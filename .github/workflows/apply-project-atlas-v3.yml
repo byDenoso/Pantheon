@@ -23,7 +23,7 @@ jobs:
         id: payload
         shell: bash
         run: |
-          if ! compgen -G '.atlas-bootstrap/chunk-*' >/dev/null; then
+          if [ ! -f .atlas-bootstrap/payload.b64 ]; then
             echo 'present=false' >> "$GITHUB_OUTPUT"
             echo 'No migration payload; branch is already materialized.'
             exit 0
@@ -35,8 +35,7 @@ jobs:
 
           EXPECTED_SHA256 = 'be0d44f56ce90ebe70e09d975a94862aea6692f9959096c8cfc0d0d6ee371245'
           EXPECTED_BASE64_LENGTH = 77544
-          chunks = sorted(Path('.atlas-bootstrap').glob('chunk-*'))
-          encoded = ''.join(''.join(path.read_text(encoding='utf-8').split()) for path in chunks)
+          encoded = ''.join(Path('.atlas-bootstrap/payload.b64').read_text(encoding='utf-8').split())
           if len(encoded) != EXPECTED_BASE64_LENGTH:
               raise SystemExit(f'Unexpected payload length: {len(encoded)}')
           archive = base64.b64decode(encoded, validate=True)
