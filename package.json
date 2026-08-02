@@ -1,11 +1,11 @@
 {
   "name": "dener-project-atlas",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "private": true,
   "type": "module",
   "scripts": {
     "dev": "node scripts/serve.mjs",
-    "test": "node --test tests/store.test.mjs",
-    "check": "node --check src/data.js && node --check src/store.js && node --check src/atlas.js && node --check src/app.js"
+    "test": "node --test tests/*.test.mjs",
+    "check": "node --check src/app.js && node --check src/atlas.js && node --check src/store.js && node --check src/data.js"
   }
 }
