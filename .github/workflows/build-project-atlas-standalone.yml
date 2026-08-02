@@ -19,10 +19,13 @@ jobs:
       - name: Checkout build branch
         uses: actions/checkout@v4
 
-      - name: Verify transported source archive
+      - name: Decode and verify source
         shell: pwsh
         run: |
-          $expected = 'c744586c5fc7968667e156507be933f7343ecce3cdf5fe97ec17c19785673e3e'
+          $encoded = (Get-Content bootstrap/source.tar.gz.b64 -Raw).Trim()
+          if ($encoded.Length -ne 55776) { throw "Unexpected Base64 length: $($encoded.Length)" }
+          [IO.File]::WriteAllBytes('bootstrap/source.tar.gz', [Convert]::FromBase64String($encoded))
+          $expected = 'fc69ecf1b7045240c2367f753b3a2f0bd43a380cd8ecdb1d5485c4c325995cfa'
           $actual = (Get-FileHash bootstrap/source.tar.gz -Algorithm SHA256).Hash.ToLower()
           if ($actual -ne $expected) { throw "Source SHA mismatch: $actual" }
           tar -tzf bootstrap/source.tar.gz | Out-Null
@@ -33,6 +36,7 @@ jobs:
         run: |
           New-Item -ItemType Directory -Force source | Out-Null
           tar -xzf bootstrap/source.tar.gz -C source
+          if ($LASTEXITCODE -ne 0) { throw 'Source extraction failed' }
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
