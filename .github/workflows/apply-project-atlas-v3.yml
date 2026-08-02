@@ -23,21 +23,26 @@ jobs:
         id: payload
         shell: bash
         run: |
-          if [ ! -f .atlas-bootstrap/payload.b64 ]; then
-            echo 'present=false' >> "$GITHUB_OUTPUT"
-            echo 'No migration payload; branch is already materialized.'
-            exit 0
-          fi
-          echo 'present=true' >> "$GITHUB_OUTPUT"
           python - <<'PY'
           from pathlib import Path
           import base64, hashlib, tarfile
 
           EXPECTED_SHA256 = 'be0d44f56ce90ebe70e09d975a94862aea6692f9959096c8cfc0d0d6ee371245'
           EXPECTED_BASE64_LENGTH = 77544
-          encoded = ''.join(Path('.atlas-bootstrap/payload.b64').read_text(encoding='utf-8').split())
+          single = Path('.atlas-bootstrap/payload.b64')
+          chunks = sorted(Path('.atlas-bootstrap').glob('chunk-*'))
+          if single.exists():
+              encoded = ''.join(single.read_text(encoding='utf-8').split())
+              source = single.name
+          elif chunks:
+              encoded = ''.join(''.join(path.read_text(encoding='utf-8').split()) for path in chunks)
+              source = f'{len(chunks)} chunks'
+          else:
+              Path('/tmp/no-atlas-payload').write_text('true')
+              print('No migration payload; branch is already materialized.')
+              raise SystemExit(0)
           if len(encoded) != EXPECTED_BASE64_LENGTH:
-              raise SystemExit(f'Unexpected payload length: {len(encoded)}')
+              raise SystemExit(f'Unexpected payload length: {len(encoded)} from {source}')
           archive = base64.b64decode(encoded, validate=True)
           digest = hashlib.sha256(archive).hexdigest()
           if digest != EXPECTED_SHA256:
@@ -51,8 +56,13 @@ jobs:
               missing = sorted(required - names)
               if missing:
                   raise SystemExit(f'Missing required files: {missing}')
-          print(f'validated archive bytes={len(archive)} sha256={digest} members={len(members)}')
+          print(f'validated source={source} archive={len(archive)} sha256={digest} members={len(members)}')
           PY
+          if [ -f /tmp/no-atlas-payload ]; then
+            echo 'present=false' >> "$GITHUB_OUTPUT"
+          else
+            echo 'present=true' >> "$GITHUB_OUTPUT"
+          fi
 
       - name: Replace branch contents atomically
         if: steps.payload.outputs.present == 'true'
