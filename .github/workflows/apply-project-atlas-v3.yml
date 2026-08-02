@@ -24,29 +24,61 @@ jobs:
         run: |
           python - <<'PY'
           from pathlib import Path
-          import base64, binascii, gzip, io, tarfile
+          import base64, binascii, hashlib, tarfile
 
+          EXPECTED_SHA256 = '529f25527471ff682c819f60af970da368809a58763eaaac7bfbc8d4fb8bf7c7'
           chunks = sorted(Path('.atlas-bootstrap').glob('chunk-*'))
           if not chunks:
               raise SystemExit('No payload chunks found')
+
+          compact_chunks = []
+          alphabet = set('ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=')
           for path in chunks:
               raw = path.read_text(encoding='utf-8')
               compact = ''.join(raw.split())
               print(f'{path.name}: raw={len(raw)} compact={len(compact)}')
-              invalid = sorted(set(compact) - set('ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/='))
+              invalid = sorted(set(compact) - alphabet)
               if invalid:
                   raise SystemExit(f'{path.name}: invalid base64 characters {invalid!r}')
+              compact_chunks.append(compact)
 
-          encoded = ''.join(''.join(path.read_text(encoding='utf-8').split()) for path in chunks)
-          print(f'total compact base64 bytes: {len(encoded)}')
-          try:
+          def decode_and_hash(encoded):
               archive = base64.b64decode(encoded, validate=True)
-          except binascii.Error as exc:
-              raise SystemExit(f'Base64 validation failed: {exc}')
+              return archive, hashlib.sha256(archive).hexdigest()
+
+          encoded = ''.join(compact_chunks)
+          print(f'total compact base64 bytes: {len(encoded)}')
+          archive = None
+          digest = None
+          try:
+              archive, digest = decode_and_hash(encoded)
+          except binascii.Error:
+              pass
+
+          if digest != EXPECTED_SHA256:
+              if len(encoded) != 78157:
+                  raise SystemExit(f'Unexpected payload length {len(encoded)} and SHA {digest}')
+              prefix = ''.join(compact_chunks[:-1])
+              tail = compact_chunks[-1]
+              print(f'attempting deterministic single-character recovery in {chunks[-1].name}')
+              for index in range(len(tail)):
+                  candidate = prefix + tail[:index] + tail[index + 1:]
+                  try:
+                      recovered, recovered_digest = decode_and_hash(candidate)
+                  except binascii.Error:
+                      continue
+                  if recovered_digest == EXPECTED_SHA256:
+                      archive = recovered
+                      digest = recovered_digest
+                      print(f'recovered payload by removing character at tail index {index}')
+                      break
+
+          if digest != EXPECTED_SHA256 or archive is None:
+              raise SystemExit(f'Payload SHA mismatch: {digest}')
 
           target = Path('/tmp/project-atlas.tar.gz')
           target.write_bytes(archive)
-          print(f'decoded archive bytes: {len(archive)}')
+          print(f'decoded archive bytes: {len(archive)} sha256={digest}')
           with tarfile.open(target, 'r:gz') as tar:
               members = tar.getmembers()
               print(f'tar members: {len(members)}')
