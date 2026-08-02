@@ -4,6 +4,13 @@ const m = (artifacts, repositories, documents, runs, datasets, complexity) => ({
 const s = (type, label, url) => ({ type, label, url });
 const a = (date, text, kind = 'update') => ({ date, text, kind });
 
+export const retiredProjects = [
+  { id: 'dener-ai-os', aliases: ['AI OS', 'Dener AI OS'], action: 'rename', replacementId: 'project-atlas' },
+  { id: 'dener-prime', aliases: ['Dener PRIME', 'Dener Prime'], action: 'retire' },
+  { id: 'ui-presets', aliases: ['PRESETS', 'Presets UI/UX'], action: 'retire' },
+  { id: 'skylife-guide', aliases: ['SKYLIFE', 'Skylife 114 mm'], action: 'retire' },
+];
+
 export const projects = [
   {
     id: 'peer-core', name: 'PEER', shortName: 'PEER', domain: 'Cosmologia', status: 'active', priority: 5,
@@ -20,7 +27,7 @@ export const projects = [
     activity: [a('2026-08-02 10:13', 'Control Tower atualizado'), a('2026-08-01 19:01', 'Seção canônica de microfísica registrada'), a('2026-08-01 13:24', 'Matched-rd ACT profile consolidado', 'run')],
   },
   {
-    id: 'peer-paper', name: 'PEER Paper', shortName: 'PAPER', domain: 'Cosmologia', status: 'attention', priority: 5,
+    id: 'peer-paper', parentId: 'peer-core', name: 'PEER Paper', shortName: 'PAPER', domain: 'Cosmologia', status: 'attention', priority: 5,
     summary: 'Paper fenomenológico + microfísico com inflação unificada, likelihoods e calibração de supernovas.',
     claim: 'A maior claim sustentada deve abrir e fechar o paper; auditoria histórica permanece fora do corpo principal.',
     nextAction: 'Consolidar outline de 20–30 páginas e claim boundary por seção.',
@@ -30,7 +37,7 @@ export const projects = [
     activity: [a('2026-08-01 19:02', 'Microfísica revisada'), a('2026-07-31 19:49', 'Auditoria do programa atualizada')],
   },
   {
-    id: 'peer-camb', name: 'CAMB Python', shortName: 'CAMB', domain: 'Cosmologia', status: 'attention', priority: 5,
+    id: 'peer-camb', parentId: 'peer-core', name: 'CAMB Python', shortName: 'CAMB', domain: 'Cosmologia', status: 'attention', priority: 5,
     summary: 'Port do CAMB/Cobaya para Python com transportes de fonte, validação high-ℓ e otimização de likelihoods.',
     claim: 'O port deve reproduzir observáveis de referência antes de ser usado para claims cosmológicas.',
     nextAction: 'Fechar equivalência numérica do caminho high-ℓ e registrar tolerâncias por observável.',
@@ -40,7 +47,7 @@ export const projects = [
     activity: [a('2026-07-31 17:24', 'Source transport atualizado'), a('2026-07-31 04:50', 'Diagnóstico ACT registrado', 'run')],
   },
   {
-    id: 'lh-data', name: 'LH-Data', shortName: 'LH-DATA', domain: 'Dados / Pesquisa', status: 'active', priority: 5,
+    id: 'lh-data', parentId: 'peer-core', name: 'LH-Data', shortName: 'LH-DATA', domain: 'Dados / Pesquisa', status: 'active', priority: 5,
     summary: 'Repositório privado de dados, manifests, resultados e provenance dos testes cosmológicos.',
     claim: 'Cada resultado operacional deve ser rastreável a configuração, fontes, hashes e saída canônica.',
     nextAction: 'Conciliar manifests recentes com o Control Tower do PEER.',
@@ -50,7 +57,7 @@ export const projects = [
     activity: [a('2026-08-01 13:24', 'Matched-rd snapshot vinculado'), a('2026-07-31 22:18', 'Hashes locais esclarecidos', 'commit')],
   },
   {
-    id: 'peer-inflation', name: 'Inflação Unificada', shortName: 'INFLAÇÃO', domain: 'Cosmologia', status: 'exploratory', priority: 4,
+    id: 'peer-inflation', parentId: 'peer-core', name: 'Inflação Unificada', shortName: 'INFLAÇÃO', domain: 'Cosmologia', status: 'exploratory', priority: 4,
     summary: 'Extensão teórica que conecta inflação, setor efetivo tardio e microfísica do PEER.',
     claim: 'Existe uma parametrização unificada candidata compatível com o regime fenomenológico já testado.',
     nextAction: 'Transformar o existence test em conjunto mínimo de condições analíticas refutáveis.',
@@ -70,7 +77,7 @@ export const projects = [
     activity: [a('2026-07-29 13:17', 'Source 0.11.5 armazenado'), a('2026-07-27 19:47', 'Build source 0.11.4 arquivado')],
   },
   {
-    id: 'fields', name: 'FIELDS', shortName: 'FIELDS', domain: 'TI / Software', status: 'exploratory', priority: 3,
+    id: 'fields', parentId: 'admindesk', name: 'FIELDS', shortName: 'FIELDS', domain: 'TI / Software', status: 'exploratory', priority: 3,
     summary: 'Aplicativo de campo para técnicos, com foco em fluxo enxuto, UX operacional e baixa fricção.',
     claim: 'Uma interface orientada à execução reduz retrabalho e ambiguidade no atendimento de campo.',
     nextAction: 'Fixar o fluxo principal e eliminar telas sem decisão operacional.',
@@ -102,17 +109,17 @@ export const projects = [
     tags: ['acadêmico', 'arquivo'], activity: [a('2026-06-10 12:00', 'Marcado como referência')],
   },
   {
-    id: 'dener-ai-os', name: 'Dener AI OS', shortName: 'AI OS', domain: 'IA / Automação', status: 'active', priority: 5,
-    summary: 'Sistema operacional pessoal para projetos, estado, automações, artefatos e retomada de contexto.',
-    claim: 'Um manifesto global roteando fontes especializadas reduz arqueologia sem destruir provenance.',
-    nextAction: 'Usar o Project Atlas como repositório canônico do portfólio.',
+    id: 'project-atlas', name: 'Project Atlas', shortName: 'ATLAS', domain: 'IA / Automação', status: 'active', priority: 5,
+    summary: 'Repositório visual 2,5D dos projetos, fontes, artefatos, dependências e estado operacional.',
+    claim: 'Um índice canônico sincronizado reduz arqueologia e preserva provenance entre Drive, Git e Vercel.',
+    nextAction: 'Implementar sincronização incremental Drive → Git → Vercel com fila de revisão.',
     updatedAt: '2026-08-02T10:14:00-03:00', metrics: m(18, 0, 9, 10, 2, 8),
-    sources: [s('Drive', 'DENER AI OS - Operação', 'https://drive.google.com/drive/folders/1E9AwXXmXmBty4Ec9QF0GlRPaxH_KolhL'), s('Drive', 'Control Tower', 'https://docs.google.com/spreadsheets/d/13ju3-2RQtESogOQJvc24Uy7VIXIHFYMZfXUePJijawc')],
+    sources: [s('Drive', 'Project Atlas - Operação', 'https://drive.google.com/drive/folders/1E9AwXXmXmBty4Ec9QF0GlRPaxH_KolhL'), s('Drive', 'Control Tower', 'https://docs.google.com/spreadsheets/d/13ju3-2RQtESogOQJvc24Uy7VIXIHFYMZfXUePJijawc')],
     position: { x: 0.9, z: 0.3 }, size: 1.2, tags: ['automação', 'projetos', 'operacional'],
     activity: [a('2026-08-02 10:14', 'Project Atlas 2,5D iniciado'), a('2026-08-02 02:22', 'Control Tower criado')],
   },
   {
-    id: 'dener-agent-os', name: 'Dener Agent OS', shortName: 'AGENT OS', domain: 'IA / Automação', status: 'active', priority: 4,
+    id: 'dener-agent-os', parentId: 'project-atlas', name: 'Dener Agent OS', shortName: 'AGENT OS', domain: 'IA / Automação', status: 'active', priority: 4,
     summary: 'CLI de agentes com decide, state, handoff, audit-drive e cycle.',
     claim: 'Agentes só entram quando mudam decisão, reduzem risco ou produzem evidência verificável.',
     nextAction: 'Integrar export do Atlas ao manifesto do Agent OS.',
@@ -122,20 +129,12 @@ export const projects = [
     activity: [a('2026-08-02 02:10', 'v0.2 validada'), a('2026-06-30 11:26', 'Pacote inicial criado')],
   },
   {
-    id: 'artifact-factory', name: 'Artifact Factory', shortName: 'ARTEFATOS', domain: 'Artefatos / Docs', status: 'active', priority: 4,
+    id: 'artifact-factory', parentId: 'project-atlas', name: 'Artifact Factory', shortName: 'ARTEFATOS', domain: 'Artefatos / Docs', status: 'active', priority: 4,
     summary: 'Fábrica de PDFs, HTMLs, planilhas, infográficos e pacotes com versionamento e QA.',
     claim: 'Artefato útil precisa de versão, fonte, QA, checksum e regra de aposentadoria.',
     nextAction: 'Obrigar registry após toda exportação.', updatedAt: '2026-08-02T02:22:00-03:00', metrics: m(24, 0, 14, 6, 0, 7),
     sources: [s('Drive', 'Control Tower de artefatos', 'https://docs.google.com/spreadsheets/d/13ju3-2RQtESogOQJvc24Uy7VIXIHFYMZfXUePJijawc')],
     position: { x: 1.1, z: 2.2 }, size: 1.0, tags: ['PDF', 'HTML', 'XLSX', 'QA'], activity: [a('2026-08-02 02:22', 'Registry inicial publicado')],
-  },
-  {
-    id: 'ui-presets', name: 'Presets UI/UX', shortName: 'PRESETS', domain: 'Artefatos / Docs', status: 'active', priority: 3,
-    summary: 'Biblioteca de direções visuais premium para dashboards, relatórios e apps.',
-    claim: 'Presets reduzem aleatoriedade visual e tornam artefatos comparáveis.', nextAction: 'Vincular cada app ao preset e tokens usados.',
-    updatedAt: '2026-06-23T23:47:00-03:00', metrics: m(9, 0, 7, 0, 0, 5),
-    sources: [s('Drive', 'Biblioteca de Presets', 'https://drive.google.com/file/d/1brPmlgcV-RpWJgHCVFFG2mkmZFFvajj8/view')],
-    position: { x: 2.7, z: 2.4 }, size: 0.75, tags: ['UI', 'UX', 'design-system'], activity: [a('2026-06-23 23:47', 'Biblioteca premium publicada')],
   },
   {
     id: 'olympus', name: 'Olympus', shortName: 'OLYMPUS', domain: 'Bodybuilding', status: 'active', priority: 5,
@@ -146,21 +145,21 @@ export const projects = [
     position: { x: -1.0, z: 1.5 }, size: 1.25, tags: ['physique', 'check-in', 'null-model'], activity: [a('2026-08-01 20:00', 'Revisão semanal preparada')],
   },
   {
-    id: 'project-natalia', name: 'Projeto Natália', shortName: 'NATÁLIA', domain: 'Bodybuilding', status: 'attention', priority: 4,
+    id: 'project-natalia', parentId: 'olympus', name: 'Projeto Natália', shortName: 'NATÁLIA', domain: 'Bodybuilding', status: 'attention', priority: 4,
     summary: 'Acompanhamento de composição corporal com InBody, null test e trajetória real versus contrafactual.',
     claim: 'A qualidade da perda deve ser julgada por gordura e massa magra, não apenas pelo peso.',
     nextAction: 'Atualizar fotos e dados do próximo check-in.', updatedAt: '2026-07-28T20:00:00-03:00', metrics: m(13, 0, 8, 5, 6, 6), sources: [],
     position: { x: -2.3, z: 2.0 }, size: 0.85, tags: ['InBody', 'null-test', 'body-comp'], activity: [a('2026-07-28 20:00', 'Próximos passos definidos')],
   },
   {
-    id: 'miqueias-v3', name: 'Miquéias V3', shortName: 'MIQUÉIAS', domain: 'Bodybuilding', status: 'active', priority: 3,
+    id: 'miqueias-v3', parentId: 'olympus', name: 'Miquéias V3', shortName: 'MIQUÉIAS', domain: 'Bodybuilding', status: 'active', priority: 3,
     summary: 'Programa Olympus Lite para recomposição, força, postura e estética.',
     claim: 'Progressão objetiva e auditoria operacional superam recomendações genéricas.',
     nextAction: 'Registrar próxima evolução e recalibrar volume.', updatedAt: '2026-07-20T19:00:00-03:00', metrics: m(8, 0, 6, 4, 3, 5), sources: [],
     position: { x: -3.4, z: 2.4 }, size: 0.7, tags: ['treino', 'dieta', 'recomposição'], activity: [a('2026-07-20 19:00', 'Programa V3 consolidado')],
   },
   {
-    id: 'renilde', name: 'Plano Renilde', shortName: 'RENILDE', domain: 'Bodybuilding', status: 'active', priority: 3,
+    id: 'renilde', parentId: 'olympus', name: 'Plano Renilde', shortName: 'RENILDE', domain: 'Bodybuilding', status: 'active', priority: 3,
     summary: 'Treino, dieta e suplementação para recomposição no contexto de menopausa.',
     claim: 'Proteína, creatina diária e progressão de força são alavancas centrais mensuráveis.',
     nextAction: 'Atualizar peso, medidas e tolerância ao treino 5x/semana.', updatedAt: '2026-07-18T18:00:00-03:00', metrics: m(7, 0, 5, 3, 2, 5), sources: [],
@@ -173,32 +172,15 @@ export const projects = [
     nextAction: 'Consolidar o preset híbrido aprovado em template versionado.', updatedAt: '2026-07-27T21:00:00-03:00', metrics: m(17, 0, 9, 0, 0, 5), sources: [],
     position: { x: -1.7, z: 3.5 }, size: 0.75, tags: ['Instagram', 'astronomia', 'infográfico'], activity: [a('2026-07-27 21:00', 'Padrão editorial salvo')],
   },
-  {
-    id: 'skylife-guide', name: 'Skylife 114 mm', shortName: 'SKYLIFE', domain: 'Divulgação Científica', status: 'active', priority: 2,
-    summary: 'Guia técnico e prático do telescópio refletor Skylife Deepsky 114 mm.',
-    claim: 'Especificação da versão, colimação e limites reais importam mais que aumento nominal.',
-    nextAction: 'Fechar identificação da versão e tabela de acessórios úteis.', updatedAt: '2026-07-27T16:35:00-03:00', metrics: m(6, 0, 5, 0, 1, 4), sources: [],
-    position: { x: -0.2, z: 4.0 }, size: 0.65, tags: ['telescópio', 'astronomia', 'guia'], activity: [a('2026-07-27 16:35', 'Pesquisa técnica iniciada')],
-  },
-  {
-    id: 'dener-prime', name: 'Dener Prime', shortName: 'DENER PRIME', domain: 'Conhecimento Pessoal', status: 'active', priority: 3,
-    summary: 'Sistema de decisão, conduta, convergência e políticas pessoais robustas.',
-    claim: 'Políticas repetíveis sob restrição produzem convergência melhor que identidade performática.',
-    nextAction: 'Integrar manuais, inference engine e Road to Convergence em um índice canônico.', updatedAt: '2026-07-12T21:11:00-03:00', metrics: m(15, 0, 12, 0, 0, 6),
-    sources: [s('Drive', 'Dener Prime Instalável', 'https://drive.google.com/file/d/1TPEIgH0IWnnBQtIKx1UMiUNylS-0SQnW/view'), s('Drive', 'Inference Engine', 'https://drive.google.com/file/d/1_McctK1ug1ogN5PKVe-VAaBDyX9Q0TGH/view')],
-    position: { x: 1.6, z: 3.8 }, size: 0.9, tags: ['decisão', 'manual', 'convergência'], activity: [a('2026-07-12 21:11', 'Versão instalável publicada')],
-  },
 ];
 
 export const dependencies = [
   ['peer-core', 'peer-paper', 'strong'], ['peer-core', 'peer-camb', 'strong'], ['peer-core', 'lh-data', 'data'],
   ['peer-core', 'peer-inflation', 'theory'], ['peer-paper', 'lh-data', 'artifact'], ['peer-camb', 'lh-data', 'data'],
-  ['dener-ai-os', 'dener-agent-os', 'strong'], ['dener-ai-os', 'artifact-factory', 'artifact'], ['dener-ai-os', 'ui-presets', 'artifact'],
-  ['dener-ai-os', 'peer-core', 'control'], ['dener-ai-os', 'admindesk', 'control'], ['dener-ai-os', 'olympus', 'control'],
-  ['admindesk', 'auditdata', 'audit'], ['fields', 'ui-presets', 'artifact'], ['artifact-factory', 'ui-presets', 'artifact'],
+  ['project-atlas', 'dener-agent-os', 'strong'], ['project-atlas', 'artifact-factory', 'artifact'],
+  ['project-atlas', 'peer-core', 'control'], ['project-atlas', 'admindesk', 'control'], ['project-atlas', 'olympus', 'control'],
+  ['admindesk', 'fields', 'strong'], ['admindesk', 'auditdata', 'audit'],
   ['olympus', 'project-natalia', 'strong'], ['olympus', 'miqueias-v3', 'strong'], ['olympus', 'renilde', 'strong'],
-  ['astronomy-stories', 'ui-presets', 'artifact'], ['skylife-guide', 'astronomy-stories', 'content'],
-  ['dener-prime', 'dener-agent-os', 'knowledge'], ['dener-prime', 'dener-ai-os', 'knowledge'],
 ];
 
 export const statusMeta = {
@@ -212,5 +194,5 @@ export const statusMeta = {
 export const domainColors = {
   'Cosmologia': '#55ef7a', 'Dados / Pesquisa': '#54a0ff', 'TI / Software': '#3fa7ff',
   'IA / Automação': '#b25cff', 'Artefatos / Docs': '#ff5ebc', 'Bodybuilding': '#ffbd3d',
-  'Divulgação Científica': '#28d7c0', 'Conhecimento Pessoal': '#9ba8ba',
+  'Divulgação Científica': '#28d7c0',
 };
