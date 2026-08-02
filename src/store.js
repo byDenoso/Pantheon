@@ -1,4 +1,10 @@
 const VALID_STATUSES = new Set(['active', 'attention', 'blocked', 'exploratory', 'archived']);
+const DEFAULT_RETIRED_PROJECTS = [
+  { id: 'dener-ai-os', aliases: ['AI OS', 'Dener AI OS'], action: 'rename', replacementId: 'project-atlas' },
+  { id: 'dener-prime', aliases: ['Dener PRIME', 'Dener Prime'], action: 'retire' },
+  { id: 'ui-presets', aliases: ['PRESETS', 'Presets UI/UX'], action: 'retire' },
+  { id: 'skylife-guide', aliases: ['SKYLIFE', 'Skylife 114 mm'], action: 'retire' },
+];
 const clone = (value) => JSON.parse(JSON.stringify(value));
 
 const asSet = (value) => value instanceof Set ? value : new Set(value || []);
@@ -170,7 +176,7 @@ function migrateManifest(manifest, seedProjects, retiredProjects) {
 }
 
 export function createRepository(seedProjects, seedDependencies, storage = null, options = {}) {
-  const retiredProjects = clone(options.retiredProjects || []);
+  const retiredProjects = clone(options.retiredProjects || DEFAULT_RETIRED_PROJECTS);
   let projectState = clone(seedProjects);
   let dependencyState = clone(seedDependencies);
   let migratedSavedState = false;
