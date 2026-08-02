@@ -19,87 +19,63 @@ jobs:
           ref: project-atlas
           fetch-depth: 0
 
-      - name: Decode and validate repository payload
+      - name: Detect, decode and validate repository payload
+        id: payload
         shell: bash
         run: |
+          if ! compgen -G '.atlas-bootstrap/chunk-*' >/dev/null; then
+            echo 'present=false' >> "$GITHUB_OUTPUT"
+            echo 'No migration payload; branch is already materialized.'
+            exit 0
+          fi
+          echo 'present=true' >> "$GITHUB_OUTPUT"
           python - <<'PY'
           from pathlib import Path
-          import base64, binascii, hashlib, tarfile
+          import base64, hashlib, tarfile
 
-          EXPECTED_SHA256 = '529f25527471ff682c819f60af970da368809a58763eaaac7bfbc8d4fb8bf7c7'
+          EXPECTED_SHA256 = 'be0d44f56ce90ebe70e09d975a94862aea6692f9959096c8cfc0d0d6ee371245'
+          EXPECTED_BASE64_LENGTH = 77544
           chunks = sorted(Path('.atlas-bootstrap').glob('chunk-*'))
-          if not chunks:
-              raise SystemExit('No payload chunks found')
-
-          compact_chunks = []
-          alphabet = set('ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=')
-          for path in chunks:
-              raw = path.read_text(encoding='utf-8')
-              compact = ''.join(raw.split())
-              print(f'{path.name}: raw={len(raw)} compact={len(compact)}')
-              invalid = sorted(set(compact) - alphabet)
-              if invalid:
-                  raise SystemExit(f'{path.name}: invalid base64 characters {invalid!r}')
-              compact_chunks.append(compact)
-
-          def decode_and_hash(encoded):
-              archive = base64.b64decode(encoded, validate=True)
-              return archive, hashlib.sha256(archive).hexdigest()
-
-          encoded = ''.join(compact_chunks)
-          print(f'total compact base64 bytes: {len(encoded)}')
-          archive = None
-          digest = None
-          try:
-              archive, digest = decode_and_hash(encoded)
-          except binascii.Error:
-              pass
-
+          encoded = ''.join(''.join(path.read_text(encoding='utf-8').split()) for path in chunks)
+          if len(encoded) != EXPECTED_BASE64_LENGTH:
+              raise SystemExit(f'Unexpected payload length: {len(encoded)}')
+          archive = base64.b64decode(encoded, validate=True)
+          digest = hashlib.sha256(archive).hexdigest()
           if digest != EXPECTED_SHA256:
-              if len(encoded) != 78157:
-                  raise SystemExit(f'Unexpected payload length {len(encoded)} and SHA {digest}')
-              prefix = ''.join(compact_chunks[:-1])
-              tail = compact_chunks[-1]
-              print(f'attempting deterministic single-character recovery in {chunks[-1].name}')
-              for index in range(len(tail)):
-                  candidate = prefix + tail[:index] + tail[index + 1:]
-                  try:
-                      recovered, recovered_digest = decode_and_hash(candidate)
-                  except binascii.Error:
-                      continue
-                  if recovered_digest == EXPECTED_SHA256:
-                      archive = recovered
-                      digest = recovered_digest
-                      print(f'recovered payload by removing character at tail index {index}')
-                      break
-
-          if digest != EXPECTED_SHA256 or archive is None:
               raise SystemExit(f'Payload SHA mismatch: {digest}')
-
           target = Path('/tmp/project-atlas.tar.gz')
           target.write_bytes(archive)
-          print(f'decoded archive bytes: {len(archive)} sha256={digest}')
           with tarfile.open(target, 'r:gz') as tar:
               members = tar.getmembers()
-              print(f'tar members: {len(members)}')
-              if not any(member.name.endswith('package.json') for member in members):
-                  raise SystemExit('package.json missing from archive')
+              names = {member.name.removeprefix('./') for member in members}
+              required = {'package.json', 'api/manifest.js', 'data/manifest.json', 'src/app.js', 'tests/api.test.mjs'}
+              missing = sorted(required - names)
+              if missing:
+                  raise SystemExit(f'Missing required files: {missing}')
+          print(f'validated archive bytes={len(archive)} sha256={digest} members={len(members)}')
           PY
 
       - name: Replace branch contents atomically
+        if: steps.payload.outputs.present == 'true'
         shell: bash
         run: |
           find . -mindepth 1 -maxdepth 1 ! -name .git -exec rm -rf {} +
           tar -xzf /tmp/project-atlas.tar.gz -C .
 
       - name: Verify implementation
+        if: steps.payload.outputs.present == 'true'
         run: npm run verify
 
       - name: Commit verified architecture
+        if: steps.payload.outputs.present == 'true'
         shell: bash
         run: |
           git config user.name 'project-atlas-bot'
           git config user.email 'project-atlas-bot@users.noreply.github.com'
           git add -A
+          if git diff --cached --quiet; then
+            echo 'No repository changes.'
+            exit 0
+          fi
           git commit -m 'feat: migrate Project Atlas to live manifest architecture'
           git push origin HEAD:project-atlas
