@@ -75,3 +75,5 @@ jobs:
             source/dist/SHA256SUMS.txt
           if-no-files-found: error
           retention-days: 30
+
+# source chunks complete: 4/4
