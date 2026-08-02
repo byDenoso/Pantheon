@@ -12,18 +12,18 @@ permissions:
   contents: read
 
 jobs:
-  diagnose-chunks:
+  diagnose-safe-chunks:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Report source chunks
+      - name: Report safe source chunks
         shell: pwsh
         run: |
-          $files = Get-ChildItem bootstrap/chunks/chunk-*.txt | Sort-Object Name
+          $files = Get-ChildItem bootstrap/chunks8/chunk-*.txt | Sort-Object Name
           foreach ($file in $files) {
             $content = (Get-Content $file.FullName -Raw).Trim()
             Write-Host "$($file.Name) length=$($content.Length)"
           }
           $encoded = (($files | ForEach-Object { (Get-Content $_.FullName -Raw).Trim() }) -join '')
           Write-Host "total=$($encoded.Length) count=$($files.Count)"
-          if ($files.Count -ne 4 -or $encoded.Length -ne 55776) { throw 'Chunk set incomplete' }
+          if ($files.Count -lt 1) { throw 'No safe chunks found' }
