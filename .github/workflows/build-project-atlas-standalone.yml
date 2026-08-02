@@ -1,0 +1,71 @@
+name: Build Project Atlas Standalone
+
+on:
+  push:
+    branches: [project-atlas-standalone]
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout build branch
+        uses: actions/checkout@v4
+
+      - name: Verify source archive
+        shell: pwsh
+        run: |
+          $expected = 'fc69ecf1b7045240c2367f753b3a2f0bd43a380cd8ecdb1d5485c4c325995cfa'
+          $actual = (Get-FileHash bootstrap/source.tar.gz -Algorithm SHA256).Hash.ToLower()
+          if ($actual -ne $expected) { throw "Source SHA mismatch: $actual" }
+
+      - name: Extract source
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force source | Out-Null
+          tar -xzf bootstrap/source.tar.gz -C source
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: source/package-lock.json
+
+      - name: Install dependencies
+        working-directory: source
+        run: npm install
+
+      - name: Verify application
+        working-directory: source
+        run: npm run verify
+
+      - name: Build portable Windows executable
+        working-directory: source
+        run: npm run dist:win
+
+      - name: Generate SHA-256
+        shell: pwsh
+        run: |
+          $exe = Get-ChildItem source/dist/*.exe | Select-Object -First 1
+          if (-not $exe) { throw 'Portable executable was not generated' }
+          $hash = (Get-FileHash $exe.FullName -Algorithm SHA256).Hash.ToLower()
+          "$hash  $($exe.Name)" | Set-Content source/dist/SHA256SUMS.txt
+          Write-Host "EXE=$($exe.Name) SHA256=$hash"
+
+      - name: Upload standalone artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Project-Atlas-Standalone-Windows-x64
+          path: |
+            source/dist/*.exe
+            source/dist/SHA256SUMS.txt
+          if-no-files-found: error
+          retention-days: 30
