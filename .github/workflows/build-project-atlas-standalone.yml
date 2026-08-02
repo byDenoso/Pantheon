@@ -19,12 +19,14 @@ jobs:
       - name: Checkout build branch
         uses: actions/checkout@v4
 
-      - name: Verify source archive
+      - name: Verify transported source archive
         shell: pwsh
         run: |
-          $expected = 'fc69ecf1b7045240c2367f753b3a2f0bd43a380cd8ecdb1d5485c4c325995cfa'
+          $expected = 'c744586c5fc7968667e156507be933f7343ecce3cdf5fe97ec17c19785673e3e'
           $actual = (Get-FileHash bootstrap/source.tar.gz -Algorithm SHA256).Hash.ToLower()
           if ($actual -ne $expected) { throw "Source SHA mismatch: $actual" }
+          tar -tzf bootstrap/source.tar.gz | Out-Null
+          if ($LASTEXITCODE -ne 0) { throw 'Source archive is not a valid gzip tarball' }
 
       - name: Extract source
         shell: pwsh
@@ -36,8 +38,6 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '22'
-          cache: npm
-          cache-dependency-path: source/package-lock.json
 
       - name: Install dependencies
         working-directory: source
