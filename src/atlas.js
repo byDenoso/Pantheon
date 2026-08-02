@@ -26,6 +26,7 @@ export class AtlasRenderer {
     this.onSelect = onSelect || (() => {});
     this.projects = [];
     this.dependencies = [];
+    this.expandedIds = new Set();
     this.selectedId = null;
     this.mode = 'iso';
     this.angle = -0.18;
@@ -49,7 +50,28 @@ export class AtlasRenderer {
     this.projects = projects;
     this.dependencies = dependencies;
     this.selectedId = selectedId;
+    const currentIds = new Set(projects.map((project) => project.id));
+    this.expandedIds = new Set([...this.expandedIds].filter((id) => currentIds.has(id)));
     this.requestDraw();
+  }
+  childrenOf(id) { return this.projects.filter((project) => project.parentId === id); }
+  visibleProjects() {
+    const byId = new Map(this.projects.map((project) => [project.id, project]));
+    return this.projects.filter((project) => {
+      let current = project;
+      const seen = new Set([project.id]);
+      while (current.parentId && byId.has(current.parentId)) {
+        if (!this.expandedIds.has(current.parentId)) return false;
+        current = byId.get(current.parentId);
+        if (seen.has(current.id)) return false;
+        seen.add(current.id);
+      }
+      return true;
+    }).map((project) => ({
+      ...project,
+      childCount: this.childrenOf(project.id).length,
+      expanded: this.expandedIds.has(project.id),
+    }));
   }
   setSelected(id) { this.selectedId = id; this.requestDraw(); }
   setMode(mode) { this.mode = mode; this.requestDraw(); }
@@ -90,7 +112,14 @@ export class AtlasRenderer {
     const rect = this.canvas.getBoundingClientRect();
     const point = { x: event.clientX - rect.left, y: event.clientY - rect.top };
     const hit = [...this.hitAreas].reverse().find((area) => pointInPolygon(point, area.polygon));
-    if (hit) this.onSelect(hit.id);
+    if (hit) {
+      if (this.childrenOf(hit.id).length) {
+        if (this.expandedIds.has(hit.id)) this.expandedIds.delete(hit.id);
+        else this.expandedIds.add(hit.id);
+        this.requestDraw();
+      }
+      this.onSelect(hit.id);
+    }
   }
 
   rotatePoint(x, z) {
@@ -166,13 +195,14 @@ export class AtlasRenderer {
     ctx.save(); ctx.textAlign='center'; ctx.fillStyle='#eaf7ff'; ctx.shadowColor='#00111d';ctx.shadowBlur=4;ctx.font=`700 ${clamp(8.4*this.zoom,7,13)}px system-ui`; ctx.fillText(project.shortName || project.name, faceCenter.x, faceCenter.y - 4*this.zoom);
     ctx.fillStyle='rgba(221,239,250,.78)';ctx.font=`${clamp(6.7*this.zoom,6,10)}px system-ui`;ctx.fillText(`${project.metrics.artifacts} artefatos · ${project.metrics.runs} runs`,faceCenter.x,faceCenter.y+9*this.zoom);ctx.restore();
     const statusColor = statusMeta[project.status]?.color || '#8ba0b1'; ctx.save();ctx.fillStyle=statusColor;ctx.shadowColor=statusColor;ctx.shadowBlur=8;ctx.beginPath();ctx.arc(t0.x+5*this.zoom,t0.y+3*this.zoom,2.2*this.zoom,0,Math.PI*2);ctx.fill();ctx.restore();
+    if(project.childCount){const badge={x:t1.x-2*this.zoom,y:t1.y-9*this.zoom};ctx.save();ctx.fillStyle=project.expanded?'#eaf7ff':shade(color,.72);ctx.strokeStyle=color;ctx.lineWidth=1.2;ctx.shadowColor=color;ctx.shadowBlur=12;ctx.beginPath();ctx.arc(badge.x,badge.y,8*this.zoom,0,Math.PI*2);ctx.fill();ctx.stroke();ctx.shadowBlur=0;ctx.fillStyle=project.expanded?'#07111d':'#eaf7ff';ctx.textAlign='center';ctx.textBaseline='middle';ctx.font=`800 ${clamp(7.5*this.zoom,7,11)}px system-ui`;ctx.fillText(`${project.expanded?'−':'+'}${project.childCount}`,badge.x,badge.y+.2*this.zoom);ctx.restore();}
     this.hitAreas.push({ id: project.id, polygon: geometry.polygon });
   }
   draw() {
     if (!this.width || !this.height) return;
     const ctx = this.ctx; ctx.clearRect(0,0,this.width,this.height); this.hitAreas=[];
     const gradient=ctx.createRadialGradient(this.width*.5,this.height*.3,40,this.width*.5,this.height*.45,this.width*.7);gradient.addColorStop(0,'rgba(14,49,74,.48)');gradient.addColorStop(1,'rgba(2,9,16,.03)');ctx.fillStyle=gradient;ctx.fillRect(0,0,this.width,this.height);
-    this.drawGrid(); const projectMap=new Map(this.projects.map((project)=>[project.id,project])); this.drawDependencies(projectMap);
-    const ordered=[...this.projects].sort((a,b)=>{const ra=this.rotatePoint(a.position.x,a.position.z),rb=this.rotatePoint(b.position.x,b.position.z);return (ra.x+ra.z)-(rb.x+rb.z)}); for(const project of ordered)this.drawBuilding(project);
+    this.drawGrid(); const visible = this.visibleProjects(); const projectMap=new Map(visible.map((project)=>[project.id,project])); this.drawDependencies(projectMap);
+    const ordered=[...visible].sort((a,b)=>{const ra=this.rotatePoint(a.position.x,a.position.z),rb=this.rotatePoint(b.position.x,b.position.z);return (ra.x+ra.z)-(rb.x+rb.z)}); for(const project of ordered)this.drawBuilding(project);
   }
 }
