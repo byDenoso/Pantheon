@@ -1,0 +1,198 @@
+const m = (artifacts, repositories, documents, runs, datasets, complexity) => ({
+  artifacts, repositories, documents, runs, datasets, complexity,
+});
+const s = (type, label, url) => ({ type, label, url });
+const a = (date, text, kind = 'update') => ({ date, text, kind });
+
+export const retiredProjects = [
+  { id: 'dener-ai-os', aliases: ['AI OS', 'Dener AI OS'], action: 'rename', replacementId: 'project-atlas' },
+  { id: 'dener-prime', aliases: ['Dener PRIME', 'Dener Prime'], action: 'retire' },
+  { id: 'ui-presets', aliases: ['PRESETS', 'Presets UI/UX'], action: 'retire' },
+  { id: 'skylife-guide', aliases: ['SKYLIFE', 'Skylife 114 mm'], action: 'retire' },
+];
+
+export const projects = [
+  {
+    id: 'peer-core', name: 'PEER', shortName: 'PEER', domain: 'Cosmologia', status: 'active', priority: 5,
+    summary: 'Programa cosmológico fenomenológico e microfísico, com inferência, testes matched e documentação canônica.',
+    claim: 'Uma deformação tardia controlada pode produzir assinaturas observacionais distinguíveis mantendo consistência com os testes fechados.',
+    nextAction: 'Fechar o teste causal rd + calibração de SN antes de ampliar a campanha de likelihoods.',
+    updatedAt: '2026-08-02T10:13:00-03:00', metrics: m(38, 1, 17, 31, 9, 10),
+    sources: [
+      s('Drive', 'PEER Control Tower', 'https://docs.google.com/spreadsheets/d/1Y9YYAn2x0NDIBTbl1bvkwBbSEGz6kHLxzAl90SQ0-GA'),
+      s('Drive', 'Status canônico V2', 'https://docs.google.com/document/d/1REHT2SjTOwNeHHSdbrQ1GnhUVUnrUtmyT_CamENAScg'),
+      s('Drive', 'Pasta Cosmologia', 'https://drive.google.com/drive/folders/13lIl7Q_BzJRHBp2hWHjJtVJvaX8C4ooj'),
+    ],
+    position: { x: -1.2, z: -1.0 }, size: 1.35, tags: ['paper', 'likelihood', 'microfísica', 'H0'],
+    activity: [a('2026-08-02 10:13', 'Control Tower atualizado'), a('2026-08-01 19:01', 'Seção canônica de microfísica registrada'), a('2026-08-01 13:24', 'Matched-rd ACT profile consolidado', 'run')],
+  },
+  {
+    id: 'peer-paper', parentId: 'peer-core', name: 'PEER Paper', shortName: 'PAPER', domain: 'Cosmologia', status: 'attention', priority: 5,
+    summary: 'Paper fenomenológico + microfísico com inflação unificada, likelihoods e calibração de supernovas.',
+    claim: 'A maior claim sustentada deve abrir e fechar o paper; auditoria histórica permanece fora do corpo principal.',
+    nextAction: 'Consolidar outline de 20–30 páginas e claim boundary por seção.',
+    updatedAt: '2026-08-01T19:02:00-03:00', metrics: m(14, 0, 11, 3, 2, 8),
+    sources: [s('Drive', 'Microfísica canônica', 'https://docs.google.com/document/d/1GhQ3CDqW4J0F9hz_bl5wMjYECzRUIsvTuNBcYnAn0gQ')],
+    position: { x: -0.2, z: -2.7 }, size: 1.05, tags: ['paper', 'submissão', 'claim'],
+    activity: [a('2026-08-01 19:02', 'Microfísica revisada'), a('2026-07-31 19:49', 'Auditoria do programa atualizada')],
+  },
+  {
+    id: 'peer-camb', parentId: 'peer-core', name: 'CAMB Python', shortName: 'CAMB', domain: 'Cosmologia', status: 'attention', priority: 5,
+    summary: 'Port do CAMB/Cobaya para Python com transportes de fonte, validação high-ℓ e otimização de likelihoods.',
+    claim: 'O port deve reproduzir observáveis de referência antes de ser usado para claims cosmológicas.',
+    nextAction: 'Fechar equivalência numérica do caminho high-ℓ e registrar tolerâncias por observável.',
+    updatedAt: '2026-07-31T17:24:00-03:00', metrics: m(12, 0, 6, 18, 7, 9),
+    sources: [s('Drive', 'CAMB source transport', 'https://docs.google.com/spreadsheets/d/1vhL9tx4rOalYrkCbr7OFh2cWMethVL6c2m_WgLuSp8o')],
+    position: { x: -2.7, z: -2.2 }, size: 1.0, tags: ['CAMB', 'Cobaya', 'Python', 'CMB'],
+    activity: [a('2026-07-31 17:24', 'Source transport atualizado'), a('2026-07-31 04:50', 'Diagnóstico ACT registrado', 'run')],
+  },
+  {
+    id: 'lh-data', parentId: 'peer-core', name: 'LH-Data', shortName: 'LH-DATA', domain: 'Dados / Pesquisa', status: 'active', priority: 5,
+    summary: 'Repositório privado de dados, manifests, resultados e provenance dos testes cosmológicos.',
+    claim: 'Cada resultado operacional deve ser rastreável a configuração, fontes, hashes e saída canônica.',
+    nextAction: 'Conciliar manifests recentes com o Control Tower do PEER.',
+    updatedAt: '2026-08-01T13:24:00-03:00', metrics: m(22, 1, 8, 27, 15, 9),
+    sources: [s('GitHub', 'byDenoso/LH-Data', 'https://github.com/byDenoso/LH-Data')],
+    position: { x: -2.8, z: 0.0 }, size: 1.1, tags: ['dados', 'manifest', 'provenance'],
+    activity: [a('2026-08-01 13:24', 'Matched-rd snapshot vinculado'), a('2026-07-31 22:18', 'Hashes locais esclarecidos', 'commit')],
+  },
+  {
+    id: 'peer-inflation', parentId: 'peer-core', name: 'Inflação Unificada', shortName: 'INFLAÇÃO', domain: 'Cosmologia', status: 'exploratory', priority: 4,
+    summary: 'Extensão teórica que conecta inflação, setor efetivo tardio e microfísica do PEER.',
+    claim: 'Existe uma parametrização unificada candidata compatível com o regime fenomenológico já testado.',
+    nextAction: 'Transformar o existence test em conjunto mínimo de condições analíticas refutáveis.',
+    updatedAt: '2026-07-29T15:59:00-03:00', metrics: m(7, 0, 5, 4, 1, 8),
+    sources: [s('Drive', 'Existence Test', 'https://docs.google.com/document/d/1xqgOrlHpIJtw_lZ2KX8bsJYbC5qFk03TD0_eprUHMnQ')],
+    position: { x: 0.2, z: -3.8 }, size: 0.85, tags: ['inflação', 'teoria', 'existence-test'],
+    activity: [a('2026-07-29 15:59', 'Existence test documentado')],
+  },
+  {
+    id: 'admindesk', name: 'AdminDesk', shortName: 'ADMINDESK', domain: 'TI / Software', status: 'attention', priority: 5,
+    summary: 'Ferramenta Windows para operações administrativas, em endurecimento de segurança e preparação de release portátil.',
+    claim: 'O release só é aceitável com elevação controlada, ACL segura, logging e validação de assinatura.',
+    nextAction: 'Executar release gate da versão atual e bloquear qualquer build sem smoke test.',
+    updatedAt: '2026-07-29T13:17:00-03:00', metrics: m(16, 0, 8, 14, 0, 9),
+    sources: [s('Drive', 'Source temporário 0.11.5', 'https://drive.google.com/file/d/1mlpTyfmjSll6d5Inr6E53owlTpgL6_TS/view')],
+    position: { x: 1.4, z: -1.9 }, size: 1.15, tags: ['Windows', 'segurança', 'release'],
+    activity: [a('2026-07-29 13:17', 'Source 0.11.5 armazenado'), a('2026-07-27 19:47', 'Build source 0.11.4 arquivado')],
+  },
+  {
+    id: 'fields', parentId: 'admindesk', name: 'FIELDS', shortName: 'FIELDS', domain: 'TI / Software', status: 'exploratory', priority: 3,
+    summary: 'Aplicativo de campo para técnicos, com foco em fluxo enxuto, UX operacional e baixa fricção.',
+    claim: 'Uma interface orientada à execução reduz retrabalho e ambiguidade no atendimento de campo.',
+    nextAction: 'Fixar o fluxo principal e eliminar telas sem decisão operacional.',
+    updatedAt: '2026-07-26T18:00:00-03:00', metrics: m(8, 0, 5, 2, 0, 6), sources: [],
+    position: { x: 2.7, z: -2.9 }, size: 0.8, tags: ['field-service', 'UX', 'mobile'],
+    activity: [a('2026-07-26 18:00', 'Escopo v0.1 consolidado')],
+  },
+  {
+    id: 'auditdata', name: 'AuditData', shortName: 'AUDITDATA', domain: 'TI / Software', status: 'active', priority: 3,
+    summary: 'Repositório público para dados e rotinas de auditoria técnica.',
+    claim: 'A auditoria deve preservar evidência reproduzível e separar achado de inferência.',
+    nextAction: 'Adicionar schema de provenance aos outputs publicados.',
+    updatedAt: '2026-08-01T09:00:00-03:00', metrics: m(6, 1, 3, 4, 3, 5),
+    sources: [s('GitHub', 'byDenoso/AuditData', 'https://github.com/byDenoso/AuditData')],
+    position: { x: 3.2, z: -1.2 }, size: 0.75, tags: ['auditoria', 'dados'], activity: [a('2026-08-01 09:00', 'Snapshot revisado')],
+  },
+  {
+    id: 'pantheon', name: 'Pantheon', shortName: 'PANTHEON', domain: 'TI / Software', status: 'exploratory', priority: 2,
+    summary: 'Repositório público experimental para arquitetura e protótipos.', claim: 'Escopo ainda exploratório.',
+    nextAction: 'Decidir função canônica ou arquivar.', updatedAt: '2026-07-25T12:00:00-03:00', metrics: m(2, 1, 1, 0, 0, 3),
+    sources: [s('GitHub', 'byDenoso/Pantheon', 'https://github.com/byDenoso/Pantheon')], position: { x: 4.1, z: -0.1 }, size: 0.55,
+    tags: ['experimento'], activity: [a('2026-07-25 12:00', 'Revisão de escopo pendente')],
+  },
+  {
+    id: 'tcc', name: 'TCC', shortName: 'TCC', domain: 'TI / Software', status: 'archived', priority: 1,
+    summary: 'Projeto acadêmico preservado como referência histórica.', claim: 'Arquivo de referência.', nextAction: 'Nenhuma.',
+    updatedAt: '2026-06-10T12:00:00-03:00', metrics: m(4, 1, 4, 0, 1, 3),
+    sources: [s('GitHub', 'byDenoso/TCC', 'https://github.com/byDenoso/TCC')], position: { x: 4.4, z: 1.2 }, size: 0.55,
+    tags: ['acadêmico', 'arquivo'], activity: [a('2026-06-10 12:00', 'Marcado como referência')],
+  },
+  {
+    id: 'project-atlas', name: 'Project Atlas', shortName: 'ATLAS', domain: 'IA / Automação', status: 'active', priority: 5,
+    summary: 'Repositório visual 2,5D dos projetos, fontes, artefatos, dependências e estado operacional.',
+    claim: 'Um índice canônico sincronizado reduz arqueologia e preserva provenance entre Drive, Git e Vercel.',
+    nextAction: 'Implementar sincronização incremental Drive → Git → Vercel com fila de revisão.',
+    updatedAt: '2026-08-02T10:14:00-03:00', metrics: m(18, 0, 9, 10, 2, 8),
+    sources: [s('Drive', 'Project Atlas - Operação', 'https://drive.google.com/drive/folders/1E9AwXXmXmBty4Ec9QF0GlRPaxH_KolhL'), s('Drive', 'Control Tower', 'https://docs.google.com/spreadsheets/d/13ju3-2RQtESogOQJvc24Uy7VIXIHFYMZfXUePJijawc')],
+    position: { x: 0.9, z: 0.3 }, size: 1.2, tags: ['automação', 'projetos', 'operacional'],
+    activity: [a('2026-08-02 10:14', 'Project Atlas 2,5D iniciado'), a('2026-08-02 02:22', 'Control Tower criado')],
+  },
+  {
+    id: 'dener-agent-os', parentId: 'project-atlas', name: 'Dener Agent OS', shortName: 'AGENT OS', domain: 'IA / Automação', status: 'active', priority: 4,
+    summary: 'CLI de agentes com decide, state, handoff, audit-drive e cycle.',
+    claim: 'Agentes só entram quando mudam decisão, reduzem risco ou produzem evidência verificável.',
+    nextAction: 'Integrar export do Atlas ao manifesto do Agent OS.',
+    updatedAt: '2026-06-30T11:26:00-03:00', metrics: m(11, 0, 7, 10, 1, 7),
+    sources: [s('Drive', 'README Agent OS', 'https://drive.google.com/file/d/1m1ZvKy2n57JEta4YnX-47sglYqAFVbBC/view'), s('Drive', 'Livro de estudo', 'https://drive.google.com/file/d/1nMfinKYYIdheDCZzKTgyldFIGSeOexG6/view')],
+    position: { x: 2.0, z: 0.5 }, size: 0.95, tags: ['CLI', 'agentes', 'estado'],
+    activity: [a('2026-08-02 02:10', 'v0.2 validada'), a('2026-06-30 11:26', 'Pacote inicial criado')],
+  },
+  {
+    id: 'artifact-factory', parentId: 'project-atlas', name: 'Artifact Factory', shortName: 'ARTEFATOS', domain: 'Artefatos / Docs', status: 'active', priority: 4,
+    summary: 'Fábrica de PDFs, HTMLs, planilhas, infográficos e pacotes com versionamento e QA.',
+    claim: 'Artefato útil precisa de versão, fonte, QA, checksum e regra de aposentadoria.',
+    nextAction: 'Obrigar registry após toda exportação.', updatedAt: '2026-08-02T02:22:00-03:00', metrics: m(24, 0, 14, 6, 0, 7),
+    sources: [s('Drive', 'Control Tower de artefatos', 'https://docs.google.com/spreadsheets/d/13ju3-2RQtESogOQJvc24Uy7VIXIHFYMZfXUePJijawc')],
+    position: { x: 1.1, z: 2.2 }, size: 1.0, tags: ['PDF', 'HTML', 'XLSX', 'QA'], activity: [a('2026-08-02 02:22', 'Registry inicial publicado')],
+  },
+  {
+    id: 'olympus', name: 'Olympus', shortName: 'OLYMPUS', domain: 'Bodybuilding', status: 'active', priority: 5,
+    summary: 'Sistema de acompanhamento de treino, dieta, composição corporal e decisão operacional.',
+    claim: 'Check-ins comparáveis e null models permitem decisões melhores que impressão visual isolada.',
+    nextAction: 'Padronizar check-in semanal e registrar decisões com variável causal.', updatedAt: '2026-08-01T20:00:00-03:00', metrics: m(21, 0, 13, 12, 8, 8),
+    sources: [s('Drive', 'Pasta Corpo', 'https://drive.google.com/drive/folders/1J1xAJSOUwRRmyDdpxGZNsrp3_0m4CVq_')],
+    position: { x: -1.0, z: 1.5 }, size: 1.25, tags: ['physique', 'check-in', 'null-model'], activity: [a('2026-08-01 20:00', 'Revisão semanal preparada')],
+  },
+  {
+    id: 'project-natalia', parentId: 'olympus', name: 'Projeto Natália', shortName: 'NATÁLIA', domain: 'Bodybuilding', status: 'attention', priority: 4,
+    summary: 'Acompanhamento de composição corporal com InBody, null test e trajetória real versus contrafactual.',
+    claim: 'A qualidade da perda deve ser julgada por gordura e massa magra, não apenas pelo peso.',
+    nextAction: 'Atualizar fotos e dados do próximo check-in.', updatedAt: '2026-07-28T20:00:00-03:00', metrics: m(13, 0, 8, 5, 6, 6), sources: [],
+    position: { x: -2.3, z: 2.0 }, size: 0.85, tags: ['InBody', 'null-test', 'body-comp'], activity: [a('2026-07-28 20:00', 'Próximos passos definidos')],
+  },
+  {
+    id: 'miqueias-v3', parentId: 'olympus', name: 'Miquéias V3', shortName: 'MIQUÉIAS', domain: 'Bodybuilding', status: 'active', priority: 3,
+    summary: 'Programa Olympus Lite para recomposição, força, postura e estética.',
+    claim: 'Progressão objetiva e auditoria operacional superam recomendações genéricas.',
+    nextAction: 'Registrar próxima evolução e recalibrar volume.', updatedAt: '2026-07-20T19:00:00-03:00', metrics: m(8, 0, 6, 4, 3, 5), sources: [],
+    position: { x: -3.4, z: 2.4 }, size: 0.7, tags: ['treino', 'dieta', 'recomposição'], activity: [a('2026-07-20 19:00', 'Programa V3 consolidado')],
+  },
+  {
+    id: 'renilde', parentId: 'olympus', name: 'Plano Renilde', shortName: 'RENILDE', domain: 'Bodybuilding', status: 'active', priority: 3,
+    summary: 'Treino, dieta e suplementação para recomposição no contexto de menopausa.',
+    claim: 'Proteína, creatina diária e progressão de força são alavancas centrais mensuráveis.',
+    nextAction: 'Atualizar peso, medidas e tolerância ao treino 5x/semana.', updatedAt: '2026-07-18T18:00:00-03:00', metrics: m(7, 0, 5, 3, 2, 5), sources: [],
+    position: { x: -4.2, z: 1.4 }, size: 0.65, tags: ['menopausa', 'força', 'dieta'], activity: [a('2026-07-18 18:00', 'Programa completo revisado')],
+  },
+  {
+    id: 'astronomy-stories', name: 'Astronomy Stories', shortName: 'STORIES', domain: 'Divulgação Científica', status: 'active', priority: 3,
+    summary: 'Linha editorial de stories 9:16 sobre astronomia, astrofísica e cosmologia.',
+    claim: 'Uma notícia ou conceito por quadro, texto curto e fonte oficial aumentam clareza e reutilização.',
+    nextAction: 'Consolidar o preset híbrido aprovado em template versionado.', updatedAt: '2026-07-27T21:00:00-03:00', metrics: m(17, 0, 9, 0, 0, 5), sources: [],
+    position: { x: -1.7, z: 3.5 }, size: 0.75, tags: ['Instagram', 'astronomia', 'infográfico'], activity: [a('2026-07-27 21:00', 'Padrão editorial salvo')],
+  },
+];
+
+export const dependencies = [
+  ['peer-core', 'peer-paper', 'strong'], ['peer-core', 'peer-camb', 'strong'], ['peer-core', 'lh-data', 'data'],
+  ['peer-core', 'peer-inflation', 'theory'], ['peer-paper', 'lh-data', 'artifact'], ['peer-camb', 'lh-data', 'data'],
+  ['project-atlas', 'dener-agent-os', 'strong'], ['project-atlas', 'artifact-factory', 'artifact'],
+  ['project-atlas', 'peer-core', 'control'], ['project-atlas', 'admindesk', 'control'], ['project-atlas', 'olympus', 'control'],
+  ['admindesk', 'fields', 'strong'], ['admindesk', 'auditdata', 'audit'],
+  ['olympus', 'project-natalia', 'strong'], ['olympus', 'miqueias-v3', 'strong'], ['olympus', 'renilde', 'strong'],
+];
+
+export const statusMeta = {
+  active: { label: 'Ativo', color: '#59f08a' },
+  attention: { label: 'Atenção', color: '#ffbd3d' },
+  blocked: { label: 'Travado', color: '#ff5e62' },
+  exploratory: { label: 'Exploratório', color: '#4f9dff' },
+  archived: { label: 'Arquivado', color: '#7f8b99' },
+};
+
+export const domainColors = {
+  'Cosmologia': '#55ef7a', 'Dados / Pesquisa': '#54a0ff', 'TI / Software': '#3fa7ff',
+  'IA / Automação': '#b25cff', 'Artefatos / Docs': '#ff5ebc', 'Bodybuilding': '#ffbd3d',
+  'Divulgação Científica': '#28d7c0',
+};
