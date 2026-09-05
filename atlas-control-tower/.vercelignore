@@ -1,9 +1,6 @@
 baseline/
-lib/snapshot.mjs
+test/
 *-render.png
 preview-*.png
-node_modules/
-.vercel/
-.env*
 dev-fixture.mjs
 build-real-snapshot.mjs

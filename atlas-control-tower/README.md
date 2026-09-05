@@ -1,4 +1,4 @@
-# NEXO Atlas Control Tower V3 — implementation candidate
+# NEXO Atlas Control Tower V3
 
 Extends the existing Vercel project `prj_DLQSz5OiIT1HxWMn2i4AgoIv5x8r` / `nexo-atlas-control-tower`.
 
@@ -21,7 +21,7 @@ Source capture contained 2,186 distinct test IDs, 84 navigation campaigns, 1,193
 
 Node 24: `npm test` and `npm start`.
 
-`build-snapshot.mjs` consumes directed connector exports in baseline/*.json and compresses the private fallback to lib/snapshot.mjs. Scientific data exports and the generated snapshot are deliberately not tracked in Git. They are rebuildable from their source. Supply them before running the server. No credentials belong in Git.
+`build-snapshot.mjs` consumes directed connector exports in baseline/*.json and compresses the private fallback to lib/snapshot.mjs. Scientific data exports and the generated snapshot are deliberately not tracked in Git. They are rebuildable from their source. Without a snapshot the optional import boots a navigation skeleton. Supply the private snapshot to load science. No credentials belong in Git.
 
 The browser test uses the runtime Playwright package and requires a Chromium installation. `test/render.cjs` uses the runtime native Canvas package to execute the actual 3D renderer independently of a browser.
 
@@ -37,7 +37,7 @@ Operational source uses the existing Flight Recorder endpoint. Runtime readback 
 
 Cache is process memory plus the bundled last-valid fallback. A durable incremental cache and background sync every five minutes are NOT implemented. Vercel Hobby cron does not support that cadence. The browser refreshes on load, focus, button and every five minutes while visible; that does not guarantee unattended background refresh.
 
-Full browser/mobile layout validation remains pending because Chromium is missing and its download timed out. Native renderer and pure/API tests do not substitute for that gate. Historical claim evolution and completion percentages are not fabricated from current rows. Critical-path view follows recorded dependencies, not an inferred scientific closure roadmap. It is not a duration-weighted schedule calculation.
+Desktop and mobile browser verification is covered by test/browser.cjs. Screenshots are generated locally and excluded from Git. Historical claim evolution and completion percentages are not fabricated from current rows. Critical-path view follows recorded dependencies, not an inferred scientific closure roadmap. It is not a duration-weighted schedule calculation.
 
 Expanded private source data requires verified viewer access control before promotion to public production. Preview deployments inherit the existing project's protection; do not disable it. Production promotion must wait for source access, viewer protection, and browser verification. No new scheduler, database, canonical writer or autonomous agent was created.
 
@@ -51,3 +51,12 @@ Expanded private source data requires verified viewer access control before prom
 6. Promote to the existing production project only after gates pass.
 
 Rollback production reference: `dpl_Bo7UyMcAqPLRZnHS7GAzKMvKe9tA` (observed 2026-09-05). Re-read current production before changing it, because other sessions may deploy concurrently.
+
+
+## Visual finish (2026-09-05)
+
+Retains the custom perspective renderer and all scientific API contracts. Expanded map, luminous focal sphere, orbital guides, depth shading, priority label placement avoiding nodes and other labels, immersion toggle (Escape to exit), opt-in automatic orbit with pause and hidden-tab suspension. No automatic camera motion on load. Flat view stops automatic orbit. UI remains dark and responsive. Source geometry is decorative navigation, never a scientific metric.
+
+Recovered HTML/CSS shell and optional snapshot import from the supplied handoff. Preserved daily 08:00 UTC cron. Science freshness and durable cache remain backend work; the daily trigger cannot refresh science without a configured reader. No source registers or automations changed.
+
+Browser test paths are relative to the current project. Use ATLAS_BASE_URL to test a deployed instance; optional ATLAS_CHROMIUM_MODULE points to a Chromium provider's ESM entry when using a serverless binary. The original production before this visual pass was dpl_EeojU1k1TiYUCGds3MBDPNAcfq3n.

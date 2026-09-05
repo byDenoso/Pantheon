@@ -1,1 +1,58 @@
-{"version":2,"builds":[{"src":"api/atlas.js","use":"@vercel/node","config":{"includeFiles":["lib/**"]}},{"src":"index.html","use":"@vercel/static"},{"src":"styles.css","use":"@vercel/static"},{"src":"app.mjs","use":"@vercel/static"},{"src":"graph3d.mjs","use":"@vercel/static"},{"src":"lib/model.mjs","use":"@vercel/static"}],"routes":[{"src":"/api/(state|sync|graph|entity|automation-runs|learning-relations|ops)","dest":"/api/atlas.js?route=$1"},{"src":"/","dest":"/index.html"},{"handle":"filesystem"},{"src":"/.*","status":404,"dest":"/index.html"}]}
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "api/atlas.js",
+      "use": "@vercel/node",
+      "config": {
+        "includeFiles": [
+          "lib/**"
+        ]
+      }
+    },
+    {
+      "src": "index.html",
+      "use": "@vercel/static"
+    },
+    {
+      "src": "styles.css",
+      "use": "@vercel/static"
+    },
+    {
+      "src": "app.mjs",
+      "use": "@vercel/static"
+    },
+    {
+      "src": "graph3d.mjs",
+      "use": "@vercel/static"
+    },
+    {
+      "src": "lib/model.mjs",
+      "use": "@vercel/static"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/api/(state|sync|graph|entity|automation-runs|learning-relations|ops)",
+      "dest": "/api/atlas.js?route=$1"
+    },
+    {
+      "src": "/",
+      "dest": "/index.html"
+    },
+    {
+      "handle": "filesystem"
+    },
+    {
+      "src": "/.*",
+      "status": 404,
+      "dest": "/index.html"
+    }
+  ],
+  "crons": [
+    {
+      "path": "/api/state?refresh=1",
+      "schedule": "0 8 * * *"
+    }
+  ]
+}
