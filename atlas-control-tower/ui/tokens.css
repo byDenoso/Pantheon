@@ -1,0 +1,15 @@
+/* Theme tokens. Change these for page colors; Canvas equivalents: visual-config.mjs. */
+:root,[data-theme="dark"] {
+ color-scheme:dark;
+ --bg:#080f1d;--surface:#0c1728;--raised:#122139;--glass:#0c1728ed;
+ --line:#263c59;--text:#e2ebf8;--muted:#9aacc5;--accent:#9bbce7;
+ --soft:#172d4b;--shadow:#02071366;--warning:#e6be82;
+ --map-background:#080f1d;--chart:#80a9de;
+}
+[data-theme="light"] {
+ color-scheme:light;
+ --bg:#f3f7fc;--surface:#ffffff;--raised:#edf3fb;--glass:#fffffff2;
+ --line:#cbd8e9;--text:#183551;--muted:#526c88;--accent:#285d9f;
+ --soft:#e1ecfa;--shadow:#24456c15;--warning:#825917;
+ --map-background:#fbfdff;--chart:#3c70b2;
+}

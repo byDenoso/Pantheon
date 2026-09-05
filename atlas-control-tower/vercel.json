@@ -29,6 +29,22 @@
     {
       "src": "lib/model.mjs",
       "use": "@vercel/static"
+    },
+    {
+      "src": "ui/tokens.css",
+      "use": "@vercel/static"
+    },
+    {
+      "src": "ui/visual-config.mjs",
+      "use": "@vercel/static"
+    },
+    {
+      "src": "ui/theme.mjs",
+      "use": "@vercel/static"
+    },
+    {
+      "src": "ui/map-data.mjs",
+      "use": "@vercel/static"
     }
   ],
   "routes": [

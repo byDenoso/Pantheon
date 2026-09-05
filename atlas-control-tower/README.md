@@ -60,3 +60,8 @@ Retains the custom perspective renderer and all scientific API contracts. Expand
 Recovered HTML/CSS shell and optional snapshot import from the supplied handoff. Preserved daily 08:00 UTC cron. Science freshness and durable cache remain backend work; the daily trigger cannot refresh science without a configured reader. No source registers or automations changed.
 
 Browser test paths are relative to the current project. Use ATLAS_BASE_URL to test a deployed instance; optional ATLAS_CHROMIUM_MODULE points to a Chromium provider's ESM entry when using a serverless binary. The original production before this visual pass was dpl_EeojU1k1TiYUCGds3MBDPNAcfq3n.
+
+
+## Observatório themes and maintenance
+
+Current visual direction: blue cosmic Observatório, dark/light themes with saved preference. Read [docs/FRONTEND.md](docs/FRONTEND.md) before frontend changes. `ui/tokens.css` owns page palette; `ui/visual-config.mjs` owns Canvas palette and visual knobs. Root preview expands real bounded subsystem children. Use `frontend-files.mjs` and `node scripts/configure-static.mjs` for new public assets.
