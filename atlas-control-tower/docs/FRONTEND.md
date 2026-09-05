@@ -41,3 +41,6 @@ New client module? Add it to `frontend-files.mjs`, then run `node scripts/config
 Repo `byDenoso/Pantheon`, active branch `atlas-control-tower-v3-20260905`, directory `atlas-control-tower/`. Vercel project `prj_DLQSz5OiIT1HxWMn2i4AgoIv5x8r`. Project is not Git-connected; code push does not deploy. Verify provider state before publishing. Previous production rollback for this pass: `dpl_7tzijKNf5EpZqCJBVaTahPSRBCkj`.
 
 Science still uses a bundled private snapshot without configured Google authentication. Durable cache and automatic scientific refresh are separate backend work. Keep source timestamps visible. Do not describe snapshot science as live. Native-browser screenshots verify desktop/mobile viewport rendering, not a physical phone.
+
+## Tower layers
+The toolbar selects 1–3 edge hops (default 3), sent as `depth` to the existing graph API. `layeredSubgraph` in `lib/model.mjs` follows existing directed navigation edges, emits layer/layoutParent for geometry, caps each branch at 8 children and the UI at 120 nodes. Truncated views show RECORTE; drill into a node or choose 1 camada for its paginated immediate children. No extra per-node HTTP calls. Authority is unchanged.
