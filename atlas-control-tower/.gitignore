@@ -1,0 +1,7 @@
+baseline/*.json
+lib/snapshot.mjs
+*-render.png
+preview-*.png
+node_modules/
+.vercel/
+.env*
