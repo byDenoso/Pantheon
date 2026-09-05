@@ -10,6 +10,44 @@ const titles = {
   system: ['ARCHITECTURE', 'SYSTEM']
 };
 
+const CANONICAL_HOST = 'nexo-research-os-live.vercel.app';
+function canonicalizeDeploymentHost() {
+  const host = location.hostname;
+  if (host !== CANONICAL_HOST && host.startsWith('nexo-research-os-live-') && host.endsWith('.vercel.app')) {
+    const url = new URL(location.href);
+    url.hostname = CANONICAL_HOST;
+    location.replace(url.toString());
+    return true;
+  }
+  return false;
+}
+
+async function registerWebMCP() {
+  const status = $('#webmcp-status');
+  if (!document.modelContext?.registerTool) {
+    if (status) status.textContent = 'WebMCP indisponível';
+    return false;
+  }
+  const schema = (properties = {}, required = []) => ({ type: 'object', properties, required });
+  const ro = { readOnlyHint: true, consequentialHint: false, untrustedContentHint: false };
+  const ui = { readOnlyHint: false, consequentialHint: false, untrustedContentHint: false };
+  const result = value => JSON.stringify(value);
+  const tools = [
+    ['nexo_get_now','Read NEXO now','Read the currently visible operational projection.',schema(),ro,()=>result({source:state.data?.source,sync:state.data?.sync,architecture:state.data?.architecture,lanes:state.data?.lanes,attention:state.data?.attention?.slice(0,10)})],
+    ['nexo_get_activity','Read material activity','Read recent material Flight Recorder events.',schema({limit:{type:'number'}},[]),ro,({limit=20})=>result((state.data?.runtime||[]).slice(0,Math.max(1,Math.min(100,limit))))],
+    ['nexo_get_evolution','Read NEXO evolution','Read measured before/after system evolution metrics.',schema(),ro,()=>result(state.data?.evolution||[])],
+    ['nexo_get_capabilities','Read capabilities','Read the visible capability proof matrix.',schema(),ro,()=>result(state.data?.capabilities||[])],
+    ['nexo_set_view','Open NEXO view','Navigate the visible NEXO Console.',schema({view:{type:'string',enum:['now','activity','evolution','capabilities','system']}},['view']),ui,({view})=>{setView(view);return result({view});}],
+    ['nexo_present','Open presentation mode','Open the presentation-safe NEXO story mode.',schema(),ui,()=>{openPresentation();return result({presentation:true});}],
+    ['nexo_refresh','Refresh visible state','Refresh the public NEXO projection used by this Console.',schema(),ui,async()=>{await refreshData();return result({source:state.data?.source,sync:state.data?.sync});}]
+  ];
+  for (const [name,title,description,inputSchema,annotations,execute] of tools) {
+    await document.modelContext.registerTool({name,title,description,inputSchema,annotations,execute});
+  }
+  if (status) status.textContent = `WebMCP ativo · ${tools.length} tools`;
+  return true;
+}
+
 function esc(value) {
   return String(value ?? '').replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
 }
@@ -184,4 +222,6 @@ $('#presentation-close').addEventListener('click',closePresentation);
 $('#presentation-prev').addEventListener('click',()=>{ const n=presentationSlides().length; state.presentationIndex=(state.presentationIndex-1+n)%n; renderPresentation(); });
 $('#presentation-next').addEventListener('click',()=>{ const n=presentationSlides().length; state.presentationIndex=(state.presentationIndex+1)%n; renderPresentation(); });
 document.addEventListener('keydown',e=>{ if(e.key==='Escape'){ closeDetail(); closePresentation(); } });
-refreshData();
+if (!canonicalizeDeploymentHost()) {
+  refreshData().finally(() => registerWebMCP().catch(() => { const status = $('#webmcp-status'); if (status) status.textContent = 'WebMCP falhou ao registrar'; }));
+}
