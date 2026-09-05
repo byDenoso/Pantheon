@@ -53,3 +53,16 @@ test('system view marks exactly three current tasks and keeps retired roles behi
   assert.match(js, /NEXO Executor/);
   assert.match(js, /historicalRoles/);
 });
+
+test('presentation-ready shell exposes premium visual structure without hiding degraded truth', () => {
+  const html = read('index.html');
+  const css = read('presentation.css');
+  for (const marker of ['hero-system', 'hero-metrics', 'domain-icon', 'degraded-code', 'nav-icon']) {
+    assert.match(html, new RegExp(marker));
+  }
+  assert.match(html, /presentation\.css/);
+  assert.match(css, /\.hero-system/);
+  assert.match(css, /\.domain-icon/);
+  assert.match(css, /backdrop-filter/);
+  assert.match(css, /radial-gradient/);
+});
