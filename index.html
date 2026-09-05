@@ -3,82 +3,132 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <meta name="theme-color" content="#07090d">
+  <meta name="theme-color" content="#07111d">
   <title>NEXO Console</title>
   <link rel="stylesheet" href="/styles.css">
+  <link rel="stylesheet" href="/presentation.css">
 </head>
 <body>
   <div class="app-shell">
     <aside class="sidebar">
       <div class="brand">
         <div class="brand-mark">N</div>
-        <div><strong>NEXO</strong><span>CONSOLE</span></div>
+        <div class="brand-copy"><strong>NEXO</strong><span>CONSOLE</span></div>
       </div>
       <nav class="nav" aria-label="Navegação principal">
-        <button class="nav-item active" data-view="now"><span>●</span> NOW</button>
-        <button class="nav-item" data-view="activity"><span>↯</span> ACTIVITY</button>
-        <button class="nav-item" data-view="evolution"><span>↗</span> EVOLUTION</button>
-        <button class="nav-item" data-view="capabilities"><span>◆</span> CAPABILITIES</button>
-        <button class="nav-item" data-view="system"><span>◎</span> SYSTEM</button>
+        <button class="nav-item active" data-view="now"><span class="nav-icon">⌂</span><span class="nav-label">NOW</span></button>
+        <button class="nav-item" data-view="activity"><span class="nav-icon">⌁</span><span class="nav-label">ACTIVITY</span></button>
+        <button class="nav-item" data-view="evolution"><span class="nav-icon">▥</span><span class="nav-label">EVOLUTION</span></button>
+        <button class="nav-item" data-view="capabilities"><span class="nav-icon">◇</span><span class="nav-label">CAPABILITIES</span></button>
+        <button class="nav-item" data-view="system"><span class="nav-icon">⚙</span><span class="nav-label">SYSTEM</span></button>
       </nav>
       <div class="sidebar-foot">
-        <button id="present-btn" class="present-btn">▶ PRESENT</button>
-        <div class="truth-note">Frontend derivado.<br>Truth owners continuam canônicos.</div>
+        <button id="present-btn" class="present-btn"><span>▶</span> PRESENT</button>
+        <div class="product-version">NEXO Console <span>v1.0.0</span></div>
+        <div class="truth-note">Interface derivada · fontes canônicas preservadas</div>
       </div>
     </aside>
 
     <section class="workspace">
       <header class="topbar">
-        <div>
-          <div class="eyebrow" id="view-eyebrow">OPERATIONAL VIEW</div>
+        <div class="title-block">
+          <div class="eyebrow" id="view-eyebrow">SISTEMA</div>
           <h1 id="view-title">NOW</h1>
+          <p class="page-subtitle">Visão operacional do NEXO em um único lugar.</p>
         </div>
         <div class="top-actions">
           <div class="sync-pill" data-sync-state="BOOTING"><i></i><span id="sync-label">BOOTING</span></div>
           <div class="refresh-age" data-since-refresh>—</div>
-          <button id="refresh-btn" class="primary-btn">Atualizar estado</button>
+          <button id="refresh-btn" class="primary-btn"><span class="refresh-symbol">↻</span> Atualizar estado</button>
         </div>
       </header>
 
       <div id="degraded-banner" class="degraded-banner" hidden>
-        <strong>PROJEÇÃO DEGRADADA</strong>
-        <span id="degraded-reason">O frontend está usando fallback e não deve ser tratado como estado live.</span>
+        <div class="degraded-main"><span class="warning-icon">!</span><strong>PROJEÇÃO DEGRADADA</strong><span class="degraded-message">Read model Neon ainda não conectado ao app.</span></div>
+        <code id="degraded-reason" class="degraded-code">DATABASE_URL_NOT_CONFIGURED</code>
       </div>
 
       <main id="view-root" class="view-root" aria-live="polite">
         <section id="view-now" class="view active-view">
-          <div class="hero-grid">
-            <article class="hero-card primary-hero">
-              <div class="hero-kicker">CURRENT SYSTEM</div>
-              <div class="hero-value"><span id="active-task-count">3</span><small> tasks operacionais</small></div>
-              <div class="hero-flow"><span>OBSERVE</span><b>→</b><span>DECIDE</span><b>→</b><span>EXECUTE</span><b>→</b><span>LEARN</span></div>
-            </article>
-            <article class="hero-card"><div class="hero-kicker">MATERIAL ACTIVITY</div><div class="hero-value" id="material-count">0</div><p>eventos materiais recentes</p></article>
-            <article class="hero-card"><div class="hero-kicker">ATTENTION</div><div class="hero-value" id="attention-count">0</div><p>itens que merecem atenção</p></article>
-          </div>
+          <section class="hero-system">
+            <div class="hero-visual">
+              <div class="planet-glow" aria-hidden="true"></div>
+              <div class="hero-copy">
+                <div class="hero-kicker">CURRENT SYSTEM</div>
+                <div class="hero-value"><span id="active-task-count">3</span><small> tasks operacionais</small></div>
+                <div class="hero-flow"><span>OBSERVE</span><b>→</b><span>DECIDE</span><b>→</b><span>EXECUTE</span><b>→</b><span>LEARN</span></div>
+              </div>
+            </div>
+            <div class="hero-metrics">
+              <article class="hero-metric">
+                <div class="metric-icon">▤</div>
+                <div><div class="metric-value" id="material-count">0</div><p>eventos materiais recentes</p></div>
+              </article>
+              <article class="hero-metric">
+                <div class="metric-icon">♢</div>
+                <div><div class="metric-value" id="attention-count">0</div><p>itens que merecem atenção</p></div>
+              </article>
+            </div>
+          </section>
 
-          <section class="section-block">
-            <div class="section-head"><div><span class="section-label">WORK</span><h2>Estado por domínio</h2></div><span class="section-meta">SCIENCE · ENGINEERING · OLYMPUS</span></div>
+          <section class="section-block domains-section">
+            <div class="section-head">
+              <div><span class="section-label">WORK</span><h2>Estado por domínio</h2></div>
+              <span class="section-meta">SCIENCE · ENGINEERING · OLYMPUS</span>
+            </div>
             <div class="domain-grid">
-              <article class="domain-card" data-domain="SCIENCE"><div class="domain-top"><span>SCIENCE</span><i></i></div><strong class="domain-status">—</strong><p class="domain-action">Carregando…</p><div class="domain-source">SOURCE —</div></article>
-              <article class="domain-card" data-domain="ENGINEERING"><div class="domain-top"><span>ENGINEERING</span><i></i></div><strong class="domain-status">—</strong><p class="domain-action">Carregando…</p><div class="domain-source">SOURCE —</div></article>
-              <article class="domain-card" data-domain="OLYMPUS"><div class="domain-top"><span>OLYMPUS</span><i></i></div><strong class="domain-status">—</strong><p class="domain-action">Carregando…</p><div class="domain-source">SOURCE —</div></article>
+              <article class="domain-card" data-domain="SCIENCE">
+                <div class="domain-card-main">
+                  <div class="domain-icon science-icon">◎</div>
+                  <div class="domain-content">
+                    <div class="domain-top"><span>SCIENCE</span><i></i></div>
+                    <p class="domain-action">Carregando…</p>
+                    <div class="domain-source">SOURCE —</div>
+                  </div>
+                  <strong class="domain-status">—</strong>
+                </div>
+                <div class="domain-foot"><span>SISTEMA OPERACIONAL</span><span class="health-label"><i></i> estado projetado</span></div>
+              </article>
+              <article class="domain-card" data-domain="ENGINEERING">
+                <div class="domain-card-main">
+                  <div class="domain-icon engineering-icon">⚙</div>
+                  <div class="domain-content">
+                    <div class="domain-top"><span>ENGINEERING</span><i></i></div>
+                    <p class="domain-action">Carregando…</p>
+                    <div class="domain-source">SOURCE —</div>
+                  </div>
+                  <strong class="domain-status">—</strong>
+                </div>
+                <div class="domain-foot"><span>SISTEMA OPERACIONAL</span><span class="health-label"><i></i> estado projetado</span></div>
+              </article>
+              <article class="domain-card" data-domain="OLYMPUS">
+                <div class="domain-card-main">
+                  <div class="domain-icon olympus-icon">△</div>
+                  <div class="domain-content">
+                    <div class="domain-top"><span>OLYMPUS</span><i></i></div>
+                    <p class="domain-action">Carregando…</p>
+                    <div class="domain-source">SOURCE —</div>
+                  </div>
+                  <strong class="domain-status">—</strong>
+                </div>
+                <div class="domain-foot"><span>SISTEMA OPERACIONAL</span><span class="health-label"><i></i> estado projetado</span></div>
+              </article>
             </div>
           </section>
 
           <div class="two-col">
             <section class="section-block">
-              <div class="section-head"><div><span class="section-label">DELTA</span><h2>Desde a última atualização</h2></div></div>
+              <div class="section-head"><div><span class="section-label">DELTA</span><h2>Desde a última atualização</h2></div><span class="section-meta">estado observado</span></div>
               <div id="delta-list" class="stack-list"></div>
             </section>
             <section class="section-block">
-              <div class="section-head"><div><span class="section-label">ATTENTION</span><h2>Prioridades</h2></div></div>
+              <div class="section-head"><div><span class="section-label">ATTENTION</span><h2>Prioridades</h2></div><span class="section-meta">impact-first</span></div>
               <div id="attention-list" class="stack-list"></div>
             </section>
           </div>
 
-          <section class="section-block">
-            <div class="section-head"><div><span class="section-label">FLIGHT RECORDER</span><h2>Trabalho material recente</h2></div><button class="text-btn" data-jump="activity">Abrir tudo →</button></div>
+          <section class="section-block flight-section">
+            <div class="section-head"><div><span class="section-label">FLIGHT RECORDER</span><h2>Trabalho material recente</h2></div><button class="text-btn" data-jump="activity">Ver todos →</button></div>
             <div id="recent-flights" class="flight-grid"></div>
           </section>
         </section>
