@@ -1,1 +1,2 @@
-Trigger full Vercel rebuild from canonical branch after production overlay CSS regression.
+Trigger full Vercel rebuild from canonical branch for NEXO Atlas official frontend promotion.
+Commit includes Painel do recorte, Black Box, 12h sync cadence, official truth-flow contract.
