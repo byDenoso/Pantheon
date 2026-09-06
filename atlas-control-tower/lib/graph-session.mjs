@@ -1,6 +1,6 @@
 /** Navigation session: what is focused, filtered and loaded.
- *  Owns exactly one graph read plus one summary read per recorte, keeps the
- *  stale-response guard, and emits events so views stay presentational. */
+ *  Fast path owns one graph read per recorte; older backends fall back to one
+ *  separate summary read. Keeps the stale-response guard and presentational views. */
 
 const ROOT = {id:'system:NEXO', label:'NEXO'};
 
@@ -19,14 +19,15 @@ export function createSession(api, {limit = 120, depth = 3, onPersist} = {}) {
   emit('loading', {focus: s.focus});
   try {
    const q = {...s.filters, focus: s.focus, mode: s.mode, offset: s.offset, limit: limit + s.extraLimit, depth: s.depth};
-   const [graph, summary] = await Promise.all([api.graph(q), api.state(s.filters)]);
-   if (seq !== loadSeq) return null;        // a newer recorte already won
+   const graph = await api.graph(q);
+   const summary = graph?.summary ?? graph?.extra?.summary ?? await api.state(s.filters);
+   if (seq !== loadSeq) return null;
    s.graph = graph; s.summary = summary;
    emit('graph', {graph, summary});
    return graph;
   } catch (error) {
    if (seq !== loadSeq) return null;
-   emit('error', {error});                   // previous view is intentionally preserved
+   emit('error', {error});
    return null;
   }
  }
@@ -47,7 +48,6 @@ export function createSession(api, {limit = 120, depth = 3, onPersist} = {}) {
    return refresh();
   },
   clearFilters() {s.filters = {}; s.offset = 0; s.extraLimit = 0; s.mode = 'children'; persist(); return refresh()},
-  /** A layered recorte is capped, not paged: raise the cap. Other modes page by offset. */
   more() {if (s.graph?.truncated) s.extraLimit += limit; else s.offset += limit; return refresh()},
   select(id) {s.selected = id; emit('select', {id})},
   deselect() {s.selected = null; emit('deselect', {})},
