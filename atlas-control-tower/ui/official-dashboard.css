@@ -3,5 +3,50 @@
 /* Recorte radar: only actionable live signals and the latest observed changes. */
 .radar-grid{display:grid;grid-template-columns:1.08fr .92fr;gap:12px}.radar-card{border:1px solid var(--line);background:var(--bg);border-radius:10px;min-width:0;overflow:hidden}.radar-head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:13px 14px;border-bottom:1px solid var(--line)}.radar-head>div{display:flex;align-items:center;gap:9px;min-width:0}.radar-icon{display:grid;place-items:center;width:29px;height:29px;border:1px solid var(--accent);border-radius:50%;color:var(--accent);font-size:15px;flex:none;background:var(--soft)}.radar-head b{display:block;font-size:11px;font-weight:600}.radar-head small{display:block;color:var(--muted);font-size:8px;margin-top:2px}.radar-link{border:0;background:none;padding:3px;font-size:7px;letter-spacing:.8px;color:var(--muted);white-space:nowrap}.radar-link:hover{background:none;color:var(--accent)}.radar-meta{font-size:7px;letter-spacing:.9px;color:var(--muted);white-space:nowrap}.radar-body{padding:5px 12px 10px}.radar-empty{padding:15px 4px;margin:0;color:var(--muted);font-size:9px}.signal-summary{display:grid;grid-template-columns:repeat(3,1fr);gap:5px;padding:7px 0 9px}.signal-summary span{border:1px solid var(--line);border-radius:6px;padding:6px 7px;color:var(--muted);font-size:7px;white-space:nowrap}.signal-summary b{display:block;color:var(--text);font-size:12px;font-weight:500;margin-bottom:1px}.signal-row,.change-row{width:100%;border:0;border-bottom:1px solid var(--line);border-radius:0;background:none;text-align:left;padding:9px 3px;display:grid;align-items:center;gap:9px}.signal-row:last-child,.change-row:last-child{border-bottom:0}.signal-row{grid-template-columns:9px minmax(0,1fr) auto 10px}.change-row{grid-template-columns:88px minmax(0,1fr) 10px}.signal-row:hover,.change-row:hover{background:var(--soft);border-color:var(--line)}.signal-dot{width:7px;height:7px;border-radius:50%;background:var(--accent);box-shadow:0 0 0 4px var(--soft)}.signal-copy,.change-copy{min-width:0}.signal-copy b,.change-copy b{display:block;font-size:9px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.signal-copy small,.change-copy small{display:block;color:var(--muted);font-size:7.5px;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.signal-chip{font-size:7px;border:1px solid currentColor;border-radius:999px;padding:2px 7px;white-space:nowrap;color:var(--accent)}.signal-arrow,.change-arrow{color:var(--muted);font-size:16px;text-align:right}.change-time{display:flex;align-items:center;gap:6px;color:var(--muted);font-size:8px;white-space:nowrap}.change-time i{width:7px;height:7px;border-radius:50%;background:var(--accent);box-shadow:0 0 0 3px var(--soft);flex:none}.tone-good{color:#59c99a!important}.signal-dot.tone-good{background:#59c99a}.tone-warn{color:var(--warning)!important}.signal-dot.tone-warn{background:var(--warning)}.tone-bad{color:#e0736f!important}.signal-dot.tone-bad{background:#e0736f}.tone-new{color:#8f7cf4!important}.signal-dot.tone-new{background:#8f7cf4}
 
+/* Cosmic dark-mode rework. Keeps layout/3D interaction intact; only visual presentation changes. */
+[data-theme="dark"] body{background:
+ radial-gradient(circle at 18% -5%,#173d7a22 0,transparent 28%),
+ radial-gradient(circle at 82% 8%,#542a9226 0,transparent 24%),
+ linear-gradient(180deg,#01040a 0%,#020712 48%,#010309 100%)}
+[data-theme="dark"] .topbar,[data-theme="dark"] #sidebar,[data-theme="dark"] .graph-heading,[data-theme="dark"] .graph-bottom{background:linear-gradient(180deg,#050b14f7,#030811f2);border-color:#12365a;box-shadow:0 10px 36px #0008}
+[data-theme="dark"] .topbar{backdrop-filter:blur(18px)}
+[data-theme="dark"] .universe{border-color:#15466f;background:#01040a;box-shadow:0 22px 70px #000b,0 0 0 1px #19b8ff12,0 0 42px #168fff12}
+[data-theme="dark"] .graph-stage{background:
+ radial-gradient(ellipse at 22% 36%,#254cff1c 0%,transparent 24%),
+ radial-gradient(ellipse at 78% 26%,#7839c91b 0%,transparent 23%),
+ radial-gradient(ellipse at 62% 78%,#0b9fe518 0%,transparent 20%),
+ radial-gradient(circle at center,#071225 0%,#020711 46%,#01040a 100%)}
+[data-theme="dark"] .graph-stage:before{content:"";position:absolute;inset:0;pointer-events:none;z-index:0;opacity:.88;background-image:
+ radial-gradient(circle at 7% 13%,#c9ecff 0 1px,transparent 1.4px),
+ radial-gradient(circle at 19% 68%,#69bdff 0 1px,transparent 1.4px),
+ radial-gradient(circle at 31% 21%,#ffffff 0 1px,transparent 1.4px),
+ radial-gradient(circle at 44% 76%,#70c8ff 0 1px,transparent 1.4px),
+ radial-gradient(circle at 57% 14%,#fff 0 1px,transparent 1.4px),
+ radial-gradient(circle at 71% 64%,#9b8cff 0 1px,transparent 1.5px),
+ radial-gradient(circle at 84% 28%,#5bc9ff 0 1px,transparent 1.4px),
+ radial-gradient(circle at 92% 81%,#d4f3ff 0 1px,transparent 1.4px);background-size:211px 173px,257px 223px,301px 191px,277px 247px,229px 203px,331px 251px,263px 187px,347px 279px}
+[data-theme="dark"] .graph-stage:after{content:"";position:absolute;inset:-12%;pointer-events:none;z-index:0;background:
+ radial-gradient(ellipse at 17% 46%,#1857ff20 0%,#372e8a10 16%,transparent 34%),
+ radial-gradient(ellipse at 85% 38%,#7738d91d 0%,#1555a90f 18%,transparent 35%);filter:blur(26px)}
+[data-theme="dark"] .graph-stage canvas,[data-theme="dark"] .graph-mode,[data-theme="dark"] .map-caption,[data-theme="dark"] .graph-controls,[data-theme="dark"] .graph-legend,[data-theme="dark"] .empty{position:absolute;z-index:1}
+[data-theme="dark"] .graph-stage canvas{inset:0;position:relative;z-index:1}
+[data-theme="dark"] .graph-controls,[data-theme="dark"] .radar-card,[data-theme="dark"] .analytics article,[data-theme="dark"] .entity-section,[data-theme="dark"] #inspector{background:linear-gradient(180deg,#06101ee8,#030812ec);border-color:#16486f;box-shadow:0 16px 44px #0008,0 0 0 1px #19b8ff12,0 0 26px #19b8ff0d;backdrop-filter:blur(14px)}
+[data-theme="dark"] button,[data-theme="dark"] select,[data-theme="dark"] .searchbox{border-color:#16486f}
+[data-theme="dark"] button:hover,[data-theme="dark"] select:hover{border-color:#22bfff;box-shadow:0 0 18px #19b8ff17}
+[data-theme="dark"] .nav.active{background:linear-gradient(90deg,#0a2440,#07111d);box-shadow:inset 2px 0 #24c2ff,0 0 24px #1baeff12;color:#f5fbff}
+[data-theme="dark"] .brand{filter:drop-shadow(0 0 11px #19b8ff22)}
+[data-theme="dark"] .dot,[data-theme="dark"] .provenance i{box-shadow:0 0 10px currentColor}
+[data-theme="dark"] .map-caption strong{color:#dcecff;text-shadow:0 0 18px #2daeff18}
+[data-theme="dark"] .line.canonical{filter:drop-shadow(0 0 4px #20b9ff)}
+[data-theme="dark"] .official-badge{border-color:#195b88;color:#b9d8ee;background:#06111f}
+[data-theme="dark"] .radar-icon{box-shadow:0 0 18px #19b8ff22}
+[data-theme="dark"] .signal-dot,[data-theme="dark"] .change-time i{box-shadow:0 0 10px currentColor,0 0 0 4px #0a1c30}
+[data-theme="dark"] .radar-card{background:linear-gradient(180deg,#050c17ee,#02070fee)}
+[data-theme="dark"] .signal-summary span{background:#06111f;border-color:#16486f}
+[data-theme="dark"] footer{border-top:1px solid #0e2c49;padding-top:12px}
+[data-theme="dark"] .workspace-toolbar{margin-bottom:10px}
+[data-theme="dark"] main{background:transparent}
+@media(min-width:1100px){[data-theme="dark"] body:not([data-mode=explore]):not([data-mode=audit]) .graph-stage{height:calc(100vh - 220px);min-height:590px}}
+
 @media(max-width:1100px){.recorte-grid{grid-template-columns:repeat(2,1fr)}.radar-grid{grid-template-columns:1fr}}
 @media(max-width:760px){.recorte-grid,.recorte-split{grid-template-columns:1fr}.blackbox-intro{display:block}.live-mark{margin-top:8px}.official-badge{display:none}.radar-head{padding:12px 10px}.radar-body{padding:4px 9px 9px}.radar-head small{font-size:7.5px}.radar-link{font-size:6.5px}.signal-summary{gap:4px}.signal-summary span{padding:6px 5px;font-size:6.5px}.signal-row{grid-template-columns:9px minmax(0,1fr) auto 8px;gap:7px}.change-row{grid-template-columns:72px minmax(0,1fr) 8px;gap:7px}.signal-copy b,.change-copy b{font-size:9.5px}.signal-copy small,.change-copy small{font-size:7.5px}.signal-chip{font-size:6.5px;padding:2px 6px}.change-time{font-size:7.5px}}
