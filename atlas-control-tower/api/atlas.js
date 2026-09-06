@@ -96,6 +96,7 @@ export default async function handler(req,res) {
  const url=new URL(req.url,'https://atlas.local'),q=Object.fromEntries(url.searchParams),route=q.route||url.pathname.split('/').pop();
  const send=(data,status=200)=>{res.statusCode=status;res.end(JSON.stringify(data))};
  try {
+  if(usingDirectNeon&&typeof v1.setOidcToken==='function')v1.setOidcToken(req.headers&&req.headers['x-vercel-oidc-token']);
   if(route==='sync'){
    if(req.method!=='POST')return send({error:'METHOD_NOT_ALLOWED'},405);
    const origin=req.headers.origin;if(origin&&new URL(origin).host!==req.headers.host)return send({error:'ORIGIN_NOT_ALLOWED'},403);
@@ -104,6 +105,9 @@ export default async function handler(req,res) {
    return send({...result,dataSource:capabilities(await decide(true)).dataSource});
   }
   if(req.method!=='GET')return send({error:'METHOD_NOT_ALLOWED'},405);
+
+  // Fluid Compute delivers the Vercel OIDC token as a request header, not an env var.
+  if(usingDirectNeon&&typeof v1.setOidcToken==='function')v1.setOidcToken(req.headers&&req.headers['x-vercel-oidc-token']);
 
   const decision=await decide(q.probe==='1'),useV1=decision.source===SOURCES.V1;
 

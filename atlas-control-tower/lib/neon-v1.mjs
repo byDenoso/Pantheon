@@ -7,7 +7,11 @@ const SYSTEMS=[['SCIENCE','Ciência'],['ENGINEERING','Engineering'],['OLYMPUS','
 export function createDataApi({env=process.env,fetchImpl,timeoutMs=12000}={}){
  const doFetch=fetchImpl||((...a)=>fetch(...a));
  const base=String(env.NEON_DATA_API_URL||DEFAULT_NEON_DATA_API_URL).replace(/\/+$/,'');
- const token=()=>env.VERCEL_OIDC_TOKEN||'';
+ // On Fluid Compute the OIDC token arrives as a per-request header, not in process.env;
+ // the handler pushes it here before each read. Tokens are project-scoped and
+ // interchangeable, so a shared override is safe under concurrent invocations.
+ let override='';
+ const token=()=>override||env.VERCEL_OIDC_TOKEN||'';
  async function select(schema,table,query={}){
   if(!token()) throw Error('VERCEL_OIDC_TOKEN_MISSING');
   const params=new URLSearchParams(Object.entries(query).filter(([,v])=>v!==undefined&&v!==null&&v!=='').map(([k,v])=>[k,String(v)]));
@@ -15,7 +19,7 @@ export function createDataApi({env=process.env,fetchImpl,timeoutMs=12000}={}){
   if(!r.ok) throw Error(`NEON_DATA_API_${r.status}`);
   return r.json();
  }
- return {select,get configured(){return !!token()},base};
+ return {select,setToken(t){override=t?String(t):''},get configured(){return !!token()},base};
 }
 
 const typeOf=t=>['HYPOTHESIS','DECISION_HYPOTHESIS','CLAIM'].includes(t)?'CLAIM':t;
@@ -97,5 +101,5 @@ export function createNeonV1Reader({env=process.env,fetchImpl,ttlMs=60000}={}){
  async function entity(q={}){const {graph:g}=await loadScience();if(q.view==='lineage')return graph({focus:q.id,mode:'lineage',depth:3,limit:250});if(q.view==='files'){const linked=new Set(g.edges.filter(e=>e.source===q.id||e.target===q.id).flatMap(e=>[e.source,e.target]));return g.nodes.filter(n=>linked.has(n.id)&&['FILE','ARTIFACT','DATASET','PUBLICATION'].includes(n.type)&&n.id!==q.id).slice(0,100)}const n=g.nodes.find(n=>n.id===q.id);if(!n)return{error:'ENTITY_NOT_FOUND'};const rel=g.edges.filter(e=>e.source===q.id||e.target===q.id);return{entity:n,relations:rel.slice(0,200),relationCount:rel.length,source:'v1'}}
  async function learning(q={}){const {payload}=await loadLearning();if(!q.id){const {_all,...p}=payload;return p}const all=payload._all||[];if(q.view==='lineage'){const by=new Map(all.map(x=>[x.id,x])),node=by.get(q.id);if(!node)return{id:q.id,available:false,reason:'NOT_FOUND',ancestors:[],descendants:[]};const parents=new Map(all.map(x=>[x.id,x.derivedFrom||[]]));const walk=(id,up)=>{const seen=new Set([id]),out=[],queue=[id];while(queue.length){const cur=queue.shift(),next=up?(parents.get(cur)||[]):all.filter(x=>(parents.get(x.id)||[]).includes(cur)).map(x=>x.id);for(const x of next)if(by.has(x)&&!seen.has(x)){seen.add(x);out.push(by.get(x));queue.push(x)}}return out};const ancestors=walk(q.id,true),descendants=walk(q.id,false);return{id:q.id,node,available:!!(ancestors.length+descendants.length),reason:ancestors.length+descendants.length?'':'NO_DECLARED_LINEAGE',ancestors,descendants}}const bare=String(q.id).replace(/^[a-z_]+:/,'');return{entity:q.id,relations:all.filter(x=>String(x.evidenceRefs||'').includes(bare)),source:'v1'}}
  async function refresh(){const before=scienceCache?.graph?.fingerprint||'',next=await loadScience(true);await loadLearning(true).catch(()=>{});return{outcome:before&&before===next.graph.fingerprint?'NO_CHANGE':'UPDATED',changes:before&&before!==next.graph.fingerprint?1:0,fingerprint:next.graph.fingerprint,completedAt:new Date().toISOString(),sources:{neon:{status:'READ_OK',observedAt:next.graph.sourceVersion}}}}
- return {get configured(){return api.configured},get health(){return health},checkHealth,graph,state:async q=>summary((await loadScience()).graph,q),entity,audit:async()=>auditPayload((await loadScience()).issues),learning,refresh};
+ return {get configured(){return api.configured},setOidcToken(t){api.setToken(t)},get health(){return health},checkHealth,graph,state:async q=>summary((await loadScience()).graph,q),entity,audit:async()=>auditPayload((await loadScience()).issues),learning,refresh};
 }
