@@ -1,1 +1,1 @@
-{"name":"nexo-atlas-control-tower","version":"3.0.0","type":"module","scripts":{"test":"node --test test/*.test.mjs","start":"node dev.mjs"}}
+{"name":"nexo-atlas-control-tower","version":"3.0.0","type":"module","scripts":{"test":"node --test test/*.test.mjs","start":"node dev.mjs"},"deploymentMarker":"css-regression-rebuild-20260906"}
