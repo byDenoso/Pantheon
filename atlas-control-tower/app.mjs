@@ -219,8 +219,11 @@ async function runSync() {
   ? ' Drive: acesso do aplicativo não configurado; snapshot preservado.' : '';
  toast((result.changes ? `${result.changes} entidades alteradas.` : 'Nenhuma alteração nos dados lidos.') + warning);
 }
-document.addEventListener('visibilitychange', () => {if (!document.hidden) runSync()});
-setInterval(() => {if (!document.hidden) runSync()}, 300000);
+// Automatic synchronization is deliberately sparse: once every 12 hours while the app
+// remains open. Opening/re-focusing the tab only refreshes the current projection; it does
+// not trigger a source sync. The toolbar button remains the explicit immediate sync path.
+const AUTO_SYNC_INTERVAL_MS = 12 * 60 * 60 * 1000;
+setInterval(() => {if (!document.hidden) runSync()}, AUTO_SYNC_INTERVAL_MS);
 
 /* ---------- start ---------- */
 
@@ -231,4 +234,3 @@ registerWebMcp({
  actions: {focus: n => session.focusNode(n), compare: n => inspector.compare(n), sync: runSync},
  onStatus: text => {$('#mcp').textContent = text}
 }).catch(() => {$('#mcp').textContent = 'WebMCP indisponível'});
-runSync();
