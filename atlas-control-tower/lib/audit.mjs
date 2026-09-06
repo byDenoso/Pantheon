@@ -62,7 +62,10 @@ export function auditReport(g, {sample = 12, source = 'legacy'} = {}) {
    issueType: c.id, severity: c.severity, source, status: item.status || '', resolution: ''
   }))
  }));
- return {generatedAt:new Date().toISOString(), source, total:categories.reduce((a, c) => a + c.count, 0), categories};
+ const total = categories.reduce((a, c) => a + c.count, 0);
+ // Findings derived from the graph have no resolution lifecycle: they are all live.
+ return {generatedAt:new Date().toISOString(), source, total, open: total, resolved: 0,
+  categories: categories.map(c => ({...c, openCount: c.count, items: c.items.map(i => ({...i, open: true}))}))};
 }
 
 /** Accepts a science_v1 audit payload; falls back to the declared categories so
@@ -79,9 +82,11 @@ export function normalizeAudit(payload, {source = 'v1'} = {}) {
    severity: c.severity || base.severity,
    detail: c.detail || base.detail,
    count: Number.isFinite(c.count) ? c.count : items.length,
+   openCount: Number.isFinite(c.openCount) ? c.openCount : items.filter(i => i.open).length,
    items: items.map(i => ({
     id:i.id || '', label:i.label || i.id || '', type:i.type || '', domain:i.domain || '',
-    status:i.status || '', authority:i.authority || '', severity:i.severity || base.severity,
+    status:i.status || '', open:i.open !== undefined ? !!i.open : !/RESOLVED|CLOSED|ACCEPTED/i.test(String(i.status || '')),
+    authority:i.authority || '', severity:i.severity || base.severity,
     issueType:i.issueType || base.id, source:i.source || source, resolution:i.resolution || i.notes || '',
     ...(i.missing ? {missing:i.missing, source:i.source, target:i.target} : {})
    }))
@@ -89,13 +94,10 @@ export function normalizeAudit(payload, {source = 'v1'} = {}) {
  });
  // Categories a V1 backend adds that this build does not know about yet.
  for (const [id, c] of incoming) if (!categories.some(x => x.id === id))
-  categories.push({id, label:c.label || id, severity:c.severity || SEVERITY.INFO, detail:c.detail || '', count:c.count || 0, items:c.items || []});
- return {
-  generatedAt: p.generatedAt || new Date().toISOString(),
-  source,
-  total: Number.isFinite(p.total) ? p.total : categories.reduce((a, c) => a + c.count, 0),
-  categories
- };
+  categories.push({id, label:c.label || id.replaceAll('_',' '), severity:c.severity || SEVERITY.INFO, detail:c.detail || '', count:c.count || 0, openCount:c.openCount || 0, items:c.items || []});
+ const total = Number.isFinite(p.total) ? p.total : categories.reduce((a, c) => a + c.count, 0);
+ const open = Number.isFinite(p.open) ? p.open : categories.reduce((a, c) => a + (c.openCount || 0), 0);
+ return {generatedAt: p.generatedAt || new Date().toISOString(), source, total, open, resolved: Number.isFinite(p.resolved) ? p.resolved : total - open, categories};
 }
 
 /** Domain buckets with the unresolved bucket removed; it belongs to audit, not to science. */

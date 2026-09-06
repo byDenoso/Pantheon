@@ -63,6 +63,8 @@ body:not([data-mode=explore]):not([data-mode=audit]) .entity-section{margin-top:
 .audit-item{display:flex;flex-direction:column;gap:2px;padding:6px 0;border-top:1px solid var(--line)}
 .audit-item code{font-size:9px;overflow-wrap:anywhere;color:var(--muted)}
 .audit-item small{font-size:8px;color:var(--muted)}
+/* Migration status codes arrive as one unbroken token; break them instead of widening the page. */
+.audit-item small,.audit-item .relation,.audit-cat>summary b{overflow-wrap:anywhere;min-width:0}
 .audit-item .relation{margin:0;padding:4px 0;border:0;background:none;text-align:left;font-size:11px;color:var(--accent)}
 .ladder{list-style:none;display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin:0 0 20px;padding:0}
 .ladder-stage{border:1px solid var(--line);border-radius:8px;padding:10px;background:var(--raised);min-width:0}
@@ -137,3 +139,5 @@ body:not([data-mode=explore]):not([data-mode=audit]) .entity-section{margin-top:
 .ladder-head b{font-weight:600;letter-spacing:-.1px}
 .ladder-items li{font-size:9.5px;line-height:1.5}
 @media(max-width:1150px){.ladder-stage,.ladder-stage:first-child,.ladder-stage:last-child{border-radius:9px;border-left-width:1px}.ladder-stage:not(:last-child):after{display:none}}
+.audit-open{font-size:8px;letter-spacing:.6px;color:var(--warning);border:1px solid var(--warning);border-radius:20px;padding:1px 8px}
+.audit-item.is-resolved{opacity:.62}

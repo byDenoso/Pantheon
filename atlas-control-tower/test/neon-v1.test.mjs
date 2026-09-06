@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {createDataApi, projectScienceRows, learningPayload} from '../lib/neon-v1.mjs';
+import {createDataApi, projectScienceRows, learningPayload, auditPayload} from '../lib/neon-v1.mjs';
 
 test('Data API uses Vercel OIDC and schema profile', async () => {
   let seen;
@@ -59,4 +59,81 @@ test('learning payload fills all five explicit Neon stages', () => {
   });
   assert.equal(p.total,5);
   assert.deepEqual(p.ladder.map(x=>x.count),[1,1,1,1,1]);
+});
+
+/* Row shapes below are copied from the live science_v1 corpus: entities.updated_at is
+   null for all but a handful of rows, imported_at is the cutover stamp shared by every
+   row, and the observed date lives on the current revision. */
+const migrated = {
+  entities:[
+    {entity_id:'T-PEER-SPT-SHOES-INTERACTION-20260902',entity_type:'TEST',title:'SPT x SH0ES',status:'COMPLETE_VALIDATED',
+     current_revision_id:'REV::T-PEER-SPT-SHOES-INTERACTION-20260902::1',updated_at:null,imported_at:'2026-09-06T00:49:23.795141+00:00'},
+    {entity_id:'R-1',entity_type:'RESULT',title:'Envelope',status:'PASS',
+     current_revision_id:'REV::R-1::1',updated_at:null,imported_at:'2026-09-06T00:49:23.795141+00:00'},
+    {entity_id:'NEXO-DARK-SECTOR',entity_type:'CAMPAIGN',title:'NEXO DARK SECTOR',status:'CHECKPOINTED',
+     current_revision_id:'REV::NEXO-DARK-SECTOR::1',updated_at:null,imported_at:'2026-09-06T00:49:23.795141+00:00'}
+  ],
+  revisions:[
+    {revision_id:'REV::T-PEER-SPT-SHOES-INTERACTION-20260902::1',entity_id:'T-PEER-SPT-SHOES-INTERACTION-20260902',observed_at:'2026-09-02T17:35:00+00:00',is_current:true},
+    {revision_id:'REV::R-1::1',entity_id:'R-1',observed_at:'2026-08-15T09:00:00+00:00',is_current:true},
+    {revision_id:'REV::NEXO-DARK-SECTOR::1',entity_id:'NEXO-DARK-SECTOR',observed_at:null,is_current:true}
+  ]
+};
+
+test('the observed revision date is the activity date, never the cutover stamp', () => {
+  const g = projectScienceRows(migrated);
+  const byId = Object.fromEntries(g.nodes.map(n=>[n.id,n]));
+  assert.equal(byId['T-PEER-SPT-SHOES-INTERACTION-20260902'].updatedAt,'2026-09-02T17:35:00+00:00');
+  assert.equal(byId['R-1'].updatedAt,'2026-08-15T09:00:00+00:00');
+  // every row shares imported_at; using it would draw one fake spike on cutover day
+  for(const n of g.nodes) assert.notEqual(n.updatedAt,'2026-09-06T00:49:23.795141+00:00');
+  // an entity whose revision carries no date simply has none; nothing is invented
+  assert.equal(byId['NEXO-DARK-SECTOR'].updatedAt,'');
+  assert.equal(byId['NEXO-DARK-SECTOR'].metadata.imported_at,'2026-09-06T00:49:23.795141+00:00');
+});
+
+test('source version is the newest observation, not the import moment', () => {
+  assert.equal(projectScienceRows(migrated).sourceVersion,'2026-09-02T17:35:00+00:00');
+  // with no observation anywhere it falls back to the import stamp rather than going blank
+  assert.equal(projectScienceRows({entities:migrated.entities,revisions:[]}).sourceVersion,'2026-09-06T00:49:23.795141+00:00');
+});
+
+/* Real migration_issues rows: every one of the 92 is RESOLVED, so the panel must not
+   read as 92 live defects. */
+const issues = [
+  {issue_id:'ISSUE::D1::MISSING_PARENT_AUTHORITY',issue_type:'MISSING_PARENT',severity:'BLOCKER',status:'RESOLVED',
+   source_key:"'Domain Registry'!D3",proposed_resolution:'Resolved by canonical registration in Tower row 1963.'},
+  {issue_id:'ISSUE::PRIMARY_TEST::dc63',issue_type:'BROKEN_REFERENCE',severity:'WARN',status:'RESOLVED',
+   source_key:"'Hypothesis Registry'!A1415:M1415",entity_id:'H2_PEER_DMDE',proposed_resolution:'Two explicit relations; not a malformed id.'},
+  {issue_id:'ISSUE::RESULT::a1',issue_type:'UNRESOLVED_RESULT_OWNER',severity:'WARN',status:'RESOLVED',
+   source_key:"'Result Envelopes'!A9",proposed_resolution:'TYPED_RESULT_SUBJECT=TEST_SET; no synthetic entity created'},
+  {issue_id:'ISSUE::RESULT::a2',issue_type:'UNRESOLVED_RESULT_OWNER',severity:'WARN',status:'OPEN',
+   source_key:"'Result Envelopes'!A10",proposed_resolution:''},
+  {issue_id:'ISSUE::SRC::drift',issue_type:'SOURCE_DRIFT',severity:'WARN',status:'RESOLVED',
+   source_key:'41 pseudo ids',proposed_resolution:'Excluded from the semantic graph; preserved in provenance.'}
+];
+
+test('migration issues map onto the declared taxonomy and separate open from resolved', () => {
+  const a = auditPayload(issues);
+  const at = id => a.categories.find(c=>c.id===id);
+  assert.equal(a.total,5);
+  assert.equal(a.open,1);
+  assert.equal(a.resolved,4);
+  // UNRESOLVED_RESULT_OWNER is the V1 name for the declared RESULT_SUBJECT category
+  assert.ok(at('RESULT_SUBJECT'),'UNRESOLVED_RESULT_OWNER must map to RESULT_SUBJECT');
+  assert.equal(at('RESULT_SUBJECT').count,2);
+  assert.equal(at('RESULT_SUBJECT').openCount,1);
+  // MISSING_PARENT is a broken reference; both are resolved, so the category raises no alarm
+  assert.equal(at('BROKEN_REFERENCE').count,2);
+  assert.equal(at('BROKEN_REFERENCE').openCount,0);
+  assert.equal(at('BROKEN_REFERENCE').severity,'INFO');
+  // the one category with an open item keeps that item's severity
+  assert.equal(at('RESULT_SUBJECT').severity,'WARN');
+  // a category the declared taxonomy does not know is kept, not dropped
+  assert.ok(at('SOURCE_DRIFT'));
+  // detail stays empty so the declared human explanation survives normalizeAudit
+  assert.equal(at('BROKEN_REFERENCE').detail,'');
+  // still-open items are listed first
+  assert.equal(at('RESULT_SUBJECT').items[0].status,'OPEN');
+  assert.equal(at('RESULT_SUBJECT').items[0].open,true);
 });
