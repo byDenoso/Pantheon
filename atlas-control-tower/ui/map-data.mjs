@@ -12,7 +12,7 @@ export function clusteredPositions(data,focus,fallback){
  const groups=data.nodes.filter(n=>n.type==='SYSTEM'&&n.id!==focus),centers=new Map();
  groups.forEach((n,i)=>{const a=i/groups.length*Math.PI*2-.9;centers.set(n.id,[Math.cos(a)*300,Math.sin(a)*195,Math.sin(a*2)*65])});
  const parent=new Map();for(const e of data.edges)if(centers.has(e.source)&&e.target!==focus&&!centers.has(e.target)&&!parent.has(e.target))parent.set(e.target,e.source);
- const counters=new Map();return data.nodes.map(n=>{if(n.id===focus)return[0,0,0];if(centers.has(n.id))return centers.get(n.id);const pid=parent.get(n.id),center=centers.get(pid);if(!center)return[0,0,-250];const i=counters.get(pid)||0;counters.set(pid,i+1);const a=i*2.39996323,r=42+Math.sqrt(i)*13;return[center[0]+Math.cos(a)*r,center[1]+Math.sin(a)*r*.75,center[2]+Math.sin(a*1.7)*42]});
+ const counters=new Map();return data.nodes.map(n=>{if(n.id===focus)return[0,0,0];if(centers.has(n.id))return centers.get(n.id);const pid=parent.get(n.id),center=centers.get(pid);if(!center)return[0,0,-250];const i=counters.get(pid)||0;counters.set(pid,i+1);const a=i*2.39996323,r=MAP_CONFIG.clusterRadius+Math.sqrt(i)*MAP_CONFIG.clusterSpread;return[center[0]+Math.cos(a)*r,center[1]+Math.sin(a)*r*.75,center[2]+Math.sin(a*1.7)*42]});
 }
 
 function layeredPositions(data,focus){

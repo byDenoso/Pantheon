@@ -17,13 +17,16 @@ export function layeredSubgraph(g,{focus,depth=3,limit=120,filters={}}){
  const byId=new Map(g.nodes.map(n=>[n.id,n])),adj=new Map(),allowed=new Set(['CONTAINS','TESTS','PRODUCES','EXECUTED_AS','DERIVED_FROM']);
  for(const e of g.edges)if(allowed.has(e.type)&&byId.has(e.target)){if(!adj.has(e.source))adj.set(e.source,[]);adj.get(e.source).push(e.target)}
  if(!byId.has(focus))return{nodes:[],edges:[],total:0,hasMore:false,depth:maxDepth};
- const levels=new Map([[focus,0]]),parents=new Map();let frontier=[focus],truncated=false;
+ const levels=new Map([[focus,0]]),parents=new Map(),omitted=new Map();let frontier=[focus],truncated=false;
  for(let layer=1;layer<=maxDepth&&frontier.length;layer++){
   const next=[];const lists=frontier.map(id=>[id,[...new Set(adj.get(id)||[])].filter(n=>!levels.has(n)&&matches(byId.get(n),filters))]);
   // Round-robin across parents avoids one large registry consuming the whole view.
-  for(let i=0;i<8;i++)for(const [parent,children]of lists){const id=children[i];if(!id||levels.has(id))continue;if(levels.size>=cap){truncated=true;continue}levels.set(id,layer);parents.set(id,parent);next.push(id)}
+  const taken=new Map();
+  for(let i=0;i<8;i++)for(const [parent,children]of lists){const id=children[i];if(!id||levels.has(id))continue;if(levels.size>=cap){truncated=true;continue}levels.set(id,layer);parents.set(id,parent);taken.set(parent,(taken.get(parent)||0)+1);next.push(id)}
+  // How many eligible children this parent still hides, so the map can say so.
+  for(const [parent,children]of lists){const hidden=children.length-(taken.get(parent)||0);if(hidden>0)omitted.set(parent,(omitted.get(parent)||0)+hidden)}
   if(lists.some(([,list])=>list.length>8))truncated=true;frontier=next;
  }
  // `hasMore` reports that raising the cap would reveal more of this same recorte.
- return{focus,nodes:[...levels].map(([id,layer])=>{const{metadata,searchText,...n}=byId.get(id);return{...n,summary:n.summary?.slice(0,280),layer,layoutParent:parents.get(id)}}),edges:g.edges.filter(e=>levels.has(e.source)&&levels.has(e.target)),total:levels.size,hasMore:truncated,depth:maxDepth,truncated};
+ return{focus,nodes:[...levels].map(([id,layer])=>{const{metadata,searchText,...n}=byId.get(id);return{...n,summary:n.summary?.slice(0,280),layer,layoutParent:parents.get(id),hiddenChildren:omitted.get(id)||0}}),edges:g.edges.filter(e=>levels.has(e.source)&&levels.has(e.target)),total:levels.size,hasMore:truncated,depth:maxDepth,truncated};
 }

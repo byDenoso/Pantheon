@@ -113,3 +113,27 @@ body:not([data-mode=explore]):not([data-mode=audit]) .entity-section{margin-top:
 .lineage{display:grid;grid-template-columns:1fr 1fr;gap:14px}
 .lineage-col h5{margin:0 0 6px;font-size:8px;letter-spacing:1px;color:var(--muted);font-weight:600}
 @media(max-width:760px){.lineage{grid-template-columns:1fr}.provenance span{display:none}.data-table{font-size:9px}}
+
+/* Visual rework: panel rhythm and a ladder that actually progresses. */
+.analytics article,.entity-section{padding:20px 22px}
+.chart-title{margin-bottom:18px;font-size:12.5px;letter-spacing:-.1px}
+.chart-title small{font-size:7.5px;letter-spacing:1.1px}
+.audit-head{font-size:11.5px;padding-bottom:12px;margin-bottom:14px}
+.learning-sub{font-size:12px;margin:24px 0 4px;letter-spacing:-.1px}
+.ladder{gap:0;align-items:stretch}
+.ladder-stage{position:relative;border-radius:0;border-left-width:0;padding:12px 14px}
+.ladder-stage:first-child{border-left-width:1px;border-radius:9px 0 0 9px}
+.ladder-stage:last-child{border-radius:0 9px 9px 0}
+/* Weight grows along the ladder, so progression is visible without a legend. */
+.ladder-stage:nth-child(1) .ladder-head b{opacity:.62}
+.ladder-stage:nth-child(2) .ladder-head b{opacity:.74}
+.ladder-stage:nth-child(3) .ladder-head b{opacity:.84}
+.ladder-stage:nth-child(4) .ladder-head b{opacity:.93}
+.ladder-stage:nth-child(5) .ladder-head b{opacity:1}
+.ladder-stage:not(:last-child):after{content:'';position:absolute;right:-6px;top:19px;width:10px;height:10px;
+ border-top:1px solid var(--line);border-right:1px solid var(--line);transform:rotate(45deg);background:var(--raised);z-index:1}
+.ladder-stage.is-pending:after{border-color:var(--line);opacity:.5}
+.ladder-head{font-size:11.5px;margin-bottom:9px}
+.ladder-head b{font-weight:600;letter-spacing:-.1px}
+.ladder-items li{font-size:9.5px;line-height:1.5}
+@media(max-width:1150px){.ladder-stage,.ladder-stage:first-child,.ladder-stage:last-child{border-radius:9px;border-left-width:1px}.ladder-stage:not(:last-child):after{display:none}}
