@@ -11,15 +11,13 @@ const params = q => new URLSearchParams(Object.entries(q).filter(([, v]) => v !=
 export function createApi({fetchImpl, timeout = 65000, maxEntries = 48} = {}) {
  const doFetch = fetchImpl || ((...a) => fetch(...a));
  const cache = new Map();
- let version = '';
+ let version = '', bypassNextGraph = false;
  let provenance = {source:SOURCES.LEGACY, freshness:FRESHNESS.SNAPSHOT, sourceVersion:'', cache:'', label:'LEGACY SNAPSHOT'};
 
- /** A new projection fingerprint invalidates everything: the cache is never an authority. */
  function setVersion(next) {
   if (!next || next === version) return;
   const had = version;
   version = next;
-  // Learning the version for the first time is not a change; a real change drops everything.
   if (had) cache.clear();
  }
  function observe(data) {
@@ -41,7 +39,6 @@ export function createApi({fetchImpl, timeout = 65000, maxEntries = 48} = {}) {
   const id = key || (route + '?' + params(q).toString());
   if (method === 'GET' && cacheable) {
    const hit = cache.get(id);
-   // Served without a network round trip; the caller sees cache: 'HIT'.
    if (hit && hit.version === version) {provenance = {...provenance, cache:'HIT'}; return hit.data}
   }
   const r = await doFetch('/api/' + route + '?' + params(q), {method, signal: AbortSignal.timeout(timeout)});
@@ -62,15 +59,17 @@ export function createApi({fetchImpl, timeout = 65000, maxEntries = 48} = {}) {
   get cached() {return cache.size},
   get provenance() {return provenance},
   clear: () => cache.clear(),
-  /** Keyed as graph:v1:<source>:<fingerprint>:<focus>:<depth>:<filters>. */
-  /** Documented key format: graph:v1:<source>:<fingerprint>:<focus>:<depth>:<filters>. */
   cacheKeyFor(q = {}) {
    const {focus = '', depth = 1, mode, offset, limit, ...filters} = q;
    return cacheKey({fingerprint: version, focus, depth, source: provenance.source, filters: {...filters, mode, offset, limit}});
   },
-  graph: async q => {
-   const {focus = ''} = q || {};
-   const data = await request('graph', q);
+  graph: async (q = {}) => {
+   const {focus = ''} = q;
+   const bypass = bypassNextGraph;
+   const requestQ = bypass ? {...q, refresh:1} : q;
+   const stableKey = 'graph?' + params(q).toString();
+   const data = await request('graph', requestQ, {key:stableKey});
+   if (bypass) bypassNextGraph = false;
    return normalizeGraph(data, {focus});
   },
   state: q => request('state', q || {}),
@@ -84,7 +83,11 @@ export function createApi({fetchImpl, timeout = 65000, maxEntries = 48} = {}) {
   learningLineage: id => request('learning', {id, view:'lineage'}),
   automationRuns: () => request('automation-runs', {}),
   learningRelations: () => request('learning-relations', {}),
-  // A refresh mutates the server read model, so it is never served or stored from cache.
-  sync: async () => {const d = await request('sync', {}, {method:'POST', cacheable:false}); cache.clear(); return d}
+  sync: async () => {
+   const d = await request('sync', {}, {method:'POST', cacheable:false});
+   cache.clear();
+   bypassNextGraph = true;
+   return d;
+  }
  };
 }
