@@ -10,113 +10,44 @@
         ]
       }
     },
-    {
-      "src": "index.html",
-      "use": "@vercel/static"
-    },
-    {
-      "src": "styles.css",
-      "use": "@vercel/static"
-    },
-    {
-      "src": "app.mjs",
-      "use": "@vercel/static"
-    },
-    {
-      "src": "graph3d.mjs",
-      "use": "@vercel/static"
-    },
-    {
-      "src": "lib/model.mjs",
-      "use": "@vercel/static"
-    },
-    {
-      "src": "lib/graph-contract.mjs",
-      "use": "@vercel/static"
-    },
-    {
-      "src": "lib/atlas-api.mjs",
-      "use": "@vercel/static"
-    },
-    {
-      "src": "lib/graph-session.mjs",
-      "use": "@vercel/static"
-    },
-    {
-      "src": "ui/tokens.css",
-      "use": "@vercel/static"
-    },
-    {
-      "src": "ui/visual-config.mjs",
-      "use": "@vercel/static"
-    },
-    {
-      "src": "ui/theme.mjs",
-      "use": "@vercel/static"
-    },
-    {
-      "src": "ui/map-data.mjs",
-      "use": "@vercel/static"
-    },
-    {
-      "src": "ui/dom.mjs",
-      "use": "@vercel/static"
-    },
-    {
-      "src": "ui/metrics.mjs",
-      "use": "@vercel/static"
-    },
-    {
-      "src": "ui/inspector.mjs",
-      "use": "@vercel/static"
-    },
-    {
-      "src": "ui/filters.mjs",
-      "use": "@vercel/static"
-    },
-    {
-      "src": "ui/learning-view.mjs",
-      "use": "@vercel/static"
-    },
-    {
-      "src": "ui/audit-view.mjs",
-      "use": "@vercel/static"
-    },
-    {
-      "src": "ui/provenance.mjs",
-      "use": "@vercel/static"
-    },
-    {
-      "src": "ui/data-view.mjs",
-      "use": "@vercel/static"
-    },
-    {
-      "src": "webmcp/tools.mjs",
-      "use": "@vercel/static"
-    }
+    {"src":"index.html","use":"@vercel/static"},
+    {"src":"styles.css","use":"@vercel/static"},
+    {"src":"app.mjs","use":"@vercel/static"},
+    {"src":"graph3d.mjs","use":"@vercel/static"},
+    {"src":"lib/model.mjs","use":"@vercel/static"},
+    {"src":"lib/graph-contract.mjs","use":"@vercel/static"},
+    {"src":"lib/atlas-api.mjs","use":"@vercel/static"},
+    {"src":"lib/graph-session.mjs","use":"@vercel/static"},
+    {"src":"ui/tokens.css","use":"@vercel/static"},
+    {"src":"ui/official-dashboard.css","use":"@vercel/static"},
+    {"src":"ui/visual-config.mjs","use":"@vercel/static"},
+    {"src":"ui/theme.mjs","use":"@vercel/static"},
+    {"src":"ui/map-data.mjs","use":"@vercel/static"},
+    {"src":"ui/dom.mjs","use":"@vercel/static"},
+    {"src":"ui/metrics.mjs","use":"@vercel/static"},
+    {"src":"ui/inspector.mjs","use":"@vercel/static"},
+    {"src":"ui/filters.mjs","use":"@vercel/static"},
+    {"src":"ui/learning-view.mjs","use":"@vercel/static"},
+    {"src":"ui/audit-view.mjs","use":"@vercel/static"},
+    {"src":"ui/provenance.mjs","use":"@vercel/static"},
+    {"src":"ui/data-view.mjs","use":"@vercel/static"},
+    {"src":"ui/recorte-view.mjs","use":"@vercel/static"},
+    {"src":"ui/blackbox-view.mjs","use":"@vercel/static"},
+    {"src":"webmcp/tools.mjs","use":"@vercel/static"}
   ],
   "routes": [
     {
       "src": "/api/(state|sync|graph|entity|automation-runs|learning-relations|learning|audit|health|ops)",
       "dest": "/api/atlas.js?route=$1"
     },
-    {
-      "src": "/",
-      "dest": "/index.html"
-    },
-    {
-      "handle": "filesystem"
-    },
-    {
-      "src": "/.*",
-      "status": 404,
-      "dest": "/index.html"
-    }
+    {"src":"/","dest":"/index.html"},
+    {"handle":"filesystem"},
+    {"src":"/.*","status":404,"dest":"/index.html"}
   ],
   "crons": [
     {
       "path": "/api/state?refresh=1",
-      "schedule": "0 8 * * *"
+      "schedule": "0 */12 * * *"
     }
   ]
 }
