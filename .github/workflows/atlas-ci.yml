@@ -1,0 +1,26 @@
+name: Atlas CI
+
+on:
+  push:
+    branches:
+      - atlas-frontend-contract-v1-20260905
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: atlas-control-tower
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - run: npm test
+      - run: node --check api/atlas.js
+      - run: node --check lib/canonical-adapter.mjs
+      - run: node --check lib/neon-reader.mjs
