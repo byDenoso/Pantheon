@@ -65,3 +65,18 @@ Browser test paths are relative to the current project. Use ATLAS_BASE_URL to te
 ## Observatório themes and maintenance
 
 Current visual direction: blue cosmic Observatório, dark/light themes with saved preference. Read [docs/FRONTEND.md](docs/FRONTEND.md) before frontend changes. `ui/tokens.css` owns page palette; `ui/visual-config.mjs` owns Canvas palette and visual knobs. Root preview expands real bounded subsystem children. Use `frontend-files.mjs` and `node scripts/configure-static.mjs` for new public assets.
+
+## Graph Contract V1, Learning and Migration Health (2026-09-05)
+
+The frontend reads a stable contract instead of the physical read model:
+`{nodes, edges, total, hasMore, truncated, depth, fingerprint, sourceVersion, issues}`,
+served by `GET /api/graph` and normalised in `lib/atlas-api.mjs` with an in-memory
+cache keyed by the projection fingerprint. New endpoints: `GET /api/audit` and
+`GET /api/learning` (`?id=` for one entity). `POST /api/sync` is never cached.
+
+Learning has its own tab with the Observation → Policy ladder, emergent buckets and
+an entity overlay driven only by `evidence_refs`; stages with no source are shown as
+pending and name the tab they need. Migration issues live in the Audit tab only —
+`UNMAPPED` is no longer rendered as a scientific domain in the chart, the sidebar or
+`GET /api/state`. Snapshot science is still a bundled private fallback without Google
+authentication; durable cache and automatic scientific refresh remain backend work.

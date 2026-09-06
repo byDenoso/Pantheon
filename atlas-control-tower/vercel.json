@@ -31,6 +31,14 @@
       "use": "@vercel/static"
     },
     {
+      "src": "lib/atlas-api.mjs",
+      "use": "@vercel/static"
+    },
+    {
+      "src": "lib/graph-session.mjs",
+      "use": "@vercel/static"
+    },
+    {
       "src": "ui/tokens.css",
       "use": "@vercel/static"
     },
@@ -45,11 +53,39 @@
     {
       "src": "ui/map-data.mjs",
       "use": "@vercel/static"
+    },
+    {
+      "src": "ui/dom.mjs",
+      "use": "@vercel/static"
+    },
+    {
+      "src": "ui/metrics.mjs",
+      "use": "@vercel/static"
+    },
+    {
+      "src": "ui/inspector.mjs",
+      "use": "@vercel/static"
+    },
+    {
+      "src": "ui/filters.mjs",
+      "use": "@vercel/static"
+    },
+    {
+      "src": "ui/learning-view.mjs",
+      "use": "@vercel/static"
+    },
+    {
+      "src": "ui/audit-view.mjs",
+      "use": "@vercel/static"
+    },
+    {
+      "src": "webmcp/tools.mjs",
+      "use": "@vercel/static"
     }
   ],
   "routes": [
     {
-      "src": "/api/(state|sync|graph|entity|automation-runs|learning-relations|ops)",
+      "src": "/api/(state|sync|graph|entity|automation-runs|learning-relations|learning|audit|ops)",
       "dest": "/api/atlas.js?route=$1"
     },
     {

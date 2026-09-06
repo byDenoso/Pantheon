@@ -44,3 +44,60 @@ Science still uses a bundled private snapshot without configured Google authenti
 
 ## Tower layers
 The toolbar selects 1–3 edge hops (default 3), sent as `depth` to the existing graph API. `layeredSubgraph` in `lib/model.mjs` follows existing directed navigation edges, emits layer/layoutParent for geometry, caps each branch at 8 children and the UI at 120 nodes. Truncated views show RECORTE; drill into a node or choose 1 camada for its paginated immediate children. No extra per-node HTTP calls. Authority is unchanged.
+
+## Graph Contract V1
+
+`lib/atlas-api.mjs` is the only place that talks to the API. It returns
+`{nodes, edges, total, hasMore, truncated, depth, fingerprint, sourceVersion, issues}`
+and fills in every field a payload omits, so a backend or projector change cannot
+reach `Graph3D`, which still consumes `{nodes, edges}` and `focus`. Edges whose
+endpoint is absent from `nodes` are dropped before the renderer sees them.
+
+Reads are cached in memory keyed by the projection `fingerprint`; a new fingerprint
+clears the cache and `POST /api/sync` is never cached. The cache is a repeat-request
+short circuit, never an authority. `lib/graph-session.mjs` owns focus, mode, filters,
+offset, depth and path, and still issues exactly one graph read plus one summary read
+per recorte with the stale-response guard.
+
+## Learning
+
+`lib/learning.mjs` (server) derives the Observation → Pattern → Lesson → Strategy →
+Policy ladder, the emergent buckets and the entity overlay; `ui/learning-view.mjs`
+renders them. Every bucket is computed from fields the source publishes —
+`status`, `relation_type`, `support_count`, `contradiction_count`,
+`successful_uses`, `failed_uses`, `confidence`. Nothing is scored synthetically and
+confidence is shown only when the source published one. Stages with no record in the
+projection are drawn as pending and name the source they still need
+(`PROCEDURAL_MEMORY`, `STRATEGY_REGISTRY`, `ADAPTIVE_POLICY`).
+
+The inspector overlay (`Aprendizado relacionado`) lists only learning records whose
+own `evidence_refs` cite the open entity. It never reclassifies the entity, and when
+nothing cites it the panel says the link is absent from the source rather than
+inferring one. `GET /api/learning` returns the report; `GET /api/learning?id=` returns
+the overlay for one entity.
+
+## Migration Health
+
+`lib/audit.mjs` (server) and `ui/audit-view.mjs` own the Audit tab. Categories:
+broken references, unresolved domain, result without owner, ambiguous mapping,
+legacy alias, other. Counts are complete and samples are bounded and labelled as
+such. Empty categories are still listed, as "sem ocorrências".
+
+`UNMAPPED` is not a scientific domain: it is excluded from the domain chart, from the
+sidebar domain list and from `GET /api/state` `domains`, and appears only here and as
+`projection.unresolvedDomain`, which links straight into the tab. The underlying nodes
+are untouched — this is a presentation boundary, not a data repair.
+
+## WebMCP
+
+`webmcp/tools.mjs` builds every tool on the same client as the visual Atlas; there is
+no second data path. `atlas_get_learning`, `atlas_explain_learning_origin` and
+`atlas_get_migration_issues` join the read tools. Only the view-moving tools listed in
+`VIEW_TOOLS` are non-read, and none of them mutates scientific state.
+
+## Module map
+
+`app.mjs` is bootstrap and wiring. Rendering lives in `ui/metrics.mjs`,
+`ui/inspector.mjs`, `ui/filters.mjs`, `ui/learning-view.mjs`, `ui/audit-view.mjs`,
+with shared helpers in `ui/dom.mjs`. `lib/audit.mjs` and `lib/learning.mjs` are
+server-side and deliberately absent from `frontend-files.mjs`.

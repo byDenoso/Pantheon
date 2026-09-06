@@ -7,3 +7,4 @@ node_modules/
 .env*
 dev-fixture.mjs
 build-real-snapshot.mjs
+shot-*.png
