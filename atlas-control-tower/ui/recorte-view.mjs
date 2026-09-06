@@ -1,5 +1,7 @@
 import {esc, num} from './dom.mjs';
+import {createApi} from '../lib/atlas-api.mjs';
 
+const radarApi=createApi();
 const SIGNAL_ORDER=['contradicted','weakening','strengthening','new','promoted'];
 const SIGNAL_LABEL={contradicted:'contradito',weakening:'enfraquecendo',strengthening:'fortalecendo',new:'novo',promoted:'promovido'};
 const SIGNAL_TONE={contradicted:'bad',weakening:'warn',strengthening:'good',new:'new',promoted:'good'};
@@ -25,9 +27,9 @@ function emergentSignals(payload,limit=5){
  const buckets=new Map((payload?.emergent||[]).map(b=>[b.id,b]));
  const seen=new Set(),out=[];
  for(const id of SIGNAL_ORDER){
-  const bucket=buckets.get(id); if(!bucket)continue;
+  const bucket=buckets.get(id);if(!bucket)continue;
   for(const item of bucket.items||[]){
-   const key=item.id||`${item.relationType}:${item.notes}`; if(seen.has(key))continue;
+   const key=item.id||`${item.relationType}:${item.notes}`;if(seen.has(key))continue;
    seen.add(key);out.push({item,bucket:id,label:SIGNAL_LABEL[id]||bucket.label||id,tone:SIGNAL_TONE[id]||'new'});
    if(out.length>=limit)return out;
   }
@@ -57,7 +59,7 @@ function renderSignals(signals,payload){
  </button>`).join('')}`;
 }
 
-export async function renderRecortePanel(api,graph,summary,{onEntity,onLearning}={}){
+export async function renderRecortePanel(graph,summary,{onEntity,onLearning}={}){
  const root=document.querySelector('#recorte-panel');if(!root)return;
  const nodes=graph?.nodes||[],total=summary?.total||nodes.length;
  const changes=latestChanges(nodes);
@@ -71,7 +73,7 @@ export async function renderRecortePanel(api,graph,summary,{onEntity,onLearning}
  root.querySelector('[data-open-learning]')?.addEventListener('click',()=>onLearning?.());
  const count=document.querySelector('#list-count');if(count)count.textContent=`${num(total)} NO RECORTE`;
  try{
-  const learning=await api.learning();
+  const learning=await radarApi.request('learning',{}, {cacheable:false});
   if(root.dataset.renderKey!==key)return;
   const target=root.querySelector('[data-signals]');if(target)target.innerHTML=renderSignals(emergentSignals(learning),learning);
   root.querySelectorAll('[data-signal-id]').forEach(b=>b.onclick=()=>onLearning?.(b.dataset.signalId));
