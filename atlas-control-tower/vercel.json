@@ -47,7 +47,7 @@
   "crons": [
     {
       "path": "/api/state?refresh=1",
-      "schedule": "0 */12 * * *"
+      "schedule": "0 8 * * *"
     }
   ]
 }
