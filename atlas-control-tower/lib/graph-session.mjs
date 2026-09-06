@@ -6,7 +6,7 @@ const ROOT = {id:'system:NEXO', label:'NEXO'};
 
 export function createSession(api, {limit = 120, depth = 3, onPersist} = {}) {
  const s = {
-  focus: ROOT.id, mode: 'children', ui: 'overview', filters: {}, offset: 0, depth,
+  focus: ROOT.id, mode: 'children', ui: 'overview', filters: {}, offset: 0, extraLimit: 0, depth,
   path: [{...ROOT}], selected: null, graph: null, summary: null, compare: null, syncing: false
  };
  const listeners = new Set();
@@ -18,7 +18,7 @@ export function createSession(api, {limit = 120, depth = 3, onPersist} = {}) {
   const seq = ++loadSeq;
   emit('loading', {focus: s.focus});
   try {
-   const q = {...s.filters, focus: s.focus, mode: s.mode, offset: s.offset, limit, depth: s.depth};
+   const q = {...s.filters, focus: s.focus, mode: s.mode, offset: s.offset, limit: limit + s.extraLimit, depth: s.depth};
    const [graph, summary] = await Promise.all([api.graph(q), api.state(s.filters)]);
    if (seq !== loadSeq) return null;        // a newer recorte already won
    s.graph = graph; s.summary = summary;
@@ -36,23 +36,24 @@ export function createSession(api, {limit = 120, depth = 3, onPersist} = {}) {
   on(fn) {listeners.add(fn); return () => listeners.delete(fn)},
   restoreFilters(filters) {if (filters && typeof filters === 'object') s.filters = {...filters}},
   refresh,
-  setDepth(value) {const d = Math.max(1, Math.min(3, Number(value) || 1)); if (d === s.depth) return null; s.depth = d; s.offset = 0; return refresh()},
-  setMode(mode) {s.mode = mode; s.offset = 0; return refresh()},
+  setDepth(value) {const d = Math.max(1, Math.min(3, Number(value) || 1)); if (d === s.depth) return null; s.depth = d; s.offset = 0; s.extraLimit = 0; return refresh()},
+  setMode(mode) {s.mode = mode; s.offset = 0; s.extraLimit = 0; return refresh()},
   setUi(ui) {s.ui = ui; emit('ui', {ui})},
   setFilters(patch) {
    Object.assign(s.filters, patch);
-   s.offset = 0;
+   s.offset = 0; s.extraLimit = 0;
    s.mode = Object.values(s.filters).some(Boolean) ? 'search' : 'children';
    persist();
    return refresh();
   },
-  clearFilters() {s.filters = {}; s.offset = 0; s.mode = 'children'; persist(); return refresh()},
-  more() {s.offset += limit; return refresh()},
+  clearFilters() {s.filters = {}; s.offset = 0; s.extraLimit = 0; s.mode = 'children'; persist(); return refresh()},
+  /** A layered recorte is capped, not paged: raise the cap. Other modes page by offset. */
+  more() {if (s.graph?.truncated) s.extraLimit += limit; else s.offset += limit; return refresh()},
   select(id) {s.selected = id; emit('select', {id})},
   deselect() {s.selected = null; emit('deselect', {})},
   async focusNode(node, push = true) {
    s.selected = null;
-   s.focus = node.id; s.mode = 'children'; s.offset = 0; s.filters = {};
+   s.focus = node.id; s.mode = 'children'; s.offset = 0; s.extraLimit = 0; s.filters = {};
    persist();
    if (push) {
     const i = s.path.findIndex(p => p.id === node.id);

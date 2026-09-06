@@ -23,7 +23,7 @@ await page.screenshot({path:path.resolve('preview-learning.png'),fullPage:true})
 // Migration health lists every declared category, including the empty ones.
 await page.locator('[data-mode="audit"]').click();await page.waitForSelector('#audit-panel .audit-cat');
 assert.equal(await page.locator('#learning-section-panel').isVisible(),false);
-assert.equal(await page.locator('#audit-panel .audit-cat').count(),6);
+assert.equal(await page.locator('#audit-panel .audit-cat').count(),9);
 assert.ok((await page.locator('#audit-panel').textContent()).includes('Referências quebradas'));
 await page.screenshot({path:path.resolve('preview-audit.png'),fullPage:true});
 await page.locator('[data-mode="overview"]').click();
@@ -45,10 +45,76 @@ if(cited){await page.locator('#search').fill(cited.replace(/^test:/,''));
  await page.waitForFunction(id=>[...document.querySelectorAll('.entity-item')].some(b=>b.dataset.entity===id),cited);
  await page.locator(`[data-entity="${cited}"]`).click();await page.waitForSelector('#learning-node');
  await page.locator('#learning-node').click();await page.waitForSelector('#learning-overlay .learning-row');
- assert.ok((await page.locator('#learning-overlay').textContent()).includes('suporte'));
+ assert.ok((await page.locator('#learning-overlay').textContent()).includes('evidência'));
  await page.locator('#close-inspector').click();await page.locator('#clear').click();await page.waitForSelector('.entity-item');
 }else{console.log('note: no learning record cites a resolvable entity in this snapshot; overlay empty state not exercised')}
 
+// Datasource is declared, and a snapshot is never dressed up as live.
+const health=await page.evaluate(()=>fetch('/api/health').then(r=>r.json()));
+assert.equal(health.contract,'v1');
+assert.ok(['legacy','v1'].includes(health.dataSource.effective));
+assert.ok(['auto','v1','legacy'].includes(health.dataSource.requested));
+const badge=await page.locator('#provenance').textContent();
+assert.ok(/LEGACY SNAPSHOT|NEON V1|STAGING V1/.test(badge),'provenance badge missing: '+badge);
+if(health.dataSource.effective==='legacy')assert.ok(!/LIVE/.test(badge),'snapshot must not be labelled live');
+assert.equal(await page.locator('.avatar').count(),0);
+
+// Human-readable naming with the canonical identifier still reachable.
+const named=await page.evaluate(()=>fetch('/api/graph?focus=domain:D7&depth=2&limit=20').then(r=>r.json()));
+const test=named.nodes.find(n=>n.type==='TEST');
+if(test){
+ assert.ok(test.canonicalId&&test.canonicalId.length,'canonical id missing');
+ assert.ok(test.displaySource,'displaySource missing');
+ assert.ok(named.nodes.every(n=>String(n.label).length<=120),'label too long for the map');
+ await page.locator('#search').fill(test.canonicalId);
+ await page.waitForFunction(id=>[...document.querySelectorAll('.entity-item')].some(b=>b.dataset.entity.endsWith(id)),test.canonicalId);
+ await page.locator(`[data-entity$="${test.canonicalId}"]`).first().click();
+ await page.waitForSelector('#detail .canonical');
+ assert.ok((await page.locator('#detail .canonical').textContent()).includes(test.canonicalId),'inspector must show the canonical id');
+ await page.locator('#close-inspector').click();await page.locator('#clear').click();await page.waitForSelector('.entity-item');
+}
+
+// The Dados tab is a real view over the same recorte.
+await page.locator('[data-mode="explore"]').click();await page.waitForSelector('#data-panel tbody tr');
+assert.equal(await page.locator('#data-section').isVisible(),true);
+const rows=await page.locator('#data-panel tbody tr').count();
+assert.ok(rows>0,'data table is empty');
+assert.equal(await page.locator('#data-panel thead th').count(),7);
+await page.locator('#data-panel thead th button').first().click();
+assert.equal(await page.locator('#data-panel tbody tr').count(),rows,'sorting must not drop rows');
+await page.locator('[data-mode="overview"]').click();
+assert.equal(await page.locator('#data-section').isVisible(),false);
+
+// A bounded recorte can be widened, and the mode chip keeps the reader oriented.
+await page.waitForFunction(()=>/RECORTE/.test(document.querySelector('#graph-count').textContent));
+const capped=await page.locator('#graph-count').textContent();
+assert.equal(await page.locator('#more').isVisible(),true,'#more must be reachable on a truncated recorte');
+await page.locator('#more').click();
+await page.waitForFunction(t=>document.querySelector('#graph-count').textContent!==t,capped);
+await page.locator('.entity-item').first().click();await page.waitForSelector('#open-node');
+await page.locator('#close-inspector').click();
+await page.locator('#neighbors').click();
+await page.waitForFunction(()=>!document.querySelector('#mode-chip').hidden);
+assert.match(await page.locator('#mode-chip').textContent(),/VIZINHAN/);
+await page.locator('#mode-chip').click();
+await page.waitForFunction(()=>document.querySelector('#mode-chip').hidden);
+
+// Audit items carry issue type, severity and source.
+await page.locator('[data-mode="audit"]').click();await page.waitForSelector('#audit-panel .audit-cat');
+assert.ok(await page.locator('#audit-panel .sev').count()>0,'severity missing from audit');
+const auditText=await page.locator('#audit-panel').textContent();
+assert.ok(/fonte/.test(auditText),'audit must declare its source');
+
+// Learning lineage is reachable and says when the source declares none.
+await page.locator('[data-mode="learning"]').click();await page.waitForSelector('#learning-panel .ladder-stage');
+if(await page.locator('#learning-panel [data-lineage]').count()){
+ await page.locator('#learning-panel [data-lineage]').first().click();
+ await page.waitForSelector('#learning-lineage:not([hidden])');
+ assert.ok((await page.locator('#learning-lineage').textContent()).length>0);
+ await page.locator('[data-close-lineage]').click();
+}
+await page.locator('[data-mode="overview"]').click();
+await page.waitForSelector('.entity-item');
 await page.locator('[data-focus="system:SCIENCE"]').click();await page.waitForFunction(()=>document.querySelector('#breadcrumbs').textContent.includes('Universo'));await page.screenshot({path:path.resolve('preview-science.png'),fullPage:true});
 await page.locator('.entity-item').filter({hasText:'DOMAIN'}).first().dblclick();await page.waitForFunction(()=>document.querySelectorAll('[data-crumb]').length>=3);await page.locator('.entity-item').last().click();await page.waitForSelector('#open-node');await page.locator('#close-inspector').click();await page.keyboard.press('Control+k');assert.equal(await page.locator('#search').evaluate(e=>e===document.activeElement),true);
 await page.locator('#home').click();await page.waitForFunction(()=>document.querySelectorAll('[data-crumb]').length===1);await page.setViewportSize({width:375,height:812});await page.locator('#theme-toggle').click();await page.evaluate(()=>scrollTo(0,0));await page.screenshot({path:path.resolve('preview-mobile-light.png'),fullPage:true});await page.locator('#theme-toggle').click();await page.screenshot({path:path.resolve('preview-mobile.png'),fullPage:true});assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);
@@ -56,4 +122,4 @@ await page.locator('#home').click();await page.waitForFunction(()=>document.quer
 await page.locator('[data-mode="learning"]').click();await page.waitForSelector('#learning-panel .ladder-stage');assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);await page.screenshot({path:path.resolve('preview-mobile-learning.png'),fullPage:true});
 await page.locator('[data-mode="audit"]').click();await page.waitForSelector('#audit-panel .audit-cat');assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);await page.screenshot({path:path.resolve('preview-mobile-audit.png'),fullPage:true});
 await page.locator('[data-mode="overview"]').click();
-await page.locator('#immersive').click();await page.screenshot({path:path.resolve('preview-mobile-map.png')});assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);assert.deepEqual(errors,[]);console.log('PASS desktop/mobile: contract, drill, inspector, learning overlay, learning + audit panels, layers, keyboard search, immersion, motion/flat, no overflow or page errors');await browser.close()})().catch(e=>{console.error(e);process.exit(1)});
+await page.locator('#immersive').click();await page.screenshot({path:path.resolve('preview-mobile-map.png')});assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);assert.deepEqual(errors,[]);console.log('PASS desktop/mobile: contract V1, datasource badge, human-readable naming + canonical id, Dados table, layers + cap raise, mode chip, learning overlay + lineage, audit severity, drill, inspector, keyboard search, immersion, motion/flat, no overflow or page errors');await browser.close()})().catch(e=>{console.error(e);process.exit(1)});

@@ -54,3 +54,31 @@ test('a failed read surfaces the status and caches nothing',async()=>{
  await assert.rejects(()=>api.graph({focus:'a'}),/HTTP 503/);
  assert.equal(api.cached,0);
 });
+
+test('provenance is exposed and a fallback is never labelled live',async()=>{
+ const api=createApi({fetchImpl:async()=>reply({nodes:[],edges:[],fingerprint:'fp1',source:'legacy',freshness:'FALLBACK',sourceVersion:'2026-09-05T20:13:05Z'})});
+ await api.graph({focus:'a'});
+ assert.equal(api.provenance.source,'legacy');
+ assert.equal(api.provenance.freshness,'FALLBACK');
+ assert.equal(api.provenance.label,'FALLBACK · LEGACY SNAPSHOT');
+ assert.equal(api.provenance.sourceVersion,'2026-09-05T20:13:05Z');
+});
+
+test('a healthy v1 payload is reported as live',async()=>{
+ const api=createApi({fetchImpl:async()=>reply({nodes:[],edges:[],fingerprint:'fp9',source:'v1',freshness:'LIVE'})});
+ await api.graph({focus:'a'});
+ assert.equal(api.provenance.label,'LIVE · NEON V1');
+});
+
+test('the documented cache key carries source, fingerprint, focus, depth and filters',async()=>{
+ const api=createApi({fetchImpl:async()=>reply({nodes:[],edges:[],fingerprint:'fp1',source:'v1',freshness:'LIVE'})});
+ await api.graph({focus:'domain:D1',depth:3});
+ const key=api.cacheKeyFor({focus:'domain:D1',depth:3,type:'TEST'});
+ assert.match(key,/^graph:v1:v1:fp1:domain:D1:3:/);
+ assert.ok(key.includes('type=TEST'));
+});
+
+test('a contract without nodes still yields a renderable empty graph',()=>{
+ const g=normalizeGraph({focus:'x'});
+ assert.deepEqual(g.nodes,[]);assert.deepEqual(g.edges,[]);assert.equal(g.focus,'x');
+});

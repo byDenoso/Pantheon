@@ -12,6 +12,8 @@ import {renderMetrics, renderSourceStatus, renderCharts, renderDomainNav} from '
 import {createInspector, closeDrawer} from './ui/inspector.mjs';
 import {installFilters, syncFilterInputs, resetFilterInputs} from './ui/filters.mjs';
 import {loadAudit} from './ui/audit-view.mjs';
+import {renderProvenance, renderFallbackNotice} from './ui/provenance.mjs';
+import {renderData} from './ui/data-view.mjs';
 import {loadLearning} from './ui/learning-view.mjs';
 import {registerWebMcp} from './webmcp/tools.mjs';
 
@@ -47,6 +49,17 @@ function selectNode(id) {
 }
 
 /* ---------- rendering ---------- */
+
+const MODE_LABEL = {neighbors:'VIZINHANÇA', ancestors:'ANCESTRAIS', descendants:'DESCENDENTES', critical:'BLOCKERS', lineage:'LINHAGEM', search:'BUSCA'};
+function modeChip() {
+ const chip = $('#mode-chip'), mode = session.state.mode;
+ const label = MODE_LABEL[mode];
+ chip.hidden = !label;
+ if (!label) return;
+ chip.textContent = label + ' ✕';
+ chip.title = 'Voltar à expansão por camadas';
+ chip.onclick = () => session.setMode('children');
+}
 
 function breadcrumbs() {
  $('#breadcrumbs').innerHTML = session.state.path
@@ -102,7 +115,11 @@ session.on((event, payload) => {
   onAudit: () => setMode('audit')
  });
  renderList(g.nodes);
+ renderData(g, {onEntity: id => selectNode(id)});
+ renderProvenance({...api.provenance, sourceVersion: g.sourceVersion || api.provenance.sourceVersion}, {onClick: () => setMode('audit')});
+ renderFallbackNotice(g.issues);
  breadcrumbs();
+ modeChip();
  $('#selection-hint').textContent = 'Selecione um nó para ver fontes e relações.';
  renderDomainNav(api, node => session.focusNode(node));
 });
@@ -115,6 +132,8 @@ function setMode(mode) {
  $$('[data-mode]').forEach(b => b.classList.toggle('on', b.dataset.mode === mode));
  $('#audit-section').hidden = mode !== 'audit';
  $('#learning-section-panel').hidden = mode !== 'learning';
+ $('#data-section').hidden = mode !== 'explore';
+ if (mode === 'explore' && session.state.graph) renderData(session.state.graph, {onEntity: id => selectNode(id)});
  if (mode === 'audit') loadAudit(api, {onEntity: id => selectNode(id)});
  if (mode === 'learning') loadLearning(api);
  if (session.state.selected) inspector.inspect(session.state.selected, {ui: mode});

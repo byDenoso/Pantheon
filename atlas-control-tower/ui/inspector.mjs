@@ -17,7 +17,7 @@ export function relationRow(r) {
  const scope = r.crossDomain ? `<em class="cross">cross-domain ${esc(r.domainA)} ↔ ${esc(r.domainB)}</em>` : esc(r.scope || 'mesmo domínio');
  return `<div class="learning-row"><b>${esc(r.relationType)}</b><span class="status-chip learning-chip">${esc(r.status || 'sem estado')}</span>
   <p class="micro">${esc(r.nodeA)} → ${esc(r.nodeB)}</p>
-  <p class="micro">${scope} · ${esc(confidenceLabel(r.confidence))} · suporte ${num(r.support)} / contradição ${num(r.contradiction)}</p>
+  <p class="micro">${scope} · ${esc(confidenceLabel(r.confidence))} · evidência ${num(r.evidenceCount ?? r.support)} / contradição ${num(r.contradictionCount ?? r.contradiction)}</p>
   ${r.notes ? `<p class="micro">${esc(String(r.notes).slice(0, 220))}</p>` : ''}</div>`;
 }
 
@@ -67,6 +67,10 @@ export function createInspector({api, colors, state, safeUrl, onFocus, onLineage
     `<p class="eyebrow" style="margin-top:20px">${esc(n.subtype || n.type)}</p><h2 class="detail-title">${esc(n.label)}</h2>`
     + `<span class="status-chip" style="--chip:${colors[state(n.status)]}">${esc(n.status || 'Estado não informado')}</span>`
     + `<p class="authority">${esc(n.authority)}</p>`
+    // The canonical identifier is always shown, whatever label the naming layer chose.
+    + `<p class="canonical"><label>ID canônico</label><code>${esc(n.canonicalId || String(n.id).replace(/^[a-z_]+:/, ''))}</code>`
+      + `${n.displaySource && n.displaySource !== 'CANONICAL_ID' ? `<small>rótulo: ${esc(n.displaySource)}</small>` : ''}`
+      + `${n.canonicalTitle && n.canonicalTitle !== n.label ? `<small>título de origem: ${esc(n.canonicalTitle)}</small>` : ''}</p>`
     + `<p class="detail-summary">${esc(n.summary || 'Sem resumo adicional registrado na fonte.')}</p>`
     + `<div class="detail-actions"><button id="open-node">Explorar →</button><button id="lineage-node">Linhagem</button><button id="learning-node">Aprendizado relacionado</button><button id="compare-node">Comparar</button><button id="copy-node">Copiar ID</button></div>`
     + sourceBlock(n, safeUrl)
@@ -84,7 +88,7 @@ export function createInspector({api, colors, state, safeUrl, onFocus, onLineage
    $('#open-node').onclick = () => onFocus(n);
    $('#lineage-node').onclick = () => onLineage(n);
    $('#compare-node').onclick = () => compare(n);
-   $('#copy-node').onclick = () => navigator.clipboard.writeText(id).then(() => toast('ID copiado.')).catch(() => toast(id));
+   $('#copy-node').onclick = () => navigator.clipboard.writeText(n.canonicalId || id).then(() => toast('ID copiado.')).catch(() => toast(id));
    $('#learning-node').onclick = () => {$('#learning-section').hidden = false; renderLearningOverlay(api, id)};
    $$('[data-related]').forEach(b => b.onclick = () => onRelated(b.dataset.related));
   } catch {

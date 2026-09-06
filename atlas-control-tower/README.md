@@ -80,3 +80,12 @@ pending and name the tab they need. Migration issues live in the Audit tab only 
 `UNMAPPED` is no longer rendered as a scientific domain in the chart, the sidebar or
 `GET /api/state`. Snapshot science is still a bundled private fallback without Google
 authentication; durable cache and automatic scientific refresh remain backend work.
+
+## V1-integration-ready frontend (2026-09-06)
+
+The presentation layer no longer knows the physical read model. `GET /api/graph`
+answers Graph Contract V1 and `ATLAS_DATA_SOURCE` (`legacy|v1|auto`) plus
+`ATLAS_V1_BASE_URL` select the reader; a fallback is always visible in the UI.
+New endpoints: `GET /api/health`, `GET /api/audit`, `GET /api/learning[?id=|&view=lineage]`.
+Human-readable labels are derived without touching canonical identifiers, which stay
+visible in the inspector, in the data table and in search.

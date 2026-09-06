@@ -35,8 +35,11 @@ draw(){
  }
  // Place focal/selected labels first; subsequent labels cannot cover them.
  c.globalAlpha=1;const boxes=[];this.labelBoxes=boxes;
- const priority=p=>p.node.id===this.focus?10000:p.node.id===this.selected?9000:p.node.id===this.hover?.id?8000:p.z;
+ const RANK={SYSTEM:600,DOMAIN:400,CAMPAIGN:220,CLAIM:120};
+ // Structure outranks leaves so a dense recorte still reads as a map.
+ const priority=p=>p.node.id===this.focus?1e4:p.node.id===this.selected?9e3:p.node.id===this.hover?.id?8e3:(RANK[p.node.type]||0)+p.z;
  for(const p of [...this.points].sort((a,b)=>priority(b)-priority(a))){const n=p.node,core=n.id===this.focus,active=n.id===this.selected||n.id===this.hover?.id;
+ if(!core&&!active&&boxes.length>=Math.max(6,MAP_CONFIG.maxLabels|0))continue;
  if((this.data.nodes.length>40&&p.z<0&&n.type!=='SYSTEM'||this.focus==='system:NEXO'&&n.type!=='SYSTEM')&&!core&&!active)continue;
  const col=palette.node,label=(n.label||n.id).slice(0,w<500?24:this.data.nodes.length>30?29:38),size=core?18:12;
  c.font=`${core?'bold':'normal'} ${size}px sans-serif`;const bw=c.measureText(label).width+22,bh=43;

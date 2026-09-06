@@ -80,3 +80,36 @@ body:not([data-mode=explore]):not([data-mode=audit]) .entity-section{margin-top:
 .learning-row .cross{font-style:normal;color:var(--accent)}
 @media(max-width:1150px){.ladder{grid-template-columns:repeat(3,1fr)}}
 @media(max-width:760px){.ladder{grid-template-columns:1fr}}
+
+/* Provenance pill, mode chip, data table, audit severity, learning lineage. */
+.provenance{display:flex;align-items:center;gap:7px;font-size:9px;letter-spacing:.6px;white-space:nowrap;background:transparent;padding:6px 10px}
+.provenance i{width:6px;height:6px;border-radius:50%;background:var(--muted);flex:none}
+.provenance small{color:var(--muted);font-size:8px}
+.provenance[data-tone=ok] i{background:#4bbf8a}.provenance[data-tone=warn] i{background:var(--warning)}
+.provenance[data-tone=bad] i{background:#e0736f}.provenance[data-tone=bad]{border-color:#e0736f}
+.fallback-note{display:flex;gap:8px;align-items:baseline;font-size:8px;color:var(--warning);border:1px solid var(--warning);border-radius:6px;padding:5px 8px;margin-bottom:8px}
+.fallback-note b{letter-spacing:1px}
+.mode-chip{display:inline-flex;align-items:center;gap:6px;margin-top:6px;font-size:8px;letter-spacing:1.2px;padding:3px 9px;border-radius:20px;color:var(--accent);border-color:var(--accent);background:transparent}
+.canonical{margin:10px 0;font-size:9px;color:var(--muted)}
+.canonical label{display:block;font-size:8px;letter-spacing:.8px;margin-bottom:3px}
+.canonical code{font-size:10px;color:var(--text);overflow-wrap:anywhere}
+.canonical small{display:block;font-size:8px;margin-top:3px}
+.table-wrap{overflow-x:auto;max-height:520px;overflow-y:auto}
+.data-table{width:100%;border-collapse:collapse;font-size:10px}
+.data-table th{position:sticky;top:0;background:var(--surface);text-align:left;border-bottom:1px solid var(--line);z-index:1}
+.data-table th button{border:0;background:none;padding:7px 8px;font-size:8px;letter-spacing:.8px;color:var(--muted);width:100%;text-align:left}
+.data-table td{padding:7px 8px;border-bottom:1px solid var(--line);color:var(--muted);vertical-align:top}
+.data-table td.mono{font-size:9px;color:var(--text);overflow-wrap:anywhere}
+.data-table tbody tr{cursor:pointer}
+.data-table tbody tr:hover td{background:var(--soft);color:var(--text)}
+.sev{font-size:7px;letter-spacing:.8px;border:1px solid var(--line);border-radius:4px;padding:1px 5px;color:var(--muted)}
+.sev-error{color:#e0736f;border-color:#e0736f}.sev-warn{color:var(--warning);border-color:var(--warning)}
+.audit-item .resolution{color:var(--text)}
+.ladder-item{display:block;width:100%;text-align:left;border:0;background:none;padding:3px 0;font-size:9px;color:var(--muted)}
+.ladder-item:hover{background:none;color:var(--text)}
+.ladder-item b{display:block;font-weight:500;color:var(--text);font-size:10px}
+.lineage-box{border:1px solid var(--accent);border-radius:9px;padding:12px;margin-bottom:16px;background:var(--raised)}
+.lineage-head{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:8px;font-size:11px}
+.lineage{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.lineage-col h5{margin:0 0 6px;font-size:8px;letter-spacing:1px;color:var(--muted);font-weight:600}
+@media(max-width:760px){.lineage{grid-template-columns:1fr}.provenance span{display:none}.data-table{font-size:9px}}

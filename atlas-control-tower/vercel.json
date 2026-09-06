@@ -31,6 +31,10 @@
       "use": "@vercel/static"
     },
     {
+      "src": "lib/graph-contract.mjs",
+      "use": "@vercel/static"
+    },
+    {
       "src": "lib/atlas-api.mjs",
       "use": "@vercel/static"
     },
@@ -79,13 +83,21 @@
       "use": "@vercel/static"
     },
     {
+      "src": "ui/provenance.mjs",
+      "use": "@vercel/static"
+    },
+    {
+      "src": "ui/data-view.mjs",
+      "use": "@vercel/static"
+    },
+    {
       "src": "webmcp/tools.mjs",
       "use": "@vercel/static"
     }
   ],
   "routes": [
     {
-      "src": "/api/(state|sync|graph|entity|automation-runs|learning-relations|learning|audit|ops)",
+      "src": "/api/(state|sync|graph|entity|automation-runs|learning-relations|learning|audit|health|ops)",
       "dest": "/api/atlas.js?route=$1"
     },
     {

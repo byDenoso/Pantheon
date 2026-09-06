@@ -35,6 +35,8 @@ export function buildTools({api, session, actions}) {
   atlas_get_migration_issues: () => api.audit(),
   atlas_get_blockers: p => api.graph({focus:p.id || session.state.focus, mode:'critical'}),
   atlas_show_lineage: async p => api.lineage(p.id),
+  atlas_get_learning_lineage: p => api.learningLineage(p.id),
+  atlas_get_provenance: async () => {const h = await api.health(); return {...h, client: api.provenance}},
   atlas_focus_entity: async p => {const d = await api.entity(p.id); await actions.focus(d.entity); return {focus:p.id}},
   atlas_filter_graph: async p => {await session.setFilters({query:p.query || '', domain:p.domain || '', status:p.status || ''}); return session.state.graph},
   atlas_compare: async p => {const d = await api.entity(p.id); actions.compare(d.entity); return {id:p.id}},

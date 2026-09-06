@@ -101,3 +101,46 @@ no second data path. `atlas_get_learning`, `atlas_explain_learning_origin` and
 `ui/inspector.mjs`, `ui/filters.mjs`, `ui/learning-view.mjs`, `ui/audit-view.mjs`,
 with shared helpers in `ui/dom.mjs`. `lib/audit.mjs` and `lib/learning.mjs` are
 server-side and deliberately absent from `frontend-files.mjs`.
+
+## Graph Contract V1 and the datasource switch
+
+`lib/graph-contract.mjs` is the shared shape (producer and consumer):
+`{focus, nodes, edges, total, hasMore, truncated, depth, fingerprint, sourceVersion,
+source, freshness, cache, issues}`. Unknown keys survive under `extra`, missing
+optional keys fall back, and `contractIssues()` reports drift by level instead of
+throwing. Edges whose endpoint is absent are dropped before `Graph3D` sees them.
+
+`lib/datasource.mjs` chooses the reader from `ATLAS_DATA_SOURCE` = `legacy | v1 | auto`
+(default `auto`) plus `ATLAS_V1_BASE_URL` and optional `ATLAS_V1_ENVIRONMENT`.
+`auto` uses science_v1 when `/health` answers and otherwise serves the legacy
+snapshot; an unconfigured V1 under `auto` is `SNAPSHOT`, not a degraded fallback.
+A requested-but-unreachable V1 is always `FRESHNESS.FALLBACK` and ships a
+`DATASOURCE_FALLBACK` issue that the UI renders as a loud note. Snapshot science is
+never labelled live.
+
+The client cache is keyed by projection fingerprint and cleared whenever the
+fingerprint changes; `api.cacheKeyFor()` produces the documented
+`graph:v1:<source>:<fingerprint>:<focus>:<depth>:<filters>` form. `POST /api/sync`
+is never cached. Camera movement issues no request; focus, depth and filters do.
+
+## Naming
+
+`lib/naming.mjs` decides what a human reads first without touching canonical
+identifiers. Priority: curated label → backend label/display_name → campaign-derived
+→ short scientific question → humanised id → canonical id. Every node carries
+`label`, `canonicalId`, `canonicalTitle`, `displaySource` and a `searchText` that
+covers label, canonical id, question and campaign. Operational records
+(RUN, AUTOMATION_RUN, RESULT, FILE, ARTIFACT, DATASET) keep their code, because
+their summary is an outcome paragraph rather than a title. `tidySourceLabel` only
+cleans SHOUTED source strings (`PEER MICRO FINGERPRINT` → `Microphysics Fingerprint`)
+and `humanizeId` expands only the small glossary; unknown abbreviations are never
+decoded. The inspector always prints the canonical id and the label's provenance.
+
+## Buttons that were dead
+
+The decorative `DP` avatar is now `#provenance`, the source/freshness pill.
+The `Dados` tab is a real sortable table (`ui/data-view.mjs`) over the same recorte
+the map is showing, with no extra request. `#more` now appears on a truncated
+layered recorte and raises the node cap instead of paging an offset that layered
+views ignore. `#mode-chip` names the active exploration mode (VIZINHANÇA,
+ANCESTRAIS, …) and returns to layered expansion.
