@@ -1,29 +1,82 @@
 import {esc, num} from './dom.mjs';
 
-const topEntries = (obj={}, limit=5) => Object.entries(obj).sort((a,b)=>Number(b[1])-Number(a[1])).slice(0,limit);
-const pct = (a,b) => b ? Math.round((Number(a)||0)*100/Number(b)) : 0;
+const SIGNAL_ORDER=['contradicted','weakening','strengthening','new','promoted'];
+const SIGNAL_LABEL={contradicted:'contradito',weakening:'enfraquecendo',strengthening:'fortalecendo',new:'novo',promoted:'promovido'};
+const SIGNAL_TONE={contradicted:'bad',weakening:'warn',strengthening:'good',new:'new',promoted:'good'};
+const CHANGE_LABEL={RESULT:'Resultado atualizado',CLAIM:'Claim atualizada',TEST:'Teste atualizado',CAMPAIGN:'Campanha atualizada',PUBLICATION:'Publicação atualizada',DOMAIN:'Domínio atualizado'};
 
-export function renderRecortePanel(graph, summary, {onEntity}={}) {
- const root=document.querySelector('#recorte-panel');
- if(!root)return;
- const nodes=graph?.nodes||[], edges=graph?.edges||[], counts=summary?.counts||{}, statuses=summary?.statuses||{};
- const degree=new Map();
- for(const e of edges){degree.set(e.source,(degree.get(e.source)||0)+1);degree.set(e.target,(degree.get(e.target)||0)+1)}
- const byId=new Map(nodes.map(n=>[n.id,n]));
- const connected=[...degree].sort((a,b)=>b[1]-a[1]).slice(0,6).map(([id,n])=>({node:byId.get(id),n})).filter(x=>x.node);
- const relationTypes={}; for(const e of edges) relationTypes[e.type||'RELATION']=(relationTypes[e.type||'RELATION']||0)+1;
- const activity=topEntries(summary?.activity||{},6).sort((a,b)=>String(b[0]).localeCompare(String(a[0])));
- const total=summary?.total||nodes.length;
- const blocked=Number(statuses.blocked||0), unresolved=Number(summary?.projection?.unresolvedDomain||0);
- const cards=[
-  ['Composição',`${num(total)} nós`,topEntries(counts,4).map(([k,v])=>`${k} ${num(v)}`).join(' · ')||'Sem composição'],
-  ['Relações',`${num(edges.length)} no recorte`,topEntries(relationTypes,3).map(([k,v])=>`${k} ${num(v)}`).join(' · ')||'Sem relações'],
-  ['Saúde',blocked||unresolved?`${num(blocked+unresolved)} atenção`:'Sem blockers',`${num(blocked)} bloqueados · ${num(unresolved)} sem domínio`],
-  ['Cobertura',`${pct(edges.length,Math.max(1,nodes.length))}%`,`${num(edges.length)} relações / ${num(nodes.length)} nós`]
- ];
- root.innerHTML=`<div class="recorte-grid">${cards.map(([label,value,detail])=>`<article class="recorte-card"><small>${esc(label)}</small><strong>${esc(value)}</strong><span>${esc(detail)}</span></article>`).join('')}</div>
- <div class="recorte-split"><article><div class="subhead"><b>Mais conectadas</b><small>NO RECORTE ATUAL</small></div><div class="rank-list">${connected.length?connected.map(({node,n})=>`<button data-recorte-entity="${esc(node.id)}"><span>${esc(node.label||node.id)}<small>${esc(node.type||'ENTITY')}</small></span><b>${num(n)}</b></button>`).join(''):'<p class="empty-note">Nenhuma centralidade calculável neste recorte.</p>'}</div></article>
- <article><div class="subhead"><b>Atividade recente</b><small>OBSERVADA NA FONTE</small></div><div class="activity-list">${activity.length?activity.map(([d,n])=>`<div><span>${esc(d)}</span><b>${num(n)}</b></div>`).join(''):'<p class="empty-note">Sem datas de atividade neste recorte.</p>'}</div></article></div>`;
- root.querySelectorAll('[data-recorte-entity]').forEach(b=>b.onclick=()=>onEntity?.(b.dataset.recorteEntity));
- const count=document.querySelector('#list-count'); if(count)count.textContent=`${num(total)} NO RECORTE`;
+function formatWhen(value){
+ if(!value)return'';
+ const d=new Date(value);
+ if(Number.isNaN(d.getTime()))return String(value).slice(0,16).replace('T',' ');
+ return d.toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}).replace(',','');
+}
+
+function latestChanges(nodes,limit=6){
+ return nodes
+  .filter(n=>n?.updatedAt&&n.type!=='SYSTEM')
+  .map(n=>({node:n,time:new Date(n.updatedAt).getTime()}))
+  .filter(x=>Number.isFinite(x.time))
+  .sort((a,b)=>b.time-a.time)
+  .slice(0,limit);
+}
+
+function emergentSignals(payload,limit=5){
+ const buckets=new Map((payload?.emergent||[]).map(b=>[b.id,b]));
+ const seen=new Set(),out=[];
+ for(const id of SIGNAL_ORDER){
+  const bucket=buckets.get(id); if(!bucket)continue;
+  for(const item of bucket.items||[]){
+   const key=item.id||`${item.relationType}:${item.notes}`; if(seen.has(key))continue;
+   seen.add(key);out.push({item,bucket:id,label:SIGNAL_LABEL[id]||bucket.label||id,tone:SIGNAL_TONE[id]||'new'});
+   if(out.length>=limit)return out;
+  }
+ }
+ return out;
+}
+
+function renderChanges(changes){
+ if(!changes.length)return '<p class="radar-empty">Nenhuma mudança datada neste recorte.</p>';
+ return changes.map(({node})=>`<button class="change-row" data-change-entity="${esc(node.id)}">
+  <span class="change-time"><i></i>${esc(formatWhen(node.updatedAt))}</span>
+  <span class="change-copy"><b>${esc(CHANGE_LABEL[node.type]||'Entidade atualizada')}</b><small>${esc(node.label||node.id)}${node.status?' · '+esc(node.status):''}</small></span>
+  <span class="change-arrow">›</span>
+ </button>`).join('');
+}
+
+function renderSignals(signals,payload){
+ if(!signals.length)return '<p class="radar-empty">Nenhum sinal emergente registrado no Learning.</p>';
+ return `<div class="signal-summary">
+  <span><b>${num((payload?.emergent||[]).find(x=>x.id==='strengthening')?.count||0)}</b> fortalecendo</span>
+  <span><b>${num((payload?.emergent||[]).find(x=>x.id==='new')?.count||0)}</b> novos</span>
+  <span><b>${num((payload?.emergent||[]).find(x=>x.id==='weakening')?.count||0)}</b> enfraquecendo</span>
+ </div>${signals.map(({item,label,tone})=>`<button class="signal-row" data-signal-id="${esc(item.id||'')}">
+  <i class="signal-dot tone-${tone}"></i>
+  <span class="signal-copy"><b>${esc(item.relationType||item.title||item.id||'Sinal emergente')}</b><small>${esc(String(item.notes||item.status||'').slice(0,150))}</small></span>
+  <span class="signal-chip tone-${tone}">${esc(label)}</span><span class="signal-arrow">›</span>
+ </button>`).join('')}`;
+}
+
+export async function renderRecortePanel(api,graph,summary,{onEntity,onLearning}={}){
+ const root=document.querySelector('#recorte-panel');if(!root)return;
+ const nodes=graph?.nodes||[],total=summary?.total||nodes.length;
+ const changes=latestChanges(nodes);
+ const key=`${graph?.fingerprint||''}:${graph?.focus||''}:${Date.now()}`;
+ root.dataset.renderKey=key;
+ root.innerHTML=`<div class="radar-grid">
+  <article class="radar-card radar-signals"><div class="radar-head"><div><span class="radar-icon">⌁</span><span><b>Sinais emergentes</b><small>padrões e relações que ganharam força</small></span></div><button class="radar-link" data-open-learning>ABRIR LEARNING ›</button></div><div class="radar-body" data-signals><p class="radar-empty">Lendo Learning…</p></div></article>
+  <article class="radar-card radar-changes"><div class="radar-head"><div><span class="radar-icon">◷</span><span><b>Últimas mudanças</b><small>eventos observados neste recorte</small></span></div><span class="radar-meta">${num(changes.length)} RECENTES</span></div><div class="radar-body">${renderChanges(changes)}</div></article>
+ </div>`;
+ root.querySelectorAll('[data-change-entity]').forEach(b=>b.onclick=()=>onEntity?.(b.dataset.changeEntity));
+ root.querySelector('[data-open-learning]')?.addEventListener('click',()=>onLearning?.());
+ const count=document.querySelector('#list-count');if(count)count.textContent=`${num(total)} NO RECORTE`;
+ try{
+  const learning=await api.learning();
+  if(root.dataset.renderKey!==key)return;
+  const target=root.querySelector('[data-signals]');if(target)target.innerHTML=renderSignals(emergentSignals(learning),learning);
+  root.querySelectorAll('[data-signal-id]').forEach(b=>b.onclick=()=>onLearning?.(b.dataset.signalId));
+ }catch{
+  if(root.dataset.renderKey!==key)return;
+  const target=root.querySelector('[data-signals]');if(target)target.innerHTML='<p class="radar-empty">Learning indisponível neste momento.</p>';
+ }
 }
