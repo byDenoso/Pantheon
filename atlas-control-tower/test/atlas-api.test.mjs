@@ -33,8 +33,8 @@ test('a new projection fingerprint clears the cache; it is never an authority',a
  await api.graph({focus:'a'});
  assert.equal(calls,1);
  fingerprint='fp2';
- await api.graph({focus:'b'});          // learns the new version
- await api.graph({focus:'a'});          // previously cached under fp1, must refetch
+ await api.graph({focus:'b'});
+ await api.graph({focus:'a'});
  assert.equal(calls,3);
 });
 
@@ -47,6 +47,18 @@ test('sync is never cached and drops what was cached before it',async()=>{
  await api.graph({focus:'a'});
  assert.equal(calls,4);
  assert.equal(api.cached,1);
+});
+
+test('the first graph read after sync bypasses CDN once without changing the stable cache key',async()=>{
+ const urls=[];
+ const api=createApi({fetchImpl:async(url)=>{urls.push(url);return reply({nodes:[],edges:[],fingerprint:'fp1',source:'v1',freshness:'LIVE'})}});
+ await api.graph({focus:'a'});
+ await api.sync();
+ await api.graph({focus:'a'});
+ assert.match(urls.at(-1),/refresh=1/);
+ const afterBypass=urls.length;
+ await api.graph({focus:'a'});
+ assert.equal(urls.length,afterBypass);
 });
 
 test('a failed read surfaces the status and caches nothing',async()=>{
