@@ -61,6 +61,7 @@ function renderSignals(signals,payload){
 
 export async function renderRecortePanel(graph,summary,{onEntity,onLearning}={}){
  const root=document.querySelector('#recorte-panel');if(!root)return;
+ const openLearning=()=>onLearning?onLearning():document.querySelector('[data-mode="learning"]')?.click();
  const nodes=graph?.nodes||[],total=summary?.total||nodes.length;
  const changes=latestChanges(nodes);
  const key=`${graph?.fingerprint||''}:${graph?.focus||''}:${Date.now()}`;
@@ -70,13 +71,13 @@ export async function renderRecortePanel(graph,summary,{onEntity,onLearning}={})
   <article class="radar-card radar-changes"><div class="radar-head"><div><span class="radar-icon">◷</span><span><b>Últimas mudanças</b><small>eventos observados neste recorte</small></span></div><span class="radar-meta">${num(changes.length)} RECENTES</span></div><div class="radar-body">${renderChanges(changes)}</div></article>
  </div>`;
  root.querySelectorAll('[data-change-entity]').forEach(b=>b.onclick=()=>onEntity?.(b.dataset.changeEntity));
- root.querySelector('[data-open-learning]')?.addEventListener('click',()=>onLearning?.());
+ root.querySelector('[data-open-learning]')?.addEventListener('click',openLearning);
  const count=document.querySelector('#list-count');if(count)count.textContent=`${num(total)} NO RECORTE`;
  try{
   const learning=await radarApi.request('learning',{}, {cacheable:false});
   if(root.dataset.renderKey!==key)return;
   const target=root.querySelector('[data-signals]');if(target)target.innerHTML=renderSignals(emergentSignals(learning),learning);
-  root.querySelectorAll('[data-signal-id]').forEach(b=>b.onclick=()=>onLearning?.(b.dataset.signalId));
+  root.querySelectorAll('[data-signal-id]').forEach(b=>b.onclick=openLearning);
  }catch{
   if(root.dataset.renderKey!==key)return;
   const target=root.querySelector('[data-signals]');if(target)target.innerHTML='<p class="radar-empty">Learning indisponível neste momento.</p>';
