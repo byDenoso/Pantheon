@@ -1,0 +1,26 @@
+name: Atlas Runtime Performance CI
+
+on:
+  push:
+    branches:
+      - nexo-runtime-perf-20260906
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: atlas-control-tower
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: atlas-control-tower/package-lock.json
+      - run: npm ci
+      - run: npm test
