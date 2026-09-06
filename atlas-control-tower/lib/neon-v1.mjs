@@ -7,9 +7,6 @@ const SYSTEMS=[['SCIENCE','Ciência'],['ENGINEERING','Engineering'],['OLYMPUS','
 export function createDataApi({env=process.env,fetchImpl,timeoutMs=12000}={}){
  const doFetch=fetchImpl||((...a)=>fetch(...a));
  const base=String(env.NEON_DATA_API_URL||DEFAULT_NEON_DATA_API_URL).replace(/\/+$/,'');
- // On Fluid Compute the OIDC token arrives as a per-request header, not in process.env;
- // the handler pushes it here before each read. Tokens are project-scoped and
- // interchangeable, so a shared override is safe under concurrent invocations.
  let override='';
  const token=()=>override||env.VERCEL_OIDC_TOKEN||'';
  async function select(schema,table,query={}){
@@ -30,11 +27,8 @@ const relationMap=r=>{
 };
 
 export function projectScienceRows({entities=[],displays=[],domains=[],entityDomains=[],relations=[],provenance=[],revisions=[]}={}){
- // entities.updated_at is almost always null in the migrated corpus; the observed date
- // lives on the current revision. imported_at is the cutover stamp, never an activity date.
  const revById=new Map(),revByEntity=new Map();
- for(const r of revisions){if(!r.observed_at)continue;if(r.revision_id)revById.set(r.revision_id,r.observed_at);
-  const prev=revByEntity.get(r.entity_id);if(r.is_current||!prev||String(r.observed_at)>String(prev))revByEntity.set(r.entity_id,r.observed_at)}
+ for(const r of revisions){if(!r.observed_at)continue;if(r.revision_id)revById.set(r.revision_id,r.observed_at);const prev=revByEntity.get(r.entity_id);if(r.is_current||!prev||String(r.observed_at)>String(prev))revByEntity.set(r.entity_id,r.observed_at)}
  const observedAt=e=>revById.get(e.current_revision_id)||revByEntity.get(e.entity_id)||e.updated_at||'';
  const nodes=[],edges=[],display=new Map(displays.map(x=>[x.entity_id,x])),domainById=new Map(domains.map(d=>[d.domain_id,d])),assignments=new Map(),prov=new Map();
  for(const x of entityDomains){if(!assignments.has(x.entity_id))assignments.set(x.entity_id,[]);assignments.get(x.entity_id).push(x)}
@@ -48,7 +42,6 @@ export function projectScienceRows({entities=[],displays=[],domains=[],entityDom
  }
  const ids=new Set(nodes.map(n=>n.id));
  for(const r of relations){const m=relationMap(r);if(!ids.has(m.source)||!ids.has(m.target))continue;edges.push({id:r.relation_id||`${m.source}:${m.type}:${m.target}`,source:m.source,target:m.target,type:m.type,authority:CANON,status:r.status||'',evidenceClass:r.evidence_class||'',sourceRefs:r.source_ref?[{source:r.source_surface,sourceRef:r.source_ref}]:[]})}
- // Newest observation the source itself recorded, not the moment we imported it.
  const sourceVersion=entities.reduce((m,e)=>{const v=String(observedAt(e)||'');return v>m?v:m},'')||entities.reduce((m,e)=>{const v=String(e.imported_at||'');return v>m?v:m},'');
  const graph={nodes,edges,issues:[]};graph.fingerprint=fingerprint(graph);graph.sourceVersion=sourceVersion;return graph;
 }
@@ -72,34 +65,39 @@ const sev=s=>s==='BLOCKER'?'ERROR':s==='WARN'?'WARN':'INFO';
 const issueCategory=t=>({UNKNOWN_DOMAIN:'UNRESOLVED_DOMAIN',UNRESOLVED_DOMAIN:'UNRESOLVED_DOMAIN',LEGACY_ALIAS:'LEGACY_REFERENCE',AMBIGUOUS_MAPPING:'AMBIGUOUS_MAPPING',BROKEN_REFERENCE:'BROKEN_REFERENCE',MISSING_PARENT:'BROKEN_REFERENCE',UNRESOLVED_RESULT_OWNER:'RESULT_SUBJECT',RESULT_SUBJECT_ISSUE:'RESULT_SUBJECT',MISSING_PROVENANCE:'MISSING_PROVENANCE',SUPERSEDED_REFERENCE:'SUPERSEDED_REF'}[t]||t||'OTHER');
 const isOpen=i=>!/RESOLVED|CLOSED|ACCEPTED/i.test(String(i.status||''));
 export function auditPayload(issues=[]){
- const groups=new Map();
- for(const i of issues){const id=issueCategory(i.issue_type);if(!groups.has(id))groups.set(id,[]);
-  groups.get(id).push({id:i.issue_id,label:i.source_key||i.entity_id||i.issue_id,type:'MIGRATION_ISSUE',domain:'',
-   status:i.status||'',open:isOpen(i),authority:'',severity:sev(i.severity),issueType:id,source:'v1',
-   resolution:i.proposed_resolution||'',detail:i.detail||'',missing:i.raw_value||''})}
- const categories=[...groups].map(([id,items])=>{
-  const open=items.filter(x=>x.open);
-  return {id,label:id.replaceAll('_',' '),
-   // Severity reflects only what is still open. A resolved BLOCKER is history, so a
-   // category with nothing open raises no alarm even though its count stays visible.
-   severity:open.some(x=>x.severity==='ERROR')?'ERROR':open.some(x=>x.severity==='WARN')?'WARN':'INFO',
-   // Left empty on purpose: the declared taxonomy supplies the human explanation.
-   detail:'',count:items.length,openCount:open.length,
-   // Anything still open is shown first.
-   items:[...open,...items.filter(x=>!x.open)].slice(0,24)}});
- const open=issues.filter(isOpen).length;
- return{generatedAt:new Date().toISOString(),source:'v1',total:issues.length,open,resolved:issues.length-open,categories}}
+ const groups=new Map();for(const i of issues){const id=issueCategory(i.issue_type);if(!groups.has(id))groups.set(id,[]);groups.get(id).push({id:i.issue_id,label:i.source_key||i.entity_id||i.issue_id,type:'MIGRATION_ISSUE',domain:'',status:i.status||'',open:isOpen(i),authority:'',severity:sev(i.severity),issueType:id,source:'v1',resolution:i.proposed_resolution||'',detail:i.detail||'',missing:i.raw_value||''})}
+ const categories=[...groups].map(([id,items])=>{const open=items.filter(x=>x.open);return{id,label:id.replaceAll('_',' '),severity:open.some(x=>x.severity==='ERROR')?'ERROR':open.some(x=>x.severity==='WARN')?'WARN':'INFO',detail:'',count:items.length,openCount:open.length,items:[...open,...items.filter(x=>!x.open)].slice(0,24)}});const open=issues.filter(isOpen).length;return{generatedAt:new Date().toISOString(),source:'v1',total:issues.length,open,resolved:issues.length-open,categories}}
 
 function summary(g,q={}){const nodes=g.nodes.filter(n=>matches(n,q)),count=fn=>nodes.reduce((a,n)=>{const k=fn(n);if(k)a[k]=(a[k]||0)+1;return a},{}),activity={};for(const n of nodes.filter(n=>['TEST','RESULT','CLAIM'].includes(n.type))){const d=String(n.updatedAt||'').match(/^\d{4}-\d{2}-\d{2}/)?.[0];if(d)activity[d]=(activity[d]||0)+1}return{counts:count(n=>n.type),statuses:count(n=>n.type==='TEST'?state(n.status):''),domains:count(n=>n.type==='TEST'?n.domain:''),activity,claims:count(n=>n.type==='CLAIM'?state(n.status):''),claimKinds:count(n=>n.type==='CLAIM'?n.subtype:''),total:nodes.length,sources:{neon:{status:'READ_OK',observedAt:g.sourceVersion}},projection:{fingerprint:g.fingerprint,sourceVersion:g.sourceVersion,unresolvedRelations:0,unresolvedDomain:nodes.filter(n=>n.type==='TEST'&&!n.domain).length,source:'v1',freshness:'LIVE'}}}
 
+const SCIENCE_SELECTS={
+ entities:'entity_id,entity_type,title,summary,status,current_revision_id,legacy_domain_raw,legacy_lane_raw,source_surface,source_row_key,created_at,updated_at,imported_at',
+ entity_display:'entity_id,display_label,is_curated',domains:'domain_id,code,name,kind,description,status',entity_domains:'entity_id,domain_id,role',relations:'relation_id,from_entity_id,to_entity_id,relation_type,status,source_surface,source_ref,evidence_class',revisions:'revision_id,entity_id,observed_at,is_current'};
+const LEARNING_SELECTS={observations:'observation_id,event_type,summary,outcome,domain,evidence_json',patterns:'pattern_id,title,description,status,supporting_count,contradicting_count,confidence_score',lessons:'lesson_id,title,statement,status,source_pattern_id',strategies:'strategy_id,title,description,status,source_lesson_id',policies:'policy_id,title,statement,status,source_strategy_id',links:'from_kind,from_id,to_kind,to_id'};
+const PROVENANCE_SELECT='owner_entity_id,source_kind,source_id,source_location,authority,observed_at';
+const AUDIT_SELECT='issue_id,issue_type,severity,source_surface,source_key,entity_id,raw_value,detail,proposed_resolution,status';
+
 export function createNeonV1Reader({env=process.env,fetchImpl,ttlMs=60000}={}){
- const api=createDataApi({env,fetchImpl});let scienceCache=null,learningCache=null,health={ok:false,checkedAt:0,detail:'NOT_CHECKED'};
- async function loadScience(force=false){if(!force&&scienceCache&&Date.now()-scienceCache.at<ttlMs)return scienceCache;const [entities,displays,domains,entityDomains,relations,provenance,issues,revisions]=await Promise.all([api.select('science_v1','entities',{select:'*',limit:10000}),api.select('science_v1','entity_display',{select:'*',limit:10000}),api.select('science_v1','domains',{select:'*',limit:1000}),api.select('science_v1','entity_domains',{select:'*',limit:10000}),api.select('science_v1','relations',{select:'*',limit:10000}),api.select('science_v1','provenance',{select:'owner_entity_id,source_kind,source_id,source_location,authority,observed_at',limit:10000}),api.select('science_v1','migration_issues',{select:'*',limit:10000}),api.select('science_v1','revisions',{select:'revision_id,entity_id,observed_at,is_current',limit:20000}).catch(()=>[])]);scienceCache={at:Date.now(),graph:projectScienceRows({entities,displays,domains,entityDomains,relations,provenance,revisions}),issues};return scienceCache}
- async function loadLearning(force=false){if(!force&&learningCache&&Date.now()-learningCache.at<ttlMs)return learningCache;const [observations,patterns,lessons,strategies,policies,links]=await Promise.all(['observations','patterns','lessons','strategies','policies','links'].map(t=>api.select('learning_v1',t,{select:'*',limit:10000})));learningCache={at:Date.now(),payload:learningPayload({observations,patterns,lessons,strategies,policies,links})};return learningCache}
+ const api=createDataApi({env,fetchImpl});
+ let scienceCache=null,learningCache=null,auditCache=null,sciencePending=null,learningPending=null,auditPending=null,health={ok:false,checkedAt:0,detail:'NOT_CHECKED'};
+ const fresh=c=>c&&Date.now()-c.at<ttlMs;
+ async function loadScience(force=false){
+  if(!force&&fresh(scienceCache))return {...scienceCache,cacheStatus:'HIT'};
+  if(sciencePending)return sciencePending;
+  sciencePending=(async()=>{const tables=['entities','entity_display','domains','entity_domains','relations','revisions'],rows=await Promise.all(tables.map(t=>api.select('science_v1',t,{select:SCIENCE_SELECTS[t],limit:t==='domains'?1000:t==='revisions'?20000:10000}).catch(e=>t==='revisions'?[]:Promise.reject(e)))),data=Object.fromEntries(tables.map((t,i)=>[t,rows[i]]));scienceCache={at:Date.now(),graph:projectScienceRows({entities:data.entities,displays:data.entity_display,domains:data.domains,entityDomains:data.entity_domains,relations:data.relations,revisions:data.revisions})};return {...scienceCache,cacheStatus:'MISS'}})();
+  try{return await sciencePending}finally{sciencePending=null}
+ }
+ async function loadLearning(force=false){
+  if(!force&&fresh(learningCache))return {...learningCache,cacheStatus:'HIT'};if(learningPending)return learningPending;
+  learningPending=(async()=>{const tables=Object.keys(LEARNING_SELECTS),rows=await Promise.all(tables.map(t=>api.select('learning_v1',t,{select:LEARNING_SELECTS[t],limit:10000}))),data=Object.fromEntries(tables.map((t,i)=>[t,rows[i]]));learningCache={at:Date.now(),payload:learningPayload(data)};return {...learningCache,cacheStatus:'MISS'}})();
+  try{return await learningPending}finally{learningPending=null}
+ }
+ async function loadAudit(force=false){if(!force&&fresh(auditCache))return auditCache;if(auditPending)return auditPending;auditPending=(async()=>{const issues=await api.select('science_v1','migration_issues',{select:AUDIT_SELECT,limit:10000});auditCache={at:Date.now(),issues};return auditCache})();try{return await auditPending}finally{auditPending=null}}
+ async function loadEntityProvenance(id){return api.select('science_v1','provenance',{select:PROVENANCE_SELECT,owner_entity_id:`eq.${id}`,limit:1000})}
  async function checkHealth({force=false}={}){if(!api.configured){health={ok:false,checkedAt:Date.now(),detail:'OIDC_NOT_AVAILABLE'};return health}if(!force&&Date.now()-health.checkedAt<30000)return health;try{const x=await api.select('science_v1','entities',{select:'entity_id',limit:1});health={ok:Array.isArray(x),checkedAt:Date.now(),detail:'OK',version:'science_v1'}}catch(e){health={ok:false,checkedAt:Date.now(),detail:String(e.message||e)}}return health}
- async function graph(q={}){const {graph:g}=await loadScience(),v=subgraph(g,q);return{...v,fingerprint:g.fingerprint,sourceVersion:g.sourceVersion,source:'v1',freshness:'LIVE',cache:'HIT',issues:g.issues||[]}}
- async function entity(q={}){const {graph:g}=await loadScience();if(q.view==='lineage')return graph({focus:q.id,mode:'lineage',depth:3,limit:250});if(q.view==='files'){const linked=new Set(g.edges.filter(e=>e.source===q.id||e.target===q.id).flatMap(e=>[e.source,e.target]));return g.nodes.filter(n=>linked.has(n.id)&&['FILE','ARTIFACT','DATASET','PUBLICATION'].includes(n.type)&&n.id!==q.id).slice(0,100)}const n=g.nodes.find(n=>n.id===q.id);if(!n)return{error:'ENTITY_NOT_FOUND'};const rel=g.edges.filter(e=>e.source===q.id||e.target===q.id);return{entity:n,relations:rel.slice(0,200),relationCount:rel.length,source:'v1'}}
+ async function graph(q={}){const loaded=await loadScience(),g=loaded.graph,v=subgraph(g,q);return{...v,fingerprint:g.fingerprint,sourceVersion:g.sourceVersion,source:'v1',freshness:'LIVE',cache:loaded.cacheStatus,issues:[]}}
+ async function entity(q={}){const {graph:g}=await loadScience();if(q.view==='lineage')return graph({focus:q.id,mode:'lineage',depth:3,limit:250});if(q.view==='files'){const linked=new Set(g.edges.filter(e=>e.source===q.id||e.target===q.id).flatMap(e=>[e.source,e.target]));return g.nodes.filter(n=>linked.has(n.id)&&['FILE','ARTIFACT','DATASET','PUBLICATION'].includes(n.type)&&n.id!==q.id).slice(0,100)}const n=g.nodes.find(n=>n.id===q.id);if(!n)return{error:'ENTITY_NOT_FOUND'};const [provenance,rel]=await Promise.all([loadEntityProvenance(q.id),Promise.resolve(g.edges.filter(e=>e.source===q.id||e.target===q.id))]);const sourceRefs=provenance.map(p=>({source:p.source_kind,sourceId:p.source_id,sourceRef:p.source_location||p.source_id,url:/^https:\/\//.test(p.source_location||'')?p.source_location:undefined,observedAt:p.observed_at}));return{entity:{...n,sourceRefs},relations:rel.slice(0,200),relationCount:rel.length,source:'v1'}}
  async function learning(q={}){const {payload}=await loadLearning();if(!q.id){const {_all,...p}=payload;return p}const all=payload._all||[];if(q.view==='lineage'){const by=new Map(all.map(x=>[x.id,x])),node=by.get(q.id);if(!node)return{id:q.id,available:false,reason:'NOT_FOUND',ancestors:[],descendants:[]};const parents=new Map(all.map(x=>[x.id,x.derivedFrom||[]]));const walk=(id,up)=>{const seen=new Set([id]),out=[],queue=[id];while(queue.length){const cur=queue.shift(),next=up?(parents.get(cur)||[]):all.filter(x=>(parents.get(x.id)||[]).includes(cur)).map(x=>x.id);for(const x of next)if(by.has(x)&&!seen.has(x)){seen.add(x);out.push(by.get(x));queue.push(x)}}return out};const ancestors=walk(q.id,true),descendants=walk(q.id,false);return{id:q.id,node,available:!!(ancestors.length+descendants.length),reason:ancestors.length+descendants.length?'':'NO_DECLARED_LINEAGE',ancestors,descendants}}const bare=String(q.id).replace(/^[a-z_]+:/,'');return{entity:q.id,relations:all.filter(x=>String(x.evidenceRefs||'').includes(bare)),source:'v1'}}
- async function refresh(){const before=scienceCache?.graph?.fingerprint||'',next=await loadScience(true);await loadLearning(true).catch(()=>{});return{outcome:before&&before===next.graph.fingerprint?'NO_CHANGE':'UPDATED',changes:before&&before!==next.graph.fingerprint?1:0,fingerprint:next.graph.fingerprint,completedAt:new Date().toISOString(),sources:{neon:{status:'READ_OK',observedAt:next.graph.sourceVersion}}}}
- return {get configured(){return api.configured},setOidcToken(t){api.setToken(t)},get health(){return health},checkHealth,graph,state:async q=>summary((await loadScience()).graph,q),entity,audit:async()=>auditPayload((await loadScience()).issues),learning,refresh};
+ async function refresh(){const before=scienceCache?.graph?.fingerprint||'',next=await loadScience(true);return{outcome:before&&before===next.graph.fingerprint?'NO_CHANGE':'UPDATED',changes:before&&before!==next.graph.fingerprint?1:0,fingerprint:next.graph.fingerprint,completedAt:new Date().toISOString(),sources:{neon:{status:'READ_OK',observedAt:next.graph.sourceVersion}}}}
+ return {get configured(){return api.configured},setOidcToken(t){api.setToken(t)},get health(){return health},checkHealth,graph,state:async q=>summary((await loadScience()).graph,q),entity,audit:async()=>auditPayload((await loadAudit()).issues),learning,refresh};
 }
