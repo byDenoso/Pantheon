@@ -11,10 +11,6 @@
       }
     },
     {
-      "src": "api/diag-neon.js",
-      "use": "@vercel/node"
-    },
-    {
       "src": "index.html",
       "use": "@vercel/static"
     },
@@ -100,10 +96,6 @@
     }
   ],
   "routes": [
-    {
-      "src": "/api/diag-neon",
-      "dest": "/api/diag-neon.js"
-    },
     {
       "src": "/api/(state|sync|graph|entity|automation-runs|learning-relations|learning|audit|health|ops)",
       "dest": "/api/atlas.js?route=$1"
