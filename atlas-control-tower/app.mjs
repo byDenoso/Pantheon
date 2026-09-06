@@ -15,6 +15,8 @@ import {loadAudit} from './ui/audit-view.mjs';
 import {renderProvenance, renderFallbackNotice} from './ui/provenance.mjs';
 import {renderData} from './ui/data-view.mjs';
 import {loadLearning} from './ui/learning-view.mjs';
+import {renderRecortePanel} from './ui/recorte-view.mjs';
+import {renderBlackBox} from './ui/blackbox-view.mjs';
 import {registerWebMcp} from './webmcp/tools.mjs';
 
 const api = createApi();
@@ -66,16 +68,7 @@ function breadcrumbs() {
   .map((p, i) => `${i ? '<span>/</span>' : ''}<button data-crumb="${i}">${esc(String(p.label).slice(0, 40))}</button>`).join('');
  $$('[data-crumb]').forEach(b => b.onclick = () => session.focusNode(session.state.path[+b.dataset.crumb]));
  $$('[data-focus]').forEach(b => b.classList.toggle('active', b.dataset.focus === session.state.focus));
-}
-
-function renderList(nodes) {
- $('#entities').innerHTML = nodes.map(n =>
-  `<button class="entity-item" data-entity="${esc(n.id)}"><span>${esc(n.label)}<small>${esc(n.type)}${n.domain ? ' · ' + esc(n.domain) : ''}</small></span>`
-  + `<span class="status-chip" style="--chip:${colors[state(n.status)]}">${esc(n.status ? state(n.status) : 'ver')}</span></button>`).join('');
- $$('[data-entity]').forEach(b => {
-  b.onclick = () => selectNode(b.dataset.entity);
-  b.ondblclick = () => session.focusNode(nodes.find(n => n.id === b.dataset.entity));
- });
+ if (session.state.ui !== 'audit') $$('[data-open-mode]').forEach(b => b.classList.remove('active'));
 }
 
 function applyFilter(patch) {
@@ -105,7 +98,6 @@ session.on((event, payload) => {
   ? 'Pré-visualização limitada. Abra um nó ou use 1 camada para os filhos paginados.'
   : 'Recorte completo para esta seleção.';
  $('#more').hidden = !g.hasMore;
- $('#list-count').textContent = `${num(g.total)} NO RECORTE`;
  renderMetrics(summary, {onMetric: type => {syncFilterInputs({...session.state.filters, type}); applyFilter({type})}});
  renderSourceStatus(summary);
  renderCharts(summary, colors, {
@@ -114,13 +106,16 @@ session.on((event, payload) => {
   onDate: since => applyFilter({since}),
   onAudit: () => setMode('audit')
  });
- renderList(g.nodes);
+ renderRecortePanel(g, summary, {onEntity: id => selectNode(id)});
+ renderBlackBox(api, g, summary).catch(() => {});
  renderData(g, {onEntity: id => selectNode(id)});
  renderProvenance({...api.provenance, sourceVersion: g.sourceVersion || api.provenance.sourceVersion}, {onClick: () => setMode('audit')});
  renderFallbackNotice(g.issues);
  breadcrumbs();
  modeChip();
- $('#selection-hint').textContent = 'Selecione um nó para ver fontes e relações.';
+ $('#selection-hint').textContent = session.state.focus === 'system:AUTOMATION'
+  ? 'Black Box: execução, aprendizado e integridade operacional.'
+  : 'Selecione um nó para ver fontes e relações.';
  renderDomainNav(api, node => session.focusNode(node));
 });
 
@@ -130,6 +125,7 @@ function setMode(mode) {
  session.setUi(mode);
  document.body.dataset.mode = mode;
  $$('[data-mode]').forEach(b => b.classList.toggle('on', b.dataset.mode === mode));
+ $$('[data-open-mode]').forEach(b => b.classList.toggle('active', b.dataset.openMode === mode));
  $('#audit-section').hidden = mode !== 'audit';
  $('#learning-section-panel').hidden = mode !== 'learning';
  $('#data-section').hidden = mode !== 'explore';
@@ -139,6 +135,7 @@ function setMode(mode) {
  if (session.state.selected) inspector.inspect(session.state.selected, {ui: mode});
 }
 $$('[data-mode]').forEach(b => b.onclick = () => setMode(b.dataset.mode));
+$$('[data-open-mode]').forEach(b => b.onclick = () => {setMode(b.dataset.openMode); $('#sidebar').classList.remove('open')});
 
 /* ---------- map controls ---------- */
 
@@ -181,7 +178,7 @@ $('#immersive').onclick = () => immersive(!document.body.classList.contains('imm
 
 $('#layers').onchange = e => session.setDepth(e.target.value);
 $('#menu').onclick = () => $('#sidebar').classList.toggle('open');
-$('#sync').onclick = () => runSync();
+$('#sync').onclick = () => runSync({manual:true});
 $('#close-inspector').onclick = () => {closeDrawer(); session.deselect()};
 $('#home').onclick = () => session.home();
 $('#back').onclick = () => session.back();
@@ -201,7 +198,7 @@ $('#dimension').onclick = () => {
 $('#more').onclick = () => session.more();
 for (const mode of ['neighbors', 'ancestors', 'descendants', 'critical'])
  $('#' + mode).onclick = () => {session.state.focus = session.state.selected || session.state.focus; session.setMode(mode)};
-$$('[data-focus]').forEach(b => b.onclick = () => session.focusNode({id: b.dataset.focus, label: b.textContent.trim()}));
+$$('[data-focus]').forEach(b => b.onclick = () => {setMode('overview'); session.focusNode({id: b.dataset.focus, label: b.textContent.trim()})});
 
 installFilters(session);
 
@@ -212,25 +209,39 @@ document.addEventListener('keydown', e => {
 
 /* ---------- sync ---------- */
 
-async function runSync() {
+const AUTO_SYNC_INTERVAL_MS = 12 * 60 * 60 * 1000;
+const AUTO_SYNC_KEY = 'atlas.lastAutoSync';
+const lastAutoSync = () => {try{return Number(localStorage.getItem(AUTO_SYNC_KEY)||0)}catch{return 0}};
+const markAutoSync = () => {try{localStorage.setItem(AUTO_SYNC_KEY,String(Date.now()))}catch{}};
+
+async function runSync({manual=false}={}) {
  const result = await session.sync();
  if (!result) return toast('Sincronização indisponível. Último recorte preservado.');
+ markAutoSync();
  const warning = result.sources?.drive?.error === 'GOOGLE_AUTH_NOT_CONFIGURED'
-  ? ' Drive: acesso do aplicativo não configurado; snapshot preservado.' : '';
- toast((result.changes ? `${result.changes} entidades alteradas.` : 'Nenhuma alteração nos dados lidos.') + warning);
+  ? ' Drive: acesso do aplicativo não configurado; Neon preservado.' : '';
+ const prefix = manual ? 'Sincronização manual concluída. ' : 'Sincronização automática concluída. ';
+ toast(prefix + (result.changes ? `${result.changes} entidades alteradas.` : 'Nenhuma alteração nos dados lidos.') + warning);
+ return result;
 }
-// Automatic synchronization is deliberately sparse: once every 12 hours while the app
-// remains open. Opening/re-focusing the tab only refreshes the current projection; it does
-// not trigger a source sync. The toolbar button remains the explicit immediate sync path.
-const AUTO_SYNC_INTERVAL_MS = 12 * 60 * 60 * 1000;
-setInterval(() => {if (!document.hidden) runSync()}, AUTO_SYNC_INTERVAL_MS);
+async function checkAutoSync() {
+ if (document.hidden || session.state.syncing) return;
+ const last=lastAutoSync();
+ if (!last) {markAutoSync(); return}
+ if (Date.now()-last >= AUTO_SYNC_INTERVAL_MS) await runSync();
+}
+// The timer only checks whether the persisted 12h window expired; it does not hit the network
+// until the window is actually due. Returning to the tab behaves the same way.
+setInterval(checkAutoSync, 60 * 1000);
+document.addEventListener('visibilitychange', () => {if (!document.hidden) checkAutoSync()});
 
 /* ---------- start ---------- */
 
 syncFilterInputs(session.state.filters);
 await session.refresh();
+await checkAutoSync();
 registerWebMcp({
  api, session,
- actions: {focus: n => session.focusNode(n), compare: n => inspector.compare(n), sync: runSync},
+ actions: {focus: n => session.focusNode(n), compare: n => inspector.compare(n), sync: () => runSync({manual:true})},
  onStatus: text => {$('#mcp').textContent = text}
 }).catch(() => {$('#mcp').textContent = 'WebMCP indisponível'});
