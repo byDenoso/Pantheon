@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {createDataApi, projectScienceRows, learningPayload} from '../lib/neon-v1.mjs';
+import {createDataApi, createNeonV1Reader, projectScienceRows, learningPayload} from '../lib/neon-v1.mjs';
 
 test('Data API uses Vercel OIDC and schema profile', async () => {
   let seen;
@@ -59,4 +59,59 @@ test('learning payload fills all five explicit Neon stages', () => {
   });
   assert.equal(p.total,5);
   assert.deepEqual(p.ladder.map(x=>x.count),[1,1,1,1,1]);
+});
+
+function neonFixture() {
+  const calls=[];
+  const rows={
+    entities:[{entity_id:'T-1',entity_type:'TEST',title:'Test',summary:'q',status:'COMPLETE_VALIDATED',updated_at:'2026-09-06T01:00:00Z'}],
+    entity_display:[{entity_id:'T-1',display_label:'Readable test',is_curated:true}],
+    domains:[{domain_id:'d1',code:'D1',name:'Expansion',kind:'PHYSICAL',status:'ACTIVE'}],
+    entity_domains:[{entity_id:'T-1',domain_id:'d1',role:'PRIMARY'}],
+    relations:[],
+    provenance:[{owner_entity_id:'T-1',source_kind:'TOWER',source_id:'src',source_location:'sheet!A2',observed_at:'2026-09-06T01:00:00Z'}],
+    migration_issues:[], observations:[],patterns:[],lessons:[],strategies:[],policies:[],links:[]
+  };
+  const fetchImpl=async url=>{
+    calls.push(url);
+    await new Promise(r=>setTimeout(r,2));
+    const table=new URL(url).pathname.split('/').pop();
+    return {ok:true,json:async()=>rows[table]||[]};
+  };
+  const reader=createNeonV1Reader({env:{VERCEL_OIDC_TOKEN:'oidc',NEON_DATA_API_URL:'https://neon.example/rest/v1'},fetchImpl,ttlMs:60000});
+  return {reader,calls};
+}
+
+test('concurrent graph and state share one cold science load and skip audit/provenance bulk reads', async()=>{
+  const {reader,calls}=neonFixture();
+  await Promise.all([reader.graph({focus:'system:NEXO'}),reader.state({})]);
+  const tables=calls.map(u=>new URL(u).pathname.split('/').pop());
+  for(const table of ['entities','entity_display','domains','entity_domains','relations']) assert.equal(tables.filter(x=>x===table).length,1,table);
+  assert.equal(tables.includes('migration_issues'),false);
+  assert.equal(tables.includes('provenance'),false);
+});
+
+test('science and learning bootstrap select only projection columns, never star payloads', async()=>{
+  const {reader,calls}=neonFixture();
+  await reader.graph({focus:'system:NEXO'});
+  await reader.learning({});
+  const selects=calls.map(u=>new URL(u).searchParams.get('select')).filter(Boolean);
+  assert(selects.length>=11);
+  assert.equal(selects.includes('*'),false);
+});
+
+test('entity inspection loads provenance only for the requested entity', async()=>{
+  const {reader,calls}=neonFixture();
+  const result=await reader.entity({id:'T-1'});
+  const prov=calls.find(u=>new URL(u).pathname.endsWith('/provenance'));
+  assert.ok(prov,'targeted provenance request missing');
+  assert.equal(new URL(prov).searchParams.get('owner_entity_id'),'eq.T-1');
+  assert.equal(result.entity.sourceRefs.length,1);
+});
+
+test('science refresh does not force a learning reload', async()=>{
+  const {reader,calls}=neonFixture();
+  await reader.refresh();
+  const tables=calls.map(u=>new URL(u).pathname.split('/').pop());
+  for(const table of ['observations','patterns','lessons','strategies','policies','links']) assert.equal(tables.includes(table),false,table);
 });
