@@ -1,156 +1,31 @@
-import {gunzipSync} from 'node:zlib';
-import {adapt} from '../lib/adapters.mjs';
-import {fingerprint, subgraph, matches, state, traverse, safeUrl} from '../lib/model.mjs';
-import * as readers from '../lib/readers.mjs';
-import {auditReport, normalizeAudit, scientificDomains} from '../lib/audit.mjs';
-import {learningReport, normalizeLearning, learningForEntity, learningLineage} from '../lib/learning.mjs';
-import {decorateGraph} from '../lib/naming.mjs';
-import {normalizeGraph, contractIssues, SOURCES, FRESHNESS} from '../lib/graph-contract.mjs';
-import {configuredMode, createV1Reader, resolveSource, fallbackIssue, v1BaseUrl} from '../lib/datasource.mjs';
-import {createNeonV1Reader} from '../lib/neon-v1.mjs';
-
-// Private fallback remains a last-valid escape hatch. Production prefers science_v1/learning_v1.
-let packed = null; try {packed = (await import('../lib/snapshot.mjs')).default} catch {}
-const snapshot = packed
- ? JSON.parse(gunzipSync(Buffer.from(packed, 'base64')).toString())
- : {capturedAt:null, raw:{}, ops:{sync:null, model:{events:[]}}};
-
-const project = (raw, ops) => decorateGraph(adapt(raw, ops));
-let raw = snapshot.raw, ops = snapshot.ops, graph = project(raw, ops), revision = '', pending = null, lastAttempt = 0;
-let sources = {
- drive:{status:'SNAPSHOT', lastReadAt:snapshot.capturedAt, observedAt:null, snapshotAt:snapshot.capturedAt},
- neon:{status:'SNAPSHOT', lastReadAt:snapshot.capturedAt, observedAt:ops.sync?.lastSyncedAt}
-};
-let lastSync = null;
-let graphFingerprint = fingerprint(graph);
-
-// Remote V1 remains supported. With no remote base URL, the Atlas reads the existing
-// Neon Data API directly using Vercel OIDC and the project's read-only database role.
-const directNeonV1 = createNeonV1Reader();
-const v1 = v1BaseUrl() ? createV1Reader() : directNeonV1;
-const usingDirectNeon = !v1BaseUrl();
-
-const sourceVersion = () => sources.drive.observedAt || snapshot.capturedAt || '';
-const decide = force => resolveSource({mode: configuredMode(), reader: v1, force});
-
-function contract(view, decision, {cache = ''} = {}) {
- const ids = new Set((view.nodes || []).map(n => n.id));
- const issue = fallbackIssue(decision);
- return {
-  focus: view.focus || '', nodes: view.nodes || [], edges: view.edges || [],
-  total: view.total ?? (view.nodes || []).length,
-  hasMore: !!view.hasMore, truncated: !!view.truncated, depth: Number(view.depth) || 1,
-  fingerprint: graphFingerprint, sourceVersion: sourceVersion(), source: decision.source,
-  freshness: decision.freshness, cache,
-  issues:[...(issue ? [issue] : []), ...(graph.issues || []).filter(i => ids.has(i.source) || ids.has(i.target)).slice(0,50)]
- };
-}
-
-async function legacySync() {
- if (pending) return pending;
- if (Date.now() - lastAttempt < 30000) return lastSync || {outcome:'COALESCED', sources};
- lastAttempt = Date.now();
- pending = (async () => {
-  const before = fingerprint(graph), events = [{stage:'READ_SOURCES', at:new Date().toISOString()}];
-  await Promise.allSettled([
-   readers.drive(raw, revision)
-    .then(d => {raw=d.raw;revision=d.revision;sources.drive={status:'READ_OK',lastReadAt:new Date().toISOString(),observedAt:d.observedAt||sources.drive.observedAt}})
-    .catch(() => {sources.drive={...sources.drive,status:'STALE',error:process.env.GOOGLE_SERVICE_ACCOUNT_JSON||process.env.GOOGLE_REFRESH_TOKEN?'DRIVE_READ_UNAVAILABLE':'GOOGLE_AUTH_NOT_CONFIGURED'}}),
-   readers.neon()
-    .then(d => {ops=d;sources.neon={status:'READ_OK',lastReadAt:new Date().toISOString(),observedAt:d.sync?.lastSyncedAt}})
-    .catch(() => {sources.neon={...sources.neon,status:'STALE',error:'OPERATIONAL_SOURCE_UNAVAILABLE'}})
-  ]);
-  events.push({stage:'NORMALIZE_COMPARE',at:new Date().toISOString()});
-  const next=project(raw,ops),after=fingerprint(next);let changes=0;
-  const old=new Map(graph.nodes.map(n=>[n.id,JSON.stringify(n)]));
-  for(const n of next.nodes){if(old.get(n.id)!==JSON.stringify(n))changes++;old.delete(n.id)}changes+=old.size;
-  graph=next;graphFingerprint=after;
-  lastSync={outcome:after===before?'NO_CHANGE':'UPDATED',changes,fingerprint:after,completedAt:new Date().toISOString(),sources,events};
-  return lastSync;
- })().finally(()=>pending=null);
- return pending;
-}
-
-function summary(filters, decision) {
- const nodes=graph.nodes.filter(n=>matches(n,filters));
- const count=key=>nodes.reduce((a,n)=>{const k=typeof key==='function'?key(n):n[key];if(k)a[k]=(a[k]||0)+1;return a},{});
- const activity={};
- for(const n of nodes.filter(n=>['TEST','RUN','AUTOMATION_RUN'].includes(n.type))){const date=String(n.updatedAt||'').match(/^\d{4}-\d{2}-\d{2}/)?.[0];if(date)activity[date]=(activity[date]||0)+1}
- const allDomains=count(n=>n.type==='TEST'?n.domain:null);
- return {counts:count('type'),statuses:count(n=>n.type==='TEST'?state(n.status):null),domains:scientificDomains(allDomains),activity,claims:count(n=>n.type==='CLAIM'?state(n.status):null),claimKinds:count(n=>n.type==='CLAIM'?n.subtype:null),total:nodes.length,sources,projection:{fingerprint:graphFingerprint,capturedAt:snapshot.capturedAt,sourceVersion:sourceVersion(),unresolvedRelations:graph.issues.length,unresolvedDomain:allDomains.UNMAPPED||0,source:decision.source,freshness:decision.freshness},lastSync};
-}
-
-function capabilities(decision) {
- return {
-  googleConfigured:!!(process.env.GOOGLE_SERVICE_ACCOUNT_JSON||process.env.GOOGLE_REFRESH_TOKEN),
-  operationalReader:usingDirectNeon?'DIRECT_NEON_DATA_API':'REMOTE_V1',
-  cache:'MEMORY_WITH_BUNDLED_FALLBACK', backgroundFiveMinutes:false,
-  dataSource:{requested:decision.mode,effective:decision.source,freshness:decision.freshness,reason:decision.reason,usedFallback:decision.usedFallback,v1Configured:!!v1BaseUrl()||directNeonV1.configured,v1Transport:usingDirectNeon?'VERCEL_OIDC_NEON_DATA_API':'HTTP_V1',v1Health:v1.health}
- };
-}
-
-export default async function handler(req,res) {
- res.setHeader('Content-Type','application/json; charset=utf-8');
- res.setHeader('Cache-Control','private, no-store');
- res.setHeader('X-Content-Type-Options','nosniff');
- const url=new URL(req.url,'https://atlas.local'),q=Object.fromEntries(url.searchParams),route=q.route||url.pathname.split('/').pop();
- const send=(data,status=200)=>{res.statusCode=status;res.end(JSON.stringify(data))};
- try {
-  if(usingDirectNeon&&typeof v1.setOidcToken==='function')v1.setOidcToken(req.headers&&req.headers['x-vercel-oidc-token']);
-  if(route==='sync'){
-   if(req.method!=='POST')return send({error:'METHOD_NOT_ALLOWED'},405);
-   const origin=req.headers.origin;if(origin&&new URL(origin).host!==req.headers.host)return send({error:'ORIGIN_NOT_ALLOWED'},403);
-   const decision=await decide(true);
-   const result=decision.source===SOURCES.V1&&typeof v1.refresh==='function'?await v1.refresh():await legacySync();
-   return send({...result,dataSource:capabilities(await decide(true)).dataSource});
-  }
-  if(req.method!=='GET')return send({error:'METHOD_NOT_ALLOWED'},405);
-
-  // Fluid Compute delivers the Vercel OIDC token as a request header, not an env var.
-  if(usingDirectNeon&&typeof v1.setOidcToken==='function')v1.setOidcToken(req.headers&&req.headers['x-vercel-oidc-token']);
-
-  const decision=await decide(q.probe==='1'),useV1=decision.source===SOURCES.V1;
-
-  if(route==='health')return send({ok:true,contract:'v1',dataSource:capabilities(decision).dataSource,fingerprint:graphFingerprint,sourceVersion:sourceVersion()});
-
-  if(route==='state'){
-   if(q.refresh==='1'){if(useV1&&typeof v1.refresh==='function')await v1.refresh();else await legacySync()}
-   if(useV1){try{const v=await v1.state(q);return send({...v,projection:{...(v.projection||{}),source:decision.source,freshness:decision.freshness},capabilities:capabilities(decision)})}catch(e){console.error('[atlas:v1:state]',e?.message||e)}}
-   return send({...summary(q,useV1?{...decision,source:SOURCES.LEGACY,freshness:FRESHNESS.FALLBACK}:decision),capabilities:capabilities(decision)});
-  }
-
-  if(route==='graph'){
-   if(useV1){try{const payload=await v1.graph(q),drift=contractIssues(payload).filter(i=>i.level==='ERROR');if(!drift.length){const view=normalizeGraph(payload,{focus:q.focus||''});return send({...view,source:SOURCES.V1,freshness:decision.freshness,cache:payload.cache||'',issues:[...view.issues,...contractIssues(payload)]})}}catch(e){console.error('[atlas:v1:graph]',e?.message||e)}}
-   return send(contract(subgraph(graph,q),useV1?{...decision,source:SOURCES.LEGACY,freshness:FRESHNESS.FALLBACK,usedFallback:true,reason:'V1_GRAPH_UNAVAILABLE'}:decision));
-  }
-
-  if(route==='audit'){
-   if(useV1){try{return send(normalizeAudit(await v1.audit(q),{source:SOURCES.V1}))}catch(e){console.error('[atlas:v1:audit]',e?.message||e)}}
-   return send(auditReport(graph,{sample:Number(q.sample)||12,source:SOURCES.LEGACY}));
-  }
-
-  if(route==='learning'){
-   if(useV1){try{const payload=await v1.learning(q);return q.id?send(payload):send(normalizeLearning(payload,{source:SOURCES.V1}))}catch(e){console.error('[atlas:v1:learning]',e?.message||e)}}
-   if(q.view==='lineage')return send(learningLineage(graph,q.id));
-   if(q.id)return send({entity:q.id,relations:learningForEntity(graph,q.id),source:decision.source});
-   return send(learningReport(graph,{source:SOURCES.LEGACY}));
-  }
-
-  if(route==='entity'){
-   if(useV1){try{const v=await v1.entity(q);if(q.view==='files'&&Array.isArray(v))return send(v);if(v&&(v.entity||Array.isArray(v.nodes)))return send({...v,source:SOURCES.V1})}catch(e){console.error('[atlas:v1:entity]',e?.message||e)}}
-   const n=graph.nodes.find(n=>n.id===q.id);if(!n)return send({error:'ENTITY_NOT_FOUND'},404);
-   const edges=graph.edges.filter(e=>e.source===n.id||e.target===n.id);
-   if(q.view==='lineage')return send(contract(subgraph(graph,{focus:q.id,mode:'lineage'}),decision));
-   if(q.view==='files'){const set=new Set(traverse(graph,n.id,'descendants',20000,['PRODUCES','EXECUTED_AS']));return send(graph.nodes.filter(x=>set.has(x.id)&&['FILE','ARTIFACT'].includes(x.type)).slice(0,100))}
-   const {searchText,...entity}=n;return send({entity,relations:edges.slice(0,200),relationCount:edges.length,source:SOURCES.LEGACY});
-  }
-
-  if(route==='automation-runs'){const offset=Number(q.offset)||0;return send(graph.nodes.filter(n=>n.type==='AUTOMATION_RUN'&&matches(n,q)).slice(offset,offset+100))}
-  if(route==='learning-relations')return send(graph.nodes.filter(n=>n.type==='LEARNING_RELATION'&&matches(n,q)));
-  if(route==='ops')return send(ops);
-  return send({error:'NOT_FOUND'},404);
- } catch(error) {
-  console.error('[atlas:request]',route,error?.message||error);
-  return send({error:'REQUEST_FAILED'},500);
- }
-}
+const BASE='https://ep-cool-lab-aw72uid0.apirest.c-12.us-east-1.aws.neon.tech/neondb/rest/v1';
+const SYSTEMS=[['SCIENCE','Ciência'],['ENGINEERING','Engineering'],['OLYMPUS','Olympus'],['AUTOMATION','Black Box'],['LEARNING','Learning']];
+const CANON='SCIENCE_CANONICAL',DERIVED='DERIVED_NOT_EVIDENCE';
+let scienceCache=null,learningCache=null,health={ok:false,checkedAt:0,detail:'NOT_CHECKED'};
+const escq=v=>encodeURIComponent(String(v));
+function fnv(text){let h=2166136261;for(let i=0;i<text.length;i++)h=Math.imul(h^text.charCodeAt(i),16777619);return(h>>>0).toString(16)}
+function st(status=''){const s=String(status).toUpperCase();if(/NEGATIVE|KILLED|CONTRADICT/.test(s))return'negative';if(/SUPERSEDED|RETIRED|LEGACY/.test(s))return'legacy';if(/BLOCKED|FAIL|ERROR/.test(s))return'blocked';if(/PARTIAL|CONDITIONAL|CHECKPOINT|DEFERRED/.test(s))return'partial';if(/PASS|COMPLETE|SUPPORTED|SURVIVES/.test(s))return'supported';if(/ACTIVE|RUNNING|READY|OPEN/.test(s))return'active';return'unknown'}
+function matches(n,f={}){if(f.type&&n.type!==f.type)return false;if(f.domain&&n.domain!==f.domain&&!n.domains?.includes(f.domain))return false;if(f.authority&&n.authority!==f.authority)return false;if(f.status&&st(n.status)!==f.status)return false;if(f.since&&(!n.updatedAt||n.updatedAt<f.since))return false;const qs=String(f.query||'').toLowerCase().split(/\s+/).filter(Boolean);return qs.every(q=>`${n.id} ${n.label||''} ${n.canonicalTitle||''} ${n.domain||''} ${n.summary||''} ${n.status||''}`.toLowerCase().includes(q))}
+async function select(token,schema,table,q={}){if(!token)throw Error('OIDC_NOT_AVAILABLE');const p=new URLSearchParams(Object.entries(q).filter(([,v])=>v!==undefined&&v!==null&&v!=='').map(([k,v])=>[k,String(v)]));const r=await fetch(`${BASE}/${escq(table)}?${p}`,{headers:{Authorization:`Bearer ${token}`,Accept:'application/json','Accept-Profile':schema},signal:AbortSignal.timeout(15000)});if(!r.ok){const body=await r.text().catch(()=> '');throw Error(`NEON_DATA_API_${r.status}:${body.slice(0,180)}`)}return r.json()}
+function relationMap(r){if(r.relation_type==='PART_OF_CAMPAIGN')return{source:r.to_entity_id,target:r.from_entity_id,type:'CONTAINS'};if(r.relation_type==='PRODUCES_RESULT')return{source:r.from_entity_id,target:r.to_entity_id,type:'PRODUCES'};return{source:r.from_entity_id,target:r.to_entity_id,type:r.relation_type}}
+function typeOf(t){return['HYPOTHESIS','DECISION_HYPOTHESIS','CLAIM'].includes(t)?'CLAIM':t}
+async function loadScience(token,force=false){if(!force&&scienceCache&&Date.now()-scienceCache.at<60000)return scienceCache;const [entities,displays,domains,entityDomains,relations,provenance,issues,revisions]=await Promise.all([
+ select(token,'science_v1','entities',{select:'*',limit:10000}),select(token,'science_v1','entity_display',{select:'*',limit:10000}),select(token,'science_v1','domains',{select:'*',limit:1000}),select(token,'science_v1','entity_domains',{select:'*',limit:10000}),select(token,'science_v1','relations',{select:'*',limit:10000}),select(token,'science_v1','provenance',{select:'owner_entity_id,source_kind,source_id,source_location,authority,observed_at',limit:10000}),select(token,'science_v1','migration_issues',{select:'*',limit:10000}),select(token,'science_v1','revisions',{select:'revision_id,entity_id,observed_at,is_current',limit:20000}).catch(()=>[])
+ ]);
+ const revById=new Map(),revByEntity=new Map();for(const r of revisions){if(!r.observed_at)continue;if(r.revision_id)revById.set(r.revision_id,r.observed_at);const prev=revByEntity.get(r.entity_id);if(r.is_current||!prev||String(r.observed_at)>String(prev))revByEntity.set(r.entity_id,r.observed_at)}
+ const observedAt=e=>revById.get(e.current_revision_id)||revByEntity.get(e.entity_id)||e.updated_at||'';
+ const display=new Map(displays.map(x=>[x.entity_id,x])),domainById=new Map(domains.map(d=>[d.domain_id,d])),assignments=new Map(),prov=new Map();for(const x of entityDomains){if(!assignments.has(x.entity_id))assignments.set(x.entity_id,[]);assignments.get(x.entity_id).push(x)}for(const p of provenance){if(!prov.has(p.owner_entity_id))prov.set(p.owner_entity_id,[]);prov.get(p.owner_entity_id).push(p)}
+ const nodes=[{id:'system:NEXO',type:'SYSTEM',label:'NEXO',summary:'Unified Cognitive Infrastructure · projeção read-only do Neon.',authority:DERIVED,status:'active'}],edges=[];
+ for(const [id,label] of SYSTEMS){nodes.push({id:`system:${id}`,type:'SYSTEM',label,authority:DERIVED,status:'active'});edges.push({id:`system:NEXO:CONTAINS:system:${id}`,source:'system:NEXO',target:`system:${id}`,type:'CONTAINS',authority:DERIVED})}
+ for(const d of domains){const code=d.code||d.domain_id;nodes.push({id:`domain:${code}`,type:'DOMAIN',label:d.name||code,domain:code,summary:d.description||'',status:d.status||'',authority:DERIVED,metadata:{kind:d.kind,domain_id:d.domain_id}});edges.push({id:`system:SCIENCE:CONTAINS:domain:${code}`,source:'system:SCIENCE',target:`domain:${code}`,type:'CONTAINS',authority:DERIVED})}
+ for(const e of entities){const a=assignments.get(e.entity_id)||[],allCodes=[...new Set(a.map(x=>domainById.get(x.domain_id)?.code||x.domain_id).filter(Boolean))],primary=a.find(x=>x.role==='PRIMARY')||a[0],domain=primary?(domainById.get(primary.domain_id)?.code||primary.domain_id):'',d=display.get(e.entity_id),refs=(prov.get(e.entity_id)||[]).map(p=>({source:p.source_kind,sourceId:p.source_id,sourceRef:p.source_location||p.source_id,url:/^https:\/\//.test(p.source_location||'')?p.source_location:undefined,observedAt:p.observed_at}));nodes.push({id:e.entity_id,canonicalId:e.entity_id,type:typeOf(e.entity_type),subtype:typeOf(e.entity_type)==='CLAIM'?e.entity_type:undefined,label:d?.display_label||e.title||e.entity_id,displaySource:d?.display_label?(d.is_curated?'CURATED':'ENTITY_DISPLAY'):'CANONICAL_TITLE',canonicalTitle:e.title||'',summary:e.summary||'',status:e.status||'',domain,domains:allCodes,authority:CANON,updatedAt:observedAt(e),sourceRefs:refs,metadata:{entity_type:e.entity_type,source_surface:e.source_surface,source_row_key:e.source_row_key,current_revision_id:e.current_revision_id||''}});if(domain)edges.push({id:`domain:${domain}:CONTAINS:${e.entity_id}`,source:`domain:${domain}`,target:e.entity_id,type:'CONTAINS',authority:DERIVED})}
+ const ids=new Set(nodes.map(n=>n.id));for(const r of relations){const m=relationMap(r);if(!ids.has(m.source)||!ids.has(m.target))continue;edges.push({id:r.relation_id||`${m.source}:${m.type}:${m.target}`,source:m.source,target:m.target,type:m.type,authority:CANON,status:r.status||'',evidenceClass:r.evidence_class||'',sourceRefs:r.source_ref?[{source:r.source_surface,sourceRef:r.source_ref}]:[]})}
+ const sourceVersion=entities.reduce((m,e)=>{const v=String(observedAt(e)||'');return v>m?v:m},'');const fingerprint=fnv(JSON.stringify({nodes:nodes.map(n=>[n.id,n.type,n.status,n.updatedAt]),edges:edges.map(e=>[e.id,e.source,e.target,e.type])}));scienceCache={at:Date.now(),graph:{nodes,edges,fingerprint,sourceVersion},issues};return scienceCache}
+function layered(g,{focus='system:NEXO',depth=3,limit=120,...filters}={}){const maxDepth=Math.max(1,Math.min(3,Number(depth)||1)),cap=Math.max(1,Math.min(250,Number(limit)||120)),byId=new Map(g.nodes.map(n=>[n.id,n])),adj=new Map(),allowed=new Set(['CONTAINS','TESTS','PRODUCES','EXECUTED_AS','DERIVED_FROM']);for(const e of g.edges)if(allowed.has(e.type)&&byId.has(e.target)){if(!adj.has(e.source))adj.set(e.source,[]);adj.get(e.source).push(e.target)}if(!byId.has(focus))return{focus,nodes:[],edges:[],total:0,hasMore:false,depth:maxDepth};const levels=new Map([[focus,0]]),parents=new Map(),omitted=new Map();let frontier=[focus],truncated=false;for(let layer=1;layer<=maxDepth&&frontier.length;layer++){const next=[],lists=frontier.map(id=>[id,[...new Set(adj.get(id)||[])].filter(n=>!levels.has(n)&&matches(byId.get(n),filters))]),taken=new Map();for(let i=0;i<8;i++)for(const [parent,children] of lists){const id=children[i];if(!id||levels.has(id))continue;if(levels.size>=cap){truncated=true;continue}levels.set(id,layer);parents.set(id,parent);taken.set(parent,(taken.get(parent)||0)+1);next.push(id)}for(const [parent,children] of lists){const hidden=children.length-(taken.get(parent)||0);if(hidden>0)omitted.set(parent,hidden)}if(lists.some(([,x])=>x.length>8))truncated=true;frontier=next}const chosen=new Set(levels.keys());return{focus,nodes:[...levels].map(([id,layer])=>{const n=byId.get(id);return{...n,summary:n.summary?.slice(0,280),layer,layoutParent:parents.get(id),hiddenChildren:omitted.get(id)||0}}),edges:g.edges.filter(e=>chosen.has(e.source)&&chosen.has(e.target)),total:levels.size,hasMore:truncated,depth:maxDepth,truncated}}
+function traverse(g,id,direction='neighbors',limit=20000){const seen=new Set([id]),queue=[id],adj=new Map();for(const e of g.edges){const pairs=direction==='ancestors'?[[e.target,e.source]]:direction==='descendants'?[[e.source,e.target]]:[[e.source,e.target],[e.target,e.source]];for(const[a,b]of pairs){if(!adj.has(a))adj.set(a,[]);adj.get(a).push(b)}}while(queue.length&&seen.size<limit){for(const n of adj.get(queue.shift())||[])if(!seen.has(n)){seen.add(n);if(direction!=='neighbors')queue.push(n)}}return seen}
+function graphView(g,q={}){const focus=q.focus||'system:NEXO',mode=q.mode||'children';if(mode==='children'&&Number(q.depth||1)>1)return layered(g,q);let ids;if(['ancestors','descendants','neighbors','lineage'].includes(mode))ids=traverse(g,focus,mode==='lineage'?'neighbors':mode);else ids=new Set([focus,...g.edges.filter(e=>e.source===focus&&['CONTAINS','TESTS','PRODUCES','EXECUTED_AS','DERIVED_FROM'].includes(e.type)).map(e=>e.target)]);let all=g.nodes.filter(n=>(mode==='search'||ids.has(n.id))&&matches(n,q));const total=all.length,offset=Number(q.offset)||0,limit=Math.min(Number(q.limit)||160,250),nodes=all.slice(offset,offset+limit),focal=g.nodes.find(n=>n.id===focus);if(focal&&!nodes.some(n=>n.id===focus)&&mode!=='search')nodes.unshift(focal);const chosen=new Set(nodes.map(n=>n.id));return{focus,nodes,edges:g.edges.filter(e=>chosen.has(e.source)&&chosen.has(e.target)),total,hasMore:offset+nodes.length<total,depth:Number(q.depth)||1}}
+function summary(g,q={}){const nodes=g.nodes.filter(n=>matches(n,q)),count=fn=>nodes.reduce((a,n)=>{const k=fn(n);if(k)a[k]=(a[k]||0)+1;return a},{}),activity={};for(const n of nodes.filter(n=>['TEST','RESULT','CLAIM'].includes(n.type))){const d=String(n.updatedAt||'').match(/^\d{4}-\d{2}-\d{2}/)?.[0];if(d)activity[d]=(activity[d]||0)+1}return{counts:count(n=>n.type),statuses:count(n=>n.type==='TEST'?st(n.status):''),domains:count(n=>n.type==='TEST'?n.domain:''),activity,claims:count(n=>n.type==='CLAIM'?st(n.status):''),claimKinds:count(n=>n.type==='CLAIM'?n.subtype:''),total:nodes.length,sources:{neon:{status:'READ_OK',observedAt:g.sourceVersion}},projection:{fingerprint:g.fingerprint,sourceVersion:g.sourceVersion,unresolvedRelations:0,unresolvedDomain:nodes.filter(n=>n.type==='TEST'&&!n.domain).length,source:'v1',freshness:'LIVE'}}}
+async function loadLearning(token,force=false){if(!force&&learningCache&&Date.now()-learningCache.at<60000)return learningCache;const [observations,patterns,lessons,strategies,policies,links]=await Promise.all(['observations','patterns','lessons','strategies','policies','links'].map(t=>select(token,'learning_v1',t,{select:'*',limit:10000})));const obs=observations.map(o=>({id:`observation:${o.observation_id}`,stage:'OBSERVATION',relationType:o.event_type||o.summary,status:o.outcome||'OBSERVED',notes:o.summary||'',domainA:o.domain||'',evidenceRefs:JSON.stringify(o.evidence_json||{})})),pat=patterns.map(p=>({id:`pattern:${p.pattern_id}`,stage:'PATTERN',relationType:p.title,status:p.status||'',notes:p.description||'',evidenceCount:Number(p.supporting_count)||0,contradictionCount:Number(p.contradicting_count)||0,confidence:p.confidence_score==null?null:Number(p.confidence_score)})),les=lessons.map(l=>({id:`lesson:${l.lesson_id}`,stage:'LESSON',relationType:l.title,status:l.status||'',notes:l.statement||'',derivedFrom:l.source_pattern_id?[`pattern:${l.source_pattern_id}`]:[]})),strat=strategies.map(s=>({id:`strategy:${s.strategy_id}`,stage:'STRATEGY',relationType:s.title,status:s.status||'',notes:s.description||'',derivedFrom:s.source_lesson_id?[`lesson:${s.source_lesson_id}`]:[]})),pol=policies.map(p=>({id:`policy:${p.policy_id}`,stage:'POLICY',relationType:p.title,status:p.status||'',notes:p.statement||'',derivedFrom:p.source_strategy_id?[`strategy:${p.source_strategy_id}`]:[]})),all=[...obs,...pat,...les,...strat,...pol],by=new Map(all.map(x=>[x.id,x]));for(const l of links){const from=`${String(l.from_kind).toLowerCase()}:${l.from_id}`,to=`${String(l.to_kind).toLowerCase()}:${l.to_id}`;if(by.has(from)&&by.has(to)){const x=by.get(to);x.derivedFrom=[...new Set([...(x.derivedFrom||[]),from])]}}const bucket=(id,label,test)=>{const items=all.filter(test);return{id,label,items,count:items.length}},emergent=[bucket('new','Novos padrões',x=>/OBSERVED|CANDIDATE|EMERGING/i.test(x.status||'')),bucket('strengthening','Fortalecendo',x=>(x.evidenceCount||0)>(x.contradictionCount||0)&&(x.evidenceCount||0)>0),bucket('weakening','Enfraquecendo',x=>(x.contradictionCount||0)>0),bucket('promoted','Promovidos',x=>/VALIDATED|ACTIVE/i.test(x.status||'')),bucket('contradicted','Contraditos',x=>/DISPROVED|ROLLED_BACK/i.test(x.status||'')),bucket('unresolved','Não resolvidos',x=>!String(x.status||'').trim())],ladder=[['OBSERVATION','Observação',obs],['PATTERN','Padrão',pat],['LESSON','Lição',les],['STRATEGY','Estratégia',strat],['POLICY','Política',pol]].map(([id,label,items])=>({id,label,source:`learning_v1.${id.toLowerCase()}s`,count:items.length,available:items.length>0,items}));learningCache={at:Date.now(),payload:{generatedAt:new Date().toISOString(),source:'v1',total:all.length,ladder,emergent,crossDomain:0,unresolvedEvidence:[],_all:all}};return learningCache}
+function auditPayload(issues=[]){const sev=s=>s==='BLOCKER'?'ERROR':s==='WARN'?'WARN':'INFO',map=t=>({UNKNOWN_DOMAIN:'UNRESOLVED_DOMAIN',UNRESOLVED_DOMAIN:'UNRESOLVED_DOMAIN',LEGACY_ALIAS:'LEGACY_REFERENCE',AMBIGUOUS_MAPPING:'AMBIGUOUS_MAPPING',BROKEN_REFERENCE:'BROKEN_REFERENCE',MISSING_PARENT:'BROKEN_REFERENCE',UNRESOLVED_RESULT_OWNER:'RESULT_SUBJECT',RESULT_SUBJECT_ISSUE:'RESULT_SUBJECT',MISSING_PROVENANCE:'MISSING_PROVENANCE',SUPERSEDED_REFERENCE:'SUPERSEDED_REF'}[t]||t||'OTHER'),isOpen=i=>!/RESOLVED|CLOSED|ACCEPTED/i.test(String(i.status||'')),groups=new Map();for(const i of issues){const id=map(i.issue_type);if(!groups.has(id))groups.set(id,[]);groups.get(id).push({id:i.issue_id,label:i.source_key||i.entity_id||i.issue_id,type:'MIGRATION_ISSUE',domain:'',status:i.status||'',open:isOpen(i),authority:'',severity:sev(i.severity),issueType:id,source:'v1',resolution:i.proposed_resolution||'',detail:i.detail||'',missing:i.raw_value||''})}const categories=[...groups].map(([id,items])=>{const open=items.filter(x=>x.open);return{id,label:id.replaceAll('_',' '),severity:open.some(x=>x.severity==='ERROR')?'ERROR':open.some(x=>x.severity==='WARN')?'WARN':'INFO',detail:'',count:items.length,openCount:open.length,items:[...open,...items.filter(x=>!x.open)].slice(0,24)}}),open=issues.filter(isOpen).length;return{generatedAt:new Date().toISOString(),source:'v1',total:issues.length,open,resolved:issues.length-open,categories}}
+function caps(){return{googleConfigured:false,operationalReader:'DIRECT_NEON_DATA_API',cache:'MEMORY_V1',backgroundFiveMinutes:false,dataSource:{requested:'auto',effective:'v1',freshness:health.ok?'LIVE':'STALE',reason:health.ok?'V1_HEALTHY':'V1_UNHEALTHY',usedFallback:false,v1Configured:true,v1Transport:'VERCEL_OIDC_NEON_DATA_API',v1Health:health}}}
+export default async function handler(req,res){res.setHeader('Content-Type','application/json; charset=utf-8');res.setHeader('Cache-Control','private, no-store');res.setHeader('X-Content-Type-Options','nosniff');const u=new URL(req.url,'https://atlas.local'),q=Object.fromEntries(u.searchParams),route=q.route||u.pathname.split('/').pop(),token=req.headers?.['x-vercel-oidc-token']||process.env.VERCEL_OIDC_TOKEN||'',send=(x,s=200)=>{res.statusCode=s;res.end(JSON.stringify(x))};delete q.route;try{if(route==='health'){try{const x=await select(token,'science_v1','entities',{select:'entity_id',limit:1});health={ok:Array.isArray(x),checkedAt:Date.now(),detail:'OK',version:'science_v1'}}catch(e){health={ok:false,checkedAt:Date.now(),detail:String(e.message||e)};return send({ok:true,contract:'v1',dataSource:caps().dataSource},200)}const s=await loadScience(token);return send({ok:true,contract:'v1',dataSource:caps().dataSource,fingerprint:s.graph.fingerprint,sourceVersion:s.graph.sourceVersion})}if(route==='sync'){if(req.method!=='POST')return send({error:'METHOD_NOT_ALLOWED'},405);const before=scienceCache?.graph?.fingerprint||'',s=await loadScience(token,true);await loadLearning(token,true).catch(()=>{});health={ok:true,checkedAt:Date.now(),detail:'OK',version:'science_v1'};return send({outcome:before&&before===s.graph.fingerprint?'NO_CHANGE':'UPDATED',changes:before&&before!==s.graph.fingerprint?1:0,fingerprint:s.graph.fingerprint,completedAt:new Date().toISOString(),sources:{neon:{status:'READ_OK',observedAt:s.graph.sourceVersion}},dataSource:caps().dataSource})}if(req.method!=='GET')return send({error:'METHOD_NOT_ALLOWED'},405);const s=await loadScience(token);health={ok:true,checkedAt:Date.now(),detail:'OK',version:'science_v1'};if(route==='state'){if(q.refresh==='1')await loadScience(token,true);const clean={...q};delete clean.refresh;return send({...summary((scienceCache||s).graph,clean),capabilities:caps()})}if(route==='graph'){const v=graphView(s.graph,q);return send({...v,fingerprint:s.graph.fingerprint,sourceVersion:s.graph.sourceVersion,source:'v1',freshness:'LIVE',cache:'HIT',issues:[]})}if(route==='entity'){if(q.view==='lineage'){const v=graphView(s.graph,{focus:q.id,mode:'lineage',depth:3,limit:250});return send({...v,fingerprint:s.graph.fingerprint,sourceVersion:s.graph.sourceVersion,source:'v1',freshness:'LIVE'})}if(q.view==='files'){const linked=new Set(s.graph.edges.filter(e=>e.source===q.id||e.target===q.id).flatMap(e=>[e.source,e.target]));return send(s.graph.nodes.filter(n=>linked.has(n.id)&&['FILE','ARTIFACT','DATASET','PUBLICATION'].includes(n.type)&&n.id!==q.id).slice(0,100))}const n=s.graph.nodes.find(n=>n.id===q.id);if(!n)return send({error:'ENTITY_NOT_FOUND'},404);const rel=s.graph.edges.filter(e=>e.source===q.id||e.target===q.id);return send({entity:n,relations:rel.slice(0,200),relationCount:rel.length,source:'v1'})}if(route==='audit')return send(auditPayload(s.issues));if(route==='learning'){const {payload}=await loadLearning(token);if(!q.id){const{_all,...p}=payload;return send(p)}const all=payload._all||[],bare=String(q.id).replace(/^[a-z_]+:/,'');if(q.view==='lineage'){const by=new Map(all.map(x=>[x.id,x])),node=by.get(q.id);if(!node)return send({id:q.id,available:false,reason:'NOT_FOUND',ancestors:[],descendants:[]});const parents=new Map(all.map(x=>[x.id,x.derivedFrom||[]])),walk=(id,up)=>{const seen=new Set([id]),out=[],queue=[id];while(queue.length){const cur=queue.shift(),next=up?(parents.get(cur)||[]):all.filter(x=>(parents.get(x.id)||[]).includes(cur)).map(x=>x.id);for(const x of next)if(by.has(x)&&!seen.has(x)){seen.add(x);out.push(by.get(x));queue.push(x)}}return out};return send({id:q.id,node,available:true,ancestors:walk(q.id,true),descendants:walk(q.id,false)})}return send({entity:q.id,relations:all.filter(x=>String(x.evidenceRefs||'').includes(bare)),source:'v1'})}if(route==='automation-runs'||route==='learning-relations')return send([]);if(route==='ops')return send({officialFrontend:true,source:'v1',freshness:'LIVE',truthFlow:['Drive','Neon','Atlas']});return send({error:'NOT_FOUND'},404)}catch(e){console.error('[atlas:official]',route,e?.message||e);return send({error:'REQUEST_FAILED',detail:String(e?.message||e).slice(0,240)},500)}}
