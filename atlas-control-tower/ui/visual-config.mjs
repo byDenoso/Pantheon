@@ -12,8 +12,8 @@ export const MAP_CONFIG = Object.freeze({
  clusterRadius:34, clusterSpread:10
 });
 export const MAP_THEMES = Object.freeze({
- dark:{background:'#080f1d',haze:'#25477224',stars:'#a5bddb',guide:'#597cab',node:'#729ccf',core:'#a3c6ee',edge:'#7599c5',derived:'#536f99',text:'#e4edf9',muted:'#9aacc5',label:'#0b1626ed',border:'#365275',highlight:'#e7f1ff',sphereMid:'#416591',sphereShadow:'#101e35',rim:'#cfe4ff',badge:'#12233bee',badgeText:'#a8c6e8'},
- light:{background:'#fbfdff',haze:'#84aadd18',stars:'#5176a5',guide:'#91b2dc',node:'#406faa',core:'#386eaf',edge:'#557eaf',derived:'#90a8c8',text:'#173451',muted:'#496685',label:'#fffffff0',border:'#c5d5e9',highlight:'#ffffff',sphereMid:'#769ac5',sphereShadow:'#244a7a',rim:'#ffffff',badge:'#ffffffee',badgeText:'#2c5687'}
+ dark:{background:'#050816',haze:'#1f8fff18',stars:'#75c8ff',guide:'#2f78b8',node:'#3ea6ff',core:'#8fd8ff',edge:'#2f86d9',derived:'#526f92',text:'#eaf4ff',muted:'#9fb4cc',label:'#07111fee',border:'#1f4266',highlight:'#dff4ff',sphereMid:'#246da8',sphereShadow:'#091426',rim:'#72c9ff',badge:'#0b1d33ed',badgeText:'#c9ecff'},
+ light:{background:'#f8fcff',haze:'#62b7ff18',stars:'#2f76b7',guide:'#78a7cf',node:'#1769aa',core:'#075f9f',edge:'#4c83b2',derived:'#90a8c0',text:'#10243a',muted:'#4c6077',label:'#fffffff2',border:'#c8d9e8',highlight:'#ffffff',sphereMid:'#6d9fc7',sphereShadow:'#1b527f',rim:'#d8f3ff',badge:'#f8fcffed',badgeText:'#154e7c'}
 });
 export function themePalette(theme){return MAP_THEMES[theme]||MAP_THEMES.dark}
 
