@@ -48,8 +48,6 @@ function selectNode(id) {
  inspector.inspect(id, {ui: session.state.ui});
 }
 
-/* ---------- rendering ---------- */
-
 const MODE_LABEL = {neighbors:'VIZINHANÇA', ancestors:'ANCESTRAIS', descendants:'DESCENDENTES', critical:'BLOCKERS', lineage:'LINHAGEM', search:'BUSCA'};
 function modeChip() {
  const chip = $('#mode-chip'), mode = session.state.mode;
@@ -124,8 +122,6 @@ session.on((event, payload) => {
  renderDomainNav(api, node => session.focusNode(node));
 });
 
-/* ---------- workspace modes ---------- */
-
 function setMode(mode) {
  session.setUi(mode);
  document.body.dataset.mode = mode;
@@ -139,8 +135,6 @@ function setMode(mode) {
  if (session.state.selected) inspector.inspect(session.state.selected, {ui: mode});
 }
 $$('[data-mode]').forEach(b => b.onclick = () => setMode(b.dataset.mode));
-
-/* ---------- map controls ---------- */
 
 let orbitFrame = 0, orbitTime = 0, orbitEnabled = false;
 function animateOrbit(t) {
@@ -181,7 +175,7 @@ $('#immersive').onclick = () => immersive(!document.body.classList.contains('imm
 
 $('#layers').onchange = e => session.setDepth(e.target.value);
 $('#menu').onclick = () => $('#sidebar').classList.toggle('open');
-$('#sync').onclick = () => runSync();
+$('#sync').onclick = () => runSync(true);
 $('#close-inspector').onclick = () => {closeDrawer(); session.deselect()};
 $('#home').onclick = () => session.home();
 $('#back').onclick = () => session.back();
@@ -210,25 +204,29 @@ document.addEventListener('keydown', e => {
  if (e.key === 'Escape') {immersive(false); closeDrawer()}
 });
 
-/* ---------- sync ---------- */
-
-async function runSync() {
+const AUTO_SYNC_MS = 300000;
+let lastAutoSyncAt = Date.now();
+async function runSync(force = false) {
+ if (!force && Date.now() - lastAutoSyncAt < AUTO_SYNC_MS) return null;
  const result = await session.sync();
- if (!result) return toast('Sincronização indisponível. Último recorte preservado.');
+ if (!result) {
+  if (force) toast('Sincronização indisponível. Último recorte preservado.');
+  return null;
+ }
+ lastAutoSyncAt = Date.now();
  const warning = result.sources?.drive?.error === 'GOOGLE_AUTH_NOT_CONFIGURED'
   ? ' Drive: acesso do aplicativo não configurado; snapshot preservado.' : '';
- toast((result.changes ? `${result.changes} entidades alteradas.` : 'Nenhuma alteração nos dados lidos.') + warning);
+ if (force || result.changes) toast((result.changes ? `${result.changes} entidades alteradas.` : 'Nenhuma alteração nos dados lidos.') + warning);
+ return result;
 }
-document.addEventListener('visibilitychange', () => {if (!document.hidden) runSync()});
-setInterval(() => {if (!document.hidden) runSync()}, 300000);
-
-/* ---------- start ---------- */
+document.addEventListener('visibilitychange', () => {if (!document.hidden) runSync(false)});
+setInterval(() => {if (!document.hidden) runSync(false)}, AUTO_SYNC_MS);
 
 syncFilterInputs(session.state.filters);
 await session.refresh();
+lastAutoSyncAt = Date.now();
 registerWebMcp({
  api, session,
- actions: {focus: n => session.focusNode(n), compare: n => inspector.compare(n), sync: runSync},
+ actions: {focus: n => session.focusNode(n), compare: n => inspector.compare(n), sync: () => runSync(true)},
  onStatus: text => {$('#mcp').textContent = text}
 }).catch(() => {$('#mcp').textContent = 'WebMCP indisponível'});
-runSync();
