@@ -14,10 +14,10 @@ Status: **OFFICIAL FRONTEND** for the NEXO scientific/operational read model.
 ## Freshness contract
 
 - Manual `Sincronizar`: immediate refresh and client-cache invalidation.
-- Automatic source refresh: every 12 hours.
+- Automatic app refresh: every 12 hours while the browser is active.
 - The browser persists the last automatic-sync time, so closing/reopening the app does not reset the cadence.
 - Returning to the tab only triggers a sync when the 12-hour window is actually due.
-- Vercel cron also requests a refresh every 12 hours.
+- The Vercel Hobby plan permits only daily cron jobs, so the server keeps one daily 08:00 UTC refresh as an unattended fallback; it is not the app cadence.
 - Normal navigation continues to read the live Neon projection; a synchronization is not required just to navigate current V1 data.
 
 ## UI contract
