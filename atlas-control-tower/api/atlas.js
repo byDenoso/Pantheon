@@ -9,7 +9,6 @@ import {normalizeGraph, contractIssues, SOURCES, FRESHNESS} from '../lib/graph-c
 import {configuredMode, createV1Reader, resolveSource, fallbackIssue, v1BaseUrl} from '../lib/datasource.mjs';
 import {createNeonV1Reader} from '../lib/neon-v1.mjs';
 
-// Private fallback remains a last-valid escape hatch. Production prefers science_v1/learning_v1.
 let packed = null; try {packed = (await import('../lib/snapshot.mjs')).default} catch {}
 const snapshot = packed
  ? JSON.parse(gunzipSync(Buffer.from(packed, 'base64')).toString())
@@ -24,14 +23,13 @@ let sources = {
 let lastSync = null;
 let graphFingerprint = fingerprint(graph);
 
-// Remote V1 remains supported. With no remote base URL, the Atlas reads the existing
-// Neon Data API directly using Vercel OIDC and the project's read-only database role.
 const directNeonV1 = createNeonV1Reader();
 const v1 = v1BaseUrl() ? createV1Reader() : directNeonV1;
 const usingDirectNeon = !v1BaseUrl();
 
 const sourceVersion = () => sources.drive.observedAt || snapshot.capturedAt || '';
 const decide = force => resolveSource({mode: configuredMode(), reader: v1, force});
+const graphFilters=q=>{const {focus,mode,offset,limit,depth,route,probe,refresh,...filters}=q||{};return filters};
 
 function contract(view, decision, {cache = ''} = {}) {
  const ids = new Set((view.nodes || []).map(n => n.id));
@@ -94,7 +92,9 @@ export default async function handler(req,res) {
  res.setHeader('Cache-Control','private, no-store');
  res.setHeader('X-Content-Type-Options','nosniff');
  const url=new URL(req.url,'https://atlas.local'),q=Object.fromEntries(url.searchParams),route=q.route||url.pathname.split('/').pop();
- const send=(data,status=200)=>{res.statusCode=status;res.end(JSON.stringify(data))};
+ const cdnSafe=req.method==='GET'&&['graph','state','audit','learning','entity'].includes(route)&&q.refresh!=='1'&&q.probe!=='1';
+ if(cdnSafe)res.setHeader('Vercel-CDN-Cache-Control','public, max-age=30, stale-while-revalidate=60');
+ const send=(data,status=200)=>{const fp=data?.fingerprint||data?.projection?.fingerprint;if(fp)res.setHeader('X-Atlas-Fingerprint',String(fp));res.statusCode=status;res.end(JSON.stringify(data))};
  try {
   if(route==='sync'){
    if(req.method!=='POST')return send({error:'METHOD_NOT_ALLOWED'},405);
@@ -116,8 +116,9 @@ export default async function handler(req,res) {
   }
 
   if(route==='graph'){
-   if(useV1){try{const payload=await v1.graph(q),drift=contractIssues(payload).filter(i=>i.level==='ERROR');if(!drift.length){const view=normalizeGraph(payload,{focus:q.focus||''});return send({...view,source:SOURCES.V1,freshness:decision.freshness,cache:payload.cache||'',issues:[...view.issues,...contractIssues(payload)]})}}catch(e){console.error('[atlas:v1:graph]',e?.message||e)}}
-   return send(contract(subgraph(graph,q),useV1?{...decision,source:SOURCES.LEGACY,freshness:FRESHNESS.FALLBACK,usedFallback:true,reason:'V1_GRAPH_UNAVAILABLE'}:decision));
+   if(useV1){try{const payload=await v1.graph(q),drift=contractIssues(payload).filter(i=>i.level==='ERROR');if(!drift.length){const view=normalizeGraph(payload,{focus:q.focus||''}),vsummary=await v1.state(graphFilters(q));return send({...view,summary:vsummary,source:SOURCES.V1,freshness:decision.freshness,cache:payload.cache||'',issues:[...view.issues,...contractIssues(payload)]})}}catch(e){console.error('[atlas:v1:graph]',e?.message||e)}}
+   const fallbackDecision=useV1?{...decision,source:SOURCES.LEGACY,freshness:FRESHNESS.FALLBACK,usedFallback:true,reason:'V1_GRAPH_UNAVAILABLE'}:decision;
+   return send({...contract(subgraph(graph,q),fallbackDecision),summary:summary(graphFilters(q),fallbackDecision)});
   }
 
   if(route==='audit'){
