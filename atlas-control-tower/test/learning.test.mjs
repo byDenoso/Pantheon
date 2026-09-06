@@ -19,7 +19,7 @@ test('stages without a source are reported as pending, never filled in',()=>{
  const lesson=ladder.find(s=>s.id==='LESSON');
  assert.equal(lesson.available,false);
  assert.equal(lesson.count,0);
- assert.equal(lesson.source,'PROCEDURAL_MEMORY');
+ assert.equal(lesson.source,'learning_v1.lessons');
  assert.equal(ladder.find(s=>s.id==='OBSERVATION').count,1);
  assert.equal(ladder.find(s=>s.id==='PATTERN').count,1);
 });
