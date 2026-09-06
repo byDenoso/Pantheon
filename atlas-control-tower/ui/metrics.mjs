@@ -1,5 +1,4 @@
-/** Metrics strip, source status and the three charts.
- *  Counts are API counts for the whole projection, not the visible recorte. */
+/** Source status and charts. The legacy top metrics strip is optional. */
 import {$, $$, esc, num, age} from './dom.mjs';
 
 const METRICS = [
@@ -12,8 +11,10 @@ const METRICS = [
 ];
 
 export function renderMetrics(summary, {onMetric}) {
+ const root = $('#metrics');
+ if (!root) return;
  const counts = summary.counts || {};
- $('#metrics').innerHTML = METRICS.map(([k, label, note]) =>
+ root.innerHTML = METRICS.map(([k, label, note]) =>
   `<div class="metric" role="button" tabindex="0" data-metric="${k}"><label>${label}</label><strong>${num(counts[k])}</strong><small>${note}</small></div>`).join('');
  $$('[data-metric]').forEach(b => {
   b.onclick = () => onMetric(b.dataset.metric);
@@ -44,7 +45,6 @@ export function renderBars(el, data, onPick) {
 }
 
 export function renderCharts(summary, colors, {onDomain, onStatus, onDate, onAudit}) {
- // Unresolved mapping is a migration issue, never a scientific domain.
  renderBars($('#domain-chart'), summary.domains, onDomain);
  const unresolved = summary.projection?.unresolvedDomain || 0;
  const note = $('#domain-unmapped');
@@ -69,7 +69,6 @@ export function renderCharts(summary, colors, {onDomain, onStatus, onDate, onAud
  $$('[data-date]').forEach(b => b.onclick = () => onDate(b.dataset.date));
 }
 
-/** Sidebar domains: the unresolved bucket is excluded here too. */
 export async function renderDomainNav(api, onPick) {
  if ($('#domain-nav').children.length) return;
  try {
