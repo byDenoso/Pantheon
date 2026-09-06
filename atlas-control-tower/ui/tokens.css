@@ -1,15 +1,15 @@
 /* Theme tokens. Change these for page colors; Canvas equivalents: visual-config.mjs. */
 :root,[data-theme="dark"] {
  color-scheme:dark;
- --bg:#080f1d;--surface:#0c1728;--raised:#122139;--glass:#0c1728ed;
- --line:#263c59;--text:#e2ebf8;--muted:#9aacc5;--accent:#9bbce7;
- --soft:#172d4b;--shadow:#02071366;--warning:#e6be82;
- --map-background:#080f1d;--chart:#80a9de;
+ --bg:#050816;--surface:#091426;--raised:#0d1d34;--glass:#091426ed;
+ --line:#1f3552;--text:#eaf4ff;--muted:#9fb4cc;--accent:#34a8ff;
+ --soft:#102746;--shadow:#01030b80;--warning:#f0c56b;
+ --map-background:#050816;--chart:#62b8ff;
 }
 [data-theme="light"] {
  color-scheme:light;
- --bg:#f3f7fc;--surface:#ffffff;--raised:#edf3fb;--glass:#fffffff2;
- --line:#cbd8e9;--text:#183551;--muted:#526c88;--accent:#285d9f;
- --soft:#e1ecfa;--shadow:#24456c15;--warning:#825917;
- --map-background:#fbfdff;--chart:#3c70b2;
+ --bg:#f8fcff;--surface:#ffffff;--raised:#f0f8ff;--glass:#fffffff2;
+ --line:#c8d9e8;--text:#10243a;--muted:#4c6077;--accent:#0067c5;
+ --soft:#e5f4ff;--shadow:#174d7a14;--warning:#855b00;
+ --map-background:#f8fcff;--chart:#176fba;
 }
