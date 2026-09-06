@@ -61,6 +61,7 @@ function renderSignals(signals,payload){
 
 export async function renderRecortePanel(graph,summary,{onEntity,onLearning}={}){
  const root=document.querySelector('#recorte-panel');if(!root)return;
+ const title=document.querySelector('#recorte-section .chart-title span');if(title)title.textContent='Radar do recorte';
  const openLearning=()=>onLearning?onLearning():document.querySelector('[data-mode="learning"]')?.click();
  const nodes=graph?.nodes||[],total=summary?.total||nodes.length;
  const changes=latestChanges(nodes);
