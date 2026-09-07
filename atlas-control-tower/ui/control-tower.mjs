@@ -43,21 +43,28 @@ const row=(item,index,{blocker=false}={})=>`<button class="ct-ref-row${blocker?'
 
 export function renderControlTower(root,model,{onFocus,onMap}={}){
  if(!root)return;
- const healthGood=model.health.filter(h=>h.state==='good').length, healthTotal=model.health.length||0;
- const nominal=healthTotal&&healthGood===healthTotal&&!model.attention.blockedCount;
- const priorities=model.priorities.length?model.priorities.map((a,i)=>row(a,i)).join(''):'<p class="ct-empty">Nenhuma prioridade publicada.</p>';
- const recent=model.recent.items.length?model.recent.items.map((e,i)=>`<button class="ct-ref-row" data-ct-focus="system:AUTOMATION"><i>•</i><span><b>${esc(e.label||e.id)}</b><small>${esc(e.metadata?.event_type||e.status||'runtime')}</small></span><time>${esc(dateLabel(e.updatedAt))}</time></button>`).join(''):'<p class="ct-empty">Nenhuma atividade recente publicada.</p>';
- const blockers=model.attention.blockers.length?model.attention.blockers.map((a,i)=>row(a,i,{blocker:true})).join(''):'<p class="ct-empty">Nenhum blocker material.</p>';
- const rb=model.attention.readbackPercent;
- const readbackText=model.attention.runs?`Readback verificado em ${num(rb)}% das execuções registradas. ${model.attention.blockedCount?`${num(model.attention.blockedCount)} blocker${model.attention.blockedCount===1?' segue':'s seguem'} exigindo ação.`:'Fluxo operacional sem blocker material publicado.'}`:'Black Box sem runs suficientes para calcular readback.';
- const statusLabel=nominal?'SISTEMA NOMINAL':model.attention.blockedCount?'SISTEMA OPERACIONAL':'LEITURA PARCIAL';
+ const health=model.health||[], attention=model.attention||{}, recentState=model.recent||{};
+ const healthGood=health.filter(h=>h.state==='good').length, healthTotal=health.length||0;
+ const blockedCount=Number(attention.blockedCount)||0;
+ const nominal=healthTotal&&healthGood===healthTotal&&!blockedCount;
+ const priorityItems=model.priorities||attention.blockers||[];
+ const priorities=priorityItems.length?priorityItems.map((a,i)=>row(a,i)).join(''):'<p class="ct-empty">Nenhuma prioridade publicada.</p>';
+ const recentItems=recentState.items||[];
+ const recent=recentItems.length?recentItems.map(e=>`<button class="ct-ref-row" data-ct-focus="system:AUTOMATION"><i>•</i><span><b>${esc(e.label||e.id)}</b><small>${esc(e.metadata?.event_type||e.status||'runtime')}</small></span><time>${esc(dateLabel(e.updatedAt))}</time></button>`).join(''):'<p class="ct-empty">Nenhuma atividade recente publicada.</p>';
+ const blockerItems=attention.blockers||[];
+ const blockers=blockerItems.length?blockerItems.map((a,i)=>row(a,i,{blocker:true})).join(''):'<p class="ct-empty">Nenhum blocker material.</p>';
+ const runs=Number(attention.runs)||0, rb=Number(attention.readbackPercent)||0;
+ const readbackLabel=attention.readbackLabel||'—';
+ const readbackText=runs?`Readback verificado em ${num(rb)}% das execuções registradas. ${blockedCount?`${num(blockedCount)} blocker${blockedCount===1?' segue':'s seguem'} exigindo ação.`:'Fluxo operacional sem blocker material publicado.'}`:'Black Box sem runs suficientes para calcular readback.';
+ const statusLabel=nominal?'SISTEMA NOMINAL':blockedCount?'SISTEMA OPERACIONAL':'LEITURA PARCIAL';
+ const generatedAt=String(model.generatedAt||'');
 
  root.innerHTML=`<div class="ct-reference-grid">
-  <article class="ct-reference-console ct-status-console"><div class="ct-reference-title"><span>Status operacional</span>${statusDot(nominal?'good':model.attention.blockedCount?'warn':'unknown')}</div><div class="ct-status-body"><strong class="ct-nominal"><i></i>${esc(statusLabel)}</strong><p>${healthTotal?`${healthGood}/${healthTotal} sinais verificados`:'Health indisponível'}</p><div class="ct-mini-metrics"><div><strong>${num(model.attention.success)}</strong><small>Execuções com sucesso</small></div><div><strong>${num(model.attention.runs)}</strong><small>Runs registrados</small></div><div><strong>${num(model.attention.blockedCount)}</strong><small>Blockers atuais</small></div></div></div></article>
+  <article class="ct-reference-console ct-status-console"><div class="ct-reference-title"><span>Status operacional</span>${statusDot(nominal?'good':blockedCount?'warn':'unknown')}</div><div class="ct-status-body"><strong class="ct-nominal"><i></i>${esc(statusLabel)}</strong><p>${healthTotal?`${healthGood}/${healthTotal} sinais verificados`:'Health indisponível'}</p><div class="ct-mini-metrics"><div><strong>${num(attention.success||0)}</strong><small>Execuções com sucesso</small></div><div><strong>${num(runs)}</strong><small>Runs registrados</small></div><div><strong>${num(blockedCount)}</strong><small>Blockers atuais</small></div></div></div></article>
   <article class="ct-reference-console ct-priorities-console"><div class="ct-reference-title"><span>Prioridades</span><small>Ver todas →</small></div><div class="ct-ref-list">${priorities}</div></article>
   <article class="ct-reference-console ct-recent-console"><div class="ct-reference-title"><span>Atividade recente</span><small>Ver todas →</small></div><div class="ct-ref-list">${recent}</div></article>
-  <article class="ct-reference-console ct-blockers-console"><div class="ct-reference-title"><span>Blockers</span><small>${num(model.attention.blockedCount)} ativos</small></div><div class="ct-ref-list">${blockers}</div></article>
-  <article class="ct-reference-console ct-readback-console"><div class="ct-reference-title"><span>Readback</span><small>${esc(model.attention.readbackLabel)}</small></div><div class="ct-readback-body"><blockquote>“${esc(readbackText)}”</blockquote><small>Black Box · ${esc(model.generatedAt.slice(0,16).replace('T',' '))}</small><div class="ct-readback-meter"><strong>${model.attention.runs?num(rb)+'%':'—'}</strong><i style="--readback:${model.attention.runs?rb:0}%"></i></div></div></article>
+  <article class="ct-reference-console ct-blockers-console"><div class="ct-reference-title"><span>Blockers</span><small>${num(blockedCount)} ativos</small></div><div class="ct-ref-list">${blockers}</div></article>
+  <article class="ct-reference-console ct-readback-console"><div class="ct-reference-title"><span>Readback</span><small>${esc(readbackLabel)}</small></div><div class="ct-readback-body"><blockquote>“${esc(readbackText)}”</blockquote><small>Black Box${generatedAt?' · '+esc(generatedAt.slice(0,16).replace('T',' ')):''}</small><div class="ct-readback-meter"><strong>${runs?num(rb)+'%':'—'}</strong><i style="--readback:${runs?rb:0}%"></i></div></div></article>
  </div>`;
  root.querySelectorAll('[data-ct-focus]').forEach(button=>button.onclick=()=>onFocus?.(button.dataset.ctFocus));
  root.querySelector('[data-ct-map]')?.addEventListener('click',()=>onMap?.());
