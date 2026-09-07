@@ -1,4 +1,4 @@
-import {themePalette,MAP_CONFIG,mixHex} from './ui/visual-config.mjs';
+import {themePalette,MAP_CONFIG,SYSTEM_COLORS,mixHex} from './ui/visual-config.mjs';
 import {clusteredPositions} from './ui/map-data.mjs';
 import {state} from './lib/model.mjs';
 export function project([x,y,z],c,w,h){if(c.flat)z=0;const cy=Math.cos(c.yaw),sy=Math.sin(c.yaw),cp=Math.cos(c.pitch),sp=Math.sin(c.pitch);const xx=x*cy+z*sy,zz=z*cy-x*sy,yy=y*cp-zz*sp,depth=y*sp+zz*cp;const scale=750/(750-depth)*(c.zoom||1)*Math.min(w/1000,h/660);return{x:w/2+xx*scale+(c.panX||0),y:h/2+yy*scale+(c.panY||0),z:depth,scale}}
@@ -31,12 +31,15 @@ draw(){
  const nearness=z=>this.camera.flat||zmax===zmin?1:(z-zmin)/(zmax-zmin);
  const fog=(color,z)=>mixHex(color,palette.background,(1-nearness(z))*MAP_CONFIG.fog);
  const map=new Map(this.points.map(p=>[p.node.id,p])),neighbors=new Set([this.selected]);
+ const parentOf=new Map();for(const e of this.data.edges)if(!parentOf.has(e.target))parentOf.set(e.target,e.source);
+ const systemRoot=id=>{let cur=id,guard=0;while(cur&&guard++<10){if(SYSTEM_COLORS[cur])return cur;cur=parentOf.get(cur)}return null};
+ const nodeBase=n=>SYSTEM_COLORS[n.id]||SYSTEM_COLORS[systemRoot(n.id)]||(n.domain?SYSTEM_COLORS['system:SCIENCE']:null)||palette.node;
  for(const e of this.data.edges)if(e.source===this.selected||e.target===this.selected){neighbors.add(e.source);neighbors.add(e.target)}
  for(const e of this.data.edges){const a=map.get(e.source),b=map.get(e.target);if(!a||!b)continue;
  const active=!this.selected||neighbors.has(a.node.id)&&neighbors.has(b.node.id);
- const col=fog(e.authority==='SCIENCE_CANONICAL'?palette.edge:palette.derived,(a.z+b.z)/2);
+ const branchColor=nodeBase(a.node),col=fog(e.authority==='SCIENCE_CANONICAL'?mixHex(branchColor,palette.edge,.32):palette.derived,(a.z+b.z)/2);
  const cp=this.edgeControl(a,b);
- c.globalAlpha=active?.62:.07;c.strokeStyle=col;c.setLineDash(e.authority==='SCIENCE_CANONICAL'?[]:[3,7]);c.lineWidth=active?1.15:.65;
+ c.globalAlpha=active?.68:.07;c.strokeStyle=col;c.setLineDash(e.authority==='SCIENCE_CANONICAL'?[]:[3,7]);c.lineWidth=active?1.2:.65;
  c.beginPath();c.moveTo(a.x,a.y);c.quadraticCurveTo(cp.cx,cp.cy,b.x,b.y);c.stroke();c.setLineDash([]);
  // The arrow sits on the curve and points along its tangent.
  const t=.68,u=1-t,x=u*u*a.x+2*u*t*cp.cx+t*t*b.x,y=u*u*a.y+2*u*t*cp.cy+t*t*b.y;
@@ -44,24 +47,24 @@ draw(){
  c.beginPath();c.moveTo(x,y);c.lineTo(x-5*Math.cos(angle-.5),y-5*Math.sin(angle-.5));c.lineTo(x-5*Math.cos(angle+.5),y-5*Math.sin(angle+.5));c.fillStyle=col;c.fill()}
  c.globalAlpha=1;this.badges=[];
  for(const p of [...this.points].sort((a,b)=>a.z-b.z)){const n=p.node,active=n.id===this.selected||n.id===this.hover?.id,core=n.id===this.focus;
- const base=core?palette.core:palette.node,col=fog(base,p.z);
+ const base=nodeBase(n),col=fog(base,p.z),sphereMid=mixHex(base,palette.background,.42),sphereShadow=mixHex(base,palette.background,.82),rim=mixHex(base,'#ffffff',.22);
  c.globalAlpha=this.selected&&!neighbors.has(n.id)?.23:1;
- const glow=c.createRadialGradient(p.x,p.y,0,p.x,p.y,p.r*(core?5:3.5));glow.addColorStop(0,col+MAP_CONFIG.haloAlpha);glow.addColorStop(.35,col+'08');glow.addColorStop(1,col+'00');c.fillStyle=glow;c.beginPath();c.arc(p.x,p.y,p.r*(core?5:3.5),0,Math.PI*2);c.fill();
+ const glow=c.createRadialGradient(p.x,p.y,0,p.x,p.y,p.r*(core?5:3.8));glow.addColorStop(0,col+MAP_CONFIG.haloAlpha);glow.addColorStop(.35,col+'0a');glow.addColorStop(1,col+'00');c.fillStyle=glow;c.beginPath();c.arc(p.x,p.y,p.r*(core?5:3.8),0,Math.PI*2);c.fill();
  // The focal rings answer the camera: they flatten as the pitch approaches the equator.
  if(core){const squash=.30+Math.abs(Math.sin(this.camera.pitch))*.55;for(let j=0;j<3;j++){c.beginPath();c.ellipse(p.x,p.y,p.r*(1.6+j*.28),p.r*(1.6+j*.28)*squash,-.5+j*.4,0,Math.PI*2);c.strokeStyle=col+(j?'44':'99');c.lineWidth=1;c.stroke()}}
  const sphere=c.createRadialGradient(p.x-p.r*.32,p.y-p.r*.4,0,p.x+p.r*.2,p.y+p.r*.2,p.r*1.2);
- sphere.addColorStop(0,fog(palette.highlight,p.z));sphere.addColorStop(.18,col);sphere.addColorStop(.55,fog(palette.sphereMid,p.z));sphere.addColorStop(1,fog(palette.sphereShadow,p.z));
- c.fillStyle=sphere;c.strokeStyle=col+'bb';c.lineWidth=active?2:1;c.beginPath();
+ sphere.addColorStop(0,fog(palette.highlight,p.z));sphere.addColorStop(.18,col);sphere.addColorStop(.55,fog(sphereMid,p.z));sphere.addColorStop(1,fog(sphereShadow,p.z));
+ c.fillStyle=sphere;c.strokeStyle=col+'c9';c.lineWidth=active?2:1;c.beginPath();
  if(['FILE','ARTIFACT','DATASET'].includes(n.type))c.rect(p.x-p.r,p.y-p.r,p.r*2,p.r*2);
  else if(n.type==='CLAIM'){c.moveTo(p.x,p.y-p.r*1.3);c.lineTo(p.x+p.r,p.y);c.lineTo(p.x,p.y+p.r*1.3);c.lineTo(p.x-p.r,p.y);c.closePath()}
  else c.arc(p.x,p.y,p.r,0,Math.PI*2);
  c.fill();c.stroke();
  // A rim light on the lit side gives the sphere its volume.
- if(p.r>7&&!['FILE','ARTIFACT','DATASET','CLAIM'].includes(n.type)){c.beginPath();c.arc(p.x,p.y,p.r*.94,Math.PI*1.05,Math.PI*1.85);c.strokeStyle=fog(palette.rim,p.z)+(core?'cc':'66');c.lineWidth=Math.max(1,p.r*.10);c.stroke()}
- if(active){c.beginPath();c.arc(p.x,p.y,p.r+7,0,Math.PI*2);c.strokeStyle=col+'aa';c.stroke()}
+ if(p.r>7&&!['FILE','ARTIFACT','DATASET','CLAIM'].includes(n.type)){c.beginPath();c.arc(p.x,p.y,p.r*.94,Math.PI*1.05,Math.PI*1.85);c.strokeStyle=fog(rim,p.z)+(core?'dd':'88');c.lineWidth=Math.max(1,p.r*.10);c.stroke()}
+ if(active){c.beginPath();c.arc(p.x,p.y,p.r+7,0,Math.PI*2);c.strokeStyle=col+'cc';c.stroke()}
  // A truncated branch says how much it still hides; drill in to see the rest.
  if(n.hiddenChildren>0&&p.r>=5&&!core){const text='+'+(n.hiddenChildren>999?'999':n.hiddenChildren);c.font='600 9px sans-serif';const bw=c.measureText(text).width+10,bx=p.x+p.r*.75,by=p.y-p.r*.75-11;
-  c.globalAlpha=this.selected&&!neighbors.has(n.id)?.25:.95;c.fillStyle=palette.badge;c.beginPath();c.roundRect(bx,by,bw,13,7);c.fill();c.strokeStyle=fog(palette.border,p.z);c.lineWidth=1;c.stroke();
+  c.globalAlpha=this.selected&&!neighbors.has(n.id)?.25:.95;c.fillStyle=palette.badge;c.beginPath();c.roundRect(bx,by,bw,13,7);c.fill();c.strokeStyle=fog(col,p.z);c.lineWidth=1;c.stroke();
   c.fillStyle=palette.badgeText;c.textAlign='center';c.fillText(text,bx+bw/2,by+9.5);this.badges.push({x:bx,y:by,w:bw,h:13,node:n})}
  }
  c.globalAlpha=1;
@@ -86,10 +89,11 @@ draw(){
  const candidates=[[p.x-bw/2,p.y+p.r+13],[p.x-bw/2,p.y-p.r-bh-13],[p.x+p.r+15,p.y-bh/2],[p.x-p.r-bw-15,p.y-bh/2],...[45,75,105].flatMap(d=>[[p.x-bw/2,p.y-p.r-bh-d],[p.x-bw/2,p.y+p.r+d]])];
  let box;for(const [x,y] of candidates){const b={x,y,w:bw,h:bh,id:n.id};if(x<8||x+bw>w-8||y<50||y+bh>h-38)continue;if(this.points.some(q=>q.node.id!==n.id&&q.x+q.r+3>x&&q.x-q.r-3<x+bw&&q.y+q.r+3>y&&q.y-q.r-3<y+bh))continue;if(boxes.some(a=>x<a.x+a.w+5&&x+bw+5>a.x&&y<a.y+a.h+4&&y+bh+4>a.y))continue;if(reserved.some(r=>x<r.x+r.w&&x+bw>r.x&&y<r.y+r.h&&y+bh>r.y))continue;box=b;break}
  if(!box)continue;boxes.push(box);
+ const labelColor=fog(nodeBase(n),p.z);
  c.globalAlpha=this.selected&&!neighbors.has(n.id)?.35:1;
- c.fillStyle=palette.label;c.fillRect(box.x,box.y,bw,bh);c.strokeStyle=core?palette.core+'88':palette.border;c.lineWidth=1;c.strokeRect(box.x,box.y,bw,bh);
+ c.fillStyle=palette.label;c.fillRect(box.x,box.y,bw,bh);c.strokeStyle=labelColor+'99';c.lineWidth=1;c.strokeRect(box.x,box.y,bw,bh);
  c.fillStyle=palette.text;c.textAlign='center';c.fillText(label,box.x+bw/2,box.y+18);
- c.font='9px sans-serif';c.fillStyle=core?palette.core:palette.muted;c.fillText(core?'FOCO ATUAL':n.type.replaceAll('_',' '),box.x+bw/2,box.y+33);
+ c.font='9px sans-serif';c.fillStyle=core?labelColor:palette.muted;c.fillText(core?'FOCO ATUAL':n.type.replaceAll('_',' '),box.x+bw/2,box.y+33);
  }c.globalAlpha=1;
 }
 }
