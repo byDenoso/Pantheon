@@ -2,14 +2,8 @@
   "version": 2,
   "builds": [
     {
-      "src": "api/atlas-v2.js",
-      "use": "@vercel/node",
-      "config": {
-        "includeFiles": [
-          "lib/**",
-          "api/atlas.js"
-        ]
-      }
+      "src": "api/runtime.js",
+      "use": "@vercel/node"
     },
     {"src":"index.html","use":"@vercel/static"},
     {"src":"styles.css","use":"@vercel/static"},
@@ -40,7 +34,7 @@
   "routes": [
     {
       "src": "/api/(state|sync|graph|entity|automation-runs|learning-relations|learning|audit|health|ops)",
-      "dest": "/api/atlas-v2.js?route=$1"
+      "dest": "/api/runtime.js?route=$1"
     },
     {"src":"/","dest":"/index.html"},
     {"handle":"filesystem"},
