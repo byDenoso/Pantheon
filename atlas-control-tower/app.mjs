@@ -16,6 +16,7 @@ import {renderProvenance, renderFallbackNotice} from './ui/provenance.mjs';
 import {renderRecortePanel} from './ui/recorte-view.mjs';
 import {buildLearningGraph} from './ui/learning-graph.mjs';
 import {renderBlackBox} from './ui/blackbox-view.mjs';
+import {buildControlTowerModel, renderControlTower} from './ui/control-tower.mjs';
 import {applyWorkspaceMode} from './ui/workspace.mjs';
 import {registerWebMcp} from './webmcp/tools.mjs';
 
@@ -48,6 +49,45 @@ function selectNode(id) {
  graph.selected = id;
  graph.draw();
  inspector.inspect(id, {ui: session.state.ui});
+}
+
+/* ---------- decision-first command center ---------- */
+
+const COMMAND_SEEN_KEY='atlas.commandCenterSeenAt';
+const commandNow=new Date().toISOString();
+let commandLastSeen=null;
+try {commandLastSeen=localStorage.getItem(COMMAND_SEEN_KEY)||null} catch {}
+const commandSources={health:null,ops:null,learning:null};
+let commandMarked=false;
+const SYSTEM_LABEL={
+ 'system:NEXO':'NEXO','system:SCIENCE':'Ciência','system:AUTOMATION':'Black Box','system:LEARNING':'Learning','system:ENGINEERING':'Engineering','system:OLYMPUS':'Olympus'
+};
+
+function focusSystem(id){
+ session.focusNode({id,label:SYSTEM_LABEL[id]||String(id).split(':').at(-1)||id});
+}
+function openMap(){
+ const target=$('#map-workspace');if(!target)return;
+ const behavior=matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth';
+ target.scrollIntoView({behavior,block:'start'});
+ try{target.focus({preventScroll:true})}catch{target.focus()}
+}
+function renderCommandCenter(summary=session.state.summary){
+ const model=buildControlTowerModel({...commandSources,summary,lastSeenAt:commandLastSeen,now:commandNow});
+ renderControlTower($('#command-center'),model,{onFocus:focusSystem,onMap:openMap});
+}
+function markCommandSeen(){
+ if(commandMarked)return;commandMarked=true;
+ try{localStorage.setItem(COMMAND_SEEN_KEY,commandNow)}catch{}
+}
+function settleCommandSource(key,promise){
+ promise.then(value=>{commandSources[key]=value;markCommandSeen()}).catch(()=>{commandSources[key]=null}).finally(()=>renderCommandCenter());
+}
+function startCommandCenter(){
+ renderCommandCenter();
+ settleCommandSource('health',api.health());
+ settleCommandSource('ops',api.ops());
+ settleCommandSource('learning',api.learning());
 }
 
 /* ---------- rendering ---------- */
@@ -84,7 +124,7 @@ function focusDomain(domain) {
    domains records name, the resolved lineage links and the declared bridges.
    The report is read once and cached, so focusing Learning is not a round trip. */
 const LEARNING_FOCUS = 'system:LEARNING';
-let learningGraph = null, learningPending = null;
+let learningGraph = null, learningPending = null, presentedGraph = null;
 function ensureLearningGraph() {
  if (learningGraph || learningPending) return learningPending;
  learningPending = api.learning()
@@ -101,29 +141,15 @@ function learningView(g) {
   total: learningGraph.nodes.length, hasMore: false, truncated: false};
 }
 
-session.on((event, payload) => {
- if (event === 'loading') $('#graph-count').textContent = 'Lendo recorte…';
- if (event === 'error') {
-  $('#graph-count').textContent = 'Leitura indisponível';
-  toast('Não foi possível atualizar este recorte. A visualização anterior foi preservada.');
- }
- if (event === 'focus') {closeDrawer(); inspector.invalidate(); resetFilterInputs(); $('#sidebar').classList.remove('open')}
- if (event === 'syncing') {
-  $('#sync').disabled = payload.on;
-  $('#sync span').textContent = payload.on ? 'Lendo fontes…' : 'Sincronizar';
- }
- if (event !== 'graph') return;
-
- const {graph: rawGraph, summary} = payload;
+function renderGraphView(rawGraph){
  const isLearning = session.state.focus === LEARNING_FOCUS;
  const g = isLearning ? learningView(rawGraph) : rawGraph;
+ presentedGraph = g;
  graph.set(g, session.state.focus);
- // First visit to Learning: read the report once, then redraw with the web.
  if (isLearning && !learningGraph) ensureLearningGraph().then(built => {
   if (built?.nodes?.length && session.state.focus === LEARNING_FOCUS) session.refresh();
  });
  $('#empty').hidden = g.nodes.length > 1 || (g.nodes.length === 1 && session.state.mode === 'search');
- // The map draws a bounded orbit; the declared total is never hidden.
  const drawn = graph.data.nodes.length, declared = graph.data.visualTotal ?? g.total ?? g.nodes.length;
  const bounded = drawn < declared || g.truncated;
  $('#graph-count').textContent = bounded
@@ -133,15 +159,8 @@ session.on((event, payload) => {
   ? `O mapa desenha ${num(drawn)} de ${num(declared)} entidades declaradas para manter a leitura. Use "Mais entidades" para ampliar o recorte.`
   : 'Recorte completo para esta seleção.';
  $('#more').hidden = !(g.hasMore || bounded);
- renderMetrics(summary, {onMetric: type => {syncFilterInputs({...session.state.filters, type}); applyFilter({type})}});
- renderSourceStatus(summary);
- renderCharts(summary, colors, {
-  onDomain: domain => focusDomain(domain),
-  onStatus: status => applyFilter({status, type: 'CLAIM'}),
-  onDate: since => applyFilter({since})
- });
- renderRecortePanel(g, summary, {onEntity: id => selectNode(id)});
- renderBlackBox(api, g, summary).catch(() => {});
+ renderRecortePanel(g, session.state.summary, {onEntity: id => selectNode(id)});
+ renderBlackBox(api, g, session.state.summary).catch(() => {});
  renderProvenance({...api.provenance, sourceVersion: g.sourceVersion || api.provenance.sourceVersion});
  renderFallbackNotice(g.issues);
  breadcrumbs();
@@ -150,6 +169,39 @@ session.on((event, payload) => {
   ? 'Black Box: execução, aprendizado e integridade operacional.'
   : 'Selecione um nó para ver fontes e relações.';
  renderDomainNav(api, node => session.focusNode(node));
+}
+
+function renderSummaryView(summary){
+ if(!summary)return;
+ renderMetrics(summary, {onMetric: type => {syncFilterInputs({...session.state.filters, type}); applyFilter({type})}});
+ renderSourceStatus(summary);
+ renderCharts(summary, colors, {
+  onDomain: domain => focusDomain(domain),
+  onStatus: status => applyFilter({status, type: 'CLAIM'}),
+  onDate: since => applyFilter({since})
+ });
+ const count=$('#list-count');if(count&&presentedGraph)count.textContent=`${num(summary.total??presentedGraph.nodes?.length??0)} NO RECORTE`;
+ renderProvenance(api.provenance);
+ renderCommandCenter(summary);
+}
+
+session.on((event, payload) => {
+ if (event === 'loading') $('#graph-count').textContent = 'Lendo recorte…';
+ if (event === 'graph-error') {
+  $('#graph-count').textContent = 'Leitura indisponível';
+  toast('Não foi possível atualizar o mapa. A visualização anterior foi preservada.');
+ }
+ if (event === 'summary-error') {
+  $('#source-status').textContent = 'Resumo indisponível · mapa preservado';
+  renderCommandCenter(session.state.summary);
+ }
+ if (event === 'focus') {closeDrawer(); inspector.invalidate(); resetFilterInputs(); $('#sidebar').classList.remove('open')}
+ if (event === 'syncing') {
+  $('#sync').disabled = payload.on;
+  $('#sync span').textContent = payload.on ? 'Lendo fontes…' : 'Sincronizar';
+ }
+ if(event==='graph')renderGraphView(payload.graph);
+ if(event==='summary')renderSummaryView(payload.summary);
 });
 
 /* ---------- map controls ---------- */
@@ -245,8 +297,6 @@ async function checkAutoSync() {
  if (!last) {markAutoSync(); return}
  if (Date.now()-last >= AUTO_SYNC_INTERVAL_MS) await runSync();
 }
-// The timer only checks whether the persisted 12h window expired; it does not hit the network
-// until the window is actually due. Returning to the tab behaves the same way.
 setInterval(checkAutoSync, 60 * 1000);
 document.addEventListener('visibilitychange', () => {if (!document.hidden) checkAutoSync()});
 
@@ -254,6 +304,7 @@ document.addEventListener('visibilitychange', () => {if (!document.hidden) check
 
 applyWorkspaceMode();
 syncFilterInputs(session.state.filters);
+startCommandCenter();
 await session.refresh();
 await checkAutoSync();
 registerWebMcp({

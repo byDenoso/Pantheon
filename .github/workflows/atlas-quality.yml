@@ -26,3 +26,11 @@ jobs:
           node-version: '24'
       - name: Run unit and contract tests
         run: npm test
+      - name: Package tested Atlas build
+        uses: actions/upload-artifact@v4
+        with:
+          name: atlas-control-tower-tested
+          path: atlas-control-tower/
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 1

@@ -82,3 +82,15 @@ test('a contract without nodes still yields a renderable empty graph',()=>{
  const g=normalizeGraph({focus:'x'});
  assert.deepEqual(g.nodes,[]);assert.deepEqual(g.edges,[]);assert.equal(g.focus,'x');
 });
+
+test('ordinary reads use a bounded timeout while sync keeps the long refresh budget', {concurrency:false}, async()=>{
+ const original=AbortSignal.timeout;
+ const seen=[];
+ AbortSignal.timeout=ms=>{seen.push(ms);return original(60_000)};
+ try{
+  const api=createApi({fetchImpl:async()=>reply({nodes:[],edges:[],fingerprint:'fp1'})});
+  await api.graph({focus:'a'});
+  await api.sync();
+  assert.deepEqual(seen,[20000,65000]);
+ }finally{AbortSignal.timeout=original}
+});
