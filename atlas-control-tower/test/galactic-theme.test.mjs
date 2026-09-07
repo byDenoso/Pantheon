@@ -18,6 +18,7 @@ test('dark theme uses restrained deep-navy accents instead of neon cyan',()=>{
 test('galactic layer is a deployed public override loaded after the existing theme',()=>{
   assert.equal(existsSync(themeUrl),true,'galactic-theme.css must exist');
   const css=readFileSync(themeUrl,'utf8');
+  assert.match(css,/--accent:#597fc0/);
   assert.match(css,/body::before/);
   assert.match(css,/graph-stage::after/);
   assert.match(css,/command-center::after/);
