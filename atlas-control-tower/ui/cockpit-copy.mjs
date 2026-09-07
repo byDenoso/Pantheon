@@ -1,5 +1,19 @@
 const STOP = new Set(['a','o','as','os','um','uma','uns','umas','de','da','do','das','dos','e','em','no','na','nos','nas','para','por','com','sem','the','of','and','or','to','for','in','on','with','from','an']);
 const HASH = /\b[a-f0-9]{24,}\b/i;
+const SCIENCE_DOMAIN_LABELS=Object.freeze({
+ 'domain:D1':'Expansão',
+ 'domain:D2':'LSS & Clusters',
+ 'domain:D3':'Late-Time / DE',
+ 'domain:D4':'DM Galáctica',
+ 'domain:D5':'Reionização',
+ 'domain:D6':'SMBH',
+ 'domain:D7':'CMB',
+ 'domain:D8':'PEER / Teoria',
+ 'domain:D9':'Particle DM',
+ 'domain:D10':'AGN / LRD',
+ 'domain:D11':'Megastructures',
+ 'domain:M1':'Método / Inferência'
+});
 
 const clean = value => {
  const text=String(value??'').replace(/\s+/g,' ').trim();
@@ -39,10 +53,10 @@ export function cockpitCopy(entity={}){
 }
 
 export function nodeDisplayLabel(node,max=30){
- const meta=node?.metadata||{};
+ const meta=node?.metadata||{},scienceAlias=SCIENCE_DOMAIN_LABELS[node?.id]||'';
  return compactLabel(node?.label||node?.canonicalTitle||node?.canonicalId||node?.id||'—',{
   max,
-  shortLabel:meta.short_label_pt||meta.shortLabelPt||'',
+  shortLabel:meta.short_label_pt||meta.shortLabelPt||scienceAlias,
   acronym:meta.acronym||meta.sigla||''
  });
 }
