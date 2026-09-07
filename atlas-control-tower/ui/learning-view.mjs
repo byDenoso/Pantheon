@@ -13,6 +13,20 @@ function stageBlock(stage) {
   <ul class="ladder-items">${body}</ul></li>`;
 }
 
+/** Reading key for the filaments drawn on the map.
+ *  The three classes are a reading of relations learning_v1 already declares
+ *  (`domains[]`, `domain`, `relation_scope`): they are DERIVED_NOT_EVIDENCE and
+ *  no filament is drawn for a connection the source does not state. */
+function filamentLegend(crossDomain) {
+ return `<div class="filament-legend" aria-label="Legenda de filamentos">
+  <b>Filamentos</b>
+  <span class="fl fl-intra"><i></i>intra-domínio</span>
+  <span class="fl fl-test"><i></i>entre testes</span>
+  <span class="fl fl-cross"><i></i>cross-domain${Number.isFinite(crossDomain) ? ` · ${num(crossDomain)}` : ''}</span>
+  <small>Relações declaradas na fonte · DERIVED_NOT_EVIDENCE</small>
+ </div>`;
+}
+
 function bucketBlock(bucket) {
  return `<details class="audit-cat">
   <summary><b>${esc(bucket.label)}</b><span class="audit-count">${num(bucket.count)}</span></summary>
@@ -47,6 +61,7 @@ export function renderLearning(report, {api} = {}) {
  if (!report) {host.innerHTML = '<p class="micro">Learning indisponível.</p>'; return}
  host.innerHTML = `<div class="audit-head"><span>${num(report.total)} relações registradas · ${num(report.crossDomain)} cross-domain · fonte <b>${esc(report.source || 'legacy')}</b></span>
    <small>${num(report.unresolvedEvidence.length)} evidências não resolvidas</small></div>
+  ${filamentLegend(report.crossDomain)}
   <ol class="ladder">${report.ladder.map(stageBlock).join('')}</ol>
   <div id="learning-lineage" class="lineage-box" hidden></div>
   <h4 class="learning-sub">Aprendizado emergente</h4>

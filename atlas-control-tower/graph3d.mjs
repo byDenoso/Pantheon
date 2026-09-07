@@ -1,6 +1,8 @@
-import {themePalette,MAP_CONFIG,SYSTEM_COLORS,mixHex} from './ui/visual-config.mjs';
-import {clusteredPositions} from './ui/map-data.mjs';
+import {themePalette,MAP_CONFIG,FILAMENT_STYLE,SYSTEM_COLORS,mixHex} from './ui/visual-config.mjs';
+import {clusteredPositions,visualCut} from './ui/map-data.mjs';
 import {nodeDisplayLabel} from './ui/cockpit-copy.mjs';
+import {orbitalOffset} from './ui/orbital-layout.mjs';
+import {buildFilaments,advancePulse,filamentControl,quadraticBezierPoint} from './ui/filaments.mjs';
 
 export function project([x,y,z],c,w,h){
  if(c.flat)z=0;
@@ -23,8 +25,14 @@ export function layout(nodes,focus){
 
 export const colors={supported:'#69dec0',partial:'#efc379',negative:'#f38999',blocked:'#ff687c',active:'#6bceff',legacy:'#73819b',unknown:'#a2b3ce'};
 const structural=n=>['SYSTEM','DOMAIN','CAMPAIGN'].includes(n?.type);
+/** Cosine ease for the soft appearance of a newly disclosed body. */
 const ease=t=>.5-Math.cos(Math.PI*Math.max(0,Math.min(1,t)))/2;
+/** easeInOutCubic drives the structural expansion: slow start, slow landing and
+ *  no overshoot at either end, so the motion reads as orbital, not springy. */
+const easeInOutCubic=t=>{const x=Math.max(0,Math.min(1,t));return x<.5?4*x*x*x:1-Math.pow(-2*x+2,3)/2};
 const lerp=(a,b,t)=>a+(b-a)*t;
+const reducedMotion=()=>typeof matchMedia==='function'&&matchMedia('(prefers-reduced-motion: reduce)').matches;
+const pageHidden=()=>typeof document==='object'&&!!document?.hidden;
 const hash=s=>{let h=0;for(const ch of String(s))h=(h*31+ch.charCodeAt(0))|0;return(Math.abs(h)%628)/100};
 
 export class Graph3D{
@@ -32,6 +40,7 @@ export class Graph3D{
   this.canvas=canvas;this.ctx=canvas.getContext('2d');this.callbacks={select,open,edge};
   this.camera={yaw:.2,pitch:-.2,zoom:1,panX:0,panY:0};this.data={nodes:[],edges:[]};this.points=[];this.positions=[];
   this.selected=null;this.hover=null;this.pointers=new Map();this.transition=null;this.motionFrame=0;this.pulseUntil=0;this.lastAmbient=0;
+  this.filaments=[];this.filamentKey='';this.spawned=new Set();this.spawnProgress=1;this.lastFrame=0;
   this.draw=this.draw.bind(this);this.motionLoop=this.motionLoop.bind(this);
   new ResizeObserver(()=>this.draw()).observe(canvas);
   canvas.addEventListener('contextmenu',e=>e.preventDefault());
@@ -77,30 +86,52 @@ export class Graph3D{
   return{...data,nodes,edges:data.edges.filter(e=>ids.has(e.source)&&ids.has(e.target)),visualTotal:nodes.length};
  }
  set(raw,focus){
-  const data=this.rootOnly(raw,focus),oldById=new Map(this.data.nodes.map((n,i)=>[n.id,this.positions[i]]));
+  const data=visualCut(this.rootOnly(raw,focus),focus,MAP_CONFIG.maxNodes),oldById=new Map(this.data.nodes.map((n,i)=>[n.id,this.positions[i]]));
   this.selected=null;this.hover=null;this.focus=focus;this.data=data;
   const target=clusteredPositions(data,focus,layout),targetById=new Map(data.nodes.map((n,i)=>[n.id,target[i]]));
   const parent=new Map();for(const e of data.edges)if(!parent.has(e.target))parent.set(e.target,e.source);
+  // A disclosed child is born at its parent and travels out to its orbit;
+  // nothing teleports into place.
+  const spawned=new Set();
   const start=data.nodes.map(n=>{
    if(oldById.has(n.id))return[...oldById.get(n.id)];
-   const p=parent.get(n.id),anchor=targetById.get(p)||[0,0,-60];
+   spawned.add(n.id);
+   const p=parent.get(n.id),anchor=oldById.get(p)||targetById.get(p)||[0,0,-60];
    return[anchor[0],anchor[1],anchor[2]-25];
   });
+  this.spawned=spawned;
   this.positions=start;this.transition={start,target,at:performance.now(),duration:MAP_CONFIG.transitionMs};
-  this.reset(false);this.kick(MAP_CONFIG.transitionMs+140);
+  this.refreshFilaments();
+  this.reset(false);this.kick(MAP_CONFIG.transitionMs+220);
+ }
+ /** Filaments are precomputed per dataset/selection, never per frame.
+  *  The key lets an external selection change (inspector, search, WebMCP) pick
+  *  up a new neighbourhood without every caller having to know about it. */
+ refreshFilaments(){
+  this.filamentKey=`${this.data.nodes.length}|${this.selected||''}|${this.hover?.id||''}`;
+  this.filaments=buildFilaments(this.data,{selected:this.selected,hover:this.hover?.id||null});
+ }
+ syncFilaments(){
+  const key=`${this.data.nodes.length}|${this.selected||''}|${this.hover?.id||''}`;
+  if(key!==this.filamentKey)this.refreshFilaments();
  }
  motionLoop(t){
   this.motionFrame=0;let active=false;
+  const dt=Math.min(FILAMENT_STYLE.maxDeltaSeconds,this.lastFrame?(t-this.lastFrame)/1000:0);
+  this.lastFrame=t;
   if(this.transition){
-   const p=ease((t-this.transition.at)/this.transition.duration);
+   const raw=(t-this.transition.at)/this.transition.duration,p=easeInOutCubic(raw);
    this.positions=this.transition.start.map((s,i)=>[lerp(s[0],this.transition.target[i][0],p),lerp(s[1],this.transition.target[i][1],p),lerp(s[2],this.transition.target[i][2],p)]);
-   if(p>=1){this.positions=this.transition.target.map(x=>[...x]);this.transition=null}else active=true;
+   this.spawnProgress=ease(raw);
+   if(raw>=1){this.positions=this.transition.target.map(x=>[...x]);this.transition=null;this.spawnProgress=1}else active=true;
   }
-  const ambient=this.data.nodes.length<=MAP_CONFIG.ambientMaxNodes&&!matchMedia('(prefers-reduced-motion: reduce)').matches&&!document.hidden;
+  const still=reducedMotion();
+  const ambient=this.data.nodes.length<=MAP_CONFIG.ambientMaxNodes&&!still&&!pageHidden();
+  if(ambient&&dt>0)for(const f of this.filaments||[])advancePulse(f,dt);
   if(t<this.pulseUntil)active=true;
   if(ambient&&t-this.lastAmbient>30){this.lastAmbient=t;active=true}
   this.draw(t);
-  if(active||ambient)this.motionFrame=requestAnimationFrame(this.motionLoop);
+  if(active||ambient)this.motionFrame=requestAnimationFrame(this.motionLoop);else this.lastFrame=0;
  }
  kick(ms=380){this.pulseUntil=Math.max(this.pulseUntil,performance.now()+ms);if(!this.motionFrame)this.motionFrame=requestAnimationFrame(this.motionLoop)}
  reset(redraw=true){Object.assign(this.camera,{yaw:.2,pitch:-.2,zoom:1,panX:0,panY:0});if(redraw)this.draw()}
@@ -108,7 +139,8 @@ export class Graph3D{
  center(){const p=this.points.find(p=>p.node.id===this.selected);if(p){this.camera.panX+=this.w/2-p.x;this.camera.panY+=this.h/2-p.y;this.kick(280);this.draw()}}
  hit(x,y){return[...this.points].sort((a,b)=>b.z-a.z).find(p=>Math.hypot(p.x-x,p.y-y)<p.r+10)?.node}
  edgeControl(a,b){const dx=b.x-a.x,dy=b.y-a.y,len=Math.hypot(dx,dy)||1,k=len*MAP_CONFIG.edgeCurve;return{cx:(a.x+b.x)/2-dy/len*k,cy:(a.y+b.y)/2+dx/len*k}}
- hitEdge(x,y){for(const e of this.data.edges){const a=this.points.find(p=>p.node.id===e.source),b=this.points.find(p=>p.node.id===e.target);if(!a||!b)continue;const cp=this.edgeControl(a,b);for(let i=0;i<=12;i++){const t=i/12,u=1-t,px=u*u*a.x+2*u*t*cp.cx+t*t*b.x,py=u*u*a.y+2*u*t*cp.cy+t*t*b.y;if(Math.hypot(x-px,y-py)<6)return e}}return null}
+ /** Edge picking samples the same curve the filament is drawn with. */
+ hitEdge(x,y){for(const f of this.filaments||[]){const a=this.points.find(p=>p.node.id===f.edge.source),b=this.points.find(p=>p.node.id===f.edge.target);if(!a||!b)continue;const cp=filamentControl(a,b,f.kind);for(let i=0;i<=12;i++){const p=quadraticBezierPoint(a,cp,b,i/12);if(Math.hypot(x-p.x,y-p.y)<6)return f.edge}}return null}
  draw(now=performance.now()){
   const palette=themePalette(this.theme),c=this.ctx,w=this.canvas.clientWidth,h=this.canvas.clientHeight;if(!w||!h)return;
   this.w=w;this.h=h;const dpr=Math.min(globalThis.devicePixelRatio||1,2);
@@ -118,15 +150,49 @@ export class Graph3D{
   haze(w*.48,h*.42,w*.48,palette.haze);haze(w*.78,h*.64,w*.31,palette.haze2||palette.haze);
   for(let i=0;i<MAP_CONFIG.stars;i++){const x=(Math.sin(i*12.9898)*43758.5453%1+1)%1*w,y=(Math.sin(i*7.23)*14321.33%1+1)%1*h;c.fillStyle=i%13===0?palette.stars+'a0':palette.stars+'38';const s=i%13===0?1.6:1;c.fillRect(x,y,s,s)}
   for(const [radius,tilt] of [[170,0],[285,0],[365,.45],[365,-.45]]){c.beginPath();for(let i=0;i<=160;i++){const a=i/160*Math.PI*2,p=project([Math.cos(a)*radius,Math.sin(a)*radius*tilt+35,Math.sin(a)*radius],this.camera,w,h);if(i)c.lineTo(p.x,p.y);else c.moveTo(p.x,p.y)}c.strokeStyle=palette.guide+(tilt?'30':'58');c.lineWidth=1;c.stroke()}
-  this.points=this.data.nodes.map((node,i)=>{const p=project(this.positions[i]||[0,0,0],this.camera,w,h);let base=node.id===this.focus?MAP_CONFIG.coreRadius:node.type==='SYSTEM'?MAP_CONFIG.groupRadius:node.type==='DOMAIN'?MAP_CONFIG.domainRadius:node.type==='CAMPAIGN'?MAP_CONFIG.campaignRadius:MAP_CONFIG.nodeRadius;return{...p,node,r:Math.max(5,base*p.scale)}});
+  this.syncFilaments();
+  // The drift is an offset on top of the semantic position, applied before the
+  // projection so what is clicked is exactly what is drawn.
+  const still=reducedMotion(),drift=still||this.transition?0:MAP_CONFIG.driftAmplitude;
+  this.points=this.data.nodes.map((node,i)=>{
+   const at=this.positions[i]||[0,0,0];
+   const off=drift?orbitalOffset(node.id,now,{amplitude:node.id===this.focus?drift*.34:drift}):[0,0,0];
+   const p=project([at[0]+off[0],at[1]+off[1],at[2]+off[2]],this.camera,w,h);
+   let base=node.id===this.focus?MAP_CONFIG.coreRadius:node.type==='SYSTEM'?MAP_CONFIG.groupRadius:node.type==='DOMAIN'?MAP_CONFIG.domainRadius:node.type==='CAMPAIGN'?MAP_CONFIG.campaignRadius:MAP_CONFIG.nodeRadius;
+   const grow=this.spawned?.has(node.id)?lerp(MAP_CONFIG.spawnScale,1,this.spawnProgress??1):1;
+   return{...p,node,r:Math.max(5,base*p.scale*grow)};
+  });
   const zs=this.points.map(p=>p.z),zmin=zs.length?Math.min(...zs):0,zmax=zs.length?Math.max(...zs):1;
   const nearness=z=>this.camera.flat||zmax===zmin?1:(z-zmin)/(zmax-zmin),fog=(color,z)=>mixHex(color,palette.background,(1-nearness(z))*MAP_CONFIG.fog);
   const map=new Map(this.points.map(p=>[p.node.id,p])),neighbors=new Set([this.selected]);
   const parentOf=new Map();for(const e of this.data.edges)if(!parentOf.has(e.target))parentOf.set(e.target,e.source);
   const systemRoot=id=>{let cur=id,guard=0;while(cur&&guard++<10){if(SYSTEM_COLORS[cur])return cur;cur=parentOf.get(cur)}return null};
   const nodeBase=n=>SYSTEM_COLORS[n.id]||SYSTEM_COLORS[systemRoot(n.id)]||(n.domain?SYSTEM_COLORS['system:SCIENCE']:null)||palette.node;
-  for(const e of this.data.edges)if(e.source===this.selected||e.target===this.selected){neighbors.add(e.source);neighbors.add(e.target)}
-  for(const e of this.data.edges){const a=map.get(e.source),b=map.get(e.target);if(!a||!b)continue;const active=!this.selected||(neighbors.has(a.node.id)&&neighbors.has(b.node.id)),branch=nodeBase(a.node);const col=fog(e.authority==='SCIENCE_CANONICAL'?mixHex(branch,palette.edge,.24):mixHex(branch,palette.derived,.52),(a.z+b.z)/2),cp=this.edgeControl(a,b);c.globalAlpha=active?.78:.1;c.strokeStyle=col;c.setLineDash(e.authority==='SCIENCE_CANONICAL'?[]:[3,7]);c.lineWidth=active?1.35:.75;c.beginPath();c.moveTo(a.x,a.y);c.quadraticCurveTo(cp.cx,cp.cy,b.x,b.y);c.stroke();c.setLineDash([])}
+  const focusedId=this.selected||this.hover?.id||null;
+  if(focusedId)neighbors.add(focusedId);
+  for(const e of this.data.edges)if(e.source===focusedId||e.target===focusedId){neighbors.add(e.source);neighbors.add(e.target)}
+  // Filaments: a thin fibre per declared relation, with a pulse travelling the
+  // curve A→B→A. Class, speed and phase were precomputed; here we only draw.
+  for(const f of this.filaments||[]){
+   const a=map.get(f.edge.source),b=map.get(f.edge.target);if(!a||!b)continue;
+   const style=FILAMENT_STYLE[f.kind]||FILAMENT_STYLE['intra-domain'];
+   const near=!focusedId||(neighbors.has(a.node.id)&&neighbors.has(b.node.id));
+   const canonical=f.edge.authority==='SCIENCE_CANONICAL',branch=nodeBase(a.node);
+   const col=fog(canonical?mixHex(branch,palette.edge,.24):mixHex(branch,palette.derived,.52),(a.z+b.z)/2);
+   const cp=filamentControl(a,b,f.kind);
+   c.globalAlpha=!focusedId?style.alpha:near?style.activeAlpha:FILAMENT_STYLE.dimAlpha;
+   c.strokeStyle=col;c.lineWidth=style.width;c.setLineDash(canonical?[]:style.dash||[]);
+   c.beginPath();c.moveTo(a.x,a.y);c.quadraticCurveTo(cp.cx,cp.cy,b.x,b.y);c.stroke();c.setLineDash([]);
+   if(!near||still){c.globalAlpha=1;continue}
+   const head=quadraticBezierPoint(a,cp,b,f.phase);
+   const tail=quadraticBezierPoint(a,cp,b,Math.max(0,Math.min(1,f.phase-f.direction*.06)));
+   c.globalAlpha=.30;c.lineWidth=style.width*1.6;c.beginPath();c.moveTo(tail.x,tail.y);c.lineTo(head.x,head.y);c.stroke();
+   const halo=c.createRadialGradient(head.x,head.y,0,head.x,head.y,style.glow);
+   halo.addColorStop(0,col+'b0');halo.addColorStop(.42,col+'2e');halo.addColorStop(1,col+'00');
+   c.globalAlpha=1;c.fillStyle=halo;c.beginPath();c.arc(head.x,head.y,style.glow,0,Math.PI*2);c.fill();
+   c.fillStyle=palette.highlight;c.globalAlpha=.85;c.beginPath();c.arc(head.x,head.y,style.pulse*.44,0,Math.PI*2);c.fill();
+   c.globalAlpha=1;
+  }
   c.globalAlpha=1;this.badges=[];
   for(const p of [...this.points].sort((a,b)=>a.z-b.z)){
    const n=p.node,active=n.id===this.selected||n.id===this.hover?.id,core=n.id===this.focus,base=nodeBase(n),col=fog(base,p.z),pulse=active?1+.05*Math.sin(now*.018):1,rr=p.r*pulse;
@@ -155,7 +221,11 @@ export class Graph3D{
   for(const p of [...this.points].sort((a,b)=>priority(b)-priority(a))){const n=p.node,core=n.id===this.focus,active=n.id===this.selected||n.id===this.hover?.id;if(!core&&!active&&boxes.length>=Math.max(7,MAP_CONFIG.maxLabels|0))continue;if(this.focus==='system:NEXO'&&n.type!=='SYSTEM'&&!active)continue;if(this.data.nodes.length>44&&p.z<0&&n.type!=='SYSTEM'&&!core&&!active)continue;
    const maxChars=w<500?18:this.data.nodes.length>30?22:30,label=nodeDisplayLabel(n,maxChars),size=core?20:n.type==='SYSTEM'?14:12;c.font=(core?'750 ':'650 ')+size+'px sans-serif';const bw=c.measureText(label).width+26,bh=46,candidates=[[p.x-bw/2,p.y+p.r+14],[p.x-bw/2,p.y-p.r-bh-14],[p.x+p.r+16,p.y-bh/2],[p.x-p.r-bw-16,p.y-bh/2],...[48,80,112].flatMap(d=>[[p.x-bw/2,p.y-p.r-bh-d],[p.x-bw/2,p.y+p.r+d]])];let box;
    for(const[x,y]of candidates){const b={x,y,w:bw,h:bh,id:n.id};if(x<8||x+bw>w-8||y<48||y+bh>h-38)continue;if(this.points.some(q=>q.node.id!==n.id&&q.x+q.r+4>x&&q.x-q.r-4<x+bw&&q.y+q.r+4>y&&q.y-q.r-4<y+bh))continue;if(boxes.some(a=>x<a.x+a.w+6&&x+bw+6>a.x&&y<a.y+a.h+5&&y+bh+5>a.y))continue;if(reserved.some(r=>x<r.x+r.w&&x+bw>r.x&&y<r.y+r.h&&y+bh>r.y))continue;box=b;break}if(!box)continue;boxes.push(box);
-   const palette=themePalette(this.theme),labelColor=fog(nodeBase(n),p.z);c.globalAlpha=this.selected&&n.id!==this.selected?.48:1;c.fillStyle=palette.label;c.beginPath();c.roundRect(box.x,box.y,bw,bh,7);c.fill();c.strokeStyle=labelColor+'df';c.lineWidth=1.35;c.stroke();c.fillStyle=palette.text;c.textAlign='center';c.fillText(label,box.x+bw/2,box.y+19);c.font='700 9px sans-serif';c.fillStyle=core?labelColor:palette.muted;const kind=n.type.replaceAll('_',' ');c.fillText(core?'FOCO ATUAL':kind,box.x+bw/2,box.y+35);c.globalAlpha=1;
+   const palette=themePalette(this.theme),labelColor=fog(nodeBase(n),p.z);
+   // The chip border keeps the body's colour identity, but on a light ground a
+   // pale system colour is unreadable as type: darken it toward the text ink.
+   const labelInk=palette.isLight?mixHex(labelColor,palette.text,.62):labelColor;
+   c.globalAlpha=this.selected&&n.id!==this.selected?.48:1;c.fillStyle=palette.label;c.beginPath();c.roundRect(box.x,box.y,bw,bh,7);c.fill();c.strokeStyle=labelColor+'df';c.lineWidth=1.35;c.stroke();c.fillStyle=palette.text;c.textAlign='center';c.fillText(label,box.x+bw/2,box.y+19);c.font='700 9px sans-serif';c.fillStyle=core?labelInk:palette.muted;const kind=n.type.replaceAll('_',' ');c.fillText(core?'FOCO ATUAL':kind,box.x+bw/2,box.y+35);c.globalAlpha=1;
   }
  }
 }

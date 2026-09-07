@@ -1,4 +1,5 @@
 import {esc, num} from './dom.mjs';
+import {decisionSummary, DECISION_AUTHORITY} from './decision-summary.mjs';
 
 const statusTone = s => /FAIL|ERROR|BLOCK|CONTRADICT|ROLLED_BACK|NEGATIVE/i.test(s||'')?'bad':/PARTIAL|WARN|DEFER|CANARY|PENDING/i.test(s||'')?'warn':/PASS|OK|READY|ACTIVE|VALIDATED|COMPLETE|SUPPORTED|SUCCESS/i.test(s||'')?'good':'new';
 const dateLabel = v => {
@@ -25,6 +26,20 @@ function eventRows(events=[]){
   return `<div class="bb-row bb-event${baseline?' baseline':''}"><time>${esc(dateLabel(e.updatedAt))}</time><div><b>${esc(e.label||e.id)}${baseline?' <span class="bb-baseline-tag">BASELINE</span>':''}</b><small>${esc(e.metadata?.event_type||e.domain||'runtime')} · ${esc(e.status||'UNKNOWN')}</small>${e.summary?`<em>${esc(String(e.summary).slice(0,170))}</em>`:''}</div></div>`;
  }).join('');
 }
+/** "Como chegou aqui": the operational trajectory of one recorded execution,
+ *  read from the fields nexo_ops already publishes. It is a derived reading of
+ *  what was recorded, never a transcript of any private deliberation, and never
+ *  scientific evidence. Steps with no source say so. */
+function trajectoryBlock(entity){
+ if(!entity)return '<p class="empty-note">Nenhuma execução publicada para explicar.</p>';
+ const summary=decisionSummary(entity);
+ const steps=summary.steps.map((s,i)=>`<li class="bb-step${s.available?'':' is-missing'}">
+  <i>${i+1}</i><div><b>${esc(s.label)}</b><em>${esc(s.value)}</em></div></li>`).join('');
+ return `<div class="bb-trajectory">
+  <p class="bb-step-note">Resumo decisório derivado de <code>nexo_ops</code> · autoridade <b>${esc(DECISION_AUTHORITY)}</b>. Campos ausentes na fonte permanecem em branco, sem preenchimento.</p>
+  <ol class="bb-steps">${steps}</ol></div>`;
+}
+
 function integrityBars(p={}){
  const components=[
   ['Proveniência',p.provenance_completeness],
@@ -52,6 +67,8 @@ export async function renderBlackBox(api, graph, summary, {onEntity}={}) {
  }
 
  const oc=ops?.counts||{},actions=ops?.actions||[],runs=ops?.runs||[],events=ops?.events||[];
+ // Runs first: an execution is where a decision was actually taken and recorded.
+ const explainable=[...runs,...actions];
  const baseline=events.find(e=>/BLACKBOX_BASELINE/i.test(e.metadata?.event_type||'')||/BLACKBOX-BASELINE/i.test(e.canonicalId||e.id||''))||null;
  const bp=payloadOf(baseline);
  const score=Number(bp.integrity_score)||Math.round(100-Math.min(100,(Number(oc.blocked)||0)*8+Math.max(0,(Number(oc.runs)||0)-(Number(oc.readbackVerified)||0))*16));
@@ -104,6 +121,19 @@ export async function renderBlackBox(api, graph, summary, {onEntity}={}) {
  #blackbox-panel .bb-baseline-tag{display:inline-block!important;margin-left:6px;padding:1px 5px;border:1px solid var(--bb-violet);border-radius:999px;color:var(--bb-violet)!important;font-size:6px!important;letter-spacing:.5px}
  #blackbox-panel .bb-event.baseline{background:linear-gradient(90deg,rgba(139,108,255,.06),transparent)}
  #blackbox-panel .bb-integrity-flags{display:grid;grid-template-columns:repeat(4,1fr);gap:7px;margin-top:9px}.bb-flag{border:1px solid var(--line);border-radius:8px;padding:8px;background:var(--soft)}.bb-flag b{display:block;font-size:13px}.bb-flag span{font-size:7px;color:var(--muted)}
+ #blackbox-panel .bb-trajectory{position:relative;z-index:1}
+ #blackbox-panel .bb-step-note{font-size:8px;color:var(--muted);margin:0 0 10px;line-height:1.5}
+ #blackbox-panel .bb-steps{list-style:none;margin:0;padding:0;display:grid;gap:0}
+ #blackbox-panel .bb-step{display:grid;grid-template-columns:22px minmax(0,1fr);gap:11px;padding:9px 0 9px 2px;border-left:1px solid var(--line);margin-left:10px;padding-left:16px;position:relative}
+ #blackbox-panel .bb-step:last-child{border-left-color:transparent}
+ #blackbox-panel .bb-step>i{position:absolute;left:-10px;top:9px;width:20px;height:20px;border-radius:50%;display:grid;place-items:center;font-style:normal;font-size:8px;font-weight:700;background:var(--bg);border:1px solid var(--bb-cyan);color:var(--bb-cyan)}
+ #blackbox-panel .bb-step b{display:block;font-size:10px}
+ #blackbox-panel .bb-step em{display:block;font-style:normal;font-size:8px;color:var(--muted);margin-top:3px;line-height:1.5;word-break:break-word}
+ #blackbox-panel .bb-step.is-missing>i{border-color:var(--line);color:var(--muted)}
+ #blackbox-panel .bb-step.is-missing em{opacity:.72}
+ #blackbox-panel .bb-pick{display:flex;gap:8px;align-items:center;margin-bottom:10px;position:relative;z-index:1;flex-wrap:wrap}
+ #blackbox-panel .bb-pick label{font-size:7px;letter-spacing:.8px;color:var(--muted)}
+ #blackbox-panel .bb-pick select{max-width:100%;font-size:9px;padding:5px 7px;border-radius:7px;border:1px solid var(--line);background:var(--soft);color:inherit}
  [data-theme="dark"] #blackbox-panel .bb-hero,[data-theme="dark"] #blackbox-panel .bb-card,[data-theme="dark"] #blackbox-panel .bb-panel,[data-theme="dark"] #blackbox-panel .bb-integrity{background:linear-gradient(180deg,rgba(4,13,24,.97),rgba(2,7,14,.99));border-color:#17466c}
  @media(max-width:1050px){#blackbox-panel .bb-cards{grid-template-columns:repeat(3,1fr)}}
  @media(max-width:820px){#blackbox-panel .bb-scoreline{grid-template-columns:1fr}#blackbox-panel .bb-layout{grid-template-columns:1fr}#blackbox-panel .bb-panel.bb-wide{grid-column:auto}#blackbox-panel .bb-history{grid-template-columns:1fr}.bb-history-arrow{display:none!important}#blackbox-panel .bb-integrity-flags{grid-template-columns:1fr 1fr}}
@@ -115,10 +145,15 @@ export async function renderBlackBox(api, graph, summary, {onEntity}={}) {
  <div class="bb-cards"><article class="bb-card"><small>AÇÕES ATUAIS</small><strong>${num(oc.actions||0)}</strong><span>${num(oc.blocked||0)} bloqueadas</span></article><article class="bb-card"><small>READBACK</small><strong>${num(readback)}/${num(materializedRuns)}</strong><span>${readbackPct}% dos runs atuais</span></article><article class="bb-card"><small>SOURCE REF</small><strong>${num(missingSources)}</strong><span>eventos atuais sem source_ref</span></article><article class="bb-card"><small>LEGACY LINEAGE</small><strong>${num(legacyLineage)}</strong><span>IDs históricos parciais, não orphans automáticos</span></article><article class="bb-card"><small>ORPHAN CONFIRMADO</small><strong>${num(orphans)}</strong><span>${num(validationBlockers)} validation blockers no baseline</span></article></div>
  <div class="bb-integrity-flags"><div class="bb-flag"><b>${num(missingReadbacks)}</b><span>runs sem readback atual</span></div><div class="bb-flag"><b>${num(bp.pattern_observations_after||0)}</b><span>links pattern ↔ observation no baseline</span></div><div class="bb-flag"><b>${num(bp.unique_learning_validation_blocker_families_after||0)}</b><span>famílias de blocker de validação</span></div><div class="bb-flag"><b>${esc(ops?.sourceVersion?dateLabel(ops.sourceVersion):'—')}</b><span>último evento materializado</span></div></div>
  <div class="bb-layout">
+  <article class="bb-panel bb-wide"><div class="subhead"><b>Como chegou aqui</b><small>TRAJETO DECISÓRIO · RESUMO OPERACIONAL DERIVADO</small></div>
+   <div class="bb-pick"><label for="bb-trajectory-pick">EXECUÇÃO / AÇÃO</label><select id="bb-trajectory-pick">${explainable.map((e,i)=>`<option value="${i}">${esc(String(e.label||e.id).slice(0,80))} · ${esc(e.status||'—')}</option>`).join('')}</select></div>
+   <div id="bb-trajectory">${trajectoryBlock(explainable[0])}</div></article>
   <article class="bb-panel"><div class="subhead"><b>Ações atuais</b><small>NEXO_OPS.ACTIONS</small></div>${actionRows(actions)}</article>
   <article class="bb-panel"><div class="subhead"><b>Execuções recentes</b><small>NEXO_OPS.EXECUTION_RUNS</small></div>${runRows(runs)}</article>
   <article class="bb-panel bb-wide"><div class="subhead"><b>Flight recorder</b><small>NEXO_OPS.RUNTIME_EVENTS · eventos materiais, não replay completo</small></div>${eventRows(events)}</article>
   <article class="bb-panel bb-wide"><div class="subhead"><b>Boundary de autoridade</b><small>DRIVE → NEON → ATLAS</small></div><div class="ops-lines"><div><span>Authority</span><b>DERIVED_NOT_EVIDENCE</b></div><div><span>Black Box fingerprint</span><code>${esc(ops?.fingerprint||'—')}</code></div><div><span>Baseline</span><b>${esc(baseline?.canonicalId||baseline?.id||'—')}</b></div><div><span>Histórico</span><b>${historicalRuns?'reconstruível sob demanda':'não inventado'}</b></div><div><span>Ciência</span><b>não alterada pela Black Box</b></div></div></article>
  </div>`;
 
+ const pick=root.querySelector('#bb-trajectory-pick'),slot=root.querySelector('#bb-trajectory');
+ if(pick&&slot)pick.addEventListener('change',()=>{slot.innerHTML=trajectoryBlock(explainable[Number(pick.value)])});
 }

@@ -136,3 +136,16 @@ body[data-mode="learning"] #learning-section-panel,body[data-mode="audit"] #audi
 }
 
 @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}*,*::before,*::after{animation:none!important;transition:none!important}}
+
+/* Filament reading key: the three relation classes drawn on the map.
+   Thickness and luminance carry the class; the colours stay inside the
+   existing accent scale so nothing new is introduced to the palette. */
+.filament-legend{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin:10px 0 14px;padding:9px 12px;border:1px solid var(--line);border-radius:var(--radius-sm);background:var(--soft)}
+.filament-legend>b{font-size:8px;letter-spacing:1.3px;text-transform:uppercase;color:var(--muted)}
+.filament-legend .fl{display:inline-flex;align-items:center;gap:7px;font-size:9px;color:var(--muted-2)}
+.filament-legend .fl i{display:block;width:26px;height:0;border-radius:99px;flex:0 0 auto}
+.filament-legend .fl-intra i{border-top:2px solid var(--accent);opacity:.72}
+.filament-legend .fl-test i{border-top:1px dashed var(--accent-emerald);opacity:.6}
+.filament-legend .fl-cross i{border-top:3px solid var(--accent-violet);opacity:.95;box-shadow:0 0 7px var(--accent-violet)}
+.filament-legend>small{margin-left:auto;font-size:7px;letter-spacing:.6px;color:var(--muted);text-transform:uppercase}
+@media(max-width:620px){.filament-legend{gap:9px;padding:8px 10px}.filament-legend>small{margin-left:0;flex-basis:100%}}

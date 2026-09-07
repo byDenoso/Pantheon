@@ -29,9 +29,9 @@ button,input,select{font-weight:520}
 [data-theme="dark"] .nav:hover{color:#fff;background:#10263f;border-color:#285b86;box-shadow:0 5px 18px #0005}
 [data-theme="dark"] .nav.active{color:#fff;background:linear-gradient(90deg,#12385d 0%,#0b2037 100%);border-color:#2c78ad;box-shadow:inset 3px 0 #35c8ff,0 0 24px #18baff1c}
 [data-theme="dark"] .domain-nav{color:#adc3d9}.domain-nav:hover{color:#fff;background:#0d2239}
-[data-theme="dark"] .sidebar-foot{color:#a7bdd2;border-color:#214765}.sidebar-foot b{color:#edf7ff}
+[data-theme="dark"] .sidebar-foot{color:#a7bdd2;border-color:#214765}[data-theme="dark"] .sidebar-foot b{color:#edf7ff}
 [data-theme="dark"] .topbar{background:rgba(7,17,31,.96);border-bottom-color:#214b70}
-[data-theme="dark"] .workspace-toolbar,.graph-heading,.graph-bottom{color:#edf7ff}
+[data-theme="dark"] .workspace-toolbar,[data-theme="dark"] .graph-heading,[data-theme="dark"] .graph-bottom{color:#edf7ff}
 [data-theme="dark"] .graph-heading,[data-theme="dark"] .graph-bottom{background:linear-gradient(180deg,#081522f7,#050d18f7);border-color:#1d4b72}
 [data-theme="dark"] .graph-legend,[data-theme="dark"] .graph-bottom,[data-theme="dark"] .micro,[data-theme="dark"] .radar-head small,[data-theme="dark"] .signal-copy small,[data-theme="dark"] .change-copy small{color:#adc3d7}
 [data-theme="dark"] .graph-controls{background:rgba(8,20,35,.94)}

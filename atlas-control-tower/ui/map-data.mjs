@@ -1,4 +1,5 @@
 import {MAP_CONFIG} from './visual-config.mjs';
+import {orbitalLayout} from './orbital-layout.mjs';
 /** Root overview shows only a sparse preview of real immediate children.
  * Deeper descendants are progressively disclosed after opening the system/node. */
 export async function expandOverview(base,read){
@@ -18,9 +19,35 @@ export async function expandOverview(base,read){
  return {...base,nodes:[...nodes.values()],edges:[...edges.values()].filter(e=>nodes.has(e.source)&&nodes.has(e.target)),preview:true,total:nodes.size};
 }
 
+/** Visual density guard for the map only.
+ *  A domain with hundreds of declared tests stays a domain with hundreds of
+ *  declared tests: this trims what is *drawn* to a readable orbit, keeps the
+ *  focus, preserves the real total and says that more exists. The Dados,
+ *  Learning and Auditoria surfaces keep reading the untouched projection. */
+export function visualCut(data,focus,max=MAP_CONFIG.maxNodes){
+ const all=data?.nodes||[],limit=Math.max(2,Number(max)||MAP_CONFIG.maxNodes);
+ const total=data?.visualTotal??data?.total??all.length;
+ if(all.length<=limit)return {...data,nodes:all,edges:data?.edges||[],visualTotal:total,hasMore:!!data?.hasMore};
+ const structural=n=>['SYSTEM','DOMAIN','CAMPAIGN'].includes(n?.type)?0:1;
+ const core=all.filter(n=>n.id===focus);
+ const rest=all.filter(n=>n.id!==focus)
+  .sort((a,b)=>structural(a)-structural(b)||String(a.id).localeCompare(String(b.id)))
+  .slice(0,limit-core.length);
+ const nodes=[...core,...rest],ids=new Set(nodes.map(n=>n.id));
+ return {
+  ...data,
+  nodes,
+  edges:(data?.edges||[]).filter(e=>ids.has(e.source)&&ids.has(e.target)),
+  visualTotal:total,
+  truncated:true,
+  hasMore:true
+ };
+}
+
 export function clusteredPositions(data,focus,fallback){
  if(data.nodes.some(n=>n.layer!=null))return layeredPositions(data,focus);
- if(focus!=='system:NEXO')return fallback(data.nodes,focus);
+ // Any focused body becomes the centre of its own small orbital system.
+ if(focus!=='system:NEXO')return orbitalLayout(data.nodes,focus);
  const groups=data.nodes.filter(n=>n.type==='SYSTEM'&&n.id!==focus),centers=new Map();
  groups.forEach((n,i)=>{const a=i/groups.length*Math.PI*2-.9;centers.set(n.id,[Math.cos(a)*300,Math.sin(a)*195,Math.sin(a*2)*65])});
  const parent=new Map();for(const e of data.edges)if(e.target!==focus&&!parent.has(e.target))parent.set(e.target,e.source);

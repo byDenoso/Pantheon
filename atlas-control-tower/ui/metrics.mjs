@@ -1,6 +1,6 @@
 /** Source status and charts. The legacy top metrics strip is optional. */
 import {$, $$, esc, num, age} from './dom.mjs';
-import {compactLabel} from './cockpit-copy.mjs';
+import {compactLabel, nodeDisplayLabel} from './cockpit-copy.mjs';
 
 const METRICS = [
  ['CAMPAIGN', 'CAMPANHAS', 'índice derivado'],
@@ -75,7 +75,7 @@ export async function renderDomainNav(api, onPick) {
  try {
   const g = await api.graph({focus:'system:SCIENCE', type:'DOMAIN', limit:200});
   const domains = g.nodes.filter(n => n.type === 'DOMAIN' && n.domain !== 'UNMAPPED' && n.id !== 'domain:UNMAPPED').slice(0, 16);
-  $('#domain-nav').innerHTML = domains.map(n => `<button class="domain-nav" data-domain-id="${esc(n.id)}" title="${esc(n.label||n.id)}">${esc(compactLabel(n.label||n.id,{max:22}))}</button>`).join('');
+  $('#domain-nav').innerHTML = domains.map(n => `<button class="domain-nav" data-domain-id="${esc(n.id)}" title="${esc(n.label||n.id)}">${esc(nodeDisplayLabel(n,22))}</button>`).join('');
   $$('[data-domain-id]').forEach(b => b.onclick = () => onPick({id: b.dataset.domainId, label: b.title || b.textContent}));
  } catch {/* sidebar stays empty; the map is the authoritative route */}
 }

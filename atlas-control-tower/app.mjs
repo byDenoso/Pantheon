@@ -3,7 +3,7 @@
  *  rendering in ui/*, and agent tools in webmcp/tools.mjs. */
 import {installTheme} from './ui/theme.mjs';
 import {MAP_CONFIG} from './ui/visual-config.mjs';
-import {compactLabel} from './ui/cockpit-copy.mjs';
+import {nodeDisplayLabel} from './ui/cockpit-copy.mjs';
 import {Graph3D, colors} from './graph3d.mjs';
 import {state, safeUrl} from './lib/model.mjs';
 import {createApi} from './lib/atlas-api.mjs';
@@ -67,7 +67,7 @@ function modeChip() {
 
 function breadcrumbs() {
  $('#breadcrumbs').innerHTML = session.state.path
-  .map((p, i) => `${i ? '<span>/</span>' : ''}<button data-crumb="${i}" title="${esc(p.label || '')}">${esc(compactLabel(p.label || p.id, {max:32}))}</button>`).join('');
+  .map((p, i) => `${i ? '<span>/</span>' : ''}<button data-crumb="${i}" title="${esc(p.label || '')}">${esc(nodeDisplayLabel(p, 32))}</button>`).join('');
  $$('[data-crumb]').forEach(b => b.onclick = () => session.focusNode(session.state.path[+b.dataset.crumb]));
  $$('[data-focus]').forEach(b => b.classList.toggle('active', b.dataset.focus === session.state.focus));
  if (session.state.ui !== 'audit') $$('[data-open-mode]').forEach(b => b.classList.remove('active'));
@@ -100,11 +100,16 @@ session.on((event, payload) => {
  const {graph: g, summary} = payload;
  graph.set(g, session.state.focus);
  $('#empty').hidden = g.nodes.length > 1 || (g.nodes.length === 1 && session.state.mode === 'search');
- $('#graph-count').textContent = `${num(g.nodes.length)} NÓS · ${num(g.edges.length)} RELAÇÕES${g.truncated ? ' · RECORTE' : ''}`;
- $('#graph-count').title = g.truncated
-  ? 'Pré-visualização limitada. Abra um nó ou aumente as camadas conscientemente.'
+ // The map draws a bounded orbit; the declared total is never hidden.
+ const drawn = graph.data.nodes.length, declared = graph.data.visualTotal ?? g.total ?? g.nodes.length;
+ const bounded = drawn < declared || g.truncated;
+ $('#graph-count').textContent = bounded
+  ? `${num(drawn)} DE ${num(declared)} NÓS · ${num(graph.data.edges.length)} RELAÇÕES · RECORTE`
+  : `${num(drawn)} NÓS · ${num(graph.data.edges.length)} RELAÇÕES`;
+ $('#graph-count').title = bounded
+  ? `O mapa desenha ${num(drawn)} de ${num(declared)} entidades declaradas para manter a leitura. Use "Mais entidades" para ampliar o recorte.`
   : 'Recorte completo para esta seleção.';
- $('#more').hidden = !g.hasMore;
+ $('#more').hidden = !(g.hasMore || bounded);
  renderMetrics(summary, {onMetric: type => {syncFilterInputs({...session.state.filters, type}); applyFilter({type})}});
  renderSourceStatus(summary);
  renderCharts(summary, colors, {
