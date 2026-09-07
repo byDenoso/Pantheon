@@ -124,7 +124,7 @@ function focusDomain(domain) {
    domains records name, the resolved lineage links and the declared bridges.
    The report is read once and cached, so focusing Learning is not a round trip. */
 const LEARNING_FOCUS = 'system:LEARNING';
-let learningGraph = null, learningPending = null;
+let learningGraph = null, learningPending = null, presentedGraph = null;
 function ensureLearningGraph() {
  if (learningGraph || learningPending) return learningPending;
  learningPending = api.learning()
@@ -144,6 +144,7 @@ function learningView(g) {
 function renderGraphView(rawGraph){
  const isLearning = session.state.focus === LEARNING_FOCUS;
  const g = isLearning ? learningView(rawGraph) : rawGraph;
+ presentedGraph = g;
  graph.set(g, session.state.focus);
  if (isLearning && !learningGraph) ensureLearningGraph().then(built => {
   if (built?.nodes?.length && session.state.focus === LEARNING_FOCUS) session.refresh();
@@ -179,7 +180,7 @@ function renderSummaryView(summary){
   onStatus: status => applyFilter({status, type: 'CLAIM'}),
   onDate: since => applyFilter({since})
  });
- if(session.state.graph)renderRecortePanel(session.state.graph, summary, {onEntity: id => selectNode(id)});
+ const count=$('#list-count');if(count&&presentedGraph)count.textContent=`${num(summary.total??presentedGraph.nodes?.length??0)} NO RECORTE`;
  renderProvenance(api.provenance);
  renderCommandCenter(summary);
 }
