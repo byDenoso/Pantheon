@@ -1,6 +1,7 @@
 {
   "version": 2,
   "builds": [
+    {"src":"api/runtime-semantic.js","use":"@vercel/node"},
     {"src":"api/runtime-v2.js","use":"@vercel/node"},
     {"src":"api/runtime.js","use":"@vercel/node"},
     {"src":"index.html","use":"@vercel/static"},
@@ -34,7 +35,7 @@
   "routes": [
     {
       "src": "/api/(state|sync|graph|entity|automation-runs|learning-relations|learning|audit|health|ops)",
-      "dest": "/api/runtime-v2.js?route=$1"
+      "dest": "/api/runtime-semantic.js?route=$1"
     },
     {"src":"/","dest":"/index.html"},
     {"handle":"filesystem"},
