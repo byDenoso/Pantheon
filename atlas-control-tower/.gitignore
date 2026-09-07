@@ -1,0 +1,10 @@
+baseline/
+lib/snapshot.mjs
+*-render.png
+preview-*.png
+node_modules/
+.vercel/
+.env*
+dev-fixture.mjs
+build-real-snapshot.mjs
+shot-*.png

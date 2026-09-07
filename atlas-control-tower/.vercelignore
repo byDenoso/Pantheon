@@ -1,0 +1,6 @@
+baseline/
+test/
+*-render.png
+preview-*.png
+dev-fixture.mjs
+build-real-snapshot.mjs

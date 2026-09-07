@@ -1,0 +1,15 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import * as m from '../lib/model.mjs';
+const canon={id:'test:T1',type:'TEST',label:'Real',authority:'SCIENCE_CANONICAL',status:'PASS'};
+test('derived projection cannot replace scientific entity',()=>{assert.equal(m.mergeGraph({nodes:[canon],edges:[]},{nodes:[{...canon,label:'Wrong',authority:'DERIVED_NOT_EVIDENCE'}],edges:[]}).nodes[0].label,'Real')});
+test('dangling edges are rejected and reported',()=>{const g=m.mergeGraph({nodes:[canon],edges:[{id:'e',source:canon.id,target:'missing'}]});assert.equal(g.edges.length,0);assert.equal(g.issues.length,1)});
+test('cycles terminate during ancestry traversal',()=>{const g={nodes:['a','b','c'].map(id=>({id})),edges:[{source:'a',target:'b',type:'CONTAINS'},{source:'b',target:'c',type:'CONTAINS'},{source:'c',target:'a',type:'CONTAINS'}]};assert.deepEqual(new Set(m.traverse(g,'a','descendants')),new Set(['a','b','c']))});
+test('filters preserve raw scientific statuses',()=>{assert.equal(m.matches({...canon,domain:'CMB',status:'COMPLETE_VALIDATED_NEGATIVE_SUBCLASS'},{query:'CMB',status:'negative'}),true);assert.equal(m.matches({...canon,status:'PARTIAL_NATIVE_WL_NEUTRAL__DESI_EFT_GATE_DEFERRED'},{status:'blocked'}),false)});
+test('canonical sheet errors never become entities',()=>{assert.equal(m.rows([['id','name'],['#REF!','broken'],['ok','Valid']],0,'id').length,1)});
+test('legacy automations excluded from current registry',()=>{assert.equal(m.automationKind('NEXO Guardian · interactive'),'LEGACY');assert.equal(m.automationKind('NEXO Continuity'),'CURRENT')});
+test('unchanged fingerprint ignores retrieval timestamps',()=>{assert.equal(m.fingerprint({nodes:[canon],edges:[],retrievedAt:'a'}),m.fingerprint({nodes:[canon],edges:[],retrievedAt:'b'}))});
+test('unsafe file links are rejected',()=>{assert.equal(m.safeUrl('javascript:alert(1)'),null);assert.equal(m.safeUrl('https://drive.google.com/file/d/abc/view'),'https://drive.google.com/file/d/abc/view')});
+test('critical path selects dependency blockers without unrelated associations',()=>{const g={nodes:[{id:'a'},{id:'b',status:'BLOCKED'},{id:'c',status:'BLOCKED'}],edges:[{source:'a',target:'b',type:'DEPENDS_ON'},{source:'a',target:'c',type:'ASSOCIATED_WITH'}]};assert.deepEqual(new Set(m.critical(g,'a')),new Set(['a','b']))});
+test('domain drill-down prioritizes campaigns over loose tests',()=>{const g={nodes:[{id:'d',type:'DOMAIN'},{id:'t',type:'TEST'},{id:'c',type:'CAMPAIGN'}],edges:[{source:'d',target:'t',type:'CONTAINS'},{source:'d',target:'c',type:'CONTAINS'}]};assert.ok(m.subgraph(g,{focus:'d'}).nodes.some(n=>n.id==='c'));assert.ok(!m.subgraph(g,{focus:'d'}).nodes.some(n=>n.id==='t'))});
+test('row provenance preserves blank and invalid source row positions',()=>{const r=m.rows([['id'],['a'],[],['#REF!'],['b']],0,'id');assert.equal(r[1]._row,5)});

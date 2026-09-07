@@ -1,0 +1,28 @@
+name: Atlas Quality
+
+on:
+  push:
+    branches:
+      - atlas-control-tower-v3-20260905
+      - 'atlas-premium-v2-*'
+  pull_request:
+    paths:
+      - 'atlas-control-tower/**'
+      - '.github/workflows/atlas-quality.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  node-tests:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: atlas-control-tower
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Run unit and contract tests
+        run: npm test
