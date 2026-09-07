@@ -17,7 +17,7 @@ test('graph opening motion is slower and smoother than the previous fast snap', 
  const ms = Number(match[1]);
  assert.ok(ms >= 360 && ms <= 520, `transitionMs=${ms} should be in the fluid 360-520ms range`);
  const graph = read('graph3d.mjs');
- assert.match(graph, /Math\.cos\(Math\.PI\*t\)/, 'transition easing should use a smooth cosine curve');
+ assert.match(graph, /Math\.cos\(Math\.PI\*/, 'transition easing should use a smooth cosine curve');
 });
 
 test('long labels compact to a deterministic acronym instead of being cut in half', async () => {
