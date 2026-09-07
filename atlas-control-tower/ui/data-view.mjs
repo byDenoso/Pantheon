@@ -1,9 +1,10 @@
 /** Tabular view of the same recorte the map is showing. No extra request:
  *  it renders the nodes already returned by the Graph Contract. */
 import {$, $$, esc, num} from './dom.mjs';
+import {compactLabel} from './cockpit-copy.mjs';
 
 const COLUMNS = [
- {id:'label',        label:'Entidade',  get:n => n.label || n.canonicalId || n.id},
+ {id:'label',        label:'Entidade',  get:n => n.label || n.canonicalId || n.id, compact:true},
  {id:'canonicalId',  label:'ID canônico', get:n => n.canonicalId || String(n.id).replace(/^[a-z_]+:/, ''), mono:true},
  {id:'type',         label:'Tipo',      get:n => n.subtype ? `${n.type} · ${n.subtype}` : n.type},
  {id:'domain',       label:'Domínio',   get:n => n.domain || '—'},
@@ -13,6 +14,7 @@ const COLUMNS = [
 ];
 
 let sort = {column:'label', dir:1};
+const cellValue=(c,n)=>{const raw=String(c.get(n)??'—');return c.compact?compactLabel(raw,{max:38}):raw.slice(0,120)};
 
 export function renderData(graph, {onEntity} = {}) {
  const host = $('#data-panel');
@@ -26,7 +28,7 @@ export function renderData(graph, {onEntity} = {}) {
  host.innerHTML = `<div class="table-wrap"><table class="data-table"><thead><tr>${COLUMNS.map(c =>
    `<th><button data-sort="${c.id}" aria-sort="${sort.column === c.id ? (sort.dir > 0 ? 'ascending' : 'descending') : 'none'}">${esc(c.label)}${sort.column === c.id ? (sort.dir > 0 ? ' ▲' : ' ▼') : ''}</button></th>`).join('')}</tr></thead>`
   + `<tbody>${nodes.map(n => `<tr data-row="${esc(n.id)}">${COLUMNS.map(c =>
-   `<td${c.mono ? ' class="mono"' : ''}>${esc(String(c.get(n) ?? '—').slice(0, 120))}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`;
+   `<td${c.mono ? ' class="mono"' : ''} title="${esc(String(c.get(n)??'—'))}">${esc(cellValue(c,n))}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`;
  $$('[data-sort]').forEach(b => b.onclick = () => {
   if (sort.column === b.dataset.sort) sort.dir *= -1; else sort = {column:b.dataset.sort, dir:1};
   renderData(graph, {onEntity});
