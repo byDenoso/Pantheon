@@ -58,6 +58,10 @@
       "use": "@vercel/static"
     },
     {
+      "src": "ui/control-tower.css",
+      "use": "@vercel/static"
+    },
+    {
       "src": "ui/visual-config.mjs",
       "use": "@vercel/static"
     },
@@ -91,6 +95,10 @@
     },
     {
       "src": "ui/learning-graph.mjs",
+      "use": "@vercel/static"
+    },
+    {
+      "src": "ui/control-tower.mjs",
       "use": "@vercel/static"
     },
     {
