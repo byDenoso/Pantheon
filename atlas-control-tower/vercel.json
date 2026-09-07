@@ -20,6 +20,7 @@
     {"src":"lib/graph-session.mjs","use":"@vercel/static"},
     {"src":"ui/tokens.css","use":"@vercel/static"},
     {"src":"ui/official-dashboard.css","use":"@vercel/static"},
+    {"src":"ui/motion-impact.css","use":"@vercel/static"},
     {"src":"ui/visual-config.mjs","use":"@vercel/static"},
     {"src":"ui/theme.mjs","use":"@vercel/static"},
     {"src":"ui/map-data.mjs","use":"@vercel/static"},
