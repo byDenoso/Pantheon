@@ -310,5 +310,5 @@ await checkAutoSync();
 registerWebMcp({
  api, session,
  actions: {focus: n => session.focusNode(n), compare: n => inspector.compare(n), sync: () => runSync({manual:true})},
- onStatus: text => {$('#mcp').textContent = text}
-}).catch(() => {$('#mcp').textContent = 'WebMCP indisponível'});
+ onStatus: text => {const el=$('#mcp');if(el)el.textContent=text}
+}).catch(() => {const el=$('#mcp');if(el)el.textContent='WebMCP indisponível'});
