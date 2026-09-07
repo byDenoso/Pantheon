@@ -3,6 +3,7 @@
  *  rendering in ui/*, and agent tools in webmcp/tools.mjs. */
 import {installTheme} from './ui/theme.mjs';
 import {MAP_CONFIG} from './ui/visual-config.mjs';
+import {compactLabel} from './ui/cockpit-copy.mjs';
 import {Graph3D, colors} from './graph3d.mjs';
 import {state, safeUrl} from './lib/model.mjs';
 import {createApi} from './lib/atlas-api.mjs';
@@ -25,7 +26,7 @@ let storedFilters = {};
 try {storedFilters = JSON.parse(localStorage.getItem('atlas.filters') || '{}')} catch {}
 const session = createSession(api, {
  limit: MAP_CONFIG.maxNodes,
- depth: Number($('#layers')?.value) || 3,
+ depth: Number($('#layers')?.value) || 1,
  onPersist: filters => {try {localStorage.setItem('atlas.filters', JSON.stringify(filters))} catch {}}
 });
 session.restoreFilters(storedFilters);
@@ -66,7 +67,7 @@ function modeChip() {
 
 function breadcrumbs() {
  $('#breadcrumbs').innerHTML = session.state.path
-  .map((p, i) => `${i ? '<span>/</span>' : ''}<button data-crumb="${i}">${esc(String(p.label).slice(0, 40))}</button>`).join('');
+  .map((p, i) => `${i ? '<span>/</span>' : ''}<button data-crumb="${i}" title="${esc(p.label || '')}">${esc(compactLabel(p.label || p.id, {max:32}))}</button>`).join('');
  $$('[data-crumb]').forEach(b => b.onclick = () => session.focusNode(session.state.path[+b.dataset.crumb]));
  $$('[data-focus]').forEach(b => b.classList.toggle('active', b.dataset.focus === session.state.focus));
  if (session.state.ui !== 'audit') $$('[data-open-mode]').forEach(b => b.classList.remove('active'));
@@ -76,6 +77,11 @@ function applyFilter(patch) {
  Object.assign(session.state.filters, patch);
  syncFilterInputs(session.state.filters);
  session.setFilters(patch);
+}
+
+function focusDomain(domain) {
+ setMode('overview', {scroll:false});
+ session.focusNode({id:`domain:${domain}`, label:domain});
 }
 
 session.on((event, payload) => {
@@ -96,18 +102,18 @@ session.on((event, payload) => {
  $('#empty').hidden = g.nodes.length > 1 || (g.nodes.length === 1 && session.state.mode === 'search');
  $('#graph-count').textContent = `${num(g.nodes.length)} NÓS · ${num(g.edges.length)} RELAÇÕES${g.truncated ? ' · RECORTE' : ''}`;
  $('#graph-count').title = g.truncated
-  ? 'Pré-visualização limitada. Abra um nó ou use 1 camada para os filhos paginados.'
+  ? 'Pré-visualização limitada. Abra um nó ou aumente as camadas conscientemente.'
   : 'Recorte completo para esta seleção.';
  $('#more').hidden = !g.hasMore;
  renderMetrics(summary, {onMetric: type => {syncFilterInputs({...session.state.filters, type}); applyFilter({type})}});
  renderSourceStatus(summary);
  renderCharts(summary, colors, {
-  onDomain: domain => applyFilter({domain}),
+  onDomain: domain => focusDomain(domain),
   onStatus: status => applyFilter({status, type: 'CLAIM'}),
   onDate: since => applyFilter({since}),
   onAudit: () => setMode('audit')
  });
- renderRecortePanel(g, summary, {onEntity: id => selectNode(id)});
+ renderRecortePanel(g, summary, {onEntity: id => selectNode(id), onLearning: () => setMode('learning')});
  renderBlackBox(api, g, summary).catch(() => {});
  renderData(g, {onEntity: id => selectNode(id)});
  renderProvenance({...api.provenance, sourceVersion: g.sourceVersion || api.provenance.sourceVersion}, {onClick: () => setMode('audit')});
