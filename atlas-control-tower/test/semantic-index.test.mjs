@@ -7,20 +7,22 @@ import {dirname,join} from 'node:path';
 const here=dirname(fileURLToPath(import.meta.url));
 const read=p=>readFileSync(join(here,'..',p),'utf8');
 
-test('runtime reads the PT-BR cockpit overlay and merges it into entity metadata',()=>{
-  const runtime=read('api/runtime.js');
+test('production semantic wrapper reads the PT-BR cockpit overlay and merges display metadata',()=>{
+  const runtime=read('api/runtime-semantic.js');
   assert.match(runtime,/flight_api/);
   assert.match(runtime,/atlas_cockpit_index/);
   assert.match(runtime,/short_label_pt/);
   assert.match(runtime,/what_pt/);
   assert.match(runtime,/how_pt/);
   assert.match(runtime,/why_pt/);
-  assert.match(runtime,/cockpitIndex/);
-  assert.match(runtime,/metadata:\{[^}]*\.\.\.cockpit/i);
+  assert.match(runtime,/cockpitCache/);
+  assert.match(runtime,/metadata:\s*\{\s*\.\.\.\(entity\.metadata\|\|\{\}\),\s*\.\.\.cockpit/i);
 });
 
-test('sync invalidates semantic overlay cache together with science and learning',()=>{
-  const runtime=read('api/runtime.js');
-  assert.match(runtime,/cockpitCache/);
-  assert.match(runtime,/loadCockpitIndex\(token,true\)/);
+test('sync forces semantic overlay refresh and Vercel routes APIs through the wrapper',()=>{
+  const runtime=read('api/runtime-semantic.js');
+  const vercel=read('vercel.json');
+  assert.match(runtime,/loadCockpitIndex\(req,true\)/);
+  assert.match(vercel,/api\/runtime-semantic\.js/);
+  assert.match(vercel,/"dest":\s*"\/api\/runtime-semantic\.js\?route=\$1"/);
 });
