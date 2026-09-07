@@ -18,6 +18,7 @@
     {"src":"ui/theme.mjs","use":"@vercel/static"},
     {"src":"ui/map-data.mjs","use":"@vercel/static"},
     {"src":"ui/workspace.mjs","use":"@vercel/static"},
+    {"src":"ui/cockpit-copy.mjs","use":"@vercel/static"},
     {"src":"ui/dom.mjs","use":"@vercel/static"},
     {"src":"ui/metrics.mjs","use":"@vercel/static"},
     {"src":"ui/inspector.mjs","use":"@vercel/static"},
