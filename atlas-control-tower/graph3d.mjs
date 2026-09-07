@@ -83,7 +83,7 @@ export class Graph3D{
   const parent=new Map();for(const e of data.edges)if(!parent.has(e.target))parent.set(e.target,e.source);
   const start=data.nodes.map(n=>{
    if(oldById.has(n.id))return[...oldById.get(n.id)];
-   const p=parent.get(n.id),anchor=targetById.get(p)||[0,0,-60];
+   const p=parent.get(n.id),anchor=oldById.get(p)||targetById.get(p)||[0,0,-60];
    return[anchor[0],anchor[1],anchor[2]-25];
   });
   this.positions=start;this.transition={start,target,at:performance.now(),duration:MAP_CONFIG.transitionMs};
