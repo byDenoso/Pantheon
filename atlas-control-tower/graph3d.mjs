@@ -1,5 +1,5 @@
 import {themePalette,MAP_CONFIG,FILAMENT_STYLE,SYSTEM_COLORS,mixHex} from './ui/visual-config.mjs';
-import {clusteredPositions,visualCut} from './ui/map-data.mjs';
+import {clusteredPositions,visualCut,withDomainLinks} from './ui/map-data.mjs';
 import {nodeDisplayLabel} from './ui/cockpit-copy.mjs';
 import {orbitalOffset} from './ui/orbital-layout.mjs';
 import {buildFilaments,advancePulse,filamentControl,quadraticBezierPoint} from './ui/filaments.mjs';
@@ -86,7 +86,7 @@ export class Graph3D{
   return{...data,nodes,edges:data.edges.filter(e=>ids.has(e.source)&&ids.has(e.target)),visualTotal:nodes.length};
  }
  set(raw,focus){
-  const data=visualCut(this.rootOnly(raw,focus),focus,MAP_CONFIG.maxNodes),oldById=new Map(this.data.nodes.map((n,i)=>[n.id,this.positions[i]]));
+  const data=withDomainLinks(visualCut(this.rootOnly(raw,focus),focus,MAP_CONFIG.maxNodes),focus),oldById=new Map(this.data.nodes.map((n,i)=>[n.id,this.positions[i]]));
   this.selected=null;this.hover=null;this.focus=focus;this.data=data;
   const target=clusteredPositions(data,focus,layout),targetById=new Map(data.nodes.map((n,i)=>[n.id,target[i]]));
   const parent=new Map();for(const e of data.edges)if(!parent.has(e.target))parent.set(e.target,e.source);
@@ -182,19 +182,28 @@ export class Graph3D{
    const style=FILAMENT_STYLE[f.kind]||FILAMENT_STYLE['intra-domain'];
    const near=!focusedId||(neighbors.has(a.node.id)&&neighbors.has(b.node.id));
    const canonical=f.edge.authority==='SCIENCE_CANONICAL',branch=nodeBase(a.node);
-   const col=fog(canonical?mixHex(branch,palette.edge,.24):mixHex(branch,palette.derived,.52),(a.z+b.z)/2);
+   // The class carries its own hue, blended with the branch colour so the three
+   // kinds of relation are told apart without leaving the system palette.
+   const tinted=style.hue?mixHex(branch,style.hue,FILAMENT_STYLE.tint):branch;
+   const col=fog(canonical?mixHex(tinted,palette.edge,.18):mixHex(tinted,palette.derived,.30),(a.z+b.z)/2);
    const cp=filamentControl(a,b,f.kind);
    c.globalAlpha=!focusedId?style.alpha:near?style.activeAlpha:FILAMENT_STYLE.dimAlpha;
    c.strokeStyle=col;c.lineWidth=style.width;c.setLineDash(canonical?[]:style.dash||[]);
    c.beginPath();c.moveTo(a.x,a.y);c.quadraticCurveTo(cp.cx,cp.cy,b.x,b.y);c.stroke();c.setLineDash([]);
    if(!near||still){c.globalAlpha=1;continue}
+   // The travelling head sits on the curve at the current phase; the wake is
+   // sampled behind it along the direction of travel, so A→B→A is readable.
    const head=quadraticBezierPoint(a,cp,b,f.phase);
-   const tail=quadraticBezierPoint(a,cp,b,Math.max(0,Math.min(1,f.phase-f.direction*.06)));
-   c.globalAlpha=.30;c.lineWidth=style.width*1.6;c.beginPath();c.moveTo(tail.x,tail.y);c.lineTo(head.x,head.y);c.stroke();
+   const back=Math.max(0,Math.min(1,f.phase-f.direction*style.trail));
+   const mid=quadraticBezierPoint(a,cp,b,Math.max(0,Math.min(1,f.phase-f.direction*style.trail*.5)));
+   const tail=quadraticBezierPoint(a,cp,b,back);
+   c.globalAlpha=.34;c.lineWidth=style.width*1.9;c.lineCap='round';
+   c.beginPath();c.moveTo(tail.x,tail.y);c.quadraticCurveTo(mid.x,mid.y,head.x,head.y);c.stroke();c.lineCap='butt';
    const halo=c.createRadialGradient(head.x,head.y,0,head.x,head.y,style.glow);
-   halo.addColorStop(0,col+'b0');halo.addColorStop(.42,col+'2e');halo.addColorStop(1,col+'00');
+   halo.addColorStop(0,col+'c8');halo.addColorStop(.4,col+'3a');halo.addColorStop(1,col+'00');
    c.globalAlpha=1;c.fillStyle=halo;c.beginPath();c.arc(head.x,head.y,style.glow,0,Math.PI*2);c.fill();
-   c.fillStyle=palette.highlight;c.globalAlpha=.85;c.beginPath();c.arc(head.x,head.y,style.pulse*.44,0,Math.PI*2);c.fill();
+   c.fillStyle=col;c.globalAlpha=.95;c.beginPath();c.arc(head.x,head.y,style.led,0,Math.PI*2);c.fill();
+   c.fillStyle=palette.highlight;c.globalAlpha=.9;c.beginPath();c.arc(head.x,head.y,style.led*.42,0,Math.PI*2);c.fill();
    c.globalAlpha=1;
   }
   c.globalAlpha=1;this.badges=[];

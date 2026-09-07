@@ -4,7 +4,7 @@
 
 - Vercel project: `prj_DLQSz5OiIT1HxWMn2i4AgoIv5x8r`
 - Production alias: `nexo-atlas-control-tower.vercel.app`
-- Frontend source pinned in the deployed `index.html`: `d99beab3048d22fd47d39a83adb5441b73f63e29`
+- Frontend source pinned in the deployed `index.html`: `36899dec2038d147efd8ce47f75b566412bb998e`
 
 Status: `SOURCE_MIRRORED_FOR_FRONTEND` (verified 2026-09-07).
 

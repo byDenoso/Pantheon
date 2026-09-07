@@ -12,13 +12,11 @@ import {$, $$, esc, num, toast} from './ui/dom.mjs';
 import {renderMetrics, renderSourceStatus, renderCharts, renderDomainNav} from './ui/metrics.mjs';
 import {createInspector, closeDrawer} from './ui/inspector.mjs';
 import {installFilters, syncFilterInputs, resetFilterInputs} from './ui/filters.mjs';
-import {loadAudit} from './ui/audit-view.mjs';
 import {renderProvenance, renderFallbackNotice} from './ui/provenance.mjs';
-import {renderData} from './ui/data-view.mjs';
-import {loadLearning, setLearningFilamentTheme} from './ui/learning-view.mjs';
 import {renderRecortePanel} from './ui/recorte-view.mjs';
+import {buildLearningGraph} from './ui/learning-graph.mjs';
 import {renderBlackBox} from './ui/blackbox-view.mjs';
-import {applyWorkspaceMode, normalizeMode} from './ui/workspace.mjs';
+import {applyWorkspaceMode} from './ui/workspace.mjs';
 import {registerWebMcp} from './webmcp/tools.mjs';
 
 const api = createApi();
@@ -36,7 +34,7 @@ const graph = new Graph3D($('#graph'), {
  open: n => session.focusNode(n),
  edge: e => inspector.inspectEdge(e)
 });
-installTheme($('#theme-toggle'), theme => {graph.theme = theme; graph.draw(); setLearningFilamentTheme(theme)});
+installTheme($('#theme-toggle'), theme => {graph.theme = theme; graph.draw()});
 
 const inspector = createInspector({
  api, colors, state, safeUrl,
@@ -70,7 +68,6 @@ function breadcrumbs() {
   .map((p, i) => `${i ? '<span>/</span>' : ''}<button data-crumb="${i}" title="${esc(p.label || '')}">${esc(nodeDisplayLabel(p, 32))}</button>`).join('');
  $$('[data-crumb]').forEach(b => b.onclick = () => session.focusNode(session.state.path[+b.dataset.crumb]));
  $$('[data-focus]').forEach(b => b.classList.toggle('active', b.dataset.focus === session.state.focus));
- if (session.state.ui !== 'audit') $$('[data-open-mode]').forEach(b => b.classList.remove('active'));
 }
 
 function applyFilter(patch) {
@@ -80,8 +77,28 @@ function applyFilter(patch) {
 }
 
 function focusDomain(domain) {
- setMode('overview', {scroll:false});
  session.focusNode({id:`domain:${domain}`, label:domain});
+}
+
+/* The Learning system draws its declared web on the map itself: the ladder, the
+   domains records name, the resolved lineage links and the declared bridges.
+   The report is read once and cached, so focusing Learning is not a round trip. */
+const LEARNING_FOCUS = 'system:LEARNING';
+let learningGraph = null, learningPending = null;
+function ensureLearningGraph() {
+ if (learningGraph || learningPending) return learningPending;
+ learningPending = api.learning()
+  .then(report => {learningGraph = buildLearningGraph(report); return learningGraph})
+  .catch(() => null)
+  .finally(() => {learningPending = null});
+ return learningPending;
+}
+/** Replaces the six-node stage list with the declared relation web, keeping the
+ *  contract fields the map reads. Falls back to the API graph when unavailable. */
+function learningView(g) {
+ if (!learningGraph?.nodes?.length) return g;
+ return {...g, nodes: learningGraph.nodes, edges: learningGraph.edges,
+  total: learningGraph.nodes.length, hasMore: false, truncated: false};
 }
 
 session.on((event, payload) => {
@@ -97,8 +114,14 @@ session.on((event, payload) => {
  }
  if (event !== 'graph') return;
 
- const {graph: g, summary} = payload;
+ const {graph: rawGraph, summary} = payload;
+ const isLearning = session.state.focus === LEARNING_FOCUS;
+ const g = isLearning ? learningView(rawGraph) : rawGraph;
  graph.set(g, session.state.focus);
+ // First visit to Learning: read the report once, then redraw with the web.
+ if (isLearning && !learningGraph) ensureLearningGraph().then(built => {
+  if (built?.nodes?.length && session.state.focus === LEARNING_FOCUS) session.refresh();
+ });
  $('#empty').hidden = g.nodes.length > 1 || (g.nodes.length === 1 && session.state.mode === 'search');
  // The map draws a bounded orbit; the declared total is never hidden.
  const drawn = graph.data.nodes.length, declared = graph.data.visualTotal ?? g.total ?? g.nodes.length;
@@ -115,13 +138,11 @@ session.on((event, payload) => {
  renderCharts(summary, colors, {
   onDomain: domain => focusDomain(domain),
   onStatus: status => applyFilter({status, type: 'CLAIM'}),
-  onDate: since => applyFilter({since}),
-  onAudit: () => setMode('audit')
+  onDate: since => applyFilter({since})
  });
- renderRecortePanel(g, summary, {onEntity: id => selectNode(id), onLearning: () => setMode('learning')});
+ renderRecortePanel(g, summary, {onEntity: id => selectNode(id)});
  renderBlackBox(api, g, summary).catch(() => {});
- renderData(g, {onEntity: id => selectNode(id)});
- renderProvenance({...api.provenance, sourceVersion: g.sourceVersion || api.provenance.sourceVersion}, {onClick: () => setMode('audit')});
+ renderProvenance({...api.provenance, sourceVersion: g.sourceVersion || api.provenance.sourceVersion});
  renderFallbackNotice(g.issues);
  breadcrumbs();
  modeChip();
@@ -130,37 +151,6 @@ session.on((event, payload) => {
   : 'Selecione um nó para ver fontes e relações.';
  renderDomainNav(api, node => session.focusNode(node));
 });
-
-/* ---------- workspace modes ---------- */
-
-function setMode(mode, {scroll=true}={}) {
- const current = normalizeMode(mode);
- session.setUi(current);
- const shouldScroll = scroll && current !== 'overview';
- applyWorkspaceMode(current, {scroll:shouldScroll, focus:false});
- $$('[data-open-mode]').forEach(b => b.classList.toggle('active', b.dataset.openMode === current));
- if (current === 'explore' && session.state.graph) renderData(session.state.graph, {onEntity: id => selectNode(id)});
- if (current === 'audit') loadAudit(api, {onEntity: id => selectNode(id)});
- if (current === 'learning') loadLearning(api, {theme: graph.theme});
- if (session.state.selected) inspector.inspect(session.state.selected, {ui: current});
- return current;
-}
-const workspaceTabs = $$('[data-mode]');
-workspaceTabs.forEach((b, i) => {
- b.onclick = () => setMode(b.dataset.mode);
- b.onkeydown = e => {
-  if (!['ArrowLeft','ArrowRight','Home','End'].includes(e.key)) return;
-  e.preventDefault();
-  let next = i;
-  if (e.key === 'ArrowLeft') next = (i - 1 + workspaceTabs.length) % workspaceTabs.length;
-  if (e.key === 'ArrowRight') next = (i + 1) % workspaceTabs.length;
-  if (e.key === 'Home') next = 0;
-  if (e.key === 'End') next = workspaceTabs.length - 1;
-  workspaceTabs[next]?.focus();
-  setMode(workspaceTabs[next]?.dataset.mode);
- };
-});
-$$('[data-open-mode]').forEach(b => b.onclick = () => {setMode(b.dataset.openMode); $('#sidebar').classList.remove('open')});
 
 /* ---------- map controls ---------- */
 
@@ -223,7 +213,7 @@ $('#dimension').onclick = () => {
 $('#more').onclick = () => session.more();
 for (const mode of ['neighbors', 'ancestors', 'descendants', 'critical'])
  $('#' + mode).onclick = () => {session.state.focus = session.state.selected || session.state.focus; session.setMode(mode)};
-$$('[data-focus]').forEach(b => b.onclick = () => {setMode('overview', {scroll:false}); session.focusNode({id: b.dataset.focus, label: b.textContent.trim()})});
+$$('[data-focus]').forEach(b => b.onclick = () => session.focusNode({id: b.dataset.focus, label: b.textContent.trim()}));
 
 installFilters(session);
 
@@ -262,7 +252,7 @@ document.addEventListener('visibilitychange', () => {if (!document.hidden) check
 
 /* ---------- start ---------- */
 
-applyWorkspaceMode(session.state.ui, {scroll:false});
+applyWorkspaceMode();
 syncFilterInputs(session.state.filters);
 await session.refresh();
 await checkAutoSync();

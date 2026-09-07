@@ -251,9 +251,8 @@ test('the trajectory rail does not squeeze its own text into the icon slot', () 
 });
 
 test('Learning keeps its relations derived and never promotes them to evidence', () => {
- const learning = read('ui/learning-view.mjs');
- assert.match(learning, /DERIVED_NOT_EVIDENCE/, 'the filament legend must declare its authority');
- assert.match(learning, /filament-legend/, 'Learning must carry the filament legend');
+ const learning = read('ui/learning-graph.mjs');
+ assert.match(learning, /DERIVED_NOT_EVIDENCE/, 'the learning web must declare its authority');
  const filaments = read('ui/filaments.mjs');
  assert.match(filaments, /DERIVED_NOT_EVIDENCE/);
  assert.doesNotMatch(filaments, /SCIENCE_CANONICAL\s*=/, 'filaments must never mint canonical authority');
@@ -356,11 +355,11 @@ test('filaments stay inside the readable budget with and without a selection', a
   'the selected neighbourhood must be kept');
 });
 
-test('the Learning legend names the three filament classes', () => {
- const learning = read('ui/learning-view.mjs');
- for (const label of ['intra-domínio', 'entre testes', 'cross-domain']) {
-  assert.ok(learning.toLowerCase().includes(label.toLowerCase()), `legend is missing "${label}"`);
- }
+test('each filament class is told apart by its own colour', async () => {
+ const {FILAMENT_STYLE} = await import('../ui/visual-config.mjs');
+ const hues = ['cross-domain', 'intra-domain', 'intra-test'].map(k => FILAMENT_STYLE[k].hue);
+ assert.equal(new Set(hues).size, 3, 'the three classes must not share a hue');
+ for (const hue of hues) assert.match(String(hue), /^#[0-9a-f]{6}$/i);
 });
 
 test('one render loop drives every filament: no per-edge timer or DOM node', () => {

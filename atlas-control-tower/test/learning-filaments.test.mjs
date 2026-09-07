@@ -157,12 +157,15 @@ test('an empty or unavailable projection yields no invented graph', async () => 
  assert.equal(buildLearningGraph(undefined).edges.length, 0);
 });
 
-test('the Learning panel hosts a canvas driven by the shared filament renderer', () => {
- const view = read('ui/learning-view.mjs');
- assert.match(view, /learning-filaments/, 'the Learning panel must host the filament canvas');
- assert.match(view, /buildLearningGraph/);
- assert.match(view, /Graph3D/, 'the filament engine must be reused, not duplicated');
- assert.match(view, /\.stop\(\)/, 'a replaced canvas must release its animation loop');
+test('the learning web is drawn on the map, not in a side panel', () => {
+ const app = read('app.mjs');
+ assert.match(app, /buildLearningGraph/, 'focusing Learning must build the declared web');
+ assert.match(app, /system:LEARNING/);
+ assert.match(app, /learningView\(rawGraph\)/, 'the map payload must be swapped for the web');
+ // the old tab panel is gone; the map is the only surface
+ assert.equal(fs.existsSync(new URL('../ui/learning-view.mjs', import.meta.url)), false,
+  'the Learning tab panel must not linger as dead code');
+ assert.doesNotMatch(read('index.html'), /learning-filaments/);
 });
 
 test('the renderer can be stopped so a replaced panel does not leak a loop', async () => {
@@ -189,16 +192,13 @@ test('the renderer can be stopped so a replaced panel does not leak a loop', asy
  assert.equal(frames.length, before, 'a stopped renderer must not schedule new frames');
 });
 
-test('a host without map chrome gets the whole canvas for its labels', async () => {
+test('label keep-out regions stay overridable per renderer instance', async () => {
  const graph3d = read('graph3d.mjs');
  assert.match(graph3d, /const reserved=this\.reserved\|\|\[/,
   'the reserved regions must be overridable per renderer instance');
  assert.match(graph3d, /const topGuard=this\.reserved\?/,
   'the top guard exists for the map mode chip and must relax without it');
  assert.match(graph3d, /y<topGuard/, 'the label bounds check must use the configurable guard');
- const view = read('ui/learning-view.mjs');
- assert.match(view, /filamentGraph\.reserved = \[\]/,
-  'the Learning stage carries no map chrome and should say so');
 });
 
 test('the learning graph stays small enough to read', async () => {

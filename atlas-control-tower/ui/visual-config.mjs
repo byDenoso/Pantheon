@@ -9,11 +9,14 @@ export const MAP_CONFIG = Object.freeze({
 
 /** Filament rendering. Thin, low-opacity fibres with a travelling pulse:
  *  never a neon wire, never a laser. Widths are CSS pixels. */
+/** Each class is told apart by colour as well as by weight: `hue` tints the
+ *  filament, `led` is the travelling head and `trail` the wake behind it, so the
+ *  direction of travel is readable at a glance. */
 export const FILAMENT_STYLE = Object.freeze({
- 'cross-domain':{width:1.3, alpha:.30, activeAlpha:.72, pulse:2.5, glow:7.5, dash:null},
- 'intra-domain':{width:0.95, alpha:.24, activeAlpha:.60, pulse:2.0, glow:5.5, dash:null},
- 'intra-test':{width:0.6, alpha:.16, activeAlpha:.44, pulse:1.6, glow:4.0, dash:[3,7]},
- dimAlpha:.07, maxDeltaSeconds:.12
+ 'cross-domain':{hue:'#c58bff', width:1.45, alpha:.38, activeAlpha:.80, led:3.4, trail:.085, glow:9.5, dash:null},
+ 'intra-domain':{hue:'#3fc4ff', width:1.00, alpha:.26, activeAlpha:.64, led:2.4, trail:.060, glow:6.0, dash:null},
+ 'intra-test':{hue:'#5ee7c4', width:0.65, alpha:.18, activeAlpha:.48, led:1.8, trail:.045, glow:4.5, dash:[3,7]},
+ tint:.72, dimAlpha:.07, maxDeltaSeconds:.12
 });
 
 export const SYSTEM_COLORS = Object.freeze({
