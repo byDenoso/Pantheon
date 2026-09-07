@@ -1,5 +1,5 @@
 import baseHandler from './runtime-v2.js';
-import {isFastRootQuery,systemRootGraph} from '../lib/system-overview.mjs';
+import {isFastRootQuery,systemRootGraph,semanticIndexMode,contentRangeTotal} from '../lib/system-overview.mjs';
 
 const BASE='https://ep-cool-lab-aw72uid0.apirest.c-12.us-east-1.aws.neon.tech/neondb/rest/v1';
 const PROFILE='flight_api';
@@ -77,35 +77,48 @@ async function probeScienceHealth(req){
   return{ok:true,checkedAt:Date.now(),detail:'OK',version:'science_v1'};
 }
 
+async function probeSemanticHealth(req){
+  const token=tokenOf(req);if(!token)throw Error('OIDC_NOT_AVAILABLE');
+  const params=new URLSearchParams({select:'index_version',limit:'1'});
+  const response=await fetch(`${BASE}/${escq(TABLE)}?${params}`,{
+    headers:{Authorization:`Bearer ${token}`,Accept:'application/json','Accept-Profile':PROFILE,Prefer:'count=exact'},
+    signal:AbortSignal.timeout(8000)
+  });
+  if(!response.ok){const body=await response.text().catch(()=> '');throw Error(`SEMANTIC_HEALTH_${response.status}:${body.slice(0,160)}`)}
+  const rows=await response.json();
+  if(!Array.isArray(rows))throw Error('SEMANTIC_HEALTH_BAD_PAYLOAD');
+  return{available:true,count:contentRangeTotal(response.headers?.get?.('content-range')),indexVersion:rows[0]?.index_version||''};
+}
+
 export default async function handler(req,res){
-  const route=routeOf(req),query=queryOf(req);
-  let index=null;
-  try{
-    index=route==='sync'?await loadCockpitIndex(req,true):await loadCockpitIndex(req,false);
-  }catch(error){console.warn('[atlas:semantic-index]',String(error?.message||error))}
+  const route=routeOf(req),query=queryOf(req),indexMode=semanticIndexMode(route,query);
 
-  // Initial system navigation is structurally fixed. Do not hydrate every science
-  // entity merely to draw the five top-level systems.
-  if(req.method==='GET'&&route==='graph'&&isFastRootQuery(query)){
-    const root=systemRootGraph();
-    const enriched=index?decorate(root,index.cockpitIndex):root;
-    return sendJson(res,enriched);
-  }
+  // The top-level graph is declared structure. Rendering it must not hydrate the
+  // science corpus or the 5k+ semantic index merely to draw five child systems.
+  if(req.method==='GET'&&route==='graph'&&indexMode==='skip')return sendJson(res,systemRootGraph());
 
-  // Health is a liveness probe, not a graph build. One science_v1 row is enough;
-  // semantic-index metadata is added when its independent projection is healthy.
-  if(req.method==='GET'&&route==='health'){
-    try{
-      const v1Health=await probeScienceHealth(req);
+  // Health uses two independent one-row probes. `count=exact` supplies semantic
+  // cardinality through Content-Range without transferring the whole index.
+  if(req.method==='GET'&&route==='health'&&indexMode==='probe'){
+    const [scienceResult,semanticResult]=await Promise.allSettled([probeScienceHealth(req),probeSemanticHealth(req)]);
+    if(scienceResult.status==='fulfilled'){
+      const v1Health=scienceResult.value;
       const payload={
         ok:true,contract:'v1',
         dataSource:{requested:'auto',effective:'v1',freshness:'LIVE',reason:'V1_HEALTHY',usedFallback:false,v1Configured:true,v1Transport:'VERCEL_OIDC_NEON_DATA_API',v1Health}
       };
-      if(index)payload.semanticIndex={available:true,count:index.rows.length,indexVersion:index.indexVersion};
+      if(semanticResult.status==='fulfilled')payload.semanticIndex=semanticResult.value;
+      else payload.semanticIndex={available:false,count:null,indexVersion:''};
       return sendJson(res,payload);
-    }catch(error){console.warn('[atlas:health-fastpath]',String(error?.message||error))}
+    }
+    console.warn('[atlas:health-fastpath]',String(scienceResult.reason?.message||scienceResult.reason||'SCIENCE_PROBE_FAILED'));
+    return baseHandler(req,res);
   }
 
+  let index=null;
+  try{
+    index=route==='sync'?await loadCockpitIndex(req,true):await loadCockpitIndex(req,false);
+  }catch(error){console.warn('[atlas:semantic-index]',String(error?.message||error))}
   if(!index)return baseHandler(req,res);
 
   const originalEnd=res.end.bind(res);
@@ -116,7 +129,6 @@ export default async function handler(req,res){
       const text=Buffer.isBuffer(body)?body.toString('utf8'):String(body??'');
       const parsed=text?JSON.parse(text):{};
       const enriched=decorate(parsed,index.cockpitIndex);
-      if(route==='health'&&enriched&&typeof enriched==='object')enriched.semanticIndex={available:true,count:index.rows.length,indexVersion:index.indexVersion};
       return originalEnd(JSON.stringify(enriched),...args);
     }catch{return originalEnd(body,...args)}
   };
