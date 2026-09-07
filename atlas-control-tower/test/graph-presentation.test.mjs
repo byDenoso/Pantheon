@@ -17,7 +17,7 @@ test('Premium V2 graph keeps a strong primary-node hierarchy', () => {
  assert.ok(MAP_CONFIG.groupRadius >= 25, 'principal system planets should stay legible');
  assert.ok(MAP_CONFIG.domainRadius >= 17);
  assert.ok(MAP_CONFIG.nodeRadius >= 9, 'leaf nodes need usable hit/visual size');
- assert.ok(MAP_CONFIG.transitionMs <= 240, 'node expansion should stay fast');
+ assert.ok(MAP_CONFIG.transitionMs >= 360 && MAP_CONFIG.transitionMs <= 520, 'node expansion should be fluid without becoming sluggish');
  assert.ok(MAP_CONFIG.fog <= .34, 'depth fog must not erase labels/nodes');
 });
 
