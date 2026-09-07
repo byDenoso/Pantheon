@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {isFastRootQuery, systemRootGraph} from '../lib/system-overview.mjs';
+import {isFastRootQuery, systemRootGraph, semanticIndexMode, contentRangeTotal} from '../lib/system-overview.mjs';
 
 test('only an unfiltered depth-1 children read qualifies for the fast root', () => {
  assert.equal(isFastRootQuery({focus:'system:NEXO', mode:'children', depth:'1'}), true);
@@ -30,4 +30,19 @@ test('fast root contains exactly the declared NEXO systems', () => {
  assert.equal(graph.source, 'v1');
  assert.equal(graph.freshness, 'LIVE');
  assert.equal(graph.authority, undefined);
+});
+
+test('semantic index is skipped for fast root, probed for health and fully loaded elsewhere', () => {
+ assert.equal(semanticIndexMode('graph',{focus:'system:NEXO',depth:'1'}),'skip');
+ assert.equal(semanticIndexMode('health',{}),'probe');
+ assert.equal(semanticIndexMode('graph',{focus:'system:SCIENCE',depth:'1'}),'full');
+ assert.equal(semanticIndexMode('ops',{}),'full');
+ assert.equal(semanticIndexMode('sync',{}),'full');
+});
+
+test('PostgREST content-range total is parsed without guessing', () => {
+ assert.equal(contentRangeTotal('0-0/5219'),5219);
+ assert.equal(contentRangeTotal('0-0/*'),null);
+ assert.equal(contentRangeTotal(''),null);
+ assert.equal(contentRangeTotal(null),null);
 });
