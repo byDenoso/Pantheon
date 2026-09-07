@@ -17,6 +17,17 @@ export function isFastRootQuery(query={}){
  return FILTER_KEYS.every(key=>query[key]===undefined||query[key]===null||query[key]==='');
 }
 
+export function semanticIndexMode(route,query={}){
+ if(route==='graph'&&isFastRootQuery(query))return'skip';
+ if(route==='health')return'probe';
+ return'full';
+}
+
+export function contentRangeTotal(value){
+ const match=String(value||'').match(/\/(\d+)$/);
+ return match?Number(match[1]):null;
+}
+
 export function systemRootGraph(){
  const root={
   id:'system:NEXO',type:'SYSTEM',label:'NEXO',
