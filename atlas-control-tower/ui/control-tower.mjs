@@ -69,30 +69,47 @@ const dateLabel=value=>{
 
 export function renderControlTower(root,model,{onFocus,onMap}={}){
  if(!root)return;
- const healthHtml=model.health.map(h=>`<button class="ct-health" data-ct-focus="${esc(h.focus)}">${statusDot(h.state)}<span><b>${esc(h.label)}</b><small>${esc(h.detail)}</small></span></button>`).join('');
- const blockers=model.attention.blockers.length?model.attention.blockers.map(a=>`<button class="ct-row ct-blocker" data-ct-focus="system:AUTOMATION"><span><b>${esc(a.label||a.id)}</b><small>${esc(a.domain||'global')} · ${esc(a.status||'BLOCKED')}</small><em>${esc(shortText(a.summary||a.metadata?.blocker_reason||'',108))}</em></span><strong>→</strong></button>`).join(''):'<p class="ct-empty">Nenhum blocker material publicado na Black Box.</p>';
- const recent=model.recent.items.length?model.recent.items.map(e=>`<button class="ct-row" data-ct-focus="system:AUTOMATION"><time>${esc(dateLabel(e.updatedAt))}</time><span><b>${esc(e.label||e.id)}</b><small>${esc(e.metadata?.event_type||e.status||'runtime')}</small><em>${esc(shortText(e.summary,118))}</em></span></button>`).join(''):`<p class="ct-empty">${model.recent.hasPreviousVisit?'Nenhuma mudança operacional desde a última visita.':'Sem histórico de visita anterior; o próximo acesso mostrará apenas deltas.'}</p>`;
- const promoted=model.promoted.length?model.promoted.map(x=>`<button class="ct-learning" data-ct-focus="system:LEARNING"><span>${esc(x.status||'')}</span><b>${esc(shortText(x.relationType||x.title||x.id,82))}</b></button>`).join(''):'<p class="ct-empty">Nenhuma promoção de Learning disponível.</p>';
- const corpus=model.corpus.total==null?'Resumo científico pendente':`${num(model.corpus.total)} entidades · ${num(model.corpus.tests||0)} testes · ${num(model.corpus.claims||0)} claims`;
- const decisionTitle=model.attention.blockedCount?`${num(model.attention.blockedCount)} blocker${model.attention.blockedCount===1?'':'s'} exigem atenção`:'Nenhum blocker material agora';
+ const healthGood=model.health.filter(h=>h.state==='good').length;
+ const healthWarn=model.health.filter(h=>h.state==='warn').length;
+ const healthUnknown=model.health.filter(h=>h.state==='unknown').length;
+ const healthTotal=model.health.length||0;
+ const statusLabel=healthUnknown===healthTotal&&healthTotal?'Leitura parcial':healthWarn?'Atenção operacional':model.attention.blockedCount?'Operacional com bloqueios':'Sistema estável';
+ const statusTone=healthWarn?'warn':healthUnknown===healthTotal?'unknown':model.attention.blockedCount?'warn':'good';
+ const healthSummary=healthTotal?`${healthGood}/${healthTotal} sinais verificados`:'Sem leitura de health';
+ const recent=model.recent.items.length?model.recent.items.map(e=>`<button class="ct-activity-row" data-ct-focus="system:AUTOMATION"><i class="ct-activity-dot"></i><span><b>${esc(e.label||e.id)}</b><small>${esc(e.metadata?.event_type||e.status||'runtime')}</small></span><time>${esc(dateLabel(e.updatedAt))}</time></button>`).join(''):`<p class="ct-empty">${model.recent.hasPreviousVisit?'Nenhuma mudança operacional desde a última visita.':'A próxima visita mostrará as mudanças observadas.'}</p>`;
+ const priorities=model.attention.blockers.length?model.attention.blockers.map(a=>`<button class="ct-priority-row" data-ct-focus="system:AUTOMATION"><span><b>${esc(a.label||a.id)}</b><small>${esc(a.domain||'global')} · ${esc(a.status||'BLOCKED')}</small><em>${esc(shortText(a.summary||a.metadata?.blocker_reason||'',116))}</em></span><strong>→</strong></button>`).join(''):'<p class="ct-empty">Nenhum blocker material publicado.</p>';
+ const corpusValue=model.corpus.total==null?'—':num(model.corpus.total);
+ const testsValue=model.corpus.tests==null?'—':num(model.corpus.tests);
 
  root.innerHTML=`
-  <div class="ct-head">
-   <div><p class="eyebrow">CONTROL TOWER / AGORA</p><h2>Prioridades operacionais</h2><p>${esc(corpus)}</p></div>
-   <button class="ct-map-cta" data-ct-map>Explorar mapa <span>↓</span></button>
+  <div class="ct-observatory-grid">
+   <article class="ct-console ct-status-console">
+    <div class="ct-console-title"><span>Status operacional</span>${statusDot(statusTone)}</div>
+    <strong class="ct-status-label">${esc(statusLabel)}</strong>
+    <p>${esc(healthSummary)}</p>
+    <div class="ct-status-list">
+     <div><span>Readback</span><b>${esc(model.attention.readbackLabel)}</b></div>
+     <div><span>Blockers</span><b class="${model.attention.blockedCount?'ct-alert':''}">${num(model.attention.blockedCount)}</b></div>
+    </div>
+   </article>
+   <article class="ct-console ct-overview-console">
+    <div class="ct-console-title"><span>Visão geral</span><small>ESTADO ATUAL</small></div>
+    <div class="ct-overview-metrics">
+     <div><small>ENTIDADES</small><strong>${corpusValue}</strong><span>no recorte científico</span></div>
+     <div><small>TESTES</small><strong>${testsValue}</strong><span>indexados</span></div>
+     <div><small>BLOCKERS</small><strong class="${model.attention.blockedCount?'ct-alert':''}">${num(model.attention.blockedCount)}</strong><span>exigem ação</span></div>
+     <div><small>READBACK</small><strong>${esc(model.attention.readbackLabel)}</strong><span>${model.attention.runs?`${num(model.attention.readbackPercent)}% verificado`:'indisponível'}</span></div>
+    </div>
+   </article>
+   <article class="ct-console ct-recent-console">
+    <div class="ct-console-title"><span>Atividade recente</span><small>${model.recent.newCount?`${num(model.recent.newCount)} NOVA${model.recent.newCount===1?'':'S'}`:'ÚLTIMOS EVENTOS'}</small></div>
+    <div class="ct-activity-list">${recent}</div>
+   </article>
   </div>
-  <div class="ct-health-grid">${healthHtml}</div>
-  <div class="ct-kpis">
-   <article><small>BLOCKERS</small><strong class="${model.attention.blockedCount?'ct-alert':''}">${num(model.attention.blockedCount)}</strong><span>${esc(decisionTitle)}</span></article>
-   <article><small>READBACK</small><strong>${esc(model.attention.readbackLabel)}</strong><span>${model.attention.runs?`${num(model.attention.readbackPercent)}% das execuções materializadas`:'Black Box indisponível'}</span></article>
-   <article><small>MUDOU</small><strong>${num(model.recent.newCount)}</strong><span>${model.recent.hasPreviousVisit?'eventos desde a última visita':'cursor local inicializado'}</span></article>
-   <article><small>CORPUS</small><strong>${model.corpus.tests==null?'—':num(model.corpus.tests)}</strong><span>testes científicos indexados</span></article>
-  </div>
-  <div class="ct-grid">
-   <section class="ct-panel"><div class="ct-title"><span>PRÓXIMAS DECISÕES</span><small>BLACK BOX</small></div>${blockers}</section>
-   <section class="ct-panel"><div class="ct-title"><span>MUDOU DESDE A ÚLTIMA VISITA</span><small>RUNTIME EVENTS</small></div>${recent}</section>
-   <section class="ct-panel ct-learning-panel"><div class="ct-title"><span>LEARNING PROMOVIDO</span></div><div class="ct-learning-list">${promoted}</div></section>
-  </div>`;
+  <section class="ct-console ct-priorities-console">
+   <div class="ct-console-title"><span>Prioridades operacionais</span><small>${num(model.attention.blockedCount)} BLOCKER${model.attention.blockedCount===1?'':'S'}</small></div>
+   <div class="ct-priority-list">${priorities}</div>
+  </section>`;
 
  root.querySelectorAll('[data-ct-focus]').forEach(button=>button.onclick=()=>onFocus?.(button.dataset.ctFocus));
  root.querySelector('[data-ct-map]')?.addEventListener('click',()=>onMap?.());
