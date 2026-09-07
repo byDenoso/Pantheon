@@ -1,4 +1,5 @@
 import baseHandler from './runtime-v2.js';
+import {isFastRootQuery,systemRootGraph} from '../lib/system-overview.mjs';
 
 const BASE='https://ep-cool-lab-aw72uid0.apirest.c-12.us-east-1.aws.neon.tech/neondb/rest/v1';
 const PROFILE='flight_api';
@@ -58,14 +59,53 @@ function decorate(value,cockpitIndex){
   return out;
 }
 
-function routeOf(req){const u=new URL(req.url||'/','https://atlas.local');return u.searchParams.get('route')||u.pathname.split('/').pop()}
+function urlOf(req){return new URL(req.url||'/','https://atlas.local')}
+function routeOf(req){const u=urlOf(req);return u.searchParams.get('route')||u.pathname.split('/').pop()}
+function queryOf(req){const u=urlOf(req),q=Object.fromEntries(u.searchParams);delete q.route;return q}
+function sendJson(res,value,status=200){res.statusCode=status;res.setHeader('Content-Type','application/json; charset=utf-8');res.setHeader('Cache-Control','private, max-age=60');res.setHeader('X-Content-Type-Options','nosniff');return res.end(JSON.stringify(value))}
+
+async function probeScienceHealth(req){
+  const token=tokenOf(req);if(!token)throw Error('OIDC_NOT_AVAILABLE');
+  const params=new URLSearchParams({select:'entity_id',limit:'1'});
+  const response=await fetch(`${BASE}/entities?${params}`,{
+    headers:{Authorization:`Bearer ${token}`,Accept:'application/json','Accept-Profile':'science_v1'},
+    signal:AbortSignal.timeout(8000)
+  });
+  if(!response.ok){const body=await response.text().catch(()=> '');throw Error(`SCIENCE_HEALTH_${response.status}:${body.slice(0,160)}`)}
+  const rows=await response.json();
+  if(!Array.isArray(rows))throw Error('SCIENCE_HEALTH_BAD_PAYLOAD');
+  return{ok:true,checkedAt:Date.now(),detail:'OK',version:'science_v1'};
+}
 
 export default async function handler(req,res){
-  const route=routeOf(req);
+  const route=routeOf(req),query=queryOf(req);
   let index=null;
   try{
     index=route==='sync'?await loadCockpitIndex(req,true):await loadCockpitIndex(req,false);
   }catch(error){console.warn('[atlas:semantic-index]',String(error?.message||error))}
+
+  // Initial system navigation is structurally fixed. Do not hydrate every science
+  // entity merely to draw the five top-level systems.
+  if(req.method==='GET'&&route==='graph'&&isFastRootQuery(query)){
+    const root=systemRootGraph();
+    const enriched=index?decorate(root,index.cockpitIndex):root;
+    return sendJson(res,enriched);
+  }
+
+  // Health is a liveness probe, not a graph build. One science_v1 row is enough;
+  // semantic-index metadata is added when its independent projection is healthy.
+  if(req.method==='GET'&&route==='health'){
+    try{
+      const v1Health=await probeScienceHealth(req);
+      const payload={
+        ok:true,contract:'v1',
+        dataSource:{requested:'auto',effective:'v1',freshness:'LIVE',reason:'V1_HEALTHY',usedFallback:false,v1Configured:true,v1Transport:'VERCEL_OIDC_NEON_DATA_API',v1Health}
+      };
+      if(index)payload.semanticIndex={available:true,count:index.rows.length,indexVersion:index.indexVersion};
+      return sendJson(res,payload);
+    }catch(error){console.warn('[atlas:health-fastpath]',String(error?.message||error))}
+  }
+
   if(!index)return baseHandler(req,res);
 
   const originalEnd=res.end.bind(res);
