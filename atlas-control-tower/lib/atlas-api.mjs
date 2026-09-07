@@ -9,7 +9,7 @@ export {normalizeGraph, EMPTY_GRAPH, SOURCES, FRESHNESS, provenanceLabel};
 const params = q => new URLSearchParams(Object.entries(q).filter(([, v]) => v !== '' && v != null).map(([k, v]) => [k, String(v)]));
 const auxiliaryFocus = focus => /^(system:(LEARNING|AUTOMATION)|learning-stage:|observation:|pattern:|lesson:|strategy:|policy:|ops-stage:|action:|run:|event:)/.test(String(focus || ''));
 
-export function createApi({fetchImpl, timeout = 65000, maxEntries = 64} = {}) {
+export function createApi({fetchImpl, timeout = 20000, syncTimeout = 65000, maxEntries = 64} = {}) {
  const doFetch = fetchImpl || ((...a) => fetch(...a));
  const cache = new Map();
  let version = '';
@@ -36,13 +36,13 @@ export function createApi({fetchImpl, timeout = 65000, maxEntries = 64} = {}) {
   };
  }
 
- async function request(route, q = {}, {method = 'GET', cacheable = true, key, versioned = true} = {}) {
+ async function request(route, q = {}, {method = 'GET', cacheable = true, key, versioned = true, timeoutMs = timeout} = {}) {
   const id = key || (route + '?' + params(q).toString());
   if (method === 'GET' && cacheable) {
    const hit = cache.get(id);
    if (hit && hit.version === version) {provenance = {...provenance, cache:'HIT'}; return hit.data}
   }
-  const r = await doFetch('/api/' + route + '?' + params(q), {method, signal: AbortSignal.timeout(timeout)});
+  const r = await doFetch('/api/' + route + '?' + params(q), {method, signal: AbortSignal.timeout(timeoutMs)});
   if (!r.ok) throw Error('HTTP ' + r.status);
   const data = await r.json();
   observe(data, {versioned});
@@ -81,6 +81,6 @@ export function createApi({fetchImpl, timeout = 65000, maxEntries = 64} = {}) {
   ops: () => request('ops', {}, {versioned:false}),
   automationRuns: () => request('automation-runs', {}, {versioned:false}),
   learningRelations: () => request('learning-relations', {}, {versioned:false}),
-  sync: async () => {const d = await request('sync', {}, {method:'POST', cacheable:false, versioned:true}); cache.clear(); return d}
+  sync: async () => {const d = await request('sync', {}, {method:'POST', cacheable:false, versioned:true, timeoutMs:syncTimeout}); cache.clear(); return d}
  };
 }
