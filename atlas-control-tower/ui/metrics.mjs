@@ -1,5 +1,6 @@
 /** Source status and charts. The legacy top metrics strip is optional. */
 import {$, $$, esc, num, age} from './dom.mjs';
+import {compactLabel} from './cockpit-copy.mjs';
 
 const METRICS = [
  ['CAMPAIGN', 'CAMPANHAS', 'índice derivado'],
@@ -39,7 +40,7 @@ export function renderBars(el, data, onPick) {
  const entries = Object.entries(data || {}).sort((a, b) => b[1] - a[1]).slice(0, 7);
  const max = Math.max(1, ...entries.map(([, n]) => n));
  el.innerHTML = entries.length
-  ? entries.map(([k, v]) => `<button class="bar-row" data-key="${esc(k)}"><span>${esc(k.slice(0, 25))}</span><div class="bar-track"><div class="bar-fill" style="width:${v / max * 100}%"></div></div><strong>${num(v)}</strong></button>`).join('')
+  ? entries.map(([k, v]) => `<button class="bar-row" data-key="${esc(k)}" title="${esc(k)}"><span>${esc(compactLabel(k,{max:18}))}</span><div class="bar-track"><div class="bar-fill" style="width:${v / max * 100}%"></div></div><strong>${num(v)}</strong></button>`).join('')
   : '<p class="chart-note">Nenhum teste neste recorte.</p>';
  el.querySelectorAll('[data-key]').forEach(b => b.onclick = () => onPick(b.dataset.key));
 }
@@ -58,7 +59,7 @@ export function renderCharts(summary, colors, {onDomain, onStatus, onDate, onAud
  const total = entries.reduce((a, [, v]) => a + v, 0);
  $('#claim-chart').innerHTML = `<div class="claim-total">${num(total)}<small>${num(summary.claimKinds?.DECISION_CLAIM)} claims decisórios</small></div>`
   + `<div class="stack">${entries.map(([k, v]) => `<button data-status="${k}" title="${esc(k)}: ${num(v)}" style="width:${v / Math.max(total, 1) * 100}%;background:${colors[k]}"></button>`).join('')}</div>`
-  + `<div class="claim-legend">${entries.map(([k, v]) => `<button data-status="${k}"><i style="background:${colors[k]}"></i>${esc(k)} <b>${num(v)}</b></button>`).join('')}</div>`;
+  + `<div class="claim-legend">${entries.map(([k, v]) => `<button data-status="${k}"><i style="background:${colors[k]}"></i>${esc(compactLabel(k,{max:16}))} <b>${num(v)}</b></button>`).join('')}</div>`;
  $$('[data-status]').forEach(b => b.onclick = () => onStatus(b.dataset.status));
 
  const act = Object.entries(summary.activity || {}).sort(([a], [b]) => a.localeCompare(b)).slice(-20);
@@ -74,7 +75,7 @@ export async function renderDomainNav(api, onPick) {
  try {
   const g = await api.graph({focus:'system:SCIENCE', type:'DOMAIN', limit:200});
   const domains = g.nodes.filter(n => n.type === 'DOMAIN' && n.domain !== 'UNMAPPED' && n.id !== 'domain:UNMAPPED').slice(0, 16);
-  $('#domain-nav').innerHTML = domains.map(n => `<button class="domain-nav" data-domain-id="${esc(n.id)}">${esc(String(n.label).slice(0, 27))}</button>`).join('');
-  $$('[data-domain-id]').forEach(b => b.onclick = () => onPick({id: b.dataset.domainId, label: b.textContent}));
+  $('#domain-nav').innerHTML = domains.map(n => `<button class="domain-nav" data-domain-id="${esc(n.id)}" title="${esc(n.label||n.id)}">${esc(compactLabel(n.label||n.id,{max:22}))}</button>`).join('');
+  $$('[data-domain-id]').forEach(b => b.onclick = () => onPick({id: b.dataset.domainId, label: b.title || b.textContent}));
  } catch {/* sidebar stays empty; the map is the authoritative route */}
 }
