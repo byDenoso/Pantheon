@@ -1,0 +1,46 @@
+/* NEXO Atlas interaction layer: fast, readable, and intentionally tactile. */
+:root{--motion-fast:140ms;--motion-med:220ms;--motion-ease:cubic-bezier(.2,.8,.2,1)}
+html{scroll-behavior:smooth}
+body,button,select,input,.nav,.domain-nav,.tabs button,.graph-controls,.graph-controls button,.universe,.analytics article,.entity-section,.radar-card,.recorte-card,.signal-row,.change-row,.audit-cat,.ladder-stage,.provenance,.searchbox,#inspector{transition:background-color var(--motion-fast) var(--motion-ease),border-color var(--motion-fast) var(--motion-ease),color var(--motion-fast) var(--motion-ease),box-shadow var(--motion-med) var(--motion-ease),transform var(--motion-fast) var(--motion-ease),opacity var(--motion-fast) var(--motion-ease)}
+button:not(:disabled):hover{transform:translateY(-1px)}
+button:not(:disabled):active{transform:translateY(0) scale(.975)}
+.nav:hover,.domain-nav:hover{transform:translateX(3px)}
+.tabs button.on{transform:translateY(-1px)}
+.graph-controls button:hover{transform:translateY(-2px) scale(1.06)}
+.signal-row:hover,.change-row:hover,.entity-item:hover,.rank-list button:hover{transform:translateX(3px)}
+.universe,.analytics article,.entity-section{animation:surfaceIn .24s var(--motion-ease) both}
+@keyframes surfaceIn{from{opacity:.72;transform:translateY(6px)}to{opacity:1;transform:none}}
+#inspector:not([hidden]){animation:drawerIn .2s var(--motion-ease) both}
+@keyframes drawerIn{from{opacity:0;transform:translateX(18px)}to{opacity:1;transform:none}}
+#sidebar.open{animation:sidebarIn .18s var(--motion-ease) both}
+@keyframes sidebarIn{from{opacity:.4;transform:translateX(-12px)}to{opacity:1;transform:none}}
+
+[data-theme="dark"] #sidebar{background:linear-gradient(180deg,#0a1424 0%,#07101d 55%,#050c16 100%)!important;border-right:1px solid #28557e!important;box-shadow:18px 0 48px #000b,4px 0 18px #168dff12!important}
+[data-theme="dark"] #sidebar .eyebrow{color:#8fa9c4!important}
+[data-theme="dark"] .nav{color:#a9bfd6!important;border-radius:11px}
+[data-theme="dark"] .nav:hover{color:#f3f9ff!important;background:#10243b!important;border-color:#244d74!important}
+[data-theme="dark"] .nav.active{color:#fff!important;background:linear-gradient(90deg,#12385c,#0b1c31)!important;border-color:#2f78ae!important;box-shadow:inset 3px 0 #28c5ff,0 0 24px #1aaeff22!important}
+[data-theme="dark"] .domain-nav{color:#90abc7!important}
+[data-theme="dark"] .domain-nav:hover{color:#eaf6ff!important;background:#0d1e32!important}
+[data-theme="dark"] .sidebar-foot{color:#91aac4!important;border-top-color:#234765!important;background:#081525;border-radius:12px;padding:14px 10px}
+[data-theme="dark"] .topbar{background:linear-gradient(180deg,#081321f7,#050d18f4)!important;border-bottom-color:#234a70!important}
+[data-theme="dark"] .workspace-toolbar{background:#050d18a6;border:1px solid #183b5d;border-radius:12px;padding:6px 8px}
+
+[data-theme="light"] body{background:linear-gradient(180deg,#eef4f9,#f8fbfd 38%,#edf4f9)}
+[data-theme="light"] #sidebar{background:linear-gradient(180deg,#f7fbff,#eaf2f8)!important;border-right:1px solid #a9c1d5!important;box-shadow:14px 0 36px #18364c14!important}
+[data-theme="light"] .nav{color:#314f69!important}
+[data-theme="light"] .nav:hover{color:#102d47!important;background:#e2eef8!important;border-color:#a9c3da!important}
+[data-theme="light"] .nav.active{color:#0b2945!important;background:linear-gradient(90deg,#d8ecff,#ebf6ff)!important;border-color:#5aa8e8!important;box-shadow:inset 3px 0 #087dd1,0 8px 22px #277db31c!important}
+[data-theme="light"] .domain-nav{color:#496982!important}
+[data-theme="light"] .topbar,[data-theme="light"] .graph-heading,[data-theme="light"] .graph-bottom{background:#ffffffed!important;border-color:#b5cadb!important}
+[data-theme="light"] .universe{border-color:#91afc6!important;box-shadow:0 18px 48px #24496518,0 0 0 1px #167fc51a!important}
+[data-theme="light"] .graph-stage{background:radial-gradient(circle at 48% 43%,#ffffff 0%,#edf5fb 52%,#e5eef6 100%)!important}
+[data-theme="light"] .graph-controls{background:#fffffff5!important;border-color:#9fb9ce!important;box-shadow:0 10px 30px #143a551c!important}
+[data-theme="light"] .map-caption strong{color:#274762!important}
+[data-theme="light"] .official-badge{color:#274c6c;border-color:#9bb9d0;background:#edf7ff}
+
+.searchbox:focus-within{border-color:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 14%,transparent)}
+.provenance[data-tone=ok]{box-shadow:0 0 16px color-mix(in srgb,#4bbf8a 16%,transparent)}
+.graph-stage canvas{cursor:grab}.graph-stage canvas:active{cursor:grabbing}
+
+@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}*,*::before,*::after{animation:none!important;transition:none!important}}
