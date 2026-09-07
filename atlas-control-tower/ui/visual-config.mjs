@@ -1,11 +1,11 @@
 /** Visual-only knobs. No scientific status, authority or API logic belongs here. */
 export const MAP_CONFIG = Object.freeze({
- maxNodes:140, previewPerGroup:12, previewDepth:2, stars:340, orbitSpeed:.00004,
- coreRadius:38, groupRadius:18, nodeRadius:7, haloAlpha:'22', maxLabels:24,
+ maxNodes:120, previewPerGroup:5, previewDepth:1, stars:340, orbitSpeed:.00004,
+ coreRadius:38, groupRadius:18, nodeRadius:6, haloAlpha:'22', maxLabels:24,
  fog:.68,
  edgeCurve:.16,
  vignette:.46,
- clusterRadius:38, clusterSpread:12
+ clusterRadius:52, clusterSpread:8
 });
 export const SYSTEM_COLORS = Object.freeze({
  'system:NEXO':'#7fe7ff',
