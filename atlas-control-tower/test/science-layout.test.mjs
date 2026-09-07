@@ -1,9 +1,12 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
 import {clusteredPositions} from '../ui/map-data.mjs';
 import {nodeDisplayLabel} from '../ui/cockpit-copy.mjs';
+import {MAP_CONFIG} from '../ui/visual-config.mjs';
 
 const edge=(source,target)=>({source,target,type:'CONTAINS'});
+const graphSource=fs.readFileSync(new URL('../graph3d.mjs',import.meta.url),'utf8');
 
 test('Ciência usa composição assimétrica própria em vez do fallback radial',()=>{
  const domains=['D1','D2','D3','D4','D5','D6','D7','D8','D9','D10','D11','M1'].map(id=>({id:`domain:${id}`,type:'DOMAIN',label:id}));
@@ -35,4 +38,9 @@ test('subdomínios científicos ganham rótulos curtos e legíveis no mapa',()=>
  assert.equal(nodeDisplayLabel({id:'domain:D1',label:'Expansion, H0 & Acoustic Geometry',type:'DOMAIN'}),'Expansão');
  assert.equal(nodeDisplayLabel({id:'domain:D7',label:'CMB, Recombination, Primordial Signatures & Systematics',type:'DOMAIN'}),'CMB');
  assert.equal(nodeDisplayLabel({id:'domain:D11',label:'Cosmic Megastructures, Homogeneity & Extreme-Structure Discovery',type:'DOMAIN'}),'Megastructures');
+});
+
+test('drilldown mantém um recorte visual pequeno e filhos nascem da posição anterior do pai',()=>{
+ assert.ok(MAP_CONFIG.maxNodes<=36,'um clique de domínio não deve despejar centenas de testes no canvas');
+ assert.match(graphSource,/oldById\.get\(p\)\s*\|\|\s*targetById\.get\(p\)/,'novos filhos devem emergir visualmente do nó clicado');
 });
