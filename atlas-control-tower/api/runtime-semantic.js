@@ -63,7 +63,9 @@ function routeOf(req){const u=new URL(req.url||'/','https://atlas.local');return
 export default async function handler(req,res){
   const route=routeOf(req);
   let index=null;
-  try{index=await loadCockpitIndex(req,route==='sync')}catch(error){console.warn('[atlas:semantic-index]',String(error?.message||error))}
+  try{
+    index=route==='sync'?await loadCockpitIndex(req,true):await loadCockpitIndex(req,false);
+  }catch(error){console.warn('[atlas:semantic-index]',String(error?.message||error))}
   if(!index)return baseHandler(req,res);
 
   const originalEnd=res.end.bind(res);
