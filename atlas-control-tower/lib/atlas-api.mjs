@@ -15,9 +15,6 @@ export function createApi({fetchImpl, timeout = 65000, maxEntries = 64} = {}) {
  let version = '';
  let provenance = {source:SOURCES.LEGACY, freshness:FRESHNESS.SNAPSHOT, sourceVersion:'', cache:'', label:'LEGACY SNAPSHOT'};
 
- /** Science projection fingerprint is the global invalidation token.
-  *  Learning and Black Box have independent fingerprints and must never evict
-  *  the Science graph (nor each other) simply because the user navigated tabs. */
  function setVersion(next) {
   if (!next || next === version) return;
   const had = version;
@@ -81,6 +78,7 @@ export function createApi({fetchImpl, timeout = 65000, maxEntries = 64} = {}) {
   learning: () => request('learning', {}, {versioned:false}),
   learningFor: id => request('learning', {id}, {versioned:false}),
   learningLineage: id => request('learning', {id, view:'lineage'}, {versioned:false}),
+  ops: () => request('ops', {}, {versioned:false}),
   automationRuns: () => request('automation-runs', {}, {versioned:false}),
   learningRelations: () => request('learning-relations', {}, {versioned:false}),
   sync: async () => {const d = await request('sync', {}, {method:'POST', cacheable:false, versioned:true}); cache.clear(); return d}
