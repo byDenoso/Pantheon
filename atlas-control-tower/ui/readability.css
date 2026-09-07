@@ -1,0 +1,60 @@
+/* High-impact readability layer for Atlas. Keeps the cosmic palette but restores hierarchy. */
+html{-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+body{font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;font-size:14px;line-height:1.5;font-weight:450;letter-spacing:.005em}
+button,input,select{font-weight:520}
+.eyebrow{font-size:10px;font-weight:750;letter-spacing:1.7px}
+.micro{font-size:11px;line-height:1.45}
+.brand b{font-weight:800;letter-spacing:3px}.brand b span{font-weight:520}
+.nav{font-size:12px;font-weight:650;letter-spacing:.01em}.domain-nav{font-size:11px;font-weight:560;line-height:1.35}
+.sidebar-foot{font-size:11px;line-height:1.55}.sidebar-foot b{font-weight:700}.sidebar-foot .micro{font-size:9px}
+.tabs button{font-size:12px;font-weight:650}.filters select,.filters button{font-size:11px}
+.graph-heading .eyebrow{font-size:9px;font-weight:800}.map-actions button,#breadcrumbs button{font-weight:650}
+.graph-mode{font-size:9px;font-weight:700}.graph-mode button{font-size:10px;font-weight:650}
+.graph-legend{font-size:9px;font-weight:560}.graph-bottom{font-size:11px;font-weight:560}.graph-bottom button{font-size:10px;font-weight:650}
+.map-caption strong{font-size:17px;font-weight:560}.map-caption>span,.map-caption small{font-weight:700}
+.chart-title{font-size:13px;font-weight:650}.chart-title small{font-size:8px;font-weight:750;letter-spacing:.9px}
+.radar-head b{font-size:12px;font-weight:700}.radar-head small{font-size:9px;line-height:1.35}.radar-meta,.radar-link{font-size:8px;font-weight:650}
+.signal-summary span{font-size:8px;font-weight:600}.signal-summary b{font-size:14px;font-weight:700}
+.signal-copy b,.change-copy b{font-size:10.5px;font-weight:650}.signal-copy small,.change-copy small{font-size:8.5px;line-height:1.4}.signal-chip{font-size:7.5px;font-weight:750}.change-time{font-size:8.5px;font-weight:600}
+.detail-title{font-weight:700}.detail-summary{font-size:13px}.relation{font-size:11px}.relation small{font-size:9px}
+.ladder-head b{font-weight:750}.ladder-item b{font-weight:650}.ladder-item small{font-weight:560}
+
+[data-theme="dark"]{
+ --text:#f6fbff;--muted:#b3c6da;--line:#22517b;--raised:#0b1728;--surface:#07111f;--soft:#0d2540;
+}
+[data-theme="dark"] body{color:#f6fbff;text-shadow:0 0 1px rgba(255,255,255,.05)}
+[data-theme="dark"] #sidebar{background:linear-gradient(180deg,#0a1627 0%,#07111f 52%,#050c17 100%);border-right:1px solid #2a5c86;box-shadow:16px 0 42px rgba(0,0,0,.5),inset -1px 0 rgba(91,180,255,.08)}
+[data-theme="dark"] #sidebar .eyebrow{color:#9fb7cf}
+[data-theme="dark"] .nav{color:#c6d7e8;text-shadow:0 1px 1px #000}.nav span{opacity:1}
+[data-theme="dark"] .nav:hover{color:#fff;background:#10263f;border-color:#285b86;box-shadow:0 5px 18px #0005}
+[data-theme="dark"] .nav.active{color:#fff;background:linear-gradient(90deg,#12385d 0%,#0b2037 100%);border-color:#2c78ad;box-shadow:inset 3px 0 #35c8ff,0 0 24px #18baff1c}
+[data-theme="dark"] .domain-nav{color:#adc3d9}.domain-nav:hover{color:#fff;background:#0d2239}
+[data-theme="dark"] .sidebar-foot{color:#a7bdd2;border-color:#214765}.sidebar-foot b{color:#edf7ff}
+[data-theme="dark"] .topbar{background:rgba(7,17,31,.96);border-bottom-color:#214b70}
+[data-theme="dark"] .workspace-toolbar,.graph-heading,.graph-bottom{color:#edf7ff}
+[data-theme="dark"] .graph-heading,[data-theme="dark"] .graph-bottom{background:linear-gradient(180deg,#081522f7,#050d18f7);border-color:#1d4b72}
+[data-theme="dark"] .graph-legend,[data-theme="dark"] .graph-bottom,[data-theme="dark"] .micro,[data-theme="dark"] .radar-head small,[data-theme="dark"] .signal-copy small,[data-theme="dark"] .change-copy small{color:#adc3d7}
+[data-theme="dark"] .graph-controls{background:rgba(8,20,35,.94)}
+[data-theme="dark"] button,[data-theme="dark"] select,[data-theme="dark"] input{color:#edf8ff}
+[data-theme="dark"] .radar-card,[data-theme="dark"] .analytics article,[data-theme="dark"] .entity-section{background:linear-gradient(180deg,rgba(8,20,35,.96),rgba(4,11,21,.98));border-color:#22527a}
+[data-theme="dark"] .radar-head b,[data-theme="dark"] .chart-title>span{color:#f8fcff}
+[data-theme="dark"] .signal-summary span{color:#b9cde0;background:#0b1c30;border-color:#285b84}
+[data-theme="dark"] .signal-summary b{color:#fff}
+[data-theme="dark"] .signal-row:hover,[data-theme="dark"] .change-row:hover{background:#0d2238}
+[data-theme="dark"] .status-chip{background:#0a1a2c;border-color:#2a5e89}
+[data-theme="dark"] #inspector{background:rgba(7,17,31,.97);border-left-color:#2b5d88}
+[data-theme="dark"] .detail-summary,[data-theme="dark"] .relation small,[data-theme="dark"] .metadata-item label{color:#b4c8da}
+
+[data-theme="light"]{
+ --text:#102238;--muted:#49637d;--line:#adc4d8;--accent:#006bd6;--soft:#e1f1ff;--raised:#edf6ff;
+}
+[data-theme="light"] body{font-weight:460}
+[data-theme="light"] #sidebar{background:linear-gradient(180deg,#ffffff 0%,#f1f7fd 100%);border-right-color:#adc6dc;box-shadow:13px 0 28px rgba(28,69,105,.10)}
+[data-theme="light"] .nav{color:#334f6c}.nav:hover{background:#eaf4fd;color:#0d3154}.nav.active{background:linear-gradient(90deg,#d9efff,#edf7ff);color:#082b4a;border-color:#74b8ef;box-shadow:inset 3px 0 #007bd8,0 6px 18px rgba(0,105,196,.12)}
+[data-theme="light"] .domain-nav{color:#425f7d}.domain-nav:hover{color:#092d50;background:#eaf4fd}
+[data-theme="light"] .graph-heading,[data-theme="light"] .graph-bottom{background:#f7fbff;border-color:#b4cadd}
+[data-theme="light"] .graph-legend,[data-theme="light"] .micro,[data-theme="light"] .radar-head small,[data-theme="light"] .signal-copy small,[data-theme="light"] .change-copy small{color:#45627f}
+[data-theme="light"] .radar-card,[data-theme="light"] .analytics article,[data-theme="light"] .entity-section{border-color:#abc4d9;box-shadow:0 10px 24px rgba(33,76,113,.08)}
+[data-theme="light"] .signal-summary span{background:#f3f9ff;border-color:#b7ccde;color:#3f5b75}
+
+@media(max-width:760px){body{font-size:13px}.nav{font-size:12px}.domain-nav{font-size:10.5px}.micro{font-size:10px}.radar-head b{font-size:12px}.signal-copy b,.change-copy b{font-size:10.5px}.signal-copy small,.change-copy small{font-size:8.5px}.change-time{font-size:8px}}
