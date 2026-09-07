@@ -17,27 +17,25 @@ const model={
  promoted:[{id:'p',title:'should not render',status:'ACTIVE'}],decisions:[]
 };
 
-const fakeRoot=()=>({
- innerHTML:'',
- querySelectorAll(){return[]},
- querySelector(){return null}
-});
+const fakeRoot=()=>({innerHTML:'',querySelectorAll(){return[]},querySelector(){return null}});
 
-test('overview puts the observatory map before the operational deck',()=>{
- assert.match(index,/O conhecimento é um sistema\./);
- assert.match(index,/ui\/observatory-v2\.css/);
+test('overview puts the approved reference map before the operational deck',()=>{
+ assert.match(index,/Ideias em órbita\./);
+ assert.match(index,/Descobertas em rede\./);
+ assert.match(index,/ui\/reference-one\.css/);
  assert.ok(index.indexOf('id="map-workspace"')<index.indexOf('id="command-center"'));
- assert.doesNotMatch(index,/FRONTEND OFICIAL/);
- assert.doesNotMatch(index,/Estado rastreável/);
+ assert.match(index,/FRONTEND OFICIAL/);
+ assert.match(index,/Estado rastreável/);
 });
 
-test('post-map deck contains status, overview, recent activity and priorities only',()=>{
+test('post-map deck contains the five approved reference consoles',()=>{
  const root=fakeRoot();
  renderControlTower(root,model,{});
  assert.match(root.innerHTML,/Status operacional/);
- assert.match(root.innerHTML,/Visão geral/);
+ assert.match(root.innerHTML,/Prioridades/);
  assert.match(root.innerHTML,/Atividade recente/);
- assert.match(root.innerHTML,/Prioridades operacionais/);
+ assert.match(root.innerHTML,/Blockers/);
+ assert.match(root.innerHTML,/Readback/);
  assert.doesNotMatch(root.innerHTML,/LEARNING PROMOVIDO/);
  assert.doesNotMatch(root.innerHTML,/APRENDIZADO/);
 });
