@@ -1,6 +1,6 @@
 /** Navigation session: what is focused, filtered and loaded.
- *  Owns exactly one graph read plus one summary read per recorte, keeps the
- *  stale-response guard, and emits events so views stay presentational. */
+ *  Graph and summary reads settle independently under one stale-response guard,
+ *  so a slow or failed summary can never hold the map hostage. */
 
 const ROOT = {id:'system:NEXO', label:'NEXO'};
 
@@ -16,19 +16,41 @@ export function createSession(api, {limit = 120, depth = 3, onPersist} = {}) {
 
  async function refresh() {
   const seq = ++loadSeq;
+  const filters = {...s.filters};
+  const q = {...filters, focus: s.focus, mode: s.mode, offset: s.offset, limit: limit + s.extraLimit, depth: s.depth};
   emit('loading', {focus: s.focus});
-  try {
-   const q = {...s.filters, focus: s.focus, mode: s.mode, offset: s.offset, limit: limit + s.extraLimit, depth: s.depth};
-   const [graph, summary] = await Promise.all([api.graph(q), api.state(s.filters)]);
-   if (seq !== loadSeq) return null;        // a newer recorte already won
-   s.graph = graph; s.summary = summary;
-   emit('graph', {graph, summary});
-   return graph;
-  } catch (error) {
-   if (seq !== loadSeq) return null;
-   emit('error', {error});                   // previous view is intentionally preserved
-   return null;
-  }
+
+  const graphRead = (async () => {
+   try {
+    const graph = await api.graph(q);
+    if (seq !== loadSeq) return null;
+    s.graph = graph;
+    emit('graph', {graph, summary:s.summary});
+    return graph;
+   } catch (error) {
+    if (seq !== loadSeq) return null;
+    emit('graph-error', {error});           // previous graph is intentionally preserved
+    return null;
+   }
+  })();
+
+  const summaryRead = (async () => {
+   try {
+    const summary = await api.state(filters);
+    if (seq !== loadSeq) return null;
+    s.summary = summary;
+    emit('summary', {summary, graph:s.graph});
+    return summary;
+   } catch (error) {
+    if (seq !== loadSeq) return null;
+    emit('summary-error', {error});         // previous summary is intentionally preserved
+    return null;
+   }
+  })();
+
+  const [graphResult] = await Promise.allSettled([graphRead, summaryRead]);
+  if (seq !== loadSeq) return null;
+  return graphResult.status === 'fulfilled' ? graphResult.value : null;
  }
 
  return {
