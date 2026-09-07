@@ -78,7 +78,7 @@ export function renderControlTower(root,model,{onFocus,onMap}={}){
 
  root.innerHTML=`
   <div class="ct-head">
-   <div><p class="eyebrow">CONTROL TOWER / AGORA</p><h2>O que merece atenção <span>neste momento.</span></h2><p>${esc(corpus)}</p></div>
+   <div><p class="eyebrow">CONTROL TOWER / AGORA</p><h2>Prioridades operacionais</h2><p>${esc(corpus)}</p></div>
    <button class="ct-map-cta" data-ct-map>Explorar mapa <span>↓</span></button>
   </div>
   <div class="ct-health-grid">${healthHtml}</div>
@@ -89,9 +89,9 @@ export function renderControlTower(root,model,{onFocus,onMap}={}){
    <article><small>CORPUS</small><strong>${model.corpus.tests==null?'—':num(model.corpus.tests)}</strong><span>testes científicos indexados</span></article>
   </div>
   <div class="ct-grid">
-   <section class="ct-panel"><div class="ct-title"><span>PRÓXIMAS DECISÕES</span><small>BLACK BOX · DERIVED_NOT_EVIDENCE</small></div>${blockers}</section>
+   <section class="ct-panel"><div class="ct-title"><span>PRÓXIMAS DECISÕES</span><small>BLACK BOX</small></div>${blockers}</section>
    <section class="ct-panel"><div class="ct-title"><span>MUDOU DESDE A ÚLTIMA VISITA</span><small>RUNTIME EVENTS</small></div>${recent}</section>
-   <section class="ct-panel ct-learning-panel"><div class="ct-title"><span>LEARNING PROMOVIDO</span><small>APRENDIZADO · NÃO É EVIDÊNCIA CIENTÍFICA</small></div><div class="ct-learning-list">${promoted}</div></section>
+   <section class="ct-panel ct-learning-panel"><div class="ct-title"><span>LEARNING PROMOVIDO</span></div><div class="ct-learning-list">${promoted}</div></section>
   </div>`;
 
  root.querySelectorAll('[data-ct-focus]').forEach(button=>button.onclick=()=>onFocus?.(button.dataset.ctFocus));
