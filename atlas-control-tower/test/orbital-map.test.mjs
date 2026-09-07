@@ -361,6 +361,19 @@ test('one render loop drives every filament: no per-edge timer or DOM node', () 
  assert.equal((graph.match(/requestAnimationFrame/g) || []).length <= 3, true, 'more than one animation loop');
 });
 
+test('stylesheet imports resolve next to their own file, not against the host root', () => {
+ // The deployed page loads these stylesheets from a pinned CDN path. A root
+ // absolute @import would resolve against the CDN origin and silently 404,
+ // dropping the whole theme token set in production.
+ for (const file of ['styles.css', 'ui/premium-v2.css', 'ui/official-dashboard.css', 'ui/readability.css']) {
+  const css = read(file);
+  const absolute = css.match(/@import\s+url\(['"]?\/[^)]*\)/g) || [];
+  assert.deepEqual(absolute, [], `${file} imports from the host root: ${absolute.join(', ')}`);
+ }
+ assert.match(read('styles.css'), /@import url\('\.\/ui\/tokens\.css'\)/,
+  'styles.css must still pull the theme tokens it declares it owns');
+});
+
 test('light theme keeps map labels and chrome readable on a pale ground', async () => {
  const graph = read('graph3d.mjs');
  assert.match(graph, /palette\.isLight\?mixHex\(labelColor,palette\.text/,
