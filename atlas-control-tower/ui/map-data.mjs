@@ -18,8 +18,44 @@ export async function expandOverview(base,read){
  return {...base,nodes:[...nodes.values()],edges:[...edges.values()].filter(e=>nodes.has(e.source)&&nodes.has(e.target)),preview:true,total:nodes.size};
 }
 
+const SCIENCE_ARC=[
+ [72,-205,34],[178,-186,-18],[282,-132,42],[344,-45,-30],
+ [337,62,38],[286,154,-22],[188,218,48],[74,202,-28],
+ [-18,153,30],[-63,73,-24],[-48,-44,22],[42,-116,-16]
+];
+
+function scienceSystemPositions(data,focus){
+ const focusPos=[-178,18,0],children=data.nodes.filter(n=>n.id!==focus);
+ const order=n=>{
+  const code=String(n.id).replace('domain:','');
+  if(code==='M1')return 99;
+  const m=code.match(/D(\d+)/);return m?Number(m[1]):50;
+ };
+ const sorted=[...children].sort((a,b)=>order(a)-order(b)||String(a.id).localeCompare(String(b.id)));
+ const pos=new Map([[focus,focusPos]]);
+ sorted.forEach((n,i)=>{
+  const slot=SCIENCE_ARC[i%SCIENCE_ARC.length],lap=Math.floor(i/SCIENCE_ARC.length);
+  pos.set(n.id,[focusPos[0]+slot[0]+lap*26,focusPos[1]+slot[1]+lap*18,slot[2]-lap*10]);
+ });
+ return data.nodes.map(n=>pos.get(n.id)||[0,0,-80]);
+}
+
+function scienceDomainPositions(data,focus){
+ const focusPos=[-205,8,0],children=data.nodes.filter(n=>n.id!==focus),bands=[-205,-70,72,205],pos=new Map([[focus,focusPos]]);
+ children.forEach((n,i)=>{
+  const branch=i%bands.length,step=Math.floor(i/bands.length),phase=branch*.83+step*1.37;
+  const x=focusPos[0]+145+step*88+branch*14;
+  const y=focusPos[1]+bands[branch]+Math.sin(phase)*24+step*(branch%2?4:-3);
+  const z=(branch-1.5)*24+Math.cos(phase)*38+(step%2?18:-12);
+  pos.set(n.id,[x,y,z]);
+ });
+ return data.nodes.map(n=>pos.get(n.id)||[0,0,-80]);
+}
+
 export function clusteredPositions(data,focus,fallback){
  if(data.nodes.some(n=>n.layer!=null))return layeredPositions(data,focus);
+ if(focus==='system:SCIENCE')return scienceSystemPositions(data,focus);
+ if(String(focus||'').startsWith('domain:'))return scienceDomainPositions(data,focus);
  if(focus!=='system:NEXO')return fallback(data.nodes,focus);
  const groups=data.nodes.filter(n=>n.type==='SYSTEM'&&n.id!==focus),centers=new Map();
  groups.forEach((n,i)=>{const a=i/groups.length*Math.PI*2-.9;centers.set(n.id,[Math.cos(a)*300,Math.sin(a)*195,Math.sin(a*2)*65])});
