@@ -1,11 +1,19 @@
 /** Visual-only knobs. No scientific status, authority or API logic belongs here. */
 export const MAP_CONFIG = Object.freeze({
- maxNodes:120, previewPerGroup:9, stars:340, orbitSpeed:.00004,
- coreRadius:38, groupRadius:18, nodeRadius:5, haloAlpha:'20', maxLabels:20,
+ maxNodes:140, previewPerGroup:12, previewDepth:2, stars:340, orbitSpeed:.00004,
+ coreRadius:38, groupRadius:18, nodeRadius:7, haloAlpha:'22', maxLabels:24,
  fog:.68,
  edgeCurve:.16,
  vignette:.46,
- clusterRadius:34, clusterSpread:10
+ clusterRadius:38, clusterSpread:12
+});
+export const SYSTEM_COLORS = Object.freeze({
+ 'system:NEXO':'#7fe7ff',
+ 'system:SCIENCE':'#2bb3ff',
+ 'system:LEARNING':'#9b6dff',
+ 'system:AUTOMATION':'#ff4fd8',
+ 'system:ENGINEERING':'#20e6c7',
+ 'system:OLYMPUS':'#63ffd1'
 });
 export const MAP_THEMES = Object.freeze({
  dark:{background:'#01040a',haze:'#225bff20',stars:'#77d4ff',guide:'#236ca8',node:'#20b9ff',core:'#b7ecff',edge:'#1da8ff',derived:'#4f6387',text:'#eef7ff',muted:'#8ea8c2',label:'#030914ed',border:'#155083',highlight:'#f0fbff',sphereMid:'#087ed0',sphereShadow:'#020913',rim:'#49d5ff',badge:'#06111fed',badgeText:'#d9f5ff'},
