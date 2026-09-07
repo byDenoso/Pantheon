@@ -1,2 +1,3 @@
 Trigger full Vercel rebuild from canonical branch for NEXO Atlas official frontend.
 Impact/motion rework: root shows only primary system nodes; structural nodes open subnodes on click; fast site-wide transitions; dark sidebar contrast and light-node legibility improved.
+Black Box implementation: cognitive flight recorder, learning pipeline, automation telemetry, learned cross-domain relations, integrity score and explicit DERIVED_NOT_EVIDENCE authority.
