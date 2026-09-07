@@ -14,14 +14,15 @@ test('Premium V2 public assets are declared and deployed', () => {
  }
 });
 
-test('Command Center public assets are declared, deployed and wired before the map', () => {
- for (const file of ['ui/control-tower.css','ui/control-tower.mjs']) {
+test('Observatory overview assets are declared, deployed and the operational deck follows the map', () => {
+ for (const file of ['ui/control-tower.css','ui/control-tower.mjs','ui/observatory-v2.css']) {
   assert.ok(frontendFiles.includes(file), `frontend boundary missing ${file}`);
   assert.ok(builds.has(file), `vercel build missing ${file}`);
  }
  assert.match(index, /\/ui\/control-tower\.css/);
+ assert.match(index, /\/ui\/observatory-v2\.css/);
  assert.match(index, /id="command-center"/);
- assert.ok(index.indexOf('id="command-center"') < index.indexOf('id="map-workspace"'));
+ assert.ok(index.indexOf('id="map-workspace"') < index.indexOf('id="command-center"'));
 });
 
 test('entrypoint loads Premium V2 instead of legacy competing override layers', () => {
