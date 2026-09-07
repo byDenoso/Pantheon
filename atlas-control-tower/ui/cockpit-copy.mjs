@@ -26,15 +26,39 @@ function pt(meta,keys){
  return '';
 }
 
+function fallbackCopy(entity={}){
+ const label=clean(entity.label||entity.canonicalTitle||entity.canonicalId||entity.id)||'esta entidade';
+ const type=String(entity.type||'ENTITY').toUpperCase();
+ const whatByType={
+  SYSTEM:`Sistema ${label} no NEXO Atlas.`,
+  DOMAIN:`Domínio ${label} no NEXO Atlas.`,
+  CAMPAIGN:`Campanha ${label} registrada no NEXO Atlas.`,
+  TEST:`Teste ${label} registrado no NEXO Atlas.`,
+  RESULT:`Resultado ${label} registrado no NEXO Atlas.`,
+  CLAIM:`Hipótese ou claim ${label} registrada no NEXO Atlas.`,
+  ACTION:`Ação operacional ${label} registrada no NEXO Atlas.`,
+  AUTOMATION_RUN:`Execução ${label} registrada pela Black Box do NEXO Atlas.`,
+  RUNTIME_EVENT:`Evento de runtime ${label} registrado pela Black Box do NEXO Atlas.`,
+  LEARNING_RELATION:`Registro de aprendizado ${label} publicado no NEXO Atlas.`,
+  PUBLICATION:`Publicação ${label} registrada no NEXO Atlas.`
+ };
+ return{
+  what:whatByType[type]||`Entidade ${label} registrada no NEXO Atlas.`,
+  how:'O Atlas a projeta a partir das fontes publicadas e preserva sua autoridade original, sem inventar conteúdo ausente.',
+  why:'Permitir navegação e rastreabilidade do estado publicado enquanto a descrição semântica específica é atualizada.'
+ };
+}
+
 export function cockpitCopy(entity={}){
  const meta=entity.metadata||{};
  const what=pt(meta,['what_pt','o_que','oque_pt','what_pt_br']);
  const how=pt(meta,['how_pt','como','como_pt','method_pt']);
  const why=pt(meta,['why_pt','por_que','porque_pt','rationale_pt','objective_pt']);
+ const fallback=fallbackCopy(entity);
  return{
-  what:what||'Conteúdo ainda não indexado em português.',
-  how:how||'Como ainda não indexado em português.',
-  why:why||'Por quê ainda não indexado em português.'
+  what:what||fallback.what,
+  how:how||fallback.how,
+  why:why||fallback.why
  };
 }
 
