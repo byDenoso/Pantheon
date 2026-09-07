@@ -1,5 +1,11 @@
 const KEY='atlas.theme';
 
+// Load the typography/contrast pass from the same origin as this module.
+// This also works when the static client is served from a pinned CDN build.
+if(typeof document!=='undefined'&&!document.querySelector('link[data-atlas-readability]')){
+ const link=document.createElement('link');link.rel='stylesheet';link.dataset.atlasReadability='1';link.href=new URL('./readability.css',import.meta.url).href;document.head.append(link);
+}
+
 // Graph labels are intentionally terse. Navigation affordance comes from motion,
 // cursor/hover and the inspector; repeating "clique para abrir" on every planet
 // adds visual noise and reduces legibility in both themes.
