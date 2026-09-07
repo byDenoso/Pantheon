@@ -17,6 +17,7 @@ import {renderData} from './ui/data-view.mjs';
 import {loadLearning} from './ui/learning-view.mjs';
 import {renderRecortePanel} from './ui/recorte-view.mjs';
 import {renderBlackBox} from './ui/blackbox-view.mjs';
+import {applyWorkspaceMode, normalizeMode} from './ui/workspace.mjs';
 import {registerWebMcp} from './webmcp/tools.mjs';
 
 const api = createApi();
@@ -121,20 +122,33 @@ session.on((event, payload) => {
 
 /* ---------- workspace modes ---------- */
 
-function setMode(mode) {
- session.setUi(mode);
- document.body.dataset.mode = mode;
- $$('[data-mode]').forEach(b => b.classList.toggle('on', b.dataset.mode === mode));
- $$('[data-open-mode]').forEach(b => b.classList.toggle('active', b.dataset.openMode === mode));
- $('#audit-section').hidden = mode !== 'audit';
- $('#learning-section-panel').hidden = mode !== 'learning';
- $('#data-section').hidden = mode !== 'explore';
- if (mode === 'explore' && session.state.graph) renderData(session.state.graph, {onEntity: id => selectNode(id)});
- if (mode === 'audit') loadAudit(api, {onEntity: id => selectNode(id)});
- if (mode === 'learning') loadLearning(api);
- if (session.state.selected) inspector.inspect(session.state.selected, {ui: mode});
+function setMode(mode, {scroll=true}={}) {
+ const current = normalizeMode(mode);
+ session.setUi(current);
+ const shouldScroll = scroll && current !== 'overview';
+ applyWorkspaceMode(current, {scroll:shouldScroll, focus:false});
+ $$('[data-open-mode]').forEach(b => b.classList.toggle('active', b.dataset.openMode === current));
+ if (current === 'explore' && session.state.graph) renderData(session.state.graph, {onEntity: id => selectNode(id)});
+ if (current === 'audit') loadAudit(api, {onEntity: id => selectNode(id)});
+ if (current === 'learning') loadLearning(api);
+ if (session.state.selected) inspector.inspect(session.state.selected, {ui: current});
+ return current;
 }
-$$('[data-mode]').forEach(b => b.onclick = () => setMode(b.dataset.mode));
+const workspaceTabs = $$('[data-mode]');
+workspaceTabs.forEach((b, i) => {
+ b.onclick = () => setMode(b.dataset.mode);
+ b.onkeydown = e => {
+  if (!['ArrowLeft','ArrowRight','Home','End'].includes(e.key)) return;
+  e.preventDefault();
+  let next = i;
+  if (e.key === 'ArrowLeft') next = (i - 1 + workspaceTabs.length) % workspaceTabs.length;
+  if (e.key === 'ArrowRight') next = (i + 1) % workspaceTabs.length;
+  if (e.key === 'Home') next = 0;
+  if (e.key === 'End') next = workspaceTabs.length - 1;
+  workspaceTabs[next]?.focus();
+  setMode(workspaceTabs[next]?.dataset.mode);
+ };
+});
 $$('[data-open-mode]').forEach(b => b.onclick = () => {setMode(b.dataset.openMode); $('#sidebar').classList.remove('open')});
 
 /* ---------- map controls ---------- */
@@ -198,7 +212,7 @@ $('#dimension').onclick = () => {
 $('#more').onclick = () => session.more();
 for (const mode of ['neighbors', 'ancestors', 'descendants', 'critical'])
  $('#' + mode).onclick = () => {session.state.focus = session.state.selected || session.state.focus; session.setMode(mode)};
-$$('[data-focus]').forEach(b => b.onclick = () => {setMode('overview'); session.focusNode({id: b.dataset.focus, label: b.textContent.trim()})});
+$$('[data-focus]').forEach(b => b.onclick = () => {setMode('overview', {scroll:false}); session.focusNode({id: b.dataset.focus, label: b.textContent.trim()})});
 
 installFilters(session);
 
@@ -237,6 +251,7 @@ document.addEventListener('visibilitychange', () => {if (!document.hidden) check
 
 /* ---------- start ---------- */
 
+applyWorkspaceMode(session.state.ui, {scroll:false});
 syncFilterInputs(session.state.filters);
 await session.refresh();
 await checkAutoSync();
