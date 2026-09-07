@@ -1,2 +1,2 @@
 Trigger full Vercel rebuild from canonical branch for NEXO Atlas official frontend.
-Cosmic dark/neon rework, hero 3D map, top metrics strip removed, live radar preserved.
+Colored system planets, inherited subnode colors, nested clickable subnodes enabled in root overview.
