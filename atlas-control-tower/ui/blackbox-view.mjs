@@ -124,7 +124,9 @@ export async function renderBlackBox(api, graph, summary, {onEntity}={}) {
  #blackbox-panel .bb-trajectory{position:relative;z-index:1}
  #blackbox-panel .bb-step-note{font-size:8px;color:var(--muted);margin:0 0 10px;line-height:1.5}
  #blackbox-panel .bb-steps{list-style:none;margin:0;padding:0;display:grid;gap:0}
- #blackbox-panel .bb-step{display:grid;grid-template-columns:22px minmax(0,1fr);gap:11px;padding:9px 0 9px 2px;border-left:1px solid var(--line);margin-left:10px;padding-left:16px;position:relative}
+ /* the step number is absolutely positioned on the rail, so it is out of flow:
+    the track must be a single column or the text lands in the icon's slot */
+ #blackbox-panel .bb-step{display:grid;grid-template-columns:minmax(0,1fr);padding:9px 0 9px 16px;border-left:1px solid var(--line);margin-left:10px;position:relative}
  #blackbox-panel .bb-step:last-child{border-left-color:transparent}
  #blackbox-panel .bb-step>i{position:absolute;left:-10px;top:9px;width:20px;height:20px;border-radius:50%;display:grid;place-items:center;font-style:normal;font-size:8px;font-weight:700;background:var(--bg);border:1px solid var(--bb-cyan);color:var(--bb-cyan)}
  #blackbox-panel .bb-step b{display:block;font-size:10px}

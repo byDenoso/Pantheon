@@ -240,6 +240,16 @@ test('the Black Box surface says "Como chegou aqui" and marks the summary as der
  assert.match(view, /DERIVED_NOT_EVIDENCE/);
 });
 
+test('the trajectory rail does not squeeze its own text into the icon slot', () => {
+ const view = read('ui/blackbox-view.mjs');
+ const step = view.match(/\.bb-step\{([^}]*)\}/)?.[1] || '';
+ assert.ok(step.includes('grid-template-columns:minmax(0,1fr)'),
+  '.bb-step must use a single track: its number is absolutely positioned and out of flow');
+ assert.match(view, /\.bb-step>i\{position:absolute/, 'the step number belongs on the rail');
+ assert.doesNotMatch(step, /grid-template-columns:\s*\d+px/,
+  'a fixed first track would collect the text once the icon leaves the flow');
+});
+
 test('Learning keeps its relations derived and never promotes them to evidence', () => {
  const learning = read('ui/learning-view.mjs');
  assert.match(learning, /DERIVED_NOT_EVIDENCE/, 'the filament legend must declare its authority');
