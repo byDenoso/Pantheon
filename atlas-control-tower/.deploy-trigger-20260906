@@ -1,2 +1,2 @@
 Trigger full Vercel rebuild from canonical branch for NEXO Atlas official frontend.
-Colored system planets, inherited subnode colors, nested clickable subnodes enabled in root overview.
+Progressive subnode disclosure: sparse direct satellites in root overview, deeper descendants only after drill-down; system color inheritance preserved.
