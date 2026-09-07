@@ -62,6 +62,10 @@
       "use": "@vercel/static"
     },
     {
+      "src": "ui/galactic-theme.css",
+      "use": "@vercel/static"
+    },
+    {
       "src": "ui/visual-config.mjs",
       "use": "@vercel/static"
     },
