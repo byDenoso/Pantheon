@@ -1,26 +1,26 @@
 /** Visual-only knobs. No scientific status, authority or API logic belongs here. */
 export const MAP_CONFIG = Object.freeze({
  maxNodes:120, previewPerGroup:0, previewDepth:1, stars:390, orbitSpeed:.000055,
- coreRadius:43, groupRadius:22, domainRadius:16, campaignRadius:11, nodeRadius:7,
- haloAlpha:'32', maxLabels:22, fog:.46, edgeCurve:.16, vignette:.34,
- clusterRadius:48, clusterSpread:14, transitionMs:260, ambientMaxNodes:30
+ coreRadius:45, groupRadius:23, domainRadius:17, campaignRadius:12, nodeRadius:8,
+ haloAlpha:'3d', maxLabels:22, fog:.38, edgeCurve:.16, vignette:.28,
+ clusterRadius:50, clusterSpread:15, transitionMs:240, ambientMaxNodes:30
 });
 
 export const SYSTEM_COLORS = Object.freeze({
- 'system:NEXO':'#7fe7ff',
+ 'system:NEXO':'#8deaff',
  'system:SCIENCE':'#168dff',
- 'system:LEARNING':'#925cff',
- 'system:AUTOMATION':'#ff42c8',
- 'system:ENGINEERING':'#00d7b6',
- 'system:OLYMPUS':'#3ce7bd'
+ 'system:LEARNING':'#a36cff',
+ 'system:AUTOMATION':'#ff4dce',
+ 'system:ENGINEERING':'#16e1bf',
+ 'system:OLYMPUS':'#55ebc6'
 });
 
 export const MAP_THEMES = Object.freeze({
  dark:{
-  isLight:false,background:'#01040a',haze:'#174dff24',haze2:'#6b2cff1c',stars:'#89ddff',guide:'#2269a3',node:'#20b9ff',core:'#bff2ff',edge:'#25baff',derived:'#526b91',text:'#f4f9ff',muted:'#a4bad1',label:'#050b15f5',border:'#23557c',highlight:'#f7fdff',sphereMid:'#087ed0',sphereShadow:'#020913',rim:'#6adfff',badge:'#071521f5',badgeText:'#e5f8ff',activeRing:'#ffffffdd'
+  isLight:false,background:'#01040a',haze:'#174dff24',haze2:'#6b2cff1c',stars:'#a7e7ff',guide:'#2e77ad',node:'#27c0ff',core:'#d6f8ff',edge:'#39c4ff',derived:'#6e86a6',text:'#ffffff',muted:'#c1d2e3',label:'#07111dfb',border:'#3a719b',highlight:'#ffffff',sphereMid:'#0b88d9',sphereShadow:'#020811',rim:'#8ceaff',badge:'#081726fb',badgeText:'#f1fbff',activeRing:'#ffffffff'
  },
  light:{
-  isLight:true,background:'#eef5fb',haze:'#168dff18',haze2:'#925cff10',stars:'#1d639d',guide:'#7aa9cc',node:'#086fc4',core:'#075f9f',edge:'#1976c9',derived:'#819bb4',text:'#10243a',muted:'#405b76',label:'#fffffff9',border:'#8aaac5',highlight:'#ffffff',sphereMid:'#4b92c7',sphereShadow:'#123d62',rim:'#0f3351',badge:'#fffffffa',badgeText:'#173d5f',activeRing:'#0b2741dd'
+  isLight:true,background:'#f4f8fc',haze:'#168dff0f',haze2:'#925cff0b',stars:'#316b98',guide:'#769bb8',node:'#006bd6',core:'#005aaf',edge:'#0b6fc7',derived:'#6f8296',text:'#0a1d31',muted:'#304d69',label:'#fffffffE',border:'#5e84a5',highlight:'#ffffff',sphereMid:'#267ebc',sphereShadow:'#082f52',rim:'#072b49',badge:'#fffffffe',badgeText:'#102f4d',activeRing:'#041b30ee'
  }
 });
 
