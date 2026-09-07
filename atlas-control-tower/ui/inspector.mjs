@@ -11,7 +11,7 @@ export function closeDrawer() {$('#inspector').hidden = true; $('#graph')?.focus
 const sourceBlock = (n, safeUrl) =>
  `<div class="detail-section"><h3>FONTES</h3>${(n.sourceRefs || []).map(r =>
   `<p class="micro">${esc(r.sourceRef || r.source || '')}<br>${safeUrl(r.url) ? `<a href="${esc(r.url)}" target="_blank" rel="noreferrer">Abrir fonte ↗</a>` : ''}</p>`).join('')
-  || '<p class="micro">Estrutura de navegação derivada.</p>'}${safeUrl(n.url) ? `<a href="${esc(n.url)}" target="_blank" rel="noreferrer">Abrir arquivo ↗</a>` : ''}</div>`;
+  || '<p class="micro">Estrutura de navegação derivada.</p>'}${safeUrl(n.url) ? `<a href="${esc(n.url)}" target="_blank" rel="noreferrer">Abrir fonte ↗</a>` : ''}</div>`;
 
 export function relationRow(r) {
  const scope = r.crossDomain ? `<em class="cross">cross-domain ${esc(r.domainA)} ↔ ${esc(r.domainB)}</em>` : esc(r.scope || 'mesmo domínio');
@@ -58,16 +58,19 @@ export function createInspector({api, colors, state, safeUrl, onFocus, onLineage
   const mine = ++seq;
   $('#selection-hint').textContent = id;
   openDrawer();
-  $('#detail').innerHTML = '<p class="detail-summary">Lendo entidade e arquivos…</p>';
+  $('#detail').innerHTML = '<p class="detail-summary">Lendo entidade…</p>';
   try {
-   const [d, files] = await Promise.all([api.entity(id), api.files(id)]);
+   // The inspector is intentionally independent from file/provenance lookups.
+   // Structural nodes (Learning / Black Box) are valid entities even when they
+   // have no FILE relation, so an auxiliary lookup must never make the drawer fail.
+   const d = await api.entity(id);
    if (mine !== seq) return;
    const n = d.entity, shown = n.metadata || {};
+   if (!n) throw Error('ENTITY_PAYLOAD_MISSING');
    $('#detail').innerHTML =
     `<p class="eyebrow" style="margin-top:20px">${esc(n.subtype || n.type)}</p><h2 class="detail-title">${esc(n.label)}</h2>`
     + `<span class="status-chip" style="--chip:${colors[state(n.status)]}">${esc(n.status || 'Estado não informado')}</span>`
     + `<p class="authority">${esc(n.authority)}</p>`
-    // The canonical identifier is always shown, whatever label the naming layer chose.
     + `<p class="canonical"><label>ID canônico</label><code>${esc(n.canonicalId || String(n.id).replace(/^[a-z_]+:/, ''))}</code>`
       + `${n.displaySource && n.displaySource !== 'CANONICAL_ID' ? `<small>rótulo: ${esc(n.displaySource)}</small>` : ''}`
       + `${n.canonicalTitle && n.canonicalTitle !== n.label ? `<small>título de origem: ${esc(n.canonicalTitle)}</small>` : ''}</p>`
@@ -75,10 +78,7 @@ export function createInspector({api, colors, state, safeUrl, onFocus, onLineage
     + `<div class="detail-actions"><button id="open-node">Explorar →</button><button id="lineage-node">Linhagem</button><button id="learning-node">Aprendizado relacionado</button><button id="compare-node">Comparar</button><button id="copy-node">Copiar ID</button></div>`
     + sourceBlock(n, safeUrl)
     + `<div class="detail-section" id="learning-section" hidden><h3>APRENDIZADO RELACIONADO</h3><div id="learning-overlay"></div></div>`
-    + `<div class="detail-section"><h3>ARQUIVOS RELACIONADOS · ${files.length}</h3>${files.map(f =>
-      `<button class="relation" data-related="${esc(f.id)}">${esc(f.label)}<small>${esc(f.type)}</small></button>`).join('')
-      || '<p class="micro">Nenhum arquivo com vínculo explícito neste registro.</p>'}</div>`
-    + `<div class="detail-section"><h3>RELAÇÕES · ${d.relationCount}</h3>${d.relations.slice(0, 30).map(e =>
+    + `<div class="detail-section"><h3>RELAÇÕES · ${d.relationCount || 0}</h3>${(d.relations || []).slice(0, 30).map(e =>
       `<button class="relation" data-related="${esc(e.source === id ? e.target : e.source)}">${esc((e.source === id ? e.target : e.source).slice(0, 85))}<small>${esc(e.type)} · ${esc(e.authority)}</small></button>`).join('')
       || '<p class="micro">Nenhuma relação explícita resolvida.</p>'}</div>`
     + `<div class="detail-section"><h3>REGISTRO DA FONTE</h3>${Object.entries(shown).filter(([k, v]) => v && k !== '_row').slice(0, 30).map(([k, v]) =>
@@ -91,8 +91,8 @@ export function createInspector({api, colors, state, safeUrl, onFocus, onLineage
    $('#copy-node').onclick = () => navigator.clipboard.writeText(n.canonicalId || id).then(() => toast('ID copiado.')).catch(() => toast(id));
    $('#learning-node').onclick = () => {$('#learning-section').hidden = false; renderLearningOverlay(api, id)};
    $$('[data-related]').forEach(b => b.onclick = () => onRelated(b.dataset.related));
-  } catch {
-   if (mine === seq) $('#detail').innerHTML = '<p class="detail-summary">A fonte não respondeu. Tente abrir a entidade novamente.</p>';
+  } catch (e) {
+   if (mine === seq) $('#detail').innerHTML = `<p class="detail-summary">Não foi possível abrir esta entidade${e?.message ? ` · ${esc(e.message)}` : ''}.</p>`;
   }
  }
 
