@@ -130,10 +130,14 @@ export class Graph3D{
   if(ambient&&dt>0)for(const f of this.filaments||[])advancePulse(f,dt);
   if(t<this.pulseUntil)active=true;
   if(ambient&&t-this.lastAmbient>30){this.lastAmbient=t;active=true}
+  if(this.stopped)return;
   this.draw(t);
   if(active||ambient)this.motionFrame=requestAnimationFrame(this.motionLoop);else this.lastFrame=0;
  }
- kick(ms=380){this.pulseUntil=Math.max(this.pulseUntil,performance.now()+ms);if(!this.motionFrame)this.motionFrame=requestAnimationFrame(this.motionLoop)}
+ kick(ms=380){if(this.stopped)return;this.pulseUntil=Math.max(this.pulseUntil,performance.now()+ms);if(!this.motionFrame)this.motionFrame=requestAnimationFrame(this.motionLoop)}
+ /** Releases the animation loop. A panel that replaces its canvas must call
+  *  this, or the detached renderer keeps a requestAnimationFrame alive. */
+ stop(){this.stopped=true;if(this.motionFrame)cancelAnimationFrame(this.motionFrame);this.motionFrame=0;this.pulseUntil=0}
  reset(redraw=true){Object.assign(this.camera,{yaw:.2,pitch:-.2,zoom:1,panX:0,panY:0});if(redraw)this.draw()}
  zoom(f){this.camera.zoom=Math.max(.3,Math.min(4,this.camera.zoom*f));this.kick(240);this.draw()}
  center(){const p=this.points.find(p=>p.node.id===this.selected);if(p){this.camera.panX+=this.w/2-p.x;this.camera.panY+=this.h/2-p.y;this.kick(280);this.draw()}}
@@ -216,11 +220,15 @@ export class Graph3D{
   this.drawLabels(c,w,h,nodeBase,fog);
  }
  drawLabels(c,w,h,nodeBase,fog){
-  const boxes=[];this.labelBoxes=boxes;const reserved=[{x:w/2-135,y:h-105,w:270,h:56},{x:10,y:h-46,w:w-20,h:40},{x:14,y:h-150,w:230,h:104},{x:12,y:8,w:230,h:34}],RANK={SYSTEM:700,DOMAIN:480,CAMPAIGN:260,CLAIM:130};
+  // Keep clear of the map chrome. A host without those controls (the Learning
+  // filament stage) sets `reserved` to [] and gets the whole canvas for labels.
+  const boxes=[];this.labelBoxes=boxes;
+  const reserved=this.reserved||[{x:w/2-135,y:h-105,w:270,h:56},{x:10,y:h-46,w:w-20,h:40},{x:14,y:h-150,w:230,h:104},{x:12,y:8,w:230,h:34}];
+  const topGuard=this.reserved?10:48,RANK={SYSTEM:700,DOMAIN:480,CAMPAIGN:260,CLAIM:130};
   const priority=p=>p.node.id===this.focus?1e4:p.node.id===this.selected?9e3:p.node.id===this.hover?.id?8e3:(RANK[p.node.type]||0)+p.z;
   for(const p of [...this.points].sort((a,b)=>priority(b)-priority(a))){const n=p.node,core=n.id===this.focus,active=n.id===this.selected||n.id===this.hover?.id;if(!core&&!active&&boxes.length>=Math.max(7,MAP_CONFIG.maxLabels|0))continue;if(this.focus==='system:NEXO'&&n.type!=='SYSTEM'&&!active)continue;if(this.data.nodes.length>44&&p.z<0&&n.type!=='SYSTEM'&&!core&&!active)continue;
    const maxChars=w<500?18:this.data.nodes.length>30?22:30,label=nodeDisplayLabel(n,maxChars),size=core?20:n.type==='SYSTEM'?14:12;c.font=(core?'750 ':'650 ')+size+'px sans-serif';const bw=c.measureText(label).width+26,bh=46,candidates=[[p.x-bw/2,p.y+p.r+14],[p.x-bw/2,p.y-p.r-bh-14],[p.x+p.r+16,p.y-bh/2],[p.x-p.r-bw-16,p.y-bh/2],...[48,80,112].flatMap(d=>[[p.x-bw/2,p.y-p.r-bh-d],[p.x-bw/2,p.y+p.r+d]])];let box;
-   for(const[x,y]of candidates){const b={x,y,w:bw,h:bh,id:n.id};if(x<8||x+bw>w-8||y<48||y+bh>h-38)continue;if(this.points.some(q=>q.node.id!==n.id&&q.x+q.r+4>x&&q.x-q.r-4<x+bw&&q.y+q.r+4>y&&q.y-q.r-4<y+bh))continue;if(boxes.some(a=>x<a.x+a.w+6&&x+bw+6>a.x&&y<a.y+a.h+5&&y+bh+5>a.y))continue;if(reserved.some(r=>x<r.x+r.w&&x+bw>r.x&&y<r.y+r.h&&y+bh>r.y))continue;box=b;break}if(!box)continue;boxes.push(box);
+   for(const[x,y]of candidates){const b={x,y,w:bw,h:bh,id:n.id};if(x<8||x+bw>w-8||y<topGuard||y+bh>h-38)continue;if(this.points.some(q=>q.node.id!==n.id&&q.x+q.r+4>x&&q.x-q.r-4<x+bw&&q.y+q.r+4>y&&q.y-q.r-4<y+bh))continue;if(boxes.some(a=>x<a.x+a.w+6&&x+bw+6>a.x&&y<a.y+a.h+5&&y+bh+5>a.y))continue;if(reserved.some(r=>x<r.x+r.w&&x+bw>r.x&&y<r.y+r.h&&y+bh>r.y))continue;box=b;break}if(!box)continue;boxes.push(box);
    const palette=themePalette(this.theme),labelColor=fog(nodeBase(n),p.z);
    // The chip border keeps the body's colour identity, but on a light ground a
    // pale system colour is unreadable as type: darken it toward the text ink.

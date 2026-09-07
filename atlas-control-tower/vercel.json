@@ -90,6 +90,10 @@
       "use": "@vercel/static"
     },
     {
+      "src": "ui/learning-graph.mjs",
+      "use": "@vercel/static"
+    },
+    {
       "src": "ui/dom.mjs",
       "use": "@vercel/static"
     },

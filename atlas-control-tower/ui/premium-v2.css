@@ -149,3 +149,21 @@ body[data-mode="learning"] #learning-section-panel,body[data-mode="audit"] #audi
 .filament-legend .fl-cross i{border-top:3px solid var(--accent-violet);opacity:.95;box-shadow:0 0 7px var(--accent-violet)}
 .filament-legend>small{margin-left:auto;font-size:7px;letter-spacing:.6px;color:var(--muted);text-transform:uppercase}
 @media(max-width:620px){.filament-legend{gap:9px;padding:8px 10px}.filament-legend>small{margin-left:0;flex-basis:100%}}
+
+/* Learning filament stage: the declared web of relations, drawn on the shared
+   canvas renderer. Counters stay visible so a sparse source reads as sparse. */
+.learning-filaments{margin:14px 0 18px;border:1px solid var(--line);border-radius:var(--radius-md);background:var(--surface);overflow:hidden}
+.lf-head{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;flex-wrap:wrap;padding:12px 14px;border-bottom:1px solid var(--line)}
+.lf-head b{display:block;font-size:12px}
+.lf-head small{display:block;font-size:8px;letter-spacing:1.2px;color:var(--muted);margin-top:3px}
+.lf-stats{display:flex;gap:8px;flex-wrap:wrap}
+.lf-stat{display:inline-flex;flex-direction:column;gap:1px;padding:5px 9px;border:1px solid var(--line);border-radius:var(--radius-xs);background:var(--soft);font-size:8px;letter-spacing:.4px;color:var(--muted);text-transform:uppercase}
+.lf-stat b{font-size:15px;letter-spacing:-.2px;color:var(--text)}
+.lf-stat.is-gap b{color:var(--accent-amber)}
+.lf-stage{position:relative;height:430px;background:var(--map-background,var(--bg))}
+.lf-stage canvas{display:block;width:100%;height:100%;touch-action:none;cursor:grab}
+.lf-stage canvas:focus-visible{outline:2px solid var(--ring);outline-offset:-2px}
+.lf-note{margin:0;padding:10px 14px;border-top:1px solid var(--line);font-size:9px;line-height:1.55;color:var(--muted)}
+.lf-note code{font-size:8px;padding:1px 4px;border-radius:4px;background:var(--soft)}
+@media(max-width:760px){.lf-stage{height:330px}.lf-head{padding:10px}.lf-stat{padding:4px 7px}.lf-stat b{font-size:13px}}
+@media(prefers-reduced-motion:reduce){.lf-stage canvas{cursor:default}}

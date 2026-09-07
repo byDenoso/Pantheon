@@ -15,7 +15,7 @@ import {installFilters, syncFilterInputs, resetFilterInputs} from './ui/filters.
 import {loadAudit} from './ui/audit-view.mjs';
 import {renderProvenance, renderFallbackNotice} from './ui/provenance.mjs';
 import {renderData} from './ui/data-view.mjs';
-import {loadLearning} from './ui/learning-view.mjs';
+import {loadLearning, setLearningFilamentTheme} from './ui/learning-view.mjs';
 import {renderRecortePanel} from './ui/recorte-view.mjs';
 import {renderBlackBox} from './ui/blackbox-view.mjs';
 import {applyWorkspaceMode, normalizeMode} from './ui/workspace.mjs';
@@ -36,7 +36,7 @@ const graph = new Graph3D($('#graph'), {
  open: n => session.focusNode(n),
  edge: e => inspector.inspectEdge(e)
 });
-installTheme($('#theme-toggle'), theme => {graph.theme = theme; graph.draw()});
+installTheme($('#theme-toggle'), theme => {graph.theme = theme; graph.draw(); setLearningFilamentTheme(theme)});
 
 const inspector = createInspector({
  api, colors, state, safeUrl,
@@ -141,7 +141,7 @@ function setMode(mode, {scroll=true}={}) {
  $$('[data-open-mode]').forEach(b => b.classList.toggle('active', b.dataset.openMode === current));
  if (current === 'explore' && session.state.graph) renderData(session.state.graph, {onEntity: id => selectNode(id)});
  if (current === 'audit') loadAudit(api, {onEntity: id => selectNode(id)});
- if (current === 'learning') loadLearning(api);
+ if (current === 'learning') loadLearning(api, {theme: graph.theme});
  if (session.state.selected) inspector.inspect(session.state.selected, {ui: current});
  return current;
 }
