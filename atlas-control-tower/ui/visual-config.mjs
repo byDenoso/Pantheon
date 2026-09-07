@@ -1,9 +1,9 @@
 /** Visual-only knobs. No scientific status, authority or API logic belongs here. */
 export const MAP_CONFIG = Object.freeze({
- maxNodes:120, previewPerGroup:0, previewDepth:1, stars:420, orbitSpeed:.00006,
+ maxNodes:120, previewPerGroup:0, previewDepth:1, stars:420, orbitSpeed:.000045,
  coreRadius:49, groupRadius:26, domainRadius:18, campaignRadius:13, nodeRadius:9,
  haloAlpha:'4a', maxLabels:22, fog:.31, edgeCurve:.16, vignette:.31,
- clusterRadius:50, clusterSpread:15, transitionMs:220, ambientMaxNodes:30
+ clusterRadius:50, clusterSpread:15, transitionMs:420, ambientMaxNodes:30
 });
 
 export const SYSTEM_COLORS = Object.freeze({
