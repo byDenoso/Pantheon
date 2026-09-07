@@ -29,7 +29,7 @@ export function normalizeGraph(payload, {focus = ''} = {}) {
  const nodes = arr(p.nodes);
  const edges = arr(p.edges);
  const ids = new Set(nodes.map(n => n.id));
- const known = new Set(['focus','nodes','edges','total','hasMore','truncated','depth','fingerprint','sourceVersion','source','freshness','cache','issues']);
+ const known = new Set(['focus','nodes','edges','total','hasMore','truncated','depth','fingerprint','sourceVersion','source','freshness','cache','issues','domainLinks']);
  const extra = Object.fromEntries(Object.entries(p).filter(([k]) => !known.has(k)));
  return {
   focus: str(p.focus, focus),
@@ -46,6 +46,11 @@ export function normalizeGraph(payload, {focus = ''} = {}) {
   freshness: Object.values(FRESHNESS).includes(p.freshness) ? p.freshness : FRESHNESS.SNAPSHOT,
   cache: CACHE_STATES.includes(p.cache) ? p.cache : '',
   issues: arr(p.issues),
+  // Domains that registered tests declare together. A reading of existing rows,
+  // never a scientific claim: a malformed entry is dropped, not guessed at.
+  domainLinks: arr(p.domainLinks)
+   .map(l => ({a: str(l?.a), b: str(l?.b), tests: Number(l?.tests) || 0}))
+   .filter(l => l.a && l.b && l.a !== l.b && l.tests > 0),
   extra
  };
 }

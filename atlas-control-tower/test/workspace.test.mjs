@@ -2,18 +2,15 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {modeState, normalizeMode} from '../ui/workspace.mjs';
 
-test('workspace modes expose exactly one primary surface', () => {
- assert.deepEqual(modeState('overview'), {map:true,data:false,learning:false,audit:false});
- assert.deepEqual(modeState('explore'), {map:false,data:true,learning:false,audit:false});
- assert.deepEqual(modeState('learning'), {map:false,data:false,learning:true,audit:false});
- assert.deepEqual(modeState('audit'), {map:false,data:false,learning:false,audit:true});
+// Dados, Learning and Auditoria used to be sibling tab panels. Their relations
+// are now read on the map itself, so the workspace has one surface and one mode.
+test('the workspace exposes the map as its only surface', () => {
+ assert.deepEqual(modeState('overview'), {map:true});
+ assert.deepEqual(modeState('learning'), {map:true});
+ assert.deepEqual(modeState('audit'), {map:true});
 });
 
-test('workspace mode normalization falls back to overview', () => {
- assert.equal(normalizeMode('overview'),'overview');
- assert.equal(normalizeMode('explore'),'explore');
- assert.equal(normalizeMode('learning'),'learning');
- assert.equal(normalizeMode('audit'),'audit');
- assert.equal(normalizeMode('unknown'),'overview');
- assert.equal(normalizeMode(''),'overview');
+test('every mode normalizes to the map, so it can never be hidden', () => {
+ for (const mode of ['overview','explore','learning','audit','unknown','',undefined])
+  assert.equal(normalizeMode(mode),'overview');
 });

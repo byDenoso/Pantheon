@@ -110,19 +110,7 @@
       "use": "@vercel/static"
     },
     {
-      "src": "ui/learning-view.mjs",
-      "use": "@vercel/static"
-    },
-    {
-      "src": "ui/audit-view.mjs",
-      "use": "@vercel/static"
-    },
-    {
       "src": "ui/provenance.mjs",
-      "use": "@vercel/static"
-    },
-    {
-      "src": "ui/data-view.mjs",
       "use": "@vercel/static"
     },
     {

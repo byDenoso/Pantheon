@@ -19,6 +19,30 @@ export async function expandOverview(base,read){
  return {...base,nodes:[...nodes.values()],edges:[...edges.values()].filter(e=>nodes.has(e.source)&&nodes.has(e.target)),preview:true,total:nodes.size};
 }
 
+/** Turns the declared domain co-declarations into drawable relations.
+ *  Each link says "N registered tests declare themselves in both domains"; it is
+ *  a reading of existing rows, never a scientific claim about the domains, so it
+ *  stays DERIVED_NOT_EVIDENCE. A link whose domain is not on the map is skipped
+ *  rather than invented. */
+export function withDomainLinks(data,focus){
+ const links=Array.isArray(data?.domainLinks)?data.domainLinks:[];
+ if(focus!=='system:SCIENCE'||!links.length)return data;
+ const present=new Set((data.nodes||[]).map(n=>n.id));
+ const extra=[];
+ for(const link of links){
+  const source=`domain:${link.a}`,target=`domain:${link.b}`;
+  if(!present.has(source)||!present.has(target))continue;
+  extra.push({
+   id:`codeclared:${link.a}:${link.b}`,
+   source,target,type:'CO_DECLARED',
+   authority:'DERIVED_NOT_EVIDENCE',
+   relationScope:'CROSS_DOMAIN',
+   tests:Number(link.tests)||0
+  });
+ }
+ return extra.length?{...data,edges:[...(data.edges||[]),...extra]}:data;
+}
+
 /** Visual density guard for the map only.
  *  A domain with hundreds of declared tests stays a domain with hundreds of
  *  declared tests: this trims what is *drawn* to a readable orbit, keeps the

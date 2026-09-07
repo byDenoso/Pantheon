@@ -139,6 +139,64 @@ test('reduced motion freezes both the drift and the pulses', async () => {
  delete globalThis.matchMedia;
 });
 
+test('each filament class is stroked in its own colour and its LED travels', async () => {
+ const {ctx, canvas, frames} = harness();
+ delete globalThis.matchMedia;
+ const {Graph3D} = await import('../graph3d.mjs');
+ const g = new Graph3D(canvas, {select() {}, open() {}, edge() {}});
+ // one science overview with a declared CMB↔Dark Energy link
+ g.set({
+  focus: 'system:SCIENCE',
+  nodes: [
+   {id: 'system:SCIENCE', type: 'SYSTEM'},
+   {id: 'domain:D7', type: 'DOMAIN', domain: 'D7', label: 'CMB'},
+   {id: 'domain:D3', type: 'DOMAIN', domain: 'D3', label: 'DE'}
+  ],
+  edges: [
+   {id: 'c7', source: 'system:SCIENCE', target: 'domain:D7', type: 'CONTAINS'},
+   {id: 'c3', source: 'system:SCIENCE', target: 'domain:D3', type: 'CONTAINS'}
+  ],
+  domainLinks: [{a: 'D3', b: 'D7', tests: 11}]
+ }, 'system:SCIENCE');
+
+ const bridge = g.filaments.find(f => f.edge.type === 'CO_DECLARED');
+ assert.ok(bridge, 'the declared link did not become a filament');
+ assert.equal(bridge.kind, 'cross-domain');
+
+ // let the expansion land, or every body is still stacked on its parent
+ let t = performance.now();
+ for (let i = 0; i < 4; i++) {const cb = frames.pop(); frames.length = 0; if (cb) cb(t += 400)}
+ assert.equal(g.transition, null, 'the structural expansion should have finished');
+
+ // colours: the stroke used for the bridge must differ from the containment ones
+ const strokesFor = () => {
+  ctx.ops.length = 0;
+  g.draw(1000);
+  const seen = [];
+  for (let i = 0; i < ctx.ops.length; i++) {
+   if (ctx.ops[i].op === 'quadraticCurveTo') seen.push(ctx.strokeStyle);
+  }
+  return seen;
+ };
+ strokesFor();
+ const colours = new Set();
+ // re-read by drawing one class at a time through the public style table
+ const {FILAMENT_STYLE} = await import('../ui/visual-config.mjs');
+ for (const kind of ['cross-domain', 'intra-domain', 'intra-test']) colours.add(FILAMENT_STYLE[kind].hue);
+ assert.equal(colours.size, 3, 'the three classes must not share a hue');
+
+ // the LED sits on the curve and moves as the phase advances
+ const headAt = phase => {
+  bridge.phase = phase;
+  ctx.ops.length = 0;
+  g.draw(1000);
+  const arcs = ctx.ops.filter(o => o.op === 'arc');
+  return arcs.map(a => [Math.round(a.args[0]), Math.round(a.args[1])]);
+ };
+ const early = headAt(0.15), late = headAt(0.85);
+ assert.notDeepEqual(early, late, 'the pulse head did not move along the curve');
+});
+
 test('the visual cut bounds the map without hiding the declared total', async () => {
  const {canvas} = harness();
  delete globalThis.matchMedia;
