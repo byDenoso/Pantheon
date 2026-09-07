@@ -1,4 +1,5 @@
 import {esc, num} from './dom.mjs';
+import {compactLabel} from './cockpit-copy.mjs';
 import {createApi} from '../lib/atlas-api.mjs';
 
 const radarApi=createApi();
@@ -39,9 +40,9 @@ function emergentSignals(payload,limit=5){
 
 function renderChanges(changes){
  if(!changes.length)return '<p class="radar-empty">Nenhuma mudança datada neste recorte.</p>';
- return changes.map(({node})=>`<button class="change-row" data-change-entity="${esc(node.id)}">
+ return changes.map(({node})=>`<button class="change-row" data-change-entity="${esc(node.id)}" title="${esc(node.label||node.id)}">
   <span class="change-time"><i></i>${esc(formatWhen(node.updatedAt))}</span>
-  <span class="change-copy"><b>${esc(CHANGE_LABEL[node.type]||'Entidade atualizada')}</b><small>${esc(node.label||node.id)}${node.status?' · '+esc(node.status):''}</small></span>
+  <span class="change-copy"><b>${esc(CHANGE_LABEL[node.type]||'Entidade atualizada')}</b><small>${esc(compactLabel(node.label||node.id,{max:34}))}${node.status?' · '+esc(node.status):''}</small></span>
   <span class="change-arrow">›</span>
  </button>`).join('');
 }
@@ -52,11 +53,11 @@ function renderSignals(signals,payload){
   <span><b>${num((payload?.emergent||[]).find(x=>x.id==='strengthening')?.count||0)}</b> fortalecendo</span>
   <span><b>${num((payload?.emergent||[]).find(x=>x.id==='new')?.count||0)}</b> novos</span>
   <span><b>${num((payload?.emergent||[]).find(x=>x.id==='weakening')?.count||0)}</b> enfraquecendo</span>
- </div>${signals.map(({item,label,tone})=>`<button class="signal-row" data-signal-id="${esc(item.id||'')}">
+ </div>${signals.map(({item,label,tone})=>{const raw=item.relationType||item.title||item.id||'Sinal emergente';return `<button class="signal-row" data-signal-id="${esc(item.id||'')}" title="${esc(raw)}">
   <i class="signal-dot tone-${tone}"></i>
-  <span class="signal-copy"><b>${esc(item.relationType||item.title||item.id||'Sinal emergente')}</b><small>${esc(String(item.notes||item.status||'').slice(0,150))}</small></span>
+  <span class="signal-copy"><b>${esc(compactLabel(raw,{max:34}))}</b><small>${esc(String(item.notes||item.status||'').slice(0,150))}</small></span>
   <span class="signal-chip tone-${tone}">${esc(label)}</span><span class="signal-arrow">›</span>
- </button>`).join('')}`;
+ </button>`}).join('')}`;
 }
 
 export async function renderRecortePanel(graph,summary,{onEntity,onLearning}={}){
