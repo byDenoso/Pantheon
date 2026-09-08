@@ -7,7 +7,6 @@ const read = path => fs.readFileSync(new URL(path, import.meta.url), 'utf8');
 const index = read('../index.html');
 const referenceCss = read('../ui/reference-one.css');
 const officialCss = read('../ui/official-dashboard.css');
-const graphSource = read('../graph3d.mjs');
 const appSource = read('../app.mjs');
 const themeSource = read('../ui/theme.mjs');
 const vercel = JSON.parse(read('../vercel.json'));
@@ -39,10 +38,10 @@ test('reference shell solves width pressure instead of masking horizontal overfl
   assert.match(referenceCss, /@media\s*\(max-width\s*:\s*1366px\)/i);
 });
 
-test('reference wallpaper can remain behind an intentionally transparent graph canvas', () => {
+test('reference wallpaper remains visible while graph geometry stays interactive', () => {
   assert.match(referenceCss, /\.reference-space[^}]*pointer-events\s*:\s*none/s);
-  assert.match(graphSource, /transparentBackground/);
-  assert.match(appSource, /transparentBackground\s*:\s*document\.body\.classList\.contains\(['"]reference-one['"]\)/);
+  assert.match(referenceCss, /#graph[^}]*mix-blend-mode\s*:\s*screen/s);
+  assert.doesNotMatch(appSource, /transparentBackground/);
 });
 
 test('theme bootstrap does not request a stylesheet excluded from the public build', () => {
