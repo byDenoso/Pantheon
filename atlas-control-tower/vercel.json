@@ -1,230 +1,62 @@
 {
   "version": 2,
   "builds": [
-    {
-      "src": "api/projection.js",
-      "use": "@vercel/node"
-    },
-    {
-      "src": "api/runtime-orphans.js",
-      "use": "@vercel/node"
-    },
-    {
-      "src": "api/runtime-semantic.js",
-      "use": "@vercel/node"
-    },
-    {
-      "src": "api/runtime-v2.js",
-      "use": "@vercel/node"
-    },
-    {
-      "src": "api/runtime.js",
-      "use": "@vercel/node"
-    },
-    {
-      "src": "assets/atlas-observatory-bg.svg",
-      "use": "@vercel/static"
-    },
-    {
-      "src": "index.html",
-      "use": "@vercel/static"
-    },
-    {
-      "src": "styles.css",
-      "use": "@vercel/static"
-    },
-    {
-      "src": "app.mjs",
-      "use": "@vercel/static"
-    },
-    {
-      "src": "graph3d.mjs",
-      "use": "@vercel/static"
-    },
-    {
-      "src": "lib/model.mjs",
-      "use": "@vercel/static"
-    },
-    {
-      "src": "lib/graph-contract.mjs",
-      "use": "@vercel/static"
-    },
-    {
-      "src": "lib/atlas-api.mjs",
-      "use": "@vercel/static"
-    },
-    {
-      "src": "lib/graph-session.mjs",
-      "use": "@vercel/static"
-    },
-    {
-      "src": "ui/tokens.css",
-      "use": "@vercel/static"
-    },
-    {
-      "src": "ui/official-dashboard.css",
-      "use": "@vercel/static"
-    },
-    {
-      "src": "ui/premium-v2.css",
-      "use": "@vercel/static"
-    },
-    {
-      "src": "ui/reference-one.css",
-      "use": "@vercel/static"
-    },
-    {
-      "src": "ui/reference-deck.css",
-      "use": "@vercel/static"
-    },
-    {
-      "src": "ui/cosmos.css",
-      "use": "@vercel/static"
-    },
-    {
-      "src": "ui/projection-layout.mjs",
-      "use": "@vercel/static"
-    },
-    {
-      "src": "ui/projection-state.mjs",
-      "use": "@vercel/static"
-    },
-    {
-      "src": "ui/layer-console.mjs",
-      "use": "@vercel/static"
-    },
-    {
-      "src": "ui/command-palette.mjs",
-      "use": "@vercel/static"
-    },
-    {
-      "src": "ui/visual-config.mjs",
-      "use": "@vercel/static"
-    },
-    {
-      "src": "ui/theme.mjs",
-      "use": "@vercel/static"
-    },
-    {
-      "src": "ui/map-data.mjs",
-      "use": "@vercel/static"
-    },
-    {
-      "src": "ui/workspace.mjs",
-      "use": "@vercel/static"
-    },
-    {
-      "src": "ui/cockpit-copy.mjs",
-      "use": "@vercel/static"
-    },
-    {
-      "src": "ui/orbital-layout.mjs",
-      "use": "@vercel/static"
-    },
-    {
-      "src": "ui/filaments.mjs",
-      "use": "@vercel/static"
-    },
-    {
-      "src": "ui/decision-summary.mjs",
-      "use": "@vercel/static"
-    },
-    {
-      "src": "ui/learning-graph.mjs",
-      "use": "@vercel/static"
-    },
-    {
-      "src": "ui/control-tower.mjs",
-      "use": "@vercel/static"
-    },
-    {
-      "src": "ui/dom.mjs",
-      "use": "@vercel/static"
-    },
-    {
-      "src": "ui/metrics.mjs",
-      "use": "@vercel/static"
-    },
-    {
-      "src": "ui/inspector.mjs",
-      "use": "@vercel/static"
-    },
-    {
-      "src": "ui/filters.mjs",
-      "use": "@vercel/static"
-    },
-    {
-      "src": "ui/provenance.mjs",
-      "use": "@vercel/static"
-    },
-    {
-      "src": "ui/recorte-view.mjs",
-      "use": "@vercel/static"
-    },
-    {
-      "src": "ui/blackbox-view.mjs",
-      "use": "@vercel/static"
-    },
-    {
-      "src": "webmcp/tools.mjs",
-      "use": "@vercel/static"
-    }
+    {"src":"api/projection.js","use":"@vercel/node"},
+    {"src":"api/runner.js","use":"@vercel/node"},
+    {"src":"api/runtime-orphans.js","use":"@vercel/node"},
+    {"src":"api/runtime-semantic.js","use":"@vercel/node"},
+    {"src":"api/runtime-v2.js","use":"@vercel/node"},
+    {"src":"api/runtime.js","use":"@vercel/node"},
+    {"src":"assets/atlas-observatory-bg.svg","use":"@vercel/static"},
+    {"src":"index.html","use":"@vercel/static"},
+    {"src":"styles.css","use":"@vercel/static"},
+    {"src":"app.mjs","use":"@vercel/static"},
+    {"src":"graph3d.mjs","use":"@vercel/static"},
+    {"src":"lib/model.mjs","use":"@vercel/static"},
+    {"src":"lib/graph-contract.mjs","use":"@vercel/static"},
+    {"src":"lib/atlas-api.mjs","use":"@vercel/static"},
+    {"src":"lib/graph-session.mjs","use":"@vercel/static"},
+    {"src":"ui/tokens.css","use":"@vercel/static"},
+    {"src":"ui/official-dashboard.css","use":"@vercel/static"},
+    {"src":"ui/premium-v2.css","use":"@vercel/static"},
+    {"src":"ui/reference-one.css","use":"@vercel/static"},
+    {"src":"ui/reference-deck.css","use":"@vercel/static"},
+    {"src":"ui/cosmos.css","use":"@vercel/static"},
+    {"src":"ui/projection-layout.mjs","use":"@vercel/static"},
+    {"src":"ui/projection-state.mjs","use":"@vercel/static"},
+    {"src":"ui/layer-console.mjs","use":"@vercel/static"},
+    {"src":"ui/command-palette.mjs","use":"@vercel/static"},
+    {"src":"ui/visual-config.mjs","use":"@vercel/static"},
+    {"src":"ui/theme.mjs","use":"@vercel/static"},
+    {"src":"ui/map-data.mjs","use":"@vercel/static"},
+    {"src":"ui/workspace.mjs","use":"@vercel/static"},
+    {"src":"ui/cockpit-copy.mjs","use":"@vercel/static"},
+    {"src":"ui/orbital-layout.mjs","use":"@vercel/static"},
+    {"src":"ui/filaments.mjs","use":"@vercel/static"},
+    {"src":"ui/decision-summary.mjs","use":"@vercel/static"},
+    {"src":"ui/learning-graph.mjs","use":"@vercel/static"},
+    {"src":"ui/control-tower.mjs","use":"@vercel/static"},
+    {"src":"ui/dom.mjs","use":"@vercel/static"},
+    {"src":"ui/metrics.mjs","use":"@vercel/static"},
+    {"src":"ui/inspector.mjs","use":"@vercel/static"},
+    {"src":"ui/filters.mjs","use":"@vercel/static"},
+    {"src":"ui/provenance.mjs","use":"@vercel/static"},
+    {"src":"ui/recorte-view.mjs","use":"@vercel/static"},
+    {"src":"ui/blackbox-view.mjs","use":"@vercel/static"},
+    {"src":"webmcp/tools.mjs","use":"@vercel/static"}
   ],
   "routes": [
-    {
-      "src": "/api/projection",
-      "dest": "/api/projection.js"
-    },
-    {
-      "src": "/api/(state|sync|graph|entity|automation-runs|learning-relations|learning|audit|health|ops)",
-      "dest": "/api/runtime-orphans.js?route=$1"
-    },
-    {
-      "src": "/(.*\\.css)",
-      "headers": {
-        "Content-Type": "text/css; charset=utf-8",
-        "Cache-Control": "public, max-age=0, must-revalidate"
-      }
-    },
-    {
-      "src": "/(.*\\.mjs)",
-      "headers": {
-        "Content-Type": "text/javascript; charset=utf-8",
-        "Cache-Control": "public, max-age=0, must-revalidate"
-      }
-    },
-    {
-      "src": "/(.*\\.js)",
-      "headers": {
-        "Content-Type": "text/javascript; charset=utf-8",
-        "Cache-Control": "public, max-age=0, must-revalidate"
-      }
-    },
-    {
-      "src": "/",
-      "headers": {
-        "Content-Type": "text/html; charset=utf-8",
-        "Cache-Control": "public, max-age=0, must-revalidate"
-      },
-      "dest": "/index.html"
-    },
-    {
-      "handle": "filesystem"
-    },
-    {
-      "src": "/.*",
-      "status": 404,
-      "headers": {
-        "Content-Type": "text/html; charset=utf-8",
-        "Cache-Control": "public, max-age=0, must-revalidate"
-      },
-      "dest": "/index.html"
-    }
+    {"src":"/api/projection","dest":"/api/projection.js"},
+    {"src":"/api/runner","dest":"/api/runner.js"},
+    {"src":"/api/(state|sync|graph|entity|automation-runs|learning-relations|learning|audit|health|ops)","dest":"/api/runtime-orphans.js?route=$1"},
+    {"src":"/(.*\\.css)","headers":{"Content-Type":"text/css; charset=utf-8","Cache-Control":"public, max-age=0, must-revalidate"}},
+    {"src":"/(.*\\.mjs)","headers":{"Content-Type":"text/javascript; charset=utf-8","Cache-Control":"public, max-age=0, must-revalidate"}},
+    {"src":"/(.*\\.js)","headers":{"Content-Type":"text/javascript; charset=utf-8","Cache-Control":"public, max-age=0, must-revalidate"}},
+    {"src":"/","headers":{"Content-Type":"text/html; charset=utf-8","Cache-Control":"public, max-age=0, must-revalidate"},"dest":"/index.html"},
+    {"handle":"filesystem"},
+    {"src":"/.*","status":404,"headers":{"Content-Type":"text/html; charset=utf-8","Cache-Control":"public, max-age=0, must-revalidate"},"dest":"/index.html"}
   ],
   "crons": [
-    {
-      "path": "/api/state?refresh=1",
-      "schedule": "0 8 * * *"
-    }
+    {"path":"/api/state?refresh=1","schedule":"0 8 * * *"}
   ]
 }
