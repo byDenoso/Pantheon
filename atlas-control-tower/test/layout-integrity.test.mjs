@@ -5,7 +5,7 @@ import {frontendFiles} from '../frontend-files.mjs';
 
 const read = path => fs.readFileSync(new URL(path, import.meta.url), 'utf8');
 const index = read('../index.html');
-const referenceCss = read('../ui/reference-one.css') + read('../ui/reference-deck.css');
+const referenceCss = read('../ui/reference-one.css');
 const officialCss = read('../ui/official-dashboard.css');
 const appSource = read('../app.mjs');
 const themeSource = read('../ui/theme.mjs');

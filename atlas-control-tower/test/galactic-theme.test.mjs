@@ -13,12 +13,10 @@ test('dark theme uses restrained deep-navy accents instead of neon cyan',()=>{
  assert.match(tokens,/--bg:#020611/);assert.match(tokens,/--accent:#597fc0/);assert.match(tokens,/--cosmic-haze:#10233e/);assert.doesNotMatch(tokens,/--accent:#2bc8ff/);
 });
 
-test('approved reference owns one image-backed spatial treatment without competing theme layers',()=>{
- assert.match(reference,/atlas-observatory-bg\.svg/);
- assert.match(reference,/reference-space[^}]*pointer-events:none/s);
- assert.doesNotMatch(reference,/observatory-asteroid-field|observatory-horizon-right/);
- assert.match(index,/premium-v2\.css[^]*reference-one\.css[^]*reference-deck\.css/);
- assert.equal(frontendFiles.includes('ui/reference-one.css'),true);assert.equal(builds.has('ui/reference-one.css'),true);assert.equal(frontendFiles.includes('ui/reference-deck.css'),true);assert.equal(builds.has('ui/reference-deck.css'),true);
- assert.equal(frontendFiles.includes('assets/atlas-observatory-bg.svg'),true);assert.equal(builds.has('assets/atlas-observatory-bg.svg'),true);
+test('approved reference owns the deployed galactic treatment without a competing theme layer',()=>{
+ for(const selector of ['observatory-nebula-left','observatory-galaxy-right','observatory-asteroid-field','observatory-horizon-right'])assert.match(reference,new RegExp(selector));
+ assert.match(reference,/pointer-events:none/);
+ assert.match(index,/premium-v2\.css[^]*reference-one\.css/);
+ assert.equal(frontendFiles.includes('ui/reference-one.css'),true);assert.equal(builds.has('ui/reference-one.css'),true);
  assert.equal(frontendFiles.includes('ui/galactic-theme.css'),false);assert.equal(builds.has('ui/galactic-theme.css'),false);
 });
