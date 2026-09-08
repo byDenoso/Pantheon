@@ -72,6 +72,14 @@ test('compiler projects canonical learning, relations, operations and Olympus wi
   assert.doesNotMatch(code, /CREATE TABLE|INSERT INTO|postgres|neon\.tech/i);
 });
 
+test('compiler projects the three canonical operational lanes instead of relying only on ACTION_INDEX', () => {
+  const code = text('apps-script','Code.gs');
+  for (const surface of ['ACTIONS_SCIENCE','ACTIONS_ENGINEERING','ACTIONS_OLYMPUS']) {
+    assert.match(code, new RegExp(surface), `missing canonical operational lane ${surface}`);
+  }
+  assert.match(code, /lane/i);
+});
+
 test('snapshot contract exposes hierarchy, provenance and Present from one truth', async () => {
   const file = path('nextgen','lib','snapshot-contract.mjs');
   if (!existsSync(file)) return;
@@ -102,4 +110,18 @@ test('snapshot contract exposes hierarchy, provenance and Present from one truth
   assert.ok(story.results.length >= 1);
   assert.equal(story.parent.id,'domain:DE');
   assert.ok(story.children.some(n=>n.id==='claim:X1'));
+});
+
+test('NextGen exposes explicit Explore hierarchy and Present mode on the same static snapshot', () => {
+  const html = text('index.html');
+  const app = text('nextgen','app.mjs');
+  assert.match(html, /data-mode="explore"/);
+  assert.match(html, /data-mode="present"/);
+  assert.match(html, /id="hierarchy-parent"/);
+  assert.match(html, /id="hierarchy-current"/);
+  assert.match(html, /id="hierarchy-children"/);
+  assert.match(html, /id="present-panel"/);
+  assert.match(app, /getPresentStory/);
+  assert.match(app, /renderHierarchy/);
+  assert.match(app, /renderPresent/);
 });
