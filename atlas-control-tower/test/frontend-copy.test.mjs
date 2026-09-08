@@ -5,10 +5,12 @@ import fs from 'node:fs';
 const index = fs.readFileSync(new URL('../index.html', import.meta.url), 'utf8');
 const tower = fs.readFileSync(new URL('../ui/control-tower.mjs', import.meta.url), 'utf8');
 
-test('approved command-center chrome stays clean and leaves provenance to the inspector', () => {
-  assert.match(index, /NEXO <span>Atlas<\/span>/i);
-  assert.match(index, /CONTROL TOWER/i);
-  assert.match(index, /reference-system-card/);
+test('NextGen chrome keeps authority visible without dumping raw provenance into the canvas shell', () => {
+  assert.match(index, /NEXO ATLAS/i);
+  assert.match(index, /SCIENTIFIC KNOWLEDGE OBSERVATORY/i);
+  assert.match(index, /TRUTH OWNER/);
+  assert.match(index, /NEON V1/);
+  assert.match(index, /id="inspector"/);
   assert.doesNotMatch(index, /FRONTEND OFICIAL|Estado rastreável/i);
   assert.doesNotMatch(index, /id="provenance"/);
 });
