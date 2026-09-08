@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+ <meta charset="utf-8">
+ <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+ <meta name="theme-color" content="#020711">
+ <title>ATLAS GRAPH LAB</title>
+ <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+ <header class="lab-topbar">
+  <div class="lab-brand"><span class="spark">✧</span><div><b>ATLAS GRAPH LAB</b><small>ORBITAL RENDERER TEST BENCH</small></div></div>
+  <div class="hud" aria-label="Performance HUD">
+   <span><b id="hud-fps">--</b><small>FPS</small></span>
+   <span><b id="hud-frame">--</b><small>MS</small></span>
+   <span><b id="hud-nodes">--</b><small>NODES</small></span>
+   <span><b id="hud-edges">--</b><small>EDGES</small></span>
+   <span><b id="hud-labels">--</b><small>LABELS</small></span>
+   <span><b id="hud-dpr">--</b><small>DPR</small></span>
+  </div>
+  <button id="panel-toggle" class="icon-btn" aria-label="Abrir parâmetros">☷</button>
+ </header>
+ <main class="lab-shell">
+  <section class="stage" aria-label="Laboratório de grafo orbital">
+   <canvas id="graph-lab-canvas" tabindex="0" aria-label="Grafo orbital experimental 3D projetado em Canvas 2D"></canvas>
+   <div class="stage-badge"><i></i><span>CANVAS 2D · SYNTHETIC DATA</span></div>
+   <div class="focus-readout"><small>FOCO</small><b id="focus-label">NEXO</b></div>
+   <div class="camera-tools" aria-label="Controles de câmera">
+    <button id="motion" title="Órbita automática">▷</button>
+    <button id="back" title="Voltar">←</button>
+    <button id="home" title="NEXO">⌂</button>
+    <button id="zoom-in" title="Aproximar">+</button>
+    <button id="zoom-out" title="Afastar">−</button>
+    <button id="fit" title="Enquadrar">⊞</button>
+    <button id="center" title="Centralizar selecionado">◎</button>
+    <button id="flat" title="Alternar perspectiva">3D</button>
+   </div>
+   <div class="gesture-hint">Arraste para orbitar · Shift para mover · Scroll/pinch para zoom · Duplo clique abre subgrafo</div>
+  </section>
+  <aside id="lab-panel" class="lab-panel">
+   <div class="panel-head"><div><small>EXPERIMENT CONTROLS</small><h1>Visual contract</h1></div><button id="panel-close" aria-label="Fechar painel">×</button></div>
+   <label class="select-row">Preset<select id="preset"><option>ORIGINAL</option><option>CLEAN</option><option>DEEP_SPACE</option><option>HIGH_CONTRAST</option><option>DENSE_GRAPH</option><option>MOBILE</option></select></label>
+   <label class="select-row">Dataset<select id="dataset-size"><option value="50">50 nodes</option><option value="100">100 nodes</option><option value="250">250 nodes</option><option value="500">500 nodes</option><option value="1000">1000 nodes</option></select></label>
+   <div class="section-title">Renderer</div>
+   <label>Node radius <output id="node-radius-out">1.00</output><input id="node-radius" type="range" min="0.55" max="1.6" step="0.05" value="1"></label>
+   <label>Glow <output id="glow-out">1.00</output><input id="glow" type="range" min="0.3" max="1.8" step="0.05" value="1"></label>
+   <label>Fog <output id="fog-out">0.38</output><input id="fog" type="range" min="0" max="0.75" step="0.01" value="0.38"></label>
+   <label>Perspective <output id="perspective-out">760</output><input id="perspective" type="range" min="480" max="1200" step="10" value="760"></label>
+   <div class="section-title">Motion</div>
+   <label>Drift amplitude <output id="drift-out">3.1</output><input id="drift" type="range" min="0" max="7" step="0.1" value="3.1"></label>
+   <label>Pulse speed <output id="pulse-speed-out">1.00</output><input id="pulse-speed" type="range" min="0" max="2.5" step="0.05" value="1"></label>
+   <div class="section-title">Graph</div>
+   <label>Filament curve <output id="filament-curve-out">0.19</output><input id="filament-curve" type="range" min="0" max="0.42" step="0.01" value="0.19"></label>
+   <label>Max labels <output id="max-labels-out">24</output><input id="max-labels" type="range" min="4" max="44" step="1" value="24"></label>
+   <label>Visible nodes <output id="max-visible-out">110</output><input id="max-visible" type="range" min="20" max="300" step="5" value="110"></label>
+   <div class="panel-note"><b>ORIGINAL</b> é o preset de referência. O laboratório não lê nem escreve dados do Atlas real.</div>
+  </aside>
+ </main>
+ <script type="module" src="./app.mjs"></script>
+</body>
+</html>
