@@ -1,8 +1,8 @@
 name: Atlas Deploy
 
-# Explicit production publisher for the existing NEXO Atlas Vercel project.
-# The Git integration is not relied upon: pushes to main are tested, built,
-# deployed with the Vercel CLI, then read back from the production domain.
+# Explicit production publisher for the canonical NEXO Atlas Vercel project.
+# Project/team IDs are identifiers, not credentials. Only the Vercel access
+# token belongs in GitHub Actions Secrets.
 
 on:
   push:
@@ -30,14 +30,18 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '24'
-      - name: Install frontend dependencies
+      - name: Install dependencies
         run: npm install --no-audit --no-fund
       - name: Run unit and contract tests
         run: npm test
-      - name: Typecheck React frontend
-        run: npm run typecheck
-      - name: Build production frontend
-        run: npm run build
+      - name: Check deployed JavaScript syntax
+        shell: bash
+        run: |
+          shopt -s nullglob
+          files=(api/*.js *.mjs lib/*.mjs ui/*.mjs webmcp/*.mjs)
+          for file in "${files[@]}"; do
+            node --check "$file"
+          done
 
   deploy:
     needs: test
@@ -47,62 +51,82 @@ jobs:
       run:
         working-directory: atlas-control-tower
     env:
-      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
-      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+      # Public/stable Vercel identifiers for the existing canonical project.
+      VERCEL_ORG_ID: team_TLkDXqQIHke6IumXh3qzMDcs
+      VERCEL_PROJECT_ID: prj_DLQSz5OiIT1HxWMn2i4AgoIv5x8r
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: '24'
 
-      - name: Fail early if the deploy credentials are missing
+      - name: Require the one real deploy credential
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
         run: |
-          for name in VERCEL_TOKEN VERCEL_ORG_ID VERCEL_PROJECT_ID; do
-            if [ -z "${!name}" ]; then
-              echo "::error::$name is not set. Add it under Settings → Secrets and variables → Actions."
-              exit 1
-            fi
-          done
+          if [ -z "$VERCEL_TOKEN" ]; then
+            echo "::error::VERCEL_TOKEN is not set. VERCEL_ORG_ID and VERCEL_PROJECT_ID are already pinned to the canonical project."
+            exit 1
+          fi
+
+      - name: Pull production settings from the canonical project
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
-
-      - name: Pull production settings from the existing project
         run: npx --yes vercel@latest pull --yes --environment=production --token="$VERCEL_TOKEN"
-        env:
-          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
 
-      - name: Build
-        run: npx --yes vercel@latest build --prod --token="$VERCEL_TOKEN"
+      - name: Build canonical deployment
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: npx --yes vercel@latest build --prod --token="$VERCEL_TOKEN"
 
       - name: Deploy to production
         id: deploy
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
         run: |
           url=$(npx --yes vercel@latest deploy --prebuilt --prod --token="$VERCEL_TOKEN")
           echo "url=$url" >> "$GITHUB_OUTPUT"
           echo "Deployed: $url"
-        env:
-          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
 
-      # WRITE → READBACK → VERIFY. Validate the React/Vite shell and the canonical
-      # projection API from the production alias. A deploy command succeeding is
-      # not enough if the alias still serves an older bundle.
+      # WRITE → READBACK → VERIFY. A READY deployment is not sufficient: the
+      # canonical alias must serve the orbital frontend and all critical runtime
+      # routes from one coherent deployment.
       - name: Readback production
+        shell: bash
         run: |
+          set -u
           domain="https://nexo-atlas-control-tower.vercel.app"
-          fail=0
+
           for attempt in $(seq 1 20); do
-            root=$(curl -s -o /tmp/root.html -w '%{http_code}' --max-time 20 "$domain/" || echo 000)
-            contract=$(curl -s -o /tmp/contract.json -w '%{http_code}' --max-time 20 "$domain/api/projection?describe=1" || echo 000)
-            health=$(curl -s -o /tmp/health.json -w '%{http_code}' --max-time 20 "$domain/api/health" || echo 000)
-            echo "attempt $attempt: /=$root /api/projection=$contract /api/health=$health"
-            if [ "$root" = "200" ] && [ "$contract" = "200" ] && [ "$health" = "200" ]; then
-              grep -q 'id="root"' /tmp/root.html || { echo "::error::production root is not the React shell"; exit 1; }
-              grep -q '/assets/index-' /tmp/root.html || { echo "::error::production root does not reference the Vite bundle"; exit 1; }
-              grep -q 'projection-v1' /tmp/contract.json || { echo "::error::contract payload is not projection-v1"; exit 1; }
+            root=$(curl -sS -o /tmp/root.html -w '%{http_code}' --max-time 20 "$domain/" || echo 000)
+            app=$(curl -sS -o /tmp/app.mjs -w '%{http_code}' --max-time 20 "$domain/app.mjs" || echo 000)
+            projection=$(curl -sS -o /tmp/projection.json -w '%{http_code}' --max-time 30 "$domain/api/projection?describe=1" || echo 000)
+            health=$(curl -sS -o /tmp/health.json -w '%{http_code}' --max-time 30 "$domain/api/health" || echo 000)
+            ops=$(curl -sS -o /tmp/ops.json -w '%{http_code}' --max-time 30 "$domain/api/ops" || echo 000)
+            learning=$(curl -sS -o /tmp/learning.json -w '%{http_code}' --max-time 30 "$domain/api/learning" || echo 000)
+            runner=$(curl -sS -o /tmp/runner.json -w '%{http_code}' --max-time 20 "$domain/api/runner?op=health" || echo 000)
+
+            echo "attempt $attempt: /=$root app=$app projection=$projection health=$health ops=$ops learning=$learning runner=$runner"
+
+            if [ "$root" = "200" ] && [ "$app" = "200" ] && [ "$projection" = "200" ] && \
+               [ "$health" = "200" ] && [ "$ops" = "200" ] && [ "$learning" = "200" ] && \
+               [ "$runner" = "401" ]; then
+              grep -q 'id="graph"' /tmp/root.html || { echo "::error::production root is not the approved orbital shell"; exit 1; }
+              grep -q 'src="/app.mjs"' /tmp/root.html || { echo "::error::production root does not load app.mjs"; exit 1; }
+              grep -q 'projection-v1' /tmp/projection.json || { echo "::error::projection contract is not projection-v1"; exit 1; }
+              grep -q 'RUNNER_UNAUTHORIZED' /tmp/runner.json || { echo "::error::runner route is not the protected Durable Runner"; exit 1; }
+
+              node -e '
+                const fs=require("fs");
+                const h=JSON.parse(fs.readFileSync("/tmp/health.json","utf8"));
+                if (!h.ok || h.contract!=="v1" || h.dataSource?.effective!=="v1" || h.dataSource?.freshness!=="LIVE" || h.dataSource?.usedFallback!==false) {
+                  console.error("health contract failed", h); process.exit(1);
+                }
+              '
+
+              fail=0
               for layer in science execution integrity; do
-                state=$(curl -s --max-time 40 "$domain/api/projection?layers=$layer" \
+                state=$(curl -sS --max-time 40 "$domain/api/projection?layers=$layer" \
                   | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{try{const j=JSON.parse(s);console.log(j.state+" nodes="+(j.nodes||[]).length)}catch{console.log("UNPARSEABLE")}})')
                 echo "  $layer -> $state"
                 case "$state" in
@@ -110,10 +134,13 @@ jobs:
                   *) echo "::error::layer $layer did not return OK: $state"; fail=1 ;;
                 esac
               done
+
               [ "$fail" = "0" ] && { echo "Production readback passed."; exit 0; }
               exit 1
             fi
+
             sleep 15
           done
-          echo "::error::production alias never served the tested React build"
+
+          echo "::error::production alias never served one coherent canonical deployment"
           exit 1
