@@ -16,12 +16,17 @@ export type AtlasUiState={
   health:any;
 };
 
+type SessionFactory=(api:any,options?:{limit?:number;depth?:number;onPersist?:(filters:unknown)=>void})=>ReturnType<typeof createSession>;
+
 export function useAtlasSession(){
   const api=useMemo(()=>createApi(),[]);
-  const session=useMemo(()=>createSession(api,{
-    limit:180,depth:1,
-    onPersist:(filters:unknown)=>{try{localStorage.setItem('atlas.filters',JSON.stringify(filters))}catch{}}
-  }),[api]);
+  const session=useMemo(()=>{
+    const factory=createSession as SessionFactory;
+    return factory(api,{
+      limit:180,depth:1,
+      onPersist:(filters:unknown)=>{try{localStorage.setItem('atlas.filters',JSON.stringify(filters))}catch{}}
+    });
+  },[api]);
   const [state,setState]=useState<AtlasUiState>(()=>({
     graph:null,summary:null,focusId:'system:NEXO',selectedId:null,selectedEntity:null,
     path:[{id:'system:NEXO',label:'NEXO'}],syncing:false,loading:true,error:null,health:null
@@ -47,7 +52,7 @@ export function useAtlasSession(){
     });
     void session.refresh();
     void api.health().then((health:any)=>setState(prev=>({...prev,health}))).catch(()=>{});
-    return off;
+    return()=>{void off()};
   },[api,session]);
 
   useEffect(()=>{
