@@ -127,3 +127,37 @@ test('raw truth reads are allowlisted and preserve the source schema', async () 
   assert.match(seen.url,/entity_id=eq\.T-1/);
   await assert.rejects(()=>bridge.readTruth({accessKey:'scheduled-secret',surface:'arbitrary_sql',key:'select *'}),/SURFACE_NOT_ALLOWED/);
 });
+
+test('action transition is compare-and-set, readback verified and idempotent', async () => {
+  const actionId='11111111-1111-4111-8111-111111111111';
+  let stored={id:actionId,status:'PENDING',blocker_reason:null,metadata:{priority_reason:'test'},updated_at:'2026-09-08T09:00:00Z'};
+  const calls=[];
+  const fetchImpl=async (url,opts={})=>{
+    calls.push({url,opts});
+    if(opts.method==='PATCH'){
+      assert.match(url,/\/actions\?/);
+      assert.match(url,/id=eq\.11111111-1111-4111-8111-111111111111/);
+      assert.match(url,/status=eq\.PENDING/);
+      const body=JSON.parse(opts.body);
+      stored={...stored,...body};
+      return {ok:true,status:200,json:async()=>[stored],text:async()=>''};
+    }
+    return {ok:true,status:200,json:async()=>[stored],text:async()=>''};
+  };
+  const bridge=createRunnerBridge({
+    env:{VERCEL_OIDC_TOKEN:'oidc',NEXO_RUNNER_KEY_SHA256:sha256('scheduled-secret'),NEON_DATA_API_URL:'https://neon.example/rest/v1'},
+    fetchImpl,
+  });
+  const input={accessKey:'scheduled-secret',effectKey:'executor:slot:science:claim',actionId,expectedStatus:'PENDING',targetStatus:'IN_PROGRESS',actor:'NEXO Executor · 3 Lanes',blockerReason:''};
+  const result=await bridge.transitionAction(input);
+  assert.equal(result.readbackVerified,true);
+  assert.equal(result.replay,false);
+  assert.equal(stored.status,'IN_PROGRESS');
+  assert.equal(stored.metadata.last_transition_effect_key,input.effectKey);
+  assert.equal(stored.metadata.last_transition_actor,input.actor);
+  const replay=await bridge.transitionAction(input);
+  assert.equal(replay.replay,true);
+  assert.equal(calls.filter(x=>x.opts.method==='PATCH').length,1,'replay must not patch twice');
+  await assert.rejects(()=>bridge.transitionAction({...input,effectKey:'executor:other',expectedStatus:'PENDING',targetStatus:'IN_PROGRESS'}),/ACTION_PRECONDITION_FAILED/);
+  await assert.rejects(()=>bridge.transitionAction({...input,effectKey:'executor:reopen',expectedStatus:'COMPLETED',targetStatus:'IN_PROGRESS'}),/ACTION_TRANSITION_NOT_ALLOWED/);
+});
