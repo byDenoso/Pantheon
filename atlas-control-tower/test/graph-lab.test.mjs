@@ -133,3 +133,22 @@ test('lab shell is standalone, synthetic-only and mobile-aware',()=>{
  assert.doesNotMatch(app,/\/api\//);
  assert.doesNotMatch(app,/science_v1|learning_v1|nexo_ops|runner/i);
 });
+
+test('Babylon graph lab is isolated, visibly identified and reuses the comparison contract',()=>{
+ const babylon=path.resolve(here,'../graph-lab-babylon');
+ for(const rel of ['index.html','styles.css','app.mjs','scene.mjs']) assert.ok(fs.existsSync(path.join(babylon,rel)),`missing Babylon lab file: ${rel}`);
+ const html=fs.readFileSync(path.join(babylon,'index.html'),'utf8');
+ const app=fs.readFileSync(path.join(babylon,'app.mjs'),'utf8');
+ const scene=fs.readFileSync(path.join(babylon,'scene.mjs'),'utf8');
+ assert.match(html,/BABYLON\.JS/);
+ assert.match(html,/cdn\.babylonjs\.com\/babylon\.js/);
+ assert.match(app,/\.\.\/graph-lab\/data\/synthetic-graph\.mjs/);
+ assert.match(app,/\.\.\/graph-lab\/graph\/palette\.mjs/);
+ assert.match(scene,/ArcRotateCamera/);
+ assert.match(scene,/MeshBuilder\.CreateSphere/);
+ assert.match(scene,/MeshBuilder\.CreateTube/);
+ assert.match(scene,/GlowLayer/);
+ assert.match(scene,/Vector3\.Project/);
+ assert.doesNotMatch(app,/\/api\//);
+ assert.doesNotMatch(scene,/\/api\//);
+});
