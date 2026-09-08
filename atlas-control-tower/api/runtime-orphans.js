@@ -1,4 +1,4 @@
-import semanticHandler from './runtime-semantic.js';
+import semanticHandler,{loadOlympus} from './runtime-semantic.js';
 
 const BASE='https://ep-cool-lab-aw72uid0.apirest.c-12.us-east-1.aws.neon.tech/neondb/rest/v1';
 const DERIVED='DERIVED_NOT_EVIDENCE';
@@ -11,6 +11,7 @@ function routeOf(req){const u=urlOf(req);return u.searchParams.get('route')||u.p
 function queryOf(req){const u=urlOf(req),q=Object.fromEntries(u.searchParams);delete q.route;return q}
 function sendJson(res,value,status=200){res.statusCode=status;res.setHeader('Content-Type','application/json; charset=utf-8');res.setHeader('Cache-Control','private, max-age=60');res.setHeader('X-Content-Type-Options','nosniff');return res.end(JSON.stringify(value))}
 const isLearningDomainId=id=>String(id||'').startsWith('learning-domain:');
+const isOlympusId=id=>String(id||'')==='system:OLYMPUS'||String(id||'').startsWith('olympus:');
 const domainOf=id=>String(id||'').slice('learning-domain:'.length);
 function labelOf(domain){return String(domain||'').replace(/^NEXO_/,'').replaceAll('_',' ').toLowerCase().replace(/(^|\s)\S/g,x=>x.toUpperCase())}
 
@@ -39,9 +40,27 @@ async function domainProjection(req,id){
   return{root,nodes,edges,sourceVersion};
 }
 
+async function olympusEntity(req,id){
+  const {graph}=await loadOlympus(req,false);
+  const base=graph.nodes.find(n=>n.id===id);if(!base)return null;
+  const meta=await semanticMeta(req,id);
+  const entity={...base,metadata:{...(base.metadata||{}),...meta}};
+  const relations=graph.edges.filter(e=>e.source===id||e.target===id);
+  return{entity,relations,relationCount:relations.length,source:'olympus'};
+}
+
 export default async function handler(req,res){
   if(req.method!=='GET')return semanticHandler(req,res);
   const route=routeOf(req),q=queryOf(req),id=route==='graph'?q.focus:q.id;
+
+  // The Olympus renderer is already canonical in runtime-semantic. This small
+  // read wrapper adds the semantic cockpit row to the normal inspector payload,
+  // which that early Olympus fast-path intentionally bypasses.
+  if(route==='entity'&&isOlympusId(q.id)&&!q.view){
+    try{const payload=await olympusEntity(req,q.id);return payload?sendJson(res,payload):sendJson(res,{error:'ENTITY_NOT_FOUND'},404)}
+    catch(error){console.warn('[atlas:olympus-index-overlay]',String(error?.message||error));return semanticHandler(req,res)}
+  }
+
   if(!isLearningDomainId(id))return semanticHandler(req,res);
   try{
     if(route==='entity'&&q.view==='files')return sendJson(res,[]);
