@@ -49,23 +49,25 @@ export function createRunnerBridge({env=process.env,fetchImpl,timeoutMs=12000}={
   let tokenOverride='';
   const oidc=()=>tokenOverride||env.VERCEL_OIDC_TOKEN||'';
   const guard=accessKey=>{if(!authorizeRunnerKey(accessKey,expectedHash))throw Error('RUNNER_UNAUTHORIZED');if(!oidc())throw Error('VERCEL_OIDC_TOKEN_MISSING')};
-  const headers=(schema,write=false)=>({
-    Authorization:`Bearer ${oidc()}`,
-    Accept:'application/json',
-    ...(write?{'Content-Type':'application/json','Content-Profile':schema,Prefer:'resolution=merge-duplicates,return=representation'}:{'Accept-Profile':schema}),
-  });
+  const readHeaders=schema=>({Authorization:`Bearer ${oidc()}`,Accept:'application/json','Accept-Profile':schema});
+  const writeHeaders=(schema,upsert=false)=>({Authorization:`Bearer ${oidc()}`,Accept:'application/json','Content-Type':'application/json','Content-Profile':schema,Prefer:`${upsert?'resolution=merge-duplicates,':''}return=representation`});
   async function parse(response,label){
     if(!response.ok){const body=await response.text().catch(()=>'');throw Error(`${label}_${response.status}:${body.slice(0,180)}`)}
     return response.json();
   }
-  async function select(schema,table,query={}){
-    const params=new URLSearchParams(Object.entries(query).filter(([,v])=>v!==undefined&&v!==null&&v!=='').map(([k,v])=>[k,String(v)]));
-    const response=await doFetch(`${base}/${encodeURIComponent(table)}?${params}`,{headers:headers(schema,false),signal:AbortSignal.timeout(timeoutMs)});
+  async function select(schema,table,paramsObj={}){
+    const params=new URLSearchParams(Object.entries(paramsObj).filter(([,v])=>v!==undefined&&v!==null&&v!=='').map(([k,v])=>[k,String(v)]));
+    const response=await doFetch(`${base}/${encodeURIComponent(table)}?${params}`,{headers:readHeaders(schema),signal:AbortSignal.timeout(timeoutMs)});
     return parse(response,`NEON_READ_${schema}_${table}`);
   }
   async function upsert(schema,table,row){
-    const response=await doFetch(`${base}/${encodeURIComponent(table)}`,{method:'POST',headers:headers(schema,true),body:JSON.stringify(row),signal:AbortSignal.timeout(timeoutMs)});
+    const response=await doFetch(`${base}/${encodeURIComponent(table)}`,{method:'POST',headers:writeHeaders(schema,true),body:JSON.stringify(row),signal:AbortSignal.timeout(timeoutMs)});
     return parse(response,`NEON_WRITE_${schema}_${table}`);
+  }
+  async function patch(schema,table,column,value,body){
+    const params=new URLSearchParams({[column]:`eq.${value}`});
+    const response=await doFetch(`${base}/${encodeURIComponent(table)}?${params}`,{method:'PATCH',headers:writeHeaders(schema,false),body:JSON.stringify(body),signal:AbortSignal.timeout(timeoutMs)});
+    return parse(response,`NEON_PATCH_${schema}_${table}`);
   }
   async function readback(schema,table,column,value){
     const rows=await select(schema,table,{select:'*',[column]:`eq.${value}`,limit:1});
@@ -80,25 +82,33 @@ export function createRunnerBridge({env=process.env,fetchImpl,timeoutMs=12000}={
     const actionId=input.actionId?clip(input.actionId,80):null;
     if(actionId&&!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(actionId))throw Error('ACTION_ID_INVALID');
     const id=deterministicRunId(effectKey);
+    const existing=await select('nexo_ops','execution_runs',{select:'*',id:`eq.${id}`,limit:1});
+    if(existing?.[0]){
+      if(existing[0].metadata?.effect_key!==effectKey)throw Error('IDEMPOTENCY_CONFLICT_EXECUTION_RUN');
+      if(existing[0].readback_verified)return {id,effectKey,readbackVerified:true,row:existing[0],authority:DERIVED,replay:true};
+    }
     const row={
       id,action_id:actionId,domain:lane,status,runtime_env:BRIDGE_ENV,artifact_hash:null,
-      execution_log:clip(input.summary,2000),readback_verified:true,
-      metadata:{
-        effect_key:effectKey,loop,lane,checkpoint:clip(input.checkpoint,160),resume_pointer:clip(input.resumePointer,500),
-        expected_outcome:clip(input.expectedOutcome,800),observed_outcome:clip(input.observedOutcome,800),
-        bridge_version:'DURABLE_RUNNER_V1',transport_authority:DERIVED,
-      },
+      execution_log:clip(input.summary,2000),readback_verified:false,
+      metadata:{effect_key:effectKey,loop,lane,checkpoint:clip(input.checkpoint,160),resume_pointer:clip(input.resumePointer,500),expected_outcome:clip(input.expectedOutcome,800),observed_outcome:clip(input.observedOutcome,800),bridge_version:'DURABLE_RUNNER_V1',transport_authority:DERIVED},
     };
     await upsert('nexo_ops','execution_runs',row);
     const persisted=await readback('nexo_ops','execution_runs','id',id);
     if(persisted.id!==id||persisted.metadata?.effect_key!==effectKey)throw Error('READBACK_MISMATCH_EXECUTION_RUN');
-    return {id,effectKey,readbackVerified:true,row:persisted,authority:DERIVED};
+    const verified=await patch('nexo_ops','execution_runs','id',id,{readback_verified:true});
+    const finalRow=verified?.[0]||{...persisted,readback_verified:true};
+    return {id,effectKey,readbackVerified:true,row:finalRow,authority:DERIVED,replay:false};
   }
   async function checkpoint(input={}){
     guard(input.accessKey);
     const effectKey=nonEmpty(input.effectKey,'EFFECT_KEY',500),loop=nonEmpty(input.loop,'LOOP',180);
     const lane=String(input.lane||'NEXO').toUpperCase();if(!SAFE_DOMAINS.has(lane))throw Error('LANE_NOT_ALLOWED');
     const eventId=`BRIDGE::${effectKey}`;
+    const existing=await select('nexo_ops','runtime_events',{select:'*',event_id:`eq.${eventId}`,limit:1});
+    if(existing?.[0]){
+      if(existing[0].payload?.effect_key!==effectKey)throw Error('IDEMPOTENCY_CONFLICT_RUNTIME_EVENT');
+      return {eventId,effectKey,readbackVerified:true,row:existing[0],authority:DERIVED,replay:true};
+    }
     const row={
       event_id:eventId,event_type:'DURABLE_CHECKPOINT',component:loop,domain:lane,action_id:null,
       status:clip(input.status||'CHECKPOINTED',120),summary:clip(input.summary,2000),occurred_at:new Date().toISOString(),
@@ -108,14 +118,14 @@ export function createRunnerBridge({env=process.env,fetchImpl,timeoutMs=12000}={
     await upsert('nexo_ops','runtime_events',row);
     const persisted=await readback('nexo_ops','runtime_events','event_id',eventId);
     if(persisted.event_id!==eventId||persisted.payload?.effect_key!==effectKey)throw Error('READBACK_MISMATCH_RUNTIME_EVENT');
-    return {eventId,effectKey,readbackVerified:true,row:persisted,authority:DERIVED};
+    return {eventId,effectKey,readbackVerified:true,row:persisted,authority:DERIVED,replay:false};
   }
   async function readTruth({accessKey,surface,key}={}){
     guard(accessKey);
     const spec=SURFACES[String(surface||'')];if(!spec)throw Error('SURFACE_NOT_ALLOWED');
-    const query={select:'*',...(spec.query||{})};
-    if(spec.keyColumn){const value=nonEmpty(key,'KEY',500);query[spec.keyColumn]=`eq.${value}`;query.limit=25}
-    const rows=await select(spec.schema,spec.table,query);
+    const paramsObj={select:'*',...(spec.query||{})};
+    if(spec.keyColumn){const value=nonEmpty(key,'KEY',500);paramsObj[spec.keyColumn]=`eq.${value}`;paramsObj.limit=25}
+    const rows=await select(spec.schema,spec.table,paramsObj);
     return {authority:TRUTH,schema:spec.schema,table:spec.table,surface,rows,readAt:new Date().toISOString()};
   }
   return {
