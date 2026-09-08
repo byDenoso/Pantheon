@@ -1,6 +1,7 @@
 {
   "version": 2,
   "builds": [
+    {"src":"api/ng.js","use":"@vercel/node"},
     {"src":"api/projection.js","use":"@vercel/node"},
     {"src":"api/runner.js","use":"@vercel/node"},
     {"src":"api/runtime-orphans.js","use":"@vercel/node"},
@@ -9,6 +10,9 @@
     {"src":"api/runtime.js","use":"@vercel/node"},
     {"src":"assets/atlas-observatory-bg.svg","use":"@vercel/static"},
     {"src":"index.html","use":"@vercel/static"},
+    {"src":"nextgen/styles.css","use":"@vercel/static"},
+    {"src":"nextgen/app.mjs","use":"@vercel/static"},
+    {"src":"nextgen/graph/engine.mjs","use":"@vercel/static"},
     {"src":"styles.css","use":"@vercel/static"},
     {"src":"app.mjs","use":"@vercel/static"},
     {"src":"graph3d.mjs","use":"@vercel/static"},
@@ -46,6 +50,7 @@
     {"src":"webmcp/tools.mjs","use":"@vercel/static"}
   ],
   "routes": [
+    {"src":"/api/ng","dest":"/api/ng.js"},
     {"src":"/api/projection","dest":"/api/projection.js"},
     {"src":"/api/runner","dest":"/api/runner.js"},
     {"src":"/api/(state|sync|graph|entity|automation-runs|learning-relations|learning|audit|health|ops)","dest":"/api/runtime-orphans.js?route=$1"},
