@@ -18,6 +18,9 @@ import {buildLearningGraph} from './ui/learning-graph.mjs';
 import {renderBlackBox} from './ui/blackbox-view.mjs';
 import {buildControlTowerModel, renderControlTower} from './ui/control-tower.mjs';
 import {applyWorkspaceMode} from './ui/workspace.mjs';
+import {consoleModel, renderLayerConsole, toggleLayer, LAYER_META} from './ui/layer-console.mjs';
+import {resolveState, renderState, bindState, PROJECTION_STATE} from './ui/projection-state.mjs';
+import {createPalette} from './ui/command-palette.mjs';
 import {registerWebMcp} from './webmcp/tools.mjs';
 
 const api = createApi();
@@ -41,7 +44,16 @@ const inspector = createInspector({
  api, colors, state, safeUrl,
  onFocus: n => session.focusNode(n),
  onLineage: n => {session.state.focus = n.id; session.setMode('lineage')},
- onRelated: id => selectNode(id)
+ onRelated: id => selectNode(id),
+ // Projection tiers (derived claims, truth owners, ingestion runs, artefacts)
+ // have no row in science_v1.entities. They are read back out of the projection
+ // payload the backend already sent, with their edges, never re-invented.
+ resolve: id => {
+  const node = projection?.nodes?.find(n => n.id === id);
+  if (!node) return null;
+  const relations = (projection.edges || []).filter(e => e.source === id || e.target === id);
+  return {entity: node, relations: relations.slice(0, 200), relationCount: relations.length, source: 'projection'};
+ }
 });
 
 function selectNode(id) {
@@ -145,11 +157,16 @@ function renderGraphView(rawGraph){
  const isLearning = session.state.focus === LEARNING_FOCUS;
  const g = isLearning ? learningView(rawGraph) : rawGraph;
  presentedGraph = g;
- graph.set(g, session.state.focus);
+ // In projection mode the canvas belongs to the layered projection; the declared
+ // systems map still owns it whenever the operator drills into one from the rail,
+ // so neither way of reading the graph is taken away.
+ if (mapMode === 'explorer') graph.set(g, session.state.focus);
  if (isLearning && !learningGraph) ensureLearningGraph().then(built => {
   if (built?.nodes?.length && session.state.focus === LEARNING_FOCUS) session.refresh();
  });
- $('#empty').hidden = g.nodes.length > 1 || (g.nodes.length === 1 && session.state.mode === 'search');
+ // The undifferentiated banner belongs to the explorer only. A projection says
+ // *why* it is empty, and that answer must never be overwritten by "no matches".
+ $('#empty').hidden = mapMode === 'projection' || g.nodes.length > 1 || (g.nodes.length === 1 && session.state.mode === 'search');
  const drawn = graph.data.nodes.length, declared = graph.data.visualTotal ?? g.total ?? g.nodes.length;
  const bounded = drawn < declared || g.truncated;
  $('#graph-count').textContent = bounded
@@ -173,11 +190,15 @@ function renderGraphView(rawGraph){
 
 function renderSummaryView(summary){
  if(!summary)return;
- const heroSystems=$('#hero-systems'),heroTests=$('#hero-tests'),heroClaims=$('#hero-claims'),heroDomains=$('#hero-domains');
- if(heroSystems)heroSystems.textContent=String(Object.keys(SYSTEM_LABEL).length-1);
- if(heroTests)heroTests.textContent=num(summary.counts?.TEST||0);
- if(heroClaims)heroClaims.textContent=num(summary.counts?.CLAIM||0);
- if(heroDomains)heroDomains.textContent=num(Object.keys(summary.domains||{}).length);
+ // In projection mode the header belongs to the projection; the summary only
+ // fills it in when the declared-systems explorer owns the map.
+ if(mapMode!=='projection'){
+  const heroSystems=$('#hero-systems'),heroTests=$('#hero-tests'),heroClaims=$('#hero-claims'),heroDomains=$('#hero-domains');
+  if(heroSystems)heroSystems.textContent=String(Object.keys(SYSTEM_LABEL).length-1);
+  if(heroTests)heroTests.textContent=num(summary.counts?.TEST||0);
+  if(heroClaims)heroClaims.textContent=num(summary.counts?.CLAIM||0);
+  if(heroDomains)heroDomains.textContent=num(Object.keys(summary.domains||{}).length);
+ }
  renderMetrics(summary, {onMetric: type => {syncFilterInputs({...session.state.filters, type}); applyFilter({type})}});
  renderSourceStatus(summary);
  renderCharts(summary, colors, {
@@ -207,6 +228,164 @@ session.on((event, payload) => {
  }
  if(event==='graph')renderGraphView(payload.graph);
  if(event==='summary')renderSummaryView(payload.summary);
+});
+
+/* ---------- layered projection: the map itself ---------- */
+
+/* The canvas has two readings and neither replaces the other.
+   `projection` is the layered command centre — one to three real backend
+   projections composed with genuine depth. `explorer` is the declared-systems
+   drill-down that already existed; the rail still opens it, so nothing that
+   used to work stopped working. */
+const VIEW_KEY = 'atlas.projectionView';
+const DEFAULT_VIEW = {layers: ['science'], zoom: 2, tier: '', signal: '', q: ''};
+let mapMode = 'projection';
+let projection = null;
+let projectionSeq = 0;
+let projectionLoading = false;
+let view = {...DEFAULT_VIEW};
+try {
+ const stored = JSON.parse(localStorage.getItem(VIEW_KEY) || '{}');
+ if (Array.isArray(stored.layers) && stored.layers.every(l => l in LAYER_META) && stored.layers.length)
+  view = {...view, ...stored, layers: stored.layers};
+} catch {}
+const persistView = () => {try {localStorage.setItem(VIEW_KEY, JSON.stringify(view))} catch {}};
+
+function paintProjectionState(resolved){
+ const host = $('#projection-state');
+ if (!host) return;
+ host.innerHTML = renderState(resolved);
+ bindState(host, {
+  'switch-layer': () => palette?.open(),
+  'clear-view': () => setView({tier: '', signal: '', q: '', zoom: 3}),
+  retry: () => loadProjection({refresh: true}),
+  diagnostics: () => toast('Leitura recusada pelo transporte OIDC → Neon Data API. As credenciais do deployment precisam ser revistas; nenhum dado foi substituído.')
+ });
+}
+
+function renderProjectionView(){
+ if (!projection) return;
+ const omitted = graph.setProjection(projection, {focus: session.state.selected || ''});
+ graph.selected = session.state.selected || null;
+ renderLayerConsole($('#layer-console'), consoleModel({
+  projection, layers: view.layers, zoom: view.zoom, syncing: session.state.syncing
+ }), {
+  onLayer: id => setView({layers: toggleLayer(view.layers, id)}),
+  onZoom: zoom => setView({zoom}),
+  onTier: tier => setView({tier: view.tier === tier ? '' : tier}),
+  onSignal: signal => setView({signal: view.signal === signal ? '' : signal})
+ });
+ paintProjectionState(resolveState(projection, {syncing: session.state.syncing}));
+ const drawn = projection.nodes?.length || 0;
+ $('#graph-count').textContent = omitted?.nodes
+  ? `${num(drawn - omitted.nodes)} DE ${num(drawn)} NÓS DESENHADOS · ${num(projection.edges?.length || 0)} RELAÇÕES`
+  : `${num(drawn)} NÓS · ${num(projection.edges?.length || 0)} RELAÇÕES`;
+ $('#graph-count').title = omitted?.nodes
+  ? `O orçamento de desenho manteve ${num(drawn - omitted.nodes)} corpos para preservar a fluidez. Os demais continuam na projeção e voltam ao aproximar o zoom semântico.`
+  : 'Projeção completa para este recorte.';
+ $('#more').hidden = true;
+ // The header counts describe the projection on screen, read from its own tier
+ // counts. A tier the current recorte excludes shows as such rather than as 0.
+ const counts = projection.metadata?.counts || {};
+ const tierTotal = tier => counts[tier] ?? (projection.metadata?.tiers?.[tier]?.declared ?? null);
+ const write = (selector, value) => {const el = $(selector); if (el) el.textContent = value == null ? '—' : num(value)};
+ write('#hero-systems', drawn);
+ write('#hero-tests', tierTotal('TEST'));
+ write('#hero-claims', tierTotal('CLAIM'));
+ write('#hero-domains', tierTotal('DOMAIN'));
+ palette?.refresh();
+}
+
+async function loadProjection({refresh = false} = {}){
+ const seq = ++projectionSeq;
+ projectionLoading = true;
+ if (!projection) paintProjectionState(resolveState(null));
+ try {
+  const payload = await api.projection({
+   layers: view.layers.join(','), zoom: view.zoom,
+   tier: view.tier, signal: view.signal, q: view.q,
+   ...(refresh ? {refresh: 1} : {})
+  });
+  if (seq !== projectionSeq) return null;
+  projection = payload;
+  renderProjectionView();
+  return payload;
+ } catch (error) {
+  if (seq !== projectionSeq) return null;
+  // The read failed. The previous projection stays on screen and is labelled as
+  // such — it is never presented as if it were the current state.
+  paintProjectionState({
+   state: PROJECTION_STATE.SOURCE_UNAVAILABLE,
+   tone: 'error', icon: '⚠', badge: 'LEITURA FALHOU',
+   title: 'A projeção não pôde ser lida',
+   detail: projection
+    ? 'A leitura anterior continua desenhada e está desatualizada. Nada foi recalculado nem preenchido com zeros.'
+    : 'Nenhuma projeção foi publicada nesta sessão.',
+   action: {label: 'Tentar novamente', kind: 'retry'},
+   errors: [{layer: view.layers.join('+'), kind: String(error?.message || error).slice(0, 120)}],
+   degraded: []
+  });
+  return null;
+ } finally {
+  if (seq === projectionSeq) projectionLoading = false;
+ }
+}
+
+function setView(patch){
+ view = {...view, ...patch};
+ persistView();
+ if (mapMode !== 'projection') enterProjectionMode();
+ return loadProjection();
+}
+
+function enterProjectionMode(){
+ mapMode = 'projection';
+ document.body.dataset.mapMode = 'projection';
+ $('#layer-console').hidden = false;
+ $('#empty').hidden = true;
+}
+function enterExplorerMode(){
+ mapMode = 'explorer';
+ document.body.dataset.mapMode = 'explorer';
+ $('#layer-console').hidden = true;
+ $('#projection-state').innerHTML = '';
+}
+
+/* ---------- command palette ---------- */
+
+const PALETTE_COMMANDS = [
+ ...Object.entries(LAYER_META).map(([id, meta]) => ({
+  id: `layer:${id}`, title: `Camada · ${meta.label}`, hint: 'alternar', keywords: `camada layer ${id} ${meta.label}`
+ })),
+ {id: 'zoom:1', title: 'Zoom semântico · Macro', hint: 'domínios', keywords: 'zoom macro domínios campanhas'},
+ {id: 'zoom:2', title: 'Zoom semântico · Meso', hint: 'testes', keywords: 'zoom meso hipóteses claims testes'},
+ {id: 'zoom:3', title: 'Zoom semântico · Micro', hint: 'evidências', keywords: 'zoom micro evidências resultados linhagem'},
+ {id: 'view:clear', title: 'Limpar recorte da projeção', hint: 'filtros', keywords: 'limpar filtros recorte reset'},
+ {id: 'map:projection', title: 'Voltar ao mapa em camadas', hint: 'mapa', keywords: 'projeção camadas mapa'},
+ {id: 'map:explorer', title: 'Abrir sistemas declarados', hint: 'explorar', keywords: 'sistemas declarados explorar nexo'},
+ {id: 'action:sync', title: 'Sincronizar fontes', hint: 'leitura', keywords: 'sync sincronizar fontes neon drive'},
+ {id: 'action:refresh', title: 'Reler a projeção agora', hint: 'leitura', keywords: 'atualizar refresh reler projeção'},
+ {id: 'action:fit', title: 'Enquadrar o mapa', hint: 'câmera', keywords: 'enquadrar fit câmera reset'},
+ {id: 'action:flat', title: 'Alternar 2D / 3D', hint: 'câmera', keywords: 'plana 2d 3d perspectiva dimensão'}
+];
+
+const palette = createPalette({
+ root: $('#palette'), input: $('#palette-input'), list: $('#palette-list'),
+ getNodes: () => projection?.nodes || [],
+ commands: PALETTE_COMMANDS,
+ onRun: command => {
+  const [kind, value] = command.id.split(':');
+  if (kind === 'layer') return setView({layers: toggleLayer(view.layers, value)});
+  if (kind === 'zoom') return setView({zoom: Number(value)});
+  if (command.id === 'view:clear') return setView({tier: '', signal: '', q: ''});
+  if (command.id === 'map:projection') {enterProjectionMode(); return loadProjection()}
+  if (command.id === 'map:explorer') {enterExplorerMode(); return session.focusNode({id: 'system:NEXO', label: 'NEXO'})}
+  if (command.id === 'action:sync') return runSync({manual: true});
+  if (command.id === 'action:refresh') return loadProjection({refresh: true});
+  if (command.id === 'action:fit') return graph.reset();
+  if (command.id === 'action:flat') return $('#dimension').click();
+ },
+ onSelect: node => selectNode(node.id)
 });
 
 /* ---------- map controls ---------- */
@@ -252,7 +431,7 @@ $('#layers').onchange = e => session.setDepth(e.target.value);
 $('#menu').onclick = () => $('#sidebar').classList.toggle('open');
 $('#sync').onclick = () => runSync({manual:true});
 $('#close-inspector').onclick = () => {closeDrawer(); session.deselect()};
-$('#home').onclick = () => session.home();
+$('#home').onclick = () => {enterProjectionMode(); loadProjection(); return session.home()};
 $('#back').onclick = () => session.back();
 $('#fit').onclick = () => graph.reset();
 $('#center').onclick = () => graph.center();
@@ -270,15 +449,27 @@ $('#dimension').onclick = () => {
 $('#more').onclick = () => session.more();
 for (const mode of ['neighbors', 'ancestors', 'descendants', 'critical'])
  $('#' + mode).onclick = () => {session.state.focus = session.state.selected || session.state.focus; session.setMode(mode)};
-$$('[data-focus]').forEach(b => b.onclick = () => session.focusNode({id: b.dataset.focus, label: b.textContent.trim()}));
-$$('[data-alias-focus]').forEach(b => b.onclick = () => session.focusNode({id: b.dataset.aliasFocus, label: b.textContent.trim()}));
+// The rail opens the declared-systems explorer; the layer console owns the
+// projection. Both readings stay reachable, and which one is on screen is
+// always the result of something the operator just clicked.
+$$('[data-focus]').forEach(b => b.onclick = () => {enterExplorerMode(); session.focusNode({id: b.dataset.focus, label: b.textContent.trim()})});
+$$('[data-alias-focus]').forEach(b => b.onclick = () => {enterExplorerMode(); session.focusNode({id: b.dataset.aliasFocus, label: b.textContent.trim()})});
 
 installFilters(session);
 
 document.addEventListener('keydown', e => {
- if ((e.metaKey || e.ctrlKey) && e.key === 'k') {e.preventDefault(); $('#search').focus()}
- if (e.key === 'Escape') {immersive(false); closeDrawer()}
+ if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {e.preventDefault(); palette.toggle()}
+ if (e.key === 'Escape' && !palette.isOpen()) {immersive(false); closeDrawer()}
+ // Digits switch layers, 1–3 on the semantic zoom with Shift. Both are the
+ // gestures this map is used with constantly, so they get a bare key.
+ if (!e.metaKey && !e.ctrlKey && !e.altKey && document.activeElement?.tagName !== 'INPUT') {
+  const layerKeys = Object.keys(LAYER_META);
+  const index = Number(e.key) - 1;
+  if (e.shiftKey && index >= 0 && index < 3) {e.preventDefault(); setView({zoom: index + 1})}
+  else if (!e.shiftKey && index >= 0 && index < layerKeys.length) {e.preventDefault(); setView({layers: toggleLayer(view.layers, layerKeys[index])})}
+ }
 });
+$('#search').addEventListener('focus', () => palette.open());
 
 /* ---------- sync ---------- */
 
@@ -288,7 +479,11 @@ const lastAutoSync = () => {try{return Number(localStorage.getItem(AUTO_SYNC_KEY
 const markAutoSync = () => {try{localStorage.setItem(AUTO_SYNC_KEY,String(Date.now()))}catch{}};
 
 async function runSync({manual=false}={}) {
+ if (mapMode === 'projection') paintProjectionState(resolveState(projection, {syncing: true}));
  const result = await session.sync();
+ // A sync changes the source; the projection is re-read from it rather than
+ // being kept and relabelled as if it were current.
+ if (mapMode === 'projection') await loadProjection({refresh: true});
  if (!result) return toast('Sincronização indisponível. Último recorte preservado.');
  markAutoSync();
  const warning = result.sources?.drive?.error === 'GOOGLE_AUTH_NOT_CONFIGURED'
@@ -311,7 +506,10 @@ document.addEventListener('visibilitychange', () => {if (!document.hidden) check
 applyWorkspaceMode();
 syncFilterInputs(session.state.filters);
 startCommandCenter();
-await session.refresh();
+enterProjectionMode();
+// The projection and the summary are read side by side. Neither waits for the
+// other, so a slow layer cannot hold the rest of the cockpit hostage.
+await Promise.allSettled([loadProjection(), session.refresh()]);
 await checkAutoSync();
 registerWebMcp({
  api, session,

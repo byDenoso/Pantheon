@@ -1,0 +1,325 @@
+/* Cosmic command centre — the layer console, projection states and command
+   palette. Loaded after reference-one.css, so it only adds the surfaces this
+   rework introduces instead of re-theming what already works.
+
+   Two rules hold the whole language together:
+   1. depth is meaning — what is nearer is nearer to the origin of the truth;
+   2. no signal is carried by colour alone — every tone ships a glyph and a word. */
+
+:root{
+ --layer-science:#4da3ff;
+ --layer-execution:#ff7ac2;
+ --layer-integrity:#57e0c0;
+ --sig-supported:#69dec0;
+ --sig-partial:#efc379;
+ --sig-negative:#f38999;
+ --sig-blocked:#ff687c;
+ --sig-active:#6bceff;
+ --sig-legacy:#73819b;
+ --sig-unknown:#a2b3ce;
+ --console-glass:color-mix(in srgb, var(--surface) 86%, transparent);
+ --console-line:color-mix(in srgb, var(--line-strong) 70%, transparent);
+}
+[data-theme="light"]{
+ --layer-science:#0a63c4;
+ --layer-execution:#b0338a;
+ --layer-integrity:#0b7f6b;
+ --sig-supported:#0d7d63;
+ --sig-partial:#8a6208;
+ --sig-negative:#b23a4c;
+ --sig-blocked:#a52034;
+ --sig-active:#0a63c4;
+ --sig-legacy:#5b6c82;
+ --sig-unknown:#5f7288;
+}
+
+/* ------------------------------------------------------------ layer console */
+
+.layer-console{
+ position:absolute;left:16px;top:16px;z-index:6;
+ display:flex;flex-direction:column;gap:8px;
+ width:min(360px,calc(100% - 32px));
+ padding:12px;
+ background:var(--console-glass);
+ backdrop-filter:blur(18px) saturate(1.2);
+ border:1px solid var(--console-line);
+ border-radius:var(--radius-md);
+ box-shadow:var(--shadow-md);
+ font-size:11px;color:var(--muted);
+ /* The console is a control surface over the map, never a panel that takes it
+    over: past this height it scrolls rather than growing. */
+ max-height:min(62vh,540px);overflow-y:auto;
+}
+.layer-console .lc-row{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.layer-console .lc-caption{
+ font-size:9px;letter-spacing:.14em;color:var(--muted-2);
+ text-transform:uppercase;margin-right:2px;
+}
+
+.lc-layer{
+ display:flex;align-items:center;gap:6px;
+ flex:1 1 96px;min-width:96px;
+ padding:8px 10px;
+ background:var(--surface-2);
+ border:1px solid var(--line);
+ border-radius:var(--radius-sm);
+ color:var(--muted);cursor:pointer;
+ transition:border-color var(--motion-fast) var(--ease),color var(--motion-fast) var(--ease),background var(--motion-fast) var(--ease);
+}
+.lc-layer .lc-glyph{font-size:13px;line-height:1}
+.lc-layer .lc-label{font-weight:650;font-size:11px;letter-spacing:.02em}
+.lc-layer:hover{border-color:var(--line-strong);color:var(--text)}
+.lc-layer.is-on{color:var(--text);background:var(--raised)}
+/* Each layer keeps its own accent so a composed map is readable at a glance. */
+.lc-layer[data-layer="science"].is-on{border-color:var(--layer-science);box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--layer-science) 40%,transparent)}
+.lc-layer[data-layer="execution"].is-on{border-color:var(--layer-execution);box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--layer-execution) 40%,transparent)}
+.lc-layer[data-layer="integrity"].is-on{border-color:var(--layer-integrity);box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--layer-integrity) 40%,transparent)}
+.lc-layer[data-layer="science"].is-on .lc-glyph{color:var(--layer-science)}
+.lc-layer[data-layer="execution"].is-on .lc-glyph{color:var(--layer-execution)}
+.lc-layer[data-layer="integrity"].is-on .lc-glyph{color:var(--layer-integrity)}
+.lc-flag{
+ margin-left:auto;width:15px;height:15px;border-radius:50%;
+ display:grid;place-items:center;font-size:10px;font-weight:800;
+ background:var(--accent-amber);color:#10131a;
+}
+
+.lc-zoom-step{
+ padding:5px 10px;font-size:10px;font-weight:650;letter-spacing:.04em;
+ background:transparent;border:1px solid var(--line);border-radius:999px;
+ color:var(--muted);cursor:pointer;
+}
+.lc-zoom-step.is-on{background:var(--accent);border-color:var(--accent);color:#04101f}
+[data-theme="light"] .lc-zoom-step.is-on{color:#fff}
+
+.lc-readout{gap:10px;font-size:10px;color:var(--muted-2);padding-top:2px}
+.lc-readout b{color:var(--text);font-weight:700}
+.lc-readout .lc-bridge b{color:var(--accent-violet)}
+.lc-readout .lc-truncated,.lc-readout .lc-hidden{
+ padding:2px 7px;border-radius:999px;
+ background:color-mix(in srgb,var(--accent-amber) 16%,transparent);
+ color:var(--accent-amber);font-weight:650;
+}
+.lc-fresh{margin-left:auto;font-weight:700;letter-spacing:.1em}
+.lc-fresh[data-freshness="LIVE"]{color:var(--sig-supported)}
+.lc-fresh[data-freshness="MIXED"]{color:var(--accent-amber)}
+.lc-fresh[data-freshness="UNKNOWN"]{color:var(--muted-2)}
+
+/* The spine: one step per tier, in declared order, so the layer's shape is
+   visible before any node is read. An empty step stays in place — a tier with
+   no rows is a fact about the system, not a gap in the drawing.
+
+   Three composed layers make 28 steps. They scroll sideways in a single line
+   rather than wrapping into a wall, so the console stays the same height
+   whether one layer is on or all three are. */
+.layer-console .lc-tiers{
+ gap:3px;border-top:1px solid var(--line);padding-top:8px;
+ flex-wrap:nowrap;overflow-x:auto;scrollbar-width:thin;padding-bottom:4px;
+}
+.lc-tiers::-webkit-scrollbar{height:5px}
+.lc-tiers::-webkit-scrollbar-thumb{background:var(--line-strong);border-radius:3px}
+.lc-tier{flex:0 0 auto}
+.lc-tier{
+ display:flex;align-items:center;gap:5px;
+ padding:3px 7px;font-size:9px;letter-spacing:.05em;
+ background:var(--surface-2);border:1px solid transparent;border-radius:999px;
+ color:var(--muted);cursor:pointer;
+}
+.lc-tier i{
+ width:6px;height:6px;border-radius:50%;
+ /* Position on the spine is drawn as brightness: front tiers read as nearer. */
+ background:color-mix(in srgb,var(--accent) calc(100% - var(--tier-step,0) * 7%),var(--muted-2));
+}
+.lc-tier em{font-style:normal;font-weight:700;color:var(--text)}
+.lc-tier:hover{border-color:var(--line-strong);color:var(--text)}
+/* Absent from the source: dimmed, because there is genuinely nothing there. */
+.lc-tier.is-empty{opacity:.45}
+.lc-tier.is-empty em{color:var(--muted-2)}
+/* Present but outside the current recorte: still legible, and marked with the
+   search glyph, so "hidden" never reads as "missing". */
+.lc-tier.is-hidden{opacity:.8;border-style:dashed;border-color:var(--line)}
+.lc-tier.is-hidden em{color:var(--accent);font-weight:600}
+
+.lc-signals{gap:4px}
+.lc-signal{
+ display:flex;align-items:center;gap:5px;
+ padding:3px 8px;font-size:9px;font-weight:600;
+ background:transparent;border:1px solid var(--line);border-radius:999px;
+ color:var(--muted);cursor:pointer;
+}
+.lc-signal i{font-style:normal;font-size:10px}
+.lc-signal em{font-style:normal;font-weight:700;color:var(--text)}
+.lc-signal[data-tone="supported"] i{color:var(--sig-supported)}
+.lc-signal[data-tone="partial"] i{color:var(--sig-partial)}
+.lc-signal[data-tone="negative"] i{color:var(--sig-negative)}
+.lc-signal[data-tone="blocked"] i{color:var(--sig-blocked)}
+.lc-signal[data-tone="active"] i{color:var(--sig-active)}
+.lc-signal[data-tone="legacy"] i{color:var(--sig-legacy)}
+.lc-signal[data-tone="unknown"] i{color:var(--sig-unknown)}
+.lc-signal:hover{border-color:var(--line-strong);color:var(--text)}
+
+.lc-integrity{gap:8px;font-size:9px;border-top:1px solid var(--line);padding-top:8px}
+.lc-integrity b{color:var(--text)}
+.lc-bar{flex:1 1 60px;height:4px;min-width:48px;border-radius:2px;background:var(--sig-unknown);overflow:hidden;display:block}
+.lc-bar i{display:block;height:100%;background:var(--sig-supported)}
+.lc-warn{color:var(--accent-amber);font-weight:650}
+/* A tier with no status column is a fact about the schema, not a warning. */
+.lc-note{color:var(--muted-2)}
+.lc-unknown{color:var(--muted-2);font-style:italic}
+
+/* The explorer's depth selector controls a focus-and-children recorte that a
+   projection does not have. Leaving a control on screen that does nothing is
+   worse than removing it, so each map mode shows only its own controls. */
+body[data-map-mode="projection"] #layers{display:none}
+body[data-map-mode="explorer"] #layer-console{display:none}
+
+/* ---------------------------------------------------------- projection state */
+
+.projection-state{
+ display:flex;gap:12px;align-items:flex-start;
+ max-width:520px;padding:18px 20px;
+ background:var(--console-glass);
+ backdrop-filter:blur(18px);
+ border:1px solid var(--console-line);
+ border-radius:var(--radius-md);
+ box-shadow:var(--shadow-md);
+ text-align:left;
+}
+.projection-state .ps-icon{font-size:20px;line-height:1.2}
+.projection-state h3{margin:2px 0 6px;font-size:15px;color:var(--text);font-weight:650}
+.projection-state .ps-badge{
+ margin:0;font-size:9px;font-weight:800;letter-spacing:.16em;color:var(--muted-2);
+}
+.projection-state .ps-detail{margin:0;font-size:12px;line-height:1.55;color:var(--muted)}
+.projection-state .ps-reasons{margin:8px 0 0;padding-left:16px;font-size:11px;color:var(--muted)}
+.projection-state .ps-reasons code{font-size:10px;color:var(--text)}
+.projection-state .ps-degraded{margin:8px 0 0;font-size:11px;color:var(--accent-amber)}
+.projection-state .ps-action{
+ margin-top:12px;padding:7px 14px;font-size:11px;font-weight:650;
+ background:var(--accent);border:0;border-radius:var(--radius-xs);
+ color:#04101f;cursor:pointer;
+}
+[data-theme="light"] .projection-state .ps-action{color:#fff}
+/* Tone is the border and the icon; the badge word carries the same meaning, so
+   the state survives a monochrome screenshot and colour-blind reading alike. */
+.projection-state.is-neutral{border-color:var(--line-strong)}
+.projection-state.is-neutral .ps-icon{color:var(--muted)}
+.projection-state.is-error{border-color:var(--sig-blocked)}
+.projection-state.is-error .ps-icon,.projection-state.is-error .ps-badge{color:var(--sig-blocked)}
+.projection-state.is-busy{border-color:var(--sig-active)}
+.projection-state.is-busy .ps-icon{color:var(--sig-active);animation:ps-spin 1.6s linear infinite}
+.projection-state.is-warn{border-color:var(--accent-amber);padding:12px 16px}
+.projection-state.is-warn .ps-icon,.projection-state.is-warn .ps-badge{color:var(--accent-amber)}
+@keyframes ps-spin{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){.projection-state.is-busy .ps-icon{animation:none}}
+
+#projection-state{
+ position:absolute;inset:0;z-index:7;
+ display:grid;place-items:center;padding:24px;pointer-events:none;
+}
+#projection-state:empty{display:none}
+#projection-state>*{pointer-events:auto}
+/* A partial composition annotates the map instead of covering it: the layers
+   that did load are still worth looking at. */
+#projection-state:has(.is-warn){place-items:start end;padding:16px}
+
+/* --------------------------------------------------------- command palette */
+
+#palette{
+ position:fixed;inset:0;z-index:60;
+ display:grid;place-items:start center;padding:12vh 16px 16px;
+ background:color-mix(in srgb,var(--bg) 72%,transparent);
+ backdrop-filter:blur(6px);
+}
+#palette[hidden]{display:none}
+.cp-shell{
+ width:min(620px,100%);
+ background:var(--surface);
+ border:1px solid var(--line-strong);
+ border-radius:var(--radius-md);
+ box-shadow:var(--shadow-lg);
+ overflow:hidden;
+}
+.cp-field{display:flex;align-items:center;gap:10px;padding:14px 16px;border-bottom:1px solid var(--line)}
+.cp-field span{color:var(--muted-2);font-size:14px}
+.cp-field input{
+ flex:1;background:transparent;border:0;outline:0;
+ color:var(--text);font-size:15px;font-family:inherit;
+}
+.cp-field kbd{
+ font-size:10px;padding:3px 6px;border:1px solid var(--line);
+ border-radius:5px;color:var(--muted-2);
+}
+.cp-list{list-style:none;margin:0;padding:6px;max-height:min(46vh,380px);overflow-y:auto}
+.cp-item{
+ display:flex;align-items:center;gap:10px;
+ padding:9px 10px;border-radius:var(--radius-xs);cursor:pointer;
+}
+.cp-item.is-active{background:var(--raised)}
+.cp-kind{
+ width:22px;height:22px;flex:0 0 22px;display:grid;place-items:center;
+ font-size:11px;border-radius:6px;background:var(--surface-2);color:var(--muted);
+}
+.cp-kind[data-tone="blocked"],.cp-kind[data-tone="negative"]{color:var(--sig-blocked)}
+.cp-kind[data-tone="supported"]{color:var(--sig-supported)}
+.cp-kind[data-tone="partial"]{color:var(--sig-partial)}
+.cp-title{flex:1;font-size:13px;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cp-hint{font-size:10px;letter-spacing:.06em;color:var(--muted-2);text-transform:uppercase;white-space:nowrap}
+.cp-empty{padding:20px 14px;font-size:12px;color:var(--muted);line-height:1.5}
+
+/* ------------------------------------------------------------------ mobile */
+
+@media (max-width:860px){
+ /* On a phone the map is the screen. The hero collapses to a single line of
+    context, the stage takes the viewport, and the console folds to its two
+    essential controls: which layers, and how deep. Everything else is one tap
+    away in the palette. */
+ body.reference-one[data-map-mode="projection"] .reference-hero-copy{
+  position:static;width:auto;padding:10px 14px 0;
+ }
+ /* The headline is the one thing a phone cannot afford: it costs half the
+    viewport to say what the console below already shows. The stats stay. */
+ body.reference-one[data-map-mode="projection"] .reference-hero-copy h1,
+ body.reference-one[data-map-mode="projection"] .reference-hero-subtitle,
+ body.reference-one[data-map-mode="projection"] .reference-explore-card{display:none}
+ body.reference-one[data-map-mode="projection"] .reference-hero-stats{margin-top:10px;max-width:none}
+ /* The stage owns the height; the zone fills what the compact header leaves.
+    Setting a min-height on both made them stack and pushed the map off screen. */
+ body.reference-one[data-map-mode="projection"] .graph-stage{min-height:0}
+ body.reference-one[data-map-mode="projection"] .reference-graph-zone,
+ body.reference-one[data-map-mode="projection"] #graph{
+  /* The desktop layout offsets the zone downward to clear the floating hero.
+     With the header collapsed there is nothing to clear, so the offset is
+     released and the map starts right under it. */
+  position:relative;inset:auto;min-height:0;height:calc(100vh - 210px);
+ }
+
+ .layer-console{
+  left:8px;right:8px;top:8px;width:auto;padding:9px;gap:6px;
+  max-height:34vh;overflow-y:auto;
+ }
+ .layer-console .lc-tiers,.layer-console .lc-integrity{display:none}
+ .lc-layer{flex:1 1 0;min-width:0;justify-content:center;padding:8px 4px}
+ .lc-layer .lc-label{font-size:10px}
+ .projection-state{max-width:none;padding:14px 16px}
+ #palette{padding:8vh 8px 8px}
+
+ /* The inspector becomes a bottom sheet: a side drawer on a 375px screen leaves
+    no map to inspect against, which defeats the point of opening it. */
+ #inspector[open],#inspector:not([hidden]){
+  position:fixed;inset:auto 0 0 0;width:auto;max-width:none;
+  height:min(72vh,560px);
+  border-radius:var(--radius-lg) var(--radius-lg) 0 0;
+  border:1px solid var(--line-strong);border-bottom:0;
+  box-shadow:0 -18px 60px var(--shadow);
+  overflow-y:auto;z-index:50;
+  animation:sheet-up var(--motion-med) var(--ease);
+ }
+ /* The grab handle says the sheet is a sheet before anyone tries to drag it. */
+ #inspector:not([hidden])::before{
+  content:'';position:sticky;top:6px;display:block;
+  width:36px;height:4px;margin:0 auto 6px;border-radius:2px;
+  background:var(--line-strong);
+ }
+}
+@keyframes sheet-up{from{transform:translateY(12%);opacity:.6}to{transform:none;opacity:1}}
+@media (prefers-reduced-motion:reduce){#inspector:not([hidden]){animation:none}}

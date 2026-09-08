@@ -2,6 +2,10 @@
   "version": 2,
   "builds": [
     {
+      "src": "api/projection.js",
+      "use": "@vercel/node"
+    },
+    {
       "src": "api/runtime-orphans.js",
       "use": "@vercel/node"
     },
@@ -71,6 +75,26 @@
     },
     {
       "src": "ui/reference-deck.css",
+      "use": "@vercel/static"
+    },
+    {
+      "src": "ui/cosmos.css",
+      "use": "@vercel/static"
+    },
+    {
+      "src": "ui/projection-layout.mjs",
+      "use": "@vercel/static"
+    },
+    {
+      "src": "ui/projection-state.mjs",
+      "use": "@vercel/static"
+    },
+    {
+      "src": "ui/layer-console.mjs",
+      "use": "@vercel/static"
+    },
+    {
+      "src": "ui/command-palette.mjs",
       "use": "@vercel/static"
     },
     {
@@ -147,6 +171,10 @@
     }
   ],
   "routes": [
+    {
+      "src": "/api/projection",
+      "dest": "/api/projection.js"
+    },
     {
       "src": "/api/(state|sync|graph|entity|automation-runs|learning-relations|learning|audit|health|ops)",
       "dest": "/api/runtime-orphans.js?route=$1"

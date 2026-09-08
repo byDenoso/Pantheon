@@ -9,7 +9,9 @@ const css = shellCss + deckCss;
 const tower = fs.readFileSync(new URL('../ui/control-tower.mjs', import.meta.url), 'utf8');
 
 test('reference-one layout reproduces the approved command-center composition', () => {
- for(const pattern of [/class=\"reference-one\"/,/Ideias em órbita\./,/Descobertas em rede\./,/Conectamos ciência, pessoas e tecnologia/,/reference-hero-stats/,/reference-graph-zone/,/reference-explore-card/])assert.match(index,pattern);
+ // The approved composition survives the rework; only the hero copy changed,
+ // from a marketing line to the header of a command centre.
+ for(const pattern of [/class=\"reference-one\"/,/Ciência, execução e integridade/,/na mesma leitura\./,/O Atlas é projeção: a verdade continua nos truth owners/,/reference-hero-stats/,/reference-graph-zone/,/reference-explore-card/])assert.match(index,pattern);
  assert.doesNotMatch(index,/FRONTEND OFICIAL|reference-cosmos-index|reference-quote/);
 });
 

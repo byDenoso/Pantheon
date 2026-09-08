@@ -69,6 +69,12 @@ export function createApi({fetchImpl, timeout = 20000, syncTimeout = 65000, maxE
    const data = await request('graph', q, {versioned: !auxiliaryFocus(focus)});
    return normalizeGraph(data, {focus});
   },
+  /** The layered projection endpoint. Unlike `graph`, this payload is not
+   *  normalised into the V1 graph shape: its `state`, `integrity` and per-layer
+   *  metadata are the point, and flattening them would discard exactly what the
+   *  UI needs to tell an empty layer apart from a failed read. */
+  projection: q => request('projection', q || {}, {versioned:false}),
+  projectionContract: () => request('projection', {describe:1}, {versioned:false}),
   state: q => request('state', q || {}, {versioned:true}),
   health: () => request('health', {}, {cacheable:false, versioned:false}),
   entity: (id, view) => request('entity', view ? {id, view} : {id}, {versioned:false}),

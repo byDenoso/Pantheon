@@ -20,8 +20,9 @@ const model={
 const fakeRoot=()=>({innerHTML:'',querySelectorAll(){return[]},querySelector(){return null}});
 
 test('overview puts the approved reference map before the operational deck',()=>{
- assert.match(index,/Ideias em órbita\./);
- assert.match(index,/Descobertas em rede\./);
+ // The hero now names what the map reads, not what the project aspires to.
+ assert.match(index,/Ciência, execução e integridade/);
+ assert.match(index,/na mesma leitura\./);
  assert.match(index,/ui\/reference-one\.css/);
  assert.ok(index.indexOf('id="map-workspace"')<index.indexOf('id="command-center"'));
  assert.match(index,/CONTROL TOWER/);
