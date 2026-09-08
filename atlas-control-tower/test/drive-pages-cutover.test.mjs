@@ -113,15 +113,16 @@ test('snapshot contract exposes hierarchy, provenance and Present from one truth
   assert.ok(story.children.some(n=>n.id==='claim:X1'));
 });
 
-test('NextGen exposes explicit Explore hierarchy and Present mode on the same static snapshot', () => {
+test('NextGen exposes explicit Explore hierarchy and Present overlay on the same static map', () => {
   const html = text('index.html');
   const app = text('nextgen','app.mjs');
-  assert.match(html, /data-mode="explore"/);
-  assert.match(html, /data-mode="present"/);
+  assert.match(html, /data-atlas-mode="explore"/);
+  assert.match(html, /data-atlas-mode="present"/);
   assert.match(html, /id="hierarchy-parent"/);
   assert.match(html, /id="hierarchy-current"/);
   assert.match(html, /id="hierarchy-children"/);
   assert.match(html, /id="present-panel"/);
+  assert.doesNotMatch(html, /role="tablist"/);
   assert.match(app, /getPresentStory/);
   assert.match(app, /renderHierarchy/);
   assert.match(app, /renderPresent/);
