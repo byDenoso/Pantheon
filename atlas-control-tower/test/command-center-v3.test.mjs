@@ -12,7 +12,8 @@ test('approved command-center UX uses the new navigation rail and hero shell', (
   for (const label of ['Visão Global','Galáxias','Ciência','Engineering','Olympus','Learning','Black Box','Pessoas','Ideias','Dados','Relatórios']) {
     assert.match(index, new RegExp(`>${label}<|>${label}</span>`));
   }
-  assert.match(index, /Conectamos ciência, pessoas e tecnologia/);
+  // The hero is now the command-centre header, not the marketing line it replaced.
+  assert.match(index, /Três projeções reais do Neon, compostas em profundidade/);
   assert.match(index, /reference-hero-stats/);
   assert.match(index, /reference-explore-card/);
   assert.doesNotMatch(index, /FRONTEND OFICIAL|reference-cosmos-index|reference-quote/);

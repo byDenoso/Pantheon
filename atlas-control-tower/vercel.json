@@ -78,6 +78,26 @@
       "use": "@vercel/static"
     },
     {
+      "src": "ui/cosmos.css",
+      "use": "@vercel/static"
+    },
+    {
+      "src": "ui/projection-layout.mjs",
+      "use": "@vercel/static"
+    },
+    {
+      "src": "ui/projection-state.mjs",
+      "use": "@vercel/static"
+    },
+    {
+      "src": "ui/layer-console.mjs",
+      "use": "@vercel/static"
+    },
+    {
+      "src": "ui/command-palette.mjs",
+      "use": "@vercel/static"
+    },
+    {
       "src": "ui/visual-config.mjs",
       "use": "@vercel/static"
     },

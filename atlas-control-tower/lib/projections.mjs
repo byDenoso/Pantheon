@@ -116,6 +116,15 @@ function place(layerId, tier) {
  };
 }
 
+/** Tiers whose rows have no status column at all. A dataset, a runtime or a
+ *  naming method is not "missing its status" — it never had one. Counting those
+ *  as unknown would turn a complete read into a false integrity warning, so they
+ *  declare `statusDeclared:false` and are excluded from that count. */
+const STATUSLESS_TIERS = new Set([
+ 'DATASET', 'EVIDENCE', 'RUNTIME', 'AGENT', 'ARTIFACT', 'DEPENDENCY',
+ 'NEON_RECORD', 'SOURCE_VERSION', 'TRANSFORMATION', 'ATLAS_PROJECTION'
+]);
+
 function node(layerId, tier, id, fields = {}) {
  const {derivation = null, authority = AUTHORITY.DERIVED, ...rest} = fields;
  return {
@@ -125,6 +134,7 @@ function node(layerId, tier, id, fields = {}) {
   authority,
   derivation: authority === AUTHORITY.DERIVED ? (derivation || 'GROUPING') : null,
   signal: signalOf(rest.status),
+  statusDeclared: !STATUSLESS_TIERS.has(tier),
   ...rest
  };
 }
@@ -145,6 +155,17 @@ function cap(rows, limit) {
 }
 
 const latest = values => values.map(str).filter(Boolean).sort().at(-1) || '';
+
+/** Turns a SCREAMING_SNAKE code into something a map label can hold.
+ *  `BLOCKED_SOURCE_EMBARGOED_PENDING_DESI_DR2_RELEASE` → `Source embargoed pending`.
+ *  The untouched code always travels in metadata: this is how the value is
+ *  displayed, never a replacement for it. */
+export function humanCode(value, words = 4) {
+ const parts = nonEmpty(value).replace(/^BLOCKED?_/i, '').split(/[_\s]+/).filter(Boolean);
+ if (!parts.length) return nonEmpty(value);
+ const kept = parts.slice(0, words).join(' ').toLowerCase();
+ return kept.charAt(0).toUpperCase() + kept.slice(1) + (parts.length > words ? '…' : '');
+}
 
 /* ----------------------------------------------------------------- SCIENCE */
 
@@ -467,17 +488,23 @@ export function buildExecution(rows = {}, options = {}) {
   ...attention.filter(a => nonEmpty(a.blocker_code)).map(a => ({kind: 'attention', row: a}))
  ];
  push('BLOCKER', blockers, ({kind, row}) => kind === 'action'
+  // The blocker reason is a paragraph an operator wrote. It is the summary, not
+  // the label: a map label built from it collapses into initials and stops being
+  // readable, so the task's own title names the node and the reason is kept whole.
   ? node(L, 'BLOCKER', `blocker:action:${row.id}`, {
-     authority: AUTHORITY.OPERATIONAL, label: nonEmpty(row.blocker_reason).slice(0, 120),
+     authority: AUTHORITY.OPERATIONAL, label: nonEmpty(row.title) || `Bloqueio ${str(row.id).slice(0, 8)}`,
      status: nonEmpty(row.status), domain: nonEmpty(row.domain), updatedAt: nonEmpty(row.updated_at),
-     summary: nonEmpty(row.title),
-     metadata: {action_id: str(row.id), source: 'nexo_ops.actions.blocker_reason'}
+     summary: nonEmpty(row.blocker_reason),
+     metadata: {action_id: str(row.id), blocker_reason: nonEmpty(row.blocker_reason), source: 'nexo_ops.actions.blocker_reason'}
     })
   : node(L, 'BLOCKER', `blocker:item:${row.item_id}`, {
-     authority: AUTHORITY.OPERATIONAL, label: nonEmpty(row.blocker_code),
+     authority: AUTHORITY.OPERATIONAL, label: humanCode(row.blocker_code),
      status: nonEmpty(row.status), domain: nonEmpty(row.domain), updatedAt: nonEmpty(row.updated_at),
-     summary: nonEmpty(row.title),
-     metadata: {item_id: nonEmpty(row.item_id), priority: nonEmpty(row.priority), action_id: nonEmpty(row.action_id), source: 'nexo_ops.attention_items'}
+     summary: nonEmpty(row.title) || nonEmpty(row.blocker_code),
+     metadata: {
+      item_id: nonEmpty(row.item_id), blocker_code: nonEmpty(row.blocker_code),
+      priority: nonEmpty(row.priority), action_id: nonEmpty(row.action_id), source: 'nexo_ops.attention_items'
+     }
     }));
 
  // WRITEBACK — a run that verified its own readback. The write→readback→verify rule,
@@ -795,7 +822,10 @@ function finish(layerId, {nodes, edges, clusters, tierMeta, sourceVersion, optio
    derivedNodes: derived,
    derivedRatio: nodes.length ? Number((derived / nodes.length).toFixed(3)) : 0,
    unlinkedNodes: orphans,
-   unknownSignal: signals.unknown || 0,
+   // Only rows that were supposed to carry a status and did not. A tier that
+   // has no status column is not a gap in the read.
+   unknownSignal: nodes.filter(n => n.statusDeclared && n.signal === 'unknown').length,
+   statuslessNodes: nodes.filter(n => !n.statusDeclared).length,
    truncated,
    derivations: uniq(nodes.filter(n => n.derivation).map(n => n.derivation)).sort()
   },
@@ -920,9 +950,27 @@ export function applyView(projection, query = {}) {
  const counts = {};
  for (const n of nodes) counts[n.tier] = (counts[n.tier] || 0) + 1;
 
+ // Integrity is recomputed over what is actually on screen. Reporting the whole
+ // layer's figures next to a filtered node count would describe two different
+ // populations as if they were one.
+ const linked = new Set(edges.flatMap(e => [e.source, e.target]));
+ const derived = nodes.filter(n => n.authority === 'DERIVED_NOT_EVIDENCE').length;
+ const integrity = {
+  ...projection.integrity,
+  canonicalNodes: nodes.length - derived,
+  derivedNodes: derived,
+  derivedRatio: nodes.length ? Number((derived / nodes.length).toFixed(3)) : 0,
+  unlinkedNodes: nodes.filter(n => !linked.has(n.id)).length,
+  unknownSignal: nodes.filter(n => n.statusDeclared && n.signal === 'unknown').length,
+  statuslessNodes: nodes.filter(n => n.statusDeclared === false).length,
+  derivations: uniq(nodes.filter(n => n.derivation).map(n => n.derivation)).sort(),
+  // The full-layer figures stay available, explicitly labelled as such.
+  ofLayer: projection.integrity
+ };
+
  return {
   ...projection,
-  nodes, edges,
+  nodes, edges, integrity,
   state: nodes.length
    ? PROJECTION_STATE.OK
    : (projection.nodes.length ? PROJECTION_STATE.FILTER_EMPTY : PROJECTION_STATE.NO_DATA),

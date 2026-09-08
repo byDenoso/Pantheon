@@ -3,6 +3,11 @@ import {clusteredPositions,visualCut,withDomainLinks} from './ui/map-data.mjs';
 import {nodeDisplayLabel} from './ui/cockpit-copy.mjs';
 import {orbitalOffset} from './ui/orbital-layout.mjs';
 import {buildFilaments,advancePulse,filamentControl,quadraticBezierPoint} from './ui/filaments.mjs';
+import {projectionLayout,applyLod,cull,LOD_BUDGET} from './ui/projection-layout.mjs';
+
+/** Layer identity is carried by the ring around a body; its fill stays the
+ *  operational signal, so status and provenance are readable at the same time. */
+export const LAYER_ACCENT=Object.freeze({science:'#4da3ff',execution:'#ff7ac2',integrity:'#57e0c0'});
 
 export function project([x,y,z],c,w,h){
  if(c.flat)z=0;
@@ -24,7 +29,9 @@ export function layout(nodes,focus){
 }
 
 export const colors={supported:'#69dec0',partial:'#efc379',negative:'#f38999',blocked:'#ff687c',active:'#6bceff',legacy:'#73819b',unknown:'#a2b3ce'};
-const structural=n=>['SYSTEM','DOMAIN','CAMPAIGN'].includes(n?.type);
+/** A structural body opens (drills in); a leaf selects (inspects). Projection
+ *  tiers that group other tiers behave the same way as the declared systems. */
+const structural=n=>['SYSTEM','DOMAIN','CAMPAIGN','TRUTH_OWNER','SOURCE','RUNTIME','AGENT'].includes(n?.type);
 /** Cosine ease for the soft appearance of a newly disclosed body. */
 const ease=t=>.5-Math.cos(Math.PI*Math.max(0,Math.min(1,t)))/2;
 /** easeInOutCubic drives the structural expansion: slow start, slow landing and
@@ -88,6 +95,7 @@ export class Graph3D{
  set(raw,focus){
   const data=withDomainLinks(visualCut(this.rootOnly(raw,focus),focus,MAP_CONFIG.maxNodes),focus),oldById=new Map(this.data.nodes.map((n,i)=>[n.id,this.positions[i]]));
   this.selected=null;this.hover=null;this.focus=focus;this.data=data;
+  this.mode='graph';this.projection=null;this.lod=null;
   const target=clusteredPositions(data,focus,layout),targetById=new Map(data.nodes.map((n,i)=>[n.id,target[i]]));
   const parent=new Map();for(const e of data.edges)if(!parent.has(e.target))parent.set(e.target,e.source);
   // A disclosed child is born at its parent and travels out to its orbit;
@@ -103,6 +111,34 @@ export class Graph3D{
   this.positions=start;this.transition={start,target,at:performance.now(),duration:MAP_CONFIG.transitionMs};
   this.refreshFilaments();
   this.reset(false);this.kick(MAP_CONFIG.transitionMs+220);
+ }
+ /** Draws a layered projection instead of a focus-and-children subgraph.
+  *
+  *  Depth here is semantic, not decorative: Z comes from the node's tier inside
+  *  its layer and from its layer's band inside the composition, so "closer" and
+  *  "nearer to the origin of the truth" are the same direction. The LOD budget
+  *  decides how much of it is worth drawing, and reports what it left out rather
+  *  than letting the map imply it is complete. */
+ setProjection(projection,{focus='',budget=LOD_BUDGET}={}){
+  const cutdown=applyLod(projection,{focus,selected:this.selected,hover:this.hover?.id,budget});
+  const nodes=cutdown.nodes.map(n=>({
+   ...n,
+   type:n.tier||n.type||'NODE',
+   tint:colors[n.signal]||colors.unknown,
+   accent:LAYER_ACCENT[n.layer]||null
+  }));
+  const data={nodes,edges:cutdown.edges,visualTotal:projection?.metadata?.drawnNodes??nodes.length};
+  const oldById=new Map(this.data.nodes.map((n,i)=>[n.id,this.positions[i]]));
+  this.mode='projection';this.projection=projection;this.lod=cutdown;this.focus=focus;this.hover=null;this.data=data;
+  const target=projectionLayout({...projection,nodes},{focus,tiers:projection?.tiers});
+  // A body already on screen travels to its new seat; a new one rises from the
+  // centre of its tier rather than appearing out of nothing.
+  const start=nodes.map((n,i)=>oldById.get(n.id)?[...oldById.get(n.id)]:[target[i][0]*.42,target[i][1]*.42,target[i][2]]);
+  this.spawned=new Set(nodes.filter(n=>!oldById.has(n.id)).map(n=>n.id));
+  this.positions=start;this.transition={start,target,at:performance.now(),duration:MAP_CONFIG.transitionMs};
+  this.refreshFilaments();
+  this.reset(false);this.kick(MAP_CONFIG.transitionMs+220);
+  return cutdown.omitted;
  }
  /** Filaments are precomputed per dataset/selection, never per frame.
   *  The key lets an external selection change (inspector, search, WebMCP) pick
@@ -166,12 +202,17 @@ export class Graph3D{
    const grow=this.spawned?.has(node.id)?lerp(MAP_CONFIG.spawnScale,1,this.spawnProgress??1):1;
    return{...p,node,r:Math.max(5,base*p.scale*grow)};
   });
+  // Frustum culling: a body entirely off-canvas is hidden by the camera, not
+  // removed from the model — it returns the moment it is panned back into view.
+  if(this.mode==='projection')this.points=cull(this.points,{width:w,height:h});
   const zs=this.points.map(p=>p.z),zmin=zs.length?Math.min(...zs):0,zmax=zs.length?Math.max(...zs):1;
   const nearness=z=>this.camera.flat||zmax===zmin?1:(z-zmin)/(zmax-zmin),fog=(color,z)=>mixHex(color,palette.background,(1-nearness(z))*MAP_CONFIG.fog);
   const map=new Map(this.points.map(p=>[p.node.id,p])),neighbors=new Set([this.selected]);
   const parentOf=new Map();for(const e of this.data.edges)if(!parentOf.has(e.target))parentOf.set(e.target,e.source);
   const systemRoot=id=>{let cur=id,guard=0;while(cur&&guard++<10){if(SYSTEM_COLORS[cur])return cur;cur=parentOf.get(cur)}return null};
-  const nodeBase=n=>SYSTEM_COLORS[n.id]||SYSTEM_COLORS[systemRoot(n.id)]||(n.domain?SYSTEM_COLORS['system:SCIENCE']:null)||palette.node;
+  // In projection mode the fill carries the operational signal the backend
+  // published; the system palette only applies to the declared-systems map.
+  const nodeBase=n=>n.tint||SYSTEM_COLORS[n.id]||SYSTEM_COLORS[systemRoot(n.id)]||(n.domain?SYSTEM_COLORS['system:SCIENCE']:null)||palette.node;
   const focusedId=this.selected||this.hover?.id||null;
   if(focusedId)neighbors.add(focusedId);
   for(const e of this.data.edges)if(e.source===focusedId||e.target===focusedId){neighbors.add(e.source);neighbors.add(e.target)}
@@ -211,12 +252,19 @@ export class Graph3D{
    const n=p.node,active=n.id===this.selected||n.id===this.hover?.id,core=n.id===this.focus,base=nodeBase(n),col=fog(base,p.z),pulse=active?1+.05*Math.sin(now*.018):1,rr=p.r*pulse;
    const mid=mixHex(base,palette.background,palette.isLight?.28:.42),shadow=mixHex(base,palette.background,palette.isLight?.58:.79),rim=mixHex(base,palette.isLight?'#07192d':'#ffffff',palette.isLight?.18:.28);
    c.globalAlpha=this.selected&&!neighbors.has(n.id)?.30:1;
-   const glow=c.createRadialGradient(p.x,p.y,0,p.x,p.y,rr*(core?5.5:4.35));glow.addColorStop(0,col+(core?MAP_CONFIG.haloAlpha:'3d'));glow.addColorStop(.38,col+'14');glow.addColorStop(1,col+'00');c.fillStyle=glow;c.beginPath();c.arc(p.x,p.y,rr*(core?5.5:4.35),0,Math.PI*2);c.fill();
+   // The radial halo is the most expensive thing per body. Under a projection
+   // budget only the bodies that carry the reading get one; the rest keep their
+   // sphere, so nothing disappears — it just stops glowing.
+   const haloed=this.mode!=='projection'||core||active||this.lod?.glowIds?.has(n.id);
+   if(haloed){const glow=c.createRadialGradient(p.x,p.y,0,p.x,p.y,rr*(core?5.5:4.35));glow.addColorStop(0,col+(core?MAP_CONFIG.haloAlpha:'3d'));glow.addColorStop(.38,col+'14');glow.addColorStop(1,col+'00');c.fillStyle=glow;c.beginPath();c.arc(p.x,p.y,rr*(core?5.5:4.35),0,Math.PI*2);c.fill()}
    if(n.type==='SYSTEM'){
     const ang=now*.00125+hash(n.id),or=rr+10;c.fillStyle=col+'e6';c.beginPath();c.arc(p.x+Math.cos(ang)*or,p.y+Math.sin(ang)*or*.58,core?2.6:1.9,0,Math.PI*2);c.fill();
    }
    if(core){const squash=.30+Math.abs(Math.sin(this.camera.pitch))*.55;for(let j=0;j<3;j++){c.beginPath();c.ellipse(p.x,p.y,rr*(1.62+j*.30),rr*(1.62+j*.30)*squash,-.5+j*.4,0,Math.PI*2);c.strokeStyle=col+(j?'62':'c4');c.lineWidth=j?1:1.5;c.stroke()}}
-   const sphere=c.createRadialGradient(p.x-rr*.34,p.y-rr*.42,0,p.x+rr*.2,p.y+rr*.2,rr*1.22);sphere.addColorStop(0,palette.highlight);sphere.addColorStop(.16,col);sphere.addColorStop(.56,fog(mid,p.z));sphere.addColorStop(1,fog(shadow,p.z));c.fillStyle=sphere;c.strokeStyle=col+'f4';c.lineWidth=active?2.8:n.type==='SYSTEM'?1.9:1.2;c.beginPath();
+   const sphere=c.createRadialGradient(p.x-rr*.34,p.y-rr*.42,0,p.x+rr*.2,p.y+rr*.2,rr*1.22);sphere.addColorStop(0,palette.highlight);sphere.addColorStop(.16,col);sphere.addColorStop(.56,fog(mid,p.z));sphere.addColorStop(1,fog(shadow,p.z));c.fillStyle=sphere;
+   // The ring is the layer's identity, so a composed map says which projection a
+   // body came from without needing a legend lookup.
+   c.strokeStyle=(n.accent?fog(n.accent,p.z):col)+'f4';c.lineWidth=active?2.8:n.accent?1.8:n.type==='SYSTEM'?1.9:1.2;c.beginPath();
    if(['FILE','ARTIFACT','DATASET'].includes(n.type))c.roundRect(p.x-rr,p.y-rr,rr*2,rr*2,Math.max(2,rr*.2));
    else if(n.type==='CLAIM'){c.moveTo(p.x,p.y-rr*1.28);c.lineTo(p.x+rr,p.y);c.lineTo(p.x,p.y+rr*1.28);c.lineTo(p.x-rr,p.y);c.closePath()}
    else c.arc(p.x,p.y,rr,0,Math.PI*2);c.fill();c.stroke();
@@ -234,8 +282,15 @@ export class Graph3D{
   const boxes=[];this.labelBoxes=boxes;
   const reserved=this.reserved||[{x:w/2-135,y:h-105,w:270,h:56},{x:10,y:h-46,w:w-20,h:40},{x:14,y:h-150,w:230,h:104},{x:12,y:8,w:230,h:34}];
   const topGuard=this.reserved?10:48,RANK={SYSTEM:700,DOMAIN:480,CAMPAIGN:260,CLAIM:130};
-  const priority=p=>p.node.id===this.focus?1e4:p.node.id===this.selected?9e3:p.node.id===this.hover?.id?8e3:(RANK[p.node.type]||0)+p.z;
-  for(const p of [...this.points].sort((a,b)=>priority(b)-priority(a))){const n=p.node,core=n.id===this.focus,active=n.id===this.selected||n.id===this.hover?.id;if(!core&&!active&&boxes.length>=Math.max(7,MAP_CONFIG.maxLabels|0))continue;if(this.focus==='system:NEXO'&&n.type!=='SYSTEM'&&!active)continue;if(this.data.nodes.length>44&&p.z<0&&n.type!=='SYSTEM'&&!core&&!active)continue;
+  // In a projection the spine replaces the type ranking: an earlier tier is
+  // structural, so it earns its label before a leaf does.
+  const tiers=this.projection?.tiers||[];
+  const rankOf=n=>this.mode==='projection'
+   ?(tiers.includes(n.tier)?(tiers.length-tiers.indexOf(n.tier))*70:0)+(4-(n.zoom||2))*90+(n.alsoInLayers?.length?300:0)
+   :(RANK[n.type]||0);
+  const priority=p=>p.node.id===this.focus?1e4:p.node.id===this.selected?9e3:p.node.id===this.hover?.id?8e3:rankOf(p.node)+p.z;
+  const labelCap=this.mode==='projection'?Math.max(7,this.lod?.labelBudget|0):Math.max(7,MAP_CONFIG.maxLabels|0);
+  for(const p of [...this.points].sort((a,b)=>priority(b)-priority(a))){const n=p.node,core=n.id===this.focus,active=n.id===this.selected||n.id===this.hover?.id;if(!core&&!active&&boxes.length>=labelCap)continue;if(this.focus==='system:NEXO'&&n.type!=='SYSTEM'&&!active)continue;if(this.data.nodes.length>44&&p.z<0&&n.type!=='SYSTEM'&&!core&&!active)continue;
    const maxChars=w<500?18:this.data.nodes.length>30?22:30,label=nodeDisplayLabel(n,maxChars),size=core?20:n.type==='SYSTEM'?14:12;c.font=(core?'750 ':'650 ')+size+'px sans-serif';const bw=c.measureText(label).width+26,bh=46,candidates=[[p.x-bw/2,p.y+p.r+14],[p.x-bw/2,p.y-p.r-bh-14],[p.x+p.r+16,p.y-bh/2],[p.x-p.r-bw-16,p.y-bh/2],...[48,80,112].flatMap(d=>[[p.x-bw/2,p.y-p.r-bh-d],[p.x-bw/2,p.y+p.r+d]])];let box;
    for(const[x,y]of candidates){const b={x,y,w:bw,h:bh,id:n.id};if(x<8||x+bw>w-8||y<topGuard||y+bh>h-38)continue;if(this.points.some(q=>q.node.id!==n.id&&q.x+q.r+4>x&&q.x-q.r-4<x+bw&&q.y+q.r+4>y&&q.y-q.r-4<y+bh))continue;if(boxes.some(a=>x<a.x+a.w+6&&x+bw+6>a.x&&y<a.y+a.h+5&&y+bh+5>a.y))continue;if(reserved.some(r=>x<r.x+r.w&&x+bw>r.x&&y<r.y+r.h&&y+bh>r.y))continue;box=b;break}if(!box)continue;boxes.push(box);
    const palette=themePalette(this.theme),labelColor=fog(nodeBase(n),p.z);

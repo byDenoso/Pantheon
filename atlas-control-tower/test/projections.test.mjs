@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import {
  buildScience, buildExecution, buildIntegrity, composeProjections, applyView, traverse,
- parseLayers, signalOf, LAYERS, AUTHORITY, PROJECTION_STATE, ZOOM, PROJECTION_CONTRACT
+ parseLayers, signalOf, humanCode, LAYERS, AUTHORITY, PROJECTION_STATE, ZOOM, PROJECTION_CONTRACT
 } from '../lib/projections.mjs';
 
 /* Fixtures mirror the real column names in Neon, so a schema drift breaks a test
@@ -285,6 +285,26 @@ test('the endpoint distinguishes every declared empty state', () => {
  assert.doesNotMatch(source, /catch\s*\(\s*\)\s*\{\s*return\s*\[\s*\]/, 'no silent fallback to fake data');
 });
 
+test('a filtered view recomputes integrity over what is actually on screen', () => {
+ const science = buildScience(scienceRows());
+ const macro = applyView(science, {zoom: ZOOM.MACRO});
+ assert.equal(macro.integrity.canonicalNodes + macro.integrity.derivedNodes, macro.nodes.length);
+ assert.notEqual(macro.integrity.canonicalNodes, science.integrity.canonicalNodes);
+ // The whole-layer figures survive, explicitly labelled rather than discarded.
+ assert.equal(macro.integrity.ofLayer.canonicalNodes, science.integrity.canonicalNodes);
+});
+
+test('a tier with no status column is not counted as a missing status', () => {
+ const science = buildScience(scienceRows());
+ const dataset = science.nodes.find(n => n.tier === 'DATASET');
+ const test1 = science.nodes.find(n => n.tier === 'TEST');
+ assert.equal(dataset.statusDeclared, false);
+ assert.equal(test1.statusDeclared, true);
+ assert.ok(science.integrity.statuslessNodes > 0);
+ const shouldHaveStatus = science.nodes.filter(n => n.statusDeclared && n.signal === 'unknown').length;
+ assert.equal(science.integrity.unknownSignal, shouldHaveStatus);
+});
+
 /* -------------------------------------------------------------- traversal */
 
 test('traversal walks neighbours, ancestors, descendants and full lineage', () => {
@@ -325,6 +345,26 @@ test('the free-text science status vocabulary collapses to drawable signals', ()
  assert.equal(signalOf('PENDING_CANONICALIZATION'), 'partial');
  assert.equal(signalOf('RUNNING'), 'active');
  assert.equal(signalOf(''), 'unknown');
+});
+
+test('long operator prose is a summary, never a map label', () => {
+ const rows = executionRows();
+ rows.actions[0].blocker_reason = 'Falta o pacote de bytes oficial do DESI DR2 e o gate humano ainda não decidiu o caminho de submissão simultânea';
+ const execution = buildExecution(rows);
+ const blocker = execution.nodes.find(n => n.id === 'blocker:action:A1');
+ assert.equal(blocker.label, 'Rodar teste', 'the task title names the node');
+ assert.equal(blocker.summary, rows.actions[0].blocker_reason, 'the reason is kept whole');
+ assert.ok(blocker.label.length < 40);
+});
+
+test('a screaming-snake code becomes readable while the raw code is preserved', () => {
+ assert.equal(humanCode('BLOCKED_SOURCE_EMBARGOED_PENDING_DESI_DR2_RELEASE'), 'Source embargoed pending desi…');
+ assert.equal(humanCode('INPUT_MISSING'), 'Input missing');
+ assert.equal(humanCode(''), '');
+ const execution = buildExecution(executionRows());
+ const item = execution.nodes.find(n => n.id === 'blocker:item:I1');
+ assert.equal(item.label, 'Input missing');
+ assert.equal(item.metadata.blocker_code, 'INPUT_MISSING', 'the code itself must survive in metadata');
 });
 
 test('integrity reports how much of the picture the Atlas computed', () => {
