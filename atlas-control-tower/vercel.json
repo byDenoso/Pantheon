@@ -1,6 +1,7 @@
 {
   "version": 2,
   "builds": [
+    {"src": "api/runtime-orphans.js", "use": "@vercel/node"},
     {"src": "api/runtime-semantic.js", "use": "@vercel/node"},
     {"src": "api/runtime-v2.js", "use": "@vercel/node"},
     {"src": "api/runtime.js", "use": "@vercel/node"},
@@ -36,7 +37,7 @@
     {"src": "webmcp/tools.mjs", "use": "@vercel/static"}
   ],
   "routes": [
-    {"src": "/api/(state|sync|graph|entity|automation-runs|learning-relations|learning|audit|health|ops)", "dest": "/api/runtime-semantic.js?route=$1"},
+    {"src": "/api/(state|sync|graph|entity|automation-runs|learning-relations|learning|audit|health|ops)", "dest": "/api/runtime-orphans.js?route=$1"},
     {"src": "/(.*\\.css)", "headers": {"Content-Type": "text/css; charset=utf-8", "Cache-Control": "public, max-age=0, must-revalidate"}},
     {"src": "/(.*\\.mjs)", "headers": {"Content-Type": "text/javascript; charset=utf-8", "Cache-Control": "public, max-age=0, must-revalidate"}},
     {"src": "/(.*\\.js)", "headers": {"Content-Type": "text/javascript; charset=utf-8", "Cache-Control": "public, max-age=0, must-revalidate"}},
