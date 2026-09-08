@@ -72,12 +72,13 @@ test('compiler projects canonical learning, relations, operations and Olympus wi
   assert.doesNotMatch(code, /CREATE TABLE|INSERT INTO|postgres|neon\.tech/i);
 });
 
-test('compiler projects the three canonical operational lanes instead of relying only on ACTION_INDEX', () => {
+test('compiler uses ACTION_INDEX as the merged operational projection instead of duplicating partition reads', () => {
   const code = text('apps-script','Code.gs');
-  for (const surface of ['ACTIONS_SCIENCE','ACTIONS_ENGINEERING','ACTIONS_OLYMPUS']) {
-    assert.match(code, new RegExp(surface), `missing canonical operational lane ${surface}`);
-  }
-  assert.match(code, /lane/i);
+  assert.match(code, /readTable_\(book,'ACTION_INDEX'\)/);
+  assert.match(code, /compactRecord_\('ACTION_INDEX',row\)/);
+  assert.doesNotMatch(code, /readTable_\(book,'ACTIONS_SCIENCE'\)/);
+  assert.doesNotMatch(code, /readTable_\(book,'ACTIONS_ENGINEERING'\)/);
+  assert.doesNotMatch(code, /readTable_\(book,'ACTIONS_OLYMPUS'\)/);
 });
 
 test('snapshot contract exposes hierarchy, provenance and Present from one truth', async () => {
