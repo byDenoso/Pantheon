@@ -5,29 +5,25 @@ import fs from 'node:fs';
 const read = p => fs.readFileSync(new URL('../'+p, import.meta.url), 'utf8');
 
 test('layered navigation defaults to one layer per click', () => {
- const html = read('index.html');
- assert.match(html, /<option value="1" selected>1 camada<\/option>/);
- assert.doesNotMatch(html, /<option value="3" selected>/);
- const app = read('app.mjs');
- assert.match(app, /depth: Number\(\$\('#layers'\)\?\.value\) \|\| 1/);
- assert.match(app, /onDomain: domain => focusDomain\(domain\)/);
- assert.match(app, /session\.focusNode\(\{id:`domain:\$\{domain\}`/);
+ const app = read('src/App.tsx');
+ const session = read('src/state/useAtlasSession.ts');
+ assert.match(app, /useState\(1\)/);
+ assert.match(app, /<option value=\{1\}>1 camada<\/option>/);
+ assert.doesNotMatch(app, /useState\(3\)/);
+ assert.match(session, /limit:180,depth:1/);
+ assert.match(app, /actions\.open\(node\)/);
 });
 
-test('graph opening motion is slower and smoother than the previous fast snap', () => {
+test('legacy graph opening motion remains a smooth compatibility reference', () => {
  const cfg = read('ui/visual-config.mjs');
  const match = cfg.match(/transitionMs:(\d+)/);
  assert.ok(match, 'transitionMs missing');
  const ms = Number(match[1]);
  assert.ok(ms >= 360 && ms <= 520, `transitionMs=${ms} should be in the fluid 360-520ms range`);
- const graph = read('graph3d.mjs');
- assert.match(graph, /Math\.cos\(Math\.PI\*/, 'transition easing should use a smooth cosine curve');
 });
 
 test('long labels compact to a deterministic acronym instead of being cut in half', async () => {
- let mod = null;
- try { mod = await import('../ui/cockpit-copy.mjs'); } catch {}
- assert.equal(typeof mod?.compactLabel, 'function', 'compactLabel helper missing');
+ const mod = await import('../ui/cockpit-copy.mjs');
  assert.equal(mod.compactLabel('Ciência', {max:18}), 'Ciência');
  assert.equal(mod.compactLabel('Cosmic Microwave Background lensing reconstruction', {max:24}), 'CMBLR');
  assert.equal(mod.compactLabel('The Shape of the Matter Power Spectrum', {max:18}), 'SMPS');
@@ -35,9 +31,7 @@ test('long labels compact to a deterministic acronym instead of being cut in hal
 });
 
 test('cockpit copy exposes only what, how and why and never echoes raw technical hashes', async () => {
- let mod = null;
- try { mod = await import('../ui/cockpit-copy.mjs'); } catch {}
- assert.equal(typeof mod?.cockpitCopy, 'function', 'cockpitCopy helper missing');
+ const mod = await import('../ui/cockpit-copy.mjs');
  const indexed = mod.cockpitCopy({
   label:'Teste',
   summary:'English raw summary',
@@ -59,15 +53,13 @@ test('cockpit copy exposes only what, how and why and never echoes raw technical
  assert.doesNotMatch(JSON.stringify(raw), /6b54a91e721785807ff0e90c897010b6|688b472d2a298ca0f988d6c3be287f2b664dc103/);
 });
 
-test('default inspector is human-facing while raw audit metadata stays isolated', () => {
- const inspector = read('ui/inspector.mjs');
- assert.match(inspector, /cockpit-triad/);
- assert.match(inspector, /O QUÊ/);
- assert.match(inspector, /COMO/);
- assert.match(inspector, /POR QUÊ/);
- assert.match(inspector, /audit\?`<div class="detail-section audit-technical">/);
+test('React inspector is human-facing while raw audit metadata stays isolated', () => {
+ const app = read('src/App.tsx');
  const manifest = read('frontend-files.mjs');
- const vercel = read('vercel.json');
+ assert.match(app, /cockpit-triad/);
+ assert.match(app, /O QUÊ/);
+ assert.match(app, /COMO/);
+ assert.match(app, /POR QUÊ/);
+ assert.match(app, /<details className="audit-technical">/);
  assert.match(manifest, /ui\/cockpit-copy\.mjs/);
- assert.match(vercel, /ui\/cockpit-copy\.mjs/);
 });
