@@ -1,0 +1,24 @@
+name: Atlas HEAD Test
+
+on:
+  push:
+    branches: [atlas-nextgen-mobile-fix-20260908]
+    paths:
+      - 'atlas-control-tower/**'
+      - '.github/workflows/atlas-head-test.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: atlas-control-tower
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - run: npm test
