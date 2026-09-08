@@ -66,6 +66,12 @@ function routeOf(req){const u=urlOf(req);return u.searchParams.get('route')||u.p
 function queryOf(req){const u=urlOf(req),q=Object.fromEntries(u.searchParams);delete q.route;return q}
 function sendJson(res,value,status=200){res.statusCode=status;res.setHeader('Content-Type','application/json; charset=utf-8');res.setHeader('Cache-Control','private, max-age=60');res.setHeader('X-Content-Type-Options','nosniff');return res.end(JSON.stringify(value))}
 
+function sourceRefsOf(ref,observedAt=''){
+  const value=String(ref||'').trim();if(!value)return[];
+  const url=/^https:\/\//i.test(value)?value:/^[A-Za-z0-9_-]{20,}$/.test(value)?`https://drive.google.com/open?id=${encodeURIComponent(value)}`:undefined;
+  return[{source:'OLYMPUS_PROVENANCE',sourceRef:value,url,observedAt:observedAt||undefined}];
+}
+
 async function selectProfile(req,profile,table,q={}){
   const token=tokenOf(req);if(!token)throw Error('OIDC_NOT_AVAILABLE');
   const params=new URLSearchParams(Object.entries(q).filter(([,v])=>v!==undefined&&v!==null&&v!=='').map(([k,v])=>[k,String(v)]));
@@ -91,21 +97,21 @@ function olympusProjection({people,states,events,evidence,attention}){
     const current=stateBy.get(personId),attn=attentionBy.get(personId),name=person.display_name||personId;
     const decision=current?.decision||attn?.decision||'',nextAction=current?.next_action||attn?.next_action||'',freshness=current?.freshness||attn?.freshness||person.status||'ACTIVE';
     const personNode=`olympus:person:${personId}`;
-    nodes.push({id:personNode,canonicalId:personId,type:'PERSON',label:name,status:freshness,authority,updatedAt:current?.updated_at||person.updated_at||'',summary:[person.mode,decision,nextAction].filter(Boolean).join(' · '),metadata:{person_id:personId,mode:person.mode||'',person_status:person.status||'',state_revision:current?.state_revision??null,protocol_version:current?.protocol_version||'',freshness:current?.freshness||'',phase:current?.phase||'',decision,next_action:nextAction,blocking_data:current?.blocking_data||attn?.blocking_data||[],priority:attn?.priority??null,source_ref:current?.source_ref||''}});
+    nodes.push({id:personNode,canonicalId:personId,type:'PERSON',label:name,status:freshness,authority,updatedAt:current?.updated_at||person.updated_at||'',summary:[person.mode,decision,nextAction].filter(Boolean).join(' · '),sourceRefs:sourceRefsOf(current?.source_ref,current?.updated_at||current?.compiled_at||person.updated_at||''),metadata:{person_id:personId,mode:person.mode||'',person_status:person.status||'',state_revision:current?.state_revision??null,protocol_version:current?.protocol_version||'',freshness:current?.freshness||'',phase:current?.phase||'',decision,next_action:nextAction,blocking_data:current?.blocking_data||attn?.blocking_data||[],priority:attn?.priority??null,source_ref:current?.source_ref||''}});
     edges.push({id:`${root}:CONTAINS:${personNode}`,source:root,target:personNode,type:'CONTAINS',authority});
     if(current){
       const stateNode=`olympus:state:${personId}`;
-      nodes.push({id:stateNode,type:'STATE',label:`Estado atual · ${name}`,status:current.freshness||current.decision||'CURRENT',authority,updatedAt:current.updated_at||current.compiled_at||'',summary:[current.decision,current.next_action].filter(Boolean).join(' · '),metadata:{person_id:personId,state_revision:current.state_revision,protocol_version:current.protocol_version||'',freshness:current.freshness||'',phase:current.phase||'',decision:current.decision||'',next_action:current.next_action||'',blocking_data:current.blocking_data||[],active_plan_ref:current.active_plan_ref||'',source_ref:current.source_ref||'',compiled_at:current.compiled_at||''}});
+      nodes.push({id:stateNode,type:'STATE',label:`Estado atual · ${name}`,status:current.freshness||current.decision||'CURRENT',authority,updatedAt:current.updated_at||current.compiled_at||'',summary:[current.decision,current.next_action].filter(Boolean).join(' · '),sourceRefs:sourceRefsOf(current.source_ref,current.updated_at||current.compiled_at||''),metadata:{person_id:personId,state_revision:current.state_revision,protocol_version:current.protocol_version||'',freshness:current.freshness||'',phase:current.phase||'',decision:current.decision||'',next_action:current.next_action||'',blocking_data:current.blocking_data||[],active_plan_ref:current.active_plan_ref||'',source_ref:current.source_ref||'',compiled_at:current.compiled_at||''}});
       edges.push({id:`${personNode}:CONTAINS:${stateNode}`,source:personNode,target:stateNode,type:'CONTAINS',authority});
     }
     for(const event of (eventsBy.get(personId)||[]).slice(0,12)){
       const eventId=String(event.id||event.legacy_event_id||`${personId}:${event.observed_at||event.created_at||'event'}`),nodeId=`olympus:event:${eventId}`;
-      nodes.push({id:nodeId,type:'EVENT',label:event.event_type||'Evento',status:event.decision||'RECORDED',authority,updatedAt:event.observed_at||event.recorded_at||event.created_at||'',summary:event.summary||'',metadata:{person_id:personId,event_id:eventId,legacy_event_id:event.legacy_event_id||'',event_type:event.event_type||'',decision:event.decision||'',source_ref:event.source_ref||'',observed_at:event.observed_at||'',recorded_at:event.recorded_at||''}});
+      nodes.push({id:nodeId,type:'EVENT',label:event.event_type||'Evento',status:event.decision||'RECORDED',authority,updatedAt:event.observed_at||event.recorded_at||event.created_at||'',summary:event.summary||'',sourceRefs:sourceRefsOf(event.source_ref,event.observed_at||event.recorded_at||event.created_at||''),metadata:{person_id:personId,event_id:eventId,legacy_event_id:event.legacy_event_id||'',event_type:event.event_type||'',decision:event.decision||'',source_ref:event.source_ref||'',observed_at:event.observed_at||'',recorded_at:event.recorded_at||''}});
       edges.push({id:`${personNode}:CONTAINS:${nodeId}`,source:personNode,target:nodeId,type:'CONTAINS',authority});
     }
     for(const item of (evidenceBy.get(personId)||[]).slice(0,12)){
       const evidenceId=String(item.id||`${personId}:${item.observed_at||item.created_at||'evidence'}`),nodeId=`olympus:evidence:${evidenceId}`;
-      nodes.push({id:nodeId,type:'EVIDENCE',label:item.evidence_type||'Evidência',status:'RECORDED',authority,updatedAt:item.observed_at||item.created_at||'',summary:item.source_ref||'',metadata:{person_id:personId,evidence_id:evidenceId,evidence_type:item.evidence_type||'',source_ref:item.source_ref||'',observed_at:item.observed_at||''}});
+      nodes.push({id:nodeId,type:'EVIDENCE',label:item.evidence_type||'Evidência',status:'RECORDED',authority,updatedAt:item.observed_at||item.created_at||'',summary:item.source_ref||'',sourceRefs:sourceRefsOf(item.source_ref,item.observed_at||item.created_at||''),metadata:{person_id:personId,evidence_id:evidenceId,evidence_type:item.evidence_type||'',source_ref:item.source_ref||'',observed_at:item.observed_at||''}});
       edges.push({id:`${personNode}:CONTAINS:${nodeId}`,source:personNode,target:nodeId,type:'CONTAINS',authority});
     }
   }
