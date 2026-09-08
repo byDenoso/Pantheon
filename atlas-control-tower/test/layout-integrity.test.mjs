@@ -5,42 +5,36 @@ import {frontendFiles} from '../frontend-files.mjs';
 
 const read = path => fs.readFileSync(new URL(path, import.meta.url), 'utf8');
 const index = read('../index.html');
-const referenceCss = read('../ui/reference-one.css') + read('../ui/reference-deck.css');
-const officialCss = read('../ui/official-dashboard.css');
-const appSource = read('../app.mjs');
+const css = read('../nextgen/styles.css');
+const appSource = read('../nextgen/app.mjs');
 const themeSource = read('../ui/theme.mjs');
 const vercel = JSON.parse(read('../vercel.json'));
 const builds = new Set(vercel.builds.map(x => x.src));
 
-const obsoleteRuntimeStyles = ['ui/control-tower.css','ui/galactic-theme.css','ui/observatory-v2.css'];
+const obsoleteRuntimeStyles = ['ui/control-tower.css','ui/galactic-theme.css','ui/observatory-v2.css','ui/motion-impact.css','ui/readability.css'];
 
-test('reference-one is the only current shell override after shared base styles', () => {
-  assert.match(index, /\/styles\.css/);
-  assert.match(index, /\/ui\/official-dashboard\.css/);
-  assert.match(index, /\/ui\/premium-v2\.css/);
-  assert.match(index, /\/ui\/reference-one\.css/);
+test('NextGen is the only active shell loaded by the entrypoint', () => {
+  assert.match(index, /\/nextgen\/styles\.css/);
+  assert.match(index, /\/nextgen\/app\.mjs/);
+  assert.doesNotMatch(index, /\/ui\/official-dashboard\.css|\/ui\/premium-v2\.css|\/ui\/reference-one\.css|\/ui\/reference-deck\.css/);
   for (const file of obsoleteRuntimeStyles) {
     const escaped = file.replace(/[./]/g, m => '\\' + m);
     assert.doesNotMatch(index, new RegExp(escaped), `entrypoint still loads competing layer ${file}`);
-    assert.equal(frontendFiles.includes(file), false, `frontend boundary still deploys ${file}`);
-    assert.equal(builds.has(file), false, `Vercel still builds ${file}`);
   }
-  assert.doesNotMatch(officialCss, /Cosmic dark-mode rework/i);
 });
 
-test('reference shell solves width pressure instead of masking horizontal overflow', () => {
-  assert.doesNotMatch(referenceCss, /overflow-x\s*:\s*hidden/i);
-  assert.match(referenceCss, /--reference-sidebar-width\s*:/);
-  assert.match(referenceCss, /--reference-gutter\s*:/);
-  assert.match(referenceCss, /\.reference-main[^}]*min-width\s*:\s*0/s);
-  assert.match(referenceCss, /grid-template-columns\s*:[^;}]*minmax\(0\s*,\s*1fr\)/i);
-  assert.match(referenceCss, /@media\s*\(max-width\s*:\s*1600px\)/i);
-  assert.match(referenceCss, /@media\s*\(max-width\s*:\s*1366px\)/i);
+test('NextGen solves width pressure and safe-area layout explicitly', () => {
+  assert.match(css, /overflow-x:hidden/);
+  assert.match(css, /viewport-fit=cover|safe-area-inset-top|safe-area-inset-bottom/);
+  assert.match(css, /@media\(max-width:720px\)/);
+  assert.match(css, /@media\(max-width:430px\)/);
+  assert.match(css, /100dvh/);
+  assert.match(css, /\.lower-deck\{display:grid/);
 });
 
-test('reference wallpaper remains visible while graph geometry stays interactive', () => {
-  assert.match(referenceCss, /\.reference-space[^}]*pointer-events\s*:\s*none/s);
-  assert.match(referenceCss, /#graph[^}]*mix-blend-mode\s*:\s*screen/s);
+test('graph geometry stays interactive while cosmic layers stay paint-only', () => {
+  assert.match(css, /#cosmos\{[^}]*touch-action:none/s);
+  assert.match(css, /\.observatory:after\{[^}]*pointer-events:none/s);
   assert.doesNotMatch(appSource, /transparentBackground/);
 });
 
@@ -49,8 +43,9 @@ test('theme bootstrap does not request a stylesheet excluded from the public bui
   assert.doesNotMatch(themeSource, /data-atlas-readability/i);
 });
 
-test('reference console rows contain variable real text without widening their grid', () => {
-  assert.match(referenceCss, /\.ct-ref-row[^}]*min-width\s*:\s*0/s);
-  assert.match(referenceCss, /\.ct-ref-row b[^}]*overflow-wrap\s*:\s*anywhere/s);
-  assert.match(referenceCss, /\.ct-reference-grid[^}]*minmax\(0\s*,\s*1fr\)/s);
+test('NextGen public assets are present in both boundary and Vercel build', () => {
+  for(const file of ['nextgen/styles.css','nextgen/app.mjs','nextgen/graph/engine.mjs']){
+    assert.equal(frontendFiles.includes(file),true,`frontend boundary missing ${file}`);
+    assert.equal(builds.has(file),true,`Vercel build missing ${file}`);
+  }
 });
