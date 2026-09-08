@@ -1,0 +1,118 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import path from 'node:path';
+import {fileURLToPath,pathToFileURL} from 'node:url';
+
+const here=path.dirname(fileURLToPath(import.meta.url));
+const lab=path.resolve(here,'../graph-lab');
+const modulePath=rel=>path.join(lab,rel);
+async function importLab(rel){
+ const file=modulePath(rel);
+ assert.ok(fs.existsSync(file),`graph lab module missing: ${rel}`);
+ return import(pathToFileURL(file));
+}
+
+test('projection makes nearer positive-depth bodies appear larger',async()=>{
+ const {projectPoint,defaultCamera}=await importLab('graph/projection.mjs');
+ const camera=defaultCamera(); camera.yaw=0; camera.pitch=0;
+ const far=projectPoint([0,0,-120],camera,1000,700,{focalLength:760});
+ const near=projectPoint([0,0,120],camera,1000,700,{focalLength:760});
+ assert.ok(near.scale>far.scale);
+ assert.equal(projectPoint([0,0,0],camera,1000,700).x,500);
+});
+
+test('semantic orbital layout is deterministic and keeps focus at origin',async()=>{
+ const {layoutNodes}=await importLab('graph/layout.mjs');
+ const nodes=[
+  {id:'system:NEXO',type:'SYSTEM'},
+  {id:'system:SCIENCE',type:'SYSTEM',parentId:'system:NEXO'},
+  {id:'domain:COSMOLOGY',type:'DOMAIN',parentId:'system:SCIENCE'},
+  {id:'campaign:H0',type:'CAMPAIGN',parentId:'domain:COSMOLOGY'}
+ ];
+ const a=layoutNodes(nodes,'system:NEXO');
+ const b=layoutNodes(nodes,'system:NEXO');
+ assert.deepEqual([...a.entries()],[...b.entries()]);
+ assert.deepEqual(a.get('system:NEXO'),[0,0,0]);
+ assert.notDeepEqual(a.get('domain:COSMOLOGY'),[0,0,0]);
+});
+
+test('quadratic filament interpolation lands exactly on both endpoints',async()=>{
+ const {filamentControl,quadraticBezierPoint}=await importLab('graph/filaments.mjs');
+ const a={x:10,y:20},b={x:210,y:120};
+ const cp=filamentControl(a,b,.2,1);
+ assert.deepEqual(quadraticBezierPoint(a,cp,b,0),a);
+ assert.deepEqual(quadraticBezierPoint(a,cp,b,1),b);
+ const mid=quadraticBezierPoint(a,cp,b,.5);
+ assert.ok(Number.isFinite(mid.x)&&Number.isFinite(mid.y));
+ assert.notEqual(mid.y,(a.y+b.y)/2);
+});
+
+test('picking chooses the visually front-most overlapping body',async()=>{
+ const {pickNode}=await importLab('graph/picking.mjs');
+ const points=[
+  {node:{id:'back'},x:100,y:100,r:30,z:-40},
+  {node:{id:'front'},x:100,y:100,r:18,z:80}
+ ];
+ assert.equal(pickNode(points,100,100)?.node.id,'front');
+ assert.equal(pickNode(points,300,300),null);
+});
+
+test('orbital drift is deterministic, bounded and non-zero',async()=>{
+ const {orbitalDrift}=await importLab('graph/motion.mjs');
+ const a=orbitalDrift('node:A',12345,4);
+ const b=orbitalDrift('node:A',12345,4);
+ assert.deepEqual(a,b);
+ assert.ok(a.some(v=>Math.abs(v)>.01));
+ assert.ok(a.every(v=>Math.abs(v)<=4.001));
+});
+
+test('synthetic graph honors requested scale without dangling edges',async()=>{
+ const {createSyntheticGraph}=await importLab('data/synthetic-graph.mjs');
+ for(const count of [50,100,250]){
+  const graph=createSyntheticGraph(count);
+  assert.equal(graph.nodes.length,count);
+  assert.equal(graph.rootId,'system:NEXO');
+  const ids=new Set(graph.nodes.map(n=>n.id));
+  assert.ok(graph.edges.length>=count-1);
+  assert.ok(graph.edges.every(e=>ids.has(e.source)&&ids.has(e.target)));
+  assert.ok(['SCIENCE','LEARNING','ENGINEERING','OLYMPUS','BLACK_BOX'].every(name=>ids.has(`system:${name}`)));
+ }
+});
+
+test('label placement prioritizes focus and rejects overlapping boxes',async()=>{
+ const {placeLabels}=await importLab('graph/labels.mjs');
+ const points=[
+  {node:{id:'focus',label:'NEXO',type:'SYSTEM'},x:200,y:160,r:24,z:40},
+  {node:{id:'other',label:'Other',type:'TEST'},x:206,y:164,r:10,z:20}
+ ];
+ const labels=placeLabels(points,{width:400,height:320,focusId:'focus',maxLabels:1,reserved:[]});
+ assert.equal(labels.length,1);
+ assert.equal(labels[0].id,'focus');
+});
+
+test('lab exposes original-style presets and a renderer with one animation loop',async()=>{
+ const {PRESETS}=await importLab('graph/palette.mjs');
+ assert.ok(PRESETS.ORIGINAL&&PRESETS.CLEAN&&PRESETS.DEEP_SPACE&&PRESETS.HIGH_CONTRAST&&PRESETS.DENSE_GRAPH&&PRESETS.MOBILE);
+ const renderer=fs.existsSync(modulePath('graph/renderer.mjs'))?fs.readFileSync(modulePath('graph/renderer.mjs'),'utf8'):'';
+ assert.match(renderer,/requestAnimationFrame/);
+ assert.match(renderer,/createRadialGradient/);
+ assert.match(renderer,/quadraticCurveTo/);
+ assert.doesNotMatch(renderer,/setInterval|setTimeout\s*\(/);
+});
+
+test('lab shell is standalone, synthetic-only and mobile-aware',()=>{
+ for(const rel of ['index.html','styles.css','app.mjs']) assert.ok(fs.existsSync(modulePath(rel)),`missing ${rel}`);
+ const html=fs.readFileSync(modulePath('index.html'),'utf8');
+ const app=fs.readFileSync(modulePath('app.mjs'),'utf8');
+ const css=fs.readFileSync(modulePath('styles.css'),'utf8');
+ assert.match(html,/ATLAS GRAPH LAB/);
+ assert.match(html,/id="graph-lab-canvas"/);
+ assert.match(html,/id="preset"/);
+ assert.match(html,/id="dataset-size"/);
+ assert.match(html,/FPS/);
+ assert.match(css,/@media\s*\(max-width:\s*760px\)/);
+ assert.match(app,/createSyntheticGraph/);
+ assert.doesNotMatch(app,/\/api\//);
+ assert.doesNotMatch(app,/science_v1|learning_v1|nexo_ops|runner/i);
+});
