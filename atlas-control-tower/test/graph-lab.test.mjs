@@ -93,8 +93,10 @@ test('label placement prioritizes focus and rejects overlapping boxes',async()=>
 
 test('lab exposes original-style presets and a renderer with one animation loop',async()=>{
  const {PRESETS}=await importLab('graph/palette.mjs');
+ const {GraphLabRenderer}=await importLab('graph/renderer.mjs');
+ assert.equal(typeof GraphLabRenderer,'function');
  assert.ok(PRESETS.ORIGINAL&&PRESETS.CLEAN&&PRESETS.DEEP_SPACE&&PRESETS.HIGH_CONTRAST&&PRESETS.DENSE_GRAPH&&PRESETS.MOBILE);
- const renderer=fs.existsSync(modulePath('graph/renderer.mjs'))?fs.readFileSync(modulePath('graph/renderer.mjs'),'utf8'):'';
+ const renderer=fs.readFileSync(modulePath('graph/renderer.mjs'),'utf8');
  assert.match(renderer,/requestAnimationFrame/);
  assert.match(renderer,/createRadialGradient/);
  assert.match(renderer,/quadraticCurveTo/);
