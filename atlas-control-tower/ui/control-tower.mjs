@@ -39,32 +39,34 @@ export async function loadControlTower(api,{summary=null,lastSeenAt=null,now=new
 const statusDot=state=>`<i class="ct-dot ct-${esc(state)}"></i>`;
 const shortText=(value,max=132)=>{const s=String(value||'').trim();return s.length>max?s.slice(0,max-1)+'…':s};
 const dateLabel=value=>{const d=new Date(value||'');return Number.isNaN(d.valueOf())?'sem data':d.toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})};
-const row=(item,index,{blocker=false}={})=>`<button class="ct-ref-row${blocker?' ct-blocker-row':''}" data-ct-focus="system:AUTOMATION"><i>${index+1}</i><span><b>${esc(item.label||item.id||'Registro')}</b><small>${esc(item.domain||item.metadata?.event_type||item.status||'NEXO')}</small></span><em>${esc(shortText(item.status||'',18))}</em></button>`;
+const stateClass=value=>{const s=String(value||'').toUpperCase();if(/BLOCK|FAIL|ERROR/.test(s))return'blocked';if(/SUCCESS|PASS|COMPLETE|VALIDATED/.test(s))return'success';if(/ACTIVE|RUNNING|OPEN|READY/.test(s))return'active';return'neutral'};
+const row=(item,index,{blocker=false}={})=>{const status=shortText(item.status||'',18),kind=blocker?'blocked':stateClass(status);return`<button class="ct-ref-row${blocker?' ct-blocker-row':''}" data-ct-focus="system:AUTOMATION"><i>${index+1}</i><span><b>${esc(item.label||item.id||'Registro')}</b><small>${esc(item.domain||item.metadata?.event_type||item.status||'NEXO')}</small></span><em class="ct-action-state ${kind}">${esc(status||'registrado')}</em></button>`};
 
 export function renderControlTower(root,model,{onFocus,onMap}={}){
  if(!root)return;
  const health=model.health||[], attention=model.attention||{}, recentState=model.recent||{};
  const healthGood=health.filter(h=>h.state==='good').length, healthTotal=health.length||0;
+ const healthPct=healthTotal?Math.round(healthGood/healthTotal*100):0;
  const blockedCount=Number(attention.blockedCount)||0;
- const nominal=healthTotal&&healthGood===healthTotal&&!blockedCount;
+ const nominal=healthTotal&&healthGood===healthTotal;
  const priorityItems=model.priorities||attention.blockers||[];
- const priorities=priorityItems.length?priorityItems.map((a,i)=>row(a,i)).join(''):'<p class="ct-empty">Nenhuma prioridade publicada.</p>';
+ const priorities=priorityItems.length?priorityItems.slice(0,5).map((a,i)=>row(a,i)).join(''):'<p class="ct-empty">Nenhuma prioridade publicada.</p>';
  const recentItems=recentState.items||[];
- const recent=recentItems.length?recentItems.map(e=>`<button class="ct-ref-row" data-ct-focus="system:AUTOMATION"><i>•</i><span><b>${esc(e.label||e.id)}</b><small>${esc(e.metadata?.event_type||e.status||'runtime')}</small></span><time>${esc(dateLabel(e.updatedAt))}</time></button>`).join(''):'<p class="ct-empty">Nenhuma atividade recente publicada.</p>';
+ const recent=recentItems.length?recentItems.slice(0,5).map(e=>`<button class="ct-ref-row" data-ct-focus="system:AUTOMATION"><i>•</i><span><b>${esc(e.label||e.id)}</b><small>${esc(e.metadata?.event_type||e.status||'runtime')}</small></span><time>${esc(dateLabel(e.updatedAt))}</time></button>`).join(''):'<p class="ct-empty">Nenhuma atividade recente publicada.</p>';
  const blockerItems=attention.blockers||[];
- const blockers=blockerItems.length?blockerItems.map((a,i)=>row(a,i,{blocker:true})).join(''):'<p class="ct-empty">Nenhum blocker material.</p>';
+ const blockers=blockerItems.length?blockerItems.slice(0,4).map((a,i)=>row(a,i,{blocker:true})).join(''):'<p class="ct-empty">Nenhum blocker material.</p>';
+ const systemList=health.map(h=>`<button class="${esc(h.state)}" data-ct-focus="${esc(h.focus||'system:NEXO')}"><i></i><span>${esc(h.label)}</span><em>${h.state==='good'?'online':h.state==='warn'?'atenção':'indefinido'}</em></button>`).join('');
  const runs=Number(attention.runs)||0, rb=Number(attention.readbackPercent)||0;
  const readbackLabel=attention.readbackLabel||'—';
  const readbackText=runs?`Readback verificado em ${num(rb)}% das execuções registradas. ${blockedCount?`${num(blockedCount)} blocker${blockedCount===1?' segue':'s seguem'} exigindo ação.`:'Fluxo operacional sem blocker material publicado.'}`:'Black Box sem runs suficientes para calcular readback.';
- const statusLabel=nominal?'SISTEMA NOMINAL':blockedCount?'SISTEMA OPERACIONAL':'LEITURA PARCIAL';
  const generatedAt=String(model.generatedAt||'');
 
  root.innerHTML=`<div class="ct-reference-grid">
-  <article class="ct-reference-console ct-status-console"><div class="ct-reference-title"><span>Status operacional</span>${statusDot(nominal?'good':blockedCount?'warn':'unknown')}</div><div class="ct-status-body"><strong class="ct-nominal"><i></i>${esc(statusLabel)}</strong><p>${healthTotal?`${healthGood}/${healthTotal} sinais verificados`:'Health indisponível'}</p><div class="ct-mini-metrics"><div><strong>${num(attention.success||0)}</strong><small>Execuções com sucesso</small></div><div><strong>${num(runs)}</strong><small>Runs registrados</small></div><div><strong>${num(blockedCount)}</strong><small>Blockers atuais</small></div></div></div></article>
+  <article class="ct-reference-console ct-status-console"><div class="ct-reference-title"><span>Status operacional</span>${statusDot(nominal?'good':healthPct?'warn':'unknown')}</div><div class="ct-status-body"><div class="ct-status-overview"><div class="ct-status-ring" style="--status:${healthPct}%"><strong>${healthTotal?num(healthPct)+'%':'—'}</strong></div><div class="ct-status-label"><strong>${healthPct===100?'SISTEMA OPERACIONAL':'LEITURA PARCIAL'}</strong><small>${healthTotal?`${healthGood}/${healthTotal} sinais verificados`:'Health indisponível'}</small><div class="ct-system-list">${systemList}</div></div></div><div class="ct-mini-metrics"><div><strong>${num(attention.success||0)}</strong><small>Execuções hoje</small></div><div><strong>${num(runs)}</strong><small>Runs registrados</small></div><div><strong>${num(blockedCount)}</strong><small>Blockers atuais</small></div><div><strong>${runs?num(rb)+'%':'—'}</strong><small>Readback</small></div></div></div></article>
   <article class="ct-reference-console ct-priorities-console"><div class="ct-reference-title"><span>Prioridades</span><small>Ver todas →</small></div><div class="ct-ref-list">${priorities}</div></article>
   <article class="ct-reference-console ct-recent-console"><div class="ct-reference-title"><span>Atividade recente</span><small>Ver todas →</small></div><div class="ct-ref-list">${recent}</div></article>
-  <article class="ct-reference-console ct-blockers-console"><div class="ct-reference-title"><span>Blockers</span><small>${num(blockedCount)} ativos</small></div><div class="ct-ref-list">${blockers}</div></article>
-  <article class="ct-reference-console ct-readback-console"><div class="ct-reference-title"><span>Readback</span><small>${esc(readbackLabel)}</small></div><div class="ct-readback-body"><blockquote>“${esc(readbackText)}”</blockquote><small>Black Box${generatedAt?' · '+esc(generatedAt.slice(0,16).replace('T',' ')):''}</small><div class="ct-readback-meter"><strong>${runs?num(rb)+'%':'—'}</strong><i style="--readback:${runs?rb:0}%"></i></div></div></article>
+  <article class="ct-reference-console ct-blockers-console"><div class="ct-reference-title"><span>Blockers</span><small>${num(blockedCount)} ativos</small></div><div class="ct-ref-list">${blockers}</div><div class="ct-console-footer"><button data-ct-focus="system:AUTOMATION">Ver todos os blockers →</button></div></article>
+  <article class="ct-reference-console ct-readback-console"><div class="ct-reference-title"><span>Readback</span><small>${esc(readbackLabel)}</small></div><div class="ct-readback-body"><blockquote>“${esc(readbackText)}”</blockquote><small>Black Box${generatedAt?' · '+esc(generatedAt.slice(0,16).replace('T',' ')):''}</small><div class="ct-readback-meter"><strong>${runs?num(rb)+'%':'—'}</strong><i style="--readback:${runs?rb:0}%"></i></div></div><div class="ct-console-footer"><button data-ct-focus="system:AUTOMATION">Ver histórico →</button></div></article>
  </div>`;
  root.querySelectorAll('[data-ct-focus]').forEach(button=>button.onclick=()=>onFocus?.(button.dataset.ctFocus));
  root.querySelector('[data-ct-map]')?.addEventListener('click',()=>onMap?.());

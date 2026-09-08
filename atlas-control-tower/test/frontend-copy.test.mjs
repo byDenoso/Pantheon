@@ -5,10 +5,11 @@ import fs from 'node:fs';
 const index = fs.readFileSync(new URL('../index.html', import.meta.url), 'utf8');
 const tower = fs.readFileSync(new URL('../ui/control-tower.mjs', import.meta.url), 'utf8');
 
-test('approved reference restores its intentional chrome without restoring provenance control', () => {
-  assert.match(index, /FRONTEND OFICIAL/i);
-  assert.match(index, /class="sidebar-foot reference-trace"/);
-  assert.match(index, /Estado rastreável/i);
+test('approved command-center chrome stays clean and leaves provenance to the inspector', () => {
+  assert.match(index, /NEXO <span>Atlas<\/span>/i);
+  assert.match(index, /CONTROL TOWER/i);
+  assert.match(index, /reference-system-card/);
+  assert.doesNotMatch(index, /FRONTEND OFICIAL|Estado rastreável/i);
   assert.doesNotMatch(index, /id="provenance"/);
 });
 
