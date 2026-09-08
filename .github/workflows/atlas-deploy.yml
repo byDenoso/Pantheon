@@ -1,0 +1,124 @@
+name: Atlas Deploy
+
+# The Vercel Git integration stopped producing production builds for this project:
+# main advanced several commits while https://nexo-atlas-control-tower.vercel.app
+# kept serving an older static bundle. This workflow publishes explicitly with the
+# Vercel CLI instead of relying on that integration, so a push to main either
+# deploys or fails loudly.
+#
+# It never publishes a red build: the test job gates the deploy job.
+#
+# Required repository secrets (Settings → Secrets and variables → Actions):
+#   VERCEL_TOKEN       Account Settings → Tokens, scoped to the project's owner
+#   VERCEL_ORG_ID      Project → Settings → General ("Vercel Team/Account ID")
+#   VERCEL_PROJECT_ID  Project → Settings → General ("Project ID", starts with prj_)
+#
+# The IDs must be the existing nexo-atlas-control-tower project. Deploying to any
+# other project would produce a shell without data: the Neon Data API is reached
+# through a Vercel OIDC token bound to that specific project.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'atlas-control-tower/**'
+      - '.github/workflows/atlas-deploy.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: atlas-production
+  cancel-in-progress: false
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: atlas-control-tower
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - run: npm test
+
+  deploy:
+    needs: test
+    runs-on: ubuntu-latest
+    environment: production
+    defaults:
+      run:
+        working-directory: atlas-control-tower
+    env:
+      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      - name: Fail early if the deploy credentials are missing
+        run: |
+          for name in VERCEL_TOKEN VERCEL_ORG_ID VERCEL_PROJECT_ID; do
+            if [ -z "${!name}" ]; then
+              echo "::error::$name is not set. Add it under Settings → Secrets and variables → Actions."
+              exit 1
+            fi
+          done
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+
+      - name: Pull production settings from the existing project
+        run: npx --yes vercel@latest pull --yes --environment=production --token="$VERCEL_TOKEN"
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+
+      - name: Build
+        run: npx --yes vercel@latest build --prod --token="$VERCEL_TOKEN"
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+
+      - name: Deploy to production
+        id: deploy
+        run: |
+          url=$(npx --yes vercel@latest deploy --prebuilt --prod --token="$VERCEL_TOKEN")
+          echo "url=$url" >> "$GITHUB_OUTPUT"
+          echo "Deployed: $url"
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+
+      # WRITE → READBACK → VERIFY. A 200 from the deploy command is not proof that
+      # the new build is the one the domain actually serves, so the job asserts
+      # against the production domain and fails if it is still serving the old
+      # bundle. A green check here means the rework is genuinely live.
+      - name: Readback production
+        run: |
+          domain="https://nexo-atlas-control-tower.vercel.app"
+          fail=0
+          for attempt in $(seq 1 20); do
+            contract=$(curl -s -o /tmp/contract.json -w '%{http_code}' --max-time 20 "$domain/api/projection?describe=1" || echo 000)
+            css=$(curl -s -o /dev/null -w '%{http_code}' --max-time 20 "$domain/ui/cosmos.css" || echo 000)
+            echo "attempt $attempt: /api/projection=$contract /ui/cosmos.css=$css"
+            if [ "$contract" = "200" ] && [ "$css" = "200" ]; then
+              echo "--- contract ---"; head -c 400 /tmp/contract.json; echo
+              grep -q 'projection-v1' /tmp/contract.json || { echo "::error::contract payload is not projection-v1"; exit 1; }
+              for layer in science execution integrity; do
+                state=$(curl -s --max-time 40 "$domain/api/projection?layers=$layer" \
+                  | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{try{const j=JSON.parse(s);console.log(j.state+" nodes="+(j.nodes||[]).length)}catch{console.log("UNPARSEABLE")}})')
+                echo "  $layer -> $state"
+                case "$state" in
+                  OK*) : ;;
+                  *) echo "::error::layer $layer did not return OK: $state"; fail=1 ;;
+                esac
+              done
+              [ "$fail" = "0" ] && { echo "Production readback passed."; exit 0; }
+              exit 1
+            fi
+            sleep 15
+          done
+          echo "::error::the production domain never served the new build; the alias is not pointing at this deployment"
+          exit 1
