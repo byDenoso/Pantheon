@@ -2,15 +2,15 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 
-const index = fs.readFileSync(new URL('../index.html', import.meta.url), 'utf8');
+const app = fs.readFileSync(new URL('../src/App.tsx', import.meta.url), 'utf8');
 const css = fs.readFileSync(new URL('../ui/reference-one.css', import.meta.url), 'utf8');
 const tower = fs.readFileSync(new URL('../ui/control-tower.mjs', import.meta.url), 'utf8');
 
-test('reference-one layout reproduces the approved hero composition', () => {
- for(const pattern of [/class="reference-one"/,/Ideias em órbita\./,/Descobertas em rede\./,/GALÁXIAS/,/DADOS/,/PESSOAS/,/IMPACTO/,/observatory-galaxy-right/,/observatory-asteroid-field/,/observatory-horizon-right/])assert.match(index,pattern);
+test('reference-one React layout reproduces the approved hero composition', () => {
+ for(const pattern of [/reference-main/,/Ideias em órbita\./,/Descobertas em rede\./,/GALÁXIAS/,/DADOS/,/PESSOAS/,/IMPACTO/,/observatory-galaxy-right/,/observatory-asteroid-field/,/observatory-horizon-right/])assert.match(app,pattern);
 });
 
-test('approved reference keeps the exact lower console taxonomy', () => {
+test('approved reference keeps the exact lower console taxonomy available', () => {
  for (const label of ['Status operacional','Prioridades','Atividade recente','Blockers','Readback']) assert.match(tower,new RegExp(label,'i'));
  assert.match(tower,/ct-reference-grid/);assert.match(tower,/ct-readback-console/);
 });

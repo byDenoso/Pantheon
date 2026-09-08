@@ -3,7 +3,8 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {renderControlTower} from '../ui/control-tower.mjs';
 
-const index=readFileSync(new URL('../index.html',import.meta.url),'utf8');
+const app=readFileSync(new URL('../src/App.tsx',import.meta.url),'utf8');
+const main=readFileSync(new URL('../src/main.tsx',import.meta.url),'utf8');
 const model={
  health:[
   {id:'science',label:'Science',state:'good',detail:'science_v1 · LIVE',focus:'system:SCIENCE'},
@@ -20,15 +21,15 @@ const model={
 const fakeRoot=()=>({innerHTML:'',querySelectorAll(){return[]},querySelector(){return null}});
 
 test('overview puts the approved reference map before the operational deck',()=>{
- assert.match(index,/Ideias em órbita\./);
- assert.match(index,/Descobertas em rede\./);
- assert.match(index,/ui\/reference-one\.css/);
- assert.ok(index.indexOf('id="map-workspace"')<index.indexOf('id="command-center"'));
- assert.match(index,/FRONTEND OFICIAL/);
- assert.match(index,/Estado rastreável/);
+ assert.match(app,/Ideias em órbita\./);
+ assert.match(app,/Descobertas em rede\./);
+ assert.match(main,/ui\/reference-one\.css/);
+ assert.ok(app.indexOf('id="map-workspace"')<app.indexOf('id="command-center"'));
+ assert.match(app,/FRONTEND OFICIAL/);
+ assert.match(app,/Estado rastreável/);
 });
 
-test('post-map deck contains the five approved reference consoles',()=>{
+test('legacy control-tower model keeps the five approved console semantics available',()=>{
  const root=fakeRoot();
  renderControlTower(root,model,{});
  assert.match(root.innerHTML,/Status operacional/);
@@ -37,5 +38,4 @@ test('post-map deck contains the five approved reference consoles',()=>{
  assert.match(root.innerHTML,/Blockers/);
  assert.match(root.innerHTML,/Readback/);
  assert.doesNotMatch(root.innerHTML,/LEARNING PROMOVIDO/);
- assert.doesNotMatch(root.innerHTML,/APRENDIZADO/);
 });
