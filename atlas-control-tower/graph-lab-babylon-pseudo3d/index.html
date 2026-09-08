@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+ <meta charset="utf-8">
+ <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+ <meta name="theme-color" content="#030507">
+ <title>ATLAS GRAPH LAB · BABYLON.JS · PSEUDO-3D</title>
+ <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+ <header class="topbar">
+  <div class="brand"><span class="spark">✧</span><div><b>ATLAS GRAPH LAB</b><small>BABYLON.JS · PSEUDO-3D ORBITAL</small></div></div>
+  <div class="engine-badge">BABYLON.JS · PSEUDO-3D</div>
+  <div class="hud"><span><b id="fps">--</b><small>FPS</small></span><span><b id="frame">--</b><small>MS</small></span><span><b id="nodes">--</b><small>NODES</small></span><span><b id="edges">--</b><small>EDGES</small></span><span><b id="labels">--</b><small>LABELS</small></span></div>
+ </header>
+ <main class="shell">
+  <section class="stage">
+   <canvas id="renderCanvas" aria-label="ATLAS Graph Lab em Babylon.js pseudo-3D"></canvas>
+   <div id="labels-layer" aria-hidden="true"></div>
+   <div class="stage-chip"><i></i>PALETTE A · OBSERVATORY PREMIUM</div>
+   <div class="mode-chip">PSEUDO-3D ORBITAL</div>
+   <div class="focus"><small>FOCO</small><b id="focus-label">NEXO</b></div>
+   <div class="tools"><button id="motion" title="Órbita automática">▷</button><button id="back" title="Voltar">←</button><button id="home" title="NEXO">⌂</button><button id="zoom-in" title="Aproximar">+</button><button id="zoom-out" title="Afastar">−</button><button id="fit" title="Enquadrar">⊞</button><button id="center" title="Centralizar selecionado">◎</button></div>
+   <div class="hint">Arraste suavemente para inclinar · Scroll/pinch para zoom · Duplo clique abre subgrafo</div>
+  </section>
+  <aside class="panel">
+   <div><small class="eyebrow">RENDERER COMPARISON</small><h1>Babylon pseudo-3D</h1><p>Mesmo grafo e mesma Paleta A. O eixo Z é comprimido e a câmera é restringida para preservar a leitura orbital do Atlas.</p></div>
+   <label>Dataset<select id="dataset-size"><option value="50">50 nodes</option><option value="100">100 nodes</option><option value="250">250 nodes</option><option value="500">500 nodes</option><option value="1000">1000 nodes</option></select></label>
+   <label>Depth <output id="depth-out">0.18</output><input id="depth" type="range" min="0.04" max="0.34" step="0.01" value="0.18"></label>
+   <label>Glow <output id="glow-out">0.68</output><input id="glow" type="range" min="0" max="1.4" step="0.05" value="0.68"></label>
+   <label>Pulse speed <output id="pulse-out">1.00</output><input id="pulse" type="range" min="0" max="2.5" step="0.05" value="1"></label>
+   <label>Max labels <output id="labels-out">24</output><input id="max-labels" type="range" min="4" max="40" step="1" value="24"></label>
+   <div class="note"><b>Engine:</b> Babylon.js<br><b>Geometry:</b> real meshes, compressed Z<br><b>Camera:</b> low-FOV + constrained tilt<br><b>Filaments:</b> curved tubes, shallow depth<br><b>Atlas production:</b> untouched</div>
+  </aside>
+ </main>
+ <script src="https://cdn.babylonjs.com/babylon.js"></script>
+ <script type="module" src="./app.mjs"></script>
+</body>
+</html>
