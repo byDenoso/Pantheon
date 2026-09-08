@@ -108,8 +108,7 @@ export async function graphProjection(req,{view='macro',focus='system:NEXO',dept
 
 export async function healthCheck(req){
   const token=tokenFor(req);const rows=await select(token,'science_v1','entities',{select:'entity_id',limit:1});
-  const graph=await loadCanonical(req);
-  return {ok:Array.isArray(rows),contract:'nextgen-3.5d',truthOwner:'NEON_V1',source:'v1',freshness:'LIVE',fingerprint:graph.fingerprint,sourceVersion:graph.sourceVersion};
+  return {ok:Array.isArray(rows),contract:'nextgen-3.5d',truthOwner:'NEON_V1',source:'v1',freshness:'LIVE'};
 }
 
 export async function forceSync(req){
