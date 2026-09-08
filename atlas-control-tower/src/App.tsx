@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { AtlasCanvas } from './scene/AtlasCanvas';
 import { useAtlasSession } from './state/useAtlasSession';
+import { cockpitCopy, nodeDisplayLabel } from '../ui/cockpit-copy.mjs';
 import type { AtlasNode } from './scene/types';
 import './styles/react-atlas.css';
 
@@ -17,7 +18,7 @@ function useMedia(query:string){
   return matches;
 }
 
-function displayNode(node:AtlasNode){return String(node.label||node.id)}
+function displayNode(node:AtlasNode){return String(nodeDisplayLabel(node,32)||node.label||node.id)}
 
 export default function App(){
   const {state,actions}=useAtlasSession();
@@ -33,6 +34,8 @@ export default function App(){
   const visibleNodes=graph?.nodes||[];
   const freshness=state.health?.dataSource?.freshness||'LIVE';
   const backend=state.health?.dataSource?.effective?.toUpperCase?.()||'V1';
+  const selectedRecord=(state.selectedEntity?.entity||state.selectedEntity||{}) as AtlasNode;
+  const selectedCopy=cockpitCopy(selectedRecord);
 
   useEffect(()=>{
     document.body.classList.add('reference-one','atlas-react-body');
@@ -80,7 +83,7 @@ export default function App(){
           <div className="graph-controls"><button onClick={()=>setAutoOrbit(v=>!v)} title="Órbita automática">{autoOrbit?'Ⅱ':'▷'}</button><button onClick={()=>void actions.back()} title="Voltar">←</button><button onClick={()=>void actions.home()} title="Sistema">⌂</button><button onClick={()=>actions.clearSelection()} title="Limpar seleção">◎</button></div>
           {state.error&&<div className="atlas-react-error">{state.error} · último recorte preservado</div>}
         </div>
-        <div className="reference-visualization-bar"><div className="reference-tabs"><button className="active" type="button">◉ Órbita</button><button type="button">⌘ Rede</button><button type="button">▣ Galeria</button><button type="button">☷ Lista</button></div><div className="reference-sources"><b>FONTES</b><span><i className="line canonical"/>Fonte científica</span><span><i className="line derived"/>Relação derivada</span></div><div className="reference-map-hint">Arraste para orbitar · Scroll para zoom · botão direito para mover</div></div>
+        <div className="reference-visualization-bar"><div className="reference-tabs"><button className="active" type="button">◉ Órbita</button><button type="button">⌘ Rede</button><button type="button">▣ Galeria</button><button type="button">☷ Lista</button></div><div className="reference-sources"><b>FONTES</b><span><i className="line canonical"/>Fonte científica</span><span><i className="line derived"/>Relação derivada</span></div><div className="reference-map-hint">Arraste para orbitar · Scroll para zoom · botão direito para mover</div>{(graph?.hasMore||graph?.truncated)&&<button id="more" type="button" onClick={()=>void actions.more()}>Mais entidades →</button>}</div>
         <div className="graph-bottom reference-selection"><span>{state.selectedId?`Selecionado: ${state.selectedId}`:'Selecione um nó para ver fontes e relações.'}</span></div>
       </section>
 
@@ -102,6 +105,6 @@ export default function App(){
       <footer className="reference-footer"><b>NEXO ATLAS</b><span>OBSERVATÓRIO PARA UMA CIÊNCIA MAIS CONECTADA</span><span className="official-flow">REACT · THREE.JS · R3F · WEBGPU · TSL</span></footer>
     </main>
 
-    {state.selectedId&&<aside id="inspector" aria-label="Detalhes da entidade" className="atlas-react-inspector"><div className="inspector-top"><span className="eyebrow">INSPETOR DA ENTIDADE</span><button onClick={actions.clearSelection} aria-label="Fechar detalhes">×</button></div><div className="atlas-inspector-body"><h2>{String(state.selectedEntity?.label||state.selectedEntity?.entity?.label||state.selectedId)}</h2><p className="micro">{state.selectedId}</p><dl><dt>Tipo</dt><dd>{String(state.selectedEntity?.type||state.selectedEntity?.entity?.type||'—')}</dd><dt>Status</dt><dd>{String(state.selectedEntity?.status||state.selectedEntity?.entity?.status||'—')}</dd><dt>Autoridade</dt><dd>{String(state.selectedEntity?.authority||state.selectedEntity?.entity?.authority||'DERIVED_NOT_EVIDENCE')}</dd></dl><pre>{JSON.stringify(state.selectedEntity?.entity||state.selectedEntity||{},null,2).slice(0,5000)}</pre></div></aside>}
+    {state.selectedId&&<aside id="inspector" aria-label="Detalhes da entidade" className="atlas-react-inspector"><div className="inspector-top"><span className="eyebrow">INSPETOR DA ENTIDADE</span><button onClick={actions.clearSelection} aria-label="Fechar detalhes">×</button></div><div className="atlas-inspector-body"><h2>{displayNode(selectedRecord.id?selectedRecord:{id:state.selectedId,label:state.selectedId})}</h2><p className="micro">{state.selectedId}</p><div className="cockpit-triad"><article><small>O QUÊ</small><p>{selectedCopy.what}</p></article><article><small>COMO</small><p>{selectedCopy.how}</p></article><article><small>POR QUÊ</small><p>{selectedCopy.why}</p></article></div><dl><dt>Tipo</dt><dd>{String(selectedRecord.type||'—')}</dd><dt>Status</dt><dd>{String(selectedRecord.status||'—')}</dd><dt>Autoridade</dt><dd>{String((selectedRecord as any).authority||'DERIVED_NOT_EVIDENCE')}</dd></dl><details className="audit-technical"><summary>Metadados técnicos</summary><pre>{JSON.stringify(selectedRecord,null,2).slice(0,5000)}</pre></details></div></aside>}
   </>;
 }
