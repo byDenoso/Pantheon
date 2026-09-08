@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
 import {
   scienceSourceRefs,
   opsSourceRefs,
@@ -7,6 +8,8 @@ import {
   TOWER_ID,
   ACTION_REGISTER_ID,
 } from '../lib/source-links.mjs';
+
+const orphanRuntime=fs.readFileSync(new URL('../api/runtime-orphans.js',import.meta.url),'utf8');
 
 test('science source rows resolve to exact frozen Tower sheet ranges', () => {
   const [ref] = scienceSourceRefs({
@@ -59,4 +62,11 @@ test('learning Action Register provenance points to the correct compatibility ta
   assert.equal(ref.sourceId, ACTION_REGISTER_ID);
   assert.match(ref.url, /gid=2100000001/);
   assert.equal(ref.source, 'ACTION_REGISTER_PROVENANCE');
+});
+
+test('normal entity reads are overlaid with source links without replacing semantic metadata',()=>{
+  assert.match(orphanRuntime,/scienceSourceRefs,opsSourceRefs,learningSourceRefs,mergeSourceRefs/);
+  assert.match(orphanRuntime,/entityWithSourceOverlay/);
+  assert.match(orphanRuntime,/entity\.sourceRefs=mergeSourceRefs/);
+  assert.match(orphanRuntime,/semanticDriveEntity/);
 });
