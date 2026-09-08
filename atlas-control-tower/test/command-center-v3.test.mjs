@@ -3,36 +3,31 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 
 const index = fs.readFileSync(new URL('../index.html', import.meta.url), 'utf8');
-const shellCss = fs.readFileSync(new URL('../ui/reference-one.css', import.meta.url), 'utf8');
-const deckCss = fs.readFileSync(new URL('../ui/reference-deck.css', import.meta.url), 'utf8');
-const css = shellCss + deckCss;
+const css = fs.readFileSync(new URL('../nextgen/styles.css', import.meta.url), 'utf8');
 const tower = fs.readFileSync(new URL('../ui/control-tower.mjs', import.meta.url), 'utf8');
 
-test('approved command-center UX uses the new navigation rail and hero shell', () => {
-  for (const label of ['Visão Global','Galáxias','Ciência','Engineering','Olympus','Learning','Black Box','Pessoas','Ideias','Dados','Relatórios']) {
-    assert.match(index, new RegExp(`>${label}<|>${label}</span>`));
-  }
-  // The hero is now the command-centre header, not the marketing line it replaced.
-  assert.match(index, /Três projeções reais do Neon, compostas em profundidade/);
-  assert.match(index, /reference-hero-stats/);
-  assert.match(index, /reference-explore-card/);
+test('NextGen command center exposes the semantic depth rail and 3.5D hero shell', () => {
+  for (const label of ['MACRO','SCIENTIFIC','PROVENANCE','AUTO ZOOM']) assert.match(index, new RegExp(label));
+  assert.match(index, /NEXO \/ MACRO GRAPH/);
+  assert.match(index, /Universo científico/);
+  assert.match(index, /id="cosmos"/);
+  assert.match(index, /TRUTH OWNER/);
+  assert.match(index, /NEON V1/);
   assert.doesNotMatch(index, /FRONTEND OFICIAL|reference-cosmos-index|reference-quote/);
 });
 
-test('new spatial shell removes the giant procedural planet and keeps a clean graph center', () => {
-  assert.match(css, /--reference-sidebar-width:124px/);
-  assert.match(css, /\.reference-space\{[^}]*background-image:url\('\/assets\/atlas-observatory-bg\.svg'\)/s);
-  assert.match(css, /background-position:center/);
-  assert.doesNotMatch(css, /\.observatory-asteroid-field|\.observatory-horizon-right/);
-  assert.match(css, /\.reference-hero-copy\{[^}]*width:min\(34%/s);
-  assert.match(css, /\.reference-graph-zone\{[^}]*left:36%/s);
+test('NextGen spatial shell is responsive and keeps graph center interactive', () => {
+  assert.match(css, /@media\(max-width:720px\)/);
+  assert.match(css, /@media\(max-width:430px\)/);
+  assert.match(css, /#cosmos\{[^}]*touch-action:none/s);
+  assert.match(css, /\.observatory\{[^}]*overflow:hidden/s);
+  assert.match(css, /100dvh/);
 });
 
-test('operational deck renders a strong status ring and readable action rows', () => {
+test('legacy operational deck remains testable while the NextGen entrypoint supersedes it', () => {
   assert.match(tower, /ct-status-ring/);
   assert.match(tower, /ct-system-list/);
   assert.match(tower, /ct-action-state/);
   assert.match(tower, /Ver todos os blockers/);
   assert.match(tower, /Ver histórico/);
-  assert.match(css, /grid-template-columns:minmax\(0,1\.05fr\) minmax\(0,1\.2fr\) minmax\(0,1\.15fr\) minmax\(0,1fr\) minmax\(0,1fr\)/);
 });
