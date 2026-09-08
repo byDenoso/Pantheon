@@ -103,6 +103,21 @@ test('lab exposes original-style presets and a renderer with one animation loop'
  assert.doesNotMatch(renderer,/setInterval|setTimeout\s*\(/);
 });
 
+test('palette A uses the approved Observatory Premium colors',async()=>{
+ const {SYSTEM_COLORS,STATUS_COLORS,PRESETS}=await importLab('graph/palette.mjs');
+ assert.equal(SYSTEM_COLORS['system:NEXO'],'#E8C982');
+ assert.equal(SYSTEM_COLORS['system:SCIENCE'],'#8FB7D6');
+ assert.equal(SYSTEM_COLORS['system:LEARNING'],'#A8A0B8');
+ assert.equal(SYSTEM_COLORS['system:ENGINEERING'],'#8195A8');
+ assert.equal(SYSTEM_COLORS['system:OLYMPUS'],'#8FB5A7');
+ assert.equal(SYSTEM_COLORS['system:BLACK_BOX'],'#777382');
+ assert.equal(PRESETS.ORIGINAL.background,'#030507');
+ assert.equal(PRESETS.ORIGINAL.edge,'#556676');
+ assert.equal(PRESETS.ORIGINAL.derived,'#6D6877');
+ assert.equal(STATUS_COLORS.active,'#9AB9D4');
+ assert.equal(STATUS_COLORS.blocked,'#8E6F6F');
+});
+
 test('lab shell is standalone, synthetic-only and mobile-aware',()=>{
  for(const rel of ['index.html','styles.css','app.mjs']) assert.ok(fs.existsSync(modulePath(rel)),`missing ${rel}`);
  const html=fs.readFileSync(modulePath('index.html'),'utf8');
