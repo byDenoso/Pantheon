@@ -1,0 +1,68 @@
+name: Atlas Rollback to Approved Orbital UI
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/atlas-rollback-video.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: atlas-production
+  cancel-in-progress: false
+
+jobs:
+  rollback:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: atlas-control-tower
+    env:
+      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      - name: Validate Vercel credentials
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: |
+          for name in VERCEL_TOKEN VERCEL_ORG_ID VERCEL_PROJECT_ID; do
+            if [ -z "${!name}" ]; then
+              echo "::error::$name is not set"
+              exit 1
+            fi
+          done
+
+      - name: Link existing production project
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: npx --yes vercel@latest pull --yes --environment=production --token="$VERCEL_TOKEN"
+
+      - name: Roll production back to approved orbital deployment
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: |
+          npx --yes vercel@latest rollback dpl_GHHZXoyyHGqT3x66z6A3dgqyu7Ku --yes --token="$VERCEL_TOKEN"
+          npx --yes vercel@latest rollback status --token="$VERCEL_TOKEN"
+
+      - name: Verify approved frontend and runtime health
+        run: |
+          domain="https://nexo-atlas-control-tower.vercel.app"
+          for attempt in $(seq 1 20); do
+            html=$(curl -fsS --max-time 20 "$domain/" || true)
+            health=$(curl -s -o /tmp/health.json -w '%{http_code}' --max-time 20 "$domain/api/health" || echo 000)
+            if printf '%s' "$html" | grep -q 'Buscar campanha, claim, teste, sistema' && [ "$health" = "200" ]; then
+              echo "Rollback readback passed: approved orbital UI + /api/health 200"
+              exit 0
+            fi
+            echo "attempt $attempt: waiting for production alias"
+            sleep 10
+          done
+          echo "::error::production did not converge to the approved orbital UI"
+          exit 1
