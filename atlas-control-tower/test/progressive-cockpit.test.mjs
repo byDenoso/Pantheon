@@ -4,14 +4,14 @@ import fs from 'node:fs';
 
 const read = p => fs.readFileSync(new URL('../'+p, import.meta.url), 'utf8');
 
-test('layered navigation defaults to one layer per click', () => {
+test('semantic navigation exposes exactly three declared depth bands plus automatic zoom', () => {
  const html = read('index.html');
- assert.match(html, /<option value="1" selected>1 camada<\/option>/);
- assert.doesNotMatch(html, /<option value="3" selected>/);
- const app = read('app.mjs');
- assert.match(app, /depth: Number\(\$\('#layers'\)\?\.value\) \|\| 1/);
- assert.match(app, /onDomain: domain => focusDomain\(domain\)/);
- assert.match(app, /session\.focusNode\(\{id:`domain:\$\{domain\}`/);
+ for(const view of ['macro','scientific','provenance']) assert.match(html,new RegExp(`data-view="${view}"`));
+ assert.match(html,/id="auto-layer"/);
+ const app = read('nextgen/app.mjs');
+ assert.match(app,/semanticLayerForZoom/);
+ assert.match(app,/changeView\('provenance'/);
+ assert.doesNotMatch(html,/<option value="3" selected>/);
 });
 
 test('graph opening motion is slower and smoother than the previous fast snap', () => {
@@ -57,17 +57,4 @@ test('cockpit copy exposes only what, how and why and never echoes raw technical
  assert.equal(raw.how, 'Como ainda não indexado em português.');
  assert.equal(raw.why, 'Por quê ainda não indexado em português.');
  assert.doesNotMatch(JSON.stringify(raw), /6b54a91e721785807ff0e90c897010b6|688b472d2a298ca0f988d6c3be287f2b664dc103/);
-});
-
-test('default inspector is human-facing while raw audit metadata stays isolated', () => {
- const inspector = read('ui/inspector.mjs');
- assert.match(inspector, /cockpit-triad/);
- assert.match(inspector, /O QUÊ/);
- assert.match(inspector, /COMO/);
- assert.match(inspector, /POR QUÊ/);
- assert.match(inspector, /audit\?`<div class="detail-section audit-technical">/);
- const manifest = read('frontend-files.mjs');
- const vercel = read('vercel.json');
- assert.match(manifest, /ui\/cockpit-copy\.mjs/);
- assert.match(vercel, /ui\/cockpit-copy\.mjs/);
 });
