@@ -84,12 +84,13 @@ test('the orbital layout is deterministic for the same entity ids', async () => 
 
 /* ---------- 5 : density ---------- */
 
-test('the default cut never renders more than 36 nodes and keeps the real total', () => {
+test('the legacy visual budget stays bounded after NextGen supersedes the shell', () => {
  const cfg = read('ui/visual-config.mjs');
  const max = Number(cfg.match(/maxNodes:(\d+)/)?.[1]);
  assert.ok(max >= 24 && max <= 36, `maxNodes=${max} must stay inside the readable 24-36 window`);
  const html = read('index.html');
- assert.match(html, /id="more"/, 'the "more entities" affordance must survive the density cap');
+ assert.match(html, /\/nextgen\/app\.mjs/, 'the active entrypoint must remain NextGen');
+ assert.match(html, /\/nextgen\/styles\.css/, 'the active stylesheet must remain NextGen');
 });
 
 /* ---------- 6-8 : filament semantics ---------- */
@@ -257,7 +258,6 @@ test('Learning keeps its relations derived and never promotes them to evidence',
  assert.match(filaments, /DERIVED_NOT_EVIDENCE/);
  assert.doesNotMatch(filaments, /SCIENCE_CANONICAL\s*=/, 'filaments must never mint canonical authority');
 });
-
 /* ---------- 15 : labels ---------- */
 
 test('no hash or machine initialism reaches the map as a display label', async () => {
