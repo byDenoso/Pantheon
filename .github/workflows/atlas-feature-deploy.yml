@@ -1,0 +1,87 @@
+name: Atlas Feature Deploy
+
+on:
+  push:
+    branches: [atlas-nextgen-mobile-fix-20260908]
+    paths:
+      - 'atlas-control-tower/**'
+      - '.github/workflows/atlas-feature-deploy.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: atlas-production-feature
+  cancel-in-progress: false
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: atlas-control-tower
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - run: npm test
+
+  deploy:
+    needs: test
+    runs-on: ubuntu-latest
+    environment: production
+    defaults:
+      run:
+        working-directory: atlas-control-tower
+    env:
+      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Check deploy credentials
+        run: |
+          for name in VERCEL_TOKEN VERCEL_ORG_ID VERCEL_PROJECT_ID; do
+            if [ -z "${!name}" ]; then
+              echo "::error::$name is not set"
+              exit 1
+            fi
+          done
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+      - name: Pull production settings
+        run: npx --yes vercel@latest pull --yes --environment=production --token="$VERCEL_TOKEN"
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+      - name: Build
+        run: npx --yes vercel@latest build --prod --token="$VERCEL_TOKEN"
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+      - name: Deploy production
+        run: npx --yes vercel@latest deploy --prebuilt --prod --token="$VERCEL_TOKEN"
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+      - name: Readback production
+        run: |
+          domain="https://nexo-atlas-control-tower.vercel.app"
+          for attempt in $(seq 1 20); do
+            root=$(curl -s -o /tmp/root.html -w '%{http_code}' --max-time 20 "$domain/" || echo 000)
+            engine=$(curl -s -o /tmp/engine.mjs -w '%{http_code}' --max-time 20 "$domain/nextgen/graph/engine.mjs" || echo 000)
+            ng=$(curl -s -o /tmp/ng.json -w '%{http_code}' --max-time 20 "$domain/api/ng?route=health" || echo 000)
+            ops=$(curl -s -o /tmp/ops.json -w '%{http_code}' --max-time 20 "$domain/api/ops" || echo 000)
+            echo "attempt $attempt: root=$root engine=$engine ng=$ng ops=$ops"
+            if [ "$root" = "200" ] && [ "$engine" = "200" ] && [ "$ng" = "200" ] && [ "$ops" = "200" ]; then
+              grep -q 'LINEAGE_BREAKPOINT=620' /tmp/engine.mjs || { echo "::error::responsive lineage marker missing"; exit 1; }
+              grep -q 'labelPolicy' /tmp/engine.mjs || { echo "::error::lineage label policy missing"; exit 1; }
+              node -e 'const fs=require("fs"); const j=JSON.parse(fs.readFileSync("/tmp/ng.json","utf8")); if(!j.ok) process.exit(1)' || { echo "::error::/api/ng health failed"; exit 1; }
+              node -e 'const fs=require("fs"); const j=JSON.parse(fs.readFileSync("/tmp/ops.json","utf8")); if(!j||typeof j!=="object") process.exit(1)' || { echo "::error::/api/ops invalid"; exit 1; }
+              echo "Production readback passed."
+              exit 0
+            fi
+            sleep 15
+          done
+          echo "::error::production did not converge to the feature build"
+          exit 1
