@@ -1,12 +1,10 @@
-/** Explicit public boundary; never add snapshots, backend readers or credentials.
- *  lib/audit.mjs, lib/learning.mjs, lib/naming.mjs, lib/datasource.mjs and
- *  lib/adapters.mjs are server-side projections and stay out. */
+/** Explicit browser-source boundary. Vite bundles these into dist/; backend readers,
+ * Durable Runner internals and credentials remain outside the frontend graph. */
 export const frontendFiles=[
- 'index.html','styles.css','app.mjs','graph3d.mjs',
+ 'index.html','styles.css','vite.config.ts','tsconfig.json',
+ 'src/main.tsx','src/App.tsx','src/state/useAtlasSession.ts','src/styles/react-atlas.css',
+ 'src/scene/types.ts','src/scene/semantic-lod.ts','src/scene/createRenderer.ts','src/scene/gpu-picking.ts','src/scene/GpuPicking.tsx',
+ 'src/scene/materials.ts','src/scene/InstancedNodes.tsx','src/scene/InstancedFilaments.tsx','src/scene/AtlasCanvas.tsx','src/scene/LabelOverlay.tsx',
  'lib/model.mjs','lib/graph-contract.mjs','lib/atlas-api.mjs','lib/graph-session.mjs',
- 'ui/tokens.css','ui/official-dashboard.css','ui/premium-v2.css','ui/reference-one.css','ui/visual-config.mjs','ui/theme.mjs','ui/map-data.mjs','ui/workspace.mjs','ui/cockpit-copy.mjs',
- 'ui/orbital-layout.mjs','ui/filaments.mjs','ui/decision-summary.mjs','ui/learning-graph.mjs','ui/control-tower.mjs',
- 'ui/dom.mjs','ui/metrics.mjs','ui/inspector.mjs','ui/filters.mjs',
- 'ui/provenance.mjs',
- 'ui/recorte-view.mjs','ui/blackbox-view.mjs','webmcp/tools.mjs'
+ 'ui/official-dashboard.css','ui/premium-v2.css','ui/reference-one.css'
 ];
