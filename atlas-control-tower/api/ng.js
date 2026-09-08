@@ -124,9 +124,15 @@ export default async function handler(req,res){
     if(route==='sync'){if(req.method!=='POST')return res.status(405).json({error:'METHOD_NOT_ALLOWED'});res.setHeader('Cache-Control','private, no-store');return res.status(200).json(await forceSync(req));}
     if(route==='graph'){
       const q=req.query||Object.fromEntries(url.searchParams);
-      res.setHeader('Cache-Control','private, max-age=30');
-      res.setHeader('CDN-Cache-Control','public, max-age=60, stale-while-revalidate=300');
-      return res.status(200).json(await graphProjection(req,{view:q.view||'macro',focus:q.focus||'system:NEXO',depth:q.depth||3,limit:q.limit||240}));
+      const force=q.force==='1'||q.force==='true';
+      if(force){
+        res.setHeader('Cache-Control','private, no-store');
+        res.setHeader('CDN-Cache-Control','no-store');
+      }else{
+        res.setHeader('Cache-Control','private, max-age=30');
+        res.setHeader('CDN-Cache-Control','public, max-age=60, stale-while-revalidate=300');
+      }
+      return res.status(200).json(await graphProjection(req,{view:q.view||'macro',focus:q.focus||'system:NEXO',depth:q.depth||3,limit:q.limit||240,force}));
     }
     return res.status(404).json({error:'NOT_FOUND'});
   }catch(error){console.error('[nextgen]',route,error?.message||error);return res.status(503).json({ok:false,error:'NEXTGEN_UNAVAILABLE',route,detail:String(error?.message||error).slice(0,240)});}
