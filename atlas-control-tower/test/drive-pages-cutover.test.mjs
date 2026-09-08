@@ -62,6 +62,16 @@ test('Apps Script compiler is deterministic, bounded and change-aware', () => {
   assert.match(code, /nexo-atlas-snapshot\/v1/);
 });
 
+test('compiler projects canonical learning, relations, operations and Olympus without inventing a new store', () => {
+  const code = text('apps-script','Code.gs');
+  for (const surface of [
+    'LEARNING_INDEX','PROCEDURAL_MEMORY','ADAPTIVE_POLICY','STRATEGY_REGISTRY',
+    'RELATION_LEDGER','HISTORICAL_LEARNING_LEDGER','ACTION_INDEX','EXECUTION_RUNS',
+    "'Ledger'","'Evidence_Registry'"
+  ]) assert.match(code, new RegExp(surface.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')), `missing Drive surface ${surface}`);
+  assert.doesNotMatch(code, /CREATE TABLE|INSERT INTO|postgres|neon\.tech/i);
+});
+
 test('snapshot contract exposes hierarchy, provenance and Present from one truth', async () => {
   const file = path('nextgen','lib','snapshot-contract.mjs');
   if (!existsSync(file)) return;
