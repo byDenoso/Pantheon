@@ -61,11 +61,12 @@ export function useAtlasSession(){
   const open=useCallback((node:AtlasNode)=>session.focusNode({id:node.id,label:String(node.label||node.id)}),[session]);
   const home=useCallback(()=>session.home(),[session]);
   const back=useCallback(()=>session.back(),[session]);
+  const more=useCallback(()=>session.more(),[session]);
   const sync=useCallback(()=>session.sync(),[session]);
   const setDepth=useCallback((value:number)=>session.setDepth(value),[session]);
   const search=useCallback((query:string)=>query.trim()?session.setFilters({q:query.trim()}):session.clearFilters(),[session]);
   const clearSelection=useCallback(()=>session.deselect(),[session]);
   const focusSystem=useCallback((id:string,label:string)=>session.focusNode({id,label}),[session]);
 
-  return {api,session,state,actions:{select,open,home,back,sync,setDepth,search,clearSelection,focusSystem}};
+  return {api,session,state,actions:{select,open,home,back,more,sync,setDepth,search,clearSelection,focusSystem}};
 }
