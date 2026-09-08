@@ -94,18 +94,21 @@ jobs:
       # WRITE → READBACK → VERIFY. A 200 from the deploy command is not proof that
       # the new build is the one the domain actually serves, so the job asserts
       # against the production domain and fails if it is still serving the old
-      # bundle. A green check here means the rework is genuinely live.
+      # bundle. Black Box is checked explicitly because a partial deployment can
+      # leave /api/ng healthy while silently dropping the operational routes.
       - name: Readback production
         run: |
           domain="https://nexo-atlas-control-tower.vercel.app"
           fail=0
           for attempt in $(seq 1 20); do
             contract=$(curl -s -o /tmp/contract.json -w '%{http_code}' --max-time 20 "$domain/api/projection?describe=1" || echo 000)
+            ops=$(curl -s -o /tmp/ops.json -w '%{http_code}' --max-time 20 "$domain/api/ops" || echo 000)
             css=$(curl -s -o /dev/null -w '%{http_code}' --max-time 20 "$domain/ui/cosmos.css" || echo 000)
-            echo "attempt $attempt: /api/projection=$contract /ui/cosmos.css=$css"
-            if [ "$contract" = "200" ] && [ "$css" = "200" ]; then
+            echo "attempt $attempt: /api/projection=$contract /api/ops=$ops /ui/cosmos.css=$css"
+            if [ "$contract" = "200" ] && [ "$ops" = "200" ] && [ "$css" = "200" ]; then
               echo "--- contract ---"; head -c 400 /tmp/contract.json; echo
               grep -q 'projection-v1' /tmp/contract.json || { echo "::error::contract payload is not projection-v1"; exit 1; }
+              node -e 'const fs=require("fs");const j=JSON.parse(fs.readFileSync("/tmp/ops.json","utf8"));if(!j||typeof j!=="object")process.exit(1)' || { echo "::error::/api/ops did not return JSON"; exit 1; }
               for layer in science execution integrity; do
                 state=$(curl -s --max-time 40 "$domain/api/projection?layers=$layer" \
                   | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{try{const j=JSON.parse(s);console.log(j.state+" nodes="+(j.nodes||[]).length)}catch{console.log("UNPARSEABLE")}})')
@@ -120,5 +123,5 @@ jobs:
             fi
             sleep 15
           done
-          echo "::error::the production domain never served the new build; the alias is not pointing at this deployment"
+          echo "::error::the production domain never served the complete build; projection, ops and CSS did not become healthy together"
           exit 1
