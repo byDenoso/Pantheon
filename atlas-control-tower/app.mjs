@@ -107,7 +107,7 @@ function breadcrumbs() {
  $('#breadcrumbs').innerHTML = session.state.path
   .map((p, i) => `${i ? '<span>/</span>' : ''}<button data-crumb="${i}" title="${esc(p.label || '')}">${esc(nodeDisplayLabel(p, 32))}</button>`).join('');
  $$('[data-crumb]').forEach(b => b.onclick = () => session.focusNode(session.state.path[+b.dataset.crumb]));
- $$('[data-focus]').forEach(b => b.classList.toggle('active', b.dataset.focus === session.state.focus));
+ $$('.nav').forEach(b => b.classList.toggle('active', b.dataset.focus === session.state.focus));
 }
 
 function applyFilter(patch) {
@@ -173,6 +173,11 @@ function renderGraphView(rawGraph){
 
 function renderSummaryView(summary){
  if(!summary)return;
+ const heroSystems=$('#hero-systems'),heroTests=$('#hero-tests'),heroClaims=$('#hero-claims'),heroDomains=$('#hero-domains');
+ if(heroSystems)heroSystems.textContent=String(Object.keys(SYSTEM_LABEL).length-1);
+ if(heroTests)heroTests.textContent=num(summary.counts?.TEST||0);
+ if(heroClaims)heroClaims.textContent=num(summary.counts?.CLAIM||0);
+ if(heroDomains)heroDomains.textContent=num(Object.keys(summary.domains||{}).length);
  renderMetrics(summary, {onMetric: type => {syncFilterInputs({...session.state.filters, type}); applyFilter({type})}});
  renderSourceStatus(summary);
  renderCharts(summary, colors, {
@@ -266,6 +271,7 @@ $('#more').onclick = () => session.more();
 for (const mode of ['neighbors', 'ancestors', 'descendants', 'critical'])
  $('#' + mode).onclick = () => {session.state.focus = session.state.selected || session.state.focus; session.setMode(mode)};
 $$('[data-focus]').forEach(b => b.onclick = () => session.focusNode({id: b.dataset.focus, label: b.textContent.trim()}));
+$$('[data-alias-focus]').forEach(b => b.onclick = () => session.focusNode({id: b.dataset.aliasFocus, label: b.textContent.trim()}));
 
 installFilters(session);
 

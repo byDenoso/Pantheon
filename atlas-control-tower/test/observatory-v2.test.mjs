@@ -24,8 +24,9 @@ test('overview puts the approved reference map before the operational deck',()=>
  assert.match(index,/Descobertas em rede\./);
  assert.match(index,/ui\/reference-one\.css/);
  assert.ok(index.indexOf('id="map-workspace"')<index.indexOf('id="command-center"'));
- assert.match(index,/FRONTEND OFICIAL/);
- assert.match(index,/Estado rastreável/);
+ assert.match(index,/CONTROL TOWER/);
+ assert.match(index,/reference-system-card/);
+ assert.doesNotMatch(index,/FRONTEND OFICIAL|Estado rastreável/);
 });
 
 test('post-map deck contains the five approved reference consoles',()=>{
