@@ -2,6 +2,10 @@
   "version": 2,
   "builds": [
     {
+      "src": "api/projection.js",
+      "use": "@vercel/node"
+    },
+    {
       "src": "api/runtime-orphans.js",
       "use": "@vercel/node"
     },
@@ -147,6 +151,10 @@
     }
   ],
   "routes": [
+    {
+      "src": "/api/projection",
+      "dest": "/api/projection.js"
+    },
     {
       "src": "/api/(state|sync|graph|entity|automation-runs|learning-relations|learning|audit|health|ops)",
       "dest": "/api/runtime-orphans.js?route=$1"
