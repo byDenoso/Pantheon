@@ -42,14 +42,16 @@ No relation was invented to improve graph connectivity.
 
 ## Semantic projection coverage
 
-Canonical-object coverage against `flight_api.atlas_cockpit_index`:
+Fresh canonical-object coverage against `flight_api.atlas_cockpit_index`:
 
 | System | Canonical expected | Indexed canonical | Missing |
 |---|---:|---:|---:|
 | SCIENCE | 5,047 | 5,047 | 0 |
 | LEARNING | 135 | 135 | 0 |
-| BLACKBOX | 82 | 82 | 0 |
+| BLACKBOX | 84 | 84 | 0 |
 | OLYMPUS | 17 | 17 | 0 |
+
+During the audit, two new Durable Runner objects appeared after the prior semantic sweep: one `execution_run` and one `runtime_event`. They were canonical in `nexo_ops` but absent from the derived semantic index. Both were indexed as `DERIVED_NOT_EVIDENCE`, then the complete coverage query was rerun and returned zero missing objects in all four systems.
 
 The full semantic index also contains derived source/file/folder/domain projection nodes, so its total is larger than canonical-object coverage by design.
 
