@@ -7,31 +7,24 @@ const index = fs.readFileSync(new URL('../index.html', import.meta.url), 'utf8')
 const vercel = JSON.parse(fs.readFileSync(new URL('../vercel.json', import.meta.url), 'utf8'));
 const builds = new Set(vercel.builds.map(x => x.src));
 
-test('Premium V2 public assets are declared and deployed', () => {
- for (const file of ['ui/premium-v2.css','ui/workspace.mjs']) {
-  assert.ok(frontendFiles.includes(file), `frontend boundary missing ${file}`);
-  assert.ok(builds.has(file), `vercel build missing ${file}`);
- }
-});
+const liveAssets=['ui/premium-v2.css','ui/reference-one.css','ui/control-tower.mjs','ui/workspace.mjs'];
+const retiredStyles=['ui/control-tower.css','ui/galactic-theme.css','ui/observatory-v2.css','ui/motion-impact.css','ui/readability.css'];
 
-test('Observatory overview assets are declared, deployed and the operational deck follows the map', () => {
- for (const file of ['ui/control-tower.css','ui/control-tower.mjs','ui/observatory-v2.css']) {
+test('current frontend assets are declared and deployed', () => {
+ for (const file of liveAssets) {
   assert.ok(frontendFiles.includes(file), `frontend boundary missing ${file}`);
   assert.ok(builds.has(file), `vercel build missing ${file}`);
  }
- assert.match(index, /\/ui\/control-tower\.css/);
- assert.match(index, /\/ui\/observatory-v2\.css/);
- assert.match(index, /id="command-center"/);
+ assert.match(index,/\/ui\/premium-v2\.css/);
+ assert.match(index,/\/ui\/reference-one\.css/);
+ assert.match(index,/id="command-center"/);
  assert.ok(index.indexOf('id="map-workspace"') < index.indexOf('id="command-center"'));
 });
 
-test('entrypoint loads Premium V2 instead of legacy competing override layers', () => {
- assert.match(index, /\/ui\/premium-v2\.css/);
- assert.doesNotMatch(index, /\/ui\/motion-impact\.css/);
- assert.doesNotMatch(index, /\/ui\/readability\.css/);
-});
-
-test('dead legacy override styles are not deployed as public build assets', () => {
- assert.equal(builds.has('ui/motion-impact.css'), false);
- assert.equal(builds.has('ui/readability.css'), false);
+test('retired override styles are absent from the entrypoint and public build', () => {
+ for(const file of retiredStyles){
+  assert.equal(frontendFiles.includes(file),false,`frontend boundary still contains ${file}`);
+  assert.equal(builds.has(file),false,`vercel still builds ${file}`);
+  assert.doesNotMatch(index,new RegExp(file.replace(/[./]/g,m=>'\\'+m)),`entrypoint still loads ${file}`);
+ }
 });

@@ -23,6 +23,8 @@ test('sync forces semantic overlay refresh and Vercel routes APIs through the wr
   const runtime=read('api/runtime-semantic.js');
   const vercel=read('vercel.json');
   assert.match(runtime,/loadCockpitIndex\(req,true\)/);
-  assert.match(vercel,/api\/runtime-semantic\.js/);
-  assert.match(vercel,/"dest":\s*"\/api\/runtime-semantic\.js\?route=\$1"/);
+  assert.match(vercel,/api\/runtime-orphans\.js/);
+  assert.match(vercel,/"dest":\s*"\/api\/runtime-orphans\.js\?route=\$1"/);
+  const orphanRuntime=read('api/runtime-orphans.js');
+  assert.match(orphanRuntime,/runtime-semantic\.js/);
 });

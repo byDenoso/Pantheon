@@ -1,6 +1,7 @@
 {
   "version": 2,
   "builds": [
+    {"src": "api/runtime-orphans.js", "use": "@vercel/node"},
     {"src": "api/runtime-semantic.js", "use": "@vercel/node"},
     {"src": "api/runtime-v2.js", "use": "@vercel/node"},
     {"src": "api/runtime.js", "use": "@vercel/node"},
@@ -15,9 +16,6 @@
     {"src": "ui/tokens.css", "use": "@vercel/static"},
     {"src": "ui/official-dashboard.css", "use": "@vercel/static"},
     {"src": "ui/premium-v2.css", "use": "@vercel/static"},
-    {"src": "ui/control-tower.css", "use": "@vercel/static"},
-    {"src": "ui/galactic-theme.css", "use": "@vercel/static"},
-    {"src": "ui/observatory-v2.css", "use": "@vercel/static"},
     {"src": "ui/reference-one.css", "use": "@vercel/static"},
     {"src": "ui/visual-config.mjs", "use": "@vercel/static"},
     {"src": "ui/theme.mjs", "use": "@vercel/static"},
@@ -39,10 +37,13 @@
     {"src": "webmcp/tools.mjs", "use": "@vercel/static"}
   ],
   "routes": [
-    {"src": "/api/(state|sync|graph|entity|automation-runs|learning-relations|learning|audit|health|ops)", "dest": "/api/runtime-semantic.js?route=$1"},
-    {"src": "/", "dest": "/index.html"},
+    {"src": "/api/(state|sync|graph|entity|automation-runs|learning-relations|learning|audit|health|ops)", "dest": "/api/runtime-orphans.js?route=$1"},
+    {"src": "/(.*\\.css)", "headers": {"Content-Type": "text/css; charset=utf-8", "Cache-Control": "public, max-age=0, must-revalidate"}},
+    {"src": "/(.*\\.mjs)", "headers": {"Content-Type": "text/javascript; charset=utf-8", "Cache-Control": "public, max-age=0, must-revalidate"}},
+    {"src": "/(.*\\.js)", "headers": {"Content-Type": "text/javascript; charset=utf-8", "Cache-Control": "public, max-age=0, must-revalidate"}},
+    {"src": "/", "headers": {"Content-Type": "text/html; charset=utf-8", "Cache-Control": "public, max-age=0, must-revalidate"}, "dest": "/index.html"},
     {"handle": "filesystem"},
-    {"src": "/.*", "status": 404, "dest": "/index.html"}
+    {"src": "/.*", "status": 404, "headers": {"Content-Type": "text/html; charset=utf-8", "Cache-Control": "public, max-age=0, must-revalidate"}, "dest": "/index.html"}
   ],
   "crons": [
     {"path": "/api/state?refresh=1", "schedule": "0 8 * * *"}

@@ -1,9 +1,5 @@
 const KEY='atlas.theme';
 
-// Load the typography/contrast pass from the same origin as this module.
-if(typeof document!=='undefined'&&!document.querySelector('link[data-atlas-readability]')){
- const link=document.createElement('link');link.rel='stylesheet';link.dataset.atlasReadability='1';link.href=new URL('./readability.css',import.meta.url).href;document.head.append(link);
-}
 
 // Canvas text needs its own typography pass because CSS cannot style the labels.
 if(typeof CanvasRenderingContext2D!=='undefined'&&!CanvasRenderingContext2D.prototype.__atlasCleanLabels){
