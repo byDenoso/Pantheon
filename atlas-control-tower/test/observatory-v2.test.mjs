@@ -20,14 +20,12 @@ const model={
 const fakeRoot=()=>({innerHTML:'',querySelectorAll(){return[]},querySelector(){return null}});
 
 test('overview puts the approved reference map before the operational deck',()=>{
- // The hero now names what the map reads, not what the project aspires to.
- assert.match(index,/Ciência, execução e integridade/);
- assert.match(index,/na mesma leitura\./);
+ assert.match(index,/Ideias em órbita\./);
+ assert.match(index,/Descobertas em rede\./);
  assert.match(index,/ui\/reference-one\.css/);
  assert.ok(index.indexOf('id="map-workspace"')<index.indexOf('id="command-center"'));
- assert.match(index,/CONTROL TOWER/);
- assert.match(index,/reference-system-card/);
- assert.doesNotMatch(index,/FRONTEND OFICIAL|Estado rastreável/);
+ assert.match(index,/FRONTEND OFICIAL/);
+ assert.match(index,/Estado rastreável/);
 });
 
 test('post-map deck contains the five approved reference consoles',()=>{

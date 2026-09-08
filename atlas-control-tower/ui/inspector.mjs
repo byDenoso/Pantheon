@@ -31,20 +31,14 @@ function triad(copy){return `<div class="cockpit-triad">
 export function relationRow(r){const scope=r.crossDomain?`<em class="cross">entre domínios ${esc(r.domainA)} ↔ ${esc(r.domainB)}</em>`:esc(r.scope||'mesmo domínio');return `<div class="learning-row"><b>${esc(r.relationType)}</b><span class="status-chip learning-chip">${esc(statusPt(r.status||'sem estado'))}</span><p class="micro">${esc(compactLabel(r.nodeA,{max:24}))} → ${esc(compactLabel(r.nodeB,{max:24}))}</p><p class="micro">${scope} · ${esc(confidenceLabel(r.confidence))} · evidência ${num(r.evidenceCount??r.support)} / contradição ${num(r.contradictionCount??r.contradiction)}</p>${r.notes?`<p class="micro">${esc(String(r.notes).slice(0,220))}</p>`:''}</div>`}
 async function renderLearningOverlay(api,id){const box=$('#learning-overlay');if(!box)return;box.innerHTML='<p class="micro">Lendo aprendizado relacionado…</p>';try{const{relations}=await api.learningFor(id);box.innerHTML=relations.length?relations.map(relationRow).join(''):'<p class="micro">Nenhum aprendizado cita esta entidade em evidence_refs. Vínculo ausente na fonte, não inferido aqui.</p>'}catch{box.innerHTML='<p class="micro">Aprendizado indisponível no momento.</p>'}}
 
-/** `resolve` supplies an entity for ids the entity endpoint does not own — a
- *  projection tier such as a derived claim, a truth owner or an ingestion run
- *  lives in the projection payload, not in science_v1.entities. It is a second
- *  reading of data the backend already sent, never a stand-in for a failed read:
- *  when it has nothing to offer, the original error is what the operator sees. */
-export function createInspector({api,colors,state,safeUrl,onFocus,onLineage,onRelated,resolve}){
+export function createInspector({api,colors,state,safeUrl,onFocus,onLineage,onRelated}){
  let pinned=null;
  function compare(n){if(!pinned){pinned=n;toast('Primeira entidade fixada. Selecione outra e clique em Comparar.');return}const a=pinned;pinned=null;$('#detail').innerHTML=`<h2 class="detail-title">Comparação</h2><div class="compare">${[a,n].map(x=>{const c=cockpitCopy(x);return `<div><h4 title="${esc(x.label||'')}">${esc(nodeDisplayLabel(x,34))}</h4><p>${esc(entityTypePt(x.type))} · ${esc(statusPt(x.status))}</p>${triad(c)}</div>`}).join('')}</div>`}
  function inspectEdge(e){openDrawer();const copy={what:`Relação ${relationPt(e.type,true).toLowerCase()} entre duas entidades.`,how:'Conexão registrada no Graph Contract do Atlas.',why:e.reason||'Preservar a navegação e a proveniência entre entidades relacionadas.'};$('#detail').innerHTML=`<p class="eyebrow" style="margin-top:20px">RELAÇÃO</p><h2 class="detail-title">${esc(relationPt(e.type,true))}</h2>${triad(copy)}${e.confidence!=null?`<p>${esc(confidenceLabel(e.confidence))}</p>`:''}<button id="edge-target">Abrir destino</button>`;$('#edge-target').onclick=()=>inspect(e.target)}
  async function inspect(id,{ui='overview'}={}){
   const mine=++seq;$('#selection-hint').textContent='Entidade selecionada';openDrawer();$('#detail').innerHTML='<p class="detail-summary">Lendo entidade…</p>';
   try{
-   const d=await api.entity(id).catch(error=>{const local=resolve?.(id);if(local)return local;throw error});
-   if(mine!==seq)return;const n=d.entity;if(!n)throw Error('ENTITY_PAYLOAD_MISSING');const copy=cockpitCopy(n),audit=ui==='audit',shown=n.metadata||{},title=nodeDisplayLabel(n,38),sourceUrl=(n.sourceRefs||[]).map(r=>r.url).find(url=>safeUrl(url));
+   const d=await api.entity(id);if(mine!==seq)return;const n=d.entity;if(!n)throw Error('ENTITY_PAYLOAD_MISSING');const copy=cockpitCopy(n),audit=ui==='audit',shown=n.metadata||{},title=nodeDisplayLabel(n,38),sourceUrl=(n.sourceRefs||[]).map(r=>r.url).find(url=>safeUrl(url));
    $('#detail').innerHTML=`<p class="eyebrow" style="margin-top:20px">${esc(entityTypePt(n.subtype||n.type))}</p><h2 class="detail-title" title="${esc(n.label||'')}">${esc(title)}</h2>`
     +`<span class="status-chip" style="--chip:${colors[state(n.status)]}" title="${esc(statusPt(n.status))}">${esc(statusPt(n.status))}</span>`
     +`<p class="authority">${esc(authorityPt(n.authority))}</p>`
