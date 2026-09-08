@@ -1,14 +1,50 @@
+const LINEAGE_BREAKPOINT=620;
+const hashL=s=>{let h=2166136261;for(const ch of String(s))h=Math.imul(h^ch.charCodeAt(0),16777619);return h>>>0};
+const jitter=(id,axis)=>(hashL(`${axis}:${id}`)%10000)/10000-.5;
 
-function layoutGraph(nodes,{focus='system:NEXO'}={}){
+function lineageLevels(list,edges,focus){
+  const ids=new Set(list.map(n=>n.id));
+  const start=ids.has(focus)?focus:list[0]?.id;
+  const adj=new Map(list.map(n=>[n.id,[]]));
+  for(const e of edges||[]){if(!ids.has(e.source)||!ids.has(e.target))continue;adj.get(e.source).push(e.target);adj.get(e.target).push(e.source)}
+  const level=new Map();
+  if(start){level.set(start,0);const queue=[start];for(let i=0;i<queue.length;i++){const id=queue[i],next=(level.get(id)||0)+1;for(const other of adj.get(id)||[]){if(level.has(other))continue;level.set(other,next);queue.push(other)}}}
+  const maxReachable=Math.max(0,...level.values());
+  for(const n of list)if(!level.has(n.id))level.set(n.id,maxReachable+1);
+  return level;
+}
+
+function layoutLineage(list,{focus,edges,mobile}){
+  const levelById=lineageLevels(list,edges,focus),byLevel=new Map();
+  for(const n of list){const level=levelById.get(n.id)||0;if(!byLevel.has(level))byLevel.set(level,[]);byLevel.get(level).push(n)}
+  const typeOrder={CLAIM:1,HYPOTHESIS:1,TEST:2,RESULT:3,DATASET:4,MODEL:4,PROBE:4,PUBLICATION:5,SOURCE:6,SOURCE_REF:7};
+  const levels=[...byLevel.keys()].sort((a,b)=>a-b),maxLevel=Math.max(0,...levels),primarySpacing=mobile?148:185,primaryOffset=-(maxLevel*primarySpacing)/2,out=[];
+  for(const level of levels){
+    const group=byLevel.get(level).sort((a,b)=>(typeOrder[a.visualType||a.type]||9)-(typeOrder[b.visualType||b.type]||9)||String(a.id).localeCompare(String(b.id)));
+    const laneSpacing=mobile?Math.max(46,Math.min(92,300/Math.max(1,group.length-1))):88;
+    for(let i=0;i<group.length;i++){
+      const n=group[i],lane=i-(group.length-1)/2,primary=primaryOffset+level*primarySpacing,cross=lane*laneSpacing,z=(n.id===focus?0:(n.zBand??0)*.05)+jitter(n.id,'lineage-z')*6;
+      out.push({id:n.id,x:mobile?cross:primary,y:mobile?primary:cross,z});
+    }
+  }
+  return out;
+}
+
+export function layoutGraph(nodes,{focus='system:NEXO',semanticView='macro',viewportWidth=1024,edges=[]}={}){
   const list=Array.isArray(nodes)?nodes:[];
-  const hashL=s=>{let h=2166136261;for(const ch of String(s))h=Math.imul(h^ch.charCodeAt(0),16777619);return h>>>0};
-  const jitter=(id,axis)=>(hashL(`${axis}:${id}`)%10000)/10000-.5;
+  if(semanticView==='provenance')return layoutLineage(list,{focus,edges,mobile:Number(viewportWidth)<LINEAGE_BREAKPOINT});
   const rings={SYSTEM:120,DOMAIN:240,CAMPAIGN:315,HYPOTHESIS:360,CLAIM:360,TEST:425,RESULT:500,DATASET:470,MODEL:450,PROBE:440,PUBLICATION:520,SOURCE:570,SOURCE_REF:635};
   const byType=new Map();
   for(const n of list){const type=n.visualType||n.type||'UNKNOWN';if(!byType.has(type))byType.set(type,[]);byType.get(type).push(n)}
   const out=[];
   for(const [type,group] of byType){group.sort((a,b)=>String(a.id).localeCompare(String(b.id)));const base=rings[type]??380,count=Math.max(1,group.length);for(let i=0;i<group.length;i++){const n=group[i];if(n.id===focus){out.push({id:n.id,x:0,y:0,z:n.zBand??0});continue}const phase=(hashL(type)%6283)/1000,angle=phase+Math.PI*2*(i/count)+jitter(n.id,'a')*.24,radius=base*(.82+jitter(n.id,'r')*.16),domainBias=n.domain?((hashL(n.domain)%360)/360)*Math.PI*2:0;out.push({id:n.id,x:Math.cos(angle+domainBias*.18)*radius+jitter(n.id,'x')*36,y:Math.sin(angle+domainBias*.18)*radius*.62+jitter(n.id,'y')*30,z:(n.zBand??0)+jitter(n.id,'z')*34})}}
   return out;
+}
+
+export function labelPolicy(width,semanticView){
+  const mobile=Number(width)<LINEAGE_BREAKPOINT;
+  if(semanticView==='provenance')return mobile?{max:18,maxChars:36}:{max:24,maxChars:48};
+  return mobile?{max:7,maxChars:28}:{max:16,maxChars:42};
 }
 
 const TAU=Math.PI*2;
@@ -25,10 +61,10 @@ export class AtlasEngine{
   constructor(canvas,{onSelect,onOpen,onZoom}={}){
     this.canvas=canvas;this.ctx=canvas.getContext('2d');this.callbacks={onSelect,onOpen,onZoom};
     this.camera={yaw:.34,pitch:-.24,zoom:.72,panX:0,panY:0,flat:false};
-    this.graph={nodes:[],edges:[]};this.positions=new Map();this.points=[];this.selected=null;this.hover=null;this.focus='system:NEXO';
+    this.graph={nodes:[],edges:[]};this.positions=new Map();this.points=[];this.selected=null;this.hover=null;this.focus='system:NEXO';this.layoutKey='';
     this.drag=null;this.pointers=new Map();this.orbit=false;this.frame=0;this.last=0;this.reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;
     this.stars=Array.from({length:220},(_,i)=>({x:(hash('x'+i)%10000)/10000,y:(hash('y'+i)%10000)/10000,s:i%17===0?1.5:.75,p:(hash('p'+i)%100)/100}));
-    this.bind();new ResizeObserver(()=>this.draw()).observe(canvas);this.kick();
+    this.bind();this.resizeObserver=new ResizeObserver(()=>{this.reflow();this.kick()});this.resizeObserver.observe(canvas);this.kick();
   }
   bind(){
     const c=this.canvas;
@@ -46,7 +82,8 @@ export class AtlasEngine{
     c.addEventListener('keydown',e=>{if(e.key==='ArrowLeft')this.camera.yaw-=.14;if(e.key==='ArrowRight')this.camera.yaw+=.14;if(e.key==='ArrowUp')this.camera.pitch-=.12;if(e.key==='ArrowDown')this.camera.pitch+=.12;if(e.key==='+')this.zoom(1.15);if(e.key==='-')this.zoom(.87);this.kick()});
     matchMedia('(prefers-reduced-motion: reduce)').addEventListener('change',e=>{this.reduced=e.matches;if(this.reduced)this.orbit=false;this.kick()});
   }
-  setData(graph,{focus}={}){this.graph=graph||{nodes:[],edges:[]};this.focus=focus||graph?.focus||this.focus;this.positions=new Map(layoutGraph(this.graph.nodes,{focus:this.focus}).map(p=>[p.id,p]));this.selected=null;this.hover=null;this.kick()}
+  reflow(force=false){const width=this.canvas.clientWidth||1024,mode=width<LINEAGE_BREAKPOINT?'mobile':'desktop',key=`${this.graph.semanticView||'macro'}:${mode}`;if(!force&&key===this.layoutKey)return false;this.layoutKey=key;this.positions=new Map(layoutGraph(this.graph.nodes,{focus:this.focus,semanticView:this.graph.semanticView,viewportWidth:width,edges:this.graph.edges}).map(p=>[p.id,p]));return true}
+  setData(graph,{focus}={}){this.graph=graph||{nodes:[],edges:[]};this.focus=focus||graph?.focus||this.focus;this.layoutKey='';this.reflow(true);this.selected=null;this.hover=null;this.kick()}
   setSelected(id){this.selected=id;this.kick()}
   setZoom(value){this.camera.zoom=clamp(value,.48,3.1);this.callbacks.onZoom?.(this.camera.zoom);this.kick()}
   zoom(f){this.setZoom(this.camera.zoom*f)}
@@ -82,5 +119,5 @@ export class AtlasEngine{
     c.globalAlpha=1;this.drawLabels(c,w,h,focused,related);
     const vignette=c.createRadialGradient(w/2,h/2,Math.min(w,h)*.25,w/2,h/2,Math.max(w,h)*.7);vignette.addColorStop(0,'rgba(0,0,0,0)');vignette.addColorStop(1,'rgba(0,0,0,.55)');c.fillStyle=vignette;c.fillRect(0,0,w,h)
   }
-  drawLabels(c,w,h,focused,related){const occupied=[];const priorities={SYSTEM:10,DOMAIN:9,CAMPAIGN:8,HYPOTHESIS:7,CLAIM:7,TEST:5,RESULT:4,SOURCE:3};const sorted=[...this.points].sort((a,b)=>(b.node.id===this.selected?100:priorities[b.node.visualType||b.node.type]||0)-(a.node.id===this.selected?100:priorities[a.node.visualType||a.node.type]||0));let count=0;const max=w<620?7:16;for(const p of sorted){const n=p.node;if(count>=max&&n.id!==this.selected&&n.id!==this.hover?.id)continue;if(focused&&!related.has(n.id)&&n.id!==this.selected)continue;const label=String(n.label||n.id).replace(/\s+/g,' ').slice(0,w<620?28:42);c.font=`${n.id===this.focus?700:600} ${n.id===this.focus?13:11}px system-ui`;const tw=c.measureText(label).width;const box={x:clamp(p.x-tw/2-8,8,w-tw-24),y:clamp(p.y+p.r+10,8,h-34),w:tw+16,h:25};if(occupied.some(o=>box.x<o.x+o.w+5&&box.x+box.w+5>o.x&&box.y<o.y+o.h+4&&box.y+box.h+4>o.y))continue;occupied.push(box);count++;c.fillStyle='rgba(3,8,18,.76)';c.strokeStyle='rgba(124,160,211,.18)';c.lineWidth=1;c.beginPath();c.roundRect(box.x,box.y,box.w,box.h,7);c.fill();c.stroke();c.fillStyle='#dce9fb';c.textAlign='center';c.fillText(label,box.x+box.w/2,box.y+16)}c.textAlign='left'}
+  drawLabels(c,w,h,focused,related){const occupied=[];const normalPriorities={SYSTEM:10,DOMAIN:9,CAMPAIGN:8,HYPOTHESIS:7,CLAIM:7,TEST:5,RESULT:4,SOURCE:3};const provenancePriorities={CLAIM:10,HYPOTHESIS:10,SOURCE:9,SOURCE_REF:8,PUBLICATION:7,DATASET:7,RESULT:6,TEST:6,MODEL:5,PROBE:5,CAMPAIGN:4,DOMAIN:3,SYSTEM:2};const priorities=this.graph.semanticView==='provenance'?provenancePriorities:normalPriorities;const sorted=[...this.points].sort((a,b)=>(b.node.id===this.selected?100:priorities[b.node.visualType||b.node.type]||0)-(a.node.id===this.selected?100:priorities[a.node.visualType||a.node.type]||0));let count=0;const policy=labelPolicy(w,this.graph.semanticView);for(const p of sorted){const n=p.node;if(count>=policy.max&&n.id!==this.selected&&n.id!==this.hover?.id)continue;if(focused&&!related.has(n.id)&&n.id!==this.selected)continue;const label=String(n.label||n.id).replace(/\s+/g,' ').slice(0,policy.maxChars);c.font=`${n.id===this.focus?700:600} ${n.id===this.focus?13:11}px system-ui`;const tw=c.measureText(label).width;const box={x:clamp(p.x-tw/2-8,8,w-tw-24),y:clamp(p.y+p.r+10,8,h-34),w:tw+16,h:25};if(occupied.some(o=>box.x<o.x+o.w+5&&box.x+box.w+5>o.x&&box.y<o.y+o.h+4&&box.y+box.h+4>o.y))continue;occupied.push(box);count++;c.fillStyle='rgba(3,8,18,.76)';c.strokeStyle='rgba(124,160,211,.18)';c.lineWidth=1;c.beginPath();c.roundRect(box.x,box.y,box.w,box.h,7);c.fill();c.stroke();c.fillStyle='#dce9fb';c.textAlign='center';c.fillText(label,box.x+box.w/2,box.y+16)}c.textAlign='left'}
 }
