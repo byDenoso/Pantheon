@@ -1,21 +1,8 @@
 name: Atlas Deploy
 
-# The Vercel Git integration stopped producing production builds for this project:
-# main advanced several commits while https://nexo-atlas-control-tower.vercel.app
-# kept serving an older static bundle. This workflow publishes explicitly with the
-# Vercel CLI instead of relying on that integration, so a push to main either
-# deploys or fails loudly.
-#
-# It never publishes a red build: the test job gates the deploy job.
-#
-# Required repository secrets (Settings → Secrets and variables → Actions):
-#   VERCEL_TOKEN       Account Settings → Tokens, scoped to the project's owner
-#   VERCEL_ORG_ID      Project → Settings → General ("Vercel Team/Account ID")
-#   VERCEL_PROJECT_ID  Project → Settings → General ("Project ID", starts with prj_)
-#
-# The IDs must be the existing nexo-atlas-control-tower project. Deploying to any
-# other project would produce a shell without data: the Neon Data API is reached
-# through a Vercel OIDC token bound to that specific project.
+# Explicit production publisher for the existing NEXO Atlas Vercel project.
+# The Git integration is not relied upon: pushes to main are tested, built,
+# deployed with the Vercel CLI, then read back from the production domain.
 
 on:
   push:
@@ -43,7 +30,14 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '24'
-      - run: npm test
+      - name: Install frontend dependencies
+        run: npm install --no-audit --no-fund
+      - name: Run unit and contract tests
+        run: npm test
+      - name: Typecheck React frontend
+        run: npm run typecheck
+      - name: Build production frontend
+        run: npm run build
 
   deploy:
     needs: test
@@ -91,20 +85,21 @@ jobs:
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
 
-      # WRITE → READBACK → VERIFY. A 200 from the deploy command is not proof that
-      # the new build is the one the domain actually serves, so the job asserts
-      # against the production domain and fails if it is still serving the old
-      # bundle. A green check here means the rework is genuinely live.
+      # WRITE → READBACK → VERIFY. Validate the React/Vite shell and the canonical
+      # projection API from the production alias. A deploy command succeeding is
+      # not enough if the alias still serves an older bundle.
       - name: Readback production
         run: |
           domain="https://nexo-atlas-control-tower.vercel.app"
           fail=0
           for attempt in $(seq 1 20); do
+            root=$(curl -s -o /tmp/root.html -w '%{http_code}' --max-time 20 "$domain/" || echo 000)
             contract=$(curl -s -o /tmp/contract.json -w '%{http_code}' --max-time 20 "$domain/api/projection?describe=1" || echo 000)
-            css=$(curl -s -o /dev/null -w '%{http_code}' --max-time 20 "$domain/ui/cosmos.css" || echo 000)
-            echo "attempt $attempt: /api/projection=$contract /ui/cosmos.css=$css"
-            if [ "$contract" = "200" ] && [ "$css" = "200" ]; then
-              echo "--- contract ---"; head -c 400 /tmp/contract.json; echo
+            health=$(curl -s -o /tmp/health.json -w '%{http_code}' --max-time 20 "$domain/api/health" || echo 000)
+            echo "attempt $attempt: /=$root /api/projection=$contract /api/health=$health"
+            if [ "$root" = "200" ] && [ "$contract" = "200" ] && [ "$health" = "200" ]; then
+              grep -q 'id="root"' /tmp/root.html || { echo "::error::production root is not the React shell"; exit 1; }
+              grep -q '/assets/index-' /tmp/root.html || { echo "::error::production root does not reference the Vite bundle"; exit 1; }
               grep -q 'projection-v1' /tmp/contract.json || { echo "::error::contract payload is not projection-v1"; exit 1; }
               for layer in science execution integrity; do
                 state=$(curl -s --max-time 40 "$domain/api/projection?layers=$layer" \
@@ -120,5 +115,5 @@ jobs:
             fi
             sleep 15
           done
-          echo "::error::the production domain never served the new build; the alias is not pointing at this deployment"
+          echo "::error::production alias never served the tested React build"
           exit 1
