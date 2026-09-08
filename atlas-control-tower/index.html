@@ -1,42 +1,55 @@
-<!doctype html><html lang="pt-BR"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="theme-color" content="#020711"><title>NEXO Atlas</title><script>try{document.documentElement.dataset.theme=localStorage.getItem("atlas.theme")==="light"?"light":"dark"}catch{}</script><link rel="stylesheet" href="/styles.css"><link rel="stylesheet" href="/ui/official-dashboard.css"><link rel="stylesheet" href="/ui/premium-v2.css"><link rel="stylesheet" href="/ui/reference-one.css"><link rel="stylesheet" href="/ui/reference-deck.css"><link rel="stylesheet" href="/ui/cosmos.css"></head><body class="reference-one" data-mode="overview">
-<header class="topbar reference-topbar"><button id="menu" aria-label="Abrir menu">☰</button><a class="brand" href="/"><i class="brand-orbit"></i><b>NEXO <span>Atlas</span></b></a><span class="reference-tagline">EXPLORE · CONECTE · INVESTIGUE</span><div class="searchbox"><span>⌕</span><input id="search" aria-label="Busca global" placeholder="Buscar sistemas, testes, pessoas…"><kbd>⌘ K</kbd></div><button id="theme-toggle" aria-pressed="false">☀ Claro</button><button id="sync" class="sync">↻ <span>Sincronizar</span></button><div id="source-status" class="source-status reference-live" aria-live="polite">● LIVE</div><button class="reference-ops" type="button" aria-label="Perfil Ops"><i>N</i><span><b>Ops</b><small>NEXO</small></span></button></header>
-<aside id="sidebar" class="reference-sidebar"><p class="eyebrow">CONTROL TOWER</p>
- <button data-focus="system:NEXO" class="nav active"><i>⌂</i><span>Visão Global</span></button>
- <button data-alias-focus="system:NEXO" class="nav"><i>◎</i><span>Galáxias</span></button>
- <button data-focus="system:SCIENCE" class="nav"><i>✧</i><span>Ciência</span></button>
- <button data-focus="system:ENGINEERING" class="nav"><i>⌘</i><span>Engineering</span></button>
- <button data-focus="system:OLYMPUS" class="nav"><i>◇</i><span>Olympus</span></button>
- <button data-focus="system:LEARNING" class="nav"><i>◉</i><span>Learning</span></button>
- <button data-focus="system:AUTOMATION" class="nav"><i>◫</i><span>Black Box</span></button>
- <div class="reference-rule"></div>
- <button data-alias-focus="system:OLYMPUS" class="nav nav-secondary"><i>♙</i><span>Pessoas</span></button>
- <button data-alias-focus="system:LEARNING" class="nav nav-secondary"><i>♧</i><span>Ideias</span></button>
- <button data-alias-focus="system:SCIENCE" class="nav nav-secondary"><i>▱</i><span>Dados</span></button>
- <button data-alias-focus="system:AUTOMATION" class="nav nav-secondary"><i>▥</i><span>Relatórios</span></button>
- <div id="domain-nav" hidden></div>
- <div class="sidebar-foot reference-system-card"><div><span></span><b>Sistema</b><em>ONLINE</em></div><small id="mcp">WebMCP verificando…</small><p>Truth Owners no Neon.<br>Atlas em leitura.</p></div>
- <div class="reference-sidebar-signature">EXPANDINDO<br>O HORIZONTE<br>DO CONHECIMENTO</div>
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#01030a">
+<meta name="color-scheme" content="dark">
+<meta name="description" content="NEXO Atlas Next Generation 3.5D Scientific Knowledge Observatory">
+<title>NEXO Atlas · 3.5D Observatory</title>
+<style>html,body{margin:0;min-height:100%;background:#01030a;color:#eef6ff;font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif;overflow-x:hidden}*{box-sizing:border-box}.topbar{position:fixed;z-index:80;inset:0 0 auto;height:calc(56px + env(safe-area-inset-top));background:#030710;border-bottom:1px solid rgba(133,171,225,.16)}.rail{position:fixed;z-index:70;top:calc(56px + env(safe-area-inset-top));left:0;right:0;height:82px;background:#050a16;border-bottom:1px solid rgba(133,171,225,.16)}main{padding:calc(146px + env(safe-area-inset-top)) 8px 20px}.observatory{height:calc(100dvh - 170px - env(safe-area-inset-top));min-height:500px;border:1px solid rgba(133,171,225,.16);border-radius:15px;background:#01030a;overflow:hidden}@media(min-width:721px){.topbar{height:64px}.rail{top:64px;right:auto;bottom:0;width:214px;height:auto;border-right:1px solid rgba(133,171,225,.16);border-bottom:0}main{padding:80px 16px 42px 230px}.observatory{height:min(720px,calc(100vh - 102px));min-height:560px}}</style>
+<link rel="stylesheet" href="/nextgen/styles.css?v=20260908b">
+</head>
+<body>
+<div id="app">
+<header class="topbar">
+  <button class="brand" id="home"><span class="brand-glyph">✦</span><span><b>NEXO ATLAS</b><small>SCIENTIFIC KNOWLEDGE OBSERVATORY</small></span></button>
+  <div class="search"><span>⌕</span><input id="search" placeholder="Buscar no recorte atual…" autocomplete="off"><kbd>⌘K</kbd><div id="search-results" hidden></div></div>
+  <div class="top-status"><span id="health-dot" class="live-dot"></span><b id="health">NEON · verificando</b><small id="source-version"></small></div>
+  <button id="sync" class="sync">↻ <span>Sincronizar</span></button>
+</header>
+
+<aside class="rail">
+  <div class="rail-title"><small>SEMANTIC</small><b>DEPTH</b></div>
+  <button data-view="macro" class="layer active"><i>01</i><span><b>MACRO</b><small>Domínios · campanhas</small></span></button>
+  <button data-view="scientific" class="layer"><i>02</i><span><b>SCIENTIFIC</b><small>Claims · testes · evidências</small></span></button>
+  <button data-view="provenance" class="layer"><i>03</i><span><b>PROVENANCE</b><small>Fontes · lineage</small></span></button>
+  <button id="auto-layer" class="auto active"><i>◉</i><span><b>AUTO ZOOM</b><small>camada por profundidade</small></span></button>
+  <div class="rail-spacer"></div>
+  <div class="truth"><span>TRUTH OWNER</span><b>NEON V1</b><small>Atlas = projeção read-only</small></div>
 </aside>
-<main class="reference-main">
-<section class="universe reference-universe" id="map-workspace" role="tabpanel" tabindex="-1">
- <div class="graph-stage reference-stage">
-  <div class="observatory-space reference-space" aria-hidden="true"></div>
-  <div class="reference-hero-copy"><p class="eyebrow"><i></i>TORRE DE CONTROLE</p><h1>Ciência, execução e integridade<br>na mesma leitura.</h1><p class="reference-hero-subtitle">Três projeções reais do Neon, compostas em profundidade.<br>O Atlas é projeção: a verdade continua nos truth owners.</p><div class="reference-hero-stats"><div><strong id="hero-systems">—</strong><span>Nós na projeção</span></div><div><strong id="hero-tests">—</strong><span>Testes</span></div><div><strong id="hero-claims">—</strong><span>Claims</span></div><div><strong id="hero-domains">—</strong><span>Domínios</span></div></div></div>
-  <button class="reference-explore-card" data-focus="system:NEXO"><i>◎</i><span><b>Exploração contínua</b><small>Sistemas integrados.<br>Descobertas em rede.</small></span><em>›</em></button>
-  <div class="reference-graph-zone"><canvas id="graph" tabindex="0" aria-label="Grafo 3D interativo do NEXO Atlas."></canvas><div id="layer-console" class="layer-console" aria-label="Console de camadas"></div><div id="projection-state" aria-live="polite"></div></div>
-  <nav id="breadcrumbs" class="reference-breadcrumbs" aria-label="Navegação hierárquica"></nav><button id="mode-chip" class="mode-chip" hidden></button>
-  <div class="reference-map-tools"><select id="layers" aria-label="Camadas do subgrafo"><option value="1" selected>1 camada</option><option value="2">2 camadas</option><option value="3">3 camadas</option></select><span id="graph-count" class="micro">Carregando relações…</span><button id="immersive" aria-pressed="false" title="Ampliar mapa">⤢</button></div>
-  <div class="workspace-toolbar reference-filter-drawer" aria-label="Filtros do mapa"><div class="filters"><select id="filter-type" aria-label="Tipo"><option value="">Todos os tipos</option><option>CAMPAIGN</option><option>CLAIM</option><option>TEST</option><option>RUN</option><option>RESULT</option><option>AUTOMATION_RUN</option><option>LEARNING_RELATION</option></select><select id="filter-status" aria-label="Estado"><option value="">Todos os estados</option><option value="supported">Suportado / aprovado</option><option value="partial">Parcial</option><option value="negative">Negativo / contradito</option><option value="blocked">Bloqueado</option><option value="active">Ativo / aberto</option><option value="legacy">Legado</option></select><select id="filter-authority" aria-label="Autoridade"><option value="">Todas as autoridades</option><option value="SCIENCE_CANONICAL">Ciência canônica</option><option value="DERIVED_NOT_EVIDENCE">Derivada</option></select><button id="clear">Limpar</button></div></div>
-  <div class="graph-mode"><span class="dot"></span><span id="dimension-label">PERSPECTIVA 3D</span><button id="dimension">Vista plana</button></div>
-  <div class="graph-controls"><button id="motion" aria-pressed="false" title="Ativar órbita automática">▷</button><button id="back" title="Voltar">←</button><button id="home" title="Sistema">⌂</button><button id="zoom-in" title="Aproximar">+</button><button id="zoom-out" title="Afastar">−</button><button id="fit" title="Enquadrar">⊞</button><button id="center" title="Centralizar selecionado">◎</button></div>
-  <div id="empty" class="empty" hidden>Nenhuma entidade corresponde a este recorte.</div>
-  <div class="reference-visualization-bar"><div class="reference-tabs"><button class="active" type="button">◉ Órbita</button><button id="neighbors" type="button">⌘ Rede</button><button id="ancestors" type="button">▣ Galeria</button><button id="descendants" type="button">☷ Lista</button></div><div class="reference-sources"><span><i class="line canonical"></i>Fonte científica</span><span><i class="line derived"></i>Relação derivada</span></div><button id="critical" class="reference-critical" type="button">Bloqueios</button><button id="more" hidden>Mais entidades →</button></div>
-  <div class="graph-bottom reference-selection"><span id="selection-hint">Selecione um nó para ver fontes e relações.</span></div>
- </div>
-</section>
-<section id="command-center" class="command-center observatory-deck reference-deck" aria-live="polite"><p class="ct-empty">Carregando estado operacional…</p></section>
-<section class="analytics reference-secondary"><article><div class="chart-title"><span>Atividade por domínio</span><small>TESTES INDEXADOS</small></div><div id="domain-chart"></div><p id="domain-unmapped" class="chart-note" hidden></p></article><article><div class="chart-title"><span>Estado das hipóteses e claims</span><small>RECORTE ATUAL</small></div><div id="claim-chart"></div></article><article><div class="chart-title"><span>Atividade registrada</span><small>ÚLTIMA REVISÃO / EVENTO</small></div><div id="activity-chart"></div><p class="chart-note">Datas de registro disponíveis; não representa uma série histórica de conclusões.</p></article></section>
-<section class="entity-section reference-secondary" id="recorte-section"><div class="chart-title"><span>Radar vivo</span><small id="list-count"></small></div><div id="recorte-panel"></div></section>
-<section class="entity-section" id="blackbox-section" hidden><div class="chart-title"><span>Black Box</span><small>EXECUÇÃO · RUNTIME · LINHAGEM · INTEGRIDADE</small></div><div id="blackbox-panel"></div></section>
-<footer class="reference-footer"><b>NEXO ATLAS</b><span>OBSERVATÓRIO PARA UMA CIÊNCIA MAIS CONECTADA</span><span id="revision"></span></footer></main>
-<aside id="inspector" aria-label="Detalhes da entidade" hidden><div class="inspector-top"><span class="eyebrow">INSPETOR DA ENTIDADE</span><button id="close-inspector" aria-label="Fechar detalhes">×</button></div><div id="detail"></div></aside><div id="palette" hidden role="dialog" aria-modal="true" aria-label="Paleta de comandos"><div class="cp-shell"><div class="cp-field"><span aria-hidden="true">⌕</span><input id="palette-input" type="text" autocomplete="off" spellcheck="false" placeholder="Comandos e entidades desta projeção…" aria-label="Buscar comandos e entidades"><kbd>ESC</kbd></div><ul id="palette-list" class="cp-list" role="listbox" aria-label="Resultados"></ul></div></div><div id="toast" role="status"></div><script type="module" src="/app.mjs"></script></body></html>
+
+<main>
+  <section class="observatory" id="observatory">
+    <canvas id="cosmos" tabindex="0" aria-label="Grafo científico 3,5D do NEXO"></canvas>
+    <div class="hud-title"><small id="eyebrow">NEXO / MACRO GRAPH</small><h1 id="title">Universo científico</h1><p id="subtitle">O estado do conhecimento como uma estrutura navegável.</p></div>
+    <div class="telemetry" id="telemetry"><div><small>NÓS</small><b id="node-count">0</b></div><div><small>RELAÇÕES</small><b id="edge-count">0</b></div><div><small>ATIVOS</small><b id="active-count">0</b></div><div><small>RECORTE</small><b id="focus-label">NEXO</b></div></div>
+    <div class="depth-scale"><span>Z−</span><i></i><b id="depth-label">MACRO</b><i></i><span>Z+</span></div>
+    <div class="timeline"><span>ATIVIDADE</span><button data-window="1">24H</button><button data-window="7">7D</button><button data-window="30">30D</button><button data-window="all" class="active">ALL</button></div>
+    <div class="controls"><button id="orbit" title="Órbita automática">▷</button><button id="back" title="Voltar">←</button><button id="fit" title="Enquadrar">⊞</button><button id="center" title="Centralizar">◎</button><button id="flat" title="Vista plana">2D</button><button id="zoom-in" title="Aproximar">+</button><button id="zoom-out" title="Afastar">−</button></div>
+    <div class="legend"><span><i class="dot canonical"></i>canônico</span><span><i class="line derived"></i>derivado</span><span><i class="pulse-mini"></i>atividade temporal</span></div>
+    <div class="hint" id="hint">Arraste para orbitar · Scroll para profundidade · duplo clique para entrar</div>
+    <div id="loading" class="loading"><i></i><span>Lendo projeção canônica…</span></div>
+    <div id="toast" class="toast"></div>
+  </section>
+  <section class="lower-deck">
+    <article><header><small>ESTADO ESTRUTURAL</small><b id="structural-title">Visão global</b></header><div id="domain-strip" class="domain-strip"></div></article>
+    <article><header><small>RELAÇÕES DOMINANTES</small><b>Topologia do recorte</b></header><div id="relation-strip" class="relation-strip"></div></article>
+    <article><header><small>PROVENANCE HEALTH</small><b>Rastreabilidade</b></header><div id="provenance-health" class="provenance-health"></div></article>
+  </section>
+</main>
+<aside id="inspector" class="inspector" aria-label="Inspetor de entidade"></aside>
+</div>
+<script type="module" src="/nextgen/app.mjs?v=20260908b"></script>
+</body>
+</html>
