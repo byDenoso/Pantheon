@@ -152,3 +152,24 @@ test('Babylon graph lab is isolated, visibly identified and reuses the compariso
  assert.doesNotMatch(app,/\/api\//);
  assert.doesNotMatch(scene,/\/api\//);
 });
+
+test('Babylon pseudo-3D lab compresses depth and constrains the camera',()=>{
+ const pseudo=path.resolve(here,'../graph-lab-babylon-pseudo3d');
+ for(const rel of ['index.html','styles.css','app.mjs','scene.mjs']) assert.ok(fs.existsSync(path.join(pseudo,rel)),`missing pseudo-3D lab file: ${rel}`);
+ const html=fs.readFileSync(path.join(pseudo,'index.html'),'utf8');
+ const app=fs.readFileSync(path.join(pseudo,'app.mjs'),'utf8');
+ const scene=fs.readFileSync(path.join(pseudo,'scene.mjs'),'utf8');
+ assert.match(html,/BABYLON\.JS · PSEUDO-3D/i);
+ assert.match(html,/PSEUDO-3D ORBITAL/i);
+ assert.match(app,/\.\.\/graph-lab\/data\/synthetic-graph\.mjs/);
+ assert.match(scene,/depthScale/);
+ assert.match(scene,/ORTHOGRAPHIC_CAMERA|fov\s*=\s*0\.[23]/);
+ assert.match(scene,/lowerBetaLimit/);
+ assert.match(scene,/upperBetaLimit/);
+ assert.match(scene,/MeshBuilder\.CreateSphere/);
+ assert.match(scene,/MeshBuilder\.CreateTube/);
+ assert.match(scene,/GlowLayer/);
+ assert.match(scene,/Vector3\.Project/);
+ assert.doesNotMatch(app,/\/api\//);
+ assert.doesNotMatch(scene,/\/api\//);
+});
