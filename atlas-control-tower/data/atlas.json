@@ -1,0 +1,34 @@
+{
+  "schemaVersion":"nexo-atlas-snapshot/v1",
+  "generatedAt":"2026-09-08T22:28:00Z",
+  "source":"GOOGLE_DRIVE",
+  "fingerprint":"1fef242819e30704d8467862ecb4cf9a9265a5ad3c3e590f42025214ff41435f",
+  "data":{
+    "staging":true,
+    "stagingReason":"Bootstrap snapshot only; full Drive compiler has not executed yet.",
+    "nodes":[
+      {"id":"system:NEXO","type":"SYSTEM","visualType":"SYSTEM","label":"NEXO","status":"ACTIVE","parentId":null,"domain":null,"summary":"Google Drive truth-owner staging snapshot.","authority":"NEXO_CANONICAL","sourceRefs":[{"source":"GOOGLE_DRIVE","sourceId":"1iBa4iFe2nNPtSLAhoMjy5a5WPNwm0hgJeoNmyexl0Qs","sourceRef":"NEXO · STATE_INDEX.md"}]},
+      {"id":"system:SCIENCE","type":"SYSTEM","visualType":"SYSTEM","label":"Science","status":"ACTIVE","parentId":"system:NEXO","domain":"SCIENCE","summary":"PEER scientific state.","authority":"SCIENCE_CANONICAL","sourceRefs":[{"source":"GOOGLE_DRIVE","sourceId":"1Y9YYAn2x0NDIBTbl1bvkwBbSEGz6kHLxzAl90SQ0-GA","sourceRef":"PEER_CONTROL_TOWER_CANONICAL"}]},
+      {"id":"system:LEARNING","type":"SYSTEM","visualType":"SYSTEM","label":"Learning","status":"ACTIVE","parentId":"system:NEXO","domain":"LEARNING","summary":"NEXO associative learning.","authority":"LEARNING_CANONICAL","sourceRefs":[{"source":"GOOGLE_DRIVE","sourceId":"1to_VBC5edy3kHbkn4CDjG2r33tr0jdtky2Ie80afbEI","sourceRef":"Nexo Associative Learning"}]},
+      {"id":"system:OPERATIONS","type":"SYSTEM","visualType":"SYSTEM","label":"Operations","status":"ACTIVE","parentId":"system:NEXO","domain":"OPERATIONS","summary":"NEXO operational state.","authority":"OPERATIONS_CANONICAL","sourceRefs":[{"source":"GOOGLE_DRIVE","sourceId":"1twRpSoZCOXv77YyCh_5V9nAS2PM2nqzex2A37eI2Zas","sourceRef":"NEXO · ACTION_REGISTER"}]},
+      {"id":"system:OLYMPUS","type":"PROJECT","visualType":"PROJECT","label":"Olympus","status":"ACTIVE","parentId":"system:NEXO","domain":"OLYMPUS","summary":"Olympus Drive ledger boundary.","authority":"OLYMPUS_CANONICAL","sourceRefs":[{"source":"GOOGLE_DRIVE","sourceId":"1qj7VyA7wN3zr6ySZZ9kxHi4Szt99IV5Hf3jRWJAykLM","sourceRef":"Olympus Ledger"}]},
+      {"id":"domain:CROSS","type":"DOMAIN","visualType":"DOMAIN","label":"CROSS","status":"ACTIVE","parentId":"system:SCIENCE","domain":"CROSS","summary":"Cross-probe scientific domain.","authority":"DERIVED_NAVIGATION","sourceRefs":[{"source":"PEER_CONTROL_TOWER_CANONICAL","sourceRef":"SCIENTIFIC_CAMPAIGNS","sourceId":"CROSS"}]},
+      {"id":"campaign:SCI-CAMP-X-CMB-EARLY-CROSSPROBE","type":"CAMPAIGN","visualType":"CAMPAIGN","label":"CMB / early-energy cross-probe","status":"ACTIVE","parentId":"domain:CROSS","domain":"CROSS","summary":"Quais sinais de CMB/energia precoce sobrevivem aos testes cross-instrument, release e mecanismos rivais?","scientificQuestion":"Quais sinais de CMB/energia precoce sobrevivem aos testes cross-instrument, release e mecanismos rivais?","currentVerdict":"No independent campaign-level verdict inferred; use linked per-test evidence","nextValidAction":"T-CON26-CMB-EE-XINST-002: Same-endpoint PR4/NPIPE + native ACT frequency/map splits.","activityAt":"2026-09-04T09:59:43.000Z","authority":"DERIVED_NAVIGATION","sourceRefs":[{"source":"PEER_CONTROL_TOWER_CANONICAL","sourceRef":"SCIENTIFIC_CAMPAIGNS","sourceId":"SCI-CAMP-X-CMB-EARLY-CROSSPROBE"}]},
+      {"id":"test:T-PCDM-PHYSNULL-003","type":"TEST","visualType":"TEST","label":"T-PCDM-PHYSNULL-003","status":"COMPLETE_CERTIFIED_LINUX_REPLAY__PROMOTED_CURRENT_ROBUST_SIGNIFICANCE","parentId":"campaign:SCI-CAMP-X-CMB-EARLY-CROSSPROBE","domain":"CROSS","summary":"Current campaign checkpoint in the Drive-derived navigation view.","authority":"SCIENCE_CANONICAL","sourceRefs":[{"source":"PEER_CONTROL_TOWER_CANONICAL","sourceRef":"Test Registry","sourceId":"T-PCDM-PHYSNULL-003"}]}
+    ],
+    "edges":[
+      {"source":"system:NEXO","target":"system:SCIENCE","type":"CONTAINS","authority":"EXPLICIT_PARENT"},
+      {"source":"system:NEXO","target":"system:LEARNING","type":"CONTAINS","authority":"EXPLICIT_PARENT"},
+      {"source":"system:NEXO","target":"system:OPERATIONS","type":"CONTAINS","authority":"EXPLICIT_PARENT"},
+      {"source":"system:NEXO","target":"system:OLYMPUS","type":"CONTAINS","authority":"EXPLICIT_PARENT"},
+      {"source":"system:SCIENCE","target":"domain:CROSS","type":"CONTAINS","authority":"EXPLICIT_PARENT"},
+      {"source":"domain:CROSS","target":"campaign:SCI-CAMP-X-CMB-EARLY-CROSSPROBE","type":"CONTAINS","authority":"EXPLICIT_PARENT"},
+      {"source":"campaign:SCI-CAMP-X-CMB-EARLY-CROSSPROBE","target":"test:T-PCDM-PHYSNULL-003","type":"CONTAINS","authority":"EXPLICIT_PARENT"}
+    ],
+    "activity":[],
+    "learning":[{"_kind":"STRATEGY","strategy_id":"STRAT-NEXO-OPPORTUNISTIC-FASTPATH-V1","family":"OPPORTUNISTIC_FASTPATH","status":"ACTIVE","domain":"NEXO","scope":"CROSS_DOMAIN"}],
+    "operations":[{"_kind":"ACTION","action_id":"ACT-SYS-HEALTH-EVAL-20260902","domain":"HEALTH_LEGACY","priority":"HIGH","status":"DONE","owner":"NEXO Guardian"}],
+    "olympus":{"sourceId":"1qj7VyA7wN3zr6ySZZ9kxHi4Szt99IV5Hf3jRWJAykLM","mode":"truth-owner-pointer"},
+    "systemState":{"sourceId":"1iBa4iFe2nNPtSLAhoMjy5a5WPNwm0hgJeoNmyexl0Qs","mode":"truth-owner-pointer"}
+  }
+}
