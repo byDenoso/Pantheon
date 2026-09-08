@@ -282,18 +282,19 @@ test('commands are reachable by their keywords as well as their titles', () => {
 
 /* ------------------------------------------------------------- deployment */
 
-test('every new frontend module is on the public boundary and in the build', () => {
+test('the public boundary and build include the active NextGen shell plus reusable legacy modules', () => {
  const vercel = JSON.parse(fs.readFileSync(new URL('../vercel.json', import.meta.url), 'utf8'));
  const builds = new Set(vercel.builds.map(b => b.src));
  const index = fs.readFileSync(new URL('../index.html', import.meta.url), 'utf8');
- for (const file of ['ui/cosmos.css', 'ui/projection-layout.mjs', 'ui/projection-state.mjs', 'ui/layer-console.mjs', 'ui/command-palette.mjs']) {
+ for (const file of ['nextgen/styles.css', 'nextgen/app.mjs', 'nextgen/graph/engine.mjs', 'ui/projection-layout.mjs', 'ui/projection-state.mjs', 'ui/layer-console.mjs', 'ui/command-palette.mjs']) {
   assert.ok(frontendFiles.includes(file), `frontend boundary missing ${file}`);
   assert.ok(builds.has(file), `vercel build missing ${file}`);
  }
- assert.match(index, /\/ui\/cosmos\.css/);
- assert.match(index, /id="layer-console"/);
- assert.match(index, /id="projection-state"/);
- assert.match(index, /id="palette"/);
+ assert.match(index, /\/nextgen\/styles\.css/);
+ assert.match(index, /\/nextgen\/app\.mjs/);
+ assert.match(index, /id="cosmos"/);
+ assert.match(index, /id="inspector"/);
+ assert.doesNotMatch(index, /\/ui\/cosmos\.css/, 'legacy cosmic stylesheet must not compete with the active NextGen shell');
 });
 
 test('server-only projection code never reaches the browser bundle', () => {
