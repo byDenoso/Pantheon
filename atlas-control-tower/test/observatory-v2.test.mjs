@@ -19,18 +19,18 @@ const model={
 
 const fakeRoot=()=>({innerHTML:'',querySelectorAll(){return[]},querySelector(){return null}});
 
-test('overview puts the approved reference map before the operational deck',()=>{
- // The hero now names what the map reads, not what the project aspires to.
- assert.match(index,/Ciência, execução e integridade/);
- assert.match(index,/na mesma leitura\./);
- assert.match(index,/ui\/reference-one\.css/);
- assert.ok(index.indexOf('id="map-workspace"')<index.indexOf('id="command-center"'));
- assert.match(index,/CONTROL TOWER/);
- assert.match(index,/reference-system-card/);
+test('overview puts the NextGen map before its structural deck',()=>{
+ assert.match(index,/NEXO \/ MACRO GRAPH/);
+ assert.match(index,/Universo científico/);
+ assert.match(index,/nextgen\/styles\.css/);
+ assert.ok(index.indexOf('id="cosmos"')<index.indexOf('class="lower-deck"'));
+ assert.match(index,/ESTADO ESTRUTURAL/);
+ assert.match(index,/RELAÇÕES DOMINANTES/);
+ assert.match(index,/PROVENANCE HEALTH/);
  assert.doesNotMatch(index,/FRONTEND OFICIAL|Estado rastreável/);
 });
 
-test('post-map deck contains the five approved reference consoles',()=>{
+test('legacy operational deck remains renderable for non-NextGen surfaces',()=>{
  const root=fakeRoot();
  renderControlTower(root,model,{});
  assert.match(root.innerHTML,/Status operacional/);
