@@ -27,8 +27,8 @@ export const PALETTE_A = {
     NEXO:'#FFBE5C',
     SCIENCE:'#66D6FF',
     LEARNING:'#AF8DFF',
-    ENGINEERING:'#64E1CB',
-    OLYMPUS:'#C478FF',
+    ENGINEERING:'#5EA8FF',
+    OLYMPUS:'#64E1CB',
     BLACK_BOX:'#7A8495',
     DEFAULT:'#A8BED2'
   },
@@ -93,7 +93,7 @@ export const PALETTE_LIGHT={
     text:'#102033',textDim:'#314B66',textMuted:'#687F96',accent:'#0077CC',accentSoft:'rgba(0,119,204,0.12)',
     success:'#008C76',warning:'#B96A00',danger:'#B83E61'
   },
-  semantic:{...PALETTE_A.semantic,NEXO:'#D78314',SCIENCE:'#087FBE',LEARNING:'#7658C9',ENGINEERING:'#168E7D',OLYMPUS:'#8A44C8',BLACK_BOX:'#657C93',DEFAULT:'#55718B'},
+  semantic:{...PALETTE_A.semantic,NEXO:'#D78314',SCIENCE:'#087FBE',LEARNING:'#7658C9',ENGINEERING:'#2F6FB6',OLYMPUS:'#168E7D',BLACK_BOX:'#657C93',DEFAULT:'#55718B'},
   states:{active:'#0077CC',supported:'#287CB8',partial:'#7658C9',negative:'#657C93',blocked:'#B83E61',legacy:'#76889A'},
   nodes:{...PALETTE_A.nodes,coreFill:'#152A40',edgeLight:'rgba(255,255,255,0.88)',glow:'rgba(0,119,204,0.15)',halo:'rgba(27,86,133,0.08)',fogFar:'rgba(221,235,250,0.38)'},
   filaments:{canonical:'rgba(0,104,184,0.38)',derived:'rgba(111,82,190,0.30)',crossDomain:'rgba(0,137,118,0.30)',intraDomain:'rgba(69,106,138,0.24)',learning:'rgba(0,119,204,0.40)',transfer:'rgba(111,82,190,0.36)',validation:'rgba(0,140,118,0.36)',hypothesis:'rgba(201,121,22,0.38)',risk:'rgba(184,62,97,0.34)',pulse:'#C97916',pulseHalo:'rgba(201,121,22,0.18)'},
