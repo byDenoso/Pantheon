@@ -9,8 +9,10 @@
     "start": "vite --host 0.0.0.0"
   },
   "dependencies": {
+    "@babylonjs/core": "9.25.0",
     "@react-three/fiber": "9.7.0",
     "graphology": "0.26.0",
+    "pixi.js": "8.20.1",
     "react": "19.2.8",
     "react-dom": "19.2.8",
     "sigma": "3.0.3",
