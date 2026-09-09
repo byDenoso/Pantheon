@@ -110,3 +110,9 @@ test('visual experience stylesheet is premium but mobile-first safe',()=>{
  assert.match(css,/--atlas-domain-rgb/);
  assert.doesNotMatch(css,/filter:\s*blur\([2-9][0-9]px\)/,'background effects must not use absurd full-screen blur costs');
 });
+
+test('visual experience never collapses the canonical graph renderer root',()=>{
+ const css=read('graph/experience/visual-experience-v4.css');
+ assert.match(css,/\.graph-renderer-root\{[^}]*position:absolute[^}]*inset:0/s,'Three renderer root must fill the stage');
+ assert.doesNotMatch(css,/\.graph-renderer-root,#graph-lab-canvas\{[^}]*position:relative/s,'experience CSS must not override full-stage renderer geometry');
+});
