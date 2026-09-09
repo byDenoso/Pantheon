@@ -1,5 +1,6 @@
 import {EXPERIENCE_ORDER,EXPERIENCE_PRESETS} from './experience-presets.mjs';
 import {resolveExperience} from './resolve-experience.mjs';
+import {createNodeActionBar} from './node-action-bar.mjs';
 import {applyBackgroundState,domainFromNode,resolveBackground} from '../background/background-director.mjs';
 import {RENDERERS} from '../renderers/renderer-registry.mjs';
 
@@ -47,6 +48,7 @@ export function installVisualExperienceV4({renderer,onOpenNode,onGoHome,onToggle
  const originalSetTheme=renderer.setTheme?.bind(renderer);
  const originalDrawSpace=renderer.drawSpace?.bind(renderer);
  let selectedId=null;
+ let actionBar=null;
 
  function activeNode(){return state.graph.nodes?.find(node=>node.id===selectedId)||state.graph.nodes?.find(node=>node.id===state.graph.rootId)||null}
  function background(){
@@ -86,8 +88,23 @@ export function installVisualExperienceV4({renderer,onOpenNode,onGoHome,onToggle
   return state.profile;
  }
 
- renderer.setGraph=function(graph,options){state.graph=graph||{nodes:[],edges:[]};const result=originalSetGraph?.(graph,options);syncStatus();syncDomain(activeNode());return result};
- renderer.setSelected=function(id){selectedId=id;const result=originalSetSelected?.(id);syncDomain(activeNode());return result};
+ renderer.setGraph=function(graph,options){
+  state.graph=graph||{nodes:[],edges:[]};
+  const result=originalSetGraph?.(graph,options);
+  syncStatus();
+  const node=activeNode();
+  actionBar?.setNode(node);
+  syncDomain(node);
+  return result;
+ };
+ renderer.setSelected=function(id){
+  selectedId=id;
+  const result=originalSetSelected?.(id);
+  const node=activeNode();
+  actionBar?.setNode(node);
+  syncDomain(node);
+  return result;
+ };
  renderer.setTheme=function(theme){const result=originalSetTheme?.(theme);queueMicrotask(background);return result};
  if(originalDrawSpace){
   renderer.drawSpace=function(ctx,w,h){
@@ -112,15 +129,25 @@ export function installVisualExperienceV4({renderer,onOpenNode,onGoHome,onToggle
  function makeButton(label,attrs={}){const b=document.createElement('button');b.type='button';b.textContent=label;for(const [k,v] of Object.entries(attrs))b.dataset[k]=v;return b}
  function installDomainBar(){
   const stage=$('.stage');if(!stage||byId('atlas-experience-bar'))return;
-  const bar=document.createElement('nav');bar.id='atlas-experience-bar';bar.className='atlas-experience-bar';bar.setAttribute('aria-label','Domínios e experiências Atlas');
+  const bar=document.createElement('nav');bar.id='atlas-experience-bar';bar.className='atlas-experience-bar';bar.setAttribute('aria-label','Domínios e experiências Atlas');bar.setAttribute('data-label-reserved','');
   for(const target of MACRO_TARGETS){const b=makeButton(target.label,{domainTarget:target.domain});b.classList.add(target.className);b.addEventListener('click',()=>target.domain==='NEXO'?onGoHome?.():onOpenNode?.(target.nodeId));bar.append(b)}
   const filament=makeButton('FILAMENTOS');filament.className='atlas-filaments-toggle';filament.addEventListener('click',()=>{state.filaments=!state.filaments;filament.classList.toggle('is-active',state.filaments);onToggleFilaments?.(state.filaments);background()});bar.append(filament);
   stage.append(bar);
  }
  function installStatus(){
   const stage=$('.stage');if(!stage||byId('atlas-status-summary'))return;
-  const root=document.createElement('div');root.id='atlas-status-summary';root.className='atlas-status-summary';root.innerHTML='<span data-metric="domains"><b>3</b><small>Macro-domínios</small></span><span data-metric="nodes"><b>0</b><small>Nós visíveis</small></span><span data-metric="blockers"><b>0</b><small>Bloqueios</small></span>';
+  const root=document.createElement('div');root.id='atlas-status-summary';root.className='atlas-status-summary';root.setAttribute('data-label-reserved','');root.innerHTML='<span data-metric="domains"><b>3</b><small>Macro-domínios</small></span><span data-metric="nodes"><b>0</b><small>Nós visíveis</small></span><span data-metric="blockers"><b>0</b><small>Bloqueios</small></span>';
   stage.append(root);syncStatus();
+ }
+ function installNodeActions(){
+  const stage=$('.stage');if(!stage||actionBar)return;
+  actionBar=createNodeActionBar({
+   host:stage,
+   onOpen:node=>renderer.callbacks?.onOpen?.(node),
+   onFocus:node=>renderer.focusNode?.(node.id),
+   onHome:()=>onGoHome?.()
+  });
+  actionBar?.setNode(activeNode());
  }
  function installTopActions(){
   const tools=$('.topbar-tools');if(!tools||byId('atlas-demo-toggle'))return;
@@ -136,14 +163,22 @@ export function installVisualExperienceV4({renderer,onOpenNode,onGoHome,onToggle
  function installStudio(){
   const panel=byId('lab-panel');const hud=panel?.querySelector('.hud');if(!panel||!hud||byId('atlas-experience-studio'))return;
   const root=document.createElement('section');root.id='atlas-experience-studio';root.className='atlas-experience-studio';
-  root.innerHTML='<header><b>EXPERIENCE STUDIO</b><small>produto primeiro · sliders depois</small></header><label class="select-row">Experience<select id="atlas-experience-select"></select></label><div class="atlas-experience-grid"></div><div class="section-title">Renderer roadmap</div><div class="atlas-renderer-matrix"></div>';
+  root.innerHTML='<header><b>EXPERIENCE</b><small>escolha o modo · ajuste técnico só se precisar</small></header><label class="atlas-experience-select-row">Experience<select id="atlas-experience-select"></select></label><div class="atlas-experience-grid"></div>';
   hud.after(root);
+  const advanced=document.createElement('details');advanced.className='atlas-advanced-controls';advanced.innerHTML='<summary>ADVANCED <span>Renderer · preset · dataset · tuning</span></summary><div data-atlas-advanced-host></div>';
+  root.after(advanced);
+  const advancedHost=advanced.querySelector('[data-atlas-advanced-host]');
+  const fixed=new Set([panel.querySelector('.panel-head'),hud,root,advanced]);
+  for(const child of [...panel.children])if(!fixed.has(child))advancedHost.append(child);
   const select=root.querySelector('select'),grid=root.querySelector('.atlas-experience-grid');
-  for(const id of EXPERIENCE_ORDER){const p=EXPERIENCE_PRESETS[id];const option=document.createElement('option');option.value=id;option.textContent=p.label;select.append(option);const b=makeButton('');b.dataset.experience=id;b.innerHTML=`<b>${p.label}</b><small>${p.rendererId} · ${p.backgroundPreset}</small>`;b.addEventListener('click',()=>applyProfile(id));grid.append(b)}
+  for(const id of EXPERIENCE_ORDER){
+   const p=EXPERIENCE_PRESETS[id];
+   const option=document.createElement('option');option.value=id;option.textContent=p.label;select.append(option);
+   const b=makeButton('');b.dataset.experience=id;b.innerHTML=`<b>${p.label}</b><small>${p.backgroundPreset} · ${p.motion}</small>`;b.addEventListener('click',()=>applyProfile(id));grid.append(b);
+  }
   select.addEventListener('change',()=>applyProfile(select.value));
-  const matrix=root.querySelector('.atlas-renderer-matrix');for(const rendererInfo of Object.values(RENDERERS)){const b=makeButton('');b.dataset.ready=String(rendererInfo.availability==='ready');b.innerHTML=`${rendererInfo.label}<em>${rendererInfo.availability}</em>`;if(rendererInfo.availability==='ready')b.addEventListener('click',()=>{const url=new URL(location.href);url.searchParams.set('renderer-v4',rendererInfo.id);url.searchParams.set('renderer',rendererInfo.baseRenderer);location.assign(url)});matrix.append(b)}
  }
- function boot(){installDomainBar();installStatus();installTopActions();installStudio();applyProfile(state.experienceId,{persist:false});syncDomain(activeNode())}
+ function boot(){installDomainBar();installStatus();installNodeActions();installTopActions();installStudio();applyProfile(state.experienceId,{persist:false});syncDomain(activeNode())}
  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
  addEventListener('resize',()=>{const next=resolveExperience({experienceId:state.experienceId,width:innerWidth,theme:document.documentElement.dataset.theme||undefined,rendererOverride:state.rendererId});if(next.viewport!==state.profile?.viewport){state.profile=next;applyProfile(state.experienceId,{persist:false})}},{passive:true});
 
