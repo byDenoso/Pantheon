@@ -5,12 +5,11 @@
 // jsDelivr, pinned to one commit of this repository. Only the entry points need
 // rewriting: app.mjs resolves its own imports (graph/, data/, vendor/, the snapshots)
 // relative to its module URL, so they follow the same pin automatically.
+// Visual Experience v5 is injected as a pinned module so production gets the
+// Editorial Observatory shell and optional Pixi/Babylon engine bridge without
+// changing the canonical graph/SSOT data path.
 //
 //   node graph-lab/build-cdn-index.mjs <commit-sha> [> deploy/index.html]
-//
-// Run it after pushing, with the sha that is actually on the default branch, and
-// publish the output as the deploy's index.html. Never pin to a branch name: the
-// deploy must keep serving the exact commit it was verified against.
 
 import fs from 'node:fs';
 import path from 'node:path';
@@ -19,6 +18,7 @@ import {fileURLToPath} from 'node:url';
 const REPO='byDenoso/Pantheon';
 const DIR='atlas-control-tower/graph-lab';
 const ENTRY_POINTS=['styles.css','nexo-live.css','obsidian-observatory.css','graph/volume-rendering.mjs','app.mjs'];
+const V5_ENTRY='graph/experience/editorial-observatory-v5.mjs';
 
 const here=path.dirname(fileURLToPath(import.meta.url));
 const commit=process.argv[2];
@@ -43,6 +43,7 @@ const pinEntrypoint=(html,file)=>{
 
 let html=fs.readFileSync(path.join(here,'index.html'),'utf8');
 for(const file of ENTRY_POINTS)html=pinEntrypoint(html,file);
+html=html.replace('</body>',`<script type="module" src="${cdn(V5_ENTRY)}"></script></body>`);
 
 const leftovers=html.match(/["']\.\/[^"']+["']/g)||[];
 if(leftovers.length){
