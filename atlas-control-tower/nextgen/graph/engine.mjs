@@ -16,10 +16,16 @@ export {layoutGraph,labelPolicy};
 // branch shares one hue, so the map reads as constellations rather than as a
 // rainbow of unrelated categories.
 export const SYSTEM_COLOR={
-  NEXO:'#E8C982',SCIENCE:'#66c2ff',LEARNING:'#b874ff',OPERATIONS:'#7f9db8',
-  ENGINEERING:'#7f9db8',OLYMPUS:'#51d1b0',BLACK_BOX:'#d860a8',BLACKBOX:'#d860a8'
+  NEXO:'#2ee6a0',SCIENCE:'#2f9dff',LEARNING:'#b44dff',OPERATIONS:'#5b8cc4',
+  ENGINEERING:'#16d9c0',OLYMPUS:'#2ee68a',BLACK_BOX:'#ff3d9a',BLACKBOX:'#ff3d9a'
 };
-const FALLBACK_SYSTEM='#9fb2c6';
+const FALLBACK_SYSTEM='#7f9dc4';
+// The systems carry the identity; the bulk of the graph stays neutral so the
+// map does not scream. A landmark is only a landmark if the field around it is
+// quiet, so ordinary nodes take a slate tone with a hint of their system.
+const NEUTRAL='#6d88ab';
+const NEUTRAL_TINT=.26;
+const LANDMARK_TYPES=new Set(['SYSTEM','PROJECT']);
 
 // Kept for shape and danger classification, and asserted by the frontend tests.
 export const TYPE_COLOR={SYSTEM:'#8db7ff',DOMAIN:'#66d6ff',PROJECT:'#66d6ff',CAMPAIGN:'#967cff',HYPOTHESIS:'#f17ec2',DECISION_HYPOTHESIS:'#f17ec2',CLAIM:'#e983c2',TEST:'#70e6bd',RESULT:'#ffd06b',DATASET:'#8da4ff',MODEL:'#b895ff',PROBE:'#73cfff',PUBLICATION:'#f4a66e',SOURCE:'#c9d4e8',SOURCE_REF:'#8b98af'};
@@ -43,6 +49,11 @@ const DIAMOND_TYPES=new Set(['HYPOTHESIS','CLAIM','DECISION_HYPOTHESIS','TEST','
 const MAX_PULSES=260;
 const CURVE_SEGMENTS=26;
 const CHILD_LIMIT=14;
+// A map is legible because of what it leaves out. The window keeps the focus,
+// its parent, its children and one more generation, then stops. Rendering the
+// whole graph at once turns any real snapshot into a haze of crossing edges.
+const WINDOW_CORE=95;
+const WINDOW_MAX=115;
 const FOV=20;
 
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
@@ -50,13 +61,13 @@ const hash=s=>{let h=0;for(const ch of String(s))h=(Math.imul(h,31)+ch.charCodeA
 const unit=(s,salt)=>(hash(salt+':'+s)%10000)/10000;
 
 function nodeRadius(node,focus){
-  if(node.id===focus)return 23;
+  if(node.id===focus)return 30;
   const t=node.visualType||node.type;
-  if(t==='SYSTEM')return 15;
-  if(t==='DOMAIN'||t==='PROJECT')return 10.5;
-  if(t==='CAMPAIGN')return 8;
-  if(t==='SOURCE'||t==='SOURCE_REF')return 5;
-  return 6;
+  if(t==='SYSTEM')return 21;
+  if(t==='DOMAIN'||t==='PROJECT')return 14;
+  if(t==='CAMPAIGN')return 11;
+  if(t==='SOURCE'||t==='SOURCE_REF')return 7;
+  return 8.5;
 }
 
 function edgeKind(edge,systems){
@@ -68,19 +79,36 @@ function edgeKind(edge,systems){
   return 'normal';
 }
 
-const PULSE_VERT=`
-attribute float aSize; attribute vec3 aColor;
-uniform float uPixelRatio;
-varying vec3 vColor;
+// aSize is a world-space diameter. uProjScale = (viewportHeight/2)/tan(fov/2)
+// converts it to pixels, so a sprite tracks the meshes exactly as you dolly.
+const POINT_VERT=`
+attribute float aSize; attribute vec3 aColor; attribute float aIntensity;
+uniform float uPixelRatio; uniform float uProjScale;
+varying vec3 vColor; varying float vIntensity;
 void main(){
-  vColor=aColor;
+  vColor=aColor; vIntensity=aIntensity;
   vec4 mv=modelViewMatrix*vec4(position,1.0);
-  gl_PointSize=aSize*uPixelRatio*(340.0/max(1.0,-mv.z));
+  gl_PointSize=max(1.0,aSize*uProjScale/max(1.0,-mv.z))*uPixelRatio;
   gl_Position=projectionMatrix*mv;
 }`;
+// The bloom. A wide, steeply falling-off disc behind every node is what turns a
+// flat coloured ball into something that reads as emitting light.
+const HALO_FRAG=`
+precision mediump float;
+varying vec3 vColor; varying float vIntensity;
+void main(){
+  float d=length(gl_PointCoord*2.0-1.0);
+  if(d>1.0) discard;
+  float glow=pow(1.0-d,3.2);
+  float core=pow(1.0-d,0.9)*0.20;
+  float a=(glow*0.85+core)*vIntensity;
+  if(a<0.004) discard;
+  gl_FragColor=vec4(vColor,a);
+}`;
+const PULSE_VERT=POINT_VERT;
 const PULSE_FRAG=`
 precision mediump float;
-varying vec3 vColor;
+varying vec3 vColor; varying float vIntensity;
 void main(){
   float d=length(gl_PointCoord*2.0-1.0);
   float core=1.0-smoothstep(0.0,0.45,d);
@@ -126,16 +154,26 @@ export class AtlasEngine{
     this.group=new THREE.Group();
     this.scene.add(this.group);
 
-    this.sphereGeom=new THREE.SphereGeometry(1,18,12);
+    this.sphereGeom=new THREE.SphereGeometry(1,26,18);
     this.octaGeom=new THREE.OctahedronGeometry(1,0);
     this.ringGeom=new THREE.RingGeometry(1.5,1.62,56);
 
     this.pulseGeom=new THREE.BufferGeometry();
     this.pulseMat=new THREE.ShaderMaterial({
       vertexShader:PULSE_VERT,fragmentShader:PULSE_FRAG,
-      uniforms:{uPixelRatio:{value:1}},
+      uniforms:{uPixelRatio:{value:1},uProjScale:{value:900}},
       transparent:true,depthWrite:false,blending:THREE.AdditiveBlending
     });
+    this.haloGeom=new THREE.BufferGeometry();
+    this.haloMat=new THREE.ShaderMaterial({
+      vertexShader:POINT_VERT,fragmentShader:HALO_FRAG,
+      uniforms:{uPixelRatio:{value:1},uProjScale:{value:900}},
+      transparent:true,depthWrite:false,depthTest:false,blending:THREE.AdditiveBlending
+    });
+    this.haloMesh=new THREE.Points(this.haloGeom,this.haloMat);
+    this.haloMesh.frustumCulled=false;
+    this.haloMesh.renderOrder=-1;
+    this.scene.add(this.haloMesh);
     this.pulseMesh=new THREE.Points(this.pulseGeom,this.pulseMat);
     this.pulseMesh.frustumCulled=false;
     this.scene.add(this.pulseMesh);
@@ -156,6 +194,7 @@ export class AtlasEngine{
     g.setAttribute('position',new THREE.BufferAttribute(pos,3));
     g.setAttribute('aSize',new THREE.BufferAttribute(size,1));
     g.setAttribute('aColor',new THREE.BufferAttribute(col,3));
+    g.setAttribute('aIntensity',new THREE.BufferAttribute(new Float32Array(count).fill(1),1));
     this.starMesh=new THREE.Points(g,this.pulseMat);
     this.starMesh.frustumCulled=false;
     this.scene.add(this.starMesh);
@@ -186,10 +225,40 @@ export class AtlasEngine{
     for(const id of this.collapsed)walk(id);
     return hidden;
   }
+  // The neighbourhood of the focus, in widening bands, capped so the view stays
+  // readable no matter how large the snapshot is.
+  windowIds(){
+    const all=this.graph.nodes||[];
+    if(all.length<=WINDOW_MAX)return null;
+    const byId=new Map(all.map(n=>[n.id,n]));
+    const kids=this.childIndex();
+    const root=byId.get(this.focus)||all[0];
+    if(!root)return null;
+    const ids=new Set([root.id]);
+    if(root.parentId&&byId.has(root.parentId))ids.add(root.parentId);
+    const direct=kids.get(root.id)||[];
+    for(const id of direct)ids.add(id);
+    for(const id of direct){
+      for(const g of kids.get(id)||[]){
+        if(ids.size>=WINDOW_CORE)break;
+        ids.add(g);
+      }
+      if(ids.size>=WINDOW_CORE)break;
+    }
+    // Then pull in whatever the neighbourhood already points at, so relations do
+    // not dangle at the edge of the window.
+    for(const e of this.graph.edges||[]){
+      if(ids.size>=WINDOW_MAX)break;
+      if(ids.has(e.source)&&byId.has(e.target))ids.add(e.target);
+      else if(ids.has(e.target)&&byId.has(e.source))ids.add(e.source);
+    }
+    return ids;
+  }
   visibleGraph(){
     const hidden=this.hiddenIds();
-    if(!hidden.size)return this.graph;
-    const nodes=(this.graph.nodes||[]).filter(n=>!hidden.has(n.id));
+    const window=this.windowIds();
+    if(!hidden.size&&!window)return this.graph;
+    const nodes=(this.graph.nodes||[]).filter(n=>!hidden.has(n.id)&&(!window||window.has(n.id)));
     const ids=new Set(nodes.map(n=>n.id));
     return {...this.graph,nodes,edges:(this.graph.edges||[]).filter(e=>ids.has(e.source)&&ids.has(e.target))};
   }
@@ -215,9 +284,13 @@ export class AtlasEngine{
   }
   expandAll(){this.collapsed.clear();this.reflow(true);this.kick()}
 
+  systemColor(node){return SYSTEM_COLOR[this.systems?.get(node.id)]||FALLBACK_SYSTEM}
+  isLandmark(node){return LANDMARK_TYPES.has(node.visualType||node.type)||node.id===this.focus}
   colorFor(node){
     if(STATUS_DANGER.test(String(node.status||node.summary||'')))return DANGER_COLOR;
-    return SYSTEM_COLOR[this.systems?.get(node.id)]||FALLBACK_SYSTEM;
+    const system=this.systemColor(node);
+    if(this.isLandmark(node))return system;
+    return '#'+new THREE.Color(NEUTRAL).lerp(new THREE.Color(system),NEUTRAL_TINT).getHexString();
   }
 
   // ---------- scene build ----------
@@ -270,10 +343,53 @@ export class AtlasEngine{
       if(t==='SYSTEM'||t==='PROJECT'||n.id===this.focus)rings.push({node:n,p});
     }
     this.instanced={};
-    this.instanced.sphere=this.buildInstances(this.sphereGeom,spheres,.88);
-    this.instanced.octa=this.buildInstances(this.octaGeom,octas,.84);
-    this.instanced.ring=this.buildInstances(this.ringGeom,rings,.3,THREE.DoubleSide);
+    this.instanced.sphere=this.buildInstances(this.sphereGeom,spheres,.95);
+    this.instanced.octa=this.buildInstances(this.octaGeom,octas,.92);
+    this.instanced.ring=this.buildInstances(this.ringGeom,rings,.34,THREE.DoubleSide);
+    this.buildHalos([...spheres,...octas]);
+    this.buildOrbits();
     this.buildEdges();
+  }
+  buildHalos(items){
+    const n=items.length;
+    const pos=new Float32Array(Math.max(1,n)*3),size=new Float32Array(Math.max(1,n)),
+          col=new Float32Array(Math.max(1,n)*3),intensity=new Float32Array(Math.max(1,n));
+    const c=new THREE.Color();
+    items.forEach((item,i)=>{
+      const r=nodeRadius(item.node,this.focus);
+      pos[i*3]=item.p.x;pos[i*3+1]=item.p.y;pos[i*3+2]=item.p.z;
+      // Landmarks glow wider and hotter; the neutral field glows just enough to
+      // sit in the same world rather than looking pasted on.
+      const landmark=this.isLandmark(item.node);
+      size[i]=r*2*(landmark?5.2:3.4);
+      intensity[i]=landmark?.85:.30;
+      c.set(landmark?this.systemColor(item.node):this.colorFor(item.node));
+      col[i*3]=c.r;col[i*3+1]=c.g;col[i*3+2]=c.b;
+    });
+    const g=this.haloGeom;
+    g.setAttribute('position',new THREE.BufferAttribute(pos,3));
+    g.setAttribute('aSize',new THREE.BufferAttribute(size,1));
+    g.setAttribute('aColor',new THREE.BufferAttribute(col,3));
+    g.setAttribute('aIntensity',new THREE.BufferAttribute(intensity,1));
+    g.setDrawRange(0,n);
+    this.haloItems=items;
+  }
+  // Tilted ellipses around the focus, the way the reference marks "you are here".
+  buildOrbits(){
+    const p=this.positions.get(this.focus);
+    if(!p)return;
+    const r=nodeRadius({id:this.focus},this.focus);
+    const color=new THREE.Color(this.systemColor({id:this.focus}));
+    const tilts=[[0,.20,0],[.9,-.35,.25],[-.7,.55,-.2]];
+    tilts.forEach((rot,i)=>{
+      const rad=r*(2.6+i*.85);
+      const geom=new THREE.RingGeometry(rad,rad*1.012,96);
+      const mat=new THREE.MeshBasicMaterial({color,transparent:true,opacity:.34-i*.07,side:THREE.DoubleSide,depthWrite:false});
+      const ring=new THREE.Mesh(geom,mat);
+      ring.position.set(p.x,p.y,p.z);
+      ring.rotation.set(rot[0],rot[1],rot[2]);
+      this.group.add(ring);
+    });
   }
   buildInstances(geom,items,opacity,side){
     if(!items.length)return null;
@@ -339,8 +455,10 @@ export class AtlasEngine{
       }
       const g=new THREE.BufferGeometry();
       g.setAttribute('position',new THREE.BufferAttribute(new Float32Array(verts),3));
-      const mat=new THREE.LineBasicMaterial({color:style.color,transparent:true,opacity:style.opacity,depthWrite:false});
+      const mat=new THREE.LineDashedMaterial({color:style.color,transparent:true,opacity:style.opacity,
+        depthWrite:false,dashSize:kind==='normal'?7:11,gapSize:kind==='normal'?9:7});
       const lines=new THREE.LineSegments(g,mat);
+      lines.computeLineDistances();
       lines.frustumCulled=false;
       lines.userData.kind=kind;
       this.group.add(lines);
@@ -359,6 +477,7 @@ export class AtlasEngine{
     g.setAttribute('position',new THREE.BufferAttribute(pos,3));
     g.setAttribute('aSize',new THREE.BufferAttribute(size,1));
     g.setAttribute('aColor',new THREE.BufferAttribute(col,3));
+    g.setAttribute('aIntensity',new THREE.BufferAttribute(new Float32Array(Math.max(1,n)).fill(1),1));
     g.setDrawRange(0,n);
     this.pulsePositions=pos;
   }
@@ -408,6 +527,10 @@ export class AtlasEngine{
     this.renderer.setPixelRatio(dpr);
     this.renderer.setSize(w,h,false);
     this.pulseMat.uniforms.uPixelRatio.value=dpr;
+    this.haloMat.uniforms.uPixelRatio.value=dpr;
+    const proj=(h/2)/Math.tan(FOV*Math.PI/360);
+    this.pulseMat.uniforms.uProjScale.value=proj;
+    this.haloMat.uniforms.uProjScale.value=proj;
     this.three.aspect=w/h;
     this.three.updateProjectionMatrix();
     this.measureContent();
@@ -450,7 +573,6 @@ export class AtlasEngine{
     this.focus=focus||graph?.focus||this.focus;
     this._childIndex=null;
     this.collapsed.clear();
-    this.autoCollapse();
     this.layoutKey='';
     this.selected=null;this.hover=null;
     this.reflow(true);
@@ -472,7 +594,7 @@ export class AtlasEngine{
       if(v.z<-1||v.z>1)continue;
       const x=(v.x*.5+.5)*this.w,y=(-v.y*.5+.5)*this.h;
       if(x<-140||y<-140||x>this.w+140||y>this.h+140)continue;
-      out.push({id:node.id,node,x,y,r:Math.max(3,nodeRadius(node,this.focus)*ppu),depth:v.z,visible:true,color:this.colorFor(node)});
+      out.push({id:node.id,node,x,y,r:Math.max(3,nodeRadius(node,this.focus)*ppu),depth:v.z,visible:true,color:this.colorFor(node),accent:this.systemColor(node)});
     }
     return out;
   }

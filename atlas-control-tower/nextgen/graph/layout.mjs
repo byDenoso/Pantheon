@@ -9,7 +9,7 @@ const jitter=(id,axis)=>(hashL(`${axis}:${id}`)%10000)/10000-.5;
 // Hierarchy depth drives the Z plane, so the map reads as stacked layers
 // instead of one flat disc. Lower rank sits closer to the camera.
 const DEPTH_RANK={SYSTEM:0,DOMAIN:1,PROJECT:1,CAMPAIGN:2,CLAIM:3,HYPOTHESIS:3,DECISION_HYPOTHESIS:3,TEST:4,RESULT:5,DATASET:5,MODEL:5,PROBE:5,PUBLICATION:6,SOURCE:7,SOURCE_REF:8};
-const DEPTH_STEP=46;
+const DEPTH_STEP=150;
 
 export function depthRank(node){const t=node?.visualType||node?.type;return DEPTH_RANK[t]??4}
 
@@ -69,6 +69,7 @@ function layoutLineage(list,{focus,edges,mobile}){
 // density constant as the ring population grows, which is what stops the
 // macro view from collapsing into a blob at the centre.
 const GOLDEN_ANGLE=Math.PI*(3-Math.sqrt(5));
+const clampR=(v,a,b)=>Math.max(a,Math.min(b,v));
 
 // Rings are chosen by a node's relationship to the current focus, not by its
 // absolute type. The focus sits at the origin, its parent just inside it, its
@@ -113,14 +114,18 @@ function layoutLayered(list,{focus}){
     if(n.id===focus){out.push({id:n.id,x:0,y:0,z:zPlane});continue}
     const ring=ringFor(n,{focusNode,children});
     const count=Math.max(1,population.get(ring)||1);
-    const widen=Math.max(1,Math.sqrt(count)/Math.sqrt(9));
+    // A crowded ring widens so its members do not overlap, but only up to a
+    // point. Uncapped sqrt(population) growth pushed a 4000-node ring out to
+    // ~8600 units, which framed the camera so far back that the inner rings
+    // collapsed to a dot and only the crossing edges stayed visible.
+    const widen=clampR(Math.sqrt(count)/Math.sqrt(9),1,2.6);
     const radius=ring*widen*(1+jitter(n.id,'r')*.07);
     const angle=k++*GOLDEN_ANGLE+jitter(n.id,'a')*.6+sectorOf(systems.get(n.id))*.19;
     out.push({
       id:n.id,
       x:Math.cos(angle)*radius,
       y:Math.sin(angle)*radius*.76,
-      z:zPlane+Math.sin(angle*1.65+jitter(n.id,'z')*6.28)*14
+      z:zPlane+Math.sin(angle*1.65+jitter(n.id,'z')*6.28)*44
     });
   }
   return out;
@@ -135,5 +140,5 @@ export function layoutGraph(nodes,{focus='system:NEXO',semanticView='macro',view
 export function labelPolicy(width,semanticView){
   const mobile=Number(width)<LINEAGE_BREAKPOINT;
   if(semanticView==='provenance')return mobile?{max:18,maxChars:36}:{max:24,maxChars:48};
-  return mobile?{max:7,maxChars:28}:{max:16,maxChars:42};
+  return mobile?{max:6,maxChars:26}:{max:11,maxChars:34};
 }

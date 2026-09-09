@@ -45,13 +45,19 @@ test('hierarchy depth separates nodes onto distinct z planes',()=>{
   assert.ok(depthRank({type:'SYSTEM'})<depthRank({type:'SOURCE'}));
 });
 
-test('a crowded rank spreads instead of stacking on a sparse one',()=>{
+test('a crowded ring widens, but its growth is bounded',()=>{
   const spread=count=>{
     const nodes=[node('system:NEXO','SYSTEM'),...Array.from({length:count},(_,i)=>node(`test:${i}`,'TEST'))];
     const p=layoutGraph(nodes,{focus:'system:NEXO',semanticView:'macro'}).filter(x=>x.id!=='system:NEXO');
     return Math.max(...p.map(x=>Math.hypot(x.x,x.y)));
   };
-  assert.ok(spread(400)>spread(20)*3,'radius must grow with population');
+  // Crowding still pushes the ring outwards so members do not overlap...
+  assert.ok(spread(400)>spread(20),'a crowded ring must widen');
+  // ...but not without bound. Uncapped sqrt(population) growth threw a
+  // 4000-node ring out to ~8600 units, which framed the camera so far back that
+  // the inner rings collapsed to a dot and only crossing edges stayed visible.
+  assert.ok(spread(4000)<spread(400)*1.6,'ring growth must be capped');
+  assert.ok(spread(4000)<1200,'the outermost ring must stay in a framable range');
 });
 
 test('layout is deterministic and finite for a large graph',()=>{
