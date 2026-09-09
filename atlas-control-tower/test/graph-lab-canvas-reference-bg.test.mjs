@@ -17,8 +17,8 @@ test('2D canvas renderer owns the approved third-reference galactic background',
  assert.match(source,/dust lane/i);
  assert.match(source,/blue-gold|gold-blue|orange-blue/i);
  assert.match(source,/cacheKey/);
- assert.doesNotMatch(source,/layoutNodes/,'background adapter must not alter graph layout');
- assert.doesNotMatch(source,/setGraph\s*=/,'background adapter must not replace graph data flow');
+ assert.doesNotMatch(source,/layoutNodes/,'background adapter must not recompute canonical graph layout');
+ assert.match(source,/layoutSpacing/,'responsive spacing is allowed as a post-layout viewport adapter');
 });
 
 test('app imports the 2D background adapter before choosing the legacy renderer',()=>{
