@@ -5,6 +5,7 @@ import {hierarchyView,expandForSearch,hierarchyExpandableIds,collapseSubtree,anc
 import {assignIdentityColors,domainLegend} from './graph/identity.mjs';
 import {buildSectionGraph,ATLAS_SECTIONS} from './graph/section-views.mjs';
 import './graph/canvas-reference-background.mjs';
+import {installVisualExperienceV4} from './graph/experience/visual-experience-v4.mjs';
 import {GraphLabRenderer as ThreeCanvasRenderer} from './graph/renderer.mjs';
 import {GraphLabRenderer as LegacyCanvasRenderer} from './graph/legacy-renderer.mjs';
 import {createCockpit} from './cockpit.mjs';
@@ -23,6 +24,7 @@ let selectedId=graph.rootId;
 let focusId=graph.rootId;
 let history=[];
 let activeOnly=false;
+let showAlternativeFilaments=false;
 let cockpitTab='visao';
 let activeSection=ATLAS_SECTIONS.includes(hashSection)?hashSection:'graph';
 
@@ -68,7 +70,7 @@ function runtimeFacts(){
 }
 
 function currentView(){
- if(activeSection==='graph')return hierarchyView(graph,{expandedIds,activeOnly,maxVisible:renderer.options.maxVisibleNodes});
+ if(activeSection==='graph')return hierarchyView(graph,{expandedIds,activeOnly,maxVisible:renderer.options.maxVisibleNodes,showAlternativeFilaments});
  return buildSectionGraph(graph,activeSection,runtimeFacts());
 }
 
@@ -209,6 +211,13 @@ const cockpit=createCockpit($('cockpit-body'),{
  onTab:id=>setCockpitTab(id)
 });
 
+const visualExperience=installVisualExperienceV4({
+ renderer,
+ onOpenNode:openNode,
+ onGoHome:goHome,
+ onToggleFilaments:value=>{showAlternativeFilaments=Boolean(value);refresh()}
+});
+
 /** The rail is a shortcut into the cockpit tabs, not a second navigation tree. */
 const railItems=[...document.querySelectorAll('.rail-item[data-tab]')];
 function setCockpitTab(id,{open=false}={}){
@@ -268,6 +277,7 @@ function setGraphData(next){
  focusId=graph.rootId;
  history=[];
  activeOnly=false;
+ showAlternativeFilaments=false;
  $('active-only').setAttribute('aria-pressed','false');
  $('active-only').classList.remove('is-active');
  $('hierarchy-search').value='';
@@ -423,6 +433,7 @@ for(const [id,key] of SLIDERS)$(id).addEventListener('input',event=>{
 const themeObserver=typeof MutationObserver==='function'?new MutationObserver(records=>{
  if(!records.some(record=>record.attributeName==='data-theme'))return;
  renderer.setTheme?.(document.documentElement.dataset.theme||'dark');
+ visualExperience?.refreshBackground?.();
  if(activeSection==='settings')refresh();else renderer.invalidate?.();
 }):null;
 themeObserver?.observe(document.documentElement,{attributes:true,attributeFilter:['data-theme']});
