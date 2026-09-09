@@ -328,7 +328,11 @@ $('nexo-live-toggle').addEventListener('click',event=>{const open=liveSurface.cl
 
 const cockpitPanel=$('cockpit');
 const openCockpit=()=>cockpitPanel.classList.add('open');
-$('cockpit-toggle').addEventListener('click',()=>cockpitPanel.classList.toggle('open'));
+$('cockpit-toggle').addEventListener('click',event=>{
+ if(document.documentElement.dataset.cockpitMode==='hidden')return;
+ cockpitPanel.classList.toggle('open');
+ event.stopImmediatePropagation();
+});
 $('cockpit-close').addEventListener('click',()=>cockpitPanel.classList.remove('open'));
 
 const labPanel=$('lab-panel');
