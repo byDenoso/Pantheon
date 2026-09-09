@@ -57,6 +57,20 @@ export function ancestorsOf(source,id){
  return trail;
 }
 
+function primaryLaneId(source,id){
+ return ancestorsOf(source,id).find(step=>step.hierarchyLevel==='lane')?.id||null;
+}
+
+function keepPrimaryLane(source,expandedIds,laneId){
+ if(!laneId)return new Set(expandedIds);
+ const next=new Set();
+ for(const expandedId of expandedIds){
+  const expandedLane=primaryLaneId(source,expandedId);
+  if(!expandedLane||expandedLane===laneId)next.add(expandedId);
+ }
+ return next;
+}
+
 /** Ids that own a subgraph, i.e. the nodes a click can open or collapse. */
 export function hierarchyExpandableIds(source){
  const {children}=indexOf(source);
@@ -82,8 +96,9 @@ export function expandHierarchyNode(source,id,expandedIds=new Set()){
  const {byId}=indexOf(source);
  const node=byId.get(id);
  if(!node)return new Set(expandedIds);
+ const laneId=node.hierarchyLevel==='lane'?node.id:primaryLaneId(source,id);
  if(node.hierarchyLevel==='lane')return new Set([id]);
- const next=new Set(expandedIds);
+ const next=keepPrimaryLane(source,expandedIds,laneId);
  for(const step of ancestorsOf(source,id).slice(0,-1))if(step.id!==source?.rootId)next.add(step.id);
  next.add(id);
  return next;
@@ -113,8 +128,6 @@ export function hierarchyView(source,{expandedIds=new Set(),activeOnly=false,max
  const limited=Number.isFinite(maxVisible)?ranked.slice(0,Math.max(1,maxVisible)):ranked;
  const shown=new Set(limited.map(entry=>entry.node.id));
 
- // Each visible node reports how much of its subgraph is still folded away, so the
- // renderer can show the weight of what a click would open.
  const projected=limited
   .sort((a,b)=>a.index-b.index)
   .map(({node})=>{
@@ -138,8 +151,7 @@ export function hierarchyView(source,{expandedIds=new Set(),activeOnly=false,max
  */
 export function expandForSearch(source,query,expandedIds=new Set()){
  const q=normalizeQuery(query);
- const next=new Set(expandedIds);
- if(!q)return{expandedIds:next,matchId:null,matches:[]};
+ if(!q)return{expandedIds:new Set(expandedIds),matchId:null,matches:[]};
  const {byId}=indexOf(source);
  const searchableLevels=new Set(['lane','domain','group','program','person','project','campaign','state','record']);
  const candidates=(source?.nodes||[]).filter(n=>searchableLevels.has(n.hierarchyLevel));
@@ -147,7 +159,9 @@ export function expandForSearch(source,query,expandedIds=new Set()){
  const match=scored.find(n=>normalizeQuery(n.recordId)===q||normalizeQuery(n.label)===q)
   ||scored.find(n=>[n.label,n.recordId].some(value=>normalizeQuery(value).startsWith(q)))
   ||scored[0];
- if(!match)return{expandedIds:next,matchId:null,matches:[]};
+ if(!match)return{expandedIds:new Set(expandedIds),matchId:null,matches:[]};
+ const laneId=primaryLaneId(source,match.id);
+ const next=keepPrimaryLane(source,expandedIds,laneId);
  let parent=byId.get(match.parentId);
  let guard=0;
  while(parent&&parent.id!==source?.rootId&&guard++<24){next.add(parent.id);parent=parent.parentId?byId.get(parent.parentId):null}
