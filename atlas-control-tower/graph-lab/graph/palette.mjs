@@ -27,8 +27,8 @@ export const PALETTE_A = {
     NEXO:'#FFBE5C',
     SCIENCE:'#66D6FF',
     LEARNING:'#AF8DFF',
-    ENGINEERING:'#5EA8FF',
-    OLYMPUS:'#64E1CB',
+    ENGINEERING:'#64E1CB',
+    OLYMPUS:'#C478FF',
     BLACK_BOX:'#7A8495',
     DEFAULT:'#A8BED2'
   },
@@ -53,6 +53,11 @@ export const PALETTE_A = {
     derived:'rgba(171,145,255,0.28)',
     crossDomain:'rgba(102,225,203,0.25)',
     intraDomain:'rgba(205,225,245,0.18)',
+    learning:'rgba(46,201,255,0.42)',
+    transfer:'rgba(180,141,255,0.38)',
+    validation:'rgba(105,220,193,0.40)',
+    hypothesis:'rgba(255,190,92,0.42)',
+    risk:'rgba(201,106,124,0.40)',
     pulse:'#FFC66E',
     pulseHalo:'rgba(255,198,110,0.20)'
   },
@@ -88,19 +93,25 @@ export const PALETTE_LIGHT={
     text:'#102033',textDim:'#314B66',textMuted:'#687F96',accent:'#0077CC',accentSoft:'rgba(0,119,204,0.12)',
     success:'#008C76',warning:'#B96A00',danger:'#B83E61'
   },
-  semantic:{...PALETTE_A.semantic,NEXO:'#D78314',SCIENCE:'#087FBE',LEARNING:'#7658C9',ENGINEERING:'#2F6FB6',OLYMPUS:'#168E7D',BLACK_BOX:'#657C93',DEFAULT:'#55718B'},
+  semantic:{...PALETTE_A.semantic,NEXO:'#D78314',SCIENCE:'#087FBE',LEARNING:'#7658C9',ENGINEERING:'#168E7D',OLYMPUS:'#8A44C8',BLACK_BOX:'#657C93',DEFAULT:'#55718B'},
   states:{active:'#0077CC',supported:'#287CB8',partial:'#7658C9',negative:'#657C93',blocked:'#B83E61',legacy:'#76889A'},
   nodes:{...PALETTE_A.nodes,coreFill:'#152A40',edgeLight:'rgba(255,255,255,0.88)',glow:'rgba(0,119,204,0.15)',halo:'rgba(27,86,133,0.08)',fogFar:'rgba(221,235,250,0.38)'},
-  filaments:{canonical:'rgba(0,104,184,0.38)',derived:'rgba(111,82,190,0.30)',crossDomain:'rgba(0,137,118,0.30)',intraDomain:'rgba(69,106,138,0.24)',pulse:'#C97916',pulseHalo:'rgba(201,121,22,0.18)'},
+  filaments:{canonical:'rgba(0,104,184,0.38)',derived:'rgba(111,82,190,0.30)',crossDomain:'rgba(0,137,118,0.30)',intraDomain:'rgba(69,106,138,0.24)',learning:'rgba(0,119,204,0.40)',transfer:'rgba(111,82,190,0.36)',validation:'rgba(0,140,118,0.36)',hypothesis:'rgba(201,121,22,0.38)',risk:'rgba(184,62,97,0.34)',pulse:'#C97916',pulseHalo:'rgba(201,121,22,0.18)'},
   space:{nebulaCore:'#A7D5F4',nebulaRim:'#C9DEF4',nebulaWarm:'#F2D8C2',dust:'rgba(62,105,144,0.30)',coreGlow:'#D98A21',coreHot:'#FFF5DF',orbitRing:'rgba(40,96,145,0.24)'},
   labels:{bg:'rgba(247,251,255,0.86)',border:'rgba(57,112,165,0.30)',text:'#102033',textDim:'#425E78',selectedBg:'rgba(0,119,204,0.10)',selectedBorder:'rgba(0,119,204,0.34)'}
 };
 
 export const LEVEL_STYLE={
   root:{radius:26,halo:3.4,label:1,minZoomLabel:0},
+  lane:{radius:19,halo:3,label:1,minZoomLabel:0},
   domain:{radius:15,halo:2.8,label:1,minZoomLabel:0},
+  group:{radius:13,halo:2.55,label:1,minZoomLabel:0},
   program:{radius:10,halo:2.4,label:2,minZoomLabel:0},
-  campaign:{radius:6.6,halo:2,label:3,minZoomLabel:.55}
+  person:{radius:10,halo:2.35,label:2,minZoomLabel:0},
+  project:{radius:10,halo:2.35,label:2,minZoomLabel:0},
+  campaign:{radius:6.6,halo:2,label:3,minZoomLabel:.55},
+  state:{radius:6.6,halo:2,label:3,minZoomLabel:.55},
+  record:{radius:5.8,halo:1.8,label:3,minZoomLabel:.65}
 };
 export function levelStyle(node){return LEVEL_STYLE[node?.hierarchyLevel]||LEVEL_STYLE.campaign}
 
