@@ -16,6 +16,60 @@ function stablePerpendicular(axis,radial){
  return axis.clone().cross(reference).normalize();
 }
 
+function cloudTexture(color){
+ const size=256,canvas=document.createElement('canvas');
+ canvas.width=canvas.height=size;
+ const ctx=canvas.getContext('2d');
+ const rgb=new THREE.Color(color);
+ const r=Math.round(rgb.r*255),g=Math.round(rgb.g*255),b=Math.round(rgb.b*255);
+ const rgba=alpha=>`rgba(${r},${g},${b},${alpha})`;
+ const gradient=ctx.createRadialGradient(size*.46,size*.45,0,size*.5,size*.5,size*.5);
+ gradient.addColorStop(0,rgba(.82));
+ gradient.addColorStop(.24,rgba(.52));
+ gradient.addColorStop(.55,rgba(.19));
+ gradient.addColorStop(.82,rgba(.055));
+ gradient.addColorStop(1,rgba(0));
+ ctx.fillStyle=gradient;
+ ctx.fillRect(0,0,size,size);
+ const texture=new THREE.CanvasTexture(canvas);
+ texture.colorSpace=THREE.SRGBColorSpace;
+ return texture;
+}
+
+// The approved observatory treatment needs a visible deep field. This replaces
+// only the renderer's background volume: node positions, hierarchy and graph
+// geometry are still produced by the canonical layout module untouched.
+GraphLabRenderer.prototype.buildSpace=function(){
+ this.space=new THREE.Group();
+ this.space.add(this.starShell(900,1400,3700,this.palette.background.stars,.90,6.2,'observatory-star'));
+ this.space.add(this.starShell(520,760,2850,this.palette.space.dust,.52,4.2,'observatory-dust'));
+
+ const clouds=[
+  {color:this.palette.space.nebulaCore,position:[-920,410,-1860],scale:[3300,1560],opacity:.78,rotation:-.18},
+  {color:this.palette.space.nebulaRim,position:[980,-330,-2280],scale:[3600,1780],opacity:.68,rotation:.20},
+  {color:this.palette.space.nebulaCore,position:[350,720,-2600],scale:[2500,1120],opacity:.48,rotation:.46},
+  {color:this.palette.space.nebulaWarm,position:[180,170,-1480],scale:[2100,940],opacity:.40,rotation:-.38},
+  {color:this.palette.space.nebulaRim,position:[-150,-760,-2460],scale:[2900,980],opacity:.36,rotation:.08}
+ ];
+ for(const [index,cloudSpec] of clouds.entries()){
+  const material=new THREE.SpriteMaterial({
+   map:this.texture(`observatory-cloud:${index}:${cloudSpec.color}`,()=>cloudTexture(cloudSpec.color)),
+   transparent:true,
+   depthWrite:false,
+   depthTest:false,
+   blending:THREE.AdditiveBlending,
+   opacity:cloudSpec.opacity,
+   rotation:cloudSpec.rotation
+  });
+  const cloud=new THREE.Sprite(material);
+  cloud.position.set(...cloudSpec.position);
+  cloud.scale.set(cloudSpec.scale[0],cloudSpec.scale[1],1);
+  cloud.renderOrder=-30+index;
+  this.space.add(cloud);
+ }
+ this.scene.add(this.space);
+};
+
 GraphLabRenderer.prototype.curveFor=function(a,b){
  const from=new THREE.Vector3(a[0],a[1],a[2]);
  const to=new THREE.Vector3(b[0],b[1],b[2]);
