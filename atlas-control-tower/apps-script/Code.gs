@@ -45,12 +45,12 @@ function compileAtlasProjection() {
   const integrity = repairGraphIntegrity_(graph);
 
   const atlasData = {
-    nodes: stableSort_(graph.nodes, 'id'),
-    edges: stableSortEdges_(integrity.validEdges),
-    activity: science.activity.concat(operations.activity).slice(-1000),
+    nodes: stableSort_(graph.nodes.map(compactAtlasNode_), 'id'),
+    edges: stableSortEdges_(integrity.validEdges.filter(e=>e.type!=='CONTAINS').map(compactAtlasEdge_)),
+    activity: science.activity.concat(operations.activity).slice(-300).map(compactActivity_),
     learning: learned.records,
     operations: operations.records,
-    olympus: olympusProjection.summary,
+    olympus: {sourceId:olympusProjection.summary.sourceId,eventCount:olympusProjection.summary.eventCount,evidenceCount:olympusProjection.summary.evidenceCount,clientCount:olympusProjection.summary.clientCount},
     integrity: {orphanEdges: integrity.orphanEdges, reparentedNodes: integrity.reparentedNodes},
     systemState: {sourceId: ATLAS.stateIndex, mode: 'truth-owner-pointer', authority: 'GOOGLE_DRIVE'}
   };
@@ -263,7 +263,7 @@ function syncAtlasToGitHub(compiled) {
   const branch=props.getProperty('ATLAS_GITHUB_BRANCH')||ATLAS.branch;
   const ref=gh_('GET','/git/ref/heads/'+encodeURIComponent(branch),null,token), head=ref.object.sha, headCommit=gh_('GET','/git/commits/'+head,null,token), treeEntries=[];
   [['atlas.json',compiled.atlas],['lineage.json',compiled.lineage],['presentation.json',compiled.presentation]].forEach(item=>{
-    const blob=gh_('POST','/git/blobs',{content:JSON.stringify(item[1],null,2)+'\n',encoding:'utf-8'},token);
+    const blob=gh_('POST','/git/blobs',{content:JSON.stringify(item[1])+'\n',encoding:'utf-8'},token);
     treeEntries.push({path:ATLAS.root+'/'+item[0],mode:'100644',type:'blob',sha:blob.sha});
   });
   const tree=gh_('POST','/git/trees',{base_tree:headCommit.tree.sha,tree:treeEntries},token);
@@ -326,14 +326,14 @@ function fallbackParent_(node) {
 }
 
 function buildLineage_(atlas) {
-  const parent={},children={},provenance={};
-  atlas.nodes.forEach(n=>{if(n.parentId){parent[n.id]=n.parentId;(children[n.parentId]||(children[n.parentId]=[])).push(n.id)}if(n.sourceRefs&&n.sourceRefs.length)provenance[n.id]=n.sourceRefs});
-  return {parent,children,relations:atlas.edges,provenance};
+  const parent={},children={};
+  atlas.nodes.forEach(n=>{if(n.parentId){parent[n.id]=n.parentId;(children[n.parentId]||(children[n.parentId]=[])).push(n.id)}});
+  return {parent,children,relations:{source:'atlas.data.edges'},provenance:{source:'atlas.data.nodes[*].sourceRefs'},integrity:atlas.integrity||{}};
 }
 
 function buildPresentation_(atlas) {
-  const byParent={}; atlas.nodes.forEach(n=>{if(n.parentId)(byParent[n.parentId]||(byParent[n.parentId]=[])).push(n)}); const stories={};
-  atlas.nodes.filter(n=>n.type==='CAMPAIGN').forEach(c=>{const desc=descendants_(c.id,byParent);stories[c.id]={topic:c.label,question:c.scientificQuestion||c.summary||'',currentState:c.currentVerdict||c.status,hypotheses:desc.filter(n=>['HYPOTHESIS','DECISION_HYPOTHESIS','CLAIM'].includes(n.type)).map(compactNode_),tests:desc.filter(n=>n.type==='TEST').map(compactNode_),results:desc.filter(n=>n.type==='RESULT').map(compactNode_),changes:atlas.activity.filter(a=>a.entityId===c.id||desc.some(n=>n.id===a.entityId)),evidence:desc.filter(n=>n.sourceRefs&&n.sourceRefs.length).map(n=>({id:n.id,sourceRefs:n.sourceRefs})),uncertainties:[],nextActions:[c.nextValidAction].filter(Boolean)}});
+  const stories={};
+  atlas.nodes.filter(n=>n.type==='CAMPAIGN').forEach(c=>{stories[c.id]={topic:c.label,question:c.scientificQuestion||c.summary||'',currentState:c.currentVerdict||c.status,nextActions:[c.nextValidAction].filter(Boolean)}});
   return {stories};
 }
 
@@ -353,11 +353,24 @@ function dedupeEdges_(edges){const seen={};return edges.filter(e=>{const k=e.sou
 function stableSort_(items,key){return items.slice().sort((a,b)=>String(a[key]||'').localeCompare(String(b[key]||'')))}
 function stableSortEdges_(items){return items.slice().sort((a,b)=>(a.source+'|'+a.target+'|'+a.type).localeCompare(b.source+'|'+b.target+'|'+b.type))}
 function descendants_(root,byParent){const out=[],q=[...(byParent[root]||[])],seen={};while(q.length){const n=q.shift();if(seen[n.id])continue;seen[n.id]=1;out.push(n);q.push(...(byParent[n.id]||[]))}return out}
+function compactAtlasNode_(n){
+  const out={id:n.id,type:n.type,label:clip_(n.label,140),status:clip_(n.status,100)};
+  if(n.parentId)out.parentId=n.parentId;if(n.domain)out.domain=clip_(n.domain,80);if(n.summary)out.summary=clip_(n.summary,240);if(n.activityAt)out.activityAt=clip_(n.activityAt,60);if(n.authority)out.authority=clip_(n.authority,60);
+  const refs=(n.sourceRefs||[]).slice(0,3).map(compactRef_).filter(Boolean);if(refs.length)out.sourceRefs=refs;
+  ['scientificQuestion','currentVerdict','nextValidAction','nextAction','claimImpact'].forEach(k=>{if(n[k])out[k]=clip_(n[k],280)});
+  if(n.actionIds&&n.actionIds.length)out.actionIds=n.actionIds.slice(0,8).map(v=>clip_(v,160));
+  if(n.integrity)out.integrity=n.integrity;
+  return out;
+}
+function compactRef_(r){if(!r)return null;const out={source:clip_(r.source||'SOURCE',40)};if(r.sourceId)out.sourceId=clip_(r.sourceId,120);if(r.sourceRef&&String(r.sourceRef).length<=160)out.sourceRef=clip_(r.sourceRef,160);return out}
+function compactAtlasEdge_(e){const out={source:e.source,target:e.target,type:e.type};if(e.authority)out.authority=clip_(e.authority,60);if(e.provenance)out.provenance=clip_(e.provenance,120);return out}
+function compactActivity_(a){return{entityId:clip_(a.entityId||'',160),at:clip_(a.at||'',60),summary:clip_(a.summary||'',200),source:clip_(a.source||'',80)}}
 function compactNode_(n){return{id:n.id,label:n.label,status:n.status,summary:n.summary,activityAt:n.activityAt||'',sourceRefs:n.sourceRefs||[]}}
-function compactRecord_(surface,row){return{surface,id:pick_(row,['strategy_id','policy_id','memory_id','lesson_id','skill_id','relation_id','action_id','run_id','event_id','id','ID'])||'',status:pick_(row,['status','state','claim_state'])||'',updatedAt:pick_(row,['updated_at','last_seen','last_checked','observed_at'])||'',title:pick_(row,['title','name','summary','statement','event_type'])||''}}
+function compactRecord_(surface,row){return{surface,id:clip_(pick_(row,['strategy_id','policy_id','memory_id','lesson_id','skill_id','relation_id','action_id','run_id','event_id','id','ID'])||'',160),status:clip_(pick_(row,['status','state','claim_state'])||'',120),updatedAt:clip_(pick_(row,['updated_at','last_seen','last_checked','observed_at'])||'',80),title:clip_(pick_(row,['title','name','summary','statement','event_type'])||'',220)}}
 function firstField_(fields,names){for(const n of names)if(fields[n]!=null&&String(fields[n]).trim()!=='')return fields[n];return''}
 function pick_(row,names){if(!row)return'';for(const n of names)if(Object.prototype.hasOwnProperty.call(row,n)&&String(row[n]).trim()!=='')return row[n];const normalized={};Object.keys(row).forEach(k=>normalized[norm_(k)]=row[k]);for(const n of names){const v=normalized[norm_(n)];if(v!=null&&String(v).trim()!=='')return v}return''}
 function splitIds_(value){return String(value||'').split(/\s*\|\s*|\s*,\s*|\n+/).map(v=>v.trim()).filter(Boolean)}
+function clip_(value,max){const s=String(value==null?'':value);return s.length>(max||320)?s.slice(0,(max||320)-1)+'…':s}
 function token_(value){return String(value||'').trim().replace(/^https?:\/\//i,'').replace(/[^A-Za-z0-9._:-]+/g,'_').replace(/^_+|_+$/g,'').slice(0,120)||'UNKNOWN'}
 function norm_(value){return String(value||'').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,'')}
 function envelope_(generatedAt,fingerprint,data){return{schemaVersion:ATLAS.schema,generatedAt,source:'GOOGLE_DRIVE',fingerprint,data}}

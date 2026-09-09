@@ -98,6 +98,15 @@ test('compiler quarantines stale Drive relations instead of breaking the publish
   assert.match(code, /integrity: \{orphanEdges: integrity\.orphanEdges, reparentedNodes: integrity\.reparentedNodes\}/);
 });
 
+test('compiled static projection avoids duplicating graph truth across envelopes', () => {
+  const code = text('apps-script','Code.gs');
+  assert.match(code, /graph\.nodes\.map\(compactAtlasNode_\)/);
+  assert.match(code, /integrity\.validEdges\.filter\(e=>e\.type!=='CONTAINS'\)/);
+  assert.match(code, /relations:\{source:'atlas\.data\.edges'\}/);
+  assert.match(code, /provenance:\{source:'atlas\.data\.nodes\[\*\]\.sourceRefs'\}/);
+  assert.match(code, /JSON\.stringify\(item\[1\]\)\+'\\n'/);
+});
+
 test('snapshot contract exposes hierarchy, provenance and Present from one truth', async () => {
   const file = path('nextgen','lib','snapshot-contract.mjs');
   if (!existsSync(file)) return;
