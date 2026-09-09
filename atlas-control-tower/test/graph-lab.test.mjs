@@ -133,3 +133,10 @@ test('lab shell is standalone, synthetic-only and mobile-aware',()=>{
  assert.doesNotMatch(app,/\/api\//);
  assert.doesNotMatch(app,/science_v1|learning_v1|nexo_ops|runner/i);
 });
+
+test('sigma initialization failure falls back to legacy canvas instead of leaving a blank stage',()=>{
+ const app=fs.readFileSync(modulePath('app.mjs'),'utf8');
+ assert.match(app,/renderer\.ready\?\.catch/);
+ assert.match(app,/legacy-canvas/);
+ assert.match(app,/location\.replace/);
+});
