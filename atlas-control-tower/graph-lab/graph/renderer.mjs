@@ -93,25 +93,48 @@ export class GraphLabRenderer{
   this.nodeGroup=new THREE.Group();
   this.edgeGroup=new THREE.Group();
   this.pulseGroup=new THREE.Group();
-  this.scene.add(this.edgeGroup,this.nodeGroup,this.pulseGroup);
-  this.buildStars();
+  this.ringGroup=new THREE.Group();
+  this.scene.add(this.ringGroup,this.edgeGroup,this.nodeGroup,this.pulseGroup);
+  this.buildSpace();
   this.applyCamera();
   return this.renderer;
  }
 
- buildStars(){
-  const count=520,positions=new Float32Array(count*3);
+ /** Deep field: two star shells, a near dust layer, and soft nebula clouds behind it all. */
+ buildSpace(){
+  this.space=new THREE.Group();
+  this.space.add(this.starShell(560,2600,3200,this.palette.background.stars,.62,5));
+  this.space.add(this.starShell(320,1500,2400,this.palette.space.dust,.3,3.4,'dust'));
+  for(const [index,color] of [this.palette.space.nebulaCore,this.palette.space.nebulaRim,this.palette.space.nebulaWarm].entries()){
+   const seed=unitHash(`nebula:${index}`);
+   const cloud=new THREE.Sprite(new THREE.SpriteMaterial({
+    map:this.texture(`nebula:${color}`,()=>haloTexture(color)),
+    transparent:true,depthWrite:false,depthTest:false,blending:THREE.AdditiveBlending,opacity:.5
+   }));
+   const spread=2600;
+   cloud.position.set((seed-.5)*spread,(unitHash(`nebulaY:${index}`)-.5)*spread*.6,-1600-index*420);
+   const size=2200+seed*1600;
+   cloud.scale.set(size,size*.72,1);
+   cloud.renderOrder=-10+index;
+   this.space.add(cloud);
+  }
+  this.scene.add(this.space);
+ }
+
+ starShell(count,inner,outer,color,opacity,size,prefix='star'){
+  const positions=new Float32Array(count*3);
   for(let i=0;i<count;i++){
-   const seed=unitHash(`star:${i}`),theta=seed*Math.PI*2,phi=Math.acos(2*unitHash(`starp:${i}`)-1),radius=2400+unitHash(`starr:${i}`)*2600;
+   const theta=unitHash(`${prefix}:${i}`)*Math.PI*2;
+   const phi=Math.acos(2*unitHash(`${prefix}p:${i}`)-1);
+   const radius=inner+unitHash(`${prefix}r:${i}`)*(outer-inner);
    positions[i*3]=Math.sin(phi)*Math.cos(theta)*radius;
    positions[i*3+1]=Math.sin(phi)*Math.sin(theta)*radius;
    positions[i*3+2]=Math.cos(phi)*radius;
   }
   const geometry=new THREE.BufferGeometry();
   geometry.setAttribute('position',new THREE.BufferAttribute(positions,3));
-  const star=parseCssColor(this.palette.background.stars);
-  this.stars=new THREE.Points(geometry,new THREE.PointsMaterial({color:new THREE.Color(star.color),size:5,sizeAttenuation:true,transparent:true,opacity:star.alpha*.55,depthWrite:false}));
-  this.scene.add(this.stars);
+  const parsed=parseCssColor(color);
+  return new THREE.Points(geometry,new THREE.PointsMaterial({color:new THREE.Color(parsed.color),size,sizeAttenuation:true,transparent:true,opacity:parsed.alpha*opacity,depthWrite:false}));
  }
 
  texture(key,factory){if(!this.textures.has(key))this.textures.set(key,factory());return this.textures.get(key)}
@@ -148,24 +171,41 @@ export class GraphLabRenderer{
   this.edgeObjects=[];
   this.pulseGroup.clear();
 
+  this.ringGroup.clear();
+
+  const byId=new Map(this.source.nodes.map(node=>[node.id,node]));
   for(const node of this.source.nodes){
    const color=colorForNode(node,this.palette);
    const style=levelStyle(node);
    const group=new THREE.Group();
+   // Three coats make a body read as volume rather than a dot: a wide corona, a
+   // tighter halo, and the lit sphere itself.
+   const corona=new THREE.Sprite(new THREE.SpriteMaterial({map:this.texture(`halo:${color}`,()=>haloTexture(color)),transparent:true,depthWrite:false,blending:THREE.AdditiveBlending,opacity:.42}));
    const halo=new THREE.Sprite(new THREE.SpriteMaterial({map:this.texture(`halo:${color}`,()=>haloTexture(color)),transparent:true,depthWrite:false,blending:THREE.AdditiveBlending,opacity:.9}));
    const body=new THREE.Sprite(new THREE.SpriteMaterial({map:this.texture(`body:${color}`,()=>bodyTexture(color)),transparent:true,depthWrite:false}));
-   group.add(halo,body);
+   group.add(corona,halo,body);
+   if(node.id===this.source.rootId){
+    // The core is a star: a hot white centre inside the orange plasma.
+    const hot=this.palette.space.coreHot;
+    const heart=new THREE.Sprite(new THREE.SpriteMaterial({map:this.texture(`body:${hot}`,()=>bodyTexture(hot,{core:.08,soft:.34})),transparent:true,depthWrite:false,blending:THREE.AdditiveBlending,opacity:.95}));
+    group.add(heart);
+    this.coreHeart=heart;
+   }
    this.nodeGroup.add(group);
-   this.nodeObjects.set(node.id,{group,halo,body,node,color,style});
+   this.nodeObjects.set(node.id,{group,corona,halo,body,node,color,style});
   }
 
+  this.buildOrbitRings();
+
   for(const edge of this.source.edges){
-   const {color,alpha}=parseCssColor(filamentStyle(edge,this.palette).stroke);
+   // A filament belongs to the branch it feeds, so it carries that Domain's hue.
+   const child=byId.get(edge.target)||byId.get(edge.source);
+   const hue=child?.hue||parseCssColor(filamentStyle(edge,this.palette).stroke).color;
    const geometry=new THREE.BufferGeometry().setFromPoints(Array.from({length:26},()=>new THREE.Vector3()));
-   const material=new THREE.LineBasicMaterial({color:new THREE.Color(color),transparent:true,opacity:alpha,depthWrite:false});
+   const material=new THREE.LineBasicMaterial({color:new THREE.Color(hue),transparent:true,opacity:.34,depthWrite:false,blending:THREE.AdditiveBlending});
    const object=new THREE.Line(geometry,material);
    this.edgeGroup.add(object);
-   this.edgeObjects.push({edge,object,geometry,material,baseOpacity:alpha});
+   this.edgeObjects.push({edge,object,geometry,material,baseOpacity:.34,hue});
   }
 
   const pulseColor=this.palette.filaments.pulse;
@@ -173,6 +213,33 @@ export class GraphLabRenderer{
   this.pulse.scale.set(16,16,1);
   this.pulse.visible=false;
   this.pulseGroup.add(this.pulse);
+ }
+
+ /**
+ * Faint concentric rings on the plane the Domains sit on. They are not data: they
+ * are the horizon that tells the eye this is one system seen in perspective, and
+ * they are drawn from the actual ring radius so they always match the layout.
+ */
+ buildOrbitRings(){
+  const radii=[...this.nodeObjects.values()]
+   .filter(object=>object.node.hierarchyLevel==='domain')
+   .map(object=>Math.hypot(...(this.targetPositions?.get(object.node.id)||[0,0,0]).slice(0,2)))
+   .filter(Boolean);
+  if(!radii.length)return;
+  const base=radii.reduce((total,value)=>total+value,0)/radii.length;
+  const {color,alpha}=parseCssColor(this.palette.space.orbitRing);
+  for(const [index,scale] of [.42,.68,1,1.34].entries()){
+   const radius=base*scale;
+   const points=Array.from({length:129},(unused,step)=>{
+    const angle=step/128*Math.PI*2;
+    return new THREE.Vector3(Math.cos(angle)*radius,Math.sin(angle)*radius*.82,0);
+   });
+   const ring=new THREE.LineLoop(
+    new THREE.BufferGeometry().setFromPoints(points),
+    new THREE.LineBasicMaterial({color:new THREE.Color(color),transparent:true,opacity:alpha*(index===2?1.5:.7),depthWrite:false})
+   );
+   this.ringGroup.add(ring);
+  }
  }
 
  // --- camera --------------------------------------------------------------
@@ -390,11 +457,19 @@ export class GraphLabRenderer{
    object.group.position.set(position[0],position[1],position[2]);
    const emphasis=id===active?1.24:id===this.focusId?1.1:1;
    const radius=object.style.radius*this.options.nodeRadius*emphasis;
+   const halo=radius*2*object.style.halo*this.options.glow;
    object.body.scale.set(radius*2,radius*2,1);
-   object.halo.scale.set(radius*2*object.style.halo*this.options.glow,radius*2*object.style.halo*this.options.glow,1);
+   object.halo.scale.set(halo,halo,1);
+   object.corona.scale.set(halo*2.1,halo*2.1,1);
    const dim=active&&id!==active&&!this.isNeighbour(id,active);
    object.body.material.opacity=dim?.34:1;
    object.halo.material.opacity=dim?.16:.9;
+   object.corona.material.opacity=dim?.06:.42;
+   if(id===this.source.rootId&&this.coreHeart){
+    // A slow breath keeps the core alive without animating the whole map.
+    const breath=still?1:1+Math.sin(now*.0011)*.06;
+    this.coreHeart.scale.set(radius*1.05*breath,radius*1.05*breath,1);
+   }
   }
   for(const item of this.edgeObjects){
    const a=this.positions.get(item.edge.source),b=this.positions.get(item.edge.target);
@@ -464,9 +539,25 @@ export class GraphLabRenderer{
  drawOverlay(){
   const c=this.ctx,w=this.width,h=this.height,p=this.palette;
   c.clearRect(0,0,w,h);
+  this.drawBlockedRings(c,p);
   this.drawFocusRings(c,p);
   this.drawBadges(c,p);
   this.drawLabels(c,p,w,h);
+ }
+
+ // Colour carries identity, so a blocked branch is marked instead of recoloured:
+ // a broken red ring around the body, visible before any panel is opened.
+ drawBlockedRings(c,p){
+  for(const point of this.points){
+   if(!point.node.ops?.rollup?.blocked)continue;
+   c.save();
+   c.strokeStyle=p.chrome.danger;
+   c.lineWidth=1.4;
+   c.globalAlpha=.85;
+   c.setLineDash([4,5]);
+   c.beginPath();c.arc(point.x,point.y,point.r+6,0,Math.PI*2);c.stroke();
+   c.restore();
+  }
  }
 
  drawFocusRings(c,p){
@@ -521,31 +612,73 @@ export class GraphLabRenderer{
   return boxes;
  }
 
+ // A label is a readout, not a name tag: it carries what the branch actually holds.
+ labelMetrics(node){
+  const rollup=node.ops?.rollup||{};
+  const rows=[];
+  if(rollup.programs)rows.push([rollup.programs,rollup.programs===1?'PROGRAM':'PROGRAMS']);
+  if(rollup.campaigns)rows.push([rollup.campaigns,rollup.campaigns===1?'CAMPAIGN':'CAMPAIGNS']);
+  return rows.slice(0,2);
+ }
+
+ labelSize(point){
+  const name=String(point.node.label||point.node.id);
+  const rows=this.labelMetrics(point.node).length;
+  if(!rows)return{w:Math.max(78,Math.min(206,name.length*6.6+26)),h:30};
+  return{w:Math.max(132,Math.min(228,name.length*6.4+40)),h:32+rows*13+11};
+ }
+
  drawLabels(c,p,w,h){
   const reserved=this.reservedBoxes();
   this.labels=placeLabels(this.labelCandidates(),{
    width:w,height:h,focusId:this.focusId,selectedId:this.selectedId,hoverId:this.hoverId,
-   maxLabels:this.options.maxLabels,reserved
+   maxLabels:this.options.maxLabels,reserved,sizeFor:point=>this.labelSize(point)
   });
+  // The weight bar is relative to the heaviest branch on screen, so it compares.
+  const heaviest=Math.max(1,...this.source.nodes.map(node=>node.ops?.rollup?.campaigns||0));
   for(const label of this.labels){
    const node=label.point.node;
    const selected=node.id===this.selectedId;
    const color=colorForNode(node,this.palette);
+   const metrics=this.labelMetrics(node);
    c.fillStyle=selected?p.labels.selectedBg:p.labels.bg;
    c.strokeStyle=selected?p.labels.selectedBorder:p.labels.border;
    c.lineWidth=1;
    c.beginPath();
-   if(c.roundRect){c.roundRect(label.x,label.y,label.w,label.h,8);c.fill();c.stroke()}
+   if(c.roundRect){c.roundRect(label.x,label.y,label.w,label.h,9);c.fill();c.stroke()}
    else{c.fillRect(label.x,label.y,label.w,label.h);c.strokeRect(label.x,label.y,label.w,label.h)}
    c.fillStyle=color;
-   c.fillRect(label.x,label.y+6,2,label.h-12);
+   c.fillRect(label.x+1,label.y+7,2,label.h-14);
    c.textAlign='left';
+   const left=label.x+12;
    c.fillStyle=p.labels.text;
    c.font='650 11px Inter,system-ui,sans-serif';
-   c.fillText(this.clip(c,label.label,label.w-20),label.x+10,label.y+14);
+   c.fillText(this.clip(c,label.label,label.w-26),left,label.y+15);
    c.fillStyle=p.chrome.textMuted;
-   c.font='700 8px Inter,system-ui,sans-serif';
-   c.fillText(LEVEL_CAPTION[node.hierarchyLevel]||String(node.type||'').toUpperCase(),label.x+10,label.y+25);
+   c.font='700 7.5px Inter,system-ui,sans-serif';
+   c.fillText(LEVEL_CAPTION[node.hierarchyLevel]||String(node.type||'').toUpperCase(),left,label.y+25);
+   let y=label.y+39;
+   for(const [value,caption] of metrics){
+    c.fillStyle=p.chrome.text;
+    c.font='650 10px Inter,system-ui,sans-serif';
+    c.fillText(String(value),left,y);
+    c.fillStyle=p.chrome.textMuted;
+    c.font='700 7px Inter,system-ui,sans-serif';
+    c.fillText(caption,left+24,y);
+    y+=13;
+   }
+   if(metrics.length){
+    const width=label.w-24;
+    const share=(node.ops?.rollup?.campaigns||0)/heaviest;
+    c.fillStyle='rgba(255,255,255,0.07)';
+    c.fillRect(left,label.y+label.h-12,width,3);
+    c.fillStyle=color;
+    c.fillRect(left,label.y+label.h-12,Math.max(3,width*share),3);
+   }
+   if(node.ops?.rollup?.blocked){
+    c.fillStyle=p.chrome.danger;
+    c.beginPath();c.arc(label.x+label.w-10,label.y+11,3,0,Math.PI*2);c.fill();
+   }
   }
  }
 

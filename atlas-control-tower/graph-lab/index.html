@@ -1,7 +1,8 @@
 <!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#05070A"><title>ATLAS GRAPH LAB · NEXO</title><link rel="stylesheet" href="./styles.css"><link rel="stylesheet" href="./nexo-live.css"></head><body>
 
 <header class="lab-topbar">
- <div class="lab-brand"><span class="spark">✧</span><div><b>NEXO ATLAS</b><small>MAPA OPERACIONAL · SSOT CANONICAL</small></div></div>
+ <div class="lab-brand"><span class="spark">✧</span><div><b>NEXO ATLAS</b><small>SCIENTIFIC INTELLIGENCE MAP</small></div></div>
+ <p class="brand-tagline">EXPLORAR · ENTENDER · DESBLOQUEAR · ACELERAR CIÊNCIA</p>
  <div class="topbar-search">
   <label class="hierarchy-search"><span>⌕</span><input id="hierarchy-search" type="search" placeholder="Buscar Domínio, Program ou Campaign…" autocomplete="off" spellcheck="false" role="combobox" aria-expanded="false" aria-controls="search-results"><button id="hierarchy-search-clear" type="button" aria-label="Limpar busca">×</button></label>
   <ul id="search-results" class="search-results" role="listbox" hidden></ul>
@@ -17,6 +18,14 @@
 </header>
 
 <main class="lab-shell">
+ <nav class="lab-rail" aria-label="Seções do cockpit">
+  <button class="rail-item is-active" data-tab="visao" type="button"><i>◎</i><span>Atlas</span></button>
+  <button class="rail-item" data-tab="bloqueios" type="button"><i>⚠<b id="rail-blockers" hidden>0</b></i><span>Bloqueios</span></button>
+  <button class="rail-item" data-tab="atividade" type="button"><i>⟳</i><span>Atividade</span></button>
+  <button class="rail-item" data-tab="integridade" type="button"><i>✓</i><span>Integridade</span></button>
+  <div class="rail-foot"><b>NEXO</b><small>UNIFIED SCIENCE OPERATIONS</small></div>
+ </nav>
+
  <section id="graph-stage" class="stage">
   <div id="graph-renderer-root" class="graph-renderer-root"><canvas id="graph-lab-canvas" tabindex="0" hidden></canvas></div>
 
@@ -37,15 +46,25 @@
 
   <div class="focus-readout" data-label-reserved><small>FOCO</small><b id="focus-label">NEXO</b></div>
 
-  <div class="camera-tools" data-label-reserved>
-   <button id="motion" type="button" title="Órbita automática">▷</button>
-   <button id="back" type="button" title="Voltar">←</button>
-   <button id="zoom-in" type="button" title="Aproximar">+</button>
-   <button id="zoom-out" type="button" title="Afastar">−</button>
-   <button id="fit" type="button" title="Enquadrar tudo">⊞</button>
-   <button id="center" type="button" title="Centralizar seleção">◎</button>
-   <button id="flat" type="button" title="Alternar 2D/3D">2D</button>
+  <div class="stage-dock" data-label-reserved>
+   <div class="dock-group">
+    <button id="motion" type="button" title="Órbita automática">▷</button>
+    <button id="back" type="button" title="Voltar">←</button>
+   </div>
+   <button id="flat" class="dock-mode" type="button" title="Alternar 2D/3D">2D</button>
+   <div class="dock-group">
+    <button id="zoom-out" type="button" title="Afastar">−</button>
+    <button id="zoom-in" type="button" title="Aproximar">+</button>
+    <button id="fit" type="button" title="Enquadrar tudo">⊞</button>
+    <button id="center" type="button" title="Centralizar seleção">◎</button>
+   </div>
+   <details id="focus-menu" class="dock-menu">
+    <summary>Foco</summary>
+    <div id="focus-list" class="dock-list"></div>
+   </details>
   </div>
+
+  <div class="stage-count" data-label-reserved><b id="stage-nodes">0</b><small>NÓS VISÍVEIS</small><i></i><span id="stage-source">SSOT</span></div>
 
   <div class="gesture-hint" data-label-reserved>Arraste para orbitar · Scroll/pinça para zoom · Clique abre e recolhe Domínio e Program</div>
  </section>

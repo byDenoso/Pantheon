@@ -4,8 +4,19 @@
 // must happen next, what was tested, what the evidence is, what this node is wired
 // to, what changed and whether the projection can be trusted. Every value shown is
 // read from node.ops, which data/operations.mjs derives from the SSOT alone.
+//
+// Four tabs split that by intent instead of making the reader scroll a single column:
+// what this node is, what is stuck, what moved, and how much to trust it.
 
 const LEVEL_LABEL={root:'NÚCLEO',domain:'DOMÍNIO',program:'PROGRAM',campaign:'CAMPAIGN'};
+
+export const COCKPIT_TABS=[
+ {id:'visao',label:'Visão geral',sections:['next','tests','relations']},
+ {id:'bloqueios',label:'Bloqueios',sections:['blockers']},
+ {id:'atividade',label:'Atividade',sections:['changes','evidence']},
+ {id:'integridade',label:'Integridade',sections:['integrity']}
+];
+
 const SECTION_HINT={
  blockers:'O que impede avanço agora',
  next:'O que exige ação',
@@ -17,8 +28,7 @@ const SECTION_HINT={
 };
 
 const el=(tag,className,text)=>{const node=document.createElement(tag);if(className)node.className=className;if(text!=null)node.textContent=text;return node};
-
-function toneDot(tone){const dot=el('i','tone-dot');dot.dataset.tone=tone||'idle';return dot}
+const toneDot=tone=>{const dot=el('i','tone-dot');dot.dataset.tone=tone||'idle';return dot};
 
 function statusPill(status,tone){
  const pill=el('span','status-pill',String(status||'—').replaceAll('_',' '));
@@ -32,7 +42,8 @@ function itemRow(item,{onFocusNode}={}){
  if(interactive){row.type='button';row.addEventListener('click',()=>onFocusNode(item.nodeId))}
  const head=el('div','cockpit-item-head');
  head.append(toneDot(item.tone),el('b',null,item.title||'—'));
- if(item.status)head.append(statusPill(item.status,item.tone));
+ if(item.severity){const chip=el('span','severity',item.severity);chip.dataset.severity=item.severity;head.append(chip)}
+ else if(item.status)head.append(statusPill(item.status,item.tone));
  row.append(head);
  if(item.detail)row.append(el('p',null,item.detail));
  if(item.meta)row.append(el('small',null,item.meta));
@@ -54,8 +65,43 @@ function sectionBlock(section,{onFocusNode}={}){
  return block;
 }
 
-export function createCockpit(root,{onFocusNode,onToggleSubgraph,onHome}={}){
- const render=(node,{graph,trail=[],expanded=false,expandable=false,hiddenChildren=0}={})=>{
+/**
+ * Load and blockers per Domain. The bar is the Domain's share of the Campaigns on the
+ * map; the number on the right is how many blockers sit inside it. When every Domain
+ * reads zero that is the real answer — the blockers are held at the core.
+ */
+function heatMap(graph,{onFocusNode}={}){
+ const rows=graph?.ops?.heatmap||[];
+ if(!rows.length)return null;
+ const block=el('section','cockpit-section heatmap');
+ block.dataset.section='heatmap';
+ const head=el('header');
+ head.append(el('h3',null,'Carga por domínio'),el('span','count',String(rows.length)));
+ block.append(head,el('small','section-hint','Barra: fatia das Campaigns · número: bloqueios no domínio'));
+ const heaviest=Math.max(1,...rows.map(row=>row.campaigns));
+ const list=el('div','heat-rows');
+ for(const row of rows){
+  const line=el('button','heat-row');
+  line.type='button';
+  line.addEventListener('click',()=>onFocusNode?.(row.id));
+  const hue=(graph.nodes.find(node=>node.id===row.id)||{}).hue||'currentColor';
+  const dot=el('i');
+  dot.style.background=hue;
+  const track=el('span','heat-track');
+  const fill=el('i');
+  fill.style.width=`${Math.max(4,(row.campaigns/heaviest)*100)}%`;
+  fill.style.background=hue;
+  track.append(fill);
+  const count=el('b',row.blocked?'is-blocked':null,String(row.blocked));
+  line.append(dot,el('span','heat-name',row.label),track,count);
+  list.append(line);
+ }
+ block.append(list);
+ return block;
+}
+
+export function createCockpit(root,{onFocusNode,onToggleSubgraph,onHome,onTab}={}){
+ const render=(node,{graph,trail=[],expanded=false,expandable=false,hiddenChildren=0,tab='visao'}={})=>{
   root.replaceChildren();
   if(!node){
    const empty=el('div','cockpit-idle');
@@ -68,13 +114,28 @@ export function createCockpit(root,{onFocusNode,onToggleSubgraph,onHome}={}){
   }
 
   const ops=node.ops||{sections:[],rollup:{}};
+  const sectionById=id=>ops.sections?.find(section=>section.id===id);
+  const active=COCKPIT_TABS.find(entry=>entry.id===tab)||COCKPIT_TABS[0];
+
+  const tabs=el('nav','cockpit-tabs');
+  for(const entry of COCKPIT_TABS){
+   const button=el('button',entry.id===active.id?'is-active':null,entry.label);
+   button.type='button';
+   const count=entry.id==='bloqueios'?sectionById('blockers')?.items.length||0:0;
+   if(count)button.append(el('span','tab-count',String(count)));
+   button.addEventListener('click',()=>onTab?.(entry.id));
+   tabs.append(button);
+  }
+  root.append(tabs);
 
   const header=el('header','cockpit-head');
   const kicker=el('div','cockpit-kicker');
   kicker.append(el('span','level-chip',LEVEL_LABEL[ops.level]||'NÓ'));
   if(node.system)kicker.append(el('span','system-chip',node.system));
   kicker.append(statusPill(ops.status,ops.tone));
-  header.append(kicker,el('h2',null,node.label||node.id));
+  const title=el('h2',null,node.label||node.id);
+  if(node.hue)title.style.setProperty('--node-hue',node.hue);
+  header.append(kicker,title);
   if(node.recordId&&node.recordId!==node.label)header.append(el('small','record-id',node.recordId));
   root.append(header);
 
@@ -90,36 +151,21 @@ export function createCockpit(root,{onFocusNode,onToggleSubgraph,onHome}={}){
    root.append(path);
   }
 
-  if(ops.core){
-   const pulse=el('div','cockpit-pulse');
-   for(const [label,value,tone] of [
-    ['ESTADO ATUAL',ops.core.currentState,ops.tone],
-    ['PRÓXIMA AÇÃO',ops.core.nextAction,'warn'],
-    ['ÚLTIMO EFEITO',ops.core.lastEffect,'ok']
-   ]){
-    const article=el('article');
-    article.dataset.tone=tone||'idle';
-    article.append(el('small',null,label),el('p',null,value||'Sem valor projetado no SSOT.'));
-    pulse.append(article);
-   }
-   root.append(pulse);
+  const tiles=el('div','cockpit-tiles');
+  const stats=[
+   ['Domínios',ops.rollup.domains],
+   ['Programs',ops.rollup.programs],
+   ['Campaigns',ops.rollup.campaigns],
+   ['Bloqueios',ops.rollup.blocked||0,ops.rollup.blocked?'blocked':'ok']
+  ].filter(([,value])=>value!=null&&(value||value===0));
+  for(const [label,value,tone] of stats){
+   if(!value&&label!=='Bloqueios')continue;
+   const tile=el('div','tile');
+   if(tone)tile.dataset.tone=tone;
+   tile.append(el('b',null,String(value)),el('small',null,label));
+   tiles.append(tile);
   }
-
-  const rollup=el('div','cockpit-rollup');
-  const plural=(count,one,many)=>count===1?one:many;
-  const chips=[
-   ops.rollup.domains?[plural(ops.rollup.domains,'Domínio','Domínios'),ops.rollup.domains,'idle']:null,
-   ops.rollup.programs?['Program'+(ops.rollup.programs===1?'':'s'),ops.rollup.programs,'idle']:null,
-   ops.rollup.campaigns?['Campaign'+(ops.rollup.campaigns===1?'':'s'),ops.rollup.campaigns,'idle']:null,
-   [plural(ops.rollup.blocked||0,'Bloqueio','Bloqueios'),ops.rollup.blocked||0,ops.rollup.blocked?'blocked':'ok']
-  ].filter(Boolean);
-  for(const [label,value,tone] of chips){
-   const chip=el('span','rollup-chip');
-   chip.dataset.tone=tone;
-   chip.append(el('b',null,String(value)),el('small',null,label));
-   rollup.append(chip);
-  }
-  root.append(rollup);
+  if(tiles.childElementCount)root.append(tiles);
 
   if(ops.summary)root.append(el('p','cockpit-summary',ops.summary));
 
@@ -143,9 +189,33 @@ export function createCockpit(root,{onFocusNode,onToggleSubgraph,onHome}={}){
   }
   if(actions.childElementCount)root.append(actions);
 
-  for(const section of ops.sections||[])root.append(sectionBlock(section,{onFocusNode}));
+  const isRoot=node.id===graph?.rootId;
+  if(active.id==='visao'&&ops.core){
+   const pulse=el('div','cockpit-pulse');
+   for(const [label,value,tone] of [
+    ['ESTADO ATUAL',ops.core.currentState,ops.tone],
+    ['PRÓXIMA AÇÃO',ops.core.nextAction,'warn'],
+    ['ÚLTIMO EFEITO',ops.core.lastEffect,'ok']
+   ]){
+    const article=el('article');
+    article.dataset.tone=tone||'idle';
+    article.append(el('small',null,label),el('p',null,value||'Sem valor projetado no SSOT.'));
+    pulse.append(article);
+   }
+   root.append(pulse);
+  }
 
-  for(const group of ops.core?.groups||[]){
+  if(active.id==='bloqueios'&&isRoot){
+   const map=heatMap(graph,{onFocusNode});
+   if(map)root.append(map);
+  }
+
+  for(const id of active.sections){
+   const section=sectionById(id);
+   if(section)root.append(sectionBlock(section,{onFocusNode}));
+  }
+
+  if(active.id==='integridade')for(const group of ops.core?.groups||[]){
    root.append(sectionBlock({id:group.id,title:group.title,items:group.items,empty:'Sem registros.'},{onFocusNode}));
   }
  };

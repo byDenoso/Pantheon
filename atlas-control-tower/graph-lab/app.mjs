@@ -2,6 +2,7 @@ import {createSyntheticGraph} from './data/synthetic-graph.mjs';
 import {loadSsotGraph,loadSsotSnapshot,SSOT_SPREADSHEET_URL} from './data/ssot.mjs';
 import {isBindableRecordId} from './data/operations.mjs';
 import {hierarchyView,expandForSearch,hierarchyExpandableIds,collapseSubtree,ancestorsOf} from './graph/projection.mjs';
+import {assignIdentityColors,domainLegend} from './graph/identity.mjs';
 import {GraphLabRenderer as ThreeCanvasRenderer} from './graph/renderer.mjs';
 import {GraphLabRenderer as LegacyCanvasRenderer} from './graph/legacy-renderer.mjs';
 import {createCockpit} from './cockpit.mjs';
@@ -19,6 +20,7 @@ let selectedId=graph.rootId;
 let focusId=graph.rootId;
 let history=[];
 let activeOnly=false;
+let cockpitTab='visao';
 
 const rendererMode=params.get('renderer')==='legacy-canvas'?'legacy-canvas':'three-canvas';
 const Renderer=rendererMode==='legacy-canvas'?LegacyCanvasRenderer:ThreeCanvasRenderer;
@@ -60,14 +62,41 @@ function refresh({fit=false}={}){
  renderView(view);
 }
 
+/** Readouts that describe the map itself rather than the selected node. */
+function syncStage(view){
+ $('stage-nodes').textContent=view.nodes.length;
+ const source=graph.ops?.authority==='drive-ssot'?'SSOT LIVE':graph.ops?.authority?'SSOT PROJEÇÃO':'SSOT';
+ $('stage-source').textContent=source;
+ const blockers=graph.ops?.blockers?.length||0;
+ const badge=$('rail-blockers');
+ badge.textContent=blockers;
+ badge.hidden=!blockers;
+}
+
+function renderFocusList(){
+ const list=$('focus-list');
+ list.replaceChildren();
+ for(const domain of domainLegend(graph)){
+  const button=document.createElement('button');
+  button.type='button';
+  const dot=document.createElement('i');
+  dot.style.background=domain.hue;
+  button.append(dot,document.createTextNode(domain.label));
+  button.addEventListener('click',()=>{$('focus-menu').open=false;openNode(domain.id)});
+  list.append(button);
+ }
+}
+
 function renderView(view=currentView()){
  const node=nodeById(selectedId)||nodeById(graph.rootId);
  const projected=view.nodes.find(entry=>entry.id===node?.id);
  $('focus-label').textContent=node?.label||'NEXO';
+ syncStage(view);
  renderBreadcrumb(node);
  cockpit.render(node,{
   graph,
   trail:node?ancestorsOf(graph,node.id).map(step=>({id:step.id,label:step.label})):[],
+  tab:cockpitTab,
   expanded:expandedIds.has(node?.id),
   expandable:Boolean(projected?.expandable??(node&&expandableIds().has(node.id))),
   hiddenChildren:projected?.hiddenChildren??0
@@ -147,8 +176,19 @@ renderer.ready?.catch(error=>{
 const cockpit=createCockpit($('cockpit-body'),{
  onFocusNode:id=>{openNode(id);openCockpit()},
  onToggleSubgraph:id=>{toggleSubgraph(id)},
- onHome:()=>goHome()
+ onHome:()=>goHome(),
+ onTab:id=>setCockpitTab(id)
 });
+
+/** The rail is a shortcut into the cockpit tabs, not a second navigation tree. */
+const railItems=[...document.querySelectorAll('.rail-item[data-tab]')];
+function setCockpitTab(id,{open=false}={}){
+ cockpitTab=id;
+ for(const button of railItems)button.classList.toggle('is-active',button.dataset.tab===id);
+ renderView();
+ if(open)openCockpit();
+}
+for(const button of railItems)button.addEventListener('click',()=>setCockpitTab(button.dataset.tab,{open:true}));
 
 // --- NEXO live -------------------------------------------------------------
 
@@ -193,7 +233,7 @@ function renderNexoLive(live=graph.live){
 // --- data ------------------------------------------------------------------
 
 function setGraphData(next){
- graph=next;
+ graph=assignIdentityColors(next);
  expandedIds=new Set();
  selectedId=graph.rootId;
  focusId=graph.rootId;
@@ -204,6 +244,7 @@ function setGraphData(next){
  $('hierarchy-search').value='';
  hideResults();
  renderNexoLive(graph.live);
+ renderFocusList();
  refresh({fit:true});
 }
 function rebuild(count){if(demoMode)setGraphData(createSyntheticGraph(count))}

@@ -177,11 +177,14 @@ export function attachOperations(graph,rowsByTab={},meta={}){
   const byStatus=new Map();
   for(const child of subtree){const key=upper(child.status)||'UNKNOWN';byStatus.set(key,(byStatus.get(key)||0)+1)}
 
+  // Severity is not invented: the loop's own state and a blocked hierarchy node are
+  // the system saying it is stuck (HIGH); a blocked record inside a branch is a
+  // single piece of work waiting (MED).
   const blockers=dedupe([
-   ...(isRoot&&loopBlocked?[{title:live.loop.currentState.split(':')[0],detail:live.loop.currentState,status:'BLOCKED',tone:'blocked',meta:'LOOP NEXO · RecursiveState'}]:[]),
-   ...subtree.filter(n=>isBlockedStatus(n.status)).map(n=>({title:n.label,detail:n.summary||'',status:n.status,tone:'blocked',meta:`${upper(n.hierarchyLevel)} · ${n.recordId}`,nodeId:n.id})),
-   ...items.filter(i=>isBlockedStatus(i.status)).map(i=>toItem(i)),
-   ...(isRoot?unbound.filter(i=>isBlockedStatus(i.status)).map(i=>toItem(i)):[])
+   ...(isRoot&&loopBlocked?[{title:live.loop.currentState.split(':')[0],detail:live.loop.currentState,status:'BLOCKED',tone:'blocked',severity:'HIGH',meta:'LOOP NEXO · RecursiveState'}]:[]),
+   ...subtree.filter(n=>isBlockedStatus(n.status)).map(n=>({title:n.label,detail:n.summary||'',status:n.status,tone:'blocked',severity:'HIGH',meta:`${upper(n.hierarchyLevel)} · ${n.recordId}`,nodeId:n.id})),
+   ...items.filter(i=>isBlockedStatus(i.status)).map(i=>toItem(i,{severity:'MED'})),
+   ...(isRoot?unbound.filter(i=>isBlockedStatus(i.status)).map(i=>toItem(i,{severity:'MED'})):[])
   ]);
 
   const nextActions=dedupe([
@@ -258,14 +261,30 @@ export function attachOperations(graph,rowsByTab={},meta={}){
   };
  }
 
+ // The map-wide readouts are the core's own projection, so a domain heat map and the
+ // critical-blocker list can never disagree with what the core cockpit shows.
+ const root=nodes.find(node=>node.id===graph.rootId);
+ const rootSection=id=>root?.ops?.sections.find(section=>section.id===id)?.items||[];
+ const domains=nodes.filter(node=>node.hierarchyLevel==='domain');
+
  graph.ops={
   authority:meta.authority||'canonical',projection:meta.projection||'',generatedAt,ageHours,loopBlocked,
   counts:{
-   domains:nodes.filter(n=>n.hierarchyLevel==='domain').length,
+   domains:domains.length,
    programs:nodes.filter(n=>n.hierarchyLevel==='program').length,
    campaigns:nodes.filter(n=>n.hierarchyLevel==='campaign').length,
    blocked:blockedNodes.length,orphans:orphans.length,unbound:unbound.length
-  }
+  },
+  blockers:rootSection('blockers'),
+  activity:rootSection('changes'),
+  heatmap:domains
+   .map(domain=>({
+    id:domain.id,label:domain.label,recordId:domain.recordId,
+    blocked:domain.ops?.rollup?.blocked||0,
+    programs:domain.ops?.rollup?.programs||0,
+    campaigns:domain.ops?.rollup?.campaigns||0
+   }))
+   .sort((a,b)=>b.blocked-a.blocked||b.campaigns-a.campaigns)
  };
  return graph;
 }

@@ -17,14 +17,19 @@ export function semanticLabelRank(point,{focusId,selectedId,hoverId}={}){
  return (TYPE_RANK[point.node.type]||0)+(point.z||0);
 }
 
-export function placeLabels(points,{width,height,focusId=null,selectedId=null,hoverId=null,maxLabels=24,reserved=[]}={}){
+/** Default card size; callers pass `sizeFor` when a label carries metrics too. */
+export function defaultLabelSize(point){
+ const label=String(point.node.label||point.node.id);
+ return {w:Math.max(54,Math.min(210,label.length*7.2+26)),h:32};
+}
+
+export function placeLabels(points,{width,height,focusId=null,selectedId=null,hoverId=null,maxLabels=24,reserved=[],sizeFor=defaultLabelSize}={}){
  const sorted=[...points].sort((a,b)=>semanticLabelRank(b,{focusId,selectedId,hoverId})-semanticLabelRank(a,{focusId,selectedId,hoverId}));
  const placed=[];
  for(const p of sorted){
   if(placed.length>=maxLabels&&p.node.id!==focusId&&p.node.id!==selectedId&&p.node.id!==hoverId)continue;
   const label=String(p.node.label||p.node.id);
-  const w=Math.max(54,Math.min(210,label.length*7.2+26));
-  const h=32;
+  const {w,h}=sizeFor(p);
   const d=p.r+12;
   const candidates=[
    [p.x-w/2,p.y+d],[p.x-w/2,p.y-d-h],[p.x+d,p.y-h/2],[p.x-d-w,p.y-h/2],

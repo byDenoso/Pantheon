@@ -7,6 +7,7 @@ export const PALETTE_A = {
   states: {active:'#E8C982',supported:'#9AB9D4',partial:'#B8AEC3',negative:'#8A96A3',blocked:'#8E6F6F',legacy:'#6F7983'},
   nodes: {coreFill:'#DCE6F0',edgeLight:'rgba(255,255,255,0.92)',glow:'rgba(186,203,219,0.18)',halo:'rgba(255,255,255,0.08)',fogNear:'rgba(255,255,255,0.00)',fogFar:'rgba(4,7,11,0.34)'},
   filaments: {canonical:'rgba(133,155,178,0.34)',derived:'rgba(167,160,184,0.24)',crossDomain:'rgba(143,181,167,0.22)',intraDomain:'rgba(196,206,217,0.18)',pulse:'#F2D79A',pulseHalo:'rgba(242,215,154,0.20)'},
+  space: {nebulaCore:'#2A1B4D',nebulaRim:'#0C2A4A',nebulaWarm:'#3A2140',dust:'rgba(150,178,214,0.5)',coreGlow:'#FFB545',coreHot:'#FFF2D8',orbitRing:'rgba(150,180,220,0.16)'},
   labels: {bg:'rgba(8,12,18,0.68)',border:'rgba(118,142,167,0.24)',text:'#E6EDF5',textDim:'#A0ADBA',selectedBg:'rgba(232,201,130,0.16)',selectedBorder:'rgba(232,201,130,0.34)'}
 };
 
@@ -28,6 +29,10 @@ export const TONE_COLORS={ok:PALETTE_A.chrome.success,warn:PALETTE_A.chrome.warn
 export const PALETTES={A:PALETTE_A};
 export function getPalette(id='A'){return PALETTES[id]||PALETTE_A}
 export function colorForNode(node,palette=PALETTE_A){
+  // Identity first: a Domain's hue is inherited by everything orbiting it and stays
+  // the same whether that branch is healthy or blocked. State is carried by the
+  // blocked ring on the body and by the cockpit, never by repainting the map.
+  if(node.hue)return node.hue;
   if(node.ops?.tone==='blocked'||node.tone==='blocked')return palette.chrome.danger;
   if(node.kind==='SYSTEM'&&node.id==='NEXO')return palette.semantic.NEXO;
   if(node.id==='NEXO'||node.id==='system:NEXO')return palette.semantic.NEXO;
