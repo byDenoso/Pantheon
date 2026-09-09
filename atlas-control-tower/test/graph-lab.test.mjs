@@ -25,16 +25,35 @@ test('projection makes nearer positive-depth bodies appear larger',async()=>{
 test('semantic orbital layout is deterministic and keeps focus at origin',async()=>{
  const {layoutNodes}=await importLab('graph/layout.mjs');
  const nodes=[
-  {id:'system:NEXO',type:'SYSTEM'},
-  {id:'system:SCIENCE',type:'SYSTEM',parentId:'system:NEXO'},
-  {id:'domain:COSMOLOGY',type:'DOMAIN',parentId:'system:SCIENCE'},
-  {id:'campaign:H0',type:'CAMPAIGN',parentId:'domain:COSMOLOGY'}
+  {id:'system:NEXO',type:'SYSTEM',hierarchyLevel:'root'},
+  {id:'domain:COSMOLOGY',type:'DOMAIN',hierarchyLevel:'domain',parentId:'system:NEXO'},
+  {id:'record:PROG-1',type:'PROGRAM',hierarchyLevel:'program',parentId:'domain:COSMOLOGY'},
+  {id:'record:CAMP-H0',type:'CAMPAIGN',hierarchyLevel:'campaign',parentId:'record:PROG-1'}
  ];
  const a=layoutNodes(nodes,'system:NEXO');
  const b=layoutNodes(nodes,'system:NEXO');
  assert.deepEqual([...a.entries()],[...b.entries()]);
  assert.deepEqual(a.get('system:NEXO'),[0,0,0]);
  assert.notDeepEqual(a.get('domain:COSMOLOGY'),[0,0,0]);
+});
+
+test('sub-orbits hang off their parent instead of forming another global ring',async()=>{
+ const {layoutNodes}=await importLab('graph/layout.mjs');
+ const nodes=[
+  {id:'root',hierarchyLevel:'root'},
+  {id:'domain:A',hierarchyLevel:'domain',parentId:'root'},
+  {id:'domain:B',hierarchyLevel:'domain',parentId:'root'},
+  {id:'program:A1',hierarchyLevel:'program',parentId:'domain:A'},
+  {id:'program:A2',hierarchyLevel:'program',parentId:'domain:A'}
+ ];
+ const positions=layoutNodes(nodes,'root',{baseRadius:250,ringGap:130});
+ const distance=(a,b)=>Math.hypot(a[0]-b[0],a[1]-b[1],a[2]-b[2]);
+ const domainA=positions.get('domain:A');
+ for(const id of ['program:A1','program:A2']){
+  // Each Program orbits its own Domain, and stays closer to it than to the core.
+  assert.ok(distance(positions.get(id),domainA)<distance(positions.get(id),[0,0,0]));
+ }
+ assert.notDeepEqual(positions.get('program:A1'),positions.get('program:A2'));
 });
 
 test('quadratic filament interpolation lands exactly on both endpoints',async()=>{
@@ -91,16 +110,48 @@ test('label placement prioritizes focus and rejects overlapping boxes',async()=>
  assert.equal(labels[0].id,'focus');
 });
 
-test('lab exposes original-style presets and a renderer with one animation loop',async()=>{
+test('what a click just revealed gets labelled before the rest of the map',async()=>{
+ const {placeLabels}=await importLab('graph/labels.mjs');
+ const points=[
+  {node:{id:'child',label:'Program A',type:'PROGRAM',parentId:'domain'},x:120,y:120,r:9,z:10},
+  {node:{id:'far',label:'Other domain',type:'DOMAIN'},x:320,y:260,r:14,z:5}
+ ];
+ const labels=placeLabels(points,{width:600,height:400,selectedId:'domain',maxLabels:1,reserved:[]});
+ assert.equal(labels[0].id,'child');
+});
+
+test('the graph renders on Three.js over a canvas overlay, from a vendored build',async()=>{
  const {PRESETS}=await importLab('graph/palette.mjs');
+ assert.ok(PRESETS.ORIGINAL&&PRESETS.CLEAN&&PRESETS.DEEP_SPACE&&PRESETS.HIGH_CONTRAST&&PRESETS.DENSE_GRAPH&&PRESETS.MOBILE);
+ assert.equal(PRESETS.ORIGINAL.renderer,'three-canvas');
+ assert.ok(fs.existsSync(modulePath('vendor/three.module.min.js')),'three must be vendored, not fetched at runtime');
+ const renderer=fs.readFileSync(modulePath('graph/renderer.mjs'),'utf8');
+ assert.match(renderer,/from '\.\.\/vendor\/three\.module\.min\.js'/);
+ assert.doesNotMatch(renderer,/https?:\/\/[^'"]*three/i,'three must not come from a CDN');
+ assert.match(renderer,/new THREE\.WebGLRenderer/);
+ assert.match(renderer,/QuadraticBezierCurve3/);
+ // Volumetric bodies and halos are canvas gradients baked into sprite textures.
+ assert.match(renderer,/createRadialGradient/);
+ assert.match(renderer,/getContext\('2d'\)/);
+ // One animation loop, and no timers driving it.
+ assert.equal(renderer.match(/requestAnimationFrame\(/g).length,1);
+ assert.doesNotMatch(renderer,/setInterval|setTimeout\s*\(/);
+});
+
+test('the renderer exposes the camera and selection controls the cockpit drives',async()=>{
  const {GraphLabRenderer}=await importLab('graph/renderer.mjs');
  assert.equal(typeof GraphLabRenderer,'function');
- assert.ok(PRESETS.ORIGINAL&&PRESETS.CLEAN&&PRESETS.DEEP_SPACE&&PRESETS.HIGH_CONTRAST&&PRESETS.DENSE_GRAPH&&PRESETS.MOBILE);
- const renderer=fs.readFileSync(modulePath('graph/renderer.mjs'),'utf8');
- assert.match(renderer,/requestAnimationFrame/);
- assert.match(renderer,/createRadialGradient/);
- assert.match(renderer,/quadraticCurveTo/);
- assert.doesNotMatch(renderer,/setInterval|setTimeout\s*\(/);
+ for(const method of ['setGraph','setSelected','focusNode','toggleFlat','fit','zoom','centerSelected','ensureInFrame','distanceFor'])
+  assert.equal(typeof GraphLabRenderer.prototype[method],'function',`renderer must expose ${method}`);
+});
+
+test('camera framing accounts for the narrow axis so a phone shows the whole system',async()=>{
+ const {GraphLabRenderer}=await importLab('graph/renderer.mjs');
+ const stub={camera:{fov:46,aspect:1.8}};
+ const wide=GraphLabRenderer.prototype.distanceFor.call(stub,400);
+ stub.camera.aspect=0.46;
+ const tall=GraphLabRenderer.prototype.distanceFor.call(stub,400);
+ assert.ok(tall>wide,'a portrait viewport must pull the camera further back');
 });
 
 test('palette A uses the approved Observatory Premium colors',async()=>{
@@ -118,23 +169,34 @@ test('palette A uses the approved Observatory Premium colors',async()=>{
  assert.equal(STATUS_COLORS.blocked,'#8E6F6F');
 });
 
-test('lab shell is standalone, synthetic-only and mobile-aware',()=>{
- for(const rel of ['index.html','styles.css','app.mjs']) assert.ok(fs.existsSync(modulePath(rel)),`missing ${rel}`);
+test('hierarchy level sets visual weight, from the core out to the leaves',async()=>{
+ const {LEVEL_STYLE,levelStyle}=await importLab('graph/palette.mjs');
+ assert.ok(LEVEL_STYLE.root.radius>LEVEL_STYLE.domain.radius);
+ assert.ok(LEVEL_STYLE.domain.radius>LEVEL_STYLE.program.radius);
+ assert.ok(LEVEL_STYLE.program.radius>LEVEL_STYLE.campaign.radius);
+ assert.equal(levelStyle({hierarchyLevel:'domain'}),LEVEL_STYLE.domain);
+});
+
+test('Atlas shell is a map with one cockpit and a secondary renderer drawer',()=>{
+ for(const rel of ['index.html','styles.css','app.mjs','cockpit.mjs']) assert.ok(fs.existsSync(modulePath(rel)),`missing ${rel}`);
  const html=fs.readFileSync(modulePath('index.html'),'utf8');
  const app=fs.readFileSync(modulePath('app.mjs'),'utf8');
  const css=fs.readFileSync(modulePath('styles.css'),'utf8');
- assert.match(html,/ATLAS GRAPH LAB/);
+ assert.match(html,/NEXO ATLAS/);
  assert.match(html,/id="graph-lab-canvas"/);
  assert.match(html,/id="preset"/);
  assert.match(html,/id="dataset-size"/);
  assert.match(html,/FPS/);
+ // Renderer telemetry and knobs live inside the drawer, not on the map.
+ const drawer=html.slice(html.indexOf('id="lab-panel"'));
+ for(const marker of ['FPS','id="preset"','id="dataset-size"','id="node-radius"'])assert.ok(drawer.includes(marker),`${marker} must sit inside the renderer drawer`);
  assert.match(css,/@media\s*\(max-width:\s*760px\)/);
  assert.match(app,/createSyntheticGraph/);
  assert.doesNotMatch(app,/\/api\//);
  assert.doesNotMatch(app,/science_v1|learning_v1|nexo_ops|runner/i);
 });
 
-test('sigma initialization failure falls back to legacy canvas instead of leaving a blank stage',()=>{
+test('a WebGL failure falls back to the legacy canvas instead of leaving a blank stage',()=>{
  const app=fs.readFileSync(modulePath('app.mjs'),'utf8');
  assert.match(app,/renderer\.ready\?\.catch/);
  assert.match(app,/legacy-canvas/);

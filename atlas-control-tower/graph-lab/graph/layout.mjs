@@ -13,42 +13,63 @@ export function easeInOutCubic(t){
  return x<.5?4*x*x*x:1-Math.pow(-2*x+2,3)/2;
 }
 
-function semanticDepth(node,byId,focusId){
- if(node.id===focusId)return 0;
- let cur=node,depth=0,guard=0;
- while(cur&&cur.id!==focusId&&guard++<12){
-  depth++;
-  cur=cur.parentId?byId.get(cur.parentId):null;
- }
- if(cur?.id===focusId)return Math.max(1,depth);
- const fallback={SYSTEM:1,DOMAIN:2,CAMPAIGN:3,CLAIM:4,TEST:4,RESULT:5}[node.type]||4;
- return fallback;
-}
-
-const typeLift={SYSTEM:0,DOMAIN:24,CAMPAIGN:52,CLAIM:84,TEST:92,RESULT:122};
-
+/**
+ * Orbital layout.
+ *
+ * The focus sits at the origin and its direct children take a full ring around it.
+ * Deeper levels do not get their own global ring: each one opens as a sub-orbit
+ * anchored on its parent and fanned outwards, away from the core. That is what keeps
+ * an expanded Program from crossing the rest of the map, and what makes the graph
+ * read as one system with satellites instead of a cloud of dots.
+ *
+ * Positions are pure functions of the node ids and sibling order, so the same SSOT
+ * always lays out the same way and expanding a branch never moves the rest.
+ */
 export function layoutNodes(nodes,focusId,options={}){
  const baseRadius=Number(options.baseRadius||250);
  const ringGap=Number(options.ringGap||118);
  const depthScale=Number(options.depthScale||145);
+ const flatten=Number(options.flatten??.82);
+
  const byId=new Map(nodes.map(n=>[n.id,n]));
- const out=new Map();
- out.set(focusId,[0,0,0]);
- let ordinal=0;
+ const children=new Map();
  for(const node of nodes){
   if(node.id===focusId)continue;
-  const depth=semanticDepth(node,byId,focusId);
-  const seed=unitHash(node.id);
-  const parentSeed=unitHash(node.parentId||node.system||'root');
-  const angle=ordinal++*GOLDEN_ANGLE+parentSeed*Math.PI*.8+seed*.35;
-  const radius=baseRadius+(depth-1)*ringGap+(typeLift[node.type]||70)*.38;
-  const flatten=1-Math.min(.28,(depth-1)*.035);
-  const x=Math.cos(angle)*radius;
-  const y=Math.sin(angle)*radius*flatten;
-  const z=Math.sin(angle*1.73+seed*Math.PI*2)*depthScale+(depth-2)*28;
-  out.set(node.id,[x,y,z]);
+  const parentId=node.parentId&&node.parentId!==node.id&&byId.has(node.parentId)?node.parentId:focusId;
+  const list=children.get(parentId)||[];
+  list.push(node);
+  children.set(parentId,list);
  }
- for(const node of nodes)if(!out.has(node.id))out.set(node.id,[0,0,0]);
+
+ const out=new Map([[focusId,[0,0,0]]]);
+ const place=(parentId,parentPos,parentAngle,depth)=>{
+  const kids=children.get(parentId)||[];
+  if(!kids.length)return;
+  const ring=depth===1;
+  // A sub-orbit widens with its population so labels stay apart without a solver.
+  const radius=ring?baseRadius:ringGap*(.85+Math.min(kids.length,10)*.05);
+  const arc=ring?Math.PI*2:Math.min(Math.PI*1.25,.5+kids.length*.24);
+  const step=ring?arc/kids.length:kids.length>1?arc/(kids.length-1):0;
+  const start=ring?unitHash(parentId)*Math.PI*2:parentAngle-arc/2;
+  kids.forEach((node,index)=>{
+   const angle=start+step*index;
+   const seed=unitHash(node.id);
+   const spread=ring?1:1+(index%2)*.17;
+   const x=parentPos[0]+Math.cos(angle)*radius*spread;
+   const y=parentPos[1]+Math.sin(angle)*radius*spread*flatten;
+   const z=parentPos[2]+Math.sin(angle*1.6+seed*Math.PI*2)*(depthScale/(depth*1.4))+(seed-.5)*24-depth*16;
+   out.set(node.id,[x,y,z]);
+   place(node.id,[x,y,z],angle,depth+1);
+  });
+ };
+ place(focusId,[0,0,0],0,1);
+
+ for(const node of nodes)if(!out.has(node.id)){
+  const seed=unitHash(node.id);
+  const angle=seed*Math.PI*2;
+  const radius=baseRadius+ringGap*2;
+  out.set(node.id,[Math.cos(angle)*radius,Math.sin(angle)*radius*flatten,(seed-.5)*depthScale]);
+ }
  return out;
 }
 

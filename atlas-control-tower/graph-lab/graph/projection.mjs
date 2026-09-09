@@ -29,35 +29,106 @@ export function projectPoint(point,camera,width,height,options={}){
  };
 }
 
-const isHierarchyNode=node=>['domain','program','campaign'].includes(node?.hierarchyLevel);
+// ---------------------------------------------------------------------------
+// Progressive hierarchy projection: NEXO -> Domain -> Program -> Campaign.
+// The first screen is the core plus its Domains. Programs appear only when their
+// Domain is open, Campaigns only when their Program is open, and a Campaign is
+// always a leaf. Nothing is pre-rendered and then hidden — the view is computed.
+// ---------------------------------------------------------------------------
+
+export const HIERARCHY_LEVELS=['root','domain','program','campaign'];
+const LEVEL_RANK={root:0,domain:1,program:2,campaign:3};
 const normalizeQuery=value=>String(value||'').trim().toLocaleLowerCase('pt-BR');
 
+const indexOf=source=>{
+ const byId=new Map((source?.nodes||[]).map(n=>[n.id,n]));
+ const children=new Map();
+ for(const node of source?.nodes||[])if(node.parentId){const list=children.get(node.parentId)||[];list.push(node);children.set(node.parentId,list)}
+ return{byId,children};
+};
+
+export function ancestorsOf(source,id){
+ const {byId}=indexOf(source);
+ const trail=[];
+ let node=byId.get(id);
+ let guard=0;
+ while(node&&guard++<16){trail.unshift(node);node=node.parentId?byId.get(node.parentId):null}
+ return trail;
+}
+
+/** Ids that own a subgraph, i.e. the nodes a click can open or collapse. */
 export function hierarchyExpandableIds(source){
- const childLevels=new Map();
- for(const node of source?.nodes||[])if(node.parentId&&node.hierarchyLevel){const levels=childLevels.get(node.parentId)||new Set();levels.add(node.hierarchyLevel);childLevels.set(node.parentId,levels)}
- return new Set((source?.nodes||[]).filter(node=>{const levels=childLevels.get(node.id);return levels?.has('program')||levels?.has('campaign')}).map(node=>node.id));
+ const {children}=indexOf(source);
+ return new Set((source?.nodes||[]).filter(node=>(children.get(node.id)||[]).length>0).map(node=>node.id));
+}
+
+/** Removes a node and everything under it from the expansion set. */
+export function collapseSubtree(source,id,expandedIds=new Set()){
+ const {children}=indexOf(source);
+ const next=new Set(expandedIds);
+ const walk=nodeId=>{next.delete(nodeId);for(const child of children.get(nodeId)||[])walk(child.id)};
+ walk(id);
+ return next;
 }
 
 export function hierarchyView(source,{expandedIds=new Set(),activeOnly=false,maxVisible=Infinity}={}){
- const visible=[];
- for(const node of source?.nodes||[]){
-  if(activeOnly&&node.type!=='SYSTEM'&&String(node.status||'').toUpperCase()!=='ACTIVE')continue;
-  if(node.hierarchyLevel==='program'&&!expandedIds.has(node.parentId))continue;
-  if(node.hierarchyLevel==='campaign'&&!expandedIds.has(node.parentId))continue;
-  visible.push(node);
- }
- const limited=Number.isFinite(maxVisible)?visible.slice(0,Math.max(1,maxVisible)):visible;
- const ids=new Set(limited.map(n=>n.id));
- return{nodes:limited,edges:(source?.edges||[]).filter(e=>ids.has(e.source)&&ids.has(e.target))};
+ const nodes=source?.nodes||[];
+ const {byId,children}=indexOf(source);
+ const rootId=source?.rootId;
+
+ const visibleIds=new Set();
+ const walk=node=>{
+  visibleIds.add(node.id);
+  if(node.id!==rootId&&!expandedIds.has(node.id))return;
+  for(const child of children.get(node.id)||[]){
+   if(activeOnly&&String(child.status||'').toUpperCase()!=='ACTIVE')continue;
+   walk(child);
+  }
+ };
+ const root=byId.get(rootId)||nodes[0];
+ if(root)walk(root);
+ for(const node of nodes)if(!node.parentId&&!visibleIds.has(node.id))visibleIds.add(node.id);
+
+ const ranked=nodes.filter(n=>visibleIds.has(n.id))
+  .map((node,index)=>({node,index}))
+  .sort((a,b)=>(LEVEL_RANK[a.node.hierarchyLevel]??9)-(LEVEL_RANK[b.node.hierarchyLevel]??9)||a.index-b.index);
+ const limited=Number.isFinite(maxVisible)?ranked.slice(0,Math.max(1,maxVisible)):ranked;
+ const shown=new Set(limited.map(entry=>entry.node.id));
+
+ // Each visible node reports how much of its subgraph is still folded away, so the
+ // renderer can show the weight of what a click would open.
+ const projected=limited
+  .sort((a,b)=>a.index-b.index)
+  .map(({node})=>{
+   const kids=children.get(node.id)||[];
+   const hidden=kids.filter(child=>!shown.has(child.id)).length;
+   return{...node,childCount:kids.length,hiddenChildren:hidden,expanded:expandedIds.has(node.id),expandable:kids.length>0&&node.id!==rootId};
+  });
+
+ return{
+  rootId,
+  nodes:projected,
+  edges:(source?.edges||[]).filter(e=>shown.has(e.source)&&shown.has(e.target))
+ };
 }
 
+/**
+ * Locates a Domain, Program or Campaign and opens every ancestor on the way to it,
+ * so a search result lands on an already-visible node.
+ */
 export function expandForSearch(source,query,expandedIds=new Set()){
- const q=normalizeQuery(query);const next=new Set(expandedIds);
- if(!q)return{expandedIds:next,matchId:null};
- const byId=new Map((source?.nodes||[]).map(n=>[n.id,n]));
- const match=(source?.nodes||[]).find(n=>['program','campaign'].includes(n.hierarchyLevel)&&[n.label,n.recordId,n.id].some(v=>normalizeQuery(v).includes(q)));
- if(!match)return{expandedIds:next,matchId:null};
+ const q=normalizeQuery(query);
+ const next=new Set(expandedIds);
+ if(!q)return{expandedIds:next,matchId:null,matches:[]};
+ const {byId}=indexOf(source);
+ const candidates=(source?.nodes||[]).filter(n=>['domain','program','campaign'].includes(n.hierarchyLevel));
+ const scored=candidates.filter(n=>[n.label,n.recordId,n.id,n.summary].some(value=>normalizeQuery(value).includes(q)));
+ const match=scored.find(n=>normalizeQuery(n.recordId)===q||normalizeQuery(n.label)===q)
+  ||scored.find(n=>[n.label,n.recordId].some(value=>normalizeQuery(value).startsWith(q)))
+  ||scored[0];
+ if(!match)return{expandedIds:next,matchId:null,matches:[]};
  let parent=byId.get(match.parentId);
- while(parent&&parent.hierarchyLevel){next.add(parent.id);parent=byId.get(parent.parentId)}
- return{expandedIds:next,matchId:match.id};
+ let guard=0;
+ while(parent&&parent.id!==source?.rootId&&guard++<16){next.add(parent.id);parent=parent.parentId?byId.get(parent.parentId):null}
+ return{expandedIds:next,matchId:match.id,matches:scored.slice(0,8)};
 }

@@ -6,7 +6,7 @@ import {orbitalDrift} from './motion.mjs';
 import {placeLabels} from './labels.mjs';
 import {PRESETS,SYSTEM_COLORS,STATUS_COLORS} from './palette.mjs';
 
-const structural=n=>['SYSTEM','DOMAIN','CAMPAIGN'].includes(n?.type);
+const structural=n=>['SYSTEM','DOMAIN','PROGRAM','CAMPAIGN'].includes(n?.type);
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 const reducedMotion=()=>typeof matchMedia==='function'&&matchMedia('(prefers-reduced-motion: reduce)').matches;
 const fract=x=>x-Math.floor(x);
@@ -15,7 +15,7 @@ function hexRgb(hex){const h=hex.replace('#','');const n=parseInt(h.length===3?h
 function mixHex(a,b,t){const A=hexRgb(a),B=hexRgb(b);return'#'+A.map((v,i)=>Math.round(v+(B[i]-v)*t).toString(16).padStart(2,'0')).join('')}
 function alphaHex(alpha){return Math.round(clamp(alpha,0,1)*255).toString(16).padStart(2,'0')}
 function roundRect(ctx,x,y,w,h,r){ctx.beginPath();if(ctx.roundRect)ctx.roundRect(x,y,w,h,r);else{ctx.moveTo(x+r,y);ctx.arcTo(x+w,y,x+w,y+h,r);ctx.arcTo(x+w,y+h,x,y+h,r);ctx.arcTo(x,y+h,x,y,r);ctx.arcTo(x,y,x+w,y,r);ctx.closePath()}}
-function nodeBaseRadius(n){return n.type==='SYSTEM'?n.id==='system:NEXO'?30:23:n.type==='DOMAIN'?17:n.type==='CAMPAIGN'?14:n.type==='CLAIM'?11:n.type==='TEST'?9:7}
+function nodeBaseRadius(n){return n.type==='SYSTEM'?n.id==='system:NEXO'?30:23:n.type==='DOMAIN'?17:n.type==='PROGRAM'?13:n.type==='CAMPAIGN'?10:n.type==='CLAIM'?11:n.type==='TEST'?9:7}
 function kindStyle(kind){
  return {
   canonical:{width:1.25,alpha:.45,dash:[],tint:'#73bce9'},
@@ -86,6 +86,8 @@ export class GraphLabRenderer{
  reset(){this.camera=defaultCamera();this.render()}
  zoom(factor){this.camera.zoom=clamp(this.camera.zoom*factor,.28,4.5);this.render()}
  toggleFlat(){this.camera.flat=!this.camera.flat;this.render();return this.camera.flat}
+ setSelected(id){this.selectedId=id;this.render()}
+ focusNode(id){this.selectedId=id;this.centerSelected()}
  centerSelected(){const p=this.points.find(x=>x.node.id===this.selectedId);if(!p)return;this.camera.panX+=this.width/2-p.x;this.camera.panY+=this.height/2-p.y;this.render()}
  fit(){
   if(!this.positions.size)return;const xs=[...this.positions.values()].map(p=>p[0]),ys=[...this.positions.values()].map(p=>p[1]);
