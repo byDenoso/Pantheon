@@ -5,6 +5,7 @@ on:
     branches:
       - atlas-control-tower-v3-20260905
       - 'atlas-premium-v2-*'
+      - 'atlas-visual-*'
   pull_request:
     paths:
       - 'atlas-control-tower/**'
