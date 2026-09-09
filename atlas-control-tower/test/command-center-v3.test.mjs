@@ -8,11 +8,12 @@ const tower = fs.readFileSync(new URL('../ui/control-tower.mjs', import.meta.url
 
 test('NextGen command center exposes the semantic depth rail and 3.5D hero shell', () => {
   for (const label of ['MACRO','SCIENTIFIC','PROVENANCE','AUTO ZOOM']) assert.match(index, new RegExp(label));
-  assert.match(index, /NEXO \/ MACRO GRAPH/);
+  assert.match(index, /NEXO \/ EXPLORE · MACRO/);
   assert.match(index, /Universo científico/);
   assert.match(index, /id="cosmos"/);
   assert.match(index, /TRUTH OWNER/);
-  assert.match(index, /NEON V1/);
+  assert.match(index, /GOOGLE DRIVE/);
+  assert.doesNotMatch(index, /NEON V1/);
   assert.doesNotMatch(index, /FRONTEND OFICIAL|reference-cosmos-index|reference-quote/);
 });
 

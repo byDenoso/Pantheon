@@ -1,0 +1,28 @@
+name: NEXO Atlas Drive Probe
+on:
+  push:
+    branches: [nexo-atlas-drive-pages-20260908]
+    paths: [".github/workflows/nexo-atlas-drive-probe.yml"]
+permissions:
+  contents: read
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Probe canonical Sheets anonymous CSV export
+        shell: bash
+        run: |
+          set -euo pipefail
+          probe() {
+            local label="$1"
+            local url="$2"
+            local out="/tmp/${label}.csv"
+            local code
+            code=$(curl -L -sS -o "$out" -w '%{http_code}' "$url")
+            echo "$label HTTP=$code bytes=$(wc -c < "$out") type=$(file -b --mime-type "$out")"
+            head -c 200 "$out" | tr '\n' ' '; echo
+          }
+          probe tower 'https://docs.google.com/spreadsheets/d/1Y9YYAn2x0NDIBTbl1bvkwBbSEGz6kHLxzAl90SQ0-GA/gviz/tq?tqx=out:csv&sheet=Domain%20Registry'
+          probe learning 'https://docs.google.com/spreadsheets/d/1to_VBC5edy3kHbkn4CDjG2r33tr0jdtky2Ie80afbEI/gviz/tq?tqx=out:csv&sheet=LEARNING_INDEX'
+          probe ops 'https://docs.google.com/spreadsheets/d/1twRpSoZCOXv77YyCh_5V9nAS2PM2nqzex2A37eI2Zas/gviz/tq?tqx=out:csv&sheet=ACTION_INDEX'
+          probe olympus 'https://docs.google.com/spreadsheets/d/1qj7VyA7wN3zr6ySZZ9kxHi4Szt99IV5Hf3jRWJAykLM/gviz/tq?tqx=out:csv&sheet=Ledger'

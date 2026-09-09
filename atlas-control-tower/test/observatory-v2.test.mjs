@@ -16,11 +16,10 @@ const model={
  recent:{newCount:1,hasPreviousVisit:true,items:[{id:'e',label:'Runtime remediation',updatedAt:'2026-09-07T19:02:30Z',summary:'repaired',metadata:{event_type:'RUNTIME'}}]},
  promoted:[{id:'p',title:'should not render',status:'ACTIVE'}],decisions:[]
 };
-
 const fakeRoot=()=>({innerHTML:'',querySelectorAll(){return[]},querySelector(){return null}});
 
 test('overview puts the NextGen map before its structural deck',()=>{
- assert.match(index,/NEXO \/ MACRO GRAPH/);
+ assert.match(index,/NEXO \/ EXPLORE · MACRO/);
  assert.match(index,/Universo científico/);
  assert.match(index,/nextgen\/styles\.css/);
  assert.ok(index.indexOf('id="cosmos"')<index.indexOf('class="lower-deck"'));

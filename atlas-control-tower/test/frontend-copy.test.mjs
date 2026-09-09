@@ -9,7 +9,8 @@ test('NextGen chrome keeps authority visible without dumping raw provenance into
   assert.match(index, /NEXO ATLAS/i);
   assert.match(index, /SCIENTIFIC KNOWLEDGE OBSERVATORY/i);
   assert.match(index, /TRUTH OWNER/);
-  assert.match(index, /NEON V1/);
+  assert.match(index, /GOOGLE DRIVE/);
+  assert.doesNotMatch(index, /NEON V1/);
   assert.match(index, /id="inspector"/);
   assert.doesNotMatch(index, /FRONTEND OFICIAL|Estado rastreável/i);
   assert.doesNotMatch(index, /id="provenance"/);

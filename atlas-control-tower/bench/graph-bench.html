@@ -1,0 +1,87 @@
+<!doctype html>
+<!-- Dev-only rendering + performance harness. Not part of frontendFiles, so it
+     is never deployed. Usage: /bench/graph-bench.html?n=5000 -->
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Atlas graph bench</title>
+<link rel="stylesheet" href="/nextgen/styles.css">
+<style>
+ html,body{margin:0;height:100%;overflow:hidden;background:#05070f}
+ .observatory{position:fixed!important;inset:0!important;width:100vw!important;height:100vh!important}
+ #hud{position:fixed;z-index:200;left:10px;top:10px;padding:8px 12px;border-radius:8px;
+   background:rgba(4,9,20,.92);border:1px solid rgba(126,162,214,.3);
+   font:600 12px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace;color:#dce9fb;white-space:pre}
+</style>
+</head>
+<body>
+<div class="observatory"><canvas id="cosmos" tabindex="0"></canvas></div>
+<div id="hud">booting…</div>
+<script type="module">
+import {AtlasEngine} from '/nextgen/graph/engine.mjs';
+
+const N = Number(new URLSearchParams(location.search).get('n') || 5000);
+
+// Synthetic snapshot shaped like the real compiler output: a NEXO root, systems,
+// domains, campaigns, then claims/tests/results hanging off them.
+function build(n){
+  const nodes=[{id:'system:NEXO',type:'SYSTEM',visualType:'SYSTEM',label:'NEXO',parentId:null,status:'ACTIVE',temporalWeight:.8}];
+  const edges=[];
+  const systems=['SCIENCE','LEARNING','OPERATIONS','OLYMPUS'];
+  for(const s of systems){
+    nodes.push({id:`system:${s}`,type:'SYSTEM',visualType:'SYSTEM',label:s,parentId:'system:NEXO',status:'ACTIVE',temporalWeight:.6});
+    edges.push({source:'system:NEXO',target:`system:${s}`,type:'CONTAINS'});
+  }
+  const types=[['DOMAIN',2],['CAMPAIGN',3],['CLAIM',4],['HYPOTHESIS',4],['TEST',6],['RESULT',5],['SOURCE',3]];
+  let made=nodes.length, ring=[...systems.map(s=>`system:${s}`)];
+  for(const [type,weight] of types){
+    const next=[];
+    const budget=Math.min(n-made, Math.round((n-made)*weight/20)+ring.length);
+    for(let i=0;i<budget && made<n;i++){
+      const parent=ring[i%ring.length];
+      const id=`${type.toLowerCase()}:${made}`;
+      nodes.push({id,type,visualType:type,label:`${type} ${i} — rótulo comprido o suficiente para testar truncamento`,
+        parentId:parent,domain:`D${i%9}`,status:i%23===0?'BLOCKED':'ACTIVE',
+        temporalWeight:(i%10)/10,sourceRefs:i%3?[]:[{source:'GOOGLE_DRIVE',sourceRef:'x'}]});
+      edges.push({source:parent,target:id,type:'CONTAINS'});
+      if(i%5===0&&next.length)edges.push({source:id,target:next[next.length-1],type:'SUPPORTS'});
+      next.push(id);made++;
+    }
+    if(next.length)ring=next;
+  }
+  return {nodes,edges,semanticView:'macro',focus:'system:NEXO',source:'BENCH'};
+}
+
+const graph=build(N);
+const engine=new AtlasEngine(document.getElementById('cosmos'),{
+  onSelect:n=>console.log('select',n.id), onOpen:n=>console.log('open',n.id), onZoom:()=>{}
+});
+engine.setData(graph,{focus:'system:NEXO'});
+
+// FPS sampling over a rolling second.
+const hud=document.getElementById('hud');
+let frames=0,t0=performance.now(),fps=0,worst=Infinity;
+(function tick(){
+  frames++;
+  const now=performance.now();
+  if(now-t0>=1000){
+    fps=Math.round(frames*1000/(now-t0));
+    if(frames>10)worst=Math.min(worst,fps);
+    frames=0;t0=now;
+    const visible=engine.view?.nodes.length??0;
+    hud.textContent=
+      `nodes total : ${graph.nodes.length}\n`+
+      `nodes drawn : ${visible}\n`+
+      `edges drawn : ${engine.view?.edges.length??0}\n`+
+      `collapsed   : ${engine.collapsed.size}\n`+
+      `labels      : ${engine.labels.active.size}\n`+
+      `fps         : ${fps}${worst<Infinity?`  (min ${worst})`:''}`;
+  }
+  engine.kick();
+  requestAnimationFrame(tick);
+})();
+
+window.__bench={engine,graph,fps:()=>fps};
+</script>
+</body>
+</html>
