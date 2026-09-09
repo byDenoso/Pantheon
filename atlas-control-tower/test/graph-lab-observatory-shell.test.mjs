@@ -7,13 +7,13 @@ const volume=readFileSync(new URL('../graph-lab/graph/volume-rendering.mjs',impo
 const index=readFileSync(new URL('../graph-lab/index.html',import.meta.url),'utf8');
 
 test('approved Obsidian Observatory changes the shell, not just token colours',()=>{
- assert.match(theme,/--topbar-height:\s*68px/);
+ assert.match(theme,/--topbar-height:\s*66px/);
  assert.match(theme,/\.lab-shell\s*\{[^}]*gap:\s*12px[^}]*padding:\s*12px/s);
  assert.match(theme,/\.stage\s*\{[^}]*border:\s*1px solid[^}]*border-radius:\s*22px/s);
- assert.match(theme,/\.cockpit\s*\{[^}]*border:\s*1px solid[^}]*border-radius:\s*18px/s);
- assert.match(theme,/\.lab-rail\s*\{[^}]*border:\s*1px solid[^}]*border-radius:\s*18px/s);
- assert.match(theme,/\.lab-brand b\s*\{[^}]*font-size:\s*15px/s);
- assert.match(theme,/\.stage-dock\s*\{[^}]*padding:\s*7px/s);
+ assert.match(theme,/\.cockpit\s*\{[^}]*border:\s*1px solid[^}]*border-radius:\s*19px/s);
+ assert.match(theme,/\.lab-rail\s*\{[^}]*border:\s*1px solid[^}]*border-radius:\s*19px/s);
+ assert.match(theme,/\.lab-brand b::before\s*\{[^}]*content:"NEXO"/s);
+ assert.match(theme,/\.stage-dock\s*\{[^}]*padding:\s*8px/s);
 });
 
 test('shell matches the approved Atlas reference navigation and visual density',()=>{
