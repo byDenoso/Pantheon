@@ -35,7 +35,7 @@ export function rendererNavigationUrl(rendererId,href='http://localhost/'){
  return url;
 }
 
-export function clearManualRendererOverride(){const saved=safeRead();safeWrite({...saved,manualRenderer:false,rendererId:null})}
+export function clearManualRendererOverride(){const saved=safeRead();safeWrite({...saved,manualRenderer:false,rendererId:null,environment:null})}
 export function saveManualRendererOverride(rendererId){const saved=safeRead();safeWrite({...saved,manualRenderer:true,rendererId})}
 
 export function runtimeRendererState({experienceRenderer='canvas-2d'}={}){
