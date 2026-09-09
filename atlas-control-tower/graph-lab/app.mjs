@@ -3,6 +3,7 @@ import {loadSsotGraph,loadSsotSnapshot,SSOT_SPREADSHEET_URL} from './data/ssot.m
 import {isBindableRecordId} from './data/operations.mjs';
 import {hierarchyView,expandForSearch,hierarchyExpandableIds,collapseSubtree,ancestorsOf} from './graph/projection.mjs';
 import {assignIdentityColors,domainLegend} from './graph/identity.mjs';
+import {buildSectionGraph,ATLAS_SECTIONS} from './graph/section-views.mjs';
 import {GraphLabRenderer as ThreeCanvasRenderer} from './graph/renderer.mjs';
 import {GraphLabRenderer as LegacyCanvasRenderer} from './graph/legacy-renderer.mjs';
 import {createCockpit} from './cockpit.mjs';
@@ -11,6 +12,7 @@ const $=id=>document.getElementById(id);
 const rendererRoot=$('graph-renderer-root');
 const params=new URLSearchParams(location.search);
 const demoMode=params.get('demo')==='1';
+const hashSection=location.hash==='#graph-stage'?'graph':location.hash.replace(/^#/,'');
 
 const placeholderGraph=()=>({rootId:'system:NEXO',nodes:[{id:'system:NEXO',label:'NEXO',type:'SYSTEM',kind:'SYSTEM',hierarchyLevel:'root',system:'NEXO',status:'LOADING',authority:'canonical',hiddenChildren:0,ops:{level:'root',status:'LOADING',tone:'idle',summary:'Lendo NEXO · SSOT CANONICAL.',rollup:{},sections:[]}}],edges:[]});
 
@@ -21,6 +23,7 @@ let focusId=graph.rootId;
 let history=[];
 let activeOnly=false;
 let cockpitTab='visao';
+let activeSection=ATLAS_SECTIONS.includes(hashSection)?hashSection:'graph';
 
 const rendererMode=params.get('renderer')==='legacy-canvas'?'legacy-canvas':'three-canvas';
 const Renderer=rendererMode==='legacy-canvas'?LegacyCanvasRenderer:ThreeCanvasRenderer;
@@ -45,18 +48,33 @@ if(demoMode)setBadge('DEMO · SYNTHETIC DATA');
 else if(rendererMode==='legacy-canvas'&&params.get('fallback')==='sigma-init')setBadge('SSOT CONNECTING · LEGACY CANVAS');
 else setBadge('SSOT CONNECTING · DRIVE');
 
-// --- hierarchy state -------------------------------------------------------
+// --- hierarchy and section state ------------------------------------------
 
 const nodeById=id=>graph.nodes.find(node=>node.id===id)||null;
 const expandableIds=()=>hierarchyExpandableIds(graph);
 
+function runtimeFacts(){
+ const moduleUrl=new URL(import.meta.url);
+ const commit=/@([0-9a-f]{40})\//i.exec(moduleUrl.pathname)?.[1]||'';
+ return{
+  hostname:location.hostname,
+  assetHost:moduleUrl.hostname,
+  commit,
+  rendererMode,
+  theme:document.documentElement.dataset.theme||'dark',
+  options:{...renderer.options}
+ };
+}
+
 function currentView(){
- return hierarchyView(graph,{expandedIds,activeOnly,maxVisible:renderer.options.maxVisibleNodes});
+ if(activeSection==='graph')return hierarchyView(graph,{expandedIds,activeOnly,maxVisible:renderer.options.maxVisibleNodes});
+ return buildSectionGraph(graph,activeSection,runtimeFacts());
 }
 
 function refresh({fit=false}={}){
  const view=currentView();
- if(!view.nodes.some(node=>node.id===focusId))focusId=graph.rootId;
+ if(!view.nodes.some(node=>node.id===focusId))focusId=view.rootId||graph.rootId;
+ if(!view.nodes.some(node=>node.id===selectedId))selectedId=view.rootId||graph.rootId;
  renderer.setGraph(view,{focusId,fit});
  renderer.setSelected?.(selectedId);
  renderView(view);
@@ -66,7 +84,7 @@ function refresh({fit=false}={}){
 function syncStage(view){
  $('stage-nodes').textContent=view.nodes.length;
  const source=graph.ops?.authority==='drive-ssot'?'SSOT LIVE':graph.ops?.authority?'SSOT PROJEÇÃO':'SSOT';
- $('stage-source').textContent=source;
+ $('stage-source').textContent=activeSection==='graph'?source:activeSection.toUpperCase();
  const blockers=graph.ops?.blockers?.length||0;
  const badge=$('rail-blockers');
  badge.textContent=blockers;
@@ -88,18 +106,19 @@ function renderFocusList(){
 }
 
 function renderView(view=currentView()){
- const node=nodeById(selectedId)||nodeById(graph.rootId);
+ const node=view.nodes.find(entry=>entry.id===selectedId)||nodeById(selectedId)||view.nodes.find(entry=>entry.id===view.rootId)||nodeById(graph.rootId);
+ const canonical=nodeById(node?.id);
  const projected=view.nodes.find(entry=>entry.id===node?.id);
  $('focus-label').textContent=node?.label||'NEXO';
  syncStage(view);
- renderBreadcrumb(node);
+ if(activeSection==='graph')renderBreadcrumb(canonical||node);else $('breadcrumb').replaceChildren();
  cockpit.render(node,{
-  graph,
-  trail:node?ancestorsOf(graph,node.id).map(step=>({id:step.id,label:step.label})):[],
+  graph:activeSection==='graph'?graph:view,
+  trail:activeSection==='graph'&&canonical?ancestorsOf(graph,canonical.id).map(step=>({id:step.id,label:step.label})):[],
   tab:cockpitTab,
-  expanded:expandedIds.has(node?.id),
-  expandable:Boolean(projected?.expandable??(node&&expandableIds().has(node.id))),
-  hiddenChildren:projected?.hiddenChildren??0
+  expanded:activeSection==='graph'&&expandedIds.has(node?.id),
+  expandable:activeSection==='graph'&&Boolean(projected?.expandable??(canonical&&expandableIds().has(canonical.id))),
+  hiddenChildren:activeSection==='graph'?(projected?.hiddenChildren??0):0
  });
 }
 
@@ -123,22 +142,25 @@ function selectNode(id,{center=false}={}){
  if(!id)return;
  if(selectedId&&selectedId!==id)history.push(selectedId);
  selectedId=id;
- focusId=graph.rootId;
+ focusId=currentView().rootId||graph.rootId;
  renderer.setSelected?.(id);
- refresh();
+ if(activeSection==='graph')refresh();else renderView(currentView());
  if(center)renderer.focusNode?.(id);
 }
 
-/** Single click is the whole navigation: it selects, and it opens or folds a subgraph. */
+/** Single click is the whole hierarchy navigation only in Graph Lab. */
 function toggleSubgraph(id){
- if(!expandableIds().has(id))return false;
+ if(activeSection!=='graph'||!expandableIds().has(id))return false;
  expandedIds=expandedIds.has(id)?collapseSubtree(graph,id,expandedIds):new Set([...expandedIds,id]);
  refresh();
  return true;
 }
 
-/** Reveals a node wherever it sits by opening every ancestor above it first. */
+/** Reveals a canonical node by switching back to Graph Lab and opening its ancestors. */
 function openNode(id){
+ const canonical=nodeById(id);
+ if(!canonical){selectedId=id;renderer.setSelected?.(id);renderView(currentView());return}
+ if(activeSection!=='graph')setSection('graph',{fit:false});
  const trail=ancestorsOf(graph,id);
  expandedIds=new Set([...expandedIds,...trail.slice(0,-1).map(step=>step.id)]);
  selectNode(id,{center:true});
@@ -148,12 +170,18 @@ function openNode(id){
 
 const renderer=new Renderer(target,{
  onSelect:node=>{
+  if(activeSection!=='graph'){
+   selectedId=node?.id||currentView().rootId||graph.rootId;
+   renderer.setSelected?.(selectedId);
+   renderView(currentView());
+   return;
+  }
   if(!node){selectedId=graph.rootId;refresh();return}
   if(selectedId!==node.id)history.push(selectedId);
   selectedId=node.id;
   if(!toggleSubgraph(node.id))refresh();
  },
- onOpen:node=>{if(node)toggleSubgraph(node.id)},
+ onOpen:node=>{if(node&&activeSection==='graph')toggleSubgraph(node.id)},
  onStats:stats=>{
   $('hud-fps').textContent=Number(stats.fps||0).toFixed(0);
   $('hud-frame').textContent=Number(stats.frameMs||0).toFixed(1);
@@ -253,7 +281,7 @@ function goHome(){
  expandedIds=new Set();
  selectedId=graph.rootId;
  focusId=graph.rootId;
- refresh({fit:true});
+ setSection('graph',{fit:true});
 }
 
 // --- search ----------------------------------------------------------------
@@ -294,6 +322,7 @@ searchInput.addEventListener('keydown',event=>{
  if(!result.matchId)return;
  expandedIds=result.expandedIds;
  hideResults();
+ if(activeSection!=='graph')setSection('graph',{fit:false});
  selectNode(result.matchId,{center:true});
  openCockpit();
 });
@@ -302,16 +331,17 @@ document.addEventListener('click',event=>{if(!results.hidden&&!event.target.clos
 
 // --- controls --------------------------------------------------------------
 
-$('expand-all').addEventListener('click',()=>{expandedIds=expandableIds();refresh()});
-$('collapse-all').addEventListener('click',()=>{expandedIds=new Set();refresh({fit:true})});
+$('expand-all').addEventListener('click',()=>{if(activeSection!=='graph')setSection('graph',{fit:false});expandedIds=expandableIds();refresh()});
+$('collapse-all').addEventListener('click',()=>{if(activeSection!=='graph')setSection('graph',{fit:false});expandedIds=new Set();refresh({fit:true})});
 $('home').addEventListener('click',()=>goHome());
 $('active-only').addEventListener('click',event=>{
+ if(activeSection!=='graph')setSection('graph',{fit:false});
  activeOnly=!activeOnly;
  event.currentTarget.setAttribute('aria-pressed',String(activeOnly));
  event.currentTarget.classList.toggle('is-active',activeOnly);
  refresh();
 });
-$('back').addEventListener('click',()=>{if(history.length){selectedId=history.pop();refresh();renderer.focusNode?.(selectedId)}});
+$('back').addEventListener('click',()=>{if(history.length){selectedId=history.pop();if(activeSection==='graph')refresh();else{renderer.setSelected?.(selectedId);renderView(currentView())}renderer.focusNode?.(selectedId)}});
 $('motion').addEventListener('click',event=>{
  renderer.setOptions({autoOrbit:!renderer.options.autoOrbit});
  event.currentTarget.setAttribute('aria-pressed',String(renderer.options.autoOrbit));
@@ -339,13 +369,37 @@ const labPanel=$('lab-panel');
 $('panel-toggle').addEventListener('click',()=>labPanel.classList.toggle('open'));
 $('panel-close').addEventListener('click',()=>labPanel.classList.remove('open'));
 
+const navLinks=[...document.querySelectorAll('.topbar-nav a')];
+const sectionFromLink=link=>link.getAttribute('href')==='#graph-stage'?'graph':String(link.getAttribute('href')||'').replace(/^#/,'');
+function setSection(section,{fit=true,updateHash=true}={}){
+ const next=ATLAS_SECTIONS.includes(section)?section:'graph';
+ activeSection=next;
+ selectedId=graph.rootId;
+ focusId=graph.rootId;
+ history=[];
+ document.documentElement.dataset.atlasSection=next;
+ for(const link of navLinks)link.classList.toggle('is-active',sectionFromLink(link)===next);
+ if(next==='settings')labPanel.classList.add('open');else labPanel.classList.remove('open');
+ refresh({fit});
+ if(updateHash)globalThis.history?.replaceState?.(null,'',next==='graph'?'#graph-stage':`#${next}`);
+}
+for(const link of navLinks)link.addEventListener('click',event=>{
+ event.preventDefault();
+ setSection(sectionFromLink(link),{fit:true});
+});
+
 $('renderer').addEventListener('change',event=>{
  const url=new URL(location.href);
  url.searchParams.set('renderer',event.target.value);
  url.searchParams.delete('fallback');
  location.assign(url);
 });
-$('preset').addEventListener('change',event=>{renderer.setPreset(event.target.value);syncControls();refresh()});
+$('preset').addEventListener('change',event=>{
+ renderer.setPreset(event.target.value);
+ renderer.setTheme?.(document.documentElement.dataset.theme||'dark');
+ syncControls();
+ refresh();
+});
 dataset.addEventListener('change',event=>rebuild(Number(event.target.value)));
 
 const SLIDERS=[['node-radius','nodeRadius'],['glow','glow'],['fog','fog'],['perspective','focalLength'],['drift','drift'],['pulse-speed','pulseSpeed'],['filament-curve','filamentCurve'],['max-labels','maxLabels'],['max-visible','maxVisibleNodes']];
@@ -362,15 +416,23 @@ for(const [id,key] of SLIDERS)$(id).addEventListener('input',event=>{
  const value=Number(event.target.value);
  renderer.setOptions({[key]:value});
  $(`${id}-out`).textContent=value.toFixed(decimals(id));
- if(key==='maxVisibleNodes')refresh();
+ if(key==='maxVisibleNodes'||activeSection==='settings')refresh();
 });
+
+const themeObserver=typeof MutationObserver==='function'?new MutationObserver(records=>{
+ if(!records.some(record=>record.attributeName==='data-theme'))return;
+ renderer.setTheme?.(document.documentElement.dataset.theme||'dark');
+ if(activeSection==='settings')refresh();else renderer.invalidate?.();
+}):null;
+themeObserver?.observe(document.documentElement,{attributes:true,attributeFilter:['data-theme']});
 
 // --- boot ------------------------------------------------------------------
 
 renderer.setPreset(matchMedia('(max-width:760px)').matches?'MOBILE':'ORIGINAL');
+renderer.setTheme?.(document.documentElement.dataset.theme||'dark');
 syncControls();
 renderNexoLive(graph.live);
-refresh({fit:true});
+setSection(activeSection,{fit:true,updateHash:false});
 renderer.start();
 
 if(!demoMode){
