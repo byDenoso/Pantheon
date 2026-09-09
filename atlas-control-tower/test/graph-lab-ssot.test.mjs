@@ -3,30 +3,32 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import {fileURLToPath,pathToFileURL} from 'node:url';
-
 const here=path.dirname(fileURLToPath(import.meta.url));
 const lab=path.resolve(here,'../graph-lab');
 const modulePath=rel=>path.join(lab,rel);
+async function importLab(rel){const file=modulePath(rel);assert.ok(fs.existsSync(file),`graph lab module missing: ${rel}`);return import(pathToFileURL(file));}
 
-async function importLab(rel){
- const file=modulePath(rel);
- assert.ok(fs.existsSync(file),`graph lab module missing: ${rel}`);
- return import(pathToFileURL(file));
-}
-
-test('SSOT adapter targets the canonical Drive spreadsheet and its three truth tabs',async()=>{
+test('SSOT adapter targets canonical Drive tabs and projects Domain -> Program -> Campaign',async()=>{
  const ssot=await importLab('data/ssot.mjs');
  assert.equal(ssot.SSOT_SPREADSHEET_ID,'1e6s2dKOYVLNsPUguHI85RLVLwJKtlCsQZBJ1BE-UhaY');
- assert.deepEqual(ssot.SSOT_TABS,['Science','Olympus','NEXO']);
+ assert.deepEqual(ssot.SSOT_TABS,['Science','Relations','Olympus','NEXO']);
  const graph=ssot.rowsToGraph({
-  Science:[{record_type:'paper',record_id:'T-PAPER-002',status:'IN_PROGRESS',title:'PEER observational model paper',detail:'core claim',source:'REV::T-PAPER-002::1',updated_at:'2026-09-09'}],
-  Olympus:[{record_type:'person',record_id:'P-001',status:'ACTIVE',title:'Athlete',detail:'current state',source:'Drive:olympus',updated_at:'2026-09-09'}],
-  NEXO:[{record_type:'policy',record_id:'POL-1',status:'ACTIVE',title:'Execution core',detail:'readback required',source:'Drive:nexo',updated_at:'2026-09-09'}]
+  Science:[
+   {record_type:'program',record_id:'PROG-A',status:'ACTIVE',title:'Program A',domain:'EXPANSION'},
+   {record_type:'campaign',record_id:'CAMP-A',status:'ACTIVE',title:'Campaign A',domain:'D3'},
+   {record_type:'current_test',record_id:'TEST-A',status:'ACTIVE',title:'Historical test',domain:'D3'}
+  ],
+  Relations:[{relation_id:'REL-A',source_entity:'CAMP-A',relation_type:'PRIMARY_PROGRAM',target_entity:'PROG-A',status:'ACTIVE'}],
+  Olympus:[{record_type:'person',record_id:'P-001',status:'ACTIVE',title:'Athlete',detail:'current state',source:'Drive:olympus'}],
+  NEXO:[{record_type:'policy',record_id:'POL-1',status:'ACTIVE',title:'Execution core',detail:'readback required',source:'Drive:nexo'}]
  });
+ const domain=graph.nodes.find(n=>n.hierarchyLevel==='domain'&&n.recordId==='EXPANSION');
+ const program=graph.nodes.find(n=>n.recordId==='PROG-A');
+ const campaign=graph.nodes.find(n=>n.recordId==='CAMP-A');
  assert.equal(graph.rootId,'system:NEXO');
- assert.ok(graph.nodes.some(n=>n.id==='system:SCIENCE'));
- assert.ok(graph.nodes.some(n=>n.id==='system:OLYMPUS'));
- assert.ok(graph.nodes.some(n=>n.id==='record:Science:T-PAPER-002'&&n.recordId==='T-PAPER-002'));
+ assert.equal(program.parentId,domain.id);
+ assert.equal(campaign.parentId,program.id);
+ assert.equal(graph.nodes.some(n=>n.recordId==='TEST-A'),false);
  assert.ok(graph.nodes.some(n=>n.id==='record:NEXO:POL-1'&&n.source==='Drive:nexo'));
  assert.ok(graph.edges.every(e=>graph.nodes.some(n=>n.id===e.source)&&graph.nodes.some(n=>n.id===e.target)));
 });

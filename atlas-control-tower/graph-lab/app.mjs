@@ -1,5 +1,6 @@
 import {createSyntheticGraph} from './data/synthetic-graph.mjs';
 import {loadSsotGraph,loadSsotSnapshot,SSOT_SPREADSHEET_URL} from './data/ssot.mjs';
+import {hierarchyView,expandForSearch,hierarchyExpandableIds} from './graph/projection.mjs';
 import {GraphLabRenderer as SigmaCanvasRenderer} from './graph/renderer.mjs';
 import {GraphLabRenderer as LegacyCanvasRenderer} from './graph/legacy-renderer.mjs';
 
@@ -8,7 +9,7 @@ const rendererRoot=$('graph-renderer-root');
 const params=new URLSearchParams(location.search);
 const demoMode=params.get('demo')==='1';
 const placeholderGraph=()=>({rootId:'system:NEXO',nodes:[{id:'system:NEXO',label:'NEXO',type:'SYSTEM',kind:'SYSTEM',system:'NEXO',status:'LOADING',authority:'canonical',hiddenChildren:0}],edges:[]});
-let graph=demoMode?createSyntheticGraph(50):placeholderGraph(),focusId=graph.rootId,history=[];
+let graph=demoMode?createSyntheticGraph(50):placeholderGraph(),focusId=graph.rootId,history=[],expandedIds=new Set(),activeOnly=false;
 const rendererMode=params.get('renderer')||'sigma-canvas';
 const Renderer=rendererMode==='legacy-canvas'?LegacyCanvasRenderer:SigmaCanvasRenderer;
 const target=rendererMode==='legacy-canvas'?$('graph-lab-canvas'):rendererRoot;
@@ -40,9 +41,18 @@ function viewForFocus(source,id,maxVisible){
  return{nodes,edges:source.edges.filter(e=>valid.has(e.source)&&valid.has(e.target))};
 }
 
+function isHierarchyGraph(source=graph){return source.nodes.some(n=>n.hierarchyLevel)}
+function graphView(){return isHierarchyGraph()?hierarchyView(graph,{expandedIds,activeOnly,maxVisible:renderer.options.maxVisibleNodes}):viewForFocus(graph,focusId,renderer.options.maxVisibleNodes)}
+function updateFocusLabel(id=focusId){$('focus-label').textContent=graph.nodes.find(n=>n.id===id)?.label||'NEXO'}
+function toggleHierarchy(node){
+ if(!node||!hierarchyExpandableIds(graph).has(node.id))return false;
+ if(expandedIds.has(node.id))expandedIds.delete(node.id);else expandedIds.add(node.id);
+ if(focusId!==node.id)history.push(focusId);focusId=node.id;updateFocusLabel();refresh();return true;
+}
+
 const renderer=new Renderer(target,{
- onSelect:node=>{if(node)$('focus-label').textContent=node.label},
- onOpen:node=>{if(node.hiddenChildren>0){history.push(focusId);focusId=node.id;$('focus-label').textContent=node.label;refresh()}},
+ onSelect:node=>{if(!node)return;updateFocusLabel(node.id);if(!demoMode)toggleHierarchy(node)},
+ onOpen:node=>{if(demoMode&&node?.hiddenChildren>0){history.push(focusId);focusId=node.id;updateFocusLabel();refresh()}},
  onStats:s=>{$('hud-fps').textContent=Number(s.fps||0).toFixed(0);$('hud-frame').textContent=Number(s.frameMs||0).toFixed(1);$('hud-nodes').textContent=s.nodes;$('hud-edges').textContent=s.edges;$('hud-labels').textContent=s.labels;$('hud-dpr').textContent=Number(s.dpr||1).toFixed(1)}
 });
 renderer.ready?.catch(error=>{
@@ -51,18 +61,32 @@ renderer.ready?.catch(error=>{
  const u=new URL(location.href);u.searchParams.set('renderer','legacy-canvas');u.searchParams.set('fallback','sigma-init');location.replace(u);
 });
 
-function refresh(){renderer.setGraph(viewForFocus(graph,focusId,renderer.options.maxVisibleNodes),{focusId})}
-function setGraphData(next){graph=next;focusId=graph.rootId;history=[];$('focus-label').textContent='NEXO';refresh()}
+function refresh(){
+ const view=graphView();
+ if(!view.nodes.some(n=>n.id===focusId)){focusId=graph.rootId;updateFocusLabel()}
+ renderer.setGraph(view,{focusId});
+}
+function setGraphData(next){graph=next;focusId=graph.rootId;history=[];expandedIds=new Set();activeOnly=false;$('active-only').setAttribute('aria-pressed','false');$('active-only').classList.remove('is-active');$('hierarchy-search').value='';updateFocusLabel();refresh()}
 function rebuild(count){if(!demoMode)return;setGraphData(createSyntheticGraph(count))}
 function syncControls(){const o=renderer.options;for(const [id,key] of [['node-radius','nodeRadius'],['glow','glow'],['fog','fog'],['perspective','focalLength'],['drift','drift'],['pulse-speed','pulseSpeed'],['filament-curve','filamentCurve'],['max-labels','maxLabels'],['max-visible','maxVisibleNodes']]){const input=$(id);if(input&&o[key]!=null){input.value=o[key];$(`${id}-out`).textContent=Number(o[key]).toFixed(['perspective','max-labels','max-visible'].includes(id)?0:id==='drift'?1:2)}}}
+
+$('hierarchy-search').addEventListener('input',e=>{
+ const query=e.target.value.trim();if(!query||!isHierarchyGraph())return;
+ const result=expandForSearch(graph,query,expandedIds);expandedIds=result.expandedIds;
+ if(result.matchId){if(focusId!==result.matchId)history.push(focusId);focusId=result.matchId;updateFocusLabel();refresh()}
+});
+$('hierarchy-search-clear').addEventListener('click',()=>{$('hierarchy-search').value='';$('hierarchy-search').focus()});
+$('expand-all').addEventListener('click',()=>{if(!isHierarchyGraph())return;expandedIds=hierarchyExpandableIds(graph);refresh()});
+$('collapse-all').addEventListener('click',()=>{expandedIds=new Set();refresh()});
+$('active-only').addEventListener('click',e=>{activeOnly=!activeOnly;e.currentTarget.setAttribute('aria-pressed',String(activeOnly));e.currentTarget.classList.toggle('is-active',activeOnly);refresh()});
 
 $('renderer').addEventListener('change',e=>{const u=new URL(location.href);u.searchParams.set('renderer',e.target.value);u.searchParams.delete('fallback');location.assign(u)});
 $('preset').addEventListener('change',e=>{renderer.setPreset(e.target.value);syncControls();refresh()});
 dataset.addEventListener('change',e=>rebuild(Number(e.target.value)));
 for(const [id,key] of [['node-radius','nodeRadius'],['glow','glow'],['fog','fog'],['perspective','focalLength'],['drift','drift'],['pulse-speed','pulseSpeed'],['filament-curve','filamentCurve'],['max-labels','maxLabels'],['max-visible','maxVisibleNodes']])$(id).addEventListener('input',e=>{const value=Number(e.target.value);renderer.setOptions({[key]:value});$(`${id}-out`).textContent=value.toFixed(['perspective','max-labels','max-visible'].includes(id)?0:id==='drift'?1:2);if(key==='maxVisibleNodes')refresh()});
 $('motion').addEventListener('click',e=>{renderer.setOptions({autoOrbit:!renderer.options.autoOrbit});e.currentTarget.setAttribute('aria-pressed',String(renderer.options.autoOrbit));e.currentTarget.textContent=renderer.options.autoOrbit?'Ⅱ':'▷'});
-$('back').addEventListener('click',()=>{if(history.length){focusId=history.pop();$('focus-label').textContent=graph.nodes.find(n=>n.id===focusId)?.label||'NEXO';refresh()}});
-$('home').addEventListener('click',()=>{if(focusId!==graph.rootId)history.push(focusId);focusId=graph.rootId;$('focus-label').textContent='NEXO';refresh()});
+$('back').addEventListener('click',()=>{if(history.length){focusId=history.pop();updateFocusLabel();refresh()}});
+$('home').addEventListener('click',()=>{if(focusId!==graph.rootId)history.push(focusId);focusId=graph.rootId;updateFocusLabel();refresh()});
 $('zoom-in').addEventListener('click',()=>renderer.zoom(1.15));$('zoom-out').addEventListener('click',()=>renderer.zoom(.86));$('fit').addEventListener('click',()=>renderer.fit());$('center').addEventListener('click',()=>renderer.centerSelected());$('flat').addEventListener('click',e=>{const flat=renderer.toggleFlat();e.currentTarget.textContent=flat?'2D':'3D'});
 const panel=$('lab-panel');$('panel-toggle').addEventListener('click',()=>panel.classList.add('open'));$('panel-close').addEventListener('click',()=>panel.classList.remove('open'));
 
@@ -72,14 +96,14 @@ if(!demoMode){
  loadSsotGraph().then(next=>{
   setGraphData(next);
   const records=Math.max(0,next.nodes.length-3);
-  setBadge(`SSOT LIVE · DRIVE · ${records} RECORDS`,{openSsot:true});
+  setBadge(`SSOT LIVE · DRIVE · ${records} NODES`,{openSsot:true});
  }).catch(async liveError=>{
   console.warn('[Graph Lab] Direct private Drive read blocked; using synchronized SSOT projection.',liveError);
   try{
    const next=await loadSsotSnapshot();
    setGraphData(next);
    const records=Math.max(0,next.nodes.length-3);
-   setBadge(`SSOT SNAPSHOT · DRIVE · ${records} RECORDS`,{openSsot:true});
+   setBadge(`SSOT SNAPSHOT · DRIVE · ${records} NODES`,{openSsot:true});
   }catch(snapshotError){
    console.error('[Graph Lab] Drive SSOT and synchronized snapshot unavailable.',snapshotError);
    setBadge('SSOT UNAVAILABLE · OPEN DRIVE',{openSsot:true});
