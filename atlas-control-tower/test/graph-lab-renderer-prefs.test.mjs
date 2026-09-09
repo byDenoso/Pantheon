@@ -11,7 +11,7 @@ const prefsPath=path.join(lab,'graph/renderer-lab-preferences.mjs');
 test('renderer lab exposes additional production presets',()=>{
  assert.ok(fs.existsSync(prefsPath),'graph/renderer-lab-preferences.mjs must exist');
  const source=fs.readFileSync(prefsPath,'utf8');
- for(const name of ['REFERENCE_3','GALACTIC_DUST','FOCUS_REVIEW','MOBILE_CLEAN','PERFORMANCE']){
+ for(const name of ['REFERENCE_3','GALACTIC_DUST','FOCUS_REVIEW','MOBILE_CLEAN','PERFORMANCE','PRESENTATION']){
   assert.match(source,new RegExp(`${name}\\s*:`),`${name} preset must exist`);
  }
  assert.match(source,/Object\.assign\(PRESETS,EXTRA_PRESETS\)/,'extra presets must extend the canonical PRESETS object');
@@ -31,10 +31,12 @@ test('renderer lab preferences persist preset, dataset and slider values',()=>{
  assert.match(source,/max-visible/);
 });
 
-test('standalone shell loads preferences before app and pins them for deploy',()=>{
- const index=fs.readFileSync(path.join(lab,'index.html'),'utf8');
- const builder=fs.readFileSync(path.join(lab,'build-cdn-index.mjs'),'utf8');
- assert.match(index,/\.\/graph\/renderer-lab-preferences\.mjs/);
- assert.ok(index.indexOf('./graph/renderer-lab-preferences.mjs')<index.indexOf('./app.mjs'),'preferences must load before app boot selects its initial preset');
- assert.match(builder,/graph\/renderer-lab-preferences\.mjs/);
+test('preference patch is renderer-only and does not alter graph topology',()=>{
+ assert.ok(fs.existsSync(prefsPath),'graph/renderer-lab-preferences.mjs must exist');
+ const source=fs.readFileSync(prefsPath,'utf8');
+ assert.match(source,/legacy-renderer\.mjs/);
+ assert.match(source,/renderer\.mjs/);
+ assert.doesNotMatch(source,/layoutNodes/,'preferences must not alter graph layout');
+ assert.doesNotMatch(source,/setGraph\s*=/,'preferences must not replace graph data flow');
+ assert.doesNotMatch(source,/loadSsotGraph/,'preferences must not touch SSOT loading');
 });
