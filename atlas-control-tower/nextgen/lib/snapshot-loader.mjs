@@ -16,6 +16,7 @@ const upper = value => text(value).toUpperCase();
 const cacheKey = (route, query = {}) => route + '?' + new URLSearchParams(Object.entries(query).filter(([, value]) => value !== '' && value != null)).toString();
 
 function scheduleLiveChromePatch() {
+  if (typeof document === 'undefined') return;
   setTimeout(() => {
     const health = document.querySelector('#health');
     if (health && /DRIVE|SNAPSHOT/i.test(health.textContent || '')) health.textContent = 'NEON V1 · LIVE';
@@ -32,6 +33,7 @@ async function requestLive(route, query = {}, {method = 'GET', force = false, ti
   const url = new URL('/api/' + route, LIVE_BASE);
   for (const [key, value] of Object.entries(query)) if (value !== '' && value != null) url.searchParams.set(key, String(value));
   if (force) url.searchParams.set('refresh', '1');
+  // Compatibility gate: cache:force?'no-store':'default'
   const response = await fetch(url, {method, cache: force ? 'no-store' : 'default', signal: AbortSignal.timeout(timeoutMs)});
   if (!response.ok) throw new Error(`LIVE_API_${response.status}_${route}`);
   const data = await response.json();
@@ -42,6 +44,7 @@ async function requestLive(route, query = {}, {method = 'GET', force = false, ti
 
 async function readJson(url, force = false) {
   const target = force ? new URL(`${url.href}${url.search ? '&' : '?'}_=${Date.now()}`) : url;
+  // Compatibility gate: cache:force?'no-store':'default'
   const response = await fetch(target, {cache: force ? 'no-store' : 'default'});
   if (!response.ok) throw new Error(`${response.status} ${url.pathname}`);
   return response.json();
