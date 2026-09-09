@@ -1,7 +1,7 @@
 import {createSyntheticGraph} from './data/synthetic-graph.mjs';
 import {loadSsotGraph,loadSsotSnapshot,SSOT_SPREADSHEET_URL} from './data/ssot.mjs';
 import {isBindableRecordId} from './data/operations.mjs';
-import {hierarchyView,expandForSearch,hierarchyExpandableIds,collapseSubtree,ancestorsOf} from './graph/projection.mjs';
+import {hierarchyView,expandForSearch,hierarchyExpandableIds,collapseSubtree,expandHierarchyNode,ancestorsOf} from './graph/projection.mjs';
 import {assignIdentityColors,domainLegend} from './graph/identity.mjs';
 import {buildSectionGraph,ATLAS_SECTIONS} from './graph/section-views.mjs';
 import './graph/canvas-reference-background.mjs';
@@ -154,7 +154,7 @@ function selectNode(id,{center=false}={}){
 /** Single click is the whole hierarchy navigation only in Graph Lab. */
 function toggleSubgraph(id){
  if(activeSection!=='graph'||!expandableIds().has(id))return false;
- expandedIds=expandedIds.has(id)?collapseSubtree(graph,id,expandedIds):new Set([...expandedIds,id]);
+ expandedIds=expandedIds.has(id)?collapseSubtree(graph,id,expandedIds):expandHierarchyNode(graph,id,expandedIds);
  refresh();
  return true;
 }
@@ -164,8 +164,11 @@ function openNode(id){
  const canonical=nodeById(id);
  if(!canonical){selectedId=id;renderer.setSelected?.(id);renderView(currentView());return}
  if(activeSection!=='graph')setSection('graph',{fit:false});
- const trail=ancestorsOf(graph,id);
- expandedIds=new Set([...expandedIds,...trail.slice(0,-1).map(step=>step.id)]);
+ if(canonical.hierarchyLevel==='lane')expandedIds=expandHierarchyNode(graph,id,expandedIds);
+ else{
+  const trail=ancestorsOf(graph,id);
+  expandedIds=new Set([...expandedIds,...trail.slice(0,-1).map(step=>step.id)]);
+ }
  selectNode(id,{center:true});
 }
 
@@ -277,7 +280,7 @@ function setGraphData(next){
  focusId=graph.rootId;
  history=[];
  activeOnly=false;
- showAlternativeFilaments=false;
+ showAlternativeFilaments=Boolean(visualExperience?.state?.filaments);
  $('active-only').setAttribute('aria-pressed','false');
  $('active-only').classList.remove('is-active');
  $('hierarchy-search').value='';
