@@ -70,10 +70,28 @@ test('experience controller adds demo, share, macro-domain navigation and dynami
  assert.match(source,/data-atlas-domain/);
 });
 
+test('macro-domain expansion keeps one primary lane open at a time',async()=>{
+ const projectionFile=mustExist('graph/projection.mjs');
+ const projection=await import(pathToFileURL(projectionFile));
+ assert.equal(typeof projection.expandHierarchyNode,'function');
+ const graph={rootId:'system:NEXO',nodes:[
+  {id:'system:NEXO',hierarchyLevel:'root'},
+  {id:'lane:SCIENCE',parentId:'system:NEXO',hierarchyLevel:'lane'},
+  {id:'lane:OLYMPUS',parentId:'system:NEXO',hierarchyLevel:'lane'},
+  {id:'domain:SCIENCE:X',parentId:'lane:SCIENCE',hierarchyLevel:'domain'},
+  {id:'olympus:group:LITE',parentId:'lane:OLYMPUS',hierarchyLevel:'group'}
+ ],edges:[]};
+ const switched=projection.expandHierarchyNode(graph,'lane:SCIENCE',new Set(['lane:OLYMPUS','olympus:group:LITE']));
+ assert.deepEqual([...switched],['lane:SCIENCE']);
+ const nested=projection.expandHierarchyNode(graph,'domain:SCIENCE:X',switched);
+ assert.deepEqual(new Set(nested),new Set(['lane:SCIENCE','domain:SCIENCE:X']));
+});
+
 test('app wires visual experience into real hierarchy and keeps alternative filaments opt-in',()=>{
  const app=read('app.mjs');
  assert.match(app,/visual-experience-v4\.mjs/);
  assert.match(app,/installVisualExperienceV4/);
+ assert.match(app,/expandHierarchyNode/);
  assert.match(app,/let showAlternativeFilaments=false/);
  assert.match(app,/hierarchyView\(graph,\{[^}]*showAlternativeFilaments/s);
  assert.match(app,/onOpenNode:\s*openNode/);
