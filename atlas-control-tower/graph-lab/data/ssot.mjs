@@ -11,10 +11,19 @@ export const SSOT_HIERARCHY_SNAPSHOT_URL=new URL('./ssot.hierarchy.snapshot.json
 export const ROOT_ID='system:NEXO';
 const HIERARCHY_TABS=['Science','Engineering'];
 const SYSTEM_FOR_TAB={Science:'SCIENCE',Engineering:'ENGINEERING',Olympus:'OLYMPUS',NEXO:'NEXO'};
+const LANE_BY_TAB={Science:'lane:SCIENCE',Engineering:'lane:ENGINEERING',Olympus:'lane:OLYMPUS'};
+const LANE_LABEL={SCIENCE:'CIÊNCIA',OLYMPUS:'OLYMPUS',ENGINEERING:'ENGENHARIA'};
+const LANE_SUMMARY={
+ SCIENCE:'Pesquisa, falsificação, domains científicos, programs, campaigns, tests e claims com evidência em Drive.',
+ OLYMPUS:'Metodologia Olympus: pessoas, protocolos, check-ins, null models e evolução corporal auditável.',
+ ENGINEERING:'GitHub + runtime são o Truth Owner: Atlas, deploy, automações, integrações e incidentes operacionais.'
+};
 const TYPE_FOR_LEVEL={domain:'DOMAIN',program:'PROGRAM',campaign:'CAMPAIGN'};
+const OLYMPUS_GROUPS=['CORE','LITE','RESEARCH'];
 
 const text=v=>v==null?'':String(v);
 const clean=v=>text(v).trim();
+const upper=v=>clean(v).toUpperCase();
 const cellValue=cell=>cell?.v==null?'':String(cell.v);
 const asArray=value=>Array.isArray(value)?value:value&&typeof value==='object'?[value]:[];
 
@@ -60,24 +69,78 @@ function makeNode(row,{parentId,extra={}}){
  };
 }
 
+function makeLane(code){
+ const authority=code==='ENGINEERING'?'runtime-github':'canonical';
+ return{
+  id:`lane:${code}`,recordId:code,recordType:'lane',hierarchyLevel:'lane',
+  label:LANE_LABEL[code]||code,type:'DOMAIN',kind:'LANE',system:code,
+  status:'ACTIVE',authority,parentId:ROOT_ID,domain:code,sheetTab:code==='SCIENCE'?'Science':code==='OLYMPUS'?'Olympus':'Engineering',
+  source:code==='ENGINEERING'?'GitHub + runtime':SSOT_SPREADSHEET_URL,
+  ssotUrl:SSOT_SPREADSHEET_URL,hiddenChildren:0,summary:LANE_SUMMARY[code]||''
+ };
+}
+
+function makeDerivedDomain(tab,code,parentId){
+ return{
+  id:`domain:${tab}:${code}`,recordId:code,recordType:'domain',hierarchyLevel:'domain',
+  label:code.replaceAll('_',' '),type:'DOMAIN',kind:'DOMAIN',system:SYSTEM_FOR_TAB[tab],
+  status:'ACTIVE',authority:'derived-from-ssot',parentId,
+  summary:`Domínio declarado no campo domain dos Programs da aba ${tab}.`,
+  domain:code,sheetTab:tab,source:SSOT_SPREADSHEET_URL,ssotUrl:SSOT_SPREADSHEET_URL,hiddenChildren:0
+ };
+}
+
+function makeOlympusGroup(group){
+ return{
+  id:`olympus:group:${group}`,recordId:`OLYMPUS-${group}`,recordType:'group',hierarchyLevel:'group',
+  label:group,type:'DOMAIN',kind:'GROUP',system:'OLYMPUS',status:'ACTIVE',authority:'canonical',
+  parentId:'lane:OLYMPUS',domain:'OLYMPUS',sheetTab:'Olympus',source:SSOT_SPREADSHEET_URL,ssotUrl:SSOT_SPREADSHEET_URL,
+  hiddenChildren:0,summary:`Agrupador Olympus ${group}: separa pessoas e estados antes dos subgrafos individuais.`
+ };
+}
+
+function makeOlympusPerson(row,parentId){
+ const recordId=clean(row.record_id);
+ return{
+  id:`record:Olympus:${recordId}`,recordId,recordType:'person',hierarchyLevel:'person',
+  label:clean(row.title||recordId),type:'PROGRAM',kind:'PERSON',system:'OLYMPUS',status:clean(row.status)||'UNKNOWN',
+  authority:'canonical',parentId,domain:'OLYMPUS',sheetTab:'Olympus',source:SSOT_SPREADSHEET_URL,ssotUrl:SSOT_SPREADSHEET_URL,
+  hiddenChildren:0,summary:clean(row.detail)||'Pessoa/cliente Olympus.',detail:clean(row.detail),olympusGroup:parentId.replace('olympus:group:','')
+ };
+}
+
+function makeOlympusState(row,parentId){
+ const recordId=clean(row.record_id);
+ return{
+  id:`record:Olympus:${recordId}:state:${clean(row.title||row.status||'STATE').replace(/[^A-Za-z0-9_-]+/g,'_')}`,
+  recordId:`${recordId}:STATE`,recordType:'state',hierarchyLevel:'state',
+  label:clean(row.title||row.status||'Estado atual'),type:'CAMPAIGN',kind:'STATE',system:'OLYMPUS',status:clean(row.status)||'UNKNOWN',
+  authority:'canonical',parentId,domain:'OLYMPUS',sheetTab:'Olympus',source:SSOT_SPREADSHEET_URL,ssotUrl:SSOT_SPREADSHEET_URL,
+  hiddenChildren:0,summary:clean(row.detail||row.summary),detail:clean(row.detail||row.summary)
+ };
+}
+
 /**
- * Projects the SSOT into the one Atlas hierarchy: NEXO -> Domain -> Program -> Campaign.
- *
- * Parenting is only ever what the SSOT declares — an explicit `parent_id`, the
- * `domain` column of a Program, or a PRIMARY_PROGRAM relation for a Campaign.
- * Records outside those three levels are not turned into graph nodes; they reach the
- * cockpit through attachOperations as read-only context.
+ * Projects the SSOT into the Atlas hierarchy:
+ * NEXO -> Ciência/Olympus/Engenharia -> local subgraphs.
+ * Filamentos alternativos are emitted as separate overlay edges. They cross-link
+ * domains without changing the hierarchy, because learning is not a fourth drawer
+ * called Misc, thank the tiny remaining dignity of information architecture.
  */
 export function rowsToGraph(rowsByTab={},meta={}){
  const root={
   id:ROOT_ID,recordId:'NEXO',label:'NEXO',type:'SYSTEM',kind:'SYSTEM',hierarchyLevel:'root',
   system:'NEXO',status:'ACTIVE',authority:'canonical',source:SSOT_SPREADSHEET_URL,
   sheetTab:'NEXO',ssotUrl:SSOT_SPREADSHEET_URL,hiddenChildren:0,
-  summary:'Núcleo operacional. Domínios, Programs e Campaigns são projeções diretas do NEXO · SSOT CANONICAL.'
+  summary:'Núcleo operacional. O primeiro nível separa Ciência, Olympus e Engenharia; subgrafos são abertos progressivamente.'
  };
  const nodes=[root];
  const edges=[];
- const connect=(parentId,node)=>{nodes.push(node);edges.push({id:`edge:${parentId}:${node.id}`,source:parentId,target:node.id,kind:'canonical',authority:'canonical'})};
+ const connect=(parentId,node,edgeExtra={})=>{nodes.push(node);edges.push({id:`edge:${parentId}:${node.id}`,source:parentId,target:node.id,kind:'canonical',authority:node.authority||'canonical',...edgeExtra})};
+ const connectExisting=(source,target,edge)=>{if(source&&target)edges.push({id:edge.id||`edge:${source}:${target}:${edge.kind||'derived'}`,source,target,...edge})};
+
+ const lanes=['SCIENCE','OLYMPUS','ENGINEERING'].map(makeLane);
+ for(const lane of lanes)connect(ROOT_ID,lane);
 
  const rows=[];
  for(const tab of HIERARCHY_TABS)for(const row of asArray(rowsByTab[tab])){const parsed=hierarchyRow(tab,row);if(parsed)rows.push(parsed)}
@@ -93,12 +156,15 @@ export function rowsToGraph(rowsByTab={},meta={}){
 
  const domainIdByCode=new Map();
  const nodeIdByRecord=new Map();
+ const registerRecord=node=>{if(node.recordId)nodeIdByRecord.set(node.recordId,node.id)};
+ lanes.forEach(registerRecord);
 
  for(const row of unique.filter(r=>r.level==='domain')){
-  const node=makeNode(row,{parentId:ROOT_ID});
-  connect(ROOT_ID,node);
+  const parentId=LANE_BY_TAB[row.tab]||ROOT_ID;
+  const node=makeNode(row,{parentId});
+  connect(parentId,node);
   domainIdByCode.set(`${row.tab}:${row.recordId}`,node.id);
-  nodeIdByRecord.set(row.recordId,node.id);
+  registerRecord(node);
  }
 
  // A Program declares its Domain either by parent_id or by the domain column; when
@@ -110,40 +176,86 @@ export function rowsToGraph(rowsByTab={},meta={}){
    const code=row.domainCode||'UNASSIGNED';
    const key=`${row.tab}:${code}`;
    if(!domainIdByCode.has(key)){
-    const derived={
-     id:`domain:${row.tab}:${code}`,recordId:code,recordType:'domain',hierarchyLevel:'domain',
-     label:code.replaceAll('_',' '),type:'DOMAIN',kind:'DOMAIN',system:SYSTEM_FOR_TAB[row.tab],
-     status:'ACTIVE',authority:'derived-from-ssot',parentId:ROOT_ID,
-     summary:`Domínio declarado no campo domain dos Programs da aba ${row.tab}.`,
-     domain:code,sheetTab:row.tab,source:SSOT_SPREADSHEET_URL,ssotUrl:SSOT_SPREADSHEET_URL,hiddenChildren:0
-    };
-    connect(ROOT_ID,derived);
+    const derived=makeDerivedDomain(row.tab,code,LANE_BY_TAB[row.tab]||ROOT_ID);
+    connect(derived.parentId,derived);
     domainIdByCode.set(key,derived.id);
+    registerRecord(derived);
    }
    parentId=domainIdByCode.get(key);
   }
   const node=makeNode(row,{parentId});
   connect(parentId,node);
-  nodeIdByRecord.set(row.recordId,node.id);
+  registerRecord(node);
  }
 
  for(const row of unique.filter(r=>r.level==='campaign')){
   const declared=row.parentRecordId||primaryProgramByCampaign.get(row.recordId)||'';
   const parentId=nodeIdByRecord.get(declared);
-  const node=makeNode(row,{
-   parentId:parentId||ROOT_ID,
-   extra:{primaryProgramId:declared,hierarchyOrphan:!parentId}
-  });
+  const fallback=LANE_BY_TAB[row.tab]||ROOT_ID;
+  const node=makeNode(row,{parentId:parentId||fallback,extra:{primaryProgramId:declared,hierarchyOrphan:!parentId}});
   connect(node.parentId,node);
-  nodeIdByRecord.set(row.recordId,node.id);
+  registerRecord(node);
  }
 
+ // Olympus is not a cosmology hierarchy. Keep its macro lane and then split people
+ // by real method tier before showing individual subgraphs.
+ const groupIds=new Map();
+ for(const group of OLYMPUS_GROUPS){
+  const node=makeOlympusGroup(group);
+  connect('lane:OLYMPUS',node);
+  groupIds.set(group,node.id);
+  registerRecord(node);
+ }
+ const olympusPeople=new Map();
+ for(const row of asArray(rowsByTab.Olympus).filter(row=>clean(row.record_type).toLowerCase()==='person')){
+  const group=upper(row.detail)||'LITE';
+  const parentId=groupIds.get(group)||groupIds.get('LITE');
+  const node=makeOlympusPerson(row,parentId);
+  connect(parentId,node);
+  olympusPeople.set(node.recordId,node.id);
+  registerRecord(node);
+ }
+ for(const row of asArray(rowsByTab.Olympus).filter(row=>clean(row.record_type).toLowerCase()==='state')){
+  const parentId=olympusPeople.get(clean(row.record_id));
+  if(!parentId)continue;
+  const node=makeOlympusState(row,parentId);
+  connect(parentId,node);
+  registerRecord(node);
+ }
+
+ // Engineering may be sparse in the spreadsheet because GitHub/runtime are its truth
+ // owner. These stable subsystem nodes make that boundary visible without pretending
+ // the sheet is the source of runtime truth.
+ const engineeringChildren=[
+  ['engineering:atlas','Atlas','Frontend, Graph Lab, cockpit e visualização.'],
+  ['engineering:runtime','Runtime','Runtimes, logs, readbacks e execução material.'],
+  ['engineering:deploy','Deploy','Vercel, CDN pinning, aliases e produção.'],
+  ['engineering:automations','Automations','Automações NEXO e rotinas recorrentes.'],
+  ['engineering:integrity','Integrity','Integridade, blockers, rollback e quality gates.']
+ ];
+ for(const [id,label,summary] of engineeringChildren){
+  const node={id,recordId:id.replace('engineering:','ENG-').toUpperCase(),recordType:'project',hierarchyLevel:'project',label,type:'PROGRAM',kind:'PROJECT',system:'ENGINEERING',status:'ACTIVE',authority:'runtime-github',parentId:'lane:ENGINEERING',domain:'ENGINEERING',sheetTab:'Engineering',source:'GitHub + runtime',ssotUrl:SSOT_SPREADSHEET_URL,hiddenChildren:0,summary};
+  connect('lane:ENGINEERING',node,{authority:'runtime-github'});
+  registerRecord(node);
+ }
+
+ const findRecord=id=>nodeIdByRecord.get(id);
+ const sourceValidation=findRecord('PROG-SCIENTIFIC-VALIDATION')||'domain:Science:VALIDATION'||'lane:SCIENCE';
+ const olympusLane='lane:OLYMPUS';
+ const engineeringLane='lane:ENGINEERING';
+ const scienceLane='lane:SCIENCE';
+ connectExisting(scienceLane,olympusLane,{kind:'alternative-learning',type:'ALTERNATIVE_FILAMENT',alternative:true,status:'SUPPORTED',title:'Null models e auditoria aplicados ao Olympus',summary:'Transferência interdomínio: usar null model e leitura de falso progresso antes de interpretar check-ins corporais.'});
+ connectExisting(sourceValidation,olympusLane,{kind:'alternative-transfer',type:'ALTERNATIVE_FILAMENT',alternative:true,status:'SUPPORTED',title:'Validation → Olympus',summary:'Validação científica vira heurística operacional para recomposição, evolução e check-ins.'});
+ connectExisting(engineeringLane,scienceLane,{kind:'alternative-validation',type:'ALTERNATIVE_FILAMENT',alternative:true,status:'SUPPORTED',title:'Runtime/readback → Ciência',summary:'Quality gates, CI e readback protegem claims e execução científica.'});
+ connectExisting(engineeringLane,olympusLane,{kind:'alternative-learning',type:'ALTERNATIVE_FILAMENT',alternative:true,status:'CANDIDATE',title:'Automação → Olympus',summary:'Rotinas e lembretes podem reduzir perda de check-in e atraso de ajuste.'});
+
  const childCounts=new Map();
- for(const edge of edges)childCounts.set(edge.source,(childCounts.get(edge.source)||0)+1);
+ for(const edge of edges.filter(edge=>!edge.alternative))childCounts.set(edge.source,(childCounts.get(edge.source)||0)+1);
  for(const node of nodes)node.hiddenChildren=childCounts.get(node.id)||0;
 
  const graph={
   rootId:ROOT_ID,nodes,edges,
+  alternativeFilamentsDefault:true,
   live:extractLiveState(rowsByTab),
   source:{kind:meta.kind||'drive-ssot',spreadsheetId:SSOT_SPREADSHEET_ID,url:SSOT_SPREADSHEET_URL,tabs:[...SSOT_TABS]}
  };
