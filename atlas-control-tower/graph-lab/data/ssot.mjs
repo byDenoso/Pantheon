@@ -27,8 +27,10 @@ export function rowsToGraph(rowsByTab){
   const parentId=system==='NEXO'?'system:NEXO':`system:${system}`;
   for(const row of rowsByTab?.[tab]||[]){
    const recordId=text(row.record_id).trim();if(!recordId)continue;
-   const id=`record:${tab}:${recordId}:${text(row.record_type).trim()}`;if(seen.has(id))continue;seen.add(id);
    const recordType=text(row.record_type).trim();
+   const baseId=`record:${tab}:${recordId}`;
+   const id=seen.has(baseId)?`${baseId}:${recordType||'record'}`:baseId;
+   if(seen.has(id))continue;seen.add(id);
    const node={id,recordId,recordType,label:text(row.title||recordId),type:TYPE_FOR_RECORD[recordType]||'TEST',system,status:text(row.status||'UNKNOWN'),authority:'canonical',parentId,detail:text(row.detail||row.summary),payloadJson:text(row.payload_json),source:text(row.source||row.source_ref),updatedAt:text(row.updated_at),domain:text(row.domain),sheetTab:tab,ssotUrl:SSOT_SPREADSHEET_URL,hiddenChildren:0};
    nodes.push(node);edges.push({id:`edge:${parentId}:${id}`,source:parentId,target:id,kind:'canonical',authority:'canonical'});
   }
