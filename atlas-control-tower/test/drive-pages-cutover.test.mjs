@@ -81,6 +81,23 @@ test('compiler uses ACTION_INDEX as the merged operational projection instead of
   assert.doesNotMatch(code, /readTable_\(book,'ACTIONS_OLYMPUS'\)/);
 });
 
+test('compiler preserves multi-action execution runs without creating orphan parents', () => {
+  const code = text('apps-script','Code.gs');
+  assert.match(code, /actionNodeIds=\{\}/);
+  assert.match(code, /actionRaws=splitIds_\(pick_\(row,\['action_id','Action ID'\]\)\)/);
+  assert.match(code, /ALSO_EXECUTED_AS/);
+  assert.match(code, /parentIds\[0\]\|\|'system:OPERATIONS'/);
+});
+
+test('compiler quarantines stale Drive relations instead of breaking the published graph', () => {
+  const code = text('apps-script','Code.gs');
+  assert.match(code, /function repairGraphIntegrity_\s*\(/);
+  assert.match(code, /orphanEdges/);
+  assert.match(code, /reparentedNodes/);
+  assert.match(code, /INTEGRITY_FALLBACK/);
+  assert.match(code, /integrity: \{orphanEdges: integrity\.orphanEdges, reparentedNodes: integrity\.reparentedNodes\}/);
+});
+
 test('snapshot contract exposes hierarchy, provenance and Present from one truth', async () => {
   const file = path('nextgen','lib','snapshot-contract.mjs');
   if (!existsSync(file)) return;

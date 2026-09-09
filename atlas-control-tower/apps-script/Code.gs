@@ -42,14 +42,16 @@ function compileAtlasProjection() {
   const learned = projectLearning_(learning, graph);
   const operations = projectOperations_(ops, graph);
   const olympusProjection = projectOlympus_(olympus, graph);
+  const integrity = repairGraphIntegrity_(graph);
 
   const atlasData = {
     nodes: stableSort_(graph.nodes, 'id'),
-    edges: stableSortEdges_(dedupeEdges_(graph.edges)),
+    edges: stableSortEdges_(integrity.validEdges),
     activity: science.activity.concat(operations.activity).slice(-1000),
     learning: learned.records,
     operations: operations.records,
     olympus: olympusProjection.summary,
+    integrity: {orphanEdges: integrity.orphanEdges, reparentedNodes: integrity.reparentedNodes},
     systemState: {sourceId: ATLAS.stateIndex, mode: 'truth-owner-pointer', authority: 'GOOGLE_DRIVE'}
   };
   const lineageData = buildLineage_(atlasData);
@@ -227,14 +229,14 @@ function projectLearning_(book, g) {
 }
 
 function projectOperations_(book, g) {
-  const actions=readTable_(book,'ACTION_INDEX'), runs=readTable_(book,'EXECUTION_RUNS'), signals=readTable_(book,'SIGNAL_LEDGER'), effects=readTable_(book,'EFFECT_LEDGER'), relations=readTable_(book,'RELATION_LEDGER'), activity=[], records=[];
+  const actions=readTable_(book,'ACTION_INDEX'), runs=readTable_(book,'EXECUTION_RUNS'), signals=readTable_(book,'SIGNAL_LEDGER'), effects=readTable_(book,'EFFECT_LEDGER'), relations=readTable_(book,'RELATION_LEDGER'), activity=[], records=[], actionNodeIds={};
   actions.forEach((row,i)=>{
     const raw=pick_(row,['action_id','Action ID']) || 'row-'+(i+2), id='action:'+token_(raw), n=node_(id,'OPERATION',pick_(row,['action','Ação','summary'])||raw,'system:OPERATIONS',pick_(row,['domain'])||'OPERATIONS',pick_(row,['status'])||'UNKNOWN',pick_(row,['inference_basis','next_action','summary'])||'');
-    n.activityAt=pick_(row,['last_checked'])||''; n.authority='OPERATIONS_CANONICAL'; n.sourceRefs=[ref_('GOOGLE_DRIVE','ACTION_INDEX',raw)]; g.addNode(n); g.addEdge('system:OPERATIONS',id,'CONTAINS','OPERATIONS_CANONICAL'); records.push(compactRecord_('ACTION_INDEX',row));
+    n.activityAt=pick_(row,['last_checked'])||''; n.authority='OPERATIONS_CANONICAL'; n.sourceRefs=[ref_('GOOGLE_DRIVE','ACTION_INDEX',raw)]; g.addNode(n); actionNodeIds[id]=true; g.addEdge('system:OPERATIONS',id,'CONTAINS','OPERATIONS_CANONICAL'); records.push(compactRecord_('ACTION_INDEX',row));
   });
   runs.forEach((row,i)=>{
-    const raw=pick_(row,['run_id','Run ID']) || 'row-'+(i+2), id='run:'+token_(raw), parentRaw=pick_(row,['action_id','Action ID']), parent=parentRaw?'action:'+token_(parentRaw):'system:OPERATIONS', n=node_(id,'RUN',pick_(row,['title','run_type','operation'])||raw,parent,pick_(row,['domain'])||'OPERATIONS',pick_(row,['status','outcome'])||'UNKNOWN',pick_(row,['summary','result_summary','message'])||'');
-    n.activityAt=pick_(row,['finished_at','observed_at','started_at','timestamp'])||''; n.authority='OPERATIONS_CANONICAL'; n.sourceRefs=[ref_('GOOGLE_DRIVE','EXECUTION_RUNS',raw)]; g.addNode(n); g.addEdge(parent,id,'EXECUTED_AS','OPERATIONS_CANONICAL'); records.push(compactRecord_('EXECUTION_RUNS',row)); activity.push({entityId:id,at:n.activityAt,summary:n.summary,source:'NEXO ACTION_REGISTER/EXECUTION_RUNS'});
+    const raw=pick_(row,['run_id','Run ID']) || 'row-'+(i+2), id='run:'+token_(raw), actionRaws=splitIds_(pick_(row,['action_id','Action ID'])), parentIds=actionRaws.map(value=>'action:'+token_(value)).filter(value=>actionNodeIds[value]), parent=parentIds[0]||'system:OPERATIONS', n=node_(id,'RUN',pick_(row,['title','run_type','operation'])||raw,parent,pick_(row,['domain'])||'OPERATIONS',pick_(row,['status','outcome'])||'UNKNOWN',pick_(row,['summary','result_summary','message'])||'');
+    n.actionIds=actionRaws; n.activityAt=pick_(row,['finished_at','observed_at','started_at','timestamp'])||''; n.authority='OPERATIONS_CANONICAL'; n.sourceRefs=[ref_('GOOGLE_DRIVE','EXECUTION_RUNS',raw)]; g.addNode(n); g.addEdge(parent,id,'EXECUTED_AS','OPERATIONS_CANONICAL'); parentIds.slice(1).forEach(extra=>g.addEdge(extra,id,'ALSO_EXECUTED_AS','OPERATIONS_CANONICAL')); records.push(compactRecord_('EXECUTION_RUNS',row)); activity.push({entityId:id,at:n.activityAt,summary:n.summary,source:'NEXO ACTION_REGISTER/EXECUTION_RUNS'});
   });
   records.push(...signals.map(r=>compactRecord_('SIGNAL_LEDGER',r)),...effects.map(r=>compactRecord_('EFFECT_LEDGER',r)),...relations.map(r=>compactRecord_('RELATION_LEDGER',r)));
   return {records,activity};
@@ -296,6 +298,31 @@ function readTable_(book,name) {
   if(headerIndex>=values.length)return[];
   const headers=values[headerIndex].map((v,i)=>String(v||('COL_'+(i+1))).trim());
   return values.slice(headerIndex+1).filter(row=>row.some(v=>String(v).trim()!=='')).map(row=>{const out={};headers.forEach((h,i)=>out[h]=row[i]==null?'':row[i]);return out});
+}
+
+function repairGraphIntegrity_(graph) {
+  const ids={}; graph.nodes.forEach(n=>{if(n&&n.id)ids[n.id]=true});
+  const reparentedNodes=[];
+  graph.nodes.forEach(n=>{
+    if(!n||!n.parentId||ids[n.parentId])return;
+    const originalParentId=n.parentId, fallback=fallbackParent_(n);
+    n.parentId=fallback; n.integrity=Object.assign({},n.integrity||{},{reparentedFrom:originalParentId});
+    reparentedNodes.push({nodeId:n.id,originalParentId,fallbackParentId:fallback});
+    if(fallback&&ids[fallback])graph.addEdge(fallback,n.id,'CONTAINS','INTEGRITY_FALLBACK',originalParentId);
+  });
+  const validEdges=[], orphanEdges=[];
+  dedupeEdges_(graph.edges).forEach(e=>{
+    if(ids[e.source]&&ids[e.target])validEdges.push(e);
+    else orphanEdges.push(Object.assign({},e,{reason:!ids[e.source]&&!ids[e.target]?'MISSING_SOURCE_AND_TARGET':(!ids[e.source]?'MISSING_SOURCE':'MISSING_TARGET')}));
+  });
+  return {validEdges,orphanEdges,reparentedNodes};
+}
+
+function fallbackParent_(node) {
+  if(node.domain==='OLYMPUS'||String(node.id||'').indexOf('olympus-')===0)return'system:OLYMPUS';
+  if(['OPERATION','RUN'].includes(node.type))return'system:OPERATIONS';
+  if(['MEMORY','POLICY','STRATEGY','SKILL','LEARNING'].includes(node.type)||String(node.id||'').indexOf('learning:')===0||String(node.id||'').indexOf('learning-concept:')===0)return'system:LEARNING';
+  return'system:SCIENCE';
 }
 
 function buildLineage_(atlas) {
