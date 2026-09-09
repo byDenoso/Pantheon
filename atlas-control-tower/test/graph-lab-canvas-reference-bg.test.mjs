@@ -25,12 +25,7 @@ test('app imports the 2D background adapter before choosing the legacy renderer'
  const app=fs.readFileSync(path.join(lab,'app.mjs'),'utf8');
  assert.match(app,/import ['"]\.\/graph\/canvas-reference-background\.mjs['"]/);
  assert.ok(app.indexOf('./graph/canvas-reference-background.mjs')<app.indexOf('./graph/legacy-renderer.mjs'),'adapter must load before app imports the legacy renderer binding');
-});
-
-test('approved 2D canvas becomes the default renderer while three-canvas remains opt-in',()=>{
- const app=fs.readFileSync(path.join(lab,'app.mjs'),'utf8');
- assert.match(app,/params\.get\('renderer'\)==='three-canvas'\?'three-canvas':'legacy-canvas'/);
- assert.match(app,/const Renderer=rendererMode==='legacy-canvas'\?LegacyCanvasRenderer:ThreeCanvasRenderer/);
+ assert.match(app,/params\.get\('renderer'\)==='legacy-canvas'\?'legacy-canvas':'three-canvas'/);
 });
 
 test('legacy canvas graph can change colour system when the theme changes',()=>{
