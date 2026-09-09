@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
 import {layoutNodes} from '../graph-lab/graph/layout.mjs';
 
 const root={id:'NEXO'};
@@ -47,4 +48,19 @@ test('expanding a branch preserves every existing position',()=>{
 
 test('layout remains deterministic',()=>{
  assert.deepEqual([...layoutNodes(all,'NEXO',opts)],[...layoutNodes(all,'NEXO',opts)]);
+});
+
+test('3D renderer adapter is wired before app and deploy-pinned',()=>{
+ const volumePath=new URL('../graph-lab/graph/volume-rendering.mjs',import.meta.url);
+ assert.ok(fs.existsSync(volumePath),'volume-rendering.mjs must exist');
+ const index=fs.readFileSync(new URL('../graph-lab/index.html',import.meta.url),'utf8');
+ const builder=fs.readFileSync(new URL('../graph-lab/build-cdn-index.mjs',import.meta.url),'utf8');
+ const volume=index.indexOf('src="./graph/volume-rendering.mjs"');
+ const app=index.indexOf('src="./app.mjs"');
+ assert.ok(volume>=0&&app>volume,'volume adapter must execute before app.mjs');
+ assert.match(builder,/graph\/volume-rendering\.mjs/);
+ const source=fs.readFileSync(volumePath,'utf8');
+ assert.match(source,/crossVectors/);
+ assert.match(source,/Math\.hypot\(\.\.\.position\)/);
+ assert.doesNotMatch(source,/requestAnimationFrame|setInterval|setTimeout/);
 });
