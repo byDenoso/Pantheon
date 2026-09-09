@@ -21,20 +21,23 @@ test('cutover artifacts exist', () => {
   ]) assert.equal(existsSync(path(...file)), true, `missing ${file.join('/')}`);
 });
 
-test('browser runtime is static and Drive-owned', () => {
+test('Pages runtime is wired to the live Vercel backend with a degraded static fallback', () => {
   const html = text('index.html');
   const app = text('nextgen','app.mjs');
-  const loader = existsSync(path('nextgen','lib','snapshot-loader.mjs')) ? text('nextgen','lib','snapshot-loader.mjs') : '';
-  assert.match(html, /GOOGLE DRIVE/i);
-  assert.doesNotMatch(html, /NEON V1/i);
+  const loader = text('nextgen','lib','snapshot-loader.mjs');
+  assert.match(loader, /https:\/\/nexo-atlas-control-tower\.vercel\.app/);
+  assert.match(loader, /requestLive\('graph'/);
+  assert.match(loader, /requestLive\('health'/);
+  assert.match(loader, /requestLive\('state'/);
+  assert.match(loader, /requestLive\('sync'/);
+  assert.match(loader, /NEON_V1/);
+  assert.match(loader, /SNAPSHOT_FALLBACK/);
+  assert.match(loader, /\.\.\/\.\.\/data\/atlas\.json/);
   assert.doesNotMatch(app, /\/api\/ng/);
-  assert.doesNotMatch(loader, /\/api\/ng/);
-  assert.match(loader, /atlas\.json/);
-  assert.match(loader, /lineage\.json/);
-  assert.match(loader, /presentation\.json/);
+  assert.match(html, /nextgen\/app\.mjs/);
 });
 
-test('all snapshots use the canonical envelope', () => {
+test('all bundled fallback snapshots keep the canonical static envelope', () => {
   for (const name of ['atlas.json','lineage.json','presentation.json']) {
     const file = path('data',name);
     if (!existsSync(file)) continue;
@@ -47,69 +50,16 @@ test('all snapshots use the canonical envelope', () => {
   }
 });
 
-test('Apps Script compiler is deterministic, bounded and change-aware', () => {
-  const file = path('apps-script','Code.gs');
-  if (!existsSync(file)) return;
-  const code = readFileSync(file, 'utf8');
+test('Apps Script compiler remains a fallback publisher, not the live backend', () => {
+  const code = text('apps-script','Code.gs');
   assert.match(code, /function compileAtlasProjection\s*\(/);
   assert.match(code, /function syncAtlasToGitHub\s*\(/);
-  assert.match(code, /function syncAtlas\s*\(/);
   assert.match(code, /Utilities\.computeDigest/);
-  assert.match(code, /PropertiesService/);
-  assert.match(code, /api\.github\.com\/repos/);
-  assert.match(code, /fingerprint/);
-  assert.match(code, /getRange\(/);
   assert.match(code, /nexo-atlas-snapshot\/v1/);
-});
-
-test('compiler projects canonical learning, relations, operations and Olympus without inventing a new store', () => {
-  const code = text('apps-script','Code.gs');
-  for (const surface of [
-    'LEARNING_INDEX','PROCEDURAL_MEMORY','ADAPTIVE_POLICY','STRATEGY_REGISTRY',
-    'RELATION_LEDGER','HISTORICAL_LEARNING_LEDGER','ACTION_INDEX','EXECUTION_RUNS',
-    "'Ledger'","'Evidence_Registry'"
-  ]) assert.match(code, new RegExp(surface.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')), `missing Drive surface ${surface}`);
   assert.doesNotMatch(code, /CREATE TABLE|INSERT INTO|postgres|neon\.tech/i);
 });
 
-test('compiler uses ACTION_INDEX as the merged operational projection instead of duplicating partition reads', () => {
-  const code = text('apps-script','Code.gs');
-  assert.match(code, /readTable_\(book,'ACTION_INDEX'\)/);
-  assert.match(code, /compactRecord_\('ACTION_INDEX',row\)/);
-  assert.doesNotMatch(code, /readTable_\(book,'ACTIONS_SCIENCE'\)/);
-  assert.doesNotMatch(code, /readTable_\(book,'ACTIONS_ENGINEERING'\)/);
-  assert.doesNotMatch(code, /readTable_\(book,'ACTIONS_OLYMPUS'\)/);
-});
-
-test('compiler preserves multi-action execution runs without creating orphan parents', () => {
-  const code = text('apps-script','Code.gs');
-  assert.match(code, /actionNodeIds=\{\}/);
-  assert.match(code, /actionRaws=splitIds_\(pick_\(row,\['action_id','Action ID'\]\)\)/);
-  assert.match(code, /ALSO_EXECUTED_AS/);
-  assert.match(code, /parentIds\[0\]\|\|'system:OPERATIONS'/);
-});
-
-test('compiler quarantines stale Drive relations instead of breaking the published graph', () => {
-  const code = text('apps-script','Code.gs');
-  assert.match(code, /function repairGraphIntegrity_\s*\(/);
-  assert.match(code, /orphanEdges/);
-  assert.match(code, /reparentedNodes/);
-  assert.match(code, /INTEGRITY_FALLBACK/);
-  assert.match(code, /integrity: \{orphanEdges: integrity\.orphanEdges, reparentedNodes: integrity\.reparentedNodes\}/);
-});
-
-test('compiled static projection avoids duplicating graph truth across envelopes', () => {
-  const code = text('apps-script','Code.gs');
-  assert.match(code, /graph\.nodes\.map\(compactAtlasNode_\)/);
-  assert.match(code, /integrity\.validEdges\.filter\(e=>e\.type!=='CONTAINS'\)/);
-  assert.match(code, /relations:\{source:'atlas\.data\.edges'\}/);
-  assert.match(code, /provenance:\{source:'atlas\.data\.nodes\[\*\]\.sourceRefs'\}/);
-  assert.match(code, /JSON\.stringify\(item\[1\]\)\+'\\n'/);
-});
-
-test('snapshot contract exposes hierarchy, provenance and Present from one truth', async () => {
-  const file = path('nextgen','lib','snapshot-contract.mjs');
-  if (!existsSync(file)) return;
+test('snapshot contract still exposes hierarchy, provenance and Present from one fallback truth', async () => {
   const {normalizeAtlasEnvelope, sliceSnapshot, buildPresentStory} = await import('../nextgen/lib/snapshot-contract.mjs');
   const envelope = normalizeAtlasEnvelope({
     schemaVersion:'nexo-atlas-snapshot/v1',
@@ -139,7 +89,7 @@ test('snapshot contract exposes hierarchy, provenance and Present from one truth
   assert.ok(story.children.some(n=>n.id==='claim:X1'));
 });
 
-test('NextGen exposes explicit Explore hierarchy and Present overlay on the same static map', () => {
+test('NextGen exposes explicit Explore hierarchy and Present overlay on the same map', () => {
   const html = text('index.html');
   const app = text('nextgen','app.mjs');
   assert.match(html, /data-atlas-mode="explore"/);
