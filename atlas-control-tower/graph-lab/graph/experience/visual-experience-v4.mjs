@@ -106,6 +106,12 @@ export function installVisualExperienceV4({renderer,onOpenNode,onGoHome,onToggle
   return result;
  };
  renderer.setTheme=function(theme){const result=originalSetTheme?.(theme);queueMicrotask(background);return result};
+ if(renderer.callbacks){
+  renderer.callbacks.onSelect=node=>{
+   if(!node){onGoHome?.();return}
+   onOpenNode?.(node.id);
+  };
+ }
  if(originalDrawSpace){
   renderer.drawSpace=function(ctx,w,h){
    originalDrawSpace(ctx,w,h);
@@ -168,8 +174,11 @@ export function installVisualExperienceV4({renderer,onOpenNode,onGoHome,onToggle
   const advanced=document.createElement('details');advanced.className='atlas-advanced-controls';advanced.innerHTML='<summary>ADVANCED <span>Renderer · preset · dataset · tuning</span></summary><div data-atlas-advanced-host></div>';
   root.after(advanced);
   const advancedHost=advanced.querySelector('[data-atlas-advanced-host]');
-  const fixed=new Set([panel.querySelector('.panel-head'),hud,root,advanced]);
+  advancedHost.append(hud);
+  const fixed=new Set([panel.querySelector('.panel-head'),root,advanced]);
   for(const child of [...panel.children])if(!fixed.has(child))advancedHost.append(child);
+  const headTitle=panel.querySelector('.panel-head h1');if(headTitle)headTitle.textContent='Visual settings';
+  const headMeta=panel.querySelector('.panel-head small');if(headMeta)headMeta.textContent='APARÊNCIA DO ATLAS';
   const select=root.querySelector('select'),grid=root.querySelector('.atlas-experience-grid');
   for(const id of EXPERIENCE_ORDER){
    const p=EXPERIENCE_PRESETS[id];
