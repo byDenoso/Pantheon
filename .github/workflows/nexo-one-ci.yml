@@ -1,0 +1,47 @@
+name: NEXO ONE CI
+on:
+  push:
+    paths: ['nexo-one/**', '.github/workflows/nexo-one-*.yml']
+  pull_request:
+    paths: ['nexo-one/**', '.github/workflows/nexo-one-*.yml']
+permissions:
+  contents: read
+concurrency:
+  group: nexo-one-ci-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: nexo-one
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: nexo-one/package-lock.json
+      - run: npm ci
+      - run: npm run check
+      - name: Install isolated browser test tools
+        run: |
+          npm install --prefix "$RUNNER_TEMP/nexo-browser" --no-audit --no-fund playwright@1.62.1
+          "$RUNNER_TEMP/nexo-browser/node_modules/.bin/playwright" install --with-deps chromium
+      - name: Desktop and mobile browser verification
+        run: |
+          node scripts/dev.mjs --built > /tmp/nexo-one-server.log 2>&1 &
+          NEXO_SERVER_PID=$!
+          trap 'kill "$NEXO_SERVER_PID"' EXIT
+          for i in $(seq 1 30); do curl --silent --fail http://127.0.0.1:4173/ >/dev/null && break; sleep 1; done
+          PLAYWRIGHT_MODULE="$RUNNER_TEMP/nexo-browser/node_modules/playwright/index.mjs" npm run test:browser
+      - run: node scripts/package-release.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: nexo-one-verification-${{ github.sha }}
+          path: nexo-one/test-output/
+      - uses: actions/upload-artifact@v4
+        with:
+          name: nexo-one-release-${{ github.sha }}
+          path: nexo-one/release/

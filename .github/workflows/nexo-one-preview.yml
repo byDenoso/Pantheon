@@ -1,0 +1,59 @@
+name: NEXO ONE verified preview
+on:
+  workflow_dispatch:
+    inputs:
+      ci_run_id:
+        description: Successful NEXO ONE CI push run ID
+        required: true
+      source_sha:
+        description: Exact verified source SHA
+        required: true
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: nexo-one-deployment
+  cancel-in-progress: false
+jobs:
+  preview:
+    runs-on: ubuntu-latest
+    environment: nexo-one-preview
+    env:
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - uses: actions/download-artifact@v4
+        with:
+          name: nexo-one-release-${{ inputs.source_sha }}
+          run-id: ${{ inputs.ci_run_id }}
+          github-token: ${{ github.token }}
+          path: release
+      - name: Check immutable source and project identity
+        env:
+          EXPECTED_SHA: ${{ inputs.source_sha }}
+          CLI_VERSION: ${{ vars.NEXO_VERCEL_CLI_VERSION }}
+        run: |
+          test "$VERCEL_PROJECT_ID" = prj_rFoAEgGt4gFNr8DHEOzxY7keS16W
+          test -n "$VERCEL_TOKEN"
+          test -n "$CLI_VERSION"
+          node -e 'const m=require("./release/release-manifest.json");if(m.gitCommit!==process.env.EXPECTED_SHA)process.exit(1)'
+          npm install --global "vercel@$CLI_VERSION"
+      - name: Publish artifact to same project
+        id: publish
+        run: |
+          DEPLOYMENT_URL=$(vercel deploy ./release --yes --token "$VERCEL_TOKEN")
+          echo "url=$DEPLOYMENT_URL" >> "$GITHUB_OUTPUT"
+      - name: Public readback
+        env:
+          NEXO_VERIFY_URL: ${{ steps.publish.outputs.url }}
+          VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
+        run: node nexo-one/scripts/verify-release.mjs
+      - uses: actions/upload-artifact@v4
+        with:
+          name: nexo-one-preview-receipt
+          path: verification.json
