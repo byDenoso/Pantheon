@@ -72,10 +72,10 @@ test('each top-level section produces a materially different graph projection fr
 
 test('light and dark UI themes also change the renderer palette instead of recolouring only the chrome',()=>{
  const palette=fs.readFileSync(path.join(lab,'graph/palette.mjs'),'utf8');
- const renderer=fs.readFileSync(path.join(lab,'graph/renderer.mjs'),'utf8');
+ const volume=fs.readFileSync(path.join(lab,'graph/volume-rendering.mjs'),'utf8');
  const app=fs.readFileSync(path.join(lab,'app.mjs'),'utf8');
  assert.match(palette,/PALETTE_LIGHT/);
- assert.match(renderer,/setTheme\(theme/);
+ assert.match(volume,/setTheme=function\(theme/);
  assert.match(app,/MutationObserver/);
  assert.match(app,/dataset\.theme/);
  assert.match(app,/setTheme/);
