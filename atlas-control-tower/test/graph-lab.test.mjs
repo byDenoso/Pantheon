@@ -50,7 +50,6 @@ test('sub-orbits hang off their parent instead of forming another global ring',a
  const distance=(a,b)=>Math.hypot(a[0]-b[0],a[1]-b[1],a[2]-b[2]);
  const domainA=positions.get('domain:A');
  for(const id of ['program:A1','program:A2']){
-  // Each Program orbits its own Domain, and stays closer to it than to the core.
   assert.ok(distance(positions.get(id),domainA)<distance(positions.get(id),[0,0,0]));
  }
  assert.notDeepEqual(positions.get('program:A1'),positions.get('program:A2'));
@@ -130,10 +129,8 @@ test('the graph renders on Three.js over a canvas overlay, from a vendored build
  assert.doesNotMatch(renderer,/https?:\/\/[^'"]*three/i,'three must not come from a CDN');
  assert.match(renderer,/new THREE\.WebGLRenderer/);
  assert.match(renderer,/QuadraticBezierCurve3/);
- // Volumetric bodies and halos are canvas gradients baked into sprite textures.
  assert.match(renderer,/createRadialGradient/);
  assert.match(renderer,/getContext\('2d'\)/);
- // One animation loop, and no timers driving it.
  assert.equal(renderer.match(/requestAnimationFrame\(/g).length,1);
  assert.doesNotMatch(renderer,/setInterval|setTimeout\s*\(/);
 });
@@ -154,19 +151,19 @@ test('camera framing accounts for the narrow axis so a phone shows the whole sys
  assert.ok(tall>wide,'a portrait viewport must pull the camera further back');
 });
 
-test('palette A uses the approved Observatory Premium colors',async()=>{
+test('palette A uses the approved Obsidian Observatory colors',async()=>{
  const {SYSTEM_COLORS,STATUS_COLORS,PRESETS}=await importLab('graph/palette.mjs');
- assert.equal(SYSTEM_COLORS['system:NEXO'],'#E8C982');
- assert.equal(SYSTEM_COLORS['system:SCIENCE'],'#8FB7D6');
- assert.equal(SYSTEM_COLORS['system:LEARNING'],'#A8A0B8');
- assert.equal(SYSTEM_COLORS['system:ENGINEERING'],'#8195A8');
- assert.equal(SYSTEM_COLORS['system:OLYMPUS'],'#8FB5A7');
- assert.equal(SYSTEM_COLORS['system:BLACK_BOX'],'#777382');
- assert.equal(PRESETS.ORIGINAL.background,'#030507');
- assert.equal(PRESETS.ORIGINAL.edge,'#556676');
- assert.equal(PRESETS.ORIGINAL.derived,'#6D6877');
- assert.equal(STATUS_COLORS.active,'#9AB9D4');
- assert.equal(STATUS_COLORS.blocked,'#8E6F6F');
+ assert.equal(SYSTEM_COLORS['system:NEXO'],'#FFBE5C');
+ assert.equal(SYSTEM_COLORS['system:SCIENCE'],'#66D6FF');
+ assert.equal(SYSTEM_COLORS['system:LEARNING'],'#AF8DFF');
+ assert.equal(SYSTEM_COLORS['system:ENGINEERING'],'#5EA8FF');
+ assert.equal(SYSTEM_COLORS['system:OLYMPUS'],'#64E1CB');
+ assert.equal(SYSTEM_COLORS['system:BLACK_BOX'],'#7A8495');
+ assert.equal(PRESETS.ORIGINAL.background,'#02050A');
+ assert.equal(PRESETS.ORIGINAL.edge,'#4B6A89');
+ assert.equal(PRESETS.ORIGINAL.derived,'#7562A7');
+ assert.equal(STATUS_COLORS.active,'#2EC9FF');
+ assert.equal(STATUS_COLORS.blocked,'#C96A7C');
 });
 
 test('hierarchy level sets visual weight, from the core out to the leaves',async()=>{
@@ -187,7 +184,6 @@ test('Atlas shell is a map with one cockpit and a secondary renderer drawer',()=
  assert.match(html,/id="preset"/);
  assert.match(html,/id="dataset-size"/);
  assert.match(html,/FPS/);
- // Renderer telemetry and knobs live inside the drawer, not on the map.
  const drawer=html.slice(html.indexOf('id="lab-panel"'));
  for(const marker of ['FPS','id="preset"','id="dataset-size"','id="node-radius"'])assert.ok(drawer.includes(marker),`${marker} must sit inside the renderer drawer`);
  assert.match(css,/@media\s*\(max-width:\s*760px\)/);
