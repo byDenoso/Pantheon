@@ -3,11 +3,11 @@ import {GraphLabRenderer as SigmaCanvasRenderer} from './graph/renderer.mjs';
 import {GraphLabRenderer as LegacyCanvasRenderer} from './graph/legacy-renderer.mjs';
 
 const $=id=>document.getElementById(id);
-const stage=$('graph-stage');
+const rendererRoot=$('graph-renderer-root');
 let graph=createSyntheticGraph(50),focusId=graph.rootId,history=[];
 const rendererMode=new URLSearchParams(location.search).get('renderer')||'sigma-canvas';
 const Renderer=rendererMode==='legacy-canvas'?LegacyCanvasRenderer:SigmaCanvasRenderer;
-const target=rendererMode==='legacy-canvas'?$('graph-lab-canvas'):stage;
+const target=rendererMode==='legacy-canvas'?$('graph-lab-canvas'):rendererRoot;
 $('renderer').value=rendererMode;
 $('graph-lab-canvas').hidden=rendererMode!=='legacy-canvas';
 
