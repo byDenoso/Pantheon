@@ -68,3 +68,14 @@ test('each top-level section produces a materially different graph projection fr
  assert.equal(new Set(signatures).size,5);
  assert.equal(source.nodes[3].parentId,'domain:A','section projections must not mutate canonical hierarchy');
 });
+
+test('light and dark UI themes also change the renderer palette instead of recolouring only the chrome',()=>{
+ const palette=fs.readFileSync(path.join(lab,'graph/palette.mjs'),'utf8');
+ const renderer=fs.readFileSync(path.join(lab,'graph/renderer.mjs'),'utf8');
+ const app=fs.readFileSync(path.join(lab,'app.mjs'),'utf8');
+ const html=fs.readFileSync(path.join(lab,'index.html'),'utf8');
+ assert.match(palette,/PALETTE_LIGHT/);
+ assert.match(renderer,/setTheme\(theme/);
+ assert.match(app,/atlas-theme-change/);
+ assert.match(html,/atlas-theme-change/);
+});
