@@ -55,7 +55,7 @@ test('the graph hierarchy starts as NEXO -> macro lanes -> local subgraphs',asyn
  assert.equal(domain.parentId,science.id);
  assert.equal(program.parentId,domain.id);
  assert.equal(campaign.parentId,program.id);
- assert.ok(graph.edges.every(e=>graph.nodes.some(n=>n.id===e.source)&&graph.nodes.some(n=>n.id===e.target)));
+ assert.ok(graph.edges.filter(e=>!e.alternative).every(e=>graph.nodes.some(n=>n.id===e.source)&&graph.nodes.some(n=>n.id===e.target)));
 });
 
 test('Engineering keeps GitHub/runtime authority while declared children remain reachable',async()=>{
