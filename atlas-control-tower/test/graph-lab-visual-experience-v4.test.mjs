@@ -74,13 +74,12 @@ test('app wires visual experience into real hierarchy and keeps alternative fila
  const app=read('app.mjs');
  assert.match(app,/visual-experience-v4\.mjs/);
  assert.match(app,/installVisualExperienceV4/);
- assert.match(app,/showAlternativeFilaments/);
+ assert.match(app,/let showAlternativeFilaments=false/);
  assert.match(app,/hierarchyView\(graph,\{[^}]*showAlternativeFilaments/s);
  assert.match(app,/onOpenNode:\s*openNode/);
  assert.match(app,/onToggleFilaments/);
  const ssot=read('data/ssot.mjs');
  assert.match(ssot,/\['SCIENCE','OLYMPUS','ENGINEERING'\]\.map\(makeLane\)/);
- assert.match(ssot,/alternativeFilamentsDefault:false/);
 });
 
 test('visual experience stylesheet is premium but mobile-first safe',()=>{
