@@ -47,6 +47,14 @@ test('status is an editorial strip and overlays reserve graph label space',()=>{
  assert.match(source,/data-label-reserved/);
 });
 
+test('editorial shell keeps status, breadcrumb, graph actions, domain nav and dock in separate bands',()=>{
+ const css=read('graph/experience/editorial-observatory-v5.css');
+ assert.match(css,/\.atlas-status-summary\{[^}]*top:52px!important/s);
+ assert.match(css,/\.breadcrumb\{[^}]*top:94px!important/s);
+ assert.match(css,/\.atlas-experience-bar\{[^}]*bottom:72px!important/s);
+ assert.match(css,/@media\(max-width:760px\)[\s\S]*\.atlas-experience-bar\{[^}]*bottom:58px!important/s);
+});
+
 test('mobile turns node actions into a safe bottom sheet and keeps studio compact',()=>{
  const css=read('graph/experience/visual-experience-v4.css');
  assert.match(css,/@media\(max-width:760px\)[\s\S]*\.atlas-node-actions\{[^}]*position:absolute[^}]*bottom:/);
