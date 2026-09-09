@@ -21,12 +21,10 @@ test('2D canvas renderer owns the approved third-reference galactic background',
  assert.doesNotMatch(source,/setGraph\s*=/,'background adapter must not replace graph data flow');
 });
 
-test('standalone shell loads the 2D background adapter before app and pins it for deploy',()=>{
- const index=fs.readFileSync(path.join(lab,'index.html'),'utf8');
- const builder=fs.readFileSync(path.join(lab,'build-cdn-index.mjs'),'utf8');
- assert.match(index,/\.\/graph\/canvas-reference-background\.mjs/);
- assert.ok(index.indexOf('./graph/canvas-reference-background.mjs')<index.indexOf('./app.mjs'),'canvas adapter must load before app imports the legacy renderer');
- assert.match(builder,/graph\/canvas-reference-background\.mjs/);
+test('app imports the 2D background adapter before choosing the legacy renderer',()=>{
+ const app=fs.readFileSync(path.join(lab,'app.mjs'),'utf8');
+ assert.match(app,/import ['"]\.\/graph\/canvas-reference-background\.mjs['"]/);
+ assert.ok(app.indexOf('./graph/canvas-reference-background.mjs')<app.indexOf('./graph/legacy-renderer.mjs'),'adapter must load before app imports the legacy renderer binding');
 });
 
 test('legacy canvas graph can change colour system when the theme changes',()=>{
