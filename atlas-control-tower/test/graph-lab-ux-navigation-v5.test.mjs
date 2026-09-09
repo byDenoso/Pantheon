@@ -27,7 +27,15 @@ test('experience studio is experience-first and hides technical controls behind 
  assert.match(source,/atlas-advanced-controls/);
  assert.match(source,/ADVANCED/);
  assert.match(source,/data-atlas-advanced-host/);
+ assert.match(source,/advancedHost\.append\(hud\)/,'FPS/renderer HUD belongs under Advanced rather than above Experience');
  assert.doesNotMatch(source,/Renderer roadmap/,'renderer roadmap must not duplicate the renderer selector in the primary studio');
+});
+
+test('single click selects/reveals a node while explicit open controls expansion',()=>{
+ const source=read('graph/experience/visual-experience-v4.mjs');
+ assert.match(source,/renderer\.callbacks\.onSelect\s*=\s*node\s*=>/);
+ assert.match(source,/onOpenNode\?\.\(node\.id\)/);
+ assert.match(source,/renderer\.callbacks\?\.onOpen\?\.\(node\)/,'ABRIR must keep using the renderer open callback for one-level expansion');
 });
 
 test('status is an editorial strip and overlays reserve graph label space',()=>{
