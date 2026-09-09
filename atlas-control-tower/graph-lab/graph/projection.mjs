@@ -72,6 +72,23 @@ export function collapseSubtree(source,id,expandedIds=new Set()){
  return next;
 }
 
+/**
+ * Opens a hierarchy owner without allowing all three macro lanes to remain
+ * exploded simultaneously. A lane is a primary workspace: opening Ciência,
+ * Olympus or Engenharia folds the previously opened macro lane. Descendants
+ * keep their canonical ancestors open so drill-down remains stable.
+ */
+export function expandHierarchyNode(source,id,expandedIds=new Set()){
+ const {byId}=indexOf(source);
+ const node=byId.get(id);
+ if(!node)return new Set(expandedIds);
+ if(node.hierarchyLevel==='lane')return new Set([id]);
+ const next=new Set(expandedIds);
+ for(const step of ancestorsOf(source,id).slice(0,-1))if(step.id!==source?.rootId)next.add(step.id);
+ next.add(id);
+ return next;
+}
+
 export function hierarchyView(source,{expandedIds=new Set(),activeOnly=false,maxVisible=Infinity,showAlternativeFilaments=source?.alternativeFilamentsDefault===true}={}){
  const nodes=source?.nodes||[];
  const {byId,children}=indexOf(source);
