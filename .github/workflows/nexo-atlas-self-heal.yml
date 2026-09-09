@@ -1,0 +1,70 @@
+name: NEXO Atlas Self Heal
+on:
+  push:
+    branches: [nexo-atlas-drive-pages-20260908]
+    paths: [".github/workflows/nexo-atlas-self-heal.yml"]
+permissions:
+  contents: write
+jobs:
+  repair:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: nexo-atlas-drive-pages-20260908
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Configure git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+      - name: RED - canonical integrity regressions
+        run: |
+          python .github/scripts/add_atlas_self_heal_tests.py . integrity
+          cd atlas-control-tower
+          set +e
+          node --test test/drive-pages-cutover.test.mjs > /tmp/atlas-red.log 2>&1
+          rc=$?
+          set -e
+          test "$rc" -ne 0
+          grep -q "not ok .*compiler preserves multi-action" /tmp/atlas-red.log
+          grep -q "not ok .*compiler quarantines stale Drive relations" /tmp/atlas-red.log
+      - name: GREEN - repair canonical relation integrity
+        run: |
+          python .github/scripts/patch_atlas_integrity.py .
+          cp atlas-control-tower/apps-script/Code.gs /tmp/Code.js
+          node --check /tmp/Code.js
+          cd atlas-control-tower
+          node --test test/drive-pages-cutover.test.mjs
+          cd ..
+          git add atlas-control-tower/apps-script/Code.gs atlas-control-tower/test/drive-pages-cutover.test.mjs
+          git commit -m "fix(atlas): tolerate canonical stale relations"
+      - name: RED - anti-sprawl projection contract
+        run: |
+          python .github/scripts/add_atlas_self_heal_tests.py . compact
+          cd atlas-control-tower
+          set +e
+          node --test test/drive-pages-cutover.test.mjs > /tmp/atlas-compact-red.log 2>&1
+          rc=$?
+          set -e
+          test "$rc" -ne 0
+          grep -q "not ok .*compiled static projection avoids duplicating graph truth" /tmp/atlas-compact-red.log
+      - name: GREEN - compact derived projections
+        run: |
+          python .github/scripts/compact_atlas_projection.py .
+          cp atlas-control-tower/apps-script/Code.gs /tmp/Code.js
+          node --check /tmp/Code.js
+          cd atlas-control-tower
+          node --test test/drive-pages-cutover.test.mjs
+          cd ..
+          git add atlas-control-tower/apps-script/Code.gs atlas-control-tower/test/drive-pages-cutover.test.mjs
+          git commit -m "perf(atlas): compact compiled static projections"
+      - name: Remove temporary self-heal helpers
+        run: |
+          git rm .github/scripts/patch_atlas_integrity.py .github/scripts/compact_atlas_projection.py .github/scripts/add_atlas_self_heal_tests.py .github/workflows/nexo-atlas-self-heal.yml
+          git commit -m "chore(atlas): remove temporary self-heal helpers"
+      - name: Push repaired compiler
+        run: git push origin HEAD:nexo-atlas-drive-pages-20260908
