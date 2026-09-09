@@ -18,7 +18,7 @@ import {fileURLToPath} from 'node:url';
 
 const REPO='byDenoso/Pantheon';
 const DIR='atlas-control-tower/graph-lab';
-const ENTRY_POINTS=['styles.css','nexo-live.css','app.mjs'];
+const ENTRY_POINTS=['styles.css','nexo-live.css','graph/volume-rendering.mjs','app.mjs'];
 
 const here=path.dirname(fileURLToPath(import.meta.url));
 const commit=process.argv[2];
