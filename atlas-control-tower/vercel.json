@@ -46,9 +46,9 @@
     {"src":"webmcp/tools.mjs","use":"@vercel/static"}
   ],
   "routes": [
-    {"src":"/api/projection","dest":"/api/projection.js"},
-    {"src":"/api/runner","dest":"/api/runner.js"},
-    {"src":"/api/(state|sync|graph|entity|automation-runs|learning-relations|learning|audit|health|ops)","dest":"/api/runtime-orphans.js?route=$1"},
+    {"src":"/api/projection","headers":{"Access-Control-Allow-Origin":"https://bydenoso.github.io","Access-Control-Allow-Methods":"GET,POST,OPTIONS","Access-Control-Allow-Headers":"Content-Type,Authorization","Vary":"Origin"},"dest":"/api/projection.js"},
+    {"src":"/api/runner","headers":{"Access-Control-Allow-Origin":"https://bydenoso.github.io","Access-Control-Allow-Methods":"GET,POST,OPTIONS","Access-Control-Allow-Headers":"Content-Type,Authorization","Vary":"Origin"},"dest":"/api/runner.js"},
+    {"src":"/api/(state|sync|graph|entity|automation-runs|learning-relations|learning|audit|health|ops)","headers":{"Access-Control-Allow-Origin":"https://bydenoso.github.io","Access-Control-Allow-Methods":"GET,POST,OPTIONS","Access-Control-Allow-Headers":"Content-Type,Authorization","Vary":"Origin"},"dest":"/api/runtime-orphans.js?route=$1"},
     {"src":"/(.*\\.css)","headers":{"Content-Type":"text/css; charset=utf-8","Cache-Control":"public, max-age=0, must-revalidate"}},
     {"src":"/(.*\\.mjs)","headers":{"Content-Type":"text/javascript; charset=utf-8","Cache-Control":"public, max-age=0, must-revalidate"}},
     {"src":"/(.*\\.js)","headers":{"Content-Type":"text/javascript; charset=utf-8","Cache-Control":"public, max-age=0, must-revalidate"}},
