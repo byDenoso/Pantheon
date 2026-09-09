@@ -7,6 +7,12 @@ const STORAGE_KEY='nexo-atlas-experience-v4';
 const $=selector=>document.querySelector(selector);
 const byId=id=>document.getElementById(id);
 const isMobile=()=>matchMedia('(max-width:760px)').matches;
+const MACRO_TARGETS=Object.freeze([
+ Object.freeze({label:'NEXO',domain:'NEXO',nodeId:'system:NEXO',className:'atlas-domain-nexo'}),
+ Object.freeze({label:'CIÊNCIA',domain:'SCIENCE',nodeId:'lane:SCIENCE',className:'atlas-domain-science'}),
+ Object.freeze({label:'OLYMPUS',domain:'OLYMPUS',nodeId:'lane:OLYMPUS',className:'atlas-domain-olympus'}),
+ Object.freeze({label:'ENGENHARIA',domain:'ENGINEERING',nodeId:'lane:ENGINEERING',className:'atlas-domain-engineering'})
+]);
 
 function read(){try{return JSON.parse(localStorage.getItem(STORAGE_KEY)||'{}')||{}}catch{return {}}}
 function write(value){try{localStorage.setItem(STORAGE_KEY,JSON.stringify(value))}catch{}}
@@ -107,8 +113,7 @@ export function installVisualExperienceV4({renderer,onOpenNode,onGoHome,onToggle
  function installDomainBar(){
   const stage=$('.stage');if(!stage||byId('atlas-experience-bar'))return;
   const bar=document.createElement('nav');bar.id='atlas-experience-bar';bar.className='atlas-experience-bar';bar.setAttribute('aria-label','Domínios e experiências Atlas');
-  const targets=[['NEXO','NEXO','atlas-domain-nexo'],['CIÊNCIA','SCIENCE','atlas-domain-science'],['OLYMPUS','OLYMPUS','atlas-domain-olympus'],['ENGENHARIA','ENGINEERING','atlas-domain-engineering']];
-  for(const [label,domain,klass] of targets){const b=makeButton(label,{domainTarget:domain});b.classList.add(klass);b.addEventListener('click',()=>domain==='NEXO'?onGoHome?.():onOpenNode?.(`lane:${domain}`));bar.append(b)}
+  for(const target of MACRO_TARGETS){const b=makeButton(target.label,{domainTarget:target.domain});b.classList.add(target.className);b.addEventListener('click',()=>target.domain==='NEXO'?onGoHome?.():onOpenNode?.(target.nodeId));bar.append(b)}
   const filament=makeButton('FILAMENTOS');filament.className='atlas-filaments-toggle';filament.addEventListener('click',()=>{state.filaments=!state.filaments;filament.classList.toggle('is-active',state.filaments);onToggleFilaments?.(state.filaments);background()});bar.append(filament);
   stage.append(bar);
  }
