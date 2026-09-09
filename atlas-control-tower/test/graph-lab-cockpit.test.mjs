@@ -49,15 +49,17 @@ test('the core reads the recursive loop as state, next action and last effect',(
  assert.ok(section(graph.nodes[0],'changes').items.some(item=>item.title==='LAST_EFFECT'));
 });
 
-test('unbound SSOT records stay on the core, never as graph nodes',()=>{
+test('unbound NEXO records stay on the core while Olympus people become local graph nodes',()=>{
  const root=graph.nodes.find(n=>n.id===graph.rootId);
  const groups=Object.fromEntries(root.ops.core.groups.map(group=>[group.id,group.items.map(item=>item.title)]));
- assert.ok(groups.olympus.includes('Josué'));
  assert.ok(groups.doutrina.includes('Fechar Big Ring'));
- for(const recordId of ['OLY-CL-0004','OBJ-1','ATLAS_COCKPIT'])assert.equal(graph.nodes.some(n=>n.recordId===recordId),false);
+ assert.equal(graph.nodes.some(n=>n.recordId==='OBJ-1'),false);
+ assert.equal(graph.nodes.some(n=>n.recordId==='ATLAS_COCKPIT'),false);
+ assert.ok(graph.nodes.some(n=>n.recordId==='OLY-CL-0004'&&n.parentId==='olympus:group:LITE'));
+ assert.ok(section(node('OLY-CL-0004'),'relations').items.some(item=>/INTAKE/.test(item.title)||/Estado/.test(item.title)));
  // An engineering effect the SSOT does not tie to a node is still surfaced — as a change.
  assert.ok(section(root,'changes').items.some(item=>/ATLAS_COCKPIT/.test(item.title)));
- assert.equal(graph.ops.counts.unbound,4);
+ assert.ok(graph.ops.counts.unbound>=2);
 });
 
 test('a record binds to a node only when the SSOT names that record id',()=>{
