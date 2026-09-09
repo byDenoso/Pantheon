@@ -7,6 +7,7 @@ import {fileURLToPath,pathToFileURL} from 'node:url';
 const here=path.dirname(fileURLToPath(import.meta.url));
 const lab=path.resolve(here,'../graph-lab');
 const modulePath=rel=>path.join(lab,rel);
+const quotedAttr=(name,value)=>new RegExp(`${name}=['\"]${value}['\"]`);
 async function importLab(rel){
  const file=modulePath(rel);
  assert.ok(fs.existsSync(file),`graph lab module missing: ${rel}`);
@@ -180,12 +181,15 @@ test('Atlas shell is a map with one cockpit and a secondary renderer drawer',()=
  const app=fs.readFileSync(modulePath('app.mjs'),'utf8');
  const css=fs.readFileSync(modulePath('styles.css'),'utf8');
  assert.match(html,/NEXO ATLAS/);
- assert.match(html,/id="graph-lab-canvas"/);
- assert.match(html,/id="preset"/);
- assert.match(html,/id="dataset-size"/);
+ assert.match(html,quotedAttr('id','graph-lab-canvas'));
+ assert.match(html,quotedAttr('id','preset'));
+ assert.match(html,quotedAttr('id','dataset-size'));
  assert.match(html,/FPS/);
- const drawer=html.slice(html.indexOf('id="lab-panel"'));
- for(const marker of ['FPS','id="preset"','id="dataset-size"','id="node-radius"'])assert.ok(drawer.includes(marker),`${marker} must sit inside the renderer drawer`);
+ const panelMatch=html.match(/id=['"]lab-panel['"]/);
+ assert.ok(panelMatch,'renderer drawer must exist');
+ const drawer=html.slice(panelMatch.index);
+ for(const id of ['preset','dataset-size','node-radius'])assert.match(drawer,quotedAttr('id',id));
+ assert.ok(drawer.includes('FPS'),'FPS must sit inside the renderer drawer');
  assert.match(css,/@media\s*\(max-width:\s*760px\)/);
  assert.match(app,/createSyntheticGraph/);
  assert.doesNotMatch(app,/\/api\//);
