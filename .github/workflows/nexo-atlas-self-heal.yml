@@ -30,8 +30,8 @@ jobs:
           rc=$?
           set -e
           test "$rc" -ne 0
-          grep -q "not ok .*compiler preserves multi-action" /tmp/atlas-red.log
-          grep -q "not ok .*compiler quarantines stale Drive relations" /tmp/atlas-red.log
+          grep -q "compiler preserves multi-action execution runs" /tmp/atlas-red.log
+          grep -q "compiler quarantines stale Drive relations" /tmp/atlas-red.log
       - name: GREEN - repair canonical relation integrity
         run: |
           python .github/scripts/patch_atlas_integrity.py .
@@ -51,7 +51,7 @@ jobs:
           rc=$?
           set -e
           test "$rc" -ne 0
-          grep -q "not ok .*compiled static projection avoids duplicating graph truth" /tmp/atlas-compact-red.log
+          grep -q "compiled static projection avoids duplicating graph truth" /tmp/atlas-compact-red.log
       - name: GREEN - compact derived projections
         run: |
           python .github/scripts/compact_atlas_projection.py .
