@@ -30,15 +30,16 @@ export function projectPoint(point,camera,width,height,options={}){
 }
 
 // ---------------------------------------------------------------------------
-// Progressive hierarchy projection: NEXO -> Domain -> Program -> Campaign.
-// The first screen is the core plus its Domains. Programs appear only when their
-// Domain is open, Campaigns only when their Program is open, and a Campaign is
-// always a leaf. Nothing is pre-rendered and then hidden — the view is computed.
+// Progressive hierarchy projection: NEXO -> Lane -> Domain/System -> Program
+// -> Campaign. The first screen is intentionally macro-only: Ciência, Olympus
+// and Engenharia. Filamentos alternativos are an overlay edge layer: they never
+// add or remove hierarchy nodes, only cross-link already visible points.
 // ---------------------------------------------------------------------------
 
-export const HIERARCHY_LEVELS=['root','domain','program','campaign'];
-const LEVEL_RANK={root:0,domain:1,program:2,campaign:3};
+export const HIERARCHY_LEVELS=['root','lane','domain','group','program','person','project','campaign','state','record'];
+const LEVEL_RANK={root:0,lane:1,domain:2,group:2,program:3,person:3,project:3,campaign:4,state:4,record:5};
 const normalizeQuery=value=>String(value||'').trim().toLocaleLowerCase('pt-BR');
+const isAlternativeEdge=edge=>String(edge?.kind||edge?.type||'').toLowerCase().startsWith('alternative')||edge?.alternative===true;
 
 const indexOf=source=>{
  const byId=new Map((source?.nodes||[]).map(n=>[n.id,n]));
@@ -52,7 +53,7 @@ export function ancestorsOf(source,id){
  const trail=[];
  let node=byId.get(id);
  let guard=0;
- while(node&&guard++<16){trail.unshift(node);node=node.parentId?byId.get(node.parentId):null}
+ while(node&&guard++<24){trail.unshift(node);node=node.parentId?byId.get(node.parentId):null}
  return trail;
 }
 
@@ -71,7 +72,7 @@ export function collapseSubtree(source,id,expandedIds=new Set()){
  return next;
 }
 
-export function hierarchyView(source,{expandedIds=new Set(),activeOnly=false,maxVisible=Infinity}={}){
+export function hierarchyView(source,{expandedIds=new Set(),activeOnly=false,maxVisible=Infinity,showAlternativeFilaments=source?.alternativeFilamentsDefault===true}={}){
  const nodes=source?.nodes||[];
  const {byId,children}=indexOf(source);
  const rootId=source?.rootId;
@@ -105,30 +106,33 @@ export function hierarchyView(source,{expandedIds=new Set(),activeOnly=false,max
    return{...node,childCount:kids.length,hiddenChildren:hidden,expanded:expandedIds.has(node.id),expandable:kids.length>0&&node.id!==rootId};
   });
 
- return{
-  rootId,
-  nodes:projected,
-  edges:(source?.edges||[]).filter(e=>shown.has(e.source)&&shown.has(e.target))
- };
+ const edges=(source?.edges||[]).filter(edge=>{
+  if(!shown.has(edge.source)||!shown.has(edge.target))return false;
+  if(isAlternativeEdge(edge))return showAlternativeFilaments;
+  return true;
+ });
+
+ return{rootId,nodes:projected,edges};
 }
 
 /**
- * Locates a Domain, Program or Campaign and opens every ancestor on the way to it,
- * so a search result lands on an already-visible node.
+ * Locates a Lane, Domain, Program, Person or Campaign and opens every ancestor
+ * on the way to it, so a search result lands on an already-visible node.
  */
 export function expandForSearch(source,query,expandedIds=new Set()){
  const q=normalizeQuery(query);
  const next=new Set(expandedIds);
  if(!q)return{expandedIds:next,matchId:null,matches:[]};
  const {byId}=indexOf(source);
- const candidates=(source?.nodes||[]).filter(n=>['domain','program','campaign'].includes(n.hierarchyLevel));
- const scored=candidates.filter(n=>[n.label,n.recordId,n.id,n.summary].some(value=>normalizeQuery(value).includes(q)));
+ const searchableLevels=new Set(['lane','domain','group','program','person','project','campaign','state','record']);
+ const candidates=(source?.nodes||[]).filter(n=>searchableLevels.has(n.hierarchyLevel));
+ const scored=candidates.filter(n=>[n.label,n.recordId,n.id,n.summary,n.detail,n.system].some(value=>normalizeQuery(value).includes(q)));
  const match=scored.find(n=>normalizeQuery(n.recordId)===q||normalizeQuery(n.label)===q)
   ||scored.find(n=>[n.label,n.recordId].some(value=>normalizeQuery(value).startsWith(q)))
   ||scored[0];
  if(!match)return{expandedIds:next,matchId:null,matches:[]};
  let parent=byId.get(match.parentId);
  let guard=0;
- while(parent&&parent.id!==source?.rootId&&guard++<16){next.add(parent.id);parent=parent.parentId?byId.get(parent.parentId):null}
+ while(parent&&parent.id!==source?.rootId&&guard++<24){next.add(parent.id);parent=parent.parentId?byId.get(parent.parentId):null}
  return{expandedIds:next,matchId:match.id,matches:scored.slice(0,8)};
 }
