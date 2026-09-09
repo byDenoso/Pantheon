@@ -49,14 +49,16 @@ test('experience presets separate public demo, work, review, filaments and mobil
  assert.equal(mobile.filamentMode,'off');
 });
 
-test('renderer registry names real current engines and future engine slots honestly',async()=>{
+test('renderer registry names current native and integrated engines honestly',async()=>{
  const file=mustExist('graph/renderers/renderer-registry.mjs');
  const mod=await import(pathToFileURL(file));
  for(const id of ['canvas-2d','pixi-2d','three-25d','three-3d','babylon-25d','babylon-3d'])assert.ok(mod.RENDERERS[id]);
  assert.equal(mod.RENDERERS['canvas-2d'].availability,'ready');
  assert.equal(mod.RENDERERS['three-25d'].availability,'ready');
- assert.notEqual(mod.RENDERERS['pixi-2d'].availability,'ready','Pixi must not be presented as ready until its renderer exists');
- assert.notEqual(mod.RENDERERS['babylon-3d'].availability,'ready','Babylon 3D must not be fake-ready');
+ assert.equal(mod.RENDERERS['pixi-2d'].availability,'ready');
+ assert.equal(mod.RENDERERS['pixi-2d'].implementation,'hybrid');
+ assert.equal(mod.RENDERERS['babylon-3d'].availability,'ready');
+ assert.equal(mod.RENDERERS['babylon-3d'].implementation,'hybrid');
 });
 
 test('experience controller adds demo, share, macro-domain navigation and dynamic background',()=>{
