@@ -2,7 +2,9 @@
 .stage{isolation:isolate;overflow:hidden;background:var(--atlas-stage-base)}
 .stage::after{content:"";position:absolute;inset:0;pointer-events:none;z-index:1;background:radial-gradient(44% 52% at 50% 48%,rgba(var(--atlas-domain-rgb),calc(.14 * var(--atlas-nebula-strength))),transparent 70%),radial-gradient(36% 46% at 22% 30%,rgba(var(--atlas-domain-secondary-rgb),calc(.12 * var(--atlas-dust-strength))),transparent 74%),linear-gradient(180deg,rgba(1,8,16,0),rgba(1,8,16,var(--atlas-background-veil)));mix-blend-mode:screen;transition:background .5s ease,opacity .4s ease}
 :root[data-theme=light] .stage::after{mix-blend-mode:multiply;background:radial-gradient(42% 48% at 50% 48%,rgba(var(--atlas-domain-rgb),.12),transparent 72%),linear-gradient(180deg,rgba(5,28,48,.02),rgba(5,28,48,var(--atlas-background-veil)))}
-.graph-renderer-root,#graph-lab-canvas{position:relative;z-index:0}
+.graph-renderer-root{position:absolute;inset:0;z-index:2}
+.graph-renderer-root canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
+#graph-lab-canvas{z-index:1}
 .atlas-experience-bar{position:absolute;left:50%;bottom:76px;transform:translateX(-50%);z-index:7;display:flex;align-items:center;gap:5px;padding:5px;border:1px solid rgba(116,199,255,.22);border-radius:999px;background:rgba(4,11,20,.70);backdrop-filter:blur(12px);box-shadow:0 16px 42px rgba(0,0,0,.22)}
 .atlas-experience-bar button{border:0;border-radius:999px;background:transparent;color:#9ab6cc;font:700 8px/1 system-ui,sans-serif;letter-spacing:.08em;text-transform:uppercase;padding:8px 10px;cursor:pointer;white-space:nowrap}
 .atlas-experience-bar button:hover,.atlas-experience-bar button.is-active{color:#fff;background:rgba(var(--atlas-domain-rgb),.14);box-shadow:inset 0 0 0 1px rgba(var(--atlas-domain-rgb),.26)}
