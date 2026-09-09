@@ -23,10 +23,22 @@ export function colorForNode(node,palette=PALETTE_A){
 }
 
 export const SYSTEM_COLORS={
- 'system:NEXO':PALETTE_A.semantic.NEXO,'system:SCIENCE':PALETTE_A.semantic.SCIENCE,'system:LEARNING':PALETTE_A.semantic.LEARNING,'system:ENGINEERING':PALETTE_A.semantic.ENGINEERING,'system:OLYMPUS':PALETTE_A.semantic.OLYMPUS,'system:BLACK_BOX':PALETTE_A.semantic.BLACK_BOX
+  'system:NEXO':PALETTE_A.semantic.NEXO,
+  'system:SCIENCE':PALETTE_A.semantic.SCIENCE,
+  'system:LEARNING':PALETTE_A.semantic.LEARNING,
+  'system:ENGINEERING':PALETTE_A.semantic.ENGINEERING,
+  'system:OLYMPUS':PALETTE_A.semantic.OLYMPUS,
+  'system:BLACK_BOX':PALETTE_A.semantic.BLACK_BOX
 };
-export const STATUS_COLORS={...PALETTE_A.states};
-const base={palette:'A',renderer:'sigma-canvas',background:PALETTE_A.background.bottom,panel:'#080C12',text:PALETTE_A.chrome.text,muted:PALETTE_A.chrome.textDim,edge:'#556676',derived:'#6D6877',highlight:'#F0F3F6',nodeRadius:1,glow:.75,fog:.34,focalLength:760,drift:0,pulseSpeed:1,filamentCurve:.12,maxLabels:24,maxVisibleNodes:110,stars:120,autoOrbit:false,transitionMs:420};
+// Compatibility surface for the legacy renderer/tests. Palette A remains the
+// authoritative semantic palette used by sigma-canvas.
+export const STATUS_COLORS={supported:'#9AB9D4',partial:'#B8AEC3',negative:'#8A96A3',blocked:'#8E6F6F',active:'#9AB9D4',legacy:'#6F7983'};
+const base={palette:'A',renderer:'sigma-canvas',background:'#030507',panel:'#080C12',text:PALETTE_A.chrome.text,muted:PALETTE_A.chrome.textDim,edge:'#556676',derived:'#6D6877',highlight:'#F0F3F6',nodeRadius:1,glow:.75,fog:.34,focalLength:760,drift:0,pulseSpeed:1,filamentCurve:.12,maxLabels:24,maxVisibleNodes:110,stars:120,autoOrbit:false,transitionMs:420};
 export const PRESETS={
- ORIGINAL:{...base,name:'ORIGINAL'},CLEAN:{...base,name:'CLEAN',stars:70,glow:.62,maxLabels:20},DEEP_SPACE:{...base,name:'DEEP_SPACE',stars:170,glow:.82,maxLabels:22},HIGH_CONTRAST:{...base,name:'HIGH_CONTRAST',maxLabels:26},DENSE_GRAPH:{...base,name:'DENSE_GRAPH',nodeRadius:.8,glow:.52,maxLabels:14,maxVisibleNodes:240},MOBILE:{...base,name:'MOBILE',nodeRadius:.9,glow:.58,maxLabels:10,maxVisibleNodes:70,stars:70}
+  ORIGINAL:{...base,name:'ORIGINAL'},
+  CLEAN:{...base,name:'CLEAN',stars:70,glow:.62,maxLabels:20},
+  DEEP_SPACE:{...base,name:'DEEP_SPACE',stars:170,glow:.82,maxLabels:22},
+  HIGH_CONTRAST:{...base,name:'HIGH_CONTRAST',maxLabels:26},
+  DENSE_GRAPH:{...base,name:'DENSE_GRAPH',nodeRadius:.8,glow:.52,maxLabels:14,maxVisibleNodes:240},
+  MOBILE:{...base,name:'MOBILE',nodeRadius:.9,glow:.58,maxLabels:10,maxVisibleNodes:70,stars:70}
 };
