@@ -4,6 +4,7 @@ import {isBindableRecordId} from './data/operations.mjs';
 import {hierarchyView,expandForSearch,hierarchyExpandableIds,collapseSubtree,ancestorsOf} from './graph/projection.mjs';
 import {assignIdentityColors,domainLegend} from './graph/identity.mjs';
 import {buildSectionGraph,ATLAS_SECTIONS} from './graph/section-views.mjs';
+import './graph/canvas-reference-background.mjs';
 import {GraphLabRenderer as ThreeCanvasRenderer} from './graph/renderer.mjs';
 import {GraphLabRenderer as LegacyCanvasRenderer} from './graph/legacy-renderer.mjs';
 import {createCockpit} from './cockpit.mjs';
