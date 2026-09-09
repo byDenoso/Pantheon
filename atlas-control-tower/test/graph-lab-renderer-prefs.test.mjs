@@ -7,6 +7,7 @@ import {fileURLToPath} from 'node:url';
 const here=path.dirname(fileURLToPath(import.meta.url));
 const lab=path.resolve(here,'../graph-lab');
 const prefsPath=path.join(lab,'graph/renderer-lab-preferences.mjs');
+const canvasAdapterPath=path.join(lab,'graph/canvas-reference-background.mjs');
 
 test('renderer lab exposes additional production presets',()=>{
  assert.ok(fs.existsSync(prefsPath),'graph/renderer-lab-preferences.mjs must exist');
@@ -31,10 +32,13 @@ test('renderer lab preferences persist preset, dataset and slider values',()=>{
  assert.match(source,/max-visible/);
 });
 
-test('standalone shell loads preferences before app and pins them for deploy',()=>{
+test('standalone shell loads renderer preferences before app boot through the canvas adapter',()=>{
  const index=fs.readFileSync(path.join(lab,'index.html'),'utf8');
- const builder=fs.readFileSync(path.join(lab,'build-cdn-index.mjs'),'utf8');
- assert.match(index,/\.\/graph\/renderer-lab-preferences\.mjs/);
- assert.ok(index.indexOf('./graph/renderer-lab-preferences.mjs')<index.indexOf('./app.mjs'),'preferences must load before app boot selects its initial preset');
- assert.match(builder,/graph\/renderer-lab-preferences\.mjs/);
+ const app=fs.readFileSync(path.join(lab,'app.mjs'),'utf8');
+ const adapter=fs.readFileSync(canvasAdapterPath,'utf8');
+ assert.match(index,/\.\/app\.mjs/);
+ assert.match(app,/\.\/graph\/canvas-reference-background\.mjs/);
+ assert.ok(app.indexOf('./graph/canvas-reference-background.mjs')<app.indexOf('./graph/legacy-renderer.mjs'),'canvas adapter must load before app boot selects its initial renderer');
+ assert.match(adapter,/nexo-atlas-renderer-lab-v3/);
+ assert.match(adapter,/upgradeRendererLabV3/);
 });
