@@ -9,9 +9,32 @@ const jitter=(id,axis)=>(hashL(`${axis}:${id}`)%10000)/10000-.5;
 // Hierarchy depth drives the Z plane, so the map reads as stacked layers
 // instead of one flat disc. Lower rank sits closer to the camera.
 const DEPTH_RANK={SYSTEM:0,DOMAIN:1,PROJECT:1,CAMPAIGN:2,CLAIM:3,HYPOTHESIS:3,DECISION_HYPOTHESIS:3,TEST:4,RESULT:5,DATASET:5,MODEL:5,PROBE:5,PUBLICATION:6,SOURCE:7,SOURCE_REF:8};
-const DEPTH_STEP=132;
+const DEPTH_STEP=46;
 
 export function depthRank(node){const t=node?.visualType||node?.type;return DEPTH_RANK[t]??4}
+
+// A node inherits the identity of the system that owns it. Colouring a whole
+// branch with one hue is what makes the map read as constellations of systems
+// rather than as an undifferentiated rainbow of node types.
+export function systemOf(node,byId){
+  if(!node)return 'NEXO';
+  let current=node,guard=0;
+  while(current&&guard++<32){
+    if(String(current.id||'').startsWith('system:'))return String(current.id).slice(7).toUpperCase();
+    const parent=current.parentId?byId?.get(current.parentId):null;
+    if(!parent)break;
+    current=parent;
+  }
+  const domain=node.domain?String(node.domain).toUpperCase():'';
+  return domain||'NEXO';
+}
+
+export function systemIndex(nodes){
+  const byId=new Map((nodes||[]).map(n=>[n.id,n]));
+  const out=new Map();
+  for(const n of nodes||[])out.set(n.id,systemOf(n,byId));
+  return out;
+}
 
 function lineageLevels(list,edges,focus){
   const ids=new Set(list.map(n=>n.id));
@@ -47,40 +70,58 @@ function layoutLineage(list,{focus,edges,mobile}){
 // macro view from collapsing into a blob at the centre.
 const GOLDEN_ANGLE=Math.PI*(3-Math.sqrt(5));
 
+// Rings are chosen by a node's relationship to the current focus, not by its
+// absolute type. The focus sits at the origin, its parent just inside it, its
+// children on the first full ring, and everything else further out. That is what
+// keeps the view readable: the thing you are looking at owns the centre.
+const RING_PARENT=150,RING_CHILD=250,RING_DOMAIN=326,RING_OUTER=398;
+
+function ringFor(node,{focusNode,children}){
+  if(focusNode&&node.id===focusNode.parentId)return RING_PARENT;
+  if(children.has(node.id))return RING_CHILD;
+  const t=node.visualType||node.type;
+  if(t==='DOMAIN'||t==='SYSTEM'||t==='PROJECT')return RING_DOMAIN;
+  return RING_OUTER;
+}
+
 function layoutLayered(list,{focus}){
-  const byRank=new Map();
-  for(const n of list){const rank=depthRank(n);if(!byRank.has(rank))byRank.set(rank,[]);byRank.get(rank).push(n)}
-  const ranks=[...byRank.keys()].sort((a,b)=>a-b);
-  const midRank=ranks.length?(ranks[0]+ranks[ranks.length-1])/2:0;
+  const byId=new Map(list.map(n=>[n.id,n]));
+  const focusNode=byId.get(focus);
+  const children=new Set(list.filter(n=>n.parentId===focus).map(n=>n.id));
+  const systems=systemIndex(list);
+  // A stable sector per system keeps a branch together as a wedge.
+  const sectors=[...new Set(systems.values())].sort();
+  const sectorOf=name=>sectors.indexOf(name)+1;
+
+  // Population per ring so a crowded ring widens instead of overlapping itself.
+  const population=new Map();
+  for(const n of list){
+    if(n.id===focus)continue;
+    const r=ringFor(n,{focusNode,children});
+    population.set(r,(population.get(r)||0)+1);
+  }
+  const ranks=list.map(depthRank);
+  const midRank=ranks.length?(Math.min(...ranks)+Math.max(...ranks))/2:0;
+
   const out=[];
-  for(const rank of ranks){
-    const group=byRank.get(rank).sort((a,b)=>String(a.id).localeCompare(String(b.id)));
-    const count=group.length;
-    // Radius grows with sqrt(count) so a rank with 2000 nodes spreads instead
-    // of stacking on top of a rank with 20. The floor of 1 matters: without it
-    // a sparse rank shrinks towards the origin and a small graph — the Drive
-    // bootstrap is seven nodes — collapses into a clump at the centre.
-    const spread=118+rank*54;
-    const scale=spread*Math.max(1,Math.sqrt(count)/Math.sqrt(6));
+  let k=0;
+  for(const n of list){
+    const rank=depthRank(n);
+    // Depth stays shallow on purpose: enough to separate the layers and give
+    // the map parallax, not so much that it turns into a tunnel.
     const zPlane=(midRank-rank)*DEPTH_STEP;
-    for(let i=0;i<count;i++){
-      const n=group[i];
-      if(n.id===focus){out.push({id:n.id,x:0,y:0,z:zPlane});continue}
-      // Offset the spiral per rank so layers do not align vertically.
-      const angle=i*GOLDEN_ANGLE+(hashL(String(rank))%6283)/1000;
-      const radial=Math.sqrt((i+.6)/count);
-      const radius=scale*radial*(1+jitter(n.id,'r')*.09);
-      // Domain pulls a node towards a stable sector, so a domain stays legible
-      // as a wedge across every layer instead of scattering.
-      const domainBias=n.domain?((hashL(n.domain)%360)/360)*Math.PI*2:0;
-      const theta=angle+domainBias*.22;
-      out.push({
-        id:n.id,
-        x:Math.cos(theta)*radius+jitter(n.id,'x')*14,
-        y:Math.sin(theta)*radius*.74+jitter(n.id,'y')*12,
-        z:zPlane+(n.zBand??0)*.12+jitter(n.id,'z')*22
-      });
-    }
+    if(n.id===focus){out.push({id:n.id,x:0,y:0,z:zPlane});continue}
+    const ring=ringFor(n,{focusNode,children});
+    const count=Math.max(1,population.get(ring)||1);
+    const widen=Math.max(1,Math.sqrt(count)/Math.sqrt(9));
+    const radius=ring*widen*(1+jitter(n.id,'r')*.07);
+    const angle=k++*GOLDEN_ANGLE+jitter(n.id,'a')*.6+sectorOf(systems.get(n.id))*.19;
+    out.push({
+      id:n.id,
+      x:Math.cos(angle)*radius,
+      y:Math.sin(angle)*radius*.76,
+      z:zPlane+Math.sin(angle*1.65+jitter(n.id,'z')*6.28)*14
+    });
   }
   return out;
 }
