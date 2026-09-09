@@ -1,5 +1,5 @@
 import {createSyntheticGraph} from './data/synthetic-graph.mjs';
-import {loadSsotGraph,SSOT_SPREADSHEET_URL} from './data/ssot.mjs';
+import {loadSsotGraph,loadSsotSnapshot,SSOT_SPREADSHEET_URL} from './data/ssot.mjs';
 import {GraphLabRenderer as SigmaCanvasRenderer} from './graph/renderer.mjs';
 import {GraphLabRenderer as LegacyCanvasRenderer} from './graph/legacy-renderer.mjs';
 
@@ -73,9 +73,17 @@ if(!demoMode){
   setGraphData(next);
   const records=Math.max(0,next.nodes.length-3);
   setBadge(`SSOT LIVE · DRIVE · ${records} RECORDS`,{openSsot:true});
- }).catch(error=>{
-  console.error('[Graph Lab] Drive SSOT unavailable.',error);
-  setBadge('SSOT UNAVAILABLE · OPEN DRIVE',{openSsot:true});
-  $('focus-label').textContent='SSOT OFFLINE';
+ }).catch(async liveError=>{
+  console.warn('[Graph Lab] Direct private Drive read blocked; using synchronized SSOT projection.',liveError);
+  try{
+   const next=await loadSsotSnapshot();
+   setGraphData(next);
+   const records=Math.max(0,next.nodes.length-3);
+   setBadge(`SSOT SNAPSHOT · DRIVE · ${records} RECORDS`,{openSsot:true});
+  }catch(snapshotError){
+   console.error('[Graph Lab] Drive SSOT and synchronized snapshot unavailable.',snapshotError);
+   setBadge('SSOT UNAVAILABLE · OPEN DRIVE',{openSsot:true});
+   $('focus-label').textContent='SSOT OFFLINE';
+  }
  });
 }
