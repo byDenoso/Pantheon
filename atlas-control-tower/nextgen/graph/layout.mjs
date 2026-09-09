@@ -57,9 +57,11 @@ function layoutLayered(list,{focus}){
     const group=byRank.get(rank).sort((a,b)=>String(a.id).localeCompare(String(b.id)));
     const count=group.length;
     // Radius grows with sqrt(count) so a rank with 2000 nodes spreads instead
-    // of stacking on top of a rank with 20.
+    // of stacking on top of a rank with 20. The floor of 1 matters: without it
+    // a sparse rank shrinks towards the origin and a small graph — the Drive
+    // bootstrap is seven nodes — collapses into a clump at the centre.
     const spread=118+rank*54;
-    const scale=spread*Math.sqrt(Math.max(1,count))/Math.sqrt(6);
+    const scale=spread*Math.max(1,Math.sqrt(count)/Math.sqrt(6));
     const zPlane=(midRank-rank)*DEPTH_STEP;
     for(let i=0;i<count;i++){
       const n=group[i];

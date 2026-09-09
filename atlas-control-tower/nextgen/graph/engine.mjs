@@ -20,6 +20,8 @@ const EDGE_COLOR={SUPPORTS:'#70e6bd',CONTRADICTS:'#ff6d88',KILLS:'#ff5f7a',TESTS
 // observatory's reading order: those are the lines that mean "this is alive".
 const PULSE_WEIGHT={SUPPORTS:1,CONTRADICTS:1,KILLS:1,TESTS:.95,VALIDATES:.95,PRODUCES_RESULT:.9,PRODUCES:.9,PRIMARY_TEST:.85,ASSOCIATED_WITH:.8,DERIVED_FROM:.6,EXECUTED_AS:.6,OBSERVED_BY:.4,LOCATED_AT:.3,CONTAINS:.25};
 
+// Perspective size constant: aSize * SIZE_SCALE / distance = pixels.
+const SIZE_SCALE=1150;
 const SHAPE={CIRCLE:0,DIAMOND:1,SQUARE:2};
 const EDGE_SEGMENTS=10;
 const CHILD_LIMIT=14;
@@ -38,13 +40,17 @@ function shapeFor(node){
 const NODE_VERT=`
 attribute vec3 aColor; attribute float aSize; attribute float aShape;
 attribute float aActivity; attribute float aState;
-uniform float uPixelRatio; uniform float uTime; uniform float uReduced;
+uniform float uPixelRatio; uniform float uTime; uniform float uReduced; uniform float uSizeScale;
 varying vec3 vColor; varying float vShape; varying float vState; varying float vActivity;
 void main(){
   vColor=aColor; vShape=aShape; vState=aState; vActivity=aActivity;
   vec4 mv=modelViewMatrix*vec4(position,1.0);
   float pulse=1.0+sin(uTime*2.6+position.x*0.05+position.y*0.05)*0.05*aActivity*(1.0-uReduced);
-  gl_PointSize=aSize*pulse*uPixelRatio*(300.0/max(1.0,-mv.z));
+  // uSizeScale is tuned so a SYSTEM node reads at roughly the same pixel size as
+  // the canvas-2D engine drew it at the default macro framing. The upper clamp
+  // stops a close-up from turning one node into a screen-filling sprite.
+  float size=aSize*pulse*(uSizeScale/max(1.0,-mv.z));
+  gl_PointSize=clamp(size,1.5,96.0)*uPixelRatio;
   gl_Position=projectionMatrix*mv;
 }`;
 
@@ -140,7 +146,7 @@ export class AtlasEngine{
     this.nodeGeom=new THREE.BufferGeometry();
     this.nodeMat=new THREE.ShaderMaterial({
       vertexShader:NODE_VERT,fragmentShader:NODE_FRAG,
-      uniforms:{uPixelRatio:{value:1},uTime:{value:0},uReduced:{value:this.reduced?1:0}},
+      uniforms:{uPixelRatio:{value:1},uTime:{value:0},uReduced:{value:this.reduced?1:0},uSizeScale:{value:SIZE_SCALE}},
       transparent:true,depthWrite:false,blending:THREE.AdditiveBlending
     });
     this.nodeMesh=new THREE.Points(this.nodeGeom,this.nodeMat);
@@ -462,7 +468,7 @@ export class AtlasEngine{
       const x=(v.x*.5+.5)*this.w,y=(-v.y*.5+.5)*this.h;
       if(x<-120||y<-120||x>this.w+120||y>this.h+120)continue;
       const dist=this.three.position.distanceTo(new THREE.Vector3(p.x,p.y,p.z));
-      const r=Math.max(3,this.nodeSize(node)*300/Math.max(1,dist)/2);
+      const r=Math.max(3,Math.min(96,this.nodeSize(node)*SIZE_SCALE/Math.max(1,dist))/2);
       let hex=TYPE_COLOR[node.visualType||node.type]||'#91a7c6';
       if(STATUS_DANGER.test(String(node.status||node.summary||'')))hex='#ff6d88';
       out.push({id:node.id,node,x,y,r,depth:v.z,visible:true,color:hex});

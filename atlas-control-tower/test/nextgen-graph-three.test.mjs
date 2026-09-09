@@ -120,3 +120,20 @@ test('mobile keeps a tighter label budget than desktop',()=>{
   assert.ok(labelPolicy(390,'macro').max<labelPolicy(1280,'macro').max);
   assert.ok(390<LINEAGE_BREAKPOINT);
 });
+
+test('a sparse graph still spreads instead of clumping at the centre',()=>{
+  // The Drive bootstrap snapshot is seven nodes. A sqrt(population) radius with
+  // no floor shrank ranks that small towards the origin.
+  const nodes=[
+    node('system:NEXO','SYSTEM'),node('system:SCIENCE','SYSTEM'),node('system:LEARNING','SYSTEM'),
+    node('domain:a','DOMAIN'),node('domain:b','DOMAIN'),
+    node('campaign:a','CAMPAIGN'),node('campaign:b','CAMPAIGN')
+  ];
+  const placed=layoutGraph(nodes,{focus:'system:NEXO',semanticView:'macro'})
+    .filter(p=>p.id!=='system:NEXO');
+  // Without the floor the innermost of these sat ~21px from the origin; with it
+  // the same node clears ~53px, so 40 separates the two regimes cleanly.
+  for(const p of placed){
+    assert.ok(Math.hypot(p.x,p.y)>40,`${p.id} sits too close to the origin`);
+  }
+});
