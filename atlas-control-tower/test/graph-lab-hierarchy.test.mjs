@@ -6,6 +6,7 @@ import {fileURLToPath,pathToFileURL} from 'node:url';
 const here=path.dirname(fileURLToPath(import.meta.url));
 const lab=path.resolve(here,'../graph-lab');
 const projection=await import(pathToFileURL(path.join(lab,'graph/projection.mjs')));
+const quotedAttr=(name,value)=>new RegExp(`${name}=['\"]${value}['\"]`);
 
 // One hierarchy, four levels: the core, its Domains, their Programs, their Campaigns.
 const graph={rootId:'system:NEXO',nodes:[
@@ -94,6 +95,6 @@ test('Atlas shell drives the hierarchy from a single click plus search and colla
  assert.match(app,/onSelect:node=>[\s\S]*toggleSubgraph\(node\.id\)/);
  assert.match(app,/collapseSubtree/);
  assert.match(app,/expandForSearch/);
- for(const id of ['hierarchy-search','search-results','expand-all','collapse-all','active-only','home','breadcrumb'])assert.match(html,new RegExp(`id="${id}"`));
+ for(const id of ['hierarchy-search','search-results','expand-all','collapse-all','active-only','home','breadcrumb'])assert.match(html,quotedAttr('id',id));
  assert.doesNotMatch(html,/Duplo clique abre subgrafo/);
 });
