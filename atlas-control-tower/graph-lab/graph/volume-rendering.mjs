@@ -1,5 +1,6 @@
 import * as THREE from '../vendor/three.module.min.js';
 import {GraphLabRenderer,parseCssColor} from './renderer.mjs';
+import {getPalette} from './palette.mjs';
 
 const RING_NORMALS=[
  new THREE.Vector3(.18,.94,.28).normalize(),
@@ -171,56 +172,76 @@ function asteroidBelt(count){
  return belt;
 }
 
-// The reference asks for an actual galactic field, not a black canvas with a few
-// polite specks. This replaces only the renderer background volume: node positions,
-// hierarchy and graph geometry still come from the canonical layout module.
+// The reference asks for an actual galactic field in dark mode, while light mode
+// uses a sparse observatory sky. Graph geometry stays external in both themes.
 GraphLabRenderer.prototype.buildSpace=function(){
- if(this.renderer)this.renderer.setClearColor(new THREE.Color('#020813'),1);
- if(this.scene)this.scene.fog=new THREE.FogExp2(new THREE.Color('#020813'),.00024);
+ const light=this.theme==='light';
+ if(this.space?.parent)this.scene.remove(this.space);
+ const background=light?'#EAF4FF':'#020813';
+ if(this.renderer)this.renderer.setClearColor(new THREE.Color(background),1);
+ if(this.scene)this.scene.fog=new THREE.FogExp2(new THREE.Color(background),light?.00013:.00024);
  this.space=new THREE.Group();
 
- const galaxy=new THREE.Sprite(new THREE.SpriteMaterial({
-  map:this.texture('galaxy-disc-reference',galaxyTexture),
-  transparent:true,
-  depthWrite:false,
-  depthTest:false,
-  opacity:.96
- }));
- galaxy.name='galaxy-disc';
- galaxy.position.set(-20,0,-1800);
- galaxy.scale.set(4050,2280,1);
- galaxy.renderOrder=-60;
- this.space.add(galaxy);
-
- this.space.add(this.starShell(1400,1200,3900,'rgba(211,234,255,0.96)',.95,6.8,'reference-star'));
- this.space.add(this.starShell(850,720,3100,'rgba(114,190,255,0.70)',.62,4.6,'reference-dust'));
- this.space.add(galaxyArmPoints(4600,'reference-arm'));
- this.space.add(asteroidBelt(190));
-
- const clouds=[
-  {color:'#175D9E',position:[-920,420,-1580],scale:[3600,1660],opacity:.64,rotation:-.18},
-  {color:'#0B2D58',position:[980,-330,-2140],scale:[3800,1860],opacity:.58,rotation:.20},
-  {color:'#1B6DBA',position:[300,740,-2380],scale:[2800,1240],opacity:.42,rotation:.46},
-  {color:'#8E472D',position:[160,120,-1320],scale:[2300,1000],opacity:.28,rotation:-.38},
-  {color:'#113B74',position:[-210,-760,-2260],scale:[3200,1100],opacity:.36,rotation:.08}
- ];
- for(const [index,cloudSpec] of clouds.entries()){
-  const material=new THREE.SpriteMaterial({
-   map:this.texture(`observatory-cloud:${index}:${cloudSpec.color}`,()=>cloudTexture(cloudSpec.color)),
+ if(light){
+  this.space.add(this.starShell(900,950,3900,'rgba(35,76,112,0.56)',.72,5.4,'light-star'));
+  this.space.add(this.starShell(420,720,2800,'rgba(85,116,150,0.42)',.48,3.8,'light-dust'));
+ }else{
+  const galaxy=new THREE.Sprite(new THREE.SpriteMaterial({
+   map:this.texture('galaxy-disc-reference',galaxyTexture),
    transparent:true,
    depthWrite:false,
    depthTest:false,
-   blending:THREE.AdditiveBlending,
-   opacity:cloudSpec.opacity,
-   rotation:cloudSpec.rotation
-  });
-  const cloud=new THREE.Sprite(material);
-  cloud.position.set(...cloudSpec.position);
-  cloud.scale.set(cloudSpec.scale[0],cloudSpec.scale[1],1);
-  cloud.renderOrder=-52+index;
-  this.space.add(cloud);
+   opacity:.96
+  }));
+  galaxy.name='galaxy-disc';
+  galaxy.position.set(-20,0,-1800);
+  galaxy.scale.set(4050,2280,1);
+  galaxy.renderOrder=-60;
+  this.space.add(galaxy);
+
+  this.space.add(this.starShell(1400,1200,3900,'rgba(211,234,255,0.96)',.95,6.8,'reference-star'));
+  this.space.add(this.starShell(850,720,3100,'rgba(114,190,255,0.70)',.62,4.6,'reference-dust'));
+  this.space.add(galaxyArmPoints(4600,'reference-arm'));
+  this.space.add(asteroidBelt(190));
+
+  const clouds=[
+   {color:'#175D9E',position:[-920,420,-1580],scale:[3600,1660],opacity:.64,rotation:-.18},
+   {color:'#0B2D58',position:[980,-330,-2140],scale:[3800,1860],opacity:.58,rotation:.20},
+   {color:'#1B6DBA',position:[300,740,-2380],scale:[2800,1240],opacity:.42,rotation:.46},
+   {color:'#8E472D',position:[160,120,-1320],scale:[2300,1000],opacity:.28,rotation:-.38},
+   {color:'#113B74',position:[-210,-760,-2260],scale:[3200,1100],opacity:.36,rotation:.08}
+  ];
+  for(const [index,cloudSpec] of clouds.entries()){
+   const material=new THREE.SpriteMaterial({
+    map:this.texture(`observatory-cloud:${index}:${cloudSpec.color}`,()=>cloudTexture(cloudSpec.color)),
+    transparent:true,
+    depthWrite:false,
+    depthTest:false,
+    blending:THREE.AdditiveBlending,
+    opacity:cloudSpec.opacity,
+    rotation:cloudSpec.rotation
+   });
+   const cloud=new THREE.Sprite(material);
+   cloud.position.set(...cloudSpec.position);
+   cloud.scale.set(cloudSpec.scale[0],cloudSpec.scale[1],1);
+   cloud.renderOrder=-52+index;
+   this.space.add(cloud);
+  }
  }
  this.scene.add(this.space);
+};
+
+GraphLabRenderer.prototype.setTheme=function(theme='dark'){
+ const next=theme==='light'?'light':'dark';
+ this.theme=next;
+ this.palette=getPalette(next==='light'?'LIGHT':'A');
+ this.options.background=next==='light'?'#EAF4FF':'#02050A';
+ this.options.text=this.palette.chrome.text;
+ this.options.muted=this.palette.chrome.textDim;
+ if(!this.scene)return;
+ this.buildSpace();
+ this.rebuildScene();
+ this.invalidate();
 };
 
 GraphLabRenderer.prototype.curveFor=function(a,b){
