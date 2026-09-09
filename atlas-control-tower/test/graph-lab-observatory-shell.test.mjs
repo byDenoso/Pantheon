@@ -17,7 +17,7 @@ test('approved Obsidian Observatory changes the shell, not just token colours',(
 });
 
 test('shell matches the approved Atlas reference navigation and visual density',()=>{
- assert.match(index,/class="topbar-nav"/);
+ assert.match(index,/class=['"]topbar-nav['"]/);
  for(const label of ['GRAPH LAB','DOMAINS','SSOT','ANALYTICS','DEPLOY','SETTINGS'])assert.match(index,new RegExp(`>${label}<`));
  assert.match(theme,/\.topbar-nav\s*\{/);
  assert.match(theme,/\.topbar-nav a\.is-active/);
@@ -35,4 +35,17 @@ test('observatory background is a visible galaxy field while graph geometry rema
  assert.match(volume,/CanvasTexture/);
  assert.match(volume,/AdditiveBlending/);
  assert.doesNotMatch(volume,/layoutNodes\s*=/);
+});
+
+test('mobile theme and compact cockpit controls are present in the standalone shell',()=>{
+ assert.match(index,/id=['"]theme-toggle['"]/);
+ assert.match(index,/id=['"]cockpit-mode['"]/);
+ assert.match(index,/nexo-atlas-ui/);
+ assert.match(index,/dataset\.theme/);
+ assert.match(index,/dataset\.cockpitMode/);
+ assert.match(index,/data-cockpit-mode=compact/);
+ assert.match(index,/data-theme=light/);
+ assert.match(index,/100dvh/);
+ assert.match(index,/safe-area-inset-bottom/);
+ assert.match(index,/\.cockpit\.open/);
 });
