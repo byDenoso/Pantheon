@@ -1,4 +1,4 @@
-const TYPE_RANK={SYSTEM:700,DOMAIN:520,CAMPAIGN:360,CLAIM:220,TEST:180,RESULT:120};
+const TYPE_RANK={SYSTEM:700,DOMAIN:520,PROGRAM:410,CAMPAIGN:360,CLAIM:220,TEST:180,RESULT:120};
 
 function overlap(a,b,pad=0){return a.x<a.x+a.w&&a.x<b.x+b.w+pad&&a.x+a.w+pad>b.x&&a.y<b.y+b.h+pad&&a.y+a.h+pad>b.y}
 function boxCircle(box,p){
@@ -12,6 +12,8 @@ export function semanticLabelRank(point,{focusId,selectedId,hoverId}={}){
  if(id===focusId)return 100000;
  if(id===selectedId)return 90000;
  if(id===hoverId)return 80000;
+ // What a click just revealed must be readable: children of the selection label next.
+ if(selectedId&&point.node.parentId===selectedId)return 70000;
  return (TYPE_RANK[point.node.type]||0)+(point.z||0);
 }
 

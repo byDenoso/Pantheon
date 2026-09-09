@@ -1,28 +1,40 @@
 import {createSyntheticGraph} from './data/synthetic-graph.mjs';
 import {loadSsotGraph,loadSsotSnapshot,SSOT_SPREADSHEET_URL} from './data/ssot.mjs';
-import {hierarchyView,expandForSearch,hierarchyExpandableIds} from './graph/projection.mjs';
-import {GraphLabRenderer as SigmaCanvasRenderer} from './graph/renderer.mjs';
+import {isBindableRecordId} from './data/operations.mjs';
+import {hierarchyView,expandForSearch,hierarchyExpandableIds,collapseSubtree,ancestorsOf} from './graph/projection.mjs';
+import {GraphLabRenderer as ThreeCanvasRenderer} from './graph/renderer.mjs';
 import {GraphLabRenderer as LegacyCanvasRenderer} from './graph/legacy-renderer.mjs';
+import {createCockpit} from './cockpit.mjs';
 
 const $=id=>document.getElementById(id);
 const rendererRoot=$('graph-renderer-root');
 const params=new URLSearchParams(location.search);
 const demoMode=params.get('demo')==='1';
-const placeholderGraph=()=>({rootId:'system:NEXO',nodes:[{id:'system:NEXO',label:'NEXO',type:'SYSTEM',kind:'SYSTEM',system:'NEXO',status:'LOADING',authority:'canonical',hiddenChildren:0}],edges:[]});
-let graph=demoMode?createSyntheticGraph(50):placeholderGraph(),focusId=graph.rootId,history=[],expandedIds=new Set(),activeOnly=false;
-const rendererMode=params.get('renderer')||'sigma-canvas';
-const Renderer=rendererMode==='legacy-canvas'?LegacyCanvasRenderer:SigmaCanvasRenderer;
+
+const placeholderGraph=()=>({rootId:'system:NEXO',nodes:[{id:'system:NEXO',label:'NEXO',type:'SYSTEM',kind:'SYSTEM',hierarchyLevel:'root',system:'NEXO',status:'LOADING',authority:'canonical',hiddenChildren:0,ops:{level:'root',status:'LOADING',tone:'idle',summary:'Lendo NEXO · SSOT CANONICAL.',rollup:{},sections:[]}}],edges:[]});
+
+let graph=demoMode?createSyntheticGraph(50):placeholderGraph();
+let expandedIds=new Set();
+let selectedId=graph.rootId;
+let focusId=graph.rootId;
+let history=[];
+let activeOnly=false;
+
+const rendererMode=params.get('renderer')==='legacy-canvas'?'legacy-canvas':'three-canvas';
+const Renderer=rendererMode==='legacy-canvas'?LegacyCanvasRenderer:ThreeCanvasRenderer;
 const target=rendererMode==='legacy-canvas'?$('graph-lab-canvas'):rendererRoot;
 $('renderer').value=rendererMode;
 $('graph-lab-canvas').hidden=rendererMode!=='legacy-canvas';
+
+const dataset=$('dataset-size');
+if(!demoMode){dataset.disabled=true;dataset.title='Produção lê NEXO · SSOT CANONICAL no Drive. Use ?demo=1 para datasets sintéticos.'}
+
 const badge=document.querySelector('.stage-badge span');
 const badgeBox=document.querySelector('.stage-badge');
-const dataset=$('dataset-size');
-if(!demoMode){dataset.disabled=true;dataset.title='Production reads NEXO · SSOT CANONICAL from Drive. Use ?demo=1 for synthetic datasets.'}
-
-function setBadge(text,{openSsot=false}={}){
+function setBadge(text,{openSsot=false,tone='idle'}={}){
  if(badge)badge.textContent=text;
  if(!badgeBox)return;
+ badgeBox.dataset.tone=tone;
  badgeBox.style.cursor=openSsot?'pointer':'default';
  badgeBox.title=openSsot?'Abrir NEXO · SSOT CANONICAL no Drive':'';
  badgeBox.onclick=openSsot?()=>window.open(SSOT_SPREADSHEET_URL,'_blank','noopener'):null;
@@ -31,112 +43,304 @@ if(demoMode)setBadge('DEMO · SYNTHETIC DATA');
 else if(rendererMode==='legacy-canvas'&&params.get('fallback')==='sigma-init')setBadge('SSOT CONNECTING · LEGACY CANVAS');
 else setBadge('SSOT CONNECTING · DRIVE');
 
-function viewForFocus(source,id,maxVisible){
- const byId=new Map(source.nodes.map(n=>[n.id,n]));const children=new Map();
- for(const n of source.nodes)if(n.parentId){const a=children.get(n.parentId)||[];a.push(n.id);children.set(n.parentId,a)}
- const ids=new Set([id]);let frontier=[id];
- for(let depth=0;depth<2&&frontier.length;depth++){const next=[];for(const parent of frontier)for(const child of children.get(parent)||[]){if(ids.size>=maxVisible)break;ids.add(child);next.push(child)}frontier=next}
- let cur=byId.get(id);while(cur?.parentId&&ids.size<maxVisible){ids.add(cur.parentId);cur=byId.get(cur.parentId)}
- const nodes=source.nodes.filter(n=>ids.has(n.id));const valid=new Set(nodes.map(n=>n.id));
- return{nodes,edges:source.edges.filter(e=>valid.has(e.source)&&valid.has(e.target))};
+// --- hierarchy state -------------------------------------------------------
+
+const nodeById=id=>graph.nodes.find(node=>node.id===id)||null;
+const expandableIds=()=>hierarchyExpandableIds(graph);
+
+function currentView(){
+ return hierarchyView(graph,{expandedIds,activeOnly,maxVisible:renderer.options.maxVisibleNodes});
 }
 
-function isHierarchyGraph(source=graph){return source.nodes.some(n=>n.hierarchyLevel)}
-function graphView(){return isHierarchyGraph()?hierarchyView(graph,{expandedIds,activeOnly,maxVisible:renderer.options.maxVisibleNodes}):viewForFocus(graph,focusId,renderer.options.maxVisibleNodes)}
-function updateFocusLabel(id=focusId){$('focus-label').textContent=graph.nodes.find(n=>n.id===id)?.label||'NEXO'}
-function toggleHierarchy(node){
- if(!node||!hierarchyExpandableIds(graph).has(node.id))return false;
- if(expandedIds.has(node.id))expandedIds.delete(node.id);else expandedIds.add(node.id);
- if(focusId!==node.id)history.push(focusId);focusId=node.id;updateFocusLabel();refresh();return true;
+function refresh({fit=false}={}){
+ const view=currentView();
+ if(!view.nodes.some(node=>node.id===focusId))focusId=graph.rootId;
+ renderer.setGraph(view,{focusId,fit});
+ renderer.setSelected?.(selectedId);
+ renderView(view);
 }
+
+function renderView(view=currentView()){
+ const node=nodeById(selectedId)||nodeById(graph.rootId);
+ const projected=view.nodes.find(entry=>entry.id===node?.id);
+ $('focus-label').textContent=node?.label||'NEXO';
+ renderBreadcrumb(node);
+ cockpit.render(node,{
+  graph,
+  trail:node?ancestorsOf(graph,node.id).map(step=>({id:step.id,label:step.label})):[],
+  expanded:expandedIds.has(node?.id),
+  expandable:Boolean(projected?.expandable??(node&&expandableIds().has(node.id))),
+  hiddenChildren:projected?.hiddenChildren??0
+ });
+}
+
+function renderBreadcrumb(node){
+ const root=$('breadcrumb');
+ root.replaceChildren();
+ const trail=node?ancestorsOf(graph,node.id):[];
+ if(trail.length<2)return;
+ trail.forEach((step,index)=>{
+  if(index){const sep=document.createElement('span');sep.className='sep';sep.textContent='›';root.append(sep)}
+  const button=document.createElement('button');
+  button.type='button';
+  button.textContent=step.label;
+  if(step.id===node.id)button.className='is-current';
+  button.addEventListener('click',()=>selectNode(step.id,{center:true}));
+  root.append(button);
+ });
+}
+
+function selectNode(id,{center=false}={}){
+ if(!id)return;
+ if(selectedId&&selectedId!==id)history.push(selectedId);
+ selectedId=id;
+ focusId=graph.rootId;
+ renderer.setSelected?.(id);
+ refresh();
+ if(center)renderer.focusNode?.(id);
+}
+
+/** Single click is the whole navigation: it selects, and it opens or folds a subgraph. */
+function toggleSubgraph(id){
+ if(!expandableIds().has(id))return false;
+ expandedIds=expandedIds.has(id)?collapseSubtree(graph,id,expandedIds):new Set([...expandedIds,id]);
+ refresh();
+ return true;
+}
+
+/** Reveals a node wherever it sits by opening every ancestor above it first. */
+function openNode(id){
+ const trail=ancestorsOf(graph,id);
+ expandedIds=new Set([...expandedIds,...trail.slice(0,-1).map(step=>step.id)]);
+ selectNode(id,{center:true});
+}
+
+// --- renderer --------------------------------------------------------------
 
 const renderer=new Renderer(target,{
- onSelect:node=>{if(!node)return;updateFocusLabel(node.id);if(!demoMode)toggleHierarchy(node)},
- onOpen:node=>{if(demoMode&&node?.hiddenChildren>0){history.push(focusId);focusId=node.id;updateFocusLabel();refresh()}},
- onStats:s=>{$('hud-fps').textContent=Number(s.fps||0).toFixed(0);$('hud-frame').textContent=Number(s.frameMs||0).toFixed(1);$('hud-nodes').textContent=s.nodes;$('hud-edges').textContent=s.edges;$('hud-labels').textContent=s.labels;$('hud-dpr').textContent=Number(s.dpr||1).toFixed(1)}
-});
-renderer.ready?.catch(error=>{
- console.error('[Graph Lab] Sigma initialization failed; switching to legacy canvas.',error);
- if(rendererMode==='legacy-canvas')return;
- const u=new URL(location.href);u.searchParams.set('renderer','legacy-canvas');u.searchParams.set('fallback','sigma-init');location.replace(u);
+ onSelect:node=>{
+  if(!node){selectedId=graph.rootId;refresh();return}
+  if(selectedId!==node.id)history.push(selectedId);
+  selectedId=node.id;
+  if(!toggleSubgraph(node.id))refresh();
+ },
+ onOpen:node=>{if(node)toggleSubgraph(node.id)},
+ onStats:stats=>{
+  $('hud-fps').textContent=Number(stats.fps||0).toFixed(0);
+  $('hud-frame').textContent=Number(stats.frameMs||0).toFixed(1);
+  $('hud-nodes').textContent=stats.nodes;
+  $('hud-edges').textContent=stats.edges;
+  $('hud-labels').textContent=stats.labels;
+  $('hud-dpr').textContent=Number(stats.dpr||1).toFixed(1);
+ }
 });
 
-function focusGraphNode(nodeId){
- if(!nodeId||!graph.nodes.some(node=>node.id===nodeId))return;
- if(focusId!==nodeId)history.push(focusId);
- focusId=nodeId;updateFocusLabel();refresh();
-}
+renderer.ready?.catch(error=>{
+ console.error('[Atlas] WebGL renderer unavailable; switching to legacy canvas.',error);
+ if(rendererMode==='legacy-canvas')return;
+ const url=new URL(location.href);
+ url.searchParams.set('renderer','legacy-canvas');
+ url.searchParams.set('fallback','sigma-init');
+ location.replace(url);
+});
+
+const cockpit=createCockpit($('cockpit-body'),{
+ onFocusNode:id=>{openNode(id);openCockpit()},
+ onToggleSubgraph:id=>{toggleSubgraph(id)},
+ onHome:()=>goHome()
+});
+
+// --- NEXO live -------------------------------------------------------------
 
 function renderNexoLive(live=graph.live){
  const state=live?.loop||{};
- const setText=(id,value,fallback='—')=>{const el=$(id);if(el)el.textContent=value||fallback};
+ const setText=(id,value,fallback='—')=>{const node=$(id);if(node)node.textContent=value||fallback};
  setText('nexo-current-state',state.currentState,'Sem estado operacional projetado.');
  setText('nexo-next-action',state.nextAction);
  setText('nexo-last-effect',state.lastEffect);
  const renderList=(id,items,emptyText)=>{
-  const root=$(id);if(!root)return;root.replaceChildren();
+  const root=$(id);
+  if(!root)return;
+  root.replaceChildren();
   if(!items?.length){const empty=document.createElement('span');empty.className='nexo-live-empty';empty.textContent=emptyText;root.append(empty);return}
   for(const item of items.slice(0,5)){
-   const nodeId=`record:NEXO:${item.recordId}`;
-   const button=document.createElement('button');button.type='button';button.className='nexo-live-item';button.setAttribute('data-node-id',nodeId);button.disabled=!graph.nodes.some(node=>node.id===nodeId);
-   const top=document.createElement('span');top.className='nexo-live-item-top';
-   const title=document.createElement('b');title.textContent=item.title||item.recordId;
-   const status=document.createElement('em');status.textContent=item.status||'UNKNOWN';status.dataset.status=(item.status||'UNKNOWN').toLowerCase();
+   const cited=new Set([item.recordId,item.scope,item.detail,...(item.evidenceRefs||[])].join(' ').split(/[^A-Za-z0-9_-]+/));
+   const owner=graph.nodes.find(node=>isBindableRecordId(node.recordId)&&cited.has(node.recordId));
+   const button=document.createElement('button');
+   button.type='button';
+   button.className='nexo-live-item';
+   button.setAttribute('data-node-id',owner?.id||'');
+   button.disabled=!owner;
+   const top=document.createElement('span');
+   top.className='nexo-live-item-top';
+   const title=document.createElement('b');
+   title.textContent=item.title||item.recordId;
+   const status=document.createElement('em');
+   status.textContent=item.status||'UNKNOWN';
+   status.dataset.status=(item.status||'UNKNOWN').toLowerCase();
    top.append(title,status);
-   const detail=document.createElement('small');detail.textContent=item.scope||item.effect||item.detail||item.recordId;
-   button.append(top,detail);button.addEventListener('click',()=>focusGraphNode(nodeId));root.append(button);
+   const detail=document.createElement('small');
+   detail.textContent=item.scope||item.effect||item.detail||item.recordId;
+   button.append(top,detail);
+   if(owner)button.addEventListener('click',()=>{openNode(owner.id);openCockpit()});
+   root.append(button);
   }
  };
  renderList('nexo-mini-claims',live?.miniClaims,'Nenhuma mini-claim material.');
  renderList('nexo-engineering-effects',live?.engineeringEffects,'Nenhum efeito recente.');
 }
 
-function refresh(){
- const view=graphView();
- if(!view.nodes.some(n=>n.id===focusId)){focusId=graph.rootId;updateFocusLabel()}
- renderer.setGraph(view,{focusId});
+// --- data ------------------------------------------------------------------
+
+function setGraphData(next){
+ graph=next;
+ expandedIds=new Set();
+ selectedId=graph.rootId;
+ focusId=graph.rootId;
+ history=[];
+ activeOnly=false;
+ $('active-only').setAttribute('aria-pressed','false');
+ $('active-only').classList.remove('is-active');
+ $('hierarchy-search').value='';
+ hideResults();
+ renderNexoLive(graph.live);
+ refresh({fit:true});
 }
-function setGraphData(next){graph=next;focusId=graph.rootId;history=[];expandedIds=new Set();activeOnly=false;$('active-only').setAttribute('aria-pressed','false');$('active-only').classList.remove('is-active');$('hierarchy-search').value='';renderNexoLive(graph.live);updateFocusLabel();refresh()}
-function rebuild(count){if(!demoMode)return;setGraphData(createSyntheticGraph(count))}
-function syncControls(){const o=renderer.options;for(const [id,key] of [['node-radius','nodeRadius'],['glow','glow'],['fog','fog'],['perspective','focalLength'],['drift','drift'],['pulse-speed','pulseSpeed'],['filament-curve','filamentCurve'],['max-labels','maxLabels'],['max-visible','maxVisibleNodes']]){const input=$(id);if(input&&o[key]!=null){input.value=o[key];$(`${id}-out`).textContent=Number(o[key]).toFixed(['perspective','max-labels','max-visible'].includes(id)?0:id==='drift'?1:2)}}}
+function rebuild(count){if(demoMode)setGraphData(createSyntheticGraph(count))}
 
-$('hierarchy-search').addEventListener('input',e=>{
- const query=e.target.value.trim();if(!query||!isHierarchyGraph())return;
- const result=expandForSearch(graph,query,expandedIds);expandedIds=result.expandedIds;
- if(result.matchId){if(focusId!==result.matchId)history.push(focusId);focusId=result.matchId;updateFocusLabel();refresh()}
+function goHome(){
+ expandedIds=new Set();
+ selectedId=graph.rootId;
+ focusId=graph.rootId;
+ refresh({fit:true});
+}
+
+// --- search ----------------------------------------------------------------
+
+const results=$('search-results');
+const searchInput=$('hierarchy-search');
+function hideResults(){results.hidden=true;results.replaceChildren();searchInput.setAttribute('aria-expanded','false')}
+function showResults(matches){
+ results.replaceChildren();
+ if(!matches.length){hideResults();return}
+ for(const match of matches){
+  const item=document.createElement('li');
+  const button=document.createElement('button');
+  button.type='button';
+  const label=document.createElement('b');
+  label.textContent=match.label;
+  const meta=document.createElement('small');
+  meta.textContent=`${String(match.hierarchyLevel||'').toUpperCase()} · ${match.recordId||match.id}`;
+  button.append(label,meta);
+  button.addEventListener('click',()=>{searchInput.value=match.label;hideResults();openNode(match.id);openCockpit()});
+  item.append(button);
+  results.append(item);
+ }
+ results.hidden=false;
+ searchInput.setAttribute('aria-expanded','true');
+}
+
+searchInput.addEventListener('input',event=>{
+ const query=event.target.value.trim();
+ if(!query){hideResults();return}
+ const result=expandForSearch(graph,query,expandedIds);
+ showResults(result.matches);
 });
-$('hierarchy-search-clear').addEventListener('click',()=>{$('hierarchy-search').value='';$('hierarchy-search').focus()});
-$('expand-all').addEventListener('click',()=>{if(!isHierarchyGraph())return;expandedIds=hierarchyExpandableIds(graph);refresh()});
-$('collapse-all').addEventListener('click',()=>{expandedIds=new Set();refresh()});
-$('active-only').addEventListener('click',e=>{activeOnly=!activeOnly;e.currentTarget.setAttribute('aria-pressed',String(activeOnly));e.currentTarget.classList.toggle('is-active',activeOnly);refresh()});
+searchInput.addEventListener('keydown',event=>{
+ if(event.key==='Escape'){searchInput.value='';hideResults();return}
+ if(event.key!=='Enter')return;
+ const result=expandForSearch(graph,searchInput.value,expandedIds);
+ if(!result.matchId)return;
+ expandedIds=result.expandedIds;
+ hideResults();
+ selectNode(result.matchId,{center:true});
+ openCockpit();
+});
+$('hierarchy-search-clear').addEventListener('click',()=>{searchInput.value='';hideResults();searchInput.focus()});
+document.addEventListener('click',event=>{if(!results.hidden&&!event.target.closest('.topbar-search'))hideResults()});
 
-$('renderer').addEventListener('change',e=>{const u=new URL(location.href);u.searchParams.set('renderer',e.target.value);u.searchParams.delete('fallback');location.assign(u)});
-$('preset').addEventListener('change',e=>{renderer.setPreset(e.target.value);syncControls();refresh()});
-dataset.addEventListener('change',e=>rebuild(Number(e.target.value)));
-for(const [id,key] of [['node-radius','nodeRadius'],['glow','glow'],['fog','fog'],['perspective','focalLength'],['drift','drift'],['pulse-speed','pulseSpeed'],['filament-curve','filamentCurve'],['max-labels','maxLabels'],['max-visible','maxVisibleNodes']])$(id).addEventListener('input',e=>{const value=Number(e.target.value);renderer.setOptions({[key]:value});$(`${id}-out`).textContent=value.toFixed(['perspective','max-labels','max-visible'].includes(id)?0:id==='drift'?1:2);if(key==='maxVisibleNodes')refresh()});
-$('motion').addEventListener('click',e=>{renderer.setOptions({autoOrbit:!renderer.options.autoOrbit});e.currentTarget.setAttribute('aria-pressed',String(renderer.options.autoOrbit));e.currentTarget.textContent=renderer.options.autoOrbit?'Ⅱ':'▷'});
-$('back').addEventListener('click',()=>{if(history.length){focusId=history.pop();updateFocusLabel();refresh()}});
-$('home').addEventListener('click',()=>{if(focusId!==graph.rootId)history.push(focusId);focusId=graph.rootId;updateFocusLabel();refresh()});
-$('zoom-in').addEventListener('click',()=>renderer.zoom(1.15));$('zoom-out').addEventListener('click',()=>renderer.zoom(.86));$('fit').addEventListener('click',()=>renderer.fit());$('center').addEventListener('click',()=>renderer.centerSelected());$('flat').addEventListener('click',e=>{const flat=renderer.toggleFlat();e.currentTarget.textContent=flat?'2D':'3D'});
-const panel=$('lab-panel');$('panel-toggle').addEventListener('click',()=>panel.classList.add('open'));$('panel-close').addEventListener('click',()=>panel.classList.remove('open'));
+// --- controls --------------------------------------------------------------
 
-renderer.setPreset(matchMedia('(max-width:760px)').matches?'MOBILE':'ORIGINAL');syncControls();refresh();renderer.start();
+$('expand-all').addEventListener('click',()=>{expandedIds=expandableIds();refresh()});
+$('collapse-all').addEventListener('click',()=>{expandedIds=new Set();refresh({fit:true})});
+$('home').addEventListener('click',()=>goHome());
+$('active-only').addEventListener('click',event=>{
+ activeOnly=!activeOnly;
+ event.currentTarget.setAttribute('aria-pressed',String(activeOnly));
+ event.currentTarget.classList.toggle('is-active',activeOnly);
+ refresh();
+});
+$('back').addEventListener('click',()=>{if(history.length){selectedId=history.pop();refresh();renderer.focusNode?.(selectedId)}});
+$('motion').addEventListener('click',event=>{
+ renderer.setOptions({autoOrbit:!renderer.options.autoOrbit});
+ event.currentTarget.setAttribute('aria-pressed',String(renderer.options.autoOrbit));
+ event.currentTarget.textContent=renderer.options.autoOrbit?'Ⅱ':'▷';
+});
+$('zoom-in').addEventListener('click',()=>renderer.zoom(1.18));
+$('zoom-out').addEventListener('click',()=>renderer.zoom(.85));
+$('fit').addEventListener('click',()=>renderer.fit());
+$('center').addEventListener('click',()=>renderer.centerSelected());
+$('flat').addEventListener('click',event=>{event.currentTarget.textContent=renderer.toggleFlat()?'3D':'2D'});
+
+const liveSurface=$('nexo-live');
+$('nexo-live-toggle').addEventListener('click',event=>{const open=liveSurface.classList.toggle('is-open');event.currentTarget.setAttribute('aria-expanded',String(open))});
+
+const cockpitPanel=$('cockpit');
+const openCockpit=()=>cockpitPanel.classList.add('open');
+$('cockpit-toggle').addEventListener('click',()=>cockpitPanel.classList.toggle('open'));
+$('cockpit-close').addEventListener('click',()=>cockpitPanel.classList.remove('open'));
+
+const labPanel=$('lab-panel');
+$('panel-toggle').addEventListener('click',()=>labPanel.classList.toggle('open'));
+$('panel-close').addEventListener('click',()=>labPanel.classList.remove('open'));
+
+$('renderer').addEventListener('change',event=>{
+ const url=new URL(location.href);
+ url.searchParams.set('renderer',event.target.value);
+ url.searchParams.delete('fallback');
+ location.assign(url);
+});
+$('preset').addEventListener('change',event=>{renderer.setPreset(event.target.value);syncControls();refresh()});
+dataset.addEventListener('change',event=>rebuild(Number(event.target.value)));
+
+const SLIDERS=[['node-radius','nodeRadius'],['glow','glow'],['fog','fog'],['perspective','focalLength'],['drift','drift'],['pulse-speed','pulseSpeed'],['filament-curve','filamentCurve'],['max-labels','maxLabels'],['max-visible','maxVisibleNodes']];
+const decimals=id=>['perspective','max-labels','max-visible'].includes(id)?0:id==='drift'?1:2;
+function syncControls(){
+ for(const [id,key] of SLIDERS){
+  const input=$(id);
+  if(!input||renderer.options[key]==null)continue;
+  input.value=renderer.options[key];
+  $(`${id}-out`).textContent=Number(renderer.options[key]).toFixed(decimals(id));
+ }
+}
+for(const [id,key] of SLIDERS)$(id).addEventListener('input',event=>{
+ const value=Number(event.target.value);
+ renderer.setOptions({[key]:value});
+ $(`${id}-out`).textContent=value.toFixed(decimals(id));
+ if(key==='maxVisibleNodes')refresh();
+});
+
+// --- boot ------------------------------------------------------------------
+
+renderer.setPreset(matchMedia('(max-width:760px)').matches?'MOBILE':'ORIGINAL');
+syncControls();
+renderNexoLive(graph.live);
+refresh({fit:true});
+renderer.start();
 
 if(!demoMode){
  loadSsotGraph().then(next=>{
   setGraphData(next);
-  const records=Math.max(0,next.nodes.length-3);
-  setBadge(`SSOT LIVE · DRIVE · ${records} NODES`,{openSsot:true});
+  setBadge(`SSOT LIVE · DRIVE · ${next.ops.counts.domains}D · ${next.ops.counts.programs}P · ${next.ops.counts.campaigns}C`,{openSsot:true,tone:next.ops.loopBlocked?'blocked':'ok'});
  }).catch(async liveError=>{
-  console.warn('[Graph Lab] Direct private Drive read blocked; using synchronized SSOT projection.',liveError);
+  console.warn('[Atlas] Direct private Drive read blocked; using synchronized SSOT projection.',liveError);
   try{
    const next=await loadSsotSnapshot();
    setGraphData(next);
-   const records=Math.max(0,next.nodes.length-3);
-   setBadge(`SSOT SNAPSHOT · DRIVE · ${records} NODES`,{openSsot:true});
+   setBadge(`SSOT SNAPSHOT · DRIVE · ${next.ops.counts.domains}D · ${next.ops.counts.programs}P · ${next.ops.counts.campaigns}C`,{openSsot:true,tone:next.ops.loopBlocked?'blocked':'warn'});
   }catch(snapshotError){
-   console.error('[Graph Lab] Drive SSOT and synchronized snapshot unavailable.',snapshotError);
-   setBadge('SSOT UNAVAILABLE · OPEN DRIVE',{openSsot:true});
+   console.error('[Atlas] Drive SSOT and synchronized snapshot unavailable.',snapshotError);
+   setBadge('SSOT UNAVAILABLE · OPEN DRIVE',{openSsot:true,tone:'blocked'});
    $('focus-label').textContent='SSOT OFFLINE';
   }
  });

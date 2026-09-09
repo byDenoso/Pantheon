@@ -1,5 +1,80 @@
-<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#05070A"><title>ATLAS GRAPH LAB</title><link rel="stylesheet" href="./styles.css"><link rel="stylesheet" href="./nexo-live.css"></head><body>
-<header class="lab-topbar"><div class="lab-brand"><span class="spark">✧</span><div><b>ATLAS GRAPH LAB</b><small>OBSERVATÓRIO PREMIUM · SIGMA + CANVAS</small></div></div><div class="hud"><span><b id="hud-fps">--</b><small>FPS</small></span><span><b id="hud-frame">--</b><small>MS</small></span><span><b id="hud-nodes">--</b><small>NODES</small></span><span><b id="hud-edges">--</b><small>EDGES</small></span><span><b id="hud-labels">--</b><small>LABELS</small></span><span><b id="hud-dpr">--</b><small>DPR</small></span></div><button id="panel-toggle" class="icon-btn">☷</button></header>
-<main class="lab-shell"><section id="graph-stage" class="stage"><div id="graph-renderer-root" class="graph-renderer-root"><canvas id="graph-lab-canvas" tabindex="0"></canvas></div><div class="stage-badge"><i></i><span>SIGMA WEBGL + CANVAS OVERLAY</span></div><div class="hierarchy-tools" aria-label="Navegação hierárquica"><label class="hierarchy-search"><span>⌕</span><input id="hierarchy-search" type="search" placeholder="Buscar Program/Campaign…" autocomplete="off" spellcheck="false"><button id="hierarchy-search-clear" type="button" aria-label="Limpar busca">×</button></label><button id="expand-all" type="button">Expandir tudo</button><button id="collapse-all" type="button">Recolher tudo</button><button id="active-only" type="button" aria-pressed="false">Só ativos</button></div><section id="nexo-live" class="nexo-live" aria-label="NEXO live" data-authority="projection"><div class="nexo-live-head"><span><i></i>NEXO LIVE</span><small>SSOT · READ ONLY</small></div><div class="nexo-live-flow"><article><small>CURRENT STATE</small><p id="nexo-current-state">Aguardando SSOT…</p></article><article><small>NEXT ACTION</small><p id="nexo-next-action">—</p></article><article><small>LAST EFFECT</small><p id="nexo-last-effect">—</p></article></div><div class="nexo-live-section"><small>MINI-CLAIMS</small><div id="nexo-mini-claims" class="nexo-live-list"><span class="nexo-live-empty">Nenhuma mini-claim material.</span></div></div><div class="nexo-live-section"><small>SELF-IMPROVEMENT</small><div id="nexo-engineering-effects" class="nexo-live-list"><span class="nexo-live-empty">Nenhum efeito recente.</span></div></div></section><div class="focus-readout"><small>FOCO</small><b id="focus-label">NEXO</b></div><div class="camera-tools"><button id="motion">▷</button><button id="back">←</button><button id="home">⌂</button><button id="zoom-in">+</button><button id="zoom-out">−</button><button id="fit">⊞</button><button id="center">◎</button><button id="flat">2D</button></div><div class="gesture-hint">Clique expande/recolhe Domínio e Program · Scroll/pinch para zoom</div></section>
-<aside id="lab-panel" class="lab-panel"><div class="panel-head"><div><small>EXPERIMENT CONTROLS</small><h1>Visual contract</h1></div><button id="panel-close">×</button></div><label class="select-row">Renderer<select id="renderer"><option value="sigma-canvas">SIGMA + CANVAS</option><option value="legacy-canvas">LEGACY CANVAS</option></select></label><label class="select-row">Preset<select id="preset"><option>ORIGINAL</option><option>CLEAN</option><option>DEEP_SPACE</option><option>HIGH_CONTRAST</option><option>DENSE_GRAPH</option><option>MOBILE</option></select></label><label class="select-row">Dataset<select id="dataset-size"><option value="50">50 nodes</option><option value="100">100 nodes</option><option value="250">250 nodes</option><option value="500">500 nodes</option><option value="1000">1000 nodes</option></select></label>
-<div class="section-title">Renderer</div><label>Node radius <output id="node-radius-out">1.00</output><input id="node-radius" type="range" min="0.55" max="1.6" step="0.05" value="1"></label><label>Glow <output id="glow-out">.75</output><input id="glow" type="range" min="0.3" max="1.8" step="0.05" value=".75"></label><label>Fog <output id="fog-out">.34</output><input id="fog" type="range" min="0" max=".75" step=".01" value=".34"></label><label>Perspective <output id="perspective-out">760</output><input id="perspective" type="range" min="480" max="1200" step="10" value="760"></label><div class="section-title">Motion</div><label>Drift <output id="drift-out">0.0</output><input id="drift" type="range" min="0" max="7" step=".1" value="0"></label><label>Pulse speed <output id="pulse-speed-out">1.00</output><input id="pulse-speed" type="range" min="0" max="2.5" step=".05" value="1"></label><div class="section-title">Graph</div><label>Filament curve <output id="filament-curve-out">.12</output><input id="filament-curve" type="range" min="0" max=".42" step=".01" value=".12"></label><label>Max labels <output id="max-labels-out">24</output><input id="max-labels" type="range" min="4" max="44" step="1" value="24"></label><label>Visible nodes <output id="max-visible-out">110</output><input id="max-visible" type="range" min="20" max="300" step="5" value="110"></label><div class="panel-note"><b>Hierarquia SSOT</b> · Domínio → Program → Campaign. Testes permanecem no corpus histórico.</div></aside></main><script type="module" src="./app.mjs"></script></body></html>
+<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#05070A"><title>ATLAS GRAPH LAB · NEXO</title><link rel="stylesheet" href="./styles.css"><link rel="stylesheet" href="./nexo-live.css"></head><body>
+
+<header class="lab-topbar">
+ <div class="lab-brand"><span class="spark">✧</span><div><b>NEXO ATLAS</b><small>MAPA OPERACIONAL · SSOT CANONICAL</small></div></div>
+ <div class="topbar-search">
+  <label class="hierarchy-search"><span>⌕</span><input id="hierarchy-search" type="search" placeholder="Buscar Domínio, Program ou Campaign…" autocomplete="off" spellcheck="false" role="combobox" aria-expanded="false" aria-controls="search-results"><button id="hierarchy-search-clear" type="button" aria-label="Limpar busca">×</button></label>
+  <ul id="search-results" class="search-results" role="listbox" hidden></ul>
+ </div>
+ <div class="topbar-tools">
+  <button id="home" type="button" title="Voltar à visão global">⌂ NEXO</button>
+  <button id="collapse-all" type="button" title="Recolher todos os subgrafos">Recolher</button>
+  <button id="expand-all" type="button" title="Abrir todos os subgrafos">Expandir</button>
+  <button id="active-only" type="button" aria-pressed="false" title="Mostrar apenas nós ACTIVE">Só ativos</button>
+  <button id="cockpit-toggle" class="icon-btn" type="button" aria-label="Abrir cockpit">☰</button>
+  <button id="panel-toggle" class="icon-btn ghost" type="button" aria-label="Controles técnicos do renderer" title="Controles técnicos (renderer)">⚙</button>
+ </div>
+</header>
+
+<main class="lab-shell">
+ <section id="graph-stage" class="stage">
+  <div id="graph-renderer-root" class="graph-renderer-root"><canvas id="graph-lab-canvas" tabindex="0" hidden></canvas></div>
+
+  <div class="stage-badge" data-label-reserved><i></i><span>SSOT CONNECTING · DRIVE</span></div>
+
+  <nav id="breadcrumb" class="breadcrumb" data-label-reserved aria-label="Trilha da hierarquia"></nav>
+
+  <section id="nexo-live" class="nexo-live" data-label-reserved aria-label="NEXO live" data-authority="projection">
+   <button id="nexo-live-toggle" class="nexo-live-head" type="button" aria-expanded="false"><span><i></i>NEXO LIVE</span><small>SSOT · READ ONLY</small><em aria-hidden="true">▾</em></button>
+   <div class="nexo-live-flow">
+    <article><small>CURRENT STATE</small><p id="nexo-current-state">Aguardando SSOT…</p></article>
+    <article><small>NEXT ACTION</small><p id="nexo-next-action">—</p></article>
+    <article><small>LAST EFFECT</small><p id="nexo-last-effect">—</p></article>
+   </div>
+   <div class="nexo-live-section"><small>MINI-CLAIMS</small><div id="nexo-mini-claims" class="nexo-live-list"><span class="nexo-live-empty">Nenhuma mini-claim material.</span></div></div>
+   <div class="nexo-live-section"><small>SELF-IMPROVEMENT</small><div id="nexo-engineering-effects" class="nexo-live-list"><span class="nexo-live-empty">Nenhum efeito recente.</span></div></div>
+  </section>
+
+  <div class="focus-readout" data-label-reserved><small>FOCO</small><b id="focus-label">NEXO</b></div>
+
+  <div class="camera-tools" data-label-reserved>
+   <button id="motion" type="button" title="Órbita automática">▷</button>
+   <button id="back" type="button" title="Voltar">←</button>
+   <button id="zoom-in" type="button" title="Aproximar">+</button>
+   <button id="zoom-out" type="button" title="Afastar">−</button>
+   <button id="fit" type="button" title="Enquadrar tudo">⊞</button>
+   <button id="center" type="button" title="Centralizar seleção">◎</button>
+   <button id="flat" type="button" title="Alternar 2D/3D">2D</button>
+  </div>
+
+  <div class="gesture-hint" data-label-reserved>Arraste para orbitar · Scroll/pinça para zoom · Clique abre e recolhe Domínio e Program</div>
+ </section>
+
+ <aside id="cockpit" class="cockpit" aria-label="Cockpit do nó selecionado">
+  <div class="cockpit-bar"><small>COCKPIT</small><button id="cockpit-close" class="icon-btn" type="button" aria-label="Fechar cockpit">×</button></div>
+  <div id="cockpit-body" class="cockpit-body"></div>
+ </aside>
+</main>
+
+<aside id="lab-panel" class="lab-panel" aria-label="Controles técnicos do renderer">
+ <div class="panel-head"><div><small>SECUNDÁRIO · NÃO OPERACIONAL</small><h1>Renderer lab</h1></div><button id="panel-close" class="icon-btn" type="button" aria-label="Fechar">×</button></div>
+ <div class="hud"><span><b id="hud-fps">--</b><small>FPS</small></span><span><b id="hud-frame">--</b><small>MS</small></span><span><b id="hud-nodes">--</b><small>NODES</small></span><span><b id="hud-edges">--</b><small>EDGES</small></span><span><b id="hud-labels">--</b><small>LABELS</small></span><span><b id="hud-dpr">--</b><small>DPR</small></span></div>
+ <label class="select-row">Renderer<select id="renderer"><option value="three-canvas">THREE.JS + CANVAS</option><option value="legacy-canvas">LEGACY CANVAS 2D</option></select></label>
+ <label class="select-row">Preset<select id="preset"><option>ORIGINAL</option><option>CLEAN</option><option>DEEP_SPACE</option><option>HIGH_CONTRAST</option><option>DENSE_GRAPH</option><option>MOBILE</option></select></label>
+ <label class="select-row">Dataset<select id="dataset-size"><option value="50">50 nodes</option><option value="100">100 nodes</option><option value="250">250 nodes</option><option value="500">500 nodes</option><option value="1000">1000 nodes</option></select></label>
+ <div class="section-title">Renderer</div>
+ <label>Node radius <output id="node-radius-out">1.00</output><input id="node-radius" type="range" min="0.55" max="1.6" step="0.05" value="1"></label>
+ <label>Glow <output id="glow-out">.75</output><input id="glow" type="range" min="0.3" max="1.8" step="0.05" value=".75"></label>
+ <label>Fog <output id="fog-out">.34</output><input id="fog" type="range" min="0" max=".75" step=".01" value=".34"></label>
+ <label>Perspective <output id="perspective-out">760</output><input id="perspective" type="range" min="480" max="1200" step="10" value="760"></label>
+ <div class="section-title">Motion</div>
+ <label>Drift <output id="drift-out">0.0</output><input id="drift" type="range" min="0" max="7" step=".1" value="0"></label>
+ <label>Pulse speed <output id="pulse-speed-out">1.00</output><input id="pulse-speed" type="range" min="0" max="2.5" step=".05" value="1"></label>
+ <div class="section-title">Graph</div>
+ <label>Filament curve <output id="filament-curve-out">.12</output><input id="filament-curve" type="range" min="0" max=".42" step=".01" value=".12"></label>
+ <label>Max labels <output id="max-labels-out">24</output><input id="max-labels" type="range" min="4" max="44" step="1" value="24"></label>
+ <label>Visible nodes <output id="max-visible-out">110</output><input id="max-visible" type="range" min="20" max="300" step="5" value="110"></label>
+ <div class="panel-note"><b>Hierarquia SSOT</b> · NEXO → Domínio → Program → Campaign. Estes controles são de laboratório visual e não alteram o estado operacional.</div>
+</aside>
+
+<script type="module" src="./app.mjs"></script></body></html>
