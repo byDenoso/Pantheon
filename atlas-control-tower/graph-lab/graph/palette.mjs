@@ -75,6 +75,27 @@ export const PALETTE_A = {
   }
 };
 
+export const PALETTE_LIGHT={
+  ...PALETTE_A,
+  id:'LIGHT',
+  name:'Solar Observatory',
+  background:{
+    top:'#F7FBFF',bottom:'#DDEBFA',vignette:'rgba(59,101,143,0.10)',
+    stars:'rgba(46,92,132,0.46)',nebulaA:'rgba(80,164,228,0.16)',nebulaB:'rgba(118,151,209,0.14)',grid:'rgba(41,99,150,0.13)'
+  },
+  chrome:{
+    ...PALETTE_A.chrome,panel:'rgba(248,252,255,0.88)',panelBorder:'rgba(57,112,165,0.30)',panelSoft:'rgba(32,86,132,0.05)',
+    text:'#102033',textDim:'#314B66',textMuted:'#687F96',accent:'#0077CC',accentSoft:'rgba(0,119,204,0.12)',
+    success:'#008C76',warning:'#B96A00',danger:'#B83E61'
+  },
+  semantic:{...PALETTE_A.semantic,NEXO:'#D78314',SCIENCE:'#087FBE',LEARNING:'#7658C9',ENGINEERING:'#2F6FB6',OLYMPUS:'#168E7D',BLACK_BOX:'#657C93',DEFAULT:'#55718B'},
+  states:{active:'#0077CC',supported:'#287CB8',partial:'#7658C9',negative:'#657C93',blocked:'#B83E61',legacy:'#76889A'},
+  nodes:{...PALETTE_A.nodes,coreFill:'#152A40',edgeLight:'rgba(255,255,255,0.88)',glow:'rgba(0,119,204,0.15)',halo:'rgba(27,86,133,0.08)',fogFar:'rgba(221,235,250,0.38)'},
+  filaments:{canonical:'rgba(0,104,184,0.38)',derived:'rgba(111,82,190,0.30)',crossDomain:'rgba(0,137,118,0.30)',intraDomain:'rgba(69,106,138,0.24)',pulse:'#C97916',pulseHalo:'rgba(201,121,22,0.18)'},
+  space:{nebulaCore:'#A7D5F4',nebulaRim:'#C9DEF4',nebulaWarm:'#F2D8C2',dust:'rgba(62,105,144,0.30)',coreGlow:'#D98A21',coreHot:'#FFF5DF',orbitRing:'rgba(40,96,145,0.24)'},
+  labels:{bg:'rgba(247,251,255,0.86)',border:'rgba(57,112,165,0.30)',text:'#102033',textDim:'#425E78',selectedBg:'rgba(0,119,204,0.10)',selectedBorder:'rgba(0,119,204,0.34)'}
+};
+
 export const LEVEL_STYLE={
   root:{radius:26,halo:3.4,label:1,minZoomLabel:0},
   domain:{radius:15,halo:2.8,label:1,minZoomLabel:0},
@@ -85,7 +106,7 @@ export function levelStyle(node){return LEVEL_STYLE[node?.hierarchyLevel]||LEVEL
 
 export const TONE_COLORS={ok:PALETTE_A.chrome.success,warn:PALETTE_A.chrome.warning,blocked:PALETTE_A.chrome.danger,idle:PALETTE_A.semantic.DEFAULT};
 
-export const PALETTES={A:PALETTE_A};
+export const PALETTES={A:PALETTE_A,LIGHT:PALETTE_LIGHT};
 export function getPalette(id='A'){return PALETTES[id]||PALETTE_A}
 export function colorForNode(node,palette=PALETTE_A){
   if(node.hue)return node.hue;
