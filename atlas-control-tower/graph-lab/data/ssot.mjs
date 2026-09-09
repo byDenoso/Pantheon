@@ -1,7 +1,7 @@
 export const SSOT_SPREADSHEET_ID='1e6s2dKOYVLNsPUguHI85RLVLwJKtlCsQZBJ1BE-UhaY';
 export const SSOT_TABS=['Science','Olympus','NEXO'];
 export const SSOT_SPREADSHEET_URL=`https://docs.google.com/spreadsheets/d/${SSOT_SPREADSHEET_ID}/edit`;
-export const SSOT_SNAPSHOT_URL='./data/ssot.snapshot.json';
+export const SSOT_SNAPSHOT_URL=new URL('./ssot.snapshot.json',import.meta.url).href;
 
 const SYSTEM_FOR_TAB={Science:'SCIENCE',Olympus:'OLYMPUS',NEXO:'NEXO'};
 const TYPE_FOR_RECORD={campaign:'CAMPAIGN',paper:'RESULT',current_test:'TEST',running_test:'TEST',blocked_test:'TEST',open_test:'TEST',open_gate:'TEST',truth:'DOMAIN',state:'TEST',action:'TEST',objective:'TEST',policy:'TEST',strategy:'TEST',lesson:'TEST',rule:'TEST',person:'TEST'};
