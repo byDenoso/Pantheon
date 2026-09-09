@@ -5,10 +5,29 @@ export const SSOT_SNAPSHOT_URL=new URL('./ssot.snapshot.json',import.meta.url).h
 export const SSOT_HIERARCHY_SNAPSHOT_URL=new URL('./ssot.hierarchy.snapshot.json',import.meta.url).href;
 
 const SYSTEM_FOR_TAB={Science:'SCIENCE',Olympus:'OLYMPUS',NEXO:'NEXO'};
-const TYPE_FOR_RECORD={program:'PROGRAM',campaign:'CAMPAIGN',paper:'RESULT',current_test:'TEST',running_test:'TEST',blocked_test:'TEST',open_test:'TEST',open_gate:'TEST',truth:'DOMAIN',state:'TEST',action:'TEST',objective:'TEST',policy:'TEST',strategy:'TEST',lesson:'TEST',rule:'TEST',person:'TEST'};
+const TYPE_FOR_RECORD={program:'PROGRAM',campaign:'CAMPAIGN',paper:'RESULT',current_test:'TEST',running_test:'TEST',blocked_test:'TEST',open_test:'TEST',open_gate:'TEST',truth:'DOMAIN',state:'TEST',action:'TEST',objective:'TEST',policy:'TEST',strategy:'TEST',lesson:'TEST',rule:'TEST',person:'TEST',mini_claim:'RESULT',engineering_effect:'RESULT'};
 const SCIENCE_GRAPH_TYPES=new Set(['program','campaign']);
 const text=v=>v==null?'':String(v);
 const cellValue=cell=>cell?.v==null?'':String(cell.v);
+const parseJson=value=>{try{return value?JSON.parse(value):{}}catch{return{}}};
+
+export function extractNexoLiveState(rowsByTab={}){
+ const rows=rowsByTab?.NEXO||[];
+ const loopRow=rows.find(row=>text(row.record_type).trim()==='state'&&text(row.record_id).trim()==='NEXO Recursive Loop');
+ const loopPayload=parseJson(loopRow?.payload_json);
+ const miniClaims=rows.filter(row=>text(row.record_type).trim()==='mini_claim').map(row=>{
+  const payload=parseJson(row.payload_json);
+  return{recordId:text(row.record_id).trim(),status:text(row.status||'UNKNOWN'),title:text(row.title||row.record_id),detail:text(row.detail),scope:text(payload.scope),evidenceRefs:Array.isArray(payload.evidence_refs)?payload.evidence_refs.map(text):[],falsifier:text(payload.falsifier),updatedAt:text(row.updated_at)};
+ });
+ const engineeringEffects=rows.filter(row=>text(row.record_type).trim()==='engineering_effect').map(row=>{
+  const payload=parseJson(row.payload_json);
+  return{recordId:text(row.record_id).trim(),status:text(row.status||'UNKNOWN'),title:text(row.title||row.record_id),detail:text(row.detail),effect:text(payload.effect||row.detail),source:text(row.source),updatedAt:text(row.updated_at)};
+ });
+ return{
+  loop:{currentState:text(loopPayload.CURRENT_STATE),nextAction:text(loopPayload.NEXT_ACTION),lastEffect:text(loopPayload.LAST_EFFECT)},
+  miniClaims,engineeringEffects
+ };
+}
 
 export function gvizTableToRows(table){
  if(!table?.cols||!Array.isArray(table.rows))return[];
@@ -63,7 +82,7 @@ export function rowsToGraph(rowsByTab){
   for(const row of rowsByTab?.[tab]||[])addNode(tab,row,parentId,system);
  }
  const childCounts=new Map();for(const edge of edges)childCounts.set(edge.source,(childCounts.get(edge.source)||0)+1);for(const node of nodes)node.hiddenChildren=childCounts.get(node.id)||0;
- return{rootId:'system:NEXO',nodes,edges,source:{kind:'drive-ssot',spreadsheetId:SSOT_SPREADSHEET_ID,url:SSOT_SPREADSHEET_URL,tabs:[...SSOT_TABS]}};
+ return{rootId:'system:NEXO',nodes,edges,live:extractNexoLiveState(rowsByTab),source:{kind:'drive-ssot',spreadsheetId:SSOT_SPREADSHEET_ID,url:SSOT_SPREADSHEET_URL,tabs:[...SSOT_TABS]}};
 }
 
 function queryUrl(tab,handler){const params=new URLSearchParams({sheet:tab,tqx:`responseHandler:${handler}`});return `https://docs.google.com/spreadsheets/d/${SSOT_SPREADSHEET_ID}/gviz/tq?${params}`}
