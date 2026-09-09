@@ -1,0 +1,56 @@
+name: NEXO ONE promote verified staged deployment
+on:
+  workflow_dispatch:
+    inputs:
+      deployment_id:
+        description: Verified STAGED PRODUCTION deployment ID (dpl_...), built with --prod --skip-domain
+        required: true
+      previous_deployment_id:
+        description: Previous verified production deployment ID for rollback
+        required: true
+permissions:
+  contents: read
+concurrency:
+  group: nexo-one-deployment
+  cancel-in-progress: false
+jobs:
+  promote:
+    runs-on: ubuntu-latest
+    environment: nexo-one-production
+    env:
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+      NEXO_QA_COOKIE: ${{ secrets.NEXO_QA_COOKIE }}
+      VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
+      TARGET_DEPLOYMENT: ${{ inputs.deployment_id }}
+      PREVIOUS_DEPLOYMENT: ${{ inputs.previous_deployment_id }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Verify deployment identities and operational readback before promotion
+        env:
+          CLI_VERSION: ${{ vars.NEXO_VERCEL_CLI_VERSION }}
+        run: |
+          test "$VERCEL_PROJECT_ID" = prj_rFoAEgGt4gFNr8DHEOzxY7keS16W
+          test -n "$CLI_VERSION"
+          npm install --global "vercel@$CLI_VERSION"
+          node nexo-one/scripts/release-identity.mjs
+          NEXO_VERIFY_URL=$(node -p 'require("./deployment-identity.json").stagedUrl') node nexo-one/scripts/verify-release.mjs --operational
+      - name: Promote the same deployment; rollback on failed readback
+        run: |
+          vercel promote "$TARGET_DEPLOYMENT" --yes --token "$VERCEL_TOKEN"
+          if ! node nexo-one/scripts/release-identity.mjs --current || ! NEXO_VERIFY_URL=https://nexo-one-two.vercel.app node nexo-one/scripts/verify-release.mjs --operational; then
+            vercel rollback "$PREVIOUS_DEPLOYMENT" --yes --token "$VERCEL_TOKEN"
+            NEXO_VERIFY_URL=https://nexo-one-two.vercel.app node nexo-one/scripts/verify-release.mjs --operational
+            exit 1
+          fi
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: nexo-one-production-receipt
+          path: |
+            verification.json
+            deployment-identity.json
