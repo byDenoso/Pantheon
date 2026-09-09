@@ -6,6 +6,7 @@ import {fileURLToPath,pathToFileURL} from 'node:url';
 const here=path.dirname(fileURLToPath(import.meta.url));
 const lab=path.resolve(here,'../graph-lab');
 const ssot=await import(pathToFileURL(path.join(lab,'data/ssot.mjs')));
+const quotedAttr=(name,value)=>new RegExp(`${name}=['\"]${value}['\"]`);
 
 const science=[{record_type:'program',record_id:'PROG-DE',status:'ACTIVE',title:'Dark Energy',domain:'DARK_ENERGY'}];
 
@@ -56,14 +57,8 @@ test('mini-claims and effects stay out of the graph and only enrich the cockpit'
 
 test('Graph Lab shell reserves a read-only NEXO LIVE surface on the map',()=>{
  const html=fs.readFileSync(path.join(lab,'index.html'),'utf8');
- assert.match(html,/id="nexo-live"/);
- assert.match(html,/id="nexo-current-state"/);
- assert.match(html,/id="nexo-next-action"/);
- assert.match(html,/id="nexo-last-effect"/);
- assert.match(html,/id="nexo-mini-claims"/);
- assert.match(html,/id="nexo-engineering-effects"/);
+ for(const id of ['nexo-live','nexo-current-state','nexo-next-action','nexo-last-effect','nexo-mini-claims','nexo-engineering-effects','nexo-live-toggle'])assert.match(html,quotedAttr('id',id));
  // It is a ribbon that folds away, not a second dashboard covering the graph.
- assert.match(html,/id="nexo-live-toggle"/);
  const css=fs.readFileSync(path.join(lab,'nexo-live.css'),'utf8');
  assert.match(css,/\.nexo-live:not\(\.is-open\)/);
 });
