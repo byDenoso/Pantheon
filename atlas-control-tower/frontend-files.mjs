@@ -2,6 +2,7 @@
 export const frontendFiles=[
  'index.html',
  'nextgen/styles.css','nextgen/app.mjs','nextgen/graph/engine.mjs',
+ 'nextgen/graph/layout.mjs','nextgen/graph/labels.mjs','nextgen/vendor/three.module.min.js',
  'styles.css','app.mjs','graph3d.mjs','assets/atlas-observatory-bg.svg',
  'lib/model.mjs','lib/graph-contract.mjs','lib/atlas-api.mjs','lib/graph-session.mjs',
  'ui/tokens.css','ui/official-dashboard.css','ui/premium-v2.css','ui/reference-one.css','ui/reference-deck.css','ui/cosmos.css','ui/visual-config.mjs','ui/theme.mjs','ui/map-data.mjs','ui/workspace.mjs','ui/cockpit-copy.mjs',
