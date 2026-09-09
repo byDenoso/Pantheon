@@ -145,7 +145,7 @@ export class GraphLabRenderer{
   const previous=new Map(this.positions);
   this.source=source;
   this.focusId=focusId||source.rootId;
-  const target=layoutNodes(source.nodes,this.focusId,{baseRadius:250,ringGap:132,depthScale:150});
+  const target=layoutNodes(source.nodes,this.focusId,{baseRadius:250,ringGap:132,depthScale:150,flat:this.flat});
   const start=new Map();
   for(const node of source.nodes){
    if(previous.has(node.id)){start.set(node.id,[...previous.get(node.id)]);continue}
@@ -165,7 +165,11 @@ export class GraphLabRenderer{
 
  rebuildScene(){
   if(!this.scene)return;
-  for(const object of this.nodeObjects.values())this.nodeGroup.remove(object.group);
+  for(const group of [this.nodeGroup,this.edgeGroup,this.pulseGroup,this.ringGroup]){
+   group.traverse(object=>{object.geometry?.dispose();object.material?.dispose()});
+   group.clear();
+  }
+  this.coreHeart=null;
   this.nodeObjects.clear();
   for(const line of this.edgeObjects)this.edgeGroup.remove(line.object);
   this.edgeObjects=[];
@@ -215,30 +219,23 @@ export class GraphLabRenderer{
   this.pulseGroup.add(this.pulse);
  }
 
- /**
- * Faint concentric rings on the plane the Domains sit on. They are not data: they
- * are the horizon that tells the eye this is one system seen in perspective, and
- * they are drawn from the actual ring radius so they always match the layout.
- */
+ /** Each Domain's guide follows its actual local orbital plane. */
  buildOrbitRings(){
-  const radii=[...this.nodeObjects.values()]
-   .filter(object=>object.node.hierarchyLevel==='domain')
-   .map(object=>Math.hypot(...(this.targetPositions?.get(object.node.id)||[0,0,0]).slice(0,2)))
-   .filter(Boolean);
-  if(!radii.length)return;
-  const base=radii.reduce((total,value)=>total+value,0)/radii.length;
   const {color,alpha}=parseCssColor(this.palette.space.orbitRing);
-  for(const [index,scale] of [.42,.68,1,1.34].entries()){
-   const radius=base*scale;
-   const points=Array.from({length:129},(unused,step)=>{
-    const angle=step/128*Math.PI*2;
-    return new THREE.Vector3(Math.cos(angle)*radius,Math.sin(angle)*radius*.82,0);
+  for(const node of this.source.nodes){
+   if(node.hierarchyLevel!=='domain')continue;
+   const frame=this.targetPositions?.frames?.get(node.id);
+   const position=this.targetPositions?.get(node.id);
+   if(!frame||!position)continue;
+   const radius=Math.hypot(...position);
+   const points=Array.from({length:96},(_,i)=>{
+    const angle=i/96*Math.PI*2;
+    return new THREE.Vector3(...frame.radial).multiplyScalar(Math.cos(angle)*radius)
+     .addScaledVector(new THREE.Vector3(...frame.tangent),Math.sin(angle)*radius);
    });
-   const ring=new THREE.LineLoop(
-    new THREE.BufferGeometry().setFromPoints(points),
-    new THREE.LineBasicMaterial({color:new THREE.Color(color),transparent:true,opacity:alpha*(index===2?1.5:.7),depthWrite:false})
-   );
-   this.ringGroup.add(ring);
+   this.ringGroup.add(new THREE.LineLoop(new THREE.BufferGeometry().setFromPoints(points),
+    new THREE.LineBasicMaterial({color:new THREE.Color(color),transparent:true,opacity:alpha*.35,depthWrite:false})));
+   if(this.flat)break;
   }
  }
 
@@ -286,12 +283,13 @@ export class GraphLabRenderer{
   this.invalidate();
  }
 
- reset(){this.orbit.yaw=CAMERA_3D.yaw;this.orbit.pitch=CAMERA_3D.pitch;this.flat=false;this.fit()}
+ reset(){this.orbit.yaw=CAMERA_3D.yaw;this.orbit.pitch=CAMERA_3D.pitch;this.flat=false;this.setGraph(this.source,{fit:true})}
 
  toggleFlat(){
   this.flat=!this.flat;
   const goal=this.flat?CAMERA_FLAT:CAMERA_3D;
   this.orbit.yaw=goal.yaw;this.orbit.pitch=goal.pitch;
+  this.setGraph(this.source,{fit:true});
   this.invalidate();
   return this.flat;
  }
@@ -357,7 +355,7 @@ export class GraphLabRenderer{
    }else{
     this.orbit.yaw-=dx*.005;
     this.orbit.pitch=clamp(this.orbit.pitch+dy*.005,-1.35,1.35);
-    this.flat=false;
+    if(this.flat){this.flat=false;this.setGraph(this.source)}
    }
    this.invalidate();
   });
@@ -403,6 +401,7 @@ export class GraphLabRenderer{
  stop(){this.running=false;if(this.raf)cancelAnimationFrame(this.raf);this.raf=0}
  destroy(){
   this.destroyed=true;this.stop();this.resizeObserver?.disconnect();
+  this.scene?.traverse(object=>{object.geometry?.dispose();object.material?.dispose()});
   for(const texture of this.textures.values())texture.dispose();
   this.renderer?.dispose();this.container.replaceChildren();
  }
@@ -426,7 +425,7 @@ export class GraphLabRenderer{
 
  advanceTransition(now){
   if(!this.transition)return;
-  const t=(now-this.transition.at)/this.transition.duration;
+  const t=reducedMotion()?1:(now-this.transition.at)/this.transition.duration;
   if(t>=1){this.positions=new Map([...this.transition.target].map(([id,p])=>[id,[...p]]));this.transition=null;return}
   const next=new Map();
   for(const [id,target] of this.transition.target)next.set(id,interpolatePosition(this.transition.start.get(id)||target,target,t));
@@ -440,6 +439,7 @@ export class GraphLabRenderer{
   const still=reducedMotion();
   if(this.options.autoOrbit&&!still&&!this.flat)this.orbit.yaw+=.0011;
   this.applyCamera();
+  this.scene.fog.density=(.22+this.options.fog*.3)/Math.max(800,this.orbit.distance);
   this.syncObjects(now,still);
   this.renderer.render(this.scene,this.camera);
   this.projectPoints();
@@ -475,7 +475,7 @@ export class GraphLabRenderer{
    const a=this.positions.get(item.edge.source),b=this.positions.get(item.edge.target);
    if(!a||!b){item.object.visible=false;continue}
    item.object.visible=true;
-   const curve=this.curveFor(a,b);
+   const curve=this.curveFor(a,b,item.edge.source);
    item.geometry.setFromPoints(curve.getPoints(25));
    item.geometry.attributes.position.needsUpdate=true;
    const live=active&&(item.edge.source===active||item.edge.target===active);
@@ -494,12 +494,15 @@ export class GraphLabRenderer{
   }
  }
 
- curveFor(a,b){
+ curveFor(a,b,parentId){
   const from=new THREE.Vector3(a[0],a[1],a[2]);
   const to=new THREE.Vector3(b[0],b[1],b[2]);
   const mid=from.clone().add(to).multiplyScalar(.5);
   const axis=to.clone().sub(from);
-  const normal=axis.clone().cross(new THREE.Vector3(0,0,1));
+  const frame=this.targetPositions?.frames?.get(parentId);
+  const normal=frame?new THREE.Vector3(...frame.binormal):axis.clone().cross(mid);
+  normal.addScaledVector(axis,-normal.dot(axis)/Math.max(axis.lengthSq(),1e-6));
+  if(this.flat)normal.set(-axis.y,axis.x,0);
   if(normal.lengthSq()<1e-6)normal.set(1,0,0);
   normal.normalize().multiplyScalar(axis.length()*this.options.filamentCurve);
   return new THREE.QuadraticBezierCurve3(from,mid.add(normal),to);
@@ -700,3 +703,4 @@ export class GraphLabRenderer{
   });
  }
 }
+

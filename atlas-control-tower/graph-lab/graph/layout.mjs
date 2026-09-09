@@ -13,62 +13,66 @@ export function easeInOutCubic(t){
  return x<.5?4*x*x*x:1-Math.pow(-2*x+2,3)/2;
 }
 
-/**
- * Orbital layout.
- *
- * The focus sits at the origin and its direct children take a full ring around it.
- * Deeper levels do not get their own global ring: each one opens as a sub-orbit
- * anchored on its parent and fanned outwards, away from the core. That is what keeps
- * an expanded Program from crossing the rest of the map, and what makes the graph
- * read as one system with satellites instead of a cloud of dots.
- *
- * Positions are pure functions of the node ids and sibling order, so the same SSOT
- * always lays out the same way and expanding a branch never moves the rest.
+const add=(a,b)=>a.map((v,i)=>v+b[i]);
+const scale=(a,s)=>a.map(v=>v*s);
+const cross=(a,b)=>[a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]];
+const unit=a=>scale(a,1/(Math.hypot(...a)||1));
+
+/** Deterministic spherical shell and perpendicular, outward-facing child petals.
+ * Frames describe each node's orbit about its parent. The returned Map retains
+ * the position API; .frames supplies the same geometry to filaments and rings.
+ * No position depends on the population of another branch.
  */
 export function layoutNodes(nodes,focusId,options={}){
  const baseRadius=Number(options.baseRadius||250);
  const ringGap=Number(options.ringGap||118);
- const depthScale=Number(options.depthScale||145);
- const flatten=Number(options.flatten??.82);
-
+ const flat=Boolean(options.flat);
  const byId=new Map(nodes.map(n=>[n.id,n]));
  const children=new Map();
  for(const node of nodes){
   if(node.id===focusId)continue;
   const parentId=node.parentId&&node.parentId!==node.id&&byId.has(node.parentId)?node.parentId:focusId;
   const list=children.get(parentId)||[];
-  list.push(node);
-  children.set(parentId,list);
+  list.push(node);children.set(parentId,list);
  }
-
  const out=new Map([[focusId,[0,0,0]]]);
- const place=(parentId,parentPos,parentAngle,depth)=>{
+ const frames=new Map([[focusId,{radial:[1,0,0],tangent:[0,1,0],binormal:[0,0,1]}]]);
+ Object.defineProperty(out,'frames',{value:frames});
+ const place=(parentId,depth)=>{
   const kids=children.get(parentId)||[];
-  if(!kids.length)return;
+  const parentPos=out.get(parentId),parentFrame=frames.get(parentId);
   const ring=depth===1;
-  // A sub-orbit widens with its population so labels stay apart without a solver.
   const radius=ring?baseRadius:ringGap*(.85+Math.min(kids.length,10)*.05);
-  const arc=ring?Math.PI*2:Math.min(Math.PI*1.25,.5+kids.length*.24);
-  const step=ring?arc/kids.length:kids.length>1?arc/(kids.length-1):0;
-  const start=ring?unitHash(parentId)*Math.PI*2:parentAngle-arc/2;
+  const arc=Math.min(Math.PI*.85,Math.max(1.4,.5+kids.length*.24));
   kids.forEach((node,index)=>{
-   const angle=start+step*index;
-   const seed=unitHash(node.id);
-   const spread=ring?1:1+(index%2)*.17;
-   const x=parentPos[0]+Math.cos(angle)*radius*spread;
-   const y=parentPos[1]+Math.sin(angle)*radius*spread*flatten;
-   const z=parentPos[2]+Math.sin(angle*1.6+seed*Math.PI*2)*(depthScale/(depth*1.4))+(seed-.5)*24-depth*16;
-   out.set(node.id,[x,y,z]);
-   place(node.id,[x,y,z],angle,depth+1);
+   if(out.has(node.id))return;
+   let radial,tangent;
+   if(ring){
+    const angle=unitHash(parentId)*Math.PI*2+index/kids.length*Math.PI*2;
+    // Alternating latitudes preserve azimuth spacing and visibly occupy Z.
+    const latitude=flat?0:(index%2?1:-1)*(.48+unitHash(node.id)*.32);
+    radial=[Math.cos(angle)*Math.cos(latitude),Math.sin(angle)*Math.cos(latitude),Math.sin(latitude)];
+    tangent=[-Math.sin(angle),Math.cos(angle),0];
+   }else{
+    const angle=kids.length===1?.65:-arc/2+arc*index/(kids.length-1);
+    const u=parentFrame.radial;
+    const v=flat?parentFrame.tangent:parentFrame.binormal;
+    radial=add(scale(u,Math.cos(angle)),scale(v,Math.sin(angle)));
+    tangent=add(scale(u,-Math.sin(angle)),scale(v,Math.cos(angle)));
+   }
+   radial=unit(radial);tangent=unit(tangent);
+   frames.set(node.id,{radial,tangent,binormal:unit(cross(radial,tangent))});
+   out.set(node.id,add(parentPos,scale(radial,radius)));
+   place(node.id,depth+1);
   });
  };
- place(focusId,[0,0,0],0,1);
-
+ place(focusId,1);
+ // Preserve deterministic handling of disconnected/cyclic input without recursion.
  for(const node of nodes)if(!out.has(node.id)){
-  const seed=unitHash(node.id);
-  const angle=seed*Math.PI*2;
-  const radius=baseRadius+ringGap*2;
-  out.set(node.id,[Math.cos(angle)*radius,Math.sin(angle)*radius*flatten,(seed-.5)*depthScale]);
+  const angle=unitHash(node.id)*Math.PI*2;
+  const radial=[Math.cos(angle),Math.sin(angle),0],tangent=[-Math.sin(angle),Math.cos(angle),0];
+  out.set(node.id,scale(radial,baseRadius+ringGap*2));
+  frames.set(node.id,{radial,tangent,binormal:[0,0,1]});
  }
  return out;
 }
@@ -77,3 +81,4 @@ export function interpolatePosition(a,b,t){
  const p=easeInOutCubic(t);
  return [a[0]+(b[0]-a[0])*p,a[1]+(b[1]-a[1])*p,a[2]+(b[2]-a[2])*p];
 }
+

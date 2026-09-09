@@ -6,7 +6,8 @@
     "test": "node --test test/*.test.mjs",
     "typecheck": "tsc --noEmit",
     "build": "vite build",
-    "start": "vite --host 0.0.0.0"
+    "start": "vite --host 0.0.0.0",
+    "dev": "vite graph-lab --config graph-lab/vite.config.mjs"
   },
   "dependencies": {
     "@react-three/fiber": "9.7.0",
