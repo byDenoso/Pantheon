@@ -29,12 +29,25 @@ if(!/^[0-9a-f]{40}$/.test(String(commit||''))){
 }
 
 const cdn=file=>`https://cdn.jsdelivr.net/gh/${REPO}@${commit}/${DIR}/${file}`;
+const pinEntrypoint=(html,file)=>{
+ const url=cdn(file);
+ const next=html
+  .replaceAll(`"./${file}"`,`"${url}"`)
+  .replaceAll(`'./${file}'`,`'${url}'`);
+ if(next===html){
+  console.error(`index.html no longer references ./${file}; update ENTRY_POINTS.`);
+  process.exit(1);
+ }
+ return next;
+};
+
 let html=fs.readFileSync(path.join(here,'index.html'),'utf8');
-for(const file of ENTRY_POINTS){
- const before=html;
- html=html.replaceAll(`"./${file}"`,`"${cdn(file)}"`);
- if(html===before){console.error(`index.html no longer references ./${file}; update ENTRY_POINTS.`);process.exit(1)}
+for(const file of ENTRY_POINTS)html=pinEntrypoint(html,file);
+
+const leftovers=html.match(/["']\.\/[^"']+["']/g)||[];
+if(leftovers.length){
+ console.error('index.html still has unpinned relative references:',leftovers.join(', '));
+ process.exit(1);
 }
-if(/"\.\//.test(html)){console.error('index.html still has unpinned relative references:',html.match(/"\.\/[^"]+"/g).join(', '));process.exit(1)}
 
 process.stdout.write(html);
