@@ -37,13 +37,14 @@ const runtime={
  options:{nodeRadius:1,glow:.75,fog:.34,drift:0,pulseSpeed:1,maxLabels:24,maxVisibleNodes:110}
 };
 
-test('top navigation declares six real Atlas sections instead of dead hash anchors',()=>{
+test('top navigation is wired as six real Atlas sections instead of dead hash anchors',()=>{
  const html=fs.readFileSync(path.join(lab,'index.html'),'utf8');
  const app=fs.readFileSync(path.join(lab,'app.mjs'),'utf8');
- for(const section of ['graph','domains','ssot','analytics','deploy','settings'])assert.match(html,new RegExp(`data-section=['\"]${section}['\"]`));
+ for(const hash of ['graph-stage','domains','ssot','analytics','deploy','settings'])assert.match(html,new RegExp(`href=['\"]#${hash}['\"]`));
  assert.match(app,/buildSectionGraph/);
  assert.match(app,/setSection\(/);
- assert.match(app,/\.topbar-nav \[data-section\]/);
+ assert.match(app,/querySelectorAll\(['\"]\.topbar-nav a['\"]\)/);
+ assert.match(app,/preventDefault\(\)/);
 });
 
 test('each top-level section produces a materially different graph projection from canonical data or runtime facts',async()=>{
@@ -73,9 +74,9 @@ test('light and dark UI themes also change the renderer palette instead of recol
  const palette=fs.readFileSync(path.join(lab,'graph/palette.mjs'),'utf8');
  const renderer=fs.readFileSync(path.join(lab,'graph/renderer.mjs'),'utf8');
  const app=fs.readFileSync(path.join(lab,'app.mjs'),'utf8');
- const html=fs.readFileSync(path.join(lab,'index.html'),'utf8');
  assert.match(palette,/PALETTE_LIGHT/);
  assert.match(renderer,/setTheme\(theme/);
- assert.match(app,/atlas-theme-change/);
- assert.match(html,/atlas-theme-change/);
+ assert.match(app,/MutationObserver/);
+ assert.match(app,/dataset\.theme/);
+ assert.match(app,/setTheme/);
 });
