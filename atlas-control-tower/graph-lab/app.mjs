@@ -61,12 +61,42 @@ renderer.ready?.catch(error=>{
  const u=new URL(location.href);u.searchParams.set('renderer','legacy-canvas');u.searchParams.set('fallback','sigma-init');location.replace(u);
 });
 
+function focusGraphNode(nodeId){
+ if(!nodeId||!graph.nodes.some(node=>node.id===nodeId))return;
+ if(focusId!==nodeId)history.push(focusId);
+ focusId=nodeId;updateFocusLabel();refresh();
+}
+
+function renderNexoLive(live=graph.live){
+ const state=live?.loop||{};
+ const setText=(id,value,fallback='—')=>{const el=$(id);if(el)el.textContent=value||fallback};
+ setText('nexo-current-state',state.currentState,'Sem estado operacional projetado.');
+ setText('nexo-next-action',state.nextAction);
+ setText('nexo-last-effect',state.lastEffect);
+ const renderList=(id,items,emptyText)=>{
+  const root=$(id);if(!root)return;root.replaceChildren();
+  if(!items?.length){const empty=document.createElement('span');empty.className='nexo-live-empty';empty.textContent=emptyText;root.append(empty);return}
+  for(const item of items.slice(0,5)){
+   const nodeId=`record:NEXO:${item.recordId}`;
+   const button=document.createElement('button');button.type='button';button.className='nexo-live-item';button.setAttribute('data-node-id',nodeId);button.disabled=!graph.nodes.some(node=>node.id===nodeId);
+   const top=document.createElement('span');top.className='nexo-live-item-top';
+   const title=document.createElement('b');title.textContent=item.title||item.recordId;
+   const status=document.createElement('em');status.textContent=item.status||'UNKNOWN';status.dataset.status=(item.status||'UNKNOWN').toLowerCase();
+   top.append(title,status);
+   const detail=document.createElement('small');detail.textContent=item.scope||item.effect||item.detail||item.recordId;
+   button.append(top,detail);button.addEventListener('click',()=>focusGraphNode(nodeId));root.append(button);
+  }
+ };
+ renderList('nexo-mini-claims',live?.miniClaims,'Nenhuma mini-claim material.');
+ renderList('nexo-engineering-effects',live?.engineeringEffects,'Nenhum efeito recente.');
+}
+
 function refresh(){
  const view=graphView();
  if(!view.nodes.some(n=>n.id===focusId)){focusId=graph.rootId;updateFocusLabel()}
  renderer.setGraph(view,{focusId});
 }
-function setGraphData(next){graph=next;focusId=graph.rootId;history=[];expandedIds=new Set();activeOnly=false;$('active-only').setAttribute('aria-pressed','false');$('active-only').classList.remove('is-active');$('hierarchy-search').value='';updateFocusLabel();refresh()}
+function setGraphData(next){graph=next;focusId=graph.rootId;history=[];expandedIds=new Set();activeOnly=false;$('active-only').setAttribute('aria-pressed','false');$('active-only').classList.remove('is-active');$('hierarchy-search').value='';renderNexoLive(graph.live);updateFocusLabel();refresh()}
 function rebuild(count){if(!demoMode)return;setGraphData(createSyntheticGraph(count))}
 function syncControls(){const o=renderer.options;for(const [id,key] of [['node-radius','nodeRadius'],['glow','glow'],['fog','fog'],['perspective','focalLength'],['drift','drift'],['pulse-speed','pulseSpeed'],['filament-curve','filamentCurve'],['max-labels','maxLabels'],['max-visible','maxVisibleNodes']]){const input=$(id);if(input&&o[key]!=null){input.value=o[key];$(`${id}-out`).textContent=Number(o[key]).toFixed(['perspective','max-labels','max-visible'].includes(id)?0:id==='drift'?1:2)}}}
 
