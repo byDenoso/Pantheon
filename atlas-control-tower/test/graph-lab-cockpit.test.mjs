@@ -6,6 +6,7 @@ import {fileURLToPath,pathToFileURL} from 'node:url';
 const here=path.dirname(fileURLToPath(import.meta.url));
 const lab=path.resolve(here,'../graph-lab');
 const importLab=rel=>import(pathToFileURL(path.join(lab,rel)));
+const quotedAttr=(name,value)=>new RegExp(`${name}=['\"]${value}['\"]`);
 
 const {rowsToGraph}=await importLab('data/ssot.mjs');
 const operations=await importLab('data/operations.mjs');
@@ -113,16 +114,21 @@ test('status tone separates what is blocked from what merely needs data',()=>{
  assert.equal(operations.isBlockedStatus('OPEN_GATE'),true);
 });
 
-test('the cockpit renders sections operationally and hides nothing behind settings',()=>{
+test('the cockpit renders sections operationally and keeps detail one toggle away',()=>{
  const cockpit=fs.readFileSync(path.join(lab,'cockpit.mjs'),'utf8');
  const html=fs.readFileSync(path.join(lab,'index.html'),'utf8');
- for(const id of ['cockpit','cockpit-body','cockpit-toggle','cockpit-close'])assert.match(html,new RegExp(`id="${id}"`));
+ for(const id of ['cockpit','cockpit-body','cockpit-toggle','cockpit-close'])assert.match(html,quotedAttr('id',id));
  for(const hint of ['Bloqueios','Próximas ações','Últimos testes','Evidências','Relações','Mudanças recentes','Integridade'])assert.ok(cockpit.includes(hint)||true);
  assert.match(cockpit,/ops\.sections/);
  assert.match(cockpit,/Recolher subgrafo/);
  assert.match(cockpit,/Voltar ao NEXO/);
+ assert.match(html,/data-cockpit-mode/);
+ assert.match(html,/id=['"]cockpit-mode['"]/);
+ assert.match(html,/compact/);
+ assert.match(html,/detail/);
+ assert.match(html,/hidden/);
  // Renderer controls are a secondary drawer, never part of the cockpit.
  assert.doesNotMatch(cockpit,/preset|renderer|nodeRadius/i);
- assert.match(html,/class="lab-panel"/);
+ assert.match(html,quotedAttr('class','lab-panel'));
  assert.match(html,/SECUNDÁRIO · NÃO OPERACIONAL/);
 });
