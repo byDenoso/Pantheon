@@ -46,7 +46,7 @@ test('projection bearer is bounded and explicit',()=>{
 
 test('service identity is wired only inside the projection route while ordinary access remains session based',async()=>{
   const handler=await readFile(new URL('../server/handler.mjs',import.meta.url),'utf8');
-  assert.match(handler,/privateAccess=authenticated\(req,env\),access=privateAccess\?'PRIVATE':'PUBLIC'/);
+  assert.match(handler,/privateAccess=authenticated\(req,env(?:,now)?\),access=privateAccess\?'PRIVATE':'PUBLIC'/);
   assert.match(handler,/if\(route==='projections'\)\{[\s\S]*verifyProjectionService\(req,\{now\}\)[\s\S]*projectionAccess/);
   const afterProjection=handler.split("if(route==='projections')")[1];
   assert.match(afterProjection,/const options=\{now,access,env,force\}/);
