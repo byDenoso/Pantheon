@@ -5,8 +5,14 @@ on:
       deployment_id:
         description: Verified STAGED PRODUCTION deployment ID (dpl_...), built with --prod --skip-domain
         required: true
+      expected_sha:
+        description: Exact verified source SHA carried by the staged release
+        required: true
       previous_deployment_id:
         description: Previous verified production deployment ID for rollback
+        required: true
+      previous_sha:
+        description: Exact verified source SHA carried by the rollback release
         required: true
 permissions:
   contents: read
@@ -23,6 +29,8 @@ jobs:
       VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
       NEXO_QA_COOKIE: ${{ secrets.NEXO_QA_COOKIE }}
       VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
+      NEXO_EXPECTED_SHA: ${{ inputs.expected_sha }}
+      PREVIOUS_EXPECTED_SHA: ${{ inputs.previous_sha }}
       TARGET_DEPLOYMENT: ${{ inputs.deployment_id }}
       PREVIOUS_DEPLOYMENT: ${{ inputs.previous_deployment_id }}
     steps:
@@ -36,6 +44,7 @@ jobs:
         run: |
           test "$VERCEL_PROJECT_ID" = prj_rFoAEgGt4gFNr8DHEOzxY7keS16W
           test -n "$CLI_VERSION"
+          test "$NEXO_EXPECTED_SHA" != "$PREVIOUS_EXPECTED_SHA" || test "$TARGET_DEPLOYMENT" != "$PREVIOUS_DEPLOYMENT"
           npm install --global "vercel@$CLI_VERSION"
           node nexo-one/scripts/release-identity.mjs
           NEXO_VERIFY_URL=$(node -p 'require("./deployment-identity.json").stagedUrl') node nexo-one/scripts/verify-release.mjs --operational
@@ -44,7 +53,7 @@ jobs:
           vercel promote "$TARGET_DEPLOYMENT" --yes --token "$VERCEL_TOKEN"
           if ! node nexo-one/scripts/release-identity.mjs --current || ! NEXO_VERIFY_URL=https://nexo-one-two.vercel.app node nexo-one/scripts/verify-release.mjs --operational; then
             vercel rollback "$PREVIOUS_DEPLOYMENT" --yes --token "$VERCEL_TOKEN"
-            NEXO_VERIFY_URL=https://nexo-one-two.vercel.app node nexo-one/scripts/verify-release.mjs --operational
+            NEXO_EXPECTED_SHA="$PREVIOUS_EXPECTED_SHA" NEXO_VERIFY_URL=https://nexo-one-two.vercel.app node nexo-one/scripts/verify-release.mjs --operational
             exit 1
           fi
       - uses: actions/upload-artifact@v4
