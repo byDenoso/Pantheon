@@ -2,13 +2,12 @@ import {PROVIDERS} from '../src/contracts/validate.mjs';
 import {compile} from './compiler/world-state.mjs';
 import {buildProjectionBus} from './compiler/projection-bus.mjs';
 import {buildSystemState} from './compiler/system-state.mjs';
-import {projectAutomationHealthProviders} from './compiler/automation-health.mjs';
 import {readProvider,pending,clearProviderCache} from './adapters/registry.mjs';
-import {readSystemInput} from './adapters/system-input.mjs';
 import {configured,authenticated,verifyPassword,makeSession,cookie,sameOrigin} from './auth/session.mjs';
 import {verifyProjectionService} from './auth/vercel-oidc.mjs';
 const attempts=new Map();
 const ATLAS_ORIGIN='https://nexo-atlas-control-tower.vercel.app';
+const PUBLIC_SYSTEM_PROVIDERS=['github','nexo'];
 async function body(req) {let text='';for await(const chunk of req){text+=chunk;if(text.length>4096)throw new Error('BODY_TOO_LARGE');}return JSON.parse(text||'{}');}
 export default async function handler(req,res) {
   const env=process.env,now=Date.now();
@@ -38,16 +37,13 @@ export default async function handler(req,res) {
       return send(await buildProjectionBus({env,now,access:projectionAccess,force}));
     }
     if(route==='system'){
-      if(!privateAccess)return send({error:'AUTH_REQUIRED'},401);
-      const options={now,access:'PRIVATE',env,force};
-      const [results,systemInput]=await Promise.all([
-        Promise.all(PROVIDERS.map(id=>readProvider(id,options))),
-        readSystemInput({env})
-      ]);
-      const compiled=compile(results,{now,access:'PRIVATE'}),byId=new Map(results.map(result=>[result.provider.id,result]));
-      const world={...compiled,providers:[...compiled.providers,...projectAutomationHealthProviders(systemInput.automationHealth)]};
-      const bus=await buildProjectionBus({env,now,access:'PRIVATE',force,reader:async id=>byId.get(id)||readProvider(id,options)});
-      return send(buildSystemState({world,bus,systemInput,now:new Date(now).toISOString()}));
+      const options={now,access:'PUBLIC',env,force};
+      const results=await Promise.all(PUBLIC_SYSTEM_PROVIDERS.map(id=>readProvider(id,options)));
+      const compiled=compile(results,{now,access:'PUBLIC'}),byId=new Map(results.map(result=>[result.provider.id,result]));
+      const truthGraphInput=byId.get('nexo')?.truthGraphInput;
+      const systemInput={actions:[],executionRuns:[],sideQuests:[],capabilities:truthGraphInput?.capabilityRows||[],semanticMemory:[],proceduralMemory:[],learningFilaments:[],automationHealth:[]};
+      const bus=await buildProjectionBus({env,now,access:'PUBLIC',force,reader:async id=>byId.get(id)||readProvider(id,options)});
+      return send(buildSystemState({world:compiled,bus,systemInput,now:new Date(now).toISOString()}));
     }
     const q=(url.searchParams.get('q')||'').trim().slice(0,200);
     if(route==='recall'&&!q)return send({error:'QUERY_REQUIRED'},400);
