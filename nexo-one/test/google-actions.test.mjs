@@ -51,7 +51,7 @@ test('drive update requires explicit file id',async()=>{
 
 test('sheets readback mismatch is never PASS',async()=>{
   const requester=async()=>({values:[['old']]});
-  const result=await readbackGoogle({action_type:'nexo.sheet.update',provider_effect_id:'sheet-1',target_ref:'sheet-1!A1',expected:{values:[['new']]}},{env:{},tokenProvider:async()=> 't',requester});
+  const result=await readbackGoogle({action_type:'nexo.sheet.update',provider_effect_id:'sheet-1',target_ref:'sheet-1!A1',expected:{range:'A1',values:[['new']]}},{env:{NEXO_SHEET_ID:'sheet-1'},tokenProvider:async()=> 't',requester});
   assert.equal(result.status,'CONFLICT');
   assert.equal(result.readback_status,'MISMATCH');
 });
