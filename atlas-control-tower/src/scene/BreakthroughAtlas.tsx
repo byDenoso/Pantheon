@@ -133,14 +133,14 @@ export function BreakthroughAtlas({
     const stage=stageRef.current;
     if(!stage||reducedMotion)return;
     const enter=gsap.fromTo(stage.querySelectorAll('.bt-node'),{opacity:0},{opacity:1,duration:.65,stagger:.012,ease:'power2.out'});
-    return()=>enter.kill();
+    return()=>{enter.kill();};
   },[focusId,reducedMotion,visible.length]);
 
   useEffect(()=>{
     const stage=stageRef.current;
     if(!stage||!autoOrbit||reducedMotion)return;
     const tween=gsap.to(stage,{'--bt-ry':'4.5deg',duration:5.8,yoyo:true,repeat:-1,ease:'sine.inOut'} as any);
-    return()=>tween.kill();
+    return()=>{tween.kill();};
   },[autoOrbit,reducedMotion]);
 
   const tilt=(event:React.PointerEvent<HTMLDivElement>)=>{
@@ -222,7 +222,7 @@ export function BreakthroughAtlas({
                 aria-label={String(point.label||point.id)}
                 onClick={event=>{event.stopPropagation();onSelect(point)}}
                 onDoubleClick={event=>{event.stopPropagation();if(STRUCTURAL.has(String(point.type||'').toUpperCase())&&point.id!==focusId)onOpen(point)}}
-                onKeyDown={event=>{if(event.key==='Enter'||event.key===' '){event.preventDefault();onSelect(point)}}}
+                onKeyDown={event=>{if(event.key==='Enter'||event.key===' '){event.preventDefault();onSelect(point)}}
                 style={{opacity:related?(.62+point.depth*.38):.08}}
               >
                 {selected&&<circle className="bt-selection-ring" r={radius+9}/>} 
