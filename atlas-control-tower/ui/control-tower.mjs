@@ -6,7 +6,7 @@ const asTime = value => {const n=Date.parse(value||'');return Number.isFinite(n)
 const pct = (n,d) => d?Math.round((Number(n)||0)/(Number(d)||1)*100):0;
 const focusForHealth={science:'system:SCIENCE',semantic:'system:NEXO',blackbox:'system:AUTOMATION',learning:'system:LEARNING'};
 
-export function buildControlTowerModel({health=null,ops=null,learning=null,summary=null,lastSeenAt=null,now=new Date().toISOString()}={}){
+export function buildControlTowerModel({health=null,ops=null,learning=null,truthGraph=null,summary=null,lastSeenAt=null,now=new Date().toISOString()}={}){
  const ds=health?.dataSource, v1=ds?.v1Health, semantic=health?.semanticIndex;
  const counts=ops?.counts||{};
  const runs=Number(counts.runs)||0, readback=Number(counts.readbackVerified)||0;
@@ -21,12 +21,15 @@ export function buildControlTowerModel({health=null,ops=null,learning=null,summa
   {id:'blackbox',label:'Black Box',state:good(!!ops,!!ops),detail:ops?`${num(runs)} runs · ${num(counts.events||0)} eventos`:'indisponível'},
   {id:'learning',label:'Learning',state:good(!!learning,!!learning),detail:learning?`${num(learning.total||0)} objetos publicados`:'indisponível'}
  ].map(item=>({...item,focus:focusForHealth[item.id]}));
+ const tgResults=Array.isArray(truthGraph?.results)?truthGraph.results:[];
+ const tgCounts=tgResults.reduce((out,item)=>{const key=String(item.status||'UNKNOWN').toUpperCase();out[key]=(out[key]||0)+1;return out},{});
 
  return{
   generatedAt:String(now),health:healthItems,
   attention:{blockedCount:blockers.length,blockers:blockers.slice(0,5),runs,readbackVerified:readback,readbackPercent:pct(readback,runs),readbackLabel:runs?`${readback}/${runs}`:'—',success:Number(counts.success)||0,events:Number(counts.events)||0},
   corpus:{total:summary?.total??null,tests:summary?.counts?.TEST??null,results:summary?.counts?.RESULT??null,claims:summary?.counts?.CLAIM??null,sourceVersion:summary?.projection?.sourceVersion||''},
   recent:{newCount:changed.length,items:(lastSeen?changed:events).slice(0,5),hasPreviousVisit:!!lastSeen},
+  truthGraph:{available:!!truthGraph,fingerprint:truthGraph?.fingerprint||'',checkedAt:truthGraph?.checked_at||'',results:tgResults,counts:tgCounts,materialCount:Array.isArray(truthGraph?.material_conflicts)?truthGraph.material_conflicts.length:0},
   promoted,priorities:actions.slice(0,5),decisions:blockers.slice(0,3)
  };
 }
@@ -40,10 +43,11 @@ const statusDot=state=>`<i class="ct-dot ct-${esc(state)}"></i>`;
 const shortText=(value,max=132)=>{const s=String(value||'').trim();return s.length>max?s.slice(0,max-1)+'…':s};
 const dateLabel=value=>{const d=new Date(value||'');return Number.isNaN(d.valueOf())?'sem data':d.toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})};
 const row=(item,index,{blocker=false}={})=>`<button class="ct-ref-row${blocker?' ct-blocker-row':''}" data-ct-focus="system:AUTOMATION"><i>${index+1}</i><span><b>${esc(item.label||item.id||'Registro')}</b><small>${esc(item.domain||item.metadata?.event_type||item.status||'NEXO')}</small></span><em>${esc(shortText(item.status||'',18))}</em></button>`;
+const truthRow=(item,index)=>`<a class="ct-ref-row${item.material?' ct-blocker-row':''}" href="${esc(item.source_ref||'#')}" target="_blank" rel="noopener noreferrer"><i>${index+1}</i><span><b>${esc(item.domain||'UNKNOWN')}</b><small>${esc(`${item.provider?.actual||'—'} → ${item.provider?.expected||'—'} · ${String(item.fingerprint||'').slice(-8)}`)}</small></span><em>${esc(shortText(item.status||'UNKNOWN',18))}</em></a>`;
 
 export function renderControlTower(root,model,{onFocus,onMap}={}){
  if(!root)return;
- const health=model.health||[], attention=model.attention||{}, recentState=model.recent||{};
+ const health=model.health||[], attention=model.attention||{}, recentState=model.recent||{}, truthGraph=model.truthGraph||{};
  const healthGood=health.filter(h=>h.state==='good').length, healthTotal=health.length||0;
  const blockedCount=Number(attention.blockedCount)||0;
  const nominal=healthTotal&&healthGood===healthTotal&&!blockedCount;
@@ -53,17 +57,21 @@ export function renderControlTower(root,model,{onFocus,onMap}={}){
  const recent=recentItems.length?recentItems.map(e=>`<button class="ct-ref-row" data-ct-focus="system:AUTOMATION"><i>•</i><span><b>${esc(e.label||e.id)}</b><small>${esc(e.metadata?.event_type||e.status||'runtime')}</small></span><time>${esc(dateLabel(e.updatedAt))}</time></button>`).join(''):'<p class="ct-empty">Nenhuma atividade recente publicada.</p>';
  const blockerItems=attention.blockers||[];
  const blockers=blockerItems.length?blockerItems.map((a,i)=>row(a,i,{blocker:true})).join(''):'<p class="ct-empty">Nenhum blocker material.</p>';
+ const tgRows=(truthGraph.results||[]).slice(0,5);
+ const truthGraphRows=tgRows.length?tgRows.map((item,i)=>truthRow(item,i)).join(''):'<p class="ct-empty">TruthGraph indisponível.</p>';
  const runs=Number(attention.runs)||0, rb=Number(attention.readbackPercent)||0;
  const readbackLabel=attention.readbackLabel||'—';
  const readbackText=runs?`Readback verificado em ${num(rb)}% das execuções registradas. ${blockedCount?`${num(blockedCount)} blocker${blockedCount===1?' segue':'s seguem'} exigindo ação.`:'Fluxo operacional sem blocker material publicado.'}`:'Black Box sem runs suficientes para calcular readback.';
  const statusLabel=nominal?'SISTEMA NOMINAL':blockedCount?'SISTEMA OPERACIONAL':'LEITURA PARCIAL';
  const generatedAt=String(model.generatedAt||'');
+ const tgFingerprint=truthGraph.fingerprint?String(truthGraph.fingerprint).replace('TRUTHGRAPH-','').slice(-8):'—';
 
  root.innerHTML=`<div class="ct-reference-grid">
   <article class="ct-reference-console ct-status-console"><div class="ct-reference-title"><span>Status operacional</span>${statusDot(nominal?'good':blockedCount?'warn':'unknown')}</div><div class="ct-status-body"><strong class="ct-nominal"><i></i>${esc(statusLabel)}</strong><p>${healthTotal?`${healthGood}/${healthTotal} sinais verificados`:'Health indisponível'}</p><div class="ct-mini-metrics"><div><strong>${num(attention.success||0)}</strong><small>Execuções com sucesso</small></div><div><strong>${num(runs)}</strong><small>Runs registrados</small></div><div><strong>${num(blockedCount)}</strong><small>Blockers atuais</small></div></div></div></article>
   <article class="ct-reference-console ct-priorities-console"><div class="ct-reference-title"><span>Prioridades</span><small>Ver todas →</small></div><div class="ct-ref-list">${priorities}</div></article>
   <article class="ct-reference-console ct-recent-console"><div class="ct-reference-title"><span>Atividade recente</span><small>Ver todas →</small></div><div class="ct-ref-list">${recent}</div></article>
   <article class="ct-reference-console ct-blockers-console"><div class="ct-reference-title"><span>Blockers</span><small>${num(blockedCount)} ativos</small></div><div class="ct-ref-list">${blockers}</div></article>
+  <article class="ct-reference-console ct-truthgraph-console"><div class="ct-reference-title"><span>Authority Radar</span><small>${esc(tgFingerprint)} · ${num(truthGraph.materialCount||0)} material</small></div><div class="ct-ref-list">${truthGraphRows}</div></article>
   <article class="ct-reference-console ct-readback-console"><div class="ct-reference-title"><span>Readback</span><small>${esc(readbackLabel)}</small></div><div class="ct-readback-body"><blockquote>“${esc(readbackText)}”</blockquote><small>Black Box${generatedAt?' · '+esc(generatedAt.slice(0,16).replace('T',' ')):''}</small><div class="ct-readback-meter"><strong>${runs?num(rb)+'%':'—'}</strong><i style="--readback:${runs?rb:0}%"></i></div></div></article>
  </div>`;
  root.querySelectorAll('[data-ct-focus]').forEach(button=>button.onclick=()=>onFocus?.(button.dataset.ctFocus));
