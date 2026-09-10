@@ -11,7 +11,9 @@
   "dependencies": {
     "@babylonjs/core": "9.25.0",
     "@react-three/fiber": "9.7.0",
+    "d3": "7.9.0",
     "graphology": "0.26.0",
+    "gsap": "3.13.0",
     "pixi.js": "8.20.1",
     "react": "19.2.8",
     "react-dom": "19.2.8",
@@ -19,11 +21,12 @@
     "three": "0.185.1"
   },
   "devDependencies": {
+    "@types/d3": "7.4.3",
     "@types/react": "19.2.14",
     "@types/react-dom": "19.2.3",
     "@types/three": "0.185.0",
     "typescript": "5.9.3",
     "vite": "8.2.2"
   },
-  "deploymentMarker": "r3f-webgpu-20260908"
+  "deploymentMarker": "breakthrough-hybrid-20260910"
 }

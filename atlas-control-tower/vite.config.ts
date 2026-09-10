@@ -6,7 +6,8 @@ export default defineConfig({
     emptyOutDir:true,
     sourcemap:true,
     target:'es2022',
-    cssCodeSplit:true
+    cssCodeSplit:true,
+    rollupOptions:{input:['index.html','bt.html']}
   },
   server:{
     host:'0.0.0.0',
