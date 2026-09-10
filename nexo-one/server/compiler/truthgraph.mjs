@@ -33,9 +33,12 @@ function declaredProvider(row){
 function domains(value){return text(value).toUpperCase().split(/[\/,;]+/).map(x=>x.trim()).filter(Boolean);}
 function capabilityState(rows){
   if(!rows.length)return {state:'N/A',summary:'Nenhuma capability específica declarada.',ids:[]};
-  const values=rows.map(r=>text(r.status).toUpperCase());
+  const active=rows.filter(r=>text(r.status).toUpperCase()!=='RETIRED_RUNTIME');
+  const summary=rows.map(r=>`${r.capability_id}:${r.status}`).join(' · '),ids=rows.map(r=>r.capability_id);
+  if(!active.length)return {state:'N/A',summary,ids};
+  const values=active.map(r=>text(r.status).toUpperCase());
   const state=values.some(x=>BLOCKING.has(x))?'BLOCKED':values.some(x=>DEGRADED.has(x)||!x.startsWith('PASS'))?'DEGRADED':'PASS';
-  return {state,summary:rows.map(r=>`${r.capability_id}:${r.status}`).join(' · '),ids:rows.map(r=>r.capability_id)};
+  return {state,summary,ids};
 }
 function explanation(status,{domain,expected,declared,provider,truth,capability}){
   if(status==='CONFLICT')return `${domain}: autoridade canônica aponta para ${expected||'owner dependente'}, mas o provider real/declarado resolve para ${declared||'provider não identificável'}. Nenhuma autoridade foi alterada automaticamente.`;
