@@ -76,7 +76,7 @@ test('NEXO reads the canonical Sheet without re-stamping the owner update time',
   ];
   await mock([
     ['api.vercel.com/v1/connect/token/google/nexo-google',{token:'connect-access'}],
-    ['sheets.googleapis.com/v4/spreadsheets/ssot-fixture/values/',(url,options)=>{assert.equal(options.headers.Authorization,'Bearer connect-access');assert.match(String(url),/NEXO%21A1%3AH1000/);return {values};}]
+    ['sheets.googleapis.com/v4/spreadsheets/ssot-fixture/values/',(url,options)=>{assert.equal(options.headers.Authorization,'Bearer connect-access');assert.match(String(url),/NEXO!A1%3AH1000/);return {values};}]
   ],async()=>{
     const x=await nexo({env:sheetEnv,now});
     assert.equal(x.items.length,1);
