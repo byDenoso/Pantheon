@@ -18,6 +18,7 @@ const clean=v=>text(v).trim();
 const upper=v=>clean(v).toUpperCase();
 const cellValue=cell=>cell?.v==null?'':String(cell.v);
 const asArray=value=>Array.isArray(value)?value:value&&typeof value==='object'?[value]:[];
+const parseJson=value=>{try{return value?JSON.parse(value):{}}catch{return{}}};
 
 /** Kept for the NEXO LIVE surface; the loop and its claims come straight from the SSOT. */
 export function extractNexoLiveState(rowsByTab={}){return extractLiveState(rowsByTab)}
@@ -33,14 +34,15 @@ function hierarchyRow(tab,row){
  if(!TYPE_FOR_LEVEL[level])return null;
  const recordId=clean(row.record_id);
  if(!recordId)return null;
+ const payload=parseJson(row.payload_json);
  return{
   tab,level,recordId,
-  parentRecordId:clean(row.parent_id),
-  domainCode:clean(row.domain),
+  parentRecordId:clean(row.parent_id||payload.parent_id),
+  domainCode:clean(row.domain||payload.domain),
   label:clean(row.title||recordId),
   status:clean(row.status)||'UNKNOWN',
-  summary:clean(row.summary),
-  detail:clean(row.detail),
+  summary:clean(row.summary||row.detail||payload.summary),
+  detail:clean(row.detail||payload.detail),
   source:clean(row.source||row.source_ref),
   updatedAt:clean(row.updated_at)
  };
