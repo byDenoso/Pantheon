@@ -4,11 +4,18 @@ const CONTRACT='ProjectionEnvelope/v1';
 const BUS='Pantheon/UniversalProjectionBus';
 const DEFAULT_URL='https://nexo-one-two.vercel.app/api/projections';
 const digest=value=>createHash('sha256').update(JSON.stringify(value)).digest('hex').slice(0,16).toUpperCase();
+const firstHeader=value=>Array.isArray(value)?value[0]:value;
 
-export async function fetchProjection({url=process.env.NEXO_ONE_PROJECTION_URL||DEFAULT_URL,fetcher=fetch,signal}={}){
+export async function fetchProjection({url=process.env.NEXO_ONE_PROJECTION_URL||DEFAULT_URL,fetcher=fetch,signal,oidcToken}={}){
   const checkedAt=new Date().toISOString();
   try{
-    const response=await fetcher(url,{method:'GET',headers:{Accept:'application/json'},signal});
+    const headers={Accept:'application/json'};
+    const token=typeof oidcToken==='string'?oidcToken.trim():'';
+    if(token){
+      headers.Authorization=`Bearer ${token}`;
+      headers['x-vercel-trusted-oidc-idp-token']=token;
+    }
+    const response=await fetcher(url,{method:'GET',headers,signal});
     if(!response.ok)throw new Error(`HTTP_${response.status}`);
     const body=await response.json();
     if(body?.contract!==CONTRACT||body?.bus!==BUS||typeof body?.fingerprint!=='string'||!Array.isArray(body?.envelopes))throw new Error('INVALID_PROJECTION_CONTRACT');
@@ -30,7 +37,8 @@ export default async function handler(req,res){
   res.setHeader('Cache-Control','private, max-age=30, stale-while-revalidate=60');
   res.setHeader('X-Content-Type-Options','nosniff');
   if(req.method!=='GET'){res.statusCode=405;return res.end(JSON.stringify({error:'METHOD_NOT_ALLOWED'}));}
-  const result=await fetchProjection();
+  const oidcToken=String(firstHeader(req.headers?.['x-vercel-oidc-token'])||process.env.VERCEL_OIDC_TOKEN||'').trim();
+  const result=await fetchProjection({oidcToken});
   res.statusCode=200;
   return res.end(JSON.stringify(result));
 }

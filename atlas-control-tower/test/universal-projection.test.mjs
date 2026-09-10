@@ -27,6 +27,15 @@ test('Atlas consumes the same projection fingerprint and envelopes without becom
   assert.equal(result.upstream.source_ref,'https://nexo.test/api/projections');
 });
 
+test('Atlas forwards its Vercel OIDC identity to the NEXO projection endpoint',async()=>{
+  let request;
+  const fetcher=async(url,options)=>{request={url,options};return {ok:true,json:async()=>structuredClone(upstream)};};
+  const result=await fetchProjection({url:'https://nexo.test/api/projections',fetcher,oidcToken:'signed-vercel-token'});
+  assert.equal(result.state,'LIVE');
+  assert.equal(request.options.headers.Authorization,'Bearer signed-vercel-token');
+  assert.equal(request.options.headers['x-vercel-trusted-oidc-idp-token'],'signed-vercel-token');
+});
+
 test('Atlas exposes upstream failure as DEGRADED instead of silently using local truth',async()=>{
   const fetcher=async()=>({ok:false,status:503});
   const result=await fetchProjection({url:'https://nexo.test/api/projections',fetcher});

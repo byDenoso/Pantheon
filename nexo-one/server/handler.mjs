@@ -3,11 +3,12 @@ import {compile} from './compiler/world-state.mjs';
 import {buildProjectionBus} from './compiler/projection-bus.mjs';
 import {readProvider,pending,clearProviderCache} from './adapters/registry.mjs';
 import {configured,authenticated,verifyPassword,makeSession,cookie,sameOrigin} from './auth/session.mjs';
+import {verifyProjectionService} from './auth/vercel-oidc.mjs';
 const attempts=new Map();
 async function body(req) {let text='';for await(const chunk of req){text+=chunk;if(text.length>4096)throw new Error('BODY_TOO_LARGE');}return JSON.parse(text||'{}');}
 export default async function handler(req,res) {
   const env=process.env,now=Date.now();
-  res.setHeader('Content-Type','application/json; charset=utf-8');res.setHeader('Cache-Control','private, no-store');res.setHeader('X-Content-Type-Options','nosniff');res.setHeader('Vary','Cookie');
+  res.setHeader('Content-Type','application/json; charset=utf-8');res.setHeader('Cache-Control','private, no-store');res.setHeader('X-Content-Type-Options','nosniff');res.setHeader('Vary','Cookie, Authorization');
   const send=(value,status=200)=>{res.statusCode=status;res.end(JSON.stringify(value));};
   const url=new URL(req.url,'http://local'),route=url.searchParams.get('route')||url.pathname.split('/').pop(),privateAccess=authenticated(req,env),access=privateAccess?'PRIVATE':'PUBLIC';
   try{
@@ -25,7 +26,11 @@ export default async function handler(req,res) {
     if(req.method!=='GET')return send({error:'WRITES_DISABLED'},405);
     if(!['world','health','now','loops','day','context','recall','projections'].includes(route))return send({error:'NOT_FOUND'},404);
     const force=url.searchParams.get('refresh')==='1';
-    if(route==='projections')return send(await buildProjectionBus({env,now,access,force}));
+    if(route==='projections'){
+      const serviceAccess=!privateAccess&&await verifyProjectionService(req,{now});
+      const projectionAccess=privateAccess||serviceAccess?'PRIVATE':'PUBLIC';
+      return send(await buildProjectionBus({env,now,access:projectionAccess,force}));
+    }
     const q=(url.searchParams.get('q')||'').trim().slice(0,200);
     if(route==='recall'&&!q)return send({error:'QUERY_REQUIRED'},400);
     const options={now,access,env,force};
