@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { emitSessionChange } from '../contracts/session-events.ts';
 
 export interface SessionState { configured: boolean; authenticated: boolean }
 
@@ -33,6 +34,7 @@ export function useSession(onChange?: (authenticated: boolean) => void) {
         return false;
       }
       setSession(await response.json());
+      if (typeof window !== 'undefined') emitSessionChange(window, true);
       onChange?.(true);
       return true;
     } catch {
@@ -48,6 +50,7 @@ export function useSession(onChange?: (authenticated: boolean) => void) {
       const response = await fetch('/api/session', { method: 'DELETE' });
       if (!response.ok) throw new Error();
       setSession(s => ({ ...s, authenticated: false }));
+      if (typeof window !== 'undefined') emitSessionChange(window, false);
       onChange?.(false);
       return true;
     } catch {
