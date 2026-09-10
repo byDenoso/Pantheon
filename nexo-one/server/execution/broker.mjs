@@ -2,23 +2,34 @@ import {normalizeIntent,ActionError} from './contracts.mjs';
 import {gateIntent} from './gate.mjs';
 import {executionLedger} from './ledger.mjs';
 import {resolveActionProvider} from './providers.mjs';
+import {materialIncident,persistMaterialIncident} from './integrity.mjs';
 import {readProvider} from '../adapters/registry.mjs';
 
 const terminal=new Set(['PASS','BLOCKED','FAILED','CONFLICT']);
 const denied=new Set(['AUTH_REQUIRED','SCOPE_REQUIRED','CAPABILITY_BLOCKED','AUTHORITY_CONFLICT','TARGET_AMBIGUOUS','CONFIRMATION_REQUIRED','IDEMPOTENCY_CONFLICT']);
 
-async function defaultLoadTruth({env,now,signal}){
+async function defaultLoadTruth({env,now}){
   const result=await readProvider('nexo',{env,now,access:'PRIVATE',force:true,timeout:8000});
   if(result.provider.status!=='AVAILABLE'||!result.truthGraphInput)throw new ActionError(result.provider.status==='AUTH_REQUIRED'?'AUTH_REQUIRED':'PROVIDER_UNAVAILABLE');
   return {truthGraphInput:result.truthGraphInput,revision:result.provider.revision,provider:result.provider};
 }
 async function defaultLoadProvider(provider,{env,now}){return readProvider(provider,{env,now,access:'PRIVATE',force:true,timeout:8000});}
 
-export function createBroker({ledger=executionLedger,loadTruth=defaultLoadTruth,loadProvider=defaultLoadProvider,resolveProvider=resolveActionProvider,now=()=>Date.now()}={}){
+export function createBroker({ledger=executionLedger,loadTruth=defaultLoadTruth,loadProvider=defaultLoadProvider,resolveProvider=resolveActionProvider,persistIncident=persistMaterialIncident,now=()=>Date.now()}={}){
   async function authority(intent,ctx,confirmed){
     const truth=await loadTruth({...ctx,now:now()});
     const decision=gateIntent(intent,{truthGraphInput:truth.truthGraphInput,confirmed});
     return {truth,decision};
+  }
+  async function attachIntegrity(receipt,ctx){
+    if(!materialIncident(receipt))return receipt;
+    try{
+      const truth=await loadTruth({...ctx,now:now()});
+      const result=await persistIncident(receipt,{...ctx,now:now(),truthGraphInput:truth.truthGraphInput});
+      return ledger.annotate(receipt.receipt_id,{integrity:{status:result.persisted?'PERSISTED':result.deduped?'DEDUPED':'NO_OP',check_id:result.incident?.check_id||null,readback:!!result.readback}});
+    }catch(error){
+      return ledger.annotate(receipt.receipt_id,{integrity:{status:'FAILED',error:error?.code||'PROVIDER_UNAVAILABLE',check_id:null,readback:false},explanation:`${receipt.explanation} Integrity persistence failed closed (${error?.code||'PROVIDER_UNAVAILABLE'}).`});
+    }
   }
   async function planAction(input,ctx={}){
     const intent=normalizeIntent(input,now());
@@ -34,15 +45,17 @@ export function createBroker({ledger=executionLedger,loadTruth=defaultLoadTruth,
     if(!receipt.provider_effect_id)return ledger.finish(receipt.receipt_id,{status:'PENDING_READBACK',readback_status:'PENDING',explanation:'Provider effect identity is unavailable; readback must resolve before retry.'});
     ledger.transition(receipt.receipt_id,'READBACK',{explanation:'Reading provider effect back before final status.'});
     const provider=resolveProvider(receipt.provider);
+    let finished;
     try{
       const verification=await provider.readback(ledger.get(receipt.receipt_id),{...ctx,now:now()});
-      return ledger.finish(receipt.receipt_id,verification);
+      finished=ledger.finish(receipt.receipt_id,verification);
     }catch(error){
       const code=error?.code;
-      if(['READBACK_TIMEOUT','PROVIDER_UNAVAILABLE','RATE_LIMITED'].includes(code))return ledger.finish(receipt.receipt_id,{status:'PENDING_READBACK',readback_status:'PENDING',explanation:`Readback pending: ${code}.`});
-      if(code==='AUTH_REQUIRED'||code==='SCOPE_REQUIRED')return ledger.finish(receipt.receipt_id,{status:'DEGRADED',readback_status:'PENDING',explanation:`Readback blocked by ${code}.`});
-      return ledger.finish(receipt.receipt_id,{status:'FAILED',readback_status:'MISMATCH',explanation:'Provider readback failed.'});
+      if(['READBACK_TIMEOUT','PROVIDER_UNAVAILABLE','RATE_LIMITED'].includes(code))finished=ledger.finish(receipt.receipt_id,{status:'PENDING_READBACK',readback_status:'PENDING',explanation:`Readback pending: ${code}.`});
+      else if(code==='AUTH_REQUIRED'||code==='SCOPE_REQUIRED')finished=ledger.finish(receipt.receipt_id,{status:'DEGRADED',readback_status:'PENDING',explanation:`Readback blocked by ${code}.`});
+      else finished=ledger.finish(receipt.receipt_id,{status:'FAILED',readback_status:'MISMATCH',explanation:'Provider readback failed.'});
     }
+    return attachIntegrity(finished,ctx);
   }
   async function executeAction(input,ctx={}){
     const intent=normalizeIntent(input,now());
