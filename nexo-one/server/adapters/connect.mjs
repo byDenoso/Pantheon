@@ -14,7 +14,11 @@ function connectorUrl(value){
   return `https://api.vercel.com/v1/connect/token/${parts.map(encodeURIComponent).join('/')}`;
 }
 
-export async function googleConnectToken(env,signal){
+function scopes(readScopes,writeScopes){
+  return [...new Set([...(readScopes||GOOGLE_READ_SCOPES),...(writeScopes||[])])];
+}
+
+export async function googleConnectToken(env,signal,{writeScopes=[],readScopes=GOOGLE_READ_SCOPES}={}){
   requireEnv(env,'GOOGLE_CONNECTOR','VERCEL_OIDC_TOKEN');
   const data=await json(connectorUrl(env.GOOGLE_CONNECTOR),{
     token:env.VERCEL_OIDC_TOKEN,
@@ -23,7 +27,7 @@ export async function googleConnectToken(env,signal){
     headers:{'Content-Type':'application/json'},
     body:JSON.stringify({
       subject:{type:'user',id:env.GOOGLE_CONNECT_SUBJECT_ID||'owner'},
-      scopes:GOOGLE_READ_SCOPES
+      scopes:scopes(readScopes,writeScopes)
     })
   });
   if(typeof data.token!=='string'||!data.token)throw new ProviderError('AUTH_REQUIRED');
