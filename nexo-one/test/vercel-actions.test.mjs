@@ -8,8 +8,16 @@ test('deployment is pinned to the configured project',async()=>{
   let call;const requester=async(url,options)=>{call={url,options};return {id:'dpl_1',url:'nexo-preview.vercel.app',readyState:'QUEUED',meta:{githubCommitSha:'abc'}};};
   const effect=await executeVercel({action_type:'vercel.deploy',target_ref:'prj_nexo',requested_payload:{deployment_id:'dpl_source',source_revision:'abc'}},{env,requester});
   assert.match(call.url,/\/v13\/deployments\?teamId=team_x$/);
+  assert.equal(call.options.token,'write');
   assert.equal(effect.effect_id,'dpl_1');
   assert.equal(effect.expected.source_revision,'abc');
+});
+
+test('write action does not fall back to read credential',async()=>{
+  await assert.rejects(
+    ()=>executeVercel({action_type:'vercel.deploy',target_ref:'prj_nexo',requested_payload:{deployment_id:'dpl_source'}},{env:{...env,VERCEL_WRITE_TOKEN:''},requester:async()=>({id:'should-not-run'})}),
+    error=>error.code==='AUTH_REQUIRED'
+  );
 });
 
 test('foreign project target is rejected',async()=>{
