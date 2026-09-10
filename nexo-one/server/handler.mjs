@@ -61,7 +61,8 @@ export default async function handler(req,res) {
     }
     const results=await Promise.all(selected.map(id=>readProvider(id,{...options,query:route==='recall'?q:''})));
     const world=compile(results,{now,access});
-    if(route==='health')return send({status:world.providers.every(p=>p.status==='AVAILABLE'&&!p.partial)?'HEALTHY':'DEGRADED',version:'0.1.0',contractVersion:'1',access,privateConfigured:configured(env),providers:world.providers,generatedAt:world.generatedAt});
+    const requiredProviders=world.providers.filter(p=>p.id!=='vercel');
+    if(route==='health')return send({status:requiredProviders.every(p=>p.status==='AVAILABLE'&&!p.partial)?'HEALTHY':'DEGRADED',version:'0.1.0',contractVersion:'1',access,privateConfigured:configured(env),providers:world.providers,generatedAt:world.generatedAt});
     if(route==='now')return send({...world,items:world.items.filter(x=>['ACT','ESCALATE'].includes(x.attention)).slice(0,3)});
     if(route==='loops')return send({...world,items:world.items.filter(x=>x.status)});
     if(route==='day')return send({...world,items:world.items.filter(x=>x.kind==='EVENT'||x.status==='NEEDS_ME')});

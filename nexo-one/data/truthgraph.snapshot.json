@@ -1,11 +1,11 @@
 {
   "version": "1",
-  "revision": "truthgraph-projection-20260910T0954Z",
+  "revision": "truthgraph-projection-20260910T1245Z",
   "partial": true,
   "items": [],
   "projection": {
     "authority": "PROJECTION_ONLY",
-    "generated_at": "2026-09-10T09:54:00Z",
+    "generated_at": "2026-09-10T12:45:00Z",
     "source": "NEXO SSOT + ACTION_REGISTER",
     "notes": "Read-only transport for TruthGraph when private Google credentials are unavailable. Canonical authority remains in the referenced Sheets."
   },
@@ -44,7 +44,7 @@
       {"capability_id":"CAP-CLAUDE-COWORK-DOMAIN-ROUTING","domain":"SCIENCE/ENGINEERING/OLYMPUS","status":"PENDING_CANARY"},
       {"capability_id":"CAP-CLAUDE-COWORK-TOWER-READ","domain":"SCIENCE","status":"PENDING_CANARY"},
       {"capability_id":"CAP-CLAUDE-COWORK-GITHUB-READ","domain":"ENGINEERING","status":"PENDING_CANARY"},
-      {"capability_id":"CAP-NEON-NEXO-OPS-SCHEDULED-WRITE","domain":"NEXO","status":"PASS"},
+      {"capability_id":"CAP-NEON-NEXO-OPS-SCHEDULED-WRITE","domain":"NEXO","status":"RETIRED_RUNTIME"},
       {"capability_id":"CAP-CAMB-DRIVE-INTERACTIVE-EXEC","domain":"SCIENCE","status":"PASS"},
       {"capability_id":"CAP-CAMB-SCHEDULED-INVOKE","domain":"SCIENCE","status":"PASS"},
       {"capability_id":"CAP-DATASET-SPT3G-D1-KK-DRIVE","domain":"SCIENCE","status":"PASS"},
