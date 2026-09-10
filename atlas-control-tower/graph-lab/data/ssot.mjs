@@ -3,18 +3,19 @@ import {attachOperations,extractLiveState,statusTone} from './operations.mjs';
 export const SSOT_SPREADSHEET_ID='1e6s2dKOYVLNsPUguHI85RLVLwJKtlCsQZBJ1BE-UhaY';
 export const SSOT_TABS=['Science','Relations','Olympus','NEXO'];
 // Read when the sheet exposes them; their absence must never fail the canonical read.
-export const SSOT_OPTIONAL_TABS=['Engineering'];
+export const SSOT_OPTIONAL_TABS=['Engineering','CrossDomain','StructuralLearning'];
 export const SSOT_SPREADSHEET_URL=`https://docs.google.com/spreadsheets/d/${SSOT_SPREADSHEET_ID}/edit`;
 export const SSOT_SNAPSHOT_URL=new URL('./ssot.snapshot.json',import.meta.url).href;
 export const SSOT_HIERARCHY_SNAPSHOT_URL=new URL('./ssot.hierarchy.snapshot.json',import.meta.url).href;
 
 export const ROOT_ID='system:NEXO';
-const HIERARCHY_TABS=['Science','Engineering'];
+const HIERARCHY_TABS=['Science','Engineering','Olympus'];
 const SYSTEM_FOR_TAB={Science:'SCIENCE',Engineering:'ENGINEERING',Olympus:'OLYMPUS',NEXO:'NEXO'};
 const TYPE_FOR_LEVEL={domain:'DOMAIN',program:'PROGRAM',campaign:'CAMPAIGN'};
 
 const text=v=>v==null?'':String(v);
 const clean=v=>text(v).trim();
+const upper=v=>clean(v).toUpperCase();
 const cellValue=cell=>cell?.v==null?'':String(cell.v);
 const asArray=value=>Array.isArray(value)?value:value&&typeof value==='object'?[value]:[];
 
@@ -58,6 +59,32 @@ function makeNode(row,{parentId,extra={}}){
   ssotUrl:SSOT_SPREADSHEET_URL,hiddenChildren:0,
   ...extra
  };
+}
+
+const isActiveRelation=row=>(upper(row.status)||'ACTIVE')==='ACTIVE';
+const isLearningFilament=row=>/^LEARNING_FILAMENT/.test(upper(row.relation_type));
+
+function attachRelationFilaments({rowsByTab,edges,nodeIdByRecord}){
+ const rows=asArray(rowsByTab.Relations).filter(row=>isActiveRelation(row)&&isLearningFilament(row));
+ const seen=new Set(edges.map(edge=>edge.id));
+ for(const row of rows){
+  const id=clean(row.relation_id);
+  const sourceRecord=clean(row.source_entity);
+  const targetRecord=clean(row.target_entity);
+  const source=nodeIdByRecord.get(sourceRecord);
+  const target=nodeIdByRecord.get(targetRecord);
+  if(!id||!source||!target)continue;
+  const edgeId=`filament:${id}`;
+  if(seen.has(edgeId))continue;
+  seen.add(edgeId);
+  edges.push({
+   id:edgeId,source,target,kind:'learning_filament',authority:'ssot-relation-projection',
+   relationId:id,relationType:clean(row.relation_type),status:clean(row.status)||'ACTIVE',
+   tone:'filament',sourceDomain:clean(row.source_domain),targetDomain:clean(row.target_domain),
+   confidence:clean(row.confidence),supportCount:clean(row.support_count),contradictCount:clean(row.contradict_count),
+   provenance:clean(row.provenance),updatedAt:clean(row.updated_at),summary:clean(row.notes)
+  });
+ }
 }
 
 /**
@@ -138,14 +165,16 @@ export function rowsToGraph(rowsByTab={},meta={}){
   nodeIdByRecord.set(row.recordId,node.id);
  }
 
+ attachRelationFilaments({rowsByTab,edges,nodeIdByRecord});
+
  const childCounts=new Map();
- for(const edge of edges)childCounts.set(edge.source,(childCounts.get(edge.source)||0)+1);
+ for(const edge of edges.filter(edge=>edge.kind==='canonical'))childCounts.set(edge.source,(childCounts.get(edge.source)||0)+1);
  for(const node of nodes)node.hiddenChildren=childCounts.get(node.id)||0;
 
  const graph={
   rootId:ROOT_ID,nodes,edges,
   live:extractLiveState(rowsByTab),
-  source:{kind:meta.kind||'drive-ssot',spreadsheetId:SSOT_SPREADSHEET_ID,url:SSOT_SPREADSHEET_URL,tabs:[...SSOT_TABS]}
+  source:{kind:meta.kind||'drive-ssot',spreadsheetId:SSOT_SPREADSHEET_ID,url:SSOT_SPREADSHEET_URL,tabs:[...SSOT_TABS,...SSOT_OPTIONAL_TABS]}
  };
  return attachOperations(graph,rowsByTab,{
   authority:meta.kind==='drive-ssot-snapshot'?'drive-ssot-projection':'drive-ssot',
@@ -178,7 +207,12 @@ export async function loadSsotSnapshot({fetchRef=globalThis.fetch,url=SSOT_SNAPS
  for(const candidate of [snapshot,hierarchy])if(candidate?.authority!=='drive-ssot-projection'||candidate?.spreadsheet_id!==SSOT_SPREADSHEET_ID)throw new Error('Invalid SSOT snapshot authority or spreadsheet id.');
  const scienceById=new Map();
  for(const row of [...(snapshot.tabs?.Science||[]),...(hierarchy.tabs?.Science||[])]){const id=clean(row.record_id);if(id)scienceById.set(id,row)}
- const tabs={...(snapshot.tabs||{}),Science:[...scienceById.values()],Relations:hierarchy.tabs?.Relations||snapshot.tabs?.Relations||[]};
+ const tabs={
+  ...(snapshot.tabs||{}),
+  ...(hierarchy.tabs||{}),
+  Science:[...scienceById.values()],
+  Relations:hierarchy.tabs?.Relations||snapshot.tabs?.Relations||[]
+ };
  const graph=rowsToGraph(tabs,{
   kind:'drive-ssot-snapshot',
   projection:clean(hierarchy.projection||snapshot.projection),
