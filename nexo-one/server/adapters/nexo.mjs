@@ -36,7 +36,7 @@ function normalizeSheet(data,{id,now}){
     });
     const observedAt=new Date(updatedMs).toISOString();
     normalized.observedAt=observedAt;
-    normalized.freshness={...normalized.freshness,observedAt};
+    normalized.freshness={...normalized.freshness,state:'SNAPSHOT',observedAt};
     items.push(normalized);
   }
   return {items,revision:normalizedRevision(items),partial:data.values.length>=1000};
