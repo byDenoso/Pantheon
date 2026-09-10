@@ -11,7 +11,7 @@ const text=v=>String(v||'').trim();
 function expectedProvider(row){
   const domain=text(row.domain).toUpperCase(),value=text(row.canonical_truth).toLowerCase();
   if(domain==='ARTIFACT')return null;
-  if(domain==='NEXO')return 'nexo';
+  if(domain==='NEXO'||value.includes('nexo · ssot')||value.includes('nexo ssot')||value.includes('ssot canonical'))return 'nexo';
   if(value.includes('github')||value.includes('git/'))return 'github';
   if(value.includes('drive')||value.includes('control tower'))return 'drive';
   if(value.includes('vercel'))return 'vercel';
