@@ -31,6 +31,7 @@ try{
     assert.match((await page.getByTestId('projection-source-NEXO_SSOT').textContent())||'',/DEGRADED.*ssot-r1/);
     assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth),'Horizontal overflow');
     await page.screenshot({path:`${output}/${name}.png`,fullPage:true});
+    await page.getByText('PROJECTION BUS',{exact:true}).click();
     await page.getByRole('button',{name:/Revisar contrato de integração/}).click();await page.getByRole('dialog').waitFor();
     assert.equal(await page.getByRole('link',{name:/Abrir na fonte/}).getAttribute('href'),'https://github.com/example/project/issues/1');
     if(name==='mobile-dark')await page.screenshot({path:`${output}/focus-drawer-mobile.png`,fullPage:true});
