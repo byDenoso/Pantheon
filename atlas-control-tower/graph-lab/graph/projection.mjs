@@ -1,5 +1,7 @@
 export const DEFAULT_FOCAL_LENGTH=760;
 
+const clamp=(value,min,max)=>Math.max(min,Math.min(max,value));
+
 export function defaultCamera(){
  return {yaw:.22,pitch:-.18,zoom:1,panX:0,panY:0,flat:false};
 }
@@ -15,17 +17,33 @@ export function rotatePoint([x,y,z],camera=defaultCamera()){
  return[xx,yy,depth];
 }
 
+export function depthMetrics(depth,{flat=false,perspective=1}={}){
+ if(flat)return Object.freeze({depthAlpha:1,parallax:0,depthPriority:0,apparentScale:1});
+ const normalized=clamp((Number(depth)||0)+360,0,720)/720;
+ return Object.freeze({
+  depthAlpha:clamp(.54+normalized*.46,.54,1),
+  parallax:clamp((Number(depth)||0)/900,-.38,.38),
+  depthPriority:normalized,
+  apparentScale:clamp(Number(perspective)||1,.35,2.4)
+ });
+}
+
 export function projectPoint(point,camera,width,height,options={}){
  const focalLength=Number(options.focalLength||DEFAULT_FOCAL_LENGTH);
  const baseScale=Number(options.baseScale||Math.min(width/1000,height/700));
  const [xx,yy,depth]=rotatePoint(point,camera);
  const perspective=camera.flat?1:focalLength/Math.max(80,focalLength-depth);
  const scale=perspective*(camera.zoom||1)*baseScale;
+ const metrics=depthMetrics(depth,{flat:camera.flat,perspective});
  return {
   x:width/2+xx*scale+(camera.panX||0),
   y:height/2+yy*scale+(camera.panY||0),
   z:depth,
-  scale
+  scale,
+  depthAlpha:metrics.depthAlpha,
+  depthPriority:metrics.depthPriority,
+  parallax:metrics.parallax,
+  apparentScale:metrics.apparentScale
  };
 }
 
