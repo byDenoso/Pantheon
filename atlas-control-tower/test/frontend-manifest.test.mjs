@@ -1,30 +1,22 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import {frontendFiles} from '../frontend-files.mjs';
 
-const index = fs.readFileSync(new URL('../index.html', import.meta.url), 'utf8');
-const vercel = JSON.parse(fs.readFileSync(new URL('../vercel.json', import.meta.url), 'utf8'));
-const builds = new Set(vercel.builds.map(x => x.src));
+const index=fs.readFileSync(new URL('../index.html',import.meta.url),'utf8');
+const vercel=JSON.parse(fs.readFileSync(new URL('../vercel.json',import.meta.url),'utf8'));
+const builds=vercel.builds||[];
 
-const liveAssets=['ui/premium-v2.css','ui/reference-one.css','ui/control-tower.mjs','ui/workspace.mjs'];
-const retiredStyles=['ui/control-tower.css','ui/galactic-theme.css','ui/observatory-v2.css','ui/motion-impact.css','ui/readability.css'];
-
-test('current frontend assets are declared and deployed', () => {
- for (const file of liveAssets) {
-  assert.ok(frontendFiles.includes(file), `frontend boundary missing ${file}`);
-  assert.ok(builds.has(file), `vercel build missing ${file}`);
- }
- assert.match(index,/\/ui\/premium-v2\.css/);
- assert.match(index,/\/ui\/reference-one\.css/);
- assert.match(index,/id="command-center"/);
- assert.ok(index.indexOf('id="map-workspace"') < index.indexOf('id="command-center"'));
+test('Vite React owns the public frontend entrypoint',()=>{
+  assert.match(index,/id="root"/);
+  assert.match(index,/src="\/src\/main\.tsx"/);
+  for(const legacy of ['/app.mjs','/graph3d.mjs','/ui/premium-v2.css','/ui/reference-one.css']){
+    assert.doesNotMatch(index,new RegExp(legacy.replace(/[./]/g,m=>'\\'+m)));
+  }
 });
 
-test('retired override styles are absent from the entrypoint and public build', () => {
- for(const file of retiredStyles){
-  assert.equal(frontendFiles.includes(file),false,`frontend boundary still contains ${file}`);
-  assert.equal(builds.has(file),false,`vercel still builds ${file}`);
-  assert.doesNotMatch(index,new RegExp(file.replace(/[./]/g,m=>'\\'+m)),`entrypoint still loads ${file}`);
- }
+test('Vercel deploys dist instead of enumerating legacy UI assets',()=>{
+  assert.ok(builds.some(x=>x.src==='package.json'&&x.use==='@vercel/static-build'));
+  for(const legacy of ['app.mjs','graph3d.mjs','ui/premium-v2.css','ui/reference-one.css']){
+    assert.equal(builds.some(x=>x.src===legacy),false,`legacy build still declared: ${legacy}`);
+  }
 });
