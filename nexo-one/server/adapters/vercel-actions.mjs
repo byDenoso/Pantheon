@@ -25,7 +25,9 @@ const qs=team=>team?`?teamId=${enc(team)}`:'';
 
 export async function executeVercel(action,{env=process.env,signal,requester=defaultRequester}={}){
   const {project,team,token,name}=credentials(env,true);ensureProject(action.target_ref,project);
-  const p=action.requested_payload||{},type=action.action_type;let data={},effectId='',expected={source_revision:String(p.source_revision||'').trim()||null},source_ref='';
+  const p=action.requested_payload||{},type=action.action_type,sourceRevision=String(p.source_revision||'').trim();
+  if(!sourceRevision)throw new ActionError('TARGET_AMBIGUOUS');
+  let data={},effectId='',expected={source_revision:sourceRevision},source_ref='';
   if(type==='vercel.deploy'){
     const deploymentId=String(p.deployment_id||'').trim(),gitSource=p.gitSource;
     if(!deploymentId&&!gitSource)throw new ActionError('TARGET_AMBIGUOUS');
@@ -47,7 +49,8 @@ export async function readbackVercel(receipt,{env=process.env,signal,requester=d
   const state=String(data.readyState||data.state||'').toUpperCase(),revision=deploymentRevision(data),expectedRevision=receipt.expected?.source_revision||null,source_ref=data.url?`https://${data.url}`:receipt.source_ref||`https://vercel.com/${team||'dashboard'}/${name}/${id}`;
   if(['ERROR','CANCELED','CANCELLED'].includes(state))return {status:'FAILED',readback_status:'MISMATCH',after_revision:revision,source_ref,explanation:`Vercel deployment ended in ${state}.`};
   if(state!=='READY')return {status:'PENDING_READBACK',readback_status:'PENDING',after_revision:revision,source_ref,explanation:`Vercel deployment is ${state||'not terminal'}; readback remains pending.`};
-  if(expectedRevision&&revision&&revision!==expectedRevision)return {status:'CONFLICT',readback_status:'MISMATCH',after_revision:revision,source_ref,material:true,explanation:'Production deployment revision differs from the approved source revision.'};
+  if(expectedRevision&&!revision)return {status:'PENDING_READBACK',readback_status:'PENDING',after_revision:null,source_ref,explanation:'Vercel deployment is READY but source revision is not observable; PASS is withheld.'};
+  if(expectedRevision&&revision!==expectedRevision)return {status:'CONFLICT',readback_status:'MISMATCH',after_revision:revision,source_ref,material:true,explanation:'Production deployment revision differs from the approved source revision.'};
   const expectedTarget=receipt.expected?.target;if(expectedTarget&&data.target&&data.target!==expectedTarget)return {status:'CONFLICT',readback_status:'MISMATCH',after_revision:revision,source_ref,material:true,explanation:'Vercel deployment target differs from the approved target.'};
   return {status:'PASS',readback_status:'MATCH',after_revision:revision||id,source_ref,explanation:'Vercel deployment readback matches the approved effect.'};
 }
