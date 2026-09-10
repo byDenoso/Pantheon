@@ -79,151 +79,443 @@ function runtimeFacts(){
 }
 
 function currentView(){
- const view=activeSection==='graph'?hierarchyView(graph,{expandedIds,activeOnly,showAlternativeFilaments,selectedId}):buildSectionGraph(activeSection,graph,{focusId,selectedId,associativeOverlay});
- return assignIdentityColors(view);
+ if(activeSection==='graph')return hierarchyView(graph,{expandedIds,activeOnly,maxVisible:renderer.options.maxVisibleNodes,showAlternativeFilaments});
+ return buildSectionGraph(graph,activeSection,runtimeFacts());
 }
 
-function syncRenderer(){
+function refresh({fit=false}={}){
  const view=currentView();
- renderer.setGraph(view);
- renderer.setSelected(selectedId);
- updateHud(view);
- updateSearch();
- updateControls(view);
- updateInspector();
- updateBreadcrumbs();
- updateDomainNav();
- updateRecorte();
- visualExperience?.updateGraph?.(view,{selectedId,focusId});
+ if(!view.nodes.some(node=>node.id===focusId))focusId=view.rootId||graph.rootId;
+ if(!view.nodes.some(node=>node.id===selectedId))selectedId=view.rootId||graph.rootId;
+ renderer.setGraph(view,{focusId,fit});
+ renderer.setSelected?.(selectedId);
+ renderView(view);
 }
 
-function updateHud(view){
- $('hud-nodes').textContent=String(view.nodes.length);
- $('hud-edges').textContent=String(view.edges.length);
- $('stage-nodes').textContent=String(view.nodes.length);
- $('stage-edges').textContent=String(view.edges.length);
- $('stage-source').textContent=showAlternativeFilaments?'SSOT + FILAMENTS':'SSOT';
+/** Readouts that describe the map itself rather than the selected node. */
+function syncStage(view){
+ $('stage-nodes').textContent=view.nodes.length;
+ const source=graph.ops?.authority==='drive-ssot'?'SSOT LIVE':graph.ops?.authority?'SSOT PROJEÇÃO':'SSOT';
+ const associative=graph.associative?.stats?.filaments?` + ${graph.associative.stats.filaments} FIL` : '';
+ $('stage-source').textContent=activeSection==='graph'?`${source}${associative}`:activeSection.toUpperCase();
+ const blockers=graph.ops?.blockers?.length||0;
+ const badge=$('rail-blockers');
+ badge.textContent=blockers;
+ badge.hidden=!blockers;
 }
 
-function updateControls(view){
- $('expand-all').disabled=activeSection!=='graph';
- $('collapse-all').disabled=activeSection!=='graph';
- $('active-only').disabled=activeSection!=='graph';
- $('active-only').setAttribute('aria-pressed',String(activeOnly));
- $('filaments').setAttribute('aria-pressed',String(showAlternativeFilaments));
- const canOpen=Boolean(nodeById(selectedId)&&expandableIds().has(selectedId));
- $('open-node').hidden=!canOpen||activeSection!=='graph';
- $('open-node').disabled=!canOpen;
-}
-
-function updateSearch(){
- const input=$('hierarchy-search');
- const results=$('search-results');
- if(!input||!results)return;
- const q=String(input.value||'').trim().toLowerCase();
- if(!q){results.innerHTML='';results.hidden=true;return}
- const matches=graph.nodes.filter(node=>`${node.label||''} ${node.id||''}`.toLowerCase().includes(q)).slice(0,8);
- results.innerHTML='';
- for(const node of matches){
+function renderFocusList(){
+ const list=$('focus-list');
+ list.replaceChildren();
+ for(const domain of domainLegend(graph)){
   const button=document.createElement('button');
-  button.type='button';button.textContent=node.label||node.id;
-  button.addEventListener('click',()=>{
-   selectedId=node.id;
-   const expanded=expandForSearch(graph,node.id,expandedIds);
-   expandedIds=expanded.expandedIds;
-   focusId=expanded.focusId||node.id;
-   history.push(node.id);
-   syncRenderer();
-   visualExperience?.syncSelection?.(node);
-   input.value='';results.hidden=true;
-  });
-  results.append(button);
- }
- results.hidden=!matches.length;
-}
-
-function updateInspector(){
- cockpit?.render?.({graph,currentGraph:currentView(),selectedId,focusId,activeSection,associativeOverlay,runtimeFacts:runtimeFacts()});
-}
-
-function updateBreadcrumbs(){
- const root=$('breadcrumbs');if(!root)return;root.innerHTML='';
- const trail=activeSection==='graph'?ancestorsOf(graph,selectedId||focusId):[{id:`section:${activeSection}`,label:activeSection.toUpperCase()}];
- for(const [index,node] of trail.entries()){
-  if(index){const sep=document.createElement('span');sep.textContent='›';sep.className='breadcrumb-sep';root.append(sep)}
-  const button=document.createElement('button');button.type='button';button.textContent=node.label||node.id;button.addEventListener('click',()=>selectNode(node.id));root.append(button);
+  button.type='button';
+  const dot=document.createElement('i');
+  dot.style.background=domain.hue;
+  button.append(dot,document.createTextNode(domain.label));
+  button.addEventListener('click',()=>{$('focus-menu').open=false;openNode(domain.id)});
+  list.append(button);
  }
 }
 
-function updateDomainNav(){
- const root=$('domain-nav');if(!root)return;root.innerHTML='';
- for(const entry of domainLegend(graph)){
-  const button=document.createElement('button');button.type='button';button.className='domain-nav-item';button.textContent=entry.label;button.dataset.domain=entry.domain;button.addEventListener('click',()=>{
-   const node=graph.nodes.find(candidate=>candidate.id===entry.id||candidate.system===entry.domain&&candidate.hierarchyLevel==='lane');if(node)openNode(node.id);
-  });root.append(button);
- }
+function renderView(view=currentView()){
+ const node=view.nodes.find(entry=>entry.id===selectedId)||nodeById(selectedId)||view.nodes.find(entry=>entry.id===view.rootId)||nodeById(graph.rootId);
+ const canonical=nodeById(node?.id);
+ const projected=view.nodes.find(entry=>entry.id===node?.id);
+ $('focus-label').textContent=node?.label||'NEXO';
+ syncStage(view);
+ if(activeSection==='graph')renderBreadcrumb(canonical||node);else $('breadcrumb').replaceChildren();
+ cockpit.render(node,{
+  graph:activeSection==='graph'?graph:view,
+  trail:activeSection==='graph'&&canonical&&!canonical.overlayOnly?ancestorsOf(graph,canonical.id).map(step=>({id:step.id,label:step.label})):[],
+  tab:cockpitTab,
+  expanded:activeSection==='graph'&&expandedIds.has(node?.id),
+  expandable:activeSection==='graph'&&Boolean(projected?.expandable??(canonical&&!canonical.overlayOnly&&expandableIds().has(canonical.id))),
+  hiddenChildren:activeSection==='graph'?(projected?.hiddenChildren??0):0
+ });
 }
 
-function updateRecorte(){
- const list=$('recorte-list');if(!list)return;list.innerHTML='';
- for(const node of currentView().nodes.slice(0,24)){
-  const button=document.createElement('button');button.type='button';button.textContent=node.label||node.id;button.addEventListener('click',()=>selectNode(node.id));list.append(button);
- }
+function renderBreadcrumb(node){
+ const root=$('breadcrumb');
+ root.replaceChildren();
+ if(node?.overlayOnly)return;
+ const trail=node?ancestorsOf(graph,node.id):[];
+ if(trail.length<2)return;
+ trail.forEach((step,index)=>{
+  if(index){const sep=document.createElement('span');sep.className='sep';sep.textContent='›';root.append(sep)}
+  const button=document.createElement('button');
+  button.type='button';
+  button.textContent=step.label;
+  if(step.id===node.id)button.className='is-current';
+  button.addEventListener('click',()=>selectNode(step.id,{center:true}));
+  root.append(button);
+ });
 }
 
-function selectNode(id){
- const node=nodeById(id);if(!node)return;selectedId=id;focusId=id;syncRenderer();visualExperience?.syncSelection?.(node);
+function selectNode(id,{center=false}={}){
+ if(!id)return;
+ if(selectedId&&selectedId!==id)history.push(selectedId);
+ selectedId=id;
+ focusId=currentView().rootId||graph.rootId;
+ renderer.setSelected?.(id);
+ if(activeSection==='graph')refresh();else renderView(currentView());
+ if(center)renderer.focusNode?.(id);
 }
+
+/** Single click selects; subgraph expansion remains an explicit action. */
+function toggleSubgraph(id){
+ if(activeSection!=='graph'||!expandableIds().has(id))return false;
+ expandedIds=expandedIds.has(id)?collapseSubtree(graph,id,expandedIds):expandHierarchyNode(graph,id,expandedIds);
+ refresh();
+ return true;
+}
+
+/** Reveals a canonical or associative node without promoting overlay memory into hierarchy. */
 function openNode(id){
- const node=nodeById(id);if(!node)return;
- if(activeSection!=='graph'){selectedId=id;focusId=id;syncRenderer();return}
- if(expandableIds().has(id)){expandedIds=expandHierarchyNode(graph,id,expandedIds);selectedId=id;focusId=id;history.push(id);syncRenderer();visualExperience?.syncSelection?.(node)}else selectNode(id);
+ const canonical=nodeById(id);
+ if(!canonical){selectedId=id;renderer.setSelected?.(id);renderView(currentView());return}
+ if(activeSection!=='graph')setSection('graph',{fit:false});
+ if(canonical.overlayOnly){
+  showAlternativeFilaments=true;
+  selectNode(id,{center:true});
+  return;
+ }
+ if(canonical.hierarchyLevel==='lane')expandedIds=expandHierarchyNode(graph,id,expandedIds);
+ else{
+  const trail=ancestorsOf(graph,id);
+  expandedIds=new Set([...expandedIds,...trail.slice(0,-1).map(step=>step.id)]);
+ }
+ selectNode(id,{center:true});
 }
-function goHome(){activeSection='graph';expandedIds=new Set();selectedId=graph.rootId;focusId=graph.rootId;history=[];syncRenderer();visualExperience?.syncSelection?.(nodeById(selectedId))}
+
+// --- renderer --------------------------------------------------------------
 
 const renderer=createGraphRenderer({
- root:rendererRoot,
+ id:rendererId,
  canvas:$('graph-lab-canvas'),
- rendererId,
- graph,currentGraph:currentView(),
- onSelect:id=>selectNode(id),
- onOpen:id=>openNode(id)
-});
-globalThis.__ATLAS_GRAPH_RENDERER=renderer;
-const cockpit=createCockpit({root:$('cockpit'),getState:()=>({graph,currentGraph:currentView(),selectedId,focusId,activeSection,associativeOverlay,runtimeFacts:runtimeFacts()}),onOpen:openNode,onSelect:selectNode});
-const visualExperience=installVisualExperienceV4({renderer,onSelectNode:selectNode,onOpenNode:openNode,onGoHome:goHome,onToggleFilaments:()=>{$('filaments').click()}});
-
-$('hierarchy-search')?.addEventListener('input',updateSearch);
-$('expand-all')?.addEventListener('click',()=>{expandedIds=new Set(expandableIds());syncRenderer()});
-$('collapse-all')?.addEventListener('click',()=>{expandedIds=new Set();syncRenderer()});
-$('active-only')?.addEventListener('click',()=>{activeOnly=!activeOnly;syncRenderer()});
-$('filaments')?.addEventListener('click',()=>{showAlternativeFilaments=!showAlternativeFilaments;syncRenderer()});
-$('open-node')?.addEventListener('click',()=>openNode(selectedId));
-$('back')?.addEventListener('click',()=>{if(history.length>1){history.pop();selectNode(history.at(-1))}else goHome()});
-$('home')?.addEventListener('click',goHome);
-$('fit')?.addEventListener('click',()=>renderer.fit?.());
-$('center')?.addEventListener('click',()=>renderer.center?.(selectedId));
-$('zoom-in')?.addEventListener('click',()=>renderer.zoomBy?.(1.18));
-$('zoom-out')?.addEventListener('click',()=>renderer.zoomBy?.(.84));
-$('renderer')?.addEventListener('change',event=>{const url=rendererNavigationUrl(event.target.value,location.href);url.searchParams.set('experience',visualExperience?.state?.experienceId||params.get('experience')||'OPERATIONAL');location.assign(url.href)});
-
-for(const button of document.querySelectorAll('[data-section]'))button.addEventListener('click',()=>{activeSection=button.dataset.section||'graph';for(const peer of document.querySelectorAll('[data-section]'))peer.classList.toggle('active',peer===button);syncRenderer()});
-
-async function loadCanonical(){
- if(demoMode){baseGraph=graph;syncRenderer();return}
- try{
-  const loaded=await loadSsotGraph();graph=loaded;baseGraph=loaded;selectedId=loaded.rootId;focusId=loaded.rootId;setBadge('SSOT LIVE · DRIVE',{openSsot:true,tone:'live'});
- }catch(error){
-  try{const snapshot=await loadSsotSnapshot();graph=snapshot;baseGraph=snapshot;selectedId=snapshot.rootId;focusId=snapshot.rootId;setBadge('SSOT SNAPSHOT',{openSsot:true,tone:'stale'})}
-  catch{setBadge('SSOT UNAVAILABLE',{openSsot:true,tone:'error'});console.error(error)}
+ container:rendererRoot,
+ mobile:mobileViewport(),
+ callbacks:{
+ onSelect:node=>{
+  if(activeSection!=='graph'){
+   selectedId=node?.id||currentView().rootId||graph.rootId;
+   renderer.setSelected?.(selectedId);
+   renderView(currentView());
+   return;
+  }
+  if(!node){selectedId=graph.rootId;refresh();return}
+  selectNode(node.id,{center:false});
+ },
+ onOpen:node=>{if(node&&activeSection==='graph'&&!node.overlayOnly)toggleSubgraph(node.id)},
+ onStats:stats=>{
+  $('hud-fps').textContent=Number(stats.fps||0).toFixed(0);
+  $('hud-frame').textContent=Number(stats.frameMs||0).toFixed(1);
+  $('hud-nodes').textContent=stats.nodes;
+  $('hud-edges').textContent=stats.edges;
+  $('hud-labels').textContent=stats.labels;
+  $('hud-dpr').textContent=Number(stats.dpr||1).toFixed(1);
  }
- syncRenderer();
+ }});
+
+renderer.ready?.catch(error=>{
+ console.error('[Atlas] WebGL renderer unavailable; switching to legacy canvas.',error);
+ if(rendererId==='canvas-2d'||rendererId==='canvas-25d')return;
+ const url=new URL(location.href);
+ url.searchParams.set('renderer-v4','canvas-2d');
+ url.searchParams.set('renderer','legacy-canvas');
+ url.searchParams.set('fallback','renderer-init');
+ location.replace(url);
+});
+
+const cockpit=createCockpit($('cockpit-body'),{
+ onFocusNode:id=>{openNode(id);openCockpit()},
+ onToggleSubgraph:id=>{toggleSubgraph(id)},
+ onHome:()=>goHome(),
+ onTab:id=>setCockpitTab(id)
+});
+
+const visualExperience=installVisualExperienceV4({
+ renderer,
+ onSelectNode:id=>selectNode(id,{center:false}),
+ onOpenNode:openNode,
+ onGoHome:goHome,
+ onToggleFilaments:value=>{showAlternativeFilaments=Boolean(value);refresh()}
+});
+
+/** The rail is a shortcut into the cockpit tabs, not a second navigation tree. */
+const railItems=[...document.querySelectorAll('.rail-item[data-tab]')];
+function setCockpitTab(id,{open=false}={}){
+ cockpitTab=id;
+ for(const button of railItems)button.classList.toggle('is-active',button.dataset.tab===id);
+ renderView();
+ if(open)openCockpit();
+}
+for(const button of railItems)button.addEventListener('click',()=>setCockpitTab(button.dataset.tab,{open:true}));
+
+// --- NEXO live -------------------------------------------------------------
+
+function renderNexoLive(live=graph.live){
+ const state=live?.loop||{};
+ const setText=(id,value,fallback='—')=>{const node=$(id);if(node)node.textContent=value||fallback};
+ setText('nexo-current-state',state.currentState,'Sem estado operacional projetado.');
+ setText('nexo-next-action',state.nextAction);
+ setText('nexo-last-effect',state.lastEffect);
+ const renderList=(id,items,emptyText)=>{
+  const root=$(id);
+  if(!root)return;
+  root.replaceChildren();
+  if(!items?.length){const empty=document.createElement('span');empty.className='nexo-live-empty';empty.textContent=emptyText;root.append(empty);return}
+  for(const item of items.slice(0,5)){
+   const cited=new Set([item.recordId,item.scope,item.detail,...(item.evidenceRefs||[])].join(' ').split(/[^A-Za-z0-9_-]+/));
+   const owner=graph.nodes.find(node=>isBindableRecordId(node.recordId)&&cited.has(node.recordId));
+   const button=document.createElement('button');
+   button.type='button';
+   button.className='nexo-live-item';
+   button.setAttribute('data-node-id',owner?.id||'');
+   button.disabled=!owner;
+   const top=document.createElement('span');
+   top.className='nexo-live-item-top';
+   const title=document.createElement('b');
+   title.textContent=item.title||item.recordId;
+   const status=document.createElement('em');
+   status.textContent=item.status||'UNKNOWN';
+   status.dataset.status=(item.status||'UNKNOWN').toLowerCase();
+   top.append(title,status);
+   const detail=document.createElement('small');
+   detail.textContent=item.scope||item.effect||item.detail||item.recordId;
+   button.append(top,detail);
+   if(owner)button.addEventListener('click',()=>{openNode(owner.id);openCockpit()});
+   root.append(button);
+  }
+ };
+ renderList('nexo-mini-claims',live?.miniClaims,'Nenhuma mini-claim material.');
+ renderList('nexo-engineering-effects',live?.engineeringEffects,'Nenhum efeito recente.');
+}
+
+// --- data ------------------------------------------------------------------
+
+function applyAssociativeOverlay(overlay,sourceGraph,token){
+ if(token!==associativeLoadToken||sourceGraph!==baseGraph)return false;
+ associativeOverlay=overlay;
+ graph=assignIdentityColors(mergeAssociativeOverlay(baseGraph,associativeOverlay));
+ if(!graph.nodes.some(node=>node.id===selectedId))selectedId=graph.rootId;
+ renderFocusList();
+ refresh({fit:false});
+ return true;
+}
+
+async function hydrateAssociativeMemory(sourceGraph){
+ const token=++associativeLoadToken;
  try{
-  const token=++associativeLoadToken;const memory=await loadAssociativeMemory();if(token!==associativeLoadToken)return;associativeOverlay=memory;graph=mergeAssociativeOverlay(baseGraph,memory);syncRenderer();
- }catch{
-  try{const token=++associativeLoadToken;const memory=await loadAssociativeSnapshot();if(token!==associativeLoadToken)return;associativeOverlay=memory;graph=mergeAssociativeOverlay(baseGraph,memory);syncRenderer()}catch{}
+  const overlay=await loadAssociativeMemory({baseGraph:sourceGraph});
+  applyAssociativeOverlay(overlay,sourceGraph,token);
+  return overlay;
+ }catch(liveError){
+  console.warn('[Atlas] Direct associative-memory read blocked; using synchronized projection.',liveError);
+  try{
+   const overlay=await loadAssociativeSnapshot({baseGraph:sourceGraph});
+   applyAssociativeOverlay(overlay,sourceGraph,token);
+   return overlay;
+  }catch(snapshotError){
+   console.warn('[Atlas] Associative memory unavailable; canonical graph remains authoritative.',snapshotError);
+   return null;
+  }
  }
 }
 
-syncRenderer();
-loadCanonical();
+function setGraphData(next){
+ baseGraph=next;
+ associativeOverlay=null;
+ graph=assignIdentityColors(next);
+ expandedIds=new Set();
+ selectedId=graph.rootId;
+ focusId=graph.rootId;
+ history=[];
+ activeOnly=false;
+ showAlternativeFilaments=Boolean(visualExperience?.state?.filaments);
+ $('active-only').setAttribute('aria-pressed','false');
+ $('active-only').classList.remove('is-active');
+ $('hierarchy-search').value='';
+ hideResults();
+ renderNexoLive(graph.live);
+ renderFocusList();
+ refresh({fit:true});
+ if(!demoMode)void hydrateAssociativeMemory(baseGraph);
+}
+function rebuild(count){if(demoMode)setGraphData(createSyntheticGraph(count))}
+
+function goHome(){
+ expandedIds=new Set();
+ selectedId=graph.rootId;
+ focusId=graph.rootId;
+ setSection('graph',{fit:true});
+}
+
+// --- search ----------------------------------------------------------------
+
+const results=$('search-results');
+const searchInput=$('hierarchy-search');
+function hideResults(){results.hidden=true;results.replaceChildren();searchInput.setAttribute('aria-expanded','false')}
+function showResults(matches){
+ results.replaceChildren();
+ if(!matches.length){hideResults();return}
+ for(const match of matches){
+  const item=document.createElement('li');
+  const button=document.createElement('button');
+  button.type='button';
+  const label=document.createElement('b');
+  label.textContent=match.label;
+  const meta=document.createElement('small');
+  meta.textContent=`${String(match.hierarchyLevel||'').toUpperCase()} · ${match.recordId||match.id}`;
+  button.append(label,meta);
+  button.addEventListener('click',()=>{searchInput.value=match.label;hideResults();openNode(match.id);openCockpit()});
+  item.append(button);
+  results.append(item);
+ }
+ results.hidden=false;
+ searchInput.setAttribute('aria-expanded','true');
+}
+
+searchInput.addEventListener('input',event=>{
+ const query=event.target.value.trim();
+ if(!query){hideResults();return}
+ const result=expandForSearch(graph,query,expandedIds);
+ showResults(result.matches);
+});
+searchInput.addEventListener('keydown',event=>{
+ if(event.key==='Escape'){searchInput.value='';hideResults();return}
+ if(event.key!=='Enter')return;
+ const result=expandForSearch(graph,searchInput.value,expandedIds);
+ if(!result.matchId)return;
+ expandedIds=result.expandedIds;
+ hideResults();
+ if(activeSection!=='graph')setSection('graph',{fit:false});
+ const match=nodeById(result.matchId);
+ if(match?.overlayOnly)showAlternativeFilaments=true;
+ selectNode(result.matchId,{center:true});
+ openCockpit();
+});
+$('hierarchy-search-clear').addEventListener('click',()=>{searchInput.value='';hideResults();searchInput.focus()});
+document.addEventListener('click',event=>{if(!results.hidden&&!event.target.closest('.topbar-search'))hideResults()});
+
+// --- controls --------------------------------------------------------------
+
+$('expand-all').addEventListener('click',()=>{if(activeSection!=='graph')setSection('graph',{fit:false});expandedIds=expandableIds();refresh()});
+$('collapse-all').addEventListener('click',()=>{if(activeSection!=='graph')setSection('graph',{fit:false});expandedIds=new Set();refresh({fit:true})});
+$('home').addEventListener('click',()=>goHome());
+$('active-only').addEventListener('click',event=>{
+ if(activeSection!=='graph')setSection('graph',{fit:false});
+ activeOnly=!activeOnly;
+ event.currentTarget.setAttribute('aria-pressed',String(activeOnly));
+ event.currentTarget.classList.toggle('is-active',activeOnly);
+ refresh();
+});
+$('back').addEventListener('click',()=>{if(history.length){selectedId=history.pop();if(activeSection==='graph')refresh();else{renderer.setSelected?.(selectedId);renderView(currentView())}renderer.focusNode?.(selectedId)}});
+$('motion').addEventListener('click',event=>{
+ renderer.setOptions({autoOrbit:!renderer.options.autoOrbit});
+ event.currentTarget.setAttribute('aria-pressed',String(renderer.options.autoOrbit));
+ event.currentTarget.textContent=renderer.options.autoOrbit?'Ⅱ':'▷';
+});
+$('zoom-in').addEventListener('click',()=>renderer.zoom(1.18));
+$('zoom-out').addEventListener('click',()=>renderer.zoom(.85));
+$('fit').addEventListener('click',()=>renderer.fit());
+$('center').addEventListener('click',()=>renderer.centerSelected());
+$('flat').addEventListener('click',event=>{event.currentTarget.textContent=renderer.toggleFlat()?'3D':'2D'});
+
+const liveSurface=$('nexo-live');
+$('nexo-live-toggle').addEventListener('click',event=>{const open=liveSurface.classList.toggle('is-open');event.currentTarget.setAttribute('aria-expanded',String(open))});
+
+const cockpitPanel=$('cockpit');
+const openCockpit=()=>cockpitPanel.classList.add('open');
+$('cockpit-toggle').addEventListener('click',event=>{
+ if(document.documentElement.dataset.cockpitMode==='hidden')return;
+ cockpitPanel.classList.toggle('open');
+ event.stopImmediatePropagation();
+});
+$('cockpit-close').addEventListener('click',()=>cockpitPanel.classList.remove('open'));
+
+const labPanel=$('lab-panel');
+$('panel-toggle').addEventListener('click',()=>labPanel.classList.toggle('open'));
+$('panel-close').addEventListener('click',()=>labPanel.classList.remove('open'));
+
+const navLinks=[...document.querySelectorAll('.topbar-nav a')];
+const sectionFromLink=link=>link.getAttribute('href')==='#graph-stage'?'graph':String(link.getAttribute('href')||'').replace(/^#/,'');
+function setSection(section,{fit=true,updateHash=true}={}){
+ const next=ATLAS_SECTIONS.includes(section)?section:'graph';
+ activeSection=next;
+ selectedId=graph.rootId;
+ focusId=graph.rootId;
+ history=[];
+ document.documentElement.dataset.atlasSection=next;
+ for(const link of navLinks)link.classList.toggle('is-active',sectionFromLink(link)===next);
+ if(next==='settings')labPanel.classList.add('open');else labPanel.classList.remove('open');
+ refresh({fit});
+ if(updateHash)globalThis.history?.replaceState?.(null,'',next==='graph'?'#graph-stage':`#${next}`);
+}
+for(const link of navLinks)link.addEventListener('click',event=>{
+ event.preventDefault();
+ setSection(sectionFromLink(link),{fit:true});
+});
+
+$('renderer').addEventListener('change',event=>{
+ location.assign(rendererNavigationUrl(event.target.value,location.href).href);
+});
+$('preset').addEventListener('change',event=>{
+ renderer.setPreset(event.target.value);
+ renderer.setTheme?.(document.documentElement.dataset.theme||'dark');
+ syncControls();
+ refresh();
+});
+dataset.addEventListener('change',event=>rebuild(Number(event.target.value)));
+
+const SLIDERS=[['node-radius','nodeRadius'],['glow','glow'],['fog','fog'],['perspective','focalLength'],['drift','drift'],['pulse-speed','pulseSpeed'],['filament-curve','filamentCurve'],['max-labels','maxLabels'],['max-visible','maxVisibleNodes']];
+const decimals=id=>['perspective','max-labels','max-visible'].includes(id)?0:id==='drift'?1:2;
+function syncControls(){
+ for(const [id,key] of SLIDERS){
+  const input=$(id);
+  if(!input||renderer.options[key]==null)continue;
+  input.value=renderer.options[key];
+  $(`${id}-out`).textContent=Number(renderer.options[key]).toFixed(decimals(id));
+ }
+}
+for(const [id,key] of SLIDERS)$(id).addEventListener('input',event=>{
+ const value=Number(event.target.value);
+ renderer.setOptions({[key]:value});
+ $(`${id}-out`).textContent=value.toFixed(decimals(id));
+ if(key==='maxVisibleNodes'||activeSection==='settings')refresh();
+});
+
+const themeObserver=typeof MutationObserver==='function'?new MutationObserver(records=>{
+ if(!records.some(record=>record.attributeName==='data-theme'))return;
+ renderer.setTheme?.(document.documentElement.dataset.theme||'dark');
+ visualExperience?.refreshBackground?.();
+ if(activeSection==='settings')refresh();else renderer.invalidate?.();
+}):null;
+themeObserver?.observe(document.documentElement,{attributes:true,attributeFilter:['data-theme']});
+
+// --- boot ------------------------------------------------------------------
+
+renderer.setPreset(matchMedia('(max-width:760px)').matches?'MOBILE':'ORIGINAL');
+renderer.setTheme?.(document.documentElement.dataset.theme||'dark');
+syncControls();
+renderNexoLive(graph.live);
+setSection(activeSection,{fit:true,updateHash:false});
+renderer.start();
+
+if(!demoMode){
+ loadSsotGraph().then(next=>{
+  setGraphData(next);
+  setBadge(`SSOT LIVE · DRIVE · ${next.ops.counts.domains}D · ${next.ops.counts.programs}P · ${next.ops.counts.campaigns}C`,{openSsot:true,tone:next.ops.loopBlocked?'blocked':'ok'});
+ }).catch(async liveError=>{
+  console.warn('[Atlas] Direct private Drive read blocked; using synchronized SSOT projection.',liveError);
+  try{
+   const next=await loadSsotSnapshot();
+   setGraphData(next);
+   setBadge(`SSOT SNAPSHOT · DRIVE · ${next.ops.counts.domains}D · ${next.ops.counts.programs}P · ${next.ops.counts.campaigns}C`,{openSsot:true,tone:next.ops.loopBlocked?'blocked':'warn'});
+  }catch(snapshotError){
+   console.error('[Atlas] Drive SSOT and synchronized snapshot unavailable.',snapshotError);
+   setBadge('SSOT UNAVAILABLE · OPEN DRIVE',{openSsot:true,tone:'blocked'});
+   $('focus-label').textContent='SSOT OFFLINE';
+  }
+ });
+}
