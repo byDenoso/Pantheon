@@ -141,3 +141,34 @@ test('mutating PASS route requires a live matching lease and write token',async(
     effectLedger:stores.effectLedger,executionRuns:stores.executionRuns,actor:ACTOR,writeToken:'wt-001',now:NOW,
   }),/LEASE_EXPIRED/);
 });
+
+test('execution chooses the lowest-risk PASS route that has an available adapter',async()=>{
+  const stores=makeStores();
+  const missingAdapter={capability_id:'CAP-LOWEST-NO-ADAPTER',domain:'ENGINEERING',runtime:'SCHEDULED_TASK',operation:GITHUB_READ_PASS.operation,status:'PASS',risk_level:'L1_READ_ONLY',cost_weight:0};
+  const usable={...GITHUB_READ_PASS,capability_id:'CAP-USABLE',risk_level:'L1_READ_ONLY',cost_weight:1};
+  const result=await executeCapabilityAware({
+    action:{action_id:'ACT-ENG-ROUTE-001',domain:'ENGINEERING'},requiredOperation:GITHUB_READ_PASS.operation,context:'SCHEDULED_TASK',input:{repo:'byDenoso/Pantheon'},
+    capabilities:[missingAdapter,usable],
+    adapters:{'CAP-USABLE':{mutating:false,async execute(){return {providerObjectId:'repo'}},async readback(){return {verified:true,providerObjectId:'repo',receiptRef:'github:repo'}}}},
+    effectLedger:stores.effectLedger,executionRuns:stores.executionRuns,actor:ACTOR,now:NOW,
+  });
+  assert.equal(result.capability.capability_id,'CAP-USABLE');
+});
+
+test('verified EFFECT remains replay-safe if execution-run finalization fails after provider readback',async()=>{
+  const stores=makeStores();let providerCalls=0,finishCalls=0;
+  stores.executionRuns.finish=async()=>{finishCalls++;throw new Error('RUN_LEDGER_UNAVAILABLE')};
+  const request={
+    action:leasedAction('SCIENCE'),requiredOperation:CAMB_PASS.operation,context:'SCHEDULED_TASK',input:{params:{H0:67.4}},capabilities:[CAMB_PASS],
+    adapters:{'CAP-CAMB-SCHEDULED-INVOKE':{mutating:true,async execute(){providerCalls++;return {providerObjectId:'camb-safe'}},async readback(){return {verified:true,providerObjectId:'camb-safe',receiptRef:'drive:camb-safe'}}}},
+    effectLedger:stores.effectLedger,executionRuns:stores.executionRuns,actor:ACTOR,writeToken:'wt-001',now:NOW,
+  };
+  await assert.rejects(()=>executeCapabilityAware(request),/RUN_LEDGER_UNAVAILABLE/);
+  const [effect]=stores.effects.values();
+  assert.equal(effect.status,'DONE');
+  assert.equal(effect.readback_status,'PASS');
+  const replay=await executeCapabilityAware(request);
+  assert.equal(replay.status,'NO_OP_ALREADY_APPLIED');
+  assert.equal(providerCalls,1);
+  assert.ok(finishCalls>=1);
+});
