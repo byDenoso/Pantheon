@@ -116,6 +116,47 @@
  border-color:rgba(200,176,129,.42);
 }
 
+.atlas-breakthrough-lenses{display:none}
+:root[data-atlas-experience="BREAKTHROUGH"] .atlas-breakthrough-lenses,
+:root[data-atlas-visual="breakthrough"] .atlas-breakthrough-lenses{
+ position:absolute;
+ top:104px;
+ left:18px;
+ z-index:8;
+ display:flex;
+ align-items:center;
+ gap:4px;
+ padding:4px;
+ border:1px solid rgba(200,176,129,.18);
+ border-radius:8px;
+ background:rgba(10,8,6,.72);
+ backdrop-filter:blur(6px);
+}
+:root[data-atlas-experience="BREAKTHROUGH"] .atlas-breakthrough-lenses button,
+:root[data-atlas-visual="breakthrough"] .atlas-breakthrough-lenses button{
+ min-height:30px;
+ padding:0 9px;
+ border:0;
+ border-radius:5px;
+ background:transparent;
+ color:#8f8068;
+ font:650 8px/1 system-ui,sans-serif;
+ letter-spacing:.07em;
+ cursor:pointer;
+}
+:root[data-atlas-experience="BREAKTHROUGH"] .atlas-breakthrough-lenses button:hover,
+:root[data-atlas-experience="BREAKTHROUGH"] .atlas-breakthrough-lenses button.is-active,
+:root[data-atlas-visual="breakthrough"] .atlas-breakthrough-lenses button:hover,
+:root[data-atlas-visual="breakthrough"] .atlas-breakthrough-lenses button.is-active{
+ color:#f0dfbd;
+ background:rgba(200,176,129,.07);
+}
+:root[data-atlas-experience="BREAKTHROUGH"] .atlas-breakthrough-lenses button:disabled,
+:root[data-atlas-visual="breakthrough"] .atlas-breakthrough-lenses button:disabled{
+ opacity:.34;
+ cursor:not-allowed;
+}
+
 @media(max-width:760px){
  :root[data-atlas-experience="BREAKTHROUGH"] .atlas-experience-bar,
  :root[data-atlas-visual="breakthrough"] .atlas-experience-bar{
@@ -127,6 +168,20 @@
  :root[data-atlas-experience="BREAKTHROUGH"] .atlas-node-actions,
  :root[data-atlas-visual="breakthrough"] .atlas-node-actions{
   bottom:100px;
+ }
+ :root[data-atlas-experience="BREAKTHROUGH"] .atlas-breakthrough-lenses,
+ :root[data-atlas-visual="breakthrough"] .atlas-breakthrough-lenses{
+  top:44px;
+  left:10px;
+  right:10px;
+  overflow-x:auto;
+  justify-content:flex-start;
+  scrollbar-width:none;
+ }
+ :root[data-atlas-experience="BREAKTHROUGH"] .atlas-breakthrough-lenses button,
+ :root[data-atlas-visual="breakthrough"] .atlas-breakthrough-lenses button{
+  min-height:44px;
+  padding:0 12px;
  }
 }
 
