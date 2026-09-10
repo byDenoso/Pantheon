@@ -10,15 +10,16 @@ const automationHealth=[
   {automation:'NEXO Core v0.1',last_checked:NOW,status:'ACTIVE_PROVIDER_CONFIRMED',readback:'PASS_PROVIDER_ENABLED_TRUE',last_run_status:'PASS'},
   {automation:'NEXO Executor v0.1',last_checked:NOW,status:'ACTIVE_PROVIDER_CONFIRMED',readback:'PASS_PROVIDER_ENABLED_TRUE',last_run_status:'PASS'},
   {automation:'NEXO Reconciler v0.1',last_checked:NOW,status:'ACTIVE_PROVIDER_CONFIRMED',readback:'PASS_PROVIDER_ENABLED_TRUE',last_run_status:'PASS'},
+  {automation:'LEGACY_HEALTH_ROWS_RETIRED',last_checked:NOW,status:'RETIRED_MERGED',readback:'PASS_MARKED_RETIRED',last_run_status:'PASS_RETIRED'},
 ];
 
-test('projeta exatamente o health canônico das quatro automações sem tratá-las como Truth Owner',()=>{
+test('projeta exatamente o health canônico das quatro automações sem tratar legado como runtime ativo',()=>{
   const projected=projectAutomationHealthProviders(automationHealth);
   const world={generatedAt:NOW,providers:projected,truthGraph:{results:[]}};
   const state=buildSystemState({world,bus,systemInput:{},now:NOW});
   const automations=state.providers.filter(p=>p.id.startsWith('automation:'));
   assert.equal(automations.length,4);
-  assert.deepEqual(automations.map(p=>p.label).sort(),automationHealth.map(x=>x.automation).sort());
+  assert.deepEqual(automations.map(p=>p.label).sort(),automationHealth.slice(0,4).map(x=>x.automation).sort());
   assert.ok(automations.every(p=>p.state==='LIVE'));
   assert.ok(automations.every(p=>p.expected_for.includes('NEXO')));
   assert.ok(state.graph.nodes.filter(n=>n.id.startsWith('provider:automation:')).length===4);
