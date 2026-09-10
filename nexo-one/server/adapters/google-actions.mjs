@@ -19,7 +19,7 @@ const sourceFor=(type,id)=>type.startsWith('gmail.')?`https://mail.google.com/ma
 
 function rawMessage(payload={}){
   const to=String(payload.to||'').trim(),subject=String(payload.subject||'').replace(/[\r\n]+/g,' ').trim(),body=String(payload.body||'');
-  if(!to||!subject)throw new ActionError('TARGET_AMBIGUOUS');
+  if(!to||!subject||/[\r\n]/.test(to))throw new ActionError('TARGET_AMBIGUOUS');
   return Buffer.from(`To: ${to}\r\nSubject: ${subject}\r\nContent-Type: text/plain; charset=UTF-8\r\nMIME-Version: 1.0\r\n\r\n${body}`,'utf8').toString('base64url');
 }
 
@@ -47,7 +47,7 @@ export async function executeGoogle(action,{env=process.env,signal,tokenProvider
     const raw=rawMessage(payload),draft=type==='gmail.draft';
     const url=draft?'https://gmail.googleapis.com/gmail/v1/users/me/drafts':'https://gmail.googleapis.com/gmail/v1/users/me/messages/send';
     data=await requester(url,{token,signal,method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(draft?{message:{raw}}:{raw})});
-    effectId=draft?data.id:data.id;expected={threadId:data.message?.threadId||data.threadId||null,subject:String(payload.subject||'')};source_ref=sourceFor(type,data.message?.id||data.id);
+    effectId=data.id;expected={threadId:data.message?.threadId||data.threadId||null,subject:String(payload.subject||'')};source_ref=sourceFor(type,data.message?.id||data.id);
   } else if(type.startsWith('calendar.')){
     const calendarId=env.GOOGLE_CALENDAR_ID||'primary',isCreate=type==='calendar.create',eventId=isCreate?'':String(payload.event_id||action.target_ref||'').trim();
     if(!isCreate&&(!eventId||eventId===calendarId||eventId==='primary'))throw new ActionError('TARGET_AMBIGUOUS');
