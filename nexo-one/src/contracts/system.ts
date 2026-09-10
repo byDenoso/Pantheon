@@ -136,8 +136,8 @@ export interface InboxItem {
 }
 
 /** UNVERIFIED nunca é "parcialmente funcional": é ausência de prova. */
-export type CapabilityStatus = 'PASS' | 'UNVERIFIED' | 'UNKNOWN' | 'BLOCKED';
-export const CAPABILITY_STATUSES: CapabilityStatus[] = ['PASS', 'UNVERIFIED', 'UNKNOWN', 'BLOCKED'];
+export type CapabilityStatus = 'PASS' | 'UNVERIFIED' | 'UNKNOWN' | 'RETIRED_RUNTIME' | 'BLOCKED';
+export const CAPABILITY_STATUSES: CapabilityStatus[] = ['PASS', 'UNVERIFIED', 'UNKNOWN', 'RETIRED_RUNTIME', 'BLOCKED'];
 
 export interface Capability {
   capability_id: string;

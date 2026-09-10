@@ -6,8 +6,7 @@ export const BUS_ID='Pantheon/UniversalProjectionBus';
 const SOURCES=[
   {id:'NEXO_SSOT',provider:'nexo',match:x=>x.kind!=='ACTION',rule:'nexo-ssot:item->projection'},
   {id:'ACTION_REGISTER',provider:'nexo',match:x=>x.kind==='ACTION',rule:'action-register:item->projection'},
-  {id:'GITHUB',provider:'github',match:()=>true,rule:'github:item->projection'},
-  {id:'VERCEL',provider:'vercel',match:()=>true,rule:'vercel:item->projection'}
+  {id:'GITHUB',provider:'github',match:()=>true,rule:'github:item->projection'}
 ];
 
 function iso(ms){return new Date(ms).toISOString();}

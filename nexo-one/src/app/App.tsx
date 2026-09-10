@@ -224,7 +224,9 @@ export default function App() {
 
         <footer className="world-footer">
           <span className="footer-scenario">
-            {system.sourceKind === 'fixture' ? 'FIXTURE' : 'REMOTO'} · {scenario.label}
+            {system.sourceKind === 'fixture'
+              ? `FIXTURE · ${scenario.label}`
+              : `REMOTO · ${system.state?.scenario_label || system.sourceLabel}`}
           </span>
           {system.state && <StatusBadge state={system.state.global_state} compact />}
           <code className="fingerprint">{system.state?.bus.fingerprint ?? 'AGUARDANDO ESTADO'}</code>
