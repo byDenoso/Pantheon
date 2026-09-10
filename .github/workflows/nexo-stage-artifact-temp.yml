@@ -1,0 +1,32 @@
+name: NEXO stage verified release artifact
+on:
+  push:
+    branches: [nexo-release-20260910]
+    paths:
+      - '.github/workflows/nexo-stage-artifact-temp.yml'
+permissions:
+  contents: write
+  actions: read
+jobs:
+  stage:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+      - name: Download exact verified CI artifact ZIP
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p deploy
+          curl -fsSL -H "Authorization: Bearer $GH_TOKEN" -H "X-GitHub-Api-Version: 2022-11-28" \
+            https://api.github.com/repos/byDenoso/Pantheon/actions/artifacts/10148608090/zip \
+            -o deploy/nexo-release.zip
+          echo '559ddd2ebf15434af215c4ad546d6af928515f59f0cddc37a484bca3c344c21c  deploy/nexo-release.zip' | sha256sum -c -
+      - name: Commit staged artifact to this isolated branch
+        run: |
+          git config user.name 'nexo-release-bot'
+          git config user.email 'nexo-release-bot@users.noreply.github.com'
+          git add deploy/nexo-release.zip
+          git commit -m 'ops(nexo-one): stage immutable verified release zip'
+          git push origin HEAD:nexo-release-20260910
