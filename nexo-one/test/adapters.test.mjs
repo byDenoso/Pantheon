@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {drive,gmail,calendar} from '../server/adapters/google.mjs';
+import {googleConnectToken,GOOGLE_READ_SCOPES} from '../server/adapters/connect.mjs';
 import {github} from '../server/adapters/github.mjs';
 import {vercel} from '../server/adapters/vercel.mjs';
 import {nexo} from '../server/adapters/nexo.mjs';
@@ -9,6 +10,36 @@ const now=Date.parse('2026-09-09T12:00:00Z');
 const env={GOOGLE_CLIENT_ID:'fixture',GOOGLE_CLIENT_SECRET:'fixture',GOOGLE_REFRESH_TOKEN:'fixture',VERCEL_READ_TOKEN:'fixture',VERCEL_PROJECT_ID:'prj_fixture',NEXO_SOURCE_URL:'https://source.example/export'};
 async function mock(routes,fn){const original=globalThis.fetch;globalThis.fetch=async(url,options)=>{const found=routes.find(([match])=>String(url).includes(match));assert.ok(found,`Unexpected outbound request: ${url}`);const value=typeof found[1]==='function'?found[1](url,options):found[1];return new Response(JSON.stringify(value),{status:200,headers:{'Content-Type':'application/json'}});};try{return await fn();}finally{globalThis.fetch=original;}}
 const oauth=['oauth2.googleapis.com',{access_token:'fixture-access',expires_in:3600}];
+
+test('Google Connect exchanges Vercel OIDC for a user-scoped read-only token',async()=>{
+  const original=globalThis.fetch;let seen;
+  globalThis.fetch=async(url,options)=>{seen={url:String(url),options};return new Response(JSON.stringify({token:'connect-google-token'}),{status:200,headers:{'Content-Type':'application/json'}});};
+  try{
+    const token=await googleConnectToken({GOOGLE_CONNECTOR:'google/nexo-google',GOOGLE_CONNECT_SUBJECT_ID:'owner',VERCEL_OIDC_TOKEN:'oidc-fixture'});
+    assert.equal(token,'connect-google-token');
+    assert.equal(seen.url,'https://api.vercel.com/v1/connect/token/google/nexo-google');
+    assert.equal(seen.options.method,'POST');
+    assert.equal(seen.options.headers.Authorization,'Bearer oidc-fixture');
+    const body=JSON.parse(seen.options.body);
+    assert.deepEqual(body.subject,{type:'user',id:'owner'});
+    assert.deepEqual(body.scopes,GOOGLE_READ_SCOPES);
+    assert.deepEqual(GOOGLE_READ_SCOPES,[
+      'https://www.googleapis.com/auth/drive.readonly',
+      'https://www.googleapis.com/auth/gmail.readonly',
+      'https://www.googleapis.com/auth/calendar.readonly',
+      'https://www.googleapis.com/auth/spreadsheets.readonly'
+    ]);
+  }finally{globalThis.fetch=original;}
+});
+
+test('Google Connect normalizes missing authorization as AUTH_REQUIRED',async()=>{
+  const original=globalThis.fetch;
+  globalThis.fetch=async()=>new Response(JSON.stringify({error:'authorization_required'}),{status:403,headers:{'Content-Type':'application/json'}});
+  try{
+    await assert.rejects(()=>googleConnectToken({GOOGLE_CONNECTOR:'google/nexo-google',VERCEL_OIDC_TOKEN:'oidc-fixture'}),error=>error?.code==='AUTH_REQUIRED');
+  }finally{globalThis.fetch=original;}
+});
+
 test('Drive normalizes paginated files and safely escapes search query',async()=>mock([oauth,['drive/v3/files',(url)=>{assert.match(new URL(url).searchParams.get('q'),/name contains/);return {nextPageToken:'next',files:[{id:'f1',name:'CAMB input',modifiedTime:'2026-09-08T10:00:00Z',version:'1'}]};}]],async()=>{const x=await drive({env,now,query:"O'Hara"});assert.equal(x.partial,true);assert.equal(x.items[0].contextId,'COSMOLOGY');assert.equal(validateItem(x.items[0],'drive'),true);}));
 test('Gmail metadata does not invent actionable commitments',async()=>mock([oauth,['/messages/m1',{id:'m1',threadId:'t1',payload:{headers:[{name:'Subject',value:'Revisão CAMB'},{name:'From',value:'Fixture sender'}]}}],['/messages?',{messages:[{id:'m1'}]}]],async()=>{const x=await gmail({env,now});assert.equal(x.items[0].status,undefined);assert.equal(validateItem(x.items[0],'gmail'),true);}));
 test('Calendar excludes canceled and self-declined events, retains all-day exclusive end',async()=>mock([oauth,['/events?',{items:[{id:'a',summary:'Appointment',htmlLink:'https://calendar.google.com/event?eid=a',start:{date:'2026-09-09'},end:{date:'2026-09-10'}},{id:'b',status:'cancelled'},{id:'c',attendees:[{self:true,responseStatus:'declined'}]}]}]],async()=>{const x=await calendar({env,now});assert.equal(x.items.length,1);assert.equal(x.items[0].allDay,true);assert.equal(validateItem(x.items[0],'calendar'),true);}));
