@@ -24,7 +24,9 @@ test('Olympus is CONFLICT when SSOT declares Sheets while authority matrix decla
   for(const key of ['source_ref','fingerprint','checked_at','authority','provider','capability','explanation']) assert.ok(finding[key],key);
   assert.equal(finding.material,true);
   assert.equal(finding.provider.expected,'drive');
-  assert.equal(finding.provider.declared,'nexo');
+  assert.equal(finding.provider.actual,'nexo');
+  assert.equal(finding.provider.status,'AVAILABLE');
+  assert.equal(finding.provider.expected_status,'AVAILABLE');
 });
 
 test('detects LIVE, DEGRADED, STALE_DECLARATION, MISSING_PROVIDER and BLOCKED',()=>{
