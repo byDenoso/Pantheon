@@ -2,6 +2,7 @@
   "version": 2,
   "builds": [
     {"src":"api/projection.js","use":"@vercel/node"},
+    {"src":"api/universal-projection.js","use":"@vercel/node"},
     {"src":"api/runner.js","use":"@vercel/node"},
     {"src":"api/runtime-orphans.js","use":"@vercel/node"},
     {"src":"api/runtime-semantic.js","use":"@vercel/node"},
@@ -47,6 +48,7 @@
   ],
   "routes": [
     {"src":"/api/projection","headers":{"Access-Control-Allow-Origin":"https://bydenoso.github.io","Access-Control-Allow-Methods":"GET,POST,OPTIONS","Access-Control-Allow-Headers":"Content-Type,Authorization","Vary":"Origin"},"dest":"/api/projection.js"},
+    {"src":"/api/universal-projection","headers":{"Access-Control-Allow-Origin":"https://bydenoso.github.io","Access-Control-Allow-Methods":"GET,OPTIONS","Access-Control-Allow-Headers":"Content-Type,Authorization","Vary":"Origin"},"dest":"/api/universal-projection.js"},
     {"src":"/api/runner","headers":{"Access-Control-Allow-Origin":"https://bydenoso.github.io","Access-Control-Allow-Methods":"GET,POST,OPTIONS","Access-Control-Allow-Headers":"Content-Type,Authorization","Vary":"Origin"},"dest":"/api/runner.js"},
     {"src":"/api/(state|sync|graph|entity|automation-runs|learning-relations|learning|audit|health|ops)","headers":{"Access-Control-Allow-Origin":"https://bydenoso.github.io","Access-Control-Allow-Methods":"GET,POST,OPTIONS","Access-Control-Allow-Headers":"Content-Type,Authorization","Vary":"Origin"},"dest":"/api/runtime-orphans.js?route=$1"},
     {"src":"/(.*\\.css)","headers":{"Content-Type":"text/css; charset=utf-8","Cache-Control":"public, max-age=0, must-revalidate"}},
