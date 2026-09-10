@@ -8,7 +8,8 @@ import {
   LineBasicMaterial,
   LineLoop,
   Points,
-  PointsMaterial
+  PointsMaterial,
+  Vector3
 } from 'three';
 import { createAtlasRenderer, type AtlasRendererBackend } from './createRenderer';
 
@@ -38,7 +39,7 @@ function makeAtmosphere(){
   for(const [radius,z,opacity] of [[4.1,-1.4,.18],[6.2,.3,.13],[8.2,1.8,.08]] as const){
     const points=Array.from({length:120},(_,i)=>{
       const a=i/120*Math.PI*2;
-      return {x:Math.cos(a)*radius,y:Math.sin(a)*radius*.43,z};
+      return new Vector3(Math.cos(a)*radius,Math.sin(a)*radius*.43,z);
     });
     const ringGeometry=new BufferGeometry().setFromPoints(points);
     const ringMaterial=new LineBasicMaterial({
