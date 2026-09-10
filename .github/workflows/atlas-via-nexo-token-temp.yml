@@ -1,4 +1,4 @@
-name: Atlas verified deploy via existing Vercel credential
+name: Atlas verified deploy via GitHub OIDC
 
 on:
   push:
@@ -7,6 +7,7 @@ on:
 
 permissions:
   contents: read
+  id-token: write
 
 concurrency:
   group: atlas-via-nexo-token-temp
@@ -15,10 +16,7 @@ concurrency:
 jobs:
   preview:
     runs-on: ubuntu-latest
-    environment: nexo-one-preview
     env:
-      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
-      VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
       ATLAS_ORG_ID: team_TLkDXqQIHke6IumXh3qzMDcs
       ATLAS_PROJECT_ID: prj_DLQSz5OiIT1HxWMn2i4AgoIv5x8r
       SOURCE_SHA: 17d07fe0e3ac13bc879dc3b7a6adbedbde562034
@@ -33,7 +31,6 @@ jobs:
 
       - name: Prove Atlas source is exactly main
         run: |
-          test -n "$VERCEL_TOKEN"
           git diff --quiet "$SOURCE_SHA" -- atlas-control-tower
           test -f atlas-control-tower/api/universal-projection.js
           test -f atlas-control-tower/ui/universal-projection.mjs
@@ -46,6 +43,30 @@ jobs:
           npm test
           npm run typecheck
           npm run build
+
+      - uses: actions/github-script@v7
+        id: oidc
+        with:
+          script: |
+            const token = await core.getIDToken();
+            core.setSecret(token);
+            core.setOutput('token', token);
+
+      - name: Exchange GitHub OIDC for short-lived Vercel token
+        env:
+          OIDC_TOKEN: ${{ steps.oidc.outputs.token }}
+        run: |
+          RESPONSE=$(curl -sS -f -X POST https://api.vercel.com/login/oauth/token \
+            --data 'grant_type=urn:ietf:params:oauth:grant-type:token-exchange' \
+            --data 'client_id=cl_kyUx2zVvA4MGptBohkmtYHJly2XltXzD' \
+            --data 'subject_token_type=urn:ietf:params:oauth:token-type:id_token' \
+            --data 'requested_token_type=urn:ietf:params:oauth:token-type:access_token' \
+            --data-urlencode "team_id_or_slug=$ATLAS_ORG_ID" \
+            --data-urlencode "subject_token=$OIDC_TOKEN")
+          TOKEN=$(printf '%s' "$RESPONSE" | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{const v=JSON.parse(s);if(!v.access_token)process.exit(2);process.stdout.write(v.access_token)})')
+          test -n "$TOKEN"
+          echo "::add-mask::$TOKEN"
+          echo "VERCEL_RUNTIME_TOKEN=$TOKEN" >> "$GITHUB_ENV"
 
       - name: Install pinned Vercel CLI
         run: npm install --global vercel@59.11.7
@@ -60,17 +81,18 @@ jobs:
         id: deploy
         working-directory: atlas-control-tower
         run: |
-          URL=$(vercel deploy . --yes --token "$VERCEL_TOKEN")
+          URL=$(vercel deploy . --yes --token "$VERCEL_RUNTIME_TOKEN")
           echo "url=$URL" >> "$GITHUB_OUTPUT"
           echo "$URL"
 
       - name: Read back shell, health, UI and Projection Bus
         env:
           DEPLOYMENT_URL: ${{ steps.deploy.outputs.url }}
+          GITHUB_OIDC_TOKEN: ${{ steps.oidc.outputs.token }}
         run: |
           node --input-type=module <<'NODE'
           const base=process.env.DEPLOYMENT_URL;
-          const headers=process.env.VERCEL_AUTOMATION_BYPASS_SECRET?{'x-vercel-protection-bypass':process.env.VERCEL_AUTOMATION_BYPASS_SECRET}:{};
+          const headers={'x-vercel-trusted-oidc-idp-token':process.env.GITHUB_OIDC_TOKEN};
           async function get(path){
             const r=await fetch(new URL(path,base),{headers,redirect:'error',signal:AbortSignal.timeout(20000)});
             const text=await r.text();
