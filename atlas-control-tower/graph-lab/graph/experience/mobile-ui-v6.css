@@ -1,0 +1,116 @@
+/* NEXO Atlas mobile shell v6: one viewport, one safe-area model, no stacked magic numbers. */
+:root{
+ --atlas-mobile-nav-h:0px;
+ --atlas-mobile-safe-bottom:env(safe-area-inset-bottom,0px);
+ --atlas-mobile-safe-top:env(safe-area-inset-top,0px);
+}
+
+@media(max-width:760px){
+ :root{
+  --atlas-mobile-top-h:52px;
+  --atlas-mobile-nav-h:62px;
+  --atlas-mobile-gap:8px;
+  --atlas-mobile-bottom-band:calc(var(--atlas-mobile-nav-h) + var(--atlas-mobile-safe-bottom));
+ }
+ html,body{width:100%;height:100dvh;min-height:100dvh;overflow:hidden;overscroll-behavior:none}
+ body{min-height:100dvh}
+ .lab-topbar{
+  height:calc(var(--atlas-mobile-top-h) + var(--atlas-mobile-safe-top))!important;
+  padding-top:var(--atlas-mobile-safe-top)!important;
+  padding-left:max(10px,env(safe-area-inset-left,0px))!important;
+  padding-right:max(10px,env(safe-area-inset-right,0px))!important;
+ }
+ .lab-shell{height:calc(100dvh - var(--atlas-mobile-top-h) - var(--atlas-mobile-safe-top))!important;padding:0!important;gap:0!important;grid-template-columns:1fr!important}
+ .stage{margin:0!important;border-radius:0!important;min-height:0!important;border-left:0!important;border-right:0!important}
+ .atlas-experience-bar{display:none!important}
+
+ .atlas-mobile-nav{
+  position:absolute;z-index:14;
+  left:max(8px,env(safe-area-inset-left,0px));
+  right:max(8px,env(safe-area-inset-right,0px));
+  bottom:calc(var(--atlas-mobile-safe-bottom) + 6px);
+  min-height:56px;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:2px;
+  padding:4px;border:1px solid rgba(104,166,210,.24);border-radius:16px;
+  background:rgba(4,11,18,.94);box-shadow:0 12px 36px rgba(0,0,0,.36);backdrop-filter:blur(12px);
+ }
+ .atlas-mobile-nav button{
+  min-width:0;min-height:44px;padding:5px 3px;border:0;border-radius:11px;background:transparent;
+  color:#839caf;font:620 8px/1.05 system-ui,sans-serif;letter-spacing:0;text-transform:none;
+  display:grid;place-items:center;gap:2px;position:relative;
+ }
+ .atlas-mobile-nav button.is-active,.atlas-mobile-nav button[aria-current=page]{color:#fff;background:rgba(var(--atlas-domain-rgb),.11)}
+ .atlas-mobile-nav button[aria-pressed=true]{color:#fff;background:rgba(196,167,255,.14)}
+ .atlas-mobile-nav button small{font:650 7px/1 system-ui,sans-serif;color:#7390a6;min-height:7px}
+ .atlas-mobile-nav button[aria-pressed=true] small{color:#c4a7ff}
+
+ .atlas-status-summary{top:8px!important;left:max(10px,env(safe-area-inset-left,0px))!important;right:max(10px,env(safe-area-inset-right,0px))!important;max-width:none!important;gap:0!important;padding:4px 0!important;background:transparent!important;pointer-events:none}
+ .atlas-status-summary span{min-width:0!important;padding:0 8px!important}
+ .atlas-status-summary span:nth-child(n+3){display:none!important}
+ .atlas-status-summary b{font-size:14px!important}
+ .atlas-status-summary small{font-size:7px!important}
+
+ .atlas-node-actions{
+  left:max(8px,env(safe-area-inset-left,0px))!important;right:max(8px,env(safe-area-inset-right,0px))!important;
+  bottom:calc(var(--atlas-mobile-bottom-band) + 10px)!important;transform:none!important;width:auto!important;
+  min-height:58px;padding:8px 9px!important;gap:7px!important;border-radius:14px!important;backdrop-filter:blur(10px)!important;
+ }
+ .atlas-node-action-copy{grid-template-columns:1fr!important;gap:2px!important}.atlas-node-action-copy small{grid-column:auto!important}.atlas-node-action-copy span{display:none!important}
+ .atlas-node-action-buttons{gap:4px!important}.atlas-node-action-buttons button{min-height:44px;height:44px!important;min-width:44px;padding:0 10px!important}
+ .atlas-node-action-buttons button[data-action=home]{display:none!important}
+
+ .focus-readout,.stage-count,.gesture-hint{display:none!important}
+ .stage-dock{display:none!important}
+ .stage-badge{display:none!important}
+
+ .atlas-mobile-tools{position:absolute;z-index:12;top:48px;right:max(8px,env(safe-area-inset-right,0px));display:flex;align-items:center;gap:4px}
+ .atlas-mobile-tools>button,.atlas-mobile-tools summary{min-width:44px;min-height:44px;height:44px;display:grid;place-items:center;border:1px solid rgba(102,160,203,.24);border-radius:12px;background:rgba(4,11,18,.82);color:#a9bfd0;font:650 10px/1 system-ui,sans-serif;list-style:none}
+ .atlas-mobile-tools summary::-webkit-details-marker{display:none}.atlas-mobile-tools details{position:relative}
+ .atlas-mobile-more-list{position:absolute;right:0;top:calc(100% + 6px);min-width:176px;display:grid;gap:3px;padding:5px;border:1px solid rgba(102,160,203,.24);border-radius:13px;background:rgba(4,11,18,.97);box-shadow:0 18px 42px rgba(0,0,0,.42)}
+ .atlas-mobile-more-list button{min-height:44px;border:0;border-radius:9px;background:transparent;color:#a9bfd0;text-align:left;padding:0 11px;font:600 10px/1 system-ui,sans-serif}
+ .atlas-mobile-more-list button:hover,.atlas-mobile-more-list button:focus-visible{background:rgba(var(--atlas-domain-rgb),.12);color:#fff}
+
+ .cockpit{
+  position:fixed!important;z-index:20!important;top:auto!important;
+  left:max(0px,env(safe-area-inset-left,0px))!important;right:max(0px,env(safe-area-inset-right,0px))!important;
+  bottom:calc(var(--atlas-mobile-bottom-band) + 6px)!important;width:auto!important;
+  max-width:none!important;border-radius:18px 18px 0 0!important;
+  transition:height .2s ease,transform .2s ease,opacity .16s ease!important;
+  will-change:height,transform;
+ }
+ .cockpit[data-sheet-state='closed']{height:min(42dvh,360px)!important;transform:translateY(calc(100% + 90px))!important;opacity:0!important;pointer-events:none!important}
+ .cockpit[data-sheet-state='compact']{height:min(42dvh,360px)!important;transform:none!important;opacity:1!important;pointer-events:auto!important}
+ .cockpit[data-sheet-state='expanded']{height:calc(100dvh - var(--atlas-mobile-safe-top) - var(--atlas-mobile-top-h) - var(--atlas-mobile-bottom-band) - 8px)!important;transform:none!important;opacity:1!important;pointer-events:auto!important}
+ .cockpit-bar{min-height:44px!important;height:44px!important;padding:0 10px!important}
+ .cockpit-sheet-toggle{display:inline-flex!important;align-items:center;justify-content:center;min-width:44px;min-height:44px;border:0;background:transparent;color:var(--text-dim);font-size:16px}
+ .cockpit-body{padding:10px 10px calc(18px + var(--atlas-mobile-safe-bottom))!important;gap:9px!important}
+ .cockpit-tabs{position:sticky;top:0;z-index:2;background:var(--panel-solid)!important}
+ .cockpit-tabs button{min-height:44px!important;padding:7px 3px!important;font-size:7.5px!important}
+ .cockpit-actions button,.cockpit-actions a{min-height:44px;display:inline-flex;align-items:center;justify-content:center;text-transform:none!important;letter-spacing:0!important}
+ .cockpit-memory-strip{display:flex;align-items:center;gap:7px;padding:7px 9px;border:1px solid var(--panel-border);border-radius:10px;background:rgba(255,255,255,.025)}
+ .cockpit-memory-strip span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font:650 8px/1 system-ui,sans-serif;color:var(--text-muted)}
+ .cockpit-memory-strip b{margin-left:auto;font:700 12px/1 system-ui,sans-serif;color:var(--accent)}
+ .cockpit-memory-strip small{font:600 7px/1 system-ui,sans-serif;color:var(--text-muted)}
+
+ .lab-panel{top:calc(var(--atlas-mobile-top-h) + var(--atlas-mobile-safe-top))!important;bottom:0!important;width:100%!important;padding-left:max(12px,env(safe-area-inset-left,0px))!important;padding-right:max(12px,env(safe-area-inset-right,0px))!important;padding-bottom:calc(18px + var(--atlas-mobile-safe-bottom))!important}
+ .nexo-live{top:48px!important;left:max(8px,env(safe-area-inset-left,0px))!important;width:min(250px,calc(100vw - 72px))!important;max-height:40px!important;padding:7px!important;border-radius:11px!important;backdrop-filter:none!important}
+ .nexo-live.is-open{max-height:min(38dvh,330px)!important;overflow:auto!important}
+
+ .atlas-experience-studio{padding-bottom:8px!important}.atlas-experience-select-row{display:grid!important}.atlas-experience-grid{display:none!important}
+ .atlas-advanced-controls>summary{min-height:44px}
+ .lab-panel select,.lab-panel button,.lab-panel input{min-height:44px}
+
+ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,summary:focus-visible{outline:2px solid var(--accent,#38c7ff);outline-offset:2px}
+}
+
+@media(max-width:420px){
+ .atlas-mobile-nav{left:max(5px,env(safe-area-inset-left,0px));right:max(5px,env(safe-area-inset-right,0px));gap:1px}
+ .atlas-mobile-nav button{font-size:7px;padding-inline:1px}
+ .atlas-node-action-buttons button[data-action=focus]{display:none!important}
+ .atlas-node-actions{grid-template-columns:minmax(0,1fr) auto!important}
+ .atlas-mobile-tools{right:max(5px,env(safe-area-inset-right,0px))}
+ .cockpit-memory-strip small{display:none}
+}
+
+@media(prefers-reduced-motion:reduce){
+ .cockpit,.atlas-mobile-nav,.atlas-node-actions{transition:none!important;animation:none!important}
+}
