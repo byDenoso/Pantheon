@@ -8,6 +8,10 @@ on:
       source_sha:
         description: Exact verified source SHA
         required: true
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/nexo-one-preview.yml
 permissions:
   contents: read
   actions: read
@@ -29,13 +33,13 @@ jobs:
           node-version: '24'
       - uses: actions/download-artifact@v4
         with:
-          name: nexo-one-release-${{ inputs.source_sha }}
-          run-id: ${{ inputs.ci_run_id }}
+          name: nexo-one-release-${{ github.event_name == 'workflow_dispatch' && inputs.source_sha || 'cf592167d301b1fea19f27953d0cdcc3d31bd3d2' }}
+          run-id: ${{ github.event_name == 'workflow_dispatch' && inputs.ci_run_id || '34454784065' }}
           github-token: ${{ github.token }}
           path: release
       - name: Check immutable source and project identity
         env:
-          EXPECTED_SHA: ${{ inputs.source_sha }}
+          EXPECTED_SHA: ${{ github.event_name == 'workflow_dispatch' && inputs.source_sha || 'cf592167d301b1fea19f27953d0cdcc3d31bd3d2' }}
           CLI_VERSION: ${{ vars.NEXO_VERCEL_CLI_VERSION }}
         run: |
           test "$VERCEL_PROJECT_ID" = prj_rFoAEgGt4gFNr8DHEOzxY7keS16W
