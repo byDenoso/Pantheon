@@ -1,0 +1,33 @@
+name: Atlas production package temporary
+on:
+  push:
+    branches: [ops/atlas-production-package-20260910]
+permissions:
+  contents: read
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: atlas-control-tower
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - run: npm install --no-audit --no-fund
+      - run: npm test
+      - run: npm run typecheck
+      - run: npm run build
+      - name: Package production source
+        run: |
+          tar --exclude='./node_modules' --exclude='./test' --exclude='./docs' --exclude='./dist' --exclude='./coverage' -czf ../atlas-production.tgz .
+          sha256sum ../atlas-production.tgz | tee ../atlas-production.sha256
+          ls -lh ../atlas-production.tgz
+      - uses: actions/upload-artifact@v4
+        with:
+          name: atlas-production-9e32234
+          path: |
+            atlas-production.tgz
+            atlas-production.sha256
+          retention-days: 1
