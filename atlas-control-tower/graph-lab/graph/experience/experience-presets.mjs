@@ -4,6 +4,9 @@ export const EXPERIENCE_PRESETS=freeze({
  OPERATIONAL:freeze({
   id:'OPERATIONAL',label:'Operational',rendererId:'canvas-2d',rendererPreset:'REFERENCE_3',backgroundPreset:'dynamic-clean',theme:'dark',layoutSpacing:1.12,fitPadding:1.06,labelScale:1,maxLabels:24,maxVisibleNodes:118,motion:'low',drift:0,pulseSpeed:.9,filamentMode:'off',cockpitMode:'compact'
  }),
+ BREAKTHROUGH:freeze({
+  id:'BREAKTHROUGH',label:'Breakthrough / Atlas',rendererId:'canvas-25d',rendererPreset:'BREAKTHROUGH_ATLAS',backgroundPreset:'breakthrough-atlas',theme:'dark',layoutSpacing:1.18,fitPadding:1.08,labelScale:.96,maxLabels:20,maxVisibleNodes:96,motion:'low',drift:0,pulseSpeed:.68,filamentMode:'context',cockpitMode:'contextual',semanticZoom:true,domainFields:true,focusTunnel:true
+ }),
  EXECUTIVE_DEMO:freeze({
   id:'EXECUTIVE_DEMO',label:'Executive Demo',rendererId:'three-25d',rendererPreset:'PRESENTATION',backgroundPreset:'dynamic-galaxy',theme:'dark',layoutSpacing:1.28,fitPadding:1.14,labelScale:1.05,maxLabels:22,maxVisibleNodes:105,motion:'subtle',drift:.08,pulseSpeed:.9,filamentMode:'off',cockpitMode:'compact'
  }),
@@ -21,7 +24,7 @@ export const EXPERIENCE_PRESETS=freeze({
  })
 });
 
-export const EXPERIENCE_ORDER=freeze(['OPERATIONAL','EXECUTIVE_DEMO','SCIENTIFIC_REVIEW','FILAMENT_DISCOVERY','PRESENTATION_3D','MOBILE_CLEAN']);
+export const EXPERIENCE_ORDER=freeze(['OPERATIONAL','BREAKTHROUGH','EXECUTIVE_DEMO','SCIENTIFIC_REVIEW','FILAMENT_DISCOVERY','PRESENTATION_3D','MOBILE_CLEAN']);
 
 export function experienceById(id='OPERATIONAL'){
  return EXPERIENCE_PRESETS[id]||EXPERIENCE_PRESETS.OPERATIONAL;
