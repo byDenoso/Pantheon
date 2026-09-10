@@ -34,9 +34,9 @@ jobs:
       - name: Build production frontend
         run: npm run build
       - name: Run Graph Lab browser smoke
-        run: node test/graph-lab-browser-smoke.mjs
+        run: xvfb-run -a dbus-run-session -- node test/graph-lab-browser-smoke.mjs
       - name: Run Breakthrough React browser smoke
-        run: node test/bt-browser-smoke.mjs
+        run: xvfb-run -a dbus-run-session -- node test/bt-browser-smoke.mjs
       - name: Package tested Atlas build
         uses: actions/upload-artifact@v4
         with:
