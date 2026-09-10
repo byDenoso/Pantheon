@@ -67,9 +67,13 @@ function sectionBlock(section,{onFocusNode}={}){
  return block;
 }
 
+function associativeEdges(node,graph){
+ return (graph?.edges||[]).filter(edge=>edge.associative&&!edge.contextEdge&&(edge.source===node?.id||edge.target===node?.id));
+}
+
 function associativeAugment(node,graph,id,base){
  if(!node?.associative)return base;
- const edges=(graph?.edges||[]).filter(edge=>edge.associative&&!edge.contextEdge&&(edge.source===node.id||edge.target===node.id));
+ const edges=associativeEdges(node,graph);
  const items=[...(base?.items||[])];
  if(id==='next')for(const value of unique(edges.map(edge=>edge.nextDiscriminant))){items.push({title:'Próximo discriminante',detail:value,tone:'warn'})}
  if(id==='evidence')for(const ref of unique(edges.flatMap(edge=>edge.evidenceRefs||[]))){items.push({title:ref,detail:'Evidência declarada pelo Learning Filament.',status:'DECLARED',tone:'idle'})}
@@ -79,6 +83,19 @@ function associativeAugment(node,graph,id,base){
  }
  if(!base&&!items.length)return null;
  return{id,title:base?.title||(id==='next'?'Ativação':id==='evidence'?'Evidência dos filamentos':id==='integrity'?'Integridade associativa':id),empty:base?.empty||'Sem registros publicados.',items};
+}
+
+function associativeStrip(node,graph){
+ if(!node?.associative)return null;
+ const edges=associativeEdges(node,graph);
+ const strongest=edges.reduce((best,edge)=>Math.max(best,Number(edge.weight)||0),0);
+ const strip=el('div','cockpit-memory-strip');
+ strip.setAttribute('aria-label','Resumo da memória associativa');
+ const layer=String(node.kind||node.metadata?.memoryLayer||'MEMÓRIA').replaceAll('_',' ');
+ strip.append(el('span',null,layer));
+ if(strongest>0)strip.append(el('b',null,strongest.toFixed(2)),el('small',null,'filamento mais forte'));
+ else strip.append(el('small',null,node.status||'SEM FILAMENTO VISÍVEL'));
+ return strip;
 }
 
 /**
@@ -134,9 +151,11 @@ export function createCockpit(root,{onFocusNode,onToggleSubgraph,onHome,onTab}={
   const active=COCKPIT_TABS.find(entry=>entry.id===tab)||COCKPIT_TABS[0];
 
   const tabs=el('nav','cockpit-tabs');
+  tabs.setAttribute('role','tablist');
+  tabs.setAttribute('aria-label','Seções do cockpit');
   for(const entry of COCKPIT_TABS){
    const button=el('button',entry.id===active.id?'is-active':null,entry.label);
-   button.type='button';button.dataset.tab=entry.id;
+   button.type='button';button.dataset.tab=entry.id;button.setAttribute('role','tab');button.setAttribute('aria-selected',String(entry.id===active.id));
    const count=entry.id==='bloqueios'?sectionById('blockers')?.items.length||0:0;
    if(count)button.append(el('span','tab-count',String(count)));
    button.addEventListener('click',()=>onTab?.(entry.id));
@@ -154,6 +173,7 @@ export function createCockpit(root,{onFocusNode,onToggleSubgraph,onHome,onTab}={
   header.append(kicker,title);
   if(node.recordId&&node.recordId!==node.label)header.append(el('small','record-id',node.recordId));
   root.append(header);
+  const memoryStrip=associativeStrip(node,graph);if(memoryStrip)root.append(memoryStrip);
 
   if(trail.length>1){
    const path=el('nav','cockpit-trail');
