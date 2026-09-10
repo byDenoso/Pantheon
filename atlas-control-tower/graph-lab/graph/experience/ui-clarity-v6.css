@@ -1,0 +1,41 @@
+/* Shared UI hierarchy. The graph may be expressive; chrome stays quiet and legible. */
+:root{--atlas-control-h:36px;--atlas-focus-ring:var(--accent,#38c7ff)}
+
+.atlas-node-action-buttons button,.cockpit-actions button,.cockpit-actions a,.topbar-tools button{
+ min-height:var(--atlas-control-h);box-shadow:none!important;text-transform:none!important;letter-spacing:0!important;
+}
+.atlas-node-action-buttons button[data-action=open],.cockpit-actions .primary{
+ font-weight:700!important;border-color:rgba(var(--atlas-domain-rgb),.56)!important;background:rgba(var(--atlas-domain-rgb),.14)!important;color:var(--text,#eef8ff)!important;
+}
+.atlas-node-action-buttons button:not([data-action=open]),.cockpit-actions button:not(.primary),.cockpit-actions a{
+ background:transparent!important;color:var(--text-dim,#9ab0c2)!important;
+}
+.cockpit-item,.tile,.cockpit-pulse article{box-shadow:none!important;background:rgba(255,255,255,.018)!important}
+.cockpit-summary{max-width:68ch}
+.cockpit-section h3{letter-spacing:.08em!important;text-transform:none!important}
+.section-hint,.record-id,.cockpit-item small{letter-spacing:.02em!important}
+.status-pill,.level-chip,.system-chip{letter-spacing:.05em!important;text-transform:none!important}
+
+.stage-badge[data-tone=blocked],.status-pill[data-tone=blocked]{border-color:rgba(185,135,135,.52)!important}
+.stage-badge[data-tone=warn],.status-pill[data-tone=warn]{border-color:rgba(215,178,109,.46)!important}
+.stage-badge[data-tone=ok],.status-pill[data-tone=ok]{border-color:rgba(143,181,167,.42)!important}
+
+button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,summary:focus-visible,[tabindex]:focus-visible{
+ outline:2px solid var(--atlas-focus-ring)!important;outline-offset:2px!important;
+}
+
+[aria-busy=true]{cursor:progress}
+.cockpit-empty,.nexo-live-empty{font-style:normal!important;opacity:.78}
+
+@media(max-width:760px){
+ :root{--atlas-control-h:44px}
+ .topbar-tools button{min-width:44px!important;min-height:44px!important}
+ .hierarchy-search{min-height:44px!important}
+ .hierarchy-search button{min-width:34px;min-height:34px}
+ .cockpit-section{padding-top:9px!important}
+ .cockpit-item{padding:9px!important}
+ .cockpit-item p{line-height:1.42!important}
+ .status-pill,.level-chip,.system-chip{padding:4px 7px!important}
+}
+
+@media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important}}
