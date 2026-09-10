@@ -7,11 +7,12 @@ import {hash,semantic} from '../compiler/world-state.mjs';
 export const readers={drive,gmail,calendar,github,vercel,nexo,atlas};
 export const labels={drive:'Google Drive',gmail:'Gmail',calendar:'Calendar',github:'GitHub',vercel:'Vercel',nexo:'NEXO SSoT',atlas:'Atlas'};
 const cache=new Map(), inflight=new Map();
+const publicTruthGraphProjection=env=>`https://raw.githubusercontent.com/${env.GITHUB_REPOSITORY||'byDenoso/Pantheon'}/main/nexo-one/data/truthgraph.snapshot.json`;
 export function pending(id,now,message='Aguardando leitura.') {return {provider:{id,label:labels[id],status:'UNAVAILABLE',lastSuccessAt:null,checkedAt:new Date(now).toISOString(),revision:null,message,partial:false,count:null},items:[]};}
 export async function readProvider(id,{env=process.env,now=Date.now(),access='PUBLIC',query='',reader=readers[id],timeout=8000,force=false}={}) {
   const key=`${access}:${id}`;
-  if(access==='PUBLIC'&&id!=='github')return {...pending(id,now,'Conecte sua conta para consultar esta fonte.'),provider:{...pending(id,now).provider,status:'AUTH_REQUIRED',message:'Acesso privado ainda não configurado.'}};
-  const effectiveEnv=access==='PUBLIC'?{GITHUB_REPOSITORY:env.GITHUB_REPOSITORY}:env;
+  if(access==='PUBLIC'&&!['github','nexo'].includes(id))return {...pending(id,now,'Conecte sua conta para consultar esta fonte.'),provider:{...pending(id,now).provider,status:'AUTH_REQUIRED',message:'Acesso privado ainda não configurado.'}};
+  const effectiveEnv=access==='PUBLIC'?(id==='nexo'?{NEXO_SOURCE_URL:publicTruthGraphProjection(env)}:{GITHUB_REPOSITORY:env.GITHUB_REPOSITORY}):env;
   const old=cache.get(key);
   if(!query&&!force&&old&&now-Date.parse(old.provider.lastSuccessAt)<60000)return old;
   if(!query&&inflight.has(key))return inflight.get(key);
@@ -21,7 +22,8 @@ export async function readProvider(id,{env=process.env,now=Date.now(),access='PU
       const result=await Promise.race([reader({env:effectiveEnv,signal:controller.signal,now,query}),new Promise((_,reject)=>{timer=setTimeout(()=>{controller.abort();reject(new Error('UNAVAILABLE'));},timeout);})]);
       if(!Array.isArray(result.items))throw new Error('UNAVAILABLE');
       const revision=result.revision||hash(result.items.map(semantic).sort((a,b)=>a.id.localeCompare(b.id)));
-      const out={items:result.items,...(result.truthGraphInput?{truthGraphInput:result.truthGraphInput}:{}),provider:{id,label:labels[id],status:'AVAILABLE',lastSuccessAt:new Date(now).toISOString(),checkedAt:new Date(now).toISOString(),revision,message:result.partial?'Leitura parcial; há mais registros na fonte.':'Leitura concluída.',partial:!!result.partial,count:result.items.length}};
+      const projected=access==='PUBLIC'&&id==='nexo';
+      const out={items:result.items,...(result.truthGraphInput?{truthGraphInput:result.truthGraphInput}:{}),provider:{id,label:labels[id],status:'AVAILABLE',lastSuccessAt:new Date(now).toISOString(),checkedAt:new Date(now).toISOString(),revision,message:projected?'Projection-only do TruthGraph; autoridade permanece nas fontes canônicas.':result.partial?'Leitura parcial; há mais registros na fonte.':'Leitura concluída.',partial:projected||!!result.partial,count:result.items.length}};
       if(!query)cache.set(key,out);return out;
     }catch(error){
       const code=['AUTH_REQUIRED','RATE_LIMITED'].includes(error.code||error.message)?error.code||error.message:'UNAVAILABLE';
