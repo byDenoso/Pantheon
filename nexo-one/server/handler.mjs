@@ -1,7 +1,10 @@
 import {PROVIDERS} from '../src/contracts/validate.mjs';
 import {compile} from './compiler/world-state.mjs';
 import {buildProjectionBus} from './compiler/projection-bus.mjs';
+import {buildSystemState} from './compiler/system-state.mjs';
+import {projectAutomationHealthProviders} from './compiler/automation-health.mjs';
 import {readProvider,pending,clearProviderCache} from './adapters/registry.mjs';
+import {readSystemInput} from './adapters/system-input.mjs';
 import {configured,authenticated,verifyPassword,makeSession,cookie,sameOrigin} from './auth/session.mjs';
 import {verifyProjectionService} from './auth/vercel-oidc.mjs';
 const attempts=new Map();
@@ -27,12 +30,24 @@ export default async function handler(req,res) {
       attempts.delete(key);res.setHeader('Set-Cookie',cookie(makeSession(env),req));return send({authenticated:true,configured:true,access:'PRIVATE'});
     }
     if(req.method!=='GET')return send({error:'WRITES_DISABLED'},405);
-    if(!['world','health','now','loops','day','context','recall','projections'].includes(route))return send({error:'NOT_FOUND'},404);
+    if(!['world','health','now','loops','day','context','recall','projections','system'].includes(route))return send({error:'NOT_FOUND'},404);
     const force=url.searchParams.get('refresh')==='1';
     if(route==='projections'){
       const serviceAccess=!privateAccess&&await verifyProjectionService(req,{now});
       const projectionAccess=privateAccess||serviceAccess?'PRIVATE':'PUBLIC';
       return send(await buildProjectionBus({env,now,access:projectionAccess,force}));
+    }
+    if(route==='system'){
+      if(!privateAccess)return send({error:'AUTH_REQUIRED'},401);
+      const options={now,access:'PRIVATE',env,force};
+      const [results,systemInput]=await Promise.all([
+        Promise.all(PROVIDERS.map(id=>readProvider(id,options))),
+        readSystemInput({env})
+      ]);
+      const compiled=compile(results,{now,access:'PRIVATE'}),byId=new Map(results.map(result=>[result.provider.id,result]));
+      const world={...compiled,providers:[...compiled.providers,...projectAutomationHealthProviders(systemInput.automationHealth)]};
+      const bus=await buildProjectionBus({env,now,access:'PRIVATE',force,reader:async id=>byId.get(id)||readProvider(id,options)});
+      return send(buildSystemState({world,bus,systemInput,now:new Date(now).toISOString()}));
     }
     const q=(url.searchParams.get('q')||'').trim().slice(0,200);
     if(route==='recall'&&!q)return send({error:'QUERY_REQUIRED'},400);
