@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url';
 
 import { buildProjectionBus } from '../server/compiler/projection-bus.mjs';
 import { buildSystemState } from '../server/compiler/system-state.mjs';
+import { buildTruthGraph } from '../server/compiler/truthgraph.mjs';
 import { capabilityToneOf, label } from '../src/viewmodels/tokens.ts';
 
 const NOW = Date.parse('2026-09-10T12:00:00.000Z');
@@ -100,4 +101,56 @@ test('remote footer labels the remote state instead of a fixture scenario', asyn
   const app = await readFile(fileURLToPath(new URL('../src/app/App.tsx', import.meta.url)), 'utf8');
   assert.doesNotMatch(app, /\{system\.sourceKind === 'fixture' \? 'FIXTURE' : 'REMOTO'\} · \{scenario\.label\}/);
   assert.match(app, /system\.state\?\.scenario_label/);
+});
+
+test('retired Neon capability is neutral to TruthGraph health', () => {
+  const graph = buildTruthGraph({
+    authorityRows: [{
+      domain: 'NEXO',
+      canonical_truth: 'ACTION_REGISTER + NDMK/STATE_INDEX',
+      operational_truth: 'Connected runtime/connectors',
+      chat_role: 'Discovery/context',
+      conflict_rule: 'Canonical state wins',
+    }],
+    truthRows: [{
+      record_type: 'truth',
+      record_id: 'NEXO',
+      status: 'ACTIVE',
+      title: 'NEXO · SSOT CANONICAL',
+      detail: 'Canonical NEXO state',
+      updated_at: NOW_ISO,
+    }],
+    capabilityRows: [{
+      capability_id: 'CAP-NEON-NEXO-OPS-SCHEDULED-WRITE',
+      domain: 'NEXO',
+      status: 'RETIRED_RUNTIME',
+    }],
+    providers: [{ id: 'nexo', status: 'AVAILABLE', partial: false, checkedAt: NOW_ISO }],
+    refs: { authority: 'https://docs.google.com/spreadsheets/d/test' },
+    now: NOW,
+  });
+  const nexo = graph.results.find(row => row.domain === 'NEXO');
+  assert.equal(nexo?.status, 'LIVE');
+  assert.equal(nexo?.capability.state, 'N/A');
+});
+
+test('HTTP health and release acceptance treat Vercel as non-gating', async () => {
+  const handler = await readFile(fileURLToPath(new URL('../server/handler.mjs', import.meta.url)), 'utf8');
+  const release = await readFile(fileURLToPath(new URL('../scripts/verify-release.mjs', import.meta.url)), 'utf8');
+  assert.match(handler, /p\.id\s*!==\s*['"]vercel['"]/);
+  assert.match(release, /p\.id\s*!==\s*['"]vercel['"]/);
+  assert.doesNotMatch(release, /w\.providers\.length\s*!==\s*7/);
+});
+
+test('release acceptance rejects Olympus conflict instead of requiring it', async () => {
+  const release = await readFile(fileURLToPath(new URL('../scripts/verify-release.mjs', import.meta.url)), 'utf8');
+  assert.doesNotMatch(release, /olympus\.status\s*!==\s*['"]CONFLICT['"]/);
+  assert.match(release, /olympus\.status\s*===\s*['"]CONFLICT['"]/);
+  assert.match(release, /row\.domain\s*===\s*['"]OLYMPUS['"]/);
+});
+
+test('public TruthGraph snapshot carries Neon retirement state', async () => {
+  const snapshot = JSON.parse(await readFile(fileURLToPath(new URL('../data/truthgraph.snapshot.json', import.meta.url)), 'utf8'));
+  const neon = snapshot.truthGraphInput.capabilityRows.find(row => row.capability_id === 'CAP-NEON-NEXO-OPS-SCHEDULED-WRITE');
+  assert.equal(neon?.status, 'RETIRED_RUNTIME');
 });
