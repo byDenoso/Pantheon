@@ -8,6 +8,7 @@ import {PRESETS,SYSTEM_COLORS,STATUS_COLORS,getPalette} from './palette.mjs';
 import {semanticGraphView} from './renderers/canvas-semantic-zoom.mjs';
 import {buildDomainFields,drawDomainField} from './renderers/canvas-domain-fields.mjs';
 import {focusTunnel,focusAlphaForNode,focusAlphaForEdge} from './renderers/canvas-focus-tunnel.mjs';
+import {publishSemanticBand,publishFocusTunnelState} from './renderers/canvas-semantic-band.mjs';
 
 const structural=n=>['SYSTEM','DOMAIN','PROGRAM','CAMPAIGN'].includes(n?.type);
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
@@ -40,7 +41,7 @@ export class GraphLabRenderer{
   this.callbacks={onSelect,onOpen,onStats};
   this.camera=defaultCamera();this.options={...PRESETS.ORIGINAL};this.graph={nodes:[],edges:[]};
   this.focusId='system:NEXO';this.selectedId=null;this.hoverId=null;this.points=[];this.labels=[];
-  this.semanticView={band:'program',nodes:[],edges:[]};this.focusTunnelState=null;this.domainFields=[];
+  this.semanticView={band:'program',nodes:[],edges:[]};this.focusTunnelState=null;this.focusTunnelId=null;this.domainFields=[];
   this.positions=new Map();this.targetPositions=new Map();this.transition=null;this.running=false;this.raf=0;this.lastFrame=0;this.lastStatsAt=0;this.frameSamples=[];this.destroyed=false;
   this.pointers=new Map();this.drag=null;this.pinchDistance=0;
   this.stars=Array.from({length:260},(_,i)=>({x:fract(Math.sin(i*12.9898)*43758.5453),y:fract(Math.sin(i*7.233)*19873.113),s:i%17===0?1.7:i%5===0?1.2:.7,a:i%17===0?.72:.28}));
@@ -96,6 +97,7 @@ export class GraphLabRenderer{
   }
   this.positions=start;this.targetPositions=target;this.transition={start,target,at:performance.now(),duration:this.options.transitionMs||780};
   if(this.selectedId&&!graph.nodes.some(n=>n.id===this.selectedId))this.selectedId=null;
+  if(this.focusTunnelId&&!graph.nodes.some(n=>n.id===this.focusTunnelId)){this.focusTunnelId=null;publishFocusTunnelState(null)}
   this.render();
  }
  setFocus(id){this.focusId=id;this.setGraph(this.graph,{focusId:id})}
@@ -103,6 +105,8 @@ export class GraphLabRenderer{
  zoom(factor){this.camera.zoom=clamp(this.camera.zoom*factor,.28,4.5);this.render()}
  toggleFlat(){this.camera.flat=!this.camera.flat;this.render();return this.camera.flat}
  setSelected(id){this.selectedId=id;this.render()}
+ setFocusTunnel(id){this.focusTunnelId=id||null;publishFocusTunnelState(this.focusTunnelId);this.render();return this.focusTunnelId}
+ clearFocusTunnel(){this.focusTunnelId=null;publishFocusTunnelState(null);this.render();return null}
  focusNode(id){this.selectedId=id;this.centerSelected()}
  centerSelected(){const p=this.points.find(x=>x.node.id===this.selectedId);if(!p)return;this.camera.panX+=this.width/2-p.x;this.camera.panY+=this.height/2-p.y;this.render()}
  fit(){
@@ -134,8 +138,9 @@ export class GraphLabRenderer{
  graphForFrame(){
   const o=this.options;
   const semantic=semanticGraphView(this.graph,{cameraZoom:this.camera.zoom,selectedId:this.selectedId,focusId:this.focusId,maxVisible:o.maxVisibleNodes,enabled:o.semanticZoom!==false});
-  this.semanticView=semantic;
-  this.focusTunnelState=o.focusTunnel===false?focusTunnel(null,null):focusTunnel(semantic,this.selectedId);
+  this.semanticView=semantic;publishSemanticBand(semantic.band);
+  this.focusTunnelState=o.focusTunnel===false?focusTunnel(null,null):focusTunnel(semantic,this.focusTunnelId);
+  publishFocusTunnelState(this.focusTunnelState?.active?this.focusTunnelId:null);
   return semantic;
  }
  draw(now,dt){
