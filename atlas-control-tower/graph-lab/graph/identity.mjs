@@ -1,15 +1,13 @@
 // Colour identity of the map.
 //
-// Each Domain owns a hue, and everything orbiting it inherits that hue: its Programs,
-// its Campaigns, and the filaments that tie them back to the core. Colour therefore
-// answers "which part of the system am I looking at" at a glance, and it never
-// encodes state — status lives in the tone dots, badges and the cockpit, so a colour
-// can be read the same way whether a branch is healthy or blocked.
-//
-// Hues are assigned by the Domain's position in the SSOT, so the map keeps the same
-// colours between reloads and a new Domain never repaints the existing ones.
+// Each canonical Domain owns a hue and descendants inherit it. Associative-memory
+// nodes are transverse overlays, not descendants, so they receive their own stable
+// learning hues without consuming a Domain slot or pretending to be a fourth lane.
 
 export const CORE_HUE='#FFB545';
+export const SEMANTIC_MEMORY_HUE='#AF8DFF';
+export const PROCEDURAL_MEMORY_HUE='#66D6FF';
+export const ASSOCIATIVE_REFERENCE_HUE='#70859A';
 
 export const DOMAIN_HUES=[
  '#4DA3FF', // azure
@@ -27,9 +25,8 @@ export const DOMAIN_HUES=[
 export const hueForIndex=index=>DOMAIN_HUES[((index%DOMAIN_HUES.length)+DOMAIN_HUES.length)%DOMAIN_HUES.length];
 
 /**
- * Writes `hue` onto every node: the core keeps the star colour, each Domain takes the
- * next hue in the ramp, and deeper levels inherit from the Domain above them.
- * Returns the graph so it can be chained after rowsToGraph.
+ * Writes `hue` onto every node. Canonical hierarchy hue semantics remain unchanged;
+ * overlay memory uses a separate visual vocabulary and never changes Domain order.
  */
 export function assignIdentityColors(graph){
  const nodes=graph?.nodes||[];
@@ -37,6 +34,10 @@ export function assignIdentityColors(graph){
  let index=0;
  for(const node of nodes){
   if(node.id===graph.rootId){node.hue=CORE_HUE;continue}
+  if(node.overlayOnly){
+   node.hue=node.kind==='SEMANTIC_MEMORY'?SEMANTIC_MEMORY_HUE:node.kind==='PROCEDURAL_MEMORY'?PROCEDURAL_MEMORY_HUE:ASSOCIATIVE_REFERENCE_HUE;
+   continue;
+  }
   if(node.hierarchyLevel==='domain')node.hue=hueForIndex(index++);
  }
  for(const node of nodes){
@@ -49,9 +50,9 @@ export function assignIdentityColors(graph){
  return graph;
 }
 
-/** The Domains in ring order, with their hue — the legend the map is drawn from. */
+/** The canonical Domains in ring order; overlay memory never enters the Domain legend. */
 export function domainLegend(graph){
  return (graph?.nodes||[])
-  .filter(node=>node.hierarchyLevel==='domain')
+  .filter(node=>node.hierarchyLevel==='domain'&&!node.overlayOnly)
   .map(node=>({id:node.id,label:node.label,recordId:node.recordId,hue:node.hue,system:node.system}));
 }
