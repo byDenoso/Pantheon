@@ -49,14 +49,14 @@ async function openPage(debugPort,{width=1440,height=1000}={}){
  await cdp.send('Page.enable');await cdp.send('Runtime.enable');await cdp.send('Log.enable');
  await cdp.send('Emulation.setDeviceMetricsOverride',{width,height,deviceScaleFactor:1,mobile:width<=760});
  const errors=[];cdp.on('Runtime.exceptionThrown',event=>errors.push(event.exceptionDetails?.text||event.exceptionDetails?.exception?.description||'Runtime exception'));
- cdp.on('Log.entryAdded',event=>{if(['error'].includes(event.entry?.level)&&!/favicon/i.test(event.entry?.text||''))errors.push(`${event.entry.level}: ${event.entry.text}`)});
+ cdp.on('Log.entryAdded',event=>{if(event.entry?.level==='error'&&!/favicon/i.test(event.entry?.text||''))errors.push(`error: ${event.entry.text}`)});
  return{cdp,errors,targetId:created.id};
 }
 
 async function evaluate(cdp,expression){const result=await cdp.send('Runtime.evaluate',{expression,awaitPromise:true,returnByValue:true});if(result.exceptionDetails)throw new Error(result.exceptionDetails.text||'evaluation failed');return result.result?.value}
 async function waitFor(cdp,expression,{timeout=15000,label=expression}={}){const started=Date.now();let last;while(Date.now()-started<timeout){try{last=await evaluate(cdp,expression);if(last)return last}catch(error){last=error.message}await delay(120)}throw new Error(`Timed out waiting for ${label}; last=${String(last)}`)}
-
 async function navigate(page,url){await page.cdp.send('Page.navigate',{url});await waitFor(page.cdp,"document.readyState==='complete'",{timeout:15000,label:'document complete'})}
+async function closePage(page){await page.cdp.send('Target.closeTarget',{targetId:page.targetId}).catch(()=>{});page.cdp.close()}
 
 const cases=[
  {id:'canvas-2d',base:'legacy-canvas',selector:'#graph-lab-canvas:not([hidden])'},
@@ -67,28 +67,46 @@ const cases=[
 
 async function smokeRenderer(debugPort,baseUrl,testCase){
  const page=await openPage(debugPort,{width:1440,height:1000});
- const url=`${baseUrl}/?demo=1&experience=OPERATIONAL&renderer-v4=${encodeURIComponent(testCase.id)}&renderer=${encodeURIComponent(testCase.base)}`;
- await navigate(page,url);
- await waitFor(page.cdp,`globalThis.__ATLAS_RENDERER_RUNTIME?.graphRendererId===${JSON.stringify(testCase.id)}`,{timeout:20000,label:`runtime ${testCase.id}`});
- await waitFor(page.cdp,`Boolean(document.querySelector(${JSON.stringify(testCase.selector)}))`,{timeout:20000,label:`surface ${testCase.id}`});
- await waitFor(page.cdp,"Number(document.querySelector('#hud-nodes')?.textContent||0)>0",{timeout:20000,label:`nodes ${testCase.id}`});
- const initial=await evaluate(page.cdp,"Number(document.querySelector('#hud-nodes')?.textContent||0)");
- await evaluate(page.cdp,"document.querySelector('[data-domain-target=SCIENCE]')?.click(); true");
- await waitFor(page.cdp,`Number(document.querySelector('#hud-nodes')?.textContent||0)>${initial}`,{timeout:10000,label:`science expansion ${testCase.id}`});
- const actual=await evaluate(page.cdp,"document.documentElement.dataset.atlasRenderer");
- assert.equal(actual,testCase.id,`${testCase.id} runtime drifted to ${actual}`);
- assert.deepEqual(page.errors,[],`${testCase.id} emitted browser errors: ${page.errors.join(' | ')}`);
- await page.cdp.send('Target.closeTarget',{targetId:page.targetId}).catch(()=>{});page.cdp.close();
+ try{
+  const url=`${baseUrl}/?demo=1&experience=OPERATIONAL&renderer-v4=${encodeURIComponent(testCase.id)}&renderer=${encodeURIComponent(testCase.base)}`;
+  await navigate(page,url);
+  await waitFor(page.cdp,`globalThis.__ATLAS_RENDERER_RUNTIME?.graphRendererId===${JSON.stringify(testCase.id)}`,{timeout:20000,label:`runtime ${testCase.id}`});
+  await waitFor(page.cdp,`Boolean(document.querySelector(${JSON.stringify(testCase.selector)}))`,{timeout:20000,label:`surface ${testCase.id}`});
+  await waitFor(page.cdp,"Number(document.querySelector('#hud-nodes')?.textContent||0)>0",{timeout:20000,label:`nodes ${testCase.id}`});
+  const initial=await evaluate(page.cdp,"Number(document.querySelector('#hud-nodes')?.textContent||0)");
+  await evaluate(page.cdp,"document.querySelector('#expand-all')?.click(); true");
+  await waitFor(page.cdp,`Number(document.querySelector('#hud-nodes')?.textContent||0)>${initial}`,{timeout:10000,label:`renderer refresh ${testCase.id}`});
+  const actual=await evaluate(page.cdp,"document.documentElement.dataset.atlasRenderer");
+  assert.equal(actual,testCase.id,`${testCase.id} runtime drifted to ${actual}`);
+  assert.deepEqual(page.errors,[],`${testCase.id} emitted browser errors: ${page.errors.join(' | ')}`);
+ }finally{await closePage(page)}
+}
+
+async function smokeCanonicalHierarchy(debugPort,baseUrl){
+ const page=await openPage(debugPort,{width:1440,height:1000});
+ try{
+  const url=`${baseUrl}/?experience=OPERATIONAL&renderer-v4=canvas-2d&renderer=legacy-canvas`;
+  await navigate(page,url);
+  await waitFor(page.cdp,"globalThis.__ATLAS_RENDERER_RUNTIME?.graphRendererId==='canvas-2d'",{timeout:15000,label:'canonical Canvas runtime'});
+  await waitFor(page.cdp,"Number(document.querySelector('#hud-nodes')?.textContent||0)>=4",{timeout:25000,label:'canonical macro hierarchy'});
+  const initial=await evaluate(page.cdp,"Number(document.querySelector('#hud-nodes')?.textContent||0)");
+  assert.equal(await evaluate(page.cdp,"Boolean(document.querySelector('[data-domain-target=SCIENCE]'))"),true,'Science macro navigation is missing');
+  await evaluate(page.cdp,"document.querySelector('[data-domain-target=SCIENCE]')?.click(); true");
+  await waitFor(page.cdp,`Number(document.querySelector('#hud-nodes')?.textContent||0)>${initial}`,{timeout:12000,label:'Science canonical expansion'});
+  await waitFor(page.cdp,"Boolean(document.querySelector('.atlas-node-actions:not([hidden]) [data-action=open]:not([hidden])'))",{timeout:5000,label:'explicit graph open affordance'});
+  assert.deepEqual(page.errors,[],`canonical hierarchy emitted browser errors: ${page.errors.join(' | ')}`);
+ }finally{await closePage(page)}
 }
 
 async function smokeMobileFallback(debugPort,baseUrl){
  const page=await openPage(debugPort,{width:390,height:844});
- const url=`${baseUrl}/?demo=1&experience=OPERATIONAL&renderer-v4=babylon-3d&renderer=three-canvas`;
- await navigate(page,url);
- await waitFor(page.cdp,"globalThis.__ATLAS_RENDERER_RUNTIME?.graphRendererId==='canvas-2d'",{timeout:15000,label:'mobile Canvas fallback'});
- assert.equal(await evaluate(page.cdp,"document.documentElement.scrollWidth<=innerWidth"),true,'mobile page overflows horizontally');
- assert.deepEqual(page.errors,[],`mobile fallback emitted browser errors: ${page.errors.join(' | ')}`);
- await page.cdp.send('Target.closeTarget',{targetId:page.targetId}).catch(()=>{});page.cdp.close();
+ try{
+  const url=`${baseUrl}/?demo=1&experience=OPERATIONAL&renderer-v4=babylon-3d&renderer=three-canvas`;
+  await navigate(page,url);
+  await waitFor(page.cdp,"globalThis.__ATLAS_RENDERER_RUNTIME?.graphRendererId==='canvas-2d'",{timeout:15000,label:'mobile Canvas fallback'});
+  assert.equal(await evaluate(page.cdp,"document.documentElement.scrollWidth<=innerWidth"),true,'mobile page overflows horizontally');
+  assert.deepEqual(page.errors,[],`mobile fallback emitted browser errors: ${page.errors.join(' | ')}`);
+ }finally{await closePage(page)}
 }
 
 async function stopBrowser(browser){
@@ -99,11 +117,7 @@ async function stopBrowser(browser){
  await Promise.race([exitPromise,delay(2500)]);
  if(!exited&&browser.exitCode===null){try{browser.kill('SIGKILL')}catch{};await Promise.race([exitPromise,delay(1500)])}
 }
-
-function cleanupProfile(profile){
- try{rmSync(profile,{recursive:true,force:true,maxRetries:10,retryDelay:100})}
- catch(error){console.warn(`WARN Chrome profile cleanup skipped: ${error.code||error.message}`)}
-}
+function cleanupProfile(profile){try{rmSync(profile,{recursive:true,force:true,maxRetries:10,retryDelay:100})}catch(error){console.warn(`WARN Chrome profile cleanup skipped: ${error.code||error.message}`)}}
 
 const chrome=findChrome();
 if(!chrome){console.error('No Chrome/Chromium binary found. Set CHROME_BIN.');process.exit(2)}
@@ -112,7 +126,8 @@ const browser=spawn(chrome,[`--remote-debugging-port=${debugPort}`,`--user-data-
 let stderr='';browser.stderr.on('data',chunk=>stderr+=chunk.toString());
 try{
  await waitFor({send:async(method)=>{if(method!=='Runtime.evaluate')return{};try{const json=await fetch(`http://127.0.0.1:${debugPort}/json/version`).then(r=>r.json());return{result:{value:Boolean(json.webSocketDebuggerUrl)}}}catch{return{result:{value:false}}}}},'true',{timeout:12000,label:'Chrome DevTools endpoint'}).catch(async()=>{for(let i=0;i<100;i++){try{const json=await fetch(`http://127.0.0.1:${debugPort}/json/version`).then(r=>r.json());if(json.webSocketDebuggerUrl)return}catch{}await delay(100)}throw new Error(`Chrome did not start: ${stderr.slice(-1200)}`)});
- for(const item of cases){await smokeRenderer(debugPort,base,item);console.log(`PASS ${item.id}`)}
+ for(const item of cases){await smokeRenderer(debugPort,base,item);console.log(`PASS renderer ${item.id}`)}
+ await smokeCanonicalHierarchy(debugPort,base);console.log('PASS canonical Science drill-down and ABRIR affordance');
  await smokeMobileFallback(debugPort,base);console.log('PASS mobile heavy-renderer fallback');
  console.log('PASS Graph Lab browser smoke');
 }finally{
