@@ -2,7 +2,8 @@ import {ActionError} from '../execution/contracts.mjs';
 
 const enc=encodeURIComponent;
 function credentials(env,write=false){
-  const project=String(env.VERCEL_PROJECT_ID||'').trim(),team=String(env.VERCEL_TEAM_ID||'').trim(),token=String((write&&env.VERCEL_WRITE_TOKEN)||env.VERCEL_READ_TOKEN||'').trim();
+  const project=String(env.VERCEL_PROJECT_ID||'').trim(),team=String(env.VERCEL_TEAM_ID||'').trim();
+  const token=String(write?env.VERCEL_WRITE_TOKEN:env.VERCEL_READ_TOKEN||'').trim();
   if(!project||!token)throw new ActionError('AUTH_REQUIRED');
   return {project,team,token,name:String(env.VERCEL_PROJECT_NAME||'nexo-one').trim()||'nexo-one'};
 }
