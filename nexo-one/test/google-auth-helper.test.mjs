@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {SCOPES,pkceChallenge,buildAuthorizationUrl} from '../scripts/google-auth.mjs';
+import {SCOPES,pkceChallenge,buildAuthorizationUrl,readOAuthCallback} from '../scripts/google-auth.mjs';
 
 const expectedScopes=[
   'https://www.googleapis.com/auth/drive.readonly',
@@ -29,4 +29,12 @@ test('google auth helper requests only the required read-only scopes and PKCE',(
   assert.equal(url.searchParams.get('code_challenge'),challenge);
   assert.equal(url.searchParams.get('state'),'state-123');
   assert.equal(url.searchParams.get('scope'),SCOPES.join(' '));
+});
+
+test('OAuth callback fails closed instead of hanging on malformed callbacks',()=>{
+  assert.equal(readOAuthCallback('/favicon.ico','state-123'),null);
+  assert.equal(readOAuthCallback('/oauth2/callback?state=state-123&code=ok','state-123'),'ok');
+  assert.throws(()=>readOAuthCallback('/oauth2/callback?state=wrong&code=ok','state-123'),/state mismatch/i);
+  assert.throws(()=>readOAuthCallback('/oauth2/callback?state=state-123&error=access_denied','state-123'),/access_denied/);
+  assert.throws(()=>readOAuthCallback('/oauth2/callback?state=state-123','state-123'),/Codigo OAuth ausente/);
 });
