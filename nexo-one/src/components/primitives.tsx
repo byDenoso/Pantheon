@@ -65,6 +65,7 @@ const CAPABILITY_NOTE: Record<CapabilityStatus, string> = {
   PASS: 'Exercida com evidência de execução.',
   UNVERIFIED: 'Declarada e nunca exercida. Ausência de prova, não funcionalidade parcial.',
   UNKNOWN: 'Sem declaração e sem evidência. Nada pode ser afirmado.',
+  RETIRED_RUNTIME: 'Retirada por decisão explícita. Evidência histórica não autoriza execução.',
   BLOCKED: 'Impedida. A operação não pode sequer ser tentada.',
 };
 

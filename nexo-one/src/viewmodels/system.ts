@@ -87,7 +87,7 @@ export function globalSummary(state: SystemState): GlobalSummary {
       ...state.lanes.flatMap(l => l.blockers.map(explanation => ({ source: l.domain, explanation }))),
       ...state.actions.filter(a => a.blocker).map(a => ({ source: a.action_id, explanation: a.blocker as string })),
     ],
-    degradedCapabilities: state.capabilities.filter(c => c.status !== 'PASS'),
+    degradedCapabilities: state.capabilities.filter(c => c.status !== 'PASS' && c.status !== 'RETIRED_RUNTIME'),
     lastRead: reads.length ? reads[reads.length - 1] : null,
     needsHuman: state.inbox.length,
     resolvable: resolvableActions(state).length,
@@ -116,7 +116,7 @@ export function resolvableActions(state: SystemState): ActionRecord[] {
     if (action.human_gate) return false;
     if (!AUTONOMOUS_STATUSES.has(action.status)) return false;
     const cap = action.capability_id ? capability.get(action.capability_id) : undefined;
-    if (cap && (cap.status === 'BLOCKED' || cap.status === 'UNKNOWN')) return false;
+    if (cap && (cap.status === 'BLOCKED' || cap.status === 'UNKNOWN' || cap.status === 'RETIRED_RUNTIME')) return false;
     if (!action.reversible && cap?.status !== 'PASS') return false;
     return true;
   });
@@ -137,7 +137,7 @@ export interface CapabilityCell {
   status: CapabilityStatus;
 }
 
-const CAPABILITY_WEIGHT: Record<CapabilityStatus, number> = { PASS: 0, UNVERIFIED: 1, UNKNOWN: 2, BLOCKED: 3 };
+const CAPABILITY_WEIGHT: Record<CapabilityStatus, number> = { PASS: 0, UNVERIFIED: 1, UNKNOWN: 2, RETIRED_RUNTIME: 3, BLOCKED: 4 };
 
 /** Matriz domínio x runtime. O pior status da célula é o status exibido. */
 export function capabilityMatrix(state: SystemState): { runtimes: Runtime[]; cells: CapabilityCell[] } {
@@ -160,6 +160,7 @@ export const capabilityCounts = (state: SystemState): Record<CapabilityStatus, n
   PASS: state.capabilities.filter(c => c.status === 'PASS').length,
   UNVERIFIED: state.capabilities.filter(c => c.status === 'UNVERIFIED').length,
   UNKNOWN: state.capabilities.filter(c => c.status === 'UNKNOWN').length,
+  RETIRED_RUNTIME: state.capabilities.filter(c => c.status === 'RETIRED_RUNTIME').length,
   BLOCKED: state.capabilities.filter(c => c.status === 'BLOCKED').length,
 });
 
@@ -202,7 +203,7 @@ export function integrityIssues(state: SystemState): IntegrityIssue[] {
     });
   }
   for (const capability of state.capabilities) {
-    if (capability.status === 'PASS') continue;
+    if (capability.status === 'PASS' || capability.status === 'RETIRED_RUNTIME') continue;
     issues.push({
       id: `capability:${capability.capability_id}`,
       severity: capability.status === 'BLOCKED' ? 'P1' : 'P2',

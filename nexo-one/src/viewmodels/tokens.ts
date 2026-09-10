@@ -12,7 +12,7 @@ const STATE_TONE: Record<string, Tone> = {
   LIVE: 'live', SNAPSHOT: 'snapshot', STALE: 'stale', STALE_DECLARATION: 'stale',
   DEGRADED: 'degraded', BLOCKED: 'blocked', CONFLICT: 'conflict', MISSING_PROVIDER: 'unknown',
   // CapabilityStatus — UNVERIFIED jamais é "parcial": é ausência de prova.
-  PASS: 'live', UNVERIFIED: 'unknown', UNKNOWN: 'unknown',
+  PASS: 'live', UNVERIFIED: 'unknown', UNKNOWN: 'unknown', RETIRED_RUNTIME: 'stale',
   // RunStatus / StepStatus
   SUCCEEDED: 'live', OK: 'live', NO_OP: 'snapshot', RUNNING: 'snapshot', PENDING: 'snapshot',
   WARN: 'degraded', FAILED: 'degraded', FAIL: 'degraded', SKIPPED: 'unknown',
@@ -36,7 +36,7 @@ export const STATE_LABEL: Record<string, string> = {
   LIVE: 'Ao vivo', SNAPSHOT: 'Instantâneo', STALE: 'Leitura anterior',
   STALE_DECLARATION: 'Declaração vencida', DEGRADED: 'Degradado', BLOCKED: 'Bloqueado',
   CONFLICT: 'Conflito', MISSING_PROVIDER: 'Fonte ausente',
-  PASS: 'Verificada', UNVERIFIED: 'Sem prova', UNKNOWN: 'Desconhecido',
+  PASS: 'Verificada', UNVERIFIED: 'Sem prova', UNKNOWN: 'Desconhecido', RETIRED_RUNTIME: 'Runtime retirado',
   SUCCEEDED: 'Concluída', NO_OP: 'Sem efeito', RUNNING: 'Em execução', FAILED: 'Falhou',
   OK: 'OK', WARN: 'Ressalva', FAIL: 'Falha', SKIPPED: 'Ignorada', PENDING: 'Pendente',
   CONFIRMED: 'Confirmado', NOT_APPLICABLE: 'Não se aplica',
@@ -89,7 +89,7 @@ export const shortTime = (value?: string | null): string =>
   value ? new Intl.DateTimeFormat('pt-BR', { hour: '2-digit', minute: '2-digit' }).format(new Date(value)) : '—';
 
 const capabilityTone: Record<CapabilityStatus, Tone> = {
-  PASS: 'live', UNVERIFIED: 'unknown', UNKNOWN: 'unknown', BLOCKED: 'blocked',
+  PASS: 'live', UNVERIFIED: 'unknown', UNKNOWN: 'unknown', RETIRED_RUNTIME: 'stale', BLOCKED: 'blocked',
 };
 export const capabilityToneOf = (status: CapabilityStatus): Tone => capabilityTone[status];
 
