@@ -21,6 +21,15 @@ function button(label,{className='',ariaLabel=label}={}){
 }
 
 function clickControl(id){byId(id)?.click()}
+function currentExperience(explicit){return explicit||globalThis.__ATLAS_VISUAL_EXPERIENCE||null}
+function proxyDomain(domain,{onGoHome,onOpenNode,nodeId}={}){
+ if(domain==='NEXO'){
+  if(onGoHome)return onGoHome();
+  return clickControl('home');
+ }
+ if(onOpenNode)return onOpenNode(nodeId);
+ document.querySelector(`#atlas-experience-bar [data-domain-target="${domain}"]`)?.click();
+}
 
 export function installMobileUxV6({renderer,visualExperience,onGoHome,onOpenNode}={}){
  ensureCss();
@@ -48,7 +57,7 @@ export function installMobileUxV6({renderer,visualExperience,onGoHome,onOpenNode
  for(const [label,domain,nodeId] of targets){
   const item=button(label,{ariaLabel:`Abrir ${label}`});
   item.dataset.domainTarget=domain;
-  item.addEventListener('click',()=>domain==='NEXO'?onGoHome?.():onOpenNode?.(nodeId));
+  item.addEventListener('click',()=>proxyDomain(domain,{onGoHome,onOpenNode,nodeId}));
   nav.append(item);
  }
  const filaments=button('FILAMENTOS',{ariaLabel:'Mostrar filamentos de aprendizagem'});
@@ -58,8 +67,7 @@ export function installMobileUxV6({renderer,visualExperience,onGoHome,onOpenNode
  filamentCount.dataset.filamentCount='';
  filaments.append(filamentCount);
  filaments.addEventListener('click',()=>{
-  const desktop=document.querySelector('#atlas-experience-bar .atlas-filaments-toggle');
-  desktop?.click();
+  document.querySelector('#atlas-experience-bar .atlas-filaments-toggle')?.click();
   queueMicrotask(sync);
  });
  nav.append(filaments);
@@ -150,7 +158,8 @@ export function installMobileUxV6({renderer,visualExperience,onGoHome,onOpenNode
  if(stageSource)graphObserver?.observe(stageSource,{childList:true,characterData:true,subtree:true});
 
  function sync(){
-  const state=visualExperience?.state||{};
+  const experience=currentExperience(visualExperience);
+  const state=experience?.state||{};
   const domain=document.documentElement.dataset.atlasDomain||state.domain||'NEXO';
   for(const item of nav.querySelectorAll('[data-domain-target]')){
    const active=item.dataset.domainTarget===domain;
