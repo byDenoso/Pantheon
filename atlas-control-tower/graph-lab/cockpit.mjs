@@ -2,13 +2,14 @@
 //
 // This is not a settings panel: it answers, in this order, what is blocked, what
 // must happen next, what was tested, what the evidence is, what this node is wired
-// to, what changed and whether the projection can be trusted. Every value shown is
-// read from node.ops, which data/operations.mjs derives from the SSOT alone.
+// to, what changed and whether the projection can be trusted. Canonical values come
+// from node.ops; associative-memory overlays add only explicitly published filament
+// metadata and are always labelled derived, never promoted to SSOT truth.
 //
 // Four tabs split that by intent instead of making the reader scroll a single column:
 // what this node is, what is stuck, what moved, and how much to trust it.
 
-const LEVEL_LABEL={root:'NÚCLEO',domain:'DOMÍNIO',program:'PROGRAM',campaign:'CAMPAIGN'};
+const LEVEL_LABEL={root:'NÚCLEO',domain:'DOMÍNIO',program:'PROGRAM',campaign:'CAMPAIGN',memory:'MEMÓRIA'};
 
 export const COCKPIT_TABS=[
  {id:'visao',label:'Visão geral',sections:['next','tests','relations']},
@@ -29,6 +30,7 @@ const SECTION_HINT={
 
 const el=(tag,className,text)=>{const node=document.createElement(tag);if(className)node.className=className;if(text!=null)node.textContent=text;return node};
 const toneDot=tone=>{const dot=el('i','tone-dot');dot.dataset.tone=tone||'idle';return dot};
+const unique=value=>[...new Set(value.filter(Boolean))];
 
 function statusPill(status,tone){
  const pill=el('span','status-pill',String(status||'—').replaceAll('_',' '));
@@ -63,6 +65,20 @@ function sectionBlock(section,{onFocusNode}={}){
  for(const item of section.items)list.append(itemRow(item,{onFocusNode}));
  block.append(list);
  return block;
+}
+
+function associativeAugment(node,graph,id,base){
+ if(!node?.associative)return base;
+ const edges=(graph?.edges||[]).filter(edge=>edge.associative&&!edge.contextEdge&&(edge.source===node.id||edge.target===node.id));
+ const items=[...(base?.items||[])];
+ if(id==='next')for(const value of unique(edges.map(edge=>edge.nextDiscriminant))){items.push({title:'Próximo discriminante',detail:value,tone:'warn'})}
+ if(id==='evidence')for(const ref of unique(edges.flatMap(edge=>edge.evidenceRefs||[]))){items.push({title:ref,detail:'Evidência declarada pelo Learning Filament.',status:'DECLARED',tone:'idle'})}
+ if(id==='integrity'){
+  items.push({title:'Autoridade',detail:node.authority||'DERIVED_NOT_TRUTH',tone:'warn'});
+  for(const edge of edges.slice(0,6))items.push({title:edge.title||edge.id,detail:`peso ${Number(edge.weight||0).toFixed(2)} · suporte ${edge.supportCount||0} · contradições ${edge.contradictionCount||0}`,status:edge.status,tone:edge.contradictionCount?'blocked':'ok'});
+ }
+ if(!base&&!items.length)return null;
+ return{id,title:base?.title||(id==='next'?'Ativação':id==='evidence'?'Evidência dos filamentos':id==='integrity'?'Integridade associativa':id),empty:base?.empty||'Sem registros publicados.',items};
 }
 
 /**
@@ -114,13 +130,13 @@ export function createCockpit(root,{onFocusNode,onToggleSubgraph,onHome,onTab}={
   }
 
   const ops=node.ops||{sections:[],rollup:{}};
-  const sectionById=id=>ops.sections?.find(section=>section.id===id);
+  const sectionById=id=>associativeAugment(node,graph,id,ops.sections?.find(section=>section.id===id));
   const active=COCKPIT_TABS.find(entry=>entry.id===tab)||COCKPIT_TABS[0];
 
   const tabs=el('nav','cockpit-tabs');
   for(const entry of COCKPIT_TABS){
    const button=el('button',entry.id===active.id?'is-active':null,entry.label);
-   button.type='button';
+   button.type='button';button.dataset.tab=entry.id;
    const count=entry.id==='bloqueios'?sectionById('blockers')?.items.length||0:0;
    if(count)button.append(el('span','tab-count',String(count)));
    button.addEventListener('click',()=>onTab?.(entry.id));
