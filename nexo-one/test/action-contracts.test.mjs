@@ -21,6 +21,8 @@ test('intent rejects client authority and missing stable identity',()=>{
 test('risk policy is server derived',()=>{
   assert.equal(confirmationFor('gmail.send'),'CONFIRM');
   assert.equal(confirmationFor('calendar.delete'),'STRONG_CONFIRM');
+  assert.equal(confirmationFor('github.branch.create'),'CONFIRM');
+  assert.equal(confirmationFor('github.commit.create'),'CONFIRM');
   assert.equal(confirmationFor('vercel.promote'),'STRONG_CONFIRM');
   assert.equal(confirmationFor('provider.refresh'),'NONE');
 });
