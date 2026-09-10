@@ -10,6 +10,11 @@ export function actionLabelForNode(node){
  return 'ABRIR';
 }
 
+export function focusLabelForNode(node,{isFocused=false}={}){
+ if(!node)return 'FOCAR';
+ return isFocused?'LIMPAR FOCO':'FOCAR';
+}
+
 function metaForNode(node){
  const rollup=node?.ops?.rollup||{};
  const pieces=[];
@@ -19,7 +24,7 @@ function metaForNode(node){
  return pieces.join(' · ')||String(node?.hierarchyLevel||node?.type||'').replaceAll('_',' ');
 }
 
-export function createNodeActionBar({host,onOpen,onFocus,onHome}={}){
+export function createNodeActionBar({host,onOpen,onFocus,onClearFocus,onHome}={}){
  if(!host)return null;
  const root=document.createElement('section');
  root.className='atlas-node-actions';
@@ -28,6 +33,7 @@ export function createNodeActionBar({host,onOpen,onFocus,onHome}={}){
  root.innerHTML='<div class="atlas-node-action-copy"><small></small><b></b><span></span></div><div class="atlas-node-action-buttons"><button type="button" data-action="open">ABRIR</button><button type="button" data-action="focus">FOCAR</button><button type="button" data-action="home">NEXO</button></div>';
  host.append(root);
  let current=null;
+ let focused=false;
  const title=root.querySelector('b');
  const kicker=root.querySelector('small');
  const meta=root.querySelector('span');
@@ -35,10 +41,11 @@ export function createNodeActionBar({host,onOpen,onFocus,onHome}={}){
  const focus=root.querySelector('[data-action=focus]');
  const home=root.querySelector('[data-action=home]');
  open.addEventListener('click',()=>{if(current)onOpen?.(current)});
- focus.addEventListener('click',()=>{if(current)onFocus?.(current)});
+ focus.addEventListener('click',()=>{if(!current)return;focused?onClearFocus?.(current):onFocus?.(current)});
  home.addEventListener('click',()=>onHome?.());
- function setNode(node){
+ function setNode(node,options={}){
   current=node||null;
+  focused=Boolean(options.focused);
   const isRoot=!node||node.hierarchyLevel==='root'||node.id==='system:NEXO';
   root.hidden=isRoot;
   if(isRoot)return;
@@ -48,8 +55,8 @@ export function createNodeActionBar({host,onOpen,onFocus,onHome}={}){
   const canOpen=expandable(node);
   open.hidden=!canOpen;
   open.textContent=actionLabelForNode(node);
-  focus.textContent='FOCAR';
+  focus.textContent=focusLabelForNode(node,{isFocused:focused});
  }
- function clear(){current=null;root.hidden=true}
- return{root,setNode,clear,get node(){return current}};
+ function clear(){current=null;focused=false;root.hidden=true}
+ return{root,setNode,clear,get node(){return current},get focused(){return focused}};
 }
