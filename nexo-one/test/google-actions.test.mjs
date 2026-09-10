@@ -23,6 +23,15 @@ test('gmail send requests write token and returns stable effect id',async()=>{
   assert.match(request.options.body,/raw/);
 });
 
+test('gmail rejects CRLF header injection before provider dispatch',async()=>{
+  let calls=0;
+  await assert.rejects(
+    ()=>executeGoogle({action_type:'gmail.send',target_ref:'me',requested_payload:{to:'victim@example.com\r\nBcc: injected@example.com',subject:'Hello',body:'Body'}},{env:{},tokenProvider:async()=> 't',requester:async()=>{calls++;return {id:'m-1'};}}),
+    error=>error.code==='TARGET_AMBIGUOUS'
+  );
+  assert.equal(calls,0);
+});
+
 test('calendar update requires explicit event target',async()=>{
   await assert.rejects(()=>executeGoogle({action_type:'calendar.update',target_ref:'primary',requested_payload:{summary:'x'}},{env:{},tokenProvider:async()=> 't',requester:async()=>({})}),e=>e.code==='TARGET_AMBIGUOUS');
 });
