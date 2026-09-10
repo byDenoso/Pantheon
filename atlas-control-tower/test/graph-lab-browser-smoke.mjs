@@ -91,6 +91,20 @@ async function smokeMobileFallback(debugPort,baseUrl){
  await page.cdp.send('Target.closeTarget',{targetId:page.targetId}).catch(()=>{});page.cdp.close();
 }
 
+async function stopBrowser(browser){
+ if(browser.exitCode!==null||browser.signalCode!==null)return;
+ let exited=false;
+ const exitPromise=new Promise(resolve=>browser.once('exit',()=>{exited=true;resolve()}));
+ try{browser.kill('SIGTERM')}catch{}
+ await Promise.race([exitPromise,delay(2500)]);
+ if(!exited&&browser.exitCode===null){try{browser.kill('SIGKILL')}catch{};await Promise.race([exitPromise,delay(1500)])}
+}
+
+function cleanupProfile(profile){
+ try{rmSync(profile,{recursive:true,force:true,maxRetries:10,retryDelay:100})}
+ catch(error){console.warn(`WARN Chrome profile cleanup skipped: ${error.code||error.message}`)}
+}
+
 const chrome=findChrome();
 if(!chrome){console.error('No Chrome/Chromium binary found. Set CHROME_BIN.');process.exit(2)}
 const {server,base}=await startStaticServer();const debugPort=await freePort();const profile=mkdtempSync(path.join(tmpdir(),'atlas-chrome-'));
@@ -102,5 +116,5 @@ try{
  await smokeMobileFallback(debugPort,base);console.log('PASS mobile heavy-renderer fallback');
  console.log('PASS Graph Lab browser smoke');
 }finally{
- try{browser.kill('SIGTERM')}catch{};await new Promise(resolve=>server.close(resolve));rmSync(profile,{recursive:true,force:true});
+ await stopBrowser(browser);await new Promise(resolve=>server.close(resolve));cleanupProfile(profile);
 }
