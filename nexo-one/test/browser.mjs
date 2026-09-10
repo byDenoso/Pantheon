@@ -1,9 +1,9 @@
 import assert from 'node:assert/strict';
-import {mkdir,writeFile,readFile,access} from 'node:fs/promises';
+import {mkdir,writeFile} from 'node:fs/promises';
 import {pathToFileURL} from 'node:url';
 import {compile} from '../server/compiler/world-state.mjs';
 import {item} from '../server/adapters/http.mjs';
-import {pending,labels} from '../server/adapters/registry.mjs';
+import {pending} from '../server/adapters/registry.mjs';
 import {PROVIDERS} from '../src/contracts/validate.mjs';
 const {chromium}=await import(process.env.PLAYWRIGHT_MODULE?pathToFileURL(process.env.PLAYWRIGHT_MODULE).href:'playwright');
 const output='test-output';await mkdir(output,{recursive:true});
@@ -11,6 +11,7 @@ const now=Date.parse('2026-09-09T12:00:00Z');
 const records=[item('github','fixture-1','Revisar contrato de integração','https://github.com/example/project/issues/1',now,{kind:'ISSUE',status:'BLOCKED',contextId:'ENGINEERING'}),item('calendar','fixture-2','Bloco de trabalho','https://calendar.google.com/calendar/u/0/r',now,{kind:'EVENT',status:'SCHEDULED',dueAt:'2026-09-09T12:30:00Z',endAt:'2026-09-09T13:00:00Z',contextId:'PERSONAL'}),item('drive','fixture-3','CAMB · referência de teste','https://drive.google.com/file/d/fixture/view',now,{kind:'FILE',contextId:'COSMOLOGY'})];
 const results=PROVIDERS.map(id=>{const r=pending(id,now);return records.some(x=>x.source===id)?{items:records.filter(x=>x.source===id),provider:{...r.provider,status:'AVAILABLE',count:records.filter(x=>x.source===id).length,lastSuccessAt:new Date(now).toISOString(),revision:'fixture-v1',message:'FIXTURE · ONLY IN TEST'}}:r;});
 const world=compile(results,{now});
+const projection={contract:'ProjectionEnvelope/v1',bus:'Pantheon/UniversalProjectionBus',fingerprint:'BUS-FIXTURE-V1',generated_at:new Date(now).toISOString(),state:'DEGRADED',sources:[{id:'NEXO_SSOT',state:'DEGRADED',revision:'ssot-r1',count:1},{id:'ACTION_REGISTER',state:'LIVE',revision:'action-r1',count:1},{id:'GITHUB',state:'LIVE',revision:'github-r1',count:1},{id:'VERCEL',state:'LIVE',revision:'vercel-r1',count:1}],envelopes:[{entity_id:'entity:ssot',domain:'NEXO',authority_class:'CANONICAL',source_ref:'https://source/ssot',source_revision:'ssot-r1',fingerprint:'PRJ-FIXTURE-1',freshness:{state:'STALE',observed_at:new Date(now-60000).toISOString(),expires_at:new Date(now-1).toISOString(),age_ms:60000},derivation_rule:'nexo-ssot:item->projection',state:'DEGRADED',source:'NEXO_SSOT',checked_at:new Date(now).toISOString(),projection_role:'NON_AUTHORITATIVE',error:{code:'UNAVAILABLE',message:'fixture degraded'}}]};
 const browser=await chromium.launch({headless:true});const reports=[];
 try{
   for(const [name,width,height,theme] of [['desktop-dark',1440,1000,'dark'],['desktop-light',1440,1000,'light'],['mobile-dark',390,844,'dark'],['mobile-light',390,844,'light']]){
@@ -20,8 +21,14 @@ try{
     await page.route('**/api/session',r=>r.fulfill({json:{configured:false,authenticated:false}}));
     await page.route('**/api/world*',r=>r.fulfill({contentType:'application/x-ndjson',body:JSON.stringify(world)+'\n'}));
     await page.route('**/api/recall*',r=>r.fulfill({json:{...world,items:records.filter(x=>x.source==='drive')}}));
+    await page.route('**/api/projections*',r=>r.fulfill({json:projection}));
     await page.goto(process.env.NEXO_BASE_URL||'http://127.0.0.1:4173');
     await page.getByRole('button',{name:/Revisar contrato de integração/}).waitFor();
+    await page.getByTestId('projection-bus').waitFor();
+    assert.equal((await page.getByTestId('projection-state').textContent())?.trim(),'DEGRADED');
+    await page.getByText('PROJECTION BUS',{exact:true}).click();
+    assert.equal((await page.getByTestId('projection-fingerprint').textContent())?.trim(),'BUS-FIXTURE-V1');
+    assert.match((await page.getByTestId('projection-source-NEXO_SSOT').textContent())||'',/DEGRADED.*ssot-r1/);
     assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth),'Horizontal overflow');
     await page.screenshot({path:`${output}/${name}.png`,fullPage:true});
     await page.getByRole('button',{name:/Revisar contrato de integração/}).click();await page.getByRole('dialog').waitFor();
@@ -33,8 +40,8 @@ try{
     await page.getByRole('textbox',{name:'Comando global'}).fill('Olympus');await page.getByRole('textbox',{name:'Comando global'}).press('Enter');assert.equal(await page.getByRole('heading',{name:'Olympus',exact:true}).count(),1);
     await page.getByRole('button',{name:/Ver fontes/}).click();await page.getByRole('dialog',{name:'CONEXÕES / FONTES'}).waitFor();if(name==='desktop-dark')await page.screenshot({path:`${output}/provider-degraded.png`,fullPage:true});await page.keyboard.press('Escape');
     await page.getByRole('button',{name:theme==='dark'?'Ativar tema claro':'Ativar tema escuro'}).click();assert.equal(await page.locator('html').getAttribute('data-theme'),theme==='dark'?'light':'dark');
-    assert.deepEqual(errors,[]);reports.push({name,status:'pass',overflow:false,runtimeErrors:errors});await context.close();
+    assert.deepEqual(errors,[]);reports.push({name,status:'pass',overflow:false,runtimeErrors:errors,projectionState:'DEGRADED',projectionFingerprint:'BUS-FIXTURE-V1'});await context.close();
   }
 }finally{await browser.close();}
-await writeFile(`${output}/browser-report.json`,JSON.stringify({status:'pass',scenarios:reports,visualBaseline:'pending-initial-review'},null,2));
+await writeFile(`${output}/browser-report.json`,JSON.stringify({status:'pass',scenarios:reports,projectionReadback:'pass',visualBaseline:'pending-initial-review'},null,2));
 console.log(JSON.stringify(reports));
