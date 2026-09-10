@@ -1,7 +1,7 @@
 import {createHash,randomBytes} from 'node:crypto';
 import {createServer} from 'node:http';
 import {resolve} from 'node:path';
-import {fileURLToPath,pathToFileURL} from 'node:url';
+import {pathToFileURL} from 'node:url';
 
 export const SCOPES=Object.freeze([
   'https://www.googleapis.com/auth/drive.readonly',
@@ -31,28 +31,28 @@ export function buildAuthorizationUrl({clientId,redirectUri,state,codeChallenge}
   return url.toString();
 }
 
+export function readOAuthCallback(requestUrl,expectedState){
+  const url=new URL(requestUrl||'/','http://127.0.0.1');
+  if(url.pathname!=='/oauth2/callback')return null;
+  if(url.searchParams.get('state')!==expectedState)throw new Error('OAuth state mismatch.');
+  const oauthError=url.searchParams.get('error');
+  if(oauthError)throw new Error(`Google OAuth error: ${oauthError}`);
+  const authCode=url.searchParams.get('code');
+  if(!authCode)throw new Error('Codigo OAuth ausente.');
+  return authCode;
+}
+
 function callbackServer(expectedState){
   let settle;
   const code=new Promise((resolveCode,rejectCode)=>{settle={resolveCode,rejectCode};});
   const server=createServer((req,res)=>{
-    const requestUrl=new URL(req.url||'/',`http://${req.headers.host||'127.0.0.1'}`);
-    if(requestUrl.pathname!=='/oauth2/callback'){
-      res.writeHead(404,{'Content-Type':'text/plain; charset=utf-8'});res.end('Not found');return;
+    let authCode;
+    try{authCode=readOAuthCallback(req.url,expectedState);}catch(error){
+      res.writeHead(400,{'Content-Type':'text/plain; charset=utf-8','Cache-Control':'no-store'});
+      res.end(`${error.message} Feche esta aba.`);
+      settle.rejectCode(error);server.close();return;
     }
-    const state=requestUrl.searchParams.get('state');
-    const error=requestUrl.searchParams.get('error');
-    const authCode=requestUrl.searchParams.get('code');
-    if(state!==expectedState){
-      res.writeHead(400,{'Content-Type':'text/plain; charset=utf-8'});res.end('Estado OAuth invalido. Feche esta aba.');
-      settle.rejectCode(new Error('OAuth state mismatch.'));server.close();return;
-    }
-    if(error){
-      res.writeHead(400,{'Content-Type':'text/plain; charset=utf-8'});res.end('Autorizacao recusada. Feche esta aba.');
-      settle.rejectCode(new Error(`Google OAuth error: ${error}`));server.close();return;
-    }
-    if(!authCode){
-      res.writeHead(400,{'Content-Type':'text/plain; charset=utf-8'});res.end('Codigo OAuth ausente. Feche esta aba.');return;
-    }
+    if(authCode===null){res.writeHead(404,{'Content-Type':'text/plain; charset=utf-8'});res.end('Not found');return;}
     res.writeHead(200,{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store'});
     res.end('<!doctype html><meta charset="utf-8"><title>NEXO ONE</title><body style="font-family:system-ui;padding:40px"><h1>Autorizacao recebida</h1><p>Volte ao terminal. Esta aba pode ser fechada.</p></body>');
     settle.resolveCode(authCode);server.close();
