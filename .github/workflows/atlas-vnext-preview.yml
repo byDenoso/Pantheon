@@ -16,6 +16,7 @@ concurrency:
 
 jobs:
   verify-and-preview:
+    environment: production
     runs-on: ubuntu-latest
     defaults:
       run:
