@@ -8,14 +8,14 @@ export function ProjectionBusStatus(){
   const [error,setError]=useState(false);
   useEffect(()=>{let live=true;fetch('/api/projections').then(r=>{if(!r.ok)throw new Error();return r.json();}).then(x=>{if(live)setBus(x);}).catch(()=>{if(live)setError(true);});return()=>{live=false;};},[]);
   const state=error?'DEGRADED':bus?.state||'SNAPSHOT';
-  return <aside aria-label="Universal Projection Bus" data-testid="projection-bus" style={{position:'fixed',right:16,bottom:16,zIndex:30,width:'min(420px,calc(100vw - 32px))',border:'1px solid rgba(128,128,128,.28)',borderRadius:12,background:'var(--surface,#12151b)',boxShadow:'0 12px 40px rgba(0,0,0,.28)',padding:'10px 12px',fontSize:12}}>
-    <details>
+  return <aside aria-label="Universal Projection Bus" data-testid="projection-bus" style={{position:'fixed',right:16,top:72,zIndex:30,width:'min(420px,calc(100vw - 32px))',pointerEvents:'none',fontSize:12}}>
+    <details style={{marginLeft:'auto',width:'fit-content',maxWidth:'100%',border:'1px solid rgba(128,128,128,.28)',borderRadius:12,background:'var(--surface,#12151b)',boxShadow:'0 12px 40px rgba(0,0,0,.28)',padding:'10px 12px',pointerEvents:'auto'}}>
       <summary style={{display:'flex',alignItems:'center',gap:8,cursor:'pointer',listStyle:'none'}}>
         <i aria-hidden="true" style={{width:8,height:8,borderRadius:99,background:stateColor[state]||'#aaa'}}/>
         <strong>PROJECTION BUS</strong><span data-testid="projection-state">{state}</span>
         <span style={{marginLeft:'auto',opacity:.65}}>{bus?.envelopes.length??'—'} envelopes</span>
       </summary>
-      <div style={{marginTop:9,display:'grid',gap:7}}>
+      <div style={{marginTop:9,display:'grid',gap:7,width:'min(396px,calc(100vw - 56px))',maxHeight:'min(60vh,480px)',overflow:'auto'}}>
         <div><b>Contrato</b> <code>{bus?.contract||'ProjectionEnvelope/v1'}</code></div>
         <div><b>Fingerprint</b> <code data-testid="projection-fingerprint">{bus?.fingerprint||'UNAVAILABLE'}</code></div>
         {(bus?.sources||[]).map(source=><div key={source.id} data-testid={`projection-source-${source.id}`} style={{display:'grid',gridTemplateColumns:'120px 78px 1fr',gap:6}}><b>{source.id}</b><span>{source.state}</span><code title={source.revision} style={{overflow:'hidden',textOverflow:'ellipsis'}}>{source.revision}</code></div>)}
