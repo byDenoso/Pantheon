@@ -7,10 +7,13 @@
  --atlas-nebula-strength:.34;
  --atlas-dust-strength:.30;
  color-scheme:dark;
+ overflow-x:hidden;
 }
 
 :root[data-atlas-experience="BREAKTHROUGH"] body,
 :root[data-atlas-visual="breakthrough"] body{
+ max-width:100%;
+ overflow-x:hidden;
  background:
   radial-gradient(78% 58% at 50% 38%,rgba(72,54,32,.28),transparent 64%),
   radial-gradient(60% 50% at 70% 58%,rgba(35,31,25,.38),transparent 68%),
