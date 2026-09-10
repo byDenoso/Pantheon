@@ -29,8 +29,8 @@ export function gateIntent(intent,{truthGraphInput,confirmed=false}={}){
   const capability=capabilityRows.find(row=>text(row.capability_id)===intent.capability_id&&domainList(row.domain).includes(intent.domain));
   if(!capability||text(capability.status).toUpperCase()!=='PASS')throw new ActionError('CAPABILITY_BLOCKED');
   const expected=authorityProvider(authorityRow);
-  if(intent.action_type==='nexo.sheet.update'&&expected!=='nexo')throw new ActionError('AUTHORITY_CONFLICT');
-  if(intent.action_type.startsWith('github.')&&intent.domain==='ENGINEERING'&&expected!=='github')throw new ActionError('AUTHORITY_CONFLICT');
+  if(intent.action_type==='nexo.sheet.update'&&(expected!=='nexo'||intent.provider!=='nexo'))throw new ActionError('AUTHORITY_CONFLICT');
+  if(intent.action_type.startsWith('github.')&&intent.domain==='ENGINEERING'&&(expected!=='github'||intent.provider!=='github'))throw new ActionError('AUTHORITY_CONFLICT');
   if(!confirmedEnough(intent.confirmation_level,confirmed))throw new ActionError('CONFIRMATION_REQUIRED');
   return {
     allowed:true,
