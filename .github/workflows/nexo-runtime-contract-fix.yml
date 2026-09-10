@@ -54,18 +54,18 @@ jobs:
 
           replace(
               'nexo-one/src/viewmodels/tokens.ts',
-              "PASS: 'live', UNVERIFIED: 'unknown', UNKNOWN: 'unknown',",
-              "PASS: 'live', UNVERIFIED: 'unknown', UNKNOWN: 'unknown', RETIRED_RUNTIME: 'stale',"
+              "  // CapabilityStatus — UNVERIFIED jamais é \"parcial\": é ausência de prova.\n  PASS: 'live', UNVERIFIED: 'unknown', UNKNOWN: 'unknown',\n  // RunStatus / StepStatus",
+              "  // CapabilityStatus — UNVERIFIED jamais é \"parcial\": é ausência de prova.\n  PASS: 'live', UNVERIFIED: 'unknown', UNKNOWN: 'unknown', RETIRED_RUNTIME: 'stale',\n  // RunStatus / StepStatus"
           )
           replace(
               'nexo-one/src/viewmodels/tokens.ts',
-              "PASS: 'Verificada', UNVERIFIED: 'Sem prova', UNKNOWN: 'Desconhecido',",
-              "PASS: 'Verificada', UNVERIFIED: 'Sem prova', UNKNOWN: 'Desconhecido', RETIRED_RUNTIME: 'Runtime retirado',"
+              "  PASS: 'Verificada', UNVERIFIED: 'Sem prova', UNKNOWN: 'Desconhecido',",
+              "  PASS: 'Verificada', UNVERIFIED: 'Sem prova', UNKNOWN: 'Desconhecido', RETIRED_RUNTIME: 'Runtime retirado',"
           )
           replace(
               'nexo-one/src/viewmodels/tokens.ts',
-              "PASS: 'live', UNVERIFIED: 'unknown', UNKNOWN: 'unknown', BLOCKED: 'blocked',",
-              "PASS: 'live', UNVERIFIED: 'unknown', UNKNOWN: 'unknown', RETIRED_RUNTIME: 'stale', BLOCKED: 'blocked',"
+              "const capabilityTone: Record<CapabilityStatus, Tone> = {\n  PASS: 'live', UNVERIFIED: 'unknown', UNKNOWN: 'unknown', BLOCKED: 'blocked',\n};",
+              "const capabilityTone: Record<CapabilityStatus, Tone> = {\n  PASS: 'live', UNVERIFIED: 'unknown', UNKNOWN: 'unknown', RETIRED_RUNTIME: 'stale', BLOCKED: 'blocked',\n};"
           )
 
           replace(
