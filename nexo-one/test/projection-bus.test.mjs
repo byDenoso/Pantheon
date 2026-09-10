@@ -6,10 +6,10 @@ const NOW=Date.parse('2026-09-09T23:00:00-03:00');
 function item(id,{kind='ENTITY',source='nexo',authority='CANONICAL',revision='r1',status}={}){
   return {id,kind,title:id,summary:'x',source,sourceRef:`https://source/${id}`,sourceRevision:revision,authority,contextId:'NEXO',observedAt:'2026-09-09T22:55:00-03:00',freshness:{state:'LIVE',observedAt:'2026-09-09T22:55:00-03:00',expiresAt:'2026-09-10T00:00:00-03:00'},actions:[],...(status?{status}:{})};
 }
-function readerFor({nexoStatus='AVAILABLE',githubStatus='AVAILABLE',vercelStatus='AVAILABLE',revision='r1'}={}){
+function readerFor({nexoStatus='AVAILABLE',githubStatus='AVAILABLE',revision='r1'}={}){
   return async id=>{
-    const status=id==='nexo'?nexoStatus:id==='github'?githubStatus:vercelStatus;
-    const items=id==='nexo'?[item('entity:ssot',{revision}),item('action:A-1',{kind:'ACTION',revision})]:id==='github'?[item('issue:1',{source:'github',authority:'PROVIDER',revision})]:[item('deploy:1',{source:'vercel',authority:'PROVIDER',revision})];
+    const status=id==='nexo'?nexoStatus:githubStatus;
+    const items=id==='nexo'?[item('entity:ssot',{revision}),item('action:A-1',{kind:'ACTION',revision})]:id==='github'?[item('issue:1',{source:'github',authority:'PROVIDER',revision})]:[];
     return {provider:{id,status,checkedAt:new Date(NOW).toISOString(),lastSuccessAt:new Date(NOW-1000).toISOString(),revision,partial:false,count:items.length,message:status==='AVAILABLE'?'ok':'down'},items};
   };
 }
@@ -18,7 +18,7 @@ test('ProjectionEnvelope carries provenance/freshness and projections are non-au
   const bus=await buildProjectionBus({now:NOW,reader:readerFor()});
   assert.equal(bus.contract,PROJECTION_CONTRACT);
   assert.equal(bus.bus,BUS_ID);
-  assert.equal(bus.envelopes.length,4);
+  assert.equal(bus.envelopes.length,3);
   const action=bus.envelopes.find(x=>x.source==='ACTION_REGISTER');
   assert.ok(action);
   for(const key of ['entity_id','domain','authority_class','source_ref','source_revision','fingerprint','freshness','derivation_rule','state'])assert.ok(key in action,key);
@@ -35,13 +35,13 @@ test('source revision changes envelope and bus fingerprints',async()=>{
   assert.notEqual(a.envelopes[0].fingerprint,b.envelopes[0].fingerprint);
 });
 
-test('unavailable source is explicit DEGRADED and never masquerades as LIVE',async()=>{
-  const bus=await buildProjectionBus({now:NOW,reader:readerFor({vercelStatus:'UNAVAILABLE'})});
-  const vercel=bus.envelopes.find(x=>x.source==='VERCEL');
-  assert.ok(vercel);
-  assert.equal(vercel.state,'DEGRADED');
+test('unavailable projection source is explicit DEGRADED and never masquerades as LIVE',async()=>{
+  const bus=await buildProjectionBus({now:NOW,reader:readerFor({githubStatus:'UNAVAILABLE'})});
+  const github=bus.envelopes.find(x=>x.source==='GITHUB');
+  assert.ok(github);
+  assert.equal(github.state,'DEGRADED');
   assert.equal(bus.state,'DEGRADED');
-  assert.equal(bus.sources.find(x=>x.id==='VERCEL').state,'DEGRADED');
+  assert.equal(bus.sources.find(x=>x.id==='GITHUB').state,'DEGRADED');
 });
 
 test('NEXO SSoT and ACTION_REGISTER are projections of one NEXO read, not duplicate authorities',async()=>{
