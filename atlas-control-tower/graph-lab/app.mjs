@@ -1,5 +1,6 @@
 import {createSyntheticGraph} from './data/synthetic-graph.mjs';
 import {loadSsotGraph,loadSsotSnapshot,SSOT_SPREADSHEET_URL} from './data/ssot.mjs';
+import {loadAssociativeMemory,loadAssociativeSnapshot,mergeAssociativeOverlay} from './data/associative-memory.mjs';
 import {isBindableRecordId} from './data/operations.mjs';
 import {hierarchyView,expandForSearch,hierarchyExpandableIds,collapseSubtree,expandHierarchyNode,ancestorsOf} from './graph/projection.mjs';
 import {assignIdentityColors,domainLegend} from './graph/identity.mjs';
@@ -20,6 +21,9 @@ const hashSection=location.hash==='#graph-stage'?'graph':location.hash.replace(/
 const placeholderGraph=()=>({rootId:'system:NEXO',nodes:[{id:'system:NEXO',label:'NEXO',type:'SYSTEM',kind:'SYSTEM',hierarchyLevel:'root',system:'NEXO',status:'LOADING',authority:'canonical',hiddenChildren:0,ops:{level:'root',status:'LOADING',tone:'idle',summary:'Lendo NEXO · SSOT CANONICAL.',rollup:{},sections:[]}}],edges:[]});
 
 let graph=demoMode?createSyntheticGraph(50):placeholderGraph();
+let baseGraph=graph;
+let associativeOverlay=null;
+let associativeLoadToken=0;
 let expandedIds=new Set();
 let selectedId=graph.rootId;
 let focusId=graph.rootId;
@@ -91,7 +95,8 @@ function refresh({fit=false}={}){
 function syncStage(view){
  $('stage-nodes').textContent=view.nodes.length;
  const source=graph.ops?.authority==='drive-ssot'?'SSOT LIVE':graph.ops?.authority?'SSOT PROJEÇÃO':'SSOT';
- $('stage-source').textContent=activeSection==='graph'?source:activeSection.toUpperCase();
+ const associative=graph.associative?.stats?.filaments?` + ${graph.associative.stats.filaments} FIL` : '';
+ $('stage-source').textContent=activeSection==='graph'?`${source}${associative}`:activeSection.toUpperCase();
  const blockers=graph.ops?.blockers?.length||0;
  const badge=$('rail-blockers');
  badge.textContent=blockers;
@@ -121,10 +126,10 @@ function renderView(view=currentView()){
  if(activeSection==='graph')renderBreadcrumb(canonical||node);else $('breadcrumb').replaceChildren();
  cockpit.render(node,{
   graph:activeSection==='graph'?graph:view,
-  trail:activeSection==='graph'&&canonical?ancestorsOf(graph,canonical.id).map(step=>({id:step.id,label:step.label})):[],
+  trail:activeSection==='graph'&&canonical&&!canonical.overlayOnly?ancestorsOf(graph,canonical.id).map(step=>({id:step.id,label:step.label})):[],
   tab:cockpitTab,
   expanded:activeSection==='graph'&&expandedIds.has(node?.id),
-  expandable:activeSection==='graph'&&Boolean(projected?.expandable??(canonical&&expandableIds().has(canonical.id))),
+  expandable:activeSection==='graph'&&Boolean(projected?.expandable??(canonical&&!canonical.overlayOnly&&expandableIds().has(canonical.id))),
   hiddenChildren:activeSection==='graph'?(projected?.hiddenChildren??0):0
  });
 }
@@ -132,6 +137,7 @@ function renderView(view=currentView()){
 function renderBreadcrumb(node){
  const root=$('breadcrumb');
  root.replaceChildren();
+ if(node?.overlayOnly)return;
  const trail=node?ancestorsOf(graph,node.id):[];
  if(trail.length<2)return;
  trail.forEach((step,index)=>{
@@ -155,7 +161,7 @@ function selectNode(id,{center=false}={}){
  if(center)renderer.focusNode?.(id);
 }
 
-/** Single click is the whole hierarchy navigation only in Graph Lab. */
+/** Single click selects; subgraph expansion remains an explicit action. */
 function toggleSubgraph(id){
  if(activeSection!=='graph'||!expandableIds().has(id))return false;
  expandedIds=expandedIds.has(id)?collapseSubtree(graph,id,expandedIds):expandHierarchyNode(graph,id,expandedIds);
@@ -163,11 +169,16 @@ function toggleSubgraph(id){
  return true;
 }
 
-/** Reveals a canonical node by switching back to Graph Lab and opening its ancestors. */
+/** Reveals a canonical or associative node without promoting overlay memory into hierarchy. */
 function openNode(id){
  const canonical=nodeById(id);
  if(!canonical){selectedId=id;renderer.setSelected?.(id);renderView(currentView());return}
  if(activeSection!=='graph')setSection('graph',{fit:false});
+ if(canonical.overlayOnly){
+  showAlternativeFilaments=true;
+  selectNode(id,{center:true});
+  return;
+ }
  if(canonical.hierarchyLevel==='lane')expandedIds=expandHierarchyNode(graph,id,expandedIds);
  else{
   const trail=ancestorsOf(graph,id);
@@ -194,7 +205,7 @@ const renderer=createGraphRenderer({
   if(!node){selectedId=graph.rootId;refresh();return}
   selectNode(node.id,{center:false});
  },
- onOpen:node=>{if(node&&activeSection==='graph')toggleSubgraph(node.id)},
+ onOpen:node=>{if(node&&activeSection==='graph'&&!node.overlayOnly)toggleSubgraph(node.id)},
  onStats:stats=>{
   $('hud-fps').textContent=Number(stats.fps||0).toFixed(0);
   $('hud-frame').textContent=Number(stats.frameMs||0).toFixed(1);
@@ -282,7 +293,38 @@ function renderNexoLive(live=graph.live){
 
 // --- data ------------------------------------------------------------------
 
+function applyAssociativeOverlay(overlay,sourceGraph,token){
+ if(token!==associativeLoadToken||sourceGraph!==baseGraph)return false;
+ associativeOverlay=overlay;
+ graph=assignIdentityColors(mergeAssociativeOverlay(baseGraph,associativeOverlay));
+ if(!graph.nodes.some(node=>node.id===selectedId))selectedId=graph.rootId;
+ renderFocusList();
+ refresh({fit:false});
+ return true;
+}
+
+async function hydrateAssociativeMemory(sourceGraph){
+ const token=++associativeLoadToken;
+ try{
+  const overlay=await loadAssociativeMemory({baseGraph:sourceGraph});
+  applyAssociativeOverlay(overlay,sourceGraph,token);
+  return overlay;
+ }catch(liveError){
+  console.warn('[Atlas] Direct associative-memory read blocked; using synchronized projection.',liveError);
+  try{
+   const overlay=await loadAssociativeSnapshot({baseGraph:sourceGraph});
+   applyAssociativeOverlay(overlay,sourceGraph,token);
+   return overlay;
+  }catch(snapshotError){
+   console.warn('[Atlas] Associative memory unavailable; canonical graph remains authoritative.',snapshotError);
+   return null;
+  }
+ }
+}
+
 function setGraphData(next){
+ baseGraph=next;
+ associativeOverlay=null;
  graph=assignIdentityColors(next);
  expandedIds=new Set();
  selectedId=graph.rootId;
@@ -297,6 +339,7 @@ function setGraphData(next){
  renderNexoLive(graph.live);
  renderFocusList();
  refresh({fit:true});
+ if(!demoMode)void hydrateAssociativeMemory(baseGraph);
 }
 function rebuild(count){if(demoMode)setGraphData(createSyntheticGraph(count))}
 
@@ -346,6 +389,8 @@ searchInput.addEventListener('keydown',event=>{
  expandedIds=result.expandedIds;
  hideResults();
  if(activeSection!=='graph')setSection('graph',{fit:false});
+ const match=nodeById(result.matchId);
+ if(match?.overlayOnly)showAlternativeFilaments=true;
  selectNode(result.matchId,{center:true});
  openCockpit();
 });
