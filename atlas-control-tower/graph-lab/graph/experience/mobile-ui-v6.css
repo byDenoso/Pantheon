@@ -4,6 +4,7 @@
  --atlas-mobile-safe-bottom:env(safe-area-inset-bottom,0px);
  --atlas-mobile-safe-top:env(safe-area-inset-top,0px);
 }
+.atlas-mobile-nav,.atlas-mobile-tools,.cockpit-sheet-toggle{display:none}
 
 @media(max-width:760px){
  :root{
