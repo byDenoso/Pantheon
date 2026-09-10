@@ -2,6 +2,7 @@ import {PROVIDERS} from '../src/contracts/validate.mjs';
 import {compile} from './compiler/world-state.mjs';
 import {buildProjectionBus} from './compiler/projection-bus.mjs';
 import {buildSystemState} from './compiler/system-state.mjs';
+import {projectAutomationHealthProviders} from './compiler/automation-health.mjs';
 import {readProvider,pending,clearProviderCache} from './adapters/registry.mjs';
 import {readSystemInput} from './adapters/system-input.mjs';
 import {configured,authenticated,verifyPassword,makeSession,cookie,sameOrigin} from './auth/session.mjs';
@@ -43,7 +44,8 @@ export default async function handler(req,res) {
         Promise.all(PROVIDERS.map(id=>readProvider(id,options))),
         readSystemInput({env})
       ]);
-      const world=compile(results,{now,access:'PRIVATE'}),byId=new Map(results.map(result=>[result.provider.id,result]));
+      const compiled=compile(results,{now,access:'PRIVATE'}),byId=new Map(results.map(result=>[result.provider.id,result]));
+      const world={...compiled,providers:[...compiled.providers,...projectAutomationHealthProviders(systemInput.automationHealth)]};
       const bus=await buildProjectionBus({env,now,access:'PRIVATE',force,reader:async id=>byId.get(id)||readProvider(id,options)});
       return send(buildSystemState({world,bus,systemInput,now:new Date(now).toISOString()}));
     }
