@@ -9,6 +9,7 @@ import { capabilityToneOf, label } from '../src/viewmodels/tokens.ts';
 
 const NOW = Date.parse('2026-09-10T12:00:00.000Z');
 const NOW_ISO = new Date(NOW).toISOString();
+const LIVE_BUS = { fingerprint: 'BUS-test', generated_at: NOW_ISO, state: 'LIVE', sources: [], envelopes: [] };
 
 function item(id, { kind = 'ENTITY', source = 'nexo' } = {}) {
   return {
@@ -59,10 +60,25 @@ test('Universal Projection Bus never requests Vercel as a source', async () => {
   assert.equal(bus.envelopes.some(envelope => envelope.source === 'VERCEL'), false);
 });
 
+test('external Vercel health stays visible without gating global NEXO health', () => {
+  const state = buildSystemState({
+    world: {
+      generatedAt: NOW_ISO,
+      providers: [{ id: 'vercel', status: 'AUTH_REQUIRED', checkedAt: NOW_ISO, lastSuccessAt: null, message: 'AUTH_REQUIRED' }],
+      truthGraph: { results: [] },
+    },
+    bus: LIVE_BUS,
+    systemInput: {},
+    now: NOW_ISO,
+  });
+  assert.equal(state.providers.find(provider => provider.id === 'vercel')?.state, 'BLOCKED');
+  assert.equal(state.global_state, 'LIVE');
+});
+
 test('RETIRED_RUNTIME remains explicit in the compiled capability state', () => {
   const state = buildSystemState({
     world: { generatedAt: NOW_ISO, providers: [], truthGraph: { results: [] } },
-    bus: { fingerprint: 'BUS-test', generated_at: NOW_ISO, state: 'LIVE', sources: [], envelopes: [] },
+    bus: LIVE_BUS,
     systemInput: {
       capabilities: [{
         capability_id: 'CAP-NEON-RETIRED',
