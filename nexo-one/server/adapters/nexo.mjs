@@ -3,12 +3,21 @@ import {json,requireEnv,item,ProviderError} from './http.mjs';
 import {googleToken} from './google.mjs';
 
 const REQUIRED_HEADERS=['record_type','record_id','status','title','detail','source','updated_at'];
+const DEFAULT_ACTION_REGISTER_ID='1twRpSoZCOXv77YyCh_5V9nAS2PM2nqzex2A37eI2Zas';
+const AUTHORITY_GID='337426832',CAPABILITY_GID='579884733';
 
-function sheetUrl(id){
+function sheetUrl(id,gid=''){
   if(typeof id!=='string'||!id||!/^[A-Za-z0-9_-]+$/.test(id))throw new ProviderError('AUTH_REQUIRED');
-  return `https://docs.google.com/spreadsheets/d/${id}/edit`;
+  return `https://docs.google.com/spreadsheets/d/${id}/edit${gid?`#gid=${gid}`:''}`;
 }
-
+function table(data){
+  if(!Array.isArray(data?.values)||!Array.isArray(data.values[0]))return [];
+  const headers=data.values[0].map(x=>String(x||'').trim());
+  return data.values.slice(1).filter(row=>Array.isArray(row)&&row.some(v=>String(v||'').trim())).map(row=>Object.fromEntries(headers.map((name,i)=>[name,String(row[i]??'').trim()])));
+}
+async function sheet(token,id,range,signal){
+  return json(`https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(id)}/values/${encodeURIComponent(range)}?majorDimension=ROWS&valueRenderOption=FORMATTED_VALUE`,{token,signal});
+}
 function normalizedRevision(items){
   const semantic=items.map(x=>({id:x.id,title:x.title,status:x.status||'',authority:x.authority,observedAt:x.observedAt,summary:x.summary||''}));
   return createHash('sha256').update(JSON.stringify(semantic)).digest('hex');
@@ -27,26 +36,25 @@ function normalizeSheet(data,{id,now}){
     const updatedMs=Date.parse(updatedRaw);
     if(!recordType||!recordId||!title||!Number.isFinite(updatedMs))throw new ProviderError('UNAVAILABLE');
     const normalized=item('nexo',`${recordType}:${recordId}`,title,sourceRef,readAt,{
-      kind:recordType==='action'?'ACTION':'ENTITY',
-      contextId:'NEXO',
-      authority:source==='NEXO · SSOT CANONICAL'?'CANONICAL':'DERIVED',
-      summary:[detail,source].filter(Boolean).join(' · '),
-      ...(status==='BLOCKED'?{status:'BLOCKED'}:{}),
-      sourceRevision:new Date(updatedMs).toISOString()
+      kind:recordType==='action'?'ACTION':'ENTITY',contextId:'NEXO',authority:source==='NEXO · SSOT CANONICAL'?'CANONICAL':'DERIVED',
+      summary:[detail,source].filter(Boolean).join(' · '),...(status==='BLOCKED'?{status:'BLOCKED'}:{}),sourceRevision:new Date(updatedMs).toISOString()
     });
     const observedAt=new Date(updatedMs).toISOString();
-    normalized.observedAt=observedAt;
-    normalized.freshness={...normalized.freshness,state:'SNAPSHOT',observedAt};
-    items.push(normalized);
+    normalized.observedAt=observedAt;normalized.freshness={...normalized.freshness,state:'SNAPSHOT',observedAt};items.push(normalized);
   }
   return {items,revision:normalizedRevision(items),partial:data.values.length>=1000};
 }
 
 async function nexoSheet({env,signal,now}){
   requireEnv(env,'NEXO_SHEET_ID');
-  const token=await googleToken(env,signal),range=env.NEXO_SHEET_RANGE||'NEXO!A1:H1000';
-  const data=await json(`https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(env.NEXO_SHEET_ID)}/values/${encodeURIComponent(range)}?majorDimension=ROWS&valueRenderOption=FORMATTED_VALUE`,{token,signal});
-  return normalizeSheet(data,{id:env.NEXO_SHEET_ID,now});
+  const token=await googleToken(env,signal),range=env.NEXO_SHEET_RANGE||'NEXO!A1:H1000',actionId=env.NEXO_ACTION_REGISTER_ID||DEFAULT_ACTION_REGISTER_ID;
+  const data=await sheet(token,env.NEXO_SHEET_ID,range,signal),base=normalizeSheet(data,{id:env.NEXO_SHEET_ID,now});
+  const truthGraphInput={truthRows:table(data),authorityRows:[],capabilityRows:[],refs:{ssot:sheetUrl(env.NEXO_SHEET_ID,'1113465053'),authority:sheetUrl(actionId,AUTHORITY_GID),capability:sheetUrl(actionId,CAPABILITY_GID)},inputError:null};
+  try{
+    const [authority,capability]=await Promise.all([sheet(token,actionId,'AUTHORITY_MATRIX!A1:F100',signal),sheet(token,actionId,'CAPABILITY_MATRIX!A1:N500',signal)]);
+    truthGraphInput.authorityRows=table(authority);truthGraphInput.capabilityRows=table(capability);
+  }catch{truthGraphInput.inputError='MATRIX_UNAVAILABLE';}
+  return {...base,truthGraphInput};
 }
 
 export async function nexo({env,signal,now}) {
@@ -54,6 +62,5 @@ export async function nexo({env,signal,now}) {
   requireEnv(env,'NEXO_SOURCE_URL');
   const data=await json(env.NEXO_SOURCE_URL,{token:env.NEXO_SOURCE_TOKEN,signal});
   if(data.version!=='1'||typeof data.revision!=='string'||!Array.isArray(data.items)) throw new ProviderError('UNAVAILABLE');
-  // The owner supplies provenance and observation time. Never re-stamp old canonical data as LIVE.
-  return {items:data.items,revision:data.revision,partial:!!data.partial};
+  return {items:data.items,revision:data.revision,partial:!!data.partial,truthGraphInput:data.truthGraphInput||null};
 }
