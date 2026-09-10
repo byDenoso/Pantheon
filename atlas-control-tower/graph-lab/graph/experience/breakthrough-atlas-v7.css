@@ -1,0 +1,139 @@
+:root[data-atlas-experience="BREAKTHROUGH"],
+:root[data-atlas-visual="breakthrough"]{
+ --atlas-stage-base:#0b0907;
+ --atlas-domain-primary:#c8b081;
+ --atlas-domain-secondary:#7f725f;
+ --atlas-background-veil:.28;
+ --atlas-nebula-strength:.34;
+ --atlas-dust-strength:.30;
+ color-scheme:dark;
+}
+
+:root[data-atlas-experience="BREAKTHROUGH"] body,
+:root[data-atlas-visual="breakthrough"] body{
+ background:
+  radial-gradient(78% 58% at 50% 38%,rgba(72,54,32,.28),transparent 64%),
+  radial-gradient(60% 50% at 70% 58%,rgba(35,31,25,.38),transparent 68%),
+  linear-gradient(180deg,#0d0b08 0%,#080706 58%,#040403 100%);
+}
+
+:root[data-atlas-experience="BREAKTHROUGH"] .stage,
+:root[data-atlas-visual="breakthrough"] .stage{
+ background:#0b0907;
+ border-color:rgba(200,176,129,.18);
+ box-shadow:inset 0 0 0 1px rgba(255,242,215,.035),0 20px 80px rgba(0,0,0,.34);
+}
+
+:root[data-atlas-experience="BREAKTHROUGH"] .stage::after,
+:root[data-atlas-visual="breakthrough"] .stage::after{
+ background:
+  radial-gradient(42% 46% at 48% 46%,rgba(200,176,129,.12),transparent 72%),
+  radial-gradient(36% 52% at 28% 35%,rgba(115,96,68,.10),transparent 76%),
+  repeating-linear-gradient(90deg,rgba(255,242,215,.018) 0 1px,transparent 1px 64px),
+  repeating-linear-gradient(0deg,rgba(255,242,215,.014) 0 1px,transparent 1px 64px),
+  linear-gradient(180deg,rgba(3,3,2,0),rgba(3,3,2,.36));
+ mix-blend-mode:screen;
+ opacity:.86;
+}
+
+:root[data-atlas-experience="BREAKTHROUGH"] .atlas-experience-bar,
+:root[data-atlas-experience="BREAKTHROUGH"] .atlas-node-actions,
+:root[data-atlas-visual="breakthrough"] .atlas-experience-bar,
+:root[data-atlas-visual="breakthrough"] .atlas-node-actions{
+ background:rgba(10,8,6,.82);
+ border-color:rgba(200,176,129,.22);
+ backdrop-filter:blur(6px);
+ box-shadow:none;
+}
+
+:root[data-atlas-experience="BREAKTHROUGH"] .atlas-experience-bar button,
+:root[data-atlas-visual="breakthrough"] .atlas-experience-bar button{
+ color:#b9aa8b;
+ letter-spacing:.08em;
+ text-transform:uppercase;
+}
+
+:root[data-atlas-experience="BREAKTHROUGH"] .atlas-experience-bar button:hover,
+:root[data-atlas-experience="BREAKTHROUGH"] .atlas-experience-bar button.is-active,
+:root[data-atlas-visual="breakthrough"] .atlas-experience-bar button:hover,
+:root[data-atlas-visual="breakthrough"] .atlas-experience-bar button.is-active{
+ color:#f0dfbd;
+}
+
+:root[data-atlas-experience="BREAKTHROUGH"] .atlas-experience-bar button.is-active::after,
+:root[data-atlas-visual="breakthrough"] .atlas-experience-bar button.is-active::after{
+ background:rgba(200,176,129,.78);
+}
+
+:root[data-atlas-experience="BREAKTHROUGH"] .atlas-status-summary b,
+:root[data-atlas-visual="breakthrough"] .atlas-status-summary b{
+ color:#ead9b5;
+}
+
+:root[data-atlas-experience="BREAKTHROUGH"] .atlas-status-summary small,
+:root[data-atlas-visual="breakthrough"] .atlas-status-summary small{
+ color:#81735e;
+}
+
+:root[data-atlas-experience="BREAKTHROUGH"] .atlas-node-action-copy b,
+:root[data-atlas-visual="breakthrough"] .atlas-node-action-copy b{
+ color:#f0dfbd;
+ font-family:Georgia,serif;
+ font-weight:650;
+}
+
+:root[data-atlas-experience="BREAKTHROUGH"] .atlas-node-action-copy span,
+:root[data-atlas-experience="BREAKTHROUGH"] .atlas-node-action-copy small,
+:root[data-atlas-visual="breakthrough"] .atlas-node-action-copy span,
+:root[data-atlas-visual="breakthrough"] .atlas-node-action-copy small{
+ color:#8f8068;
+}
+
+:root[data-atlas-experience="BREAKTHROUGH"] .atlas-node-action-buttons button,
+:root[data-atlas-visual="breakthrough"] .atlas-node-action-buttons button{
+ color:#cab891;
+ border-color:rgba(200,176,129,.22);
+ background:rgba(255,242,215,.025);
+}
+
+:root[data-atlas-experience="BREAKTHROUGH"] .atlas-node-action-buttons button[data-action=open],
+:root[data-atlas-visual="breakthrough"] .atlas-node-action-buttons button[data-action=open]{
+ color:#f5e7c8;
+ border-color:rgba(200,176,129,.42);
+ background:rgba(200,176,129,.08);
+}
+
+:root[data-atlas-experience="BREAKTHROUGH"] .atlas-experience-grid button,
+:root[data-atlas-visual="breakthrough"] .atlas-experience-grid button{
+ background:rgba(10,8,6,.28);
+ border-color:rgba(200,176,129,.13);
+ color:#e7d5ae;
+}
+
+:root[data-atlas-experience="BREAKTHROUGH"] .atlas-experience-grid button.is-active,
+:root[data-atlas-visual="breakthrough"] .atlas-experience-grid button.is-active{
+ background:rgba(200,176,129,.065);
+ border-color:rgba(200,176,129,.42);
+}
+
+@media(max-width:760px){
+ :root[data-atlas-experience="BREAKTHROUGH"] .atlas-experience-bar,
+ :root[data-atlas-visual="breakthrough"] .atlas-experience-bar{
+  bottom:56px;
+  border-radius:0;
+  border-left:0;
+  border-right:0;
+ }
+ :root[data-atlas-experience="BREAKTHROUGH"] .atlas-node-actions,
+ :root[data-atlas-visual="breakthrough"] .atlas-node-actions{
+  bottom:100px;
+ }
+}
+
+@media(prefers-reduced-motion:reduce){
+ :root[data-atlas-experience="BREAKTHROUGH"] *,
+ :root[data-atlas-visual="breakthrough"] *{
+  transition:none!important;
+  animation:none!important;
+ }
+}
