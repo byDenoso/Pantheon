@@ -21,7 +21,9 @@ test('Breakthrough hybrid scene is split into SVG graph and Three atmosphere', (
     'src/scene/BreakthroughAtlas.tsx',
     'src/scene/AtlasAtmosphere.tsx',
     'src/scene/breakthrough-layout.ts',
-    'src/styles/breakthrough-hybrid.css'
+    'src/styles/breakthrough-hybrid.css',
+    'src/BreakthroughApp.tsx',
+    'src/bt-main.tsx'
   ]) assert.equal(exists(file), true, `${file} must exist`);
 });
 
@@ -43,8 +45,9 @@ test('Three/WebGPU is an atmosphere layer with graceful fallback', () => {
   assert.match(source, /webgpu|webgl2/i);
 });
 
-test('official React shell mounts the Breakthrough hybrid experience', () => {
-  const app = read('src/App.tsx');
+test('dedicated Breakthrough React shell mounts the hybrid experience', () => {
+  assert.equal(exists('src/BreakthroughApp.tsx'), true, 'BreakthroughApp.tsx must exist');
+  const app = read('src/BreakthroughApp.tsx');
   assert.match(app, /BreakthroughAtlas/);
   assert.match(app, /breakthrough-hybrid\.css/);
   assert.match(app, /data-bt-stack/);
@@ -66,7 +69,7 @@ test('Breakthrough ships as a dedicated Vite entry without replacing the canonic
   const vite = read('vite.config.ts');
   const canonical = read('index.html');
   assert.match(bt, /id="root"/);
-  assert.match(bt, /\/src\/main\.tsx/);
+  assert.match(bt, /\/src\/bt-main\.tsx/);
   assert.match(vite, /bt\.html/);
   assert.match(canonical, /src="\/app\.mjs"/);
 });
