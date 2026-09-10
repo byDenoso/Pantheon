@@ -10,7 +10,7 @@ function Finding({finding}:{finding:TruthGraphFinding}){
       <strong>{finding.domain} · {finding.status}</strong>
       <span>{finding.explanation}</span>
       <small>Autoridade: {authority}</small>
-      <small>Provider: {finding.provider.expected} ← declarado {finding.provider.declared||'—'} · {finding.provider.status}</small>
+      <small>Provider real: {finding.provider.actual||'—'} · {finding.provider.status} · alvo da autoridade: {finding.provider.expected} · {finding.provider.expected_status}</small>
       <small>Capability: {finding.capability.summary}</small>
       <small className="mono">{finding.fingerprint} · {dateTime(finding.checked_at)}</small>
     </div>
