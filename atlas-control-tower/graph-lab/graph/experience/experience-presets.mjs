@@ -17,7 +17,7 @@ export const EXPERIENCE_PRESETS=freeze({
   id:'PRESENTATION_3D',label:'Presentation 3D',rendererId:'three-3d',rendererPreset:'PRESENTATION',backgroundPreset:'deep-observatory',theme:'dark',layoutSpacing:1.30,fitPadding:1.15,labelScale:1.08,maxLabels:18,maxVisibleNodes:96,motion:'cinematic',drift:.12,pulseSpeed:.86,filamentMode:'off',cockpitMode:'hidden'
  }),
  MOBILE_CLEAN:freeze({
-  id:'MOBILE_CLEAN',label:'Mobile Clean',rendererId:'canvas-2d',rendererPreset:'MOBILE_CLEAN',backgroundPreset:'dynamic-lightweight',theme:'dark',layoutSpacing:.72,fitPadding:.92,labelScale:.82,maxLabels:9,maxVisibleNodes:55,motion:'off',drift:0,pulseSpeed:.65,filamentMode:'off',cockpitMode:'compact'
+  id:'MOBILE_CLEAN',label:'Mobile Clean',rendererId:'canvas-2d',rendererPreset:'MOBILE_CLEAN',backgroundPreset:'dynamic-lightweight',theme:'dark',layoutSpacing:.68,fitPadding:.88,labelScale:.78,maxLabels:7,maxVisibleNodes:42,motion:'off',drift:0,pulseSpeed:.45,filamentMode:'off',cockpitMode:'compact'
  })
 });
 
