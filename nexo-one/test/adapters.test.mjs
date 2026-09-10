@@ -67,4 +67,36 @@ test('Gmail metadata does not invent actionable commitments',async()=>mock([oaut
 test('Calendar excludes canceled and self-declined events, retains all-day exclusive end',async()=>mock([oauth,['/events?',{items:[{id:'a',summary:'Appointment',htmlLink:'https://calendar.google.com/event?eid=a',start:{date:'2026-09-09'},end:{date:'2026-09-10'}},{id:'b',status:'cancelled'},{id:'c',attendees:[{self:true,responseStatus:'declined'}]}]}]],async()=>{const x=await calendar({env,now});assert.equal(x.items.length,1);assert.equal(x.items[0].allDay,true);assert.equal(validateItem(x.items[0],'calendar'),true);}));
 test('GitHub derives assignment only from explicit assignees and blockers from labels',async()=>mock([['/issues?', [{number:1,title:'Fix',html_url:'https://github.com/byDenoso/Pantheon/issues/1',state:'open',assignees:[{login:'byDenoso'}],labels:[]},{number:2,title:'Blocked',html_url:'https://github.com/byDenoso/Pantheon/issues/2',state:'open',labels:[{name:'blocked'}]}]],['/repos/',{full_name:'byDenoso/Pantheon',html_url:'https://github.com/byDenoso/Pantheon',pushed_at:'2026-09-09T10:00:00Z'}]],async()=>{const x=await github({env:{},now});assert.equal(x.items[1].status,'NEEDS_ME');assert.equal(x.items[2].status,'BLOCKED');assert.ok(x.items.every(i=>validateItem(i,'github')));}));
 test('Vercel failure history is contextual, not an invented current blocker',async()=>mock([['/deployments?',{deployments:[{uid:'dpl_fixture',name:'nexo-one',state:'ERROR',created:now}],pagination:{next:null}}]],async()=>{const x=await vercel({env,now});assert.equal(x.items[0].status,undefined);assert.equal(validateItem(x.items[0],'vercel'),true);}));
+
+test('NEXO reads the canonical Sheet without re-stamping the owner update time',async()=>{
+  const sheetEnv={GOOGLE_CONNECTOR:'google/nexo-google',GOOGLE_CONNECT_SUBJECT_ID:'owner',VERCEL_OIDC_TOKEN:'oidc-fixture',NEXO_SHEET_ID:'ssot-fixture'};
+  const values=[
+    ['record_type','record_id','status','title','detail','payload_json','source','updated_at'],
+    ['action','abc','BLOCKED','Acquire source','Exact source missing','','Neon:nexo_ops.actions','2026-09-09 12:00:00+00']
+  ];
+  await mock([
+    ['api.vercel.com/v1/connect/token/google/nexo-google',{token:'connect-access'}],
+    ['sheets.googleapis.com/v4/spreadsheets/ssot-fixture/values/',(url,options)=>{assert.equal(options.headers.Authorization,'Bearer connect-access');assert.match(String(url),/NEXO%21A1%3AH1000/);return {values};}]
+  ],async()=>{
+    const x=await nexo({env:sheetEnv,now});
+    assert.equal(x.items.length,1);
+    assert.equal(x.items[0].id,'nexo:action:abc');
+    assert.equal(x.items[0].status,'BLOCKED');
+    assert.equal(x.items[0].observedAt,'2026-09-09T12:00:00.000Z');
+    assert.equal(x.items[0].sourceRef,'https://docs.google.com/spreadsheets/d/ssot-fixture/edit');
+    assert.equal(validateItem(x.items[0],'nexo'),true);
+    assert.match(x.revision,/^[a-f0-9]{64}$/);
+  });
+});
+
+test('NEXO rejects malformed canonical Sheet schema instead of inventing fields',async()=>{
+  const sheetEnv={GOOGLE_CONNECTOR:'google/nexo-google',VERCEL_OIDC_TOKEN:'oidc-fixture',NEXO_SHEET_ID:'ssot-fixture'};
+  await mock([
+    ['api.vercel.com/v1/connect/token/google/nexo-google',{token:'connect-access'}],
+    ['sheets.googleapis.com/v4/spreadsheets/ssot-fixture/values/',{values:[['title','detail'],['Missing identity','bad']]}]
+  ],async()=>{
+    await assert.rejects(()=>nexo({env:sheetEnv,now}),error=>error?.code==='UNAVAILABLE');
+  });
+});
+
 test('NEXO requires versioned owner export and never re-stamps it',async()=>mock([['source.example',{version:'1',revision:'r1',items:[{id:'nexo:a',observedAt:'2026-01-01T00:00:00Z'}]}]],async()=>{const x=await nexo({env});assert.equal(x.items[0].observedAt,'2026-01-01T00:00:00Z');assert.equal(x.revision,'r1');}));
