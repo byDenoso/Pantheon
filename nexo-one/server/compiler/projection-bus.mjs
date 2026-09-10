@@ -34,6 +34,7 @@ function semanticPayload(item){
 function envelopeFor(source,item,provider,now){
   const sourceRevision=revisionOf(item,provider);
   const payload=semanticPayload(item);
+  const degraded=provider.status!=='AVAILABLE';
   const fingerprint='PRJ-'+hash({source:source.id,entity:item.id,sourceRevision,payload});
   return {
     entity_id:item.id,
@@ -48,7 +49,8 @@ function envelopeFor(source,item,provider,now){
     source:source.id,
     checked_at:provider.checkedAt||iso(now),
     projection_role:'NON_AUTHORITATIVE',
-    payload
+    payload,
+    ...(degraded?{error:{code:provider.status||'UNAVAILABLE',message:provider.message||'Fonte indisponível; snapshot preservado apenas como projeção degradada.'}}:{})
   };
 }
 function degradedEnvelope(source,provider,now){
