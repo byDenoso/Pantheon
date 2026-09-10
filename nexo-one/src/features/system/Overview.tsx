@@ -10,6 +10,8 @@ import {
   actionById, capabilityById, globalSummary, inboxGroups, laneViews, nextActionsFor, resolvableActions,
 } from '../../viewmodels/system.ts';
 import { dateTime, label, toneOf } from '../../viewmodels/tokens.ts';
+import { ProjectionDiagnostics } from './ProjectionDiagnostics.tsx';
+import { BrokerPendingConfirmations, BrokerRecentExecutions } from './BrokerEvidence.tsx';
 
 export function Overview(
   { state, onOpenAction, onOpenInbox, onNavigate }:
@@ -68,6 +70,11 @@ export function Overview(
         </div>
       </section>
 
+      <BrokerPendingConfirmations onOpenAction={actionId => {
+        const action = state.actions.find(item => item.action_id === actionId);
+        if (action) onOpenAction(action); else onNavigate('ACTIONS');
+      }} />
+
       <section aria-labelledby="attention-title" data-order="attention">
         <div className="section-head">
           <h2 id="attention-title">Precisa de você <span>{summary.needsHuman}</span></h2>
@@ -78,7 +85,7 @@ export function Overview(
               <HumanInboxItem key={item.id} item={item} action={actionById(state, item.action_id)} onOpen={onOpenInbox} />
             ))
           : <EmptyState title="Nada exige decisão humana nesta leitura."
-              description="Isto não significa que o sistema está saudável — significa que nada depende de você agora."
+              description="Isto não significa que o sistema está saudável; significa que nada depende de você agora."
               hint="Confira Integrity para o que não pôde ser provado." />}
       </section>
 
@@ -97,6 +104,8 @@ export function Overview(
           : <EmptyState title="Nenhuma ação elegível para autonomia."
               description="Toda ação aberta depende de decisão humana ou de uma capability sem prova de execução." />}
       </section>
+
+      <BrokerRecentExecutions />
 
       <section aria-labelledby="lanes-title" data-order="lanes">
         <div className="section-head">
@@ -117,6 +126,7 @@ export function Overview(
           <span className="eyebrow">{label(state.bus.state)}</span>
         </div>
         <ProjectionHealth bus={state.bus} />
+        <ProjectionDiagnostics state={state} />
       </section>
     </div>
   );
