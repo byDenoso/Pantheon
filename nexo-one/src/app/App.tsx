@@ -21,6 +21,7 @@ import { Overview } from '../features/system/Overview.tsx';
 import { ActionsView, ExecutionView, InboxView } from '../features/system/Operations.tsx';
 import { CapabilitiesView, IntegrityView, SourcesView, TruthGraphView } from '../features/system/Integrity.tsx';
 import { AtlasView, LearningView } from '../features/system/Atlas.tsx';
+import { ActionBrokerPanel } from '../features/system/ActionBrokerPanel.tsx';
 import { PersonalCockpit } from '../features/PersonalCockpit.tsx';
 
 const stored = (key: string, fallback: string): string => {
@@ -45,7 +46,6 @@ export default function App() {
   const [loginOpen, setLoginOpen] = useState(false);
   const [password, setPassword] = useState('');
 
-  // Contexto preservado entre navegações: filtros do Atlas, seleção e busca sobrevivem à troca de aba.
   const [filters, setFilters] = useState<GraphFilters>({ ...EMPTY_FILTERS });
   const [selectedNode, setSelectedNode] = useState<string | null>(null);
   const [selectedRun, setSelectedRun] = useState<string | null>(null);
@@ -272,6 +272,9 @@ export default function App() {
           <Modal title="AÇÃO / EXECUÇÃO" className="focus-drawer" onClose={() => setOpenAction(null)}>
             <div className="drawer-body">
               <ActionCard action={openAction} capability={capabilityById(system.state, openAction.capability_id)} />
+              <ActionBrokerPanel action={openAction}
+                capability={capabilityById(system.state, openAction.capability_id)}
+                authenticated={session.session.authenticated} onChanged={system.reload} />
               {runsForAction(system.state, openAction.action_id).map(run => (
                 <div key={run.run_id} className="drawer-run">
                   <div className="section-head secondary">
@@ -296,8 +299,12 @@ export default function App() {
             <div className="drawer-body">
               <HumanInboxItem item={openInbox} />
               {openInbox.action_id && (
-                <button className="text-button" onClick={() => { setOpenInbox(null); go('ACTIONS'); }}>
-                  Ver a ação relacionada ↗
+                <button className="text-button" onClick={() => {
+                  const action = system.state?.actions.find(item => item.action_id === openInbox.action_id) || null;
+                  setOpenInbox(null);
+                  if (action) setOpenAction(action); else go('ACTIONS');
+                }}>
+                  Abrir ação relacionada ↗
                 </button>
               )}
             </div>
