@@ -28,6 +28,8 @@ const CONFIRMATION_BY_ACTION=Object.freeze({
   'nexo.sheet.update':'STRONG_CONFIRM',
   'github.issue.create':'CONFIRM',
   'github.issue.update':'CONFIRM',
+  'github.branch.create':'CONFIRM',
+  'github.commit.create':'CONFIRM',
   'github.pr.create':'CONFIRM',
   'github.merge':'STRONG_CONFIRM',
   'vercel.deploy':'CONFIRM',
