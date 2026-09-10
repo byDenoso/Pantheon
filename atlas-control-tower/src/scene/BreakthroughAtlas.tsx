@@ -222,7 +222,7 @@ export function BreakthroughAtlas({
                 aria-label={String(point.label||point.id)}
                 onClick={event=>{event.stopPropagation();onSelect(point)}}
                 onDoubleClick={event=>{event.stopPropagation();if(STRUCTURAL.has(String(point.type||'').toUpperCase())&&point.id!==focusId)onOpen(point)}}
-                onKeyDown={event=>{if(event.key==='Enter'||event.key===' '){event.preventDefault();onSelect(point)}}
+                onKeyDown={event=>{if(event.key==='Enter'||event.key===' '){event.preventDefault();onSelect(point)}}}
                 style={{opacity:related?(.62+point.depth*.38):.08}}
               >
                 {selected&&<circle className="bt-selection-ring" r={radius+9}/>} 
