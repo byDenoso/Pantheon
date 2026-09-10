@@ -1,0 +1,50 @@
+name: Atlas vNext Preview
+
+on:
+  push:
+    branches: [feat/nexo-atlas-vnext]
+    paths:
+      - 'atlas-control-tower/**'
+      - '.github/workflows/atlas-vnext-preview.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: atlas-vnext-preview
+  cancel-in-progress: true
+
+jobs:
+  verify-and-preview:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: atlas-control-tower
+    env:
+      VERCEL_ORG_ID: team_TLkDXqQIHke6IumXh3qzMDcs
+      VERCEL_PROJECT_ID: prj_DLQSz5OiIT1HxWMn2i4AgoIv5x8r
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: atlas-control-tower/package-lock.json
+      - run: npm ci --no-audit --no-fund
+      - run: npm test
+      - run: npm run typecheck
+      - run: npm run build
+      - name: Pull preview settings
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: npx --yes vercel@latest pull --yes --environment=preview --token="$VERCEL_TOKEN"
+      - name: Build preview
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: npx --yes vercel@latest build --token="$VERCEL_TOKEN"
+      - name: Deploy preview
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: |
+          url=$(npx --yes vercel@latest deploy --prebuilt --token="$VERCEL_TOKEN")
+          echo "PREVIEW_URL=$url"
