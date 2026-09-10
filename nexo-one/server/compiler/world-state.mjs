@@ -1,6 +1,7 @@
 import {createHash} from 'node:crypto';
 import {validateItem, CONTEXTS} from '../../src/contracts/validate.mjs';
 import {classify,rankAttention} from './attention.mjs';
+import {buildTruthGraph} from './truthgraph.mjs';
 export const stable = value => JSON.stringify(canonical(value));
 function canonical(v) { return Array.isArray(v)?v.map(canonical):v && typeof v==='object'?Object.fromEntries(Object.keys(v).sort().map(k=>[k,canonical(v[k])])):v; }
 export const hash = x => createHash('sha256').update(stable(x)).digest('hex').slice(0,16).toUpperCase();
@@ -28,7 +29,9 @@ export function compile(results,{now=Date.now(),previous=null,access='PRIVATE'}=
   }
   items.sort((a,b)=>rankAttention(a)-rankAttention(b)||(a.dueAt||'z').localeCompare(b.dueAt||'z')||a.id.localeCompare(b.id));
   const contexts=CONTEXTS.map(id=>({id,title:descriptions[id][0],description:descriptions[id][1],itemIds:items.filter(x=>x.contextId===id).map(x=>x.id),attentionCount:items.filter(x=>x.contextId===id&&['ACT','ESCALATE'].includes(x.attention)).length,coverage:items.some(x=>x.contextId===id)?providers.some(p=>p.status!=='AVAILABLE'||p.partial)?'PARTIAL':'AVAILABLE':'UNAVAILABLE'}));
-  const fingerprint='WORLD-'+hash({version:'1',access,items:[...items].sort((a,b)=>a.id.localeCompare(b.id)).map(semantic),providers:providers.map(({id,revision,status,partial})=>({id,revision,status,partial}))});
-  const world={version:'1',fingerprint,generatedAt:new Date(now).toISOString(),providers,items,contexts,issues,access};
+  const input=results.find(r=>r.provider.id==='nexo')?.truthGraphInput;
+  const truthGraph=buildTruthGraph({...(input||{inputError:'NEXO_UNAVAILABLE'}),providers,now});
+  const fingerprint='WORLD-'+hash({version:'1',access,items:[...items].sort((a,b)=>a.id.localeCompare(b.id)).map(semantic),providers:providers.map(({id,revision,status,partial})=>({id,revision,status,partial})),truthGraph:truthGraph.fingerprint});
+  const world={version:'1',fingerprint,generatedAt:new Date(now).toISOString(),providers,items,contexts,issues,truthGraph,access};
   return {...world,diff:worldDiff(previous,world)};
 }
