@@ -1,12 +1,17 @@
 import {json,requireEnv,item,inferContext} from './http.mjs';
-let tokenCache=null;
-async function googleToken(env,signal) {
+import {googleConnectToken} from './connect.mjs';
+let legacyTokenCache=null;
+async function legacyGoogleToken(env,signal) {
   requireEnv(env,'GOOGLE_CLIENT_ID','GOOGLE_CLIENT_SECRET','GOOGLE_REFRESH_TOKEN');
-  if(tokenCache && tokenCache.until>Date.now()) return tokenCache.value;
+  if(legacyTokenCache && legacyTokenCache.until>Date.now()) return legacyTokenCache.value;
   // Each provider uses its own cancellation signal; do not share a request tied to another reader.
   const result=await json('https://oauth2.googleapis.com/token',{signal,method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:new URLSearchParams({client_id:env.GOOGLE_CLIENT_ID,client_secret:env.GOOGLE_CLIENT_SECRET,refresh_token:env.GOOGLE_REFRESH_TOKEN,grant_type:'refresh_token'}).toString()});
   if(!result.access_token)throw new Error('AUTH_REQUIRED');
-  tokenCache={value:result.access_token,until:Date.now()+Math.max(0,(result.expires_in||3600)-120)*1000};return result.access_token;
+  legacyTokenCache={value:result.access_token,until:Date.now()+Math.max(0,(result.expires_in||3600)-120)*1000};return result.access_token;
+}
+export async function googleToken(env,signal) {
+  if(env.GOOGLE_CONNECTOR)return googleConnectToken(env,signal);
+  return legacyGoogleToken(env,signal);
 }
 export async function drive({env,signal,now,query}) {
   const token=await googleToken(env,signal);
