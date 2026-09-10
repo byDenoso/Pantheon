@@ -34,3 +34,12 @@ test('release provenance is an explicit static artifact, not SPA fallback',async
   assert.match(verify,/release-provenance\.json/);
   assert.match(verify,/NEXO_EXPECTED_SHA/);
 });
+
+test('preview and production verification pin readback to an explicit source SHA',async()=>{
+  const [preview,production]=await Promise.all([
+    read('../../.github/workflows/nexo-one-preview.yml'),read('../../.github/workflows/nexo-one-production.yml')
+  ]);
+  assert.match(preview,/NEXO_EXPECTED_SHA:\s*\$\{\{\s*inputs\.source_sha\s*\}\}/);
+  assert.match(production,/expected_sha:/);
+  assert.match(production,/NEXO_EXPECTED_SHA:\s*\$\{\{\s*inputs\.expected_sha\s*\}\}/);
+});
