@@ -155,7 +155,10 @@ export function hierarchyView(source,{expandedIds=new Set(),activeOnly=false,max
 
  const edges=(source?.edges||[]).filter(edge=>{
   if(!shown.has(edge.source)||!shown.has(edge.target))return false;
-  if(isAlternativeEdge(edge))return showAlternativeFilaments;
+  if(isAlternativeEdge(edge)){
+   if(source?.associative&&!edge.associative)return false;
+   return showAlternativeFilaments;
+  }
   return true;
  });
 
