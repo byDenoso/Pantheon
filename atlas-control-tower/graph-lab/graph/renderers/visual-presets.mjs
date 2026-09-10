@@ -13,7 +13,8 @@ export const VISUAL_PRESETS=Object.freeze({
  THREE_DEEP_OBSERVATORY:{...base,name:'THREE_DEEP_OBSERVATORY',stars:320,glow:.95,fog:.46,focalLength:700,filamentCurve:.16,nodeRadius:1.02,maxLabels:22,maxVisibleNodes:130,transitionMs:520,backgroundIntensity:1.05},
  BABYLON_OBSERVATORY:{...base,name:'BABYLON_OBSERVATORY',stars:220,glow:.86,fog:.40,focalLength:760,filamentCurve:.14,nodeRadius:1,maxLabels:24,maxVisibleNodes:125,transitionMs:420,backgroundIntensity:.98},
  BABYLON_DEEP_SPACE:{...base,name:'BABYLON_DEEP_SPACE',stars:320,glow:1.12,fog:.50,focalLength:660,filamentCurve:.18,nodeRadius:1.08,maxLabels:20,maxVisibleNodes:120,transitionMs:520,backgroundIntensity:1.12},
- CANVAS_DEPTH_CLEAN:{...base,name:'CANVAS_DEPTH_CLEAN',glow:.68,fog:.42,focalLength:820,filamentCurve:.10,nodeRadius:.96,stars:180,maxLabels:22,maxVisibleNodes:110,transitionMs:380,backgroundIntensity:.76}
+ CANVAS_DEPTH_CLEAN:{...base,name:'CANVAS_DEPTH_CLEAN',glow:.68,fog:.42,focalLength:820,filamentCurve:.10,nodeRadius:.96,stars:180,maxLabels:22,maxVisibleNodes:110,transitionMs:380,backgroundIntensity:.76},
+ BREAKTHROUGH_ATLAS:{...base,name:'BREAKTHROUGH_ATLAS',stars:90,nodeRadius:1,glow:.42,fog:.28,focalLength:790,drift:0,pulseSpeed:.68,filamentCurve:.12,maxLabels:20,maxVisibleNodes:96,transitionMs:360,backgroundIntensity:.54,autoOrbit:false,semanticZoom:true,domainFields:true,focusTunnel:true}
 });
 
 Object.assign(PRESETS,VISUAL_PRESETS);
