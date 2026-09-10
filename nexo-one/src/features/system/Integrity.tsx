@@ -47,7 +47,7 @@ export function CapabilitiesView({ state }: { state: SystemState }) {
   return (
     <>
       <div className="capability-counters">
-        {(['PASS', 'UNVERIFIED', 'UNKNOWN', 'BLOCKED'] as const).map(status => (
+        {(['PASS', 'UNVERIFIED', 'UNKNOWN', 'RETIRED_RUNTIME', 'BLOCKED'] as const).map(status => (
           <div key={status} className={`capability-counter tone-${toneOf(status)}`}>
             <strong>{counts[status]}</strong>
             <CapabilityBadge status={status} />
@@ -55,6 +55,7 @@ export function CapabilitiesView({ state }: { state: SystemState }) {
               PASS: 'exercidas com evidência',
               UNVERIFIED: 'declaradas, nunca exercidas',
               UNKNOWN: 'sem declaração nem evidência',
+              RETIRED_RUNTIME: 'retiradas por decisão explícita',
               BLOCKED: 'impedidas de serem tentadas',
             }[status]}</small>
           </div>
@@ -170,7 +171,7 @@ export function IntegrityView({ state }: { state: SystemState }) {
   const issues = integrityIssues(state);
   if (!issues.length) {
     return <EmptyState title="Nenhum achado aberto nesta leitura."
-      description="Todos os domínios estão LIVE, todas as capabilities têm evidência e nenhum readback falhou." />;
+      description="Todos os domínios estão LIVE, todas as capabilities ativas estão verificadas e nenhum readback falhou." />;
   }
   return (
     <>
