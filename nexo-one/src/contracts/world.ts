@@ -20,7 +20,7 @@ export interface WorldDiff { previous:string|null; current:string; added:string[
 export interface TruthGraphFinding {
   domain:string; status:TruthGraphStatus; source_ref:string; fingerprint:string; checked_at:string; material:boolean; explanation:string;
   authority:{canonical_truth:string;operational_truth:string;chat_role:string;conflict_rule:string}|string;
-  provider:{expected:string;declared:string|null;status:string;partial?:boolean;checked_at?:string};
+  provider:{expected:string;actual:string|null;status:string;expected_status:string;partial?:boolean;checked_at?:string};
   capability:{state:string;summary:string;ids:string[]};
 }
 export interface TruthGraphState { fingerprint:string; checked_at:string; results:TruthGraphFinding[]; material_conflicts:TruthGraphFinding[] }
