@@ -29,6 +29,19 @@ test('Olympus is CONFLICT when SSOT declares Sheets while authority matrix decla
   assert.equal(finding.provider.expected_status,'AVAILABLE');
 });
 
+test('Olympus canonical NEXO SSOT authority resolves to nexo instead of owner-dependent',()=>{
+  const out=graph({
+    authorityRows:[authority('OLYMPUS','NEXO · SSOT CANONICAL / Olympus')],
+    truthRows:[truth('OLYMPUS','Google Sheets:NEXO · SSOT CANONICAL / Olympus','Olympus operational truth hot state')],
+    capabilityRows:[cap('OLYMPUS')],providers:[provider('nexo')]
+  });
+  const finding=out.results[0];
+  assert.equal(finding.provider.expected,'nexo');
+  assert.equal(finding.provider.actual,'nexo');
+  assert.equal(finding.status,'LIVE');
+  assert.equal(finding.material,false);
+});
+
 test('detects LIVE, DEGRADED, STALE_DECLARATION, MISSING_PROVIDER and BLOCKED',()=>{
   const cases=[
     ['LIVE',{authorityRows:[authority('ENGINEERING','Git/GitHub for versioned code')],truthRows:[truth('ENGINEERING','GitHub:repo + real runtime')],capabilityRows:[cap('ENGINEERING')],providers:[provider('github')]},'LIVE'],
