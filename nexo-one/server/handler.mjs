@@ -106,7 +106,8 @@ export function createHandler({broker=actionBroker,envProvider=()=>process.env,n
       }
       const results=await Promise.all(selected.map(id=>readProvider(id,{...options,query:route==='recall'?q:''})));
       const world=compile(results,{now,access});
-      if(route==='health')return send({status:world.providers.every(p=>p.status==='AVAILABLE'&&!p.partial)?'HEALTHY':'DEGRADED',version:'0.1.0',contractVersion:'1',access,privateConfigured:configured(env),providers:world.providers,configuration:{session:configured(env),google:!!(env.GOOGLE_CONNECTOR||(env.GOOGLE_CLIENT_ID&&env.GOOGLE_CLIENT_SECRET&&env.GOOGLE_REFRESH_TOKEN)),nexo_sheet:!!env.NEXO_SHEET_ID,github_write:!!env.GITHUB_TOKEN,vercel_read:!!env.VERCEL_READ_TOKEN,vercel_write:!!(env.VERCEL_WRITE_TOKEN||env.VERCEL_READ_TOKEN),atlas:!!env.ATLAS_GRAPH_URL},generatedAt:world.generatedAt});
+      const requiredProviders=world.providers.filter(p=>p.id!=='vercel');
+      if(route==='health')return send({status:requiredProviders.every(p=>p.status==='AVAILABLE'&&!p.partial)?'HEALTHY':'DEGRADED',version:'0.1.0',contractVersion:'1',access,privateConfigured:configured(env),providers:world.providers,configuration:{session:configured(env),google:!!(env.GOOGLE_CONNECTOR||(env.GOOGLE_CLIENT_ID&&env.GOOGLE_CLIENT_SECRET&&env.GOOGLE_REFRESH_TOKEN)),nexo_sheet:!!env.NEXO_SHEET_ID,github_write:!!env.GITHUB_TOKEN,vercel_read:!!env.VERCEL_READ_TOKEN,vercel_write:!!env.VERCEL_WRITE_TOKEN,atlas:!!env.ATLAS_GRAPH_URL},generatedAt:world.generatedAt});
       if(route==='now')return send({...world,items:world.items.filter(x=>['ACT','ESCALATE'].includes(x.attention)).slice(0,3)});
       if(route==='loops')return send({...world,items:world.items.filter(x=>x.status)});
       if(route==='day')return send({...world,items:world.items.filter(x=>x.kind==='EVENT'||x.status==='NEEDS_ME')});
