@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { LoadState, SystemState } from '../contracts/system.ts';
+import { onSessionChange } from '../contracts/session-events.ts';
 import { DataSourceError, activeSource } from './adapters';
+import { preserveStateOnFailure } from './adapters/source.ts';
 import { DEFAULT_SCENARIO_ID } from './fixtures/scenarios.ts';
 
 export interface SystemStore {
@@ -34,6 +36,11 @@ export function useSystem(initialScenario = DEFAULT_SCENARIO_ID): SystemStore {
   const reload = useCallback(() => setNonce(value => value + 1), []);
 
   useEffect(() => {
+    if (typeof window === 'undefined' || activeSource.kind !== 'remote') return;
+    return onSessionChange(window, reload);
+  }, [reload]);
+
+  useEffect(() => {
     controller.current?.abort();
     const ctrl = new AbortController();
     controller.current = ctrl;
@@ -51,8 +58,9 @@ export function useSystem(initialScenario = DEFAULT_SCENARIO_ID): SystemStore {
         const { load: nextLoad, message } = messageFor(failure);
         setLoad(nextLoad);
         setError(message);
-        // Erro nunca vira skeleton eterno nem apaga silenciosamente o último estado.
-        setState(previous => previous);
+        if (!preserveStateOnFailure(nextLoad)) setState(null);
+        // Falhas transitórias mantêm o último snapshot explicitamente degradado;
+        // perda de autorização apaga o estado privado imediatamente.
       });
     return () => ctrl.abort();
   }, [scenarioId, nonce]);
