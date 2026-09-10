@@ -32,6 +32,15 @@ test('gmail rejects CRLF header injection before provider dispatch',async()=>{
   assert.equal(calls,0);
 });
 
+test('canonical sheet update is pinned to configured NEXO SSoT',async()=>{
+  let calls=0;
+  await assert.rejects(
+    ()=>executeGoogle({action_type:'nexo.sheet.update',target_ref:'foreign!A1',requested_payload:{spreadsheet_id:'foreign',range:'NEXO!A1',values:[['x']]}},{env:{NEXO_SHEET_ID:'canonical'},tokenProvider:async()=> 't',requester:async()=>{calls++;return {};}}),
+    error=>error.code==='AUTHORITY_CONFLICT'
+  );
+  assert.equal(calls,0);
+});
+
 test('calendar update requires explicit event target',async()=>{
   await assert.rejects(()=>executeGoogle({action_type:'calendar.update',target_ref:'primary',requested_payload:{summary:'x'}},{env:{},tokenProvider:async()=> 't',requester:async()=>({})}),e=>e.code==='TARGET_AMBIGUOUS');
 });
