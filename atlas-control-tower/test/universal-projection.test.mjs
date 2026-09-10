@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {fetchProjection} from '../api/universal-projection.js';
+import {projectionViewModel,readUniversalProjection} from '../ui/universal-projection.mjs';
 
 const upstream={
   contract:'ProjectionEnvelope/v1',
@@ -34,4 +35,16 @@ test('Atlas exposes upstream failure as DEGRADED instead of silently using local
   assert.equal(result.envelopes[0].state,'DEGRADED');
   assert.equal(result.envelopes[0].projection_role,'NON_AUTHORITATIVE');
   assert.equal(result.envelopes[0].error.code,'SOURCE_UNAVAILABLE');
+});
+
+test('Atlas UI model preserves provenance/freshness and rejects invalid contracts',async()=>{
+  const model=projectionViewModel(upstream);
+  assert.equal(model.state,'LIVE');
+  assert.equal(model.fingerprint,'BUS-ABC123');
+  assert.equal(model.envelopes[0].source_ref,'https://github.test/1');
+  assert.equal(model.envelopes[0].freshness.state,'LIVE');
+  assert.equal(projectionViewModel({}).state,'DEGRADED');
+  const degraded=await readUniversalProjection({endpoint:'/api/universal-projection',fetcher:async()=>({ok:false,status:502})});
+  assert.equal(degraded.state,'DEGRADED');
+  assert.equal(degraded.fingerprint,'UNAVAILABLE');
 });
