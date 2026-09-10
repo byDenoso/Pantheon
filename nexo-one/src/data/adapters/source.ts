@@ -1,6 +1,6 @@
 // DataSource -> Adapter -> Contract -> ViewModel -> UI
 // A UI depende SOMENTE desta interface. Trocar a origem dos dados não toca em componente algum.
-import type { SystemState } from '../../contracts/system.ts';
+import type { LoadState, SystemState } from '../../contracts/system.ts';
 
 export type DataSourceErrorCode = 'UNAUTHORIZED' | 'UNAVAILABLE' | 'CONTRACT_MISMATCH' | 'NOT_CONNECTED';
 
@@ -19,6 +19,14 @@ export interface SystemDataSource {
   /** Origem real dos dados. `fixture` nunca deve chegar a produção sem rótulo visível. */
   kind: 'fixture' | 'remote';
   load(options: { signal?: AbortSignal; scenarioId?: string }): Promise<SystemState>;
+}
+
+/**
+ * Falha transitória pode preservar o último snapshot visível com estado de erro.
+ * Falha de autorização é diferente: estado privado anterior deve desaparecer imediatamente.
+ */
+export function preserveStateOnFailure(load: LoadState): boolean {
+  return load !== 'UNAUTHORIZED';
 }
 
 /**
