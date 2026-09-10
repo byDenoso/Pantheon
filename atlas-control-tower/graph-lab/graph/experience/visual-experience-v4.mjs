@@ -15,6 +15,12 @@ const MACRO_TARGETS=Object.freeze([
  Object.freeze({label:'OLYMPUS',domain:'OLYMPUS',nodeId:'lane:OLYMPUS',className:'atlas-domain-olympus'}),
  Object.freeze({label:'ENGENHARIA',domain:'ENGINEERING',nodeId:'lane:ENGINEERING',className:'atlas-domain-engineering'})
 ]);
+const BREAKTHROUGH_LENSES=Object.freeze([
+ Object.freeze({id:'structure',label:'ESTRUTURA'}),
+ Object.freeze({id:'learning',label:'APRENDIZADO'}),
+ Object.freeze({id:'evidence',label:'EVIDÊNCIA'}),
+ Object.freeze({id:'time',label:'TEMPO',disabled:true,title:'Histórico temporal ainda não é autoridade canônica.'})
+]);
 
 function read(){try{return JSON.parse(localStorage.getItem(STORAGE_KEY)||'{}')||{}}catch{return {}}}
 function write(value){try{localStorage.setItem(STORAGE_KEY,JSON.stringify(value))}catch{}}
@@ -35,7 +41,7 @@ export function installVisualExperienceV4({renderer,onSelectNode,onOpenNode,onGo
   experienceId:initialExperienceId,
   rendererId:initialRuntime.graphRendererId,
   manualRenderer:initialRuntime.manualOverride,
-  domain:'NEXO',filaments:false,demo:query.get('demo-view')==='1'||saved.demo===true,
+  domain:'NEXO',filaments:false,demo:query.get('demo-view')==='1'||saved.demo===true,lens:'structure',
   graph:{nodes:[],edges:[]},background:null,profile:null
  };
 
@@ -61,6 +67,29 @@ export function installVisualExperienceV4({renderer,onSelectNode,onOpenNode,onGo
   document.documentElement.setAttribute('data-atlas-domain',state.domain);
   for(const button of document.querySelectorAll('[data-domain-target]'))button.classList.toggle('is-active',button.dataset.domainTarget===state.domain);
   background();
+ }
+ function syncLens(){
+  if(state.experienceId!=='BREAKTHROUGH'){
+   delete document.documentElement.dataset.atlasLens;
+   return;
+  }
+  document.documentElement.dataset.atlasLens=state.lens;
+  for(const button of document.querySelectorAll('#atlas-breakthrough-lenses [data-atlas-lens]')){
+   const active=button.dataset.atlasLens===state.lens;
+   button.classList.toggle('is-active',active);
+   button.setAttribute('aria-pressed',String(active));
+  }
+ }
+ function setLens(id){
+  if(!BREAKTHROUGH_LENSES.some(lens=>lens.id===id&&!lens.disabled))return state.lens;
+  state.lens=id;
+  if(id==='structure')state.filaments=false;
+  if(id==='learning'||id==='evidence')state.filaments=true;
+  onToggleFilaments?.(state.filaments);
+  const filament=byId('atlas-experience-bar')?.querySelector('.atlas-filaments-toggle');
+  filament?.classList.toggle('is-active',state.filaments);
+  syncLens();background();renderer.render?.();
+  return state.lens;
  }
  function clearManualQuery(){
   const url=new URL(location.href);
@@ -102,7 +131,7 @@ export function installVisualExperienceV4({renderer,onSelectNode,onOpenNode,onGo
   setButtonActive(document,state.experienceId);
   const select=byId('atlas-experience-select');if(select)select.value=state.experienceId;
   if(persist)write({experienceId:state.experienceId,demo:state.demo,manualRenderer:state.manualRenderer});
-  background();
+  syncLens();background();
   if(navigateToRenderer(state.rendererId))return state.profile;
   return state.profile;
  }
@@ -112,7 +141,7 @@ export function installVisualExperienceV4({renderer,onSelectNode,onOpenNode,onGo
   const result=originalSetGraph?.(graph,options);
   syncStatus();
   const node=activeNode();
-  actionBar?.setNode(node);
+  actionBar?.setNode(node,{focused:renderer.focusTunnelId===node?.id});
   syncDomain(node);
   return result;
  };
@@ -120,7 +149,7 @@ export function installVisualExperienceV4({renderer,onSelectNode,onOpenNode,onGo
   selectedId=id;
   const result=originalSetSelected?.(id);
   const node=activeNode();
-  actionBar?.setNode(node);
+  actionBar?.setNode(node,{focused:renderer.focusTunnelId===node?.id});
   syncDomain(node);
   return result;
  };
@@ -159,6 +188,18 @@ export function installVisualExperienceV4({renderer,onSelectNode,onOpenNode,onGo
   const filament=makeButton('FILAMENTOS');filament.className='atlas-filaments-toggle';filament.addEventListener('click',()=>{state.filaments=!state.filaments;filament.classList.toggle('is-active',state.filaments);onToggleFilaments?.(state.filaments);background()});bar.append(filament);
   stage.append(bar);
  }
+ function installLenses(){
+  const stage=$('.stage');if(!stage||byId('atlas-breakthrough-lenses'))return;
+  const root=document.createElement('nav');root.id='atlas-breakthrough-lenses';root.className='atlas-breakthrough-lenses';root.setAttribute('aria-label','Lentes do Breakthrough');root.setAttribute('data-label-reserved','');
+  for(const lens of BREAKTHROUGH_LENSES){
+   const button=makeButton(lens.label,{atlasLens:lens.id});
+   button.setAttribute('aria-pressed','false');
+   if(lens.disabled){button.disabled=true;button.title=lens.title||'Indisponível';button.setAttribute('aria-disabled','true')}
+   else button.addEventListener('click',()=>setLens(lens.id));
+   root.append(button);
+  }
+  stage.append(root);syncLens();
+ }
  function installStatus(){
   const stage=$('.stage');if(!stage||byId('atlas-status-summary'))return;
   const root=document.createElement('div');root.id='atlas-status-summary';root.className='atlas-status-summary';root.setAttribute('data-label-reserved','');root.innerHTML='<span data-metric="domains"><b>3</b><small>Macro-domínios</small></span><span data-metric="nodes"><b>0</b><small>Nós visíveis</small></span><span data-metric="blockers"><b>0</b><small>Bloqueios</small></span>';
@@ -169,10 +210,11 @@ export function installVisualExperienceV4({renderer,onSelectNode,onOpenNode,onGo
   actionBar=createNodeActionBar({
    host:stage,
    onOpen:node=>renderer.callbacks?.onOpen?.(node),
-   onFocus:node=>renderer.focusNode?.(node.id),
+   onFocus:node=>{renderer.setFocusTunnel?.(node.id);actionBar?.setNode(node,{focused:true})},
+   onClearFocus:node=>{renderer.clearFocusTunnel?.();actionBar?.setNode(node,{focused:false})},
    onHome:()=>onGoHome?.()
   });
-  actionBar?.setNode(activeNode());
+  actionBar?.setNode(activeNode(),{focused:false});
  }
  function installTopActions(){
   const tools=$('.topbar-tools');if(!tools||byId('atlas-demo-toggle'))return;
@@ -208,7 +250,7 @@ export function installVisualExperienceV4({renderer,onSelectNode,onOpenNode,onGo
   select.addEventListener('change',()=>applyProfile(select.value));
  }
  function boot(){
-  installDomainBar();installStatus();installNodeActions();installTopActions();installStudio();
+  installDomainBar();installLenses();installStatus();installNodeActions();installTopActions();installStudio();
   installRendererRuntime({experienceRenderer:EXPERIENCE_PRESETS[state.experienceId].rendererId});
   applyProfile(state.experienceId,{persist:false,preserveManual:true});syncDomain(activeNode());
  }
@@ -218,6 +260,6 @@ export function installVisualExperienceV4({renderer,onSelectNode,onOpenNode,onGo
   if(next.viewport!==state.profile?.viewport){state.profile=next;applyProfile(state.experienceId,{persist:false,preserveManual:true})}
  },{passive:true});
 
- const api={state,applyExperience:applyProfile,setDemo,refreshBackground:background,syncDomain};
+ const api={state,applyExperience:applyProfile,setDemo,setLens,refreshBackground:background,syncDomain};
  renderer.__atlasVisualExperienceV4=api;globalThis.__ATLAS_VISUAL_EXPERIENCE=api;return api;
 }
