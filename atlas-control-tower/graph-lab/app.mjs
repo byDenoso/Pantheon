@@ -6,8 +6,9 @@ import {assignIdentityColors,domainLegend} from './graph/identity.mjs';
 import {buildSectionGraph,ATLAS_SECTIONS} from './graph/section-views.mjs';
 import './graph/canvas-reference-background.mjs';
 import {installVisualExperienceV4} from './graph/experience/visual-experience-v4.mjs';
-import {GraphLabRenderer as ThreeCanvasRenderer} from './graph/renderer.mjs';
-import {GraphLabRenderer as LegacyCanvasRenderer} from './graph/legacy-renderer.mjs';
+import {createGraphRenderer} from './graph/renderers/renderer-factory.mjs';
+import {resolveRenderer} from './graph/renderers/renderer-registry.mjs';
+import {rendererNavigationUrl} from './graph/renderers/renderer-runtime.mjs';
 import {createCockpit} from './cockpit.mjs';
 
 const $=id=>document.getElementById(id);
@@ -28,11 +29,14 @@ let showAlternativeFilaments=false;
 let cockpitTab='visao';
 let activeSection=ATLAS_SECTIONS.includes(hashSection)?hashSection:'graph';
 
-const rendererMode=params.get('renderer')==='legacy-canvas'?'legacy-canvas':'three-canvas';
-const Renderer=rendererMode==='legacy-canvas'?LegacyCanvasRenderer:ThreeCanvasRenderer;
-const target=rendererMode==='legacy-canvas'?$('graph-lab-canvas'):rendererRoot;
-$('renderer').value=rendererMode;
-$('graph-lab-canvas').hidden=rendererMode!=='legacy-canvas';
+const mobileViewport=()=>typeof matchMedia==='function'&&matchMedia('(max-width:760px)').matches;
+const legacyRendererId=params.get('renderer')==='legacy-canvas'?'canvas-2d':'three-25d';
+const requestedRendererId=params.get('renderer-v4')||legacyRendererId;
+const rendererInfo=resolveRenderer(requestedRendererId,{mobile:mobileViewport()});
+const rendererId=rendererInfo.id;
+const rendererMode=rendererInfo.baseRenderer;
+$('renderer').value=rendererId;
+$('graph-lab-canvas').hidden=rendererInfo.target!=='canvas';
 
 const dataset=$('dataset-size');
 if(!demoMode){dataset.disabled=true;dataset.title='Produção lê NEXO · SSOT CANONICAL no Drive. Use ?demo=1 para datasets sintéticos.'}
@@ -174,7 +178,12 @@ function openNode(id){
 
 // --- renderer --------------------------------------------------------------
 
-const renderer=new Renderer(target,{
+const renderer=createGraphRenderer({
+ id:rendererId,
+ canvas:$('graph-lab-canvas'),
+ container:rendererRoot,
+ mobile:mobileViewport(),
+ callbacks:{
  onSelect:node=>{
   if(activeSection!=='graph'){
    selectedId=node?.id||currentView().rootId||graph.rootId;
@@ -183,9 +192,7 @@ const renderer=new Renderer(target,{
    return;
   }
   if(!node){selectedId=graph.rootId;refresh();return}
-  if(selectedId!==node.id)history.push(selectedId);
-  selectedId=node.id;
-  if(!toggleSubgraph(node.id))refresh();
+  selectNode(node.id,{center:false});
  },
  onOpen:node=>{if(node&&activeSection==='graph')toggleSubgraph(node.id)},
  onStats:stats=>{
@@ -196,14 +203,15 @@ const renderer=new Renderer(target,{
   $('hud-labels').textContent=stats.labels;
   $('hud-dpr').textContent=Number(stats.dpr||1).toFixed(1);
  }
-});
+ }});
 
 renderer.ready?.catch(error=>{
  console.error('[Atlas] WebGL renderer unavailable; switching to legacy canvas.',error);
- if(rendererMode==='legacy-canvas')return;
+ if(rendererId==='canvas-2d'||rendererId==='canvas-25d')return;
  const url=new URL(location.href);
+ url.searchParams.set('renderer-v4','canvas-2d');
  url.searchParams.set('renderer','legacy-canvas');
- url.searchParams.set('fallback','sigma-init');
+ url.searchParams.set('fallback','renderer-init');
  location.replace(url);
 });
 
@@ -216,6 +224,7 @@ const cockpit=createCockpit($('cockpit-body'),{
 
 const visualExperience=installVisualExperienceV4({
  renderer,
+ onSelectNode:id=>selectNode(id,{center:false}),
  onOpenNode:openNode,
  onGoHome:goHome,
  onToggleFilaments:value=>{showAlternativeFilaments=Boolean(value);refresh()}
@@ -403,10 +412,7 @@ for(const link of navLinks)link.addEventListener('click',event=>{
 });
 
 $('renderer').addEventListener('change',event=>{
- const url=new URL(location.href);
- url.searchParams.set('renderer',event.target.value);
- url.searchParams.delete('fallback');
- location.assign(url);
+ location.assign(rendererNavigationUrl(event.target.value,location.href).href);
 });
 $('preset').addEventListener('change',event=>{
  renderer.setPreset(event.target.value);

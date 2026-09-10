@@ -1,4 +1,3 @@
-import '../renderers/engine-bridge-auto.mjs';
 
 const STORAGE_KEY='nexo-atlas-design-v5';
 const DESIGN_LABEL={editorial:'Editorial',performance:'Performance'};

@@ -4,7 +4,7 @@ import {filamentControl,quadraticBezierPoint,pulsePhase,filamentKind} from './fi
 import {pickNode} from './picking.mjs';
 import {orbitalDrift} from './motion.mjs';
 import {placeLabels} from './labels.mjs';
-import {PRESETS,SYSTEM_COLORS,STATUS_COLORS} from './palette.mjs';
+import {PRESETS,SYSTEM_COLORS,STATUS_COLORS,getPalette} from './palette.mjs';
 
 const structural=n=>['SYSTEM','DOMAIN','PROGRAM','CAMPAIGN'].includes(n?.type);
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
@@ -31,21 +31,22 @@ export class GraphLabRenderer{
   this.callbacks={onSelect,onOpen,onStats};
   this.camera=defaultCamera();this.options={...PRESETS.ORIGINAL};this.graph={nodes:[],edges:[]};
   this.focusId='system:NEXO';this.selectedId=null;this.hoverId=null;this.points=[];this.labels=[];
-  this.positions=new Map();this.targetPositions=new Map();this.transition=null;this.running=false;this.raf=0;this.lastFrame=0;this.lastStatsAt=0;this.frameSamples=[];
+  this.positions=new Map();this.targetPositions=new Map();this.transition=null;this.running=false;this.raf=0;this.lastFrame=0;this.lastStatsAt=0;this.frameSamples=[];this.destroyed=false;
   this.pointers=new Map();this.drag=null;this.pinchDistance=0;
   this.stars=Array.from({length:260},(_,i)=>({x:fract(Math.sin(i*12.9898)*43758.5453),y:fract(Math.sin(i*7.233)*19873.113),s:i%17===0?1.7:i%5===0?1.2:.7,a:i%17===0?.72:.28}));
+  this.eventController=typeof AbortController==='function'?new AbortController():null;
   this.frame=this.frame.bind(this);this.installEvents();
-  if(typeof ResizeObserver==='function')new ResizeObserver(()=>this.render()).observe(canvas);
+  if(typeof ResizeObserver==='function'){this.resizeObserver=new ResizeObserver(()=>this.render());this.resizeObserver.observe(canvas)}
  }
  installEvents(){
-  const c=this.canvas;
-  c.addEventListener('contextmenu',e=>e.preventDefault());
-  c.addEventListener('wheel',e=>{e.preventDefault();this.zoom(Math.exp(-e.deltaY*.0011))},{passive:false});
-  c.addEventListener('pointerdown',e=>{
+  const c=this.canvas,listen=(type,handler,options={})=>c.addEventListener(type,handler,this.eventController?{...options,signal:this.eventController.signal}:options);
+  listen('contextmenu',e=>e.preventDefault());
+  listen('wheel',e=>{e.preventDefault();this.zoom(Math.exp(-e.deltaY*.0011))},{passive:false});
+  listen('pointerdown',e=>{
    c.setPointerCapture?.(e.pointerId);this.pointers.set(e.pointerId,{x:e.offsetX,y:e.offsetY});
    this.drag={x:e.offsetX,y:e.offsetY,moved:0,button:e.button};this.pinchDistance=this.measurePinch();
   });
-  c.addEventListener('pointermove',e=>{
+  listen('pointermove',e=>{
    const prev=this.pointers.get(e.pointerId);
    if(prev){
     const dx=e.offsetX-prev.x,dy=e.offsetY-prev.y;this.pointers.set(e.pointerId,{x:e.offsetX,y:e.offsetY});
@@ -63,13 +64,18 @@ export class GraphLabRenderer{
    if(this.drag&&this.drag.moved<7){const hit=pickNode(this.points,e.offsetX,e.offsetY);this.selectedId=hit?.node.id||null;this.callbacks.onSelect?.(hit?.node||null);this.render()}
    this.drag=null;
   };
-  c.addEventListener('pointerup',finish);c.addEventListener('pointercancel',finish);
-  c.addEventListener('dblclick',e=>{const hit=pickNode(this.points,e.offsetX,e.offsetY);if(hit&&structural(hit.node))this.callbacks.onOpen?.(hit.node)});
-  c.addEventListener('keydown',e=>{if(e.key==='ArrowLeft')this.camera.yaw-=.12;if(e.key==='ArrowRight')this.camera.yaw+=.12;if(e.key==='ArrowUp')this.camera.pitch-=.12;if(e.key==='ArrowDown')this.camera.pitch+=.12;if(e.key==='+')this.zoom(1.12);if(e.key==='-')this.zoom(.88);this.render()});
+  listen('pointerup',finish);listen('pointercancel',finish);
+  listen('dblclick',e=>{const hit=pickNode(this.points,e.offsetX,e.offsetY);if(hit&&structural(hit.node))this.callbacks.onOpen?.(hit.node)});
+  listen('keydown',e=>{if(e.key==='ArrowLeft')this.camera.yaw-=.12;if(e.key==='ArrowRight')this.camera.yaw+=.12;if(e.key==='ArrowUp')this.camera.pitch-=.12;if(e.key==='ArrowDown')this.camera.pitch+=.12;if(e.key==='+')this.zoom(1.12);if(e.key==='-')this.zoom(.88);this.render()});
  }
  measurePinch(){const p=[...this.pointers.values()];return p.length===2?Math.hypot(p[0].x-p[1].x,p[0].y-p[1].y):0}
  setPreset(name){this.options={...PRESETS[name]||PRESETS.ORIGINAL};this.render();return this.options}
  setOptions(partial){Object.assign(this.options,partial);this.render()}
+ setTheme(theme='dark'){
+  const next=theme==='light'?'light':'dark',palette=getPalette(next==='light'?'LIGHT':'A');
+  this.theme=next;this.referenceBackgroundTheme=next;this.referenceBackgroundCacheKey='';
+  this.options.background=next==='light'?'#EAF4FF':'#02050A';this.options.text=palette.chrome.text;this.options.muted=palette.chrome.textDim;this.render();return next;
+ }
  setGraph(graph,{focusId=this.focusId}={}){
   const old=new Map(this.positions);this.graph=graph;this.focusId=focusId;
   const target=layoutNodes(graph.nodes,focusId,{baseRadius:245,ringGap:112,depthScale:145});
@@ -94,15 +100,16 @@ export class GraphLabRenderer{
   const span=Math.max(Math.max(...xs)-Math.min(...xs),Math.max(...ys)-Math.min(...ys),300);
   this.camera.zoom=clamp(640/span,.42,1.55);this.camera.panX=0;this.camera.panY=0;this.render();
  }
- start(){if(this.running)return;this.running=true;this.raf=requestAnimationFrame(this.frame)}
+ start(){if(this.running||this.destroyed)return;this.running=true;this.raf=requestAnimationFrame(this.frame)}
  stop(){this.running=false;if(this.raf)cancelAnimationFrame(this.raf);this.raf=0}
+ destroy(){this.destroyed=true;this.stop();this.eventController?.abort();this.resizeObserver?.disconnect();this.pointers.clear();this.drag=null;this.callbacks={};}
  frame(now){
   this.raf=0;if(!this.running)return;
   const dt=this.lastFrame?Math.min(80,now-this.lastFrame):16;this.lastFrame=now;
   if(this.options.autoOrbit&&!reducedMotion())this.camera.yaw+=dt*.00008;
   this.draw(now,dt);this.raf=requestAnimationFrame(this.frame);
  }
- render(){if(!this.running)this.draw(performance.now(),16)}
+ render(){if(!this.running&&!this.destroyed)this.draw(performance.now(),16)}
  updateTransition(now){
   if(!this.transition)return;
   const t=(now-this.transition.at)/this.transition.duration;

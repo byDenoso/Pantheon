@@ -14,4 +14,6 @@ test('Atlas Quality remains the active Atlas verification workflow',()=>{
   assert.match(text,/pull_request:/);
   assert.match(text,/node-version:\s*'24'/);
   assert.match(text,/Run unit and contract tests/);
+  assert.match(text,/Run Graph Lab browser smoke/);
+  assert.match(text,/graph-lab-browser-smoke\.mjs/);
 });

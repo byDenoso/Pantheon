@@ -1,4 +1,5 @@
 import {experienceById} from './experience-presets.mjs';
+import {resolveRenderer} from '../renderers/renderer-registry.mjs';
 
 export const VIEWPORT_PROFILES=Object.freeze({
  DESKTOP_WIDE:Object.freeze({id:'DESKTOP_WIDE',minWidth:1280,layoutSpacing:1.28,fitPadding:1.15,maxLabels:30,maxVisibleNodes:150}),
@@ -19,7 +20,7 @@ export function resolveExperience({experienceId='OPERATIONAL',width=globalThis.i
  const experience=experienceById(experienceId);
  const viewport=viewportProfile(width);
  const mobile=viewport.id==='MOBILE';
- const rendererId=mobile?'canvas-2d':(rendererOverride||experience.rendererId);
+ const rendererId=resolveRenderer(rendererOverride||experience.rendererId,{mobile}).id;
  const layoutSpacing=mobile?viewport.layoutSpacing:Math.max(experience.layoutSpacing,viewport.layoutSpacing*.96);
  const fitPadding=mobile?viewport.fitPadding:Math.max(experience.fitPadding,viewport.fitPadding*.96);
  const maxLabels=Math.min(experience.maxLabels,viewport.maxLabels);

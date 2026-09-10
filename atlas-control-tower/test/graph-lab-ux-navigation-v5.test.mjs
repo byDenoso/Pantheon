@@ -34,7 +34,7 @@ test('experience studio is experience-first and hides technical controls behind 
 test('single click selects/reveals a node while explicit open controls expansion',()=>{
  const source=read('graph/experience/visual-experience-v4.mjs');
  assert.match(source,/renderer\.callbacks\.onSelect\s*=\s*node\s*=>/);
- assert.match(source,/onOpenNode\?\.\(node\.id\)/);
+ assert.match(source,/onSelectNode\?\.\(node\.id\)/);
  assert.match(source,/renderer\.callbacks\?\.onOpen\?\.\(node\)/,'ABRIR must keep using the renderer open callback for one-level expansion');
 });
 

@@ -49,16 +49,19 @@ test('experience presets separate public demo, work, review, filaments and mobil
  assert.equal(mobile.filamentMode,'off');
 });
 
-test('renderer registry names current native and integrated engines honestly',async()=>{
+test('renderer registry exposes every production engine as a native graph renderer',async()=>{
  const file=mustExist('graph/renderers/renderer-registry.mjs');
  const mod=await import(pathToFileURL(file));
  for(const id of ['canvas-2d','pixi-2d','three-25d','three-3d','babylon-25d','babylon-3d'])assert.ok(mod.RENDERERS[id]);
  assert.equal(mod.RENDERERS['canvas-2d'].availability,'ready');
  assert.equal(mod.RENDERERS['three-25d'].availability,'ready');
  assert.equal(mod.RENDERERS['pixi-2d'].availability,'ready');
- assert.equal(mod.RENDERERS['pixi-2d'].implementation,'hybrid');
+ assert.equal(mod.RENDERERS['pixi-2d'].implementation,'native');
+ assert.equal(mod.RENDERERS['pixi-2d'].role,'graph');
  assert.equal(mod.RENDERERS['babylon-3d'].availability,'ready');
- assert.equal(mod.RENDERERS['babylon-3d'].implementation,'hybrid');
+ assert.equal(mod.RENDERERS['babylon-3d'].implementation,'native');
+ assert.equal(mod.RENDERERS['babylon-3d'].role,'graph');
+ assert.deepEqual(mod.ENVIRONMENT_RENDERER_IDS,[]);
 });
 
 test('experience controller adds demo, share, macro-domain navigation and dynamic background',()=>{

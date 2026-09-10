@@ -15,24 +15,24 @@ test('project pins real PixiJS and Babylon packages',()=>{
  assert.equal(pkg.dependencies['@babylonjs/core'],'9.25.0');
 });
 
-test('renderer registry exposes real integrated engines instead of scaffolds',()=>{
+test('renderer registry exposes Pixi and Babylon as native graph renderers',()=>{
  const source=read('graph/renderers/renderer-registry.mjs');
  for(const id of ['pixi-2d','babylon-25d','babylon-3d'])assert.match(source,new RegExp(`'${id}'`));
- assert.doesNotMatch(source,/pixi-2d[^\n]+availability:'scaffold'/);
- assert.doesNotMatch(source,/babylon-25d[^\n]+availability:'scaffold'/);
- assert.doesNotMatch(source,/babylon-3d[^\n]+availability:'scaffold'/);
- assert.match(source,/implementation:'hybrid'/);
+ assert.doesNotMatch(source,/availability:'scaffold'/);
+ assert.doesNotMatch(source,/implementation:'hybrid'/);
+ assert.doesNotMatch(source,/role:'environment'/);
+ assert.match(source,/implementation:'native'/);
 });
 
-test('engine bridge loads exact library versions and protects mobile',()=>{
- const source=read('graph/renderers/engine-bridge-auto.mjs');
- assert.match(source,/pixi\.js@8\.20\.1/);
- assert.match(source,/@babylonjs\/core@9\.25\.0/);
- assert.match(source,/pixi-2d/);
- assert.match(source,/babylon-25d/);
- assert.match(source,/babylon-3d/);
- assert.match(source,/max-width:760px/);
- assert.match(source,/destroyEngine/);
+test('native Pixi and Babylon renderer modules pin exact library versions',()=>{
+ const pixi=read('graph/renderers/pixi-graph-renderer.mjs');
+ const babylon=read('graph/renderers/babylon-graph-renderer.mjs');
+ assert.match(pixi,/pixi\.js@8\.20\.1/);
+ assert.match(pixi,/preference:'webgpu'/);
+ assert.match(pixi,/preference:'webgl'/);
+ assert.match(babylon,/@babylonjs\/core@9\.25\.0/);
+ assert.match(babylon,/MeshBuilder\.CreateSphere/);
+ assert.match(babylon,/MeshBuilder\.CreateLines/);
 });
 
 test('editorial observatory removes generic AI-dashboard chrome',()=>{
@@ -47,12 +47,11 @@ test('editorial observatory removes generic AI-dashboard chrome',()=>{
  assert.doesNotMatch(css,/letter-spacing:\s*\.1[2-9]em/g);
 });
 
-test('visual bootstrap installs editorial design and engine bridge in production',()=>{
+test('visual bootstrap installs editorial design without a shadow renderer bridge',()=>{
  const source=read('graph/experience/editorial-observatory-v5.mjs');
  assert.match(source,/data-atlas-design/);
  assert.match(source,/Editorial Observatory/);
- assert.match(source,/engine-bridge-auto\.mjs/);
- assert.match(source,/MutationObserver/);
+ assert.doesNotMatch(source,/engine-bridge-auto\.mjs/);
  const builder=read('build-cdn-index.mjs');
  assert.match(builder,/editorial-observatory-v5\.mjs/);
  assert.match(builder,/Visual Experience v5/);

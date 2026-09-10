@@ -2,9 +2,8 @@ import {EXPERIENCE_ORDER,EXPERIENCE_PRESETS} from './experience-presets.mjs';
 import {resolveExperience} from './resolve-experience.mjs';
 import {createNodeActionBar} from './node-action-bar.mjs';
 import {applyBackgroundState,domainFromNode,resolveBackground} from '../background/background-director.mjs';
-import {rendererById} from '../renderers/renderer-registry.mjs';
 import '../renderers/layout-safety.mjs';
-import {clearManualRendererOverride,installRendererRuntime,runtimeRendererState} from '../renderers/renderer-runtime.mjs';
+import {clearManualRendererOverride,installRendererRuntime,rendererNavigationUrl,runtimeRendererState} from '../renderers/renderer-runtime.mjs';
 
 const STORAGE_KEY='nexo-atlas-experience-v4';
 const $=selector=>document.querySelector(selector);
@@ -25,9 +24,7 @@ function ensureCss(){
 }
 function setButtonActive(root,value){for(const button of root?.querySelectorAll('[data-experience]')||[])button.classList.toggle('is-active',button.dataset.experience===value)}
 function copyText(value){return navigator.clipboard?.writeText?.(value).catch(()=>{})}
-function pageBaseRenderer(){return byId('graph-lab-canvas')?.hidden?'three-canvas':'legacy-canvas'}
-
-export function installVisualExperienceV4({renderer,onOpenNode,onGoHome,onToggleFilaments}={}){
+export function installVisualExperienceV4({renderer,onSelectNode,onOpenNode,onGoHome,onToggleFilaments}={}){
  if(!renderer||renderer.__atlasVisualExperienceV4)return renderer?.__atlasVisualExperienceV4;
  ensureCss();
  const query=new URLSearchParams(location.search);
@@ -37,7 +34,6 @@ export function installVisualExperienceV4({renderer,onOpenNode,onGoHome,onToggle
  const state={
   experienceId:initialExperienceId,
   rendererId:initialRuntime.graphRendererId,
-  environmentRendererId:initialRuntime.environmentRendererId,
   manualRenderer:initialRuntime.manualOverride,
   domain:'NEXO',filaments:false,demo:query.get('demo-view')==='1'||saved.demo===true,
   graph:{nodes:[],edges:[]},background:null,profile:null
@@ -69,20 +65,13 @@ export function installVisualExperienceV4({renderer,onOpenNode,onGoHome,onToggle
  function clearManualQuery(){
   const url=new URL(location.href);
   url.searchParams.delete('renderer-v4');
-  url.searchParams.delete('environment');
   url.searchParams.set('experience',state.experienceId);
   history.replaceState(history.state,'',url);
-  document.documentElement.removeAttribute('data-atlas-environment');
  }
- function navigateToRequiredBase(rendererId){
-  const desiredBase=rendererById(rendererId).baseRenderer;
-  if(desiredBase===pageBaseRenderer())return false;
-  const url=new URL(location.href);
-  url.searchParams.set('renderer',desiredBase);
+ function navigateToRenderer(rendererId){
+  if(renderer.rendererId===rendererId)return false;
+  const url=rendererNavigationUrl(rendererId,location.href);
   url.searchParams.set('experience',state.experienceId);
-  url.searchParams.delete('renderer-v4');
-  url.searchParams.delete('environment');
-  url.searchParams.delete('fallback');
   location.assign(url.href);
   return true;
  }
@@ -90,7 +79,6 @@ export function installVisualExperienceV4({renderer,onOpenNode,onGoHome,onToggle
   state.experienceId=EXPERIENCE_PRESETS[experienceId]?experienceId:'OPERATIONAL';
   if(!preserveManual){
    state.manualRenderer=false;
-   state.environmentRendererId=null;
    clearManualRendererOverride();
    clearManualQuery();
   }
@@ -115,7 +103,7 @@ export function installVisualExperienceV4({renderer,onOpenNode,onGoHome,onToggle
   const select=byId('atlas-experience-select');if(select)select.value=state.experienceId;
   if(persist)write({experienceId:state.experienceId,demo:state.demo,manualRenderer:state.manualRenderer});
   background();
-  if(navigateToRequiredBase(state.rendererId))return state.profile;
+  if(navigateToRenderer(state.rendererId))return state.profile;
   return state.profile;
  }
 
@@ -140,7 +128,7 @@ export function installVisualExperienceV4({renderer,onOpenNode,onGoHome,onToggle
  if(renderer.callbacks){
   renderer.callbacks.onSelect=node=>{
    if(!node){onGoHome?.();return}
-   onOpenNode?.(node.id);
+   onSelectNode?.(node.id);
   };
  }
  if(originalDrawSpace){
@@ -191,7 +179,6 @@ export function installVisualExperienceV4({renderer,onOpenNode,onGoHome,onToggle
   const demo=makeButton('DEMO');demo.id='atlas-demo-toggle';demo.className='atlas-top-action';demo.addEventListener('click',()=>setDemo(!state.demo));
   const share=makeButton('SHARE VIEW');share.id='atlas-share-view';share.className='atlas-top-action';share.addEventListener('click',()=>{
    const url=new URL(location.href);url.searchParams.set('experience',state.experienceId);url.searchParams.set('renderer-v4',state.rendererId);url.searchParams.set('theme',document.documentElement.dataset.theme||'dark');
-   const environment=document.documentElement.dataset.atlasEnvironment;if(environment)url.searchParams.set('environment',environment);else url.searchParams.delete('environment');
    if(state.demo)url.searchParams.set('demo-view','1');else url.searchParams.delete('demo-view');copyText(url.href);share.textContent='COPIED';setTimeout(()=>share.textContent='SHARE VIEW',1200);
   });
   tools.prepend(share);tools.prepend(demo);setDemo(state.demo,{persist:false});
@@ -204,7 +191,7 @@ export function installVisualExperienceV4({renderer,onOpenNode,onGoHome,onToggle
   const root=document.createElement('section');root.id='atlas-experience-studio';root.className='atlas-experience-studio';
   root.innerHTML='<header><b>EXPERIENCE</b><small>escolha o modo · ajuste técnico só se precisar</small></header><label class="atlas-experience-select-row">Experience<select id="atlas-experience-select"></select></label><div class="atlas-experience-grid"></div>';
   hud.after(root);
-  const advanced=document.createElement('details');advanced.className='atlas-advanced-controls';advanced.innerHTML='<summary>ADVANCED <span>Renderer · environment · preset · dataset · tuning</span></summary><div data-atlas-advanced-host></div>';
+  const advanced=document.createElement('details');advanced.className='atlas-advanced-controls';advanced.innerHTML='<summary>ADVANCED <span>Renderer · preset · dataset · tuning</span></summary><div data-atlas-advanced-host></div>';
   root.after(advanced);
   const advancedHost=advanced.querySelector('[data-atlas-advanced-host]');
   advancedHost.append(hud);

@@ -18,20 +18,26 @@ test('2D canvas renderer owns the approved third-reference galactic background',
  assert.match(source,/blue-gold|gold-blue|orange-blue/i);
  assert.match(source,/cacheKey/);
  assert.doesNotMatch(source,/layoutNodes/,'background adapter must not recompute canonical graph layout');
- assert.match(source,/layoutSpacing/,'responsive spacing is allowed as a post-layout viewport adapter');
+ assert.doesNotMatch(source,/layoutSpacing/,'background adapter must not own viewport/layout spacing');
+ const layoutSafety=fs.readFileSync(path.join(lab,'graph/renderers/layout-safety.mjs'),'utf8');
+ assert.match(layoutSafety,/layoutSpacing/,'responsive spacing belongs to the renderer layout-safety boundary');
 });
 
-test('app imports the 2D background adapter before choosing the legacy renderer',()=>{
+test('app loads the 2D background adapter before the renderer factory creates Canvas',()=>{
  const app=fs.readFileSync(path.join(lab,'app.mjs'),'utf8');
+ const factory=fs.readFileSync(path.join(lab,'graph/renderers/renderer-factory.mjs'),'utf8');
  assert.match(app,/import ['"]\.\/graph\/canvas-reference-background\.mjs['"]/);
- assert.ok(app.indexOf('./graph/canvas-reference-background.mjs')<app.indexOf('./graph/legacy-renderer.mjs'),'adapter must load before app imports the legacy renderer binding');
- assert.match(app,/params\.get\('renderer'\)==='legacy-canvas'\?'legacy-canvas':'three-canvas'/);
+ assert.match(app,/renderer-factory\.mjs/);
+ assert.ok(app.indexOf('./graph/canvas-reference-background.mjs')<app.indexOf('./graph/renderers/renderer-factory.mjs'),'background adapter must load before renderer factory binding');
+ assert.match(factory,/legacy-renderer\.mjs/);
+ assert.match(app,/createGraphRenderer/);
 });
 
 test('legacy canvas graph can change colour system when the theme changes',()=>{
  assert.ok(fs.existsSync(canvasRework),'graph/canvas-reference-background.mjs must exist');
  const source=fs.readFileSync(canvasRework,'utf8');
- assert.match(source,/prototype\.setTheme/);
+ const legacy=fs.readFileSync(path.join(lab,'graph/legacy-renderer.mjs'),'utf8');
+ assert.match(legacy,/setTheme\(theme=/,'theme lifecycle belongs to the canonical Canvas renderer');
  assert.match(source,/PALETTE_LIGHT/);
  assert.match(source,/prototype\.nodeColor/);
  assert.match(source,/referenceBackgroundTheme/);
