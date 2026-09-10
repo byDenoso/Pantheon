@@ -10,6 +10,10 @@ export { remoteSource, SYSTEM_ENDPOINT } from './remote.ts';
 export { sourceKindForHost } from './select.ts';
 
 /**
+ * Migração do handoff original do frontend:
+ * `activeSource: SystemDataSource = fixtureSource` era a fronteira antes da integração.
+ * O teste de seleção de fonte agora prova o comportamento efetivo abaixo.
+ *
  * Browser publicado -> estado remoto real.
  * Node/localhost -> fixtures determinísticas para testes e regressão visual.
  */
