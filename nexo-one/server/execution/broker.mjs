@@ -21,6 +21,11 @@ export function createBroker({ledger=executionLedger,loadTruth=defaultLoadTruth,
     const decision=gateIntent(intent,{truthGraphInput:truth.truthGraphInput,confirmed});
     return {truth,decision};
   }
+  async function writePreflight(intent,ctx){
+    const provider=resolveProvider(intent.provider);
+    if(typeof provider.preflight==='function')await provider.preflight(intent,{...ctx,now:now()});
+    return provider;
+  }
   async function attachIntegrity(receipt,ctx){
     if(!materialIncident(receipt))return receipt;
     try{
@@ -37,6 +42,7 @@ export function createBroker({ledger=executionLedger,loadTruth=defaultLoadTruth,
     if(existing.status!=='PLANNED')return existing;
     const synthetic=intent.confirmation_level==='STRONG_CONFIRM'?'STRONG_CONFIRM':intent.confirmation_level==='CONFIRM'?'CONFIRM':true;
     const {truth,decision}=await authority(intent,ctx,synthetic);
+    await writePreflight(intent,ctx);
     let before=truth.revision||null;
     try{const provider=await loadProvider(intent.provider,{...ctx,now:now()});before=provider?.provider?.revision||before;}catch{}
     return ledger.transition(existing.receipt_id,'GATED',{authority_decision:decision.authority,capability_decision:decision.capability,before_revision:before,explanation:intent.confirmation_level==='NONE'?'Action is gated and may execute without human confirmation.':`Action is gated and requires ${intent.confirmation_level}.`});
@@ -63,9 +69,9 @@ export function createBroker({ledger=executionLedger,loadTruth=defaultLoadTruth,
     if(receipt.provider_effect_id)return terminal.has(receipt.status)?receipt:performReadback(receipt,ctx);
     if(terminal.has(receipt.status))return receipt;
     const {truth,decision}=await authority(intent,ctx,ctx.confirmed);
+    const provider=await writePreflight(intent,ctx);
     receipt=ledger.transition(receipt.receipt_id,'GATED',{authority_decision:decision.authority,capability_decision:decision.capability,before_revision:receipt.before_revision||truth.revision||null});
     receipt=ledger.transition(receipt.receipt_id,'CONFIRMED',{explanation:intent.confirmation_level==='NONE'?'No human confirmation required.':`${intent.confirmation_level} accepted by private session.`});
-    const provider=resolveProvider(intent.provider);
     try{
       receipt=ledger.transition(receipt.receipt_id,'DISPATCHED',{explanation:'Action dispatched to the governed provider adapter.'});
       const effect=await provider.execute(intent,{...ctx,now:now()});
