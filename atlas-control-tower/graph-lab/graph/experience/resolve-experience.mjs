@@ -20,11 +20,14 @@ export function resolveExperience({experienceId='OPERATIONAL',width=globalThis.i
  const experience=experienceById(experienceId);
  const viewport=viewportProfile(width);
  const mobile=viewport.id==='MOBILE';
+ const breakthrough=experience.id==='BREAKTHROUGH';
  const rendererId=resolveRenderer(rendererOverride||experience.rendererId,{mobile}).id;
- const layoutSpacing=mobile?viewport.layoutSpacing:Math.max(experience.layoutSpacing,viewport.layoutSpacing*.96);
+ const layoutSpacing=mobile?Math.min(experience.layoutSpacing,viewport.layoutSpacing):Math.max(experience.layoutSpacing,viewport.layoutSpacing*.96);
  const fitPadding=mobile?viewport.fitPadding:Math.max(experience.fitPadding,viewport.fitPadding*.96);
- const maxLabels=Math.min(experience.maxLabels,viewport.maxLabels);
- const maxVisibleNodes=Math.min(experience.maxVisibleNodes,viewport.maxVisibleNodes);
+ const mobileLabelLimit=breakthrough?6:viewport.maxLabels;
+ const mobileNodeLimit=breakthrough?Math.min(42,viewport.maxVisibleNodes):viewport.maxVisibleNodes;
+ const maxLabels=Math.min(experience.maxLabels,mobile?mobileLabelLimit:viewport.maxLabels);
+ const maxVisibleNodes=Math.min(experience.maxVisibleNodes,mobile?mobileNodeLimit:viewport.maxVisibleNodes);
  return Object.freeze({
   ...experience,
   rendererId,
@@ -34,9 +37,13 @@ export function resolveExperience({experienceId='OPERATIONAL',width=globalThis.i
   fitPadding,
   maxLabels,
   maxVisibleNodes,
-  filamentMode:mobile?'off':experience.filamentMode,
+  filamentMode:mobile&&!breakthrough?'off':experience.filamentMode,
   motion:mobile?'off':experience.motion,
   drift:mobile?0:experience.drift,
-  pulseSpeed:mobile?Math.min(.7,experience.pulseSpeed):experience.pulseSpeed
+  pulseSpeed:mobile?Math.min(.7,experience.pulseSpeed):experience.pulseSpeed,
+  semanticZoom:Boolean(experience.semanticZoom),
+  domainFields:Boolean(experience.domainFields),
+  focusTunnel:Boolean(experience.focusTunnel),
+  mobileSemanticAggressive:breakthrough&&mobile
  });
 }
