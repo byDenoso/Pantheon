@@ -97,10 +97,10 @@ test('RETIRED_RUNTIME remains explicit in the compiled capability state', () => 
   assert.equal(label('RETIRED_RUNTIME'), 'Runtime retirado');
 });
 
-test('remote footer labels the remote state instead of a fixture scenario', async () => {
+test('cockpit keeps the governed Action Broker mounted in the action drawer', async () => {
   const app = await readFile(fileURLToPath(new URL('../src/app/App.tsx', import.meta.url)), 'utf8');
-  assert.doesNotMatch(app, /\{system\.sourceKind === 'fixture' \? 'FIXTURE' : 'REMOTO'\} · \{scenario\.label\}/);
-  assert.match(app, /system\.state\?\.scenario_label/);
+  assert.match(app, /ActionBrokerPanel/);
+  assert.match(app, /authenticated=\{session\.session\.authenticated\}/);
 });
 
 test('retired Neon capability is neutral to TruthGraph health', () => {
