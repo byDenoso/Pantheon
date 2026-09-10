@@ -36,6 +36,12 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,su
  .cockpit-item{padding:9px!important}
  .cockpit-item p{line-height:1.42!important}
  .status-pill,.level-chip,.system-chip{padding:4px 7px!important}
+ .stage .nexo-live:not(.is-open){width:44px!important;height:44px!important;min-height:44px!important;overflow:hidden!important;padding:0!important;border-radius:12px!important}
+ .stage .nexo-live:not(.is-open) .nexo-live-head{width:44px!important;height:44px!important;min-height:44px!important;padding:0!important;display:grid!important;place-items:center!important}
+ .stage .nexo-live:not(.is-open) .nexo-live-head span{font-size:0!important}
+ .stage .nexo-live:not(.is-open) .nexo-live-head span i{display:block!important;width:8px!important;height:8px!important;margin:0!important}
+ .stage .nexo-live:not(.is-open) .nexo-live-head small,.stage .nexo-live:not(.is-open) .nexo-live-head em,.stage .nexo-live:not(.is-open) .nexo-live-flow,.stage .nexo-live:not(.is-open) .nexo-live-section{display:none!important}
+ .stage:has(.nexo-live.is-open) .atlas-mobile-tools{display:none!important}
 }
 
 @media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important}}
