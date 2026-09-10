@@ -19,31 +19,45 @@ test('mobile shell reserves safe-area layout bands and 44px primary targets',asy
  assert.match(css,/data-sheet-state=['"]expanded['"]/);
 });
 
-test('mobile navigation exposes canonical lanes plus Filamentos without a second state machine',async()=>{
- const source=await read('graph/experience/visual-experience-v4.mjs');
+test('mobile navigation proxies canonical graph controls instead of creating a second state machine',async()=>{
+ const source=await read('graph/experience/mobile-ux-v6.mjs');
+ const factory=await read('graph/renderers/renderer-factory.mjs');
  assert.match(source,/atlas-mobile-nav/);
  assert.match(source,/FILAMENTOS/);
  assert.match(source,/aria-pressed/);
- assert.match(source,/onToggleFilaments/);
+ assert.match(source,/proxyDomain/);
+ assert.match(source,/atlas-experience-bar/);
  assert.doesNotMatch(source,/mobileDomainState/);
+ assert.match(factory,/installMobileUxV6/);
 });
 
-test('mobile cockpit has explicit sheet states and can suspend expensive graph animation',async()=>{
- const app=await read('app.mjs');
- assert.match(app,/setCockpitSheetState/);
- assert.match(app,/dataset\.sheetState/);
- assert.match(app,/renderer\.stop\(\)/);
- assert.match(app,/renderer\.start\(\)/);
+test('mobile cockpit has explicit sheet states and suspends expensive graph animation when expanded',async()=>{
+ const source=await read('graph/experience/mobile-ux-v6.mjs');
+ assert.match(source,/setCockpitSheetState/);
+ assert.match(source,/dataset\.sheetState/);
+ assert.match(source,/renderer\?\.stop\?\.\(\)/);
+ assert.match(source,/renderer\?\.start\?\.\(\)/);
+ assert.match(source,/aria-controls/);
 });
 
 test('mobile UX keeps accessibility and a lightweight renderer budget explicit',async()=>{
  const css=await read('graph/experience/mobile-ui-v6.css');
  const presets=await read('graph/experience/experience-presets.mjs');
+ const visualPresets=await read('graph/renderers/visual-presets.mjs');
  assert.match(css,/:focus-visible/);
  assert.match(css,/prefers-reduced-motion/);
  const mobile=/MOBILE_CLEAN:freeze\(\{([\s\S]*?)\}\)/.exec(presets)?.[1]||'';
  assert.match(mobile,/rendererId:'canvas-2d'/);
- assert.match(mobile,/maxLabels:\d+/);
- assert.match(mobile,/maxVisibleNodes:\d+/);
+ assert.match(mobile,/maxLabels:7/);
+ assert.match(mobile,/maxVisibleNodes:42/);
  assert.match(mobile,/drift:0/);
+ assert.match(visualPresets,/MOBILE_CLEAN:\{[^\n]*maxLabels:7,maxVisibleNodes:42[^\n]*autoOrbit:false/);
+});
+
+test('associative memory gets a compact auditable header without changing truth authority',async()=>{
+ const cockpit=await read('cockpit.mjs');
+ assert.match(cockpit,/cockpit-memory-strip/);
+ assert.match(cockpit,/filamento mais forte/);
+ assert.match(cockpit,/DERIVED_NOT_TRUTH/);
+ assert.match(cockpit,/Próximo discriminante/);
 });
