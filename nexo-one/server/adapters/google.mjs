@@ -9,8 +9,8 @@ async function legacyGoogleToken(env,signal) {
   if(!result.access_token)throw new Error('AUTH_REQUIRED');
   legacyTokenCache={value:result.access_token,until:Date.now()+Math.max(0,(result.expires_in||3600)-120)*1000};return result.access_token;
 }
-export async function googleToken(env,signal) {
-  if(env.GOOGLE_CONNECTOR)return googleConnectToken(env,signal);
+export async function googleToken(env,signal,options={}) {
+  if(env.GOOGLE_CONNECTOR)return googleConnectToken(env,signal,options);
   return legacyGoogleToken(env,signal);
 }
 export async function drive({env,signal,now,query}) {
