@@ -37,7 +37,7 @@ test('ordinary external effect may differ from Truth Owner when capability expli
 
 test('canonical mutations must target canonical authority provider',()=>{
   const canonical=normalizeIntent({...base,action_type:'nexo.sheet.update',provider:'drive',capability_id:'CAP-SHEET-WRITE'},0);
-  assert.throws(()=>gateIntent(canonical,{truthGraphInput:{authorityRows,capabilityRows:[{capability_id:'CAP-SHEET-WRITE',domain:'OLYMPUS',status:'PASS'}]},confirmed:true}),e=>e.code==='AUTHORITY_CONFLICT');
+  assert.throws(()=>gateIntent(canonical,{truthGraphInput:{authorityRows,capabilityRows:[{capability_id:'CAP-SHEET-WRITE',domain:'OLYMPUS',status:'PASS'}]},confirmed:'STRONG_CONFIRM'}),e=>e.code==='AUTHORITY_CONFLICT');
 });
 
 test('confirmation is enforced from server policy',()=>{
