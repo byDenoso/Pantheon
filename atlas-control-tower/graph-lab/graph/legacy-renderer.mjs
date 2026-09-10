@@ -1,6 +1,6 @@
 import {defaultCamera,projectPoint} from './projection.mjs';
 import {layoutNodes,interpolatePosition} from './layout.mjs';
-import {filamentControl,quadraticBezierPoint,pulsePhase,filamentKind} from './filaments.mjs';
+import {filamentControl,quadraticBezierPoint,pulsePhase,filamentKind,filamentWeight,filamentStatusAlpha} from './filaments.mjs';
 import {pickNode} from './picking.mjs';
 import {orbitalDrift} from './motion.mjs';
 import {placeLabels} from './labels.mjs';
@@ -21,7 +21,12 @@ function kindStyle(kind){
   canonical:{width:1.25,alpha:.45,dash:[],tint:'#73bce9'},
   derived:{width:1,alpha:.28,dash:[5,7],tint:'#887cb3'},
   'cross-domain':{width:1.35,alpha:.34,dash:[2,6],tint:'#8fd3e7'},
-  'intra-domain':{width:1.05,alpha:.32,dash:[],tint:'#6fa7c7'}
+  'intra-domain':{width:1.05,alpha:.32,dash:[],tint:'#6fa7c7'},
+  'alternative-learning':{width:1.35,alpha:.42,dash:[2,7],tint:'#2EC9FF'},
+  'alternative-transfer':{width:1.25,alpha:.38,dash:[7,7],tint:'#B48DFF'},
+  'alternative-validation':{width:1.25,alpha:.40,dash:[3,5],tint:'#69DCC1'},
+  'alternative-hypothesis':{width:1.2,alpha:.42,dash:[9,6],tint:'#FFBE5C'},
+  'alternative-risk':{width:1.2,alpha:.40,dash:[4,6],tint:'#C96A7C'}
  }[kind]||{width:1,alpha:.3,dash:[],tint:'#6685a3'};
 }
 
@@ -140,13 +145,13 @@ export class GraphLabRenderer{
  }
  drawFilaments(c,byId,now,still){
   const o=this.options;
-  for(const edge of this.graph.edges){const a=byId.get(edge.source),b=byId.get(edge.target);if(!a||!b)continue;const kind=filamentKind(edge),style=kindStyle(kind),cp=filamentControl(a,b,o.filamentCurve,edge.source<edge.target?1:-1);const depth=(a.z+b.z)/2;const fade=1-clamp((110-depth)/600,0,o.fog);const col=mixHex(style.tint,o.background,(1-fade)*.55);
-   c.globalAlpha=style.alpha*fade;c.strokeStyle=col;c.lineWidth=style.width;c.setLineDash(style.dash);c.beginPath();c.moveTo(a.x,a.y);c.quadraticCurveTo(cp.cx,cp.cy,b.x,b.y);c.stroke();c.setLineDash([]);
-   if(still)continue;const pulse=pulsePhase(edge.id||`${edge.source}:${edge.target}`,now,.24*o.pulseSpeed);const head=quadraticBezierPoint(a,cp,b,pulse.t);const behind=quadraticBezierPoint(a,cp,b,clamp(pulse.t-pulse.direction*.065,0,1));c.globalAlpha=.35;c.lineWidth=3.2;c.beginPath();c.moveTo(behind.x,behind.y);c.lineTo(head.x,head.y);c.stroke();
-   const g=c.createRadialGradient(head.x,head.y,0,head.x,head.y,10*o.glow);g.addColorStop(0,col+'e8');g.addColorStop(.35,col+'58');g.addColorStop(1,col+'00');c.globalAlpha=1;c.fillStyle=g;c.beginPath();c.arc(head.x,head.y,10*o.glow,0,Math.PI*2);c.fill();c.fillStyle='#eafbff';c.beginPath();c.arc(head.x,head.y,1.7,0,Math.PI*2);c.fill();
+  for(const edge of this.graph.edges){const a=byId.get(edge.source),b=byId.get(edge.target);if(!a||!b)continue;const kind=filamentKind(edge),style=kindStyle(kind),weight=filamentWeight(edge),statusAlpha=filamentStatusAlpha(edge),declared=edge.weight!=null&&String(edge.weight).trim()!=='',weightScale=declared?.72+.58*weight:1,semanticAlpha=edge.associative?(.42+.58*weight)*statusAlpha:1,cp=filamentControl(a,b,o.filamentCurve,edge.source<edge.target?1:-1);const depth=(a.z+b.z)/2;const fade=1-clamp((110-depth)/600,0,o.fog);const col=mixHex(style.tint,o.background,(1-fade)*.55);
+   c.globalAlpha=style.alpha*fade*semanticAlpha;c.strokeStyle=col;c.lineWidth=style.width*weightScale;c.setLineDash(style.dash);c.beginPath();c.moveTo(a.x,a.y);c.quadraticCurveTo(cp.cx,cp.cy,b.x,b.y);c.stroke();c.setLineDash([]);
+   if(still)continue;const pulse=pulsePhase(edge.id||`${edge.source}:${edge.target}`,now,.24*o.pulseSpeed);const head=quadraticBezierPoint(a,cp,b,pulse.t);const behind=quadraticBezierPoint(a,cp,b,clamp(pulse.t-pulse.direction*.065,0,1));c.globalAlpha=.35*semanticAlpha;c.lineWidth=3.2*weightScale;c.beginPath();c.moveTo(behind.x,behind.y);c.lineTo(head.x,head.y);c.stroke();
+   const g=c.createRadialGradient(head.x,head.y,0,head.x,head.y,10*o.glow);g.addColorStop(0,col+'e8');g.addColorStop(.35,col+'58');g.addColorStop(1,col+'00');c.globalAlpha=semanticAlpha;c.fillStyle=g;c.beginPath();c.arc(head.x,head.y,10*o.glow,0,Math.PI*2);c.fill();c.fillStyle='#eafbff';c.beginPath();c.arc(head.x,head.y,1.7,0,Math.PI*2);c.fill();
   }c.globalAlpha=1;
  }
- nodeColor(node){return SYSTEM_COLORS[node.id]||SYSTEM_COLORS[`system:${node.system}`]||STATUS_COLORS[node.status]||'#80b7dc'}
+ nodeColor(node){return node.hue||SYSTEM_COLORS[node.id]||SYSTEM_COLORS[`system:${node.system}`]||STATUS_COLORS[node.status]||'#80b7dc'}
  drawNodes(c,points,now){
   const o=this.options;for(const p of [...points].sort((a,b)=>a.z-b.z)){const n=p.node,base=this.nodeColor(n),near=clamp((p.z+320)/700,0,1),col=mixHex(base,o.background,(1-near)*o.fog),selected=n.id===this.selectedId,hover=n.id===this.hoverId,focus=n.id===this.focusId;const r=p.r*(selected||hover?1.08:1);
    const halo=c.createRadialGradient(p.x,p.y,0,p.x,p.y,r*(focus?5.7:4.1)*o.glow);halo.addColorStop(0,col+alphaHex(focus?.30:.22));halo.addColorStop(.48,col+'18');halo.addColorStop(1,col+'00');c.fillStyle=halo;c.beginPath();c.arc(p.x,p.y,r*(focus?5.7:4.1)*o.glow,0,Math.PI*2);c.fill();
