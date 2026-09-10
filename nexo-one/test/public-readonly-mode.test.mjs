@@ -35,3 +35,11 @@ test('production promotion workflow has no runtime-login dependency', async () =
   const workflow = await read('../../.github/workflows/nexo-one-production.yml');
   assert.doesNotMatch(workflow, /NEXO_QA_COOKIE/);
 });
+
+test('human login cannot be re-enabled by adding password/session environment variables', async () => {
+  const handler = await read('../server/handler.mjs');
+  const example = await read('../.env.example');
+  assert.doesNotMatch(handler, /authenticated\(req,env\)|verifyPassword|makeSession|NEXO_PASSWORD_HASH|NEXO_SESSION_SECRET/);
+  assert.match(handler, /route==='session'[\s\S]{0,180}mode:'PUBLIC_READ_ONLY'/);
+  assert.doesNotMatch(example, /NEXO_PASSWORD_HASH|NEXO_SESSION_SECRET/);
+});
