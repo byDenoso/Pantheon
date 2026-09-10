@@ -38,7 +38,7 @@ function capabilityState(rows){
   return {state,summary:rows.map(r=>`${r.capability_id}:${r.status}`).join(' · '),ids:rows.map(r=>r.capability_id)};
 }
 function explanation(status,{domain,expected,declared,provider,truth,capability}){
-  if(status==='CONFLICT')return `${domain}: autoridade canônica aponta para ${expected||'owner dependente'}, mas a declaração ativa resolve para ${declared||'provider não identificável'}. Nenhuma autoridade foi alterada automaticamente.`;
+  if(status==='CONFLICT')return `${domain}: autoridade canônica aponta para ${expected||'owner dependente'}, mas o provider real/declarado resolve para ${declared||'provider não identificável'}. Nenhuma autoridade foi alterada automaticamente.`;
   if(status==='BLOCKED')return `${domain}: capability necessária está fail-closed (${capability.summary}).`;
   if(status==='MISSING_PROVIDER')return `${domain}: provider canônico ${expected||'esperado'} não está disponível para readback.`;
   if(status==='STALE_DECLARATION')return `${domain}: declaração canônica está além da janela de freshness de 7 dias (${truth?.updated_at||'sem timestamp'}).`;
@@ -49,7 +49,7 @@ function explanation(status,{domain,expected,declared,provider,truth,capability}
 export function buildTruthGraph({authorityRows=[],truthRows=[],capabilityRows=[],providers=[],refs={},now=Date.now(),inputError=null}={}){
   const checked_at=new Date(now).toISOString();
   if(inputError||!authorityRows.length){
-    const semantic={domain:'NEXO',status:'MISSING_PROVIDER',authority:'AUTHORITY_MATRIX',provider:{expected:'nexo',declared:null,status:'UNAVAILABLE'},capability:{state:'N/A',summary:'Matrizes canônicas indisponíveis.',ids:[]},source_ref:refs.authority||refs.ssot||'https://docs.google.com/'};
+    const semantic={domain:'NEXO',status:'MISSING_PROVIDER',authority:'AUTHORITY_MATRIX',provider:{expected:'nexo',actual:null,status:'UNAVAILABLE',expected_status:'UNAVAILABLE'},capability:{state:'N/A',summary:'Matrizes canônicas indisponíveis.',ids:[]},source_ref:refs.authority||refs.ssot||'https://docs.google.com/'};
     const result={...semantic,fingerprint:`TG-${hash(semantic)}`,checked_at,explanation:'NEXO: AUTHORITY_MATRIX/CAPABILITY_MATRIX não puderam ser lidas; o radar não inventa autoridade ausente.',material:true};
     return {fingerprint:`TRUTHGRAPH-${hash([result.fingerprint])}`,checked_at,results:[result],material_conflicts:[result]};
   }
@@ -57,8 +57,8 @@ export function buildTruthGraph({authorityRows=[],truthRows=[],capabilityRows=[]
   const results=authorityRows.filter(r=>text(r.domain)).map(row=>{
     const domain=text(row.domain).toUpperCase();
     const truth=truthRows.find(r=>text(r.record_type).toLowerCase()==='truth'&&text(r.record_id).toUpperCase()===domain&&text(r.status).toUpperCase()==='ACTIVE');
-    const expected=expectedProvider(row),declared=declaredProvider(truth);
-    const p=expected?providerMap.get(expected):null;
+    const expected=expectedProvider(row),declared=declaredProvider(truth),actual=declared||expected;
+    const expectedState=expected?providerMap.get(expected):null,actualState=actual?providerMap.get(actual):null;
     const caps=capabilityRows.filter(r=>domains(r.domain).includes(domain));
     const capability=capabilityState(caps);
     const updated=truth?Date.parse(truth.updated_at):NaN;
@@ -68,12 +68,12 @@ export function buildTruthGraph({authorityRows=[],truthRows=[],capabilityRows=[]
     if(domain==='ARTIFACT')status='LIVE';
     else if(conflict)status='CONFLICT';
     else if(capability.state==='BLOCKED')status='BLOCKED';
-    else if(expected&&(!p||p.status!=='AVAILABLE'))status='MISSING_PROVIDER';
+    else if(expected&&(!expectedState||expectedState.status!=='AVAILABLE'))status='MISSING_PROVIDER';
     else if(stale)status='STALE_DECLARATION';
-    else if((p&&p.partial)||capability.state==='DEGRADED')status='DEGRADED';
-    const source_ref=conflict?(refs.ssot||refs.authority):(refs.authority||refs.ssot||p?.sourceRef||'https://docs.google.com/');
+    else if((actualState&&actualState.partial)||capability.state==='DEGRADED')status='DEGRADED';
+    const source_ref=conflict?(refs.ssot||refs.authority):(refs.authority||refs.ssot||'https://docs.google.com/');
     const authority={canonical_truth:text(row.canonical_truth),operational_truth:text(row.operational_truth),chat_role:text(row.chat_role),conflict_rule:text(row.conflict_rule)};
-    const provider={expected:expected||'owner-dependent',declared:declared||expected||'owner-dependent',status:p?.status|| (expected?'UNAVAILABLE':'N/A'),partial:!!p?.partial,checked_at:p?.checkedAt||checked_at};
+    const provider={expected:expected||'owner-dependent',actual:actual||'owner-dependent',status:actualState?.status||(actual?'UNAVAILABLE':'N/A'),expected_status:expectedState?.status||(expected?'UNAVAILABLE':'N/A'),partial:!!actualState?.partial,checked_at:actualState?.checkedAt||checked_at};
     const semantic={domain,status,source_ref,authority,provider,capability};
     const material=['CONFLICT','BLOCKED','MISSING_PROVIDER','STALE_DECLARATION'].includes(status);
     return {...semantic,fingerprint:`TG-${hash(semantic)}`,checked_at,material,explanation:explanation(status,{domain,expected,declared,provider,truth,capability})};
