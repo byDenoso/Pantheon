@@ -1,4 +1,4 @@
-name: Atlas verified deploy via GitHub OIDC
+name: Atlas OIDC bridge probe
 
 on:
   push:
@@ -9,41 +9,10 @@ permissions:
   contents: read
   id-token: write
 
-concurrency:
-  group: atlas-via-nexo-token-temp
-  cancel-in-progress: false
-
 jobs:
-  preview:
+  probe:
     runs-on: ubuntu-latest
-    env:
-      ATLAS_ORG_ID: team_TLkDXqQIHke6IumXh3qzMDcs
-      ATLAS_PROJECT_ID: prj_DLQSz5OiIT1HxWMn2i4AgoIv5x8r
-      SOURCE_SHA: 17d07fe0e3ac13bc879dc3b7a6adbedbde562034
     steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '24'
-
-      - name: Prove Atlas source is exactly main
-        run: |
-          git diff --quiet "$SOURCE_SHA" -- atlas-control-tower
-          test -f atlas-control-tower/api/universal-projection.js
-          test -f atlas-control-tower/ui/universal-projection.mjs
-          grep -q '/api/universal-projection' atlas-control-tower/vercel.json
-
-      - name: Install, test, typecheck and build Atlas
-        working-directory: atlas-control-tower
-        run: |
-          npm install --no-audit --no-fund
-          npm test
-          npm run typecheck
-          npm run build
-
       - uses: actions/github-script@v7
         id: oidc
         with:
@@ -52,61 +21,15 @@ jobs:
             core.setSecret(token);
             core.setOutput('token', token);
 
-      - name: Exchange GitHub OIDC for short-lived Vercel token
+      - name: Reach protected Atlas preview and execute proxy probe
         env:
-          OIDC_TOKEN: ${{ steps.oidc.outputs.token }}
-        run: |
-          RESPONSE=$(curl -sS -f -X POST https://api.vercel.com/login/oauth/token \
-            --data 'grant_type=urn:ietf:params:oauth:grant-type:token-exchange' \
-            --data 'client_id=cl_kyUx2zVvA4MGptBohkmtYHJly2XltXzD' \
-            --data 'subject_token_type=urn:ietf:params:oauth:token-type:id_token' \
-            --data 'requested_token_type=urn:ietf:params:oauth:token-type:access_token' \
-            --data-urlencode "team_id_or_slug=$ATLAS_ORG_ID" \
-            --data-urlencode "subject_token=$OIDC_TOKEN")
-          TOKEN=$(printf '%s' "$RESPONSE" | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{const v=JSON.parse(s);if(!v.access_token)process.exit(2);process.stdout.write(v.access_token)})')
-          test -n "$TOKEN"
-          echo "::add-mask::$TOKEN"
-          echo "VERCEL_RUNTIME_TOKEN=$TOKEN" >> "$GITHUB_ENV"
-
-      - name: Install pinned Vercel CLI
-        run: npm install --global vercel@59.11.7
-
-      - name: Link canonical Atlas project explicitly
-        working-directory: atlas-control-tower
-        run: |
-          mkdir -p .vercel
-          printf '{"orgId":"%s","projectId":"%s"}\n' "$ATLAS_ORG_ID" "$ATLAS_PROJECT_ID" > .vercel/project.json
-
-      - name: Deploy complete Atlas preview
-        id: deploy
-        working-directory: atlas-control-tower
-        run: |
-          URL=$(vercel deploy . --yes --token "$VERCEL_RUNTIME_TOKEN")
-          echo "url=$URL" >> "$GITHUB_OUTPUT"
-          echo "$URL"
-
-      - name: Read back shell, health, UI and Projection Bus
-        env:
-          DEPLOYMENT_URL: ${{ steps.deploy.outputs.url }}
           GITHUB_OIDC_TOKEN: ${{ steps.oidc.outputs.token }}
+          PROBE_URL: https://nexo-atlas-control-tower-fdtmelhj3-denosooo2-1701s-projects.vercel.app/api/proxy-probe
         run: |
-          node --input-type=module <<'NODE'
-          const base=process.env.DEPLOYMENT_URL;
-          const headers={'x-vercel-trusted-oidc-idp-token':process.env.GITHUB_OIDC_TOKEN};
-          async function get(path){
-            const r=await fetch(new URL(path,base),{headers,redirect:'error',signal:AbortSignal.timeout(20000)});
-            const text=await r.text();
-            if(!r.ok)throw new Error(`${path}: HTTP ${r.status} ${text.slice(0,200)}`);
-            return {r,text};
-          }
-          const root=await get('/');
-          if(!root.text.includes('NEXO Atlas')||!root.text.includes('/ui/universal-projection.mjs'))throw new Error('Atlas shell is incomplete.');
-          const ui=await get('/ui/universal-projection.mjs');
-          if(!ui.text.includes('ProjectionEnvelope/v1')||!ui.text.includes('/api/universal-projection'))throw new Error('Projection UI module missing or stale.');
-          const health=await get('/api/health');
-          const h=JSON.parse(health.text);if(h.ok!==true)throw new Error('Atlas health failed.');
-          const projection=await get('/api/universal-projection');
-          const p=JSON.parse(projection.text);
-          if(p.contract!=='ProjectionEnvelope/v1'||p.bus!=='Pantheon/UniversalProjectionBus'||p.consumer!=='ATLAS'||p.projection_role!=='NON_AUTHORITATIVE')throw new Error('Universal Projection contract failed.');
-          console.log(JSON.stringify({url:base,shell:'pass',health:'pass',projectionUI:'pass',projection:'pass',projectionState:p.state,upstream:p.upstream?.state,fingerprint:p.fingerprint},null,2));
-          NODE
+          status=$(curl -sS -o /tmp/probe.json -w '%{http_code}' --max-time 30 "$PROBE_URL" \
+            -H "x-vercel-trusted-oidc-idp-token: $GITHUB_OIDC_TOKEN")
+          echo "probe HTTP $status"
+          cat /tmp/probe.json
+          echo
+          test "$status" = "200"
+          node -e 'const fs=require("fs");const j=JSON.parse(fs.readFileSync("/tmp/probe.json","utf8"));if(j.ok!==true||j.upstreamStatus!==200)process.exit(1);console.log("OIDC proxy bridge PASS")'
