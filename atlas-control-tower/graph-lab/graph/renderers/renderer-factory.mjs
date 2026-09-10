@@ -5,6 +5,7 @@ import {PixiGraphRenderer} from './pixi-graph-renderer.mjs';
 import {BabylonGraphRenderer} from './babylon-graph-renderer.mjs';
 import {assertGraphRenderer} from './renderer-contract.mjs';
 import {rendererById,resolveRenderer} from './renderer-registry.mjs';
+import {installMobileUxV6} from '../experience/mobile-ux-v6.mjs';
 import './visual-presets.mjs';
 
 export function rendererClassFor(id){
@@ -23,5 +24,8 @@ export function createGraphRenderer({id='canvas-2d',canvas,container,callbacks={
  if(info.id==='canvas-2d')instance.camera.flat=true;
  if(info.id==='canvas-25d')instance.camera.flat=false;
  if(info.id==='three-3d'&&instance.options)instance.options.autoOrbit=false;
- return assertGraphRenderer(instance,info.id);
+ const renderer=assertGraphRenderer(instance,info.id);
+ globalThis.__ATLAS_GRAPH_RENDERER=renderer;
+ queueMicrotask(()=>installMobileUxV6({renderer}));
+ return renderer;
 }
