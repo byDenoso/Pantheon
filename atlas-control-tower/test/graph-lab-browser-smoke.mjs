@@ -99,6 +99,26 @@ async function smokeCanonicalHierarchy(debugPort,baseUrl){
  }finally{await closePage(page)}
 }
 
+async function smokeAssociativeMemory(debugPort,baseUrl){
+ const page=await openPage(debugPort,{width:1440,height:1000});
+ try{
+  const url=`${baseUrl}/?experience=OPERATIONAL&renderer-v4=canvas-2d&renderer=legacy-canvas`;
+  await navigate(page,url);
+  await waitFor(page.cdp,"String(document.querySelector('#stage-source')?.textContent||'').includes('FIL')",{timeout:30000,label:'associative memory live or snapshot projection'});
+  const before=await evaluate(page.cdp,"Number(document.querySelector('#hud-nodes')?.textContent||0)");
+  assert.equal(await evaluate(page.cdp,"document.querySelectorAll('[data-domain-target]').length"),4,'associative memory must not create a fourth macro lane');
+  await evaluate(page.cdp,"document.querySelector('.atlas-filaments-toggle')?.click(); true");
+  await waitFor(page.cdp,`Number(document.querySelector('#hud-nodes')?.textContent||0)>${before}`,{timeout:10000,label:'associative nodes after FILAMENTOS'});
+  await evaluate(page.cdp,"(()=>{const input=document.querySelector('#hierarchy-search');input.value='SEM-CROSS-NULL-AUDIT-001';input.dispatchEvent(new Event('input',{bubbles:true}));return true})()");
+  await waitFor(page.cdp,"Boolean(document.querySelector('#search-results button'))",{timeout:5000,label:'semantic memory search result'});
+  await evaluate(page.cdp,"document.querySelector('#search-results button')?.click(); true");
+  await waitFor(page.cdp,"String(document.querySelector('.cockpit-summary')?.textContent||'').includes('hipóteses rivais')",{timeout:5000,label:'semantic memory cockpit meaning'});
+  await waitFor(page.cdp,"String(document.querySelector('#cockpit-body')?.textContent||'').includes('peso 0.90')",{timeout:5000,label:'filament weight in cockpit'});
+  assert.equal(await evaluate(page.cdp,"String(document.querySelector('#cockpit-body')?.textContent||'').includes('DERIVED_NOT_TRUTH')||String(document.querySelector('#cockpit-body')?.textContent||'').includes('Suporte declarado')"),true,'associative cockpit must expose auditable context');
+  assert.deepEqual(page.errors,[],`associative memory emitted browser errors: ${page.errors.join(' | ')}`);
+ }finally{await closePage(page)}
+}
+
 async function smokeMobileFallback(debugPort,baseUrl){
  const page=await openPage(debugPort,{width:390,height:844});
  try{
@@ -129,6 +149,7 @@ try{
  await waitFor({send:async(method)=>{if(method!=='Runtime.evaluate')return{};try{const json=await fetch(`http://127.0.0.1:${debugPort}/json/version`).then(r=>r.json());return{result:{value:Boolean(json.webSocketDebuggerUrl)}}}catch{return{result:{value:false}}}}},'true',{timeout:12000,label:'Chrome DevTools endpoint'}).catch(async()=>{for(let i=0;i<100;i++){try{const json=await fetch(`http://127.0.0.1:${debugPort}/json/version`).then(r=>r.json());if(json.webSocketDebuggerUrl)return}catch{}await delay(100)}throw new Error(`Chrome did not start: ${stderr.slice(-1200)}`)});
  for(const item of cases){await smokeRenderer(debugPort,base,item);console.log(`PASS renderer ${item.id}`)}
  await smokeCanonicalHierarchy(debugPort,base);console.log('PASS canonical Science drill-down and ABRIR affordance');
+ await smokeAssociativeMemory(debugPort,base);console.log('PASS associative memory overlay and cockpit');
  await smokeMobileFallback(debugPort,base);console.log('PASS mobile heavy-renderer fallback');
  console.log('PASS Graph Lab browser smoke');
 }finally{
