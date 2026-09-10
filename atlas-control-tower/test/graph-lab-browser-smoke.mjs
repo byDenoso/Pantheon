@@ -19,6 +19,7 @@ async function startStaticServer(){
  const server=createServer(async(req,res)=>{
   try{
    const pathname=decodeURIComponent(new URL(req.url,'http://localhost').pathname);
+   if(pathname==='/favicon.ico'){res.writeHead(204,{'cache-control':'no-store'});res.end();return}
    const requested=pathname==='/'?'index.html':pathname.replace(/^\/+/, '');
    const file=path.resolve(root,requested);
    if(!file.startsWith(root+path.sep)&&file!==path.join(root,'index.html'))throw new Error('path escape');
@@ -49,7 +50,7 @@ async function openPage(debugPort,{width=1440,height=1000}={}){
  await cdp.send('Page.enable');await cdp.send('Runtime.enable');await cdp.send('Log.enable');
  await cdp.send('Emulation.setDeviceMetricsOverride',{width,height,deviceScaleFactor:1,mobile:width<=760});
  const errors=[];cdp.on('Runtime.exceptionThrown',event=>errors.push(event.exceptionDetails?.text||event.exceptionDetails?.exception?.description||'Runtime exception'));
- cdp.on('Log.entryAdded',event=>{if(event.entry?.level==='error'&&!/favicon/i.test(event.entry?.text||''))errors.push(`error: ${event.entry.text}`)});
+ cdp.on('Log.entryAdded',event=>{if(event.entry?.level==='error'&&!/favicon/i.test(`${event.entry?.url||''} ${event.entry?.text||''}`))errors.push(`error: ${event.entry?.url||event.entry?.text}`)});
  return{cdp,errors,targetId:created.id};
 }
 
