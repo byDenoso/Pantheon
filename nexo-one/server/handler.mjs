@@ -7,12 +7,15 @@ import {readSystemInput} from './adapters/system-input.mjs';
 import {configured,authenticated,verifyPassword,makeSession,cookie,sameOrigin} from './auth/session.mjs';
 import {verifyProjectionService} from './auth/vercel-oidc.mjs';
 const attempts=new Map();
+const ATLAS_ORIGIN='https://nexo-atlas-control-tower.vercel.app';
 async function body(req) {let text='';for await(const chunk of req){text+=chunk;if(text.length>4096)throw new Error('BODY_TOO_LARGE');}return JSON.parse(text||'{}');}
 export default async function handler(req,res) {
   const env=process.env,now=Date.now();
-  res.setHeader('Content-Type','application/json; charset=utf-8');res.setHeader('Cache-Control','private, no-store');res.setHeader('X-Content-Type-Options','nosniff');res.setHeader('Vary','Cookie, Authorization');
+  res.setHeader('Content-Type','application/json; charset=utf-8');res.setHeader('Cache-Control','private, no-store');res.setHeader('X-Content-Type-Options','nosniff');res.setHeader('Vary','Cookie, Authorization, Origin');
   const send=(value,status=200)=>{res.statusCode=status;res.end(JSON.stringify(value));};
   const url=new URL(req.url,'http://local'),route=url.searchParams.get('route')||url.pathname.split('/').pop(),privateAccess=authenticated(req,env),access=privateAccess?'PRIVATE':'PUBLIC';
+  const origin=String(req.headers.origin||'');
+  if(req.method==='GET'&&route==='world'&&origin===ATLAS_ORIGIN)res.setHeader('Access-Control-Allow-Origin',ATLAS_ORIGIN);
   try{
     if(route==='session'){
       if(req.method==='GET')return send({authenticated:privateAccess,configured:configured(env),access});
