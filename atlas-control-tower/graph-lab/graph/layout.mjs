@@ -33,10 +33,10 @@ function localFrame(parentPos,parentId){
 /**
  * Deterministic 3.5D orbital layout.
  *
- * Domains occupy a shallow spherical shell around NEXO instead of one XY disk.
- * Descendants open in a stable local frame attached to their parent and lean
- * outward from the shell, so progressive expansion adds volume without moving
- * anything that was already visible.
+ * Canonical descendants stay in a stable local frame. overlayOnly associative
+ * memories are never promoted into that hierarchy: they sit between the domain
+ * anchors explicitly declared by Learning Filaments, so the neural layer reads
+ * as a transverse bridge rather than as a fourth branch under NEXO.
  */
 export function layoutNodes(nodes,focusId,options={}){
  const baseRadius=Number(options.baseRadius||250);
@@ -47,7 +47,7 @@ export function layoutNodes(nodes,focusId,options={}){
  const byId=new Map(nodes.map(n=>[n.id,n]));
  const children=new Map();
  for(const node of nodes){
-  if(node.id===focusId)continue;
+  if(node.id===focusId||node.overlayOnly)continue;
   const parentId=node.parentId&&node.parentId!==node.id&&byId.has(node.parentId)?node.parentId:focusId;
   const list=children.get(parentId)||[];
   list.push(node);
@@ -98,6 +98,18 @@ export function layoutNodes(nodes,focusId,options={}){
   });
  };
  place(focusId,[0,0,0],1);
+
+ // Associative memories are positioned from their declared domain anchors only.
+ // No anchor means no invented semantic placement; the generic fallback below is
+ // used and the node remains explicitly DERIVED_NOT_TRUTH.
+ for(const node of nodes.filter(node=>node.overlayOnly)){
+  const anchors=(node.metadata?.associativeAnchors||[]).map(id=>out.get(id)).filter(Boolean);
+  if(!anchors.length)continue;
+  const center=anchors.reduce((acc,p)=>[acc[0]+p[0],acc[1]+p[1],acc[2]+p[2]],[0,0,0]).map(value=>value/anchors.length);
+  const seed=unitHash(node.id),angle=seed*Math.PI*2,radius=34+unitHash(`${node.id}:r`)*42;
+  const zBias=(unitHash(`${node.id}:z`)-.5)*60;
+  out.set(node.id,[center[0]+Math.cos(angle)*radius,center[1]+Math.sin(angle)*radius*.68,center[2]+zBias]);
+ }
 
  for(const node of nodes)if(!out.has(node.id)){
   const seed=unitHash(node.id);
