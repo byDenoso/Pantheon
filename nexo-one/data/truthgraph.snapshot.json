@@ -1,0 +1,64 @@
+{
+  "version": "1",
+  "revision": "truthgraph-projection-20260910T0954Z",
+  "partial": true,
+  "items": [],
+  "projection": {
+    "authority": "PROJECTION_ONLY",
+    "generated_at": "2026-09-10T09:54:00Z",
+    "source": "NEXO SSOT + ACTION_REGISTER",
+    "notes": "Read-only transport for TruthGraph when private Google credentials are unavailable. Canonical authority remains in the referenced Sheets."
+  },
+  "truthGraphInput": {
+    "truthRows": [
+      {"record_type":"truth","record_id":"SCIENCE","status":"ACTIVE","title":"Google Sheets:NEXO · SSOT CANONICAL / Science","detail":"Science truth hot index; evidence remains in Drive","updated_at":"2026-09-09"},
+      {"record_type":"truth","record_id":"OLYMPUS","status":"ACTIVE","title":"Google Sheets:NEXO · SSOT CANONICAL / Olympus","detail":"Olympus operational truth hot state","updated_at":"2026-09-09"},
+      {"record_type":"truth","record_id":"LEARNING","status":"ACTIVE","title":"Google Sheets:NEXO · SSOT CANONICAL / NEXO","detail":"Learning and operational rules consolidated into NEXO","updated_at":"2026-09-09"},
+      {"record_type":"truth","record_id":"ENGINEERING","status":"ACTIVE","title":"GitHub:byDenoso/Pantheon + real runtime","detail":"Code/runtime Truth Owner remains GitHub + runtime","updated_at":"2026-09-08T09:31:29Z"}
+    ],
+    "authorityRows": [
+      {"domain":"NEXO","canonical_truth":"ACTION_REGISTER + NDMK/STATE_INDEX","operational_truth":"Connected runtime/connectors","chat_role":"Discovery/context","conflict_rule":"Canonical NEXO state wins; runtime proves capabilities/effects"},
+      {"domain":"SCIENCE","canonical_truth":"PEER Control Tower + SCIENCE skill","operational_truth":"Verified outputs/datasets/checkpoints","chat_role":"Discovery/context + anticipatory test-direction signal","conflict_rule":"Tower/contract/evidence wins; inference may schedule/queue discriminating work but cannot promote claims or relax gates"},
+      {"domain":"ENGINEERING","canonical_truth":"Git/GitHub for versioned code","operational_truth":"Runtime/provider for deployed behavior (Vercel/DB/logs/service)","chat_role":"Requirements/context + operational signals","conflict_rule":"Git decides code state; runtime decides what is live; inference may trigger reversible maintenance/fixes but never infer deployment from Git"},
+      {"domain":"OLYMPUS","canonical_truth":"NEXO · SSOT CANONICAL / Olympus","operational_truth":"SSOT Olympus only; Calendar/Gmail/human/provider inputs are signals or readback evidence, never authority.","chat_role":"Explicit human intent/context signal only; never Truth Owner.","conflict_rule":"SSOT Olympus wins. Any competing authority declaration is invalid and must be removed; external signals may propose bounded updates only after SSOT reconciliation."},
+      {"domain":"ARTIFACT","canonical_truth":"Truth owner of underlying content","operational_truth":"Rendered/exported artifact","chat_role":"Context only","conflict_rule":"Artifact never overrides Science/Engineering/Olympus truth"}
+    ],
+    "capabilityRows": [
+      {"capability_id":"CAP-GCAL-SCHEDULED-WRITE","domain":"ENGINEERING/OLYMPUS","status":"PASS"},
+      {"capability_id":"CAP-GMAIL-SCHEDULED-SELF","domain":"NEXO","status":"PASS"},
+      {"capability_id":"CAP-GDRIVE-INTERACTIVE-SHEET","domain":"NEXO","status":"PASS"},
+      {"capability_id":"CAP-GDRIVE-SCHEDULED-SHEET","domain":"NEXO","status":"PASS"},
+      {"capability_id":"CAP-GITHUB-INTERACTIVE-READ","domain":"ENGINEERING","status":"PASS"},
+      {"capability_id":"CAP-GITHUB-SCHEDULED-READ","domain":"ENGINEERING","status":"PASS"},
+      {"capability_id":"CAP-GITHUB-SCHEDULED-WRITE","domain":"ENGINEERING","status":"PASS"},
+      {"capability_id":"CAP-VERCEL-INTERACTIVE-READ","domain":"ENGINEERING","status":"PASS"},
+      {"capability_id":"CAP-VERCEL-SCHEDULED-READ","domain":"ENGINEERING","status":"PASS"},
+      {"capability_id":"CAP-SCIENCE-SCHEDULED-RESUME","domain":"SCIENCE","status":"PENDING_REAL_ACTION"},
+      {"capability_id":"CAP-OLYMPUS-ANTICIPATORY-E2E","domain":"OLYMPUS","status":"PASS"},
+      {"capability_id":"CAP-EFFECT-EXACTLY-ONCE","domain":"NEXO","status":"PASS"},
+      {"capability_id":"CAP-LEASE-RECOVERY","domain":"NEXO","status":"PASS"},
+      {"capability_id":"CAP-CLAUDE-COWORK-SCHEDULED-READ","domain":"NEXO/SCIENCE/ENGINEERING/OLYMPUS","status":"PENDING_CANARY"},
+      {"capability_id":"CAP-CLAUDE-COWORK-SCHEDULED-WRITE","domain":"NEXO","status":"UNVERIFIED"},
+      {"capability_id":"CAP-CLAUDE-COWORK-PROJECT-CONTEXT","domain":"NEXO","status":"PENDING_CANARY"},
+      {"capability_id":"CAP-CLAUDE-COWORK-RECEIPT-CONTRACT","domain":"NEXO","status":"PENDING_CANARY"},
+      {"capability_id":"CAP-CLAUDE-COWORK-DOMAIN-ROUTING","domain":"SCIENCE/ENGINEERING/OLYMPUS","status":"PENDING_CANARY"},
+      {"capability_id":"CAP-CLAUDE-COWORK-TOWER-READ","domain":"SCIENCE","status":"PENDING_CANARY"},
+      {"capability_id":"CAP-CLAUDE-COWORK-GITHUB-READ","domain":"ENGINEERING","status":"PENDING_CANARY"},
+      {"capability_id":"CAP-NEON-NEXO-OPS-SCHEDULED-WRITE","domain":"NEXO","status":"PASS"},
+      {"capability_id":"CAP-CAMB-DRIVE-INTERACTIVE-EXEC","domain":"SCIENCE","status":"PASS"},
+      {"capability_id":"CAP-CAMB-SCHEDULED-INVOKE","domain":"SCIENCE","status":"PASS"},
+      {"capability_id":"CAP-DATASET-SPT3G-D1-KK-DRIVE","domain":"SCIENCE","status":"PASS"},
+      {"capability_id":"CAP-SPT3G-D1-LENSLIKE-NATIVE","domain":"SCIENCE","status":"PASS"},
+      {"capability_id":"CAP-SCIENCE-RESOURCE-RESOLVER","domain":"SCIENCE","status":"PASS"},
+      {"capability_id":"CAP-SCIENCE-MINIMAL-HYDRATION-SCHEDULED","domain":"SCIENCE","status":"PENDING_REAL_ACTION"},
+      {"capability_id":"CAP-ATLAS-SIDEQUEST-PROJECTION","domain":"ENGINEERING/NEXO","status":"PASS"},
+      {"capability_id":"CAP-NEXO-ASSOCIATIVE-LEARNING-LAYER","domain":"NEXO","status":"PASS"}
+    ],
+    "refs": {
+      "ssot": "https://docs.google.com/spreadsheets/d/1e6s2dKOYVLNsPUguHI85RLVLwJKtlCsQZBJ1BE-UhaY/edit#gid=1113465053",
+      "authority": "https://docs.google.com/spreadsheets/d/1twRpSoZCOXv77YyCh_5V9nAS2PM2nqzex2A37eI2Zas/edit#gid=337426832",
+      "capability": "https://docs.google.com/spreadsheets/d/1twRpSoZCOXv77YyCh_5V9nAS2PM2nqzex2A37eI2Zas/edit#gid=579884733"
+    },
+    "inputError": null
+  }
+}
