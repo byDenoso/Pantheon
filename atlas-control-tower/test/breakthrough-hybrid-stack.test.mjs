@@ -59,3 +59,14 @@ test('Breakthrough CSS provides rustic depth and reduced-motion safety', () => {
   assert.match(css, /--bt-rx/);
   assert.match(css, /--bt-ry/);
 });
+
+test('Breakthrough ships as a dedicated Vite entry without replacing the canonical static shell', () => {
+  assert.equal(exists('bt.html'), true, 'bt.html must exist');
+  const bt = read('bt.html');
+  const vite = read('vite.config.ts');
+  const canonical = read('index.html');
+  assert.match(bt, /id="root"/);
+  assert.match(bt, /\/src\/main\.tsx/);
+  assert.match(vite, /bt\.html/);
+  assert.match(canonical, /src="\/app\.mjs"/);
+});
