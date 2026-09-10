@@ -138,7 +138,8 @@ test('HTTP health and release acceptance treat Vercel as non-gating', async () =
   const handler = await readFile(fileURLToPath(new URL('../server/handler.mjs', import.meta.url)), 'utf8');
   const release = await readFile(fileURLToPath(new URL('../scripts/verify-release.mjs', import.meta.url)), 'utf8');
   assert.match(handler, /p\.id\s*!==\s*['"]vercel['"]/);
-  assert.match(release, /p\.id\s*!==\s*['"]vercel['"]/);
+  assert.doesNotMatch(release, /requiredIds[\s\S]{0,200}vercel/);
+  assert.match(release, /read\('\/api\/system'\)/);
   assert.doesNotMatch(release, /w\.providers\.length\s*!==\s*7/);
 });
 
