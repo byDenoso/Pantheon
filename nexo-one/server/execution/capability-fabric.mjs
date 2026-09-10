@@ -10,6 +10,7 @@ function text(value){return String(value??'').trim()}
 function upper(value){return text(value).toUpperCase()}
 
 function canonical(value){
+  if(value instanceof Date)return value.toISOString();
   if(value===null||typeof value!=='object'){
     if(typeof value==='number'&&!Number.isFinite(value))return String(value);
     if(typeof value==='bigint')return value.toString();
@@ -117,6 +118,14 @@ function requireStores(effectLedger,executionRuns){
   }
 }
 
+function adapterReady(adapter){
+  return !!adapter&&typeof adapter.execute==='function'&&typeof adapter.readback==='function';
+}
+
+async function bestEffort(call){
+  try{return await call()}catch{return null}
+}
+
 export async function executeCapabilityAware({
   action,requiredOperation,context,input,capabilities,eligibleRuntimes,adapters={},effectLedger,executionRuns,
   actor,writeToken,now=new Date().toISOString(),
@@ -128,10 +137,9 @@ export async function executeCapabilityAware({
 
   const inputFingerprint=stableFingerprint(input??null);
   const runtimeCandidates=(eligibleRuntimes?.length?eligibleRuntimes:[executionContext]).map(upper);
-  const capability=selectCapabilityRoute({capabilities,domain,requiredOperation,context:executionContext,eligibleRuntimes:runtimeCandidates});
-  const capabilityId=text(capability.capability_id),runtime=upper(capability.runtime);
-  const adapter=adapters[capabilityId];
-  if(!adapter||typeof adapter.execute!=='function'||typeof adapter.readback!=='function')throw new Error('CAPABILITY_RUNTIME_ADAPTER_MISSING');
+  const availableCapabilities=(Array.isArray(capabilities)?capabilities:[]).filter(capability=>adapterReady(adapters[text(capability?.capability_id)]));
+  const capability=selectCapabilityRoute({capabilities:availableCapabilities,domain,requiredOperation,context:executionContext,eligibleRuntimes:runtimeCandidates});
+  const capabilityId=text(capability.capability_id),runtime=upper(capability.runtime),adapter=adapters[capabilityId];
 
   const effectKey=deriveEffectKey({actionId,requiredOperation,context:executionContext,inputFingerprint});
   const existing=await effectLedger.get(effectKey);
@@ -153,14 +161,20 @@ export async function executeCapabilityAware({
   }
 
   const id=runId(effectKey);
-  await executionRuns.start({
-    run_id:id,automation:text(actor)||'CAPABILITY_AWARE_EXECUTOR',runtime,domain,lane:domain,action_id:actionId,started_at:now,status:'IN_PROGRESS',
-    material_change:false,readback:'PENDING',effect_key:effectKey,receipt_ref:null,failure_signature:null,tools_used:capabilityId,
-    signals_observed:`required_operation=${text(requiredOperation)}; capability_fingerprint=${text(capability.fingerprint)}`,
-    context_fingerprint:inputFingerprint,strategy_family:FABRIC_VERSION,risk_class:text(capability.risk_level),
-    capability_id:capabilityId,input_fingerprint:inputFingerprint,
-  });
+  try{
+    await executionRuns.start({
+      run_id:id,automation:text(actor)||'CAPABILITY_AWARE_EXECUTOR',runtime,domain,lane:domain,action_id:actionId,started_at:now,status:'IN_PROGRESS',
+      material_change:false,readback:'PENDING',effect_key:effectKey,receipt_ref:null,failure_signature:null,tools_used:capabilityId,
+      signals_observed:`required_operation=${text(requiredOperation)}; capability_fingerprint=${text(capability.fingerprint)}`,
+      context_fingerprint:inputFingerprint,strategy_family:FABRIC_VERSION,risk_class:text(capability.risk_level),
+      capability_id:capabilityId,input_fingerprint:inputFingerprint,
+    });
+  }catch(error){
+    await bestEffort(()=>effectLedger.fail(effectKey,{status:'FAILED',last_attempt_at:now,readback_status:'NOT_RUN',last_error:text(error?.message||error)}));
+    throw error;
+  }
 
+  let effectVerified=false;
   try{
     const providerResult=await adapter.execute({action,input,capability,runtime,context:executionContext,inputFingerprint,effectKey,writeToken,actor});
     const readback=await adapter.readback({action,input,capability,runtime,context:executionContext,inputFingerprint,effectKey,providerResult,writeToken,actor});
@@ -170,6 +184,7 @@ export async function executeCapabilityAware({
     const completed=await effectLedger.complete(effectKey,{
       status:DONE,provider_object_id:providerObjectId,last_attempt_at:now,readback_status:READBACK_PASS,receipt_pointer:receiptRef,last_error:null,
     });
+    effectVerified=true;
     await executionRuns.finish(id,{
       ended_at:now,status:'SUCCESS',material_change:mutating,readback:READBACK_PASS,receipt_ref:receiptRef,outcome:'provider readback verified',
       quality_gate_result:PASS,accuracy_or_equivalence:text(readback.fingerprint||readback.providerFingerprint)||'READBACK_VERIFIED',
@@ -177,8 +192,12 @@ export async function executeCapabilityAware({
     return {status:'SUCCESS',capability,runtime,inputFingerprint,effectKey,runId:id,providerResult,readback,effect:completed};
   }catch(error){
     const message=text(error?.message||error)||'EXECUTION_FAILED';
-    await effectLedger.fail(effectKey,{status:'FAILED',last_attempt_at:now,readback_status:'FAIL',last_error:message});
-    await executionRuns.finish(id,{ended_at:now,status:'FAILED',material_change:false,readback:'FAIL',failure_signature:message,outcome:message,quality_gate_result:'FAIL'});
+    if(effectVerified){
+      await bestEffort(()=>executionRuns.finish(id,{ended_at:now,status:'CHECKPOINTED',material_change:mutating,readback:READBACK_PASS,failure_signature:message,outcome:'effect verified; execution-run finalization failed',quality_gate_result:'INCONCLUSIVE'}));
+    }else{
+      await bestEffort(()=>effectLedger.fail(effectKey,{status:'FAILED',last_attempt_at:now,readback_status:'FAIL',last_error:message}));
+      await bestEffort(()=>executionRuns.finish(id,{ended_at:now,status:'FAILED',material_change:false,readback:'FAIL',failure_signature:message,outcome:message,quality_gate_result:'FAIL'}));
+    }
     throw error;
   }
 }
