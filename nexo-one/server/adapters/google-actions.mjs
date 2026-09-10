@@ -22,6 +22,12 @@ function rawMessage(payload={}){
   if(!to||!subject||/[\r\n]/.test(to))throw new ActionError('TARGET_AMBIGUOUS');
   return Buffer.from(`To: ${to}\r\nSubject: ${subject}\r\nContent-Type: text/plain; charset=UTF-8\r\nMIME-Version: 1.0\r\n\r\n${body}`,'utf8').toString('base64url');
 }
+function canonicalSheet(env,requested){
+  const canonical=String(env.NEXO_SHEET_ID||'').trim();
+  if(!canonical)throw new ActionError('AUTH_REQUIRED');
+  if(String(requested||'').trim()!==canonical)throw new ActionError('AUTHORITY_CONFLICT');
+  return canonical;
+}
 
 export async function googleActionRequest(url,{token,signal,method='GET',headers={},body}={},fetcher=fetch){
   const response=await fetcher(url,{method,signal,redirect:'error',headers:{Accept:'application/json',Authorization:`Bearer ${token}`,...headers},body});
@@ -74,10 +80,11 @@ export async function executeGoogle(action,{env=process.env,signal,tokenProvider
   } else if(type==='nexo.sheet.update'){
     const spreadsheetId=String(payload.spreadsheet_id||'').trim(),range=String(payload.range||'').trim(),values=payload.values;
     if(!spreadsheetId||!range||!Array.isArray(values))throw new ActionError('TARGET_AMBIGUOUS');
+    canonicalSheet(env,spreadsheetId);
     data=await requester(`https://sheets.googleapis.com/v4/spreadsheets/${enc(spreadsheetId)}/values/${enc(range)}?valueInputOption=RAW`,{token,signal,method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({range,majorDimension:'ROWS',values})});effectId=spreadsheetId;expected={range,values};source_ref=`https://docs.google.com/spreadsheets/d/${enc(spreadsheetId)}/edit`;
   } else throw new ActionError('CAPABILITY_BLOCKED');
   if(!effectId)throw new ActionError('PROVIDER_REJECTED');
-  return {effect_id:effectId,source_ref,classification:'ACK',expected,before_revision:payload.before_revision||null,target_ref:action.target_ref,action_type:type};
+  return {effect_id:effectId,source_ref,classification:'ACK',expected,target_ref:action.target_ref,action_type:type,before_revision:payload.before_revision||null};
 }
 
 function pickEvent(event){return {summary:event.summary,start:event.start,end:event.end,location:event.location,description:event.description};}
@@ -95,6 +102,7 @@ function containsExpected(actual,expected){
 export async function readbackGoogle(receipt,{env=process.env,signal,tokenProvider=googleToken,requester=defaultRequester}={}){
   const type=receipt.action_type,scopes=googleScopesFor(type),token=await tokenProvider(env,signal,{writeScopes:scopes}),effectId=receipt.provider_effect_id||receipt.effect_id;
   if(!effectId)throw new ActionError('READBACK_TIMEOUT');
+  if(type==='nexo.sheet.update')canonicalSheet(env,effectId);
   let data,match=true,revision=null,source_ref=receipt.source_ref||sourceFor(type,effectId);
   try{
     if(type==='gmail.send')data=await requester(`https://gmail.googleapis.com/gmail/v1/users/me/messages/${enc(effectId)}?format=metadata&metadataHeaders=Subject`,{token,signal});
