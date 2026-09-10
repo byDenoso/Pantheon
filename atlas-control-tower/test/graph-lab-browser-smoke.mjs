@@ -114,7 +114,11 @@ async function smokeAssociativeMemory(debugPort,baseUrl){
   await evaluate(page.cdp,"document.querySelector('#search-results button')?.click(); true");
   await waitFor(page.cdp,"String(document.querySelector('.cockpit-summary')?.textContent||'').includes('hipóteses rivais')",{timeout:5000,label:'semantic memory cockpit meaning'});
   await waitFor(page.cdp,"String(document.querySelector('#cockpit-body')?.textContent||'').includes('peso 0.90')",{timeout:5000,label:'filament weight in cockpit'});
-  assert.equal(await evaluate(page.cdp,"String(document.querySelector('#cockpit-body')?.textContent||'').includes('DERIVED_NOT_TRUTH')||String(document.querySelector('#cockpit-body')?.textContent||'').includes('Suporte declarado')"),true,'associative cockpit must expose auditable context');
+  await waitFor(page.cdp,"String(document.querySelector('#cockpit-body')?.textContent||'').includes('Próximo discriminante')",{timeout:5000,label:'next discriminant in overview'});
+  await evaluate(page.cdp,"document.querySelector('.cockpit-tabs [data-tab=atividade]')?.click(); true");
+  await waitFor(page.cdp,"String(document.querySelector('#cockpit-body')?.textContent||'').includes('Suporte declarado')&&String(document.querySelector('#cockpit-body')?.textContent||'').includes('Renilde')",{timeout:5000,label:'associative evidence in Activity tab'});
+  await evaluate(page.cdp,"document.querySelector('.cockpit-tabs [data-tab=integridade]')?.click(); true");
+  await waitFor(page.cdp,"String(document.querySelector('#cockpit-body')?.textContent||'').includes('DERIVED_NOT_TRUTH')&&String(document.querySelector('#cockpit-body')?.textContent||'').includes('Confiança publicada')",{timeout:5000,label:'associative authority and confidence in Integrity tab'});
   assert.deepEqual(page.errors,[],`associative memory emitted browser errors: ${page.errors.join(' | ')}`);
  }finally{await closePage(page)}
 }
