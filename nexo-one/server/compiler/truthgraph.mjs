@@ -75,7 +75,7 @@ export function buildTruthGraph({authorityRows=[],truthRows=[],capabilityRows=[]
     const authority={canonical_truth:text(row.canonical_truth),operational_truth:text(row.operational_truth),chat_role:text(row.chat_role),conflict_rule:text(row.conflict_rule)};
     const provider={expected:expected||'owner-dependent',actual:actual||'owner-dependent',status:actualState?.status||(actual?'UNAVAILABLE':'N/A'),expected_status:expectedState?.status||(expected?'UNAVAILABLE':'N/A'),partial:!!actualState?.partial,checked_at:actualState?.checkedAt||checked_at};
     const semantic={domain,status,source_ref,authority,provider,capability};
-    const material=['CONFLICT','BLOCKED','MISSING_PROVIDER','STALE_DECLARATION'].includes(status);
+    const material=['CONFLICT','MISSING_PROVIDER','STALE_DECLARATION'].includes(status);
     return {...semantic,fingerprint:`TG-${hash(semantic)}`,checked_at,material,explanation:explanation(status,{domain,expected,declared,provider,truth,capability})};
   });
   const material_conflicts=results.filter(r=>r.material);
