@@ -42,6 +42,7 @@ function explanation(status,{domain,expected,declared,provider,truth,capability}
   if(status==='BLOCKED')return `${domain}: capability necessária está fail-closed (${capability.summary}).`;
   if(status==='MISSING_PROVIDER')return `${domain}: provider canônico ${expected||'esperado'} não está disponível para readback.`;
   if(status==='STALE_DECLARATION')return `${domain}: declaração canônica está além da janela de freshness de 7 dias (${truth?.updated_at||'sem timestamp'}).`;
+  if(status==='DEGRADED'&&provider?.expected_status==='AUTH_REQUIRED')return `${domain}: provider canônico existe, mas esta superfície não possui autenticação para readback direto; evidência permanece parcial.`;
   if(status==='DEGRADED')return `${domain}: autoridade está coerente, mas provider/capability não tem prova integral (${provider?.partial?'provider parcial':capability.summary}).`;
   return `${domain}: autoridade, provider, freshness e capability estão coerentes no readback atual.`;
 }
@@ -68,6 +69,7 @@ export function buildTruthGraph({authorityRows=[],truthRows=[],capabilityRows=[]
     if(domain==='ARTIFACT')status='LIVE';
     else if(conflict)status='CONFLICT';
     else if(capability.state==='BLOCKED')status='BLOCKED';
+    else if(expected&&expectedState?.status==='AUTH_REQUIRED')status='DEGRADED';
     else if(expected&&(!expectedState||expectedState.status!=='AVAILABLE'))status='MISSING_PROVIDER';
     else if(stale)status='STALE_DECLARATION';
     else if((actualState&&actualState.partial)||capability.state==='DEGRADED')status='DEGRADED';
