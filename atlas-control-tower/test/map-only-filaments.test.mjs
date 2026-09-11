@@ -56,11 +56,11 @@ test('R3F filaments are instanced and GPU-driven rather than one DOM/canvas time
  assert.match(materials,/MeshBasicNodeMaterial/);
 });
 
-test('the React workspace is one map surface with semantic expansion, not tab panels',()=>{
+test('the graph renderer is a domain capability, not the global workspace',()=>{
  const app=read('src/App.tsx');const canvas=read('src/scene/AtlasCanvas.tsx');
- assert.doesNotMatch(app,/role="tablist"|data-mode="explore"|data-mode="learning"|data-mode="audit"|id="data-section"|id="learning-section-panel"|id="audit-section"|data-open-mode/);
- assert.match(app,/id="map-workspace"/);assert.match(app,/id="more"/);assert.match(canvas,/<Canvas/);
- for(const focus of ['system:NEXO','system:SCIENCE','system:AUTOMATION','system:LEARNING'])assert.ok(app.includes(focus),`sidebar focus ${focus} must remain`);
+ assert.doesNotMatch(app,/role="tablist"|id="map-workspace"|<AtlasCanvas/);
+ assert.match(app,/UniversesPage/);assert.match(app,/UniversePage/);assert.match(canvas,/<Canvas/);
+ assert.match(read('src/app/navigation.ts'),/Universos/);
 });
 
 test('the workspace compatibility module still normalizes retired modes to the map',async()=>{

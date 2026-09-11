@@ -1,0 +1,25 @@
+.nexo-shell{min-height:100vh;display:grid;grid-template-columns:228px minmax(0,1fr)}
+.nexo-sidebar{position:sticky;top:0;height:100vh;padding:22px 16px 18px;border-right:1px solid var(--line);display:flex;flex-direction:column;background:rgba(247,246,242,.9);backdrop-filter:blur(18px)}
+.nexo-brand{display:flex;align-items:center;gap:10px;padding:8px 10px;font-size:14px;letter-spacing:.02em}
+.nexo-brand b{font-weight:650}.nexo-mark{display:grid;place-items:center;width:28px;height:28px;border-radius:50%;background:var(--dark);color:#f3f1e9;font-size:12px}
+.nexo-primary-nav{display:flex;flex-direction:column;gap:3px;margin-top:30px}
+.nexo-nav-item{display:flex;align-items:center;gap:11px;padding:10px 11px;border-radius:10px;color:#716f69;font-size:13px;transition:.16s ease}
+.nexo-nav-item:hover{background:#eeede7;color:#242421}.nexo-nav-item.active{background:#e7e5de;color:#1f201d;font-weight:600}
+.nexo-nav-icon{width:18px;text-align:center;color:#87847d}.nexo-nav-item.active .nexo-nav-icon{color:#30352d}
+.nexo-sidebar-foot{margin-top:auto;padding:12px 10px;color:var(--muted);font-size:11px;display:flex;align-items:center;gap:8px}
+.nexo-status-dot{width:7px;height:7px;border-radius:50%;background:#6d8a72;box-shadow:0 0 0 3px rgba(109,138,114,.12)}
+.nexo-workspace{min-width:0}.nexo-topbar{height:64px;display:flex;align-items:center;gap:18px;padding:0 34px;border-bottom:1px solid var(--line);background:rgba(247,246,242,.82);backdrop-filter:blur(16px);position:sticky;top:0;z-index:20}
+.nexo-search{margin:auto;max-width:520px;width:52%;display:flex;align-items:center;gap:9px;padding:9px 12px;border:1px solid #e0dfd9;border-radius:11px;background:#fbfaf7;color:#95928a;font-size:12px}
+.nexo-search span{flex:1}.nexo-search kbd{font:10px ui-monospace,monospace;color:#aaa79f;border:1px solid #e1dfd8;padding:2px 5px;border-radius:5px}
+.nexo-runtime{font-size:11px;color:#8d8a82}.nexo-content{padding:42px clamp(24px,5vw,72px) 72px;max-width:1500px;margin:0 auto}
+@media(max-width:820px){
+  .nexo-shell{grid-template-columns:72px minmax(0,1fr)}
+  .nexo-sidebar{padding-inline:10px}.nexo-brand span:last-child,.nexo-nav-item span:last-child,.nexo-sidebar-foot{display:none}
+  .nexo-brand,.nexo-nav-item{justify-content:center}.nexo-nav-icon{width:auto;font-size:16px}
+  .nexo-topbar{padding:0 18px}.nexo-search{width:100%;max-width:none}.nexo-runtime{display:none}
+  .nexo-content{padding:30px 20px 56px}
+}
+@media(max-width:560px){
+  .nexo-shell{display:block}.nexo-sidebar{height:58px;width:100%;position:fixed;left:0;right:0;bottom:0;top:auto;z-index:50;flex-direction:row;padding:6px 8px;border-right:0;border-top:1px solid var(--line)}
+  .nexo-brand,.nexo-sidebar-foot{display:none}.nexo-primary-nav{margin:0;flex:1;flex-direction:row;justify-content:space-around}.nexo-nav-item{padding:9px 10px}.nexo-topbar{height:58px}.nexo-content{padding-bottom:88px}
+}

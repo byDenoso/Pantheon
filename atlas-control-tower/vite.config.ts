@@ -10,6 +10,13 @@ export default defineConfig({
   },
   server:{
     host:'0.0.0.0',
-    port:4173
+    port:4173,
+    proxy:{
+      '/api':{
+        target:'https://nexo-atlas-control-tower.vercel.app',
+        changeOrigin:true,
+        secure:true
+      }
+    }
   }
 });

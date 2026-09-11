@@ -20,13 +20,13 @@ const model={
 
 const fakeRoot=()=>({innerHTML:'',querySelectorAll(){return[]},querySelector(){return null}});
 
-test('overview puts the approved reference map before the operational deck',()=>{
- assert.match(app,/Ideias em órbita\./);
- assert.match(app,/Descobertas em rede\./);
- assert.match(main,/ui\/reference-one\.css/);
- assert.ok(app.indexOf('id="map-workspace"')<app.indexOf('id="command-center"'));
- assert.match(app,/FRONTEND OFICIAL/);
- assert.match(app,/Estado rastreável/);
+test('vNext overview is decision-first and explicitly excludes the graph',()=>{
+ const overview=readFileSync(new URL('../src/pages/OverviewPage.tsx',import.meta.url),'utf8');
+ assert.match(overview,/Visão geral/);
+ assert.match(overview,/Sem grafo competindo pela sua atenção/);
+ assert.doesNotMatch(overview,/AtlasCanvas|map-workspace/);
+ assert.match(main,/\.\/design\/index\.css/);
+ assert.doesNotMatch(app,/AtlasCanvas|reference-main|command-center/);
 });
 
 test('legacy control-tower model keeps the five approved console semantics available',()=>{

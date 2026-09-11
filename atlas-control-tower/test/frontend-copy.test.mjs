@@ -3,13 +3,13 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 
 const app = fs.readFileSync(new URL('../src/App.tsx', import.meta.url), 'utf8');
+const shell = fs.readFileSync(new URL('../src/app/AppShell.tsx', import.meta.url), 'utf8');
 const tower = fs.readFileSync(new URL('../ui/control-tower.mjs', import.meta.url), 'utf8');
 
-test('approved reference restores its intentional chrome without restoring provenance control', () => {
-  assert.match(app, /FRONTEND OFICIAL/i);
-  assert.match(app, /sidebar-foot reference-trace/);
-  assert.match(app, /Estado rastreável/i);
-  assert.doesNotMatch(app, /id="provenance"/);
+test('vNext shell identifies Atlas as a read-only projection without naming a provider', () => {
+  assert.match(shell, /projeção somente leitura/i);
+  assert.doesNotMatch(shell, /NEON|Truth Owners no Neon/i);
+  assert.doesNotMatch(app + shell, /id="provenance"|VERCEL_OIDC_TOKEN|Authorization:\s*Bearer/);
 });
 
 test('command center keeps direct operational copy without generic contrast disclaimers', () => {
@@ -18,7 +18,7 @@ test('command center keeps direct operational copy without generic contrast disc
   assert.doesNotMatch(tower, /NÃO É EVIDÊNCIA CIENTÍFICA/i);
 });
 
-test('React shell names the renderer without leaking runtime credentials', () => {
-  assert.match(app, /React · R3F · WebGPU/);
-  assert.doesNotMatch(app, /scGpF8x9|VERCEL_OIDC_TOKEN|Authorization:\s*Bearer/);
+test('graph renderer is route-scoped instead of leaking into the root shell', () => {
+  assert.doesNotMatch(app, /AtlasCanvas|R3F|WebGPU/);
+  assert.match(app, /lazy\(\(\)=>import\('\.\/pages\/UniversePage'\)\)/);
 });

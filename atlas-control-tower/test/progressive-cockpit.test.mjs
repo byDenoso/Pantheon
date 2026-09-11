@@ -4,14 +4,12 @@ import fs from 'node:fs';
 
 const read = p => fs.readFileSync(new URL('../'+p, import.meta.url), 'utf8');
 
-test('layered navigation defaults to one layer per click', () => {
+test('route-scoped graph navigation keeps the one-layer session default', () => {
  const app = read('src/App.tsx');
  const session = read('src/state/useAtlasSession.ts');
- assert.match(app, /useState\(1\)/);
- assert.match(app, /<option value=\{1\}>1 camada<\/option>/);
- assert.doesNotMatch(app, /useState\(3\)/);
  assert.match(session, /limit:180,depth:1/);
- assert.match(app, /actions\.open\(node\)/);
+ assert.doesNotMatch(app, /useState\(1\)|useState\(3\)|actions\.open\(node\)/);
+ assert.match(app, /UniversePage/);
 });
 
 test('legacy graph opening motion remains a smooth compatibility reference', () => {
@@ -53,13 +51,10 @@ test('cockpit copy exposes only what, how and why and never echoes raw technical
  assert.doesNotMatch(JSON.stringify(raw), /6b54a91e721785807ff0e90c897010b6|688b472d2a298ca0f988d6c3be287f2b664dc103/);
 });
 
-test('React inspector is human-facing while raw audit metadata stays isolated', () => {
+test('human-facing cockpit copy remains available without living in the root shell', () => {
  const app = read('src/App.tsx');
  const manifest = read('frontend-files.mjs');
- assert.match(app, /cockpit-triad/);
- assert.match(app, /O QUÊ/);
- assert.match(app, /COMO/);
- assert.match(app, /POR QUÊ/);
- assert.match(app, /<details className="audit-technical">/);
+ assert.doesNotMatch(app, /cockpit-triad|O QUÊ|POR QUÊ|audit-technical/);
  assert.match(manifest, /ui\/cockpit-copy\.mjs/);
+ assert.match(app, /UniversePage/);
 });

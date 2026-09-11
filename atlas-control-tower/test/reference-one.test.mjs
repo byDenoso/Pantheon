@@ -6,8 +6,9 @@ const app = fs.readFileSync(new URL('../src/App.tsx', import.meta.url), 'utf8');
 const css = fs.readFileSync(new URL('../ui/reference-one.css', import.meta.url), 'utf8');
 const tower = fs.readFileSync(new URL('../ui/control-tower.mjs', import.meta.url), 'utf8');
 
-test('reference-one React layout reproduces the approved hero composition', () => {
- for(const pattern of [/reference-main/,/Ideias em órbita\./,/Descobertas em rede\./,/GALÁXIAS/,/DADOS/,/PESSOAS/,/IMPACTO/,/observatory-galaxy-right/,/observatory-asteroid-field/,/observatory-horizon-right/])assert.match(app,pattern);
+test('vNext root no longer reproduces the retired reference-one hero', () => {
+ for(const pattern of [/reference-main/,/Ideias em órbita\./,/Descobertas em rede\./,/observatory-galaxy-right/,/observatory-asteroid-field/,/observatory-horizon-right/]) assert.doesNotMatch(app,pattern);
+ assert.match(app,/OverviewPage/);assert.match(app,/UniversesPage/);
 });
 
 test('approved reference keeps the exact lower console taxonomy available', () => {
