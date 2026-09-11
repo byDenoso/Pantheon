@@ -4,21 +4,24 @@ import fs from 'node:fs';
 
 const read=path=>fs.readFileSync(new URL('../'+path,import.meta.url),'utf8');
 
-test('vNext exposes six top-level product areas',()=>{
+test('vNext exposes five top-level product areas and Learning is an overlay',()=>{
   const nav=read('src/app/navigation.ts');
-  for(const label of ['Visão geral','Universos','Grafos','Learning','Operação','Proveniência']) assert.match(nav,new RegExp(label));
+  for(const label of ['Visão geral','Domínios','Grafos','Operação','Proveniência']) assert.match(nav,new RegExp(label));
+  assert.doesNotMatch(nav,/label: 'Learning'/);
   assert.doesNotMatch(nav,/Universo científico|Black Box.*nav/i);
 });
 
 test('routes are lazy and keep graph engines out of the root shell',()=>{
   const app=read('src/App.tsx');
-  for(const page of ['OverviewPage','UniversesPage','UniversePage','SubdomainPage','GraphsPage','GraphDomainPage','GraphDetailPage','LearningPage','OperationsPage','ProvenancePage']){
+  for(const page of ['OverviewPage','UniversesPage','UniversePage','GraphsV2Page','GraphDomainV2Page','GraphDetailV2Page','OperationsPage','ProvenancePage']){
     assert.match(app,new RegExp(`lazy\\(.*${page}`,'s'),`${page} is not lazy`);
   }
   assert.match(app,/BrowserRouter/);
   assert.match(app,/path="\/universes\/:universeId\/:subdomainId"/);
+  assert.match(app,/LegacyUniverseRedirect/);
   assert.match(app,/path="\/graphs\/:domainId\/:subgraphId"/);
-  assert.doesNotMatch(app,/AtlasCanvas/);
+  assert.match(app,/LearningRedirect/);
+  assert.doesNotMatch(app,/AtlasCanvas|GraphExplorer/);
 });
 
 test('main entrypoint uses only the vNext design system',()=>{
