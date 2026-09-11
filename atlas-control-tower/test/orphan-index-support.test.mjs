@@ -7,12 +7,14 @@ const orphanRuntime = read('../api/runtime-orphans.js');
 const drive = read('../lib/drive-ssot.mjs');
 const inspector = read('../ui/inspector.mjs');
 
-test('runtime routes orphaned compatibility reads through the Drive authority', () => {
+test('runtime routes compatibility reads through live Drive authority with explicit snapshot fallback', () => {
+  assert.match(orphanRuntime, /loadLiveSsot,projectLiveRoute,syncLiveSsot/);
   assert.match(orphanRuntime, /driveRoute,DRIVE_SSOT_META/);
   assert.match(orphanRuntime, /X-Atlas-Authority/);
   assert.match(orphanRuntime, /GOOGLE_DRIVE/);
-  assert.match(orphanRuntime, /READ_ONLY_DRIVE_SSOT/);
-  assert.match(orphanRuntime, /driveRoute\(route,query,\{method\}\)/);
+  assert.match(orphanRuntime, /LIVE_SSOT_UNAVAILABLE/);
+  assert.match(orphanRuntime, /staticFallback/);
+  assert.match(orphanRuntime, /METHOD_NOT_ALLOWED/);
 });
 
 test('Drive entities preserve source references as provenance metadata', () => {
