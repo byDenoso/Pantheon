@@ -1,0 +1,55 @@
+name: Atlas MCP Package
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/atlas-mcp-package.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Build MCP deployment manifest from tracked source
+        shell: bash
+        run: |
+          node <<'NODE'
+          const fs=require('fs');
+          const cp=require('child_process');
+          const prefix='atlas-control-tower/';
+          const tracked=cp.execFileSync('git',['ls-files','-z',prefix],{encoding:'utf8'}).split('\0').filter(Boolean);
+          const excluded=[
+            'docs/',
+            'test/',
+            'vercel.preview.json',
+            '.deploy-trigger-20260906'
+          ];
+          const selected=tracked.filter(full=>{
+            const rel=full.slice(prefix.length);
+            return !excluded.some(rule=>rule.endsWith('/')?rel.startsWith(rule):rel===rule);
+          });
+          const files=selected.map(full=>{
+            const rel=full.slice(prefix.length);
+            const bytes=fs.readFileSync(full);
+            return {file:rel,data:bytes.toString('base64'),encoding:'base64'};
+          });
+          const bytes=selected.reduce((n,p)=>n+fs.statSync(p).size,0);
+          fs.mkdirSync('atlas-mcp-package',{recursive:true});
+          fs.writeFileSync('atlas-mcp-package/files.json',JSON.stringify(files));
+          fs.writeFileSync('atlas-mcp-package/receipt.json',JSON.stringify({sha:process.env.GITHUB_SHA,fileCount:files.length,sourceBytes:bytes,files:selected},null,2));
+          console.log(`packaged ${files.length} tracked files (${bytes} source bytes)`);
+          NODE
+      - uses: actions/upload-artifact@v4
+        with:
+          name: atlas-mcp-package-${{ github.sha }}
+          path: atlas-mcp-package/
+          if-no-files-found: error
+          retention-days: 1
