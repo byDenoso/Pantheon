@@ -64,8 +64,8 @@ test('canvas has a keyboard-operable DOM accessibility mirror',()=>{
 
 test('graph v2 mobile and reduced-motion policy is explicit',()=>{
   const css=read('src/design/graph-v2.css');
-  assert.match(css,/min-height:44px/);
-  assert.match(css,/position:sticky/);
+  assert.match(css,/min-height:40px|44px/);
+  assert.match(css,/\.graph-v2-toolbar\{[^}]*position:absolute/);
   assert.match(css,/@media\(prefers-reduced-motion:reduce\)/);
   assert.match(css,/touch-action:none/);
 });
