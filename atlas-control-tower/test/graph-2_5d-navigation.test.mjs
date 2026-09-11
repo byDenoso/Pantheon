@@ -12,14 +12,17 @@ test('graph surface uses viewport-sized canvas with floating inspector',()=>{
   assert.doesNotMatch(css,/grid-template-columns:minmax\(0,1fr\) 320px/);
 });
 
-test('2.5D camera keeps Pixi 2D renderer and supports depth tilt gestures',()=>{
+test('2.5D camera keeps Pixi 2D renderer and computes depth inside canvas',()=>{
   const source=read('src/graph-engine/GraphExplorer.tsx');
+  const css=read('src/design/graph-v2.css');
   assert.match(source,/tiltX/);
   assert.match(source,/tiltY/);
   assert.match(source,/shiftKey/);
-  assert.match(source,/--graph-tilt-x/);
-  assert.match(source,/--graph-tilt-y/);
-  assert.match(source,/translateZ\(0\)/);
+  assert.match(source,/projectCanvasNode/);
+  assert.match(source,/depthScale/);
+  assert.match(source,/depthAlpha/);
+  assert.doesNotMatch(source,/--graph-tilt-x|--graph-tilt-y|translateZ\(0\)/);
+  assert.doesNotMatch(css,/rotateX\(|rotateY\(|perspective:\s*1400px/);
   assert.doesNotMatch(source,/THREE|@react-three|Canvas from ['"]@react-three/);
 });
 
