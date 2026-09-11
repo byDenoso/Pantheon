@@ -1,6 +1,7 @@
 import { NavLink, Outlet } from 'react-router-dom';
 import { productNavigation } from './navigation';
 import { GlobalSearch } from '../components/GlobalSearch';
+import { ThemeToggle } from '../components/ThemeToggle';
 
 export function AppShell(){
   return <div className="nexo-shell">
@@ -20,9 +21,9 @@ export function AppShell(){
     <section className="nexo-workspace">
       <header className="nexo-topbar">
         <GlobalSearch/>
-        <div className="nexo-runtime">NEXO Atlas vNext</div>
+        <div className="nexo-topbar-actions"><ThemeToggle/><div className="nexo-runtime">NEXO Atlas vNext</div></div>
       </header>
-      <main className="nexo-content"><Outlet/></main>
+      <main id="atlas-main" className="nexo-content" tabIndex={-1}><Outlet/></main>
     </section>
   </div>;
 }

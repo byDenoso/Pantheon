@@ -45,7 +45,7 @@ export function buildUniversesModel(rootGraph:GraphLike,details:Record<string,Gr
  const source=text(root.source)||'legacy',freshness=text(root.freshness)||'SNAPSHOT';
  return {available:true,sourceLabel:provenanceLabel({source,freshness}),items};
 }
-export function buildUniverseView(universeId:string,graph:GraphLike){
+export function buildUniverseView(universeId:string,graph:GraphLike,selectedEntityId=''){
  const id=String(universeId||'').toLowerCase(),key=id.toUpperCase();
  const label=LABELS[key]||id||'Universo',description=DESCRIPTIONS[key]||'Contexto publicado pelo NEXO.';
  if(!graph)return {available:false,id,label,description,status:'',sourceLabel:'INDISPONÍVEL',subdomains:[],entities:[],facets:[]};
@@ -53,9 +53,11 @@ export function buildUniverseView(universeId:string,graph:GraphLike){
  const systemId=`system:${key}`;
  const system=nodes.find(node=>text(node.id).toUpperCase()===systemId.toUpperCase())||{};
  const subdomains=buildSubdomainsModel(id,graph).items;
- const entities=nodes.filter(node=>text(node.id)!==systemId&&text(node.type).toUpperCase()!=='DOMAIN').map(node=>({
+ const allEntities=nodes.filter(node=>text(node.id)!==systemId&&text(node.type).toUpperCase()!=='DOMAIN').map(node=>({
   id:text(node.id),label:text(node.label)||text(node.id),type:text(node.type)||'ENTITY',status:text(node.status),summary:text(node.summary)
- })).filter(item=>item.id).sort((a,b)=>a.label.localeCompare(b.label,'pt-BR')).slice(0,24);
+ })).filter(item=>item.id).sort((a,b)=>a.label.localeCompare(b.label,'pt-BR'));
+ const selected=selectedEntityId?allEntities.find(item=>item.id===selectedEntityId):undefined;
+ const entities=(selected?[selected,...allEntities.filter(item=>item.id!==selectedEntityId)]:allEntities).slice(0,24);
  const counts=new Map<string,number>();
  for(const item of entities)counts.set(item.type,(counts.get(item.type)||0)+1);
  const facets=[...counts.entries()].map(([type,count])=>({type,count})).sort((a,b)=>b.count-a.count||a.type.localeCompare(b.type));

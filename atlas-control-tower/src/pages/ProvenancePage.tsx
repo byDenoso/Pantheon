@@ -13,6 +13,7 @@ const safeUrl=(url:string)=>/^https:\/\//i.test(url)?url:'';
 export default function ProvenancePage(){
  const [params,setParams]=useSearchParams();
  const focusId=params.get('id')||'';
+ const auditId=params.get('audit')||'';
  const [query,setQuery]=useState(focusId);
  const [sources,setSources]=useState<Sources|null>(null);
  const [loading,setLoading]=useState(true);
@@ -34,7 +35,7 @@ export default function ProvenancePage(){
   <section className="provenance-grid">
    <article className="provenance-panel audit-panel">
     <header><div><span>AUDITORIA</span><h2>Saúde da proveniência</h2></div><b>{audit.available?'publicada':'indisponível'}</b></header>
-    <div className="audit-categories">{audit.categories.length?audit.categories.map(category=><article key={category.id}>
+    <div className="audit-categories">{audit.categories.length?audit.categories.map(category=><article className={category.id===auditId?'search-target':''} key={category.id}>
      <div><b>{category.label}</b><span>{category.openCount??'—'} abertas</span></div><strong>{category.count??'—'}</strong>
     </article>):<p className="provenance-empty">{sources?.audit?'Nenhuma categoria publicada.':'Fonte indisponível.'}</p>}</div>
    </article>

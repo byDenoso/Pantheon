@@ -14,7 +14,7 @@ test('legacy graph palette remains restrained for route-scoped graph rendering',
 test('vNext shell owns one warm neutral design system without legacy galactic overrides',()=>{
  assert.match(main,/\.\/design\/index\.css/);
  for(const legacy of ['premium-v2.css','reference-one.css','galactic-theme.css','official-dashboard.css']) assert.doesNotMatch(main,new RegExp(legacy));
- assert.match(design,/--bg:#f7f6f2/);
- assert.match(design,/--dark:#111411/);
+ assert.match(design,/--bg:#f4f2ec/);
+ assert.match(design,/--dark:#101410/);
  assert.doesNotMatch(design,/#00e5ff|#00ffff|cyan/i);
 });

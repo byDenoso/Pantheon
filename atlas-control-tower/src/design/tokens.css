@@ -1,10 +1,11 @@
 :root{
-  font-family:Inter,ui-sans-serif,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
-  color:#20201e;background:#f7f6f2;font-synthesis:none;
-  --bg:#f7f6f2;--panel:#ffffff;--panel-soft:#f1f0eb;--line:#deddd7;
-  --text:#20201e;--muted:#77756f;--subtle:#9a9891;--accent:#353a31;
-  --dark:#111411;--dark-2:#181c18;--ok:#56745f;--warn:#9a7245;--bad:#9a5555;
-  --radius:18px;--radius-sm:12px;--shadow:0 18px 50px rgba(30,30,25,.08);
+  font-family:"Recursive Variable",ui-sans-serif,system-ui,sans-serif;
+  font-variation-settings:"CASL" .08,"CRSV" .5;
+  color:#171816;background:#f4f2ec;font-synthesis:none;
+  --bg:#f4f2ec;--panel:#fffefa;--panel-soft:#eceae3;--line:#cbc8be;
+  --text:#171816;--muted:#575950;--subtle:#74766d;--accent:#2f382f;
+  --dark:#101410;--dark-2:#171c17;--ok:#477354;--warn:#94672e;--bad:#a04646;
+  --radius:18px;--radius-sm:12px;--shadow:0 18px 50px rgba(28,29,25,.1);
 }
 *{box-sizing:border-box}
 html,body,#root{min-height:100%;margin:0}

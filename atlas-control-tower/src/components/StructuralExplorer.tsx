@@ -4,7 +4,7 @@ import { AtlasCanvas } from '../scene/AtlasCanvas';
 import type { AtlasGraph, AtlasNode } from '../scene/types';
 
 type View='map'|'summary'|'claims'|'tests'|'evidence'|'sources';
-type Props={rootFocusId:string};
+type Props={rootFocusId:string;initialSelectedId?:string|null};
 const VIEWS:Array<[View,string]>=[['map','Mapa'],['summary','Resumo'],['claims','Claims'],['tests','Testes'],['evidence','Evidências'],['sources','Fontes']];
 const nodeType=(node:AtlasNode)=>String(node.type||'').toUpperCase();
 
@@ -14,7 +14,7 @@ function useReducedMotion(){
  return value;
 }
 
-export function StructuralExplorer({rootFocusId}:Props){
+export function StructuralExplorer({rootFocusId,initialSelectedId=null}:Props){
  const api=useMemo(()=>createApi(),[]);
  const reducedMotion=useReducedMotion();
  const [view,setView]=useState<View>('map');
@@ -26,7 +26,7 @@ export function StructuralExplorer({rootFocusId}:Props){
  const [selectedId,setSelectedId]=useState<string|null>(null);
  const [selectedEntity,setSelectedEntity]=useState<any>(null);
  const [autoOrbit,setAutoOrbit]=useState(false);
- useEffect(()=>{setFocusId(rootFocusId);setLimit(180);setSelectedId(null);setSelectedEntity(null)},[rootFocusId]);
+ useEffect(()=>{setFocusId(rootFocusId);setLimit(180);setSelectedId(initialSelectedId);setSelectedEntity(null)},[rootFocusId,initialSelectedId]);
  useEffect(()=>{
   let live=true;setLoading(true);setError('');
   void api.graph({focus:focusId,depth:2,limit}).then((next:any)=>{if(!live)return;setGraph(next);setLoading(false)}).catch(()=>{if(!live)return;setLoading(false);setError('GRAPH_READ_FAILED')});

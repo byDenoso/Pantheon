@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { PageHeader } from '../components/PageHeader';
 import { LearningMesh } from '../components/LearningMesh';
 import { loadLearningSource } from '../data/load-learning';
@@ -13,6 +14,8 @@ const STAGE_LABEL:Record<string,string>={OBSERVATION:'Observação',PATTERN:'Pad
 const fmt=(value:number|null)=>value===null?'—':new Intl.NumberFormat('pt-BR').format(value);
 
 export default function LearningPage(){
+ const [searchParams]=useSearchParams();
+ const deepLinkedItem=searchParams.get('item');
  const [source,setSource]=useState<any>(null);
  const [loading,setLoading]=useState(true);
  const [mode,setMode]=useState<Mode>('mesh');
@@ -20,6 +23,7 @@ export default function LearningPage(){
  const [reducedMotion,setReducedMotion]=useState(false);
  const reload=useCallback(async()=>{setLoading(true);setSource(await loadLearningSource());setLoading(false)},[]);
  useEffect(()=>{void reload()},[reload]);
+ useEffect(()=>{if(deepLinkedItem){setSelectedId(deepLinkedItem);setMode('mesh')}},[deepLinkedItem]);
  useEffect(()=>{
   const media=window.matchMedia?.('(prefers-reduced-motion: reduce)');
   if(!media)return;const update=()=>setReducedMotion(media.matches);update();media.addEventListener?.('change',update);return()=>media.removeEventListener?.('change',update);

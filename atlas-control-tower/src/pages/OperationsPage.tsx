@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { PageHeader } from '../components/PageHeader';
 import { loadOperationsSources } from '../data/load-operations';
 import { buildOperationsModel } from '../data/operations-vnext-model';
@@ -10,11 +11,14 @@ const tone=(status:string)=>/FAIL|BLOCK|DEGRADED/.test(status)?'danger':/PASS|SU
 const when=(stamp:string)=>stamp?new Date(stamp).toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'}):'—';
 
 export default function OperationsPage(){
+ const [searchParams]=useSearchParams();
+ const focusedId=searchParams.get('run')||searchParams.get('event')||searchParams.get('action')||'';
  const [sources,setSources]=useState<Sources|null>(null);
  const [loading,setLoading]=useState(true);
  const reload=useCallback(async()=>{setLoading(true);setSources(await loadOperationsSources());setLoading(false)},[]);
  useEffect(()=>{void reload()},[reload]);
  const model=useMemo(()=>buildOperationsModel(sources??{}),[sources]);
+ const focusedItem=useMemo(()=>focusedId?[...model.runs,...model.events,...model.actions].find(item=>item.id===focusedId)||null:null,[focusedId,model]);
  const metrics=[
   ['Runs',model.metrics.runs],['Sucesso',model.metrics.success],
   ['Bloqueios',model.metrics.blocked],['Readback',model.metrics.readback],
@@ -26,6 +30,9 @@ export default function OperationsPage(){
  return <div className="nexo-page operations-page">
   <PageHeader eyebrow="OPERAÇÃO" title="Operação" description="Execução, runtime, automações e integridade. A página mostra estado publicado; não infere saúde a partir de silêncio."
    actions={<button className="nexo-button" onClick={()=>void reload()} disabled={loading}>{loading?'Atualizando…':'Atualizar'}</button>}/>
+  {focusedId?<section className={`operation-focus ${focusedItem?'found':'missing'}`} aria-live="polite">
+   <span className="panel-kicker">ABERTO PELA BUSCA</span><div><b>{focusedItem?.label||focusedId}</b><p>{focusedItem?.summary||'O item não está no recorte operacional carregado.'}</p></div><span className={`status-chip ${tone(focusedItem?.status||'')}`}>{focusedItem?.status||'—'}</span>
+  </section>:null}
   <section className="operations-metrics" aria-label="Indicadores operacionais">
    {metrics.map(([label,v])=><article key={label}><span>{label}</span><strong>{value(v)}</strong></article>)}
   </section>

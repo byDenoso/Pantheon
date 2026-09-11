@@ -45,9 +45,12 @@ function buildAutomations(runs:AnyRecord[]){
 export function buildOperationsModel({ops,runs,health}:Sources){
  const o=record(ops),counts=record(o.counts),h=record(health),dataSource=record(h.dataSource),semantic=record(h.semanticIndex);
  const runRows=list(runs).sort(byRecent);
- const blockers=list(o.actions).filter(item=>text(item.status).toUpperCase()==='BLOCKED').map(normalizeAction).sort((a,b)=>(a.priority??99)-(b.priority??99)||b.updatedAt.localeCompare(a.updatedAt));
- const recentRuns=runRows.slice(0,12).map(normalizeRun);
- const blackBox=list(o.events).sort(byRecent).slice(0,12).map(normalizeEvent);
+ const actions=list(o.actions).map(normalizeAction).sort((a,b)=>b.updatedAt.localeCompare(a.updatedAt));
+ const allRuns=runRows.map(normalizeRun);
+ const events=list(o.events).sort(byRecent).map(normalizeEvent);
+ const blockers=actions.filter(item=>item.status.toUpperCase()==='BLOCKED').sort((a,b)=>(a.priority??99)-(b.priority??99)||b.updatedAt.localeCompare(a.updatedAt));
+ const recentRuns=allRuns.slice(0,12);
+ const blackBox=events.slice(0,12);
  const totalRuns=ops?finite(counts.runs):null,verified=ops?finite(counts.readbackVerified):null;
  return {
   available:Boolean(ops||runs||health),
@@ -57,7 +60,7 @@ export function buildOperationsModel({ops,runs,health}:Sources){
    success:ops?finite(counts.success):null,
    readback:totalRuns!==null&&verified!==null?`${verified}/${totalRuns}`:null,
   },
-  blockers,recentRuns,blackBox,automations:buildAutomations(runRows),
+  actions,runs:allRuns,events,blockers,recentRuns,blackBox,automations:buildAutomations(runRows),
   integrity:{
    health:health?(h.ok===true?'PASS':'DEGRADED'):'UNAVAILABLE',
    contract:health?text(h.contract):'',
