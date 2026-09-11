@@ -3,7 +3,7 @@ import {useNavigate} from 'react-router-dom';
 
 type Position={x:number;y:number;z:number};
 type Domain={id:string;label:string;summary:string;status:string;entityCount:number|null;activity:number|null;relationCount:number;relationStrength:number|null;position:Position};
-type Relation={id:string;source:string;target:string;type:string;strength:number|null;declared:true};
+type Relation={id:string;source:string;target:string;type:string;strength:number|null;declared:boolean};
 type Model={available:boolean;universeId:string;universeLabel:string;domains:Domain[];relations:Relation[]};
 type Props={universeId:string;model:Model};
 
