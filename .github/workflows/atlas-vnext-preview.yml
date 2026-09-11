@@ -35,17 +35,34 @@ jobs:
       - run: npm test
       - run: npm run typecheck
       - run: npm run build
+      - name: Detect preview credentials
+        id: preview-auth
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: |
+          if [ -n "$VERCEL_TOKEN" ]; then
+            echo "available=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "available=false" >> "$GITHUB_OUTPUT"
+            echo "### Preview deployment blocked" >> "$GITHUB_STEP_SUMMARY"
+            echo "Verification passed, but VERCEL_TOKEN is not configured." >> "$GITHUB_STEP_SUMMARY"
+          fi
       - name: Pull preview settings
+        if: steps.preview-auth.outputs.available == 'true'
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
         run: npx --yes vercel@latest pull --yes --environment=preview --token="$VERCEL_TOKEN"
       - name: Build preview
+        if: steps.preview-auth.outputs.available == 'true'
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
         run: npx --yes vercel@latest build --token="$VERCEL_TOKEN"
       - name: Deploy preview
+        if: steps.preview-auth.outputs.available == 'true'
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
         run: |
           url=$(npx --yes vercel@latest deploy --prebuilt --token="$VERCEL_TOKEN")
           echo "PREVIEW_URL=$url"
+          echo "### Preview deployment" >> "$GITHUB_STEP_SUMMARY"
+          echo "$url" >> "$GITHUB_STEP_SUMMARY"
