@@ -15,12 +15,14 @@ test('legacy semantic wrapper remains provider-neutral compatibility code',()=>{
   assert.match(runtime,/why_pt/);
 });
 
-test('Vercel compatibility APIs route through the read-only Drive wrapper',()=>{
+test('Vercel compatibility APIs route through Drive-first runtime and expose only POST sync as mutation-shaped refresh',()=>{
   const vercel=read('vercel.json');
   assert.match(vercel,/api\/runtime-orphans\.js/);
   assert.match(vercel,/"dest":\s*"\/api\/runtime-orphans\.js\?route=\$1"/);
   const orphanRuntime=read('api/runtime-orphans.js');
+  assert.match(orphanRuntime,/loadLiveSsot/);
   assert.match(orphanRuntime,/driveRoute/);
-  assert.match(orphanRuntime,/READ_ONLY_DRIVE_SSOT/);
+  assert.match(orphanRuntime,/method==='POST'&&route==='sync'/);
+  assert.match(orphanRuntime,/METHOD_NOT_ALLOWED/);
   assert.match(orphanRuntime,/GOOGLE_DRIVE/);
 });

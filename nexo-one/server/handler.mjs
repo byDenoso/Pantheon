@@ -3,6 +3,7 @@ import {compile} from './compiler/world-state.mjs';
 import {buildProjectionBus} from './compiler/projection-bus.mjs';
 import {buildSystemState} from './compiler/system-state.mjs';
 import {readProvider,pending} from './adapters/registry.mjs';
+import {readAtlasSsot} from './adapters/atlas-ssot.mjs';
 import {verifyProjectionService} from './auth/vercel-oidc.mjs';
 const ATLAS_ORIGIN='https://nexo-atlas-control-tower.vercel.app';
 const PUBLIC_SYSTEM_PROVIDERS=['github','nexo'];
@@ -16,6 +17,11 @@ export default async function handler(req,res) {
   try{
     if(req.method!=='GET')return send({error:'WRITES_DISABLED'},405);
     if(route==='session')return send({authenticated:false,configured:false,access:'PUBLIC',mode:'PUBLIC_READ_ONLY'});
+    if(route==='atlas-ssot'){
+      const serviceAccess=await verifyProjectionService(req,{now});
+      if(!serviceAccess)return send({error:'ATLAS_SERVICE_REQUIRED'},403);
+      return send(await readAtlasSsot({env,now,signal:req.signal}));
+    }
     if(!['world','health','now','loops','day','context','recall','projections','system'].includes(route))return send({error:'NOT_FOUND'},404);
     const force=url.searchParams.get('refresh')==='1';
     if(route==='projections'){
@@ -52,5 +58,5 @@ export default async function handler(req,res) {
     if(route==='context')return send({...world,items:world.items.filter(x=>x.contextId===url.searchParams.get('id'))});
     if(route==='recall')return send({...world,query:q,items:world.items.filter(x=>`${x.title} ${x.summary||''} ${x.contextId||''}`.toLocaleLowerCase().includes(q.toLocaleLowerCase())||['drive','gmail','github'].includes(x.source))});
     return send(world);
-  }catch {return send({error:'REQUEST_FAILED'},500);}
+  }catch(error){console.error('[nexo-one]',route,String(error?.message||error));return send({error:'REQUEST_FAILED'},500);}
 }
