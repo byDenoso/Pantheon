@@ -1,6 +1,6 @@
 {
   "name": "nexo-atlas-control-tower",
-  "version": "4.0.0",
+  "version": "5.0.0",
   "type": "module",
   "scripts": {
     "test": "node --test test/*.test.mjs",
@@ -9,11 +9,13 @@
     "start": "vite --host 0.0.0.0"
   },
   "dependencies": {
-    "@fontsource-variable/recursive": "^5.3.0",
+    "@fontsource-variable/recursive": "5.3.0",
     "@react-three/fiber": "9.7.0",
+    "gsap": "3.13.0",
+    "pixi.js": "8.13.1",
     "react": "19.2.8",
     "react-dom": "19.2.8",
-    "react-router-dom": "^7.18.3",
+    "react-router-dom": "7.18.3",
     "three": "0.185.1"
   },
   "devDependencies": {
@@ -23,5 +25,5 @@
     "typescript": "5.9.3",
     "vite": "8.2.2"
   },
-  "deploymentMarker": "r3f-webgpu-20260908"
+  "deploymentMarker": "graph-engine-v2-20260911"
 }
