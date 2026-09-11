@@ -5,6 +5,7 @@ on:
     branches:
       - main
       - feat/nexo-atlas-vnext
+      - feat/atlas-graph-engine-v2
     paths:
       - 'atlas-control-tower/**'
       - '.github/workflows/atlas-quality.yml'
@@ -30,6 +31,9 @@ jobs:
           node-version: '24'
           cache: npm
           cache-dependency-path: atlas-control-tower/package-lock.json
+      - name: Refresh dependency lock for graph-v2 branch
+        if: github.ref == 'refs/heads/feat/atlas-graph-engine-v2'
+        run: npm install --package-lock-only --ignore-scripts --no-audit --no-fund
       - name: Install frontend dependencies
         run: npm ci --no-audit --no-fund
       - name: Run unit and contract tests
@@ -44,4 +48,11 @@ jobs:
           name: atlas-control-tower-dist
           path: atlas-control-tower/dist/
           if-no-files-found: error
+          retention-days: 1
+      - name: Package generated lockfile
+        if: github.ref == 'refs/heads/feat/atlas-graph-engine-v2'
+        uses: actions/upload-artifact@v4
+        with:
+          name: atlas-graph-v2-lock
+          path: atlas-control-tower/package-lock.json
           retention-days: 1
