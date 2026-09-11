@@ -2,7 +2,7 @@ export type AtlasNode = {
   id: string;
   type?: string;
   label?: string;
-  status?: string;
+  status?: string | null;
   domain?: string;
   parentId?: string | null;
   priority?: number;
