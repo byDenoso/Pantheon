@@ -25,10 +25,14 @@ export function graphNodeBudget({width=1280,nodeCount=0}={}){
  return Math.min(count,cap);
 }
 
-/** @param {{width?:number,nodeCount?:number}} [options] */
-export function graphLabelBudget({width=1280,nodeCount=0}={}){
+/** @param {{width?:number,nodeCount?:number,zoom?:number}} [options] */
+export function graphLabelBudget({width=1280,nodeCount=0,zoom=1}={}){
  const count=Math.max(0,Number(nodeCount)||0);
- const cap=Number(width)<=720?70:Number(width)<=1024?140:260;
+ const z=clampGraphZoom(zoom);
+ let cap;
+ if(Number(width)<=720)cap=z<.8?8:z<1.35?16:34;
+ else if(Number(width)<=1024)cap=z<.8?12:z<1.35?26:56;
+ else cap=z<.8?18:z<1.35?40:88;
  return Math.min(count,cap);
 }
 
@@ -52,4 +56,23 @@ export function selectVisibleGraphNodes(nodes,{focusId=null,selectedId=null,budg
   return {node,index,score};
  }).sort((a,b)=>b.score-a.score||a.index-b.index).slice(0,limit).sort((a,b)=>a.index-b.index);
  return ranked.map(item=>item.node);
+}
+
+/**
+ * @template {{id?:string,type?:string}} T
+ * @param {T[]} nodes
+ * @param {{focusId?:string|null,selectedId?:string|null,budget?:number}} [options]
+ * @returns {T[]}
+ */
+export function selectGraphLabelNodes(nodes,{focusId=null,selectedId=null,budget=40}={}){
+ const source=Array.isArray(nodes)?nodes:[];
+ const limit=Math.max(0,Math.min(source.length,Number(budget)||0));
+ if(limit===0)return [];
+ return source.map((node,index)=>{
+  const id=String(node?.id||'');
+  let score=Number(TYPE_PRIORITY[String(node?.type||'').toUpperCase()]||0);
+  if(id===focusId)score+=10000;
+  if(id===selectedId)score+=20000;
+  return {node,index,score};
+ }).sort((a,b)=>b.score-a.score||a.index-b.index).slice(0,limit).map(item=>item.node);
 }
