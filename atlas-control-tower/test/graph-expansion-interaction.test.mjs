@@ -19,12 +19,16 @@ test('graph branches expand in place from a clicked anchor',async()=>{
   assert.equal(expanded.nodes.find(node=>node.id==='D3')?.parentId,'science');
 });
 
-test('graph explorer uses single click expansion and has no Explore button',()=>{
-  const source=read('src/graph-engine/GraphExplorer.tsx');
-  assert.doesNotMatch(source,/Explorar\s*→/);
-  assert.doesNotMatch(source,/onDoubleClick/);
-  assert.doesNotMatch(source,/lastTapRef/);
-  assert.match(source,/onOpen\?\./);
+test('single click drives branch expansion and no v2 page renders Explore',()=>{
+  const explorer=read('src/graph-engine/GraphExplorer.tsx');
+  assert.match(explorer,/callbacksRef\.current\.onSelect\(node\.id\)/,'Pixi node tap must emit selection immediately');
+  for(const page of ['GraphsV2Page.tsx','GraphDomainV2Page.tsx','GraphDetailV2Page.tsx']){
+    const source=read('src/pages/'+page);
+    assert.doesNotMatch(source,/onOpen=/,'v2 pages must not render the Explore action');
+  }
+  assert.match(read('src/pages/GraphsV2Page.tsx'),/node\?\.type==='DOMAIN'.*toggleDomain/s);
+  assert.match(read('src/pages/GraphsV2Page.tsx'),/node\?\.type==='SUBGRAPH'.*toggleSubgraph/s);
+  assert.match(read('src/pages/GraphDomainV2Page.tsx'),/node\?\.type==='SUBGRAPH'.*toggleSubgraph/s);
 });
 
 test('graph pages expand branches without route navigation',()=>{
