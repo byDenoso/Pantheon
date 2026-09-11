@@ -45,22 +45,18 @@ test('domain links become cross-domain filaments only where both domain bodies e
  const byId=new Map(out.nodes.map(n=>[n.id,n]));assert.equal(classifyEdge(byId.get(strong.source),byId.get(strong.target),strong),'cross-domain');assert.equal(data.edges.length,0);
 });
 
-test('R3F filaments are instanced and GPU-driven rather than one DOM/canvas timer per edge',()=>{
+test('R3F filaments remain available as rollback until V2 equivalence is proven',()=>{
  const renderer=read('src/scene/InstancedFilaments.tsx');
  const materials=read('src/scene/materials.ts');
- assert.match(renderer,/<instancedMesh/);
- assert.match(renderer,/setMatrixAt/);
- assert.match(renderer,/setColorAt/);
- assert.doesNotMatch(renderer,/setInterval|setTimeout|quadraticCurveTo/);
- assert.match(materials,/time\.mul/);
- assert.match(materials,/MeshBasicNodeMaterial/);
+ assert.match(renderer,/<instancedMesh/);assert.match(renderer,/setMatrixAt/);assert.match(renderer,/setColorAt/);
+ assert.doesNotMatch(renderer,/setInterval|setTimeout|quadraticCurveTo/);assert.match(materials,/time\.mul/);assert.match(materials,/MeshBasicNodeMaterial/);
 });
 
-test('the graph renderer is a domain capability, not the global workspace',()=>{
- const app=read('src/App.tsx');const canvas=read('src/scene/AtlasCanvas.tsx');
+test('the graph renderer is route-scoped and Learning is not a workspace area',()=>{
+ const app=read('src/App.tsx');const canvas=read('src/scene/AtlasCanvas.tsx');const nav=read('src/app/navigation.ts');
  assert.doesNotMatch(app,/role="tablist"|id="map-workspace"|<AtlasCanvas/);
  assert.match(app,/UniversesPage/);assert.match(app,/UniversePage/);assert.match(canvas,/<Canvas/);
- assert.match(read('src/app/navigation.ts'),/Universos/);
+ assert.match(nav,/Domínios/);assert.match(nav,/Grafos/);assert.doesNotMatch(nav,/label: 'Learning'/);
 });
 
 test('the workspace compatibility module still normalizes retired modes to the map',async()=>{
