@@ -4,13 +4,13 @@ import fs from 'node:fs';
 
 const page=fs.readFileSync(new URL('../src/pages/UniversePage.tsx',import.meta.url),'utf8');
 
-test('universe page is a graph-free second level with canonical subdomains',()=>{
+test('universe page uses lightweight domain navigation before structural drill-down',()=>{
  assert.match(page,/useParams/);
  assert.match(page,/loadUniverseSource/);
  assert.match(page,/buildUniverseView/);
- assert.match(page,/Subdomínios/);
+ assert.match(page,/DomainNavigator/);
+ assert.match(page,/Domínios/);
  assert.match(page,/Entidades publicadas/);
- assert.match(page,/Link/);
  assert.doesNotMatch(page,/AtlasCanvas|WebGPU|map-workspace/);
 });
 
