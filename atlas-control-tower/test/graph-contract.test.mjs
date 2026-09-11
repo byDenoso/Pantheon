@@ -4,7 +4,7 @@ import {normalizeGraph,contractIssues,cacheKey,provenanceLabel,EMPTY_GRAPH,SOURC
 test('optional contract fields fall back instead of breaking the UI',()=>{
  const g=normalizeGraph({nodes:[{id:'a'}],edges:[]});
  assert.equal(g.depth,1);assert.equal(g.truncated,false);assert.equal(g.fingerprint,'');
- assert.equal(g.sourceVersion,'');assert.equal(g.source,SOURCES.LEGACY);assert.equal(g.freshness,FRESHNESS.SNAPSHOT);
+ assert.equal(g.sourceVersion,'');assert.equal(g.source,SOURCES.DRIVE);assert.equal(g.freshness,FRESHNESS.SNAPSHOT);
  assert.deepEqual(g.issues,[]);assert.equal(g.total,1);
  const empty=normalizeGraph(null);
  assert.deepEqual(empty.nodes,EMPTY_GRAPH.nodes);assert.equal(empty.total,0);
@@ -39,7 +39,7 @@ test('cache key is deterministic and order independent',()=>{
  assert.equal(a,b);
  assert.equal(a,'graph:v1:v1:fp1:domain:D1:3:status=blocked,type=TEST');
  assert.notEqual(a,cacheKey({fingerprint:'fp2',focus:'domain:D1',depth:3,source:'v1',filters:{type:'TEST',status:'blocked'}}));
- assert.match(cacheKey({}),/^graph:v1:legacy:nofp:root:1:none$/);
+ assert.match(cacheKey({}),/^graph:v1:drive:nofp:root:1:none$/);
 });
 
 test('a fallback is never described as live',()=>{
