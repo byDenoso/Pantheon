@@ -10,7 +10,7 @@ const quality=fs.readFileSync(new URL('../../.github/workflows/atlas-quality.yml
 
 test('graphs domain route renders an explicit unavailable state when the SSOT read returns null',()=>{
   assert.match(graphDomain,/graph===null/);
-  assert.match(graphDomain,/indisponível/i);
+  assert.match(graphDomain,/Subgrafos indisponíveis/i);
 });
 
 test('graph detail drills into canonical domain node ids for every universe',()=>{
