@@ -75,28 +75,32 @@ export function buildLayout25D(projection:GraphProjection):GraphLayout25D{
     directPosition.set(node.id,{x:50+Math.cos(angle+jitter)*29,y:50+Math.sin(angle+jitter)*24,z:48+(hash(`${node.id}:z`)-.5)*34});
   });
 
-  const laid:GraphNode25D[]=projection.nodes.map((node,index)=>{
+  const ordered=[...projection.nodes].sort((a,b)=>depthOf(a.id,focusId,parent)-depthOf(b.id,focusId,parent)||a.id.localeCompare(b.id));
+  const placed=new Map<string,GraphNode25D>();
+
+  for(const node of ordered){
     const isFocus=node.id===focusId;const depth=depthOf(node.id,focusId,parent);const clusterId=clusterRootOf(node.id,focusId,parent);
-    if(isFocus)return{...node,x:50,y:50,z:100,size:semanticSize(node,true),priority:semanticPriority(node,true),depth:0,clusterId:focusId,isFocus:true};
-
-    if(directIndex.has(node.id)){
+    let result:GraphNode25D;
+    if(isFocus){
+      result={...node,x:50,y:50,z:100,size:semanticSize(node,true),priority:semanticPriority(node,true),depth:0,clusterId:focusId,isFocus:true};
+    }else if(directIndex.has(node.id)){
       const p=directPosition.get(node.id)!;
-      return{...node,x:clamp(p.x,8,92),y:clamp(p.y,10,90),z:p.z,size:semanticSize(node,false),priority:semanticPriority(node,false),depth,clusterId,isFocus:false};
+      result={...node,x:clamp(p.x,8,92),y:clamp(p.y,10,90),z:p.z,size:semanticSize(node,false),priority:semanticPriority(node,false),depth,clusterId,isFocus:false};
+    }else{
+      const rootId=clusterId;const rootPos=directPosition.get(rootId)||{x:50+(hash(`${rootId}:x`)-.5)*58,y:50+(hash(`${rootId}:y`)-.5)*44,z:12};
+      const parentId=parent.get(node.id)||rootId;const siblings=siblingsFor(parentId,parent,projection.nodes);const siblingIndex=Math.max(0,siblings.findIndex(candidate=>candidate.id===node.id));const count=Math.max(1,siblings.length);
+      const angle=(siblingIndex/count)*TAU+hash(parentId)*1.9+depth*.43;
+      const radiusX=8+Math.min(14,depth*3.2);const radiusY=6+Math.min(10,depth*2.4);
+      const parentPlaced=placed.get(parentId);
+      const cx=parentPlaced?.x??rootPos.x;const cy=parentPlaced?.y??rootPos.y;
+      const x=clamp(cx+Math.cos(angle)*radiusX,5,95);const y=clamp(cy+Math.sin(angle)*radiusY,8,92);
+      const z=28-depth*20+(hash(`${node.id}:depth`)-.5)*18;
+      result={...node,x,y,z,size:semanticSize(node,false),priority:semanticPriority(node,false),depth,clusterId,isFocus:false};
     }
+    placed.set(node.id,result);
+  }
 
-    const rootId=clusterId;const rootPos=directPosition.get(rootId)||{x:50+(hash(`${rootId}:x`)-.5)*58,y:50+(hash(`${rootId}:y`)-.5)*44,z:12};
-    const parentId=parent.get(node.id)||rootId;const siblings=siblingsFor(parentId,parent,projection.nodes);const siblingIndex=Math.max(0,siblings.findIndex(candidate=>candidate.id===node.id));const count=Math.max(1,siblings.length);
-    const angle=(siblingIndex/count)*TAU+hash(parentId)*1.9+depth*.43;
-    const radiusX=8+Math.min(14,depth*3.2);const radiusY=6+Math.min(10,depth*2.4);
-    const center=nodeById.has(parentId)&&parentId!==rootId?undefined:rootPos;
-    let cx=center?.x??rootPos.x;let cy=center?.y??rootPos.y;
-    const parentPlaced=laid.find(candidate=>candidate.id===parentId);
-    if(parentPlaced){cx=parentPlaced.x;cy=parentPlaced.y}
-    const x=clamp(cx+Math.cos(angle)*radiusX,5,95);const y=clamp(cy+Math.sin(angle)*radiusY,8,92);
-    const z=28-depth*20+(hash(`${node.id}:depth`)-.5)*18;
-    return{...node,x,y,z,size:semanticSize(node,false),priority:semanticPriority(node,false),depth,clusterId,isFocus:false};
-  });
-
+  const laid=projection.nodes.map(node=>placed.get(node.id)!).filter(Boolean);
   const clusters:GraphCluster25D[]=direct.map((node,index)=>{
     const members=laid.filter(candidate=>candidate.clusterId===node.id||candidate.id===node.id);const x=members.reduce((sum,item)=>sum+item.x,0)/Math.max(1,members.length);const y=members.reduce((sum,item)=>sum+item.y,0)/Math.max(1,members.length);
     return{id:`cluster:${node.id}`,label:node.label,x:clamp(x,10,90),y:clamp(y,12,88),z:18+(index%3)*9,width:Math.min(30,16+members.length*1.4),height:Math.min(19,10+members.length*.9)};
