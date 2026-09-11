@@ -5,27 +5,28 @@ type Position={x:number;y:number;z:number};
 type Domain={id:string;label:string;summary:string;status:string;entityCount:number|null;activity:number|null;relationCount:number;relationStrength:number|null;position:Position};
 type Relation={id:string;source:string;target:string;type:string;strength:number|null;declared:boolean};
 type Model={available:boolean;universeId:string;universeLabel:string;domains:Domain[];relations:Relation[]};
-type Props={universeId:string;model:Model};
+type Props={universeId:string;model:Model;basePath?:string;actionLabel?:string};
 
 const point=(position:Position)=>({x:position.x*10,y:position.y*6.5});
 const compactLabel=(label:string)=>label.length>28?`${label.slice(0,27)}…`:label;
 const relationWidth=(strength:number|null)=>strength===null?1.4:Math.min(5.5,1.2+Math.sqrt(Math.max(0,strength))*.48);
 const relationPath=(a:Position,b:Position)=>{const p1=point(a),p2=point(b);const mx=(p1.x+p2.x)/2,my=(p1.y+p2.y)/2;const bow=Math.min(54,Math.abs(p2.x-p1.x)*.08+16);return `M ${p1.x} ${p1.y} Q ${mx} ${my-bow} ${p2.x} ${p2.y}`};
 
-export function DomainNavigator({universeId,model}:Props){
+export function DomainNavigator({universeId,model,basePath,actionLabel='Abrir domínio →'}:Props){
   const navigate=useNavigate();
   const [selectedId,setSelectedId]=useState<string|null>(null);
   useEffect(()=>{setSelectedId(null)},[universeId]);
   const selected=model.domains.find(domain=>domain.id===selectedId)||null;
   const byId=useMemo(()=>new Map(model.domains.map(domain=>[domain.id,domain])),[model.domains]);
   const related=useMemo(()=>{if(!selectedId)return new Set<string>();const ids=new Set<string>([selectedId]);for(const relation of model.relations){if(relation.source===selectedId)ids.add(relation.target);if(relation.target===selectedId)ids.add(relation.source)}return ids},[model.relations,selectedId]);
-  const open=(domain:Domain)=>navigate(`/universes/${universeId}/${domain.id}`);
+  const root=basePath||`/universes/${universeId}`;
+  const open=(domain:Domain)=>navigate(`${root}/${domain.id}`);
   const onKeyDown=(event:React.KeyboardEvent<SVGGElement>,domain:Domain)=>{if(event.key==='Enter'){event.preventDefault();open(domain)}else if(event.key===' '){event.preventDefault();setSelectedId(domain.id)}else if(event.key==='Escape'){event.preventDefault();setSelectedId(null)}};
 
   if(!model.domains.length)return <section className="domain-navigator-empty"><b>Nenhum domínio publicado.</b><p>O Atlas não criou uma taxonomia visual para preencher o vazio.</p></section>;
   return <section className="domain-navigator-shell" aria-label={`Navegador de domínios de ${model.universeLabel}`}>
     <div className="domain-navigator-stage" onClick={()=>setSelectedId(null)}>
-      <div className="domain-navigator-heading"><span>MAPA 2.5D</span><h2>{model.universeLabel}</h2><p>Clique para inspecionar. Enter ou duplo clique abre o domínio.</p></div>
+      <div className="domain-navigator-heading"><span>MAPA 2.5D</span><h2>{model.universeLabel}</h2><p>Clique para inspecionar. Enter ou duplo clique abre o próximo nível.</p></div>
       <svg className="domain-navigator-svg" viewBox="0 0 1000 650" role="img" aria-label={`Mapa navegável de ${model.domains.length} domínios`}>
         <defs>
           <radialGradient id="domainHubGlow"><stop offset="0" stopColor="#8de9ff" stopOpacity="1"/><stop offset=".45" stopColor="#4b8cff" stopOpacity=".88"/><stop offset="1" stopColor="#5f4bd9" stopOpacity=".08"/></radialGradient>
@@ -39,7 +40,7 @@ export function DomainNavigator({universeId,model}:Props){
       </svg>
     </div>
     <aside className={`domain-inspector ${selected?'open':''}`} aria-live="polite">
-      {selected?<><span className="panel-kicker">DOMÍNIO SELECIONADO</span><strong className="domain-inspector-code">{selected.id}</strong><h3>{selected.label}</h3><p>{selected.summary||'Sem resumo publicado.'}</p><dl><div><dt>Status</dt><dd>{selected.status||'—'}</dd></div><div><dt>Relações</dt><dd>{selected.relationCount}</dd></div><div><dt>Testes compartilhados</dt><dd>{selected.relationStrength===null?'—':selected.relationStrength}</dd></div></dl><button type="button" className="domain-open-button" onClick={()=>open(selected)}>Abrir domínio →</button></>:<><span className="panel-kicker">NAVEGAÇÃO</span><h3>Escolha um domínio</h3><p>As conexões vêm de relações publicadas no contrato. Nenhum filamento é inferido pela interface.</p></>}
+      {selected?<><span className="panel-kicker">DOMÍNIO SELECIONADO</span><strong className="domain-inspector-code">{selected.id}</strong><h3>{selected.label}</h3><p>{selected.summary||'Sem resumo publicado.'}</p><dl><div><dt>Status</dt><dd>{selected.status||'—'}</dd></div><div><dt>Relações</dt><dd>{selected.relationCount}</dd></div><div><dt>Testes compartilhados</dt><dd>{selected.relationStrength===null?'—':selected.relationStrength}</dd></div></dl><button type="button" className="domain-open-button" onClick={()=>open(selected)}>{actionLabel}</button></>:<><span className="panel-kicker">NAVEGAÇÃO</span><h3>Escolha um domínio</h3><p>As conexões vêm de relações publicadas no contrato. Nenhum filamento é inferido pela interface.</p></>}
     </aside>
   </section>;
 }
