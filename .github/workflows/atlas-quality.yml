@@ -3,12 +3,16 @@ name: Atlas Quality
 on:
   push:
     branches:
-      - atlas-control-tower-v3-20260905
-      - 'atlas-premium-v2-*'
+      - main
+      - feat/nexo-atlas-vnext
+    paths:
+      - 'atlas-control-tower/**'
+      - '.github/workflows/atlas-quality.yml'
   pull_request:
     paths:
       - 'atlas-control-tower/**'
       - '.github/workflows/atlas-quality.yml'
+      - '.github/workflows/atlas-deploy.yml'
 
 permissions:
   contents: read
@@ -24,19 +28,20 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '24'
+          cache: npm
+          cache-dependency-path: atlas-control-tower/package-lock.json
       - name: Install frontend dependencies
-        run: npm install --no-audit --no-fund
+        run: npm ci --no-audit --no-fund
       - name: Run unit and contract tests
         run: npm test
       - name: Typecheck React frontend
         run: npm run typecheck
       - name: Build production frontend
         run: npm run build
-      - name: Package tested Atlas build
+      - name: Package tested frontend build
         uses: actions/upload-artifact@v4
         with:
-          name: atlas-control-tower-tested
-          path: atlas-control-tower/
-          include-hidden-files: true
+          name: atlas-control-tower-dist
+          path: atlas-control-tower/dist/
           if-no-files-found: error
           retention-days: 1
