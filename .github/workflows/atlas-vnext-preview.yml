@@ -44,25 +44,49 @@ jobs:
             echo "available=true" >> "$GITHUB_OUTPUT"
           else
             echo "available=false" >> "$GITHUB_OUTPUT"
-            echo "### Preview deployment blocked" >> "$GITHUB_STEP_SUMMARY"
-            echo "Verification passed, but VERCEL_TOKEN is not configured." >> "$GITHUB_STEP_SUMMARY"
+            echo "### Authenticated preview unavailable" >> "$GITHUB_STEP_SUMMARY"
+            echo "VERCEL_TOKEN is not configured; using SSOT-backed temporary preview." >> "$GITHUB_STEP_SUMMARY"
           fi
       - name: Pull preview settings
         if: steps.preview-auth.outputs.available == 'true'
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
         run: npx --yes vercel@latest pull --yes --environment=preview --token="$VERCEL_TOKEN"
-      - name: Build preview
+      - name: Build authenticated preview
         if: steps.preview-auth.outputs.available == 'true'
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
         run: npx --yes vercel@latest build --token="$VERCEL_TOKEN"
-      - name: Deploy preview
+      - name: Deploy authenticated preview
         if: steps.preview-auth.outputs.available == 'true'
+        id: authenticated-preview
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
         run: |
           url=$(npx --yes vercel@latest deploy --prebuilt --token="$VERCEL_TOKEN")
-          echo "PREVIEW_URL=$url"
-          echo "### Preview deployment" >> "$GITHUB_STEP_SUMMARY"
+          echo "url=$url" >> "$GITHUB_OUTPUT"
+          echo "### Authenticated preview" >> "$GITHUB_STEP_SUMMARY"
+          echo "$url" >> "$GITHUB_STEP_SUMMARY"
+      - name: Deploy temporary SSOT-backed preview
+        if: steps.preview-auth.outputs.available != 'true'
+        id: temporary-preview
+        run: |
+          unset VERCEL_ORG_ID VERCEL_PROJECT_ID
+          url=$(npx --yes vercel@latest deploy --temporary --yes --local-config vercel.preview.json | tail -n 1)
+          echo "url=$url" >> "$GITHUB_OUTPUT"
+          echo "### Temporary SSOT-backed preview" >> "$GITHUB_STEP_SUMMARY"
+          echo "$url" >> "$GITHUB_STEP_SUMMARY"
+      - name: Smoke preview
+        env:
+          AUTH_URL: ${{ steps.authenticated-preview.outputs.url }}
+          TEMP_URL: ${{ steps.temporary-preview.outputs.url }}
+        run: |
+          url="${AUTH_URL:-$TEMP_URL}"
+          test -n "$url"
+          for path in / /universes /universes/science /learning /operations /provenance /api/health; do
+            code=$(curl -L -sS -o /tmp/body -w "%{http_code}" --retry 4 --retry-delay 2 "$url$path")
+            echo "$path -> $code"
+            test "$code" = "200"
+          done
+          echo "### Smoke readback PASS" >> "$GITHUB_STEP_SUMMARY"
           echo "$url" >> "$GITHUB_STEP_SUMMARY"
