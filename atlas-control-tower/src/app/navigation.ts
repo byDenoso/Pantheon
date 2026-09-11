@@ -1,6 +1,7 @@
 export const productNavigation = [
   { label: 'Visão geral', path: '/', icon: '◌' },
   { label: 'Universos', path: '/universes', icon: '◎' },
+  { label: 'Grafos', path: '/graphs', icon: '⌘' },
   { label: 'Learning', path: '/learning', icon: '⌁' },
   { label: 'Operação', path: '/operations', icon: '▦' },
   { label: 'Proveniência', path: '/provenance', icon: '↗' },
