@@ -17,7 +17,7 @@ const displayValue=(value:unknown)=>value===null||value===undefined||value===''?
 
 export function GraphExplorer({projection,learningEdges=[],learning,selectedId=null,selectedEdgeId=null,onSelect,onSelectEdge,onToggleLearning}:Props){
  const hostRef=useRef<HTMLDivElement|null>(null);
- const appRef=useRef<any>(null);
+ const appRef=useRef<any>(null); // persistent Pixi application across projection redraws
  const worldRef=useRef<any>(null);
  const layersRef=useRef<{structural:any;learning:any;nodes:any}|null>(null);
  const redrawRef=useRef<(()=>void)|null>(null);
