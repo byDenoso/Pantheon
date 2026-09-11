@@ -5,12 +5,19 @@ import { AppShell } from './app/AppShell';
 const OverviewPage = lazy(()=>import('./pages/OverviewPage'));
 const UniversesPage = lazy(()=>import('./pages/UniversesPage'));
 const UniversePage = lazy(()=>import('./pages/UniversePage'));
-const GraphsPage = lazy(()=>import('./pages/GraphsV2Page'));
-const GraphDomainPage = lazy(()=>import('./pages/GraphDomainV2Page'));
-const GraphDetailPage = lazy(()=>import('./pages/GraphDetailV2Page'));
+const GraphsV2Page = lazy(()=>import('./pages/GraphsV2Page'));
+const GraphDomainV2Page = lazy(()=>import('./pages/GraphDomainV2Page'));
+const GraphDetailV2Page = lazy(()=>import('./pages/GraphDetailV2Page'));
+const LegacyGraphsPage = lazy(()=>import('./pages/GraphsPage'));
+const LegacyGraphDomainPage = lazy(()=>import('./pages/GraphDomainPage'));
+const LegacyGraphDetailPage = lazy(()=>import('./pages/GraphDetailPage'));
 const OperationsPage = lazy(()=>import('./pages/OperationsPage'));
 const ProvenancePage = lazy(()=>import('./pages/ProvenancePage'));
 
+function useLegacyGraphEngine(){const [params]=useSearchParams();return params.get('engine')==='v1'}
+function GraphsRoute(){return useLegacyGraphEngine()?<LegacyGraphsPage/>:<GraphsV2Page/>}
+function GraphDomainRoute(){return useLegacyGraphEngine()?<LegacyGraphDomainPage/>:<GraphDomainV2Page/>}
+function GraphDetailRoute(){return useLegacyGraphEngine()?<LegacyGraphDetailPage/>:<GraphDetailV2Page/>}
 function LegacyUniverseRedirect(){
   const params=useParams();
   const target=params.subdomainId?`/graphs/${params.universeId}/${params.subdomainId}`:`/graphs/${params.universeId}`;
@@ -32,9 +39,9 @@ export default function App(){
           <Route path="/universes" element={<UniversesPage/>}/>
           <Route path="/universes/:universeId" element={<UniversePage/>}/>
           <Route path="/universes/:universeId/:subdomainId" element={<LegacyUniverseRedirect/>}/>
-          <Route path="/graphs" element={<GraphsPage/>}/>
-          <Route path="/graphs/:domainId" element={<GraphDomainPage/>}/>
-          <Route path="/graphs/:domainId/:subgraphId" element={<GraphDetailPage/>}/>
+          <Route path="/graphs" element={<GraphsRoute/>}/>
+          <Route path="/graphs/:domainId" element={<GraphDomainRoute/>}/>
+          <Route path="/graphs/:domainId/:subgraphId" element={<GraphDetailRoute/>}/>
           <Route path="/learning" element={<LearningRedirect/>}/>
           <Route path="/operations" element={<OperationsPage/>}/>
           <Route path="/provenance" element={<ProvenancePage/>}/>
