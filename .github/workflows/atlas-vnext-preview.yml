@@ -40,7 +40,13 @@ jobs:
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
         run: |
-          if [ -n "$VERCEL_TOKEN" ]; then echo "available=true" >> "$GITHUB_OUTPUT"; else echo "available=false" >> "$GITHUB_OUTPUT"; fi
+          if [ -n "$VERCEL_TOKEN" ]; then
+            echo "available=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "available=false" >> "$GITHUB_OUTPUT"
+            echo "### Preview deploy skipped" >> "$GITHUB_STEP_SUMMARY"
+            echo "VERCEL_TOKEN is not configured. Verification remains authoritative; deployment is intentionally not attempted with anonymous CLI auth." >> "$GITHUB_STEP_SUMMARY"
+          fi
       - name: Pull preview settings
         if: steps.preview-auth.outputs.available == 'true'
         env:
@@ -60,24 +66,13 @@ jobs:
           set -euo pipefail
           url=$(npx --yes vercel@latest deploy --prebuilt --token="$VERCEL_TOKEN")
           echo "url=$url" >> "$GITHUB_OUTPUT"
-      - name: Deploy temporary SSOT-backed preview
-        if: steps.preview-auth.outputs.available != 'true'
-        id: temporary-preview
-        run: |
-          set -euo pipefail
-          cmd="env -i HOME=$HOME PATH=$PATH TERM=xterm-256color npm_config_yes=true npx --yes vercel@latest deploy --temporary --yes --local-config vercel.preview.json"
-          timeout 120 script -q -e -c "$cmd" /dev/null 2>&1 | tee /tmp/vercel-preview.log
-          url=$(tr -d '\r' < /tmp/vercel-preview.log | grep -Eo 'https://[^ ]+\.vercel\.app' | tail -n 1)
-          test -n "$url"
-          echo "url=$url" >> "$GITHUB_OUTPUT"
-          echo "$url" >> "$GITHUB_STEP_SUMMARY"
-      - name: Smoke preview
+      - name: Smoke authenticated preview
+        if: steps.preview-auth.outputs.available == 'true'
         env:
           AUTH_URL: ${{ steps.authenticated-preview.outputs.url }}
-          TEMP_URL: ${{ steps.temporary-preview.outputs.url }}
         run: |
           set -euo pipefail
-          url="${AUTH_URL:-$TEMP_URL}"
+          url="$AUTH_URL"
           test -n "$url"
           for path in / /graphs /graphs/science /graphs/science/D3 /universes /learning /operations /provenance /api/health; do
             code=$(curl -L -sS -o /tmp/body -w "%{http_code}" --retry 4 --retry-delay 2 "$url$path")
