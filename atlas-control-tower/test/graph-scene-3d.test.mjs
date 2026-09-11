@@ -10,9 +10,9 @@ test('3D orbital layout is deterministic, centers focus and uses real depth',()=
  assert.deepEqual(first,second);assert.deepEqual(first.find(n=>n.id==='root').position,[0,0,0]);assert.ok(first.some(n=>n.id!=='root'&&Math.abs(n.position[2])>.01));
 });
 
-test('3D graph route preserves explicit Pixi rollback',()=>{
+test('3D graph route remains available beside Pixi rollback',()=>{
  const renderer=read('src/graph-engine/GraphRenderer.tsx');const scene=read('src/graph-engine/GraphScene3D.tsx');
- assert.match(renderer,/renderer.*2d/);assert.match(renderer,/GraphExplorer/);assert.match(renderer,/GraphScene3D/);assert.match(scene,/AtlasCanvas/);
+ assert.match(renderer,/mode==='3d'/);assert.match(renderer,/mode==='2d'/);assert.match(renderer,/GraphExplorer/);assert.match(renderer,/GraphScene3D/);assert.match(scene,/AtlasCanvas/);
 });
 
 test('target visual grammar includes glow nodes, curved filaments, stars and orbital guides',()=>{
