@@ -5,7 +5,6 @@ import {PageHeader} from '../components/PageHeader';
 import {GraphExplorer} from '../graph-engine/GraphExplorer';
 import {detailProjection} from '../graph-engine/projection';
 import {useLearningOverlay} from '../graph-engine/useLearningOverlay';
-import type {GraphNode} from '../graph-engine/types';
 
 export default function GraphDetailV2Page(){
  const route=useParams();const domainId=route.domainId||'science';const subgraphId=route.subgraphId||'';const rootFocus='domain:'+subgraphId;const [params,setParams]=useSearchParams();
@@ -16,7 +15,6 @@ export default function GraphDetailV2Page(){
  const learningEdges=useLearningOverlay(projection.nodes);
  const select=(id:string|null)=>{const next=new URLSearchParams(params);next.delete('edge');if(id)next.set('entity',id);else next.delete('entity');setParams(next,{replace:true})};
  const selectEdge=(id:string|null)=>{const next=new URLSearchParams(params);next.delete('entity');if(id)next.set('edge',id);else next.delete('edge');setParams(next,{replace:true})};
- const open=(node:GraphNode)=>{const next=new URLSearchParams(params);next.set('focus',node.id);next.delete('entity');next.delete('edge');setParams(next)};
  const toggle=(value:boolean)=>{const next=new URLSearchParams(params);if(value)next.set('learning','1');else{next.delete('learning');next.delete('edge')}setParams(next,{replace:true})};
- return <div className="nexo-page graphs-page"><nav className="nexo-breadcrumb"><Link to="/graphs">NEXO</Link><span>/</span><Link to={'/graphs/'+domainId}>{domainId}</Link><span>/</span><b>{subgraphId}</b></nav><PageHeader eyebrow="REDE NEURAL" title={subgraphId||'Subgrafo'} description="Claims, testes, evidências e resultados em uma projeção neural progressiva."/>{graph===undefined?<section className="nexo-empty-state"><h2>Carregando recorte</h2></section>:null}{graph===null?<section className="nexo-empty-state"><h2>Grafo indisponível</h2><p>O estado canônico foi preservado.</p></section>:null}{graph?<GraphExplorer projection={projection} learningEdges={learningEdges} learning={learning} selectedId={selectedId} selectedEdgeId={selectedEdgeId} onSelect={select} onSelectEdge={selectEdge} onOpen={open} onToggleLearning={toggle}/>:null}</div>;
+ return <div className="nexo-page graphs-page"><nav className="nexo-breadcrumb"><Link to="/graphs">NEXO</Link><span>/</span><Link to={'/graphs/'+domainId}>{domainId}</Link><span>/</span><b>{subgraphId}</b></nav><PageHeader eyebrow="REDE NEURAL" title={subgraphId||'Subgrafo'} description="Claims, testes, evidências e resultados permanecem na mesma superfície; clique para inspecionar."/>{graph===undefined?<section className="nexo-empty-state"><h2>Carregando recorte</h2></section>:null}{graph===null?<section className="nexo-empty-state"><h2>Grafo indisponível</h2><p>O estado canônico foi preservado.</p></section>:null}{graph?<GraphExplorer projection={projection} learningEdges={learningEdges} learning={learning} selectedId={selectedId} selectedEdgeId={selectedEdgeId} onSelect={select} onSelectEdge={selectEdge} onToggleLearning={toggle}/>:null}</div>;
 }
