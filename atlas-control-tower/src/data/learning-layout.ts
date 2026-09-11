@@ -4,7 +4,8 @@ type Filament=Record<string,any>;
 const FIXED:Record<string,[number,number]>={
  science:[180,150],engineering:[820,150],olympus:[180,470],ai:[820,470],operation:[500,525]
 };
-const STAGE_RADIUS:Record<string,number>={OBSERVATION:58,PATTERN:72,LESSON:86,STRATEGY:100,POLICY:114};
+const STAGE_RADIUS:Record<string,number>={OBSERVATION:64,PATTERN:82,LESSON:102,STRATEGY:124,POLICY:146};
+const GOLDEN_ANGLE=Math.PI*(3-Math.sqrt(5));
 
 function hash01(value:string){
  let h=2166136261;
@@ -37,19 +38,17 @@ export function layoutLearningMesh(model:any){
  });
  const anchors=new Map(points.filter(point=>point.kind==='context').map(point=>[point.contextId||'',point.position]));
  const grouped=new Map<string,any[]>();
- for(const item of items){
-  const id=contextId(item.domainA);
-  if(!grouped.has(id))grouped.set(id,[]);
-  grouped.get(id)!.push(item);
- }
+ for(const item of items){const id=contextId(item.domainA);if(!grouped.has(id))grouped.set(id,[]);grouped.get(id)!.push(item)}
  for(const [ctx,group] of grouped){
   const anchor=anchors.get(ctx)||[500,310] as [number,number];
   group.forEach((item,index)=>{
    const stage=String(item.stage||'').toUpperCase();
-   const radius=(STAGE_RADIUS[stage]||82)+(index%3)*8;
-   const angle=(index/Math.max(1,group.length))*Math.PI*2+(hash01(String(item.id))*0.7-0.35);
+   const ringStep=ctx?14:18;const ringIndex=Math.floor(index/ringStep);
+   const radius=(STAGE_RADIUS[stage]||92)+ringIndex*(ctx?18:26);
+   const angle=index*GOLDEN_ANGLE+(hash01(String(item.id))*.5-.25);
+   const depthSquash=.58+((index%5)*.035);
    const x=Math.max(28,Math.min(972,anchor[0]+Math.cos(angle)*radius));
-   const y=Math.max(28,Math.min(592,anchor[1]+Math.sin(angle)*radius*.72));
+   const y=Math.max(34,Math.min(586,anchor[1]+Math.sin(angle)*radius*depthSquash));
    points.push({id:String(item.id),label:String(item.label||item.id),kind:'item',stage,status:String(item.status||''),position:[x,y],contextId:ctx||null});
   });
  }
@@ -61,12 +60,9 @@ export function layoutLearningMesh(model:any){
 export function filamentPath(filament:any,byId:Map<string,Point>){
  const a=byId.get(String(filament?.source)),b=byId.get(String(filament?.target));
  if(!a||!b)return '';
- const [x1,y1]=a.position,[x2,y2]=b.position;
- const dx=x2-x1,dy=y2-y1;
- const length=Math.max(1,Math.hypot(dx,dy));
- const nx=-dy/length,ny=dx/length;
+ const [x1,y1]=a.position,[x2,y2]=b.position;const dx=x2-x1,dy=y2-y1;
+ const length=Math.max(1,Math.hypot(dx,dy));const nx=-dy/length,ny=dx/length;
  const bend=(String(filament?.type)==='transfer'?72:String(filament?.type)==='lineage'?38:22)*(hash01(String(filament?.id))>.5?1:-1);
- const c1x=x1+dx*.34+nx*bend,c1y=y1+dy*.34+ny*bend;
- const c2x=x1+dx*.66+nx*bend,c2y=y1+dy*.66+ny*bend;
+ const c1x=x1+dx*.34+nx*bend,c1y=y1+dy*.34+ny*bend;const c2x=x1+dx*.66+nx*bend,c2y=y1+dy*.66+ny*bend;
  return `M ${x1.toFixed(1)} ${y1.toFixed(1)} C ${c1x.toFixed(1)} ${c1y.toFixed(1)} ${c2x.toFixed(1)} ${c2y.toFixed(1)} ${x2.toFixed(1)} ${y2.toFixed(1)}`;
 }
