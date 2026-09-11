@@ -35,4 +35,7 @@ test('relation strength uses published shared-test count without inventing it',(
   const relation=model.relations.find(r=>r.source==='D3'&&r.target==='D7');
   assert.equal(relation?.strength,30);
   assert.equal(model.domains.find(d=>d.id==='D3')?.relationCount,2);
+  const unknown=buildDomainNavigatorModel('science',{...graph,domainLinks:[{a:'D1',b:'D7',tests:null}]});
+  assert.equal(unknown.relations[0].strength,null);
+  assert.equal(unknown.domains.find(d=>d.id==='D1')?.relationStrength,null);
 });
