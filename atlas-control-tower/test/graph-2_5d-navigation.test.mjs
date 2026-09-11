@@ -7,7 +7,8 @@ const read=path=>fs.readFileSync(new URL(path,root),'utf8');
 
 test('graph surface uses viewport-sized canvas with floating inspector',()=>{
   const css=read('src/design/graph-v2.css');
-  assert.match(css,/min-height:calc\(100dvh -/);
+  assert.match(css,/\.graphs-page\{[^}]*height:calc\(100dvh -/);
+  assert.match(css,/\.graph-v2-main\{[^}]*position:absolute[^}]*inset:0/);
   assert.match(css,/\.graph-v2-inspector\{[^}]*position:absolute/);
   assert.doesNotMatch(css,/grid-template-columns:minmax\(0,1fr\) 320px/);
 });
