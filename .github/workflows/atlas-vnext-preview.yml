@@ -44,8 +44,6 @@ jobs:
             echo "available=true" >> "$GITHUB_OUTPUT"
           else
             echo "available=false" >> "$GITHUB_OUTPUT"
-            echo "### Authenticated preview unavailable" >> "$GITHUB_STEP_SUMMARY"
-            echo "VERCEL_TOKEN is not configured; using SSOT-backed temporary preview." >> "$GITHUB_STEP_SUMMARY"
           fi
       - name: Pull preview settings
         if: steps.preview-auth.outputs.available == 'true'
@@ -66,15 +64,13 @@ jobs:
           set -euo pipefail
           url=$(npx --yes vercel@latest deploy --prebuilt --token="$VERCEL_TOKEN")
           echo "url=$url" >> "$GITHUB_OUTPUT"
-          echo "### Authenticated preview" >> "$GITHUB_STEP_SUMMARY"
-          echo "$url" >> "$GITHUB_STEP_SUMMARY"
       - name: Deploy temporary SSOT-backed preview
         if: steps.preview-auth.outputs.available != 'true'
         id: temporary-preview
         run: |
           set -euo pipefail
-          unset VERCEL_ORG_ID VERCEL_PROJECT_ID
-          output=$(script -q -e -c 'env -u CI -u GITHUB_ACTIONS -u VERCEL_ORG_ID -u VERCEL_PROJECT_ID npx --yes vercel@latest deploy --temporary --yes --local-config vercel.preview.json' /dev/null 2>&1)
+          cmd="env -i HOME=$HOME PATH=$PATH TERM=xterm-256color npm_config_yes=true npx --yes vercel@latest deploy --temporary --yes --local-config vercel.preview.json"
+          output=$(timeout 240 script -q -e -c "$cmd" /dev/null 2>&1)
           printf '%s\n' "$output"
           url=$(printf '%s\n' "$output" | tr -d '\r' | grep -Eo 'https://[^ ]+\.vercel\.app' | tail -n 1)
           test -n "$url"
@@ -89,7 +85,7 @@ jobs:
           set -euo pipefail
           url="${AUTH_URL:-$TEMP_URL}"
           test -n "$url"
-          for path in / /universes /universes/science /learning /operations /provenance /api/health; do
+          for path in / /graphs /graphs/science /graphs/science/D3 /universes /learning /operations /provenance /api/health; do
             code=$(curl -L -sS -o /tmp/body -w "%{http_code}" --retry 4 --retry-delay 2 "$url$path")
             echo "$path -> $code"
             test "$code" = "200"
