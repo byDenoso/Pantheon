@@ -63,6 +63,7 @@ jobs:
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
         run: |
+          set -euo pipefail
           url=$(npx --yes vercel@latest deploy --prebuilt --token="$VERCEL_TOKEN")
           echo "url=$url" >> "$GITHUB_OUTPUT"
           echo "### Authenticated preview" >> "$GITHUB_STEP_SUMMARY"
@@ -71,8 +72,12 @@ jobs:
         if: steps.preview-auth.outputs.available != 'true'
         id: temporary-preview
         run: |
-          unset VERCEL_ORG_ID VERCEL_PROJECT_ID
-          url=$(npx --yes vercel@latest deploy --temporary --yes --local-config vercel.preview.json | tail -n 1)
+          set -euo pipefail
+          unset VERCEL_ORG_ID VERCEL_PROJECT_ID CI GITHUB_ACTIONS
+          output=$(npx --yes vercel@latest deploy --temporary --yes --local-config vercel.preview.json 2>&1)
+          printf '%s\n' "$output"
+          url=$(printf '%s\n' "$output" | grep -Eo 'https://[^ ]+\.vercel\.app' | tail -n 1)
+          test -n "$url"
           echo "url=$url" >> "$GITHUB_OUTPUT"
           echo "### Temporary SSOT-backed preview" >> "$GITHUB_STEP_SUMMARY"
           echo "$url" >> "$GITHUB_STEP_SUMMARY"
@@ -81,6 +86,7 @@ jobs:
           AUTH_URL: ${{ steps.authenticated-preview.outputs.url }}
           TEMP_URL: ${{ steps.temporary-preview.outputs.url }}
         run: |
+          set -euo pipefail
           url="${AUTH_URL:-$TEMP_URL}"
           test -n "$url"
           for path in / /universes /universes/science /learning /operations /provenance /api/health; do
