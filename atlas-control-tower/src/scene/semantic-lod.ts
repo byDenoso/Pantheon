@@ -13,14 +13,17 @@ export type LODContext = {
 };
 
 const TYPE_SCORE: Record<string, number> = {
+  ROOT: 8500,
   SYSTEM: 8000,
   DOMAIN: 7000,
+  SUBGRAPH: 6500,
   CLAIM: 6200,
   CAMPAIGN: 6000,
   TEST: 5000,
   ACTION: 4600,
   AUTOMATION_RUN: 3600,
   RUN: 3000,
+  EVIDENCE: 2300,
   RESULT: 2000,
   LEARNING_RELATION: 1800
 };
