@@ -16,7 +16,7 @@ on:
       - '.github/workflows/atlas-deploy.yml'
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   node-tests:
@@ -32,6 +32,17 @@ jobs:
       - name: Install graph-v2 dependencies and generate lock
         if: github.ref == 'refs/heads/feat/atlas-graph-engine-v2'
         run: npm install --ignore-scripts --no-audit --no-fund
+      - name: Persist graph-v2 lockfile
+        if: github.ref == 'refs/heads/feat/atlas-graph-engine-v2'
+        working-directory: .
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add atlas-control-tower/package-lock.json
+          if ! git diff --cached --quiet; then
+            git commit -m "build(graph-v2): persist dependency lock"
+            git push origin HEAD:feat/atlas-graph-engine-v2
+          fi
       - name: Install locked dependencies
         if: github.ref != 'refs/heads/feat/atlas-graph-engine-v2'
         run: npm ci --no-audit --no-fund
@@ -47,11 +58,4 @@ jobs:
           name: atlas-control-tower-dist
           path: atlas-control-tower/dist/
           if-no-files-found: error
-          retention-days: 1
-      - name: Package generated lockfile
-        if: github.ref == 'refs/heads/feat/atlas-graph-engine-v2'
-        uses: actions/upload-artifact@v4
-        with:
-          name: atlas-graph-v2-lock
-          path: atlas-control-tower/package-lock.json
           retention-days: 1
