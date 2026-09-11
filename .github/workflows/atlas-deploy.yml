@@ -1,9 +1,5 @@
 name: Atlas Deploy
 
-# Explicit production publisher for the canonical NEXO Atlas Vercel project.
-# Project/team IDs are identifiers, not credentials. Only the Vercel access
-# token belongs in GitHub Actions Secrets.
-
 on:
   push:
     branches: [main]
@@ -30,11 +26,17 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '24'
+          cache: npm
+          cache-dependency-path: atlas-control-tower/package-lock.json
       - name: Install dependencies
-        run: npm install --no-audit --no-fund
+        run: npm ci --no-audit --no-fund
       - name: Run unit and contract tests
         run: npm test
-      - name: Check deployed JavaScript syntax
+      - name: Typecheck React frontend
+        run: npm run typecheck
+      - name: Build production frontend
+        run: npm run build
+      - name: Check server-side JavaScript syntax
         shell: bash
         run: |
           shopt -s nullglob
@@ -51,7 +53,6 @@ jobs:
       run:
         working-directory: atlas-control-tower
     env:
-      # Public/stable Vercel identifiers for the existing canonical project.
       VERCEL_ORG_ID: team_TLkDXqQIHke6IumXh3qzMDcs
       VERCEL_PROJECT_ID: prj_DLQSz5OiIT1HxWMn2i4AgoIv5x8r
     steps:
@@ -60,16 +61,16 @@ jobs:
         with:
           node-version: '24'
 
-      - name: Require the one real deploy credential
+      - name: Require production deploy credential
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
         run: |
           if [ -z "$VERCEL_TOKEN" ]; then
-            echo "::error::VERCEL_TOKEN is not set. VERCEL_ORG_ID and VERCEL_PROJECT_ID are already pinned to the canonical project."
+            echo "::error::VERCEL_TOKEN is not configured for the production environment."
             exit 1
           fi
 
-      - name: Pull production settings from the canonical project
+      - name: Pull production settings from canonical project
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
         run: npx --yes vercel@latest pull --yes --environment=production --token="$VERCEL_TOKEN"
@@ -84,63 +85,62 @@ jobs:
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
         run: |
+          set -euo pipefail
           url=$(npx --yes vercel@latest deploy --prebuilt --prod --token="$VERCEL_TOKEN")
           echo "url=$url" >> "$GITHUB_OUTPUT"
           echo "Deployed: $url"
 
-      # WRITE → READBACK → VERIFY. A READY deployment is not sufficient: the
-      # canonical alias must serve the orbital frontend and all critical runtime
-      # routes from one coherent deployment.
       - name: Readback production
+        env:
+          DEPLOY_URL: ${{ steps.deploy.outputs.url }}
         shell: bash
         run: |
-          set -u
-          domain="https://nexo-atlas-control-tower.vercel.app"
+          set -euo pipefail
+          canonical="https://nexo-atlas-control-tower.vercel.app"
 
-          for attempt in $(seq 1 20); do
-            root=$(curl -sS -o /tmp/root.html -w '%{http_code}' --max-time 20 "$domain/" || echo 000)
-            app=$(curl -sS -o /tmp/app.mjs -w '%{http_code}' --max-time 20 "$domain/app.mjs" || echo 000)
-            projection=$(curl -sS -o /tmp/projection.json -w '%{http_code}' --max-time 30 "$domain/api/projection?describe=1" || echo 000)
-            health=$(curl -sS -o /tmp/health.json -w '%{http_code}' --max-time 30 "$domain/api/health" || echo 000)
-            ops=$(curl -sS -o /tmp/ops.json -w '%{http_code}' --max-time 30 "$domain/api/ops" || echo 000)
-            learning=$(curl -sS -o /tmp/learning.json -w '%{http_code}' --max-time 30 "$domain/api/learning" || echo 000)
-            runner=$(curl -sS -o /tmp/runner.json -w '%{http_code}' --max-time 20 "$domain/api/runner?op=health" || echo 000)
+          smoke_frontend(){
+            local base="$1"
+            for path in / /graphs /graphs/science /graphs/science/D3 /universes /learning /operations /provenance; do
+              code=$(curl -L -sS -H 'Cache-Control: no-cache' -o /tmp/page.html -w '%{http_code}' --max-time 30 "$base$path")
+              echo "$base$path -> $code"
+              [ "$code" = "200" ] || return 1
+              grep -q 'id="root"' /tmp/page.html || return 1
+            done
+            curl -L -sS -H 'Cache-Control: no-cache' --max-time 30 "$base/" -o /tmp/root.html
+            grep -Eq 'src="/assets/[^\"]+\.js"' /tmp/root.html || return 1
+          }
 
-            echo "attempt $attempt: /=$root app=$app projection=$projection health=$health ops=$ops learning=$learning runner=$runner"
+          smoke_api(){
+            local base="$1"
+            health=$(curl -L -sS -o /tmp/health.json -w '%{http_code}' --max-time 40 "$base/api/health")
+            graph=$(curl -L -sS -o /tmp/graph.json -w '%{http_code}' --max-time 40 "$base/api/graph?focus=system:SCIENCE&depth=1&limit=8")
+            ops=$(curl -L -sS -o /tmp/ops.json -w '%{http_code}' --max-time 40 "$base/api/ops")
+            learning=$(curl -L -sS -o /tmp/learning.json -w '%{http_code}' --max-time 40 "$base/api/learning")
+            runner=$(curl -L -sS -o /tmp/runner.json -w '%{http_code}' --max-time 20 "$base/api/runner?op=health")
+            echo "$base API -> health=$health graph=$graph ops=$ops learning=$learning runner=$runner"
+            [ "$health" = "200" ] && [ "$graph" = "200" ] && [ "$ops" = "200" ] && [ "$learning" = "200" ] && [ "$runner" = "401" ]
+            node -e '
+              const fs=require("fs");
+              const h=JSON.parse(fs.readFileSync("/tmp/health.json","utf8"));
+              if(!h.ok || h.contract!=="v1" || h.dataSource?.freshness!=="LIVE" || h.dataSource?.usedFallback!==false){
+                console.error("health contract failed",h);process.exit(1);
+              }
+              const g=JSON.parse(fs.readFileSync("/tmp/graph.json","utf8"));
+              if(!Array.isArray(g.nodes)){console.error("graph contract missing nodes");process.exit(1);}
+            '
+          }
 
-            if [ "$root" = "200" ] && [ "$app" = "200" ] && [ "$projection" = "200" ] && \
-               [ "$health" = "200" ] && [ "$ops" = "200" ] && [ "$learning" = "200" ] && \
-               [ "$runner" = "401" ]; then
-              grep -q 'id="graph"' /tmp/root.html || { echo "::error::production root is not the approved orbital shell"; exit 1; }
-              grep -q 'src="/app.mjs"' /tmp/root.html || { echo "::error::production root does not load app.mjs"; exit 1; }
-              grep -q 'projection-v1' /tmp/projection.json || { echo "::error::projection contract is not projection-v1"; exit 1; }
-              grep -q 'RUNNER_UNAUTHORIZED' /tmp/runner.json || { echo "::error::runner route is not the protected Durable Runner"; exit 1; }
+          smoke_frontend "$DEPLOY_URL"
+          smoke_api "$DEPLOY_URL"
 
-              node -e '
-                const fs=require("fs");
-                const h=JSON.parse(fs.readFileSync("/tmp/health.json","utf8"));
-                if (!h.ok || h.contract!=="v1" || h.dataSource?.effective!=="v1" || h.dataSource?.freshness!=="LIVE" || h.dataSource?.usedFallback!==false) {
-                  console.error("health contract failed", h); process.exit(1);
-                }
-              '
-
-              fail=0
-              for layer in science execution integrity; do
-                state=$(curl -sS --max-time 40 "$domain/api/projection?layers=$layer" \
-                  | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{try{const j=JSON.parse(s);console.log(j.state+" nodes="+(j.nodes||[]).length)}catch{console.log("UNPARSEABLE")}})')
-                echo "  $layer -> $state"
-                case "$state" in
-                  OK*) : ;;
-                  *) echo "::error::layer $layer did not return OK: $state"; fail=1 ;;
-                esac
-              done
-
-              [ "$fail" = "0" ] && { echo "Production readback passed."; exit 0; }
-              exit 1
+          for attempt in $(seq 1 16); do
+            echo "canonical readback attempt $attempt"
+            if smoke_frontend "$canonical" && smoke_api "$canonical"; then
+              echo "Production vNext readback passed."
+              exit 0
             fi
-
-            sleep 15
+            sleep 10
           done
 
-          echo "::error::production alias never served one coherent canonical deployment"
+          echo "::error::canonical production alias never converged to the validated vNext deployment"
           exit 1
