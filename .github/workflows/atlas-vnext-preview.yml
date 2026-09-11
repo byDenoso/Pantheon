@@ -40,11 +40,7 @@ jobs:
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
         run: |
-          if [ -n "$VERCEL_TOKEN" ]; then
-            echo "available=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "available=false" >> "$GITHUB_OUTPUT"
-          fi
+          if [ -n "$VERCEL_TOKEN" ]; then echo "available=true" >> "$GITHUB_OUTPUT"; else echo "available=false" >> "$GITHUB_OUTPUT"; fi
       - name: Pull preview settings
         if: steps.preview-auth.outputs.available == 'true'
         env:
@@ -70,12 +66,10 @@ jobs:
         run: |
           set -euo pipefail
           cmd="env -i HOME=$HOME PATH=$PATH TERM=xterm-256color npm_config_yes=true npx --yes vercel@latest deploy --temporary --yes --local-config vercel.preview.json"
-          output=$(timeout 240 script -q -e -c "$cmd" /dev/null 2>&1)
-          printf '%s\n' "$output"
-          url=$(printf '%s\n' "$output" | tr -d '\r' | grep -Eo 'https://[^ ]+\.vercel\.app' | tail -n 1)
+          timeout 120 script -q -e -c "$cmd" /dev/null 2>&1 | tee /tmp/vercel-preview.log
+          url=$(tr -d '\r' < /tmp/vercel-preview.log | grep -Eo 'https://[^ ]+\.vercel\.app' | tail -n 1)
           test -n "$url"
           echo "url=$url" >> "$GITHUB_OUTPUT"
-          echo "### Temporary SSOT-backed preview" >> "$GITHUB_STEP_SUMMARY"
           echo "$url" >> "$GITHUB_STEP_SUMMARY"
       - name: Smoke preview
         env:
