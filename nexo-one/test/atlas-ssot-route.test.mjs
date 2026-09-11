@@ -13,8 +13,9 @@ test('Atlas SSOT route is service-authenticated and read-only',()=>{
  assert.match(handler,/readAtlasSsot\(\{env,now/);
 });
 
-test('Atlas SSOT reader cannot inherit the legacy NEXO sheet id',()=>{
- assert.match(adapter,/NEXO_SSOT_ID/);
+test('Atlas SSOT reader is pinned to the canonical sheet and cannot inherit a legacy sheet id',()=>{
+ assert.match(adapter,/CANONICAL_SSOT_ID/);
  assert.match(adapter,/1e6s2dKOYVLNsPUguHI85RLVLwJKtlCsQZBJ1BE-UhaY/);
  assert.doesNotMatch(adapter,/NEXO_SHEET_ID/);
+ assert.doesNotMatch(adapter,/NEXO_SSOT_ID/);
 });
