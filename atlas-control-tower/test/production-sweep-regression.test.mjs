@@ -29,9 +29,11 @@ test('production workflow verifies the vNext app rather than the retired orbital
   assert.doesNotMatch(deploy,/id=\\?['"]graph\\?['"]/);
 });
 
-test('main quality gate is reproducible and covers production pushes',()=>{
+test('main quality gate is reproducible and uploads only the tested frontend build',()=>{
   assert.match(quality,/main/);
   assert.match(quality,/npm ci --no-audit --no-fund/);
+  assert.match(quality,/path:\s*atlas-control-tower\/dist\//);
+  assert.doesNotMatch(quality,/path:\s*atlas-control-tower\/\s*$/m);
 });
 
 test('production Vite build does not publish source maps by default',()=>{
