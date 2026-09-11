@@ -73,10 +73,10 @@ jobs:
         id: temporary-preview
         run: |
           set -euo pipefail
-          unset VERCEL_ORG_ID VERCEL_PROJECT_ID CI GITHUB_ACTIONS
-          output=$(npx --yes vercel@latest deploy --temporary --yes --local-config vercel.preview.json 2>&1)
+          unset VERCEL_ORG_ID VERCEL_PROJECT_ID
+          output=$(script -q -e -c 'env -u CI -u GITHUB_ACTIONS -u VERCEL_ORG_ID -u VERCEL_PROJECT_ID npx --yes vercel@latest deploy --temporary --yes --local-config vercel.preview.json' /dev/null 2>&1)
           printf '%s\n' "$output"
-          url=$(printf '%s\n' "$output" | grep -Eo 'https://[^ ]+\.vercel\.app' | tail -n 1)
+          url=$(printf '%s\n' "$output" | tr -d '\r' | grep -Eo 'https://[^ ]+\.vercel\.app' | tail -n 1)
           test -n "$url"
           echo "url=$url" >> "$GITHUB_OUTPUT"
           echo "### Temporary SSOT-backed preview" >> "$GITHUB_STEP_SUMMARY"
