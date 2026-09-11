@@ -33,7 +33,7 @@ test('Science subgraphs come from Drive campaign domains, not a synthetic taxono
  const domains=graph.nodes.filter(node=>node.type==='DOMAIN').map(node=>node.domain);
  assert.ok(domains.includes('D1'));
  assert.ok(domains.includes('D3'));
- assert.ok(domains.every(id=>/^D\\d+$|^M\\d+$/.test(id)));
+ assert.ok(domains.every(id=>/^D\d+$|^M\d+$/.test(id)));
 });
 
 test('Learning is projected from StructuralLearning and CrossDomain rows',async()=>{
