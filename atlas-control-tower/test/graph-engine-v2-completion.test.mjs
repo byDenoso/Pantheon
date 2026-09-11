@@ -45,7 +45,8 @@ test('Learning filaments are selectable and have an inspector path',()=>{
   const source=read('src/graph-engine/GraphExplorer.tsx');
   assert.match(source,/onSelectEdge/);
   assert.match(source,/selectedEdgeId/);
-  assert.match(source,/edgeHit/);
+  assert.match(source,/pointertap/);
+  assert.match(source,/callbacksRef\.current\.onSelectEdge/);
   assert.match(source,/RELAÇÃO LEARNING/);
   for(const page of ['GraphsV2Page.tsx','GraphDomainV2Page.tsx','GraphDetailV2Page.tsx']){
     const pageSource=read('src/pages/'+page);
