@@ -43,9 +43,9 @@ test('cache key is deterministic and order independent',()=>{
 });
 
 test('a fallback is never described as live',()=>{
- assert.equal(provenanceLabel({source:SOURCES.V1,freshness:FRESHNESS.LIVE}),'LIVE · NEON V1');
- assert.equal(provenanceLabel({source:SOURCES.V1,freshness:FRESHNESS.STAGING}),'STAGING V1');
- assert.equal(provenanceLabel({source:SOURCES.LEGACY,freshness:FRESHNESS.SNAPSHOT}),'LEGACY SNAPSHOT');
- assert.equal(provenanceLabel({source:SOURCES.LEGACY,freshness:FRESHNESS.FALLBACK}),'FALLBACK · LEGACY SNAPSHOT');
- assert.equal(provenanceLabel({source:SOURCES.LEGACY,freshness:FRESHNESS.STALE}),'STALE · LEGACY SNAPSHOT');
+ assert.equal(provenanceLabel({source:SOURCES.V1,freshness:FRESHNESS.LIVE}),'LIVE · PROJEÇÃO CANÔNICA');
+ assert.equal(provenanceLabel({source:SOURCES.V1,freshness:FRESHNESS.STAGING}),'STAGING · PROJEÇÃO CANÔNICA');
+ assert.equal(provenanceLabel({source:SOURCES.LEGACY,freshness:FRESHNESS.SNAPSHOT}),'SNAPSHOT LEGADO');
+ assert.equal(provenanceLabel({source:SOURCES.LEGACY,freshness:FRESHNESS.FALLBACK}),'FALLBACK · SNAPSHOT LEGADO');
+ assert.equal(provenanceLabel({source:SOURCES.LEGACY,freshness:FRESHNESS.STALE}),'STALE · SNAPSHOT LEGADO');
 });

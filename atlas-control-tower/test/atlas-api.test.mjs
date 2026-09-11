@@ -60,14 +60,14 @@ test('provenance is exposed and a fallback is never labelled live',async()=>{
  await api.graph({focus:'a'});
  assert.equal(api.provenance.source,'legacy');
  assert.equal(api.provenance.freshness,'FALLBACK');
- assert.equal(api.provenance.label,'FALLBACK · LEGACY SNAPSHOT');
+ assert.equal(api.provenance.label,'FALLBACK · SNAPSHOT LEGADO');
  assert.equal(api.provenance.sourceVersion,'2026-09-05T20:13:05Z');
 });
 
 test('a healthy v1 payload is reported as live',async()=>{
  const api=createApi({fetchImpl:async()=>reply({nodes:[],edges:[],fingerprint:'fp9',source:'v1',freshness:'LIVE'})});
  await api.graph({focus:'a'});
- assert.equal(api.provenance.label,'LIVE · NEON V1');
+ assert.equal(api.provenance.label,'LIVE · PROJEÇÃO CANÔNICA');
 });
 
 test('the documented cache key carries source, fingerprint, focus, depth and filters',async()=>{

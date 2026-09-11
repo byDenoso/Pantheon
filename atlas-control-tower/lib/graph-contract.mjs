@@ -80,11 +80,10 @@ export function cacheKey({fingerprint = '', focus = '', depth = 1, filters = {},
 
 /** Short, human-facing description of where the data came from and how fresh it is. */
 export function provenanceLabel({source, freshness, sourceVersion} = {}) {
- const base = source === SOURCES.V1
-  ? (freshness === FRESHNESS.STAGING ? 'STAGING V1' : 'NEON V1')
-  : 'LEGACY SNAPSHOT';
+ const base = source === SOURCES.V1 ? 'PROJEÇÃO CANÔNICA' : 'SNAPSHOT LEGADO';
  if (freshness === FRESHNESS.FALLBACK) return 'FALLBACK · ' + base;
  if (freshness === FRESHNESS.STALE) return 'STALE · ' + base;
+ if (freshness === FRESHNESS.STAGING) return 'STAGING · ' + base;
  if (freshness === FRESHNESS.LIVE) return 'LIVE · ' + base;
  return base + (sourceVersion ? '' : '');
 }
