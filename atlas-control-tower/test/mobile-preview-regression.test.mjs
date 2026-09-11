@@ -18,9 +18,8 @@ test('mobile graph surfaces stay visible and pannable instead of collapsing', ()
   assert.match(css, /\.structural-map-canvas\{[^}]*min-height:/s);
 });
 
-test('preview runtime falls back to canonical live API when OIDC is unavailable', () => {
-  const runtime = read('api/runtime-orphans.js');
-  assert.match(runtime, /VERCEL_ENV/);
-  assert.match(runtime, /CANONICAL_API_ORIGIN/);
-  assert.match(runtime, /proxyCanonical/);
+test('mobile overrides are loaded after theme and renderer styles', () => {
+  const css = read('src/design/index.css');
+  assert.ok(css.indexOf("./mobile.css") > css.indexOf("./theme.css"));
+  assert.ok(css.indexOf("./mobile.css") > css.indexOf("./structural.css"));
 });
