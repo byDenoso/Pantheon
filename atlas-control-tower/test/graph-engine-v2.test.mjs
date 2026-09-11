@@ -12,8 +12,8 @@ test('v2 pages use one renderer gateway with 2.5D primary, 3D opt-in and Pixi ro
  assert.match(gateway,/GraphScene25D/);
  assert.match(gateway,/GraphScene3D/);
  assert.match(gateway,/GraphExplorer/);
- assert.match(gateway,/renderer.*3d/);
- assert.match(gateway,/renderer.*2d/);
- assert.match(gateway,/renderer.*25d/);
+ assert.match(gateway,/mode==='3d'/);
+ assert.match(gateway,/mode==='2d'/);
+ assert.match(gateway,/requested==='25d'/);
 });
 test('legacy learning and universe deep links are retained',()=>{const source=read('src/App.tsx');assert.match(source,/LegacyUniverseRedirect/);assert.match(source,/LearningRedirect/);assert.match(source,/learning/)});
