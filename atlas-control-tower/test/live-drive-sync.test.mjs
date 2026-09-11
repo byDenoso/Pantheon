@@ -11,7 +11,8 @@ const live={
   EVENTS:[{event_id:'EVT::1',event_type:'HANDOFF_RESULT',domain:'SCIENCE',summary:'Verified',status:'DONE',created_at:'2026-09-11T18:00:00Z'}],
   KNOWLEDGE:[
    {knowledge_id:'KNOW::1',domain:'NEXO',type:'PROCEDURAL',statement:'Null-first audit',context:'method',support:'2',contradiction:'0',confidence:'0.9',evidence_refs:'Drive:1',related_ids:'WORK::1',status:'ACTIVE',updated_at:'2026-09-11T18:00:00Z'},
-   {knowledge_id:'KNOW::REL::1',domain:'SCIENCE | OLYMPUS',type:'RELATION',statement:'Science — LEARNING_FILAMENT — Olympus',context:'filament',support:'3',contradiction:'0',confidence:'0.8',evidence_refs:'Drive:2',related_ids:'PROG-SCI | OLY-PROG',status:'SUPPORTED',updated_at:'2026-09-11T18:00:00Z'}
+   {knowledge_id:'KNOW::REL::1',domain:'SCIENCE | OLYMPUS',type:'RELATION',statement:'Science — LEARNING_FILAMENT — Olympus',context:'filament',support:'3',contradiction:'0',confidence:'0.8',evidence_refs:'Drive:2',related_ids:'PROG-SCI | OLY-PROG',status:'SUPPORTED',updated_at:'2026-09-11T18:00:00Z'},
+   {knowledge_id:'KNOW::UNKNOWN::1',domain:'ENGINEERING',type:'PROCEDURAL',statement:'Unknown metrics stay unknown',context:'method',support:'',contradiction:'',confidence:'',evidence_refs:'Drive:3',related_ids:'',status:'ACTIVE',updated_at:'2026-09-11T18:00:00Z'}
   ],
   DECISIONS:[],SYSTEM:[{system_id:'SYS::NEON',key:'NEON',value:'RETIRED_RUNTIME',status:'RETIRED',updated_at:'2026-09-11T18:00:00Z',source:'Director'}]
  },
@@ -46,11 +47,16 @@ test('live graph preserves current Science D-domain contract',()=>{
 
 test('Learning comes from current canonical knowledge plus derived transfer projections',()=>{
  const report=projectLiveRoute(live,'learning',{});
- assert.ok(report.total>=4);
- const relation=report.ladder.flatMap(stage=>stage.items).find(item=>item.id==='KNOW::REL::1');
+ assert.ok(report.total>=5);
+ const items=report.ladder.flatMap(stage=>stage.items);
+ const relation=items.find(item=>item.id==='KNOW::REL::1');
  assert.equal(relation.domainA,'SCIENCE');
  assert.equal(relation.domainB,'OLYMPUS');
  assert.equal(relation.evidenceRefs.relation_scope,'CROSS_DOMAIN');
+ const unknown=items.find(item=>item.id==='KNOW::UNKNOWN::1');
+ assert.equal(unknown.confidence,null);
+ assert.equal(unknown.evidenceCount,null);
+ assert.equal(unknown.contradictionCount,null);
  assert.ok(report.crossDomain>=2);
 });
 
