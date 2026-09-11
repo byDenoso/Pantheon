@@ -8,7 +8,7 @@ export default function GraphDetailPage(){
  const subgraphId=params.subgraphId||'';
  const [searchParams]=useSearchParams();
  const selectedEntity=searchParams.get('entity');
- const focusId=domainId.toLowerCase()==='science'?'domain:'+subgraphId:domainId+':'+subgraphId;
+ const focusId=`domain:${subgraphId}`;
  return <div className="nexo-page subdomain-page graphs-page">
   <nav className="nexo-breadcrumb"><Link to="/graphs">Grafos</Link><span>/</span><Link to={'/graphs/'+domainId}>{domainId}</Link><span>/</span><b>{subgraphId}</b></nav>
   <PageHeader eyebrow="GRAFO DETALHADO" title={subgraphId||'Subgrafo'} description="Entidades, relações, claims, testes, evidências e fontes do recorte estrutural selecionado."/>
