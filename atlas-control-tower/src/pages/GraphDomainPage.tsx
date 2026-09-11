@@ -5,6 +5,7 @@ import {SubgraphMap} from '../components/SubgraphMap';
 import {buildDomainNavigatorModel} from '../components/DomainNavigator/domain-model.mjs';
 import {loadUniverseSource} from '../data/load-universe';
 import {buildUniverseView} from '../data/universes-model';
+import '../design/subgraph.css';
 
 export default function GraphDomainPage(){
  const params=useParams();
