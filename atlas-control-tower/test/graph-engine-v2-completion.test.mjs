@@ -29,7 +29,8 @@ test('Pixi application stays persistent while graph state redraws incrementally'
   assert.match(source,/appRef/);
   assert.match(source,/worldRef/);
   assert.match(source,/redrawRef/);
-  assert.match(source,/persistent Pixi application/i);
+  assert.match(source,/latestRef\.current=\{projection,learningEdges,learning,selectedId,selectedEdgeId\}/);
+  assert.match(source,/useEffect\(\(\)=>\{redrawRef\.current\?\.\(\)\},\[projection,learningEdges,learning,selectedId,selectedEdgeId\]\)/);
   assert.doesNotMatch(source,/host\.innerHTML=''/);
 });
 
