@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { PageHeader } from '../components/PageHeader';
+import { DomainNavigator } from '../components/DomainNavigator/DomainNavigator';
+import { buildDomainNavigatorModel } from '../components/DomainNavigator/domain-model.mjs';
 import { loadUniverseSource } from '../data/load-universe';
 import { buildUniverseView } from '../data/universes-model';
 
@@ -11,6 +13,7 @@ export default function UniversePage(){
  const [graph,setGraph]=useState<any>(undefined);
  useEffect(()=>{let live=true;setGraph(undefined);void loadUniverseSource(universeId).then(value=>{if(live)setGraph(value)});return()=>{live=false}},[universeId]);
  const model=useMemo(()=>buildUniverseView(universeId,graph??null,selectedEntity),[universeId,graph,selectedEntity]);
+ const domainModel=useMemo(()=>buildDomainNavigatorModel(universeId,graph??null),[universeId,graph]);
  const loading=graph===undefined;
  return <div className="nexo-page universe-page">
   <nav className="nexo-breadcrumb"><Link to="/universes">Universos</Link><span>/</span><b>{model.label}</b></nav>
@@ -18,10 +21,8 @@ export default function UniversePage(){
   <div className="universe-source-row"><span className={`overview-source ${model.available?'ok':'offline'}`}><i/>{loading?'Carregando…':model.available?model.sourceLabel.toUpperCase():'Fonte indisponível'}</span></div>
   {!loading&&!model.available?<section className="nexo-empty-state"><h2>Universo indisponível</h2><p>A projeção não respondeu. Nenhuma estrutura foi sintetizada.</p></section>:null}
   {model.available?<>
-   <section className="universe-section-head"><div><span className="panel-kicker">ESTRUTURA</span><h2>Subdomínios</h2></div><span>{model.subdomains.length}</span></section>
-   {model.subdomains.length?<section className="subdomain-grid">{model.subdomains.map(item=><Link className="subdomain-card" to={item.path} key={item.id}>
-    <span className="subdomain-code">{item.id}</span><div><h3>{item.label}</h3>{item.summary&&<p>{item.summary}</p>}</div><span className="status-pill">{item.status||'—'}</span>
-   </Link>)}</section>:<section className="universe-inline-empty"><b>Nenhum subdomínio canônico publicado.</b><p>A interface mostra abaixo as entidades que a projeção realmente declarou.</p></section>}
+   <section className="universe-section-head"><div><span className="panel-kicker">NAVEGAÇÃO</span><h2>Domínios</h2></div><span>{model.subdomains.length}</span></section>
+   {model.subdomains.length?<DomainNavigator universeId={universeId} model={domainModel}/>:<section className="universe-inline-empty"><b>Nenhum subdomínio canônico publicado.</b><p>A interface mostra abaixo apenas as entidades que a projeção realmente declarou.</p></section>}
   </>:null}
   {model.available?<>
    <section className="universe-section-head entities-head"><div><span className="panel-kicker">RECORTE</span><h2>Entidades publicadas</h2></div><span>{model.entities.length}</span></section>
