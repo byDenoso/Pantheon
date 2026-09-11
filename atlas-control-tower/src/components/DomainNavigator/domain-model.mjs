@@ -1,7 +1,7 @@
 const record=value=>value&&typeof value==='object'&&!Array.isArray(value)?value:{};
 const list=value=>Array.isArray(value)?value.map(record):[];
 const text=value=>typeof value==='string'?value:'';
-const finite=value=>{const n=Number(value);return Number.isFinite(n)?n:null};
+const finite=value=>{if(value===null||value===undefined||value==='')return null;const n=Number(value);return Number.isFinite(n)?n:null};
 const domainRank=id=>{const d=String(id).match(/^D(\d+)$/i);if(d)return Number(d[1]);const m=String(id).match(/^M(\d+)$/i);return m?1000+Number(m[1]):2000};
 const universeLabel=id=>({science:'Ciência',engineering:'Engenharia',olympus:'Olympus',ai:'IA'}[String(id).toLowerCase()]||String(id));
 
