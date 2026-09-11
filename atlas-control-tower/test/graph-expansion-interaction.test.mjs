@@ -21,7 +21,8 @@ test('graph branches expand in place from a clicked anchor',async()=>{
 
 test('single click drives branch expansion and no v2 page renders Explore',()=>{
   const explorer=read('src/graph-engine/GraphExplorer.tsx');
-  assert.match(explorer,/callbacksRef\.current\.onSelect\(node\.id\)/,'Pixi node tap must emit selection immediately');
+  assert.match(explorer,/pointertap/,'Pixi node must handle tap');
+  assert.match(explorer,/callbacksRef\.current\.onSelect\([^)]*\.id\)/,'Pixi node tap must emit selection immediately');
   for(const page of ['GraphsV2Page.tsx','GraphDomainV2Page.tsx','GraphDetailV2Page.tsx']){
     const source=read('src/pages/'+page);
     assert.doesNotMatch(source,/onOpen=/,'v2 pages must not render the Explore action');
