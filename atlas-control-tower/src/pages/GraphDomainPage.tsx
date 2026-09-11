@@ -18,8 +18,9 @@ export default function GraphDomainPage(){
  return <div className="nexo-page graphs-page">
   <nav className="nexo-breadcrumb"><Link to="/graphs">Grafos</Link><span>/</span><b>{view.label}</b><span>/</span><b>Subgrafos</b></nav>
   <PageHeader eyebrow="SUBGRAFOS" title={view.label+' / Subgrafos'} description="Explore os recortes publicados e abra o grafo estrutural de cada um."/>
-  {graph===undefined?<section className="nexo-empty-state"><h2>Carregando subgrafos</h2></section>:null}
-  {graph&&model.domains.length?<SubgraphMap model={model} basePath={path}/>:null}
-  {graph&&!model.domains.length?<section className="nexo-empty-state"><h2>Nenhum subgrafo publicado</h2><p>Este nível permanece vazio quando a fonte não publica recortes.</p></section>:null}
+  {graph===undefined?<section className="nexo-empty-state"><h2>Carregando subgrafos</h2><p>Aguardando a projeção canônica.</p></section>:null}
+  {graph===null?<section className="nexo-empty-state"><h2>Subgrafos indisponíveis</h2><p>A projeção canônica não respondeu para este universo. Nenhuma estrutura foi sintetizada.</p></section>:null}
+  {graph!==undefined&&graph!==null&&model.domains.length?<SubgraphMap model={model} basePath={path}/>:null}
+  {graph!==undefined&&graph!==null&&!model.domains.length?<section className="nexo-empty-state"><h2>Nenhum subgrafo publicado</h2><p>Este nível permanece vazio quando a fonte não publica recortes.</p></section>:null}
  </div>;
 }
