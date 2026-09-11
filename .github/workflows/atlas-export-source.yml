@@ -1,4 +1,4 @@
-name: Atlas Export Source
+name: Atlas Publish Static
 
 on:
   push:
@@ -7,17 +7,36 @@ on:
       - '.github/workflows/atlas-export-source.yml'
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
-  export-source:
+  publish-static:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/upload-artifact@v4
+      - uses: actions/setup-node@v4
         with:
-          name: atlas-control-tower-source
-          path: atlas-control-tower
-          if-no-files-found: error
-          include-hidden-files: true
-          retention-days: 1
+          node-version: 24
+          cache: npm
+          cache-dependency-path: atlas-control-tower/package-lock.json
+      - name: Install and build
+        working-directory: atlas-control-tower
+        run: |
+          npm ci --no-audit --no-fund
+          npm run build
+      - name: Publish immutable static branch
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          rm -rf /tmp/atlas-static
+          mkdir -p /tmp/atlas-static
+          cp -R atlas-control-tower/dist/. /tmp/atlas-static/
+          cd /tmp/atlas-static
+          git init
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git checkout -b atlas-static
+          git add -A
+          git commit -m "atlas static ${GITHUB_SHA}"
+          git remote add origin "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          git push --force origin atlas-static
