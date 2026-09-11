@@ -5,9 +5,9 @@ import { AppShell } from './app/AppShell';
 const OverviewPage = lazy(()=>import('./pages/OverviewPage'));
 const UniversesPage = lazy(()=>import('./pages/UniversesPage'));
 const UniversePage = lazy(()=>import('./pages/UniversePage'));
-const GraphsPage = lazy(()=>import('./pages/GraphsPage'));
-const GraphDomainPage = lazy(()=>import('./pages/GraphDomainPage'));
-const GraphDetailPage = lazy(()=>import('./pages/GraphDetailPage'));
+const GraphsPage = lazy(()=>import('./pages/GraphsV2Page'));
+const GraphDomainPage = lazy(()=>import('./pages/GraphDomainV2Page'));
+const GraphDetailPage = lazy(()=>import('./pages/GraphDetailV2Page'));
 const OperationsPage = lazy(()=>import('./pages/OperationsPage'));
 const ProvenancePage = lazy(()=>import('./pages/ProvenancePage'));
 
