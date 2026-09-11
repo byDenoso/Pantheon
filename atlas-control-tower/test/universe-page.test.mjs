@@ -19,3 +19,10 @@ test('universe page does not synthesize missing taxonomy',()=>{
  assert.match(page,/Fonte indisponível|indisponível/i);
  assert.doesNotMatch(page,/NEON/i);
 });
+
+test('graphs navigation contract',()=>{
+ const app=fs.readFileSync(new URL('../src/App.tsx',import.meta.url),'utf8');
+ const nav=fs.readFileSync(new URL('../src/app/navigation.ts',import.meta.url),'utf8');
+ assert.equal(nav.includes('Grafos'),true);
+ assert.equal(app.includes('/graphs/:domainId/:subgraphId'),true);
+});
