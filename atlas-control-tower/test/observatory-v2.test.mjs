@@ -22,8 +22,10 @@ const fakeRoot=()=>({innerHTML:'',querySelectorAll(){return[]},querySelector(){r
 
 test('vNext overview is decision-first and explicitly excludes the graph',()=>{
  const overview=readFileSync(new URL('../src/pages/OverviewPage.tsx',import.meta.url),'utf8');
- assert.match(overview,/Visão geral/);
- assert.match(overview,/Sem grafo competindo pela sua atenção/);
+ assert.match(overview,/Observatório científico/);
+ assert.match(overview,/O que mudou/);
+ assert.match(overview,/Bloqueios/);
+ assert.match(overview,/Estado científico/);
  assert.doesNotMatch(overview,/AtlasCanvas|map-workspace/);
  assert.match(main,/\.\/design\/index\.css/);
  assert.doesNotMatch(app,/AtlasCanvas|reference-main|command-center/);
