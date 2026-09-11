@@ -51,7 +51,7 @@ function SceneContent({nodes,graph,pickScene,idToNode,labelIds,onLabels,onPick,r
 
 export function AtlasCanvas({graph,focusId,selectedId,onSelect,onOpen,reducedMotion,autoOrbit,compact=false}:Props){
   const [labels,setLabels]=useState<ProjectedLabel[]>([]);const pickScene=useMemo(()=>{const scene=new Scene();scene.background=new Color(0x000000);return scene},[]);const sourceNodes=graph?.nodes||[];
-  const lod=useMemo(()=>selectSemanticLOD(sourceNodes,{selectedId,focusId,visibleBudget:compact?90:180,labelBudget:compact?20:34}),[compact,focusId,selectedId,sourceNodes]);
+  const lod=useMemo(()=>selectSemanticLOD(sourceNodes,{selectedId,focusId,visibleBudget:compact?90:180,labelBudget:compact?20:36}),[compact,focusId,selectedId,sourceNodes]);
   const visible=useMemo(()=>sourceNodes.filter(node=>lod.visibleIds.has(node.id)),[lod.visibleIds,sourceNodes]);const nodes=useMemo(()=>buildOrbitalNodes(visible,focusId),[focusId,visible]);
   const nodeById=useMemo(()=>new Map(nodes.map(node=>[node.id,node])),[nodes]);const idToNode=useMemo(()=>new Map(nodes.map(node=>[node.pickId,node.id])),[nodes]);const visibleIds=useMemo(()=>new Set(nodes.map(node=>node.id)),[nodes]);
   const sceneGraph=useMemo<AtlasGraph>(()=>({...(graph||{nodes:[],edges:[]}),nodes,edges:(graph?.edges||[]).filter(edge=>visibleIds.has(edge.source)&&visibleIds.has(edge.target))}),[graph,nodes,visibleIds]);
