@@ -1,22 +1,8 @@
-type FetchLike=(input:string)=>Promise<{ok:boolean;status:number;json:()=>Promise<unknown>}>;
-
+import {createApi} from '../../lib/atlas-api.mjs';
 type OverviewSourceSet={state:unknown|null;ops:unknown|null;audit:unknown|null};
-
-async function read(fetchImpl:FetchLike,url:string){
-  try{
-    const response=await fetchImpl(url);
-    if(!response.ok) return null;
-    return await response.json();
-  }catch{
-    return null;
-  }
-}
-
-export async function loadOverviewSources(fetchImpl:FetchLike=fetch as unknown as FetchLike):Promise<OverviewSourceSet>{
-  const [state,ops,audit]=await Promise.all([
-    read(fetchImpl,'/api/state'),
-    read(fetchImpl,'/api/ops'),
-    read(fetchImpl,'/api/audit'),
-  ]);
-  return {state,ops,audit};
+type Api={state:(q?:Record<string,unknown>)=>Promise<unknown>;ops:()=>Promise<unknown>;audit:()=>Promise<unknown>};
+const safe=async<T>(fn:()=>Promise<T>):Promise<T|null>=>{try{return await fn()}catch{return null}};
+export async function loadOverviewSources(api:Api=createApi() as Api):Promise<OverviewSourceSet>{
+ const [state,ops,audit]=await Promise.all([safe(()=>api.state({})),safe(()=>api.ops()),safe(()=>api.audit())]);
+ return {state,ops,audit};
 }
