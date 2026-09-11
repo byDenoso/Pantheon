@@ -1,12 +1,11 @@
-import {json,requireEnv} from './http.mjs';
+import {json} from './http.mjs';
 import {googleToken} from './google.mjs';
 import {buildAtlasSsotSnapshot,CANONICAL_TABS,PROJECTION_TABS} from '../compiler/atlas-ssot.mjs';
 
-const DEFAULT_SSOT_ID='1e6s2dKOYVLNsPUguHI85RLVLwJKtlCsQZBJ1BE-UhaY';
+const CANONICAL_SSOT_ID='1e6s2dKOYVLNsPUguHI85RLVLwJKtlCsQZBJ1BE-UhaY';
 
 export async function readAtlasSsot({env=process.env,signal,now=Date.now()}={}){
- const sourceFileId=env.NEXO_SSOT_ID||env.NEXO_SHEET_ID||DEFAULT_SSOT_ID;
- requireEnv({...env,NEXO_SSOT_ID:sourceFileId},'NEXO_SSOT_ID');
+ const sourceFileId=CANONICAL_SSOT_ID;
  const token=await googleToken(env,signal);
  const requested=[...CANONICAL_TABS,...PROJECTION_TABS];
  const params=new URLSearchParams();
