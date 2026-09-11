@@ -10,9 +10,10 @@ test('Vercel exposes the durable runner as one bounded function route', async()=
   assert(cfg.routes.some(x=>x.src==='/api/runner'&&x.dest==='/api/runner.js'));
 });
 
-test('runner endpoint accepts GET only and never exposes arbitrary SQL',async()=>{
+test('runner endpoint is GET-only and fails closed while Drive is read-only',async()=>{
   const source=await readFile(new URL('api/runner.js',root),'utf8');
   assert.match(source,/req\.method!=='GET'/);
   assert.doesNotMatch(source,/run_sql|arbitrary_sql|query\s*=/i);
-  assert.match(source,/createRunnerBridge/);
+  assert.match(source,/READ_ONLY_DRIVE_SSOT/);
+  assert.match(source,/GOOGLE_DRIVE/);
 });
