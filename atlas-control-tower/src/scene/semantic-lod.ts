@@ -1,7 +1,7 @@
 export type SemanticNode = {
   id: string;
   type?: string;
-  status?: string;
+  status?: string | null;
   priority?: number;
 };
 
