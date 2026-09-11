@@ -24,7 +24,7 @@ function normalizeTable(tab,values){
 function normalizeProjectionTable(values){
  if(!Array.isArray(values)||!Array.isArray(values[0])||values[0].length===0)return [];
  const rawHeaders=values[0].map(text);
- const headers=rawHeaders.map((header,index)=>header||index===0?'record_type':`column_${index+1}`);
+ const headers=rawHeaders.map((header,index)=>header||(index===0?'record_type':`column_${index+1}`));
  return values.slice(1).filter(row=>Array.isArray(row)&&row.some(value=>text(value))).map(row=>Object.fromEntries(headers.map((header,index)=>[header,text(row[index])])));
 }
 
