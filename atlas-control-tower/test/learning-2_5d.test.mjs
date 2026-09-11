@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 
 const mesh=readFileSync(new URL('../src/components/LearningMesh.tsx',import.meta.url),'utf8');
-const css=readFileSync(new URL('../src/design/learning.css',import.meta.url),'utf8');
+const css=readFileSync(new URL('../src/design/learning-2_5d.css',import.meta.url),'utf8');
 const layout=readFileSync(new URL('../src/data/learning-layout.ts',import.meta.url),'utf8');
 
 test('learning mesh has depth planes and navigable context hubs',()=>{
