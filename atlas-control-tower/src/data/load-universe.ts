@@ -1,10 +1,4 @@
-import { createApi } from '../../lib/atlas-api.mjs';
-
+import {createApi} from '../../lib/atlas-api.mjs';
 type GraphApi={graph:(query:Record<string,unknown>)=>Promise<any>};
-const SYSTEMS:Record<string,string>={science:'SCIENCE',engineering:'ENGINEERING',olympus:'OLYMPUS',ai:'AI'};
-
-export async function loadUniverseSource(universeId:string,api:GraphApi=createApi() as GraphApi){
- const key=SYSTEMS[String(universeId||'').toLowerCase()];
- if(!key)return null;
- try{return await api.graph({focus:`system:${key}`,depth:1,limit:96})}catch{return null}
-}
+const SYSTEMS:Record<string,string>={science:'SCIENCE',engineering:'ENGINEERING',olympus:'OLYMPUS'};
+export async function loadUniverseSource(universeId:string,api:GraphApi=createApi() as GraphApi){const key=SYSTEMS[String(universeId||'').toLowerCase()];if(!key)return null;try{return await api.graph({focus:`system:${key}`,depth:1,limit:96})}catch{return null}}
