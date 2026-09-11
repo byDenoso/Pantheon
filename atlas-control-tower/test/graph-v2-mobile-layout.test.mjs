@@ -20,6 +20,6 @@ test('mobile graph uses compact controls and a collapsible bottom sheet',()=>{
 
 test('mobile canvas keeps most of the viewport available to the graph',()=>{
   const css=read('src/design/graph-v2.css');
-  assert.match(css,/\.graph-v2-main\{[^}]*min-height:calc\(100dvh - 146px\)/);
+  assert.match(css,/\.graph-v2-main\{[^}]*min-height:calc\(100dvh - 112px\)/);
   assert.match(css,/\.graph-v2-inspector:not\(\.is-open\) \.graph-v2-inspector-body\{display:none\}/);
 });
