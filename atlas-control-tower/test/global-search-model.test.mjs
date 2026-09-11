@@ -14,8 +14,8 @@ const audit={categories:[{id:'BROKEN_REFERENCE',label:'Broken reference',count:4
 test('global search groups declared results and gives each one a navigable route',()=>{
  const model=buildGlobalSearchModel({query:'runtime',science,olympus,learning,ops,runs,audit});
  assert.equal(model.query,'runtime');
- assert.ok(model.results.some(x=>x.group==='Ciência'&&x.path==='/universes/science/D3?entity=T-DE-001'));
- assert.ok(model.results.some(x=>x.group==='Learning'&&x.path==='/learning?item=pattern%3Ap1'));
+ assert.ok(model.results.some(x=>x.group==='Ciência'&&x.path==='/graphs/science/D3?entity=T-DE-001'));
+ assert.ok(model.results.some(x=>x.group==='Learning'&&x.path==='/graphs?learning=1&entity=pattern%3Ap1'));
  assert.ok(model.results.some(x=>x.group==='Operação'&&x.path==='/operations?action=action%3Aa1'));
  assert.ok(model.results.some(x=>x.group==='Operação'&&x.path==='/operations?run=run%3Ar1'));
 });
