@@ -1,6 +1,6 @@
 import {json,requireEnv} from './http.mjs';
 import {googleToken} from './google.mjs';
-import {buildAtlasSsotSnapshot,CANONICAL_TABS} from '../compiler/atlas-ssot.mjs';
+import {buildAtlasSsotSnapshot,CANONICAL_TABS,PROJECTION_TABS} from '../compiler/atlas-ssot.mjs';
 
 const DEFAULT_SSOT_ID='1e6s2dKOYVLNsPUguHI85RLVLwJKtlCsQZBJ1BE-UhaY';
 
@@ -8,8 +8,9 @@ export async function readAtlasSsot({env=process.env,signal,now=Date.now()}={}){
  const sourceFileId=env.NEXO_SSOT_ID||env.NEXO_SHEET_ID||DEFAULT_SSOT_ID;
  requireEnv({...env,NEXO_SSOT_ID:sourceFileId},'NEXO_SSOT_ID');
  const token=await googleToken(env,signal);
+ const requested=[...CANONICAL_TABS,...PROJECTION_TABS];
  const params=new URLSearchParams();
- for(const tab of CANONICAL_TABS)params.append('ranges',`${tab}!A1:Z5000`);
+ for(const tab of requested)params.append('ranges',`${tab}!A1:Z5000`);
  params.set('majorDimension','ROWS');
  params.set('valueRenderOption','FORMATTED_VALUE');
  const [batch,meta]=await Promise.all([
@@ -17,12 +18,9 @@ export async function readAtlasSsot({env=process.env,signal,now=Date.now()}={}){
   json(`https://www.googleapis.com/drive/v3/files/${encodeURIComponent(sourceFileId)}?fields=id,name,modifiedTime,version`,{token,signal})
  ]);
  const valueRanges=Array.isArray(batch?.valueRanges)?batch.valueRanges:[];
- const tables={};
- for(let i=0;i<CANONICAL_TABS.length;i++)tables[CANONICAL_TABS[i]]=valueRanges[i]?.values||[];
- return buildAtlasSsotSnapshot({
-  tables,
-  sourceFileId,
-  sourceModifiedAt:meta?.modifiedTime||'',
-  generatedAt:new Date(now).toISOString()
- });
+ const byTab={};
+ for(let i=0;i<requested.length;i++)byTab[requested[i]]=valueRanges[i]?.values||[];
+ const tables=Object.fromEntries(CANONICAL_TABS.map(tab=>[tab,byTab[tab]]));
+ const projectionTables=Object.fromEntries(PROJECTION_TABS.map(tab=>[tab,byTab[tab]]));
+ return buildAtlasSsotSnapshot({tables,projectionTables,sourceFileId,sourceModifiedAt:meta?.modifiedTime||'',generatedAt:new Date(now).toISOString()});
 }
