@@ -16,14 +16,15 @@ test('R3F scene uses instancing instead of one mesh per graph node',()=>{
  assert.doesNotMatch(edges,/edges\.map\([^)]*=>\s*<mesh/);
 });
 
-test('scene defines TSL materials and on-demand GPU picking integration',()=>{
+test('scene defines TSL materials and renderer-native picking integration',()=>{
  const materials=read('src/scene/materials.ts');
  const canvas=read('src/scene/AtlasCanvas.tsx');
  const picking=read('src/scene/gpu-picking.ts');
  assert.match(materials,/three\/tsl/);
  assert.match(materials,/MeshBasicNodeMaterial|MeshStandardNodeMaterial/);
  assert.match(materials,/colorNode/);
- assert.match(canvas,/GpuPicking/);
+ assert.match(canvas,/onNodeClick/);
+ assert.doesNotMatch(canvas,/createPortal|<GpuPicking/);
  assert.match(picking,/readRenderTargetPixelsAsync/);
  assert.match(picking,/WebGLRenderTarget/);
 });
