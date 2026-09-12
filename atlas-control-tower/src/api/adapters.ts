@@ -9,6 +9,7 @@ import type {
   Provenance,
   ScientificStatus,
   StatePayload,
+  ResearchEnvelope,
   TensionGroup,
   TensionResult,
   Uncertainty,
@@ -330,6 +331,83 @@ export function adaptObservatoryState(raw: unknown): ObservatoryData {
   };
 }
 
+function envelopeParts(raw: unknown): { root: RecordValue; data: RecordValue } {
+  const root = asRecord(raw);
+  const data = asRecord(root.data);
+  return { root, data: Object.keys(data).length ? data : root };
+}
+
+function envelopeCollection(data: RecordValue, key: string): unknown[] | undefined {
+  if (Array.isArray(data.items)) return data.items;
+  if (Array.isArray(data[key])) return data[key];
+  return undefined;
+}
+
+function researchFreshness(values: unknown[]): Freshness {
+  const states = values.map(value => firstText(envelopeParts(value).root.freshness)?.toUpperCase()).filter(Boolean);
+  if (states.includes('OFFLINE')) return 'OFFLINE';
+  if (states.includes('STALE')) return 'STALE';
+  if (states.includes('DEGRADED')) return 'DEGRADED';
+  if (states.includes('SNAPSHOT')) return 'SNAPSHOT';
+  return 'LIVE';
+}
+
+function researchState(values: unknown[]): StatePayload & RecordValue {
+  const parts = values.map(envelopeParts);
+  const summary = parts.find(part => part.data.coverage || part.data.availability)?.data || {};
+  const parameterData = parts.find(part => envelopeCollection(part.data, 'parameters') !== undefined)?.data || {};
+  const tensionData = parts.find(part => envelopeCollection(part.data, 'tensions') !== undefined)?.data || {};
+  const directionalData = parts.find(part => envelopeCollection(part.data, 'directionalSignals') !== undefined)?.data || {};
+  const snapshot = parts.find(part => part.data.summary !== undefined || part.data.coverage)?.data || {};
+  const root = parts.find(part => part.root.contract)?.root || {};
+  const pick = (data: RecordValue, key: string) => envelopeCollection(data, key);
+  return {
+    ...summary,
+    parameters: pick(parameterData, 'parameters') ?? pick(summary, 'parameters') ?? pick(snapshot, 'parameters'),
+    tensions: pick(tensionData, 'tensions') ?? pick(summary, 'tensions') ?? pick(snapshot, 'tensions'),
+    directionalSignals: pick(directionalData, 'directionalSignals') ?? pick(summary, 'directionalSignals') ?? pick(snapshot, 'directionalSignals'),
+    weightedH0: parameterData.weightedH0 ?? summary.weightedH0 ?? snapshot.weightedH0,
+    observatory: summary.observatory,
+    snapshot,
+    synthesis: summary.synthesis ?? snapshot.synthesis ?? (snapshot.summary && typeof snapshot.summary === 'object' ? snapshot.summary : undefined),
+    freshness: researchFreshness(values),
+    source: 'drive',
+    sourceVersion: firstText(root.sourceModifiedAt, root.generatedAt),
+    generatedAt: root.generatedAt,
+    provenance: root.provenance
+  };
+}
+
+function recordsFromResearch(raw: ResearchEnvelope, type: string): ResearchRecord[] {
+  const { root, data } = envelopeParts(raw);
+  const inherited = provenance(root.provenance);
+  return asArray(data.items).map((item): ResearchRecord | null => {
+    const value = asRecord(item);
+    const id = firstText(value.id, value.work_id);
+    if (!id) return null;
+    const node: AtlasNode = {
+      id,
+      type: firstText(value.type, type) || type,
+      label: firstText(value.label, value.title, value.question, id) || id,
+      status: firstText(value.status, 'UNKNOWN'),
+      domain: firstText(value.domain),
+      summary: firstText(value.summary, value.question),
+      metadata: { priority: value.priority, hasResult: value.hasResult }
+    };
+    return {
+      id,
+      label: String(node.label || id),
+      type: String(node.type || type),
+      status: text(value.status),
+      domain: text(value.domain),
+      summary: text(value.summary ?? value.question),
+      updatedAt: firstText(value.updatedAt, value.updated_at),
+      provenance: [...provenance(value.provenance), ...inherited],
+      node
+    } satisfies ResearchRecord;
+  }).filter((item): item is ResearchRecord => item !== null);
+}
+
 export function createAtlasAdapter(client: AtlasApiClient) {
   const stateCache = new Map<string, Promise<unknown>>();
   const readState = (context: AtlasContext = {}) => {
@@ -343,7 +421,18 @@ export function createAtlasAdapter(client: AtlasApiClient) {
     stateCache.set(key, request);
     return request;
   };
-  const getObservatorySummary = async (context: AtlasContext = {}) => adaptObservatoryState(await readState(context));
+  const getObservatorySummary = async (context: AtlasContext = {}) => {
+    if (!client.remote || typeof client.research !== 'function') return adaptObservatoryState(await readState(context));
+    const routes = ['observatory-summary', 'observatory-parameters', 'observatory-tensions', 'observatory-directional-signals'];
+    const results = await Promise.allSettled(routes.map(route => client.research(route, contextQuery(context))));
+    const values = results.filter((result): result is PromiseFulfilledResult<ResearchEnvelope> => result.status === 'fulfilled').map(result => result.value);
+    if (!values.length) throw new AtlasApiError('RESEARCH_READ_FAILED', 'Nenhum endpoint do observatório respondeu.');
+    return adaptObservatoryState(researchState(values));
+  };
+  const records = async (route: string, type: string, context: AtlasContext = {}) => {
+    if (!client.remote || typeof client.research !== 'function') return recordsFromGraph(await client.graph({ ...contextQuery(context), type, mode: 'search', limit: 120 }));
+    return recordsFromResearch(await client.research(route, contextQuery(context)), type);
+  };
   return {
     getAtlasGraph: (query: Record<string, string | number | undefined>) => client.graph(query),
     getObservatorySummary,
@@ -351,15 +440,21 @@ export function createAtlasAdapter(client: AtlasApiClient) {
     getTensions: async (context: AtlasContext = {}) => (await getObservatorySummary(context)).tensions,
     getDirectionalSignals: async (context: AtlasContext = {}) => (await getObservatorySummary(context)).directionalSignals,
     getUniverseSnapshot: async (context: AtlasContext = {}) => {
-      const summary = await getObservatorySummary(context);
-      return { parameters: summary.parameters, narrative: summary.narrative, freshness: summary.freshness };
+      if (!client.remote || typeof client.research !== 'function') {
+        const summary = await getObservatorySummary(context);
+        return { parameters: summary.parameters, narrative: summary.narrative, freshness: summary.freshness };
+      }
+      const raw = await client.research('universe-snapshot', contextQuery(context));
+      const data = adaptObservatoryState(researchState([raw]));
+      return { parameters: data.parameters, narrative: data.narrative, tensions: data.tensions, directionalSignals: data.directionalSignals, freshness: data.freshness };
     },
-    getClaims: async (context: AtlasContext = {}) => recordsFromGraph(await client.graph({ ...contextQuery(context), type: 'CLAIM', mode: 'search', limit: 120 })),
-    getTests: async (context: AtlasContext = {}) => recordsFromGraph(await client.graph({ ...contextQuery(context), type: 'TEST', mode: 'search', limit: 120 })),
-    getRuns: async (context: AtlasContext = {}) => recordsFromGraph(await client.graph({ ...contextQuery(context), type: 'RUN', mode: 'search', limit: 120 })),
-    getResults: async (context: AtlasContext = {}) => recordsFromGraph(await client.graph({ ...contextQuery(context), type: 'RESULT', mode: 'search', limit: 120 })),
-    getEvidence: async (context: AtlasContext = {}) => recordsFromGraph(await client.graph({ ...contextQuery(context), type: 'EVIDENCE', mode: 'search', limit: 120 })),
-    getPipelines: async (context: AtlasContext = {}) => recordsFromGraph(await client.graph({ ...contextQuery(context), type: 'PIPELINE', mode: 'search', limit: 120 })),
+    getHypotheses: (context: AtlasContext = {}) => records('lab-hypotheses', 'HYPOTHESIS', context),
+    getClaims: (context: AtlasContext = {}) => records('lab-claims', 'CLAIM', context),
+    getTests: (context: AtlasContext = {}) => records('lab-tests', 'TEST', context),
+    getRuns: (context: AtlasContext = {}) => records('lab-runs', 'RUN', context),
+    getResults: (context: AtlasContext = {}) => records('lab-results', 'RESULT', context),
+    getEvidence: (context: AtlasContext = {}) => records('lab-evidence', 'EVIDENCE', context),
+    getPipelines: (context: AtlasContext = {}) => records('lab-pipelines', 'PIPELINE', context),
     getEntity: async (id: string) => client.entity(id),
     getLineage: async (id: string) => client.lineage(id),
     getLearning: async () => client.learning(),
