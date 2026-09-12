@@ -16,5 +16,7 @@ test('Canvas fallback draws nodes, edges and labels from one animated canvas', (
 test('R3F failure is contained by a real Canvas fallback', () => {
   assert.match(atlasCanvas, /CanvasErrorBoundary/);
   assert.match(atlasCanvas, /CanvasGraphFallback/);
+  assert.match(atlasCanvas, /canUseThreeRenderer/);
+  assert.match(atlasCanvas, /!threeEnabled/);
   assert.match(atlasCanvas, /Renderer 3D indisponível/);
 });
