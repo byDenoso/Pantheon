@@ -11,7 +11,7 @@ const env={GOOGLE_CLIENT_ID:'fixture',GOOGLE_CLIENT_SECRET:'fixture',GOOGLE_REFR
 async function mock(routes,fn){const original=globalThis.fetch;globalThis.fetch=async(url,options)=>{const found=routes.find(([match])=>String(url).includes(match));assert.ok(found,`Unexpected outbound request: ${url}`);const value=typeof found[1]==='function'?found[1](url,options):found[1];return new Response(JSON.stringify(value),{status:200,headers:{'Content-Type':'application/json'}});};try{return await fn();}finally{globalThis.fetch=original;}}
 const oauth=['oauth2.googleapis.com',{access_token:'fixture-access',expires_in:3600}];
 
-test('Google Connect exchanges Vercel OIDC for a user-scoped read-only token',async()=>{
+test('Google Connect exchanges Vercel OIDC for an app-scoped read-only token',async()=>{
   const original=globalThis.fetch;let seen;
   globalThis.fetch=async(url,options)=>{seen={url:String(url),options};return new Response(JSON.stringify({token:'connect-google-token'}),{status:200,headers:{'Content-Type':'application/json'}});};
   try{
@@ -21,7 +21,7 @@ test('Google Connect exchanges Vercel OIDC for a user-scoped read-only token',as
     assert.equal(seen.options.method,'POST');
     assert.equal(seen.options.headers.Authorization,'Bearer oidc-fixture');
     const body=JSON.parse(seen.options.body);
-    assert.deepEqual(body.subject,{type:'user',id:'owner'});
+    assert.deepEqual(body.subject,{type:'app'});
     assert.deepEqual(body.scopes,GOOGLE_READ_SCOPES);
     assert.deepEqual(GOOGLE_READ_SCOPES,[
       'https://www.googleapis.com/auth/drive.readonly',

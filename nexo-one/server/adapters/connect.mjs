@@ -22,7 +22,7 @@ export async function googleConnectToken(env,signal){
     method:'POST',
     headers:{'Content-Type':'application/json'},
     body:JSON.stringify({
-      subject:{type:'user',id:env.GOOGLE_CONNECT_SUBJECT_ID||'owner'},
+      subject:{type:'app'},
       scopes:GOOGLE_READ_SCOPES
     })
   });
