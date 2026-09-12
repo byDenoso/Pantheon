@@ -1,4 +1,5 @@
 import { useLayoutEffect, useMemo, useRef } from 'react';
+import type { ThreeEvent } from '@react-three/fiber';
 import { Color, InstancedMesh, Matrix4, MeshBasicMaterial, Object3D } from 'three';
 import { createNodeAuraMaterial, createNodeMaterial } from './materials';
 import { encodePickId } from './gpu-picking';
@@ -37,9 +38,10 @@ type Props={
   focusId?: string | null;
   pickMode?: boolean;
   aura?: boolean;
+  onNodeClick?: (node: PositionedNode, event: ThreeEvent<MouseEvent>) => void;
 };
 
-export function InstancedNodes({nodes,selectedId,focusId,pickMode=false,aura=false}:Props){
+export function InstancedNodes({nodes,selectedId,focusId,pickMode=false,aura=false,onNodeClick}:Props){
   const mesh=useRef<InstancedMesh>(null);
   const object=useMemo(()=>new Object3D(),[]);
   const material=useMemo(()=>pickMode
@@ -66,7 +68,13 @@ export function InstancedNodes({nodes,selectedId,focusId,pickMode=false,aura=fal
     if(target.instanceColor)target.instanceColor.needsUpdate=true;
   },[aura,focusId,nodes,object,pickMode,selectedId]);
 
-  return <instancedMesh ref={mesh} args={[undefined,undefined,Math.max(1,nodes.length)]} frustumCulled={false}>
+  const handleClick = (event: ThreeEvent<MouseEvent>) => {
+    if (pickMode || !onNodeClick || event.instanceId === undefined) return;
+    const node = nodes[event.instanceId];
+    if (node) onNodeClick(node, event);
+  };
+
+  return <instancedMesh ref={mesh} args={[undefined,undefined,Math.max(1,nodes.length)]} frustumCulled={false} onClick={handleClick}>
     <sphereGeometry args={[1,18,12]}/>
     <primitive object={material} attach="material"/>
   </instancedMesh>;
