@@ -1,6 +1,7 @@
 import { useLayoutEffect, useMemo, useRef } from 'react';
 import type { ThreeEvent } from '@react-three/fiber';
-import { Color, InstancedMesh, Matrix4, MeshBasicMaterial, Object3D } from 'three';
+import { useFrame } from '@react-three/fiber';
+import { Color, InstancedMesh, Matrix4, MeshBasicMaterial, Object3D, Vector3 } from 'three';
 import { createNodeAuraMaterial, createNodeMaterial } from './materials';
 import { encodePickId } from './gpu-picking';
 import type { PositionedNode } from './types';
@@ -39,9 +40,10 @@ type Props={
   pickMode?: boolean;
   aura?: boolean;
   onNodeClick?: (node: PositionedNode, event: ThreeEvent<MouseEvent>) => void;
+  positions?: Map<string,Vector3>;
 };
 
-export function InstancedNodes({nodes,selectedId,focusId,pickMode=false,aura=false,onNodeClick}:Props){
+export function InstancedNodes({nodes,selectedId,focusId,pickMode=false,aura=false,onNodeClick,positions}:Props){
   const mesh=useRef<InstancedMesh>(null);
   const object=useMemo(()=>new Object3D(),[]);
   const material=useMemo(()=>pickMode
@@ -51,22 +53,26 @@ export function InstancedNodes({nodes,selectedId,focusId,pickMode=false,aura=fal
   useLayoutEffect(()=>{
       const target=mesh.current;if(!target)return;
     target.count=nodes.length;
-    const matrix=new Matrix4();
     nodes.forEach((node,index)=>{
-      object.position.set(...node.position);
-      const radius=nodeRadius(node,selectedId,focusId);
-      object.scale.setScalar(aura ? radius * (node.id === focusId ? 1.72 : 1.54) : radius);
-      object.updateMatrix();
-      matrix.copy(object.matrix);
-      target.setMatrixAt(index,matrix);
       if(pickMode){
         const [r,g,b]=encodePickId(node.pickId);
         target.setColorAt(index,new Color(r/255,g/255,b/255));
       }else target.setColorAt(index,visualColor(node));
     });
+  },[nodes,pickMode]);
+
+  useFrame(()=>{
+    const target=mesh.current;if(!target)return;
+    const matrix=new Matrix4();
+    nodes.forEach((node,index)=>{
+      const position=positions?.get(node.id)||new Vector3(...node.position);
+      object.position.copy(position);
+      const radius=nodeRadius(node,selectedId,focusId);
+      object.scale.setScalar(aura ? radius * (node.id === focusId ? 1.72 : 1.54) : radius);
+      object.updateMatrix();matrix.copy(object.matrix);target.setMatrixAt(index,matrix);
+    });
     target.instanceMatrix.needsUpdate=true;
-    if(target.instanceColor)target.instanceColor.needsUpdate=true;
-  },[aura,focusId,nodes,object,pickMode,selectedId]);
+  });
 
   const handleClick = (event: ThreeEvent<MouseEvent>) => {
     if (pickMode || !onNodeClick || event.instanceId === undefined) return;
