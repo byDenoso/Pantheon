@@ -73,7 +73,7 @@ function orbitalPoint(id: string, index: number, total: number, radius: number, 
   const r = ringRadius(safeTotal, radius, shell);
   const x = Math.cos(angle) * r * 1.36;
   const y = Math.sin(angle) * r * flatten + Math.sin(angle * 2.1 + phase) * 0.26;
-  const z = Math.sin(angle * 1.7 + phase) * Math.min(2.15, r * 0.22) + shell * 0.36;
+  const z = Math.sin(angle * 1.7 + phase) * Math.min(3.85, r * 0.54) + shell * 0.52;
   return [x, y, z];
 }
 
