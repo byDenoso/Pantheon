@@ -1,8 +1,10 @@
 import {writeFile} from 'node:fs/promises';
 const base=process.env.NEXO_VERIFY_URL;
 if(!base||new URL(base).protocol!=='https:')throw new Error('NEXO_VERIFY_URL must be an HTTPS deployment URL.');
-const bypass=process.env.VERCEL_AUTOMATION_BYPASS_SECRET?{'x-vercel-protection-bypass':process.env.VERCEL_AUTOMATION_BYPASS_SECRET}:{};
-async function read(path){const r=await fetch(new URL(path,base),{redirect:'error',signal:AbortSignal.timeout(20000),headers:bypass});if(!r.ok)throw new Error(`${path}: HTTP ${r.status}`);return path==='/'?r.text():r.json();}
+const headers={};
+if(process.env.VERCEL_AUTOMATION_BYPASS_SECRET)headers['x-vercel-protection-bypass']=process.env.VERCEL_AUTOMATION_BYPASS_SECRET;
+if(process.env.VERCEL_TRUSTED_OIDC_TOKEN)headers['x-vercel-trusted-oidc-idp-token']=process.env.VERCEL_TRUSTED_OIDC_TOKEN;
+async function read(path){const r=await fetch(new URL(path,base),{redirect:'error',signal:AbortSignal.timeout(20000),headers});if(!r.ok)throw new Error(`${path}: HTTP ${r.status}`);return path==='/'?r.text():r.json();}
 const html=await read('/');if(!html.includes('NEXO ONE'))throw new Error('Shell missing.');
 const pub=await read('/api/world');if(pub.access!=='PUBLIC'||pub.items.some(i=>i.source!=='github'))throw new Error('Public access boundary failed.');
 const report={url:base,checkedAt:new Date().toISOString(),publicBoundary:'pass',shell:'pass',operational:'blocked',truthGraph:'blocked',privacyBoundary:'blocked'};
