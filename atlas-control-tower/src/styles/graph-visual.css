@@ -1,0 +1,65 @@
+/* Graph visual language: a restrained 2.5D observatory field. The data
+   remains in R3F/WebGPU; these are only the HTML presentation affordances. */
+.reference-stage {
+  background:
+    radial-gradient(circle at 50% 52%, rgba(24, 115, 181, .26), transparent 24%),
+    radial-gradient(circle at 16% 76%, rgba(35, 96, 155, .12), transparent 24%),
+    radial-gradient(circle at 84% 27%, rgba(56, 88, 173, .11), transparent 25%),
+    radial-gradient(circle at 18% 16%, rgba(160, 214, 255, .6) 0 1px, transparent 1.5px),
+    radial-gradient(circle at 73% 13%, rgba(160, 214, 255, .45) 0 1px, transparent 1.4px),
+    radial-gradient(circle at 88% 69%, rgba(78, 173, 236, .55) 0 1px, transparent 1.5px),
+    #020914;
+  isolation: isolate;
+}
+.reference-stage::before {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  content: '';
+  opacity: .28;
+  background-image: linear-gradient(rgba(79, 160, 207, .06) 1px, transparent 1px), linear-gradient(90deg, rgba(79, 160, 207, .06) 1px, transparent 1px);
+  background-size: 92px 92px;
+  mask-image: radial-gradient(ellipse at center, #000 0 48%, transparent 82%);
+}
+.reference-hero-copy {
+  top: 22px;
+  left: 24px;
+  max-width: 230px;
+  padding: 10px 12px;
+  border: 1px solid rgba(101, 180, 231, .22);
+  border-radius: 9px;
+  background: rgba(3, 12, 23, .46);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, .18);
+  backdrop-filter: blur(10px);
+}
+.reference-hero-copy h1 {
+  margin: 5px 0 0;
+  color: rgba(234, 246, 255, .88);
+  font-size: clamp(19px, 2.25vw, 30px);
+  line-height: 1.03;
+  letter-spacing: -.045em;
+}
+.reference-hero-copy span { display: block; margin-top: 8px; font-size: 8px; letter-spacing: .13em; }
+.atlas-label {
+  max-width: 190px;
+  padding: 5px 8px 4px;
+  border: 1px solid rgba(89, 177, 235, .48);
+  border-radius: 6px;
+  background: rgba(3, 12, 23, .82);
+  color: var(--atlas-text-primary);
+  font: 600 11px/1.1 Inter, ui-sans-serif, system-ui, sans-serif;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, .32), 0 0 14px rgba(76, 200, 255, .08);
+  backdrop-filter: blur(8px);
+}
+.atlas-label strong, .atlas-label span { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.atlas-label strong { font-weight: 650; }
+.atlas-label span { margin-top: 3px; color: var(--atlas-cyan-soft); font: 700 8px/1 ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: .06em; }
+.atlas-label.selected { border-color: rgba(105, 222, 192, .88); background: rgba(5, 26, 34, .9); box-shadow: 0 0 20px rgba(105, 222, 192, .22); }
+.atlas-label.selected span { color: var(--atlas-green); }
+@media (max-width: 640px) {
+  .reference-hero-copy { top: 16px; left: 15px; max-width: 188px; padding: 8px 10px; }
+  .reference-hero-copy h1 { font-size: 20px; }
+  .atlas-label { max-width: 132px; padding: 4px 6px 3px; font-size: 9px; }
+  .atlas-label span { font-size: 7px; }
+}

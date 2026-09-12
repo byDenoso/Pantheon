@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 
 const app = fs.readFileSync(new URL('../src/App.tsx', import.meta.url), 'utf8');
+const graphs = fs.readFileSync(new URL('../src/pages/graphs-page.tsx', import.meta.url), 'utf8');
 const shell = fs.readFileSync(new URL('../src/app/AppShell.tsx', import.meta.url), 'utf8');
 const tower = fs.readFileSync(new URL('../ui/control-tower.mjs', import.meta.url), 'utf8');
 
@@ -19,6 +20,8 @@ test('command center keeps direct operational copy without generic contrast disc
 });
 
 test('graph renderer is route-scoped instead of leaking into the root shell', () => {
-  assert.doesNotMatch(app, /AtlasCanvas|R3F|WebGPU/);
-  assert.match(app, /lazy\(\(\)=>import\('\.\/pages\/UniversePage'\)\)/);
+  assert.doesNotMatch(app, /from ['"]\.\/scene\/AtlasCanvas|<AtlasCanvas|<Canvas/);
+  assert.match(app, /GraphsPage/);
+  assert.match(graphs, /<AtlasCanvas/);
+  assert.match(app, /lazy\(\(\) => import\('\.\/pages\/atlas-pages'\)/);
 });

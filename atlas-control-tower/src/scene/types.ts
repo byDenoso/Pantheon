@@ -4,7 +4,6 @@ export type AtlasNode = {
   label?: string;
   status?: string | null;
   domain?: string;
-  parentId?: string | null;
   priority?: number;
   [key: string]: unknown;
 };
@@ -42,95 +41,122 @@ function hash01(value: string) {
   return (hash >>> 0) / 0xFFFFFFFF;
 }
 
-function visualRank(node: AtlasNode) {
+function hashSigned(value: string) {
+  return hash01(value) * 2 - 1;
+}
+
+const HIERARCHY_EDGE_TYPES = new Set([
+  'CONTAINS', 'PARENT_OF', 'HAS_CHILD', 'TESTS', 'PRODUCES', 'EXECUTED_AS',
+  'DERIVED_FROM', 'IMPLEMENTS', 'REPORTS_ON'
+]);
+
+function legacyOrbitalPosition(node: AtlasNode, index: number, count: number): [number, number, number] {
+  const golden = Math.PI * (3 - Math.sqrt(5));
+  const y = 1 - 2 * ((index + 0.5) / count);
+  const radial = Math.sqrt(Math.max(0, 1 - y * y));
+  const jitter = hashSigned(node.id) * 0.16;
+  const angle = index * golden + jitter;
   const type = String(node.type || '').toUpperCase();
-  if (typeof node.priority === 'number') return node.priority;
-  if (type === 'ROOT') return 100;
-  if (type === 'SYSTEM') return 92;
-  if (type === 'DOMAIN') return 84;
-  if (type === 'SUBGRAPH' || type === 'CAMPAIGN') return 72;
-  if (type === 'CLAIM' || type === 'TEST') return 58;
-  if (type === 'RESULT' || type === 'EVIDENCE') return 46;
-  return 30;
-}
-
-function compareVisualRank(a: AtlasNode, b: AtlasNode) {
-  const delta = visualRank(b) - visualRank(a);
-  if (delta) return delta;
-  return String(a.label || a.id).localeCompare(String(b.label || b.id));
-}
-
-function ringRadius(total: number, base: number, index = 0) {
-  const density = Math.max(0, total - 8);
-  return base + Math.min(2.35, density * 0.12) + index * 0.62;
-}
-
-function orbitalPoint(id: string, index: number, total: number, radius: number, flatten = 0.64): [number, number, number] {
-  const safeTotal = Math.max(1, total);
-  const phase = hash01(id) * Math.PI * 2;
-  const angle = (index / safeTotal) * Math.PI * 2 - Math.PI / 2 + phase * 0.055;
-  const shell = Math.floor(index / 14);
-  const r = ringRadius(safeTotal, radius, shell);
-  const x = Math.cos(angle) * r * 1.36;
-  const y = Math.sin(angle) * r * flatten + Math.sin(angle * 2.1 + phase) * 0.26;
-  const z = Math.sin(angle * 1.7 + phase) * Math.min(3.85, r * 0.54) + shell * 0.52;
-  return [x, y, z];
-}
-
-function localClusterPoint(id: string, index: number, total: number, radius: number): [number, number, number] {
-  const phase = hash01(id) * Math.PI * 2;
-  const angle = (index / Math.max(1, total)) * Math.PI * 2 + phase * 0.09;
+  const shell = type === 'SYSTEM' ? 5.6 : type === 'DOMAIN' ? 6.7 : type === 'CAMPAIGN' ? 7.7 : 8.8;
+  const depth = 0.72 + hash01(`${node.id}:depth`) * 0.5;
   return [
-    Math.cos(angle) * radius,
-    Math.sin(angle) * radius * 0.58,
-    Math.sin(angle * 1.3 + phase) * radius * 0.28
+    Math.cos(angle) * radial * shell,
+    y * shell * 0.72,
+    Math.sin(angle) * radial * shell * depth
   ];
 }
 
-export function buildOrbitalNodes(nodes: AtlasNode[], focusId?: string | null): PositionedNode[] {
+function hierarchyPositions(nodes: AtlasNode[], focusId: string, edges: AtlasEdge[]): Map<string, [number, number, number]> | null {
   const byId = new Map(nodes.map(node => [node.id, node]));
-  const children = new Map<string, AtlasNode[]>();
+  const parentByChild = new Map<string, string>();
+
   for (const node of nodes) {
-    const parentId = typeof node.parentId === 'string' ? node.parentId : null;
-    if (!parentId || !byId.has(parentId)) continue;
-    const list = children.get(parentId) || [];
-    list.push(node);
-    children.set(parentId, list);
+    const explicitParent = typeof node.layoutParent === 'string' ? node.layoutParent : typeof node.parentId === 'string' ? node.parentId : '';
+    if (explicitParent && explicitParent !== node.id && byId.has(explicitParent)) parentByChild.set(node.id, explicitParent);
   }
-  for (const list of children.values()) list.sort(compareVisualRank);
 
-  const rootId = focusId && byId.has(focusId) ? focusId : nodes[0]?.id;
-  const placed = new Map<string, [number, number, number]>();
-  if (rootId) placed.set(rootId, [0, 0, 0]);
+  for (const edge of edges) {
+    const type = String(edge.type || '').toUpperCase();
+    if (!HIERARCHY_EDGE_TYPES.has(type) || !byId.has(edge.source) || !byId.has(edge.target)) continue;
+    if (edge.target !== focusId && !parentByChild.has(edge.target)) parentByChild.set(edge.target, edge.source);
+  }
 
-  const direct = rootId ? [...(children.get(rootId) || [])].sort(compareVisualRank) : [];
-  const directRadius = direct.length > 9 ? 7.2 : 6.35;
-  direct.forEach((node, index) => placed.set(node.id, orbitalPoint(node.id, index, direct.length, directRadius)));
+  const directChildren = nodes
+    .filter(node => node.id !== focusId && parentByChild.get(node.id) === focusId)
+    .sort((a, b) => a.id.localeCompare(b.id));
 
-  const queue = [...direct];
-  const depth = new Map<string, number>(direct.map(node => [node.id, 1]));
-  while (queue.length) {
-    const parent = queue.shift()!;
-    const parentPosition = placed.get(parent.id);
-    if (!parentPosition) continue;
-    const kids = [...(children.get(parent.id) || [])].sort(compareVisualRank);
-    const parentDepth = depth.get(parent.id) || 1;
-    const localRadius = Math.max(0.82, 1.56 - parentDepth * 0.18) + Math.min(0.86, Math.sqrt(kids.length) * 0.14);
-    kids.forEach((child, index) => {
-      if (placed.has(child.id)) return;
-      const local = localClusterPoint(child.id, index, kids.length, localRadius);
-      placed.set(child.id, [
-        parentPosition[0] + local[0],
-        parentPosition[1] + local[1],
-        parentPosition[2] + local[2] + parentDepth * 0.18
+  if (directChildren.length === 0) return null;
+
+  const rootFor = (id: string) => {
+    let current = id;
+    const seen = new Set<string>();
+    while (current !== focusId && !seen.has(current)) {
+      seen.add(current);
+      const parent = parentByChild.get(current);
+      if (!parent) return null;
+      if (parent === focusId) return current;
+      current = parent;
+    }
+    return current === focusId ? id : null;
+  };
+
+  const roots = new Set(directChildren.map(node => node.id));
+  const members = new Map<string, AtlasNode[]>();
+  for (const child of directChildren) members.set(child.id, []);
+  for (const node of nodes) {
+    if (node.id === focusId || roots.has(node.id)) continue;
+    const root = rootFor(node.id);
+    if (root && members.has(root)) members.get(root)!.push(node);
+  }
+
+  const positions = new Map<string, [number, number, number]>([[focusId, [0, 0, 0]]]);
+  const ringRadius = directChildren.length === 1 ? 4.45 : directChildren.length < 5 ? 4.85 : 5.15;
+  const golden = Math.PI * (3 - Math.sqrt(5));
+  const phase = hash01(`${focusId}:phase`) * Math.PI * 2;
+
+  directChildren.forEach((child, index) => {
+    const angle = phase + index * golden;
+    const center: [number, number, number] = [
+      Math.cos(angle) * ringRadius,
+      Math.sin(angle) * ringRadius * 0.66,
+      hashSigned(`${child.id}:hub-depth`) * 0.72
+    ];
+    positions.set(child.id, center);
+    const cluster = members.get(child.id) || [];
+    cluster.forEach((node, memberIndex) => {
+      const memberAngle = hash01(`${node.id}:angle`) * Math.PI * 2 + memberIndex * golden;
+      const memberRadius = 0.92 + Math.sqrt((memberIndex + 0.5) / Math.max(1, cluster.length)) * 1.65;
+      positions.set(node.id, [
+        center[0] + Math.cos(memberAngle) * memberRadius,
+        center[1] + Math.sin(memberAngle) * memberRadius * 0.72,
+        center[2] + hashSigned(`${node.id}:depth`) * (0.75 + memberRadius * 0.22)
       ]);
-      depth.set(child.id, parentDepth + 1);
-      queue.push(child);
     });
+  });
+
+  return positions;
+}
+
+export function buildOrbitalNodes(nodes: AtlasNode[], focusId?: string | null, edges: AtlasEdge[] = []): PositionedNode[] {
+  const focalId = focusId || undefined;
+  const positions = focalId ? hierarchyPositions(nodes, focalId, edges) : null;
+  const others = nodes.filter(node => node.id !== focalId);
+  const fallbackCount = Math.max(1, others.length);
+  let fallbackIndex = 0;
+
+  if (positions) {
+    for (const node of others) {
+      if (!positions.has(node.id)) {
+        positions.set(node.id, legacyOrbitalPosition(node, fallbackIndex, fallbackCount));
+        fallbackIndex += 1;
+      }
+    }
   }
 
-  const unplaced = nodes.filter(node => !placed.has(node.id)).sort(compareVisualRank);
-  unplaced.forEach((node, index) => placed.set(node.id, orbitalPoint(node.id, index, unplaced.length, 7.35, 0.68)));
-
-  return nodes.map((node, index) => ({...node, position: placed.get(node.id) || [0, 0, 0], pickId: index + 1}));
+  return nodes.map((node, index) => {
+    const position = node.id === focalId
+      ? [0, 0, 0] as [number, number, number]
+      : positions?.get(node.id) || legacyOrbitalPosition(node, fallbackIndex++, fallbackCount);
+    return {...node, position, pickId:index + 1};
+  });
 }

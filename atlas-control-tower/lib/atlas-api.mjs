@@ -6,27 +6,54 @@ export {normalizeGraph,EMPTY_GRAPH,SOURCES,FRESHNESS,provenanceLabel};
 const params=q=>new URLSearchParams(Object.entries(q).filter(([,v])=>v!==''&&v!=null).map(([k,v])=>[k,String(v)]));
 const auxiliaryFocus=focus=>/^(system:(LEARNING|AUTOMATION)|learning-stage:|observation:|pattern:|lesson:|strategy:|policy:|ops-stage:|action:|run:|event:)/.test(String(focus||''));
 
-export function createApi({fetchImpl,timeout=20000,syncTimeout=65000,maxEntries=64}={}){
- const remote=typeof fetchImpl==='function';
- const doFetch=fetchImpl;
- const cache=new Map();let version='';
- let provenance={source:SOURCES.DRIVE,freshness:FRESHNESS.SNAPSHOT,sourceVersion:'',cache:'',label:'DRIVE · PROJEÇÃO CANÔNICA'};
- function setVersion(next){if(!next||next===version)return;const had=version;version=next;if(had)cache.clear()}
- function observe(data,{versioned=true}={}){
-  const fp=data?.projection?.fingerprint||(versioned?data?.fingerprint:'');if(fp)setVersion(fp);
-  const source=data?.source||data?.projection?.source;const freshness=data?.freshness||data?.projection?.freshness;if(!source&&!freshness)return;
-  provenance={source:source||provenance.source,freshness:freshness||provenance.freshness,sourceVersion:data?.sourceVersion||data?.projection?.sourceVersion||provenance.sourceVersion,cache:CACHE_STATES.includes(data?.cache)?data.cache:'',label:provenanceLabel({source:source||provenance.source,freshness:freshness||provenance.freshness})};
+export function createApi({fetchImpl, timeout = 20000, syncTimeout = 65000, maxEntries = 64, baseUrl = '/api'} = {}) {
+ const remote = typeof fetchImpl === 'function';
+ const doFetch = fetchImpl || ((...a) => fetch(...a));
+ const apiBase = String(baseUrl || '/api').replace(/\/+$/, '');
+ const cache = new Map();
+ let version = '';
+ let provenance = {source:remote ? SOURCES.LEGACY : SOURCES.DRIVE, freshness:FRESHNESS.SNAPSHOT, sourceVersion:'', cache:'', label:remote ? 'LEGACY SNAPSHOT' : 'DRIVE · PROJEÇÃO CANÔNICA'};
+
+ function setVersion(next) {
+  if (!next || next === version) return;
+  const had = version;
+  version = next;
+  if (had) cache.clear();
  }
- async function request(route,q={}, {method='GET',cacheable=true,key,versioned=true,timeoutMs=timeout}={}){
-  const id=key||(route+'?'+params(q));
-  if(method==='GET'&&cacheable){const hit=cache.get(id);if(hit&&hit.version===version){provenance={...provenance,cache:'HIT'};return hit.data}}
-  let data;
-  if(!remote){data=await driveRoute(route,q,{method});}
-  else{
-   const r=await doFetch('/api/'+route+'?'+params(q),{method,signal:AbortSignal.timeout(timeoutMs)});if(!r.ok)throw Error('HTTP '+r.status);data=await r.json();
+ function observe(data, {versioned = true} = {}) {
+  const fp = data?.projection?.fingerprint || (versioned ? data?.fingerprint : '');
+  if (fp) setVersion(fp);
+  const source = data?.source || data?.projection?.source;
+  const freshness = data?.freshness || data?.projection?.freshness;
+  if (!source && !freshness) return;
+  provenance = {
+   source: source || provenance.source,
+   freshness: freshness || provenance.freshness,
+   sourceVersion: data?.sourceVersion || data?.projection?.sourceVersion || provenance.sourceVersion,
+   cache: CACHE_STATES.includes(data?.cache) ? data.cache : '',
+   label: provenanceLabel({source: source || provenance.source, freshness: freshness || provenance.freshness})
+  };
+ }
+
+ async function request(route, q = {}, {method = 'GET', cacheable = true, key, versioned = true, timeoutMs = timeout} = {}) {
+  const id = key || (route + '?' + params(q).toString());
+  if (method === 'GET' && cacheable) {
+   const hit = cache.get(id);
+   if (hit && hit.version === version) {provenance = {...provenance, cache:'HIT'}; return hit.data}
   }
-  observe(data,{versioned});
-  if(method==='GET'&&cacheable){cache.set(id,{version,data});if(cache.size>maxEntries)cache.delete(cache.keys().next().value)}
+  let data;
+  if (!remote) {
+   data = await driveRoute(route, q, {method});
+  } else {
+   const r = await doFetch(apiBase + '/' + route + '?' + params(q).toString(), {method, signal: AbortSignal.timeout(timeoutMs)});
+   if (!r.ok) throw Error('HTTP ' + r.status);
+   data = await r.json();
+  }
+  observe(data, {versioned});
+  if (method === 'GET' && cacheable) {
+   cache.set(id, {version, data});
+   if (cache.size > maxEntries) cache.delete(cache.keys().next().value);
+  }
   return data;
  }
  return {
