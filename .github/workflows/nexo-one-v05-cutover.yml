@@ -1,4 +1,5 @@
 name: NEXO ONE v0.5 one-shot producer cutover
+# 2026-09-12: live Atlas cockpit bridge cutover trigger
 
 on:
   push:
