@@ -7,7 +7,7 @@ function initialRead<T>(): PanelRead<T> {
   return { state: 'LOADING', data: null, freshness: { state: 'DEGRADED' } };
 }
 
-function freshnessFromResults(results: PromiseSettledResult<unknown>[], failed: number): 'LIVE' | 'SNAPSHOT' | 'STALE' | 'DEGRADED' {
+function freshnessFromResults(results: PromiseSettledResult<unknown>[], failed: number, fallback?: string): 'LIVE' | 'SNAPSHOT' | 'STALE' | 'DEGRADED' {
   const states = results.filter((item): item is PromiseFulfilledResult<unknown> => item.status === 'fulfilled').map(item => {
     const value = item.value;
     if (!value || typeof value !== 'object') return '';
@@ -19,6 +19,10 @@ function freshnessFromResults(results: PromiseSettledResult<unknown>[], failed: 
   if (states.includes('STALE')) return 'STALE';
   if (states.includes('SNAPSHOT')) return 'SNAPSHOT';
   if (failed) return 'DEGRADED';
+  const normalizedFallback = fallback?.toUpperCase();
+  if (normalizedFallback === 'STALE') return 'STALE';
+  if (normalizedFallback === 'SNAPSHOT') return 'SNAPSHOT';
+  if (normalizedFallback === 'DEGRADED' || normalizedFallback === 'OFFLINE') return 'DEGRADED';
   return 'LIVE';
 }
 
@@ -56,7 +60,7 @@ export function useLabData(client: AtlasApiClient, context: AtlasContext) {
       const failed = results.filter(item => item.status === 'rejected').length;
       const data: LabData = { claims: value<ResearchRecord>(0), tests: value<ResearchRecord>(1), runs: value<ResearchRecord>(2), results: value<ResearchRecord>(3), evidence: value<ResearchRecord>(4), pipelines: value<ResearchRecord>(5) };
       const hasData = Object.values(data).some(items => items.length > 0);
-      const freshness = freshnessFromResults(results, failed);
+      const freshness = freshnessFromResults(results, failed, client.provenance?.freshness);
       setRead({ state: failed === results.length ? 'API_ERROR' : failed ? 'PARTIAL' : hasData ? 'READY' : 'EMPTY', data, freshness: { state: freshness }, error: failed ? 'PARTIAL_READ' : undefined });
     });
     return () => { live = false; };
