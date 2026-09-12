@@ -33,6 +33,15 @@ class CanvasErrorBoundary extends Component<{fallback:ReactNode;children:ReactNo
   render(){return this.state.failed?this.props.fallback:this.props.children;}
 }
 
+function canUseThreeRenderer(){
+  if(typeof document==='undefined')return true;
+  if(typeof navigator!=='undefined'&&'gpu' in navigator)return true;
+  const probe=document.createElement('canvas');
+  const supported=Boolean(probe.getContext('webgl2')||probe.getContext('webgl'));
+  probe.width=1;probe.height=1;
+  return supported;
+}
+
 function CameraRig({reducedMotion,autoOrbit,compact,focusId}:{reducedMotion:boolean;autoOrbit:boolean;compact:boolean;focusId:string}){
   const {camera,gl,size}=useThree();
   const controls=useRef<OrbitControls|null>(null);
@@ -177,6 +186,7 @@ function SceneContent({nodes,graph,labelIds,onLabels,onPick,reducedMotion,autoOr
 
 export function AtlasCanvas({graph,focusId,selectedId,onSelect,onOpen,reducedMotion,autoOrbit,compact=false,loading=false}:Props){
   const [labels,setLabels]=useState<ProjectedLabel[]>([]);
+  const [threeEnabled]=useState(canUseThreeRenderer);
   const [renderActive,setRenderActive]=useState(() => typeof document === 'undefined' || document.visibilityState !== 'hidden');
   const stageRef=useRef<HTMLDivElement>(null);
   const motion=useRef<MotionState>({current:new Map(),target:new Map()});
@@ -214,6 +224,7 @@ export function AtlasCanvas({graph,focusId,selectedId,onSelect,onOpen,reducedMot
   if(!graph)return <div className="atlas-canvas-loading">Lendo recorte orbital…</div>;
 
   const fallback=<div className="atlas-graph-renderer-fallback"><CanvasGraphFallback nodes={nodes} edges={sceneGraph.edges} labelIds={lod.labelIds} focusId={focusId} selectedId={selectedId} onNodeClick={handlePick} reducedMotion={reducedMotion} compact={compact}/><span className="atlas-graph-fallback-note">Renderer 3D indisponível · exploração preservada em Canvas</span></div>;
+  if(!threeEnabled)return <div className="atlas-r3f-stage" ref={stageRef} data-render-active="true">{fallback}{loading&&<div className="atlas-graph-transition" role="status">Carregando subgrafo…</div>}</div>;
   return <div className="atlas-r3f-stage" ref={stageRef} data-render-active={renderActive ? 'true' : 'false'}>
     <CanvasErrorBoundary key={`${focusId}:${nodes.length}`} fallback={fallback}>
       <Canvas
