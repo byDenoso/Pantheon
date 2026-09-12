@@ -21,7 +21,12 @@ export default async function handler(req,res) {
     if(route==='session')return send({authenticated:false,configured:false,access:'PUBLIC',mode:'PUBLIC_READ_ONLY'});
     if(route==='atlas-public-ssot')return send(buildPublicAtlasSsot(await readAtlasSsot({env,now,signal:req.signal})));
     if(RESEARCH_ROUTES.has(route)){
-      const snapshot=await readAtlasSsot({env,now,signal:req.signal});
+      let snapshot=null;
+      try{snapshot=await readAtlasSsot({env,now,signal:req.signal});}
+      catch(error){
+        const code=String(error?.code||error?.name||error?.message||'');
+        if(!['AUTH_REQUIRED','RATE_LIMITED','UNAVAILABLE','TIMEOUT','AbortError','ABORT_ERR'].includes(code))throw error;
+      }
       return send(buildAtlasResearchView(snapshot,route));
     }
     if(route==='atlas-ssot'){
