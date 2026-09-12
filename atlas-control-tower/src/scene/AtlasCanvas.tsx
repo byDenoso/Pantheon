@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { Component, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { BufferGeometry, Float32BufferAttribute, Vector3 } from 'three';
 import { MeshBasicNodeMaterial } from 'three/webgpu';
@@ -9,6 +9,7 @@ import { buildOrbitalNodes, type AtlasGraph, type AtlasNode, type PositionedNode
 import { InstancedNodes } from './InstancedNodes';
 import { InstancedFilaments } from './InstancedFilaments';
 import { LabelOverlay, labelStatus, labelText, labelType, type ProjectedLabel } from './LabelOverlay';
+import { CanvasGraphFallback } from './CanvasGraphFallback';
 
 type Props={
   graph:AtlasGraph|null;
@@ -22,6 +23,15 @@ type Props={
   loading?:boolean;
 };
 type MotionState={current:Map<string,Vector3>;target:Map<string,Vector3>};
+
+class CanvasErrorBoundary extends Component<{fallback:ReactNode;children:ReactNode},{failed:boolean}>{
+  state={failed:false};
+  static getDerivedStateFromError(){return {failed:true};}
+  componentDidCatch(error:unknown){
+    if(typeof window!=='undefined')window.dispatchEvent(new CustomEvent('atlas:graph-metrics',{detail:{engine:'r3f-3d',phase:'error',message:error instanceof Error?error.message:'renderer-failed'}}));
+  }
+  render(){return this.state.failed?this.props.fallback:this.props.children;}
+}
 
 function CameraRig({reducedMotion,autoOrbit,compact,focusId}:{reducedMotion:boolean;autoOrbit:boolean;compact:boolean;focusId:string}){
   const {camera,gl,size}=useThree();
@@ -203,29 +213,32 @@ export function AtlasCanvas({graph,focusId,selectedId,onSelect,onOpen,reducedMot
 
   if(!graph)return <div className="atlas-canvas-loading">Lendo recorte orbital…</div>;
 
+  const fallback=<div className="atlas-graph-renderer-fallback"><CanvasGraphFallback nodes={nodes} edges={sceneGraph.edges} labelIds={lod.labelIds} focusId={focusId} selectedId={selectedId} onNodeClick={handlePick} reducedMotion={reducedMotion} compact={compact}/><span className="atlas-graph-fallback-note">Renderer 3D indisponível · exploração preservada em Canvas</span></div>;
   return <div className="atlas-r3f-stage" ref={stageRef} data-render-active={renderActive ? 'true' : 'false'}>
-    <Canvas
-      className="atlas-webgpu-canvas"
-      frameloop={renderActive ? 'always' : 'never'}
-      dpr={[1,2]}
-      camera={{position:[0,0,15.5],fov:48,near:0.05,far:120}}
-      gl={async defaults=>(await createAtlasRenderer(defaults.canvas as HTMLCanvasElement)).renderer as never}
-    >
-      <SceneContent
-        nodes={nodes}
-        graph={sceneGraph}
-        labelIds={lod.labelIds}
-        onLabels={setLabels}
-        onPick={handlePick}
-        reducedMotion={reducedMotion}
-        autoOrbit={autoOrbit}
-        selectedId={selectedId}
-        focusId={focusId}
-        compact={compact}
-        motion={motion.current}
-      />
-    </Canvas>
-    <LabelOverlay labels={labels} labelIds={lod.labelIds} selectedId={selectedId}/>
+    <CanvasErrorBoundary key={`${focusId}:${nodes.length}`} fallback={fallback}>
+      <Canvas
+        className="atlas-webgpu-canvas"
+        frameloop={renderActive ? 'always' : 'never'}
+        dpr={[1,2]}
+        camera={{position:[0,0,15.5],fov:48,near:0.05,far:120}}
+        gl={async defaults=>(await createAtlasRenderer(defaults.canvas as HTMLCanvasElement)).renderer as never}
+      >
+        <SceneContent
+          nodes={nodes}
+          graph={sceneGraph}
+          labelIds={lod.labelIds}
+          onLabels={setLabels}
+          onPick={handlePick}
+          reducedMotion={reducedMotion}
+          autoOrbit={autoOrbit}
+          selectedId={selectedId}
+          focusId={focusId}
+          compact={compact}
+          motion={motion.current}
+        />
+      </Canvas>
+      <LabelOverlay labels={labels} labelIds={lod.labelIds} selectedId={selectedId}/>
+    </CanvasErrorBoundary>
     {loading && <div className="atlas-graph-transition" role="status">Carregando subgrafo…</div>}
   </div>;
 }
