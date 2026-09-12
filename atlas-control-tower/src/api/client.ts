@@ -8,7 +8,7 @@ declare global {
   const __NEXO_API_BASE_URL__: string | undefined;
 }
 
-function configuredBaseUrl(): string {
+export function configuredBaseUrl(): string {
   const viteBase = import.meta.env.VITE_NEXO_API_BASE_URL;
   const buildBase = typeof __NEXO_API_BASE_URL__ === 'string' ? __NEXO_API_BASE_URL__ : undefined;
   const runtimeBase = typeof window !== 'undefined' ? window.__NEXO_API_BASE_URL__ : undefined;
