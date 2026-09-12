@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Canvas, createPortal, useFrame, useThree } from '@react-three/fiber';
-import { Color, Group, Scene, Vector3 } from 'three';
+import { Color, Scene, Vector3 } from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { createAtlasRenderer } from './createRenderer';
 import { selectSemanticLOD } from './semantic-lod';
@@ -16,37 +16,25 @@ const STRUCTURAL=new Set(['ROOT','SYSTEM','DOMAIN','SUBGRAPH','CAMPAIGN']);
 type Props={graph:AtlasGraph|null;focusId:string;selectedId?:string|null;onSelect:(node:AtlasNode)=>void;onOpen:(node:AtlasNode)=>void;reducedMotion:boolean;autoOrbit:boolean;compact?:boolean};
 
 function CameraRig({reducedMotion,autoOrbit}:{reducedMotion:boolean;autoOrbit:boolean}){
-  const {camera,gl}=useThree();const controls=useRef<OrbitControls|null>(null);
+  const {camera,gl,size}=useThree();const controls=useRef<OrbitControls|null>(null);const parallax=useRef({yaw:0,pitch:0});
   useEffect(()=>{
     camera.position.set(.35,.18,17.5);camera.lookAt(0,0,0);
     const next=new OrbitControls(camera,gl.domElement);next.enableDamping=true;next.dampingFactor=.075;next.enablePan=true;next.minDistance=4.8;next.maxDistance=36;next.rotateSpeed=.55;next.zoomSpeed=.72;controls.current=next;
-    return()=>{next.dispose();controls.current=null};
-  },[camera,gl]);
-  useEffect(()=>{if(!controls.current)return;controls.current.autoRotate=autoOrbit&&!reducedMotion;controls.current.autoRotateSpeed=.32},[autoOrbit,reducedMotion]);
-  useFrame(()=>controls.current?.update());return null;
-}
-
-function ParallaxRig({reducedMotion,children}:{reducedMotion:boolean;children:React.ReactNode}){
-  const ref=useRef<Group|null>(null);const {gl,size}=useThree();const target=useRef({yaw:0,pitch:0});
-  useEffect(()=>{
-    const canvas=gl.domElement;
     const move=(event:PointerEvent)=>{
       if(reducedMotion||event.buttons!==0)return;
-      const rect=canvas.getBoundingClientRect();
-      target.current=pointerParallaxTarget(event.clientX-rect.left,event.clientY-rect.top,rect.width||size.width,rect.height||size.height);
+      const rect=gl.domElement.getBoundingClientRect();
+      parallax.current=pointerParallaxTarget(event.clientX-rect.left,event.clientY-rect.top,rect.width||size.width,rect.height||size.height);
     };
-    const leave=()=>{target.current={yaw:0,pitch:0}};
-    canvas.addEventListener('pointermove',move,{passive:true});canvas.addEventListener('pointerleave',leave,{passive:true});
-    return()=>{canvas.removeEventListener('pointermove',move);canvas.removeEventListener('pointerleave',leave)};
-  },[gl,reducedMotion,size.height,size.width]);
+    const leave=()=>{parallax.current={yaw:0,pitch:0}};
+    gl.domElement.addEventListener('pointermove',move,{passive:true});gl.domElement.addEventListener('pointerleave',leave,{passive:true});
+    return()=>{gl.domElement.removeEventListener('pointermove',move);gl.domElement.removeEventListener('pointerleave',leave);next.dispose();controls.current=null};
+  },[camera,gl,reducedMotion,size.height,size.width]);
+  useEffect(()=>{if(!controls.current)return;controls.current.autoRotate=autoOrbit&&!reducedMotion;controls.current.autoRotateSpeed=.32},[autoOrbit,reducedMotion]);
   useFrame(()=>{
-    if(!ref.current)return;
-    const strength=reducedMotion?0:.11;
-    const tx=target.current.pitch*strength,ty=target.current.yaw*strength;
-    ref.current.rotation.x+=(tx-ref.current.rotation.x)*.075;
-    ref.current.rotation.y+=(ty-ref.current.rotation.y)*.075;
-  });
-  return <group ref={ref}>{children}</group>;
+    const next=controls.current;if(!next)return;
+    const px=reducedMotion?0:parallax.current.yaw*1.35,py=reducedMotion?0:-parallax.current.pitch*1.1;
+    next.target.x+=(px-next.target.x)*.075;next.target.y+=(py-next.target.y)*.075;next.update();
+  });return null;
 }
 
 function StarField(){
@@ -70,7 +58,7 @@ function LabelProjector({nodes,labelIds,onLabels}:{nodes:PositionedNode[];labelI
 }
 
 function SceneContent({nodes,graph,pickScene,idToNode,labelIds,onLabels,onPick,reducedMotion,autoOrbit,selectedId}:{nodes:PositionedNode[];graph:AtlasGraph;pickScene:Scene;idToNode:Map<number,string>;labelIds:Set<string>;onLabels:(labels:ProjectedLabel[])=>void;onPick:(id:string|null)=>void;reducedMotion:boolean;autoOrbit:boolean;selectedId?:string|null}){
-  return <><CameraRig reducedMotion={reducedMotion} autoOrbit={autoOrbit}/><StarField/><ParallaxRig reducedMotion={reducedMotion}><OrbitalGuides/><InstancedFilaments edges={graph.edges} nodes={nodes}/><InstancedNodes nodes={nodes} selectedId={selectedId}/>{createPortal(<InstancedNodes nodes={nodes} pickMode/>,pickScene)}</ParallaxRig><GpuPicking pickScene={pickScene} idToNode={idToNode} onPick={onPick}/><LabelProjector nodes={nodes} labelIds={labelIds} onLabels={onLabels}/></>;
+  return <><CameraRig reducedMotion={reducedMotion} autoOrbit={autoOrbit}/><StarField/><OrbitalGuides/><InstancedFilaments edges={graph.edges} nodes={nodes}/><InstancedNodes nodes={nodes} selectedId={selectedId}/>{createPortal(<InstancedNodes nodes={nodes} pickMode/>,pickScene)}<GpuPicking pickScene={pickScene} idToNode={idToNode} onPick={onPick}/><LabelProjector nodes={nodes} labelIds={labelIds} onLabels={onLabels}/></>;
 }
 
 export function AtlasCanvas({graph,focusId,selectedId,onSelect,onOpen,reducedMotion,autoOrbit,compact=false}:Props){
