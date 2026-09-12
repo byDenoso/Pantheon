@@ -32,6 +32,22 @@ test('configured API base is used without changing the existing request contract
   assert.match(seen[0], /^https:\/\/api\.example\.test\/nexo\/graph\?/);
 });
 
+test('configured API base activates remote reads without an injected fetcher', async () => {
+  const originalFetch = globalThis.fetch;
+  let seen = '';
+  globalThis.fetch = async url => {
+    seen = String(url);
+    return { ok: true, status: 200, json: async () => ({ nodes: [], edges: [], fingerprint: 'remote-config' }) };
+  };
+  try {
+    const api = createApi({ baseUrl: 'https://api.example.test/nexo' });
+    await api.graph({ focus: 'system:NEXO' });
+    assert.equal(seen, 'https://api.example.test/nexo/atlas/graph?focus=system%3ANEXO');
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
 test('the production entrypoint is the React shell and the existing graph engine remains imported', () => {
   const index = read('index.html');
   const main = read('src/main.tsx');
