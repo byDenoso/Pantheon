@@ -37,7 +37,7 @@ function structuralCoverage(snapshot){const science=scienceProjection(snapshot),
 const emptyScientific=(snapshot,kind)=>envelope(snapshot,{items:[],reason:`No structured canonical ${kind} records are available in the current SSOT.`},'EMPTY');
 export function buildAtlasResearchView(snapshot,route){
   if(!RESEARCH_ROUTES.has(route))throw new Error(`UNKNOWN_RESEARCH_ROUTE:${route}`);
-  if(route==='atlas-graph')return envelope(snapshot,graphView(snapshot),'OK');
+  if(route==='atlas-graph')return envelope(snapshot,graphView(snapshot),snapshot?'OK':'PARTIAL');
   if(route==='observatory-summary')return envelope(snapshot,{coverage:structuralCoverage(snapshot),availability:{parameters:false,tensions:false,directionalSignals:false},note:'Scientific products remain empty until explicit machine-readable canonical records exist.'},'PARTIAL');
   if(route==='observatory-parameters')return emptyScientific(snapshot,'parameter estimate');
   if(route==='observatory-tensions')return emptyScientific(snapshot,'tension result');
