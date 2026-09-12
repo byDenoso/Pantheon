@@ -94,3 +94,27 @@ test('ordinary reads use a bounded timeout while sync keeps the long refresh bud
   assert.deepEqual(seen,[20000,65000]);
  }finally{AbortSignal.timeout=original}
 });
+
+test('configured production API maps graph, snapshot and research reads to the Atlas contract routes', async () => {
+ let calls = [];
+ const originalFetch = globalThis.fetch;
+ globalThis.fetch = async url => {
+  calls.push(String(url));
+  const path = new URL(String(url)).pathname;
+  const data = path.endsWith('/atlas/graph') ? { nodes: [{ id: 'system:NEXO', type: 'ROOT' }], edges: [] }
+   : path.endsWith('/universe/snapshot') ? { parameters: [], tensions: [], directionalSignals: [], summary: null }
+     : { items: [] };
+  return { ok: true, status: 200, json: async () => ({ contract: 'NEXO_ATLAS_RESEARCH_API_V1', status: 'EMPTY', freshness: 'DEGRADED', data }) };
+ };
+ try {
+  const api = createApi({ baseUrl: 'https://nexo-one-two.vercel.app/api' });
+  await api.graph({ focus: 'system:NEXO' });
+  await api.state({ domain: 'D3' });
+  await api.research('lab-claims', { domain: 'D3' });
+  assert.match(calls[0], /\/api\/atlas\/graph\?/);
+  assert.match(calls[1], /\/api\/universe\/snapshot\?/);
+  assert.match(calls[2], /\/api\/lab-claims\?/);
+ } finally {
+  globalThis.fetch = originalFetch;
+ }
+});
