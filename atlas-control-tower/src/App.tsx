@@ -69,6 +69,7 @@ export default function App() {
   const compact = useMedia('(max-width: 760px)');
   const reducedMotion = useMedia('(prefers-reduced-motion: reduce)');
   const appliedContext = useRef('');
+  const hydratedGraphRoute = useRef('');
   const freshness = useMemo(() => headerFreshness(state), [state]);
   const graph = state.graph;
   const domains = useMemo(() => graph?.nodes.filter(node => String(node.type || '').toUpperCase() === 'DOMAIN').slice(0, 12) || [], [graph]);
@@ -79,6 +80,7 @@ export default function App() {
   }, []);
 
   useEffect(() => {
+    if (route.context.graphPath?.length) return;
     const contextKey = `${route.area}:${route.context.domain || ''}`;
     if (appliedContext.current === contextKey) return;
     appliedContext.current = contextKey;
@@ -88,6 +90,19 @@ export default function App() {
       else void actions.open(domain);
     }
   }, [actions, route.area, route.context.domain, state.focusId]);
+
+  useEffect(() => {
+    if (route.area !== 'graphs' || hydratedGraphRoute.current === route.path) return;
+    const segments = route.context.graphPath || (route.context.domain ? ['science', route.context.domain.toLowerCase()] : []);
+    if (!segments.length) return;
+    hydratedGraphRoute.current = route.path;
+    void (async () => {
+      for (const [index, segment] of segments.entries()) {
+        const id = segment.includes(':') ? segment : index === 0 && segment.toLowerCase() === 'science' ? 'system:SCIENCE' : `domain:${segment}`;
+        await actions.focusSystem(id, segment);
+      }
+    })();
+  }, [actions, route.area, route.context.domain, route.context.graphPath, route.path]);
 
   useEffect(() => {
     const onShortcut = (event: KeyboardEvent) => {
@@ -101,6 +116,14 @@ export default function App() {
   }, []);
 
   useEffect(() => { setQuery(route.context.query || ''); }, [route.context.query]);
+
+  useEffect(() => {
+    if (route.area !== 'graphs' || state.loading || state.path.length < 2) return;
+    const graphPath = state.path.slice(1).map(item => item.id);
+    const desired = routeFor('graphs', { ...route.context, graphPath });
+    const current = `${window.location.pathname}${window.location.search}`;
+    if (desired !== current) window.history.replaceState({}, '', desired);
+  }, [route.area, route.context, state.loading, state.path]);
 
   const go = (area: AtlasArea) => { setSidebarOpen(false); navigate(routeFor(area, route.context)); };
   const runSearch = () => {
