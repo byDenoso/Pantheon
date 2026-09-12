@@ -24,16 +24,19 @@ export function readAtlasRoute(location: Pick<Location, 'pathname' | 'search'> =
   const query = new URLSearchParams(location.search);
   const segments = pathname.split('/').filter(Boolean);
   const domainSegment = area === 'graphs' && segments.length >= 3 && segments[1] === 'science' ? segments[2] : undefined;
+  const graphPath = area === 'graphs' && segments.length > 1 ? segments.slice(1).map(segment => decodeURIComponent(segment)) : undefined;
   const context = Object.fromEntries(CONTEXT_KEYS.flatMap(key => {
     const value = key === 'domain' ? normalizeDomain(query.get(key) || domainSegment || null) : query.get(key)?.trim();
     return value ? [[key, value]] : [];
   })) as AtlasContext;
+  if (graphPath?.length) context.graphPath = graphPath;
   return { area, path: pathname, context };
 }
 
 export function routeFor(area: AtlasArea, context: AtlasContext = {}): string {
   const domain = context.domain?.trim();
-  const path = area === 'graphs' && domain ? `/graphs/science/${encodeURIComponent(domain.toLowerCase())}` : `/${area}`;
+  const graphPath = area === 'graphs' ? context.graphPath?.filter(Boolean) : undefined;
+  const path = area === 'graphs' && graphPath?.length ? `/graphs/${graphPath.map(encodeURIComponent).join('/')}` : area === 'graphs' && domain ? `/graphs/science/${encodeURIComponent(domain.toLowerCase())}` : `/${area}`;
   const query = new URLSearchParams();
   for (const key of CONTEXT_KEYS) {
     if (key === 'domain' || !context[key]) continue;
