@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Canvas, createPortal, useFrame, useThree } from '@react-three/fiber';
-import { Color, Scene, Vector3 } from 'three';
+import { Color, Group, Scene, Vector3 } from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { createAtlasRenderer } from './createRenderer';
 import { selectSemanticLOD } from './semantic-lod';
@@ -9,6 +9,7 @@ import { InstancedNodes } from './InstancedNodes';
 import { InstancedFilaments } from './InstancedFilaments';
 import { GpuPicking } from './GpuPicking';
 import { LabelOverlay, labelText, type ProjectedLabel } from './LabelOverlay';
+import { isNavigableNode, pointerParallaxTarget } from './interaction.mjs';
 
 const STRUCTURAL=new Set(['ROOT','SYSTEM','DOMAIN','SUBGRAPH','CAMPAIGN']);
 
@@ -23,6 +24,29 @@ function CameraRig({reducedMotion,autoOrbit}:{reducedMotion:boolean;autoOrbit:bo
   },[camera,gl]);
   useEffect(()=>{if(!controls.current)return;controls.current.autoRotate=autoOrbit&&!reducedMotion;controls.current.autoRotateSpeed=.32},[autoOrbit,reducedMotion]);
   useFrame(()=>controls.current?.update());return null;
+}
+
+function ParallaxRig({reducedMotion,children}:{reducedMotion:boolean;children:React.ReactNode}){
+  const ref=useRef<Group|null>(null);const {gl,size}=useThree();const target=useRef({yaw:0,pitch:0});
+  useEffect(()=>{
+    const canvas=gl.domElement;
+    const move=(event:PointerEvent)=>{
+      if(reducedMotion||event.buttons!==0)return;
+      const rect=canvas.getBoundingClientRect();
+      target.current=pointerParallaxTarget(event.clientX-rect.left,event.clientY-rect.top,rect.width||size.width,rect.height||size.height);
+    };
+    const leave=()=>{target.current={yaw:0,pitch:0}};
+    canvas.addEventListener('pointermove',move,{passive:true});canvas.addEventListener('pointerleave',leave,{passive:true});
+    return()=>{canvas.removeEventListener('pointermove',move);canvas.removeEventListener('pointerleave',leave)};
+  },[gl,reducedMotion,size.height,size.width]);
+  useFrame(()=>{
+    if(!ref.current)return;
+    const strength=reducedMotion?0:.11;
+    const tx=target.current.pitch*strength,ty=target.current.yaw*strength;
+    ref.current.rotation.x+=(tx-ref.current.rotation.x)*.075;
+    ref.current.rotation.y+=(ty-ref.current.rotation.y)*.075;
+  });
+  return <group ref={ref}>{children}</group>;
 }
 
 function StarField(){
@@ -46,7 +70,7 @@ function LabelProjector({nodes,labelIds,onLabels}:{nodes:PositionedNode[];labelI
 }
 
 function SceneContent({nodes,graph,pickScene,idToNode,labelIds,onLabels,onPick,reducedMotion,autoOrbit,selectedId}:{nodes:PositionedNode[];graph:AtlasGraph;pickScene:Scene;idToNode:Map<number,string>;labelIds:Set<string>;onLabels:(labels:ProjectedLabel[])=>void;onPick:(id:string|null)=>void;reducedMotion:boolean;autoOrbit:boolean;selectedId?:string|null}){
-  return <><CameraRig reducedMotion={reducedMotion} autoOrbit={autoOrbit}/><StarField/><OrbitalGuides/><InstancedFilaments edges={graph.edges} nodes={nodes}/><InstancedNodes nodes={nodes} selectedId={selectedId}/>{createPortal(<InstancedNodes nodes={nodes} pickMode/>,pickScene)}<GpuPicking pickScene={pickScene} idToNode={idToNode} onPick={onPick}/><LabelProjector nodes={nodes} labelIds={labelIds} onLabels={onLabels}/></>;
+  return <><CameraRig reducedMotion={reducedMotion} autoOrbit={autoOrbit}/><StarField/><ParallaxRig reducedMotion={reducedMotion}><OrbitalGuides/><InstancedFilaments edges={graph.edges} nodes={nodes}/><InstancedNodes nodes={nodes} selectedId={selectedId}/>{createPortal(<InstancedNodes nodes={nodes} pickMode/>,pickScene)}</ParallaxRig><GpuPicking pickScene={pickScene} idToNode={idToNode} onPick={onPick}/><LabelProjector nodes={nodes} labelIds={labelIds} onLabels={onLabels}/></>;
 }
 
 export function AtlasCanvas({graph,focusId,selectedId,onSelect,onOpen,reducedMotion,autoOrbit,compact=false}:Props){
@@ -55,7 +79,7 @@ export function AtlasCanvas({graph,focusId,selectedId,onSelect,onOpen,reducedMot
   const visible=useMemo(()=>sourceNodes.filter(node=>lod.visibleIds.has(node.id)),[lod.visibleIds,sourceNodes]);const nodes=useMemo(()=>buildOrbitalNodes(visible,focusId),[focusId,visible]);
   const nodeById=useMemo(()=>new Map(nodes.map(node=>[node.id,node])),[nodes]);const idToNode=useMemo(()=>new Map(nodes.map(node=>[node.pickId,node.id])),[nodes]);const visibleIds=useMemo(()=>new Set(nodes.map(node=>node.id)),[nodes]);
   const sceneGraph=useMemo<AtlasGraph>(()=>({...(graph||{nodes:[],edges:[]}),nodes,edges:(graph?.edges||[]).filter(edge=>visibleIds.has(edge.source)&&visibleIds.has(edge.target))}),[graph,nodes,visibleIds]);
-  const handlePick=(id:string|null)=>{if(!id)return;const node=nodeById.get(id);if(!node)return;if(STRUCTURAL.has(String(node.type||'').toUpperCase())&&node.id===selectedId&&node.id!==focusId)onOpen(node);else onSelect(node)};
+  const handlePick=(id:string|null)=>{if(!id)return;const node=nodeById.get(id);if(!node)return;if(isNavigableNode(node,sceneGraph,focusId)||STRUCTURAL.has(String(node.type||'').toUpperCase())&&node.id!==focusId)onOpen(node);else onSelect(node)};
   if(!graph)return <div className="atlas-canvas-loading">Lendo recorte orbital…</div>;
   return <div className="atlas-r3f-stage"><Canvas className="atlas-webgpu-canvas" dpr={[1,2]} camera={{position:[.35,.18,17.5],fov:48,near:.05,far:120}} gl={async defaults=>(await createAtlasRenderer(defaults.canvas as HTMLCanvasElement)).renderer as never}><color attach="background" args={['#020611']}/><SceneContent nodes={nodes} graph={sceneGraph} pickScene={pickScene} idToNode={idToNode} labelIds={lod.labelIds} onLabels={setLabels} onPick={handlePick} reducedMotion={reducedMotion} autoOrbit={autoOrbit} selectedId={selectedId}/></Canvas><LabelOverlay labels={labels} labelIds={lod.labelIds} selectedId={selectedId} focusId={focusId}/></div>;
 }
