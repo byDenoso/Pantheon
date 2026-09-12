@@ -23,6 +23,7 @@ export function GraphScene3D({projection,learningEdges=[],learning,selectedId=nu
   const focus=useMemo(()=>projection.nodes.find(node=>node.id===projection.focusId)||projection.nodes[0]||null,[projection.focusId,projection.nodes]);
   const selected=useMemo(()=>projection.nodes.find(node=>node.id===selectedId)||null,[projection.nodes,selectedId]);
   const selectedEdge=useMemo(()=>[...projection.edges,...learningEdges].find(edge=>edge.id===selectedEdgeId)||null,[learningEdges,projection.edges,selectedEdgeId]);
+  const inspectorOpen=Boolean(selected||selectedEdge?true:false);
   const sourceHint=asText((projection as unknown as Record<string,unknown>).freshness||(projection as unknown as Record<string,unknown>).sourceState||projection.level,'snapshot');
   const selectedNavigable=Boolean(selected&&selected.id!==projection.focusId&&(graph.edges.some(edge=>edge.source===selected.id||edge.target===selected.id)||['ROOT','SYSTEM','DOMAIN','SUBGRAPH','CAMPAIGN'].includes(String(selected.type||'').toUpperCase())));
   const handleNode=(node:AtlasNode)=>onSelect(String(node.id));
@@ -44,7 +45,7 @@ export function GraphScene3D({projection,learningEdges=[],learning,selectedId=nu
     <div className="graph-3d-nav-hint">mova o mouse para parallax · arraste para orbitar · scroll aproxima · clique entra no subgrafo</div>
     <GraphControlDock autoOrbit={autoOrbit} reducedMotion={reducedMotion} learning={learning} onToggleOrbit={setAutoOrbit} onToggleLearning={value=>onToggleLearning?.(value)} onRollback={onRollback}/>
     <GraphMinimap nodes={projection.nodes} focusId={projection.focusId} selectedId={selectedId} onSelect={id=>onSelect(id)}/>
-    {(selected||selectedEdge)?<GraphInspector node={selected} edge={selectedEdge} navigable={selectedNavigable} onClose={clearInspector} onOpenSubgraph={openSelected}/>:null}
+    {inspectorOpen?<GraphInspector node={selected} edge={selectedEdge} navigable={selectedNavigable} onClose={clearInspector} onOpenSubgraph={openSelected}/>:null}
     <div className="graph-3d-a11y">{projection.nodes.slice(0,180).map(node=><button key={node.id} onClick={()=>onSelect(node.id)}>{node.label}</button>)}</div>
   </section>;
 }

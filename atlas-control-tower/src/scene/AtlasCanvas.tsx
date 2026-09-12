@@ -37,7 +37,7 @@ function LabelProjector({nodes,labelIds,onLabels}:{nodes:PositionedNode[];labelI
 }
 
 function SceneContent({nodes,graph,pickScene,idToNode,labelIds,onLabels,onPick,reducedMotion,autoOrbit,selectedId}:{nodes:PositionedNode[];graph:AtlasGraph;pickScene:Scene;idToNode:Map<number,string>;labelIds:Set<string>;onLabels:(labels:ProjectedLabel[])=>void;onPick:(id:string|null)=>void;reducedMotion:boolean;autoOrbit:boolean;selectedId?:string|null}){
-  return <><CameraController reducedMotion={reducedMotion} autoOrbit={autoOrbit}/><StarField/><OrbitalGuides/><InstancedFilaments edges={graph.edges} nodes={nodes}/><InstancedNodes nodes={nodes} selectedId={selectedId}/>{createPortal(<InstancedNodes nodes={nodes} pickMode/>,pickScene)}<GpuPicking pickScene={pickScene} idToNode={idToNode} onPick={onPick}/><LabelProjector nodes={nodes} labelIds={labelIds} onLabels={onLabels}/></>;
+  return <><CameraController reducedMotion={reducedMotion} autoOrbit={autoOrbit&&!reducedMotion}/><StarField/><OrbitalGuides/><InstancedFilaments edges={graph.edges} nodes={nodes}/><InstancedNodes nodes={nodes} selectedId={selectedId}/>{createPortal(<InstancedNodes nodes={nodes} pickMode/>,pickScene)}<GpuPicking pickScene={pickScene} idToNode={idToNode} onPick={onPick}/><LabelProjector nodes={nodes} labelIds={labelIds} onLabels={onLabels}/></>;
 }
 
 export function AtlasCanvas({graph,focusId,selectedId,onSelect,onOpen,reducedMotion,autoOrbit,compact=false}:Props){
