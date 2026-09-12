@@ -17,7 +17,7 @@ test('Google Connect exchanges Vercel OIDC for an app-scoped read-only token',as
   try{
     const token=await googleConnectToken({GOOGLE_CONNECTOR:'google/nexo-google',GOOGLE_CONNECT_SUBJECT_ID:'owner',VERCEL_OIDC_TOKEN:'oidc-fixture'});
     assert.equal(token,'connect-google-token');
-    assert.equal(seen.url,'https://api.vercel.com/v1/connect/token/google/nexo-google');
+    assert.equal(seen.url,'https://api.vercel.com/v1/connect/token/google%2Fnexo-google');
     assert.equal(seen.options.method,'POST');
     assert.equal(seen.options.headers.Authorization,'Bearer oidc-fixture');
     const body=JSON.parse(seen.options.body);
@@ -43,7 +43,7 @@ test('Google Connect normalizes missing authorization as AUTH_REQUIRED',async()=
 test('Drive prefers Vercel Connect when a Google connector is configured',async()=>{
   const connectEnv={...env,GOOGLE_CONNECTOR:'google/nexo-google',GOOGLE_CONNECT_SUBJECT_ID:'owner',VERCEL_OIDC_TOKEN:'oidc-fixture'};
   await mock([
-    ['api.vercel.com/v1/connect/token/google/nexo-google',{token:'connect-access'}],
+    ['api.vercel.com/v1/connect/token/google%2Fnexo-google',{token:'connect-access'}],
     ['drive/v3/files',(url,options)=>{assert.equal(options.headers.Authorization,'Bearer connect-access');return {files:[]};}]
   ],async()=>{const x=await drive({env:connectEnv,now});assert.deepEqual(x.items,[]);});
 });
@@ -53,7 +53,7 @@ test('Configured Google Connect failure does not silently fall back to legacy OA
   const original=globalThis.fetch;const seen=[];
   globalThis.fetch=async(url)=>{
     seen.push(String(url));
-    if(String(url).includes('api.vercel.com/v1/connect/token/google/nexo-google'))return new Response(JSON.stringify({error:'authorization_required'}),{status:403,headers:{'Content-Type':'application/json'}});
+    if(String(url).includes('api.vercel.com/v1/connect/token/google%2Fnexo-google'))return new Response(JSON.stringify({error:'authorization_required'}),{status:403,headers:{'Content-Type':'application/json'}});
     assert.fail(`Connect failure must not fall back to ${url}`);
   };
   try{
@@ -75,7 +75,7 @@ test('NEXO reads the canonical Sheet without re-stamping the owner update time',
     ['action','abc','BLOCKED','Acquire source','Exact source missing','','Neon:nexo_ops.actions','2026-09-09 12:00:00+00']
   ];
   await mock([
-    ['api.vercel.com/v1/connect/token/google/nexo-google',{token:'connect-access'}],
+    ['api.vercel.com/v1/connect/token/google%2Fnexo-google',{token:'connect-access'}],
     ['sheets.googleapis.com/v4/spreadsheets/ssot-fixture/values/',(url,options)=>{assert.equal(options.headers.Authorization,'Bearer connect-access');assert.match(String(url),/NEXO!A1%3AH1000/);return {values};}]
   ],async()=>{
     const x=await nexo({env:sheetEnv,now});
@@ -92,7 +92,7 @@ test('NEXO reads the canonical Sheet without re-stamping the owner update time',
 test('NEXO rejects malformed canonical Sheet schema instead of inventing fields',async()=>{
   const sheetEnv={GOOGLE_CONNECTOR:'google/nexo-google',VERCEL_OIDC_TOKEN:'oidc-fixture',NEXO_SHEET_ID:'ssot-fixture'};
   await mock([
-    ['api.vercel.com/v1/connect/token/google/nexo-google',{token:'connect-access'}],
+    ['api.vercel.com/v1/connect/token/google%2Fnexo-google',{token:'connect-access'}],
     ['sheets.googleapis.com/v4/spreadsheets/ssot-fixture/values/',{values:[['title','detail'],['Missing identity','bad']]}]
   ],async()=>{
     await assert.rejects(()=>nexo({env:sheetEnv,now}),error=>error?.code==='UNAVAILABLE');

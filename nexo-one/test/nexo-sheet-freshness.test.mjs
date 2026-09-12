@@ -8,7 +8,7 @@ test('NEXO Sheet transport liveness never re-stamps owner rows as LIVE',async()=
   const original=globalThis.fetch;
   globalThis.fetch=async(url,options)=>{
     const href=String(url);
-    if(href.includes('api.vercel.com/v1/connect/token/google/nexo-google')){
+    if(href.includes('api.vercel.com/v1/connect/token/google%2Fnexo-google')){
       return new Response(JSON.stringify({token:'connect-access'}),{status:200,headers:{'Content-Type':'application/json'}});
     }
     if(href.includes('sheets.googleapis.com/v4/spreadsheets/ssot-fixture/values/')){

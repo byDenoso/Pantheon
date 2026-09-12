@@ -11,7 +11,7 @@ function connectorUrl(value){
   if(typeof value!=='string'||!value.trim())throw new ProviderError('AUTH_REQUIRED');
   const parts=value.trim().split('/');
   if(parts.some(part=>!part||!/^[A-Za-z0-9._-]+$/.test(part)))throw new ProviderError('AUTH_REQUIRED');
-  return `https://api.vercel.com/v1/connect/token/${parts.map(encodeURIComponent).join('/')}`;
+  return `https://api.vercel.com/v1/connect/token/${encodeURIComponent(value.trim())}`;
 }
 
 export async function googleConnectToken(env,signal){
