@@ -45,3 +45,16 @@ test('2.5D interaction keeps selection, zoom bounds and explicit legacy renderer
  assert.match(scene,/onSelect/);assert.match(scene,/selectedId/);assert.match(scene,/Math\.min\(1\.45/);assert.match(scene,/Math\.max\(\.72/);assert.match(scene,/onPointerDown/);
  assert.match(renderer,/mode==='3d'/);assert.match(renderer,/mode==='2d'/);assert.match(renderer,/GraphScene25D/);
 });
+
+test('2.5D navigation supports real 3D camera motion and fly-to focus',()=>{
+ const scene=read('src/graph-engine/GraphScene25D.tsx');
+ assert.match(scene,/camera25d/);
+ assert.match(scene,/panX/);
+ assert.match(scene,/panY/);
+ assert.match(scene,/dolly/);
+ assert.match(scene,/shiftKey/);
+ assert.match(scene,/onDoubleClick/);
+ assert.match(scene,/flyToNode/);
+ assert.match(scene,/yaw/);
+ assert.match(scene,/pitch/);
+});
