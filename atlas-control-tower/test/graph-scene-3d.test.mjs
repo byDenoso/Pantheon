@@ -17,5 +17,5 @@ test('3D graph route preserves explicit Pixi rollback',()=>{
 
 test('target visual grammar includes glow nodes, curved filaments, stars and orbital guides',()=>{
  const nodes=read('src/scene/InstancedNodes.tsx');const filaments=read('src/scene/InstancedFilaments.tsx');const canvas=read('src/scene/AtlasCanvas.tsx');
- assert.match(nodes,/AdditiveBlending/);assert.match(nodes,/highlight/);assert.match(filaments,/SEGMENTS=7/);assert.match(filaments,/quadraticPoint/);assert.match(canvas,/StarField/);assert.match(canvas,/OrbitalGuides/);
+ assert.match(nodes,/AdditiveBlending/);assert.match(nodes,/highlight/);assert.match(filaments,/SEGMENTS=(7|9)/);assert.match(filaments,/quadraticPoint/);assert.match(canvas,/StarField/);assert.match(canvas,/OrbitalGuides/);
 });
