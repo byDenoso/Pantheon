@@ -189,6 +189,20 @@ export type HealthPayload = {
   sourceVersion?: string;
 };
 
+export type ResearchEnvelope<T = unknown> = {
+  contract?: string;
+  status?: 'OK' | 'EMPTY' | 'PARTIAL' | 'DATA_UNAVAILABLE' | string;
+  freshness?: Freshness | string;
+  generatedAt?: string;
+  sourceModifiedAt?: string;
+  authority?: string;
+  projectionAuthority?: string;
+  access?: string;
+  privacyGate?: string;
+  data?: T;
+  provenance?: Provenance[];
+};
+
 export type StatePayload = {
   counts?: Record<string, number>;
   statuses?: Record<string, number>;
@@ -228,6 +242,8 @@ export type AtlasApiClient = {
   audit: () => Promise<unknown>;
   files: (id: string) => Promise<unknown>;
   sync: () => Promise<unknown>;
+  research: (route: string, query?: Record<string, string | number | undefined>) => Promise<ResearchEnvelope>;
+  remote?: boolean;
   provenance?: {
     source?: string;
     freshness?: string;
