@@ -5,8 +5,9 @@ import {buildSystemState} from './compiler/system-state.mjs';
 import {readProvider,pending} from './adapters/registry.mjs';
 import {readAtlasSsot} from './adapters/atlas-ssot.mjs';
 import {buildPublicAtlasSsot} from './compiler/atlas-public-ssot.mjs';
+import {buildAtlasResearchView,RESEARCH_ROUTES} from './compiler/atlas-research-api.mjs';
 import {verifyProjectionService} from './auth/vercel-oidc.mjs';
-const ATLAS_ORIGIN='https://nexo-atlas-control-tower.vercel.app';
+const ATLAS_ORIGINS=new Set(['https://nexo-atlas-control-tower.vercel.app','https://nexo-atlas-cockpit.vercel.app']);
 const PUBLIC_SYSTEM_PROVIDERS=['github','nexo'];
 export default async function handler(req,res) {
   const env=process.env,now=Date.now();
@@ -14,11 +15,15 @@ export default async function handler(req,res) {
   const send=(value,status=200)=>{res.statusCode=status;res.end(JSON.stringify(value));};
   const url=new URL(req.url,'http://local'),route=url.searchParams.get('route')||url.pathname.split('/').pop(),access='PUBLIC';
   const origin=String(req.headers.origin||'');
-  if(req.method==='GET'&&route==='world'&&origin===ATLAS_ORIGIN)res.setHeader('Access-Control-Allow-Origin',ATLAS_ORIGIN);
+  if(req.method==='GET'&&ATLAS_ORIGINS.has(origin)&&(route==='world'||RESEARCH_ROUTES.has(route)))res.setHeader('Access-Control-Allow-Origin',origin);
   try{
     if(req.method!=='GET')return send({error:'WRITES_DISABLED'},405);
     if(route==='session')return send({authenticated:false,configured:false,access:'PUBLIC',mode:'PUBLIC_READ_ONLY'});
     if(route==='atlas-public-ssot')return send(buildPublicAtlasSsot(await readAtlasSsot({env,now,signal:req.signal})));
+    if(RESEARCH_ROUTES.has(route)){
+      const snapshot=await readAtlasSsot({env,now,signal:req.signal});
+      return send(buildAtlasResearchView(snapshot,route));
+    }
     if(route==='atlas-ssot'){
       const serviceAccess=await verifyProjectionService(req,{now});
       if(!serviceAccess)return send({error:'ATLAS_SERVICE_REQUIRED'},403);
