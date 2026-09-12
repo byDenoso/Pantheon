@@ -213,7 +213,9 @@ export function AtlasCanvas({graph,focusId,selectedId,onSelect,onOpen,reducedMot
 
   const handlePick=(picked:PositionedNode)=>{
     const node=nodeById.get(picked.id);if(!node)return;
-    const hasChildren=Number(node.childCount ?? node.childrenCount ?? 0)>0 || sceneGraph.edges.some(edge=>edge.source===node.id && edge.target!==node.id);
+    const structuralType=String(node.type||'').toUpperCase();
+    const canRevealDescendants=['ROOT','SYSTEM','DOMAIN','PROGRAM','CAMPAIGN','SUBGRAPH'].includes(structuralType);
+    const hasChildren=Number(node.childCount ?? node.childrenCount ?? 0)>0 || sceneGraph.edges.some(edge=>edge.source===node.id && edge.target!==node.id) || canRevealDescendants;
     if(hasChildren&&node.id!==focusId)onOpen(node);
     else onSelect(node);
   };

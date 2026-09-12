@@ -32,4 +32,5 @@ test('node entry is a real drill-down and terminal nodes remain selectable', () 
   assert.match(canvas, /onOpen\(node\)/);
   assert.match(canvas, /onSelect\(node\)/);
   assert.match(canvas, /loading/);
+  assert.match(canvas, /SYSTEM.*DOMAIN.*PROGRAM.*CAMPAIGN.*SUBGRAPH/);
 });
