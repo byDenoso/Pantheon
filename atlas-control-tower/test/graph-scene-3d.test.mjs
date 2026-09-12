@@ -19,3 +19,11 @@ test('target visual grammar includes glow nodes, curved filaments, stars and orb
  const nodes=read('src/scene/InstancedNodes.tsx');const filaments=read('src/scene/InstancedFilaments.tsx');const canvas=read('src/scene/AtlasCanvas.tsx');
  assert.match(nodes,/AdditiveBlending/);assert.match(nodes,/highlight/);assert.match(filaments,/SEGMENTS=(7|9)/);assert.match(filaments,/quadraticPoint/);assert.match(canvas,/StarField/);assert.match(canvas,/OrbitalGuides/);
 });
+
+test('3D graph starts in active motion instead of requiring the user to find the orbit toggle',()=>{
+ const scene=read('src/graph-engine/GraphScene3D.tsx');
+ assert.match(scene,/useState\(true\)/);
+ assert.match(scene,/data-motion=\{reducedMotion\?'reduced':'auto-orbit'\}/);
+ assert.match(scene,/aria-pressed=\{autoOrbit\}/);
+ assert.match(scene,/Pausar movimento/);
+});
