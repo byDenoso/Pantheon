@@ -22,7 +22,8 @@ test('universe page does not synthesize missing taxonomy',()=>{
 
 test('graphs navigation contract',()=>{
  const app=fs.readFileSync(new URL('../src/App.tsx',import.meta.url),'utf8');
- const nav=fs.readFileSync(new URL('../src/app/navigation.ts',import.meta.url),'utf8');
- assert.equal(nav.includes('Grafos'),true);
- assert.equal(app.includes('/graphs/:domainId/:subgraphId'),true);
+ const route=fs.readFileSync(new URL('../src/atlas-route.ts',import.meta.url),'utf8');
+ assert.equal(app.includes('GRAFOS'),true);
+ assert.equal(route.includes('/graphs/science/'),true);
+ assert.equal(route.includes('domain'),true);
 });

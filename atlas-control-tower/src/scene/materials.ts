@@ -1,3 +1,4 @@
+import { AdditiveBlending } from 'three';
 import { MeshBasicNodeMaterial } from 'three/webgpu';
 import { vertexColor, time, float } from 'three/tsl';
 
@@ -6,6 +7,16 @@ export function createNodeMaterial() {
   material.colorNode = vertexColor();
   material.opacity = 0.96;
   material.depthWrite = true;
+  return material;
+}
+
+export function createNodeAuraMaterial() {
+  const material = new MeshBasicNodeMaterial({ transparent:true, vertexColors:true });
+  material.colorNode = vertexColor();
+  material.opacity = 0.16;
+  material.depthWrite = false;
+  material.depthTest = true;
+  material.blending = AdditiveBlending;
   return material;
 }
 

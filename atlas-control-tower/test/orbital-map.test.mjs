@@ -42,10 +42,12 @@ test('semantic LOD bounds dense views without dropping focus or selected nodes',
 
 test('the graph session still exposes bounded expansion for route-scoped explorers',()=>{
  const app=read('src/App.tsx');
+ const graphs=read('src/pages/graphs-page.tsx');
  const session=read('src/state/useAtlasSession.ts');
  assert.doesNotMatch(app,/id="more"|actions\.more\(\)/);
+ assert.match(graphs,/id="more"|actions\.more\(\)/);
  assert.match(session,/session\.more\(\)/);
- assert.match(app,/UniversesPage/);
+ assert.match(app,/GraphsPage/);
 });
 
 test('cross-domain and intra-domain semantics still come only from declared membership',async()=>{

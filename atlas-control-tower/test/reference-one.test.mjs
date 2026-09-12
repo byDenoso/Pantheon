@@ -8,7 +8,7 @@ const tower = fs.readFileSync(new URL('../ui/control-tower.mjs', import.meta.url
 
 test('vNext root no longer reproduces the retired reference-one hero', () => {
  for(const pattern of [/reference-main/,/Ideias em órbita\./,/Descobertas em rede\./,/observatory-galaxy-right/,/observatory-asteroid-field/,/observatory-horizon-right/]) assert.doesNotMatch(app,pattern);
- assert.match(app,/OverviewPage/);assert.match(app,/UniversesPage/);
+ assert.match(app,/GraphsPage/);assert.match(app,/ObservatoryPage/);assert.match(app,/UniversePage/);
 });
 
 test('approved reference keeps the exact lower console taxonomy available', () => {

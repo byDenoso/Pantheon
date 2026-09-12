@@ -24,15 +24,15 @@ test('premium graph stage follows the dark orbital reference grammar', () => {
 test('R3F labels can anchor on either side of the node instead of drifting as loose cards', () => {
   const source = read('src/scene/LabelOverlay.tsx');
   const css = read('src/styles/react-atlas.css');
-  assert.match(source, /side='left'/);
-  assert.match(source, /translateX\(-100%\)/);
+  assert.match(source, /side:'left'\|'right'/);
+  assert.match(source, /item\.side/);
   assert.match(css, /atlas-label\.left:before/);
   assert.match(css, /atlas-label\.right:before/);
 });
 
 test('orbital layout uses a large readable outer ring around the focus', () => {
   const source = read('src/scene/types.ts');
-  assert.match(source, /directRadius/);
+  assert.match(source, /directChildren/);
   assert.match(source, /ringRadius/);
-  assert.match(source, /compareVisualRank/);
+  assert.match(source, /hierarchyPositions/);
 });

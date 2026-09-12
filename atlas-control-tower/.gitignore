@@ -3,8 +3,10 @@ lib/snapshot.mjs
 *-render.png
 preview-*.png
 node_modules/
+dist/
 .vercel/
 .env*
+!.env.example
 dev-fixture.mjs
 build-real-snapshot.mjs
 shot-*.png

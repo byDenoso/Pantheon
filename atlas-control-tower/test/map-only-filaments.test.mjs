@@ -54,9 +54,10 @@ test('R3F filaments remain available as rollback until V2 equivalence is proven'
 
 test('the graph renderer is route-scoped and Learning is not a workspace area',()=>{
  const app=read('src/App.tsx');const canvas=read('src/scene/AtlasCanvas.tsx');const nav=read('src/app/navigation.ts');
- assert.doesNotMatch(app,/role="tablist"|id="map-workspace"|<AtlasCanvas/);
- assert.match(app,/UniversesPage/);assert.match(app,/UniversePage/);assert.match(canvas,/<Canvas/);
- assert.match(nav,/Domínios/);assert.match(nav,/Grafos/);assert.doesNotMatch(nav,/label: 'Learning'/);
+ const route=read('src/atlas-route.ts');const graphs=read('src/pages/graphs-page.tsx');
+ assert.doesNotMatch(app,/role="tablist"|<AtlasCanvas/);
+ assert.match(app,/GraphsPage/);assert.match(app,/UniversePage/);assert.match(canvas,/<Canvas/);
+ assert.match(route,/observatory|lab|universe/);assert.match(graphs,/id="map-workspace"/);assert.doesNotMatch(app,/label: ['"]Learning['"]/);
 });
 
 test('the workspace compatibility module still normalizes retired modes to the map',async()=>{
