@@ -10,8 +10,6 @@ import { InstancedNodes } from './InstancedNodes';
 import { InstancedFilaments } from './InstancedFilaments';
 import { LabelOverlay, labelStatus, labelText, labelType, type ProjectedLabel } from './LabelOverlay';
 
-const STRUCTURAL=new Set(['SYSTEM','DOMAIN','CAMPAIGN']);
-
 type Props={
   graph:AtlasGraph|null;
   focusId:string;
@@ -21,11 +19,15 @@ type Props={
   reducedMotion:boolean;
   autoOrbit:boolean;
   compact?:boolean;
+  loading?:boolean;
 };
+type MotionState={current:Map<string,Vector3>;target:Map<string,Vector3>};
 
-function CameraRig({reducedMotion,autoOrbit,compact}:{reducedMotion:boolean;autoOrbit:boolean;compact:boolean}){
+function CameraRig({reducedMotion,autoOrbit,compact,focusId}:{reducedMotion:boolean;autoOrbit:boolean;compact:boolean;focusId:string}){
   const {camera,gl,size}=useThree();
   const controls=useRef<OrbitControls|null>(null);
+  const desiredPosition=useRef(new Vector3(0,0,16));
+  const origin=useMemo(()=>new Vector3(0,0,0),[]);
   useEffect(()=>{
     const aspect=size.width/Math.max(1,size.height);
     const distance=aspect<0.72 ? 21 : compact ? 18 : 16;
@@ -38,14 +40,24 @@ function CameraRig({reducedMotion,autoOrbit,compact}:{reducedMotion:boolean;auto
     next.minDistance=5;
     next.maxDistance=34;
     controls.current=next;
+    desiredPosition.current.set(0,0,distance);
     return()=>{next.dispose();controls.current=null};
   },[camera,compact,gl,size.height,size.width]);
+  useEffect(()=>{
+    const distance=compact ? 14.2 : 13.4;
+    desiredPosition.current.set(0,0,distance);
+  },[compact,focusId]);
   useEffect(()=>{
     if(!controls.current)return;
     controls.current.autoRotate=autoOrbit&&!reducedMotion;
     controls.current.autoRotateSpeed=0.42;
   },[autoOrbit,reducedMotion]);
-  useFrame(()=>controls.current?.update());
+  useFrame(()=>{
+    const next=controls.current;if(!next)return;
+    camera.position.lerp(desiredPosition.current,0.075);
+    next.target.lerp(origin,0.11);
+    next.update();
+  });
   return null;
 }
 
@@ -92,7 +104,7 @@ function OrbitalGuides({nodes,focusId}:{nodes:PositionedNode[];focusId:string}){
   </group>;
 }
 
-function LabelProjector({nodes,labelIds,onLabels}:{nodes:PositionedNode[];labelIds:Set<string>;onLabels:(labels:ProjectedLabel[])=>void}){
+function LabelProjector({nodes,labelIds,onLabels,motion}:{nodes:PositionedNode[];labelIds:Set<string>;onLabels:(labels:ProjectedLabel[])=>void;motion:MotionState}){
   const {camera,size}=useThree();
   const lastAt=useRef(0);
   const lastSignature=useRef('');
@@ -101,7 +113,7 @@ function LabelProjector({nodes,labelIds,onLabels}:{nodes:PositionedNode[];labelI
     if(clock.elapsedTime-lastAt.current<0.06)return;
     lastAt.current=clock.elapsedTime;
     const labels=nodes.filter(node=>labelIds.has(node.id)).map(node=>{
-      tmp.set(...node.position).project(camera);
+      tmp.copy(motion.current.get(node.id)||new Vector3(...node.position)).project(camera);
       return {
         id:node.id,
         label:labelText(node),
@@ -119,7 +131,7 @@ function LabelProjector({nodes,labelIds,onLabels}:{nodes:PositionedNode[];labelI
   return null;
 }
 
-function SceneContent({nodes,graph,labelIds,onLabels,onPick,reducedMotion,autoOrbit,selectedId,focusId,compact}:{
+function SceneContent({nodes,graph,labelIds,onLabels,onPick,reducedMotion,autoOrbit,selectedId,focusId,compact,motion}:{
   nodes:PositionedNode[];
   graph:AtlasGraph;
   labelIds:Set<string>;
@@ -130,21 +142,34 @@ function SceneContent({nodes,graph,labelIds,onLabels,onPick,reducedMotion,autoOr
   selectedId?:string|null;
   focusId:string;
   compact:boolean;
+  motion:MotionState;
 }){
+  useFrame((_,delta)=>{
+    const easing=1-Math.pow(0.001,Math.min(delta,0.05));
+    const ids=new Set(nodes.map(node=>node.id));
+    nodes.forEach(node=>{
+      const goal=new Vector3(...node.position);
+      motion.target.set(node.id,goal);
+      if(!motion.current.has(node.id)) motion.current.set(node.id,motion.current.size?new Vector3(0,0,0):goal.clone());
+      motion.current.get(node.id)!.lerp(goal,easing);
+    });
+    for(const id of motion.current.keys()) if(!ids.has(id)){motion.current.delete(id);motion.target.delete(id)}
+  });
   return <>
-    <CameraRig reducedMotion={reducedMotion} autoOrbit={autoOrbit} compact={compact}/>
+    <CameraRig reducedMotion={reducedMotion} autoOrbit={autoOrbit} compact={compact} focusId={focusId}/>
     <OrbitalGuides nodes={nodes} focusId={focusId}/>
-    <InstancedNodes nodes={nodes} focusId={focusId} aura/>
-    <InstancedFilaments edges={graph.edges} nodes={nodes} focusId={focusId} selectedId={selectedId}/>
-    <InstancedNodes nodes={nodes} selectedId={selectedId} focusId={focusId} onNodeClick={onPick}/>
-    <LabelProjector nodes={nodes} labelIds={labelIds} onLabels={onLabels}/>
+    <InstancedNodes nodes={nodes} positions={motion.current} focusId={focusId} aura/>
+    <InstancedFilaments edges={graph.edges} nodes={nodes} positions={motion.current} focusId={focusId} selectedId={selectedId}/>
+    <InstancedNodes nodes={nodes} positions={motion.current} selectedId={selectedId} focusId={focusId} onNodeClick={onPick}/>
+    <LabelProjector nodes={nodes} labelIds={labelIds} onLabels={onLabels} motion={motion}/>
   </>;
 }
 
-export function AtlasCanvas({graph,focusId,selectedId,onSelect,onOpen,reducedMotion,autoOrbit,compact=false}:Props){
+export function AtlasCanvas({graph,focusId,selectedId,onSelect,onOpen,reducedMotion,autoOrbit,compact=false,loading=false}:Props){
   const [labels,setLabels]=useState<ProjectedLabel[]>([]);
   const [renderActive,setRenderActive]=useState(() => typeof document === 'undefined' || document.visibilityState !== 'hidden');
   const stageRef=useRef<HTMLDivElement>(null);
+  const motion=useRef<MotionState>({current:new Map(),target:new Map()});
   const sourceNodes=graph?.nodes||[];
   const lod=useMemo(()=>selectSemanticLOD(sourceNodes,{
     selectedId,focusId,
@@ -162,7 +187,8 @@ export function AtlasCanvas({graph,focusId,selectedId,onSelect,onOpen,reducedMot
 
   const handlePick=(picked:PositionedNode)=>{
     const node=nodeById.get(picked.id);if(!node)return;
-    if(STRUCTURAL.has(String(node.type||'').toUpperCase())&&node.id!==focusId)onOpen(node);
+    const hasChildren=Number(node.childCount ?? node.childrenCount ?? 0)>0 || sceneGraph.edges.some(edge=>edge.source===node.id && edge.target!==node.id);
+    if(hasChildren&&node.id!==focusId)onOpen(node);
     else onSelect(node);
   };
 
@@ -196,8 +222,10 @@ export function AtlasCanvas({graph,focusId,selectedId,onSelect,onOpen,reducedMot
         selectedId={selectedId}
         focusId={focusId}
         compact={compact}
+        motion={motion.current}
       />
     </Canvas>
     <LabelOverlay labels={labels} labelIds={lod.labelIds} selectedId={selectedId}/>
+    {loading && <div className="atlas-graph-transition" role="status">Carregando subgrafo…</div>}
   </div>;
 }
