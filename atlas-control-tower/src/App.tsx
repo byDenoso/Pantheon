@@ -35,7 +35,8 @@ export default function App(){
     <Suspense fallback={<div className="nexo-route-loading">Carregando…</div>}>
       <Routes>
         <Route element={<AppShell/>}>
-          <Route index element={<OverviewPage/>}/>
+          <Route index element={<GraphsRoute/>}/>
+          <Route path="/overview" element={<OverviewPage/>}/>
           <Route path="/universes" element={<UniversesPage/>}/>
           <Route path="/universes/:universeId" element={<UniversePage/>}/>
           <Route path="/universes/:universeId/:subdomainId" element={<LegacyUniverseRedirect/>}/>

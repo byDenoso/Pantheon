@@ -1,6 +1,6 @@
 import {createApi} from '../../lib/atlas-api.mjs';
 type GraphApi={graph:(query:Record<string,unknown>)=>Promise<any>};
-const ALLOWED=new Set(['SCIENCE','ENGINEERING','OLYMPUS']);
+const ALLOWED=new Set(['SCIENCE','ENGINEERING','OLYMPUS','OPERATIONS']);
 export async function loadUniversesSources(api:GraphApi=createApi() as GraphApi){
  let root:any=null;try{root=await api.graph({focus:'system:NEXO',depth:1,limit:32})}catch{return{root:null,details:{}}}
  const nodes:any[]=Array.isArray(root?.nodes)?root.nodes:[];const edges:any[]=Array.isArray(root?.edges)?root.edges:[];

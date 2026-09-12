@@ -1,10 +1,14 @@
 import {driveRoute,DRIVE_SSOT_META} from '../lib/drive-ssot.mjs';
 import {loadLiveSsot,projectLiveRoute,syncLiveSsot} from '../lib/live-drive-ssot.mjs';
+import {enhanceCockpitRoute} from '../lib/cockpit-projection.mjs';
 
+const PUBLIC_SSOT_URL=process.env.NEXO_ATLAS_PUBLIC_SSOT_URL||'https://nexo-one-two.vercel.app/api/atlas-public-ssot';
 function urlOf(req){return new URL(req.url||'/','https://atlas.local')}
 function routeOf(req){const u=urlOf(req);return u.searchParams.get('route')||u.pathname.split('/').filter(Boolean).pop()||'health'}
 function queryOf(req){const u=urlOf(req),q=Object.fromEntries(u.searchParams);delete q.route;return q}
 function sendJson(res,value,status=200,{noStore=false}={}){res.statusCode=status;res.setHeader('Content-Type','application/json; charset=utf-8');res.setHeader('Cache-Control',noStore?'private, no-store':'public, max-age=30, stale-while-revalidate=120');res.setHeader('X-Content-Type-Options','nosniff');res.setHeader('X-Atlas-Authority','GOOGLE_DRIVE');return res.end(JSON.stringify(value))}
+function validatePublicSnapshot(snapshot){if(snapshot?.contract!=='NEXO_ATLAS_SSOT_V1'||snapshot?.authority!=='GOOGLE_DRIVE'||snapshot?.projectionOnly!==true||snapshot?.access!=='PUBLIC_SANITIZED')throw new Error('INVALID_PUBLIC_ATLAS_SNAPSHOT');return snapshot}
+async function publicLiveSnapshot(signal){const response=await fetch(PUBLIC_SSOT_URL,{headers:{Accept:'application/json'},signal});if(!response.ok)throw new Error(`PUBLIC_ATLAS_SSOT_HTTP_${response.status}`);return validatePublicSnapshot(await response.json())}
 
 async function staticFallback(route,query,error){
  const fallback=await driveRoute(route,query,{method:'GET'});
@@ -28,14 +32,20 @@ export default async function handler(req,res){
  if(route==='sync')return sendJson(res,{ok:false,error:'METHOD_NOT_ALLOWED',allowed:['POST'],authority:'GOOGLE_DRIVE'},405,{noStore:true});
  try{
   const live=await loadLiveSsot({req,force:query.refresh==='1',signal:req.signal});
-  return sendJson(res,projectLiveRoute(live,route,query));
- }catch(error){
-  console.warn('[atlas:live-ssot]',route,String(error?.message||error));
-  try{return sendJson(res,await staticFallback(route,query,error))}
-  catch(fallbackError){
-   const message=String(fallbackError?.message||fallbackError);
-   const status=message.startsWith('DRIVE_ROUTE_UNSUPPORTED')?404:500;
-   return sendJson(res,{ok:false,error:message,authority:'GOOGLE_DRIVE',projectionOnly:true},status);
+  return sendJson(res,enhanceCockpitRoute(live,route,query,projectLiveRoute(live,route,query)));
+ }catch(privateError){
+  console.warn('[atlas:private-live-ssot]',route,String(privateError?.message||privateError));
+  try{
+   const live=await publicLiveSnapshot(req.signal);
+   return sendJson(res,enhanceCockpitRoute(live,route,query,projectLiveRoute(live,route,query)));
+  }catch(publicError){
+   console.warn('[atlas:public-live-ssot]',route,String(publicError?.message||publicError));
+   try{return sendJson(res,await staticFallback(route,query,publicError))}
+   catch(fallbackError){
+    const message=String(fallbackError?.message||fallbackError);
+    const status=message.startsWith('DRIVE_ROUTE_UNSUPPORTED')?404:500;
+    return sendJson(res,{ok:false,error:message,authority:'GOOGLE_DRIVE',projectionOnly:true},status);
+   }
   }
  }
 }
