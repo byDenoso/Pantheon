@@ -269,4 +269,5 @@ export type AtlasContext = {
   redshift?: string;
   status?: string;
   scope?: string;
+  graphPath?: string[];
 };
