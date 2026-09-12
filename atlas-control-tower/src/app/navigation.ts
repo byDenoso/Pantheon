@@ -1,5 +1,5 @@
 export const productNavigation = [
-  { label: 'Cockpit', path: '/', icon: '⌘' },
+  { label: 'Grafos', path: '/', icon: '⌘' },
   { label: 'Domínios', path: '/universes', icon: '◎' },
   { label: 'Operação', path: '/operations', icon: '▦' },
   { label: 'Proveniência', path: '/provenance', icon: '↗' },
