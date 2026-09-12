@@ -10,18 +10,27 @@ const STATUS_COLOR: Record<string,string> = {
   ACTIVE:'#6bceff', IN_PROGRESS:'#6bceff', OPEN:'#6bceff', LEGACY:'#73819b'
 };
 const TYPE_COLOR: Record<string,string> = {
-  ROOT:'#55dfff', SYSTEM:'#8be4ff', DOMAIN:'#4fb8ff', SUBGRAPH:'#7e9cff', CAMPAIGN:'#a88dff',
+  ROOT:'#8eefff', SYSTEM:'#8be4ff', DOMAIN:'#4fb8ff', SUBGRAPH:'#7e9cff', CAMPAIGN:'#a88dff',
   CLAIM:'#d782ff', TEST:'#71e3d0', RUN:'#79a9ff', RESULT:'#69dec0', EVIDENCE:'#69dec0', ACTION:'#ff8fa3'
 };
 
 function nodeRadius(node: PositionedNode, selectedId?: string | null) {
-  if (node.id === selectedId) return 0.58;
+  if (node.id === selectedId) return 0.72;
+  if (Number(node.priority || 0) >= 96) return 0.86;
   const type=String(node.type||'').toUpperCase();
-  if(type==='ROOT'||type==='SYSTEM') return 0.54;
-  if(type==='DOMAIN') return 0.38;
-  if(type==='SUBGRAPH'||type==='CAMPAIGN') return 0.28;
-  if(type==='CLAIM'||type==='TEST') return 0.2;
-  return 0.15;
+  if(type==='ROOT'||type==='SYSTEM') return 0.68;
+  if(type==='DOMAIN') return 0.46;
+  if(type==='SUBGRAPH'||type==='CAMPAIGN') return 0.32;
+  if(type==='CLAIM'||type==='TEST') return 0.22;
+  return 0.17;
+}
+
+function glowScale(node: PositionedNode) {
+  if (Number(node.priority || 0) >= 96) return 2.08;
+  const type=String(node.type||'').toUpperCase();
+  if(type==='ROOT'||type==='SYSTEM') return 1.86;
+  if(type==='DOMAIN') return 1.72;
+  return 1.54;
 }
 
 function visualColor(node: PositionedNode) {
@@ -53,8 +62,8 @@ export function InstancedNodes({nodes,selectedId,pickMode=false}:Props){
         const [r,g,b]=encodePickId(node.pickId);target.setColorAt(index,new Color(r/255,g/255,b/255));
       }else{
         const color=visualColor(node);target.setColorAt(index,color);
-        if(glowTarget){object.position.set(...node.position);object.scale.setScalar(radius*1.65);object.updateMatrix();glowTarget.setMatrixAt(index,object.matrix);glowTarget.setColorAt(index,color)}
-        if(highlightTarget){object.position.set(node.position[0]-radius*.22,node.position[1]+radius*.24,node.position[2]+radius*.72);object.scale.setScalar(radius*.2);object.updateMatrix();highlightTarget.setMatrixAt(index,object.matrix)}
+        if(glowTarget){object.position.set(...node.position);object.scale.setScalar(radius*glowScale(node));object.updateMatrix();glowTarget.setMatrixAt(index,object.matrix);glowTarget.setColorAt(index,color)}
+        if(highlightTarget){object.position.set(node.position[0]-radius*.22,node.position[1]+radius*.25,node.position[2]+radius*.76);object.scale.setScalar(radius*.2);object.updateMatrix();highlightTarget.setMatrixAt(index,object.matrix)}
       }
     });
     target.instanceMatrix.needsUpdate=true;if(target.instanceColor)target.instanceColor.needsUpdate=true;
@@ -63,18 +72,18 @@ export function InstancedNodes({nodes,selectedId,pickMode=false}:Props){
   },[nodes,object,pickMode,selectedId]);
 
   if(pickMode)return <instancedMesh ref={body} args={[undefined,undefined,Math.max(1,nodes.length)]} frustumCulled={false}>
-    <sphereGeometry args={[1,18,12]}/><primitive object={material} attach="material"/>
+    <sphereGeometry args={[1,24,16]}/><primitive object={material} attach="material"/>
   </instancedMesh>;
 
   return <>
     <instancedMesh ref={glow} args={[undefined,undefined,Math.max(1,nodes.length)]} frustumCulled={false}>
-      <sphereGeometry args={[1,14,10]}/><meshBasicMaterial vertexColors transparent opacity={0.13} depthWrite={false} toneMapped={false} blending={AdditiveBlending}/>
+      <sphereGeometry args={[1,20,14]}/><meshBasicMaterial vertexColors transparent opacity={0.17} depthWrite={false} toneMapped={false} blending={AdditiveBlending}/>
     </instancedMesh>
     <instancedMesh ref={body} args={[undefined,undefined,Math.max(1,nodes.length)]} frustumCulled={false}>
-      <sphereGeometry args={[1,24,16]}/><primitive object={material} attach="material"/>
+      <sphereGeometry args={[1,32,20]}/><primitive object={material} attach="material"/>
     </instancedMesh>
     <instancedMesh ref={highlight} args={[undefined,undefined,Math.max(1,nodes.length)]} frustumCulled={false}>
-      <sphereGeometry args={[1,12,8]}/><meshBasicMaterial color="#ecfbff" transparent opacity={0.82} depthWrite={false} toneMapped={false}/>
+      <sphereGeometry args={[1,12,8]}/><meshBasicMaterial color="#ecfbff" transparent opacity={0.9} depthWrite={false} toneMapped={false}/>
     </instancedMesh>
   </>;
 }
