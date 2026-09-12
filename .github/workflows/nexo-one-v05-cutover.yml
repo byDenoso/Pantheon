@@ -8,6 +8,7 @@ on:
 
 permissions:
   contents: read
+  id-token: write
 
 concurrency:
   group: nexo-one-deployment
@@ -20,9 +21,8 @@ jobs:
     environment: nexo-one-production
     env:
       VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
-      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
-      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
-      VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
+      VERCEL_ORG_ID: team_TLkDXqQIHke6IumXh3qzMDcs
+      VERCEL_PROJECT_ID: prj_rFoAEgGt4gFNr8DHEOzxY7keS16W
       NEXO_PRODUCTION_URL: https://nexo-one-two.vercel.app
       ATLAS_PRODUCTION_URL: https://nexo-atlas-control-tower.vercel.app
     steps:
@@ -34,12 +34,23 @@ jobs:
           cache: npm
           cache-dependency-path: nexo-one/package-lock.json
 
+      - name: Acquire GitHub OIDC token for Vercel trusted-source readback
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const token = await core.getIDToken();
+            core.setSecret(token);
+            core.exportVariable('VERCEL_TRUSTED_OIDC_TOKEN', token);
+
       - name: Verify project identity and build exact source
         run: |
           set -euo pipefail
           test "$VERCEL_PROJECT_ID" = prj_rFoAEgGt4gFNr8DHEOzxY7keS16W
           test "$VERCEL_ORG_ID" = team_TLkDXqQIHke6IumXh3qzMDcs
-          test -n "$VERCEL_TOKEN"
+          if [ -z "$VERCEL_TOKEN" ]; then
+            echo "::error::VERCEL_TOKEN is the only missing deployment credential."
+            exit 78
+          fi
           cd nexo-one
           npm ci --no-audit --no-fund
           npm run check
@@ -91,13 +102,13 @@ jobs:
       - name: Verify staged public and operational boundaries
         env:
           NEXO_VERIFY_URL: ${{ env.STAGED_URL }}
+          VERCEL_TRUSTED_OIDC_TOKEN: ${{ env.VERCEL_TRUSTED_OIDC_TOKEN }}
         run: node nexo-one/scripts/verify-release.mjs --operational
 
       - name: Prove private Atlas bridge exists before promotion
         run: |
           node --input-type=module <<'NODE'
-          const headers={};
-          if(process.env.VERCEL_AUTOMATION_BYPASS_SECRET)headers['x-vercel-protection-bypass']=process.env.VERCEL_AUTOMATION_BYPASS_SECRET;
+          const headers={'x-vercel-trusted-oidc-idp-token':process.env.VERCEL_TRUSTED_OIDC_TOKEN};
           const response=await fetch(new URL('/api/atlas-ssot',process.env.STAGED_URL),{headers,redirect:'error',signal:AbortSignal.timeout(20000)});
           let body={};try{body=await response.json()}catch{}
           if(response.status!==403||body.error!=='ATLAS_SERVICE_REQUIRED')throw new Error(`Atlas bridge gate failed: HTTP ${response.status} ${JSON.stringify(body)}`);
