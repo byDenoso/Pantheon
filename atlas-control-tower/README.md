@@ -15,12 +15,11 @@ held only a manifest.
 
 Two limits still apply, and neither should be inferred away:
 
-- **A commit here does not deploy.** The production deployment is created with
-  the Vercel CLI from a built directory whose `index.html` has its stylesheet
-  and module references rewritten to `cdn.jsdelivr.net/gh/byDenoso/Pantheon@<commit>`.
-  Vercel itself serves only `index.html` and the three `api/*` functions. To
-  ship a frontend change: push the commit, rewrite the pins to it, deploy a
-  preview, verify, then promote.
+- **Commits to `main` now trigger Vercel Git Integration.** The project is
+  rooted at `atlas-control-tower` and Vercel builds the checked-in frontend
+  directly. The legacy CLI promotion path remains available when a release
+  credential is intentionally configured, but it is not required for the
+  connected Git deployment.
 - **Vercel remains authoritative for live deployment and runtime state**, and
   Neon `science_v1` / `learning_v1` / `nexo_ops` remain the mutable truth
   owners. Git is the source mirror, not the data owner.
