@@ -35,11 +35,17 @@ class CanvasErrorBoundary extends Component<{fallback:ReactNode;children:ReactNo
 
 function canUseThreeRenderer(){
   if(typeof document==='undefined')return true;
-  if(typeof navigator!=='undefined'&&'gpu' in navigator)return true;
   const probe=document.createElement('canvas');
   const supported=Boolean(probe.getContext('webgl2')||probe.getContext('webgl'));
   probe.width=1;probe.height=1;
   return supported;
+}
+
+async function detectThreeRenderer(){
+  if(canUseThreeRenderer())return true;
+  const gpu=(typeof navigator!=='undefined'&&'gpu' in navigator)?(navigator as Navigator & {gpu?:{requestAdapter?:()=>Promise<unknown>}}).gpu:undefined;
+  if(!gpu?.requestAdapter)return false;
+  try{return Boolean(await gpu.requestAdapter());}catch{return false;}
 }
 
 function CameraRig({reducedMotion,autoOrbit,compact,focusId}:{reducedMotion:boolean;autoOrbit:boolean;compact:boolean;focusId:string}){
@@ -186,7 +192,7 @@ function SceneContent({nodes,graph,labelIds,onLabels,onPick,reducedMotion,autoOr
 
 export function AtlasCanvas({graph,focusId,selectedId,onSelect,onOpen,reducedMotion,autoOrbit,compact=false,loading=false}:Props){
   const [labels,setLabels]=useState<ProjectedLabel[]>([]);
-  const [threeEnabled]=useState(canUseThreeRenderer);
+  const [threeEnabled,setThreeEnabled]=useState(canUseThreeRenderer);
   const [renderActive,setRenderActive]=useState(() => typeof document === 'undefined' || document.visibilityState !== 'hidden');
   const stageRef=useRef<HTMLDivElement>(null);
   const motion=useRef<MotionState>({current:new Map(),target:new Map()});
@@ -220,6 +226,13 @@ export function AtlasCanvas({graph,focusId,selectedId,onSelect,onOpen,reducedMot
     updateVisibility();
     return()=>{document.removeEventListener('visibilitychange',updateVisibility);observer?.disconnect()};
   },[]);
+
+  useEffect(()=>{
+    if(threeEnabled||typeof document==='undefined')return;
+    let active=true;
+    void detectThreeRenderer().then(supported=>{if(active)setThreeEnabled(supported);});
+    return()=>{active=false;};
+  },[threeEnabled]);
 
   if(!graph)return <div className="atlas-canvas-loading">Lendo recorte orbital…</div>;
 
