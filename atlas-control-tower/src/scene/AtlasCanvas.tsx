@@ -9,20 +9,32 @@ import { InstancedNodes } from './InstancedNodes';
 import { InstancedFilaments } from './InstancedFilaments';
 import { GpuPicking } from './GpuPicking';
 import { LabelOverlay, labelText, type ProjectedLabel } from './LabelOverlay';
+import { isNavigableNode, pointerParallaxTarget } from './interaction.mjs';
 
 const STRUCTURAL=new Set(['ROOT','SYSTEM','DOMAIN','SUBGRAPH','CAMPAIGN']);
 
 type Props={graph:AtlasGraph|null;focusId:string;selectedId?:string|null;onSelect:(node:AtlasNode)=>void;onOpen:(node:AtlasNode)=>void;reducedMotion:boolean;autoOrbit:boolean;compact?:boolean};
 
 function CameraRig({reducedMotion,autoOrbit}:{reducedMotion:boolean;autoOrbit:boolean}){
-  const {camera,gl}=useThree();const controls=useRef<OrbitControls|null>(null);
+  const {camera,gl,size}=useThree();const controls=useRef<OrbitControls|null>(null);const parallax=useRef({yaw:0,pitch:0});
   useEffect(()=>{
     camera.position.set(.35,.18,17.5);camera.lookAt(0,0,0);
     const next=new OrbitControls(camera,gl.domElement);next.enableDamping=true;next.dampingFactor=.075;next.enablePan=true;next.minDistance=4.8;next.maxDistance=36;next.rotateSpeed=.55;next.zoomSpeed=.72;controls.current=next;
-    return()=>{next.dispose();controls.current=null};
-  },[camera,gl]);
+    const move=(event:PointerEvent)=>{
+      if(reducedMotion||event.buttons!==0)return;
+      const rect=gl.domElement.getBoundingClientRect();
+      parallax.current=pointerParallaxTarget(event.clientX-rect.left,event.clientY-rect.top,rect.width||size.width,rect.height||size.height);
+    };
+    const leave=()=>{parallax.current={yaw:0,pitch:0}};
+    gl.domElement.addEventListener('pointermove',move,{passive:true});gl.domElement.addEventListener('pointerleave',leave,{passive:true});
+    return()=>{gl.domElement.removeEventListener('pointermove',move);gl.domElement.removeEventListener('pointerleave',leave);next.dispose();controls.current=null};
+  },[camera,gl,reducedMotion,size.height,size.width]);
   useEffect(()=>{if(!controls.current)return;controls.current.autoRotate=autoOrbit&&!reducedMotion;controls.current.autoRotateSpeed=.32},[autoOrbit,reducedMotion]);
-  useFrame(()=>controls.current?.update());return null;
+  useFrame(()=>{
+    const next=controls.current;if(!next)return;
+    const px=reducedMotion?0:parallax.current.yaw*1.35,py=reducedMotion?0:-parallax.current.pitch*1.1;
+    next.target.x+=(px-next.target.x)*.075;next.target.y+=(py-next.target.y)*.075;next.update();
+  });return null;
 }
 
 function StarField(){
@@ -55,7 +67,7 @@ export function AtlasCanvas({graph,focusId,selectedId,onSelect,onOpen,reducedMot
   const visible=useMemo(()=>sourceNodes.filter(node=>lod.visibleIds.has(node.id)),[lod.visibleIds,sourceNodes]);const nodes=useMemo(()=>buildOrbitalNodes(visible,focusId),[focusId,visible]);
   const nodeById=useMemo(()=>new Map(nodes.map(node=>[node.id,node])),[nodes]);const idToNode=useMemo(()=>new Map(nodes.map(node=>[node.pickId,node.id])),[nodes]);const visibleIds=useMemo(()=>new Set(nodes.map(node=>node.id)),[nodes]);
   const sceneGraph=useMemo<AtlasGraph>(()=>({...(graph||{nodes:[],edges:[]}),nodes,edges:(graph?.edges||[]).filter(edge=>visibleIds.has(edge.source)&&visibleIds.has(edge.target))}),[graph,nodes,visibleIds]);
-  const handlePick=(id:string|null)=>{if(!id)return;const node=nodeById.get(id);if(!node)return;if(STRUCTURAL.has(String(node.type||'').toUpperCase())&&node.id===selectedId&&node.id!==focusId)onOpen(node);else onSelect(node)};
+  const handlePick=(id:string|null)=>{if(!id)return;const node=nodeById.get(id);if(!node)return;if(isNavigableNode(node,graph,focusId)||(STRUCTURAL.has(String(node.type||'').toUpperCase())&&node.id!==focusId))onOpen(node);else onSelect(node)};
   if(!graph)return <div className="atlas-canvas-loading">Lendo recorte orbital…</div>;
   return <div className="atlas-r3f-stage"><Canvas className="atlas-webgpu-canvas" dpr={[1,2]} camera={{position:[.35,.18,17.5],fov:48,near:.05,far:120}} gl={async defaults=>(await createAtlasRenderer(defaults.canvas as HTMLCanvasElement)).renderer as never}><color attach="background" args={['#020611']}/><SceneContent nodes={nodes} graph={sceneGraph} pickScene={pickScene} idToNode={idToNode} labelIds={lod.labelIds} onLabels={setLabels} onPick={handlePick} reducedMotion={reducedMotion} autoOrbit={autoOrbit} selectedId={selectedId}/></Canvas><LabelOverlay labels={labels} labelIds={lod.labelIds} selectedId={selectedId} focusId={focusId}/></div>;
 }
