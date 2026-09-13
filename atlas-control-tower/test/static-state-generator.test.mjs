@@ -3,12 +3,13 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import {generateStaticState,validateStaticState} from '../lib/static-state-generator.mjs';
+import {generateStaticState} from '../lib/campaign-static-state-generator.mjs';
+import {validateStaticState} from '../lib/static-state-generator.mjs';
 
 const temp=()=>fs.mkdtempSync(path.join(os.tmpdir(),'nexo-state-'));
 const read=(root,rel)=>JSON.parse(fs.readFileSync(path.join(root,rel),'utf8'));
 
-test('static state generator emits manifest indexes and bounded science shards',async()=>{
+test('static state generator emits campaign-only science artifacts',async()=>{
   const out=temp();
   const result=await generateStaticState({outDir:out,generatedAt:'2026-09-13T16:30:00.000Z'});
   assert.match(result.fingerprint,/^sha256:[a-f0-9]{64}$/);
@@ -22,13 +23,17 @@ test('static state generator emits manifest indexes and bounded science shards',
   assert.equal(manifest.source,'GOOGLE_DRIVE');
   assert.equal(manifest.codeAuthority,'GITHUB');
   assert.equal(manifest.projectionOnly,true);
-  assert.equal(d7.completeness.truncated,true);
-  assert.equal(entities.entities['T-ALENS-001'].artifact,'science/D7.json');
-  assert.equal(entities.entities['result:T-ALENS-001'].artifact,'science/D7.json');
+  assert.equal(d7.completeness.campaigns.truncated,false);
+  assert.ok(d7.campaigns.some(campaign=>campaign.id==='CAMP-CMB-ANOMALIES'));
+  assert.equal(Boolean(entities.entities['T-ALENS-001']),false);
+  assert.equal(entities.entities['CAMP-CMB-ANOMALIES'].artifact,'science/D7.json');
   assert.ok(root.nodes.some(node=>node.id==='system:OPERATIONS'));
   assert.ok(manifest.artifacts['graph/operations.json']);
   assert.equal(state.projection.authority,'GITHUB');
   assert.equal(state.projection.projectionAuthority,'GOOGLE_DRIVE');
+  assert.equal(state.counts.CAMPAIGN,17);
+  assert.equal(Object.hasOwn(state.counts,'TEST'),false);
+  assert.equal(Object.hasOwn(state.counts,'RESULT'),false);
   assert.ok(state.domains.science>0);
   assert.equal(validateStaticState(out).ok,true);
 });
