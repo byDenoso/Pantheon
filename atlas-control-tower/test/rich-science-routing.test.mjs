@@ -14,15 +14,15 @@ test('GitHub manifest explicitly authorizes the rich science_v1 projection',()=>
 
 test('graph state and entity routes use the rich science function before the generic canonical fallback',()=>{
  const vercel=JSON.parse(read('vercel.json'));
- assert.ok(vercel.builds.some(build=>build.src==='api/atlas.js'));
+ assert.ok(vercel.builds.some(build=>build.src==='api/science.js'));
  const rich=vercel.routes.find(route=>String(route.src).includes('state|graph|entity'));
- assert.equal(rich?.dest,'/api/atlas.js?route=$1');
+ assert.equal(rich?.dest,'/api/science.js?route=$1');
 });
 
 test('rich science handler is gated by GitHub authority and keeps a canonical fallback',()=>{
- const atlas=read('api/atlas.js');
- assert.match(atlas,/readGithubAuthority/);
- assert.match(atlas,/assertScienceProjectionAuthorized/);
- assert.match(atlas,/projectGithubCanonical/);
- assert.match(atlas,/SCIENCE_V1_UNAVAILABLE/);
+ const science=read('api/science.js');
+ assert.match(science,/readGithubAuthority/);
+ assert.match(science,/assertScienceProjectionAuthorized/);
+ assert.match(science,/projectGithubCanonical/);
+ assert.match(science,/SCIENCE_V1_UNAVAILABLE/);
 });
