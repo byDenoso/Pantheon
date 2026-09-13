@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import {projectGithubCanonical} from '../lib/github-canonical-projection.mjs';
 import {cockpitCopy} from '../ui/cockpit-copy.mjs';
+import {canonicalRuntimeRoute,adaptRuntimeRoute} from '../api/runtime-github.js';
 
 const state={
   authority:{contract:'NEXO_CANONICAL_GITHUB_V1',authority:'GITHUB',repository:'byDenoso/Pantheon',ref:'main',projection:{transportPath:'atlas-control-tower/data/nexo-drive-projection.json'}},
@@ -62,9 +63,16 @@ test('cockpit copy consumes normalized entity fields and describes absence preci
   assert.match(absent.what,/não publicado|ausente/i);
 });
 
-test('production route manifest exposes normalized research and provenance contracts',async()=>{
+test('production route manifest exposes normalized research, adapter aliases and provenance contracts',async()=>{
   const manifest=await readFile(new URL('../vercel.json',import.meta.url),'utf8');
-  for(const route of ['universe','summaries','observatory','lab','provenance','operations']) assert.match(manifest,new RegExp(route));
+  for(const route of ['universe','universe-snapshot','summaries','observatory','observatory-summary','observatory-parameters','observatory-tensions','observatory-directional-signals','lab','lab-claims','lab-tests','lab-runs','lab-results','lab-evidence','lab-pipelines','provenance','operations']) assert.match(manifest,new RegExp(route));
+});
+
+test('runtime compatibility aliases resolve to one canonical contract surface',()=>{
+  assert.equal(canonicalRuntimeRoute('universe-snapshot'),'universe');
+  assert.equal(canonicalRuntimeRoute('observatory-summary'),'observatory');
+  assert.equal(canonicalRuntimeRoute('lab-tests'),'lab');
+  assert.deepEqual(adaptRuntimeRoute('lab-tests',{tests:[{id:'T-1'}]}).data.items,[{id:'T-1'}]);
 });
 
 test('Inspector never manufactures the legacy technical authority enum',async()=>{
@@ -73,8 +81,12 @@ test('Inspector never manufactures the legacy technical authority enum',async()=
   assert.match(app,/authorityLabel/);
 });
 
-test('Universe UI does not map absence to scientific INCONCLUSIVE or scatter generic missing-copy',async()=>{
-  const page=await readFile(new URL('../src/pages/atlas-pages.tsx',import.meta.url),'utf8');
-  assert.doesNotMatch(page,/section\?\.status \|\| 'INCONCLUSIVE'/);
+test('active Universe UI preserves unavailable separately from scientific INCONCLUSIVE',async()=>{
+  const app=await readFile(new URL('../src/App.tsx',import.meta.url),'utf8');
+  const page=await readFile(new URL('../src/pages/universe-page.tsx',import.meta.url),'utf8');
+  assert.match(app,/import\('\.\/pages\/universe-page'\)/);
+  assert.doesNotMatch(page,/\|\|\s*'INCONCLUSIVE'/);
   assert.doesNotMatch(page,/Sem síntese publicada para esta pergunta no payload atual/);
+  assert.match(page,/NÃO PUBLICADO/);
+  assert.match(page,/availability/);
 });
