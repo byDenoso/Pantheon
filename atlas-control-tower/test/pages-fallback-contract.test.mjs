@@ -16,8 +16,10 @@ test('Pages repository root defaults to graphs instead of an undefined area', ()
   assert.match(route, /areaSegment\s*&&\s*AREAS\.includes\(areaSegment\)\s*\?\s*areaSegment\s*:\s*['"]graphs['"]/);
 });
 
-test('Pages fallback uses the canonical production API and repository base', () => {
-  assert.match(workflow, /VITE_NEXO_API_BASE_URL: https:\/\/nexo-atlas-control-tower\.vercel\.app\/api/);
+test('Pages fallback uses the sovereign static runtime and repository base', () => {
+  assert.doesNotMatch(workflow, /VITE_NEXO_API_BASE_URL/);
+  assert.doesNotMatch(workflow, /nexo-atlas-control-tower\.vercel\.app\/api/);
   assert.match(workflow, /npm run build -- --base=\/Pantheon\//);
   assert.match(workflow, /actions\/deploy-pages@v4/);
+  assert.match(workflow, /Readback Pages static runtime/);
 });

@@ -4,10 +4,8 @@ import fs from 'node:fs';
 
 const client = fs.readFileSync(new URL('../src/api/client.ts', import.meta.url), 'utf8');
 
-test('browser default API client routes through the Atlas serverless contract', () => {
+test('browser default API client uses the local static Atlas contract', () => {
   assert.match(client, /const baseUrl = configuredBaseUrl\(\)/);
-  assert.match(client, /baseUrl === '\/api'/);
-  assert.match(client, /window\.fetch\.bind\(window\)/);
-  assert.match(client, /profile:\s*['"]atlas['"]\s+as const/);
-  assert.match(client, /createApi\(apiOptions\)/);
+  assert.match(client, /createApi\(\{\s*baseUrl,\s*profile:\s*['"]atlas['"]\s+as const\s*\}\)/s);
+  assert.doesNotMatch(client, /window\.fetch\.bind\(window\)/);
 });

@@ -9,9 +9,9 @@ const index=fs.readFileSync(new URL('../index.html',import.meta.url),'utf8');
 const types=fs.readFileSync(new URL('../src/api/types.ts',import.meta.url),'utf8');
 const graphsPage=fs.readFileSync(new URL('../src/pages/graphs-page.tsx',import.meta.url),'utf8');
 const pagesWorkflow=fs.readFileSync(new URL('../../.github/workflows/atlas-pages-fallback.yml',import.meta.url),'utf8');
-const reply=body=>({ok:true,status:200,json:async()=>body});
+const reply=body=>({ok:true,status:200,headers:{get:()=> 'application/json'},json:async()=>body});
 
-test('absolute Atlas API base keeps the native Atlas graph and state routes',async()=>{
+test('explicit remote Atlas API base keeps native Atlas graph and state routes for compatibility',async()=>{
   const calls=[];
   const originalFetch=globalThis.fetch;
   globalThis.fetch=async url=>{
@@ -22,7 +22,7 @@ test('absolute Atlas API base keeps the native Atlas graph and state routes',asy
     return reply({});
   };
   try{
-    const api=createApi({baseUrl:'https://nexo-atlas-control-tower.vercel.app/api',profile:'atlas'});
+    const api=createApi({baseUrl:'https://example.invalid/api',profile:'atlas'});
     await api.graph({focus:'system:NEXO'});
     await api.state({});
     assert.match(calls[0],/\/api\/graph\?/);
@@ -30,18 +30,18 @@ test('absolute Atlas API base keeps the native Atlas graph and state routes',asy
   }finally{globalThis.fetch=originalFetch}
 });
 
-test('non JSON 200 responses fail with an Atlas route diagnostic',async()=>{
+test('non JSON remote responses fail with an Atlas route diagnostic',async()=>{
   const api=createApi({
-    baseUrl:'https://nexo-atlas-control-tower.vercel.app/api',
+    baseUrl:'https://example.invalid/api',
     profile:'atlas',
     fetchImpl:async()=>({ok:true,status:200,headers:{get:()=> 'text/html; charset=utf-8'},json:async()=>{throw new SyntaxError('The string did not match the expected pattern.')}})
   });
   await assert.rejects(()=>api.graph({focus:'system:NEXO'}),/ATLAS_API_NON_JSON.*graph/i);
 });
 
-test('malformed JSON without a content type still names the failing Atlas route',async()=>{
+test('malformed remote JSON still names the failing Atlas route',async()=>{
   const api=createApi({
-    baseUrl:'https://nexo-atlas-control-tower.vercel.app/api',
+    baseUrl:'https://example.invalid/api',
     profile:'atlas',
     fetchImpl:async()=>({ok:true,status:200,headers:{get:()=> ''},json:async()=>{throw new SyntaxError('Unexpected token <')}})
   });
@@ -52,16 +52,22 @@ test('browser product declares the Atlas API profile explicitly',()=>{
   assert.match(client,/profile\s*:\s*['"]atlas['"]/);
 });
 
+test('default browser client does not force same-origin HTTP fetch for local static runtime',()=>{
+  assert.doesNotMatch(client,/baseUrl\s*===\s*['"]\/api['"][\s\S]{0,120}window\.fetch/);
+});
+
 test('empty initial graph errors never claim that a previous graph was preserved',()=>{
   assert.match(graphsPage,/state\.error\s*&&\s*graph\s*&&/);
 });
 
-test('Pages readback exercises the graph route, not health alone',()=>{
-  assert.match(pagesWorkflow,/\/api\/graph\?focus=/);
-  assert.match(pagesWorkflow,/GRAPH=/);
+test('Pages build and readback have no required remote API base',()=>{
+  assert.doesNotMatch(pagesWorkflow,/VITE_NEXO_API_BASE_URL/);
+  assert.doesNotMatch(pagesWorkflow,/nexo-atlas-control-tower\.vercel\.app/);
+  assert.doesNotMatch(pagesWorkflow,/\/api\/health/);
+  assert.doesNotMatch(pagesWorkflow,/\/api\/graph\?focus=/);
 });
 
-test('Pages deploy boots the built app with deterministic Playwright assertions before publishing',()=>{
+test('Pages deploy boots with deterministic Playwright assertions and blocks retired runtime requests',()=>{
   assert.match(pagesWorkflow,/name:\s*Install isolated Pages browser tools/);
   assert.match(pagesWorkflow,/playwright@/);
   assert.match(pagesWorkflow,/name:\s*Browser bootstrap smoke/);
@@ -69,6 +75,9 @@ test('Pages deploy boots the built app with deterministic Playwright assertions 
   assert.match(pagesWorkflow,/waitForSelector\(['"]\.atlas-app/);
   assert.match(pagesWorkflow,/waitForSelector\(['"]\.atlas-context-bar/);
   assert.match(pagesWorkflow,/atlas-bootstrap-error/);
+  assert.match(pagesWorkflow,/RETIRED_RUNTIME_REQUEST/);
+  assert.match(pagesWorkflow,/route\.abort\(\)/);
+  assert.match(pagesWorkflow,/supabase\|firebase/);
   assert.doesNotMatch(pagesWorkflow,/--dump-dom/);
 });
 

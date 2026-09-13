@@ -1,0 +1,18 @@
+{
+  "architecture": "NEXO_SOVEREIGN_V1",
+  "architectureVersion": "1.0",
+  "authority": {
+    "mutableData": "GOOGLE_DRIVE",
+    "codeContracts": "GITHUB_MAIN",
+    "projection": "GITHUB_GENERATED_STATE"
+  },
+  "runtime": {
+    "frontend": "GITHUB_PAGES",
+    "readApi": "STATIC_LOCAL",
+    "compute": "GITHUB_ACTIONS"
+  },
+  "projection": {
+    "freshnessModel": "SNAPSHOT",
+    "projectionOnly": true
+  }
+}
