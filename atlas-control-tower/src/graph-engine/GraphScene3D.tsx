@@ -17,7 +17,7 @@ export function GraphScene3D({projection,learningEdges=[],learning,selectedId=nu
   const [autoOrbit,setAutoOrbit]=useState(true);const [reducedMotion,setReducedMotion]=useState(false);
   useEffect(()=>{const media=window.matchMedia('(prefers-reduced-motion: reduce)');const sync=()=>setReducedMotion(media.matches);sync();media.addEventListener?.('change',sync);return()=>media.removeEventListener?.('change',sync)},[]);
   const graph=useMemo<AtlasGraph>(()=>({
-    nodes:projection.nodes.map(node=>({...node,priority:node.id===projection.focusId?99:String(node.type||'').toUpperCase()==='SYSTEM'?92:node.type==='DOMAIN'?86:node.type==='SUBGRAPH'?76:undefined})),
+    nodes:projection.nodes.map(node=>({...node,domain:node.domain??undefined,parentId:node.parentId??undefined,summary:node.summary??undefined,status:node.status??undefined,priority:node.id===projection.focusId?99:String(node.type||'').toUpperCase()==='SYSTEM'?92:node.type==='DOMAIN'?86:node.type==='SUBGRAPH'?76:undefined})),
     edges:[...projection.edges,...(learning?learningEdges.map(edge=>({...edge,type:`LEARNING_${edge.type}`})):[])]
   }),[learning,learningEdges,projection]);
   const focus=useMemo(()=>projection.nodes.find(node=>node.id===projection.focusId)||projection.nodes[0]||null,[projection.focusId,projection.nodes]);

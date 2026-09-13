@@ -1,0 +1,44 @@
+:root{
+ --surface-canvas:#edf2f7;--surface-primary:#ffffff;--surface-elevated:#f8fafc;--surface-overlay:rgba(255,255,255,.92);
+ --text-primary:#122033;--text-secondary:#40546b;--text-tertiary:#687b8f;--border-default:#d7e0e8;--border-emphasis:#a8b8c8;
+ --accent-primary:#1668d8;--status-ready:#18794e;--status-partial:#9a6700;--status-stale:#6e7781;--status-error:#cf222e;
+ --graph-background:#eaf0f6;--graph-grid:#bdd0e0;--graph-edge:#5f86ad;--graph-label:#10243b;--graph-focus:#006edb;
+ --graph-node:#397fbd;--graph-node-domain:#1769aa;--graph-node-test:#a35d00;--graph-node-claim:#7656b3;--graph-node-evidence:#16825d;
+}
+html[data-theme="dark"]{
+ --surface-canvas:#071018;--surface-primary:#0d1720;--surface-elevated:#12202b;--surface-overlay:rgba(9,18,26,.94);
+ --text-primary:#edf7ff;--text-secondary:#b3c6d7;--text-tertiary:#8298aa;--border-default:#263b4a;--border-emphasis:#3f5d72;
+ --accent-primary:#58b6ff;--status-ready:#54d69b;--status-partial:#e8b95e;--status-stale:#9aa9b7;--status-error:#ff858d;
+ --graph-background:#041019;--graph-grid:#173346;--graph-edge:#3b789f;--graph-label:#eefaff;--graph-focus:#55dfff;
+ --graph-node:#6aa8ff;--graph-node-domain:#4fb8ff;--graph-node-test:#ffc65d;--graph-node-claim:#d782ff;--graph-node-evidence:#55e7a4;
+}
+html[data-theme="deep-space"]{
+ --surface-canvas:#000205;--surface-primary:#03070c;--surface-elevated:#071018;--surface-overlay:rgba(0,3,7,.96);
+ --text-primary:#f4fbff;--text-secondary:#a9c0d0;--text-tertiary:#718999;--border-default:#142633;--border-emphasis:#29475b;
+ --accent-primary:#64d8ff;--status-ready:#58efb0;--status-partial:#ffd166;--status-stale:#91a4b3;--status-error:#ff7b86;
+ --graph-background:#000205;--graph-grid:#0c2637;--graph-edge:#286a93;--graph-label:#f5fcff;--graph-focus:#6be6ff;
+ --graph-node:#5faeff;--graph-node-domain:#44c7ff;--graph-node-test:#ffd166;--graph-node-claim:#dc8cff;--graph-node-evidence:#58efb0;
+}
+html[data-theme="high-contrast"]{
+ --surface-canvas:#000;--surface-primary:#050505;--surface-elevated:#111;--surface-overlay:#000;
+ --text-primary:#fff;--text-secondary:#fff;--text-tertiary:#e7e7e7;--border-default:#fff;--border-emphasis:#fff;
+ --accent-primary:#00e5ff;--status-ready:#54ff88;--status-partial:#ffe600;--status-stale:#fff;--status-error:#ff5964;
+ --graph-background:#000;--graph-grid:#4d4d4d;--graph-edge:#b9eaff;--graph-label:#fff;--graph-focus:#00e5ff;
+ --graph-node:#56b8ff;--graph-node-domain:#00e5ff;--graph-node-test:#ffe600;--graph-node-claim:#f48cff;--graph-node-evidence:#54ff88;
+}
+html[data-theme]{
+ --bg:var(--surface-canvas);--panel:var(--surface-primary);--panel-soft:var(--surface-elevated);--line:var(--border-default);
+ --text:var(--text-primary);--muted:var(--text-secondary);--subtle:var(--text-tertiary);--accent:var(--accent-primary);
+ --dark:var(--surface-canvas);--dark-2:var(--surface-primary);--ok:var(--status-ready);--warn:var(--status-partial);--bad:var(--status-error);
+ color-scheme:dark;
+}
+html[data-theme="light"]{color-scheme:light}
+html[data-theme] body{background:var(--surface-canvas);color:var(--text-primary);transition:background .18s ease,color .18s ease}
+.theme-switcher{display:inline-flex;align-items:center}
+.theme-switcher select{height:34px;max-width:132px;border:1px solid var(--border-default);border-radius:9px;background:var(--surface-elevated);color:var(--text-primary);padding:0 28px 0 10px;font:600 11px/1 "Recursive Variable",system-ui;letter-spacing:.02em;cursor:pointer}
+.theme-switcher select:focus-visible{outline:2px solid var(--accent-primary);outline-offset:2px}
+.graph-renderer-canvas,.graph-renderer-rollback{position:relative;height:100%;min-height:0;background:var(--graph-background)}
+.graph-renderer-switch{position:absolute;z-index:14;right:12px;top:12px;border:1px solid var(--border-default);border-radius:8px;background:var(--surface-overlay);color:var(--text-secondary);padding:7px 9px;font-size:10px;letter-spacing:.06em;text-transform:uppercase}
+.graph-renderer-error{position:absolute;z-index:15;left:50%;top:14px;transform:translateX(-50%);border:1px solid var(--status-partial);background:var(--surface-overlay);color:var(--text-primary);padding:8px 12px;border-radius:9px;font-size:11px}
+@media(prefers-contrast:more){:root:not([data-theme="light"]){--border-default:#fff;--border-emphasis:#fff}}
+@media(prefers-reduced-motion:reduce){html[data-theme] body{transition:none}}
