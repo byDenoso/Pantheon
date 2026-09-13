@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 
 const app=fs.readFileSync(new URL('../src/App.tsx',import.meta.url),'utf8');
+const command=fs.readFileSync(new URL('../src/components/CommandEntry.tsx',import.meta.url),'utf8');
 const graph=fs.readFileSync(new URL('../src/pages/graphs-page.tsx',import.meta.url),'utf8');
 const inspector=fs.readFileSync(new URL('../src/graph-engine/SpatialInspector.tsx',import.meta.url),'utf8');
 const tokens=fs.readFileSync(new URL('../src/design/tokens.css',import.meta.url),'utf8');
@@ -12,7 +13,7 @@ const mobile=fs.readFileSync(new URL('../src/design/mobile.css',import.meta.url)
 test('premium shell exposes compact command entry and graph context bar',()=>{
   assert.match(app,/premium-shell/);
   assert.match(app,/CommandEntry/);
-  assert.match(app,/atlas-command-trigger/);
+  assert.match(command,/atlas-command-trigger/);
   assert.match(graph,/AtlasContextBar/);
   assert.match(graph,/atlas-context-bar/);
 });
