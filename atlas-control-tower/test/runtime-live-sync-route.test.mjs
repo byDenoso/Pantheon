@@ -22,5 +22,5 @@ test('GitHub is the canonical authority for sync',()=>{
  assert.match(source,/authority:'GITHUB'/);
  assert.doesNotMatch(source,/authority:'GOOGLE_DRIVE'/);
  assert.match(canonical,/NEXO_CANONICAL_GITHUB_V1/);
- assert.match(canonical,/raw\.githubusercontent\.com/);
+ assert.match(canonical,/api\.github\.com/);
 });
