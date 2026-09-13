@@ -1,11 +1,13 @@
 import {useEffect,useState} from 'react';
 
-type Theme='system'|'light'|'dark'|'deep-space'|'high-contrast';
-type ResolvedTheme='light'|'dark'|'deep-space'|'high-contrast';
+type Theme='system'|'light'|'dark'|'classic'|'deep-space'|'high-contrast';
+type ResolvedTheme='light'|'dark'|'classic'|'deep-space'|'high-contrast';
 const STORAGE_KEY='nexo-atlas-theme';
-const THEMES:Theme[]=['system','light','dark','deep-space','high-contrast'];
-const labels:Record<Theme,string>={system:'Sistema',light:'Claro',dark:'Escuro','deep-space':'Deep Space','high-contrast':'Alto contraste'};
-const savedTheme=():Theme=>{try{const saved=localStorage.getItem(STORAGE_KEY) as Theme|null;return saved&&THEMES.includes(saved)?saved:'system'}catch{return'system'}};
+const THEMES:Theme[]=['classic','light','dark','system','deep-space','high-contrast'];
+const labels:Record<Theme,string>={system:'Sistema',light:'Claro',dark:'Escuro',classic:'Clássico','deep-space':'Deep Space','high-contrast':'Alto contraste'};
+// "Clássico" is the requested default -- a real, first-class preset, not the fallback
+// only reached when nothing else was ever chosen.
+const savedTheme=():Theme=>{try{const saved=localStorage.getItem(STORAGE_KEY) as Theme|null;return saved&&THEMES.includes(saved)?saved:'classic'}catch{return'classic'}};
 const resolveTheme=(theme:Theme,dark:boolean):ResolvedTheme=>theme==='system'?(dark?'dark':'light'):theme;
 
 export function ThemeToggle(){
@@ -19,8 +21,8 @@ export function ThemeToggle(){
   useEffect(()=>{
     document.documentElement.dataset.theme=resolved;
     document.documentElement.dataset.themeMode=theme;
-    document.documentElement.style.colorScheme=resolved==='light'?'light':'dark';
-    document.querySelector('meta[name="theme-color"]')?.setAttribute('content',resolved==='light'?'#edf2f7':resolved==='deep-space'?'#000205':'#071018');
+    document.documentElement.style.colorScheme=resolved==='light'||resolved==='classic'?'light':'dark';
+    document.querySelector('meta[name="theme-color"]')?.setAttribute('content',resolved==='light'?'#edf2f7':resolved==='classic'?'#f2f1ed':resolved==='deep-space'?'#000205':'#071018');
     try{localStorage.setItem(STORAGE_KEY,theme)}catch{}
     window.dispatchEvent(new CustomEvent('atlas:theme-change',{detail:{theme,resolved}}));
   },[resolved,theme]);

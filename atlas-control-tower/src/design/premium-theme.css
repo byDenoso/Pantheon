@@ -26,6 +26,15 @@ html[data-theme="high-contrast"]{
  --graph-background:#000;--graph-grid:#4d4d4d;--graph-edge:#b9eaff;--graph-label:#fff;--graph-focus:#00e5ff;
  --graph-node:#56b8ff;--graph-node-domain:#00e5ff;--graph-node-test:#ffe600;--graph-node-claim:#f48cff;--graph-node-evidence:#54ff88;
 }
+/* "Clássico": warm neutral preset, the requested default -- between a SaaS product
+   and a scientific instrument, not another cold blue/gray theme. */
+html[data-theme="classic"]{
+ --surface-canvas:#f2f1ed;--surface-primary:#fafaf8;--surface-elevated:#ececea;--surface-overlay:rgba(250,250,248,.94);
+ --text-primary:#171717;--text-secondary:#656560;--text-tertiary:#8a897f;--border-default:#d9d8d3;--border-emphasis:#b9b8b0;
+ --accent-primary:#8a5a2b;--status-ready:#3f7a4f;--status-partial:#a6741f;--status-stale:#847f73;--status-error:#a2402f;
+ --graph-background:#f4f3ef;--graph-grid:#ddd9cf;--graph-edge:#a99b7d;--graph-label:#171717;--graph-focus:#8a5a2b;
+ --graph-node:#5c7a8a;--graph-node-domain:#3b6ea5;--graph-node-test:#c07a29;--graph-node-claim:#7a5c8a;--graph-node-evidence:#3f7a4f;
+}
 html[data-theme]{
  --surface-base:var(--surface-canvas);--surface-depth:var(--graph-background);--surface-hover:color-mix(in srgb,var(--surface-elevated) 78%,var(--accent-primary) 5%);
  --bg:var(--surface-canvas);--panel:var(--surface-primary);--panel-soft:var(--surface-elevated);--line:var(--border-default);
@@ -39,7 +48,10 @@ html[data-theme]{
  --atlas-space-1:var(--space-1);--atlas-space-2:var(--space-2);--atlas-space-3:var(--space-3);--atlas-space-4:var(--space-4);--atlas-space-5:var(--space-5);--atlas-space-6:var(--space-6);--atlas-space-7:var(--space-7);--atlas-radius-sm:var(--radius-sm);--atlas-radius-md:var(--radius-md);--atlas-radius-lg:var(--radius-lg);--atlas-shadow-panel:var(--shadow-elevated);--atlas-glow-cyan:var(--shadow-focus);--atlas-motion-fast:var(--motion-fast);--atlas-motion-card:var(--motion-fast);--atlas-motion-panel:var(--motion-panel);--atlas-ease:var(--ease-standard);--atlas-topbar-height:62px;--atlas-sidebar-width:190px;
  color-scheme:dark;
 }
-html[data-theme="light"]{color-scheme:light}
+html[data-theme="light"],html[data-theme="classic"]{color-scheme:light}
+/* Domain colors stay constant across every theme per the locked spec -- only
+   saturation/luminosity/glow (handled above, per-theme) are allowed to shift. */
+:root{--domain-science:#3B82F6;--domain-olympus:#D97745;--domain-engineering:#10A678}
 html[data-theme] body{background:var(--surface-canvas);color:var(--text-primary);transition:background var(--motion-fast) ease,color var(--motion-fast) ease}
 
 .premium-shell{min-height:100dvh;background:var(--surface-canvas);color:var(--text-primary)}
