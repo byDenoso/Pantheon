@@ -23,6 +23,10 @@ async function expectRoute(page, route) {
 
   await page.goto(baseUrl + '/graphs', { waitUntil: 'networkidle' });
   await page.waitForSelector('.atlas-topbar');
+  assert.equal(await page.locator('.premium-shell').isVisible(), true, 'premium-shell is not visible');
+  assert.equal(await page.locator('.atlas-context-bar').isVisible(), true, 'atlas-context-bar is not visible');
+  assert.equal(await page.locator('.atlas-command-trigger').isVisible(), true, 'atlas-command-trigger is not visible');
+  assert.equal(await page.locator('.spatial-navigation-hud').isVisible(), true, 'spatial-navigation-hud is not visible');
   assert.equal(await page.locator('[aria-label="Navegação principal"] a').count(), 4);
   assert.equal(await page.locator('.graphs-page').isVisible(), true);
   await page.screenshot({ path: path.join(screenshotDir, 'preview-desktop.png'), fullPage: true });
@@ -58,6 +62,14 @@ async function expectRoute(page, route) {
   assert.ok(universeText.includes('Sem síntese publicada') || universeText.includes('Parâmetros publicados'));
 
   await page.setViewportSize({ width: 390, height: 844 });
+  await page.getByRole('link', { name: 'GRAFOS' }).click();
+  await page.waitForSelector('.graphs-page');
+  assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false, 'mobile graph horizontal overflow');
+  assert.equal(await page.locator('.atlas-context-bar').isVisible(), true, 'mobile context bar is not visible');
+  assert.equal(await page.locator('.spatial-navigation-hud').isVisible(), true, 'mobile graph HUD is not visible');
+  assert.equal(await page.locator('.atlas-command-trigger').isVisible(), true, 'mobile command entry is not visible');
+  await page.screenshot({ path: path.join(screenshotDir, 'preview-graph-mobile.png'), fullPage: true });
+
   await page.getByRole('link', { name: 'OBSERVATÓRIO' }).click();
   await expectRoute(page, '/observatory');
   await page.screenshot({ path: path.join(screenshotDir, 'preview-mobile.png'), fullPage: true });
@@ -71,7 +83,7 @@ async function expectRoute(page, route) {
   assert.equal(await page.locator('#global-search').evaluate(element => element === document.activeElement), true, 'command palette shortcut did not focus search');
   assert.deepEqual(errors, []);
   await browser.close();
-  console.log('PASS NEXO Atlas vNext browser acceptance: routes, contextual domain, panels, read-only lab, responsive layout, keyboard search, no page errors');
+  console.log('PASS NEXO Atlas premium browser acceptance: shell, graph context/HUD, routes, mobile graph, responsive layout, keyboard search, no page errors');
 })().catch(error => {
   console.error(error);
   process.exit(1);
