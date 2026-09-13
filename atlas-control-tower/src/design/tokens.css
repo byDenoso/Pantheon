@@ -3,8 +3,8 @@
   font-variation-settings:"CASL" .08,"CRSV" .5;
   font-synthesis:none;
 
-  --surface-base:#edf2f7;
-  --surface-depth:#e4ebf2;
+  --surface-base:#f4f2ec;
+  --surface-depth:#101410;
   --surface-canvas:var(--surface-base);
   --surface-primary:#ffffff;
   --surface-elevated:#f8fafc;
@@ -75,7 +75,7 @@
   --z-toast:100;
 
   /* Compatibility aliases while legacy consumers migrate to semantic tokens. */
-  --bg:var(--surface-base);
+  --bg:#f4f2ec;
   --panel:var(--surface-primary);
   --panel-soft:var(--surface-elevated);
   --line:var(--border-default);
@@ -83,7 +83,7 @@
   --muted:var(--text-secondary);
   --subtle:var(--text-tertiary);
   --accent:var(--accent-primary);
-  --dark:var(--surface-depth);
+  --dark:#101410;
   --dark-2:var(--surface-primary);
   --ok:var(--semantic-success);
   --warn:var(--semantic-warning);
