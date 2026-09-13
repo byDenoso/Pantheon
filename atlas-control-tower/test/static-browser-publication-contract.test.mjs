@@ -4,6 +4,7 @@ import fs from 'node:fs';
 
 const client=fs.readFileSync(new URL('../src/api/client.ts',import.meta.url),'utf8');
 const pages=fs.readFileSync(new URL('../../.github/workflows/atlas-pages-fallback.yml',import.meta.url),'utf8');
+const pkg=JSON.parse(fs.readFileSync(new URL('../package.json',import.meta.url),'utf8'));
 
 test('default browser client reads published static artifacts while explicit remote base stays compatibility-only',()=>{
   assert.match(client,/createStaticArtifactApi/);
@@ -19,4 +20,11 @@ test('Pages stages static state before Vite build and readback proves manifest p
   assert.match(pages,/science\/D7\.json/);
   assert.match(pages,/T-ALENS-001/);
   assert.match(pages,/sha256:/);
+});
+
+test('local dev and start stage sovereign static state before Vite serves the app',()=>{
+  assert.match(pkg.scripts?.predev||'',/state:build/);
+  assert.match(pkg.scripts?.prestart||'',/state:build/);
+  assert.equal(pkg.scripts?.dev,'vite --host 0.0.0.0');
+  assert.equal(pkg.scripts?.start,'vite --host 0.0.0.0');
 });
