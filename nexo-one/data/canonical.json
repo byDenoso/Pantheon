@@ -10,10 +10,16 @@
     "fingerprint": "sha256:535dab97986ea590d9d520eba4d7057a3f2c200e957ac60c5041c44c47edba12",
     "role": "PROJECTION_ONLY"
   },
+  "scienceProjection": {
+    "kind": "NEON_DATA_API",
+    "schema": "science_v1",
+    "transport": "VERCEL_OIDC",
+    "role": "PROJECTION_ONLY"
+  },
   "rules": {
     "projectionCannotOverrideCanonical": true,
     "failedRefreshPreservesLastValid": true,
     "syncRequiresCanonicalValidation": true
   },
-  "notes": "GitHub is the canonical control plane. External stores may supply private or operational projections only when their declared revision is accepted by this versioned manifest."
+  "notes": "GitHub is the canonical control plane. External stores may supply private or operational projections only when explicitly authorized by this versioned manifest."
 }
