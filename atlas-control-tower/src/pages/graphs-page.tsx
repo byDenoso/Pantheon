@@ -1,5 +1,6 @@
 import {useEffect,useMemo,useState} from 'react';
 import {GraphRenderer} from '../graph-engine/GraphRenderer';
+import {SpatialInspector} from '../graph-engine/SpatialInspector';
 import {buildLiveProjection} from '../graph-engine/live-projection';
 import type {GraphNode} from '../graph-engine/types';
 import type {AtlasNode} from '../scene/types';
@@ -30,18 +31,32 @@ export function GraphsPage({state,actions,reducedMotion,compact}:{state:AtlasUiS
   const selected=graph?.nodes.find(node=>node.id===state.selectedId)||null;
   const canBack=state.navigationIndex>0;
   const canForward=state.navigationIndex<state.navigationStack.length-1;
+  const navigationKind=String(state.navigationStack[state.navigationIndex]?.navigationKind||'drill-down');
 
   const projectedNode=(id:string)=>projection?.nodes.find(node=>node.id===id)||baseProjection?.nodes.find(node=>node.id===id)||null;
   const rawNode=(id:string)=>graph?.nodes.find(node=>node.id===id)||null;
   const select=(id:string|null)=>{if(!id){actions.clearSelection();return}const raw=rawNode(id);if(raw)actions.select(raw)};
   const open=(id:string)=>{
     const projected=projectedNode(id);const raw=rawNode(id);
-    if(raw){actions.open({...raw,navigationKind:projected?.navigationKind} as AtlasNode);return}
+    if(raw){void actions.open({...raw,navigationKind:projected?.navigationKind} as AtlasNode);return}
     if(projected?.syntheticContext)void actions.focusSystem(projected.id,projected.label);
   };
   const breadcrumb=(node:GraphNode)=>void actions.focusSystem(node.id,node.label);
   const selectedPinned=Boolean(state.selectedId&&state.pins.includes(state.selectedId));
   const selectedCompared=Boolean(state.selectedId&&state.compare.includes(state.selectedId));
+
+  useEffect(()=>{
+    const keyboard=(event:KeyboardEvent)=>{
+      const tag=(event.target as HTMLElement|null)?.tagName;if(tag==='INPUT'||tag==='TEXTAREA'||tag==='SELECT')return;
+      if(event.altKey&&event.key==='ArrowLeft'&&canBack){event.preventDefault();void actions.back();return}
+      if(event.altKey&&event.key==='ArrowRight'&&canForward){event.preventDefault();void actions.forward();return}
+      if(event.key==='Backspace'&&canBack){event.preventDefault();void actions.back();return}
+      if(event.key==='Escape'){actions.clearSelection();return}
+      if(event.key==='Enter'&&state.selectedId){event.preventDefault();open(state.selectedId);return}
+      if(event.key.toLowerCase()==='f'&&!event.metaKey&&!event.ctrlKey){event.preventDefault();setImmersive(value=>!value)}
+    };
+    window.addEventListener('keydown',keyboard);return()=>window.removeEventListener('keydown',keyboard);
+  },[actions,canBack,canForward,state.selectedId,projection,baseProjection]);
 
   return <div className={`page-wrap graphs-page spatial-knowledge-page ${immersive?'is-immersive':''}`}>
     <section className="graph-workspace spatial-workspace" id="map-workspace">
@@ -56,12 +71,13 @@ export function GraphsPage({state,actions,reducedMotion,compact}:{state:AtlasUiS
 
       <div className="graph-stage spatial-stage">
         {projection?<GraphRenderer projection={projection} learning={false} selectedId={state.selectedId} onSelect={select} onOpenNode={open}/>:<div className="graph-empty-state"><span aria-hidden="true">∅</span><p>{state.loading?'Lendo mapa de conhecimento…':'Grafo indisponível neste momento.'}</p><small>{state.error||'Nenhum recorte válido foi publicado.'}</small></div>}
+        <SpatialInspector state={state} actions={actions} projection={projection} onOpen={open}/>
         <div className="spatial-navigation-hud" aria-label="Controles de navegação">
-          <button onClick={()=>void actions.back()} disabled={!canBack} title="Voltar" aria-label="Voltar">←</button>
-          <button onClick={()=>void actions.forward()} disabled={!canForward} title="Avançar" aria-label="Avançar">→</button>
+          <button onClick={()=>void actions.back()} disabled={!canBack} title="Voltar · Alt+←" aria-label="Voltar">←</button>
+          <button onClick={()=>void actions.forward()} disabled={!canForward} title="Avançar · Alt+→" aria-label="Avançar">→</button>
           <button onClick={()=>void actions.home()} title="Início" aria-label="Início">⌂</button>
           <label>LOD <select value={depth} aria-label="Profundidade semântica" onChange={event=>{const next=Number(event.target.value);setDepth(next);actions.setDepth(next)}}><option value={1}>Macro</option><option value={2}>Meso</option><option value={3}>Micro</option><option value={4}>Detail</option></select></label>
-          <button onClick={()=>setImmersive(value=>!value)} aria-pressed={immersive} title="Modo imersivo" aria-label="Modo imersivo">{immersive?'□':'⛶'}</button>
+          <button onClick={()=>setImmersive(value=>!value)} aria-pressed={immersive} title="Modo imersivo · F" aria-label="Modo imersivo">{immersive?'□':'⛶'}</button>
         </div>
         {state.error&&<div className="atlas-react-error spatial-stale-state" role="status">STALE · último recorte válido preservado · {state.error}</div>}
       </div>
@@ -70,6 +86,7 @@ export function GraphsPage({state,actions,reducedMotion,compact}:{state:AtlasUiS
         <span><b>{projection?.nodes.length||0}</b> / {total||projection?.nodes.length||0} nós</span>
         <span><b>{projection?.edges.length||0}</b> relações visíveis</span>
         <span><b>{state.path.at(-1)?.label||state.focusId}</b> foco</span>
+        <span className={navigationKind==='cross-domain'?'jump':'drill'}><b>{navigationKind==='cross-domain'?'CROSS-DOMAIN JUMP':'DRILL DOWN'}</b></span>
         <span><b>{state.pins.length}</b> pins</span>
         <span><b>{state.compare.length}/2</b> compare</span>
         {state.selectedId?<div className="spatial-selection-actions"><span>{selected?.label||state.selectedId}</span><button onClick={()=>selectedPinned?actions.unpin(state.selectedId!):actions.pin(state.selectedId!)}>{selectedPinned?'Unpin':'Pin'}</button><button className={selectedCompared?'active':''} onClick={()=>actions.toggleCompare(state.selectedId!)}>Compare</button><button onClick={actions.clearSelection}>×</button></div>:<span className="spatial-selection-empty">Selecione um nó para investigar.</span>}
