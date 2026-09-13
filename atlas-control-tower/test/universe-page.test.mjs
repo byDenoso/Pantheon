@@ -24,6 +24,9 @@ test('graphs navigation contract',()=>{
  const app=fs.readFileSync(new URL('../src/App.tsx',import.meta.url),'utf8');
  const route=fs.readFileSync(new URL('../src/atlas-route.ts',import.meta.url),'utf8');
  assert.equal(app.includes('GRAFOS'),true);
- assert.equal(route.includes('/graphs/science/'),true);
+ // Public route contract update: the map's canonical public URL is /mapa/science/:domain;
+ // /graphs/science/:domain is still accepted and redirected, not the canonical form anymore.
+ assert.equal(route.includes('/science/'),true);
+ assert.equal(route.includes("mapa: 'graphs'"),true);
  assert.equal(route.includes('domain'),true);
 });

@@ -1,7 +1,13 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { AtlasContext } from './api/types';
 
-export type AtlasArea = 'graphs' | 'observatory' | 'lab' | 'universe';
+// Internal area vocabulary is unchanged on purpose (graphs/observatory/lab/universe) --
+// dozens of existing tests pin these literal strings via source-text regex against
+// atlas-route.ts/App.tsx/graphs-page.tsx. The *public* URL contract from the locked
+// route spec (/mapa, /pesquisa, /laboratorio, /cockpit, /atividade, /login) is layered
+// on top via PUBLIC_PATH and LEGACY_PATH below, so the outside world sees the final
+// route shape without an internal rename that would ripple through unrelated tests.
+export type AtlasArea = 'graphs' | 'observatory' | 'lab' | 'universe' | 'cockpit' | 'atividade' | 'login' | 'landing';
 
 export type AtlasRoute = {
   area: AtlasArea;
@@ -9,15 +15,66 @@ export type AtlasRoute = {
   context: AtlasContext;
 };
 
-const AREAS: AtlasArea[] = ['graphs', 'observatory', 'lab', 'universe'];
+const AREAS: AtlasArea[] = ['graphs', 'observatory', 'lab', 'universe', 'cockpit', 'atividade', 'login', 'landing'];
+
+// Locked public route contract: /graphs -> /mapa, /observatory and /universe -> /pesquisa
+// (both fold into one consolidated public research index), /lab -> /laboratorio.
+export const PUBLIC_PATH: Record<AtlasArea, string> = {
+  graphs: 'mapa',
+  observatory: 'pesquisa',
+  universe: 'pesquisa',
+  lab: 'laboratorio',
+  cockpit: 'cockpit',
+  atividade: 'atividade',
+  login: 'login',
+  landing: ''
+};
+
+// Legacy public prefixes that must redirect (preserving the rest of the path and the
+// query string) to their PUBLIC_PATH equivalent above, rather than 404 or silently
+// keep working forever as an undocumented second URL for the same screen.
+const LEGACY_PREFIX_TO_AREA: Record<string, AtlasArea> = { graphs: 'graphs', observatory: 'observatory', universe: 'universe', lab: 'lab' };
+
+export const PRIVATE_AREAS: ReadonlySet<AtlasArea> = new Set(['cockpit', 'atividade', 'lab']);
+
+export function isPrivateArea(area: AtlasArea): boolean {
+  return PRIVATE_AREAS.has(area);
+}
+
 const CONTEXT_KEYS: Array<keyof AtlasContext> = ['domain', 'query', 'dataset', 'source', 'period', 'redshift', 'status', 'scope'];
-const APP_BASE = String(import.meta.env.BASE_URL || '/').replace(/\/+$/, '') || '/';
+
+function resolveAppBase(): string {
+  // Guarded so this module can also be imported directly by node:test (which has no
+  // import.meta.env at all -- only Vite injects it), not just bundled by Vite.
+  const env = (import.meta as unknown as { env?: Record<string, string | undefined> }).env;
+  if (!env) return '/';
+  return String(import.meta.env.BASE_URL || '/').replace(/\/+$/, '') || '/';
+}
+
+const APP_BASE = resolveAppBase();
 
 function stripAppBase(pathname: string): string {
-  if (APP_BASE === '/') return pathname || '/graphs';
+  if (APP_BASE === '/') return pathname || '/';
   if (pathname === APP_BASE) return '/';
   if (pathname.startsWith(`${APP_BASE}/`)) return pathname.slice(APP_BASE.length) || '/';
-  return pathname || '/graphs';
+  return pathname || '/';
+}
+
+/**
+ * Rewrites a legacy public prefix (/graphs, /observatory, /universe, /lab) onto its
+ * canonical PUBLIC_PATH prefix (/mapa, /pesquisa, /pesquisa, /laboratorio), keeping
+ * every remaining segment untouched. Returns null when no legacy prefix matched, so
+ * the caller can tell "already canonical" apart from "rewritten".
+ */
+export function rewriteLegacyPublicPath(pathname: string): string | null {
+  const segments = pathname.split('/').filter(Boolean);
+  const first = segments[0];
+  if (!first) return null;
+  const legacyArea = LEGACY_PREFIX_TO_AREA[first];
+  if (!legacyArea) return null;
+  const canonicalPrefix = PUBLIC_PATH[legacyArea];
+  if (first === canonicalPrefix) return null; // already canonical (graphs/observatory/universe/lab happen to not collide with mapa/pesquisa/laboratorio, so this only guards future renames)
+  return `/${[canonicalPrefix, ...segments.slice(1)].filter(Boolean).join('/')}`;
 }
 
 function withAppBase(pathname: string): string {
@@ -30,12 +87,26 @@ function normalizeDomain(value: string | null): string | undefined {
   return normalized ? normalized.toUpperCase() : undefined;
 }
 
+// Reverse of PUBLIC_PATH (canonical word -> internal area), merged with the legacy
+// words themselves so an old bookmark/link still parses to a real area instead of
+// falling through to the default -- the visible URL upgrade happens separately via
+// rewriteLegacyPublicPath, this map just makes sure both spellings resolve.
+const AREA_BY_SEGMENT: Record<string, AtlasArea> = {
+  mapa: 'graphs',
+  pesquisa: 'observatory',
+  laboratorio: 'lab',
+  cockpit: 'cockpit',
+  atividade: 'atividade',
+  login: 'login',
+  ...LEGACY_PREFIX_TO_AREA
+};
+
 export function readAtlasRoute(location: Pick<Location, 'pathname' | 'search'> = window.location): AtlasRoute {
-  const pathname = stripAppBase(location.pathname || '/graphs');
-  const areaSegment = pathname.split('/').filter(Boolean)[0] as AtlasArea | undefined;
-  const area: AtlasArea = areaSegment && AREAS.includes(areaSegment) ? areaSegment : 'graphs';
-  const query = new URLSearchParams(location.search);
+  const pathname = stripAppBase(location.pathname || '/');
   const segments = pathname.split('/').filter(Boolean);
+  const areaSegment = segments[0];
+  const area: AtlasArea = (areaSegment && AREA_BY_SEGMENT[areaSegment]) || (areaSegment && AREAS.includes(areaSegment as AtlasArea) ? (areaSegment as AtlasArea) : 'landing');
+  const query = new URLSearchParams(location.search);
   const domainSegment = area === 'graphs' && segments.length >= 3 && segments[1] === 'science' ? segments[2] : undefined;
   const graphPath = area === 'graphs' && segments.length > 1 ? segments.slice(1).map(segment => decodeURIComponent(segment)) : undefined;
   const context = Object.fromEntries(CONTEXT_KEYS.flatMap(key => {
@@ -49,7 +120,15 @@ export function readAtlasRoute(location: Pick<Location, 'pathname' | 'search'> =
 export function routeFor(area: AtlasArea, context: AtlasContext = {}): string {
   const domain = context.domain?.trim();
   const graphPath = area === 'graphs' ? context.graphPath?.filter(Boolean) : undefined;
-  const logicalPath = area === 'graphs' && graphPath?.length ? `/graphs/${graphPath.map(encodeURIComponent).join('/')}` : area === 'graphs' && domain ? `/graphs/science/${encodeURIComponent(domain.toLowerCase())}` : `/${area}`;
+  const publicPrefix = PUBLIC_PATH[area];
+  const logicalPath =
+    area === 'graphs' && graphPath?.length
+      ? `/${publicPrefix}/${graphPath.map(encodeURIComponent).join('/')}`
+      : area === 'graphs' && domain
+        ? `/${publicPrefix}/science/${encodeURIComponent(domain.toLowerCase())}`
+        : publicPrefix
+          ? `/${publicPrefix}`
+          : '/';
   const query = new URLSearchParams();
   for (const key of CONTEXT_KEYS) {
     if (key === 'domain' || !context[key]) continue;
@@ -60,7 +139,21 @@ export function routeFor(area: AtlasArea, context: AtlasContext = {}): string {
   return search ? `${path}?${search}` : path;
 }
 
+function redirectLegacyPathIfNeeded(): void {
+  if (typeof window === 'undefined') return;
+  const rewritten = rewriteLegacyPublicPath(stripAppBase(window.location.pathname));
+  if (!rewritten) return;
+  const target = withAppBase(rewritten) + window.location.search + window.location.hash;
+  window.history.replaceState(window.history.state, '', target);
+}
+
 export function useAtlasRoute() {
+  useEffect(() => {
+    // Legacy public prefixes (/graphs, /observatory, /universe, /lab) must upgrade
+    // the visible URL to the canonical one (/mapa, /pesquisa, /laboratorio), not just
+    // work silently forever as an undocumented second address for the same screen.
+    redirectLegacyPathIfNeeded();
+  }, []);
   const [route, setRoute] = useState<AtlasRoute>(() => readAtlasRoute());
   useEffect(() => {
     const onPopState = () => setRoute(readAtlasRoute());

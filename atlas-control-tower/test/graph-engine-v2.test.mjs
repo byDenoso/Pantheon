@@ -13,6 +13,11 @@ test('projection contract discards undeclared and dangling edges',()=>{const sou
 test('v2 pages use one renderer gateway with Canvas primary and WebGL opt-in',()=>{for(const page of ['GraphsV2Page.tsx','GraphDomainV2Page.tsx','GraphDetailV2Page.tsx'])assert.match(read('src/pages/'+page),/GraphRenderer/);const gateway=read('src/graph-engine/GraphRenderer.tsx');assert.match(gateway,/GraphScene3D/);assert.match(gateway,/GraphExplorer/);assert.match(gateway,/renderer'\)===['"]webgl['"]/);assert.match(gateway,/if\(!webgl\).*GraphExplorer/s)});
 test('contextual deep links are retained by the Atlas route reader',()=>{
  const source=read('src/atlas-route.ts');
- assert.match(source,/readAtlasRoute/);assert.match(source,/routeFor/);assert.match(source,/graphs\/science/);
+ assert.match(source,/readAtlasRoute/);assert.match(source,/routeFor/);
+ // Public route contract update: the map's canonical public path is now /mapa/science/:domain
+ // (not /graphs/science/:domain) -- /graphs still parses via the legacy compatibility map
+ // and redirects to /mapa, which this same file must still express.
+ assert.match(source,/publicPrefix\}\/science\//);
+ assert.match(source,/mapa:\s*'graphs'/);
  assert.match(source,/observatory|lab|universe/);
 });

@@ -11,9 +11,15 @@ test('Pages fallback preserves route semantics below the repository base path', 
   assert.match(route, /withAppBase/);
 });
 
-test('Pages repository root defaults to graphs instead of an undefined area', () => {
+test('Pages repository root defaults to a known area, never an undefined one', () => {
+  // Locked route contract update: "/" is now the public landing (or a redirect to
+  // /cockpit for a signed-in session, built at the App.tsx level) rather than an
+  // implicit alias for the map. The important invariant -- an unrecognized or empty
+  // area segment never produces `undefined` -- still holds, it just resolves to
+  // 'landing' instead of 'graphs'.
   assert.doesNotMatch(route, /AREAS\.includes\(areaSegment\s*\|\|\s*['"]graphs['"]\)\s*\?\s*areaSegment/);
-  assert.match(route, /areaSegment\s*&&\s*AREAS\.includes\(areaSegment\)\s*\?\s*areaSegment\s*:\s*['"]graphs['"]/);
+  assert.match(route, /'landing'/);
+  assert.match(route, /AREA_BY_SEGMENT\[areaSegment\]/);
 });
 
 test('Pages fallback uses the sovereign static runtime and repository base', () => {
