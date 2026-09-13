@@ -26,5 +26,5 @@
     "typescript": "5.9.3",
     "vite": "8.2.2"
   },
-  "deploymentMarker": "graph-engine-v2-20260911"
+  "deploymentMarker": "same-origin-api-routing-20260913"
 }
