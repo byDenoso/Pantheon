@@ -22,7 +22,7 @@ function graphNode(node:AtlasNode):GraphNode{
 function graphEdge(edge:AtlasEdge,index:number):GraphEdge{
  return {
   id:text(edge.id,`${edge.source}:${edgeType(edge)}:${edge.target}:${index}`),source:text(edge.source),target:text(edge.target),type:edgeType(edge),declared:true,
-  direction:edge.direction==='backward'||edge.direction==='bidirectional'?'bidirectional':'forward',
+  direction:edge.direction==='backward'?'backward':edge.direction==='bidirectional'?'bidirectional':'forward',
   strength:typeof edge.strength==='number'?edge.strength:null,
   metadata:{authority:edge.authority??null}
  };
