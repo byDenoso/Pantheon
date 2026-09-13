@@ -148,13 +148,18 @@ function redirectLegacyPathIfNeeded(): void {
 }
 
 export function useAtlasRoute() {
+  const [route, setRoute] = useState<AtlasRoute>(() => readAtlasRoute());
   useEffect(() => {
     // Legacy public prefixes (/graphs, /observatory, /universe, /lab) must upgrade
     // the visible URL to the canonical one (/mapa, /pesquisa, /laboratorio), not just
     // work silently forever as an undocumented second address for the same screen.
+    // history.replaceState does not fire popstate, so without this the address bar
+    // would change while the already-rendered area (read from the pre-redirect path
+    // at the initial useState above) silently stayed stale -- re-reading the route
+    // right after the rewrite keeps state and URL in sync on the very first paint.
     redirectLegacyPathIfNeeded();
+    setRoute(readAtlasRoute());
   }, []);
-  const [route, setRoute] = useState<AtlasRoute>(() => readAtlasRoute());
   useEffect(() => {
     const onPopState = () => setRoute(readAtlasRoute());
     window.addEventListener('popstate', onPopState);
