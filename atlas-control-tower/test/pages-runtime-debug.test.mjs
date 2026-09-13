@@ -5,6 +5,8 @@ import {createApi} from '../lib/atlas-api.mjs';
 
 const client=fs.readFileSync(new URL('../src/api/client.ts',import.meta.url),'utf8');
 const app=fs.readFileSync(new URL('../src/App.tsx',import.meta.url),'utf8');
+const index=fs.readFileSync(new URL('../index.html',import.meta.url),'utf8');
+const types=fs.readFileSync(new URL('../src/api/types.ts',import.meta.url),'utf8');
 const graphsPage=fs.readFileSync(new URL('../src/pages/graphs-page.tsx',import.meta.url),'utf8');
 const pagesWorkflow=fs.readFileSync(new URL('../../.github/workflows/atlas-pages-fallback.yml',import.meta.url),'utf8');
 const reply=body=>({ok:true,status:200,json:async()=>body});
@@ -71,4 +73,17 @@ test('sidebar systems mirror the GitHub canonical root graph',()=>{
   for(const id of ['system:NEXO','system:SCIENCE','system:ENGINEERING','system:OLYMPUS','system:OPERATIONS'])assert.match(block,new RegExp(id));
   assert.doesNotMatch(block,/system:AUTOMATION/);
   assert.doesNotMatch(block,/system:LEARNING/);
+});
+
+test('skip link has a real main landmark target',()=>{
+  assert.match(index,/href=["']#atlas-main["']/);
+  assert.match(app,/<main\s+id=["']atlas-main["']\s+className=["']atlas-main["']/);
+});
+
+test('health types and badge metadata accept the canonical datasource shape',()=>{
+  const healthBlock=types.match(/export type HealthPayload\s*=\s*\{[\s\S]*?\n\};/)?.[0]||'';
+  assert.match(healthBlock,/source\?:\s*string/);
+  assert.match(healthBlock,/sourceVersion\?:\s*string/);
+  assert.match(app,/dataSource\?\.effective\s*\|\|\s*state\.health\?\.dataSource\?\.source/);
+  assert.match(app,/dataSource\?\.sourceVersion\s*\|\|\s*state\.health\?\.sourceVersion/);
 });
