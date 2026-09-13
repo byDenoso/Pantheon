@@ -6,6 +6,7 @@ on:
       - main
       - feat/nexo-atlas-vnext
       - feat/atlas-graph-engine-v2
+      - feat/nexo-spatial-navigation-v2
     paths:
       - 'atlas-control-tower/**'
       - '.github/workflows/atlas-quality.yml'
