@@ -9,7 +9,14 @@
     {"src":"api/runtime-orphans.js","use":"@vercel/node"},
     {"src":"api/runtime-semantic.js","use":"@vercel/node"},
     {"src":"api/runtime-v2.js","use":"@vercel/node"},
-    {"src":"api/runtime.js","use":"@vercel/node"}
+    {"src":"api/runtime.js","use":"@vercel/node"},
+    {"src":"api/auth/session.mjs","use":"@vercel/node"},
+    {"src":"api/private/cockpit.mjs","use":"@vercel/node"},
+    {"src":"api/private/activity.mjs","use":"@vercel/node"},
+    {"src":"api/private/research.mjs","use":"@vercel/node"},
+    {"src":"api/private/entity.mjs","use":"@vercel/node"},
+    {"src":"api/private/learner.mjs","use":"@vercel/node"},
+    {"src":"api/private/sync.mjs","use":"@vercel/node"}
   ],
   "routes": [
     {"src":"/api/projection","headers":{"Access-Control-Allow-Origin":"https://bydenoso.github.io","Access-Control-Allow-Methods":"GET,POST,OPTIONS","Access-Control-Allow-Headers":"Content-Type,Authorization","Vary":"Origin"},"dest":"/api/projection.js"},
@@ -17,6 +24,13 @@
     {"src":"/api/runner","headers":{"Access-Control-Allow-Origin":"https://bydenoso.github.io","Access-Control-Allow-Methods":"GET,POST,OPTIONS","Access-Control-Allow-Headers":"Content-Type,Authorization","Vary":"Origin"},"dest":"/api/runner.js"},
     {"src":"/api/(state|graph|entity)","headers":{"Access-Control-Allow-Origin":"https://bydenoso.github.io","Access-Control-Allow-Methods":"GET,OPTIONS","Access-Control-Allow-Headers":"Content-Type,Authorization","Vary":"Origin"},"dest":"/api/science.js?route=$1"},
     {"src":"/api/(state|sync|graph|entity|automation-runs|learning-relations|learning|audit|health|ops)","headers":{"Access-Control-Allow-Origin":"https://bydenoso.github.io","Access-Control-Allow-Methods":"GET,POST,OPTIONS","Access-Control-Allow-Headers":"Content-Type,Authorization","Vary":"Origin"},"dest":"/api/runtime-orphans.js?route=$1"},
+    {"src":"/api/auth/session","dest":"/api/auth/session.mjs"},
+    {"src":"/api/private/cockpit","dest":"/api/private/cockpit.mjs"},
+    {"src":"/api/private/activity","dest":"/api/private/activity.mjs"},
+    {"src":"/api/private/research","dest":"/api/private/research.mjs"},
+    {"src":"/api/private/entity","dest":"/api/private/entity.mjs"},
+    {"src":"/api/private/learner","dest":"/api/private/learner.mjs"},
+    {"src":"/api/private/sync","dest":"/api/private/sync.mjs"},
     {"handle":"filesystem"},
     {"src":"/(.*)","dest":"/index.html"}
   ],

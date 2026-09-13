@@ -41,8 +41,10 @@ export function isPrivateRouteAccessible(session: AtlasSession | null, now: numb
   return resolveAuthGateState(session, now, clientId) === 'SIGNED_IN';
 }
 
-// --- Facade-side classification (used by api/private/*.mjs handlers; kept here too so
-// the same rule is unit-tested once and imported both client- and server-side). ---
+// --- Facade-side classification lives in lib/auth.mjs, not duplicated here -- that
+// file is the one both this browser bundle AND the api/private/*.js Vercel functions
+// import (those run as plain JS, no TS build step, matching this repo's existing
+// api/*.js convention), so the 401/403/JWT-verification rule is defined once. ---
 
 export type FacadeAuthOutcome = { status: 401 | 403 | 200; reason: string };
 
@@ -54,33 +56,8 @@ export type DecodedGoogleClaims = {
   email_verified?: boolean;
 };
 
-const VALID_ISSUERS = new Set(['accounts.google.com', 'https://accounts.google.com']);
-
-/**
- * Pure classification of a decoded (already signature-verified, elsewhere) Google ID
- * token against the expected audience and the email allowlist. Never trusts an
- * unverified token -- callers must verify the JWT signature before calling this.
- */
-export function classifyGoogleSession(
-  claims: DecodedGoogleClaims | null,
-  expectedAudience: string,
-  allowedEmails: readonly string[],
-  now: number = Math.floor(Date.now() / 1000)
-): FacadeAuthOutcome {
-  if (!claims) return { status: 401, reason: 'TOKEN_ABSENT' };
-  if (!claims.iss || !VALID_ISSUERS.has(claims.iss)) return { status: 401, reason: 'INVALID_ISSUER' };
-  if (claims.aud !== expectedAudience) return { status: 401, reason: 'INVALID_AUDIENCE' };
-  if (!claims.exp || claims.exp <= now) return { status: 401, reason: 'EXPIRED' };
-  if (!claims.email_verified) return { status: 401, reason: 'EMAIL_NOT_VERIFIED' };
-  if (!claims.email) return { status: 401, reason: 'EMAIL_ABSENT' };
-  const allowlist = new Set(allowedEmails.map(email => email.trim().toLowerCase()));
-  if (!allowlist.has(claims.email.trim().toLowerCase())) return { status: 403, reason: 'NOT_IN_ALLOWLIST' };
-  return { status: 200, reason: 'OK' };
-}
-
-export function isAllowedOrigin(origin: string | null | undefined, allowedOrigins: readonly string[]): boolean {
-  if (!origin) return false;
-  return allowedOrigins.includes(origin);
-}
-
-export const PRODUCTION_PAGES_ORIGIN = 'https://bydenoso.github.io';
+export {
+  classifyGoogleSession,
+  isAllowedOrigin,
+  PRODUCTION_PAGES_ORIGIN
+} from '../../lib/auth.mjs';
