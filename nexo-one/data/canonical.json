@@ -3,8 +3,17 @@
   "authority": "GITHUB",
   "repository": "byDenoso/Pantheon",
   "ref": "main",
-  "payloadPath": "atlas-control-tower/data/nexo-drive-projection.json",
-  "payloadFormat": "NEXO_ATLAS_PROJECTION_V1",
-  "projectionSources": ["GOOGLE_DRIVE"],
-  "notes": "GitHub is canonical. The initial payload was bootstrapped from a Drive projection; Drive remains provenance/projection only and cannot override this versioned state."
+  "controlPlane": "GITHUB",
+  "projection": {
+    "kind": "GOOGLE_DRIVE",
+    "transportPath": "atlas-control-tower/data/nexo-drive-projection.json",
+    "fingerprint": "sha256:535dab97986ea590d9d520eba4d7057a3f2c200e957ac60c5041c44c47edba12",
+    "role": "PROJECTION_ONLY"
+  },
+  "rules": {
+    "projectionCannotOverrideCanonical": true,
+    "failedRefreshPreservesLastValid": true,
+    "syncRequiresCanonicalValidation": true
+  },
+  "notes": "GitHub is the canonical control plane. External stores may supply private or operational projections only when their declared revision is accepted by this versioned manifest."
 }
