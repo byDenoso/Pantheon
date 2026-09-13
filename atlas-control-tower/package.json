@@ -6,7 +6,7 @@
     "test": "node --test test/*.test.mjs",
     "typecheck": "tsc --noEmit",
     "state:build": "node scripts/generate-static-state.mjs public/data",
-    "build": "npm run state:build && vite build",
+    "build": "vite build",
     "dev": "vite --host 0.0.0.0",
     "start": "vite --host 0.0.0.0"
   },
