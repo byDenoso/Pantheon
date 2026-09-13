@@ -5,8 +5,11 @@
   "scripts": {
     "test": "node --test test/*.test.mjs",
     "typecheck": "tsc --noEmit",
+    "state:build": "node scripts/generate-static-state.mjs public/data",
     "build": "vite build",
+    "predev": "npm run state:build",
     "dev": "vite --host 0.0.0.0",
+    "prestart": "npm run state:build",
     "start": "vite --host 0.0.0.0"
   },
   "dependencies": {
@@ -26,5 +29,5 @@
     "typescript": "5.9.3",
     "vite": "8.2.2"
   },
-  "deploymentMarker": "same-origin-api-routing-20260913"
+  "deploymentMarker": "nexo-sovereign-static-runtime-20260913"
 }

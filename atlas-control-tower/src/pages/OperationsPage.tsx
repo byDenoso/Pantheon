@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import { createConfiguredApi } from '../api/client';
 import { PageHeader } from '../components/PageHeader';
 import { loadOperationsSources } from '../data/load-operations';
 import { buildOperationsModel } from '../data/operations-vnext-model';
@@ -9,13 +10,14 @@ const nf=new Intl.NumberFormat('pt-BR');
 const value=(v:number|string|null)=>v===null||v===''?'—':typeof v==='number'?nf.format(v):v;
 const tone=(status:string)=>/FAIL|BLOCK|DEGRADED/.test(status)?'danger':/PASS|SUCCESS/.test(status)?'ok':'neutral';
 const when=(stamp:string)=>stamp?new Date(stamp).toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'}):'—';
+const api=createConfiguredApi();
 
 export default function OperationsPage(){
  const [searchParams]=useSearchParams();
  const focusedId=searchParams.get('run')||searchParams.get('event')||searchParams.get('action')||'';
  const [sources,setSources]=useState<Sources|null>(null);
  const [loading,setLoading]=useState(true);
- const reload=useCallback(async()=>{setLoading(true);setSources(await loadOperationsSources());setLoading(false)},[]);
+ const reload=useCallback(async()=>{setLoading(true);setSources(await loadOperationsSources(api));setLoading(false)},[]);
  useEffect(()=>{void reload()},[reload]);
  const model=useMemo(()=>buildOperationsModel(sources??{}),[sources]);
  const focusedItem=useMemo(()=>focusedId?[...model.runs,...model.events,...model.actions].find(item=>item.id===focusedId)||null:null,[focusedId,model]);
@@ -28,7 +30,7 @@ export default function OperationsPage(){
   <section className="nexo-empty-state"><span className="nexo-empty-kicker">INDISPONÍVEL</span><h2>Fonte indisponível</h2><p>Nenhum estado operacional foi sintetizado.</p></section>
  </div>;
  return <div className="nexo-page operations-page">
-  <PageHeader eyebrow="OPERAÇÃO" title="Operação" description="Execução, runtime, automações e integridade. A página mostra estado publicado; não infere saúde a partir de silêncio."
+  <PageHeader eyebrow="OPERAÇÃO" title="Operação" description="Execução, runtime, automações e integridade. A página mostra estado publicado+ não infere saúde a partir de silêncio."
    actions={<button className="nexo-button" onClick={()=>void reload()} disabled={loading}>{loading?'Atualizando…':'Atualizar'}</button>}/>
   {focusedId?<section className={`operation-focus ${focusedItem?'found':'missing'}`} aria-live="polite">
    <span className="panel-kicker">ABERTO PELA BUSCA</span><div><b>{focusedItem?.label||focusedId}</b><p>{focusedItem?.summary||'O item não está no recorte operacional carregado.'}</p></div><span className={`status-chip ${tone(focusedItem?.status||'')}`}>{focusedItem?.status||'—'}</span>

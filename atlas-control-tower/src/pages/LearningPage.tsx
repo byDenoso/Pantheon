@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import { createConfiguredApi } from '../api/client';
 import { PageHeader } from '../components/PageHeader';
 import { LearningMesh } from '../components/LearningMesh';
 import { loadLearningSource } from '../data/load-learning';
@@ -12,6 +13,7 @@ const MODES:Array<{id:Mode;label:string}>=[
 ];
 const STAGE_LABEL:Record<string,string>={OBSERVATION:'Observação',PATTERN:'Padrão',LESSON:'Lição',STRATEGY:'Estratégia',POLICY:'Política'};
 const fmt=(value:number|null)=>value===null?'—':new Intl.NumberFormat('pt-BR').format(value);
+const api=createConfiguredApi();
 
 export default function LearningPage(){
  const [searchParams]=useSearchParams();
@@ -21,7 +23,7 @@ export default function LearningPage(){
  const [mode,setMode]=useState<Mode>('mesh');
  const [selectedId,setSelectedId]=useState<string|null>(null);
  const [reducedMotion,setReducedMotion]=useState(false);
- const reload=useCallback(async()=>{setLoading(true);setSource(await loadLearningSource());setLoading(false)},[]);
+ const reload=useCallback(async()=>{setLoading(true);setSource(await loadLearningSource(api));setLoading(false)},[]);
  useEffect(()=>{void reload()},[reload]);
  useEffect(()=>{if(deepLinkedItem){setSelectedId(deepLinkedItem);setMode('mesh')}},[deepLinkedItem]);
  useEffect(()=>{

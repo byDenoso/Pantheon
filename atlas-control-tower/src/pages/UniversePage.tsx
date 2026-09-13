@@ -1,17 +1,20 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
+import { createConfiguredApi } from '../api/client';
 import { PageHeader } from '../components/PageHeader';
 import { DomainNavigator } from '../components/DomainNavigator/DomainNavigator';
 import { buildDomainNavigatorModel } from '../components/DomainNavigator/domain-model.mjs';
 import { loadUniverseSource } from '../data/load-universe';
 import { buildUniverseView } from '../data/universes-model';
 
+const api=createConfiguredApi();
+
 export default function UniversePage(){
  const {universeId=''}=useParams();
  const [searchParams]=useSearchParams();
  const selectedEntity=searchParams.get('entity')||'';
  const [graph,setGraph]=useState<any>(undefined);
- useEffect(()=>{let live=true;setGraph(undefined);void loadUniverseSource(universeId).then(value=>{if(live)setGraph(value)});return()=>{live=false}},[universeId]);
+ useEffect(()=>{let live=true;setGraph(undefined);void loadUniverseSource(universeId,api).then(value=>{if(live)setGraph(value)});return()=>{live=false}},[universeId]);
  const model=useMemo(()=>buildUniverseView(universeId,graph??null,selectedEntity),[universeId,graph,selectedEntity]);
  const domainModel=useMemo(()=>buildDomainNavigatorModel(universeId,graph??null),[universeId,graph]);
  const loading=graph===undefined;

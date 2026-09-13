@@ -243,6 +243,7 @@ export type AtlasApiClient = {
   learning: () => Promise<unknown>;
   learningFor: (id: string) => Promise<unknown>;
   ops: () => Promise<unknown>;
+  automationRuns: () => Promise<unknown>;
   audit: () => Promise<unknown>;
   files: (id: string) => Promise<unknown>;
   sync: () => Promise<unknown>;

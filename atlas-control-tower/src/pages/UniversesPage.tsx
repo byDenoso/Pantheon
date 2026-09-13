@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { createConfiguredApi } from '../api/client';
 import { PageHeader } from '../components/PageHeader';
 import { loadUniversesSources } from '../data/load-universes';
 import { buildUniversesModel } from '../data/universes-model';
@@ -7,11 +8,12 @@ import { buildUniversesModel } from '../data/universes-model';
 type Sources=Awaited<ReturnType<typeof loadUniversesSources>>;
 const icons:Record<string,string>={science:'✦',engineering:'⌘',olympus:'△',ai:'◇'};
 const value=(n:number|null)=>n===null?'—':new Intl.NumberFormat('pt-BR').format(n);
+const api=createConfiguredApi();
 
 export default function UniversesPage(){
  const [sources,setSources]=useState<Sources|null>(null);
  const [loading,setLoading]=useState(true);
- const reload=useCallback(async()=>{setLoading(true);setSources(await loadUniversesSources());setLoading(false)},[]);
+ const reload=useCallback(async()=>{setLoading(true);setSources(await loadUniversesSources(api));setLoading(false)},[]);
  useEffect(()=>{void reload()},[reload]);
  const model=useMemo(()=>buildUniversesModel(sources?.root??null,sources?.details??{}),[sources]);
  return <div className="nexo-page universes-page">

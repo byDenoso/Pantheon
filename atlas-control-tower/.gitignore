@@ -4,6 +4,7 @@ lib/snapshot.mjs
 preview-*.png
 node_modules/
 dist/
+public/data/
 .vercel/
 .env*
 !.env.example

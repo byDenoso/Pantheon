@@ -1,5 +1,6 @@
 import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import { createConfiguredApi } from '../api/client';
 import { PageHeader } from '../components/PageHeader';
 import { LineageDag } from '../components/LineageDag';
 import { loadProvenanceSources } from '../data/load-provenance';
@@ -9,6 +10,7 @@ type Sources=Awaited<ReturnType<typeof loadProvenanceSources>>;
 const nf=new Intl.NumberFormat('pt-BR');
 const value=(v:number|null)=>v===null?'—':nf.format(v);
 const safeUrl=(url:string)=>/^https:\/\//i.test(url)?url:'';
+const api=createConfiguredApi();
 
 export default function ProvenancePage(){
  const [params,setParams]=useSearchParams();
@@ -18,7 +20,7 @@ export default function ProvenancePage(){
  const [sources,setSources]=useState<Sources|null>(null);
  const [loading,setLoading]=useState(true);
  const [selectedId,setSelectedId]=useState<string|null>(focusId||null);
- const reload=useCallback(async()=>{setLoading(true);setSources(await loadProvenanceSources(undefined,focusId));setLoading(false)},[focusId]);
+ const reload=useCallback(async()=>{setLoading(true);setSources(await loadProvenanceSources(api,focusId));setLoading(false)},[focusId]);
  useEffect(()=>{setQuery(focusId);setSelectedId(focusId||null);void reload()},[focusId,reload]);
  const audit=useMemo(()=>buildAuditModel(sources?.audit??null),[sources]);
  const lineage=useMemo(()=>buildLineageModel(sources?.lineage??null,focusId),[sources,focusId]);

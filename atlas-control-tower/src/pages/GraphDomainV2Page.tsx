@@ -1,6 +1,6 @@
 import {useEffect,useMemo,useState} from 'react';
 import {Link,useParams,useSearchParams} from 'react-router-dom';
-import {createApi} from '../../lib/atlas-api.mjs';
+import {createConfiguredApi} from '../api/client';
 import {PageHeader} from '../components/PageHeader';
 import {buildDomainNavigatorModel} from '../components/DomainNavigator/domain-model.mjs';
 import {loadUniverseSource} from '../data/load-universe';
@@ -12,8 +12,8 @@ import {useLearningOverlay} from '../graph-engine/useLearningOverlay';
 import type {GraphNode,GraphProjection} from '../graph-engine/types';
 
 export default function GraphDomainV2Page(){
- const route=useParams();const domainId=route.domainId||'science';const [params,setParams]=useSearchParams();const [graph,setGraph]=useState<any>();const [expandedDetails,setExpandedDetails]=useState<Record<string,GraphProjection>>({});const [loadingBranch,setLoadingBranch]=useState<string|null>(null);const api=useMemo(()=>createApi(),[]);const selectedId=params.get('entity');const selectedEdgeId=params.get('edge');const learning=params.get('learning')==='1';
- useEffect(()=>{let active=true;setGraph(undefined);setExpandedDetails({});void loadUniverseSource(domainId).then(value=>{if(active)setGraph(value)});return()=>{active=false}},[domainId]);
+ const route=useParams();const domainId=route.domainId||'science';const [params,setParams]=useSearchParams();const [graph,setGraph]=useState<any>();const [expandedDetails,setExpandedDetails]=useState<Record<string,GraphProjection>>({});const [loadingBranch,setLoadingBranch]=useState<string|null>(null);const api=useMemo(()=>createConfiguredApi(),[]);const selectedId=params.get('entity');const selectedEdgeId=params.get('edge');const learning=params.get('learning')==='1';
+ useEffect(()=>{let active=true;setGraph(undefined);setExpandedDetails({});void loadUniverseSource(domainId,api).then(value=>{if(active)setGraph(value)});return()=>{active=false}},[domainId,api]);
  const view=useMemo(()=>buildUniverseView(domainId,graph??null),[domainId,graph]);const model=useMemo(()=>buildDomainNavigatorModel(domainId,graph??null),[domainId,graph]);const baseProjection=useMemo(()=>domainProjection(domainId,model),[domainId,model]);const projection=useMemo(()=>{let current=baseProjection;for(const [subgraphId,child] of Object.entries(expandedDetails))current=graftProjection(current,subgraphId,child) as GraphProjection;return current},[baseProjection,expandedDetails]);const learningEdges=useLearningOverlay(projection.nodes);
  const toggleSubgraph=async(node:GraphNode)=>{if(expandedDetails[node.id]){setExpandedDetails(previous=>{const next={...previous};delete next[node.id];return next});return}setLoadingBranch(node.id);try{const detail=await api.graph({focus:`domain:${node.id}`,depth:2,limit:220});setExpandedDetails({[node.id]:detailProjection(`domain:${node.id}`,detail)})}catch{}finally{setLoadingBranch(current=>current===node.id?null:current)}};
  const selectNode=(id:string|null)=>{const repeated=Boolean(id&&selectedId===id);const next=new URLSearchParams(params);next.delete('edge');if(id)next.set('entity',id);else next.delete('entity');setParams(next,{replace:true});if(!id||!repeated)return;const node=projection.nodes.find(candidate=>candidate.id===id);if(node?.type==='SUBGRAPH')void toggleSubgraph(node)};
