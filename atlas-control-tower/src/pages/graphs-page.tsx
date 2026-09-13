@@ -1,4 +1,5 @@
 import {useEffect,useMemo,useState} from 'react';
+import {AtlasContextBar} from '../components/AtlasContextBar';
 import {GraphRenderer} from '../graph-engine/GraphRenderer';
 import {SpatialInspector} from '../graph-engine/SpatialInspector';
 import {buildLiveProjection} from '../graph-engine/live-projection';
@@ -32,6 +33,9 @@ export function GraphsPage({state,actions,reducedMotion,compact}:{state:AtlasUiS
   const canBack=state.navigationIndex>0;
   const canForward=state.navigationIndex<state.navigationStack.length-1;
   const navigationKind=String(state.navigationStack[state.navigationIndex]?.navigationKind||'drill-down');
+  const contextFreshness=state.health?.dataSource?.freshness||state.summary?.projection?.freshness||projection?.freshness||'UNKNOWN';
+  const contextAuthority=state.health?.dataSource?.authority||null;
+  const contextSourceVersion=state.health?.dataSource?.sourceVersion||state.summary?.projection?.sourceVersion||state.health?.sourceVersion||null;
 
   const projectedNode=(id:string)=>projection?.nodes.find(node=>node.id===id)||baseProjection?.nodes.find(node=>node.id===id)||null;
   const rawNode=(id:string)=>graph?.nodes.find(node=>node.id===id)||null;
@@ -60,6 +64,9 @@ export function GraphsPage({state,actions,reducedMotion,compact}:{state:AtlasUiS
 
   return <div className={`page-wrap graphs-page spatial-knowledge-page ${immersive?'is-immersive':''}`}>
     <section className="graph-workspace spatial-workspace" id="map-workspace">
+      <div className="atlas-context-bar-slot">
+        <AtlasContextBar path={state.path} freshness={contextFreshness} authority={contextAuthority} sourceVersion={contextSourceVersion} navigationKind={navigationKind}/>
+      </div>
       <div className="spatial-top-hud">
         <nav className="reference-breadcrumbs spatial-breadcrumbs" aria-label="Navegação hierárquica">
           {baseProjection?.breadcrumbs.map((item,index)=><span key={item.id}>{index>0&&<i>/</i>}<button onClick={()=>breadcrumb({id:item.id,label:item.label,type:'CONTEXT'})}>{item.label}</button></span>)}
