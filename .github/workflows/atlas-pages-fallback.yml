@@ -106,6 +106,7 @@ jobs:
           if(retired.length)throw new Error(`RETIRED_RUNTIME_REQUEST:${retired.join(' | ')}`);
           if(errors.length)throw new Error(`ATLAS_PAGEERROR:${errors.join(' | ')}`);
           await browser.close();
+          console.log('PAGES_SOVEREIGN_BOOTSTRAP_OK');
           console.log('PAGES_SOVEREIGN_STATIC_ARTIFACT_BOOTSTRAP_OK');
           NODE
       - uses: actions/upload-pages-artifact@v3
