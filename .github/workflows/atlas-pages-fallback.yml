@@ -152,7 +152,8 @@ jobs:
           const manifest=require('/tmp/nexo-manifest.json');
           const d7=require('/tmp/nexo-d7.json');
           const health=require('/tmp/nexo-health.json');
-          if(!Array.isArray(d7.tests)||!d7.tests.some(test=>test.id==='T-ALENS-001'))throw new Error('D7_SENTINEL_MISSING');
+          if(!Array.isArray(d7.campaigns)||!d7.campaigns.some(campaign=>campaign.id==='CAMP-CMB-ANOMALIES'))throw new Error('D7_CAMPAIGN_SENTINEL_MISSING');
+          if(Array.isArray(d7.tests))throw new Error('D7_PUBLIC_TESTS_PRESENT');
           if(health.contract!=='nexo-static-runtime-v1'||health.runtime!=='STATIC_LOCAL')throw new Error('STATIC_HEALTH_INVALID');
           if(manifest.source!=='GOOGLE_DRIVE'||manifest.codeAuthority!=='GITHUB')throw new Error('STATIC_AUTHORITY_INVALID');
           NODE
