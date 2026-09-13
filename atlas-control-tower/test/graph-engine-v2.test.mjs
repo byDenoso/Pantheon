@@ -10,7 +10,7 @@ test('Learning remains a graph context and is not a primary product area',()=>{
  assert.doesNotMatch(route,/Learning/);assert.doesNotMatch(app,/label: ['"]Learning['"]/);
 });
 test('projection contract discards undeclared and dangling edges',()=>{const source=read('src/graph-engine/projection.ts');assert.match(source,/declared===true/);assert.match(source,/ids\.has\(e\.source\)/);assert.match(source,/ids\.has\(e\.target\)/)});
-test('v2 pages use one renderer gateway with 3D primary and Pixi rollback',()=>{for(const page of ['GraphsV2Page.tsx','GraphDomainV2Page.tsx','GraphDetailV2Page.tsx'])assert.match(read('src/pages/'+page),/GraphRenderer/);const gateway=read('src/graph-engine/GraphRenderer.tsx');assert.match(gateway,/GraphScene3D/);assert.match(gateway,/GraphExplorer/);assert.match(gateway,/renderer.*2d/)});
+test('v2 pages use one renderer gateway with Canvas primary and WebGL opt-in',()=>{for(const page of ['GraphsV2Page.tsx','GraphDomainV2Page.tsx','GraphDetailV2Page.tsx'])assert.match(read('src/pages/'+page),/GraphRenderer/);const gateway=read('src/graph-engine/GraphRenderer.tsx');assert.match(gateway,/GraphScene3D/);assert.match(gateway,/GraphExplorer/);assert.match(gateway,/renderer'\)===['"]webgl['"]/);assert.match(gateway,/if\(!webgl\).*GraphExplorer/s)});
 test('contextual deep links are retained by the Atlas route reader',()=>{
  const source=read('src/atlas-route.ts');
  assert.match(source,/readAtlasRoute/);assert.match(source,/routeFor/);assert.match(source,/graphs\/science/);
