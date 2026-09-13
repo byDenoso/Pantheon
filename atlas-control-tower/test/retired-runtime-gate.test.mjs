@@ -35,15 +35,15 @@ test('sovereign local router depends only on static projection modules',()=>{
   assert.doesNotMatch(sovereign,/neon|vercel-oidc|database/i);
 });
 
-test('science sentinel is usable when global HTTP is unavailable',async()=>{
+test('science campaign sentinel is usable when global HTTP is unavailable',async()=>{
   const originalFetch=globalThis.fetch;
   globalThis.fetch=async()=>{throw new Error('NETWORK_FORBIDDEN')};
   try{
     const api=createApi({profile:'atlas'});
     const graph=await api.graph({focus:'domain:D7',depth:3});
-    assert.ok(graph.nodes.some(node=>node.id==='T-ALENS-001'));
-    assert.ok(graph.nodes.some(node=>node.id==='result:T-ALENS-001'));
-    assert.ok(graph.edges.some(edge=>edge.source==='T-ALENS-001'&&edge.target==='result:T-ALENS-001'&&edge.type==='PRODUCES'));
+    assert.ok(graph.nodes.some(node=>node.id==='CAMP-CMB-ANOMALIES'&&node.type==='CAMPAIGN'));
+    assert.equal(graph.nodes.some(node=>node.type==='TEST'||node.type==='RESULT'),false);
+    assert.equal(graph.truncated,false);
   }finally{
     globalThis.fetch=originalFetch;
   }
