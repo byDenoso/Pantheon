@@ -27,18 +27,40 @@ html[data-theme="high-contrast"]{
  --graph-node:#56b8ff;--graph-node-domain:#00e5ff;--graph-node-test:#ffe600;--graph-node-claim:#f48cff;--graph-node-evidence:#54ff88;
 }
 html[data-theme]{
+ --surface-base:var(--surface-canvas);--surface-depth:var(--graph-background);--surface-hover:color-mix(in srgb,var(--surface-elevated) 78%,var(--accent-primary) 5%);
  --bg:var(--surface-canvas);--panel:var(--surface-primary);--panel-soft:var(--surface-elevated);--line:var(--border-default);
  --text:var(--text-primary);--muted:var(--text-secondary);--subtle:var(--text-tertiary);--accent:var(--accent-primary);
  --dark:var(--surface-canvas);--dark-2:var(--surface-primary);--ok:var(--status-ready);--warn:var(--status-partial);--bad:var(--status-error);
+ --state-live:var(--status-ready);--state-snapshot:var(--accent-primary);--state-stale:var(--status-stale);--state-degraded:var(--status-partial);--state-unknown:var(--text-tertiary);--state-derived:var(--graph-node-claim);--state-published:var(--status-ready);
+ --edge-hierarchy:color-mix(in srgb,var(--graph-edge) 72%,var(--text-tertiary));--edge-relation:var(--graph-edge);--edge-evidence:var(--graph-node-evidence);--edge-dependency:var(--graph-node-test);--edge-provenance:var(--graph-node-claim);--edge-contradiction:var(--status-error);
+ --graph-primary:var(--graph-node);--graph-secondary:color-mix(in srgb,var(--graph-node) 68%,var(--text-tertiary));--graph-muted:var(--text-tertiary);--graph-selection:var(--accent-primary);
+ --atlas-background:var(--surface-canvas);--atlas-background-deep:var(--graph-background);--atlas-surface:var(--surface-overlay);--atlas-surface-elevated:var(--surface-elevated);--atlas-surface-soft:color-mix(in srgb,var(--surface-elevated) 72%,transparent);
+ --atlas-border:var(--border-default);--atlas-border-strong:var(--border-emphasis);--atlas-text-primary:var(--text-primary);--atlas-text-secondary:var(--text-secondary);--atlas-text-muted:var(--text-tertiary);--atlas-cyan:var(--accent-primary);--atlas-cyan-soft:var(--accent-primary);--atlas-violet:var(--graph-node-claim);--atlas-green:var(--status-ready);--atlas-amber:var(--status-partial);--atlas-red:var(--status-error);--atlas-gray:var(--text-tertiary);
+ --atlas-space-1:var(--space-1);--atlas-space-2:var(--space-2);--atlas-space-3:var(--space-3);--atlas-space-4:var(--space-4);--atlas-space-5:var(--space-5);--atlas-space-6:var(--space-6);--atlas-space-7:var(--space-7);--atlas-radius-sm:var(--radius-sm);--atlas-radius-md:var(--radius-md);--atlas-radius-lg:var(--radius-lg);--atlas-shadow-panel:var(--shadow-elevated);--atlas-glow-cyan:var(--shadow-focus);--atlas-motion-fast:var(--motion-fast);--atlas-motion-card:var(--motion-fast);--atlas-motion-panel:var(--motion-panel);--atlas-ease:var(--ease-standard);--atlas-topbar-height:62px;--atlas-sidebar-width:190px;
  color-scheme:dark;
 }
 html[data-theme="light"]{color-scheme:light}
-html[data-theme] body{background:var(--surface-canvas);color:var(--text-primary);transition:background .18s ease,color .18s ease}
+html[data-theme] body{background:var(--surface-canvas);color:var(--text-primary);transition:background var(--motion-fast) ease,color var(--motion-fast) ease}
+
+.premium-shell{min-height:100dvh;background:var(--surface-canvas);color:var(--text-primary)}
+.premium-shell .atlas-topbar{min-height:var(--atlas-topbar-height);gap:12px;padding:8px 14px;border-color:var(--border-default);background:color-mix(in srgb,var(--surface-overlay) 95%,transparent);box-shadow:0 1px 0 color-mix(in srgb,var(--border-default) 60%,transparent);backdrop-filter:blur(20px)}
+.premium-shell .atlas-brand{min-width:178px}.premium-shell .atlas-brand b{font-family:"Recursive Variable",system-ui;font-size:17px}.premium-shell .atlas-brand small{color:var(--text-tertiary)}
+.premium-shell .brand-orbit{border-color:var(--accent-primary);color:var(--accent-primary);box-shadow:var(--shadow-focus)}
+.premium-shell .top-navigation{gap:2px}.premium-shell .top-navigation a{min-width:auto;padding:0 12px;border-radius:9px;color:var(--text-secondary);font-size:10px;letter-spacing:.05em}.premium-shell .top-navigation a:hover{background:var(--surface-hover);color:var(--text-primary)}.premium-shell .top-navigation a.active{border-color:color-mix(in srgb,var(--accent-primary) 42%,var(--border-default));background:color-mix(in srgb,var(--accent-primary) 10%,var(--surface-elevated));color:var(--text-primary);box-shadow:none}
+.premium-shell .top-actions{gap:7px}.premium-shell .atlas-command-trigger{width:clamp(210px,19vw,300px);min-height:36px;border-color:var(--border-default);background:color-mix(in srgb,var(--surface-elevated) 78%,transparent)}.premium-shell .atlas-command-trigger:focus-within{border-color:var(--accent-primary);box-shadow:var(--shadow-focus)}
+.premium-shell .sync-button,.premium-shell .profile-button{border-color:var(--border-default);background:var(--surface-elevated);color:var(--text-secondary)}.premium-shell .profile-button{border-radius:10px}
+.premium-shell .atlas-body{grid-template-columns:var(--atlas-sidebar-width) minmax(0,1fr);min-height:calc(100dvh - var(--atlas-topbar-height))}
+.premium-shell .atlas-sidebar{top:var(--atlas-topbar-height);min-height:calc(100dvh - var(--atlas-topbar-height));padding:18px 10px 14px;border-color:color-mix(in srgb,var(--border-default) 72%,transparent);background:color-mix(in srgb,var(--surface-primary) 88%,var(--graph-background))}
+.premium-shell .graph-nav-item{min-height:38px;border-radius:10px;color:var(--text-secondary)}.premium-shell .graph-nav-item:hover{border-color:var(--border-default);background:var(--surface-hover);color:var(--text-primary)}.premium-shell .graph-nav-item.active{border-color:color-mix(in srgb,var(--accent-primary) 40%,var(--border-default));background:color-mix(in srgb,var(--accent-primary) 10%,var(--surface-elevated));color:var(--accent-primary)}
+.premium-shell .atlas-main{min-width:0;background:var(--surface-canvas)}.premium-shell .graphs-page{padding-top:0}.premium-shell .graph-workspace{min-height:calc(100dvh - var(--atlas-topbar-height))}
+.premium-shell .atlas-footer{margin-top:0;border-color:var(--border-default);background:var(--surface-primary)}
+
 .theme-switcher{display:inline-flex;align-items:center}
 .theme-switcher select{height:34px;max-width:132px;border:1px solid var(--border-default);border-radius:9px;background:var(--surface-elevated);color:var(--text-primary);padding:0 28px 0 10px;font:600 11px/1 "Recursive Variable",system-ui;letter-spacing:.02em;cursor:pointer}
 .theme-switcher select:focus-visible{outline:2px solid var(--accent-primary);outline-offset:2px}
 .graph-renderer-canvas,.graph-renderer-rollback{position:relative;height:100%;min-height:0;background:var(--graph-background)}
-.graph-renderer-switch{position:absolute;z-index:14;right:12px;top:12px;border:1px solid var(--border-default);border-radius:8px;background:var(--surface-overlay);color:var(--text-secondary);padding:7px 9px;font-size:10px;letter-spacing:.06em;text-transform:uppercase}
-.graph-renderer-error{position:absolute;z-index:15;left:50%;top:14px;transform:translateX(-50%);border:1px solid var(--status-partial);background:var(--surface-overlay);color:var(--text-primary);padding:8px 12px;border-radius:9px;font-size:11px}
+.graph-renderer-switch{position:absolute;z-index:var(--z-hud);right:12px;top:12px;border:1px solid var(--border-default);border-radius:8px;background:var(--surface-overlay);color:var(--text-secondary);padding:7px 9px;font-size:10px;letter-spacing:.06em;text-transform:uppercase}
+.graph-renderer-error{position:absolute;z-index:calc(var(--z-hud) + 1);left:50%;top:14px;transform:translateX(-50%);border:1px solid var(--status-partial);background:var(--surface-overlay);color:var(--text-primary);padding:8px 12px;border-radius:9px;font-size:11px}
+@media(max-width:1180px){.premium-shell .atlas-brand{min-width:150px}.premium-shell .top-navigation a{padding:0 9px}.premium-shell .atlas-command-trigger{width:190px}.premium-shell .sync-button span{display:none}}
 @media(prefers-contrast:more){:root:not([data-theme="light"]){--border-default:#fff;--border-emphasis:#fff}}
-@media(prefers-reduced-motion:reduce){html[data-theme] body{transition:none}}
+@media(prefers-reduced-motion:reduce){html[data-theme] body{transition:none}.premium-shell *{scroll-behavior:auto!important}}
