@@ -33,15 +33,34 @@ test('Drive GitHub reader exposes graph state and entity projection without a ne
  assert.doesNotMatch(reader,/neon\.tech|DATA_API|OIDC/i);
 });
 
-test('bounded snapshot reports its real completeness instead of pretending to contain the entire corpus',()=>{
+test('sharded snapshot contains the complete canonical Test Registry corpus',()=>{
  const snapshot=JSON.parse(read('data/science-drive-projection.json'));
  assert.equal(snapshot.contract,'nexo-science-drive-github-v1');
  assert.equal(snapshot.source,'GOOGLE_DRIVE');
  assert.match(snapshot.sourceRef,/PEER_CONTROL_TOWER_CANONICAL/);
  assert.ok(snapshot.domains.some(d=>d.id==='domain:D7'&&d.label));
  assert.equal(snapshot.shards?.D7,'science-drive-projection/D7.json');
- assert.ok(snapshot.completeness?.tests?.declared>snapshot.completeness?.tests?.included);
- assert.equal(snapshot.completeness?.tests?.truncated,true);
+ const shardEntries=Object.entries(snapshot.shards||{});
+ const total=shardEntries.reduce((sum,[name,rel])=>{
+  const shard=JSON.parse(read(`data/${rel}`));
+  const actual=Array.isArray(shard.tests)?shard.tests.length:0;
+  assert.equal(snapshot.completeness?.byShard?.[name]?.included,actual,`${name} included count drift`);
+  assert.equal(snapshot.completeness?.byShard?.[name]?.truncated,false,`${name} must be complete`);
+  return sum+actual;
+ },0);
+ assert.equal(total,snapshot.completeness?.tests?.declared);
+ assert.equal(snapshot.completeness?.tests?.included,total);
+ assert.equal(snapshot.completeness?.tests?.truncated,false);
+});
+
+test('historical D1 test resolves through the rich science entity projection',async()=>{
+ const {loadDriveGithubScience,projectDriveGithubScience}=await import('../lib/drive-github-science.mjs');
+ const state=loadDriveGithubScience();
+ const response=projectDriveGithubScience(state,'entity',{id:'T-AF-001'});
+ assert.equal(response.entity?.id,'T-AF-001');
+ assert.equal(response.entity?.type,'TEST');
+ assert.equal(response.entity?.domain,'D1');
+ assert.ok(response.entity?.summary);
 });
 
 test('D7 graph contains a real canonical CMB test and a derived result edge',async()=>{
