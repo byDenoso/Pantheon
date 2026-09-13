@@ -28,7 +28,7 @@ const NAVIGATION: Array<{ area: AtlasArea; label: string }> = [
 
 const ObservatoryPage = lazy(() => import('./pages/atlas-pages').then(module => ({ default: module.ObservatoryPage })));
 const LaboratoryPage = lazy(() => import('./pages/atlas-pages').then(module => ({ default: module.LaboratoryPage })));
-const UniversePage = lazy(() => import('./pages/atlas-pages').then(module => ({ default: module.UniversePage })));
+const UniversePage = lazy(() => import('./pages/universe-page'));
 
 function useMedia(query: string) {
   const [matches, setMatches] = useState(() => typeof matchMedia === 'function' ? matchMedia(query).matches : false);
