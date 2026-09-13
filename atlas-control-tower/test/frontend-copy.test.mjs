@@ -20,8 +20,9 @@ test('command center keeps direct operational copy without generic contrast disc
 });
 
 test('graph renderer is route-scoped instead of leaking into the root shell', () => {
-  assert.doesNotMatch(app, /from ['"]\.\/scene\/AtlasCanvas|<AtlasCanvas|<Canvas/);
+  assert.doesNotMatch(app, /from ['"]\.\/scene\/AtlasCanvas|<AtlasCanvas|<Canvas|GraphRenderer/);
   assert.match(app, /GraphsPage/);
-  assert.match(graphs, /<AtlasCanvas/);
+  assert.match(graphs, /<GraphRenderer/);
+  assert.doesNotMatch(graphs, /<AtlasCanvas/);
   assert.match(app, /lazy\(\(\) => import\('\.\/pages\/atlas-pages'\)/);
 });
