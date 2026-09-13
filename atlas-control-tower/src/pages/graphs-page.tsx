@@ -3,6 +3,7 @@ import {AtlasContextBar} from '../components/AtlasContextBar';
 import {GraphRenderer} from '../graph-engine/GraphRenderer';
 import {SpatialInspector} from '../graph-engine/SpatialInspector';
 import {buildLiveProjection} from '../graph-engine/live-projection';
+import {enforceGraphEntityContract} from '../graph-engine/graph-entity-contract';
 import type {GraphNode} from '../graph-engine/types';
 import type {AtlasNode} from '../scene/types';
 import type {AtlasActions,AtlasUiState} from '../state/useAtlasSession';
@@ -27,7 +28,16 @@ export function GraphsPage({state,actions,reducedMotion,compact}:{state:AtlasUiS
   useEffect(()=>{actions.setSceneState({visibleLayers:mode==='evidence'?['evidence','provenance']:mode==='relations'?['hierarchy','relations','evidence']:['hierarchy','relations'],expandedRelations:mode==='relations'?['related','supports','contradicts','dependency']:[]})},[actions,mode]);
   void reducedMotion;void compact;
 
-  const baseProjection=useMemo(()=>graph?buildLiveProjection({graph,focusId:state.focusId,path:state.path,pins:state.pins,compare:state.compare}):null,[graph,state.focusId,state.path,state.pins,state.compare]);
+  const liveProjection=useMemo(()=>graph?buildLiveProjection({graph,focusId:state.focusId,path:state.path,pins:state.pins,compare:state.compare}):null,[graph,state.focusId,state.path,state.pins,state.compare]);
+  const baseProjection=useMemo(()=>{
+    if(!liveProjection)return null;
+    // Locked map contract: only SYSTEM/ROOT/DOMAIN/CAMPAIGN render as map nodes.
+    // Tests/claims/datasets/artifacts/results/evidence are stripped here, not hidden by
+    // mode -- they stay reachable via Pesquisa/Atividade/Laboratório/inspector instead.
+    const {projection,issues}=enforceGraphEntityContract(liveProjection);
+    if(issues.length)console.debug('[atlas:graph-contract]',issues);
+    return projection;
+  },[liveProjection]);
   const projection=useMemo(()=>baseProjection?modeProjection(baseProjection,mode):null,[baseProjection,mode]);
   const selected=graph?.nodes.find(node=>node.id===state.selectedId)||null;
   const canBack=state.navigationIndex>0;
