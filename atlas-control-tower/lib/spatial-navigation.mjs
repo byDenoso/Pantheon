@@ -2,6 +2,7 @@ const MAX_HISTORY = 64;
 
 const cloneRecord = value => value && typeof value === 'object' && !Array.isArray(value) ? {...value} : {};
 const cloneList = value => Array.isArray(value) ? [...value] : [];
+const clonePath = value => Array.isArray(value) ? value.map(item => ({...item})) : [];
 
 export function captureFrame(input = {}) {
   return {
@@ -14,6 +15,8 @@ export function captureFrame(input = {}) {
     filters: cloneRecord(input.filters),
     expandedRelations: cloneList(input.expandedRelations),
     visibleLayers: cloneList(input.visibleLayers),
+    path: clonePath(input.path),
+    navigationKind: input.navigationKind === 'cross-domain' ? 'cross-domain' : input.navigationKind === 'restore' ? 'restore' : 'drill-down',
     timestamp: Number.isFinite(Number(input.timestamp)) ? Number(input.timestamp) : Date.now()
   };
 }
@@ -33,6 +36,14 @@ export function pushFrame(state, frame, maxHistory = MAX_HISTORY) {
   const cap = Math.max(2, Number(maxHistory) || MAX_HISTORY);
   if (stack.length > cap) stack = stack.slice(stack.length - cap);
   const navigationIndex = stack.length - 1;
+  return {navigationStack:stack, navigationIndex, frame:stack[navigationIndex]};
+}
+
+export function replaceCurrentFrame(state, frame) {
+  const stack = Array.isArray(state?.navigationStack) ? [...state.navigationStack] : [];
+  if (!stack.length) return createNavigationState(frame);
+  const navigationIndex = Math.max(0, Math.min(stack.length - 1, Number(state.navigationIndex) || 0));
+  stack[navigationIndex] = captureFrame(frame);
   return {navigationStack:stack, navigationIndex, frame:stack[navigationIndex]};
 }
 
