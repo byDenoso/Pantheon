@@ -4,7 +4,7 @@ import fs from 'node:fs';
 
 const app=fs.readFileSync(new URL('../src/App.tsx',import.meta.url),'utf8');
 const route=fs.readFileSync(new URL('../src/atlas-route.ts',import.meta.url),'utf8');
-const pages=fs.readFileSync(new URL('../src/pages/atlas-pages.tsx',import.meta.url),'utf8');
+const page=fs.readFileSync(new URL('../src/pages/ObservatorySpatialPage.tsx',import.meta.url),'utf8');
 const renderer=fs.readFileSync(new URL('../src/graph-engine/GraphRenderer.tsx',import.meta.url),'utf8');
 
 test('Graphs is no longer a primary product area and Observatory owns spatial entry',()=>{
@@ -22,9 +22,9 @@ test('legacy graphs URLs normalize into Observatory instead of remaining a produ
 });
 
 test('Observatory embeds the spatial map and removes the old compact graph handoff',()=>{
-  assert.match(pages,/ObservatorySpatialMap/);
-  assert.doesNotMatch(pages,/ABRIR NO MODO GRAFOS/);
-  assert.doesNotMatch(pages,/CompactGraph/);
+  assert.match(page,/ObservatorySpatialMap/);
+  assert.doesNotMatch(page,/ABRIR NO MODO GRAFOS/);
+  assert.doesNotMatch(page,/CompactGraph/);
 });
 
 test('product graph renderer is Canvas 2.5D only with no visible WebGL switch',()=>{
