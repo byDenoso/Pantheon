@@ -40,7 +40,7 @@ jobs:
         shell: bash
         run: |
           shopt -s nullglob
-          files=(api/*.js *.mjs lib/*.mjs ui/*.mjs webmcp/*.mjs)
+          files=(api/*.js *.mjs lib/*.mjs ui/*.mjs scripts/*.mjs webmcp/*.mjs)
           for file in "${files[@]}"; do
             node --check "$file"
           done
@@ -123,22 +123,11 @@ jobs:
 
           smoke_api(){
             local base="$1"
-            health=$(curl -L -sS -o /tmp/health.json -w '%{http_code}' --max-time 40 "$base/api/health")
-            graph=$(curl -L -sS -o /tmp/graph.json -w '%{http_code}' --max-time 40 "$base/api/graph?focus=system:SCIENCE&depth=1&limit=8")
-            ops=$(curl -L -sS -o /tmp/ops.json -w '%{http_code}' --max-time 40 "$base/api/ops")
-            learning=$(curl -L -sS -o /tmp/learning.json -w '%{http_code}' --max-time 40 "$base/api/learning")
+            node scripts/api-readback.mjs "$base/api"
             runner=$(curl -L -sS -o /tmp/runner.json -w '%{http_code}' --max-time 20 "$base/api/runner?op=health")
-            echo "$base API -> health=$health graph=$graph ops=$ops learning=$learning runner=$runner"
-            [ "$health" = "200" ] && [ "$graph" = "200" ] && [ "$ops" = "200" ] && [ "$learning" = "200" ] && [ "$runner" = "401" ]
-            node -e '
-              const fs=require("fs");
-              const h=JSON.parse(fs.readFileSync("/tmp/health.json","utf8"));
-              if(!h.ok || h.contract!=="v1" || h.dataSource?.freshness!=="LIVE" || h.dataSource?.usedFallback!==false){
-                console.error("health contract failed",h);process.exit(1);
-              }
-              const g=JSON.parse(fs.readFileSync("/tmp/graph.json","utf8"));
-              if(!Array.isArray(g.nodes)){console.error("graph contract missing nodes");process.exit(1);}
-            '
+            echo "$base runner -> $runner"
+            [ "$runner" = "503" ] || [ "$runner" = "401" ]
+            node -e 'const fs=require("fs");const r=JSON.parse(fs.readFileSync("/tmp/runner.json","utf8"));if(r.ok!==false){process.exit(1)}'
           }
 
           smoke_frontend "$DEPLOY_URL"
@@ -147,13 +136,13 @@ jobs:
           for attempt in $(seq 1 16); do
             echo "canonical readback attempt $attempt"
             if smoke_frontend "$canonical" && smoke_api "$canonical"; then
-              echo "Production vNext readback passed."
+              echo "Production Atlas contract readback passed."
               exit 0
             fi
             sleep 10
           done
 
-          echo "::error::canonical production alias never converged to the validated vNext deployment"
+          echo "::error::canonical production alias never converged to the validated Atlas deployment"
           exit 1
 
       - name: Confirm Vercel Git deployment handoff

@@ -48,9 +48,9 @@ test('cockpit copy exposes only what, how and why and never echoes raw technical
   summary:'Run exactkg archive 6b54a91e721785807ff0e90c897010b6 against branch atlas-control.',
   metadata:{artifact_hash:'6b54a91e721785807ff0e90c897010b6',git_commit:'688b472d2a298ca0f988d6c3be287f2b664dc103'}
  });
- assert.equal(raw.what, 'Conteúdo ainda não indexado em português.');
- assert.equal(raw.how, 'Como ainda não indexado em português.');
- assert.equal(raw.why, 'Por quê ainda não indexado em português.');
+ assert.equal(raw.what, 'Não publicado na projeção atual.');
+ assert.equal(raw.how, 'Não publicado na projeção atual.');
+ assert.equal(raw.why, 'Não publicado na projeção atual.');
  assert.doesNotMatch(JSON.stringify(raw), /6b54a91e721785807ff0e90c897010b6|688b472d2a298ca0f988d6c3be287f2b664dc103/);
 });
 
