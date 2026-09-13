@@ -64,7 +64,7 @@ test('browser acceptance asserts premium shell context command entry and mobile 
   assert.match(browser,/mobile graph horizontal overflow/);
 });
 
-test('Pages bootstrap smoke rejects publishing a build without the premium shell markers',()=>{
+test('Pages sovereign bootstrap still rejects publishing a build without the premium shell markers',()=>{
   for(const marker of ['premium-shell','atlas-context-bar','atlas-command-trigger']) assert.match(pagesWorkflow,new RegExp(marker));
-  assert.match(pagesWorkflow,/PAGES_PREMIUM_BOOTSTRAP_OK/);
+  assert.match(pagesWorkflow,/PAGES_SOVEREIGN_BOOTSTRAP_OK/);
 });
