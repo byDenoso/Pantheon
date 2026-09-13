@@ -1,12 +1,10 @@
-import { createConfiguredApi } from '../api/client';
-
 type SearchApi={
  graph:(query:Record<string,unknown>)=>Promise<any>;
  learning:()=>Promise<any>;ops:()=>Promise<any>;automationRuns:()=>Promise<any>;audit:()=>Promise<any>;
 };
 const value=<T>(item:PromiseSettledResult<T>):T|null=>item.status==='fulfilled'?item.value:null;
 
-export async function loadGlobalSearchSources(query:string,api:SearchApi=createConfiguredApi() as SearchApi){
+export async function loadGlobalSearchSources(query:string,api:SearchApi){
  const q=String(query||'').trim();
  if(!q)return {science:null,olympus:null,learning:null,ops:null,runs:null,audit:null};
  const settled=await Promise.allSettled([

@@ -1,9 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { createConfiguredApi } from '../api/client';
 import { loadGlobalSearchSources } from '../data/load-global-search';
 import { buildGlobalSearchModel, type GlobalSearchResult } from '../data/global-search-model';
 
 const GROUP_ORDER=['Ciência','Olympus','Learning','Operação','Proveniência'];
+const api=createConfiguredApi();
 
 export function GlobalSearch(){
  const navigate=useNavigate();
@@ -27,7 +29,7 @@ export function GlobalSearch(){
   if(!q){setLoading(false);setModel(buildGlobalSearchModel({query:'',science:null,olympus:null,learning:null,ops:null,runs:null,audit:null}));return}
   setLoading(true);
   const timer=window.setTimeout(()=>{
-   void loadGlobalSearchSources(q).then(sources=>{
+   void loadGlobalSearchSources(q,api).then(sources=>{
     if(current!==seq.current)return;
     setModel(buildGlobalSearchModel({query:q,...sources}));setLoading(false);
    }).catch(()=>{if(current===seq.current){setModel(buildGlobalSearchModel({query:q,science:null,olympus:null,learning:null,ops:null,runs:null,audit:null}));setLoading(false)}});

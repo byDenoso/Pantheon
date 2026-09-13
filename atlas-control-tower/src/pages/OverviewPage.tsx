@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { createConfiguredApi } from '../api/client';
 import { PageHeader } from '../components/PageHeader';
 import { loadOverviewSources } from '../data/load-overview';
 import { buildOverviewModel } from '../data/overview-model';
@@ -7,13 +8,14 @@ type Sources=Awaited<ReturnType<typeof loadOverviewSources>>;
 const nf=new Intl.NumberFormat('pt-BR');
 const value=(v:number|string|null)=>v===null?'—':typeof v==='number'?nf.format(v):v;
 const statusTone=(status:string)=>/BLOCK|FAIL|ERROR/.test(status)?'danger':/PASS|SUCCESS|RECOVER/.test(status)?'ok':'neutral';
+const api=createConfiguredApi();
 
 export default function OverviewPage(){
   const [sources,setSources]=useState<Sources|null>(null);
   const [loading,setLoading]=useState(true);
   const reload=useCallback(async()=>{
     setLoading(true);
-    setSources(await loadOverviewSources());
+    setSources(await loadOverviewSources(api));
     setLoading(false);
   },[]);
   useEffect(()=>{void reload()},[reload]);
