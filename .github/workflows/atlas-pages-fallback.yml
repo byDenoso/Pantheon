@@ -47,6 +47,38 @@ jobs:
         run: |
           npm run build -- --base=/Pantheon/
           cp dist/index.html dist/404.html
+      - name: Browser bootstrap smoke
+        run: |
+          rm -rf /tmp/atlas-pages-smoke
+          mkdir -p /tmp/atlas-pages-smoke/Pantheon
+          cp -a dist/. /tmp/atlas-pages-smoke/Pantheon/
+          python3 -m http.server 4174 --directory /tmp/atlas-pages-smoke >/tmp/atlas-pages-http.log 2>&1 &
+          server_pid=$!
+          trap 'kill "$server_pid" 2>/dev/null || true' EXIT
+          for attempt in 1 2 3 4 5; do
+            curl -fsS http://127.0.0.1:4174/Pantheon/ >/dev/null && break
+            sleep 1
+          done
+          browser="$(command -v google-chrome || command -v chromium || command -v chromium-browser || true)"
+          [ -n "$browser" ]
+          timeout 30s "$browser" \
+            --headless=new \
+            --no-sandbox \
+            --disable-gpu \
+            --disable-dev-shm-usage \
+            --virtual-time-budget=10000 \
+            --dump-dom \
+            http://127.0.0.1:4174/Pantheon/ \
+            >/tmp/atlas-pages-dom.html 2>/tmp/atlas-pages-browser.log || {
+              cat /tmp/atlas-pages-browser.log
+              exit 1
+            }
+          grep -q 'class="atlas-app"' /tmp/atlas-pages-dom.html
+          if grep -q 'atlas-bootstrap-error' /tmp/atlas-pages-dom.html; then
+            cat /tmp/atlas-pages-dom.html
+            exit 1
+          fi
+          echo 'PAGES_BROWSER_BOOTSTRAP_OK'
       - uses: actions/upload-pages-artifact@v3
         with:
           path: atlas-control-tower/dist
