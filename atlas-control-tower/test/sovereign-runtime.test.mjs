@@ -4,18 +4,19 @@ import {createApi} from '../lib/atlas-api.mjs';
 
 const api=createApi({profile:'atlas'});
 
-test('local Atlas science resolves D7 test and result without HTTP',async()=>{
+test('local Atlas science resolves D7 campaign without HTTP',async()=>{
   const graph=await api.graph({focus:'domain:D7',depth:3});
   assert.equal(graph.focus,'domain:D7');
-  assert.ok(graph.nodes.some(node=>node.id==='T-ALENS-001'&&node.type==='TEST'),'missing T-ALENS-001');
-  assert.ok(graph.nodes.some(node=>node.id==='result:T-ALENS-001'&&node.type==='RESULT'),'missing result:T-ALENS-001');
-  assert.ok(graph.edges.some(edge=>edge.source==='T-ALENS-001'&&edge.target==='result:T-ALENS-001'&&edge.type==='PRODUCES'),'missing PRODUCES relation');
+  assert.ok(graph.nodes.some(node=>node.id==='CAMP-CMB-ANOMALIES'&&node.type==='CAMPAIGN'),'missing CAMP-CMB-ANOMALIES');
+  assert.equal(graph.nodes.some(node=>node.type==='TEST'||node.type==='RESULT'),false);
+  assert.equal(graph.truncated,false);
 });
 
-test('local Atlas entity resolution keeps scientific sentinel metadata',async()=>{
-  const response=await api.entity('T-ALENS-001');
-  assert.equal(response.entity?.id,'T-ALENS-001');
-  assert.equal(response.entity?.type,'TEST');
+test('local Atlas entity resolution keeps campaign provenance metadata',async()=>{
+  const response=await api.entity('CAMP-CMB-ANOMALIES');
+  assert.equal(response.entity?.id,'CAMP-CMB-ANOMALIES');
+  assert.equal(response.entity?.type,'CAMPAIGN');
+  assert.equal(response.entity?.metadata?.testCount,104);
   assert.equal(response.authority,'GITHUB');
   assert.equal(response.projectionAuthority,'GOOGLE_DRIVE');
 });
