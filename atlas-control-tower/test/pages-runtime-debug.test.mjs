@@ -75,9 +75,9 @@ test('Pages deploy boots with deterministic Playwright assertions and blocks ret
   assert.match(pagesWorkflow,/waitForSelector\(['"]\.atlas-app/);
   assert.match(pagesWorkflow,/waitForSelector\(['"]\.atlas-context-bar/);
   assert.match(pagesWorkflow,/atlas-bootstrap-error/);
-  assert.match(pagesWorkflow,/vercel\.app/i);
-  assert.match(pagesWorkflow,/neon/i);
+  assert.match(pagesWorkflow,/RETIRED_RUNTIME_REQUEST/);
   assert.match(pagesWorkflow,/route\.abort\(\)/);
+  assert.match(pagesWorkflow,/supabase\|firebase/);
   assert.doesNotMatch(pagesWorkflow,/--dump-dom/);
 });
 
