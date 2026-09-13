@@ -53,3 +53,17 @@ jobs:
       - name: Deploy Pages
         id: deployment
         uses: actions/deploy-pages@v4
+      - name: Readback Pages and canonical API
+        env:
+          PAGE_URL: ${{ steps.deployment.outputs.page_url }}
+        run: |
+          page=''
+          for attempt in 1 2 3 4 5 6; do
+            page="$(curl -fsSL "$PAGE_URL" 2>/dev/null || true)"
+            [ -n "$page" ] && break
+            sleep 5
+          done
+          [ -n "$page" ]
+          printf '%s' "$page" | grep -q '/Pantheon/assets/index-'
+          health="$(curl -fsSL -H 'Origin: https://bydenoso.github.io' https://nexo-atlas-control-tower.vercel.app/api/health)"
+          HEALTH="$health" node --input-type=module -e "const h=JSON.parse(process.env.HEALTH); if(!h.ok) process.exit(1); const f=String(h.dataSource?.freshness||'').toUpperCase(); if(!['LIVE','SNAPSHOT'].includes(f)) process.exit(2); console.log('PAGES_READBACK_OK freshness='+f);"
