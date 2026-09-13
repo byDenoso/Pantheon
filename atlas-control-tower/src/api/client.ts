@@ -19,14 +19,10 @@ export function configuredBaseUrl(): string {
 
 export function createConfiguredApi(): AtlasApiClient {
   const baseUrl = configuredBaseUrl();
-  const fetchImpl = typeof window !== 'undefined' && baseUrl === '/api'
-    ? window.fetch.bind(window)
-    : undefined;
-  const apiOptions = { baseUrl, fetchImpl, profile: 'atlas' as const };
-  return createApi(apiOptions) as AtlasApiClient;
+  return createApi({ baseUrl, profile: 'atlas' as const }) as AtlasApiClient;
 }
 
 export function apiBaseLabel(): string {
   const base = configuredBaseUrl();
-  return base === '/api' ? 'API local' : base;
+  return base === '/api' ? 'Runtime estático local' : base;
 }
