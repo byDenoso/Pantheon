@@ -1,6 +1,6 @@
 /** Graph Contract client. Default Atlas reads are served from the Drive-derived read-only projection. */
 import {normalizeGraph,cacheKey,EMPTY_GRAPH,SOURCES,FRESHNESS,CACHE_STATES,provenanceLabel} from './graph-contract.mjs';
-import {driveRoute} from './drive-ssot.mjs';
+import {sovereignDriveRoute as driveRoute} from './sovereign-static-route.mjs';
 import {subgraph} from './model.mjs';
 export {normalizeGraph,EMPTY_GRAPH,SOURCES,FRESHNESS,provenanceLabel};
 
