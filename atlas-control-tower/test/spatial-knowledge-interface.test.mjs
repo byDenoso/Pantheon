@@ -60,8 +60,11 @@ test('theme control supports system light dark deep-space and high-contrast', ()
   const source = read('src/components/ThemeToggle.tsx');
   for (const theme of ['system', 'light', 'dark', 'deep-space', 'high-contrast']) assert.match(source, new RegExp(theme));
   assert.match(source, /atlas:theme-change/);
-  const app = read('src/App.tsx');
-  assert.match(app, /ThemeToggle/);
+  const mount = read('src/components/ThemeMount.tsx');
+  assert.match(mount, /ThemeToggle/);
+  assert.match(mount, /\.top-actions/);
+  const entry = read('src/main.tsx');
+  assert.match(entry, /ThemeMount/);
   const indexCss = read('src/design/index.css');
   assert.match(indexCss, /premium-theme\.css/);
 });
