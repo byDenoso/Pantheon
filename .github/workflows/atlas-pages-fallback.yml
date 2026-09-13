@@ -41,10 +41,12 @@ jobs:
         run: |
           npm test
           npm run typecheck
-      - name: Build Pages frontend
+      - name: Build Pages frontend and static state
         run: |
+          npm run state:build
           npm run build -- --base=/Pantheon/
           cp dist/index.html dist/404.html
+          test -f dist/data/current/manifest.json
       - name: Install isolated Pages browser tools
         run: |
           npm install --prefix "$RUNNER_TEMP/atlas-pages-browser" --no-audit --no-fund playwright@1.62.1
@@ -74,7 +76,14 @@ jobs:
           const page=await browser.newPage({viewport:{width:1280,height:800}});
           const errors=[];
           const retired=[];
+          const dataRequests=[];
+          const apiRequests=[];
           page.on('pageerror',error=>errors.push(String(error)));
+          page.on('request',request=>{
+            const url=new URL(request.url());
+            if(url.pathname.includes('/Pantheon/data/'))dataRequests.push(url.pathname);
+            if(url.origin==='http://127.0.0.1:4174'&&url.pathname.startsWith('/api/'))apiRequests.push(url.pathname);
+          });
           await page.route('**/*',route=>{
             const url=route.request().url();
             if(/vercel\.app|neon|supabase|firebase/i.test(url)){
@@ -83,17 +92,21 @@ jobs:
             }
             return route.continue();
           });
+          const manifestResponse=page.waitForResponse(response=>response.url().includes('/Pantheon/data/current/manifest.json')&&response.ok(),{timeout:15000});
           await page.goto('http://127.0.0.1:4174/Pantheon/',{waitUntil:'domcontentloaded',timeout:30000});
+          await manifestResponse;
           await page.waitForSelector('.atlas-app',{timeout:15000});
           await page.waitForSelector('.premium-shell',{timeout:15000});
           await page.waitForSelector('.atlas-context-bar',{timeout:15000});
           await page.waitForSelector('.atlas-command-trigger',{timeout:15000});
           const bootstrapError=await page.locator('.atlas-bootstrap-error').count();
           if(bootstrapError)throw new Error('ATLAS_BOOTSTRAP_ERROR_VISIBLE');
+          if(!dataRequests.some(path=>path.endsWith('/data/current/manifest.json')))throw new Error(`STATIC_MANIFEST_NOT_REQUESTED:${dataRequests.join(' | ')}`);
+          if(apiRequests.length)throw new Error(`LEGACY_API_REQUEST:${apiRequests.join(' | ')}`);
           if(retired.length)throw new Error(`RETIRED_RUNTIME_REQUEST:${retired.join(' | ')}`);
           if(errors.length)throw new Error(`ATLAS_PAGEERROR:${errors.join(' | ')}`);
           await browser.close();
-          console.log('PAGES_SOVEREIGN_BOOTSTRAP_OK');
+          console.log('PAGES_SOVEREIGN_STATIC_ARTIFACT_BOOTSTRAP_OK');
           NODE
       - uses: actions/upload-pages-artifact@v3
         with:
@@ -106,6 +119,7 @@ jobs:
           PAGE_URL: ${{ steps.deployment.outputs.page_url }}
         run: |
           set -euo pipefail
+          base="${PAGE_URL%/}"
           page=''
           for attempt in 1 2 3 4 5 6; do
             page="$(curl -fsSL "$PAGE_URL" 2>/dev/null || true)"
@@ -118,4 +132,18 @@ jobs:
             echo '::error::Published Pages shell contains a retired runtime reference'
             exit 1
           fi
-          echo 'PAGES_STATIC_READBACK_OK'
+
+          curl -fsSL "$base/data/current/manifest.json" -o /tmp/nexo-manifest.json
+          snapshot_path="$(node -e "const m=require('/tmp/nexo-manifest.json'); if(m.contract!=='nexo-static-runtime-v1'||!/^sha256:[a-f0-9]{64}$/i.test(m.fingerprint)||!m.artifacts?.['science/D7.json']) process.exit(1); process.stdout.write(m.snapshotPath)")"
+          fingerprint="$(node -e "const m=require('/tmp/nexo-manifest.json'); process.stdout.write(m.fingerprint)")"
+          curl -fsSL "$base/data/$snapshot_path/science/D7.json" -o /tmp/nexo-d7.json
+          curl -fsSL "$base/data/$snapshot_path/health.json" -o /tmp/nexo-health.json
+          node <<'NODE'
+          const manifest=require('/tmp/nexo-manifest.json');
+          const d7=require('/tmp/nexo-d7.json');
+          const health=require('/tmp/nexo-health.json');
+          if(!Array.isArray(d7.tests)||!d7.tests.some(test=>test.id==='T-ALENS-001'))throw new Error('D7_SENTINEL_MISSING');
+          if(health.contract!=='nexo-static-runtime-v1'||health.runtime!=='STATIC_LOCAL')throw new Error('STATIC_HEALTH_INVALID');
+          if(manifest.source!=='GOOGLE_DRIVE'||manifest.codeAuthority!=='GITHUB')throw new Error('STATIC_AUTHORITY_INVALID');
+          NODE
+          echo "PAGES_STATIC_STATE_READBACK_OK fingerprint=$fingerprint"

@@ -122,6 +122,7 @@ export function createStaticArtifactApi({baseUrl='/data',fetchImpl=globalThis.fe
     if(focus==='system:SCIENCE')return artifact('graph/science.json');
     if(focus==='system:ENGINEERING')return artifact('graph/engineering.json');
     if(focus==='system:OLYMPUS')return artifact('graph/olympus.json');
+    if(focus==='system:OPERATIONS')return artifact('graph/operations.json');
     if(/^domain:D\d+$/i.test(focus))return artifact(`graph/science/${focus.slice(7).toUpperCase()}.json`);
     if(/^T-/i.test(focus)||/^result:T-/i.test(focus)||/^CAMP-/i.test(focus))return focusedScienceGraph(focus);
     if(/^domain:/.test(focus))return genericHierarchy(focus);

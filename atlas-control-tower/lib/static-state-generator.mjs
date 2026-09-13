@@ -88,7 +88,8 @@ function rootGraph(science){
   const children=[
     systemNode('SCIENCE','Ciência','Pesquisa científica projetada do Drive e autorizada pelo GitHub.'),
     systemNode('ENGINEERING','Engenharia','Programas e campanhas de engenharia publicados na projeção pública.'),
-    systemNode('OLYMPUS','Olympus','Estrutura pública sanitizada do domínio Olympus; dados pessoais não são publicados.')
+    systemNode('OLYMPUS','Olympus','Estrutura pública sanitizada do domínio Olympus; dados pessoais não são publicados.'),
+    systemNode('OPERATIONS','Operação','Estado operacional público sanitizado, execução e bloqueios publicados pelo snapshot.')
   ];
   return graph(science.sourceVersion,root.id,[root,...children],children.map(node=>({id:`contains:${root.id}:${node.id}`,source:root.id,target:node.id,type:'CONTAINS',declared:true})));
 }
@@ -141,6 +142,13 @@ function safeOps(drive,sourceVersion){
   return {...publicMeta(sourceVersion),privacyGate:'PUBLIC_ALLOWLIST',counts:{blocked:actions.filter(row=>upper(row.status)==='BLOCKED').length,actions:actions.length},actions,runs:[],events:[]};
 }
 
+function operationsGraph(drive,sourceVersion){
+  const operations=safeOps(drive,sourceVersion);
+  const root=systemNode('OPERATIONS','Operação','Ações operacionais públicas sanitizadas do snapshot soberano.');
+  const nodes=arr(operations.actions).map(row=>({id:row.id,type:'ACTION',label:row.label||row.id,status:row.status||'',updatedAt:row.updatedAt||'',authority:'GITHUB'}));
+  return graph(sourceVersion,root.id,[root,...nodes],nodes.map(node=>({id:`contains:${root.id}:${node.id}`,source:root.id,target:node.id,type:'CONTAINS',declared:true})));
+}
+
 function safeAudit(drive,sourceVersion){
   const issues=arr(drive.integrity).map(row=>({id:row.id,scope:row.scope||'',type:row.type||'',status:row.status||'',severity:row.severity||''}));
   return {...publicMeta(sourceVersion),privacyGate:'PUBLIC_ALLOWLIST',total:issues.length,issues};
@@ -161,6 +169,9 @@ function buildEntityIndex(science,shards,drive){
   for(const row of generic){
     entities[row.id]={type:upper(row.type)||'ENTITY',domain:'',artifact:'entities/index.json',label:row.title||row.id,status:row.status||'',summary:row.summary||'',parentId:row.parentId||null};
   }
+  for(const row of arr(drive.actions)){
+    entities[row.id]={type:'ACTION',domain:'OPERATIONS',artifact:'operations/current.json',label:row.title||row.id,status:row.status||'',summary:'',parentId:'system:OPERATIONS'};
+  }
   return {...publicMeta(science.sourceVersion),privacyGate:'PUBLIC_ALLOWLIST',entities};
 }
 
@@ -172,10 +183,15 @@ function buildSearchIndex(entityIndex){
 
 function buildState(science,shards,drive){
   const tests=Object.values(shards).reduce((sum,shard)=>sum+arr(shard.tests).length,0);
+  const olympusPublic=arr(drive.olympus).filter(row=>upper(row.type)!=='CAMPAIGN').length;
+  const meta=publicMeta(science.sourceVersion);
   return {
-    ...publicMeta(science.sourceVersion),
+    ...meta,
     freshness:'SNAPSHOT',
-    counts:{DOMAIN:arr(science.domains).length,CAMPAIGN:arr(science.campaigns).length,TEST:tests,RESULT:tests,ENGINEERING:arr(drive.engineering).length,OLYMPUS_PUBLIC:arr(drive.olympus).filter(row=>upper(row.type)!=='CAMPAIGN').length},
+    projection:{...meta,freshness:'SNAPSHOT',fingerprint:science.fingerprint,sourceFingerprint:science.fingerprint},
+    counts:{DOMAIN:arr(science.domains).length,CAMPAIGN:arr(science.campaigns).length,TEST:tests,RESULT:tests,ENGINEERING:arr(drive.engineering).length,OLYMPUS_PUBLIC:olympusPublic,OPERATIONS:arr(drive.actions).length},
+    claims:{active:null,blocked:null},
+    domains:{science:arr(science.campaigns).length,engineering:arr(drive.engineering).length,olympus:olympusPublic,operations:arr(drive.actions).length},
     science:{testsDeclared:science.completeness?.tests?.declared??null,testsIncluded:tests,truncated:Boolean(science.completeness?.tests?.truncated),domains:arr(science.domains).length,campaigns:arr(science.campaigns).length}
   };
 }
@@ -211,6 +227,7 @@ export async function generateStaticState({outDir,dataDir=DEFAULT_DATA_DIR,gener
   for(const [name,shard] of Object.entries(shards))if(/^D\d+$/i.test(name))emit(`graph/science/${name}.json`,scienceDomainGraph(science,name,shard));
   emit('graph/engineering.json',hierarchyGraph(science.sourceVersion,'ENGINEERING',drive.engineering,'ENG-DOM-ENGINEERING'));
   emit('graph/olympus.json',hierarchyGraph(science.sourceVersion,'OLYMPUS',drive.olympus,'OLY-DOM-OLYMPUS',{publicOlympus:true}));
+  emit('graph/operations.json',operationsGraph(drive,science.sourceVersion));
   const entities=buildEntityIndex(science,shards,drive);
   emit('entities/index.json',entities);
   emit('search/index.json',buildSearchIndex(entities));
@@ -275,7 +292,7 @@ export function validateStaticState(outDir){
     const actual=sha256(body);
     if(actual!==expected.sha256)issues.push({type:'HASH_MISMATCH',artifact,expected:expected.sha256,actual});
   }
-  const required=['science/index.json','science/D7.json','graph/root.json','graph/science.json','graph/science/D7.json','entities/index.json','search/index.json','state.json','health.json','learning/current.json','operations/current.json','audit/current.json'];
+  const required=['science/index.json','science/D7.json','graph/root.json','graph/science.json','graph/science/D7.json','graph/operations.json','entities/index.json','search/index.json','state.json','health.json','learning/current.json','operations/current.json','audit/current.json'];
   for(const artifact of required)if(!manifest.artifacts?.[artifact])issues.push({type:'REQUIRED_ARTIFACT_UNDECLARED',artifact});
   return {ok:issues.length===0,issues,fingerprint:manifest.fingerprint};
 }
