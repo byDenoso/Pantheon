@@ -8,5 +8,6 @@ test('browser default API client routes through the same-origin serverless API',
   assert.match(client, /const baseUrl = configuredBaseUrl\(\)/);
   assert.match(client, /baseUrl === '\/api'/);
   assert.match(client, /window\.fetch\.bind\(window\)/);
-  assert.match(client, /createApi\(\{ baseUrl, fetchImpl \}\)/);
+  assert.match(client, /const apiOptions = \{ baseUrl, fetchImpl \}/);
+  assert.match(client, /createApi\(apiOptions\)/);
 });
