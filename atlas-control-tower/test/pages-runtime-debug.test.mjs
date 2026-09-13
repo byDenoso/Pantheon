@@ -4,6 +4,7 @@ import fs from 'node:fs';
 import {createApi} from '../lib/atlas-api.mjs';
 
 const client=fs.readFileSync(new URL('../src/api/client.ts',import.meta.url),'utf8');
+const app=fs.readFileSync(new URL('../src/App.tsx',import.meta.url),'utf8');
 const graphsPage=fs.readFileSync(new URL('../src/pages/graphs-page.tsx',import.meta.url),'utf8');
 const pagesWorkflow=fs.readFileSync(new URL('../../.github/workflows/atlas-pages-fallback.yml',import.meta.url),'utf8');
 const reply=body=>({ok:true,status:200,json:async()=>body});
@@ -56,4 +57,18 @@ test('empty initial graph errors never claim that a previous graph was preserved
 test('Pages readback exercises the graph route, not health alone',()=>{
   assert.match(pagesWorkflow,/\/api\/graph\?focus=/);
   assert.match(pagesWorkflow,/GRAPH=/);
+});
+
+test('app navigation never hardcodes the site root for graph navigation',()=>{
+  assert.doesNotMatch(app,/href=["']\/graphs["']/);
+  assert.doesNotMatch(app,/navigate\(["']\/graphs["']\)/);
+  assert.match(app,/href=\{routeFor\('graphs',\s*route\.context\)\}/);
+  assert.match(app,/navigate\(routeFor\('graphs'\)\)/);
+});
+
+test('sidebar systems mirror the GitHub canonical root graph',()=>{
+  const block=app.match(/const SYSTEMS\s*=\s*\[(.*?)\]\s*as const;/s)?.[1]||'';
+  for(const id of ['system:NEXO','system:SCIENCE','system:ENGINEERING','system:OLYMPUS','system:OPERATIONS'])assert.match(block,new RegExp(id));
+  assert.doesNotMatch(block,/system:AUTOMATION/);
+  assert.doesNotMatch(block,/system:LEARNING/);
 });
