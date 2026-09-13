@@ -14,7 +14,7 @@
     {"src":"/api/projection","headers":{"Access-Control-Allow-Origin":"https://bydenoso.github.io","Access-Control-Allow-Methods":"GET,POST,OPTIONS","Access-Control-Allow-Headers":"Content-Type,Authorization","Vary":"Origin"},"dest":"/api/projection.js"},
     {"src":"/api/universal-projection","headers":{"Access-Control-Allow-Origin":"https://bydenoso.github.io","Access-Control-Allow-Methods":"GET,OPTIONS","Access-Control-Allow-Headers":"Content-Type,Authorization","Vary":"Origin"},"dest":"/api/universal-projection.js"},
     {"src":"/api/runner","headers":{"Access-Control-Allow-Origin":"https://bydenoso.github.io","Access-Control-Allow-Methods":"GET,POST,OPTIONS","Access-Control-Allow-Headers":"Content-Type,Authorization","Vary":"Origin"},"dest":"/api/runner.js"},
-    {"src":"/api/(state|sync|graph|entity|automation-runs|learning-relations|learning|audit|health|ops)","headers":{"Access-Control-Allow-Origin":"https://bydenoso.github.io","Access-Control-Allow-Methods":"GET,POST,OPTIONS","Access-Control-Allow-Headers":"Content-Type,Authorization","Vary":"Origin"},"dest":"/api/runtime-orphans.js?route=$1"},
+    {"src":"/api/(state|sync|graph|entity|automation-runs|learning-relations|learning|audit|provenance|health|ops|operations|universe|summary|summaries|observatory|lab)","headers":{"Access-Control-Allow-Origin":"https://bydenoso.github.io","Access-Control-Allow-Methods":"GET,POST,OPTIONS","Access-Control-Allow-Headers":"Content-Type,Authorization","Vary":"Origin"},"dest":"/api/runtime-orphans.js?route=$1"},
     {"handle":"filesystem"},
     {"src":"/(.*)","dest":"/index.html"}
   ],
