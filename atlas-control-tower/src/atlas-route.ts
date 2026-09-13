@@ -33,7 +33,7 @@ function normalizeDomain(value: string | null): string | undefined {
 export function readAtlasRoute(location: Pick<Location, 'pathname' | 'search'> = window.location): AtlasRoute {
   const pathname = stripAppBase(location.pathname || '/graphs');
   const areaSegment = pathname.split('/').filter(Boolean)[0] as AtlasArea | undefined;
-  const area = AREAS.includes(areaSegment || 'graphs') ? areaSegment as AtlasArea : 'graphs';
+  const area: AtlasArea = areaSegment && AREAS.includes(areaSegment) ? areaSegment : 'graphs';
   const query = new URLSearchParams(location.search);
   const segments = pathname.split('/').filter(Boolean);
   const domainSegment = area === 'graphs' && segments.length >= 3 && segments[1] === 'science' ? segments[2] : undefined;
