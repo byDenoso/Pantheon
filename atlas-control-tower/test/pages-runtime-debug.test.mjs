@@ -61,6 +61,14 @@ test('Pages readback exercises the graph route, not health alone',()=>{
   assert.match(pagesWorkflow,/GRAPH=/);
 });
 
+test('Pages deploy boots the built app in a real browser before publishing',()=>{
+  assert.match(pagesWorkflow,/name:\s*Browser bootstrap smoke/);
+  assert.match(pagesWorkflow,/google-chrome|chromium/);
+  assert.match(pagesWorkflow,/--dump-dom/);
+  assert.match(pagesWorkflow,/atlas-app/);
+  assert.match(pagesWorkflow,/atlas-bootstrap-error/);
+});
+
 test('app navigation never hardcodes the site root for graph navigation',()=>{
   assert.doesNotMatch(app,/href=["']\/graphs["']/);
   assert.doesNotMatch(app,/navigate\(["']\/graphs["']\)/);
