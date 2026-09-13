@@ -36,6 +36,15 @@ test('non JSON 200 responses fail with an Atlas route diagnostic',async()=>{
   await assert.rejects(()=>api.graph({focus:'system:NEXO'}),/ATLAS_API_NON_JSON.*graph/i);
 });
 
+test('malformed JSON without a content type still names the failing Atlas route',async()=>{
+  const api=createApi({
+    baseUrl:'https://nexo-atlas-control-tower.vercel.app/api',
+    profile:'atlas',
+    fetchImpl:async()=>({ok:true,status:200,headers:{get:()=> ''},json:async()=>{throw new SyntaxError('Unexpected token <')}})
+  });
+  await assert.rejects(()=>api.graph({focus:'system:NEXO'}),/ATLAS_API_INVALID_JSON.*graph/i);
+});
+
 test('browser product declares the Atlas API profile explicitly',()=>{
   assert.match(client,/profile\s*:\s*['"]atlas['"]/);
 });
