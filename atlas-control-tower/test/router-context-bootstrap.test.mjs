@@ -17,3 +17,12 @@ test('graph renderer does not require a react-router context inside the custom A
   assert.match(renderer, /history\.replaceState/);
   assert.doesNotMatch(main, /<BrowserRouter\b|<RouterProvider\b/);
 });
+
+test('root render failures become a visible bootstrap diagnostic instead of a blank page', async () => {
+  const main = await readFile(mainUrl, 'utf8');
+  assert.match(main, /class RootErrorBoundary/);
+  assert.match(main, /getDerivedStateFromError/);
+  assert.match(main, /atlas-bootstrap-error/);
+  assert.match(main, /<RootErrorBoundary>/);
+  assert.match(main, /Falha ao iniciar o NEXO Atlas/);
+});
