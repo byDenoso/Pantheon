@@ -14,11 +14,6 @@ export function assertScienceProjectionAuthorized(authority){
  return projection;
 }
 
-function capture(){
- const headers=new Map();let body='';
- return {statusCode:200,setHeader:(k,v)=>headers.set(String(k).toLowerCase(),v),getHeader:k=>headers.get(String(k).toLowerCase()),end:chunk=>{if(chunk!=null)body+=String(chunk);return body},read:()=>({statusCode:this?.statusCode||200,body,headers})};
-}
-
 async function runAtlas(req){
  let statusCode=200,body='';const headers=new Map();
  const res={setHeader:(k,v)=>headers.set(String(k).toLowerCase(),v),getHeader:k=>headers.get(String(k).toLowerCase()),get statusCode(){return statusCode},set statusCode(v){statusCode=v},end:chunk=>{if(chunk!=null)body+=String(chunk);return body}};
