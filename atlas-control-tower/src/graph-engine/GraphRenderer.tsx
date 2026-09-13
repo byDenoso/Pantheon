@@ -1,6 +1,8 @@
-import {Component,useEffect,useState,type ReactNode} from 'react';
+import {Component,Suspense,lazy,useEffect,useState,type ReactNode} from 'react';
 import {GraphExplorer} from './GraphExplorer';
-import {GraphScene3D,type GraphSurfaceProps} from './GraphScene3D';
+import type {GraphSurfaceProps} from './GraphScene3D';
+
+const GraphScene3D=lazy(()=>import('./GraphScene3D').then(module=>({default:module.GraphScene3D})));
 
 type RendererMode='canvas'|'webgl';
 
@@ -36,5 +38,6 @@ export function GraphRenderer(props:GraphSurfaceProps){
   const webgl=mode==='webgl';
   if(!webgl)return <div className="graph-renderer-canvas"><button className="graph-renderer-switch" onClick={()=>switchRenderer('webgl')} title="Renderer experimental">WebGL</button><GraphExplorer {...props}/></div>;
   const fallback=<div className="graph-renderer-rollback"><div className="graph-renderer-error">WebGL indisponível. A cena foi preservada no Canvas.</div><button className="graph-renderer-switch" onClick={()=>switchRenderer('canvas')}>Canvas</button><GraphExplorer {...props}/></div>;
-  return <RendererBoundary key={props.projection.id} fallback={fallback}><GraphScene3D {...props} onRollback={()=>switchRenderer('canvas')}/></RendererBoundary>;
+  const loading=<div className="graph-renderer-canvas"><GraphExplorer {...props}/></div>;
+  return <RendererBoundary key={props.projection.id} fallback={fallback}><Suspense fallback={loading}><GraphScene3D {...props} onRollback={()=>switchRenderer('canvas')}/></Suspense></RendererBoundary>;
 }
