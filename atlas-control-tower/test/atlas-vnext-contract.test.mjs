@@ -48,7 +48,7 @@ test('configured API base activates remote reads without an injected fetcher', a
   }
 });
 
-test('the production entrypoint is the React shell and the existing graph engine remains imported', () => {
+test('the production entrypoint is the React shell and the spatial graph engine remains route-scoped', () => {
   const index = read('index.html');
   const main = read('src/main.tsx');
   const app = read('src/App.tsx');
@@ -57,6 +57,8 @@ test('the production entrypoint is the React shell and the existing graph engine
   assert.match(index, /src="\/src\/main\.tsx"/);
   assert.match(main, /createRoot/);
   assert.match(app, /GraphsPage/);
-  assert.match(graphs, /AtlasCanvas/);
+  assert.match(graphs, /GraphRenderer/);
+  assert.match(graphs, /buildLiveProjection/);
+  assert.doesNotMatch(graphs, /AtlasCanvas/);
   assert.match(graphs, /actions\.more\(\)/);
 });
