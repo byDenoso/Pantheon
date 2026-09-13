@@ -11,9 +11,10 @@
     "role": "PROJECTION_ONLY"
   },
   "scienceProjection": {
-    "kind": "NEON_DATA_API",
-    "schema": "science_v1",
-    "transport": "VERCEL_OIDC",
+    "kind": "GOOGLE_DRIVE",
+    "schema": "nexo-science-drive-github-v1",
+    "transportPath": "atlas-control-tower/data/science-drive-projection.json",
+    "sourceRef": "PEER_CONTROL_TOWER_CANONICAL",
     "role": "PROJECTION_ONLY"
   },
   "rules": {
@@ -21,5 +22,5 @@
     "failedRefreshPreservesLastValid": true,
     "syncRequiresCanonicalValidation": true
   },
-  "notes": "GitHub is the canonical control plane. External stores may supply private or operational projections only when explicitly authorized by this versioned manifest."
+  "notes": "GitHub is the canonical control plane. Google Drive supplies the read-only scientific and operational projections persisted in GitHub before frontend consumption."
 }
