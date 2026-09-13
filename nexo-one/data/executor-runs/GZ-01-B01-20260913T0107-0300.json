@@ -1,0 +1,102 @@
+{
+  "schema": "NEXO_EXECUTOR_RUN_V1",
+  "run_id": "GZ-01-B01-20260913T0107-0300",
+  "campaign": "GZ-01-B01",
+  "status": "BATCH_TERMINAL_WITH_BOUNDARIES",
+  "authority": {
+    "canonical": "GITHUB",
+    "repository": "byDenoso/Pantheon",
+    "ref": "main",
+    "projection_fingerprint_authorized": "sha256:535dab97986ea590d9d520eba4d7057a3f2c200e957ac60c5041c44c47edba12"
+  },
+  "scope": [
+    "DESI N(z)",
+    "coarse comoving density sanity check",
+    "clustering/bias consistency",
+    "Euclid release-boundary cross-check",
+    "COSMOS-Web/JWST high-z orthogonal cross-check"
+  ],
+  "assumptions": {
+    "density_cosmology": {"model": "flat LambdaCDM", "H0_km_s_Mpc": 67.4, "Omega_m": 0.315},
+    "density_area_deg2": 9528,
+    "density_area_note": "Uses DESI DR1 approximate Main Survey dark-program area as a deliberately coarse normalization. This is not a substitute for tracer-specific clustering masks/effective volume.",
+    "claim_boundary": "Cross-survey comparisons with different selections, tracers and redshift regimes are treated as orthogonal consistency checks, not pooled confirmation."
+  },
+  "tests": [
+    {
+      "id": "T-GZ01B01-01",
+      "name": "DESI_NZ_SAMPLE_CONTRACT",
+      "verdict": "PASS",
+      "evidence": [
+        "DESI DR1 publishes tracer redshift distributions for ELG/LRG/BGS/QSO and an approximate dark-program area of 9528 deg2.",
+        "Published DESI clustering sample definitions report LRG 0.4<z<1.1, ELG 0.8<z<1.6 and primary QSO clustering 0.8<z<2.1, with tracer-specific success criteria."
+      ],
+      "sources": [
+        "https://data.desi.lbl.gov/doc/releases/dr1/",
+        "https://www.desi.lbl.gov/for-scientists/target-selection-and-survey-validation/"
+      ]
+    },
+    {
+      "id": "T-GZ01B01-02",
+      "name": "COMOVING_DENSITY_SANITY",
+      "verdict": "PASS_WITH_CAVEAT",
+      "method": "N/Vshell using flat LambdaCDM and the approximate 9528 deg2 DR1 dark-program area; counts/ranges from published clustering-sample summary.",
+      "results_Mpc-3": {
+        "LRG_0p4_1p1": 5.0013e-5,
+        "ELG_0p8_1p6": 3.2311e-5,
+        "QSO_0p8_2p1_primary": 6.3880e-6
+      },
+      "interpretation": "Ordering is physically plausible for the progressively rarer tracer populations. Values are sanity checks only because the real clustering masks, completeness weights and n(z) structure are tracer/redshift dependent.",
+      "source": "https://data.desi.lbl.gov/doc/releases/dr1/"
+    },
+    {
+      "id": "T-GZ01B01-03",
+      "name": "CLUSTERING_BIAS_CONSISTENCY",
+      "verdict": "PASS",
+      "evidence": "DESI One-Percent HOD analysis reports LRG linear bias 1.93 (+0.06/-0.04) at z=0.4-0.6 and 2.08 +/-0.03 at z=0.6-0.8, while QSO bias is 2.63 (+0.37/-0.26) over z=0.8-2.1. The hierarchy is consistent with increasingly biased rarer tracers and shows no obvious contradiction with the coarse-density ordering.",
+      "boundary": "This is a consistency bridge from the validated One-Percent HOD analysis, not a replacement for a DR1 tracer-by-tracer bias refit.",
+      "source": "https://infoscience.epfl.ch/entities/publication/f5a8e358-29cb-445c-adf1-b4e67f202319"
+    },
+    {
+      "id": "T-GZ01B01-04",
+      "name": "EUCLID_DIRECT_CROSSCHECK",
+      "verdict": "BLOCKED_BY_RELEASE_BOUNDARY",
+      "evidence": "Euclid Q1 released 63.1 deg2 and ~26 million detections but is explicitly not a cosmology release. ESA states the first cosmology data release is planned for October 2026.",
+      "interpretation": "No negative scientific verdict. Direct DESI-vs-Euclid cosmological N(z)/clustering validation is premature at this run date.",
+      "sources": [
+        "https://www.euclid-ec.org/science/q1/",
+        "https://www.esa.int/Science_Exploration/Space_Science/Euclid/Euclid_opens_data_treasure_trove_offers_glimpse_of_deep_fields"
+      ]
+    },
+    {
+      "id": "T-GZ01B01-05",
+      "name": "COSMOS_WEB_HIGHZ_DENSITY_BRIDGE",
+      "verdict": "PASS_AS_ORTHOGONAL_CHECK",
+      "evidence": "COSMOS-Web LSS uses ~164k galaxies over 0.54 deg2 with photo-z quality sigma_z/(1+z)<0.1 and traces density structure to high redshift; this independently demonstrates measurable environment/density structure outside the DESI spectroscopic regime.",
+      "boundary": "Small-area photometric selection and different tracer population prohibit treating this as a direct normalization of DESI N(z) or bias.",
+      "sources": [
+        "https://doi.org/10.3847/1538-4357/ae5bac",
+        "https://cosmos2025.iap.fr/lss.html"
+      ]
+    },
+    {
+      "id": "T-GZ01B01-06",
+      "name": "JWST_HIGHZ_ABUNDANCE_BOUNDARY",
+      "verdict": "SURVIVES_WITH_ASTROPHYSICAL_DEGENERACY",
+      "evidence": "COSMOS-Web UVLF work reports 3099 galaxies across z~5.5-14 and a bright-end excess beginning around z~9, increasing toward z~12. Independent spectroscopy in GLASS confirms a high z~10 abundance and notes clustering and AGN contamination as viable contributors.",
+      "interpretation": "High-z abundance remains a real modeling target, but the current evidence does not uniquely identify cosmology because star-formation efficiency, stochasticity, dust, AGN contamination and cosmic structure remain live explanations.",
+      "sources": [
+        "https://arxiv.org/abs/2508.04791",
+        "https://www.ipac.caltech.edu/publication/2025A%26A...693A..50N"
+      ]
+    }
+  ],
+  "summary": {
+    "passes": 3,
+    "pass_with_caveat": 1,
+    "blocked_not_negative": 1,
+    "survives_with_degeneracy": 1,
+    "scientific_close": "DESI N(z), coarse density and bias are mutually consistent at sanity-check level. COSMOS-Web/JWST strengthens the case that high-z abundance and environment require explicit selection/astrophysical modeling. Euclid cannot yet serve as a direct cosmology cross-check before its core cosmology release.",
+    "learner_handoff": true
+  }
+}
