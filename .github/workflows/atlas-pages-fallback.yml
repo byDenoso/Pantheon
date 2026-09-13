@@ -99,12 +99,21 @@ jobs:
           await page.waitForSelector('.premium-shell',{timeout:15000});
           await page.waitForSelector('.atlas-context-bar',{timeout:15000});
           await page.waitForSelector('.atlas-command-trigger',{timeout:15000});
-          const bootstrapError=await page.locator('.atlas-bootstrap-error').count();
-          if(bootstrapError)throw new Error('ATLAS_BOOTSTRAP_ERROR_VISIBLE');
+          await page.waitForSelector('.graph-v2-canvas canvas',{timeout:15000});
+          if(await page.locator('.atlas-bootstrap-error').count())throw new Error('ATLAS_BOOTSTRAP_ERROR_VISIBLE');
+
+          await page.getByRole('link',{name:'OBSERVATÓRIO'}).click();
+          await page.waitForSelector('.graph-v2-canvas canvas',{state:'detached',timeout:10000});
+          await page.getByRole('link',{name:'GRAFOS'}).click();
+          await page.waitForSelector('.graph-v2-canvas canvas',{timeout:15000});
+          await page.waitForTimeout(250);
+          if(await page.locator('.atlas-bootstrap-error').count())throw new Error('ATLAS_BOOTSTRAP_ERROR_AFTER_GRAPH_REMOUNT');
+          if(errors.length)throw new Error(`ATLAS_PAGEERROR:${errors.join(' | ')}`);
+          console.log('GRAPH_LIFECYCLE_SMOKE_OK');
+
           if(!dataRequests.some(path=>path.endsWith('/data/current/manifest.json')))throw new Error(`STATIC_MANIFEST_NOT_REQUESTED:${dataRequests.join(' | ')}`);
           if(apiRequests.length)throw new Error(`LEGACY_API_REQUEST:${apiRequests.join(' | ')}`);
           if(retired.length)throw new Error(`RETIRED_RUNTIME_REQUEST:${retired.join(' | ')}`);
-          if(errors.length)throw new Error(`ATLAS_PAGEERROR:${errors.join(' | ')}`);
           await browser.close();
           console.log('PAGES_SOVEREIGN_BOOTSTRAP_OK');
           console.log('PAGES_SOVEREIGN_STATIC_ARTIFACT_BOOTSTRAP_OK');
