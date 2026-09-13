@@ -1,4 +1,5 @@
-type GraphApi={graph:(query:Record<string,unknown>)=>Promise<any>};
+type Query=Record<string,string|number|undefined>;
+type GraphApi={graph:(query?:Query)=>Promise<any>};
 const ALLOWED=new Set(['SCIENCE','ENGINEERING','OLYMPUS','OPERATIONS']);
 export async function loadUniversesSources(api:GraphApi){
  let root:any=null;try{root=await api.graph({focus:'system:NEXO',depth:1,limit:32})}catch{return{root:null,details:{}}}

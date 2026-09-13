@@ -27,6 +27,20 @@ test('active data loaders stay runtime-agnostic and UI boundaries inject the con
   }
 });
 
+test('all graph entry pages use the configured sovereign client and never recreate the legacy factory',()=>{
+  for(const path of ['pages/GraphDomainPage.tsx','pages/GraphDomainV2Page.tsx','pages/GraphsPage.tsx','pages/GraphsV2Page.tsx']){
+    const source=loadUi(path);
+    assert.match(source,/createConfiguredApi/,`${path} must use configured sovereign client`);
+    assert.doesNotMatch(source,/\.\.\/\.\.\/lib\/atlas-api\.mjs/,`${path} still imports the legacy API factory`);
+    assert.doesNotMatch(source,/\bcreateApi\s*\(/,`${path} still constructs the legacy API client`);
+  }
+});
+
+const clientTypes=fs.readFileSync(new URL('../src/api/types.ts',import.meta.url),'utf8');
+test('typed Atlas client declares automation run reads exposed by both remote and static runtimes',()=>{
+  assert.match(clientTypes,/automationRuns\s*:\s*\(\)\s*=>\s*Promise/);
+});
+
 const staticApi=fs.readFileSync(new URL('../lib/static-artifact-api.mjs',import.meta.url),'utf8');
 test('published static runtime covers automation run reads used by Operations and global search',()=>{
   assert.match(staticApi,/automationRuns\s*:/);

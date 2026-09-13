@@ -1,5 +1,6 @@
+type Query=Record<string,string|number|undefined>;
 type SearchApi={
- graph:(query:Record<string,unknown>)=>Promise<any>;
+ graph:(query?:Query)=>Promise<any>;
  learning:()=>Promise<any>;ops:()=>Promise<any>;automationRuns:()=>Promise<any>;audit:()=>Promise<any>;
 };
 const value=<T>(item:PromiseSettledResult<T>):T|null=>item.status==='fulfilled'?item.value:null;

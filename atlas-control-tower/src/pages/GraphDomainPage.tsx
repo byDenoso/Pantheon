@@ -1,5 +1,6 @@
 import {useEffect,useMemo,useState} from 'react';
 import {Link,useParams} from 'react-router-dom';
+import {createConfiguredApi} from '../api/client';
 import {PageHeader} from '../components/PageHeader';
 import {SubgraphMap} from '../components/SubgraphMap';
 import {buildDomainNavigatorModel} from '../components/DomainNavigator/domain-model.mjs';
@@ -7,11 +8,13 @@ import {loadUniverseSource} from '../data/load-universe';
 import {buildUniverseView} from '../data/universes-model';
 import '../design/subgraph.css';
 
+const api=createConfiguredApi();
+
 export default function GraphDomainPage(){
  const params=useParams();
  const domainId=params.domainId||'science';
  const [graph,setGraph]=useState<any>(undefined);
- useEffect(()=>{let live=true;setGraph(undefined);void loadUniverseSource(domainId).then(value=>{if(live)setGraph(value)});return()=>{live=false}},[domainId]);
+ useEffect(()=>{let live=true;setGraph(undefined);void loadUniverseSource(domainId,api).then(value=>{if(live)setGraph(value)});return()=>{live=false}},[domainId]);
  const view=useMemo(()=>buildUniverseView(domainId,graph??null),[domainId,graph]);
  const model=useMemo(()=>buildDomainNavigatorModel(domainId,graph??null),[domainId,graph]);
  const path='/graphs/'+domainId;

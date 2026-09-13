@@ -1,15 +1,17 @@
 import {useEffect,useMemo,useState} from 'react';
 import {useNavigate} from 'react-router-dom';
+import {createConfiguredApi} from '../api/client';
 import {PageHeader} from '../components/PageHeader';
 import {loadUniversesSources} from '../data/load-universes';
 import {buildUniversesModel} from '../data/universes-model';
 
 const positions=[{x:32,y:28},{x:68,y:28},{x:32,y:70},{x:68,y:70}];
+const api=createConfiguredApi();
 
 export default function GraphsPage(){
  const navigate=useNavigate();
  const [sources,setSources]=useState<any>(undefined);
- useEffect(()=>{let live=true;void loadUniversesSources().then(value=>{if(live)setSources(value)});return()=>{live=false}},[]);
+ useEffect(()=>{let live=true;void loadUniversesSources(api).then(value=>{if(live)setSources(value)});return()=>{live=false}},[]);
  const model=useMemo(()=>buildUniversesModel(sources?.root??null,sources?.details??{}),[sources]);
  return <div className="nexo-page graphs-page">
   <PageHeader eyebrow="REDE" title="Grafos" description="Navegue pelos grafos publicados e aprofunde do universo ao subgrafo estrutural."/>
