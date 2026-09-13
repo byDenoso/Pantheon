@@ -73,12 +73,15 @@ jobs:
               cat /tmp/atlas-pages-browser.log
               exit 1
             }
-          grep -q 'class="atlas-app"' /tmp/atlas-pages-dom.html
+          grep -q 'class="atlas-app' /tmp/atlas-pages-dom.html
+          grep -q 'premium-shell' /tmp/atlas-pages-dom.html
+          grep -q 'atlas-context-bar' /tmp/atlas-pages-dom.html
+          grep -q 'atlas-command-trigger' /tmp/atlas-pages-dom.html
           if grep -q 'atlas-bootstrap-error' /tmp/atlas-pages-dom.html; then
             cat /tmp/atlas-pages-dom.html
             exit 1
           fi
-          echo 'PAGES_BROWSER_BOOTSTRAP_OK'
+          echo 'PAGES_PREMIUM_BOOTSTRAP_OK'
       - uses: actions/upload-pages-artifact@v3
         with:
           path: atlas-control-tower/dist
