@@ -18,7 +18,11 @@ export function configuredBaseUrl(): string {
 }
 
 export function createConfiguredApi(): AtlasApiClient {
-  return createApi({ baseUrl: configuredBaseUrl() }) as AtlasApiClient;
+  const baseUrl = configuredBaseUrl();
+  const fetchImpl = typeof window !== 'undefined' && baseUrl === '/api'
+    ? window.fetch.bind(window)
+    : undefined;
+  return createApi({ baseUrl, fetchImpl }) as AtlasApiClient;
 }
 
 export function apiBaseLabel(): string {
