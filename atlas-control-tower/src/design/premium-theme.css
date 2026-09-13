@@ -26,8 +26,14 @@ html[data-theme="high-contrast"]{
  --graph-background:#000;--graph-grid:#4d4d4d;--graph-edge:#b9eaff;--graph-label:#fff;--graph-focus:#00e5ff;
  --graph-node:#56b8ff;--graph-node-domain:#00e5ff;--graph-node-test:#ffe600;--graph-node-claim:#f48cff;--graph-node-evidence:#54ff88;
 }
-html[data-theme="light"] body,html[data-theme="system"][data-theme-mode="system"] body{background:var(--surface-canvas);color:var(--text-primary)}
-html[data-theme="deep-space"] body,html[data-theme="high-contrast"] body{background:var(--surface-canvas);color:var(--text-primary)}
+html[data-theme]{
+ --bg:var(--surface-canvas);--panel:var(--surface-primary);--panel-soft:var(--surface-elevated);--line:var(--border-default);
+ --text:var(--text-primary);--muted:var(--text-secondary);--subtle:var(--text-tertiary);--accent:var(--accent-primary);
+ --dark:var(--surface-canvas);--dark-2:var(--surface-primary);--ok:var(--status-ready);--warn:var(--status-partial);--bad:var(--status-error);
+ color-scheme:dark;
+}
+html[data-theme="light"]{color-scheme:light}
+html[data-theme] body{background:var(--surface-canvas);color:var(--text-primary);transition:background .18s ease,color .18s ease}
 .theme-switcher{display:inline-flex;align-items:center}
 .theme-switcher select{height:34px;max-width:132px;border:1px solid var(--border-default);border-radius:9px;background:var(--surface-elevated);color:var(--text-primary);padding:0 28px 0 10px;font:600 11px/1 "Recursive Variable",system-ui;letter-spacing:.02em;cursor:pointer}
 .theme-switcher select:focus-visible{outline:2px solid var(--accent-primary);outline-offset:2px}
@@ -35,3 +41,4 @@ html[data-theme="deep-space"] body,html[data-theme="high-contrast"] body{backgro
 .graph-renderer-switch{position:absolute;z-index:14;right:12px;top:12px;border:1px solid var(--border-default);border-radius:8px;background:var(--surface-overlay);color:var(--text-secondary);padding:7px 9px;font-size:10px;letter-spacing:.06em;text-transform:uppercase}
 .graph-renderer-error{position:absolute;z-index:15;left:50%;top:14px;transform:translateX(-50%);border:1px solid var(--status-partial);background:var(--surface-overlay);color:var(--text-primary);padding:8px 12px;border-radius:9px;font-size:11px}
 @media(prefers-contrast:more){:root:not([data-theme="light"]){--border-default:#fff;--border-emphasis:#fff}}
+@media(prefers-reduced-motion:reduce){html[data-theme] body{transition:none}}
