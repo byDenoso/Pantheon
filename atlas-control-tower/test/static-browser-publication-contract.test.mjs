@@ -14,11 +14,13 @@ test('default browser client reads published static artifacts while explicit rem
   assert.match(client,/VITE_NEXO_API_BASE_URL/);
 });
 
-test('Pages stages static state before Vite build and readback proves manifest plus D7 sentinel',()=>{
+test('Pages stages static state before Vite build and readback proves manifest plus D7 campaign sentinel',()=>{
   assert.match(pages,/npm run state:build[\s\S]*npm run build -- --base=\/Pantheon\//);
   assert.match(pages,/data\/current\/manifest\.json/);
   assert.match(pages,/science\/D7\.json/);
-  assert.match(pages,/T-ALENS-001/);
+  assert.match(pages,/CAMP-CMB-ANOMALIES/);
+  assert.match(pages,/D7_PUBLIC_TESTS_PRESENT/);
+  assert.doesNotMatch(pages,/T-ALENS-001/);
   assert.match(pages,/sha256:/);
 });
 
