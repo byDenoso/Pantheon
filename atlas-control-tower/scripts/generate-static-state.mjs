@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
-import {generateStaticState} from '../lib/static-state-generator.mjs';
+import {generateStaticState} from '../lib/campaign-static-state-generator.mjs';
 
 const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
 const outDir=path.resolve(root,process.argv[2]||'public/data');
