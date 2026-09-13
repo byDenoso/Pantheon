@@ -1,9 +1,7 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { AtlasContext, DirectionalSignal, Freshness, PanelState, Provenance, ResearchRecord, ScientificStatus, TensionResult } from '../api/types';
 import type { AtlasUiState, AtlasActions } from '../state/useAtlasSession';
 import { useLabData, useObservatoryData } from '../api/hooks';
-import { AtlasCanvas } from '../scene/AtlasCanvas';
-import type { AtlasGraph, AtlasNode } from '../scene/types';
 import { routeFor } from '../atlas-route';
 import { formatDate, formatEstimate, formatNumber, formatUncertainty } from '../science-format';
 import { FreshnessBadge, ForestPlot, PanelFrame, PanelStateView, ParameterCard, ProvenanceDrawer, ReadOnlyNotice, ScientificStatusBadge, SkyMap, TensionComparison, RecordList } from '../components/atlas-ui';
@@ -40,9 +38,17 @@ function jumpToGraphs({ navigate, context, state }: Pick<PageProps, 'navigate' |
   navigate(routeFor('graphs', pageContext(context, state)));
 }
 
-function CompactGraph({ state, actions, reducedMotion, compact, context, navigate }: Pick<PageProps, 'state' | 'actions' | 'reducedMotion' | 'compact' | 'context' | 'navigate'>) {
+// Renders a static summary instead of embedding the live 3D canvas here. The
+// dedicated Mapa area (src/pages/graphs-page.tsx) already owns the safe, lazy-loaded,
+// WebGL2-default rendering path (see graph-engine/GraphRenderer.tsx). Embedding a
+// second, always-mounted AtlasCanvas instance in this compact preview was the source
+// of a real, reproduced crash loop (a per-frame error inside three.js/TSL's node
+// material path, thrown from a useFrame callback that a React error boundary cannot
+// catch) -- fixed here by not mounting that component a second time, not by patching
+// three.js internals blind.
+function CompactGraph({ state, context, navigate }: Pick<PageProps, 'state' | 'actions' | 'reducedMotion' | 'compact' | 'context' | 'navigate'>) {
   return <div className="compact-graph-shell">
-    <div className="compact-graph-stage">{state.graph ? <AtlasCanvas graph={state.graph} focusId={state.focusId} selectedId={state.selectedId} onSelect={actions.select} onOpen={actions.open} reducedMotion={reducedMotion} autoOrbit={false} compact={true}/> : <div className="graph-empty-state"><span aria-hidden="true">∅</span><p>{state.loading ? 'Lendo mapa de conhecimento…' : 'Mapa indisponível neste momento.'}</p><small>{state.error || 'Nenhum recorte válido foi publicado.'}</small></div>}{state.loading && <span className="compact-graph-status">LENDO MAPA…</span>}</div>
+    <div className="compact-graph-stage compact-graph-static">{state.graph ? <div className="compact-graph-summary"><span aria-hidden="true">✧</span><p>{state.graph.nodes.length} nós · {state.graph.edges.length} relações no recorte atual</p></div> : <div className="graph-empty-state"><span aria-hidden="true">∅</span><p>{state.loading ? 'Lendo mapa de conhecimento…' : 'Mapa indisponível neste momento.'}</p><small>{state.error || 'Nenhum recorte válido foi publicado.'}</small></div>}{state.loading && <span className="compact-graph-status">LENDO MAPA…</span>}</div>
     <div className="compact-graph-footer"><span>{state.graph ? `${state.graph.nodes.length} nós · ${state.graph.edges.length} relações` : 'Recorte indisponível'}</span><button className="secondary-button" onClick={() => jumpToGraphs({ navigate, context, state })}>ABRIR NO MODO GRAFOS <span aria-hidden="true">→</span></button></div>
   </div>;
 }
@@ -111,12 +117,8 @@ export function UniversePage({ api, state, context, navigate, onProvenance }: Pa
 
 function DetailDialog({ title, onClose, children }: { title: string; onClose: () => void; children: React.ReactNode }) { return <div className="dialog-backdrop" role="presentation" onMouseDown={event => { if (event.target === event.currentTarget) onClose(); }}><section className="detail-dialog" role="dialog" aria-modal="true" aria-label={title}><header><div><span className="eyebrow">DRILL-DOWN</span><h2>{title}</h2></div><button className="icon-button" onClick={onClose} aria-label="Fechar detalhe">×</button></header><div className="detail-dialog-body">{children}</div></section></div>; }
 
-export function GraphsPage({ state, actions, reducedMotion, compact }: Pick<PageProps, 'state' | 'actions' | 'reducedMotion' | 'compact'> & { context: AtlasContext; navigate: Navigate }) {
-  const [depth, setDepth] = useState(1);
-  const [autoOrbit, setAutoOrbit] = useState(false);
-  const graph = state.graph;
-  const total = Number(graph?.visualTotal ?? graph?.total ?? graph?.nodes.length ?? 0);
-  const domains = useMemo(() => graph?.nodes.filter(node => String(node.type || '').toUpperCase() === 'DOMAIN').slice(0, 12) || [], [graph]);
-  useEffect(() => { document.body.dataset.mode = 'graphs'; }, []);
-  return <div className="page-wrap graphs-page"><section className="graph-workspace" id="map-workspace"><div className="graph-stage reference-stage"><div className="observatory-space reference-space" aria-hidden="true"><i className="observatory-nebula-left"/><i className="observatory-galaxy-right"/><i className="observatory-asteroid-field"/><i className="observatory-horizon-right"/></div><div className="reference-hero-copy"><p className="eyebrow">ATLAS / OFICIAL</p><h1>Ideias em órbita.<br/>Descobertas em rede.</h1><span>EXPLORE · CONECTE · INVESTIGUE</span></div>{graph ? <AtlasCanvas graph={graph} focusId={state.focusId} selectedId={state.selectedId} onSelect={actions.select} onOpen={actions.open} reducedMotion={reducedMotion} autoOrbit={autoOrbit} compact={compact}/> : <div className="graph-empty-state"><span aria-hidden="true">∅</span><p>{state.loading ? 'Lendo mapa de conhecimento…' : 'Grafo indisponível neste momento.'}</p><small>{state.error || 'Nenhum recorte válido foi publicado.'}</small></div>}<nav className="reference-breadcrumbs" aria-label="Navegação hierárquica">{state.path.map((item, index) => <span key={item.id}>{index > 0 && <i>/</i>}<button onClick={() => void actions.focusSystem(item.id, item.label || item.id)}>{item.label || item.id}</button></span>)}</nav><div className="reference-map-tools"><label>CAMADAS<select value={depth} aria-label="Camadas do subgrafo" onChange={event => { const next = Number(event.target.value); setDepth(next); actions.setDepth(next); }}><option value={1}>1 camada</option><option value={2}>2 camadas</option><option value={3}>3 camadas</option></select></label><span className="micro">{state.loading ? 'LENDO…' : `${graph?.nodes.length || 0} DE ${total || graph?.nodes.length || 0} NÓS · ${graph?.edges.length || 0} RELAÇÕES`}</span></div><div className="graph-mode"><span className="dot"/><span>WEBGPU / R3F</span><button onClick={() => setAutoOrbit(value => !value)} aria-pressed={autoOrbit}>{autoOrbit ? 'Pausar órbita' : 'Órbita automática'}</button></div><div className="graph-controls"><button onClick={() => setAutoOrbit(value => !value)} title="Órbita automática" aria-label="Órbita automática">{autoOrbit ? 'Ⅱ' : '▷'}</button><button onClick={() => void actions.back()} title="Voltar" aria-label="Voltar">←</button><button onClick={() => void actions.home()} title="Sistema" aria-label="Sistema">⌂</button><button onClick={actions.clearSelection} title="Limpar seleção" aria-label="Limpar seleção">◎</button></div>{state.error && <div className="atlas-react-error" role="status">{state.error} · último recorte preservado</div>}</div><div className="graph-bottom reference-selection"><span>{state.selectedId ? `Selecionado: ${state.selectedId}` : 'Selecione um nó para ver fontes e relações.'}</span>{(graph?.hasMore || graph?.truncated) && <button id="more" type="button" onClick={() => void actions.more()}>Mais entidades →</button>}</div></section><section className="graph-support-grid"><article><small>RECORTE</small><strong>{graph?.nodes.length || 0}</strong><span>{total || graph?.nodes.length || 0} entidades declaradas</span></article><article><small>FOCO</small><strong>{state.focusId.replace('system:', '')}</strong><span>{state.path.map(item => item.label || item.id).join(' / ')}</span></article><article><small>DOMÍNIOS VISÍVEIS</small><strong>{domains.length}</strong><span>Filtrados pelo recorte atual</span></article><article><small>RENDER</small><strong>R3F</strong><span>Instancing · GPU picking · semantic LOD</span></article></section></div>;
-}
+// A second, unused GraphsPage used to live here, statically importing AtlasCanvas.
+// Confirmed zero consumers (only ObservatoryPage/LaboratoryPage/UniversePage are ever
+// imported from this module -- grepped the whole repo, including tests) before
+// removing it; the real, wired-in GraphsPage lives in src/pages/graphs-page.tsx and
+// already renders through the safe, lazy-loaded GraphRenderer path.

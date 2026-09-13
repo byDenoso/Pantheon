@@ -5,12 +5,16 @@ import fs from 'node:fs';
 const read = p => fs.readFileSync(new URL('../'+p, import.meta.url), 'utf8');
 
 test('layered navigation defaults to one layer per click', () => {
+ // The two `pages` (src/pages/atlas-pages.tsx) assertions this test used to make were
+ // checking the depth-selector UI of a second, unused GraphsPage component that lived
+ // in that file -- confirmed zero consumers (grepped the whole repo, only
+ // ObservatoryPage/LaboratoryPage/UniversePage were ever imported from there) and
+ // removed as part of fixing a real crash loop caused by that file's other stray
+ // AtlasCanvas mount. The still-meaningful invariant this test protects -- the session
+ // and the real, wired-in App.tsx both default to one layer/depth -- is unaffected and
+ // still checked below.
  const app = read('src/App.tsx');
- const pages = read('src/pages/atlas-pages.tsx');
  const session = read('src/state/useAtlasSession.ts');
- assert.match(pages, /useState\(1\)/);
- assert.match(pages, /<option value=\{1\}>1 camada<\/option>/);
- assert.doesNotMatch(pages, /useState\(3\)/);
  assert.match(session, /limit:180,depth:1/);
  assert.match(app, /actions\.open\(node\)/);
 });
