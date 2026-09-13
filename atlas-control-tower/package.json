@@ -7,7 +7,9 @@
     "typecheck": "tsc --noEmit",
     "state:build": "node scripts/generate-static-state.mjs public/data",
     "build": "vite build",
+    "predev": "npm run state:build",
     "dev": "vite --host 0.0.0.0",
+    "prestart": "npm run state:build",
     "start": "vite --host 0.0.0.0"
   },
   "dependencies": {
