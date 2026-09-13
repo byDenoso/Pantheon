@@ -2,18 +2,23 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 
-const source=await readFile(new URL('../api/runtime-orphans.js',import.meta.url),'utf8');
+const wrapper=await readFile(new URL('../api/runtime-orphans.js',import.meta.url),'utf8');
+const runtime=await readFile(new URL('../api/runtime-github.js',import.meta.url),'utf8');
+const authority=await readFile(new URL('../lib/github-authority.mjs',import.meta.url),'utf8');
 
-test('runtime uses live SSOT projection before static fallback',()=>{
- assert.match(source,/loadLiveSsot/);
- assert.match(source,/projectLiveRoute/);
- assert.match(source,/driveRoute/);
- assert.match(source,/LIVE_SSOT_UNAVAILABLE/);
+test('runtime delegates to GitHub canonical implementation',()=>{
+ assert.match(wrapper,/runtime-github\.js/);
 });
 
-test('POST is accepted only for sync and returns semantic diff',()=>{
- assert.match(source,/route==='sync'/);
- assert.match(source,/syncLiveSsot/);
- assert.match(source,/changedSections/);
- assert.match(source,/METHOD_NOT_ALLOWED/);
+test('sync uses GitHub canonical runtime',()=>{
+ assert.match(runtime,/syncGithubCanonical/);
+ assert.match(runtime,/loadGithubCanonical/);
+ assert.match(runtime,/projectGithubCanonical/);
+ assert.match(runtime,/GITHUB/);
+ assert.match(runtime,/lastValidPreserved/);
+});
+
+test('authority contract is explicit',()=>{
+ assert.match(authority,/NEXO_CANONICAL_GITHUB_V1/);
+ assert.match(authority,/api\.github\.com/);
 });
