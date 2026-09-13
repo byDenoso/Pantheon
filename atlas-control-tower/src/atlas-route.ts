@@ -41,7 +41,7 @@ export function isPrivateArea(area: AtlasArea): boolean {
   return PRIVATE_AREAS.has(area);
 }
 
-const CONTEXT_KEYS: Array<keyof AtlasContext> = ['domain', 'query', 'dataset', 'source', 'period', 'redshift', 'status', 'scope'];
+const CONTEXT_KEYS: Array<keyof AtlasContext> = ['domain', 'query', 'dataset', 'source', 'period', 'redshift', 'status', 'scope', 'kind', 'entity'];
 
 function resolveAppBase(): string {
   // Guarded so this module can also be imported directly by node:test (which has no

@@ -26,9 +26,9 @@ type RawHealth = {
 // in graph-entity-contract.ts.
 const NON_MAP_KIND_ROUTES: Partial<Record<SearchResultKind, (id: string) => string>> = {
   TEST: id => `/pesquisa/testes/${encodeURIComponent(id)}`,
-  CLAIM: id => `/laboratorio?kind=CLAIM&id=${encodeURIComponent(id)}`,
-  DATASET: id => `/laboratorio?kind=DATASET&id=${encodeURIComponent(id)}`,
-  ARTIFACT: id => `/laboratorio?kind=ARTIFACT&id=${encodeURIComponent(id)}`
+  CLAIM: id => `/laboratorio?kind=CLAIM&entity=${encodeURIComponent(id)}`,
+  DATASET: id => `/laboratorio?kind=DATASET&entity=${encodeURIComponent(id)}`,
+  ARTIFACT: id => `/laboratorio?kind=ARTIFACT&entity=${encodeURIComponent(id)}`
 };
 
 function normalizeFreshness(value: string | undefined): Freshness {
