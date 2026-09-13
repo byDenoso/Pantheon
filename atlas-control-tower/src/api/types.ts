@@ -182,7 +182,11 @@ export type HealthPayload = {
   dataSource?: {
     requested?: string;
     effective?: string;
+    source?: string;
     freshness?: string;
+    sourceVersion?: string;
+    authority?: string;
+    projectionOnly?: boolean;
     reason?: string;
   };
   fingerprint?: string;
