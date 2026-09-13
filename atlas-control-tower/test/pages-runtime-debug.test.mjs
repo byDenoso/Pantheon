@@ -61,12 +61,15 @@ test('Pages readback exercises the graph route, not health alone',()=>{
   assert.match(pagesWorkflow,/GRAPH=/);
 });
 
-test('Pages deploy boots the built app in a real browser before publishing',()=>{
+test('Pages deploy boots the built app with deterministic Playwright assertions before publishing',()=>{
+  assert.match(pagesWorkflow,/name:\s*Install isolated Pages browser tools/);
+  assert.match(pagesWorkflow,/playwright@/);
   assert.match(pagesWorkflow,/name:\s*Browser bootstrap smoke/);
-  assert.match(pagesWorkflow,/google-chrome|chromium/);
-  assert.match(pagesWorkflow,/--dump-dom/);
-  assert.match(pagesWorkflow,/atlas-app/);
+  assert.match(pagesWorkflow,/chromium\.launch/);
+  assert.match(pagesWorkflow,/waitForSelector\(['"]\.atlas-app/);
+  assert.match(pagesWorkflow,/waitForSelector\(['"]\.atlas-context-bar/);
   assert.match(pagesWorkflow,/atlas-bootstrap-error/);
+  assert.doesNotMatch(pagesWorkflow,/--dump-dom/);
 });
 
 test('app navigation never hardcodes the site root for graph navigation',()=>{
