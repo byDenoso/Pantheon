@@ -1,0 +1,4 @@
+NEXO Atlas cutover retrigger
+reason=production still reports GOOGLE_DRIVE authority while main contains GitHub canonical runtime
+requested_at=2026-09-13T01:07:15-03:00
+expected_authority=GITHUB
