@@ -22,7 +22,7 @@ const NAVIGATION: Array<{ area: AtlasArea; label: string }> = [
   { area: 'universe', label: 'RESUMO DO UNIVERSO' }
 ];
 
-const ObservatoryPage = lazy(() => import('./pages/atlas-pages').then(module => ({ default: module.ObservatoryPage })));
+const ObservatoryPage = lazy(() => import('./pages/ObservatorySpatialPage').then(module => ({ default: module.ObservatoryPage })));
 const LaboratoryPage = lazy(() => import('./pages/atlas-pages').then(module => ({ default: module.LaboratoryPage })));
 const UniversePage = lazy(() => import('./pages/atlas-pages').then(module => ({ default: module.UniversePage })));
 
