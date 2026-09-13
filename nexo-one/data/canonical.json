@@ -1,0 +1,10 @@
+{
+  "contract": "NEXO_CANONICAL_GITHUB_V1",
+  "authority": "GITHUB",
+  "repository": "byDenoso/Pantheon",
+  "ref": "main",
+  "payloadPath": "atlas-control-tower/data/nexo-drive-projection.json",
+  "payloadFormat": "NEXO_ATLAS_PROJECTION_V1",
+  "projectionSources": ["GOOGLE_DRIVE"],
+  "notes": "GitHub is canonical. The initial payload was bootstrapped from a Drive projection; Drive remains provenance/projection only and cannot override this versioned state."
+}
