@@ -1,3 +1,7 @@
+/* Transitional legacy foundations are centralized here so App owns no CSS imports. */
+@import '../styles/react-atlas.css';
+@import '../styles/atlas-shell.css';
+@import '../styles/graph-visual.css';
 @import './tokens.css';
 @import './shell.css';
 @import './content.css';
