@@ -30,6 +30,11 @@ test('App delegates styling to the single design-system entrypoint',()=>{
   assert.doesNotMatch(app,/react-atlas\.css|atlas-shell\.css|graph-visual\.css/);
 });
 
+test('graph route owns its inspector and viewport without duplicate legacy chrome',()=>{
+  assert.match(app,/route\.area\s*!==\s*['"]graphs['"]\s*&&\s*<Inspector/);
+  assert.match(app,/route\.area\s*!==\s*['"]graphs['"]\s*&&\s*<footer/);
+});
+
 test('premium inspector uses human-facing tabs, trust cues and technical disclosure',()=>{
   assert.match(inspector,/spatial-sheet-handle/);
   assert.match(inspector,/Visão Geral/);
