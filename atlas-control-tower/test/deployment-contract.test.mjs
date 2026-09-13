@@ -2,30 +2,27 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 
-const vercel=JSON.parse(fs.readFileSync(new URL('../vercel.json',import.meta.url),'utf8'));
-const routes=vercel.routes||[];
-const builds=vercel.builds||[];
+const pkg=JSON.parse(fs.readFileSync(new URL('../package.json',import.meta.url),'utf8'));
+const pages=fs.readFileSync(new URL('../../.github/workflows/atlas-pages-fallback.yml',import.meta.url),'utf8');
 
-test('Vercel uses the Vite static build and retains serverless APIs',()=>{
-  assert.ok(builds.some(x=>x.src==='package.json'&&x.use==='@vercel/static-build'));
-  for(const api of ['api/projection.js','api/runner.js','api/runtime-orphans.js']){
-    assert.ok(builds.some(x=>x.src===api&&x.use==='@vercel/node'),`missing ${api}`);
-  }
+test('Atlas production artifact is a portable Vite static build',()=>{
+  assert.equal(pkg.scripts?.build,'vite build');
+  assert.ok(!Object.keys(pkg.dependencies||{}).some(name=>/vercel|neon/i.test(name)));
 });
 
-test('API rewrites execute before static filesystem handling',()=>{
-  const fsIndex=routes.findIndex(x=>x.handle==='filesystem');
-  const apiIndex=routes.findIndex(x=>String(x.src||'').startsWith('/api/'));
-  assert.ok(apiIndex>=0&&fsIndex>apiIndex);
+test('GitHub Pages is an active deployment target with browser verification',()=>{
+  assert.match(pages,/actions\/deploy-pages@v4/);
+  assert.match(pages,/Browser bootstrap smoke/);
+  assert.match(pages,/playwright@/);
 });
 
-test('SPA fallback serves index with normal 200 semantics',()=>{
-  const fallback=routes.at(-1);
-  assert.equal(fallback?.src,'/(.*)');
-  assert.equal(fallback?.dest,'/index.html');
-  assert.equal(fallback?.status,undefined);
+test('Pages production build does not require a remote API environment variable',()=>{
+  assert.doesNotMatch(pages,/VITE_NEXO_API_BASE_URL/);
+  assert.doesNotMatch(pages,/VERCEL_TOKEN|VERCEL_PROJECT_ID|VERCEL_ORG_ID/);
 });
 
-test('scheduled state refresh remains declared',()=>{
-  assert.deepEqual(vercel.crons,[{path:'/api/state?refresh=1',schedule:'0 8 * * *'}]);
+test('Pages readback validates the published site rather than a serverless API',()=>{
+  assert.match(pages,/PAGE_URL/);
+  assert.doesNotMatch(pages,/\/api\/health/);
+  assert.doesNotMatch(pages,/\/api\/graph\?focus=/);
 });
