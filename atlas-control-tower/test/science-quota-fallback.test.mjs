@@ -28,25 +28,26 @@ test('Drive GitHub reader exposes graph state and entity projection without a ne
  assert.match(reader,/nexo-science-drive-github-v1/);
  assert.match(reader,/science-drive-projection\.json/);
  assert.match(reader,/projectDriveGithubScience/);
+ assert.match(reader,/PRODUCES/);
+ assert.match(reader,/result:/);
  assert.doesNotMatch(reader,/neon\.tech|science_v1|DATA_API|OIDC/i);
 });
 
-test('Drive snapshot keeps real CMB test and result content with explicit completeness',()=>{
+test('Drive snapshot keeps real CMB test content with complete sharded coverage',()=>{
  const snapshot=JSON.parse(read('data/science-drive-projection.json'));
+ const d7=JSON.parse(read('data/science-drive-projection/D7.json'));
  assert.equal(snapshot.contract,'nexo-science-drive-github-v1');
  assert.equal(snapshot.source,'GOOGLE_DRIVE');
  assert.match(snapshot.sourceRef,/PEER_CONTROL_TOWER_CANONICAL/);
  assert.ok(snapshot.domains.some(d=>d.id==='domain:D7'&&d.label));
- const testNode=snapshot.nodes.find(n=>n.id==='T-ALENS-001');
+ assert.equal(snapshot.shards?.D7,'science-drive-projection/D7.json');
+ const testNode=d7.tests.find(n=>n.id==='T-ALENS-001');
  assert.ok(testNode,'expected canonical D7 test is absent');
- assert.equal(testNode.type,'TEST');
- assert.equal(testNode.domain,'D7');
+ assert.equal(testNode.primaryCampaign,'CAMP-CMB-ANOMALIES');
+ assert.ok(testNode.domains.includes('D7'));
  assert.ok(testNode.summary);
  assert.ok(testNode.evidenceClass);
- const resultNode=snapshot.nodes.find(n=>n.id==='result:T-ALENS-001');
- assert.ok(resultNode,'expected derived result node is absent');
- assert.equal(resultNode.type,'RESULT');
- assert.ok(snapshot.edges.some(e=>e.source==='T-ALENS-001'&&e.target==='result:T-ALENS-001'&&e.type==='PRODUCES'));
- assert.ok(snapshot.completeness?.tests?.declared>=snapshot.completeness?.tests?.included);
+ assert.equal(snapshot.completeness?.tests?.declared,2198);
+ assert.equal(snapshot.completeness?.tests?.included,2198);
  assert.equal(snapshot.completeness?.tests?.truncated,false);
 });
