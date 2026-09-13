@@ -59,7 +59,7 @@ test('science state reports campaigns without TEST or RESULT public counts',asyn
 });
 
 test('static public state contains campaign graphs and no public test entities',async()=>{
- const {generateStaticState}=await import('../lib/static-state-generator.mjs');
+ const {generateStaticState}=await import('../lib/campaign-static-state-generator.mjs');
  const outDir=fs.mkdtempSync(path.join(os.tmpdir(),'nexo-campaign-state-'));
  try{
   const result=await generateStaticState({outDir,generatedAt:'2026-09-13T18:30:00Z'});
