@@ -43,9 +43,11 @@ test('live graph projection carries context-shell and relation-horizon roles', (
 });
 
 test('GraphRenderer is Canvas-first and keeps WebGL as explicit opt-in', () => {
+  // Canvas-primary swapped from GraphExplorer (Pixi) to Canvas25DGraph (plain
+  // Canvas2D) per an explicit user request; WebGL opt-in path is unaffected.
   const source = read('src/graph-engine/GraphRenderer.tsx');
   assert.match(source, /renderer'\)===['"]webgl['"]/);
-  assert.match(source, /if\(!webgl\).*GraphExplorer/s);
+  assert.match(source, /if\(!webgl\).*Canvas25DGraph/s);
   assert.match(source, /GraphScene3D/);
 });
 

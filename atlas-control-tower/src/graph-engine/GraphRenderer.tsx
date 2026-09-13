@@ -1,5 +1,5 @@
 import {Component,Suspense,lazy,useEffect,useState,type ReactNode} from 'react';
-import {GraphExplorer} from './GraphExplorer';
+import {Canvas25DGraph} from './Canvas25DGraph';
 import type {GraphSurfaceProps} from './GraphScene3D';
 
 const GraphScene3D=lazy(()=>import('./GraphScene3D').then(module=>({default:module.GraphScene3D})));
@@ -36,8 +36,8 @@ export function GraphRenderer(props:GraphSurfaceProps){
   },[]);
   const switchRenderer=(next:RendererMode)=>{replaceRendererMode(next);setMode(next)};
   const webgl=mode==='webgl';
-  if(!webgl)return <div className="graph-renderer-canvas"><button className="graph-renderer-switch" onClick={()=>switchRenderer('webgl')} title="Renderer experimental">WebGL</button><GraphExplorer {...props}/></div>;
-  const fallback=<div className="graph-renderer-rollback"><div className="graph-renderer-error">WebGL indisponível. A cena foi preservada no Canvas.</div><button className="graph-renderer-switch" onClick={()=>switchRenderer('canvas')}>Canvas</button><GraphExplorer {...props}/></div>;
-  const loading=<div className="graph-renderer-canvas"><GraphExplorer {...props}/></div>;
+  if(!webgl)return <div className="graph-renderer-canvas"><button className="graph-renderer-switch" onClick={()=>switchRenderer('webgl')} title="Renderer experimental">WebGL</button><Canvas25DGraph projection={props.projection} selectedId={props.selectedId??null} onSelect={props.onSelect} onOpenNode={id=>props.onOpenNode?.(id)}/></div>;
+  const fallback=<div className="graph-renderer-rollback"><div className="graph-renderer-error">WebGL indisponível. A cena foi preservada no Canvas 2.5D.</div><button className="graph-renderer-switch" onClick={()=>switchRenderer('canvas')}>Canvas</button><Canvas25DGraph projection={props.projection} selectedId={props.selectedId??null} onSelect={props.onSelect} onOpenNode={id=>props.onOpenNode?.(id)}/></div>;
+  const loading=<div className="graph-renderer-canvas"><Canvas25DGraph projection={props.projection} selectedId={props.selectedId??null} onSelect={props.onSelect} onOpenNode={id=>props.onOpenNode?.(id)}/></div>;
   return <RendererBoundary key={props.projection.id} fallback={fallback}><Suspense fallback={loading}><GraphScene3D {...props} onRollback={()=>switchRenderer('canvas')}/></Suspense></RendererBoundary>;
 }

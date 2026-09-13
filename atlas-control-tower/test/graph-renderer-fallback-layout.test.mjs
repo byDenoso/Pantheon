@@ -11,8 +11,8 @@ test('2D fallback wrapper preserves full graph height',async()=>{
   assert.match(css,/\.graph-renderer-rollback>\.graph-v2-shell\{[^}]*height:100%/s);
 });
 
-test('2D fallback remains the same interactive GraphExplorer surface',async()=>{
+test('2D fallback remains an interactive canvas surface (Canvas25DGraph, swapped from GraphExplorer/Pixi per an explicit user request)',async()=>{
   const source=await readFile(rendererUrl,'utf8');
   assert.match(source,/graph-renderer-rollback/);
-  assert.match(source,/<GraphExplorer \{\.\.\.props\}\/>/);
+  assert.match(source,/<Canvas25DGraph /);
 });
