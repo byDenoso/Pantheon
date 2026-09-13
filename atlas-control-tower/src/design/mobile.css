@@ -1,3 +1,19 @@
+@media(max-width:760px){
+  .premium-shell{min-height:100dvh;overflow-x:hidden;background:var(--surface-base)}
+  .premium-shell .atlas-topbar{display:grid;grid-template-columns:44px minmax(0,1fr) auto;align-items:center;gap:6px;min-height:0;padding:calc(6px + env(safe-area-inset-top)) 8px 6px;background:color-mix(in srgb,var(--surface-overlay) 96%,transparent);z-index:var(--z-topbar)}
+  .premium-shell .menu-button{display:grid;place-items:center;width:44px;min-width:44px;height:44px;border:1px solid var(--border-default);border-radius:10px;background:var(--surface-elevated);color:var(--text-primary)}
+  .premium-shell .atlas-brand{min-width:0;gap:8px}.premium-shell .atlas-brand>span:last-child{min-width:0}.premium-shell .atlas-brand b{font-size:16px;white-space:nowrap}.premium-shell .atlas-brand small{display:none}.premium-shell .brand-orbit{width:34px;height:34px;flex:0 0 auto}
+  .premium-shell .top-actions{grid-column:3;display:flex;gap:5px}.premium-shell .sync-button{display:none}.premium-shell .profile-button{width:44px;height:44px}.premium-shell .freshness-badge{padding:0 5px;font-size:9px}
+  .premium-shell .atlas-command-trigger{position:relative;width:44px;min-width:44px;height:44px;padding:0;justify-content:center;transition:width var(--motion-panel) var(--ease-standard),background var(--motion-fast) var(--ease-standard)}
+  .premium-shell .atlas-command-trigger>span{font-size:18px}.premium-shell .atlas-command-trigger input{width:0;min-width:0;flex:0;opacity:0;padding:0}.premium-shell .atlas-command-trigger kbd{display:none}
+  .premium-shell .atlas-command-trigger:focus-within{position:absolute;left:8px;right:8px;top:calc(6px + env(safe-area-inset-top));z-index:calc(var(--z-topbar) + 2);width:auto;min-width:0;padding:0 12px;background:var(--surface-overlay);box-shadow:var(--shadow-overlay)}
+  .premium-shell .atlas-command-trigger:focus-within input{width:auto;min-width:0;flex:1;opacity:1;padding-left:8px}
+  .premium-shell .top-navigation{grid-column:1/-1;grid-row:2;display:flex;justify-content:flex-start;align-items:stretch;gap:4px;min-width:0;width:100%;overflow-x:auto;overflow-y:hidden;scroll-snap-type:x proximity;scrollbar-width:none;overscroll-behavior-x:contain;-webkit-overflow-scrolling:touch;padding:2px 0 0;mask-image:linear-gradient(90deg,#000 0,#000 calc(100% - 24px),transparent 100%)}
+  .premium-shell .top-navigation::-webkit-scrollbar{display:none}.premium-shell .top-navigation a{flex:0 0 auto;min-width:max-content;min-height:44px;padding:0 14px;scroll-snap-align:start;white-space:nowrap}
+  .premium-shell .atlas-body{grid-template-columns:1fr;min-height:0}.premium-shell .atlas-main{grid-column:1;min-width:0;width:100%}
+  .premium-shell .atlas-footer{padding-bottom:env(safe-area-inset-bottom)}
+}
+
 @media(max-width:720px){
   .nexo-content{padding:22px 14px 92px}
   .nexo-page-header h1{font-size:clamp(34px,12vw,54px);line-height:.98}
@@ -23,6 +39,7 @@
 }
 
 @media(max-width:430px){
+  .premium-shell .freshness-badge span{display:none}
   .domain-navigator-svg,.learning-mesh{width:700px;min-width:700px}
   .domain-navigator-stage{min-height:470px}.domain-navigator-svg{height:470px}
   .learning-mesh-wrap,.learning-mesh{height:440px}
