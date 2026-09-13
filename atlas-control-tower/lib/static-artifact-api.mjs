@@ -159,6 +159,7 @@ export function createStaticArtifactApi({baseUrl='/data',fetchImpl=globalThis.fe
     learningFor:async id=>{const data=await artifact('learning/current.json');const items=arr(data.ladder).flatMap(stage=>arr(stage.items));return {...data,item:items.find(item=>item.id===id)||null}},
     learningLineage:id=>readGraph({focus:id,mode:'lineage',depth:3}),
     ops:()=>artifact('operations/current.json'),
+    automationRuns:async()=>arr((await artifact('operations/current.json')).runs),
     audit:()=>artifact('audit/current.json'),
     files:async id=>({id,files:[],source:'GOOGLE_DRIVE',freshness:'SNAPSHOT',reason:'PUBLIC_STATIC_RUNTIME'}),
     research:async route=>{throw new Error(`STATIC_RESEARCH_ROUTE_NOT_MATERIALIZED:${route}`)},

@@ -1,8 +1,8 @@
-import { createApi } from '../../lib/atlas-api.mjs';
+import { createConfiguredApi } from '../api/client';
 
 type LearningApi={learning:()=>Promise<any>};
 
-export async function loadLearningSource(api:LearningApi=createApi() as LearningApi){
+export async function loadLearningSource(api:LearningApi=createConfiguredApi() as LearningApi){
  try{
   const report=await api.learning();
   return {available:true,report,error:null};
