@@ -9,6 +9,8 @@ const inspector=fs.readFileSync(new URL('../src/graph-engine/SpatialInspector.ts
 const tokens=fs.readFileSync(new URL('../src/design/tokens.css',import.meta.url),'utf8');
 const spatial=fs.readFileSync(new URL('../src/design/spatial-interface.css',import.meta.url),'utf8');
 const mobile=fs.readFileSync(new URL('../src/design/mobile.css',import.meta.url),'utf8');
+const browser=fs.readFileSync(new URL('./browser.cjs',import.meta.url),'utf8');
+const pagesWorkflow=fs.readFileSync(new URL('../../.github/workflows/atlas-pages-fallback.yml',import.meta.url),'utf8');
 
 test('premium shell exposes compact command entry and graph context bar',()=>{
   assert.match(app,/premium-shell/);
@@ -50,4 +52,14 @@ test('graph premium surface keeps full-bleed workspace and trust metadata separa
   assert.match(spatial,/\.atlas-context-bar/);
   assert.match(spatial,/\.spatial-trust-block/);
   assert.match(spatial,/--z-inspector/);
+});
+
+test('browser acceptance asserts premium shell context command entry and mobile graph usability',()=>{
+  for(const marker of ['premium-shell','atlas-context-bar','atlas-command-trigger','spatial-navigation-hud']) assert.match(browser,new RegExp(marker));
+  assert.match(browser,/mobile graph horizontal overflow/);
+});
+
+test('Pages bootstrap smoke rejects publishing a build without the premium shell markers',()=>{
+  for(const marker of ['premium-shell','atlas-context-bar','atlas-command-trigger']) assert.match(pagesWorkflow,new RegExp(marker));
+  assert.match(pagesWorkflow,/PAGES_PREMIUM_BOOTSTRAP_OK/);
 });
