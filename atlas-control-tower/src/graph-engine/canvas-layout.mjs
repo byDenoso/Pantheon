@@ -1,3 +1,5 @@
+import {projectPoint25d} from './camera-25d.mjs';
+
 const hash=s=>{let h=2166136261;for(let i=0;i<String(s).length;i++){h^=String(s).charCodeAt(i);h=Math.imul(h,16777619)}return h>>>0};
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 export const boxesOverlap=(a,b)=>!(a.x+a.w<=b.x||b.x+b.w<=a.x||a.y+a.h<=b.y||b.y+b.h<=a.y);
@@ -15,7 +17,8 @@ export function layoutCanvasOrbit(nodes,{focusId,width,height}){
  return out;
 }
 export function projectCanvasNode(pos,view){
- const z=Number(pos?.z||0);const depthScale=clamp(1+z*.08,.76,1.2);const depthAlpha=clamp(.72+z*.14,.3,1);const tiltX=(view?.tiltX||0)*Math.PI/180,tiltY=(view?.tiltY||0)*Math.PI/180;return{x:pos.x+z*Math.sin(tiltY)*44,y:pos.y-z*Math.sin(tiltX)*38,depthScale,depthAlpha};
+ const projected=projectPoint25d(pos,{yaw:view?.tiltY||0,pitch:view?.tiltX||0,depth:view?.depth??1});
+ return{x:projected.x,y:projected.y,depthScale:projected.depthScale,depthAlpha:projected.depthAlpha};
 }
 export function placeCanvasLabels(items,{focusId,selectedId,measureText,fontHeight=14,padding=6}){
  const sorted=[...items].sort((a,b)=>{const af=a.id===focusId||a.id===selectedId?1:0,bf=b.id===focusId||b.id===selectedId?1:0;return bf-af||(b.priority||0)-(a.priority||0)||String(a.id).localeCompare(String(b.id))});
