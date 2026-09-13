@@ -1,9 +1,11 @@
-import {useEffect,useMemo,useState} from 'react';
+import {useEffect,useMemo,useRef,useState} from 'react';
 import {AtlasContextBar} from '../components/AtlasContextBar';
 import {GraphRenderer} from '../graph-engine/GraphRenderer';
 import {SpatialInspector} from '../graph-engine/SpatialInspector';
+import {AccessibleGraphTable} from '../graph-engine/AccessibleGraphTable';
 import {buildLiveProjection} from '../graph-engine/live-projection';
 import {enforceGraphEntityContract} from '../graph-engine/graph-entity-contract';
+import {supportsWebGL2,resolveMapRenderMode} from '../graph-engine/webgl-support';
 import type {GraphNode} from '../graph-engine/types';
 import type {AtlasNode} from '../scene/types';
 import type {AtlasActions,AtlasUiState} from '../state/useAtlasSession';
@@ -21,6 +23,19 @@ export function GraphsPage({state,actions,reducedMotion,compact}:{state:AtlasUiS
   const [depth,setDepth]=useState(1);
   const [mode,setMode]=useState<GraphMode>('explore');
   const [immersive,setImmersive]=useState(false);
+  const [webgl2Supported]=useState(()=>supportsWebGL2());
+  const [contextLost,setContextLost]=useState(false);
+  useEffect(()=>{
+    // Capture phase catches webglcontextlost/restored even though the event does not
+    // reliably bubble -- once lost without a restore, the accessible table takes over
+    // for the rest of the session rather than flapping back and forth on recovery.
+    const onLost=(event:Event)=>{event.preventDefault();setContextLost(true)};
+    const onRestored=()=>{};
+    document.addEventListener('webglcontextlost',onLost,true);
+    document.addEventListener('webglcontextrestored',onRestored,true);
+    return()=>{document.removeEventListener('webglcontextlost',onLost,true);document.removeEventListener('webglcontextrestored',onRestored,true)};
+  },[]);
+  const renderMode=resolveMapRenderMode({webgl2Supported,contextLost});
   const graph=state.graph;
   const total=Number(graph?.visualTotal??graph?.total??graph?.nodes.length??0);
   useEffect(()=>{document.body.dataset.mode='graphs';return()=>{delete document.body.dataset.mode}},[]);
@@ -29,13 +44,23 @@ export function GraphsPage({state,actions,reducedMotion,compact}:{state:AtlasUiS
   void reducedMotion;void compact;
 
   const liveProjection=useMemo(()=>graph?buildLiveProjection({graph,focusId:state.focusId,path:state.path,pins:state.pins,compare:state.compare}):null,[graph,state.focusId,state.path,state.pins,state.compare]);
+  const lastLoggedIssuesRef=useRef('');
   const baseProjection=useMemo(()=>{
     if(!liveProjection)return null;
     // Locked map contract: only SYSTEM/ROOT/DOMAIN/CAMPAIGN render as map nodes.
     // Tests/claims/datasets/artifacts/results/evidence are stripped here, not hidden by
     // mode -- they stay reachable via Pesquisa/Atividade/Laboratório/inspector instead.
     const {projection,issues}=enforceGraphEntityContract(liveProjection);
-    if(issues.length)console.debug('[atlas:graph-contract]',issues);
+    if(issues.length){
+      // useAtlasSession.ts rebuilds state.path/pins/compare as fresh array references
+      // on every session event (even ones unrelated to the graph, e.g. scene/camera
+      // updates), so this memo -- and this log -- would otherwise fire far more often
+      // than the actual issue set changes. Dedupe on the serialized issue set instead
+      // of logging unconditionally; this is a workaround for that upstream re-render
+      // frequency, not a fix for it (flagged as a residual perf finding).
+      const signature=JSON.stringify(issues);
+      if(lastLoggedIssuesRef.current!==signature){lastLoggedIssuesRef.current=signature;console.debug('[atlas:graph-contract]',issues)}
+    }
     return projection;
   },[liveProjection]);
   const projection=useMemo(()=>baseProjection?modeProjection(baseProjection,mode):null,[baseProjection,mode]);
@@ -87,7 +112,9 @@ export function GraphsPage({state,actions,reducedMotion,compact}:{state:AtlasUiS
       </div>
 
       <div className="graph-stage spatial-stage">
-        {projection?<GraphRenderer projection={projection} learning={false} selectedId={state.selectedId} onSelect={select} onOpenNode={open}/>:<div className="graph-empty-state"><span aria-hidden="true">∅</span><p>{state.loading?'Lendo mapa de conhecimento…':'Grafo indisponível neste momento.'}</p><small>{state.error||'Nenhum recorte válido foi publicado.'}</small></div>}
+        {!projection?<div className="graph-empty-state"><span aria-hidden="true">∅</span><p>{state.loading?'Lendo mapa de conhecimento…':'Grafo indisponível neste momento.'}</p><small>{state.error||'Nenhum recorte válido foi publicado.'}</small></div>
+          :renderMode==='table'?<AccessibleGraphTable projection={projection} selectedId={state.selectedId} onSelect={select}/>
+          :<GraphRenderer projection={projection} learning={false} selectedId={state.selectedId} onSelect={select} onOpenNode={open}/>}
         <SpatialInspector state={state} actions={actions} projection={projection} onOpen={open}/>
         <div className="spatial-navigation-hud" aria-label="Controles de navegação">
           <button onClick={()=>void actions.back()} disabled={!canBack} title="Voltar · Alt+←" aria-label="Voltar">←</button>
