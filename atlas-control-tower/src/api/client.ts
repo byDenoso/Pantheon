@@ -22,7 +22,7 @@ export function createConfiguredApi(): AtlasApiClient {
   const fetchImpl = typeof window !== 'undefined' && baseUrl === '/api'
     ? window.fetch.bind(window)
     : undefined;
-  const apiOptions = { baseUrl, fetchImpl };
+  const apiOptions = { baseUrl, fetchImpl, profile: 'atlas' as const };
   return createApi(apiOptions) as AtlasApiClient;
 }
 

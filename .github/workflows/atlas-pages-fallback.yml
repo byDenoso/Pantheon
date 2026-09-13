@@ -66,4 +66,6 @@ jobs:
           [ -n "$page" ]
           printf '%s' "$page" | grep -q '/Pantheon/assets/index-'
           health="$(curl -fsSL -H 'Origin: https://bydenoso.github.io' https://nexo-atlas-control-tower.vercel.app/api/health)"
-          HEALTH="$health" node --input-type=module -e "const h=JSON.parse(process.env.HEALTH); if(!h.ok) process.exit(1); const f=String(h.dataSource?.freshness||'').toUpperCase(); if(!['LIVE','SNAPSHOT'].includes(f)) process.exit(2); console.log('PAGES_READBACK_OK freshness='+f);"
+          HEALTH="$health" node --input-type=module -e "const h=JSON.parse(process.env.HEALTH); if(!h.ok) process.exit(1); const f=String(h.dataSource?.freshness||'').toUpperCase(); if(!['LIVE','SNAPSHOT'].includes(f)) process.exit(2); console.log('PAGES_HEALTH_READBACK_OK freshness='+f);"
+          graph="$(curl -fsSL -H 'Origin: https://bydenoso.github.io' 'https://nexo-atlas-control-tower.vercel.app/api/graph?focus=system%3ANEXO&mode=children&depth=1')"
+          GRAPH="$graph" node --input-type=module -e "const g=JSON.parse(process.env.GRAPH); if(!Array.isArray(g.nodes)||!g.nodes.some(n=>n?.id==='system:NEXO')) process.exit(3); if(String(g.focus||'')!=='system:NEXO') process.exit(4); console.log('PAGES_GRAPH_READBACK_OK nodes='+g.nodes.length);"
