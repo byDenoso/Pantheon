@@ -22,6 +22,10 @@ test('static artifact API resolves core graph and science sentinel by relative a
   const api=createStaticArtifactApi({baseUrl:'/data',fetchImpl:fileFetch(root)});
   const top=await api.graph({focus:'system:NEXO'});
   assert.ok(top.nodes.some(node=>node.id==='system:SCIENCE'));
+  assert.ok(top.nodes.some(node=>node.id==='system:OPERATIONS'));
+  const ops=await api.graph({focus:'system:OPERATIONS'});
+  assert.equal(ops.focus,'system:OPERATIONS');
+  assert.ok(ops.nodes.some(node=>node.id==='system:OPERATIONS'));
   const d7=await api.graph({focus:'domain:D7'});
   assert.ok(d7.nodes.some(node=>node.id==='T-ALENS-001'));
   assert.ok(d7.nodes.some(node=>node.id==='result:T-ALENS-001'));
@@ -37,7 +41,11 @@ test('static artifact API resolves entity state health learning ops and audit wi
   const entity=await api.entity('T-ALENS-001');
   assert.equal(entity.entity?.type,'TEST');
   assert.equal((await api.health()).runtime,'STATIC_LOCAL');
-  assert.equal((await api.state()).freshness,'SNAPSHOT');
+  const state=await api.state();
+  assert.equal(state.freshness,'SNAPSHOT');
+  assert.equal(state.projection?.authority,'GITHUB');
+  assert.equal(state.projection?.projectionAuthority,'GOOGLE_DRIVE');
+  assert.ok(state.domains?.science>0);
   assert.ok(Array.isArray((await api.learning()).ladder));
   assert.ok(Array.isArray((await api.ops()).actions));
   assert.ok(Array.isArray((await api.audit()).issues));

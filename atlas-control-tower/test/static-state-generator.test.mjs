@@ -13,8 +13,11 @@ test('static state generator emits manifest indexes and bounded science shards',
   const result=await generateStaticState({outDir:out,generatedAt:'2026-09-13T16:30:00.000Z'});
   assert.match(result.fingerprint,/^sha256:[a-f0-9]{64}$/);
   const manifest=read(out,'current/manifest.json');
-  const d7=read(out,`snapshots/${manifest.fingerprint.slice(7)}/science/D7.json`);
-  const entities=read(out,`snapshots/${manifest.fingerprint.slice(7)}/entities/index.json`);
+  const snap=`snapshots/${manifest.fingerprint.slice(7)}`;
+  const d7=read(out,`${snap}/science/D7.json`);
+  const entities=read(out,`${snap}/entities/index.json`);
+  const root=read(out,`${snap}/graph/root.json`);
+  const state=read(out,`${snap}/state.json`);
   assert.equal(manifest.contract,'nexo-static-runtime-v1');
   assert.equal(manifest.source,'GOOGLE_DRIVE');
   assert.equal(manifest.codeAuthority,'GITHUB');
@@ -22,6 +25,11 @@ test('static state generator emits manifest indexes and bounded science shards',
   assert.equal(d7.completeness.truncated,true);
   assert.equal(entities.entities['T-ALENS-001'].artifact,'science/D7.json');
   assert.equal(entities.entities['result:T-ALENS-001'].artifact,'science/D7.json');
+  assert.ok(root.nodes.some(node=>node.id==='system:OPERATIONS'));
+  assert.ok(manifest.artifacts['graph/operations.json']);
+  assert.equal(state.projection.authority,'GITHUB');
+  assert.equal(state.projection.projectionAuthority,'GOOGLE_DRIVE');
+  assert.ok(state.domains.science>0);
   assert.equal(validateStaticState(out).ok,true);
 });
 
