@@ -18,9 +18,8 @@ function configuredRemoteBaseUrl(): string {
 }
 
 // The canonical Vercel deployment exposes the Node endpoints under the same
-// origin. This keeps production on the live API even when no build-time env var
-// was injected, while GitHub Pages and localhost continue to use the signed
-// static artifact runtime.
+// origin. Use an absolute base URL so createApi takes the real HTTP path rather
+// than the internal static/sovereign route used for the literal `/api` sentinel.
 export function shouldUseSameOriginApi(): boolean {
   if (typeof window === 'undefined') return false;
   const hostname = String(window.location.hostname || '').toLowerCase();
@@ -28,7 +27,12 @@ export function shouldUseSameOriginApi(): boolean {
 }
 
 export function configuredBaseUrl(): string {
-  return configuredRemoteBaseUrl() || '/api';
+  const remote = configuredRemoteBaseUrl();
+  if (remote) return remote;
+  if (shouldUseSameOriginApi() && typeof window !== 'undefined') {
+    return `${window.location.origin.replace(/\/+$/, '')}/api`;
+  }
+  return '/api';
 }
 
 export function configuredStaticDataBaseUrl(): string {
@@ -84,8 +88,9 @@ export function createResilientApi(primary: AtlasApiClient, fallback: AtlasApiCl
 export function createConfiguredApi(): AtlasApiClient {
   const remoteBase = configuredRemoteBaseUrl();
   if (remoteBase) return createApi({ baseUrl: remoteBase, profile: 'atlas' as const }) as AtlasApiClient;
-  if (shouldUseSameOriginApi()) {
-    const primary = createApi({ baseUrl: '/api', profile: 'atlas' as const }) as AtlasApiClient;
+  if (shouldUseSameOriginApi() && typeof window !== 'undefined') {
+    const sameOriginApiBase = `${window.location.origin.replace(/\/+$/, '')}/api`;
+    const primary = createApi({ baseUrl: sameOriginApiBase, profile: 'atlas' as const }) as AtlasApiClient;
     const fallback = createStaticArtifactApi({ baseUrl: configuredStaticDataBaseUrl() }) as AtlasApiClient;
     return createResilientApi(primary, fallback);
   }
