@@ -11,6 +11,7 @@ test('R3F scene uses instancing instead of one mesh per graph node',()=>{
  assert.match(canvas,/from ['"]@react-three\/fiber['"]/);
  assert.match(canvas,/<Canvas/);
  assert.match(nodes,/<instancedMesh/);
+ assert.match(nodes,/circleGeometry/, '3D node glyphs should preserve the flat 2D reference language');
  assert.match(edges,/<instancedMesh/);
  assert.doesNotMatch(nodes,/nodes\.map\([^)]*=>\s*<mesh/);
  assert.doesNotMatch(edges,/edges\.map\([^)]*=>\s*<mesh/);

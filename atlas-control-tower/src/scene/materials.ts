@@ -17,7 +17,7 @@ import { AdditiveBlending, MeshBasicMaterial } from 'three';
 // on the material flag, independent of instancing -- see WebGLProgram.js's
 // `parameters.vertexColors ? '#define USE_COLOR' : ''` for the vertex stage) and
 // multiply vColor by it *before* the separate per-INSTANCE `instanceColor`
-// multiply runs. None of our geometries (sphereGeometry/cylinderGeometry) ever
+// multiply runs. None of our geometries (circleGeometry/cylinderGeometry) ever
 // define a `color` attribute -- we only ever set colors via setColorAt/
 // instanceColor -- so that phantom vertex attribute is never bound and reads
 // WebGL's default (0,0,0,1), zeroing vColor to black regardless of what

@@ -1,6 +1,6 @@
 import { useLayoutEffect, useMemo, useRef } from 'react';
 import type { ThreeEvent } from '@react-three/fiber';
-import { useFrame } from '@react-three/fiber';
+import { useFrame, useThree } from '@react-three/fiber';
 import { Color, InstancedMesh, Matrix4, MeshBasicMaterial, Object3D, Vector3 } from 'three';
 import { createNodeAuraMaterial, createNodeMaterial } from './materials';
 import { encodePickId } from './gpu-picking';
@@ -46,6 +46,7 @@ type Props={
 export function InstancedNodes({nodes,selectedId,focusId,pickMode=false,aura=false,onNodeClick,positions}:Props){
   const mesh=useRef<InstancedMesh>(null);
   const object=useMemo(()=>new Object3D(),[]);
+  const {camera}=useThree();
   // No vertexColors here -- see the comment on createNodeMaterial in materials.ts
   // for why that flag (not per-instance color itself) was the real black-node bug.
   const material=useMemo(()=>pickMode
@@ -71,7 +72,12 @@ export function InstancedNodes({nodes,selectedId,focusId,pickMode=false,aura=fal
     const matrix=new Matrix4();
     nodes.forEach((node,index)=>{
       const position=positions?.get(node.id)||new Vector3(...node.position);
+      // Keep the node graphic facing the user like the 2D reference. Depth is
+      // still real: position, perspective, scale, occlusion and orbit controls
+      // all operate in 3D; only the glyph itself is a camera-facing illustration
+      // instead of a shaded sphere that would change visual language while orbiting.
       object.position.copy(position);
+      object.quaternion.copy(camera.quaternion);
       const radius=nodeRadius(node,selectedId,focusId);
       object.scale.setScalar(aura ? radius * (node.id === focusId ? 1.72 : 1.54) : radius);
       object.updateMatrix();matrix.copy(object.matrix);target.setMatrixAt(index,matrix);
@@ -86,7 +92,7 @@ export function InstancedNodes({nodes,selectedId,focusId,pickMode=false,aura=fal
   };
 
   return <instancedMesh ref={mesh} args={[undefined,undefined,Math.max(1,nodes.length)]} frustumCulled={false} onClick={handleClick}>
-    <sphereGeometry args={[1,18,12]}/>
+    <circleGeometry args={[1,32]}/>
     <primitive object={material} attach="material"/>
   </instancedMesh>;
 }

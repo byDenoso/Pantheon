@@ -7,7 +7,7 @@ import { readFileSync } from 'node:fs';
 // color` into the vertex shader (WebGLProgram.js gates this purely on the material
 // flag, independent of instancing), and multiplies vColor by it *before* the
 // separate per-instance `instanceColor` multiply runs. None of our instanced
-// geometries (sphereGeometry for nodes, cylinderGeometry for filaments) ever define
+// geometries (camera-facing circleGeometry for nodes, cylinderGeometry for filaments) ever define
 // a `color` attribute -- only setColorAt/instanceColor is used -- so that phantom
 // attribute is never bound and reads WebGL's unbound default (0,0,0,1), zeroing the
 // color to black regardless of what instanceColor actually holds. Confirmed live in
