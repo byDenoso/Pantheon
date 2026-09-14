@@ -5,11 +5,12 @@ import { createApi } from '../lib/atlas-api.mjs';
 
 const read = path => fs.readFileSync(new URL(`../${path}`, import.meta.url), 'utf8');
 
-test('Atlas vNext keeps one shell with the four requested perspectives and URL context', () => {
+test('Atlas vNext keeps one shell with the four Phase 1 product surfaces and compatibility routes', () => {
   const app = read('src/App.tsx');
   const route = read('src/atlas-route.ts');
-  for (const label of ['GRAFOS', 'OBSERVATÓRIO', 'LABORATÓRIO', 'RESUMO DO UNIVERSO']) assert.match(app, new RegExp(label));
-  for (const path of ['graphs', 'observatory', 'lab', 'universe']) assert.match(route, new RegExp(path));
+  for (const label of ['COCKPIT', 'OBSERVATÓRIO', 'LABORATÓRIO', 'ATIVIDADE']) assert.match(app, new RegExp(`label: '${label}'`));
+  assert.doesNotMatch(app, /label: 'GRAFOS'|label: 'RESUMO DO UNIVERSO'/);
+  for (const area of ['graphs', 'observatory', 'lab', 'universe', 'cockpit', 'atividade']) assert.match(route, new RegExp(area));
   assert.match(route, /domain/);
   assert.match(route, /period/);
 });
@@ -48,15 +49,18 @@ test('configured API base activates remote reads without an injected fetcher', a
   }
 });
 
-test('the production entrypoint is the React shell and the spatial graph engine remains route-scoped', () => {
+test('the production entrypoint is the React shell and one spatial renderer remains route-scoped inside the Observatório', () => {
   const index = read('index.html');
   const main = read('src/main.tsx');
   const app = read('src/App.tsx');
+  const unified = read('src/pages/UnifiedObservatoryPage.tsx');
   const graphs = read('src/pages/graphs-page.tsx');
   assert.match(index, /id="root"/);
   assert.match(index, /src="\/src\/main\.tsx"/);
   assert.match(main, /createRoot/);
-  assert.match(app, /GraphsPage/);
+  assert.match(app, /UnifiedObservatoryPage/);
+  assert.match(unified, /GraphsPage/);
+  assert.doesNotMatch(unified, /GraphRenderer|Canvas25DGraph|GraphsV2|Babylon|pixi/i);
   assert.match(graphs, /GraphRenderer/);
   assert.match(graphs, /buildLiveProjection/);
   assert.doesNotMatch(graphs, /AtlasCanvas/);
