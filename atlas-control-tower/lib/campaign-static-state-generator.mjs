@@ -12,8 +12,10 @@ const json=value=>JSON.stringify(value,null,2)+'\n';
 const read=file=>JSON.parse(fs.readFileSync(file,'utf8'));
 const write=(file,value)=>fs.writeFileSync(file,json(value));
 const fileMeta=file=>{const body=fs.readFileSync(file);return {sha256:sha256(body),bytes:body.length}};
-const publicCompleteness=index=>({campaigns:{included:arr(index.campaigns).length,truncated:false},domains:{included:arr(index.domains).length,truncated:false}});
-const campaignNode=item=>({id:item.id,type:'CAMPAIGN',domain:item.domain||'',label:item.label||item.id,status:item.status||'',summary:item.question||'',authority:'GITHUB',metadata:{testCount:item.testCount??null}});
+const programMode=index=>arr(index.programs).length>0;
+const publicCompleteness=index=>({programs:{included:arr(index.programs).length,truncated:false},campaigns:{included:arr(index.campaigns).length,truncated:false},domains:{included:arr(index.domains).length,truncated:false}});
+const campaignNode=item=>({id:item.id,type:'CAMPAIGN',domain:item.domain||'',label:item.label||item.id,status:item.status||'',summary:item.question||item.summary||'',authority:'GITHUB',metadata:{testCount:item.testCount??null,childCount:0}});
+const programNode=(item,index)=>({id:item.id,type:'PROGRAM',domain:item.domain||'',label:item.label||item.id,status:item.status||'',summary:item.summary||'',authority:'GITHUB',metadata:{childCount:arr(index.campaigns).filter(campaign=>campaign.primaryProgram===item.id).length}});
 
 function domainArtifact(index,code){
  const campaigns=arr(index.campaigns).filter(item=>item.domain===code);
@@ -49,11 +51,19 @@ function sanitizeDomainGraph(file,index,code){
 
 function sanitizeScienceRoot(file,index){
  const body=read(file);
- const root=body.nodes.find(node=>node.id==='system:SCIENCE')||{id:'system:SCIENCE',type:'SYSTEM',label:'Ciência',status:'ACTIVE',summary:'Campanhas científicas publicadas.',authority:'GITHUB'};
- const domains=arr(body.nodes).filter(node=>node.type==='DOMAIN');
- const cross=arr(index.campaigns).filter(item=>!clean(item.domain)).map(campaignNode);
- body.nodes=[root,...domains,...cross];
- body.edges=[...domains,...cross].map(node=>({id:`contains:${root.id}:${node.id}`,source:root.id,target:node.id,type:'CONTAINS',declared:true}));
+ const root=body.nodes.find(node=>node.id==='system:SCIENCE')||{id:'system:SCIENCE',type:'SYSTEM',label:'Ciência',status:'ACTIVE',summary:'Estrutura científica publicada.',authority:'GITHUB'};
+ if(programMode(index)){
+  const programs=arr(index.programs).map(item=>programNode(item,index));
+  root.metadata={...(root.metadata||{}),childCount:programs.length};
+  body.nodes=[root,...programs];
+  body.edges=programs.map(node=>({id:`contains:${root.id}:${node.id}`,source:root.id,target:node.id,type:'CONTAINS',declared:true}));
+ }else{
+  const domains=arr(body.nodes).filter(node=>node.type==='DOMAIN');
+  const cross=arr(index.campaigns).filter(item=>!clean(item.domain)).map(campaignNode);
+  root.metadata={...(root.metadata||{}),childCount:domains.length+cross.length};
+  body.nodes=[root,...domains,...cross];
+  body.edges=[...domains,...cross].map(node=>({id:`contains:${root.id}:${node.id}`,source:root.id,target:node.id,type:'CONTAINS',declared:true}));
+ }
  body.total=body.nodes.length;
  body.hasMore=false;
  body.truncated=false;
@@ -74,10 +84,10 @@ function sanitizeSearch(file){
 
 function sanitizeState(file,index){
  const body=read(file);
- body.counts={...(body.counts||{}),DOMAIN:arr(index.domains).length,CAMPAIGN:arr(index.campaigns).length};
+ body.counts={...(body.counts||{}),PROGRAM:arr(index.programs).length,DOMAIN:arr(index.domains).length,CAMPAIGN:arr(index.campaigns).length};
  delete body.counts.TEST;
  delete body.counts.RESULT;
- body.science={domains:arr(index.domains).length,campaigns:arr(index.campaigns).length,truncated:false};
+ body.science={programs:arr(index.programs).length,domains:arr(index.domains).length,campaigns:arr(index.campaigns).length,truncated:false};
  write(file,body);
 }
 
@@ -115,24 +125,35 @@ export async function generateStaticState(options={}){
  const oldRoot=path.join(outDir,oldManifest.snapshotPath);
  const indexFile=path.join(oldRoot,'science/index.json');
  const index=read(indexFile);
- index.projectionMode='CAMPAIGN_INDEX';
+ index.projectionMode=programMode(index)?'CANONICAL_PROGRAM_CAMPAIGN_INDEX':'CAMPAIGN_INDEX';
  index.completeness=publicCompleteness(index);
  delete index.shards;
  write(indexFile,index);
 
- for(const domain of arr(index.domains)){
-  const code=domain.code;
-  write(path.join(oldRoot,`science/${code}.json`),domainArtifact(index,code));
-  sanitizeDomainGraph(path.join(oldRoot,`graph/science/${code}.json`),index,code);
+ if(!programMode(index)){
+  for(const domain of arr(index.domains)){
+   const code=domain.code;
+   const graphFile=path.join(oldRoot,`graph/science/${code}.json`);
+   write(path.join(oldRoot,`science/${code}.json`),domainArtifact(index,code));
+   if(fs.existsSync(graphFile))sanitizeDomainGraph(graphFile,index,code);
+  }
+  write(path.join(oldRoot,'science/CROSS.json'),{...domainArtifact(index,'CROSS'),campaigns:arr(index.campaigns).filter(item=>!clean(item.domain)),completeness:{campaigns:{included:arr(index.campaigns).filter(item=>!clean(item.domain)).length,truncated:false}}});
  }
- write(path.join(oldRoot,'science/CROSS.json'),{...domainArtifact(index,'CROSS'),campaigns:arr(index.campaigns).filter(item=>!clean(item.domain)),completeness:{campaigns:{included:arr(index.campaigns).filter(item=>!clean(item.domain)).length,truncated:false}}});
  sanitizeScienceRoot(path.join(oldRoot,'graph/science.json'),index);
  sanitizeEntities(path.join(oldRoot,'entities/index.json'));
  sanitizeSearch(path.join(oldRoot,'search/index.json'));
  sanitizeState(path.join(oldRoot,'state.json'),index);
 
  const artifacts={};
- for(const artifact of Object.keys(oldManifest.artifacts||{}))artifacts[artifact]=fileMeta(path.join(oldRoot,artifact));
+ const walk=(dir,prefix='')=>{
+  for(const entry of fs.readdirSync(dir,{withFileTypes:true})){
+   if(entry.name==='manifest.json'||entry.name==='public-manifest-v2.json')continue;
+   const rel=prefix?`${prefix}/${entry.name}`:entry.name;
+   const file=path.join(dir,entry.name);
+   if(entry.isDirectory())walk(file,rel);else artifacts[rel]=fileMeta(file);
+  }
+ };
+ walk(oldRoot);
  const fingerprint=semanticFingerprint(oldManifest.sourceVersion,artifacts);
  const hex=fingerprint.slice(7);
  const newRoot=path.join(outDir,'snapshots',hex);
@@ -144,7 +165,7 @@ export async function generateStaticState(options={}){
  write(path.join(newRoot,'manifest.json'),manifest);
  write(path.join(outDir,'current','manifest.json'),manifest);
 
- const publicManifest=initialPublicManifest(oldManifest,artifacts,options.generatedAt);
+ const publicManifest=initialPublicManifest(manifest,artifacts,options.generatedAt);
  write(path.join(newRoot,'public-manifest-v2.json'),publicManifest);
  write(path.join(outDir,'current','public-manifest-v2.json'),publicManifest);
  return {fingerprint,manifest,publicManifest,snapshotDir:newRoot};
