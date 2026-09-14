@@ -235,6 +235,7 @@ export type StatePayload = {
 };
 
 export type AtlasApiClient = {
+  clear?: () => void;
   graph: (query?: Record<string, string | number | undefined>) => Promise<AtlasGraph>;
   state: (query?: Record<string, string | number | undefined>) => Promise<unknown>;
   health: () => Promise<unknown>;

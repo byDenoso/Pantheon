@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
+import { loadCockpitSources, mergeRunSources } from '../src/core/cockpit-sources.ts';
 
 const root = new URL('../', import.meta.url);
 const read = path => fs.readFileSync(new URL(path, root), 'utf8');
@@ -33,11 +34,12 @@ test('mobile premium shell recalibrates its topbar geometry instead of inheritin
   assert.match(mobile, /--atlas-topbar-height:\s*64px/);
 });
 
-test('cockpit consumes the public operations and audit projections', () => {
+test('cockpit consumes the public operations and audit projections', async () => {
   const cockpit = read('src/pages/CockpitPage.tsx');
-  assert.match(cockpit, /api\.ops\(\)/);
-  assert.match(cockpit, /api\.automationRuns\(\)/);
-  assert.match(cockpit, /api\.audit\(\)/);
+  const calls = [];
+  await loadCockpitSources(Object.fromEntries(['health', 'ops', 'automationRuns', 'audit'].map(key => [key, async () => { calls.push(key); return {}; }])));
+  assert.deepEqual(calls.sort(), ['audit', 'automationRuns', 'health', 'ops']);
+  assert.match(cockpit, /loadCockpitSources\(api\)/);
   assert.doesNotMatch(cockpit, /requer a fachada privada/);
 });
 
@@ -85,9 +87,10 @@ test('the Vercel runtime uses its same-origin API when no external base URL is i
 });
 
 test('cockpit deduplicates operations when two public endpoints expose the same run', () => {
-  const cockpit = read('src/pages/CockpitPage.tsx');
-  assert.match(cockpit, /mergeUniqueOperations/);
-  assert.match(cockpit, /new Map\(items\.map/);
+  const run = { id: 'same-run', status: 'RUNNING', label: 'Published run' };
+  const merged = mergeRunSources({ ops: { state: 'READY', data: { actions: [], runs: [run] } }, runs: { state: 'READY', data: [run] } });
+  assert.equal(merged.data.length, 1);
+  assert.equal(merged.data[0].id, run.id);
 });
 
 test('graph transitions expose a visible loading state while preserving the last valid projection', () => {

@@ -36,3 +36,18 @@ test('planeLabel covers every plane id with a non-empty Portuguese label', () =>
     assert.ok(planeLabel(id).length > 0);
   }
 });
+
+test('missing fingerprint and revision-only timestamps remain explicitly unproven', () => {
+  const canonical = resolveHealthPlanes({ contract: 'published', sourceVersion: 'main' })[0];
+  assert.match(canonical.reason, /fingerprint não publicado/);
+  assert.equal(canonical.observedAt, undefined);
+});
+
+test('declared failure and fallback cannot produce green health planes', () => {
+  const failed = resolveHealthPlanes({ ok: false, contract: 'published', dataSource: { freshness: 'LIVE' } });
+  assert.equal(failed[0].status, 'RED');
+  assert.equal(failed.find(item => item.id === 'API').status, 'RED');
+  const fallback = resolveHealthPlanes({ contract: 'published', dataSource: { freshness: 'LIVE', usedFallback: true } });
+  assert.equal(fallback[0].status, 'AMBER');
+  assert.equal(fallback.find(item => item.id === 'API').status, 'AMBER');
+});
