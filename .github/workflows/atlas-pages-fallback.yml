@@ -95,17 +95,23 @@ jobs:
           const manifestResponse=page.waitForResponse(response=>response.url().includes('/Pantheon/data/current/manifest.json')&&response.ok(),{timeout:15000});
           await page.goto('http://127.0.0.1:4174/Pantheon/',{waitUntil:'domcontentloaded',timeout:30000});
           await manifestResponse;
+          // The public root is the marketing/landing surface (real product decision,
+          // not a bug): it does not mount the ATLAS shell itself. Enter through its
+          // real "Mapa" link, exactly as a visitor would, before asserting on the
+          // shell/graph DOM that only exists once inside the app proper.
+          if(await page.locator('.atlas-bootstrap-error').count())throw new Error('ATLAS_BOOTSTRAP_ERROR_VISIBLE_ON_LANDING');
+          await page.getByRole('link',{name:'Mapa'}).click();
           await page.waitForSelector('.atlas-app',{timeout:15000});
           await page.waitForSelector('.premium-shell',{timeout:15000});
           await page.waitForSelector('.atlas-context-bar',{timeout:15000});
           await page.waitForSelector('.atlas-command-trigger',{timeout:15000});
-          await page.waitForSelector('.graph-v2-canvas canvas',{timeout:15000});
+          await page.waitForSelector('.graph-renderer-canvas canvas',{timeout:15000});
           if(await page.locator('.atlas-bootstrap-error').count())throw new Error('ATLAS_BOOTSTRAP_ERROR_VISIBLE');
 
           await page.getByRole('link',{name:'OBSERVATÓRIO'}).click();
-          await page.waitForSelector('.graph-v2-canvas canvas',{state:'detached',timeout:10000});
+          await page.waitForSelector('.graph-renderer-canvas canvas',{state:'detached',timeout:10000});
           await page.getByRole('link',{name:'GRAFOS'}).click();
-          await page.waitForSelector('.graph-v2-canvas canvas',{timeout:15000});
+          await page.waitForSelector('.graph-renderer-canvas canvas',{timeout:15000});
           await page.waitForTimeout(250);
           if(await page.locator('.atlas-bootstrap-error').count())throw new Error('ATLAS_BOOTSTRAP_ERROR_AFTER_GRAPH_REMOUNT');
           if(errors.length)throw new Error(`ATLAS_PAGEERROR:${errors.join(' | ')}`);
