@@ -1,5 +1,6 @@
 import {useMemo,useState} from 'react';
 import type {AtlasActions,AtlasUiState} from '../state/useAtlasSession';
+import {deriveGraphNavigation} from './navigation-contract.mjs';
 import type {GraphProjection} from './types';
 
 type Tab='overview'|'relations'|'evidence'|'history'|'runs'|'artifacts'|'provenance';
@@ -12,6 +13,9 @@ const humanFreshness=(value:string|null|undefined)=>{const state=String(value||'
 export function SpatialInspector({state,actions,projection,onOpen}:{state:AtlasUiState;actions:AtlasActions;projection:GraphProjection|null;onOpen:(id:string)=>void}){
   const [deep,setDeep]=useState(false);const [tab,setTab]=useState<Tab>('overview');
   const selected=projection?.nodes.find(node=>node.id===state.selectedId)||null;
+  const navigation=useMemo(()=>deriveGraphNavigation(projection?.nodes||[],projection?.edges||[]),[projection]);
+  const selectedExpandable=Boolean(selected&&(selected.expandable===true||navigation.get(selected.id)?.expandable===true));
+  const selectedCanOpen=Boolean(selected&&selected.id!==projection?.focusId&&selectedExpandable);
   const relations=useMemo(()=>{
     if(!selected)return [];
     const canonical=state.selectedEntity?.relations;
@@ -40,12 +44,13 @@ export function SpatialInspector({state,actions,projection,onOpen}:{state:AtlasU
           {selected.confidence!=null&&<span><small>Confiança</small><b>{selected.confidence}</b></span>}
           {selected.domain&&<span><small>Domínio</small><b>{selected.domain}</b></span>}
           <span><small>Relações</small><b>{relations.length}</b></span>
+          <span><small>Filhos</small><b>{navigation.get(selected.id)?.childCount||0}</b></span>
         </div>
-        <div className="spatial-inspector-actions">{selected.id!==projection?.focusId&&<button className="primary" onClick={()=>onOpen(selected.id)}>{selected.contextRole==='portal'?'Atravessar portal':'Entrar'}</button>}<button onClick={()=>pinned?actions.unpin(selected.id):actions.pin(selected.id)}>{pinned?'Desafixar':'Fixar'}</button><button className={compared?'active':''} onClick={()=>actions.toggleCompare(selected.id)}>Comparar</button><button onClick={()=>setDeep(true)}>Abrir detalhes</button></div>
+        <div className="spatial-inspector-actions">{selectedCanOpen&&<button className="primary" onClick={()=>onOpen(selected.id)}>{selected.contextRole==='portal'?'Atravessar portal':'Entrar'}</button>}<button onClick={()=>pinned?actions.unpin(selected.id):actions.pin(selected.id)}>{pinned?'Desafixar':'Fixar'}</button><button className={compared?'active':''} onClick={()=>actions.toggleCompare(selected.id)}>Comparar</button><button onClick={()=>setDeep(true)}>Abrir detalhes</button></div>
       </div>:<div className="spatial-inspector-deep">
         <nav aria-label="Seções do inspector">{TABS.map(value=><button key={value} className={tab===value?'active':''} onClick={()=>setTab(value)}>{tabLabel[value]}</button>)}</nav>
         <div className="spatial-inspector-tab">
-          {tab==='overview'&&<><p>{selected.summary||'Descrição ainda não publicada para esta entidade.'}</p><div className="spatial-trust-block"><span><small>Tipo</small><b>{selected.type}</b></span><span><small>Status</small><b>{selected.status||'Desconhecido'}</b></span><span><small>Freshness</small><b>{humanFreshness(freshness)}</b></span>{selected.confidence!=null&&<span><small>Confiança</small><b>{selected.confidence}</b></span>}{selected.domain&&<span><small>Domínio</small><b>{selected.domain}</b></span>}{selected.updatedAt&&<span><small>Atualizado</small><b>{selected.updatedAt}</b></span>}</div><details className="spatial-technical-details"><summary>Detalhes técnicos</summary><dl><div><dt>ID canônico</dt><dd>{selected.id}</dd></div><div><dt>Source version</dt><dd>{state.summary?.projection?.sourceVersion||state.health?.dataSource?.sourceVersion||'—'}</dd></div>{Object.entries(selected.metrics||{}).filter(([key])=>key!=='compare').map(([key,value])=><div key={key}><dt>{key}</dt><dd>{String(value??'—')}</dd></div>)}</dl></details></>}
+          {tab==='overview'&&<><p>{selected.summary||'Descrição ainda não publicada para esta entidade.'}</p><div className="spatial-trust-block"><span><small>Tipo</small><b>{selected.type}</b></span><span><small>Status</small><b>{selected.status||'Desconhecido'}</b></span><span><small>Freshness</small><b>{humanFreshness(freshness)}</b></span>{selected.confidence!=null&&<span><small>Confiança</small><b>{selected.confidence}</b></span>}{selected.domain&&<span><small>Domínio</small><b>{selected.domain}</b></span>}{selected.updatedAt&&<span><small>Atualizado</small><b>{selected.updatedAt}</b></span>}<span><small>Filhos navegáveis</small><b>{navigation.get(selected.id)?.childCount||0}</b></span></div><details className="spatial-technical-details"><summary>Detalhes técnicos</summary><dl><div><dt>ID canônico</dt><dd>{selected.id}</dd></div><div><dt>Source version</dt><dd>{state.summary?.projection?.sourceVersion||state.health?.dataSource?.sourceVersion||'—'}</dd></div>{Object.entries(selected.metrics||{}).filter(([key])=>key!=='compare').map(([key,value])=><div key={key}><dt>{key}</dt><dd>{String(value??'—')}</dd></div>)}</dl></details></>}
           {tab==='relations'&&<RelationList rows={relatedRows} label={neighbor}/>} 
           {tab==='evidence'&&<RelationList rows={evidenceRows} label={neighbor} empty="Nenhuma relação de evidência publicada neste recorte."/>}
           {tab==='runs'&&<RelationList rows={runRows} label={neighbor} empty="Nenhuma Run relacionada publicada neste recorte."/>}
@@ -53,7 +58,7 @@ export function SpatialInspector({state,actions,projection,onOpen}:{state:AtlasU
           {tab==='artifacts'&&<>{provenance.filter(item=>item.url).length?<ul className="spatial-source-list">{provenance.filter(item=>item.url).map((item,index)=><li key={`${item.url}:${index}`}><a href={item.url} target="_blank" rel="noreferrer">{item.label||item.sourceRef||item.source||'Abrir fonte'}</a></li>)}</ul>:<p>Nenhum artefato navegável publicado para esta entidade.</p>}</>}
           {tab==='provenance'&&<>{provenance.length?<ul className="spatial-source-list">{provenance.map((item,index)=><li key={`${item.sourceRef||item.source||'source'}:${index}`}><b>{item.label||item.source||'Fonte'}</b><span>{item.sourceRef||item.sourceId||'—'}</span><small>{item.observedAt||'sem timestamp publicado'}</small></li>)}</ul>:<p>Proveniência detalhada não foi publicada neste recorte.</p>}</>}
         </div>
-        <div className="spatial-inspector-actions"><button onClick={()=>setDeep(false)}>Visão rápida</button>{selected.id!==projection?.focusId&&<button className="primary" onClick={()=>onOpen(selected.id)}>Entrar</button>}</div>
+        <div className="spatial-inspector-actions"><button onClick={()=>setDeep(false)}>Visão rápida</button>{selectedCanOpen&&<button className="primary" onClick={()=>onOpen(selected.id)}>Entrar</button>}</div>
       </div>}
     </aside>}
     {compareNodes.length===2&&<section className="spatial-compare" aria-label="Comparação de nós"><header><span>COMPARAÇÃO</span><button onClick={()=>{actions.toggleCompare(compareNodes[0].id);actions.toggleCompare(compareNodes[1].id)}}>×</button></header><div>{compareNodes.map(node=><article key={node.id}><span>{node.type}</span><h4>{node.label}</h4><dl><div><dt>Status</dt><dd>{node.status||'—'}</dd></div><div><dt>Atualidade</dt><dd>{humanFreshness(node.freshness)}</dd></div><div><dt>Domínio</dt><dd>{node.domain||'—'}</dd></div><div><dt>Relações visíveis</dt><dd>{projection?.edges.filter(edge=>edge.source===node.id||edge.target===node.id).length||0}</dd></div></dl></article>)}</div></section>}

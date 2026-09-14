@@ -5,7 +5,7 @@ import { readFile } from 'node:fs/promises';
 const rendererUrl = new URL('../src/graph-engine/GraphRenderer.tsx', import.meta.url);
 const mainUrl = new URL('../src/main.tsx', import.meta.url);
 
-test('graph renderer does not require a react-router context inside the custom Atlas shell', async () => {
+test('graph renderer is self-contained inside the custom Atlas shell', async () => {
   const [renderer, main] = await Promise.all([
     readFile(rendererUrl, 'utf8'),
     readFile(mainUrl, 'utf8')
@@ -13,8 +13,8 @@ test('graph renderer does not require a react-router context inside the custom A
 
   assert.doesNotMatch(renderer, /react-router-dom/);
   assert.doesNotMatch(renderer, /\buseSearchParams\b/);
-  assert.match(renderer, /URLSearchParams/);
-  assert.match(renderer, /history\.replaceState/);
+  assert.doesNotMatch(renderer, /URLSearchParams|history\.replaceState|renderer=webgl/);
+  assert.match(renderer, /Canvas25DGraph/);
   assert.doesNotMatch(main, /<BrowserRouter\b|<RouterProvider\b/);
 });
 

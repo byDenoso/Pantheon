@@ -1,5 +1,5 @@
 import { createApi } from '../../lib/atlas-api.mjs';
-import { createStaticArtifactApi } from '../../lib/static-artifact-api.mjs';
+import { createStaticArtifactApi } from '../../lib/multisurface-static-api.mjs';
 import { createPagesManualSyncApi } from '../../lib/pages-manual-live-api.mjs';
 import type { AtlasApiClient } from './types';
 
@@ -81,7 +81,7 @@ export function createResilientApi(primary: AtlasApiClient, fallback: AtlasApiCl
     audit: () => call('audit'),
     files: id => call('files', id),
     sync: () => primary.sync(),
-    research: (route, query) => primary.research(route, query)
+    research: (route, query) => call('research', route, query) as ReturnType<AtlasApiClient['research']>
   };
 }
 
