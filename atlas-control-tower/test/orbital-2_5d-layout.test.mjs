@@ -17,6 +17,13 @@ test('layoutRing places nodes evenly around the center and is deterministic', ()
   }
 });
 
+test('layoutRing gives satellites a visible front/back depth spread', () => {
+  const positions = layoutRing(['a', 'b', 'c', 'd'], 100);
+  const depths = positions.map(position => position.z);
+  assert.ok(Math.max(...depths) - Math.min(...depths) > 0.5, 'the 2.5D ring must not collapse every satellite onto one depth plane');
+  assert.ok(depths.every(depth => depth >= 0.16 && depth <= 0.94));
+});
+
 test('layoutRing with zero satellites returns an empty array, never throws', () => {
   assert.deepEqual(layoutRing([], 100), []);
 });

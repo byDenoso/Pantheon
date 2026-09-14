@@ -10,7 +10,7 @@ import { shouldOpenNode } from './picking';
 import { buildOrbitalNodes, type AtlasGraph, type AtlasNode, type PositionedNode } from './types';
 import { InstancedNodes } from './InstancedNodes';
 import { InstancedFilaments } from './InstancedFilaments';
-import { LabelOverlay, labelStatus, labelText, labelType, type ProjectedLabel } from './LabelOverlay';
+import { LabelOverlay, labelStatus, labelText, labelType, placeProjectedLabels, type ProjectedLabel } from './LabelOverlay';
 import { CanvasGraphFallback } from './CanvasGraphFallback';
 
 type Props={
@@ -165,7 +165,7 @@ function OrbitalGuides({nodes,focusId}:{nodes:PositionedNode[];focusId:string}){
   </group>;
 }
 
-function LabelProjector({nodes,labelIds,onLabels,motion}:{nodes:PositionedNode[];labelIds:Set<string>;onLabels:(labels:ProjectedLabel[])=>void;motion:MotionState}){
+function LabelProjector({nodes,labelIds,onLabels,motion,focusId,selectedId}:{nodes:PositionedNode[];labelIds:Set<string>;onLabels:(labels:ProjectedLabel[])=>void;motion:MotionState;focusId:string;selectedId?:string|null}){
   const {camera,size}=useThree();
   const lastAt=useRef(0);
   const lastSignature=useRef('');
@@ -186,8 +186,9 @@ function LabelProjector({nodes,labelIds,onLabels,motion}:{nodes:PositionedNode[]
         side:(tmp.x > 0.08 ? 'left' : 'right') as 'left'|'right'
       };
     });
-    const signature=labels.map(item=>`${item.id}:${Math.round(item.x)}:${Math.round(item.y)}:${item.visible?1:0}`).join('|');
-    if(signature!==lastSignature.current){lastSignature.current=signature;onLabels(labels)}
+    const placed=placeProjectedLabels(labels,size.width,size.height,focusId,selectedId);
+    const signature=placed.map(item=>`${item.id}:${Math.round(item.x)}:${Math.round(item.y)}:${item.visible?1:0}`).join('|');
+    if(signature!==lastSignature.current){lastSignature.current=signature;onLabels(placed)}
   });
   return null;
 }
@@ -225,7 +226,7 @@ function SceneContent({nodes,graph,labelIds,onLabels,onPick,reducedMotion,select
     <InstancedNodes nodes={nodes} positions={motion.current} focusId={focusId} aura/>
     <InstancedFilaments edges={graph.edges} nodes={nodes} positions={motion.current} focusId={focusId} selectedId={selectedId}/>
     <InstancedNodes nodes={nodes} positions={motion.current} selectedId={selectedId} focusId={focusId} onNodeClick={onPick}/>
-    <LabelProjector nodes={nodes} labelIds={labelIds} onLabels={onLabels} motion={motion}/>
+    <LabelProjector nodes={nodes} labelIds={labelIds} onLabels={onLabels} motion={motion} focusId={focusId} selectedId={selectedId}/>
   </>;
 }
 

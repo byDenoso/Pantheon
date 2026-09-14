@@ -143,7 +143,11 @@ export function Canvas25DGraph({ projection, selectedId, onSelect, onOpenNode, z
       }
 
       const orbit = orbitRef.current;
-      const radius = Math.min(width, height) * 0.36;
+      // Leave a real label-safe margin around the orbit. The previous
+      // min(width,height)*.36 framing pushed the outer labels outside the
+      // viewport on the narrow app shell, making the graph feel cropped before
+      // the user ever started navigating it.
+      const radius = Math.min(width * 0.30, height * 0.34);
       const scene = buildSceneLayout(centerNode.id, satellites.map(node => node.id), radius, orbit);
       const pointer = reducedMotion ? { x: 0, y: 0 } : pointerRef.current;
       const positioned: Array<OrbitalPosition & { label: string; type: string }> = [
@@ -154,6 +158,10 @@ export function Canvas25DGraph({ projection, selectedId, onSelect, onOpenNode, z
           return { ...eased, label: String(node?.label || pos.id), type: String(node?.type || '') };
         })
       ];
+      // Paint distant satellites first and keep the focus node in front. This
+      // makes z affect occlusion as well as parallax, so depth remains legible
+      // when several nodes occupy a similar screen-space orbit.
+      const drawOrder = [...positioned.slice(1).sort((a, b) => a.z - b.z), positioned[0]];
 
       ctx.clearRect(0, 0, width, height);
       ctx.save();
@@ -179,11 +187,12 @@ export function Canvas25DGraph({ projection, selectedId, onSelect, onOpenNode, z
       ctx.setLineDash([]);
 
       const hitboxes: Array<{ id: string; x: number; y: number; radius: number }> = [];
-      for (const [index, pos] of positioned.entries()) {
-        const isCenter = index === 0;
+      for (const pos of drawOrder) {
+        const isCenter = pos.id === centerNode.id;
         const kind = isCenter ? 'center' : isTerminalType(pos.type) ? 'campaign' : 'domain';
         const selected = pos.id === selectedId;
-        const r = nodeRadius(kind, selected);
+        const depthScale = isCenter ? 1 : 0.82 + pos.z * 0.3;
+        const r = nodeRadius(kind, selected) * depthScale;
         const color = isCenter ? palette.focus : colorFor(pos.type, palette);
 
         const glow = ctx.createRadialGradient(pos.x, pos.y, 0, pos.x, pos.y, r * (isCenter ? 2.4 : 1.8));

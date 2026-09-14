@@ -114,6 +114,13 @@ test('buildOrbitalNodes gives deterministic, distinct x/y/z positions for the sa
   assert.notDeepEqual(byId.get('campaign:c1'), byId.get('campaign:c2'), 'distinct nodes must not collapse onto the same point');
 });
 
+test('hierarchy panorama gives sibling nodes materially more Z depth', () => {
+  const nodes = [{ id: 'system:NEXO', type: 'ROOT' }, ...Array.from({ length: 12 }, (_, index) => ({ id: `system:S${index}`, type: 'SYSTEM', parentId: 'system:NEXO' }))];
+  const edges = nodes.slice(1).map(node => ({ source: 'system:NEXO', target: node.id, type: 'CONTAINS' }));
+  const positioned = buildOrbitalNodes(nodes, 'system:NEXO', edges).slice(1).map(node => node.position[2]);
+  assert.ok(Math.max(...positioned) - Math.min(...positioned) > 2.5, 'the 3D panorama needs enough Z separation to read as volume');
+});
+
 test('buildOrbitalNodes centers the focus even when its case does not match the real node id (regression)', () => {
   // Real repro: a URL/session focusId of "domain:d1" against a real node id of
   // "domain:D1" previously matched nothing -- the focus never sat at the origin,

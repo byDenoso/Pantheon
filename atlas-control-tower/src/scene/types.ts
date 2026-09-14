@@ -110,7 +110,9 @@ function hierarchyPositions(nodes: AtlasNode[], focusId: string, edges: AtlasEdg
   }
 
   const positions = new Map<string, [number, number, number]>([[focusId, [0, 0, 0]]]);
-  const ringRadius = directChildren.length === 1 ? 4.45 : directChildren.length < 5 ? 4.85 : 5.15;
+  // Give the panorama enough physical volume that perspective can separate
+  // sibling systems/domains instead of projecting them into a near-column.
+  const ringRadius = directChildren.length === 1 ? 4.7 : directChildren.length < 5 ? 5.35 : 5.8;
   const golden = Math.PI * (3 - Math.sqrt(5));
   const phase = hash01(`${focusId}:phase`) * Math.PI * 2;
 
@@ -119,7 +121,7 @@ function hierarchyPositions(nodes: AtlasNode[], focusId: string, edges: AtlasEdg
     const center: [number, number, number] = [
       Math.cos(angle) * ringRadius,
       Math.sin(angle) * ringRadius * 0.66,
-      hashSigned(`${child.id}:hub-depth`) * 0.72
+      hashSigned(`${child.id}:hub-depth`) * 2.2
     ];
     positions.set(child.id, center);
     const cluster = members.get(child.id) || [];
@@ -129,7 +131,7 @@ function hierarchyPositions(nodes: AtlasNode[], focusId: string, edges: AtlasEdg
       positions.set(node.id, [
         center[0] + Math.cos(memberAngle) * memberRadius,
         center[1] + Math.sin(memberAngle) * memberRadius * 0.72,
-        center[2] + hashSigned(`${node.id}:depth`) * (0.75 + memberRadius * 0.22)
+        center[2] + hashSigned(`${node.id}:depth`) * (1.45 + memberRadius * 0.5)
       ]);
     });
   });

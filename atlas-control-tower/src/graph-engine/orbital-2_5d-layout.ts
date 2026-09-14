@@ -20,7 +20,11 @@ export function layoutRing(ids: string[], radius: number, startAngle = -Math.PI 
   if (count === 0) return [];
   return ids.map((id, index) => {
     const angle = startAngle + (index / count) * Math.PI * 2;
-    return { id, x: Math.cos(angle) * radius, y: Math.sin(angle) * radius * tilt, z: 0.6, angle };
+    // Keep the ring planar in x/y, but give each satellite a deterministic
+    // front/back position. A single z value made the 2.5D view look like a
+    // flat poster even while the user was orbiting it.
+    const z = Math.min(0.94, Math.max(0.16, 0.55 + Math.cos(angle) * 0.36));
+    return { id, x: Math.cos(angle) * radius, y: Math.sin(angle) * radius * tilt, z, angle };
   });
 }
 
