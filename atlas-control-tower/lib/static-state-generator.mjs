@@ -80,30 +80,34 @@ function scienceShardArtifact(science,name,shard){
   };
 }
 
-const systemNode=(id,label,summary)=>({id:`system:${id}`,type:'SYSTEM',label,status:'ACTIVE',summary,authority:'GITHUB'});
+const systemNode=(id,label,summary,childCount=null)=>({id:`system:${id}`,type:'SYSTEM',label,status:'ACTIVE',summary,authority:'GITHUB',...(Number.isFinite(childCount)?{metadata:{childCount}}:{})});
 const graph=(sourceVersion,focus,nodes,edges,extra={})=>({...publicMeta(sourceVersion),focus,nodes,edges,total:nodes.length,depth:extra.depth||1,hasMore:Boolean(extra.hasMore),truncated:Boolean(extra.truncated),completeness:extra.completeness||undefined});
 
-function rootGraph(science){
-  const root=systemNode('NEXO','NEXO','Interface read-only sobre projeções publicadas do Sovereign Core.');
+function rootGraph(science,drive){
+  const scienceChildren=arr(science.domains).length;
+  const engineeringChildren=arr(drive.engineering).filter(row=>upper(row.type)==='PROGRAM'&&clean(row.parentId)==='ENG-DOM-ENGINEERING').length;
+  const olympusChildren=arr(drive.olympus).filter(row=>upper(row.type)==='PROGRAM'&&clean(row.parentId)==='OLY-DOM-OLYMPUS').length;
+  const operationsChildren=arr(drive.actions).length;
+  const root=systemNode('NEXO','NEXO','Interface read-only sobre projeções publicadas do Sovereign Core.',4);
   const children=[
-    systemNode('SCIENCE','Ciência','Pesquisa científica projetada do Drive e autorizada pelo GitHub.'),
-    systemNode('ENGINEERING','Engenharia','Programas e campanhas de engenharia publicados na projeção pública.'),
-    systemNode('OLYMPUS','Olympus','Estrutura pública sanitizada do domínio Olympus; dados pessoais não são publicados.'),
-    systemNode('OPERATIONS','Operação','Estado operacional público sanitizado, execução e bloqueios publicados pelo snapshot.')
+    systemNode('SCIENCE','Ciência','Pesquisa científica projetada do Drive e autorizada pelo GitHub.',scienceChildren),
+    systemNode('ENGINEERING','Engenharia','Programas e campanhas de engenharia publicados na projeção pública.',engineeringChildren),
+    systemNode('OLYMPUS','Olympus','Estrutura pública sanitizada do domínio Olympus; dados pessoais não são publicados.',olympusChildren),
+    systemNode('OPERATIONS','Operação','Estado operacional público sanitizado, execução e bloqueios publicados pelo snapshot.',operationsChildren)
   ];
   return graph(science.sourceVersion,root.id,[root,...children],children.map(node=>({id:`contains:${root.id}:${node.id}`,source:root.id,target:node.id,type:'CONTAINS',declared:true})));
 }
 
 function scienceRootGraph(science){
-  const root=systemNode('SCIENCE','Ciência','Domínios científicos publicados no snapshot soberano.');
-  const domains=arr(science.domains).map(domain=>({id:domain.id,type:'DOMAIN',domain:domain.code,label:domain.label||domain.code,status:domain.scientificState||'',summary:domain.question||'',authority:'GITHUB',metadata:{operationalState:domain.operationalState||'',parentHypothesis:domain.parentHypothesis||''}}));
+  const root=systemNode('SCIENCE','Ciência','Domínios científicos publicados no snapshot soberano.',arr(science.domains).length);
+  const domains=arr(science.domains).map(domain=>({id:domain.id,type:'DOMAIN',domain:domain.code,label:domain.label||domain.code,status:domain.scientificState||'',summary:domain.question||'',authority:'GITHUB',metadata:{operationalState:domain.operationalState||'',parentHypothesis:domain.parentHypothesis||'',childCount:arr(science.campaigns).filter(campaign=>campaign.domain===domain.code).length}}));
   return graph(science.sourceVersion,root.id,[root,...domains],domains.map(node=>({id:`contains:${root.id}:${node.id}`,source:root.id,target:node.id,type:'CONTAINS',declared:true})));
 }
 
 function scienceDomainGraph(science,name,shard){
   const domain=arr(science.domains).find(item=>item.code===name);
-  const root={id:domain?.id||`domain:${name}`,type:'DOMAIN',domain:name,label:domain?.label||name,status:domain?.scientificState||'',summary:domain?.question||'',authority:'GITHUB'};
-  const campaigns=arr(science.campaigns).filter(item=>item.domain===name).map(item=>({id:item.id,type:'CAMPAIGN',domain:name,label:item.label||item.id,status:item.status||'',summary:item.question||'',authority:'GITHUB',metadata:{testCount:item.testCount??null}}));
+  const campaigns=arr(science.campaigns).filter(item=>item.domain===name).map(item=>({id:item.id,type:'CAMPAIGN',domain:name,label:item.label||item.id,status:item.status||'',summary:item.question||'',authority:'GITHUB',metadata:{testCount:item.testCount??null,childCount:0}}));
+  const root={id:domain?.id||`domain:${name}`,type:'DOMAIN',domain:name,label:domain?.label||name,status:domain?.scientificState||'',summary:domain?.question||'',authority:'GITHUB',metadata:{childCount:campaigns.length}};
   const tests=arr(shard.tests).map(sanitizeTest).map(test=>({id:test.id,type:'TEST',domain:name,label:test.label,status:test.status,summary:test.summary,authority:'GITHUB',evidenceClass:test.evidenceClass,updatedAt:test.lastVerified,metadata:{primaryCampaign:test.primaryCampaign,keyMetrics:test.keyMetrics}}));
   const results=arr(shard.tests).map(sanitizeTest).map(test=>({id:`result:${test.id}`,type:'RESULT',domain:name,label:`Resultado · ${test.label}`,status:test.status,summary:test.summary,authority:'GITHUB',evidenceClass:test.evidenceClass,updatedAt:test.lastVerified,metadata:{testId:test.id,keyMetrics:test.keyMetrics}}));
   const edges=[];
@@ -124,8 +128,8 @@ function hierarchyGraph(sourceVersion,system,rows,rootId,{publicOlympus=false}={
     if(publicOlympus&&upper(row.type)==='CAMPAIGN')return false;
     return upper(row.type)==='PROGRAM'&&clean(row.parentId)===rootId;
   });
-  const root=systemNode(system,label,publicOlympus?'Estrutura pública sanitizada; registros pessoais permanecem privados.':`Hierarquia ${label} publicada no snapshot.`);
-  const nodes=allowed.map(row=>({id:row.id,type:'PROGRAM',label:row.title||row.id,status:row.status||'',summary:row.summary||'',authority:'GITHUB'}));
+  const root=systemNode(system,label,publicOlympus?'Estrutura pública sanitizada; registros pessoais permanecem privados.':`Hierarquia ${label} publicada no snapshot.`,allowed.length);
+  const nodes=allowed.map(row=>({id:row.id,type:'PROGRAM',label:row.title||row.id,status:row.status||'',summary:row.summary||'',authority:'GITHUB',metadata:{childCount:publicOlympus?0:arr(rows).filter(child=>upper(child.type)==='CAMPAIGN'&&clean(child.parentId)===row.id).length}}));
   return graph(sourceVersion,systemId,[root,...nodes],nodes.map(node=>({id:`contains:${systemId}:${node.id}`,source:systemId,target:node.id,type:'CONTAINS',declared:true})));
 }
 
@@ -144,8 +148,8 @@ function safeOps(drive,sourceVersion){
 
 function operationsGraph(drive,sourceVersion){
   const operations=safeOps(drive,sourceVersion);
-  const root=systemNode('OPERATIONS','Operação','Ações operacionais públicas sanitizadas do snapshot soberano.');
-  const nodes=arr(operations.actions).map(row=>({id:row.id,type:'ACTION',label:row.label||row.id,status:row.status||'',updatedAt:row.updatedAt||'',authority:'GITHUB'}));
+  const root=systemNode('OPERATIONS','Operação','Ações operacionais públicas sanitizadas do snapshot soberano.',arr(operations.actions).length);
+  const nodes=arr(operations.actions).map(row=>({id:row.id,type:'ACTION',label:row.label||row.id,status:row.status||'',updatedAt:row.updatedAt||'',authority:'GITHUB',metadata:{childCount:0}}));
   return graph(sourceVersion,root.id,[root,...nodes],nodes.map(node=>({id:`contains:${root.id}:${node.id}`,source:root.id,target:node.id,type:'CONTAINS',declared:true})));
 }
 
@@ -222,7 +226,7 @@ export async function generateStaticState({outDir,dataDir=DEFAULT_DATA_DIR,gener
   const index=scienceIndexArtifact(science);
   emit('science/index.json',index);
   for(const [name,shard] of Object.entries(shards))emit(`science/${name}.json`,scienceShardArtifact(science,name,shard));
-  emit('graph/root.json',rootGraph(science));
+  emit('graph/root.json',rootGraph(science,drive));
   emit('graph/science.json',scienceRootGraph(science));
   for(const [name,shard] of Object.entries(shards))if(/^D\d+$/i.test(name))emit(`graph/science/${name}.json`,scienceDomainGraph(science,name,shard));
   emit('graph/engineering.json',hierarchyGraph(science.sourceVersion,'ENGINEERING',drive.engineering,'ENG-DOM-ENGINEERING'));
