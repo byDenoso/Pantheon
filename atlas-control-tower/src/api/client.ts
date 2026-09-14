@@ -38,13 +38,60 @@ export function configuredStaticDataBaseUrl(): string {
   return `${normalized}${staticSegment}`;
 }
 
+export function createResilientApi(primary: AtlasApiClient, fallback: AtlasApiClient): AtlasApiClient {
+  let lastSource: 'primary' | 'fallback' = 'primary';
+
+  async function call(method: string, ...args: unknown[]) {
+    const primaryFn = (primary as unknown as Record<string, unknown>)[method];
+    if (typeof primaryFn !== 'function') throw new Error(`PRIMARY_API_METHOD_MISSING:${method}`);
+    try {
+      const value = await (primaryFn as (...values: unknown[]) => Promise<unknown>)(...args);
+      lastSource = 'primary';
+      return value;
+    } catch (primaryError) {
+      const fallbackFn = (fallback as unknown as Record<string, unknown>)[method];
+      if (typeof fallbackFn !== 'function') throw primaryError;
+      const value = await (fallbackFn as (...values: unknown[]) => Promise<unknown>)(...args);
+      lastSource = 'fallback';
+      return value;
+    }
+  }
+
+  return {
+    get remote() { return primary.remote; },
+    get provenance() { return lastSource === 'fallback' ? fallback.provenance : primary.provenance; },
+    clear() {
+      primary.clear?.();
+      fallback.clear?.();
+      lastSource = 'primary';
+    },
+    graph: query => call('graph', query) as ReturnType<AtlasApiClient['graph']>,
+    state: query => call('state', query),
+    health: () => call('health'),
+    entity: (id, view) => call('entity', id, view),
+    lineage: id => call('lineage', id) as ReturnType<AtlasApiClient['lineage']>,
+    learning: () => call('learning'),
+    learningFor: id => call('learningFor', id),
+    ops: () => call('ops'),
+    automationRuns: () => call('automationRuns'),
+    audit: () => call('audit'),
+    files: id => call('files', id),
+    sync: () => primary.sync(),
+    research: (route, query) => primary.research(route, query)
+  };
+}
+
 export function createConfiguredApi(): AtlasApiClient {
   const remoteBase = configuredRemoteBaseUrl();
   if (remoteBase) return createApi({ baseUrl: remoteBase, profile: 'atlas' as const }) as AtlasApiClient;
-  if (shouldUseSameOriginApi()) return createApi({ baseUrl: '/api', profile: 'atlas' as const }) as AtlasApiClient;
+  if (shouldUseSameOriginApi()) {
+    const primary = createApi({ baseUrl: '/api', profile: 'atlas' as const }) as AtlasApiClient;
+    const fallback = createStaticArtifactApi({ baseUrl: configuredStaticDataBaseUrl() }) as AtlasApiClient;
+    return createResilientApi(primary, fallback);
+  }
   return createStaticArtifactApi({ baseUrl: configuredStaticDataBaseUrl() }) as AtlasApiClient;
 }
 
 export function apiBaseLabel(): string {
-  return configuredRemoteBaseUrl() || (shouldUseSameOriginApi() ? 'API do próprio site' : 'Runtime estático publicado');
+  return configuredRemoteBaseUrl() || (shouldUseSameOriginApi() ? 'API do próprio site · fallback estático' : 'Runtime estático publicado');
 }
