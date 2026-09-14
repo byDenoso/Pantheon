@@ -72,9 +72,10 @@ const text = (value: unknown): string => typeof value === 'string' ? value.trim(
 const num = (value: unknown): number | undefined => typeof value === 'number' && Number.isFinite(value) ? value : typeof value === 'string' && value.trim() && Number.isFinite(Number(value)) ? Number(value) : undefined;
 const strings = (value: unknown): string[] => arr(value).map(text).filter(Boolean);
 const provenance = (value: unknown): Provenance[] => arr(value).map(item => obj(item) as Provenance).filter(item => Object.values(item).some(Boolean));
+const present = <T,>(item: T | null): item is T => item !== null;
 
 function investigationRecords(value: unknown, fallbackType: string): ScienceInvestigationRecord[] {
-  return arr(value).map(raw => {
+  return arr(value).map((raw): ScienceInvestigationRecord | null => {
     const row = obj(raw);
     const id = text(row.id);
     if (!id) return null;
@@ -91,8 +92,8 @@ function investigationRecords(value: unknown, fallbackType: string): ScienceInve
       updatedAt: text(row.updatedAt) || undefined,
       sourceRef: text(row.sourceRef) || undefined,
       provenance: provenance(row.provenance)
-    } satisfies ScienceInvestigationRecord;
-  }).filter((item): item is ScienceInvestigationRecord => Boolean(item));
+    };
+  }).filter(present);
 }
 
 export function parseScienceReadModel(raw: unknown): ScienceReadModelV2 {
@@ -100,19 +101,19 @@ export function parseScienceReadModel(raw: unknown): ScienceReadModelV2 {
   const data = Object.keys(obj(root.data)).length ? obj(root.data) : root;
   if (data.contract !== SCIENCE_READ_MODEL_V2_CONTRACT) throw new Error('SCIENCE_READ_MODEL_V2_INVALID');
   const structure = obj(data.structure), investigation = obj(data.investigation);
-  const programs = arr(structure.programs).map(rawProgram => {
+  const programs = arr(structure.programs).map((rawProgram): ScienceProgram | null => {
     const row = obj(rawProgram), id = text(row.id);
-    return id ? { id, type: 'PROGRAM' as const, label: text(row.label) || id, status: text(row.status) || undefined, domain: text(row.domain) || undefined, summary: text(row.summary) || undefined } : null;
-  }).filter((item): item is ScienceProgram => Boolean(item));
-  const campaigns = arr(structure.campaigns).map(rawCampaign => {
+    return id ? { id, type: 'PROGRAM', label: text(row.label) || id, status: text(row.status) || undefined, domain: text(row.domain) || undefined, summary: text(row.summary) || undefined } : null;
+  }).filter(present);
+  const campaigns = arr(structure.campaigns).map((rawCampaign): ScienceCampaign | null => {
     const row = obj(rawCampaign), id = text(row.id);
-    return id ? { id, type: 'CAMPAIGN' as const, label: text(row.label) || id, programId: text(row.programId) || undefined, status: text(row.status) || undefined, summary: text(row.summary) || undefined, question: text(row.question) || undefined, facets: strings(row.facets), declaredTestCount: num(row.declaredTestCount), observedTestCount: num(row.observedTestCount) } : null;
-  }).filter((item): item is ScienceCampaign => Boolean(item));
-  const facets = arr(structure.facets).map(rawFacet => {
+    return id ? { id, type: 'CAMPAIGN', label: text(row.label) || id, programId: text(row.programId) || undefined, status: text(row.status) || undefined, summary: text(row.summary) || undefined, question: text(row.question) || undefined, facets: strings(row.facets), declaredTestCount: num(row.declaredTestCount), observedTestCount: num(row.observedTestCount) } : null;
+  }).filter(present);
+  const facets = arr(structure.facets).map((rawFacet): ScienceFacet | null => {
     const row = obj(rawFacet), code = text(row.code).toUpperCase(), id = text(row.id) || (code ? `facet:${code}` : '');
-    return id && code ? { id, code, label: text(row.label) || code, type: 'FACET' as const, campaignIds: strings(row.campaignIds), question: text(row.question) || undefined, status: text(row.status) || undefined } : null;
-  }).filter((item): item is ScienceFacet => Boolean(item));
-  const observations = arr(data.observations).map(rawObservation => {
+    return id && code ? { id, code, label: text(row.label) || code, type: 'FACET', campaignIds: strings(row.campaignIds), question: text(row.question) || undefined, status: text(row.status) || undefined } : null;
+  }).filter(present);
+  const observations = arr(data.observations).map((rawObservation): ScientificObservation | null => {
     const row = obj(rawObservation), id = text(row.id), metricId = text(row.metricId), kind = text(row.kind) as ScientificObservationKind;
     if (!id || !metricId || !['scalar','interval','distribution','directional','timeseries','matrix','categorical'].includes(kind)) return null;
     const uncertaintyRaw = obj(row.uncertainty);
@@ -126,16 +127,16 @@ export function parseScienceReadModel(raw: unknown): ScienceReadModelV2 {
       sourceRef: text(row.sourceRef) || undefined, observedAt: text(row.observedAt) || undefined, provenance: provenance(row.provenance),
       ra: num(row.ra), dec: num(row.dec), points: arr(row.points).map(point => obj(point)).map(point => ({ x: typeof point.x === 'number' || typeof point.x === 'string' ? point.x : undefined, y: num(point.y) })).filter(point => point.y !== undefined),
       matrix: arr(row.matrix).map(line => arr(line).map(num).filter((item): item is number => item !== undefined)), categories: strings(row.categories)
-    } satisfies ScientificObservation;
-  }).filter((item): item is ScientificObservation => Boolean(item));
-  const comparisons = arr(data.comparisons).map(rawComparison => {
+    };
+  }).filter(present);
+  const comparisons = arr(data.comparisons).map((rawComparison): ScienceComparison | null => {
     const row = obj(rawComparison), id = text(row.id);
     return id ? { id, kind: text(row.kind), metricId: text(row.metricId) || undefined, observationIds: strings(row.observationIds), value: num(row.value), unit: text(row.unit) || undefined, significance: num(row.significance), status: text(row.status) || undefined, summary: text(row.summary) || undefined, provenance: provenance(row.provenance) } : null;
-  }).filter((item): item is ScienceComparison => Boolean(item));
-  const syntheses = arr(data.syntheses).map(rawSynthesis => {
+  }).filter(present);
+  const syntheses = arr(data.syntheses).map((rawSynthesis): ScienceSynthesis | null => {
     const row = obj(rawSynthesis), id = text(row.id);
     return id ? { id, scope: text(row.scope), scopeId: text(row.scopeId), status: text(row.status), narrative: text(row.narrative) || undefined, observationIds: strings(row.observationIds), comparisonIds: strings(row.comparisonIds), evidenceIds: strings(row.evidenceIds), dependencyFingerprint: text(row.dependencyFingerprint), updatedAt: text(row.updatedAt), provenance: provenance(row.provenance) } : null;
-  }).filter((item): item is ScienceSynthesis => Boolean(item));
+  }).filter(present);
   return {
     contract: SCIENCE_READ_MODEL_V2_CONTRACT,
     state: text(data.state) || 'DATA_UNAVAILABLE', generatedAt: text(data.generatedAt) || undefined, sourceVersion: text(data.sourceVersion) || undefined,
