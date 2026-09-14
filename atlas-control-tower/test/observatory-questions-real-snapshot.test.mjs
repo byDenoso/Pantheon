@@ -3,39 +3,33 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { buildObservatoryQuestion, sortObservatoryQuestions } from '../src/api/observatory-questions.ts';
+import { parseObservatoryQuestions } from '../src/api/observatory-questions.ts';
 
-// End-to-end against the real static snapshot files (no hand-built fixture, no
-// network): proves the real read model genuinely produces 10 real question rows
-// from the actual published snapshot's system:SCIENCE domains and their real
-// campaign children -- the same two graph reads adapters.ts::getObservatoryQuestions
-// performs (composed directly here rather than through createAtlasAdapter, which
-// pulls in this repo's full bare-specifier ESM import graph -- untested for direct
-// Node execution outside Vite's bundler resolution -- as a separate, pre-existing
-// concern this test isn't scoped to fix).
-
+// End-to-end against the real generated public surface. Science is canonically
+// PROGRAM -> CAMPAIGN now; D1..D10 are an explicit derived Observatory index based
+// on each campaign's declared domain, not fake DOMAIN children injected back into
+// the structural map.
 const here = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(here, '..');
 const manifest = JSON.parse(readFileSync(path.join(root, 'public/data/current/manifest.json'), 'utf8'));
+const publicManifest = JSON.parse(readFileSync(path.join(root, 'public/data/current/public-manifest-v2.json'), 'utf8'));
 const snapshotDir = path.join(root, 'public/data', manifest.snapshotPath);
 
-function readGraphFile(relativePath) {
-  return JSON.parse(readFileSync(path.join(snapshotDir, relativePath), 'utf8'));
+function realObservatoryQuestions() {
+  const descriptor = publicManifest.surfaces?.observatory;
+  assert.equal(descriptor?.state, 'READY');
+  assert.ok(descriptor?.path, 'observatory surface path must be published');
+  const payload = JSON.parse(readFileSync(path.join(snapshotDir, descriptor.path), 'utf8'));
+  return parseObservatoryQuestions({
+    contract: 'NEXO_ATLAS_OBSERVATORY_QUESTIONS_V1',
+    status: 'OK',
+    freshness: 'SNAPSHOT',
+    data: { items: payload.questions || [] }
+  }).questions;
 }
 
-async function realObservatoryQuestions() {
-  const scienceGraph = readGraphFile('graph/science.json');
-  const domains = scienceGraph.nodes.filter(node => String(node.type || '').toUpperCase() === 'DOMAIN');
-  const perDomain = domains.map(domain => {
-    const code = String(domain.domain || domain.id.replace(/^domain:/i, '')).toUpperCase();
-    const domainGraph = readGraphFile(`graph/science/${code}.json`);
-    return buildObservatoryQuestion(domain, domainGraph.nodes);
-  });
-  return sortObservatoryQuestions(perDomain);
-}
-
-test('the real read model returns one row per real published domain, D1..D10, in order', async () => {
-  const questions = await realObservatoryQuestions();
+test('the real read model returns one derived row per declared D1..D10 campaign domain, in order', () => {
+  const questions = realObservatoryQuestions();
   assert.ok(questions.length >= 10, `expected at least 10 real domains, got ${questions.length}`);
   assert.deepEqual(questions.slice(0, 10).map(q => q.code), ['D1', 'D2', 'D3', 'D4', 'D5', 'D6', 'D7', 'D8', 'D9', 'D10']);
   for (const question of questions) {
@@ -46,11 +40,12 @@ test('the real read model returns one row per real published domain, D1..D10, in
   }
 });
 
-test('D1 carries its real, non-zero campaign test count from the published snapshot', async () => {
-  const questions = await realObservatoryQuestions();
+test('D1 carries its real campaign and non-zero test count from the canonical snapshot', () => {
+  const questions = realObservatoryQuestions();
   const d1 = questions.find(q => q.code === 'D1');
   assert.ok(d1);
-  assert.equal(d1.label, 'H0 / acoustic ruler');
-  assert.ok(d1.campaigns.length >= 1);
-  assert.ok(d1.testCount > 0, 'D1 has a real published campaign testCount and must not read as 0');
+  assert.match(d1.label, /H0|acoustic ruler/i);
+  assert.ok(d1.campaigns.some(campaign => campaign.id === 'CAMP-H0-RULER-ANCHOR'));
+  assert.ok(d1.testCountKnown);
+  assert.ok(d1.testCount > 0, 'D1 must carry the real published campaign test count');
 });

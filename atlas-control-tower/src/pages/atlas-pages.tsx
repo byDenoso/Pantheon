@@ -40,10 +40,29 @@ function jumpToGraphs({ navigate, context, state }: Pick<PageProps, 'navigate' |
   navigate(routeFor('graphs', pageContext(context, state)));
 }
 
-function CompactGraph({ state, context, navigate }: Pick<PageProps, 'state' | 'actions' | 'reducedMotion' | 'compact' | 'context' | 'navigate'>) {
+function CompactGraph({ state, actions, context, navigate }: Pick<PageProps, 'state' | 'actions' | 'reducedMotion' | 'compact' | 'context' | 'navigate'>) {
+  const graph = state.graph;
+  const nodes = graph?.nodes.slice(0, 7) || [];
+  const visibleIds = new Set(nodes.map(node => node.id));
+  const visibleEdges = (graph?.edges || []).filter(edge => visibleIds.has(edge.source) && visibleIds.has(edge.target)).slice(0, 8);
+  const focus = nodes.find(node => node.id === graph?.focus) || nodes[0];
+  const connected = focus ? nodes.filter(node => node.id !== focus.id && visibleEdges.some(edge => (edge.source === focus.id && edge.target === node.id) || (edge.target === focus.id && edge.source === node.id))) : [];
+  const satellites = (connected.length ? connected : nodes.filter(node => node.id !== focus?.id)).slice(0, 5);
+  const relationFor = (id: string) => focus ? visibleEdges.find(edge => (edge.source === focus.id && edge.target === id) || (edge.target === focus.id && edge.source === id)) : undefined;
+  const openNode = (node: (typeof nodes)[number]) => {
+    void actions.open(node);
+    const nextContext: AtlasContext = node.type === 'DOMAIN'
+      ? { ...context, domain: String(node.domain || node.id.replace(/^domain:/i, '')).toUpperCase(), graphPath: undefined }
+      : { ...context, domain: undefined, graphPath: [node.id] };
+    navigate(routeFor('graphs', nextContext));
+  };
   return <div className="compact-graph-shell">
-    <div className="compact-graph-stage compact-graph-static">{state.graph ? <div className="compact-graph-summary"><span aria-hidden="true">✧</span><p>{state.graph.nodes.length} nós · {state.graph.edges.length} relações no recorte atual</p></div> : <div className="graph-empty-state"><span aria-hidden="true">∅</span><p>{state.loading ? 'Lendo mapa de conhecimento…' : 'Mapa indisponível neste momento.'}</p><small>{state.error || 'Nenhum recorte válido foi publicado.'}</small></div>}{state.loading && <span className="compact-graph-status">LENDO MAPA…</span>}</div>
-    <div className="compact-graph-footer"><span>{state.graph ? `${state.graph.nodes.length} nós · ${state.graph.edges.length} relações` : 'Recorte indisponível'}</span><button className="secondary-button" onClick={() => jumpToGraphs({ navigate, context, state })}>ABRIR NO MODO GRAFOS <span aria-hidden="true">→</span></button></div>
+    <div className="compact-graph-stage compact-graph-static">{graph && focus ? <div className="compact-context-flow" aria-label="Miniatura do grafo contextual">
+      <div className="compact-context-root"><button className="compact-context-node is-focus" onClick={() => openNode(focus)} title={`Abrir ${focus.label || focus.id} no grafo`}><small>{focus.type}</small><b>{focus.label || focus.id}</b><code>{focus.id}</code></button></div>
+      {satellites.length > 0 && <div className="compact-context-branches">{satellites.map(node => { const relation = relationFor(node.id); return <div className="compact-context-branch" key={node.id}><span className="compact-context-edge" title={relation?.type || 'relação declarada'} aria-hidden="true"/><button className="compact-context-node" onClick={() => openNode(node)} title={`Abrir ${node.label || node.id} no grafo`}><small>{node.type}{relation?.type ? ` · ${relation.type}` : ''}</small><b>{node.label || node.id}</b><code>{node.id}</code></button></div>; })}</div>}
+      {graph.nodes.length > nodes.length && <small className="compact-context-more">+ {graph.nodes.length - nodes.length} nós no recorte completo</small>}
+    </div> : <div className="graph-empty-state"><span aria-hidden="true">∅</span><p>{state.loading ? 'Lendo mapa de conhecimento…' : 'Mapa indisponível neste momento.'}</p><small>{state.error || 'Nenhum recorte válido foi publicado.'}</small></div>}{state.loading && <span className="compact-graph-status">LENDO MAPA…</span>}</div>
+    <div className="compact-graph-footer"><span>{graph ? `${graph.nodes.length} nós · ${graph.edges.length} relações` : 'Recorte indisponível'}</span><button className="secondary-button" onClick={() => jumpToGraphs({ navigate, context, state })}>ABRIR NO MODO GRAFOS <span aria-hidden="true">→</span></button></div>
   </div>;
 }
 
