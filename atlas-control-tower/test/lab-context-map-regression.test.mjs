@@ -13,6 +13,8 @@ test('Laboratory contextual map renders the published nodes and relations instea
   assert.match(page,/compact-context-flow/,'context panel needs a visible node/edge flow');
   assert.match(page,/compact-context-node/,'context panel needs visible graph nodes');
   assert.match(page,/compact-context-edge/,'context panel needs visible declared relations');
-  assert.match(page,/state\.graph\.nodes/,'context panel must be derived from the current published graph');
+  assert.match(page,/const graph\s*=\s*state\.graph/,'context panel must take the current published graph as its source');
+  assert.match(page,/graph\?\.nodes|graph\.nodes/,'context panel must derive visible nodes from that graph');
+  assert.match(page,/graph\?\.edges|graph\.edges/,'context panel must derive visible relations from that graph');
   assert.match(css,/\.compact-context-flow/,'context flow needs an explicit layout instead of inheriting the oversized blank stage');
 });
