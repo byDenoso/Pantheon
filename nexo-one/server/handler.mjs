@@ -22,7 +22,8 @@ export default async function handler(req,res) {
   const origin=String(req.headers.origin||'');
   if(ATLAS_ORIGINS.has(origin)&&isCorsRoute(route)){
     res.setHeader('Access-Control-Allow-Origin',origin);
-    res.setHeader('Access-Control-Allow-Methods',route==='mcp'?'POST,OPTIONS':'GET,OPTIONS');
+    res.setHeader('Access-Control-Allow-Methods','GET,OPTIONS');
+    if(route==='mcp')res.setHeader('Access-Control-Allow-Methods','POST,OPTIONS');
     res.setHeader('Access-Control-Allow-Headers','Accept,Content-Type,Mcp-Protocol-Version');
   }
   if(req.method==='OPTIONS'&&ATLAS_ORIGINS.has(origin)&&isCorsRoute(route)){res.statusCode=204;return res.end();}
