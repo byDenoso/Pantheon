@@ -1,5 +1,6 @@
 import { createApi } from '../../lib/atlas-api.mjs';
 import { createStaticArtifactApi } from '../../lib/static-artifact-api.mjs';
+import { createPagesManualSyncApi } from '../../lib/pages-manual-live-api.mjs';
 import type { AtlasApiClient } from './types';
 
 declare global {
@@ -17,9 +18,8 @@ function configuredRemoteBaseUrl(): string {
   return configured ? configured.replace(/\/+$/, '') : '';
 }
 
-// The canonical Vercel deployment exposes the Node endpoints under the same
-// origin. Use an absolute base URL so createApi takes the real HTTP path rather
-// than the internal static/sovereign route used for the literal `/api` sentinel.
+// Vercel remains a compatibility runtime. GitHub Pages is the primary product
+// surface and uses published static artifacts until the user explicitly syncs.
 export function shouldUseSameOriginApi(): boolean {
   if (typeof window === 'undefined') return false;
   const hostname = String(window.location.hostname || '').toLowerCase();
@@ -38,8 +38,7 @@ export function configuredBaseUrl(): string {
 export function configuredStaticDataBaseUrl(): string {
   const appBase = String(import.meta.env.BASE_URL || '/').trim() || '/';
   const normalized = appBase.endsWith('/') ? appBase : `${appBase}/`;
-  const staticSegment = 'data';
-  return `${normalized}${staticSegment}`;
+  return `${normalized}data`;
 }
 
 export function createResilientApi(primary: AtlasApiClient, fallback: AtlasApiClient): AtlasApiClient {
@@ -94,9 +93,10 @@ export function createConfiguredApi(): AtlasApiClient {
     const fallback = createStaticArtifactApi({ baseUrl: configuredStaticDataBaseUrl() }) as AtlasApiClient;
     return createResilientApi(primary, fallback);
   }
-  return createStaticArtifactApi({ baseUrl: configuredStaticDataBaseUrl() }) as AtlasApiClient;
+  const staticApi = createStaticArtifactApi({ baseUrl: configuredStaticDataBaseUrl() }) as AtlasApiClient;
+  return createPagesManualSyncApi(staticApi) as AtlasApiClient;
 }
 
 export function apiBaseLabel(): string {
-  return configuredRemoteBaseUrl() || (shouldUseSameOriginApi() ? 'API do próprio site · fallback estático' : 'Runtime estático publicado');
+  return configuredRemoteBaseUrl() || (shouldUseSameOriginApi() ? 'API do próprio site · fallback estático' : 'GitHub Pages · snapshot + sincronização manual');
 }
