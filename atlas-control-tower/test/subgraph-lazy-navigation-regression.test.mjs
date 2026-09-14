@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import {generateStaticState} from '../lib/static-state-generator.mjs';
+import {generateStaticState} from '../lib/campaign-static-state-generator.mjs';
 import {createStaticArtifactApi} from '../lib/static-artifact-api.mjs';
 import {deriveGraphNavigation} from '../src/graph-engine/navigation-contract.mjs';
 
@@ -28,12 +28,17 @@ test('lazy structural containers publish child counts so click navigation can pr
 
   const science=json(path.join(built.snapshotDir,'graph/science.json'));
   const scienceNav=deriveGraphNavigation(science.nodes,science.edges);
-  assert.equal(scienceNav.get('domain:D1')?.expandable,true,'D1 must be clickable before its campaign shard is loaded');
-  assert.ok(scienceNav.get('domain:D1')?.childCount>0);
+  assert.equal(scienceNav.get('PROG-EXPANSION-GEOMETRY')?.expandable,true,'canonical Science program must be clickable before its campaign children are loaded');
+  assert.ok(scienceNav.get('PROG-EXPANSION-GEOMETRY')?.childCount>0);
 
-  const d1=json(path.join(built.snapshotDir,'graph/science/D1.json'));
+  const api=createStaticArtifactApi({baseUrl:'/data',fetchImpl:localFetch(out)});
+  const program=await api.graph({focus:'PROG-EXPANSION-GEOMETRY',depth:2});
+  assert.ok(program.nodes.some(node=>node.id==='CAMP-H0-RULER-ANCHOR'&&node.type==='CAMPAIGN'));
+  assert.ok(program.edges.some(edge=>edge.source==='PROG-EXPANSION-GEOMETRY'&&edge.target==='CAMP-H0-RULER-ANCHOR'));
+
+  const d1=await api.graph({focus:'domain:D1',depth:2});
   const d1Nav=deriveGraphNavigation(d1.nodes,d1.edges);
-  assert.equal(d1Nav.get('CAMP-H0-RULER-ANCHOR')?.expandable,false,'Campaign remains a structural leaf in the public map');
+  assert.equal(d1Nav.get('CAMP-H0-RULER-ANCHOR')?.expandable,false,'campaign remains a structural leaf in the public map');
 });
 
 test('static runtime can open an Engineering program into its real campaign subgraph',async()=>{
