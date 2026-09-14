@@ -18,7 +18,7 @@ test('scientific projections are adapter-backed and do not embed reference numbe
   const source = read('src/api/adapters.ts') + read('src/pages/atlas-pages.tsx');
   for (const component of ['WeightedH0', 'Tension', 'Directional', 'Snapshot', 'Provenance', 'Freshness']) assert.match(source, new RegExp(component));
   for (const placeholder of ['70,2', '4,4', '1,03', '13,8', '70.2', '4.4']) assert.doesNotMatch(source, new RegExp(placeholder.replace('.', '\\.')));
-  assert.match(source, /Nenhuma estimativa consolidada disponível/);
+  assert.match(source, /Nenhuma estimativa H0 publicada/);
   assert.match(source, /Sem sinal direcional robusto no estado atual/);
 });
 
