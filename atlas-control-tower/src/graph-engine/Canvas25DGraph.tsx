@@ -60,9 +60,19 @@ function readThemePalette(): ThemePalette {
   };
 }
 
+// PROGRAM (Engineering/Olympus) and ACTION (Operations) are the real structural
+// types those systems publish where Science has DOMAIN/CAMPAIGN. They fill the same
+// two visual roles -- PROGRAM as a drill-in cluster like DOMAIN, ACTION as a terminal
+// leaf like CAMPAIGN -- without being relabeled or given fabricated data.
+const TERMINAL_TYPES = new Set(['CAMPAIGN', 'ACTION']);
+
+function isTerminalType(type: string): boolean {
+  return TERMINAL_TYPES.has(type.toUpperCase());
+}
+
 function colorFor(type: string, palette: ThemePalette): string {
   const upper = type.toUpperCase();
-  if (upper === 'CAMPAIGN') return palette.campaign;
+  if (isTerminalType(upper)) return palette.campaign;
   if (upper === 'DERIVED_NAVIGATION_GROUP') return palette.transversal;
   return palette.domain;
 }
@@ -171,7 +181,7 @@ export function Canvas25DGraph({ projection, selectedId, onSelect, onOpenNode, z
       const hitboxes: Array<{ id: string; x: number; y: number; radius: number }> = [];
       for (const [index, pos] of positioned.entries()) {
         const isCenter = index === 0;
-        const kind = isCenter ? 'center' : pos.type.toUpperCase() === 'CAMPAIGN' ? 'campaign' : 'domain';
+        const kind = isCenter ? 'center' : isTerminalType(pos.type) ? 'campaign' : 'domain';
         const selected = pos.id === selectedId;
         const r = nodeRadius(kind, selected);
         const color = isCenter ? palette.focus : colorFor(pos.type, palette);
@@ -263,7 +273,7 @@ export function Canvas25DGraph({ projection, selectedId, onSelect, onOpenNode, z
         return;
       }
       const node = projection.nodes.find(candidate => candidate.id === hitId);
-      if (node && String(node.type || '').toUpperCase() === 'DOMAIN' && hitId !== projection.focusId) onOpenNode(hitId);
+      if (node && !isTerminalType(String(node.type || '')) && hitId !== projection.focusId) onOpenNode(hitId);
       else onSelect(hitId);
     };
 

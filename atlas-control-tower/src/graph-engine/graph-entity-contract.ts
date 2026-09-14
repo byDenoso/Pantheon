@@ -1,9 +1,21 @@
 import type { GraphEdge, GraphNode, GraphProjection } from './types';
 
-// Product contract (locked): the 3D map renders exactly Universo -> Dominio -> Campanha.
+// Product contract (locked): the map renders exactly Universo -> Dominio -> Campanha.
 // Campaign is terminal. Tests, claims, datasets, artifacts, results and evidence are
 // content for Pesquisa/Atividade/Laboratorio/inspector, never graph nodes/edges.
-export const MAP_ENTITY_TYPES = new Set(['SYSTEM', 'ROOT', 'DOMAIN', 'CAMPAIGN']);
+//
+// PROGRAM and ACTION are included here too -- not new invented map levels, but the
+// REAL structural types Engineering/Olympus/Operations already publish in place of
+// Science's DOMAIN/CAMPAIGN (Engineering/Olympus: Sistema -> Programa -> Campanha;
+// Operations: Sistema -> Ação, no campaign layer at all). Stripping them (the
+// previous behavior) left every non-Science system rendering as a single lone SYSTEM
+// dot with no children -- confirmed via a real browser repro on /mapa's Engenharia,
+// Olympus and Operação routes, not a guess. PROGRAM occupies the same "cluster"
+// visual role as DOMAIN and ACTION the same terminal role as CAMPAIGN (colorFor/
+// drill-in in Canvas25DGraph.tsx); neither is relabeled or given fabricated data --
+// their real type/id/label/status are unchanged, only which existing map contract
+// they render under.
+export const MAP_ENTITY_TYPES = new Set(['SYSTEM', 'ROOT', 'DOMAIN', 'CAMPAIGN', 'PROGRAM', 'ACTION']);
 export const TRANSVERSAL_GROUP_ID = 'group:transversais';
 export const TRANSVERSAL_GROUP_TYPE = 'DERIVED_NAVIGATION_GROUP';
 
@@ -26,8 +38,16 @@ function isCampaign(node: GraphNode): boolean {
   return String(node.type || '').toUpperCase() === 'CAMPAIGN';
 }
 
-function isDomain(node: GraphNode): boolean {
-  return String(node.type || '').toUpperCase() === 'DOMAIN';
+// DOMAIN (Science) and PROGRAM (Engineering/Olympus) both play the cluster/parent
+// role one level under SYSTEM. Only CAMPAIGN needs the orphan check below: a
+// campaign with no DOMAIN/PROGRAM parent is cross-domain and gets grouped under
+// "Transversais" instead of dropped. ACTION (Operations) is intentionally excluded
+// -- Operations has no domain/campaign concept at all (Sistema -> Ação directly is
+// its real, complete structure), so an ACTION attached straight to SYSTEM is not an
+// orphan needing synthetic grouping, unlike a campaign with no domain.
+function isClusterEntity(node: GraphNode): boolean {
+  const type = String(node.type || '').toUpperCase();
+  return type === 'DOMAIN' || type === 'PROGRAM';
 }
 
 /**
@@ -75,15 +95,15 @@ export function enforceGraphEntityContract(projection: GraphProjection): GraphCo
     keptEdges.push(edge);
   }
 
-  const domainIds = new Set(keptNodes.filter(isDomain).map(node => node.id));
+  const clusterIds = new Set(keptNodes.filter(isClusterEntity).map(node => node.id));
   const campaignHasDomainParent = new Map<string, boolean>();
   for (const node of keptNodes) {
     if (isCampaign(node)) campaignHasDomainParent.set(node.id, false);
   }
   for (const edge of keptEdges) {
-    if (domainIds.has(edge.source) && campaignHasDomainParent.has(edge.target)) {
+    if (clusterIds.has(edge.source) && campaignHasDomainParent.has(edge.target)) {
       campaignHasDomainParent.set(edge.target, true);
-    } else if (domainIds.has(edge.target) && campaignHasDomainParent.has(edge.source)) {
+    } else if (clusterIds.has(edge.target) && campaignHasDomainParent.has(edge.source)) {
       campaignHasDomainParent.set(edge.source, true);
     }
   }

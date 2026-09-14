@@ -1,10 +1,11 @@
 import { Component, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
+import { OrbitControls as DreiOrbitControls } from '@react-three/drei';
 import { BufferGeometry, Float32BufferAttribute, MeshBasicMaterial, Vector3 } from 'three';
-import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import type { OrbitControls as OrbitControlsImpl } from 'three-stdlib';
 import { createAtlasRenderer } from './createRenderer';
 import { selectSemanticLOD } from './semantic-lod';
-import { applyCameraKey, cameraDistanceForLevel, sphericalToCartesian, type CameraSpherical } from './camera-controls';
+import { applyCameraKey, cameraDistanceForLevel, clampSpherical, sphericalToCartesian, type CameraSpherical } from './camera-controls';
 import { shouldOpenNode } from './picking';
 import { buildOrbitalNodes, type AtlasGraph, type AtlasNode, type PositionedNode } from './types';
 import { InstancedNodes } from './InstancedNodes';
@@ -48,54 +49,81 @@ async function detectThreeRenderer(){
   try{return Boolean(await gpu.requestAdapter());}catch{return false;}
 }
 
+// Uses @react-three/drei's OrbitControls (a mature, well-tested wrapper around
+// three.js's own OrbitControls) instead of a hand-rolled camera rig. The previous
+// hand-rolled version instantiated a raw three/addons OrbitControls correctly, but
+// then a useFrame lerped the camera's position toward a fixed target vector on
+// *every* frame unconditionally -- overwriting whatever position the user's drag
+// had just set, every ~16ms. That is the actual, confirmed (via a live drag test
+// producing zero camera movement) root cause of "orbit doesn't respond": the rig
+// was fighting the user's own input, not a broken drag handler. The fix here is
+// structural, not cosmetic: position is only ever driven programmatically during a
+// focus/orientation change (`recenter`), and user drag is left alone the rest of
+// the time -- exactly what the "genuinely draggable" requirement calls for.
 function CameraRig({compact,focusId,focusType}:{compact:boolean;focusId:string;focusType:string|undefined}){
   const {camera,gl,size}=useThree();
-  const controls=useRef<OrbitControls|null>(null);
-  const spherical=useRef<CameraSpherical>({azimuth:0,polar:Math.PI/2,distance:16});
-  const desiredPosition=useRef(new Vector3(0,0,16));
-  const origin=useMemo(()=>new Vector3(0,0,0),[]);
+  const controlsRef=useRef<OrbitControlsImpl|null>(null);
+
+  const recenter=(distance:number)=>{
+    const controls=controlsRef.current;
+    // Preserve whatever orbit angle the user last dragged to; only the distance
+    // (how far the camera pulls back for this level) changes across focus/aspect
+    // changes -- never snap the user's chosen viewing angle back to a default.
+    const spherical:CameraSpherical=controls
+      ? clampSpherical({azimuth:controls.getAzimuthalAngle(),polar:controls.getPolarAngle(),distance})
+      : {azimuth:0,polar:Math.PI/2,distance};
+    camera.position.set(...sphericalToCartesian(spherical));
+    camera.lookAt(0,0,0);
+    controls?.target.set(0,0,0);
+    controls?.update();
+  };
+
   useEffect(()=>{
     const aspect=size.width/Math.max(1,size.height);
     const distance=aspect<0.72 ? cameraDistanceForLevel(focusType,true) : cameraDistanceForLevel(focusType,compact);
-    spherical.current={...spherical.current,distance};
-    camera.position.set(...sphericalToCartesian(spherical.current));
-    camera.lookAt(0,0,0);
-    const next=new OrbitControls(camera,gl.domElement);
-    next.enableDamping=true;
-    next.dampingFactor=0.075;
-    next.enablePan=true;
-    next.enableRotate=true;
-    next.autoRotate=false;
-    next.minDistance=5;
-    next.maxDistance=34;
-    controls.current=next;
-    desiredPosition.current.set(...sphericalToCartesian(spherical.current));
+    recenter(distance);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  },[compact,focusType,size.height,size.width]);
+
+  useEffect(()=>{
+    recenter(cameraDistanceForLevel(focusType,compact));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  },[focusId]);
+
+  useEffect(()=>{
     // Manual keyboard orbit/zoom, scoped to the canvas element (not window) so it
     // never competes with the shell's own Alt+Arrow back/forward shortcuts. No
     // auto-rotation is ever applied here or above -- orbit is always user-driven.
     gl.domElement.tabIndex=0;
     const onKeyDown=(event:KeyboardEvent)=>{
-      const nextSpherical=applyCameraKey(spherical.current,event.key);
-      if(!nextSpherical)return;
+      const controls=controlsRef.current;if(!controls)return;
+      const current:CameraSpherical={azimuth:controls.getAzimuthalAngle(),polar:controls.getPolarAngle(),distance:controls.getDistance()};
+      const next=applyCameraKey(current,event.key);
+      if(!next)return;
       event.preventDefault();
-      spherical.current=nextSpherical;
-      desiredPosition.current.set(...sphericalToCartesian(nextSpherical));
+      camera.position.set(...sphericalToCartesian(next));
+      controls.update();
     };
     gl.domElement.addEventListener('keydown',onKeyDown);
-    return()=>{gl.domElement.removeEventListener('keydown',onKeyDown);next.dispose();controls.current=null};
-  },[camera,compact,focusType,gl,size.height,size.width]);
-  useEffect(()=>{
-    const distance=cameraDistanceForLevel(focusType,compact);
-    spherical.current={...spherical.current,distance};
-    desiredPosition.current.set(...sphericalToCartesian(spherical.current));
-  },[compact,focusId,focusType]);
-  useFrame(()=>{
-    const next=controls.current;if(!next)return;
-    camera.position.lerp(desiredPosition.current,0.075);
-    next.target.lerp(origin,0.11);
-    next.update();
-  });
-  return null;
+    return()=>gl.domElement.removeEventListener('keydown',onKeyDown);
+  },[camera,gl]);
+
+  return <DreiOrbitControls
+    ref={controlsRef}
+    camera={camera}
+    domElement={gl.domElement}
+    makeDefault
+    enableDamping
+    dampingFactor={0.12}
+    enablePan
+    enableRotate
+    enableZoom
+    // autoRotate=false unconditionally -- no automatic orbit ever, orbit is always user-driven.
+    autoRotate={false}
+    minDistance={5}
+    maxDistance={34}
+    target={[0,0,0]}
+  />;
 }
 
 const STARFIELD_POSITIONS=Array.from({length:180},(_,index)=>{

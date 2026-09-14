@@ -20,8 +20,25 @@ function projectionFixture(nodes, edges) {
   };
 }
 
-test('map entity contract keeps only SYSTEM/ROOT/DOMAIN/CAMPAIGN', () => {
-  assert.deepEqual([...MAP_ENTITY_TYPES].sort(), ['CAMPAIGN', 'DOMAIN', 'ROOT', 'SYSTEM']);
+test('map entity contract keeps SYSTEM/ROOT/DOMAIN/CAMPAIGN plus the real PROGRAM/ACTION structural types Engineering/Olympus/Operations publish', () => {
+  assert.deepEqual([...MAP_ENTITY_TYPES].sort(), ['ACTION', 'CAMPAIGN', 'DOMAIN', 'PROGRAM', 'ROOT', 'SYSTEM']);
+});
+
+test('PROGRAM and ACTION nodes survive the contract like DOMAIN/CAMPAIGN do -- focusing a system whose real children are PROGRAM/ACTION typed must not collapse to a lone root node', () => {
+  const nodes = [
+    { id: 'system:ENGINEERING', type: 'SYSTEM', label: 'Engenharia' },
+    { id: 'ENG-PROG-NOVA-CAMB', type: 'PROGRAM', label: 'Nova Camb' },
+    { id: 'ENG-CAMP-CAMB-PORTABILITY-RUNTIME', type: 'CAMPAIGN', label: 'Portability Runtime' }
+  ];
+  const edges = [
+    { id: 'e1', source: 'system:ENGINEERING', target: 'ENG-PROG-NOVA-CAMB', type: 'CONTAINS', declared: true },
+    { id: 'e2', source: 'ENG-PROG-NOVA-CAMB', target: 'ENG-CAMP-CAMB-PORTABILITY-RUNTIME', type: 'CONTAINS', declared: true }
+  ];
+  const { projection, issues } = enforceGraphEntityContract(projectionFixture(nodes, edges));
+
+  assert.deepEqual(projection.nodes.map(n => n.id).sort(), nodes.map(n => n.id).sort());
+  assert.equal(projection.edges.length, 2);
+  assert.ok(!issues.some(issue => issue.code === 'REJECTED_NODE_TYPE'));
 });
 
 test('rejects TEST/CLAIM/DATASET/ARTIFACT/RESULT/EVIDENCE node types and reports an issue per node', () => {

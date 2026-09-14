@@ -133,7 +133,21 @@ test('buildOrbitalNodes centers the focus even when its case does not match the 
   assert.deepEqual(mismatched.map(n => n.position), canonical.map(n => n.position), 'a case-mismatched focusId must produce the same layout as the exact-cased one');
 });
 
-test('no map node outside DOMAIN/CAMPAIGN/SYSTEM/ROOT reaches the 3D scene once the entity contract has run', async () => {
+test('CameraRig uses the mature @react-three/drei OrbitControls instead of a hand-rolled rig, and never fights a live user drag with an unconditional per-frame position lerp', async () => {
+  // Real, confirmed root cause of "drag does nothing" in WebGL: a useFrame ran
+  // `camera.position.lerp(desiredPosition, 0.075)` on every single frame with no
+  // guard, so any position OrbitControls set from the user's drag was immediately
+  // overwritten ~16ms later. Per the explicit instruction to check for a mature
+  // orbit-controls implementation (drei/camera-controls) before hand-rolling one,
+  // this locks that the mature implementation is actually wired in and that no
+  // code path unconditionally stomps the camera position every frame anymore.
+  const { readFileSync } = await import('node:fs');
+  const canvas = readFileSync(new URL('../src/scene/AtlasCanvas.tsx', import.meta.url), 'utf8');
+  assert.match(canvas, /@react-three\/drei/, 'expected the mature drei OrbitControls to be used');
+  assert.doesNotMatch(canvas, /camera\.position\.lerp\(/, 'camera position must never be unconditionally lerped every frame -- that is what defeated user drag before');
+});
+
+test('no map node outside DOMAIN/CAMPAIGN/SYSTEM/ROOT/PROGRAM/ACTION reaches the 3D scene once the entity contract has run', async () => {
   const { enforceGraphEntityContract } = await import('../src/graph-engine/graph-entity-contract.ts');
   const projection = {
     id: 'p', version: '1', level: 'domain', focusId: 'domain:D1',
@@ -150,7 +164,10 @@ test('no map node outside DOMAIN/CAMPAIGN/SYSTEM/ROOT reaches the 3D scene once 
   const { projection: enforced } = enforceGraphEntityContract(projection);
   const nodes = buildOrbitalNodes(enforced.nodes, enforced.focusId, enforced.edges);
   // DERIVED_NAVIGATION_GROUP is the locked "Transversais" cross-domain grouping node
-  // -- a real, contract-allowed type distinct from DOMAIN, not a violation.
-  const allowed = new Set(['ROOT', 'SYSTEM', 'DOMAIN', 'CAMPAIGN', 'DERIVED_NAVIGATION_GROUP']);
+  // -- a real, contract-allowed type distinct from DOMAIN, not a violation. PROGRAM/
+  // ACTION are the real structural types Engineering/Olympus/Operations publish in
+  // place of DOMAIN/CAMPAIGN and are equally allowed, though this fixture doesn't
+  // exercise them (that's covered by graph-map-not-empty.test.mjs against real data).
+  const allowed = new Set(['ROOT', 'SYSTEM', 'DOMAIN', 'CAMPAIGN', 'PROGRAM', 'ACTION', 'DERIVED_NAVIGATION_GROUP']);
   for (const node of nodes) assert.ok(allowed.has(String(node.type || '').toUpperCase()), `unexpected node type reached the 3D scene: ${node.type}`);
 });
