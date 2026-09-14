@@ -1,7 +1,7 @@
 # NEXO ATLAS multi-surface rework design
 
 Date: 2026-09-14
-Status: Design approved in chat; implementation pending written-spec review
+Status: Approved for implementation
 Branch: `atlas-multisurface-rework-20260914`
 
 ## 1. Purpose
@@ -15,15 +15,16 @@ The rework must preserve the current fail-closed behavior, manual sync model, Gi
 The rework is complete when:
 
 1. `Grafos` exposes only structural hierarchy and never floods the map with tests/results.
-2. A leaf node cannot open an empty subgraph. Expandability is derived from real hierarchical children.
-3. `Observatório` can render H0 comparisons by published stack, quantitative parameters, tensions and directional signals when the source publishes enough structured data.
-4. `Laboratório` can render Hypothesis, Claim, Test, Run, Result, Evidence and Decision/Knowledge from a dedicated investigative index instead of relying on graph nodes.
-5. `Cockpit` can show public operational state, sync receipts, blockers, active runs and health signals when those records are published.
-6. `Atividade` renders a real public event stream instead of a permanent `DATA_UNAVAILABLE` placeholder.
-7. `Learning` separates published learning corpus from scheduler/runtime state.
-8. Manual sync updates the changed public surfaces atomically through one manifest and readback protocol, not only Science/Engineering graph projections.
-9. Existing public sanitization remains fail-closed. No private Olympus/person-level data is exposed.
-10. Regression tests prevent empty-subgraph navigation, partial multi-surface swaps, unverified sync state, and accidental reintroduction of private/forbidden records.
+2. `Grafos` uses one performant Spatial Canvas 2.5D experience with full orbit/tilt/pan/zoom navigation, meaningful depth, readable labels and no 2D/WebGL mode toggle.
+3. A leaf node cannot open an empty subgraph. Expandability is derived from real hierarchical children.
+4. `Observatório` can render H0 comparisons by published stack, quantitative parameters, tensions and directional signals when the source publishes enough structured data.
+5. `Laboratório` can render Hypothesis, Claim, Test, Run, Result, Evidence and Decision/Knowledge from a dedicated investigative index instead of relying on graph nodes.
+6. `Cockpit` can show public operational state, sync receipts, blockers, active runs and health signals when those records are published.
+7. `Atividade` renders a real public event stream instead of a permanent `DATA_UNAVAILABLE` placeholder.
+8. `Learning` separates published learning corpus from scheduler/runtime state.
+9. Manual sync updates the changed public surfaces atomically through one manifest and readback protocol, not only Science/Engineering graph projections.
+10. Existing public sanitization remains fail-closed. No private Olympus/person-level data is exposed.
+11. Regression tests prevent empty-subgraph navigation, partial multi-surface swaps, unverified sync state, accidental reintroduction of private/forbidden records, and reintroduction of the old renderer toggle.
 
 ## 3. Chosen approach
 
@@ -114,9 +115,37 @@ UI rule:
 
 The same rule must be consumed by Canvas, SpatialInspector and search-to-graph navigation.
 
-### 5.3 Renderer
+### 5.3 Spatial Canvas renderer and aesthetic contract
 
-The existing 2.5D/WebGL graph capability remains available, but the rework converges UI behavior around one structural navigation contract. No second semantic graph is introduced inside Laboratory.
+`Canvas25DGraph` becomes the single primary spatial renderer. The WebGL/Three scene is removed from normal navigation and the user-facing `2D`/renderer switch is retired instead of maintained as a second product path.
+
+The canvas must preserve full spatial navigation without a WebGL scene:
+
+- horizontal drag rotates azimuth/orbit;
+- vertical drag changes tilt/depth perspective;
+- pan remains available through the existing pan gesture/modifier contract;
+- wheel/pinch controls zoom;
+- keyboard navigation and reduced-motion behavior remain available;
+- camera reset remains available.
+
+Visual composition rules:
+
+- hierarchy maps to deliberate depth bands, not arbitrary Z noise;
+- the focused/root node anchors the visual composition;
+- first-level structural children occupy the dominant readable band;
+- secondary/context nodes recede through scale, opacity and depth rather than competing equally with the focus;
+- selected, pinned and portal nodes remain visually distinguishable;
+- labels use level-of-detail: selected/pinned/focus labels are always shown, nearby high-priority labels are shown when space permits, distant labels collapse before they overlap heavily;
+- label collision is handled deterministically in projected screen space;
+- edge opacity/weight responds to projected depth and selection; unrelated distant edges are visually quieter;
+- edge routing may curve to reduce line-through-node collisions;
+- shadows/glows are restrained so depth is communicated by projection and hierarchy rather than large floating cards;
+- no dense wall of dark label cards may obscure the graph core;
+- mobile uses the same semantic renderer with reduced label density and shallower decorative effects.
+
+The renderer may continue to use the existing Canvas layout/projection helpers, but there must be one navigation semantic contract and one default renderer path.
+
+No second semantic graph is introduced inside Laboratory.
 
 ## 6. Observatory contract
 
@@ -320,7 +349,7 @@ Pages must not collapse these states into one generic blank panel.
 
 ## 15. Implementation boundaries
 
-Target files/modules will be limited to the data-contract, projection, API adapter, sync and page/component layers needed for this rework. Unrelated UI restyling and infrastructure changes are out of scope.
+Target files/modules will be limited to the data-contract, projection, API adapter, sync, graph renderer, graph styling and page/component layers needed for this rework. Unrelated restyling and infrastructure changes are out of scope.
 
 Expected areas:
 
@@ -330,6 +359,9 @@ Expected areas:
 - `atlas-control-tower/src/core/*`
 - `atlas-control-tower/src/pages/*`
 - `atlas-control-tower/src/graph-engine/*`
+- `atlas-control-tower/src/design/graph-25d-v2.css`
+- `atlas-control-tower/src/design/graph-v2.css`
+- `atlas-control-tower/src/design/mobile.css`
 - `atlas-control-tower/test/*`
 - public snapshot/projection fixtures only where required by tests
 
@@ -343,6 +375,9 @@ Implementation follows TDD. Required regression coverage:
 - node with real hierarchical child => `expandable=true`
 - inspector hides `Entrar` on leaf
 - search never routes non-map investigative records to a graph focus
+- default graph route uses the Spatial Canvas path without exposing a renderer toggle
+- screen-space label selection is deterministic and preserves focus/selected/pinned labels
+- graph aesthetics remain usable under mobile/reduced-density constraints
 
 ### Observatory
 
@@ -385,9 +420,9 @@ Implementation follows TDD. Required regression coverage:
 
 Implementation is split into four reviewable commits/phases:
 
-### Phase A — structural navigation contract
+### Phase A — Spatial Canvas and structural navigation contract
 
-Add expandability/childCount derivation and remove empty-subgraph navigation paths.
+Make Canvas 2.5D the single default renderer, remove the public renderer toggle, improve depth/label/edge composition, add expandability/childCount derivation and remove empty-subgraph navigation paths.
 
 ### Phase B — public multi-surface contracts and sync
 
