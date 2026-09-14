@@ -97,3 +97,11 @@ test('graph transitions expose a visible loading state while preserving the last
   assert.match(graph, /state\.loading && projection/);
   assert.match(styles, /graph-stage-status/);
 });
+
+test('document title follows the active Atlas surface', () => {
+  const app = read('src/App.tsx');
+  assert.match(app, /PAGE_TITLES/);
+  assert.match(app, /document\.title\s*=\s*PAGE_TITLES\[route\.area\]/);
+  assert.match(app, /cockpit:\s*'Cockpit — NEXO Atlas'/);
+  assert.match(app, /graphs:\s*'Grafos — NEXO Atlas'/);
+});

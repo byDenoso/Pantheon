@@ -35,6 +35,17 @@ const NAVIGATION: Array<{ area: AtlasArea; label: string; icon: string; private?
   { area: 'universe', label: 'RESUMO DO UNIVERSO', icon: '▤' }
 ];
 
+const PAGE_TITLES: Record<AtlasArea, string> = {
+  landing: 'NEXO Atlas',
+  login: 'Acesso — NEXO Atlas',
+  cockpit: 'Cockpit — NEXO Atlas',
+  graphs: 'Grafos — NEXO Atlas',
+  observatory: 'Observatório — NEXO Atlas',
+  lab: 'Laboratório — NEXO Atlas',
+  universe: 'Resumo do Universo — NEXO Atlas',
+  atividade: 'Atividade — NEXO Atlas'
+};
+
 const ObservatoryPage = lazy(() => import('./pages/atlas-pages').then(module => ({ default: module.ObservatoryPage })));
 const LaboratoryPage = lazy(() => import('./pages/atlas-pages').then(module => ({ default: module.LaboratoryPage })));
 const UniversePage = lazy(() => import('./pages/atlas-pages').then(module => ({ default: module.UniversePage })));
@@ -92,6 +103,10 @@ export default function App() {
     document.body.classList.add('atlas-react-body');
     return () => { document.body.classList.remove('atlas-react-body'); };
   }, []);
+
+  useEffect(() => {
+    document.title = PAGE_TITLES[route.area] || 'NEXO Atlas';
+  }, [route.area]);
 
   useEffect(() => {
     if (route.context.graphPath?.length) return;
