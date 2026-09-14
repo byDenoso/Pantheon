@@ -1,4 +1,5 @@
 import type { AtlasApiClient } from '../api/types';
+import { parseScienceReadModel, type ScienceReadModelV2 } from '../api/science-read-model';
 import type {
   AtlasDataSource,
   CampaignDetail,
@@ -21,9 +22,6 @@ type RawHealth = {
   dataSource?: { freshness?: string; sourceVersion?: string; source?: string; authority?: string };
 };
 
-// Map result kinds that must never become a graph node -- they always carry a
-// targetRoute to a textual area instead. Kept in sync with the locked map contract
-// in graph-entity-contract.ts.
 const NON_MAP_KIND_ROUTES: Partial<Record<SearchResultKind, (id: string) => string>> = {
   TEST: id => `/pesquisa/testes/${encodeURIComponent(id)}`,
   CLAIM: id => `/laboratorio?kind=CLAIM&entity=${encodeURIComponent(id)}`,
@@ -44,19 +42,22 @@ function baseProvenance(source: string, sourceVersion?: string, url?: string): P
   return [{ source, sourceRef: sourceVersion, observedAt: sourceVersion, url, label: source }];
 }
 
-/**
- * Reads the sanitized public static snapshot through the existing AtlasApiClient
- * (createStaticArtifactApi under the hood in production, network-blocked-safe by
- * design since it only ever hits same-origin /data/* artifacts). Normalizes every
- * response into the locked DataEnvelope shape. Never returns a TEST/CLAIM/DATASET/
- * ARTIFACT node as part of a DomainNode/CampaignNode list -- those kinds only ever
- * appear from search(), always carrying a targetRoute instead of a graph position.
- */
 export class PublicSnapshotSource implements AtlasDataSource {
   private readonly api: AtlasApiClient;
+  private scienceModelPromise: Promise<ScienceReadModelV2> | null = null;
 
   constructor(api: AtlasApiClient) {
     this.api = api;
+  }
+
+  private async scienceReadModel(): Promise<ScienceReadModelV2> {
+    if (!this.scienceModelPromise) {
+      this.scienceModelPromise = this.api.research('science-read-model').then(parseScienceReadModel).catch(error => {
+        this.scienceModelPromise = null;
+        throw error;
+      });
+    }
+    return this.scienceModelPromise;
   }
 
   private async healthEnvelope(): Promise<{ freshness: Freshness; fingerprint?: string; sourceVersion?: string }> {
@@ -75,53 +76,86 @@ export class PublicSnapshotSource implements AtlasDataSource {
   async getDomains(): Promise<DataEnvelope<DomainNode[]>> {
     const meta = await this.healthEnvelope();
     try {
-      // The root projection contains systems only. Domains are owned by the
-      // Science hierarchy, so reading the root here silently produced an empty
-      // Cockpit campaign list even when the snapshot contained all campaigns.
-      const graph = (await this.api.graph({ focus: 'system:SCIENCE' })) as RawGraph;
-      const domains: DomainNode[] = (graph.nodes || [])
-        .filter(node => String(node.type || '').toUpperCase() === 'DOMAIN')
-        .map(node => ({ id: node.id, type: 'DOMAIN', label: String(node.label || node.id), summary: node.summary }));
+      const model = await this.scienceReadModel();
+      const domains: DomainNode[] = model.structure.facets.map(facet => ({
+        id: `domain:${facet.code}`,
+        type: 'DOMAIN',
+        label: facet.label || facet.code,
+        summary: facet.question
+      }));
       return {
         data: domains,
-        state: domains.length ? 'READY' : 'EMPTY',
-        freshness: meta.freshness,
-        fingerprint: meta.fingerprint,
-        sourceVersion: meta.sourceVersion,
-        provenance: baseProvenance('GITHUB · TOWER_V06 (publicado via GOOGLE_DRIVE)', meta.sourceVersion),
+        state: domains.length ? 'READY' : model.state === 'DATA_UNAVAILABLE' ? 'DATA_UNAVAILABLE' : 'EMPTY',
+        freshness: normalizeFreshness(model.freshness),
+        fingerprint: model.fingerprint || meta.fingerprint,
+        sourceVersion: model.sourceVersion || meta.sourceVersion,
+        provenance: baseProvenance('SRM V2 · GOOGLE_DRIVE', model.sourceVersion || meta.sourceVersion),
         issues: []
       };
-    } catch (error) {
-      return errorEnvelope(error, meta.freshness);
+    } catch {
+      try {
+        const graph = (await this.api.graph({ focus: 'system:SCIENCE' })) as RawGraph;
+        const domains: DomainNode[] = (graph.nodes || [])
+          .filter(node => String(node.type || '').toUpperCase() === 'DOMAIN')
+          .map(node => ({ id: node.id, type: 'DOMAIN', label: String(node.label || node.id), summary: node.summary }));
+        return {
+          data: domains,
+          state: domains.length ? 'READY' : 'EMPTY',
+          freshness: meta.freshness,
+          fingerprint: meta.fingerprint,
+          sourceVersion: meta.sourceVersion,
+          provenance: baseProvenance('GITHUB · snapshot de compatibilidade', meta.sourceVersion),
+          issues: []
+        };
+      } catch (error) {
+        return errorEnvelope(error, meta.freshness);
+      }
     }
   }
 
   async getDomainCampaigns(domainId: string): Promise<DataEnvelope<CampaignNode[]>> {
     const meta = await this.healthEnvelope();
+    const code = domainId.replace(/^domain:/i, '').toUpperCase();
+    const focus = `domain:${code}`;
     try {
-      const focus = domainId.startsWith('domain:') ? domainId : `domain:${domainId}`;
-      const graph = (await this.api.graph({ focus })) as RawGraph;
-      const campaigns: CampaignNode[] = (graph.nodes || [])
-        .filter(node => String(node.type || '').toUpperCase() === 'CAMPAIGN')
-        .map(node => ({
-          id: node.id,
+      const model = await this.scienceReadModel();
+      const campaigns: CampaignNode[] = model.structure.campaigns
+        .filter(campaign => campaign.facets.includes(code))
+        .map(campaign => ({
+          id: campaign.id,
           type: 'CAMPAIGN',
-          label: String(node.label || node.id),
+          label: campaign.label,
           domainId: focus,
-          status: node.status,
-          summary: node.summary
+          status: campaign.status,
+          summary: campaign.summary
         }));
       return {
         data: campaigns,
-        state: campaigns.length ? 'READY' : 'EMPTY',
-        freshness: meta.freshness,
-        fingerprint: meta.fingerprint,
-        sourceVersion: meta.sourceVersion,
-        provenance: baseProvenance('GITHUB · TOWER_V06 (publicado via GOOGLE_DRIVE)', meta.sourceVersion),
+        state: campaigns.length ? 'READY' : model.state === 'DATA_UNAVAILABLE' ? 'DATA_UNAVAILABLE' : 'EMPTY',
+        freshness: normalizeFreshness(model.freshness),
+        fingerprint: model.fingerprint || meta.fingerprint,
+        sourceVersion: model.sourceVersion || meta.sourceVersion,
+        provenance: baseProvenance('SRM V2 · GOOGLE_DRIVE', model.sourceVersion || meta.sourceVersion),
         issues: []
       };
-    } catch (error) {
-      return errorEnvelope(error, meta.freshness);
+    } catch {
+      try {
+        const graph = (await this.api.graph({ focus })) as RawGraph;
+        const campaigns: CampaignNode[] = (graph.nodes || [])
+          .filter(node => String(node.type || '').toUpperCase() === 'CAMPAIGN')
+          .map(node => ({ id: node.id, type: 'CAMPAIGN', label: String(node.label || node.id), domainId: focus, status: node.status, summary: node.summary }));
+        return {
+          data: campaigns,
+          state: campaigns.length ? 'READY' : 'EMPTY',
+          freshness: meta.freshness,
+          fingerprint: meta.fingerprint,
+          sourceVersion: meta.sourceVersion,
+          provenance: baseProvenance('GITHUB · snapshot de compatibilidade', meta.sourceVersion),
+          issues: []
+        };
+      } catch (error) {
+        return errorEnvelope(error, meta.freshness);
+      }
     }
   }
 
@@ -165,14 +199,8 @@ export class PublicSnapshotSource implements AtlasDataSource {
       const results: SearchResult[] = (graph.nodes || []).map(node => {
         const kind = String(node.type || 'ENTITY').toUpperCase() as SearchResultKind;
         const nonMapRoute = NON_MAP_KIND_ROUTES[kind];
-        if (nonMapRoute) {
-          return { id: node.id, kind, label: String(node.label || node.id), targetRoute: nonMapRoute(node.id) };
-        }
-        if (kind === 'DOMAIN' || kind === 'CAMPAIGN') {
-          return { id: node.id, kind, label: String(node.label || node.id), graphId: node.id };
-        }
-        // Any other/unknown kind: never invent a map position for it either --
-        // route it to Pesquisa's generic lookup rather than the map.
+        if (nonMapRoute) return { id: node.id, kind, label: String(node.label || node.id), targetRoute: nonMapRoute(node.id) };
+        if (kind === 'DOMAIN' || kind === 'CAMPAIGN') return { id: node.id, kind, label: String(node.label || node.id), graphId: node.id };
         return { id: node.id, kind: 'ARTIFACT', label: String(node.label || node.id), targetRoute: `/pesquisa?entity=${encodeURIComponent(node.id)}` };
       });
       return {
@@ -190,11 +218,6 @@ export class PublicSnapshotSource implements AtlasDataSource {
   }
 
   async getLearnerLayer(): Promise<DataEnvelope<LearnerFilament[]>> {
-    // The public static snapshot (public/data/**) carries no scheduler/Learner field
-    // today -- confirmed by inspecting the generated artifacts, not assumed. Returning
-    // an honest DATA_UNAVAILABLE here is the correct behavior under the "never invent
-    // a line to a state we can't prove" rule; it is not a bug to fix by fabricating a
-    // filament.
     const meta = await this.healthEnvelope();
     return {
       data: [],
