@@ -6,12 +6,15 @@ import { loadCockpitSources, mergeRunSources } from '../src/core/cockpit-sources
 const root = new URL('../', import.meta.url);
 const read = path => fs.readFileSync(new URL(path, root), 'utf8');
 
-test('cockpit is a public read-only operational surface while execution stays gated', () => {
+test('cockpit, laboratory and activity are public read-only product surfaces', () => {
   const app = read('src/App.tsx');
+  const gate = read('src/components/PrivateGate.tsx');
   assert.match(app, /\{ area: 'cockpit', label: 'COCKPIT', icon: '◈' \}/);
   assert.match(app, /route\.area === 'cockpit' && <CockpitPage api=\{api\} navigate=\{navigate\}\/>/);
   assert.match(app, /route\.area === 'lab' && <PrivateGate/);
   assert.match(app, /route\.area === 'atividade' && <PrivateGate/);
+  assert.match(gate, /return <>{children}<\/>/);
+  assert.doesNotMatch(gate, /AUTH_SETUP_REQUIRED|Acesso à área restrito/);
 });
 
 test('observatory investigation links do not advertise a false active tab', () => {
@@ -70,12 +73,11 @@ test('live graph controls use a consistent Portuguese vocabulary', () => {
   assert.match(context, /Abrir subgrafo/);
 });
 
-test('private areas explain the access boundary in product language and keep the technical cause secondary', () => {
+test('legacy private wrapper is transparent while backend write authorization remains separate', () => {
   const gate = read('src/components/PrivateGate.tsx');
-  assert.match(gate, /Área protegida/);
-  assert.match(gate, /execução e histórico/);
-  assert.match(gate, /Detalhe técnico/);
-  assert.match(gate, /AUTH_SETUP_REQUIRED/);
+  assert.match(gate, /public\/read-only/);
+  assert.match(gate, /authorization belongs to backend/);
+  assert.match(gate, /return <>{children}<\/>/);
 });
 
 test('the Vercel runtime uses its real same-origin HTTP API when no external base URL is injected', () => {
