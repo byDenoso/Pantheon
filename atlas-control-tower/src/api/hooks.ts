@@ -96,7 +96,7 @@ export function useLabData(client: AtlasApiClient, context: AtlasContext) {
     const jobs = Promise.allSettled([
       adapter.getHypotheses(context), adapter.getClaims(context), adapter.getTests(context),
       adapter.getRuns(context), adapter.getResults(context), adapter.getEvidence(context),
-      adapter.getDecisions(context), adapter.getKnowledge(context), adapter.getPipelines(context)
+      adapter.getDecisions(), adapter.getKnowledge(), adapter.getPipelines(context)
     ]);
     void jobs.then(results => {
       if (!live) return;
