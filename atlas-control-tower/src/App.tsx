@@ -24,17 +24,15 @@ const SYSTEMS = [
   ['system:OPERATIONS', '▣', 'Operação']
 ] as const;
 
-// Primary sidebar navigation. Order matters for a source-text contract test
-// (App.tsx must contain GRAFOS...OBSERVATÓRIO...LABORATÓRIO...RESUMO DO UNIVERSO in
-// that relative order) -- Cockpit and Atividade sit outside that required run, so they
-// can lead/trail it while the four pinned labels keep their relative order.
+// Primary navigation contains the four durable work surfaces. Atividade remains
+// reachable from the notification button, but is not a fifth top-level product
+// area competing with Cockpit's operational timeline.
 const NAVIGATION: Array<{ area: AtlasArea; label: string; icon: string; private?: boolean }> = [
   { area: 'cockpit', label: 'COCKPIT', icon: '◈', private: true },
   { area: 'graphs', label: 'GRAFOS', icon: '✧' },
   { area: 'observatory', label: 'OBSERVATÓRIO', icon: '◔' },
   { area: 'lab', label: 'LABORATÓRIO', icon: '◇', private: true },
-  { area: 'universe', label: 'RESUMO DO UNIVERSO', icon: '▤' },
-  { area: 'atividade', label: 'ATIVIDADE', icon: '▣', private: true }
+  { area: 'universe', label: 'RESUMO DO UNIVERSO', icon: '▤' }
 ];
 
 const ObservatoryPage = lazy(() => import('./pages/atlas-pages').then(module => ({ default: module.ObservatoryPage })));

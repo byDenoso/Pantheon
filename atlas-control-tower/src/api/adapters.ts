@@ -22,7 +22,7 @@ import type {
 } from './types';
 import type { AtlasEdge, AtlasNode } from '../scene/types';
 import { AtlasApiError, errorMessage } from './errors';
-import { buildObservatoryQuestion, sortObservatoryQuestions, type ObservatoryQuestion } from './observatory-questions';
+import { buildObservatoryQuestion, DEFAULT_OBSERVATORY_SURFACES, OBSERVATORY_QUESTIONS_CONTRACT, parseObservatoryQuestions, sortObservatoryQuestions, type ObservatoryQuestion, type ObservatoryQuestionsRead } from './observatory-questions';
 import { scientificStatus } from './scientific-status';
 export { scientificStatus };
 
@@ -411,20 +411,42 @@ export function createAtlasAdapter(client: AtlasApiClient) {
     if (!client.remote || typeof client.research !== 'function') return recordsFromGraph(await client.graph({ ...contextQuery(context), type, mode: 'search', limit: 120 }));
     return recordsFromResearch(await client.research(route, contextQuery(context)), type);
   };
-  // Real per-domain question read model (see observatory-questions.ts): built from
-  // system:SCIENCE's real DOMAIN children plus each domain's real CAMPAIGN children
-  // (id/label/status/summary/metadata.testCount), the same graph data the map
-  // already renders -- not a second, hand-picked question list. One extra read per
-  // domain (10 today) against static JSON is cheap; a future real research route
-  // for this can replace the per-domain fan-out without changing the return shape.
-  const getObservatoryQuestions = async (): Promise<ObservatoryQuestion[]> => {
+  // Prefer the dedicated backend semantic contract. Static mode intentionally
+  // keeps the same read model by deriving it from the graph snapshot, so both
+  // runtimes expose the same questions/campaigns without a second data owner.
+  const getObservatoryQuestions = async (): Promise<ObservatoryQuestionsRead> => {
+    if (client.remote && typeof client.research === 'function') {
+      try {
+        const parsed = parseObservatoryQuestions(await client.research('observatory-questions'));
+        if (parsed.questions.length || parsed.status === 'DATA_UNAVAILABLE') return parsed;
+      } catch {
+        // The graph contract remains a safe compatibility path while a backend
+        // deployment rolls out the dedicated endpoint.
+      }
+    }
     const scienceGraph = await client.graph({ focus: 'system:SCIENCE' });
     const domains = scienceGraph.nodes.filter(node => String(node.type || '').toUpperCase() === 'DOMAIN');
     const perDomain = await Promise.all(domains.map(async domain => {
       const domainGraph = await client.graph({ focus: domain.id });
       return buildObservatoryQuestion(domain, domainGraph.nodes);
     }));
-    return sortObservatoryQuestions(perDomain);
+    const publishedTests = perDomain.reduce((sum, question) => sum + (question.testCountKnown ? question.testCount : 0), 0);
+    const surfaces = DEFAULT_OBSERVATORY_SURFACES.map(surface => surface.id === 'questions'
+      ? { ...surface, count: perDomain.length, available: perDomain.length > 0 }
+      : surface.id === 'tests'
+        ? { ...surface, count: publishedTests, available: publishedTests > 0 }
+        : surface.id === 'relations'
+          ? { ...surface, count: scienceGraph.edges.length, available: scienceGraph.edges.length > 0 }
+          : { ...surface, count: 0, available: false });
+    return {
+      questions: sortObservatoryQuestions(perDomain),
+      surfaces,
+      contract: OBSERVATORY_QUESTIONS_CONTRACT,
+      status: perDomain.length ? 'OK' : 'DATA_UNAVAILABLE',
+      freshness: client.provenance?.freshness || 'SNAPSHOT',
+      source: client.provenance?.source || 'GOOGLE_DRIVE',
+      sourceVersion: client.provenance?.sourceVersion
+    };
   };
   return {
     getAtlasGraph: (query: Record<string, string | number | undefined>) => client.graph(query),

@@ -2,6 +2,27 @@ import type { AtlasNode } from '../scene/types';
 import type { ScientificStatus } from './types';
 import { scientificStatus } from './scientific-status.ts';
 
+export const OBSERVATORY_QUESTIONS_CONTRACT = 'NEXO_ATLAS_OBSERVATORY_QUESTIONS_V1';
+
+export type ObservatorySurface = {
+  id: 'questions' | 'evidence' | 'tests' | 'relations' | 'decisions';
+  label: string;
+  description: string;
+  owner: string;
+  destination: 'universe' | 'lab' | 'graphs';
+  kind?: string;
+  count?: number;
+  available?: boolean;
+};
+
+export const DEFAULT_OBSERVATORY_SURFACES: ObservatorySurface[] = [
+  { id: 'questions', label: 'Perguntas', description: 'O que cada domínio está tentando responder.', owner: 'science_v1.domains', destination: 'universe' },
+  { id: 'evidence', label: 'Evidências', description: 'Fontes e resultados que sustentam ou limitam uma leitura.', owner: 'science_v1.provenance', destination: 'lab', kind: 'EVIDENCE' },
+  { id: 'tests', label: 'Testes', description: 'Validações publicadas por campanha; não são nós do mapa.', owner: 'science_v1.entities', destination: 'lab', kind: 'TEST' },
+  { id: 'relations', label: 'Relações', description: 'Conexões declaradas entre entidades e domínios.', owner: 'science_v1.relations', destination: 'graphs' },
+  { id: 'decisions', label: 'Decisões', description: 'Claims de decisão e seus vínculos de evidência.', owner: 'science_v1.entities', destination: 'lab', kind: 'DECISION' }
+];
+
 /**
  * The real per-domain "scientific question" read model for Observatório/Resumo do
  * Universo. Built entirely from data the static/live graph API already publishes
@@ -29,8 +50,22 @@ export type ObservatoryQuestion = {
   rawStatus: string;
   campaigns: ObservatoryCampaignRef[];
   testCount: number;
+  testCountKnown?: boolean;
+  counts?: { campaigns: number; tests: number | null };
   synthesis: string | null;
   unavailableReason: string | null;
+  availability?: 'QUESTION_PUBLISHED' | 'DATA_UNAVAILABLE';
+  nextAction?: string;
+};
+
+export type ObservatoryQuestionsRead = {
+  questions: ObservatoryQuestion[];
+  surfaces: ObservatorySurface[];
+  contract: string;
+  status: string;
+  freshness?: string;
+  source?: string;
+  sourceVersion?: string;
 };
 
 function metadataOf(node: AtlasNode): Record<string, unknown> {
@@ -60,6 +95,8 @@ export function buildObservatoryQuestion(domainNode: AtlasNode, campaignNodes: A
       testCount: testCountOf(node)
     }));
   const testCount = campaigns.reduce((sum, campaign) => sum + (campaign.testCount || 0), 0);
+  const testCountKnown = campaigns.length > 0 && campaigns.every(campaign => campaign.testCount !== null);
+  const hasQuestion = Boolean(String(domainNode.summary || '').trim());
   return {
     id: domainNode.id,
     code,
@@ -69,8 +106,92 @@ export function buildObservatoryQuestion(domainNode: AtlasNode, campaignNodes: A
     rawStatus,
     campaigns,
     testCount,
+    testCountKnown,
+    counts: { campaigns: campaigns.length, tests: testCountKnown ? testCount : null },
     synthesis: null,
-    unavailableReason: 'A fonte ainda não publica uma síntese quantitativa para esta pergunta neste snapshot.'
+    availability: hasQuestion ? 'QUESTION_PUBLISHED' : 'DATA_UNAVAILABLE',
+    unavailableReason: hasQuestion
+      ? 'A fonte publica a pergunta e o recorte de campanhas, mas ainda não publica uma síntese quantitativa para este domínio.'
+      : 'A fonte ainda não publicou uma pergunta semântica para este domínio.',
+    nextAction: campaigns.length
+      ? 'Abrir as campanhas para revisar testes, evidências e relações publicadas.'
+      : 'Aguardar a publicação de uma campanha vinculada a este domínio.'
+  };
+}
+
+function asRecord(value: unknown): Record<string, unknown> {
+  return value !== null && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : {};
+}
+
+function asArray(value: unknown): unknown[] { return Array.isArray(value) ? value : []; }
+
+function textValue(value: unknown): string { return typeof value === 'string' && value.trim() ? value.trim() : ''; }
+
+function numberValue(value: unknown): number | null {
+  return typeof value === 'number' && Number.isFinite(value) ? value : typeof value === 'string' && value.trim() && Number.isFinite(Number(value)) ? Number(value) : null;
+}
+
+/**
+ * Normalises the backend envelope while preserving the graph-derived fields.
+ * The UI can consume the same shape from the Vercel endpoint or the static
+ * snapshot fallback; it never falls back to a hand-written question catalogue.
+ */
+export function parseObservatoryQuestions(value: unknown): ObservatoryQuestionsRead {
+  const root = asRecord(value);
+  const data = asRecord(root.data);
+  const rawItems = asArray(data.items ?? root.items);
+  const questions = rawItems.map(raw => {
+    const item = asRecord(raw);
+    const campaigns = asArray(item.campaigns).map(campaignRaw => {
+      const campaign = asRecord(campaignRaw);
+      return {
+        id: textValue(campaign.id),
+        label: textValue(campaign.label) || textValue(campaign.id),
+        status: textValue(campaign.status),
+        testCount: numberValue(campaign.testCount)
+      } satisfies ObservatoryCampaignRef;
+    }).filter(campaign => campaign.id);
+    const counts = asRecord(item.counts);
+    const tests = numberValue(counts.tests ?? item.testCount);
+    const rawStatus = textValue(item.rawStatus || item.status);
+    return {
+      id: textValue(item.id),
+      code: textValue(item.code).toUpperCase(),
+      label: textValue(item.label) || textValue(item.code),
+      question: textValue(item.question),
+      status: scientificStatus(item.status),
+      rawStatus,
+      campaigns,
+      testCount: tests ?? 0,
+      testCountKnown: item.testCountKnown === true || tests !== null,
+      counts: { campaigns: numberValue(counts.campaigns) ?? campaigns.length, tests },
+      synthesis: textValue(item.synthesis) || null,
+      unavailableReason: textValue(item.unavailableReason) || null,
+      availability: item.availability === 'QUESTION_PUBLISHED' ? 'QUESTION_PUBLISHED' : 'DATA_UNAVAILABLE',
+      nextAction: textValue(item.nextAction) || undefined
+    } satisfies ObservatoryQuestion;
+  }).filter(question => question.id && question.code);
+  const rawSurfaces = asArray(data.surfaces ?? root.surfaces);
+  const surfaceById = new Map(rawSurfaces.map(raw => {
+    const item = asRecord(raw);
+    return [textValue(item.id), item] as const;
+  }));
+  const surfaces = DEFAULT_OBSERVATORY_SURFACES.map(surface => {
+    const raw = surfaceById.get(surface.id);
+    return raw ? {
+      ...surface,
+      count: numberValue(raw.count) ?? undefined,
+      available: raw.available === true
+    } : surface;
+  });
+  return {
+    questions: sortObservatoryQuestions(questions),
+    surfaces,
+    contract: textValue(root.contract) || OBSERVATORY_QUESTIONS_CONTRACT,
+    status: textValue(root.status) || 'DATA_UNAVAILABLE',
+    freshness: textValue(root.freshness) || undefined,
+    source: textValue(root.source) || undefined,
+    sourceVersion: textValue(root.sourceVersion) || undefined
   };
 }
 

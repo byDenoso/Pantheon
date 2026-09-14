@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { AtlasApiClient, AtlasContext, LabData, ObservatoryData, PanelRead, ResearchRecord } from './types';
-import type { ObservatoryQuestion } from './observatory-questions';
+import type { ObservatoryQuestionsRead } from './observatory-questions';
 import { createAtlasAdapter } from './adapters';
 import { errorMessage } from './errors';
 
@@ -54,13 +54,15 @@ export function useObservatoryData(client: AtlasApiClient, context: AtlasContext
  */
 export function useObservatoryQuestions(client: AtlasApiClient) {
   const adapter = useMemo(() => createAtlasAdapter(client), [client]);
-  const [read, setRead] = useState<PanelRead<ObservatoryQuestion[]>>(initialRead<ObservatoryQuestion[]>);
+  const [read, setRead] = useState<PanelRead<ObservatoryQuestionsRead>>(initialRead<ObservatoryQuestionsRead>);
   useEffect(() => {
     let live = true;
     setRead(previous => ({ ...previous, state: 'LOADING' }));
-    void adapter.getObservatoryQuestions().then(questions => {
+    void adapter.getObservatoryQuestions().then(data => {
       if (!live) return;
-      setRead({ state: questions.length ? 'READY' : 'EMPTY', data: questions, freshness: { state: 'SNAPSHOT' } });
+      const freshness = String(data.freshness || '').toUpperCase();
+      const state = freshness === 'STALE' ? 'STALE' : data.questions.length ? 'READY' : 'EMPTY';
+      setRead({ state, data, freshness: { state: freshness === 'LIVE' ? 'LIVE' : freshness === 'STALE' ? 'STALE' : 'SNAPSHOT', source: data.source, sourceVersion: data.sourceVersion } });
     }).catch(error => {
       if (!live) return;
       setRead(previous => ({ ...previous, state: previous.data ? 'STALE' : 'API_ERROR', error: errorMessage(error), freshness: { ...previous.freshness, state: previous.data ? 'STALE' : 'DEGRADED' } }));
