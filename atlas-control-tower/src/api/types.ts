@@ -139,7 +139,7 @@ export type ScientificSummary = {
 
 export type ObservatoryData = {
   h0: WeightedH0Estimate | null;
-  h0Stacks: H0StackMeasurement[];
+  h0Stacks?: H0StackMeasurement[];
   tensions: TensionResult[];
   directionalSignals: DirectionalSignal[];
   parameters: ParameterEstimate[];
