@@ -24,8 +24,10 @@ test('Atlas SSOT reader uses exact-name Drive discovery or private override and 
  assert.doesNotMatch(adapter,/NEXO_SSOT_ID/);
 });
 
-test('public Atlas projection does not depend on runtime Google credentials',()=>{
- assert.match(handler,/route==='atlas-public-ssot'.*publicProjection/s);
- assert.match(handler,/buildAtlasResearchView\(snapshot\|\|publicProjection,route\)/);
+test('manual public Atlas refresh reads the live Drive SSOT but exposes only the sanitized public projection',()=>{
+ assert.match(handler,/route==='atlas-public-ssot'.*buildPublicAtlasSsot\(await readAtlasSsot\(\{env,now,signal:req\.signal\}\)\)/s);
+ assert.match(handler,/https:\/\/bydenoso\.github\.io/);
+ assert.match(handler,/Access-Control-Allow-Methods','GET,OPTIONS'/);
+ assert.match(handler,/WRITES_DISABLED/);
  assert.match(live,/nexo-one-two\.vercel\.app\/api\/atlas-public-ssot/);
 });
