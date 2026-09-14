@@ -1,6 +1,6 @@
 import {Canvas25DGraph} from './Canvas25DGraph';
 import {deriveGraphNavigation} from './navigation-contract.mjs';
-import type {GraphSurfaceProps} from './GraphScene3D';
+import type {GraphSurfaceProps} from './types';
 
 export function GraphRenderer(props:GraphSurfaceProps&{zoom?:number;onZoomChange?:(zoom:number)=>void}){
   const navigation=deriveGraphNavigation(props.projection.nodes,props.projection.edges);
