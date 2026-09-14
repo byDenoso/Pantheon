@@ -49,10 +49,8 @@ export function createStaticArtifactApi({baseUrl='/data',fetchImpl=globalThis.fe
   surfaceCache.set(key,pending);
   try{return await pending}catch(error){surfaceCache.delete(key);throw error}
  }
- const envelope=(value)=>({contract:value.contract,status:value.state==='DATA_UNAVAILABLE'?'DATA_UNAVAILABLE':'OK',freshness:value.freshness||'SNAPSHOT',sourceModifiedAt:value.sourceVersion,data:value,provenance:value.provenance||[]});
- const labRouteType={
-  'lab-hypotheses':'HYPOTHESIS','lab-claims':'CLAIM','lab-tests':'TEST','lab-runs':'RUN','lab-results':'RESULT','lab-evidence':'EVIDENCE','lab-decisions':'DECISION','lab-knowledge':'KNOWLEDGE','lab-pipelines':'PIPELINE'
- };
+ const envelope=value=>({contract:value.contract,status:value.state==='DATA_UNAVAILABLE'?'DATA_UNAVAILABLE':'OK',freshness:value.freshness||'SNAPSHOT',sourceModifiedAt:value.sourceVersion,data:value,provenance:value.provenance||[]});
+ const labRouteType={'lab-hypotheses':'HYPOTHESIS','lab-claims':'CLAIM','lab-tests':'TEST','lab-runs':'RUN','lab-results':'RESULT','lab-evidence':'EVIDENCE','lab-decisions':'DECISION','lab-knowledge':'KNOWLEDGE','lab-pipelines':'PIPELINE'};
  const directSurfaceRoute={activity:'activity',operations:'operations',cockpit:'operations',audit:'audit',learning:'learning',search:'search'};
  async function research(route,query={}){
   const direct=directSurfaceRoute[route];
@@ -71,16 +69,28 @@ export function createStaticArtifactApi({baseUrl='/data',fetchImpl=globalThis.fe
   }
   throw new Error(`STATIC_RESEARCH_ROUTE_NOT_MATERIALIZED:${route}`);
  }
+ async function learning(){
+  const value=await surface('learning');
+  return {...value,ladder:Array.isArray(value.ladder)?value.ladder:[{id:'structural',items:arr(value.items)}],emergent:arr(value.emergent)};
+ }
+ async function ops(){
+  const value=await surface('operations');
+  return {...value,actions:arr(value.actions),runs:arr(value.runs)};
+ }
+ async function audit(){
+  const value=await surface('audit');
+  return {...value,issues:Array.isArray(value.issues)?value.issues:arr(value.items)};
+ }
  return {
   ...legacy,
   get remote(){return false},
   publicManifest,
   surface,
-  learning:()=>surface('learning'),
-  learningFor:async id=>{const value=await surface('learning');return {...value,item:arr(value.items).find(item=>item.id===id)||null}},
-  ops:()=>surface('operations'),
-  automationRuns:async()=>arr((await surface('operations')).runs),
-  audit:()=>surface('audit'),
+  learning,
+  learningFor:async id=>{const value=await learning();const items=arr(value.ladder).flatMap(stage=>arr(stage.items));return {...value,item:items.find(item=>item.id===id)||null}},
+  ops,
+  automationRuns:async()=>arr((await ops()).runs),
+  audit,
   searchIndex:()=>surface('search'),
   research,
   clear(){legacy.clear?.();publicManifestPromise=null;surfaceCache.clear()}
