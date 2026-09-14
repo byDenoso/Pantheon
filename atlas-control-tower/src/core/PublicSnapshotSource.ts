@@ -1,5 +1,5 @@
 import type { AtlasApiClient } from '../api/types';
-import { parseScienceReadModel, type ScienceReadModelV2 } from '../api/science-read-model';
+import { parseScienceReadModel, type ScienceReadModelV2 } from '../api/science-read-model.ts';
 import type {
   AtlasDataSource,
   CampaignDetail,
