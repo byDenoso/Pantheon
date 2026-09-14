@@ -22,7 +22,7 @@ export function AtividadePage(){
     return()=>{live=false};
   },[api]);
   return <div className="page-wrap atividade-page">
-    <div className="page-heading"><div><span className="eyebrow">NEXO ATLAS / ATIVIDADE</span><h1>Atividade</h1><p>Linha do tempo publicada de mudanças operacionais, em ordem de observação.</p></div></div>
+    <div className="page-heading"><div><span className="eyebrow">NEXO ATLAS / ATIVIDADE</span><h1>Atividade operacional</h1><p>Linha do tempo publicada em ordem de observação. Sem identificação explícita de ciclo, eventos não são agrupados em Pulse por inferência.</p></div></div>
     {state==='LOADING'&&<p role="status">Lendo atividade publicada…</p>}
     {state==='DATA_UNAVAILABLE'&&<p role="status">Fonte de atividade indisponível.</p>}
     {state==='ERROR'&&<p role="status">Falha ao ler a superfície de atividade. O restante do Atlas permanece disponível.</p>}
