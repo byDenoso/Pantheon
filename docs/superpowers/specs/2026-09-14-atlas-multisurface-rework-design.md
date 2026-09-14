@@ -1,7 +1,7 @@
 # NEXO ATLAS multi-surface rework design
 
 Date: 2026-09-14
-Status: Approved architecture, pending implementation-plan approval
+Status: Design approved in chat; implementation pending written-spec review
 Branch: `atlas-multisurface-rework-20260914`
 
 ## 1. Purpose
@@ -52,7 +52,7 @@ This would let every page invent its own source logic. It reduces immediate work
 
 ## 4. Public manifest contract
 
-Introduce a versioned public contract similar to:
+Introduce a versioned public contract with this semantic shape:
 
 ```json
 {
@@ -60,28 +60,29 @@ Introduce a versioned public contract similar to:
   "authority": "GOOGLE_DRIVE",
   "projectionOnly": true,
   "access": "PUBLIC_SANITIZED",
-  "generatedAt": "...",
-  "sourceModifiedAt": "...",
-  "fingerprint": "sha256:...",
+  "generatedAt": "ISO-8601 timestamp",
+  "sourceModifiedAt": "ISO-8601 timestamp",
+  "fingerprint": "sha256:<64 hex chars>",
   "surfaces": {
-    "graph": { "path": "graph/index.json", "sha256": "..." },
-    "observatory": { "path": "observatory/index.json", "sha256": "..." },
-    "laboratory": { "path": "laboratory/index.json", "sha256": "..." },
-    "learning": { "path": "learning/index.json", "sha256": "..." },
-    "operations": { "path": "operations/index.json", "sha256": "..." },
-    "activity": { "path": "activity/index.json", "sha256": "..." },
-    "audit": { "path": "audit/index.json", "sha256": "..." },
-    "search": { "path": "search/index.json", "sha256": "..." }
+    "graph": { "state": "READY", "contract": "graph-vN", "path": "graph/index.json", "sha256": "<64 hex chars>" },
+    "observatory": { "state": "READY", "contract": "observatory-vN", "path": "observatory/index.json", "sha256": "<64 hex chars>" },
+    "laboratory": { "state": "READY", "contract": "laboratory-vN", "path": "laboratory/index.json", "sha256": "<64 hex chars>" },
+    "learning": { "state": "DATA_UNAVAILABLE" },
+    "operations": { "state": "READY", "contract": "operations-vN", "path": "operations/index.json", "sha256": "<64 hex chars>" },
+    "activity": { "state": "READY", "contract": "activity-vN", "path": "activity/index.json", "sha256": "<64 hex chars>" },
+    "audit": { "state": "READY", "contract": "audit-vN", "path": "audit/index.json", "sha256": "<64 hex chars>" },
+    "search": { "state": "READY", "contract": "search-vN", "path": "search/index.json", "sha256": "<64 hex chars>" }
   }
 }
 ```
 
 Rules:
 
-- The top-level fingerprint is computed from contract version, source version and all surface hashes.
-- Every surface is independently hash-verified.
-- Missing optional surfaces are represented explicitly as unavailable, never as an empty success.
-- The browser switches to a new live manifest only after two independent manifest reads agree on fingerprint and every required changed surface validates.
+- The top-level fingerprint is computed from contract version, source version and all declared surface states/hashes.
+- Every `READY` surface is independently hash-verified.
+- `graph` is the only required surface for accepting a new live snapshot. Other surfaces may be explicitly `DATA_UNAVAILABLE`; absence without an explicit state is invalid.
+- A `DATA_UNAVAILABLE` surface has no path/hash and is rendered honestly by its consumer.
+- The browser switches to a new live manifest only after two independent manifest reads agree on fingerprint and every changed `READY` surface validates.
 - On any validation failure, the last valid active snapshot remains untouched.
 
 ## 5. Graph contract and navigation
@@ -145,8 +146,9 @@ interface H0StackMeasurement {
   datasets: string[];
   model: string | null;
   h0: number;
-  sigmaLow: number | null;
-  sigmaHigh: number | null;
+  uncertaintyLow: number | null;
+  uncertaintyHigh: number | null;
+  uncertaintyLevel: string | null;
   baselineId: string | null;
   deltaH0: number | null;
   evidenceClass: string | null;
@@ -164,7 +166,13 @@ The Observatory renders:
 3. stack composition matrix when dataset membership is published
 4. optional weighted/reference band only when the source publishes a valid combination rule or covariance-aware aggregate
 
-If no valid weighting rule is published, the UI labels the product `Comparativo H0 por stack`, not `H0 ponderado`.
+Chart rules:
+
+- x-axis uses H0 in km/s/Mpc.
+- uncertainty bars are shown only when both magnitude and confidence/credibility level can be represented truthfully.
+- the UI must not silently call an unknown interval `1σ` or `68%`.
+- `deltaH0` is shown only against an explicitly identified baseline.
+- if no valid weighting rule is published, the product is labeled `Comparativo H0 por stack`, not `H0 ponderado`.
 
 ### 6.2 Extraction rule
 
@@ -265,8 +273,8 @@ Flow:
 1. Read live manifest A with cache disabled.
 2. Read live manifest B independently.
 3. Require matching top-level fingerprints.
-4. Compare current active surface hashes to B.
-5. Fetch only changed surfaces plus required shared metadata.
+4. Compare current active surface states/hashes to B.
+5. Fetch only changed `READY` surfaces plus required shared metadata.
 6. Verify each changed payload against the manifest hash.
 7. Build an immutable candidate snapshot in memory.
 8. Validate cross-surface contract/version compatibility.
@@ -274,6 +282,8 @@ Flow:
 10. Publish a local sync receipt containing changed surfaces, before/after fingerprints and readback status.
 
 Failure at steps 2-8 preserves the previous valid snapshot and returns a fail-closed receipt.
+
+A transition from `READY` to `DATA_UNAVAILABLE` is itself a surface change and must be part of the atomic candidate/readback, so stale data from the previous snapshot cannot masquerade as current.
 
 ## 13. Public/private boundary
 
@@ -338,6 +348,7 @@ Implementation follows TDD. Required regression coverage:
 
 - deterministic H0 stack normalization
 - invalid/ambiguous H0 metrics are omitted rather than guessed
+- uncertainty level is never invented
 - weighted/reference aggregate is absent unless combination metadata exists
 - stack forest-plot view receives stable structured values
 
@@ -353,6 +364,7 @@ Implementation follows TDD. Required regression coverage:
 - matching double-read -> candidate accepted
 - mismatched fingerprint -> last valid snapshot preserved
 - changed surface hash failure -> last valid snapshot preserved
+- READY -> DATA_UNAVAILABLE clears the old active surface atomically
 - unchanged surfaces are not unnecessarily re-fetched
 - receipt lists exact changed surfaces
 
