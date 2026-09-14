@@ -3,15 +3,22 @@ import type { AtlasApiClient } from '../api/types';
 import { resolveHealthPlanes, planeLabel } from '../core/cockpit-view-model';
 import { resolveLearnerLayer } from '../graph-engine/learner-overlay';
 import { PublicSnapshotSource } from '../core/PublicSnapshotSource';
+import { summarizeCampaignStatus, type CockpitCampaignRow } from '../core/cockpit-campaigns';
+import { routeFor } from '../atlas-route';
 import type { HealthPlane } from '../core/contracts';
 
 const STATUS_LABEL: Record<HealthPlane['status'], string> = { GREEN: 'OK', AMBER: 'ATENÇÃO', RED: 'CRÍTICO', UNKNOWN: 'DESCONHECIDO' };
 
-export function CockpitPage({ api }: { api: AtlasApiClient }) {
+// Cockpit is the operational home: backend/API health, sync, campaign status and
+// access links. It intentionally never mounts GraphRenderer/AtlasCanvas or repeats
+// the full graph exploration surface -- that is Grafos's job (src/pages/graphs-page.tsx).
+export function CockpitPage({ api, navigate }: { api: AtlasApiClient; navigate: (href: string) => void }) {
   const [planes, setPlanes] = useState<HealthPlane[] | null>(null);
   const [fingerprint, setFingerprint] = useState<string | undefined>();
   const [sourceVersion, setSourceVersion] = useState<string | undefined>();
   const [learnerUnavailable, setLearnerUnavailable] = useState(false);
+  const [campaigns, setCampaigns] = useState<CockpitCampaignRow[] | null>(null);
+  const [campaignsUnavailable, setCampaignsUnavailable] = useState(false);
 
   useEffect(() => {
     let live = true;
@@ -30,6 +37,24 @@ export function CockpitPage({ api }: { api: AtlasApiClient }) {
     const source = new PublicSnapshotSource(api);
     void source.getLearnerLayer().then(envelope => {
       if (live) setLearnerUnavailable(envelope.state === 'DATA_UNAVAILABLE');
+    });
+    void source.getDomains().then(async domainsEnvelope => {
+      if (!live) return;
+      const domains = domainsEnvelope.data || [];
+      if (!domains.length) {
+        setCampaignsUnavailable(true);
+        return;
+      }
+      const perDomain = await Promise.all(domains.map(domain => source.getDomainCampaigns(domain.id)));
+      if (!live) return;
+      const allCampaigns = perDomain.flatMap(envelope => envelope.data || []);
+      if (!allCampaigns.length) {
+        setCampaignsUnavailable(true);
+        return;
+      }
+      setCampaigns(summarizeCampaignStatus(allCampaigns));
+    }).catch(() => {
+      if (live) setCampaignsUnavailable(true);
     });
     return () => {
       live = false;
@@ -87,11 +112,47 @@ export function CockpitPage({ api }: { api: AtlasApiClient }) {
         )}
       </section>
 
+      <section aria-label="Status das campanhas">
+        <h2>Campanhas</h2>
+        {campaigns?.length ? (
+          <ul className="cockpit-campaign-list">
+            {campaigns.map(campaign => (
+              <li key={campaign.id} className="cockpit-campaign-row">
+                <span className="cockpit-campaign-label">{campaign.label}</span>
+                <span className="cockpit-campaign-status">{campaign.status}</span>
+                <a
+                  className="source-link"
+                  href={campaign.domain ? routeFor('graphs', { domain: campaign.domain }) : routeFor('graphs')}
+                  onClick={event => { event.preventDefault(); navigate(campaign.domain ? routeFor('graphs', { domain: campaign.domain }) : routeFor('graphs')); }}
+                >
+                  Abrir em Grafos →
+                </a>
+              </li>
+            ))}
+          </ul>
+        ) : campaignsUnavailable ? (
+          <p>DATA_UNAVAILABLE — nenhuma campanha publicada nesta fonte.</p>
+        ) : (
+          <p>Lendo status das campanhas…</p>
+        )}
+      </section>
+
       <section aria-label="Blockers e trabalho ativo">
         <h2>Blockers</h2>
         <p>DATA_UNAVAILABLE — requer a fachada privada (não conectada nesta build).</p>
         <h2>Trabalho ativo</h2>
         <p>DATA_UNAVAILABLE — requer a fachada privada (não conectada nesta build).</p>
+        <h2>Mudanças recentes</h2>
+        <p>DATA_UNAVAILABLE — requer a fachada privada (não conectada nesta build).</p>
+      </section>
+
+      <section aria-label="Links de acesso">
+        <h2>Links de acesso</h2>
+        <ul className="cockpit-access-links">
+          <li><a className="secondary-button" href={routeFor('graphs')} onClick={event => { event.preventDefault(); navigate(routeFor('graphs')); }}>Abrir Grafos →</a></li>
+          <li><a className="secondary-button" href={routeFor('observatory')} onClick={event => { event.preventDefault(); navigate(routeFor('observatory')); }}>Abrir Observatório →</a></li>
+          <li><a className="secondary-button" href={routeFor('universe')} onClick={event => { event.preventDefault(); navigate(routeFor('universe')); }}>Abrir Resumo do Universo →</a></li>
+        </ul>
       </section>
     </div>
   );

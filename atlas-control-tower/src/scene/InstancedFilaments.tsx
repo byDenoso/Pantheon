@@ -30,11 +30,9 @@ export function InstancedFilaments({edges,nodes,positions:sharedPositions,focusI
       if(active) color.lerp(new Color('#d4f5ff'),0.46);
       target.setColorAt(index,color);
     });
+    // setColorAt only writes the CPU-side buffer; without this flag the instance
+    // color never uploads to the GPU.
     if(target.instanceColor)target.instanceColor.needsUpdate=true;
-    // See the matching comment in InstancedNodes.tsx: forces Three to recompile the
-    // per-instance-color shader branch instead of possibly reusing a program cached
-    // from before instanceColor existed.
-    material.needsUpdate=true;
   },[edges,focusId,nodes,object,selectedId,sharedPositions]);
 
   useFrame(({clock})=>{

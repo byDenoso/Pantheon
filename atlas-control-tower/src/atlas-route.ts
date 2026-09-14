@@ -114,8 +114,15 @@ export function readAtlasRoute(location: Pick<Location, 'pathname' | 'search'> =
   const pathname = stripAppBase(location.pathname || '/');
   const segments = pathname.split('/').filter(Boolean);
   const areaSegment = segments[0];
-  const area: AtlasArea = (areaSegment && AREA_BY_SEGMENT[areaSegment]) || (areaSegment && AREAS.includes(areaSegment as AtlasArea) ? (areaSegment as AtlasArea) : 'landing');
   const query = new URLSearchParams(location.search);
+  let area: AtlasArea = (areaSegment && AREA_BY_SEGMENT[areaSegment]) || (areaSegment && AREAS.includes(areaSegment as AtlasArea) ? (areaSegment as AtlasArea) : 'landing');
+  // /pesquisa and /universe share one public path (PUBLIC_PATH.observatory ===
+  // PUBLIC_PATH.universe === 'pesquisa') by design -- but without this check every
+  // link to 'universe' silently rendered ObservatoryPage instead, since the reverse
+  // map (AREA_BY_SEGMENT.pesquisa) can only point at one area. ?scope=universo (set
+  // by routeFor below) is the real, additive discriminator that makes UniversePage
+  // reachable without splitting the shared public path or touching PUBLIC_PATH.
+  if (area === 'observatory' && query.get('scope') === 'universo') area = 'universe';
   const domainSegment = area === 'graphs' && segments.length >= 3 && segments[1] === 'science' ? segments[2] : undefined;
   const graphPath = area === 'graphs' && segments.length > 1 ? segments.slice(1).map(segment => decodeURIComponent(segment)) : undefined;
   const context = Object.fromEntries(CONTEXT_KEYS.flatMap(key => {
@@ -140,9 +147,20 @@ export function routeFor(area: AtlasArea, context: AtlasContext = {}): string {
           : '/';
   const query = new URLSearchParams();
   for (const key of CONTEXT_KEYS) {
-    if (key === 'domain' || !context[key]) continue;
+    // 'scope' is a private discriminator between Observatory and Universe (both
+    // sharing the /pesquisa path below), not a general-purpose passthrough value --
+    // carrying it into an unrelated area's link (e.g. clicking "Grafos" while on
+    // Resumo do Universo, which reuses the current route's context) produced URLs
+    // like /mapa?scope=universo that don't mean anything for that area. It is only
+    // ever set explicitly, below, for area === 'universe'.
+    if (key === 'domain' || key === 'scope' || !context[key]) continue;
     query.set(key, String(context[key]));
   }
+  // Universe shares /pesquisa's public path with Observatory (see PUBLIC_PATH); this
+  // is the additive discriminator readAtlasRoute checks to render UniversePage
+  // instead of ObservatoryPage. Set unconditionally (not merged from context) so
+  // stray context never accidentally produces a bare /pesquisa for this area.
+  if (area === 'universe') query.set('scope', 'universo');
   const path = withAppBase(logicalPath);
   const search = query.toString();
   return search ? `${path}?${search}` : path;
@@ -150,9 +168,17 @@ export function routeFor(area: AtlasArea, context: AtlasContext = {}): string {
 
 function redirectLegacyPathIfNeeded(): void {
   if (typeof window === 'undefined') return;
-  const rewritten = rewriteLegacyPublicPath(stripAppBase(window.location.pathname));
+  const pathname = stripAppBase(window.location.pathname);
+  const rewritten = rewriteLegacyPublicPath(pathname);
   if (!rewritten) return;
-  const target = withAppBase(rewritten) + window.location.search + window.location.hash;
+  const legacyArea = LEGACY_PREFIX_TO_AREA[pathname.split('/').filter(Boolean)[0] || ''];
+  const query = new URLSearchParams(window.location.search);
+  // A legacy /universe link collapses onto the same /pesquisa path as Observatory;
+  // without re-adding the scope discriminator here, the redirect would silently
+  // strip the one signal that tells readAtlasRoute to render UniversePage.
+  if (legacyArea === 'universe' && !query.get('scope')) query.set('scope', 'universo');
+  const search = query.toString();
+  const target = withAppBase(rewritten) + (search ? `?${search}` : '') + window.location.hash;
   window.history.replaceState(window.history.state, '', target);
 }
 

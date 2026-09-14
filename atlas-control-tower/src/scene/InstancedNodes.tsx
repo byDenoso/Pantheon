@@ -46,12 +46,14 @@ type Props={
 export function InstancedNodes({nodes,selectedId,focusId,pickMode=false,aura=false,onNodeClick,positions}:Props){
   const mesh=useRef<InstancedMesh>(null);
   const object=useMemo(()=>new Object3D(),[]);
+  // No vertexColors here -- see the comment on createNodeMaterial in materials.ts
+  // for why that flag (not per-instance color itself) was the real black-node bug.
   const material=useMemo(()=>pickMode
-    ? new MeshBasicMaterial({vertexColors:true,toneMapped:false})
+    ? new MeshBasicMaterial({toneMapped:false})
     : aura ? createNodeAuraMaterial() : createNodeMaterial(),[aura,pickMode]);
 
   useLayoutEffect(()=>{
-      const target=mesh.current;if(!target)return;
+    const target=mesh.current;if(!target)return;
     target.count=nodes.length;
     nodes.forEach((node,index)=>{
       if(pickMode){
@@ -60,18 +62,9 @@ export function InstancedNodes({nodes,selectedId,focusId,pickMode=false,aura=fal
       }else target.setColorAt(index,visualColor(node));
     });
     // setColorAt only writes the CPU-side buffer; without this flag the instance
-    // color never uploads to the GPU and every instance renders black.
+    // color never uploads to the GPU.
     if(target.instanceColor)target.instanceColor.needsUpdate=true;
-    // Three.js only decides whether to compile the USE_INSTANCING_COLOR shader
-    // branch by re-checking object.instanceColor when the material's program cache
-    // is invalidated. If instanceColor was still null on the very first render call
-    // (created lazily by the first setColorAt above, which can land after that first
-    // frame), the material can keep using an already-cached program compiled without
-    // per-instance color support -- every instance then renders solid black
-    // regardless of a perfectly correct instanceColor buffer. Forcing needsUpdate
-    // here makes Three re-evaluate and recompile for the real object state.
-    material.needsUpdate=true;
-  },[nodes,pickMode,material]);
+  },[nodes,pickMode]);
 
   useFrame(()=>{
     const target=mesh.current;if(!target)return;

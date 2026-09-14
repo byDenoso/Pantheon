@@ -1,4 +1,4 @@
-import { SRGBColorSpace, WebGLRenderer } from 'three';
+import { NoToneMapping, SRGBColorSpace, WebGLRenderer } from 'three';
 
 export type AtlasRendererBackend = 'webgpu' | 'webgl2';
 
@@ -22,6 +22,7 @@ function createWebGLRenderer(canvas: HTMLCanvasElement) {
   // browser repro (instance color buffer verified correct, only the displayed pixels
   // were wrong), not a guess.
   renderer.outputColorSpace = SRGBColorSpace;
+  renderer.toneMapping = NoToneMapping;
   return { renderer, backend: 'webgl2' as const };
 }
 

@@ -19,12 +19,32 @@ test('normalizeGraphHydrationId leaves non-domain ids untouched', () => {
 test('routeFor produces the canonical public paths from the locked route contract', () => {
   assert.equal(routeFor('graphs'), '/mapa');
   assert.equal(routeFor('observatory'), '/pesquisa');
-  assert.equal(routeFor('universe'), '/pesquisa');
   assert.equal(routeFor('lab'), '/laboratorio');
   assert.equal(routeFor('cockpit'), '/cockpit');
   assert.equal(routeFor('atividade'), '/atividade');
   assert.equal(routeFor('login'), '/login');
   assert.equal(routeFor('landing'), '/');
+});
+
+test('routeFor gives Universe the shared /pesquisa path plus the scope=universo discriminator, so it is a real, reachable destination distinct from Observatory', () => {
+  // Regression: Universe and Observatory share PUBLIC_PATH ('pesquisa') by design,
+  // but without a discriminator every link to 'universe' silently rendered
+  // ObservatoryPage -- confirmed via source read, not a guess. scope=universo is the
+  // additive fix readAtlasRoute checks for.
+  assert.equal(routeFor('universe'), '/pesquisa?scope=universo');
+  assert.equal(readAtlasRoute({ pathname: '/pesquisa', search: '?scope=universo' }).area, 'universe');
+});
+
+test('routeFor never leaks the universe scope discriminator into another area\'s link (regression)', () => {
+  // Real repro: clicking any other sidebar item while on Resumo do Universo reused
+  // the current route's context (which carries scope: 'universo') and produced
+  // meaningless URLs like /mapa?scope=universo, /cockpit?scope=universo, etc.
+  const universeContext = readAtlasRoute({ pathname: '/pesquisa', search: '?scope=universo' }).context;
+  assert.equal(routeFor('graphs', universeContext), '/mapa');
+  assert.equal(routeFor('cockpit', universeContext), '/cockpit');
+  assert.equal(routeFor('lab', universeContext), '/laboratorio');
+  assert.equal(routeFor('atividade', universeContext), '/atividade');
+  assert.equal(routeFor('observatory', universeContext), '/pesquisa');
 });
 
 test('routeFor keeps the /mapa/science/:domain shape for a domain-focused map route', () => {
