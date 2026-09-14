@@ -1,6 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
 import {buildPublicManifest,validatePublicManifest} from '../lib/public-surface-manifest.mjs';
+import {generateStaticState} from '../lib/campaign-static-state-generator.mjs';
 
 const ready=(name,fill='a')=>({state:'READY',contract:`${name}-v1`,path:`surfaces/${name}/index.json`,sha256:fill.repeat(64)});
 const base=overrides=>({
@@ -46,4 +50,17 @@ test('graph is the required structural surface while optional surfaces may be un
  assert.throws(()=>validatePublicManifest(manifest),/PUBLIC_MANIFEST_GRAPH_REQUIRED/);
  const valid=buildPublicManifest({authority:'GOOGLE_DRIVE',sourceVersion:'v1',generatedAt:'now',surfaces:{graph:ready('graph'),activity:{state:'DATA_UNAVAILABLE'},learning:{state:'DATA_UNAVAILABLE'}}});
  assert.equal(validatePublicManifest(valid).surfaces.activity.state,'DATA_UNAVAILABLE');
+});
+
+test('campaign static generator publishes manifest v2 additively beside the legacy fallback manifest',async()=>{
+ const out=fs.mkdtempSync(path.join(os.tmpdir(),'nexo-manifest-v2-'));
+ const result=await generateStaticState({outDir:out,generatedAt:'2026-09-14T12:10:00Z'});
+ const published=JSON.parse(fs.readFileSync(path.join(out,'current','public-manifest-v2.json'),'utf8'));
+ assert.equal(validatePublicManifest(published).fingerprint,published.fingerprint);
+ assert.equal(published.surfaces.graph.state,'READY');
+ assert.equal(published.surfaces.graph.path,'graph/root.json');
+ assert.equal(published.surfaces.observatory.state,'DATA_UNAVAILABLE');
+ assert.equal(published.surfaces.activity.state,'DATA_UNAVAILABLE');
+ assert.ok(fs.existsSync(path.join(result.snapshotDir,'public-manifest-v2.json')));
+ assert.ok(fs.existsSync(path.join(out,'current','manifest.json')),'legacy fallback manifest must remain during migration');
 });
