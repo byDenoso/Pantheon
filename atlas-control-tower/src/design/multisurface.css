@@ -1,3 +1,4 @@
+.sidebar-primary-nav a>small[aria-hidden="true"]{display:none}
 .h0-stack-panel{display:grid;gap:14px;padding:16px;border:1px solid var(--atlas-border);border-radius:16px;background:var(--atlas-surface)}
 .h0-stack-panel>header{display:grid;gap:4px}.h0-stack-panel h3{margin:0}.h0-stack-panel p{margin:0;color:var(--atlas-text-muted)}
 .h0-stack-list{display:grid;gap:8px}.h0-stack-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 18px;align-items:center;padding:11px 12px;border-radius:12px;background:color-mix(in srgb,var(--atlas-surface) 78%,var(--graph-grid));border:1px solid var(--atlas-border)}
