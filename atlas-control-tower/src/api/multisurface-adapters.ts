@@ -8,6 +8,7 @@ const text=(v:unknown)=>String(v??'').trim();
 const arr=(v:unknown):unknown[]=>Array.isArray(v)?v:[];
 const obj=(v:unknown):Record<string,unknown>=>v&&typeof v==='object'&&!Array.isArray(v)?v as Record<string,unknown>:{};
 const query=(context:AtlasContext={})=>Object.fromEntries(Object.entries(context).filter(([,value])=>Boolean(value))) as Record<string,string>;
+const modelSource=(model:ScienceReadModelV2)=>text(model.provenance?.[0]?.source)||'TOWER_V06_PROJECTION';
 
 function h0Stacks(raw:unknown):H0StackMeasurement[]{
  const root=obj(raw),data=Object.keys(obj(root.data)).length?obj(root.data):root;
@@ -59,7 +60,7 @@ function modelSummary(model:ScienceReadModelV2):ObservatoryData{
  });
  const sections:ScientificSection[]=model.syntheses.map(item=>({id:item.id,label:item.scopeId||item.id,summary:item.narrative,status:scientificStatus(item.status,'INCONCLUSIVE'),updatedAt:item.updatedAt,provenance:item.provenance}));
  const narrative=model.syntheses.find(item=>item.scope==='global'&&item.narrative)?.narrative;
- return {h0:null,h0Stacks:stacks,tensions:[],directionalSignals,parameters,narrative,sections,freshness:{state:freshnessFromModel(model),source:'GOOGLE_DRIVE',sourceVersion:model.sourceVersion,updatedAt:model.generatedAt}};
+ return {h0:null,h0Stacks:stacks,tensions:[],directionalSignals,parameters,narrative,sections,freshness:{state:freshnessFromModel(model),source:modelSource(model),sourceVersion:model.sourceVersion,updatedAt:model.generatedAt}};
 }
 
 function modelQuestions(model:ScienceReadModelV2):ObservatoryQuestionsRead{
@@ -76,7 +77,7 @@ function modelQuestions(model:ScienceReadModelV2):ObservatoryQuestionsRead{
   const count=surface.id==='questions'?counts.questions:surface.id==='tests'?counts.tests:surface.id==='relations'?counts.relations:surface.id==='evidence'?counts.evidence:counts.decisions;
   return {...surface,count,available:count>0};
  });
- return {questions,surfaces,contract:OBSERVATORY_QUESTIONS_CONTRACT,status:questions.length?'OK':'DATA_UNAVAILABLE',freshness:model.freshness,source:'GOOGLE_DRIVE',sourceVersion:model.sourceVersion};
+ return {questions,surfaces,contract:OBSERVATORY_QUESTIONS_CONTRACT,status:questions.length?'OK':'DATA_UNAVAILABLE',freshness:model.freshness,source:modelSource(model),sourceVersion:model.sourceVersion};
 }
 
 export function createAtlasAdapter(client:AtlasApiClient){
