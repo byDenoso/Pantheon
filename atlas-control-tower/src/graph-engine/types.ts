@@ -6,6 +6,7 @@ export type GraphNode={
  id:string;label:string;type:string;domain?:string|null;parentId?:string|null;summary?:string|null;status?:string|null;
  metrics?:Record<string,number|string|boolean|null>;x?:number;y?:number;z?:number;contextRole?:GraphContextRole;navigationKind?:GraphNavigationKind;
  importance?:number|null;confidence?:number|null;freshness?:string|null;updatedAt?:string|null;capabilities?:string[];syntheticContext?:boolean;
+ childCount?:number;expandable?:boolean;metadata?:Record<string,unknown>;
 };
 export type GraphEdge={id:string;source:string;target:string;type:string;declared:true;direction?:'forward'|'backward'|'bidirectional'|null;strength?:number|null;metadata?:Record<string,unknown>};
 export type GraphOverlay={id:string;type:string;enabled:boolean;nodes?:GraphNode[];edges?:GraphEdge[]};
