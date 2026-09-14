@@ -5,21 +5,16 @@ import '../design/graph-25d-v2.css';
 import {AtlasCanvas} from '../scene/AtlasCanvas';
 import {GraphMinimap} from '../components/GraphMinimap';
 import type {AtlasGraph} from '../scene/types';
-import type {GraphEdge,GraphProjection} from './types';
+import type {GraphSurfaceProps} from './types';
 
-export type GraphSurfaceProps={projection:GraphProjection;learningEdges?:GraphEdge[];learning:boolean;selectedId?:string|null;selectedEdgeId?:string|null;onSelect:(id:string|null)=>void;onOpenNode?:(id:string)=>void;onSelectEdge?:(id:string|null)=>void;onToggleLearning?:(value:boolean)=>void};
 type Props=GraphSurfaceProps&{onRollback?:()=>void};
 const asText=(value:unknown,fallback='SNAPSHOT')=>String(value||fallback).replace(/_/g,' ');
 
 /**
- * Real 3D map scene (WebGL2/Three via AtlasCanvas): x/y/z node positions, perspective
- * camera, orbit/pan/zoom, and picking. No auto-rotation anywhere -- orbit is manual
- * only, per the locked contract. Selection, the header and the activity drawer are
- * the SAME shell elements used by the 2D/2.5D map (SpatialInspector is rendered by
- * GraphsPage as a sibling of the renderer, not duplicated here); an earlier phase
- * mounted a second, separate per-node detail panel plus a dock of camera buttons
- * wired to a custom DOM event nothing in the live scene ever listened for, which is
- * what made 3D feel like a disconnected product -- both were removed.
+ * Dormant 3D compatibility scene. The production graph gateway now uses the
+ * Canvas 2.5D renderer exclusively; this module remains isolated so older scene
+ * primitives/tests can be removed in a later dependency cleanup without coupling
+ * the active renderer back to WebGL.
  */
 export function GraphScene3D({projection,learningEdges=[],learning,selectedId=null,onSelect,onOpenNode,onRollback}:Props){
   const [reducedMotion,setReducedMotion]=useState(false);
