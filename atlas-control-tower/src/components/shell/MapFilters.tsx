@@ -1,11 +1,9 @@
 import type { MapFilters as MapFilterState } from '../../graph-engine/graph-filters';
 
 // Filters for the map context. Domínio, Status and Autoridade genuinely narrow the
-// visible projection (see graph-filters.ts) -- they are wired to real fields on real
-// nodes, not decorative. Fonte has no per-node source value anywhere in the current
-// data pipeline (every node in the static snapshot carries the same fixed
-// GOOGLE_DRIVE/GITHUB pipeline provenance, not a per-entity source to filter across),
-// so it renders disabled with an honest reason instead of a fake option list.
+// visible projection (see graph-filters.ts). Fonte is global for this public read
+// model, so it is informative rather than interactive: Drive owns state and GitHub
+// transports the sanitized projection.
 export function MapFilters({
   filters,
   domainOptions,
@@ -51,10 +49,10 @@ export function MapFilters({
           ))}
         </select>
       </label>
-      <label className="map-filter-unavailable" title="Nenhuma fonte por entidade é publicada neste snapshot -- todo o recorte usa a mesma proveniência (GOOGLE_DRIVE/GITHUB).">
+      <label className="map-filter-unavailable" title="Fonte global do recorte. O Google Drive é a autoridade de estado; o GitHub transporta apenas a projeção pública sanitizada.">
         <span>Fonte</span>
-        <select disabled value="">
-          <option value="">Indisponível</option>
+        <select disabled value="GOOGLE_DRIVE" aria-label="Fonte global: Google Drive">
+          <option value="GOOGLE_DRIVE">Google Drive</option>
         </select>
       </label>
       {active && (
