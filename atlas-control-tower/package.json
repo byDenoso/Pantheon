@@ -4,9 +4,11 @@
   "type": "module",
   "scripts": {
     "test": "node --test test/*.test.mjs",
+    "pretest": "npm run state:build",
     "typecheck": "tsc --noEmit",
     "state:build": "node scripts/generate-static-state.mjs public/data",
     "build": "vite build",
+    "prebuild": "npm run state:build",
     "predev": "npm run state:build",
     "dev": "vite --host 0.0.0.0",
     "prestart": "npm run state:build",
