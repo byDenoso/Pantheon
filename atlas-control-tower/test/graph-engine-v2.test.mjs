@@ -14,7 +14,7 @@ test('v2 pages use one renderer gateway with Canvas 2.5D primary and WebGL opt-i
  // Canvas-primary default swapped from GraphExplorer (Pixi) to Canvas25DGraph (plain
  // Canvas2D, no WebGL/Pixi/Three.js) per an explicit user request to replace the
  // default map render with a 2.5D canvas. WebGL stays an explicit, unaffected opt-in.
- for(const page of ['GraphsV2Page.tsx','GraphDomainV2Page.tsx','GraphDetailV2Page.tsx'])assert.match(read('src/pages/'+page),/GraphRenderer/);const gateway=read('src/graph-engine/GraphRenderer.tsx');assert.match(gateway,/GraphScene3D/);assert.match(gateway,/Canvas25DGraph/);assert.match(gateway,/renderer'\)===['"]webgl['"]/);assert.match(gateway,/if\(!webgl\).*Canvas25DGraph/s)});
+ for(const page of ['GraphsV2Page.tsx','GraphDomainV2Page.tsx','GraphDetailV2Page.tsx'])assert.match(read('src/pages/'+page),/GraphRenderer/);const gateway=read('src/graph-engine/GraphRenderer.tsx');assert.match(gateway,/GraphScene3D/);assert.match(gateway,/Canvas25DGraph/);assert.match(gateway,/renderer'\)===['"]webgl['"]/);assert.match(gateway,/if\(!webgl\)return.*\{canvas25d\}/s)});
 test('contextual deep links are retained by the Atlas route reader',()=>{
  const source=read('src/atlas-route.ts');
  assert.match(source,/readAtlasRoute/);assert.match(source,/routeFor/);

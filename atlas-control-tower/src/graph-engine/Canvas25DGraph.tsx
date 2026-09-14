@@ -7,6 +7,7 @@ type Props = {
   selectedId: string | null;
   onSelect: (id: string | null) => void;
   onOpenNode: (id: string) => void;
+  zoom?: number;
 };
 
 function usePrefersReducedMotion(): boolean {
@@ -67,7 +68,7 @@ function colorFor(type: string, palette: ThemePalette): string {
  * CAMPAIGN satellites on one ring. Respects prefers-reduced-motion by disabling the
  * parallax response entirely (static layout, not just a slower one).
  */
-export function Canvas25DGraph({ projection, selectedId, onSelect, onOpenNode }: Props) {
+export function Canvas25DGraph({ projection, selectedId, onSelect, onOpenNode, zoom = 1 }: Props) {
   const reducedMotion = usePrefersReducedMotion();
   const hostRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -121,6 +122,7 @@ export function Canvas25DGraph({ projection, selectedId, onSelect, onOpenNode }:
       ctx.clearRect(0, 0, width, height);
       ctx.save();
       ctx.translate(width / 2, height / 2);
+      ctx.scale(zoom, zoom);
 
       // Orbit ring (structural, not decorative -- shows where satellites live).
       ctx.strokeStyle = palette.grid;
@@ -171,7 +173,7 @@ export function Canvas25DGraph({ projection, selectedId, onSelect, onOpenNode }:
         ctx.textAlign = 'center';
         ctx.fillText(pos.label, pos.x, pos.y + r + 14);
 
-        hitboxes.push({ id: pos.id, x: pos.x + width / 2, y: pos.y + height / 2, radius: r });
+        hitboxes.push({ id: pos.id, x: pos.x * zoom + width / 2, y: pos.y * zoom + height / 2, radius: r * zoom });
       }
       hitboxesRef.current = hitboxes;
       ctx.restore();
@@ -215,7 +217,7 @@ export function Canvas25DGraph({ projection, selectedId, onSelect, onOpenNode }:
       window.removeEventListener('atlas:theme-change', onThemeChange);
       cancelAnimationFrame(frameRef.current);
     };
-  }, [projection, selectedId, onSelect, onOpenNode, reducedMotion]);
+  }, [projection, selectedId, onSelect, onOpenNode, reducedMotion, zoom]);
 
   return (
     <div ref={hostRef} className="canvas-25d-graph-host" style={{ width: '100%', height: '100%', position: 'relative' }}>

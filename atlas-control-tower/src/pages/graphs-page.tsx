@@ -3,9 +3,11 @@ import {AtlasContextBar} from '../components/AtlasContextBar';
 import {GraphRenderer} from '../graph-engine/GraphRenderer';
 import {SpatialInspector} from '../graph-engine/SpatialInspector';
 import {AccessibleGraphTable} from '../graph-engine/AccessibleGraphTable';
+import {GraphHeader} from '../components/shell/GraphHeader';
 import {buildLiveProjection} from '../graph-engine/live-projection';
 import {enforceGraphEntityContract} from '../graph-engine/graph-entity-contract';
 import {supportsWebGL2,resolveMapRenderMode} from '../graph-engine/webgl-support';
+import {clampZoom,zoomStep} from '../graph-engine/orbital-2_5d-layout';
 import type {GraphNode} from '../graph-engine/types';
 import type {AtlasNode} from '../scene/types';
 import type {AtlasActions,AtlasUiState} from '../state/useAtlasSession';
@@ -25,6 +27,8 @@ export function GraphsPage({state,actions,reducedMotion,compact}:{state:AtlasUiS
   const [immersive,setImmersive]=useState(false);
   const [webgl2Supported]=useState(()=>supportsWebGL2());
   const [contextLost,setContextLost]=useState(false);
+  const [zoom,setZoom]=useState(1);
+  const stageRef=useRef<HTMLDivElement>(null);
   useEffect(()=>{
     // Capture phase catches webglcontextlost/restored even though the event does not
     // reliably bubble -- once lost without a restore, the accessible table takes over
@@ -111,10 +115,12 @@ export function GraphsPage({state,actions,reducedMotion,compact}:{state:AtlasUiS
         </div>
       </div>
 
-      <div className="graph-stage spatial-stage">
+      <GraphHeader onReset={()=>void actions.home()} zoom={zoom} onZoomIn={()=>setZoom(current=>zoomStep(current,1))} onZoomOut={()=>setZoom(current=>zoomStep(current,-1))} fullscreenTargetRef={stageRef}/>
+
+      <div className="graph-stage spatial-stage" ref={stageRef}>
         {!projection?<div className="graph-empty-state"><span aria-hidden="true">∅</span><p>{state.loading?'Lendo mapa de conhecimento…':'Grafo indisponível neste momento.'}</p><small>{state.error||'Nenhum recorte válido foi publicado.'}</small></div>
           :renderMode==='table'?<AccessibleGraphTable projection={projection} selectedId={state.selectedId} onSelect={select}/>
-          :<GraphRenderer projection={projection} learning={false} selectedId={state.selectedId} onSelect={select} onOpenNode={open}/>}
+          :<GraphRenderer projection={projection} learning={false} selectedId={state.selectedId} onSelect={select} onOpenNode={open} zoom={zoom}/>}
         <SpatialInspector state={state} actions={actions} projection={projection} onOpen={open}/>
         <div className="spatial-navigation-hud" aria-label="Controles de navegação">
           <button onClick={()=>void actions.back()} disabled={!canBack} title="Voltar · Alt+←" aria-label="Voltar">←</button>

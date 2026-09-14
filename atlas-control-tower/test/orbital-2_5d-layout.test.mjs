@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { layoutRing, buildSceneLayout, applyParallax, hitTest, nodeRadius } from '../src/graph-engine/orbital-2_5d-layout.ts';
+import { layoutRing, buildSceneLayout, applyParallax, hitTest, nodeRadius, clampZoom, zoomStep, MIN_ZOOM, MAX_ZOOM } from '../src/graph-engine/orbital-2_5d-layout.ts';
 
 test('layoutRing places nodes evenly around the center and is deterministic', () => {
   const first = layoutRing(['a', 'b', 'c', 'd'], 100);
@@ -67,4 +67,17 @@ test('nodeRadius: center > domain > campaign, and selection adds a fixed increme
   assert.ok(center > domain);
   assert.ok(domain > campaign);
   assert.equal(nodeRadius('campaign', true) - nodeRadius('campaign', false), 4);
+});
+
+test('clampZoom keeps values within [MIN_ZOOM, MAX_ZOOM] and passes valid values through', () => {
+  assert.equal(clampZoom(0.1), MIN_ZOOM);
+  assert.equal(clampZoom(10), MAX_ZOOM);
+  assert.equal(clampZoom(1), 1);
+});
+
+test('zoomStep moves by the given step and stays clamped at the bounds', () => {
+  assert.equal(zoomStep(1, 1), 1.25);
+  assert.equal(zoomStep(1, -1), 0.75);
+  assert.equal(zoomStep(MAX_ZOOM, 1), MAX_ZOOM);
+  assert.equal(zoomStep(MIN_ZOOM, -1), MIN_ZOOM);
 });

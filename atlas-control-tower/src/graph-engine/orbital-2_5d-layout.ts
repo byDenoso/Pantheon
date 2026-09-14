@@ -69,3 +69,16 @@ export function nodeRadius(kind: 'center' | 'domain' | 'campaign', selected: boo
   const base = kind === 'center' ? 34 : kind === 'domain' ? 22 : 15;
   return base + (selected ? 4 : 0);
 }
+
+export const MIN_ZOOM = 0.5;
+export const MAX_ZOOM = 2.5;
+
+/** Clamps a zoom level to the supported range. Pure so the +/- buttons and any future
+ * wheel/pinch handler share exactly one bound, never drifting out of sync. */
+export function clampZoom(value: number): number {
+  return Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, value));
+}
+
+export function zoomStep(current: number, direction: 1 | -1, step = 0.25): number {
+  return clampZoom(current + direction * step);
+}

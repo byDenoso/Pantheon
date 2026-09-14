@@ -1,5 +1,5 @@
 .spatial-knowledge-page{height:100%;min-height:0;padding:0!important;overflow:hidden;background:var(--graph-background)}
-.spatial-workspace{height:100%;min-height:0;display:grid;grid-template-rows:auto auto minmax(0,1fr) auto;position:relative;background:var(--graph-background)}
+.spatial-workspace{height:100%;min-height:0;display:grid;grid-template-rows:auto auto auto minmax(0,1fr) auto;position:relative;background:var(--graph-background)}
 
 .atlas-context-bar-slot{min-width:0;z-index:var(--z-hud)}
 .atlas-context-bar{min-height:34px;display:flex;align-items:center;justify-content:space-between;gap:14px;padding:5px 14px;border-bottom:1px solid color-mix(in srgb,var(--border-default) 75%,transparent);background:color-mix(in srgb,var(--surface-overlay) 92%,transparent);backdrop-filter:blur(16px);color:var(--text-tertiary);font-size:10px}
@@ -30,7 +30,7 @@
 .spatial-selection-actions{margin-left:auto;display:flex;align-items:center;gap:5px}.spatial-selection-actions>span{max-width:180px;overflow:hidden;text-overflow:ellipsis}.spatial-selection-actions button,.spatial-context-strip>#more{border:1px solid var(--border-default);border-radius:7px;background:var(--surface-elevated);color:var(--text-secondary);padding:5px 8px;font-size:10px}.spatial-selection-actions button.active{border-color:var(--accent-primary);color:var(--accent-primary)}
 .spatial-selection-empty{margin-left:auto}.spatial-stale-state{position:absolute!important;z-index:calc(var(--z-hud) + 1);left:12px;bottom:14px;max-width:min(440px,70vw)}
 
-.spatial-inspector{position:absolute;z-index:var(--z-inspector);right:14px;top:14px;width:min(410px,calc(100% - 28px));max-height:calc(100% - 28px);display:flex;flex-direction:column;border:1px solid color-mix(in srgb,var(--border-emphasis) 70%,var(--border-default));border-radius:var(--radius-panel);background:color-mix(in srgb,var(--surface-overlay) 96%,transparent);color:var(--text-primary);box-shadow:var(--shadow-overlay);backdrop-filter:blur(22px);overflow:hidden;transition:width var(--motion-panel) var(--ease-standard),max-height var(--motion-panel) var(--ease-standard),transform var(--motion-panel) var(--ease-standard)}
+.spatial-inspector{position:absolute;z-index:var(--z-inspector);right:14px;top:14px;width:min(380px,30vw,calc(100% - 28px));max-height:calc(100% - 28px);display:flex;flex-direction:column;border:1px solid color-mix(in srgb,var(--border-emphasis) 70%,var(--border-default));border-radius:var(--radius-panel);background:color-mix(in srgb,var(--surface-overlay) 96%,transparent);color:var(--text-primary);box-shadow:var(--shadow-overlay);backdrop-filter:blur(22px);overflow:hidden;transition:width var(--motion-panel) var(--ease-standard),max-height var(--motion-panel) var(--ease-standard),transform var(--motion-panel) var(--ease-standard)}
 .spatial-inspector.is-deep{width:min(460px,calc(100% - 28px))}
 .spatial-sheet-handle{display:none;width:42px;height:4px;margin:8px auto 0;border-radius:var(--radius-pill);background:var(--border-emphasis)}
 .spatial-inspector-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;padding:14px 16px 11px;border-bottom:1px solid var(--border-default)}.spatial-inspector-head span{display:block;color:var(--text-tertiary);font-size:9px;letter-spacing:.11em}.spatial-inspector-head h3{margin:4px 0 0;font-size:16px;line-height:1.2}.spatial-inspector-head>button{border:0;background:transparent;color:var(--text-tertiary);font-size:18px}
@@ -59,3 +59,44 @@ body.graph-immersive .atlas-sidebar,body.graph-immersive .atlas-footer{display:n
   .spatial-compare{left:8px;right:8px;top:8px;width:auto}.spatial-compare>div{grid-template-columns:1fr 1fr}
 }
 @media(prefers-reduced-motion:reduce){.spatial-mode-switch button,.spatial-navigation-hud,.spatial-top-hud,.spatial-inspector{transition:none!important}}
+
+/* Graph header: title/description + reset/zoom/fullscreen/2D-3D controls. Sits above
+   the canvas, never inside it -- keeps the map's own chrome free of overlaid text. */
+.graph-header{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:10px 14px;border-bottom:1px solid var(--border-default);background:color-mix(in srgb,var(--surface-primary) 90%,transparent)}
+.graph-header-copy h2{margin:0;font-size:15px;color:var(--text-primary)}
+.graph-header-copy p{margin:2px 0 0;font-size:11px;color:var(--text-tertiary)}
+.graph-header-controls{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.graph-header-controls>button{min-height:34px;padding:0 10px;border:1px solid var(--border-default);border-radius:8px;background:var(--surface-elevated);color:var(--text-secondary);font:600 11px/1 "Recursive Variable",system-ui;cursor:pointer}
+.graph-header-controls>button:hover{background:var(--surface-hover);color:var(--text-primary)}
+.graph-zoom-controls{display:flex;align-items:center;gap:6px;padding:2px 6px;border:1px solid var(--border-default);border-radius:8px;background:var(--surface-elevated)}
+.graph-zoom-controls button{min-width:28px;min-height:28px;border:0;background:transparent;color:var(--text-secondary);font-size:14px;cursor:pointer}
+.graph-zoom-controls span{min-width:38px;text-align:center;font-size:10px;color:var(--text-tertiary)}
+.graph-mode-toggle{display:flex;border:1px solid var(--border-default);border-radius:8px;overflow:hidden}
+.graph-mode-toggle button{min-height:34px;padding:0 12px;border:0;background:var(--surface-elevated);color:var(--text-secondary);font:700 10px/1 ui-monospace,monospace;cursor:pointer}
+.graph-mode-toggle button.active{background:color-mix(in srgb,var(--accent-primary) 16%,var(--surface-elevated));color:var(--accent-primary)}
+@media(max-width:640px){.graph-header{padding:8px 10px}.graph-header-copy p{display:none}.graph-header-controls>button,.graph-zoom-controls button,.graph-mode-toggle button{min-height:40px}}
+
+/* Bottom activity drawer: 48-56px closed handle, 260-400px expanded body. */
+/* Fixed to the viewport, not sticky-in-flow: a sticky drawer whose expanded body adds
+   real document height pushes the WHOLE app taller, forcing the sticky header back
+   into view mid-page on scroll (reproduced live). Fixed avoids ever affecting layout
+   height regardless of graph/inspector content size. */
+.activity-drawer{position:fixed;bottom:0;left:0;right:0;z-index:var(--z-hud);border-top:1px solid var(--border-default);background:color-mix(in srgb,var(--surface-primary) 96%,transparent);backdrop-filter:blur(16px)}
+@media(min-width:881px){.activity-drawer{left:var(--atlas-sidebar-width,214px)}}
+.activity-drawer-handle{display:flex;align-items:center;gap:8px;width:100%;min-height:52px;padding:0 16px;border:0;background:transparent;color:var(--text-secondary);font:700 11px/1 "Recursive Variable",system-ui;letter-spacing:.04em;cursor:pointer}
+.activity-drawer-handle:hover{color:var(--text-primary)}
+.activity-drawer-body{max-height:400px;min-height:260px;display:flex;flex-direction:column;border-top:1px solid var(--border-default)}
+.activity-drawer-tabs{display:flex;gap:4px;padding:8px 12px;border-bottom:1px solid var(--border-default);overflow-x:auto}
+.activity-drawer-tabs button{min-height:34px;padding:0 12px;border:1px solid transparent;border-radius:8px;background:transparent;color:var(--text-tertiary);font:600 11px/1 "Recursive Variable",system-ui;white-space:nowrap;cursor:pointer}
+.activity-drawer-tabs button.active{border-color:var(--border-default);background:var(--surface-elevated);color:var(--text-primary)}
+.activity-drawer-panel{flex:1;min-height:0;overflow:auto;padding:14px 16px}
+.drawer-empty{display:flex;flex-direction:column;align-items:center;gap:6px;padding:24px 0;color:var(--text-tertiary);text-align:center}
+.drawer-empty span[aria-hidden]{font-size:22px}
+.drawer-empty p{margin:0;font:700 11px ui-monospace,monospace;color:var(--text-secondary)}
+.drawer-empty small{max-width:360px}
+.activity-drawer-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+.activity-drawer-list li{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px 10px;border:1px solid var(--border-default);border-radius:8px;background:var(--surface-elevated)}
+.activity-drawer-list a{color:var(--accent-primary);font-size:12px;text-decoration:none}
+.activity-drawer-list a:hover{text-decoration:underline}
+.activity-drawer-list small{color:var(--text-tertiary);font:700 9px ui-monospace,monospace}
+@media(max-width:640px){.activity-drawer-body{max-height:70dvh}.activity-drawer-handle{min-height:48px}}

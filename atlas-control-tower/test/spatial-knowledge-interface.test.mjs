@@ -45,9 +45,14 @@ test('live graph projection carries context-shell and relation-horizon roles', (
 test('GraphRenderer is Canvas-first and keeps WebGL as explicit opt-in', () => {
   // Canvas-primary swapped from GraphExplorer (Pixi) to Canvas25DGraph (plain
   // Canvas2D) per an explicit user request; WebGL opt-in path is unaffected.
+  // Canvas25DGraph is built once into a `canvas25d` element and reused across the
+  // non-webgl/fallback/loading branches (so the zoom prop only has to be wired in one
+  // place) -- assert the shared element exists and that the !webgl branch renders it,
+  // rather than requiring the literal JSX tag to sit textually after "if(!webgl)".
   const source = read('src/graph-engine/GraphRenderer.tsx');
   assert.match(source, /renderer'\)===['"]webgl['"]/);
-  assert.match(source, /if\(!webgl\).*Canvas25DGraph/s);
+  assert.match(source, /const canvas25d=<Canvas25DGraph/);
+  assert.match(source, /if\(!webgl\)return.*\{canvas25d\}/s);
   assert.match(source, /GraphScene3D/);
 });
 
