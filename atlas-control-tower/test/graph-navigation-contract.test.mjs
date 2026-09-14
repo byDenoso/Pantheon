@@ -21,11 +21,12 @@ test('graph navigation derives expandability from real hierarchical children or 
  assert.deepEqual(nav.get('program:LEAF'),{childCount:0,expandable:false});
 });
 
-test('Canvas and inspector refuse to enter a structural leaf',()=>{
- const canvas=read('src/graph-engine/Canvas25DGraph.tsx');
+test('renderer boundary and inspector refuse to enter a structural leaf',()=>{
+ const renderer=read('src/graph-engine/GraphRenderer.tsx');
  const inspector=read('src/graph-engine/SpatialInspector.tsx');
- assert.match(canvas,/expandable\s*===\s*true|\.expandable/);
- assert.doesNotMatch(canvas,/!isTerminalType\(String\(node\.type/);
- assert.match(inspector,/selected\.expandable\s*===\s*true|selected\.expandable/);
- assert.doesNotMatch(inspector,/selected\.id!==projection\?\.focusId&&<button className="primary" onClick=\{\(\)=>onOpen\(selected\.id\)\}/);
+ assert.match(renderer,/state\?\.expandable/);
+ assert.match(renderer,/else props\.onSelect\(id\)/);
+ assert.match(inspector,/selected\.expandable===true/);
+ assert.match(inspector,/selectedCanOpen&&<button className="primary"/);
+ assert.doesNotMatch(inspector,/selected\.id!==projection\?\.focusId&&<button className="primary"/);
 });
