@@ -7,13 +7,14 @@ import path from 'node:path';
 const root=new URL('../',import.meta.url);
 const read=p=>fs.readFileSync(new URL(p,root),'utf8');
 
-test('GitHub manifest authorizes a Drive-backed science campaign projection, never a network database',()=>{
+test('Tower manifest authorizes a legacy Drive science campaign projection, never a network database',()=>{
  const authority=JSON.parse(read('../nexo-one/data/canonical.json'));
- assert.equal(authority.authority,'GITHUB');
- assert.equal(authority.scienceProjection?.kind,'GOOGLE_DRIVE');
+ assert.equal(authority.authority,'TOWER_V06');
+ assert.equal(authority.truthOwner,'byDenoso/NEXO-Obsidian-Vault@main:TOWER_V06');
+ assert.equal(authority.scienceProjection?.kind,'LEGACY_GOOGLE_DRIVE_SNAPSHOT');
  assert.equal(authority.scienceProjection?.schema,'nexo-science-drive-github-v1');
  assert.equal(authority.scienceProjection?.transportPath,'atlas-control-tower/data/science-drive-projection.json');
- assert.equal(authority.scienceProjection?.role,'PROJECTION_ONLY');
+ assert.equal(authority.scienceProjection?.role,'READ_ONLY_PROJECTION');
  assert.doesNotMatch(JSON.stringify(authority.scienceProjection),/DATA_API|OIDC/i);
 });
 

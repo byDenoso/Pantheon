@@ -8,15 +8,15 @@ const githubRuntime = read('../api/runtime-github.js');
 const drive = read('../lib/drive-ssot.mjs');
 const inspector = read('../ui/inspector.mjs');
 
-test('runtime compatibility delegates to GitHub authority with explicit stale projection fallback', () => {
+test('runtime compatibility delegates to Tower authority with explicit stale projection fallback', () => {
   assert.match(orphanRuntime, /runtime-github\.js/);
   assert.match(githubRuntime, /loadGithubCanonical/);
   assert.match(githubRuntime, /syncGithubCanonical/);
   assert.match(githubRuntime, /projectGithubCanonical/);
   assert.match(githubRuntime, /driveRoute/);
   assert.match(githubRuntime, /X-Atlas-Authority/);
-  assert.match(githubRuntime, /GITHUB/);
-  assert.match(githubRuntime, /GITHUB_CANONICAL_UNAVAILABLE/);
+  assert.match(githubRuntime, /TOWER_V06/);
+  assert.match(githubRuntime, /TOWER_PROJECTION_UNAVAILABLE/);
   assert.match(githubRuntime, /freshness:'STALE'/);
   assert.match(githubRuntime, /METHOD_NOT_ALLOWED/);
 });

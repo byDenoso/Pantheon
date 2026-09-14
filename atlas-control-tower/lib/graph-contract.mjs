@@ -1,8 +1,8 @@
 /** Graph Contract V1 — the presentation layer knows the contract, never the physical store. */
 export const CONTRACT_VERSION = 'v1';
 
-/** Where a payload came from. Drive is the canonical Atlas projection source. */
-export const SOURCES = Object.freeze({LEGACY:'legacy', V1:'v1', DRIVE:'drive'});
+/** TOWER_V06 is an authority source; Drive remains a compatibility projection transport. */
+export const SOURCES = Object.freeze({LEGACY:'legacy', V1:'v1', DRIVE:'drive', TOWER:'tower'});
 export const FRESHNESS = Object.freeze({LIVE:'LIVE', STAGING:'STAGING', SNAPSHOT:'SNAPSHOT', STALE:'STALE', FALLBACK:'FALLBACK'});
 export const CACHE_STATES = Object.freeze(['HIT', 'MISS', 'STALE', 'REVALIDATED']);
 
@@ -48,7 +48,7 @@ export function cacheKey({fingerprint='',focus='',depth=1,filters={},source=SOUR
 }
 
 export function provenanceLabel({source,freshness}={}){
- const base=source===SOURCES.DRIVE?'DRIVE · PROJEÇÃO CANÔNICA':source===SOURCES.V1?'PROJEÇÃO CANÔNICA':'SNAPSHOT LEGADO';
+ const base=source===SOURCES.TOWER?'TOWER_V06 · PROJEÇÃO READ-ONLY':source===SOURCES.DRIVE?'DRIVE · SNAPSHOT LEGADO':source===SOURCES.V1?'PROJEÇÃO CANÔNICA':'SNAPSHOT LEGADO';
  if(freshness===FRESHNESS.FALLBACK)return 'FALLBACK · '+base;
  if(freshness===FRESHNESS.STALE)return 'STALE · '+base;
  if(freshness===FRESHNESS.STAGING)return 'STAGING · '+base;
