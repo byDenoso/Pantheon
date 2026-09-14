@@ -6,6 +6,7 @@ import {buildPublicManifest} from './public-surface-manifest.mjs';
 
 const CONTRACT='nexo-static-runtime-v1';
 const clean=value=>value==null?'':String(value).trim();
+const upper=value=>clean(value).toUpperCase();
 const arr=value=>Array.isArray(value)?value:[];
 const sha256=value=>createHash('sha256').update(value).digest('hex');
 const json=value=>JSON.stringify(value,null,2)+'\n';
@@ -24,7 +25,7 @@ const campaignNode=item=>({id:item.id,type:'CAMPAIGN',domain:item.domain||'',lab
 const programNode=(item,index)=>({id:item.id,type:'PROGRAM',domain:item.domain||'',label:item.label||item.title||item.id,status:item.status||'',summary:item.summary||'',authority:'GITHUB',metadata:{childCount:arr(index.campaigns).filter(campaign=>campaign.primaryProgram===item.id).length}});
 
 function domainArtifact(index,code){
- const campaigns=arr(index.campaigns).filter(item=>item.domain===code).map(item=>({...item,label:item.label||item.title||item.id,testCount:campaignTestCount(item)}));
+ const campaigns=arr(index.campaigns).filter(item=>upper(item.domain)===code).map(item=>({...item,label:item.label||item.title||item.id,testCount:campaignTestCount(item)}));
  return {
   contractVersion:index.contractVersion,
   schemaVersion:index.schemaVersion,
@@ -45,7 +46,7 @@ function domainArtifact(index,code){
 }
 
 function compatibilityDomainGraph(index,code){
- const campaigns=arr(index.campaigns).filter(item=>item.domain===code).map(campaignNode);
+ const campaigns=arr(index.campaigns).filter(item=>upper(item.domain)===code).map(campaignNode);
  const root={id:`domain:${code}`,type:'DOMAIN',domain:code,label:code,status:'ACTIVE',summary:`Vista derivada de campanhas que declaram domínio ${code}.`,authority:'GITHUB',metadata:{derived:true,derivationRule:'campaign.domain',childCount:campaigns.length}};
  return {
   contractVersion:index.contractVersion,
@@ -69,7 +70,7 @@ function compatibilityDomainGraph(index,code){
 
 function sanitizeDomainGraph(file,index,code){
  const body=read(file);
- const allowed=new Set([`domain:${code}`,...arr(index.campaigns).filter(item=>item.domain===code).map(item=>item.id)]);
+ const allowed=new Set([`domain:${code}`,...arr(index.campaigns).filter(item=>upper(item.domain)===code).map(item=>item.id)]);
  body.nodes=arr(body.nodes).filter(node=>allowed.has(node.id)&&(node.type==='DOMAIN'||node.type==='CAMPAIGN')).map(node=>node.type==='CAMPAIGN'?campaignNode(arr(index.campaigns).find(item=>item.id===node.id)||node):node);
  body.edges=arr(body.edges).filter(edge=>allowed.has(edge.source)&&allowed.has(edge.target));
  body.total=body.nodes.length;
