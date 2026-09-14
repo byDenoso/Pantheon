@@ -80,8 +80,9 @@ export function createStaticArtifactApi({baseUrl='/data',fetchImpl=globalThis.fe
     const index=await entityIndex();
     const entity=index.entities?.[rawId];
     if(!entity)return graph(focus,[],[],{issues:[{level:'WARN',type:'FOCUS_NOT_IN_STATIC_INDEX',focus}]});
-    const root={id:focus,type:entity.type||'ENTITY',label:entity.label||rawId,status:entity.status||'',summary:entity.summary||'',authority:'GITHUB'};
-    const children=Object.entries(index.entities).filter(([,item])=>item.parentId===rawId).map(([id,item])=>({id,type:item.type||'ENTITY',label:item.label||id,status:item.status||'',summary:item.summary||'',authority:'GITHUB'}));
+    const childEntries=Object.entries(index.entities).filter(([,item])=>item.parentId===rawId);
+    const root={id:focus,type:entity.type||'ENTITY',label:entity.label||rawId,status:entity.status||'',summary:entity.summary||'',authority:'GITHUB',metadata:{childCount:childEntries.length}};
+    const children=childEntries.map(([id,item])=>({id,type:item.type||'ENTITY',label:item.label||id,status:item.status||'',summary:item.summary||'',authority:'GITHUB',metadata:{childCount:Object.values(index.entities).filter(candidate=>candidate.parentId===id).length}}));
     return graph(focus,[root,...children],children.map(node=>({id:`contains:${focus}:${node.id}`,source:focus,target:node.id,type:'CONTAINS',declared:true})),{depth:2});
   }
 
@@ -93,7 +94,7 @@ export function createStaticArtifactApi({baseUrl='/data',fetchImpl=globalThis.fe
     if(campaign.domain)raw=await artifact(`science/${campaign.domain}.json`);
     else raw=await artifact('science/CROSS.json').catch(()=>null);
     const tests=arr(raw?.tests).filter(test=>test.primaryCampaign===id);
-    const root={id,type:'CAMPAIGN',label:campaign.label||id,status:campaign.status||'',summary:campaign.summary||'',domain:campaign.domain||'',authority:'GITHUB'};
+    const root={id,type:'CAMPAIGN',label:campaign.label||id,status:campaign.status||'',summary:campaign.summary||'',domain:campaign.domain||'',authority:'GITHUB',metadata:{childCount:0}};
     const nodes=[root],edges=[];
     for(const test of tests){
       const t=testNode(test,campaign.domain),r=resultNode(test,campaign.domain);nodes.push(t,r);
@@ -126,6 +127,8 @@ export function createStaticArtifactApi({baseUrl='/data',fetchImpl=globalThis.fe
     if(/^domain:D\d+$/i.test(focus))return artifact(`graph/science/${focus.slice(7).toUpperCase()}.json`);
     if(/^T-/i.test(focus)||/^result:T-/i.test(focus)||/^CAMP-/i.test(focus))return focusedScienceGraph(focus);
     if(/^domain:/.test(focus))return genericHierarchy(focus);
+    const indexed=(await entityIndex()).entities?.[focus];
+    if(upper(indexed?.type)==='PROGRAM')return genericHierarchy(focus);
     return graph(focus,[],[],{issues:[{level:'WARN',type:'FOCUS_NOT_IN_STATIC_RUNTIME',focus}]});
   }
 
