@@ -73,6 +73,23 @@ export type WeightedH0Estimate = {
   provenance: Provenance[];
 };
 
+export type H0StackMeasurement = {
+  id: string;
+  stackLabel: string;
+  domain?: string;
+  primaryCampaign?: string;
+  h0: number;
+  uncertaintyLow?: number;
+  uncertaintyHigh?: number;
+  uncertaintyLevel?: string;
+  datasets: string[];
+  baselineId?: string;
+  deltaH0?: number;
+  status?: string;
+  updatedAt?: string;
+  sourceRef?: string;
+};
+
 export type TensionGroup = {
   id: string;
   label: string;
@@ -122,6 +139,7 @@ export type ScientificSummary = {
 
 export type ObservatoryData = {
   h0: WeightedH0Estimate | null;
+  h0Stacks: H0StackMeasurement[];
   tensions: TensionResult[];
   directionalSignals: DirectionalSignal[];
   parameters: ParameterEstimate[];
@@ -157,14 +175,19 @@ export type Test = ResearchRecord;
 export type Run = ResearchRecord;
 export type Result = ResearchRecord;
 export type Evidence = ResearchRecord;
+export type Decision = ResearchRecord;
+export type Knowledge = ResearchRecord;
 export type Pipeline = ResearchRecord;
 
 export type LabData = {
+  hypotheses: Hypothesis[];
   claims: Claim[];
   tests: Test[];
   runs: Run[];
   results: Result[];
   evidence: Evidence[];
+  decisions: Decision[];
+  knowledge: Knowledge[];
   pipelines: Pipeline[];
 };
 
@@ -229,6 +252,7 @@ export type StatePayload = {
   tensions?: unknown;
   directionalSignals?: unknown;
   weightedH0?: unknown;
+  h0Stacks?: unknown;
   observatory?: unknown;
   snapshot?: unknown;
   synthesis?: unknown;
