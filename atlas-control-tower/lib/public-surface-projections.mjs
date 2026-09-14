@@ -6,6 +6,18 @@ const upper=v=>text(v).toUpperCase();
 const splitDomains=v=>Array.isArray(v)?v.map(text).filter(Boolean):text(v).split('|').map(text).filter(Boolean);
 const provenance=(sourceRef,sourceVersion)=>[{source:'GOOGLE_DRIVE',sourceRef:text(sourceRef)||undefined,observedAt:text(sourceVersion)||undefined}].filter(x=>x.sourceRef||x.observedAt);
 const ready=(name,payload)=>({descriptor:{state:'READY',contract:payload.contract,path:`surfaces/${name}/index.json`},payload});
+const campaignTestCount=row=>{
+ const direct=Number(row?.testCount);
+ if(Number.isFinite(direct))return direct;
+ const match=text(row?.summary||row?.question).match(/\b(\d+)\s+test_ids?\b/i);
+ return match?Number(match[1]):null;
+};
+const campaignQuestion=row=>{
+ const summary=text(row?.question||row?.summary);
+ const match=summary.match(/(?:^|\s)Pergunta:\s*(.*?)(?:\s+Mecanismo:|$)/i);
+ return text(match?.[1]||summary);
+};
+const campaignLabel=row=>text(row?.label||row?.title||row?.id);
 
 function publicTest(test,domain,sourceVersion){
  return {
@@ -36,11 +48,45 @@ function laboratorySurface(scienceShards,sourceVersion){
  const items=[...tests,...results];
  return {contract:'NEXO_ATLAS_LABORATORY_V1',state:'READY',sourceVersion,provenance:provenance('PEER_CONTROL_TOWER_CANONICAL/Test Registry',sourceVersion),items};
 }
+function canonicalDomainQuestions(scienceIndex,sourceVersion){
+ const explicit=arr(scienceIndex?.domains);
+ if(explicit.length)return explicit.map(row=>({
+  id:text(row.id||`domain:${row.code}`),code:text(row.code),label:text(row.label||row.code),question:text(row.question)||undefined,status:text(row.scientificState||row.status)||undefined,
+  campaigns:arr(scienceIndex?.campaigns).filter(campaign=>upper(campaign.domain)===upper(row.code)).map(campaign=>({id:text(campaign.id),label:campaignLabel(campaign),status:text(campaign.status)||undefined,testCount:campaignTestCount(campaign)})),
+  testCountKnown:arr(scienceIndex?.campaigns).filter(campaign=>upper(campaign.domain)===upper(row.code)).every(campaign=>campaignTestCount(campaign)!==null),
+  testCount:arr(scienceIndex?.campaigns).filter(campaign=>upper(campaign.domain)===upper(row.code)).reduce((sum,campaign)=>sum+(campaignTestCount(campaign)||0),0),
+  availability:text(row.question)?'QUESTION_PUBLISHED':'DATA_UNAVAILABLE',
+  unavailableReason:text(row.question)?'A fonte publica a pergunta e o recorte de campanhas, mas ainda não publica uma síntese quantitativa para este domínio.':'A fonte ainda não publicou uma pergunta semântica para este domínio.',
+  synthesis:null,
+  provenance:provenance('PEER_CONTROL_TOWER_CANONICAL/Scientific Domains',sourceVersion)
+ }));
+ const grouped=new Map();
+ for(const campaign of arr(scienceIndex?.campaigns)){
+  const code=upper(campaign.domain);
+  if(!/^D\d+$/.test(code))continue;
+  const group=grouped.get(code)||[];group.push(campaign);grouped.set(code,group);
+ }
+ return [...grouped.entries()].sort((a,b)=>Number(a[0].slice(1))-Number(b[0].slice(1))).map(([code,campaigns])=>{
+  const first=campaigns[0];
+  const counts=campaigns.map(campaignTestCount);
+  const testCountKnown=counts.every(value=>value!==null);
+  const question=campaignQuestion(first);
+  return {
+   id:`domain:${code}`,code,label:campaigns.length===1?campaignLabel(first):code,question:question||undefined,status:text(first?.status)||undefined,
+   campaigns:campaigns.map(campaign=>({id:text(campaign.id),label:campaignLabel(campaign),status:text(campaign.status)||undefined,testCount:campaignTestCount(campaign)})),
+   testCountKnown,testCount:counts.reduce((sum,value)=>sum+(value||0),0),counts:{campaigns:campaigns.length,tests:testCountKnown?counts.reduce((sum,value)=>sum+(value||0),0):null},
+   synthesis:null,availability:question?'QUESTION_PUBLISHED':'DATA_UNAVAILABLE',
+   unavailableReason:question?'A fonte publica a pergunta e o recorte de campanhas, mas ainda não publica uma síntese quantitativa para este domínio.':'A fonte ainda não publicou uma pergunta semântica para este domínio.',
+   nextAction:campaigns.length?'Abrir as campanhas para revisar testes, evidências e relações publicadas.':'Aguardar a publicação de uma campanha vinculada a este domínio.',
+   provenance:provenance('DENER · SSOT CANONICAL / Science',sourceVersion)
+  };
+ });
+}
 function observatorySurface(scienceIndex,scienceShards,sourceVersion){
- const questions=arr(scienceIndex?.domains).map(row=>({id:text(row.id||`domain:${row.code}`),code:text(row.code),label:text(row.label||row.code),question:text(row.question)||undefined,status:text(row.scientificState||row.status)||undefined,provenance:provenance('PEER_CONTROL_TOWER_CANONICAL/Scientific Domains',sourceVersion)}));
- const campaigns=arr(scienceIndex?.campaigns).map(row=>({id:text(row.id),label:text(row.label||row.id),domain:text(row.domain)||undefined,question:text(row.question)||undefined,status:text(row.status)||undefined,testCount:Number.isFinite(Number(row.testCount))?Number(row.testCount):undefined,provenance:provenance('PEER_CONTROL_TOWER_CANONICAL/SCIENTIFIC_CAMPAIGNS',sourceVersion)}));
+ const questions=canonicalDomainQuestions(scienceIndex,sourceVersion);
+ const campaigns=arr(scienceIndex?.campaigns).map(row=>({id:text(row.id),label:campaignLabel(row),domain:text(row.domain)||undefined,question:campaignQuestion(row)||undefined,status:text(row.status)||undefined,testCount:campaignTestCount(row)??undefined,provenance:provenance('DENER · SSOT CANONICAL / Science',sourceVersion)}));
  const h0=buildH0StackProjection(rawScienceTests(scienceShards));
- return {contract:'NEXO_ATLAS_OBSERVATORY_V1',state:'READY',sourceVersion,provenance:provenance('PEER_CONTROL_TOWER_CANONICAL',sourceVersion),questions,campaigns,h0Stacks:h0.measurements,h0Rejected:h0.rejected,aggregate:null};
+ return {contract:'NEXO_ATLAS_OBSERVATORY_V1',state:'READY',sourceVersion,provenance:provenance('DENER · SSOT CANONICAL / Science',sourceVersion),questions,campaigns,h0Stacks:h0.measurements,h0Rejected:h0.rejected,aggregate:null};
 }
 function learningSurface(drive,sourceVersion){
  const map=row=>({id:text(row.id),label:text(row.title||row.id),status:text(row.status)||undefined,domains:splitDomains(row.domains),summary:text(row.summary)||undefined,rule:text(row.rule)||undefined,support:Number.isFinite(Number(row.support))?Number(row.support):undefined,contradict:Number.isFinite(Number(row.contradict))?Number(row.contradict):undefined,confidence:Number.isFinite(Number(row.confidence))?Number(row.confidence):undefined,scope:text(row.scope)||undefined,provenance:provenance(row.provenance||'NEXO Learning',sourceVersion)});
@@ -62,8 +108,9 @@ function auditSurface(drive,sourceVersion){
 }
 function searchSurface(scienceIndex,lab,observatory,learning,operations,sourceVersion){
  const items=[];
- for(const row of arr(scienceIndex?.domains))items.push({id:text(row.id||`domain:${row.code}`),label:text(row.label||row.code),type:'DOMAIN',domain:text(row.code)||undefined,status:text(row.scientificState||row.status)||undefined,route:'/mapa'});
- for(const row of arr(scienceIndex?.campaigns))items.push({id:text(row.id),label:text(row.label||row.id),type:'CAMPAIGN',domain:text(row.domain)||undefined,status:text(row.status)||undefined,route:'/mapa'});
+ for(const row of arr(scienceIndex?.programs))items.push({id:text(row.id),label:campaignLabel(row),type:'PROGRAM',domain:text(row.domain)||undefined,status:text(row.status)||undefined,route:'/mapa'});
+ for(const row of canonicalDomainQuestions(scienceIndex,sourceVersion))items.push({id:text(row.id),label:text(row.label||row.code),type:'DOMAIN',domain:text(row.code)||undefined,status:text(row.status)||undefined,route:'/mapa'});
+ for(const row of arr(scienceIndex?.campaigns))items.push({id:text(row.id),label:campaignLabel(row),type:'CAMPAIGN',domain:text(row.domain)||undefined,status:text(row.status)||undefined,route:'/mapa'});
  for(const row of arr(lab.items))items.push({id:row.id,label:row.label,type:row.type,domain:row.domain,status:row.status,route:'/laboratorio'});
  for(const row of arr(observatory.h0Stacks))items.push({id:`h0:${row.id}`,label:row.stackLabel,type:'H0_MEASUREMENT',domain:row.domain,status:row.status,route:'/observatorio'});
  for(const row of arr(learning.items))items.push({id:row.id,label:row.label,type:'LEARNING',status:row.status,route:'/learning'});
