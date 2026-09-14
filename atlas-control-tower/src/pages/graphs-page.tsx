@@ -4,6 +4,8 @@ import {GraphRenderer} from '../graph-engine/GraphRenderer';
 import {SpatialInspector} from '../graph-engine/SpatialInspector';
 import {AccessibleGraphTable} from '../graph-engine/AccessibleGraphTable';
 import {GraphHeader} from '../components/shell/GraphHeader';
+import {MapFilters} from '../components/shell/MapFilters';
+import {applyMapFilters,distinctAuthorityValues,distinctFieldValues,type MapFilters as MapFilterState} from '../graph-engine/graph-filters';
 import {buildLiveProjection} from '../graph-engine/live-projection';
 import {enforceGraphEntityContract} from '../graph-engine/graph-entity-contract';
 import {supportsWebGL2,resolveMapRenderMode} from '../graph-engine/webgl-support';
@@ -28,6 +30,7 @@ export function GraphsPage({state,actions,reducedMotion,compact}:{state:AtlasUiS
   const [webgl2Supported]=useState(()=>supportsWebGL2());
   const [contextLost,setContextLost]=useState(false);
   const [zoom,setZoom]=useState(1);
+  const [mapFilters,setMapFilters]=useState<MapFilterState>({});
   const stageRef=useRef<HTMLDivElement>(null);
   useEffect(()=>{
     // Capture phase catches webglcontextlost/restored even though the event does not
@@ -43,6 +46,7 @@ export function GraphsPage({state,actions,reducedMotion,compact}:{state:AtlasUiS
   const graph=state.graph;
   const total=Number(graph?.visualTotal??graph?.total??graph?.nodes.length??0);
   useEffect(()=>{document.body.dataset.mode='graphs';return()=>{delete document.body.dataset.mode}},[]);
+  useEffect(()=>{setMapFilters({})},[state.focusId]);
   useEffect(()=>{document.body.classList.toggle('graph-immersive',immersive);return()=>document.body.classList.remove('graph-immersive')},[immersive]);
   useEffect(()=>{actions.setSceneState({visibleLayers:mode==='evidence'?['evidence','provenance']:mode==='relations'?['hierarchy','relations','evidence']:['hierarchy','relations'],expandedRelations:mode==='relations'?['related','supports','contradicts','dependency']:[]})},[actions,mode]);
   void reducedMotion;void compact;
@@ -67,7 +71,14 @@ export function GraphsPage({state,actions,reducedMotion,compact}:{state:AtlasUiS
     }
     return projection;
   },[liveProjection]);
-  const projection=useMemo(()=>baseProjection?modeProjection(baseProjection,mode):null,[baseProjection,mode]);
+  const modeFilteredProjection=useMemo(()=>baseProjection?modeProjection(baseProjection,mode):null,[baseProjection,mode]);
+  const authorityById=useMemo(()=>new Map((graph?.nodes||[]).map(node=>[node.id,typeof node.authority==='string'?node.authority:undefined])),[graph]);
+  const domainOptions=useMemo(()=>baseProjection?distinctFieldValues(baseProjection.nodes,'domain'):[],[baseProjection]);
+  const statusOptions=useMemo(()=>baseProjection?distinctFieldValues(baseProjection.nodes,'status'):[],[baseProjection]);
+  const authorityOptions=useMemo(()=>distinctAuthorityValues(authorityById),[authorityById]);
+  const projection=useMemo(()=>modeFilteredProjection?applyMapFilters(modeFilteredProjection,mapFilters,authorityById):null,[modeFilteredProjection,mapFilters,authorityById]);
+  const filtersActive=Boolean(mapFilters.domain||mapFilters.status||mapFilters.authority);
+  const filteredToEmpty=filtersActive&&Boolean(projection)&&projection!.nodes.length<=1;
   const selected=graph?.nodes.find(node=>node.id===state.selectedId)||null;
   const canBack=state.navigationIndex>0;
   const canForward=state.navigationIndex<state.navigationStack.length-1;
@@ -117,8 +128,11 @@ export function GraphsPage({state,actions,reducedMotion,compact}:{state:AtlasUiS
 
       <GraphHeader onReset={()=>void actions.home()} zoom={zoom} onZoomIn={()=>setZoom(current=>zoomStep(current,1))} onZoomOut={()=>setZoom(current=>zoomStep(current,-1))} fullscreenTargetRef={stageRef}/>
 
+      <MapFilters filters={mapFilters} domainOptions={domainOptions} statusOptions={statusOptions} authorityOptions={authorityOptions} onChange={setMapFilters} onClear={()=>setMapFilters({})}/>
+
       <div className="graph-stage spatial-stage" ref={stageRef}>
         {!projection?<div className="graph-empty-state"><span aria-hidden="true">∅</span><p>{state.loading?'Lendo mapa de conhecimento…':'Grafo indisponível neste momento.'}</p><small>{state.error||'Nenhum recorte válido foi publicado.'}</small></div>
+          :filteredToEmpty?<div className="graph-empty-state"><span aria-hidden="true">∅</span><p>Nenhum nó corresponde aos filtros atuais.</p><small><button type="button" className="map-filter-clear" onClick={()=>setMapFilters({})}>Limpar filtros</button></small></div>
           :renderMode==='table'?<AccessibleGraphTable projection={projection} selectedId={state.selectedId} onSelect={select}/>
           :<GraphRenderer projection={projection} learning={false} selectedId={state.selectedId} onSelect={select} onOpenNode={open} zoom={zoom}/>}
         <SpatialInspector state={state} actions={actions} projection={projection} onOpen={open}/>

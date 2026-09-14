@@ -46,10 +46,16 @@ test('domain links become cross-domain filaments only where both domain bodies e
 });
 
 test('R3F filaments remain available as rollback until V2 equivalence is proven',()=>{
+ // materials.ts moved off TSL/WebGPU node materials (MeshBasicNodeMaterial + a
+ // time.mul shader pulse) after they crashed under the default WebGL2 backend in a
+ // real browser smoke test; the pulse is now a real per-frame material.opacity
+ // update instead, still genuinely animated, not decorative.
  const renderer=read('src/scene/InstancedFilaments.tsx');
  const materials=read('src/scene/materials.ts');
  assert.match(renderer,/<instancedMesh/);assert.match(renderer,/setMatrixAt/);assert.match(renderer,/setColorAt/);
- assert.doesNotMatch(renderer,/setInterval|setTimeout|quadraticCurveTo/);assert.match(materials,/time\.mul/);assert.match(materials,/MeshBasicNodeMaterial/);
+ assert.doesNotMatch(renderer,/setInterval|setTimeout|quadraticCurveTo/);
+ assert.match(renderer,/\.opacity\s*=.*Math\.sin/);
+ assert.match(materials,/MeshBasicMaterial/);
 });
 
 test('the graph renderer is route-scoped and Learning is not a workspace area',()=>{

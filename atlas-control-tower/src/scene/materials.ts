@@ -1,30 +1,23 @@
-import { AdditiveBlending } from 'three';
-import { MeshBasicNodeMaterial } from 'three/webgpu';
-import { vertexColor, time, float } from 'three/tsl';
+import { AdditiveBlending, MeshBasicMaterial } from 'three';
 
+// Plain MeshBasicMaterial (flat, unlit, vertex-colored) instead of a WebGPU/TSL Node
+// Material. The TSL node-material path (MeshBasicNodeMaterial from 'three/webgpu' +
+// vertexColor()/time from 'three/tsl') crashed at runtime under the WebGL2 backend
+// that is the contractual default renderer here (repeated "Cannot read properties of
+// undefined (reading 'replace')" from inside three's node system, confirmed via a
+// real browser smoke test -- not something WebGPU-opt-in users would ever hit, but a
+// hard crash for every default WebGL2 user, i.e. everyone). Node materials are built
+// for WebGPURenderer; their WebGL2 fallback path is not reliable enough here to keep
+// as the default. Plain materials keep the same flat/unlit/vertex-colored look the
+// design contract already calls for, and are universally supported by both backends.
 export function createNodeMaterial() {
-  const material = new MeshBasicNodeMaterial({ transparent:true, vertexColors:true });
-  material.colorNode = vertexColor();
-  material.opacity = 0.96;
-  material.depthWrite = true;
-  return material;
+  return new MeshBasicMaterial({ vertexColors: true, transparent: true, opacity: 0.96, depthWrite: true });
 }
 
 export function createNodeAuraMaterial() {
-  const material = new MeshBasicNodeMaterial({ transparent:true, vertexColors:true });
-  material.colorNode = vertexColor();
-  material.opacity = 0.16;
-  material.depthWrite = false;
-  material.depthTest = true;
-  material.blending = AdditiveBlending;
-  return material;
+  return new MeshBasicMaterial({ vertexColors: true, transparent: true, opacity: 0.16, depthWrite: false, depthTest: true, blending: AdditiveBlending });
 }
 
 export function createFilamentMaterial() {
-  const material = new MeshBasicNodeMaterial({ transparent:true, vertexColors:true });
-  const pulse = float(0.82).add(time.mul(1.35).sin().mul(0.18));
-  material.colorNode = vertexColor().mul(pulse);
-  material.opacity = 0.52;
-  material.depthWrite = false;
-  return material;
+  return new MeshBasicMaterial({ vertexColors: true, transparent: true, opacity: 0.52, depthWrite: false });
 }

@@ -1,6 +1,6 @@
 import { useLayoutEffect, useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
-import { Color, InstancedMesh, Matrix4, Object3D, Quaternion, Vector3 } from 'three';
+import { Color, InstancedMesh, Matrix4, type MeshBasicMaterial, Object3D, Quaternion, Vector3 } from 'three';
 import { createFilamentMaterial } from './materials';
 import type { AtlasEdge, PositionedNode } from './types';
 
@@ -33,7 +33,7 @@ export function InstancedFilaments({edges,nodes,positions:sharedPositions,focusI
     if(target.instanceColor)target.instanceColor.needsUpdate=true;
   },[edges,focusId,nodes,object,selectedId,sharedPositions]);
 
-  useFrame(()=>{
+  useFrame(({clock})=>{
     const target=mesh.current;if(!target)return;
     const positions=new Map(nodes.map(node=>[node.id,sharedPositions?.get(node.id)||new Vector3(...node.position)]));
     const valid=edges.filter(edge=>positions.has(edge.source)&&positions.has(edge.target));
@@ -47,6 +47,9 @@ export function InstancedFilaments({edges,nodes,positions:sharedPositions,focusI
       object.scale.set(active ? 0.032 : 0.014,length,active ? 0.032 : 0.014);object.updateMatrix();target.setMatrixAt(index,matrix.copy(object.matrix));
     });
     target.instanceMatrix.needsUpdate=true;
+    // A gentle, real-time pulse on filament opacity -- CPU-driven (material.opacity),
+    // not a GPU shader node, but genuinely animated every frame, not decorative.
+    (material as MeshBasicMaterial).opacity=0.82+Math.sin(clock.elapsedTime*1.35)*0.18;
   });
 
   return <instancedMesh ref={mesh} args={[undefined,undefined,Math.max(1,edges.length)]} frustumCulled={false}>

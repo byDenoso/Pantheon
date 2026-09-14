@@ -27,10 +27,16 @@ test('the WebGL graph animates node and edge transitions inside the renderer', (
 });
 
 test('node entry is a real drill-down and terminal nodes remain selectable', () => {
+  // The open-vs-select decision moved out of AtlasCanvas.tsx into picking.ts (a
+  // plain module, not JSX) so it has a real behavior test -- see
+  // test/scene-3d-navigation.test.mjs ("shouldOpenNode ..."). This keeps the
+  // source-shape checks that still belong to AtlasCanvas itself.
   const canvas = read('src/scene/AtlasCanvas.tsx');
-  assert.match(canvas, /childCount|childrenCount/);
+  const picking = read('src/scene/picking.ts');
+  assert.match(canvas, /shouldOpenNode/);
   assert.match(canvas, /onOpen\(node\)/);
   assert.match(canvas, /onSelect\(node\)/);
   assert.match(canvas, /loading/);
-  assert.match(canvas, /SYSTEM.*DOMAIN.*PROGRAM.*CAMPAIGN.*SUBGRAPH/);
+  assert.match(picking, /childCount|childrenCount/);
+  assert.match(picking, /SYSTEM.*DOMAIN.*PROGRAM.*CAMPAIGN.*SUBGRAPH/);
 });

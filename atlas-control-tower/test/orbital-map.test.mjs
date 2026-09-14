@@ -59,20 +59,31 @@ test('cross-domain and intra-domain semantics still come only from declared memb
  assert.equal(classifyEdge(a,{...a,id:'T3'},{type:'RELATES_TO'}),'intra-test');
 });
 
-test('production filaments are instanced, bounded to declared edges and GPU animated',()=>{
+test('production filaments are instanced, bounded to declared edges and really animated every frame',()=>{
+ // The WebGPU/TSL node-material pulse (materials.ts using MeshBasicNodeMaterial +
+ // three/tsl) crashed at runtime under the default WebGL2 backend -- confirmed via a
+ // real browser smoke test, not a guess (repeated "reading 'replace'" exceptions,
+ // blank canvas). Replaced with plain MeshBasicMaterial plus a real per-frame
+ // (useFrame) opacity pulse: still genuinely animated every frame, just CPU- rather
+ // than GPU-shader-driven, and it actually renders under the contractual default.
  const scene=read('src/scene/InstancedFilaments.tsx');
  const materials=read('src/scene/materials.ts');
  assert.match(scene,/<instancedMesh/);
  assert.match(scene,/edges\.filter/);
  assert.match(scene,/positions\.has\(edge\.source\).*positions\.has\(edge\.target\)/s);
  assert.doesNotMatch(scene,/setInterval|setTimeout|document\.createElement/);
- assert.match(materials,/time\.mul/);
- assert.match(materials,/three\/tsl/);
+ assert.match(scene,/useFrame\(\(\{clock\}\)/);
+ assert.match(scene,/\.opacity\s*=.*Math\.sin/);
+ assert.doesNotMatch(materials,/^import.*['"]three\/(tsl|webgpu)['"]/m);
 });
 
-test('reduced motion prevents automatic camera orbit',()=>{
+test('there is no automatic camera orbit at all -- stronger than gating it on reduced motion',()=>{
+ // The map contract forbids auto-rotation outright (not just under reduced motion),
+ // so AtlasCanvas sets OrbitControls.autoRotate=false unconditionally and never
+ // threads an autoOrbit prop/state through the scene.
  const canvas=read('src/scene/AtlasCanvas.tsx');
- assert.match(canvas,/autoOrbit&&!reducedMotion/);
+ assert.match(canvas,/autoRotate\s*=\s*false/);
+ assert.doesNotMatch(canvas,/autoOrbit/);
  assert.match(canvas,/prefers-reduced-motion|reducedMotion/);
 });
 

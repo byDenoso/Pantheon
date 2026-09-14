@@ -22,10 +22,25 @@ test('target visual grammar includes glow nodes, curved filaments, stars and orb
  assert.match(nodes,/createNodeAuraMaterial/);assert.match(nodes,/selectedId/);assert.match(filaments,/edges\.filter/);assert.match(canvas,/StarField/);assert.match(canvas,/OrbitalGuides/);assert.match(canvas,/torusGeometry/);
 });
 
-test('3D graph starts in active motion instead of requiring the user to find the orbit toggle',()=>{
+test('3D graph never starts (or offers) automatic camera motion -- orbit is always manual',()=>{
+ // An earlier phase intentionally defaulted to auto-orbiting motion; the locked map
+ // contract (repeated explicitly by the user) forbids auto-rotation outright, so this
+ // now asserts the opposite of what it used to: no autoOrbit state/toggle anywhere in
+ // the 3D scene, and the real camera rig sets autoRotate=false unconditionally.
  const scene=read('src/graph-engine/GraphScene3D.tsx');
- assert.match(scene,/useState\(true\)/);
- assert.match(scene,/data-motion=\{reducedMotion\?'reduced':'auto-orbit'\}/);
- assert.match(scene,/aria-pressed=\{autoOrbit\}/);
- assert.match(scene,/Pausar movimento/);
+ const canvas=read('src/scene/AtlasCanvas.tsx');
+ assert.doesNotMatch(scene,/autoOrbit/);
+ assert.doesNotMatch(scene,/Pausar movimento|Mover grafo/);
+ assert.match(canvas,/autoRotate\s*=\s*false/);
+});
+
+test('the 3D scene mounts the same shell inspector as the 2D map, not a duplicate',()=>{
+ // GraphScene3D used to mount its own GraphInspector; SpatialInspector is already
+ // rendered as a sibling of GraphRenderer in graphs-page.tsx and reads the same
+ // selection state, so a second inspector inside the 3D scene was the exact
+ // disconnected-product duplication the shell work set out to remove.
+ const scene=read('src/graph-engine/GraphScene3D.tsx');
+ assert.doesNotMatch(scene,/<GraphInspector|import\s*\{[^}]*GraphInspector/);
+ assert.doesNotMatch(scene,/<GraphControlDock|import\s*\{[^}]*GraphControlDock/);
+ assert.doesNotMatch(scene,/atlas:camera-command/);
 });

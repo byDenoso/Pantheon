@@ -1,10 +1,11 @@
 import { Component, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
-import { BufferGeometry, Float32BufferAttribute, Vector3 } from 'three';
-import { MeshBasicNodeMaterial } from 'three/webgpu';
+import { BufferGeometry, Float32BufferAttribute, MeshBasicMaterial, Vector3 } from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { createAtlasRenderer } from './createRenderer';
 import { selectSemanticLOD } from './semantic-lod';
+import { applyCameraKey, cameraDistanceForLevel, sphericalToCartesian, type CameraSpherical } from './camera-controls';
+import { shouldOpenNode } from './picking';
 import { buildOrbitalNodes, type AtlasGraph, type AtlasNode, type PositionedNode } from './types';
 import { InstancedNodes } from './InstancedNodes';
 import { InstancedFilaments } from './InstancedFilaments';
@@ -18,7 +19,6 @@ type Props={
   onSelect:(node:AtlasNode)=>void;
   onOpen:(node:AtlasNode)=>void;
   reducedMotion:boolean;
-  autoOrbit:boolean;
   compact?:boolean;
   loading?:boolean;
 };
@@ -48,35 +48,47 @@ async function detectThreeRenderer(){
   try{return Boolean(await gpu.requestAdapter());}catch{return false;}
 }
 
-function CameraRig({reducedMotion,autoOrbit,compact,focusId}:{reducedMotion:boolean;autoOrbit:boolean;compact:boolean;focusId:string}){
+function CameraRig({compact,focusId,focusType}:{compact:boolean;focusId:string;focusType:string|undefined}){
   const {camera,gl,size}=useThree();
   const controls=useRef<OrbitControls|null>(null);
+  const spherical=useRef<CameraSpherical>({azimuth:0,polar:Math.PI/2,distance:16});
   const desiredPosition=useRef(new Vector3(0,0,16));
   const origin=useMemo(()=>new Vector3(0,0,0),[]);
   useEffect(()=>{
     const aspect=size.width/Math.max(1,size.height);
-    const distance=aspect<0.72 ? 21 : compact ? 18 : 16;
-    camera.position.set(0,0,distance);
+    const distance=aspect<0.72 ? cameraDistanceForLevel(focusType,true) : cameraDistanceForLevel(focusType,compact);
+    spherical.current={...spherical.current,distance};
+    camera.position.set(...sphericalToCartesian(spherical.current));
     camera.lookAt(0,0,0);
     const next=new OrbitControls(camera,gl.domElement);
     next.enableDamping=true;
     next.dampingFactor=0.075;
     next.enablePan=true;
+    next.enableRotate=true;
+    next.autoRotate=false;
     next.minDistance=5;
     next.maxDistance=34;
     controls.current=next;
-    desiredPosition.current.set(0,0,distance);
-    return()=>{next.dispose();controls.current=null};
-  },[camera,compact,gl,size.height,size.width]);
+    desiredPosition.current.set(...sphericalToCartesian(spherical.current));
+    // Manual keyboard orbit/zoom, scoped to the canvas element (not window) so it
+    // never competes with the shell's own Alt+Arrow back/forward shortcuts. No
+    // auto-rotation is ever applied here or above -- orbit is always user-driven.
+    gl.domElement.tabIndex=0;
+    const onKeyDown=(event:KeyboardEvent)=>{
+      const nextSpherical=applyCameraKey(spherical.current,event.key);
+      if(!nextSpherical)return;
+      event.preventDefault();
+      spherical.current=nextSpherical;
+      desiredPosition.current.set(...sphericalToCartesian(nextSpherical));
+    };
+    gl.domElement.addEventListener('keydown',onKeyDown);
+    return()=>{gl.domElement.removeEventListener('keydown',onKeyDown);next.dispose();controls.current=null};
+  },[camera,compact,focusType,gl,size.height,size.width]);
   useEffect(()=>{
-    const distance=compact ? 14.2 : 13.4;
-    desiredPosition.current.set(0,0,distance);
-  },[compact,focusId]);
-  useEffect(()=>{
-    if(!controls.current)return;
-    controls.current.autoRotate=autoOrbit&&!reducedMotion;
-    controls.current.autoRotateSpeed=0.42;
-  },[autoOrbit,reducedMotion]);
+    const distance=cameraDistanceForLevel(focusType,compact);
+    spherical.current={...spherical.current,distance};
+    desiredPosition.current.set(...sphericalToCartesian(spherical.current));
+  },[compact,focusId,focusType]);
   useFrame(()=>{
     const next=controls.current;if(!next)return;
     camera.position.lerp(desiredPosition.current,0.075);
@@ -104,18 +116,14 @@ function StarField(){
 }
 
 function OrbitalGuides({nodes,focusId}:{nodes:PositionedNode[];focusId:string}){
-  const ringMaterials=useMemo(()=>[0.12,0.19,0.27].map(opacity=>{
-    const material=new MeshBasicNodeMaterial({color:0x42bff4,transparent:true,opacity,depthWrite:false});
-    material.depthTest=true;
-    return material;
-  }),[]);
-  const clusterMaterial=useMemo(()=>{
-    const material=new MeshBasicNodeMaterial({color:0x2d8fc7,transparent:true,opacity:0.14,depthWrite:false});
-    material.depthTest=true;
-    return material;
-  },[]);
+  const ringMaterials=useMemo(()=>[0.12,0.19,0.27].map(opacity=>
+    new MeshBasicMaterial({color:0x42bff4,transparent:true,opacity,depthWrite:false,depthTest:true})
+  ),[]);
+  const clusterMaterial=useMemo(()=>
+    new MeshBasicMaterial({color:0x2d8fc7,transparent:true,opacity:0.14,depthWrite:false,depthTest:true})
+  ,[]);
   const clusterNodes=useMemo(()=>nodes.filter(node=>node.id!==focusId&&['SYSTEM','DOMAIN','CAMPAIGN'].includes(String(node.type||'').toUpperCase())).slice(0,12),[focusId,nodes]);
-  return <group aria-hidden="true"><StarField/>
+  return <group aria-hidden="true">
     <group scale={[1,0.66,1]} rotation={[0.06,-0.08,0.04]}>
       {[4.2,5.2,6.15].map((radius,index)=><mesh key={radius} rotation={[0,index*0.12,index*0.16]}>
         <torusGeometry args={[radius,0.012 + index*0.004,8,144]}/>
@@ -156,33 +164,36 @@ function LabelProjector({nodes,labelIds,onLabels,motion}:{nodes:PositionedNode[]
   return null;
 }
 
-function SceneContent({nodes,graph,labelIds,onLabels,onPick,reducedMotion,autoOrbit,selectedId,focusId,compact,motion}:{
+function SceneContent({nodes,graph,labelIds,onLabels,onPick,reducedMotion,selectedId,focusId,focusType,compact,motion}:{
   nodes:PositionedNode[];
   graph:AtlasGraph;
   labelIds:Set<string>;
   onLabels:(labels:ProjectedLabel[])=>void;
   onPick:(node:PositionedNode)=>void;
   reducedMotion:boolean;
-  autoOrbit:boolean;
   selectedId?:string|null;
   focusId:string;
+  focusType:string|undefined;
   compact:boolean;
   motion:MotionState;
 }){
   useFrame((_,delta)=>{
-    const easing=1-Math.pow(0.001,Math.min(delta,0.05));
     const ids=new Set(nodes.map(node=>node.id));
     nodes.forEach(node=>{
       const goal=new Vector3(...node.position);
       motion.target.set(node.id,goal);
       if(!motion.current.has(node.id)) motion.current.set(node.id,motion.current.size?new Vector3(0,0,0):goal.clone());
-      motion.current.get(node.id)!.lerp(goal,easing);
+      // Reduced motion: snap straight to the goal position instead of tweening --
+      // no eased drift between subgraphs when the user has asked for less motion.
+      if(reducedMotion) motion.current.get(node.id)!.copy(goal);
+      else motion.current.get(node.id)!.lerp(goal,1-Math.pow(0.001,Math.min(delta,0.05)));
     });
     for(const id of motion.current.keys()) if(!ids.has(id)){motion.current.delete(id);motion.target.delete(id)}
   });
   return <>
-    <CameraRig reducedMotion={reducedMotion} autoOrbit={autoOrbit} compact={compact} focusId={focusId}/>
+    <CameraRig compact={compact} focusId={focusId} focusType={focusType}/>
     <OrbitalGuides nodes={nodes} focusId={focusId}/>
+    {!reducedMotion&&<StarField/>}
     <InstancedNodes nodes={nodes} positions={motion.current} focusId={focusId} aura/>
     <InstancedFilaments edges={graph.edges} nodes={nodes} positions={motion.current} focusId={focusId} selectedId={selectedId}/>
     <InstancedNodes nodes={nodes} positions={motion.current} selectedId={selectedId} focusId={focusId} onNodeClick={onPick}/>
@@ -190,7 +201,7 @@ function SceneContent({nodes,graph,labelIds,onLabels,onPick,reducedMotion,autoOr
   </>;
 }
 
-export function AtlasCanvas({graph,focusId,selectedId,onSelect,onOpen,reducedMotion,autoOrbit,compact=false,loading=false}:Props){
+export function AtlasCanvas({graph,focusId,selectedId,onSelect,onOpen,reducedMotion,compact=false,loading=false}:Props){
   const [labels,setLabels]=useState<ProjectedLabel[]>([]);
   const [threeEnabled,setThreeEnabled]=useState(canUseThreeRenderer);
   const [renderActive,setRenderActive]=useState(() => typeof document === 'undefined' || document.visibilityState !== 'hidden');
@@ -210,13 +221,11 @@ export function AtlasCanvas({graph,focusId,selectedId,onSelect,onOpen,reducedMot
     ...(graph||{nodes:[],edges:[]}),nodes,
     edges:(graph?.edges||[]).filter(edge=>visibleIds.has(edge.source)&&visibleIds.has(edge.target))
   }),[graph,nodes,visibleIds]);
+  const focusType=nodeById.get(focusId)?.type as string|undefined;
 
   const handlePick=(picked:PositionedNode)=>{
     const node=nodeById.get(picked.id);if(!node)return;
-    const structuralType=String(node.type||'').toUpperCase();
-    const canRevealDescendants=['ROOT','SYSTEM','DOMAIN','PROGRAM','CAMPAIGN','SUBGRAPH'].includes(structuralType);
-    const hasChildren=Number(node.childCount ?? node.childrenCount ?? 0)>0 || sceneGraph.edges.some(edge=>edge.source===node.id && edge.target!==node.id) || canRevealDescendants;
-    if(hasChildren&&node.id!==focusId)onOpen(node);
+    if(shouldOpenNode(node,focusId,sceneGraph.edges))onOpen(node);
     else onSelect(node);
   };
 
@@ -256,9 +265,9 @@ export function AtlasCanvas({graph,focusId,selectedId,onSelect,onOpen,reducedMot
           onLabels={setLabels}
           onPick={handlePick}
           reducedMotion={reducedMotion}
-          autoOrbit={autoOrbit}
           selectedId={selectedId}
           focusId={focusId}
+          focusType={focusType}
           compact={compact}
           motion={motion.current}
         />

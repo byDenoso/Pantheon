@@ -1,5 +1,5 @@
 .spatial-knowledge-page{height:100%;min-height:0;padding:0!important;overflow:hidden;background:var(--graph-background)}
-.spatial-workspace{height:100%;min-height:0;display:grid;grid-template-rows:auto auto auto minmax(0,1fr) auto;position:relative;background:var(--graph-background)}
+.spatial-workspace{height:100%;min-height:0;display:grid;grid-template-rows:auto auto auto auto minmax(0,1fr) auto;position:relative;background:var(--graph-background)}
 
 .atlas-context-bar-slot{min-width:0;z-index:var(--z-hud)}
 .atlas-context-bar{min-height:34px;display:flex;align-items:center;justify-content:space-between;gap:14px;padding:5px 14px;border-bottom:1px solid color-mix(in srgb,var(--border-default) 75%,transparent);background:color-mix(in srgb,var(--surface-overlay) 92%,transparent);backdrop-filter:blur(16px);color:var(--text-tertiary);font-size:10px}
@@ -76,6 +76,38 @@ body.graph-immersive .atlas-sidebar,body.graph-immersive .atlas-footer{display:n
 .graph-mode-toggle button.active{background:color-mix(in srgb,var(--accent-primary) 16%,var(--surface-elevated));color:var(--accent-primary)}
 @media(max-width:640px){.graph-header{padding:8px 10px}.graph-header-copy p{display:none}.graph-header-controls>button,.graph-zoom-controls button,.graph-mode-toggle button{min-height:40px}}
 
+/* Map-context filters (domain/status/authority genuinely narrow the visible
+   projection -- see graph-filters.ts; "Fonte" has no real per-node value in the
+   current data pipeline and renders disabled rather than decorative). */
+.map-filters{display:flex;flex-wrap:wrap;align-items:center;gap:10px;padding:8px 14px;border-bottom:1px solid var(--border-default);background:color-mix(in srgb,var(--surface-primary) 92%,transparent)}
+.map-filters label{display:flex;align-items:center;gap:6px;font:600 10px/1 "Recursive Variable",system-ui;color:var(--text-tertiary);letter-spacing:.03em}
+.map-filters select{min-height:30px;border:1px solid var(--border-default);border-radius:7px;background:var(--surface-elevated);color:var(--text-primary);padding:0 8px;font:600 11px/1 "Recursive Variable",system-ui}
+.map-filters label.map-filter-unavailable{opacity:.55}
+.map-filters label.map-filter-unavailable select{cursor:not-allowed}
+.map-filter-clear{min-height:30px;border:1px solid var(--border-default);border-radius:7px;background:transparent;color:var(--accent-primary);padding:0 10px;font:650 10px/1 "Recursive Variable",system-ui;cursor:pointer}
+.map-filter-clear:hover{border-color:var(--accent-primary)}
+@media(max-width:640px){.map-filters{padding:8px 10px;gap:8px}.map-filters select{min-height:36px}}
+
+/* 3D scene backdrop, theme-aware. graph-3d.css hardcodes a dark-space background
+   regardless of theme (real "two products" bug: Light/Classico showed the same
+   deep-space gradient as Escuro). Overridden here to read the same --graph-* tokens
+   Canvas25DGraph already uses, so 2D and 3D agree per theme. Node/edge/status colors
+   inside the WebGL scene itself (InstancedNodes) stay as-is -- documented as a
+   disclosed remaining gap, not silently dropped. */
+.premium-shell .graph-3d-shell{background:radial-gradient(circle at 50% 48%,color-mix(in srgb,var(--accent-primary) 22%,transparent) 0,var(--graph-background) 55%,var(--graph-background) 100%);box-shadow:none}
+.premium-shell .graph-3d-shell.is-learning{background:radial-gradient(circle at 50% 48%,color-mix(in srgb,#8a5aff 22%,transparent) 0,var(--graph-background) 55%,var(--graph-background) 100%)}
+.premium-shell .graph-3d-shell:before{background:radial-gradient(circle at 50% 50%,color-mix(in srgb,var(--accent-primary) 10%,transparent),transparent 20%)}
+.premium-shell .graph-3d-shell:after{background:none}
+.premium-shell .graph-3d-ambient-grid{background-image:radial-gradient(circle,color-mix(in srgb,var(--border-emphasis) 60%,transparent) 1px,transparent 1.5px)}
+.premium-shell .graph-3d-status,.premium-shell .graph-3d-controls{border-color:var(--border-default);background:color-mix(in srgb,var(--surface-overlay) 90%,transparent);box-shadow:var(--shadow-overlay)}
+.premium-shell .graph-3d-status{color:var(--text-secondary)}
+.premium-shell .graph-3d-focus-card .graph-3d-eyebrow{color:var(--text-tertiary)}
+.premium-shell .graph-3d-focus-card strong{color:var(--text-primary)}
+.premium-shell .graph-3d-focus-card span:last-child{color:var(--text-tertiary)}
+.premium-shell .graph-3d-nav-hint{border-color:var(--border-default);background:color-mix(in srgb,var(--surface-overlay) 90%,transparent);color:var(--text-tertiary)}
+.premium-shell .graph-renderer-switch{border-color:var(--border-default);background:var(--surface-elevated);color:var(--text-secondary)}
+.premium-shell .graph-renderer-switch:hover{color:var(--text-primary);border-color:var(--accent-primary)}
+
 /* Bottom activity drawer: 48-56px closed handle, 260-400px expanded body. */
 /* Fixed to the viewport, not sticky-in-flow: a sticky drawer whose expanded body adds
    real document height pushes the WHOLE app taller, forcing the sticky header back
@@ -100,3 +132,40 @@ body.graph-immersive .atlas-sidebar,body.graph-immersive .atlas-footer{display:n
 .activity-drawer-list a:hover{text-decoration:underline}
 .activity-drawer-list small{color:var(--text-tertiary);font:700 9px ui-monospace,monospace}
 @media(max-width:640px){.activity-drawer-body{max-height:70dvh}.activity-drawer-handle{min-height:48px}}
+
+/* Legacy entity Inspector (App.tsx, used outside the map on Observatorio/Laboratorio/
+   Universo/Cockpit). Restyled here to reuse the shell's own theme tokens and the same
+   header/card/provenance language as the map's SpatialInspector, so selecting an
+   entity outside the map does not feel like a different, disconnected product. This
+   is a visual-only pass: the component keeps its own data (state.selectedEntity),
+   markup and class names -- only composition/spacing/color are unified. A full merge
+   with SpatialInspector was judged too risky for this pass (different underlying data
+   shapes: canonical entity records here vs. graph-projection nodes there) and is
+   intentionally left as a follow-up. */
+.premium-shell .atlas-inspector{position:fixed;top:calc(var(--atlas-topbar-height,64px) + 14px);right:14px;bottom:14px;left:auto;width:min(380px,30vw,calc(100% - 28px));max-width:none;border:1px solid color-mix(in srgb,var(--border-emphasis) 70%,var(--border-default));border-radius:var(--radius-panel);background:color-mix(in srgb,var(--surface-overlay) 96%,transparent);color:var(--text-primary);box-shadow:var(--shadow-overlay);backdrop-filter:blur(22px)}
+.premium-shell .atlas-inspector .inspector-sheet-handle{display:none;width:42px;height:4px;margin:8px auto 0;border-radius:var(--radius-pill);background:var(--border-emphasis)}
+.premium-shell .atlas-inspector .inspector-top{padding:14px 16px 11px;border-bottom:1px solid var(--border-default)}
+.premium-shell .atlas-inspector .inspector-top .eyebrow{color:var(--text-tertiary);font:700 9px/1.2 "Recursive Variable",system-ui;letter-spacing:.11em}
+.premium-shell .atlas-inspector .inspector-top .icon-button{border:0;background:transparent;color:var(--text-tertiary);font-size:18px;cursor:pointer}
+.premium-shell .atlas-inspector .inspector-top .icon-button:hover{color:var(--text-primary)}
+.premium-shell .atlas-inspector .inspector-body{padding:13px 16px 15px;color:var(--text-secondary)}
+.premium-shell .atlas-inspector .inspector-heading h2{margin:4px 0 0;font-size:16px;line-height:1.2;color:var(--text-primary)}
+.premium-shell .atlas-inspector .canonical-id{color:var(--text-tertiary)}
+.premium-shell .atlas-inspector .inspector-triad article{border-left:2px solid var(--accent-primary);background:color-mix(in srgb,var(--accent-primary) 10%,var(--surface-elevated))}
+.premium-shell .atlas-inspector .inspector-triad small{color:var(--accent-primary);font:700 9px/1 ui-monospace,monospace}
+.premium-shell .atlas-inspector .inspector-triad p{color:var(--text-secondary)}
+.premium-shell .atlas-inspector .inspector-body dt{color:var(--text-tertiary)}
+.premium-shell .atlas-inspector .inspector-body dd{color:var(--text-primary)}
+.premium-shell .atlas-inspector .inspector-links button,.premium-shell .atlas-inspector .related-links button{border:1px solid var(--border-default);border-radius:8px;background:var(--surface-elevated);color:var(--text-secondary);font:650 10px/1 "Recursive Variable",system-ui}
+.premium-shell .atlas-inspector .inspector-links button:hover,.premium-shell .atlas-inspector .related-links button:hover{border-color:var(--accent-primary);color:var(--accent-primary)}
+.premium-shell .atlas-inspector .related-links{border-top:1px solid var(--border-default)}
+.premium-shell .atlas-inspector .related-links .eyebrow{color:var(--text-tertiary)}
+.premium-shell .atlas-inspector .source-button{border:1px solid var(--border-default);border-radius:8px;background:var(--surface-elevated);color:var(--accent-primary)}
+.premium-shell .atlas-inspector .source-button:hover{border-color:var(--accent-primary)}
+.premium-shell .atlas-inspector .technical-details{border-top:1px solid var(--border-default);color:var(--text-tertiary)}
+.premium-shell .atlas-inspector .technical-details pre{background:var(--surface-canvas);color:var(--text-secondary)}
+@media(max-width:760px){
+  .premium-shell .atlas-inspector{left:0;right:0;top:auto;bottom:0;width:100%;max-width:none;max-height:80dvh;border-radius:18px 18px 0 0;border-left:0;border-right:0;border-bottom:0;padding-bottom:env(safe-area-inset-bottom)}
+  .premium-shell .atlas-inspector .inspector-sheet-handle{display:block}
+  .premium-shell .atlas-inspector .inspector-top{padding-top:9px}
+}

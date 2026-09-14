@@ -4,11 +4,15 @@ import assert from 'node:assert/strict';
 
 const read = path => readFileSync(new URL(`../${path}`, import.meta.url), 'utf8');
 
-test('3D graph exposes a compact HUD and keeps the inspector demand-driven', () => {
+test('3D graph exposes a compact HUD and delegates the inspector to the shared shell one', () => {
+  // GraphScene3D used to manage its own demand-driven inspector visibility
+  // (selected||selectedEdge?...); it now mounts no inspector of its own at all --
+  // SpatialInspector (a sibling in graphs-page.tsx) is the single, shared,
+  // demand-driven inspector for both the 2D and 3D renderers.
   const source = read('src/graph-engine/GraphScene3D.tsx');
   assert.match(source, /graph-3d-focus-card/);
   assert.match(source, /graph-3d-nav-hint/);
-  assert.match(source, /selected\|\|selectedEdge\?/);
+  assert.doesNotMatch(source, /<GraphInspector/);
   assert.doesNotMatch(source, /<h3>Mapa orbital<\/h3>/);
 });
 

@@ -25,7 +25,6 @@ export function StructuralExplorer({rootFocusId,initialSelectedId=null}:Props){
  const [limit,setLimit]=useState(180);
  const [selectedId,setSelectedId]=useState<string|null>(null);
  const [selectedEntity,setSelectedEntity]=useState<any>(null);
- const [autoOrbit,setAutoOrbit]=useState(false);
  useEffect(()=>{setFocusId(rootFocusId);setLimit(180);setSelectedId(initialSelectedId);setSelectedEntity(null)},[rootFocusId,initialSelectedId]);
  useEffect(()=>{
   let live=true;setLoading(true);setError('');
@@ -66,10 +65,10 @@ export function StructuralExplorer({rootFocusId,initialSelectedId=null}:Props){
   {view==='map'?<div className="structural-map-shell">
    <div className="structural-map-toolbar">
     <span><b>{focusId}</b>{loading?' · carregando…':''}</span>
-    <div>{focusId!==rootFocusId&&<button onClick={resetFocus}>Voltar ao subdomínio</button>}<button onClick={()=>setAutoOrbit(v=>!v)}>{autoOrbit?'Pausar órbita':'Órbita automática'}</button></div>
+    <div>{focusId!==rootFocusId&&<button onClick={resetFocus}>Voltar ao subdomínio</button>}</div>
    </div>
    <div className="structural-map-canvas">
-    <AtlasCanvas graph={graph} focusId={focusId} selectedId={selectedId} onSelect={select} onOpen={open} reducedMotion={reducedMotion} autoOrbit={autoOrbit}/>
+    <AtlasCanvas graph={graph} focusId={focusId} selectedId={selectedId} onSelect={select} onOpen={open} reducedMotion={reducedMotion}/>
     {error&&<div className="structural-error">Falha ao ler o recorte. O último grafo válido foi preservado.</div>}
    </div>
    <div className="structural-map-footer"><span>{graph?.nodes?.length||0} nós · {graph?.edges?.length||0} relações</span>{(graph?.truncated||graph?.hasMore)&&<button onClick={()=>setLimit(v=>v+180)}>Mais entidades</button>}</div>

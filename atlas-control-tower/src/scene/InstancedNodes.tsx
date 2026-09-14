@@ -59,6 +59,9 @@ export function InstancedNodes({nodes,selectedId,focusId,pickMode=false,aura=fal
         target.setColorAt(index,new Color(r/255,g/255,b/255));
       }else target.setColorAt(index,visualColor(node));
     });
+    // setColorAt only writes the CPU-side buffer; without this flag the instance
+    // color never uploads to the GPU and every instance renders black.
+    if(target.instanceColor)target.instanceColor.needsUpdate=true;
   },[nodes,pickMode]);
 
   useFrame(()=>{
