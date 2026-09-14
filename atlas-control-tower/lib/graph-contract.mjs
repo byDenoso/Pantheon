@@ -1,20 +1,20 @@
 /** Graph Contract V1 — the presentation layer knows the contract, never the physical store. */
 export const CONTRACT_VERSION = 'v1';
 
-/** TOWER_V06 is the authority; Drive and bundled files are projection/fallback transports only. */
+/** TOWER_V06 is an authority source; Drive remains a compatibility projection transport. */
 export const SOURCES = Object.freeze({LEGACY:'legacy', V1:'v1', DRIVE:'drive', TOWER:'tower'});
 export const FRESHNESS = Object.freeze({LIVE:'LIVE', STAGING:'STAGING', SNAPSHOT:'SNAPSHOT', STALE:'STALE', FALLBACK:'FALLBACK'});
 export const CACHE_STATES = Object.freeze(['HIT', 'MISS', 'STALE', 'REVALIDATED']);
 
 export const EMPTY_GRAPH = Object.freeze({
  focus:'', nodes:[], edges:[], total:0, hasMore:false, truncated:false, depth:1,
- fingerprint:'', sourceVersion:'', source:SOURCES.TOWER, freshness:FRESHNESS.SNAPSHOT,
+ fingerprint:'', sourceVersion:'', source:SOURCES.DRIVE, freshness:FRESHNESS.SNAPSHOT,
  cache:'', issues:[]
 });
 
 const str=(v,fallback='')=>(v==null?fallback:String(v));
 const arr=v=>(Array.isArray(v)?v:[]);
-const sourceOf=value=>Object.values(SOURCES).includes(value)?value:SOURCES.TOWER;
+const sourceOf=value=>Object.values(SOURCES).includes(value)?value:SOURCES.DRIVE;
 
 export function normalizeGraph(payload,{focus=''}={}){
  const p=payload&&typeof payload==='object'?payload:{};
@@ -42,13 +42,13 @@ export function contractIssues(payload){
  return [...missing.map(k=>({level:'ERROR',field:k,reason:'MISSING_REQUIRED_ARRAY'})),...soft.map(k=>({level:'WARN',field:k,reason:'MISSING_OPTIONAL_FIELD'})),...(badEdges?[{level:'WARN',field:'edges',reason:'EDGE_WITHOUT_ENDPOINTS',count:badEdges}]:[])];
 }
 
-export function cacheKey({fingerprint='',focus='',depth=1,filters={},source=SOURCES.TOWER}={}){
+export function cacheKey({fingerprint='',focus='',depth=1,filters={},source=SOURCES.DRIVE}={}){
  const f=Object.entries(filters).filter(([,v])=>v!==''&&v!=null).sort(([a],[b])=>a.localeCompare(b)).map(([k,v])=>`${k}=${v}`).join(',');
  return `graph:${CONTRACT_VERSION}:${source}:${fingerprint||'nofp'}:${focus||'root'}:${depth}:${f||'none'}`;
 }
 
 export function provenanceLabel({source,freshness}={}){
- const base=source===SOURCES.TOWER?'TOWER_V06 · PROJEÇÃO READ-ONLY':source===SOURCES.DRIVE?'DRIVE · SNAPSHOT LEGADO':source===SOURCES.V1?'PROJEÇÃO DERIVADA':'SNAPSHOT LEGADO';
+ const base=source===SOURCES.TOWER?'TOWER_V06 · PROJEÇÃO READ-ONLY':source===SOURCES.DRIVE?'DRIVE · SNAPSHOT LEGADO':source===SOURCES.V1?'PROJEÇÃO CANÔNICA':'SNAPSHOT LEGADO';
  if(freshness===FRESHNESS.FALLBACK)return 'FALLBACK · '+base;
  if(freshness===FRESHNESS.STALE)return 'STALE · '+base;
  if(freshness===FRESHNESS.STAGING)return 'STAGING · '+base;
