@@ -53,7 +53,10 @@ export function createStaticArtifactApi({baseUrl='/data',fetchImpl=globalThis.fe
  const labRouteType={
   'lab-hypotheses':'HYPOTHESIS','lab-claims':'CLAIM','lab-tests':'TEST','lab-runs':'RUN','lab-results':'RESULT','lab-evidence':'EVIDENCE','lab-decisions':'DECISION','lab-knowledge':'KNOWLEDGE','lab-pipelines':'PIPELINE'
  };
+ const directSurfaceRoute={activity:'activity',operations:'operations',cockpit:'operations',audit:'audit',learning:'learning',search:'search'};
  async function research(route,query={}){
+  const direct=directSurfaceRoute[route];
+  if(direct)return envelope(await surface(direct));
   if(route.startsWith('observatory-')||route==='universe-snapshot'){
    const value=await surface('observatory');
    if(route==='observatory-questions')return envelope({...value,items:value.questions||[],surfaces:value.surfaces});
