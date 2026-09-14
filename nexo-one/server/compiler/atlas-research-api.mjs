@@ -1,9 +1,12 @@
+import {buildScienceChanges,buildScienceReadModelV2} from './science-read-model-v2.mjs';
+
 export const RESEARCH_API_CONTRACT='NEXO_ATLAS_RESEARCH_API_V1';
 export const RESEARCH_ROUTES=new Set([
   'atlas-graph',
   'observatory-summary','observatory-parameters','observatory-tensions','observatory-directional-signals',
   'lab-hypotheses','lab-claims','lab-tests','lab-runs','lab-results','lab-evidence','lab-pipelines',
-  'universe-snapshot'
+  'universe-snapshot',
+  'science-read-model','science-changes','science-observations','science-comparisons','science-syntheses'
 ]);
 
 const text=v=>String(v??'').trim();
@@ -35,8 +38,23 @@ function graphView(snapshot){
 function labItems(snapshot,kinds){const wanted=new Set(kinds.map(upper));return scienceWork(snapshot).filter(row=>wanted.has(upper(row.kind))).map(row=>({id:text(row.work_id),type:upper(row.kind),title:text(row.question)||text(row.work_id),status:text(row.status)||'UNKNOWN',priority:text(row.priority),updatedAt:text(row.updated_at),hasResult:Boolean(text(row.result_ref))})).filter(item=>item.id);}
 function structuralCoverage(snapshot){const science=scienceProjection(snapshot),engineering=engineeringProjection(snapshot),domains=new Set(science.map(row=>text(row.domain)).filter(Boolean));return {programs:[...science,...engineering].filter(row=>upper(row.record_type)==='PROGRAM').length,campaigns:science.filter(row=>upper(row.record_type)==='CAMPAIGN').length,domains:domains.size,tests:labItems(snapshot,['TEST']).length};}
 const emptyScientific=(snapshot,kind)=>envelope(snapshot,{items:[],reason:`No structured canonical ${kind} records are available in the current SSOT.`},'EMPTY');
+const srmStatus=model=>model.state==='READY'?'OK':model.state==='PARTIAL'?'PARTIAL':model.state==='EMPTY'?'EMPTY':'PARTIAL';
+
 export function buildAtlasResearchView(snapshot,route){
   if(!RESEARCH_ROUTES.has(route))throw new Error(`UNKNOWN_RESEARCH_ROUTE:${route}`);
+  if(route==='science-read-model'){
+    const model=buildScienceReadModelV2(snapshot);
+    return envelope(snapshot,model,srmStatus(model));
+  }
+  if(route==='science-changes'){
+    const changes=buildScienceChanges(snapshot);
+    return envelope(snapshot,changes,changes.items.length?'OK':snapshot?'EMPTY':'PARTIAL');
+  }
+  if(route==='science-observations'||route==='science-comparisons'||route==='science-syntheses'){
+    const model=buildScienceReadModelV2(snapshot);
+    const items=route==='science-observations'?model.observations:route==='science-comparisons'?model.comparisons:model.syntheses;
+    return envelope(snapshot,{contract:model.contract,state:model.state,sourceVersion:model.sourceVersion,fingerprint:model.fingerprint,items,provenance:model.provenance},items.length?'OK':snapshot?'EMPTY':'PARTIAL');
+  }
   if(route==='atlas-graph')return envelope(snapshot,graphView(snapshot),snapshot?'OK':'PARTIAL');
   if(route==='observatory-summary')return envelope(snapshot,{coverage:structuralCoverage(snapshot),availability:{parameters:false,tensions:false,directionalSignals:false},note:'Scientific products remain empty until explicit machine-readable canonical records exist.'},'PARTIAL');
   if(route==='observatory-parameters')return emptyScientific(snapshot,'parameter estimate');

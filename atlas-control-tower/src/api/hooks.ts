@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { AtlasApiClient, AtlasContext, LabData, ObservatoryData, PanelRead, ResearchRecord } from './types';
 import type { ObservatoryQuestionsRead } from './observatory-questions';
+import type { ScienceReadModelV2 } from './science-read-model';
 import { createAtlasAdapter } from './multisurface-adapters';
 import { errorMessage } from './errors';
 
@@ -25,6 +26,26 @@ function freshnessFromResults(results: PromiseSettledResult<unknown>[], failed: 
   if (normalizedFallback === 'SNAPSHOT') return 'SNAPSHOT';
   if (normalizedFallback === 'DEGRADED' || normalizedFallback === 'OFFLINE') return 'DEGRADED';
   return 'LIVE';
+}
+
+export function useScienceReadModel(client: AtlasApiClient) {
+  const adapter = useMemo(() => createAtlasAdapter(client), [client]);
+  const [read, setRead] = useState<PanelRead<ScienceReadModelV2>>(initialRead<ScienceReadModelV2>);
+  useEffect(() => {
+    let live = true;
+    setRead(previous => ({ ...previous, state: 'LOADING' }));
+    void adapter.getScienceReadModel().then(data => {
+      if (!live) return;
+      const state = data.state === 'PARTIAL' ? 'PARTIAL' : data.state === 'DATA_UNAVAILABLE' ? 'DATA_UNAVAILABLE' : data.state === 'ERROR' ? 'API_ERROR' : data.state === 'EMPTY' ? 'EMPTY' : data.freshness === 'STALE' ? 'STALE' : 'READY';
+      const freshness = data.freshness === 'LIVE' || data.freshness === 'SNAPSHOT' || data.freshness === 'STALE' || data.freshness === 'DEGRADED' ? data.freshness : 'DEGRADED';
+      setRead({ state, data, freshness: { state: freshness, source: 'GOOGLE_DRIVE', sourceVersion: data.sourceVersion, updatedAt: data.generatedAt } });
+    }).catch(error => {
+      if (!live) return;
+      setRead(previous => ({ ...previous, state: previous.data ? 'STALE' : 'API_ERROR', error: errorMessage(error), freshness: { ...previous.freshness, state: previous.data ? 'STALE' : 'DEGRADED' } }));
+    });
+    return () => { live = false; };
+  }, [adapter]);
+  return read;
 }
 
 export function useObservatoryData(client: AtlasApiClient, context: AtlasContext) {
@@ -75,7 +96,7 @@ export function useLabData(client: AtlasApiClient, context: AtlasContext) {
     const jobs = Promise.allSettled([
       adapter.getHypotheses(context), adapter.getClaims(context), adapter.getTests(context),
       adapter.getRuns(context), adapter.getResults(context), adapter.getEvidence(context),
-      adapter.getDecisions(context), adapter.getKnowledge(context), adapter.getPipelines(context)
+      adapter.getDecisions(), adapter.getKnowledge(), adapter.getPipelines(context)
     ]);
     void jobs.then(results => {
       if (!live) return;

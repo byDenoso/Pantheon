@@ -1,3 +1,4 @@
+import {toNodeHandler} from '@modelcontextprotocol/node';
 import {PROVIDERS} from '../src/contracts/validate.mjs';
 import {compile} from './compiler/world-state.mjs';
 import {buildProjectionBus} from './compiler/projection-bus.mjs';
@@ -7,9 +8,12 @@ import {readAtlasSsot} from './adapters/atlas-ssot.mjs';
 import {buildPublicAtlasSsot} from './compiler/atlas-public-ssot.mjs';
 import {buildAtlasResearchView,RESEARCH_ROUTES} from './compiler/atlas-research-api.mjs';
 import {verifyProjectionService} from './auth/vercel-oidc.mjs';
+import {createNexoMcpWebHandler} from './mcp/server.mjs';
 const ATLAS_ORIGINS=new Set(['https://bydenoso.github.io','https://nexo-atlas-control-tower.vercel.app','https://nexo-atlas-cockpit.vercel.app']);
 const PUBLIC_SYSTEM_PROVIDERS=['github','nexo'];
-const isCorsRoute=route=>route==='atlas-public-ssot'||route==='world'||RESEARCH_ROUTES.has(route);
+const isCorsRoute=route=>route==='mcp'||route==='atlas-public-ssot'||route==='world'||RESEARCH_ROUTES.has(route);
+const mcpWebHandler=createNexoMcpWebHandler({readSnapshot:()=>readAtlasSsot({env:process.env,now:Date.now()})});
+const mcpNodeHandler=toNodeHandler(mcpWebHandler);
 export default async function handler(req,res) {
   const env=process.env,now=Date.now();
   res.setHeader('Content-Type','application/json; charset=utf-8');res.setHeader('Cache-Control','private, no-store');res.setHeader('X-Content-Type-Options','nosniff');res.setHeader('Vary','Authorization, Origin');
@@ -19,10 +23,15 @@ export default async function handler(req,res) {
   if(ATLAS_ORIGINS.has(origin)&&isCorsRoute(route)){
     res.setHeader('Access-Control-Allow-Origin',origin);
     res.setHeader('Access-Control-Allow-Methods','GET,OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers','Accept,Content-Type');
+    if(route==='mcp')res.setHeader('Access-Control-Allow-Methods','POST,OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers','Accept,Content-Type,Mcp-Protocol-Version');
   }
   if(req.method==='OPTIONS'&&ATLAS_ORIGINS.has(origin)&&isCorsRoute(route)){res.statusCode=204;return res.end();}
   try{
+    if(route==='mcp'){
+      if(origin&&!ATLAS_ORIGINS.has(origin))return send({error:'ORIGIN_NOT_ALLOWED'},403);
+      return mcpNodeHandler(req,res);
+    }
     if(req.method!=='GET')return send({error:'WRITES_DISABLED'},405);
     if(route==='session')return send({authenticated:false,configured:false,access:'PUBLIC',mode:'PUBLIC_READ_ONLY'});
     if(route==='atlas-public-ssot')return send(buildPublicAtlasSsot(await readAtlasSsot({env,now,signal:req.signal})));
