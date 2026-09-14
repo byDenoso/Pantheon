@@ -7,7 +7,7 @@ const TABS:Tab[]=['overview','relations','evidence','history','runs','artifacts'
 const tabLabel:Record<Tab,string>={overview:'Visão Geral',relations:'Relações',evidence:'Evidências',history:'Histórico',runs:'Runs',artifacts:'Artefatos',provenance:'Proveniência'};
 const relationKind=(value:string)=>value.toUpperCase();
 const evidenceRelation=(value:string)=>{const kind=relationKind(value);return kind.includes('EVIDENCE')||kind.includes('SUPPORT')||kind.includes('CONTRADICT')||kind.includes('TEST')||kind.includes('PRODUC')};
-const humanFreshness=(value:string|null|undefined)=>{const state=String(value||'UNKNOWN').toUpperCase();return state==='LIVE'?'Live':state==='SNAPSHOT'?'Snapshot':state==='STALE'?'Desatualizado':state==='DEGRADED'?'Degradado':state==='UNKNOWN'?'Desconhecido':state.replaceAll('_',' ')};
+const humanFreshness=(value:string|null|undefined)=>{const state=String(value||'UNKNOWN').toUpperCase();return state==='LIVE'?'Ao vivo':state==='SNAPSHOT'?'Snapshot':state==='STALE'?'Desatualizado':state==='DEGRADED'?'Degradado':state==='UNKNOWN'?'Desconhecido':state.replaceAll('_',' ')};
 
 export function SpatialInspector({state,actions,projection,onOpen}:{state:AtlasUiState;actions:AtlasActions;projection:GraphProjection|null;onOpen:(id:string)=>void}){
   const [deep,setDeep]=useState(false);const [tab,setTab]=useState<Tab>('overview');
@@ -41,7 +41,7 @@ export function SpatialInspector({state,actions,projection,onOpen}:{state:AtlasU
           {selected.domain&&<span><small>Domínio</small><b>{selected.domain}</b></span>}
           <span><small>Relações</small><b>{relations.length}</b></span>
         </div>
-        <div className="spatial-inspector-actions">{selected.id!==projection?.focusId&&<button className="primary" onClick={()=>onOpen(selected.id)}>{selected.contextRole==='portal'?'Atravessar portal':'Entrar'}</button>}<button onClick={()=>pinned?actions.unpin(selected.id):actions.pin(selected.id)}>{pinned?'Unpin':'Pin'}</button><button className={compared?'active':''} onClick={()=>actions.toggleCompare(selected.id)}>Compare</button><button onClick={()=>setDeep(true)}>Abrir detalhes</button></div>
+        <div className="spatial-inspector-actions">{selected.id!==projection?.focusId&&<button className="primary" onClick={()=>onOpen(selected.id)}>{selected.contextRole==='portal'?'Atravessar portal':'Entrar'}</button>}<button onClick={()=>pinned?actions.unpin(selected.id):actions.pin(selected.id)}>{pinned?'Desafixar':'Fixar'}</button><button className={compared?'active':''} onClick={()=>actions.toggleCompare(selected.id)}>Comparar</button><button onClick={()=>setDeep(true)}>Abrir detalhes</button></div>
       </div>:<div className="spatial-inspector-deep">
         <nav aria-label="Seções do inspector">{TABS.map(value=><button key={value} className={tab===value?'active':''} onClick={()=>setTab(value)}>{tabLabel[value]}</button>)}</nav>
         <div className="spatial-inspector-tab">
@@ -49,14 +49,14 @@ export function SpatialInspector({state,actions,projection,onOpen}:{state:AtlasU
           {tab==='relations'&&<RelationList rows={relatedRows} label={neighbor}/>} 
           {tab==='evidence'&&<RelationList rows={evidenceRows} label={neighbor} empty="Nenhuma relação de evidência publicada neste recorte."/>}
           {tab==='runs'&&<RelationList rows={runRows} label={neighbor} empty="Nenhuma Run relacionada publicada neste recorte."/>}
-          {tab==='history'&&<dl><div><dt>Freshness</dt><dd>{humanFreshness(freshness)}</dd></div><div><dt>Atualizado</dt><dd>{selected.updatedAt||'—'}</dd></div><div><dt>Source version</dt><dd>{state.summary?.projection?.sourceVersion||state.health?.dataSource?.sourceVersion||'—'}</dd></div></dl>}
+          {tab==='history'&&<dl><div><dt>Atualidade</dt><dd>{humanFreshness(freshness)}</dd></div><div><dt>Atualizado</dt><dd>{selected.updatedAt||'—'}</dd></div><div><dt>Versão da fonte</dt><dd>{state.summary?.projection?.sourceVersion||state.health?.dataSource?.sourceVersion||'—'}</dd></div></dl>}
           {tab==='artifacts'&&<>{provenance.filter(item=>item.url).length?<ul className="spatial-source-list">{provenance.filter(item=>item.url).map((item,index)=><li key={`${item.url}:${index}`}><a href={item.url} target="_blank" rel="noreferrer">{item.label||item.sourceRef||item.source||'Abrir fonte'}</a></li>)}</ul>:<p>Nenhum artefato navegável publicado para esta entidade.</p>}</>}
           {tab==='provenance'&&<>{provenance.length?<ul className="spatial-source-list">{provenance.map((item,index)=><li key={`${item.sourceRef||item.source||'source'}:${index}`}><b>{item.label||item.source||'Fonte'}</b><span>{item.sourceRef||item.sourceId||'—'}</span><small>{item.observedAt||'sem timestamp publicado'}</small></li>)}</ul>:<p>Proveniência detalhada não foi publicada neste recorte.</p>}</>}
         </div>
         <div className="spatial-inspector-actions"><button onClick={()=>setDeep(false)}>Visão rápida</button>{selected.id!==projection?.focusId&&<button className="primary" onClick={()=>onOpen(selected.id)}>Entrar</button>}</div>
       </div>}
     </aside>}
-    {compareNodes.length===2&&<section className="spatial-compare" aria-label="Comparação de nós"><header><span>COMPARE</span><button onClick={()=>{actions.toggleCompare(compareNodes[0].id);actions.toggleCompare(compareNodes[1].id)}}>×</button></header><div>{compareNodes.map(node=><article key={node.id}><span>{node.type}</span><h4>{node.label}</h4><dl><div><dt>Status</dt><dd>{node.status||'—'}</dd></div><div><dt>Freshness</dt><dd>{humanFreshness(node.freshness)}</dd></div><div><dt>Domínio</dt><dd>{node.domain||'—'}</dd></div><div><dt>Relações visíveis</dt><dd>{projection?.edges.filter(edge=>edge.source===node.id||edge.target===node.id).length||0}</dd></div></dl></article>)}</div></section>}
+    {compareNodes.length===2&&<section className="spatial-compare" aria-label="Comparação de nós"><header><span>COMPARAÇÃO</span><button onClick={()=>{actions.toggleCompare(compareNodes[0].id);actions.toggleCompare(compareNodes[1].id)}}>×</button></header><div>{compareNodes.map(node=><article key={node.id}><span>{node.type}</span><h4>{node.label}</h4><dl><div><dt>Status</dt><dd>{node.status||'—'}</dd></div><div><dt>Atualidade</dt><dd>{humanFreshness(node.freshness)}</dd></div><div><dt>Domínio</dt><dd>{node.domain||'—'}</dd></div><div><dt>Relações visíveis</dt><dd>{projection?.edges.filter(edge=>edge.source===node.id||edge.target===node.id).length||0}</dd></div></dl></article>)}</div></section>}
   </>;
 }
 

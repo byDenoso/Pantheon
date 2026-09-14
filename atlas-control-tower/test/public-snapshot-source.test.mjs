@@ -40,6 +40,20 @@ test('getDomains keeps only DOMAIN nodes and carries fingerprint/freshness from 
   assert.equal(envelope.freshness, 'SNAPSHOT');
 });
 
+test('getDomains reads the science hierarchy instead of the system root', async () => {
+  const calls = [];
+  const source = new PublicSnapshotSource(
+    mockApi({
+      graph: async query => {
+        calls.push(query.focus);
+        return { nodes: [{ id: 'domain:D1', type: 'DOMAIN', label: 'Cosmologia' }] };
+      }
+    })
+  );
+  await source.getDomains();
+  assert.deepEqual(calls, ['system:SCIENCE']);
+});
+
 test('getDomains returns EMPTY (not READY, not fabricated) when the source has no domains', async () => {
   const source = new PublicSnapshotSource(mockApi());
   const envelope = await source.getDomains();

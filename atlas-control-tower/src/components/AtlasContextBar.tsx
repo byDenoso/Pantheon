@@ -10,7 +10,7 @@ type AtlasContextBarProps={
 
 function humanState(value?:string|null){
   const state=String(value||'UNKNOWN').toUpperCase();
-  if(state==='LIVE')return'Live';
+  if(state==='LIVE')return'Ao vivo';
   if(state==='SNAPSHOT')return'Snapshot';
   if(state==='STALE')return'Desatualizado';
   if(state==='DEGRADED')return'Degradado';
@@ -27,7 +27,7 @@ export function AtlasContextBar({path,freshness,authority,sourceVersion,navigati
       <span className={`context-state context-state-${String(freshness||'unknown').toLowerCase()}`}>{humanState(freshness)}</span>
       {authority&&<span title="Autoridade da projeção">{humanState(authority)}</span>}
       {sourceVersion&&<span title="Versão da fonte">{sourceVersion}</span>}
-      <span className={navigationKind==='cross-domain'?'context-jump':'context-drill'}>{navigationKind==='cross-domain'?'Cross-domain':'Drill down'}</span>
+      <span className={navigationKind==='cross-domain'?'context-jump':'context-drill'}>{navigationKind==='cross-domain'?'Salto entre domínios':'Abrir subgrafo'}</span>
     </div>
   </div>;
 }

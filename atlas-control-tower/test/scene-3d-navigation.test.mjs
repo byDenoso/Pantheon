@@ -121,6 +121,13 @@ test('hierarchy panorama gives sibling nodes materially more Z depth', () => {
   assert.ok(Math.max(...positioned) - Math.min(...positioned) > 2.5, 'the 3D panorama needs enough Z separation to read as volume');
 });
 
+test('hierarchy panorama keeps a wide spatial volume for deep orbital navigation', () => {
+  const nodes = [{ id: 'system:NEXO', type: 'ROOT' }, ...Array.from({ length: 12 }, (_, index) => ({ id: `system:DEEP${index}`, type: 'SYSTEM', parentId: 'system:NEXO' }))];
+  const edges = nodes.slice(1).map(node => ({ source: 'system:NEXO', target: node.id, type: 'CONTAINS' }));
+  const positioned = buildOrbitalNodes(nodes, 'system:NEXO', edges).slice(1).map(node => node.position[2]);
+  assert.ok(Math.max(...positioned) - Math.min(...positioned) > 5.5, 'the deep mode needs a clearly visible front/back volume, not a shallow z jitter');
+});
+
 test('buildOrbitalNodes centers the focus even when its case does not match the real node id (regression)', () => {
   // Real repro: a URL/session focusId of "domain:d1" against a real node id of
   // "domain:D1" previously matched nothing -- the focus never sat at the origin,

@@ -1,5 +1,5 @@
 @media(max-width:760px){
-  .premium-shell{min-height:100dvh;overflow-x:hidden;background:var(--surface-base)}
+  .premium-shell{--atlas-topbar-height:64px;min-height:100dvh;overflow-x:hidden;background:var(--surface-base)}
   .premium-shell .atlas-topbar{display:grid;grid-template-columns:44px minmax(0,1fr) auto;align-items:center;gap:6px;min-height:0;padding:calc(6px + env(safe-area-inset-top)) 8px 6px;background:color-mix(in srgb,var(--surface-overlay) 96%,transparent);z-index:var(--z-topbar)}
   .premium-shell .menu-button{display:grid;place-items:center;width:44px;min-width:44px;height:44px;border:1px solid var(--border-default);border-radius:10px;background:var(--surface-elevated);color:var(--text-primary)}
   .premium-shell .atlas-brand{min-width:0;gap:8px;overflow:hidden}.premium-shell .atlas-brand>span:last-child{min-width:0;overflow:hidden}.premium-shell .atlas-brand b{display:block;overflow:hidden;text-overflow:ellipsis;font-size:16px;white-space:nowrap}.premium-shell .atlas-brand small{display:none}.premium-shell .brand-orbit{width:34px;height:34px;flex:0 0 auto}

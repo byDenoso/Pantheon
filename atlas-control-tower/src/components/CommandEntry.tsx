@@ -4,7 +4,13 @@ type CommandEntryProps={
   onSubmit:()=>void;
 };
 
+function shortcutLabel(){
+  if(typeof navigator==='undefined')return 'Ctrl K';
+  return /Mac|iPhone|iPad|iPod/.test(navigator.platform)?'⌘ K':'Ctrl K';
+}
+
 export function CommandEntry({value,onChange,onSubmit}:CommandEntryProps){
+  const shortcut=shortcutLabel();
   return <label className="global-search atlas-command-trigger" aria-label="Busca e comandos do Atlas">
     <span aria-hidden="true">⌕</span>
     <input
@@ -16,6 +22,6 @@ export function CommandEntry({value,onChange,onSubmit}:CommandEntryProps){
       placeholder="Buscar campanha, claim, teste…"
       autoComplete="off"
     />
-    <kbd>⌘ K</kbd>
+    <kbd>{shortcut}</kbd>
   </label>;
 }

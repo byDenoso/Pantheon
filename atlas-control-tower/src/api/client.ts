@@ -17,6 +17,16 @@ function configuredRemoteBaseUrl(): string {
   return configured ? configured.replace(/\/+$/, '') : '';
 }
 
+// The canonical Vercel deployment exposes the Node endpoints under the same
+// origin. This keeps production on the live API even when no build-time env var
+// was injected, while GitHub Pages and localhost continue to use the signed
+// static artifact runtime.
+export function shouldUseSameOriginApi(): boolean {
+  if (typeof window === 'undefined') return false;
+  const hostname = String(window.location.hostname || '').toLowerCase();
+  return hostname === 'vercel.app' || hostname.endsWith('.vercel.app');
+}
+
 export function configuredBaseUrl(): string {
   return configuredRemoteBaseUrl() || '/api';
 }
@@ -31,9 +41,10 @@ export function configuredStaticDataBaseUrl(): string {
 export function createConfiguredApi(): AtlasApiClient {
   const remoteBase = configuredRemoteBaseUrl();
   if (remoteBase) return createApi({ baseUrl: remoteBase, profile: 'atlas' as const }) as AtlasApiClient;
+  if (shouldUseSameOriginApi()) return createApi({ baseUrl: '/api', profile: 'atlas' as const }) as AtlasApiClient;
   return createStaticArtifactApi({ baseUrl: configuredStaticDataBaseUrl() }) as AtlasApiClient;
 }
 
 export function apiBaseLabel(): string {
-  return configuredRemoteBaseUrl() || 'Runtime estático publicado';
+  return configuredRemoteBaseUrl() || (shouldUseSameOriginApi() ? 'API do próprio site' : 'Runtime estático publicado');
 }

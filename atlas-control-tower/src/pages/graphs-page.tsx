@@ -122,7 +122,7 @@ export function GraphsPage({state,actions,reducedMotion,compact}:{state:AtlasUiS
           {baseProjection?.breadcrumbs.map((item,index)=><span key={item.id}>{index>0&&<i>/</i>}<button onClick={()=>breadcrumb({id:item.id,label:item.label,type:'CONTEXT'})}>{item.label}</button></span>)}
         </nav>
         <div className="spatial-mode-switch" aria-label="Modo do grafo">
-          {(['explore','relations','evidence'] as const).map(value=><button key={value} className={mode===value?'active':''} aria-pressed={mode===value} onClick={()=>setMode(value)}>{value==='explore'?'Explore':value==='relations'?'Relations':'Evidence'}</button>)}
+          {(['explore','relations','evidence'] as const).map(value=><button key={value} className={mode===value?'active':''} aria-pressed={mode===value} onClick={()=>setMode(value)}>{value==='explore'?'Explorar':value==='relations'?'Relações':'Evidências'}</button>)}
         </div>
       </div>
 
@@ -140,7 +140,7 @@ export function GraphsPage({state,actions,reducedMotion,compact}:{state:AtlasUiS
           <button onClick={()=>void actions.back()} disabled={!canBack} title="Voltar · Alt+←" aria-label="Voltar">←</button>
           <button onClick={()=>void actions.forward()} disabled={!canForward} title="Avançar · Alt+→" aria-label="Avançar">→</button>
           <button onClick={()=>void actions.home()} title="Início" aria-label="Início">⌂</button>
-          <label>LOD <select value={depth} aria-label="Profundidade semântica" onChange={event=>{const next=Number(event.target.value);setDepth(next);actions.setDepth(next)}}><option value={1}>Macro</option><option value={2}>Meso</option><option value={3}>Micro</option><option value={4}>Detail</option></select></label>
+          <label>NÍVEL <select value={depth} aria-label="Profundidade semântica" onChange={event=>{const next=Number(event.target.value);setDepth(next);actions.setDepth(next)}}><option value={1}>Macro</option><option value={2}>Meso</option><option value={3}>Micro</option><option value={4}>Detalhe</option></select></label>
           <button onClick={()=>setImmersive(value=>!value)} aria-pressed={immersive} title="Modo imersivo · F" aria-label="Modo imersivo">{immersive?'□':'⛶'}</button>
         </div>
         {state.error&&graph&&<div className="atlas-react-error spatial-stale-state" role="status">STALE · último recorte válido preservado · {state.error}</div>}
@@ -150,10 +150,10 @@ export function GraphsPage({state,actions,reducedMotion,compact}:{state:AtlasUiS
         <span><b>{projection?.nodes.length||0}</b> / {total||projection?.nodes.length||0} nós</span>
         <span><b>{projection?.edges.length||0}</b> relações visíveis</span>
         <span><b>{state.path.at(-1)?.label||state.focusId}</b> foco</span>
-        <span className={navigationKind==='cross-domain'?'jump':'drill'}><b>{navigationKind==='cross-domain'?'CROSS-DOMAIN JUMP':'DRILL DOWN'}</b></span>
-        <span><b>{state.pins.length}</b> pins</span>
-        <span><b>{state.compare.length}/2</b> compare</span>
-        {state.selectedId?<div className="spatial-selection-actions"><span>{selected?.label||state.selectedId}</span><button onClick={()=>selectedPinned?actions.unpin(state.selectedId!):actions.pin(state.selectedId!)}>{selectedPinned?'Unpin':'Pin'}</button><button className={selectedCompared?'active':''} onClick={()=>actions.toggleCompare(state.selectedId!)}>Compare</button><button onClick={actions.clearSelection}>×</button></div>:<span className="spatial-selection-empty">Selecione um nó para investigar.</span>}
+        <span className={navigationKind==='cross-domain'?'jump':'drill'}><b>{navigationKind==='cross-domain'?'SALTO ENTRE DOMÍNIOS':'ABRIR SUBGRAFO'}</b></span>
+        <span><b>{state.pins.length}</b> fixados</span>
+        <span><b>{state.compare.length}/2</b> comparação</span>
+        {state.selectedId?<div className="spatial-selection-actions"><span>{selected?.label||state.selectedId}</span><button onClick={()=>selectedPinned?actions.unpin(state.selectedId!):actions.pin(state.selectedId!)}>{selectedPinned?'Desafixar':'Fixar'}</button><button className={selectedCompared?'active':''} onClick={()=>actions.toggleCompare(state.selectedId!)}>Comparar</button><button onClick={actions.clearSelection}>×</button></div>:<span className="spatial-selection-empty">Selecione um nó para investigar.</span>}
         {(graph?.hasMore||graph?.truncated)&&<button id="more" type="button" onClick={()=>void actions.more()}>Mais entidades</button>}
       </footer>
     </section>

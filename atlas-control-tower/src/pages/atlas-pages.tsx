@@ -61,6 +61,7 @@ function observatorySurfaceHref(surface: ObservatorySurface, context: AtlasConte
 }
 
 function surfaceMeta(surface: ObservatorySurface, questionRead?: ObservatoryQuestionsRead, relationCount?: number): string {
+  if (surface.available === false) return 'Não publicado';
   if (surface.count !== undefined) return `${surface.count} publicados`;
   const questions = questionRead?.questions || [];
   if (surface.id === 'questions' && questions.length) return `${questions.length} publicados`;
@@ -77,7 +78,7 @@ function ObservatorySurfaceNav({ surfaces, questionRead, relationCount, context,
   return <section className="observatory-surface-nav" aria-label="Camadas semânticas do Observatório">
     <div className="observatory-surface-intro"><span className="eyebrow">CAMADAS DO OBSERVATÓRIO</span><b>Uma pergunta, cinco formas de investigar</b><p>Cada camada tem uma fonte e um destino próprios. O mapa espacial continua concentrado em domínios e campanhas.</p></div>
     <nav className="observatory-surface-tabs" aria-label="Superfícies de investigação">
-      {surfaces.map((surface, index) => <a key={surface.id} className={`observatory-surface-tab ${index === 0 ? 'active' : ''}`} aria-current={index === 0 ? 'page' : undefined} href={observatorySurfaceHref(surface, context)} onClick={event => { event.preventDefault(); navigate(observatorySurfaceHref(surface, context)); }}>
+      {surfaces.map(surface => <a key={surface.id} className="observatory-surface-tab" href={observatorySurfaceHref(surface, context)} onClick={event => { event.preventDefault(); navigate(observatorySurfaceHref(surface, context)); }}>
         <span className="surface-tab-label">{surface.label}</span><small>{surface.description}</small><span className="surface-tab-meta">{surfaceMeta(surface, questionRead, relationCount)} <span aria-hidden="true">→</span></span>
       </a>)}
     </nav>

@@ -20,12 +20,15 @@ export function PrivateGate({
     return (
       <div className="page-wrap panel-empty auth-gate" role="status">
         <span aria-hidden="true">⚿</span>
-        <h2>AUTH_SETUP_REQUIRED</h2>
+        <h2>Área protegida</h2>
         <p>
-          {area} é uma área privada, mas nenhum provedor de login (Google Identity Services) está configurado neste
-          ambiente. Nenhuma sessão foi simulada.
+          {area} reúne execução e histórico operacional. O acesso ainda não está configurado neste ambiente, então o
+          Atlas preservou a leitura pública e não simulou uma sessão.
         </p>
-        <small>Configuração pendente: VITE_GOOGLE_CLIENT_ID / GOOGLE_CLIENT_ID / NEXO_ALLOWED_EMAILS.</small>
+        <details>
+          <summary>Detalhe técnico</summary>
+          <small>AUTH_SETUP_REQUIRED · configure o provedor Google e a lista NEXO_ALLOWED_EMAILS.</small>
+        </details>
       </div>
     );
   }
@@ -34,7 +37,7 @@ export function PrivateGate({
   return (
     <div className="page-wrap panel-empty auth-gate" role="status">
       <span aria-hidden="true">⚿</span>
-      <h2>{state}</h2>
+      <h2>Acesso à área restrito</h2>
       <p>{message}</p>
       <button className="sync-button" onClick={onGoToLogin}>
         Entrar →

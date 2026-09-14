@@ -121,7 +121,10 @@ function hierarchyPositions(nodes: AtlasNode[], focusId: string, edges: AtlasEdg
     const center: [number, number, number] = [
       Math.cos(angle) * ringRadius,
       Math.sin(angle) * ringRadius * 0.66,
-      hashSigned(`${child.id}:hub-depth`) * 2.2
+      // The graph is an illustrated spatial field, not a flat radial chart. A
+      // wider deterministic front/back spread is what makes orbiting visible
+      // while keeping the public node budget unchanged.
+      hashSigned(`${child.id}:hub-depth`) * 4.2
     ];
     positions.set(child.id, center);
     const cluster = members.get(child.id) || [];
@@ -131,7 +134,7 @@ function hierarchyPositions(nodes: AtlasNode[], focusId: string, edges: AtlasEdg
       positions.set(node.id, [
         center[0] + Math.cos(memberAngle) * memberRadius,
         center[1] + Math.sin(memberAngle) * memberRadius * 0.72,
-        center[2] + hashSigned(`${node.id}:depth`) * (1.45 + memberRadius * 0.5)
+        center[2] + hashSigned(`${node.id}:depth`) * (2.4 + memberRadius * 0.85)
       ]);
     });
   });

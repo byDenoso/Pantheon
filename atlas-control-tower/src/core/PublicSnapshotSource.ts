@@ -75,7 +75,10 @@ export class PublicSnapshotSource implements AtlasDataSource {
   async getDomains(): Promise<DataEnvelope<DomainNode[]>> {
     const meta = await this.healthEnvelope();
     try {
-      const graph = (await this.api.graph({ focus: 'system:NEXO' })) as RawGraph;
+      // The root projection contains systems only. Domains are owned by the
+      // Science hierarchy, so reading the root here silently produced an empty
+      // Cockpit campaign list even when the snapshot contained all campaigns.
+      const graph = (await this.api.graph({ focus: 'system:SCIENCE' })) as RawGraph;
       const domains: DomainNode[] = (graph.nodes || [])
         .filter(node => String(node.type || '').toUpperCase() === 'DOMAIN')
         .map(node => ({ id: node.id, type: 'DOMAIN', label: String(node.label || node.id), summary: node.summary }));
