@@ -15,5 +15,9 @@ export type GraphProjection={
  breadcrumbs:GraphContext[];capabilities:{drillDown:boolean;learning:boolean;provenance:boolean;search:boolean;compare?:boolean;pin?:boolean;relations?:boolean};
  freshness?:string|null;navigationKind?:GraphNavigationKind;
 };
+export type GraphSurfaceProps={
+ projection:GraphProjection;learningEdges?:GraphEdge[];learning:boolean;selectedId?:string|null;selectedEdgeId?:string|null;
+ onSelect:(id:string|null)=>void;onOpenNode?:(id:string)=>void;onSelectEdge?:(id:string|null)=>void;onToggleLearning?:(value:boolean)=>void;
+};
 export type GraphSelection={nodeId:string|null;edgeId:string|null};
 export type GraphMachineState={level:GraphLevel;focusId:string|null;selection:GraphSelection;learning:boolean};
