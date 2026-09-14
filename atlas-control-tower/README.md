@@ -1,116 +1,99 @@
-# NEXO Atlas Control Tower V3
+# NEXO Atlas Control Tower
 
-## Runtime provenance
+ATLAS is the read-only visualization and inspection surface for NEXO.
 
-- Vercel project: `prj_DLQSz5OiIT1HxWMn2i4AgoIv5x8r`
-- Production alias: `nexo-atlas-control-tower.vercel.app`
-- Frontend source pinned in the deployed `index.html`: `36899dec2038d147efd8ce47f75b566412bb998e`
+## Authority
 
-Status: `SOURCE_MIRRORED_FOR_FRONTEND` (verified 2026-09-07).
+Operational truth is owned exclusively by:
 
-The pinned commit above is reachable from `main`, so the frontend the production
-alias serves can be read here. That replaces the earlier
-`SOURCE_NOT_MIRRORED_IN_REPO` pointer, which was accurate while this directory
-held only a manifest.
+`byDenoso/NEXO-Obsidian-Vault@main:TOWER_V06`
 
-Two limits still apply, and neither should be inferred away:
+The canonical write model is `GITHUB_CAS_ENTITY_EVENT`. ATLAS does not own operational state and cannot write back into TOWER.
 
-- **Commits to `main` now trigger Vercel Git Integration.** The project is
-  rooted at `atlas-control-tower` and Vercel builds the checked-in frontend
-  directly. The legacy CLI promotion path remains available when a release
-  credential is intentionally configured, but it is not required for the
-  connected Git deployment.
-- **Vercel remains authoritative for live deployment and runtime state**, and
-  Neon `science_v1` / `learning_v1` / `nexo_ops` remain the mutable truth
-  owners. Git is the source mirror, not the data owner.
+The locator contract is `nexo-one/data/canonical.json` (`NEXO_ATLAS_AUTHORITY_V2`). It points at `TOWER_V06/CONTROL.json` and separately identifies sanitized projection artifacts used by the public UI.
 
+Google Drive is legacy projection/provenance only. Neon and old Data API surfaces are legacy compatibility code, not current NEXO truth owners. A projection, cache, deployment runtime, or fallback can never override TOWER_V06.
 
-Extends the existing Vercel project `prj_DLQSz5OiIT1HxWMn2i4AgoIv5x8r` / `nexo-atlas-control-tower`.
+## Read path
 
-## Design spec
+```text
+TOWER_V06
+   |
+   +-- canonical state / provenance
+   |
+   +--> sanitized projection
+              |
+              v
+           ATLAS
+```
 
-The central explorer uses deterministic 3D coordinates, perspective projection, orbit, pan, zoom, hit testing and depth ordering. Canvas rendering has no external CDN or library dependency. It is not a WebGL/Three.js implementation. A flat view is available. Scientific data is read-only. Derived navigation and learning remain explicitly marked. Source-sheet row numbers survive blank and invalid rows.
+Public state, graph and entity routes are served through the Tower-aware projection runtime. Existing GitHub/Drive-named modules may remain as compatibility adapters, but their names do not grant authority.
 
-The UI includes overview/explore/audit controls, bounded subgraph loading, node and edge inspection, source links, related files, neighbor/ancestor/descendant exploration, blocker dependencies, two-entity comparison, interactive domain/claim/activity charts, shared filters, search, and fourteen progressive WebMCP tools. Domain expansion prioritizes campaigns. The renderer does not interpret geometric distance as scientific evidence.
+If the current projection cannot be refreshed, ATLAS preserves the last valid sanitized snapshot and marks it stale/degraded. It must not invent replacement truth.
 
-## Sources and scope
+## Product boundary
 
-- PEER Sheet: `1Y9YYAn2x0NDIBTbl1bvkwBbSEGz6kHLxzAl90SQ0-GA`.
-- Learning Sheet: `1to_VBC5edy3kHbkn4CDjG2r33tr0jdtky2Ie80afbEI`.
-- Existing operational read model: `https://nexo-flight-recorder.vercel.app/api/flight`.
-- Baseline frontend recovered from the existing production deployment. Original backend source was not located. The new backend reuses the existing operational endpoint rather than creating a new database identity.
+ATLAS provides:
 
-Source capture contained 2,186 distinct test IDs, 84 navigation campaigns, 1,193 hypotheses, 31 decision claims, 1,606 result envelopes, 190 campaign-run IDs, and 28 learning relations. These are captured-source counts, not permanent assertions about the live system. Incomplete relationship references are reported, not fabricated. Runs and files are connected only when source references exist.
+- structural graph navigation;
+- science/program/campaign read models;
+- Learning and inter-domain overlays;
+- Operations, audit, provenance and health views;
+- source links and bounded drill-down;
+- static GitHub Pages artifacts plus compatible serverless read routes.
 
-## Run and test
+Personal Olympus/client health data must never enter the public projection. Derived geometry, graph position and semantic similarity are navigation aids, not scientific evidence.
 
-Node 24: `npm test` and `npm start`.
+## API compatibility
 
-`build-snapshot.mjs` consumes directed connector exports in baseline/*.json and compresses the private fallback to lib/snapshot.mjs. Scientific data exports and the generated snapshot are deliberately not tracked in Git. They are rebuildable from their source. Without a snapshot the optional import boots a navigation skeleton. Supply the private snapshot to load science. No credentials belong in Git.
+Primary public read routes include:
 
-The browser test uses the runtime Playwright package and requires a Chromium installation. `test/render.cjs` uses the runtime native Canvas package to execute the actual 3D renderer independently of a browser.
+```text
+GET  /api/state
+GET  /api/graph
+GET  /api/entity
+GET  /api/health
+GET  /api/learning
+GET  /api/audit
+GET  /api/ops
+POST /api/sync
+```
 
-## Implemented backend
+`POST /api/sync` is a projection refresh operation, not a canonical mutation. It cannot alter TOWER_V06.
 
-GET /api/state, /api/graph, /api/entity?id=..., /api/entity?id=...&view=lineage, /api/entity?id=...&view=files, /api/automation-runs, /api/learning-relations, /api/ops. POST /api/sync refreshes available sources and preserves last valid data on failure. GET /api/state?refresh=1 provides the same read-model refresh for diagnostics. Source reads have deadlines; concurrent refreshes are coalesced per instance, with a 30s throttle. Google readers compare modified times before reading sheet ranges.
+## Runtime
 
-## Configuration still required / unverified
+The browser product is a Vite/React application with a route-scoped spatial graph renderer. GitHub Pages is a supported static production target. Vercel compatibility routes may also serve the read model, but deployment providers are not state authorities.
 
-Google runtime authentication: either GOOGLE_SERVICE_ACCOUNT_JSON, or GOOGLE_CLIENT_ID + GOOGLE_CLIENT_SECRET + GOOGLE_REFRESH_TOKEN, read-only scopes. Existing ChatGPT connector access does not provision the app. No Google secrets were retrieved or created.
+No scheduler, database, cache, MCP, API gateway, or UI runtime is allowed to become a second NEXO truth store.
 
-Operational source uses the existing Flight Recorder endpoint. Runtime readback must prove that this remains accessible from the new deployment. It is an indirect Neon reader, not a newly configured direct database connection.
+## Development
 
-Cache is process memory plus the bundled last-valid fallback. A durable incremental cache and background sync every five minutes are NOT implemented. Vercel Hobby cron does not support that cadence. The browser refreshes on load, focus, button and every five minutes while visible; that does not guarantee unattended background refresh.
+From `atlas-control-tower/`:
 
-Desktop and mobile browser verification is covered by test/browser.cjs. Screenshots are generated locally and excluded from Git. Historical claim evolution and completion percentages are not fabricated from current rows. Critical-path view follows recorded dependencies, not an inferred scientific closure roadmap. It is not a duration-weighted schedule calculation.
+```bash
+npm ci
+npm test
+npm run typecheck
+npm run build
+```
 
-Expanded private source data requires verified viewer access control before promotion to public production. Preview deployments inherit the existing project's protection; do not disable it. Production promotion must wait for source access, viewer protection, and browser verification. No new scheduler, database, canonical writer or autonomous agent was created.
+The Atlas Quality workflow must pass unit/contract tests, TypeScript checks and the production build before merge. Browser/release verification is performed by the NEXO ONE CI workflow.
 
-## Implementation plan and release gates
+## UGI cutover
 
-1. Recovered baseline and adapters: implemented; tests executed.
-2. Data APIs and 3D UI: implemented as candidate.
-3. Preview runtime and source readback: inspect latest deployment receipt.
-4. Configure Google read-only app access, verify viewer access control, choose existing-infrastructure durable cache strategy.
-5. Complete full desktop/mobile browser checks, authenticated sync, failover and real-volume acceptance.
-6. Promote to the existing production project only after gates pass.
+NEXO UGI Core keeps API and MCP as semantic interfaces over the same canonical state. ATLAS remains downstream of that architecture:
 
-Rollback production reference: `dpl_Bo7UyMcAqPLRZnHS7GAzKMvKe9tA` (observed 2026-09-05). Re-read current production before changing it, because other sessions may deploy concurrently.
+```text
+UGI Core
+   |
+API / MCP
+   |
+NexoService
+   |
+TOWER_V06
+   |
+ATLAS read-only projection
+```
 
-
-## Visual finish (2026-09-05)
-
-Retains the custom perspective renderer and all scientific API contracts. Expanded map, luminous focal sphere, orbital guides, depth shading, priority label placement avoiding nodes and other labels, immersion toggle (Escape to exit), opt-in automatic orbit with pause and hidden-tab suspension. No automatic camera motion on load. Flat view stops automatic orbit. UI remains dark and responsive. Source geometry is decorative navigation, never a scientific metric.
-
-Recovered HTML/CSS shell and optional snapshot import from the supplied handoff. Preserved daily 08:00 UTC cron. Science freshness and durable cache remain backend work; the daily trigger cannot refresh science without a configured reader. No source registers or automations changed.
-
-Browser test paths are relative to the current project. Use ATLAS_BASE_URL to test a deployed instance; optional ATLAS_CHROMIUM_MODULE points to a Chromium provider's ESM entry when using a serverless binary. The original production before this visual pass was dpl_EeojU1k1TiYUCGds3MBDPNAcfq3n.
-
-
-## Observatório themes and maintenance
-
-Current visual direction: blue cosmic Observatório, dark/light themes with saved preference. Read [docs/FRONTEND.md](docs/FRONTEND.md) before frontend changes. `ui/tokens.css` owns page palette; `ui/visual-config.mjs` owns Canvas palette and visual knobs. Root preview expands real bounded subsystem children. Use `frontend-files.mjs` and `node scripts/configure-static.mjs` for new public assets.
-
-## Graph Contract V1, Learning and Migration Health (2026-09-05)
-
-The frontend reads a stable contract instead of the physical read model:
-`{nodes, edges, total, hasMore, truncated, depth, fingerprint, sourceVersion, issues}`,
-served by `GET /api/graph` and normalised in `lib/atlas-api.mjs` with an in-memory
-cache keyed by the projection fingerprint. New endpoints: `GET /api/audit` and
-`GET /api/learning` (`?id=` for one entity). `POST /api/sync` is never cached.
-
-Learning has its own tab with the Observation → Policy ladder, emergent buckets and
-an entity overlay driven only by `evidence_refs`; stages with no source are shown as
-pending and name the tab they need. Migration issues live in the Audit tab only —
-`UNMAPPED` is no longer rendered as a scientific domain in the chart, the sidebar or
-`GET /api/state`. Snapshot science is still a bundled private fallback without Google
-authentication; durable cache and automatic scientific refresh remain backend work.
-
-## V1-integration-ready frontend (2026-09-06)
-
-The presentation layer no longer knows the physical read model. `GET /api/graph`
-answers Graph Contract V1 and `ATLAS_DATA_SOURCE` (`legacy|v1|auto`) plus
-`ATLAS_V1_BASE_URL` select the reader; a fallback is always visible in the UI.
-New endpoints: `GET /api/health`, `GET /api/audit`, `GET /api/learning[?id=|&view=lineage]`.
-Human-readable labels are derived without touching canonical identifiers, which stay
-visible in the inspector, in the data table and in search.
+On disagreement between ATLAS, Drive, runtime checkpoints, caches, model context or TOWER_V06, **TOWER_V06 wins**.
