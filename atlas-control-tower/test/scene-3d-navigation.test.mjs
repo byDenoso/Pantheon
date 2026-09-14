@@ -114,6 +114,25 @@ test('buildOrbitalNodes gives deterministic, distinct x/y/z positions for the sa
   assert.notDeepEqual(byId.get('campaign:c1'), byId.get('campaign:c2'), 'distinct nodes must not collapse onto the same point');
 });
 
+test('buildOrbitalNodes centers the focus even when its case does not match the real node id (regression)', () => {
+  // Real repro: a URL/session focusId of "domain:d1" against a real node id of
+  // "domain:D1" previously matched nothing -- the focus never sat at the origin,
+  // hierarchyPositions() found no direct children, and every node fell back to the
+  // much-larger-radius golden-spiral layout while the camera stayed framed for the
+  // tight hierarchy layout, blowing the scene up on screen (confirmed via a real
+  // browser repro at http://localhost:4412/mapa/system:SCIENCE/domain:d1).
+  const nodes = [
+    { id: 'domain:D1', type: 'DOMAIN' },
+    { id: 'CAMP-H0-RULER-ANCHOR', type: 'CAMPAIGN', domain: 'D1' }
+  ];
+  const edges = [{ source: 'domain:D1', target: 'CAMP-H0-RULER-ANCHOR', type: 'CONTAINS' }];
+  const mismatched = buildOrbitalNodes(nodes, 'domain:d1', edges);
+  const canonical = buildOrbitalNodes(nodes, 'domain:D1', edges);
+  const byIdMismatched = new Map(mismatched.map(n => [n.id, n.position]));
+  assert.deepEqual(byIdMismatched.get('domain:D1'), [0, 0, 0], 'a lowercase focusId must still resolve to the real (uppercase) node and center it');
+  assert.deepEqual(mismatched.map(n => n.position), canonical.map(n => n.position), 'a case-mismatched focusId must produce the same layout as the exact-cased one');
+});
+
 test('no map node outside DOMAIN/CAMPAIGN/SYSTEM/ROOT reaches the 3D scene once the entity contract has run', async () => {
   const { enforceGraphEntityContract } = await import('../src/graph-engine/graph-entity-contract.ts');
   const projection = {

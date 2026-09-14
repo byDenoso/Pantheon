@@ -1,6 +1,20 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { readAtlasRoute, routeFor, rewriteLegacyPublicPath, isPrivateArea, PUBLIC_PATH } from '../src/atlas-route.ts';
+import { readAtlasRoute, routeFor, rewriteLegacyPublicPath, isPrivateArea, PUBLIC_PATH, normalizeGraphHydrationId } from '../src/atlas-route.ts';
+
+test('normalizeGraphHydrationId uppercases a lowercase domain id, matching real node ids (regression)', () => {
+  // Real repro: hydrating /mapa/system:SCIENCE/domain:d1 previously kept "domain:d1"
+  // verbatim as the focus id while the real node is "domain:D1", breaking every
+  // downstream id comparison and blowing up the 3D layout on screen.
+  assert.equal(normalizeGraphHydrationId('domain:d1'), 'domain:D1');
+  assert.equal(normalizeGraphHydrationId('DOMAIN:d10'), 'domain:D10');
+  assert.equal(normalizeGraphHydrationId('domain:D1'), 'domain:D1');
+});
+
+test('normalizeGraphHydrationId leaves non-domain ids untouched', () => {
+  assert.equal(normalizeGraphHydrationId('system:SCIENCE'), 'system:SCIENCE');
+  assert.equal(normalizeGraphHydrationId('CAMP-H0-RULER-ANCHOR'), 'CAMP-H0-RULER-ANCHOR');
+});
 
 test('routeFor produces the canonical public paths from the locked route contract', () => {
   assert.equal(routeFor('graphs'), '/mapa');

@@ -28,8 +28,14 @@ function graphEdge(edge:AtlasEdge,index:number):GraphEdge{
  };
 }
 
-export function buildLiveProjection({graph,focusId,path,pins=[],compare=[]}:{graph:AtlasGraph;focusId:string;path:Array<{id:string;label?:string}>;pins?:string[];compare?:string[]}):GraphProjection{
+export function buildLiveProjection({graph,focusId:rawFocusId,path,pins=[],compare=[]}:{graph:AtlasGraph;focusId:string;path:Array<{id:string;label?:string}>;pins?:string[];compare?:string[]}):GraphProjection{
  const byId=new Map(graph.nodes.map(node=>[node.id,node]));
+ // Resolve to the real node's own id (case-insensitively) before any comparison
+ // below. A case-mismatched focusId (e.g. session state carrying "domain:d1" while
+ // the real node is "domain:D1") previously matched no node at all: nothing got
+ // contextRole:'current', hierarchy/portal detection silently found nothing tied to
+ // the focus -- confirmed via a real browser repro, not a guess.
+ const focusId=byId.has(rawFocusId)?rawFocusId:(graph.nodes.find(node=>node.id.toLowerCase()===rawFocusId.toLowerCase())?.id??rawFocusId);
  const edges=graph.edges.map(graphEdge);
  const hierarchyChildren=new Set<string>();
  const portalIds=new Set<string>();

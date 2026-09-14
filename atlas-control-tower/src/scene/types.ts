@@ -138,7 +138,17 @@ function hierarchyPositions(nodes: AtlasNode[], focusId: string, edges: AtlasEdg
 }
 
 export function buildOrbitalNodes(nodes: AtlasNode[], focusId?: string | null, edges: AtlasEdge[] = []): PositionedNode[] {
-  const focalId = focusId || undefined;
+  // Resolve to the real node's own id (case-insensitively) before any comparison
+  // below. A case-mismatched focusId (e.g. a URL-persisted "domain:d1" against a
+  // real "domain:D1" node) previously matched nothing: the focus never centered at
+  // the origin, hierarchyPositions() found no direct children, and every node fell
+  // back to the generic golden-spiral layout at a much larger radius than the
+  // camera framing expects -- confirmed via a real browser repro, not a guess.
+  const focalId = focusId
+    ? nodes.find(node => node.id === focusId)?.id
+      ?? nodes.find(node => node.id.toLowerCase() === focusId.toLowerCase())?.id
+      ?? focusId
+    : undefined;
   const positions = focalId ? hierarchyPositions(nodes, focalId, edges) : null;
   const others = nodes.filter(node => node.id !== focalId);
   const fallbackCount = Math.max(1, others.length);

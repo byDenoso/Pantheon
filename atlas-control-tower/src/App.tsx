@@ -3,7 +3,7 @@ import { cockpitCopy, nodeDisplayLabel } from '../ui/cockpit-copy.mjs';
 import { FreshnessBadge, ProvenanceDrawer, ScientificStatusBadge } from './components/atlas-ui';
 import { ControlPlaneDrawer } from './components/ControlPlaneDrawer';
 import { CommandEntry } from './components/CommandEntry';
-import { useAtlasRoute, routeFor, type AtlasArea } from './atlas-route';
+import { useAtlasRoute, routeFor, normalizeGraphHydrationId, type AtlasArea } from './atlas-route';
 import type { Provenance } from './api/types';
 import { useAtlasSession, type AtlasActions, type AtlasUiState } from './state/useAtlasSession';
 import { GraphsPage } from './pages/graphs-page';
@@ -114,7 +114,8 @@ export default function App() {
     hydratedGraphRoute.current = route.path;
     void (async () => {
       for (const [index, segment] of segments.entries()) {
-        const id = segment.includes(':') ? segment : index === 0 && segment.toLowerCase() === 'science' ? 'system:SCIENCE' : `domain:${segment}`;
+        const raw = segment.includes(':') ? segment : index === 0 && segment.toLowerCase() === 'science' ? 'system:SCIENCE' : `domain:${segment}`;
+        const id = normalizeGraphHydrationId(raw);
         await actions.focusSystem(id, segment);
       }
     })();

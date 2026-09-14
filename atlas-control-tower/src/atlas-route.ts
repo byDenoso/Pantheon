@@ -17,6 +17,15 @@ export type AtlasRoute = {
 
 const AREAS: AtlasArea[] = ['graphs', 'observatory', 'lab', 'universe', 'cockpit', 'atividade', 'login', 'landing'];
 
+// Real domain ids are uppercase (domain:D1..D10); a URL typed or persisted in
+// lowercase (domain:d1) must still resolve to the real node during graph-route
+// hydration, or every downstream id comparison (buildLiveProjection,
+// buildOrbitalNodes) silently fails and the graph falls back to an uncentered
+// layout -- confirmed via a real browser repro, not a guess.
+export function normalizeGraphHydrationId(id: string): string {
+  return id.replace(/^domain:(.+)$/i, (_match, rest: string) => `domain:${rest.toUpperCase()}`);
+}
+
 // Locked public route contract: /graphs -> /mapa, /observatory and /universe -> /pesquisa
 // (both fold into one consolidated public research index), /lab -> /laboratorio.
 export const PUBLIC_PATH: Record<AtlasArea, string> = {
