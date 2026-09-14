@@ -6,6 +6,12 @@ const arr=value=>Array.isArray(value)?value:[];
 const text=value=>String(value??'').trim();
 const upper=value=>text(value).toUpperCase();
 const programMode=index=>arr(index?.programs).length>0;
+const campaignTestCount=campaign=>{
+ const direct=Number(campaign?.testCount);
+ if(Number.isFinite(direct))return direct;
+ const match=text(campaign?.summary||campaign?.question).match(/\b(\d+)\s+test_ids?\b/i);
+ return match?Number(match[1]):null;
+};
 
 function validateIndex(index=INDEX){
  const driveOwned=upper(index?.source)==='GOOGLE_DRIVE'||upper(index?.authority)==='GOOGLE_DRIVE'||upper(index?.projectionAuthority)==='GOOGLE_DRIVE';
@@ -18,7 +24,7 @@ export function loadDriveGithubScience(){return {index:validateIndex()}}
 const sourceVersion=index=>text(index.sourceVersion||index.sourceModifiedAt||index.generatedAt||index.fingerprint);
 const domainNode=domain=>({id:domain.id,type:'DOMAIN',domain:domain.code,label:domain.label||domain.code,status:domain.scientificState||'',summary:domain.question||'',authority:'GITHUB',metadata:{operationalState:domain.operationalState||'',parentHypothesis:domain.parentHypothesis||'',scienceAuthority:domain.authority||'',projectionAuthority:'GOOGLE_DRIVE',childCount:null}});
 const programNode=(program,index)=>({id:program.id,type:'PROGRAM',domain:program.domain||'',label:program.title||program.label||program.id,status:program.status||'',summary:program.summary||'',authority:'GITHUB',metadata:{sourceRef:program.sourceRef||'',projectionAuthority:'GOOGLE_DRIVE',childCount:arr(index.campaigns).filter(campaign=>campaign.primaryProgram===program.id).length}});
-const campaignNode=campaign=>({id:campaign.id,type:'CAMPAIGN',label:campaign.title||campaign.label||campaign.id,status:campaign.status||'',summary:campaign.question||campaign.summary||'',domain:campaign.domain||'',authority:'GITHUB',metadata:{testCount:campaign.testCount??null,sourceRef:campaign.sourceRef||'',primaryProgram:campaign.primaryProgram||'',projectionAuthority:'GOOGLE_DRIVE',childCount:0}});
+const campaignNode=campaign=>({id:campaign.id,type:'CAMPAIGN',label:campaign.title||campaign.label||campaign.id,status:campaign.status||'',summary:campaign.question||campaign.summary||'',domain:campaign.domain||'',authority:'GITHUB',metadata:{testCount:campaignTestCount(campaign),sourceRef:campaign.sourceRef||'',primaryProgram:campaign.primaryProgram||'',projectionAuthority:'GOOGLE_DRIVE',childCount:0}});
 const publicCompleteness=index=>({programs:{included:arr(index.programs).length,truncated:false},campaigns:{included:arr(index.campaigns).length,truncated:false},domains:{included:arr(index.domains).length,truncated:false}});
 
 function base(state){
@@ -47,11 +53,13 @@ function programGraph(state,id){
 }
 
 function domainGraph(state,code){
- const domain=arr(state.index.domains).find(item=>item.code===code);
- if(!domain)return graph(state,`domain:${code}`,[],[],{depth:2,issues:[{level:'WARN',type:'SCIENCE_DOMAIN_NOT_FOUND',focus:code}]});
- const campaigns=arr(state.index.campaigns).filter(item=>item.domain===code).map(campaignNode);
- const root={...domainNode(domain),metadata:{...domainNode(domain).metadata,childCount:campaigns.length}};
- const edges=campaigns.map(campaign=>({id:`contains:${root.id}:${campaign.id}`,source:root.id,target:campaign.id,type:'CONTAINS',authority:'GITHUB',declared:true}));
+ const explicit=arr(state.index.domains).find(item=>item.code===code);
+ const campaigns=arr(state.index.campaigns).filter(item=>upper(item.domain)===code).map(campaignNode);
+ if(!explicit&&!campaigns.length)return graph(state,`domain:${code}`,[],[],{depth:2,issues:[{level:'WARN',type:'SCIENCE_DOMAIN_NOT_FOUND',focus:code}]});
+ const root=explicit
+  ?{...domainNode(explicit),metadata:{...domainNode(explicit).metadata,childCount:campaigns.length}}
+  :{id:`domain:${code}`,type:'DOMAIN',domain:code,label:code,status:'ACTIVE',summary:`Vista derivada das campanhas que declaram domínio ${code}.`,authority:'GITHUB',metadata:{derived:true,derivationRule:'campaign.domain',projectionAuthority:'GOOGLE_DRIVE',childCount:campaigns.length}};
+ const edges=campaigns.map(campaign=>({id:`contains:${root.id}:${campaign.id}`,source:root.id,target:campaign.id,type:'CONTAINS',authority:'GITHUB',declared:true,derived:!explicit}));
  return graph(state,root.id,[root,...campaigns],edges,{depth:2,completeness:{...publicCompleteness(state.index),view:{included:campaigns.length,truncated:false}}});
 }
 
@@ -65,6 +73,7 @@ function scienceEntity(state,id){
  if(id==='system:SCIENCE')return scienceRoot(state).nodes[0];
  const program=arr(state.index.programs).find(item=>item.id===id);if(program)return programNode(program,state.index);
  const domain=arr(state.index.domains).find(item=>item.id===id||item.code===id);if(domain)return domainNode(domain);
+ if(/^domain:D\d+$/i.test(id)){const view=domainGraph(state,id.slice(7).toUpperCase());return view.nodes[0]||null}
  const campaign=arr(state.index.campaigns).find(item=>item.id===id);if(campaign)return campaignNode(campaign);
  return null;
 }
@@ -73,7 +82,7 @@ function projectGraph(state,query,genericState){
  const focus=text(query.focus||'system:NEXO');
  if(focus==='system:SCIENCE')return scienceRoot(state);
  if(arr(state.index.programs).some(item=>item.id===focus)){const value=programGraph(state,focus);if(value)return value}
- if(/^domain:D\d+$/i.test(focus)&&!programMode(state.index))return domainGraph(state,focus.slice(7).toUpperCase());
+ if(/^domain:D\d+$/i.test(focus))return domainGraph(state,focus.slice(7).toUpperCase());
  if(/^CAMP-/i.test(focus)){const value=campaignGraph(state,focus);if(value)return value}
  if(/^T-|^result:/i.test(focus))return graph(state,focus,[],[],{issues:[{level:'INFO',type:'SCIENCE_TEST_DETAIL_NOT_PUBLIC',focus}]});
  if(genericState)return projectGithubCanonical(genericState,'graph',query);
