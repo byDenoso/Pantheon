@@ -30,6 +30,16 @@ test('compiler emits the SRM V2 structural contract without exposing Olympus',()
   assert(!JSON.stringify(model).includes('SECRET'));
 });
 
+test('structural edges only reference published structural entities',()=>{
+  const model=buildScienceReadModelV2(snapshot);
+  const ids=new Set(['system:SCIENCE',...model.structure.programs.map(item=>item.id),...model.structure.campaigns.map(item=>item.id)]);
+  for(const edge of model.structure.edges){
+    assert(ids.has(edge.source),`dangling source ${edge.source}`);
+    assert(ids.has(edge.target),`dangling target ${edge.target}`);
+  }
+  assert(!model.structure.edges.some(edge=>edge.target==='programs'));
+});
+
 test('all five SRM read routes are public research routes',()=>{
   for(const route of SRM_ROUTES)assert(RESEARCH_ROUTES.has(route),route);
 });
