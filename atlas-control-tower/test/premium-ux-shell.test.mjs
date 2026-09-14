@@ -78,11 +78,14 @@ test('private areas explain the access boundary in product language and keep the
   assert.match(gate, /AUTH_SETUP_REQUIRED/);
 });
 
-test('the Vercel runtime uses its same-origin API when no external base URL is injected', () => {
+test('the Vercel runtime uses its real same-origin HTTP API when no external base URL is injected', () => {
   const client = read('src/api/client.ts');
   assert.match(client, /shouldUseSameOriginApi/);
   assert.match(client, /vercel\.app/);
-  assert.match(client, /createApi\(\{\s*baseUrl:\s*'\/api',\s*profile:\s*'atlas'/);
+  assert.match(client, /sameOriginApiBase/);
+  assert.match(client, /window\.location\.origin/);
+  assert.match(client, /createApi\(\{\s*baseUrl:\s*sameOriginApiBase,\s*profile:\s*'atlas'/);
+  assert.doesNotMatch(client, /createApi\(\{\s*baseUrl:\s*'\/api',\s*profile:\s*'atlas'/);
   assert.match(client, /createStaticArtifactApi/);
 });
 
