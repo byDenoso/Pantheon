@@ -30,8 +30,5 @@
     {"src":"/api/private/sync","dest":"/api/private/index.mjs?route=sync"},
     {"handle":"filesystem"},
     {"src":"/(.*)","dest":"/index.html"}
-  ],
-  "crons": [
-    {"path":"/api/state?refresh=1","schedule":"0 8 * * *"}
   ]
 }
