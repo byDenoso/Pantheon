@@ -4,7 +4,7 @@ import {readFile} from 'node:fs/promises';
 
 const handler=await readFile(new URL('../server/handler.mjs',import.meta.url),'utf8');
 const adapter=await readFile(new URL('../server/adapters/atlas-ssot.mjs',import.meta.url),'utf8');
-const live=await readFile(new URL('../../atlas-control-tower/lib/live-drive-ssot.mjs',import.meta.url),'utf8');
+const manualSync=await readFile(new URL('../../atlas-control-tower/lib/pages-manual-live-api.mjs',import.meta.url),'utf8');
 
 test('Atlas SSOT route is service-authenticated and read-only',()=>{
  assert.match(handler,/readAtlasSsot/);
@@ -29,5 +29,7 @@ test('manual public Atlas refresh reads the live Drive SSOT but exposes only the
  assert.match(handler,/https:\/\/bydenoso\.github\.io/);
  assert.match(handler,/Access-Control-Allow-Methods','GET,OPTIONS'/);
  assert.match(handler,/WRITES_DISABLED/);
- assert.match(live,/nexo-one-two\.vercel\.app\/api\/atlas-public-ssot/);
+ assert.match(manualSync,/nexo-one-two\.vercel\.app\/api\/atlas-public-ssot/);
+ assert.match(manualSync,/readbackVerified:true/);
+ assert.match(manualSync,/lastValidPreserved:true/);
 });
