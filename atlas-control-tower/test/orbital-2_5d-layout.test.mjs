@@ -1,6 +1,9 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { layoutRing, buildSceneLayout, applyParallax, hitTest, nodeRadius, clampZoom, zoomStep, MIN_ZOOM, MAX_ZOOM } from '../src/graph-engine/orbital-2_5d-layout.ts';
+import {
+  layoutRing, buildSceneLayout, applyParallax, hitTest, nodeRadius, clampZoom, zoomStep, MIN_ZOOM, MAX_ZOOM,
+  clampTilt, rotationFromDrag, tiltFromDrag, rotationFromKey, tiltFromKey, panFromDrag, clampPan, MIN_TILT, MAX_TILT, MAX_PAN
+} from '../src/graph-engine/orbital-2_5d-layout.ts';
 
 test('layoutRing places nodes evenly around the center and is deterministic', () => {
   const first = layoutRing(['a', 'b', 'c', 'd'], 100);
@@ -80,4 +83,59 @@ test('zoomStep moves by the given step and stays clamped at the bounds', () => {
   assert.equal(zoomStep(1, -1), 0.75);
   assert.equal(zoomStep(MAX_ZOOM, 1), MAX_ZOOM);
   assert.equal(zoomStep(MIN_ZOOM, -1), MIN_ZOOM);
+});
+
+// Real drag-to-orbit behavior (the Canvas 2.5D "navigate in 3D" interaction): a
+// pointer drag on the canvas itself rotates/tilts the ring, not just a passive
+// hover parallax.
+
+test('layoutRing accepts a live tilt so the ellipse squash is drag-controlled, not fixed', () => {
+  const flat = layoutRing(['a'], 100, -Math.PI / 2, 0.9);
+  const steep = layoutRing(['a'], 100, -Math.PI / 2, 0.35);
+  assert.ok(Math.abs(flat[0].y) > Math.abs(steep[0].y), 'a higher tilt value must produce a taller ellipse (less steep/edge-on)');
+});
+
+test('buildSceneLayout applies a live rotation offset so dragging genuinely spins the ring', () => {
+  const noRotation = buildSceneLayout('focus', ['a', 'b'], 100, { rotation: 0, tilt: 0.55 });
+  const rotated = buildSceneLayout('focus', ['a', 'b'], 100, { rotation: Math.PI / 2, tilt: 0.55 });
+  assert.notDeepEqual(noRotation.satellites.map(s => [s.x, s.y]), rotated.satellites.map(s => [s.x, s.y]));
+});
+
+test('rotationFromDrag: dragging right and left spin in opposite directions', () => {
+  assert.ok(rotationFromDrag(0, 100) > 0);
+  assert.ok(rotationFromDrag(0, -100) < 0);
+  assert.equal(rotationFromDrag(0, 0), 0);
+});
+
+test('tiltFromDrag: dragging down flattens the ellipse (lower tilt), dragging up steepens it, and it never leaves [MIN_TILT, MAX_TILT]', () => {
+  const down = tiltFromDrag(0.55, 100);
+  const up = tiltFromDrag(0.55, -100);
+  assert.ok(down < 0.55);
+  assert.ok(up > 0.55);
+  assert.equal(clampTilt(-5), MIN_TILT);
+  assert.equal(clampTilt(5), MAX_TILT);
+});
+
+test('rotationFromKey/tiltFromKey move by a fixed step per keypress, tilt still clamped', () => {
+  assert.ok(rotationFromKey(0, 1) > 0);
+  assert.ok(rotationFromKey(0, -1) < 0);
+  assert.equal(tiltFromKey(MAX_TILT, 1), MAX_TILT);
+  assert.equal(tiltFromKey(MIN_TILT, -1), MIN_TILT);
+});
+
+test('panFromDrag accumulates a pan offset and stays within [-MAX_PAN, MAX_PAN]', () => {
+  const once = panFromDrag({ x: 0, y: 0 }, 10, -5);
+  assert.deepEqual(once, { x: 10, y: -5 });
+  const clamped = panFromDrag({ x: MAX_PAN - 2, y: 0 }, 100, 0);
+  assert.equal(clamped.x, MAX_PAN);
+  assert.equal(clampPan(-9999), -MAX_PAN);
+});
+
+test('an orbit drag and a pan drag produce different results for the same node set (they are not the same operation)', () => {
+  const orbited = buildSceneLayout('focus', ['a'], 100, { rotation: rotationFromDrag(0, 200), tilt: 0.55 });
+  const base = buildSceneLayout('focus', ['a'], 100, { rotation: 0, tilt: 0.55 });
+  // Orbit changes satellite geometry; a pan is applied separately at draw time as a
+  // canvas translate and never touches these coordinates -- this locks that
+  // separation by asserting orbit alone already moves the satellite.
+  assert.notDeepEqual(orbited.satellites[0], base.satellites[0]);
 });

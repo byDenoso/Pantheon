@@ -1,5 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
-import { buildSceneLayout, applyParallax, hitTest, nodeRadius, type OrbitalPosition } from './orbital-2_5d-layout';
+import {
+  buildSceneLayout, applyParallax, hitTest, nodeRadius, clampZoom, zoomStep,
+  rotationFromDrag, tiltFromDrag, rotationFromKey, tiltFromKey, panFromDrag,
+  type OrbitalPosition
+} from './orbital-2_5d-layout';
 import type { GraphProjection } from './types';
 
 type Props = {
@@ -8,7 +12,10 @@ type Props = {
   onSelect: (id: string | null) => void;
   onOpenNode: (id: string) => void;
   zoom?: number;
+  onZoomChange?: (zoom: number) => void;
 };
+
+const DRAG_CLICK_THRESHOLD = 4; // px -- below this, a pointerup is treated as a click, not a drag
 
 function usePrefersReducedMotion(): boolean {
   const [reduced, setReduced] = useState(false);
@@ -68,13 +75,31 @@ function colorFor(type: string, palette: ThemePalette): string {
  * CAMPAIGN satellites on one ring. Respects prefers-reduced-motion by disabling the
  * parallax response entirely (static layout, not just a slower one).
  */
-export function Canvas25DGraph({ projection, selectedId, onSelect, onOpenNode, zoom = 1 }: Props) {
+export function Canvas25DGraph({ projection, selectedId, onSelect, onOpenNode, zoom = 1, onZoomChange }: Props) {
   const reducedMotion = usePrefersReducedMotion();
   const hostRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const pointerRef = useRef({ x: 0, y: 0 });
   const frameRef = useRef(0);
   const hitboxesRef = useRef<Array<{ id: string; x: number; y: number; radius: number }>>([]);
+  // Real drag-to-orbit state: horizontal drag spins azimuth (rotation), vertical
+  // drag tilts the ellipse (simulated elevation) -- a genuine "navigate in 3D"
+  // interaction on a plain 2D canvas, not a passive hover effect.
+  const orbitRef = useRef({ rotation: 0, tilt: 0.55 });
+  const panRef = useRef({ x: 0, y: 0 });
+  const dragRef = useRef<{ mode: 'orbit' | 'pan'; pointerId: number; lastX: number; lastY: number; moved: boolean } | null>(null);
+  const pinchRef = useRef<Map<number, { x: number; y: number }>>(new Map());
+  const lastFocusRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    // A new focus resets the camera to a clean default framing rather than keeping
+    // whatever orbit/pan the user left on the previous subgraph.
+    if (lastFocusRef.current !== projection.focusId) {
+      lastFocusRef.current = projection.focusId;
+      orbitRef.current = { rotation: 0, tilt: 0.55 };
+      panRef.current = { x: 0, y: 0 };
+    }
+  }, [projection.focusId]);
 
   useEffect(() => {
     const host = hostRef.current;
@@ -107,8 +132,9 @@ export function Canvas25DGraph({ projection, selectedId, onSelect, onOpenNode, z
         return;
       }
 
+      const orbit = orbitRef.current;
       const radius = Math.min(width, height) * 0.36;
-      const scene = buildSceneLayout(centerNode.id, satellites.map(node => node.id), radius);
+      const scene = buildSceneLayout(centerNode.id, satellites.map(node => node.id), radius, orbit);
       const pointer = reducedMotion ? { x: 0, y: 0 } : pointerRef.current;
       const positioned: Array<OrbitalPosition & { label: string; type: string }> = [
         { ...scene.center, angle: 0, label: String(centerNode.label || centerNode.id), type: String(centerNode.type || '') },
@@ -121,14 +147,14 @@ export function Canvas25DGraph({ projection, selectedId, onSelect, onOpenNode, z
 
       ctx.clearRect(0, 0, width, height);
       ctx.save();
-      ctx.translate(width / 2, height / 2);
+      ctx.translate(width / 2 + panRef.current.x, height / 2 + panRef.current.y);
       ctx.scale(zoom, zoom);
 
       // Orbit ring (structural, not decorative -- shows where satellites live).
       ctx.strokeStyle = palette.grid;
       ctx.lineWidth = 1;
       ctx.beginPath();
-      ctx.ellipse(0, 0, radius, radius * 0.55, 0, 0, Math.PI * 2);
+      ctx.ellipse(0, 0, radius, radius * orbit.tilt, 0, 0, Math.PI * 2);
       ctx.stroke();
 
       // Connective lines, center -> each satellite.
@@ -173,21 +199,61 @@ export function Canvas25DGraph({ projection, selectedId, onSelect, onOpenNode, z
         ctx.textAlign = 'center';
         ctx.fillText(pos.label, pos.x, pos.y + r + 14);
 
-        hitboxes.push({ id: pos.id, x: pos.x * zoom + width / 2, y: pos.y * zoom + height / 2, radius: r * zoom });
+        hitboxes.push({
+          id: pos.id,
+          x: pos.x * zoom + width / 2 + panRef.current.x,
+          y: pos.y * zoom + height / 2 + panRef.current.y,
+          radius: r * zoom
+        });
       }
       hitboxesRef.current = hitboxes;
       ctx.restore();
     };
 
-    const onPointerMove = (event: PointerEvent) => {
-      if (reducedMotion) return;
-      const rect = canvas.getBoundingClientRect();
-      pointerRef.current = { x: event.clientX - rect.left - rect.width / 2, y: event.clientY - rect.top - rect.height / 2 };
+    const requestDraw = () => {
       cancelAnimationFrame(frameRef.current);
       frameRef.current = requestAnimationFrame(draw);
     };
 
-    const onClick = (event: MouseEvent) => {
+    const onPointerMove = (event: PointerEvent) => {
+      const drag = dragRef.current;
+      if (drag && event.pointerId === drag.pointerId) {
+        const dx = event.clientX - drag.lastX;
+        const dy = event.clientY - drag.lastY;
+        if (Math.abs(dx) + Math.abs(dy) > DRAG_CLICK_THRESHOLD) drag.moved = true;
+        if (drag.mode === 'orbit') {
+          orbitRef.current = { rotation: rotationFromDrag(orbitRef.current.rotation, dx), tilt: tiltFromDrag(orbitRef.current.tilt, dy) };
+        } else {
+          panRef.current = panFromDrag(panRef.current, dx, dy);
+        }
+        drag.lastX = event.clientX;
+        drag.lastY = event.clientY;
+        requestDraw();
+        return;
+      }
+      if (reducedMotion) return;
+      const rect = canvas.getBoundingClientRect();
+      pointerRef.current = { x: event.clientX - rect.left - rect.width / 2, y: event.clientY - rect.top - rect.height / 2 };
+      requestDraw();
+    };
+
+    // Real drag-to-orbit/pan: pointerdown starts tracking without yet deciding
+    // click vs. drag (a click is just a drag that never crossed the threshold).
+    // Plain drag orbits; holding Shift (or a two-finger touch, handled separately
+    // below) pans instead -- matching the standard orbit-camera convention.
+    const onPointerDown = (event: PointerEvent) => {
+      if (event.button !== undefined && event.button !== 0) return;
+      if (pinchRef.current.size > 0) return; // a pinch gesture is already in progress
+      canvas.setPointerCapture(event.pointerId);
+      dragRef.current = { mode: event.shiftKey ? 'pan' : 'orbit', pointerId: event.pointerId, lastX: event.clientX, lastY: event.clientY, moved: false };
+    };
+
+    const onPointerUp = (event: PointerEvent) => {
+      const drag = dragRef.current;
+      if (!drag || event.pointerId !== drag.pointerId) return;
+      canvas.releasePointerCapture(event.pointerId);
+      dragRef.current = null;
+      if (drag.moved) return; // a real drag, not a click -- selection stays as-is
       const rect = canvas.getBoundingClientRect();
       const px = event.clientX - rect.left;
       const py = event.clientY - rect.top;
@@ -201,23 +267,94 @@ export function Canvas25DGraph({ projection, selectedId, onSelect, onOpenNode, z
       else onSelect(hitId);
     };
 
+    // Two-finger pinch-to-zoom, tracked independently of the single-pointer drag
+    // above (touch also fires pointerdown/move/up per finger).
+    const onTouchPointerDown = (event: PointerEvent) => {
+      if (event.pointerType !== 'touch') return;
+      pinchRef.current.set(event.pointerId, { x: event.clientX, y: event.clientY });
+      if (pinchRef.current.size === 2) {
+        dragRef.current = null; // a second finger landed mid-drag: hand off to pinch
+      }
+    };
+
+    const onTouchPointerMove = (event: PointerEvent) => {
+      if (!pinchRef.current.has(event.pointerId)) return;
+      const previous = new Map(pinchRef.current);
+      pinchRef.current.set(event.pointerId, { x: event.clientX, y: event.clientY });
+      if (pinchRef.current.size !== 2 || !onZoomChange) return;
+      const points = Array.from(pinchRef.current.values());
+      const previousPoints = Array.from(previous.values());
+      if (previousPoints.length !== 2) return;
+      const distance = Math.hypot(points[0].x - points[1].x, points[0].y - points[1].y);
+      const previousDistance = Math.hypot(previousPoints[0].x - previousPoints[1].x, previousPoints[0].y - previousPoints[1].y);
+      if (previousDistance <= 0) return;
+      onZoomChange(clampZoom(zoom * (distance / previousDistance)));
+    };
+
+    const onTouchPointerUp = (event: PointerEvent) => {
+      pinchRef.current.delete(event.pointerId);
+    };
+
+    const onWheel = (event: WheelEvent) => {
+      if (!onZoomChange) return;
+      event.preventDefault();
+      const direction: 1 | -1 = event.deltaY < 0 ? 1 : -1;
+      onZoomChange(zoomStep(zoom, direction, 0.12));
+    };
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      const step = event.shiftKey ? 24 : 0;
+      if (event.key === 'ArrowLeft' && step) { event.preventDefault(); panRef.current = panFromDrag(panRef.current, -step, 0); requestDraw(); return; }
+      if (event.key === 'ArrowRight' && step) { event.preventDefault(); panRef.current = panFromDrag(panRef.current, step, 0); requestDraw(); return; }
+      if (event.key === 'ArrowUp' && step) { event.preventDefault(); panRef.current = panFromDrag(panRef.current, 0, -step); requestDraw(); return; }
+      if (event.key === 'ArrowDown' && step) { event.preventDefault(); panRef.current = panFromDrag(panRef.current, 0, step); requestDraw(); return; }
+      if (event.key === 'ArrowLeft') { event.preventDefault(); orbitRef.current = { ...orbitRef.current, rotation: rotationFromKey(orbitRef.current.rotation, -1) }; requestDraw(); return; }
+      if (event.key === 'ArrowRight') { event.preventDefault(); orbitRef.current = { ...orbitRef.current, rotation: rotationFromKey(orbitRef.current.rotation, 1) }; requestDraw(); return; }
+      if (event.key === 'ArrowUp') { event.preventDefault(); orbitRef.current = { ...orbitRef.current, tilt: tiltFromKey(orbitRef.current.tilt, 1) }; requestDraw(); return; }
+      if (event.key === 'ArrowDown') { event.preventDefault(); orbitRef.current = { ...orbitRef.current, tilt: tiltFromKey(orbitRef.current.tilt, -1) }; requestDraw(); return; }
+      if ((event.key === '+' || event.key === '=') && onZoomChange) { event.preventDefault(); onZoomChange(zoomStep(zoom, 1)); return; }
+      if ((event.key === '-' || event.key === '_') && onZoomChange) { event.preventDefault(); onZoomChange(zoomStep(zoom, -1)); return; }
+      if (event.key === '0' || event.key === 'Home') {
+        event.preventDefault();
+        orbitRef.current = { rotation: 0, tilt: 0.55 };
+        panRef.current = { x: 0, y: 0 };
+        requestDraw();
+      }
+    };
+
     const onThemeChange = () => draw();
 
     const resizeObserver = new ResizeObserver(resize);
     resizeObserver.observe(host);
+    canvas.addEventListener('pointerdown', onPointerDown);
+    canvas.addEventListener('pointerdown', onTouchPointerDown);
     canvas.addEventListener('pointermove', onPointerMove);
-    canvas.addEventListener('click', onClick);
+    canvas.addEventListener('pointermove', onTouchPointerMove);
+    canvas.addEventListener('pointerup', onPointerUp);
+    canvas.addEventListener('pointerup', onTouchPointerUp);
+    canvas.addEventListener('pointercancel', onPointerUp);
+    canvas.addEventListener('pointercancel', onTouchPointerUp);
+    canvas.addEventListener('wheel', onWheel, { passive: false });
+    canvas.addEventListener('keydown', onKeyDown);
     window.addEventListener('atlas:theme-change', onThemeChange);
     resize();
 
     return () => {
       resizeObserver.disconnect();
+      canvas.removeEventListener('pointerdown', onPointerDown);
+      canvas.removeEventListener('pointerdown', onTouchPointerDown);
       canvas.removeEventListener('pointermove', onPointerMove);
-      canvas.removeEventListener('click', onClick);
+      canvas.removeEventListener('pointermove', onTouchPointerMove);
+      canvas.removeEventListener('pointerup', onPointerUp);
+      canvas.removeEventListener('pointerup', onTouchPointerUp);
+      canvas.removeEventListener('pointercancel', onPointerUp);
+      canvas.removeEventListener('pointercancel', onTouchPointerUp);
+      canvas.removeEventListener('wheel', onWheel);
+      canvas.removeEventListener('keydown', onKeyDown);
       window.removeEventListener('atlas:theme-change', onThemeChange);
       cancelAnimationFrame(frameRef.current);
     };
-  }, [projection, selectedId, onSelect, onOpenNode, reducedMotion, zoom]);
+  }, [projection, selectedId, onSelect, onOpenNode, onZoomChange, reducedMotion, zoom]);
 
   return (
     <div ref={hostRef} className="canvas-25d-graph-host" style={{ width: '100%', height: '100%', position: 'relative' }}>
@@ -228,9 +365,10 @@ export function Canvas25DGraph({ projection, selectedId, onSelect, onOpenNode, z
           to 18000+px before this fix). */}
       <canvas
         ref={canvasRef}
-        role="img"
-        aria-label="Mapa orbital 2.5D de domínios e campanhas"
-        style={{ position: 'absolute', inset: 0, display: 'block', width: '100%', height: '100%' }}
+        role="application"
+        tabIndex={0}
+        aria-label="Mapa orbital 2.5D de domínios e campanhas. Arraste para orbitar, Shift+arraste para deslocar, roda ou pinça para zoom, setas para orbitar, Shift+setas para deslocar, +/- para zoom, 0 para redefinir a câmera."
+        style={{ position: 'absolute', inset: 0, display: 'block', width: '100%', height: '100%', touchAction: 'none', outline: 'none' }}
       />
     </div>
   );

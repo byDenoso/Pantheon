@@ -84,8 +84,8 @@ export function GraphHeader({
           <button type="button" className={mode === 'canvas' ? 'active' : ''} aria-pressed={mode === 'canvas'} onClick={() => setMode2D3D('canvas')}>
             2D
           </button>
-          <button type="button" className={mode === 'webgl' ? 'active' : ''} aria-pressed={mode === 'webgl'} onClick={() => setMode2D3D('webgl')} title="Experimental">
-            3D
+          <button type="button" className={mode === 'webgl' ? 'active' : ''} aria-pressed={mode === 'webgl'} onClick={() => setMode2D3D('webgl')} title="3D (WebGL) — modo experimental: orbit por arraste ainda não é confiável em todos os navegadores. Canvas 2.5D é o modo padrão suportado.">
+            3D <small>beta</small>
           </button>
         </div>
       </div>

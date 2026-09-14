@@ -134,7 +134,7 @@ export function GraphsPage({state,actions,reducedMotion,compact}:{state:AtlasUiS
         {!projection?<div className="graph-empty-state"><span aria-hidden="true">∅</span><p>{state.loading?'Lendo mapa de conhecimento…':'Grafo indisponível neste momento.'}</p><small>{state.error||'Nenhum recorte válido foi publicado.'}</small></div>
           :filteredToEmpty?<div className="graph-empty-state"><span aria-hidden="true">∅</span><p>Nenhum nó corresponde aos filtros atuais.</p><small><button type="button" className="map-filter-clear" onClick={()=>setMapFilters({})}>Limpar filtros</button></small></div>
           :renderMode==='table'?<AccessibleGraphTable projection={projection} selectedId={state.selectedId} onSelect={select}/>
-          :<GraphRenderer projection={projection} learning={false} selectedId={state.selectedId} onSelect={select} onOpenNode={open} zoom={zoom}/>}
+          :<GraphRenderer projection={projection} learning={false} selectedId={state.selectedId} onSelect={select} onOpenNode={open} zoom={zoom} onZoomChange={setZoom}/>}
         <SpatialInspector state={state} actions={actions} projection={projection} onOpen={open}/>
         <div className="spatial-navigation-hud" aria-label="Controles de navegação">
           <button onClick={()=>void actions.back()} disabled={!canBack} title="Voltar · Alt+←" aria-label="Voltar">←</button>

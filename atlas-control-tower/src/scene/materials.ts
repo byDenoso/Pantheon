@@ -11,7 +11,7 @@ import { AdditiveBlending, MeshBasicMaterial } from 'three';
 // as the default. Plain materials keep the same flat/unlit/vertex-colored look the
 // design contract already calls for, and are universally supported by both backends.
 export function createNodeMaterial() {
-  return new MeshBasicMaterial({ vertexColors: true, transparent: true, opacity: 0.96, depthWrite: true });
+  return new MeshBasicMaterial({ vertexColors: true, toneMapped: false, transparent: true, opacity: 0.96, depthWrite: true });
 }
 
 export function createNodeAuraMaterial() {

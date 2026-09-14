@@ -62,7 +62,16 @@ export function InstancedNodes({nodes,selectedId,focusId,pickMode=false,aura=fal
     // setColorAt only writes the CPU-side buffer; without this flag the instance
     // color never uploads to the GPU and every instance renders black.
     if(target.instanceColor)target.instanceColor.needsUpdate=true;
-  },[nodes,pickMode]);
+    // Three.js only decides whether to compile the USE_INSTANCING_COLOR shader
+    // branch by re-checking object.instanceColor when the material's program cache
+    // is invalidated. If instanceColor was still null on the very first render call
+    // (created lazily by the first setColorAt above, which can land after that first
+    // frame), the material can keep using an already-cached program compiled without
+    // per-instance color support -- every instance then renders solid black
+    // regardless of a perfectly correct instanceColor buffer. Forcing needsUpdate
+    // here makes Three re-evaluate and recompile for the real object state.
+    material.needsUpdate=true;
+  },[nodes,pickMode,material]);
 
   useFrame(()=>{
     const target=mesh.current;if(!target)return;

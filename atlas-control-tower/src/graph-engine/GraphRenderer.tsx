@@ -27,7 +27,7 @@ class RendererBoundary extends Component<{fallback:ReactNode;children:ReactNode}
   render(){return this.state.failed?this.props.fallback:this.props.children}
 }
 
-export function GraphRenderer(props:GraphSurfaceProps&{zoom?:number}){
+export function GraphRenderer(props:GraphSurfaceProps&{zoom?:number;onZoomChange?:(zoom:number)=>void}){
   const [mode,setMode]=useState<RendererMode>(()=>readRendererMode());
   useEffect(()=>{
     const sync=()=>setMode(readRendererMode());
@@ -36,7 +36,7 @@ export function GraphRenderer(props:GraphSurfaceProps&{zoom?:number}){
   },[]);
   const switchRenderer=(next:RendererMode)=>{replaceRendererMode(next);setMode(next)};
   const webgl=mode==='webgl';
-  const canvas25d=<Canvas25DGraph projection={props.projection} selectedId={props.selectedId??null} onSelect={props.onSelect} onOpenNode={id=>props.onOpenNode?.(id)} zoom={props.zoom}/>;
+  const canvas25d=<Canvas25DGraph projection={props.projection} selectedId={props.selectedId??null} onSelect={props.onSelect} onOpenNode={id=>props.onOpenNode?.(id)} zoom={props.zoom} onZoomChange={props.onZoomChange}/>;
   if(!webgl)return <div className="graph-renderer-canvas"><button className="graph-renderer-switch" onClick={()=>switchRenderer('webgl')} title="Renderer experimental">WebGL</button>{canvas25d}</div>;
   const fallback=<div className="graph-renderer-rollback"><div className="graph-renderer-error">WebGL indisponível. A cena foi preservada no Canvas 2.5D.</div><button className="graph-renderer-switch" onClick={()=>switchRenderer('canvas')}>Canvas</button>{canvas25d}</div>;
   const loading=<div className="graph-renderer-canvas">{canvas25d}</div>;

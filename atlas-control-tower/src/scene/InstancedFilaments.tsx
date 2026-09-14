@@ -31,6 +31,10 @@ export function InstancedFilaments({edges,nodes,positions:sharedPositions,focusI
       target.setColorAt(index,color);
     });
     if(target.instanceColor)target.instanceColor.needsUpdate=true;
+    // See the matching comment in InstancedNodes.tsx: forces Three to recompile the
+    // per-instance-color shader branch instead of possibly reusing a program cached
+    // from before instanceColor existed.
+    material.needsUpdate=true;
   },[edges,focusId,nodes,object,selectedId,sharedPositions]);
 
   useFrame(({clock})=>{

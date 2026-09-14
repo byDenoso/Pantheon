@@ -74,6 +74,7 @@ body.graph-immersive .atlas-sidebar,body.graph-immersive .atlas-footer{display:n
 .graph-mode-toggle{display:flex;border:1px solid var(--border-default);border-radius:8px;overflow:hidden}
 .graph-mode-toggle button{min-height:34px;padding:0 12px;border:0;background:var(--surface-elevated);color:var(--text-secondary);font:700 10px/1 ui-monospace,monospace;cursor:pointer}
 .graph-mode-toggle button.active{background:color-mix(in srgb,var(--accent-primary) 16%,var(--surface-elevated));color:var(--accent-primary)}
+.graph-mode-toggle button small{margin-left:3px;padding:1px 4px;border-radius:5px;background:color-mix(in srgb,var(--status-partial) 24%,transparent);color:var(--status-partial);font-size:7px;letter-spacing:.04em;vertical-align:1px}
 @media(max-width:640px){.graph-header{padding:8px 10px}.graph-header-copy p{display:none}.graph-header-controls>button,.graph-zoom-controls button,.graph-mode-toggle button{min-height:40px}}
 
 /* Map-context filters (domain/status/authority genuinely narrow the visible

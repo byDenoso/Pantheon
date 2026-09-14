@@ -15,12 +15,12 @@ export type OrbitalPosition = {
  * `startAngle` (radians). Deterministic (same inputs -> same outputs, no randomness),
  * so a re-render with the same node set never jitters.
  */
-export function layoutRing(ids: string[], radius: number, startAngle = -Math.PI / 2): OrbitalPosition[] {
+export function layoutRing(ids: string[], radius: number, startAngle = -Math.PI / 2, tilt = 0.55): OrbitalPosition[] {
   const count = ids.length;
   if (count === 0) return [];
   return ids.map((id, index) => {
     const angle = startAngle + (index / count) * Math.PI * 2;
-    return { id, x: Math.cos(angle) * radius, y: Math.sin(angle) * radius * 0.55, z: 0.6, angle };
+    return { id, x: Math.cos(angle) * radius, y: Math.sin(angle) * radius * tilt, z: 0.6, angle };
   });
 }
 
@@ -35,8 +35,8 @@ export type SceneLayout = {
  * This is deliberately flat -- the locked map contract has exactly two rendered
  * levels (Universo/Domínio ring, then Domínio/Campanha ring on focus), never a third.
  */
-export function buildSceneLayout(centerId: string, satelliteIds: string[], radius: number): SceneLayout {
-  return { center: { id: centerId, x: 0, y: 0, z: 1 }, satellites: layoutRing(satelliteIds, radius) };
+export function buildSceneLayout(centerId: string, satelliteIds: string[], radius: number, orbit: { rotation: number; tilt: number } = { rotation: 0, tilt: 0.55 }): SceneLayout {
+  return { center: { id: centerId, x: 0, y: 0, z: 1 }, satellites: layoutRing(satelliteIds, radius, -Math.PI / 2 + orbit.rotation, orbit.tilt) };
 }
 
 /**
@@ -81,4 +81,41 @@ export function clampZoom(value: number): number {
 
 export function zoomStep(current: number, direction: 1 | -1, step = 0.25): number {
   return clampZoom(current + direction * step);
+}
+
+// Drag-to-orbit for the Canvas 2.5D renderer: horizontal drag spins the ring's
+// azimuth (rotation), vertical drag tilts its ellipse squash (simulated elevation).
+// Both are plain radians/ratios, no DOM here, so drag math has a real behavior test
+// independent of pointer-event wiring.
+export const MIN_TILT = 0.32;
+export const MAX_TILT = 0.92;
+
+export function clampTilt(value: number): number {
+  return Math.min(MAX_TILT, Math.max(MIN_TILT, value));
+}
+
+export function rotationFromDrag(current: number, dxPixels: number, sensitivity = 0.006): number {
+  return current + dxPixels * sensitivity;
+}
+
+export function tiltFromDrag(current: number, dyPixels: number, sensitivity = 0.003): number {
+  return clampTilt(current - dyPixels * sensitivity);
+}
+
+export function rotationFromKey(current: number, direction: 1 | -1, step = 0.12): number {
+  return current + direction * step;
+}
+
+export function tiltFromKey(current: number, direction: 1 | -1, step = 0.05): number {
+  return clampTilt(current + direction * step);
+}
+
+export const MAX_PAN = 400;
+
+export function clampPan(value: number): number {
+  return Math.min(MAX_PAN, Math.max(-MAX_PAN, value));
+}
+
+export function panFromDrag(current: { x: number; y: number }, dxPixels: number, dyPixels: number): { x: number; y: number } {
+  return { x: clampPan(current.x + dxPixels), y: clampPan(current.y + dyPixels) };
 }
