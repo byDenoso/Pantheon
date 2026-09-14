@@ -22,6 +22,9 @@ import type {
 } from './types';
 import type { AtlasEdge, AtlasNode } from '../scene/types';
 import { AtlasApiError, errorMessage } from './errors';
+import { buildObservatoryQuestion, sortObservatoryQuestions, type ObservatoryQuestion } from './observatory-questions';
+import { scientificStatus } from './scientific-status';
+export { scientificStatus };
 
 type RecordValue = Record<string, unknown>;
 
@@ -30,31 +33,6 @@ const asArray = (value: unknown): unknown[] => Array.isArray(value) ? value : []
 const text = (value: unknown): string | undefined => typeof value === 'string' && value.trim() ? value.trim() : undefined;
 const number = (value: unknown): number | undefined => typeof value === 'number' && Number.isFinite(value) ? value : typeof value === 'string' && value.trim() && Number.isFinite(Number(value)) ? Number(value) : undefined;
 const firstText = (...values: unknown[]): string | undefined => values.map(text).find(Boolean);
-
-const STATUS_ALIASES: Record<string, ScientificStatus> = {
-  measured: 'MEASURED',
-  observed: 'MEASURED',
-  supported: 'SUPPORTED',
-  validated: 'SUPPORTED',
-  approved: 'SUPPORTED',
-  provisional: 'PROVISIONAL',
-  candidate: 'CANDIDATE',
-  inconclusive: 'INCONCLUSIVE',
-  unknown: 'UNKNOWN',
-  stale: 'STALE',
-  blocked: 'BLOCKED',
-  contradicted: 'CONTRADICTED',
-  disproved: 'CONTRADICTED',
-  consistent: 'CONSISTENT',
-  interesting: 'INTERESTING',
-  tension: 'TENSION',
-  significant: 'SIGNIFICANT'
-};
-
-export function scientificStatus(value: unknown, fallback: ScientificStatus = 'UNKNOWN'): ScientificStatus {
-  const raw = text(value)?.toLowerCase();
-  return raw ? STATUS_ALIASES[raw] || fallback : fallback;
-}
 
 export function uncertainty(value: unknown): Uncertainty | undefined {
   const scalar = number(value);
@@ -433,9 +411,25 @@ export function createAtlasAdapter(client: AtlasApiClient) {
     if (!client.remote || typeof client.research !== 'function') return recordsFromGraph(await client.graph({ ...contextQuery(context), type, mode: 'search', limit: 120 }));
     return recordsFromResearch(await client.research(route, contextQuery(context)), type);
   };
+  // Real per-domain question read model (see observatory-questions.ts): built from
+  // system:SCIENCE's real DOMAIN children plus each domain's real CAMPAIGN children
+  // (id/label/status/summary/metadata.testCount), the same graph data the map
+  // already renders -- not a second, hand-picked question list. One extra read per
+  // domain (10 today) against static JSON is cheap; a future real research route
+  // for this can replace the per-domain fan-out without changing the return shape.
+  const getObservatoryQuestions = async (): Promise<ObservatoryQuestion[]> => {
+    const scienceGraph = await client.graph({ focus: 'system:SCIENCE' });
+    const domains = scienceGraph.nodes.filter(node => String(node.type || '').toUpperCase() === 'DOMAIN');
+    const perDomain = await Promise.all(domains.map(async domain => {
+      const domainGraph = await client.graph({ focus: domain.id });
+      return buildObservatoryQuestion(domain, domainGraph.nodes);
+    }));
+    return sortObservatoryQuestions(perDomain);
+  };
   return {
     getAtlasGraph: (query: Record<string, string | number | undefined>) => client.graph(query),
     getObservatorySummary,
+    getObservatoryQuestions,
     getParameters: async (context: AtlasContext = {}) => (await getObservatorySummary(context)).parameters,
     getTensions: async (context: AtlasContext = {}) => (await getObservatorySummary(context)).tensions,
     getDirectionalSignals: async (context: AtlasContext = {}) => (await getObservatorySummary(context)).directionalSignals,

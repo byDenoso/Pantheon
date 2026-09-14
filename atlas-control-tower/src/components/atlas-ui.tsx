@@ -47,9 +47,9 @@ export function PanelFrame({ id, icon, title, subtitle, action, freshness, child
   </article>;
 }
 
-export function PanelStateView({ state, empty, children }: { state: PanelState; empty: string; children?: React.ReactNode }) {
+export function PanelStateView({ state, empty, reason, action, children }: { state: PanelState; empty: string; reason?: string; action?: React.ReactNode; children?: React.ReactNode }) {
   if (state === 'LOADING') return <div className="panel-skeleton" aria-label="Carregando dados"><span/><span/><span/></div>;
-  if (state === 'EMPTY') return <div className="panel-empty"><span className="empty-glyph" aria-hidden="true">∅</span><p>{empty}</p><small>Nenhum dado foi inventado para preencher este painel.</small></div>;
+  if (state === 'EMPTY') return <div className="panel-empty"><span className="empty-glyph" aria-hidden="true">∅</span><p>{empty}</p><small>{reason || 'Nenhum dado foi inventado para preencher este painel.'}</small>{action}</div>;
   if (state === 'API_ERROR' || state === 'DATA_UNAVAILABLE') return <div className="panel-empty panel-error"><span className="empty-glyph" aria-hidden="true">!</span><p>Dados indisponíveis neste momento.</p><small>A fonte não respondeu; a navegação do Atlas continua disponível.</small></div>;
   return <>{children}</>;
 }

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { AtlasApiClient, AtlasContext, LabData, ObservatoryData, PanelRead, ResearchRecord } from './types';
+import type { ObservatoryQuestion } from './observatory-questions';
 import { createAtlasAdapter } from './adapters';
 import { errorMessage } from './errors';
 
@@ -42,6 +43,30 @@ export function useObservatoryData(client: AtlasApiClient, context: AtlasContext
     });
     return () => { live = false; };
   }, [adapter, context]);
+  return read;
+}
+
+/**
+ * Real per-domain question rows for Observatório/Resumo do Universo (see
+ * adapters.ts::getObservatoryQuestions / observatory-questions.ts). Context is
+ * intentionally not a dependency: the question list is system:SCIENCE-wide, not
+ * filtered by the domain/status query params the graph view uses.
+ */
+export function useObservatoryQuestions(client: AtlasApiClient) {
+  const adapter = useMemo(() => createAtlasAdapter(client), [client]);
+  const [read, setRead] = useState<PanelRead<ObservatoryQuestion[]>>(initialRead<ObservatoryQuestion[]>);
+  useEffect(() => {
+    let live = true;
+    setRead(previous => ({ ...previous, state: 'LOADING' }));
+    void adapter.getObservatoryQuestions().then(questions => {
+      if (!live) return;
+      setRead({ state: questions.length ? 'READY' : 'EMPTY', data: questions, freshness: { state: 'SNAPSHOT' } });
+    }).catch(error => {
+      if (!live) return;
+      setRead(previous => ({ ...previous, state: previous.data ? 'STALE' : 'API_ERROR', error: errorMessage(error), freshness: { ...previous.freshness, state: previous.data ? 'STALE' : 'DEGRADED' } }));
+    });
+    return () => { live = false; };
+  }, [adapter]);
   return read;
 }
 
