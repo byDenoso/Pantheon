@@ -2,6 +2,7 @@ import {createHash} from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import {generateStaticState as generateLegacyStaticState} from './static-state-generator.mjs';
+import {buildPublicManifest} from './public-surface-manifest.mjs';
 
 const CONTRACT='nexo-static-runtime-v1';
 const clean=value=>value==null?'':String(value).trim();
@@ -85,6 +86,28 @@ function semanticFingerprint(sourceVersion,artifacts){
  return `sha256:${sha256([CONTRACT,sourceVersion,...lines].join('\n'))}`;
 }
 
+function initialPublicManifest(oldManifest,artifacts,generatedAt){
+ const graphMeta=artifacts['graph/root.json'];
+ if(!graphMeta?.sha256)throw new Error('PUBLIC_MANIFEST_GRAPH_ARTIFACT_MISSING');
+ const unavailable={state:'DATA_UNAVAILABLE'};
+ return buildPublicManifest({
+  authority:'GOOGLE_DRIVE',
+  sourceVersion:oldManifest.sourceVersion||'',
+  sourceModifiedAt:oldManifest.sourceModifiedAt||oldManifest.sourceVersion||'',
+  generatedAt:generatedAt||oldManifest.generatedAt||'',
+  surfaces:{
+   graph:{state:'READY',contract:'atlas-structural-graph-v1',path:'graph/root.json',sha256:graphMeta.sha256},
+   observatory:unavailable,
+   laboratory:unavailable,
+   learning:unavailable,
+   operations:unavailable,
+   activity:unavailable,
+   audit:unavailable,
+   search:unavailable
+  }
+ });
+}
+
 export async function generateStaticState(options={}){
  const result=await generateLegacyStaticState(options);
  const outDir=options.outDir;
@@ -120,5 +143,9 @@ export async function generateStaticState(options={}){
  }
  write(path.join(newRoot,'manifest.json'),manifest);
  write(path.join(outDir,'current','manifest.json'),manifest);
- return {fingerprint,manifest,snapshotDir:newRoot};
+
+ const publicManifest=initialPublicManifest(oldManifest,artifacts,options.generatedAt);
+ write(path.join(newRoot,'public-manifest-v2.json'),publicManifest);
+ write(path.join(outDir,'current','public-manifest-v2.json'),publicManifest);
+ return {fingerprint,manifest,publicManifest,snapshotDir:newRoot};
 }
