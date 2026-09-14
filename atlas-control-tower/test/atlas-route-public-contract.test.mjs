@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { readAtlasRoute, routeFor, rewriteLegacyPublicPath, isPrivateArea, PUBLIC_PATH, normalizeGraphHydrationId } from '../src/atlas-route.ts';
+import { readAtlasRoute, routeFor, preserveGraphMode, rewriteLegacyPublicPath, isPrivateArea, PUBLIC_PATH, normalizeGraphHydrationId } from '../src/atlas-route.ts';
 
 test('normalizeGraphHydrationId uppercases a lowercase domain id, matching real node ids (regression)', () => {
   // Real repro: hydrating /mapa/system:SCIENCE/domain:d1 previously kept "domain:d1"
@@ -53,6 +53,12 @@ test('routeFor keeps the /mapa/science/:domain shape for a domain-focused map ro
 
 test('routeFor keeps an explicit graphPath under /mapa', () => {
   assert.equal(routeFor('graphs', { graphPath: ['science', 'd1', 'campaign:c1'] }), '/mapa/science/d1/campaign%3Ac1');
+});
+
+test('preserveGraphMode carries explicit 3D mode only across graph routes', () => {
+  assert.equal(preserveGraphMode('/mapa/system%3ASCIENCE/system%3AOLYMPUS', '?renderer=webgl'), '/mapa/system%3ASCIENCE/system%3AOLYMPUS?renderer=webgl');
+  assert.equal(preserveGraphMode('/pesquisa', '?renderer=webgl'), '/pesquisa');
+  assert.equal(preserveGraphMode('/mapa', ''), '/mapa');
 });
 
 test('readAtlasRoute parses the new canonical prefixes back to the correct internal area', () => {

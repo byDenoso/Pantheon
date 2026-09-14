@@ -166,6 +166,21 @@ export function routeFor(area: AtlasArea, context: AtlasContext = {}): string {
   return search ? `${path}?${search}` : path;
 }
 
+/**
+ * Keeps an explicitly selected WebGL graph mode while an in-app graph link
+ * changes focus. Renderer mode is presentation state, not domain context, so it
+ * should travel with graph navigation without leaking into research or private
+ * area links.
+ */
+export function preserveGraphMode(href: string, currentSearch = ''): string {
+  const current = new URLSearchParams(currentSearch);
+  if (current.get('renderer') !== 'webgl') return href;
+  const target = new URL(href, 'http://atlas.local');
+  if (readAtlasRoute(target).area !== 'graphs') return href;
+  target.searchParams.set('renderer', 'webgl');
+  return `${target.pathname}${target.search}${target.hash}`;
+}
+
 function redirectLegacyPathIfNeeded(): void {
   if (typeof window === 'undefined') return;
   const pathname = stripAppBase(window.location.pathname);
@@ -201,7 +216,8 @@ export function useAtlasRoute() {
     return () => window.removeEventListener('popstate', onPopState);
   }, []);
   const navigate = useCallback((next: string | AtlasRoute) => {
-    const href = typeof next === 'string' ? next : routeFor(next.area, next.context);
+    const rawHref = typeof next === 'string' ? next : routeFor(next.area, next.context);
+    const href = preserveGraphMode(rawHref, window.location.search);
     window.history.pushState({}, '', href);
     setRoute(readAtlasRoute());
     window.dispatchEvent(new PopStateEvent('popstate'));

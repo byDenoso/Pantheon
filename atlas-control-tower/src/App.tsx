@@ -3,7 +3,7 @@ import { cockpitCopy, nodeDisplayLabel } from '../ui/cockpit-copy.mjs';
 import { FreshnessBadge, ProvenanceDrawer, ScientificStatusBadge } from './components/atlas-ui';
 import { ControlPlaneDrawer } from './components/ControlPlaneDrawer';
 import { CommandEntry } from './components/CommandEntry';
-import { useAtlasRoute, routeFor, normalizeGraphHydrationId, type AtlasArea } from './atlas-route';
+import { useAtlasRoute, routeFor, preserveGraphMode, normalizeGraphHydrationId, type AtlasArea } from './atlas-route';
 import type { Provenance } from './api/types';
 import { useAtlasSession, type AtlasActions, type AtlasUiState } from './state/useAtlasSession';
 import { GraphsPage } from './pages/graphs-page';
@@ -135,7 +135,7 @@ export default function App() {
   useEffect(() => {
     if (route.area !== 'graphs' || state.loading || state.path.length < 2) return;
     const graphPath = state.path.slice(1).map(item => item.id);
-    const desired = routeFor('graphs', { ...route.context, graphPath });
+    const desired = preserveGraphMode(routeFor('graphs', { ...route.context, graphPath }), window.location.search);
     const current = `${window.location.pathname}${window.location.search}`;
     if (desired !== current) window.history.replaceState({}, '', desired);
   }, [route.area, route.context, state.loading, state.path]);

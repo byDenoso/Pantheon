@@ -14,7 +14,8 @@ test('WebGL graph route remains explicit and rolls back to Canvas 2.5D',()=>{
  // Rollback target swapped from GraphExplorer (Pixi) to Canvas25DGraph (plain
  // Canvas2D) per an explicit user request to replace the default map render.
  const renderer=read('src/graph-engine/GraphRenderer.tsx');const scene=read('src/graph-engine/GraphScene3D.tsx');
- assert.match(renderer,/renderer'\)===['"]webgl['"]/);assert.match(renderer,/switchRenderer\('canvas'\)/);assert.match(renderer,/Canvas25DGraph/);assert.match(renderer,/GraphScene3D/);assert.match(scene,/AtlasCanvas/);
+ assert.match(renderer,/requested===['"]webgl['"]/);assert.match(renderer,/switchRenderer\('canvas'\)/);assert.match(renderer,/Canvas25DGraph/);assert.match(renderer,/GraphScene3D/);assert.match(scene,/AtlasCanvas/);
+ assert.match(renderer,/localStorage/, 'the selected spatial renderer should persist across graph drill-down routes');
 });
 
 test('target visual grammar includes glow nodes, curved filaments, stars and orbital guides',()=>{

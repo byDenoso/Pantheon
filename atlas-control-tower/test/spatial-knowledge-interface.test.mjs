@@ -50,7 +50,7 @@ test('GraphRenderer is Canvas-first and keeps WebGL as explicit opt-in', () => {
   // place) -- assert the shared element exists and that the !webgl branch renders it,
   // rather than requiring the literal JSX tag to sit textually after "if(!webgl)".
   const source = read('src/graph-engine/GraphRenderer.tsx');
-  assert.match(source, /renderer'\)===['"]webgl['"]/);
+  assert.match(source, /requested===['"]webgl['"]/);
   assert.match(source, /const canvas25d=<Canvas25DGraph/);
   assert.match(source, /if\(!webgl\)return.*\{canvas25d\}/s);
   assert.match(source, /GraphScene3D/);

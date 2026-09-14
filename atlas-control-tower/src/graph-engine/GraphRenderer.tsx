@@ -5,10 +5,13 @@ import type {GraphSurfaceProps} from './GraphScene3D';
 const GraphScene3D=lazy(()=>import('./GraphScene3D').then(module=>({default:module.GraphScene3D})));
 
 type RendererMode='canvas'|'webgl';
+const RENDERER_STORAGE_KEY='atlas-renderer-mode';
 
 function readRendererMode():RendererMode{
   if(typeof window==='undefined')return'canvas';
-  return new URLSearchParams(window.location.search).get('renderer')==='webgl'?'webgl':'canvas';
+  const requested=new URLSearchParams(window.location.search).get('renderer');
+  if(requested==='webgl')return'webgl';
+  try{return window.localStorage.getItem(RENDERER_STORAGE_KEY)==='webgl'?'webgl':'canvas';}catch{return'canvas';}
 }
 
 function replaceRendererMode(mode:RendererMode){
@@ -34,7 +37,17 @@ export function GraphRenderer(props:GraphSurfaceProps&{zoom?:number;onZoomChange
     window.addEventListener('popstate',sync);
     return()=>window.removeEventListener('popstate',sync);
   },[]);
-  const switchRenderer=(next:RendererMode)=>{replaceRendererMode(next);setMode(next)};
+  const switchRenderer=(next:RendererMode)=>{
+    replaceRendererMode(next);
+    try{window.localStorage.setItem(RENDERER_STORAGE_KEY,next)}catch{/* storage may be unavailable in privacy mode */}
+    setMode(next);
+  };
+  useEffect(()=>{
+    // Keep the chosen spatial mode while the user drills across graph routes.
+    // The URL remains an explicit share/deep-link override; storage is only the
+    // continuity layer for normal in-app navigation.
+    try{window.localStorage.setItem(RENDERER_STORAGE_KEY,mode)}catch{/* best effort */}
+  },[mode]);
   const webgl=mode==='webgl';
   const canvas25d=<Canvas25DGraph projection={props.projection} selectedId={props.selectedId??null} onSelect={props.onSelect} onOpenNode={id=>props.onOpenNode?.(id)} zoom={props.zoom} onZoomChange={props.onZoomChange}/>;
   if(!webgl)return <div className="graph-renderer-canvas"><button className="graph-renderer-switch" onClick={()=>switchRenderer('webgl')} title="Renderer experimental">WebGL</button>{canvas25d}</div>;
