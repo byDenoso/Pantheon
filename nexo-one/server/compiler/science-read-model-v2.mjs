@@ -68,7 +68,7 @@ export function buildScienceReadModelV2(snapshot){
     const members=campaigns.filter(row=>row.facets.includes(code));
     return {id:`facet:${code}`,code,label:code,type:'FACET',campaignIds:members.map(row=>row.id),question:members.find(row=>row.question)?.question,status:members.length&&members.every(row=>row.status===members[0].status)?members[0].status:undefined};
   });
-  const edges=[{id:'contains:system:SCIENCE:programs',source:'system:SCIENCE',target:'programs',type:'DECLARES'}];
+  const edges=[];
   for(const program of programs)edges.push({id:`contains:system:SCIENCE:${program.id}`,source:'system:SCIENCE',target:program.id,type:'CONTAINS'});
   for(const campaign of campaigns){if(campaign.programId&&programs.some(program=>program.id===campaign.programId))edges.push({id:`contains:${campaign.programId}:${campaign.id}`,source:campaign.programId,target:campaign.id,type:'CONTAINS'});}
   const lane=kind=>work.filter(row=>upper(row.kind)===kind).map(row=>publicRecord(row,kind)).filter(Boolean).map(row=>({...row,provenance:provenance(snapshot,row.sourceRef)}));
