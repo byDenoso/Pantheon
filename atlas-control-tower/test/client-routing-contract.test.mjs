@@ -11,3 +11,11 @@ test('browser default API client uses published static artifacts and keeps remot
   assert.match(client, /if\s*\(remoteBase\)[\s\S]*createApi\(\{\s*baseUrl:\s*remoteBase,\s*profile:\s*['"]atlas['"]\s+as const\s*\}\)/s);
   assert.doesNotMatch(client, /window\.fetch\.bind\(window\)/);
 });
+
+test('Vercel same-origin API has a published static-artifact fallback instead of blanking the graph', () => {
+  assert.match(client, /createResilientApi/);
+  assert.match(client, /primary/);
+  assert.match(client, /fallback/);
+  assert.match(client, /catch/);
+  assert.match(client, /shouldUseSameOriginApi\(\)[\s\S]*createResilientApi/s);
+});
