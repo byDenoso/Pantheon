@@ -13,9 +13,12 @@ test('Atlas SSOT route is service-authenticated and read-only',()=>{
  assert.match(handler,/readAtlasSsot\(\{env,now/);
 });
 
-test('Atlas SSOT reader is pinned to the canonical sheet and cannot inherit a legacy sheet id',()=>{
- assert.match(adapter,/CANONICAL_SSOT_ID/);
- assert.match(adapter,/1e6s2dKOYVLNsPUguHI85RLVLwJKtlCsQZBJ1BE-UhaY/);
+test('Atlas SSOT reader uses exact-name Drive discovery or private override and cannot inherit legacy ids',()=>{
+ assert.match(adapter,/DRIVE_SSOT_SPREADSHEET_ID/);
+ assert.match(adapter,/DENER · SSOT CANONICAL/);
+ assert.match(adapter,/SSOT_DISCOVERY_NOT_FOUND/);
+ assert.match(adapter,/SSOT_DISCOVERY_AMBIGUOUS/);
+ assert.doesNotMatch(adapter,/CANONICAL_SSOT_ID/);
  assert.doesNotMatch(adapter,/NEXO_SHEET_ID/);
  assert.doesNotMatch(adapter,/NEXO_SSOT_ID/);
 });

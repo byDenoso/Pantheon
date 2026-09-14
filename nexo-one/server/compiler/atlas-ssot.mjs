@@ -1,9 +1,17 @@
 import {createHash} from 'node:crypto';
 
 export const ATLAS_SSOT_CONTRACT='NEXO_ATLAS_SSOT_V1';
-export const CANONICAL_TABS=Object.freeze(['THREADS','WORK','EVENTS','KNOWLEDGE','DECISIONS','SYSTEM']);
+export const CANONICAL_TAB_MAP=Object.freeze({
+ THREADS:'THREADS',WORK:'WORK',EVENTS:'EVENTS',KNOWLEDGE:'KNOWLEDGE',DECISIONS:'DECISIONS',SYSTEM:'SYSTEM',
+ PROJECTS:'PROJECTS',TESTS:'TEST_REGISTRY_V1',RELATIONS:'Relations'
+});
+export const CANONICAL_TABS=Object.freeze(Object.keys(CANONICAL_TAB_MAP));
+export const CANONICAL_SOURCE_TABS=Object.freeze(Object.values(CANONICAL_TAB_MAP));
 export const PROJECTION_TABS=Object.freeze(['Science','Engineering','Olympus','StructuralLearning','CrossDomain','Integrity']);
-const REQUIRED_KEY=Object.freeze({THREADS:'thread_id',WORK:'work_id',EVENTS:'event_id',KNOWLEDGE:'knowledge_id',DECISIONS:'decision_id',SYSTEM:'system_id'});
+const REQUIRED_KEY=Object.freeze({
+ THREADS:'thread_id',WORK:'work_id',EVENTS:'event_id',KNOWLEDGE:'knowledge_id',DECISIONS:'decision_id',SYSTEM:'system_id',
+ PROJECTS:'record_id',TESTS:'metatest_id',RELATIONS:'relation_id'
+});
 
 const text=value=>String(value??'').trim();
 
