@@ -89,3 +89,11 @@ test('cockpit deduplicates operations when two public endpoints expose the same 
   assert.match(cockpit, /mergeUniqueOperations/);
   assert.match(cockpit, /new Map\(items\.map/);
 });
+
+test('graph transitions expose a visible loading state while preserving the last valid projection', () => {
+  const graph = read('src/pages/graphs-page.tsx');
+  const styles = read('src/design/spatial-interface.css');
+  assert.match(graph, /Preparando o próximo recorte/);
+  assert.match(graph, /state\.loading && projection/);
+  assert.match(styles, /graph-stage-status/);
+});
