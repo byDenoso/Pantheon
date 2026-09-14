@@ -5,17 +5,20 @@ const arr=value=>Array.isArray(value)?value:[];
 const hash=value=>`sha256:${createHash('sha256').update(JSON.stringify(value)).digest('hex')}`;
 const KEYS=['science','engineering','olympus','learning','crossDomain','integrity','actions'];
 function validatePayload(payload,authority){
- if(!payload||typeof payload!=='object')throw new Error('INVALID_GITHUB_CANONICAL_PAYLOAD');
+ if(!payload||typeof payload!=='object')throw new Error('INVALID_ATLAS_PROJECTION_PAYLOAD');
  const expected=authority?.projection?.fingerprint,actual=payload?.meta?.fingerprint;
- if(expected&&actual!==expected)throw new Error('GITHUB_CANONICAL_FINGERPRINT_MISMATCH');
+ if(expected&&actual!==expected)throw new Error('ATLAS_PROJECTION_FINGERPRINT_MISMATCH');
  return payload;
 }
 async function fetchPayload(authority,{fetcher=fetch,signal}={}){
- const repo=authority.repository||'byDenoso/Pantheon',ref=authority.ref||'main',path=authority?.projection?.transportPath;
- if(!path)throw new Error('GITHUB_CANONICAL_PATH_MISSING');
+ const projection=authority?.projection||{};
+ const repo=projection.repository||authority.repository;
+ const ref=projection.ref||authority.ref||'main';
+ const path=projection.transportPath;
+ if(!repo||!path)throw new Error('ATLAS_PROJECTION_LOCATOR_MISSING');
  const url=`https://api.github.com/repos/${repo}/contents/${path}?ref=${encodeURIComponent(ref)}`;
  const response=await fetcher(url,{headers:{Accept:'application/vnd.github.raw+json','X-GitHub-Api-Version':'2022-11-28','User-Agent':'nexo-atlas'},signal,cache:'no-store'});
- if(!response?.ok)throw new Error(`GITHUB_CANONICAL_PAYLOAD_HTTP_${response?.status||0}`);
+ if(!response?.ok)throw new Error(`ATLAS_PROJECTION_HTTP_${response?.status||0}`);
  return validatePayload(await response.json(),authority);
 }
 export async function loadGithubCanonical({force=false,fetcher=fetch,signal}={}){
