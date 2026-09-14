@@ -38,7 +38,8 @@ export function configuredBaseUrl(): string {
 export function configuredStaticDataBaseUrl(): string {
   const appBase = String(import.meta.env.BASE_URL || '/').trim() || '/';
   const normalized = appBase.endsWith('/') ? appBase : `${appBase}/`;
-  return `${normalized}data`;
+  const staticSegment = 'data';
+  return `${normalized}${staticSegment}`;
 }
 
 export function createResilientApi(primary: AtlasApiClient, fallback: AtlasApiClient): AtlasApiClient {
