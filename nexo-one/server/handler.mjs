@@ -8,10 +8,11 @@ import {readAtlasSsot} from './adapters/atlas-ssot.mjs';
 import {buildPublicAtlasSsot} from './compiler/atlas-public-ssot.mjs';
 import {buildAtlasResearchView,RESEARCH_ROUTES} from './compiler/atlas-research-api.mjs';
 import {verifyProjectionService} from './auth/vercel-oidc.mjs';
-import {configured as sessionConfigured,sameOrigin} from './auth/session.mjs';
+import {sameOrigin} from './auth/session.mjs';
 import {sessionAccess,sessionRoute} from './auth/session-route.mjs';
 import {buildPersonalSnapshot,executePersonalAction} from './personal/service.mjs';
 import {createNexoMcpWebHandler} from './mcp/server.mjs';
+import {summarizeConnectionHealth} from './health/connection-state.mjs';
 const ATLAS_ORIGINS=new Set(['https://bydenoso.github.io','https://nexo-atlas-control-tower.vercel.app','https://nexo-atlas-cockpit.vercel.app']);
 const PUBLIC_SYSTEM_PROVIDERS=['github','nexo'];
 const isCorsRoute=route=>route==='mcp'||route==='atlas-public-ssot'||route==='world'||RESEARCH_ROUTES.has(route);
@@ -113,7 +114,10 @@ export default async function handler(req,res) {
     const results=await Promise.all(selected.map(id=>readProvider(id,{...options,query:route==='recall'?q:''})));
     const world=compile(results,{now,access});
     const requiredProviders=world.providers.filter(p=>p.id!=='vercel');
-    if(route==='health')return send({status:requiredProviders.every(p=>p.status==='AVAILABLE'&&!p.partial)?'HEALTHY':'DEGRADED',version:'0.1.0',contractVersion:'1',access,privateConfigured:sessionConfigured(env),providers:world.providers,generatedAt:world.generatedAt});
+    if(route==='health'){
+      const connectionHealth=summarizeConnectionHealth({env,providers:world.providers,access});
+      return send({status:requiredProviders.every(p=>p.status==='AVAILABLE'&&!p.partial)?'HEALTHY':'DEGRADED',version:'0.1.0',contractVersion:'1',access,privateConfigured:connectionHealth.session.configured,sessionConfigured:connectionHealth.session.configured,connections:connectionHealth.connections,providers:world.providers,generatedAt:world.generatedAt});
+    }
     if(route==='now')return send({...world,items:world.items.filter(x=>['ACT','ESCALATE'].includes(x.attention)).slice(0,3)});
     if(route==='loops')return send({...world,items:world.items.filter(x=>x.status)});
     if(route==='day')return send({...world,items:world.items.filter(x=>x.kind==='EVENT'||x.status==='NEEDS_ME')});
