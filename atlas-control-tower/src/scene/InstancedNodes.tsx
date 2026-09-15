@@ -16,6 +16,15 @@ const TYPE_COLOR: Record<string,string> = {
   SYSTEM:'#d8f2ff', DOMAIN:'#74b9ff', CAMPAIGN:'#a88dff', CLAIM:'#ffc86b',
   TEST:'#71e3d0', RUN:'#79a9ff', RESULT:'#92a4ba', ACTION:'#ff8fa3'
 };
+const LIGHT_STATUS_COLOR: Record<string,string> = {
+  SUPPORTED:'#087f68', APPROVED:'#087f68', SUCCESS:'#087f68',
+  PARTIAL:'#956600', BLOCKED:'#b33c52', NEGATIVE:'#b33c52',
+  ACTIVE:'#176fae', IN_PROGRESS:'#176fae', OPEN:'#176fae', LEGACY:'#5b6f83'
+};
+const LIGHT_TYPE_COLOR: Record<string,string> = {
+  SYSTEM:'#176fae', DOMAIN:'#1f6fae', CAMPAIGN:'#6547b0', CLAIM:'#956600',
+  TEST:'#087f68', RUN:'#3e6396', RESULT:'#526b83', ACTION:'#a23b55'
+};
 
 function nodeRadius(node: PositionedNode, selectedId?: string | null, focusId?: string | null) {
   if (node.id === focusId) return 0.7;
@@ -27,10 +36,12 @@ function nodeRadius(node: PositionedNode, selectedId?: string | null, focusId?: 
   return 0.13;
 }
 
-function visualColor(node: PositionedNode) {
+function visualColor(node: PositionedNode, theme:'dark'|'light') {
   const status=String(node.status||'').toUpperCase();
   const type=String(node.type||'').toUpperCase();
-  return new Color(STATUS_COLOR[status] || TYPE_COLOR[type] || '#8ca8c4');
+  const statuses=theme==='light'?LIGHT_STATUS_COLOR:STATUS_COLOR;
+  const types=theme==='light'?LIGHT_TYPE_COLOR:TYPE_COLOR;
+  return new Color(statuses[status] || types[type] || (theme==='light'?'#4c6d88':'#8ca8c4'));
 }
 
 type Props={
@@ -39,11 +50,12 @@ type Props={
   focusId?: string | null;
   pickMode?: boolean;
   aura?: boolean;
+  theme?: 'dark'|'light';
   onNodeClick?: (node: PositionedNode, event: ThreeEvent<MouseEvent>) => void;
   positions?: Map<string,Vector3>;
 };
 
-export function InstancedNodes({nodes,selectedId,focusId,pickMode=false,aura=false,onNodeClick,positions}:Props){
+export function InstancedNodes({nodes,selectedId,focusId,pickMode=false,aura=false,onNodeClick,positions,theme='dark'}:Props){
   const mesh=useRef<InstancedMesh>(null);
   const object=useMemo(()=>new Object3D(),[]);
   const {camera}=useThree();
@@ -60,12 +72,12 @@ export function InstancedNodes({nodes,selectedId,focusId,pickMode=false,aura=fal
       if(pickMode){
         const [r,g,b]=encodePickId(node.pickId);
         target.setColorAt(index,new Color(r/255,g/255,b/255));
-      }else target.setColorAt(index,visualColor(node));
+      }else target.setColorAt(index,visualColor(node,theme));
     });
     // setColorAt only writes the CPU-side buffer; without this flag the instance
     // color never uploads to the GPU.
     if(target.instanceColor)target.instanceColor.needsUpdate=true;
-  },[nodes,pickMode]);
+  },[nodes,pickMode,theme]);
 
   useFrame(()=>{
     const target=mesh.current;if(!target)return;

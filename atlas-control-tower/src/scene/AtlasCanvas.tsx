@@ -5,7 +5,7 @@ import { BufferGeometry, Float32BufferAttribute, MeshBasicMaterial, Vector3 } fr
 import type { OrbitControls as OrbitControlsImpl } from 'three-stdlib';
 import { createAtlasRenderer } from './createRenderer';
 import { selectSemanticLOD } from './semantic-lod';
-import { applyCameraKey, cameraDistanceForLevel, clampSpherical, sphericalToCartesian, type CameraSpherical } from './camera-controls';
+import { applyCameraKey, cameraDistanceForPresentation, clampSpherical, MAX_DISTANCE, sphericalToCartesian, type CameraSpherical } from './camera-controls';
 import { shouldOpenNode } from './picking';
 import { buildOrbitalNodes, type AtlasGraph, type AtlasNode, type PositionedNode } from './types';
 import { InstancedNodes } from './InstancedNodes';
@@ -71,13 +71,12 @@ function CameraRig({compact,focusId,focusType,presentationMode}:{compact:boolean
 
   useEffect(()=>{
     const aspect=size.width/Math.max(1,size.height);
-    const base=aspect<0.72 ? cameraDistanceForLevel(focusType,true) : cameraDistanceForLevel(focusType,compact);
-    recenter(base*(presentationMode==='canvas'?1.16:1));
+    recenter(cameraDistanceForPresentation(focusType,compact,aspect,presentationMode));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   },[compact,focusType,presentationMode,size.height,size.width]);
 
   useEffect(()=>{
-    recenter(cameraDistanceForLevel(focusType,compact)*(presentationMode==='canvas'?1.16:1));
+    recenter(cameraDistanceForPresentation(focusType,compact,size.width/Math.max(1,size.height),presentationMode));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   },[focusId,presentationMode]);
 
@@ -110,7 +109,7 @@ function CameraRig({compact,focusId,focusType,presentationMode}:{compact:boolean
     // autoRotate = false: camera motion is always user-driven.
     autoRotate={false}
     minDistance={5}
-    maxDistance={38}
+    maxDistance={MAX_DISTANCE}
     minPolarAngle={presentationMode==='canvas'?Math.PI/2-0.24:0.18}
     maxPolarAngle={presentationMode==='canvas'?Math.PI/2+0.24:Math.PI-0.18}
     minAzimuthAngle={presentationMode==='canvas'?-0.48:-Infinity}
@@ -220,9 +219,9 @@ function SceneContent({nodes,graph,labelIds,onLabels,onPick,reducedMotion,select
     <CameraRig compact={compact} focusId={focusId} focusType={focusType} presentationMode={presentationMode}/>
     <OrbitalGuides nodes={nodes} focusId={focusId} theme={theme} presentationMode={presentationMode}/>
     {!reducedMotion&&<StarField theme={theme}/>}
-    <InstancedNodes nodes={nodes} positions={motion.current} focusId={focusId} aura/>
+    <InstancedNodes nodes={nodes} positions={motion.current} focusId={focusId} aura theme={theme}/>
     <InstancedFilaments edges={graph.edges} nodes={nodes} positions={motion.current} focusId={focusId} selectedId={selectedId} theme={theme}/>
-    <InstancedNodes nodes={nodes} positions={motion.current} selectedId={selectedId} focusId={focusId} onNodeClick={onPick}/>
+    <InstancedNodes nodes={nodes} positions={motion.current} selectedId={selectedId} focusId={focusId} onNodeClick={onPick} theme={theme}/>
     <LabelProjector nodes={nodes} labelIds={labelIds} onLabels={onLabels} motion={motion} focusId={focusId} selectedId={selectedId}/>
   </>;
 }
@@ -273,7 +272,7 @@ export function AtlasCanvas({graph,focusId,selectedId,onSelect,onOpen,reducedMot
 
   if(!graph)return <div className="atlas-canvas-loading">Lendo recorte orbital…</div>;
 
-  const fallback=<div className="atlas-graph-renderer-fallback"><CanvasGraphFallback nodes={nodes} edges={sceneGraph.edges} labelIds={lod.labelIds} focusId={focusId} selectedId={selectedId} onNodeClick={handlePick} reducedMotion={reducedMotion} compact={compact}/><span className="atlas-graph-fallback-note">Renderer 3D indisponível · exploração preservada em Canvas</span></div>;
+  const fallback=<div className="atlas-graph-renderer-fallback"><CanvasGraphFallback nodes={nodes} edges={sceneGraph.edges} labelIds={lod.labelIds} focusId={focusId} selectedId={selectedId} onNodeClick={handlePick} reducedMotion={reducedMotion} compact={compact} theme={theme}/><span className="atlas-graph-fallback-note">Renderer 3D indisponível · exploração preservada em Canvas</span></div>;
   if(!threeEnabled)return <div className="atlas-r3f-stage" ref={stageRef} data-render-active="true">{fallback}{loading&&<div className="atlas-graph-transition" role="status">Carregando subgrafo…</div>}</div>;
   return <div className="atlas-r3f-stage" ref={stageRef} data-render-active={renderActive ? 'true' : 'false'}>
     <CanvasErrorBoundary key={`${focusId}:${nodes.length}:${theme}:${presentationMode}`} fallback={fallback}>

@@ -20,10 +20,11 @@ test('Atlas V3 exposes persisted light dark and system theme modes',()=>{
   assert.match(theme,/--bg:#f7faff/);
 });
 
-test('Atlas V3 canvas presentation is wider and deliberately shallow',()=>{
+test('Atlas V3 canvas presentation is wider and keeps readable orbital depth',()=>{
   const layout=read('src/scene/types.ts');
   assert.match(layout,/CANVAS_LAYOUT_SPREAD\s*=\s*1\.3/);
-  assert.match(layout,/CANVAS_DEPTH_SCALE\s*=\s*0\.28/);
+  assert.match(layout,/CANVAS_CLUSTER_SPREAD\s*=\s*1\.25/);
+  assert.match(layout,/CANVAS_DEPTH_SCALE\s*=\s*0\.[7-9]/);
   const canvas=read('src/scene/AtlasCanvas.tsx');
   assert.match(canvas,/presentationMode\?:'spatial'\|'canvas'/);
   assert.match(canvas,/minPolarAngle/);

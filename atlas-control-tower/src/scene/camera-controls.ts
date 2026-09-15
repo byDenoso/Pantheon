@@ -6,7 +6,9 @@ export type CameraSpherical = { azimuth: number; polar: number; distance: number
 export const MIN_POLAR = 0.35;
 export const MAX_POLAR = Math.PI - 0.35;
 export const MIN_DISTANCE = 5;
-export const MAX_DISTANCE = 34;
+export const MAX_DISTANCE = 42;
+export const CANVAS_CAMERA_SCALE = 1.28;
+export const CANVAS_MOBILE_CAMERA_SCALE = 1.18;
 
 const ORBIT_STEP = 0.12;
 const ZOOM_STEP = 1.4;
@@ -20,6 +22,13 @@ export function cameraDistanceForLevel(nodeType: string | undefined | null, comp
   if (type === 'DOMAIN') return compact ? 16.5 : 14.2;
   if (type === 'CAMPAIGN') return compact ? 13 : 10.8;
   return compact ? 18 : 15.5;
+}
+
+export function cameraDistanceForPresentation(nodeType: string | undefined | null, compact: boolean, aspect: number, presentationMode: 'spatial' | 'canvas' = 'spatial'): number {
+  const compactMode = compact || aspect < 0.72;
+  const base = cameraDistanceForLevel(nodeType, compactMode);
+  if (presentationMode !== 'canvas') return base;
+  return base * CANVAS_CAMERA_SCALE * (aspect < 0.72 ? CANVAS_MOBILE_CAMERA_SCALE : 1);
 }
 
 export function clampSpherical(state: CameraSpherical): CameraSpherical {
