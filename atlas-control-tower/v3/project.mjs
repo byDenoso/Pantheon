@@ -41,9 +41,10 @@ function relationId(source, type, target) {
 }
 
 function nodeFrom(bucket, entity) {
+  const projectedType = bucket === 'work' ? 'WORK' : normalizeEntityKind(bucket, entity);
   return {
     id: String(entity.id),
-    type: normalizeEntityKind(bucket, entity),
+    type: projectedType,
     label: canonicalLabel(entity),
     status: entity.status || null,
     domain: entity.domain || entity.source_domains?.[0] || null,
@@ -54,9 +55,10 @@ function nodeFrom(bucket, entity) {
 }
 
 function publicEntityView(bucket, entity) {
+  const projectedType = bucket === 'work' ? 'WORK' : normalizeEntityKind(bucket, entity);
   const base = {
     id: String(entity.id),
-    projectedType: normalizeEntityKind(bucket, entity),
+    projectedType,
     label: canonicalLabel(entity),
     status: entity.status || null,
     domain: entity.domain || entity.source_domains?.[0] || null,
