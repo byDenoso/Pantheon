@@ -32,6 +32,10 @@ export type PositionedNode = AtlasNode & {
   pickId: number;
 };
 
+export const CANVAS_LAYOUT_SPREAD = 1.3;
+export const CANVAS_CLUSTER_SPREAD = 1.25;
+export const CANVAS_DEPTH_SCALE = 0.28;
+
 function hash01(value: string) {
   let hash = 2166136261;
   for (let i = 0; i < value.length; i++) {
@@ -57,12 +61,13 @@ function legacyOrbitalPosition(node: AtlasNode, index: number, count: number): [
   const jitter = hashSigned(node.id) * 0.16;
   const angle = index * golden + jitter;
   const type = String(node.type || '').toUpperCase();
-  const shell = type === 'SYSTEM' ? 5.6 : type === 'DOMAIN' ? 6.7 : type === 'CAMPAIGN' ? 7.7 : 8.8;
+  const baseShell = type === 'SYSTEM' ? 5.6 : type === 'DOMAIN' ? 6.7 : type === 'CAMPAIGN' ? 7.7 : 8.8;
+  const shell = baseShell * CANVAS_LAYOUT_SPREAD;
   const depth = 0.72 + hash01(`${node.id}:depth`) * 0.5;
   return [
     Math.cos(angle) * radial * shell,
     y * shell * 0.72,
-    Math.sin(angle) * radial * shell * depth
+    Math.sin(angle) * radial * shell * depth * CANVAS_DEPTH_SCALE
   ];
 }
 
@@ -110,9 +115,8 @@ function hierarchyPositions(nodes: AtlasNode[], focusId: string, edges: AtlasEdg
   }
 
   const positions = new Map<string, [number, number, number]>([[focusId, [0, 0, 0]]]);
-  // Give the panorama enough physical volume that perspective can separate
-  // sibling systems/domains instead of projecting them into a near-column.
-  const ringRadius = directChildren.length === 1 ? 4.7 : directChildren.length < 5 ? 5.35 : 5.8;
+  const baseRingRadius = directChildren.length === 1 ? 4.7 : directChildren.length < 5 ? 5.35 : 5.8;
+  const ringRadius = baseRingRadius * CANVAS_LAYOUT_SPREAD;
   const golden = Math.PI * (3 - Math.sqrt(5));
   const phase = hash01(`${focusId}:phase`) * Math.PI * 2;
 
@@ -121,20 +125,17 @@ function hierarchyPositions(nodes: AtlasNode[], focusId: string, edges: AtlasEdg
     const center: [number, number, number] = [
       Math.cos(angle) * ringRadius,
       Math.sin(angle) * ringRadius * 0.66,
-      // The graph is an illustrated spatial field, not a flat radial chart. A
-      // wider deterministic front/back spread is what makes orbiting visible
-      // while keeping the public node budget unchanged.
-      hashSigned(`${child.id}:hub-depth`) * 4.2
+      hashSigned(`${child.id}:hub-depth`) * 4.2 * CANVAS_DEPTH_SCALE
     ];
     positions.set(child.id, center);
     const cluster = members.get(child.id) || [];
     cluster.forEach((node, memberIndex) => {
       const memberAngle = hash01(`${node.id}:angle`) * Math.PI * 2 + memberIndex * golden;
-      const memberRadius = 0.92 + Math.sqrt((memberIndex + 0.5) / Math.max(1, cluster.length)) * 1.65;
+      const memberRadius = (0.92 + Math.sqrt((memberIndex + 0.5) / Math.max(1, cluster.length)) * 1.65) * CANVAS_CLUSTER_SPREAD;
       positions.set(node.id, [
         center[0] + Math.cos(memberAngle) * memberRadius,
         center[1] + Math.sin(memberAngle) * memberRadius * 0.72,
-        center[2] + hashSigned(`${node.id}:depth`) * (2.4 + memberRadius * 0.85)
+        center[2] + hashSigned(`${node.id}:depth`) * (2.4 + memberRadius * 0.85) * CANVAS_DEPTH_SCALE
       ]);
     });
   });
@@ -143,12 +144,6 @@ function hierarchyPositions(nodes: AtlasNode[], focusId: string, edges: AtlasEdg
 }
 
 export function buildOrbitalNodes(nodes: AtlasNode[], focusId?: string | null, edges: AtlasEdge[] = []): PositionedNode[] {
-  // Resolve to the real node's own id (case-insensitively) before any comparison
-  // below. A case-mismatched focusId (e.g. a URL-persisted "domain:d1" against a
-  // real "domain:D1" node) previously matched nothing: the focus never centered at
-  // the origin, hierarchyPositions() found no direct children, and every node fell
-  // back to the generic golden-spiral layout at a much larger radius than the
-  // camera framing expects -- confirmed via a real browser repro, not a guess.
   const focalId = focusId
     ? nodes.find(node => node.id === focusId)?.id
       ?? nodes.find(node => node.id.toLowerCase() === focusId.toLowerCase())?.id
