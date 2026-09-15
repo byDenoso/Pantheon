@@ -1,18 +1,25 @@
-# NEXO Sovereign Architecture
+# NEXO Canonical Architecture
 
-The NEXO Sovereign Core has two structural providers:
+The sole operational truth owner is:
 
-- Google Drive: mutable factual SSOT.
-- GitHub: code, contracts, schemas, architecture, workflows, validation, projection compute, generated read-only state, and public distribution through Pages.
+`byDenoso/NEXO-Obsidian-Vault@main:TOWER_V06`
 
-Required public read path:
+`TOWER_V06/CONTROL.json` is the canonical control-plane declaration. The operational write model is `GITHUB_CAS_ENTITY_EVENT`.
 
-`Google Drive -> GitHub Actions -> generated GitHub projection -> GitHub Pages -> browser local/static API`
+Pantheon owns code, contracts, projection logic, validation and presentation. ATLAS is a read-only projection and cannot write operational truth.
 
-Vercel and Neon are retired from required read paths. Optional integrations may exist, but they are not Core dependencies and their outage must not degrade Core health.
+Google Drive is not an operational SSOT. It may remain an evidence/artifact/dataset provider and legacy projection/provenance surface, but it cannot override TOWER_V06 and Drive writeback to truth is forbidden.
 
-Generated snapshots are projection-only and must preserve provenance, source version, fingerprint, schema/projection versions, completeness and freshness semantics.
+Required Atlas V3 read path:
 
-The browser is read-only. Authorized writes follow validate -> Drive write -> Drive readback -> projection -> publication -> Pages readback.
+`TOWER_V06 -> Atlas Projection V3 -> immutable fingerprinted snapshot -> Atlas Data SDK -> Atlas Neural V3`
 
-Full design: `docs/superpowers/specs/2026-09-13-nexo-sovereign-architecture.md`.
+Projection failures preserve the last valid snapshot. Projection state must remain distinguishable from canonical state.
+
+Public projections are allowlist-based. Personal Olympus/client health data must not enter the public Atlas projection.
+
+The previous Drive-as-mutable-SSOT architecture is superseded for operational state by the active TOWER_V06 authority contract.
+
+Current Atlas V3 design: `docs/superpowers/specs/2026-09-14-atlas-neural-v3.md`.
+
+Historical sovereign architecture: `docs/superpowers/specs/2026-09-13-nexo-sovereign-architecture.md`.
