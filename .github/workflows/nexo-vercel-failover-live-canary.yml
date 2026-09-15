@@ -1,0 +1,100 @@
+name: NEXO Vercel Fallback Live Canary
+
+on:
+  push:
+    branches:
+      - feat/nexo-vercel-failover-live-canary-v1
+    paths:
+      - '.github/workflows/nexo-vercel-failover-live-canary.yml'
+      - 'science/runtime/vercel_fallback_canary.py'
+      - 'nexo-one/server/executor/fallback-router.mjs'
+      - 'nexo-one/server/executor/vercel-sandbox.mjs'
+      - 'nexo-one/test/vercel-failover-live-canary.test.mjs'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: nexo-vercel-fallback-live-canary
+  cancel-in-progress: false
+
+jobs:
+  canary:
+    runs-on: ubuntu-latest
+    environment: nexo-one-preview
+    env:
+      GITHUB_AVAILABLE: 'false'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Force router handoff and execute exact contract in Vercel Sandbox
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: |
+          node --input-type=module <<'NODE'
+          import assert from 'node:assert/strict';
+          import {createHash} from 'node:crypto';
+          import {writeFile} from 'node:fs/promises';
+          import {chooseExecutor} from './nexo-one/server/executor/fallback-router.mjs';
+          import {runVercelFallbackShard} from './nexo-one/server/executor/vercel-sandbox.mjs';
+
+          const route=chooseExecutor({
+            mode:'auto',
+            github:{available:process.env.GITHUB_AVAILABLE!=='false',remainingMinutes:null},
+            estimatedMinutes:1,
+            reserveMinutes:15,
+          });
+          assert.deepEqual(route,{backend:'vercel_sandbox',reason:'GITHUB_UNAVAILABLE'});
+
+          const contract={
+            canary_id:'NEXO-VERCEL-FAILOVER-CANARY-V1',
+            work_id:'WORK::NEXO-VERCEL-FAILOVER-CANARY-V1',
+            gate_id:'EXECUTOR_ROUTING_V1',
+            shard_id:'LIVE-CANARY-001',
+            expected_backend:'vercel_sandbox',
+            scientific_effect:'NONE',
+            input_class:'SYNTHETIC_OPERATIONAL_CANARY',
+          };
+          const canonical=JSON.stringify(Object.fromEntries(Object.entries(contract).sort(([a],[b])=>a.localeCompare(b))));
+          const expectedResultHash=`sha256:${createHash('sha256').update(canonical).digest('hex')}`;
+          const contractBase64=Buffer.from(JSON.stringify(contract),'utf8').toString('base64');
+          const receipt=await runVercelFallbackShard({
+            job:{
+              runId:`gha-${process.env.GITHUB_RUN_ID}`,
+              workId:contract.work_id,
+              gateId:contract.gate_id,
+              shardId:contract.shard_id,
+              commitSha:process.env.GITHUB_SHA,
+              runner:'science/runtime/vercel_fallback_canary.py',
+              contractBase64,
+            },
+            env:process.env,
+          });
+          assert.equal(receipt.backend,'vercel_sandbox');
+          assert.equal(receipt.status,'COMPLETE');
+          assert.equal(receipt.validationStatus,'PASS');
+          assert.equal(receipt.exitCode,0);
+          assert.equal(receipt.resultHash,expectedResultHash);
+          assert.match(receipt.sessionRef,/^sbx_/);
+
+          const output={
+            schema_version:'1',
+            canary_id:contract.canary_id,
+            router_decision:route,
+            contract,
+            contract_hash:expectedResultHash,
+            receipt,
+            github_run_id:process.env.GITHUB_RUN_ID,
+            github_sha:process.env.GITHUB_SHA,
+          };
+          await writeFile('vercel-failover-canary-receipt.json',JSON.stringify(output,null,2)+'\n');
+          console.log(JSON.stringify({status:'PASS',backend:receipt.backend,result_hash:receipt.resultHash,session_ref:receipt.sessionRef}));
+          NODE
+      - name: Upload immutable canary receipt
+        uses: actions/upload-artifact@v4
+        with:
+          name: nexo-vercel-failover-live-canary-${{ github.run_id }}
+          path: vercel-failover-canary-receipt.json
+          if-no-files-found: error
