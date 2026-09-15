@@ -160,10 +160,7 @@ export function SpatialCameraRig({compact,focusId,focusType,presentationMode,red
       pointersRef.current.delete(event.pointerId);
       try{element.releasePointerCapture(event.pointerId)}catch{}
       if(pointersRef.current.size===0){gestureStartRef.current=null;gestureRecordedRef.current=false;}
-      else{
-        const next=[...pointersRef.current.values()][0];gestureStartRef.current=snapshot();gestureRecordedRef.current=false;
-        pointersRef.current.set(event.pointerId,{...next});
-      }
+      else{gestureStartRef.current=snapshot();gestureRecordedRef.current=false;velocityRef.current={yaw:0,pitch:0};}
       if(reducedMotion)velocityRef.current={yaw:0,pitch:0};
     };
     const onWheel=(event:WheelEvent)=>{
