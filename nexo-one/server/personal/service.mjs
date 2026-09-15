@@ -70,9 +70,10 @@ export async function executePersonalAction({env=process.env,now=new Date().toIS
   if(!config)throw new Error('PERSONAL_ACTION_NOT_EXECUTABLE');
   const fingerprint=personalActionFingerprint(proposal);
   if(proposal.fingerprint&&proposal.fingerprint!==fingerprint)throw new Error('STALE_PROPOSAL');
+  if(decision.policy==='APPROVAL_REQUIRED'&&!approval)return {status:'APPROVAL_REQUIRED',policy_level:decision.level,proposal_fingerprint:fingerprint};
   if(decision.policy==='APPROVAL_REQUIRED'&&(approval?.approved!==true||text(approval?.proposal_fingerprint)!==fingerprint))throw new Error('APPROVAL_MISMATCH');
   const input=semanticInput(proposal.input);if(!input)throw new Error('PERSONAL_ACTION_INPUT_REQUIRED');
-  const at=typeof now==='number'?new Date(now).toISOString():new Date(now).toISOString();if(at==='Invalid Date')throw new Error('EXECUTION_TIME_INVALID');
+  const at=new Date(now).toISOString();
   const rt=runtime||defaultRuntime({env,now:at,signal}),writeToken=`PWT-${stableFingerprint({fingerprint,actor,at}).slice(0,32)}`;
   const action={action_id:`ACT-PERSONAL-${stableFingerprint({fingerprint}).slice(0,24)}`,domain:'PERSONAL',lease_owner:actor,lease_until:new Date(Date.parse(at)+120000).toISOString(),write_token:writeToken,proposal_fingerprint:fingerprint,policy_level:decision.level};
   return executeCapabilityAware({action,requiredOperation:config.operation,context:'NEXO',input,capabilities:rt.capabilities||PERSONAL_CAPABILITIES,eligibleRuntimes:['NEXO'],adapters:rt.adapters,effectLedger:rt.effectLedger,executionRuns:rt.executionRuns,actor,writeToken,now:at});
