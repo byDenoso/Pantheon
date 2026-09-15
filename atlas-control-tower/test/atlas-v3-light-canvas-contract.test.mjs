@@ -22,8 +22,8 @@ test('Atlas V3 exposes persisted light dark and system theme modes',()=>{
 
 test('Atlas V3 canvas presentation is wider and keeps readable orbital depth',()=>{
   const layout=read('src/scene/types.ts');
-  assert.match(layout,/CANVAS_LAYOUT_SPREAD\s*=\s*1\.3/);
-  assert.match(layout,/CANVAS_CLUSTER_SPREAD\s*=\s*1\.25/);
+  assert.match(layout,/CANVAS_LAYOUT_SPREAD\s*=\s*1\.45/);
+  assert.match(layout,/CANVAS_CLUSTER_SPREAD\s*=\s*1\.35/);
   assert.match(layout,/CANVAS_DEPTH_SCALE\s*=\s*0\.[7-9]/);
   const canvas=read('src/scene/AtlasCanvas.tsx');
   assert.match(canvas,/presentationMode\?:'spatial'\|'canvas'/);
