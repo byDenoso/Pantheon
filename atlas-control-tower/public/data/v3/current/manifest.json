@@ -1,0 +1,15 @@
+{
+  "contractVersion": "ATLAS_PROJECTION_V3",
+  "schemaVersion": "3.0",
+  "projectionVersion": "3.0.0",
+  "fingerprint": "sha256:88f89635ece9111f8f4177078ba1b6692d98289c06a98317f1ecf00682e5fa0f",
+  "sourceVersion": "TOWER_V06@CONTROL:b5af26938a1d05fdd3e27e924e001dca0d102b55;INTERDOMAIN:61fbb4dca6551d1d03f185c7ade9cf77591661eb;WORK:b3107a22dca8a8513a0ff2be99e7c87e5840e87d,d5116024f3d84993e1ebd9f56f56b08549a82c2c",
+  "generatedAt": "2026-09-15T02:34:37Z",
+  "authority": "TOWER_V06",
+  "truthOwner": "byDenoso/NEXO-Obsidian-Vault@main:TOWER_V06",
+  "projectionOnly": true,
+  "completeness": "PARTIAL_BOOTSTRAP",
+  "freshness": "SNAPSHOT",
+  "publicProjection": true,
+  "snapshotPath": "../snapshots/sha256-88f89635ece9111f8f4177078ba1b6692d98289c06a98317f1ecf00682e5fa0f/snapshot.json"
+}
