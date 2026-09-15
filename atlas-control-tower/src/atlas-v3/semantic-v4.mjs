@@ -29,17 +29,13 @@ export function buildSemanticVisibility(graph,{focusId='',selectedId='',level=0,
     if((source===focusId||source===selectedId)&&ids.has(target))forced.add(target);
     if((target===focusId||target===selectedId)&&ids.has(source))forced.add(source);
   }
-  for(const node of nodes){
-    const id=nodeId(node);if(!id)continue;
-    if(semanticDepthForNode(node)<=level)forced.add(id);
-  }
-  const ordered=[...forced].filter(ids.has.bind(ids));
-  const remainder=nodes
+  const eligible=nodes
     .map(node=>({id:nodeId(node),depth:semanticDepthForNode(node)}))
-    .filter(item=>item.id&&!forced.has(item.id))
+    .filter(item=>item.id&&item.depth<=level&&!forced.has(item.id))
     .sort((a,b)=>a.depth-b.depth||a.id.localeCompare(b.id));
+  const ordered=[...forced].filter(ids.has.bind(ids));
   const limit=Math.max(forced.size,Math.max(1,Number.isFinite(budget)?Math.floor(budget):24));
-  for(const item of remainder){if(ordered.length>=limit)break;ordered.push(item.id)}
+  for(const item of eligible){if(ordered.length>=limit)break;ordered.push(item.id)}
   return new Set(ordered);
 }
 
