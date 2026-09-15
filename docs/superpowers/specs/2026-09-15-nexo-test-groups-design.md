@@ -2,11 +2,11 @@
 
 ## Goal
 
-Keep the NEXO Neural graph legible with ~2.2k historical tests while preserving complete test auditability and making future tests appear automatically through stable aggregate nodes.
+Keep the NEXO Neural graph legible with ~2.2k historical tests while preserving test auditability and making future tests appear automatically through stable aggregate nodes.
 
 ## Authority
 
-`byDenoso/NEXO-Obsidian-Vault@main:TOWER_V06` remains operational truth. Pantheon/ATLAS is a read-only projection. The legacy `PEER_CONTROL_TOWER_CANONICAL` Test Registry is migration provenance only and is used once to construct a deterministic historical backfill.
+`byDenoso/NEXO-Obsidian-Vault@main:TOWER_V06` remains operational truth. Pantheon/ATLAS is a read-only projection. The legacy `PEER_CONTROL_TOWER_CANONICAL` Test Registry is migration provenance only.
 
 ## Visible hierarchy
 
@@ -29,11 +29,11 @@ The historical grouping rule is deterministic:
 3. Put smaller families into the campaign's `OTHER` group.
 4. Explicit canonical groups override virtual membership for live/current tests.
 
-The frozen backfill generated from the legacy registry contains 2,198 unique test IDs and 67 groups.
+The frozen migration backfill summarizes 2,198 unique historical Test IDs into 67 TEST_GROUPs. It does **not** copy the 2,198 historical test records into TOWER. Each virtual group keeps migration provenance and an access descriptor for the legacy Test Registry.
 
 ## Test record
 
-A compact test record carries only navigation/audit metadata needed by the projection: `id`, `test_group_id`, `campaign_id`, `program_id`, `status`, `evidence_class`, `title`, and provenance/source refs. Detailed scientific artifacts stay in their existing canonical/evidence locations.
+Future/current material tests are canonical compact entities carrying only navigation/audit metadata needed by the projection: `id`, `test_group_id`, `campaign_id`, `program_id`, `status`, `evidence_class`, `title`, and provenance/source refs. Detailed scientific artifacts stay in their existing canonical/evidence locations.
 
 Future terminal or materially updated tests are upserted through the canonical mutation writer as `entity_kind=test`; their group is upserted as `entity_kind=test_group` when needed. The writer may create only the explicitly allowlisted new entity kinds `work`, `test`, and `test_group` at `expected_version=0`.
 
@@ -43,11 +43,13 @@ Atlas V3 reads:
 
 - canonical live `entities/test_group/*.json`;
 - canonical live `entities/test/*.json`;
-- frozen `migration/test-registry-backfill-v1.json` as historical fallback.
+- frozen `migration/test-registry-backfill-v1.json` group summaries as historical fallback.
 
-Live entities override matching backfill IDs. `TEST_GROUP` becomes a graph node with `CAMPAIGN -> TEST_GROUP` `CONTAINS` edges. `TEST` records are omitted from the graph node map and published under a compact `testing` collection.
+Live groups override matching migration groups. `TEST_GROUP` becomes a graph node with `CAMPAIGN -> TEST_GROUP` `CONTAINS` edges. Canonical `TEST` records are omitted from the graph node map and are exposed only to the group detail/registry surface.
 
-A TEST_GROUP is terminal in the Neural. Double-click/open selects it and opens the inspector but must not change graph focus. The inspector exposes one `Abrir testes` link. The linked registry view lists/searches tests for that group from the same published snapshot.
+A TEST_GROUP is terminal in the Neural. Opening it selects the group and opens the inspector but must not change graph focus. The inspector exposes one `Abrir testes` link.
+
+For a live/declared group, the linked registry view can list canonical TEST records from the published snapshot. For a migration-only virtual group, the link opens the historical Test Registry access surface using the stored campaign/family filter. The Neural never expands to individual historical tests.
 
 ## Filaments
 
@@ -59,10 +61,10 @@ No private Olympus/client identity, labs, photographs, health data or personal c
 
 ## Acceptance criteria
 
-- Historical backfill reports 2,198 unique tests and 67 groups.
+- Historical migration reports 2,198 unique tests compressed into 67 group summaries and does not duplicate the historical tests in TOWER.
 - GZ01 eROSITA superbattery is represented as one explicit `TEST_GROUP` of kind `BATTERY` under `CAMP-GROWTH-LSS`.
 - Atlas graph contains TEST_GROUP nodes and zero TEST nodes.
-- The snapshot still contains compact tests addressable by group.
+- Canonical live tests remain addressable by group outside the graph; historical virtual groups expose a legacy registry access link/filter.
 - Opening a TEST_GROUP does not drill the graph deeper and exposes a tests link.
 - New canonical `test` and `test_group` entities can be created with CAS/readback using the existing mutation pipeline.
 - Regression tests and build/typecheck pass before merge.
