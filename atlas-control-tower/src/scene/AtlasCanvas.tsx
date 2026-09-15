@@ -311,7 +311,7 @@ export function AtlasCanvas({graph,focusId,selectedId,onSelect,onOpen,reducedMot
 
   if(!graph)return <div className="atlas-canvas-loading">Lendo recorte orbital…</div>;
 
-  const accessibleSummary=<ul className="atlas-visible-summary" aria-label="Entidades visíveis no Atlas" style={visuallyHidden}>{sceneGraph.nodes.slice(0,64).map(node=><li key={node.id}>{labelText(node)} · {labelType(node)}{node.id===focusId?' · foco':''}{node.id===selectedId?' · selecionado':''}</li>)}</ul>;
+  const accessibleSummary=<ul className="atlas-visible-summary" aria-label="Entidades visíveis no Atlas" style={visuallyHidden}>{sceneGraph.nodes.slice(0,64).map(node=><li key={node.id}>{labelText(node as PositionedNode)} · {labelType(node as PositionedNode)}{node.id===focusId?' · foco':''}{node.id===selectedId?' · selecionado':''}</li>)}</ul>;
   const fallback=<div className="atlas-graph-renderer-fallback"><CanvasGraphFallback nodes={nodes} edges={sceneGraph.edges} labelIds={lod.labelIds} focusId={focusId} selectedId={selectedId} onNodeClick={handlePick} reducedMotion={reducedMotion} compact={compact} theme={theme}/><span className="atlas-graph-fallback-note">Renderer 3D indisponível · exploração preservada em Canvas</span></div>;
   if(!threeEnabled)return <div className="atlas-r3f-stage" ref={stageRef} data-render-active="true">{accessibleSummary}{fallback}{loading&&<div className="atlas-graph-transition" role="status">Carregando subgrafo…</div>}</div>;
   return <div className="atlas-r3f-stage" ref={stageRef} data-render-active={renderActive ? 'true' : 'false'}>
