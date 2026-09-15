@@ -6,7 +6,7 @@
     "test": "node --test test/*.test.mjs",
     "pretest": "npm run state:build",
     "typecheck": "tsc --noEmit",
-    "state:build": "node scripts/generate-static-state.mjs public/data",
+    "state:build": "node scripts/generate-static-state.mjs public/data && node scripts/generate-atlas-v3-state.mjs --input v3/bootstrap-source.json --out public/data/v3",
     "build": "vite build",
     "prebuild": "npm run state:build",
     "predev": "npm run state:build",
