@@ -80,3 +80,24 @@ test('public projection excludes explicit personal/client entities', () => {
 test('rejects any input whose truth owner is not TOWER_V06', () => {
   assert.throws(() => buildAtlasProjectionV3({ ...input, control: { ...control, truth_owner: 'GOOGLE_DRIVE' } }), /INVALID_TOWER_AUTHORITY/);
 });
+
+test('public projection uses structural allowlists instead of copying nested canonical payloads', () => {
+  const snapshot = buildAtlasProjectionV3({
+    ...input,
+    entities: {
+      ...input.entities,
+      work: [{
+        id: 'WORK::OLYMPUS::SAFE-ID',
+        status: 'WAIT_DEPENDENCY',
+        owner_role: 'EXECUTOR',
+        next_action: 'Await a new check-in for Miquéias',
+        eligible_cohort_manifest: { display_name: 'Miquéias', dates: ['2026-01-27'] }
+      }]
+    }
+  });
+  const projected = snapshot.entities['WORK::OLYMPUS::SAFE-ID'];
+  assert.equal(projected.ownerRole, 'EXECUTOR');
+  assert.equal('eligible_cohort_manifest' in projected, false);
+  assert.equal(snapshot.operations.works[0].nextAction, null);
+  assert.doesNotMatch(JSON.stringify(snapshot), /Miqu[eé]ias/i);
+});
