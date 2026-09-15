@@ -19,8 +19,8 @@ test('cinematic scene keeps presentation nodes outside canonical Projection V3 s
   const adapter=read('src/atlas-v3/scene-adapter.mjs');assert.match(adapter,/__PRESENTATION_NEXO__/);assert.match(adapter,/__PRESENTATION_CLUSTER__/);assert.match(adapter,/presentationOnly:true/);assert.match(adapter,/layoutParent/);assert.doesNotMatch(adapter,/snapshot\.graph\.root\.nodes\.push/);
 });
 
-test('cinematic renderer exposes orbit pan zoom reduced motion adaptive quality and Canvas fallback',()=>{
+test('cinematic V3 reuses the mature 3D renderer rather than forking a second engine',()=>{
   const canvas=read('src/scene/AtlasCanvas.tsx');
-  assert.match(canvas,/CanvasGraphFallback/);assert.match(canvas,/reducedMotion/);assert.match(canvas,/DreiOrbitControls/);assert.match(canvas,/enablePan/);assert.match(canvas,/enableRotate/);assert.match(canvas,/enableZoom/);
-  assert.match(canvas,/visibleBudget:compact\?70:180/);assert.match(canvas,/PerformanceMonitor/);assert.match(canvas,/setDpr/);
+  assert.match(canvas,/CanvasGraphFallback/);assert.match(canvas,/canUseThreeRenderer/);assert.match(canvas,/DreiOrbitControls/);assert.match(canvas,/enablePan/);assert.match(canvas,/enableRotate/);assert.match(canvas,/enableZoom/);
+  assert.match(canvas,/motion\.current/);assert.match(canvas,/torusGeometry/);assert.match(canvas,/visibleBudget:compact\?90:180/);
 });

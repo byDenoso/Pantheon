@@ -5,8 +5,8 @@ import { createFilamentMaterial } from './materials';
 import type { AtlasEdge, PositionedNode } from './types';
 
 const EDGE_COLOR: Record<string,string> = {
-  CO_DECLARED:'#b695ff', CROSS_DOMAIN:'#b695ff', METHOD_TRANSFER:'#b695ff', PROPOSES_TEST:'#b695ff',
-  CONTAINS:'#355f82', SUPPORTS:'#69dec0', SUPPORTED_BY:'#69dec0', CONTRADICTS:'#f38999', DEPENDS_ON:'#efc379'
+  CO_DECLARED:'#b695ff', CROSS_DOMAIN:'#b695ff', CONTAINS:'#496e93',
+  SUPPORTS:'#69dec0', CONTRADICTS:'#f38999', DEPENDS_ON:'#efc379'
 };
 
 type Props={edges:AtlasEdge[];nodes:PositionedNode[];positions?:Map<string,Vector3>;focusId?:string|null;selectedId?:string|null};
@@ -15,7 +15,6 @@ export function InstancedFilaments({edges,nodes,positions:sharedPositions,focusI
   const mesh=useRef<InstancedMesh>(null);
   const object=useMemo(()=>new Object3D(),[]);
   const material=useMemo(()=>createFilamentMaterial(),[]);
-  const reducedMotion=typeof window!=='undefined'&&window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
   useLayoutEffect(()=>{
     const target=mesh.current;if(!target)return;
@@ -23,14 +22,18 @@ export function InstancedFilaments({edges,nodes,positions:sharedPositions,focusI
     const valid=edges.filter(edge=>positions.has(edge.source)&&positions.has(edge.target));
     target.count=valid.length;
     valid.forEach((edge,index)=>{
+      const a=positions.get(edge.source)!;
+      const b=positions.get(edge.target)!;
       const kind=String(edge.type||'').toUpperCase();
       const color=new Color(EDGE_COLOR[kind]||'#36526f');
       const active=edge.source===focusId||edge.target===focusId||edge.source===selectedId||edge.target===selectedId;
-      if(active) color.lerp(new Color('#e1f8ff'),0.52);
+      if(active) color.lerp(new Color('#d4f5ff'),0.46);
       target.setColorAt(index,color);
     });
+    // setColorAt only writes the CPU-side buffer; without this flag the instance
+    // color never uploads to the GPU.
     if(target.instanceColor)target.instanceColor.needsUpdate=true;
-  },[edges,focusId,nodes,selectedId,sharedPositions]);
+  },[edges,focusId,nodes,object,selectedId,sharedPositions]);
 
   useFrame(({clock})=>{
     const target=mesh.current;if(!target)return;
@@ -43,10 +46,12 @@ export function InstancedFilaments({edges,nodes,positions:sharedPositions,focusI
       const midpoint=a.clone().add(b).multiplyScalar(0.5);
       object.position.copy(midpoint);object.quaternion.copy(new Quaternion().setFromUnitVectors(up,direction.normalize()));
       const active=edge.source===focusId||edge.target===focusId||edge.source===selectedId||edge.target===selectedId;
-      object.scale.set(active ? 0.038 : 0.013,length,active ? 0.038 : 0.013);object.updateMatrix();target.setMatrixAt(index,matrix.copy(object.matrix));
+      object.scale.set(active ? 0.032 : 0.014,length,active ? 0.032 : 0.014);object.updateMatrix();target.setMatrixAt(index,matrix.copy(object.matrix));
     });
     target.instanceMatrix.needsUpdate=true;
-    (material as MeshBasicMaterial).opacity=reducedMotion?0.9:0.8+Math.sin(clock.elapsedTime*1.2)*0.18;
+    // A gentle, real-time pulse on filament opacity -- CPU-driven (material.opacity),
+    // not a GPU shader node, but genuinely animated every frame, not decorative.
+    (material as MeshBasicMaterial).opacity=0.82+Math.sin(clock.elapsedTime*1.35)*0.18;
   });
 
   return <instancedMesh ref={mesh} args={[undefined,undefined,Math.max(1,edges.length)]} frustumCulled={false}>
