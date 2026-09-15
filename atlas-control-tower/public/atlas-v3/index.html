@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ATLAS Neural V3</title>
+  <link rel="stylesheet" href="./atlas-v3.css" />
+</head>
+<body>
+  <div class="app-shell">
+    <header class="topbar">
+      <div class="brand"><span class="brand-mark">✦</span><span><b>ATLAS</b><small>NEURAL V3</small></span></div>
+      <div class="status-cluster">
+        <span id="authority" class="pill">TOWER_V06</span>
+        <span id="freshness" class="pill">SNAPSHOT</span>
+        <button id="reload" class="ghost">↻ sincronizar projeção</button>
+      </div>
+    </header>
+
+    <section class="hero">
+      <div>
+        <p class="eyebrow">OBSERVATÓRIO ESPACIAL DO NEXO</p>
+        <h1>Um universo. Uma autoridade. Várias camadas.</h1>
+        <p id="subline" class="subline">Carregando projeção validada…</p>
+      </div>
+      <div class="metrics" id="metrics"></div>
+    </section>
+
+    <nav class="layers" aria-label="Camadas do Atlas">
+      <button data-layer="SCIENCE" class="active">SCIENCE</button>
+      <button data-layer="LEARNING">LEARNING</button>
+      <button data-layer="OPERATIONS">OPERATIONS</button>
+      <button data-layer="EVIDENCE">EVIDENCE</button>
+      <button data-layer="PROVENANCE">PROVENANCE</button>
+      <button data-layer="HEALTH">HEALTH</button>
+    </nav>
+
+    <main class="workspace">
+      <aside class="context-rail">
+        <p class="eyebrow">CONTEXTO</p>
+        <div id="context"></div>
+        <div class="legend">
+          <span><i class="dot filament"></i>filamento</span>
+          <span><i class="dot work"></i>work</span>
+          <span><i class="dot reference"></i>referência</span>
+        </div>
+      </aside>
+
+      <section class="stage">
+        <div class="stage-head">
+          <div><p class="eyebrow">REDE NEXO</p><h2 id="stage-title">SCIENCE</h2></div>
+          <div class="stage-meta"><span id="fingerprint">—</span></div>
+        </div>
+        <svg id="graph" role="img" aria-label="Rede espacial do NEXO"></svg>
+        <div id="empty" class="empty" hidden>Esta camada ainda não possui entidades publicadas neste snapshot.</div>
+      </section>
+
+      <aside class="inspector">
+        <p class="eyebrow">INSPECTOR</p>
+        <div id="inspector"><h3>Selecione um nó</h3><p>Clique em uma entidade para ver estado, domínio e relações declaradas.</p></div>
+      </aside>
+    </main>
+
+    <footer class="ops-strip">
+      <div><span class="eyebrow">PANORAMA OPERACIONAL</span><strong id="ops-summary">—</strong></div>
+      <div id="ops-items" class="ops-items"></div>
+    </footer>
+  </div>
+  <script type="module" src="./atlas-v3.js"></script>
+</body>
+</html>

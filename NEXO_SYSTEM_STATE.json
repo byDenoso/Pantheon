@@ -1,18 +1,28 @@
 {
-  "architecture": "NEXO_SOVEREIGN_V1",
-  "architectureVersion": "1.0",
+  "architecture": "NEXO_TOWER_ATLAS_V3",
+  "architectureVersion": "3.0",
   "authority": {
-    "mutableData": "GOOGLE_DRIVE",
+    "operationalTruth": "TOWER_V06",
+    "truthOwner": "byDenoso/NEXO-Obsidian-Vault@main:TOWER_V06",
+    "writeModel": "GITHUB_CAS_ENTITY_EVENT",
     "codeContracts": "GITHUB_MAIN",
-    "projection": "GITHUB_GENERATED_STATE"
+    "projection": "ATLAS_PROJECTION_V3"
   },
   "runtime": {
     "frontend": "GITHUB_PAGES",
-    "readApi": "STATIC_LOCAL",
-    "compute": "GITHUB_ACTIONS"
+    "readModel": "ATLAS_DATA_SDK_V3",
+    "compute": "GITHUB_ACTIONS_OR_AUTHORIZED_RUNNER"
   },
   "projection": {
     "freshnessModel": "SNAPSHOT",
-    "projectionOnly": true
+    "projectionOnly": true,
+    "authority": "TOWER_V06",
+    "failurePolicy": "PRESERVE_LAST_VALID",
+    "publicPrivacy": "ALLOWLIST"
+  },
+  "providers": {
+    "googleDrive": "EVIDENCE_ARTIFACT_DATASET_LEGACY_PROJECTION_ONLY",
+    "vercel": "OPTIONAL_COMPATIBILITY",
+    "neon": "RETIRED_FROM_REQUIRED_RUNTIME"
   }
 }

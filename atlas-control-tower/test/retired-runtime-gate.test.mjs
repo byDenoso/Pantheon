@@ -10,13 +10,20 @@ const pages=read('../../.github/workflows/atlas-pages-fallback.yml');
 const systemState=JSON.parse(read('../../NEXO_SYSTEM_STATE.json'));
 const authority=JSON.parse(read('../../NEXO_AUTHORITY.json'));
 
-test('Sovereign Core architecture is machine-readable and names only Drive plus GitHub as structural authorities',()=>{
-  assert.equal(systemState.architecture,'NEXO_SOVEREIGN_V1');
-  assert.equal(systemState.authority.mutableData,'GOOGLE_DRIVE');
+test('canonical architecture is machine-readable and keeps TOWER_V06 as the sole operational truth owner',()=>{
+  assert.equal(systemState.architecture,'NEXO_TOWER_ATLAS_V3');
+  assert.equal(systemState.authority.operationalTruth,'TOWER_V06');
+  assert.equal(systemState.authority.truthOwner,'byDenoso/NEXO-Obsidian-Vault@main:TOWER_V06');
+  assert.equal(systemState.authority.writeModel,'GITHUB_CAS_ENTITY_EVENT');
   assert.equal(systemState.authority.codeContracts,'GITHUB_MAIN');
+  assert.equal(systemState.authority.projection,'ATLAS_PROJECTION_V3');
   assert.equal(systemState.runtime.frontend,'GITHUB_PAGES');
-  assert.equal(systemState.runtime.readApi,'STATIC_LOCAL');
-  assert.equal(authority.DATA_MUTABLE,'GOOGLE_DRIVE');
+  assert.equal(systemState.runtime.readModel,'ATLAS_DATA_SDK_V3');
+  assert.equal(systemState.projection.projectionOnly,true);
+  assert.equal(authority.OPERATIONAL_TRUTH,'TOWER_V06');
+  assert.equal(authority.TRUTH_OWNER,'byDenoso/NEXO-Obsidian-Vault@main:TOWER_V06');
+  assert.equal(authority.GOOGLE_DRIVE,'EVIDENCE_ARTIFACT_DATASET_LEGACY_PROJECTION_ONLY');
+  assert.equal(authority.ATLAS,'READ_ONLY_PROJECTION');
   assert.equal(authority.CODE,'GITHUB_MAIN');
   assert.equal(authority.PRESENTATION,'GITHUB_PAGES');
 });
@@ -28,7 +35,7 @@ test('active Pages and browser read path does not require retired remote runtime
   assert.doesNotMatch(pages,/nexo-atlas-control-tower\.vercel\.app\/api/);
 });
 
-test('sovereign local router depends only on static projection modules',()=>{
+test('sovereign local router keeps legacy static compatibility isolated from remote retired runtimes',()=>{
   assert.match(sovereign,/drive-ssot\.mjs/);
   assert.match(sovereign,/drive-github-science\.mjs/);
   assert.doesNotMatch(sovereign,/\.\.\/api\//);
