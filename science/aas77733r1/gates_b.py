@@ -13,7 +13,7 @@ from .utils import gate_result
 
 
 def _publication_state(ctx: Context):
-    return ctx.state("non_calibrator",0.01)
+    return ctx.state("non_calibrator", settings.PRIMARY_ZMIN)
 
 
 def g6(ctx: Context, results: dict) -> dict:
@@ -22,7 +22,7 @@ def g6(ctx: Context, results: dict) -> dict:
     raw = [{"z":float(z),"residual_mag":float(r)} for z,r in zip(s["z"],s["residual"],strict=True)]
     whitened = [{"z":float(z),"whitened_residual":float(r)} for z,r in zip(s["z"],w,strict=True)]
     return gate_result("G6","PASS" if scan["delta_chi2"]>0 else "FAIL",metrics={
-        "n":int(s["idx"].size),"omega_m":float(s["fit"]["best"]["omega_m"]),
+        "baseline_zmin":settings.PRIMARY_ZMIN,"n":int(s["idx"].size),"omega_m":float(s["fit"]["best"]["omega_m"]),
         "best_z":float(scan["best_z"]),"delta_chi2":float(scan["delta_chi2"]),"step_amplitude_mag":float(scan["amplitude"]),
         "raw_residuals":raw,"binned_gls":binned_gls(s["z"],s["residual"],s["covariance"],bins=20),"whitened_residuals":whitened,
         "whitened_mean":float(np.mean(w)),"whitened_std":float(np.std(w)),
@@ -35,7 +35,7 @@ def g7(ctx: Context, results: dict) -> dict:
     historical=[r for r in scan["scan"] if settings.HISTORICAL_SCAN["z_min"]<=r["z"]<=settings.HISTORICAL_SCAN["z_max"]]
     hbest=max(historical,key=lambda r:r["delta_chi2"]) if historical else None
     return gate_result("G7","PASS",metrics={
-        "discovery_statistic":"max_z delta_chi2(z)","scan_min":float(s["pivots"][0]),"scan_max":float(s["pivots"][-1]),"scan_step":settings.BLIND_SCAN["z_step"],
+        "baseline_zmin":settings.PRIMARY_ZMIN,"discovery_statistic":"max_z delta_chi2(z)","scan_min":float(s["pivots"][0]),"scan_max":float(s["pivots"][-1]),"scan_step":settings.BLIND_SCAN["z_step"],
         "min_side_count":settings.BLIND_SCAN["min_side_count"],"best_z":float(scan["best_z"]),"T_obs":float(scan["delta_chi2"]),"left_n":left,"right_n":right,
         "scan":scan["scan"],"historical_window_provenance":hbest,
     })
@@ -79,6 +79,7 @@ def g10(ctx: Context, results: dict) -> dict:
     for bg in s["fit"]["grid"]:
         if float(bg["chi2"])>best+1.0: continue
         omega=float(bg["omega_m"]); residual=s["observed"]-distance_modulus_flat_lcdm(s["z"],s["zhel"],omega)
+        residual=residual-float(bg["intercept"])
         ev=s["scan"]["projection"].evaluate(residual)
         rows.append({"omega_m":omega,"delta_background_chi2":float(bg["chi2"]-best),"best_z":float(ev["metadata"]["z"]),"step_delta_chi2":float(ev["delta_chi2"])})
     piv=np.asarray([r["best_z"] for r in rows]); pr=float(np.ptp(piv)) if piv.size else float("inf")
