@@ -48,9 +48,14 @@ function nodeFrom(bucket, entity) {
     label: canonicalLabel(entity),
     status: entity.status || null,
     domain: entity.domain || entity.source_domains?.[0] || null,
-    parentId: entity.program_id || null,
+    parentId: bucket === 'test_group' ? entity.campaign_id || null : entity.program_id || null,
     entityVersion: entity.entity_version ?? null,
-    projectionAuthority: TOWER_AUTHORITY
+    projectionAuthority: TOWER_AUTHORITY,
+    ...(bucket === 'test_group' ? {
+      groupKind: entity.group_kind || 'TEST_FAMILY',
+      testCount: Number.isFinite(Number(entity.test_count)) ? Number(entity.test_count) : null,
+      terminal: true
+    } : {})
   };
 }
 
@@ -64,11 +69,30 @@ function publicEntityView(bucket, entity) {
     domain: entity.domain || entity.source_domains?.[0] || null,
     priority: entity.priority || null,
     ownerRole: entity.owner_role || entity.writer_role || null,
-    parentId: entity.program_id || null,
+    parentId: bucket === 'test_group' ? entity.campaign_id || null : entity.program_id || null,
     entityVersion: entity.entity_version ?? null
   };
   if (bucket === 'program') base.campaignCount = Number.isFinite(Number(entity.campaign_count)) ? Number(entity.campaign_count) : null;
   if (bucket === 'campaign') base.testCount = Number.isFinite(Number(entity.test_count)) ? Number(entity.test_count) : null;
+  if (bucket === 'test_group') {
+    base.campaignId = entity.campaign_id || null;
+    base.programId = entity.program_id || null;
+    base.groupKind = entity.group_kind || 'TEST_FAMILY';
+    base.testCount = Number.isFinite(Number(entity.test_count)) ? Number(entity.test_count) : null;
+    base.workRef = entity.work_ref || null;
+    base.migrationOnly = Boolean(entity.migration_only);
+    base.historicalAccess = entity.historical_access || null;
+    base.terminal = true;
+  }
+  if (bucket === 'test') {
+    base.testGroupId = entity.test_group_id || null;
+    base.campaignId = entity.campaign_id || null;
+    base.programId = entity.program_id || null;
+    base.evidenceClass = entity.evidence_class || null;
+    base.resultRef = entity.result_ref || null;
+    base.evidenceRef = entity.evidence_ref || null;
+    base.artifactRef = entity.artifact_ref || null;
+  }
   if (bucket === 'interdomain' || String(entity.kind || '').toUpperCase() === 'INTERDOMAIN') {
     return {
       ...base,
@@ -122,32 +146,47 @@ export function buildAtlasProjectionV3(input) {
     }
   }
 
+  const testToGroup = new Map(
+    canonicalEntities
+      .filter(({ bucket, entity }) => bucket === 'test' && entity.test_group_id)
+      .map(({ entity }) => [String(entity.id), String(entity.test_group_id)])
+  );
+
   const nodeMap = new Map();
   const entityMap = new Map();
   for (const { bucket, entity } of canonicalEntities) {
-    nodeMap.set(String(entity.id), nodeFrom(bucket, entity));
-    entityMap.set(String(entity.id), publicProjection ? publicEntityView(bucket, entity) : { ...entity, projectedType: normalizeEntityKind(bucket, entity) });
+    if (bucket !== 'test') nodeMap.set(String(entity.id), nodeFrom(bucket, entity));
+    entityMap.set(String(entity.id), publicProjection ? publicEntityView(bucket, entity) : { ...entity, projectedType: bucket === 'work' ? 'WORK' : normalizeEntityKind(bucket, entity) });
   }
 
   const edges = [];
-  const addEdge = (source, target, type) => {
+  const addEdge = (source, target, type, { allowExternal = true } = {}) => {
     if (!source || !target || source === target) return;
     if (!nodeMap.has(source)) return;
-    if (!nodeMap.has(target) && shouldMaterializeReference(target)) nodeMap.set(target, externalStub(target));
+    if (!nodeMap.has(target) && allowExternal && shouldMaterializeReference(target)) nodeMap.set(target, externalStub(target));
     if (!nodeMap.has(target)) return;
     edges.push({ id: relationId(source, type, target), source, target, type });
+  };
+  const addTestReference = (source, testRef, type) => {
+    const groupId = testToGroup.get(String(testRef));
+    if (groupId) addEdge(source, groupId, type, { allowExternal: false });
   };
 
   for (const { bucket, entity } of canonicalEntities) {
     const source = String(entity.id);
     if (bucket === 'campaign' && entity.program_id) addEdge(String(entity.program_id), source, 'CONTAINS');
+    if (bucket === 'test_group' && entity.campaign_id) addEdge(String(entity.campaign_id), source, 'CONTAINS');
+    if (bucket === 'test') continue;
     if (bucket === 'interdomain' || String(entity.kind || '').toUpperCase() === 'INTERDOMAIN') {
       for (const ref of entity.source_nodes || []) addEdge(source, String(ref), entity.relation_type || 'METHOD_TRANSFER');
-      for (const ref of entity.test_refs || []) addEdge(source, String(ref), 'PROPOSES_TEST');
+      for (const ref of entity.test_refs || []) addTestReference(source, ref, 'PROPOSES_TEST');
       for (const ref of entity.evidence_refs || []) addEdge(source, String(ref), 'SUPPORTED_BY');
     } else {
       for (const [field, type] of REFERENCE_FIELDS) {
-        for (const ref of entity[field] || []) addEdge(source, String(ref), type);
+        for (const ref of entity[field] || []) {
+          if (field === 'test_refs') addTestReference(source, ref, type);
+          else addEdge(source, String(ref), type);
+        }
       }
     }
   }
@@ -185,6 +224,24 @@ export function buildAtlasProjectionV3(input) {
     }))
     .sort((a, b) => a.id.localeCompare(b.id));
 
+  const groups = canonicalEntities
+    .filter(({ bucket }) => bucket === 'test_group')
+    .map(({ entity }) => publicEntityView('test_group', entity))
+    .sort((a, b) => a.id.localeCompare(b.id));
+  const tests = canonicalEntities
+    .filter(({ bucket }) => bucket === 'test')
+    .map(({ entity }) => publicEntityView('test', entity))
+    .sort((a, b) => a.id.localeCompare(b.id));
+  const historicalRegistry = {
+    uniqueTests: Number(input?.historicalRegistry?.unique_tests) || 0,
+    groupCount: Number(input?.historicalRegistry?.group_count) || 0,
+    sourceFileId: input?.historicalRegistry?.source_file_id || null,
+    sourceSheetId: input?.historicalRegistry?.source_sheet_id ?? null,
+    sourceTitle: input?.historicalRegistry?.source_title || null,
+    sourceSheet: input?.historicalRegistry?.source_sheet || null,
+    accessMode: input?.historicalRegistry?.historical_access_mode || null
+  };
+
   const olympusPublicEntities = canonicalEntities.filter(({ bucket, entity }) => {
     const domain = String(entity.domain || '').toUpperCase();
     return bucket === 'olympus' || domain.includes('OLYMPUS') || domain.includes('BODYBUILD');
@@ -198,7 +255,10 @@ export function buildAtlasProjectionV3(input) {
     edges,
     entities,
     filaments,
-    works
+    works,
+    groups,
+    tests,
+    historicalRegistry
   };
   const fingerprint = fingerprintFor(fingerprintPayload);
 
@@ -225,13 +285,17 @@ export function buildAtlasProjectionV3(input) {
         nodes: nodes.length,
         edges: edges.length,
         filaments: filaments.length,
-        works: works.length
+        works: works.length,
+        testGroups: groups.length,
+        tests: tests.length,
+        historicalTests: historicalRegistry.uniqueTests
       }
     },
     graph: { root: { nodes, edges } },
     entities,
     learning: { filaments },
     operations: { works },
+    testing: { groups, tests, historicalRegistry },
     health: {
       state: 'SNAPSHOT',
       authority: TOWER_AUTHORITY,
