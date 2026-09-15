@@ -30,4 +30,5 @@ test('embedded Neural surface anchors Projection V3 reads to the published atlas
 
 test('embedded Neural surface opts into the Atlas full-height workspace contract', () => {
   assert.match(app, /atlas-v3-shell--embedded[^`]*spatial-knowledge-page/);
+  assert.match(read('../src/atlas-v3/atlas-v3.css'), /atlas-v3-shell--embedded\{height:calc\(100dvh - var\(--atlas-topbar-height\)\)!important/);
 });
