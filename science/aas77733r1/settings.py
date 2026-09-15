@@ -2,6 +2,7 @@ BATTERY_ID = "AAS77733-R1-PUB"
 SEED = 77733
 DEFAULT_MOCKS = 10000
 MOCK_POLICY = {"base": 10000, "tail_trigger_p": 0.01, "tail": 100000}
+PRIMARY_ZMIN = 0.0233
 ZMIN_SWEEP = [0.01, 0.0233, 0.024, 0.03, 0.05, 0.10]
 CALIBRATION_BRANCHES = ["official_all", "calibrator_only", "non_calibrator"]
 TEMPLATE_FAMILIES = ["hard_step", "tanh_step", "gaussian_bump", "piecewise_linear"]
