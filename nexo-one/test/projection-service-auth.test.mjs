@@ -44,14 +44,15 @@ test('projection bearer is bounded and explicit',()=>{
   assert.equal(projectionBearer({headers:{}}),'');
 });
 
-test('service identity is wired only inside projections while human access remains public read-only',async()=>{
+test('service identity remains projection-scoped while human private sessions cannot elevate public SystemState',async()=>{
   const handler=await readFile(new URL('../server/handler.mjs',import.meta.url),'utf8');
-  assert.match(handler,/route=url\.searchParams\.get\('route'\)[\s\S]*access='PUBLIC'/);
-  assert.doesNotMatch(handler,/authenticated\(req,env\)|privateAccess/);
-  assert.match(handler,/if\(route==='session'\)return send\(\{authenticated:false,configured:false,access:'PUBLIC',mode:'PUBLIC_READ_ONLY'\}\)/);
+  assert.match(handler,/sessionAccess\(req,env,now\)/);
+  assert.match(handler,/access=privateAccess\?'PRIVATE':'PUBLIC'/);
+  assert.match(handler,/if\(route==='session'\)/);
   const projectionBlock=handler.split("if(route==='projections')")[1].split("if(route==='system')")[0];
   assert.match(projectionBlock,/verifyProjectionService\(req,\{now\}\)/);
   assert.match(projectionBlock,/projectionAccess=serviceAccess\?'PRIVATE':'PUBLIC'/);
   const afterProjection=handler.split("if(route==='system')")[1];
   assert.match(afterProjection,/const options=\{now,access:'PUBLIC',env,force\}/);
+  assert.match(afterProjection,/compile\(results,\{now,access:'PUBLIC'\}\)/);
 });
