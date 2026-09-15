@@ -1,53 +1,17 @@
-name: Atlas Deploy
+name: Atlas Legacy Vercel Deploy
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - 'atlas-control-tower/**'
-      - '.github/workflows/atlas-deploy.yml'
   workflow_dispatch:
 
 permissions:
   contents: read
-  statuses: read
 
 concurrency:
-  group: atlas-production
+  group: atlas-vercel-compatibility
   cancel-in-progress: false
 
 jobs:
-  test:
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: atlas-control-tower
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '24'
-          cache: npm
-          cache-dependency-path: atlas-control-tower/package-lock.json
-      - name: Install dependencies
-        run: npm ci --no-audit --no-fund
-      - name: Run unit and contract tests
-        run: npm test
-      - name: Typecheck React frontend
-        run: npm run typecheck
-      - name: Build production frontend
-        run: npm run build
-      - name: Check server-side JavaScript syntax
-        shell: bash
-        run: |
-          shopt -s nullglob
-          files=(api/*.js *.mjs lib/*.mjs ui/*.mjs webmcp/*.mjs)
-          for file in "${files[@]}"; do
-            node --check "$file"
-          done
-
-  deploy:
-    needs: test
+  compatibility-deploy:
     runs-on: ubuntu-latest
     environment: nexo-one-production
     defaults:
@@ -56,166 +20,44 @@ jobs:
     env:
       VERCEL_ORG_ID: team_TLkDXqQIHke6IumXh3qzMDcs
       VERCEL_PROJECT_ID: prj_DLQSz5OiIT1HxWMn2i4AgoIv5x8r
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: '24'
-
-      - name: Select production deploy path
-        id: deploy-auth
-        env:
-          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          cache: npm
+          cache-dependency-path: atlas-control-tower/package-lock.json
+      - name: Verify compatibility deploy authorization
         run: |
           if [ -z "$VERCEL_TOKEN" ]; then
-            echo "available=false" >> "$GITHUB_OUTPUT"
-            {
-              echo "### Vercel production deploy"
-              echo "CLI promotion unavailable; production must be verified from the Vercel Git status and published artifact."
-            } >> "$GITHUB_STEP_SUMMARY"
-          else
-            echo "available=true" >> "$GITHUB_OUTPUT"
+            echo '::error::Manual Vercel compatibility deployment requires VERCEL_TOKEN.'
+            exit 1
           fi
-
-      - name: Pull production settings from canonical project
-        if: steps.deploy-auth.outputs.available == 'true'
-        env:
-          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+      - name: Install dependencies
+        run: npm ci --no-audit --no-fund
+      - name: Verify compatibility build
+        run: |
+          npm test
+          npm run typecheck
+          npm run build
+      - name: Pull compatibility project settings
         run: npx --yes vercel@latest pull --yes --environment=production --token="$VERCEL_TOKEN"
-
-      - name: Build canonical deployment
-        if: steps.deploy-auth.outputs.available == 'true'
-        env:
-          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+      - name: Build compatibility deployment
         run: npx --yes vercel@latest build --prod --token="$VERCEL_TOKEN"
-
-      - name: Deploy to production
-        if: steps.deploy-auth.outputs.available == 'true'
+      - name: Deploy compatibility runtime
         id: deploy
-        env:
-          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
         run: |
           set -euo pipefail
           url=$(npx --yes vercel@latest deploy --prebuilt --prod --token="$VERCEL_TOKEN")
           echo "url=$url" >> "$GITHUB_OUTPUT"
-          echo "Deployed: $url"
-
-      - name: Readback production
-        if: steps.deploy-auth.outputs.available == 'true'
+          echo "Compatibility deployment: $url"
+      - name: Readback compatibility shell
         env:
           DEPLOY_URL: ${{ steps.deploy.outputs.url }}
-        shell: bash
         run: |
           set -euo pipefail
-          canonical="https://nexo-atlas-control-tower.vercel.app"
-
-          smoke_frontend(){
-            local base="$1"
-            for path in / /graphs /graphs/science /graphs/science/D3 /universes /learning /operations /provenance; do
-              code=$(curl -L -sS -H 'Cache-Control: no-cache' -o /tmp/page.html -w '%{http_code}' --max-time 30 "$base$path")
-              echo "$base$path -> $code"
-              [ "$code" = "200" ] || return 1
-              grep -q 'id="root"' /tmp/page.html || return 1
-            done
-            curl -L -sS -H 'Cache-Control: no-cache' --max-time 30 "$base/" -o /tmp/root.html
-            grep -Eq 'src="/assets/[^\"]+\.js"' /tmp/root.html || return 1
-          }
-
-          smoke_api(){
-            local base="$1"
-            health=$(curl -L -sS -o /tmp/health.json -w '%{http_code}' --max-time 40 "$base/api/health")
-            graph=$(curl -L -sS -o /tmp/graph.json -w '%{http_code}' --max-time 40 "$base/api/graph?focus=system:SCIENCE&depth=1&limit=8")
-            ops=$(curl -L -sS -o /tmp/ops.json -w '%{http_code}' --max-time 40 "$base/api/ops")
-            learning=$(curl -L -sS -o /tmp/learning.json -w '%{http_code}' --max-time 40 "$base/api/learning")
-            runner=$(curl -L -sS -o /tmp/runner.json -w '%{http_code}' --max-time 20 "$base/api/runner?op=health")
-            echo "$base API -> health=$health graph=$graph ops=$ops learning=$learning runner=$runner"
-            [ "$health" = "200" ] && [ "$graph" = "200" ] && [ "$ops" = "200" ] && [ "$learning" = "200" ] && [ "$runner" = "401" ]
-            node -e '
-              const fs=require("fs");
-              const h=JSON.parse(fs.readFileSync("/tmp/health.json","utf8"));
-              if(!h.ok || h.contract!=="v1" || h.dataSource?.freshness!=="LIVE" || h.dataSource?.usedFallback!==false){
-                console.error("health contract failed",h);process.exit(1);
-              }
-              const g=JSON.parse(fs.readFileSync("/tmp/graph.json","utf8"));
-              if(!Array.isArray(g.nodes)){console.error("graph contract missing nodes");process.exit(1);}
-            '
-          }
-
-          smoke_frontend "$DEPLOY_URL"
-          smoke_api "$DEPLOY_URL"
-
-          for attempt in $(seq 1 16); do
-            echo "canonical readback attempt $attempt"
-            if smoke_frontend "$canonical" && smoke_api "$canonical"; then
-              echo "Production vNext readback passed."
-              exit 0
-            fi
-            sleep 10
-          done
-
-          echo "::error::canonical production alias never converged to the validated vNext deployment"
-          exit 1
-
-      - name: Vercel Git deployment status
-        if: steps.deploy-auth.outputs.available != 'true'
-        env:
-          GH_TOKEN: ${{ github.token }}
-        shell: bash
-        run: |
-          set -euo pipefail
-          context='Vercel – nexo-atlas-control-tower'
-          canonical='https://nexo-atlas-control-tower.vercel.app'
-          status_url="https://api.github.com/repos/${GITHUB_REPOSITORY}/commits/${GITHUB_SHA}/status"
-
-          for attempt in $(seq 1 18); do
-            echo "Vercel Git status attempt $attempt"
-            curl -fsSL \
-              -H "Authorization: Bearer $GH_TOKEN" \
-              -H 'Accept: application/vnd.github+json' \
-              -H 'X-GitHub-Api-Version: 2022-11-28' \
-              "$status_url" -o /tmp/vercel-status.json
-
-            readarray -t fields < <(node - <<'NODE'
-          const fs=require('fs');
-          const payload=JSON.parse(fs.readFileSync('/tmp/vercel-status.json','utf8'));
-          const item=(payload.statuses||[]).find(status=>status.context==='Vercel – nexo-atlas-control-tower');
-          console.log(item?.state||'pending');
-          console.log(item?.target_url||'');
-          NODE
-            )
-            state="${fields[0]:-pending}"
-            target="${fields[1]:-}"
-            echo "Vercel context=$context state=$state target=$target"
-
-            if [ "$state" = "failure" ] || [ "$state" = "error" ]; then
-              echo "::error::Vercel Git deployment failed: $target"
-              exit 1
-            fi
-
-            if [ "$state" = "success" ]; then
-              code=$(curl -L -sS -H 'Cache-Control: no-cache' -o /tmp/vercel-root.html -w '%{http_code}' --max-time 30 "$canonical/")
-              if [ "$code" != "200" ] || ! grep -q 'id="root"' /tmp/vercel-root.html; then
-                echo "Vercel status is success but canonical shell has not converged yet."
-                sleep 10
-                continue
-              fi
-
-              if curl -fsSL -H 'Cache-Control: no-cache' --max-time 30 "$canonical/data/current/manifest.json" -o /tmp/vercel-manifest.json; then
-                snapshot_path=$(node -e "const m=require('/tmp/vercel-manifest.json'); if(!m.snapshotPath) process.exit(1); process.stdout.write(m.snapshotPath)")
-                curl -fsSL -H 'Cache-Control: no-cache' --max-time 30 "$canonical/data/$snapshot_path/science/D7.json" -o /tmp/vercel-d7.json
-                node - <<'NODE'
-          const d7=require('/tmp/vercel-d7.json');
-          if(!Array.isArray(d7.campaigns)||!d7.campaigns.some(campaign=>campaign.id==='CAMP-CMB-ANOMALIES')) throw new Error('VERCEL_D7_CAMPAIGN_SENTINEL_MISSING');
-          if(Array.isArray(d7.tests)) throw new Error('VERCEL_D7_PUBLIC_TESTS_PRESENT');
-          NODE
-              fi
-
-              echo "Vercel Git deployment and canonical readback passed."
-              exit 0
-            fi
-
-            sleep 10
-          done
-
-          echo "::error::Vercel Git deployment never reached a terminal success state"
-          exit 1
+          code=$(curl -L -sS -H 'Cache-Control: no-cache' -o /tmp/page.html -w '%{http_code}' --max-time 30 "$DEPLOY_URL/")
+          [ "$code" = "200" ]
+          grep -q 'id="root"' /tmp/page.html
+          echo 'VERCEL_COMPATIBILITY_READBACK_OK'
