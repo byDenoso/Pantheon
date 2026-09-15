@@ -8,7 +8,8 @@ import {
   assertPublicEntitySafe,
   assertTowerControl,
   canonicalLabel,
-  normalizeEntityKind
+  normalizeEntityKind,
+  safePublicText
 } from './contracts.mjs';
 
 const REFERENCE_FIELDS = [
@@ -51,6 +52,34 @@ function nodeFrom(bucket, entity) {
   };
 }
 
+function publicEntityView(bucket, entity) {
+  const base = {
+    id: String(entity.id),
+    projectedType: normalizeEntityKind(bucket, entity),
+    label: canonicalLabel(entity),
+    status: entity.status || null,
+    domain: entity.domain || entity.source_domains?.[0] || null,
+    priority: entity.priority || null,
+    ownerRole: entity.owner_role || entity.writer_role || null,
+    entityVersion: entity.entity_version ?? null
+  };
+  if (bucket === 'interdomain' || String(entity.kind || '').toUpperCase() === 'INTERDOMAIN') {
+    return {
+      ...base,
+      relationType: entity.relation_type || 'INTERDOMAIN',
+      sourceDomains: entity.source_domains || [],
+      targetDomains: entity.target_domains || [],
+      sourceNodes: entity.source_nodes || [],
+      testRefs: entity.test_refs || [],
+      evidenceRefs: entity.evidence_refs || [],
+      mapping: safePublicText(entity.mapping),
+      predictionOrUtility: safePublicText(entity.prediction_or_utility),
+      falsifier: safePublicText(entity.falsifier_or_validation || entity.proposed_test?.falsifier)
+    };
+  }
+  return base;
+}
+
 function externalStub(id) {
   return {
     id,
@@ -90,7 +119,7 @@ export function buildAtlasProjectionV3(input) {
   const entityMap = new Map();
   for (const { bucket, entity } of canonicalEntities) {
     nodeMap.set(String(entity.id), nodeFrom(bucket, entity));
-    entityMap.set(String(entity.id), { ...entity, projectedType: normalizeEntityKind(bucket, entity) });
+    entityMap.set(String(entity.id), publicProjection ? publicEntityView(bucket, entity) : { ...entity, projectedType: normalizeEntityKind(bucket, entity) });
   }
 
   const edges = [];
@@ -128,10 +157,10 @@ export function buildAtlasProjectionV3(input) {
       sourceNodes: entity.source_nodes || [],
       testRefs: entity.test_refs || [],
       evidenceRefs: entity.evidence_refs || [],
-      mapping: entity.mapping || null,
-      predictionOrUtility: entity.prediction_or_utility || null,
-      falsifier: entity.falsifier_or_validation || entity.proposed_test?.falsifier || null,
-      proposedTest: entity.proposed_test || null,
+      mapping: publicProjection ? safePublicText(entity.mapping) : entity.mapping || null,
+      predictionOrUtility: publicProjection ? safePublicText(entity.prediction_or_utility) : entity.prediction_or_utility || null,
+      falsifier: publicProjection ? safePublicText(entity.falsifier_or_validation || entity.proposed_test?.falsifier) : entity.falsifier_or_validation || entity.proposed_test?.falsifier || null,
+      proposedTest: publicProjection ? null : entity.proposed_test || null,
       entityVersion: entity.entity_version ?? null
     }))
     .sort((a, b) => a.id.localeCompare(b.id));
@@ -142,7 +171,7 @@ export function buildAtlasProjectionV3(input) {
       id: String(entity.id),
       status: entity.status || 'UNKNOWN',
       ownerRole: entity.owner_role || entity.writer_role || null,
-      nextAction: entity.next_action || null,
+      nextAction: publicProjection ? null : entity.next_action || null,
       entityVersion: entity.entity_version ?? null
     }))
     .sort((a, b) => a.id.localeCompare(b.id));
