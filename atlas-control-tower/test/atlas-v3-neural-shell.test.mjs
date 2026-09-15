@@ -6,23 +6,26 @@ const root=new URL('../',import.meta.url);
 const app=fs.readFileSync(new URL('src/atlas-v3/AtlasV3App.tsx',root),'utf8');
 const css=fs.readFileSync(new URL('src/atlas-v3/atlas-v3.css',root),'utf8');
 
-test('V3 exposes a clean neural layer toggle bar',()=>{
-  for(const layer of ['NEXO','SCIENCE','OPERATIONS','HEALTH','AUTOMATIONS','EVIDENCES']) assert.match(app,new RegExp(layer));
+test('Neural V4 separates primary domains from contextual overlays',()=>{
+  for(const domain of ['NEXO','SCIENCE','OPERATIONS','HEALTH']) assert.match(app,new RegExp(domain));
+  for(const overlay of ['LEARNING','AUTOMATIONS','EVIDENCE']) assert.match(app,new RegExp(overlay));
+  assert.match(app,/atlas-domain-bar/);
+  assert.match(app,/atlas-overlay-menu/);
   assert.match(app,/role="toolbar"/);
-  assert.match(app,/aria-label="Camadas neurais"/);
   assert.doesNotMatch(app,/className="layer-rail glass-panel"/);
 });
 
-test('V3 communicates a living learning system',()=>{
+test('Neural V4 communicates live, stale and learning state without inventing data',()=>{
   assert.match(app,/LIVE/);
+  assert.match(app,/STALE/);
   assert.match(app,/LEARNING/);
-  assert.match(app,/sistema vivo/i);
-  assert.match(app,/atividade/i);
+  assert.match(app,/Estrutura factual/);
+  assert.match(app,/last-known-good|última projeção válida|último snapshot válido/i);
   assert.match(css,/neural-pulse/);
   assert.match(css,/learning-state/);
 });
 
-test('neural shell has responsive horizontal controls',()=>{
+test('neural shell keeps responsive horizontal domain controls',()=>{
   assert.match(css,/\.neural-layer-bar/);
   assert.match(css,/overflow-x:\s*auto/);
   assert.match(css,/scrollbar-width:\s*none/);
