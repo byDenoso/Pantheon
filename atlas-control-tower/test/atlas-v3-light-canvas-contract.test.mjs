@@ -26,11 +26,12 @@ test('Atlas V3 canvas presentation is wider and deliberately shallow',()=>{
   assert.match(layout,/CANVAS_DEPTH_SCALE\s*=\s*0\.28/);
   const canvas=read('src/scene/AtlasCanvas.tsx');
   assert.match(canvas,/presentationMode\?:'spatial'\|'canvas'/);
-  assert.match(canvas,/presentationMode="canvas"/);
   assert.match(canvas,/minPolarAngle/);
   assert.match(canvas,/maxPolarAngle/);
   assert.match(canvas,/minAzimuthAngle/);
   assert.match(canvas,/maxAzimuthAngle/);
+  const app=read('src/atlas-v3/AtlasV3App.tsx');
+  assert.match(app,/presentationMode="canvas"/);
 });
 
 test('light theme reaches the WebGL scene rather than recoloring only DOM chrome',()=>{
