@@ -116,9 +116,9 @@ def main() -> int:
         contract = _contract_from_args(args, manifest)
         _ensure_dependencies()
         if __package__ in {None, ""}:
-            from science.aas77733.gates import run_battery
+            from science.aas77733.canonical_gates import run_battery
         else:
-            from .gates import run_battery
+            from .canonical_gates import run_battery
         raw = run_battery(
             manifest,
             cache_dir=contract["cache_dir"],
@@ -133,6 +133,7 @@ def main() -> int:
             "blocked_gates": blocked,
             "contract": {key: value for key, value in contract.items() if key != "cache_dir"},
             "numpy_scipy_pinned": ["numpy==2.2.6", "scipy==1.15.3"],
+            "gate_binding": "canonical_gates",
         }
         payload["result_hash"] = _hash_payload(payload)
         output = Path(str(contract["output"]))
