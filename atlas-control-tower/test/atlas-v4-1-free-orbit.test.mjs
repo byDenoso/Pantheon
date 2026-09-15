@@ -43,12 +43,13 @@ test('free orbit supports more than two full azimuth turns without clamping', as
   assert.ok(Math.abs(pose.position[2]) < 1e-8);
 });
 
-test('R3F spatial camera delegates rotation to the free-orbit controller instead of pole-clamped OrbitControls', async () => {
-  const source = await read('src/scene/AtlasCanvas.tsx');
-  assert.match(source, /from ['"]\.\/free-orbit\.mjs['"]/);
-  assert.match(source, /enableRotate=\{false\}/);
-  assert.match(source, /data-camera-mode="free-orbit-360"/);
-  assert.doesNotMatch(source, /minPolarAngle=\{presentationMode===['"]spatial['"][^\n]+/);
+test('R3F spatial camera delegates rotation to a pole-safe free-orbit rig rather than OrbitControls', async () => {
+  const canvas = await read('src/scene/AtlasCanvas.tsx');
+  const rig = await read('src/scene/SpatialCameraRig.tsx');
+  assert.match(canvas, /SpatialCameraRig/);
+  assert.match(canvas, /data-camera-mode="free-orbit-360"/);
+  assert.match(rig, /from ['"]\.\/free-orbit\.mjs['"]/);
+  assert.doesNotMatch(rig, /minPolarAngle|maxPolarAngle|clampSpherical|OrbitControls/);
 });
 
 test('orientation gizmo and mobile gesture hint are part of the spatial renderer contract', async () => {
@@ -57,4 +58,10 @@ test('orientation gizmo and mobile gesture hint are part of the spatial renderer
   assert.match(source, /1 dedo[^<\n]*orbitar/i);
   assert.match(source, /2 dedos[^<\n]*mover/i);
   assert.match(source, /pin[cç]a[^<\n]*aproximar/i);
+});
+
+test('touch release does not resurrect a released pointer in the active gesture map', async () => {
+  const rig = await read('src/scene/SpatialCameraRig.tsx');
+  assert.match(rig, /pointersRef\.current\.delete\(event\.pointerId\)/);
+  assert.doesNotMatch(rig, /pointersRef\.current\.set\(event\.pointerId[^\n]+next/);
 });
