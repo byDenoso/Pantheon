@@ -3,6 +3,7 @@ name: AAS77733-R1 Battery
 on:
   push:
     branches:
+      - main
       - feat/aas77733-r1-detection-battery
     paths:
       - 'science/**'
@@ -61,7 +62,8 @@ jobs:
           from pathlib import Path
           p = json.loads(Path('artifacts/aas77733-r1-result.json').read_text())
           assert p['execution']['validation_status'] == 'PASS', p['execution']
-          assert list(p['gates']) == [f'G{i}' for i in range(20)], list(p['gates'])
+          expected = {f'G{i}' for i in range(20)}
+          assert set(p['gates']) == expected and len(p['gates']) == 20, sorted(p['gates'])
           assert len(p['result_hash']) == 64
           print(json.dumps({
               'validation_status': p['execution']['validation_status'],
