@@ -56,16 +56,18 @@ test('projects declared program to campaign hierarchy without inventing taxonomy
   assert.equal(snapshot.entities['PROG-STRUCTURE'].campaignCount, 1);
 });
 
-test('projects inter-domain state as first-class learning filaments', () => {
+test('projects inter-domain state as first-class learning filaments without materializing unresolved test refs', () => {
   const snapshot = buildAtlasProjectionV3(input);
   assert.equal(snapshot.learning.filaments.length, 1);
   const filament = snapshot.learning.filaments[0];
   assert.equal(filament.relationType, 'METHOD_TRANSFER');
   assert.deepEqual(filament.sourceDomains, ['Cosmologia']);
   assert.deepEqual(filament.targetDomains, ['Bodybuilding']);
+  assert.deepEqual(filament.testRefs, ['WORK::OLYMPUS::T01']);
   const relationTypes = snapshot.graph.root.edges.map(edge => edge.type);
   assert.ok(relationTypes.includes('METHOD_TRANSFER'));
-  assert.ok(relationTypes.includes('PROPOSES_TEST'));
+  assert.equal(relationTypes.includes('PROPOSES_TEST'), false);
+  assert.equal(snapshot.graph.root.nodes.some(node => node.id === 'WORK::OLYMPUS::T01' && node.type === 'TEST'), false);
 });
 
 test('fingerprint is deterministic and independent from generation time', () => {
