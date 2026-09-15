@@ -10,7 +10,7 @@ from science.aas77733.config import load_manifest
 from science.aas77733.data import PantheonBundle, pantheon_primary_mask, pantheon_sensitivity_mask
 from science.aas77733.gates import close_claim
 from science.aas77733.run_shard import decode_contract
-from science.aas77733.stats import hard_step_scan, scan_null_pvalue
+from science.aas77733.stats import GLSMetric, distance_modulus_flat_lcdm, fit_omega_m, hard_step_scan, scan_null_pvalue
 
 
 class ManifestContractTests(unittest.TestCase):
@@ -64,6 +64,21 @@ class DataSelectionContractTests(unittest.TestCase):
 
 
 class StatisticsContractTests(unittest.TestCase):
+    def test_fit_omega_m_profiles_continuously_between_grid_nodes(self):
+        z = np.linspace(0.02, 1.2, 120)
+        target = 0.3332
+        observed = distance_modulus_flat_lcdm(z, z, target) + 23.81
+        metric = GLSMetric(z.size, covariance=np.eye(z.size) * 0.01**2)
+        fit = fit_omega_m(
+            zhd=z,
+            zhel=z,
+            observed=observed,
+            metric=metric,
+            grid=np.arange(0.30, 0.3601, 0.005),
+        )
+        self.assertAlmostEqual(fit["best"]["omega_m"], target, places=4)
+        self.assertLess(fit["best"]["chi2"], 1e-8)
+
     def test_hard_step_scan_recovers_synthetic_injection(self):
         z = np.linspace(0.1, 0.9, 80)
         residual = np.where(z > 0.5, 0.1, 0.0)
