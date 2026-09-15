@@ -6,6 +6,7 @@ import {ATLAS_V3_PRESENTATION_ROOT,buildAtlasV3Scene} from './scene-adapter.mjs'
 import type {AtlasV3Layer,AtlasV3Scene,AtlasV3Snapshot} from './types';
 import {persistThemeMode, readThemeMode, resolveTheme} from './theme-mode.mjs';
 import {buildHealthLayerModel} from './health-layer-model.mjs';
+import './atlas-v3.css';
 import './atlas-v3-theme.css';
 
 type ThemeMode='system'|'light'|'dark';
