@@ -8,6 +8,11 @@ test('state:build regenerates both sovereign static state and Atlas Projection V
   const script=String(pkg.scripts?.['state:build']||'');
   assert.match(script,/generate-static-state\.mjs\s+public\/data/);
   assert.match(script,/generate-atlas-v3-state\.mjs/);
-  assert.match(script,/--input\s+v3\/bootstrap-source\.json/);
+  assert.match(script,/--input\s+v3\/tower-source\.json/);
+  assert.doesNotMatch(script,/bootstrap-source\.json/);
   assert.match(script,/--out\s+public\/data\/v3/);
+});
+
+test('Tower source can be refreshed by the dedicated sanitizer before projection',()=>{
+  assert.match(String(pkg.scripts?.['tower:sync']||''),/sync-atlas-v3-tower\.mjs/);
 });

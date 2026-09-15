@@ -19,6 +19,8 @@ const input = {
   generatedAt: '2026-09-14T12:00:00Z',
   completeness: 'PARTIAL',
   entities: {
+    program: [{ id: 'PROG-STRUCTURE', kind: 'PROGRAM', label: 'Structure growth', status: 'PROVISIONAL', campaign_count: 1 }],
+    campaign: [{ id: 'CAMP-GROWTH', kind: 'CAMPAIGN', status: 'ACTIVE', program_id: 'PROG-STRUCTURE', test_count: 12 }],
     hypothesis: [{ id: 'HYP::COSMO::A', status: 'TESTING', label: 'Cosmology hypothesis' }],
     work: [{ id: 'WORK::OLYMPUS::T01', status: 'READY', owner_role: 'EXECUTOR' }],
     interdomain: [{
@@ -43,6 +45,15 @@ test('projects TOWER_V06 as the only operational authority', () => {
   assert.equal(snapshot.manifest.projectionOnly, true);
   assert.equal(snapshot.manifest.freshness, 'SNAPSHOT');
   assert.equal(snapshot.provenance.source, 'TOWER_V06');
+});
+
+test('projects declared program to campaign hierarchy without inventing taxonomy', () => {
+  const snapshot = buildAtlasProjectionV3(input);
+  const edge = snapshot.graph.root.edges.find(item => item.type === 'CONTAINS' && item.source === 'PROG-STRUCTURE' && item.target === 'CAMP-GROWTH');
+  assert.ok(edge);
+  assert.equal(snapshot.entities['CAMP-GROWTH'].parentId, 'PROG-STRUCTURE');
+  assert.equal(snapshot.entities['CAMP-GROWTH'].testCount, 12);
+  assert.equal(snapshot.entities['PROG-STRUCTURE'].campaignCount, 1);
 });
 
 test('projects inter-domain state as first-class learning filaments', () => {

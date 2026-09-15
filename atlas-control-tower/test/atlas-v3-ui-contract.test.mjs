@@ -8,7 +8,7 @@ const js = await readFile(new URL('../public/atlas-v3/atlas-v3.js', import.meta.
 const layers = ['SCIENCE', 'LEARNING', 'OPERATIONS', 'EVIDENCE', 'PROVENANCE', 'HEALTH'];
 
 test('Atlas Neural V3 is one spatial workspace with six presentation layers', () => {
-  assert.match(html, /ATLAS/);
+  assert.match(html, /NEXO Atlas/);
   assert.match(html, /NEURAL V3/);
   assert.match(html, /Um universo\. Uma autoridade\. Várias camadas\./);
   for (const layer of layers) assert.match(html, new RegExp(`data-layer="${layer}"`));
