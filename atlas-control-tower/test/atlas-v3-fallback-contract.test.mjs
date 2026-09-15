@@ -11,5 +11,5 @@ test('V3 inherits a usable Canvas fallback when WebGL is unavailable',()=>{
   assert.match(canvas,/canUseThreeRenderer/);
   assert.match(canvas,/CanvasErrorBoundary/);
   assert.match(canvas,/fallback=\{fallback\}/);
-  assert.match(fallback,/Renderer 3D indisponível/);
+  assert.match(fallback,/CANVAS 2\.5D · FALLBACK/);
 });
