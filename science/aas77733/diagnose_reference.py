@@ -19,6 +19,19 @@ else:
     from .stats import GLSMetric, distance_modulus_flat_lcdm, hard_step_scan
 
 
+def _scan_at_omega(*, zhd, zhel, observed, metric, pivots, omega_m: float):
+    residual = observed - distance_modulus_flat_lcdm(zhd, zhel, float(omega_m))
+    _, chi2 = metric.profile(residual, np.ones((len(zhd), 1)))
+    scan = hard_step_scan(z=zhd, residual=residual, metric=metric, pivots=pivots)
+    return {
+        "omega_m": float(omega_m),
+        "chi2": float(chi2),
+        "best_z": float(scan["best_z"]),
+        "delta_chi2": float(scan["delta_chi2"]),
+        "step_amplitude_mag": float(scan["amplitude"]),
+    }
+
+
 def evaluate_subset(bundle, mask, pivots, *, use_heliocentric_factor: bool):
     idx = np.flatnonzero(mask)
     zhd = np.asarray(bundle.columns["zHD"], float)[idx]
@@ -29,22 +42,36 @@ def evaluate_subset(bundle, mask, pivots, *, use_heliocentric_factor: bool):
     metric = GLSMetric(idx.size, covariance=covariance)
 
     def objective(omega_m: float) -> float:
-        residual = observed - distance_modulus_flat_lcdm(zhd, zhel, float(omega_m))
-        _, chi2 = metric.profile(residual, np.ones((idx.size, 1)))
-        return chi2
+        return _scan_at_omega(
+            zhd=zhd,
+            zhel=zhel,
+            observed=observed,
+            metric=metric,
+            pivots=pivots,
+            omega_m=float(omega_m),
+        )["chi2"]
 
     fit = minimize_scalar(objective, bounds=(0.15, 0.50), method="bounded", options={"xatol": 1e-10})
-    omega_m = float(fit.x)
-    residual = observed - distance_modulus_flat_lcdm(zhd, zhel, omega_m)
-    scan = hard_step_scan(z=zhd, residual=residual, metric=metric, pivots=pivots)
-    return {
-        "n": int(idx.size),
-        "omega_m": omega_m,
-        "chi2": float(fit.fun),
-        "best_z": float(scan["best_z"]),
-        "delta_chi2": float(scan["delta_chi2"]),
-        "step_amplitude_mag": float(scan["amplitude"]),
+    best = _scan_at_omega(
+        zhd=zhd,
+        zhel=zhel,
+        observed=observed,
+        metric=metric,
+        pivots=pivots,
+        omega_m=float(fit.x),
+    )
+    fixed = {
+        f"{omega:.3f}": _scan_at_omega(
+            zhd=zhd,
+            zhel=zhel,
+            observed=observed,
+            metric=metric,
+            pivots=pivots,
+            omega_m=omega,
+        )
+        for omega in (0.285, 0.300, 0.315, 0.330, 0.335, 0.347, 0.361)
     }
+    return {"n": int(idx.size), "profiled_best": best, "fixed_omega": fixed}
 
 
 def main() -> int:
@@ -73,7 +100,8 @@ def main() -> int:
         "manuscript_reference": manifest["reference_manuscript"],
         "interpretation": {
             "official_zHD_zHEL": "Pantheon+ public likelihood convention: integrate at zHD and apply luminosity factor with zHEL.",
-            "legacy_zHD_only": "Historical simplified pipeline convention: use zHD for both the integration redshift and luminosity factor. Diagnostic only.",
+            "legacy_zHD_only": "Historical simplified project convention: use zHD for both the integration redshift and luminosity factor. Diagnostic only.",
+            "fixed_omega": "Predeclared diagnostic grid for locating sensitivity to the homogeneous reference; no value is selected to reproduce the manuscript table.",
         },
     }
     output = Path(args.output)
