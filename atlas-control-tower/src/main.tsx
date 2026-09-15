@@ -21,7 +21,8 @@ class RootErrorBoundary extends Component<{children:ReactNode},{message:string|n
   }
 }
 
-const rootRedirect=typeof window!=='undefined'
+const isProductionPages=typeof window!=='undefined'&&window.location.hostname==='bydenoso.github.io';
+const rootRedirect=isProductionPages
   ? resolveAtlasV4RootRedirect(window.location,import.meta.env.BASE_URL)
   : null;
 
