@@ -14,7 +14,7 @@ export default defineConfig(({ mode }) => {
       chunkSizeWarningLimit:1200,
       rollupOptions:{
         input:{
-          main:'index.html',
+          index:'index.html',
           atlasV3:'atlas-v3/index.html'
         },
         output:{
