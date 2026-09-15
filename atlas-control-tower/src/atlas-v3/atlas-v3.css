@@ -11,3 +11,4 @@
 @media (max-width:760px){.neural-layer-bar{top:68px;left:8px;right:8px;transform:none;max-width:none;width:auto}.neural-layer-bar .layer-button{padding:0 10px;font-size:8px}.neural-state{display:none}.top-hud .theme-switch{margin-left:auto}.scene-caption{top:122px}}
 .learning-state{color:var(--green)}
 .inspector-context{margin:14px 0 0;padding:11px 12px;border-left:2px solid var(--cyan);border-radius:0 10px 10px 0;background:rgba(88,214,255,.055)}.inspector-context span{display:block;color:var(--cyan);font-size:8px;font-weight:800;letter-spacing:.11em;text-transform:uppercase}.inspector-context p{margin:6px 0 0;color:var(--text);font-size:11px;line-height:1.45}.inspector-context--next{border-left-color:var(--green);background:rgba(101,229,187,.055)}.inspector-context--next span{color:var(--green)}
+.atlas-v3-shell--embedded{height:100%!important;min-height:0!important}
