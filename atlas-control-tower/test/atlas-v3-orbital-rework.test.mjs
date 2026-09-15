@@ -9,7 +9,7 @@ const css = await readFile(new URL('../public/atlas-v3/atlas-v3.css', import.met
 test('Atlas V3 exposes the approved orbital workspace instead of a dashboard-first shell', () => {
   assert.match(html, /id="graph-world"/);
   assert.match(html, /id="nexo-core"/);
-  assert.match(html, /class="graph-controls"/);
+  assert.match(html, /class="[^"]*graph-controls[^"]*"/);
   assert.match(html, /id="graph-search"/);
   assert.match(html, /Buscar entidade, work, hipótese/);
   assert.match(css, /\.nexo-core/);
