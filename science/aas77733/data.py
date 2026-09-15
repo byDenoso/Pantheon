@@ -154,7 +154,7 @@ def pantheon_primary_mask(bundle: PantheonBundle) -> np.ndarray:
 
 
 def pantheon_sensitivity_mask(bundle: PantheonBundle) -> np.ndarray:
-    return pantheon_primary_mask(bundle) & (np.asarray(bundle.columns["IDSURVEY"], dtype=int) != 1)
+    return (np.asarray(bundle.columns["IS_CALIBRATOR"], dtype=int) == 0) & (np.asarray(bundle.columns["IDSURVEY"], dtype=int) != 1)
 
 
 def subset_covariance(covariance: np.ndarray, mask: np.ndarray) -> np.ndarray:
