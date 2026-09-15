@@ -5,29 +5,76 @@ on:
     branches:
       - feat/aas77733-r1-detection-battery
     paths:
-      - 'science/aas77733/**'
+      - 'science/**'
       - '.github/workflows/aas77733-r1-battery.yml'
       - 'docs/superpowers/specs/2026-09-15-aas77733-r1-detection-battery-design.md'
       - 'docs/superpowers/plans/2026-09-15-aas77733-r1-detection-battery.md'
   pull_request:
     paths:
-      - 'science/aas77733/**'
+      - 'science/**'
       - '.github/workflows/aas77733-r1-battery.yml'
   workflow_dispatch:
+    inputs:
+      mocks:
+        description: 'Mocks per calibrated null'
+        required: false
+        default: '500'
 
 permissions:
   contents: read
 
+concurrency:
+  group: aas77733-r1-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
-  contract-tests:
+  battery:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 30
+    env:
+      OPENBLAS_NUM_THREADS: '2'
+      OMP_NUM_THREADS: '2'
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: '3.13'
-      - name: Install numerical test dependencies
+          cache: pip
+      - name: Install pinned numerical dependencies
         run: python -m pip install 'numpy==2.2.6' 'scipy==1.15.3'
-      - name: Run AAS77733-R1 contract tests
+      - name: Restore immutable public-data cache
+        uses: actions/cache@v4
+        with:
+          path: .cache/aas77733
+          key: aas77733-r1-public-data-c447f0f-c9a4fca-v1
+      - name: Run contract and synthetic tests
         run: python -m unittest science.aas77733.test_battery -v
+      - name: Execute frozen G0-G19 battery
+        run: |
+          mkdir -p artifacts
+          MOCKS='${{ inputs.mocks }}'
+          if [ -z "$MOCKS" ]; then MOCKS=500; fi
+          python science/aas77733/run_shard.py --all --mocks "$MOCKS" --seed 77733 --output artifacts/aas77733-r1-result.json --cache-dir .cache/aas77733
+      - name: Validate machine-readable result
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          p = json.loads(Path('artifacts/aas77733-r1-result.json').read_text())
+          assert p['execution']['validation_status'] == 'PASS', p['execution']
+          assert list(p['gates']) == [f'G{i}' for i in range(20)], list(p['gates'])
+          assert len(p['result_hash']) == 64
+          print(json.dumps({
+              'validation_status': p['execution']['validation_status'],
+              'classification': p['gates']['G19']['metrics']['classification'],
+              'result_hash': p['result_hash'],
+          }, sort_keys=True))
+          PY
+      - name: Upload battery evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: aas77733-r1-battery-${{ github.sha }}
+          path: artifacts/
+          if-no-files-found: warn
+          retention-days: 30
