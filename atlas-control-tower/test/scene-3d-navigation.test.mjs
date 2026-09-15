@@ -188,7 +188,7 @@ test('no map node outside DOMAIN/CAMPAIGN/SYSTEM/ROOT/PROGRAM/ACTION reaches the
 
 
 test('canvas presentation keeps the approved wider spacing and readable depth', () => {
-  assert.ok(CANVAS_LAYOUT_SPREAD >= 1.25, 'hub spacing should be at least 25% wider');
-  assert.ok(CANVAS_CLUSTER_SPREAD >= 1.2, 'internal cluster spacing should be at least 20% wider');
+  assert.ok(CANVAS_LAYOUT_SPREAD >= 1.4, 'hub spacing should be at least 25% wider');
+  assert.ok(CANVAS_CLUSTER_SPREAD >= 1.3, 'internal cluster spacing should be at least 20% wider');
   assert.ok(CANVAS_DEPTH_SCALE >= 0.7, 'canvas mode should retain readable orbital depth');
 });
