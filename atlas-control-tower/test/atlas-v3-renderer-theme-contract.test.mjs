@@ -30,3 +30,11 @@ test('light theme adds a dark readability edge to labels and graph marks', () =>
   assert.match(theme, /data-theme="light"[^}]*\\.atlas-label[^}]*border-color/);
   assert.match(fallback, /theme === 'light'[^;]*strokeStyle|strokeStyle[^;]*theme === 'light'/);
 });
+
+
+test('Canvas fallback declutters labels instead of drawing overlapping text', () => {
+  assert.match(fallback, /labelCandidates/);
+  assert.match(fallback, /labelBoxes/);
+  assert.match(fallback, /overlaps/);
+  assert.match(fallback, /labelBudget/);
+});

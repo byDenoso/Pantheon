@@ -113,6 +113,33 @@ export function CanvasGraphFallback({ nodes, edges, labelIds, focusId, selectedI
       const visibleNodes = nodesRef.current;
       const visibleIds = new Set(visibleNodes.map(node => node.id));
       const points = new Map(visibleNodes.map(node => [node.id, project(node)]));
+      const labelBudget = compact ? 16 : 28;
+      const labelCandidates = visibleNodes
+        .filter(node => labelsRef.current.has(node.id))
+        .map((node, index) => ({
+          node,
+          point: points.get(node.id)!,
+          priority: node.id === focusRef.current ? 10000 : node.id === selectedRef.current ? 9000 : ['ROOT', 'SYSTEM', 'DOMAIN'].includes(String(node.type || '').toUpperCase()) ? 7000 : 1000 - index
+        }))
+        .sort((a, b) => b.priority - a.priority)
+        .slice(0, labelBudget);
+      const labelBoxes: Array<{ x: number; y: number; width: number; height: number }> = [];
+      const visibleLabelIds = new Set<string>();
+      const overlaps = (a: { x: number; y: number; width: number; height: number }, b: { x: number; y: number; width: number; height: number }) =>
+        a.x < b.x + b.width && a.x + a.width > b.x && a.y < b.y + b.height && a.y + a.height > b.y;
+      for (const candidate of labelCandidates) {
+        const labelWidth = Math.min(220, Math.max(90, String(candidate.node.label || candidate.node.id).length * 6.2 + 22));
+        const box = {
+          x: Math.max(8, Math.min(width - labelWidth - 8, candidate.point.x + candidate.point.radius + 7)),
+          y: Math.max(8, Math.min(height - 30, candidate.point.y - 16)),
+          width: labelWidth,
+          height: 30
+        };
+        if (!labelBoxes.some(other => overlaps(box, other))) {
+          labelBoxes.push(box);
+          visibleLabelIds.add(candidate.node.id);
+        }
+      }
 
       context.save();
       context.translate(width / 2 + runtime.panX, height / 2 + runtime.panY);
@@ -186,7 +213,7 @@ export function CanvasGraphFallback({ nodes, edges, labelIds, focusId, selectedI
         context.lineWidth = active ? 2.4 : 1.35;
         context.stroke();
 
-        if (!labelsRef.current.has(node.id)) continue;
+        if (!visibleLabelIds.has(node.id)) continue;
         context.font = `${active ? 600 : 500} ${active ? 14 : 11}px system-ui, sans-serif`;
         context.textBaseline = 'middle';
         context.fillStyle = theme === 'light' ? '#15334f' : '#ecf9ff';
