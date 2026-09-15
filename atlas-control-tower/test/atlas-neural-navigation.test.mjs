@@ -23,3 +23,7 @@ test('neural HUD exposes the global reset view action', () => {
   assert.match(app, /Reset view/);
   assert.match(app, /data-testid=["']atlas-reset-view["']/);
 });
+
+test('embedded Neural surface anchors Projection V3 reads to the published atlas-v3 base path', () => {
+  assert.match(app, /loadAtlasV3Snapshot\(new URL\(['"]atlas-v3\/['"],window\.location\.href\)\.href\)/);
+});
