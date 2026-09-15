@@ -4,6 +4,7 @@ import '@fontsource-variable/recursive';
 import './design/index.css';
 import App from './App';
 import {ThemeMount} from './components/ThemeMount';
+import {resolveAtlasV4RootRedirect} from './atlas-v3/root-entry.mjs';
 
 class RootErrorBoundary extends Component<{children:ReactNode},{message:string|null}>{
   state={message:null as string|null};
@@ -20,7 +21,14 @@ class RootErrorBoundary extends Component<{children:ReactNode},{message:string|n
   }
 }
 
-const root=document.getElementById('root');
-if(!root) throw new Error('ATLAS_ROOT_MISSING');
+const rootRedirect=typeof window!=='undefined'
+  ? resolveAtlasV4RootRedirect(window.location,import.meta.env.BASE_URL)
+  : null;
 
-createRoot(root).render(<StrictMode><RootErrorBoundary><App/><ThemeMount/></RootErrorBoundary></StrictMode>);
+if(rootRedirect){
+  window.location.replace(rootRedirect);
+}else{
+  const root=document.getElementById('root');
+  if(!root) throw new Error('ATLAS_ROOT_MISSING');
+  createRoot(root).render(<StrictMode><RootErrorBoundary><App/><ThemeMount/></RootErrorBoundary></StrictMode>);
+}
