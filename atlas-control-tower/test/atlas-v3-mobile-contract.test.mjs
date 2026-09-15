@@ -13,7 +13,7 @@ test('mobile V3 uses a full-screen stage and safe-area aware chrome',()=>{
   assert.match(css,/safe-area-inset-bottom/);
   assert.match(css,/safe-area-inset-top/);
   assert.match(css,/overflow-x:\s*hidden/);
-  assert.match(css,/min-(?:width|height):\s*44px/);
+  assert.match(css,/--hit:\s*44px/);
   assert.match(css,/@media\s*\(max-width:\s*760px\)/);
   assert.match(css,/\.inspector-sheet/);
 });
