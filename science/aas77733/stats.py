@@ -6,6 +6,7 @@ from typing import Any, Iterable
 import numpy as np
 from scipy.integrate import cumulative_trapezoid
 from scipy.linalg import cho_factor, cho_solve
+from scipy.optimize import minimize_scalar
 
 C_KM_S = 299792.458
 
@@ -325,7 +326,11 @@ def fit_omega_m(
     extra_design: np.ndarray | None = None,
 ) -> dict[str, Any]:
     zhd = np.asarray(zhd, dtype=float)
+    zhel = np.asarray(zhel, dtype=float)
     observed = np.asarray(observed, dtype=float)
+    omega_grid = np.asarray(grid, dtype=float)
+    if omega_grid.ndim != 1 or omega_grid.size < 2 or not np.all(np.diff(omega_grid) > 0):
+        raise ValueError("OMEGA_GRID_INVALID")
     if extra_design is None:
         design = np.ones((len(zhd), 1), dtype=float)
     else:
@@ -334,14 +339,36 @@ def fit_omega_m(
             design = design[:, None]
         if not np.allclose(design[:, 0], 1.0):
             design = np.column_stack([np.ones(len(zhd)), design])
-    rows: list[dict[str, float]] = []
-    for omega_m in np.asarray(grid, dtype=float):
+
+    def evaluate(omega_m: float) -> tuple[float, float]:
         theory = distance_modulus_flat_lcdm(zhd, zhel, float(omega_m))
         residual = observed - theory
         beta, chi2 = metric.profile(residual, design)
-        rows.append({"omega_m": float(omega_m), "chi2": float(chi2), "intercept": float(beta[0])})
-    best = min(rows, key=lambda row: row["chi2"])
-    theory = distance_modulus_flat_lcdm(zhd, zhel, best["omega_m"])
+        return float(chi2), float(beta[0])
+
+    rows: list[dict[str, float]] = []
+    for omega_m in omega_grid:
+        chi2, intercept = evaluate(float(omega_m))
+        rows.append({"omega_m": float(omega_m), "chi2": chi2, "intercept": intercept})
+
+    optimum = minimize_scalar(
+        lambda omega: evaluate(float(omega))[0],
+        bounds=(float(omega_grid[0]), float(omega_grid[-1])),
+        method="bounded",
+        options={"xatol": 1e-10, "maxiter": 500},
+    )
+    if not optimum.success or not np.isfinite(optimum.fun):
+        raise ValueError("OMEGA_PROFILE_FAILED")
+    best_omega = float(optimum.x)
+    best_chi2, best_intercept = evaluate(best_omega)
+    best = {
+        "omega_m": best_omega,
+        "chi2": best_chi2,
+        "intercept": best_intercept,
+        "optimizer": "bounded_continuous_profile",
+        "search_bounds": [float(omega_grid[0]), float(omega_grid[-1])],
+    }
+    theory = distance_modulus_flat_lcdm(zhd, zhel, best_omega)
     residual = observed - theory
     return {"best": best, "grid": rows, "residual": residual}
 
