@@ -3,11 +3,11 @@ from __future__ import annotations
 import base64
 import json
 import unittest
-from pathlib import Path
 
 import numpy as np
 
 from science.aas77733.config import load_manifest
+from science.aas77733.data import PantheonBundle, pantheon_primary_mask, pantheon_sensitivity_mask
 from science.aas77733.gates import close_claim
 from science.aas77733.run_shard import decode_contract
 from science.aas77733.stats import hard_step_scan, scan_null_pvalue
@@ -39,6 +39,28 @@ class ManifestContractTests(unittest.TestCase):
         manifest = load_manifest()
         historical = manifest["reference_manuscript"]["historical_exploratory"]
         self.assertFalse(historical["primary_evidence"])
+
+    def test_manifest_keeps_sensitivity_mask_independent_of_primary_low_z_cut(self):
+        manifest = load_manifest()
+        self.assertEqual(
+            manifest["pantheon"]["sensitivity_mask"],
+            "IS_CALIBRATOR == 0 and IDSURVEY != 1",
+        )
+
+
+class DataSelectionContractTests(unittest.TestCase):
+    def test_sensitivity_mask_does_not_inherit_primary_z_cut(self):
+        bundle = PantheonBundle(
+            columns={
+                "zHD": np.array([0.005, 0.020, 0.030, 0.040]),
+                "IS_CALIBRATOR": np.array([0, 0, 1, 0]),
+                "IDSURVEY": np.array([2, 1, 2, 2]),
+            },
+            covariance=np.eye(4),
+            receipts={},
+        )
+        self.assertEqual(pantheon_primary_mask(bundle).tolist(), [False, True, False, True])
+        self.assertEqual(pantheon_sensitivity_mask(bundle).tolist(), [True, False, False, True])
 
 
 class StatisticsContractTests(unittest.TestCase):
