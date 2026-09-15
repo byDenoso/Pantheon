@@ -56,6 +56,7 @@ function CameraRig({compact,focusId,focusType,presentationMode}:{compact:boolean
   const {camera,gl,size}=useThree();
   const controlsRef=useRef<OrbitControlsImpl|null>(null);
   const viewHistory=useRef<CameraSpherical[]>([]);
+  const restoringView=useRef(false);
 
   const recenter=(distance:number)=>{
     const controls=controlsRef.current;
@@ -73,9 +74,10 @@ function CameraRig({compact,focusId,focusType,presentationMode}:{compact:boolean
 
   const restoreView=()=>{
     const previous=viewHistory.current.pop();
-    if(!previous)return;
+    if(!previous)return false;
     camera.position.set(...sphericalToCartesian(previous));
     controlsRef.current?.update();
+    return true;
   };
 
   useEffect(()=>{
@@ -85,6 +87,7 @@ function CameraRig({compact,focusId,focusType,presentationMode}:{compact:boolean
   },[compact,focusType,presentationMode,size.height,size.width]);
 
   useEffect(()=>{
+    if(restoringView.current){restoringView.current=false;return;}
     recenter(cameraDistanceForPresentation(focusType,compact,size.width/Math.max(1,size.height),presentationMode));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   },[focusId,presentationMode]);
@@ -107,7 +110,7 @@ function CameraRig({compact,focusId,focusType,presentationMode}:{compact:boolean
 
   useEffect(()=>{
     const reset=()=>{viewHistory.current=[];recenter(cameraDistanceForPresentation(undefined,compact,size.width/Math.max(1,size.height),presentationMode));};
-    const back=()=>restoreView();
+    const back=()=>{if(restoreView())restoringView.current=true;};
     window.addEventListener('atlas:reset-view',reset);
     window.addEventListener('atlas:camera-back',back);
     return()=>{window.removeEventListener('atlas:reset-view',reset);window.removeEventListener('atlas:camera-back',back)};

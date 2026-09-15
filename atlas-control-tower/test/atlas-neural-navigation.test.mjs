@@ -22,6 +22,7 @@ test('neural Canvas fallback supports smooth drag, pinch and double-click focus'
 test('neural HUD exposes the global reset view action', () => {
   assert.match(app, /Reset view/);
   assert.match(app, /data-testid=["']atlas-reset-view["']/);
+  assert.match(app, /atlas:camera-back/);
 });
 
 test('embedded Neural surface anchors Projection V3 reads to the published atlas-v3 base path', () => {
