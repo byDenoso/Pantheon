@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import {readFile} from 'node:fs/promises';
 import test from 'node:test';
 import {summarizeConnectionHealth} from '../server/health/connection-state.mjs';
 
@@ -36,4 +37,12 @@ test('reports atlas and vercel configuration independently',()=>{
   assert.equal(result.connections.atlas.runtimeVerified,true);
   assert.equal(result.connections.vercel.configured,true);
   assert.equal(result.connections.vercel.runtimeVerified,false);
+});
+
+test('health route publishes explicit session and connection readiness while keeping legacy privateConfigured',async()=>{
+  const source=await readFile(new URL('../server/handler.mjs',import.meta.url),'utf8');
+  assert.match(source,/summarizeConnectionHealth/);
+  assert.match(source,/sessionConfigured:connectionHealth\.session\.configured/);
+  assert.match(source,/privateConfigured:connectionHealth\.session\.configured/);
+  assert.match(source,/connections:connectionHealth\.connections/);
 });
