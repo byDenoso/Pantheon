@@ -88,3 +88,34 @@
   .theme-switch button{width:30px;height:30px;font-size:12px}
   .tower-status i{display:none}
 }
+
+/* Neural V4: semantic domains + contextual overlays. The canvas remains visually
+   dominant; these accents identify regions without painting the whole universe. */
+.atlas-v3-shell{
+  --domain-nexo:#38a8ff;
+  --domain-science:#4c8dff;
+  --domain-operations:#a979ff;
+  --domain-health:#44d7a8;
+  --domain-learning:#e2b7ff;
+  --domain-evidence:#5dd6d6;
+}
+.atlas-breadcrumb{display:flex;align-items:center;justify-content:center;gap:6px;min-width:0;max-width:min(42vw,520px);margin:0 12px;padding:0 8px;color:var(--muted);font-size:9px;white-space:nowrap;overflow:hidden}
+.atlas-breadcrumb span,.atlas-breadcrumb strong{overflow:hidden;text-overflow:ellipsis}.atlas-breadcrumb strong{color:var(--text);font-weight:750}.atlas-breadcrumb b{color:color-mix(in srgb,var(--cyan) 70%,transparent);font-weight:500}
+.atlas-domain-bar .layer-button i{border-radius:50%}.atlas-domain-bar .layer-button--nexo i{color:var(--domain-nexo)}.atlas-domain-bar .layer-button--science i{color:var(--domain-science)}.atlas-domain-bar .layer-button--operations i{color:var(--domain-operations);border-radius:2px;transform:rotate(45deg)}.atlas-domain-bar .layer-button--health i{color:var(--domain-health);border-radius:45% 55% 45% 55%}
+.atlas-domain-bar .layer-button--nexo.active{box-shadow:inset 0 -2px var(--domain-nexo)}.atlas-domain-bar .layer-button--science.active{box-shadow:inset 0 -2px var(--domain-science)}.atlas-domain-bar .layer-button--operations.active{box-shadow:inset 0 -2px var(--domain-operations)}.atlas-domain-bar .layer-button--health.active{box-shadow:inset 0 -2px var(--domain-health)}
+.atlas-overlay-menu{position:absolute;z-index:11;top:143px;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:3px;max-width:min(520px,calc(100vw - 32px));padding:4px;border-radius:12px;overflow-x:auto;scrollbar-width:none}.atlas-overlay-menu::-webkit-scrollbar{display:none}.atlas-overlay-menu .layer-button{display:flex;align-items:center;justify-content:center;gap:6px;min-width:auto;min-height:36px;padding:0 10px;font-size:8px;white-space:nowrap}.atlas-overlay-menu .layer-button i{width:6px;height:6px;border:1px solid currentColor;border-radius:50%}.atlas-overlay-menu .overlay-button--learning i{color:var(--domain-learning)}.atlas-overlay-menu .overlay-button--evidence i{color:var(--domain-evidence)}.atlas-overlay-menu .overlay-button--automations i{color:var(--amber);border-radius:2px}.atlas-overlay-menu .overlay-button.active{background:rgba(88,214,255,.065);box-shadow:none}
+.sync-diff-chip{position:absolute;z-index:12;right:max(18px,env(safe-area-inset-right));top:92px;display:flex;align-items:center;gap:9px;min-height:34px;padding:0 10px;border-radius:11px;color:var(--muted);font:8px ui-monospace,SFMono-Regular,Menlo,monospace}.sync-diff-chip b{color:var(--green);font-size:8px;letter-spacing:.08em}.sync-diff-chip span{white-space:nowrap}.stale-state{top:auto;left:auto;right:max(18px,env(safe-area-inset-right));bottom:max(84px,calc(env(safe-area-inset-bottom) + 74px));transform:none;width:min(310px,calc(100vw - 36px));padding:13px 14px;text-align:left;border-color:color-mix(in srgb,var(--amber) 45%,var(--line))}.stale-state b{color:var(--amber)}.stale-state button{min-height:36px;margin-top:9px}.atlas-v3-shell[data-theme="light"] .atlas-overlay-menu .overlay-button.active{background:rgba(30,126,219,.06)}
+
+@media (max-width:980px){.atlas-breadcrumb{max-width:34vw}.atlas-overlay-menu{max-width:min(460px,calc(100vw - 28px))}}
+@media (max-width:760px){
+  .atlas-breadcrumb{position:absolute;left:42px;right:126px;bottom:-18px;max-width:none;justify-content:flex-start;margin:0;padding:0;font-size:7px;pointer-events:none}
+  .atlas-overlay-menu{top:auto;left:8px;right:8px;bottom:max(122px,calc(env(safe-area-inset-bottom) + 112px));transform:none;max-width:none;padding:4px;justify-content:flex-start}
+  .atlas-overlay-menu .layer-button{min-height:38px;padding:0 11px}
+  .sync-diff-chip{top:124px;right:10px;min-height:30px;padding:0 8px}
+  .stale-state{right:10px;left:10px;bottom:max(176px,calc(env(safe-area-inset-bottom) + 164px));width:auto}
+}
+@media (max-width:430px){
+  .atlas-breadcrumb{display:none}
+  .atlas-overlay-menu{bottom:max(116px,calc(env(safe-area-inset-bottom) + 108px))}
+  .sync-diff-chip{left:10px;right:auto;top:122px}
+}
