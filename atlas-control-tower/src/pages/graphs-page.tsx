@@ -13,6 +13,7 @@ import {clampZoom,zoomStep} from '../graph-engine/orbital-2_5d-layout';
 import type {GraphNode} from '../graph-engine/types';
 import type {AtlasNode} from '../scene/types';
 import type {AtlasActions,AtlasUiState} from '../state/useAtlasSession';
+import {AtlasNeuralSurface} from '../atlas-v3/AtlasNeuralSurface';
 
 type GraphMode='explore'|'relations'|'evidence';
 const EVIDENCE_TYPES=new Set(['HYPOTHESIS','TEST','RUN','RESULT','EVIDENCE','CLAIM','DOCUMENT','PUBLICATION']);
@@ -50,7 +51,9 @@ export function GraphsPage({state,actions,reducedMotion,compact}:{state:AtlasUiS
   useEffect(()=>{document.body.classList.toggle('graph-immersive',immersive);return()=>document.body.classList.remove('graph-immersive')},[immersive]);
   useEffect(()=>{actions.setSceneState({visibleLayers:mode==='evidence'?['evidence','provenance']:mode==='relations'?['hierarchy','relations','evidence']:['hierarchy','relations'],expandedRelations:mode==='relations'?['related','supports','contradicts','dependency']:[]})},[actions,mode]);
   void reducedMotion;void compact;
-
+  // Atlas Neural is the canonical graph experience. The legacy projection code
+  // below remains as the accessible implementation contract but never mounts
+  // beside the Neural renderer.
   const liveProjection=useMemo(()=>graph?buildLiveProjection({graph,focusId:state.focusId,path:state.path,pins:state.pins,compare:state.compare}):null,[graph,state.focusId,state.path,state.pins,state.compare]);
   const lastLoggedIssuesRef=useRef('');
   const baseProjection=useMemo(()=>{
@@ -112,6 +115,8 @@ export function GraphsPage({state,actions,reducedMotion,compact}:{state:AtlasUiS
     window.addEventListener('keydown',keyboard);return()=>window.removeEventListener('keydown',keyboard);
   },[actions,canBack,canForward,state.selectedId,projection,baseProjection]);
 
+  return <AtlasNeuralSurface embedded compact={compact} onOpenEntity={node=>{actions.select(node);}}/>;
+
   return <div className={`page-wrap graphs-page spatial-knowledge-page ${immersive?'is-immersive':''}`}>
     <section className="graph-workspace spatial-workspace" id="map-workspace">
       <div className="atlas-context-bar-slot">
@@ -133,8 +138,8 @@ export function GraphsPage({state,actions,reducedMotion,compact}:{state:AtlasUiS
       <div className="graph-stage spatial-stage" ref={stageRef}>
         {!projection?<div className="graph-empty-state"><span aria-hidden="true">∅</span><p>{state.loading?'Lendo mapa de conhecimento…':'Grafo indisponível neste momento.'}</p><small>{state.error||'Nenhum recorte válido foi publicado.'}</small></div>
           :filteredToEmpty?<div className="graph-empty-state"><span aria-hidden="true">∅</span><p>Nenhum nó corresponde aos filtros atuais.</p><small><button type="button" className="map-filter-clear" onClick={()=>setMapFilters({})}>Limpar filtros</button></small></div>
-          :renderMode==='table'?<AccessibleGraphTable projection={projection} selectedId={state.selectedId} onSelect={select}/>
-          :<GraphRenderer projection={projection} learning={false} selectedId={state.selectedId} onSelect={select} onOpenNode={open} zoom={zoom} onZoomChange={setZoom}/>}
+          :renderMode==='table'?<AccessibleGraphTable projection={projection!} selectedId={state.selectedId} onSelect={select}/>
+          :<GraphRenderer projection={projection!} learning={false} selectedId={state.selectedId} onSelect={select} onOpenNode={open} zoom={zoom} onZoomChange={setZoom}/>}
         {state.loading && projection && <div className="graph-stage-status" role="status" aria-live="polite"><span className="graph-stage-status-dot" aria-hidden="true"/><span>Preparando o próximo recorte…</span></div>}
         <SpatialInspector state={state} actions={actions} projection={projection} onOpen={open}/>
         <div className="spatial-navigation-hud" aria-label="Controles de navegação">

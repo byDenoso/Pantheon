@@ -166,7 +166,7 @@ export default function App() {
   // assumed -- see src/core/auth.ts). There is no code path here that can produce a
   // real session, so this stays null rather than a fake signed-in stand-in.
   const session = null;
-  const go = (area: AtlasArea) => { setSidebarOpen(false); navigate(routeFor(area, route.context)); };
+  const go = (area: AtlasArea) => { setSidebarOpen(false); if (area === 'graphs') void actions.home(); navigate(routeFor(area, route.context)); };
   const runSearch = () => {
     const value = query.trim();
     navigate(routeFor('graphs', { ...route.context, query: value || undefined }));

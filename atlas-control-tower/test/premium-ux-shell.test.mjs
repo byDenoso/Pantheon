@@ -91,6 +91,11 @@ test('the Vercel runtime uses its real same-origin HTTP API when no external bas
   assert.match(client, /createStaticArtifactApi/);
 });
 
+test('opening Grafos resets a stale graph-layer focus to the NEXO universe', () => {
+  const app = read('src/App.tsx');
+  assert.match(app, /area === 'graphs'[\s\S]*actions\.home\(\)/);
+});
+
 test('cockpit deduplicates operations when two public endpoints expose the same run', () => {
   const run = { id: 'same-run', status: 'RUNNING', label: 'Published run' };
   const merged = mergeRunSources({ ops: { state: 'READY', data: { actions: [], runs: [run] } }, runs: { state: 'READY', data: [run] } });
