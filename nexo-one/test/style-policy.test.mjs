@@ -5,6 +5,7 @@ import {
   detectStyleViolations,
   validateStyleText,
   buildStyleInstruction,
+  enforceStyleText,
 } from '../server/policy/style-policy.mjs';
 
 const banned = [
@@ -30,16 +31,7 @@ test('policy is canonical and enabled for every generated surface', () => {
   assert.equal(STYLE_POLICY.id, 'STYLE_DIRECT_AFFIRMATIVE_V1');
   assert.equal(STYLE_POLICY.bannedContrastiveReframe, true);
   assert.deepEqual(STYLE_POLICY.surfaces, [
-    'chat',
-    'ui',
-    'artifact',
-    'report',
-    'paper',
-    'letter',
-    'slide',
-    'infographic',
-    'automation',
-    'agent',
+    'chat','ui','artifact','report','paper','letter','slide','infographic','automation','agent',
   ]);
 });
 
@@ -70,4 +62,20 @@ test('builds a reusable instruction for agents and generators', () => {
   assert.match(instruction, /frases afirmativas diretas/i);
   assert.match(instruction, /reformulações binárias contrastivas/i);
   assert.match(instruction, /reescreva/i);
+});
+
+test('enforcement rewrites and validates before release', async () => {
+  const out = await enforceStyleText('Não falta integração, falta coordenação.', {
+    rewrite: () => 'A coordenação da integração é a prioridade atual.',
+  });
+  assert.equal(out.text, 'A coordenação da integração é a prioridade atual.');
+  assert.equal(out.rewritten, true);
+  assert.equal(out.validation.ok, true);
+});
+
+test('enforcement fails closed without a rewrite path', async () => {
+  await assert.rejects(
+    () => enforceStyleText('Não é sobre A, é sobre B.'),
+    error => error.code === 'STYLE_POLICY_VIOLATION',
+  );
 });
