@@ -14,12 +14,12 @@ test('visible product navigation unifies map and observatory without deleting ma
   assert.match(route, /observatory: 'pesquisa'/);
 });
 
-test('legacy separate-graph product copy is gone while graph infrastructure remains', () => {
-  const pages = read('src/pages/atlas-pages.tsx');
-  const graphHeader = read('src/components/shell/GraphHeader.tsx');
-  assert.doesNotMatch(pages, /ABRIR NO MODO GRAFOS|O Grafo é o mapa; o Observatório é a leitura|Ver campanhas no Grafo/);
-  assert.doesNotMatch(graphHeader, /Universo → Domínio → Campanha/);
+test('visible research product copy is unified while graph infrastructure remains', () => {
+  const visible = read('src/App.tsx') + read('src/pages/CockpitPage.tsx') + read('src/components/shell/GraphHeader.tsx');
+  assert.doesNotMatch(visible, /ABRIR NO MODO GRAFOS|O Grafo é o mapa; o Observatório é a leitura|Ver campanhas no Grafo|Abrir em Grafos|Abrir Grafos/);
+  assert.doesNotMatch(visible, /Universo → Domínio → Campanha/);
   assert.match(read('src/pages/graphs-page.tsx'), /GraphRenderer/);
+  assert.match(read('src/App.tsx'), /UnifiedObservatoryPage/);
 });
 
 test('deep-space is the default visual preset but all presets remain available', () => {
