@@ -69,7 +69,7 @@ def evaluate_subset(bundle, mask, pivots, *, use_heliocentric_factor: bool):
             pivots=pivots,
             omega_m=omega,
         )
-        for omega in (0.285, 0.300, 0.315, 0.330, 0.335, 0.347, 0.361)
+        for omega in (0.285, 0.300, 0.315, 0.330, 0.335, 0.340, 0.347, 0.361)
     }
     return {"n": int(idx.size), "profiled_best": best, "fixed_omega": fixed}
 
