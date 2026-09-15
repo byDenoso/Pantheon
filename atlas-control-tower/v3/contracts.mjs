@@ -22,13 +22,25 @@ export function assertTowerControl(control) {
   return control;
 }
 
+export function containsPrivateSignal(value) {
+  if (value == null) return false;
+  const text = typeof value === 'string' ? value : JSON.stringify(value);
+  return PRIVATE_PATTERNS.some(pattern => pattern.test(text));
+}
+
 export function assertPublicEntitySafe(entity) {
   const privacy = String(entity?.privacy || entity?.visibility || '').toUpperCase();
   if (['PRIVATE', 'PERSONAL', 'RESTRICTED'].includes(privacy)) return false;
-  const haystack = [entity?.id, entity?.label, entity?.name, entity?.subject, entity?.person]
+  const identityFields = [entity?.id, entity?.label, entity?.name, entity?.subject, entity?.person]
     .filter(Boolean)
     .join(' ');
-  return !PRIVATE_PATTERNS.some(pattern => pattern.test(haystack));
+  return !containsPrivateSignal(identityFields);
+}
+
+export function safePublicText(value) {
+  if (value == null) return null;
+  const text = String(value);
+  return containsPrivateSignal(text) ? null : text;
 }
 
 export function normalizeEntityKind(bucket, entity) {
