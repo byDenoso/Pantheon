@@ -117,11 +117,19 @@ export function CanvasGraphFallback({ nodes, edges, labelIds, focusId, selectedI
       context.save();
       context.translate(width / 2 + runtime.panX, height / 2 + runtime.panY);
       context.scale(runtime.scale, runtime.scale);
-      context.strokeStyle = theme === 'light' ? 'rgba(23,111,174,.18)' : 'rgba(72,191,255,.11)';
-      context.lineWidth = 1;
       [4.4, 5.5, 6.5].forEach(radius => {
         context.beginPath();
         context.ellipse(0, 0, radius * Math.min(width, height) / 16.5, radius * Math.min(width, height) / 16.5 * 0.72, 0, 0, Math.PI * 2);
+        if (theme === 'light') {
+          context.strokeStyle = 'rgba(18,51,79,.16)';
+          context.lineWidth = 2.6;
+          context.stroke();
+          context.strokeStyle = 'rgba(23,111,174,.28)';
+          context.lineWidth = 1;
+        } else {
+          context.strokeStyle = 'rgba(72,191,255,.11)';
+          context.lineWidth = 1;
+        }
         context.stroke();
       });
       context.restore();
@@ -136,10 +144,19 @@ export function CanvasGraphFallback({ nodes, edges, labelIds, focusId, selectedI
         context.moveTo(from.x, from.y);
         context.lineTo(to.x, to.y);
         context.setLineDash(String(edge.type || '').toUpperCase() === 'RELATED' ? [3, 5] : []);
-        context.strokeStyle = theme === 'light'
-          ? (related ? 'rgba(23,111,174,.42)' : 'rgba(23,111,174,.12)')
-          : (related ? 'rgba(77,190,255,.42)' : 'rgba(77,190,255,.09)');
-        context.lineWidth = related ? 1.4 : 1;
+        if (theme === 'light') {
+          context.strokeStyle = 'rgba(18,51,79,.2)';
+          context.lineWidth = related ? 2.7 : 2;
+          context.stroke();
+          context.beginPath();
+          context.moveTo(from.x, from.y);
+          context.lineTo(to.x, to.y);
+          context.strokeStyle = related ? 'rgba(23,111,174,.58)' : 'rgba(23,111,174,.2)';
+          context.lineWidth = related ? 1.25 : .8;
+        } else {
+          context.strokeStyle = related ? 'rgba(77,190,255,.42)' : 'rgba(77,190,255,.09)';
+          context.lineWidth = related ? 1.4 : 1;
+        }
         context.stroke();
         context.setLineDash([]);
       }
@@ -166,19 +183,26 @@ export function CanvasGraphFallback({ nodes, edges, labelIds, focusId, selectedI
         context.strokeStyle = active
           ? (theme === 'light' ? '#123e63' : '#e5fbff')
           : (theme === 'light' ? 'rgba(37,88,126,.72)' : 'rgba(206,245,255,.76)');
-        context.lineWidth = active ? 2 : 1;
+        context.lineWidth = active ? 2.4 : 1.35;
         context.stroke();
 
         if (!labelsRef.current.has(node.id)) continue;
         context.font = `${active ? 600 : 500} ${active ? 14 : 11}px system-ui, sans-serif`;
         context.textBaseline = 'middle';
         context.fillStyle = theme === 'light' ? '#15334f' : '#ecf9ff';
+        context.shadowColor = theme === 'light' ? 'rgba(18,51,79,.58)' : 'transparent';
+        context.shadowBlur = theme === 'light' ? 1.5 : 0;
+        context.shadowOffsetX = 0;
+        context.shadowOffsetY = 1;
         context.fillText(String(node.label || node.id), point.x + point.radius + 7, point.y - 4);
         context.font = '700 8px ui-monospace, SFMono-Regular, Menlo, monospace';
         context.fillStyle = active
           ? (theme === 'light' ? '#176fae' : '#8ee6ff')
           : (theme === 'light' ? 'rgba(67,104,133,.9)' : 'rgba(151,208,232,.75)');
         context.fillText(`${String(node.type || 'ENTITY')} · ${String(node.status || 'UNKNOWN')}`, point.x + point.radius + 7, point.y + 10);
+        context.shadowColor = 'transparent';
+        context.shadowBlur = 0;
+        context.shadowOffsetY = 0;
       }
     };
 

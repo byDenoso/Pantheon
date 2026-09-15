@@ -22,3 +22,11 @@ test('Canvas camera uses a named framing scale for the wider orbital volume', ()
   assert.match(camera, /CANVAS_CAMERA_SCALE/);
   assert.match(camera, /CANVAS_MOBILE_CAMERA_SCALE/);
 });
+
+
+test('light theme adds a dark readability edge to labels and graph marks', () => {
+  const theme = readFileSync(new URL('src/atlas-v3/atlas-v3-theme.css', root), 'utf8');
+  assert.match(theme, /data-theme="light"[^}]*\\n[^}]*text-shadow/);
+  assert.match(theme, /data-theme="light"[^}]*\\.atlas-label[^}]*border-color/);
+  assert.match(fallback, /theme === 'light'[^;]*strokeStyle|strokeStyle[^;]*theme === 'light'/);
+});
