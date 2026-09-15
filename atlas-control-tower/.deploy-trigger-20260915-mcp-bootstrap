@@ -1,0 +1,6 @@
+NEXO MCP production retrigger
+reason=production Vercel is still serving d3cf6e066740f1fc40ea305a13490e89bf9140d0 while main contains the canonical MCP bootstrap
+requested_at=2026-09-15
+expected_source_commit=fede6bf7e7dab8104d4c4a48d6be309df2701c3a
+expected_endpoint=/api/mcp
+expected_capability=nexo.get_bootstrap
