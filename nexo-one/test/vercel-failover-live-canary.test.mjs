@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 
+// P0 retry marker: Vercel NEXO ONE previews are accepting builds again; keep behavior unchanged.
 const root=new URL('../../',import.meta.url);
 const read=path=>readFile(new URL(path,root),'utf8');
 
