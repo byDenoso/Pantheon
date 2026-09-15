@@ -1,8 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {Client,StreamableHTTPClientTransport} from '@modelcontextprotocol/client';
-import {createNexoMcpWebHandler} from '../server/mcp/server.mjs';
-import {MCP_TOOL_NAMES} from '../server/mcp/tools.mjs';
+import {createNexoMcpWebHandler,NEXO_MCP_TOOL_NAMES} from '../server/mcp/server.mjs';
 
 const snapshot={
   sourceModifiedAt:'2026-09-12T12:00:00Z',generatedAt:'2026-09-12T12:01:00Z',
@@ -24,7 +23,7 @@ test('official MCP client negotiates 2026-07-28 and sees only read-only NEXO too
     await client.connect(transport);
     assert.equal(client.getNegotiatedProtocolVersion(),'2026-07-28');
     const list=await client.listTools();
-    assert.deepEqual(list.tools.map(tool=>tool.name),MCP_TOOL_NAMES);
+    assert.deepEqual(list.tools.map(tool=>tool.name),NEXO_MCP_TOOL_NAMES);
     for(const tool of list.tools){
       assert.equal(tool.annotations?.readOnlyHint,true,tool.name);
       assert.equal(tool.annotations?.destructiveHint,false,tool.name);
@@ -38,6 +37,12 @@ test('official MCP client negotiates 2026-07-28 and sees only read-only NEXO too
     assert.equal(payload.items.length,1);
     assert.equal(payload.items[0].metricId,'cosmology.H0');
     assert.equal(payload.items[0].value,71.5884);
+
+    const style=await client.callTool({name:'validate_style_text',arguments:{text:'A integração é a prioridade atual.'}});
+    assert.equal(style.isError,undefined);
+    const stylePayload=JSON.parse(style.content[0].text);
+    assert.equal(stylePayload.policyId,'STYLE_DIRECT_AFFIRMATIVE_V1');
+    assert.equal(stylePayload.ok,true);
   }finally{
     await client.close().catch(()=>{});
     await handler.close();
