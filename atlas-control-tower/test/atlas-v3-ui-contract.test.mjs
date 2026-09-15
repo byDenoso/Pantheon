@@ -12,7 +12,7 @@ test('V3 presents a cinematic neural workspace rather than the retired SVG dashb
   assert.match(html,/NEXO Atlas/);
   assert.match(app,/AtlasCanvas/);
   assert.match(app,/Mapa neural tridimensional/);
-  assert.match(app,/Buscar campanha, claim, teste ou work/);
+  assert.match(app,/Buscar campanha, grupo, claim ou work/);
   assert.match(app,/TOWER_V06/);
   assert.match(css,/radial-gradient/);
   assert.match(css,/backdrop-filter/);
