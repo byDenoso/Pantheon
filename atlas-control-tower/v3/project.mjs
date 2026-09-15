@@ -41,9 +41,10 @@ function relationId(source, type, target) {
 }
 
 function nodeFrom(bucket, entity) {
+  const projectedType = bucket === 'work' ? 'WORK' : normalizeEntityKind(bucket, entity);
   return {
     id: String(entity.id),
-    type: normalizeEntityKind(bucket, entity),
+    type: projectedType,
     label: canonicalLabel(entity),
     status: entity.status || null,
     domain: entity.domain || entity.source_domains?.[0] || null,
@@ -59,9 +60,10 @@ function nodeFrom(bucket, entity) {
 }
 
 function publicEntityView(bucket, entity) {
+  const projectedType = bucket === 'work' ? 'WORK' : normalizeEntityKind(bucket, entity);
   const base = {
     id: String(entity.id),
-    projectedType: normalizeEntityKind(bucket, entity),
+    projectedType,
     label: canonicalLabel(entity),
     status: entity.status || null,
     domain: entity.domain || entity.source_domains?.[0] || null,
@@ -177,7 +179,8 @@ export function buildAtlasProjectionV3(input) {
     if (bucket === 'test') continue;
     if (bucket === 'interdomain' || String(entity.kind || '').toUpperCase() === 'INTERDOMAIN') {
       for (const ref of entity.source_nodes || []) addEdge(source, String(ref), entity.relation_type || 'METHOD_TRANSFER');
-      for (const ref of entity.test_refs || []) addTestReference(source, ref, 'PROPOSES_TEST');
+      // Test references remain in the learning filament envelope. They are
+      // registry evidence, not structural Neural graph edges.
       for (const ref of entity.evidence_refs || []) addEdge(source, String(ref), 'SUPPORTED_BY');
     } else {
       for (const [field, type] of REFERENCE_FIELDS) {

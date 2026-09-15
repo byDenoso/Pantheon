@@ -4,10 +4,10 @@ import fs from 'node:fs';
 const read=path=>fs.readFileSync(new URL('../'+path,import.meta.url),'utf8');
 
 test('graph runtime uses PixiJS and GSAP',()=>{const source=read('src/graph-engine/runtime.ts');assert.match(source,/pixi\.js/);assert.match(source,/gsap/)});
-test('Learning remains a graph context and is not a primary product area',()=>{
+test('Learning remains a graph context and is exposed as an optional layer',()=>{
  const app=read('src/App.tsx');const route=read('src/atlas-route.ts');const api=read('lib/atlas-api.mjs');
  assert.match(api,/system:\(LEARNING\|AUTOMATION\)/);assert.match(app,/GRAFOS.*OBSERVATÓRIO.*LABORATÓRIO.*RESUMO DO UNIVERSO/s);
- assert.doesNotMatch(route,/Learning/);assert.doesNotMatch(app,/label: ['"]Learning['"]/);assert.doesNotMatch(app,/\['system:LEARNING'/);
+ assert.doesNotMatch(route,/Learning/);assert.match(app,/Aprendizado/);assert.match(app,/\['system:LEARNING'/);
 });
 test('projection contract discards undeclared and dangling edges',()=>{const source=read('src/graph-engine/projection.ts');assert.match(source,/declared===true/);assert.match(source,/ids\.has\(e\.source\)/);assert.match(source,/ids\.has\(e\.target\)/)});
 test('v2 pages use one renderer gateway with Spatial Canvas 2.5D as the only active renderer',()=>{

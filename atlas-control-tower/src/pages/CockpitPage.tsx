@@ -6,6 +6,8 @@ import { PublicSnapshotSource } from '../core/PublicSnapshotSource';
 import { summarizeCampaignStatus, type CockpitCampaignRow } from '../core/cockpit-campaigns';
 import { routeFor } from '../atlas-route';
 import type { HealthPlane } from '../core/contracts';
+import { buildCompletenessModel, type CompletenessModel } from '../data/completeness-model';
+import { CompletenessOverview } from '../components/CompletenessOverview';
 
 const STATUS_LABEL: Record<HealthPlane['status'], string> = { GREEN: 'OK', AMBER: 'ATENÇÃO', RED: 'CRÍTICO', UNKNOWN: 'DESCONHECIDO' };
 
@@ -14,6 +16,14 @@ const countLabel = (count: number, read?: SourceRead<unknown>) => !read || read.
 
 function humanAuditType(value: string): string {
   return value.replace(/[_-]+/g, ' ').replace(/\b\w/g, char => char.toUpperCase());
+}
+
+function responseField(value: unknown, key: string): unknown[] | undefined {
+  if (!value || typeof value !== 'object') return undefined;
+  const root = value as Record<string, unknown>;
+  const data = root.data && typeof root.data === 'object' && !Array.isArray(root.data) ? root.data as Record<string, unknown> : root;
+  const field = data[key] ?? root[key];
+  return Array.isArray(field) ? field : undefined;
 }
 
 // Cockpit is the operational home: backend/API health, sync, campaign status and
@@ -26,6 +36,7 @@ export function CockpitPage({ api, navigate }: { api: AtlasApiClient; navigate: 
   const [campaigns, setCampaigns] = useState<CockpitCampaignRow[] | null>(null);
   const [campaignsUnavailable, setCampaignsUnavailable] = useState(false);
   const [campaignCount, setCampaignCount] = useState<number | null>(null);
+  const [completeness, setCompleteness] = useState<CompletenessModel | null>(null);
   const metadata = readMetadata(sources?.health.data);
   const { fingerprint, sourceVersion, freshness, source } = metadata;
   const planes = resolveHealthPlanes(sources?.health.data || null);
@@ -37,7 +48,21 @@ export function CockpitPage({ api, navigate }: { api: AtlasApiClient; navigate: 
     setCampaignCount(null);
     setCampaignsUnavailable(false);
     setLearnerUnavailable(null);
+    setCompleteness(null);
     void loadCockpitSources(api).then(value => { if (live) setSources(value); });
+
+    const completenessRoutes = ['observatory-questions', 'lab-tests', 'lab-evidence', 'lab-runs', 'learning', 'operations', 'audit'] as const;
+    void Promise.all(completenessRoutes.map(route => api.research(route).catch(() => null))).then(values => {
+      if (!live) return;
+      const [observatory, laboratoryTests, evidence, runs, learning, operations, audit] = values;
+      setCompleteness(buildCompletenessModel({
+        observatory: { questions: responseField(observatory, 'questions') || responseField(observatory, 'items') || [], campaigns: responseField(observatory, 'campaigns') || [], h0Stacks: responseField(observatory, 'h0Stacks') || [] },
+        laboratory: { items: responseField(laboratoryTests, 'items') || [], evidence: responseField(evidence, 'items') || [], runs: responseField(runs, 'items') || [] },
+        learning: { items: responseField(learning, 'items') || [] },
+        operations: { actions: responseField(operations, 'actions') || [] },
+        audit: { items: responseField(audit, 'items') || responseField(audit, 'issues') || [] }
+      }));
+    });
 
     const snapshot = new PublicSnapshotSource(api);
     void snapshot.getLearnerLayer().then(envelope => {
@@ -97,6 +122,8 @@ export function CockpitPage({ api, navigate }: { api: AtlasApiClient; navigate: 
         <ul className="cockpit-source-list" aria-live="polite">{(['health', 'ops', 'runs', 'audit'] as const).map((key, index) => <li key={key} data-state={sources?.[key].state || 'LOADING'}><b>{['Saúde', 'Operações', 'Runs', 'Auditoria'][index]}</b><span>{readLabel(sources?.[key])}</span>{sources?.[key].metadata && <small>{freshnessLabel(sources[key].metadata!.freshness)} · {sources[key].metadata!.source}</small>}</li>)}</ul>
         <p className="cockpit-empty">Uma fonte indisponível permanece desconhecida. Atualizar leitura consulta os dados publicados; a ingestão é acompanhada em Sincronizar.</p>
       </section>
+
+      <CompletenessOverview model={completeness}/>
 
       <section className="cockpit-section" aria-label="Saúde por plano">
         <div className="cockpit-section-heading"><div><span className="eyebrow">SINAIS DO SISTEMA</span><h2>Saúde do sistema</h2></div><span className="cockpit-section-note">Cada sinal precisa de uma fonte</span></div>

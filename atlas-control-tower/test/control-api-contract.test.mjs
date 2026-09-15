@@ -27,9 +27,9 @@ test('control client keeps write operations explicit and GET operations separate
   assert.match(source, /listOutbox:/);
 });
 
-test('shell exposes control-plane readback without replacing the four Atlas areas', () => {
+test('shell exposes editable workspace preferences without replacing the four Atlas areas', () => {
   const app = fs.readFileSync(new URL('../src/App.tsx', import.meta.url), 'utf8');
-  assert.match(app, /ControlPlaneDrawer/);
+  assert.match(app, /WorkspacePreferencesDrawer/);
   assert.match(app, /route\.area === 'graphs'/);
   assert.match(app, /route\.area === 'observatory'/);
   assert.match(app, /route\.area === 'lab'/);

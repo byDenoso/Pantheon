@@ -90,7 +90,14 @@ export function createConfiguredApi(): AtlasApiClient {
   if (remoteBase) return createApi({ baseUrl: remoteBase, profile: 'atlas' as const }) as AtlasApiClient;
   if (shouldUseSameOriginApi() && typeof window !== 'undefined') {
     const sameOriginApiBase = `${window.location.origin.replace(/\/+$/, '')}/api`;
-    const primary = createApi({ baseUrl: sameOriginApiBase, profile: 'atlas' as const }) as AtlasApiClient;
+    const primary = createApi({
+      baseUrl: sameOriginApiBase,
+      profile: 'atlas' as const,
+      // createApi treats a browser endpoint as remote only when it receives the
+      // browser transport explicitly. Without this, Vercel silently used the
+      // retired local adapter and every panel ended in Failed to fetch.
+      fetchImpl: typeof globalThis.fetch === 'function' ? globalThis.fetch : undefined
+    } as never) as AtlasApiClient;
     const fallback = createStaticArtifactApi({ baseUrl: configuredStaticDataBaseUrl() }) as AtlasApiClient;
     return createResilientApi(primary, fallback);
   }

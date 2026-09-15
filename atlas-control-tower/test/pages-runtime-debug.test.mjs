@@ -92,7 +92,7 @@ test('sidebar systems mirror the GitHub canonical root graph',()=>{
   const block=app.match(/const SYSTEMS\s*=\s*\[(.*?)\]\s*as const;/s)?.[1]||'';
   for(const id of ['system:NEXO','system:SCIENCE','system:ENGINEERING','system:OLYMPUS','system:OPERATIONS'])assert.match(block,new RegExp(id));
   assert.doesNotMatch(block,/system:AUTOMATION/);
-  assert.doesNotMatch(block,/system:LEARNING/);
+  assert.match(block,/system:LEARNING/);
 });
 
 test('skip link has a real main landmark target',()=>{

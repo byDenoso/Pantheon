@@ -17,10 +17,9 @@ test('Pages browser smoke waits for the graph renderer canvas and exercises tear
   assert.match(workflow, /GRAPH_LIFECYCLE_SMOKE_OK/);
 });
 
-test('Pages browser smoke enters through the real landing page before asserting on the app shell', () => {
-  // The public root is a real, intentional marketing/landing page (LandingPage.tsx)
-  // that does not mount the ATLAS shell -- confirmed live. The smoke test must
-  // click through it first, exactly as a real visitor would, rather than assume
-  // the shell/graph DOM exists at the bare root.
-  assert.match(workflow, /getByRole\(['"]link['"],\s*\{name:\s*['"]Mapa['"]\}\)\.click\(\)/);
+test('Pages browser smoke opens the graph workspace directly at the public root', () => {
+  // The public root is the map-first Atlas workspace; no extra landing-page click
+  // should be required before the graph lifecycle assertion.
+  assert.doesNotMatch(workflow, /getByRole\(['"]link['"],\s*\{name:\s*['"]Mapa['"]\}\)\.click\(\)/);
+  assert.match(workflow, /page\.goto\(['"]http:\/\/127\.0\.0\.1/);
 });

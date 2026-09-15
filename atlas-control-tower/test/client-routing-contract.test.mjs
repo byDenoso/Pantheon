@@ -19,3 +19,7 @@ test('Vercel same-origin API has a published static-artifact fallback instead of
   assert.match(client, /catch/);
   assert.match(client, /shouldUseSameOriginApi\(\)[\s\S]*createResilientApi/s);
 });
+
+test('Vercel same-origin primary is wired to browser fetch instead of the local adapter', () => {
+  assert.match(client, /sameOriginApiBase[\s\S]*fetchImpl:\s*typeof globalThis\.fetch === 'function' \? globalThis\.fetch/);
+});

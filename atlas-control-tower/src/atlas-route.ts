@@ -115,7 +115,7 @@ export function readAtlasRoute(location: Pick<Location, 'pathname' | 'search'> =
   const segments = pathname.split('/').filter(Boolean);
   const areaSegment = segments[0];
   const query = new URLSearchParams(location.search);
-  let area: AtlasArea = (areaSegment && AREA_BY_SEGMENT[areaSegment]) || (areaSegment && AREAS.includes(areaSegment as AtlasArea) ? (areaSegment as AtlasArea) : 'landing');
+  let area: AtlasArea = (areaSegment && AREA_BY_SEGMENT[areaSegment]) || (areaSegment && AREAS.includes(areaSegment as AtlasArea) ? (areaSegment as AtlasArea) : 'graphs');
   // /pesquisa and /universe share one public path (PUBLIC_PATH.observatory ===
   // PUBLIC_PATH.universe === 'pesquisa') by design -- but without this check every
   // link to 'universe' silently rendered ObservatoryPage instead, since the reverse

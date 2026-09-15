@@ -12,13 +12,10 @@ test('Pages fallback preserves route semantics below the repository base path', 
 });
 
 test('Pages repository root defaults to a known area, never an undefined one', () => {
-  // Locked route contract update: "/" is now the public landing (or a redirect to
-  // /cockpit for a signed-in session, built at the App.tsx level) rather than an
-  // implicit alias for the map. The important invariant -- an unrecognized or empty
-  // area segment never produces `undefined` -- still holds, it just resolves to
-  // 'landing' instead of 'graphs'.
+  // The map is the Atlas workspace entry point. An unrecognized or empty area
+  // segment must resolve to that useful surface rather than a dead landing page.
   assert.doesNotMatch(route, /AREAS\.includes\(areaSegment\s*\|\|\s*['"]graphs['"]\)\s*\?\s*areaSegment/);
-  assert.match(route, /'landing'/);
+  assert.match(route, /:\s*'graphs'/);
   assert.match(route, /AREA_BY_SEGMENT\[areaSegment\]/);
 });
 

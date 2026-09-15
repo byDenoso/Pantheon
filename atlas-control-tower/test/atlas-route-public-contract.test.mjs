@@ -77,9 +77,9 @@ test('readAtlasRoute still parses legacy prefixes so an old link never 404s', ()
   assert.equal(readAtlasRoute({ pathname: '/lab', search: '' }).area, 'lab');
 });
 
-test('readAtlasRoute defaults an empty or unknown path to landing, not the map', () => {
-  assert.equal(readAtlasRoute({ pathname: '/', search: '' }).area, 'landing');
-  assert.equal(readAtlasRoute({ pathname: '/something-unknown', search: '' }).area, 'landing');
+test('readAtlasRoute defaults an empty or unknown path directly to the map workspace', () => {
+  assert.equal(readAtlasRoute({ pathname: '/', search: '' }).area, 'graphs');
+  assert.equal(readAtlasRoute({ pathname: '/something-unknown', search: '' }).area, 'graphs');
 });
 
 test('readAtlasRoute keeps deep domain context under the new /mapa/science/:domain shape', () => {

@@ -1,7 +1,6 @@
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { cockpitCopy, nodeDisplayLabel } from '../ui/cockpit-copy.mjs';
 import { FreshnessBadge, ProvenanceDrawer, ScientificStatusBadge } from './components/atlas-ui';
-import { ControlPlaneDrawer } from './components/ControlPlaneDrawer';
 import { CommandEntry } from './components/CommandEntry';
 import { useAtlasRoute, routeFor, preserveGraphMode, normalizeGraphHydrationId, type AtlasArea } from './atlas-route';
 import type { Provenance } from './api/types';
@@ -10,9 +9,10 @@ import { GraphsPage } from './pages/graphs-page';
 import { CockpitPage } from './pages/CockpitPage';
 import { AtividadePage } from './pages/AtividadePage';
 import { LoginPage } from './pages/LoginPage';
-import { LandingPage } from './pages/LandingPage';
 import { PrivateGate } from './components/PrivateGate';
 import { ActivityDrawer } from './components/shell/ActivityDrawer';
+import { WorkspacePreferencesDrawer } from './components/WorkspacePreferencesDrawer';
+import { DEFAULT_WORKSPACE_PREFERENCES, readWorkspacePreferences, writeWorkspacePreferences, type WorkspacePreferences } from './state/workspace-preferences';
 import { isActiveNavItem } from './state/nav-active';
 import type { AtlasNode } from './scene/types';
 
@@ -21,7 +21,8 @@ const SYSTEMS = [
   ['system:SCIENCE', '✧', 'Ciência'],
   ['system:ENGINEERING', '◇', 'Engenharia'],
   ['system:OLYMPUS', '△', 'Olympus'],
-  ['system:OPERATIONS', '▣', 'Operação']
+  ['system:OPERATIONS', '▣', 'Operação'],
+  ['system:LEARNING', '✦', 'Aprendizado']
 ] as const;
 
 // Primary navigation contains the durable work surfaces. Atividade remains
@@ -91,6 +92,7 @@ export default function App() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [drawer, setDrawer] = useState<{ title: string; items: Provenance[] } | null>(null);
   const [controlOpen, setControlOpen] = useState(false);
+  const [workspacePreferences, setWorkspacePreferences] = useState<WorkspacePreferences>(() => readWorkspacePreferences());
   const compact = useMedia('(max-width: 760px)');
   const reducedMotion = useMedia('(prefers-reduced-motion: reduce)');
   const appliedContext = useRef('');
@@ -148,6 +150,11 @@ export default function App() {
   useEffect(() => { setQuery(route.context.query || ''); }, [route.context.query]);
 
   useEffect(() => {
+    if (route.path !== '/' || workspacePreferences.startArea === 'graphs') return;
+    navigate(routeFor(workspacePreferences.startArea, route.context));
+  }, [navigate, route.context, route.path, workspacePreferences.startArea]);
+
+  useEffect(() => {
     if (route.area !== 'graphs' || state.loading || state.path.length < 2) return;
     const graphPath = state.path.slice(1).map(item => item.id);
     const desired = preserveGraphMode(routeFor('graphs', { ...route.context, graphPath }), window.location.search);
@@ -160,15 +167,22 @@ export default function App() {
   // real session, so this stays null rather than a fake signed-in stand-in.
   const session = null;
   const go = (area: AtlasArea) => { setSidebarOpen(false); navigate(routeFor(area, route.context)); };
-  const goHref = (href: string) => navigate(href);
   const runSearch = () => {
     const value = query.trim();
     navigate(routeFor('graphs', { ...route.context, query: value || undefined }));
     if (value) void actions.search(value); else void actions.clearFilters();
   };
 
-  if (route.area === 'landing') return <LandingPage navigate={goHref}/>;
   if (route.area === 'login') return <LoginPage/>;
 
-  return <div className="atlas-app premium-shell"><header className="atlas-topbar"><button className="menu-button" onClick={() => setSidebarOpen(value => !value)} aria-label="Abrir menu">☰</button><a className="atlas-brand" href={routeFor('graphs', route.context)} onClick={event => { event.preventDefault(); navigate(routeFor('graphs', route.context)); }}><span className="brand-orbit" aria-hidden="true">✧</span><span><b>NEXO <em>Atlas</em></b><small>MAPEANDO O UNIVERSO EM DADOS</small></span></a><div className="top-actions"><CommandEntry value={query} onChange={setQuery} onSubmit={runSearch}/><button className="sync-button" onClick={() => void actions.sync()} disabled={state.syncing} aria-label="Sincronizar dados">↻ <span>{state.syncing ? 'Lendo…' : 'Sincronizar'}</span></button><FreshnessBadge freshness={freshness}/><button className="notifications-button" onClick={() => go('atividade')} aria-label="Abrir Atividade">🔔</button><button className="profile-button" onClick={() => setControlOpen(true)} aria-label="Abrir controle operacional">OPS</button></div></header><div className="atlas-body">{sidebarOpen && <button type="button" className="sidebar-scrim" aria-label="Fechar menu" onClick={() => setSidebarOpen(false)}/>}<aside className={`atlas-sidebar ${sidebarOpen ? 'open' : ''}`}><div className="sidebar-heading"><span className="eyebrow">ATLAS</span><button className="icon-button sidebar-close" onClick={() => setSidebarOpen(false)} aria-label="Fechar menu">×</button></div><nav className="sidebar-primary-nav" aria-label="Navegação principal">{NAVIGATION.map(item => <a key={item.area} className={isActiveNavItem(route.area, item.area) ? 'active' : ''} href={routeFor(item.area, route.context)} onClick={event => { event.preventDefault(); go(item.area); }}><span aria-hidden="true">{item.icon}</span><span>{item.label}</span>{item.private && <small aria-hidden="true">🔒</small>}</a>)}</nav><div className="sidebar-divider"/><span className="eyebrow">NAVEGAÇÃO DO GRAFO</span>{SYSTEMS.map(([id, icon, label]) => <button key={id} className={`graph-nav-item ${route.area === 'graphs' && state.focusId === id ? 'active' : ''}`} onClick={() => { navigate(routeFor('graphs')); void actions.focusSystem(id, label); setSidebarOpen(false); }}>{icon}<span>{label}</span></button>)}<div className="sidebar-divider"/><span className="eyebrow">DOMÍNIOS VISÍVEIS</span><div className="domain-nav">{domains.map(node => <button key={node.id} className="graph-nav-item" onClick={() => { const domain = String(node.domain || node.id.replace('domain:', '')); navigate(routeFor('graphs', { ...route.context, domain })); void actions.open(node); setSidebarOpen(false); }}>◎<span>{displayNode(node)}</span></button>)}</div><div className="sidebar-foot"><span className="tiny-orbit" aria-hidden="true">◎</span><b>Estado rastreável</b><p>Truth owners no backend.<br/>Atlas é projeção somente leitura.</p><small>React · R3F · WebGPU</small></div></aside><main id="atlas-main" className="atlas-main">{route.area === 'graphs' && <GraphsPage state={state} actions={actions} reducedMotion={reducedMotion} compact={compact}/>} {route.area !== 'graphs' && <Suspense fallback={<div className="page-wrap panel-empty"><p>Carregando projeção…</p></div>}>{route.area === 'observatory' && <ObservatoryPage api={api} state={state} actions={actions} context={route.context} reducedMotion={reducedMotion} compact={compact} navigate={navigate} onProvenance={(title, items) => setDrawer({ title, items })}/>} {route.area === 'lab' && <PrivateGate session={session} area="Laboratório" onGoToLogin={() => go('login')}><LaboratoryPage api={api} state={state} actions={actions} context={route.context} reducedMotion={reducedMotion} compact={compact} navigate={navigate} onProvenance={(title, items) => setDrawer({ title, items })}/></PrivateGate>} {route.area === 'universe' && <UniversePage api={api} state={state} actions={actions} context={route.context} reducedMotion={reducedMotion} compact={compact} navigate={navigate} onProvenance={(title, items) => setDrawer({ title, items })}/>}</Suspense>}{route.area === 'cockpit' && <CockpitPage api={api} navigate={navigate}/>}{route.area === 'atividade' && <PrivateGate session={session} area="Atividade" onGoToLogin={() => go('login')}><AtividadePage/></PrivateGate>}{route.area !== 'graphs' && <footer className="atlas-footer"><b>NEXO Atlas</b><span>Observatório para uma ciência mais conectada.</span><span className="footer-spacer"/><FreshnessBadge freshness={freshness}/><span>API configurável</span><span>v4.1</span></footer>}<ActivityDrawer api={api}/></main></div>{route.area !== 'graphs' && <Inspector state={state} actions={actions} onProvenance={(title, items) => setDrawer({ title, items })} onNavigate={go}/>}<ProvenanceDrawer open={Boolean(drawer)} title={drawer?.title} items={drawer?.items || []} onClose={() => setDrawer(null)} onNavigate={ref => { if (ref.url) window.open(ref.url, '_blank', 'noopener,noreferrer'); }} /><ControlPlaneDrawer open={controlOpen} onClose={() => setControlOpen(false)} /></div>;
+  const updateWorkspacePreferences = (patch: Partial<WorkspacePreferences>) => {
+    const next = { ...workspacePreferences, ...patch };
+    setWorkspacePreferences(next);
+    try { writeWorkspacePreferences(localStorage, next); } catch { /* local preferences are best effort */ }
+  };
+
+  const visibleNavigation = NAVIGATION.filter(item => item.area !== 'cockpit' || workspacePreferences.showOperations).filter(item => !['observatory', 'universe'].includes(item.area) || workspacePreferences.showResearch);
+  const visibleSystems = SYSTEMS.filter(([id]) => id !== 'system:OPERATIONS' || workspacePreferences.showOperations).filter(([id]) => id !== 'system:LEARNING' || workspacePreferences.showLearning);
+
+  return <div className="atlas-app premium-shell"><header className="atlas-topbar"><button className="menu-button" onClick={() => setSidebarOpen(value => !value)} aria-label="Abrir menu">☰</button><a className="atlas-brand" href={routeFor('graphs', route.context)} onClick={event => { event.preventDefault(); navigate(routeFor('graphs', route.context)); }}><span className="brand-orbit" aria-hidden="true">✧</span><span><b>NEXO <em>Atlas</em></b><small>MAPEANDO O UNIVERSO EM DADOS</small></span></a><div className="top-actions"><CommandEntry value={query} onChange={setQuery} onSubmit={runSearch}/><button className="sync-button" onClick={() => void actions.sync()} disabled={state.syncing} aria-label="Sincronizar dados">↻ <span>{state.syncing ? 'Lendo…' : 'Sincronizar'}</span></button><FreshnessBadge freshness={freshness}/><button className="notifications-button" onClick={() => go('atividade')} aria-label="Abrir Atividade">🔔</button><button className="profile-button" onClick={() => setControlOpen(true)} aria-label="Abrir preferências do workspace">OPS</button></div></header><div className="atlas-body">{sidebarOpen && <button type="button" className="sidebar-scrim" aria-label="Fechar menu" onClick={() => setSidebarOpen(false)}/>}<aside className={`atlas-sidebar ${sidebarOpen ? 'open' : ''}`}><div className="sidebar-heading"><span className="eyebrow">ATLAS</span><button className="icon-button sidebar-close" onClick={() => setSidebarOpen(false)} aria-label="Fechar menu">×</button></div><nav className="sidebar-primary-nav" aria-label="Navegação principal">{visibleNavigation.map(item => <a key={item.area} className={isActiveNavItem(route.area, item.area) ? 'active' : ''} href={routeFor(item.area, route.context)} onClick={event => { event.preventDefault(); go(item.area); }}><span aria-hidden="true">{item.icon}</span><span>{item.label}</span>{item.private && <small aria-hidden="true">🔒</small>}</a>)}</nav><div className="sidebar-divider"/><span className="eyebrow">NAVEGAÇÃO DO GRAFO</span>{visibleSystems.map(([id, icon, label]) => <button key={id} className={`graph-nav-item ${route.area === 'graphs' && state.focusId === id ? 'active' : ''}`} onClick={() => { navigate(routeFor('graphs')); void actions.focusSystem(id, label); setSidebarOpen(false); }}>{icon}<span>{label}</span></button>)}<div className="sidebar-divider"/><span className="eyebrow">DOMÍNIOS VISÍVEIS</span><div className="domain-nav">{domains.map(node => <button key={node.id} className="graph-nav-item" onClick={() => { const domain = String(node.domain || node.id.replace('domain:', '')); navigate(routeFor('graphs', { ...route.context, domain })); void actions.open(node); setSidebarOpen(false); }}>◎<span>{displayNode(node)}</span></button>)}</div><div className="sidebar-foot"><span className="tiny-orbit" aria-hidden="true">◎</span><b>Estado rastreável</b><p>Truth owners no backend.<br/>Atlas é projeção somente leitura.</p><small>React · R3F · WebGPU</small></div></aside><main id="atlas-main" className="atlas-main">{route.area === 'graphs' && <GraphsPage state={state} actions={actions} reducedMotion={reducedMotion} compact={compact}/>} {route.area !== 'graphs' && <Suspense fallback={<div className="page-wrap panel-empty"><p>Carregando projeção…</p></div>}>{route.area === 'observatory' && <ObservatoryPage api={api} state={state} actions={actions} context={route.context} reducedMotion={reducedMotion} compact={compact} navigate={navigate} onProvenance={(title, items) => setDrawer({ title, items })}/>} {route.area === 'lab' && <PrivateGate session={session} area="Laboratório" onGoToLogin={() => go('login')}><LaboratoryPage api={api} state={state} actions={actions} context={route.context} reducedMotion={reducedMotion} compact={compact} navigate={navigate} onProvenance={(title, items) => setDrawer({ title, items })}/></PrivateGate>} {route.area === 'universe' && <UniversePage api={api} state={state} actions={actions} context={route.context} reducedMotion={reducedMotion} compact={compact} navigate={navigate} onProvenance={(title, items) => setDrawer({ title, items })}/>}</Suspense>}{route.area === 'cockpit' && <CockpitPage api={api} navigate={navigate}/>}{route.area === 'atividade' && <PrivateGate session={session} area="Atividade" onGoToLogin={() => go('login')}><AtividadePage/></PrivateGate>}{route.area !== 'graphs' && <footer className="atlas-footer"><b>NEXO Atlas</b><span>Observatório para uma ciência mais conectada.</span><span className="footer-spacer"/><FreshnessBadge freshness={freshness}/><span>API configurável</span><span>v4.1</span></footer>}<ActivityDrawer api={api}/></main></div>{route.area !== 'graphs' && <Inspector state={state} actions={actions} onProvenance={(title, items) => setDrawer({ title, items })} onNavigate={go}/>}<ProvenanceDrawer open={Boolean(drawer)} title={drawer?.title} items={drawer?.items || []} onClose={() => setDrawer(null)} onNavigate={ref => { if (ref.url) window.open(ref.url, '_blank', 'noopener,noreferrer'); }} /><WorkspacePreferencesDrawer open={controlOpen} preferences={workspacePreferences} onChange={updateWorkspacePreferences} onReset={() => updateWorkspacePreferences(DEFAULT_WORKSPACE_PREFERENCES)} onClose={() => setControlOpen(false)} /></div>;
 }

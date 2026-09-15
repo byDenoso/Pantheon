@@ -83,7 +83,6 @@ jobs:
           await page.goto('http://127.0.0.1:4174/Pantheon/',{waitUntil:'domcontentloaded',timeout:30000});
           await manifestResponse;
           if(await page.locator('.atlas-bootstrap-error').count())throw new Error('ATLAS_BOOTSTRAP_ERROR_VISIBLE_ON_LANDING');
-          await page.getByRole('link',{name:'Mapa'}).click();
           await page.waitForSelector('.atlas-app',{timeout:15000});
           await page.waitForSelector('.premium-shell',{timeout:15000});
           await page.waitForSelector('.atlas-context-bar',{timeout:15000});
