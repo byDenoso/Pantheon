@@ -5,9 +5,9 @@ type ResolvedTheme='light'|'dark'|'classic'|'deep-space'|'high-contrast';
 const STORAGE_KEY='nexo-atlas-theme';
 const THEMES:Theme[]=['classic','light','dark','system','deep-space','high-contrast'];
 const labels:Record<Theme,string>={system:'Sistema',light:'Claro',dark:'Escuro',classic:'Clássico','deep-space':'Deep Space','high-contrast':'Alto contraste'};
-// "Clássico" is the requested default -- a real, first-class preset, not the fallback
-// only reached when nothing else was ever chosen.
-const savedTheme=():Theme=>{try{const saved=localStorage.getItem(STORAGE_KEY) as Theme|null;return saved&&THEMES.includes(saved)?saved:'classic'}catch{return'classic'}};
+// Preserve explicit user choice. New sessions without a saved preference start in
+// the approved deep-space Observatório preset.
+const savedTheme=():Theme=>{try{const saved=localStorage.getItem(STORAGE_KEY) as Theme|null;return saved&&THEMES.includes(saved)?saved:'deep-space'}catch{return'deep-space'}};
 const resolveTheme=(theme:Theme,dark:boolean):ResolvedTheme=>theme==='system'?(dark?'dark':'light'):theme;
 
 export function ThemeToggle(){

@@ -1,4 +1,4 @@
-import {useEffect,useMemo,useRef,useState} from 'react';
+import {useEffect,useMemo,useRef,useState,type ReactNode} from 'react';
 import {AtlasContextBar} from '../components/AtlasContextBar';
 import {GraphRenderer} from '../graph-engine/GraphRenderer';
 import {SpatialInspector} from '../graph-engine/SpatialInspector';
@@ -9,12 +9,13 @@ import {applyMapFilters,distinctAuthorityValues,distinctFieldValues,type MapFilt
 import {buildLiveProjection} from '../graph-engine/live-projection';
 import {enforceGraphEntityContract} from '../graph-engine/graph-entity-contract';
 import {supportsWebGL2,resolveMapRenderMode} from '../graph-engine/webgl-support';
-import {clampZoom,zoomStep} from '../graph-engine/orbital-2_5d-layout';
+import {zoomStep} from '../graph-engine/orbital-2_5d-layout';
 import type {GraphNode} from '../graph-engine/types';
 import type {AtlasNode} from '../scene/types';
 import type {AtlasActions,AtlasUiState} from '../state/useAtlasSession';
 
-type GraphMode='explore'|'relations'|'evidence';
+type GraphMode='structure'|'evidence'|'synthesis';
+export type ObservatoryProductMode=GraphMode;
 const EVIDENCE_TYPES=new Set(['HYPOTHESIS','TEST','RUN','RESULT','EVIDENCE','CLAIM','DOCUMENT','PUBLICATION']);
 
 function modeProjection(projection:ReturnType<typeof buildLiveProjection>,mode:GraphMode){
@@ -23,49 +24,53 @@ function modeProjection(projection:ReturnType<typeof buildLiveProjection>,mode:G
   return {...projection,nodes:projection.nodes.filter(node=>keep.has(node.id)),edges:projection.edges.filter(edge=>keep.has(edge.source)&&keep.has(edge.target))};
 }
 
-export function GraphsPage({state,actions,reducedMotion,compact}:{state:AtlasUiState;actions:AtlasActions;reducedMotion:boolean;compact:boolean}){
+type GraphsPageProps={
+  state:AtlasUiState;
+  actions:AtlasActions;
+  reducedMotion:boolean;
+  compact:boolean;
+  initialProductMode?:ObservatoryProductMode;
+  synthesisOverlay?:ReactNode;
+};
+
+export function GraphsPage({state,actions,reducedMotion,compact,initialProductMode='structure',synthesisOverlay}:GraphsPageProps){
   const [depth,setDepth]=useState(1);
-  const [mode,setMode]=useState<GraphMode>('explore');
+  const [mode,setMode]=useState<GraphMode>(initialProductMode);
+  const [relationsExpanded,setRelationsExpanded]=useState(false);
   const [immersive,setImmersive]=useState(false);
   const [webgl2Supported]=useState(()=>supportsWebGL2());
   const [contextLost,setContextLost]=useState(false);
   const [zoom,setZoom]=useState(1);
   const [mapFilters,setMapFilters]=useState<MapFilterState>({});
   const stageRef=useRef<HTMLDivElement>(null);
+
+  useEffect(()=>setMode(initialProductMode),[initialProductMode]);
   useEffect(()=>{
-    // Capture phase catches webglcontextlost/restored even though the event does not
-    // reliably bubble -- once lost without a restore, the accessible table takes over
-    // for the rest of the session rather than flapping back and forth on recovery.
     const onLost=(event:Event)=>{event.preventDefault();setContextLost(true)};
     const onRestored=()=>{};
     document.addEventListener('webglcontextlost',onLost,true);
     document.addEventListener('webglcontextrestored',onRestored,true);
     return()=>{document.removeEventListener('webglcontextlost',onLost,true);document.removeEventListener('webglcontextrestored',onRestored,true)};
   },[]);
+
   const renderMode=resolveMapRenderMode({webgl2Supported,contextLost});
   const graph=state.graph;
   const total=Number(graph?.visualTotal??graph?.total??graph?.nodes.length??0);
-  useEffect(()=>{document.body.dataset.mode='graphs';return()=>{delete document.body.dataset.mode}},[]);
+  useEffect(()=>{document.body.dataset.mode='observatory';return()=>{delete document.body.dataset.mode}},[]);
   useEffect(()=>{setMapFilters({})},[state.focusId]);
   useEffect(()=>{document.body.classList.toggle('graph-immersive',immersive);return()=>document.body.classList.remove('graph-immersive')},[immersive]);
-  useEffect(()=>{actions.setSceneState({visibleLayers:mode==='evidence'?['evidence','provenance']:mode==='relations'?['hierarchy','relations','evidence']:['hierarchy','relations'],expandedRelations:mode==='relations'?['related','supports','contradicts','dependency']:[]})},[actions,mode]);
+  useEffect(()=>{
+    const visibleLayers=mode==='evidence'?['evidence','provenance']:relationsExpanded?['hierarchy','relations','evidence']:['hierarchy','relations'];
+    actions.setSceneState({visibleLayers,expandedRelations:relationsExpanded?['related','supports','contradicts','dependency']:[]});
+  },[actions,mode,relationsExpanded]);
   void reducedMotion;void compact;
 
   const liveProjection=useMemo(()=>graph?buildLiveProjection({graph,focusId:state.focusId,path:state.path,pins:state.pins,compare:state.compare}):null,[graph,state.focusId,state.path,state.pins,state.compare]);
   const lastLoggedIssuesRef=useRef('');
   const baseProjection=useMemo(()=>{
     if(!liveProjection)return null;
-    // Locked map contract: only SYSTEM/ROOT/DOMAIN/CAMPAIGN render as map nodes.
-    // Tests/claims/datasets/artifacts/results/evidence are stripped here, not hidden by
-    // mode -- they stay reachable via Pesquisa/Atividade/Laboratório/inspector instead.
     const {projection,issues}=enforceGraphEntityContract(liveProjection);
     if(issues.length){
-      // useAtlasSession.ts rebuilds state.path/pins/compare as fresh array references
-      // on every session event (even ones unrelated to the graph, e.g. scene/camera
-      // updates), so this memo -- and this log -- would otherwise fire far more often
-      // than the actual issue set changes. Dedupe on the serialized issue set instead
-      // of logging unconditionally; this is a workaround for that upstream re-render
-      // frequency, not a fix for it (flagged as a residual perf finding).
       const signature=JSON.stringify(issues);
       if(lastLoggedIssuesRef.current!==signature){lastLoggedIssuesRef.current=signature;console.debug('[atlas:graph-contract]',issues)}
     }
@@ -112,7 +117,7 @@ export function GraphsPage({state,actions,reducedMotion,compact}:{state:AtlasUiS
     window.addEventListener('keydown',keyboard);return()=>window.removeEventListener('keydown',keyboard);
   },[actions,canBack,canForward,state.selectedId,projection,baseProjection]);
 
-  return <div className={`page-wrap graphs-page spatial-knowledge-page ${immersive?'is-immersive':''}`}>
+  return <div className={`page-wrap graphs-page unified-observatory spatial-knowledge-page ${immersive?'is-immersive':''}`}>
     <section className="graph-workspace spatial-workspace" id="map-workspace">
       <div className="atlas-context-bar-slot">
         <AtlasContextBar path={state.path} freshness={contextFreshness} authority={contextAuthority} sourceVersion={contextSourceVersion} navigationKind={navigationKind}/>
@@ -121,8 +126,11 @@ export function GraphsPage({state,actions,reducedMotion,compact}:{state:AtlasUiS
         <nav className="reference-breadcrumbs spatial-breadcrumbs" aria-label="Navegação hierárquica">
           {baseProjection?.breadcrumbs.map((item,index)=><span key={item.id}>{index>0&&<i>/</i>}<button onClick={()=>breadcrumb({id:item.id,label:item.label,type:'CONTEXT'})}>{item.label}</button></span>)}
         </nav>
-        <div className="spatial-mode-switch" aria-label="Modo do grafo">
-          {(['explore','relations','evidence'] as const).map(value=><button key={value} className={mode===value?'active':''} aria-pressed={mode===value} onClick={()=>setMode(value)}>{value==='explore'?'Explorar':value==='relations'?'Relações':'Evidências'}</button>)}
+        <div className="observatory-view-controls">
+          <div className="spatial-mode-switch" aria-label="Modo do Observatório">
+            {(['structure','evidence','synthesis'] as const).map(value=><button key={value} className={mode===value?'active':''} aria-pressed={mode===value} onClick={()=>setMode(value)}>{value==='structure'?'Estrutura':value==='evidence'?'Evidência':'Síntese'}</button>)}
+          </div>
+          <button className={`observatory-relations-toggle ${relationsExpanded?'active':''}`} aria-pressed={relationsExpanded} onClick={()=>setRelationsExpanded(value=>!value)}>Relações</button>
         </div>
       </div>
 
@@ -131,10 +139,11 @@ export function GraphsPage({state,actions,reducedMotion,compact}:{state:AtlasUiS
       <MapFilters filters={mapFilters} domainOptions={domainOptions} statusOptions={statusOptions} authorityOptions={authorityOptions} onChange={setMapFilters} onClear={()=>setMapFilters({})}/>
 
       <div className="graph-stage spatial-stage" ref={stageRef}>
-        {!projection?<div className="graph-empty-state"><span aria-hidden="true">∅</span><p>{state.loading?'Lendo mapa de conhecimento…':'Grafo indisponível neste momento.'}</p><small>{state.error||'Nenhum recorte válido foi publicado.'}</small></div>
+        {!projection?<div className="graph-empty-state"><span aria-hidden="true">∅</span><p>{state.loading?'Lendo mapa de conhecimento…':'Observatório indisponível neste momento.'}</p><small>{state.error||'Nenhum recorte válido foi publicado.'}</small></div>
           :filteredToEmpty?<div className="graph-empty-state"><span aria-hidden="true">∅</span><p>Nenhum nó corresponde aos filtros atuais.</p><small><button type="button" className="map-filter-clear" onClick={()=>setMapFilters({})}>Limpar filtros</button></small></div>
           :renderMode==='table'?<AccessibleGraphTable projection={projection} selectedId={state.selectedId} onSelect={select}/>
           :<GraphRenderer projection={projection} learning={false} selectedId={state.selectedId} onSelect={select} onOpenNode={open} zoom={zoom} onZoomChange={setZoom}/>}
+        {mode==='synthesis'&&synthesisOverlay&&<aside className="observatory-synthesis-overlay" aria-label="Síntese científica publicada">{synthesisOverlay}</aside>}
         {state.loading && projection && <div className="graph-stage-status" role="status" aria-live="polite"><span className="graph-stage-status-dot" aria-hidden="true"/><span>Preparando o próximo recorte…</span></div>}
         <SpatialInspector state={state} actions={actions} projection={projection} onOpen={open}/>
         <div className="spatial-navigation-hud" aria-label="Controles de navegação">

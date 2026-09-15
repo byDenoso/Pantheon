@@ -9,6 +9,10 @@ function initialRead<T>(): PanelRead<T> {
   return { state: 'LOADING', data: null, freshness: { state: 'DEGRADED' } };
 }
 
+function projectionSource(model: ScienceReadModelV2, client: AtlasApiClient): string {
+  return String(model.provenance?.[0]?.source || client.provenance?.source || 'TOWER_V06_PROJECTION');
+}
+
 function freshnessFromResults(results: PromiseSettledResult<unknown>[], failed: number, fallback?: string): 'LIVE' | 'SNAPSHOT' | 'STALE' | 'DEGRADED' {
   const states = results.filter((item): item is PromiseFulfilledResult<unknown> => item.status === 'fulfilled').map(item => {
     const value = item.value;
@@ -38,13 +42,13 @@ export function useScienceReadModel(client: AtlasApiClient) {
       if (!live) return;
       const state = data.state === 'PARTIAL' ? 'PARTIAL' : data.state === 'DATA_UNAVAILABLE' ? 'DATA_UNAVAILABLE' : data.state === 'ERROR' ? 'API_ERROR' : data.state === 'EMPTY' ? 'EMPTY' : data.freshness === 'STALE' ? 'STALE' : 'READY';
       const freshness = data.freshness === 'LIVE' || data.freshness === 'SNAPSHOT' || data.freshness === 'STALE' || data.freshness === 'DEGRADED' ? data.freshness : 'DEGRADED';
-      setRead({ state, data, freshness: { state: freshness, source: 'GOOGLE_DRIVE', sourceVersion: data.sourceVersion, updatedAt: data.generatedAt } });
+      setRead({ state, data, freshness: { state: freshness, source: projectionSource(data, client), sourceVersion: data.sourceVersion, updatedAt: data.generatedAt } });
     }).catch(error => {
       if (!live) return;
       setRead(previous => ({ ...previous, state: previous.data ? 'STALE' : 'API_ERROR', error: errorMessage(error), freshness: { ...previous.freshness, state: previous.data ? 'STALE' : 'DEGRADED' } }));
     });
     return () => { live = false; };
-  }, [adapter]);
+  }, [adapter, client]);
   return read;
 }
 
@@ -112,6 +116,6 @@ export function useLabData(client: AtlasApiClient, context: AtlasContext) {
       setRead({ state: failed === results.length ? 'API_ERROR' : failed ? 'PARTIAL' : hasData ? 'READY' : 'EMPTY', data, freshness: { state: freshness }, error: failed ? 'PARTIAL_READ' : undefined });
     });
     return () => { live = false; };
-  }, [adapter, context]);
+  }, [adapter, context, client.provenance?.freshness]);
   return read;
 }

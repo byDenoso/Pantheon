@@ -3,10 +3,7 @@
 // not source-text regexes. The full React components (GraphHeader.tsx,
 // ActivityDrawer.tsx) are JSX and can't be imported under Node's plain type-stripping
 // test runner, so this file exercises the exact non-JSX logic those components
-// delegate to for rendering decisions: renderer-mode URL parsing, the drawer's tab
-// list and empty-state copy, the sidebar active-item predicate, and theme token
-// parity. Live-browser verification of the actual rendered components (both main
-// themes, desktop and mobile breakpoints) was performed separately for this change.
+// delegate to for rendering decisions.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
@@ -53,13 +50,13 @@ test('activity drawer never claims data it cannot back: unavailable reasons are 
   }
 });
 
-test('isActiveNavItem marks exactly the matching area active and nothing else', () => {
-  const items = [{ area: 'graphs' }, { area: 'observatory' }, { area: 'lab' }, { area: 'cockpit' }];
-  const activeCount = items.filter(item => isActiveNavItem('observatory', item.area)).length;
-  assert.equal(activeCount, 1);
-  assert.equal(isActiveNavItem('graphs', 'graphs'), true);
+test('isActiveNavItem maps legacy research areas to the single visible Observatório item', () => {
+  assert.equal(isActiveNavItem('observatory', 'observatory'), true);
+  assert.equal(isActiveNavItem('graphs', 'observatory'), true);
+  assert.equal(isActiveNavItem('universe', 'observatory'), true);
   assert.equal(isActiveNavItem('graphs', 'lab'), false);
-  assert.equal(isActiveNavItem('', 'graphs'), false);
+  assert.equal(isActiveNavItem('cockpit', 'cockpit'), true);
+  assert.equal(isActiveNavItem('', 'observatory'), false);
 });
 
 function parseCssCustomProps(block) {
@@ -68,10 +65,6 @@ function parseCssCustomProps(block) {
   return props;
 }
 
-// Returns the FIRST parsed block per selector name (a selector such as :root, or a
-// later html[data-theme="classic"] rule, can legitimately appear more than once in
-// the stylesheet to add unrelated tokens further down -- the palette comparison
-// below cares about the first, primary declaration of each theme).
 function themeBlocks(css) {
   const blocks = {};
   const re = /(:root|html\[data-theme="([a-z-]+)"\])\s*\{([^}]*)\}/g;
