@@ -47,6 +47,8 @@ export function normalizeEntityKind(bucket, entity) {
   if (bucket === 'interdomain' || String(entity?.kind || '').toUpperCase() === 'INTERDOMAIN') return 'FILAMENT';
   if (bucket === 'work') return 'WORK';
   if (bucket === 'hypothesis') return 'HYPOTHESIS';
+  if (bucket === 'test_group') return 'TEST_GROUP';
+  if (bucket === 'test') return 'TEST';
   if (bucket === 'governance') return 'GOVERNANCE';
   if (bucket === 'system') return 'SYSTEM';
   return String(entity?.kind || entity?.type || bucket || 'ENTITY').toUpperCase();
