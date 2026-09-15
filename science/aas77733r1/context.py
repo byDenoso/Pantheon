@@ -70,11 +70,12 @@ class Context:
             cov += np.diag(err * err)
         metric = GLSMetric(idx.size, covariance=cov)
         fit = fit_omega_m(zhd=z, zhel=zhel, observed=observed, metric=metric, grid=self.omega_grid)
+        profiled_residual = np.asarray(fit["residual"], float) - float(fit["best"]["intercept"])
         pivots = blind_pivots(z, **settings.BLIND_SCAN)
-        scan = hard_step_scan(z=z, residual=fit["residual"], metric=metric, pivots=pivots)
+        scan = hard_step_scan(z=z, residual=profiled_residual, metric=metric, pivots=pivots)
         state = {
             "idx": idx, "z": z, "zhel": zhel, "observed": observed, "covariance": cov, "metric": metric,
-            "fit": fit, "residual": fit["residual"], "pivots": pivots, "scan": scan,
+            "fit": fit, "residual": profiled_residual, "pivots": pivots, "scan": scan,
             "survey": np.asarray(c["IDSURVEY"], int)[idx],
             "host_mass": np.asarray(c["HOST_LOGMASS"], float)[idx],
             "vpecerr": np.asarray(c["VPECERR"], float)[idx],
@@ -93,7 +94,7 @@ class Context:
         metric = GLSMetric(idx.size, covariance=cov)
         residual = np.asarray(c["m_b_corr"], float)[idx] - np.asarray(c["CEPH_DIST"], float)[idx]
         beta, chi2 = metric.profile(residual, np.ones((idx.size, 1)))
-        result = {"n": int(idx.size), "intercept": float(beta[0]), "chi2": float(chi2), "residual_rms": float(np.std(residual))}
+        result = {"n": int(idx.size), "intercept": float(beta[0]), "chi2": float(chi2), "residual_rms": float(np.std(residual - beta[0]))}
         self.memo[key] = result
         return result
 
