@@ -25,7 +25,7 @@ test('neural HUD exposes the global reset view action', () => {
 });
 
 test('embedded Neural surface anchors Projection V3 reads to the published atlas-v3 base path', () => {
-  assert.match(app, /loadAtlasV3Snapshot\(new URL\(['"]atlas-v3\/['"],window\.location\.href\)\.href\)/);
+  assert.match(app, /loadAtlasV3Snapshot\(embedded\?new URL\(['"]atlas-v3\/['"],window\.location\.href\)\.href:window\.location\.href\)/);
 });
 
 test('embedded Neural surface opts into the Atlas full-height workspace contract', () => {
