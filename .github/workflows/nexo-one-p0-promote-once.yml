@@ -15,7 +15,7 @@ concurrency:
 
 jobs:
   promote:
-    if: startsWith(github.event.head_commit.message, 'ops(nexo-one): promote verified PERSONAL_LOOP preview')
+    if: "${{ startsWith(github.event.head_commit.message, 'ops(nexo-one): promote verified PERSONAL_LOOP preview') }}"
     runs-on: ubuntu-latest
     environment: nexo-one-production
     env:
