@@ -115,7 +115,7 @@ export default async function handler(req,res) {
     const world=compile(results,{now,access});
     const requiredProviders=world.providers.filter(p=>p.id!=='vercel');
     if(route==='health'){
-      const connectionHealth=summarizeConnectionHealth({env,providers:world.providers});
+      const connectionHealth=summarizeConnectionHealth({env,providers:world.providers,access});
       return send({status:requiredProviders.every(p=>p.status==='AVAILABLE'&&!p.partial)?'HEALTHY':'DEGRADED',version:'0.1.0',contractVersion:'1',access,privateConfigured:connectionHealth.session.configured,sessionConfigured:connectionHealth.session.configured,connections:connectionHealth.connections,providers:world.providers,generatedAt:world.generatedAt});
     }
     if(route==='now')return send({...world,items:world.items.filter(x=>['ACT','ESCALATE'].includes(x.attention)).slice(0,3)});
