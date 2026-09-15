@@ -23,6 +23,9 @@ type Runtime = {
   panX: number;
   panY: number;
   pointer: Pointer | null;
+  pointers: Map<number, Pointer>;
+  pinch: { distance: number; scale: number } | null;
+  velocity: Pointer;
   moved: boolean;
 };
 
@@ -67,7 +70,7 @@ export function CanvasGraphFallback({ nodes, edges, labelIds, focusId, selectedI
   const nodesRef = useRef(nodes);
   const edgesRef = useRef(edges);
   const labelsRef = useRef(labelIds);
-  const runtimeRef = useRef<Runtime>({ current: new Map(), target: new Map(), scale: 1, panX: 0, panY: 0, pointer: null, moved: false });
+  const runtimeRef = useRef<Runtime>({ current: new Map(), target: new Map(), scale: 1, panX: 0, panY: 0, pointer: null, pointers: new Map(), pinch: null, velocity: { x: 0, y: 0 }, moved: false });
   const selectedRef = useRef(selectedId);
   const focusRef = useRef(focusId);
   const callbackRef = useRef(onNodeClick);
@@ -262,6 +265,12 @@ export function CanvasGraphFallback({ nodes, edges, labelIds, focusId, selectedI
         }
       }
       for (const id of runtime.current.keys()) if (!ids.has(id)) runtime.current.delete(id);
+      if (!reducedMotion && !runtime.pointer && !runtime.pinch) {
+        runtime.panX += runtime.velocity.x;
+        runtime.panY += runtime.velocity.y;
+        runtime.velocity.x *= 0.88;
+        runtime.velocity.y *= 0.88;
+      }
       draw();
       if (!disposed) frame = requestAnimationFrame(tick);
       if (!moving && reducedMotion) cancelAnimationFrame(frame);
@@ -281,27 +290,52 @@ export function CanvasGraphFallback({ nodes, edges, labelIds, focusId, selectedI
       const rect = canvas.getBoundingClientRect();
       return { x: event.clientX - rect.left, y: event.clientY - rect.top };
     };
-    const down = (event: PointerEvent) => { runtime.pointer = pointFromEvent(event); runtime.moved = false; canvas.setPointerCapture?.(event.pointerId); };
+    const distanceBetween = (a: Pointer, b: Pointer) => Math.hypot(a.x - b.x, a.y - b.y);
+    const down = (event: PointerEvent) => {
+      const point = pointFromEvent(event);
+      runtime.pointers.set(event.pointerId, point);
+      runtime.moved = false;
+      runtime.velocity = { x: 0, y: 0 };
+      canvas.setPointerCapture?.(event.pointerId);
+      if (runtime.pointers.size >= 2) {
+        const [first, second] = [...runtime.pointers.values()];
+        runtime.pinch = { distance: Math.max(1, distanceBetween(first, second)), scale: runtime.scale };
+        runtime.pointer = null;
+      } else runtime.pointer = point;
+    };
     const move = (event: PointerEvent) => {
-      if (!runtime.pointer) return;
       const next = pointFromEvent(event);
+      runtime.pointers.set(event.pointerId, next);
+      if (runtime.pointers.size >= 2 && runtime.pinch) {
+        const [first, second] = [...runtime.pointers.values()];
+        runtime.scale = Math.max(0.5, Math.min(2.2, runtime.pinch.scale * distanceBetween(first, second) / runtime.pinch.distance));
+        runtime.moved = true;
+        return;
+      }
+      if (!runtime.pointer) return;
       const dx = next.x - runtime.pointer.x;
       const dy = next.y - runtime.pointer.y;
       if (Math.hypot(dx, dy) > 3) runtime.moved = true;
-      if (runtime.moved) { runtime.panX += dx; runtime.panY += dy; }
+      if (runtime.moved) { runtime.panX += dx; runtime.panY += dy; runtime.velocity = { x: dx, y: dy }; }
       runtime.pointer = next;
     };
     const up = (event: PointerEvent) => {
       const point = pointFromEvent(event);
-      if (!runtime.moved) { const node = findNode(point.x, point.y); if (node) callbackRef.current(node); }
+      runtime.pointers.delete(event.pointerId);
+      if (runtime.pointers.size < 2) runtime.pinch = null;
+      if (!runtime.moved && !runtime.pointers.size) { const node = findNode(point.x, point.y); if (node) callbackRef.current(node); }
       runtime.pointer = null;
     };
-    const wheel = (event: WheelEvent) => { event.preventDefault(); runtime.scale = Math.max(0.62, Math.min(1.8, runtime.scale * Math.exp(-event.deltaY * 0.0012))); };
+    const doubleClick = (event: MouseEvent) => { const rect = canvas.getBoundingClientRect(); const node = findNode(event.clientX - rect.left, event.clientY - rect.top); if (node) callbackRef.current(node); };
+    const wheel = (event: WheelEvent) => { event.preventDefault(); runtime.scale = Math.max(0.5, Math.min(2.2, runtime.scale * Math.exp(-event.deltaY * 0.0012))); };
+    const reset = () => { runtime.scale = 1; runtime.panX = 0; runtime.panY = 0; runtime.velocity = { x: 0, y: 0 }; };
     canvas.addEventListener('pointerdown', down);
     canvas.addEventListener('pointermove', move);
     canvas.addEventListener('pointerup', up);
     canvas.addEventListener('pointercancel', up);
     canvas.addEventListener('wheel', wheel, { passive: false });
+    canvas.addEventListener('dblclick', doubleClick);
+    window.addEventListener('atlas:reset-view', reset);
     const observer = new ResizeObserver(resize);
     observer.observe(host);
     resize();
@@ -315,10 +349,12 @@ export function CanvasGraphFallback({ nodes, edges, labelIds, focusId, selectedI
       canvas.removeEventListener('pointerup', up);
       canvas.removeEventListener('pointercancel', up);
       canvas.removeEventListener('wheel', wheel);
+      canvas.removeEventListener('dblclick', doubleClick);
+      window.removeEventListener('atlas:reset-view', reset);
     };
   }, [compact, reducedMotion, theme]);
 
-  return <div ref={hostRef} className="atlas-canvas-fallback" data-renderer="canvas-2d" role="img" aria-label="Mapa de conhecimento em Canvas 2.5D">
+  return <div ref={hostRef} className="atlas-canvas-fallback" data-renderer="canvas-2d" role="img" aria-label="Mapa de conhecimento em Canvas 2.5D" style={{touchAction:'none'}}>
     <canvas ref={canvasRef} aria-hidden="true" />
     <span className="atlas-canvas-fallback-badge">CANVAS 2.5D · FALLBACK</span>
   </div>;

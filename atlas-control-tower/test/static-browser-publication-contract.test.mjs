@@ -30,3 +30,9 @@ test('local dev and start stage sovereign static state before Vite serves the ap
   assert.equal(pkg.scripts?.dev,'vite --host 0.0.0.0');
   assert.equal(pkg.scripts?.start,'vite --host 0.0.0.0');
 });
+
+test('Pages publication smoke validates the merged Neural graph surface',()=>{
+  assert.match(pages,/atlas-v3-shell/);
+  assert.match(pages,/atlas-v3-stage/);
+  assert.match(pages,/neural-layer-bar/);
+});

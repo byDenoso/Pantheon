@@ -58,10 +58,11 @@ type Props={
   aura?: boolean;
   theme?: 'dark'|'light';
   onNodeClick?: (node: PositionedNode, event: ThreeEvent<MouseEvent>) => void;
+  onNodeDoubleClick?: (node: PositionedNode, event: ThreeEvent<MouseEvent>) => void;
   positions?: Map<string,Vector3>;
 };
 
-export function InstancedNodes({nodes,selectedId,focusId,pickMode=false,aura=false,onNodeClick,positions,theme='dark'}:Props){
+export function InstancedNodes({nodes,selectedId,focusId,pickMode=false,aura=false,onNodeClick,onNodeDoubleClick,positions,theme='dark'}:Props){
   const mesh=useRef<InstancedMesh>(null);
   const object=useMemo(()=>new Object3D(),[]);
   const {camera}=useThree();
@@ -108,8 +109,13 @@ export function InstancedNodes({nodes,selectedId,focusId,pickMode=false,aura=fal
     const node = nodes[event.instanceId];
     if (node) onNodeClick(node, event);
   };
+  const handleDoubleClick = (event: ThreeEvent<MouseEvent>) => {
+    if (pickMode || !onNodeDoubleClick || event.instanceId === undefined) return;
+    const node = nodes[event.instanceId];
+    if (node) onNodeDoubleClick(node, event);
+  };
 
-  return <instancedMesh ref={mesh} args={[undefined,undefined,Math.max(1,nodes.length)]} frustumCulled={false} onClick={handleClick}>
+  return <instancedMesh ref={mesh} args={[undefined,undefined,Math.max(1,nodes.length)]} frustumCulled={false} onClick={handleClick} onDoubleClick={handleDoubleClick}>
     <circleGeometry args={[1,32]}/>
     <primitive object={material} attach="material"/>
   </instancedMesh>;

@@ -24,7 +24,8 @@ test('production workflow verifies the vNext app and Atlas V3 rather than the re
   assert.match(deploy,/npm run typecheck/);
   assert.match(deploy,/npm run build -- --base=\/Pantheon\//);
   assert.match(deploy,/\.premium-shell/);
-  assert.match(deploy,/\.graph-renderer-canvas canvas/);
+  assert.match(deploy,/\.atlas-v3-shell/);
+  assert.match(deploy,/\.atlas-r3f-stage canvas/);
   assert.match(deploy,/OBSERVATÓRIO/);
   assert.match(deploy,/GRAFOS/);
   assert.match(deploy,/atlas-v3/);

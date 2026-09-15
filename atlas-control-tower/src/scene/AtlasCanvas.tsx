@@ -55,6 +55,7 @@ async function detectThreeRenderer(){
 function CameraRig({compact,focusId,focusType,presentationMode}:{compact:boolean;focusId:string;focusType:string|undefined;presentationMode:'spatial'|'canvas'}){
   const {camera,gl,size}=useThree();
   const controlsRef=useRef<OrbitControlsImpl|null>(null);
+  const viewHistory=useRef<CameraSpherical[]>([]);
 
   const recenter=(distance:number)=>{
     const controls=controlsRef.current;
@@ -68,6 +69,13 @@ function CameraRig({compact,focusId,focusType,presentationMode}:{compact:boolean
     camera.lookAt(0,0,0);
     controls?.target.set(0,0,0);
     controls?.update();
+  };
+
+  const restoreView=()=>{
+    const previous=viewHistory.current.pop();
+    if(!previous)return;
+    camera.position.set(...sphericalToCartesian(previous));
+    controlsRef.current?.update();
   };
 
   useEffect(()=>{
@@ -97,6 +105,14 @@ function CameraRig({compact,focusId,focusType,presentationMode}:{compact:boolean
     return()=>gl.domElement.removeEventListener('keydown',onKeyDown);
   },[camera,gl,presentationMode]);
 
+  useEffect(()=>{
+    const reset=()=>{viewHistory.current=[];recenter(cameraDistanceForPresentation(undefined,compact,size.width/Math.max(1,size.height),presentationMode));};
+    const back=()=>restoreView();
+    window.addEventListener('atlas:reset-view',reset);
+    window.addEventListener('atlas:camera-back',back);
+    return()=>{window.removeEventListener('atlas:reset-view',reset);window.removeEventListener('atlas:camera-back',back)};
+  },[compact,presentationMode,size.height,size.width]);
+
   return <DreiOrbitControls
     ref={controlsRef}
     camera={camera}
@@ -107,6 +123,7 @@ function CameraRig({compact,focusId,focusType,presentationMode}:{compact:boolean
     enablePan
     enableRotate
     enableZoom
+    onStart={()=>{const controls=controlsRef.current;if(controls)viewHistory.current.push(clampSpherical({azimuth:controls.getAzimuthalAngle(),polar:controls.getPolarAngle(),distance:controls.getDistance()}));}}
     // autoRotate = false: camera motion is always user-driven.
     autoRotate={false}
     minDistance={5}
@@ -190,12 +207,13 @@ function LabelProjector({nodes,labelIds,onLabels,motion,focusId,selectedId}:{nod
   return null;
 }
 
-function SceneContent({nodes,graph,labelIds,onLabels,onPick,reducedMotion,selectedId,focusId,focusType,compact,motion,theme,presentationMode}:{
+function SceneContent({nodes,graph,labelIds,onLabels,onPick,onDoubleClick,reducedMotion,selectedId,focusId,focusType,compact,motion,theme,presentationMode}:{
   nodes:PositionedNode[];
   graph:AtlasGraph;
   labelIds:Set<string>;
   onLabels:(labels:ProjectedLabel[])=>void;
   onPick:(node:PositionedNode)=>void;
+  onDoubleClick:(node:PositionedNode)=>void;
   reducedMotion:boolean;
   selectedId?:string|null;
   focusId:string;
@@ -222,7 +240,7 @@ function SceneContent({nodes,graph,labelIds,onLabels,onPick,reducedMotion,select
     {!reducedMotion&&<StarField theme={theme}/>}
     <InstancedNodes nodes={nodes} positions={motion.current} focusId={focusId} aura theme={theme}/>
     <InstancedFilaments edges={graph.edges} nodes={nodes} positions={motion.current} focusId={focusId} selectedId={selectedId} theme={theme}/>
-    <InstancedNodes nodes={nodes} positions={motion.current} selectedId={selectedId} focusId={focusId} onNodeClick={onPick} theme={theme}/>
+    <InstancedNodes nodes={nodes} positions={motion.current} selectedId={selectedId} focusId={focusId} onNodeClick={onPick} onNodeDoubleClick={onDoubleClick} theme={theme}/>
     <LabelProjector nodes={nodes} labelIds={labelIds} onLabels={onLabels} motion={motion} focusId={focusId} selectedId={selectedId}/>
   </>;
 }
@@ -254,6 +272,9 @@ export function AtlasCanvas({graph,focusId,selectedId,onSelect,onOpen,reducedMot
     const node=nodeById.get(picked.id);if(!node)return;
     if(shouldOpenNode(node,focusId,sceneGraph.edges))onOpen(node);
     else onSelect(node);
+  };
+  const handleDoubleClick=(picked:PositionedNode)=>{
+    const node=nodeById.get(picked.id);if(node)onOpen(node);
   };
 
   useEffect(()=>{
@@ -291,6 +312,7 @@ export function AtlasCanvas({graph,focusId,selectedId,onSelect,onOpen,reducedMot
           labelIds={lod.labelIds}
           onLabels={setLabels}
           onPick={handlePick}
+          onDoubleClick={handleDoubleClick}
           reducedMotion={reducedMotion}
           selectedId={selectedId}
           focusId={focusId}

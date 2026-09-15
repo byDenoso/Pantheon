@@ -73,7 +73,7 @@ test('Pages deploy boots with deterministic Playwright assertions and blocks ret
   assert.match(pagesWorkflow,/name:\s*Browser bootstrap smoke/);
   assert.match(pagesWorkflow,/chromium\.launch/);
   assert.match(pagesWorkflow,/waitForSelector\(['"]\.atlas-app/);
-  assert.match(pagesWorkflow,/waitForSelector\(['"]\.atlas-context-bar/);
+  assert.match(pagesWorkflow,/waitForSelector\(['"]\.atlas-v3-shell/);
   assert.match(pagesWorkflow,/atlas-bootstrap-error/);
   assert.match(pagesWorkflow,/RETIRED_RUNTIME_REQUEST/);
   assert.match(pagesWorkflow,/route\.abort\(\)/);
