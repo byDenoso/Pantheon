@@ -11,9 +11,10 @@
     "google-auth": "node scripts/google-auth.mjs",
     "typecheck": "tsc --noEmit",
     "test": "node --test test/*.test.mjs",
+    "style:lint": "node scripts/style-lint.mjs",
     "build": "vite build",
     "preview": "node scripts/dev.mjs --built",
-    "check": "npm run typecheck && npm test && npm run build",
+    "check": "npm run typecheck && npm test && npm run style:lint && npm run build",
     "test:browser": "node test/browser.mjs"
   },
   "dependencies": {
