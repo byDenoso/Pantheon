@@ -8,19 +8,35 @@ import {readAtlasSsot} from './adapters/atlas-ssot.mjs';
 import {buildPublicAtlasSsot} from './compiler/atlas-public-ssot.mjs';
 import {buildAtlasResearchView,RESEARCH_ROUTES} from './compiler/atlas-research-api.mjs';
 import {verifyProjectionService} from './auth/vercel-oidc.mjs';
-import {configured as sessionConfigured} from './auth/session.mjs';
+import {configured as sessionConfigured,sameOrigin} from './auth/session.mjs';
 import {sessionAccess,sessionRoute} from './auth/session-route.mjs';
+import {buildPersonalSnapshot,executePersonalAction} from './personal/service.mjs';
 import {createNexoMcpWebHandler} from './mcp/server.mjs';
 const ATLAS_ORIGINS=new Set(['https://bydenoso.github.io','https://nexo-atlas-control-tower.vercel.app','https://nexo-atlas-cockpit.vercel.app']);
 const PUBLIC_SYSTEM_PROVIDERS=['github','nexo'];
 const isCorsRoute=route=>route==='mcp'||route==='atlas-public-ssot'||route==='world'||RESEARCH_ROUTES.has(route);
 const mcpWebHandler=createNexoMcpWebHandler({readSnapshot:()=>readAtlasSsot({env:process.env,now:Date.now()})});
 const mcpNodeHandler=toNodeHandler(mcpWebHandler);
+async function requestBody(req){
+  if(req.body&&typeof req.body==='object'&&!Buffer.isBuffer(req.body))return req.body;
+  if(typeof req.body==='string'){try{return JSON.parse(req.body);}catch{return {};}}
+  if(!req||typeof req[Symbol.asyncIterator]!=='function')return {};
+  let raw='';for await(const chunk of req){raw+=Buffer.from(chunk).toString('utf8');if(raw.length>65536)throw new Error('REQUEST_BODY_TOO_LARGE');}
+  if(!raw.trim())return {};try{return JSON.parse(raw);}catch{throw new Error('INVALID_JSON');}
+}
+function personalError(error){
+  const code=String(error?.message||error||'REQUEST_FAILED');
+  if(code==='PERSONAL_ACTION_DENIED')return [code,403];
+  if(['APPROVAL_MISMATCH','STALE_PROPOSAL','EFFECT_RESERVATION_CONFLICT','CAPABILITY_PASS_ROUTE_NOT_FOUND'].some(value=>code.includes(value)))return [code,409];
+  if(['PERSONAL_ACTION_INPUT_REQUIRED','PERSONAL_ACTION_NOT_EXECUTABLE','INVALID_JSON','REQUEST_BODY_TOO_LARGE'].includes(code))return [code,400];
+  if(code.includes('AUTH_REQUIRED'))return ['AUTH_REQUIRED',401];
+  return ['REQUEST_FAILED',500];
+}
 export default async function handler(req,res) {
   const env=process.env,now=Date.now();
   res.setHeader('Content-Type','application/json; charset=utf-8');res.setHeader('Cache-Control','private, no-store');res.setHeader('X-Content-Type-Options','nosniff');res.setHeader('Vary','Authorization, Origin, Cookie');
   const send=(value,status=200)=>{res.statusCode=status;res.end(JSON.stringify(value));};
-  const url=new URL(req.url,'http://local'),route=url.searchParams.get('route')||url.pathname.split('/').pop();
+  const url=new URL(req.url,'http://local'),path=url.pathname.replace(/\/+$/,''),route=url.searchParams.get('route')||(path.endsWith('/personal/action')?'personal-action':path.split('/').pop());
   const privateAccess=sessionAccess(req,env,now),access=privateAccess?'PRIVATE':'PUBLIC';
   const origin=String(req.headers.origin||'');
   if(ATLAS_ORIGINS.has(origin)&&isCorsRoute(route)){
@@ -36,9 +52,21 @@ export default async function handler(req,res) {
       return mcpNodeHandler(req,res);
     }
     if(route==='session'){
-      const decision=sessionRoute(req,env,now,req.body&&typeof req.body==='object'?req.body:{});
+      const decision=sessionRoute(req,env,now,await requestBody(req));
       if(decision.setCookie)res.setHeader('Set-Cookie',decision.setCookie);
       return send(decision.body,decision.status);
+    }
+    if(route==='personal'){
+      if(req.method!=='GET')return send({error:'METHOD_NOT_ALLOWED'},405);
+      if(!privateAccess)return send({error:'AUTH_REQUIRED'},401);
+      return send(await buildPersonalSnapshot({env,now,reader:readProvider}));
+    }
+    if(route==='personal-action'){
+      if(req.method!=='POST')return send({error:'METHOD_NOT_ALLOWED'},405);
+      if(!privateAccess)return send({error:'AUTH_REQUIRED'},401);
+      if(!sameOrigin(req))return send({error:'ORIGIN_NOT_ALLOWED'},403);
+      try{const body=await requestBody(req);return send(await executePersonalAction({env,now:new Date(now).toISOString(),signal:req.signal,proposal:body.proposal,approval:body.approval}));}
+      catch(error){const [code,status]=personalError(error);return send({error:code},status);}
     }
     if(req.method!=='GET')return send({error:'WRITES_DISABLED'},405);
     if(route==='atlas-public-ssot')return send(buildPublicAtlasSsot(await readAtlasSsot({env,now,signal:req.signal})));
