@@ -49,6 +49,10 @@ jobs:
           key: aas77733-r1-public-data-c447f0f-c9a4fca-v1
       - name: Run contract and synthetic tests
         run: python -m unittest science.aas77733.test_battery -v
+      - name: Diagnose reference-redshift convention
+        run: |
+          mkdir -p artifacts
+          python science/aas77733/diagnose_reference.py --cache-dir .cache/aas77733 --output artifacts/reference-convention-diagnostic.json
       - name: Execute frozen G0-G19 battery
         run: |
           mkdir -p artifacts
