@@ -46,6 +46,21 @@ test('semantic visibility always preserves focus selection and first degree neig
   assert.equal(visible.has('far'),false);
 });
 
+test('global semantic LOD does not expose deep entities merely to fill a render budget',()=>{
+  const graph={
+    nodes:[
+      {id:'root',type:'ROOT'},
+      {id:'science',type:'DOMAIN'},
+      {id:'campaign-a',type:'CAMPAIGN'},
+      {id:'campaign-b',type:'CAMPAIGN'},
+      {id:'claim',type:'CLAIM'}
+    ],
+    edges:[{source:'root',target:'science'}]
+  };
+  const visible=buildSemanticVisibility(graph,{focusId:'root',level:0,budget:20});
+  assert.deepEqual([...visible].sort(),['root','science']);
+});
+
 test('semantic location roundtrips through compact URL state',()=>{
   const input={domain:'SCIENCE',focusId:'CAMP-CMB',selectedId:'CLAIM-17',overlays:['LEARNING','EVIDENCE'],level:2};
   assert.deepEqual(parseSemanticLocation(serializeSemanticLocation(input)),input);
