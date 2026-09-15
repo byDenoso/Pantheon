@@ -36,6 +36,8 @@ export const CANVAS_LAYOUT_SPREAD = 1.3;
 export const CANVAS_CLUSTER_SPREAD = 1.25;
 export const CANVAS_DEPTH_SCALE = 0.28;
 
+type PresentationMode='spatial'|'canvas';
+
 function hash01(value: string) {
   let hash = 2166136261;
   for (let i = 0; i < value.length; i++) {
@@ -54,7 +56,7 @@ const HIERARCHY_EDGE_TYPES = new Set([
   'DERIVED_FROM', 'IMPLEMENTS', 'REPORTS_ON'
 ]);
 
-function legacyOrbitalPosition(node: AtlasNode, index: number, count: number): [number, number, number] {
+function legacyOrbitalPosition(node: AtlasNode, index: number, count: number, presentationMode:PresentationMode): [number, number, number] {
   const golden = Math.PI * (3 - Math.sqrt(5));
   const y = 1 - 2 * ((index + 0.5) / count);
   const radial = Math.sqrt(Math.max(0, 1 - y * y));
@@ -62,16 +64,18 @@ function legacyOrbitalPosition(node: AtlasNode, index: number, count: number): [
   const angle = index * golden + jitter;
   const type = String(node.type || '').toUpperCase();
   const baseShell = type === 'SYSTEM' ? 5.6 : type === 'DOMAIN' ? 6.7 : type === 'CAMPAIGN' ? 7.7 : 8.8;
-  const shell = baseShell * CANVAS_LAYOUT_SPREAD;
+  const spread = presentationMode==='canvas'?CANVAS_LAYOUT_SPREAD:1;
+  const depthScale = presentationMode==='canvas'?CANVAS_DEPTH_SCALE:1;
+  const shell = baseShell * spread;
   const depth = 0.72 + hash01(`${node.id}:depth`) * 0.5;
   return [
     Math.cos(angle) * radial * shell,
     y * shell * 0.72,
-    Math.sin(angle) * radial * shell * depth * CANVAS_DEPTH_SCALE
+    Math.sin(angle) * radial * shell * depth * depthScale
   ];
 }
 
-function hierarchyPositions(nodes: AtlasNode[], focusId: string, edges: AtlasEdge[]): Map<string, [number, number, number]> | null {
+function hierarchyPositions(nodes: AtlasNode[], focusId: string, edges: AtlasEdge[], presentationMode:PresentationMode): Map<string, [number, number, number]> | null {
   const byId = new Map(nodes.map(node => [node.id, node]));
   const parentByChild = new Map<string, string>();
 
@@ -115,8 +119,11 @@ function hierarchyPositions(nodes: AtlasNode[], focusId: string, edges: AtlasEdg
   }
 
   const positions = new Map<string, [number, number, number]>([[focusId, [0, 0, 0]]]);
+  const spread = presentationMode==='canvas'?CANVAS_LAYOUT_SPREAD:1;
+  const clusterSpread = presentationMode==='canvas'?CANVAS_CLUSTER_SPREAD:1;
+  const depthScale = presentationMode==='canvas'?CANVAS_DEPTH_SCALE:1;
   const baseRingRadius = directChildren.length === 1 ? 4.7 : directChildren.length < 5 ? 5.35 : 5.8;
-  const ringRadius = baseRingRadius * CANVAS_LAYOUT_SPREAD;
+  const ringRadius = baseRingRadius * spread;
   const golden = Math.PI * (3 - Math.sqrt(5));
   const phase = hash01(`${focusId}:phase`) * Math.PI * 2;
 
@@ -125,17 +132,17 @@ function hierarchyPositions(nodes: AtlasNode[], focusId: string, edges: AtlasEdg
     const center: [number, number, number] = [
       Math.cos(angle) * ringRadius,
       Math.sin(angle) * ringRadius * 0.66,
-      hashSigned(`${child.id}:hub-depth`) * 4.2 * CANVAS_DEPTH_SCALE
+      hashSigned(`${child.id}:hub-depth`) * 4.2 * depthScale
     ];
     positions.set(child.id, center);
     const cluster = members.get(child.id) || [];
     cluster.forEach((node, memberIndex) => {
       const memberAngle = hash01(`${node.id}:angle`) * Math.PI * 2 + memberIndex * golden;
-      const memberRadius = (0.92 + Math.sqrt((memberIndex + 0.5) / Math.max(1, cluster.length)) * 1.65) * CANVAS_CLUSTER_SPREAD;
+      const memberRadius = (0.92 + Math.sqrt((memberIndex + 0.5) / Math.max(1, cluster.length)) * 1.65) * clusterSpread;
       positions.set(node.id, [
         center[0] + Math.cos(memberAngle) * memberRadius,
         center[1] + Math.sin(memberAngle) * memberRadius * 0.72,
-        center[2] + hashSigned(`${node.id}:depth`) * (2.4 + memberRadius * 0.85) * CANVAS_DEPTH_SCALE
+        center[2] + hashSigned(`${node.id}:depth`) * (2.4 + memberRadius * 0.85) * depthScale
       ]);
     });
   });
@@ -143,13 +150,13 @@ function hierarchyPositions(nodes: AtlasNode[], focusId: string, edges: AtlasEdg
   return positions;
 }
 
-export function buildOrbitalNodes(nodes: AtlasNode[], focusId?: string | null, edges: AtlasEdge[] = []): PositionedNode[] {
+export function buildOrbitalNodes(nodes: AtlasNode[], focusId?: string | null, edges: AtlasEdge[] = [], presentationMode:PresentationMode='spatial'): PositionedNode[] {
   const focalId = focusId
     ? nodes.find(node => node.id === focusId)?.id
       ?? nodes.find(node => node.id.toLowerCase() === focusId.toLowerCase())?.id
       ?? focusId
     : undefined;
-  const positions = focalId ? hierarchyPositions(nodes, focalId, edges) : null;
+  const positions = focalId ? hierarchyPositions(nodes, focalId, edges, presentationMode) : null;
   const others = nodes.filter(node => node.id !== focalId);
   const fallbackCount = Math.max(1, others.length);
   let fallbackIndex = 0;
@@ -157,7 +164,7 @@ export function buildOrbitalNodes(nodes: AtlasNode[], focusId?: string | null, e
   if (positions) {
     for (const node of others) {
       if (!positions.has(node.id)) {
-        positions.set(node.id, legacyOrbitalPosition(node, fallbackIndex, fallbackCount));
+        positions.set(node.id, legacyOrbitalPosition(node, fallbackIndex, fallbackCount, presentationMode));
         fallbackIndex += 1;
       }
     }
@@ -166,7 +173,7 @@ export function buildOrbitalNodes(nodes: AtlasNode[], focusId?: string | null, e
   return nodes.map((node, index) => {
     const position = node.id === focalId
       ? [0, 0, 0] as [number, number, number]
-      : positions?.get(node.id) || legacyOrbitalPosition(node, fallbackIndex++, fallbackCount);
+      : positions?.get(node.id) || legacyOrbitalPosition(node, fallbackIndex++, fallbackCount, presentationMode);
     return {...node, position, pickId:index + 1};
   });
 }
