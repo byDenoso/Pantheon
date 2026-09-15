@@ -13,7 +13,7 @@ from .stats import (
 from .utils import gate_result
 
 
-def _state(ctx:Context): return ctx.state("non_calibrator",0.01)
+def _state(ctx:Context): return ctx.state("non_calibrator",settings.PRIMARY_ZMIN)
 
 
 def g11(ctx:Context,results:dict)->dict:
@@ -30,7 +30,7 @@ def g11(ctx:Context,results:dict)->dict:
         rows[f"survey_redshift_block_{width:.3f}"]=scan_null_pvalue(observed=obs,maxima=maxima)
     structured=[v for k,v in rows.items() if k!="gaussian"]
     maxp=float(max(structured)); survives=maxp<0.05
-    return gate_result("G11","PASS" if survives else "FAIL",metrics={"hierarchy":rows,"max_structured_p":maxp,"mocks_per_null":n,"survives_structure_preserving_nulls":survives})
+    return gate_result("G11","PASS" if survives else "FAIL",metrics={"baseline_zmin":settings.PRIMARY_ZMIN,"hierarchy":rows,"max_structured_p":maxp,"mocks_per_null":n,"survives_structure_preserving_nulls":survives})
 
 
 def _scan_mask(ctx:Context,mask:np.ndarray)->dict:
@@ -39,13 +39,14 @@ def _scan_mask(ctx:Context,mask:np.ndarray)->dict:
     cov=b.covariance[np.ix_(idx,idx)]; metric=GLSMetric(idx.size,covariance=cov)
     fit=fit_omega_m(zhd=z,zhel=zhel,observed=obs,metric=metric,grid=ctx.omega_grid)
     from .stats import blind_pivots
-    piv=blind_pivots(z,**settings.BLIND_SCAN); scan=hard_step_scan(z=z,residual=fit["residual"],metric=metric,pivots=piv)
+    residual=np.asarray(fit["residual"],float)-float(fit["best"]["intercept"])
+    piv=blind_pivots(z,**settings.BLIND_SCAN); scan=hard_step_scan(z=z,residual=residual,metric=metric,pivots=piv)
     return {"n":int(idx.size),"omega_m":float(fit["best"]["omega_m"]),"best_z":float(scan["best_z"]),"delta_chi2":float(scan["delta_chi2"]),"amplitude_mag":float(scan["amplitude"])}
 
 
 def g12(ctx:Context,results:dict)->dict:
     s=_state(ctx); raw=float(s["scan"]["delta_chi2"]); b=ctx.pantheon; c=b.columns
-    base=ctx.mask("non_calibrator",0.01); surveys,counts=np.unique(s["survey"],return_counts=True); order=np.argsort(counts)[::-1]
+    base=ctx.mask("non_calibrator",settings.PRIMARY_ZMIN); surveys,counts=np.unique(s["survey"],return_counts=True); order=np.argsort(counts)[::-1]
     rows=[]
     for value in surveys[order]:
         mask=base & (np.asarray(c["IDSURVEY"],int)!=int(value)); row=_scan_mask(ctx,mask); row["excluded_survey"]=int(value); rows.append(row)
@@ -54,7 +55,7 @@ def g12(ctx:Context,results:dict)->dict:
     contrib=survey_score_contributions(s["scan"]["projection"],s["residual"],s["survey"],best_index)
     maxfrac=float(contrib[0]["abs_score_fraction"]) if contrib else 1.0
     robust=drop<=settings.THRESHOLDS["survey_max_leave_one_out_drop_fraction"] and maxfrac<=settings.THRESHOLDS["survey_max_abs_score_fraction"]
-    return gate_result("G12","PASS" if robust else "FAIL",metrics={"leave_one_survey_out":rows,"max_drop_fraction":drop,"score_contributions":contrib,"max_abs_score_fraction":maxfrac,"robust_to_survey_attribution":robust})
+    return gate_result("G12","PASS" if robust else "FAIL",metrics={"baseline_zmin":settings.PRIMARY_ZMIN,"leave_one_survey_out":rows,"max_drop_fraction":drop,"score_contributions":contrib,"max_abs_score_fraction":maxfrac,"robust_to_survey_attribution":robust})
 
 
 def g13(ctx:Context,results:dict)->dict:
@@ -66,7 +67,7 @@ def g13(ctx:Context,results:dict)->dict:
     d1=float(raw["delta_chi2"]); d2=float(scan2["delta_chi2"]); d3=float(scan3["delta_chi2"]); frac=d3/d1 if d1>0 else 0.0
     survives=frac>=settings.THRESHOLDS["nuisance_min_delta_fraction"]
     return gate_result("G13","PASS" if survives else "FAIL",metrics={
-        "M0":{"definition":"intercept only"},
+        "baseline_zmin":settings.PRIMARY_ZMIN,"M0":{"definition":"intercept only"},
         "M1":{"definition":"intercept + step","delta_chi2_A":d1,"best_z":float(raw["best_z"])},
         "M2":{"definition":"survey intercepts + step","delta_chi2_A":d2,"best_z":float(scan2["best_z"])},
         "M3":{"definition":"survey intercepts + survey-specific z slopes + step","delta_chi2_A":d3,"best_z":float(scan3["best_z"])},
@@ -82,7 +83,7 @@ def g14(ctx:Context,results:dict)->dict:
     stable=width<=settings.THRESHOLDS["max_pivot_p16_p84_width"] and loc>=settings.THRESHOLDS["minimum_localization_fraction"]
     values,counts=np.unique(piv,return_counts=True); order=np.argsort(counts)[::-1][:5]
     modes=[{"z":float(values[i]),"fraction":float(counts[i]/n)} for i in order]
-    return gate_result("G14","PASS" if stable else "FAIL",metrics={"nominal_z":nominal,"p16":float(p16),"median":float(p50),"p84":float(p84),"p16_p84_width":width,"iqr":iqr,"localization_fraction":loc,"localization_halfwidth":half,"normalized_entropy":ent,"dominant_modes":modes,"stable":stable,"mocks":n})
+    return gate_result("G14","PASS" if stable else "FAIL",metrics={"baseline_zmin":settings.PRIMARY_ZMIN,"nominal_z":nominal,"p16":float(p16),"median":float(p50),"p84":float(p84),"p16_p84_width":width,"iqr":iqr,"localization_fraction":loc,"localization_halfwidth":half,"normalized_entropy":ent,"dominant_modes":modes,"stable":stable,"mocks":n})
 
 
 GATES={"G11":g11,"G12":g12,"G13":g13,"G14":g14}
