@@ -47,6 +47,7 @@ export function createNexoSheetStores({now=new Date().toISOString(),transport}={
   };
 
   const personalRecords={
+    async get(kind,id){const row=await one(text(kind).toLowerCase(),text(id));return row?{record:row,payload:payloadOf(row)}:null;},
     async upsert(record){
       const kind=text(record?.kind),type=kind.toLowerCase();if(!['task','commitment','decision'].includes(type))throw new Error('PERSONAL_RECORD_KIND_UNSUPPORTED');
       const id=text(record?.id);if(!id)throw new Error('PERSONAL_RECORD_ID_REQUIRED');
