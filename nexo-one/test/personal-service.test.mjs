@@ -39,11 +39,14 @@ test('L5 actions are denied before any execution adapter can run',async()=>{
   assert.equal(called,false);
 });
 
-test('L4 approval is bound to the exact proposal fingerprint before provider mutation',async()=>{
+test('L4 first returns the server fingerprint, then binds approval to that exact proposal before mutation',async()=>{
   let calls=0;
   const rt=runtime(PERSONAL_CAPABILITY_IDS.gmailDraft,{mutating:true,target:'gmail',execute:async()=>{calls++;return {providerObjectId:'draft-1'};},readback:async()=>({verified:true,providerObjectId:'draft-1',receiptRef:'gmail:draft:draft-1'})});
   const proposal={kind:'CREATE_GMAIL_DRAFT',input:{to:'alice@example.com',subject:'Status',body:'Tudo certo.'}};
   const fingerprint=personalActionFingerprint(proposal);
+  const pending=await executePersonalAction({now,proposal,runtime:rt});
+  assert.deepEqual(pending,{status:'APPROVAL_REQUIRED',policy_level:'L4',proposal_fingerprint:fingerprint});
+  assert.equal(calls,0);
   await assert.rejects(()=>executePersonalAction({now,proposal:{...proposal,fingerprint},approval:{approved:true,proposal_fingerprint:'stale'},runtime:rt}),/APPROVAL_MISMATCH/);
   assert.equal(calls,0);
   const result=await executePersonalAction({now,proposal:{...proposal,fingerprint},approval:{approved:true,proposal_fingerprint:fingerprint},runtime:rt});
