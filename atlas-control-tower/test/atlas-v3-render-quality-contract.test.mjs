@@ -5,9 +5,11 @@ import fs from 'node:fs';
 const root=new URL('../',import.meta.url);
 const read=path=>fs.readFileSync(new URL(path,root),'utf8');
 
-test('AtlasCanvas caps DPR and semantic budgets on compact surfaces',()=>{
+test('AtlasCanvas uses a smaller semantic and label budget on compact surfaces',()=>{
   const canvas=read('src/scene/AtlasCanvas.tsx');
-  assert.match(canvas,/visibleBudget:compact\?60:180/);
-  assert.match(canvas,/labelBudget:compact\?12:36/);
-  assert.match(canvas,/dpr=\{compact\?\[1,1\.5\]:\[1,2\]\}/);
+  assert.match(canvas,/visibleBudget:compact\?90:180/);
+  assert.match(canvas,/labelBudget:compact\?20:36/);
+  assert.match(canvas,/dpr=\{\[1,2\]\}/);
+  const app=read('src/atlas-v3/AtlasV3App.tsx');
+  assert.match(app,/compact=\{compact\}/);
 });
