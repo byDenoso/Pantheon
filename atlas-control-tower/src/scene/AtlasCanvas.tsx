@@ -1,11 +1,8 @@
 import { Component, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
-import { OrbitControls as DreiOrbitControls } from '@react-three/drei';
 import { BufferGeometry, Float32BufferAttribute, MeshBasicMaterial, Vector3 } from 'three';
-import type { OrbitControls as OrbitControlsImpl } from 'three-stdlib';
 import { createAtlasRenderer } from './createRenderer';
 import { selectSemanticLOD } from './semantic-lod';
-import { applyCameraKey, cameraDistanceForPresentation, clampSpherical, MAX_DISTANCE, sphericalToCartesian, type CameraSpherical } from './camera-controls';
 import { shouldOpenNode } from './picking';
 import { buildOrbitalNodes, type AtlasGraph, type AtlasNode, type PositionedNode } from './types';
 import { InstancedNodes } from './InstancedNodes';
@@ -13,6 +10,8 @@ import { InstancedFilaments } from './InstancedFilaments';
 import { LabelOverlay, labelStatus, labelText, labelType, placeProjectedLabels, type ProjectedLabel } from './LabelOverlay';
 import { CanvasGraphFallback } from './CanvasGraphFallback';
 import { graphRenderBudget } from './neural-visuals.mjs';
+import { SpatialCameraRig } from './SpatialCameraRig';
+import './atlas-spatial.css';
 
 type Props={
   graph:AtlasGraph|null;
@@ -52,102 +51,15 @@ async function detectThreeRenderer(){
   try{return Boolean(await gpu.requestAdapter());}catch{return false;}
 }
 
-function CameraRig({compact,focusId,focusType,presentationMode}:{compact:boolean;focusId:string;focusType:string|undefined;presentationMode:'spatial'|'canvas'}){
-  const {camera,gl,size}=useThree();
-  const controlsRef=useRef<OrbitControlsImpl|null>(null);
-  const viewHistory=useRef<CameraSpherical[]>([]);
-  const restoringView=useRef(false);
-
-  const recenter=(distance:number)=>{
-    const controls=controlsRef.current;
-    let spherical:CameraSpherical=controls
-      ? clampSpherical({azimuth:controls.getAzimuthalAngle(),polar:controls.getPolarAngle(),distance})
-      : {azimuth:0,polar:Math.PI/2,distance};
-    if(presentationMode==='canvas'){
-      spherical={...spherical,azimuth:Math.max(-0.48,Math.min(0.48,spherical.azimuth)),polar:Math.max(Math.PI/2-0.24,Math.min(Math.PI/2+0.24,spherical.polar))};
-    }
-    camera.position.set(...sphericalToCartesian(spherical));
-    camera.lookAt(0,0,0);
-    controls?.target.set(0,0,0);
-    controls?.update();
-  };
-
-  const restoreView=()=>{
-    const previous=viewHistory.current.pop();
-    if(!previous)return false;
-    camera.position.set(...sphericalToCartesian(previous));
-    controlsRef.current?.target.set(0,0,0);
-    controlsRef.current?.update();
-    return true;
-  };
-
-  useEffect(()=>{
-    const aspect=size.width/Math.max(1,size.height);
-    recenter(cameraDistanceForPresentation(focusType,compact,aspect,presentationMode));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  },[compact,focusType,presentationMode,size.height,size.width]);
-
-  useEffect(()=>{
-    if(restoringView.current){restoringView.current=false;return;}
-    recenter(cameraDistanceForPresentation(focusType,compact,size.width/Math.max(1,size.height),presentationMode));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  },[focusId,presentationMode]);
-
-  useEffect(()=>{
-    gl.domElement.tabIndex=0;
-    const onKeyDown=(event:KeyboardEvent)=>{
-      const controls=controlsRef.current;if(!controls)return;
-      const current:CameraSpherical={azimuth:controls.getAzimuthalAngle(),polar:controls.getPolarAngle(),distance:controls.getDistance()};
-      const next=applyCameraKey(current,event.key);
-      if(!next)return;
-      event.preventDefault();
-      const bounded=presentationMode==='canvas'?{...next,azimuth:Math.max(-0.48,Math.min(0.48,next.azimuth)),polar:Math.max(Math.PI/2-0.24,Math.min(Math.PI/2+0.24,next.polar))}:next;
-      camera.position.set(...sphericalToCartesian(bounded));
-      controls.update();
-    };
-    gl.domElement.addEventListener('keydown',onKeyDown);
-    return()=>gl.domElement.removeEventListener('keydown',onKeyDown);
-  },[camera,gl,presentationMode]);
-
-  useEffect(()=>{
-    const reset=()=>{viewHistory.current=[];recenter(cameraDistanceForPresentation(undefined,compact,size.width/Math.max(1,size.height),presentationMode));};
-    const back=()=>{if(restoreView())restoringView.current=true;};
-    const fitSelection=()=>{
-      const controls=controlsRef.current;
-      if(controls)viewHistory.current.push(clampSpherical({azimuth:controls.getAzimuthalAngle(),polar:controls.getPolarAngle(),distance:controls.getDistance()}));
-      recenter(cameraDistanceForPresentation(focusType,compact,size.width/Math.max(1,size.height),presentationMode));
-    };
-    window.addEventListener('atlas:reset-view',reset);
-    window.addEventListener('atlas:camera-back',back);
-    window.addEventListener('atlas:fit-selection',fitSelection);
-    return()=>{
-      window.removeEventListener('atlas:reset-view',reset);
-      window.removeEventListener('atlas:camera-back',back);
-      window.removeEventListener('atlas:fit-selection',fitSelection);
-    };
-  },[compact,focusType,presentationMode,size.height,size.width]);
-
-  return <DreiOrbitControls
-    ref={controlsRef}
-    camera={camera}
-    domElement={gl.domElement}
-    makeDefault
-    enableDamping
-    dampingFactor={0.12}
-    enablePan
-    enableRotate
-    enableZoom
-    onStart={()=>{const controls=controlsRef.current;if(controls)viewHistory.current.push(clampSpherical({azimuth:controls.getAzimuthalAngle(),polar:controls.getPolarAngle(),distance:controls.getDistance()}));}}
-    // autoRotate = false: camera motion is always user-driven.
-    autoRotate={false}
-    minDistance={5}
-    maxDistance={MAX_DISTANCE}
-    minPolarAngle={presentationMode==='canvas'?Math.PI/2-0.24:0.18}
-    maxPolarAngle={presentationMode==='canvas'?Math.PI/2+0.24:Math.PI-0.18}
-    minAzimuthAngle={presentationMode==='canvas'?-0.48:-Infinity}
-    maxAzimuthAngle={presentationMode==='canvas'?0.48:Infinity}
-    target={[0,0,0]}
-  />;
+function OrientationGizmo(){
+  const snap=(axis:'front'|'top'|'right')=>window.dispatchEvent(new CustomEvent('atlas:camera-axis',{detail:{axis}}));
+  const home=()=>window.dispatchEvent(new CustomEvent('atlas:reset-view'));
+  return <div className="atlas-orientation-gizmo" role="group" aria-label="Orientação da câmera">
+    <button type="button" onClick={()=>snap('front')} aria-label="Alinhar câmera à frente" title="Frente">Z</button>
+    <button type="button" onClick={()=>snap('top')} aria-label="Alinhar câmera ao topo" title="Topo">Y</button>
+    <button type="button" onClick={()=>snap('right')} aria-label="Alinhar câmera à direita" title="Direita">X</button>
+    <button type="button" className="gizmo-home" onClick={home} aria-label="Restaurar orientação global" title="Início">⌂</button>
+  </div>;
 }
 
 const STARFIELD_POSITIONS=Array.from({length:180},(_,index)=>{
@@ -249,7 +161,7 @@ function SceneContent({nodes,graph,labelIds,onLabels,onPick,onDoubleClick,reduce
     for(const id of motion.current.keys()) if(!ids.has(id)){motion.current.delete(id);motion.target.delete(id)}
   });
   return <>
-    <CameraRig compact={compact} focusId={focusId} focusType={focusType} presentationMode={presentationMode}/>
+    <SpatialCameraRig compact={compact} focusId={focusId} focusType={focusType} presentationMode={presentationMode} reducedMotion={reducedMotion}/>
     <OrbitalGuides nodes={nodes} focusId={focusId} theme={theme} presentationMode={presentationMode}/>
     {!reducedMotion&&<StarField theme={theme}/>}
     <InstancedNodes nodes={nodes} positions={motion.current} focusId={focusId} aura theme={theme}/>
@@ -265,6 +177,7 @@ export function AtlasCanvas({graph,focusId,selectedId,onSelect,onOpen,reducedMot
   const [labels,setLabels]=useState<ProjectedLabel[]>([]);
   const [threeEnabled,setThreeEnabled]=useState(canUseThreeRenderer);
   const [renderActive,setRenderActive]=useState(() => typeof document === 'undefined' || document.visibilityState !== 'hidden');
+  const [showGestureHint,setShowGestureHint]=useState(compact);
   const stageRef=useRef<HTMLDivElement>(null);
   const motion=useRef<MotionState>({current:new Map(),target:new Map()});
   const sourceNodes=graph?.nodes||[];
@@ -292,6 +205,16 @@ export function AtlasCanvas({graph,focusId,selectedId,onSelect,onOpen,reducedMot
   const handleDoubleClick=(picked:PositionedNode)=>{
     const node=nodeById.get(picked.id);if(node)onOpen(node);
   };
+  const dismissGestureHint=()=>{
+    if(!showGestureHint)return;
+    setShowGestureHint(false);
+    try{sessionStorage.setItem('atlas-spatial-gestures-seen','1')}catch{}
+  };
+
+  useEffect(()=>{
+    if(!compact){setShowGestureHint(false);return;}
+    try{setShowGestureHint(sessionStorage.getItem('atlas-spatial-gestures-seen')!=='1')}catch{setShowGestureHint(true)}
+  },[compact]);
 
   useEffect(()=>{
     const updateVisibility=()=>setRenderActive(document.visibilityState !== 'hidden');
@@ -313,8 +236,8 @@ export function AtlasCanvas({graph,focusId,selectedId,onSelect,onOpen,reducedMot
 
   const accessibleSummary=<ul className="atlas-visible-summary" aria-label="Entidades visíveis no Atlas" style={visuallyHidden}>{sceneGraph.nodes.slice(0,64).map(node=><li key={node.id}>{labelText(node as PositionedNode)} · {labelType(node as PositionedNode)}{node.id===focusId?' · foco':''}{node.id===selectedId?' · selecionado':''}</li>)}</ul>;
   const fallback=<div className="atlas-graph-renderer-fallback"><CanvasGraphFallback nodes={nodes} edges={sceneGraph.edges} labelIds={lod.labelIds} focusId={focusId} selectedId={selectedId} onNodeClick={handlePick} reducedMotion={reducedMotion} compact={compact} theme={theme}/><span className="atlas-graph-fallback-note">Renderer 3D indisponível · exploração preservada em Canvas</span></div>;
-  if(!threeEnabled)return <div className="atlas-r3f-stage" ref={stageRef} data-render-active="true">{accessibleSummary}{fallback}{loading&&<div className="atlas-graph-transition" role="status">Carregando subgrafo…</div>}</div>;
-  return <div className="atlas-r3f-stage" ref={stageRef} data-render-active={renderActive ? 'true' : 'false'}>
+  if(!threeEnabled)return <div className="atlas-r3f-stage" ref={stageRef} data-render-active="true" data-camera-mode="canvas-fallback">{accessibleSummary}{fallback}{loading&&<div className="atlas-graph-transition" role="status">Carregando subgrafo…</div>}</div>;
+  return <div className="atlas-r3f-stage" ref={stageRef} data-render-active={renderActive ? 'true' : 'false'} data-camera-mode="free-orbit-360" onPointerDownCapture={dismissGestureHint}>
     {accessibleSummary}
     <CanvasErrorBoundary key={`${focusId}:${nodes.length}:${theme}:${presentationMode}`} fallback={fallback}>
       <Canvas
@@ -343,6 +266,8 @@ export function AtlasCanvas({graph,focusId,selectedId,onSelect,onOpen,reducedMot
       </Canvas>
       <LabelOverlay labels={labels} labelIds={lod.labelIds} selectedId={selectedId}/>
     </CanvasErrorBoundary>
+    <OrientationGizmo/>
+    {compact&&showGestureHint&&<div className="atlas-gesture-hint" aria-hidden="true"><span>1 dedo · orbitar</span><span>2 dedos · mover</span><span>pinça · aproximar</span></div>}
     {loading && <div className="atlas-graph-transition" role="status">Carregando subgrafo…</div>}
   </div>;
 }
