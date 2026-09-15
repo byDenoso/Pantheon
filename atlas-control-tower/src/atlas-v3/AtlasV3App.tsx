@@ -45,7 +45,7 @@ function graphForLayer(scene:AtlasV3Scene,layer:AtlasV3Layer):AtlasGraph{
 function Inspector({node,snapshot,onClose,compact}:{node:AtlasNode|null;snapshot:AtlasV3Snapshot;onClose:()=>void;compact:boolean}){
   const entity=node&&!node.presentationOnly?snapshot.entities?.[node.id]:null;
   const kind=node?.presentationOnly?'APRESENTAÇÃO':'CANONICAL';
-  return <aside id="atlas-v3-inspector" className={`inspector-sheet ${node?'is-open':''}`} aria-modal={compact&&Boolean(node)?true:undefined} aria-label="Inspector do Atlas">
+  return <aside id="atlas-v3-inspector" role={compact?'dialog':'complementary'} className="inspector-sheet is-open" aria-modal={compact?true:undefined} aria-label="Inspector do Atlas">
     <div className="inspector-grab" aria-hidden="true"/>
     <header className="inspector-head"><div><span>{kind}</span><h2>{node?displayLabel(node):'Selecione um nó'}</h2></div><button className="icon-button inspector-close" type="button" onClick={onClose} aria-label="Fechar inspector">×</button></header>
     <div className="inspector-body">
@@ -78,7 +78,7 @@ export function AtlasV3App(){
     try{
       const result=await loadAtlasV3Snapshot(window.location.href);
       const nextScene=buildAtlasV3Scene(result.snapshot);
-      setSnapshot(result.snapshot);setScene(nextScene);setFocusId(nextScene.focusId);setFocusHistory([]);setSelectedId(null);
+      setSnapshot(result.snapshot);setScene(nextScene);setFocusId(nextScene.focusId);setFocusHistory([]);setSelectedId(null);setInspectorOpen(false);
     }catch(reason){setSnapshot(null);setScene(null);setError(reason instanceof Error?reason.message:String(reason))}
     finally{setLoading(false)}
   },[]);
@@ -89,7 +89,7 @@ export function AtlasV3App(){
   const layerGraph=useMemo(()=>scene?graphForLayer(scene,layer):null,[layer,scene]);
   useEffect(()=>{if(layerGraph&&!layerGraph.nodes.some(node=>node.id===focusId)){setFocusId(ATLAS_V3_PRESENTATION_ROOT);setFocusHistory([])}},[focusId,layerGraph]);
 
-  const canonicalIds=scene?.canonicalIds||new Set<string>();
+  const canonicalIds=useMemo(()=>scene?.canonicalIds||new Set<string>(),[scene]);
   const selectedNode=useMemo(()=>scene?.graph.nodes.find(node=>node.id===selectedId)||null,[scene,selectedId]);
   const searchResults=useMemo(()=>{
     if(!scene||!query.trim())return [];
@@ -110,7 +110,11 @@ export function AtlasV3App(){
 
   const selectNode=useCallback((node:AtlasNode)=>{setSelectedId(node.id);setInspectorOpen(true)},[]);
   const goHome=useCallback(()=>{setFocusId(ATLAS_V3_PRESENTATION_ROOT);setFocusHistory([]);setSelectedId(null);setInspectorOpen(false)},[]);
-  const goBack=useCallback(()=>setFocusHistory(history=>{if(!history.length){setFocusId(ATLAS_V3_PRESENTATION_ROOT);return history}const next=[...history];const previous=next.pop()!;setFocusId(previous);setSelectedId(previous===ATLAS_V3_PRESENTATION_ROOT?null:previous);return next}),[]);
+  const goBack=useCallback(()=>{
+    if(!focusHistory.length){setFocusId(ATLAS_V3_PRESENTATION_ROOT);setSelectedId(null);return}
+    const previous=focusHistory[focusHistory.length-1];
+    setFocusHistory(history=>history.slice(0,-1));setFocusId(previous);setSelectedId(previous===ATLAS_V3_PRESENTATION_ROOT?null:previous);setInspectorOpen(false);
+  },[focusHistory]);
 
   useEffect(()=>{
     const onKey=(event:KeyboardEvent)=>{
@@ -153,13 +157,13 @@ export function AtlasV3App(){
       <button className="icon-button" type="button" onClick={()=>setInspectorOpen(value=>!value)} aria-expanded={inspectorOpen} aria-controls="atlas-v3-inspector" aria-label="Abrir inspector">◫</button>
     </div>
 
-    <section id="atlas-v3-search-panel" className={`search-panel glass-panel ${searchOpen?'is-open':''}`} aria-label="Busca no Atlas">
+    {searchOpen&&<section id="atlas-v3-search-panel" className="search-panel glass-panel is-open" aria-label="Busca no Atlas">
       <label htmlFor="atlas-v3-search">Buscar campanha, claim, teste ou work</label>
-      <div className="search-row"><span>⌕</span><input id="atlas-v3-search" autoFocus={searchOpen} value={query} onChange={event=>setQuery(event.target.value)} placeholder="Buscar na projeção…" autoComplete="off"/><kbd>Esc</kbd></div>
+      <div className="search-row"><span>⌕</span><input id="atlas-v3-search" autoFocus value={query} onChange={event=>setQuery(event.target.value)} placeholder="Buscar na projeção…" autoComplete="off"/><kbd>Esc</kbd></div>
       {query&&<div className="search-results">{searchResults.length?searchResults.map(node=><button className="search-result" type="button" key={node.id} onClick={()=>focusEntity(node.id)}><b>{displayLabel(node)}</b><small>{String(node.type||'—')} · {String(node.status||'—')}</small></button>):<p>Nenhuma entidade encontrada.</p>}</div>}
-    </section>
+    </section>}
 
-    {snapshot&&<Inspector node={inspectorOpen?selectedNode:null} snapshot={snapshot} compact={compact} onClose={()=>setInspectorOpen(false)}/>} 
+    {snapshot&&inspectorOpen&&<Inspector node={selectedNode} snapshot={snapshot} compact={compact} onClose={()=>setInspectorOpen(false)}/>} 
 
     <footer className="runtime-strip"><span>ORBITAR: arrastar · ZOOM: roda/pinça · PAN: botão direito/dois dedos</span><span>{snapshot?.manifest.sourceVersion||'aguardando Tower'}</span></footer>
   </main>;
