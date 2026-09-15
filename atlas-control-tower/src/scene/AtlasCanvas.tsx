@@ -76,6 +76,7 @@ function CameraRig({compact,focusId,focusType,presentationMode}:{compact:boolean
     const previous=viewHistory.current.pop();
     if(!previous)return false;
     camera.position.set(...sphericalToCartesian(previous));
+    controlsRef.current?.target.set(0,0,0);
     controlsRef.current?.update();
     return true;
   };
@@ -111,10 +112,20 @@ function CameraRig({compact,focusId,focusType,presentationMode}:{compact:boolean
   useEffect(()=>{
     const reset=()=>{viewHistory.current=[];recenter(cameraDistanceForPresentation(undefined,compact,size.width/Math.max(1,size.height),presentationMode));};
     const back=()=>{if(restoreView())restoringView.current=true;};
+    const fitSelection=()=>{
+      const controls=controlsRef.current;
+      if(controls)viewHistory.current.push(clampSpherical({azimuth:controls.getAzimuthalAngle(),polar:controls.getPolarAngle(),distance:controls.getDistance()}));
+      recenter(cameraDistanceForPresentation(focusType,compact,size.width/Math.max(1,size.height),presentationMode));
+    };
     window.addEventListener('atlas:reset-view',reset);
     window.addEventListener('atlas:camera-back',back);
-    return()=>{window.removeEventListener('atlas:reset-view',reset);window.removeEventListener('atlas:camera-back',back)};
-  },[compact,presentationMode,size.height,size.width]);
+    window.addEventListener('atlas:fit-selection',fitSelection);
+    return()=>{
+      window.removeEventListener('atlas:reset-view',reset);
+      window.removeEventListener('atlas:camera-back',back);
+      window.removeEventListener('atlas:fit-selection',fitSelection);
+    };
+  },[compact,focusType,presentationMode,size.height,size.width]);
 
   return <DreiOrbitControls
     ref={controlsRef}
@@ -248,6 +259,8 @@ function SceneContent({nodes,graph,labelIds,onLabels,onPick,onDoubleClick,reduce
   </>;
 }
 
+const visuallyHidden={position:'absolute',width:'1px',height:'1px',padding:0,margin:'-1px',overflow:'hidden',clip:'rect(0,0,0,0)',whiteSpace:'nowrap',border:0} as const;
+
 export function AtlasCanvas({graph,focusId,selectedId,onSelect,onOpen,reducedMotion,compact=false,loading=false,theme='dark',presentationMode='spatial'}:Props){
   const [labels,setLabels]=useState<ProjectedLabel[]>([]);
   const [threeEnabled,setThreeEnabled]=useState(canUseThreeRenderer);
@@ -298,9 +311,11 @@ export function AtlasCanvas({graph,focusId,selectedId,onSelect,onOpen,reducedMot
 
   if(!graph)return <div className="atlas-canvas-loading">Lendo recorte orbital…</div>;
 
+  const accessibleSummary=<ul className="atlas-visible-summary" aria-label="Entidades visíveis no Atlas" style={visuallyHidden}>{sceneGraph.nodes.slice(0,64).map(node=><li key={node.id}>{labelText(node)} · {labelType(node)}{node.id===focusId?' · foco':''}{node.id===selectedId?' · selecionado':''}</li>)}</ul>;
   const fallback=<div className="atlas-graph-renderer-fallback"><CanvasGraphFallback nodes={nodes} edges={sceneGraph.edges} labelIds={lod.labelIds} focusId={focusId} selectedId={selectedId} onNodeClick={handlePick} reducedMotion={reducedMotion} compact={compact} theme={theme}/><span className="atlas-graph-fallback-note">Renderer 3D indisponível · exploração preservada em Canvas</span></div>;
-  if(!threeEnabled)return <div className="atlas-r3f-stage" ref={stageRef} data-render-active="true">{fallback}{loading&&<div className="atlas-graph-transition" role="status">Carregando subgrafo…</div>}</div>;
+  if(!threeEnabled)return <div className="atlas-r3f-stage" ref={stageRef} data-render-active="true">{accessibleSummary}{fallback}{loading&&<div className="atlas-graph-transition" role="status">Carregando subgrafo…</div>}</div>;
   return <div className="atlas-r3f-stage" ref={stageRef} data-render-active={renderActive ? 'true' : 'false'}>
+    {accessibleSummary}
     <CanvasErrorBoundary key={`${focusId}:${nodes.length}:${theme}:${presentationMode}`} fallback={fallback}>
       <Canvas
         className="atlas-webgpu-canvas"
