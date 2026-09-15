@@ -6,165 +6,38 @@ import {ATLAS_V3_PRESENTATION_ROOT,buildAtlasV3Scene} from './scene-adapter.mjs'
 import type {AtlasV3Layer,AtlasV3Scene,AtlasV3Snapshot} from './types';
 
 const LAYERS:AtlasV3Layer[]=['SCIENCE','LEARNING','OPERATIONS','EVIDENCE','PROVENANCE','HEALTH'];
-
-function useMedia(query:string){
-  const [matches,setMatches]=useState(()=>typeof window!=='undefined'&&window.matchMedia(query).matches);
-  useEffect(()=>{const media=window.matchMedia(query);const update=()=>setMatches(media.matches);update();media.addEventListener('change',update);return()=>media.removeEventListener('change',update)},[query]);
-  return matches;
-}
-
+function useMedia(query:string){const [matches,setMatches]=useState(()=>typeof window!=='undefined'&&window.matchMedia(query).matches);useEffect(()=>{const media=window.matchMedia(query);const update=()=>setMatches(media.matches);update();media.addEventListener('change',update);return()=>media.removeEventListener('change',update)},[query]);return matches}
 function short(value:unknown,max=52){const text=String(value??'');return text.length>max?`${text.slice(0,max-1)}…`:text}
 function displayLabel(node?:AtlasNode|null){return short(node?.label||String(node?.id||'Sem seleção'),42)}
+function layerForNode(node:AtlasNode):AtlasV3Layer{const type=String(node.type||'').toUpperCase();if(type==='FILAMENT')return'LEARNING';if(type==='WORK')return'OPERATIONS';if(type==='REFERENCE'||type==='EVIDENCE')return'EVIDENCE';return'SCIENCE'}
+function connectedToTypes(graph:AtlasGraph,types:Set<string>){const seeds=new Set(graph.nodes.filter(node=>types.has(String(node.type||'').toUpperCase())).map(node=>node.id));const visible=new Set(seeds);for(const edge of graph.edges)if(seeds.has(edge.source)||seeds.has(edge.target)){visible.add(edge.source);visible.add(edge.target)}return visible}
+function nodeVisibleForLayer(node:AtlasNode,layer:AtlasV3Layer,connected:Set<string>){if(node.presentationOnly)return true;const type=String(node.type||'').toUpperCase();if(layer==='SCIENCE')return !['WORK','REFERENCE','EVIDENCE','FILAMENT'].includes(type);if(layer==='LEARNING')return connected.has(node.id)||type==='FILAMENT';if(layer==='OPERATIONS')return connected.has(node.id)||type==='WORK';if(layer==='EVIDENCE')return connected.has(node.id)||type==='REFERENCE'||type==='EVIDENCE';return true}
+function graphForLayer(scene:AtlasV3Scene,layer:AtlasV3Layer):AtlasGraph{const types=layer==='LEARNING'?new Set(['FILAMENT']):layer==='OPERATIONS'?new Set(['WORK']):layer==='EVIDENCE'?new Set(['REFERENCE','EVIDENCE']):new Set<string>();const connected=types.size?connectedToTypes(scene.graph,types):new Set(scene.graph.nodes.map(node=>node.id));const nodes=scene.graph.nodes.filter(node=>nodeVisibleForLayer(node,layer,connected));const ids=new Set(nodes.map(node=>node.id));const edges=scene.graph.edges.filter(edge=>ids.has(edge.source)&&ids.has(edge.target));return{...scene.graph,nodes,edges,visualTotal:nodes.length}}
 
-function connectedToTypes(graph:AtlasGraph,types:Set<string>){
-  const seeds=new Set(graph.nodes.filter(node=>types.has(String(node.type||'').toUpperCase())).map(node=>node.id));
-  const visible=new Set(seeds);
-  for(const edge of graph.edges)if(seeds.has(edge.source)||seeds.has(edge.target)){visible.add(edge.source);visible.add(edge.target)}
-  return visible;
-}
-
-function nodeVisibleForLayer(node:AtlasNode,layer:AtlasV3Layer,connected:Set<string>){
-  if(node.presentationOnly)return true;
-  const type=String(node.type||'').toUpperCase();
-  if(layer==='SCIENCE')return !['WORK','REFERENCE','EVIDENCE','FILAMENT'].includes(type);
-  if(layer==='LEARNING')return connected.has(node.id)||type==='FILAMENT';
-  if(layer==='OPERATIONS')return connected.has(node.id)||type==='WORK';
-  if(layer==='EVIDENCE')return connected.has(node.id)||type==='REFERENCE'||type==='EVIDENCE';
-  return true;
-}
-
-function graphForLayer(scene:AtlasV3Scene,layer:AtlasV3Layer):AtlasGraph{
-  const types=layer==='LEARNING'?new Set(['FILAMENT']):layer==='OPERATIONS'?new Set(['WORK']):layer==='EVIDENCE'?new Set(['REFERENCE','EVIDENCE']):new Set<string>();
-  const connected=types.size?connectedToTypes(scene.graph,types):new Set(scene.graph.nodes.map(node=>node.id));
-  const nodes=scene.graph.nodes.filter(node=>nodeVisibleForLayer(node,layer,connected));
-  const ids=new Set(nodes.map(node=>node.id));
-  const edges=scene.graph.edges.filter(edge=>ids.has(edge.source)&&ids.has(edge.target));
-  return {...scene.graph,nodes,edges,visualTotal:nodes.length};
-}
-
-function Inspector({node,snapshot,onClose,compact}:{node:AtlasNode|null;snapshot:AtlasV3Snapshot;onClose:()=>void;compact:boolean}){
-  const entity=node&&!node.presentationOnly?snapshot.entities?.[node.id]:null;
-  const kind=node?.presentationOnly?'APRESENTAÇÃO':'CANONICAL';
-  return <aside id="atlas-v3-inspector" role={compact?'dialog':'complementary'} className="inspector-sheet is-open" aria-modal={compact?true:undefined} aria-label="Inspector do Atlas">
-    <div className="inspector-grab" aria-hidden="true"/>
-    <header className="inspector-head"><div><span>{kind}</span><h2>{node?displayLabel(node):'Selecione um nó'}</h2></div><button className="icon-button inspector-close" type="button" onClick={onClose} aria-label="Fechar inspector">×</button></header>
-    <div className="inspector-body">
-      {node?<>
-        <div className="inspector-grid"><span>tipo<b>{String(node.type||'—')}</b></span><span>status<b>{String(node.status||'—')}</b></span><span>domínio<b>{String(node.domain||'—')}</b></span><span>origem<b>{node.presentationOnly?'visual':'TOWER_V06'}</b></span></div>
-        <p className="canonical-id">{node.id}</p>
-        {entity&&<dl className="entity-fields">{Object.entries(entity).filter(([key])=>!['id','label'].includes(key)).slice(0,8).map(([key,value])=><div key={key}><dt>{key}</dt><dd>{Array.isArray(value)?value.join(', '):String(value??'—')}</dd></div>)}</dl>}
-      </>:<p className="inspector-empty">Toque ou clique em uma entidade. O painel mostra somente o que existe na projeção publicada.</p>}
-    </div>
-  </aside>;
-}
+function Inspector({node,snapshot,onClose,compact}:{node:AtlasNode|null;snapshot:AtlasV3Snapshot;onClose:()=>void;compact:boolean}){const entity=node&&!node.presentationOnly?snapshot.entities?.[node.id]:null;const kind=node?.presentationOnly?'APRESENTAÇÃO':'CANONICAL';return <aside id="atlas-v3-inspector" role={compact?'dialog':'complementary'} className="inspector-sheet is-open" aria-modal={compact?true:undefined} aria-label="Inspector do Atlas"><div className="inspector-grab" aria-hidden="true"/><header className="inspector-head"><div><span>{kind}</span><h2>{node?displayLabel(node):'Selecione um nó'}</h2></div><button className="icon-button inspector-close" type="button" onClick={onClose} aria-label="Fechar inspector">×</button></header><div className="inspector-body">{node?<><div className="inspector-grid"><span>tipo<b>{String(node.type||'—')}</b></span><span>status<b>{String(node.status||'—')}</b></span><span>domínio<b>{String(node.domain||'—')}</b></span><span>origem<b>{node.presentationOnly?'visual':'TOWER_V06'}</b></span></div><p className="canonical-id">{node.id}</p>{entity&&<dl className="entity-fields">{Object.entries(entity).filter(([key])=>!['id','label'].includes(key)).slice(0,8).map(([key,value])=><div key={key}><dt>{key}</dt><dd>{Array.isArray(value)?value.join(', '):String(value??'—')}</dd></div>)}</dl>}</>:<p className="inspector-empty">Toque ou clique em uma entidade. O painel mostra somente o que existe na projeção publicada.</p>}</div></aside>}
 
 export function AtlasV3App(){
-  const compact=useMedia('(max-width: 760px)');
-  const reducedMotion=useMedia('(prefers-reduced-motion: reduce)');
-  const [snapshot,setSnapshot]=useState<AtlasV3Snapshot|null>(null);
-  const [scene,setScene]=useState<AtlasV3Scene|null>(null);
-  const [layer,setLayer]=useState<AtlasV3Layer>('SCIENCE');
-  const [focusId,setFocusId]=useState(ATLAS_V3_PRESENTATION_ROOT);
-  const [focusHistory,setFocusHistory]=useState<string[]>([]);
-  const [selectedId,setSelectedId]=useState<string|null>(null);
-  const [query,setQuery]=useState('');
-  const [searchOpen,setSearchOpen]=useState(false);
-  const [inspectorOpen,setInspectorOpen]=useState(false);
-  const [loading,setLoading]=useState(true);
-  const [error,setError]=useState<string|null>(null);
-
-  const load=useCallback(async()=>{
-    setLoading(true);setError(null);
-    try{
-      const result=await loadAtlasV3Snapshot(window.location.href);
-      const nextScene=buildAtlasV3Scene(result.snapshot);
-      setSnapshot(result.snapshot);setScene(nextScene);setFocusId(nextScene.focusId);setFocusHistory([]);setSelectedId(null);setInspectorOpen(false);
-    }catch(reason){setSnapshot(null);setScene(null);setError(reason instanceof Error?reason.message:String(reason))}
-    finally{setLoading(false)}
-  },[]);
-
-  useEffect(()=>{void load()},[load]);
-  useEffect(()=>{document.title='NEXO Atlas · Neural V3'},[]);
-
-  const layerGraph=useMemo(()=>scene?graphForLayer(scene,layer):null,[layer,scene]);
-  useEffect(()=>{if(layerGraph&&!layerGraph.nodes.some(node=>node.id===focusId)){setFocusId(ATLAS_V3_PRESENTATION_ROOT);setFocusHistory([])}},[focusId,layerGraph]);
-
-  const canonicalIds=useMemo(()=>scene?.canonicalIds||new Set<string>(),[scene]);
-  const selectedNode=useMemo(()=>scene?.graph.nodes.find(node=>node.id===selectedId)||null,[scene,selectedId]);
-  const searchResults=useMemo(()=>{
-    if(!scene||!query.trim())return [];
-    const q=query.trim().toLocaleLowerCase('pt-BR');
-    return scene.graph.nodes.filter(node=>canonicalIds.has(node.id)&&`${node.id} ${node.label||''} ${node.type||''} ${node.domain||''}`.toLocaleLowerCase('pt-BR').includes(q)).slice(0,8);
-  },[canonicalIds,query,scene]);
-
-  const focusEntity=useCallback((id:string)=>{
-    if(!scene||!canonicalIds.has(id))return;
-    setFocusHistory(history=>focusId===id?history:[...history,focusId].slice(-12));
-    setFocusId(id);setSelectedId(id);setInspectorOpen(true);setSearchOpen(false);setQuery('');
-  },[canonicalIds,focusId,scene]);
-
-  const openNode=useCallback((node:AtlasNode)=>{
-    setFocusHistory(history=>focusId===node.id?history:[...history,focusId].slice(-12));
-    setFocusId(node.id);setSelectedId(node.id);setInspectorOpen(compact);
-  },[compact,focusId]);
-
-  const selectNode=useCallback((node:AtlasNode)=>{setSelectedId(node.id);setInspectorOpen(true)},[]);
-  const goHome=useCallback(()=>{setFocusId(ATLAS_V3_PRESENTATION_ROOT);setFocusHistory([]);setSelectedId(null);setInspectorOpen(false)},[]);
-  const goBack=useCallback(()=>{
-    if(!focusHistory.length){setFocusId(ATLAS_V3_PRESENTATION_ROOT);setSelectedId(null);return}
-    const previous=focusHistory[focusHistory.length-1];
-    setFocusHistory(history=>history.slice(0,-1));setFocusId(previous);setSelectedId(previous===ATLAS_V3_PRESENTATION_ROOT?null:previous);setInspectorOpen(false);
-  },[focusHistory]);
-
-  useEffect(()=>{
-    const onKey=(event:KeyboardEvent)=>{
-      if((event.metaKey||event.ctrlKey)&&event.key.toLowerCase()==='k'){event.preventDefault();setSearchOpen(true);return}
-      if(event.key==='Escape'){
-        if(inspectorOpen){setInspectorOpen(false);return}
-        if(searchOpen){setSearchOpen(false);setQuery('');return}
-        if(focusId!==ATLAS_V3_PRESENTATION_ROOT)goBack();
-      }
-    };
-    window.addEventListener('keydown',onKey);return()=>window.removeEventListener('keydown',onKey);
-  },[focusId,goBack,inspectorOpen,searchOpen]);
-
-  const counts=snapshot?.universe?.counts||{};
-  const statusText=error?'projeção indisponível':loading?'carregando projeção':`${snapshot?.manifest.completeness||'SNAPSHOT'} · ${snapshot?.manifest.freshness||'SNAPSHOT'}`;
-
+  const compact=useMedia('(max-width: 760px)');const reducedMotion=useMedia('(prefers-reduced-motion: reduce)');
+  const [snapshot,setSnapshot]=useState<AtlasV3Snapshot|null>(null);const [scene,setScene]=useState<AtlasV3Scene|null>(null);const [layer,setLayer]=useState<AtlasV3Layer>('SCIENCE');const [focusId,setFocusId]=useState(ATLAS_V3_PRESENTATION_ROOT);const [focusHistory,setFocusHistory]=useState<string[]>([]);const [selectedId,setSelectedId]=useState<string|null>(null);const [query,setQuery]=useState('');const [searchOpen,setSearchOpen]=useState(false);const [inspectorOpen,setInspectorOpen]=useState(false);const [loading,setLoading]=useState(true);const [error,setError]=useState<string|null>(null);
+  const load=useCallback(async()=>{setLoading(true);setError(null);try{const result=await loadAtlasV3Snapshot(window.location.href);const nextScene=buildAtlasV3Scene(result.snapshot);setSnapshot(result.snapshot);setScene(nextScene);setFocusId(nextScene.focusId);setFocusHistory([]);setSelectedId(null);setInspectorOpen(false)}catch(reason){setSnapshot(null);setScene(null);setError(reason instanceof Error?reason.message:String(reason))}finally{setLoading(false)}},[]);
+  useEffect(()=>{void load()},[load]);useEffect(()=>{document.title='NEXO Atlas · Neural V3'},[]);
+  const layerGraph=useMemo(()=>scene?graphForLayer(scene,layer):null,[layer,scene]);useEffect(()=>{if(layerGraph&&!layerGraph.nodes.some(node=>node.id===focusId)){setFocusId(ATLAS_V3_PRESENTATION_ROOT);setFocusHistory([])}},[focusId,layerGraph]);
+  const canonicalIds=useMemo(()=>scene?.canonicalIds||new Set<string>(),[scene]);const selectedNode=useMemo(()=>scene?.graph.nodes.find(node=>node.id===selectedId)||null,[scene,selectedId]);
+  const searchResults=useMemo(()=>{if(!scene||!query.trim())return[];const q=query.trim().toLocaleLowerCase('pt-BR');return scene.graph.nodes.filter(node=>canonicalIds.has(node.id)&&`${node.id} ${node.label||''} ${node.type||''} ${node.domain||''}`.toLocaleLowerCase('pt-BR').includes(q)).slice(0,8)},[canonicalIds,query,scene]);
+  const focusEntity=useCallback((id:string)=>{if(!scene||!canonicalIds.has(id))return;const node=scene.graph.nodes.find(candidate=>candidate.id===id);if(!node)return;setLayer(layerForNode(node));setFocusHistory(history=>focusId===id?history:[...history,focusId].slice(-12));setFocusId(id);setSelectedId(id);setInspectorOpen(true);setSearchOpen(false);setQuery('')},[canonicalIds,focusId,scene]);
+  const openNode=useCallback((node:AtlasNode)=>{setFocusHistory(history=>focusId===node.id?history:[...history,focusId].slice(-12));setFocusId(node.id);setSelectedId(node.id);setInspectorOpen(compact)},[compact,focusId]);
+  const selectNode=useCallback((node:AtlasNode)=>{setSelectedId(node.id);setInspectorOpen(true)},[]);const goHome=useCallback(()=>{setFocusId(ATLAS_V3_PRESENTATION_ROOT);setFocusHistory([]);setSelectedId(null);setInspectorOpen(false)},[]);
+  const goBack=useCallback(()=>{if(!focusHistory.length){setFocusId(ATLAS_V3_PRESENTATION_ROOT);setSelectedId(null);return}const previous=focusHistory[focusHistory.length-1];setFocusHistory(history=>history.slice(0,-1));setFocusId(previous);setSelectedId(previous===ATLAS_V3_PRESENTATION_ROOT?null:previous);setInspectorOpen(false)},[focusHistory]);
+  useEffect(()=>{const onKey=(event:KeyboardEvent)=>{if((event.metaKey||event.ctrlKey)&&event.key.toLowerCase()==='k'){event.preventDefault();setSearchOpen(true);return}if(event.key==='Escape'){if(inspectorOpen){setInspectorOpen(false);return}if(searchOpen){setSearchOpen(false);setQuery('');return}if(focusId!==ATLAS_V3_PRESENTATION_ROOT)goBack()}};window.addEventListener('keydown',onKey);return()=>window.removeEventListener('keydown',onKey)},[focusId,goBack,inspectorOpen,searchOpen]);
+  const counts=snapshot?.universe?.counts||{};const statusText=error?'projeção indisponível':loading?'carregando projeção':`${snapshot?.manifest.completeness||'SNAPSHOT'} · ${snapshot?.manifest.freshness||'SNAPSHOT'}`;
   return <main className="atlas-v3-shell" data-reduced-motion={reducedMotion?'true':'false'} aria-busy={loading}>
-    <section className="cinematic-stage" data-testid="atlas-v3-stage" aria-label="Mapa neural tridimensional do NEXO" style={{touchAction:'none'}}>
-      {layerGraph&&<AtlasCanvas graph={layerGraph} focusId={focusId} selectedId={selectedId} onSelect={selectNode} onOpen={openNode} reducedMotion={reducedMotion} compact={compact} loading={loading}/>} 
-      {loading&&!layerGraph&&<div className="projection-state loading-state" role="status"><span className="loader-orbit"/><b>Materializando universo</b><small>TOWER_V06 → Projection V3 → cena 3D</small></div>}
-      {error&&<div className="projection-state error-state" role="alert"><b>Projeção indisponível</b><p>O Atlas não inventará um estado substituto.</p><small>{error}</small><button type="button" onClick={()=>void load()}>Tentar novamente</button></div>}
-      {!loading&&!error&&layerGraph&&layerGraph.nodes.length<=1&&<div className="projection-state empty-state"><b>Nenhuma entidade encontrada</b><small>Esta camada não possui entidades publicadas neste snapshot.</small></div>}
-    </section>
-
-    <header className="top-hud glass-panel">
-      <div className="brand-block"><span className="brand-orbit" aria-hidden="true">◎</span><div><strong>NEXO Atlas</strong><small>NEURAL V3 · CINEMATIC 3D</small></div></div>
-      <div className="tower-status"><i/><span><b>TOWER_V06</b><small>{statusText}</small></span></div>
-    </header>
-
+    <section className="cinematic-stage" data-testid="atlas-v3-stage" aria-label="Mapa neural tridimensional do NEXO" style={{touchAction:'none'}}>{layerGraph&&<AtlasCanvas graph={layerGraph} focusId={focusId} selectedId={selectedId} onSelect={selectNode} onOpen={openNode} reducedMotion={reducedMotion} compact={compact} loading={loading}/>} {loading&&!layerGraph&&<div className="projection-state loading-state" role="status"><span className="loader-orbit"/><b>Materializando universo</b><small>TOWER_V06 → Projection V3 → cena 3D</small></div>}{error&&<div className="projection-state error-state" role="alert"><b>Projeção indisponível</b><p>O Atlas não inventará um estado substituto.</p><small>{error}</small><button type="button" onClick={()=>void load()}>Tentar novamente</button></div>}{!loading&&!error&&layerGraph&&layerGraph.nodes.length<=1&&<div className="projection-state empty-state"><b>Nenhuma entidade encontrada</b><small>Esta camada não possui entidades publicadas neste snapshot.</small></div>}</section>
+    <header className="top-hud glass-panel"><div className="brand-block"><span className="brand-orbit" aria-hidden="true">◎</span><div><strong>NEXO Atlas</strong><small>NEURAL V3 · CINEMATIC 3D</small></div></div><div className="tower-status"><i/><span><b>TOWER_V06</b><small>{statusText}</small></span></div></header>
     <div className="scene-caption" aria-live="polite"><span>{layer}</span><b>{focusId===ATLAS_V3_PRESENTATION_ROOT?'NEXO':displayLabel(scene?.graph.nodes.find(node=>node.id===focusId))}</b><small>{counts.nodes??0} nós · {counts.edges??0} relações · fingerprint {short(snapshot?.manifest.fingerprint||'—',20)}</small></div>
-
-    <nav className="layer-rail glass-panel" aria-label="Camadas do Atlas">
-      {LAYERS.map(item=><button key={item} type="button" className={`layer-button ${layer===item?'active':''}`} aria-pressed={layer===item} onClick={()=>setLayer(item)}>{item}</button>)}
-    </nav>
-
-    <div className="control-dock glass-panel" aria-label="Navegação do grafo">
-      <button className="icon-button" type="button" onClick={goBack} disabled={!focusHistory.length&&focusId===ATLAS_V3_PRESENTATION_ROOT} aria-label="Voltar">←</button>
-      <button className="icon-button home-button" type="button" onClick={goHome} aria-label="Voltar ao NEXO">◎</button>
-      <button className="icon-button search-trigger" type="button" onClick={()=>setSearchOpen(value=>!value)} aria-expanded={searchOpen} aria-controls="atlas-v3-search-panel" aria-label="Buscar entidade">⌕</button>
-      <button className="icon-button" type="button" onClick={()=>setInspectorOpen(value=>!value)} aria-expanded={inspectorOpen} aria-controls="atlas-v3-inspector" aria-label="Abrir inspector">◫</button>
-    </div>
-
-    {searchOpen&&<section id="atlas-v3-search-panel" className="search-panel glass-panel is-open" aria-label="Busca no Atlas">
-      <label htmlFor="atlas-v3-search">Buscar campanha, claim, teste ou work</label>
-      <div className="search-row"><span>⌕</span><input id="atlas-v3-search" autoFocus value={query} onChange={event=>setQuery(event.target.value)} placeholder="Buscar na projeção…" autoComplete="off"/><kbd>Esc</kbd></div>
-      {query&&<div className="search-results">{searchResults.length?searchResults.map(node=><button className="search-result" type="button" key={node.id} onClick={()=>focusEntity(node.id)}><b>{displayLabel(node)}</b><small>{String(node.type||'—')} · {String(node.status||'—')}</small></button>):<p>Nenhuma entidade encontrada.</p>}</div>}
-    </section>}
-
+    <nav className="layer-rail glass-panel" aria-label="Camadas do Atlas">{LAYERS.map(item=><button key={item} type="button" className={`layer-button ${layer===item?'active':''}`} aria-pressed={layer===item} onClick={()=>setLayer(item)}>{item}</button>)}</nav>
+    <div className="control-dock glass-panel" aria-label="Navegação do grafo"><button className="icon-button" type="button" onClick={goBack} disabled={!focusHistory.length&&focusId===ATLAS_V3_PRESENTATION_ROOT} aria-label="Voltar">←</button><button className="icon-button home-button" type="button" onClick={goHome} aria-label="Voltar ao NEXO">◎</button><button className="icon-button search-trigger" type="button" onClick={()=>setSearchOpen(value=>!value)} aria-expanded={searchOpen} aria-controls="atlas-v3-search-panel" aria-label="Buscar entidade">⌕</button><button className="icon-button" type="button" onClick={()=>setInspectorOpen(value=>!value)} aria-expanded={inspectorOpen} aria-controls="atlas-v3-inspector" aria-label="Abrir inspector">◫</button></div>
+    {searchOpen&&<section id="atlas-v3-search-panel" className="search-panel glass-panel is-open" aria-label="Busca no Atlas"><label htmlFor="atlas-v3-search">Buscar campanha, claim, teste ou work</label><div className="search-row"><span>⌕</span><input id="atlas-v3-search" autoFocus value={query} onChange={event=>setQuery(event.target.value)} placeholder="Buscar na projeção…" autoComplete="off"/><kbd>Esc</kbd></div>{query&&<div className="search-results">{searchResults.length?searchResults.map(node=><button className="search-result" type="button" key={node.id} onClick={()=>focusEntity(node.id)}><b>{displayLabel(node)}</b><small>{String(node.type||'—')} · {String(node.status||'—')}</small></button>):<p>Nenhuma entidade encontrada.</p>}</div>}</section>}
     {snapshot&&inspectorOpen&&<Inspector node={selectedNode} snapshot={snapshot} compact={compact} onClose={()=>setInspectorOpen(false)}/>} 
-
     <footer className="runtime-strip"><span>ORBITAR: arrastar · ZOOM: roda/pinça · PAN: botão direito/dois dedos</span><span>{snapshot?.manifest.sourceVersion||'aguardando Tower'}</span></footer>
-  </main>;
+  </main>
 }
