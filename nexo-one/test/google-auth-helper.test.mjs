@@ -5,10 +5,13 @@ import {SCOPES,pkceChallenge,buildAuthorizationUrl,readOAuthCallback} from '../s
 const expectedScopes=[
   'https://www.googleapis.com/auth/drive.readonly',
   'https://www.googleapis.com/auth/gmail.readonly',
-  'https://www.googleapis.com/auth/calendar.readonly'
+  'https://www.googleapis.com/auth/gmail.compose',
+  'https://www.googleapis.com/auth/calendar.readonly',
+  'https://www.googleapis.com/auth/calendar.events',
+  'https://www.googleapis.com/auth/spreadsheets'
 ];
 
-test('google auth helper requests only the required read-only scopes and PKCE',()=>{
+test('google auth helper requests the bounded PERSONAL_LOOP_V1 scopes and PKCE',()=>{
   assert.deepEqual([...SCOPES].sort(),expectedScopes.sort());
   const challenge=pkceChallenge('abc');
   assert.equal(challenge,'ungWv48Bz-pBQUDeXa4iI7ADYaOWF3qctBD_YfIAFa0');

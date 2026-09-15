@@ -5,6 +5,8 @@ import {googleToken} from './google.mjs';
 const REQUIRED_HEADERS=['record_type','record_id','status','title','detail','source','updated_at'];
 const DEFAULT_ACTION_REGISTER_ID='1twRpSoZCOXv77YyCh_5V9nAS2PM2nqzex2A37eI2Zas';
 const AUTHORITY_GID='337426832',CAPABILITY_GID='579884733';
+const LOOP_STATUSES=new Set(['NEEDS_ME','WAITING_OTHER','SCHEDULED','BLOCKED','DONE']);
+const PERSONAL_TYPES={task:'Task',commitment:'Commitment',decision:'Decision'};
 
 function sheetUrl(id,gid=''){
   if(typeof id!=='string'||!id||!/^[A-Za-z0-9_-]+$/.test(id))throw new ProviderError('AUTH_REQUIRED');
@@ -22,6 +24,7 @@ function normalizedRevision(items){
   const semantic=items.map(x=>({id:x.id,title:x.title,status:x.status||'',authority:x.authority,observedAt:x.observedAt,summary:x.summary||''}));
   return createHash('sha256').update(JSON.stringify(semantic)).digest('hex');
 }
+function payload(value){try{return value?JSON.parse(value):{};}catch{throw new ProviderError('UNAVAILABLE');}}
 
 function normalizeSheet(data,{id,now}){
   if(!Array.isArray(data.values)||!Array.isArray(data.values[0]))throw new ProviderError('UNAVAILABLE');
@@ -35,9 +38,11 @@ function normalizeSheet(data,{id,now}){
     const recordType=get('record_type'),recordId=get('record_id'),title=get('title'),status=get('status').toUpperCase(),detail=get('detail'),source=get('source'),updatedRaw=get('updated_at');
     const updatedMs=Date.parse(updatedRaw);
     if(!recordType||!recordId||!title||!Number.isFinite(updatedMs))throw new ProviderError('UNAVAILABLE');
+    const personalType=PERSONAL_TYPES[recordType]||null,recordPayload=personalType?payload(get('payload_json')):{};
     const normalized=item('nexo',`${recordType}:${recordId}`,title,sourceRef,readAt,{
-      kind:recordType==='action'?'ACTION':'ENTITY',contextId:'NEXO',authority:source==='NEXO · SSOT CANONICAL'?'CANONICAL':'DERIVED',
-      summary:[detail,source].filter(Boolean).join(' · '),...(status==='BLOCKED'?{status:'BLOCKED'}:{}),sourceRevision:new Date(updatedMs).toISOString()
+      kind:recordType==='action'?'ACTION':'ENTITY',contextId:personalType?'PERSONAL':'NEXO',authority:source==='NEXO · SSOT CANONICAL'?'CANONICAL':'DERIVED',
+      summary:[detail,source].filter(Boolean).join(' · '),...(LOOP_STATUSES.has(status)?{status}:{}),...(personalType?{personalType}:{}),
+      ...(recordPayload.due_at?{dueAt:String(recordPayload.due_at)}:{}),...(recordPayload.end_at?{endAt:String(recordPayload.end_at)}:{}),sourceRevision:new Date(updatedMs).toISOString()
     });
     const observedAt=new Date(updatedMs).toISOString();
     normalized.observedAt=observedAt;normalized.freshness={...normalized.freshness,state:'SNAPSHOT',observedAt};items.push(normalized);

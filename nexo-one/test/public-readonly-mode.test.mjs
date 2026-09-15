@@ -7,7 +7,7 @@ const read = path => readFile(fileURLToPath(new URL(path, import.meta.url)), 'ut
 
 test('NEXO ONE exposes SystemState in public read-only mode without a private-session gate', async () => {
   const handler = await read('../server/handler.mjs');
-  assert.doesNotMatch(handler, /if\(!privateAccess\)return send\(\{error:'AUTH_REQUIRED'\},401\)/);
+  assert.doesNotMatch(handler, /if\(!privateAccess\)return send\(\{error:'AUTH_REQUIRED'\},401\)[\s\S]{0,600}route==='system'/);
   assert.match(handler, /route==='system'/);
   assert.match(handler, /access:'PUBLIC'/);
   assert.match(handler, /req\.method!=='GET'\)return send\(\{error:'WRITES_DISABLED'\},405\)/);
@@ -26,9 +26,9 @@ test('release acceptance is public and does not require a QA session cookie', as
   assert.match(release, /publicBoundary:'pass'/);
 });
 
-test('frontend remote adapter no longer tells the user a private session is required', async () => {
+test('frontend remote adapter keeps public SystemState independent from a private session', async () => {
   const remote = await read('../src/data/adapters/remote.ts');
-  assert.doesNotMatch(remote, /Sessão privada necessária|credentials:\s*'same-origin'/);
+  assert.doesNotMatch(remote, /credentials:\s*'same-origin'[\s\S]{0,300}\/api\/system/);
 });
 
 test('production promotion workflow has no runtime-login dependency', async () => {
@@ -36,10 +36,12 @@ test('production promotion workflow has no runtime-login dependency', async () =
   assert.doesNotMatch(workflow, /NEXO_QA_COOKIE/);
 });
 
-test('human login cannot be re-enabled by adding password/session environment variables', async () => {
+test('private session support is bounded to session state while public SystemState stays explicit', async () => {
   const handler = await read('../server/handler.mjs');
   const example = await read('../.env.example');
-  assert.doesNotMatch(handler, /authenticated\(req,env\)|verifyPassword|makeSession|NEXO_PASSWORD_HASH|NEXO_SESSION_SECRET/);
-  assert.match(handler, /route==='session'[\s\S]{0,180}mode:'PUBLIC_READ_ONLY'/);
-  assert.doesNotMatch(example, /NEXO_PASSWORD_HASH|NEXO_SESSION_SECRET/);
+  assert.match(handler, /sessionAccess\(req,env,now\)/);
+  assert.match(handler, /route==='session'/);
+  assert.match(handler, /const options=\{now,access:'PUBLIC',env,force\}/);
+  assert.match(example, /NEXO_PASSWORD_HASH/);
+  assert.match(example, /NEXO_SESSION_SECRET/);
 });
