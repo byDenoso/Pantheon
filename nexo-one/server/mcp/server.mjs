@@ -1,6 +1,7 @@
 import {createMcpHandler,McpServer} from '@modelcontextprotocol/server';
 import * as z from 'zod/v4';
-import {executeMcpTool,MCP_TOOL_NAMES} from './tools.mjs';
+import {executeMcpTool,MCP_TOOL_NAMES as CORE_MCP_TOOL_NAMES} from './tools.mjs';
+import {STYLE_POLICY,buildStyleInstruction,validateStyleText} from '../policy/style-policy.mjs';
 
 const READ_ONLY_ANNOTATIONS=Object.freeze({
   readOnlyHint:true,
@@ -8,6 +9,9 @@ const READ_ONLY_ANNOTATIONS=Object.freeze({
   idempotentHint:true,
   openWorldHint:false
 });
+
+const STYLE_MCP_TOOL_NAMES=Object.freeze(['get_style_policy','validate_style_text']);
+export const NEXO_MCP_TOOL_NAMES=Object.freeze([...CORE_MCP_TOOL_NAMES,...STYLE_MCP_TOOL_NAMES]);
 
 const TOOL_DEFINITIONS=Object.freeze({
   get_science_state:{
@@ -53,6 +57,14 @@ const TOOL_DEFINITIONS=Object.freeze({
   get_provenance:{
     description:'Read provenance for one public entity or for the current science state.',
     inputSchema:z.object({id:z.string().optional(),entityId:z.string().optional(),entity_id:z.string().optional()})
+  },
+  get_style_policy:{
+    description:'Read the canonical NEXO writing style policy and generator instruction.',
+    inputSchema:z.object({})
+  },
+  validate_style_text:{
+    description:'Validate candidate generated text against the canonical NEXO writing style policy.',
+    inputSchema:z.object({text:z.string().max(200000)})
   }
 });
 
@@ -63,16 +75,23 @@ function toolResult(payload){
   };
 }
 
+export async function executeNexoMcpTool({readSnapshot},name,args={}){
+  if(name==='get_style_policy')return {policy:STYLE_POLICY,instruction:buildStyleInstruction()};
+  if(name==='validate_style_text')return {policyId:STYLE_POLICY.id,...validateStyleText(args.text)};
+  if(typeof readSnapshot!=='function')throw new TypeError('MCP_READ_SNAPSHOT_REQUIRED');
+  return executeMcpTool(await readSnapshot(),name,args);
+}
+
 export function createNexoMcpServer({readSnapshot}){
   if(typeof readSnapshot!=='function')throw new TypeError('MCP_READ_SNAPSHOT_REQUIRED');
-  const server=new McpServer({name:'nexo-science',version:'1.0.0'});
-  for(const name of MCP_TOOL_NAMES){
+  const server=new McpServer({name:'nexo-science',version:'1.1.0'});
+  for(const name of NEXO_MCP_TOOL_NAMES){
     const definition=TOOL_DEFINITIONS[name];
     server.registerTool(name,{
       description:definition.description,
       inputSchema:definition.inputSchema,
       annotations:READ_ONLY_ANNOTATIONS
-    },async args=>toolResult(await executeMcpTool(await readSnapshot(),name,args)));
+    },async args=>toolResult(await executeNexoMcpTool({readSnapshot},name,args)));
   }
   return server;
 }

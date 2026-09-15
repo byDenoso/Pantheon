@@ -176,8 +176,8 @@ export function IntegrityView({ state }: { state: SystemState }) {
   return (
     <>
       <p className="rule-note">
-        Esta tela lista o que a interface <strong>não</strong> consegue provar. Um item aqui não é um alarme:
-        é uma lacuna de evidência declarada explicitamente.
+        Esta tela lista o que a interface <strong>não</strong> consegue provar. Cada item representa uma lacuna de evidência
+        declarada explicitamente, sem classificação automática como alarme.
       </p>
       <ul className="integrity-list">
         {issues.map(issue => (
