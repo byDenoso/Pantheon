@@ -12,6 +12,7 @@ import { InstancedNodes } from './InstancedNodes';
 import { InstancedFilaments } from './InstancedFilaments';
 import { LabelOverlay, labelStatus, labelText, labelType, placeProjectedLabels, type ProjectedLabel } from './LabelOverlay';
 import { CanvasGraphFallback } from './CanvasGraphFallback';
+import { graphRenderBudget } from './neural-visuals.mjs';
 
 type Props={
   graph:AtlasGraph|null;
@@ -233,11 +234,12 @@ export function AtlasCanvas({graph,focusId,selectedId,onSelect,onOpen,reducedMot
   const stageRef=useRef<HTMLDivElement>(null);
   const motion=useRef<MotionState>({current:new Map(),target:new Map()});
   const sourceNodes=graph?.nodes||[];
+  const renderBudget=useMemo(()=>graphRenderBudget({width:typeof window==='undefined'?(compact?390:1280):window.innerWidth,compact}),[compact]);
   const lod=useMemo(()=>selectSemanticLOD(sourceNodes,{
     selectedId,focusId,
-    visibleBudget:compact?90:180,
-    labelBudget:compact?20:36
-  }),[compact,focusId,selectedId,sourceNodes]);
+    visibleBudget:renderBudget.visibleBudget,
+    labelBudget:renderBudget.labelBudget
+  }),[focusId,renderBudget,selectedId,sourceNodes]);
   const visible=useMemo(()=>sourceNodes.filter(node=>lod.visibleIds.has(node.id)),[lod.visibleIds,sourceNodes]);
   const nodes=useMemo(()=>buildOrbitalNodes(visible,focusId,graph?.edges||[],presentationMode),[focusId,graph?.edges,presentationMode,visible]);
   const nodeById=useMemo(()=>new Map(nodes.map(node=>[node.id,node])),[nodes]);
@@ -279,7 +281,7 @@ export function AtlasCanvas({graph,focusId,selectedId,onSelect,onOpen,reducedMot
       <Canvas
         className="atlas-webgpu-canvas"
         frameloop={renderActive ? 'always' : 'never'}
-        dpr={[1,2]}
+        dpr={[1,compact?1.35:1.75]}
         camera={{position:[0,0,presentationMode==='canvas'?18.2:15.5],fov:presentationMode==='canvas'?42:48,near:0.05,far:120}}
         gl={async defaults=>(await createAtlasRenderer(defaults.canvas as HTMLCanvasElement)).renderer as never}
       >

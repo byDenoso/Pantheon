@@ -3,6 +3,7 @@ import { useFrame } from '@react-three/fiber';
 import { Color, InstancedMesh, Matrix4, type MeshBasicMaterial, Object3D, Quaternion, Vector3 } from 'three';
 import { createFilamentMaterial } from './materials';
 import type { AtlasEdge, PositionedNode } from './types';
+import { edgeVisualRole } from './neural-visuals.mjs';
 
 const EDGE_COLOR: Record<string,string> = {
   CO_DECLARED:'#b695ff', CROSS_DOMAIN:'#b695ff', CONTAINS:'#496e93',
@@ -28,7 +29,9 @@ export function InstancedFilaments({edges,nodes,positions:sharedPositions,focusI
     target.count=valid.length;
     valid.forEach((edge,index)=>{
       const kind=String(edge.type||'').toUpperCase();
-      const color=new Color(palette[kind]||(theme==='light'?'#416b91':'#36526f'));
+      const role=edgeVisualRole(edge);
+      const rolePalette=theme==='light'?{hierarchy:'#3d6f9e',learning:'#7654c7',evidence:'#168d72',attention:'#c94f69',association:'#416b91'}:{hierarchy:'#496e93',learning:'#b695ff',evidence:'#69dec0',attention:'#f38999',association:'#36526f'};
+      const color=new Color(rolePalette[role]||palette[kind]||(theme==='light'?'#416b91':'#36526f'));
       const active=edge.source===focusId||edge.target===focusId||edge.source===selectedId||edge.target===selectedId;
       if(active) color.lerp(new Color(theme==='light'?'#175d92':'#d4f5ff'),theme==='light'?0.28:0.46);
       target.setColorAt(index,color);
@@ -47,7 +50,7 @@ export function InstancedFilaments({edges,nodes,positions:sharedPositions,focusI
       const midpoint=a.clone().add(b).multiplyScalar(0.5);
       object.position.copy(midpoint);object.quaternion.copy(new Quaternion().setFromUnitVectors(up,direction.normalize()));
       const active=edge.source===focusId||edge.target===focusId||edge.source===selectedId||edge.target===selectedId;
-      object.scale.set(active ? 0.028 : 0.011,length,active ? 0.028 : 0.011);object.updateMatrix();target.setMatrixAt(index,matrix.copy(object.matrix));
+      const role=edgeVisualRole(edge);const width=role==='hierarchy'?0.014:role==='attention'?0.018:role==='evidence'?0.012:0.009;object.scale.set(active ? width*2.1 : width,length,active ? width*2.1 : width);object.updateMatrix();target.setMatrixAt(index,matrix.copy(object.matrix));
     });
     target.instanceMatrix.needsUpdate=true;
     const base=theme==='light'?0.62:0.76;

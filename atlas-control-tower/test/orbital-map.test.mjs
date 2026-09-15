@@ -102,7 +102,7 @@ test('HTML labels stay outside the GPU scene and are semantically bounded',()=>{
  assert.match(overlay,/atlas-label-overlay/);
  assert.match(overlay,/labelIds\.has/);
  assert.doesNotMatch(overlay,/<Html/);
- assert.match(canvas,/labelBudget:compact\?20:36/);
+ assert.match(canvas,/graphRenderBudget/);
 });
 
 test('decision summaries remain derived and never expose private reasoning',async()=>{

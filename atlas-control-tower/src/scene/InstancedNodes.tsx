@@ -5,6 +5,7 @@ import { Color, InstancedMesh, Matrix4, MeshBasicMaterial, Object3D, Vector3 } f
 import { createNodeAuraMaterial, createNodeMaterial } from './materials';
 import { encodePickId } from './gpu-picking';
 import type { PositionedNode } from './types';
+import { nodeVisualRole } from './neural-visuals.mjs';
 
 const STATUS_COLOR: Record<string,string> = {
   SUPPORTED:'#69dec0', APPROVED:'#69dec0', SUCCESS:'#69dec0',
@@ -37,6 +38,11 @@ function nodeRadius(node: PositionedNode, selectedId?: string | null, focusId?: 
 }
 
 function visualColor(node: PositionedNode, theme:'dark'|'light') {
+  const role=nodeVisualRole(node);
+  const roleColors=theme==='light'
+    ? {core:'#145b91',hub:'#1f6fae',automation:'#a26700',evidence:'#087f68',attention:'#a23b55',signal:'#176fae',entity:'#4c6d88'}
+    : {core:'#b9ecff',hub:'#74b9ff',automation:'#ffc86d',evidence:'#69deb0',attention:'#ff7188',signal:'#6bceff',entity:'#8ca8c4'};
+  if(roleColors[role])return new Color(roleColors[role]);
   const status=String(node.status||'').toUpperCase();
   const type=String(node.type||'').toUpperCase();
   const statuses=theme==='light'?LIGHT_STATUS_COLOR:STATUS_COLOR;

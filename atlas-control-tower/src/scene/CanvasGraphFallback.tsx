@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { Vector3 } from 'three';
 import type { AtlasEdge, PositionedNode } from './types';
+import { edgeVisualRole, graphRenderBudget, nodeVisualRole } from './neural-visuals.mjs';
 
 type Props = {
   nodes: PositionedNode[];
@@ -41,6 +42,12 @@ function radiusFor(node: PositionedNode, selected: boolean) {
 }
 
 function colorFor(node: PositionedNode, theme:'dark'|'light') {
+  const role=nodeVisualRole(node);
+  if(role==='attention')return theme==='light'?'#a23b55':'#ff7188';
+  if(role==='automation')return theme==='light'?'#a26700':'#ffc86d';
+  if(role==='evidence')return theme==='light'?'#087f68':'#69deb0';
+  if(role==='hub')return theme==='light'?'#1f6fae':'#74b9ff';
+  if(role==='core')return theme==='light'?'#145b91':'#b9ecff';
   const type = String(node.type || '').toUpperCase();
   if (theme === 'light') {
     if (type === 'RESULT' || type === 'EVIDENCE') return '#087f68';
@@ -113,15 +120,50 @@ export function CanvasGraphFallback({ nodes, edges, labelIds, focusId, selectedI
       const visibleNodes = nodesRef.current;
       const visibleIds = new Set(visibleNodes.map(node => node.id));
       const points = new Map(visibleNodes.map(node => [node.id, project(node)]));
+      const labelBudget = graphRenderBudget({width,compact}).labelBudget;
+      const labelCandidates = visibleNodes
+        .filter(node => labelsRef.current.has(node.id))
+        .map((node, index) => ({
+          node,
+          point: points.get(node.id)!,
+          priority: node.id === focusRef.current ? 10000 : node.id === selectedRef.current ? 9000 : ['ROOT', 'SYSTEM', 'DOMAIN'].includes(String(node.type || '').toUpperCase()) ? 7000 : 1000 - index
+        }))
+        .sort((a, b) => b.priority - a.priority)
+        .slice(0, labelBudget);
+      const labelBoxes: Array<{ x: number; y: number; width: number; height: number }> = [];
+      const visibleLabelIds = new Set<string>();
+      const overlaps = (a: { x: number; y: number; width: number; height: number }, b: { x: number; y: number; width: number; height: number }) =>
+        a.x < b.x + b.width && a.x + a.width > b.x && a.y < b.y + b.height && a.y + a.height > b.y;
+      for (const candidate of labelCandidates) {
+        const labelWidth = Math.min(220, Math.max(90, String(candidate.node.label || candidate.node.id).length * 6.2 + 22));
+        const box = {
+          x: Math.max(8, Math.min(width - labelWidth - 8, candidate.point.x + candidate.point.radius + 7)),
+          y: Math.max(8, Math.min(height - 30, candidate.point.y - 16)),
+          width: labelWidth,
+          height: 30
+        };
+        if (!labelBoxes.some(other => overlaps(box, other))) {
+          labelBoxes.push(box);
+          visibleLabelIds.add(candidate.node.id);
+        }
+      }
 
       context.save();
       context.translate(width / 2 + runtime.panX, height / 2 + runtime.panY);
       context.scale(runtime.scale, runtime.scale);
-      context.strokeStyle = theme === 'light' ? 'rgba(23,111,174,.18)' : 'rgba(72,191,255,.11)';
-      context.lineWidth = 1;
       [4.4, 5.5, 6.5].forEach(radius => {
         context.beginPath();
         context.ellipse(0, 0, radius * Math.min(width, height) / 16.5, radius * Math.min(width, height) / 16.5 * 0.72, 0, 0, Math.PI * 2);
+        if (theme === 'light') {
+          context.strokeStyle = 'rgba(18,51,79,.16)';
+          context.lineWidth = 2.6;
+          context.stroke();
+          context.strokeStyle = 'rgba(23,111,174,.28)';
+          context.lineWidth = 1;
+        } else {
+          context.strokeStyle = 'rgba(72,191,255,.11)';
+          context.lineWidth = 1;
+        }
         context.stroke();
       });
       context.restore();
@@ -135,11 +177,21 @@ export function CanvasGraphFallback({ nodes, edges, labelIds, focusId, selectedI
         context.beginPath();
         context.moveTo(from.x, from.y);
         context.lineTo(to.x, to.y);
-        context.setLineDash(String(edge.type || '').toUpperCase() === 'RELATED' ? [3, 5] : []);
-        context.strokeStyle = theme === 'light'
-          ? (related ? 'rgba(23,111,174,.42)' : 'rgba(23,111,174,.12)')
-          : (related ? 'rgba(77,190,255,.42)' : 'rgba(77,190,255,.09)');
-        context.lineWidth = related ? 1.4 : 1;
+        const role=edgeVisualRole(edge);
+        context.setLineDash(role==='learning' ? [3, 5] : role==='evidence' ? [1, 4] : role==='attention' ? [6, 3] : []);
+        if (theme === 'light') {
+          context.strokeStyle = role==='attention' ? 'rgba(162,59,85,.34)' : 'rgba(18,51,79,.2)';
+          context.lineWidth = related ? (role==='hierarchy'?2.9:2.5) : 1.6;
+          context.stroke();
+          context.beginPath();
+          context.moveTo(from.x, from.y);
+          context.lineTo(to.x, to.y);
+          context.strokeStyle = role==='attention' ? (related?'rgba(162,59,85,.72)':'rgba(162,59,85,.2)') : related ? 'rgba(23,111,174,.58)' : 'rgba(23,111,174,.2)';
+          context.lineWidth = related ? (role==='hierarchy'?1.55:1.25) : .8;
+        } else {
+          context.strokeStyle = role==='attention' ? (related?'rgba(255,113,136,.62)':'rgba(255,113,136,.12)') : related ? 'rgba(77,190,255,.42)' : 'rgba(77,190,255,.09)';
+          context.lineWidth = related ? (role==='hierarchy'?1.7:1.4) : 1;
+        }
         context.stroke();
         context.setLineDash([]);
       }
@@ -149,6 +201,7 @@ export function CanvasGraphFallback({ nodes, edges, labelIds, focusId, selectedI
         if (!point) continue;
         const color = colorFor(node, theme);
         const active = node.id === selectedRef.current || node.id === focusRef.current;
+        const role=nodeVisualRole(node);
         const gradient = context.createRadialGradient(point.x, point.y, 0, point.x, point.y, point.radius * (active ? 2.8 : 2.2));
         gradient.addColorStop(0, `${color}cc`);
         gradient.addColorStop(0.42, `${color}40`);
@@ -166,19 +219,26 @@ export function CanvasGraphFallback({ nodes, edges, labelIds, focusId, selectedI
         context.strokeStyle = active
           ? (theme === 'light' ? '#123e63' : '#e5fbff')
           : (theme === 'light' ? 'rgba(37,88,126,.72)' : 'rgba(206,245,255,.76)');
-        context.lineWidth = active ? 2 : 1;
+        context.lineWidth = active ? 2.4 : role==='core' ? 1.9 : role==='attention' ? 1.7 : 1.35;
         context.stroke();
 
-        if (!labelsRef.current.has(node.id)) continue;
+        if (!visibleLabelIds.has(node.id)) continue;
         context.font = `${active ? 600 : 500} ${active ? 14 : 11}px system-ui, sans-serif`;
         context.textBaseline = 'middle';
         context.fillStyle = theme === 'light' ? '#15334f' : '#ecf9ff';
+        context.shadowColor = theme === 'light' ? 'rgba(18,51,79,.58)' : 'transparent';
+        context.shadowBlur = theme === 'light' ? 1.5 : 0;
+        context.shadowOffsetX = 0;
+        context.shadowOffsetY = 1;
         context.fillText(String(node.label || node.id), point.x + point.radius + 7, point.y - 4);
         context.font = '700 8px ui-monospace, SFMono-Regular, Menlo, monospace';
         context.fillStyle = active
           ? (theme === 'light' ? '#176fae' : '#8ee6ff')
           : (theme === 'light' ? 'rgba(67,104,133,.9)' : 'rgba(151,208,232,.75)');
         context.fillText(`${String(node.type || 'ENTITY')} · ${String(node.status || 'UNKNOWN')}`, point.x + point.radius + 7, point.y + 10);
+        context.shadowColor = 'transparent';
+        context.shadowBlur = 0;
+        context.shadowOffsetY = 0;
       }
     };
 

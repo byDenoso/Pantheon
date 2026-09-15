@@ -22,5 +22,5 @@ test('cinematic scene keeps presentation nodes outside canonical Projection V3 s
 test('cinematic V3 reuses the mature 3D renderer rather than forking a second engine',()=>{
   const canvas=read('src/scene/AtlasCanvas.tsx');
   assert.match(canvas,/CanvasGraphFallback/);assert.match(canvas,/canUseThreeRenderer/);assert.match(canvas,/DreiOrbitControls/);assert.match(canvas,/enablePan/);assert.match(canvas,/enableRotate/);assert.match(canvas,/enableZoom/);
-  assert.match(canvas,/motion\.current/);assert.match(canvas,/torusGeometry/);assert.match(canvas,/visibleBudget:compact\?90:180/);
+  assert.match(canvas,/motion\.current/);assert.match(canvas,/torusGeometry/);assert.match(canvas,/graphRenderBudget/);
 });

@@ -14,7 +14,7 @@ import {
   MAX_DISTANCE
 } from '../src/scene/camera-controls.ts';
 import { shouldOpenNode } from '../src/scene/picking.ts';
-import { buildOrbitalNodes, CANVAS_LAYOUT_SPREAD, CANVAS_CLUSTER_SPREAD, CANVAS_DEPTH_SCALE } from '../src/scene/types.ts';
+import { buildOrbitalNodes, CANVAS_CLUSTER_SPREAD, CANVAS_DEPTH_SCALE, CANVAS_LAYOUT_SPREAD } from '../src/scene/types.ts';
 
 test('cameraDistanceForLevel pulls back further for Universo/System than for Domain, and closer still for Campanha', () => {
   const system = cameraDistanceForLevel('SYSTEM');
@@ -128,6 +128,12 @@ test('hierarchy panorama keeps a wide spatial volume for deep orbital navigation
   assert.ok(Math.max(...positioned) - Math.min(...positioned) > 5.5, 'the deep mode needs a clearly visible front/back volume, not a shallow z jitter');
 });
 
+test('canvas presentation keeps the approved spacing increase and restores readable Z depth', () => {
+  assert.ok(CANVAS_LAYOUT_SPREAD >= 1.4, 'hub spacing must be materially wider');
+  assert.ok(CANVAS_CLUSTER_SPREAD >= 1.3, 'member spacing must be materially wider');
+  assert.ok(CANVAS_DEPTH_SCALE >= 0.7, 'canvas depth must remain visibly three-dimensional');
+});
+
 test('buildOrbitalNodes centers the focus even when its case does not match the real node id (regression)', () => {
   // Real repro: a URL/session focusId of "domain:d1" against a real node id of
   // "domain:D1" previously matched nothing -- the focus never sat at the origin,
@@ -184,11 +190,4 @@ test('no map node outside DOMAIN/CAMPAIGN/SYSTEM/ROOT/PROGRAM/ACTION reaches the
   // exercise them (that's covered by graph-map-not-empty.test.mjs against real data).
   const allowed = new Set(['ROOT', 'SYSTEM', 'DOMAIN', 'CAMPAIGN', 'PROGRAM', 'ACTION', 'DERIVED_NAVIGATION_GROUP']);
   for (const node of nodes) assert.ok(allowed.has(String(node.type || '').toUpperCase()), `unexpected node type reached the 3D scene: ${node.type}`);
-});
-
-
-test('canvas presentation keeps the approved wider spacing and readable depth', () => {
-  assert.ok(CANVAS_LAYOUT_SPREAD >= 1.25, 'hub spacing should be at least 25% wider');
-  assert.ok(CANVAS_CLUSTER_SPREAD >= 1.2, 'internal cluster spacing should be at least 20% wider');
-  assert.ok(CANVAS_DEPTH_SCALE >= 0.7, 'canvas mode should retain readable orbital depth');
 });

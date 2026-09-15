@@ -31,6 +31,15 @@
   background:rgba(255,255,255,.88);
   box-shadow:0 7px 22px rgba(56,91,130,.13),0 0 18px rgba(30,126,219,.06);
 }
+.atlas-v3-shell[data-theme="light"] .atlas-label strong,
+.atlas-v3-shell[data-theme="light"] .atlas-label span,
+.atlas-v3-shell[data-theme="light"] .scene-caption b,
+.atlas-v3-shell[data-theme="light"] .scene-caption span{
+  text-shadow:-1px 0 #f7faff,1px 0 #f7faff,0 -1px #f7faff,0 1px #f7faff,
+    0 1px 2px rgba(18,51,79,.5);
+  -webkit-text-stroke:.16px rgba(18,51,79,.34);
+}
+.atlas-v3-shell[data-theme="light"] .atlas-label strong{color:#15334f}
 .atlas-v3-shell[data-theme="light"] .atlas-label span{color:#377cae}
 .atlas-v3-shell[data-theme="light"] .atlas-label.selected{border-color:rgba(15,169,121,.72);box-shadow:0 0 22px rgba(15,169,121,.14)}
 .atlas-v3-shell[data-theme="light"] .layer-button{color:#647b96}
