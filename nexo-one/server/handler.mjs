@@ -8,6 +8,8 @@ import {readAtlasSsot} from './adapters/atlas-ssot.mjs';
 import {buildPublicAtlasSsot} from './compiler/atlas-public-ssot.mjs';
 import {buildAtlasResearchView,RESEARCH_ROUTES} from './compiler/atlas-research-api.mjs';
 import {verifyProjectionService} from './auth/vercel-oidc.mjs';
+import {configured as sessionConfigured} from './auth/session.mjs';
+import {sessionAccess,sessionRoute} from './auth/session-route.mjs';
 import {createNexoMcpWebHandler} from './mcp/server.mjs';
 const ATLAS_ORIGINS=new Set(['https://bydenoso.github.io','https://nexo-atlas-control-tower.vercel.app','https://nexo-atlas-cockpit.vercel.app']);
 const PUBLIC_SYSTEM_PROVIDERS=['github','nexo'];
@@ -16,9 +18,10 @@ const mcpWebHandler=createNexoMcpWebHandler({readSnapshot:()=>readAtlasSsot({env
 const mcpNodeHandler=toNodeHandler(mcpWebHandler);
 export default async function handler(req,res) {
   const env=process.env,now=Date.now();
-  res.setHeader('Content-Type','application/json; charset=utf-8');res.setHeader('Cache-Control','private, no-store');res.setHeader('X-Content-Type-Options','nosniff');res.setHeader('Vary','Authorization, Origin');
+  res.setHeader('Content-Type','application/json; charset=utf-8');res.setHeader('Cache-Control','private, no-store');res.setHeader('X-Content-Type-Options','nosniff');res.setHeader('Vary','Authorization, Origin, Cookie');
   const send=(value,status=200)=>{res.statusCode=status;res.end(JSON.stringify(value));};
-  const url=new URL(req.url,'http://local'),route=url.searchParams.get('route')||url.pathname.split('/').pop(),access='PUBLIC';
+  const url=new URL(req.url,'http://local'),route=url.searchParams.get('route')||url.pathname.split('/').pop();
+  const privateAccess=sessionAccess(req,env,now),access=privateAccess?'PRIVATE':'PUBLIC';
   const origin=String(req.headers.origin||'');
   if(ATLAS_ORIGINS.has(origin)&&isCorsRoute(route)){
     res.setHeader('Access-Control-Allow-Origin',origin);
@@ -32,8 +35,12 @@ export default async function handler(req,res) {
       if(origin&&!ATLAS_ORIGINS.has(origin))return send({error:'ORIGIN_NOT_ALLOWED'},403);
       return mcpNodeHandler(req,res);
     }
+    if(route==='session'){
+      const decision=sessionRoute(req,env,now,req.body&&typeof req.body==='object'?req.body:{});
+      if(decision.setCookie)res.setHeader('Set-Cookie',decision.setCookie);
+      return send(decision.body,decision.status);
+    }
     if(req.method!=='GET')return send({error:'WRITES_DISABLED'},405);
-    if(route==='session')return send({authenticated:false,configured:false,access:'PUBLIC',mode:'PUBLIC_READ_ONLY'});
     if(route==='atlas-public-ssot')return send(buildPublicAtlasSsot(await readAtlasSsot({env,now,signal:req.signal})));
     if(RESEARCH_ROUTES.has(route)){
       let snapshot=null;
@@ -78,7 +85,7 @@ export default async function handler(req,res) {
     const results=await Promise.all(selected.map(id=>readProvider(id,{...options,query:route==='recall'?q:''})));
     const world=compile(results,{now,access});
     const requiredProviders=world.providers.filter(p=>p.id!=='vercel');
-    if(route==='health')return send({status:requiredProviders.every(p=>p.status==='AVAILABLE'&&!p.partial)?'HEALTHY':'DEGRADED',version:'0.1.0',contractVersion:'1',access,privateConfigured:false,providers:world.providers,generatedAt:world.generatedAt});
+    if(route==='health')return send({status:requiredProviders.every(p=>p.status==='AVAILABLE'&&!p.partial)?'HEALTHY':'DEGRADED',version:'0.1.0',contractVersion:'1',access,privateConfigured:sessionConfigured(env),providers:world.providers,generatedAt:world.generatedAt});
     if(route==='now')return send({...world,items:world.items.filter(x=>['ACT','ESCALATE'].includes(x.attention)).slice(0,3)});
     if(route==='loops')return send({...world,items:world.items.filter(x=>x.status)});
     if(route==='day')return send({...world,items:world.items.filter(x=>x.kind==='EVENT'||x.status==='NEEDS_ME')});
