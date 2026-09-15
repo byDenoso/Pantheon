@@ -1,0 +1,68 @@
+name: AAS77733-R1 Publication Battery
+
+on:
+  push:
+    branches: [agent/aas77733-r1-publication]
+    paths:
+      - 'science/aas77733r1/**'
+      - '.github/workflows/aas77733-r1-publication.yml'
+  workflow_dispatch:
+    inputs:
+      mocks:
+        description: 'Base null mocks'
+        required: false
+        default: '10000'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: aas77733-r1-publication-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  battery:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    env:
+      OPENBLAS_NUM_THREADS: '2'
+      OMP_NUM_THREADS: '2'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Install pinned numerical dependencies
+        run: python -m pip install 'numpy==2.2.6' 'scipy==1.15.3'
+      - name: Restore immutable public-data cache
+        uses: actions/cache@v4
+        with:
+          path: .cache/aas77733
+          key: aas77733-r1-publication-c447f0f-c9a4fca-v1
+      - name: Run RED/GREEN contract suite
+        run: python -m unittest discover -s science/aas77733r1 -p 'test*.py' -v
+      - name: Execute G0-G19 publication battery
+        run: |
+          mkdir -p artifacts
+          MOCKS='${{ inputs.mocks }}'
+          if [ -z "$MOCKS" ]; then MOCKS=10000; fi
+          python -m science.aas77733r1.run --mocks "$MOCKS" --seed 77733 --cache-dir .cache/aas77733 --output artifacts/aas77733-r1-publication.json
+      - name: Validate artifact
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          p=json.loads(Path('artifacts/aas77733-r1-publication.json').read_text())
+          assert p['validation_status']=='PASS', p
+          assert set(p['gates'])=={f'G{i}' for i in range(20)}
+          assert len(p['result_hash'])==64
+          print(json.dumps({'classification':p['gates']['G19']['metrics']['classification'],'result_hash':p['result_hash']},sort_keys=True))
+          PY
+      - name: Upload evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: aas77733-r1-publication-${{ github.sha }}
+          path: artifacts/
+          if-no-files-found: warn
+          retention-days: 30
