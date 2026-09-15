@@ -11,9 +11,9 @@ const canvas = await readFile(new URL('../src/scene/AtlasCanvas.tsx', import.met
 test('Atlas V3 exposes the approved cinematic orbital workspace instead of a dashboard-first shell', () => {
   assert.match(html, /NEURAL V3/);
   assert.match(app, /AtlasCanvas/);
-  assert.match(app, /className="control-dock/);
+  assert.match(app, /className="neural-layer-bar/);
   assert.match(app, /atlas-v3-search/);
-  assert.match(app, /Buscar campanha, grupo, claim ou work/);
+  assert.match(app, /Buscar campanha, claim, teste ou work/);
   assert.match(css, /\.cinematic-stage/);
   assert.match(css, /\.brand-orbit/);
   assert.match(css, /radial-gradient/);
