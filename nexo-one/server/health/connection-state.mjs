@@ -11,7 +11,18 @@ function googleConfigured(env){
   return present(env,'GOOGLE_CLIENT_ID','GOOGLE_CLIENT_SECRET','GOOGLE_REFRESH_TOKEN');
 }
 
-export function summarizeConnectionHealth({env=process.env,providers=[]}={}){
+function connection({configured,runtimeVerified,providerStatuses,access}){
+  const observable=String(access||'PRIVATE').toUpperCase()==='PRIVATE';
+  return {
+    configured,
+    authorized:observable?configured&&runtimeVerified:null,
+    runtimeVerified:observable&&runtimeVerified,
+    verificationState:observable?(runtimeVerified?'VERIFIED':'NOT_VERIFIED'):'PRIVATE_SESSION_REQUIRED',
+    providers:providerStatuses,
+  };
+}
+
+export function summarizeConnectionHealth({env=process.env,providers=[],access='PRIVATE'}={}){
   const googleIds=['drive','gmail','calendar'];
   const googleRuntimeVerified=allAvailable(googleIds,providers);
   const atlasRuntimeVerified=anyAvailable(['atlas'],providers);
@@ -22,9 +33,9 @@ export function summarizeConnectionHealth({env=process.env,providers=[]}={}){
   return {
     session:{configured:sessionConfigured(env)},
     connections:{
-      google:{configured:googleIsConfigured,authorized:googleIsConfigured&&googleRuntimeVerified,runtimeVerified:googleRuntimeVerified,providers:statuses(googleIds,providers)},
-      atlas:{configured:atlasIsConfigured,authorized:atlasIsConfigured&&atlasRuntimeVerified,runtimeVerified:atlasRuntimeVerified,providers:statuses(['atlas'],providers)},
-      vercel:{configured:vercelIsConfigured,authorized:vercelIsConfigured&&vercelRuntimeVerified,runtimeVerified:vercelRuntimeVerified,providers:statuses(['vercel'],providers)},
+      google:connection({configured:googleIsConfigured,runtimeVerified:googleRuntimeVerified,providerStatuses:statuses(googleIds,providers),access}),
+      atlas:connection({configured:atlasIsConfigured,runtimeVerified:atlasRuntimeVerified,providerStatuses:statuses(['atlas'],providers),access}),
+      vercel:connection({configured:vercelIsConfigured,runtimeVerified:vercelRuntimeVerified,providerStatuses:statuses(['vercel'],providers),access}),
     }
   };
 }
