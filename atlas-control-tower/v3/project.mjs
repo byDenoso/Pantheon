@@ -143,7 +143,8 @@ export function buildAtlasProjectionV3(input) {
     if (bucket === 'campaign' && entity.program_id) addEdge(String(entity.program_id), source, 'CONTAINS');
     if (bucket === 'interdomain' || String(entity.kind || '').toUpperCase() === 'INTERDOMAIN') {
       for (const ref of entity.source_nodes || []) addEdge(source, String(ref), entity.relation_type || 'METHOD_TRANSFER');
-      for (const ref of entity.test_refs || []) addEdge(source, String(ref), 'PROPOSES_TEST');
+      // Test references remain in the learning filament envelope. They are
+      // registry evidence, not structural Neural graph edges.
       for (const ref of entity.evidence_refs || []) addEdge(source, String(ref), 'SUPPORTED_BY');
     } else {
       for (const [field, type] of REFERENCE_FIELDS) {
