@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
 
 const adapterUrl=new URL('../src/atlas-v3/scene-adapter.mjs',import.meta.url);
 
@@ -14,6 +15,7 @@ const sample={
 };
 
 test('scene adapter adds presentation hierarchy without mutating canonical snapshot',async()=>{
+  assert.equal(fs.existsSync(adapterUrl),true,'scene adapter must exist');
   const before=JSON.stringify(sample);
   const {buildAtlasV3Scene}=await import(adapterUrl);
   const scene=buildAtlasV3Scene(sample);
