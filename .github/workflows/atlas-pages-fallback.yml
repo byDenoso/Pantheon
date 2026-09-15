@@ -1,4 +1,4 @@
-name: Atlas Pages Fallback
+name: Atlas Deploy
 
 on:
   workflow_dispatch:
@@ -7,6 +7,7 @@ on:
     paths:
       - 'atlas-control-tower/**'
       - '.github/workflows/atlas-pages-fallback.yml'
+      - '.github/workflows/atlas-deploy.yml'
 
 permissions:
   contents: read
@@ -14,7 +15,7 @@ permissions:
   id-token: write
 
 concurrency:
-  group: atlas-pages-fallback
+  group: atlas-production
   cancel-in-progress: true
 
 jobs:
@@ -37,7 +38,7 @@ jobs:
         with:
           enablement: true
       - run: npm ci --no-audit --no-fund
-      - name: Verify fallback build
+      - name: Verify production build
         run: |
           npm test
           npm run typecheck
@@ -47,6 +48,8 @@ jobs:
           npm run build -- --base=/Pantheon/
           cp dist/index.html dist/404.html
           test -f dist/data/current/manifest.json
+          test -f dist/data/v3/current/manifest.json
+          test -f dist/atlas-v3/index.html
       - name: Install isolated Pages browser tools
         run: |
           npm install --prefix "$RUNNER_TEMP/atlas-pages-browser" --no-audit --no-fund playwright@1.62.1
@@ -95,10 +98,6 @@ jobs:
           const manifestResponse=page.waitForResponse(response=>response.url().includes('/Pantheon/data/current/manifest.json')&&response.ok(),{timeout:15000});
           await page.goto('http://127.0.0.1:4174/Pantheon/',{waitUntil:'domcontentloaded',timeout:30000});
           await manifestResponse;
-          // The public root is the marketing/landing surface (real product decision,
-          // not a bug): it does not mount the ATLAS shell itself. Enter through its
-          // real "Mapa" link, exactly as a visitor would, before asserting on the
-          // shell/graph DOM that only exists once inside the app proper.
           if(await page.locator('.atlas-bootstrap-error').count())throw new Error('ATLAS_BOOTSTRAP_ERROR_VISIBLE_ON_LANDING');
           await page.getByRole('link',{name:'Mapa'}).click();
           await page.waitForSelector('.atlas-app',{timeout:15000});
@@ -107,7 +106,6 @@ jobs:
           await page.waitForSelector('.atlas-command-trigger',{timeout:15000});
           await page.waitForSelector('.graph-renderer-canvas canvas',{timeout:15000});
           if(await page.locator('.atlas-bootstrap-error').count())throw new Error('ATLAS_BOOTSTRAP_ERROR_VISIBLE');
-
           await page.getByRole('link',{name:'OBSERVATÓRIO'}).click();
           await page.waitForSelector('.graph-renderer-canvas canvas',{state:'detached',timeout:10000});
           await page.getByRole('link',{name:'GRAFOS'}).click();
@@ -115,14 +113,19 @@ jobs:
           await page.waitForTimeout(250);
           if(await page.locator('.atlas-bootstrap-error').count())throw new Error('ATLAS_BOOTSTRAP_ERROR_AFTER_GRAPH_REMOUNT');
           if(errors.length)throw new Error(`ATLAS_PAGEERROR:${errors.join(' | ')}`);
-          console.log('GRAPH_LIFECYCLE_SMOKE_OK');
-
           if(!dataRequests.some(path=>path.endsWith('/data/current/manifest.json')))throw new Error(`STATIC_MANIFEST_NOT_REQUESTED:${dataRequests.join(' | ')}`);
           if(apiRequests.length)throw new Error(`LEGACY_API_REQUEST:${apiRequests.join(' | ')}`);
           if(retired.length)throw new Error(`RETIRED_RUNTIME_REQUEST:${retired.join(' | ')}`);
+
+          const v3=await browser.newPage({viewport:{width:1280,height:800}});
+          await v3.goto('http://127.0.0.1:4174/Pantheon/atlas-v3/',{waitUntil:'networkidle',timeout:30000});
+          await v3.getByText('NEURAL V3').waitFor({state:'visible',timeout:10000});
+          await v3.getByText('Um universo. Uma autoridade. Várias camadas.').waitFor({state:'visible',timeout:10000});
+          if(await v3.getByText('TOWER_V06').count()===0)throw new Error('ATLAS_V3_AUTHORITY_NOT_VISIBLE');
+          if(await v3.getByText('LEARNING').count()===0)throw new Error('ATLAS_V3_LEARNING_LAYER_MISSING');
           await browser.close();
-          console.log('PAGES_SOVEREIGN_BOOTSTRAP_OK');
-          console.log('PAGES_SOVEREIGN_STATIC_ARTIFACT_BOOTSTRAP_OK');
+          console.log('PAGES_CANONICAL_BOOTSTRAP_OK');
+          console.log('ATLAS_V3_BROWSER_SMOKE_OK');
           NODE
       - uses: actions/upload-pages-artifact@v3
         with:
@@ -130,7 +133,7 @@ jobs:
       - name: Deploy Pages
         id: deployment
         uses: actions/deploy-pages@v4
-      - name: Readback Pages static runtime
+      - name: Readback canonical Pages runtime
         env:
           PAGE_URL: ${{ steps.deployment.outputs.page_url }}
         run: |
@@ -161,6 +164,24 @@ jobs:
           if(!Array.isArray(d7.campaigns)||!d7.campaigns.some(campaign=>campaign.id==='CAMP-CMB-ANOMALIES'))throw new Error('D7_CAMPAIGN_SENTINEL_MISSING');
           if(Array.isArray(d7.tests))throw new Error('D7_PUBLIC_TESTS_PRESENT');
           if(health.contract!=='nexo-static-runtime-v1'||health.runtime!=='STATIC_LOCAL')throw new Error('STATIC_HEALTH_INVALID');
-          if(manifest.source!=='GOOGLE_DRIVE'||manifest.codeAuthority!=='GITHUB')throw new Error('STATIC_AUTHORITY_INVALID');
+          if(manifest.source!=='GOOGLE_DRIVE'||manifest.codeAuthority!=='GITHUB')throw new Error('LEGACY_STATIC_TRANSPORT_INVALID');
+          NODE
+
+          curl -fsSL "$base/atlas-v3/" -o /tmp/atlas-v3.html
+          grep -q 'NEURAL V3' /tmp/atlas-v3.html
+          grep -q 'Um universo. Uma autoridade. Várias camadas.' /tmp/atlas-v3.html
+          curl -fsSL "$base/data/v3/current/manifest.json" -o /tmp/atlas-v3-manifest.json
+          v3_snapshot_path="$(node -e "const m=require('/tmp/atlas-v3-manifest.json'); if(m.contractVersion!=='ATLAS_PROJECTION_V3'||m.authority!=='TOWER_V06'||m.projectionOnly!==true||!/^sha256:[a-f0-9]{64}$/i.test(m.fingerprint)||!m.snapshotPath) process.exit(1); process.stdout.write(m.snapshotPath)")"
+          v3_fingerprint="$(node -e "const m=require('/tmp/atlas-v3-manifest.json'); process.stdout.write(m.fingerprint)")"
+          curl -fsSL "$base/data/v3/current/$v3_snapshot_path" -o /tmp/atlas-v3-snapshot.json
+          node <<'NODE'
+          const snapshot=require('/tmp/atlas-v3-snapshot.json');
+          if(snapshot.manifest?.authority!=='TOWER_V06'||snapshot.manifest?.projectionOnly!==true)throw new Error('ATLAS_V3_AUTHORITY_INVALID');
+          if(!Array.isArray(snapshot.graph?.root?.nodes)||snapshot.graph.root.nodes.length<1)throw new Error('ATLAS_V3_GRAPH_EMPTY');
+          if(!Array.isArray(snapshot.learning?.filaments)||!snapshot.learning.filaments.some(f=>f.id==='META::INTERDOMAIN::COSMO-OLYMPUS-SELECTION-AWARE-CHANGE-001'))throw new Error('ATLAS_V3_FILAMENT_SENTINEL_MISSING');
+          if(!Array.isArray(snapshot.operations?.works)||snapshot.operations.works.length<1)throw new Error('ATLAS_V3_OPERATIONS_EMPTY');
+          const raw=JSON.stringify(snapshot);
+          if(/eligible_cohort_manifest|full_validation|participant_manifest/i.test(raw))throw new Error('ATLAS_V3_PRIVATE_STRUCTURE_LEAK');
           NODE
           echo "PAGES_STATIC_STATE_READBACK_OK fingerprint=$fingerprint"
+          echo "ATLAS_V3_READBACK_OK fingerprint=$v3_fingerprint url=$base/atlas-v3/"
