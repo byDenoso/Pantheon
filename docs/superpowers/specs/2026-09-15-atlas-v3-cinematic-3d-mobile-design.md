@@ -12,17 +12,17 @@ Transform the current orbital Atlas V3 into a true spatial graph workspace while
 - Legacy Atlas remains available until production readback proves the new surface.
 
 ## Renderer
-Replace the current 2D SVG graph renderer with a WebGL spatial renderer based on Three.js / React Three Fiber or an equivalent thin Three.js layer if integrating React into the standalone V3 shell creates unnecessary coupling.
+Retire the standalone V3 SVG renderer and reuse the repository's mature React Three Fiber `AtlasCanvas` as the single WebGL spatial engine. Do not fork a second 3D engine: the existing renderer already owns real XYZ layout, orbital guides, star field, animated node/edge transitions, semantic label LOD, WebGL failure containment and Canvas fallback.
 
-The graph uses meaningful XYZ positions. Domain/program hubs occupy separated spatial regions; campaign, hypothesis, test, work, result, evidence and filament nodes form local constellations. Interdomain relations traverse regions as visually distinct filaments.
+The Projection V3 adapter adds only presentation hierarchy: NEXO and deterministic cluster hubs sit above canonical projection nodes via `layoutParent`. Canonical snapshot objects are never mutated. Interdomain relations remain canonical edges and traverse spatial regions as visually distinct filaments.
 
 Visual language:
-- emissive node cores with restrained bloom;
+- emissive node cores and restrained aura/glow;
 - depth-aware particles and star field;
-- curved 3D edges/filaments;
-- atmospheric fog/depth cues;
-- selected-node halo and focus transition;
-- labels that scale/cull by camera distance and importance;
+- 3D filaments and orbital guides;
+- atmospheric depth cues;
+- selected-node focus and camera transition;
+- labels culled by semantic importance and camera projection;
 - cinematic camera interpolation rather than hard jumps.
 
 Visual effects are presentation only and never alter graph semantics.
@@ -30,15 +30,15 @@ Visual effects are presentation only and never alter graph semantics.
 ## Navigation
 Desktop:
 - orbit/rotate, pan and dolly/zoom;
-- click node to focus and open inspector;
-- double click / explicit focus action to fly camera to cluster;
+- click node to focus/select and open inspector;
+- structural nodes drill into their subgraph;
 - keyboard escape returns one navigation level;
-- search result can fly to entity;
+- search result can focus an entity;
 - reset/home returns to NEXO overview.
 
 Mobile:
 - one-finger orbit;
-- two-finger pinch zoom and pan where supported;
+- two-finger pinch zoom and pan through OrbitControls;
 - tap selects;
 - no hover-only controls;
 - inspector becomes a bottom sheet;
@@ -48,44 +48,50 @@ Mobile:
 ## Responsive architecture
 Do not shrink the desktop grid. At narrow viewports the graph becomes the primary full-screen surface. Desktop side rails collapse into drawers/bottom sheets. Header metrics collapse into a compact status row. Minimum hit targets are 44 CSS px. No horizontal page overflow is allowed.
 
-Use `100dvh` with safe fallbacks, `env(safe-area-inset-*)`, pointer events instead of mouse-only listeners, and explicit `touch-action` rules for the canvas/control surfaces.
+Use `100dvh`, `env(safe-area-inset-*)`, pointer-capable R3F controls and explicit `touch-action` rules for the canvas/control surfaces.
 
 ## Adaptive quality
-Introduce a renderer quality tier selected from viewport, DPR, reduced-motion preference and observed frame budget. Cap DPR on mobile. Expensive effects degrade in this order: particle density -> bloom quality -> edge animation -> star density. Graph semantics, labels for selected/focused entities and navigation must never disappear.
+Reuse the renderer's semantic LOD and compact budgets instead of bolting a second quality governor onto the scene. Compact surfaces receive smaller visible-node and label budgets; selected/focused entities are preserved by semantic LOD. Rendering is suspended when the document is hidden. Reduced-motion removes continuous decorative motion and snaps graph transitions. The V3 shell also reduces label footprint and decorative density on narrow screens.
 
-Respect `prefers-reduced-motion` by disabling continuous camera drift and shortening focus transitions.
+This is intentionally conservative: the current public V3 hot set is small enough that a second frame-budget controller would add renderer coupling without measurable benefit. If the full Tower projection later pushes the graph beyond the existing LOD envelope, frame-time/DPR adaptation becomes a separate measured change with its own performance gate.
 
 ## Loading / failure / accessibility
 - deterministic loading state while manifest/snapshot/renderer load;
-- explicit WebGL-unavailable fallback with a usable non-cinematic graph/list surface, never a blank canvas;
+- explicit WebGL-unavailable fallback with a usable Canvas graph, never a blank canvas;
 - projection error keeps the existing no-invented-state principle;
-- canvas has an accessible summary and entity inspector remains keyboard reachable;
+- stage has an accessible summary and entity inspector remains keyboard reachable;
+- hidden search/inspector controls are unmounted so they cannot become focus traps;
 - visible focus states and semantic buttons;
 - sufficient text contrast over glass surfaces.
 
 ## Implementation audit
 Before fixes, reproduce mobile failures and trace root causes across HTML/CSS, renderer sizing, pointer handling, viewport units and graph data flow. Add regression tests before each root fix.
 
-After functional fixes, perform a separate sweep for:
+Verified root causes to address:
+- the old V3 fixed 1600×900 SVG viewBox scaled poorly to phone aspect ratios;
+- mobile overlays were independently fixed-positioned and could cover one another;
+- wheel/drag logic had no true pinch/dolly camera model;
+- hidden panels remained mounted and could retain keyboard focus;
+- desktop inspector/header geometry was being compressed rather than recomposed for mobile;
+- the V3 page was a public static script, preventing reuse of the mature R3F renderer and its fallback/navigation behavior.
+
+After functional fixes, sweep for:
 - overflow and clipping;
-- stale event listeners / resize observers;
-- renderer disposal and memory leaks;
-- device pixel ratio misuse;
+- stale event listeners / resize behavior;
+- renderer fallback and lifecycle;
 - label collision/occlusion;
 - unreachable controls;
 - loading/error/empty states;
 - keyboard and touch navigation;
 - visual hierarchy and information density;
-- performance on constrained viewport/GPU profiles.
+- performance on constrained viewport profiles.
 
 ## Test and release gates
 - contract tests for 3D renderer and no authority regression;
 - responsive tests for phone portrait, phone landscape, tablet and desktop;
-- pointer/touch navigation tests;
-- WebGL fallback test;
-- reduced-motion test;
+- WebGL fallback and reduced-motion tests;
 - full unit suite, typecheck and production build;
-- Playwright/browser smoke at multiple viewports;
+- Playwright/browser smoke at multiple viewports, including resize/orientation;
 - production Pages deploy and HTTP readback;
 - no merge/deploy success claim until fresh evidence passes.
 
