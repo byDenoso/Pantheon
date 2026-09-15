@@ -8,40 +8,15 @@
     "pantheon_plus": {
       "repository": "PantheonPlusSH0ES/DataRelease",
       "commit": "c447f0fea703fcd0fff57de5000947b5ca81286b",
-      "data": {
-        "path": "Pantheon+_Data/4_DISTANCES_AND_COVAR/Pantheon+SH0ES.dat",
-        "git_blob_sha1": "cce857db0c15e9ce7a0e0ce77452b6ff62af969a",
-        "url": "https://raw.githubusercontent.com/PantheonPlusSH0ES/DataRelease/c447f0fea703fcd0fff57de5000947b5ca81286b/Pantheon+_Data/4_DISTANCES_AND_COVAR/Pantheon+SH0ES.dat"
-      },
-      "covariance": {
-        "path": "Pantheon+_Data/4_DISTANCES_AND_COVAR/Pantheon+SH0ES_STAT+SYS.cov",
-        "git_blob_sha1": "d1a1498154e7ba826df14bdbef35ebcb7f5efba1",
-        "url": "https://raw.githubusercontent.com/PantheonPlusSH0ES/DataRelease/c447f0fea703fcd0fff57de5000947b5ca81286b/Pantheon+_Data/4_DISTANCES_AND_COVAR/Pantheon+SH0ES_STAT+SYS.cov",
-        "dimension": 1701,
-        "semantics": "covariance"
-      },
-      "stat_only_covariance": {
-        "path": "Pantheon+_Data/4_DISTANCES_AND_COVAR/Pantheon+SH0ES_STATONLY.cov",
-        "git_blob_sha1": "bd0fef3f25150a3aee5100b3f35c895cbdf63235",
-        "url": "https://raw.githubusercontent.com/PantheonPlusSH0ES/DataRelease/c447f0fea703fcd0fff57de5000947b5ca81286b/Pantheon+_Data/4_DISTANCES_AND_COVAR/Pantheon+SH0ES_STATONLY.cov",
-        "dimension": 1701,
-        "semantics": "covariance"
-      }
+      "data": {"path": "Pantheon+_Data/4_DISTANCES_AND_COVAR/Pantheon+SH0ES.dat", "git_blob_sha1": "cce857db0c15e9ce7a0e0ce77452b6ff62af969a", "url": "https://raw.githubusercontent.com/PantheonPlusSH0ES/DataRelease/c447f0fea703fcd0fff57de5000947b5ca81286b/Pantheon+_Data/4_DISTANCES_AND_COVAR/Pantheon+SH0ES.dat"},
+      "covariance": {"path": "Pantheon+_Data/4_DISTANCES_AND_COVAR/Pantheon+SH0ES_STAT+SYS.cov", "git_blob_sha1": "d1a1498154e7ba826df14bdbef35ebcb7f5efba1", "url": "https://raw.githubusercontent.com/PantheonPlusSH0ES/DataRelease/c447f0fea703fcd0fff57de5000947b5ca81286b/Pantheon+_Data/4_DISTANCES_AND_COVAR/Pantheon+SH0ES_STAT+SYS.cov", "dimension": 1701, "semantics": "covariance"},
+      "stat_only_covariance": {"path": "Pantheon+_Data/4_DISTANCES_AND_COVAR/Pantheon+SH0ES_STATONLY.cov", "git_blob_sha1": "bd0fef3f25150a3aee5100b3f35c895cbdf63235", "url": "https://raw.githubusercontent.com/PantheonPlusSH0ES/DataRelease/c447f0fea703fcd0fff57de5000947b5ca81286b/Pantheon+_Data/4_DISTANCES_AND_COVAR/Pantheon+SH0ES_STATONLY.cov", "dimension": 1701, "semantics": "covariance"}
     },
     "des_sn5yr": {
       "repository": "des-science/DES-SN5YR",
       "commit": "c9a4fcafc4cbd19bd750dee47fc76194a45c181f",
-      "data": {
-        "path": "4_DISTANCES_COVMAT/DES-Dovekie_HD.csv",
-        "git_blob_sha1": "f80ec4e2795edcbf3442f460c539bea56226027a",
-        "url": "https://raw.githubusercontent.com/des-science/DES-SN5YR/c9a4fcafc4cbd19bd750dee47fc76194a45c181f/4_DISTANCES_COVMAT/DES-Dovekie_HD.csv"
-      },
-      "precision": {
-        "path": "4_DISTANCES_COVMAT/STAT+SYS.npz",
-        "git_blob_sha1": "4289666487f427782ec81c327ae7f7741f0f5fe5",
-        "url": "https://raw.githubusercontent.com/des-science/DES-SN5YR/c9a4fcafc4cbd19bd750dee47fc76194a45c181f/4_DISTANCES_COVMAT/STAT+SYS.npz",
-        "semantics": "inverse_covariance"
-      }
+      "data": {"path": "4_DISTANCES_COVMAT/DES-Dovekie_HD.csv", "git_blob_sha1": "f80ec4e2795edcbf3442f460c539bea56226027a", "url": "https://raw.githubusercontent.com/des-science/DES-SN5YR/c9a4fcafc4cbd19bd750dee47fc76194a45c181f/4_DISTANCES_COVMAT/DES-Dovekie_HD.csv"},
+      "precision": {"path": "4_DISTANCES_COVMAT/STAT+SYS.npz", "git_blob_sha1": "4289666487f427782ec81c327ae7f7741f0f5fe5", "url": "https://raw.githubusercontent.com/des-science/DES-SN5YR/c9a4fcafc4cbd19bd750dee47fc76194a45c181f/4_DISTANCES_COVMAT/STAT+SYS.npz", "semantics": "inverse_covariance"}
     }
   },
   "pantheon": {
@@ -49,6 +24,7 @@
     "sensitivity_mask": "primary and IDSURVEY != 1",
     "scan": {"z_min": 0.25, "z_max": 0.60, "z_step": 0.01},
     "zmin_sweep": [0.01, 0.02, 0.03, 0.05, 0.07, 0.10, 0.15],
+    "omega_m_grid": {"min": 0.15, "max": 0.50, "step": 0.005},
     "gaussian_bump_widths": [0.025, 0.05, 0.075, 0.10],
     "block_widths": [0.03, 0.05, 0.08, 0.10],
     "injection_amplitudes_mag": [0.01, 0.01347, 0.02, 0.03, 0.05],
@@ -60,14 +36,24 @@
     "sensitivity": {"n": 1303, "z_t": 0.290, "delta_chi2": 2.352, "step_amplitude_mag": 0.01645},
     "historical_exploratory": {"z_t": 0.360, "delta_chi2": 7.91, "primary_evidence": false}
   },
-  "closure": {
+  "thresholds": {
+    "max_covariance_condition_number": 100000000.0,
     "global_alpha": 0.05,
+    "zmin_010_min_delta_fraction": 0.50,
+    "zmin_010_max_pivot_shift": 0.05,
+    "scan_boundary_margin": 0.01,
+    "cosmology_max_pivot_range": 0.05,
+    "nuisance_min_delta_fraction": 0.50,
+    "survey_max_leave_one_out_drop_fraction": 0.50,
     "pivot_localization_halfwidth": 0.03,
     "minimum_localization_fraction": 0.68,
     "max_pivot_p16_p84_width": 0.10,
     "minimum_injection_recovery_fraction": 0.68,
-    "physical_support_requires_external_context": true
+    "max_survey_false_positive_rate": 0.05,
+    "des_replication_max_pivot_shift": 0.05,
+    "des_replication_global_alpha": 0.05
   },
+  "closure": {"physical_support_requires_external_context": true},
   "priority_context": [
     {"name": "Pantheon+ public full-covariance likelihood", "kind": "existing_literature", "reference": "Brout et al. 2022; Scolnic et al. 2022"},
     {"name": "look-elsewhere/trials-factor calibration", "kind": "existing_literature", "reference": "Gross & Vitells 2010"},
@@ -75,25 +61,6 @@
     {"name": "AAS77733-R1 gate orchestration", "kind": "project_extension", "reference": "this audit battery"}
   ],
   "gates": [
-    {"id": "G0", "name": "priority_state_of_art"},
-    {"id": "G1", "name": "official_likelihood_reproduction"},
-    {"id": "G2", "name": "covariance_adjudication"},
-    {"id": "G3", "name": "data_vector_audit"},
-    {"id": "G4", "name": "calibrator_branches"},
-    {"id": "G5", "name": "zmin_sweep"},
-    {"id": "G6", "name": "feature_existence"},
-    {"id": "G7", "name": "blind_global_pivot_scan"},
-    {"id": "G8", "name": "look_elsewhere"},
-    {"id": "G9", "name": "comparator_templates"},
-    {"id": "G10", "name": "cosmological_profiling"},
-    {"id": "G11", "name": "nuisance_profiling"},
-    {"id": "G12", "name": "structured_nulls"},
-    {"id": "G13", "name": "survey_attribution_absorption"},
-    {"id": "G14", "name": "pivot_stability"},
-    {"id": "G15", "name": "injection_recovery"},
-    {"id": "G16", "name": "survey_structured_false_positive"},
-    {"id": "G17", "name": "des_sn5yr_replication"},
-    {"id": "G18", "name": "physical_context_discipline"},
-    {"id": "G19", "name": "claim_closure"}
+    {"id": "G0", "name": "priority_state_of_art"}, {"id": "G1", "name": "official_likelihood_reproduction"}, {"id": "G2", "name": "covariance_adjudication"}, {"id": "G3", "name": "data_vector_audit"}, {"id": "G4", "name": "calibrator_branches"}, {"id": "G5", "name": "zmin_sweep"}, {"id": "G6", "name": "feature_existence"}, {"id": "G7", "name": "blind_global_pivot_scan"}, {"id": "G8", "name": "look_elsewhere"}, {"id": "G9", "name": "comparator_templates"}, {"id": "G10", "name": "cosmological_profiling"}, {"id": "G11", "name": "nuisance_profiling"}, {"id": "G12", "name": "structured_nulls"}, {"id": "G13", "name": "survey_attribution_absorption"}, {"id": "G14", "name": "pivot_stability"}, {"id": "G15", "name": "injection_recovery"}, {"id": "G16", "name": "survey_structured_false_positive"}, {"id": "G17", "name": "des_sn5yr_replication"}, {"id": "G18", "name": "physical_context_discipline"}, {"id": "G19", "name": "claim_closure"}
   ]
 }
