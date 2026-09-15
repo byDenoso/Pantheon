@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <meta name="theme-color" content="#0b1020" />
+  <meta name="color-scheme" content="dark" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="NEXO" />
+  <link rel="manifest" href="./manifest.webmanifest" />
+  <title>NEXO Mobile</title>
+  <style>
+    :root{--bg:#090d18;--panel:#111827;--panel2:#151e30;--line:#253047;--text:#f7f9fc;--muted:#99a6ba;--blue:#67a7ff;--green:#5dd39e;--amber:#f3bd63;--red:#ff7a7a;--shadow:0 18px 55px rgba(0,0,0,.28);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,system-ui,sans-serif}
+    *{box-sizing:border-box}html,body{margin:0;min-height:100%;background:radial-gradient(circle at top,#14203a 0,#090d18 42%);color:var(--text)}body{min-height:100dvh;padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom)}button,input,select{font:inherit}.shell{max-width:760px;margin:auto;padding:18px 16px 110px}.top{display:flex;align-items:center;gap:12px;margin-bottom:18px}.brand{flex:1}.brand h1{font-size:22px;margin:0;letter-spacing:-.02em}.brand p{margin:3px 0 0;color:var(--muted);font-size:12px}.iconbtn{width:42px;height:42px;border-radius:13px;border:1px solid var(--line);background:rgba(17,24,39,.86);color:var(--text);display:grid;place-items:center}.status{display:flex;align-items:center;gap:8px;padding:11px 13px;border:1px solid var(--line);background:rgba(17,24,39,.74);border-radius:14px;color:var(--muted);font-size:12px;margin-bottom:14px}.dot{width:8px;height:8px;border-radius:999px;background:var(--amber);box-shadow:0 0 0 4px rgba(243,189,99,.09)}.dot.ok{background:var(--green);box-shadow:0 0 0 4px rgba(93,211,158,.08)}.grid{display:grid;gap:12px}.panel{border:1px solid var(--line);background:linear-gradient(180deg,rgba(21,30,48,.96),rgba(14,21,35,.96));border-radius:18px;padding:15px;box-shadow:var(--shadow)}.panel h2{font-size:13px;text-transform:uppercase;letter-spacing:.12em;color:#b9c5d8;margin:0 0 12px}.hero{display:grid;grid-template-columns:1fr auto;gap:12px;align-items:center}.hero strong{font-size:22px;letter-spacing:-.03em}.hero small{display:block;color:var(--muted);margin-top:4px}.pill{padding:8px 10px;border:1px solid #284064;border-radius:999px;color:var(--blue);background:#10203a;font-size:11px}.cards{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.card{min-height:104px;border:1px solid var(--line);background:rgba(9,13,24,.46);border-radius:15px;padding:13px;display:flex;flex-direction:column;justify-content:space-between}.card b{font-size:13px}.card span{font-size:12px;color:var(--muted);line-height:1.35}.card .kpi{font-size:24px;color:var(--blue);letter-spacing:-.04em}.compose{display:grid;gap:9px}.row{display:grid;grid-template-columns:1fr 124px;gap:8px}.input,.select{width:100%;min-height:46px;border:1px solid var(--line);border-radius:13px;background:#0b1220;color:var(--text);padding:0 12px;outline:none}.input:focus,.select:focus{border-color:#3f70b5;box-shadow:0 0 0 3px rgba(103,167,255,.08)}.btn{min-height:46px;border:0;border-radius:13px;background:var(--blue);color:#07101f;font-weight:800;padding:0 14px}.btn.secondary{background:#182438;color:#dbe7fa;border:1px solid var(--line)}.btn.danger{background:#3a1820;color:#ffc8cf;border:1px solid #57242d}.alerts{display:grid;gap:8px}.alert{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;padding:11px;border:1px solid var(--line);background:#0b1220;border-radius:13px}.sev{width:10px;height:10px;border-radius:50%}.sev.CRITICAL{background:var(--red)}.sev.ACTION_REQUIRED{background:var(--amber)}.sev.REMINDER{background:var(--blue)}.sev.INFO{background:var(--green)}.alert b{display:block;font-size:12px}.alert small{display:block;color:var(--muted);margin-top:3px;font-size:10px}.tag{font-size:10px;color:var(--muted)}.empty{color:var(--muted);font-size:12px;padding:6px 0}.quicklinks{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}.linkbtn{min-height:52px;border:1px solid var(--line);border-radius:14px;background:#0b1220;color:#eaf1fb;text-decoration:none;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700}.fab{position:fixed;left:50%;bottom:calc(18px + env(safe-area-inset-bottom));transform:translateX(-50%);width:min(728px,calc(100vw - 32px));height:58px;border:0;border-radius:17px;background:linear-gradient(180deg,#79b4ff,#4b8ff0);color:#07101f;font-weight:900;font-size:15px;box-shadow:0 16px 45px rgba(75,143,240,.28)}dialog{border:1px solid var(--line);border-radius:20px;background:#101827;color:var(--text);width:min(520px,calc(100vw - 28px));padding:0;box-shadow:0 25px 80px rgba(0,0,0,.55)}dialog::backdrop{background:rgba(0,0,0,.62);backdrop-filter:blur(5px)}.modal{padding:18px}.modal h3{margin:0 0 4px}.modal p{color:var(--muted);font-size:12px;line-height:1.45}.fields{display:grid;gap:10px;margin:14px 0}.label{display:grid;gap:6px;color:#c6d0e0;font-size:11px}.modal-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px}.hint{font-size:10px;color:var(--muted);line-height:1.4}.toast{position:fixed;top:calc(16px + env(safe-area-inset-top));left:50%;transform:translate(-50%,-20px);opacity:0;pointer-events:none;transition:.2s;background:#172238;border:1px solid var(--line);padding:10px 13px;border-radius:12px;font-size:12px;z-index:30}.toast.show{opacity:1;transform:translate(-50%,0)}@media(max-width:560px){.shell{padding-left:12px;padding-right:12px}.cards,.quicklinks{grid-template-columns:1fr 1fr}.row{grid-template-columns:1fr}.panel{border-radius:16px}.fab{width:calc(100vw - 24px)}}
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <header class="top">
+      <div class="brand"><h1>NEXO</h1><p>Mobile gateway · Pages</p></div>
+      <button class="iconbtn" id="settingsBtn" aria-label="Configurações">⚙</button>
+    </header>
+
+    <div class="status"><span class="dot" id="statusDot"></span><span id="statusText">Pages online · gateway não configurado</span></div>
+
+    <section class="grid">
+      <article class="panel">
+        <h2>Agora</h2>
+        <div class="hero"><div><strong id="nowTime">--:--</strong><small id="nowDate">carregando data</small></div><div class="pill" id="modePill">CLIENTE</div></div>
+        <div class="cards" style="margin-top:12px">
+          <div class="card"><b>Alertas locais</b><div class="kpi" id="alertCount">0</div><span>Eventos enviados por este aparelho.</span></div>
+          <div class="card"><b>Backend</b><div class="kpi" style="font-size:18px" id="backendState">OFF</div><span>Gateway Apps Script separado.</span></div>
+        </div>
+      </article>
+
+      <article class="panel">
+        <h2>Registrar</h2>
+        <form class="compose" id="eventForm">
+          <input class="input" id="message" maxlength="220" placeholder="O que aconteceu?" autocomplete="off" />
+          <div class="row">
+            <select class="select" id="severity">
+              <option value="ACTION_REQUIRED">Precisa de mim</option>
+              <option value="CRITICAL">Crítico</option>
+              <option value="REMINDER">Lembrete</option>
+              <option value="INFO">Informativo</option>
+            </select>
+            <button class="btn" type="submit">Enviar</button>
+          </div>
+        </form>
+        <p class="hint">No Pages, o envio externo é fire-and-forget. Até o readback cross-origin estar disponível, o estado é mostrado como “enviado, não verificado”.</p>
+      </article>
+
+      <article class="panel">
+        <h2>Alertas</h2>
+        <div class="alerts" id="alerts"><div class="empty">Nenhum alerta registrado neste aparelho.</div></div>
+      </article>
+
+      <article class="panel">
+        <h2>Próximos</h2>
+        <div class="quicklinks">
+          <a class="linkbtn" id="operationalLink" target="_blank" rel="noopener">App operacional</a>
+          <a class="linkbtn" href="https://calendar.google.com/" target="_blank" rel="noopener">Calendário</a>
+        </div>
+      </article>
+    </section>
+  </main>
+
+  <button class="fab" id="talkBtn">Falar com NEXO</button>
+
+  <dialog id="settingsDialog">
+    <form method="dialog" class="modal" id="settingsForm">
+      <h3>Conexões</h3>
+      <p>O token fica apenas no armazenamento local deste aparelho. Ele não entra no GitHub nem no HTML público.</p>
+      <div class="fields">
+        <label class="label">Gateway Apps Script
+          <input class="input" id="gatewayUrl" inputmode="url" placeholder="https://script.google.com/macros/s/.../exec" />
+        </label>
+        <label class="label">Token do gateway
+          <input class="input" id="gatewayToken" type="password" autocomplete="off" placeholder="token" />
+        </label>
+        <label class="label">App operacional
+          <input class="input" id="appUrl" inputmode="url" />
+        </label>
+      </div>
+      <div class="modal-actions"><button class="btn secondary" value="cancel">Cancelar</button><button class="btn" id="saveSettings" value="default">Salvar</button></div>
+    </form>
+  </dialog>
+  <div class="toast" id="toast"></div>
+
+  <script>
+    const DEFAULT_APP_URL='https://script.google.com/macros/s/AKfycbzmC61X_hklK0ueypQ5Xfw6RgYO45M2Ot7EEPvr9Ih6jizVxJ1kWk0k6HrINAlP6G2IYg/exec';
+    const KEY='nexo.mobile.config.v1';
+    const EVENT_KEY='nexo.mobile.sent.v1';
+    const $=id=>document.getElementById(id);
+    const state={config:load(KEY,{gatewayUrl:'',gatewayToken:'',appUrl:DEFAULT_APP_URL}),events:load(EVENT_KEY,[])};
+    function load(key,fallback){try{return JSON.parse(localStorage.getItem(key))??fallback}catch{return fallback}}
+    function save(key,value){localStorage.setItem(key,JSON.stringify(value))}
+    function escapeHtml(value){return String(value).replace(/[&<>'"]/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[ch]))}
+    function nowIso(){return new Date().toISOString()}
+    function uuid(){return crypto.randomUUID?.()||('req-'+Date.now()+'-'+Math.random().toString(16).slice(2))}
+    function toast(message){const el=$('toast');el.textContent=message;el.classList.add('show');setTimeout(()=>el.classList.remove('show'),2200)}
+    function updateClock(){const d=new Date();$('nowTime').textContent=d.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});$('nowDate').textContent=d.toLocaleDateString('pt-BR',{weekday:'long',day:'2-digit',month:'long'})}
+    function updateStatus(){const connected=Boolean(state.config.gatewayUrl&&state.config.gatewayToken);$('statusDot').classList.toggle('ok',connected);$('statusText').textContent=connected?'Pages online · gateway configurado':'Pages online · gateway não configurado';$('backendState').textContent=connected?'ARMED':'OFF';$('operationalLink').href=state.config.appUrl||DEFAULT_APP_URL;$('alertCount').textContent=state.events.length}
+    function renderEvents(){const box=$('alerts');if(!state.events.length){box.innerHTML='<div class="empty">Nenhum alerta registrado neste aparelho.</div>';return}box.innerHTML=state.events.slice(0,8).map(e=>`<div class="alert"><span class="sev ${escapeHtml(e.severity)}"></span><div><b>${escapeHtml(e.message)}</b><small>${new Date(e.at).toLocaleString('pt-BR')}</small></div><span class="tag">${escapeHtml(e.status)}</span></div>`).join('')}
+    async function sendEvent(message,severity){if(!state.config.gatewayUrl||!state.config.gatewayToken){toast('Configure o gateway primeiro');$('settingsDialog').showModal();return false}const payload={token:state.config.gatewayToken,requestId:uuid(),operation:'event.push',payload:{severity,message,source:'GITHUB_PAGES',createdAt:nowIso()}};try{await fetch(state.config.gatewayUrl,{method:'POST',mode:'no-cors',headers:{'Content-Type':'text/plain;charset=UTF-8'},body:JSON.stringify(payload),keepalive:true});state.events.unshift({message,severity,at:nowIso(),status:'SENT_UNVERIFIED'});state.events=state.events.slice(0,25);save(EVENT_KEY,state.events);renderEvents();updateStatus();toast('Enviado ao gateway');return true}catch(error){console.error(error);toast('Falha ao enviar');return false}}
+    $('eventForm').addEventListener('submit',async e=>{e.preventDefault();const message=$('message').value.trim();if(!message){toast('Digite uma mensagem');return}const ok=await sendEvent(message,$('severity').value);if(ok)$('message').value=''});
+    $('settingsBtn').addEventListener('click',()=>{$('gatewayUrl').value=state.config.gatewayUrl;$('gatewayToken').value=state.config.gatewayToken;$('appUrl').value=state.config.appUrl||DEFAULT_APP_URL;$('settingsDialog').showModal()});
+    $('saveSettings').addEventListener('click',e=>{e.preventDefault();state.config={gatewayUrl:$('gatewayUrl').value.trim(),gatewayToken:$('gatewayToken').value.trim(),appUrl:$('appUrl').value.trim()||DEFAULT_APP_URL};save(KEY,state.config);updateStatus();$('settingsDialog').close();toast('Configuração salva')});
+    $('talkBtn').addEventListener('click',()=>window.open(state.config.appUrl||DEFAULT_APP_URL,'_blank','noopener'));
+    if('serviceWorker' in navigator){navigator.serviceWorker.register('./sw.js').catch(console.warn)}
+    updateClock();setInterval(updateClock,30000);updateStatus();renderEvents();
+  </script>
+</body>
+</html>
