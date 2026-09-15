@@ -47,6 +47,7 @@ function nodeFrom(bucket, entity) {
     label: canonicalLabel(entity),
     status: entity.status || null,
     domain: entity.domain || entity.source_domains?.[0] || null,
+    parentId: entity.program_id || null,
     entityVersion: entity.entity_version ?? null,
     projectionAuthority: TOWER_AUTHORITY
   };
@@ -61,8 +62,11 @@ function publicEntityView(bucket, entity) {
     domain: entity.domain || entity.source_domains?.[0] || null,
     priority: entity.priority || null,
     ownerRole: entity.owner_role || entity.writer_role || null,
+    parentId: entity.program_id || null,
     entityVersion: entity.entity_version ?? null
   };
+  if (bucket === 'program') base.campaignCount = Number.isFinite(Number(entity.campaign_count)) ? Number(entity.campaign_count) : null;
+  if (bucket === 'campaign') base.testCount = Number.isFinite(Number(entity.test_count)) ? Number(entity.test_count) : null;
   if (bucket === 'interdomain' || String(entity.kind || '').toUpperCase() === 'INTERDOMAIN') {
     return {
       ...base,
@@ -87,6 +91,7 @@ function externalStub(id) {
     label: id,
     status: null,
     domain: null,
+    parentId: null,
     entityVersion: null,
     projectionAuthority: TOWER_AUTHORITY,
     referenceOnly: true
@@ -125,6 +130,7 @@ export function buildAtlasProjectionV3(input) {
   const edges = [];
   const addEdge = (source, target, type) => {
     if (!source || !target || source === target) return;
+    if (!nodeMap.has(source)) return;
     if (!nodeMap.has(target) && shouldMaterializeReference(target)) nodeMap.set(target, externalStub(target));
     if (!nodeMap.has(target)) return;
     edges.push({ id: relationId(source, type, target), source, target, type });
@@ -132,6 +138,7 @@ export function buildAtlasProjectionV3(input) {
 
   for (const { bucket, entity } of canonicalEntities) {
     const source = String(entity.id);
+    if (bucket === 'campaign' && entity.program_id) addEdge(String(entity.program_id), source, 'CONTAINS');
     if (bucket === 'interdomain' || String(entity.kind || '').toUpperCase() === 'INTERDOMAIN') {
       for (const ref of entity.source_nodes || []) addEdge(source, String(ref), entity.relation_type || 'METHOD_TRANSFER');
       for (const ref of entity.test_refs || []) addEdge(source, String(ref), 'PROPOSES_TEST');
