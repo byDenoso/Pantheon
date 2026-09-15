@@ -8,8 +8,9 @@ test('Projection V3 loader rejects authority and fingerprint divergence',async()
   assert.equal(fs.existsSync(loaderUrl),true,'projection loader must exist');
   const {validateAtlasV3Snapshot}=await import(loaderUrl);
   const manifest={authority:'TOWER_V06',projectionOnly:true,fingerprint:'sha256:abc'};
-  assert.doesNotThrow(()=>validateAtlasV3Snapshot(manifest,{manifest:{...manifest}}));
-  assert.throws(()=>validateAtlasV3Snapshot(manifest,{manifest:{...manifest,authority:'GOOGLE_DRIVE'}}),/authority/i);
-  assert.throws(()=>validateAtlasV3Snapshot(manifest,{manifest:{...manifest,fingerprint:'sha256:def'}}),/fingerprint/i);
-  assert.throws(()=>validateAtlasV3Snapshot(manifest,{manifest:{...manifest,projectionOnly:false}}),/projection/i);
+  const snapshot=overrides=>({manifest:{...manifest,...overrides},graph:{root:{nodes:[],edges:[]}}});
+  assert.doesNotThrow(()=>validateAtlasV3Snapshot(manifest,snapshot({})));
+  assert.throws(()=>validateAtlasV3Snapshot(manifest,snapshot({authority:'GOOGLE_DRIVE'})),/authority/i);
+  assert.throws(()=>validateAtlasV3Snapshot(manifest,snapshot({fingerprint:'sha256:def'})),/fingerprint/i);
+  assert.throws(()=>validateAtlasV3Snapshot(manifest,snapshot({projectionOnly:false})),/projection/i);
 });
