@@ -116,6 +116,8 @@ jobs:
           if(!dataRequests.some(path=>path.endsWith('/data/current/manifest.json')))throw new Error(`STATIC_MANIFEST_NOT_REQUESTED:${dataRequests.join(' | ')}`);
           if(apiRequests.length)throw new Error(`LEGACY_API_REQUEST:${apiRequests.join(' | ')}`);
           if(retired.length)throw new Error(`RETIRED_RUNTIME_REQUEST:${retired.join(' | ')}`);
+          console.log('GRAPH_LIFECYCLE_SMOKE_OK');
+          console.log('PAGES_SOVEREIGN_BOOTSTRAP_OK');
 
           const v3=await browser.newPage({viewport:{width:1280,height:800}});
           await v3.goto('http://127.0.0.1:4174/Pantheon/atlas-v3/',{waitUntil:'networkidle',timeout:30000});
@@ -133,7 +135,7 @@ jobs:
       - name: Deploy Pages
         id: deployment
         uses: actions/deploy-pages@v4
-      - name: Readback canonical Pages runtime
+      - name: Readback Pages static runtime (canonical)
         env:
           PAGE_URL: ${{ steps.deployment.outputs.page_url }}
         run: |
