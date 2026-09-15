@@ -12,6 +12,8 @@ import numpy as np
 
 from .config import load_manifest
 
+MAX_COVARIANCE_RELATIVE_ASYMMETRY = 1e-7
+
 
 @dataclass
 class PantheonBundle:
@@ -91,7 +93,7 @@ def _parse_pantheon(path: Path) -> dict[str, np.ndarray]:
     return {name: np.asarray(table[name]) for name in table.dtype.names}
 
 
-def _parse_pantheon_covariance(path: Path, expected_n: int) -> np.ndarray:
+def _parse_pantheon_covariance(path: Path, expected_n: int) -> tuple[np.ndarray, dict[str, Any]]:
     payload = np.fromstring(path.read_text(encoding="utf-8"), sep=" ")
     if payload.size < 2:
         raise ValueError("PANTHEON_COVARIANCE_EMPTY")
@@ -102,9 +104,23 @@ def _parse_pantheon_covariance(path: Path, expected_n: int) -> np.ndarray:
     if values.size != n * n:
         raise ValueError(f"PANTHEON_COVARIANCE_SIZE:{values.size}:{n*n}")
     covariance = values.reshape(n, n)
-    if not np.allclose(covariance, covariance.T, rtol=1e-9, atol=1e-12):
-        raise ValueError("PANTHEON_COVARIANCE_NOT_SYMMETRIC")
-    return covariance
+    max_abs = float(np.max(np.abs(covariance)))
+    max_asymmetry = float(np.max(np.abs(covariance - covariance.T)))
+    relative_asymmetry = max_asymmetry / max(max_abs, np.finfo(float).tiny)
+    if relative_asymmetry > MAX_COVARIANCE_RELATIVE_ASYMMETRY:
+        raise ValueError(
+            f"PANTHEON_COVARIANCE_ASYMMETRY:{relative_asymmetry:.6e}:{MAX_COVARIANCE_RELATIVE_ASYMMETRY:.6e}"
+        )
+    symmetrized = max_asymmetry > 0.0
+    if symmetrized:
+        covariance = 0.5 * (covariance + covariance.T)
+    diagnostic = {
+        "max_abs_asymmetry": max_asymmetry,
+        "relative_asymmetry": relative_asymmetry,
+        "allowed_relative_asymmetry": MAX_COVARIANCE_RELATIVE_ASYMMETRY,
+        "symmetrized_release_rounding": symmetrized,
+    }
+    return covariance, diagnostic
 
 
 def load_pantheon(cache_dir: str | Path) -> PantheonBundle:
@@ -116,7 +132,7 @@ def load_pantheon(cache_dir: str | Path) -> PantheonBundle:
     expected_n = int(source["covariance"]["dimension"])
     if len(columns["zHD"]) != expected_n:
         raise ValueError(f"PANTHEON_ROW_COUNT:{len(columns['zHD'])}:{expected_n}")
-    covariance = _parse_pantheon_covariance(cov_path, expected_n)
+    covariance, covariance_diagnostic = _parse_pantheon_covariance(cov_path, expected_n)
     required = {"CID", "IDSURVEY", "zHD", "zHEL", "m_b_corr", "MU_SH0ES", "CEPH_DIST", "IS_CALIBRATOR", "HOST_LOGMASS"}
     missing = sorted(required - set(columns))
     if missing:
@@ -128,7 +144,7 @@ def load_pantheon(cache_dir: str | Path) -> PantheonBundle:
             "repository": source["repository"],
             "commit": source["commit"],
             "data": data_receipt,
-            "covariance": cov_receipt,
+            "covariance": {**cov_receipt, **covariance_diagnostic},
         },
     )
 
@@ -190,7 +206,7 @@ def _parse_des_precision(path: Path) -> np.ndarray:
     precision[upper_idx] = upper
     lower_idx = np.tril_indices(n, -1)
     precision[lower_idx] = precision.T[lower_idx]
-    if not np.allclose(precision, precision.T, rtol=1e-10, atol=1e-12):
+    if not np.allclose(precision, precision.T, rtol=1e-12, atol=1e-14):
         raise ValueError("DES_PRECISION_NOT_SYMMETRIC")
     return precision
 
