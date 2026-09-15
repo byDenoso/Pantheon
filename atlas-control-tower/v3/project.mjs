@@ -211,6 +211,11 @@ export function buildAtlasProjectionV3(input) {
     }))
     .sort((a, b) => a.id.localeCompare(b.id));
 
+  const olympusPublicEntities = canonicalEntities.filter(({ bucket, entity }) => {
+    const domain = String(entity.domain || '').toUpperCase();
+    return bucket === 'olympus' || domain.includes('OLYMPUS') || domain.includes('BODYBUILD');
+  }).length;
+
   const works = canonicalEntities
     .filter(({ bucket }) => bucket === 'work')
     .map(({ entity }) => ({
@@ -295,7 +300,15 @@ export function buildAtlasProjectionV3(input) {
       fingerprint,
       sourceVersion,
       completeness,
-      lastProjectionAt: generatedAt
+      lastProjectionAt: generatedAt,
+      olympusSync: {
+        state: olympusPublicEntities > 0 ? 'SYNCED' : 'UNKNOWN',
+        source: 'OLYMPUS',
+        authority: TOWER_AUTHORITY,
+        sourceVersion,
+        publicEntityCount: olympusPublicEntities,
+        privateDataExcluded: publicProjection
+      }
     },
     provenance: {
       authority: TOWER_TRUTH_OWNER,
