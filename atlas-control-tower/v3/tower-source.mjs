@@ -58,7 +58,7 @@ function sanitizeWork(entity) {
 }
 
 function sanitizeHypothesis(entity) {
-  const id = normalizedIdentity(entity, 'id', 'entity_id');
+  const id = normalizedIdentity(entity, 'id', 'entity_id', 'hypothesis_id');
   if (!safeIdentityEnvelope(entity, id)) return null;
   const out = {
     id,
