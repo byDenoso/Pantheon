@@ -10,14 +10,28 @@ export default defineConfig(({ mode }) => {
       emptyOutDir:true,
       sourcemap:false,
       target:'es2022',
-      cssCodeSplit:true
+      cssCodeSplit:true,
+      chunkSizeWarningLimit:1200,
+      rollupOptions:{
+        input:{
+          main:'index.html',
+          atlasV3:'atlas-v3/index.html'
+        },
+        output:{
+          manualChunks(id){
+            if(id.includes('@react-three')||id.includes('/three/'))return 'three-stack';
+            if(id.includes('react-dom')||id.includes('/react/'))return 'react-stack';
+            if(id.includes('gsap'))return 'motion-stack';
+          }
+        }
+      }
     },
     server:{
       host:'0.0.0.0',
       port:4173,
-      proxy: apiBase ? {
-        '/api': { target: apiBase, changeOrigin: true, secure: true }
-      } : undefined
+      proxy:apiBase?{
+        '/api':{target:apiBase,changeOrigin:true,secure:true}
+      }:undefined
     }
   };
 });
