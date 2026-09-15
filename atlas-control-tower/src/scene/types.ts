@@ -34,7 +34,7 @@ export type PositionedNode = AtlasNode & {
 
 export const CANVAS_LAYOUT_SPREAD = 1.3;
 export const CANVAS_CLUSTER_SPREAD = 1.25;
-export const CANVAS_DEPTH_SCALE = 0.28;
+export const CANVAS_DEPTH_SCALE = 0.82;
 
 type PresentationMode='spatial'|'canvas';
 

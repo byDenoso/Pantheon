@@ -6,12 +6,10 @@ import {ATLAS_V3_PRESENTATION_ROOT,buildAtlasV3Scene} from './scene-adapter.mjs'
 import {groupForId,historicalRegistryHref,isTerminalTestGroup,testGroupHref,testsForGroup} from './test-groups.mjs';
 import type {AtlasV3Layer,AtlasV3Scene,AtlasV3Snapshot} from './types';
 import './atlas-v3-theme.css';
+import {persistThemeMode,readThemeMode,resolveTheme} from './theme-mode.mjs';
 
-type ThemeMode='system'|'light'|'dark';
-const THEME_STORAGE_KEY='nexo-atlas-v3-theme';
 const LAYERS:AtlasV3Layer[]=['SCIENCE','LEARNING','OPERATIONS','EVIDENCE','PROVENANCE','HEALTH'];
 function useMedia(query:string){const [matches,setMatches]=useState(()=>typeof window!=='undefined'&&window.matchMedia(query).matches);useEffect(()=>{const media=window.matchMedia(query);const update=()=>setMatches(media.matches);update();media.addEventListener('change',update);return()=>media.removeEventListener('change',update)},[query]);return matches}
-function readThemeMode():ThemeMode{if(typeof window==='undefined')return'system';try{const value=window.localStorage.getItem(THEME_STORAGE_KEY);return value==='light'||value==='dark'||value==='system'?value:'system'}catch{return'system'}}
 function short(value:unknown,max=52){const text=String(value??'');return text.length>max?`${text.slice(0,max-1)}…`:text}
 function displayLabel(node?:AtlasNode|null){return short(node?.label||String(node?.id||'Sem seleção'),42)}
 function layerForNode(node:AtlasNode):AtlasV3Layer{const type=String(node.type||'').toUpperCase();if(type==='FILAMENT')return'LEARNING';if(type==='WORK')return'OPERATIONS';if(type==='REFERENCE'||type==='EVIDENCE')return'EVIDENCE';return'SCIENCE'}
@@ -25,10 +23,10 @@ function TestGroupRegistry({snapshot,groupId}:{snapshot:AtlasV3Snapshot;groupId:
 
 export function AtlasV3App(){
   const compact=useMedia('(max-width: 760px)');const reducedMotion=useMedia('(prefers-reduced-motion: reduce)');const systemDark=useMedia('(prefers-color-scheme: dark)');
-  const [themeMode,setThemeMode]=useState<ThemeMode>(readThemeMode);const resolvedTheme:'dark'|'light'=themeMode==='system'?(systemDark?'dark':'light'):themeMode;
+  const [themeMode,setThemeMode]=useState(readThemeMode);const resolvedTheme=resolveTheme(themeMode,systemDark);
   const [snapshot,setSnapshot]=useState<AtlasV3Snapshot|null>(null);const [scene,setScene]=useState<AtlasV3Scene|null>(null);const [layer,setLayer]=useState<AtlasV3Layer>('SCIENCE');const [focusId,setFocusId]=useState(ATLAS_V3_PRESENTATION_ROOT);const [focusHistory,setFocusHistory]=useState<string[]>([]);const [selectedId,setSelectedId]=useState<string|null>(null);const [query,setQuery]=useState('');const [searchOpen,setSearchOpen]=useState(false);const [inspectorOpen,setInspectorOpen]=useState(false);const [loading,setLoading]=useState(true);const [error,setError]=useState<string|null>(null);const registryGroupId=typeof window!=='undefined'?new URLSearchParams(window.location.search).get('testGroup'):null;
   const load=useCallback(async()=>{setLoading(true);setError(null);try{const result=await loadAtlasV3Snapshot(window.location.href);const nextScene=buildAtlasV3Scene(result.snapshot);setSnapshot(result.snapshot);setScene(nextScene);setFocusId(nextScene.focusId);setFocusHistory([]);setSelectedId(null);setInspectorOpen(false)}catch(reason){setSnapshot(null);setScene(null);setError(reason instanceof Error?reason.message:String(reason))}finally{setLoading(false)}},[]);
-  useEffect(()=>{void load()},[load]);useEffect(()=>{document.title=registryGroupId?'NEXO Atlas · Test Group':'NEXO Atlas · Neural V3'},[registryGroupId]);useEffect(()=>{try{window.localStorage.setItem(THEME_STORAGE_KEY,themeMode)}catch{/* storage can be unavailable in hardened browsers */}},[themeMode]);
+  useEffect(()=>{void load()},[load]);useEffect(()=>{document.title=registryGroupId?'NEXO Atlas · Test Group':'NEXO Atlas · Neural V3'},[registryGroupId]);useEffect(()=>{persistThemeMode(themeMode)},[themeMode]);
   const layerGraph=useMemo(()=>scene?graphForLayer(scene,layer):null,[layer,scene]);useEffect(()=>{if(layerGraph&&!layerGraph.nodes.some(node=>node.id===focusId)){setFocusId(ATLAS_V3_PRESENTATION_ROOT);setFocusHistory([])}},[focusId,layerGraph]);
   const canonicalIds=useMemo(()=>scene?.canonicalIds||new Set<string>(),[scene]);const selectedNode=useMemo(()=>scene?.graph.nodes.find(node=>node.id===selectedId)||null,[scene,selectedId]);
   const searchResults=useMemo(()=>{if(!scene||!query.trim())return[];const q=query.trim().toLocaleLowerCase('pt-BR');return scene.graph.nodes.filter(node=>canonicalIds.has(node.id)&&`${node.id} ${node.label||''} ${node.type||''} ${node.domain||''}`.toLocaleLowerCase('pt-BR').includes(q)).slice(0,8)},[canonicalIds,query,scene]);

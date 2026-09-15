@@ -14,7 +14,7 @@ import {
   MAX_DISTANCE
 } from '../src/scene/camera-controls.ts';
 import { shouldOpenNode } from '../src/scene/picking.ts';
-import { buildOrbitalNodes } from '../src/scene/types.ts';
+import { buildOrbitalNodes, CANVAS_LAYOUT_SPREAD, CANVAS_CLUSTER_SPREAD, CANVAS_DEPTH_SCALE } from '../src/scene/types.ts';
 
 test('cameraDistanceForLevel pulls back further for Universo/System than for Domain, and closer still for Campanha', () => {
   const system = cameraDistanceForLevel('SYSTEM');
@@ -184,4 +184,11 @@ test('no map node outside DOMAIN/CAMPAIGN/SYSTEM/ROOT/PROGRAM/ACTION reaches the
   // exercise them (that's covered by graph-map-not-empty.test.mjs against real data).
   const allowed = new Set(['ROOT', 'SYSTEM', 'DOMAIN', 'CAMPAIGN', 'PROGRAM', 'ACTION', 'DERIVED_NAVIGATION_GROUP']);
   for (const node of nodes) assert.ok(allowed.has(String(node.type || '').toUpperCase()), `unexpected node type reached the 3D scene: ${node.type}`);
+});
+
+
+test('canvas presentation keeps the approved wider spacing and readable depth', () => {
+  assert.ok(CANVAS_LAYOUT_SPREAD >= 1.25, 'hub spacing should be at least 25% wider');
+  assert.ok(CANVAS_CLUSTER_SPREAD >= 1.2, 'internal cluster spacing should be at least 20% wider');
+  assert.ok(CANVAS_DEPTH_SCALE >= 0.7, 'canvas mode should retain readable orbital depth');
 });

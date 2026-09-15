@@ -11,6 +11,7 @@ type Props = {
   onNodeClick: (node: PositionedNode) => void;
   reducedMotion: boolean;
   compact: boolean;
+  theme?: 'dark'|'light';
 };
 
 type Pointer = { x: number; y: number };
@@ -39,15 +40,21 @@ function radiusFor(node: PositionedNode, selected: boolean) {
   return base + (selected ? 4 : 0);
 }
 
-function colorFor(node: PositionedNode) {
+function colorFor(node: PositionedNode, theme:'dark'|'light') {
   const type = String(node.type || '').toUpperCase();
+  if (theme === 'light') {
+    if (type === 'RESULT' || type === 'EVIDENCE') return '#087f68';
+    if (type === 'TEST') return '#956600';
+    if (type === 'CLAIM') return '#6547b0';
+    return '#176fae';
+  }
   if (type === 'RESULT' || type === 'EVIDENCE') return '#69deb0';
   if (type === 'TEST') return '#ffc65d';
   if (type === 'CLAIM') return '#b68cff';
   return '#48bfff';
 }
 
-export function CanvasGraphFallback({ nodes, edges, labelIds, focusId, selectedId, onNodeClick, reducedMotion, compact }: Props) {
+export function CanvasGraphFallback({ nodes, edges, labelIds, focusId, selectedId, onNodeClick, reducedMotion, compact, theme='dark' }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const hostRef = useRef<HTMLDivElement>(null);
   const nodesRef = useRef(nodes);
@@ -110,7 +117,7 @@ export function CanvasGraphFallback({ nodes, edges, labelIds, focusId, selectedI
       context.save();
       context.translate(width / 2 + runtime.panX, height / 2 + runtime.panY);
       context.scale(runtime.scale, runtime.scale);
-      context.strokeStyle = 'rgba(72,191,255,.11)';
+      context.strokeStyle = theme === 'light' ? 'rgba(23,111,174,.18)' : 'rgba(72,191,255,.11)';
       context.lineWidth = 1;
       [4.4, 5.5, 6.5].forEach(radius => {
         context.beginPath();
@@ -129,7 +136,9 @@ export function CanvasGraphFallback({ nodes, edges, labelIds, focusId, selectedI
         context.moveTo(from.x, from.y);
         context.lineTo(to.x, to.y);
         context.setLineDash(String(edge.type || '').toUpperCase() === 'RELATED' ? [3, 5] : []);
-        context.strokeStyle = related ? 'rgba(77,190,255,.42)' : 'rgba(77,190,255,.09)';
+        context.strokeStyle = theme === 'light'
+          ? (related ? 'rgba(23,111,174,.42)' : 'rgba(23,111,174,.12)')
+          : (related ? 'rgba(77,190,255,.42)' : 'rgba(77,190,255,.09)');
         context.lineWidth = related ? 1.4 : 1;
         context.stroke();
         context.setLineDash([]);
@@ -138,7 +147,7 @@ export function CanvasGraphFallback({ nodes, edges, labelIds, focusId, selectedI
       for (const node of visibleNodes) {
         const point = points.get(node.id);
         if (!point) continue;
-        const color = colorFor(node);
+        const color = colorFor(node, theme);
         const active = node.id === selectedRef.current || node.id === focusRef.current;
         const gradient = context.createRadialGradient(point.x, point.y, 0, point.x, point.y, point.radius * (active ? 2.8 : 2.2));
         gradient.addColorStop(0, `${color}cc`);
@@ -154,17 +163,21 @@ export function CanvasGraphFallback({ nodes, edges, labelIds, focusId, selectedI
         context.arc(point.x, point.y, point.radius, 0, Math.PI * 2);
         context.fill();
         context.globalAlpha = 1;
-        context.strokeStyle = active ? '#e5fbff' : 'rgba(206,245,255,.76)';
+        context.strokeStyle = active
+          ? (theme === 'light' ? '#123e63' : '#e5fbff')
+          : (theme === 'light' ? 'rgba(37,88,126,.72)' : 'rgba(206,245,255,.76)');
         context.lineWidth = active ? 2 : 1;
         context.stroke();
 
         if (!labelsRef.current.has(node.id)) continue;
         context.font = `${active ? 600 : 500} ${active ? 14 : 11}px system-ui, sans-serif`;
         context.textBaseline = 'middle';
-        context.fillStyle = '#ecf9ff';
+        context.fillStyle = theme === 'light' ? '#15334f' : '#ecf9ff';
         context.fillText(String(node.label || node.id), point.x + point.radius + 7, point.y - 4);
         context.font = '700 8px ui-monospace, SFMono-Regular, Menlo, monospace';
-        context.fillStyle = active ? '#8ee6ff' : 'rgba(151,208,232,.75)';
+        context.fillStyle = active
+          ? (theme === 'light' ? '#176fae' : '#8ee6ff')
+          : (theme === 'light' ? 'rgba(67,104,133,.9)' : 'rgba(151,208,232,.75)');
         context.fillText(`${String(node.type || 'ENTITY')} · ${String(node.status || 'UNKNOWN')}`, point.x + point.radius + 7, point.y + 10);
       }
     };
@@ -243,7 +256,7 @@ export function CanvasGraphFallback({ nodes, edges, labelIds, focusId, selectedI
       canvas.removeEventListener('pointercancel', up);
       canvas.removeEventListener('wheel', wheel);
     };
-  }, [compact, reducedMotion]);
+  }, [compact, reducedMotion, theme]);
 
   return <div ref={hostRef} className="atlas-canvas-fallback" data-renderer="canvas-2d" role="img" aria-label="Mapa de conhecimento em Canvas 2.5D">
     <canvas ref={canvasRef} aria-hidden="true" />
