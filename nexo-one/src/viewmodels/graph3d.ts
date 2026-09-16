@@ -61,6 +61,11 @@ export function distance3(a: Point3, b: Point3): number {
   return Math.hypot(a.x - b.x, a.y - b.y, a.z - b.z);
 }
 
+export function resolveSelection3D(nodes: Array<Pick<GraphNode, 'id'>>, selectedId: string | null): string | null {
+  if (!selectedId) return null;
+  return nodes.some(node => node.id === selectedId) ? selectedId : null;
+}
+
 function localDirection(key: string, index: number, count: number): Point3 {
   const seed = hash32(key);
   const phase = ((seed % 10000) / 10000) * Math.PI * 2;
