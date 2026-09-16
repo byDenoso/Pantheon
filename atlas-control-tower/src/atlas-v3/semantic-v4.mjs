@@ -52,7 +52,7 @@ export function semanticDomainForNode(node){
   if(matchesAny(domain,['ENGINEERING','PROCEDURAL','NEXO','SYSTEM','INTERDOMAIN']))return'NEXO';
   if(matchesAny(domain,['OPERATIONS','OPERATION','RUNTIME','EXECUTION','AUTOMATION']))return'OPERATIONS';
   if(matchesAny(domain,['SCIENCE','COSMO','ASTRO','PHYSIC','CMB','GALAX','DARK_','DARK-']))return'SCIENCE';
-  if(type==='WORK'||type==='ACTION')return domain?'UNCLASSIFIED':'OPERATIONS';
+  if(type==='WORK'||type==='ACTION')return'UNCLASSIFIED';
   if(type==='AUTOMATION')return'OPERATIONS';
   if(type==='FILAMENT')return'NEXO';
   if(SCIENCE_TYPES.has(type))return'SCIENCE';
