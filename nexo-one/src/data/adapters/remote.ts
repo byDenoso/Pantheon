@@ -8,7 +8,7 @@
 import type { SystemState } from '../../contracts/system.ts';
 import { DataSourceError, assertSystemState, type SystemDataSource } from './source.ts';
 
-const configuredSystemEndpoint = import.meta.env.VITE_SYSTEM_ENDPOINT?.trim();
+const configuredSystemEndpoint = import.meta.env?.VITE_SYSTEM_ENDPOINT?.trim();
 export const SYSTEM_ENDPOINT = configuredSystemEndpoint || '/api/system';
 
 export const remoteSource: SystemDataSource = {
