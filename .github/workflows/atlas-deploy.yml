@@ -2,6 +2,14 @@ name: Atlas Legacy Vercel Deploy
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - atlas-control-tower/api/mcp.js
+      - atlas-control-tower/lib/scientific-mcp.mjs
+      - atlas-control-tower/lib/scientific-mcp-http.mjs
+      - atlas-control-tower/lib/tower-github-gateway.mjs
 
 permissions:
   contents: read
