@@ -1,5 +1,13 @@
 const text=value=>String(value??'').trim();
 
+/**
+ * @typedef {Object} AtlasSemanticCoreOptions
+ * @property {()=>any} getState
+ * @property {Record<string,Function>} actions
+ * @property {()=>any} getRoute
+ * @property {()=>any} [getCapabilities]
+ */
+
 function findNode(state,id){
   const target=text(id);
   if(!target)return null;
@@ -16,7 +24,9 @@ function snapshotCapabilities(raw={}){
   };
 }
 
-export function createAtlasSemanticCore({getState,actions,getRoute,getCapabilities=()=>({})}={}){
+/** @param {AtlasSemanticCoreOptions} options */
+export function createAtlasSemanticCore(options){
+  const {getState,actions,getRoute,getCapabilities=()=>({})}=options||{};
   if(typeof getState!=='function')throw new Error('ATLAS_STATE_READER_REQUIRED');
   if(!actions)throw new Error('ATLAS_ACTIONS_REQUIRED');
   if(typeof getRoute!=='function')throw new Error('ATLAS_ROUTE_READER_REQUIRED');
