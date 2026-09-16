@@ -49,6 +49,20 @@ test('semantic domain routing respects declared domain before generic node type'
   assert.equal(classify?.({id:'x1',type:'MYSTERY',domain:'UNKNOWN_REALM'}),'UNCLASSIFIED');
 });
 
+test('scene layout preserves domain ownership instead of collapsing into science',()=>{
+  const scene=sceneFixture();
+  const byId=new Map(scene.graph.nodes.map(node=>[node.id,node]));
+  assert.equal(byId.get('WORK-SCI')?.layoutParent,`${ATLAS_V3_CLUSTER_PREFIX}SCIENCE`);
+  assert.equal(byId.get('WORK-OPS')?.layoutParent,`${ATLAS_V3_CLUSTER_PREFIX}OPERATIONS`);
+  assert.equal(byId.get('ACT-ENG')?.layoutParent,`${ATLAS_V3_CLUSTER_PREFIX}ENGINEERING`);
+  assert.equal(byId.get('WORK-HEALTH')?.layoutParent,`${ATLAS_V3_CLUSTER_PREFIX}OLYMPUS`);
+  assert.equal(byId.get('FIL-1')?.layoutParent,`${ATLAS_V3_CLUSTER_PREFIX}INTERDOMAIN`);
+  assert.equal(byId.get('EVID-1')?.layoutParent,`${ATLAS_V3_CLUSTER_PREFIX}REFERENCES`);
+  assert.equal(byId.get('MYSTERY')?.layoutParent,`${ATLAS_V3_CLUSTER_PREFIX}OTHER`);
+  assert.notEqual(byId.get('WORK-OPS')?.layoutParent,`${ATLAS_V3_CLUSTER_PREFIX}SCIENCE`);
+  assert.notEqual(byId.get('MYSTERY')?.layoutParent,`${ATLAS_V3_CLUSTER_PREFIX}SCIENCE`);
+});
+
 test('semantic domain routing uses distinct focus anchors and distinct graph membership',()=>{
   const scene=sceneFixture();
   const focus=semantic.focusIdForPrimaryDomain;
