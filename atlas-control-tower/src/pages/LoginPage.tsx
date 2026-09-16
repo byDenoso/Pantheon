@@ -17,15 +17,26 @@ declare global {
 
 const GOOGLE_SCRIPT='https://accounts.google.com/gsi/client';
 
-function clientId(){ return String(import.meta.env.VITE_GOOGLE_CLIENT_ID || '').trim(); }
+type AuthConfig={authConfigured?:boolean;clientId?:string|null};
 
 export function LoginPage() {
   const buttonRef=useRef<HTMLDivElement|null>(null);
   const [error,setError]=useState('');
-  const id=clientId();
+  const [id,setId]=useState('');
 
   useEffect(()=>{
-    if(!id){ setError('Autenticação ainda não configurada: VITE_GOOGLE_CLIENT_ID ausente.'); return; }
+    let live=true;
+    void fetch('/api/auth/session',{headers:{Accept:'application/json'}}).then(async response=>{
+      const config=await response.json() as AuthConfig;
+      if(!response.ok)throw new Error(`AUTH_CONFIG_HTTP_${response.status}`);
+      if(!config.authConfigured||!config.clientId)throw new Error('AUTH_NOT_CONFIGURED');
+      if(live)setId(String(config.clientId));
+    }).catch(error=>{if(live)setError(String(error?.message||error)==='AUTH_NOT_CONFIGURED'?'Autenticação operacional ainda não configurada no servidor.':'Falha ao ler configuração de autenticação.');});
+    return()=>{live=false};
+  },[]);
+
+  useEffect(()=>{
+    if(!id)return;
     let disposed=false;
     const mount=()=>{
       if(disposed||!buttonRef.current||!window.google?.accounts?.id)return;
@@ -59,6 +70,7 @@ export function LoginPage() {
         <h1>Entrar no Atlas</h1>
         <p>Autentique-se para acessar readers privados e comandos de escrita governados pelo NEXO.</p>
         <div ref={buttonRef}/>
+        {!id&&!error&&<p role="status">Carregando autenticação…</p>}
         {error && <p role="alert">{error}</p>}
       </section>
     </div>
