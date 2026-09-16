@@ -1,45 +1,11 @@
 {
-  "analysis_name_mapping": {
-    "main": {
-      "G0": "literature_and_method_scope",
-      "G1": "official_likelihood_reproduction",
-      "G10": "cosmology_profile_sensitivity",
-      "G11": "structure_preserving_null_models",
-      "G12": "survey_attribution",
-      "G13": "survey_nuisance_absorption",
-      "G14": "localization_stability",
-      "G15": "injection_recovery",
-      "G16": "survey_offset_sensitivity",
-      "G17": "des_external_replication",
-      "G18": "redshift_velocity_context",
-      "G19": "scientific_classification",
-      "G2": "covariance_definition_sensitivity",
-      "G3": "covariance_integrity",
-      "G4": "calibrator_partition_check",
-      "G5": "redshift_cut_sensitivity",
-      "G6": "residual_feature_scan",
-      "G7": "scan_definition_and_historical_window",
-      "G8": "global_scan_significance",
-      "G9": "template_family_robustness"
-    },
-    "robustness": {
-      "H0": "official_likelihood_checkpoint",
-      "H1": "duplicate_supernova_collapse",
-      "H2": "supernova_influence",
-      "H3": "robust_likelihood_diagnostic",
-      "H4": "survey_composition_balance",
-      "H5": "redshift_frame_and_sky_jackknife",
-      "H6": "des_covariance_comparison"
-    }
-  },
-  "note": "Internal source identifiers are retained only in this provenance file so the publication-facing analysis can be traced exactly to the research workspace.",
+  "source_repository": "byDenoso/Pantheon",
+  "source_commit": "04dd7af95cb6ca050a5ad4247d5fbcc2983aa400",
+  "publication_workflow_run": 35004612182,
   "publication_artifact_id": 10410514891,
   "publication_result_hash": "fe29ab0645e58aefe6dc9e74e80d26ccbbde62418a2be0111062a930c3f82764",
-  "publication_workflow_run": 35004612182,
+  "robustness_workflow_run": 35043241727,
   "robustness_artifact_id": 10425498157,
   "robustness_result_hash": "c3682f5423a2dda165f8dfb03d598f7467d53569ca8fc66e492518058aa7eb9e",
-  "robustness_workflow_run": 35043241727,
-  "source_branch": "agent/aas77733-r1-hardening-lm",
-  "source_commit_before_publication_packaging": "04dd7af95cb6ca050a5ad4247d5fbcc2983aa400",
-  "source_repository": "byDenoso/Pantheon"
+  "note": "This file identifies the frozen source implementation and result records from which the publication-facing metrics were transcribed. Analysis names in this repository are descriptive scientific names rather than workspace identifiers."
 }
