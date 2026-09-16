@@ -1,18 +1,19 @@
-// Atlas: mapa estrutural do sistema. Não é um grafo decorativo — cada nó é uma
-// entidade projetada, com estado, autoridade e proveniência próprios.
+// Atlas: mapa estrutural do sistema. Cada nó é uma entidade projetada com estado,
+// autoridade e proveniência próprios; o renderer 3D continua sendo somente projeção.
 import { useMemo, useState } from 'react';
 import type { GraphNode, SystemState } from '../../contracts/system.ts';
 import {
   AuthorityClass, CAPABILITY_STATUSES, DOMAINS, GRAPH_NODE_TYPES, PROJECTION_STATES, RELATION_KINDS,
 } from '../../contracts/system.ts';
+import { Atlas3DCanvas } from '../../components/Atlas3DCanvas.tsx';
 import { EntityInspector } from '../../components/inspector.tsx';
 import { EmptyState } from '../../components/states.tsx';
 import { DomainBadge, SeverityBadge, StatusBadge } from '../../components/primitives.tsx';
 import { useIsMobile } from '../../app/useMediaQuery.ts';
 import {
-  EMPTY_FILTERS, VIEWBOX, filterCount, filterGraph, layoutGraph, legendOf, relationsOf,
-  type GraphFilters, type PlacedNode,
+  EMPTY_FILTERS, filterCount, filterGraph, legendOf, relationsOf, type GraphFilters,
 } from '../../viewmodels/graph.ts';
+import { layoutGraph3D } from '../../viewmodels/graph3d.ts';
 import { label, toneOf } from '../../viewmodels/tokens.ts';
 
 const AUTHORITIES: AuthorityClass[] = ['TRUTH_OWNER', 'DELEGATED', 'DERIVED', 'NON_AUTHORITATIVE'];
@@ -39,76 +40,6 @@ function ChipGroup<T extends string>(
   );
 }
 
-function GraphCanvas(
-  { nodes, edges, selectedId, onSelect }:
-  {
-    nodes: PlacedNode[];
-    edges: SystemState['graph']['edges'];
-    selectedId: string | null;
-    onSelect: (id: string) => void;
-  },
-) {
-  const byId = useMemo(() => new Map(nodes.map(n => [n.id, n])), [nodes]);
-  const neighbours = useMemo(() => {
-    if (!selectedId) return new Set<string>();
-    const set = new Set<string>([selectedId]);
-    for (const edge of edges) {
-      if (edge.from === selectedId) set.add(edge.to);
-      if (edge.to === selectedId) set.add(edge.from);
-    }
-    return set;
-  }, [selectedId, edges]);
-
-  return (
-    <svg className="atlas-canvas" viewBox={`0 0 ${VIEWBOX} ${VIEWBOX}`} role="group"
-      aria-label="Mapa estrutural do sistema">
-      <g className="atlas-edges">
-        {edges.map(edge => {
-          const from = byId.get(edge.from);
-          const to = byId.get(edge.to);
-          if (!from || !to) return null;
-          const dimmed = selectedId ? !(neighbours.has(edge.from) && neighbours.has(edge.to)) : false;
-          const critical = edge.kind === 'CONTRADICTS' || edge.kind === 'BLOCKS';
-          return (
-            <line key={edge.id} x1={from.x} y1={from.y} x2={to.x} y2={to.y}
-              className={`atlas-edge${critical ? ' critical' : ''}${dimmed ? ' dim' : ''}`}
-              strokeWidth={0.6 + edge.weight * 1.4}>
-              <title>{`${from.label} ${label(edge.kind)} ${to.label} — ${edge.explanation}`}</title>
-            </line>
-          );
-        })}
-      </g>
-      <g className="atlas-nodes">
-        {nodes.map(node => {
-          const dimmed = selectedId ? !neighbours.has(node.id) : false;
-          // Rótulo permanente só nas âncoras do mapa. O resto se revela na seleção,
-          // senão o centro do grafo vira uma mancha de texto ilegível.
-          const anchored = node.type === 'DOMAIN' || node.type === 'PROVIDER';
-          const labelled = anchored || (!!selectedId && neighbours.has(node.id));
-          return (
-            <g key={node.id} className={`atlas-node tone-${toneOf(node.state)} type-${node.type.toLowerCase()}${dimmed ? ' dim' : ''}${node.id === selectedId ? ' selected' : ''}`}
-              transform={`translate(${node.x} ${node.y})`} tabIndex={0} role="button"
-              aria-label={`${label(node.type)}: ${node.label}. Estado ${label(node.state)}.`}
-              onClick={() => onSelect(node.id)}
-              onKeyDown={event => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); onSelect(node.id); } }}>
-              {node.type === 'DOMAIN'
-                ? <rect x={-node.radius} y={-node.radius} width={node.radius * 2} height={node.radius * 2} rx={6} />
-                : <circle r={node.radius} />}
-              {node.state === 'CONFLICT' && <circle className="conflict-ring" r={node.radius + 7} />}
-              {labelled && (
-                <text y={node.radius + 13} textAnchor="middle" className={anchored ? 'anchor-label' : ''}>
-                  {node.label.length > 24 ? `${node.label.slice(0, 23)}…` : node.label}
-                </text>
-              )}
-              <title>{node.summary}</title>
-            </g>
-          );
-        })}
-      </g>
-    </svg>
-  );
-}
-
 export function AtlasView(
   { state, filters, setFilters, selectedId, onSelect }:
   {
@@ -122,7 +53,7 @@ export function AtlasView(
   const isMobile = useIsMobile();
   const [panelOpen, setPanelOpen] = useState(false);
   const filtered = useMemo(() => filterGraph(state.graph, filters), [state.graph, filters]);
-  const placed = useMemo(() => layoutGraph(filtered.nodes), [filtered.nodes]);
+  const placed = useMemo(() => layoutGraph3D(filtered.nodes), [filtered.nodes]);
   const legend = useMemo(() => legendOf(filtered.nodes), [filtered.nodes]);
   const selected: GraphNode | null = filtered.nodes.find(n => n.id === selectedId) ?? null;
   const relations = useMemo(
@@ -170,13 +101,13 @@ export function AtlasView(
       )}
 
       <div className="atlas-body">
-        <div className="atlas-stage">
+        <div className="atlas-stage atlas-stage-3d">
           {filtered.nodes.length === 0
             ? <EmptyState title="Nenhuma entidade sobrevive a este filtro."
                 description="Um grafo vazio aqui é resultado do filtro, não ausência de dados no sistema."
                 hint="Remova um critério para voltar a ver o mapa." />
             : <>
-                <GraphCanvas nodes={placed} edges={filtered.edges} selectedId={selectedId} onSelect={onSelect} />
+                <Atlas3DCanvas nodes={placed} edges={filtered.edges} selectedId={selectedId} onSelect={onSelect} />
                 <ul className="atlas-legend">
                   {legend.map(entry => (
                     <li key={entry.type}>
