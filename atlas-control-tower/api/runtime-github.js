@@ -1,6 +1,7 @@
 import {driveRoute} from '../lib/drive-ssot.mjs';
 import {loadGithubCanonical,syncGithubCanonical} from '../lib/github-canonical-runtime.mjs';
 import {projectGithubCanonical} from '../lib/github-canonical-projection.mjs';
+import liveActivity from './live/activity.mjs';
 
 const TRUTH_OWNER='byDenoso/NEXO-Obsidian-Vault@main:TOWER_V06';
 function urlOf(req){return new URL(req.url||'/','https://atlas.local')}
@@ -25,6 +26,7 @@ async function fallback(route,query,error){const value=await driveRoute(route,qu
 
 export default async function handler(req,res){
  const route=routeOf(req),query=queryOf(req),method=String(req.method||'GET').toUpperCase();
+ if(route==='live-activity')return liveActivity(req,res);
  if(method==='POST'&&route==='sync'){
   try{const {state,diff}=await syncGithubCanonical({signal:req.signal}),canonical=state.authority;return sendJson(res,{ok:true,authority:'TOWER_V06',truthOwner:canonical.truthOwner||TRUTH_OWNER,projectionAuthority:'LEGACY_GOOGLE_DRIVE_SNAPSHOT',canonicalContract:canonical.contract,canonicalRef:canonical.ref,canonicalRepository:canonical.repository,canonicalControlPath:canonical.controlPath,sourceFingerprint:state.fingerprint,validation:'PASS',changedSections:[],...diff},200,{noStore:true})}
   catch(error){return sendJson(res,{ok:false,error:'TOWER_PROJECTION_UNAVAILABLE',detail:String(error?.message||error).slice(0,180),authority:'TOWER_V06',truthOwner:TRUTH_OWNER,lastValidPreserved:true},503,{noStore:true})}
