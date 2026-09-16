@@ -33,6 +33,8 @@ jobs:
           cache-dependency-path: atlas-control-tower/package-lock.json
       - name: Install locked dependencies
         run: npm ci --no-audit --no-fund
+      - name: Install Playwright Chromium
+        run: npx playwright install --with-deps chromium
       - name: Run unit and contract tests
         run: npm test
       - name: Typecheck React frontend
