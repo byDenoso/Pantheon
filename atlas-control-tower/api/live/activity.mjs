@@ -27,9 +27,9 @@ export default async function liveActivity(req,res){
   const gateway=createTowerGithubGateway();
   try{
     const [workIndex,tests,interdomain,receipts,reports]=await Promise.all([
-      gateway.readActiveWorkIndex(),
+      gateway.readJson('indexes/active-work.json'),
       gateway.listJsonDirectory('entities/test'),
-      gateway.readInterdomainIndex(),
+      gateway.readJson('indexes/interdomain-active.json'),
       gateway.listJsonDirectory('mutations/receipts'),
       gateway.listJsonDirectory('runtime/reports')
     ]);
@@ -42,6 +42,13 @@ export default async function liveActivity(req,res){
       state:'LIVE',
       truth_owner:'TOWER_V06',
       generated_at:new Date().toISOString(),
+      availability:{
+        work_index:Boolean(workIndex),
+        tests:true,
+        interdomain_index:Boolean(interdomain),
+        mutation_receipts:true,
+        runtime_reports:true
+      },
       data:{
         changes,
         next:work.slice(0,30),
