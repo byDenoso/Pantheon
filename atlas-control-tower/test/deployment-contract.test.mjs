@@ -34,11 +34,10 @@ test('Pages readback validates both static runtime and Atlas Neural V3',()=>{
   assert.doesNotMatch(pages,/\/api\/graph\?focus=/);
 });
 
-test('Vercel compatibility runtime auto-promotes Atlas changes without replacing canonical Pages production',()=>{
+test('legacy Vercel Action is manual compatibility fallback, not a second automatic production deployer',()=>{
   assert.match(legacyVercel,/name:\s*Atlas Legacy Vercel Deploy/);
-  assert.match(legacyVercel,/push:\s*\n\s*branches:\s*\[main\]/);
-  assert.match(legacyVercel,/paths:\s*\n\s*-\s*['"]atlas-control-tower\/\*\*['"]/);
   assert.match(legacyVercel,/workflow_dispatch:/);
+  assert.doesNotMatch(legacyVercel,/push:\s*\n\s*branches:\s*\[main\]/);
   assert.match(legacyVercel,/VERCEL_TOKEN/);
   assert.match(legacyVercel,/VERCEL_COMPATIBILITY_READBACK_OK/);
   assert.match(legacyVercel,/group:\s*atlas-vercel-compatibility/);
