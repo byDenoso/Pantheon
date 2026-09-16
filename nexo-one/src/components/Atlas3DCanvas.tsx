@@ -134,6 +134,23 @@ export function Atlas3DCanvas(
 
   const byId = useMemo(() => new Map(nodes.map(node => [node.id, node])), [nodes]);
 
+  const orbit = (delta: number) => {
+    const camera = runtimeRef.current?.camera;
+    if (camera) camera.alpha += delta;
+  };
+  const tilt = (delta: number) => {
+    const camera = runtimeRef.current?.camera;
+    if (!camera) return;
+    camera.beta = Math.max(0.22, Math.min(Math.PI - 0.22, camera.beta + delta));
+  };
+  const zoom = (factor: number) => {
+    const camera = runtimeRef.current?.camera;
+    if (!camera) return;
+    const lower = camera.lowerRadiusLimit ?? 4;
+    const upper = camera.upperRadiusLimit ?? Number.POSITIVE_INFINITY;
+    camera.radius = Math.max(lower, Math.min(upper, camera.radius * factor));
+  };
+
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas || nodes.length === 0) return undefined;
@@ -151,7 +168,7 @@ export function Atlas3DCanvas(
       const bounds = graphBounds3D(nodes);
       const center = point(bounds.center);
       const camera = new ArcRotateCamera('atlas-camera', -Math.PI / 2.3, Math.PI / 2.55, bounds.radius * 2.25, center, scene);
-      camera.attachControl(canvas, true);
+      camera.attachControl(canvas, false);
       camera.lowerRadiusLimit = 4;
       camera.upperRadiusLimit = Math.max(80, bounds.radius * 5);
       camera.wheelPrecision = 22;
@@ -288,12 +305,20 @@ export function Atlas3DCanvas(
     <div className="atlas3d-shell" data-testid="atlas-3d-shell">
       <div className="atlas3d-haze" aria-hidden="true" />
       <canvas ref={canvasRef} className="atlas3d-canvas" data-testid="atlas-3d-canvas"
-        aria-label="Mapa 3D navegável do NEXO. Arraste para orbitar, use a roda ou gesto de pinça para zoom e selecione nós para inspecionar." />
+        aria-label="Mapa 3D navegável do NEXO. Arraste para orbitar, faça pinça para zoom ou use os controles de navegação e selecione nós para inspecionar." />
       <div ref={tooltipRef} className="atlas3d-tooltip" data-visible="false" aria-hidden="true" />
+      <div className="atlas3d-mobile-nav" aria-label="Navegação tátil do mapa 3D">
+        <button type="button" aria-label="Girar mapa para a esquerda" onClick={() => orbit(-0.22)}>←</button>
+        <button type="button" aria-label="Inclinar mapa para cima" onClick={() => tilt(-0.16)}>↑</button>
+        <button type="button" aria-label="Inclinar mapa para baixo" onClick={() => tilt(0.16)}>↓</button>
+        <button type="button" aria-label="Girar mapa para a direita" onClick={() => orbit(0.22)}>→</button>
+        <button type="button" aria-label="Aproximar mapa" onClick={() => zoom(0.82)}>＋</button>
+        <button type="button" aria-label="Afastar mapa" onClick={() => zoom(1.22)}>−</button>
+      </div>
       <div className="atlas3d-controls" aria-label="Controles do mapa 3D">
         <button type="button" onClick={() => runtimeRef.current?.reset()} title="Restaurar visão geral">Visão geral</button>
         <button type="button" disabled={!selectedId} onClick={() => runtimeRef.current?.focus(selectedId, true)} title="Centralizar seleção">Focar</button>
-        <span>arraste · zoom · duplo clique</span>
+        <span>arraste · pinça · toque no nó</span>
       </div>
       {failed && <div className="atlas3d-fallback" role="alert">Renderização 3D indisponível: {failed}</div>}
       <div className="atlas3d-a11y-list" aria-label="Entidades do mapa 3D">
