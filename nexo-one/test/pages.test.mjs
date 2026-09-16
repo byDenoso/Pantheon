@@ -18,14 +18,15 @@ test('GitHub Pages build uses repository base and configurable SystemState endpo
   assert.match(remote, /\/api\/system/);
 });
 
-test('GitHub Pages workflow builds, snapshots public SystemState and deploys official Pages artifact', async () => {
+test('GitHub Pages compiles public SystemState locally and deploys official Pages artifact', async () => {
   const workflow = await text('../.github/workflows/nexo-one-pages.yml');
 
   assert.match(workflow, /actions\/configure-pages@v5/);
   assert.match(workflow, /actions\/upload-pages-artifact@v4/);
   assert.match(workflow, /actions\/deploy-pages@v4/);
   assert.match(workflow, /VITE_SYSTEM_ENDPOINT:\s*\.\/system\.json/);
-  assert.match(workflow, /nexo-one-two\.vercel\.app\/api\/system/);
+  assert.match(workflow, /node scripts\/build-pages-system\.mjs/);
+  assert.doesNotMatch(workflow, /nexo-one-two\.vercel\.app\/api\/system/);
   assert.match(workflow, /pages:\s*write/);
   assert.match(workflow, /id-token:\s*write/);
 });
