@@ -26,22 +26,24 @@ export function createTowerGithubGateway({env=process.env,fetchImpl=globalThis.f
   if(typeof fetchImpl!=='function')throw new Error('FETCH_REQUIRED');
   const token=selectGitHubToken(env),readTower=path=>readContent({fetchImpl,token,repo:towerRepo,path,ref:towerRef});
   async function readJson(relative){const path=String(relative).startsWith('TOWER_V06/')?String(relative):`TOWER_V06/${String(relative).replace(/^\/+/, '')}`;const file=await readTower(path);return file?.json??null;}
+  async function requireJson(relative){const value=await readJson(relative);if(value===null)throw new Error(`CANONICAL_READ_MISSING:${relative}`);return value;}
   async function readEntity(kind,id){return readJson(`entities/${String(kind).toLowerCase()}/${id}.json`);}
   async function readReceipt(requestId){return readJson(`mutations/receipts/${requestId}.json`);}
   async function submitTowerMutation(request){if(!token)throw new Error('GITHUB_WRITE_NOT_CONFIGURED');if(!request?.request_id||!request?.entity_name||!request?.entity_kind)throw new Error('INVALID_TOWER_MUTATION');const existingReceipt=await readReceipt(request.request_id);if(existingReceipt)return {request_id:request.request_id,status:'COMPLETE',receipt:existingReceipt};const inbox=`TOWER_V06/mutations/inbox/${request.request_id}.json`;await createContent({fetchImpl,token,repo:towerRepo,path:inbox,ref:towerRef,message:`nexo(mcp): submit ${request.entity_name}`,json:request});for(let attempt=0;attempt<receiptAttempts;attempt+=1){const receipt=await readReceipt(request.request_id);if(receipt)return {request_id:request.request_id,status:'COMPLETE',receipt};if(attempt+1<receiptAttempts)await sleep(receiptDelayMs);}throw new Error('TOWER_MUTATION_RECEIPT_TIMEOUT');}
-  async function dispatchRuntime({trigger_id,run_id,work_id,capability_id,data_bounded=false}){if(!token)throw new Error('GITHUB_WRITE_NOT_CONFIGURED');for(const [key,value] of Object.entries({trigger_id,run_id,work_id,capability_id}))if(!String(value||'').trim())throw new Error(`${key.toUpperCase()}_REQUIRED`);const launch={schema_version:'1.0.0',event_type:'RUNTIME_LAUNCH_REQUESTED',trigger_id,run_id,work_id,capability_id,data_bounded:Boolean(data_bounded)};const path=`TOWER_V06/runtime/launch/inbox/${run_id}.json`;const write=await createContent({fetchImpl,token,repo:towerRepo,path,ref:towerRef,message:`nexo(mcp): launch ${run_id}`,json:launch});return {status:'ACCEPTED',dispatch_mode:'LAUNCH_EVENT',ref:towerRef,trigger_id,run_id,work_id,capability_id,already_enqueued:Boolean(write.idempotent),launch_commit:write.commit_sha||null};}
+  async function dispatchRuntime({trigger_id,run_id,work_id,capability_id,data_bounded=false}){if(!token)throw new Error('GITHUB_WRITE_NOT_CONFIGURED');for(const [key,value] of Object.entries({trigger_id,run_id,work_id,capability_id}))if(!String(value||'').trim())throw new Error(`${key.toUpperCase()}_REQUIRED`);const launch={schema_version:'1.0.0',event_type:'RUNTIME_LAUNCH_REQUESTED',trigger_id,run_id,work_id,capability_id,data_bounded:Boolean(data_bounded)};const path=`TOWER_V06/runtime/launch/inbox/${run_id}.json`;const existing=await readTower(path);if(existing){const actual=existing.json||{},expected={trigger_id,run_id,work_id,capability_id,data_bounded:Boolean(data_bounded)};if(Object.keys(expected).some(key=>actual[key]!==expected[key]))throw new Error(`RUNTIME_LAUNCH_CONFLICT:${run_id}`);return {status:'ACCEPTED',dispatch_mode:'LAUNCH_EVENT',ref:towerRef,trigger_id,run_id,work_id,capability_id,already_enqueued:true,launch_commit:null};}const write=await createContent({fetchImpl,token,repo:towerRepo,path,ref:towerRef,message:`nexo(mcp): launch ${run_id}`,json:launch});return {status:'ACCEPTED',dispatch_mode:'LAUNCH_EVENT',ref:towerRef,trigger_id,run_id,work_id,capability_id,already_enqueued:Boolean(write.idempotent),launch_commit:write.commit_sha||null};}
   return {
     configured:{towerWrite:Boolean(token),towerRepo,towerRef,dispatchRepo,dispatchRef},
     readJson,
-    readControl:async()=>readJson('CONTROL.json')||{},
+    readControl:()=>requireJson('CONTROL.json'),
     readEntity,
-    readRoleView:async role=>readJson(`bootstrap/${String(role).toLowerCase()}.json`)||{role:String(role).toUpperCase(),queue:[],queue_count:0},
+    readActiveWorkIndex:()=>requireJson('indexes/active-work.json'),
+    readRoleView:role=>requireJson(`bootstrap/${String(role).toLowerCase()}.json`),
     readReceipt,
-    readCapabilityManifest:async()=>readJson('manifests/capabilities.json')||{capabilities:{}},
+    readCapabilityManifest:()=>requireJson('manifests/capabilities.json'),
     readRuntimeReport:runId=>readJson(`runtime/reports/${runId}.json`),
     readEvidence:evidenceId=>readJson(`runtime/evidence/${evidenceId}.json`),
-    readCampaignIndex:async()=>readJson('indexes/campaigns.json')||{campaigns:[]},
-    readInterdomainIndex:async()=>readJson('indexes/interdomain-active.json')||{items:[]},
+    readCampaignIndex:()=>requireJson('indexes/campaigns.json'),
+    readInterdomainIndex:()=>requireJson('indexes/interdomain-active.json'),
     submitTowerMutation,
     dispatchRuntime,
     async findByFingerprint(fingerprint,{testId}={}){const id=testId||exactEntityIdFromFingerprint(fingerprint),entity=await readEntity('test',id);if(!entity)return null;if(entity.scientific_fingerprint&&entity.scientific_fingerprint!==fingerprint)return null;return entity;},
