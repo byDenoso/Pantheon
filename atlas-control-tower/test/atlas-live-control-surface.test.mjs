@@ -39,8 +39,14 @@ test('login page performs real Google Identity sign-in instead of redirecting to
   assert.doesNotMatch(source,/Abrindo o Cockpit público/);
 });
 
-test('App restores a browser session rather than forcing session null',()=>{
-  const source=read('src/App.tsx');
+test('private gate restores a stored browser session instead of remaining a no-op',()=>{
+  const source=read('src/components/PrivateGate.tsx');
   assert.match(source,/readStoredGoogleSession/);
-  assert.doesNotMatch(source,/const session = null/);
+  assert.match(source,/Entrar no Atlas/);
+});
+
+test('Atividade exposes an explicit authenticated create-work operation',()=>{
+  const source=read('src/pages/AtividadePage.tsx');
+  assert.match(source,/semanticCommand\(['"]nexo\.create_work['"]/);
+  assert.match(source,/Criar WORK/);
 });
