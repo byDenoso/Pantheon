@@ -106,12 +106,19 @@ export default function App() {
   const freshness = useMemo(() => headerFreshness(state), [state]);
   const graph = state.graph;
   const domains = useMemo(() => graph?.nodes.filter(node => String(node.type || '').toUpperCase() === 'DOMAIN').slice(0, 12) || [], [graph]);
+  const webMcpActions = useMemo(() => ({
+    select: actions.select,
+    open: actions.open,
+    focusSystem: actions.focusSystem,
+    search: actions.search,
+    sync: actions.sync
+  }), [actions.select, actions.open, actions.focusSystem, actions.search, actions.sync]);
   const webMcpCore = useMemo(() => createAtlasSemanticCore({
     getState: () => stateRef.current,
-    actions,
+    actions: webMcpActions,
     getRoute: () => routeRef.current,
     getCapabilities: () => ({ towerWriteConfigured: false })
-  }), [actions]);
+  }), [webMcpActions]);
 
   useEffect(() => {
     let disposed = false;
