@@ -9,7 +9,9 @@ export function buildAtlasV3Scene(snapshot){
   const reservedIds=[ROOT_ID,...keys.map(clusterId)];for(const id of reservedIds)if(canonicalIds.has(id))throw new Error(`ATLAS_V3_PRESENTATION_ID_COLLISION:${id}`);
   const root={id:ROOT_ID,type:'ROOT',label:'NEXO',status:'ACTIVE',presentationOnly:true,domain:'SYSTEM'};const clusters=keys.map(key=>({id:clusterId(key),type:'SYSTEM',label:CLUSTER_LABEL[key]||key,status:'ACTIVE',domain:key,presentationOnly:true,layoutParent:ROOT_ID}));
   const canonicalNodes=sourceNodes.map(source=>{const node={...source};const declaredParent=typeof source.parentId==='string'&&canonicalIds.has(source.parentId)?source.parentId:null;node.layoutParent=declaredParent||clusterId(clusterKey(source));return node});
-  const presentationEdges=[];for(const key of keys){const hub=clusterId(key);presentationEdges.push({id:`presentation:${ROOT_ID}:${hub}`,source:ROOT_ID,target:hub,type:'CONTAINS',presentationOnly:true});for(const node of canonicalNodes)if(node.layoutParent===hub)presentationEdges.push({id:`presentation:${hub}:${node.id}`,source:hub,target:node.id,type:'CONTAINS',presentationOnly:true})}
-  const canonicalEdges=sourceEdges.map(edge=>({...edge}));const nodes=[root,...clusters,...canonicalNodes];const edges=[...presentationEdges,...canonicalEdges];return{graph:{nodes,edges,total:nodes.length,visualTotal:nodes.length,truncated:false,hasMore:false},focusId:ROOT_ID,canonicalIds,presentationIds:new Set(reservedIds)};
+  // Presentation hierarchy exists only in layoutParent. Synthetic CONTAINS edges used
+  // to be merged with canonical relations, which made visual grouping look like factual
+  // graph semantics. Keep layout and knowledge separate: only source edges are semantic.
+  const canonicalEdges=sourceEdges.map(edge=>({...edge}));const nodes=[root,...clusters,...canonicalNodes];const edges=canonicalEdges;return{graph:{nodes,edges,total:nodes.length,visualTotal:nodes.length,truncated:false,hasMore:false},focusId:ROOT_ID,canonicalIds,presentationIds:new Set(reservedIds)};
 }
 export{ROOT_ID as ATLAS_V3_PRESENTATION_ROOT,CLUSTER_PREFIX as ATLAS_V3_CLUSTER_PREFIX};
