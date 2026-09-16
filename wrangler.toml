@@ -1,0 +1,11 @@
+name = "whatsapp-openai-bridge"
+main = "worker.mjs"
+compatibility_date = "2026-09-16"
+workers_dev = true
+
+[vars]
+OPENAI_MODEL = "gpt-5.6-sol"
+OPENAI_MAX_OUTPUT_TOKENS = "500"
+WHATSAPP_ALLOW_ALL = "false"
+META_GRAPH_VERSION = "v23.0"
+SYSTEM_PROMPT = "Responda em português do Brasil, de forma direta, útil e curta para WhatsApp."
