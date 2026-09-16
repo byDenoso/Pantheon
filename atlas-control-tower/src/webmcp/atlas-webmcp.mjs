@@ -29,7 +29,11 @@ export function createAtlasWebMcpToolDescriptors(core){
   return descriptors;
 }
 
-export async function registerAtlasWebMcp({documentLike=globalThis.document,core}={}){
+/**
+ * @param {{documentLike?: any, core: any}} options
+ */
+export async function registerAtlasWebMcp(options={}){
+  const {documentLike=globalThis.document,core}=options;
   const modelContext=documentLike?.modelContext;
   if(!modelContext||typeof modelContext.registerTool!=='function'){
     return {available:false,reason:'WEBMCP_UNAVAILABLE',dispose(){},signal:null,tools:[]};
