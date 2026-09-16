@@ -7,8 +7,9 @@ import {dirname,resolve} from 'node:path';
 const here=dirname(fileURLToPath(import.meta.url));
 const workflow=readFileSync(resolve(here,'../../.github/workflows/atlas-deploy.yml'),'utf8');
 
-test('Vercel compatibility runtime deploys from main when Atlas/MCP production code changes',()=>{
-  assert.match(workflow,/push:\s*\n\s*branches:\s*\[?main\]?/m,'atlas-deploy.yml must react to pushes on main');
-  assert.match(workflow,/paths:\s*\n(?:\s*-\s*['"]?atlas-control-tower\/\*\*['"]?\s*\n?)+/m,'main deploy must be scoped to atlas-control-tower/**');
+test('legacy Vercel action stays manual fallback while Vercel Git integration owns automatic production',()=>{
   assert.match(workflow,/workflow_dispatch:/,'manual recovery trigger must remain available');
+  assert.doesNotMatch(workflow,/push:\s*\n\s*branches:\s*\[?main\]?/m,'legacy fallback must not duplicate Vercel Git production deployment');
+  assert.match(workflow,/group:\s*atlas-vercel-compatibility/);
+  assert.match(workflow,/VERCEL_TOKEN/);
 });
