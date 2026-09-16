@@ -47,9 +47,9 @@ export interface ProjectionEnvelope {
 }
 
 export type TruthStatus =
-  | 'LIVE' | 'DEGRADED' | 'CONFLICT' | 'STALE_DECLARATION' | 'MISSING_PROVIDER' | 'BLOCKED';
+  | 'LIVE' | 'SNAPSHOT' | 'DEGRADED' | 'CONFLICT' | 'STALE_DECLARATION' | 'MISSING_PROVIDER' | 'BLOCKED';
 export const TRUTH_STATUSES: TruthStatus[] =
-  ['LIVE', 'DEGRADED', 'CONFLICT', 'STALE_DECLARATION', 'MISSING_PROVIDER', 'BLOCKED'];
+  ['LIVE', 'SNAPSHOT', 'DEGRADED', 'CONFLICT', 'STALE_DECLARATION', 'MISSING_PROVIDER', 'BLOCKED'];
 
 export interface TruthFinding {
   id: string;
