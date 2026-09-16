@@ -2,6 +2,7 @@ import {createMcpHandler,McpServer} from '@modelcontextprotocol/server';
 import * as z from 'zod/v4';
 import {executeMcpTool,MCP_TOOL_NAMES as CORE_MCP_TOOL_NAMES} from './tools.mjs';
 import {STYLE_POLICY,buildStyleInstruction,validateStyleText} from '../policy/style-policy.mjs';
+import {getPdfPolicy} from '../policy/pdf-reporting-policy.mjs';
 
 const READ_ONLY_ANNOTATIONS=Object.freeze({
   readOnlyHint:true,
@@ -10,7 +11,7 @@ const READ_ONLY_ANNOTATIONS=Object.freeze({
   openWorldHint:false
 });
 
-const STYLE_MCP_TOOL_NAMES=Object.freeze(['get_style_policy','validate_style_text']);
+const STYLE_MCP_TOOL_NAMES=Object.freeze(['get_style_policy','validate_style_text','get_pdf_policy']);
 export const NEXO_MCP_TOOL_NAMES=Object.freeze([...CORE_MCP_TOOL_NAMES,...STYLE_MCP_TOOL_NAMES]);
 
 const TOOL_DEFINITIONS=Object.freeze({
@@ -65,6 +66,10 @@ const TOOL_DEFINITIONS=Object.freeze({
   validate_style_text:{
     description:'Validate candidate generated text against the canonical NEXO writing style policy.',
     inputSchema:z.object({text:z.string().max(200000)})
+  },
+  get_pdf_policy:{
+    description:'Read the canonical NEXO PDF reporting policy, presets, and authoring instruction.',
+    inputSchema:z.object({preset:z.string().max(80).optional()})
   }
 });
 
@@ -78,13 +83,14 @@ function toolResult(payload){
 export async function executeNexoMcpTool({readSnapshot},name,args={}){
   if(name==='get_style_policy')return {policy:STYLE_POLICY,instruction:buildStyleInstruction()};
   if(name==='validate_style_text')return {policyId:STYLE_POLICY.id,...validateStyleText(args.text)};
+  if(name==='get_pdf_policy')return getPdfPolicy(args.preset);
   if(typeof readSnapshot!=='function')throw new TypeError('MCP_READ_SNAPSHOT_REQUIRED');
   return executeMcpTool(await readSnapshot(),name,args);
 }
 
 export function createNexoMcpServer({readSnapshot}){
   if(typeof readSnapshot!=='function')throw new TypeError('MCP_READ_SNAPSHOT_REQUIRED');
-  const server=new McpServer({name:'nexo-science',version:'1.1.0'});
+  const server=new McpServer({name:'nexo-science',version:'1.2.0'});
   for(const name of NEXO_MCP_TOOL_NAMES){
     const definition=TOOL_DEFINITIONS[name];
     server.registerTool(name,{
