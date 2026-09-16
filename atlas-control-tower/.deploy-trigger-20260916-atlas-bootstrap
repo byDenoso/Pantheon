@@ -1,0 +1,3 @@
+Atlas production redeploy trigger for the 2026-09-16 bootstrap hotfix.
+Canonical hotfix merge: a597d407d512c3b5a4aa184acafa491f9dfe6262
+Reason: force production deployment after preview was READY but merge was not promoted automatically.
