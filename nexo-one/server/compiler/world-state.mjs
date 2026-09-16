@@ -30,7 +30,7 @@ export function compile(results,{now=Date.now(),previous=null,access='PRIVATE'}=
   items.sort((a,b)=>rankAttention(a)-rankAttention(b)||(a.dueAt||'z').localeCompare(b.dueAt||'z')||a.id.localeCompare(b.id));
   const contexts=CONTEXTS.map(id=>({id,title:descriptions[id][0],description:descriptions[id][1],itemIds:items.filter(x=>x.contextId===id).map(x=>x.id),attentionCount:items.filter(x=>x.contextId===id&&['ACT','ESCALATE'].includes(x.attention)).length,coverage:items.some(x=>x.contextId===id)?providers.some(p=>p.status!=='AVAILABLE'||p.partial)?'PARTIAL':'AVAILABLE':'UNAVAILABLE'}));
   const input=results.find(r=>r.provider.id==='nexo')?.truthGraphInput;
-  const truthGraph=buildTruthGraph({...(input||{inputError:'NEXO_UNAVAILABLE'}),providers,now});
+  const truthGraph=buildTruthGraph({...(input||{inputError:'NEXO_UNAVAILABLE'}),providers,now,access});
   const fingerprint='WORLD-'+hash({version:'1',access,items:[...items].sort((a,b)=>a.id.localeCompare(b.id)).map(semantic),providers:providers.map(({id,revision,status,partial})=>({id,revision,status,partial})),truthGraph:truthGraph.fingerprint});
   const world={version:'1',fingerprint,generatedAt:new Date(now).toISOString(),providers,items,contexts,issues,truthGraph,access};
   return {...world,diff:worldDiff(previous,world)};
