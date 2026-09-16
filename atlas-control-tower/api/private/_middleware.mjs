@@ -1,7 +1,8 @@
-// Shared request gate for every api/private/* endpoint. No endpoint handler talks to
-// req/res directly for auth/CORS -- they all go through withGoogleAuth so the 401/403/
-// AUTH_SETUP_REQUIRED/CORS behavior is defined and tested in exactly one place.
+// Shared request gate for every api/private/* endpoint. Private endpoints accept a
+// server-issued PIN session cookie first and retain Google bearer auth as a backwards-
+// compatible secondary path. The PIN itself never reaches browser storage or source.
 import { classifyGoogleSession, isAllowedOrigin, verifyGoogleIdToken, PRODUCTION_PAGES_ORIGIN } from '../../lib/auth.mjs';
+import { isPinAuthConfigured, readPinSession } from '../../lib/pin-auth.mjs';
 
 const GOOGLE_JWKS_URL = 'https://www.googleapis.com/oauth2/v3/certs';
 
@@ -29,8 +30,9 @@ function applyCors(req, res) {
   if (origin && originAllowed(req, origin)) {
     res.setHeader('Access-Control-Allow-Origin', origin);
     res.setHeader('Vary', 'Origin');
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
   }
-  res.setHeader('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
+  res.setHeader('Access-Control-Allow-Methods', 'GET,POST,DELETE,OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type,Authorization');
 }
 
@@ -56,14 +58,24 @@ export function withGoogleAuth(handler, { fetchJwks = () => fetch(GOOGLE_JWKS_UR
     const origin = req.headers?.origin || null;
     if (origin && !originAllowed(req, origin)) return send(res, { error: 'CORS_ORIGIN_NOT_ALLOWED' }, 403);
 
-    const clientId = String(process.env.GOOGLE_CLIENT_ID || '').trim();
-    const allowedEmailsRaw = String(process.env.NEXO_ALLOWED_EMAILS || '').trim();
-    if (!clientId || !allowedEmailsRaw) {
-      return send(res, { error: 'AUTH_SETUP_REQUIRED', missing: [!clientId && 'GOOGLE_CLIENT_ID', !allowedEmailsRaw && 'NEXO_ALLOWED_EMAILS'].filter(Boolean) }, 503);
+    if (isPinAuthConfigured()) {
+      const pinSession = readPinSession(req);
+      if (pinSession.ok) {
+        req.session = { auth: 'pin', expiresAt: pinSession.expiresAt };
+        return handler(req, res, { send });
+      }
     }
 
     const token = bearerToken(req);
-    if (!token) return send(res, { error: 'UNAUTHORIZED', reason: 'TOKEN_ABSENT' }, 401);
+    if (!token) {
+      return send(res, { error: 'UNAUTHORIZED', reason: 'SESSION_OR_TOKEN_ABSENT' }, 401);
+    }
+
+    const clientId = String(process.env.GOOGLE_CLIENT_ID || '').trim();
+    const allowedEmailsRaw = String(process.env.NEXO_ALLOWED_EMAILS || '').trim();
+    if (!clientId || !allowedEmailsRaw) {
+      return send(res, { error: 'AUTH_SETUP_REQUIRED', missing: [!isPinAuthConfigured() && 'NEXO_ACCESS_PIN', !clientId && 'GOOGLE_CLIENT_ID', !allowedEmailsRaw && 'NEXO_ALLOWED_EMAILS'].filter(Boolean) }, 503);
+    }
 
     let claims;
     try {
@@ -76,9 +88,9 @@ export function withGoogleAuth(handler, { fetchJwks = () => fetch(GOOGLE_JWKS_UR
     const outcome = classifyGoogleSession(claims, clientId, allowedEmails);
     if (outcome.status !== 200) return send(res, { error: outcome.status === 403 ? 'FORBIDDEN' : 'UNAUTHORIZED', reason: outcome.reason }, outcome.status);
 
-    req.session = { email: claims.email };
+    req.session = { auth: 'google', email: claims.email };
     return handler(req, res, { send });
   };
 }
 
-export { send };
+export { applyCors, originAllowed, send };
