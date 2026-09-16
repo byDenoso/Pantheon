@@ -23,6 +23,13 @@ test('live activity endpoint reads canonical Tower entities and indexes',()=>{
   assert.match(source,/readInterdomainIndex/);
 });
 
+test('live and semantic routes reuse existing Vercel functions instead of increasing Hobby function count',()=>{
+  const config=JSON.parse(read('vercel.json'));
+  assert.equal(config.builds.filter(item=>item.use==='@vercel/node').length,12);
+  assert.ok(config.routes.some(route=>route.src==='/api/live/activity'&&String(route.dest).includes('runtime-orphans')));
+  assert.ok(config.routes.some(route=>route.src==='/api/private/semantic'&&String(route.dest).includes('private/index')));
+});
+
 test('private semantic command endpoint is authenticated and never accepts generic patch commands',()=>{
   const source=read('api/private/semantic.mjs');
   assert.match(source,/withGoogleAuth/);
@@ -31,11 +38,12 @@ test('private semantic command endpoint is authenticated and never accepts gener
   assert.doesNotMatch(source,/patch_json|write_entity/i);
 });
 
-test('login page performs real Google Identity sign-in instead of redirecting to public cockpit',()=>{
+test('login page performs real Google Identity sign-in with client configuration loaded from the server',()=>{
   const source=read('src/pages/LoginPage.tsx');
   assert.match(source,/accounts\.google\.com\/gsi\/client/);
-  assert.match(source,/VITE_GOOGLE_CLIENT_ID/);
+  assert.match(source,/\/api\/auth\/session/);
   assert.match(source,/storeGoogleCredential/);
+  assert.doesNotMatch(source,/VITE_GOOGLE_CLIENT_ID/);
   assert.doesNotMatch(source,/Abrindo o Cockpit público/);
 });
 
