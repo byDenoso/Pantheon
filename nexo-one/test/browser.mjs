@@ -159,33 +159,44 @@ try {
     await page.keyboard.press('Escape');
     assert.equal(await page.getByRole('dialog').count(), 0);
 
-    // 6. Atlas: seleção de entidade abre o inspector (painel no desktop, folha no mobile).
+    // 6. Atlas 3D: canvas real, navegação espacial e seleção pelo caminho acessível.
     await navigate('Atlas');
-    await page.locator('.atlas-canvas').waitFor();
-    assert.ok(await page.locator('.atlas-node').count() > 10, 'grafo praticamente vazio');
-    await page.locator('.atlas-node').first().click();
+    const canvas = page.getByTestId('atlas-3d-canvas');
+    await canvas.waitFor();
+    assert.equal(await page.locator('.atlas3d-fallback').count(), 0, 'Babylon caiu no fallback');
+    const graphNodes = page.locator('.atlas3d-a11y-list button');
+    assert.ok(await graphNodes.count() > 10, 'grafo 3D praticamente vazio');
+    const box = await canvas.boundingBox();
+    if (box) {
+      await page.mouse.move(box.x + box.width * 0.58, box.y + box.height * 0.48);
+      await page.mouse.down();
+      await page.mouse.move(box.x + box.width * 0.68, box.y + box.height * 0.42, { steps: 5 });
+      await page.mouse.up();
+      await page.mouse.wheel(0, -180);
+    }
+    await graphNodes.first().focus();
+    await page.keyboard.press('Enter');
     await page.locator('.entity-inspector').waitFor();
     const inspector = (await page.locator('.entity-inspector').innerText()).toLowerCase();
     for (const field of ['upstream', 'downstream', 'fingerprint', 'source_revision', 'checked_at']) {
       assert.ok(inspector.includes(field), `inspector sem ${field}`);
     }
     await page.screenshot({ path: `${output}/atlas-${name}.png`, fullPage: true });
-    // No mobile o inspector é uma folha inferior que cobre o conteúdo: fecha antes de seguir.
     if (mobile) {
       await page.getByRole('button', { name: 'Fechar inspector' }).click();
       await page.locator('.atlas-sheet').waitFor({ state: 'detached' });
     }
 
-    // 7. Filtros do Atlas reduzem o grafo e podem ser limpos.
-    const countNodes = () => page.locator('.atlas-node').count();
+    // 7. Filtros do Atlas reduzem os nós renderizados e podem ser limpos.
+    const countNodes = () => page.locator('.atlas3d-a11y-list button').count();
     const before = await countNodes();
     await page.getByRole('button', { name: /Filtros/ }).click();
     await page.locator('.atlas-filters').waitFor();
     await page.locator('.chip-group', { hasText: 'DOMÍNIO' }).getByRole('button', { name: 'OLYMPUS' }).click();
-    assert.ok(await countNodes() < before, 'o filtro de domínio não reduziu o grafo');
+    assert.ok(await countNodes() < before, 'o filtro de domínio não reduziu o grafo 3D');
     if (name === 'desktop-dark') await page.screenshot({ path: `${output}/atlas-filtered.png`, fullPage: true });
     await page.getByRole('button', { name: 'Limpar' }).click();
-    assert.equal(await countNodes(), before, 'limpar filtros não restaurou o grafo');
+    assert.equal(await countNodes(), before, 'limpar filtros não restaurou o grafo 3D');
 
     // 8. Contexto preservado: o filtro de busca sobrevive à ida e volta entre visões.
     await page.getByRole('textbox', { name: 'Buscar no grafo' }).fill('olympus');
