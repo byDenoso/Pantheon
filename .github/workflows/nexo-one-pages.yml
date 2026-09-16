@@ -49,20 +49,15 @@ jobs:
           VITE_SYSTEM_ENDPOINT: ./system.json
         run: npm run build
 
-      - name: Snapshot public SystemState
+      - name: Compile public SystemState
+        working-directory: nexo-one
+        env:
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
-          curl --fail --silent --show-error \
-            https://nexo-one-two.vercel.app/api/system \
-            --output nexo-one/dist/system.json
-          node --input-type=module <<'NODE'
-          import {readFileSync} from 'node:fs';
-          const value = JSON.parse(readFileSync('nexo-one/dist/system.json', 'utf8'));
-          if (!value || typeof value !== 'object' || Array.isArray(value)) {
-            throw new Error('SystemState snapshot is not a JSON object');
-          }
-          NODE
-          touch nexo-one/dist/.nojekyll
+          node scripts/build-pages-system.mjs
+          touch dist/.nojekyll
 
       - name: Upload GitHub Pages artifact
         uses: actions/upload-pages-artifact@v4
