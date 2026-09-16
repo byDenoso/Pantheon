@@ -1,0 +1,23 @@
+name: NEXO ONE lockfile generator
+on:
+  push:
+    branches: ['feat/nexo-atlas-3d-v1']
+    paths: ['nexo-one/package.json', '.github/workflows/nexo-one-lockgen.yml']
+permissions:
+  contents: read
+jobs:
+  lock:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: nexo-one
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - run: npm install --package-lock-only --ignore-scripts --no-audit --no-fund
+      - uses: actions/upload-artifact@v4
+        with:
+          name: nexo-one-package-lock-${{ github.sha }}
+          path: nexo-one/package-lock.json
