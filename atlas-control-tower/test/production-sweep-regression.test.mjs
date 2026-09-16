@@ -34,11 +34,10 @@ test('production workflow verifies the vNext app and Atlas V3 rather than the re
   assert.doesNotMatch(deploy,/id=\\?['"]graph\\?['"]/);
 });
 
-test('Vercel compatibility deploy is path-scoped and remains separate from canonical Pages verification',()=>{
+test('legacy Vercel deployment remains manual compatibility fallback and separate from canonical Pages verification',()=>{
   assert.match(legacyVercel,/Atlas Legacy Vercel Deploy/);
-  assert.match(legacyVercel,/push:\s*\n\s*branches:\s*\[main\]/);
-  assert.match(legacyVercel,/paths:\s*\n\s*-\s*['"]atlas-control-tower\/\*\*['"]/);
   assert.match(legacyVercel,/workflow_dispatch:/);
+  assert.doesNotMatch(legacyVercel,/push:\s*\n\s*branches:\s*\[main\]/);
   assert.match(legacyVercel,/group:\s*atlas-vercel-compatibility/);
   assert.doesNotMatch(legacyVercel,/actions\/deploy-pages@v4/);
   assert.match(deploy,/actions\/deploy-pages@v4/);
