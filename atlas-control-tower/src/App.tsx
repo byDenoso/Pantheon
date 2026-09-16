@@ -149,8 +149,7 @@ export default function App() {
     appliedContext.current = contextKey;
     if (route.context.domain && state.focusId !== `domain:${route.context.domain}`) {
       const domain = { id: `domain:${route.context.domain}`, type: 'DOMAIN', label: route.context.domain } as AtlasNode;
-      if (state.focusId === 'system:NEXO') void actions.focusSystem('system:SCIENCE', 'Ciência').then(() => actions.open(domain));
-      else void actions.open(domain);
+      void actions.open(domain);
     }
   }, [actions, route.area, route.context.domain, state.focusId]);
 
