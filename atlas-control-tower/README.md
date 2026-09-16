@@ -14,6 +14,20 @@ The locator contract is `nexo-one/data/canonical.json` (`NEXO_ATLAS_AUTHORITY_V2
 
 Google Drive is legacy projection/provenance only. Neon and old Data API surfaces are legacy compatibility code, not current NEXO truth owners. A projection, cache, deployment runtime, or fallback can never override TOWER_V06.
 
+## Hosted NEXO MCP
+
+The canonical hosted NEXO MCP front door is:
+
+`https://nexo-atlas-control-tower.vercel.app/api/mcp`
+
+It is a semantic transport over the existing Tower/GitHub/runtime contracts, not a state authority. The endpoint exposes public capability/bootstrap discovery and authenticated semantic operations for canonical work, campaigns, runtime dispatch/readback, evidence and health incident lifecycle.
+
+Public discovery never grants mutation authority. Private semantic reads and mutations require bearer authentication, and Tower writes fail closed when an authorized server-side GitHub credential is absent. Canonical mutations continue through `TOWER_V06/mutations/inbox` -> receipt -> exact entity readback; runtime execution continues through canonical launch requests and SingleRuntime.
+
+`byDenoso/NEXO-Obsidian-Vault/services/nexo-api` remains useful as runtime/reference/test code, but its separate Railway-oriented host is not required for the normal hosted MCP path after this consolidation.
+
+No MCP-local database, queue, scheduler or second writer exists. If the MCP disagrees with Tower, **TOWER_V06 wins**.
+
 ## Read path
 
 ```text
