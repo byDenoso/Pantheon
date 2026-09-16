@@ -40,18 +40,20 @@ function capabilityState(rows){
   const state=values.some(x=>BLOCKING.has(x))?'BLOCKED':values.some(x=>DEGRADED.has(x)||!x.startsWith('PASS'))?'DEGRADED':'PASS';
   return {state,summary,ids};
 }
-function explanation(status,{domain,expected,declared,provider,truth,capability}){
+function explanation(status,{domain,expected,declared,provider,truth,capability,access}){
   if(status==='CONFLICT')return `${domain}: autoridade canônica aponta para ${expected||'owner dependente'}, mas o provider real/declarado resolve para ${declared||'provider não identificável'}. Nenhuma autoridade foi alterada automaticamente.`;
   if(status==='BLOCKED')return `${domain}: capability necessária está fail-closed (${capability.summary}).`;
   if(status==='MISSING_PROVIDER')return `${domain}: provider canônico ${expected||'esperado'} não está disponível para readback.`;
   if(status==='STALE_DECLARATION')return `${domain}: declaração canônica está além da janela de freshness de 7 dias (${truth?.updated_at||'sem timestamp'}).`;
+  if(status==='SNAPSHOT'&&provider?.expected_status==='AUTH_REQUIRED')return `${domain}: fonte canônica privada está representada por snapshot público; ausência de credencial nesta superfície não é degradação do sistema.`;
+  if(status==='SNAPSHOT')return `${domain}: projeção pública coerente com a autoridade canônica; readback direto permanece fora desta superfície.`;
   if(status==='DEGRADED'&&provider?.expected_status==='AUTH_REQUIRED')return `${domain}: provider canônico existe, mas esta superfície não possui autenticação para readback direto; evidência permanece parcial.`;
   if(status==='DEGRADED')return `${domain}: autoridade está coerente, mas provider/capability não tem prova integral (${provider?.partial?'provider parcial':capability.summary}).`;
-  return `${domain}: autoridade, provider, freshness e capability estão coerentes no readback atual.`;
+  return `${domain}: autoridade e provider estão coerentes no readback atual${access==='PUBLIC'?' da superfície pública':''}.`;
 }
 
-export function buildTruthGraph({authorityRows=[],truthRows=[],capabilityRows=[],providers=[],refs={},now=Date.now(),inputError=null}={}){
-  const checked_at=new Date(now).toISOString();
+export function buildTruthGraph({authorityRows=[],truthRows=[],capabilityRows=[],providers=[],refs={},now=Date.now(),inputError=null,access='PRIVATE'}={}){
+  const checked_at=new Date(now).toISOString(),publicProjection=access==='PUBLIC';
   if(inputError||!authorityRows.length){
     const semantic={domain:'NEXO',status:'MISSING_PROVIDER',authority:'AUTHORITY_MATRIX',provider:{expected:'nexo',actual:null,status:'UNAVAILABLE',expected_status:'UNAVAILABLE'},capability:{state:'N/A',summary:'Matrizes canônicas indisponíveis.',ids:[]},source_ref:refs.authority||refs.ssot||'https://docs.google.com/'};
     const result={...semantic,fingerprint:`TG-${hash(semantic)}`,checked_at,explanation:'NEXO: AUTHORITY_MATRIX/CAPABILITY_MATRIX não puderam ser lidas; o radar não inventa autoridade ausente.',material:true};
@@ -71,18 +73,19 @@ export function buildTruthGraph({authorityRows=[],truthRows=[],capabilityRows=[]
     let status='LIVE';
     if(domain==='ARTIFACT')status='LIVE';
     else if(conflict)status='CONFLICT';
-    else if(capability.state==='BLOCKED')status='BLOCKED';
-    else if(expected&&expectedState?.status==='AUTH_REQUIRED')status='DEGRADED';
+    else if(!publicProjection&&capability.state==='BLOCKED')status='BLOCKED';
+    else if(expected&&expectedState?.status==='AUTH_REQUIRED')status=publicProjection?'SNAPSHOT':'DEGRADED';
     else if(expected&&(!expectedState||expectedState.status!=='AVAILABLE'))status='MISSING_PROVIDER';
-    else if(stale)status='STALE_DECLARATION';
-    else if((actualState&&actualState.partial)||capability.state==='DEGRADED')status='DEGRADED';
+    else if(!publicProjection&&stale)status='STALE_DECLARATION';
+    else if(actualState?.partial)status=publicProjection?'SNAPSHOT':'DEGRADED';
+    else if(!publicProjection&&capability.state==='DEGRADED')status='DEGRADED';
     const source_ref=conflict?(refs.ssot||refs.authority):(refs.authority||refs.ssot||'https://docs.google.com/');
     const authority={canonical_truth:text(row.canonical_truth),operational_truth:text(row.operational_truth),chat_role:text(row.chat_role),conflict_rule:text(row.conflict_rule)};
     const provider={expected:expected||'owner-dependent',actual:actual||'owner-dependent',status:actualState?.status||(actual?'UNAVAILABLE':'N/A'),expected_status:expectedState?.status||(expected?'UNAVAILABLE':'N/A'),partial:!!actualState?.partial,checked_at:actualState?.checkedAt||checked_at};
     const {checked_at:providerCheckedAt,...providerSemantic}=provider;
     const semantic={domain,status,source_ref,authority,provider:providerSemantic,capability};
     const material=['CONFLICT','MISSING_PROVIDER','STALE_DECLARATION'].includes(status);
-    return {...semantic,provider,fingerprint:`TG-${hash(semantic)}`,checked_at,material,explanation:explanation(status,{domain,expected,declared,provider,truth,capability})};
+    return {...semantic,provider,fingerprint:`TG-${hash(semantic)}`,checked_at,material,explanation:explanation(status,{domain,expected,declared,provider,truth,capability,access})};
   });
   const material_conflicts=results.filter(r=>r.material);
   return {fingerprint:`TRUTHGRAPH-${hash(results.map(r=>r.fingerprint))}`,checked_at,results,material_conflicts};
