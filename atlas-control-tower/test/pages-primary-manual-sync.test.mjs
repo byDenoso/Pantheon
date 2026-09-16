@@ -4,13 +4,16 @@ import { readFile } from 'node:fs/promises';
 
 const read = rel => readFile(new URL(`../${rel}`, import.meta.url), 'utf8');
 
-test('read-only Atlas surfaces no longer block on authentication', async () => {
+test('public Atlas surfaces stay reachable while operational areas can authenticate', async () => {
+  const app = await read('src/App.tsx');
   const gate = await read('src/components/PrivateGate.tsx');
   const login = await read('src/pages/LoginPage.tsx');
-  assert.match(gate, /return <>{children}<\/>/);
-  assert.doesNotMatch(gate, /AUTH_SETUP_REQUIRED|Acesso à área restrito/);
-  assert.doesNotMatch(login, /AUTH_SETUP_REQUIRED|GOOGLE_CLIENT_ID|NEXO_ALLOWED_EMAILS/);
+  assert.match(app, /route\.area === 'login'/);
+  assert.match(gate, /readStoredGoogleSession/);
+  assert.match(gate, /Entrar no Atlas/);
+  assert.match(login, /accounts\.google\.com\/gsi\/client/);
   assert.match(login, /routeFor\('cockpit'\)/);
+  assert.doesNotMatch(app, /if\s*\(!session\)\s*return/,'root/public Atlas must not be globally blocked on authentication');
 });
 
 test('Atlas frontend has no scheduled Vercel refresh', async () => {
