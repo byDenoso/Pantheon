@@ -45,6 +45,7 @@ test('semantic domain routing respects declared domain before generic node type'
   assert.equal(classify?.({id:'w3',type:'WORK',domain:'OLYMPUS'}),'HEALTH');
   assert.equal(classify?.({id:'a1',type:'ACTION',domain:'ENGINEERING'}),'NEXO');
   assert.equal(classify?.({id:'p1',type:'PROGRAM',domain:'SCIENCE'}),'SCIENCE');
+  assert.equal(classify?.({id:'w4',type:'WORK'}),'UNCLASSIFIED');
   assert.equal(classify?.({id:'x1',type:'MYSTERY',domain:'UNKNOWN_REALM'}),'UNCLASSIFIED');
 });
 
