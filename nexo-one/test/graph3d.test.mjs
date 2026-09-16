@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { distance3, layoutGraph3D } from '../src/viewmodels/graph3d.ts';
+import { distance3, layoutGraph3D, resolveSelection3D } from '../src/viewmodels/graph3d.ts';
 
 const fresh = { state: 'LIVE', observed_at: '2026-09-15T00:00:00Z', ttl_seconds: 3600 };
 const node = (id, type, domain) => ({
@@ -66,4 +66,10 @@ test('no non-domain nodes collide exactly and every coordinate is finite', () =>
   const satellites = placed.filter(n => n.type !== 'DOMAIN');
   assert.equal(new Set(satellites.map(n => `${n.x}:${n.y}:${n.z}`)).size, satellites.length);
   assert.ok(placed.every(n => [n.x, n.y, n.z, n.radius].every(Number.isFinite)));
+});
+
+test('selection clears when filtering removes the selected node', () => {
+  const olympusOnly = layoutGraph3D(fixture.filter(n => n.domain === 'OLYMPUS'));
+  assert.equal(resolveSelection3D(olympusOnly, 'engineering:provider'), null);
+  assert.equal(resolveSelection3D(olympusOnly, 'domain:olympus'), 'domain:olympus');
 });
