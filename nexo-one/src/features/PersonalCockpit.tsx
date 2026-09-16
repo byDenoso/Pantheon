@@ -26,14 +26,17 @@ export function PersonalCockpit(
   const [selected, setSelected] = useState<CockpitItem | null>(null);
   const providers = world?.providers ?? [];
   const available = providers.filter(p => p.status === 'AVAILABLE').length;
+  const total = world?.providers_total ?? providers.length;
+  const readValid = world?.read_valid ?? available > 0;
 
   return (
     <div className="personal-plane">
-      <div className="plane-banner">
+      <div className={`plane-banner${readValid ? '' : ' plane-unavailable'}`}>
         <span className="plane-tag">PLANO PESSOAL</span>
         <span>
-          Esta aba consome o servidor real em <code>/api/world</code>. {available} de {providers.length || 7} fontes
-          responderam nesta leitura.
+          Esta aba consome o servidor real em <code>/api/world</code>. {readValid
+            ? `${available} de ${total} fontes responderam nesta leitura.`
+            : 'Leitura indisponível: nenhuma fonte respondeu nesta leitura.'}
         </span>
         <button className="text-button" onClick={() => refresh()} disabled={loading}>
           {loading ? 'Lendo fontes…' : 'Sincronizar ↻'}

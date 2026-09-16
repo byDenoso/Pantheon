@@ -32,6 +32,8 @@ export function compile(results,{now=Date.now(),previous=null,access='PRIVATE'}=
   const input=results.find(r=>r.provider.id==='nexo')?.truthGraphInput;
   const truthGraph=buildTruthGraph({...(input||{inputError:'NEXO_UNAVAILABLE'}),providers,now,access});
   const fingerprint='WORLD-'+hash({version:'1',access,items:[...items].sort((a,b)=>a.id.localeCompare(b.id)).map(semantic),providers:providers.map(({id,revision,status,partial})=>({id,revision,status,partial})),truthGraph:truthGraph.fingerprint});
-  const world={version:'1',fingerprint,generatedAt:new Date(now).toISOString(),providers,items,contexts,issues,truthGraph,access};
+  const providersTotal=providers.length;
+  const providersAvailable=providers.filter(p=>p.status==='AVAILABLE').length;
+  const world={version:'1',fingerprint,generatedAt:new Date(now).toISOString(),providers,providers_total:providersTotal,providers_available:providersAvailable,read_valid:providersAvailable>0,items,contexts,issues,truthGraph,access};
   return {...world,diff:worldDiff(previous,world)};
 }

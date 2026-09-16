@@ -24,6 +24,7 @@ const DOMAIN_COLOR = {
   SCIENCE: '#44a8ff',
   ENGINEERING: '#71dfa0',
   OLYMPUS: '#bd8cff',
+  ARTIFACT: '#f2b654',
 } as const;
 
 const ALERT_STATES = new Set(['BLOCKED', 'CONFLICT', 'MISSING_PROVIDER']);

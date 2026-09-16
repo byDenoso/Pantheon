@@ -412,6 +412,10 @@
 .plane-tag{font-size:9.5px;letter-spacing:1.6px;font-weight:700;color:var(--accent);border:1px solid var(--accent);
   border-radius:4px;padding:3px 8px}
 .plane-banner button{margin-left:auto}
+.plane-banner.plane-unavailable{border-color:color-mix(in srgb,var(--amber) 45%,var(--line));background:color-mix(in srgb,var(--amber) 5%,var(--panel))}
+.capability-summary{display:inline-block;max-width:100%;font-size:12px;line-height:1.5;color:var(--muted)}
+.capability-summary::first-letter{font-weight:650}
+.freshness-detail{display:block;margin-top:4px;color:var(--quiet);line-height:1.45}
 
 /* Filtros e utilitários --------------------------------------------------- */
 .filter-row{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:18px}

@@ -14,7 +14,7 @@ import {buildPersonalSnapshot,executePersonalAction} from './personal/service.mj
 import {createNexoMcpWebHandler} from './mcp/server.mjs';
 import {summarizeConnectionHealth} from './health/connection-state.mjs';
 const ATLAS_ORIGINS=new Set(['https://bydenoso.github.io','https://nexo-atlas-control-tower.vercel.app','https://nexo-atlas-cockpit.vercel.app']);
-const PUBLIC_SYSTEM_PROVIDERS=['github','nexo'];
+const PUBLIC_SYSTEM_PROVIDERS=['github','nexo','drive'];
 const isCorsRoute=route=>route==='mcp'||route==='atlas-public-ssot'||route==='world'||RESEARCH_ROUTES.has(route);
 const mcpWebHandler=createNexoMcpWebHandler({readSnapshot:()=>readAtlasSsot({env:process.env,now:Date.now()})});
 const mcpNodeHandler=toNodeHandler(mcpWebHandler);
@@ -126,3 +126,4 @@ export default async function handler(req,res) {
     return send(world);
   }catch(error){console.error('[nexo-one]',route,String(error?.message||error));return send({error:'REQUEST_FAILED'},500);}
 }
+

@@ -2,7 +2,7 @@
 // O frontend nunca é Truth Owner: tudo aqui é projeção não autoritativa.
 // TRUTH -> Authority/Capability -> Action -> Effect/Readback -> Projection -> Interfaces
 
-export type Domain = 'NEXO' | 'SCIENCE' | 'ENGINEERING' | 'OLYMPUS';
+export type Domain = 'NEXO' | 'SCIENCE' | 'ENGINEERING' | 'OLYMPUS' | 'ARTIFACT';
 export const DOMAINS: Domain[] = ['NEXO', 'SCIENCE', 'ENGINEERING', 'OLYMPUS'];
 
 export type AuthorityClass = 'TRUTH_OWNER' | 'DELEGATED' | 'DERIVED' | 'NON_AUTHORITATIVE';
@@ -59,11 +59,14 @@ export interface TruthFinding {
   fingerprint: string;
   checked_at: string;
   authority: { owner: string; class: AuthorityClass };
-  provider: { expected: string; observed: string | null };
+  provider: { expected: string; observed: string | null; declared?: string | null };
   capability: string | null;
+  capability_state?: string;
+  capability_summary?: string;
   severity: Severity;
   explanation: string;
   freshness: Freshness;
+  source_observed_at?: string | null;
 }
 
 export type RequiredOperation = 'READ' | 'WRITE' | 'SCHEDULE' | 'DEPLOY' | 'NOTIFY';

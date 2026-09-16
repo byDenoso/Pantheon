@@ -16,6 +16,7 @@ const DOMAIN_SUMMARY: Record<Domain, string> = {
   SCIENCE: 'Cosmologia e produção científica; verdade ancorada nos manuscritos canônicos.',
   ENGINEERING: 'Repositório, build e deploy; verdade ancorada no branch principal.',
   OLYMPUS: 'Treino, nutrição e check-ins; posse da verdade atualmente em disputa.',
+  ARTIFACT: 'Conteúdo produzido; a autoridade pertence à origem do artefato.',
 };
 
 /** Claims, tests e memories não têm fonte própria nas fixtures: são âncoras semânticas do Atlas. */

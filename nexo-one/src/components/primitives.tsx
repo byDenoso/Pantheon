@@ -84,7 +84,7 @@ export function SeverityBadge({ severity }: { severity: Severity }) {
   return <span className={`badge severity tone-${tone} compact`} title={`Severidade ${severity}`}>{severity}</span>;
 }
 
-const DOMAIN_GLYPH: Record<Domain, string> = { NEXO: '⌘', SCIENCE: '✧', ENGINEERING: '⌥', OLYMPUS: '△' };
+const DOMAIN_GLYPH: Record<Domain, string> = { NEXO: '⌘', SCIENCE: '✧', ENGINEERING: '⌥', OLYMPUS: '△', ARTIFACT: '▣' };
 
 export function DomainBadge({ domain, muted }: { domain: Domain; muted?: boolean }) {
   return (

@@ -8,6 +8,7 @@ const DOMAIN_ANCHORS: Record<Domain, Point3> = {
   SCIENCE: { x: 18, y: 4, z: -5 },
   ENGINEERING: { x: -14, y: -5, z: 12 },
   OLYMPUS: { x: 4, y: -12, z: -17 },
+  ARTIFACT: { x: -4, y: 12, z: 17 },
 };
 
 const SHELL_RADIUS: Record<GraphNodeType, number> = {

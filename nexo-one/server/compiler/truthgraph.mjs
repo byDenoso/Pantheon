@@ -63,12 +63,17 @@ export function buildTruthGraph({authorityRows=[],truthRows=[],capabilityRows=[]
   const results=authorityRows.filter(r=>text(r.domain)).map(row=>{
     const domain=text(row.domain).toUpperCase();
     const truth=truthRows.find(r=>text(r.record_type).toLowerCase()==='truth'&&text(r.record_id).toUpperCase()===domain&&text(r.status).toUpperCase()==='ACTIVE');
-    const expected=expectedProvider(row),declared=declaredProvider(truth),actual=declared||expected;
-    const expectedState=expected?providerMap.get(expected):null,actualState=actual?providerMap.get(actual):null;
+    const expected=expectedProvider(row),declared=declaredProvider(truth);
+    const expectedState=expected?providerMap.get(expected):null;
     const caps=capabilityRows.filter(r=>domains(r.domain).includes(domain));
     const capability=capabilityState(caps);
     const updated=truth?Date.parse(truth.updated_at):NaN;
     const stale=truth&&(!Number.isFinite(updated)||now-updated>STALE_MS);
+    // `declared` is a claim from the TruthGraph row. `actual` is only a
+    // provider that actually answered this read. Never promote a declaration
+    // or an expected provider to an observed readback.
+    const actual=expected&&expectedState?.status==='AVAILABLE'?expected:null;
+    const actualState=actual?providerMap.get(actual):null;
     const conflict=!!(truth&&expected&&declared&&declared!==expected);
     let status='LIVE';
     if(domain==='ARTIFACT')status='LIVE';
@@ -81,9 +86,9 @@ export function buildTruthGraph({authorityRows=[],truthRows=[],capabilityRows=[]
     else if(!publicProjection&&capability.state==='DEGRADED')status='DEGRADED';
     const source_ref=conflict?(refs.ssot||refs.authority):(refs.authority||refs.ssot||'https://docs.google.com/');
     const authority={canonical_truth:text(row.canonical_truth),operational_truth:text(row.operational_truth),chat_role:text(row.chat_role),conflict_rule:text(row.conflict_rule)};
-    const provider={expected:expected||'owner-dependent',actual:actual||'owner-dependent',status:actualState?.status||(actual?'UNAVAILABLE':'N/A'),expected_status:expectedState?.status||(expected?'UNAVAILABLE':'N/A'),partial:!!actualState?.partial,checked_at:actualState?.checkedAt||checked_at};
+    const provider={expected:expected||null,declared:declared||null,actual,status:actualState?.status||(actual?'UNAVAILABLE':'N/A'),expected_status:expectedState?.status||(expected?'UNAVAILABLE':'N/A'),partial:!!actualState?.partial,checked_at:actualState?.checkedAt||checked_at};
     const {checked_at:providerCheckedAt,...providerSemantic}=provider;
-    const semantic={domain,status,source_ref,authority,provider:providerSemantic,capability};
+    const semantic={domain,status,source_ref,authority,provider:providerSemantic,capability,source_observed_at:truth?.updated_at||null};
     const material=['CONFLICT','MISSING_PROVIDER','STALE_DECLARATION'].includes(status);
     return {...semantic,provider,fingerprint:`TG-${hash(semantic)}`,checked_at,material,explanation:explanation(status,{domain,expected,declared,provider,truth,capability,access})};
   });

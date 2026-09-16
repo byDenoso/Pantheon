@@ -1,6 +1,7 @@
 import {hash} from './world-state.mjs';
 
 const DOMAINS=['NEXO','SCIENCE','ENGINEERING','OLYMPUS'];
+const KNOWN_DOMAINS=[...DOMAINS,'ARTIFACT'];
 const STATE_RANK={LIVE:0,SNAPSHOT:1,STALE:2,DEGRADED:3,BLOCKED:4,MISSING_PROVIDER:5,CONFLICT:6};
 const SHEET_REF='https://docs.google.com/spreadsheets/d/1twRpSoZCOXv77YyCh_5V9nAS2PM2nqzex2A37eI2Zas/edit';
 const text=v=>String(v??'').trim();
@@ -10,6 +11,7 @@ const iso=(value,fallback)=>{const ms=Date.parse(text(value));return Number.isFi
 
 function domainOf(value){
   const v=upper(value);
+  if(v.includes('ARTIFACT'))return 'ARTIFACT';
   if(v.includes('OLYMPUS'))return 'OLYMPUS';
   if(v.includes('ENGINEERING')||v==='TI')return 'ENGINEERING';
   if(v.includes('SCIENCE')||v.includes('COSMO')||v.includes('PEER')||v.includes('PHYS'))return 'SCIENCE';
@@ -133,8 +135,9 @@ function mapFindings(world,now){
     id:`truth:${domainOf(row.domain)}`,domain:domainOf(row.domain),status:['LIVE','DEGRADED','CONFLICT','STALE_DECLARATION','MISSING_PROVIDER','BLOCKED'].includes(upper(row.status))?upper(row.status):'BLOCKED',
     source_ref:text(row.source_ref)||SHEET_REF,fingerprint:text(row.fingerprint)||`TG-${hash(row)}`,checked_at:iso(row.checked_at,now),
     authority:{owner:text(row.authority?.canonical_truth||row.authority?.operational_truth)||'UNRESOLVED',class:upper(row.status)==='LIVE'?'TRUTH_OWNER':'NON_AUTHORITATIVE'},
-    provider:{expected:text(row.provider?.expected)||'owner-dependent',observed:text(row.provider?.actual)||null},capability:(row.capability?.ids||[])[0]||null,
-    severity:severityForFinding(row),explanation:text(row.explanation)||'Sem explicação de integridade.',freshness:freshness(row.provider?.checked_at||row.checked_at,now)
+    provider:{expected:text(row.provider?.expected)||null,observed:text(row.provider?.actual)||null,declared:text(row.provider?.declared)||null},
+    capability:(row.capability?.ids||[])[0]||null,capability_state:text(row.capability?.state)||'N/A',capability_summary:text(row.capability?.summary)||'Nenhuma capability específica declarada.',
+    severity:severityForFinding(row),explanation:text(row.explanation)||'Sem explicação de integridade.',freshness:freshness(row.source_observed_at,now),source_observed_at:iso(row.source_observed_at,null)
   }));
 }
 function mapCapabilities(rows,now){

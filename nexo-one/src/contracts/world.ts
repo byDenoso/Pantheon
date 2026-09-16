@@ -20,8 +20,9 @@ export interface WorldDiff { previous:string|null; current:string; added:string[
 export interface TruthGraphFinding {
   domain:string; status:TruthGraphStatus; source_ref:string; fingerprint:string; checked_at:string; material:boolean; explanation:string;
   authority:{canonical_truth:string;operational_truth:string;chat_role:string;conflict_rule:string}|string;
-  provider:{expected:string;actual:string|null;status:string;expected_status:string;partial?:boolean;checked_at?:string};
+  provider:{expected:string|null;actual:string|null;declared?:string|null;status:string;expected_status:string;partial?:boolean;checked_at?:string};
   capability:{state:string;summary:string;ids:string[]};
+  source_observed_at?: string|null;
 }
 export interface TruthGraphState { fingerprint:string; checked_at:string; results:TruthGraphFinding[]; material_conflicts:TruthGraphFinding[] }
-export interface WorldState { version:'1'; fingerprint:string; generatedAt:string; providers:ProviderState[]; items:CockpitItem[]; contexts:ContextPack[]; issues:{provider:ProviderId; code:string}[]; truthGraph:TruthGraphState; diff:WorldDiff; access:'PUBLIC'|'PRIVATE' }
+export interface WorldState { version:'1'; fingerprint:string; generatedAt:string; providers:ProviderState[]; providers_total?:number; providers_available?:number; read_valid?:boolean; items:CockpitItem[]; contexts:ContextPack[]; issues:{provider:ProviderId; code:string}[]; truthGraph:TruthGraphState; diff:WorldDiff; access:'PUBLIC'|'PRIVATE' }

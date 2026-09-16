@@ -18,7 +18,16 @@ test('Olympus is CONFLICT when SSOT declares Sheets while authority matrix decla
   const finding=out.results[0];
   assert.equal(finding.status,'CONFLICT');
   for(const key of ['source_ref','fingerprint','checked_at','authority','provider','capability','explanation']) assert.ok(finding[key],key);
-  assert.equal(finding.material,true);assert.equal(finding.provider.expected,'drive');assert.equal(finding.provider.actual,'nexo');assert.equal(finding.provider.status,'AVAILABLE');assert.equal(finding.provider.expected_status,'AVAILABLE');
+  assert.equal(finding.material,true);assert.equal(finding.provider.expected,'drive');assert.equal(finding.provider.declared,'nexo');assert.equal(finding.provider.actual,'drive');assert.equal(finding.provider.status,'AVAILABLE');assert.equal(finding.provider.expected_status,'AVAILABLE');
+});
+
+test('ARTIFACT permanece entidade própria e não colide com NEXO',()=>{
+  const out=graph({authorityRows:[authority('ARTIFACT','Truth owner of underlying content')],truthRows:[truth('ARTIFACT','Artifact content')],providers:[provider('nexo')]});
+  const finding=out.results[0];
+  assert.equal(finding.domain,'ARTIFACT');
+  assert.equal(finding.provider.expected,null);
+  assert.equal(finding.provider.actual,null);
+  assert.equal(finding.status,'LIVE');
 });
 
 test('Olympus canonical NEXO SSOT authority resolves to nexo instead of owner-dependent',()=>{

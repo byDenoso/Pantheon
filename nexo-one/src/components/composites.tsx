@@ -64,7 +64,7 @@ export function TruthGraphCard({ finding, capability }: { finding: TruthFinding;
         </div>
         <div>
           <dt>Provider esperado</dt>
-          <dd><code>{finding.provider.expected}</code></dd>
+          <dd>{finding.provider.expected ? <code>{finding.provider.expected}</code> : <em>nenhum</em>}</dd>
         </div>
         <div className={mismatch ? 'mismatch' : undefined}>
           <dt>Provider observado</dt>
@@ -73,11 +73,19 @@ export function TruthGraphCard({ finding, capability }: { finding: TruthFinding;
         </div>
         <div>
           <dt>Capability</dt>
-          <dd>{capability ? <CapabilityBadge status={capability.status} id={capability.capability_id} /> : '— nenhuma'}</dd>
+          <dd>{finding.capability_state && finding.capability_state !== 'N/A'
+              ? <span className={`capability-summary capability-${finding.capability_state.toLowerCase()}`}>
+                {finding.capability_state} · {finding.capability_summary}
+              </span>
+              : capability ? <CapabilityBadge status={capability.status} id={capability.capability_id} />
+              : '— nenhuma'}</dd>
         </div>
         <div>
           <dt>Freshness</dt>
-          <dd><FreshnessIndicator freshness={finding.freshness} /></dd>
+          <dd>
+            <FreshnessIndicator freshness={finding.freshness} />
+            {finding.source_observed_at && <small className="freshness-detail">Fonte: {dateTime(finding.source_observed_at)} · verificado: {dateTime(finding.checked_at)}</small>}
+          </dd>
         </div>
         <div>
           <dt>Fingerprint</dt>
