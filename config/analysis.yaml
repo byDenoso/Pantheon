@@ -1,0 +1,20 @@
+project: pantheon-residual-audit
+seed: 77733
+primary_sample:
+  dataset: Pantheon+SH0ES
+  branch: non_calibrator
+  z_min: 0.0233
+scan:
+  statistic: max_delta_chi2_step_scan
+  min_side_count: 100
+  z_step: 0.01
+global_null:
+  mocks: 10000
+  p_value: plus_one_empirical
+robustness:
+  score_space_mocks: 5000
+external_replication:
+  dataset: DES-SN5YR
+  covariance_variants:
+    - STAT+SYS
+    - STATONLY

@@ -1,0 +1,27 @@
+{
+  "analysis_id": "pantheon_residual_audit_v1",
+  "checks": {
+    "calibrator_partition_check": {"non_calibrator_n": 1580,"official_all_n": 1590,"status": "PASS"},
+    "cosmology_profile_sensitivity": {"pivot_range": 0.4,"stable": false,"status": "FAIL"},
+    "covariance_definition_sensitivity": {"canonical_delta_chi2": 4.348561501113952,"extra_diagonal_delta_chi2": 1.376426697221367,"official_extra_diagonal": false,"status": "PASS"},
+    "covariance_integrity": {"cholesky": true,"condition_number": 460.1793832996059,"primary_n": 1580,"rows_total": 1701,"status": "PASS"},
+    "des_external_replication": {"best_z": 0.58,"consistent_replication": false,"delta_chi2": 3.9945757331808824,"n": 1820,"p_global": 0.49555044495550443,"status": "FAIL"},
+    "global_scan_significance": {"mocks": 10000,"null_q95": 9.006885900017652,"p_global": 0.8378162183781622,"status": "FAIL"},
+    "injection_recovery": {"adequate": false,"detection_power": 0.1123,"status": "FAIL"},
+    "localization_stability": {"localization_fraction": 0.309,"median": 0.29,"p16": 0.03,"p84": 0.44,"stable": false,"status": "FAIL"},
+    "official_likelihood_reproduction": {"chi2_profiled": 1402.9192434986066,"n": 1590,"omega_m": 0.33157594174137955,"status": "PASS"},
+    "redshift_cut_sensitivity": {"pivot_range": 0.41,"stable": false,"status": "FAIL"},
+    "redshift_velocity_context": {"physical_context_complete": false,"status": "OPEN"},
+    "residual_feature_scan": {"amplitude_mag": 0.02330572963037458,"best_z": 0.03,"delta_chi2": 2.2244629118594608,"n": 1365,"omega_m": 0.32769694527307347,"status": "PASS","z_min": 0.0233},
+    "scan_definition_and_historical_window": {"min_side_count": 100,"scan_max": 0.64,"scan_min": 0.03,"scan_step": 0.01,"status": "PASS"},
+    "scientific_classification": {"classification": "no_robust_residual_feature","physical_cause_supported": false,"status": "PASS"},
+    "structure_preserving_null_models": {"max_structured_p": 0.996000399960004,"status": "FAIL","survives": false},
+    "survey_attribution": {"max_abs_score_fraction": 0.21972156602097542,"max_drop_fraction": 0.1534071688058067,"robust": true,"status": "PASS"},
+    "survey_nuisance_absorption": {"final_delta_fraction": 1.875181106063646,"status": "PASS","survives": true},
+    "survey_offset_sensitivity": {"minimum_offset_mag": 0.005,"robust": false,"status": "FAIL"},
+    "template_family_robustness": {"p_global_by_family": {"gaussian_bump": 0.5771422857714229,"hard_step": 0.8381161883811619,"piecewise_linear": 0.22727727227277272,"tanh_step": 0.9089091090890911},"significance_story_consistent": true,"status": "PASS"}
+  },
+  "mocks": 10000,
+  "seed": 77733,
+  "source_result_hash": "fe29ab0645e58aefe6dc9e74e80d26ccbbde62418a2be0111062a930c3f82764"
+}

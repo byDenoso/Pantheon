@@ -1,0 +1,15 @@
+{
+  "analysis_id": "pantheon_residual_robustness_v1",
+  "checks": {
+    "des_covariance_comparison": {"consistent_replication": false,"stat_sys_best_z": 0.58,"stat_sys_p_global": 0.4937012597480504,"statonly_best_z": 0.06,"statonly_p_global": 0.2917416516696661,"status": "REINFORCES_C1"},
+    "duplicate_supernova_collapse": {"best_z": 0.03,"delta_chi2": 2.4762526599759904,"duplicates_removed": 67,"n_light_curves": 1365,"n_unique": 1298,"p_global": 0.7874425114977005,"status": "REINFORCES_C1"},
+    "official_likelihood_checkpoint": {"chi2": 1402.9192434986066,"n": 1590,"omega_m": 0.33157594174137955,"status": "PASS"},
+    "redshift_frame_and_sky_jackknife": {"minimum_global_p": 0.1853629274145171,"status": "REINFORCES_C1","zcmb_best_z": 0.04,"zcmb_delta_chi2": 6.181808572706616,"zcmb_p_global": 0.1853629274145171},
+    "robust_likelihood_diagnostic": {"scope": "DIAGONAL_ONLY_OUTLIER_SENSITIVITY_NOT_CANONICAL_COVARIANCE_REPLACEMENT","status": "DIAGNOSTIC"},
+    "supernova_influence": {"any_above_null_q95": false,"baseline_delta_chi2": 2.2244629118594608,"leave_one_max": 3.1172252316355364,"status": "DIAGNOSTIC"},
+    "survey_composition_balance": {"adequate_overlap": false,"common_surveys": [15],"n_selected": 269,"status": "OPEN"}
+  },
+  "mocks": 5000,
+  "seed": 77733,
+  "source_result_hash": "c3682f5423a2dda165f8dfb03d598f7467d53569ca8fc66e492518058aa7eb9e"
+}

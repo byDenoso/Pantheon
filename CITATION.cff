@@ -1,0 +1,7 @@
+cff-version: 1.2.0
+message: "If you use this analysis package, please cite the associated manuscript."
+title: "Pantheon+ residual-feature audit"
+type: software
+authors:
+  - family-names: "Pereira"
+    given-names: "Dener"

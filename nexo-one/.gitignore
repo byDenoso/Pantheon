@@ -1,7 +1,0 @@
-node_modules
-dist/
-.vercel/
-.env*
-!.env.example
-test-output/
-release/
