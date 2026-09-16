@@ -1,5 +1,5 @@
 name: NEXO ONE v0.5 one-shot producer cutover
-# 2026-09-15: Atlas 3D production cutover trigger
+# 2026-09-16: production cutover retrigger for current main
 
 on:
   push:
