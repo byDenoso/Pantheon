@@ -26,6 +26,33 @@ test('dispatch payload preserves one allow-listed execution contract per TEST',(
   assert.equal(payload.work_id,'T-CHAT-ABC123');assert.equal(payload.domain,'SCIENCE');assert.equal(payload.adapter,'execution');assert.equal(payload.args.execute,true);assert.equal(payload.args.task_id,'cosmology_benchmark');assert.equal(payload.args.test_id,'T-CHAT-ABC123');
 });
 
+test('gateway lists canonical JSON directory entries without inventing an index',async()=>{
+  const seen=[];
+  const payloads={
+    'TOWER_V06/entities/hypothesis/HYP-A.json':{id:'HYP-A',proposition:'A'},
+    'TOWER_V06/entities/hypothesis/HYP-B.json':{id:'HYP-B',proposition:'B'},
+  };
+  const fetchImpl=async url=>{
+    const parsed=new URL(url);const encodedPath=parsed.pathname.split('/contents/')[1]||'';const path=encodedPath.split('/').map(decodeURIComponent).join('/');seen.push(path);
+    if(path==='TOWER_V06/entities/hypothesis')return new Response(JSON.stringify([
+      {type:'file',name:'HYP-B.json',path:'TOWER_V06/entities/hypothesis/HYP-B.json'},
+      {type:'dir',name:'nested',path:'TOWER_V06/entities/hypothesis/nested'},
+      {type:'file',name:'README.md',path:'TOWER_V06/entities/hypothesis/README.md'},
+      {type:'file',name:'HYP-A.json',path:'TOWER_V06/entities/hypothesis/HYP-A.json'},
+    ]),{status:200,headers:{'content-type':'application/json'}});
+    const value=payloads[path];if(!value)return new Response(JSON.stringify({message:'Not Found'}),{status:404,headers:{'content-type':'application/json'}});
+    return new Response(JSON.stringify({sha:'sha1',content:Buffer.from(JSON.stringify(value)).toString('base64'),encoding:'base64'}),{status:200,headers:{'content-type':'application/json'}});
+  };
+  const gateway=createTowerGithubGateway({env:{},fetchImpl});
+  const items=await gateway.listJsonDirectory('entities/hypothesis');
+  assert.deepEqual(items.map(item=>item.id),['HYP-A','HYP-B']);
+  assert.deepEqual(seen,[
+    'TOWER_V06/entities/hypothesis',
+    'TOWER_V06/entities/hypothesis/HYP-A.json',
+    'TOWER_V06/entities/hypothesis/HYP-B.json',
+  ]);
+});
+
 test('gateway fails closed on writes when no server GitHub credential exists',async()=>{
   const gateway=createTowerGithubGateway({env:{},fetchImpl:async()=>{throw new Error('network should not run')}});
   await assert.rejects(()=>gateway.persistTest({request_id:'REQ-1',entity_name:'T-1'}),/GITHUB_WRITE_NOT_CONFIGURED/);
