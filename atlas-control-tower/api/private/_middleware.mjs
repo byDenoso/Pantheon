@@ -5,6 +5,13 @@ import { classifyGoogleSession, isAllowedOrigin, verifyGoogleIdToken, PRODUCTION
 
 const GOOGLE_JWKS_URL = 'https://www.googleapis.com/oauth2/v3/certs';
 
+function sameOrigin(req, origin) {
+  if (!origin) return true;
+  const host = String(req.headers?.host || '').trim();
+  if (!host) return false;
+  return origin === `https://${host}` || origin === `http://${host}`;
+}
+
 function allowedOrigins() {
   const extra = String(process.env.NEXO_DEV_ORIGINS || '')
     .split(',')
@@ -13,9 +20,13 @@ function allowedOrigins() {
   return [PRODUCTION_PAGES_ORIGIN, ...extra];
 }
 
+function originAllowed(req, origin) {
+  return sameOrigin(req, origin) || isAllowedOrigin(origin, allowedOrigins());
+}
+
 function applyCors(req, res) {
   const origin = req.headers?.origin || null;
-  if (isAllowedOrigin(origin, allowedOrigins())) {
+  if (origin && originAllowed(req, origin)) {
     res.setHeader('Access-Control-Allow-Origin', origin);
     res.setHeader('Vary', 'Origin');
   }
@@ -37,20 +48,13 @@ function bearerToken(req) {
   return match ? match[1] : null;
 }
 
-/**
- * Wraps a handler with: CORS headers + OPTIONS short-circuit, config check
- * (AUTH_SETUP_REQUIRED when GOOGLE_CLIENT_ID/NEXO_ALLOWED_EMAILS are missing --
- * never a fake session), JWT verification against Google's real JWKS, and allowlist
- * classification (401 vs 403). The wrapped handler only ever runs with a verified,
- * allowlisted identity attached at req.session.
- */
 export function withGoogleAuth(handler, { fetchJwks = () => fetch(GOOGLE_JWKS_URL).then(response => response.json()) } = {}) {
   return async function gated(req, res) {
     applyCors(req, res);
     if (req.method === 'OPTIONS') return send(res, {}, 204);
 
     const origin = req.headers?.origin || null;
-    if (origin && !isAllowedOrigin(origin, allowedOrigins())) return send(res, { error: 'CORS_ORIGIN_NOT_ALLOWED' }, 403);
+    if (origin && !originAllowed(req, origin)) return send(res, { error: 'CORS_ORIGIN_NOT_ALLOWED' }, 403);
 
     const clientId = String(process.env.GOOGLE_CLIENT_ID || '').trim();
     const allowedEmailsRaw = String(process.env.NEXO_ALLOWED_EMAILS || '').trim();
