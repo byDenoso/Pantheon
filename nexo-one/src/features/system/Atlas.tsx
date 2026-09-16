@@ -13,7 +13,7 @@ import { useIsMobile } from '../../app/useMediaQuery.ts';
 import {
   EMPTY_FILTERS, filterCount, filterGraph, legendOf, relationsOf, type GraphFilters,
 } from '../../viewmodels/graph.ts';
-import { layoutGraph3D } from '../../viewmodels/graph3d.ts';
+import { layoutGraph3D, resolveSelection3D } from '../../viewmodels/graph3d.ts';
 import { label, toneOf } from '../../viewmodels/tokens.ts';
 
 const AUTHORITIES: AuthorityClass[] = ['TRUTH_OWNER', 'DELEGATED', 'DERIVED', 'NON_AUTHORITATIVE'];
@@ -55,10 +55,11 @@ export function AtlasView(
   const filtered = useMemo(() => filterGraph(state.graph, filters), [state.graph, filters]);
   const placed = useMemo(() => layoutGraph3D(filtered.nodes), [filtered.nodes]);
   const legend = useMemo(() => legendOf(filtered.nodes), [filtered.nodes]);
-  const selected: GraphNode | null = filtered.nodes.find(n => n.id === selectedId) ?? null;
+  const effectiveSelectedId = resolveSelection3D(placed, selectedId);
+  const selected: GraphNode | null = filtered.nodes.find(n => n.id === effectiveSelectedId) ?? null;
   const relations = useMemo(
-    () => (selectedId ? relationsOf(filtered, selectedId) : { upstream: [], downstream: [] }),
-    [filtered, selectedId]);
+    () => (effectiveSelectedId ? relationsOf(filtered, effectiveSelectedId) : { upstream: [], downstream: [] }),
+    [filtered, effectiveSelectedId]);
 
   const toggle = <K extends FilterKey>(key: K, value: GraphFilters[K][number]) => {
     const current = filters[key] as string[];
@@ -107,7 +108,7 @@ export function AtlasView(
                 description="Um grafo vazio aqui é resultado do filtro, não ausência de dados no sistema."
                 hint="Remova um critério para voltar a ver o mapa." />
             : <>
-                <Atlas3DCanvas nodes={placed} edges={filtered.edges} selectedId={selectedId} onSelect={onSelect} />
+                <Atlas3DCanvas nodes={placed} edges={filtered.edges} selectedId={effectiveSelectedId} onSelect={onSelect} />
                 <ul className="atlas-legend">
                   {legend.map(entry => (
                     <li key={entry.type}>
