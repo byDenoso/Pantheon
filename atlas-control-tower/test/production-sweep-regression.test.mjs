@@ -34,10 +34,15 @@ test('production workflow verifies the vNext app and Atlas V3 rather than the re
   assert.doesNotMatch(deploy,/id=\\?['"]graph\\?['"]/);
 });
 
-test('legacy Vercel deployment is compatibility-only, not the production verification contract',()=>{
-  assert.match(legacyVercel,/workflow_dispatch:/);
+test('Vercel compatibility deploy is path-scoped and remains separate from canonical Pages verification',()=>{
   assert.match(legacyVercel,/Atlas Legacy Vercel Deploy/);
-  assert.doesNotMatch(legacyVercel,/push:\s*\n\s*branches:\s*\[main\]/);
+  assert.match(legacyVercel,/push:\s*\n\s*branches:\s*\[main\]/);
+  assert.match(legacyVercel,/paths:\s*\n\s*-\s*['"]atlas-control-tower\/\*\*['"]/);
+  assert.match(legacyVercel,/workflow_dispatch:/);
+  assert.match(legacyVercel,/group:\s*atlas-vercel-compatibility/);
+  assert.doesNotMatch(legacyVercel,/actions\/deploy-pages@v4/);
+  assert.match(deploy,/actions\/deploy-pages@v4/);
+  assert.match(deploy,/group:\s*atlas-production/);
 });
 
 test('main quality gate is reproducible and uploads only the tested frontend build',()=>{

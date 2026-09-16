@@ -1,6 +1,10 @@
 name: Atlas Legacy Vercel Deploy
 
 on:
+  push:
+    branches: [main]
+    paths:
+      - 'atlas-control-tower/**'
   workflow_dispatch:
 
 permissions:
@@ -31,7 +35,7 @@ jobs:
       - name: Verify compatibility deploy authorization
         run: |
           if [ -z "$VERCEL_TOKEN" ]; then
-            echo '::error::Manual Vercel compatibility deployment requires VERCEL_TOKEN.'
+            echo '::error::Vercel compatibility deployment requires VERCEL_TOKEN.'
             exit 1
           fi
       - name: Install dependencies
