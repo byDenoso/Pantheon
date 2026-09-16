@@ -38,10 +38,6 @@ const results = PROVIDERS.map(id => {
 });
 const world = compile(results, { now });
 
-// Fixture do Universal Projection Bus, preservada do main: o readback do bus
-// continua sendo verificado em toda viewport.
-const projection={contract:'ProjectionEnvelope/v1',bus:'Pantheon/UniversalProjectionBus',fingerprint:'BUS-FIXTURE-V1',generated_at:new Date(now).toISOString(),state:'DEGRADED',sources:[{id:'NEXO_SSOT',state:'DEGRADED',revision:'ssot-r1',count:1},{id:'ACTION_REGISTER',state:'LIVE',revision:'action-r1',count:1},{id:'GITHUB',state:'LIVE',revision:'github-r1',count:1},{id:'VERCEL',state:'LIVE',revision:'vercel-r1',count:1}],envelopes:[{entity_id:'entity:ssot',domain:'NEXO',authority_class:'CANONICAL',source_ref:'https://source/ssot',source_revision:'ssot-r1',fingerprint:'PRJ-FIXTURE-1',freshness:{state:'STALE',observed_at:new Date(now-60000).toISOString(),expires_at:new Date(now-1).toISOString(),age_ms:60000},derivation_rule:'nexo-ssot:item->projection',state:'DEGRADED',source:'NEXO_SSOT',checked_at:new Date(now).toISOString(),projection_role:'NON_AUTHORITATIVE',error:{code:'UNAVAILABLE',message:'fixture degraded'}}]};
-
 const VIEWPORTS = [
   ['desktop-dark', 1440, 1000, 'dark'],
   ['desktop-light', 1440, 1000, 'light'],
@@ -78,7 +74,6 @@ const newPage = async (width, height, theme, view = 'OVERVIEW') => {
   }, [theme, view]);
   await page.route('**/api/session', route => route.fulfill({ json: { configured: false, authenticated: false } }));
   await page.route('**/api/world*', route => route.fulfill({ contentType: 'application/x-ndjson', body: JSON.stringify(world) + '\n' }));
-  await page.route('**/api/projections*', route => route.fulfill({ json: projection }));
   await page.route('**/api/recall*', route => route.fulfill({ json: { ...world, items: records.filter(x => x.source === 'drive') } }));
   return { context, page, errors };
 };
@@ -107,16 +102,10 @@ try {
     await page.getByRole('heading', { level: 1 }).waitFor();
     await page.getByRole('heading', { name: 'Estado atual' }).waitFor();
     assert.equal(await page.locator('.domain-tile').count(), 4, 'quatro domínios no estado atual');
+    assert.equal(await page.getByTestId('projection-bus').count(), 0,
+      'overlay legado do Projection Bus não pode competir com o SystemState');
     await noOverflow(page, `${name}/Overview`);
     await page.screenshot({ path: `${output}/${name}.png`, fullPage: true });
-
-    // 1b. Readback do Universal Projection Bus (verificação preservada do main).
-    await page.getByTestId('projection-bus').waitFor();
-    assert.equal((await page.getByTestId('projection-state').textContent())?.trim(), 'DEGRADED');
-    await page.getByText('PROJECTION BUS', { exact: true }).click();
-    assert.equal((await page.getByTestId('projection-fingerprint').textContent())?.trim(), 'BUS-FIXTURE-V1');
-    assert.match((await page.getByTestId('projection-source-NEXO_SSOT').textContent()) || '', /DEGRADED.*ssot-r1/);
-    await page.getByText('PROJECTION BUS', { exact: true }).click();
 
     // 2. Navegação: percorre as visões preservando um H1 por tela.
     const navigate = async view => {
@@ -173,6 +162,13 @@ try {
       await page.mouse.move(box.x + box.width * 0.68, box.y + box.height * 0.42, { steps: 5 });
       await page.mouse.up();
       await page.mouse.wheel(0, -180);
+    }
+    if (mobile) {
+      for (const control of ['Girar mapa para a esquerda', 'Girar mapa para a direita', 'Aproximar mapa', 'Afastar mapa']) {
+        const button = page.getByRole('button', { name: control });
+        await button.waitFor();
+        await button.click();
+      }
     }
     await graphNodes.first().focus();
     await page.keyboard.press('Enter');
@@ -240,7 +236,7 @@ try {
 
     assert.deepEqual(errors, [], `erros de runtime em ${name}`);
     reports.push({ name, status: 'pass', viewport: `${width}x${height}`, theme, overflow: false,
-      runtimeErrors: errors, projectionState: 'DEGRADED', projectionFingerprint: 'BUS-FIXTURE-V1' });
+      runtimeErrors: errors });
     await context.close();
   }
 
@@ -263,5 +259,5 @@ try {
 }
 
 await writeFile(`${output}/browser-report.json`,
-  JSON.stringify({ status: 'pass', scenarios: reports, projectionReadback: 'pass', visualBaseline: 'pending-initial-review' }, null, 2));
+  JSON.stringify({ status: 'pass', scenarios: reports, visualBaseline: 'pending-initial-review' }, null, 2));
 console.log(JSON.stringify(reports.map(r => r.name)));
