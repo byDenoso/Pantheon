@@ -4,17 +4,25 @@ import {PDF_REPORT_POLICY,PDF_PRESETS,getPdfPolicy,resolvePdfPreset} from '../se
 import {detectStyleViolations} from '../server/policy/style-policy.mjs';
 import {NEXO_MCP_TOOL_NAMES,executeNexoMcpTool} from '../server/mcp/server.mjs';
 
-test('PDF policy exposes the six canonical presets',()=>{
-  assert.equal(PDF_REPORT_POLICY.id,'PDF_REPORTING_V1');
-  assert.deepEqual(Object.keys(PDF_PRESETS),[
-    'premium-dark','premium-light','scientific','operational','editorial','minimal',
-  ]);
+const canonicalPresetIds=[
+  'swiss-signal','mission-control','editorial-shock','museum-archive','lab-notebook','data-newsroom',
+  'raw-brutal','generative-geometry','quiet-japan','type-matrix','ledger-78','monograph',
+  'tech-review-12','forensic-dossier','blueprint-system','market-terminal','cartographic-atlas',
+  'material-index','signal-zine','data-brand-system','architectonic','research-poster',
+];
+
+test('PDF policy exposes the 22 canonical Drive presets',()=>{
+  assert.equal(PDF_REPORT_POLICY.id,'PDF_REPORTING_V2');
+  assert.deepEqual(Object.keys(PDF_PRESETS),canonicalPresetIds);
+  assert.equal(PDF_REPORT_POLICY.sourceAuthority,'Google Drive');
+  assert.equal(PDF_REPORT_POLICY.sourceDocumentId,'12hpUHgXCcXQk9AWDrFj0tBp6tGXwfnhVDu7vEAMbiFE');
 });
 
 test('PDF policy requires preset selection when style is unspecified',()=>{
   assert.equal(PDF_REPORT_POLICY.askPresetWhenUnspecified,true);
-  assert.equal(resolvePdfPreset('Premium Dark').id,'premium-dark');
-  assert.equal(resolvePdfPreset('operational').id,'operational');
+  assert.equal(resolvePdfPreset('SWISS_SIGNAL').id,'swiss-signal');
+  assert.equal(resolvePdfPreset('Mission Control').id,'mission-control');
+  assert.equal(resolvePdfPreset('research poster').id,'research-poster');
 });
 
 test('PDF policy bans report metalinguage about generation and validation',()=>{
@@ -32,15 +40,15 @@ test('PDF policy bans report metalinguage about generation and validation',()=>{
 test('MCP exposes PDF policy without reading the science snapshot',async()=>{
   assert.ok(NEXO_MCP_TOOL_NAMES.includes('get_pdf_policy'));
   const readSnapshot=()=>{throw new Error('SNAPSHOT_SHOULD_NOT_BE_READ')};
-  const result=await executeNexoMcpTool({readSnapshot},'get_pdf_policy',{preset:'scientific'});
-  assert.equal(result.policy.id,'PDF_REPORTING_V1');
-  assert.equal(result.preset.id,'scientific');
+  const result=await executeNexoMcpTool({readSnapshot},'get_pdf_policy',{preset:'lab notebook'});
+  assert.equal(result.policy.id,'PDF_REPORTING_V2');
+  assert.equal(result.preset.id,'lab-notebook');
   assert.match(result.instruction,/conteúdo do relatório/i);
 });
 
-test('getPdfPolicy returns all presets when no preset is requested',()=>{
+test('getPdfPolicy returns all canonical presets when no preset is requested',()=>{
   const result=getPdfPolicy();
-  assert.equal(result.policy.id,'PDF_REPORTING_V1');
+  assert.equal(result.policy.id,'PDF_REPORTING_V2');
   assert.equal(result.preset,null);
-  assert.equal(result.presets.length,6);
+  assert.equal(result.presets.length,22);
 });
