@@ -24,8 +24,7 @@ const visuallyHidden={position:'absolute',width:'1px',height:'1px',padding:0,mar
 export function AtlasCanvas({graph,focusId,selectedId,onSelect,onOpen,reducedMotion,compact=false,loading=false,theme='dark'}:Props){
   const sourceNodes=graph?.nodes||[];
   const renderBudget=useMemo(()=>graphRenderBudget({width:compact?420:1440,compact}),[compact]);
-  const lod=useMemo(()=>selectSemanticLOD({
-    nodes:sourceNodes,
+  const lod=useMemo(()=>selectSemanticLOD(sourceNodes,{
     selectedId,focusId,
     visibleBudget:renderBudget.visibleBudget,
     labelBudget:renderBudget.labelBudget
