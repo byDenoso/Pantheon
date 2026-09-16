@@ -17,6 +17,7 @@ function requestHeaders(token,hasBody=false){return {Accept:'application/vnd.git
 function exactEntityIdFromFingerprint(fingerprint){const hex=String(fingerprint||'').replace(/^sha256:/,'');if(!/^[0-9a-f]{64}$/i.test(hex))throw new Error('INVALID_SCIENTIFIC_FINGERPRINT');return `T-CHAT-${hex.slice(0,12).toUpperCase()}`;}
 async function githubFetch(fetchImpl,token,url,init={}){const response=await fetchImpl(url,{...init,headers:{...requestHeaders(token,Boolean(init.body)),...(init.headers||{})}});let payload=null;const raw=await response.text();if(raw)payload=safeJson(raw,'GITHUB_RESPONSE');return {response,payload};}
 async function readContent({fetchImpl,token,repo,path,ref}){const url=`${API}/repos/${repo}/contents/${encodePath(path)}?ref=${encodeURIComponent(ref)}`;const {response,payload}=await githubFetch(fetchImpl,token,url);if(response.status===404)return null;if(!response.ok)throw new Error(`GITHUB_READ_FAILED:${response.status}:${payload?.message||'UNKNOWN'}`);if(!payload||payload.encoding!=='base64'||typeof payload.content!=='string')throw new Error('GITHUB_CONTENT_INVALID');const text=fromB64(payload.content);return {sha:payload.sha,text,json:safeJson(text,'GITHUB_CONTENT')};}
+async function listJsonDirectoryContents({fetchImpl,token,repo,path,ref}){const url=`${API}/repos/${repo}/contents/${encodePath(path)}?ref=${encodeURIComponent(ref)}`;const {response,payload}=await githubFetch(fetchImpl,token,url);if(response.status===404)return [];if(!response.ok)throw new Error(`GITHUB_READ_FAILED:${response.status}:${payload?.message||'UNKNOWN'}`);if(!Array.isArray(payload))throw new Error('GITHUB_DIRECTORY_INVALID');const files=payload.filter(item=>item?.type==='file'&&String(item?.name||'').endsWith('.json')).sort((a,b)=>String(a.path||'').localeCompare(String(b.path||'')));const values=[];for(const item of files){const file=await readContent({fetchImpl,token,repo,path:String(item.path),ref});if(file?.json&&typeof file.json==='object'&&!Array.isArray(file.json))values.push(file.json);}return values;}
 async function createContent({fetchImpl,token,repo,path,ref,message,json}){if(!token)throw new Error('GITHUB_WRITE_NOT_CONFIGURED');const existing=await readContent({fetchImpl,token,repo,path,ref});const text=JSON.stringify(json,null,2)+'\n';if(existing){if(JSON.stringify(existing.json)===JSON.stringify(json))return {idempotent:true,sha:existing.sha,commit_sha:null,path};throw new Error(`GITHUB_CONTENT_CONFLICT:${path}`);}const url=`${API}/repos/${repo}/contents/${encodePath(path)}`;const {response,payload}=await githubFetch(fetchImpl,token,url,{method:'PUT',body:JSON.stringify({message,content:b64(text),branch:ref})});if(!response.ok)throw new Error(`GITHUB_WRITE_FAILED:${response.status}:${payload?.message||'UNKNOWN'}`);return {idempotent:false,sha:payload?.content?.sha||null,commit_sha:payload?.commit?.sha||null,path};}
 
 export function resolveFrozenCapability(spec,env=process.env){const requested=String(spec?.execution_capability||'').trim();if(!requested)return null;const builtIn=FROZEN_CAPABILITIES[requested];if(builtIn)return {...builtIn,required_outputs:[...builtIn.required_outputs]};const raw=env?.NEXO_SCIENCE_CAPABILITIES_JSON;if(!raw)return null;let registry;try{registry=JSON.parse(raw);}catch{return null;}const candidate=registry?.[requested];if(!candidate||candidate.task_id!=='cosmology_benchmark'||candidate.repository!=='byDenoso/TCC')return null;if(!/^[0-9a-f]{40}$/i.test(String(candidate.source_revision||'')))return null;if(!Array.isArray(candidate.required_outputs)||!candidate.required_outputs.every(item=>typeof item==='string'&&item))return null;return {capability_id:requested,task_id:'cosmology_benchmark',repository:'byDenoso/TCC',source_revision:candidate.source_revision,runtime_requirement:String(candidate.runtime_requirement||'MCMC'),required_outputs:[...candidate.required_outputs],timeout_minutes:Number(candidate.timeout_minutes||15),seed:candidate.seed??20260915};}
@@ -26,6 +27,7 @@ export function createTowerGithubGateway({env=process.env,fetchImpl=globalThis.f
   if(typeof fetchImpl!=='function')throw new Error('FETCH_REQUIRED');
   const token=selectGitHubToken(env),readTower=path=>readContent({fetchImpl,token,repo:towerRepo,path,ref:towerRef});
   async function readJson(relative){const path=String(relative).startsWith('TOWER_V06/')?String(relative):`TOWER_V06/${String(relative).replace(/^\/+/, '')}`;const file=await readTower(path);return file?.json??null;}
+  async function listJsonDirectory(relative){const path=String(relative).startsWith('TOWER_V06/')?String(relative):`TOWER_V06/${String(relative).replace(/^\/+/, '')}`;return listJsonDirectoryContents({fetchImpl,token,repo:towerRepo,path,ref:towerRef});}
   async function requireJson(relative){const value=await readJson(relative);if(value===null)throw new Error(`CANONICAL_READ_MISSING:${relative}`);return value;}
   async function readEntity(kind,id){return readJson(`entities/${String(kind).toLowerCase()}/${id}.json`);}
   async function readReceipt(requestId){return readJson(`mutations/receipts/${requestId}.json`);}
@@ -34,6 +36,7 @@ export function createTowerGithubGateway({env=process.env,fetchImpl=globalThis.f
   return {
     configured:{towerWrite:Boolean(token),towerRepo,towerRef,dispatchRepo,dispatchRef},
     readJson,
+    listJsonDirectory,
     readControl:()=>requireJson('CONTROL.json'),
     readEntity,
     readActiveWorkIndex:()=>requireJson('indexes/active-work.json'),
@@ -54,4 +57,4 @@ export function createTowerGithubGateway({env=process.env,fetchImpl=globalThis.f
   };
 }
 
-export const _internal={readContent,createContent,exactEntityIdFromFingerprint,FROZEN_CAPABILITIES};
+export const _internal={readContent,listJsonDirectoryContents,createContent,exactEntityIdFromFingerprint,FROZEN_CAPABILITIES};
