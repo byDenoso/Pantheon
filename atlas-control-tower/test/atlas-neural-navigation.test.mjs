@@ -34,3 +34,12 @@ test('embedded Neural surface opts into the Atlas full-height workspace contract
   assert.match(read('../src/atlas-v3/atlas-v3.css'), /atlas-v3-shell--embedded\{height:calc\(100dvh - var\(--atlas-topbar-height\)\)!important/);
   assert.match(app, /import ['"]\.\/atlas-v3\.css['"]/);
 });
+
+test('Neural semantic navigation delegates domain projection to shared semantic helpers', () => {
+  for (const marker of ['graphForSemanticContext','focusIdForPrimaryDomain','overlayAvailability','semanticDomainForNode']) {
+    assert.match(app,new RegExp(marker));
+  }
+  assert.match(app,/initialLayer='NEXO'/);
+  assert.doesNotMatch(app,/return'SCIENCE'/);
+  assert.match(app,/disabled=\{!available\}/);
+});
