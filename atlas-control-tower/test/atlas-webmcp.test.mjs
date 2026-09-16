@@ -100,3 +100,9 @@ test('App mounts WebMCP from live Atlas session without making human UI depend o
   assert.match(app,/dispose\(\)/);
   assert.doesNotMatch(app,/if\s*\([^)]*modelContext[^)]*\)\s*return/,'human UI must not be gated on WebMCP availability');
 });
+
+test('App stabilizes the WebMCP action facade instead of depending on the per-render actions object',()=>{
+  const app=readFileSync(resolve(here,'../src/App.tsx'),'utf8');
+  assert.match(app,/const\s+webMcpActions\s*=\s*useMemo/,'WebMCP must use a stable action facade');
+  assert.doesNotMatch(app,/createAtlasSemanticCore\([\s\S]*?actions,\s*\n[\s\S]*?\),\s*\[actions\]\)/,'core must not depend on the per-render actions object identity');
+});
