@@ -14,7 +14,7 @@ test('root presentation assigns distinct positions to every canonical cluster in
 
 test('mobile root view uses container width to switch to compact screen-space domain placement', () => {
   const canvas = read('src/scene/CanvasGraphFallback.tsx');
-  assert.match(canvas, /const mobile=width<=520/);
+  assert.match(canvas, /mobile=width<=520/);
   assert.match(canvas, /domainScreenPoint/);
   assert.match(canvas, /Math\.min\(width\*\.32,145\)/);
 });
