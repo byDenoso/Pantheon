@@ -4,6 +4,7 @@ import research from './research.mjs';
 import entity from './entity.mjs';
 import learner from './learner.mjs';
 import sync from './sync.mjs';
+import semantic from './semantic.mjs';
 import { send } from './_middleware.mjs';
 
 const handlers = Object.freeze({
@@ -13,6 +14,7 @@ const handlers = Object.freeze({
   entity,
   learner,
   sync,
+  semantic,
 });
 
 export default async function privateDispatcher(req, res) {
