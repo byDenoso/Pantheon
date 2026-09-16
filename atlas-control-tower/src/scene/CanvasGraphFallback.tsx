@@ -1,361 +1,111 @@
 import { useEffect, useRef } from 'react';
-import { Vector3 } from 'three';
 import type { AtlasEdge, PositionedNode } from './types';
-import { edgeVisualRole, graphRenderBudget, nodeVisualRole } from './neural-visuals.mjs';
+import { edgeVisualRole, nodeVisualRole } from './neural-visuals.mjs';
 
-type Props = {
-  nodes: PositionedNode[];
-  edges: AtlasEdge[];
-  labelIds: Set<string>;
-  focusId: string;
-  selectedId?: string | null;
-  onNodeClick: (node: PositionedNode) => void;
-  reducedMotion: boolean;
-  compact: boolean;
-  theme?: 'dark'|'light';
+type Props={
+  nodes:PositionedNode[];
+  edges:AtlasEdge[];
+  labelIds:Set<string>;
+  focusId:string;
+  selectedId?:string|null;
+  onNodeClick:(node:PositionedNode)=>void;
+  reducedMotion:boolean;
+  compact:boolean;
+  theme?:'dark'|'light';
+};
+type Point={x:number;y:number};
+type WorldPoint={x:number;y:number;z:number};
+type Camera={scale:number;panX:number;panY:number};
+type Runtime={camera:Camera;drag:Point|null;last:Point|null;moved:boolean;pointers:Map<number,Point>;pinch:{distance:number;scale:number}|null;history:Camera[];hoverId:string|null};
+
+const ROOT='__PRESENTATION_NEXO__';
+const DOMAIN_PREFIX='__PRESENTATION_CLUSTER__:';
+const ROOT_SCALE=0.68;
+const MIN_SCALE=0.34;
+const MAX_SCALE=2.5;
+const DOMAIN_POSITIONS:Record<string,WorldPoint>={
+  SCIENCE:{x:-5.6,y:1.1,z:0},
+  ENGINEERING:{x:0,y:-1.8,z:0},
+  OLYMPUS:{x:5.6,y:1.1,z:0}
 };
 
-type Pointer = { x: number; y: number };
-type Runtime = {
-  current: Map<string, Vector3>;
-  target: Map<string, Vector3>;
-  scale: number;
-  panX: number;
-  panY: number;
-  pointer: Pointer | null;
-  pointers: Map<number, Pointer>;
-  pinch: { distance: number; scale: number } | null;
-  velocity: Pointer;
-  moved: boolean;
-};
-
-const hash = (value: string) => {
-  let result = 2166136261;
-  for (let index = 0; index < value.length; index += 1) {
-    result ^= value.charCodeAt(index);
-    result = Math.imul(result, 16777619);
+function nodeWorld(node:PositionedNode,focusId:string):WorldPoint{
+  const id=String(node.id);
+  if(focusId===ROOT&&id.startsWith(DOMAIN_PREFIX)){
+    const key=id.slice(DOMAIN_PREFIX.length);
+    return DOMAIN_POSITIONS[key]||{x:0,y:0,z:0};
   }
-  return result >>> 0;
-};
-
-function radiusFor(node: PositionedNode, selected: boolean) {
-  const type = String(node.type || '').toUpperCase();
-  const base = type === 'ROOT' ? 31 : type === 'SYSTEM' ? 25 : type === 'DOMAIN' ? 21 : type === 'CAMPAIGN' ? 15 : 11;
-  return base + (selected ? 4 : 0);
+  if(focusId===ROOT&&id===ROOT)return{x:0,y:4.2,z:0};
+  const p=node.position||[0,0,0];
+  return{x:Number(p[0]||0),y:Number(p[1]||0),z:Number(p[2]||0)};
 }
-
-function colorFor(node: PositionedNode, theme:'dark'|'light') {
+function radiusFor(node:PositionedNode,active:boolean,focusId:string){
+  const id=String(node.id);const type=String(node.type||'').toUpperCase();
+  let base=id.startsWith(DOMAIN_PREFIX)&&focusId===ROOT?38:type==='ROOT'?20:type==='SYSTEM'?25:type==='DOMAIN'?21:type==='CAMPAIGN'?15:11;
+  if(id===ROOT&&focusId===ROOT)base=11;
+  return base+(active?3:0);
+}
+function colorFor(node:PositionedNode,theme:'dark'|'light'){
+  const id=String(node.id);
+  if(id.endsWith(':SCIENCE'))return theme==='light'?'#2679b8':'#56bfff';
+  if(id.endsWith(':ENGINEERING'))return theme==='light'?'#258b73':'#63dbbd';
+  if(id.endsWith(':OLYMPUS'))return theme==='light'?'#8059bd':'#b891ff';
   const role=nodeVisualRole(node);
   if(role==='attention')return theme==='light'?'#a23b55':'#ff7188';
   if(role==='automation')return theme==='light'?'#a26700':'#ffc86d';
   if(role==='evidence')return theme==='light'?'#087f68':'#69deb0';
   if(role==='hub')return theme==='light'?'#1f6fae':'#74b9ff';
-  if(role==='core')return theme==='light'?'#145b91':'#b9ecff';
-  const type = String(node.type || '').toUpperCase();
-  if (theme === 'light') {
-    if (type === 'RESULT' || type === 'EVIDENCE') return '#087f68';
-    if (type === 'TEST') return '#956600';
-    if (type === 'CLAIM') return '#6547b0';
-    return '#176fae';
-  }
-  if (type === 'RESULT' || type === 'EVIDENCE') return '#69deb0';
-  if (type === 'TEST') return '#ffc65d';
-  if (type === 'CLAIM') return '#b68cff';
-  return '#48bfff';
+  return theme==='light'?'#176fae':'#48bfff';
 }
+function distance(a:Point,b:Point){return Math.hypot(a.x-b.x,a.y-b.y)}
+function copyCamera(camera:Camera):Camera{return{scale:camera.scale,panX:camera.panX,panY:camera.panY}}
 
-export function CanvasGraphFallback({ nodes, edges, labelIds, focusId, selectedId, onNodeClick, reducedMotion, compact, theme='dark' }: Props) {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const hostRef = useRef<HTMLDivElement>(null);
-  const nodesRef = useRef(nodes);
-  const edgesRef = useRef(edges);
-  const labelsRef = useRef(labelIds);
-  const runtimeRef = useRef<Runtime>({ current: new Map(), target: new Map(), scale: 1, panX: 0, panY: 0, pointer: null, pointers: new Map(), pinch: null, velocity: { x: 0, y: 0 }, moved: false });
-  const selectedRef = useRef(selectedId);
-  const focusRef = useRef(focusId);
-  const callbackRef = useRef(onNodeClick);
+export function CanvasGraphFallback({nodes,edges,labelIds,focusId,selectedId,onNodeClick,reducedMotion,compact,theme='dark'}:Props){
+  const canvasRef=useRef<HTMLCanvasElement>(null);
+  const hostRef=useRef<HTMLDivElement>(null);
+  const nodesRef=useRef(nodes);const edgesRef=useRef(edges);const labelsRef=useRef(labelIds);const focusRef=useRef(focusId);const selectedRef=useRef(selectedId);const callbackRef=useRef(onNodeClick);
+  const runtimeRef=useRef<Runtime>({camera:{scale:ROOT_SCALE,panX:0,panY:0},drag:null,last:null,moved:false,pointers:new Map(),pinch:null,history:[],hoverId:null});
+  nodesRef.current=nodes;edgesRef.current=edges;labelsRef.current=labelIds;focusRef.current=focusId;selectedRef.current=selectedId;callbackRef.current=onNodeClick;
 
-  nodesRef.current = nodes;
-  edgesRef.current = edges;
-  labelsRef.current = labelIds;
-  selectedRef.current = selectedId;
-  focusRef.current = focusId;
-  callbackRef.current = onNodeClick;
-
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    const host = hostRef.current;
-    if (!canvas || !host) return undefined;
-    const context = canvas.getContext('2d');
-    if (!context) return undefined;
-    const runtime = runtimeRef.current;
-    let frame = 0;
-    let disposed = false;
-    let width = 0;
-    let height = 0;
-
-    const resize = () => {
-      const ratio = Math.min(window.devicePixelRatio || 1, 2);
-      const rect = host.getBoundingClientRect();
-      width = Math.max(320, rect.width);
-      height = Math.max(420, rect.height);
-      canvas.width = Math.round(width * ratio);
-      canvas.height = Math.round(height * ratio);
-      canvas.style.width = `${width}px`;
-      canvas.style.height = `${height}px`;
-      context.setTransform(ratio, 0, 0, ratio, 0, 0);
-    };
-
-    const project = (node: PositionedNode) => {
-      const point = runtime.current.get(node.id) || new Vector3(...node.position);
-      const unit = Math.min(width, height) / (compact ? 18.5 : 16.5) * runtime.scale;
-      const depth = 1 + point.z * 0.055;
-      return {
-        x: width / 2 + runtime.panX + point.x * unit * depth,
-        y: height / 2 + runtime.panY + point.y * unit * 0.72 * depth,
-        radius: radiusFor(node, node.id === selectedRef.current || node.id === focusRef.current) * Math.max(0.78, depth)
-      };
-    };
-
-    const draw = () => {
-      if (disposed) return;
-      context.clearRect(0, 0, width, height);
-      const visibleNodes = nodesRef.current;
-      const visibleIds = new Set(visibleNodes.map(node => node.id));
-      const points = new Map(visibleNodes.map(node => [node.id, project(node)]));
-      const labelBudget = graphRenderBudget({width,compact}).labelBudget;
-      const labelCandidates = visibleNodes
-        .filter(node => labelsRef.current.has(node.id))
-        .map((node, index) => ({
-          node,
-          point: points.get(node.id)!,
-          priority: node.id === focusRef.current ? 10000 : node.id === selectedRef.current ? 9000 : ['ROOT', 'SYSTEM', 'DOMAIN'].includes(String(node.type || '').toUpperCase()) ? 7000 : 1000 - index
-        }))
-        .sort((a, b) => b.priority - a.priority)
-        .slice(0, labelBudget);
-      const labelBoxes: Array<{ x: number; y: number; width: number; height: number }> = [];
-      const visibleLabelIds = new Set<string>();
-      const overlaps = (a: { x: number; y: number; width: number; height: number }, b: { x: number; y: number; width: number; height: number }) =>
-        a.x < b.x + b.width && a.x + a.width > b.x && a.y < b.y + b.height && a.y + a.height > b.y;
-      for (const candidate of labelCandidates) {
-        const labelWidth = Math.min(220, Math.max(90, String(candidate.node.label || candidate.node.id).length * 6.2 + 22));
-        const box = {
-          x: Math.max(8, Math.min(width - labelWidth - 8, candidate.point.x + candidate.point.radius + 7)),
-          y: Math.max(8, Math.min(height - 30, candidate.point.y - 16)),
-          width: labelWidth,
-          height: 30
-        };
-        if (!labelBoxes.some(other => overlaps(box, other))) {
-          labelBoxes.push(box);
-          visibleLabelIds.add(candidate.node.id);
-        }
+  useEffect(()=>{
+    const canvas=canvasRef.current;const host=hostRef.current;if(!canvas||!host)return;
+    const ctx=canvas.getContext('2d');if(!ctx)return;
+    const runtime=runtimeRef.current;let width=0;let height=0;let raf=0;let disposed=false;
+    const resize=()=>{const dpr=Math.min(window.devicePixelRatio||1,2);const rect=host.getBoundingClientRect();width=Math.max(320,rect.width);height=Math.max(420,rect.height);canvas.width=Math.round(width*dpr);canvas.height=Math.round(height*dpr);canvas.style.width=`${width}px`;canvas.style.height=`${height}px`;ctx.setTransform(dpr,0,0,dpr,0,0)};
+    const unit=()=>Math.min(width,height)/(compact?17.5:16.5)*runtime.camera.scale;
+    const project=(node:PositionedNode)=>{const p=nodeWorld(node,focusRef.current);const depth=Math.max(.72,1+p.z*.035);return{x:width/2+runtime.camera.panX+p.x*unit()*depth,y:height/2+runtime.camera.panY+p.y*unit()*.76*depth,radius:radiusFor(node,node.id===selectedRef.current||node.id===focusRef.current,focusRef.current)*Math.max(.8,depth)}};
+    const isDomain=(node:PositionedNode)=>String(node.id).startsWith(DOMAIN_PREFIX)&&focusRef.current===ROOT;
+    const draw=()=>{
+      ctx.clearRect(0,0,width,height);
+      const visible=nodesRef.current;const ids=new Set(visible.map(n=>n.id));const points=new Map(visible.map(n=>[n.id,project(n)]));
+      for(const edge of edgesRef.current){if(!ids.has(edge.source)||!ids.has(edge.target))continue;const a=points.get(edge.source),b=points.get(edge.target);if(!a||!b)continue;const role=edgeVisualRole(edge);ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.setLineDash(role==='learning'?[4,6]:role==='evidence'?[2,5]:[]);ctx.strokeStyle=theme==='light'?'rgba(28,72,104,.22)':'rgba(92,174,220,.24)';ctx.lineWidth=role==='hierarchy'?1.4:1;ctx.stroke();ctx.setLineDash([])}
+      for(const node of visible){const p=points.get(node.id);if(!p)continue;const active=node.id===selectedRef.current||node.id===focusRef.current;const domain=isDomain(node);const color=colorFor(node,theme);const root=node.id===ROOT&&focusRef.current===ROOT;
+        if(!root){ctx.beginPath();ctx.arc(p.x,p.y,p.radius+(domain?13:5),0,Math.PI*2);ctx.strokeStyle=domain?(theme==='light'?'rgba(30,73,105,.20)':'rgba(151,220,255,.20)'):(theme==='light'?'rgba(30,73,105,.12)':'rgba(151,220,255,.10)');ctx.lineWidth=domain?1.5:1;ctx.stroke()}
+        ctx.beginPath();ctx.arc(p.x,p.y,p.radius,0,Math.PI*2);ctx.fillStyle=root?(theme==='light'?'rgba(45,81,108,.36)':'rgba(135,193,219,.34)'):color;ctx.globalAlpha=root?.55:(active?1:.9);ctx.fill();ctx.globalAlpha=1;ctx.strokeStyle=active?(theme==='light'?'#123e63':'#effcff'):(theme==='light'?'rgba(38,82,114,.65)':'rgba(216,247,255,.72)');ctx.lineWidth=active?2.4:1.25;ctx.stroke();
+        const showLabel=domain||labelsRef.current.has(node.id)||active;if(!showLabel)continue;
+        const label=String(node.label||node.id);const x=p.x+p.radius+12;const y=p.y-(domain?12:4);ctx.textBaseline='middle';ctx.font=`${domain?700:active?650:500} ${domain?17:active?14:11}px system-ui,sans-serif`;ctx.fillStyle=theme==='light'?'#102d45':'#edfaff';ctx.fillText(label,x,y);
+        if(domain){const summary=String(node.summary||'');if(summary){ctx.font='500 11px system-ui,sans-serif';ctx.fillStyle=theme==='light'?'rgba(45,75,98,.82)':'rgba(184,218,233,.80)';const max=compact?190:270;const words=summary.split(/\s+/);let line='';let yy=y+21;for(const word of words){const test=line?`${line} ${word}`:word;if(ctx.measureText(test).width>max&&line){ctx.fillText(line,x,yy);line=word;yy+=15}else line=test}if(line)ctx.fillText(line,x,yy)}}
+        else{ctx.font='700 8px ui-monospace,SFMono-Regular,Menlo,monospace';ctx.fillStyle=theme==='light'?'rgba(67,104,133,.88)':'rgba(151,208,232,.72)';ctx.fillText(`${String(node.type||'ENTITY')} · ${String(node.status||'UNKNOWN')}`,x,y+14)}
       }
+      raf=requestAnimationFrame(draw);
+    };
+    const point=(event:PointerEvent):Point=>{const rect=canvas.getBoundingClientRect();return{x:event.clientX-rect.left,y:event.clientY-rect.top}};
+    const hit=(x:number,y:number)=>{let best:PositionedNode|undefined;let bestD=Infinity;for(const node of nodesRef.current){const p=project(node);const d=Math.hypot(x-p.x,y-p.y);if(d<=p.radius+16&&d<bestD){best=node;bestD=d}}return best};
+    const pushHistory=()=>{runtime.history.push(copyCamera(runtime.camera));if(runtime.history.length>20)runtime.history.shift()};
+    const down=(e:PointerEvent)=>{const p=point(e);runtime.pointers.set(e.pointerId,p);runtime.moved=false;canvas.setPointerCapture?.(e.pointerId);if(runtime.pointers.size===2){const [a,b]=[...runtime.pointers.values()];runtime.pinch={distance:Math.max(1,distance(a,b)),scale:runtime.camera.scale};runtime.drag=null;pushHistory()}else{runtime.drag=p;runtime.last=p;pushHistory()}};
+    const move=(e:PointerEvent)=>{const p=point(e);runtime.pointers.set(e.pointerId,p);if(runtime.pointers.size===2&&runtime.pinch){const [a,b]=[...runtime.pointers.values()];runtime.camera.scale=Math.max(MIN_SCALE,Math.min(MAX_SCALE,runtime.pinch.scale*(distance(a,b)/runtime.pinch.distance)));runtime.moved=true;return}if(runtime.drag&&runtime.last){const dx=p.x-runtime.last.x,dy=p.y-runtime.last.y;if(Math.abs(dx)+Math.abs(dy)>2)runtime.moved=true;runtime.camera.panX+=dx;runtime.camera.panY+=dy;runtime.last=p}const candidate=hit(p.x,p.y);runtime.hoverId=candidate?.id||null;canvas.style.cursor=runtime.drag?'grabbing':candidate?'pointer':'grab'};
+    const up=(e:PointerEvent)=>{const p=point(e);const wasMoved=runtime.moved;runtime.pointers.delete(e.pointerId);if(runtime.pointers.size<2)runtime.pinch=null;if(!runtime.pointers.size){runtime.drag=null;runtime.last=null}if(!wasMoved){const node=hit(p.x,p.y);if(node)callbackRef.current(node)}};
+    const wheel=(e:WheelEvent)=>{e.preventDefault();pushHistory();const before=point(e as unknown as PointerEvent);const old=runtime.camera.scale;const next=Math.max(MIN_SCALE,Math.min(MAX_SCALE,old*Math.exp(-e.deltaY*.0011)));const factor=next/old;runtime.camera.panX=before.x-width/2-(before.x-width/2-runtime.camera.panX)*factor;runtime.camera.panY=before.y-height/2-(before.y-height/2-runtime.camera.panY)*factor;runtime.camera.scale=next};
+    const reset=()=>{pushHistory();runtime.camera={scale:focusRef.current===ROOT?ROOT_SCALE:.82,panX:0,panY:0}};
+    const fit=()=>{pushHistory();runtime.camera={scale:focusRef.current===ROOT?ROOT_SCALE:.94,panX:0,panY:0}};
+    const back=()=>{const previous=runtime.history.pop();if(previous)runtime.camera=previous};
+    const observer=new ResizeObserver(resize);observer.observe(host);resize();
+    canvas.addEventListener('pointerdown',down);canvas.addEventListener('pointermove',move);canvas.addEventListener('pointerup',up);canvas.addEventListener('pointercancel',up);canvas.addEventListener('wheel',wheel,{passive:false});window.addEventListener('atlas:reset-view',reset);window.addEventListener('atlas:fit-selection',fit);window.addEventListener('atlas:camera-back',back);
+    raf=requestAnimationFrame(draw);
+    return()=>{disposed=true;cancelAnimationFrame(raf);observer.disconnect();canvas.removeEventListener('pointerdown',down);canvas.removeEventListener('pointermove',move);canvas.removeEventListener('pointerup',up);canvas.removeEventListener('pointercancel',up);canvas.removeEventListener('wheel',wheel);window.removeEventListener('atlas:reset-view',reset);window.removeEventListener('atlas:fit-selection',fit);window.removeEventListener('atlas:camera-back',back)};
+  },[compact,reducedMotion,theme]);
 
-      context.save();
-      context.translate(width / 2 + runtime.panX, height / 2 + runtime.panY);
-      context.scale(runtime.scale, runtime.scale);
-      [4.4, 5.5, 6.5].forEach(radius => {
-        context.beginPath();
-        context.ellipse(0, 0, radius * Math.min(width, height) / 16.5, radius * Math.min(width, height) / 16.5 * 0.72, 0, 0, Math.PI * 2);
-        if (theme === 'light') {
-          context.strokeStyle = 'rgba(18,51,79,.16)';
-          context.lineWidth = 2.6;
-          context.stroke();
-          context.strokeStyle = 'rgba(23,111,174,.28)';
-          context.lineWidth = 1;
-        } else {
-          context.strokeStyle = 'rgba(72,191,255,.11)';
-          context.lineWidth = 1;
-        }
-        context.stroke();
-      });
-      context.restore();
+  useEffect(()=>{if(focusId===ROOT)runtimeRef.current.camera={scale:ROOT_SCALE,panX:0,panY:0};else runtimeRef.current.camera={scale:.82,panX:0,panY:0}},[focusId]);
 
-      for (const edge of edgesRef.current) {
-        if (!visibleIds.has(edge.source) || !visibleIds.has(edge.target)) continue;
-        const from = points.get(edge.source);
-        const to = points.get(edge.target);
-        if (!from || !to) continue;
-        const related = !selectedRef.current || edge.source === selectedRef.current || edge.target === selectedRef.current;
-        context.beginPath();
-        context.moveTo(from.x, from.y);
-        context.lineTo(to.x, to.y);
-        const role=edgeVisualRole(edge);
-        context.setLineDash(role==='learning' ? [3, 5] : role==='evidence' ? [1, 4] : role==='attention' ? [6, 3] : []);
-        if (theme === 'light') {
-          context.strokeStyle = role==='attention' ? 'rgba(162,59,85,.34)' : 'rgba(18,51,79,.2)';
-          context.lineWidth = related ? (role==='hierarchy'?2.9:2.5) : 1.6;
-          context.stroke();
-          context.beginPath();
-          context.moveTo(from.x, from.y);
-          context.lineTo(to.x, to.y);
-          context.strokeStyle = role==='attention' ? (related?'rgba(162,59,85,.72)':'rgba(162,59,85,.2)') : related ? 'rgba(23,111,174,.58)' : 'rgba(23,111,174,.2)';
-          context.lineWidth = related ? (role==='hierarchy'?1.55:1.25) : .8;
-        } else {
-          context.strokeStyle = role==='attention' ? (related?'rgba(255,113,136,.62)':'rgba(255,113,136,.12)') : related ? 'rgba(77,190,255,.42)' : 'rgba(77,190,255,.09)';
-          context.lineWidth = related ? (role==='hierarchy'?1.7:1.4) : 1;
-        }
-        context.stroke();
-        context.setLineDash([]);
-      }
-
-      for (const node of visibleNodes) {
-        const point = points.get(node.id);
-        if (!point) continue;
-        const color = colorFor(node, theme);
-        const active = node.id === selectedRef.current || node.id === focusRef.current;
-        const role=nodeVisualRole(node);
-        const gradient = context.createRadialGradient(point.x, point.y, 0, point.x, point.y, point.radius * (active ? 2.8 : 2.2));
-        gradient.addColorStop(0, `${color}cc`);
-        gradient.addColorStop(0.42, `${color}40`);
-        gradient.addColorStop(1, `${color}00`);
-        context.fillStyle = gradient;
-        context.beginPath();
-        context.arc(point.x, point.y, point.radius * (active ? 2.8 : 2.2), 0, Math.PI * 2);
-        context.fill();
-        context.fillStyle = color;
-        context.globalAlpha = active ? 1 : 0.86;
-        context.beginPath();
-        context.arc(point.x, point.y, point.radius, 0, Math.PI * 2);
-        context.fill();
-        context.globalAlpha = 1;
-        context.strokeStyle = active
-          ? (theme === 'light' ? '#123e63' : '#e5fbff')
-          : (theme === 'light' ? 'rgba(37,88,126,.72)' : 'rgba(206,245,255,.76)');
-        context.lineWidth = active ? 2.4 : role==='core' ? 1.9 : role==='attention' ? 1.7 : 1.35;
-        context.stroke();
-
-        if (!visibleLabelIds.has(node.id)) continue;
-        context.font = `${active ? 600 : 500} ${active ? 14 : 11}px system-ui, sans-serif`;
-        context.textBaseline = 'middle';
-        context.fillStyle = theme === 'light' ? '#15334f' : '#ecf9ff';
-        context.shadowColor = theme === 'light' ? 'rgba(18,51,79,.58)' : 'transparent';
-        context.shadowBlur = theme === 'light' ? 1.5 : 0;
-        context.shadowOffsetX = 0;
-        context.shadowOffsetY = 1;
-        context.fillText(String(node.label || node.id), point.x + point.radius + 7, point.y - 4);
-        context.font = '700 8px ui-monospace, SFMono-Regular, Menlo, monospace';
-        context.fillStyle = active
-          ? (theme === 'light' ? '#176fae' : '#8ee6ff')
-          : (theme === 'light' ? 'rgba(67,104,133,.9)' : 'rgba(151,208,232,.75)');
-        context.fillText(`${String(node.type || 'ENTITY')} · ${String(node.status || 'UNKNOWN')}`, point.x + point.radius + 7, point.y + 10);
-        context.shadowColor = 'transparent';
-        context.shadowBlur = 0;
-        context.shadowOffsetY = 0;
-      }
-    };
-
-    const tick = () => {
-      const currentNodes = nodesRef.current;
-      const ids = new Set(currentNodes.map(node => node.id));
-      let moving = false;
-      for (const node of currentNodes) {
-        let current = runtime.current.get(node.id);
-        if (!current) {
-          current = runtime.current.size ? new Vector3(0, 0, 0) : new Vector3(...node.position);
-          runtime.current.set(node.id, current);
-          moving = true;
-        }
-        const target = new Vector3(...node.position);
-        runtime.target.set(node.id, target);
-        if (reducedMotion) current.copy(target);
-        else {
-          current.lerp(target, 0.075);
-          moving ||= current.distanceTo(target) > 0.02;
-        }
-      }
-      for (const id of runtime.current.keys()) if (!ids.has(id)) runtime.current.delete(id);
-      if (!reducedMotion && !runtime.pointer && !runtime.pinch) {
-        runtime.panX += runtime.velocity.x;
-        runtime.panY += runtime.velocity.y;
-        runtime.velocity.x *= 0.88;
-        runtime.velocity.y *= 0.88;
-      }
-      draw();
-      if (!disposed) frame = requestAnimationFrame(tick);
-      if (!moving && reducedMotion) cancelAnimationFrame(frame);
-    };
-
-    const findNode = (x: number, y: number) => {
-      let nearest: PositionedNode | undefined;
-      let distance = Number.POSITIVE_INFINITY;
-      for (const node of nodesRef.current) {
-        const point = project(node);
-        const next = Math.hypot(x - point.x, y - point.y);
-        if (next <= point.radius + 12 && next < distance) { nearest = node; distance = next; }
-      }
-      return nearest;
-    };
-    const pointFromEvent = (event: PointerEvent) => {
-      const rect = canvas.getBoundingClientRect();
-      return { x: event.clientX - rect.left, y: event.clientY - rect.top };
-    };
-    const distanceBetween = (a: Pointer, b: Pointer) => Math.hypot(a.x - b.x, a.y - b.y);
-    const down = (event: PointerEvent) => {
-      const point = pointFromEvent(event);
-      runtime.pointers.set(event.pointerId, point);
-      runtime.moved = false;
-      runtime.velocity = { x: 0, y: 0 };
-      canvas.setPointerCapture?.(event.pointerId);
-      if (runtime.pointers.size >= 2) {
-        const [first, second] = [...runtime.pointers.values()];
-        runtime.pinch = { distance: Math.max(1, distanceBetween(first, second)), scale: runtime.scale };
-        runtime.pointer = null;
-      } else runtime.pointer = point;
-    };
-    const move = (event: PointerEvent) => {
-      const next = pointFromEvent(event);
-      runtime.pointers.set(event.pointerId, next);
-      if (runtime.pointers.size >= 2 && runtime.pinch) {
-        const [first, second] = [...runtime.pointers.values()];
-        runtime.scale = Math.max(0.5, Math.min(2.2, runtime.pinch.scale * distanceBetween(first, second) / runtime.pinch.distance));
-        runtime.moved = true;
-        return;
-      }
-      if (!runtime.pointer) return;
-      const dx = next.x - runtime.pointer.x;
-      const dy = next.y - runtime.pointer.y;
-      if (Math.hypot(dx, dy) > 3) runtime.moved = true;
-      if (runtime.moved) { runtime.panX += dx; runtime.panY += dy; runtime.velocity = { x: dx, y: dy }; }
-      runtime.pointer = next;
-    };
-    const up = (event: PointerEvent) => {
-      const point = pointFromEvent(event);
-      runtime.pointers.delete(event.pointerId);
-      if (runtime.pointers.size < 2) runtime.pinch = null;
-      if (!runtime.moved && !runtime.pointers.size) { const node = findNode(point.x, point.y); if (node) callbackRef.current(node); }
-      runtime.pointer = null;
-    };
-    const doubleClick = (event: MouseEvent) => { const rect = canvas.getBoundingClientRect(); const node = findNode(event.clientX - rect.left, event.clientY - rect.top); if (node) callbackRef.current(node); };
-    const wheel = (event: WheelEvent) => { event.preventDefault(); runtime.scale = Math.max(0.5, Math.min(2.2, runtime.scale * Math.exp(-event.deltaY * 0.0012))); };
-    const reset = () => { runtime.scale = 1; runtime.panX = 0; runtime.panY = 0; runtime.velocity = { x: 0, y: 0 }; };
-    canvas.addEventListener('pointerdown', down);
-    canvas.addEventListener('pointermove', move);
-    canvas.addEventListener('pointerup', up);
-    canvas.addEventListener('pointercancel', up);
-    canvas.addEventListener('wheel', wheel, { passive: false });
-    canvas.addEventListener('dblclick', doubleClick);
-    window.addEventListener('atlas:reset-view', reset);
-    const observer = new ResizeObserver(resize);
-    observer.observe(host);
-    resize();
-    frame = requestAnimationFrame(tick);
-    return () => {
-      disposed = true;
-      cancelAnimationFrame(frame);
-      observer.disconnect();
-      canvas.removeEventListener('pointerdown', down);
-      canvas.removeEventListener('pointermove', move);
-      canvas.removeEventListener('pointerup', up);
-      canvas.removeEventListener('pointercancel', up);
-      canvas.removeEventListener('wheel', wheel);
-      canvas.removeEventListener('dblclick', doubleClick);
-      window.removeEventListener('atlas:reset-view', reset);
-    };
-  }, [compact, reducedMotion, theme]);
-
-  return <div ref={hostRef} className="atlas-canvas-fallback" data-renderer="canvas-2d" role="img" aria-label="Mapa de conhecimento em Canvas 2.5D" style={{touchAction:'none'}}>
-    <canvas ref={canvasRef} aria-hidden="true" />
-    <span className="atlas-canvas-fallback-badge">CANVAS 2.5D · FALLBACK</span>
-  </div>;
+  return <div ref={hostRef} className="canvas-graph-fallback" data-testid="atlas-canvas-2d" style={{position:'absolute',inset:0,minHeight:compact?420:620,touchAction:'none'}}><canvas ref={canvasRef} aria-label="Grafo interativo 2D" style={{display:'block',width:'100%',height:'100%',touchAction:'none'}}/></div>;
 }
