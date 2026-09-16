@@ -1,50 +1,55 @@
 ---
 name: pdf-reporting
-description: Use when creating, rewriting, exporting, or validating a PDF report, plan, audit, scientific report, consulting document, or other fixed-layout PDF artifact.
+description: Use when creating, rewriting, exporting, or validating a PDF report, plan, audit, scientific report, consulting document, infographic-adapted report, or other fixed-layout PDF artifact.
 ---
 
 # PDF Reporting
 
 ## Core rule
 
-Treat preset choice as structural. If the user requests a PDF without defining style or preset, present the six canonical presets before authoring. Do not silently invent a visual identity.
+Preset choice is structural. If the user requests a PDF without a preset, present the canonical Visual Grammar Preset Pack before authoring. Reuse an already established preset for the active document or project.
 
-## Canonical presets
+Google Drive document `NEXO · ARTIFACT · VISUAL GRAMMAR PRESET PACK · v1.0` (`12hpUHgXCcXQk9AWDrFj0tBp6tGXwfnhVDu7vEAMbiFE`) is the body/content authority. MCP exposes discovery/resolve metadata only.
 
-- **Premium Dark**: technical dashboard, dark background, cards, metrics, charts, high visual hierarchy.
-- **Premium Light**: clean executive report, light background, whitespace, discreet charts and tables.
-- **Scientific**: formal technical/scientific report, figures, tables, captions, references, dense information.
-- **Operational**: audit format centered on diagnosis, evidence, risk, decision, and next action.
-- **Editorial**: consulting-style visual report with stronger typography and controlled visual narrative.
-- **Minimal**: compact, dry, low-decoration document optimized for fast reading.
+## Canonical 22 presets
+
+1. **SWISS_SIGNAL** — editorial-system — grid + scale + signal color.
+2. **MISSION_CONTROL** — operational — operational surface, not dashboard cards.
+3. **EDITORIAL_SHOCK** — editorial — every spread changes rhythm.
+4. **MUSEUM_ARCHIVE** — archive-luxury — object as specimen.
+5. **LAB_NOTEBOOK** — scientific — artifact behaves like research instrument.
+6. **DATA_NEWSROOM** — data-editorial — the chart carries the argument.
+7. **RAW_BRUTAL** — brutalist — nothing decorative survives.
+8. **GENERATIVE_GEOMETRY** — data-driven-identity — identity changes with the data.
+9. **QUIET_JAPAN** — minimal-editorial — silence is part of hierarchy.
+10. **TYPE_MATRIX** — typographic — typography is the visualization.
+11. **LEDGER_78** — institutional-record — structure is explicit and auditable.
+12. **MONOGRAPH** — publication — book logic, not app logic.
+13. **TECH_REVIEW_12** — technology-editorial — flexible technical publication grid.
+14. **FORENSIC_DOSSIER** — investigative — evidence chain is the composition.
+15. **BLUEPRINT_SYSTEM** — engineering-schematic — page behaves like a drawing set.
+16. **MARKET_TERMINAL** — financial-terminal — dense comparative scanning.
+17. **CARTOGRAPHIC_ATLAS** — spatial-atlas — layers and geography lead the story.
+18. **MATERIAL_INDEX** — material-catalog — systematic sample cataloguing.
+19. **SIGNAL_ZINE** — experimental-zine — controlled visual collision.
+20. **DATA_BRAND_SYSTEM** — data-brand — charts and brand grammar are one system.
+21. **ARCHITECTONIC** — architectural — monumental hierarchy with spatial discipline.
+22. **RESEARCH_POSTER** — academic-poster — one-canvas research narrative.
+
+## Selection
+
+Use the explicit preset supplied by the user. If none is supplied, ask for one. Unknown preset or ambiguous alias fails closed. Do not silently replace a selected grammar with generic cards, generic dashboard styling, or generic corporate layout.
+
+For detailed rules and cross-media compatibility, recover the current Drive authority before authoring when those details materially affect the result.
 
 ## Writing policy
 
-Write the report itself. Do not write about the report-generation process.
-
-Avoid metalinguage such as:
-- statements that the document exists to prove generation capability;
-- comments about producing, rendering, validating, exporting, or testing the PDF;
-- comments about templates or lack of templates;
-- sentences such as “este relatório demonstra que...” when they describe the artifact rather than the subject matter;
-- explanations of why the document was generated unless that is genuine subject-matter content requested by the user.
-
-Prefer direct domain content: data, evidence, analysis, inference, conclusion, decision, and action.
+Write the report itself. Avoid metalinguage about generating, rendering, validating, exporting, testing, templates, or proving artifact capability. Prefer direct domain content: data, evidence, analysis, inference, conclusion, decision, and action.
 
 ## Authoring flow
 
-1. Resolve preset.
-2. Choose the smallest correct authoring route for the content.
-3. Build the artifact with coherent typography, spacing, tables, figures, and page breaks.
-4. Export to PDF.
-5. Render every page to images.
-6. Validate clipping, overlap, broken glyphs, table overflow, graph readability, headers/footers, and pagination.
-7. Deliver only after visual validation passes.
-
-## Preset inference
-
-Use an explicit preset supplied by the user. If none is supplied, ask for one. If the user already established a preset for the active document or project, reuse it instead of asking again.
+Resolve preset → recover detailed grammar if needed → author → export PDF → render every page → validate final-size legibility, pagination, clipping, overlap, glyphs, tables, charts, headers and footers → deliver.
 
 ## Integration
 
-The canonical machine-readable policy is `server/policy/pdf-reporting-policy.mjs`. MCP clients should read it through `get_pdf_policy` rather than duplicating preset definitions.
+`server/policy/pdf-reporting-policy.mjs` mirrors discovery metadata for the 22 presets. MCP clients use `get_pdf_policy`; Drive remains the canonical grammar body.
