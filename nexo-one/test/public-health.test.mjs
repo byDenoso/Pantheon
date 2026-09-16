@@ -24,6 +24,8 @@ function byDomain(result) {
 }
 
 test('public TruthGraph distinguishes projection limits from material degradation', () => {
+  const science = truth('SCIENCE', 'Google Sheets:NEXO · SSOT CANONICAL / Science');
+  science.detail = 'Science truth hot index; evidence remains in Drive';
   const graph = buildTruthGraph({
     access: 'PUBLIC', now: NOW, refs,
     authorityRows: [
@@ -34,7 +36,7 @@ test('public TruthGraph distinguishes projection limits from material degradatio
     ],
     truthRows: [
       truth('NEXO', 'Google Sheets:NEXO · SSOT CANONICAL / NEXO'),
-      truth('SCIENCE', 'Google Sheets:NEXO · SSOT CANONICAL / Science'),
+      science,
       truth('ENGINEERING', 'GitHub:byDenoso/Pantheon + real runtime', '2026-09-01T00:00:00Z'),
       truth('OLYMPUS', 'Google Sheets:NEXO · SSOT CANONICAL / Olympus'),
     ],
