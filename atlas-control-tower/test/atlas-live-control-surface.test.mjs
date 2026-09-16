@@ -15,12 +15,13 @@ test('activity drawer reads live Tower API instead of public snapshot placeholde
   assert.doesNotMatch(source,/índice de busca público/i);
 });
 
-test('live activity endpoint reads canonical Tower entities and indexes',()=>{
+test('live activity endpoint reads canonical Tower entities and tolerates absent optional indexes',()=>{
   const source=read('api/live/activity.mjs');
   assert.match(source,/createTowerGithubGateway/);
   assert.match(source,/listJsonDirectory\(['"]entities\/test['"]\)/);
-  assert.match(source,/readActiveWorkIndex/);
-  assert.match(source,/readInterdomainIndex/);
+  assert.match(source,/readJson\(['"]indexes\/active-work\.json['"]\)/);
+  assert.match(source,/readJson\(['"]indexes\/interdomain-active\.json['"]\)/);
+  assert.match(source,/availability/);
 });
 
 test('live and semantic routes reuse existing Vercel functions instead of increasing Hobby function count',()=>{
