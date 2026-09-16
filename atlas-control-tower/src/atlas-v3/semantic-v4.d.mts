@@ -1,8 +1,8 @@
 import type {AtlasGraph,AtlasNode} from '../scene/types';
 import type {AtlasV3Scene} from './types';
 
-export const PRIMARY_DOMAINS: readonly ['NEXO','SCIENCE','OPERATIONS','HEALTH'];
-export const OVERLAYS: readonly ['LEARNING','AUTOMATIONS','EVIDENCE'];
+export const PRIMARY_DOMAINS: readonly string[];
+export const OVERLAYS: readonly string[];
 
 export function semanticDepthForNode(node:Partial<AtlasNode>):number;
 export function semanticDomainForNode(node:Partial<AtlasNode>|null|undefined):'NEXO'|'SCIENCE'|'OPERATIONS'|'HEALTH'|'UNCLASSIFIED';
