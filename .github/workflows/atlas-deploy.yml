@@ -2,6 +2,11 @@ name: Atlas Legacy Vercel Deploy
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - 'atlas-control-tower/.deploy-trigger-*'
 
 permissions:
   contents: read
