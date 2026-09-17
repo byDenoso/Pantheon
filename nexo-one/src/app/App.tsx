@@ -97,6 +97,10 @@ export default function App() {
     setMoreOpen(false);
     const hash = hashForView(next);
     if (window.location.hash !== hash) window.history.pushState(null, '', hash);
+    // Cada superfície começa no próprio cabeçalho. Sem este reset, trocar de uma
+    // tela longa para outra preserva o scroll anterior e pode esconder título,
+    // filtros e estado inicial da nova seção.
+    window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
   }, []);
 
   const submitCommand = (event: React.FormEvent) => {

@@ -13,6 +13,7 @@ test('views have stable hash deep links and browser history restoration', async 
   assert.match(navigation, /export const hashForView/);
   assert.match(app, /hashchange/);
   assert.match(app, /history\.replaceState/);
+  assert.match(app, /window\.scrollTo\(\{ top: 0, left: 0, behavior: 'auto' \}\)/);
 });
 
 test('static Pages sends private access to the private cockpit instead of a dead local session endpoint', async () => {
