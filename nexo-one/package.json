@@ -13,8 +13,9 @@
     "test": "node --test test/*.test.mjs",
     "style:lint": "node scripts/style-lint.mjs",
     "build": "vite build",
+    "verify:public": "node scripts/verify-public-artifact.mjs",
     "preview": "node scripts/dev.mjs --built",
-    "check": "npm run typecheck && npm test && npm run style:lint && npm run build",
+    "check": "npm run typecheck && npm test && npm run style:lint && npm run build && npm run verify:public",
     "test:browser": "node test/browser.mjs"
   },
   "dependencies": {
