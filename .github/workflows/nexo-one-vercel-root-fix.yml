@@ -1,0 +1,38 @@
+name: NEXO ONE repair Vercel root
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/nexo-one-vercel-root-fix.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: nexo-one-vercel-root-fix
+  cancel-in-progress: false
+
+jobs:
+  repair:
+    runs-on: ubuntu-latest
+    environment: nexo-one-production
+    env:
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+    steps:
+      - name: Repair Vercel Root Directory
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$VERCEL_TOKEN"
+          test -n "$VERCEL_ORG_ID"
+          test "$VERCEL_PROJECT_ID" = "prj_rFoAEgGt4gFNr8DHEOzxY7keS16W"
+          RESPONSE=$(curl --silent --show-error --fail-with-body \
+            -X PATCH \
+            -H "Authorization: Bearer $VERCEL_TOKEN" \
+            -H "Content-Type: application/json" \
+            "https://api.vercel.com/v9/projects/$VERCEL_PROJECT_ID?teamId=$VERCEL_ORG_ID" \
+            --data '{"rootDirectory":"nexo-one"}')
+          node -e 'const p=JSON.parse(process.argv[1]); if(p.rootDirectory!=="nexo-one") { console.error(p); process.exit(1) } console.log(JSON.stringify({id:p.id,name:p.name,rootDirectory:p.rootDirectory}))' "$RESPONSE"
