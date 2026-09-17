@@ -40,6 +40,7 @@ export function createAppsScriptAuthBridge(options={}){
   if(!parentWindow)throw new Error('AUTH_BRIDGE_WINDOW_REQUIRED');
 
   const nonce=String(randomId('nonce'));
+  const browserId=`browser-${nonce}`;
   const iframe=new URL(bridgeUrl);
   iframe.searchParams.set('bridgeNonce',nonce);
   iframe.searchParams.set('parentOrigin',String(parentWindow.location?.origin||''));
@@ -117,7 +118,7 @@ export function createAppsScriptAuthBridge(options={}){
       const token=getStoredSessionToken(parentWindow);
       return request('SESSION_GET',token?{token}:{});
     },
-    login(pin){return request('SESSION_LOGIN',{pin:String(pin??'')});},
+    login(pin){return request('SESSION_LOGIN',{pin:String(pin??''),browserId});},
     async logout(){
       const token=getStoredSessionToken(parentWindow);
       clearStoredSessionToken(parentWindow);
