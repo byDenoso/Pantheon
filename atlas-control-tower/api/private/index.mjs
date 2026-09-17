@@ -5,6 +5,7 @@ import entity from './entity.mjs';
 import learner from './learner.mjs';
 import sync from './sync.mjs';
 import semantic from './semantic.mjs';
+import control from './control.mjs';
 import { send } from './_middleware.mjs';
 
 const handlers = Object.freeze({
@@ -15,6 +16,7 @@ const handlers = Object.freeze({
   learner,
   sync,
   semantic,
+  control,
 });
 
 export default async function privateDispatcher(req, res) {

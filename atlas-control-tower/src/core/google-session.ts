@@ -3,6 +3,11 @@ import type { AtlasSession } from './auth';
 const TOKEN_KEY='nexo_google_id_token';
 
 type Claims={email?:string;exp?:number};
+export type ControlPlaneAction='SYNC'|'RECONCILE'|'EXECUTE'|'RECOVER'|'VALIDATE';
+export type ControlPlaneEnvelope={
+  request_id:string;action:ControlPlaneAction|string;target:string;requested_at:string;acceptance:'accepted'|'rejected'|string;
+  execution_id:string|null;state:string;before_revision:string|null;after_revision:string|null;evidence:unknown[];blocker:unknown|null;readback:unknown|null;
+};
 
 function decodePart(value:string):string{
   const normalized=value.replace(/-/g,'+').replace(/_/g,'/');
@@ -55,4 +60,11 @@ export async function semanticCommand(command:string,args:Record<string,unknown>
   const payload=await response.json().catch(()=>({error:`HTTP_${response.status}`}));
   if(!response.ok)throw new Error(String(payload?.error||`HTTP_${response.status}`));
   return payload;
+}
+
+export async function controlPlaneAction(action:ControlPlaneAction,target?:string,extra:Record<string,unknown>={}):Promise<ControlPlaneEnvelope>{
+  const response=await authenticatedFetch('/api/private/control',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action,target,...extra})});
+  const payload=await response.json().catch(()=>({blocker:{reason:`HTTP_${response.status}`}})) as Partial<ControlPlaneEnvelope>&{error?:string};
+  if(!response.ok&&payload.acceptance!=='rejected')throw new Error(String(payload.error||`HTTP_${response.status}`));
+  return payload as ControlPlaneEnvelope;
 }

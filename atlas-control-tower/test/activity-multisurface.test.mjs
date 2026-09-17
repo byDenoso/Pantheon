@@ -11,10 +11,12 @@ test('activity page consumes the live canonical Tower surface',()=>{
  assert.doesNotMatch(source,/Fonte de atividade indisponível/);
 });
 
-test('activity renders canonical labels and statuses and exposes governed work creation',()=>{
+test('activity renders canonical labels and statuses and exposes only governed Control Plane actions',()=>{
  const source=read('src/pages/AtividadePage.tsx');
  assert.match(source,/function label\(item/);
  assert.match(source,/function status\(item/);
- assert.match(source,/semanticCommand\(['"]nexo\.create_work['"]/);
- assert.match(source,/Criar WORK/);
+ for(const action of ['SYNC','RECONCILE','EXECUTE','RECOVER','VALIDATE']) assert.match(source,new RegExp(action));
+ assert.match(source,/controlPlaneAction/);
+ assert.doesNotMatch(source,/nexo\.create_work/);
+ assert.doesNotMatch(source,/Criar WORK/);
 });
