@@ -36,31 +36,12 @@ jobs:
       - name: Install Playwright Chromium
         run: npx playwright install --with-deps chromium
       - name: Run unit and contract tests
-        run: set -o pipefail; npm test 2>&1 | tee /tmp/atlas-test.log
-      - name: Upload test failure log
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: atlas-test-failure-log
-          path: /tmp/atlas-test.log
-          if-no-files-found: error
-          retention-days: 1
+        run: npm test
       - name: Typecheck React frontend
-        if: always()
-        run: set -o pipefail; npm run typecheck 2>&1 | tee /tmp/atlas-typecheck.log
-      - name: Upload typecheck failure log
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: atlas-typecheck-failure-log
-          path: /tmp/atlas-typecheck.log
-          if-no-files-found: error
-          retention-days: 1
+        run: npm run typecheck
       - name: Build production frontend
-        if: always()
         run: npm run build
       - name: Package tested frontend build
-        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: atlas-control-tower-dist
