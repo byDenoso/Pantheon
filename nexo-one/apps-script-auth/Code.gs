@@ -34,7 +34,7 @@ function nexoAllowedOrigin_(request,props){
   var expected=props.getProperty('NEXO_ALLOWED_ORIGIN')||'';
   return expected&&request&&String(request.origin||'')===expected;
 }
-function nexoSessionKey_(token,secret){return 'session:'+nexoHmac_('session:'+String(token||''),secret);}
+function nexoSessionKey_(token,secret){return 'NEXO_SESSION_'+nexoHmac_('session:'+String(token||''),secret);}
 function nexoBrowserKey_(browserId,secret){return 'rate:browser:'+nexoHmac_('browser:'+String(browserId||''),secret);}
 function nexoReadJson_(cache,key){
   var raw=cache.get(key);if(!raw)return null;
@@ -48,20 +48,27 @@ function nexoIncrementBucket_(cache,key,now){
   cache.put(key,JSON.stringify(bucket),NEXO_RATE_WINDOW_SECONDS);
   return bucket;
 }
-function nexoValidateSession_(token,props,cache){
+function nexoValidateSession_(token,props){
   if(!token)return null;
   var secret=props.getProperty('NEXO_SESSION_SECRET')||'';
-  var record=nexoReadJson_(cache,nexoSessionKey_(token,secret));
+  var key=nexoSessionKey_(token,secret);
+  var raw=props.getProperty(key);
+  if(!raw)return null;
+  var record=null;
+  try{record=JSON.parse(raw);}catch(_error){props.deleteProperty(key);return null;}
   var now=Date.now();
-  if(!record||!Number(record.createdAt)||!Number(record.expiresAt)||now>=Number(record.expiresAt)||Number(record.expiresAt)-Number(record.createdAt)>NEXO_SESSION_TTL_SECONDS*1000)return null;
+  if(!record||!Number(record.createdAt)||!Number(record.expiresAt)||now>=Number(record.expiresAt)||Number(record.expiresAt)-Number(record.createdAt)>NEXO_SESSION_TTL_SECONDS*1000){
+    props.deleteProperty(key);
+    return null;
+  }
   return record;
 }
-function nexoIssueSession_(props,cache){
+function nexoIssueSession_(props){
   var secret=props.getProperty('NEXO_SESSION_SECRET');
   var entropy=Utilities.getUuid()+':'+Date.now()+':'+Utilities.getUuid();
   var token=nexoHmac_(entropy,secret);
   var now=Date.now();
-  cache.put(nexoSessionKey_(token,secret),JSON.stringify({createdAt:now,expiresAt:now+NEXO_SESSION_TTL_SECONDS*1000}),NEXO_SESSION_TTL_SECONDS);
+  props.setProperty(nexoSessionKey_(token,secret),JSON.stringify({createdAt:now,expiresAt:now+NEXO_SESSION_TTL_SECONDS*1000}));
   return token;
 }
 
@@ -85,7 +92,7 @@ function authStatus(request){
   if(!configured)return {ok:true,status:200,state:nexoPublicState_(false)};
   var token=String(request&&request.token||'');
   if(!token)return {ok:true,status:200,state:nexoPublicState_(true)};
-  if(!nexoValidateSession_(token,props,nexoCache_()))return {ok:false,status:401,state:nexoPublicState_(true),error:'SESSION_EXPIRED'};
+  if(!nexoValidateSession_(token,props))return {ok:false,status:401,state:nexoPublicState_(true),error:'SESSION_EXPIRED'};
   return {ok:true,status:200,state:nexoPrivateState_()};
 }
 
@@ -111,7 +118,7 @@ function authLogin(request){
       return {ok:false,status:401,state:nexoPublicState_(true),error:'AUTH_REQUIRED'};
     }
     cache.remove(browserKey);
-    var token=nexoIssueSession_(props,cache);
+    var token=nexoIssueSession_(props);
     return {ok:true,status:200,state:nexoPrivateState_(),token:token};
   }finally{lock.releaseLock();}
 }
@@ -121,7 +128,7 @@ function authLogout(request){
   if(!nexoAllowedOrigin_(request,props))return {ok:false,status:403,state:nexoPublicState_(configured),error:'ORIGIN_NOT_ALLOWED'};
   if(configured&&request&&request.token){
     var secret=props.getProperty('NEXO_SESSION_SECRET');
-    nexoCache_().remove(nexoSessionKey_(String(request.token),secret));
+    props.deleteProperty(nexoSessionKey_(String(request.token),secret));
   }
   return {ok:true,status:200,state:nexoPublicState_(configured)};
 }
