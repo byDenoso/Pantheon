@@ -28,6 +28,7 @@ test('Atlas Control Plane uses one authenticated private dispatcher route and co
   const dispatcher=read('api/private/index.mjs');
   const vercel=read('vercel.json');
   assert.match(route,/withGoogleAuth/);
+  assert.match(route,/performSync/);
   for(const action of ['SYNC','RECONCILE','EXECUTE','RECOVER','VALIDATE']) assert.match(plane,new RegExp(action));
   for(const field of ['request_id','action','target','requested_at','acceptance','execution_id','state','before_revision','after_revision','evidence','blocker','readback']) assert.match(plane,new RegExp(field));
   assert.match(dispatcher,/control/);
@@ -41,9 +42,21 @@ test('Atlas V1 activity surface invokes the five Control Plane actions and remov
   const session=read('src/core/google-session.ts');
   assert.match(session,/\/api\/private\/control/);
   for(const action of ['SYNC','RECONCILE','EXECUTE','RECOVER','VALIDATE']) assert.match(page,new RegExp(action));
+  assert.match(page,/terminalStates/);
   assert.match(page,/readback|evidence/);
   assert.doesNotMatch(page,/nexo\.create_work/);
   assert.doesNotMatch(page,/Criar WORK/);
+});
+
+test('SYNC reuses the native independent-read sync receipt instead of treating a read as refresh',async()=>{
+  let calls=0;
+  const sync=async()=>{calls+=1;return {requestId:'sync-1',outcome:'UPDATED',beforeFingerprint:'old',afterFingerprint:'new',readbackVerified:true,sources:[{id:'github-state',state:'READY',observedAt:'sha-new'}],errors:[]};};
+  const result=await createAtlasControlPlane({semantic:{},sync}).execute({action:'SYNC'});
+  assert.equal(calls,1);
+  assert.equal(result.state,'UPDATED');
+  assert.equal(result.before_revision,'old');
+  assert.equal(result.after_revision,'new');
+  assert.equal(result.readback.readbackVerified,true);
 });
 
 test('EXECUTE stays non-terminal until a separate readback exists',async()=>{
