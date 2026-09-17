@@ -20,7 +20,7 @@ test('useSession routes the private session through the Apps Script bridge',asyn
 
 test('missing bridge config fails closed to public-only mode',async()=>{
   const source=await text('src/app/useSession.ts');
-  assert.match(source,/runtimeAvailable[^\n]*false/);
+  assert.match(source,/setRuntimeAvailable\(false\)/);
   assert.match(source,/configured:\s*false[^\n]*authenticated:\s*false/);
 });
 
