@@ -11,7 +11,11 @@ test('legacy monorepo Vercel runtime remains structurally valid during migration
   assert.match(config.installCommand,/cd nexo-one/);
   assert.match(config.buildCommand,/cd nexo-one/);
   assert.equal(config.outputDirectory,'nexo-one/dist');
-  assert.match(api,/import handler from '\.\.\/nexo-one\/server\/handler\.mjs'/);
+  assert.equal(config.functions,undefined);
+  assert.ok(config.rewrites.some(entry=>entry.source==='/api/:route'&&entry.destination.includes('/api/index')));
+  assert.match(api,/module\.exports\s*=\s*async function/);
+  assert.match(api,/await import\('\.\.\/nexo-one\/server\/handler\.mjs'\)/);
+  assert.doesNotMatch(api,/^import\s+handler/m);
 });
 
 test('private access UI is a numeric PIN flow with ephemeral input',async()=>{
@@ -22,6 +26,7 @@ test('private access UI is a numeric PIN flow with ephemeral input',async()=>{
   assert.match(app,/inputMode="numeric"/);
   assert.match(app,/setPin\(event\.target\.value\.replace\(\/\\D\/g,''\)\)/);
   assert.match(app,/const submitted=pin;setPin\(''\)/);
+  assert.doesNotMatch(app,/Senha do NEXO ONE/);
   assert.match(app,/VITE_NEXO_AUTH_BRIDGE_URL/);
   assert.match(session,/createAppsScriptAuthBridge/);
   assert.match(session,/PIN inválido\./);
