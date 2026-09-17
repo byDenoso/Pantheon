@@ -24,11 +24,12 @@ test('live activity endpoint reads canonical Tower entities and tolerates absent
   assert.match(source,/availability/);
 });
 
-test('live and semantic routes reuse existing Vercel functions instead of increasing Hobby function count',()=>{
+test('live and private control routes reuse existing Vercel functions instead of increasing Hobby function count',()=>{
   const config=JSON.parse(read('vercel.json'));
   assert.equal(config.builds.filter(item=>item.use==='@vercel/node').length,12);
   assert.ok(config.routes.some(route=>route.src==='/api/live/activity'&&String(route.dest).includes('runtime-orphans')));
   assert.ok(config.routes.some(route=>route.src==='/api/private/semantic'&&String(route.dest).includes('private/index')));
+  assert.ok(config.routes.some(route=>route.src==='/api/private/control'&&String(route.dest).includes('private/index')));
 });
 
 test('private semantic command endpoint is authenticated and never accepts generic patch commands',()=>{
@@ -54,8 +55,14 @@ test('private gate restores a stored browser session instead of remaining a no-o
   assert.match(source,/Entrar no Atlas/);
 });
 
-test('Atividade exposes an explicit authenticated create-work operation',()=>{
+test('Atividade exposes constrained authenticated Control Plane operations instead of free-form work creation',()=>{
   const source=read('src/pages/AtividadePage.tsx');
-  assert.match(source,/semanticCommand\(['"]nexo\.create_work['"]/);
-  assert.match(source,/Criar WORK/);
+  assert.match(source,/controlPlaneAction/);
+  assert.match(source,/SYNC/);
+  assert.match(source,/RECONCILE/);
+  assert.match(source,/EXECUTE/);
+  assert.match(source,/RECOVER/);
+  assert.match(source,/VALIDATE/);
+  assert.doesNotMatch(source,/nexo\.create_work/);
+  assert.doesNotMatch(source,/Criar WORK/);
 });
