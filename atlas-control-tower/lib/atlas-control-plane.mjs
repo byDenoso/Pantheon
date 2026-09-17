@@ -91,7 +91,7 @@ async function recoverWork(semantic,workId){
   return {before:revision(work),result,readback:result.readback};
 }
 
-export function createAtlasControlPlane({semantic}){
+export function createAtlasControlPlane({semantic,sync=null}){
   if(!semantic)throw new Error('SEMANTIC_GATEWAY_REQUIRED');
 
   async function execute(input={}){
@@ -100,8 +100,19 @@ export function createAtlasControlPlane({semantic}){
     const envelope=baseEnvelope(action,target);
 
     if(action==='SYNC'){
-      const control=await semantic.getState();
-      return {...envelope,state:'COMPLETE',readback:control,evidence:[{kind:'canonical_control',truth_owner:control.truth_owner||null,write_model:control.write_model||null}]};
+      if(typeof sync!=='function')return rejected(action,target,'SYNC_HANDLER_REQUIRED');
+      const receipt=await sync();
+      const verified=receipt?.readbackVerified===true;
+      return {
+        ...envelope,
+        request_id:text(receipt?.requestId)||envelope.request_id,
+        state:upper(receipt?.outcome)||'PENDING',
+        before_revision:text(receipt?.beforeFingerprint)||null,
+        after_revision:text(receipt?.afterFingerprint)||null,
+        evidence:Array.isArray(receipt?.sources)?receipt.sources.map(source=>({kind:'sync_source',...source})):[],
+        blocker:verified?null:{reason:'SYNC_READBACK_NOT_VERIFIED',errors:Array.isArray(receipt?.errors)?receipt.errors:[]},
+        readback:receipt||null,
+      };
     }
 
     if(action==='EXECUTE'){
