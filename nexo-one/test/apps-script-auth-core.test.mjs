@@ -46,6 +46,14 @@ test('session record expires at the eight hour boundary',()=>{
   assert.equal(isSessionRecordValid(null,now),false);
 });
 
+test('Apps Script persists eight-hour sessions in Script Properties, not the six-hour CacheService',async()=>{
+  const code=await text('apps-script-auth/Code.gs');
+  assert.match(code,/props\.setProperty\(nexoSessionKey_/);
+  assert.match(code,/props\.getProperty\(key\)/);
+  assert.match(code,/props\.deleteProperty\(nexoSessionKey_/);
+  assert.doesNotMatch(code,/cache\.put\(nexoSessionKey_/);
+});
+
 test('per-browser limiter blocks the sixth failure inside fifteen minutes',()=>{
   const start=2_000_000;
   assert.equal(RATE_WINDOW_MS,15*60*1000);
