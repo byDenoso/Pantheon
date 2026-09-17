@@ -23,6 +23,14 @@ test('static Pages sends private access to the private cockpit instead of a dead
   assert.match(workflow, /VITE_PRIVATE_COCKPIT_URL:\s*https:\/\/nexo-one-two\.vercel\.app/);
 });
 
+test('mobile keeps the private session control visible', async () => {
+  const app = await text('src/app/App.tsx');
+  const layout = await text('src/styles/layout.css');
+
+  assert.match(app, /Acessar sessão privada/);
+  assert.doesNotMatch(layout, /\.avatar\{display:none!important\}/);
+});
+
 test('personal plane exposes a per-provider connection center', async () => {
   const personal = await text('src/features/PersonalCockpit.tsx');
 

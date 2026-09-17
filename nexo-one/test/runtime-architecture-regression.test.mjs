@@ -155,3 +155,9 @@ test('public TruthGraph snapshot carries Neon retirement state', async () => {
   const neon = snapshot.truthGraphInput.capabilityRows.find(row => row.capability_id === 'CAP-NEON-NEXO-OPS-SCHEDULED-WRITE');
   assert.equal(neon?.status, 'RETIRED_RUNTIME');
 });
+
+test('public /api/system applies the same projection normalization used by Pages', async () => {
+  const handler = await readFile(fileURLToPath(new URL('../server/handler.mjs', import.meta.url)), 'utf8');
+  assert.match(handler, /import\s+\{normalizePublicSystemState\}\s+from\s+['"]\.\/compiler\/public-system-state\.mjs['"]/);
+  assert.match(handler, /normalizePublicSystemState\(buildSystemState\(\{world:compiled,bus,systemInput,now:new Date\(now\)\.toISOString\(\)\}\),compiled\)/);
+});
