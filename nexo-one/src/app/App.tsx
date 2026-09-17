@@ -6,7 +6,7 @@ import { useSession } from './useSession.ts';
 import { useIsMobile } from './useMediaQuery.ts';
 import { SCENARIOS } from '../data/fixtures/scenarios.ts';
 import {
-  MOBILE_PRIMARY, NAV_GROUPS, VIEW_TITLES, entryFor, isSystemView, type ViewId,
+  MOBILE_PRIMARY, NAV_GROUPS, VIEW_TITLES, entryFor, hashForView, isSystemView, viewFromHash, type ViewId,
 } from './navigation.ts';
 import { parseCommand } from './command.ts';
 import { EMPTY_FILTERS, type GraphFilters } from '../viewmodels/graph.ts';
@@ -31,10 +31,13 @@ const persist = (key: string, value: string): void => {
 };
 
 const ALL_VIEWS = NAV_GROUPS.flatMap(group => group.entries.map(entry => entry.id));
+const PRIVATE_COCKPIT_URL = String(import.meta.env.VITE_PRIVATE_COCKPIT_URL || '').trim().replace(/\/+$/, '');
 
 export default function App() {
   const isMobile = useIsMobile();
   const [view, setView] = useState<ViewId>(() => {
+    const linked = typeof window !== 'undefined' ? viewFromHash(window.location.hash) : null;
+    if (linked) return linked;
     const saved = stored('nexo-view', 'OVERVIEW') as ViewId;
     return ALL_VIEWS.includes(saved) ? saved : 'OVERVIEW';
   });
@@ -63,6 +66,21 @@ export default function App() {
   useEffect(() => { document.documentElement.dataset.theme = theme; persist('nexo-theme', theme); }, [theme]);
   useEffect(() => { persist('nexo-view', view); }, [view]);
   useEffect(() => {
+    if (!viewFromHash(window.location.hash)) window.history.replaceState(null, '', hashForView(view));
+  }, []);
+  useEffect(() => {
+    const restore = () => {
+      const next = viewFromHash(window.location.hash);
+      if (next) { setView(next); setNotice(''); setMoreOpen(false); }
+    };
+    window.addEventListener('hashchange', restore);
+    window.addEventListener('popstate', restore);
+    return () => {
+      window.removeEventListener('hashchange', restore);
+      window.removeEventListener('popstate', restore);
+    };
+  }, []);
+  useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
         event.preventDefault();
@@ -73,7 +91,13 @@ export default function App() {
     return () => window.removeEventListener('keydown', onKey);
   }, []);
 
-  const go = useCallback((next: ViewId) => { setView(next); setNotice(''); setMoreOpen(false); }, []);
+  const go = useCallback((next: ViewId) => {
+    setView(next);
+    setNotice('');
+    setMoreOpen(false);
+    const hash = hashForView(next);
+    if (window.location.hash !== hash) window.history.pushState(null, '', hash);
+  }, []);
 
   const submitCommand = (event: React.FormEvent) => {
     event.preventDefault();
@@ -109,9 +133,18 @@ export default function App() {
       case 'ATLAS':
         return <AtlasView state={state} filters={filters} setFilters={setFilters}
           selectedId={selectedNode} onSelect={setSelectedNode} />;
-      case 'LEARNING': return <LearningView state={state} />;
+      case 'LEARNING': return <LearningView state={state} onNavigate={go} />;
       default: return null;
     }
+  };
+
+  const openSession = () => {
+    if (session.session.authenticated) { void session.logout(); return; }
+    if (PRIVATE_COCKPIT_URL) {
+      window.location.assign(`${PRIVATE_COCKPIT_URL}/${hashForView(view)}`);
+      return;
+    }
+    setLoginOpen(true);
   };
 
   return (
@@ -139,7 +172,7 @@ export default function App() {
               aria-label={theme === 'dark' ? 'Ativar tema claro' : 'Ativar tema escuro'}>
               {theme === 'dark' ? '☼' : '☾'}
             </button>
-            <button className="avatar" onClick={() => (session.session.authenticated ? void session.logout() : setLoginOpen(true))}
+            <button className="avatar" onClick={openSession}
               aria-label={session.session.authenticated ? 'Sair da sessão' : 'Entrar na sessão'}>D</button>
           </div>
         </header>
