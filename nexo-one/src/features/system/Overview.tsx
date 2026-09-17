@@ -25,6 +25,9 @@ export function Overview(
   const urgent = groups.flatMap(group => group.items).slice(0, 3);
   const resolvable = resolvableActions(state);
   const lanes = laneViews(state);
+  const unavailableProviders = state.providers.filter(provider =>
+    provider.state === 'MISSING_PROVIDER' || provider.state === 'BLOCKED').length;
+  const representedProviders = Math.max(0, state.providers.length - unavailableProviders);
 
   return (
     <div className="overview">
@@ -34,6 +37,9 @@ export function Overview(
           <div className="head-side">
             <StatusBadge state={summary.state} />
             <span className="quiet-note">última leitura {dateTime(summary.lastRead)}</span>
+            <span className="quiet-note">
+              Cobertura {representedProviders}/{state.providers.length} fontes com leitura ou snapshot · {unavailableProviders} indisponíveis
+            </span>
           </div>
         </div>
         <div className="domain-strip">
@@ -54,10 +60,10 @@ export function Overview(
         </div>
         <div className="state-counters">
           <button onClick={() => onNavigate('TRUTHGRAPH')} className={summary.conflicts.length ? 'counter conflict' : 'counter'}>
-            <strong>{summary.conflicts.length}</strong><span>conflitos abertos</span>
+            <strong>{summary.conflicts.length}</strong><span>conflitos observados</span>
           </button>
           <button onClick={() => onNavigate('ACTIONS')} className="counter">
-            <strong>{summary.blockers.length}</strong><span>blockers</span>
+            <strong>{summary.blockers.length}</strong><span>blockers observados</span>
           </button>
           <button onClick={() => onNavigate('SOURCES')} className="counter">
             <strong>{summary.degradedCapabilities.length}</strong><span>capabilities sem PASS</span>
@@ -66,6 +72,11 @@ export function Overview(
             <strong>{summary.needsHuman}</strong><span>exigem você</span>
           </button>
         </div>
+        {unavailableProviders > 0 && (
+          <p className="rule-note">
+            Contadores em zero descrevem apenas o que foi observado nesta compilação. Com provider indisponível, zero não equivale a estado saudável.
+          </p>
+        )}
       </section>
 
       <section aria-labelledby="attention-title" data-order="attention">
@@ -78,8 +89,8 @@ export function Overview(
               <HumanInboxItem key={item.id} item={item} action={actionById(state, item.action_id)} onOpen={onOpenInbox} />
             ))
           : <EmptyState title="Nada exige decisão humana nesta leitura."
-              description="Isto não significa que o sistema está saudável — significa que nada depende de você agora."
-              hint="Confira Integrity para o que não pôde ser provado." />}
+              description="Isto não significa que o sistema está saudável; significa apenas que nada observado depende de você agora."
+              hint="Confira Integrity e a cobertura das fontes para o que não pôde ser provado." />}
       </section>
 
       <section aria-labelledby="autonomy-title" data-order="autonomy">
