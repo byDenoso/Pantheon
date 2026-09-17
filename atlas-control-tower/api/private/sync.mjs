@@ -13,9 +13,7 @@ function sourceReadFrom(status, body) {
   return { id: 'github-state', state: 'READY', observedAt: body?.capabilities?.projection?.sourceVersion || body?.projection?.sourceVersion };
 }
 
-export default withGoogleAuth(async (req, res) => {
-  if (req.method !== 'POST') return send(res, { error: 'METHOD_NOT_ALLOWED' }, 405);
-
+export async function performSync(req) {
   const requestId = `sync-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
   const startedAt = new Date().toISOString();
 
@@ -33,7 +31,7 @@ export default withGoogleAuth(async (req, res) => {
   const errors = [];
   if (refreshed.status < 200 || refreshed.status >= 300) errors.push({ code: 'REFRESH_FAILED', severity: 'ERROR', message: 'The upstream refresh call did not return a success status.' });
 
-  const receipt = resolveSyncReceipt({
+  return resolveSyncReceipt({
     requestId,
     startedAt,
     completedAt: new Date().toISOString(),
@@ -43,6 +41,10 @@ export default withGoogleAuth(async (req, res) => {
     afterSources: [sourceReadFrom(after.status, after.body)],
     errors
   });
+}
 
+export default withGoogleAuth(async (req, res) => {
+  if (req.method !== 'POST') return send(res, { error: 'METHOD_NOT_ALLOWED' }, 405);
+  const receipt = await performSync(req);
   send(res, { session: req.session, ...receipt });
 });
