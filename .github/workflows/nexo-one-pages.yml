@@ -61,6 +61,7 @@ jobs:
           node scripts/build-pages-system.mjs
           test -s dist/system.json
           test -s dist/world-public.ndjson
+          node scripts/verify-public-artifact.mjs
           touch dist/.nojekyll
 
       - name: Upload GitHub Pages artifact
