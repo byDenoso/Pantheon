@@ -144,7 +144,10 @@ export function AtlasView(
   );
 }
 
-export function LearningView({ state }: { state: SystemState }) {
+export function LearningView(
+  { state, onNavigate }:
+  { state: SystemState; onNavigate: (view: 'SOURCES' | 'EXECUTION') => void },
+) {
   const [kind, setKind] = useState<'ALL' | 'SEMANTIC' | 'PROCEDURAL'>('ALL');
   const filaments = state.filaments
     .filter(f => kind === 'ALL' || f.kind === kind)
@@ -165,7 +168,15 @@ export function LearningView({ state }: { state: SystemState }) {
         ))}
       </div>
       {filaments.length === 0
-        ? <EmptyState title="Nenhum filamento neste filtro." description="A memória é populada a partir de execuções e evidências registradas." />
+        ? <div>
+            <EmptyState title="Nenhum filamento neste filtro."
+              description="Ainda não há memória derivada das execuções e evidências disponíveis nesta projeção."
+              hint="Confirme primeiro se as fontes responderam; depois verifique se já existem execuções com readback." />
+            <div className="filter-row" role="group" aria-label="Próximos passos para Learning">
+              <button className="primary-button" onClick={() => onNavigate('SOURCES')}>Ver fontes</button>
+              <button className="text-button" onClick={() => onNavigate('EXECUTION')}>Ver Execution</button>
+            </div>
+          </div>
         : <div className="filament-list">
             {filaments.map(filament => {
               const total = filament.support + filament.contradiction;
