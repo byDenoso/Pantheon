@@ -1,3 +1,4 @@
-import handler from '../nexo-one/server/handler.mjs';
-
-export default handler;
+module.exports = async function vercelApiHandler(req, res) {
+  const { default: handler } = await import('../nexo-one/server/handler.mjs');
+  return handler(req, res);
+};
