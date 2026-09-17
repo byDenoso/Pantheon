@@ -13,7 +13,8 @@ export const PERSONAL_CAPABILITY_IDS=Object.freeze({
   calendarEvent:'CAP-PERSONAL-CALENDAR-EVENT'
 });
 
-const capability=(capability_id,operation,risk_level,provider)=>Object.freeze({capability_id,domain:'PERSONAL',operation,context:'NEXO',execution_context:'NEXO',runtime:'NEXO',status:'PASS',risk_level,provider,cost_weight:0,fingerprint:stableFingerprint({capability_id,operation,risk_level,provider,version:'PERSONAL_LOOP_V1'})});
+const riskForLevel=level=>level==='L3'?'LOW':level==='L4'?'MEDIUM':'HIGH';
+const capability=(capability_id,operation,risk_level,provider)=>Object.freeze({capability_id,domain:'PERSONAL',operation,context:'NEXO',execution_context:'NEXO',runtime:'NEXO',status:'PASS',risk_level,risk:riskForLevel(risk_level),provider,cost_weight:0,fingerprint:stableFingerprint({capability_id,operation,risk_level,provider,version:'PERSONAL_LOOP_V1'})});
 export const PERSONAL_CAPABILITIES=Object.freeze([
   capability(PERSONAL_CAPABILITY_IDS.nexoTask,'personal.task.upsert','L3','nexo'),
   capability(PERSONAL_CAPABILITY_IDS.nexoCommitment,'personal.commitment.upsert','L3','nexo'),
@@ -29,6 +30,7 @@ const ACTIONS=Object.freeze({
 });
 
 const text=value=>String(value??'').trim();
+const upper=value=>text(value).toUpperCase();
 const semanticInput=input=>input&&typeof input==='object'&&!Array.isArray(input)?input:null;
 export function personalActionFingerprint(proposal={}){
   return `PAF-${stableFingerprint({kind:text(proposal.kind),entity_ids:[...(proposal.entity_ids||[])].map(text).filter(Boolean).sort(),input:semanticInput(proposal.input)}).slice(0,40)}`;
@@ -64,17 +66,31 @@ function defaultRuntime({env,now,signal}={}){
   }};
 }
 
-export async function executePersonalAction({env=process.env,now=new Date().toISOString(),signal,proposal={},approval=null,actor='PERSONAL_LOOP',runtime=null}={}){
+export function personalExecutionPolicy({proposal={},capabilities=PERSONAL_CAPABILITIES,adapters={}}={}){
   const decision=classifyPersonalProposal(proposal),config=ACTIONS[text(proposal.kind)];
-  if(decision.policy==='DENY')throw new Error('PERSONAL_ACTION_DENIED');
+  if(decision.policy==='DENY'||!config)return {policy:'DENY',level:decision.level,reason:'ACTION_DENIED'};
+  const capability=(Array.isArray(capabilities)?capabilities:[]).find(item=>text(item?.capability_id)===config.capabilityId);
+  if(!capability||upper(capability.status)!=='PASS')return {policy:'DENY',level:decision.level,reason:'CAPABILITY_NOT_PASS'};
+  const adapter=adapters?.[config.capabilityId];
+  if(!adapter||typeof adapter.execute!=='function'||typeof adapter.readback!=='function')return {policy:'DENY',level:decision.level,reason:'READBACK_PATH_REQUIRED'};
+  const risk=upper(capability.risk||riskForLevel(capability.risk_level));
+  if(decision.policy==='APPROVAL_REQUIRED'||risk!=='LOW')return {policy:'APPROVAL_REQUIRED',level:decision.level,risk,capability};
+  return {policy:'AUTO',level:decision.level,risk,capability};
+}
+
+export async function executePersonalAction({env=process.env,now=new Date().toISOString(),signal,proposal={},approval=null,actor='PERSONAL_LOOP',runtime=null}={}){
+  const config=ACTIONS[text(proposal.kind)];
+  if(!config&&classifyPersonalProposal(proposal).policy==='DENY')throw new Error('PERSONAL_ACTION_DENIED');
   if(!config)throw new Error('PERSONAL_ACTION_NOT_EXECUTABLE');
   const fingerprint=personalActionFingerprint(proposal);
   if(proposal.fingerprint&&proposal.fingerprint!==fingerprint)throw new Error('STALE_PROPOSAL');
+  const at=new Date(now).toISOString(),rt=runtime||defaultRuntime({env,now:at,signal});
+  const decision=personalExecutionPolicy({proposal,capabilities:rt.capabilities||PERSONAL_CAPABILITIES,adapters:rt.adapters});
+  if(decision.policy==='DENY')throw new Error(decision.reason==='CAPABILITY_NOT_PASS'?'CAPABILITY_PASS_ROUTE_NOT_FOUND':'PERSONAL_ACTION_DENIED');
   if(decision.policy==='APPROVAL_REQUIRED'&&!approval)return {status:'APPROVAL_REQUIRED',policy_level:decision.level,proposal_fingerprint:fingerprint};
   if(decision.policy==='APPROVAL_REQUIRED'&&(approval?.approved!==true||text(approval?.proposal_fingerprint)!==fingerprint))throw new Error('APPROVAL_MISMATCH');
   const input=semanticInput(proposal.input);if(!input)throw new Error('PERSONAL_ACTION_INPUT_REQUIRED');
-  const at=new Date(now).toISOString();
-  const rt=runtime||defaultRuntime({env,now:at,signal}),writeToken=`PWT-${stableFingerprint({fingerprint,actor,at}).slice(0,32)}`;
+  const writeToken=`PWT-${stableFingerprint({fingerprint,actor,at}).slice(0,32)}`;
   const action={action_id:`ACT-PERSONAL-${stableFingerprint({fingerprint}).slice(0,24)}`,domain:'PERSONAL',lease_owner:actor,lease_until:new Date(Date.parse(at)+120000).toISOString(),write_token:writeToken,proposal_fingerprint:fingerprint,policy_level:decision.level};
   return executeCapabilityAware({action,requiredOperation:config.operation,context:'NEXO',input,capabilities:rt.capabilities||PERSONAL_CAPABILITIES,eligibleRuntimes:['NEXO'],adapters:rt.adapters,effectLedger:rt.effectLedger,executionRuns:rt.executionRuns,actor,writeToken,now:at});
 }
