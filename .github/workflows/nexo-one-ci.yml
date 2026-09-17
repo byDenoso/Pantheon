@@ -35,6 +35,18 @@ jobs:
           trap 'kill "$NEXO_SERVER_PID"' EXIT
           for i in $(seq 1 30); do curl --silent --fail http://127.0.0.1:4173/ >/dev/null && break; sleep 1; done
           PLAYWRIGHT_MODULE="$RUNNER_TEMP/nexo-browser/node_modules/playwright/index.mjs" npm run test:browser
+      - name: Apps Script auth browser verification
+        run: |
+          set -euo pipefail
+          VITE_NEXO_AUTH_BRIDGE_URL=https://mock.googleusercontent.com/auth npm run build
+          node scripts/dev.mjs --built > /tmp/nexo-one-auth-server.log 2>&1 &
+          NEXO_AUTH_SERVER_PID=$!
+          trap 'kill "$NEXO_AUTH_SERVER_PID" 2>/dev/null || true' EXIT
+          for i in $(seq 1 30); do curl --silent --fail http://127.0.0.1:4173/ >/dev/null && break; sleep 1; done
+          PLAYWRIGHT_MODULE="$RUNNER_TEMP/nexo-browser/node_modules/playwright/index.mjs" node test/auth-browser.mjs
+          kill "$NEXO_AUTH_SERVER_PID" 2>/dev/null || true
+          trap - EXIT
+          npm run build
       - run: node scripts/package-release.mjs
       - uses: actions/upload-artifact@v4
         if: always()

@@ -1,0 +1,54 @@
+<!doctype html>
+<html>
+<head>
+  <base target="_top">
+  <meta charset="utf-8">
+  <meta name="referrer" content="no-referrer">
+  <title>NEXO Auth Bridge</title>
+</head>
+<body>
+<script>
+(function(){
+  'use strict';
+  const PARENT_ORIGIN=<?!= allowedOriginJson ?>;
+  const BRIDGE_NONCE=<?!= bridgeNonceJson ?>;
+  const VERSION=1;
+  const PARENT_SOURCE='NEXO_PARENT';
+  const BRIDGE_SOURCE='NEXO_AUTH_BRIDGE';
+
+  function post(message){
+    window.top.postMessage(message,PARENT_ORIGIN);
+  }
+
+  function response(requestId,result){
+    const safe=result&&typeof result==='object'?result:{ok:false,status:500,error:'INVALID_REQUEST'};
+    post({source:BRIDGE_SOURCE,version:VERSION,requestId,...safe});
+  }
+
+  function failure(requestId){
+    response(requestId,{ok:false,status:503,error:'INVALID_REQUEST'});
+  }
+
+  function callServer(method,requestId,payload){
+    const request={...(payload||{}),origin:PARENT_ORIGIN};
+    const runner=google.script.run
+      .withSuccessHandler(result=>response(requestId,result))
+      .withFailureHandler(()=>failure(requestId));
+    if(method==='SESSION_GET')runner.authStatus(request);
+    else if(method==='SESSION_LOGIN')runner.authLogin(request);
+    else if(method==='SESSION_LOGOUT')runner.authLogout(request);
+    else failure(requestId);
+  }
+
+  window.addEventListener('message',event=>{
+    if(event.origin!==PARENT_ORIGIN||event.source!==window.top)return;
+    const data=event.data;
+    if(!data||data.source!==PARENT_SOURCE||data.version!==VERSION||typeof data.requestId!=='string')return;
+    callServer(data.type,data.requestId,data.payload);
+  });
+
+  post({source:BRIDGE_SOURCE,version:VERSION,type:'BRIDGE_READY',nonce:BRIDGE_NONCE});
+})();
+</script>
+</body>
+</html>

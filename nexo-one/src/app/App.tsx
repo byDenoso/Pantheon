@@ -32,6 +32,7 @@ const persist = (key: string, value: string): void => {
 
 const ALL_VIEWS = NAV_GROUPS.flatMap(group => group.entries.map(entry => entry.id));
 const PRIVATE_COCKPIT_URL = String(import.meta.env.VITE_PRIVATE_COCKPIT_URL || '').trim().replace(/\/+$/, '');
+const AUTH_BRIDGE_URL = String(import.meta.env.VITE_NEXO_AUTH_BRIDGE_URL || '').trim();
 
 export default function App() {
   const isMobile = useIsMobile();
@@ -139,6 +140,7 @@ export default function App() {
 
   const openSession = () => {
     if (session.session.authenticated) { void session.logout(); return; }
+    if (AUTH_BRIDGE_URL) { setLoginOpen(true); return; }
     if (PRIVATE_COCKPIT_URL) {
       try {
         const target = new URL(PRIVATE_COCKPIT_URL, window.location.href);
