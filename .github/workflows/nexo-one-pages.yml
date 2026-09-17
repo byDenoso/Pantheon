@@ -48,6 +48,7 @@ jobs:
           GITHUB_PAGES: '1'
           VITE_SYSTEM_ENDPOINT: ./system.json
           VITE_WORLD_ENDPOINT: ./world-public.ndjson
+          VITE_NEXO_AUTH_BRIDGE_URL: ${{ vars.VITE_NEXO_AUTH_BRIDGE_URL }}
           VITE_PRIVATE_COCKPIT_URL: https://nexo-one-two.vercel.app
         run: npm run build
 
