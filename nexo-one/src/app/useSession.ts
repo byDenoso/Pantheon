@@ -77,14 +77,13 @@ export function useSession(onChange?: (authenticated: boolean) => void) {
     try {
       const response=await bridge.login(pin);
       setRuntimeAvailable(true);
-      if (!response.ok) {
+      if (!response.ok || !response.state?.authenticated) {
         if(response.error==='SESSION_EXPIRED')clearStoredSessionToken(window);
         setSession(response.state||PUBLIC_SESSION);
         setError(response.status === 429 ? 'Muitas tentativas. Aguarde 15 minutos.' : 'PIN inválido.');
         return false;
       }
-      const value=response.state||PUBLIC_SESSION;
-      setSession(value);
+      setSession(response.state);
       emitSessionChange(window, true);
       onChange?.(true);
       return true;
