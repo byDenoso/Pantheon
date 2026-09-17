@@ -1,6 +1,5 @@
 // Navegação única para NEXO ONE e Atlas.
-// O plano SISTEMA consome o SystemState (fixtures nesta fase).
-// O plano PESSOAL preserva o cockpit já existente, que lê /api/world de verdade.
+// O plano SISTEMA consome o SystemState; o plano PESSOAL lê o world state do backend real.
 export const SYSTEM_VIEWS = [
   'OVERVIEW', 'INBOX', 'ACTIONS', 'EXECUTION',
   'TRUTHGRAPH', 'CAPABILITIES', 'SOURCES', 'INTEGRITY',
@@ -13,8 +12,17 @@ export type PersonalView = typeof PERSONAL_VIEWS[number];
 
 export type ViewId = SystemView | PersonalView;
 
+const VIEW_IDS: readonly ViewId[] = [...SYSTEM_VIEWS, ...PERSONAL_VIEWS];
+
 export const isSystemView = (view: ViewId): view is SystemView =>
   (SYSTEM_VIEWS as readonly string[]).includes(view);
+
+export const hashForView = (view: ViewId): string => `#${view.toLowerCase()}`;
+
+export const viewFromHash = (hash: string): ViewId | null => {
+  const value = hash.replace(/^#\/?/, '').trim().toUpperCase();
+  return (VIEW_IDS as readonly string[]).includes(value) ? value as ViewId : null;
+};
 
 export interface NavEntry { id: ViewId; label: string; glyph: string; hint: string }
 export interface NavGroup { id: string; label: string; entries: NavEntry[] }
