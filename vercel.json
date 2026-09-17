@@ -1,0 +1,11 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "installCommand": "cd nexo-one && npm ci --no-audit --no-fund --ignore-scripts",
+  "buildCommand": "cd nexo-one && npm run build",
+  "outputDirectory": "nexo-one/dist",
+  "rewrites": [
+    {"source": "/api/:route", "destination": "/api/index?route=:route"},
+    {"source": "/api/:route/:subroute", "destination": "/api/index?route=:route/:subroute"},
+    {"source": "/((?!api/).*)", "destination": "/index.html"}
+  ]
+}

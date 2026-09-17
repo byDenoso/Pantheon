@@ -1,9 +1,9 @@
 name: NEXO ONE CI
 on:
   push:
-    paths: ['nexo-one/**', '.github/workflows/nexo-one-*.yml']
+    paths: ['nexo-one/**', 'api/index.js', 'vercel.json', '.github/workflows/nexo-one-*.yml']
   pull_request:
-    paths: ['nexo-one/**', '.github/workflows/nexo-one-*.yml']
+    paths: ['nexo-one/**', 'api/index.js', 'vercel.json', '.github/workflows/nexo-one-*.yml']
 permissions:
   contents: read
 concurrency:
