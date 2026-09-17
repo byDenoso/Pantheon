@@ -30,3 +30,12 @@ test('GitHub Pages compiles public SystemState locally and deploys official Page
   assert.match(workflow, /pages:\s*write/);
   assert.match(workflow, /id-token:\s*write/);
 });
+
+test('GitHub Pages personal plane reads the public Vercel world API instead of the Pages origin', async () => {
+  const hook = await text('src/app/useWorld.ts');
+  const workflow = await text('../.github/workflows/nexo-one-pages.yml');
+
+  assert.match(hook, /VITE_WORLD_ENDPOINT/);
+  assert.doesNotMatch(hook, /fetch\('\/api\/world\?stream=1&refresh=1'/);
+  assert.match(workflow, /VITE_WORLD_ENDPOINT:\s*https:\/\/nexo-one-two\.vercel\.app\/api\/world/);
+});
