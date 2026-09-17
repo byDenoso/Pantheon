@@ -1,6 +1,5 @@
-// Atlas: mapa estrutural do sistema. Cada nó é uma entidade projetada com estado,
-// autoridade e proveniência próprios; o renderer 3D continua sendo somente projeção.
-import { useMemo, useState } from 'react';
+// Atlas: mapas projetados do mesmo SystemState. Nenhuma visualização é Truth Owner.
+import { useEffect, useMemo, useState } from 'react';
 import type { GraphNode, SystemState } from '../../contracts/system.ts';
 import {
   AuthorityClass, CAPABILITY_STATUSES, DOMAINS, GRAPH_NODE_TYPES, PROJECTION_STATES, RELATION_KINDS,
@@ -10,10 +9,12 @@ import { EntityInspector } from '../../components/inspector.tsx';
 import { EmptyState } from '../../components/states.tsx';
 import { DomainBadge, SeverityBadge, StatusBadge } from '../../components/primitives.tsx';
 import { useIsMobile } from '../../app/useMediaQuery.ts';
+import { atlasModeFromHash, hashForView } from '../../app/navigation.ts';
 import {
   EMPTY_FILTERS, filterCount, filterGraph, legendOf, relationsOf, type GraphFilters,
 } from '../../viewmodels/graph.ts';
 import { layoutGraph3D, resolveSelection3D } from '../../viewmodels/graph3d.ts';
+import { buildGraphMode, GRAPH_MODES, type GraphMode } from '../../viewmodels/graph-modes.ts';
 import { label, toneOf } from '../../viewmodels/tokens.ts';
 
 const AUTHORITIES: AuthorityClass[] = ['TRUTH_OWNER', 'DELEGATED', 'DERIVED', 'NON_AUTHORITATIVE'];
@@ -52,7 +53,17 @@ export function AtlasView(
 ) {
   const isMobile = useIsMobile();
   const [panelOpen, setPanelOpen] = useState(false);
-  const filtered = useMemo(() => filterGraph(state.graph, filters), [state.graph, filters]);
+  const [mode,setMode]=useState<GraphMode>(()=>typeof window==='undefined'?'general':atlasModeFromHash(window.location.hash));
+
+  useEffect(()=>{
+    const restore=()=>setMode(atlasModeFromHash(window.location.hash));
+    window.addEventListener('hashchange',restore);
+    window.addEventListener('popstate',restore);
+    return()=>{window.removeEventListener('hashchange',restore);window.removeEventListener('popstate',restore);};
+  },[]);
+
+  const graph=useMemo(()=>buildGraphMode(state,mode,'PUBLIC'),[state,mode]);
+  const filtered = useMemo(() => filterGraph(graph, filters), [graph, filters]);
   const placed = useMemo(() => layoutGraph3D(filtered.nodes), [filtered.nodes]);
   const legend = useMemo(() => legendOf(filtered.nodes), [filtered.nodes]);
   const effectiveSelectedId = resolveSelection3D(placed, selectedId);
@@ -69,11 +80,23 @@ export function AtlasView(
     setFilters({ ...filters, [key]: next } as GraphFilters);
   };
 
+  const changeMode=(next:GraphMode)=>{
+    if(next===mode)return;
+    setMode(next);onSelect(null);setFilters({...EMPTY_FILTERS});
+    window.history.pushState(null,'',hashForView('ATLAS',next));
+  };
   const active = filterCount(filters);
+  const modeMeta=GRAPH_MODES.find(item=>item.id===mode)??GRAPH_MODES[0];
 
   return (
-    <div className={`atlas-layout${isMobile ? ' mobile' : ''}`}>
+    <div className={`atlas-layout${isMobile ? ' mobile' : ''}`} data-graph-mode={mode}>
       <div className="atlas-toolbar">
+        <label className="atlas-mode-control">
+          <span className="eyebrow">GRAFO</span>
+          <select aria-label="Modo do grafo" value={mode} onChange={event=>changeMode(event.target.value as GraphMode)}>
+            {GRAPH_MODES.map(item=><option key={item.id} value={item.id}>{item.label}</option>)}
+          </select>
+        </label>
         <div className="atlas-search">
           <span aria-hidden="true">⌕</span>
           <input value={filters.search} placeholder="Filtrar entidades por nome ou resumo"
@@ -88,6 +111,7 @@ export function AtlasView(
         )}
         <span className="atlas-count">{filtered.nodes.length} nós · {filtered.edges.length} relações</span>
       </div>
+      <p className="rule-note atlas-mode-note"><strong>{modeMeta.label}.</strong> {modeMeta.description}</p>
 
       {panelOpen && (
         <div className="atlas-filters">
@@ -105,8 +129,8 @@ export function AtlasView(
         <div className="atlas-stage atlas-stage-3d">
           {filtered.nodes.length === 0
             ? <EmptyState title="Nenhuma entidade sobrevive a este filtro."
-                description="Um grafo vazio aqui é resultado do filtro, não ausência de dados no sistema."
-                hint="Remova um critério para voltar a ver o mapa." />
+                description="Um grafo vazio aqui é resultado da projeção ou do filtro, não prova de ausência no sistema."
+                hint="Remova um critério ou selecione outro modo de grafo." />
             : <>
                 <Atlas3DCanvas nodes={placed} edges={filtered.edges} selectedId={effectiveSelectedId} onSelect={onSelect} />
                 <ul className="atlas-legend">
