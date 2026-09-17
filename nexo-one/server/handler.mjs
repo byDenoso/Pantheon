@@ -3,6 +3,7 @@ import {PROVIDERS} from '../src/contracts/validate.mjs';
 import {compile} from './compiler/world-state.mjs';
 import {buildProjectionBus} from './compiler/projection-bus.mjs';
 import {buildSystemState} from './compiler/system-state.mjs';
+import {normalizePublicSystemState} from './compiler/public-system-state.mjs';
 import {readProvider,pending} from './adapters/registry.mjs';
 import {readAtlasSsot} from './adapters/atlas-ssot.mjs';
 import {buildPublicAtlasSsot} from './compiler/atlas-public-ssot.mjs';
@@ -99,7 +100,7 @@ export default async function handler(req,res) {
       const truthGraphInput=byId.get('nexo')?.truthGraphInput;
       const systemInput={actions:[],executionRuns:[],sideQuests:[],capabilities:truthGraphInput?.capabilityRows||[],semanticMemory:[],proceduralMemory:[],learningFilaments:[],automationHealth:[]};
       const bus=await buildProjectionBus({env,now,access:'PUBLIC',force,reader:async id=>byId.get(id)||readProvider(id,options)});
-      return send(buildSystemState({world:compiled,bus,systemInput,now:new Date(now).toISOString()}));
+      return send(normalizePublicSystemState(buildSystemState({world:compiled,bus,systemInput,now:new Date(now).toISOString()}),compiled));
     }
     const q=(url.searchParams.get('q')||'').trim().slice(0,200);
     if(route==='recall'&&!q)return send({error:'QUERY_REQUIRED'},400);
@@ -126,4 +127,3 @@ export default async function handler(req,res) {
     return send(world);
   }catch(error){console.error('[nexo-one]',route,String(error?.message||error));return send({error:'REQUEST_FAILED'},500);}
 }
-
