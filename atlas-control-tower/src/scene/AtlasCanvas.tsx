@@ -1,7 +1,7 @@
 import {useMemo} from 'react';
 import {selectSemanticLOD} from './semantic-lod';
 import {shouldOpenNode} from './picking';
-import {buildOrbitalNodes,type AtlasGraph,type AtlasNode,type PositionedNode} from './types';
+import type {AtlasGraph,AtlasNode,PositionedNode} from './types';
 import {CanvasGraph25D} from './CanvasGraph25D';
 import {graphRenderBudget} from './neural-visuals.mjs';
 import {labelText,labelType} from './LabelOverlay';
@@ -27,7 +27,7 @@ export function AtlasCanvas({graph,focusId,selectedId,onSelect,onOpen,reducedMot
   const renderBudget=useMemo(()=>graphRenderBudget({width:compact?420:1440,compact}),[compact]);
   const lod=useMemo(()=>selectSemanticLOD(sourceNodes,{selectedId,focusId,visibleBudget:renderBudget.visibleBudget,labelBudget:renderBudget.labelBudget}),[focusId,renderBudget,selectedId,sourceNodes]);
   const visible=useMemo(()=>sourceNodes.filter(node=>lod.visibleIds.has(node.id)),[lod.visibleIds,sourceNodes]);
-  const nodes=useMemo(()=>buildOrbitalNodes(visible,focusId,graph?.edges||[],'canvas'),[focusId,graph?.edges,visible]);
+  const nodes=useMemo<PositionedNode[]>(()=>visible.map((node,index)=>({...node,position:[0,0,0] as [number,number,number],pickId:index+1})),[visible]);
   const nodeById=useMemo(()=>new Map(nodes.map(node=>[node.id,node])),[nodes]);
   const visibleIds=useMemo(()=>new Set(nodes.map(node=>node.id)),[nodes]);
   const sceneGraph=useMemo<AtlasGraph>(()=>({...(graph||{nodes:[],edges:[]}),nodes,edges:(graph?.edges||[]).filter(edge=>visibleIds.has(edge.source)&&visibleIds.has(edge.target))}),[graph,nodes,visibleIds]);
