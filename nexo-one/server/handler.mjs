@@ -23,8 +23,8 @@ async function readPublicWorldState({env=process.env,now=Date.now(),force=false,
   return compile(results,{now,access:'PUBLIC'});
 }
 
-async function readPublicSystemState({env=process.env,now=Date.now(),force=false,signal}={}){
-  const options={now,access:'PUBLIC',env,force,signal};
+async function readPublicSystemState({env=process.env,now=Date.now(),force=false}={}){
+  const options={now,access:'PUBLIC',env,force};
   const results=await Promise.all(PUBLIC_SYSTEM_PROVIDERS.map(id=>readProvider(id,options)));
   const compiled=compile(results,{now,access:'PUBLIC'}),byId=new Map(results.map(result=>[result.provider.id,result]));
   const truthGraphInput=byId.get('nexo')?.truthGraphInput;
@@ -113,7 +113,15 @@ export default async function handler(req,res) {
       const projectionAccess=serviceAccess?'PRIVATE':'PUBLIC';
       return send(await buildProjectionBus({env,now,access:projectionAccess,force}));
     }
-    if(route==='system')return send(await readPublicSystemState({env,now,force,signal:req.signal}));
+    if(route==='system'){
+      const options={now,access:'PUBLIC',env,force};
+      const results=await Promise.all(PUBLIC_SYSTEM_PROVIDERS.map(id=>readProvider(id,options)));
+      const compiled=compile(results,{now,access:'PUBLIC'}),byId=new Map(results.map(result=>[result.provider.id,result]));
+      const truthGraphInput=byId.get('nexo')?.truthGraphInput;
+      const systemInput={actions:[],executionRuns:[],sideQuests:[],capabilities:truthGraphInput?.capabilityRows||[],semanticMemory:[],proceduralMemory:[],learningFilaments:[],automationHealth:[]};
+      const bus=await buildProjectionBus({env,now,access:'PUBLIC',force,reader:async id=>byId.get(id)||readProvider(id,options)});
+      return send(buildSystemState({world:compiled,bus,systemInput,now:new Date(now).toISOString()}));
+    }
     const q=(url.searchParams.get('q')||'').trim().slice(0,200);
     if(route==='recall'&&!q)return send({error:'QUERY_REQUIRED'},400);
     const options={now,access,env,force};
