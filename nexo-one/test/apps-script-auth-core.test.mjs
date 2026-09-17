@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import {readFile} from 'node:fs/promises';
 import {
   isValidPin,
   makePinHash,
@@ -13,6 +14,8 @@ import {
 } from '../apps-script-auth/core.mjs';
 
 const secret='test-secret-value-that-is-long-enough';
+const root=new URL('../',import.meta.url);
+const text=path=>readFile(new URL(path,root),'utf8');
 
 test('PIN accepts numeric values from 4 through 12 digits only',()=>{
   assert.equal(isValidPin('1234'),true);
@@ -57,4 +60,23 @@ test('global limiter blocks at fifty failures inside the window',()=>{
   let bucket=null;
   for(let i=0;i<50;i++)bucket=nextFailureBucket(bucket,start+i,start);
   assert.equal(isRateLimited(bucket,start+1_000,50),true);
+});
+
+test('Apps Script shell embeds safely and exposes only bounded auth RPCs',async()=>{
+  const code=await text('apps-script-auth/Code.gs');
+  const html=await text('apps-script-auth/Index.html');
+  assert.match(code,/setXFrameOptionsMode\(HtmlService\.XFrameOptionsMode\.ALLOWALL\)/);
+  assert.match(code,/PropertiesService\.getScriptProperties\(\)/);
+  assert.match(code,/CacheService\.getScriptCache\(\)/);
+  assert.match(code,/function authStatus\(/);
+  assert.match(code,/function authLogin\(/);
+  assert.match(code,/function authLogout\(/);
+  assert.match(code,/function setupNexoAuth\(/);
+  assert.match(html,/google\.script\.run/);
+  assert.match(html,/BRIDGE_READY/);
+  assert.match(html,/window\.top\.postMessage/);
+  assert.doesNotMatch(html,/postMessage\([^\n]*['"]\*['"]\)/);
+  assert.doesNotMatch(html,/localStorage/);
+  assert.doesNotMatch(code,/NEXO_PIN_HASH\s*[:=]\s*['"][^'"]+['"]/);
+  assert.doesNotMatch(code,/NEXO_SESSION_SECRET\s*[:=]\s*['"][^'"]+['"]/);
 });
