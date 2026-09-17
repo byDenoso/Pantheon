@@ -26,11 +26,10 @@ export function AtlasCanvas({graph,focusId,selectedId,onSelect,onOpen,reducedMot
   const sourceNodes=graph?.nodes||[];
   const renderBudget=useMemo(()=>graphRenderBudget({width:compact?420:1440,compact}),[compact]);
   const lod=useMemo(()=>selectSemanticLOD(sourceNodes,{selectedId,focusId,visibleBudget:renderBudget.visibleBudget,labelBudget:renderBudget.labelBudget}),[focusId,renderBudget,selectedId,sourceNodes]);
-  const visible=useMemo(()=>sourceNodes.filter(node=>lod.visibleIds.has(node.id)),[lod.visibleIds,sourceNodes]);
-  const nodes=useMemo<PositionedNode[]>(()=>visible.map((node,index)=>({...node,position:[0,0,0] as [number,number,number],pickId:index+1})),[visible]);
+  const nodes=useMemo<PositionedNode[]>(()=>sourceNodes.map((node,index)=>({...node,position:[0,0,0] as [number,number,number],pickId:index+1})),[sourceNodes]);
   const nodeById=useMemo(()=>new Map(nodes.map(node=>[node.id,node])),[nodes]);
-  const visibleIds=useMemo(()=>new Set(nodes.map(node=>node.id)),[nodes]);
-  const sceneGraph=useMemo<AtlasGraph>(()=>({...(graph||{nodes:[],edges:[]}),nodes,edges:(graph?.edges||[]).filter(edge=>visibleIds.has(edge.source)&&visibleIds.has(edge.target))}),[graph,nodes,visibleIds]);
+  const summaryNodes=useMemo(()=>nodes.filter(node=>lod.visibleIds.has(node.id)).slice(0,64),[lod.visibleIds,nodes]);
+  const sceneGraph=useMemo<AtlasGraph>(()=>({...(graph||{nodes:[],edges:[]}),nodes,edges:graph?.edges||[]}),[graph,nodes]);
 
   const resolveNode=(picked:PositionedNode)=>nodeById.get(picked.id);
   const handleSelect=(picked:PositionedNode)=>{const node=resolveNode(picked);if(node)onSelect(node)};
@@ -39,7 +38,7 @@ export function AtlasCanvas({graph,focusId,selectedId,onSelect,onOpen,reducedMot
   if(!graph)return <div className="atlas-canvas-loading">Lendo arquitetura…</div>;
 
   return <div className="atlas-r3f-stage atlas-canvas-2d-primary" data-render-active="true" data-renderer="canvas-2.5d">
-    <ul className="atlas-visible-summary" aria-label="Entidades visíveis no Atlas" style={visuallyHidden}>{sceneGraph.nodes.slice(0,64).map(node=><li key={node.id}>{labelText(node as PositionedNode)} · {labelType(node as PositionedNode)}{node.id===focusId?' · foco':''}{node.id===selectedId?' · selecionado':''}</li>)}</ul>
+    <ul className="atlas-visible-summary" aria-label="Entidades visíveis no Atlas" style={visuallyHidden}>{summaryNodes.map(node=><li key={node.id}>{labelText(node)} · {labelType(node)}{node.id===focusId?' · foco':''}{node.id===selectedId?' · selecionado':''}</li>)}</ul>
     <CanvasGraph25D nodes={nodes} edges={sceneGraph.edges} labelIds={lod.labelIds} focusId={focusId} selectedId={selectedId} onNodeClick={handleSelect} onNodeDoubleClick={handleFocus} reducedMotion={reducedMotion} compact={compact} theme={theme}/>
     {loading&&<div className="atlas-graph-transition" role="status">Carregando subgrafo…</div>}
   </div>;
