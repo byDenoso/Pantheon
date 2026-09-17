@@ -5,6 +5,7 @@ import {readFile} from 'node:fs/promises';
 const root=new URL('../',import.meta.url);
 const text=path=>readFile(new URL(path,root),'utf8');
 
+// Regression contract: Pages hands private access to a real Vercel runtime with PIN auth.
 test('monorepo root Vercel deployment delegates to nexo-one',async()=>{
   const config=JSON.parse(await text('../vercel.json'));
   const api=await text('../api/index.js');
