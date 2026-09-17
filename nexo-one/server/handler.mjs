@@ -16,7 +16,28 @@ import {summarizeConnectionHealth} from './health/connection-state.mjs';
 const ATLAS_ORIGINS=new Set(['https://bydenoso.github.io','https://nexo-atlas-control-tower.vercel.app','https://nexo-atlas-cockpit.vercel.app']);
 const PUBLIC_SYSTEM_PROVIDERS=['github','nexo','drive'];
 const isCorsRoute=route=>route==='mcp'||route==='atlas-public-ssot'||route==='world'||RESEARCH_ROUTES.has(route);
-const mcpWebHandler=createNexoMcpWebHandler({readSnapshot:()=>readAtlasSsot({env:process.env,now:Date.now()})});
+
+async function readPublicWorldState({env=process.env,now=Date.now(),force=false,signal}={}){
+  const options={now,access:'PUBLIC',env,force,signal};
+  const results=await Promise.all(PROVIDERS.map(id=>readProvider(id,options)));
+  return compile(results,{now,access:'PUBLIC'});
+}
+
+async function readPublicSystemState({env=process.env,now=Date.now(),force=false,signal}={}){
+  const options={now,access:'PUBLIC',env,force,signal};
+  const results=await Promise.all(PUBLIC_SYSTEM_PROVIDERS.map(id=>readProvider(id,options)));
+  const compiled=compile(results,{now,access:'PUBLIC'}),byId=new Map(results.map(result=>[result.provider.id,result]));
+  const truthGraphInput=byId.get('nexo')?.truthGraphInput;
+  const systemInput={actions:[],executionRuns:[],sideQuests:[],capabilities:truthGraphInput?.capabilityRows||[],semanticMemory:[],proceduralMemory:[],learningFilaments:[],automationHealth:[]};
+  const bus=await buildProjectionBus({env,now,access:'PUBLIC',force,reader:async id=>byId.get(id)||readProvider(id,options)});
+  return buildSystemState({world:compiled,bus,systemInput,now:new Date(now).toISOString()});
+}
+
+const mcpWebHandler=createNexoMcpWebHandler({
+  readSnapshot:()=>readAtlasSsot({env:process.env,now:Date.now()}),
+  readWorldState:()=>readPublicWorldState({env:process.env,now:Date.now()}),
+  readSystemState:()=>readPublicSystemState({env:process.env,now:Date.now()})
+});
 const mcpNodeHandler=toNodeHandler(mcpWebHandler);
 async function requestBody(req){
   if(req.body&&typeof req.body==='object'&&!Buffer.isBuffer(req.body))return req.body;
@@ -92,15 +113,7 @@ export default async function handler(req,res) {
       const projectionAccess=serviceAccess?'PRIVATE':'PUBLIC';
       return send(await buildProjectionBus({env,now,access:projectionAccess,force}));
     }
-    if(route==='system'){
-      const options={now,access:'PUBLIC',env,force};
-      const results=await Promise.all(PUBLIC_SYSTEM_PROVIDERS.map(id=>readProvider(id,options)));
-      const compiled=compile(results,{now,access:'PUBLIC'}),byId=new Map(results.map(result=>[result.provider.id,result]));
-      const truthGraphInput=byId.get('nexo')?.truthGraphInput;
-      const systemInput={actions:[],executionRuns:[],sideQuests:[],capabilities:truthGraphInput?.capabilityRows||[],semanticMemory:[],proceduralMemory:[],learningFilaments:[],automationHealth:[]};
-      const bus=await buildProjectionBus({env,now,access:'PUBLIC',force,reader:async id=>byId.get(id)||readProvider(id,options)});
-      return send(buildSystemState({world:compiled,bus,systemInput,now:new Date(now).toISOString()}));
-    }
+    if(route==='system')return send(await readPublicSystemState({env,now,force,signal:req.signal}));
     const q=(url.searchParams.get('q')||'').trim().slice(0,200);
     if(route==='recall'&&!q)return send({error:'QUERY_REQUIRED'},400);
     const options={now,access,env,force};
@@ -126,4 +139,3 @@ export default async function handler(req,res) {
     return send(world);
   }catch(error){console.error('[nexo-one]',route,String(error?.message||error));return send({error:'REQUEST_FAILED'},500);}
 }
-
