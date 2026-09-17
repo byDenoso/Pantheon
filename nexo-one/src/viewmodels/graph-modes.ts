@@ -128,7 +128,7 @@ function nexoGraph(state:SystemState,access:'PUBLIC'|'PRIVATE',world?:WorldState
       const privateSource=['gmail','calendar'].includes(text(item.source).toLowerCase());
       if(access==='PUBLIC'&&privateSource)continue;
       const id=`world:${item.source}:${item.id}`,d=itemDomain(item);
-      nodes.push(makeNode(id,itemType(item),item.title,d,stateFor(item.status||item.freshness?.state),{...item,source_ref:item.sourceRef,source_revision:world.fingerprint,fingerprint:`${world.fingerprint}:${item.id}`,checked_at:item.observedAt},item.summary||`${item.kind} observado em ${item.source}.`,'PROVIDER'));
+      nodes.push(makeNode(id,itemType(item),item.title,d,stateFor(item.status||item.freshness?.state),{...item,source_ref:item.sourceRef,source_revision:world.fingerprint,fingerprint:`${world.fingerprint}:${item.id}`,checked_at:item.observedAt},item.summary||`${item.kind} observado em ${item.source}.`,'NON_AUTHORITATIVE'));
       const providerId=`provider:${item.source}`;
       edges.push(edge(providerId,id,'PRODUCES','Provider observou esta entidade no WorldState privado.'));
     }
