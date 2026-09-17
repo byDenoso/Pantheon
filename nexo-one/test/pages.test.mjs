@@ -16,6 +16,8 @@ test('GitHub Pages build uses repository base and configurable SystemState endpo
   assert.match(vite, /Pantheon/);
   assert.match(remote, /VITE_SYSTEM_ENDPOINT/);
   assert.match(remote, /\/api\/system/);
+  assert.match(remote, /cache:\s*'no-store'/);
+  assert.match(remote, /endsWith\('\.json'\)/);
 });
 
 test('GitHub Pages compiles public SystemState locally and deploys official Pages artifact', async () => {

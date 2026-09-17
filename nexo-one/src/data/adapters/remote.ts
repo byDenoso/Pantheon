@@ -16,7 +16,13 @@ export const remoteSource: SystemDataSource = {
   label: 'Servidor NEXO · SystemState público',
   kind: 'remote',
   async load({ signal }): Promise<SystemState> {
-    const response = await fetch(SYSTEM_ENDPOINT, { signal });
+    // Pages publica um JSON versionado por deploy, mas o CDN pode manter o
+    // mesmo caminho em cache por alguns minutos. A leitura do estado precisa
+    // acompanhar o botão Recompilar e não servir um snapshot anterior.
+    const requestUrl = SYSTEM_ENDPOINT.endsWith('.json')
+      ? `${SYSTEM_ENDPOINT}${SYSTEM_ENDPOINT.includes('?') ? '&' : '?'}v=${Date.now()}`
+      : SYSTEM_ENDPOINT;
+    const response = await fetch(requestUrl, { signal, cache: 'no-store' });
     if (response.status === 404) {
       throw new DataSourceError('NOT_CONNECTED',
         `${SYSTEM_ENDPOINT} não está publicado nesta implantação.`);
