@@ -1,5 +1,6 @@
 name: NEXO ONE v0.5 one-shot producer cutover
 # 2026-09-17: local prebuilt cutover bypasses remote Vercel build quota
+# cutover trigger: mobile-private-session-control-20260917
 
 on:
   push:
