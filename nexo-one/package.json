@@ -16,7 +16,7 @@
     "verify:public": "node scripts/verify-public-artifact.mjs",
     "preview": "node scripts/dev.mjs --built",
     "check": "npm run typecheck && npm test && npm run style:lint && npm run build && npm run verify:public",
-    "test:browser": "node test/browser.mjs"
+    "test:browser": "node test/browser.mjs && node test/graph-browser.mjs"
   },
   "dependencies": {
     "@babylonjs/core": "9.26.1",
