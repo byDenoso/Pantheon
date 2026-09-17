@@ -1,4 +1,5 @@
-import type {ActionRecord,Capability,Domain,GraphEdge,GraphNode,ProviderHealth,SystemState} from '../contracts/system.ts';
+import type {Capability,Domain,GraphEdge,GraphNode,SystemState} from '../contracts/system.ts';
+import type {WorldState,CockpitItem} from '../contracts/world.ts';
 
 export type GraphMode='general'|'operations'|'truth'|'capabilities'|'learning'|'nexo';
 export const GRAPH_MODES:readonly {id:GraphMode;label:string;description:string}[]=[
@@ -20,16 +21,16 @@ const domain=(value:unknown):Domain=>{
 const stateFor=(value:unknown):GraphNode['state']=>{
   const v=text(value).toUpperCase();
   if(['PASS','UNVERIFIED','UNKNOWN','RETIRED_RUNTIME','LIVE','SNAPSHOT','STALE','DEGRADED','BLOCKED','CONFLICT','MISSING_PROVIDER'].includes(v))return v as GraphNode['state'];
-  if(['APPLIED','SUCCEEDED','CONFIRMED','ESTABLISHED'].includes(v))return 'LIVE';
-  if(['FAILED','AWAITING_HUMAN'].includes(v))return 'BLOCKED';
-  if(['RUNNING','PENDING','ELIGIBLE','PROPOSED','PROVISIONAL'].includes(v))return 'SNAPSHOT';
+  if(['APPLIED','SUCCEEDED','CONFIRMED','ESTABLISHED','AVAILABLE'].includes(v))return 'LIVE';
+  if(['FAILED','AWAITING_HUMAN','AUTH_REQUIRED','RATE_LIMITED','UNAVAILABLE'].includes(v))return 'BLOCKED';
+  if(['RUNNING','PENDING','ELIGIBLE','PROPOSED','PROVISIONAL','SCHEDULED','NEEDS_ME','WAITING_OTHER'].includes(v))return 'SNAPSHOT';
   if(v==='CONTESTED')return 'CONFLICT';
   return 'UNKNOWN';
 };
 const fresh=(value:any)=>value?.freshness||{state:'UNKNOWN',observed_at:null,ttl_seconds:null};
-const checked=(value:any,fallback=nowFallback)=>text(value?.checked_at||value?.updated_at||value?.last_verified_at||value?.last_success_at)||fallback;
-const source=(value:any,fallback:string)=>text(value?.source_ref||value?.evidence_ref)||fallback;
-const revision=(value:any)=>text(value?.source_revision||value?.fingerprint)||'projection';
+const checked=(value:any,fallback=nowFallback)=>text(value?.checked_at||value?.checkedAt||value?.updated_at||value?.last_verified_at||value?.last_success_at||value?.lastSuccessAt||value?.observedAt)||fallback;
+const source=(value:any,fallback:string)=>text(value?.source_ref||value?.sourceRef||value?.evidence_ref)||fallback;
+const revision=(value:any)=>text(value?.source_revision||value?.revision||value?.fingerprint)||'projection';
 const fingerprint=(prefix:string,value:any)=>text(value?.fingerprint||value?.input_fingerprint||value?.observed_fingerprint)||`${prefix}:${text(value?.id||value?.action_id||value?.capability_id||value?.run_id)}`;
 
 function makeNode(id:string,type:GraphNode['type'],label:string,d:Domain,state:GraphNode['state'],value:any,summary:string,authority:GraphNode['authority_class']='DERIVED'):GraphNode{
@@ -40,7 +41,7 @@ const dedupe=(nodes:GraphNode[])=>[...new Map(nodes.map(node=>[node.id,node])).v
 const validEdges=(nodes:GraphNode[],edges:GraphEdge[])=>{const ids=new Set(nodes.map(n=>n.id));return [...new Map(edges.filter(e=>ids.has(e.from)&&ids.has(e.to)).map(e=>[e.id,e])).values()];};
 
 function capabilityNode(cap:Capability){return makeNode(`capability:${cap.capability_id}`,'CAPABILITY',cap.label||cap.capability_id,cap.domain,stateFor(cap.status),cap,`${cap.operation} · ${cap.status} · risco ${cap.risk}.`,'DELEGATED');}
-function providerNode(provider:string,d:Domain,value:any,summary?:string){return makeNode(`provider:${provider}`,'PROVIDER',provider,d,stateFor(value?.state||value?.status||'LIVE'),value,summary||text(value?.explanation)||'Provider observado.','NON_AUTHORITATIVE');}
+function providerNode(provider:string,d:Domain,value:any,summary?:string){return makeNode(`provider:${provider}`,'PROVIDER',provider,d,stateFor(value?.state||value?.status||'LIVE'),value,summary||text(value?.explanation||value?.message)||'Provider observado.','NON_AUTHORITATIVE');}
 function runtimeNode(runtime:string,d:Domain,value:any){return makeNode(`runtime:${runtime}`,'PROJECTION',runtime,d,stateFor(value?.status||'LIVE'),value,`Runtime ${runtime}.`,'DERIVED');}
 
 function operationsGraph(state:SystemState){
@@ -63,7 +64,7 @@ function operationsGraph(state:SystemState){
       edges.push(edge(`effect:${action.effect_key}`,`readback:${action.action_id}`,'VERIFIES','Readback confirma ou rejeita a aplicação do efeito.'));
     }
   }
-  return {nodes:dedupe(nodes),edges:validEdges(dedupe(nodes),edges)};
+  const unique=dedupe(nodes);return {nodes:unique,edges:validEdges(unique,edges)};
 }
 
 function truthGraph(state:SystemState){
@@ -103,24 +104,43 @@ function learningGraph(state:SystemState){
   const unique=dedupe(nodes);return {nodes:unique,edges:validEdges(unique,edges)};
 }
 
-function nexoGraph(state:SystemState,access:'PUBLIC'|'PRIVATE'){
+const itemType=(item:CockpitItem):GraphNode['type']=>item.kind==='ACTION'?'ACTION':item.kind==='ISSUE'?'SIDE_QUEST':item.kind==='FILE'?'MEMORY':'PROJECTION';
+const itemDomain=(item:CockpitItem):Domain=>domain(item.contextId==='COSMOLOGY'?'SCIENCE':item.contextId);
+
+function nexoGraph(state:SystemState,access:'PUBLIC'|'PRIVATE',world?:WorldState|null){
   const nodes=[...(state.graph?.nodes||[])],edges=[...(state.graph?.edges||[])];
   for(const p of state.providers||[]){
     const privateProvider=['gmail','calendar'].includes(text(p.id).toLowerCase());
-    const summary=access==='PUBLIC'&&privateProvider?`AUTH_REQUIRED · conteúdo privado oculto.`:text(p.explanation)||`Provider ${p.label}.`;
+    const summary=access==='PUBLIC'&&privateProvider?'AUTH_REQUIRED · conteúdo privado oculto.':text(p.explanation)||`Provider ${p.label}.`;
     nodes.push(providerNode(text(p.id),p.expected_for?.[0]||'NEXO',p,summary));
     const root=nodes.find(n=>n.type==='DOMAIN'&&n.domain===(p.expected_for?.[0]||'NEXO'));
     if(root)edges.push(edge(root.id,`provider:${p.id}`,'DEPENDS_ON','Domínio depende da disponibilidade deste provider.'));
   }
   for(const cap of state.capabilities||[])nodes.push(capabilityNode(cap));
+
+  if(world){
+    for(const p of world.providers||[]){
+      const id=text(p.id).toLowerCase(),privateProvider=['gmail','calendar'].includes(id);
+      const summary=access==='PUBLIC'&&privateProvider?'AUTH_REQUIRED · conteúdo privado oculto.':text(p.message)||`Provider ${p.label}.`;
+      nodes.push(providerNode(id,'NEXO',{...p,source_ref:`world:provider:${id}`,source_revision:p.revision||world.fingerprint,checked_at:p.checkedAt},summary));
+    }
+    for(const item of world.items||[]){
+      const privateSource=['gmail','calendar'].includes(text(item.source).toLowerCase());
+      if(access==='PUBLIC'&&privateSource)continue;
+      const id=`world:${item.source}:${item.id}`,d=itemDomain(item);
+      nodes.push(makeNode(id,itemType(item),item.title,d,stateFor(item.status||item.freshness?.state),{...item,source_ref:item.sourceRef,source_revision:world.fingerprint,fingerprint:`${world.fingerprint}:${item.id}`,checked_at:item.observedAt},item.summary||`${item.kind} observado em ${item.source}.`,'PROVIDER'));
+      const providerId=`provider:${item.source}`;
+      edges.push(edge(providerId,id,'PRODUCES','Provider observou esta entidade no WorldState privado.'));
+    }
+  }
   const unique=dedupe(nodes);return {nodes:unique,edges:validEdges(unique,edges)};
 }
 
-export function buildGraphMode(state:SystemState,mode:GraphMode='general',access:'PUBLIC'|'PRIVATE'='PUBLIC'):{nodes:GraphNode[];edges:GraphEdge[]}{
+export function buildGraphMode(state:SystemState,mode:GraphMode='general',access:'PUBLIC'|'PRIVATE'='PUBLIC',world?:WorldState|null):{nodes:GraphNode[];edges:GraphEdge[]}{
   if(mode==='operations')return operationsGraph(state);
   if(mode==='truth')return truthGraph(state);
   if(mode==='capabilities')return capabilitiesGraph(state);
   if(mode==='learning')return learningGraph(state);
-  if(mode==='nexo')return nexoGraph(state,access);
+  if(mode==='nexo')return nexoGraph(state,access,world);
   return {nodes:state.graph?.nodes||[],edges:state.graph?.edges||[]};
 }
