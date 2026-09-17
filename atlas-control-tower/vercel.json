@@ -31,6 +31,7 @@
     {"src":"/api/private/learner","dest":"/api/private/index.mjs?route=learner"},
     {"src":"/api/private/sync","dest":"/api/private/index.mjs?route=sync"},
     {"src":"/api/private/semantic","dest":"/api/private/index.mjs?route=semantic"},
+    {"src":"/api/private/control","dest":"/api/private/index.mjs?route=control"},
     {"handle":"filesystem"},
     {"src":"/(.*)","dest":"/index.html"}
   ]
