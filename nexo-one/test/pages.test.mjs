@@ -39,6 +39,8 @@ test('GitHub Pages personal plane reads the locally compiled public WorldState',
   const builder = await text('scripts/build-pages-system.mjs');
 
   assert.match(hook, /VITE_WORLD_ENDPOINT/);
+  assert.match(hook, /cache:'no-store'/);
+  assert.match(hook, /endsWith\('\.ndjson'\)/);
   assert.doesNotMatch(hook, /fetch\('\/api\/world\?stream=1&refresh=1'/);
   assert.match(workflow, /VITE_WORLD_ENDPOINT:\s*\.\/world-public\.ndjson/);
   assert.match(workflow, /test -s dist\/world-public\.ndjson/);

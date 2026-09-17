@@ -14,7 +14,12 @@ export function useWorld(){
     if(reset){previous.current=null;setWorld(null);}
     try{
       const endpoint=configuredWorldEndpoint();
-      const response=await fetch(endpoint,{signal:ctrl.signal,credentials:requestCredentials(endpoint)});
+      // A projeção estática do Pages pode ficar no CDN por alguns minutos;
+      // cada refresh precisa ler o snapshot publicado mais recente.
+      const requestUrl=endpoint.endsWith('.ndjson')
+        ? `${endpoint}${endpoint.includes('?')?'&':'?'}v=${Date.now()}`
+        : endpoint;
+      const response=await fetch(requestUrl,{signal:ctrl.signal,credentials:requestCredentials(endpoint),cache:'no-store'});
       if(!response.ok||!response.body)throw new Error('Falha ao ler as fontes.');
       const reader=response.body.getReader(),decoder=new TextDecoder();let buffer='',last:WorldState|null=null;
       const consume=(line:string)=>{if(!line.trim())return;const value=JSON.parse(line) as WorldState;if(value.version!=='1'||!Array.isArray(value.items)||!Array.isArray(value.providers))throw new Error('Resposta incompatível.');last=value;if(!previous.current)setWorld(value);};
