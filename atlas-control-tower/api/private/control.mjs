@@ -1,4 +1,5 @@
 import {withGoogleAuth,send} from './_middleware.mjs';
+import {performSync} from './sync.mjs';
 import {createTowerGithubGateway} from '../../lib/tower-github-gateway.mjs';
 import {createNexoSemanticGateway} from '../../lib/nexo-semantic-gateway.mjs';
 import {createAtlasControlPlane} from '../../lib/atlas-control-plane.mjs';
@@ -17,7 +18,7 @@ export default withGoogleAuth(async(req,res)=>{
 
   const towerGateway=createTowerGithubGateway();
   const semantic=createNexoSemanticGateway({towerGateway});
-  const control=createAtlasControlPlane({semantic});
+  const control=createAtlasControlPlane({semantic,sync:()=>performSync(req)});
   try{
     const result=await control.execute(body);
     const status=result.acceptance==='rejected'?409:200;
