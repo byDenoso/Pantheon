@@ -46,9 +46,8 @@ export default function App() {
   const [notice, setNotice] = useState('');
   const [moreOpen, setMoreOpen] = useState(false);
   const [loginOpen, setLoginOpen] = useState(false);
-  const [password, setPassword] = useState('');
+  const [pin, setPin] = useState('');
 
-  // Contexto preservado entre navegações: filtros do Atlas, seleção e busca sobrevivem à troca de aba.
   const [filters, setFilters] = useState<GraphFilters>({ ...EMPTY_FILTERS });
   const [selectedNode, setSelectedNode] = useState<string | null>(null);
   const [selectedRun, setSelectedRun] = useState<string | null>(null);
@@ -141,15 +140,21 @@ export default function App() {
   const openSession = () => {
     if (session.session.authenticated) { void session.logout(); return; }
     if (PRIVATE_COCKPIT_URL) {
-      window.location.assign(`${PRIVATE_COCKPIT_URL}/${hashForView(view)}`);
-      return;
+      try {
+        const target = new URL(PRIVATE_COCKPIT_URL, window.location.href);
+        if (target.origin !== window.location.origin) {
+          target.hash = window.location.hash || hashForView(view);
+          window.location.assign(target.toString());
+          return;
+        }
+      } catch { /* URL inválida cai no modal local */ }
     }
     setLoginOpen(true);
   };
 
   return (
     <ProvenanceProvider>
-      <div className={`cockpit${isMobile ? ' mobile' : ''}`} data-view={view}>
+      <div className={`cockpit${isMobile ? ' mobile' : ''}`} data-view={view} data-access={session.session.authenticated?'PRIVATE':'PUBLIC'}>
         <a className="skip-link" href="#workspace">Ir ao conteúdo</a>
 
         <header className="topbar">
@@ -168,12 +173,13 @@ export default function App() {
                 <span>{label(summary.state)}</span>
               </button>
             )}
+            {session.session.authenticated && <span className="private-session-badge" role="status">PRIVATE</span>}
             <button className="icon-btn" onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
               aria-label={theme === 'dark' ? 'Ativar tema claro' : 'Ativar tema escuro'}>
               {theme === 'dark' ? '☼' : '☾'}
             </button>
-            <button className="avatar" onClick={openSession}
-              aria-label={session.session.authenticated ? 'Sair da sessão' : 'Entrar na sessão'}>D</button>
+            <button className={`avatar${session.session.authenticated?' private':''}`} onClick={openSession}
+              aria-label={session.session.authenticated ? 'Sair da sessão privada' : 'Acessar sessão privada'}>D</button>
           </div>
         </header>
 
@@ -340,27 +346,30 @@ export default function App() {
         )}
 
         {loginOpen && (
-          <Modal title="ACESSO PRIVADO" onClose={() => { setLoginOpen(false); setPassword(''); session.setError(''); }}>
+          <Modal title="ACESSO PRIVADO" onClose={() => { setLoginOpen(false); setPin(''); session.setError(''); }}>
             <div className="drawer-body">
-              <h2>Entre no seu cockpit.</h2>
-              {session.session.configured
-                ? <form className="login-form" onSubmit={async event => {
-                    event.preventDefault();
-                    if (await session.login(password)) { setPassword(''); setLoginOpen(false); }
-                  }}>
-                    <label>Senha do NEXO ONE
-                      <input type="password" autoComplete="current-password" value={password} required maxLength={256}
-                        onChange={event => setPassword(event.target.value)} />
-                    </label>
-                    {session.error && <p role="alert">{session.error}</p>}
-                    <button className="primary-button" disabled={session.pending}>
-                      {session.pending ? 'Entrando…' : 'Entrar →'}
-                    </button>
-                  </form>
-                : <p>
-                    A autenticação privada ainda precisa ser configurada no servidor. O plano SISTEMA continua
-                    disponível com fixtures; o plano PESSOAL exibe apenas fontes públicas.
-                  </p>}
+              <h2>Entre no cockpit privado.</h2>
+              {session.runtimeAvailable===false
+                ? <p role="alert">Runtime privado indisponível. A superfície pública continua em modo somente leitura.</p>
+                : session.session.configured
+                  ? <form className="login-form" onSubmit={async event => {
+                      event.preventDefault();
+                      const submitted=pin;setPin('');
+                      if (await session.login(submitted)) setLoginOpen(false);
+                    }}>
+                      <label>PIN
+                        <input type="password" inputMode="numeric" autoComplete="one-time-code" value={pin} required maxLength={12}
+                          onChange={event => setPin(event.target.value.replace(/\D/g,''))} />
+                      </label>
+                      {session.error && <p role="alert">{session.error}</p>}
+                      <button className="primary-button" disabled={session.pending}>
+                        {session.pending ? 'Entrando…' : 'Entrar →'}
+                      </button>
+                    </form>
+                  : <p>
+                      A autenticação privada ainda não está configurada neste runtime. A superfície pública permanece
+                      disponível sem promover dados privados a estado público.
+                    </p>}
             </div>
           </Modal>
         )}
