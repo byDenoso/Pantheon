@@ -130,8 +130,9 @@ export default function App() {
       case 'SOURCES': return <SourcesView state={state} />;
       case 'INTEGRITY': return <IntegrityView state={state} />;
       case 'ATLAS':
-        return <AtlasView state={state} filters={filters} setFilters={setFilters}
-          selectedId={selectedNode} onSelect={setSelectedNode} />;
+        return <AtlasView state={state} world={world.world}
+          access={session.session.authenticated ? 'PRIVATE' : 'PUBLIC'}
+          filters={filters} setFilters={setFilters} selectedId={selectedNode} onSelect={setSelectedNode} />;
       case 'LEARNING': return <LearningView state={state} onNavigate={go} />;
       default: return null;
     }
