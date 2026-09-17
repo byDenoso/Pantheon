@@ -1,0 +1,223 @@
+.atlas25d-shell {
+  position: relative;
+  min-width: 0;
+  min-height: 520px;
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--border, #26384f) 72%, transparent);
+  border-radius: 18px;
+  background:
+    radial-gradient(circle at 52% 46%, rgb(22 70 96 / 22%) 0, transparent 34%),
+    linear-gradient(150deg, #07111d 0%, #09131f 48%, #050b13 100%);
+  box-shadow: inset 0 0 68px rgb(0 0 0 / 28%);
+  isolation: isolate;
+}
+
+.atlas25d-shell::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: .44;
+  background-image:
+    radial-gradient(circle at 14% 24%, rgb(185 226 255 / 70%) 0 1px, transparent 1.5px),
+    radial-gradient(circle at 31% 67%, rgb(185 226 255 / 55%) 0 1px, transparent 1.5px),
+    radial-gradient(circle at 72% 33%, rgb(185 226 255 / 50%) 0 1px, transparent 1.5px),
+    radial-gradient(circle at 89% 78%, rgb(185 226 255 / 48%) 0 1px, transparent 1.5px);
+  background-size: 181px 157px, 223px 191px, 271px 231px, 307px 263px;
+}
+
+.atlas25d-canvas {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  width: 100%;
+  height: 100%;
+  display: block;
+  touch-action: none;
+  cursor: grab;
+  outline: none;
+}
+
+.atlas25d-canvas:focus-visible {
+  box-shadow: inset 0 0 0 2px var(--accent, #79f2d0);
+}
+
+.atlas25d-controls {
+  position: absolute;
+  left: 50%;
+  bottom: 14px;
+  z-index: 4;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  max-width: calc(100% - 24px);
+  padding: 6px;
+  border: 1px solid rgb(133 181 214 / 22%);
+  border-radius: 12px;
+  background: rgb(4 14 25 / 76%);
+  box-shadow: 0 12px 30px rgb(0 0 0 / 24%);
+  backdrop-filter: blur(12px);
+  transform: translateX(-50%);
+}
+
+.atlas25d-controls button {
+  min-height: 38px;
+  padding: 0 13px;
+  border: 1px solid rgb(132 188 220 / 27%);
+  border-radius: 8px;
+  background: rgb(17 43 61 / 74%);
+  color: #e7f7ff;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: .03em;
+  cursor: pointer;
+}
+
+.atlas25d-controls button:hover:not(:disabled),
+.atlas25d-controls button:focus-visible {
+  border-color: rgb(121 242 208 / 68%);
+  background: rgb(24 61 79 / 92%);
+}
+
+.atlas25d-controls button:disabled {
+  opacity: .36;
+  cursor: default;
+}
+
+.atlas25d-controls span {
+  padding: 0 7px;
+  color: rgb(197 221 237 / 62%);
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.atlas25d-depth,
+.atlas25d-selection {
+  position: absolute;
+  z-index: 3;
+  top: 13px;
+  border: 1px solid rgb(125 186 218 / 22%);
+  border-radius: 999px;
+  background: rgb(4 14 25 / 72%);
+  color: rgb(213 235 246 / 78%);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  backdrop-filter: blur(8px);
+}
+
+.atlas25d-depth {
+  right: 13px;
+  padding: 6px 9px;
+  color: #79f2d0;
+}
+
+.atlas25d-selection {
+  left: 13px;
+  max-width: calc(100% - 82px);
+  padding: 6px 10px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.atlas25d-fallback {
+  position: absolute;
+  inset: 18px;
+  z-index: 6;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  border: 1px solid rgb(255 107 114 / 35%);
+  border-radius: 12px;
+  background: rgb(10 17 27 / 92%);
+  color: #f4c4c6;
+  text-align: center;
+}
+
+.atlas25d-a11y-list {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  z-index: 7;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  opacity: 0;
+}
+
+.atlas25d-a11y-list:focus-within {
+  width: min(340px, calc(100% - 20px));
+  height: auto;
+  max-height: 55%;
+  overflow: auto;
+  padding: 8px;
+  border: 1px solid rgb(121 242 208 / 38%);
+  border-radius: 10px;
+  background: rgb(4 14 25 / 96%);
+  opacity: 1;
+}
+
+.atlas25d-a11y-list button {
+  width: 100%;
+  min-height: 36px;
+  margin: 2px 0;
+  padding: 7px 9px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: #e8f6ff;
+  text-align: left;
+}
+
+.atlas25d-a11y-list button:focus-visible {
+  outline: 2px solid #79f2d0;
+  background: rgb(31 68 82 / 74%);
+}
+
+@media (max-width: 760px) {
+  .atlas25d-shell {
+    min-height: 430px;
+    aspect-ratio: 4 / 4.45;
+    border-radius: 14px;
+  }
+
+  .atlas25d-controls {
+    left: 10px;
+    right: 10px;
+    bottom: 10px;
+    justify-content: center;
+    max-width: none;
+    transform: none;
+  }
+
+  .atlas25d-controls button {
+    min-height: 42px;
+    flex: 1 1 0;
+  }
+
+  .atlas25d-controls span {
+    display: none;
+  }
+
+  .atlas25d-selection {
+    max-width: calc(100% - 78px);
+  }
+}
+
+@media (max-width: 420px) {
+  .atlas25d-shell {
+    min-height: 390px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .atlas25d-controls,
+  .atlas25d-depth,
+  .atlas25d-selection {
+    backdrop-filter: none;
+  }
+}

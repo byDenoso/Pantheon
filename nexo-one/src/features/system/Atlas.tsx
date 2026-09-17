@@ -1,11 +1,11 @@
 // Atlas: mapa estrutural do sistema. Cada nó é uma entidade projetada com estado,
-// autoridade e proveniência próprios; o renderer 3D continua sendo somente projeção.
+// autoridade e proveniência próprios; o renderer 2,5D continua sendo somente projeção.
 import { useMemo, useState } from 'react';
 import type { GraphNode, SystemState } from '../../contracts/system.ts';
 import {
   AuthorityClass, CAPABILITY_STATUSES, DOMAINS, GRAPH_NODE_TYPES, PROJECTION_STATES, RELATION_KINDS,
 } from '../../contracts/system.ts';
-import { Atlas3DCanvas } from '../../components/Atlas3DCanvas.tsx';
+import { Atlas25DCanvas } from '../../components/Atlas25DCanvas.tsx';
 import { EntityInspector } from '../../components/inspector.tsx';
 import { EmptyState } from '../../components/states.tsx';
 import { DomainBadge, SeverityBadge, StatusBadge } from '../../components/primitives.tsx';
@@ -102,13 +102,13 @@ export function AtlasView(
       )}
 
       <div className="atlas-body">
-        <div className="atlas-stage atlas-stage-3d">
+        <div className="atlas-stage atlas-stage-25d">
           {filtered.nodes.length === 0
             ? <EmptyState title="Nenhuma entidade sobrevive a este filtro."
                 description="Um grafo vazio aqui é resultado do filtro, não ausência de dados no sistema."
                 hint="Remova um critério para voltar a ver o mapa." />
             : <>
-                <Atlas3DCanvas nodes={placed} edges={filtered.edges} selectedId={effectiveSelectedId} onSelect={onSelect} />
+                <Atlas25DCanvas nodes={placed} edges={filtered.edges} selectedId={effectiveSelectedId} onSelect={onSelect} />
                 <ul className="atlas-legend">
                   {legend.map(entry => (
                     <li key={entry.type}>
