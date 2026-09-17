@@ -371,6 +371,8 @@ export default function App() {
                   : <p>
                       A autenticação privada ainda não está configurada neste runtime. A superfície pública permanece
                       disponível sem promover dados privados a estado público.
+                      <button className="primary-button private-fallback" type="button"
+                        onClick={() => setLoginOpen(false)}>Continuar no cockpit público →</button>
                     </p>}
             </div>
           </Modal>

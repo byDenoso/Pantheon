@@ -42,6 +42,9 @@ jobs:
         working-directory: nexo-one
         run: npm ci --no-audit --no-fund
 
+      - name: Refresh public operational projection
+        run: cp atlas-control-tower/data/nexo-drive-projection.json nexo-one/data/nexo-drive-projection.json
+
       - name: Build static NEXO ONE
         working-directory: nexo-one
         env:

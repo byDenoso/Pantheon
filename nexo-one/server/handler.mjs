@@ -14,6 +14,8 @@ import {sessionAccess,sessionRoute} from './auth/session-route.mjs';
 import {buildPersonalSnapshot,executePersonalAction} from './personal/service.mjs';
 import {createNexoMcpWebHandler} from './mcp/server.mjs';
 import {summarizeConnectionHealth} from './health/connection-state.mjs';
+import {readSystemInput} from './adapters/system-input.mjs';
+import {readPublicSystemInput} from './compiler/public-system-input.mjs';
 const ATLAS_ORIGINS=new Set(['https://bydenoso.github.io','https://nexo-atlas-control-tower.vercel.app','https://nexo-atlas-cockpit.vercel.app']);
 const PUBLIC_SYSTEM_PROVIDERS=['github','nexo','drive'];
 const isCorsRoute=route=>route==='mcp'||route==='atlas-public-ssot'||route==='world'||RESEARCH_ROUTES.has(route);
@@ -98,7 +100,10 @@ export default async function handler(req,res) {
       const results=await Promise.all(PUBLIC_SYSTEM_PROVIDERS.map(id=>readProvider(id,options)));
       const compiled=compile(results,{now,access:'PUBLIC'}),byId=new Map(results.map(result=>[result.provider.id,result]));
       const truthGraphInput=byId.get('nexo')?.truthGraphInput;
-      const systemInput={actions:[],executionRuns:[],sideQuests:[],capabilities:truthGraphInput?.capabilityRows||[],semanticMemory:[],proceduralMemory:[],learningFilaments:[],automationHealth:[]};
+      const systemInput=privateAccess
+        ? await readSystemInput({env,signal:req.signal})
+        : await readPublicSystemInput();
+      if(!systemInput.capabilities?.length&&truthGraphInput?.capabilityRows)systemInput.capabilities=truthGraphInput.capabilityRows;
       const bus=await buildProjectionBus({env,now,access:'PUBLIC',force,reader:async id=>byId.get(id)||readProvider(id,options)});
       return send(normalizePublicSystemState(buildSystemState({world:compiled,bus,systemInput,now:new Date(now).toISOString()}),compiled));
     }

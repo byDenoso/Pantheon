@@ -272,6 +272,9 @@ export interface GraphEdge {
   kind: RelationKind;
   weight: number;
   explanation: string;
+  is_learning?: boolean;
+  learning_scope?: 'INTRA_DOMAIN' | 'INTER_DOMAIN';
+  blocked?: boolean;
 }
 
 export type FilamentStatus = 'ESTABLISHED' | 'PROVISIONAL' | 'CONTESTED' | 'RETIRED';
@@ -290,6 +293,11 @@ export interface Filament {
   boundary: string;
   from_label: string;
   to_label: string;
+  from_id?: string;
+  to_id?: string;
+  from_domain?: Domain;
+  to_domain?: Domain;
+  scope?: 'INTRA_DOMAIN' | 'INTER_DOMAIN';
 }
 
 export interface ProviderHealth {

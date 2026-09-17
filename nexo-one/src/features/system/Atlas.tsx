@@ -52,9 +52,17 @@ export function AtlasView(
 ) {
   const isMobile = useIsMobile();
   const [panelOpen, setPanelOpen] = useState(false);
+  const [learningVisible, setLearningVisible] = useState(false);
   const filtered = useMemo(() => filterGraph(state.graph, filters), [state.graph, filters]);
-  const placed = useMemo(() => layoutGraph3D(filtered.nodes), [filtered.nodes]);
-  const legend = useMemo(() => legendOf(filtered.nodes), [filtered.nodes]);
+  const learningEndpointIds = useMemo(() => new Set(filtered.edges.filter(edge => edge.is_learning).flatMap(edge => [edge.from, edge.to])), [filtered.edges]);
+  const renderGraph = useMemo(() => {
+    if (learningVisible) return filtered;
+    const nodes = filtered.nodes.filter(node => node.type !== 'FILAMENT' && !learningEndpointIds.has(node.id));
+    const ids = new Set(nodes.map(node => node.id));
+    return { nodes, edges: filtered.edges.filter(edge => !edge.is_learning && ids.has(edge.from) && ids.has(edge.to)) };
+  }, [filtered, learningEndpointIds, learningVisible]);
+  const placed = useMemo(() => layoutGraph3D(renderGraph.nodes), [renderGraph.nodes]);
+  const legend = useMemo(() => legendOf(renderGraph.nodes), [renderGraph.nodes]);
   const effectiveSelectedId = resolveSelection3D(placed, selectedId);
   const selected: GraphNode | null = filtered.nodes.find(n => n.id === effectiveSelectedId) ?? null;
   const relations = useMemo(
@@ -86,7 +94,11 @@ export function AtlasView(
         {active > 0 && (
           <button className="text-button" onClick={() => setFilters({ ...EMPTY_FILTERS })}>Limpar</button>
         )}
-        <span className="atlas-count">{filtered.nodes.length} nós · {filtered.edges.length} relações</span>
+        <button className={`filter-toggle learning-toggle${learningVisible ? ' has-filters' : ''}`} type="button"
+          aria-pressed={learningVisible} onClick={() => setLearningVisible(value => !value)}>
+          Learning Filaments <b>{learningVisible ? 'ON' : 'OFF'}</b>
+        </button>
+        <span className="atlas-count">{renderGraph.nodes.length} nós · {renderGraph.edges.length} relações</span>
       </div>
 
       {panelOpen && (
@@ -103,12 +115,12 @@ export function AtlasView(
 
       <div className="atlas-body">
         <div className="atlas-stage atlas-stage-3d">
-          {filtered.nodes.length === 0
+          {renderGraph.nodes.length === 0
             ? <EmptyState title="Nenhuma entidade sobrevive a este filtro."
                 description="Um grafo vazio aqui é resultado do filtro, não ausência de dados no sistema."
                 hint="Remova um critério para voltar a ver o mapa." />
             : <>
-                <Atlas3DCanvas nodes={placed} edges={filtered.edges} selectedId={effectiveSelectedId} onSelect={onSelect} />
+                <Atlas3DCanvas nodes={placed} edges={renderGraph.edges} selectedId={effectiveSelectedId} onSelect={onSelect} />
                 <ul className="atlas-legend">
                   {legend.map(entry => (
                     <li key={entry.type}>
@@ -187,6 +199,7 @@ export function LearningView(
                     <DomainBadge domain={filament.domain} muted />
                     <StatusBadge state={filament.status} />
                     <span className="filament-kind">{label(filament.kind)}</span>
+                    {filament.scope && <span className="filament-kind">{filament.scope === 'INTER_DOMAIN' ? 'INTERDOMÍNIO' : 'INTRADOMÍNIO'}</span>}
                     {filament.status === 'CONTESTED' && <SeverityBadge severity="P2" />}
                   </header>
                   <h3>{filament.label}</h3>

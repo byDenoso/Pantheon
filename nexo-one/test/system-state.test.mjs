@@ -61,6 +61,8 @@ test('mapeia capability, execução, Human Inbox e filamentos sem inventar suces
   assert.equal(state.inbox[0].action_id,'ACT-HUMAN');
   assert.equal(state.filaments[0].weight,0.9);
   assert.ok(state.graph.nodes.some(x=>x.id==='action:ACT-1'));
+  assert.ok(state.graph.edges.some(x=>x.is_learning&&x.learning_scope==='INTER_DOMAIN'));
+  assert.ok(state.graph.nodes.some(x=>x.id==='SEM-1'));
 });
 
 test('estado global preserva conflito P0 mesmo quando providers e bus estão LIVE',()=>{

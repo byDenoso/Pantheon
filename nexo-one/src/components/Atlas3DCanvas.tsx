@@ -51,6 +51,18 @@ function point(node: Point3): Vector3 {
   return new Vector3(node.x, node.y, node.z);
 }
 
+function edgeControl(from: Point3, to: Point3, kind: string): Vector3 {
+  const a = point(from), b = point(to), midpoint = Vector3.Lerp(a, b, 0.5);
+  const direction = b.subtract(a);
+  const lift = Math.min(8, Math.max(1.8, direction.length() * (kind === 'SUPPORTS' ? 0.16 : 0.1)));
+  return midpoint.add(new Vector3(-direction.z * 0.08, lift, direction.x * 0.08));
+}
+
+function curvePoints(from: Point3, to: Point3, kind: string): Vector3[] {
+  const a = point(from), b = point(to), c = edgeControl(from, to, kind);
+  return [a, Vector3.Lerp(a, c, 0.5), c, Vector3.Lerp(c, b, 0.5), b];
+}
+
 function neighboursOf(id: string | null, edges: GraphEdge[]): Set<string> {
   if (!id) return new Set();
   const set = new Set<string>([id]);
@@ -168,10 +180,10 @@ export function Atlas3DCanvas(
 
       const bounds = graphBounds3D(nodes);
       const center = point(bounds.center);
-      const camera = new ArcRotateCamera('atlas-camera', -Math.PI / 2.3, Math.PI / 2.55, bounds.radius * 2.25, center, scene);
+      const camera = new ArcRotateCamera('atlas-camera', -Math.PI / 2.3, Math.PI / 2.55, bounds.radius * 3.25, center, scene);
       camera.attachControl(canvas, false);
       camera.lowerRadiusLimit = 4;
-      camera.upperRadiusLimit = Math.max(80, bounds.radius * 5);
+      camera.upperRadiusLimit = Math.max(110, bounds.radius * 8);
       camera.wheelPrecision = 22;
       camera.pinchPrecision = 120;
       camera.panningSensibility = 95;
@@ -211,17 +223,49 @@ export function Atlas3DCanvas(
       }
 
       const edgeMeshes = new Map<string, Mesh>();
+      const pulses: Array<{ mesh: Mesh; from: Point3; to: Point3; kind: string; phase: number; speed: number }> = [];
       for (const edge of edges) {
         const from = nodeMap.get(edge.from);
         const to = nodeMap.get(edge.to);
         if (!from || !to) continue;
-        const line = MeshBuilder.CreateLines(`edge:${edge.id}`, { points: [point(from), point(to)] }, scene);
+        const line = MeshBuilder.CreateTube(`edge:${edge.id}`, {
+          path: curvePoints(from, to, edge.kind),
+          radius: Math.max(0.045, Math.min(0.24, 0.045 + edge.weight * 0.11)),
+          tessellation: 6,
+          cap: 0,
+        }, scene);
         const critical = edge.kind === 'CONTRADICTS' || edge.kind === 'BLOCKS';
-        line.color = critical ? Color3.FromHexString('#ff746f') : Color3.FromHexString('#57718f');
-        line.alpha = critical ? 0.62 : Math.min(0.42, 0.13 + edge.weight * 0.24);
+        const material = new StandardMaterial(`edge-material:${edge.id}`, scene);
+        const learning = edge.is_learning;
+        material.diffuseColor = critical ? Color3.FromHexString('#ff746f') : learning ? Color3.FromHexString(edge.learning_scope === 'INTER_DOMAIN' ? '#bd8cff' : '#44d9ff') : Color3.FromHexString('#57718f');
+        material.emissiveColor = learning ? material.diffuseColor.scale(0.85) : material.diffuseColor.scale(0.3);
+        material.alpha = edge.blocked ? 0.22 : critical ? 0.62 : Math.min(0.68, 0.16 + edge.weight * 0.26);
+        line.material = material;
         line.isPickable = false;
         edgeMeshes.set(edge.id, line);
+        if (learning && !edge.blocked) {
+          const pulse = MeshBuilder.CreateSphere(`pulse:${edge.id}`, { diameter: Math.max(0.16, Math.min(0.42, 0.16 + edge.weight * 0.18)), segments: 8 }, scene);
+          const pulseMaterial = new StandardMaterial(`pulse-material:${edge.id}`, scene);
+          pulseMaterial.emissiveColor = material.diffuseColor.scale(1.4);
+          pulseMaterial.diffuseColor = material.diffuseColor;
+          pulse.material = pulseMaterial;
+          pulse.isPickable = false;
+          pulses.push({ mesh: pulse, from, to, kind: edge.kind, phase: (edge.weight * 0.37) % 1, speed: 0.08 + Math.min(0.18, edge.weight * 0.09) });
+        }
       }
+
+      const animatePulses = !globalThis.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+      const pulseObserver = scene.onBeforeRenderObservable.add(() => {
+        if (!animatePulses) return;
+        const delta = Math.min(50, scene!.getEngine().getDeltaTime()) / 1000;
+        for (const pulse of pulses) {
+          pulse.phase = (pulse.phase + delta * pulse.speed) % 1;
+          const a = point(pulse.from), b = point(pulse.to), c = edgeControl(pulse.from, pulse.to, pulse.kind);
+          const t = pulse.phase;
+          const pos = Vector3.Lerp(Vector3.Lerp(a, c, t), Vector3.Lerp(c, b, t), t);
+          pulse.mesh.position.copyFrom(pos);
+        }
+      });
 
       let transientLabel: Mesh | null = null;
       const initialTarget = center.clone();
@@ -293,6 +337,7 @@ export function Atlas3DCanvas(
     return () => {
       if (resize) window.removeEventListener('resize', resize);
       runtimeRef.current = null;
+      if (scene) scene.onBeforeRenderObservable.clear();
       scene?.dispose();
       engine?.dispose();
     };
