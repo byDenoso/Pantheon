@@ -70,3 +70,16 @@ test('estado global preserva conflito P0 mesmo quando providers e bus estão LIV
   assert.ok(state.bus.consumers.some(x=>x.id==='nexo_one'));
   assert.ok(state.bus.consumers.some(x=>x.id==='atlas'));
 });
+
+test('SNAPSHOT do TruthGraph permanece SNAPSHOT e não vira BLOCKED no compilador',()=>{
+  const state=buildSystemState({
+    world:{generatedAt:NOW,providers:[],truthGraph:{results:[{
+      domain:'SCIENCE',status:'SNAPSHOT',source_ref:'snapshot',fingerprint:'TG-S',checked_at:NOW,source_observed_at:NOW,
+      authority:{canonical_truth:'PEER Control Tower + SCIENCE skill'},provider:{expected:'drive',actual:null,declared:'drive'},
+      capability:{state:'DEGRADED',ids:[]},explanation:'public snapshot'
+    }]}},
+    bus:{fingerprint:'BUS-S',generated_at:NOW,state:'LIVE',sources:[],envelopes:[]},systemInput:{},now:NOW
+  });
+  assert.equal(state.findings.find(x=>x.domain==='SCIENCE')?.status,'SNAPSHOT');
+  assert.equal(state.lanes.find(x=>x.domain==='SCIENCE')?.state,'SNAPSHOT');
+});
