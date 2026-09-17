@@ -12,7 +12,7 @@
     "ref": "main",
     "kind": "LEGACY_GOOGLE_DRIVE_SNAPSHOT",
     "transportPath": "atlas-control-tower/data/nexo-drive-projection.json",
-    "fingerprint": "sha256:535dab97986ea590d9d520eba4d7057a3f2c200e957ac60c5041c44c47edba12",
+    "fingerprint": "sha256:13dea7f40821882852560463341a158c0153f9e77772bd3e8b3f27fbb429e817",
     "role": "READ_ONLY_PROJECTION"
   },
   "scienceProjection": {
