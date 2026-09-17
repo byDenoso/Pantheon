@@ -12,9 +12,10 @@ test('monorepo root Vercel deployment delegates to nexo-one',async()=>{
   assert.match(config.installCommand,/cd nexo-one/);
   assert.match(config.buildCommand,/cd nexo-one/);
   assert.equal(config.outputDirectory,'nexo-one/dist');
-  assert.ok(config.functions?.['api/index.js']);
+  assert.equal(config.functions,undefined);
   assert.ok(config.rewrites.some(entry=>entry.source==='/api/:route'&&entry.destination.includes('/api/index')));
-  assert.match(api,/nexo-one\/server\/handler\.mjs/);
+  assert.match(api,/import handler from '\.\.\/nexo-one\/server\/handler\.mjs'/);
+  assert.match(api,/export default handler/);
 });
 
 test('private access UI is a numeric PIN flow with ephemeral input',async()=>{
