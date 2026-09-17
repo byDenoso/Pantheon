@@ -83,7 +83,8 @@ export function ActionsView(
             ))}
           </div>
         : <EmptyState title="Nenhuma ação neste filtro."
-            description="Uma lista vazia aqui não significa sistema ocioso; verifique Integrity e TruthGraph." />}
+            description="Não há ActionRecord projetado para este filtro nesta compilação. Isso não prova ausência de trabalho fora do registro."
+            hint="Use Integrity e Sources para distinguir vazio real de falta de evidência." />}
       <p className="write-disabled standalone">
         Nenhuma ação é executada por esta interface. O frontend projeta estado e explica elegibilidade;
         a execução pertence à camada de integração.
@@ -99,7 +100,14 @@ export function ExecutionView(
   const runs = [...state.runs].sort((a, b) => b.started_at.localeCompare(a.started_at));
   const selected: ExecutionRun | null = runs.find(r => r.run_id === selectedRunId) ?? runs[0] ?? null;
   if (!selected) {
-    return <EmptyState title="Nenhuma execução registrada." description="Assim que uma ação for executada, o trace aparece aqui com fingerprints e readback." />;
+    return <>
+      <EmptyState title="Nenhuma execução registrada."
+        description="Não existe ExecutionRun nesta compilação. A ausência do trace não deve ser interpretada como execução bem-sucedida nem como sistema ocioso."
+        hint="Quando houver execução, ela aparece abaixo segundo o contrato auditável completo." />
+      <p className="rule-note">
+        <strong>Fluxo esperado:</strong> ACTION → CAPABILITY → RUNTIME → EFFECT → READBACK. Um efeito só conta como aplicado depois de readback confirmado.
+      </p>
+    </>;
   }
   return (
     <div className="execution-layout">
