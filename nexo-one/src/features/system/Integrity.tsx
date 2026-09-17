@@ -101,31 +101,46 @@ export function SourcesView({ state }: { state: SystemState }) {
         <span className="eyebrow">ESPERADO x OBSERVADO</span>
       </div>
       <div className="provider-grid">
-        {state.providers.map(provider => (
-          <article key={provider.id} className={`provider-card tone-${toneOf(provider.state)}`}>
-            <header>
-              <strong>{provider.label}</strong>
-              <StatusBadge state={provider.state} />
-            </header>
-            <p>{provider.explanation}</p>
-            <dl className="meta-row">
-              <div><dt>domínios</dt><dd>{provider.expected_for.map(d => <DomainBadge key={d} domain={d} muted />)}</dd></div>
-              <div><dt>última leitura</dt><dd>{provider.last_success_at ? dateTime(provider.last_success_at) : <em>nenhuma</em>}</dd></div>
-              <div><dt>verificado em</dt><dd>{dateTime(provider.checked_at)}</dd></div>
-            </dl>
-            <ul className="provider-capabilities">
-              {provider.capabilities.map(id => {
-                const capability = capabilityById(state, id);
-                return (
-                  <li key={id}>
-                    <code>{id}</code>
-                    {capability && <CapabilityBadge status={capability.status} id={id} />}
-                  </li>
-                );
-              })}
-            </ul>
-          </article>
-        ))}
+        {state.providers.map(provider => {
+          const caps=provider.capabilities.map(id=>capabilityById(state,id)).filter((item):item is Capability=>!!item);
+          const pass=caps.filter(item=>item.status==='PASS').length;
+          const blocked=caps.filter(item=>item.status==='BLOCKED').length;
+          const unverified=caps.filter(item=>item.status==='UNVERIFIED').length;
+          return (
+            <article key={provider.id} className={`provider-card tone-${toneOf(provider.state)}`}>
+              <header>
+                <strong>{provider.label}</strong>
+                <StatusBadge state={provider.state} />
+              </header>
+              <p>{provider.explanation}</p>
+              <dl className="meta-row">
+                <div><dt>domínios</dt><dd>{provider.expected_for.map(d => <DomainBadge key={d} domain={d} muted />)}</dd></div>
+                <div><dt>última leitura</dt><dd>{provider.last_success_at ? dateTime(provider.last_success_at) : <em>nenhuma</em>}</dd></div>
+                <div><dt>verificado em</dt><dd>{dateTime(provider.checked_at)}</dd></div>
+              </dl>
+              <div className="provider-capability-summary" aria-label={`Capabilities de ${provider.label}`}>
+                <span><strong>{pass}</strong> PASS</span>
+                <span><strong>{unverified}</strong> UNVERIFIED</span>
+                <span><strong>{blocked}</strong> BLOCKED</span>
+                <span><strong>{provider.capabilities.length}</strong> total</span>
+              </div>
+              {provider.capabilities.length>0 && <details className="provider-capability-details">
+                <summary>Ver capabilities</summary>
+                <ul className="provider-capabilities">
+                  {provider.capabilities.map(id => {
+                    const capability = capabilityById(state, id);
+                    return (
+                      <li key={id}>
+                        <code>{id}</code>
+                        {capability && <CapabilityBadge status={capability.status} id={id} />}
+                      </li>
+                    );
+                  })}
+                </ul>
+              </details>}
+            </article>
+          );
+        })}
       </div>
       <div className="section-head">
         <h2>Envelopes do bus</h2>
@@ -135,7 +150,7 @@ export function SourcesView({ state }: { state: SystemState }) {
         <table className="envelope-table">
           <thead>
             <tr>
-              <th scope="col">entity_id</th><th scope="col">domínio</th><th scope="col">estado</th>
+              <th scope="col">entidade</th><th scope="col">domínio</th><th scope="col">estado</th>
               <th scope="col">authority</th><th scope="col">freshness</th>
               <th scope="col">derivation_rule</th><th scope="col">fingerprint</th><th scope="col">origem</th>
             </tr>
@@ -143,7 +158,7 @@ export function SourcesView({ state }: { state: SystemState }) {
           <tbody>
             {state.envelopes.map(envelope => (
               <tr key={envelope.entity_id} className={`tone-${toneOf(envelope.state)}`}>
-                <td><code>{envelope.entity_id}</code></td>
+                <td><strong className="entity-title">{envelope.title}</strong><code className="entity-id-secondary">{envelope.entity_id}</code></td>
                 <td><DomainBadge domain={envelope.domain} muted /></td>
                 <td><StatusBadge state={envelope.state} compact /></td>
                 <td><AuthorityBadge authority={envelope.authority_class} /></td>
