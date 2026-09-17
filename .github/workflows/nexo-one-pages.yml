@@ -47,6 +47,7 @@ jobs:
         env:
           GITHUB_PAGES: '1'
           VITE_SYSTEM_ENDPOINT: ./system.json
+          VITE_WORLD_ENDPOINT: https://nexo-one-two.vercel.app/api/world?stream=1&refresh=1
         run: npm run build
 
       - name: Compile public SystemState
