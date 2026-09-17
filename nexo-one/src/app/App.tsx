@@ -32,6 +32,7 @@ const persist = (key: string, value: string): void => {
 
 const ALL_VIEWS = NAV_GROUPS.flatMap(group => group.entries.map(entry => entry.id));
 const PRIVATE_COCKPIT_URL = String(import.meta.env.VITE_PRIVATE_COCKPIT_URL || '').trim().replace(/\/+$/, '');
+const AUTH_BRIDGE_URL = String(import.meta.env.VITE_NEXO_AUTH_BRIDGE_URL || '').trim();
 
 export default function App() {
   const isMobile = useIsMobile();
@@ -139,6 +140,7 @@ export default function App() {
 
   const openSession = () => {
     if (session.session.authenticated) { void session.logout(); return; }
+    if (AUTH_BRIDGE_URL) { setLoginOpen(true); return; }
     if (PRIVATE_COCKPIT_URL) {
       try {
         const target = new URL(PRIVATE_COCKPIT_URL, window.location.href);
@@ -178,201 +180,91 @@ export default function App() {
               aria-label={theme === 'dark' ? 'Ativar tema claro' : 'Ativar tema escuro'}>
               {theme === 'dark' ? '☼' : '☾'}
             </button>
-            <button className={`avatar${session.session.authenticated?' private':''}`} onClick={openSession}
-              aria-label={session.session.authenticated ? 'Sair da sessão privada' : 'Acessar sessão privada'}>D</button>
+            <button className="avatar-btn" onClick={openSession} aria-label={session.session.authenticated?'Encerrar sessão privada':'Abrir acesso privado'}>
+              {session.session.authenticated?'PR':'ME'}
+            </button>
           </div>
         </header>
 
-        {system.sourceKind === 'fixture' && (
-          <div className="fixture-strip" role="status">
-            <span className="fixture-tag">FIXTURES</span>
-            <label>
-              Cenário
-              <select value={system.scenarioId} aria-label="Cenário de fixture"
-                onChange={event => { system.setScenarioId(event.target.value); setSelectedRun(null); }}>
-                {SCENARIOS.map(item => <option key={item.id} value={item.id}>{item.label}</option>)}
-              </select>
-            </label>
-            <span className="fixture-note">{scenario.description}</span>
-          </div>
-        )}
+        <div className="shell">
+          <nav className="sidebar" aria-label="Navegação principal">
+            {NAV_GROUPS.map(group => (
+              <section key={group.label} className="nav-group">
+                <span className="nav-group-label">{group.label}</span>
+                {group.entries.map(item => (
+                  <button key={item.id} className={`nav-item${view === item.id ? ' active' : ''}`} onClick={() => go(item.id)}>
+                    <span className="nav-icon">{item.icon}</span><span>{item.label}</span>
+                  </button>
+                ))}
+              </section>
+            ))}
+          </nav>
 
-        <div className="command-wrap">
-          <form className="command-bar" onSubmit={submitCommand}>
-            <span aria-hidden="true">⌕</span>
-            <input ref={commandRef} value={command} onChange={event => setCommand(event.target.value)}
-              placeholder="Ir para uma visão, filtrar o Atlas ou consultar o registro" aria-label="Comando global" />
-            <kbd>Ctrl K</kbd>
-            <button className="command-submit" aria-label="Executar comando">↵</button>
-          </form>
-        </div>
+          <main id="workspace" className="workspace">
+            <form className="command-bar" onSubmit={submitCommand} role="search">
+              <span className="command-prefix">⌘</span>
+              <input ref={commandRef} value={command} onChange={event => setCommand(event.target.value)}
+                placeholder="Navegar, buscar ou inspecionar…" aria-label="Comando NEXO" />
+              <kbd>⌘K</kbd>
+            </form>
 
-        <div className="cockpit-body">
-          {!isMobile && (
-            <nav className="nav-rail" aria-label="Navegação principal">
-              {NAV_GROUPS.map(group => (
-                <div key={group.id} className="nav-group">
-                  <span className="eyebrow">{group.label}</span>
-                  {group.entries.map(item => (
-                    <button key={item.id} className={`nav-item${view === item.id ? ' active' : ''}`}
-                      onClick={() => go(item.id)} aria-current={view === item.id ? 'page' : undefined} title={item.hint}>
-                      <i aria-hidden="true">{item.glyph}</i>
-                      <span>{item.label}</span>
-                      {item.id === 'INBOX' && summary && summary.needsHuman > 0 && <b>{summary.needsHuman}</b>}
-                      {item.id === 'TRUTHGRAPH' && summary && summary.conflicts.length > 0 && (
-                        <b className="alarm">{summary.conflicts.length}</b>
-                      )}
-                    </button>
-                  ))}
-                </div>
-              ))}
-            </nav>
-          )}
+            {notice && <div className="notice" role="status">{notice}</div>}
 
-          <main id="workspace" tabIndex={-1} className="workspace">
-            <div className="workspace-heading">
+            <header className="view-header">
               <div>
-                <div className="eyebrow">
-                  <span className="accent-text">{entry.label}</span>
-                  <span className="breadcrumb"> / {isSystemView(view) ? 'SISTEMA' : 'PESSOAL'}</span>
-                </div>
+                <span className="eyebrow">{entry?.group || 'SYSTEM'}</span>
                 <h1>{titles.title}</h1>
-                <p>{titles.lead}</p>
+                <p>{titles.subtitle}</p>
               </div>
-              {isSystemView(view) && (
-                <button className="sync-button" onClick={system.reload} disabled={system.load === 'LOADING'}>
-                  <span>↻</span><span>{system.load === 'LOADING' ? 'Compilando' : 'Recompilar'}</span>
-                </button>
-              )}
-            </div>
+              <div className="view-meta">
+                <span>{system.sourceLabel}</span>
+                <span>{session.session.authenticated?'PRIVATE':'PUBLIC'}</span>
+              </div>
+            </header>
 
-            {notice && (
-              <div role="status" className="notice-box">
-                {notice}<button className="text-button" onClick={() => setNotice('')}>Fechar</button>
-              </div>
+            {isSystemView(view) ? systemContent() : (
+              <PersonalCockpit world={world} query={personalQuery} setQuery={setPersonalQuery}
+                context={personalContext} setContext={setPersonalContext} />
             )}
-
-            {isSystemView(view)
-              ? <Surface load={system.load} error={system.error} onRetry={system.reload}>{systemContent()}</Surface>
-              : <PersonalCockpit view={view} world={world.world} loading={world.loading} error={world.error}
-                  refresh={world.refresh} authenticated={session.session.authenticated}
-                  query={personalQuery} setQuery={setPersonalQuery}
-                  context={personalContext} setContext={setPersonalContext} />}
           </main>
         </div>
 
-        <footer className="world-footer">
-          <span className="footer-scenario">
-            {system.sourceKind === 'fixture'
-              ? `FIXTURE · ${scenario.label}`
-              : `REMOTO · ${system.state?.scenario_label || system.sourceLabel}`}
-          </span>
-          {system.state && <StatusBadge state={system.state.global_state} compact />}
-          <code className="fingerprint">{system.state?.bus.fingerprint ?? 'AGUARDANDO ESTADO'}</code>
-        </footer>
-
-        {isMobile && (
-          <nav className="bottom-nav" aria-label="Navegação">
-            {MOBILE_PRIMARY.map(id => {
-              const item = entryFor(id);
-              return (
-                <button key={id} className={view === id ? 'active' : ''} onClick={() => go(id)}
-                  aria-current={view === id ? 'page' : undefined}>
-                  <i aria-hidden="true">{item.glyph}</i>
-                  <span>{item.label}</span>
-                  {id === 'INBOX' && summary && summary.needsHuman > 0 && <b>{summary.needsHuman}</b>}
-                </button>
-              );
-            })}
-            <button className={moreOpen ? 'active' : ''} onClick={() => setMoreOpen(true)} aria-expanded={moreOpen}>
-              <i aria-hidden="true">⋯</i><span>Mais</span>
+        <nav className="mobile-nav" aria-label="Navegação móvel">
+          {MOBILE_PRIMARY.map(item => (
+            <button key={item.id} className={view === item.id ? 'active' : ''} onClick={() => go(item.id)}>
+              <span>{item.icon}</span><small>{item.label}</small>
             </button>
-          </nav>
-        )}
+          ))}
+          <button className={moreOpen ? 'active' : ''} onClick={() => setMoreOpen(!moreOpen)}><span>•••</span><small>Mais</small></button>
+        </nav>
 
-        {moreOpen && (
-          <Modal title="TODAS AS VISÕES" className="nav-sheet" onClose={() => setMoreOpen(false)}>
-            <div className="drawer-body">
-              {NAV_GROUPS.map(group => (
-                <div key={group.id} className="sheet-group">
-                  <span className="eyebrow">{group.label}</span>
-                  {group.entries.map(item => (
-                    <button key={item.id} className={`sheet-item${view === item.id ? ' active' : ''}`}
-                      onClick={() => go(item.id)}>
-                      <i aria-hidden="true">{item.glyph}</i>
-                      <span><strong>{item.label}</strong><small>{item.hint}</small></span>
-                    </button>
-                  ))}
-                </div>
-              ))}
-            </div>
-          </Modal>
-        )}
+        {moreOpen && <div className="mobile-more">
+          {NAV_GROUPS.flatMap(group => group.entries).filter(item => !MOBILE_PRIMARY.some(primary => primary.id === item.id)).map(item => (
+            <button key={item.id} onClick={() => go(item.id)}>{item.icon} {item.label}</button>
+          ))}
+        </div>}
 
-        {openAction && system.state && (
-          <Modal title="AÇÃO / EXECUÇÃO" className="focus-drawer" onClose={() => setOpenAction(null)}>
-            <div className="drawer-body">
-              <ActionCard action={openAction} capability={capabilityById(system.state, openAction.capability_id)} />
-              {runsForAction(system.state, openAction.action_id).map(run => (
-                <div key={run.run_id} className="drawer-run">
-                  <div className="section-head secondary">
-                    <h2>{run.run_id}</h2>
-                    <StatusBadge state={run.status} />
-                  </div>
-                  <ExecutionTrace run={run} />
-                </div>
-              ))}
-              <button className="text-button" onClick={() => {
-                const first = runsForAction(system.state!, openAction.action_id)[0];
-                setSelectedRun(first ? first.run_id : null);
-                setOpenAction(null);
-                go('EXECUTION');
-              }}>Abrir no Execution trace ↗</button>
-            </div>
-          </Modal>
-        )}
+        <Modal open={loginOpen} title="Acesso privado" onClose={() => { setLoginOpen(false); setPin(''); session.setError(''); }}>
+          <form onSubmit={async event => { event.preventDefault(); const submitted=pin;setPin(''); if(await session.login(submitted))setLoginOpen(false); }}>
+            <label>PIN
+              <input type="password" inputMode="numeric" autoComplete="off" maxLength={12} value={pin}
+                onChange={event=>setPin(event.target.value.replace(/\D/g,''))} autoFocus />
+            </label>
+            {session.error && <p className="form-error" role="alert">{session.error}</p>}
+            {session.runtimeAvailable===false && !session.error && <p className="form-error" role="alert">Runtime privado indisponível.</p>}
+            <button type="submit" disabled={session.pending||pin.length<4}>{session.pending?'Validando…':'Entrar'}</button>
+          </form>
+        </Modal>
 
-        {openInbox && (
-          <Modal title="INTERVENÇÃO HUMANA" className="focus-drawer" onClose={() => setOpenInbox(null)}>
-            <div className="drawer-body">
-              <HumanInboxItem item={openInbox} />
-              {openInbox.action_id && (
-                <button className="text-button" onClick={() => { setOpenInbox(null); go('ACTIONS'); }}>
-                  Ver a ação relacionada ↗
-                </button>
-              )}
-            </div>
-          </Modal>
-        )}
+        {openAction && <Modal open title="Ação" onClose={() => setOpenAction(null)}><ActionCard action={openAction} onOpen={() => {}} /></Modal>}
+        {openInbox && <Modal open title="Intervenção humana" onClose={() => setOpenInbox(null)}><HumanInboxItem item={openInbox} onOpen={() => {}} /></Modal>}
+        {selectedRun && system.state && <Modal open title="Execução" onClose={() => setSelectedRun(null)}>
+          {runsForAction(system.state, selectedRun).map(run => <ExecutionTrace key={run.run_id} run={run} />)}
+        </Modal>}
 
-        {loginOpen && (
-          <Modal title="ACESSO PRIVADO" onClose={() => { setLoginOpen(false); setPin(''); session.setError(''); }}>
-            <div className="drawer-body">
-              <h2>Entre no cockpit privado.</h2>
-              {session.runtimeAvailable===false
-                ? <p role="alert">Runtime privado indisponível. A superfície pública continua em modo somente leitura.</p>
-                : session.session.configured
-                  ? <form className="login-form" onSubmit={async event => {
-                      event.preventDefault();
-                      const submitted=pin;setPin('');
-                      if (await session.login(submitted)) setLoginOpen(false);
-                    }}>
-                      <label>PIN
-                        <input type="password" inputMode="numeric" autoComplete="one-time-code" value={pin} required maxLength={12}
-                          onChange={event => setPin(event.target.value.replace(/\D/g,''))} />
-                      </label>
-                      {session.error && <p role="alert">{session.error}</p>}
-                      <button className="primary-button" disabled={session.pending}>
-                        {session.pending ? 'Entrando…' : 'Entrar →'}
-                      </button>
-                    </form>
-                  : <p>
-                      A autenticação privada ainda não está configurada neste runtime. A superfície pública permanece
-                      disponível sem promover dados privados a estado público.
-                    </p>}
-            </div>
-          </Modal>
-        )}
+        <footer className="statusbar">
+          <span>{scenario.label}</span><span>{system.sourceLabel}</span><span>{session.session.authenticated?'PRIVATE':'PUBLIC READ-ONLY'}</span>
+        </footer>
       </div>
     </ProvenanceProvider>
   );
