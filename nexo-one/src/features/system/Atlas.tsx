@@ -1,6 +1,7 @@
 // Atlas: mapas projetados do mesmo SystemState. Nenhuma visualização é Truth Owner.
 import { useEffect, useMemo, useState } from 'react';
 import type { GraphNode, SystemState } from '../../contracts/system.ts';
+import type { WorldState } from '../../contracts/world.ts';
 import {
   AuthorityClass, CAPABILITY_STATUSES, DOMAINS, GRAPH_NODE_TYPES, PROJECTION_STATES, RELATION_KINDS,
 } from '../../contracts/system.ts';
@@ -42,9 +43,11 @@ function ChipGroup<T extends string>(
 }
 
 export function AtlasView(
-  { state, filters, setFilters, selectedId, onSelect }:
+  { state, world, access, filters, setFilters, selectedId, onSelect }:
   {
     state: SystemState;
+    world?: WorldState | null;
+    access?: 'PUBLIC' | 'PRIVATE';
     filters: GraphFilters;
     setFilters: (next: GraphFilters) => void;
     selectedId: string | null;
@@ -62,7 +65,7 @@ export function AtlasView(
     return()=>{window.removeEventListener('hashchange',restore);window.removeEventListener('popstate',restore);};
   },[]);
 
-  const graph=useMemo(()=>buildGraphMode(state,mode,'PUBLIC'),[state,mode]);
+  const graph=useMemo(()=>buildGraphMode(state,mode,access||'PUBLIC',world),[state,mode,access,world]);
   const filtered = useMemo(() => filterGraph(graph, filters), [graph, filters]);
   const placed = useMemo(() => layoutGraph3D(filtered.nodes), [filtered.nodes]);
   const legend = useMemo(() => legendOf(filtered.nodes), [filtered.nodes]);
