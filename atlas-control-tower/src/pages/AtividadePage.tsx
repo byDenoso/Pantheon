@@ -35,14 +35,14 @@ export function AtividadePage(){
     try{
       const result=await controlPlaneAction(action,target,extra);
       setOperation(result);
-      if(result.acceptance==='accepted'&&(result.readback||result.evidence?.length))load();
+      if(result.acceptance==='accepted'&&(result.readback!==null||result.evidence.length>0))load();
     }catch(error){setActionError(String(error instanceof Error?error.message:error));}
     finally{setBusy(null);}
   };
 
   const changes=payload?.data?.changes||[];
   const next=payload?.data?.next||[];
-  const verified=Boolean(operation&&operation.acceptance==='accepted'&&(operation.readback||operation.evidence?.length));
+  const verified=Boolean(operation&&operation.acceptance==='accepted'&&(operation.readback!==null||operation.evidence.length>0));
 
   return <div className="page-wrap atividade-page">
     <div className="page-heading"><div><span className="eyebrow">NEXO ATLAS / CONTROL PLANE</span><h1>Atividade operacional</h1><p>Estado lido diretamente da TOWER_V06. Ações passam pelo MCP/NEXO e só são confirmadas com readback ou evidência.</p></div></div>
@@ -56,8 +56,8 @@ export function AtividadePage(){
       {operation&&<div className="operation-readback" role="status">
         <p><b>{operation.action}</b> · {operation.acceptance} · {operation.state}</p>
         {verified?<p>Concluído com readback/evidence verificável.</p>:<p>Aguardando readback/evidence; nenhuma conclusão foi inferida do HTTP.</p>}
-        {operation.blocker&&<pre>{JSON.stringify(operation.blocker,null,2)}</pre>}
-        {operation.readback&&<pre>{JSON.stringify(operation.readback,null,2)}</pre>}
+        {operation.blocker!==null&&<pre>{JSON.stringify(operation.blocker,null,2)}</pre>}
+        {operation.readback!==null&&<pre>{JSON.stringify(operation.readback,null,2)}</pre>}
       </div>}
     </section>
 
