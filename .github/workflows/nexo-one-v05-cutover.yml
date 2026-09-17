@@ -1,5 +1,5 @@
 name: NEXO ONE v0.5 one-shot producer cutover
-# 2026-09-16: production cutover retrigger for current main
+# 2026-09-17: local prebuilt cutover bypasses remote Vercel build quota
 
 on:
   push:
@@ -75,10 +75,13 @@ jobs:
           console.log(`previous=${previous}`);
           NODE
 
-      - name: Stage exact release as production candidate without moving domain
+      - name: Stage locally prebuilt production candidate without moving domain
         run: |
           set -euo pipefail
-          STAGED_URL=$(vercel deploy ./nexo-one/release --prod --skip-domain --yes --token "$VERCEL_TOKEN")
+          cd nexo-one
+          vercel pull --yes --environment=production --token "$VERCEL_TOKEN"
+          vercel build --prod --yes --token "$VERCEL_TOKEN"
+          STAGED_URL=$(vercel deploy --prebuilt --prod --skip-domain --yes --token "$VERCEL_TOKEN")
           test -n "$STAGED_URL"
           echo "STAGED_URL=$STAGED_URL" >> "$GITHUB_ENV"
           echo "staged=$STAGED_URL"
