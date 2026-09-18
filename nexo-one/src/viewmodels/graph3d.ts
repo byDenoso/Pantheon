@@ -5,10 +5,12 @@ export interface PlacedNode3D extends GraphNode, Point3 { radius: number }
 
 const DOMAIN_ANCHORS: Record<Domain, Point3> = {
   NEXO: { x: 0, y: 0, z: 0 },
-  SCIENCE: { x: 18, y: 4, z: -5 },
-  ENGINEERING: { x: -14, y: -5, z: 12 },
-  OLYMPUS: { x: 4, y: -12, z: -17 },
-  ARTIFACT: { x: -4, y: 12, z: 17 },
+  // Keep domain hubs outside the satellite shells so the clusters remain
+  // separable after the Canvas camera fits the whole graph into view.
+  SCIENCE: { x: 32, y: 8, z: -11 },
+  ENGINEERING: { x: -30, y: -9, z: 25 },
+  OLYMPUS: { x: 9, y: -26, z: -35 },
+  ARTIFACT: { x: -9, y: 27, z: 34 },
 };
 
 const SHELL_RADIUS: Record<GraphNodeType, number> = {
