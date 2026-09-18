@@ -93,7 +93,7 @@ export function AtlasWebGL3D({
     const mobile = window.matchMedia('(max-width: 760px)').matches;
     // Keep the desktop world generously spaced, then fit that same semantic
     // graph into a portrait viewport without changing backend topology.
-    const worldScale = mobile ? .74 : 1;
+    const worldScale = mobile ? .6 : 1;
     const nodeScale = mobile ? 1.22 : 1;
     const renderNodes = nodes.map(node => ({
       ...node,
