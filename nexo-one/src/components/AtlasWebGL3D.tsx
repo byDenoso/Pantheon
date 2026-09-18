@@ -63,6 +63,16 @@ export function AtlasWebGL3D({
     const canvas = canvasRef.current;
     const labelsHost = labelsRef.current;
     if (!host || !canvas || !labelsHost || !nodes.length) return undefined;
+    const mobile = window.matchMedia('(max-width: 760px)').matches;
+    // Keep the desktop world generously spaced, then fit that same semantic
+    // graph into a portrait viewport without changing backend topology.
+    const worldScale = mobile ? .82 : 1;
+    const renderNodes = nodes.map(node => ({
+      ...node,
+      x: node.x * worldScale,
+      y: node.y * worldScale,
+      z: node.z * worldScale,
+    }));
     let engine: Engine;
     try { engine = new Engine(canvas, true, { antialias: true, stencil: true, preserveDrawingBuffer: false }); }
     catch { setFailed('WebGL indisponível neste navegador.'); return undefined; }
@@ -70,9 +80,11 @@ export function AtlasWebGL3D({
     scene.clearColor = new Color4(.011, .067, .122, 1);
     scene.imageProcessingConfiguration.toneMappingEnabled = true;
     scene.imageProcessingConfiguration.toneMappingType = ImageProcessingConfiguration.TONEMAPPING_ACES;
-    const bounds = graphBounds3D(nodes);
+    const bounds = graphBounds3D(renderNodes);
     const target = new Vector3(bounds.center.x, bounds.center.y, bounds.center.z);
-    const camera = new ArcRotateCamera('atlas-camera', -Math.PI / 2, 1.14, Math.max(105, bounds.radius * 2.65), target, scene);
+    const cameraDistance = Math.max(mobile ? 112 : 132, bounds.radius * (mobile ? 1.72 : 2.15));
+    const camera = new ArcRotateCamera('atlas-camera', -Math.PI / 2, 1.14, cameraDistance, target, scene);
+    camera.fov = mobile ? .72 : .8;
     camera.lowerBetaLimit = .16; camera.upperBetaLimit = Math.PI - .16;
     camera.wheelDeltaPercentage = .035; camera.pinchDeltaPercentage = .035; camera.panningSensibility = 190;
     camera.attachControl(canvas, true);
@@ -92,7 +104,7 @@ export function AtlasWebGL3D({
       material.specularColor = new Color3(.12, .16, .2); material.roughness = .22;
       materialByColor.set(key, material); return material;
     };
-    for (const node of nodes) {
+    for (const node of renderNodes) {
       const mesh = MeshBuilder.CreateSphere(`atlas-node-${node.id}`, { segments: 20, diameter: radiusFor(node) * 2 }, scene);
       mesh.position = new Vector3(node.x, node.y, node.z); mesh.material = materialFor(colorFor(node));
       mesh.isPickable = true; mesh.metadata = { nodeId: node.id }; meshById.set(node.id, mesh);
@@ -112,7 +124,7 @@ export function AtlasWebGL3D({
       }, scene);
       line.color = color; line.alpha = edge.is_learning ? .48 : edge.blocked ? .12 : .2; line.isPickable = false;
     }
-    const labelEntries = nodes.map(node => {
+    const labelEntries = renderNodes.map(node => {
       const label = document.createElement('span'); label.className = 'atlas-webgl-label'; label.textContent = labelFor(node); label.dataset.nodeId = node.id;
       label.style.setProperty('--label-color', DOMAIN_COLOR[node.domain] ?? '#dbeeff'); labelsHost.appendChild(label); return { node, label };
     });
@@ -122,7 +134,8 @@ export function AtlasWebGL3D({
       const transform = scene.getTransformMatrix(); const selected = selectedRef.current;
       const visible = labelEntries.filter(item => item.node.type === 'DOMAIN' || item.node.type === 'PROVIDER' || item.node.id === selected || learningIds.has(item.node.id));
       const ranked = visible.sort((a, b) => (PRIORITY[b.node.type] ?? 30) - (PRIORITY[a.node.type] ?? 30));
-      const allowed = new Set(ranked.slice(0, engine.getRenderWidth() < 720 ? 16 : 30).map(item => item.node.id));
+      const labelLimit = engine.getRenderWidth() < 460 ? 12 : engine.getRenderWidth() < 720 ? 16 : 30;
+      const allowed = new Set(ranked.slice(0, labelLimit).map(item => item.node.id));
       for (const item of labelEntries) {
         const mesh = meshById.get(item.node.id); if (!mesh || !allowed.has(item.node.id)) { item.label.hidden = true; continue; }
         const projected = Vector3.Project(mesh.position, Matrix.IdentityReadOnly, transform, viewport);
@@ -136,7 +149,7 @@ export function AtlasWebGL3D({
       if (pointerInfo.type !== PointerEventTypes.POINTERPICK) return;
       const nodeId = pointerInfo.pickInfo?.pickedMesh?.metadata?.nodeId; if (typeof nodeId === 'string') onSelectRef.current(nodeId);
     });
-    const reset = () => { camera.alpha = -Math.PI / 2; camera.beta = 1.14; camera.radius = Math.max(105, bounds.radius * 2.65); camera.setTarget(target); };
+    const reset = () => { camera.alpha = -Math.PI / 2; camera.beta = 1.14; camera.radius = cameraDistance; camera.setTarget(target); };
     const focus = (id: string | null, center = false) => { const mesh = id ? meshById.get(id) : undefined; if (mesh && center) camera.setTarget(mesh.position); };
     runtimeRef.current = { reset, focus };
     const keydown = (event: KeyboardEvent) => {

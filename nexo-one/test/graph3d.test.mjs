@@ -37,7 +37,7 @@ test('NEXO anchors the 3D universe at the origin and other domains occupy unique
   assert.deepEqual([nexo.x, nexo.y, nexo.z], [0, 0, 0]);
 
   const hubs = ['domain:science', 'domain:engineering', 'domain:olympus'].map(id => byId.get(id));
-  assert.ok(hubs.every(h => distance3(h, nexo) >= 28));
+  assert.ok(hubs.every(h => distance3(h, nexo) >= 50));
   assert.equal(new Set(hubs.map(h => `${h.x}:${h.y}:${h.z}`)).size, hubs.length);
 });
 
@@ -79,6 +79,6 @@ test('force layout keeps canonical hubs pinned while opening satellite spacing',
   const placed = forceLayoutGraph3D(fixture, edges);
   const byId = new Map(placed.map(n => [n.id, n]));
   assert.deepEqual([byId.get('domain:nexo').x, byId.get('domain:nexo').y, byId.get('domain:nexo').z], [0, 0, 0]);
-  assert.ok(distance3(byId.get('science:provider'), byId.get('domain:science')) > 4);
-  assert.ok(distance3(byId.get('engineering:provider'), byId.get('domain:engineering')) > 4);
+  assert.ok(distance3(byId.get('science:provider'), byId.get('domain:science')) > 8);
+  assert.ok(distance3(byId.get('engineering:provider'), byId.get('domain:engineering')) > 8);
 });

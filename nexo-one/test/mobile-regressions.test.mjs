@@ -35,6 +35,18 @@ test('Atlas uses Babylon WebGL 3D with restrained post-processing', async () => 
   assert.match(view, /AtlasWebGL3D/);
 });
 
+test('Atlas adapts the spaced world to portrait mobile viewports', async () => {
+  const atlas = await text('src/components/AtlasWebGL3D.tsx');
+  const graph = await text('src/viewmodels/graph3d.ts');
+  const styles = await text('src/styles/atlas3d.css');
+  assert.match(atlas, /matchMedia\('\(max-width: 760px\)'\)/);
+  assert.match(atlas, /const worldScale = mobile \? \.82 : 1/);
+  assert.match(atlas, /camera\.fov = mobile \? \.72 : \.8/);
+  assert.match(graph, /const spacingScale = 1\.34/);
+  assert.match(styles, /min-height: 640px/);
+  assert.match(styles, /aspect-ratio: 3 \/ 4/);
+});
+
 test('Atlas orbit wraps a full 360 degrees and renders backend learning edges by scope', async () => {
   const atlas = await text('src/components/AtlasWebGL3D.tsx');
   assert.match(atlas, /camera\.alpha/);

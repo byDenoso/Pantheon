@@ -240,8 +240,8 @@
 
 @media (max-width: 760px) {
   .atlas3d-shell {
-    min-height: 500px;
-    aspect-ratio: 4 / 5;
+    min-height: 640px;
+    aspect-ratio: 3 / 4;
     border-radius: 14px;
   }
 
@@ -284,6 +284,30 @@
 
   .atlas3d-tooltip {
     display: none;
+  }
+
+  .atlas-webgl-label {
+    max-width: 155px;
+    padding: 3px 6px;
+    font-size: 11px;
+  }
+}
+
+@media (max-width: 420px) {
+  .atlas3d-shell {
+    min-height: 610px;
+  }
+
+  .atlas3d-mobile-nav {
+    left: 7px;
+    right: 7px;
+    gap: 4px;
+    padding: 5px;
+  }
+
+  .atlas3d-mobile-nav button {
+    min-height: 42px;
+    font-size: 17px;
   }
 }
 

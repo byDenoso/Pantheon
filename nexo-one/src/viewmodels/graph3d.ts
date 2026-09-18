@@ -6,27 +6,29 @@ export interface PlacedNode3D extends GraphNode, Point3 { radius: number }
 const DOMAIN_ANCHORS: Record<Domain, Point3> = {
   NEXO: { x: 0, y: 0, z: 0 },
   // Keep domain hubs outside the satellite shells so the clusters remain
-  // separable after the Canvas camera fits the whole graph into view.
-  SCIENCE: { x: 32, y: 8, z: -11 },
-  ENGINEERING: { x: -30, y: -9, z: 25 },
-  OLYMPUS: { x: 9, y: -26, z: -35 },
-  ARTIFACT: { x: -9, y: 27, z: 34 },
+  // separable after the perspective camera fits the whole graph into view.
+  // The wide baselines are intentional: mobile scales this world down only
+  // at render time, while desktop keeps the clusters visibly independent.
+  SCIENCE: { x: 52, y: 15, z: -18 },
+  ENGINEERING: { x: -49, y: -16, z: 38 },
+  OLYMPUS: { x: 18, y: -46, z: -61 },
+  ARTIFACT: { x: -17, y: 48, z: 59 },
 };
 
 const SHELL_RADIUS: Record<GraphNodeType, number> = {
   DOMAIN: 0,
-  // Wider, nested orbital shells keep satellites readable instead of stacking
+  // Extra-wide nested shells keep satellites readable instead of stacking
   // into one compact ball around each domain hub.
-  PROVIDER: 6.5,
-  CAPABILITY: 8.5,
-  ACTION: 11.5,
-  SIDE_QUEST: 12.5,
-  EFFECT: 15,
-  PROJECTION: 16,
-  CLAIM: 19,
-  FILAMENT: 21,
-  TEST: 24,
-  MEMORY: 27,
+  PROVIDER: 10,
+  CAPABILITY: 14,
+  ACTION: 18,
+  SIDE_QUEST: 20,
+  EFFECT: 24,
+  PROJECTION: 26,
+  CLAIM: 31,
+  FILAMENT: 36,
+  TEST: 42,
+  MEMORY: 48,
 };
 
 const NODE_RADIUS: Record<GraphNodeType, number> = {
@@ -195,7 +197,19 @@ export function forceLayoutGraph3D(nodes: GraphNode[], edges: GraphEdge[], itera
       node.x += clampStep(nodeVelocity.x); node.y += clampStep(nodeVelocity.y); node.z += clampStep(nodeVelocity.z);
     }
   }
-  return placed.map(node => ({ ...node, x: rounded(node.x), y: rounded(node.y), z: rounded(node.z) })).sort((a, b) => a.id.localeCompare(b.id));
+  // The springs preserve canonical relations, then this final radial opening
+  // gives every cluster breathing room without inventing nodes or edges.
+  const spacingScale = 1.34;
+  return placed.map(node => {
+    if (domainIds.has(node.id)) return { ...node, x: rounded(node.x), y: rounded(node.y), z: rounded(node.z) };
+    const anchor = domainAnchor(node.domain);
+    return {
+      ...node,
+      x: rounded(anchor.x + (node.x - anchor.x) * spacingScale),
+      y: rounded(anchor.y + (node.y - anchor.y) * spacingScale),
+      z: rounded(anchor.z + (node.z - anchor.z) * spacingScale),
+    };
+  }).sort((a, b) => a.id.localeCompare(b.id));
 }
 
 export function graphBounds3D(nodes: PlacedNode3D[]): { center: Point3; radius: number } {
