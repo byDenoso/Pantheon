@@ -66,12 +66,16 @@ test('Atlas surfaces backend learning scope counts beside the filament toggle', 
 
 test('Atlas starts at the NEXO hub and expands canonical domain clusters on selection', async () => {
   const view = await text('src/features/system/Atlas.tsx');
+  assert.match(view, /const \[rootExpanded, setRootExpanded\] = useState\(false\)/);
+  assert.match(view, /const \[expandAll, setExpandAll\] = useState\(false\)/);
+  assert.match(view, /if \(!rootExpanded\) return \{ nodes: nexoNode \? \[nexoNode\] : \[\], edges: \[\] \}/);
+  assert.match(view, /atlas\.root\.edge/);
   assert.match(view, /const \[expandedDomain, setExpandedDomain\] = useState<GraphNode\['domain'\] \| null>\(null\)/);
   assert.match(view, /const \[expandedCluster, setExpandedCluster\] = useState<GraphNode\['type'\] \| null>\(null\)/);
   assert.match(view, /node\?\.type === 'DOMAIN'/);
-  assert.match(view, /Hub:<\/b> \{expandedDomain \?\? 'NEXO'\}/);
-  assert.match(view, /Voltar ao hub/);
-  assert.match(view, /Voltar ao domínio/);
+  assert.match(view, /Hub:<\/b> \{expandAll \? 'NEXO · Visão completa' : expandedDomain \?\? \(rootExpanded \? 'NEXO · Domínios' : 'NEXO'\)\}/);
+  assert.match(view, /aria-label="Voltar no grafo"/);
+  assert.match(view, /aria-label="Expandir todos os grafos"/);
   assert.match(view, /atlas\.cluster/);
   assert.match(view, /clusterFromId/);
   assert.match(view, /node\.domain === expandedDomain/);

@@ -154,7 +154,12 @@ try {
     await canvas.waitFor();
     assert.equal(await page.locator('.atlas3d-fallback').count(), 0, 'Babylon caiu no fallback');
     const graphNodes = page.locator('.atlas3d-a11y-list button');
-    assert.ok(await graphNodes.count() >= 4, 'grafo 3D sem os hubs de domínio');
+    assert.equal(await graphNodes.count(), 1, 'Atlas deve iniciar somente no hub NEXO');
+    assert.equal(await graphNodes.first().innerText(), 'NEXO');
+    await graphNodes.first().focus();
+    await page.keyboard.press('Enter');
+    await page.getByRole('button', { name: 'SCIENCE' }).waitFor();
+    assert.ok(await graphNodes.count() >= 4, 'NEXO não expandiu os domínios derivados');
     const box = await canvas.boundingBox();
     if (box) {
       await page.mouse.move(box.x + box.width * 0.58, box.y + box.height * 0.48);
@@ -164,13 +169,20 @@ try {
       await page.mouse.wheel(0, -180);
     }
     if (mobile) {
-      const touchNavigation = page.locator('.atlas3d-controls.atlas3d-mobile-nav');
+      const touchNavigation = page.locator('.atlas3d-mobile-nav:visible').first();
       for (const control of ['Girar mapa para a esquerda', 'Girar mapa para a direita', 'Aproximar mapa', 'Afastar mapa']) {
         const button = touchNavigation.getByRole('button', { name: control });
-        await button.dispatchEvent('click');
+        await button.click({ force: true });
       }
     }
-    await graphNodes.first().focus();
+    await page.getByRole('button', { name: 'SCIENCE' }).focus();
+    await page.keyboard.press('Enter');
+    const scienceClusters = page.locator('.atlas3d-a11y-list button');
+    await scienceClusters.filter({ hasText: 'CLAIM' }).first().focus();
+    await page.keyboard.press('Enter');
+    const scienceClaims = page.locator('.atlas3d-a11y-list button');
+    assert.ok(await scienceClaims.count() >= 2, 'domínio não abriu a subtree de entidades');
+    await scienceClaims.first().focus();
     await page.keyboard.press('Enter');
     await page.locator('.entity-inspector').waitFor();
     const inspector = (await page.locator('.entity-inspector').innerText()).toLowerCase();
@@ -182,6 +194,8 @@ try {
       await page.getByRole('button', { name: 'Fechar inspector' }).click();
       await page.locator('.atlas-sheet').waitFor({ state: 'detached' });
     }
+    await page.getByRole('button', { name: 'Voltar no grafo' }).click();
+    await page.getByRole('button', { name: 'Expandir todos os grafos' }).click();
 
     // 7. Filtros do Atlas reduzem os nós renderizados e podem ser limpos.
     const countNodes = () => page.locator('.atlas3d-a11y-list button').count();
@@ -196,12 +210,11 @@ try {
 
     // 8. Contexto preservado: o filtro de busca sobrevive à ida e volta entre visões.
     await page.getByRole('textbox', { name: 'Buscar no grafo' }).fill('olympus');
-    const filtered = await countNodes();
     await navigate('Integrity');
     await navigate('Atlas');
     assert.equal(await page.getByRole('textbox', { name: 'Buscar no grafo' }).inputValue(), 'olympus',
       'a busca do Atlas não sobreviveu à navegação');
-    assert.equal(await countNodes(), filtered, 'o resultado filtrado não foi preservado');
+    assert.equal(await countNodes(), 0, 'a raiz NEXO deve ocultar entidades fora do nível atual');
     await page.getByRole('textbox', { name: 'Buscar no grafo' }).fill('');
 
     // 9. Command Bar: navega e recusa escrita explicitamente.
