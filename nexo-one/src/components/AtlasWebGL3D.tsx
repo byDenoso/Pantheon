@@ -7,6 +7,7 @@ import { PointLight } from '@babylonjs/core/Lights/pointLight';
 import { Color3, Color4 } from '@babylonjs/core/Maths/math.color';
 import { Matrix, Vector3 } from '@babylonjs/core/Maths/math.vector';
 import { ImageProcessingConfiguration } from '@babylonjs/core/Materials/imageProcessingConfiguration';
+import { PBRMaterial } from '@babylonjs/core/Materials/PBR/pbrMaterial';
 import { StandardMaterial } from '@babylonjs/core/Materials/standardMaterial';
 import { MeshBuilder } from '@babylonjs/core/Meshes/meshBuilder';
 import { DefaultRenderingPipeline } from '@babylonjs/core/PostProcesses/RenderPipeline/Pipelines/defaultRenderingPipeline';
@@ -25,14 +26,15 @@ const PRIORITY: Record<string, number> = {
   PROJECTION: 42, FILAMENT: 40, MEMORY: 38, EFFECT: 36, SIDE_QUEST: 34,
 };
 type Runtime = { reset: () => void; focus: (id: string | null, center?: boolean) => void };
-type EdgeCurve = { edge: GraphEdge; points: Vector3[]; control: Vector3; color: Color3; line: import('@babylonjs/core/Meshes/mesh').Mesh };
+type EdgeCurve = { edge: GraphEdge; points: Vector3[]; control: Vector3; color: Color3; line: import('@babylonjs/core/Meshes/mesh').Mesh; fibers: import('@babylonjs/core/Meshes/mesh').Mesh[]; core: import('@babylonjs/core/Meshes/mesh').Mesh };
 type NeuralPulse = { mesh: import('@babylonjs/core/Meshes/mesh').Mesh; curve: EdgeCurve; u: number; speed: number };
 
 function colorFor(node: PlacedNode3D): Color3 { return Color3.FromHexString(DOMAIN_COLOR[node.domain] ?? '#8fb2d0'); }
 function edgeColor(edge: GraphEdge): Color3 {
   if (edge.kind === 'CONTRADICTS' || edge.kind === 'BLOCKS') return Color3.FromHexString(ALERT_COLOR);
-  if (edge.is_learning) return Color3.FromHexString(edge.learning_scope === 'INTER_DOMAIN' ? '#bd8cff' : '#44d9ff');
-  return Color3.FromHexString('#537b9e');
+  if (edge.is_learning) return Color3.FromHexString(edge.learning_scope === 'INTER_DOMAIN' ? '#f4c468' : '#d99a4f');
+  if (edge.kind === 'SUPPORTS') return Color3.FromHexString('#51d7ef');
+  return Color3.FromHexString('#3a8fd0');
 }
 function radiusFor(node: PlacedNode3D): number {
   if (node.type === 'DOMAIN') return node.domain === 'NEXO' ? 2.9 : 2.35;
@@ -110,7 +112,10 @@ export function AtlasWebGL3D({
     try { engine = new Engine(canvas, true, { antialias: true, stencil: true, preserveDrawingBuffer: false }); }
     catch { setFailed('WebGL indisponível neste navegador.'); return undefined; }
     const scene = new Scene(engine);
-    scene.clearColor = new Color4(.011, .067, .122, 1);
+    scene.clearColor = new Color4(.003, .018, .03, 1);
+    scene.fogMode = Scene.FOGMODE_EXP2;
+    scene.fogDensity = mobile ? .0011 : .0018;
+    scene.fogColor = new Color3(.003, .018, .03);
     scene.imageProcessingConfiguration.toneMappingEnabled = true;
     scene.imageProcessingConfiguration.toneMappingType = ImageProcessingConfiguration.TONEMAPPING_ACES;
     const bounds = graphBounds3D(renderNodes);
@@ -126,26 +131,48 @@ export function AtlasWebGL3D({
     const keyLight = new PointLight('atlas-key', new Vector3(-34, 42, -28), scene);
     keyLight.intensity = 1.1; keyLight.diffuse = new Color3(.73, .88, 1);
     const pipeline = new DefaultRenderingPipeline('atlas-post', true, scene, [camera]);
-    pipeline.bloomEnabled = true; pipeline.bloomThreshold = .84; pipeline.bloomWeight = .13; pipeline.bloomKernel = 28; pipeline.fxaaEnabled = true;
+    pipeline.bloomEnabled = true; pipeline.bloomThreshold = .92; pipeline.bloomWeight = .16; pipeline.bloomKernel = 24; pipeline.fxaaEnabled = true;
+    if (!mobile) {
+      pipeline.depthOfFieldEnabled = true;
+      pipeline.depthOfField.focusDistance = cameraDistance * .62;
+      pipeline.depthOfField.fStop = 3.6;
+      pipeline.depthOfField.lensSize = 42;
+    }
 
     const meshById = new Map<string, import('@babylonjs/core/Meshes/mesh').Mesh>();
     const materialByColor = new Map<string, StandardMaterial>();
     const materialFor = (color: Color3) => {
       const key = color.toHexString(); const existing = materialByColor.get(key); if (existing) return existing;
       const material = new StandardMaterial(`atlas-material-${key.slice(1)}`, scene);
-      material.diffuseColor = color.scale(.68); material.emissiveColor = color.scale(.34);
-      material.specularColor = new Color3(.12, .16, .2); material.roughness = .22;
+      material.diffuseColor = color.scale(.48); material.emissiveColor = color.scale(.28);
+      material.specularColor = new Color3(.38, .48, .58); material.specularPower = 72; material.roughness = .18;
       materialByColor.set(key, material); return material;
     };
+    const translucentMaterialByKey = new Map<string, StandardMaterial>();
+    const translucentMaterialFor = (color: Color3, alpha: number) => {
+      const key = `${color.toHexString()}-${alpha.toFixed(3)}`; const existing = translucentMaterialByKey.get(key); if (existing) return existing;
+      const material = new StandardMaterial(`atlas-translucent-${key.replace('#', '').replace('.', '_')}`, scene);
+      material.diffuseColor = color.scale(.35); material.emissiveColor = color.scale(.8); material.alpha = alpha;
+      material.specularColor = color; material.specularPower = 64; material.backFaceCulling = false;
+      translucentMaterialByKey.set(key, material); return material;
+    };
+    const nucleusMaterialByColor = new Map<string, PBRMaterial>();
+    const nucleusMaterialFor = (color: Color3) => {
+      const key = color.toHexString(); const existing = nucleusMaterialByColor.get(key); if (existing) return existing;
+      const material = new PBRMaterial(`atlas-nucleus-${key.slice(1)}`, scene);
+      material.albedoColor = color.scale(.42); material.metallic = .34; material.roughness = .2;
+      material.emissiveColor = color.scale(.5); material.emissiveIntensity = .7; material.environmentIntensity = .3;
+      nucleusMaterialByColor.set(key, material); return material;
+    };
     const starMaterial = new StandardMaterial('atlas-star-material', scene);
-    starMaterial.diffuseColor = new Color3(.28, .62, .82);
-    starMaterial.emissiveColor = new Color3(.2, .5, .78);
-    starMaterial.alpha = .64;
+    starMaterial.diffuseColor = new Color3(.13, .36, .54);
+    starMaterial.emissiveColor = new Color3(.12, .38, .68);
+    starMaterial.alpha = .52;
     const starMeshes: import('@babylonjs/core/Meshes/mesh').Mesh[] = [];
-    const starSpread = Math.max(85, bounds.radius * 2.4);
-    for (let index = 0; index < 96; index += 1) {
+    const starSpread = Math.max(110, bounds.radius * 2.8);
+    for (let index = 0; index < 150; index += 1) {
       const star = MeshBuilder.CreateSphere(`atlas-star-${index}`, {
-        segments: 6, diameter: .12 + starValue(index, 4) * .2,
+        segments: 6, diameter: .06 + starValue(index, 4) * .18,
       }, scene);
       star.position = new Vector3(
         bounds.center.x + (starValue(index, 1) - .5) * starSpread,
@@ -155,12 +182,17 @@ export function AtlasWebGL3D({
       star.material = starMaterial; star.isPickable = false; starMeshes.push(star);
     }
     for (const node of renderNodes) {
+      const nodeColor = colorFor(node);
       const mesh = MeshBuilder.CreateSphere(`atlas-node-${node.id}`, { segments: 20, diameter: radiusFor(node) * 2 * nodeScale }, scene);
-      mesh.position = new Vector3(node.x, node.y, node.z); mesh.material = materialFor(colorFor(node));
+      mesh.position = new Vector3(node.x, node.y, node.z); mesh.material = node.type === 'DOMAIN' ? nucleusMaterialFor(nodeColor) : materialFor(nodeColor);
       mesh.isPickable = true; mesh.metadata = { nodeId: node.id }; meshById.set(node.id, mesh);
       if (node.type === 'DOMAIN' || node.id === selectedRef.current) {
         const ring = MeshBuilder.CreateTorus(`atlas-ring-${node.id}`, { diameter: radiusFor(node) * 2.65 * nodeScale, thickness: .08 * nodeScale, tessellation: 28 }, scene);
-        ring.position.copyFrom(mesh.position); ring.rotation.x = Math.PI / 2; ring.material = materialFor(colorFor(node)); ring.isPickable = false;
+        ring.position.copyFrom(mesh.position); ring.rotation.x = Math.PI / 2; ring.material = materialFor(nodeColor); ring.isPickable = false;
+        if (node.type === 'DOMAIN') {
+          const halo = MeshBuilder.CreateSphere(`atlas-halo-${node.id}`, { segments: 16, diameter: radiusFor(node) * 3.6 * nodeScale }, scene);
+          halo.position.copyFrom(mesh.position); halo.material = translucentMaterialFor(nodeColor, .07); halo.isPickable = false;
+        }
       }
       if (node.state === 'BLOCKED' || node.state === 'CONFLICT') {
         const alertRing = MeshBuilder.CreateTorus(`atlas-alert-${node.id}`, { diameter: radiusFor(node) * 3.05 * nodeScale, thickness: .055 * nodeScale, tessellation: 24 }, scene);
@@ -174,8 +206,26 @@ export function AtlasWebGL3D({
       const line = MeshBuilder.CreateLines(`atlas-edge-${edge.id}`, {
         points: geometry.points, colors: geometry.points.map(() => new Color4(color.r, color.g, color.b, 1)),
       }, scene);
-      line.color = color; line.alpha = edge.is_learning ? .52 : edge.blocked ? .12 : .2; line.isPickable = false;
-      edgeCurves.push({ edge, points: geometry.points, control: geometry.control, color, line });
+      const strength = Math.max(0, Math.min(1, Number(edge.weight ?? 0)));
+      const fiberCount = Math.max(3, Math.min(7, 3 + Math.round(strength * 4)));
+      const delta = to.position.subtract(from.position).normalize();
+      let normal = Vector3.Cross(delta, new Vector3(0, 1, 0));
+      if (normal.lengthSquared() < .001) normal = Vector3.Cross(delta, new Vector3(1, 0, 0));
+      normal.normalize();
+      const binormal = Vector3.Cross(delta, normal).normalize();
+      const fibers = Array.from({ length: fiberCount }, (_, fiberIndex) => {
+        const phase = (fiberIndex - (fiberCount - 1) / 2) / Math.max(1, fiberCount - 1);
+        const path = geometry.points.map((point, pointIndex) => point
+          .add(normal.scale(phase * (.12 + strength * .18)))
+          .add(binormal.scale(Math.sin(pointIndex * .75 + fiberIndex) * (.05 + strength * .08))));
+        const fiber = MeshBuilder.CreateLines(`atlas-fiber-${edge.id}-${fiberIndex}`, { points: path }, scene);
+        fiber.color = color; fiber.alpha = edge.blocked ? .08 : (edge.is_learning ? .34 + strength * .2 : .16 + strength * .24); fiber.isPickable = false;
+        return fiber;
+      });
+      const core = MeshBuilder.CreateTube(`atlas-axon-${edge.id}`, { path: geometry.points, radius: .018 + strength * .055, tessellation: 5, cap: 0 }, scene);
+      core.material = translucentMaterialFor(color, edge.blocked ? .08 : (edge.is_learning ? .25 + strength * .16 : .12 + strength * .14)); core.isPickable = false;
+      line.color = color; line.alpha = edge.is_learning ? .18 + strength * .14 : edge.blocked ? .08 : .1 + strength * .1; line.isPickable = false;
+      edgeCurves.push({ edge, points: geometry.points, control: geometry.control, color, line, fibers, core });
     }
     const pulseMaterialByColor = new Map<string, StandardMaterial>();
     const pulseMaterialFor = (color: Color3) => {
@@ -184,12 +234,13 @@ export function AtlasWebGL3D({
       material.diffuseColor = color; material.emissiveColor = color.scale(.9); material.specularColor = color;
       pulseMaterialByColor.set(key, material); return material;
     };
-    const activeCurves = edgeCurves.filter(({ edge }) => edge.is_learning || edge.kind === 'BLOCKS' || edge.kind === 'SUPPORTS').slice(0, 18);
-    const pulses: NeuralPulse[] = activeCurves.map((curve, index) => {
-      const mesh = MeshBuilder.CreateSphere(`atlas-pulse-${curve.edge.id}`, { segments: 10, diameter: mobile ? .95 : .68 }, scene);
-      mesh.material = pulseMaterialFor(curve.color); mesh.isPickable = false; mesh.position.copyFrom(curvePoint(curve, (index * .17) % 1));
-      return { mesh, curve, u: (index * .17) % 1, speed: curve.edge.is_learning ? .00026 : .00018 };
-    });
+    const activeCurves = edgeCurves.filter(({ edge }) => edge.is_learning || edge.kind === 'BLOCKS' || edge.kind === 'SUPPORTS').slice(0, 24);
+    const pulses: NeuralPulse[] = activeCurves.flatMap((curve, index) => [0, .47].map((offset, pulseIndex) => {
+      const mesh = MeshBuilder.CreateSphere(`atlas-pulse-${curve.edge.id}-${pulseIndex}`, { segments: 10, diameter: mobile ? .95 : .68 }, scene);
+      const u = (index * .17 + offset) % 1;
+      mesh.material = pulseMaterialFor(curve.color); mesh.isPickable = false; mesh.position.copyFrom(curvePoint(curve, u));
+      return { mesh, curve, u, speed: curve.edge.is_learning ? .0003 + pulseIndex * .00002 : .0002 + pulseIndex * .000015 };
+    }));
     const labelEntries = renderNodes.map(node => {
       const label = document.createElement('span'); label.className = 'atlas-webgl-label'; label.textContent = labelFor(node); label.dataset.nodeId = node.id;
       label.style.setProperty('--label-color', DOMAIN_COLOR[node.domain] ?? '#dbeeff'); labelsHost.appendChild(label); return { node, label };

@@ -29,7 +29,7 @@ test('Atlas uses Babylon WebGL 3D with restrained post-processing', async () => 
   assert.match(atlas, /new Engine\(canvas/);
   assert.match(atlas, /new ArcRotateCamera/);
   assert.match(atlas, /DefaultRenderingPipeline/);
-  assert.match(atlas, /bloomThreshold = \.84/);
+  assert.match(atlas, /bloomThreshold = \.92/);
   assert.match(atlas, /fxaaEnabled = true/);
   assert.match(atlas, /data-renderer="babylon-webgl-3d"/);
   assert.match(view, /AtlasWebGL3D/);
@@ -53,7 +53,7 @@ test('Atlas orbit wraps a full 360 degrees and renders backend learning edges by
   assert.match(atlas, /camera\.alpha/);
   assert.match(atlas, /lowerBetaLimit/);
   assert.match(atlas, /edge\.is_learning/);
-  assert.match(atlas, /edge\.learning_scope === 'INTER_DOMAIN' \? '#bd8cff' : '#44d9ff'/);
+  assert.match(atlas, /edge\.learning_scope === 'INTER_DOMAIN' \? '#f4c468' : '#d99a4f'/);
 });
 
 test('Atlas surfaces backend learning scope counts beside the filament toggle', async () => {
@@ -76,5 +76,9 @@ test('Atlas marks both endpoints of every visible learning edge', async () => {
   assert.match(atlas, /const starMeshes/);
   assert.match(atlas, /const containWheel = \(event: WheelEvent\) => event\.preventDefault\(\)/);
   assert.match(atlas, /addEventListener\('wheel', containWheel, \{ passive: false \}\)/);
-  assert.match(atlas, /line\.alpha = edge\.is_learning \? \.52/);
+  assert.match(atlas, /CreateTube\(`atlas-axon-/);
+  assert.match(atlas, /fiberCount = Math\.max\(3/);
+  assert.match(atlas, /#f4c468/);
+  assert.match(atlas, /depthOfFieldEnabled = true/);
+  assert.match(atlas, /line\.alpha = edge\.is_learning \? \.18 \+ strength \* \.14/);
 });
