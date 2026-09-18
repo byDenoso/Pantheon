@@ -74,8 +74,9 @@ test('Atlas starts at the NEXO hub and expands canonical domain clusters on sele
   assert.match(view, /const \[expandedCluster, setExpandedCluster\] = useState<GraphNode\['type'\] \| null>\(null\)/);
   assert.match(view, /node\?\.type === 'DOMAIN'/);
   assert.match(view, /Hub:<\/b> \{expandAll \? 'NEXO · Visão completa' : expandedDomain \?\? \(rootExpanded \? 'NEXO · Domínios' : 'NEXO'\)\}/);
-  assert.match(view, /aria-label="Voltar no grafo"/);
-  assert.match(view, /aria-label="Expandir todos os grafos"/);
+  assert.match(view, /aria-label="Voltar um nível no grafo"/);
+  assert.match(view, /aria-label="Expandir gráficos"/);
+  assert.match(view, /aria-label="Voltar à tela inicial dos gráficos"/);
   assert.match(view, /atlas\.cluster/);
   assert.match(view, /clusterFromId/);
   assert.match(view, /node\.domain === expandedDomain/);

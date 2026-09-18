@@ -194,8 +194,12 @@ try {
       await page.getByRole('button', { name: 'Fechar inspector' }).click();
       await page.locator('.atlas-sheet').waitFor({ state: 'detached' });
     }
-    await page.getByRole('button', { name: 'Voltar no grafo' }).click();
-    await page.getByRole('button', { name: 'Expandir todos os grafos' }).click();
+    await page.getByRole('button', { name: 'Voltar um nível no grafo' }).click();
+    await page.getByRole('button', { name: 'Expandir gráficos' }).click();
+    assert.ok(await graphNodes.count() > 4, 'expandir gráficos não materializou o grafo completo');
+    await page.getByRole('button', { name: 'Voltar à tela inicial dos gráficos' }).click();
+    assert.equal(await graphNodes.count(), 1, 'voltar ao início não restaurou o hub NEXO');
+    await page.getByRole('button', { name: 'Expandir gráficos' }).click();
 
     // 7. Filtros do Atlas reduzem os nós renderizados e podem ser limpos.
     const countNodes = () => page.locator('.atlas3d-a11y-list button').count();
