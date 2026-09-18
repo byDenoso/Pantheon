@@ -27,11 +27,11 @@ function linkColor(edge: GraphEdge): string {
   return '#69baf2';
 }
 function nodeRadius(node: PlacedNode3D): number {
-  if (node.type === 'DOMAIN') return node.domain === 'NEXO' ? 5.4 : 4.2;
-  if (isClusterNode(node)) return 3.1;
-  if (node.type === 'PROVIDER') return 2.55;
-  if (node.type === 'CAPABILITY') return 2.05;
-  return 1.45;
+  if (node.type === 'DOMAIN') return node.domain === 'NEXO' ? 6.8 : 5.2;
+  if (isClusterNode(node)) return 3.6;
+  if (node.type === 'PROVIDER') return 2.45;
+  if (node.type === 'CAPABILITY') return 1.9;
+  return 1.18;
 }
 function nodeLabel(node: PlacedNode3D): string {
   const title = node.label.length > 52 ? `${node.label.slice(0, 51)}…` : node.label;
@@ -44,28 +44,61 @@ function strength(edge: GraphEdge): number {
 function nodeObject(node: GraphNodeView, selectedId: string | null): Group {
   const color = new Color(colorFor(node));
   const radius = nodeRadius(node);
+  const selected = node.id === selectedId;
+  const major = node.type === 'DOMAIN' || isClusterNode(node);
   const group = new Group();
+
+  const halo = new Mesh(
+    new SphereGeometry(radius * (major ? 1.48 : 1.32), 18, 12),
+    new MeshBasicMaterial({
+      color,
+      transparent: true,
+      opacity: selected ? 0.16 : major ? 0.08 : 0.035,
+      depthWrite: false,
+    }),
+  );
+  group.add(halo);
+
   const material = new MeshStandardMaterial({
     color,
     emissive: color,
-    emissiveIntensity: node.type === 'DOMAIN' ? 0.55 : isClusterNode(node) ? 0.32 : 0.14,
-    metalness: 0.18,
-    roughness: 0.24,
+    emissiveIntensity: node.type === 'DOMAIN' ? 0.78 : isClusterNode(node) ? 0.48 : 0.22,
+    metalness: major ? 0.28 : 0.16,
+    roughness: major ? 0.16 : 0.28,
     transparent: true,
-    opacity: node.state === 'BLOCKED' || node.state === 'CONFLICT' ? 0.82 : 1,
+    opacity: node.state === 'BLOCKED' || node.state === 'CONFLICT' ? 0.76 : 0.98,
   });
-  const sphere = new Mesh(new SphereGeometry(radius, 20, 14), material);
+  const sphere = new Mesh(new SphereGeometry(radius, major ? 28 : 18, major ? 20 : 12), material);
   group.add(sphere);
 
-  if (node.type === 'DOMAIN' || isClusterNode(node) || node.id === selectedId) {
-    const ring = new Mesh(new TorusGeometry(radius * 1.34, node.id === selectedId ? 0.16 : 0.11, 8, 40), new MeshBasicMaterial({
-      color, transparent: true, opacity: node.id === selectedId ? 0.92 : 0.58,
-    }));
+  const core = new Mesh(
+    new SphereGeometry(radius * (major ? 0.48 : 0.42), 16, 10),
+    new MeshBasicMaterial({ color: new Color('#f5fdff'), transparent: true, opacity: major ? 0.2 : 0.1, depthWrite: false }),
+  );
+  group.add(core);
+
+  if (major || selected) {
+    const ring = new Mesh(
+      new TorusGeometry(radius * (selected ? 1.52 : 1.34), selected ? 0.15 : 0.085, 8, 56),
+      new MeshBasicMaterial({ color: selected ? new Color('#f5fdff') : color, transparent: true, opacity: selected ? 0.9 : 0.44, depthWrite: false }),
+    );
+    ring.rotation.x = selected ? Math.PI * 0.18 : 0;
     group.add(ring);
   }
+
+  if (node.type === 'DOMAIN') {
+    const orbit = new Mesh(
+      new TorusGeometry(radius * 1.82, 0.045, 8, 64),
+      new MeshBasicMaterial({ color, transparent: true, opacity: 0.24, depthWrite: false }),
+    );
+    orbit.rotation.x = Math.PI * 0.42;
+    orbit.rotation.y = Math.PI * 0.18;
+    group.add(orbit);
+  }
+
   if (node.state === 'BLOCKED' || node.state === 'CONFLICT') {
-    const alertRing = new Mesh(new TorusGeometry(radius * 1.58, 0.09, 8, 40), new MeshBasicMaterial({
-      color: new Color(ALERT_COLOR), transparent: true, opacity: 0.82,
+    const alertRing = new Mesh(new TorusGeometry(radius * 1.68, 0.1, 8, 48), new MeshBasicMaterial({
+      color: new Color(ALERT_COLOR), transparent: true, opacity: 0.88, depthWrite: false,
     }));
     group.add(alertRing);
   }
@@ -222,7 +255,7 @@ export function AtlasWebGL3D({
           width={size.width || 1}
           height={size.height || 1}
           graphData={graphData}
-        backgroundColor="#03111f"
+        backgroundColor="#020711"
         showNavInfo={false}
         controlType="orbit"
         enableNavigationControls
@@ -237,15 +270,15 @@ export function AtlasWebGL3D({
         linkColor={edge => linkColor(edge as GraphLinkView)}
         linkWidth={edge => {
           const value = edge as GraphLinkView;
-          if (isStructuralEdge(value)) return 0.72 + strength(value) * 0.32;
-          if (value.is_learning) return 0.9 + strength(value) * 0.36;
-          return 0.14 + strength(value) * 0.14;
+          if (isStructuralEdge(value)) return 0.82 + strength(value) * 0.3;
+          if (value.is_learning) return 0.72 + strength(value) * 0.32;
+          return 0.07 + strength(value) * 0.09;
         }}
-        linkOpacity={0.84}
+        linkOpacity={0.72}
         linkMaterial={edge => {
           const value = edge as GraphLinkView;
           const color = linkColor(value);
-          const opacity = value.is_learning ? 0.98 : isStructuralEdge(value) ? 0.92 : 0.68;
+          const opacity = value.is_learning ? 0.9 : isStructuralEdge(value) ? 0.94 : 0.34;
           const key = `${color}:${opacity}`;
           let material = linkMaterials.get(key);
           if (!material) {
@@ -254,13 +287,13 @@ export function AtlasWebGL3D({
           }
           return material;
         }}
-        linkCurvature={edge => (edge as GraphLinkView).is_learning ? 0.58 : 0.16}
+        linkCurvature={edge => (edge as GraphLinkView).is_learning ? 0.46 : isStructuralEdge(edge as GraphLinkView) ? 0.08 : 0.12}
         linkDirectionalParticles={edge => {
           const value = edge as GraphLinkView;
           return isStructuralEdge(value) || value.is_learning || value.kind === 'SUPPORTS' || value.kind === 'BLOCKS' ? 2 : 0;
         }}
         linkDirectionalParticleSpeed={edge => (edge as GraphLinkView).is_learning ? 0.006 : 0.003}
-        linkDirectionalParticleWidth={edge => 0.9 + strength(edge as GraphLinkView) * 1.2}
+        linkDirectionalParticleWidth={edge => 0.7 + strength(edge as GraphLinkView) * 0.9}
         linkDirectionalParticleColor={edge => linkColor(edge as GraphLinkView)}
         onNodeClick={onNodeClick}
         onBackgroundClick={onBackgroundClick}
@@ -292,12 +325,12 @@ export function AtlasWebGL3D({
         {labelNodes.map(node => <span
           key={node.id}
           ref={element => { if (element) labelRefs.current.set(node.id, element); else labelRefs.current.delete(node.id); }}
-          className={`atlas-webgl-label${node.id === selectedId ? ' selected' : ''}`}
+          className={`atlas-webgl-label${node.type === 'DOMAIN' ? ' domain' : ''}${isClusterNode(node) ? ' cluster' : ''}${node.id === selectedId ? ' selected' : ''}`}
           style={{ '--label-color': colorFor(node) } as CSSProperties}
         >{node.label.length > 38 ? `${node.label.slice(0, 37)}…` : node.label}</span>)}
       </div>
       <div className="atlas3d-selection" aria-live="polite">
-        {selectedId ? 'Nó selecionado · clique no fundo para limpar' : 'Arraste para orbitar · pinça/scroll para zoom'}
+        {selectedId ? 'ATLAS 3D · nó selecionado · clique no fundo para limpar' : 'ATLAS 3D · arraste para orbitar · pinça/scroll para zoom'}
       </div>
       <div className="atlas3d-controls atlas3d-mobile-nav" role="group" aria-label="Controles do grafo">
         <button type="button" aria-label="Resetar câmera" onClick={resetCamera}>Visão geral</button>
