@@ -14,6 +14,7 @@
     linear-gradient(145deg, #07111f 0%, #091522 48%, #050b14 100%);
   box-shadow: inset 0 0 80px rgb(0 0 0 / 34%);
   isolation: isolate;
+  overscroll-behavior: contain;
 }
 
 .atlas3d-haze {
@@ -38,6 +39,7 @@
   height: 100%;
   display: block;
   touch-action: none;
+  overscroll-behavior: contain;
   outline: none;
 }
 

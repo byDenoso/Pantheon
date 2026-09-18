@@ -70,5 +70,11 @@ test('Atlas marks both endpoints of every visible learning edge', async () => {
   assert.match(atlas, /CreateLines/);
   assert.match(atlas, /Quadratic Bézier/);
   assert.match(atlas, /const pulses: NeuralPulse\[\]/);
+  assert.match(atlas, /scene\.pick\(scene\.pointerX, scene\.pointerY/);
+  assert.match(atlas, /PointerEventTypes\.POINTERDOWN/);
+  assert.match(atlas, /atlas-star-material/);
+  assert.match(atlas, /const starMeshes/);
+  assert.match(atlas, /const containWheel = \(event: WheelEvent\) => event\.preventDefault\(\)/);
+  assert.match(atlas, /addEventListener\('wheel', containWheel, \{ passive: false \}\)/);
   assert.match(atlas, /line\.alpha = edge\.is_learning \? \.52/);
 });

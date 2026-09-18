@@ -45,6 +45,11 @@ function labelFor(node: PlacedNode3D): string {
   return node.label.length > 42 ? `${node.label.slice(0, 41)}…` : node.label;
 }
 
+function starValue(index: number, salt: number): number {
+  const value = Math.sin(index * 12.9898 + salt * 78.233) * 43758.5453;
+  return value - Math.floor(value);
+}
+
 function curveFor(from: Vector3, to: Vector3, edge: GraphEdge): { points: Vector3[]; control: Vector3 } {
   // Quadratic Bézier axon: the perpendicular control point keeps relations organic.
   const delta = to.subtract(from);
@@ -132,6 +137,23 @@ export function AtlasWebGL3D({
       material.specularColor = new Color3(.12, .16, .2); material.roughness = .22;
       materialByColor.set(key, material); return material;
     };
+    const starMaterial = new StandardMaterial('atlas-star-material', scene);
+    starMaterial.diffuseColor = new Color3(.28, .62, .82);
+    starMaterial.emissiveColor = new Color3(.2, .5, .78);
+    starMaterial.alpha = .64;
+    const starMeshes: import('@babylonjs/core/Meshes/mesh').Mesh[] = [];
+    const starSpread = Math.max(85, bounds.radius * 2.4);
+    for (let index = 0; index < 96; index += 1) {
+      const star = MeshBuilder.CreateSphere(`atlas-star-${index}`, {
+        segments: 6, diameter: .12 + starValue(index, 4) * .2,
+      }, scene);
+      star.position = new Vector3(
+        bounds.center.x + (starValue(index, 1) - .5) * starSpread,
+        bounds.center.y + (starValue(index, 2) - .5) * starSpread,
+        bounds.center.z + (starValue(index, 3) - .5) * starSpread,
+      );
+      star.material = starMaterial; star.isPickable = false; starMeshes.push(star);
+    }
     for (const node of renderNodes) {
       const mesh = MeshBuilder.CreateSphere(`atlas-node-${node.id}`, { segments: 20, diameter: radiusFor(node) * 2 * nodeScale }, scene);
       mesh.position = new Vector3(node.x, node.y, node.z); mesh.material = materialFor(colorFor(node));
@@ -172,6 +194,23 @@ export function AtlasWebGL3D({
       const label = document.createElement('span'); label.className = 'atlas-webgl-label'; label.textContent = labelFor(node); label.dataset.nodeId = node.id;
       label.style.setProperty('--label-color', DOMAIN_COLOR[node.domain] ?? '#dbeeff'); labelsHost.appendChild(label); return { node, label };
     });
+    const pickNodeAtPointer = (): string | null => {
+      const picked = scene.pick(scene.pointerX, scene.pointerY, mesh => typeof mesh.metadata?.nodeId === 'string');
+      const pickedId = picked?.pickedMesh?.metadata?.nodeId;
+      if (picked?.hit && typeof pickedId === 'string') return pickedId;
+      // Give small satellites a forgiving touch target without changing their
+      // visual radius: nearest projected node within a 22px screen envelope.
+      const viewport = camera.viewport.toGlobal(engine.getRenderWidth(), engine.getRenderHeight());
+      const transform = scene.getTransformMatrix();
+      let nearest: { id: string; distance: number } | null = null;
+      for (const node of renderNodes) {
+        const mesh = meshById.get(node.id); if (!mesh) continue;
+        const projected = Vector3.Project(mesh.position, Matrix.IdentityReadOnly, transform, viewport);
+        const distance = Math.hypot(projected.x - scene.pointerX, projected.y - scene.pointerY);
+        if (distance <= 22 && (!nearest || distance < nearest.distance)) nearest = { id: node.id, distance };
+      }
+      return nearest?.id ?? null;
+    };
     const learningIds = new Set(edges.filter(edge => edge.is_learning).flatMap(edge => [edge.from, edge.to]));
     const updateLabels = () => {
       const viewport = camera.viewport.toGlobal(engine.getRenderWidth(), engine.getRenderHeight());
@@ -195,14 +234,17 @@ export function AtlasWebGL3D({
         pulse.u = (pulse.u + delta * pulse.speed) % 1;
         pulse.mesh.position.copyFrom(curvePoint(pulse.curve, pulse.u));
       }
+      const now = performance.now() * .001;
+      starMeshes.forEach((star, index) => { star.visibility = .42 + .28 * (0.5 + 0.5 * Math.sin(now * (.45 + index * .013) + index)); });
     });
     const pointerObserver = scene.onPointerObservable.add(pointerInfo => {
-      if (pointerInfo.type !== PointerEventTypes.POINTERPICK) return;
-      const nodeId = pointerInfo.pickInfo?.pickedMesh?.metadata?.nodeId; if (typeof nodeId === 'string') onSelectRef.current(nodeId);
+      if (pointerInfo.type !== PointerEventTypes.POINTERPICK && pointerInfo.type !== PointerEventTypes.POINTERDOWN) return;
+      const nodeId = pickNodeAtPointer(); if (nodeId) onSelectRef.current(nodeId);
     });
     const reset = () => { camera.alpha = -Math.PI / 2; camera.beta = 1.14; camera.radius = cameraDistance; camera.setTarget(target); };
     const focus = (id: string | null, center = false) => { const mesh = id ? meshById.get(id) : undefined; if (mesh && center) camera.setTarget(mesh.position); };
     runtimeRef.current = { reset, focus };
+    const containWheel = (event: WheelEvent) => event.preventDefault();
     const keydown = (event: KeyboardEvent) => {
       if (event.key === 'ArrowLeft') camera.alpha -= .16; else if (event.key === 'ArrowRight') camera.alpha += .16;
       else if (event.key === 'ArrowUp') camera.beta = Math.max(.16, camera.beta - .12); else if (event.key === 'ArrowDown') camera.beta = Math.min(Math.PI - .16, camera.beta + .12);
@@ -210,10 +252,10 @@ export function AtlasWebGL3D({
       else if (event.key === '0' || event.key === 'Home') reset(); else return;
       event.preventDefault();
     };
-    canvas.addEventListener('keydown', keydown); engine.runRenderLoop(() => scene.render());
+    canvas.addEventListener('keydown', keydown); canvas.addEventListener('wheel', containWheel, { passive: false }); engine.runRenderLoop(() => scene.render());
     const resize = () => engine.resize(); const observer = new ResizeObserver(resize); observer.observe(host); resize(); setFailed('');
     return () => {
-      observer.disconnect(); canvas.removeEventListener('keydown', keydown); scene.onBeforeRenderObservable.remove(renderObserver); scene.onBeforeRenderObservable.remove(pulseObserver); scene.onPointerObservable.remove(pointerObserver);
+      observer.disconnect(); canvas.removeEventListener('keydown', keydown); canvas.removeEventListener('wheel', containWheel); scene.onBeforeRenderObservable.remove(renderObserver); scene.onBeforeRenderObservable.remove(pulseObserver); scene.onPointerObservable.remove(pointerObserver);
       runtimeRef.current = null; labelsHost.replaceChildren(); pipeline.dispose(); scene.dispose(); engine.dispose();
     };
   }, [nodes, edges]);
