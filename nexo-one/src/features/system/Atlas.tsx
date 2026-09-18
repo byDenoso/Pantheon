@@ -1,11 +1,11 @@
 // Atlas: mapa estrutural do sistema. Cada nó é uma entidade projetada com estado,
-// autoridade e proveniência próprios; o Canvas 2,5D é somente projeção.
+// autoridade e proveniência próprios; o WebGL 3D é somente projeção.
 import { useMemo, useState } from 'react';
 import type { GraphNode, SystemState } from '../../contracts/system.ts';
 import {
   AuthorityClass, CAPABILITY_STATUSES, DOMAINS, GRAPH_NODE_TYPES, PROJECTION_STATES, RELATION_KINDS,
 } from '../../contracts/system.ts';
-import { AtlasCanvas25D } from '../../components/AtlasCanvas25D.tsx';
+import { AtlasWebGL3D } from '../../components/AtlasWebGL3D.tsx';
 import { EntityInspector } from '../../components/inspector.tsx';
 import { EmptyState } from '../../components/states.tsx';
 import { DomainBadge, SeverityBadge, StatusBadge } from '../../components/primitives.tsx';
@@ -13,7 +13,7 @@ import { useIsMobile } from '../../app/useMediaQuery.ts';
 import {
   EMPTY_FILTERS, filterCount, filterGraph, legendOf, relationsOf, type GraphFilters,
 } from '../../viewmodels/graph.ts';
-import { layoutGraph3D, resolveSelection3D } from '../../viewmodels/graph3d.ts';
+import { forceLayoutGraph3D, resolveSelection3D } from '../../viewmodels/graph3d.ts';
 import { label, toneOf } from '../../viewmodels/tokens.ts';
 
 const AUTHORITIES: AuthorityClass[] = ['TRUTH_OWNER', 'DELEGATED', 'DERIVED', 'NON_AUTHORITATIVE'];
@@ -70,7 +70,7 @@ export function AtlasView(
     const ids = new Set(nodes.map(node => node.id));
     return { nodes, edges: filtered.edges.filter(edge => !edge.is_learning && ids.has(edge.from) && ids.has(edge.to)) };
   }, [filtered, learningEndpointIds, learningVisible]);
-  const placed = useMemo(() => layoutGraph3D(renderGraph.nodes), [renderGraph.nodes]);
+  const placed = useMemo(() => forceLayoutGraph3D(renderGraph.nodes, renderGraph.edges), [renderGraph.nodes, renderGraph.edges]);
   const legend = useMemo(() => legendOf(renderGraph.nodes), [renderGraph.nodes]);
   const effectiveSelectedId = resolveSelection3D(placed, selectedId);
   const selected: GraphNode | null = filtered.nodes.find(n => n.id === effectiveSelectedId) ?? null;
@@ -136,7 +136,7 @@ export function AtlasView(
                 description="Um grafo vazio aqui é resultado do filtro, não ausência de dados no sistema."
                 hint="Remova um critério para voltar a ver o mapa." />
             : <>
-                <AtlasCanvas25D nodes={placed} edges={renderGraph.edges} selectedId={effectiveSelectedId} onSelect={onSelect} />
+                <AtlasWebGL3D nodes={placed} edges={renderGraph.edges} selectedId={effectiveSelectedId} onSelect={onSelect} />
                 <ul className="atlas-legend">
                   {legend.map(entry => (
                     <li key={entry.type}>

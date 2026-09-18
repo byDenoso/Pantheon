@@ -12,31 +12,34 @@ test('published shell does not mount the legacy projection overlay that probes /
 });
 
 test('Atlas exposes explicit touch navigation controls for mobile instead of depending only on gestures', async () => {
-  const atlas = await text('src/components/AtlasCanvas25D.tsx');
+  const atlas = await text('src/components/AtlasWebGL3D.tsx');
   assert.match(atlas, /aria-label="Girar mapa para a esquerda"/);
   assert.match(atlas, /aria-label="Girar mapa para a direita"/);
   assert.match(atlas, /aria-label="Aproximar mapa"/);
   assert.match(atlas, /aria-label="Afastar mapa"/);
-  assert.match(atlas, /camera\.rotation/);
-  assert.match(atlas, /camera\.zoom/);
+  assert.match(atlas, /camera\.alpha/);
+  assert.match(atlas, /camera\.beta/);
+  assert.match(atlas, /camera\.radius/);
 });
 
-test('Atlas uses Canvas 2.5D as the active renderer and keeps WebGL out of the path', async () => {
-  const atlas = await text('src/components/AtlasCanvas25D.tsx');
+test('Atlas uses Babylon WebGL 3D with restrained post-processing', async () => {
+  const atlas = await text('src/components/AtlasWebGL3D.tsx');
   const view = await text('src/features/system/Atlas.tsx');
-  assert.match(atlas, /data-renderer="canvas-25d"/);
-  assert.match(atlas, /getContext\('2d'\)/);
-  assert.match(atlas, /Math\.pow\(afterDistance \/ beforeDistance, 1\.35\)/);
-  assert.doesNotMatch(atlas, /@babylonjs|BABYLON|Engine\(/);
-  assert.match(view, /AtlasCanvas25D/);
+  assert.match(atlas, /@babylonjs\/core/);
+  assert.match(atlas, /new Engine\(canvas/);
+  assert.match(atlas, /new ArcRotateCamera/);
+  assert.match(atlas, /DefaultRenderingPipeline/);
+  assert.match(atlas, /bloomThreshold = \.84/);
+  assert.match(atlas, /fxaaEnabled = true/);
+  assert.match(atlas, /data-renderer="babylon-webgl-3d"/);
+  assert.match(view, /AtlasWebGL3D/);
 });
 
 test('Atlas orbit wraps a full 360 degrees and renders backend learning edges by scope', async () => {
-  const atlas = await text('src/components/AtlasCanvas25D.tsx');
-  assert.match(atlas, /wrapAngle/);
-  assert.match(atlas, /camera\.tilt = wrapAngle/);
+  const atlas = await text('src/components/AtlasWebGL3D.tsx');
+  assert.match(atlas, /camera\.alpha/);
+  assert.match(atlas, /lowerBetaLimit/);
   assert.match(atlas, /edge\.is_learning/);
-  assert.match(atlas, /edge\.learning_scope === 'INTER_DOMAIN'/);
   assert.match(atlas, /edge\.learning_scope === 'INTER_DOMAIN' \? '#bd8cff' : '#44d9ff'/);
 });
 
@@ -50,8 +53,7 @@ test('Atlas surfaces backend learning scope counts beside the filament toggle', 
 });
 
 test('Atlas marks both endpoints of every visible learning edge', async () => {
-  const atlas = await text('src/components/AtlasCanvas25D.tsx');
-  assert.match(atlas, /Every relation terminates on a visible port/);
-  assert.match(atlas, /for \(const endpoint of \[from, to\]\)/);
-  assert.match(atlas, /endpoint\.radius \+ 1\.8/);
+  const atlas = await text('src/components/AtlasWebGL3D.tsx');
+  assert.match(atlas, /CreateLines/);
+  assert.match(atlas, /line\.alpha = edge\.is_learning \? \.48/);
 });

@@ -1,4 +1,4 @@
-import type { Domain, GraphNode, GraphNodeType } from '../contracts/system.ts';
+import type { Domain, GraphEdge, GraphNode, GraphNodeType } from '../contracts/system.ts';
 
 export interface Point3 { x: number; y: number; z: number }
 export interface PlacedNode3D extends GraphNode, Point3 { radius: number }
@@ -137,6 +137,65 @@ export function layoutGraph3D(nodes: GraphNode[]): PlacedNode3D[] {
   }
 
   return placed.sort((a, b) => a.id.localeCompare(b.id));
+}
+
+/**
+ * Deterministic 3D force relaxation for the WebGL renderer.
+ *
+ * The graph remains backend-shaped: only canonical nodes and edges participate.
+ * Domain hubs are pinned, satellites repel one another, and canonical relations
+ * act as springs. No cross-cluster relation is synthesized here.
+ */
+export function forceLayoutGraph3D(nodes: GraphNode[], edges: GraphEdge[], iterations = 180): PlacedNode3D[] {
+  const placed = layoutGraph3D(nodes).map(node => ({ ...node, x: node.x * 1.04, y: node.y * 1.04, z: node.z * 1.04 }));
+  const byId = new Map(placed.map(node => [node.id, node]));
+  const velocity = new Map(placed.map(node => [node.id, { x: 0, y: 0, z: 0 }]));
+  const domainIds = new Set(placed.filter(node => node.type === 'DOMAIN').map(node => node.id));
+  const clampStep = (value: number): number => Math.max(-0.65, Math.min(0.65, value));
+
+  for (let iteration = 0; iteration < iterations; iteration += 1) {
+    const force = new Map(placed.map(node => [node.id, { x: 0, y: 0, z: 0 }]));
+    for (let leftIndex = 0; leftIndex < placed.length; leftIndex += 1) {
+      const left = placed[leftIndex];
+      if (domainIds.has(left.id)) continue;
+      for (let rightIndex = leftIndex + 1; rightIndex < placed.length; rightIndex += 1) {
+        const right = placed[rightIndex];
+        if (domainIds.has(right.id)) continue;
+        const dx = left.x - right.x, dy = left.y - right.y, dz = left.z - right.z;
+        const distance = Math.max(1.5, Math.hypot(dx, dy, dz));
+        const repulsion = 0.75 / (distance * distance);
+        const fx = (dx / distance) * repulsion, fy = (dy / distance) * repulsion, fz = (dz / distance) * repulsion;
+        const leftForce = force.get(left.id)!; const rightForce = force.get(right.id)!;
+        leftForce.x += fx; leftForce.y += fy; leftForce.z += fz;
+        rightForce.x -= fx; rightForce.y -= fy; rightForce.z -= fz;
+      }
+    }
+    for (const edge of edges) {
+      const from = byId.get(edge.from), to = byId.get(edge.to);
+      if (!from || !to || from.id === to.id) continue;
+      const dx = to.x - from.x, dy = to.y - from.y, dz = to.z - from.z;
+      const distance = Math.max(1.5, Math.hypot(dx, dy, dz));
+      const target = edge.is_learning ? 18 : 13 + Math.min(8, Number(edge.weight ?? 0) * 5);
+      const spring = (distance - target) * (edge.is_learning ? 0.0048 : 0.0025);
+      const fx = (dx / distance) * spring, fy = (dy / distance) * spring, fz = (dz / distance) * spring;
+      const fromForce = force.get(from.id); const toForce = force.get(to.id);
+      if (fromForce && !domainIds.has(from.id)) { fromForce.x += fx; fromForce.y += fy; fromForce.z += fz; }
+      if (toForce && !domainIds.has(to.id)) { toForce.x -= fx; toForce.y -= fy; toForce.z -= fz; }
+    }
+    for (const node of placed) {
+      if (domainIds.has(node.id)) { const anchor = domainAnchor(node.domain); node.x = anchor.x; node.y = anchor.y; node.z = anchor.z; continue; }
+      const anchor = domainAnchor(node.domain), nodeForce = force.get(node.id)!;
+      nodeForce.x += (anchor.x - node.x) * 0.0014;
+      nodeForce.y += (anchor.y - node.y) * 0.0014;
+      nodeForce.z += (anchor.z - node.z) * 0.0014;
+      const nodeVelocity = velocity.get(node.id)!;
+      nodeVelocity.x = (nodeVelocity.x + nodeForce.x) * 0.86;
+      nodeVelocity.y = (nodeVelocity.y + nodeForce.y) * 0.86;
+      nodeVelocity.z = (nodeVelocity.z + nodeForce.z) * 0.86;
+      node.x += clampStep(nodeVelocity.x); node.y += clampStep(nodeVelocity.y); node.z += clampStep(nodeVelocity.z);
+    }
+  }
+  return placed.map(node => ({ ...node, x: rounded(node.x), y: rounded(node.y), z: rounded(node.z) })).sort((a, b) => a.id.localeCompare(b.id));
 }
 
 export function graphBounds3D(nodes: PlacedNode3D[]): { center: Point3; radius: number } {

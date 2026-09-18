@@ -41,6 +41,34 @@
   outline: none;
 }
 
+.atlas-webgl-shell { background: #03111f; }
+.atlas-webgl-labels {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  pointer-events: none;
+  overflow: hidden;
+}
+.atlas-webgl-label {
+  position: absolute;
+  top: 0;
+  left: 0;
+  max-width: 190px;
+  padding: 2px 6px;
+  border: 1px solid color-mix(in srgb, var(--label-color, #dbeeff) 38%, transparent);
+  border-radius: 5px;
+  background: rgb(3 17 31 / 74%);
+  color: var(--label-color, #dbeeff);
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1.2;
+  text-align: center;
+  text-shadow: 0 1px 9px #03111f, 0 0 5px #03111f;
+  white-space: nowrap;
+  transform-origin: center;
+}
+.atlas-webgl-label.selected { border-color: #f4fdff; color: #f4fdff; }
+
 .atlas3d-canvas:focus-visible {
   box-shadow: inset 0 0 0 2px var(--accent, #79f2d0);
 }

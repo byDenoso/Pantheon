@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { distance3, layoutGraph3D, resolveSelection3D } from '../src/viewmodels/graph3d.ts';
+import { distance3, forceLayoutGraph3D, layoutGraph3D, resolveSelection3D } from '../src/viewmodels/graph3d.ts';
 
 const fresh = { state: 'LIVE', observed_at: '2026-09-15T00:00:00Z', ttl_seconds: 3600 };
 const node = (id, type, domain) => ({
@@ -72,4 +72,13 @@ test('selection clears when filtering removes the selected node', () => {
   const olympusOnly = layoutGraph3D(fixture.filter(n => n.domain === 'OLYMPUS'));
   assert.equal(resolveSelection3D(olympusOnly, 'engineering:provider'), null);
   assert.equal(resolveSelection3D(olympusOnly, 'domain:olympus'), 'domain:olympus');
+});
+
+test('force layout keeps canonical hubs pinned while opening satellite spacing', () => {
+  const edges = [{ id: 'edge:1', from: 'science:provider', to: 'engineering:provider', kind: 'SUPPORTS', weight: .7 }];
+  const placed = forceLayoutGraph3D(fixture, edges);
+  const byId = new Map(placed.map(n => [n.id, n]));
+  assert.deepEqual([byId.get('domain:nexo').x, byId.get('domain:nexo').y, byId.get('domain:nexo').z], [0, 0, 0]);
+  assert.ok(distance3(byId.get('science:provider'), byId.get('domain:science')) > 4);
+  assert.ok(distance3(byId.get('engineering:provider'), byId.get('domain:engineering')) > 4);
 });
