@@ -244,7 +244,7 @@ export function AtlasWebGL3D({
       <div className="atlas3d-selection" aria-live="polite">
         {selectedId ? 'Nó selecionado · clique no fundo para limpar' : 'Arraste para orbitar · pinça/scroll para zoom'}
       </div>
-      <div className="atlas3d-controls" role="group" aria-label="Controles do grafo">
+      <div className="atlas3d-controls atlas3d-mobile-nav" role="group" aria-label="Controles do grafo">
         <button type="button" aria-label="Resetar câmera" onClick={resetCamera}>Visão geral</button>
         <button type="button" aria-label="Girar mapa para a esquerda" onClick={() => rotate(0.34)}>←</button>
         <button type="button" aria-label="Girar mapa para a direita" onClick={() => rotate(-0.34)}>→</button>
