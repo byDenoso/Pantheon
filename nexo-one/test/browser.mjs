@@ -164,8 +164,9 @@ try {
       await page.mouse.wheel(0, -180);
     }
     if (mobile) {
+      const touchNavigation = page.locator('.atlas3d-mobile-nav');
       for (const control of ['Girar mapa para a esquerda', 'Girar mapa para a direita', 'Aproximar mapa', 'Afastar mapa']) {
-        const button = page.getByRole('button', { name: control });
+        const button = touchNavigation.getByRole('button', { name: control });
         await button.waitFor();
         await button.click();
       }
@@ -261,3 +262,4 @@ try {
 await writeFile(`${output}/browser-report.json`,
   JSON.stringify({ status: 'pass', scenarios: reports, visualBaseline: 'pending-initial-review' }, null, 2));
 console.log(JSON.stringify(reports.map(r => r.name)));
+
