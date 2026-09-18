@@ -134,9 +134,9 @@ export function AtlasWebGL3D({
     pipeline.bloomEnabled = true; pipeline.bloomThreshold = .92; pipeline.bloomWeight = .16; pipeline.bloomKernel = 24; pipeline.fxaaEnabled = true;
     if (!mobile) {
       pipeline.depthOfFieldEnabled = true;
-      pipeline.depthOfField.focusDistance = cameraDistance * .62;
-      pipeline.depthOfField.fStop = 3.6;
-      pipeline.depthOfField.lensSize = 42;
+      pipeline.depthOfField.focusDistance = cameraDistance * .72;
+      pipeline.depthOfField.fStop = 10;
+      pipeline.depthOfField.lensSize = 28;
     }
 
     const meshById = new Map<string, import('@babylonjs/core/Meshes/mesh').Mesh>();
