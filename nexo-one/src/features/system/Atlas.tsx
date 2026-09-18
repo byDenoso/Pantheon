@@ -55,6 +55,15 @@ export function AtlasView(
   const [learningVisible, setLearningVisible] = useState(false);
   const filtered = useMemo(() => filterGraph(state.graph, filters), [state.graph, filters]);
   const learningEndpointIds = useMemo(() => new Set(filtered.edges.filter(edge => edge.is_learning).flatMap(edge => [edge.from, edge.to])), [filtered.edges]);
+  const learningEdges = useMemo(() => filtered.edges.filter(edge => edge.is_learning), [filtered.edges]);
+  const learningInterDomain = useMemo(
+    () => learningEdges.filter(edge => edge.learning_scope === 'INTER_DOMAIN').length,
+    [learningEdges],
+  );
+  const learningIntraDomain = useMemo(
+    () => learningEdges.filter(edge => edge.learning_scope === 'INTRA_DOMAIN').length,
+    [learningEdges],
+  );
   const renderGraph = useMemo(() => {
     if (learningVisible) return filtered;
     const nodes = filtered.nodes.filter(node => node.type !== 'FILAMENT' && !learningEndpointIds.has(node.id));
@@ -98,6 +107,13 @@ export function AtlasView(
           aria-pressed={learningVisible} onClick={() => setLearningVisible(value => !value)}>
           Learning Filaments <b>{learningVisible ? 'ON' : 'OFF'}</b>
         </button>
+        {learningEdges.length > 0 && (
+          <span className="atlas-learning-meta"
+            aria-label={`${learningEdges.length} filamentos do backend: ${learningInterDomain} interdomínio e ${learningIntraDomain} intradomínio`}>
+            <i className="atlas-learning-key inter" aria-hidden="true" />{learningInterDomain} interdomínio
+            <i className="atlas-learning-key intra" aria-hidden="true" />{learningIntraDomain} intradomínio
+          </span>
+        )}
         <span className="atlas-count">{renderGraph.nodes.length} nós · {renderGraph.edges.length} relações</span>
       </div>
 

@@ -39,3 +39,12 @@ test('Atlas orbit wraps a full 360 degrees and renders backend learning edges by
   assert.match(atlas, /edge\.learning_scope === 'INTER_DOMAIN'/);
   assert.match(atlas, /edge\.learning_scope === 'INTER_DOMAIN' \? '#bd8cff' : '#44d9ff'/);
 });
+
+test('Atlas surfaces backend learning scope counts beside the filament toggle', async () => {
+  const view = await text('src/features/system/Atlas.tsx');
+  assert.match(view, /filtered\.edges\.filter\(edge => edge\.is_learning\)/);
+  assert.match(view, /learningInterDomain/);
+  assert.match(view, /learningIntraDomain/);
+  assert.match(view, /interdomínio/);
+  assert.match(view, /intradomínio/);
+});
