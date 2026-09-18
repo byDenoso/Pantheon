@@ -297,6 +297,7 @@
   }
 
   .atlas3d-shell {
+    width: 100%;
     min-height: 640px;
     aspect-ratio: 3 / 4;
     border-radius: 14px;
@@ -317,6 +318,7 @@
     background: rgb(4 14 25 / 74%);
     box-shadow: 0 10px 26px rgb(0 0 0 / 24%);
     backdrop-filter: blur(12px);
+    transform: none;
   }
 
   .atlas3d-mobile-nav button {
@@ -352,7 +354,8 @@
 
 @media (max-width: 420px) {
   .atlas3d-shell {
-    min-height: 610px;
+    min-height: 0;
+    height: min(610px, 133.333vw);
   }
 
   .atlas3d-mobile-nav {
