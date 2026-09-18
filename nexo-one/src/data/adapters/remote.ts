@@ -2,7 +2,7 @@
 // PONTO DE INTEGRAÇÃO ÚNICO.
 //
 // O frontend consome SystemState v1. Em runtime normal usa GET /api/system e
-// hidrata o Atlas pelo endpoint dedicado GET /api/atlas/graph, mantendo /api/system
+// hidrata o Atlas pelo endpoint dedicado GET /api/atlas-graph, mantendo /api/system
 // como fallback canônico. Builds estáticos
 // podem fornecer VITE_SYSTEM_ENDPOINT para uma projeção JSON junto dos assets.
 // ============================================================================
@@ -11,7 +11,7 @@ import { DataSourceError, assertSystemState, type SystemDataSource } from './sou
 
 const configuredSystemEndpoint = import.meta.env?.VITE_SYSTEM_ENDPOINT?.trim();
 export const SYSTEM_ENDPOINT = configuredSystemEndpoint || '/api/system';
-export const ATLAS_GRAPH_ENDPOINT = '/api/atlas/graph';
+export const ATLAS_GRAPH_ENDPOINT = '/api/atlas-graph';
 
 type AtlasGraphPayload = {
   contract_version: '1';
