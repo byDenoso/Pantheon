@@ -114,6 +114,7 @@ export function AtlasWebGL3D({
     () => graphData.nodes.filter(node => node.type === 'DOMAIN' || isClusterNode(node) || node.id === selectedId),
     [graphData.nodes, selectedId],
   );
+  const linkMaterials = useMemo(() => new Map<string, MeshBasicMaterial>(), []);
 
   useEffect(() => {
     const host = hostRef.current;
@@ -212,11 +213,23 @@ export function AtlasWebGL3D({
         linkColor={edge => linkColor(edge as GraphLinkView)}
         linkWidth={edge => {
           const value = edge as GraphLinkView;
-          if (isStructuralEdge(value)) return 0.38 + strength(value) * 0.24;
-          if (value.is_learning) return 0.32 + strength(value) * 0.24;
+          if (isStructuralEdge(value)) return 0.72 + strength(value) * 0.32;
+          if (value.is_learning) return 0.9 + strength(value) * 0.36;
           return 0.14 + strength(value) * 0.14;
         }}
         linkOpacity={0.84}
+        linkMaterial={edge => {
+          const value = edge as GraphLinkView;
+          const color = linkColor(value);
+          const opacity = value.is_learning ? 0.98 : isStructuralEdge(value) ? 0.92 : 0.68;
+          const key = `${color}:${opacity}`;
+          let material = linkMaterials.get(key);
+          if (!material) {
+            material = new MeshBasicMaterial({ color, transparent: true, opacity, depthWrite: false });
+            linkMaterials.set(key, material);
+          }
+          return material;
+        }}
         linkCurvature={edge => (edge as GraphLinkView).is_learning ? 0.58 : 0.16}
         linkDirectionalParticles={edge => {
           const value = edge as GraphLinkView;
