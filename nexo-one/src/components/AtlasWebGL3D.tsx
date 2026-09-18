@@ -145,7 +145,12 @@ export function AtlasWebGL3D({
 
   const graphData = useMemo(() => {
     const ids = new Set(nodes.map(node => node.id));
-    const graphNodes: GraphNodeView[] = nodes.map(node => ({ ...node }));
+    const graphNodes: GraphNodeView[] = nodes.map(node => ({
+      ...node,
+      x: node.x * 0.16,
+      y: node.y * 0.16,
+      z: node.z * 0.16,
+    }));
     const graphLinks: GraphLinkView[] = edges
       .filter(edge => ids.has(edge.from) && ids.has(edge.to))
       .map(edge => ({ ...edge, source: edge.from, target: edge.to }));
@@ -209,14 +214,26 @@ export function AtlasWebGL3D({
       return 0.24;
     });
 
+    graph.cameraPosition(
+      { x: 0, y: 4, z: isMobile ? 118 : 132 },
+      { x: 0, y: 0, z: 0 },
+      0,
+    );
     graph.d3ReheatSimulation();
 
-    const timer = window.setTimeout(() => {
-      zoomToGraph(graph, isMobile, 700);
-      previousGraphKey.current = graphKey;
-    }, previousGraphKey.current === graphKey ? 180 : 900);
+    const firstFit = window.setTimeout(() => {
+      zoomToGraph(graph, isMobile, 420);
+    }, 140);
 
-    return () => window.clearTimeout(timer);
+    const settledFit = window.setTimeout(() => {
+      zoomToGraph(graph, isMobile, 720);
+      previousGraphKey.current = graphKey;
+    }, previousGraphKey.current === graphKey ? 720 : 1450);
+
+    return () => {
+      window.clearTimeout(firstFit);
+      window.clearTimeout(settledFit);
+    };
   }, [graphKey, isMobile, size.height, size.width]);
 
   useEffect(() => {
@@ -356,7 +373,7 @@ export function AtlasWebGL3D({
         <button type="button" aria-label="Girar mapa para a esquerda" onClick={() => rotate(0.34)}>←</button>
         <button type="button" aria-label="Girar mapa para a direita" onClick={() => rotate(-0.34)}>→</button>
         <button type="button" aria-label="Aproximar mapa" onClick={() => zoom(1.18)}>+</button>
-        <button type="button" aria-label="Afastar mapa" onClick={() => zoom(1.18)}>−</button>
+        <button type="button" aria-label="Afastar mapa" onClick={() => zoom(0.84)}>−</button>
       </div>
     </div>
   );
