@@ -47,6 +47,41 @@ test('GitHub Pages consumes only the sanctioned TOWER_V06 public projection', as
   assert.doesNotMatch(builder, /truthgraph\.snapshot/);
 });
 
+test('sanctioned TOWER interdomain entities become visible learning filaments', async () => {
+  const { buildPagesProjection } = await import('../scripts/build-pages-system.mjs');
+  const manifest = {
+    authority: 'TOWER_V06',
+    projection_only: true,
+    writeback: 'FORBIDDEN',
+    tower_commit: 'a'.repeat(40),
+    event_cursor: '20260918T162451768632Z-47dfe529',
+    projection_fingerprint: `sha256:${'b'.repeat(64)}`,
+  };
+  const projection = {
+    contract: 'NEXO_PUBLIC_PROJECTION_V1',
+    manifest,
+    event_cursor: manifest.event_cursor,
+    work: [],
+    tests: [],
+    capabilities: {},
+    counts: { active_work: 0, tests: 0, capabilities: 0 },
+  };
+  const { system } = buildPagesProjection({
+    projection,
+    manifestFile: manifest,
+    interdomain: [{
+      id: 'META::INTERDOMAIN::TEST',
+      relation_type: 'METHOD_TRANSFER',
+      source_domains: ['Cosmologia'],
+      target_domains: ['Bodybuilding'],
+      status: 'TESTING',
+    }],
+  });
+  assert.equal(system.filaments.length, 1);
+  assert.ok(system.graph.edges.some(edge => edge.is_learning && edge.learning_scope === 'INTER_DOMAIN'));
+  assert.ok(system.graph.edges.some(edge => edge.from === 'domain:SCIENCE' && edge.to === 'domain:OLYMPUS'));
+});
+
 test('GitHub Pages deploys official artifact and exposes projection readback', async () => {
   const workflow = await text('../.github/workflows/nexo-one-pages.yml');
 

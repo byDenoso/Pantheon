@@ -162,6 +162,11 @@ jobs:
           mkdir -p nexo-one/data/tower-public
           cp _vault/TOWER_V06/projections/public/projection.json nexo-one/data/tower-public/projection.json
           cp _vault/TOWER_V06/projections/public/manifest.json nexo-one/data/tower-public/manifest.json
+          if compgen -G "_vault/TOWER_V06/entities/interdomain/*.json" > /dev/null; then
+            jq -s '.' _vault/TOWER_V06/entities/interdomain/*.json > nexo-one/data/tower-public/interdomain.json
+          else
+            printf '[]\n' > nexo-one/data/tower-public/interdomain.json
+          fi
 
       - name: Setup Node
         uses: actions/setup-node@v4
@@ -194,6 +199,7 @@ jobs:
         env:
           NEXO_PUBLIC_PROJECTION: data/tower-public/projection.json
           NEXO_PUBLIC_PROJECTION_MANIFEST: data/tower-public/manifest.json
+          NEXO_PUBLIC_INTERDOMAIN: data/tower-public/interdomain.json
         run: |
           set -euo pipefail
           node scripts/build-pages-system.mjs

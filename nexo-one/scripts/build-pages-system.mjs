@@ -53,10 +53,15 @@ function cursorTime(cursor) {
 
 function domainOf(value) {
   const domain = String(value || '').trim().toUpperCase();
-  if (domain === 'COSMOLOGY' || domain === 'SCIENCE') return 'SCIENCE';
+  if (domain === 'COSMOLOGY' || domain === 'COSMOLOGIA' || domain === 'SCIENCE') return 'SCIENCE';
   if (domain === 'ENGINEERING') return 'ENGINEERING';
-  if (domain === 'OLYMPUS') return 'OLYMPUS';
+  if (domain === 'OLYMPUS' || domain === 'BODYBUILDING' || domain === 'PHYSIQUE') return 'OLYMPUS';
   return 'NEXO';
+}
+
+function domainsOf(value) {
+  if (Array.isArray(value)) return value.map(domainOf);
+  return String(value || '').split(/[|,;]/).map(item => item.trim()).filter(Boolean).map(domainOf);
 }
 
 function projectionState(value) {
@@ -76,7 +81,37 @@ function nodeFingerprint(kind, id, manifest) {
   return sha256({ kind, id, projection_fingerprint: manifest.projection_fingerprint });
 }
 
-function graphFromProjection(projection, observedAt) {
+function learningFilamentsFromTower(interdomain, manifest, observedAt) {
+  return (Array.isArray(interdomain) ? interdomain : []).map(item => {
+    const sourceDomains = domainsOf(item.source_domains || item.sourceDomains || item.domain);
+    const targetDomains = domainsOf(item.target_domains || item.targetDomains || item.domain);
+    const fromDomain = sourceDomains[0] || 'NEXO';
+    const toDomain = targetDomains[0] || fromDomain;
+    const status = String(item.status || '').toUpperCase();
+    return {
+      id: String(item.id || `interdomain:${fromDomain}:${toDomain}:${item.relation_type || 'learning'}`),
+      label: String(item.relation_type || item.title || item.id || 'TOWER interdomain learning'),
+      domain: fromDomain,
+      kind: 'SEMANTIC',
+      weight: Number.isFinite(Number(item.confidence)) ? Math.max(0.1, Math.min(1, Number(item.confidence))) : 0.72,
+      support: Number.isFinite(Number(item.support)) ? Number(item.support) : 1,
+      contradiction: Number.isFinite(Number(item.contradict)) ? Number(item.contradict) : 0,
+      status: status.includes('RETIR') ? 'RETIRED' : status.includes('CONTEST') ? 'CONTESTED'
+        : status === 'ACTIVE' || status === 'SUPPORTED' || status === 'ADMIT' ? 'ESTABLISHED' : 'PROVISIONAL',
+      evidence: [`tower://${manifest.tower_repository || 'byDenoso/NEXO-Obsidian-Vault'}@${manifest.tower_commit}/${String(item.id || 'interdomain')}`],
+      source_ref: `tower://${manifest.tower_repository || 'byDenoso/NEXO-Obsidian-Vault'}@${manifest.tower_commit}/TOWER_V06/entities/interdomain`,
+      boundary: String(item.falsifier_or_validation || item.mapping || item.summary || 'Limite declarado no registro interdomínio.'),
+      from_label: String(item.source_nodes?.[0] || fromDomain),
+      to_label: String(item.target_domains?.[0] || toDomain),
+      from_domain: fromDomain,
+      to_domain: toDomain,
+      scope: fromDomain === toDomain ? 'INTRA_DOMAIN' : 'INTER_DOMAIN',
+      observed_at: observedAt,
+    };
+  });
+}
+
+function graphFromProjection(projection, observedAt, filaments = []) {
   const manifest = projection.manifest;
   const source = sourceRef(manifest);
   const nodes = [];
@@ -181,6 +216,22 @@ function graphFromProjection(projection, observedAt) {
     addEdge('domain:NEXO', id);
   }
 
+  for (const filament of filaments) {
+    const from = 'domain:' + filament.from_domain;
+    const to = 'domain:' + filament.to_domain;
+    if (!seen.has(from) || !seen.has(to)) continue;
+    edges.push({
+      id: 'learning:' + sha256({ id: filament.id, from, to }).slice(7, 23),
+      from,
+      to,
+      kind: 'SUPPORTS',
+      weight: filament.weight,
+      explanation: 'Learning filament declarado pelo TOWER_V06; a posição liga os domínios informados pela fonte.',
+      is_learning: true,
+      learning_scope: filament.scope,
+    });
+  }
+
   return { nodes, edges: edges.filter(edge => seen.has(edge.from) && seen.has(edge.to)) };
 }
 
@@ -230,11 +281,12 @@ function worldItem(kind, item, projection, observedAt, index) {
   };
 }
 
-export function buildPagesProjection({ projection, manifestFile = null } = {}) {
+export function buildPagesProjection({ projection, manifestFile = null, interdomain = [] } = {}) {
   const manifest = validateSanctionedProjection(projection, manifestFile);
   const observedAt = cursorTime(manifest.event_cursor);
   const source = sourceRef(manifest);
-  const graph = graphFromProjection(projection, observedAt);
+  const filaments = learningFilamentsFromTower(interdomain, manifest, observedAt);
+  const graph = graphFromProjection(projection, observedAt, filaments);
   const lanes = lanesFromProjection(projection, observedAt);
 
   const system = {
@@ -298,7 +350,7 @@ export function buildPagesProjection({ projection, manifestFile = null } = {}) {
     runs: [],
     lanes,
     graph,
-    filaments: [],
+    filaments,
     providers: [{
       id: 'nexo',
       label: 'TOWER_V06 sanctioned projection',
@@ -396,13 +448,24 @@ async function readJson(path) {
   return JSON.parse(await readFile(path, 'utf8'));
 }
 
+async function readJsonIfPresent(path) {
+  try {
+    return await readJson(path);
+  } catch (error) {
+    if (error?.code === 'ENOENT') return [];
+    throw error;
+  }
+}
+
 const invokedPath = process.argv[1] ? pathToFileURL(resolve(process.argv[1])).href : '';
 if (import.meta.url === invokedPath) {
   const projectionPath = resolve(process.env.NEXO_PUBLIC_PROJECTION || 'data/tower-public/projection.json');
   const manifestPath = resolve(process.env.NEXO_PUBLIC_PROJECTION_MANIFEST || 'data/tower-public/manifest.json');
+  const interdomainPath = resolve(process.env.NEXO_PUBLIC_INTERDOMAIN || 'data/tower-public/interdomain.json');
   const projection = await readJson(projectionPath);
   const manifestFile = await readJson(manifestPath);
-  const { system, world } = buildPagesProjection({ projection, manifestFile });
+  const interdomain = await readJsonIfPresent(interdomainPath);
+  const { system, world } = buildPagesProjection({ projection, manifestFile, interdomain });
 
   const dist = resolve('dist');
   const evidenceDir = resolve(dist, 'tower-projection');

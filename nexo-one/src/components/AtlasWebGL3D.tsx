@@ -24,7 +24,7 @@ function linkColor(edge: GraphEdge): string {
   if (edge.kind === 'CONTRADICTS' || edge.kind === 'BLOCKS') return ALERT_COLOR;
   if (edge.is_learning) return edge.learning_scope === 'INTER_DOMAIN' ? '#f4c468' : '#d99a4f';
   if (edge.kind === 'SUPPORTS') return '#51d7ef';
-  return '#3a8fd0';
+  return '#69baf2';
 }
 function nodeRadius(node: PlacedNode3D): number {
   if (node.type === 'DOMAIN') return node.domain === 'NEXO' ? 5.4 : 4.2;
@@ -212,17 +212,18 @@ export function AtlasWebGL3D({
         linkColor={edge => linkColor(edge as GraphLinkView)}
         linkWidth={edge => {
           const value = edge as GraphLinkView;
-          if (isStructuralEdge(value)) return 0.11 + strength(value) * 0.16;
-          return 0.045 + strength(value) * (value.is_learning ? 0.18 : 0.10);
+          if (isStructuralEdge(value)) return 0.38 + strength(value) * 0.24;
+          if (value.is_learning) return 0.32 + strength(value) * 0.24;
+          return 0.14 + strength(value) * 0.14;
         }}
-        linkOpacity={0.62}
+        linkOpacity={0.84}
         linkCurvature={edge => (edge as GraphLinkView).is_learning ? 0.58 : 0.16}
         linkDirectionalParticles={edge => {
           const value = edge as GraphLinkView;
           return isStructuralEdge(value) || value.is_learning || value.kind === 'SUPPORTS' || value.kind === 'BLOCKS' ? 2 : 0;
         }}
         linkDirectionalParticleSpeed={edge => (edge as GraphLinkView).is_learning ? 0.006 : 0.003}
-        linkDirectionalParticleWidth={edge => 0.55 + strength(edge as GraphLinkView) * 0.8}
+        linkDirectionalParticleWidth={edge => 0.9 + strength(edge as GraphLinkView) * 1.2}
         linkDirectionalParticleColor={edge => linkColor(edge as GraphLinkView)}
         onNodeClick={onNodeClick}
         onBackgroundClick={onBackgroundClick}
