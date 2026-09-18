@@ -184,17 +184,12 @@ export function AtlasWebGL3D({
           if (!path || !source || !target) continue;
           const start = graph.graph2ScreenCoords(source.x, source.y, source.z);
           const end = graph.graph2ScreenCoords(target.x, target.y, target.z);
-          const visible = start.z >= 0 && start.z <= 1 && end.z >= 0 && end.z <= 1;
-          if (!visible) {
-            path.style.display = 'none';
-            continue;
-          }
           const dx = end.x - start.x;
           const dy = end.y - start.y;
           const bend = Math.hypot(dx, dy) * (edge.is_learning ? 0.16 : 0.08);
           const controlX = (start.x + end.x) / 2 - dy * (bend / Math.max(1, Math.hypot(dx, dy)));
           const controlY = (start.y + end.y) / 2 + dx * (bend / Math.max(1, Math.hypot(dx, dy)));
-          path.style.display = '';
+          path.style.display = 'inline';
           path.setAttribute('d', `M ${start.x} ${start.y} Q ${controlX} ${controlY} ${end.x} ${end.y}`);
         }
       }
