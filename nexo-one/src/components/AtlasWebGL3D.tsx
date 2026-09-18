@@ -108,6 +108,15 @@ export function AtlasWebGL3D({
       .map(edge => ({ ...edge, source: edge.from, target: edge.to }));
     return { nodes: graphNodes, links: graphLinks };
   }, [edges, nodes]);
+  const graphNodesById = useMemo(() => new Map(graphData.nodes.map(node => [String(node.id), node])), [graphData.nodes]);
+  const overlayLinks = useMemo(
+    () => graphData.links.filter(link => {
+      const source = graphNodesById.get(String(link.from));
+      const target = graphNodesById.get(String(link.to));
+      return source?.type === 'DOMAIN' && target?.type === 'DOMAIN';
+    }),
+    [graphData.links, graphNodesById],
+  );
   const graphKey = useMemo(() => graphData.nodes.map(node => node.id).join('|'), [graphData.nodes]);
   const isMobile = typeof window !== 'undefined' && window.matchMedia('(max-width: 760px)').matches;
   const labelNodes = useMemo(
@@ -168,12 +177,32 @@ export function AtlasWebGL3D({
           label.style.transform = `translate(-50%, -50%) translate(${position.x}px, ${position.y + nodeRadius(node) * 12}px)`;
           label.hidden = position.z < 0 || position.z > 1;
         }
+        for (const edge of overlayLinks) {
+          const path = labelRefs.current.get(`edge:${edge.id}`) as unknown as SVGPathElement | undefined;
+          const source = graphNodesById.get(String(edge.from));
+          const target = graphNodesById.get(String(edge.to));
+          if (!path || !source || !target) continue;
+          const start = graph.graph2ScreenCoords(source.x, source.y, source.z);
+          const end = graph.graph2ScreenCoords(target.x, target.y, target.z);
+          const visible = start.z >= 0 && start.z <= 1 && end.z >= 0 && end.z <= 1;
+          if (!visible) {
+            path.style.display = 'none';
+            continue;
+          }
+          const dx = end.x - start.x;
+          const dy = end.y - start.y;
+          const bend = Math.hypot(dx, dy) * (edge.is_learning ? 0.16 : 0.08);
+          const controlX = (start.x + end.x) / 2 - dy * (bend / Math.max(1, Math.hypot(dx, dy)));
+          const controlY = (start.y + end.y) / 2 + dx * (bend / Math.max(1, Math.hypot(dx, dy)));
+          path.style.display = '';
+          path.setAttribute('d', `M ${start.x} ${start.y} Q ${controlX} ${controlY} ${end.x} ${end.y}`);
+        }
       }
       frame = window.requestAnimationFrame(updateLabels);
     };
     frame = window.requestAnimationFrame(updateLabels);
     return () => window.cancelAnimationFrame(frame);
-  }, [labelNodes]);
+  }, [graphNodesById, labelNodes, overlayLinks]);
 
   const resetCamera = () => fitCamera(graphRef.current, graphData.nodes, isMobile, 500);
   const rotate = (horizontal: number, vertical = 0) => {
@@ -246,6 +275,17 @@ export function AtlasWebGL3D({
           rendererConfig={{ antialias: true, alpha: true, powerPreference: 'high-performance' }}
         />
       </div>
+      <svg className="atlas-webgl-links" viewBox={`0 0 ${size.width || 1} ${size.height || 1}`} preserveAspectRatio="none"
+        aria-hidden="true">
+        {overlayLinks.map(edge => (
+          <path key={edge.id} ref={element => {
+            const key = `edge:${edge.id}`;
+            if (element) labelRefs.current.set(key, element as unknown as HTMLSpanElement);
+            else labelRefs.current.delete(key);
+          }} className={`atlas-webgl-link${edge.is_learning ? ' learning' : ' structural'}`}
+            stroke={linkColor(edge)} strokeWidth={edge.is_learning ? 3.6 : 2.8} />
+        ))}
+      </svg>
       <div className="atlas3d-a11y-list" aria-label="Nós do grafo 3D">
         {graphData.nodes.map(node => (
           <button key={node.id} type="button" onClick={() => onSelect(String(node.id))}>

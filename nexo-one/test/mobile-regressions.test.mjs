@@ -57,6 +57,8 @@ test('Atlas orbit wraps a full 360 degrees and renders backend learning edges by
   assert.match(atlas, /return 0\.72 \+ strength\(value\) \* 0\.32/);
   assert.match(atlas, /linkMaterial=\{edge =>/);
   assert.match(atlas, /MeshBasicMaterial/);
+  assert.match(atlas, /className="atlas-webgl-links"/);
+  assert.match(atlas, /atlas-webgl-link\$\{edge\.is_learning/);
 });
 
 test('Atlas surfaces backend learning scope counts beside the filament toggle', async () => {
