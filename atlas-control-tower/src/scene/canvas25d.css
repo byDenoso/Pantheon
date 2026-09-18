@@ -1,0 +1,8 @@
+.atlas-canvas-25d{position:absolute;inset:0;overflow:hidden;touch-action:none;overscroll-behavior:none}
+.atlas-canvas-25d canvas{display:block;width:100%;height:100%;outline:none;touch-action:none;-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent}
+.atlas-canvas-25d canvas:focus-visible{outline:2px solid var(--cyan);outline-offset:-3px}
+
+@media (max-width:760px){
+  .atlas-v3-shell .control-dock,.atlas-v3-shell .atlas-v4-control-dock{display:none!important}
+  .atlas-v3-shell .atlas-r3f-stage.atlas-canvas-2d-primary,.atlas-v3-shell .atlas-canvas-25d{inset:0!important;width:100%!important;height:100%!important}
+}
