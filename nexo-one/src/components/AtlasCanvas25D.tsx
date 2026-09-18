@@ -81,15 +81,17 @@ export function AtlasCanvas25D({ nodes, edges, selectedId, onSelect }: { nodes: 
         const isRelated = !selectedRef.current || related.has(item.node.id), selected = item.node.id === selectedRef.current, color = nodeColor(item.node);
         ctx.save(); ctx.globalAlpha = isRelated ? item.alpha : .12; const glow = ctx.createRadialGradient(item.x, item.y, 0, item.x, item.y, item.radius * (selected ? 3 : 2)); glow.addColorStop(0, alphaColor(color, selected ? .72 : .42)); glow.addColorStop(1, alphaColor(color, 0)); ctx.fillStyle = glow; ctx.beginPath(); ctx.arc(item.x, item.y, item.radius * (selected ? 3 : 2), 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = color; ctx.beginPath(); ctx.arc(item.x, item.y, item.radius, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = 'rgba(5,16,28,.55)'; ctx.beginPath(); ctx.arc(item.x, item.y, item.radius * .46, 0, Math.PI * 2); ctx.fill(); if (selected) { ctx.globalAlpha = 1; ctx.strokeStyle = '#f3fcff'; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.arc(item.x, item.y, item.radius + 4, 0, Math.PI * 2); ctx.stroke(); } if (item.node.state === 'BLOCKED' || item.node.state === 'CONFLICT') { ctx.strokeStyle = '#ffb0b4'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(item.x - item.radius * .55, item.y - item.radius * .55); ctx.lineTo(item.x + item.radius * .55, item.y + item.radius * .55); ctx.stroke(); } ctx.restore(); hitboxes.push({ id: item.node.id, x: item.x, y: item.y, radius: Math.max(14, item.radius + 7) });
       }
-      // Learning edges terminate on an explicit connection port so the filament
-      // remains visibly attached even when the node's dark core covers its center.
-      for (const edge of edges.filter(item => item.is_learning)) {
+      // Every relation terminates on a visible port; learning ports get a ring
+      // so their filament cannot look detached when a node's dark core covers it.
+      for (const edge of edges) {
         const from = screen.get(edge.from), to = screen.get(edge.to); if (!from || !to) continue;
-        const color = edge.learning_scope === 'INTER_DOMAIN' ? '#bd8cff' : '#44d9ff';
-        ctx.save(); ctx.globalAlpha = .92; ctx.strokeStyle = color; ctx.lineWidth = 1.15;
+        const isLearning = edge.is_learning, color = edge.kind === 'CONTRADICTS' || edge.kind === 'BLOCKS'
+          ? '#ff6b72' : isLearning ? (edge.learning_scope === 'INTER_DOMAIN' ? '#bd8cff' : '#44d9ff') : '#537b9e';
+        ctx.save(); ctx.globalAlpha = isLearning ? .92 : .52; ctx.strokeStyle = color; ctx.lineWidth = isLearning ? 1.15 : .7;
         for (const endpoint of [from, to]) {
-          ctx.beginPath(); ctx.arc(endpoint.x, endpoint.y, endpoint.radius + 1.8, 0, Math.PI * 2); ctx.stroke();
-          ctx.fillStyle = '#f5fbff'; ctx.globalAlpha = .9; ctx.beginPath(); ctx.arc(endpoint.x, endpoint.y, 1.35, 0, Math.PI * 2); ctx.fill();
+          if (isLearning) { ctx.beginPath(); ctx.arc(endpoint.x, endpoint.y, endpoint.radius + 1.8, 0, Math.PI * 2); ctx.stroke(); }
+          ctx.fillStyle = isLearning ? '#f5fbff' : color; ctx.globalAlpha = isLearning ? .9 : .72;
+          ctx.beginPath(); ctx.arc(endpoint.x, endpoint.y, isLearning ? 1.35 : 1.05, 0, Math.PI * 2); ctx.fill();
         }
         ctx.restore();
       }

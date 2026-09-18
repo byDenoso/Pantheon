@@ -51,7 +51,7 @@ test('Atlas surfaces backend learning scope counts beside the filament toggle', 
 
 test('Atlas marks both endpoints of every visible learning edge', async () => {
   const atlas = await text('src/components/AtlasCanvas25D.tsx');
-  assert.match(atlas, /Learning edges terminate on an explicit connection port/);
+  assert.match(atlas, /Every relation terminates on a visible port/);
   assert.match(atlas, /for \(const endpoint of \[from, to\]\)/);
   assert.match(atlas, /endpoint\.radius \+ 1\.8/);
 });
