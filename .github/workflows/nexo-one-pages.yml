@@ -125,6 +125,15 @@ jobs:
               raise SystemExit("event_cursor missing")
           if not fingerprint.startswith("sha256:") or len(fingerprint) != 71:
               raise SystemExit("projection_fingerprint invalid")
+          snapshot_path = Path("_vault/TOWER_V06/snapshot/latest.json")
+          snapshot = json.loads(snapshot_path.read_text(encoding="utf-8"))
+          snapshot_cursor = str(snapshot.get("event_cursor") or "")
+          if not snapshot_cursor:
+              raise SystemExit("canonical snapshot event_cursor missing")
+          if event_cursor != snapshot_cursor:
+              raise SystemExit(
+                  f"projection event_cursor {event_cursor} differs from canonical snapshot {snapshot_cursor}"
+              )
 
           output = Path(os.environ["GITHUB_OUTPUT"])
           with output.open("a", encoding="utf-8") as handle:
