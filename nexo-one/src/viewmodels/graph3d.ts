@@ -15,16 +15,18 @@ const DOMAIN_ANCHORS: Record<Domain, Point3> = {
 
 const SHELL_RADIUS: Record<GraphNodeType, number> = {
   DOMAIN: 0,
-  PROVIDER: 4.2,
-  CAPABILITY: 5.1,
-  ACTION: 6.8,
-  SIDE_QUEST: 7.2,
-  EFFECT: 8.2,
-  PROJECTION: 8.6,
-  CLAIM: 9.8,
-  FILAMENT: 10.4,
-  TEST: 11.8,
-  MEMORY: 12.4,
+  // Wider, nested orbital shells keep satellites readable instead of stacking
+  // into one compact ball around each domain hub.
+  PROVIDER: 6.5,
+  CAPABILITY: 8.5,
+  ACTION: 11.5,
+  SIDE_QUEST: 12.5,
+  EFFECT: 15,
+  PROJECTION: 16,
+  CLAIM: 19,
+  FILAMENT: 21,
+  TEST: 24,
+  MEMORY: 27,
 };
 
 const NODE_RADIUS: Record<GraphNodeType, number> = {
