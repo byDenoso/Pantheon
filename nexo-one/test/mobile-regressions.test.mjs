@@ -65,6 +65,15 @@ test('Atlas surfaces backend learning scope counts beside the filament toggle', 
   assert.match(view, /intradomínio/);
 });
 
+test('Atlas starts at the NEXO hub and expands canonical domain clusters on selection', async () => {
+  const view = await text('src/features/system/Atlas.tsx');
+  assert.match(view, /const \[expandedDomain, setExpandedDomain\] = useState<string \| null>\(null\)/);
+  assert.match(view, /node\?\.type === 'DOMAIN'/);
+  assert.match(view, /Hub:<\/b> \{expandedDomain \?\? 'NEXO'\}/);
+  assert.match(view, /Voltar ao hub/);
+  assert.match(view, /node\.domain === expandedDomain/);
+});
+
 test('Atlas marks both endpoints of every visible learning edge', async () => {
   const atlas = await text('src/components/AtlasWebGL3D.tsx');
   assert.match(atlas, /CreateLines/);
@@ -81,4 +90,8 @@ test('Atlas marks both endpoints of every visible learning edge', async () => {
   assert.match(atlas, /#f4c468/);
   assert.match(atlas, /depthOfFieldEnabled = false/);
   assert.match(atlas, /line\.alpha = edge\.is_learning \? \.18 \+ strength \* \.14/);
+  assert.match(atlas, /const nexoAnchor = renderNodes\.find/);
+  assert.match(atlas, /const animateFocus = \(id: string \| null, center = false\)/);
+  assert.match(atlas, /camera\.radius = fromRadius \+ \(toRadius - fromRadius\) \* eased/);
+  assert.match(atlas, /const lodVisible = close \|\| node\?\.type === 'DOMAIN'/);
 });

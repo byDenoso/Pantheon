@@ -49,6 +49,34 @@
     radial-gradient(circle at 78% 15%, rgb(39 92 132 / 12%), transparent 28%),
     #020a12;
 }
+
+.atlas-explorer-state {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 32px;
+  padding: 4px 8px;
+  border: 1px solid rgb(112 173 206 / 24%);
+  border-radius: 999px;
+  background: rgb(4 18 30 / 72%);
+  color: rgb(211 233 245 / 78%);
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.atlas-explorer-state b { color: #79f2d0; }
+.atlas-explorer-state button {
+  padding: 3px 7px;
+  border: 1px solid rgb(121 242 208 / 42%);
+  border-radius: 999px;
+  background: rgb(18 57 68 / 70%);
+  color: #e9ffff;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+.atlas-explorer-state button:hover,
+.atlas-explorer-state button:focus-visible { background: rgb(29 86 91 / 88%); }
 .atlas-webgl-labels {
   position: absolute;
   inset: 0;
@@ -247,6 +275,12 @@
 }
 
 @media (max-width: 760px) {
+  .atlas-explorer-state {
+    order: 5;
+    width: 100%;
+    justify-content: space-between;
+  }
+
   .atlas3d-shell {
     min-height: 640px;
     aspect-ratio: 3 / 4;

@@ -119,7 +119,8 @@ export function AtlasWebGL3D({
     scene.imageProcessingConfiguration.toneMappingEnabled = true;
     scene.imageProcessingConfiguration.toneMappingType = ImageProcessingConfiguration.TONEMAPPING_ACES;
     const bounds = graphBounds3D(renderNodes);
-    const target = new Vector3(bounds.center.x, bounds.center.y, bounds.center.z);
+    const nexoAnchor = renderNodes.find(node => node.type === 'DOMAIN' && node.domain === 'NEXO');
+    const target = new Vector3(nexoAnchor?.x ?? bounds.center.x, nexoAnchor?.y ?? bounds.center.y, nexoAnchor?.z ?? bounds.center.z);
     const cameraDistance = Math.max(mobile ? 118 : 132, bounds.radius * (mobile ? 1.92 : 2.15));
     const camera = new ArcRotateCamera('atlas-camera', -Math.PI / 2, 1.14, cameraDistance, target, scene);
     camera.fov = mobile ? .72 : .8;
@@ -138,6 +139,7 @@ export function AtlasWebGL3D({
     pipeline.depthOfFieldEnabled = false;
 
     const meshById = new Map<string, import('@babylonjs/core/Meshes/mesh').Mesh>();
+    const nodeById = new Map(renderNodes.map(node => [node.id, node]));
     const materialByColor = new Map<string, StandardMaterial>();
     const materialFor = (color: Color3) => {
       const key = color.toHexString(); const existing = materialByColor.get(key); if (existing) return existing;
@@ -276,7 +278,51 @@ export function AtlasWebGL3D({
         item.label.classList.toggle('selected', item.node.id === selected);
       }
     };
-    const renderObserver = scene.onBeforeRenderObservable.add(updateLabels);
+    let focusObserver: ReturnType<typeof scene.onBeforeRenderObservable.add> | null = null;
+    const animateFocus = (id: string | null, center = false) => {
+      const mesh = id ? meshById.get(id) : undefined;
+      if (!mesh || !center) return;
+      if (focusObserver) scene.onBeforeRenderObservable.remove(focusObserver);
+      const fromTarget = camera.target.clone();
+      const fromRadius = camera.radius;
+      const toTarget = mesh.position.clone();
+      const toRadius = Math.max(mobile ? 82 : 96, cameraDistance * .62);
+      const started = performance.now();
+      focusObserver = scene.onBeforeRenderObservable.add(() => {
+        const progress = Math.min(1, (performance.now() - started) / 520);
+        const eased = 1 - ((1 - progress) ** 3);
+        camera.target = Vector3.Lerp(fromTarget, toTarget, eased);
+        camera.radius = fromRadius + (toRadius - fromRadius) * eased;
+        if (progress >= 1 && focusObserver) {
+          scene.onBeforeRenderObservable.remove(focusObserver); focusObserver = null;
+        }
+      });
+    };
+    const renderObserver = scene.onBeforeRenderObservable.add(() => {
+      const focusedId = selectedRef.current;
+      const relevant = new Set<string>();
+      if (focusedId) {
+        relevant.add(focusedId);
+        for (const edge of edges) {
+          if (edge.from === focusedId) relevant.add(edge.to);
+          if (edge.to === focusedId) relevant.add(edge.from);
+        }
+      }
+      for (const [id, mesh] of meshById) {
+        const node = nodeById.get(id);
+        const close = camera.radius < cameraDistance * .86;
+        const lodVisible = close || node?.type === 'DOMAIN' || node?.type === 'PROVIDER' || id === focusedId;
+        const focusVisible = !focusedId || relevant.has(id) || node?.type === 'DOMAIN';
+        mesh.visibility = lodVisible ? (focusVisible ? 1 : .2) : .28;
+      }
+      for (const curve of edgeCurves) {
+        const focusVisible = !focusedId || curve.edge.from === focusedId || curve.edge.to === focusedId;
+        curve.line.visibility = focusVisible ? 1 : .12;
+        curve.core.visibility = focusVisible ? 1 : .12;
+        curve.fibers.forEach(fiber => { fiber.visibility = focusVisible ? 1 : .12; });
+      }
+      updateLabels();
+    });
     const pulseObserver = scene.onBeforeRenderObservable.add(() => {
       const delta = Math.min(34, engine.getDeltaTime());
       for (const pulse of pulses) {
@@ -288,10 +334,10 @@ export function AtlasWebGL3D({
     });
     const pointerObserver = scene.onPointerObservable.add(pointerInfo => {
       if (pointerInfo.type !== PointerEventTypes.POINTERPICK && pointerInfo.type !== PointerEventTypes.POINTERDOWN) return;
-      const nodeId = pickNodeAtPointer(); if (nodeId) onSelectRef.current(nodeId);
+      const nodeId = pickNodeAtPointer(); if (nodeId) { onSelectRef.current(nodeId); animateFocus(nodeId, true); }
     });
-    const reset = () => { camera.alpha = -Math.PI / 2; camera.beta = 1.14; camera.radius = cameraDistance; camera.setTarget(target); };
-    const focus = (id: string | null, center = false) => { const mesh = id ? meshById.get(id) : undefined; if (mesh && center) camera.setTarget(mesh.position); };
+    const reset = () => { if (focusObserver) scene.onBeforeRenderObservable.remove(focusObserver); focusObserver = null; camera.alpha = -Math.PI / 2; camera.beta = 1.14; camera.radius = cameraDistance; camera.setTarget(target); };
+    const focus = (id: string | null, center = false) => animateFocus(id, center);
     runtimeRef.current = { reset, focus };
     const containWheel = (event: WheelEvent) => event.preventDefault();
     const keydown = (event: KeyboardEvent) => {
@@ -304,10 +350,14 @@ export function AtlasWebGL3D({
     canvas.addEventListener('keydown', keydown); canvas.addEventListener('wheel', containWheel, { passive: false }); engine.runRenderLoop(() => scene.render());
     const resize = () => engine.resize(); const observer = new ResizeObserver(resize); observer.observe(host); resize(); setFailed('');
     return () => {
-      observer.disconnect(); canvas.removeEventListener('keydown', keydown); canvas.removeEventListener('wheel', containWheel); scene.onBeforeRenderObservable.remove(renderObserver); scene.onBeforeRenderObservable.remove(pulseObserver); scene.onPointerObservable.remove(pointerObserver);
+      observer.disconnect(); canvas.removeEventListener('keydown', keydown); canvas.removeEventListener('wheel', containWheel); scene.onBeforeRenderObservable.remove(renderObserver); scene.onBeforeRenderObservable.remove(pulseObserver); scene.onPointerObservable.remove(pointerObserver); if (focusObserver) scene.onBeforeRenderObservable.remove(focusObserver);
       runtimeRef.current = null; labelsHost.replaceChildren(); pipeline.dispose(); scene.dispose(); engine.dispose();
     };
   }, [nodes, edges]);
+
+  useEffect(() => {
+    if (selectedId) runtimeRef.current?.focus(selectedId, true);
+  }, [selectedId]);
 
   const key = (keyName: string) => canvasRef.current?.dispatchEvent(new KeyboardEvent('keydown', { key: keyName }));
   return <div ref={hostRef} className="atlas3d-shell atlas-webgl-shell" data-testid="atlas-3d-shell" data-renderer="babylon-webgl-3d">

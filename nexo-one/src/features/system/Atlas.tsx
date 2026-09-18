@@ -53,6 +53,7 @@ export function AtlasView(
   const isMobile = useIsMobile();
   const [panelOpen, setPanelOpen] = useState(false);
   const [learningVisible, setLearningVisible] = useState(false);
+  const [expandedDomain, setExpandedDomain] = useState<string | null>(null);
   const filtered = useMemo(() => filterGraph(state.graph, filters), [state.graph, filters]);
   const learningEndpointIds = useMemo(() => new Set(filtered.edges.filter(edge => edge.is_learning).flatMap(edge => [edge.from, edge.to])), [filtered.edges]);
   const learningEdges = useMemo(() => filtered.edges.filter(edge => edge.is_learning), [filtered.edges]);
@@ -65,11 +66,30 @@ export function AtlasView(
     [learningEdges],
   );
   const renderGraph = useMemo(() => {
-    if (learningVisible) return filtered;
-    const nodes = filtered.nodes.filter(node => node.type !== 'FILAMENT' && !learningEndpointIds.has(node.id));
+    const baseNodes = filtered.nodes.filter(node => learningVisible || (node.type !== 'FILAMENT' && !learningEndpointIds.has(node.id)));
+    const baseIds = new Set(baseNodes.map(node => node.id));
+    const domainNodes = baseNodes.filter(node => node.type === 'DOMAIN');
+    const domainIds = new Set(domainNodes.map(node => node.id));
+    const nexoId = domainNodes.find(node => node.domain === 'NEXO')?.id ?? null;
+    const topLevelIds = new Set(domainNodes.map(node => node.id));
+    if (nexoId) {
+      for (const edge of filtered.edges) {
+        if (edge.from !== nexoId && edge.to !== nexoId) continue;
+        const other = edge.from === nexoId ? edge.to : edge.from;
+        if (baseIds.has(other)) topLevelIds.add(other);
+      }
+    }
+    if (expandedDomain) {
+      for (const node of baseNodes) {
+        if (node.domain === expandedDomain) topLevelIds.add(node.id);
+      }
+    }
+    // Hub view keeps NEXO and the domain hubs visible. Opening a domain reveals
+    // its complete canonical cluster without changing the backend graph.
+    const nodes = baseNodes.filter(node => expandedDomain ? topLevelIds.has(node.id) : domainIds.has(node.id) || topLevelIds.has(node.id));
     const ids = new Set(nodes.map(node => node.id));
-    return { nodes, edges: filtered.edges.filter(edge => !edge.is_learning && ids.has(edge.from) && ids.has(edge.to)) };
-  }, [filtered, learningEndpointIds, learningVisible]);
+    return { nodes, edges: filtered.edges.filter(edge => (learningVisible || !edge.is_learning) && ids.has(edge.from) && ids.has(edge.to)) };
+  }, [expandedDomain, filtered, learningEndpointIds, learningVisible]);
   const placed = useMemo(() => forceLayoutGraph3D(renderGraph.nodes, renderGraph.edges), [renderGraph.nodes, renderGraph.edges]);
   const legend = useMemo(() => legendOf(renderGraph.nodes), [renderGraph.nodes]);
   const effectiveSelectedId = resolveSelection3D(placed, selectedId);
@@ -87,6 +107,13 @@ export function AtlasView(
   };
 
   const active = filterCount(filters);
+  const handleGraphSelect = (id: string | null) => {
+    if (id) {
+      const node = filtered.nodes.find(candidate => candidate.id === id);
+      if (node?.type === 'DOMAIN') setExpandedDomain(node.domain === 'NEXO' ? null : node.domain);
+    }
+    onSelect(id);
+  };
 
   return (
     <div className={`atlas-layout${isMobile ? ' mobile' : ''}`}>
@@ -115,6 +142,10 @@ export function AtlasView(
           </span>
         )}
         <span className="atlas-count">{renderGraph.nodes.length} nós · {renderGraph.edges.length} relações</span>
+        <div className="atlas-explorer-state" role="status">
+          <span><b>Hub:</b> {expandedDomain ?? 'NEXO'}</span>
+          {expandedDomain && <button type="button" onClick={() => { setExpandedDomain(null); onSelect(null); }}>Voltar ao hub</button>}
+        </div>
       </div>
 
       {panelOpen && (
@@ -136,7 +167,7 @@ export function AtlasView(
                 description="Um grafo vazio aqui é resultado do filtro, não ausência de dados no sistema."
                 hint="Remova um critério para voltar a ver o mapa." />
             : <>
-                <AtlasWebGL3D nodes={placed} edges={renderGraph.edges} selectedId={effectiveSelectedId} onSelect={onSelect} />
+                <AtlasWebGL3D nodes={placed} edges={renderGraph.edges} selectedId={effectiveSelectedId} onSelect={handleGraphSelect} />
                 <ul className="atlas-legend">
                   {legend.map(entry => (
                     <li key={entry.type}>
@@ -152,7 +183,7 @@ export function AtlasView(
           <aside className="atlas-inspector">
             {selected
               ? <EntityInspector node={selected} upstream={relations.upstream} downstream={relations.downstream}
-                  onSelect={onSelect} />
+                  onSelect={handleGraphSelect} />
               : <div className="inspector-placeholder">
                   <span className="focus-glyph" aria-hidden="true">⌖</span>
                   <h3>Selecione uma entidade.</h3>
@@ -165,7 +196,7 @@ export function AtlasView(
       {isMobile && selected && (
         <div className="atlas-sheet" role="dialog" aria-label={`Inspector de ${selected.label}`}>
           <EntityInspector node={selected} upstream={relations.upstream} downstream={relations.downstream}
-            onSelect={onSelect} onClose={() => onSelect(null)} />
+            onSelect={handleGraphSelect} onClose={() => onSelect(null)} />
         </div>
       )}
     </div>
