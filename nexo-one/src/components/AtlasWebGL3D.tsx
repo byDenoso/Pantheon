@@ -1,42 +1,67 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import ForceGraph3D, { type ForceGraphMethods } from 'react-force-graph-3d';
 import {
-  Group, Mesh, MeshBasicMaterial, MeshStandardMaterial, SphereGeometry, TorusGeometry, Color,
+  Color, Group, Mesh, MeshBasicMaterial, MeshStandardMaterial, SphereGeometry, TorusGeometry,
 } from 'three';
 import type { GraphEdge } from '../contracts/system.ts';
 import type { PlacedNode3D } from '../viewmodels/graph3d.ts';
 import '../styles/atlas3d.css';
 
 const DOMAIN_COLOR: Record<string, string> = {
-  NEXO: '#79f2d0', SCIENCE: '#44a8ff', ENGINEERING: '#71dfa0', OLYMPUS: '#bd8cff', ARTIFACT: '#f2b654',
+  NEXO: '#79f2d0',
+  SCIENCE: '#44a8ff',
+  ENGINEERING: '#71dfa0',
+  OLYMPUS: '#bd8cff',
+  ARTIFACT: '#f2b654',
 };
-const ALERT_COLOR = '#ff6b72';
 
-type GraphNodeView = PlacedNode3D & { fx: number; fy: number; fz: number };
+const ALERT_COLOR = '#ff6b72';
+const LINK_COLOR = '#68829b';
+const STRUCTURAL_LINK_COLOR = '#90a9bf';
+
+type GraphNodeView = PlacedNode3D & { fx?: number; fy?: number; fz?: number };
 type GraphLinkView = GraphEdge & { source: string; target: string };
 type GraphRef = ForceGraphMethods<GraphNodeView, GraphLinkView>;
 
-function isClusterNode(node: PlacedNode3D): boolean { return node.id.startsWith('atlas.cluster.'); }
-function colorFor(node: PlacedNode3D): string { return DOMAIN_COLOR[node.domain] ?? '#8fb2d0'; }
-function isStructuralEdge(edge: GraphEdge): boolean { return edge.id.startsWith('atlas.root.edge.') || edge.id.startsWith('atlas.cluster.edge.'); }
+type ForceWithStrength = {
+  strength?: (value: number | ((item: GraphNodeView | GraphLinkView) => number)) => unknown;
+  distance?: (value: number | ((item: GraphLinkView) => number)) => unknown;
+  distanceMax?: (value: number) => unknown;
+};
+
+function isClusterNode(node: PlacedNode3D): boolean {
+  return node.id.startsWith('atlas.cluster.');
+}
+
+function isStructuralEdge(edge: GraphEdge): boolean {
+  return edge.id.startsWith('atlas.root.edge.') || edge.id.startsWith('atlas.cluster.edge.');
+}
+
+function colorFor(node: PlacedNode3D): string {
+  return DOMAIN_COLOR[node.domain] ?? '#8fb2d0';
+}
+
 function linkColor(edge: GraphEdge): string {
-  if (isStructuralEdge(edge)) return '#79f2d0';
   if (edge.kind === 'CONTRADICTS' || edge.kind === 'BLOCKS') return ALERT_COLOR;
   if (edge.is_learning) return edge.learning_scope === 'INTER_DOMAIN' ? '#f4c468' : '#d99a4f';
   if (edge.kind === 'SUPPORTS') return '#51d7ef';
-  return '#69baf2';
+  if (isStructuralEdge(edge)) return STRUCTURAL_LINK_COLOR;
+  return LINK_COLOR;
 }
+
 function nodeRadius(node: PlacedNode3D): number {
-  if (node.type === 'DOMAIN') return node.domain === 'NEXO' ? 6.8 : 5.2;
-  if (isClusterNode(node)) return 3.6;
-  if (node.type === 'PROVIDER') return 2.45;
-  if (node.type === 'CAPABILITY') return 1.9;
-  return 1.18;
+  if (node.type === 'DOMAIN') return node.domain === 'NEXO' ? 3.4 : 2.8;
+  if (isClusterNode(node)) return 2.1;
+  if (node.type === 'PROVIDER') return 1.55;
+  if (node.type === 'CAPABILITY') return 1.28;
+  return 1.02;
 }
+
 function nodeLabel(node: PlacedNode3D): string {
-  const title = node.label.length > 52 ? `${node.label.slice(0, 51)}…` : node.label;
+  const title = node.label.length > 64 ? `${node.label.slice(0, 63)}…` : node.label;
   return `<strong>${title}</strong><br/><small>${node.type} · ${node.domain}</small>`;
 }
+
 function strength(edge: GraphEdge): number {
   return Math.max(0.15, Math.min(1, Number(edge.weight ?? 0)));
 }
@@ -48,60 +73,47 @@ function nodeObject(node: GraphNodeView, selectedId: string | null): Group {
   const major = node.type === 'DOMAIN' || isClusterNode(node);
   const group = new Group();
 
-  const halo = new Mesh(
-    new SphereGeometry(radius * (major ? 1.48 : 1.32), 18, 12),
-    new MeshBasicMaterial({
+  const sphere = new Mesh(
+    new SphereGeometry(radius, major ? 18 : 12, major ? 14 : 9),
+    new MeshStandardMaterial({
       color,
+      emissive: color,
+      emissiveIntensity: major ? 0.34 : 0.12,
+      metalness: 0.08,
+      roughness: 0.34,
       transparent: true,
-      opacity: selected ? 0.16 : major ? 0.08 : 0.035,
-      depthWrite: false,
+      opacity: node.state === 'BLOCKED' || node.state === 'CONFLICT' ? 0.78 : 0.96,
     }),
   );
-  group.add(halo);
-
-  const material = new MeshStandardMaterial({
-    color,
-    emissive: color,
-    emissiveIntensity: node.type === 'DOMAIN' ? 0.78 : isClusterNode(node) ? 0.48 : 0.22,
-    metalness: major ? 0.28 : 0.16,
-    roughness: major ? 0.16 : 0.28,
-    transparent: true,
-    opacity: node.state === 'BLOCKED' || node.state === 'CONFLICT' ? 0.76 : 0.98,
-  });
-  const sphere = new Mesh(new SphereGeometry(radius, major ? 28 : 18, major ? 20 : 12), material);
   group.add(sphere);
 
-  const core = new Mesh(
-    new SphereGeometry(radius * (major ? 0.48 : 0.42), 16, 10),
-    new MeshBasicMaterial({ color: new Color('#f5fdff'), transparent: true, opacity: major ? 0.2 : 0.1, depthWrite: false }),
-  );
-  group.add(core);
-
-  if (major || selected) {
+  if (selected) {
     const ring = new Mesh(
-      new TorusGeometry(radius * (selected ? 1.52 : 1.34), selected ? 0.15 : 0.085, 8, 56),
-      new MeshBasicMaterial({ color: selected ? new Color('#f5fdff') : color, transparent: true, opacity: selected ? 0.9 : 0.44, depthWrite: false }),
+      new TorusGeometry(radius * 1.7, 0.09, 8, 40),
+      new MeshBasicMaterial({
+        color: new Color('#f5fdff'),
+        transparent: true,
+        opacity: 0.92,
+        depthWrite: false,
+      }),
     );
-    ring.rotation.x = selected ? Math.PI * 0.18 : 0;
+    ring.rotation.x = Math.PI * 0.22;
     group.add(ring);
   }
 
-  if (node.type === 'DOMAIN') {
-    const orbit = new Mesh(
-      new TorusGeometry(radius * 1.82, 0.045, 8, 64),
-      new MeshBasicMaterial({ color, transparent: true, opacity: 0.24, depthWrite: false }),
-    );
-    orbit.rotation.x = Math.PI * 0.42;
-    orbit.rotation.y = Math.PI * 0.18;
-    group.add(orbit);
-  }
-
   if (node.state === 'BLOCKED' || node.state === 'CONFLICT') {
-    const alertRing = new Mesh(new TorusGeometry(radius * 1.68, 0.1, 8, 48), new MeshBasicMaterial({
-      color: new Color(ALERT_COLOR), transparent: true, opacity: 0.88, depthWrite: false,
-    }));
+    const alertRing = new Mesh(
+      new TorusGeometry(radius * 1.5, 0.075, 8, 36),
+      new MeshBasicMaterial({
+        color: new Color(ALERT_COLOR),
+        transparent: true,
+        opacity: 0.84,
+        depthWrite: false,
+      }),
+    );
     group.add(alertRing);
   }
+
   return group;
 }
 
@@ -110,221 +122,206 @@ function controlCall(graph: GraphRef | null | undefined, method: string, ...args
   controls?.[method]?.(...args);
 }
 
-function fitCamera(graph: GraphRef | null | undefined, nodes: GraphNodeView[], mobile: boolean, transitionMs = 500) {
-  if (!graph || !nodes.length) return;
-  const min = { x: Infinity, y: Infinity, z: Infinity };
-  const max = { x: -Infinity, y: -Infinity, z: -Infinity };
-  for (const node of nodes) {
-    min.x = Math.min(min.x, node.x); min.y = Math.min(min.y, node.y); min.z = Math.min(min.z, node.z);
-    max.x = Math.max(max.x, node.x); max.y = Math.max(max.y, node.y); max.z = Math.max(max.z, node.z);
-  }
-  const target = { x: (min.x + max.x) / 2, y: (min.y + max.y) / 2, z: (min.z + max.z) / 2 };
-  const screenRadius = Math.max(
-    1,
-    ...nodes.map(node => Math.hypot(node.x - target.x, node.y - target.y) + nodeRadius(node)),
-  );
-  const depthRadius = Math.max(0, (max.z - min.z) / 2);
-  const distance = Math.max(
-    mobile ? 58 : 62,
-    screenRadius * (mobile ? 1.88 : 1.48) + depthRadius * (mobile ? 0.16 : 0.12),
-  );
-  graph.cameraPosition(
-    { x: target.x, y: target.y + distance * 0.055, z: target.z + distance },
-    target,
-    transitionMs,
-  );
+function zoomToGraph(graph: GraphRef | null | undefined, mobile: boolean, duration = 650) {
+  graph?.zoomToFit(duration, mobile ? 34 : 52);
 }
 
-/** Three.js graph renderer. The Atlas projection owns topology and fixed positions; this component owns camera and WebGL interaction. */
 export function AtlasWebGL3D({
-  nodes, edges, selectedId, onSelect,
-}: { nodes: PlacedNode3D[]; edges: GraphEdge[]; selectedId: string | null; onSelect: (id: string | null) => void }) {
+  nodes,
+  edges,
+  selectedId,
+  onSelect,
+}: {
+  nodes: PlacedNode3D[];
+  edges: GraphEdge[];
+  selectedId: string | null;
+  onSelect: (id: string | null) => void;
+}) {
   const hostRef = useRef<HTMLDivElement | null>(null);
   const graphRef = useRef<GraphRef | undefined>(undefined);
   const previousGraphKey = useRef('');
   const labelRefs = useRef(new Map<string, HTMLSpanElement>());
   const [size, setSize] = useState({ width: 0, height: 0 });
+
   const graphData = useMemo(() => {
     const ids = new Set(nodes.map(node => node.id));
-    const graphNodes: GraphNodeView[] = nodes.map(node => ({ ...node, fx: node.x, fy: node.y, fz: node.z }));
+    const graphNodes: GraphNodeView[] = nodes.map(node => ({ ...node }));
     const graphLinks: GraphLinkView[] = edges
       .filter(edge => ids.has(edge.from) && ids.has(edge.to))
       .map(edge => ({ ...edge, source: edge.from, target: edge.to }));
     return { nodes: graphNodes, links: graphLinks };
   }, [edges, nodes]);
-  const graphNodesById = useMemo(() => new Map(graphData.nodes.map(node => [String(node.id), node])), [graphData.nodes]);
-  const overlayLinks = useMemo(
-    () => graphData.links.filter(link => {
-      const source = graphNodesById.get(String(link.from));
-      const target = graphNodesById.get(String(link.to));
-      return source?.type === 'DOMAIN' && target?.type === 'DOMAIN';
-    }),
-    [graphData.links, graphNodesById],
+
+  const graphKey = useMemo(
+    () => `${graphData.nodes.map(node => node.id).join('|')}::${graphData.links.map(link => link.id).join('|')}`,
+    [graphData.links, graphData.nodes],
   );
-  const graphKey = useMemo(() => graphData.nodes.map(node => node.id).join('|'), [graphData.nodes]);
+
   const isMobile = typeof window !== 'undefined' && window.matchMedia('(max-width: 760px)').matches;
-  const labelNodes = useMemo(
-    () => graphData.nodes.filter(node => node.type === 'DOMAIN' || isClusterNode(node) || node.id === selectedId),
+
+  const selectedNode = useMemo(
+    () => graphData.nodes.find(node => node.id === selectedId) ?? null,
     [graphData.nodes, selectedId],
   );
-  const linkMaterials = useMemo(() => new Map<string, MeshBasicMaterial>(), []);
 
   useEffect(() => {
     const host = hostRef.current;
     if (!host) return undefined;
-    const update = () => setSize({ width: Math.max(1, host.clientWidth), height: Math.max(1, host.clientHeight) });
+    const update = () => setSize({
+      width: Math.max(1, host.clientWidth),
+      height: Math.max(1, host.clientHeight),
+    });
     update();
     const observer = new ResizeObserver(update);
     observer.observe(host);
     return () => observer.disconnect();
   }, []);
 
-  const makeNode = useCallback((node: GraphNodeView) => nodeObject(node, selectedId), [selectedId]);
-  const onNodeClick = useCallback((node: GraphNodeView) => onSelect(String(node.id)), [onSelect]);
+  const makeNode = useCallback(
+    (node: GraphNodeView) => nodeObject(node, selectedId),
+    [selectedId],
+  );
+
+  const onNodeClick = useCallback(
+    (node: GraphNodeView) => onSelect(String(node.id)),
+    [onSelect],
+  );
+
   const onBackgroundClick = useCallback(() => onSelect(null), [onSelect]);
 
   useEffect(() => {
     const graph = graphRef.current;
     if (!graph) return undefined;
-    graph.d3Force('link', null);
-    graph.d3Force('charge', null);
-    graph.d3Force('center', null);
+
+    const charge = graph.d3Force('charge') as ForceWithStrength | undefined;
+    charge?.strength?.(isMobile ? -48 : -66);
+    charge?.distanceMax?.(260);
+
+    const link = graph.d3Force('link') as ForceWithStrength | undefined;
+    link?.distance?.((edge: GraphLinkView) => {
+      if (isStructuralEdge(edge)) return 26;
+      if (edge.is_learning) return 42;
+      return 34;
+    });
+    link?.strength?.((edge: GraphLinkView) => {
+      if (isStructuralEdge(edge)) return 0.54;
+      if (edge.is_learning) return 0.14;
+      return 0.24;
+    });
+
+    graph.d3ReheatSimulation();
+
     const timer = window.setTimeout(() => {
-      if (previousGraphKey.current !== graphKey) {
-        fitCamera(graph, graphData.nodes, isMobile, 550);
-      } else if (selectedId) {
-        const node = graphData.nodes.find(candidate => candidate.id === selectedId);
-        if (node) {
-          const distance = isMobile ? 34 : 42;
-          const length = Math.hypot(node.x, node.y, node.z) || 1;
-          graph.cameraPosition({
-            x: node.x + (node.x / length) * distance,
-            y: node.y + (node.y / length) * distance,
-            z: node.z + (node.z / length) * distance,
-          }, { x: node.x, y: node.y, z: node.z }, 650);
-        }
-      }
+      zoomToGraph(graph, isMobile, 700);
       previousGraphKey.current = graphKey;
-    }, 120);
+    }, previousGraphKey.current === graphKey ? 180 : 900);
+
     return () => window.clearTimeout(timer);
-  }, [graphData.nodes, graphKey, isMobile, selectedId, size.height, size.width]);
+  }, [graphKey, isMobile, size.height, size.width]);
 
   useEffect(() => {
-    let frame = 0;
-    const updateLabels = () => {
-      const graph = graphRef.current;
-      if (graph) {
-        for (const node of labelNodes) {
-          const label = labelRefs.current.get(node.id);
-          if (!label) continue;
-          const position = graph.graph2ScreenCoords(node.x, node.y, node.z);
-          label.style.transform = `translate(-50%, -50%) translate(${position.x}px, ${position.y + nodeRadius(node) * 12}px)`;
-          label.hidden = position.z < 0 || position.z > 1;
-        }
-        for (const edge of overlayLinks) {
-          const path = labelRefs.current.get(`edge:${edge.id}`) as unknown as SVGPathElement | undefined;
-          const source = graphNodesById.get(String(edge.from));
-          const target = graphNodesById.get(String(edge.to));
-          if (!path || !source || !target) continue;
-          const start = graph.graph2ScreenCoords(source.x, source.y, source.z);
-          const end = graph.graph2ScreenCoords(target.x, target.y, target.z);
-          const dx = end.x - start.x;
-          const dy = end.y - start.y;
-          const bend = Math.hypot(dx, dy) * (edge.is_learning ? 0.16 : 0.08);
-          const controlX = (start.x + end.x) / 2 - dy * (bend / Math.max(1, Math.hypot(dx, dy)));
-          const controlY = (start.y + end.y) / 2 + dx * (bend / Math.max(1, Math.hypot(dx, dy)));
-          path.style.display = 'inline';
-          path.setAttribute('d', `M ${start.x} ${start.y} Q ${controlX} ${controlY} ${end.x} ${end.y}`);
-        }
-      }
-      frame = window.requestAnimationFrame(updateLabels);
-    };
-    frame = window.requestAnimationFrame(updateLabels);
-    return () => window.cancelAnimationFrame(frame);
-  }, [graphNodesById, labelNodes, overlayLinks]);
+    const graph = graphRef.current;
+    if (!graph || !selectedNode) return;
 
-  const resetCamera = () => fitCamera(graphRef.current, graphData.nodes, isMobile, 500);
+    const timer = window.setTimeout(() => {
+      const x = Number(selectedNode.x ?? 0);
+      const y = Number(selectedNode.y ?? 0);
+      const z = Number(selectedNode.z ?? 0);
+      const distance = isMobile ? 28 : 34;
+      const length = Math.hypot(x, y, z) || 1;
+
+      graph.cameraPosition({
+        x: x + (x / length) * distance,
+        y: y + (y / length) * distance,
+        z: z + (z / length) * distance,
+      }, { x, y, z }, 650);
+    }, 80);
+
+    return () => window.clearTimeout(timer);
+  }, [isMobile, selectedNode]);
+
+  useEffect(() => {
+    if (!selectedNode) return undefined;
+
+    let frame = 0;
+    const updateLabel = () => {
+      const graph = graphRef.current;
+      const label = labelRefs.current.get(selectedNode.id);
+      if (graph && label) {
+        const x = Number(selectedNode.x ?? 0);
+        const y = Number(selectedNode.y ?? 0);
+        const z = Number(selectedNode.z ?? 0);
+        const position = graph.graph2ScreenCoords(x, y, z);
+        label.style.transform = `translate(-50%, -50%) translate(${position.x}px, ${position.y + nodeRadius(selectedNode) * 12}px)`;
+      }
+      frame = window.requestAnimationFrame(updateLabel);
+    };
+
+    frame = window.requestAnimationFrame(updateLabel);
+    return () => window.cancelAnimationFrame(frame);
+  }, [selectedNode]);
+
+  const resetCamera = () => zoomToGraph(graphRef.current, isMobile, 550);
+
   const rotate = (horizontal: number, vertical = 0) => {
     const graph = graphRef.current;
     controlCall(graph, 'rotateLeft', horizontal);
     controlCall(graph, 'rotateUp', vertical);
   };
-  const zoom = (scale: number) => controlCall(graphRef.current, scale > 1 ? 'dollyIn' : 'dollyOut', Math.abs(scale));
+
+  const zoom = (scale: number) => {
+    controlCall(graphRef.current, scale > 1 ? 'dollyIn' : 'dollyOut', Math.abs(scale));
+  };
 
   return (
     <div
       ref={hostRef}
-      className="atlas3d-shell atlas-webgl-shell atlas-force-shell"
+      className="atlas3d-shell atlas-webgl-shell atlas-force-shell atlas-force-organic"
       data-testid="atlas-3d-shell"
       data-renderer="three-force-graph-3d"
       onWheelCapture={event => event.preventDefault()}
     >
       <div className="atlas3d-haze" aria-hidden="true" />
+
       <div className="atlas-force-graph" data-testid="atlas-3d-canvas" aria-label="Grafo 3D do Atlas">
         <ForceGraph3D
           ref={graphRef}
           width={size.width || 1}
           height={size.height || 1}
           graphData={graphData}
-        backgroundColor="#020711"
-        showNavInfo={false}
-        controlType="orbit"
-        enableNavigationControls
-        enablePointerInteraction
-        enableNodeDrag={false}
-        nodeThreeObject={makeNode}
-        nodeThreeObjectExtend={false}
-        nodeLabel={nodeLabel}
-        nodeVal={node => nodeRadius(node as GraphNodeView)}
-        nodeOpacity={0.96}
-        nodeResolution={18}
-        linkColor={edge => linkColor(edge as GraphLinkView)}
-        linkWidth={edge => {
-          const value = edge as GraphLinkView;
-          if (isStructuralEdge(value)) return 0.82 + strength(value) * 0.3;
-          if (value.is_learning) return 0.72 + strength(value) * 0.32;
-          return 0.07 + strength(value) * 0.09;
-        }}
-        linkOpacity={0.72}
-        linkMaterial={edge => {
-          const value = edge as GraphLinkView;
-          const color = linkColor(value);
-          const opacity = value.is_learning ? 0.9 : isStructuralEdge(value) ? 0.94 : 0.34;
-          const key = `${color}:${opacity}`;
-          let material = linkMaterials.get(key);
-          if (!material) {
-            material = new MeshBasicMaterial({ color, transparent: true, opacity, depthWrite: false });
-            linkMaterials.set(key, material);
-          }
-          return material;
-        }}
-        linkCurvature={edge => (edge as GraphLinkView).is_learning ? 0.46 : isStructuralEdge(edge as GraphLinkView) ? 0.08 : 0.12}
-        linkDirectionalParticles={edge => {
-          const value = edge as GraphLinkView;
-          return isStructuralEdge(value) || value.is_learning || value.kind === 'SUPPORTS' || value.kind === 'BLOCKS' ? 2 : 0;
-        }}
-        linkDirectionalParticleSpeed={edge => (edge as GraphLinkView).is_learning ? 0.006 : 0.003}
-        linkDirectionalParticleWidth={edge => 0.7 + strength(edge as GraphLinkView) * 0.9}
-        linkDirectionalParticleColor={edge => linkColor(edge as GraphLinkView)}
-        onNodeClick={onNodeClick}
-        onBackgroundClick={onBackgroundClick}
-          warmupTicks={0}
-        cooldownTicks={0}
-        cooldownTime={0}
+          backgroundColor="#020711"
+          showNavInfo={false}
+          controlType="orbit"
+          enableNavigationControls
+          enablePointerInteraction
+          enableNodeDrag={false}
+          nodeThreeObject={makeNode}
+          nodeThreeObjectExtend={false}
+          nodeLabel={nodeLabel}
+          nodeVal={node => nodeRadius(node as GraphNodeView)}
+          nodeOpacity={0.96}
+          nodeResolution={12}
+          linkColor={edge => linkColor(edge as GraphLinkView)}
+          linkWidth={edge => {
+            const value = edge as GraphLinkView;
+            if (value.kind === 'CONTRADICTS' || value.kind === 'BLOCKS') return 0.24;
+            if (value.is_learning) return 0.19 + strength(value) * 0.08;
+            if (isStructuralEdge(value)) return 0.17;
+            return 0.08 + strength(value) * 0.05;
+          }}
+          linkOpacity={0.44}
+          linkCurvature={edge => (edge as GraphLinkView).is_learning ? 0.18 : 0}
+          linkDirectionalParticles={0}
+          onNodeClick={onNodeClick}
+          onBackgroundClick={onBackgroundClick}
+          warmupTicks={54}
+          cooldownTicks={180}
+          cooldownTime={4200}
+          d3VelocityDecay={0.28}
           rendererConfig={{ antialias: true, alpha: true, powerPreference: 'high-performance' }}
         />
       </div>
-      <svg className="atlas-webgl-links" viewBox={`0 0 ${size.width || 1} ${size.height || 1}`} preserveAspectRatio="none"
-        aria-hidden="true">
-        {overlayLinks.map(edge => (
-          <path key={edge.id} ref={element => {
-            const key = `edge:${edge.id}`;
-            if (element) labelRefs.current.set(key, element as unknown as HTMLSpanElement);
-            else labelRefs.current.delete(key);
-          }} className={`atlas-webgl-link${edge.is_learning ? ' learning' : ' structural'}`}
-            stroke={linkColor(edge)} strokeWidth={edge.is_learning ? 3.6 : 2.8} />
-        ))}
-      </svg>
+
       <div className="atlas3d-a11y-list" aria-label="Nós do grafo 3D">
         {graphData.nodes.map(node => (
           <button key={node.id} type="button" onClick={() => onSelect(String(node.id))}>
@@ -332,17 +329,28 @@ export function AtlasWebGL3D({
           </button>
         ))}
       </div>
+
       <div className="atlas-webgl-labels" aria-hidden="true">
-        {labelNodes.map(node => <span
-          key={node.id}
-          ref={element => { if (element) labelRefs.current.set(node.id, element); else labelRefs.current.delete(node.id); }}
-          className={`atlas-webgl-label${node.type === 'DOMAIN' ? ' domain' : ''}${isClusterNode(node) ? ' cluster' : ''}${node.id === selectedId ? ' selected' : ''}`}
-          style={{ '--label-color': colorFor(node) } as CSSProperties}
-        >{node.label.length > 38 ? `${node.label.slice(0, 37)}…` : node.label}</span>)}
+        {selectedNode && (
+          <span
+            ref={element => {
+              if (element) labelRefs.current.set(selectedNode.id, element);
+              else labelRefs.current.delete(selectedNode.id);
+            }}
+            className="atlas-webgl-label selected"
+            style={{ '--label-color': colorFor(selectedNode) } as React.CSSProperties}
+          >
+            {selectedNode.label.length > 46 ? `${selectedNode.label.slice(0, 45)}…` : selectedNode.label}
+          </span>
+        )}
       </div>
+
       <div className="atlas3d-selection" aria-live="polite">
-        {selectedId ? 'ATLAS 3D · nó selecionado · clique no fundo para limpar' : 'ATLAS 3D · arraste para orbitar · pinça/scroll para zoom'}
+        {selectedId
+          ? 'ATLAS 3D · nó selecionado · clique no fundo para limpar'
+          : 'ATLAS 3D · force layout · arraste para orbitar · pinça/scroll para zoom'}
       </div>
+
       <div className="atlas3d-controls atlas3d-mobile-nav" role="group" aria-label="Controles do grafo">
         <button type="button" aria-label="Resetar câmera" onClick={resetCamera}>Visão geral</button>
         <button type="button" aria-label="Girar mapa para a esquerda" onClick={() => rotate(0.34)}>←</button>
