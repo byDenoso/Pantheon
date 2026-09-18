@@ -94,7 +94,7 @@ export function AtlasWebGL3D({
     // Keep the desktop world generously spaced, then fit that same semantic
     // graph into a portrait viewport without changing backend topology.
     const worldScale = mobile ? .74 : 1;
-    const nodeScale = mobile ? 1.42 : 1;
+    const nodeScale = mobile ? 1.22 : 1;
     const renderNodes = nodes.map(node => ({
       ...node,
       x: node.x * worldScale,
@@ -110,7 +110,7 @@ export function AtlasWebGL3D({
     scene.imageProcessingConfiguration.toneMappingType = ImageProcessingConfiguration.TONEMAPPING_ACES;
     const bounds = graphBounds3D(renderNodes);
     const target = new Vector3(bounds.center.x, bounds.center.y, bounds.center.z);
-    const cameraDistance = Math.max(mobile ? 108 : 132, bounds.radius * (mobile ? 1.55 : 2.15));
+    const cameraDistance = Math.max(mobile ? 118 : 132, bounds.radius * (mobile ? 1.92 : 2.15));
     const camera = new ArcRotateCamera('atlas-camera', -Math.PI / 2, 1.14, cameraDistance, target, scene);
     camera.fov = mobile ? .72 : .8;
     camera.lowerBetaLimit = .16; camera.upperBetaLimit = Math.PI - .16;
