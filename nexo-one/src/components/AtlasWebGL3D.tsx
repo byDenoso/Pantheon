@@ -18,7 +18,9 @@ type GraphRef = ForceGraphMethods<GraphNodeView, GraphLinkView>;
 
 function isClusterNode(node: PlacedNode3D): boolean { return node.id.startsWith('atlas.cluster.'); }
 function colorFor(node: PlacedNode3D): string { return DOMAIN_COLOR[node.domain] ?? '#8fb2d0'; }
+function isStructuralEdge(edge: GraphEdge): boolean { return edge.id.startsWith('atlas.root.edge.') || edge.id.startsWith('atlas.cluster.edge.'); }
 function linkColor(edge: GraphEdge): string {
+  if (isStructuralEdge(edge)) return '#79f2d0';
   if (edge.kind === 'CONTRADICTS' || edge.kind === 'BLOCKS') return ALERT_COLOR;
   if (edge.is_learning) return edge.learning_scope === 'INTER_DOMAIN' ? '#f4c468' : '#d99a4f';
   if (edge.kind === 'SUPPORTS') return '#51d7ef';
@@ -208,12 +210,16 @@ export function AtlasWebGL3D({
         nodeOpacity={0.96}
         nodeResolution={18}
         linkColor={edge => linkColor(edge as GraphLinkView)}
-          linkWidth={edge => 0.025 + strength(edge as GraphLinkView) * ((edge as GraphLinkView).is_learning ? 0.13 : 0.055)}
-        linkOpacity={0.34}
+        linkWidth={edge => {
+          const value = edge as GraphLinkView;
+          if (isStructuralEdge(value)) return 0.11 + strength(value) * 0.16;
+          return 0.045 + strength(value) * (value.is_learning ? 0.18 : 0.10);
+        }}
+        linkOpacity={0.62}
         linkCurvature={edge => (edge as GraphLinkView).is_learning ? 0.58 : 0.16}
         linkDirectionalParticles={edge => {
           const value = edge as GraphLinkView;
-          return value.is_learning || value.kind === 'SUPPORTS' || value.kind === 'BLOCKS' ? 2 : 0;
+          return isStructuralEdge(value) || value.is_learning || value.kind === 'SUPPORTS' || value.kind === 'BLOCKS' ? 2 : 0;
         }}
         linkDirectionalParticleSpeed={edge => (edge as GraphLinkView).is_learning ? 0.006 : 0.003}
         linkDirectionalParticleWidth={edge => 0.55 + strength(edge as GraphLinkView) * 0.8}
