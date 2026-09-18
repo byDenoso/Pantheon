@@ -25,6 +25,8 @@ const PRIORITY: Record<string, number> = {
   PROJECTION: 42, FILAMENT: 40, MEMORY: 38, EFFECT: 36, SIDE_QUEST: 34,
 };
 type Runtime = { reset: () => void; focus: (id: string | null, center?: boolean) => void };
+type EdgeCurve = { edge: GraphEdge; points: Vector3[]; control: Vector3; color: Color3; line: import('@babylonjs/core/Meshes/mesh').Mesh };
+type NeuralPulse = { mesh: import('@babylonjs/core/Meshes/mesh').Mesh; curve: EdgeCurve; u: number; speed: number };
 
 function colorFor(node: PlacedNode3D): Color3 { return Color3.FromHexString(DOMAIN_COLOR[node.domain] ?? '#8fb2d0'); }
 function edgeColor(edge: GraphEdge): Color3 {
@@ -41,6 +43,31 @@ function radiusFor(node: PlacedNode3D): number {
 }
 function labelFor(node: PlacedNode3D): string {
   return node.label.length > 42 ? `${node.label.slice(0, 41)}…` : node.label;
+}
+
+function curveFor(from: Vector3, to: Vector3, edge: GraphEdge): { points: Vector3[]; control: Vector3 } {
+  // Quadratic Bézier axon: the perpendicular control point keeps relations organic.
+  const delta = to.subtract(from);
+  const length = Math.max(1, delta.length());
+  let normal = Vector3.Cross(delta, new Vector3(0, 1, 0));
+  if (normal.lengthSquared() < 0.001) normal = Vector3.Cross(delta, new Vector3(1, 0, 0));
+  normal.normalize();
+  const bend = Math.min(18, length * (edge.is_learning ? .2 : .13));
+  const control = from.add(to).scale(.5).add(normal.scale(bend));
+  const points = Array.from({ length: 12 }, (_, index) => {
+    const u = index / 11;
+    return from.scale((1 - u) * (1 - u)).add(control.scale(2 * (1 - u) * u)).add(to.scale(u * u));
+  });
+  return { points, control };
+}
+
+function curvePoint(curve: EdgeCurve, u: number): Vector3 {
+  const from = curve.points[0];
+  const to = curve.points[curve.points.length - 1];
+  const clamped = Math.max(0, Math.min(1, u));
+  return from.scale((1 - clamped) * (1 - clamped))
+    .add(curve.control.scale(2 * (1 - clamped) * clamped))
+    .add(to.scale(clamped * clamped));
 }
 
 /** Babylon WebGL graph: deterministic force relaxation, PBR-like spheres and a restrained bloom pass. */
@@ -66,7 +93,8 @@ export function AtlasWebGL3D({
     const mobile = window.matchMedia('(max-width: 760px)').matches;
     // Keep the desktop world generously spaced, then fit that same semantic
     // graph into a portrait viewport without changing backend topology.
-    const worldScale = mobile ? .82 : 1;
+    const worldScale = mobile ? .74 : 1;
+    const nodeScale = mobile ? 1.42 : 1;
     const renderNodes = nodes.map(node => ({
       ...node,
       x: node.x * worldScale,
@@ -82,7 +110,7 @@ export function AtlasWebGL3D({
     scene.imageProcessingConfiguration.toneMappingType = ImageProcessingConfiguration.TONEMAPPING_ACES;
     const bounds = graphBounds3D(renderNodes);
     const target = new Vector3(bounds.center.x, bounds.center.y, bounds.center.z);
-    const cameraDistance = Math.max(mobile ? 112 : 132, bounds.radius * (mobile ? 1.72 : 2.15));
+    const cameraDistance = Math.max(mobile ? 108 : 132, bounds.radius * (mobile ? 1.55 : 2.15));
     const camera = new ArcRotateCamera('atlas-camera', -Math.PI / 2, 1.14, cameraDistance, target, scene);
     camera.fov = mobile ? .72 : .8;
     camera.lowerBetaLimit = .16; camera.upperBetaLimit = Math.PI - .16;
@@ -105,25 +133,41 @@ export function AtlasWebGL3D({
       materialByColor.set(key, material); return material;
     };
     for (const node of renderNodes) {
-      const mesh = MeshBuilder.CreateSphere(`atlas-node-${node.id}`, { segments: 20, diameter: radiusFor(node) * 2 }, scene);
+      const mesh = MeshBuilder.CreateSphere(`atlas-node-${node.id}`, { segments: 20, diameter: radiusFor(node) * 2 * nodeScale }, scene);
       mesh.position = new Vector3(node.x, node.y, node.z); mesh.material = materialFor(colorFor(node));
       mesh.isPickable = true; mesh.metadata = { nodeId: node.id }; meshById.set(node.id, mesh);
       if (node.type === 'DOMAIN' || node.id === selectedRef.current) {
-        const ring = MeshBuilder.CreateTorus(`atlas-ring-${node.id}`, { diameter: radiusFor(node) * 2.65, thickness: .08, tessellation: 28 }, scene);
+        const ring = MeshBuilder.CreateTorus(`atlas-ring-${node.id}`, { diameter: radiusFor(node) * 2.65 * nodeScale, thickness: .08 * nodeScale, tessellation: 28 }, scene);
         ring.position.copyFrom(mesh.position); ring.rotation.x = Math.PI / 2; ring.material = materialFor(colorFor(node)); ring.isPickable = false;
       }
       if (node.state === 'BLOCKED' || node.state === 'CONFLICT') {
-        const alertRing = MeshBuilder.CreateTorus(`atlas-alert-${node.id}`, { diameter: radiusFor(node) * 3.05, thickness: .055, tessellation: 24 }, scene);
+        const alertRing = MeshBuilder.CreateTorus(`atlas-alert-${node.id}`, { diameter: radiusFor(node) * 3.05 * nodeScale, thickness: .055 * nodeScale, tessellation: 24 }, scene);
         alertRing.position.copyFrom(mesh.position); alertRing.material = materialFor(Color3.FromHexString(ALERT_COLOR)); alertRing.isPickable = false;
       }
     }
+    const edgeCurves: EdgeCurve[] = [];
     for (const edge of edges) {
       const from = meshById.get(edge.from), to = meshById.get(edge.to); if (!from || !to) continue;
-      const color = edgeColor(edge); const line = MeshBuilder.CreateLines(`atlas-edge-${edge.id}`, {
-        points: [from.position, to.position], colors: [new Color4(color.r, color.g, color.b, 1), new Color4(color.r, color.g, color.b, 1)],
+      const color = edgeColor(edge); const geometry = curveFor(from.position, to.position, edge);
+      const line = MeshBuilder.CreateLines(`atlas-edge-${edge.id}`, {
+        points: geometry.points, colors: geometry.points.map(() => new Color4(color.r, color.g, color.b, 1)),
       }, scene);
-      line.color = color; line.alpha = edge.is_learning ? .48 : edge.blocked ? .12 : .2; line.isPickable = false;
+      line.color = color; line.alpha = edge.is_learning ? .52 : edge.blocked ? .12 : .2; line.isPickable = false;
+      edgeCurves.push({ edge, points: geometry.points, control: geometry.control, color, line });
     }
+    const pulseMaterialByColor = new Map<string, StandardMaterial>();
+    const pulseMaterialFor = (color: Color3) => {
+      const key = color.toHexString(); const existing = pulseMaterialByColor.get(key); if (existing) return existing;
+      const material = new StandardMaterial(`atlas-pulse-${key.slice(1)}`, scene);
+      material.diffuseColor = color; material.emissiveColor = color.scale(.9); material.specularColor = color;
+      pulseMaterialByColor.set(key, material); return material;
+    };
+    const activeCurves = edgeCurves.filter(({ edge }) => edge.is_learning || edge.kind === 'BLOCKS' || edge.kind === 'SUPPORTS').slice(0, 18);
+    const pulses: NeuralPulse[] = activeCurves.map((curve, index) => {
+      const mesh = MeshBuilder.CreateSphere(`atlas-pulse-${curve.edge.id}`, { segments: 10, diameter: mobile ? .95 : .68 }, scene);
+      mesh.material = pulseMaterialFor(curve.color); mesh.isPickable = false; mesh.position.copyFrom(curvePoint(curve, (index * .17) % 1));
+      return { mesh, curve, u: (index * .17) % 1, speed: curve.edge.is_learning ? .00026 : .00018 };
+    });
     const labelEntries = renderNodes.map(node => {
       const label = document.createElement('span'); label.className = 'atlas-webgl-label'; label.textContent = labelFor(node); label.dataset.nodeId = node.id;
       label.style.setProperty('--label-color', DOMAIN_COLOR[node.domain] ?? '#dbeeff'); labelsHost.appendChild(label); return { node, label };
@@ -145,6 +189,13 @@ export function AtlasWebGL3D({
       }
     };
     const renderObserver = scene.onBeforeRenderObservable.add(updateLabels);
+    const pulseObserver = scene.onBeforeRenderObservable.add(() => {
+      const delta = Math.min(34, engine.getDeltaTime());
+      for (const pulse of pulses) {
+        pulse.u = (pulse.u + delta * pulse.speed) % 1;
+        pulse.mesh.position.copyFrom(curvePoint(pulse.curve, pulse.u));
+      }
+    });
     const pointerObserver = scene.onPointerObservable.add(pointerInfo => {
       if (pointerInfo.type !== PointerEventTypes.POINTERPICK) return;
       const nodeId = pointerInfo.pickInfo?.pickedMesh?.metadata?.nodeId; if (typeof nodeId === 'string') onSelectRef.current(nodeId);
@@ -162,7 +213,7 @@ export function AtlasWebGL3D({
     canvas.addEventListener('keydown', keydown); engine.runRenderLoop(() => scene.render());
     const resize = () => engine.resize(); const observer = new ResizeObserver(resize); observer.observe(host); resize(); setFailed('');
     return () => {
-      observer.disconnect(); canvas.removeEventListener('keydown', keydown); scene.onBeforeRenderObservable.remove(renderObserver); scene.onPointerObservable.remove(pointerObserver);
+      observer.disconnect(); canvas.removeEventListener('keydown', keydown); scene.onBeforeRenderObservable.remove(renderObserver); scene.onBeforeRenderObservable.remove(pulseObserver); scene.onPointerObservable.remove(pointerObserver);
       runtimeRef.current = null; labelsHost.replaceChildren(); pipeline.dispose(); scene.dispose(); engine.dispose();
     };
   }, [nodes, edges]);
