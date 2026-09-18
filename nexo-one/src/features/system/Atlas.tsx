@@ -203,6 +203,14 @@ export function AtlasView(
     onSelect(null);
   };
 
+  const goHome = () => {
+    setRootExpanded(false);
+    setExpandAll(false);
+    setExpandedDomain(null);
+    setExpandedCluster(null);
+    onSelect(null);
+  };
+
   return (
     <div className={`atlas-layout${isMobile ? ' mobile' : ''}`}>
       <div className="atlas-toolbar">
@@ -232,9 +240,14 @@ export function AtlasView(
         <span className="atlas-count">{renderGraph.nodes.length} nós · {renderGraph.edges.length} relações</span>
         <div className="atlas-explorer-state" role="status">
           <span><b>Hub:</b> {expandAll ? 'NEXO · Visão completa' : expandedDomain ?? (rootExpanded ? 'NEXO · Domínios' : 'NEXO')}</span>
-          {rootExpanded && <button type="button" aria-label="Voltar no grafo" onClick={goBack}>Voltar</button>}
+          {rootExpanded && <button type="button" aria-label="Voltar um nível no grafo" onClick={goBack}>Voltar nível</button>}
           {rootExpanded && !expandAll && <button type="button" aria-label="Expandir todos os grafos" onClick={expandEverything}>Expandir todos</button>}
           {expandedCluster && <span className="atlas-explorer-subtree">Subtree: {label(expandedCluster)}</span>}
+        </div>
+        <div className="atlas-graph-actions" role="group" aria-label="Navegação estrutural do grafo">
+          <button type="button" aria-label="Expandir gráficos" onClick={expandEverything} disabled={expandAll}>Expandir gráficos</button>
+          <button type="button" aria-label="Voltar à tela inicial dos gráficos" onClick={goHome}
+            disabled={!rootExpanded && !expandAll && !expandedDomain && !expandedCluster}>Voltar ao início</button>
         </div>
       </div>
 
