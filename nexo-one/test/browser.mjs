@@ -164,7 +164,7 @@ try {
       await page.mouse.wheel(0, -180);
     }
     if (mobile) {
-      const touchNavigation = page.locator('.atlas3d-mobile-nav:has(button[aria-label="Girar mapa para cima"])');
+      const touchNavigation = page.locator('.atlas3d-controls.atlas3d-mobile-nav');
       for (const control of ['Girar mapa para a esquerda', 'Girar mapa para a direita', 'Aproximar mapa', 'Afastar mapa']) {
         const button = touchNavigation.getByRole('button', { name: control });
         await button.dispatchEvent('click');
