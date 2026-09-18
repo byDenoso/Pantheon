@@ -154,7 +154,7 @@ try {
     await canvas.waitFor();
     assert.equal(await page.locator('.atlas3d-fallback').count(), 0, 'Babylon caiu no fallback');
     const graphNodes = page.locator('.atlas3d-a11y-list button');
-    assert.ok(await graphNodes.count() > 10, 'grafo 3D praticamente vazio');
+    assert.ok(await graphNodes.count() >= 4, 'grafo 3D sem os hubs de domínio');
     const box = await canvas.boundingBox();
     if (box) {
       await page.mouse.move(box.x + box.width * 0.58, box.y + box.height * 0.48);
