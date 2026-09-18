@@ -79,6 +79,6 @@ test('Atlas marks both endpoints of every visible learning edge', async () => {
   assert.match(atlas, /CreateTube\(`atlas-axon-/);
   assert.match(atlas, /fiberCount = Math\.max\(3/);
   assert.match(atlas, /#f4c468/);
-  assert.match(atlas, /depthOfFieldEnabled = true/);
+  assert.match(atlas, /depthOfFieldEnabled = false/);
   assert.match(atlas, /line\.alpha = edge\.is_learning \? \.18 \+ strength \* \.14/);
 });

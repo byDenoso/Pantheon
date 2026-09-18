@@ -132,12 +132,10 @@ export function AtlasWebGL3D({
     keyLight.intensity = 1.1; keyLight.diffuse = new Color3(.73, .88, 1);
     const pipeline = new DefaultRenderingPipeline('atlas-post', true, scene, [camera]);
     pipeline.bloomEnabled = true; pipeline.bloomThreshold = .92; pipeline.bloomWeight = .16; pipeline.bloomKernel = 24; pipeline.fxaaEnabled = true;
-    if (!mobile) {
-      pipeline.depthOfFieldEnabled = true;
-      pipeline.depthOfField.focusDistance = cameraDistance * .72;
-      pipeline.depthOfField.fStop = 10;
-      pipeline.depthOfField.lensSize = 28;
-    }
+    // Keep the graph crisp: Babylon's depth-of-field pass can blur the whole
+    // canvas when the depth texture is unavailable. Perspective, fog and
+    // layered bloom provide the depth cue without sacrificing node legibility.
+    pipeline.depthOfFieldEnabled = false;
 
     const meshById = new Map<string, import('@babylonjs/core/Meshes/mesh').Mesh>();
     const materialByColor = new Map<string, StandardMaterial>();
