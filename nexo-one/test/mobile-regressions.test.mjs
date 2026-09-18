@@ -30,3 +30,12 @@ test('Atlas uses Canvas 2.5D as the active renderer and keeps WebGL out of the p
   assert.doesNotMatch(atlas, /@babylonjs|BABYLON|Engine\(/);
   assert.match(view, /AtlasCanvas25D/);
 });
+
+test('Atlas orbit wraps a full 360 degrees and renders backend learning edges by scope', async () => {
+  const atlas = await text('src/components/AtlasCanvas25D.tsx');
+  assert.match(atlas, /wrapAngle/);
+  assert.match(atlas, /camera\.tilt = wrapAngle/);
+  assert.match(atlas, /edge\.is_learning/);
+  assert.match(atlas, /edge\.learning_scope === 'INTER_DOMAIN'/);
+  assert.match(atlas, /edge\.learning_scope === 'INTER_DOMAIN' \? '#bd8cff' : '#44d9ff'/);
+});
