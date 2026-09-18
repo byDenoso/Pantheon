@@ -134,13 +134,18 @@ jobs:
           print(f"TOWER_PROJECTION_VERIFIED commit={tower_commit} cursor={event_cursor} fingerprint={fingerprint}")
           PY
 
-          tower_commit="${{ steps.projection.outputs.tower_commit }}"
-          git -C _vault cat-file -e "${tower_commit}^{commit}" || {
-            echo "::error::projection tower_commit ${tower_commit} is not present in canonical Vault history"
+      - name: Verify projection ancestry and stage sanctioned files
+        shell: bash
+        env:
+          TOWER_COMMIT: ${{ steps.projection.outputs.tower_commit }}
+        run: |
+          set -euo pipefail
+          git -C _vault cat-file -e "${TOWER_COMMIT}^{commit}" || {
+            echo "::error::projection tower_commit ${TOWER_COMMIT} is not present in canonical Vault history"
             exit 1
           }
-          git -C _vault merge-base --is-ancestor "${tower_commit}" HEAD || {
-            echo "::error::projection tower_commit ${tower_commit} is not an ancestor of current Vault main"
+          git -C _vault merge-base --is-ancestor "${TOWER_COMMIT}" HEAD || {
+            echo "::error::projection tower_commit ${TOWER_COMMIT} is not an ancestor of current Vault main"
             exit 1
           }
 
