@@ -79,6 +79,8 @@ export function AtlasView(
   const isMobile = useIsMobile();
   const [panelOpen, setPanelOpen] = useState(false);
   const [learningVisible, setLearningVisible] = useState(false);
+  const [rootExpanded, setRootExpanded] = useState(false);
+  const [expandAll, setExpandAll] = useState(false);
   const [expandedDomain, setExpandedDomain] = useState<GraphNode['domain'] | null>(null);
   const filtered = useMemo(() => filterGraph(state.graph, filters), [state.graph, filters]);
   const learningEndpointIds = useMemo(() => new Set(filtered.edges.filter(edge => edge.is_learning).flatMap(edge => [edge.from, edge.to])), [filtered.edges]);
@@ -95,7 +97,22 @@ export function AtlasView(
   const renderGraph = useMemo(() => {
     const baseNodes = filtered.nodes.filter(node => learningVisible || (node.type !== 'FILAMENT' && !learningEndpointIds.has(node.id)));
     const domainNodes = baseNodes.filter(node => node.type === 'DOMAIN');
-    if (!expandedDomain) return { nodes: domainNodes, edges: [] };
+    const nexoNode = domainNodes.find(node => node.domain === 'NEXO');
+    if (expandAll) {
+      const ids = new Set(baseNodes.map(node => node.id));
+      return { nodes: baseNodes, edges: filtered.edges.filter(edge => (learningVisible || !edge.is_learning) && ids.has(edge.from) && ids.has(edge.to)) };
+    }
+    if (!rootExpanded) return { nodes: nexoNode ? [nexoNode] : [], edges: [] };
+    if (!expandedDomain) {
+      if (!nexoNode) return { nodes: domainNodes, edges: [] };
+      const childDomains = domainNodes.filter(node => node.domain !== 'NEXO');
+      const edges = childDomains.map(node => ({
+        id: `atlas.root.edge.${node.id}`,
+        from: nexoNode.id, to: node.id, kind: 'OWNS' as const, weight: 0.38,
+        explanation: `Domínio ${node.label} projetado a partir do núcleo NEXO.`,
+      }));
+      return { nodes: [nexoNode, ...childDomains], edges };
+    }
     const domainNode = domainNodes.find(node => node.domain === expandedDomain);
     if (!domainNode) return { nodes: domainNodes, edges: [] };
     if (!expandedCluster) {
@@ -108,7 +125,7 @@ export function AtlasView(
       const nodes = [domainNode, ...clusterNodes];
       const edges = clusterNodes.map(node => ({
         id: `atlas.cluster.edge.${expandedDomain}.${node.id}`,
-        from: domainNode.id, to: node.id, kind: 'OWNS' as const, weight: 1,
+        from: domainNode.id, to: node.id, kind: 'OWNS' as const, weight: 0.72,
         explanation: `Cluster ${node.label} projetado a partir do grafo canônico.`,
       }));
       return { nodes, edges };
@@ -117,7 +134,7 @@ export function AtlasView(
     const nodes = [domainNode, ...children];
     const ids = new Set(nodes.map(node => node.id));
     return { nodes, edges: filtered.edges.filter(edge => (learningVisible || !edge.is_learning) && ids.has(edge.from) && ids.has(edge.to)) };
-  }, [expandedCluster, expandedDomain, filtered, learningEndpointIds, learningVisible]);
+  }, [expandAll, expandedCluster, expandedDomain, filtered, learningEndpointIds, learningVisible, rootExpanded]);
   const placed = useMemo(() => forceLayoutGraph3D(renderGraph.nodes, renderGraph.edges), [renderGraph.nodes, renderGraph.edges]);
   const legend = useMemo(() => legendOf(renderGraph.nodes.filter(node => !clusterFromId(node.id))), [renderGraph.nodes]);
   const effectiveSelectedId = resolveSelection3D(placed, selectedId);
@@ -141,16 +158,49 @@ export function AtlasView(
       if (cluster) {
         setExpandedDomain(cluster.domain);
         setExpandedCluster(cluster.type);
+        setRootExpanded(true);
+        setExpandAll(false);
         onSelect(null);
         return;
       }
       const node = filtered.nodes.find(candidate => candidate.id === id);
       if (node?.type === 'DOMAIN') {
+        if (node.domain === 'NEXO') {
+          if (rootExpanded && !expandedDomain && !expandAll) {
+            setRootExpanded(false);
+            onSelect(null);
+            return;
+          }
+          setRootExpanded(true);
+          setExpandAll(false);
+          setExpandedDomain(null);
+          setExpandedCluster(null);
+          onSelect(null);
+          return;
+        }
+        setRootExpanded(true);
+        setExpandAll(false);
         setExpandedDomain(node.domain);
         setExpandedCluster(null);
       }
     }
     onSelect(id);
+  };
+
+  const goBack = () => {
+    if (expandAll) setExpandAll(false);
+    else if (expandedCluster) setExpandedCluster(null);
+    else if (expandedDomain) setExpandedDomain(null);
+    else if (rootExpanded) setRootExpanded(false);
+    onSelect(null);
+  };
+
+  const expandEverything = () => {
+    setRootExpanded(true);
+    setExpandedDomain(null);
+    setExpandedCluster(null);
+    setExpandAll(true);
+    onSelect(null);
   };
 
   return (
@@ -181,9 +231,10 @@ export function AtlasView(
         )}
         <span className="atlas-count">{renderGraph.nodes.length} nós · {renderGraph.edges.length} relações</span>
         <div className="atlas-explorer-state" role="status">
-          <span><b>Hub:</b> {expandedDomain ?? 'NEXO'}{expandedCluster && <> · <b>Subtree:</b> {label(expandedCluster)}</>}</span>
-          {expandedCluster && <button type="button" onClick={() => { setExpandedCluster(null); onSelect(null); }}>Voltar ao domínio</button>}
-          {expandedDomain && !expandedCluster && <button type="button" onClick={() => { setExpandedDomain(null); onSelect(null); }}>Voltar ao hub</button>}
+          <span><b>Hub:</b> {expandAll ? 'NEXO · Visão completa' : expandedDomain ?? (rootExpanded ? 'NEXO · Domínios' : 'NEXO')}</span>
+          {rootExpanded && <button type="button" aria-label="Voltar no grafo" onClick={goBack}>Voltar</button>}
+          {rootExpanded && !expandAll && <button type="button" aria-label="Expandir todos os grafos" onClick={expandEverything}>Expandir todos</button>}
+          {expandedCluster && <span className="atlas-explorer-subtree">Subtree: {label(expandedCluster)}</span>}
         </div>
       </div>
 
