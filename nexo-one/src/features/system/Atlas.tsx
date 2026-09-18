@@ -67,18 +67,9 @@ export function AtlasView(
   );
   const renderGraph = useMemo(() => {
     const baseNodes = filtered.nodes.filter(node => learningVisible || (node.type !== 'FILAMENT' && !learningEndpointIds.has(node.id)));
-    const baseIds = new Set(baseNodes.map(node => node.id));
     const domainNodes = baseNodes.filter(node => node.type === 'DOMAIN');
     const domainIds = new Set(domainNodes.map(node => node.id));
-    const nexoId = domainNodes.find(node => node.domain === 'NEXO')?.id ?? null;
     const topLevelIds = new Set(domainNodes.map(node => node.id));
-    if (nexoId) {
-      for (const edge of filtered.edges) {
-        if (edge.from !== nexoId && edge.to !== nexoId) continue;
-        const other = edge.from === nexoId ? edge.to : edge.from;
-        if (baseIds.has(other)) topLevelIds.add(other);
-      }
-    }
     if (expandedDomain) {
       for (const node of baseNodes) {
         if (node.domain === expandedDomain) topLevelIds.add(node.id);
@@ -86,7 +77,7 @@ export function AtlasView(
     }
     // Hub view keeps NEXO and the domain hubs visible. Opening a domain reveals
     // its complete canonical cluster without changing the backend graph.
-    const nodes = baseNodes.filter(node => expandedDomain ? topLevelIds.has(node.id) : domainIds.has(node.id) || topLevelIds.has(node.id));
+    const nodes = expandedDomain ? baseNodes.filter(node => topLevelIds.has(node.id)) : domainNodes;
     const ids = new Set(nodes.map(node => node.id));
     return { nodes, edges: filtered.edges.filter(edge => (learningVisible || !edge.is_learning) && ids.has(edge.from) && ids.has(edge.to)) };
   }, [expandedDomain, filtered, learningEndpointIds, learningVisible]);

@@ -72,6 +72,7 @@ test('Atlas starts at the NEXO hub and expands canonical domain clusters on sele
   assert.match(view, /Hub:<\/b> \{expandedDomain \?\? 'NEXO'\}/);
   assert.match(view, /Voltar ao hub/);
   assert.match(view, /node\.domain === expandedDomain/);
+  assert.doesNotMatch(view, /topLevelIds\.add\(other\)/);
 });
 
 test('Atlas marks both endpoints of every visible learning edge', async () => {
