@@ -2,7 +2,8 @@
 // PONTO DE INTEGRAÇÃO ÚNICO.
 //
 // O frontend consome SystemState v1. Em runtime normal usa GET /api/system e
-// hidrata o Atlas pelo endpoint dedicado GET /api/atlas/graph. Builds estáticos
+// hidrata o Atlas pelo endpoint dedicado GET /api/atlas/graph, mantendo /api/system
+// como fallback canônico. Builds estáticos
 // podem fornecer VITE_SYSTEM_ENDPOINT para uma projeção JSON junto dos assets.
 // ============================================================================
 import type { GraphEdge, GraphNode, SystemState } from '../../contracts/system.ts';
