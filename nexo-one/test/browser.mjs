@@ -164,7 +164,7 @@ try {
       await page.mouse.wheel(0, -180);
     }
     if (mobile) {
-      const touchNavigation = page.locator('.atlas3d-mobile-nav');
+      const touchNavigation = page.locator('.atlas3d-mobile-nav:visible').first();
       for (const control of ['Girar mapa para a esquerda', 'Girar mapa para a direita', 'Aproximar mapa', 'Afastar mapa']) {
         const button = touchNavigation.getByRole('button', { name: control });
         await button.waitFor();
