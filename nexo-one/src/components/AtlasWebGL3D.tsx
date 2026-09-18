@@ -119,9 +119,20 @@ function fitCamera(graph: GraphRef | null | undefined, nodes: GraphNodeView[], m
     max.x = Math.max(max.x, node.x); max.y = Math.max(max.y, node.y); max.z = Math.max(max.z, node.z);
   }
   const target = { x: (min.x + max.x) / 2, y: (min.y + max.y) / 2, z: (min.z + max.z) / 2 };
-  const radius = Math.max(1, ...nodes.map(node => Math.hypot(node.x - target.x, node.y - target.y, node.z - target.z) + nodeRadius(node)));
-  const distance = Math.max(mobile ? 72 : 86, radius * (mobile ? 2.55 : 2.25));
-  graph.cameraPosition({ x: target.x, y: target.y + distance * 0.08, z: target.z + distance }, target, transitionMs);
+  const screenRadius = Math.max(
+    1,
+    ...nodes.map(node => Math.hypot(node.x - target.x, node.y - target.y) + nodeRadius(node)),
+  );
+  const depthRadius = Math.max(0, (max.z - min.z) / 2);
+  const distance = Math.max(
+    mobile ? 58 : 62,
+    screenRadius * (mobile ? 1.88 : 1.48) + depthRadius * (mobile ? 0.16 : 0.12),
+  );
+  graph.cameraPosition(
+    { x: target.x, y: target.y + distance * 0.055, z: target.z + distance },
+    target,
+    transitionMs,
+  );
 }
 
 /** Three.js graph renderer. The Atlas projection owns topology and fixed positions; this component owns camera and WebGL interaction. */
