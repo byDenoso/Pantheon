@@ -111,7 +111,11 @@ export function AtlasView(
         from: nexoNode.id, to: node.id, kind: 'OWNS' as const, weight: 0.38,
         explanation: `Domínio ${node.label} projetado a partir do núcleo NEXO.`,
       }));
-      return { nodes: [nexoNode, ...childDomains], edges };
+      const visibleIds = new Set([nexoNode, ...childDomains].map(node => node.id));
+      const visibleLearningEdges = learningVisible
+        ? filtered.edges.filter(edge => edge.is_learning && visibleIds.has(edge.from) && visibleIds.has(edge.to))
+        : [];
+      return { nodes: [nexoNode, ...childDomains], edges: [...edges, ...visibleLearningEdges] };
     }
     const domainNode = domainNodes.find(node => node.domain === expandedDomain);
     if (!domainNode) return { nodes: domainNodes, edges: [] };
