@@ -251,14 +251,6 @@ export function AtlasWebGL3D({
         <button type="button" aria-label="Aproximar mapa" onClick={() => zoom(1.18)}>+</button>
         <button type="button" aria-label="Afastar mapa" onClick={() => zoom(1.18)}>−</button>
       </div>
-      <div className="atlas3d-mobile-nav" role="group" aria-label="Navegação móvel do grafo">
-        <button type="button" aria-label="Girar mapa para a esquerda" onClick={() => rotate(0.34)}>←</button>
-        <button type="button" aria-label="Girar mapa para cima" onClick={() => rotate(0, 0.24)}>↑</button>
-        <button type="button" aria-label="Girar mapa para baixo" onClick={() => rotate(0, -0.24)}>↓</button>
-        <button type="button" aria-label="Girar mapa para a direita" onClick={() => rotate(-0.34)}>→</button>
-        <button type="button" aria-label="Aproximar mapa" onClick={() => zoom(1.18)}>+</button>
-        <button type="button" aria-label="Afastar mapa" onClick={() => zoom(1.18)}>−</button>
-      </div>
     </div>
   );
 }
