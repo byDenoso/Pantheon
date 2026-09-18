@@ -427,3 +427,256 @@
     transition: none;
   }
 }
+
+
+/* Atlas graph visual refresh */
+.atlas3d-shell {
+  border-color: color-mix(in srgb, #79e7ff 20%, #18273a);
+  border-radius: 22px;
+  background:
+    radial-gradient(circle at 50% 44%, rgb(38 135 173 / 14%) 0, transparent 28%),
+    radial-gradient(circle at 74% 26%, rgb(60 121 255 / 9%) 0, transparent 26%),
+    radial-gradient(circle at 24% 72%, rgb(78 236 192 / 7%) 0, transparent 24%),
+    linear-gradient(rgb(121 231 255 / 3%) 1px, transparent 1px),
+    linear-gradient(90deg, rgb(121 231 255 / 3%) 1px, transparent 1px),
+    linear-gradient(145deg, #020711 0%, #030b16 46%, #02060d 100%);
+  background-size: auto, auto, auto, 72px 72px, 72px 72px, auto;
+  box-shadow:
+    inset 0 0 160px rgb(0 0 0 / 68%),
+    inset 0 1px 0 rgb(255 255 255 / 4%),
+    0 28px 80px rgb(0 0 0 / 32%);
+}
+
+.atlas3d-shell::before,
+.atlas3d-shell::after {
+  content: "";
+  position: absolute;
+  z-index: 2;
+  pointer-events: none;
+}
+
+.atlas3d-shell::before {
+  inset: 0;
+  background:
+    linear-gradient(90deg, transparent 49.92%, rgb(121 231 255 / 5%) 50%, transparent 50.08%),
+    linear-gradient(transparent 49.92%, rgb(121 231 255 / 5%) 50%, transparent 50.08%);
+  mask-image: radial-gradient(circle at center, #000 0 18%, transparent 62%);
+  opacity: .7;
+}
+
+.atlas3d-shell::after {
+  inset: 0;
+  background:
+    radial-gradient(circle at center, transparent 42%, rgb(0 3 8 / 18%) 68%, rgb(0 3 8 / 72%) 100%),
+    linear-gradient(180deg, rgb(121 231 255 / 3%), transparent 22%, transparent 78%, rgb(121 231 255 / 2%));
+  box-shadow: inset 0 0 0 1px rgb(255 255 255 / 2%);
+}
+
+.atlas3d-haze {
+  opacity: .38;
+  background-image:
+    radial-gradient(circle at 12% 61%, rgb(187 224 255 / 52%) 0 .7px, transparent 1px),
+    radial-gradient(circle at 31% 14%, rgb(121 231 255 / 46%) 0 .8px, transparent 1.1px),
+    radial-gradient(circle at 66% 72%, rgb(117 191 255 / 42%) 0 .7px, transparent 1px),
+    radial-gradient(circle at 88% 39%, rgb(126 249 218 / 36%) 0 .8px, transparent 1.1px);
+  background-size: 181px 157px, 233px 199px, 271px 229px, 311px 257px;
+  filter: blur(.1px);
+}
+
+.atlas-force-graph {
+  z-index: 1;
+}
+
+.atlas-force-graph canvas {
+  filter: saturate(1.08) contrast(1.04);
+}
+
+.atlas-webgl-links {
+  z-index: 2;
+  opacity: .9;
+  mix-blend-mode: screen;
+}
+
+.atlas-webgl-link {
+  filter: drop-shadow(0 0 7px currentColor);
+  opacity: .72;
+}
+
+.atlas-webgl-link.learning {
+  stroke-dasharray: 8 10;
+  opacity: .9;
+}
+
+.atlas-webgl-link.structural {
+  opacity: .82;
+}
+
+.atlas-webgl-labels {
+  z-index: 4;
+}
+
+.atlas-webgl-label {
+  max-width: 220px;
+  padding: 5px 9px;
+  border-color: color-mix(in srgb, var(--label-color, #dbeeff) 34%, transparent);
+  border-radius: 999px;
+  background:
+    linear-gradient(180deg, rgb(8 18 30 / 86%), rgb(2 8 16 / 82%));
+  box-shadow:
+    0 8px 24px rgb(0 0 0 / 34%),
+    0 0 18px color-mix(in srgb, var(--label-color, #dbeeff) 8%, transparent),
+    inset 0 1px rgb(255 255 255 / 7%);
+  color: color-mix(in srgb, var(--label-color, #dbeeff) 92%, white);
+  font-size: 9px;
+  font-weight: 760;
+  letter-spacing: .08em;
+  line-height: 1.1;
+  text-transform: uppercase;
+  text-shadow: 0 1px 8px #01050c;
+  backdrop-filter: blur(10px);
+}
+
+.atlas-webgl-label.domain {
+  padding: 6px 11px;
+  border-color: color-mix(in srgb, var(--label-color, #dbeeff) 62%, transparent);
+  background:
+    linear-gradient(180deg,
+      color-mix(in srgb, var(--label-color, #dbeeff) 15%, rgb(4 12 22 / 94%)),
+      rgb(2 8 15 / 90%));
+  font-size: 10px;
+  letter-spacing: .11em;
+  box-shadow:
+    0 8px 28px rgb(0 0 0 / 40%),
+    0 0 28px color-mix(in srgb, var(--label-color, #dbeeff) 16%, transparent),
+    inset 0 1px rgb(255 255 255 / 8%);
+}
+
+.atlas-webgl-label.cluster {
+  border-style: dashed;
+  opacity: .94;
+}
+
+.atlas-webgl-label.selected {
+  border-color: #f5fdff;
+  color: #fff;
+  box-shadow:
+    0 8px 30px rgb(0 0 0 / 42%),
+    0 0 0 2px rgb(245 253 255 / 9%),
+    0 0 34px color-mix(in srgb, var(--label-color, #dbeeff) 28%, transparent);
+}
+
+.atlas3d-selection {
+  top: 16px;
+  left: 16px;
+  max-width: calc(100% - 32px);
+  padding: 7px 11px;
+  border-color: rgb(121 231 255 / 16%);
+  border-radius: 999px;
+  background: rgb(2 8 16 / 62%);
+  color: rgb(206 229 242 / 70%);
+  box-shadow: inset 0 1px rgb(255 255 255 / 4%), 0 8px 24px rgb(0 0 0 / 18%);
+  font-size: 8px;
+  font-weight: 720;
+  letter-spacing: .14em;
+  backdrop-filter: blur(14px);
+}
+
+.atlas3d-selection::before {
+  content: "";
+  display: inline-block;
+  width: 5px;
+  height: 5px;
+  margin-right: 8px;
+  border-radius: 50%;
+  background: #79e7ff;
+  box-shadow: 0 0 10px rgb(121 231 255 / 80%);
+  vertical-align: 1px;
+}
+
+.atlas3d-controls {
+  bottom: 18px;
+  gap: 5px;
+  padding: 5px;
+  border-color: rgb(121 231 255 / 15%);
+  border-radius: 13px;
+  background: rgb(2 8 16 / 70%);
+  box-shadow:
+    0 16px 36px rgb(0 0 0 / 34%),
+    inset 0 1px rgb(255 255 255 / 5%);
+  backdrop-filter: blur(18px) saturate(120%);
+}
+
+.atlas3d-controls button,
+.atlas3d-mobile-nav button {
+  min-height: 34px;
+  border-color: rgb(121 231 255 / 14%);
+  border-radius: 9px;
+  background: linear-gradient(180deg, rgb(17 31 47 / 84%), rgb(7 16 28 / 84%));
+  color: rgb(224 240 249 / 86%);
+  font-size: 11px;
+  font-weight: 650;
+  box-shadow: inset 0 1px rgb(255 255 255 / 5%);
+}
+
+.atlas3d-controls button:first-child {
+  padding-inline: 14px;
+  color: #dff9ff;
+  border-color: rgb(121 231 255 / 24%);
+  background: linear-gradient(180deg, rgb(22 50 66 / 84%), rgb(7 22 33 / 88%));
+}
+
+.atlas3d-controls button:hover:not(:disabled),
+.atlas3d-controls button:focus-visible,
+.atlas3d-mobile-nav button:active,
+.atlas3d-mobile-nav button:focus-visible {
+  border-color: rgb(121 231 255 / 52%);
+  background: linear-gradient(180deg, rgb(25 61 79 / 94%), rgb(9 27 39 / 94%));
+  color: #fff;
+  box-shadow: 0 0 18px rgb(121 231 255 / 8%), inset 0 1px rgb(255 255 255 / 7%);
+}
+
+.atlas3d-tooltip {
+  border-color: rgb(121 231 255 / 20%);
+  border-radius: 10px;
+  background: rgb(3 10 19 / 92%);
+  box-shadow: 0 14px 36px rgb(0 0 0 / 42%);
+  backdrop-filter: blur(14px);
+}
+
+@media (max-width: 760px) {
+  .atlas3d-shell {
+    border-radius: 18px;
+    background-size: auto, auto, auto, 54px 54px, 54px 54px, auto;
+  }
+
+  .atlas3d-selection {
+    top: 10px;
+    left: 10px;
+    max-width: calc(100% - 20px);
+    padding: 6px 9px;
+    font-size: 7px;
+  }
+
+  .atlas-webgl-label {
+    max-width: 170px;
+    padding: 4px 7px;
+    font-size: 8px;
+  }
+
+  .atlas-webgl-label.domain {
+    padding: 5px 8px;
+    font-size: 9px;
+  }
+
+  .atlas3d-controls {
+    bottom: 10px;
+    width: calc(100% - 20px);
+    justify-content: center;
+  }
+
+  .atlas3d-controls button {
+    min-width: 42px;
+    min-height: 42px;
+    padding-inline: 9px;
+  }
+}
