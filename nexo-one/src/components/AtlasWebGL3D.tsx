@@ -189,7 +189,7 @@ export function AtlasWebGL3D({
       onWheelCapture={event => event.preventDefault()}
     >
       <div className="atlas3d-haze" aria-hidden="true" />
-      <div className="atlas-force-graph" aria-label="Grafo 3D do Atlas">
+      <div className="atlas-force-graph" data-testid="atlas-3d-canvas" aria-label="Grafo 3D do Atlas">
         <ForceGraph3D
           ref={graphRef}
           width={size.width || 1}
@@ -225,6 +225,13 @@ export function AtlasWebGL3D({
         cooldownTime={0}
           rendererConfig={{ antialias: true, alpha: true, powerPreference: 'high-performance' }}
         />
+      </div>
+      <div className="atlas3d-a11y-list" aria-label="Nós do grafo 3D">
+        {graphData.nodes.map(node => (
+          <button key={node.id} type="button" onClick={() => onSelect(String(node.id))}>
+            {node.label}
+          </button>
+        ))}
       </div>
       <div className="atlas-webgl-labels" aria-hidden="true">
         {labelNodes.map(node => <span
