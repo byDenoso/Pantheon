@@ -17,21 +17,20 @@ test('Atlas exposes explicit touch navigation controls for mobile instead of dep
   assert.match(atlas, /aria-label="Girar mapa para a direita"/);
   assert.match(atlas, /aria-label="Aproximar mapa"/);
   assert.match(atlas, /aria-label="Afastar mapa"/);
-  assert.match(atlas, /camera\.alpha/);
-  assert.match(atlas, /camera\.beta/);
-  assert.match(atlas, /camera\.radius/);
+  assert.match(atlas, /rotateLeft/);
+  assert.match(atlas, /dollyIn/);
+  assert.match(atlas, /onWheelCapture=\{event => event\.preventDefault\(\)\}/);
 });
 
-test('Atlas uses Babylon WebGL 3D with restrained post-processing', async () => {
+test('Atlas uses Three.js force graph 3D with fixed positions and restrained links', async () => {
   const atlas = await text('src/components/AtlasWebGL3D.tsx');
   const view = await text('src/features/system/Atlas.tsx');
-  assert.match(atlas, /@babylonjs\/core/);
-  assert.match(atlas, /new Engine\(canvas/);
-  assert.match(atlas, /new ArcRotateCamera/);
-  assert.match(atlas, /DefaultRenderingPipeline/);
-  assert.match(atlas, /bloomThreshold = \.92/);
-  assert.match(atlas, /fxaaEnabled = true/);
-  assert.match(atlas, /data-renderer="babylon-webgl-3d"/);
+  assert.match(atlas, /react-force-graph-3d/);
+  assert.match(atlas, /data-renderer="three-force-graph-3d"/);
+  assert.match(atlas, /controlType="orbit"/);
+  assert.match(atlas, /nodeThreeObject=\{makeNode\}/);
+  assert.match(atlas, /fx: node\.x, fy: node\.y, fz: node\.z/);
+  assert.match(atlas, /linkCurvature=/);
   assert.match(view, /AtlasWebGL3D/);
 });
 
@@ -40,9 +39,9 @@ test('Atlas adapts the spaced world to portrait mobile viewports', async () => {
   const graph = await text('src/viewmodels/graph3d.ts');
   const styles = await text('src/styles/atlas3d.css');
   assert.match(atlas, /matchMedia\('\(max-width: 760px\)'\)/);
-  assert.match(atlas, /const worldScale = mobile \? \.52 : 1/);
-  assert.match(atlas, /const nodeScale = mobile \? 1\.22 : 1/);
-  assert.match(atlas, /camera\.fov = mobile \? \.72 : \.8/);
+  assert.match(atlas, /const distance = isMobile \? 34 : 42/);
+  assert.match(atlas, /const distance = Math\.max\(mobile \? 72 : 86/);
+  assert.match(styles, /touch-action: none/);
   assert.match(graph, /const spacingScale = 1\.34/);
   assert.match(styles, /min-height: 640px/);
   assert.match(styles, /aspect-ratio: 3 \/ 4/);
@@ -50,8 +49,8 @@ test('Atlas adapts the spaced world to portrait mobile viewports', async () => {
 
 test('Atlas orbit wraps a full 360 degrees and renders backend learning edges by scope', async () => {
   const atlas = await text('src/components/AtlasWebGL3D.tsx');
-  assert.match(atlas, /camera\.alpha/);
-  assert.match(atlas, /lowerBetaLimit/);
+  assert.match(atlas, /controlType="orbit"/);
+  assert.match(atlas, /enableNavigationControls/);
   assert.match(atlas, /edge\.is_learning/);
   assert.match(atlas, /edge\.learning_scope === 'INTER_DOMAIN' \? '#f4c468' : '#d99a4f'/);
 });
@@ -81,22 +80,12 @@ test('Atlas starts at the NEXO hub and expands canonical domain clusters on sele
 
 test('Atlas marks both endpoints of every visible learning edge', async () => {
   const atlas = await text('src/components/AtlasWebGL3D.tsx');
-  assert.match(atlas, /CreateLines/);
-  assert.match(atlas, /Quadratic Bézier/);
-  assert.match(atlas, /const pulses: NeuralPulse\[\]/);
-  assert.match(atlas, /scene\.pick\(scene\.pointerX, scene\.pointerY/);
-  assert.match(atlas, /PointerEventTypes\.POINTERDOWN/);
-  assert.match(atlas, /atlas-star-material/);
-  assert.match(atlas, /const starMeshes/);
-  assert.match(atlas, /const containWheel = \(event: WheelEvent\) => event\.preventDefault\(\)/);
-  assert.match(atlas, /addEventListener\('wheel', containWheel, \{ passive: false \}\)/);
-  assert.match(atlas, /CreateTube\(`atlas-axon-/);
-  assert.match(atlas, /fiberCount = Math\.max\(3/);
+  assert.match(atlas, /filter\(edge => ids\.has\(edge\.from\) && ids\.has\(edge\.to\)\)/);
+  assert.match(atlas, /source: edge\.from, target: edge\.to/);
+  assert.match(atlas, /linkDirectionalParticles=/);
+  assert.match(atlas, /linkDirectionalParticleColor=/);
+  assert.match(atlas, /linkCurvature=/);
   assert.match(atlas, /#f4c468/);
-  assert.match(atlas, /depthOfFieldEnabled = false/);
-  assert.match(atlas, /line\.alpha = edge\.is_learning \? \.18 \+ strength \* \.14/);
-  assert.match(atlas, /const nexoAnchor = renderNodes\.find/);
-  assert.match(atlas, /const animateFocus = \(id: string \| null, center = false\)/);
-  assert.match(atlas, /camera\.radius = fromRadius \+ \(toRadius - fromRadius\) \* eased/);
-  assert.match(atlas, /const lodVisible = close \|\| node\?\.type === 'DOMAIN'/);
+  assert.match(atlas, /const graphData = useMemo/);
+  assert.match(atlas, /graph\.cameraPosition/);
 });
