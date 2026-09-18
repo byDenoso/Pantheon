@@ -30,6 +30,7 @@ type EdgeCurve = { edge: GraphEdge; points: Vector3[]; control: Vector3; color: 
 type NeuralPulse = { mesh: import('@babylonjs/core/Meshes/mesh').Mesh; curve: EdgeCurve; u: number; speed: number };
 
 function colorFor(node: PlacedNode3D): Color3 { return Color3.FromHexString(DOMAIN_COLOR[node.domain] ?? '#8fb2d0'); }
+function isClusterNode(node: PlacedNode3D): boolean { return node.id.startsWith('atlas.cluster.'); }
 function edgeColor(edge: GraphEdge): Color3 {
   if (edge.kind === 'CONTRADICTS' || edge.kind === 'BLOCKS') return Color3.FromHexString(ALERT_COLOR);
   if (edge.is_learning) return Color3.FromHexString(edge.learning_scope === 'INTER_DOMAIN' ? '#f4c468' : '#d99a4f');
@@ -38,6 +39,7 @@ function edgeColor(edge: GraphEdge): Color3 {
 }
 function radiusFor(node: PlacedNode3D): number {
   if (node.type === 'DOMAIN') return node.domain === 'NEXO' ? 2.9 : 2.35;
+  if (isClusterNode(node)) return 1.65;
   if (node.type === 'PROVIDER') return 1.45;
   if (node.type === 'CAPABILITY') return 1.05;
   if (node.type === 'MEMORY' || node.type === 'FILAMENT') return .92;
@@ -186,7 +188,7 @@ export function AtlasWebGL3D({
       const mesh = MeshBuilder.CreateSphere(`atlas-node-${node.id}`, { segments: 20, diameter: radiusFor(node) * 2 * nodeScale }, scene);
       mesh.position = new Vector3(node.x, node.y, node.z); mesh.material = node.type === 'DOMAIN' ? nucleusMaterialFor(nodeColor) : materialFor(nodeColor);
       mesh.isPickable = true; mesh.metadata = { nodeId: node.id }; meshById.set(node.id, mesh);
-      if (node.type === 'DOMAIN' || node.id === selectedRef.current) {
+      if (node.type === 'DOMAIN' || isClusterNode(node) || node.id === selectedRef.current) {
         const ring = MeshBuilder.CreateTorus(`atlas-ring-${node.id}`, { diameter: radiusFor(node) * 2.65 * nodeScale, thickness: .08 * nodeScale, tessellation: 28 }, scene);
         ring.position.copyFrom(mesh.position); ring.rotation.x = Math.PI / 2; ring.material = materialFor(nodeColor); ring.isPickable = false;
         if (node.type === 'DOMAIN') {
@@ -266,7 +268,7 @@ export function AtlasWebGL3D({
     const updateLabels = () => {
       const viewport = camera.viewport.toGlobal(engine.getRenderWidth(), engine.getRenderHeight());
       const transform = scene.getTransformMatrix(); const selected = selectedRef.current;
-      const visible = labelEntries.filter(item => item.node.type === 'DOMAIN' || item.node.type === 'PROVIDER' || item.node.id === selected || learningIds.has(item.node.id));
+      const visible = labelEntries.filter(item => item.node.type === 'DOMAIN' || item.node.type === 'PROVIDER' || isClusterNode(item.node) || item.node.id === selected || learningIds.has(item.node.id));
       const ranked = visible.sort((a, b) => (PRIORITY[b.node.type] ?? 30) - (PRIORITY[a.node.type] ?? 30));
       const labelLimit = engine.getRenderWidth() < 460 ? 12 : engine.getRenderWidth() < 720 ? 16 : 30;
       const allowed = new Set(ranked.slice(0, labelLimit).map(item => item.node.id));

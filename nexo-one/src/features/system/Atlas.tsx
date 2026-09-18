@@ -119,7 +119,7 @@ export function AtlasView(
     return { nodes, edges: filtered.edges.filter(edge => (learningVisible || !edge.is_learning) && ids.has(edge.from) && ids.has(edge.to)) };
   }, [expandedCluster, expandedDomain, filtered, learningEndpointIds, learningVisible]);
   const placed = useMemo(() => forceLayoutGraph3D(renderGraph.nodes, renderGraph.edges), [renderGraph.nodes, renderGraph.edges]);
-  const legend = useMemo(() => legendOf(renderGraph.nodes), [renderGraph.nodes]);
+  const legend = useMemo(() => legendOf(renderGraph.nodes.filter(node => !clusterFromId(node.id))), [renderGraph.nodes]);
   const effectiveSelectedId = resolveSelection3D(placed, selectedId);
   const selected: GraphNode | null = filtered.nodes.find(n => n.id === effectiveSelectedId) ?? null;
   const relations = useMemo(
