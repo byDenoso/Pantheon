@@ -21,6 +21,32 @@ const FRESHNESS_VALUES = ['LIVE', 'RECENT', 'AGING', 'STALE', 'UNKNOWN'] as cons
 
 type FilterKey = 'domains' | 'types' | 'states' | 'freshness' | 'authorities' | 'relations';
 
+const ATLAS_CLUSTER_TYPES: GraphNode['type'][] = [
+  'PROVIDER', 'CAPABILITY', 'ACTION', 'EFFECT', 'PROJECTION', 'CLAIM', 'TEST', 'MEMORY', 'SIDE_QUEST', 'FILAMENT',
+];
+
+const clusterIdFor = (domain: GraphNode['domain'], type: GraphNode['type']): string =>
+  `atlas.cluster.${domain.toLowerCase()}.${type.toLowerCase()}`;
+
+const clusterFromId = (id: string): { domain: GraphNode['domain']; type: GraphNode['type'] } | null => {
+  const match = /^atlas\.cluster\.([^\.]+)\.([^\.]+)$/.exec(id);
+  if (!match) return null;
+  const domain = match[1].toUpperCase() as GraphNode['domain'];
+  const type = match[2].toUpperCase() as GraphNode['type'];
+  return ATLAS_CLUSTER_TYPES.includes(type) ? { domain, type } : null;
+};
+
+function clusterNode(domain: GraphNode['domain'], type: GraphNode['type'], count: number): GraphNode {
+  const title = label(type).toUpperCase();
+  return {
+    id: clusterIdFor(domain, type), type: 'PROVIDER', label: `${title} · ${count}`,
+    domain, state: 'LIVE', authority_class: 'DERIVED', source_ref: 'atlas://projection/cluster',
+    source_revision: 'projection', fingerprint: `atlas-cluster:${domain}:${type}`,
+    freshness: { state: 'LIVE', observed_at: new Date().toISOString(), ttl_seconds: null },
+    checked_at: new Date().toISOString(), summary: `${count} entidades ${title.toLowerCase()} no domínio ${domain}.`,
+  };
+}
+
 function ChipGroup<T extends string>(
   { title, values, selected, onToggle }:
   { title: string; values: readonly T[]; selected: T[]; onToggle: (value: T) => void },
@@ -53,7 +79,7 @@ export function AtlasView(
   const isMobile = useIsMobile();
   const [panelOpen, setPanelOpen] = useState(false);
   const [learningVisible, setLearningVisible] = useState(false);
-  const [expandedDomain, setExpandedDomain] = useState<string | null>(null);
+  const [expandedDomain, setExpandedDomain] = useState<GraphNode['domain'] | null>(null);
   const filtered = useMemo(() => filterGraph(state.graph, filters), [state.graph, filters]);
   const learningEndpointIds = useMemo(() => new Set(filtered.edges.filter(edge => edge.is_learning).flatMap(edge => [edge.from, edge.to])), [filtered.edges]);
   const learningEdges = useMemo(() => filtered.edges.filter(edge => edge.is_learning), [filtered.edges]);
@@ -65,22 +91,33 @@ export function AtlasView(
     () => learningEdges.filter(edge => edge.learning_scope === 'INTRA_DOMAIN').length,
     [learningEdges],
   );
+  const [expandedCluster, setExpandedCluster] = useState<GraphNode['type'] | null>(null);
   const renderGraph = useMemo(() => {
     const baseNodes = filtered.nodes.filter(node => learningVisible || (node.type !== 'FILAMENT' && !learningEndpointIds.has(node.id)));
     const domainNodes = baseNodes.filter(node => node.type === 'DOMAIN');
-    const domainIds = new Set(domainNodes.map(node => node.id));
-    const topLevelIds = new Set(domainNodes.map(node => node.id));
-    if (expandedDomain) {
-      for (const node of baseNodes) {
-        if (node.domain === expandedDomain) topLevelIds.add(node.id);
-      }
+    if (!expandedDomain) return { nodes: domainNodes, edges: [] };
+    const domainNode = domainNodes.find(node => node.domain === expandedDomain);
+    if (!domainNode) return { nodes: domainNodes, edges: [] };
+    if (!expandedCluster) {
+      const clusterNodes = ATLAS_CLUSTER_TYPES
+        .map(type => {
+          const count = baseNodes.filter(node => node.domain === expandedDomain && node.type === type).length;
+          return count > 0 ? clusterNode(expandedDomain, type, count) : null;
+        })
+        .filter((node): node is GraphNode => Boolean(node));
+      const nodes = [domainNode, ...clusterNodes];
+      const edges = clusterNodes.map(node => ({
+        id: `atlas.cluster.edge.${expandedDomain}.${node.id}`,
+        from: domainNode.id, to: node.id, kind: 'OWNS' as const, weight: 1,
+        explanation: `Cluster ${node.label} projetado a partir do grafo canônico.`,
+      }));
+      return { nodes, edges };
     }
-    // Hub view keeps NEXO and the domain hubs visible. Opening a domain reveals
-    // its complete canonical cluster without changing the backend graph.
-    const nodes = expandedDomain ? baseNodes.filter(node => topLevelIds.has(node.id)) : domainNodes;
+    const children = baseNodes.filter(node => node.domain === expandedDomain && node.type === expandedCluster);
+    const nodes = [domainNode, ...children];
     const ids = new Set(nodes.map(node => node.id));
     return { nodes, edges: filtered.edges.filter(edge => (learningVisible || !edge.is_learning) && ids.has(edge.from) && ids.has(edge.to)) };
-  }, [expandedDomain, filtered, learningEndpointIds, learningVisible]);
+  }, [expandedCluster, expandedDomain, filtered, learningEndpointIds, learningVisible]);
   const placed = useMemo(() => forceLayoutGraph3D(renderGraph.nodes, renderGraph.edges), [renderGraph.nodes, renderGraph.edges]);
   const legend = useMemo(() => legendOf(renderGraph.nodes), [renderGraph.nodes]);
   const effectiveSelectedId = resolveSelection3D(placed, selectedId);
@@ -100,8 +137,18 @@ export function AtlasView(
   const active = filterCount(filters);
   const handleGraphSelect = (id: string | null) => {
     if (id) {
+      const cluster = clusterFromId(id);
+      if (cluster) {
+        setExpandedDomain(cluster.domain);
+        setExpandedCluster(cluster.type);
+        onSelect(null);
+        return;
+      }
       const node = filtered.nodes.find(candidate => candidate.id === id);
-      if (node?.type === 'DOMAIN') setExpandedDomain(node.domain === 'NEXO' ? null : node.domain);
+      if (node?.type === 'DOMAIN') {
+        setExpandedDomain(node.domain);
+        setExpandedCluster(null);
+      }
     }
     onSelect(id);
   };
@@ -134,8 +181,9 @@ export function AtlasView(
         )}
         <span className="atlas-count">{renderGraph.nodes.length} nós · {renderGraph.edges.length} relações</span>
         <div className="atlas-explorer-state" role="status">
-          <span><b>Hub:</b> {expandedDomain ?? 'NEXO'}</span>
-          {expandedDomain && <button type="button" onClick={() => { setExpandedDomain(null); onSelect(null); }}>Voltar ao hub</button>}
+          <span><b>Hub:</b> {expandedDomain ?? 'NEXO'}{expandedCluster && <> · <b>Subtree:</b> {label(expandedCluster)}</>}</span>
+          {expandedCluster && <button type="button" onClick={() => { setExpandedCluster(null); onSelect(null); }}>Voltar ao domínio</button>}
+          {expandedDomain && !expandedCluster && <button type="button" onClick={() => { setExpandedDomain(null); onSelect(null); }}>Voltar ao hub</button>}
         </div>
       </div>
 
