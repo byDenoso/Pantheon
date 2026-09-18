@@ -92,6 +92,26 @@
 }
 .atlas-explorer-state button:hover,
 .atlas-explorer-state button:focus-visible { background: rgb(29 86 91 / 88%); }
+.atlas-graph-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.atlas-graph-actions button {
+  min-height: 32px;
+  padding: 4px 10px;
+  border: 1px solid rgb(121 242 208 / 46%);
+  border-radius: 8px;
+  background: linear-gradient(180deg, rgb(17 67 76 / 88%), rgb(7 31 43 / 88%));
+  color: #e9ffff;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.atlas-graph-actions button:hover,
+.atlas-graph-actions button:focus-visible { border-color: #79f2d0; background: rgb(29 86 91 / 92%); }
+.atlas-graph-actions button:disabled { cursor: default; opacity: .46; }
 .atlas-webgl-labels {
   position: absolute;
   inset: 0;
@@ -295,6 +315,15 @@
     width: 100%;
     justify-content: space-between;
   }
+
+  .atlas-graph-actions {
+    order: 6;
+    width: 100%;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .atlas-graph-actions button { min-height: 38px; }
 
   .atlas3d-shell {
     width: 100%;
