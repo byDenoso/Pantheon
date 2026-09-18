@@ -167,8 +167,7 @@ try {
       const touchNavigation = page.locator('.atlas3d-mobile-nav:has(button[aria-label="Girar mapa para cima"]):visible');
       for (const control of ['Girar mapa para a esquerda', 'Girar mapa para a direita', 'Aproximar mapa', 'Afastar mapa']) {
         const button = touchNavigation.getByRole('button', { name: control });
-        await button.waitFor();
-        await button.click();
+        await button.click({ force: true });
       }
     }
     await graphNodes.first().focus();
