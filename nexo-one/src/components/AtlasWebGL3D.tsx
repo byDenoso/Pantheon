@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import ForceGraph3D, { type ForceGraphMethods } from 'react-force-graph-3d';
 import {
   Color, Group, Mesh, MeshBasicMaterial, MeshStandardMaterial, SphereGeometry, TorusGeometry,
@@ -338,7 +338,7 @@ export function AtlasWebGL3D({
               else labelRefs.current.delete(selectedNode.id);
             }}
             className="atlas-webgl-label selected"
-            style={{ '--label-color': colorFor(selectedNode) } as React.CSSProperties}
+            style={{ '--label-color': colorFor(selectedNode) } as CSSProperties}
           >
             {selectedNode.label.length > 46 ? `${selectedNode.label.slice(0, 45)}…` : selectedNode.label}
           </span>
