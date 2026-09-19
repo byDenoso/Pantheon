@@ -120,6 +120,37 @@ export function domainAnchor(domain: Domain): Point3 {
   return { ...(SECONDARY_DOMAIN_ANCHOR[domain] ?? { x: 0, y: 0, z: 0 }) };
 }
 
+
+const MACRO_DOMAIN_ANCHOR: Partial<Record<Domain, Point3>> = {
+  NEXO: { x: 0, y: 0, z: 0 },
+  SCIENCE: { x: 92, y: 18, z: -8 },
+  ENGINEERING: { x: -84, y: 52, z: 8 },
+  OLYMPUS: { x: -68, y: -58, z: -6 },
+};
+
+export function macroDomainAnchor(domain: Domain): Point3 {
+  return { ...(MACRO_DOMAIN_ANCHOR[domain] ?? domainAnchor(domain)) };
+}
+
+export function layoutMacroDomains(nodes: GraphNode[]): PlacedNode3D[] {
+  const occurrences = new Map<Domain, number>();
+  return [...nodes]
+    .sort((a, b) => a.id.localeCompare(b.id))
+    .map(node => {
+      const anchor = macroDomainAnchor(node.domain);
+      const occurrence = occurrences.get(node.domain) ?? 0;
+      occurrences.set(node.domain, occurrence + 1);
+      const offset = occurrence * 3;
+      return {
+        ...node,
+        x: rounded(anchor.x + offset),
+        y: rounded(anchor.y - offset * 0.25),
+        z: rounded(anchor.z + offset * 0.2),
+        radius: node.domain === 'NEXO' ? 3.2 : 2.2,
+      };
+    });
+}
+
 export function distance3(a: Point3, b: Point3): number {
   return Math.hypot(a.x - b.x, a.y - b.y, a.z - b.z);
 }
