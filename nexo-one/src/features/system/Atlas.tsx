@@ -79,7 +79,9 @@ export function AtlasView(
   const isMobile = useIsMobile();
   const [panelOpen, setPanelOpen] = useState(false);
   const [learningVisible, setLearningVisible] = useState(false);
-  const [rootExpanded, setRootExpanded] = useState(false);
+  // Start at the domain overview. A single isolated NEXO node looked like an
+  // empty graph even when the sanctioned projection contained hundreds of entities.
+  const [rootExpanded, setRootExpanded] = useState(true);
   const [expandAll, setExpandAll] = useState(false);
   const [expandedDomain, setExpandedDomain] = useState<GraphNode['domain'] | null>(null);
   const filtered = useMemo(() => filterGraph(state.graph, filters), [state.graph, filters]);
@@ -170,11 +172,8 @@ export function AtlasView(
       const node = filtered.nodes.find(candidate => candidate.id === id);
       if (node?.type === 'DOMAIN') {
         if (node.domain === 'NEXO') {
-          if (rootExpanded && !expandedDomain && !expandAll) {
-            setRootExpanded(false);
-            onSelect(null);
-            return;
-          }
+          // NEXO is the root of the domain overview. Selecting it resets the
+          // drill-down instead of collapsing the canvas to one lonely node.
           setRootExpanded(true);
           setExpandAll(false);
           setExpandedDomain(null);
@@ -195,7 +194,7 @@ export function AtlasView(
     if (expandAll) setExpandAll(false);
     else if (expandedCluster) setExpandedCluster(null);
     else if (expandedDomain) setExpandedDomain(null);
-    else if (rootExpanded) setRootExpanded(false);
+    setRootExpanded(true);
     onSelect(null);
   };
 
@@ -208,7 +207,7 @@ export function AtlasView(
   };
 
   const goHome = () => {
-    setRootExpanded(false);
+    setRootExpanded(true);
     setExpandAll(false);
     setExpandedDomain(null);
     setExpandedCluster(null);
@@ -243,15 +242,15 @@ export function AtlasView(
         )}
         <span className="atlas-count">{renderGraph.nodes.length} nós · {renderGraph.edges.length} relações</span>
         <div className="atlas-explorer-state" role="status">
-          <span><b>Hub:</b> {expandAll ? 'NEXO · Visão completa' : expandedDomain ?? (rootExpanded ? 'NEXO · Domínios' : 'NEXO')}</span>
-          {rootExpanded && <button type="button" aria-label="Voltar um nível no grafo" onClick={goBack}>Voltar nível</button>}
-          {rootExpanded && !expandAll && <button type="button" aria-label="Expandir todos os grafos" onClick={expandEverything}>Expandir todos</button>}
+          <span><b>Visão:</b> {expandAll ? 'grafo completo' : expandedCluster ? `${expandedDomain} · ${label(expandedCluster)}` : expandedDomain ?? 'domínios'}</span>
+          {(expandAll || expandedDomain || expandedCluster) && <button type="button" aria-label="Voltar um nível no grafo" onClick={goBack}>Voltar nível</button>}
+          {!expandAll && <button type="button" aria-label="Mostrar o grafo completo" onClick={expandEverything}>Mostrar tudo</button>}
           {expandedCluster && <span className="atlas-explorer-subtree">Subtree: {label(expandedCluster)}</span>}
         </div>
         <div className="atlas-graph-actions" role="group" aria-label="Navegação estrutural do grafo">
-          <button type="button" aria-label="Expandir gráficos" onClick={expandEverything} disabled={expandAll}>Expandir gráficos</button>
-          <button type="button" aria-label="Voltar à tela inicial dos gráficos" onClick={goHome}
-            disabled={!rootExpanded && !expandAll && !expandedDomain && !expandedCluster}>Voltar ao início</button>
+          <button type="button" aria-label="Mostrar o grafo completo" onClick={expandEverything} disabled={expandAll}>Mostrar grafo completo</button>
+          <button type="button" aria-label="Voltar à visão por domínios" onClick={goHome}
+            disabled={!expandAll && !expandedDomain && !expandedCluster}>Visão por domínios</button>
         </div>
       </div>
 
