@@ -3,48 +3,54 @@ import type { Domain, GraphEdge, GraphNode, GraphNodeType } from '../contracts/s
 export interface Point3 { x: number; y: number; z: number }
 export interface PlacedNode3D extends GraphNode, Point3 { radius: number }
 
-const DOMAIN_ANCHORS: Record<Domain, Point3> = {
-  NEXO: { x: 0, y: 0, z: 0 },
-  // Keep domain hubs outside the satellite shells so the clusters remain
-  // separable after the perspective camera fits the whole graph into view.
-  // The wide baselines are intentional: mobile scales this world down only
-  // at render time, while desktop keeps the clusters visibly independent.
-  SCIENCE: { x: 52, y: 15, z: -18 },
-  ENGINEERING: { x: -49, y: -16, z: 38 },
-  OLYMPUS: { x: 18, y: -46, z: -61 },
-  ARTIFACT: { x: -17, y: 48, z: 59 },
+export const PRIMARY_GALAXY_DOMAINS = ['SCIENCE', 'ENGINEERING', 'OLYMPUS'] as const;
+export type PrimaryGalaxyDomain = (typeof PRIMARY_GALAXY_DOMAINS)[number];
+
+const ARM_PHASE: Record<PrimaryGalaxyDomain, number> = {
+  SCIENCE: -0.52,
+  ENGINEERING: 1.57,
+  OLYMPUS: 3.66,
 };
 
-const SHELL_RADIUS: Record<GraphNodeType, number> = {
+const ARM_Z_PHASE: Record<PrimaryGalaxyDomain, number> = {
+  SCIENCE: 0.2,
+  ENGINEERING: 2.15,
+  OLYMPUS: 4.1,
+};
+
+const TYPE_PROGRESS: Record<GraphNodeType, number> = {
   DOMAIN: 0,
-  // Extra-wide nested shells keep satellites readable instead of stacking
-  // into one compact ball around each domain hub.
-  PROVIDER: 10,
-  CAPABILITY: 14,
-  ACTION: 18,
-  SIDE_QUEST: 20,
-  EFFECT: 24,
-  PROJECTION: 26,
-  CLAIM: 31,
-  FILAMENT: 36,
-  TEST: 42,
-  MEMORY: 48,
+  PROVIDER: 0.1,
+  CAPABILITY: 0.18,
+  ACTION: 0.28,
+  EFFECT: 0.38,
+  PROJECTION: 0.48,
+  CLAIM: 0.58,
+  FILAMENT: 0.66,
+  TEST: 0.76,
+  MEMORY: 0.86,
+  SIDE_QUEST: 0.94,
 };
 
 const NODE_RADIUS: Record<GraphNodeType, number> = {
-  DOMAIN: 1.65,
+  DOMAIN: 1.72,
   PROVIDER: 0.72,
-  CAPABILITY: 0.62,
-  ACTION: 0.5,
+  CAPABILITY: 0.64,
+  ACTION: 0.52,
   SIDE_QUEST: 0.5,
-  EFFECT: 0.46,
-  PROJECTION: 0.48,
-  CLAIM: 0.42,
-  FILAMENT: 0.4,
-  TEST: 0.38,
-  MEMORY: 0.38,
+  EFFECT: 0.48,
+  PROJECTION: 0.5,
+  CLAIM: 0.45,
+  FILAMENT: 0.42,
+  TEST: 0.4,
+  MEMORY: 0.4,
 };
 
+const SECONDARY_DOMAIN_ANCHOR: Partial<Record<Domain, Point3>> = {
+  ARTIFACT: { x: -9, y: 18, z: 13 },
+};
+
+const TAU = Math.PI * 2;
 const GOLDEN_ANGLE = Math.PI * (3 - Math.sqrt(5));
 
 function hash32(value: string): number {
@@ -56,12 +62,62 @@ function hash32(value: string): number {
   return hash >>> 0;
 }
 
+function unit(seed: number, shift = 0): number {
+  return (((seed >>> shift) % 10000) / 10000);
+}
+
 function rounded(value: number): number {
   return Math.round(value * 10000) / 10000;
 }
 
+function primaryDomain(domain: Domain): PrimaryGalaxyDomain | null {
+  return (PRIMARY_GALAXY_DOMAINS as readonly string[]).includes(domain)
+    ? domain as PrimaryGalaxyDomain
+    : null;
+}
+
+function clusterSemanticType(node: GraphNode): GraphNodeType {
+  const match = /^atlas\.cluster\.[^.]+\.([^.]+)$/.exec(node.id);
+  const candidate = match?.[1]?.toUpperCase() as GraphNodeType | undefined;
+  return candidate && candidate in TYPE_PROGRESS ? candidate : node.type;
+}
+
+/**
+ * A stable point on one of NEXO ONE's three irregular spiral arms.
+ *
+ * t=0 is near the luminous bar/core and t=1 is the outer experimental edge.
+ * The formula is deterministic and intentionally imperfect: a galaxy should
+ * look spatially learnable, not like somebody drew three SVG spirals with a ruler.
+ */
+export function galaxyArmPoint(domain: PrimaryGalaxyDomain, t: number): Point3 {
+  const clamped = Math.max(0, Math.min(1, t));
+  const phase = ARM_PHASE[domain];
+  const zPhase = ARM_Z_PHASE[domain];
+  const radial = 24 + 112 * clamped;
+  const irregularity = Math.sin(clamped * Math.PI * 5 + zPhase) * 0.055;
+  const angle = phase + 0.1 + clamped * 1.42 + irregularity;
+  const flatten = 0.76 + Math.sin(clamped * Math.PI * 2 + zPhase) * 0.035;
+  return {
+    x: rounded(Math.cos(angle) * radial * 1.06),
+    y: rounded(Math.sin(angle) * radial * flatten),
+    z: rounded(
+      Math.sin(angle * 1.33 + zPhase) * (7 + clamped * 9)
+      + Math.sin(clamped * Math.PI * 4 + zPhase) * 3.5,
+    ),
+  };
+}
+
+export function galaxyArmPath(domain: PrimaryGalaxyDomain, samples = 56): Point3[] {
+  const count = Math.max(8, Math.min(160, Math.floor(samples)));
+  return Array.from({ length: count }, (_, index) =>
+    galaxyArmPoint(domain, index / Math.max(1, count - 1)));
+}
+
 export function domainAnchor(domain: Domain): Point3 {
-  return { ...DOMAIN_ANCHORS[domain] };
+  if (domain === 'NEXO') return { x: 0, y: 0, z: 0 };
+  const primary = primaryDomain(domain);
+  if (primary) return galaxyArmPoint(primary, 0.105);
+  return { ...(SECONDARY_DOMAIN_ANCHOR[domain] ?? { x: 0, y: 0, z: 0 }) };
 }
 
 export function distance3(a: Point3, b: Point3): number {
@@ -73,143 +129,137 @@ export function resolveSelection3D(nodes: Array<Pick<GraphNode, 'id'>>, selected
   return nodes.some(node => node.id === selectedId) ? selectedId : null;
 }
 
-function localDirection(key: string, index: number, count: number): Point3 {
-  const seed = hash32(key);
-  const phase = ((seed % 10000) / 10000) * Math.PI * 2;
-  const tilt = ((((seed >>> 8) % 1000) / 1000) - 0.5) * 0.38;
-  const t = count <= 1 ? 0.5 : (index + 0.5) / count;
-  const y = Math.max(-0.82, Math.min(0.82, 1 - 2 * t + tilt));
-  const radial = Math.sqrt(Math.max(0, 1 - y * y));
-  const theta = phase + index * GOLDEN_ANGLE;
-  return { x: Math.cos(theta) * radial, y, z: Math.sin(theta) * radial };
+function localOffset(node: GraphNode, index: number, count: number, tangentAngle: number, spread: number): Point3 {
+  const seed = hash32(node.id);
+  const centeredIndex = count <= 1 ? 0 : (index / (count - 1)) - 0.5;
+  const lane = (unit(seed, 4) - 0.5) * spread + centeredIndex * Math.min(spread * 0.34, 6);
+  const depth = (unit(seed, 12) - 0.5) * spread * 0.8;
+  const along = (unit(seed, 20) - 0.5) * spread * 0.5;
+  const normalAngle = tangentAngle + Math.PI / 2;
+  return {
+    x: Math.cos(normalAngle) * lane + Math.cos(tangentAngle) * along,
+    y: Math.sin(normalAngle) * lane * 0.78 + Math.sin(tangentAngle) * along * 0.78,
+    z: depth,
+  };
 }
 
-/**
- * Deterministic semantic 3D layout.
- *
- * NEXO is the origin. Other domains are stable orbital hubs. Every non-domain
- * entity is placed on a type-specific shell around its own domain. There is no
- * runtime force simulation, so the same graph remains spatially learnable.
- */
-export function layoutGraph3D(nodes: GraphNode[]): PlacedNode3D[] {
-  const ordered = [...nodes].sort((a, b) => a.id.localeCompare(b.id));
-  const buckets = new Map<string, GraphNode[]>();
+function armTangent(domain: PrimaryGalaxyDomain, t: number): number {
+  const a = galaxyArmPoint(domain, Math.max(0, t - 0.008));
+  const b = galaxyArmPoint(domain, Math.min(1, t + 0.008));
+  return Math.atan2(b.y - a.y, b.x - a.x);
+}
 
-  for (const node of ordered) {
-    if (node.type === 'DOMAIN') continue;
-    const key = `${node.domain}:${node.type}`;
-    const group = buckets.get(key) ?? [];
+function layoutPrimaryDomainNodes(domain: PrimaryGalaxyDomain, nodes: GraphNode[]): PlacedNode3D[] {
+  const byType = new Map<GraphNodeType, GraphNode[]>();
+  for (const node of nodes) {
+    const semanticType = clusterSemanticType(node);
+    const group = byType.get(semanticType) ?? [];
     group.push(node);
-    buckets.set(key, group);
+    byType.set(semanticType, group);
   }
 
   const placed: PlacedNode3D[] = [];
-  const domainCounts = new Map<Domain, number>();
-  for (const node of ordered) {
-    if (node.type !== 'DOMAIN') continue;
-    const occurrence = domainCounts.get(node.domain) ?? 0;
-    domainCounts.set(node.domain, occurrence + 1);
-    const anchor = domainAnchor(node.domain);
-    const offset = occurrence === 0 ? { x: 0, y: 0, z: 0 } : localDirection(`${node.domain}:domain`, occurrence, occurrence + 1);
-    placed.push({
-      ...node,
-      x: rounded(anchor.x + offset.x * occurrence * 1.5),
-      y: rounded(anchor.y + offset.y * occurrence * 1.5),
-      z: rounded(anchor.z + offset.z * occurrence * 1.5),
-      radius: node.domain === 'NEXO' ? 2.25 : NODE_RADIUS.DOMAIN,
-    });
-  }
-
-  for (const [key, group] of [...buckets.entries()].sort(([a], [b]) => a.localeCompare(b))) {
+  for (const [semanticType, group] of [...byType.entries()].sort((a, b) =>
+    TYPE_PROGRESS[a[0]] - TYPE_PROGRESS[b[0]] || a[0].localeCompare(b[0]))) {
     const sorted = [...group].sort((a, b) => a.id.localeCompare(b.id));
+    const base = TYPE_PROGRESS[semanticType];
     sorted.forEach((node, index) => {
-      const anchor = domainAnchor(node.domain);
-      const direction = localDirection(key, index, sorted.length);
-      const shell = SHELL_RADIUS[node.type];
-      const jitter = ((hash32(node.id) % 1000) / 1000 - 0.5) * 0.55;
-      const radiusFromHub = shell + jitter;
+      const seed = hash32(node.id);
+      const within = sorted.length <= 1 ? 0.5 : (index + 0.5) / sorted.length;
+      const typeBand = 0.07;
+      const t = Math.max(
+        0.13,
+        Math.min(0.985, 0.12 + base * 0.78 + (within - 0.5) * typeBand + (unit(seed) - 0.5) * 0.025),
+      );
+      const spine = galaxyArmPoint(domain, t);
+      const tangent = armTangent(domain, t);
+      const spread = 5.5 + t * 15;
+      const offset = localOffset(node, index, sorted.length, tangent, spread);
       placed.push({
         ...node,
-        x: rounded(anchor.x + direction.x * radiusFromHub),
-        y: rounded(anchor.y + direction.y * radiusFromHub),
-        z: rounded(anchor.z + direction.z * radiusFromHub),
+        x: rounded(spine.x + offset.x),
+        y: rounded(spine.y + offset.y),
+        z: rounded(spine.z + offset.z),
         radius: NODE_RADIUS[node.type],
       });
     });
+  }
+  return placed;
+}
+
+function layoutSecondaryDomainNodes(domain: Domain, nodes: GraphNode[]): PlacedNode3D[] {
+  const anchor = domainAnchor(domain);
+  const sorted = [...nodes].sort((a, b) => a.id.localeCompare(b.id));
+  return sorted.map((node, index) => {
+    const seed = hash32(node.id);
+    const theta = unit(seed) * TAU + index * GOLDEN_ANGLE;
+    const ring = 8 + TYPE_PROGRESS[clusterSemanticType(node)] * 22 + (unit(seed, 10) - 0.5) * 4;
+    return {
+      ...node,
+      x: rounded(anchor.x + Math.cos(theta) * ring),
+      y: rounded(anchor.y + Math.sin(theta) * ring * 0.7),
+      z: rounded(anchor.z + (unit(seed, 18) - 0.5) * 12),
+      radius: NODE_RADIUS[node.type],
+    };
+  });
+}
+
+/**
+ * Deterministic NEXO ONE galaxy layout.
+ *
+ * NEXO is fixed at the origin. SCIENCE, ENGINEERING and OLYMPUS own three
+ * persistent irregular spiral sectors. Domain hubs stay near the core while
+ * derived/local entities spread outward according to semantic type. No force
+ * simulation runs at render time, which keeps 500-2000 entity views stable.
+ */
+export function layoutGalaxy3D(nodes: GraphNode[]): PlacedNode3D[] {
+  const ordered = [...nodes].sort((a, b) => a.id.localeCompare(b.id));
+  const placed: PlacedNode3D[] = [];
+  const buckets = new Map<Domain, GraphNode[]>();
+  const domainOccurrences = new Map<Domain, number>();
+
+  for (const node of ordered) {
+    if (node.type === 'DOMAIN') {
+      const occurrence = domainOccurrences.get(node.domain) ?? 0;
+      domainOccurrences.set(node.domain, occurrence + 1);
+      const anchor = domainAnchor(node.domain);
+      const offset = occurrence === 0 ? 0 : occurrence * 2.4;
+      placed.push({
+        ...node,
+        x: rounded(anchor.x + offset),
+        y: rounded(anchor.y - offset * 0.35),
+        z: rounded(anchor.z + offset * 0.22),
+        radius: node.domain === 'NEXO' ? 2.7 : NODE_RADIUS.DOMAIN,
+      });
+      continue;
+    }
+    const group = buckets.get(node.domain) ?? [];
+    group.push(node);
+    buckets.set(node.domain, group);
+  }
+
+  for (const [domain, group] of [...buckets.entries()].sort(([a], [b]) => a.localeCompare(b))) {
+    const primary = primaryDomain(domain);
+    placed.push(...(primary
+      ? layoutPrimaryDomainNodes(primary, group)
+      : layoutSecondaryDomainNodes(domain, group)));
   }
 
   return placed.sort((a, b) => a.id.localeCompare(b.id));
 }
 
 /**
- * Deterministic 3D force relaxation for the WebGL renderer.
- *
- * The graph remains backend-shaped: only canonical nodes and edges participate.
- * Domain hubs are pinned, satellites repel one another, and canonical relations
- * act as springs. No cross-cluster relation is synthesized here.
+ * Compatibility alias for callers that previously requested a force layout.
+ * The old O(n² × iterations) relaxation was a performance liability and made
+ * spatial memory drift. Stage 2 deliberately routes it to the deterministic
+ * galaxy layout while preserving the public function until downstream cleanup.
  */
-export function forceLayoutGraph3D(nodes: GraphNode[], edges: GraphEdge[], iterations = 180): PlacedNode3D[] {
-  const placed = layoutGraph3D(nodes).map(node => ({ ...node, x: node.x * 1.04, y: node.y * 1.04, z: node.z * 1.04 }));
-  const byId = new Map(placed.map(node => [node.id, node]));
-  const velocity = new Map(placed.map(node => [node.id, { x: 0, y: 0, z: 0 }]));
-  const domainIds = new Set(placed.filter(node => node.type === 'DOMAIN').map(node => node.id));
-  const clampStep = (value: number): number => Math.max(-0.65, Math.min(0.65, value));
+export function forceLayoutGraph3D(nodes: GraphNode[], _edges: GraphEdge[], _iterations = 180): PlacedNode3D[] {
+  return layoutGalaxy3D(nodes);
+}
 
-  for (let iteration = 0; iteration < iterations; iteration += 1) {
-    const force = new Map(placed.map(node => [node.id, { x: 0, y: 0, z: 0 }]));
-    for (let leftIndex = 0; leftIndex < placed.length; leftIndex += 1) {
-      const left = placed[leftIndex];
-      if (domainIds.has(left.id)) continue;
-      for (let rightIndex = leftIndex + 1; rightIndex < placed.length; rightIndex += 1) {
-        const right = placed[rightIndex];
-        if (domainIds.has(right.id)) continue;
-        const dx = left.x - right.x, dy = left.y - right.y, dz = left.z - right.z;
-        const distance = Math.max(1.5, Math.hypot(dx, dy, dz));
-        const repulsion = 0.75 / (distance * distance);
-        const fx = (dx / distance) * repulsion, fy = (dy / distance) * repulsion, fz = (dz / distance) * repulsion;
-        const leftForce = force.get(left.id)!; const rightForce = force.get(right.id)!;
-        leftForce.x += fx; leftForce.y += fy; leftForce.z += fz;
-        rightForce.x -= fx; rightForce.y -= fy; rightForce.z -= fz;
-      }
-    }
-    for (const edge of edges) {
-      const from = byId.get(edge.from), to = byId.get(edge.to);
-      if (!from || !to || from.id === to.id) continue;
-      const dx = to.x - from.x, dy = to.y - from.y, dz = to.z - from.z;
-      const distance = Math.max(1.5, Math.hypot(dx, dy, dz));
-      const target = edge.is_learning ? 18 : 13 + Math.min(8, Number(edge.weight ?? 0) * 5);
-      const spring = (distance - target) * (edge.is_learning ? 0.0048 : 0.0025);
-      const fx = (dx / distance) * spring, fy = (dy / distance) * spring, fz = (dz / distance) * spring;
-      const fromForce = force.get(from.id); const toForce = force.get(to.id);
-      if (fromForce && !domainIds.has(from.id)) { fromForce.x += fx; fromForce.y += fy; fromForce.z += fz; }
-      if (toForce && !domainIds.has(to.id)) { toForce.x -= fx; toForce.y -= fy; toForce.z -= fz; }
-    }
-    for (const node of placed) {
-      if (domainIds.has(node.id)) { const anchor = domainAnchor(node.domain); node.x = anchor.x; node.y = anchor.y; node.z = anchor.z; continue; }
-      const anchor = domainAnchor(node.domain), nodeForce = force.get(node.id)!;
-      nodeForce.x += (anchor.x - node.x) * 0.0014;
-      nodeForce.y += (anchor.y - node.y) * 0.0014;
-      nodeForce.z += (anchor.z - node.z) * 0.0014;
-      const nodeVelocity = velocity.get(node.id)!;
-      nodeVelocity.x = (nodeVelocity.x + nodeForce.x) * 0.86;
-      nodeVelocity.y = (nodeVelocity.y + nodeForce.y) * 0.86;
-      nodeVelocity.z = (nodeVelocity.z + nodeForce.z) * 0.86;
-      node.x += clampStep(nodeVelocity.x); node.y += clampStep(nodeVelocity.y); node.z += clampStep(nodeVelocity.z);
-    }
-  }
-  // The springs preserve canonical relations, then this final radial opening
-  // gives every cluster breathing room without inventing nodes or edges.
-  const spacingScale = 1.34;
-  return placed.map(node => {
-    if (domainIds.has(node.id)) return { ...node, x: rounded(node.x), y: rounded(node.y), z: rounded(node.z) };
-    const anchor = domainAnchor(node.domain);
-    return {
-      ...node,
-      x: rounded(anchor.x + (node.x - anchor.x) * spacingScale),
-      y: rounded(anchor.y + (node.y - anchor.y) * spacingScale),
-      z: rounded(anchor.z + (node.z - anchor.z) * spacingScale),
-    };
-  }).sort((a, b) => a.id.localeCompare(b.id));
+export function layoutGraph3D(nodes: GraphNode[]): PlacedNode3D[] {
+  return layoutGalaxy3D(nodes);
 }
 
 export function graphBounds3D(nodes: PlacedNode3D[]): { center: Point3; radius: number } {
