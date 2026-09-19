@@ -9,6 +9,7 @@ import { GraphsPage } from './pages/graphs-page';
 import { CockpitPage } from './pages/CockpitPage';
 import { AtividadePage } from './pages/AtividadePage';
 import { LoginPage } from './pages/LoginPage';
+import { HomePage } from './pages/HomePage';
 import { PrivateGate } from './components/PrivateGate';
 import { ActivityDrawer } from './components/shell/ActivityDrawer';
 import { WorkspacePreferencesDrawer } from './components/WorkspacePreferencesDrawer';
@@ -181,9 +182,9 @@ export default function App() {
   useEffect(() => { setQuery(route.context.query || ''); }, [route.context.query]);
 
   useEffect(() => {
-    if (route.path !== '/' || workspacePreferences.startArea === 'graphs') return;
+    if (route.area === 'landing' || route.path !== '/' || workspacePreferences.startArea === 'graphs') return;
     navigate(routeFor(workspacePreferences.startArea, route.context));
-  }, [navigate, route.context, route.path, workspacePreferences.startArea]);
+  }, [navigate, route.area, route.context, route.path, workspacePreferences.startArea]);
 
   useEffect(() => {
     if (route.area !== 'graphs' || state.loading || state.path.length < 2) return;
@@ -204,6 +205,7 @@ export default function App() {
     if (value) void actions.search(value); else void actions.clearFilters();
   };
 
+  if (route.area === 'landing') return <HomePage state={state} actions={actions} navigate={navigate}/>;
   if (route.area === 'login') return <LoginPage/>;
 
   const updateWorkspacePreferences = (patch: Partial<WorkspacePreferences>) => {
