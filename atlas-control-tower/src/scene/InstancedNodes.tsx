@@ -57,12 +57,13 @@ type Props={
   pickMode?: boolean;
   aura?: boolean;
   theme?: 'dark'|'light';
+  shape?: 'disc'|'sphere';
   onNodeClick?: (node: PositionedNode, event: ThreeEvent<MouseEvent>) => void;
   onNodeDoubleClick?: (node: PositionedNode, event: ThreeEvent<MouseEvent>) => void;
   positions?: Map<string,Vector3>;
 };
 
-export function InstancedNodes({nodes,selectedId,focusId,pickMode=false,aura=false,onNodeClick,onNodeDoubleClick,positions,theme='dark'}:Props){
+export function InstancedNodes({nodes,selectedId,focusId,pickMode=false,aura=false,onNodeClick,onNodeDoubleClick,positions,theme='dark',shape='disc'}:Props){
   const mesh=useRef<InstancedMesh>(null);
   const object=useMemo(()=>new Object3D(),[]);
   const {camera}=useThree();
@@ -96,7 +97,8 @@ export function InstancedNodes({nodes,selectedId,focusId,pickMode=false,aura=fal
       // all operate in 3D; only the glyph itself is a camera-facing illustration
       // instead of a shaded sphere that would change visual language while orbiting.
       object.position.copy(position);
-      object.quaternion.copy(camera.quaternion);
+      if(shape==='disc') object.quaternion.copy(camera.quaternion);
+      else object.quaternion.identity();
       const radius=nodeRadius(node,selectedId,focusId);
       object.scale.setScalar(aura ? radius * (node.id === focusId ? 1.72 : 1.54) : radius);
       object.updateMatrix();matrix.copy(object.matrix);target.setMatrixAt(index,matrix);
@@ -116,7 +118,7 @@ export function InstancedNodes({nodes,selectedId,focusId,pickMode=false,aura=fal
   };
 
   return <instancedMesh ref={mesh} args={[undefined,undefined,Math.max(1,nodes.length)]} frustumCulled={false} onClick={handleClick} onDoubleClick={handleDoubleClick}>
-    <circleGeometry args={[1,32]}/>
+    {shape==='sphere'?<icosahedronGeometry args={[1,2]}/>:<circleGeometry args={[1,32]}/>} 
     <primitive object={material} attach="material"/>
   </instancedMesh>;
 }
