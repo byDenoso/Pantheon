@@ -76,6 +76,22 @@ export const bySeverity = <T extends { severity: Severity }>(a: T, b: T): number
 
 export const isConflict = (state: EntityState): boolean => state === 'CONFLICT';
 
+/**
+ * A conservative "what's next" hint for the inspector, derived only from the
+ * entity's own state — never from data the projection does not carry. When
+ * the state gives no real signal, this says so instead of guessing.
+ */
+export const nextHintFor = (state: EntityState): string => {
+  switch (state) {
+    case 'CONFLICT': return 'Requer decisão humana: dois provedores divergem sobre esta entidade.';
+    case 'BLOCKED': return 'Bloqueada — verifique a relação BLOCKS/dependência no inspector antes de agir.';
+    case 'MISSING_PROVIDER': return 'Provedor esperado não respondeu; sem leitura recente para decidir.';
+    case 'DEGRADED': return 'Leitura degradada — trate como parcial até a próxima checagem.';
+    case 'STALE': case 'STALE_DECLARATION': return 'Leitura antiga — confirme a fonte antes de assumir que ainda vale.';
+    default: return 'Nenhuma ação pendente identificada nesta projeção.';
+  }
+};
+
 /** Estados que exigem que a UI diga explicitamente o que não sabe. */
 export const NEEDS_EXPLANATION: Tone[] = ['stale', 'degraded', 'conflict', 'blocked', 'unknown'];
 
