@@ -87,7 +87,7 @@ test('GitHub Pages refreshes every two hours, hydrates history and reads back th
   assert.match(workflow, /cron: '17 \*\/2 \* \* \*'/);
   assert.match(workflow, /Hydrate previous valid galaxy snapshot history/);
   assert.match(workflow, /NEXO_GALAXY_PREVIOUS: dist\/galaxy\/previous\.json/);
-  assert.match(workflow, /NEXO_GALAXY_RETENTION: '360'/);
+  assert.match(workflow, /NEXO_GALAXY_RETENTION: '168'/);
   assert.match(workflow, /node scripts\/build-galaxy-snapshot\.mjs/);
   assert.match(workflow, /test -s dist\/galaxy\/latest\.json/);
   assert.match(workflow, /test -s dist\/galaxy\/index\.json/);
