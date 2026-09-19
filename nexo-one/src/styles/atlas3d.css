@@ -704,3 +704,82 @@
     font-size: 9px;
   }
 }
+
+
+/* Atlas mobile viewport pass */
+@media (max-width: 760px) {
+  .atlas3d-shell {
+    min-height: 0;
+    height: clamp(520px, 72dvh, 720px);
+    aspect-ratio: auto;
+    border-radius: 16px;
+    overflow: hidden;
+  }
+
+  .atlas3d-selection {
+    top: 8px;
+    left: 8px;
+    right: 8px;
+    max-width: none;
+    padding: 6px 8px;
+    font-size: 6.8px;
+    letter-spacing: .11em;
+  }
+
+  .atlas3d-controls,
+  .atlas3d-mobile-nav {
+    left: 8px;
+    right: 8px;
+    bottom: calc(80px + env(safe-area-inset-bottom));
+    width: auto;
+    max-width: none;
+    grid-template-columns: 1.35fr repeat(4, minmax(42px, .72fr));
+    gap: 5px;
+    padding: 5px;
+    transform: none;
+  }
+
+  .atlas3d-controls button,
+  .atlas3d-mobile-nav button {
+    min-width: 0;
+    min-height: 42px;
+    padding: 0 7px;
+    font-size: 15px;
+  }
+
+  .atlas3d-controls button:first-child,
+  .atlas3d-mobile-nav button:first-child {
+    padding-inline: 10px;
+    font-size: 10px;
+  }
+
+  .atlas-webgl-label {
+    max-width: 104px;
+    padding: 3px 6px;
+    font-size: 7.5px;
+    letter-spacing: .06em;
+  }
+
+  .atlas-webgl-label.domain {
+    max-width: 116px;
+    padding: 4px 7px;
+    font-size: 8.5px;
+    letter-spacing: .085em;
+  }
+}
+
+@media (max-width: 420px) {
+  .atlas3d-shell {
+    height: clamp(500px, 70dvh, 640px);
+  }
+
+  .atlas3d-controls,
+  .atlas3d-mobile-nav {
+    bottom: calc(76px + env(safe-area-inset-bottom));
+  }
+
+  .atlas3d-controls button,
+  .atlas3d-mobile-nav button {
+    min-height: 40px;
+  }
+}
