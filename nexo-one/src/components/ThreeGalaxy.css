@@ -1,0 +1,199 @@
+.three-galaxy-root{
+  position:absolute;
+  inset:0;
+  z-index:1;
+  overflow:hidden;
+  min-width:0;
+  min-height:0;
+  background:
+    radial-gradient(circle at 50% 46%,rgba(36,119,168,.14),transparent 32%),
+    radial-gradient(circle at 50% 52%,rgba(9,31,52,.3),transparent 58%),
+    linear-gradient(180deg,#01040a 0%,#020711 52%,#01040a 100%);
+}
+.three-galaxy-canvas{
+  position:absolute;
+  inset:0;
+  display:block;
+  width:100%;
+  height:100%;
+  touch-action:none;
+  overscroll-behavior:contain;
+  outline:none;
+}
+.three-galaxy-canvas:focus-visible{
+  box-shadow:inset 0 0 0 2px rgba(121,231,255,.56);
+}
+.three-galaxy-vignette{
+  position:absolute;
+  inset:0;
+  z-index:2;
+  pointer-events:none;
+  background:
+    radial-gradient(circle at center,transparent 30%,rgba(0,2,6,.1) 56%,rgba(0,2,6,.82) 100%),
+    linear-gradient(180deg,rgba(121,231,255,.02),transparent 20%,transparent 78%,rgba(121,231,255,.02));
+  box-shadow:inset 0 0 140px rgba(0,0,0,.62);
+}
+.three-galaxy-status{
+  position:absolute;
+  z-index:5;
+  top:12px;
+  left:12px;
+  display:inline-flex;
+  align-items:center;
+  max-width:calc(100% - 24px);
+  min-height:29px;
+  padding:0 11px;
+  overflow:hidden;
+  border:1px solid rgba(121,231,255,.14);
+  border-radius:999px;
+  background:rgba(2,8,16,.56);
+  color:rgba(220,239,248,.68);
+  box-shadow:0 10px 28px rgba(0,0,0,.2),inset 0 1px rgba(255,255,255,.04);
+  font:720 8px/1.2 "SFMono-Regular",Consolas,monospace;
+  letter-spacing:.13em;
+  text-overflow:ellipsis;
+  text-transform:uppercase;
+  white-space:nowrap;
+  backdrop-filter:blur(16px);
+}
+.three-galaxy-status i{
+  width:5px;
+  height:5px;
+  margin-right:8px;
+  border-radius:50%;
+  background:#79e7ff;
+  box-shadow:0 0 14px rgba(121,231,255,.94);
+}
+.three-galaxy-labels{
+  position:absolute;
+  inset:0;
+  z-index:4;
+  pointer-events:none;
+}
+.three-galaxy-domain-label{
+  position:absolute;
+  top:0;
+  left:0;
+  min-width:88px;
+  padding:7px 12px;
+  border:1px solid rgba(160,231,255,.24);
+  border-radius:999px;
+  background:linear-gradient(180deg,rgba(7,18,31,.74),rgba(2,8,16,.58));
+  color:#edfaff;
+  box-shadow:
+    0 12px 34px rgba(0,0,0,.3),
+    0 0 22px rgba(121,231,255,.08),
+    inset 0 1px rgba(255,255,255,.05);
+  font:760 10px/1 Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  letter-spacing:.12em;
+  text-align:center;
+  text-transform:uppercase;
+  text-shadow:0 0 12px rgba(121,231,255,.38);
+  pointer-events:auto;
+  cursor:pointer;
+  backdrop-filter:blur(12px);
+  will-change:transform,opacity;
+}
+.three-galaxy-domain-label span{display:block}
+.three-galaxy-domain-label small{
+  display:block;
+  margin-top:3px;
+  color:rgba(220,240,249,.52);
+  font:650 7px/1 "SFMono-Regular",Consolas,monospace;
+  letter-spacing:.16em;
+}
+.three-galaxy-domain-label.domain-nexo{
+  min-width:112px;
+  padding:9px 15px;
+  border-color:rgba(240,253,255,.52);
+  background:radial-gradient(circle at 50% 10%,rgba(121,231,255,.16),rgba(3,10,18,.7) 60%);
+  color:#fff;
+  font-size:12px;
+  box-shadow:
+    0 16px 40px rgba(0,0,0,.38),
+    0 0 34px rgba(121,231,255,.16),
+    inset 0 1px rgba(255,255,255,.08);
+}
+.three-galaxy-domain-label:hover,
+.three-galaxy-domain-label:focus-visible{
+  border-color:rgba(215,249,255,.62);
+  background:linear-gradient(180deg,rgba(14,40,58,.86),rgba(4,13,23,.76));
+  color:#fff;
+  outline:none;
+}
+.three-galaxy-controls{
+  position:absolute;
+  z-index:6;
+  left:50%;
+  bottom:14px;
+  display:grid;
+  grid-template-columns:1.4fr repeat(2,48px);
+  gap:5px;
+  width:min(250px,calc(100% - 24px));
+  padding:5px;
+  border:1px solid rgba(121,231,255,.14);
+  border-radius:14px;
+  background:rgba(2,8,16,.66);
+  box-shadow:0 16px 36px rgba(0,0,0,.34),inset 0 1px rgba(255,255,255,.05);
+  transform:translateX(-50%);
+  backdrop-filter:blur(18px) saturate(120%);
+}
+.three-galaxy-controls button{
+  min-height:38px;
+  border:1px solid rgba(121,231,255,.12);
+  border-radius:9px;
+  background:linear-gradient(180deg,rgba(17,31,47,.82),rgba(7,16,28,.84));
+  color:rgba(232,246,252,.9);
+  font:680 12px/1 Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  cursor:pointer;
+}
+.three-galaxy-controls button:first-child{
+  color:#e8fbff;
+  border-color:rgba(121,231,255,.22);
+  letter-spacing:.08em;
+}
+.three-galaxy-controls button:active,
+.three-galaxy-controls button:focus-visible{
+  border-color:rgba(121,231,255,.54);
+  color:#fff;
+  outline:none;
+  box-shadow:0 0 18px rgba(121,231,255,.1);
+}
+@media(max-width:760px){
+  .three-galaxy-status{
+    top:8px;
+    left:8px;
+    max-width:calc(100% - 16px);
+    min-height:26px;
+    padding:0 9px;
+    font-size:6.7px;
+    letter-spacing:.1em;
+  }
+  .three-galaxy-domain-label{
+    min-width:72px;
+    padding:5px 8px;
+    font-size:8px;
+    letter-spacing:.09em;
+  }
+  .three-galaxy-domain-label.domain-nexo{
+    min-width:86px;
+    padding:7px 10px;
+    font-size:9px;
+  }
+  .three-galaxy-controls{
+    left:10px;
+    right:10px;
+    bottom:calc(80px + env(safe-area-inset-bottom));
+    width:auto;
+    transform:none;
+    grid-template-columns:1.5fr repeat(2,52px);
+  }
+  .three-galaxy-controls button{min-height:42px}
+}
+@media(max-width:420px){
+  .three-galaxy-controls{bottom:calc(76px + env(safe-area-inset-bottom))}
+}
+@media(prefers-reduced-motion:reduce){
+  .three-galaxy-domain-label,
+  .three-galaxy-controls button{transition:none!important}
+}
