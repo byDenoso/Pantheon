@@ -14,6 +14,14 @@ export interface GalaxySnapshotState {
   freshness: SnapshotFreshness;
 }
 
+export function selectCompatibleGalaxySnapshot(
+  published: GalaxySnapshot | null,
+  fallback: GalaxySnapshot,
+  systemFingerprint: string,
+): GalaxySnapshot {
+  return published?.tower_revision === systemFingerprint ? published : fallback;
+}
+
 /**
  * Public builds prefer the versioned NEXO_ONE_GALAXY_V1 artifact. Development
  * and partial deployments remain usable by deriving the exact same contract
@@ -30,7 +38,7 @@ export function useGalaxySnapshot(state: SystemState): GalaxySnapshotState {
       .then(snapshot => {
         // Never allow a stale artifact from another Tower projection to become
         // the visual authority for the current SystemState.
-        setPublished(snapshot.tower_revision === state.bus.fingerprint ? snapshot : fallback);
+        setPublished(selectCompatibleGalaxySnapshot(snapshot, fallback, state.bus.fingerprint));
       })
       .catch(() => setPublished(fallback));
     return () => controller.abort();
