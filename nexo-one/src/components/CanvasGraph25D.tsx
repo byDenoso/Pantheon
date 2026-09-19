@@ -455,7 +455,7 @@ export const CanvasGraph25D=forwardRef<CanvasGraph25DHandle,Props>(function Canv
           ?1+Math.sin(now*.004+item.x*.01)*.13
           :1;
         const radius=item.radius*pulse;
-        const halo=node.halo??(selected?1:hot?.65:node.major?.28:0);
+        const halo=node.halo??(selected?1:hot?0.65:node.major?0.28:0);
 
         if(halo>0){
           ctx.save();
