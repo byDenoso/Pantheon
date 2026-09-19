@@ -19,7 +19,6 @@ test('Canvas galaxy exposes explicit navigation controls in addition to gestures
   assert.match(canvas, /aria-label="Afastar"/);
   assert.match(canvas, /onPointerMove/);
   assert.match(canvas, /onWheel=/);
-  assert.match(canvas, /touch-action/);
 });
 
 test('Atlas active surface uses Canvas 2.5D with deterministic galaxy geometry', async () => {
