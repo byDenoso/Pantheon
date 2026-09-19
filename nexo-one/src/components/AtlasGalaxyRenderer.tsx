@@ -23,11 +23,13 @@ export const AtlasGalaxyRenderer = forwardRef<CanvasGraph25DHandle, {
   edges: GraphEdge[];
   selectedId: string | null;
   onSelect: (id: string | null) => void;
+  viewMode?: 'macro' | 'detail';
 }>(function AtlasGalaxyRenderer({
   nodes,
   edges,
   selectedId,
   onSelect,
+  viewMode = 'detail',
 }, ref) {
   const [webglAvailable, setWebglAvailable] = useState(false);
   const [threeFailed, setThreeFailed] = useState(false);
@@ -61,6 +63,7 @@ export const AtlasGalaxyRenderer = forwardRef<CanvasGraph25DHandle, {
         selectedId={selectedId}
         onSelect={onSelect}
         onFailure={() => setThreeFailed(true)}
+        viewMode={viewMode}
       />
     </div>
   );
