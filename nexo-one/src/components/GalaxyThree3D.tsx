@@ -351,7 +351,7 @@ function compatibleView(camera: PerspectiveCamera, target: Vector3): Canvas25DVi
   return {
     yaw: Math.atan2(offset.x, offset.z),
     pitch: Math.asin(Math.max(-1, Math.min(1, offset.y / distance))),
-    zoom: 205 / distance,
+    zoom: 248 / distance,
     target: { x: target.x, y: target.y, z: target.z },
   };
 }
