@@ -1,3 +1,21 @@
+.atlas3d-hint {
+  position: absolute;
+  z-index: 6;
+  left: 50%;
+  bottom: 96px;
+  transform: translateX(-50%);
+  padding: 6px 12px;
+  border: 1px solid color-mix(in srgb, var(--accent, #79e7ff) 24%, transparent);
+  border-radius: 999px;
+  background: color-mix(in srgb, #05070b 78%, transparent);
+  backdrop-filter: blur(12px);
+  color: color-mix(in srgb, #eafcff 88%, transparent);
+  font: 600 9px/1.2 "SFMono-Regular", Consolas, monospace;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  pointer-events: none;
+}
+
 .atlas3d-shell {
   position: relative;
   min-width: 0;
@@ -783,3 +801,11 @@
     min-height: 40px;
   }
 }
+
+.atlas-snapshot-age{
+  display:inline-flex;align-items:center;min-height:24px;padding:0 8px;border:1px solid rgba(121,231,255,.12);
+  border-radius:999px;background:rgba(3,10,18,.45);color:rgba(222,240,249,.58);
+  font:650 8px/1.1 "SFMono-Regular",Consolas,monospace;letter-spacing:.08em;text-transform:uppercase;white-space:nowrap
+}
+.atlas-snapshot-age.freshness-aging{border-color:rgba(121,231,255,.2);color:rgba(222,240,249,.72)}
+.atlas-snapshot-age.freshness-stale,.atlas-snapshot-age.freshness-unknown{border-style:dashed;color:rgba(222,240,249,.68)}
