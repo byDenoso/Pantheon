@@ -107,6 +107,25 @@ test('Pages pipeline uses Tower projection authority, two-hour cadence, history 
   assert.match(workflow,/NEXO_GALAXY_RETENTION: '168'/);
   assert.match(workflow,/GALAXY_VERSIONED_READBACK_MISMATCH/);
   assert.match(workflow,/GALAXY_NOT_BOUND_TO_TOWER_PROJECTION/);
+  const readback=workflow.slice(workflow.indexOf('      - name: Read back sanctioned projection'));
+  const versionedCurl=readback.indexOf('galaxy/snapshots/\${galaxy_id}.json');
+  const versionedRead=readback.indexOf("const galaxyVersioned=JSON.parse");
+  assert.ok(versionedCurl>=0&&versionedRead>versionedCurl,'versioned snapshot must be fetched before Node readback');
+  assert.match(readback,/grep -Eq '\\^galaxy-\[0-9a-z-\]\\\+\\\
+  assert.match(builder,/server\/compiler\/galaxy-v1\.mjs/);
+  assert.doesNotMatch(builder,/viewmodels\/galaxyCompiler/);
+});
+
+test('frontend labels the SystemState compiler explicitly as fallback while production stays Tower-native',async()=>{
+  const [fallback,hook]=await Promise.all([
+    read('../src/viewmodels/galaxyCompiler.ts'),
+    read('../src/data/useGalaxySnapshot.ts'),
+  ]);
+  assert.match(hook,/Production truth comes from the sanctioned Tower projection/);
+  assert.match(hook,/compileGalaxySnapshot\(state\)/);
+  assert.match(fallback,/SystemState/);
+});
+/);
   assert.match(builder,/server\/compiler\/galaxy-v1\.mjs/);
   assert.doesNotMatch(builder,/viewmodels\/galaxyCompiler/);
 });
