@@ -298,8 +298,10 @@ jobs:
           curl -fsSL "${base}/mcp/topology.json" -o /tmp/mcp-topology.json
           curl -fsSL "${base}/galaxy/latest.json" -o /tmp/galaxy-latest.json
           curl -fsSL "${base}/galaxy/index.json" -o /tmp/galaxy-index.json
+
           galaxy_id="$(node -e "const fs=require('fs');const x=JSON.parse(fs.readFileSync('/tmp/galaxy-latest.json','utf8'));process.stdout.write(x.snapshot_id)")"
-          printf '%s' "${galaxy_id}" | grep -Eq '^galaxy-[0-9a-z-]+
+          printf '%s' "${galaxy_id}" | grep -Eq '^galaxy-[0-9a-z-]+$'
+          curl -fsSL "${base}/galaxy/snapshots/${galaxy_id}.json" -o /tmp/galaxy-versioned.json
 
           node <<'NODE'
           const fs=require('fs');
@@ -311,6 +313,7 @@ jobs:
           const galaxy=JSON.parse(fs.readFileSync('/tmp/galaxy-latest.json','utf8'));
           const galaxyIndex=JSON.parse(fs.readFileSync('/tmp/galaxy-index.json','utf8'));
           const galaxyVersioned=JSON.parse(fs.readFileSync('/tmp/galaxy-versioned.json','utf8'));
+
           if(manifest.authority!=='TOWER_V06')throw new Error('READBACK_AUTHORITY_INVALID');
           if(manifest.projection_only!==true)throw new Error('READBACK_PROJECTION_ONLY_INVALID');
           if(manifest.writeback!=='FORBIDDEN')throw new Error('READBACK_WRITEBACK_INVALID');
@@ -320,11 +323,14 @@ jobs:
           if(JSON.stringify(projection.manifest)!==JSON.stringify(manifest))throw new Error('READBACK_MANIFEST_SPLIT_BRAIN');
           if(system.bus?.fingerprint!==manifest.projection_fingerprint)throw new Error('SYSTEM_NOT_BOUND_TO_TOWER_PROJECTION');
           if(world.truthGraph?.fingerprint!==manifest.projection_fingerprint)throw new Error('WORLD_NOT_BOUND_TO_TOWER_PROJECTION');
+
           const raw=JSON.stringify({system,world,projection});
           if(/truthgraph-projection|nexo-drive-projection|GOOGLE_DRIVE/i.test(raw))throw new Error('LEGACY_OPERATIONAL_SOURCE_PRESENT');
+
           if(mcp.contract!=='NEXO_MCP_TOPOLOGY_V1')throw new Error('MCP_TOPOLOGY_CONTRACT_INVALID');
           if(mcp.source?.authority!=='TOWER_V06'||!mcp.source?.commit)throw new Error('MCP_TOPOLOGY_SOURCE_INVALID');
           if(!Array.isArray(mcp.nodes)||mcp.nodes.length<8||!Array.isArray(mcp.links)||mcp.links.length<7)throw new Error('MCP_TOPOLOGY_EMPTY');
+
           if(galaxy.contract!=='NEXO_ONE_GALAXY_V1')throw new Error('GALAXY_CONTRACT_INVALID');
           if(galaxy.provenance?.source_fingerprint!==manifest.projection_fingerprint)throw new Error('GALAXY_NOT_BOUND_TO_TOWER_PROJECTION');
           if(galaxy.tower_revision!==manifest.tower_commit)throw new Error('GALAXY_TOWER_REVISION_MISMATCH');
@@ -340,33 +346,3 @@ jobs:
           echo "PAGES_MCP_ATLAS_READBACK_OK ${base}/mcp/topology.json"
           echo "PAGES_GALAXY_READBACK_OK ${base}/galaxy/latest.json"
           echo "PAGES_GALAXY_INDEX_READBACK_OK ${base}/galaxy/index.json"
-
-          curl -fsSL "${base}/galaxy/snapshots/${galaxy_id}.json" -o /tmp/galaxy-versioned.json
-
-          node <<'NODE'
-          const fs=require('fs');
-          const manifest=JSON.parse(fs.readFileSync('/tmp/manifest.json','utf8'));
-          const projection=JSON.parse(fs.readFileSync('/tmp/projection.json','utf8'));
-          const system=JSON.parse(fs.readFileSync('/tmp/system.json','utf8'));
-          const world=JSON.parse(fs.readFileSync('/tmp/world.ndjson','utf8').trim());
-          const mcp=JSON.parse(fs.readFileSync('/tmp/mcp-topology.json','utf8'));
-          if(manifest.authority!=='TOWER_V06')throw new Error('READBACK_AUTHORITY_INVALID');
-          if(manifest.projection_only!==true)throw new Error('READBACK_PROJECTION_ONLY_INVALID');
-          if(manifest.writeback!=='FORBIDDEN')throw new Error('READBACK_WRITEBACK_INVALID');
-          if(manifest.tower_commit!==process.env.EXPECTED_TOWER_COMMIT)throw new Error('READBACK_TOWER_COMMIT_MISMATCH');
-          if(manifest.event_cursor!==process.env.EXPECTED_EVENT_CURSOR)throw new Error('READBACK_EVENT_CURSOR_MISMATCH');
-          if(manifest.projection_fingerprint!==process.env.EXPECTED_FINGERPRINT)throw new Error('READBACK_FINGERPRINT_MISMATCH');
-          if(JSON.stringify(projection.manifest)!==JSON.stringify(manifest))throw new Error('READBACK_MANIFEST_SPLIT_BRAIN');
-          if(system.bus?.fingerprint!==manifest.projection_fingerprint)throw new Error('SYSTEM_NOT_BOUND_TO_TOWER_PROJECTION');
-          if(world.truthGraph?.fingerprint!==manifest.projection_fingerprint)throw new Error('WORLD_NOT_BOUND_TO_TOWER_PROJECTION');
-          const raw=JSON.stringify({system,world,projection});
-          if(/truthgraph-projection|nexo-drive-projection|GOOGLE_DRIVE/i.test(raw))throw new Error('LEGACY_OPERATIONAL_SOURCE_PRESENT');
-          if(mcp.contract!=='NEXO_MCP_TOPOLOGY_V1')throw new Error('MCP_TOPOLOGY_CONTRACT_INVALID');
-          if(mcp.source?.authority!=='TOWER_V06'||!mcp.source?.commit)throw new Error('MCP_TOPOLOGY_SOURCE_INVALID');
-          if(!Array.isArray(mcp.nodes)||mcp.nodes.length<8||!Array.isArray(mcp.links)||mcp.links.length<7)throw new Error('MCP_TOPOLOGY_EMPTY');
-          NODE
-
-          echo "PAGES_TOWER_PROJECTION_READBACK_OK ${base}/tower-projection/manifest.json"
-          echo "PAGES_SYSTEM_READBACK_OK ${base}/system.json"
-          echo "PAGES_WORLD_READBACK_OK ${base}/world-public.ndjson"
-          echo "PAGES_MCP_ATLAS_READBACK_OK ${base}/mcp/topology.json"
