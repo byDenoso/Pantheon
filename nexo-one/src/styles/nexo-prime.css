@@ -1001,50 +1001,52 @@ p{
 
 
 /* NEXO V2 palette + restrained product surface ---------------------------
-   Dark: black + light blue. Light: white + orange.
+   Dark: Black Titanium + ice blue. Light: porcelain white + orange.
    This intentionally removes the old neon/glass emphasis from ordinary UI. */
 :root{
   color-scheme:dark;
-  --nexo-bg-0:#07090d;
-  --nexo-bg-1:#0c1016;
-  --nexo-bg-2:#111720;
-  --nexo-surface-1:#0c1016;
-  --nexo-surface-2:#111720;
-  --nexo-surface-3:#171e27;
-  --nexo-text:#f4f7fa;
-  --nexo-text-2:#b4c0cc;
-  --nexo-muted:#7d8b99;
-  --nexo-accent:#78b8ff;
-  --nexo-accent-strong:#9bcbff;
-  --nexo-accent-dim:#4f7fae;
-  --nexo-success:#62c99e;
-  --nexo-attention:#dfb36a;
-  --nexo-danger:#ec7d86;
-  --nexo-experimental:#9d91e8;
+  --nexo-bg-0:#090a0c;
+  --nexo-bg-1:#101216;
+  --nexo-bg-2:#15181d;
+  --nexo-surface-1:#101216;
+  --nexo-surface-2:#15181d;
+  --nexo-surface-3:#1b1f25;
+  --nexo-text:#f5f6f7;
+  --nexo-text-2:#b3b8c0;
+  --nexo-muted:#7e858f;
+  --nexo-accent:#6faeff;
+  --nexo-accent-strong:#a5ceff;
+  --nexo-accent-dim:#4d79ad;
+  --nexo-accent-soft:rgba(111,174,255,.10);
+  --nexo-border-strong:#39414b;
+  --nexo-success:#65c49a;
+  --nexo-attention:#d7aa63;
+  --nexo-danger:#df747d;
+  --nexo-experimental:#978ce1;
 
-  --surface-0:#07090d;
-  --surface-1:#0c1016;
-  --surface-2:#111720;
-  --surface-3:#171e27;
-  --bg:#07090d;
-  --panel:#0c1016;
-  --raised:#111720;
-  --hover:#171e27;
-  --ink:#f4f7fa;
-  --muted:#b4c0cc;
-  --quiet:#7d8b99;
-  --line:#222b36;
-  --accent:#78b8ff;
-  --blue:#78b8ff;
-  --snapshot:#78b8ff;
-  --live:#62c99e;
-  --degraded:#dfb36a;
-  --conflict:#ec7d86;
-  --blocked:#9d91e8;
-  --command-accent:#78b8ff;
-  --command-accent-strong:#9bcbff;
+  --surface-0:#090a0c;
+  --surface-1:#101216;
+  --surface-2:#15181d;
+  --surface-3:#1b1f25;
+  --bg:#090a0c;
+  --panel:#101216;
+  --raised:#15181d;
+  --hover:#20252c;
+  --ink:#f5f6f7;
+  --muted:#b3b8c0;
+  --quiet:#7e858f;
+  --line:#292e36;
+  --accent:#6faeff;
+  --blue:#6faeff;
+  --snapshot:#6faeff;
+  --live:#65c49a;
+  --degraded:#d7aa63;
+  --conflict:#df747d;
+  --blocked:#978ce1;
+  --command-accent:#6faeff;
+  --command-accent-strong:#a5ceff;
   --command-grid:transparent;
-  --command-hairline:#222b36;
+  --command-hairline:#292e36;
   --command-shadow:0 12px 34px rgba(0,0,0,.24);
   --shadow:0 12px 34px rgba(0,0,0,.24);
 }
@@ -1188,7 +1190,7 @@ p{
 
 /* Galaxy canvas adapts to theme instead of assuming black + cyan. */
 .galaxy-three-root{
-  background:#020508;
+  background:#090a0c;
 }
 :root[data-theme=light] .galaxy-three-root{
   background:
@@ -1264,6 +1266,10 @@ p{
 }
 :root[data-theme=light] .brand-mark{
   background:#fff;
+}
+:root[data-theme=dark] .bottom-nav{
+  background:rgba(16,18,22,.94);
+  border-color:var(--command-hairline);
 }
 :root[data-theme=light] .bottom-nav{
   background:rgba(255,255,255,.94);
