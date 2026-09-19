@@ -15,7 +15,8 @@ import {
   EMPTY_FILTERS, filterCount, filterGraph, legendOf, relationsOf, type GraphFilters,
 } from '../../viewmodels/graph.ts';
 import { layoutGraph3D, resolveSelection3D } from '../../viewmodels/graph3d.ts';
-import { compileGalaxySnapshot } from '../../viewmodels/galaxyCompiler.ts';
+import { useGalaxySnapshot } from '../../data/useGalaxySnapshot.ts';
+import { galaxySnapshotAgeLabel } from '../../data/galaxySnapshot.ts';
 import { label, toneOf } from '../../viewmodels/tokens.ts';
 import { LAYER_TYPES, PRESETS, applyPreset, type LayerId } from '../../viewmodels/layers.ts';
 import { TOUR_ROUTES, resolveTourAction, tourRouteById, type TourRouteId } from '../../viewmodels/tour.ts';
@@ -104,7 +105,8 @@ export function AtlasView(
   const audio = useGalaxyAudio(isMobile);
   const deepLinkAppliedRef = useRef(false);
   const filtered = useMemo(() => filterGraph(state.graph, filters), [state.graph, filters]);
-  const galaxySnapshot = useMemo(() => compileGalaxySnapshot(state), [state]);
+  const galaxyState = useGalaxySnapshot(state);
+  const galaxySnapshot = galaxyState.snapshot;
   const galaxyPositions = useMemo(() => {
     const positions = new Map<string, { x: number; y: number; z: number }>();
     for (const entity of galaxySnapshot.entities) positions.set(entity.id, entity.layout.position);
@@ -424,6 +426,10 @@ export function AtlasView(
           </span>
         )}
         <span className="atlas-count">{renderGraph.nodes.length} nós · {renderGraph.edges.length} relações</span>
+        <span className={`atlas-snapshot-age freshness-${galaxyState.freshness.toLowerCase()}`}
+          title={galaxyState.source === 'PUBLISHED' ? 'Snapshot publicado' : 'Fallback derivado do SystemState atual'}>
+          {galaxySnapshotAgeLabel(galaxySnapshot.generated_at)}
+        </span>
         <div className="atlas-explorer-state" role="status">
           <span><b>Visão:</b> {expandAll ? 'grafo completo' : expandedCluster ? `${expandedDomain} · ${label(expandedCluster)}` : expandedDomain ?? 'domínios'}</span>
           {(expandAll || expandedDomain || expandedCluster) && <button type="button" aria-label="Voltar um nível no grafo" onClick={goBack}>Voltar nível</button>}
