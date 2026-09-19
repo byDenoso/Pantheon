@@ -8,6 +8,7 @@ import {
   snapshotAgeMs,
 } from '../src/data/galaxySnapshot.ts';
 import { compileGalaxySnapshot } from '../src/viewmodels/galaxyCompiler.ts';
+import { selectCompatibleGalaxySnapshot } from '../src/data/useGalaxySnapshot.ts';
 import { scenarioById } from '../src/data/fixtures/scenarios.ts';
 
 const snapshot = () => compileGalaxySnapshot(scenarioById('all-live').build());
@@ -50,5 +51,18 @@ test('loadGalaxySnapshot validates successful reads and can keep a known-good fa
       fetchImpl: async () => new Response('broken', { status: 503 }),
     }),
     /GALAXY_HTTP_503/,
+  );
+});
+
+test('published snapshot is ignored on Tower fingerprint split-brain', () => {
+  const fallback = snapshot();
+  const published = { ...fallback, snapshot_id: 'galaxy-deadbeef', tower_revision: 'sha256:' + 'b'.repeat(64) };
+  assert.equal(
+    selectCompatibleGalaxySnapshot(published, fallback, fallback.tower_revision),
+    fallback,
+  );
+  assert.equal(
+    selectCompatibleGalaxySnapshot(fallback, published, fallback.tower_revision),
+    fallback,
   );
 });
