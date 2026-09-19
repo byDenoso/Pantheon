@@ -72,3 +72,15 @@ test('estado global preserva conflito P0 mesmo quando providers e bus estão LIV
   assert.ok(state.bus.consumers.some(x=>x.id==='nexo_one'));
   assert.ok(state.bus.consumers.some(x=>x.id==='atlas'));
 });
+
+
+test('executor starvation é recuperação do sistema, não decisão humana',()=>{
+  const data=input();
+  const actionId='SYSTEM_FIX_REQUIRED::EXECUTOR_STARVATION::OLY-SELCHANGE-T01-R2';
+  data.systemInput.actions.push({action_id:actionId,domain:'OLYMPUS',action:'Executor starvation on abstract longitudinal-method validation',status:'READY',authority:'L1',last_checked:NOW,next_action:'auto-recover',fingerprint:actionId});
+  data.systemInput.sideQuests.push({side_quest_id:`PUBLIC-REVIEW-${actionId}`,parent_action_id:actionId,lane:'OLYMPUS',type:'HUMAN',status:'WAITING',blocker:'Executor starvation on abstract longitudinal-method validation',required_resolution:'Revisar o sinal projetado e confirmar o próximo passo.',created_at:NOW,fingerprint:actionId,source_ref:'PUBLIC_PROJECTION'});
+  const state=buildSystemState(data);
+  assert.equal(state.inbox.some(x=>x.action_id===actionId),false);
+  assert.notEqual(state.actions.find(x=>x.action_id===actionId)?.status,'AWAITING_HUMAN');
+  assert.equal(state.graph.nodes.some(x=>x.id===`sidequest:PUBLIC-REVIEW-${actionId}`),false);
+});
