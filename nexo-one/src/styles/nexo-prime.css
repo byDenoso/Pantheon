@@ -624,6 +624,19 @@ p{
   box-shadow:0 8px 28px rgba(0,0,0,.20),0 0 20px rgba(121,231,255,.06);
 }
 
+.galaxy-three-label.domain strong{
+  display:block;
+  font:740 1em/1 var(--font-ui);
+  letter-spacing:.045em;
+}
+.galaxy-three-label.domain small{
+  display:block;
+  margin-top:2px;
+  color:var(--nexo-muted);
+  font:600 10px/1 var(--font-mono);
+  letter-spacing:.045em;
+}
+
 .galaxy-three-label.selected{
   border-color:rgba(255,255,255,.38);
   box-shadow:0 10px 34px rgba(0,0,0,.32),0 0 32px rgba(121,231,255,.12);
