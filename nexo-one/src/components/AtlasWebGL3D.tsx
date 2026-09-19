@@ -210,12 +210,14 @@ export function AtlasWebGL3D({
     charge?.distanceMax?.(260);
 
     const link = graph.d3Force('link') as ForceWithStrength | undefined;
-    link?.distance?.((edge: GraphLinkView) => {
+    link?.distance?.((item: GraphNodeView | GraphLinkView) => {
+      const edge = item as GraphLinkView;
       if (isStructuralEdge(edge)) return 26;
       if (edge.is_learning) return 42;
       return 34;
     });
-    link?.strength?.((edge: GraphLinkView) => {
+    link?.strength?.((item: GraphNodeView | GraphLinkView) => {
+      const edge = item as GraphLinkView;
       if (isStructuralEdge(edge)) return 0.54;
       if (edge.is_learning) return 0.14;
       return 0.24;
