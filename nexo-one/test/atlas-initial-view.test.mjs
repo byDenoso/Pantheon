@@ -5,7 +5,7 @@ import {readFile} from 'node:fs/promises';
 const root=new URL('../',import.meta.url);
 const text=path=>readFile(new URL(path,root),'utf8');
 
-test('Atlas opens on domain topology instead of an isolated NEXO root',async()=>{
+test('Atlas opens on the three-domain NEXO galaxy and exposes camera drill-down',async()=>{
   const [atlas,renderer,canvas]=await Promise.all([
     text('src/features/system/Atlas.tsx'),
     text('src/components/AtlasCanvas25D.tsx'),
@@ -15,7 +15,11 @@ test('Atlas opens on domain topology instead of an isolated NEXO root',async()=>
   assert.match(atlas,/setRootExpanded\] = useState\(true\)/);
   assert.match(atlas,/Visão por domínios/);
   assert.match(atlas,/Mostrar grafo completo/);
-  assert.doesNotMatch(atlas,/else if \(rootExpanded\) setRootExpanded\(false\)/);
-  assert.match(renderer,/toque em um domínio para abrir/);
-  assert.match(canvas,/Enquadrar/);
+  assert.match(atlas,/controllerRef=\{galaxyRef\}/);
+  assert.match(renderer,/GALAXY_ARMS/);
+  assert.match(renderer,/Galáxia 2\.5D do NEXO ONE/);
+  assert.match(canvas,/focusDomain/);
+  assert.match(canvas,/focusSubdomain/);
+  assert.match(canvas,/focusEntity/);
+  assert.match(canvas,/reset/);
 });
