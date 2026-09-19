@@ -28,9 +28,8 @@ jobs:
       - name: Stage 4 focused tests
         working-directory: nexo-one
         run: node --test test/galaxy-snapshot-loader.test.mjs test/galaxy-snapshot-pipeline.test.mjs test/galaxy-hardening.test.mjs test/galaxy-compiler.test.mjs test/galaxy-stage2.test.mjs test/graph3d.test.mjs test/mobile-regressions.test.mjs
-      - name: Full tests baseline
+      - name: Full tests
         working-directory: nexo-one
-        continue-on-error: true
         run: npm test
       - name: Style lint
         working-directory: nexo-one
