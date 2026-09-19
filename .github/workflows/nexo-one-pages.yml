@@ -226,7 +226,7 @@ jobs:
           try { index=JSON.parse(fs.readFileSync('/tmp/galaxy-index.json','utf8')); } catch { process.exit(0); }
           if(index?.contract!=='NEXO_ONE_GALAXY_INDEX_V1'||!Array.isArray(index.snapshots))process.exit(0);
           const ids=[];
-          for(const item of index.snapshots.slice(0,359)){
+          for(const item of index.snapshots.slice(0,167)){
             const id=String(item?.snapshot_id||'');
             if(/^galaxy-[0-9a-f]+$/i.test(id)&&!ids.includes(id))ids.push(id);
           }
@@ -245,7 +245,7 @@ jobs:
           NEXO_PUBLIC_PROJECTION_MANIFEST: data/tower-public/manifest.json
           NEXO_PUBLIC_INTERDOMAIN: data/tower-public/interdomain.json
           NEXO_GALAXY_PREVIOUS: dist/galaxy/previous.json
-          NEXO_GALAXY_RETENTION: '360'
+          NEXO_GALAXY_RETENTION: '168'
         run: |
           set -euo pipefail
           node scripts/build-pages-system.mjs
