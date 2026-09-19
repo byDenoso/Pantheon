@@ -11,67 +11,73 @@ test('published shell does not mount the legacy projection overlay that probes /
   assert.doesNotMatch(main, /<ProjectionBusStatus\s*\/>/);
 });
 
-test('Atlas exposes explicit touch navigation controls for mobile instead of depending only on gestures', async () => {
+test('Canvas galaxy exposes explicit navigation controls in addition to gestures', async () => {
   const canvas = await text('src/components/CanvasGraph25D.tsx');
   assert.match(canvas, /aria-label="Girar para a esquerda"/);
   assert.match(canvas, /aria-label="Girar para a direita"/);
   assert.match(canvas, /aria-label="Aproximar"/);
   assert.match(canvas, /aria-label="Afastar"/);
-  assert.match(canvas, /onWheel=\{event=>\{/);
-  assert.match(canvas, /event\.preventDefault\(\)/);
+  assert.match(canvas, /onPointerMove/);
+  assert.match(canvas, /onWheel=/);
 });
 
-test('Atlas uses the deterministic Canvas 2.5D renderer with pointer-driven yaw/pitch/zoom, not a WebGL force graph', async () => {
-  const canvas = await text('src/components/CanvasGraph25D.tsx');
-  const atlas = await text('src/components/AtlasCanvas25D.tsx');
-  assert.match(canvas, /getContext\('2d'/);
+test('Atlas active surface uses Canvas 2.5D with deterministic galaxy geometry', async () => {
+  const [canvas,adapter,view,graph] = await Promise.all([
+    text('src/components/CanvasGraph25D.tsx'),
+    text('src/components/AtlasCanvas25D.tsx'),
+    text('src/features/system/Atlas.tsx'),
+    text('src/viewmodels/graph3d.ts'),
+  ]);
   assert.match(canvas, /data-renderer="canvas-2\.5d"/);
-  assert.match(canvas, /function rotatePoint/);
-  assert.match(canvas, /onPointerDown=\{/);
-  assert.match(canvas, /onPointerMove=\{/);
-  assert.doesNotMatch(canvas, /react-force-graph-3d|ForceGraph3D|THREE\./);
-  assert.match(atlas, /data-renderer="canvas-2\.5d"/);
-  assert.doesNotMatch(atlas, /react-force-graph-3d|ForceGraph3D/);
+  assert.match(canvas, /getContext\('2d'/);
+  assert.match(adapter, /GALAXY_ARMS/);
+  assert.match(view, /AtlasCanvas25D/);
+  assert.match(graph, /layoutGalaxy3D/);
+  assert.doesNotMatch(view, /AtlasWebGL3D/);
 });
 
-test('Atlas adapts the spaced world and canvas controls to portrait mobile viewports', async () => {
-  const css = await text('src/components/CanvasGraph25D.css');
-  const graph = await text('src/viewmodels/graph3d.ts');
-  assert.match(css, /touch-action:none/);
-  assert.match(css, /@media\(max-width:760px\)/);
-  assert.match(css, /@media\(max-width:420px\)/);
-  assert.match(graph, /const spacingScale = 1\.34/);
+test('Atlas adapts density and interaction budgets for mobile viewports', async () => {
+  const [canvas,styles] = await Promise.all([
+    text('src/components/CanvasGraph25D.tsx'),
+    text('src/components/CanvasGraph25D.css'),
+  ]);
+  assert.match(canvas, /size\.width<760\?720:1500/);
+  assert.match(canvas, /size\.width<760\?420:1100/);
+  assert.match(canvas, /size\.width<760\?14:34/);
+  assert.match(canvas, /pointersRef/);
+  assert.match(canvas, /newDistance\/oldDistance/);
+  assert.match(styles, /touch-action:\s*none/);
 });
 
-test('Atlas surfaces backend learning scope counts beside the filament toggle', async () => {
-  const view = await text('src/features/system/Atlas.tsx');
-  assert.match(view, /filtered\.edges\.filter\(edge => edge\.is_learning\)/);
-  assert.match(view, /learningInterDomain/);
-  assert.match(view, /learningIntraDomain/);
-  assert.match(view, /interdomínio/);
-  assert.match(view, /intradomínio/);
+test('Atlas uses zoom LOD and selection to progressively reveal relations', async () => {
+  const canvas = await text('src/components/CanvasGraph25D.tsx');
+  const adapter = await text('src/components/AtlasCanvas25D.tsx');
+  assert.match(canvas, /lodForZoom/);
+  assert.match(canvas, /edge\.from===selectedId\|\|edge\.to===selectedId/);
+  assert.match(canvas, /edgeBudget/);
+  assert.match(adapter, /edge\.is_learning/);
+  assert.match(adapter, /minZoom:/);
+  assert.match(adapter, /importance:/);
 });
 
-test('Atlas starts at the NEXO domain overview and expands canonical domain clusters on selection', async () => {
+test('Atlas starts on domain topology and camera focus follows hierarchy selection', async () => {
   const view = await text('src/features/system/Atlas.tsx');
   assert.match(view, /const \[rootExpanded, setRootExpanded\] = useState\(true\)/);
   assert.match(view, /const \[expandAll, setExpandAll\] = useState\(false\)/);
-  assert.match(view, /atlas\.root\.edge/);
-  assert.match(view, /visibleLearningEdges/);
-  assert.match(view, /visibleIds\.has\(edge\.from\) && visibleIds\.has\(edge\.to\)/);
-  assert.match(view, /const \[expandedDomain, setExpandedDomain\] = useState<GraphNode\['domain'\] \| null>\(null\)/);
-  assert.match(view, /const \[expandedCluster, setExpandedCluster\] = useState<GraphNode\['type'\] \| null>\(null\)/);
-  assert.match(view, /node\?\.type === 'DOMAIN'/);
+  assert.match(view, /galaxyRef\.current\?\.focusDomain/);
+  assert.match(view, /galaxyRef\.current\?\.focusSubdomain/);
+  assert.match(view, /galaxyRef\.current\?\.focusEntity/);
+  assert.match(view, /galaxyRef\.current\?\.reset/);
   assert.match(view, /atlas\.cluster/);
   assert.match(view, /clusterFromId/);
-  assert.match(view, /node\.domain === expandedDomain/);
 });
 
-test('Atlas marks both endpoints of every rendered edge and keeps relation color coding legible', async () => {
-  const atlas = await text('src/components/AtlasCanvas25D.tsx');
+test('Canvas relation rendering keeps both visible endpoints and promotes selected links', async () => {
   const canvas = await text('src/components/CanvasGraph25D.tsx');
-  assert.match(atlas, /edges\.map\(edge=>\(\{/);
-  assert.match(atlas, /edgeColor\(edge\)/);
-  assert.match(canvas, /safeEdges=useMemo\(\(\)=>edges\.filter\(edge=>byId\.has\(edge\.from\)&&byId\.has\(edge\.to\)\)/);
-  assert.match(canvas, /dashed/);
+  assert.match(canvas, /screenById\.has\(edge\.from\)/);
+  assert.match(canvas, /screenById\.has\(edge\.to\)/);
+  assert.match(canvas, /screenById\.get\(edge\.from\)/);
+  assert.match(canvas, /screenById\.get\(edge\.to\)/);
+  assert.match(canvas, /selected\?1\.75/);
+  assert.match(canvas, /quadraticCurveTo/);
 });
