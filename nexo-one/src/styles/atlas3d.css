@@ -680,3 +680,27 @@
     padding-inline: 9px;
   }
 }
+
+
+/* Atlas persistent label tuning */
+.atlas-webgl-label {
+  pointer-events: none;
+  white-space: nowrap;
+  max-width: 160px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+@media (max-width: 760px) {
+  .atlas-webgl-label {
+    max-width: 110px;
+    padding: 4px 7px;
+    font-size: 8px;
+  }
+
+  .atlas-webgl-label.domain {
+    max-width: 120px;
+    padding: 5px 8px;
+    font-size: 9px;
+  }
+}
