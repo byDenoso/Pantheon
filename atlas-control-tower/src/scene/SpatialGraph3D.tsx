@@ -10,6 +10,7 @@ import {InstancedFilaments} from './InstancedFilaments';
 import {CameraController} from './CameraController';
 import {shouldOpenNode} from './picking';
 import {supportsWebGL2} from '../graph-engine/webgl-support';
+import '../design/spatial-3d.css';
 
 type Props={
   graph:AtlasGraph|null;
