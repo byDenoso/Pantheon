@@ -201,7 +201,11 @@ jobs:
           VITE_WORLD_ENDPOINT: ./world-public.ndjson
           VITE_NEXO_AUTH_BRIDGE_URL: ${{ vars.VITE_NEXO_AUTH_BRIDGE_URL }}
           VITE_PRIVATE_COCKPIT_URL: https://nexo-one-two.vercel.app
-        run: npm run build
+        run: |
+          npm run typecheck
+          node --test test/galaxy-compiler.test.mjs
+          npm run style:lint
+          npm run build
 
       - name: Compile presentation from sanctioned Tower projection
         working-directory: nexo-one
