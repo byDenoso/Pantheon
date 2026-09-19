@@ -1,0 +1,53 @@
+.atlas3d-stage{
+  position:relative;
+  width:100%;
+  height:100%;
+  min-height:520px;
+  overflow:hidden;
+  background:
+    radial-gradient(circle at 50% 50%,rgba(95,255,202,.07),transparent 28%),
+    radial-gradient(circle at 30% 70%,rgba(95,170,255,.06),transparent 32%),
+    #050606;
+}
+.atlas3d-stage canvas{display:block;width:100%!important;height:100%!important;touch-action:none}
+.atlas3d-stage--hero{min-height:660px;background:transparent}
+.atlas3d-vignette{
+  position:absolute;inset:0;pointer-events:none;
+  background:radial-gradient(circle at 50% 46%,transparent 34%,rgba(0,0,0,.18) 62%,rgba(0,0,0,.76) 100%);
+  box-shadow:inset 0 0 120px rgba(0,0,0,.38)
+}
+.atlas3d-label{
+  min-width:max-content;
+  padding:5px 8px;
+  border:1px solid rgba(255,255,255,.13);
+  border-radius:999px;
+  background:rgba(5,7,7,.72);
+  box-shadow:0 8px 30px rgba(0,0,0,.28);
+  color:rgba(255,255,255,.78);
+  font:600 10px/1.1 Recursive,system-ui,sans-serif;
+  letter-spacing:.02em;
+  backdrop-filter:blur(10px)
+}
+.atlas3d-label strong{display:block;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.atlas3d-label span{display:block;margin-top:3px;color:rgba(255,255,255,.38);font-size:8px;letter-spacing:.12em}
+.atlas3d-label.is-focus,.atlas3d-label.is-selected{border-color:rgba(128,255,205,.5);color:#fff}
+.atlas3d-label.is-focus{box-shadow:0 0 30px rgba(87,255,191,.12)}
+.atlas3d-hint{
+  position:absolute;right:18px;bottom:16px;z-index:3;
+  color:rgba(255,255,255,.34);
+  font:500 10px/1 Recursive,system-ui,sans-serif;
+  letter-spacing:.04em;
+  pointer-events:none
+}
+.atlas3d-state{
+  min-height:420px;display:grid;place-items:center;align-content:center;gap:8px;
+  background:#050606;color:rgba(255,255,255,.55);text-align:center
+}
+.atlas3d-state strong{color:#fff}.atlas3d-state span{font-size:12px}
+@media(max-width:760px){
+  .atlas3d-stage,.atlas3d-stage--hero{min-height:500px}
+  .atlas3d-label{padding:4px 7px;font-size:9px;background:rgba(5,7,7,.82)}
+  .atlas3d-label strong{max-width:118px}
+  .atlas3d-label span{display:none}
+  .atlas3d-hint{right:12px;bottom:10px;font-size:9px}
+}
