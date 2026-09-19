@@ -43,6 +43,7 @@ export default function App() {
     return ALL_VIEWS.includes(saved) ? saved : 'OVERVIEW';
   });
   const [theme, setTheme] = useState(() => stored('nexo-theme', 'dark'));
+  const [visualStyle, setVisualStyle] = useState(() => stored('nexo-visual-style', 'nexo-prime'));
   const [command, setCommand] = useState('');
   const [notice, setNotice] = useState('');
   const [moreOpen, setMoreOpen] = useState(false);
@@ -64,6 +65,7 @@ export default function App() {
   const session = useSession(useCallback(() => refreshWorld(true), [refreshWorld]));
 
   useEffect(() => { document.documentElement.dataset.theme = theme; persist('nexo-theme', theme); }, [theme]);
+  useEffect(() => { document.documentElement.dataset.visualStyle = visualStyle; persist('nexo-visual-style', visualStyle); }, [visualStyle]);
   useEffect(() => { persist('nexo-view', view); }, [view]);
   useEffect(() => {
     if (!viewFromHash(window.location.hash)) window.history.replaceState(null, '', hashForView(view));
@@ -170,6 +172,18 @@ export default function App() {
             <span className="brand-descriptor">PERSONAL COMMAND DECK</span>
           </a>
           <div className="header-tools">
+            <div className="visual-style-switch" role="group" aria-label="Estilo visual">
+              {[
+                ['nexo-prime', 'NEXO'],
+                ['openai', 'OpenAI'],
+                ['apple', 'Apple'],
+              ].map(([id, title]) => (
+                <button key={id} type="button" className={visualStyle === id ? 'active' : ''}
+                  aria-pressed={visualStyle === id} onClick={() => setVisualStyle(id)}>
+                  {title}
+                </button>
+              ))}
+            </div>
             <a className="product-switch" href={`${import.meta.env.BASE_URL}mcp/`} title="Abrir a topologia MCP 3D">
               MCP Atlas <span>↗</span>
             </a>
@@ -314,6 +328,21 @@ export default function App() {
                   ))}
                 </div>
               ))}
+              <div className="sheet-group visual-style-sheet">
+                <span className="eyebrow">VISUAL</span>
+                <div className="visual-style-sheet-options" role="group" aria-label="Estilo visual">
+                  {[
+                    ['nexo-prime', 'NEXO Prime', 'Apple na interface, OpenAI na atmosfera'],
+                    ['openai', 'OpenAI', 'Mais atmosfera, glow e organicidade'],
+                    ['apple', 'Apple', 'Mais silêncio, contraste e espaço'],
+                  ].map(([id, title, hint]) => (
+                    <button key={id} type="button" className={visualStyle === id ? 'active' : ''}
+                      aria-pressed={visualStyle === id} onClick={() => setVisualStyle(id)}>
+                      <strong>{title}</strong><small>{hint}</small>
+                    </button>
+                  ))}
+                </div>
+              </div>
               <div className="sheet-group product-group">
                 <span className="eyebrow">ESTRUTURA</span>
                 <a className="sheet-item product-sheet-link" href={`${import.meta.env.BASE_URL}mcp/`}>

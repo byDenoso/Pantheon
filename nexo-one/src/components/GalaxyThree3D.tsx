@@ -41,7 +41,7 @@ import type { Canvas25DViewState, CanvasGraph25DHandle } from './CanvasGraph25D.
 import './GalaxyThree3D.css';
 
 const TAU = Math.PI * 2;
-const DEFAULT_CAMERA = new Vector3(0, 18, 205);
+const DEFAULT_CAMERA = new Vector3(0, 22, 248);
 const DEFAULT_TARGET = new Vector3(0, 0, 0);
 const GALAXY_CYAN = new Color('#79e7ff');
 const GALAXY_WHITE = new Color('#effcff');
@@ -142,7 +142,7 @@ function buildGalaxyGeometry(count: number): BufferGeometry {
     const random = rng(hash32(`nexo-galaxy:${index}`));
     const lane = random();
 
-    if (lane < 0.16) {
+    if (lane < 0.12) {
       const radius = Math.pow(random(), 1.72) * 34;
       const angle = random() * TAU + radius * 0.075;
       const coreTightness = Math.max(0.18, 1 - radius / 42);
@@ -154,13 +154,13 @@ function buildGalaxyGeometry(count: number): BufferGeometry {
         Math.cos(angle) * radius + gaussian(random) * 1.8,
         Math.sin(angle) * radius * 0.72 + gaussian(random) * 1.35,
         gaussian(random) * (1.8 + 4.2 * (1 - coreTightness)),
-        1.8 + random() * 3.8,
-        0.72 + random() * 0.28,
+        1.25 + random() * 2.7,
+        0.62 + random() * 0.30,
       );
       continue;
     }
 
-    if (lane < 0.51) {
+    if (lane < 0.47) {
       const t = Math.pow(random(), 0.88);
       const center = signaturePoint(t);
       const tangent = signatureTangent(t);
@@ -176,13 +176,13 @@ function buildGalaxyGeometry(count: number): BufferGeometry {
         center.x + Math.cos(normal) * cross + Math.cos(tangent) * along,
         center.y + Math.sin(normal) * cross * 0.76 + Math.sin(tangent) * along * 0.76,
         center.z + gaussian(random) * (1.5 + t * 5.6),
-        1 + random() * (2.6 + (1 - t) * 1.4),
-        0.34 + random() * 0.58,
+        0.78 + random() * (2.05 + (1 - t) * 1.05),
+        0.28 + random() * 0.52,
       );
       continue;
     }
 
-    if (lane < 0.94) {
+    if (lane < 0.93) {
       const domain = PRIMARY_GALAXY_DOMAINS[Math.floor(random() * PRIMARY_GALAXY_DOMAINS.length)]!;
       const t = Math.pow(random(), 0.86);
       const center = galaxyArmPoint(domain, t);
@@ -199,8 +199,8 @@ function buildGalaxyGeometry(count: number): BufferGeometry {
         center.x + Math.cos(normal) * cross + Math.cos(tangent) * along,
         center.y + Math.sin(normal) * cross * 0.76 + Math.sin(tangent) * along * 0.76,
         center.z + gaussian(random) * (1.8 + t * 6.2),
-        0.9 + random() * 2.7,
-        0.28 + random() * 0.58,
+        0.68 + random() * 2.15,
+        0.24 + random() * 0.50,
       );
       continue;
     }
@@ -351,7 +351,7 @@ function compatibleView(camera: PerspectiveCamera, target: Vector3): Canvas25DVi
   return {
     yaw: Math.atan2(offset.x, offset.z),
     pitch: Math.asin(Math.max(-1, Math.min(1, offset.y / distance))),
-    zoom: 205 / distance,
+    zoom: 248 / distance,
     target: { x: target.x, y: target.y, z: target.z },
   };
 }
@@ -477,7 +477,7 @@ export const GalaxyThree3D = forwardRef<CanvasGraph25DHandle, Props>(function Ga
       });
       renderer.outputColorSpace = SRGBColorSpace;
       renderer.toneMapping = ACESFilmicToneMapping;
-      renderer.toneMappingExposure = isMobile ? 1.08 : 1.18;
+      renderer.toneMappingExposure = isMobile ? 1.0 : 1.06;
       renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, isMobile ? 1.45 : 1.9));
       renderer.setSize(size.width, size.height, false);
       renderer.domElement.className = 'galaxy-three-canvas';
@@ -489,7 +489,7 @@ export const GalaxyThree3D = forwardRef<CanvasGraph25DHandle, Props>(function Ga
       const scene = new Scene();
       sceneRef.current = scene;
 
-      const camera = new PerspectiveCamera(isMobile ? 48 : 42, size.width / size.height, 0.1, 1200);
+      const camera = new PerspectiveCamera(isMobile ? 50 : 44, size.width / size.height, 0.1, 1200);
       camera.position.copy(DEFAULT_CAMERA);
       cameraRef.current = camera;
 
@@ -562,10 +562,10 @@ export const GalaxyThree3D = forwardRef<CanvasGraph25DHandle, Props>(function Ga
       if (!isMobile) {
         composer = new EffectComposer(renderer);
         composer.addPass(new RenderPass(scene, camera));
-        const bloom = new UnrealBloomPass(new Vector2(size.width, size.height), 0.92, 0.58, 0.22);
-        bloom.threshold = 0.16;
-        bloom.strength = 0.9;
-        bloom.radius = 0.62;
+        const bloom = new UnrealBloomPass(new Vector2(size.width, size.height), 0.58, 0.46, 0.28);
+        bloom.threshold = 0.22;
+        bloom.strength = 0.58;
+        bloom.radius = 0.46;
         composer.addPass(bloom);
       }
 
@@ -696,7 +696,9 @@ export const GalaxyThree3D = forwardRef<CanvasGraph25DHandle, Props>(function Ga
             className={`galaxy-three-label${node.type === 'DOMAIN' ? ' domain' : ''}${node.id === selectedId ? ' selected' : ''}`}
             style={{ '--galaxy-label-intensity': node.id === selectedId ? 1 : 0.72 } as CSSProperties}
           >
-            {node.label}
+            {node.type === 'DOMAIN' && node.domain === 'NEXO'
+              ? <><strong>NEXO</strong><small>CORE</small></>
+              : node.label}
           </span>
         ))}
       </div>

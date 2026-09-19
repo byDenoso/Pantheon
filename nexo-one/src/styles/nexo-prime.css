@@ -1,0 +1,1000 @@
+/* NEXO PRIME
+   70% interface discipline / 30% atmospheric depth.
+   Loaded last on purpose so it can normalize legacy cockpit styles without
+   rewriting every historical stylesheet in one risky pass. */
+
+:root{
+  --font-ui:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  --font-mono:"SFMono-Regular","JetBrains Mono",Consolas,monospace;
+
+  --text-2xs:10px;
+  --text-xs:11px;
+  --text-sm:12px;
+  --text-md:14px;
+  --text-lg:16px;
+  --text-xl:18px;
+  --text-2xl:24px;
+  --text-3xl:28px;
+  --text-hero:clamp(38px,7vw,64px);
+
+  --space-1:4px;
+  --space-2:8px;
+  --space-3:12px;
+  --space-4:16px;
+  --space-5:20px;
+  --space-6:24px;
+  --space-8:32px;
+  --space-10:40px;
+  --space-12:48px;
+  --space-16:64px;
+
+  --radius-control:10px;
+  --radius-button:12px;
+  --radius-panel:18px;
+  --radius-sheet:24px;
+
+  --nexo-bg-0:#02060d;
+  --nexo-bg-1:#050a12;
+  --nexo-bg-2:#07101a;
+  --nexo-surface-1:rgba(10,16,24,.64);
+  --nexo-surface-2:rgba(15,24,34,.76);
+  --nexo-surface-3:rgba(20,31,44,.88);
+  --nexo-text:#f5fafc;
+  --nexo-text-2:#b8c7d2;
+  --nexo-muted:#718391;
+  --nexo-accent:#79e7ff;
+  --nexo-accent-strong:#b7f5ff;
+  --nexo-accent-dim:#2d7186;
+  --nexo-success:#79f2d0;
+  --nexo-attention:#ffc76a;
+  --nexo-danger:#ff7c86;
+  --nexo-experimental:#a891ff;
+
+  --surface-0:var(--nexo-bg-0);
+  --surface-1:var(--nexo-bg-1);
+  --surface-2:var(--nexo-bg-2);
+  --surface-3:#0d1824;
+  --bg:var(--nexo-bg-0);
+  --panel:var(--nexo-bg-1);
+  --raised:var(--nexo-bg-2);
+  --hover:#0d1926;
+  --ink:var(--nexo-text);
+  --muted:var(--nexo-text-2);
+  --quiet:var(--nexo-muted);
+  --line:rgba(121,231,255,.10);
+  --accent:var(--nexo-accent);
+  --command-accent:var(--nexo-accent);
+  --command-accent-strong:var(--nexo-accent-strong);
+  --command-hairline:rgba(121,231,255,.10);
+
+  font-family:var(--font-ui);
+  font-size:14px;
+  letter-spacing:0;
+}
+
+:root[data-visual-style="openai"]{
+  --nexo-bg-0:#05070b;
+  --nexo-bg-1:#090e14;
+  --nexo-bg-2:#10161e;
+  --nexo-surface-1:rgba(10,14,20,.68);
+  --nexo-surface-2:rgba(16,22,30,.82);
+  --nexo-surface-3:rgba(22,30,39,.9);
+  --nexo-text:#f5f7f8;
+  --nexo-text-2:#b8c0c7;
+  --nexo-muted:#737d86;
+  --nexo-accent:#d7fff6;
+  --nexo-accent-strong:#effffb;
+  --nexo-accent-dim:#4d8f85;
+}
+
+:root[data-visual-style="apple"]{
+  --nexo-bg-0:#000;
+  --nexo-bg-1:#0d0d0f;
+  --nexo-bg-2:#121214;
+  --nexo-surface-1:rgba(18,18,20,.72);
+  --nexo-surface-2:rgba(28,28,30,.82);
+  --nexo-surface-3:rgba(34,34,37,.9);
+  --nexo-text:#f5f5f7;
+  --nexo-text-2:#a1a1a6;
+  --nexo-muted:#6e6e73;
+  --nexo-accent:#e8f8ff;
+  --nexo-accent-strong:#fff;
+  --nexo-accent-dim:#55747d;
+  --nexo-attention:#ffd60a;
+  --nexo-danger:#ff453a;
+  --nexo-success:#30d158;
+}
+
+html,body,#root{
+  min-width:320px;
+  background:var(--nexo-bg-0);
+}
+
+body{
+  font-family:var(--font-ui);
+  color:var(--nexo-text);
+  text-rendering:optimizeLegibility;
+  -webkit-font-smoothing:antialiased;
+}
+
+h1,h2,h3{
+  letter-spacing:-.015em;
+}
+
+p{
+  font-size:var(--text-md);
+}
+
+.mono,.fingerprint,kbd,code,.header-date,.atlas-snapshot-age{
+  font-family:var(--font-mono);
+  letter-spacing:.025em;
+}
+
+.eyebrow{
+  font-size:var(--text-2xs);
+  font-weight:650;
+  letter-spacing:.055em;
+  text-transform:uppercase;
+}
+
+/* Global product shell --------------------------------------------------- */
+.cockpit{
+  background:
+    radial-gradient(900px 520px at 72% -4%,color-mix(in srgb,var(--nexo-accent) 8%,transparent),transparent 66%),
+    var(--nexo-bg-0);
+}
+
+.cockpit::before{
+  opacity:.34;
+}
+
+.topbar{
+  min-height:68px;
+  padding:10px clamp(14px,2vw,30px);
+  border-bottom-color:rgba(121,231,255,.08);
+  background:color-mix(in srgb,var(--nexo-bg-0) 82%,transparent);
+  box-shadow:none;
+  backdrop-filter:blur(24px) saturate(120%);
+}
+
+.brand{
+  gap:10px;
+}
+
+.brand-mark{
+  width:34px;
+  height:34px;
+  border:1px solid color-mix(in srgb,var(--nexo-accent) 38%,transparent);
+  border-radius:10px;
+  clip-path:none;
+  background:linear-gradient(145deg,color-mix(in srgb,var(--nexo-accent) 12%,transparent),transparent);
+  color:var(--nexo-accent-strong);
+  box-shadow:inset 0 1px rgba(255,255,255,.05);
+  font-size:18px;
+  font-weight:760;
+}
+
+.brand strong{
+  font-size:14px;
+  font-weight:720;
+  letter-spacing:.045em;
+}
+
+.brand strong span{
+  color:var(--nexo-text-2);
+  font-weight:500;
+}
+
+.brand-descriptor{
+  font-size:var(--text-2xs);
+  letter-spacing:.05em;
+  color:var(--nexo-muted);
+}
+
+.header-tools{
+  gap:8px;
+}
+
+.visual-style-switch{
+  display:flex;
+  align-items:center;
+  gap:2px;
+  padding:3px;
+  border:1px solid rgba(121,231,255,.09);
+  border-radius:11px;
+  background:rgba(5,10,18,.52);
+}
+
+.visual-style-switch button{
+  min-height:28px;
+  padding:0 9px;
+  border-radius:8px;
+  color:var(--nexo-muted);
+  font-size:10px;
+  font-weight:600;
+  letter-spacing:0;
+}
+
+.visual-style-switch button:hover{
+  background:rgba(255,255,255,.035);
+  color:var(--nexo-text-2);
+}
+
+.visual-style-switch button.active{
+  background:color-mix(in srgb,var(--nexo-accent) 11%,transparent);
+  color:var(--nexo-accent-strong);
+}
+
+.icon-btn,.avatar,.product-switch,.health-button{
+  border-color:rgba(121,231,255,.09);
+  background:rgba(10,16,24,.5);
+  box-shadow:inset 0 1px rgba(255,255,255,.035);
+}
+
+.product-switch{
+  min-height:32px;
+  font-size:var(--text-xs);
+  letter-spacing:0;
+}
+
+/* Typography reset for readable UI -------------------------------------- */
+.nav-group .eyebrow,
+.workspace-heading .eyebrow,
+.section-head>.eyebrow,
+.footer-scenario{
+  font-size:var(--text-2xs);
+  letter-spacing:.055em;
+}
+
+.nav-item{
+  font-size:13px;
+}
+
+.workspace-heading h1{
+  font-size:clamp(32px,3.5vw,54px);
+  font-weight:540;
+  line-height:1.02;
+  letter-spacing:-.025em;
+}
+
+.workspace-heading p{
+  max-width:760px;
+  font-size:14px;
+  line-height:1.6;
+}
+
+.section-head h2{
+  font-size:13px;
+  letter-spacing:.04em;
+}
+
+.counter span,
+.operate-panel-domain,
+.provenance-list dt{
+  font-size:var(--text-2xs);
+  letter-spacing:.045em;
+}
+
+.command-bar input,
+.atlas-search input,
+.entity-inspector,
+.inspector-summary,
+.inspector-next p{
+  font-size:14px;
+}
+
+.atlas-count,
+.atlas-learning-meta,
+.atlas-snapshot-age{
+  font-size:10px;
+}
+
+/* Visual preset sheet ---------------------------------------------------- */
+.visual-style-sheet-options{
+  display:grid;
+  gap:8px;
+}
+
+.visual-style-sheet-options button{
+  display:flex;
+  flex-direction:column;
+  align-items:flex-start;
+  gap:4px;
+  width:100%;
+  min-height:54px;
+  padding:11px 12px;
+  border:1px solid rgba(121,231,255,.10);
+  border-radius:12px;
+  background:rgba(10,16,24,.45);
+  text-align:left;
+}
+
+.visual-style-sheet-options button.active{
+  border-color:color-mix(in srgb,var(--nexo-accent) 42%,transparent);
+  background:color-mix(in srgb,var(--nexo-accent) 8%,rgba(10,16,24,.66));
+}
+
+.visual-style-sheet-options strong{
+  font-size:13px;
+}
+
+.visual-style-sheet-options small{
+  color:var(--nexo-muted);
+  font-size:11px;
+  line-height:1.35;
+}
+
+/* Atlas becomes the environment, not a card ----------------------------- */
+.cockpit[data-view=ATLAS]{
+  min-height:100dvh;
+  overflow:hidden;
+  background:var(--nexo-bg-0);
+}
+
+.cockpit[data-view=ATLAS] .command-wrap,
+.cockpit[data-view=ATLAS] .workspace-heading,
+.cockpit[data-view=ATLAS] .world-footer,
+.cockpit[data-view=ATLAS] .nav-rail{
+  display:none;
+}
+
+.cockpit[data-view=ATLAS] .cockpit-body{
+  display:block;
+  min-height:calc(100dvh - 68px);
+}
+
+.cockpit[data-view=ATLAS] .workspace{
+  width:100%;
+  max-width:none;
+  min-height:calc(100dvh - 68px);
+  margin:0;
+  padding:0;
+}
+
+.cockpit[data-view=ATLAS] .workspace>.surface,
+.cockpit[data-view=ATLAS] .workspace>.state-surface,
+.cockpit[data-view=ATLAS] .workspace>div{
+  min-height:inherit;
+}
+
+.cockpit[data-view=ATLAS] .atlas-layout{
+  position:relative;
+  display:block;
+  width:100%;
+  height:calc(100dvh - 68px);
+  min-height:620px;
+  overflow:hidden;
+}
+
+.cockpit[data-view=ATLAS] .atlas-body{
+  position:absolute;
+  inset:0;
+  display:block;
+  height:100%;
+}
+
+.cockpit[data-view=ATLAS] .atlas-stage{
+  position:absolute;
+  inset:0;
+  width:100%;
+  height:100%;
+  border:0;
+  border-radius:0;
+  background:var(--nexo-bg-0);
+}
+
+.cockpit[data-view=ATLAS] .atlas3d-shell{
+  width:100%;
+  height:100%;
+  min-height:0;
+  aspect-ratio:auto;
+  border:0;
+  border-radius:0;
+  box-shadow:none;
+}
+
+/* Floating atlas command layer */
+.cockpit[data-view=ATLAS] .atlas-toolbar{
+  position:absolute;
+  z-index:18;
+  top:14px;
+  left:50%;
+  display:flex;
+  width:min(1180px,calc(100% - 28px));
+  max-height:116px;
+  padding:7px;
+  gap:6px;
+  overflow:visible;
+  border:1px solid rgba(121,231,255,.09);
+  border-radius:15px;
+  background:rgba(4,10,17,.58);
+  box-shadow:0 18px 50px rgba(0,0,0,.26),inset 0 1px rgba(255,255,255,.035);
+  transform:translateX(-50%);
+  backdrop-filter:blur(22px) saturate(120%);
+}
+
+.cockpit[data-view=ATLAS] .atlas-mode-toggle{
+  flex:none;
+  border:0;
+  border-radius:10px;
+  padding:2px;
+  background:rgba(255,255,255,.025);
+}
+
+.cockpit[data-view=ATLAS] .atlas-mode-toggle button{
+  min-height:34px;
+  padding:0 12px;
+  border-radius:8px;
+  font-size:12px;
+  font-weight:600;
+}
+
+.cockpit[data-view=ATLAS] .atlas-mode-toggle button.active{
+  background:color-mix(in srgb,var(--nexo-accent) 11%,transparent);
+  color:var(--nexo-accent-strong);
+  box-shadow:none;
+}
+
+.cockpit[data-view=ATLAS] .atlas-search{
+  flex:1 1 360px;
+  min-width:220px;
+  min-height:38px;
+  padding:0 12px;
+  border-color:rgba(121,231,255,.08);
+  border-radius:10px;
+  background:rgba(255,255,255,.025);
+}
+
+.cockpit[data-view=ATLAS] .atlas-search input{
+  font-size:13px;
+}
+
+.cockpit[data-view=ATLAS] .filter-toggle,
+.cockpit[data-view=ATLAS] .text-button,
+.cockpit[data-view=ATLAS] .atlas-graph-actions button,
+.cockpit[data-view=ATLAS] .atlas-explorer-state button{
+  min-height:34px;
+  padding:0 10px;
+  border:1px solid rgba(121,231,255,.08);
+  border-radius:9px;
+  background:rgba(255,255,255,.02);
+  color:var(--nexo-text-2);
+  font-size:11px;
+  font-weight:600;
+}
+
+.cockpit[data-view=ATLAS] .filter-toggle.has-filters{
+  border-color:color-mix(in srgb,var(--nexo-accent) 32%,transparent);
+  color:var(--nexo-accent-strong);
+}
+
+.cockpit[data-view=ATLAS] .atlas-learning-meta,
+.cockpit[data-view=ATLAS] .atlas-count,
+.cockpit[data-view=ATLAS] .atlas-snapshot-age{
+  min-height:28px;
+  display:inline-flex;
+  align-items:center;
+  padding:0 7px;
+  border:0;
+  background:transparent;
+  color:var(--nexo-muted);
+  white-space:nowrap;
+}
+
+.cockpit[data-view=ATLAS] .atlas-explorer-state,
+.cockpit[data-view=ATLAS] .atlas-graph-actions{
+  display:none;
+}
+
+/* Filters and operational overlays */
+.cockpit[data-view=ATLAS] .atlas-filters{
+  position:absolute;
+  z-index:30;
+  top:68px;
+  left:50%;
+  width:min(980px,calc(100% - 32px));
+  max-height:min(62vh,560px);
+  overflow:auto;
+  padding:16px;
+  border:1px solid rgba(121,231,255,.10);
+  border-radius:18px;
+  background:rgba(5,10,18,.91);
+  box-shadow:0 30px 90px rgba(0,0,0,.55),inset 0 1px rgba(255,255,255,.045);
+  transform:translateX(-50%);
+  backdrop-filter:blur(28px) saturate(120%);
+}
+
+.cockpit[data-view=ATLAS] .chip{
+  min-height:32px;
+  padding:0 10px;
+  border-color:rgba(121,231,255,.10);
+  border-radius:9px;
+  font-size:11px;
+}
+
+.cockpit[data-view=ATLAS] .chip.on{
+  background:color-mix(in srgb,var(--nexo-accent) 12%,transparent);
+  border-color:color-mix(in srgb,var(--nexo-accent) 32%,transparent);
+  color:var(--nexo-accent-strong);
+}
+
+/* Compact Operate HUD floats over the galaxy */
+.cockpit[data-view=ATLAS] .operate-hud{
+  position:absolute;
+  z-index:17;
+  left:50%;
+  top:72px;
+  display:flex;
+  justify-content:center;
+  width:min(900px,calc(100% - 28px));
+  margin:0;
+  gap:6px;
+  transform:translateX(-50%);
+  pointer-events:none;
+}
+
+.cockpit[data-view=ATLAS] .operate-hud>*{
+  pointer-events:auto;
+}
+
+.cockpit[data-view=ATLAS] .operate-indicator{
+  min-height:34px;
+  padding:0 11px;
+  border:1px solid rgba(121,231,255,.08);
+  border-radius:10px;
+  background:rgba(4,10,17,.64);
+  color:var(--nexo-text-2);
+  font-size:11px;
+  backdrop-filter:blur(18px);
+}
+
+.cockpit[data-view=ATLAS] .operate-indicator.has-items{
+  border-color:color-mix(in srgb,var(--nexo-accent) 20%,transparent);
+  color:var(--nexo-accent-strong);
+}
+
+.cockpit[data-view=ATLAS] .operate-indicator b{
+  background:rgba(255,255,255,.05);
+  color:var(--nexo-text);
+}
+
+/* Desktop inspector is a real overlay, not a column stealing galaxy width */
+.cockpit[data-view=ATLAS] .atlas-inspector{
+  position:absolute;
+  z-index:24;
+  top:76px;
+  right:16px;
+  width:min(380px,calc(100% - 32px));
+  max-height:calc(100% - 96px);
+  overflow:auto;
+  border:1px solid rgba(121,231,255,.10);
+  border-radius:18px;
+  background:rgba(5,10,18,.84);
+  box-shadow:0 28px 90px rgba(0,0,0,.50),inset 0 1px rgba(255,255,255,.04);
+  backdrop-filter:blur(26px) saturate(120%);
+}
+
+.cockpit[data-view=ATLAS] .inspector-placeholder{
+  padding:34px 24px;
+}
+
+.cockpit[data-view=ATLAS] .entity-inspector{
+  padding:18px;
+  border-left:0;
+  border-radius:18px;
+  gap:18px;
+}
+
+.cockpit[data-view=ATLAS] .inspector-head h2{
+  font-size:18px;
+}
+
+.cockpit[data-view=ATLAS] .relation-list button{
+  font-size:12px;
+}
+
+/* Galaxy labels and chrome ------------------------------------------------ */
+.galaxy-three-label{
+  max-width:180px;
+  padding:4px 7px;
+  border-color:rgba(121,231,255,.10);
+  border-radius:8px;
+  background:rgba(3,8,14,.46);
+  box-shadow:0 8px 24px rgba(0,0,0,.18);
+  color:rgba(245,250,252,.84);
+  font-family:var(--font-ui);
+  font-size:11px;
+  font-weight:650;
+  line-height:1.15;
+  letter-spacing:.035em;
+  text-transform:none;
+  backdrop-filter:blur(8px);
+}
+
+.galaxy-three-label.domain{
+  max-width:220px;
+  padding:5px 8px;
+  border-color:rgba(183,245,255,.15);
+  background:rgba(2,7,13,.28);
+  color:var(--nexo-text);
+  font-size:15px;
+  font-weight:740;
+  letter-spacing:.045em;
+  text-transform:uppercase;
+  box-shadow:0 8px 28px rgba(0,0,0,.20),0 0 20px rgba(121,231,255,.06);
+}
+
+.galaxy-three-label.domain strong{
+  display:block;
+  font:740 1em/1 var(--font-ui);
+  letter-spacing:.045em;
+}
+.galaxy-three-label.domain small{
+  display:block;
+  margin-top:2px;
+  color:var(--nexo-muted);
+  font:600 10px/1 var(--font-mono);
+  letter-spacing:.045em;
+}
+
+.galaxy-three-label.selected{
+  border-color:rgba(255,255,255,.38);
+  box-shadow:0 10px 34px rgba(0,0,0,.32),0 0 32px rgba(121,231,255,.12);
+}
+
+.galaxy-three-status{
+  top:auto;
+  left:16px;
+  bottom:16px;
+  min-height:30px;
+  padding:0 9px;
+  border-color:rgba(121,231,255,.07);
+  border-radius:9px;
+  background:rgba(2,7,13,.46);
+  color:var(--nexo-muted);
+  font-size:10px;
+  letter-spacing:.035em;
+  text-transform:none;
+}
+
+.galaxy-three-controls{
+  bottom:16px;
+  width:auto;
+  min-width:300px;
+  grid-template-columns:1.4fr repeat(4,44px);
+  padding:4px;
+  border-color:rgba(121,231,255,.08);
+  border-radius:12px;
+  background:rgba(3,8,14,.52);
+  box-shadow:0 16px 38px rgba(0,0,0,.24);
+  backdrop-filter:blur(20px);
+}
+
+.galaxy-three-controls button{
+  min-height:38px;
+  border-color:transparent;
+  border-radius:9px;
+  background:transparent;
+  color:var(--nexo-text-2);
+  font-size:13px;
+}
+
+.galaxy-three-controls button:first-child{
+  border-color:rgba(121,231,255,.08);
+  background:rgba(121,231,255,.055);
+  color:var(--nexo-accent-strong);
+  font-size:11px;
+}
+
+/* Palette semantics: color communicates state, not category */
+.tone-live{--tone:var(--nexo-success)}
+.tone-degraded{--tone:var(--nexo-attention)}
+.tone-conflict{--tone:var(--nexo-danger)}
+.tone-blocked{--tone:var(--nexo-experimental)}
+
+:root[data-visual-style="openai"] .galaxy-three-vignette{
+  opacity:.84;
+}
+:root[data-visual-style="openai"] .galaxy-three-label{
+  background:rgba(6,12,18,.36);
+  border-color:rgba(215,255,246,.10);
+  box-shadow:0 8px 26px rgba(0,0,0,.16),0 0 24px rgba(141,230,214,.055);
+}
+:root[data-visual-style="openai"] .cockpit[data-view=ATLAS] .atlas-toolbar,
+:root[data-visual-style="openai"] .cockpit[data-view=ATLAS] .atlas-inspector{
+  background:rgba(8,13,19,.50);
+  backdrop-filter:blur(28px) saturate(115%);
+}
+
+:root[data-visual-style="apple"] .cockpit::before{
+  display:none;
+}
+:root[data-visual-style="apple"] .topbar,
+:root[data-visual-style="apple"] .cockpit[data-view=ATLAS] .atlas-toolbar,
+:root[data-visual-style="apple"] .cockpit[data-view=ATLAS] .atlas-inspector{
+  background:rgba(14,14,16,.72);
+  border-color:rgba(255,255,255,.075);
+  box-shadow:0 18px 56px rgba(0,0,0,.30);
+  backdrop-filter:blur(30px) saturate(100%);
+}
+:root[data-visual-style="apple"] .galaxy-three-label{
+  border-color:rgba(255,255,255,.07);
+  background:rgba(12,12,14,.50);
+  box-shadow:none;
+}
+:root[data-visual-style="apple"] .galaxy-three-label.domain{
+  border-color:rgba(255,255,255,.10);
+  box-shadow:none;
+}
+:root[data-visual-style="apple"] .galaxy-three-controls{
+  border-color:rgba(255,255,255,.07);
+  background:rgba(18,18,20,.72);
+  box-shadow:0 14px 34px rgba(0,0,0,.30);
+}
+
+/* Mobile is a dedicated composition -------------------------------------- */
+@media(max-width:860px){
+  .visual-style-switch{
+    display:none;
+  }
+
+  .topbar{
+    min-height:58px;
+    padding:8px 12px;
+  }
+
+  .brand-mark{
+    width:30px;
+    height:30px;
+    font-size:16px;
+  }
+
+  .brand strong{
+    font-size:13px;
+  }
+
+  .brand-descriptor,
+  .header-date,
+  .product-switch{
+    display:none;
+  }
+
+  .workspace-heading .eyebrow{
+    font-size:10px;
+  }
+
+  .workspace-heading h1{
+    font-size:clamp(30px,9vw,42px);
+  }
+
+  .workspace-heading p{
+    font-size:14px;
+    line-height:1.55;
+  }
+
+  .bottom-nav{
+    left:10px;
+    right:10px;
+    bottom:calc(8px + env(safe-area-inset-bottom));
+    min-height:58px;
+    padding:4px;
+    border-color:rgba(121,231,255,.08);
+    border-radius:16px;
+    background:rgba(5,10,18,.78);
+    box-shadow:0 18px 50px rgba(0,0,0,.40),inset 0 1px rgba(255,255,255,.035);
+    backdrop-filter:blur(26px) saturate(120%);
+  }
+
+  .bottom-nav button{
+    min-height:48px;
+    padding:5px 2px;
+    border-radius:11px;
+    font-size:10px;
+  }
+
+  .bottom-nav button span{
+    font-size:10px;
+  }
+
+  .bottom-nav button i{
+    font-size:16px;
+  }
+
+  .cockpit[data-view=ATLAS]{
+    padding-bottom:0;
+  }
+
+  .cockpit[data-view=ATLAS] .cockpit-body,
+  .cockpit[data-view=ATLAS] .workspace{
+    min-height:calc(100dvh - 58px);
+  }
+
+  .cockpit[data-view=ATLAS] .atlas-layout{
+    height:calc(100dvh - 58px);
+    min-height:520px;
+  }
+
+  .cockpit[data-view=ATLAS] .atlas-toolbar{
+    top:10px;
+    width:calc(100% - 16px);
+    max-height:none;
+    padding:5px;
+    gap:4px;
+    border-radius:13px;
+  }
+
+  .cockpit[data-view=ATLAS] .atlas-mode-toggle button{
+    min-height:36px;
+    padding:0 10px;
+    font-size:12px;
+  }
+
+  .cockpit[data-view=ATLAS] .atlas-search{
+    order:3;
+    flex:1 0 100%;
+    min-height:38px;
+    min-width:0;
+  }
+
+  .cockpit[data-view=ATLAS] .atlas-search input{
+    font-size:13px;
+  }
+
+  .cockpit[data-view=ATLAS] .filter-toggle,
+  .cockpit[data-view=ATLAS] .text-button{
+    min-height:36px;
+    padding:0 9px;
+    font-size:11px;
+  }
+
+  .cockpit[data-view=ATLAS] .learning-toggle,
+  .cockpit[data-view=ATLAS] .atlas-learning-meta,
+  .cockpit[data-view=ATLAS] .atlas-count,
+  .cockpit[data-view=ATLAS] .atlas-snapshot-age{
+    display:none;
+  }
+
+  .cockpit[data-view=ATLAS] .operate-hud{
+    top:96px;
+    width:calc(100% - 16px);
+    justify-content:flex-start;
+    overflow-x:auto;
+    padding-bottom:3px;
+    scrollbar-width:none;
+  }
+
+  .cockpit[data-view=ATLAS] .operate-hud::-webkit-scrollbar{
+    display:none;
+  }
+
+  .cockpit[data-view=ATLAS] .operate-indicator{
+    flex:0 0 auto;
+    min-height:34px;
+    padding:0 9px;
+    font-size:11px;
+  }
+
+  .cockpit[data-view=ATLAS] .atlas-filters{
+    top:98px;
+    width:calc(100% - 16px);
+    max-height:calc(100dvh - 180px);
+    padding:14px;
+    border-radius:18px;
+  }
+
+  .galaxy-three-label{
+    max-width:120px;
+    padding:3px 5px;
+    font-size:10px;
+    letter-spacing:.02em;
+  }
+
+  .galaxy-three-label.domain{
+    max-width:150px;
+    padding:4px 6px;
+    font-size:13px;
+    letter-spacing:.035em;
+  }
+
+  .galaxy-three-status{
+    left:10px;
+    bottom:calc(76px + env(safe-area-inset-bottom));
+    font-size:10px;
+  }
+
+  .galaxy-three-controls{
+    left:10px;
+    right:auto;
+    bottom:calc(76px + env(safe-area-inset-bottom));
+    width:auto;
+    min-width:0;
+    grid-template-columns:auto 42px 42px;
+    transform:none;
+  }
+
+  .galaxy-three-controls button{
+    min-width:42px;
+    min-height:42px;
+    font-size:15px;
+  }
+
+  .galaxy-three-controls button:nth-child(2),
+  .galaxy-three-controls button:nth-child(3){
+    display:none;
+  }
+
+  .galaxy-three-controls button:first-child{
+    min-width:72px;
+    font-size:10px;
+  }
+
+  .cockpit[data-view=ATLAS] .atlas-legend{
+    display:none;
+  }
+
+  .cockpit[data-view=ATLAS] .atlas-sheet{
+    position:fixed;
+    z-index:50;
+    left:8px;
+    right:8px;
+    bottom:calc(8px + env(safe-area-inset-bottom));
+    max-height:min(74dvh,680px);
+    padding-top:14px;
+    border:1px solid rgba(121,231,255,.10);
+    border-radius:24px;
+    background:rgba(5,10,18,.94);
+    box-shadow:0 30px 100px rgba(0,0,0,.62),inset 0 1px rgba(255,255,255,.05);
+    backdrop-filter:blur(28px) saturate(120%);
+  }
+
+  .cockpit[data-view=ATLAS] .atlas-sheet::before{
+    content:"";
+    display:block;
+    width:38px;
+    height:4px;
+    margin:0 auto 7px;
+    border-radius:999px;
+    background:rgba(184,199,210,.34);
+  }
+
+  .cockpit[data-view=ATLAS] .atlas-sheet .entity-inspector{
+    padding:12px 15px calc(18px + env(safe-area-inset-bottom));
+  }
+}
+
+@media(max-width:480px){
+  .header-tools .health-button span,
+  .header-tools .private-session-badge{
+    display:none;
+  }
+
+  .cockpit[data-view=ATLAS] .atlas-toolbar{
+    top:7px;
+  }
+
+  .cockpit[data-view=ATLAS] .atlas-mode-toggle button{
+    padding-inline:8px;
+  }
+
+  .cockpit[data-view=ATLAS] .atlas-tour .filter-toggle{
+    padding-inline:8px;
+  }
+
+  .galaxy-three-label.domain{
+    font-size:12px;
+  }
+
+  .bottom-nav{
+    left:7px;
+    right:7px;
+  }
+}
+
+@media(prefers-reduced-motion:reduce){
+  *,*::before,*::after{
+    animation-duration:.001ms!important;
+    animation-iteration-count:1!important;
+    transition-duration:.001ms!important;
+    scroll-behavior:auto!important;
+  }
+}
