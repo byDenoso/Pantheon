@@ -378,12 +378,14 @@ export function AtlasWebGL3D({
 
       <div className="atlas3d-selection" aria-live="polite">
         {selectedId
-          ? 'ATLAS 3D · nó selecionado · clique no fundo para limpar'
-          : 'ATLAS 3D · force layout · arraste para orbitar · pinça/scroll para zoom'}
+          ? `ATLAS 3D · selecionado: ${selectedNode?.label ?? selectedId}`
+          : isMobile
+            ? `ATLAS 3D · ${graphData.nodes.length} nós · ${graphData.links.length} relações · toque em um domínio para abrir`
+            : `ATLAS 3D · ${graphData.nodes.length} nós · ${graphData.links.length} relações · arraste para orbitar · scroll para zoom`}
       </div>
 
       <div className="atlas3d-controls atlas3d-mobile-nav" role="group" aria-label="Controles do grafo">
-        <button type="button" aria-label="Resetar câmera" onClick={resetCamera}>Visão geral</button>
+        <button type="button" aria-label="Enquadrar grafo" onClick={resetCamera}>Enquadrar</button>
         <button type="button" aria-label="Girar mapa para a esquerda" onClick={() => rotate(0.34)}>←</button>
         <button type="button" aria-label="Girar mapa para a direita" onClick={() => rotate(-0.34)}>→</button>
         <button type="button" aria-label="Aproximar mapa" onClick={() => zoom(1.18)}>+</button>
