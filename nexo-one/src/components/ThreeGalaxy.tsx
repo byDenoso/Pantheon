@@ -46,6 +46,8 @@ type Runtime = {
   entityMesh: THREE.InstancedMesh;
   entityIds: string[];
   entityPositionById: Map<string, THREE.Vector3>;
+  selectedHalo: THREE.Sprite | null;
+  selectedHaloMaterial: THREE.SpriteMaterial | null;
   labelStates: LabelState[];
   disposables: Array<{ dispose: () => void }>;
   raf: number;
@@ -356,15 +358,12 @@ function buildPositionMap(snapshot: GalaxySnapshot, nodes: PlacedNode3D[]) {
   return map;
 }
 
-function createRelationLines(snapshot: GalaxySnapshot, positions: Map<string, THREE.Vector3>, selectedId: string | null) {
-  const selected = selectedId
-    ? snapshot.relations.filter(relation => relation.from === selectedId || relation.to === selectedId)
-    : [];
+function createRelationLines(snapshot: GalaxySnapshot, positions: Map<string, THREE.Vector3>) {
   const macro = [...snapshot.relations]
     .filter(relation => positions.has(relation.from) && positions.has(relation.to))
     .sort((a, b) => Number(b.derived) - Number(a.derived) || b.weight - a.weight)
-    .slice(0, selectedId ? 75 : 58);
-  const byId = new Map([...macro, ...selected].map(relation => [relation.id, relation]));
+    .slice(0, 64);
+  const byId = new Map(macro.map(relation => [relation.id, relation]));
   const coords: number[] = [];
   for (const relation of byId.values()) {
     const from = positions.get(relation.from);
@@ -377,7 +376,7 @@ function createRelationLines(snapshot: GalaxySnapshot, positions: Map<string, TH
   const material = new THREE.LineBasicMaterial({
     color: new THREE.Color(DIM),
     transparent: true,
-    opacity: selectedId ? 0.27 : 0.1,
+    opacity: 0.11,
     blending: THREE.AdditiveBlending,
     depthWrite: false,
   });
@@ -600,22 +599,20 @@ export const ThreeGalaxy = forwardRef<CanvasGraph25DHandle, Omit<Props, 'control
       if (!entities.positionById.has(id)) entities.positionById.set(id, position.clone());
     }
 
-    const relations = createRelationLines(snapshot, positionMap, selectedId);
+    const relations = createRelationLines(snapshot, positionMap);
     root.add(relations.lines);
 
     const selectedHaloMaterial = texture ? new THREE.SpriteMaterial({
       map: texture,
       color: new THREE.Color(CORE),
       transparent: true,
-      opacity: selectedId ? 0.6 : 0,
+      opacity: 0,
       blending: THREE.AdditiveBlending,
       depthWrite: false,
     }) : null;
     const selectedHalo = selectedHaloMaterial ? new THREE.Sprite(selectedHaloMaterial) : null;
     if (selectedHalo) {
       selectedHalo.scale.set(17, 17, 1);
-      const selectedPosition = selectedId ? positionMap.get(selectedId) : null;
-      if (selectedPosition) selectedHalo.position.copy(selectedPosition);
       root.add(selectedHalo);
     }
 
@@ -685,6 +682,8 @@ export const ThreeGalaxy = forwardRef<CanvasGraph25DHandle, Omit<Props, 'control
       entityMesh: entities.mesh,
       entityIds: entities.ids,
       entityPositionById: entities.positionById,
+      selectedHalo,
+      selectedHaloMaterial,
       labelStates,
       disposables,
       raf: 0,
@@ -732,12 +731,16 @@ export const ThreeGalaxy = forwardRef<CanvasGraph25DHandle, Omit<Props, 'control
       renderer.domElement.remove();
       runtimeRef.current = null;
     };
-  }, [mobile, nodes, onSelect, onUnavailable, reducedMotion, selectedId, snapshot]);
+  }, [mobile, nodes, onSelect, onUnavailable, reducedMotion, snapshot]);
 
   useEffect(() => {
     const runtime = runtimeRef.current;
     if (!runtime) return;
     const position = selectedId ? runtime.entityPositionById.get(selectedId) : null;
+    if (runtime.selectedHalo && runtime.selectedHaloMaterial) {
+      runtime.selectedHaloMaterial.opacity = position ? 0.62 : 0;
+      if (position) runtime.selectedHalo.position.copy(position);
+    }
     if (position) focusPointInternal(position, 2.25);
   }, [selectedId]);
 
