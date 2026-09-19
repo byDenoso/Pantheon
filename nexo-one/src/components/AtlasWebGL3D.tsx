@@ -169,6 +169,13 @@ export function AtlasWebGL3D({
     [graphData.nodes, selectedId],
   );
 
+  const visibleLabels = useMemo(
+    () => graphData.nodes.filter(node =>
+      node.type === 'DOMAIN' || isClusterNode(node) || node.id === selectedId
+    ),
+    [graphData.nodes, selectedId],
+  );
+
   useEffect(() => {
     const host = hostRef.current;
     if (!host) return undefined;
@@ -258,25 +265,31 @@ export function AtlasWebGL3D({
   }, [isMobile, selectedNode]);
 
   useEffect(() => {
-    if (!selectedNode) return undefined;
-
     let frame = 0;
-    const updateLabel = () => {
+
+    const updateLabels = () => {
       const graph = graphRef.current;
-      const label = labelRefs.current.get(selectedNode.id);
-      if (graph && label) {
-        const x = Number(selectedNode.x ?? 0);
-        const y = Number(selectedNode.y ?? 0);
-        const z = Number(selectedNode.z ?? 0);
-        const position = graph.graph2ScreenCoords(x, y, z);
-        label.style.transform = `translate(-50%, -50%) translate(${position.x}px, ${position.y + nodeRadius(selectedNode) * 12}px)`;
+      if (graph) {
+        for (const node of visibleLabels) {
+          const label = labelRefs.current.get(node.id);
+          if (!label) continue;
+
+          const x = Number(node.x ?? 0);
+          const y = Number(node.y ?? 0);
+          const z = Number(node.z ?? 0);
+          const position = graph.graph2ScreenCoords(x, y, z);
+
+          label.style.transform =
+            `translate(-50%, -50%) translate(${position.x}px, ${position.y + nodeRadius(node) * 14}px)`;
+        }
       }
-      frame = window.requestAnimationFrame(updateLabel);
+
+      frame = window.requestAnimationFrame(updateLabels);
     };
 
-    frame = window.requestAnimationFrame(updateLabel);
+    frame = window.requestAnimationFrame(updateLabels);
     return () => window.cancelAnimationFrame(frame);
-  }, [selectedNode]);
+  }, [visibleLabels]);
 
   const resetCamera = () => zoomToGraph(graphRef.current, isMobile, 550);
 
@@ -348,18 +361,19 @@ export function AtlasWebGL3D({
       </div>
 
       <div className="atlas-webgl-labels" aria-hidden="true">
-        {selectedNode && (
+        {visibleLabels.map(node => (
           <span
+            key={node.id}
             ref={element => {
-              if (element) labelRefs.current.set(selectedNode.id, element);
-              else labelRefs.current.delete(selectedNode.id);
+              if (element) labelRefs.current.set(node.id, element);
+              else labelRefs.current.delete(node.id);
             }}
-            className="atlas-webgl-label selected"
-            style={{ '--label-color': colorFor(selectedNode) } as CSSProperties}
+            className={`atlas-webgl-label${node.type === 'DOMAIN' ? ' domain' : ''}${isClusterNode(node) ? ' cluster' : ''}${node.id === selectedId ? ' selected' : ''}`}
+            style={{ '--label-color': colorFor(node) } as CSSProperties}
           >
-            {selectedNode.label.length > 46 ? `${selectedNode.label.slice(0, 45)}…` : selectedNode.label}
+            {node.label.length > 36 ? `${node.label.slice(0, 35)}…` : node.label}
           </span>
-        )}
+        ))}
       </div>
 
       <div className="atlas3d-selection" aria-live="polite">
