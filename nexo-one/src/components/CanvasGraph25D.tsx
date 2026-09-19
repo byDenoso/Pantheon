@@ -56,6 +56,9 @@ export type Canvas25DViewState={
 export type CanvasGraph25DHandle={
   reset:()=>void;
   focusNode:(id:string,zoom?:number)=>boolean;
+  focusDomain:(id:string)=>boolean;
+  focusSubdomain:(id:string)=>boolean;
+  focusEntity:(id:string)=>boolean;
   focusPoint:(point:{x:number;y:number;z:number},zoom?:number)=>void;
   getView:()=>Canvas25DViewState;
 };
@@ -236,6 +239,9 @@ export const CanvasGraph25D=forwardRef<CanvasGraph25DHandle,Props>(function Canv
   useImperativeHandle(ref,()=>({
     reset,
     focusNode,
+    focusDomain:(id:string)=>focusNode(id,1.55),
+    focusSubdomain:(id:string)=>focusNode(id,1.9),
+    focusEntity:(id:string)=>focusNode(id,2.35),
     focusPoint,
     getView:()=>({
       ...viewRef.current,
