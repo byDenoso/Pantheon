@@ -3,7 +3,7 @@
 import type { GraphNode } from '../contracts/system.ts';
 import type { Relation } from '../viewmodels/graph.ts';
 import { provenanceOf } from '../viewmodels/system.ts';
-import { dateTime, label, toneOf } from '../viewmodels/tokens.ts';
+import { dateTime, label, nextHintFor, toneOf } from '../viewmodels/tokens.ts';
 import {
   AuthorityBadge, DomainBadge, Fingerprint, FreshnessIndicator, SeverityBadge, SourceRef, StatusBadge,
 } from './primitives.tsx';
@@ -64,6 +64,11 @@ export function EntityInspector(
         {node.runtime && <span className="runtime-chip">{label(node.runtime)}</span>}
       </div>
       <p className="inspector-summary">{node.summary}</p>
+
+      <section className="inspector-block inspector-next">
+        <span className="eyebrow">PRÓXIMO PASSO</span>
+        <p>{nextHintFor(node.state)}</p>
+      </section>
 
       <section className="inspector-block">
         <span className="eyebrow">ESTADO E LEITURA</span>
