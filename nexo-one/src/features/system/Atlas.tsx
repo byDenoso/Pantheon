@@ -14,7 +14,7 @@ import { useIsMobile } from '../../app/useMediaQuery.ts';
 import {
   EMPTY_FILTERS, filterCount, filterGraph, legendOf, relationsOf, type GraphFilters,
 } from '../../viewmodels/graph.ts';
-import { layoutGraph3D, resolveSelection3D } from '../../viewmodels/graph3d.ts';
+import { layoutGraph3D, layoutMacroDomains, resolveSelection3D } from '../../viewmodels/graph3d.ts';
 import { useGalaxySnapshot } from '../../data/useGalaxySnapshot.ts';
 import { galaxySnapshotAgeLabel } from '../../data/galaxySnapshot.ts';
 import { label, toneOf } from '../../viewmodels/tokens.ts';
@@ -204,10 +204,14 @@ export function AtlasView(
     const ids = new Set(nodes.map(node => node.id));
     return { nodes, edges: filtered.edges.filter(edge => (learningVisible || !edge.is_learning) && ids.has(edge.from) && ids.has(edge.to)) };
   }, [expandAll, expandedCluster, expandedDomain, filtered, learningEndpointIds, learningVisible, rootExpanded]);
-  const placed = useMemo(() => layoutGraph3D(renderGraph.nodes).map(node => {
-    const position = galaxyPositions.get(node.id);
-    return position ? { ...node, ...position } : node;
-  }), [renderGraph.nodes, galaxyPositions]);
+  const isMacroOverview = rootExpanded && !expandAll && !expandedDomain && !expandedCluster;
+  const placed = useMemo(() => {
+    if (isMacroOverview) return layoutMacroDomains(renderGraph.nodes);
+    return layoutGraph3D(renderGraph.nodes).map(node => {
+      const position = galaxyPositions.get(node.id);
+      return position ? { ...node, ...position } : node;
+    });
+  }, [isMacroOverview, renderGraph.nodes, galaxyPositions]);
   const legend = useMemo(() => legendOf(renderGraph.nodes.filter(node => !clusterFromId(node.id))), [renderGraph.nodes]);
   const effectiveSelectedId = resolveSelection3D(placed, selectedId);
   const selected: GraphNode | null = filtered.nodes.find(n => n.id === effectiveSelectedId) ?? null;
@@ -520,7 +524,7 @@ export function AtlasView(
                 description="Um grafo vazio aqui é resultado do filtro, não ausência de dados no sistema."
                 hint="Remova um critério para voltar a ver o mapa." />
             : <>
-                <AtlasGalaxyRenderer ref={galaxyRef} nodes={placed} edges={renderGraph.edges} selectedId={effectiveSelectedId} onSelect={handleGraphSelect} />
+                <AtlasGalaxyRenderer ref={galaxyRef} nodes={placed} edges={renderGraph.edges} selectedId={effectiveSelectedId} onSelect={handleGraphSelect} viewMode={isMacroOverview ? 'macro' : 'detail'} />
                 <ul className="atlas-legend">
                   {legend.map(entry => (
                     <li key={entry.type}>
