@@ -40,7 +40,7 @@ test('atlas consumes the stage 1 galaxy compiler and renders one visual palette 
   assert.match(adapter,/GALAXY_ARMS/);
   assert.match(adapter,/GALAXY_COLOR='#79e7ff'/);
   assert.doesNotMatch(adapter,/DOMAIN_COLOR|ALERT_COLOR/);
-  assert.match(atlas,/compileGalaxySnapshot\(state\)/);
+  assert.match(atlas,/useGalaxySnapshot\(state\)/);
   assert.match(atlas,/galaxySnapshot\.entities/);
   assert.match(atlas,/galaxySnapshot\.subdomains/);
   assert.match(atlas,/controllerRef=\{galaxyRef\}/);
