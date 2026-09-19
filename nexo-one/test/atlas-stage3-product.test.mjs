@@ -45,9 +45,9 @@ test('Operate HUD exposes exactly the four permanent indicators, sourced from th
   assert.doesNotMatch(hud, /Math\.random/);
 });
 
-test('Changes panel reports an honest empty state instead of fabricating history', async () => {
+test('Changes panel stays honest when published history has no delta', async () => {
   const hud = await text('src/features/system/OperateHUD.tsx');
-  assert.match(hud, /Nenhuma mudança rastreada nesta sessão/);
+  assert.match(hud, /Nenhuma mudança entre os snapshots publicados disponíveis/);
 });
 
 test('the inspector adds a NEXT ("próximo passo") section derived from real entity state', async () => {
