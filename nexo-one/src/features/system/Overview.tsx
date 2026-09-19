@@ -33,7 +33,7 @@ export function Overview(
     <div className="overview">
       <section className="current-state" aria-labelledby="current-state-title" data-order="state">
         <div className="section-head">
-          <h2 id="current-state-title">Estado atual</h2>
+          <h2 id="current-state-title">Leitura canônica</h2>
           <div className="head-side">
             <StatusBadge state={summary.state} />
             <span className="quiet-note">última leitura {dateTime(summary.lastRead)}</span>
@@ -51,7 +51,7 @@ export function Overview(
               </header>
               <StatusBadge state={domain.state} />
               {domain.freshness && <FreshnessIndicator freshness={domain.freshness} />}
-              <p>{domain.finding?.explanation ?? 'Sem achado registrado para este domínio.'}</p>
+              <p>{domain.finding?.explanation ?? 'Sem finding registrado para este domínio nesta projeção.'}</p>
               {domain.blockers.length > 0 && (
                 <ul className="tile-blockers">{domain.blockers.map(b => <li key={b}>{b}</li>)}</ul>
               )}
@@ -60,42 +60,42 @@ export function Overview(
         </div>
         <div className="state-counters">
           <button onClick={() => onNavigate('TRUTHGRAPH')} className={summary.conflicts.length ? 'counter conflict' : 'counter'}>
-            <strong>{summary.conflicts.length}</strong><span>conflitos observados</span>
+            <strong>{summary.conflicts.length}</strong><span>conflitos</span>
           </button>
           <button onClick={() => onNavigate('ACTIONS')} className="counter">
-            <strong>{summary.blockers.length}</strong><span>blockers observados</span>
+            <strong>{summary.blockers.length}</strong><span>blockers</span>
           </button>
           <button onClick={() => onNavigate('SOURCES')} className="counter">
             <strong>{summary.degradedCapabilities.length}</strong><span>capabilities sem PASS</span>
           </button>
           <button onClick={() => onNavigate('INBOX')} className="counter">
-            <strong>{summary.needsHuman}</strong><span>exigem você</span>
+            <strong>{summary.needsHuman}</strong><span>gates humanos</span>
           </button>
         </div>
         {unavailableProviders > 0 && (
           <p className="rule-note">
-            Contadores em zero descrevem apenas o que foi observado nesta compilação. Com provider indisponível, zero não equivale a estado saudável.
+            Há provider indisponível nesta compilação. Contadores em zero não cobrem o estado ausente.
           </p>
         )}
       </section>
 
       <section aria-labelledby="attention-title" data-order="attention">
         <div className="section-head">
-          <h2 id="attention-title">Precisa de você <span>{summary.needsHuman}</span></h2>
+          <h2 id="attention-title">Gates humanos <span>{summary.needsHuman}</span></h2>
           <button className="text-button" onClick={() => onNavigate('INBOX')}>Ver Human Inbox ↗</button>
         </div>
         {urgent.length
           ? urgent.map(item => (
               <HumanInboxItem key={item.id} item={item} action={actionById(state, item.action_id)} onOpen={onOpenInbox} />
             ))
-          : <EmptyState title="Nada exige decisão humana nesta leitura."
-              description="Isto não significa que o sistema está saudável; significa apenas que nada observado depende de você agora."
-              hint="Confira Integrity e a cobertura das fontes para o que não pôde ser provado." />}
+          : <EmptyState title="0 gates humanos explícitos."
+              description="Nenhuma entidade desta compilação está marcada como HUMAN_AUTH_REQUIRED ou HUMAN_DECISION_REQUIRED."
+              hint="Integridade e cobertura de providers são verificadas separadamente." />}
       </section>
 
       <section aria-labelledby="autonomy-title" data-order="autonomy">
         <div className="section-head">
-          <h2 id="autonomy-title">NEXO pode resolver <span>{resolvable.length}</span></h2>
+          <h2 id="autonomy-title">Fila autônoma elegível <span>{resolvable.length}</span></h2>
           <span className="eyebrow">SEM GATE HUMANO</span>
         </div>
         {resolvable.length
@@ -105,13 +105,13 @@ export function Overview(
                   capability={capabilityById(state, action.capability_id)} onOpen={onOpenAction} />
               ))}
             </div>
-          : <EmptyState title="Nenhuma ação elegível para autonomia."
-              description="Toda ação aberta depende de decisão humana ou de uma capability sem prova de execução." />}
+          : <EmptyState title="0 ações executáveis sem gate humano."
+              description="Não há ação aberta com capability executável e dependências resolvidas nesta compilação." />}
       </section>
 
       <section aria-labelledby="lanes-title" data-order="lanes">
         <div className="section-head">
-          <h2 id="lanes-title">Próximas ações por lane</h2>
+          <h2 id="lanes-title">Próxima operação por domínio</h2>
           <span className="eyebrow">SCIENCE · ENGINEERING · OLYMPUS</span>
         </div>
         <div className="lane-grid">
@@ -124,7 +124,7 @@ export function Overview(
 
       <section aria-labelledby="bus-title" data-order="bus">
         <div className="section-head">
-          <h2 id="bus-title">Projection health</h2>
+          <h2 id="bus-title">Projeção publicada</h2>
           <span className="eyebrow">{label(state.bus.state)}</span>
         </div>
         <ProjectionHealth bus={state.bus} />

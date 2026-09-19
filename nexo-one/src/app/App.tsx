@@ -170,6 +170,9 @@ export default function App() {
             <span className="brand-descriptor">PERSONAL COMMAND DECK</span>
           </a>
           <div className="header-tools">
+            <a className="product-switch" href={`${import.meta.env.BASE_URL}mcp/`} title="Abrir a topologia MCP 3D">
+              MCP Atlas <span>↗</span>
+            </a>
             <span className="header-date">
               {new Intl.DateTimeFormat('pt-BR', { weekday: 'short', day: '2-digit', month: 'short' }).format(new Date())}
             </span>
@@ -311,6 +314,13 @@ export default function App() {
                   ))}
                 </div>
               ))}
+              <div className="sheet-group product-group">
+                <span className="eyebrow">ESTRUTURA</span>
+                <a className="sheet-item product-sheet-link" href={`${import.meta.env.BASE_URL}mcp/`}>
+                  <i aria-hidden="true">⌬</i>
+                  <span><strong>MCP Atlas</strong><small>Tools, capabilities, runtimes e roles no grafo 3D</small></span>
+                </a>
+              </div>
             </div>
           </Modal>
         )}

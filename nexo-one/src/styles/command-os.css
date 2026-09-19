@@ -1419,3 +1419,33 @@ body{
     max-width: 28ch;
   }
 }
+
+/* Product family bridge: NEXO ONE <-> MCP Atlas */
+.product-switch{
+  display:inline-flex;
+  align-items:center;
+  gap:7px;
+  min-height:34px;
+  padding:0 11px;
+  border:1px solid var(--command-hairline);
+  border-radius:10px;
+  background:color-mix(in srgb,var(--surface-2) 66%,transparent);
+  color:color-mix(in srgb,var(--muted) 92%,transparent);
+  font-size:10px;
+  font-weight:680;
+  letter-spacing:.06em;
+  text-decoration:none;
+  box-shadow:inset 0 1px 0 #ffffff08;
+}
+.product-switch span{color:var(--command-accent)}
+.product-switch:hover{
+  border-color:color-mix(in srgb,var(--command-accent) 38%,var(--line));
+  background:color-mix(in srgb,var(--command-accent) 8%,var(--surface-2));
+  color:var(--ink);
+  text-decoration:none;
+}
+.product-sheet-link{display:flex;text-decoration:none}
+.product-sheet-link:hover{text-decoration:none}
+@media(max-width:760px){
+  .product-switch{display:none}
+}

@@ -139,17 +139,17 @@ export function McpAtlasApp(){
 
   return <div className="mcp-site">
     <nav className="mcp-nav">
-      <a className="mcp-brand" href="../"><span className="mark">N</span><span>NEXO</span><b>MCP ATLAS</b></a>
-      <div className="nav-links"><a href="#architecture">Arquitetura</a><a href="#topology">Topologia</a><a href="#source">Fonte</a></div>
+      <a className="mcp-brand" href="../"><span className="mark">N</span><span>NEXO <em>ONE</em></span><b>MCP ATLAS</b></a>
+      <div className="nav-links"><a href="../">Cockpit</a><a href="#topology">Topologia</a><a href="#architecture">Relações</a><a href="#source">Fonte</a></div>
       <span className="live-pill"><i/> TOWER_V06</span>
     </nav>
 
     <main>
       <section className="hero" id="topology">
         <div className="hero-copy">
-          <div className="kicker">LIVE SYSTEM MAP · READ-ONLY</div>
-          <h1>Seu MCP,<br/><span>visível em 3D.</span></h1>
-          <p>Uma projeção espacial da estrutura canônica do NEXO: tools, capabilities, runtimes e papéis, compilados diretamente da Tower atual.</p>
+          <div className="kicker">TOWER_V06 · MCP STRUCTURE · READ-ONLY</div>
+          <h1>Topologia MCP<br/><span>da revisão atual.</span></h1>
+          <p>Tools expostas, capabilities registradas, backends de runtime e roles. O grafo é recompilado do checkout canônico usado no deploy.</p>
           {topology&&<div className="metrics">
             <div><strong>{topology.stats.tools}</strong><span>tools</span></div>
             <div><strong>{topology.stats.capabilities}</strong><span>capabilities</span></div>
@@ -157,7 +157,7 @@ export function McpAtlasApp(){
             <div><strong>{topology.stats.remote_tools}</strong><span>remote tools</span></div>
           </div>}
           <div className="hero-actions">
-            <a className="primary-cta" href="#architecture">Explorar arquitetura</a>
+            <a className="primary-cta" href="../">Abrir NEXO ONE</a>
             {topology&&<span className="freshness">Atualizado {updated}</span>}
           </div>
         </div>
@@ -189,22 +189,22 @@ export function McpAtlasApp(){
 
       {topology&&<section className="architecture" id="architecture">
         <div className="section-head">
-          <span>ARCHITECTURE</span>
-          <h2>Da superfície semântica<br/>até o runtime.</h2>
-          <p>O mapa não inventa dependências. Ele organiza relações declaradas no MCP e no manifest de capabilities, com agrupamentos visuais derivados apenas para navegação.</p>
+          <span>RELAÇÕES PUBLICADAS</span>
+          <h2>Encadeamento declarado<br/>no MCP e na Tower.</h2>
+          <p>As arestas publicadas são EXPOSES, CONTAINS, RUNS_ON e AVAILABLE_TO. Agrupamentos por família servem apenas ao layout; não criam dependências canônicas.</p>
         </div>
         <div className="arch-flow">
-          <article><span>01</span><h3>MCP surface</h3><p>{topology.stats.remote_tools} tools remotos e {topology.stats.internal_tools} internos.</p></article>
-          <article><span>02</span><h3>Capability fabric</h3><p>{topology.stats.capabilities} capabilities registradas na Tower.</p></article>
-          <article><span>03</span><h3>Runtime backends</h3><p>{Object.entries(topology.stats.backend_counts).slice(0,4).map(([k,v])=>`${k} (${v})`).join(' · ')}</p></article>
-          <article><span>04</span><h3>Governance</h3><p>{topology.stats.roles} papéis conectados às capabilities declaradas.</p></article>
+          <article><span>01</span><h3>Tools expostas</h3><p>{topology.stats.remote_tools} tools remotos e {topology.stats.internal_tools} internos.</p></article>
+          <article><span>02</span><h3>Capabilities registradas</h3><p>{topology.stats.capabilities} capabilities registradas na Tower.</p></article>
+          <article><span>03</span><h3>Backends de runtime</h3><p>{Object.entries(topology.stats.backend_counts).slice(0,4).map(([k,v])=>`${k} (${v})`).join(' · ')}</p></article>
+          <article><span>04</span><h3>Roles declaradas</h3><p>{topology.stats.roles} papéis conectados às capabilities declaradas.</p></article>
         </div>
       </section>}
 
       <section className="source-section" id="source">
         <div>
-          <span className="kicker">CANONICAL SOURCE</span>
-          <h2>O site segue o MCP.<br/>Não o contrário.</h2>
+          <span className="kicker">FONTE CANÔNICA</span>
+          <h2>Revisão e arquivos<br/>usados no build.</h2>
         </div>
         {topology&&<div className="source-card">
           <div><span>authority</span><b>{topology.source.authority}</b></div>
@@ -215,6 +215,12 @@ export function McpAtlasApp(){
       </section>
     </main>
 
-    <footer><span>NEXO MCP ATLAS</span><span>Projection-only · GitHub Pages</span></footer>
+    <nav className="mcp-bottom-nav" aria-label="Navegação do MCP Atlas">
+      <a href="../"><i>◎</i><span>NEXO ONE</span></a>
+      <a href="#topology" className="active"><i>⌬</i><span>Topologia</span></a>
+      <a href="#architecture"><i>→</i><span>Relações</span></a>
+      <a href="#source"><i>⊞</i><span>Fonte</span></a>
+    </nav>
+    <footer><span>NEXO ONE · MCP ATLAS</span><span>TOWER_V06 · projection-only</span></footer>
   </div>;
 }

@@ -65,21 +65,21 @@ export const NAV_GROUPS: NavGroup[] = [
 export const MOBILE_PRIMARY: ViewId[] = ['INBOX', 'OVERVIEW', 'ACTIONS', 'ATLAS'];
 
 export const VIEW_TITLES: Record<ViewId, { title: string; lead: string }> = {
-  OVERVIEW: { title: 'O estado real, agora.', lead: 'Estado global, atenção humana, o que o NEXO pode resolver e como cada lane está.' },
-  INBOX: { title: 'Precisa de você.', lead: 'Apenas o que exige intervenção humana. Nada que o sistema possa decidir sozinho.' },
-  ACTIONS: { title: 'Ações e elegibilidade.', lead: 'Operação exigida, capability, runtime, risco e por que a ação pode ou não avançar.' },
-  EXECUTION: { title: 'Execution trace.', lead: 'ACTION → CAPABILITY → RUNTIME → EFFECT → READBACK, com fingerprints e horários.' },
-  TRUTHGRAPH: { title: 'Quem detém a verdade.', lead: 'Autoridade, provider esperado contra observado, freshness e conflitos por domínio.' },
-  CAPABILITIES: { title: 'Capability Radar.', lead: 'O que pode ser feito, em qual runtime, com qual prova de execução.' },
-  SOURCES: { title: 'Fontes e projeções.', lead: 'Providers, Universal Projection Bus e cobertura de cada consumidor.' },
-  INTEGRITY: { title: 'O que não pode ser provado.', lead: 'Achados abertos, capabilities sem evidência e readbacks que falharam.' },
-  ATLAS: { title: 'Atlas.', lead: 'Estrutura, relações e proveniência do sistema inteiro em um só mapa.' },
-  LEARNING: { title: 'Aprendizado.', lead: 'Filamentos ponderados com suporte, contradição e limite de validade.' },
-  NOW: { title: 'O que merece sua atenção.', lead: 'Fontes pessoais conectadas ao servidor real.' },
-  LOOPS: { title: 'Compromissos em movimento.', lead: 'Estado declarado na fonte, não inferido.' },
-  DAY: { title: 'Um dia que cabe no dia.', lead: 'Agenda real; propostas não alteram compromissos.' },
-  CONTEXT: { title: 'Entre no contexto certo.', lead: 'Objetivos, registros e ferramentas por área.' },
-  RECALL: { title: 'Encontre. Retome. Avance.', lead: 'Busca nas fontes conectadas, com origem preservada.' },
+  OVERVIEW: { title: 'Estado operacional da Tower.', lead: 'Gates humanos, blockers, capabilities, providers e filas por domínio na compilação atual.' },
+  INBOX: { title: 'Gates humanos abertos.', lead: 'Somente entidades com requisito humano explícito na projeção canônica.' },
+  ACTIONS: { title: 'Fila operacional.', lead: 'Ações abertas, capability vinculada, runtime, dependências e motivo de avanço ou espera.' },
+  EXECUTION: { title: 'Rastreamento de execução.', lead: 'ACTION → CAPABILITY → RUNTIME → EFFECT → READBACK, com fingerprint e horário por etapa.' },
+  TRUTHGRAPH: { title: 'Autoridade e conflito de estado.', lead: 'Provider esperado, provider observado, freshness e divergências por domínio.' },
+  CAPABILITIES: { title: 'Capabilities executáveis.', lead: 'Backend, status, contrato de execução e evidência disponível por capability.' },
+  SOURCES: { title: 'Cobertura de providers.', lead: 'Disponibilidade, freshness e consumidores atendidos pelo Projection Bus.' },
+  INTEGRITY: { title: 'Falhas de prova e readback.', lead: 'Invariantes abertos, capabilities sem evidência e leituras que não fecharam.' },
+  ATLAS: { title: 'Topologia operacional.', lead: 'Entidades, relações e proveniência materializadas no grafo atual.' },
+  LEARNING: { title: 'Relações promovidas e rejeitadas.', lead: 'Filamentos com suporte, contradição, escopo e limite de validade.' },
+  NOW: { title: 'Pendências pessoais com fonte.', lead: 'Itens atuais vindos das fontes pessoais conectadas.' },
+  LOOPS: { title: 'Compromissos abertos.', lead: 'Estado declarado na fonte e última atualização observada.' },
+  DAY: { title: 'Agenda consolidada.', lead: 'Eventos da agenda conectada; propostas permanecem separadas do calendário.' },
+  CONTEXT: { title: 'Contextos e ferramentas.', lead: 'Objetivos, registros e integrações disponíveis por área.' },
+  RECALL: { title: 'Busca com proveniência.', lead: 'Resultados das fontes conectadas com origem preservada.' },
 };
 
 export const entryFor = (view: ViewId): NavEntry =>
