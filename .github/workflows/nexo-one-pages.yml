@@ -1,0 +1,271 @@
+name: NEXO ONE GitHub Pages
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'nexo-one/**'
+      - '.github/workflows/nexo-one-pages.yml'
+  repository_dispatch:
+    types: [nexo-public-projection-updated]
+  workflow_dispatch:
+  schedule:
+    - cron: '17 * * * *'
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: nexo-one-github-pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    outputs:
+      projection_fingerprint: ${{ steps.projection.outputs.projection_fingerprint }}
+      tower_commit: ${{ steps.projection.outputs.tower_commit }}
+      event_cursor: ${{ steps.projection.outputs.event_cursor }}
+    steps:
+      - name: Checkout Pantheon
+        uses: actions/checkout@v4
+
+      - name: Require read-only Vault credential
+        shell: bash
+        env:
+          NEXO_VAULT_READ_TOKEN: ${{ secrets.NEXO_VAULT_READ_TOKEN }}
+        run: |
+          set -euo pipefail
+          if [ -z "${NEXO_VAULT_READ_TOKEN}" ]; then
+            echo "::error::NEXO_VAULT_READ_TOKEN is required. Permission boundary: read-only Contents access to byDenoso/NEXO-Obsidian-Vault; no write/admin scope."
+            exit 1
+          fi
+
+      - name: Checkout canonical Tower
+        uses: actions/checkout@v4
+        with:
+          repository: byDenoso/NEXO-Obsidian-Vault
+          ref: main
+          token: ${{ secrets.NEXO_VAULT_READ_TOKEN }}
+          path: _vault
+          persist-credentials: false
+          fetch-depth: 0
+
+      - name: Resolve canonical runtime revision
+        id: runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+          rev="$(jq -er '.runtime_revision' _vault/TOWER_V06/CONTROL.json)"
+          case "${rev}" in
+            byDenoso/TCC@*) ;;
+            *) echo "::error::CONTROL.runtime_revision must reference byDenoso/TCC, got ${rev}"; exit 1 ;;
+          esac
+          sha="${rev#byDenoso/TCC@}"
+          printf '%s' "${sha}" | grep -Eq '^[0-9a-f]{40}$' || {
+            echo "::error::CONTROL.runtime_revision must pin a full 40-hex TCC SHA, got ${sha}"
+            exit 1
+          }
+          echo "sha=${sha}" >> "$GITHUB_OUTPUT"
+
+      - name: Checkout projection verifier
+        uses: actions/checkout@v4
+        with:
+          repository: byDenoso/TCC
+          ref: ${{ steps.runtime.outputs.sha }}
+          path: _tcc
+          persist-credentials: false
+
+      - name: Verify sanctioned Tower projection
+        id: projection
+        shell: bash
+        run: |
+          set -euo pipefail
+          expected="${{ steps.runtime.outputs.sha }}"
+          actual="$(git -C _tcc rev-parse HEAD)"
+          [ "${actual}" = "${expected}" ] || {
+            echo "::error::TCC verifier checkout ${actual} differs from CONTROL.runtime_revision ${expected}"
+            exit 1
+          }
+
+          python - <<'PY'
+          import json
+          import os
+          import sys
+          from pathlib import Path
+
+          sys.path.insert(0, str(Path("_tcc").resolve()))
+          from runtime.nexo_agent_api.public_projection import verify_projection
+
+          projection_path = Path("_vault/TOWER_V06/projections/public/projection.json")
+          manifest_path = Path("_vault/TOWER_V06/projections/public/manifest.json")
+          projection = json.loads(projection_path.read_text(encoding="utf-8"))
+          external_manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+          manifest = projection.get("manifest") or {}
+
+          ok, detail = verify_projection(projection)
+          if not ok:
+              raise SystemExit(f"sanctioned projection verification failed: {detail}")
+          if external_manifest != manifest:
+              raise SystemExit("manifest.json differs from projection.manifest")
+          if manifest.get("authority") != "TOWER_V06":
+              raise SystemExit("authority != TOWER_V06")
+          if manifest.get("projection_only") is not True:
+              raise SystemExit("projection_only != true")
+          if manifest.get("writeback") != "FORBIDDEN":
+              raise SystemExit("writeback != FORBIDDEN")
+          tower_commit = str(manifest.get("tower_commit") or "")
+          event_cursor = str(manifest.get("event_cursor") or "")
+          fingerprint = str(manifest.get("projection_fingerprint") or "")
+          if len(tower_commit) != 40:
+              raise SystemExit("tower_commit is not a full commit SHA")
+          if not event_cursor:
+              raise SystemExit("event_cursor missing")
+          if not fingerprint.startswith("sha256:") or len(fingerprint) != 71:
+              raise SystemExit("projection_fingerprint invalid")
+          snapshot_path = Path("_vault/TOWER_V06/snapshot/latest.json")
+          snapshot = json.loads(snapshot_path.read_text(encoding="utf-8"))
+          snapshot_cursor = str(snapshot.get("event_cursor") or "")
+          if not snapshot_cursor:
+              raise SystemExit("canonical snapshot event_cursor missing")
+          if event_cursor != snapshot_cursor:
+              raise SystemExit(
+                  f"projection event_cursor {event_cursor} differs from canonical snapshot {snapshot_cursor}"
+              )
+
+          output = Path(os.environ["GITHUB_OUTPUT"])
+          with output.open("a", encoding="utf-8") as handle:
+              handle.write(f"tower_commit={tower_commit}\n")
+              handle.write(f"event_cursor={event_cursor}\n")
+              handle.write(f"projection_fingerprint={fingerprint}\n")
+          print(f"TOWER_PROJECTION_VERIFIED commit={tower_commit} cursor={event_cursor} fingerprint={fingerprint}")
+          PY
+
+      - name: Verify projection ancestry and stage sanctioned files
+        shell: bash
+        env:
+          TOWER_COMMIT: ${{ steps.projection.outputs.tower_commit }}
+        run: |
+          set -euo pipefail
+          git -C _vault cat-file -e "${TOWER_COMMIT}^{commit}" || {
+            echo "::error::projection tower_commit ${TOWER_COMMIT} is not present in canonical Vault history"
+            exit 1
+          }
+          git -C _vault merge-base --is-ancestor "${TOWER_COMMIT}" HEAD || {
+            echo "::error::projection tower_commit ${TOWER_COMMIT} is not an ancestor of current Vault main"
+            exit 1
+          }
+
+          rm -rf nexo-one/data/tower-public
+          mkdir -p nexo-one/data/tower-public
+          cp _vault/TOWER_V06/projections/public/projection.json nexo-one/data/tower-public/projection.json
+          cp _vault/TOWER_V06/projections/public/manifest.json nexo-one/data/tower-public/manifest.json
+          if compgen -G "_vault/TOWER_V06/entities/interdomain/*.json" > /dev/null; then
+            jq -s '.' _vault/TOWER_V06/entities/interdomain/*.json > nexo-one/data/tower-public/interdomain.json
+          else
+            printf '[]\n' > nexo-one/data/tower-public/interdomain.json
+          fi
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: nexo-one/package-lock.json
+
+      - name: Configure GitHub Pages
+        uses: actions/configure-pages@v5
+        with:
+          enablement: true
+
+      - name: Install dependencies
+        working-directory: nexo-one
+        run: npm ci --no-audit --no-fund
+
+      - name: Build static NEXO ONE
+        working-directory: nexo-one
+        env:
+          GITHUB_PAGES: '1'
+          VITE_SYSTEM_ENDPOINT: ./system.json
+          VITE_WORLD_ENDPOINT: ./world-public.ndjson
+          VITE_NEXO_AUTH_BRIDGE_URL: ${{ vars.VITE_NEXO_AUTH_BRIDGE_URL }}
+          VITE_PRIVATE_COCKPIT_URL: https://nexo-one-two.vercel.app
+        run: npm run build
+
+      - name: Compile presentation from sanctioned Tower projection
+        working-directory: nexo-one
+        env:
+          NEXO_PUBLIC_PROJECTION: data/tower-public/projection.json
+          NEXO_PUBLIC_PROJECTION_MANIFEST: data/tower-public/manifest.json
+          NEXO_PUBLIC_INTERDOMAIN: data/tower-public/interdomain.json
+        run: |
+          set -euo pipefail
+          node scripts/build-pages-system.mjs
+          test -s dist/system.json
+          test -s dist/world-public.ndjson
+          test -s dist/tower-projection/projection.json
+          test -s dist/tower-projection/manifest.json
+          touch dist/.nojekyll
+          if grep -R -Eqi 'GOOGLE_DRIVE|truthgraph-projection|nexo-drive-projection' dist/system.json dist/world-public.ndjson dist/tower-projection; then
+            echo "::error::legacy Drive/truthgraph operational source leaked into Pages artifact"
+            exit 1
+          fi
+
+      - name: Upload GitHub Pages artifact
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: nexo-one/dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
+
+      - name: Read back sanctioned projection
+        shell: bash
+        env:
+          PAGE_URL: ${{ steps.deployment.outputs.page_url }}
+          EXPECTED_FINGERPRINT: ${{ needs.build.outputs.projection_fingerprint }}
+          EXPECTED_TOWER_COMMIT: ${{ needs.build.outputs.tower_commit }}
+          EXPECTED_EVENT_CURSOR: ${{ needs.build.outputs.event_cursor }}
+        run: |
+          set -euo pipefail
+          base="${PAGE_URL%/}"
+          for attempt in 1 2 3 4 5 6; do
+            if curl -fsSL "${base}/tower-projection/manifest.json" -o /tmp/manifest.json; then break; fi
+            sleep 5
+          done
+          curl -fsSL "${base}/tower-projection/projection.json" -o /tmp/projection.json
+          curl -fsSL "${base}/system.json" -o /tmp/system.json
+          curl -fsSL "${base}/world-public.ndjson" -o /tmp/world.ndjson
+
+          node <<'NODE'
+          const fs=require('fs');
+          const manifest=JSON.parse(fs.readFileSync('/tmp/manifest.json','utf8'));
+          const projection=JSON.parse(fs.readFileSync('/tmp/projection.json','utf8'));
+          const system=JSON.parse(fs.readFileSync('/tmp/system.json','utf8'));
+          const world=JSON.parse(fs.readFileSync('/tmp/world.ndjson','utf8').trim());
+          if(manifest.authority!=='TOWER_V06')throw new Error('READBACK_AUTHORITY_INVALID');
+          if(manifest.projection_only!==true)throw new Error('READBACK_PROJECTION_ONLY_INVALID');
+          if(manifest.writeback!=='FORBIDDEN')throw new Error('READBACK_WRITEBACK_INVALID');
+          if(manifest.tower_commit!==process.env.EXPECTED_TOWER_COMMIT)throw new Error('READBACK_TOWER_COMMIT_MISMATCH');
+          if(manifest.event_cursor!==process.env.EXPECTED_EVENT_CURSOR)throw new Error('READBACK_EVENT_CURSOR_MISMATCH');
+          if(manifest.projection_fingerprint!==process.env.EXPECTED_FINGERPRINT)throw new Error('READBACK_FINGERPRINT_MISMATCH');
+          if(JSON.stringify(projection.manifest)!==JSON.stringify(manifest))throw new Error('READBACK_MANIFEST_SPLIT_BRAIN');
+          if(system.bus?.fingerprint!==manifest.projection_fingerprint)throw new Error('SYSTEM_NOT_BOUND_TO_TOWER_PROJECTION');
+          if(world.truthGraph?.fingerprint!==manifest.projection_fingerprint)throw new Error('WORLD_NOT_BOUND_TO_TOWER_PROJECTION');
+          const raw=JSON.stringify({system,world,projection});
+          if(/truthgraph-projection|nexo-drive-projection|GOOGLE_DRIVE/i.test(raw))throw new Error('LEGACY_OPERATIONAL_SOURCE_PRESENT');
+          NODE
+
+          echo "PAGES_TOWER_PROJECTION_READBACK_OK ${base}/tower-projection/manifest.json"
+          echo "PAGES_SYSTEM_READBACK_OK ${base}/system.json"
+          echo "PAGES_WORLD_READBACK_OK ${base}/world-public.ndjson"
