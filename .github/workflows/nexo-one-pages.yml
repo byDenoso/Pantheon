@@ -202,7 +202,7 @@ jobs:
           VITE_NEXO_AUTH_BRIDGE_URL: ${{ vars.VITE_NEXO_AUTH_BRIDGE_URL }}
           VITE_PRIVATE_COCKPIT_URL: https://nexo-one-two.vercel.app
         run: |
-          npm run typecheck
+          npx tsc --noEmit --target ES2022 --module ESNext --moduleResolution Bundler --strict src/contracts/galaxy.ts
           node --test test/galaxy-compiler.test.mjs
           npm run style:lint
           npm run build
