@@ -2,9 +2,8 @@
 // opens an overlay panel (the galaxy stays visible behind it, per spec — this
 // never navigates away). Counts come straight from the already-compiled
 // GalaxySnapshot: Needs You is exactly state.inbox (Stage 1's strict rule),
-// Learn/Capabilities are galaxy entities of that visual kind, Changes is
-// whatever diffGalaxySnapshots produced (empty until Stage 4 persists a
-// previous snapshot to diff against — reported as empty, never invented).
+// Learn/Capabilities are galaxy entities of that visual kind, Changes comes from the published versioned snapshot diff when available; the
+// fallback snapshot remains honest and empty rather than fabricating history.
 import type { GalaxySnapshot } from '../../contracts/galaxy.ts';
 import type { GalaxyPanelId } from '../../app/galaxyDeepLink.ts';
 import { Modal } from '../../shell/Modal.tsx';
@@ -108,7 +107,7 @@ export function OperateHUD(
         <Modal title="CHANGES" className="operate-panel" onClose={onClosePanel}>
           {snapshot.changes.length === 0
             ? <p className="quiet-note">
-                Nenhuma mudança rastreada nesta sessão. O histórico entre snapshots reais chega na Etapa 4.
+                Nenhuma mudança entre os snapshots publicados disponíveis.
               </p>
             : <ul className="operate-panel-list">
                 {snapshot.changes.map(change => (
