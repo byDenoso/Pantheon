@@ -14,9 +14,12 @@ type Topology={
   nodes:TopologyNode[];links:TopologyLink[];
 };
 
+// One coherent cyan/blue galaxy identity: node kind is read from radial position
+// and label, not from hue. Brightness alone separates the structural core from
+// leaf nodes so the map never reads as a rainbow dashboard.
 const COLORS:Record<NodeKind,string>={
-  ROOT:'#ffffff',LAYER:'#8b93a6',TRANSPORT:'#7df2c8',TOOL:'#56c7ff',
-  FAMILY:'#a9b2c8',CAPABILITY:'#9c7cff',BACKEND:'#76f7a7',ROLE:'#ffc76b',
+  ROOT:'#eafcff',LAYER:'#9fe9ff',TRANSPORT:'#8fdcf7',TOOL:'#79e7ff',
+  FAMILY:'#6fc3e8',CAPABILITY:'#79e7ff',BACKEND:'#8fdcf7',ROLE:'#5fa7c4',
 };
 const endpoint=()=>new URL('./topology.json',window.location.href).toString();
 const idOf=(value:string|TopologyNode)=>typeof value==='string'?value:value.id;
@@ -131,7 +134,7 @@ export function McpAtlasApp(){
     <main>
       <section className="hero" id="topology">
         <div className="hero-copy">
-          <div className="kicker">TOWER_V06 · CANVAS 2.5D · READ-ONLY</div>
+          <div className="kicker">TOWER_V06 · MCP STRUCTURE · READ-ONLY</div>
           <h1>Topologia MCP<br/><span>da revisão atual.</span></h1>
           <p>Tools expostas, capabilities registradas, backends de runtime e roles. Nós e arestas são desenhados em Canvas 2D com profundidade projetada; CSS cuida da interface.</p>
           {topology&&<div className="metrics">
