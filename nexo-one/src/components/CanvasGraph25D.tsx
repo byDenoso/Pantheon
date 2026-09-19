@@ -279,6 +279,7 @@ export const CanvasGraph25D=forwardRef<CanvasGraph25DHandle,Props>(function Canv
       if(!ctx)return;
 
       const view=viewRef.current;
+      const reducedMotion=prefersReducedMotion();
       const dpr=clamp(window.devicePixelRatio||1,1,2);
       const pixelWidth=Math.max(1,Math.round(size.width*dpr));
       const pixelHeight=Math.max(1,Math.round(size.height*dpr));
@@ -457,7 +458,7 @@ export const CanvasGraph25D=forwardRef<CanvasGraph25DHandle,Props>(function Canv
         const hot=node.id===hoveredRef.current;
         const baseOpacity=clamp(node.opacity??1,.06,1);
         const depthAlpha=clamp(.62+(item.depth+1)*.16,.5,.98);
-        const pulse=node.pulse&&!prefersReducedMotion()
+        const pulse=node.pulse&&!reducedMotion
           ?1+Math.sin(now*.004+item.x*.01)*.13
           :1;
         const radius=item.radius*pulse;
@@ -559,7 +560,7 @@ export const CanvasGraph25D=forwardRef<CanvasGraph25DHandle,Props>(function Canv
         statusRef.current.textContent=`${screen.length}/${nodes.length} nós · ${visibleEdges.length}/${safeEdges.length} relações · ${lod.toUpperCase()}`;
       }
 
-      if(nodes.some(node=>node.pulse)&&!prefersReducedMotion())scheduleDraw();
+      if(nodes.some(node=>node.pulse)&&!reducedMotion)scheduleDraw();
     };
     scheduleDraw();
   },[arms,nodes,safeEdges,selectedId,size]);
