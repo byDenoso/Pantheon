@@ -19,7 +19,7 @@ test('NEXO ONE and MCP Atlas share product navigation and operational language',
   assert.match(app,/MCP Atlas/);
   assert.match(app,/BASE_URL}mcp\//);
   assert.match(mcp,/Topologia MCP/);
-  assert.match(mcp,/TOWER_V06 · MCP STRUCTURE/);
+  assert.match(mcp,/TOWER_V06 · CANVAS 2.5D · READ-ONLY/);
   assert.match(mcp,/mcp-bottom-nav/);
   assert.match(css,/--surface-0:#05070b/);
   assert.match(css,/--accent:#79e7ff/);
