@@ -159,6 +159,7 @@ export const CanvasGraph25D=forwardRef<CanvasGraph25DHandle,Props>(function Canv
   const hoveredRef=useRef<string|null>(null);
   const lastScaleRef=useRef(1);
   const [size,setSize]=useState({width:1,height:1});
+  const [canvasFailed,setCanvasFailed]=useState(false);
 
   const byId=useMemo(()=>new Map(nodes.map(node=>[node.id,node])),[nodes]);
   const safeEdges=useMemo(
@@ -276,7 +277,10 @@ export const CanvasGraph25D=forwardRef<CanvasGraph25DHandle,Props>(function Canv
       const canvas=canvasRef.current;
       if(!canvas)return;
       const ctx=canvas.getContext('2d',{alpha:true});
-      if(!ctx)return;
+      if(!ctx){
+        setCanvasFailed(true);
+        return;
+      }
 
       const view=viewRef.current;
       const reducedMotion=prefersReducedMotion();
@@ -618,6 +622,13 @@ export const CanvasGraph25D=forwardRef<CanvasGraph25DHandle,Props>(function Canv
     data-renderer="canvas-2.5d"
     data-lod="macro"
   >
+    {canvasFailed && <div className="canvas25d-fallback" role="status">
+      <strong>Visualização gráfica indisponível.</strong>
+      <p>A estrutura continua navegável pela lista de entidades.</p>
+      <div className="canvas25d-fallback-list">
+        {nodes.slice(0,200).map(node=><button key={node.id} type="button" onClick={()=>onSelect(node.id)}>{node.label}</button>)}
+      </div>
+    </div>}
     <canvas
       ref={canvasRef}
       className="canvas25d-canvas"
