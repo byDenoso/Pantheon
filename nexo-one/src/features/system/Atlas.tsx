@@ -1,11 +1,12 @@
 // Atlas: mapa estrutural do sistema. Cada nó é uma entidade projetada com estado,
 // autoridade e proveniência próprios; Canvas 2.5D é somente projeção.
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import type { GraphNode, SystemState } from '../../contracts/system.ts';
 import {
   AuthorityClass, CAPABILITY_STATUSES, DOMAINS, GRAPH_NODE_TYPES, PROJECTION_STATES, RELATION_KINDS,
 } from '../../contracts/system.ts';
 import { AtlasCanvas25D } from '../../components/AtlasCanvas25D.tsx';
+import type { CanvasGraph25DHandle } from '../../components/CanvasGraph25D.tsx';
 import { EntityInspector } from '../../components/inspector.tsx';
 import { EmptyState } from '../../components/states.tsx';
 import { DomainBadge, SeverityBadge, StatusBadge } from '../../components/primitives.tsx';
@@ -77,6 +78,7 @@ export function AtlasView(
   },
 ) {
   const isMobile = useIsMobile();
+  const galaxyRef = useRef<CanvasGraph25DHandle | null>(null);
   const [panelOpen, setPanelOpen] = useState(false);
   const [learningVisible, setLearningVisible] = useState(false);
   // Start at the domain overview. A single isolated NEXO node looked like an
@@ -162,6 +164,7 @@ export function AtlasView(
     if (id) {
       const cluster = clusterFromId(id);
       if (cluster) {
+        galaxyRef.current?.focusSubdomain(id);
         setExpandedDomain(cluster.domain);
         setExpandedCluster(cluster.type);
         setRootExpanded(true);
@@ -172,6 +175,7 @@ export function AtlasView(
       const node = filtered.nodes.find(candidate => candidate.id === id);
       if (node?.type === 'DOMAIN') {
         if (node.domain === 'NEXO') {
+          galaxyRef.current?.reset();
           // NEXO is the root of the domain overview. Selecting it resets the
           // drill-down instead of collapsing the canvas to one lonely node.
           setRootExpanded(true);
@@ -181,10 +185,13 @@ export function AtlasView(
           onSelect(null);
           return;
         }
+        galaxyRef.current?.focusDomain(id);
         setRootExpanded(true);
         setExpandAll(false);
         setExpandedDomain(node.domain);
         setExpandedCluster(null);
+      } else {
+        galaxyRef.current?.focusEntity(id);
       }
     }
     onSelect(id);
@@ -199,6 +206,7 @@ export function AtlasView(
   };
 
   const expandEverything = () => {
+    galaxyRef.current?.reset();
     setRootExpanded(true);
     setExpandedDomain(null);
     setExpandedCluster(null);
@@ -207,6 +215,7 @@ export function AtlasView(
   };
 
   const goHome = () => {
+    galaxyRef.current?.reset();
     setRootExpanded(true);
     setExpandAll(false);
     setExpandedDomain(null);
@@ -273,7 +282,7 @@ export function AtlasView(
                 description="Um grafo vazio aqui é resultado do filtro, não ausência de dados no sistema."
                 hint="Remova um critério para voltar a ver o mapa." />
             : <>
-                <AtlasCanvas25D nodes={placed} edges={renderGraph.edges} selectedId={effectiveSelectedId} onSelect={handleGraphSelect} />
+                <AtlasCanvas25D nodes={placed} edges={renderGraph.edges} selectedId={effectiveSelectedId} onSelect={handleGraphSelect} controllerRef={galaxyRef} />
                 <ul className="atlas-legend">
                   {legend.map(entry => (
                     <li key={entry.type}>
