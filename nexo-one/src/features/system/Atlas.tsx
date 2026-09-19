@@ -5,7 +5,7 @@ import type { GraphNode, SystemState } from '../../contracts/system.ts';
 import {
   AuthorityClass, CAPABILITY_STATUSES, DOMAINS, GRAPH_NODE_TYPES, PROJECTION_STATES, RELATION_KINDS,
 } from '../../contracts/system.ts';
-import { AtlasCanvas25D } from '../../components/AtlasCanvas25D.tsx';
+import { AtlasGalaxyRenderer } from '../../components/AtlasGalaxyRenderer.tsx';
 import type { CanvasGraph25DHandle } from '../../components/CanvasGraph25D.tsx';
 import { EntityInspector } from '../../components/inspector.tsx';
 import { EmptyState } from '../../components/states.tsx';
@@ -59,6 +59,27 @@ function clusterNode(domain: GraphNode['domain'], type: GraphNode['type'], count
   };
 }
 
+
+function visualDomainNode(
+  domain: GraphNode['domain'],
+  snapshot: ReturnType<typeof useGalaxySnapshot>['snapshot'],
+): GraphNode {
+  return {
+    id: `galaxy.domain.${domain.toLowerCase()}`,
+    type: 'DOMAIN',
+    label: domain,
+    domain,
+    state: 'LIVE',
+    authority_class: 'DERIVED',
+    source_ref: 'galaxy://projection/domain',
+    source_revision: snapshot.tower_revision,
+    fingerprint: snapshot.fingerprint,
+    freshness: { state: 'RECENT', observed_at: snapshot.generated_at, ttl_seconds: 3 * 60 * 60 },
+    checked_at: snapshot.generated_at,
+    summary: `Domínio visual ${domain} derivado do contrato ${snapshot.contract}.`,
+  };
+}
+
 function ChipGroup<T extends string>(
   { title, values, selected, onToggle }:
   { title: string; values: readonly T[]; selected: T[]; onToggle: (value: T) => void },
@@ -104,9 +125,21 @@ export function AtlasView(
   const [activeTourRoute, setActiveTourRoute] = useState<TourRouteId | null>(null);
   const audio = useGalaxyAudio(isMobile);
   const deepLinkAppliedRef = useRef(false);
-  const filtered = useMemo(() => filterGraph(state.graph, filters), [state.graph, filters]);
   const galaxyState = useGalaxySnapshot(state);
   const galaxySnapshot = galaxyState.snapshot;
+  const visualDomainNodes = useMemo(() => {
+    const existing = new Set(
+      state.graph.nodes.filter(node => node.type === 'DOMAIN').map(node => node.domain),
+    );
+    return galaxySnapshot.domains
+      .filter(domain => !existing.has(domain))
+      .map(domain => visualDomainNode(domain, galaxySnapshot));
+  }, [galaxySnapshot, state.graph.nodes]);
+  const graphForView = useMemo(() => ({
+    nodes: [...state.graph.nodes, ...visualDomainNodes],
+    edges: state.graph.edges,
+  }), [state.graph.edges, state.graph.nodes, visualDomainNodes]);
+  const filtered = useMemo(() => filterGraph(graphForView, filters), [filters, graphForView]);
   const galaxyPositions = useMemo(() => {
     const positions = new Map<string, { x: number; y: number; z: number }>();
     for (const entity of galaxySnapshot.entities) positions.set(entity.id, entity.layout.position);
@@ -279,7 +312,7 @@ export function AtlasView(
     audio.playDomainTransition();
     if (action.kind === 'RESET') { goHome(); return; }
     if (action.kind === 'FOCUS_DOMAIN') {
-      const domainNode = state.graph.nodes.find(node => node.type === 'DOMAIN' && node.domain === action.domain);
+      const domainNode = graphForView.nodes.find(node => node.type === 'DOMAIN' && node.domain === action.domain);
       if (domainNode) handleGraphSelect(domainNode.id);
       return;
     }
@@ -487,7 +520,7 @@ export function AtlasView(
                 description="Um grafo vazio aqui é resultado do filtro, não ausência de dados no sistema."
                 hint="Remova um critério para voltar a ver o mapa." />
             : <>
-                <AtlasCanvas25D nodes={placed} edges={renderGraph.edges} selectedId={effectiveSelectedId} onSelect={handleGraphSelect} controllerRef={galaxyRef} />
+                <AtlasGalaxyRenderer ref={galaxyRef} nodes={placed} edges={renderGraph.edges} selectedId={effectiveSelectedId} onSelect={handleGraphSelect} />
                 <ul className="atlas-legend">
                   {legend.map(entry => (
                     <li key={entry.type}>

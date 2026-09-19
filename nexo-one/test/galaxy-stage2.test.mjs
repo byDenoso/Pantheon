@@ -43,7 +43,7 @@ test('atlas consumes the stage 1 galaxy compiler and renders one visual palette 
   assert.match(atlas,/useGalaxySnapshot\(state\)/);
   assert.match(atlas,/galaxySnapshot\.entities/);
   assert.match(atlas,/galaxySnapshot\.subdomains/);
-  assert.match(atlas,/controllerRef=\{galaxyRef\}/);
+  assert.match(atlas,/<AtlasGalaxyRenderer ref=\{galaxyRef\}/);
   assert.match(atlas,/focusDomain/);
   assert.match(atlas,/focusSubdomain/);
   assert.match(atlas,/focusEntity/);
