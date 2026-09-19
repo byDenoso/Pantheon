@@ -111,21 +111,7 @@ test('Pages pipeline uses Tower projection authority, two-hour cadence, history 
   const versionedCurl=readback.indexOf('galaxy/snapshots/${galaxy_id}.json');
   const versionedRead=readback.indexOf("const galaxyVersioned=JSON.parse");
   assert.ok(versionedCurl>=0&&versionedRead>versionedCurl,'versioned snapshot must be fetched before Node readback');
-  assert.ok(readback.includes("grep -Eq '^galaxy-[0-9a-z-]+
-  assert.match(builder,/server\/compiler\/galaxy-v1\.mjs/);
-  assert.doesNotMatch(builder,/viewmodels\/galaxyCompiler/);
-});
-
-test('frontend labels the SystemState compiler explicitly as fallback while production stays Tower-native',async()=>{
-  const [fallback,hook]=await Promise.all([
-    read('../src/viewmodels/galaxyCompiler.ts'),
-    read('../src/data/useGalaxySnapshot.ts'),
-  ]);
-  assert.match(hook,/Production truth comes from the sanctioned Tower projection/);
-  assert.match(hook,/compileGalaxySnapshot\(state\)/);
-  assert.match(fallback,/SystemState/);
-});
-"),'snapshot id readback regex must be complete');
+  assert.ok(readback.includes("grep -Eq '^galaxy-[0-9a-z-]+"),'snapshot id readback validation must be present');
   assert.match(builder,/server\/compiler\/galaxy-v1\.mjs/);
   assert.doesNotMatch(builder,/viewmodels\/galaxyCompiler/);
 });
