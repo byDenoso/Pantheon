@@ -2,7 +2,7 @@ name: NEXO ONE GitHub Pages
 
 on:
   push:
-    branches: [main]
+    branches: [main, chatgpt/nexo-one-galaxy-stage1-20260919]
     paths:
       - 'nexo-one/**'
       - '.github/workflows/nexo-one-pages.yml'
