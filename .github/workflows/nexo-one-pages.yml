@@ -213,7 +213,9 @@ jobs:
           set -euo pipefail
           node scripts/build-pages-system.mjs
           node scripts/build-mcp-topology.mjs
+          node scripts/build-galaxy-snapshot.mjs
           test -s dist/system.json
+          test -s dist/galaxy/latest.json
           test -s dist/mcp/index.html
           test -s dist/mcp/topology.json
           test -s dist/world-public.ndjson
