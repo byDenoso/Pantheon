@@ -1,11 +1,12 @@
 // Atlas: mapa estrutural do sistema. Cada nó é uma entidade projetada com estado,
 // autoridade e proveniência próprios; Canvas 2.5D é somente projeção.
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { GraphNode, SystemState } from '../../contracts/system.ts';
 import {
   AuthorityClass, CAPABILITY_STATUSES, DOMAINS, GRAPH_NODE_TYPES, PROJECTION_STATES, RELATION_KINDS,
 } from '../../contracts/system.ts';
 import { AtlasCanvas25D } from '../../components/AtlasCanvas25D.tsx';
+import type { CanvasGraph25DHandle } from '../../components/CanvasGraph25D.tsx';
 import { EntityInspector } from '../../components/inspector.tsx';
 import { EmptyState } from '../../components/states.tsx';
 import { DomainBadge, SeverityBadge, StatusBadge } from '../../components/primitives.tsx';
@@ -13,8 +14,19 @@ import { useIsMobile } from '../../app/useMediaQuery.ts';
 import {
   EMPTY_FILTERS, filterCount, filterGraph, legendOf, relationsOf, type GraphFilters,
 } from '../../viewmodels/graph.ts';
-import { forceLayoutGraph3D, resolveSelection3D } from '../../viewmodels/graph3d.ts';
+import { layoutGraph3D, resolveSelection3D } from '../../viewmodels/graph3d.ts';
+import { useGalaxySnapshot } from '../../data/useGalaxySnapshot.ts';
+import { galaxySnapshotAgeLabel } from '../../data/galaxySnapshot.ts';
 import { label, toneOf } from '../../viewmodels/tokens.ts';
+import { LAYER_TYPES, PRESETS, applyPreset, type LayerId } from '../../viewmodels/layers.ts';
+import { TOUR_ROUTES, resolveTourAction, tourRouteById, type TourRouteId } from '../../viewmodels/tour.ts';
+import {
+  buildGalaxySearch, parseGalaxyDeepLink, type GalaxyMode, type GalaxyPanelId,
+} from '../../app/galaxyDeepLink.ts';
+import { useGalaxyAudio } from '../../app/useGalaxyAudio.ts';
+import { registerGalaxyWebMcpTools } from '../../mcp/webmcpTools.ts';
+import { GalaxyIntro } from './GalaxyIntro.tsx';
+import { OperateHUD } from './OperateHUD.tsx';
 
 const AUTHORITIES: AuthorityClass[] = ['TRUTH_OWNER', 'DELEGATED', 'DERIVED', 'NON_AUTHORITATIVE'];
 const FRESHNESS_VALUES = ['LIVE', 'RECENT', 'AGING', 'STALE', 'UNKNOWN'] as const;
@@ -77,6 +89,7 @@ export function AtlasView(
   },
 ) {
   const isMobile = useIsMobile();
+  const galaxyRef = useRef<CanvasGraph25DHandle | null>(null);
   const [panelOpen, setPanelOpen] = useState(false);
   const [learningVisible, setLearningVisible] = useState(false);
   // Start at the domain overview. A single isolated NEXO node looked like an
@@ -84,7 +97,24 @@ export function AtlasView(
   const [rootExpanded, setRootExpanded] = useState(true);
   const [expandAll, setExpandAll] = useState(false);
   const [expandedDomain, setExpandedDomain] = useState<GraphNode['domain'] | null>(null);
+  const [introDone, setIntroDone] = useState(false);
+  const [mode, setMode] = useState<GalaxyMode>('explore');
+  const [openPanel, setOpenPanel] = useState<GalaxyPanelId | null>(null);
+  const [tourOpen, setTourOpen] = useState(false);
+  const [activeTourRoute, setActiveTourRoute] = useState<TourRouteId | null>(null);
+  const audio = useGalaxyAudio(isMobile);
+  const deepLinkAppliedRef = useRef(false);
   const filtered = useMemo(() => filterGraph(state.graph, filters), [state.graph, filters]);
+  const galaxyState = useGalaxySnapshot(state);
+  const galaxySnapshot = galaxyState.snapshot;
+  const galaxyPositions = useMemo(() => {
+    const positions = new Map<string, { x: number; y: number; z: number }>();
+    for (const entity of galaxySnapshot.entities) positions.set(entity.id, entity.layout.position);
+    for (const subdomain of galaxySnapshot.subdomains) {
+      positions.set(clusterIdFor(subdomain.domain, subdomain.kind), subdomain.layout.position);
+    }
+    return positions;
+  }, [galaxySnapshot]);
   const learningEndpointIds = useMemo(() => new Set(filtered.edges.filter(edge => edge.is_learning).flatMap(edge => [edge.from, edge.to])), [filtered.edges]);
   const learningEdges = useMemo(() => filtered.edges.filter(edge => edge.is_learning), [filtered.edges]);
   const learningInterDomain = useMemo(
@@ -141,7 +171,10 @@ export function AtlasView(
     const ids = new Set(nodes.map(node => node.id));
     return { nodes, edges: filtered.edges.filter(edge => (learningVisible || !edge.is_learning) && ids.has(edge.from) && ids.has(edge.to)) };
   }, [expandAll, expandedCluster, expandedDomain, filtered, learningEndpointIds, learningVisible, rootExpanded]);
-  const placed = useMemo(() => forceLayoutGraph3D(renderGraph.nodes, renderGraph.edges), [renderGraph.nodes, renderGraph.edges]);
+  const placed = useMemo(() => layoutGraph3D(renderGraph.nodes).map(node => {
+    const position = galaxyPositions.get(node.id);
+    return position ? { ...node, ...position } : node;
+  }), [renderGraph.nodes, galaxyPositions]);
   const legend = useMemo(() => legendOf(renderGraph.nodes.filter(node => !clusterFromId(node.id))), [renderGraph.nodes]);
   const effectiveSelectedId = resolveSelection3D(placed, selectedId);
   const selected: GraphNode | null = filtered.nodes.find(n => n.id === effectiveSelectedId) ?? null;
@@ -162,6 +195,7 @@ export function AtlasView(
     if (id) {
       const cluster = clusterFromId(id);
       if (cluster) {
+        galaxyRef.current?.focusSubdomain(id);
         setExpandedDomain(cluster.domain);
         setExpandedCluster(cluster.type);
         setRootExpanded(true);
@@ -172,6 +206,7 @@ export function AtlasView(
       const node = filtered.nodes.find(candidate => candidate.id === id);
       if (node?.type === 'DOMAIN') {
         if (node.domain === 'NEXO') {
+          galaxyRef.current?.reset();
           // NEXO is the root of the domain overview. Selecting it resets the
           // drill-down instead of collapsing the canvas to one lonely node.
           setRootExpanded(true);
@@ -181,14 +216,130 @@ export function AtlasView(
           onSelect(null);
           return;
         }
+        galaxyRef.current?.focusDomain(id);
+        audio.playDomainTransition();
         setRootExpanded(true);
         setExpandAll(false);
         setExpandedDomain(node.domain);
         setExpandedCluster(null);
+      } else {
+        galaxyRef.current?.focusEntity(id);
+        audio.playSelection();
       }
     }
     onSelect(id);
   };
+
+  // Search-to-fly: an exact id match wins, otherwise the first id/label
+  // substring match. Reveals the match (full-graph view, so hierarchy never
+  // hides it), flies the camera, selects it and opens the inspector.
+  const flyToEntity = (id: string) => {
+    setExpandAll(true);
+    setRootExpanded(true);
+    onSelect(id);
+    requestAnimationFrame(() => galaxyRef.current?.focusEntity(id));
+    audio.playSelection();
+  };
+  const handleSearchSubmit = () => {
+    const query = filters.search.trim().toLowerCase();
+    if (!query) return;
+    const pool = state.graph.nodes.filter(node => node.type !== 'DOMAIN');
+    const match = pool.find(node => node.id.toLowerCase() === query)
+      ?? pool.find(node => node.id.toLowerCase().includes(query) || node.label.toLowerCase().includes(query));
+    if (match) flyToEntity(match.id);
+  };
+
+  const layerActive = (layer: LayerId): boolean => {
+    const types = LAYER_TYPES[layer];
+    return types.length > 0 && types.every(type => filters.types.includes(type));
+  };
+  const toggleLayer = (layer: LayerId) => {
+    const types = LAYER_TYPES[layer];
+    if (types.length === 0) return;
+    const isActive = layerActive(layer);
+    const next = isActive
+      ? filters.types.filter(type => !types.includes(type))
+      : [...new Set([...filters.types, ...types])];
+    setFilters({ ...filters, types: next });
+  };
+  const runPreset = (presetId: (typeof PRESETS)[number]['id']) => {
+    const preset = PRESETS.find(candidate => candidate.id === presetId);
+    if (!preset) return;
+    setFilters(applyPreset(preset, filters));
+    if (presetId === 'ATTENTION' || presetId === 'LEARNING') setMode('operate');
+  };
+
+  const needsYouFirstId = galaxySnapshot.needs_you[0]?.entity_id ?? null;
+  const runTourRoute = (routeId: TourRouteId) => {
+    const route = tourRouteById(routeId);
+    if (!route) return;
+    const action = resolveTourAction(route, { needsYouFirstId });
+    setTourOpen(false);
+    setActiveTourRoute(routeId);
+    audio.playDomainTransition();
+    if (action.kind === 'RESET') { goHome(); return; }
+    if (action.kind === 'FOCUS_DOMAIN') {
+      const domainNode = state.graph.nodes.find(node => node.type === 'DOMAIN' && node.domain === action.domain);
+      if (domainNode) handleGraphSelect(domainNode.id);
+      return;
+    }
+    setMode('operate');
+    setOpenPanel(action.panel);
+    if (action.focusEntityId) galaxyRef.current?.focusEntity(action.focusEntityId);
+  };
+  const exitTour = () => { setActiveTourRoute(null); goHome(); };
+
+  // Deep links: ?mode=&domain=&subdomain=&entity=&panel= reconstruct focus/panel
+  // once on mount. The galaxy never leaves this page for any of this.
+  useEffect(() => {
+    const initial = parseGalaxyDeepLink(window.location.search);
+    if (initial.mode === 'operate') setMode('operate');
+    if (initial.panel) { setMode('operate'); setOpenPanel(initial.panel); }
+    if (initial.entity) {
+      setExpandAll(true);
+      onSelect(initial.entity);
+    } else if (initial.subdomain) {
+      const cluster = clusterFromId(initial.subdomain);
+      if (cluster) { setExpandedDomain(cluster.domain); setExpandedCluster(cluster.type); }
+    } else if (initial.domain && (DOMAINS as string[]).includes(initial.domain)) {
+      setExpandedDomain(initial.domain as GraphNode['domain']);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Once the deep-linked entity is actually part of the rendered graph, fly
+  // the camera to it exactly once.
+  useEffect(() => {
+    if (deepLinkAppliedRef.current || placed.length === 0) return;
+    const initial = parseGalaxyDeepLink(window.location.search);
+    if (initial.entity && placed.some(node => node.id === initial.entity)) {
+      galaxyRef.current?.focusEntity(initial.entity);
+    }
+    deepLinkAppliedRef.current = true;
+  }, [placed]);
+
+  // Keep the URL in sync with camera/panel state (no reload, no history spam).
+  useEffect(() => {
+    const subdomain = expandedDomain && expandedCluster ? clusterIdFor(expandedDomain, expandedCluster) : null;
+    const search = buildGalaxySearch({
+      mode, domain: expandedDomain, subdomain, entity: effectiveSelectedId, panel: openPanel,
+    });
+    const url = `${window.location.pathname}${search}${window.location.hash}`;
+    window.history.replaceState(null, '', url);
+  }, [mode, expandedDomain, expandedCluster, effectiveSelectedId, openPanel]);
+
+  // Optional read-only WebMCP surface. registerGalaxyWebMcpTools is a no-op
+  // whenever no WebMCP host exists on window, which is every browser today —
+  // the galaxy never depends on this running.
+  useEffect(() => {
+    registerGalaxyWebMcpTools({
+      getSnapshot: () => galaxySnapshot,
+      focusEntity: id => { const ok = Boolean(galaxyRef.current?.focusEntity(id)); if (ok) flyToEntity(id); return ok; },
+      focusDomain: id => Boolean(galaxyRef.current?.focusDomain(id)),
+      startTour: routeId => { runTourRoute(routeId as TourRouteId); return true; },
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [galaxySnapshot]);
 
   const goBack = () => {
     if (expandAll) setExpandAll(false);
@@ -199,6 +350,7 @@ export function AtlasView(
   };
 
   const expandEverything = () => {
+    galaxyRef.current?.reset();
     setRootExpanded(true);
     setExpandedDomain(null);
     setExpandedCluster(null);
@@ -207,6 +359,7 @@ export function AtlasView(
   };
 
   const goHome = () => {
+    galaxyRef.current?.reset();
     setRootExpanded(true);
     setExpandAll(false);
     setExpandedDomain(null);
@@ -216,11 +369,20 @@ export function AtlasView(
 
   return (
     <div className={`atlas-layout${isMobile ? ' mobile' : ''}`}>
+      {!introDone && <GalaxyIntro onDone={() => setIntroDone(true)} />}
+
       <div className="atlas-toolbar">
+        <div className="atlas-mode-toggle" role="group" aria-label="Modo de visualização">
+          <button type="button" className={mode === 'explore' ? 'active' : ''} aria-pressed={mode === 'explore'}
+            onClick={() => setMode('explore')}>Explore</button>
+          <button type="button" className={mode === 'operate' ? 'active' : ''} aria-pressed={mode === 'operate'}
+            onClick={() => setMode('operate')}>Operate</button>
+        </div>
         <div className="atlas-search">
           <span aria-hidden="true">⌕</span>
-          <input value={filters.search} placeholder="Filtrar entidades por nome ou resumo"
-            aria-label="Buscar no grafo" onChange={e => setFilters({ ...filters, search: e.target.value })} />
+          <input value={filters.search} placeholder="Buscar e voar até uma entidade, ou filtrar por nome/resumo"
+            aria-label="Buscar no grafo" onChange={e => setFilters({ ...filters, search: e.target.value })}
+            onKeyDown={e => { if (e.key === 'Enter') handleSearchSubmit(); }} />
         </div>
         <button className={`filter-toggle${active ? ' has-filters' : ''}`} onClick={() => setPanelOpen(v => !v)}
           aria-expanded={panelOpen}>
@@ -229,6 +391,29 @@ export function AtlasView(
         {active > 0 && (
           <button className="text-button" onClick={() => setFilters({ ...EMPTY_FILTERS })}>Limpar</button>
         )}
+        <button className={`filter-toggle${audio.muted ? '' : ' has-filters'}`} type="button"
+          aria-pressed={!audio.muted} onClick={audio.toggle}>
+          Som <b>{audio.muted ? 'OFF' : 'ON'}</b>
+        </button>
+        <div className="atlas-tour">
+          <button type="button" className={`filter-toggle${activeTourRoute ? ' has-filters' : ''}`}
+            aria-expanded={tourOpen} aria-haspopup="menu" onClick={() => setTourOpen(v => !v)}>Tour</button>
+          {tourOpen && (
+            <div className="atlas-tour-menu" role="menu" aria-label="Rotas do tour">
+              {TOUR_ROUTES.map(route => (
+                <button key={route.id} role="menuitem" type="button"
+                  className={activeTourRoute === route.id ? 'active' : ''}
+                  onClick={() => runTourRoute(route.id)}>
+                  <strong>{route.label}</strong>
+                  <span>{route.description}</span>
+                </button>
+              ))}
+            </div>
+          )}
+          {activeTourRoute && (
+            <button type="button" className="text-button" onClick={exitTour}>Sair do tour</button>
+          )}
+        </div>
         <button className={`filter-toggle learning-toggle${learningVisible ? ' has-filters' : ''}`} type="button"
           aria-pressed={learningVisible} onClick={() => setLearningVisible(value => !value)}>
           Learning Filaments <b>{learningVisible ? 'ON' : 'OFF'}</b>
@@ -241,6 +426,10 @@ export function AtlasView(
           </span>
         )}
         <span className="atlas-count">{renderGraph.nodes.length} nós · {renderGraph.edges.length} relações</span>
+        <span className={`atlas-snapshot-age freshness-${galaxyState.freshness.toLowerCase()}`}
+          title={galaxyState.source === 'PUBLISHED' ? 'Snapshot publicado' : 'Fallback derivado do SystemState atual'}>
+          {galaxySnapshotAgeLabel(galaxySnapshot.generated_at)}
+        </span>
         <div className="atlas-explorer-state" role="status">
           <span><b>Visão:</b> {expandAll ? 'grafo completo' : expandedCluster ? `${expandedDomain} · ${label(expandedCluster)}` : expandedDomain ?? 'domínios'}</span>
           {(expandAll || expandedDomain || expandedCluster) && <button type="button" aria-label="Voltar um nível no grafo" onClick={goBack}>Voltar nível</button>}
@@ -256,6 +445,25 @@ export function AtlasView(
 
       {panelOpen && (
         <div className="atlas-filters">
+          <div className="chip-group">
+            <span className="eyebrow">CAMADAS</span>
+            <div className="chip-row">
+              {(Object.keys(LAYER_TYPES) as LayerId[]).filter(layer => LAYER_TYPES[layer].length > 0).map(layer => (
+                <button key={layer} type="button" className={`chip${layerActive(layer) ? ' on' : ''}`}
+                  aria-pressed={layerActive(layer)} onClick={() => toggleLayer(layer)}>{layer.replace('_', ' ')}</button>
+              ))}
+            </div>
+          </div>
+          <div className="chip-group">
+            <span className="eyebrow">PRESETS</span>
+            <div className="chip-row">
+              {PRESETS.map(preset => (
+                <button key={preset.id} type="button" className="chip" onClick={() => runPreset(preset.id)}>
+                  {preset.label}
+                </button>
+              ))}
+            </div>
+          </div>
           <ChipGroup title="DOMÍNIO" values={DOMAINS} selected={filters.domains} onToggle={v => toggle('domains', v)} />
           <ChipGroup title="TIPO" values={GRAPH_NODE_TYPES} selected={filters.types} onToggle={v => toggle('types', v)} />
           <ChipGroup title="ESTADO" values={[...PROJECTION_STATES, ...CAPABILITY_STATUSES]}
@@ -266,6 +474,12 @@ export function AtlasView(
         </div>
       )}
 
+      {mode === 'operate' && (
+        <OperateHUD snapshot={galaxySnapshot} openPanel={openPanel}
+          onOpenPanel={panel => setOpenPanel(panel)} onClosePanel={() => setOpenPanel(null)}
+          onFocusEntity={id => { flyToEntity(id); setOpenPanel(null); }} />
+      )}
+
       <div className="atlas-body">
         <div className="atlas-stage atlas-stage-3d">
           {renderGraph.nodes.length === 0
@@ -273,7 +487,7 @@ export function AtlasView(
                 description="Um grafo vazio aqui é resultado do filtro, não ausência de dados no sistema."
                 hint="Remova um critério para voltar a ver o mapa." />
             : <>
-                <AtlasCanvas25D nodes={placed} edges={renderGraph.edges} selectedId={effectiveSelectedId} onSelect={handleGraphSelect} />
+                <AtlasCanvas25D nodes={placed} edges={renderGraph.edges} selectedId={effectiveSelectedId} onSelect={handleGraphSelect} controllerRef={galaxyRef} />
                 <ul className="atlas-legend">
                   {legend.map(entry => (
                     <li key={entry.type}>

@@ -32,7 +32,7 @@ test('frontend remote adapter keeps public SystemState independent from a privat
 });
 
 test('production promotion workflow has no runtime-login dependency', async () => {
-  const workflow = await read('../../.github/workflows/nexo-one-production.yml');
+  const workflow = await read('../../.github/workflows/nexo-one-pages.yml');
   assert.doesNotMatch(workflow, /NEXO_QA_COOKIE/);
 });
 

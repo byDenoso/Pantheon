@@ -1,179 +1,207 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {compileGalaxySnapshot,deriveChanges,GALAXY_CONTRACT,mapVisualDomain} from '../server/compiler/galaxy-v1.mjs';
+import { compileGalaxySnapshot, diffGalaxySnapshots } from '../src/viewmodels/galaxyCompiler.ts';
+import { GALAXY_CONTRACT, GALAXY_DOMAINS } from '../src/contracts/galaxy.ts';
+import { scenarioById } from '../src/data/fixtures/scenarios.ts';
+import { layoutGraph3D } from '../src/viewmodels/graph3d.ts';
 
-const towerCommit='225412698ed9552c9a4fd6038622c9c6bbcea21e';
-const projectionFingerprint='sha256:642ce4315c2b0b866976fe95f3e8b01a8b400e5245b59b21972ef6daa97e9343';
-function fixture(overrides={}){
-  const manifest={authority:'TOWER_V06',event_cursor:'20260918T193842687249Z-ecf6b565',generated_at:null,projection_fingerprint:projectionFingerprint,projection_only:true,tower_commit:towerCommit,tower_repository:'byDenoso/NEXO-Obsidian-Vault',writeback:'FORBIDDEN'};
-  return {
-    contract:'NEXO_PUBLIC_PROJECTION_V1',event_cursor:manifest.event_cursor,manifest,
-    work:[
-      {id:'WORK::SCI-1',domain:'SCIENCE',campaign_id:'CAMP-SCI',kind:'ACTION',priority:'HIGH',status:'READY',title:'Science work'},
-      {id:'WORK::COSMO-1',domain:'COSMOLOGY',campaign_id:'CAMP-COSMO',kind:'RESEARCH',priority:'CRITICAL',status:'CHECKPOINTED'},
-      {id:'WORK::AI-1',domain:'AI',kind:'ENGINEERING_FIX',status:'READY'},
-      {id:'WORK::HUMAN-1',domain:'ENGINEERING',dependency_class:'HUMAN_AUTH_REQUIRED',status:'WAIT_DEPENDENCY',priority:'CRITICAL'},
-      {id:'WORK::NO-DOMAIN',campaign_id:'CAMP-SCI',status:'READY'},
-    ],
-    tests:[
-      {id:'TEST-1',campaign_id:'CAMP-COSMO',status:'VERIFIED',test_group_id:'TG-1'},
-      {id:'TEST-QUEUED',status:'QUEUED'},
-    ],
-    capabilities:{
-      'peer.camb.exact_v2':{backend:'nexo_runtime',status:'ACTIVE'},
-      'nexo_state_mutation_v1':{backend:'nexo_runtime',status:'ACTIVE'},
+const baseState = () => scenarioById('all-live').build();
+
+test('compiles the NEXO_ONE_GALAXY_V1 contract from a real SystemState fixture', () => {
+  const snapshot = compileGalaxySnapshot(baseState());
+  assert.equal(snapshot.contract, GALAXY_CONTRACT);
+  assert.deepEqual(snapshot.domains, GALAXY_DOMAINS);
+  assert.ok(snapshot.snapshot_id.startsWith('galaxy-'));
+  assert.ok(snapshot.generated_at);
+  assert.ok(snapshot.tower_revision);
+  assert.ok(snapshot.fingerprint);
+  assert.ok(snapshot.entities.length > 0);
+  assert.equal(snapshot.stats.entities, snapshot.entities.length);
+  assert.equal(snapshot.stats.relations, snapshot.relations.length);
+  assert.equal(snapshot.stats.subdomains, snapshot.subdomains.length);
+  assert.equal(snapshot.stats.needs_you, snapshot.needs_you.length);
+  assert.equal(snapshot.presets.length, 5);
+});
+
+test('the projection is deterministic: the same SystemState always compiles to the same snapshot', () => {
+  const state = baseState();
+  const a = compileGalaxySnapshot(state);
+  const b = compileGalaxySnapshot(baseState());
+  assert.deepEqual(
+    a.entities.map(e => ({ id: e.id, layout: e.layout })),
+    b.entities.map(e => ({ id: e.id, layout: e.layout })),
+  );
+  assert.equal(a.snapshot_id, b.snapshot_id);
+  assert.equal(a.fingerprint, b.fingerprint);
+});
+
+test('layout positions are hash-derived, not random: node order does not change the macro-layout', () => {
+  const state = baseState();
+  const forward = compileGalaxySnapshot(state);
+  const reversedState = { ...state, graph: { nodes: [...state.graph.nodes].reverse(), edges: state.graph.edges } };
+  const reversed = compileGalaxySnapshot(reversedState);
+  const byId = new Map(reversed.entities.map(e => [e.id, e]));
+  for (const entity of forward.entities) {
+    assert.deepEqual(entity.layout.position, byId.get(entity.id).layout.position, entity.id);
+  }
+});
+
+test('every entity keeps its canonical Tower type and only gains a derived visual kind/layer', () => {
+  const state = baseState();
+  const snapshot = compileGalaxySnapshot(state);
+  const canonicalById = new Map(state.graph.nodes.map(n => [n.id, n]));
+  for (const entity of snapshot.entities) {
+    const canonical = canonicalById.get(entity.id);
+    assert.equal(entity.canonical_type, canonical.type);
+    assert.equal(entity.domain, canonical.domain);
+    assert.equal(entity.status, canonical.state);
+    assert.equal(entity.title, canonical.label);
+    assert.equal(entity.provenance.source_ref, canonical.source_ref);
+    assert.equal(entity.provenance.fingerprint, canonical.fingerprint);
+    assert.ok(entity.layout.derived);
+  }
+});
+
+test('NEXO is CORE, the other domain hubs are DOMAIN, and every other type is ENTITY or PERIPHERY', () => {
+  const snapshot = compileGalaxySnapshot(baseState());
+  const nexo = snapshot.entities.find(e => e.canonical_type === 'DOMAIN' && e.domain === 'NEXO');
+  assert.equal(nexo.layout.layer, 'CORE');
+  for (const entity of snapshot.entities.filter(e => e.canonical_type === 'DOMAIN' && e.domain !== 'NEXO')) {
+    assert.equal(entity.layout.layer, 'DOMAIN');
+  }
+  for (const entity of snapshot.entities.filter(e => e.canonical_type === 'SIDE_QUEST' || e.canonical_type === 'FILAMENT')) {
+    assert.equal(entity.layout.layer, 'PERIPHERY');
+  }
+});
+
+test('subdomains group non-domain entities by (domain, canonical type) and are marked derived', () => {
+  const state = baseState();
+  const snapshot = compileGalaxySnapshot(state);
+  const nonDomain = state.graph.nodes.filter(n => n.type !== 'DOMAIN');
+  const expectedBuckets = new Set(nonDomain.map(n => `${n.domain}:${n.type}`));
+  assert.equal(snapshot.subdomains.length, expectedBuckets.size);
+  for (const subdomain of snapshot.subdomains) {
+    assert.equal(subdomain.layout.layer, 'SUBDOMAIN');
+    assert.equal(subdomain.layout.derived, true);
+    const members = snapshot.entities.filter(e => e.subdomain_id === subdomain.id);
+    assert.equal(subdomain.entity_count, members.length);
+    assert.ok(members.length > 0);
+  }
+  for (const entity of snapshot.entities.filter(e => e.canonical_type !== 'DOMAIN')) {
+    assert.ok(entity.subdomain_id);
+  }
+});
+
+test('relations include every canonical edge between kept entities plus explicit derived grouping edges', () => {
+  const state = baseState();
+  const snapshot = compileGalaxySnapshot(state);
+  const canonicalIds = new Set(state.graph.nodes.map(n => n.id));
+  const keptCanonicalEdges = state.graph.edges.filter(e => canonicalIds.has(e.from) && canonicalIds.has(e.to));
+  const canonical = snapshot.relations.filter(r => !r.derived);
+  assert.equal(canonical.length, keptCanonicalEdges.length);
+  for (const edge of keptCanonicalEdges) {
+    assert.ok(canonical.some(r => r.id === edge.id && r.from === edge.from && r.to === edge.to && r.kind === edge.kind));
+  }
+  const derived = snapshot.relations.filter(r => r.derived);
+  assert.ok(derived.length > 0);
+  assert.ok(derived.every(r => r.kind === 'OWNS'));
+});
+
+test('Needs You is exactly the inbox — never inferred from queued tests, degraded providers or blocked actions', () => {
+  const state = baseState();
+  const snapshot = compileGalaxySnapshot(state);
+  assert.equal(snapshot.needs_you.length, state.inbox.length);
+  const ids = new Set(state.inbox.map(item => item.id));
+  assert.ok(snapshot.needs_you.every(item => ids.has(item.id)));
+
+  // Fabricate a state with a queued test, a degraded provider and a blocked action,
+  // but an EMPTY inbox: none of that may surface as Needs You.
+  const noisyState = {
+    ...state,
+    inbox: [],
+    graph: {
+      ...state.graph,
+      nodes: [...state.graph.nodes, {
+        id: 'test.queued.noise', type: 'TEST', label: 'Queued test', domain: 'SCIENCE',
+        state: 'SNAPSHOT', authority_class: 'DERIVED', source_ref: 'x', source_revision: '1',
+        fingerprint: 'x', freshness: { state: 'LIVE', observed_at: null, ttl_seconds: null },
+        checked_at: '', summary: 'queued, not a human gate',
+      }],
     },
-    ...overrides,
+    providers: state.providers.map(p => ({ ...p, state: 'DEGRADED' })),
+    actions: state.actions.map(a => ({ ...a, status: 'BLOCKED' })),
   };
-}
-
-const interdomain=[{
-  id:'META::INTERDOMAIN::1',kind:'INTERDOMAIN',relation_type:'METHOD_TRANSFER',source_domains:['Cosmologia'],target_domains:['Bodybuilding'],status:'TESTING',mapping:'Transfer a method, not a claim.'
-}];
-
-test('rejects missing projection',()=>assert.throws(()=>compileGalaxySnapshot(),/projection must be an object/));
-test('rejects wrong source contract',()=>assert.throws(()=>compileGalaxySnapshot({projection:{...fixture(),contract:'WRONG'}}),/NEXO_PUBLIC_PROJECTION_V1/));
-test('rejects missing work and test arrays',()=>assert.throws(()=>compileGalaxySnapshot({projection:{...fixture(),work:null}}),/work\/tests arrays missing/));
-test('rejects split-brain manifest',()=>assert.throws(()=>compileGalaxySnapshot({projection:fixture(),manifestFile:{authority:'WRONG'}}),/manifest file differs/));
-
-test('emits the explicit Galaxy V1 contract and Tower provenance',()=>{
-  const out=compileGalaxySnapshot({projection:fixture()});
-  assert.equal(out.contract,GALAXY_CONTRACT);
-  assert.equal(out.tower_revision,towerCommit);
-  assert.equal(out.provenance.authority,'TOWER_V06');
-  assert.equal(out.provenance.source_fingerprint,projectionFingerprint);
-  assert.match(out.fingerprint,/^sha256:[0-9a-f]{64}$/);
+  const noisySnapshot = compileGalaxySnapshot(noisyState);
+  assert.equal(noisySnapshot.needs_you.length, 0);
 });
 
-test('creates NEXO core plus the three fixed visual arms',()=>{
-  const out=compileGalaxySnapshot({projection:fixture()});
-  assert.deepEqual(out.domains.map(item=>item.domain),['NEXO','SCIENCE','ENGINEERING','OLYMPUS']);
-  assert.deepEqual(out.domains[0].layout,{x:0,y:0,z:0,sector:'CORE',lod:'MACRO'});
-  assert.deepEqual(out.layout.sectors,['SCIENCE','ENGINEERING','OLYMPUS']);
+test('an empty SystemState compiles to an empty, well-formed snapshot instead of throwing', () => {
+  const empty = {
+    contract_version: '1', scenario_id: 'empty', scenario_label: 'empty', generated_at: '2026-01-01T00:00:00Z',
+    global_state: 'LIVE', bus: { fingerprint: 'FP-EMPTY', generated_at: '2026-01-01T00:00:00Z', state: 'LIVE', envelope_count: 0, sources: [], consumers: [] },
+    envelopes: [], findings: [], actions: [], inbox: [], capabilities: [], runs: [], lanes: [],
+    graph: { nodes: [], edges: [] }, filaments: [], providers: [],
+  };
+  const snapshot = compileGalaxySnapshot(empty);
+  assert.equal(snapshot.contract, GALAXY_CONTRACT);
+  assert.deepEqual(snapshot.entities, []);
+  assert.deepEqual(snapshot.subdomains, []);
+  assert.deepEqual(snapshot.relations, []);
+  assert.deepEqual(snapshot.needs_you, []);
+  assert.deepEqual(snapshot.changes, []);
+  assert.equal(snapshot.stats.entities, 0);
 });
 
-test('maps Tower domain aliases conservatively and preserves source_domain',()=>{
-  assert.equal(mapVisualDomain('COSMOLOGY'),'SCIENCE');
-  assert.equal(mapVisualDomain('Bodybuilding'),'OLYMPUS');
-  assert.equal(mapVisualDomain('AI'),'ENGINEERING');
-  assert.equal(mapVisualDomain('unknown'),null);
-  const out=compileGalaxySnapshot({projection:fixture()});
-  const cosmo=out.entities.find(item=>item.canonical_id==='WORK::COSMO-1');
-  const ai=out.entities.find(item=>item.canonical_id==='WORK::AI-1');
-  assert.equal(cosmo.domain,'SCIENCE');
-  assert.equal(cosmo.source.source_domain,'COSMOLOGY');
-  assert.equal(ai.domain,'ENGINEERING');
-  assert.equal(ai.source.source_domain,'AI');
+test('malformed/partial graph input does not throw: missing nodes/edges/inbox degrade to empty, not a crash', () => {
+  const state = baseState();
+  const partial = { ...state, graph: undefined, inbox: undefined };
+  assert.doesNotThrow(() => compileGalaxySnapshot(partial));
+  const snapshot = compileGalaxySnapshot(partial);
+  assert.deepEqual(snapshot.entities, []);
+  assert.deepEqual(snapshot.needs_you, []);
 });
 
-test('uses campaign consensus only as visual placement, never as canonical domain',()=>{
-  const out=compileGalaxySnapshot({projection:fixture()});
-  const entity=out.entities.find(item=>item.canonical_id==='WORK::NO-DOMAIN');
-  assert.equal(entity.domain,null);
-  assert.equal(entity.visual_domain,'SCIENCE');
-  assert.equal(entity.source.derivation,'campaign_consensus_layout');
+test('diffGalaxySnapshots returns no changes when there is no previous snapshot', () => {
+  const snapshot = compileGalaxySnapshot(baseState());
+  assert.deepEqual(diffGalaxySnapshots(null, snapshot), []);
 });
 
-test('keeps unassigned source entities non-canonical while placing them in NEXO',()=>{
-  const out=compileGalaxySnapshot({projection:fixture()});
-  const entity=out.entities.find(item=>item.canonical_id==='TEST-QUEUED');
-  assert.equal(entity.domain,null);
-  assert.equal(entity.visual_domain,'NEXO');
-  assert.equal(entity.source.source_domain,null);
+test('diffGalaxySnapshots derives ADDED/REMOVED/STATUS_CHANGED only from real differences between two snapshots', () => {
+  const state = baseState();
+  const previous = compileGalaxySnapshot(state);
+
+  const mutated = {
+    ...state,
+    graph: {
+      nodes: state.graph.nodes
+        .filter(n => n.id !== state.graph.nodes.at(-1).id)
+        .map((n, i) => i === 0 ? { ...n, state: n.state === 'LIVE' ? 'STALE' : 'LIVE' } : n)
+        .concat([{
+          id: 'test.new.entity', type: 'TEST', label: 'New test', domain: 'ENGINEERING',
+          state: 'LIVE', authority_class: 'DERIVED', source_ref: 'x', source_revision: '1',
+          fingerprint: 'x', freshness: { state: 'LIVE', observed_at: null, ttl_seconds: null },
+          checked_at: '', summary: 'freshly added',
+        }]),
+      edges: state.graph.edges,
+    },
+  };
+  const current = compileGalaxySnapshot(mutated, { previous });
+
+  assert.ok(current.changes.some(c => c.change_type === 'ADDED' && c.entity_id === 'test.new.entity'));
+  assert.ok(current.changes.some(c => c.change_type === 'REMOVED'));
+  assert.ok(current.changes.some(c => c.change_type === 'STATUS_CHANGED'));
+  for (const change of current.changes) {
+    assert.ok(['ADDED', 'REMOVED', 'STATUS_CHANGED', 'RELATION_CHANGED'].includes(change.change_type));
+    assert.equal(change.timestamp, current.generated_at);
+  }
 });
 
-test('derives presentation subdomains from Tower-backed campaign and capability families',()=>{
-  const out=compileGalaxySnapshot({projection:fixture()});
-  const campaign=out.subdomains.find(item=>item.title==='CAMP-COSMO');
-  const capability=out.subdomains.find(item=>item.title==='peer.camb');
-  assert.equal(campaign.canonical,false);
-  assert.equal(campaign.source_basis,'campaign_id');
-  assert.equal(campaign.domain,'SCIENCE');
-  assert.equal(capability.source_basis,'capability_family');
-  assert.equal(capability.domain,'NEXO');
-});
-
-test('layout and fingerprint are deterministic under identical input',()=>{
-  const a=compileGalaxySnapshot({projection:fixture(),interdomain});
-  const b=compileGalaxySnapshot({projection:fixture(),interdomain});
-  assert.equal(a.fingerprint,b.fingerprint);
-  assert.equal(a.snapshot_id,b.snapshot_id);
-  assert.deepEqual(a.entities.map(x=>x.layout),b.entities.map(x=>x.layout));
-});
-
-test('entity ordering does not affect stable snapshot identity',()=>{
-  const p=fixture();
-  const a=compileGalaxySnapshot({projection:p,interdomain});
-  const b=compileGalaxySnapshot({projection:{...p,work:[...p.work].reverse(),tests:[...p.tests].reverse()},interdomain});
-  assert.equal(a.fingerprint,b.fingerprint);
-  assert.deepEqual(a.entities,b.entities);
-});
-
-test('Needs You requires an explicit human signal',()=>{
-  const out=compileGalaxySnapshot({projection:fixture()});
-  assert.deepEqual(out.needs_you.map(item=>item.entity),['work:WORK::HUMAN-1']);
-  assert.equal(out.needs_you[0].reason,'HUMAN_AUTH_REQUIRED');
-});
-
-test('queued, normal dependency and blocked-like states do not become Needs You by themselves',()=>{
-  const p=fixture({work:[
-    {id:'A',status:'QUEUED'},
-    {id:'B',status:'WAIT_DEPENDENCY',dependency_class:'MIXED'},
-    {id:'C',status:'BLOCKED'},
-    {id:'D',status:'RUNNING'},
-  ],tests:[],capabilities:{}});
-  assert.equal(compileGalaxySnapshot({projection:p}).needs_you.length,0);
-});
-
-test('explicit interdomain records become semantic relations without inventing scientific edges',()=>{
-  const out=compileGalaxySnapshot({projection:fixture(),interdomain});
-  const relation=out.relations.find(item=>item.id==='relation:interdomain:META::INTERDOMAIN::1');
-  assert.equal(relation.from,'domain:SCIENCE');
-  assert.equal(relation.to,'domain:OLYMPUS');
-  assert.equal(relation.kind,'METHOD_TRANSFER');
-  assert.equal(relation.semantic,true);
-  assert.equal(relation.derived,false);
-  assert.ok(out.relations.filter(item=>item.semantic).every(item=>item.source?.authority==='TOWER_V06'));
-});
-
-test('entities carry relation references for their presentation hierarchy',()=>{
-  const out=compileGalaxySnapshot({projection:fixture()});
-  const entity=out.entities.find(item=>item.canonical_id==='WORK::SCI-1');
-  assert.ok(entity.relation_refs.length>=1);
-  assert.ok(entity.relation_refs.every(id=>out.relations.some(relation=>relation.id===id)));
-});
-
-test('Changes are empty without a real prior snapshot and derived when one is provided',()=>{
-  const first=compileGalaxySnapshot({projection:fixture()});
-  assert.deepEqual(first.changes,[]);
-  const changed=fixture();
-  changed.work=changed.work.filter(item=>item.id!=='WORK::AI-1').map(item=>item.id==='WORK::SCI-1'?{...item,status:'RUNNING'}:item);
-  changed.work.push({id:'WORK::NEW',domain:'OLYMPUS',status:'READY'});
-  const second=compileGalaxySnapshot({projection:changed,previousSnapshot:first});
-  const types=new Map(second.changes.map(item=>[item.entity,item.change_type]));
-  assert.equal(types.get('work:WORK::SCI-1'),'UPDATED');
-  assert.equal(types.get('work:WORK::AI-1'),'REMOVED');
-  assert.equal(types.get('work:WORK::NEW'),'ADDED');
-});
-
-test('empty sanctioned state remains valid and does not fabricate entities',()=>{
-  const p=fixture({work:[],tests:[],capabilities:{}});
-  const out=compileGalaxySnapshot({projection:p});
-  assert.equal(out.stats.entities,0);
-  assert.equal(out.stats.subdomains,0);
-  assert.equal(out.stats.needs_you,0);
-  assert.deepEqual(out.entities,[]);
-  assert.equal(out.domains.length,4);
-});
-
-test('duplicate entity ids fail closed',()=>{
-  const p=fixture({work:[{id:'DUP'},{id:'DUP'}],tests:[],capabilities:{}});
-  assert.throws(()=>compileGalaxySnapshot({projection:p}),/duplicate entity id work:DUP/);
-});
-
-test('deriveChanges is deterministic and importance-sorted',()=>{
-  const previous={entities:[{id:'work:A',kind:'WORK',domain:null,visual_domain:'NEXO',subdomain:null,status:'READY',title:'A',importance:.2,priority:null,cluster_id:'x',source:{}},{id:'work:B',kind:'WORK',domain:null,visual_domain:'NEXO',subdomain:null,status:'READY',title:'B',importance:.9,priority:null,cluster_id:'x',source:{}}]};
-  const current={entities:[{...previous.entities[0],status:'RUNNING'}]};
-  const changes=deriveChanges(previous,current,'2026-09-19T00:00:00.000Z');
-  assert.deepEqual(changes.map(x=>x.entity),['work:B','work:A']);
+test('galaxy entity positions match layoutGraph3D exactly — the compiler reuses it instead of re-deriving layout', () => {
+  const state = baseState();
+  const placed = new Map(layoutGraph3D(state.graph.nodes).map(n => [n.id, n]));
+  const snapshot = compileGalaxySnapshot(state);
+  for (const entity of snapshot.entities) {
+    const expected = placed.get(entity.id);
+    assert.deepEqual(entity.layout.position, { x: expected.x, y: expected.y, z: expected.z });
+  }
 });

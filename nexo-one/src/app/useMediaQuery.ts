@@ -18,3 +18,4 @@ export function useMediaQuery(query: string): boolean {
 }
 
 export const useIsMobile = (): boolean => useMediaQuery('(max-width: 860px)');
+export const usePrefersReducedMotion = (): boolean => useMediaQuery('(prefers-reduced-motion: reduce)');
