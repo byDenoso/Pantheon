@@ -998,3 +998,275 @@ p{
     scroll-behavior:auto!important;
   }
 }
+
+
+/* NEXO V2 palette + restrained product surface ---------------------------
+   Dark: black + light blue. Light: white + orange.
+   This intentionally removes the old neon/glass emphasis from ordinary UI. */
+:root{
+  color-scheme:dark;
+  --nexo-bg-0:#020508;
+  --nexo-bg-1:#070b10;
+  --nexo-bg-2:#0d131a;
+  --nexo-surface-1:rgba(8,13,19,.94);
+  --nexo-surface-2:rgba(12,19,27,.96);
+  --nexo-surface-3:rgba(18,27,37,.98);
+  --nexo-text:#f2f7fb;
+  --nexo-text-2:#b6c3cf;
+  --nexo-muted:#738493;
+  --nexo-accent:#8bd3ff;
+  --nexo-accent-strong:#ccecff;
+  --nexo-accent-dim:#4c84a4;
+  --nexo-success:#62b992;
+  --nexo-attention:#cf9a52;
+  --nexo-danger:#c66c74;
+  --nexo-experimental:#8a82b8;
+
+  --surface-0:#020508;
+  --surface-1:#070b10;
+  --surface-2:#0b1118;
+  --surface-3:#111922;
+  --bg:#020508;
+  --panel:#080d13;
+  --raised:#0e151e;
+  --hover:#121c27;
+  --ink:#f2f7fb;
+  --muted:#b6c3cf;
+  --quiet:#738493;
+  --line:#1b2b38;
+  --accent:#8bd3ff;
+  --blue:#8bd3ff;
+  --snapshot:#80b9db;
+  --live:#62b992;
+  --degraded:#cf9a52;
+  --conflict:#c66c74;
+  --blocked:#8a82b8;
+  --command-accent:#8bd3ff;
+  --command-accent-strong:#ccecff;
+  --command-grid:transparent;
+  --command-hairline:#172632;
+  --command-shadow:0 12px 34px rgba(0,0,0,.24);
+  --shadow:0 12px 34px rgba(0,0,0,.24);
+}
+
+:root[data-theme=light]{
+  color-scheme:light;
+  --nexo-bg-0:#fbfaf7;
+  --nexo-bg-1:#ffffff;
+  --nexo-bg-2:#f5f2ed;
+  --nexo-surface-1:rgba(255,255,255,.98);
+  --nexo-surface-2:rgba(252,250,247,.98);
+  --nexo-surface-3:rgba(246,242,236,.98);
+  --nexo-text:#17191c;
+  --nexo-text-2:#5e646b;
+  --nexo-muted:#8a9096;
+  --nexo-accent:#f47a20;
+  --nexo-accent-strong:#d95e08;
+  --nexo-accent-dim:#bd6324;
+  --nexo-success:#438b68;
+  --nexo-attention:#c9822e;
+  --nexo-danger:#bd5a55;
+  --nexo-experimental:#796d9f;
+
+  --surface-0:#fbfaf7;
+  --surface-1:#ffffff;
+  --surface-2:#ffffff;
+  --surface-3:#f5f2ed;
+  --bg:#fbfaf7;
+  --panel:#ffffff;
+  --raised:#f5f2ed;
+  --hover:#f2eee8;
+  --ink:#17191c;
+  --muted:#5e646b;
+  --quiet:#8a9096;
+  --line:#e6dfd6;
+  --accent:#f47a20;
+  --blue:#f47a20;
+  --snapshot:#c76c2b;
+  --live:#438b68;
+  --degraded:#c9822e;
+  --conflict:#bd5a55;
+  --blocked:#796d9f;
+  --command-accent:#f47a20;
+  --command-accent-strong:#d95e08;
+  --command-grid:transparent;
+  --command-hairline:#e8e0d7;
+  --command-shadow:0 10px 30px rgba(67,49,34,.08);
+  --shadow:0 10px 30px rgba(67,49,34,.08);
+}
+
+.cockpit{
+  background:var(--surface-0);
+}
+.cockpit::before{
+  display:none;
+}
+.topbar{
+  border-bottom:1px solid var(--command-hairline);
+  background:color-mix(in srgb,var(--surface-0) 96%,transparent);
+  box-shadow:none;
+  backdrop-filter:blur(16px);
+}
+.brand-mark{
+  border-color:var(--command-hairline);
+  background:var(--surface-2);
+  color:var(--command-accent);
+  box-shadow:none;
+}
+.icon-btn,.avatar,.product-switch,.health-button,
+.command-bar,.nav-rail,.bottom-nav{
+  box-shadow:none;
+}
+.icon-btn,.avatar,.product-switch,.health-button{
+  background:var(--surface-2);
+  border-color:var(--command-hairline);
+}
+.command-bar{
+  background:var(--surface-2);
+  border-color:var(--command-hairline);
+}
+.nav-rail{
+  background:var(--surface-1);
+  border-color:var(--command-hairline);
+}
+.nav-item.active{
+  background:color-mix(in srgb,var(--command-accent) 8%,var(--surface-2));
+  border-color:color-mix(in srgb,var(--command-accent) 26%,var(--line));
+  box-shadow:inset 2px 0 0 var(--command-accent);
+}
+.action-card,.lane-card,.truth-card,.inbox-item,.provider-card,.filament,.capability-detail,
+.connection-center,.bus-card,.integrity-row,.context-card,.personal-card{
+  background:var(--surface-2);
+  border-color:var(--command-hairline);
+  box-shadow:none;
+}
+.action-card:hover,.lane-card:hover,.truth-card:hover,.inbox-item:hover,.provider-card:hover,.filament:hover{
+  transform:none;
+  box-shadow:none;
+  border-color:color-mix(in srgb,var(--command-accent) 28%,var(--line));
+}
+
+/* Atlas ordinary chrome: flatter, simpler, less HUD-like. */
+.cockpit[data-view=ATLAS] .atlas-toolbar{
+  top:12px;
+  width:min(1120px,calc(100% - 32px));
+  padding:6px;
+  border:1px solid var(--command-hairline);
+  border-radius:12px;
+  background:color-mix(in srgb,var(--surface-1) 94%,transparent);
+  box-shadow:0 8px 24px rgba(0,0,0,.14);
+  backdrop-filter:blur(14px);
+}
+:root[data-theme=light] .cockpit[data-view=ATLAS] .atlas-toolbar{
+  box-shadow:0 8px 24px rgba(58,44,30,.07);
+}
+.cockpit[data-view=ATLAS] .atlas-mode-toggle,
+.cockpit[data-view=ATLAS] .atlas-search,
+.cockpit[data-view=ATLAS] .filter-toggle,
+.cockpit[data-view=ATLAS] .text-button{
+  background:var(--surface-2);
+  border-color:var(--command-hairline);
+  box-shadow:none;
+}
+.cockpit[data-view=ATLAS] .atlas-mode-toggle button.active{
+  background:color-mix(in srgb,var(--command-accent) 12%,var(--surface-3));
+  color:var(--ink);
+}
+.cockpit[data-view=ATLAS] .atlas-filters,
+.cockpit[data-view=ATLAS] .atlas-inspector,
+.cockpit[data-view=ATLAS] .atlas-sheet{
+  background:color-mix(in srgb,var(--surface-1) 97%,transparent);
+  border-color:var(--command-hairline);
+  box-shadow:0 14px 40px rgba(0,0,0,.20);
+  backdrop-filter:blur(16px);
+}
+:root[data-theme=light] .cockpit[data-view=ATLAS] .atlas-filters,
+:root[data-theme=light] .cockpit[data-view=ATLAS] .atlas-inspector,
+:root[data-theme=light] .cockpit[data-view=ATLAS] .atlas-sheet{
+  box-shadow:0 14px 40px rgba(58,44,30,.08);
+}
+
+/* Galaxy canvas adapts to theme instead of assuming black + cyan. */
+.galaxy-three-root{
+  background:#020508;
+}
+:root[data-theme=light] .galaxy-three-root{
+  background:
+    radial-gradient(circle at 50% 46%,rgba(244,122,32,.045),transparent 34%),
+    #fbfaf7;
+}
+.galaxy-three-vignette{
+  background:radial-gradient(circle at 50% 48%,transparent 0 48%,rgba(0,0,0,.12) 80%,rgba(0,0,0,.42) 100%);
+  box-shadow:none;
+}
+:root[data-theme=light] .galaxy-three-vignette{
+  background:radial-gradient(circle at 50% 48%,transparent 0 56%,rgba(251,250,247,.08) 72%,rgba(235,228,219,.40) 100%);
+}
+.galaxy-three-label{
+  border:1px solid var(--command-hairline);
+  background:color-mix(in srgb,var(--surface-1) 92%,transparent);
+  color:var(--ink);
+  box-shadow:none;
+  backdrop-filter:blur(8px);
+}
+.galaxy-three-label.domain{
+  border-color:color-mix(in srgb,var(--command-accent) 30%,var(--line));
+  background:color-mix(in srgb,var(--surface-1) 94%,transparent);
+  color:var(--ink);
+  box-shadow:none;
+}
+.galaxy-three-label.selected{
+  border-color:var(--command-accent);
+  box-shadow:0 0 0 2px color-mix(in srgb,var(--command-accent) 12%,transparent);
+}
+.galaxy-three-status,.galaxy-three-controls{
+  border-color:var(--command-hairline);
+  background:color-mix(in srgb,var(--surface-1) 94%,transparent);
+  color:var(--muted);
+  box-shadow:none;
+  backdrop-filter:blur(12px);
+}
+.galaxy-three-controls button,
+.galaxy-three-controls button:first-child{
+  border-color:transparent;
+  background:transparent;
+  color:var(--muted);
+  box-shadow:none;
+}
+.galaxy-three-controls button:first-child{
+  color:var(--command-accent);
+}
+
+/* Macro overview is a topology view, not a particle demo. */
+.galaxy-three-root[data-view-mode="macro"] .galaxy-three-label.domain{
+  min-width:108px;
+  padding:7px 10px;
+  text-align:center;
+  font-size:14px;
+}
+.galaxy-three-root[data-view-mode="macro"] .galaxy-three-label.domain strong{
+  font-size:16px;
+}
+.galaxy-three-root[data-view-mode="macro"] .galaxy-three-label.domain small{
+  margin-top:4px;
+}
+.galaxy-three-root[data-view-mode="macro"] .galaxy-three-status{
+  opacity:.74;
+}
+
+/* Light mode: orange is the only brand accent. */
+:root[data-theme=light] a,
+:root[data-theme=light] .accent-text,
+:root[data-theme=light] .command-bar>span,
+:root[data-theme=light] .nav-item.active i,
+:root[data-theme=light] .filter-toggle.has-filters{
+  color:var(--command-accent);
+}
+:root[data-theme=light] .brand-mark{
+  background:#fff;
+}
+:root[data-theme=light] .bottom-nav{
+  background:rgba(255,255,255,.94);
+  border-color:var(--command-hairline);
+}
+

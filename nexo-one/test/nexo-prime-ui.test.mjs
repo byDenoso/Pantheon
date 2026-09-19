@@ -46,12 +46,24 @@ test('mobile Atlas keeps readable type and gesture-first camera controls',async(
   assert.doesNotMatch(css,/font-size:(?:6(?:\.\d+)?|7(?:\.\d+)?|8(?:\.\d+)?)px/);
 });
 
-test('galaxy framing is wider and bloom is controlled instead of clipping the core',async()=>{
+test('galaxy uses restrained exposure, macro framing and theme-aware rendering',async()=>{
   const galaxy=await text('src/components/GalaxyThree3D.tsx');
-  assert.match(galaxy,/DEFAULT_CAMERA = new Vector3\(0, 22, 248\)/);
-  assert.match(galaxy,/toneMappingExposure = isMobile \? 1\.0 : 1\.06/);
-  assert.match(galaxy,/bloom\.threshold = 0\.22/);
-  assert.match(galaxy,/bloom\.strength = 0\.58/);
-  assert.match(galaxy,/bloom\.radius = 0\.46/);
+  assert.match(galaxy,/DEFAULT_CAMERA = new Vector3\(0, 22, 268\)/);
+  assert.match(galaxy,/MACRO_CAMERA = new Vector3\(0, 20, 340\)/);
+  assert.match(galaxy,/toneMappingExposure = themeName === 'light' \? 0\.92/);
+  assert.match(galaxy,/bloom\.threshold = 0\.30/);
+  assert.match(galaxy,/bloom\.strength = 0\.34/);
+  assert.match(galaxy,/bloom\.radius = 0\.32/);
+  assert.match(galaxy,/NormalBlending/);
   assert.match(galaxy,/<small>CORE<\/small>/);
+});
+
+
+test('dark and light themes use the requested black-blue and white-orange palettes',async()=>{
+  const css=await text('src/styles/nexo-prime.css');
+  assert.match(css,/--nexo-bg-0:#020508/);
+  assert.match(css,/--nexo-accent:#8bd3ff/);
+  assert.match(css,/:root\[data-theme=light\]\{[\s\S]*--nexo-bg-0:#fbfaf7/);
+  assert.match(css,/:root\[data-theme=light\]\{[\s\S]*--nexo-accent:#f47a20/);
+  assert.match(css,/\.galaxy-three-root\[data-view-mode="macro"\]/);
 });

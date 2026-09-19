@@ -25,7 +25,7 @@ test('active Atlas renderer is a procedural raw Three.js galaxy with Canvas fall
 
 test('procedural galaxy uses dense particles instead of luminous arm polylines',async()=>{
   const three=await text('src/components/GalaxyThree3D.tsx');
-  assert.match(three,/particleCount = isMobile \? 32000 : 86000/);
+  assert.match(three,/particleCount = isMacro \? \(isMobile \? 4200 : 11000\) : \(isMobile \? 26000 : 68000\)/);
   assert.match(three,/signaturePoint/);
   assert.match(three,/galaxyArmPoint/);
   assert.match(three,/gaussian\(random\)/);
@@ -56,8 +56,27 @@ test('macro scene derives missing domain anchors from the Galaxy snapshot',async
 
 test('mobile profile reduces GPU particle and pixel load without changing topology',async()=>{
   const three=await text('src/components/GalaxyThree3D.tsx');
-  assert.match(three,/isMobile \? 32000 : 86000/);
+  assert.match(three,/isMacro \? \(isMobile \? 4200 : 11000\) : \(isMobile \? 26000 : 68000\)/);
   assert.match(three,/isMobile \? 1\.45 : 1\.9/);
-  assert.match(three,/if \(!isMobile\) \{/);
+  assert.match(three,/if \(!isMobile && !isMacro && themeName === 'dark'\) \{/);
   assert.match(three,/data-particle-profile=\{isMobile \? 'mobile' : 'desktop'\}/);
+});
+
+
+test('macro overview uses deterministic domain anchors and explicit renderer mode',async()=>{
+  const [view,layout,adapter,three]=await Promise.all([
+    text('src/features/system/Atlas.tsx'),
+    text('src/viewmodels/graph3d.ts'),
+    text('src/components/AtlasGalaxyRenderer.tsx'),
+    text('src/components/GalaxyThree3D.tsx'),
+  ]);
+  assert.match(layout,/layoutMacroDomains/);
+  assert.match(layout,/SCIENCE: \{ x: 92, y: 18, z: -8 \}/);
+  assert.match(layout,/ENGINEERING: \{ x: -84, y: 52, z: 8 \}/);
+  assert.match(layout,/OLYMPUS: \{ x: -68, y: -58, z: -6 \}/);
+  assert.match(view,/isMacroOverview/);
+  assert.match(view,/layoutMacroDomains\(renderGraph\.nodes\)/);
+  assert.match(view,/viewMode=\{isMacroOverview \? 'macro' : 'detail'\}/);
+  assert.match(adapter,/viewMode\?: 'macro' \| 'detail'/);
+  assert.match(three,/data-view-mode=\{viewMode\}/);
 });
