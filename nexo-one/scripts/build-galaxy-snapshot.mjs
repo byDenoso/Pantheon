@@ -46,6 +46,13 @@ const previous = await readJsonIfValid(previousPath);
 const snapshot = compileGalaxySnapshot(system, { previous });
 
 await mkdir(snapshotsDir, { recursive: true });
+if (previous && previous.snapshot_id !== snapshot.snapshot_id) {
+  await writeFile(
+    resolve(snapshotsDir, `${previous.snapshot_id}.json`),
+    JSON.stringify(previous, null, 2) + '\n',
+    'utf8',
+  );
+}
 const body = JSON.stringify(snapshot, null, 2) + '\n';
 await writeFile(resolve(galaxyDir, 'latest.json'), body, 'utf8');
 await writeFile(resolve(snapshotsDir, `${snapshot.snapshot_id}.json`), body, 'utf8');
