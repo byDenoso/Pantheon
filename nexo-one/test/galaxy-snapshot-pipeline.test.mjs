@@ -17,6 +17,7 @@ test('build-galaxy-snapshot.mjs compiles dist/system.json into a versioned snaps
   try {
     await mkdir(join(workdir, 'dist'), { recursive: true });
     const system = scenarioById('all-live').build();
+    system.bus.fingerprint = 'sha256:' + 'a'.repeat(64);
     await writeFile(join(workdir, 'dist', 'system.json'), JSON.stringify(system), 'utf8');
 
     const { stdout } = await run(process.execPath, [join(cwd, 'scripts/build-galaxy-snapshot.mjs')], { cwd: workdir });
@@ -48,6 +49,7 @@ test('a later build diffs the last valid snapshot and preserves bounded history'
   try {
     await mkdir(join(workdir, 'dist'), { recursive: true });
     const first = scenarioById('all-live').build();
+    first.bus.fingerprint = 'sha256:' + 'a'.repeat(64);
     await writeFile(join(workdir, 'dist', 'system.json'), JSON.stringify(first), 'utf8');
     await run(process.execPath, [join(cwd, 'scripts/build-galaxy-snapshot.mjs')], { cwd: workdir });
 
@@ -89,6 +91,7 @@ test('malformed or provenance-mismatched previous snapshots are ignored instead 
   try {
     await mkdir(join(workdir, 'dist', 'galaxy'), { recursive: true });
     const system = scenarioById('all-live').build();
+    system.bus.fingerprint = 'sha256:' + 'a'.repeat(64);
     await writeFile(join(workdir, 'dist', 'system.json'), JSON.stringify(system), 'utf8');
     await writeFile(join(workdir, 'dist', 'galaxy', 'previous.json'), JSON.stringify({
       contract: 'NEXO_ONE_GALAXY_V1',
