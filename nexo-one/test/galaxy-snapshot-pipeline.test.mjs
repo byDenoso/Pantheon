@@ -82,6 +82,35 @@ test('a later build diffs the last valid snapshot and preserves bounded history'
   }
 });
 
+
+test('malformed or provenance-mismatched previous snapshots are ignored instead of contaminating history', async () => {
+  const cwd = new URL('../', import.meta.url).pathname;
+  const workdir = await mkdtemp(join(tmpdir(), 'galaxy-invalid-history-'));
+  try {
+    await mkdir(join(workdir, 'dist', 'galaxy'), { recursive: true });
+    const system = scenarioById('all-live').build();
+    await writeFile(join(workdir, 'dist', 'system.json'), JSON.stringify(system), 'utf8');
+    await writeFile(join(workdir, 'dist', 'galaxy', 'previous.json'), JSON.stringify({
+      contract: 'NEXO_ONE_GALAXY_V1',
+      snapshot_id: 'galaxy-bad',
+      generated_at: '2026-09-19T12:00:00Z',
+      tower_revision: 'not-a-projection-fingerprint',
+      fingerprint: 'different',
+      domains: ['NEXO','SCIENCE','ENGINEERING','OLYMPUS'],
+      entities: [],
+      relations: [],
+    }), 'utf8');
+
+    const { stdout } = await run(process.execPath, [join(cwd, 'scripts/build-galaxy-snapshot.mjs')], { cwd: workdir });
+    const summary = JSON.parse(stdout.trim());
+    const latest = JSON.parse(await readFile(join(workdir, 'dist', 'galaxy', 'latest.json'), 'utf8'));
+    assert.equal(summary.previous_snapshot_id, null);
+    assert.deepEqual(latest.changes, []);
+  } finally {
+    await rm(workdir, { recursive: true, force: true });
+  }
+});
+
 test('GitHub Pages refreshes every two hours, hydrates history and reads back the versioned galaxy', async () => {
   const workflow = await text('../.github/workflows/nexo-one-pages.yml');
   assert.match(workflow, /cron: '17 \*\/2 \* \* \*'/);
