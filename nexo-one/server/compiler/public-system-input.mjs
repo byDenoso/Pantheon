@@ -27,7 +27,15 @@ export async function readPublicSystemInput({url} = {}) {
     authority: 'DERIVED', last_checked: text(row.updatedAt), next_action: text(row.summary),
     evidence_pointer: text(row.provenance) || 'PUBLIC_PROJECTION', fingerprint: text(row.id),
   })).filter(row => row.action_id);
-  const sideQuests = actions.filter(row => row.status === 'OPEN').map(row => ({
+  // Public action projections are not evidence of a human gate. Only explicit
+  // human-required metadata may enter Human Inbox; generic OPEN work remains
+  // autonomous/operational and must never be upgraded into a human decision.
+  const humanActionIds = new Set((source.actions || [])
+    .filter(row => row?.humanRequired === true || row?.requiresHuman === true
+      || /AWAITING_HUMAN|HUMAN_REQUIRED|NEEDS_ME|NEEDS_DENER/.test(upper(row?.status)))
+    .map(row => text(row.id))
+    .filter(Boolean));
+  const sideQuests = actions.filter(row => humanActionIds.has(row.action_id)).map(row => ({
     side_quest_id: `PUBLIC-REVIEW-${row.action_id}`, parent_action_id: row.action_id, lane: row.domain,
     type: 'HUMAN', status: 'WAITING', blocker: row.action, required_resolution: 'Revisar o sinal projetado e confirmar o próximo passo.',
     blocks_scope: row.domain, created_at: row.last_checked, source_ref: 'PUBLIC_PROJECTION', fingerprint: row.fingerprint,
