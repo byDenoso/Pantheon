@@ -10,7 +10,7 @@ on:
     types: [nexo-public-projection-updated]
   workflow_dispatch:
   schedule:
-    - cron: '17 * * * *'
+    - cron: '17 */2 * * *'
 
 permissions:
   contents: read
@@ -199,9 +199,44 @@ jobs:
           GITHUB_PAGES: '1'
           VITE_SYSTEM_ENDPOINT: ./system.json
           VITE_WORLD_ENDPOINT: ./world-public.ndjson
+          VITE_GALAXY_ENDPOINT: ./galaxy/latest.json
           VITE_NEXO_AUTH_BRIDGE_URL: ${{ vars.VITE_NEXO_AUTH_BRIDGE_URL }}
           VITE_PRIVATE_COCKPIT_URL: https://nexo-one-two.vercel.app
         run: npm run build
+
+      - name: Hydrate previous valid galaxy snapshot history
+        working-directory: nexo-one
+        shell: bash
+        env:
+          GALAXY_PUBLIC_BASE: https://bydenoso.github.io/Pantheon/galaxy
+        run: |
+          set -euo pipefail
+          mkdir -p dist/galaxy/snapshots
+          base="${GALAXY_PUBLIC_BASE%/}"
+
+          # Failure here is intentionally non-fatal. The last deployed Pages
+          # artifact remains the availability fallback; a first build simply
+          # starts a new history with no fabricated delta.
+          curl -fsSL --retry 2 --connect-timeout 5 "${base}/latest.json" -o dist/galaxy/previous.json || rm -f dist/galaxy/previous.json
+
+          if curl -fsSL --retry 2 --connect-timeout 5 "${base}/index.json" -o /tmp/galaxy-index.json; then
+            node <<'NODE' >/tmp/galaxy-history-ids.txt
+          const fs=require('fs');
+          let index;
+          try { index=JSON.parse(fs.readFileSync('/tmp/galaxy-index.json','utf8')); } catch { process.exit(0); }
+          if(index?.contract!=='NEXO_ONE_GALAXY_INDEX_V1'||!Array.isArray(index.snapshots))process.exit(0);
+          const ids=[];
+          for(const item of index.snapshots.slice(0,359)){
+            const id=String(item?.snapshot_id||'');
+            if(/^galaxy-[0-9a-f]+$/i.test(id)&&!ids.includes(id))ids.push(id);
+          }
+          process.stdout.write(ids.join('\n'));
+          NODE
+            while IFS= read -r id; do
+              [ -n "${id}" ] || continue
+              curl -fsSL --retry 1 --connect-timeout 4 "${base}/snapshots/${id}.json" -o "dist/galaxy/snapshots/${id}.json" || rm -f "dist/galaxy/snapshots/${id}.json"
+            done </tmp/galaxy-history-ids.txt
+          fi
 
       - name: Compile presentation from sanctioned Tower projection
         working-directory: nexo-one
@@ -209,6 +244,8 @@ jobs:
           NEXO_PUBLIC_PROJECTION: data/tower-public/projection.json
           NEXO_PUBLIC_PROJECTION_MANIFEST: data/tower-public/manifest.json
           NEXO_PUBLIC_INTERDOMAIN: data/tower-public/interdomain.json
+          NEXO_GALAXY_PREVIOUS: dist/galaxy/previous.json
+          NEXO_GALAXY_RETENTION: '360'
         run: |
           set -euo pipefail
           node scripts/build-pages-system.mjs
@@ -221,6 +258,9 @@ jobs:
           test -s dist/tower-projection/projection.json
           test -s dist/tower-projection/manifest.json
           test -s dist/galaxy/latest.json
+          test -s dist/galaxy/index.json
+          node -e "const fs=require('fs');const x=JSON.parse(fs.readFileSync('dist/galaxy/latest.json'));const i=JSON.parse(fs.readFileSync('dist/galaxy/index.json'));if(i.latest_snapshot_id!==x.snapshot_id)throw new Error('GALAXY_INDEX_LATEST_MISMATCH');if(!fs.existsSync('dist/galaxy/snapshots/'+x.snapshot_id+'.json'))throw new Error('GALAXY_VERSIONED_SNAPSHOT_MISSING')"
+          rm -f dist/galaxy/previous.json
           touch dist/.nojekyll
           if grep -R -Eqi 'GOOGLE_DRIVE|truthgraph-projection|nexo-drive-projection' dist/system.json dist/world-public.ndjson dist/tower-projection dist/galaxy; then
             echo "::error::legacy Drive/truthgraph operational source leaked into Pages artifact"
@@ -262,6 +302,53 @@ jobs:
           curl -fsSL "${base}/world-public.ndjson" -o /tmp/world.ndjson
           curl -fsSL "${base}/mcp/topology.json" -o /tmp/mcp-topology.json
           curl -fsSL "${base}/galaxy/latest.json" -o /tmp/galaxy-latest.json
+          curl -fsSL "${base}/galaxy/index.json" -o /tmp/galaxy-index.json
+          galaxy_id="$(node -e "const fs=require('fs');const x=JSON.parse(fs.readFileSync('/tmp/galaxy-latest.json'));process.stdout.write(x.snapshot_id)")"
+          printf '%s' "${galaxy_id}" | grep -Eq '^galaxy-[0-9a-f]+
+
+          node <<'NODE'
+          const fs=require('fs');
+          const manifest=JSON.parse(fs.readFileSync('/tmp/manifest.json','utf8'));
+          const projection=JSON.parse(fs.readFileSync('/tmp/projection.json','utf8'));
+          const system=JSON.parse(fs.readFileSync('/tmp/system.json','utf8'));
+          const world=JSON.parse(fs.readFileSync('/tmp/world.ndjson','utf8').trim());
+          const mcp=JSON.parse(fs.readFileSync('/tmp/mcp-topology.json','utf8'));
+          const galaxy=JSON.parse(fs.readFileSync('/tmp/galaxy-latest.json','utf8'));
+          const galaxyIndex=JSON.parse(fs.readFileSync('/tmp/galaxy-index.json','utf8'));
+          const galaxyVersioned=JSON.parse(fs.readFileSync('/tmp/galaxy-versioned.json','utf8'));
+          if(manifest.authority!=='TOWER_V06')throw new Error('READBACK_AUTHORITY_INVALID');
+          if(manifest.projection_only!==true)throw new Error('READBACK_PROJECTION_ONLY_INVALID');
+          if(manifest.writeback!=='FORBIDDEN')throw new Error('READBACK_WRITEBACK_INVALID');
+          if(manifest.tower_commit!==process.env.EXPECTED_TOWER_COMMIT)throw new Error('READBACK_TOWER_COMMIT_MISMATCH');
+          if(manifest.event_cursor!==process.env.EXPECTED_EVENT_CURSOR)throw new Error('READBACK_EVENT_CURSOR_MISMATCH');
+          if(manifest.projection_fingerprint!==process.env.EXPECTED_FINGERPRINT)throw new Error('READBACK_FINGERPRINT_MISMATCH');
+          if(JSON.stringify(projection.manifest)!==JSON.stringify(manifest))throw new Error('READBACK_MANIFEST_SPLIT_BRAIN');
+          if(system.bus?.fingerprint!==manifest.projection_fingerprint)throw new Error('SYSTEM_NOT_BOUND_TO_TOWER_PROJECTION');
+          if(world.truthGraph?.fingerprint!==manifest.projection_fingerprint)throw new Error('WORLD_NOT_BOUND_TO_TOWER_PROJECTION');
+          const raw=JSON.stringify({system,world,projection});
+          if(/truthgraph-projection|nexo-drive-projection|GOOGLE_DRIVE/i.test(raw))throw new Error('LEGACY_OPERATIONAL_SOURCE_PRESENT');
+          if(mcp.contract!=='NEXO_MCP_TOPOLOGY_V1')throw new Error('MCP_TOPOLOGY_CONTRACT_INVALID');
+          if(mcp.source?.authority!=='TOWER_V06'||!mcp.source?.commit)throw new Error('MCP_TOPOLOGY_SOURCE_INVALID');
+          if(!Array.isArray(mcp.nodes)||mcp.nodes.length<8||!Array.isArray(mcp.links)||mcp.links.length<7)throw new Error('MCP_TOPOLOGY_EMPTY');
+          if(galaxy.contract!=='NEXO_ONE_GALAXY_V1')throw new Error('GALAXY_CONTRACT_INVALID');
+          if(galaxy.tower_revision!==manifest.projection_fingerprint)throw new Error('GALAXY_NOT_BOUND_TO_TOWER_PROJECTION');
+          if(!Array.isArray(galaxy.domains)||galaxy.domains.length!==4)throw new Error('GALAXY_DOMAINS_INVALID');
+          if(galaxyIndex.contract!=='NEXO_ONE_GALAXY_INDEX_V1')throw new Error('GALAXY_INDEX_CONTRACT_INVALID');
+          if(galaxyIndex.latest_snapshot_id!==galaxy.snapshot_id)throw new Error('GALAXY_INDEX_LATEST_MISMATCH');
+          if(!Array.isArray(galaxyIndex.snapshots)||!galaxyIndex.snapshots.some(item=>item.snapshot_id===galaxy.snapshot_id))throw new Error('GALAXY_INDEX_MISSING_LATEST');
+          if(JSON.stringify(galaxyVersioned)!==JSON.stringify(galaxy))throw new Error('GALAXY_VERSIONED_READBACK_MISMATCH');
+          const generated=Date.parse(galaxy.generated_at);
+          if(!Number.isFinite(generated)||generated>Date.now()+10*60*1000)throw new Error('GALAXY_GENERATED_AT_INVALID');
+          NODE
+
+          echo "PAGES_TOWER_PROJECTION_READBACK_OK ${base}/tower-projection/manifest.json"
+          echo "PAGES_SYSTEM_READBACK_OK ${base}/system.json"
+          echo "PAGES_WORLD_READBACK_OK ${base}/world-public.ndjson"
+          echo "PAGES_MCP_ATLAS_READBACK_OK ${base}/mcp/topology.json"
+          echo "PAGES_GALAXY_READBACK_OK ${base}/galaxy/latest.json"
+          echo "PAGES_GALAXY_INDEX_READBACK_OK ${base}/galaxy/index.json"
+
+          curl -fsSL "${base}/galaxy/snapshots/${galaxy_id}.json" -o /tmp/galaxy-versioned.json
 
           node <<'NODE'
           const fs=require('fs');
