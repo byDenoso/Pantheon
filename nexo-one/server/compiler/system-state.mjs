@@ -80,6 +80,9 @@ function latestByAction(rows){
   }
   return out;
 }
+function isSystemOwnedAutoRecovery(row){
+  return upper(row?.parent_action_id).startsWith('SYSTEM_FIX_REQUIRED::EXECUTOR_STARVATION::');
+}
 function humanKind(row){
   const v=upper(`${row.required_resolution} ${row.blocker}`);
   if(/APPROV|APROV/.test(v))return 'APROVAR';
@@ -209,8 +212,8 @@ function buildGraph({actions,capabilities,providers,envelopes,filaments,sideQues
 }
 
 export function buildSystemState({world,bus,systemInput={},now=world?.generatedAt||new Date().toISOString()}={}){
-  const generated=iso(now,new Date().toISOString()),providers=mapProviders(world?.providers||[],generated),findings=mapFindings(world||{},generated),capabilities=mapCapabilities(systemInput.capabilities||[],generated),rawRuns=systemInput.executionRuns||[],runs=mapRuns(rawRuns,generated),actions=mapActions(systemInput.actions||[],rawRuns,systemInput.sideQuests||[],generated),inbox=mapInbox(systemInput.sideQuests||[],generated),filaments=mapFilaments(systemInput.learningFilaments||[]),envelopes=mapEnvelopes(bus||{},generated),projectionBus=mapBus(bus||{},providers,generated),lanes=mapLanes(actions,runs,systemInput.sideQuests||[],findings,generated);
-  const graph=buildGraph({actions,capabilities,providers,envelopes,filaments,sideQuests:systemInput.sideQuests||[],findings,now:generated});
+  const generated=iso(now,new Date().toISOString()),providers=mapProviders(world?.providers||[],generated),findings=mapFindings(world||{},generated),capabilities=mapCapabilities(systemInput.capabilities||[],generated),rawRuns=systemInput.executionRuns||[],runs=mapRuns(rawRuns,generated),sideQuests=(systemInput.sideQuests||[]).filter(q=>!isSystemOwnedAutoRecovery(q)),actions=mapActions(systemInput.actions||[],rawRuns,sideQuests,generated),inbox=mapInbox(sideQuests,generated),filaments=mapFilaments(systemInput.learningFilaments||[]),envelopes=mapEnvelopes(bus||{},generated),projectionBus=mapBus(bus||{},providers,generated),lanes=mapLanes(actions,runs,sideQuests,findings,generated);
+  const graph=buildGraph({actions,capabilities,providers,envelopes,filaments,sideQuests,findings,now:generated});
   const globalProviders=providers.filter(provider=>provider.id!=='vercel');
   const global_state=worst([projectionBus.state,...globalProviders.map(p=>p.state),...findings.map(f=>f.status),...lanes.map(l=>l.state)]);
   return {contract_version:'1',scenario_id:'live',scenario_label:'Estado real · fontes conectadas',generated_at:generated,global_state,bus:projectionBus,envelopes,findings,actions,inbox,capabilities,runs,lanes,graph,filaments,providers};
