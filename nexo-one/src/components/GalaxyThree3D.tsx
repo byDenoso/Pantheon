@@ -10,6 +10,7 @@ import {
 import {
   ACESFilmicToneMapping,
   AdditiveBlending,
+  NormalBlending,
   BufferGeometry,
   Color,
   Float32BufferAttribute,
@@ -41,10 +42,15 @@ import type { Canvas25DViewState, CanvasGraph25DHandle } from './CanvasGraph25D.
 import './GalaxyThree3D.css';
 
 const TAU = Math.PI * 2;
-const DEFAULT_CAMERA = new Vector3(0, 22, 248);
+const DEFAULT_CAMERA = new Vector3(0, 22, 268);
+const MACRO_CAMERA = new Vector3(0, 20, 340);
 const DEFAULT_TARGET = new Vector3(0, 0, 0);
-const GALAXY_CYAN = new Color('#79e7ff');
-const GALAXY_WHITE = new Color('#effcff');
+
+function paletteForTheme(theme: 'dark' | 'light') {
+  return theme === 'light'
+    ? { accent: new Color('#f47a20'), strong: new Color('#a94808') }
+    : { accent: new Color('#8bd3ff'), strong: new Color('#eef8ff') };
+}
 
 type Props = {
   nodes: PlacedNode3D[];
@@ -54,6 +60,7 @@ type Props = {
   onFailure?: () => void;
   className?: string;
   ariaLabel?: string;
+  viewMode?: 'macro' | 'detail';
 };
 
 type Tween = {
@@ -246,6 +253,9 @@ void main() {
 `;
 
 const galaxyFragmentShader = `
+uniform vec3 uColorA;
+uniform vec3 uColorB;
+uniform float uOpacity;
 varying float vBrightness;
 
 void main() {
@@ -253,11 +263,9 @@ void main() {
   float d = length(uv);
   if (d > 0.5) discard;
   float core = smoothstep(0.5, 0.0, d);
-  float halo = smoothstep(0.5, 0.16, d);
-  vec3 cyan = vec3(0.31, 0.80, 1.0);
-  vec3 white = vec3(0.94, 0.99, 1.0);
-  vec3 color = mix(cyan, white, clamp(vBrightness, 0.0, 1.0));
-  float alpha = (halo * 0.54 + core * 0.78) * (0.28 + vBrightness * 0.82);
+  float halo = smoothstep(0.5, 0.18, d);
+  vec3 color = mix(uColorA, uColorB, clamp(vBrightness, 0.0, 1.0));
+  float alpha = (halo * 0.36 + core * 0.60) * (0.18 + vBrightness * 0.64) * uOpacity;
   gl_FragColor = vec4(color, alpha);
 }
 `;
@@ -364,6 +372,7 @@ export const GalaxyThree3D = forwardRef<CanvasGraph25DHandle, Props>(function Ga
   onFailure,
   className = '',
   ariaLabel = 'Galáxia tridimensional do NEXO ONE',
+  viewMode = 'detail',
 }, ref) {
   const hostRef = useRef<HTMLDivElement | null>(null);
   const mountRef = useRef<HTMLDivElement | null>(null);
@@ -377,10 +386,23 @@ export const GalaxyThree3D = forwardRef<CanvasGraph25DHandle, Props>(function Ga
   const pointerDownRef = useRef<{ x: number; y: number } | null>(null);
   const [size, setSize] = useState({ width: 1, height: 1 });
   const [failed, setFailed] = useState(false);
+  const [themeName, setThemeName] = useState<'dark' | 'light'>(() =>
+    typeof document !== 'undefined' && document.documentElement.dataset.theme === 'light' ? 'light' : 'dark',
+  );
 
+  const isMacro = viewMode === 'macro';
   const isMobile = size.width < 760;
   const reducedMotion = typeof window !== 'undefined'
     && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+
+  useEffect(() => {
+    const root = document.documentElement;
+    const syncTheme = () => setThemeName(root.dataset.theme === 'light' ? 'light' : 'dark');
+    syncTheme();
+    const observer = new MutationObserver(syncTheme);
+    observer.observe(root, { attributes: true, attributeFilter: ['data-theme'] });
+    return () => observer.disconnect();
+  }, []);
 
   const nodeMap = useMemo(() => new Map(nodes.map(node => [node.id, node])), [nodes]);
   const visibleLabels = useMemo(
@@ -420,11 +442,12 @@ export const GalaxyThree3D = forwardRef<CanvasGraph25DHandle, Props>(function Ga
     const camera = cameraRef.current;
     const controls = controlsRef.current;
     if (!camera || !controls) return;
+    const homeCamera = isMacro ? MACRO_CAMERA : DEFAULT_CAMERA;
     tweenRef.current = {
       startAt: performance.now(),
       duration: reducedMotion ? 0 : 760,
       fromPosition: camera.position.clone(),
-      toPosition: DEFAULT_CAMERA.clone(),
+      toPosition: homeCamera.clone(),
       fromTarget: controls.target.clone(),
       toTarget: DEFAULT_TARGET.clone(),
     };
@@ -445,7 +468,7 @@ export const GalaxyThree3D = forwardRef<CanvasGraph25DHandle, Props>(function Ga
       }
       return compatibleView(camera, controls.target);
     },
-  }), [isMobile, nodeMap, reducedMotion]);
+  }), [isMacro, isMobile, nodeMap, reducedMotion]);
 
   useEffect(() => {
     const host = hostRef.current;
@@ -477,7 +500,7 @@ export const GalaxyThree3D = forwardRef<CanvasGraph25DHandle, Props>(function Ga
       });
       renderer.outputColorSpace = SRGBColorSpace;
       renderer.toneMapping = ACESFilmicToneMapping;
-      renderer.toneMappingExposure = isMobile ? 1.0 : 1.06;
+      renderer.toneMappingExposure = themeName === 'light' ? 0.92 : (isMobile ? 0.96 : 1.0);
       renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, isMobile ? 1.45 : 1.9));
       renderer.setSize(size.width, size.height, false);
       renderer.domElement.className = 'galaxy-three-canvas';
@@ -490,7 +513,7 @@ export const GalaxyThree3D = forwardRef<CanvasGraph25DHandle, Props>(function Ga
       sceneRef.current = scene;
 
       const camera = new PerspectiveCamera(isMobile ? 50 : 44, size.width / size.height, 0.1, 1200);
-      camera.position.copy(DEFAULT_CAMERA);
+      camera.position.copy(isMacro ? MACRO_CAMERA : DEFAULT_CAMERA);
       cameraRef.current = camera;
 
       const controls = new OrbitControls(camera, renderer.domElement);
@@ -508,18 +531,22 @@ export const GalaxyThree3D = forwardRef<CanvasGraph25DHandle, Props>(function Ga
       controls.maxPolarAngle = Math.PI - 0.18;
       controlsRef.current = controls;
 
-      const particleCount = isMobile ? 32000 : 86000;
+      const palette = paletteForTheme(themeName);
+      const particleCount = isMacro ? (isMobile ? 4200 : 11000) : (isMobile ? 26000 : 68000);
       const galaxyGeometry = buildGalaxyGeometry(particleCount);
       const galaxyMaterial = new ShaderMaterial({
         uniforms: {
           uTime: { value: 0 },
           uPixelRatio: { value: renderer.getPixelRatio() },
+          uColorA: { value: palette.accent },
+          uColorB: { value: palette.strong },
+          uOpacity: { value: isMacro ? (themeName === 'light' ? 0.24 : 0.32) : (themeName === 'light' ? 0.46 : 0.72) },
         },
         vertexShader: galaxyVertexShader,
         fragmentShader: galaxyFragmentShader,
         transparent: true,
         depthWrite: false,
-        blending: AdditiveBlending,
+        blending: themeName === 'light' ? NormalBlending : AdditiveBlending,
       });
       const galaxy = new Points(galaxyGeometry, galaxyMaterial);
       scene.add(galaxy);
@@ -529,12 +556,15 @@ export const GalaxyThree3D = forwardRef<CanvasGraph25DHandle, Props>(function Ga
         uniforms: {
           uTime: { value: 0 },
           uPixelRatio: { value: renderer.getPixelRatio() },
+          uColorA: { value: palette.accent },
+          uColorB: { value: palette.strong },
+          uOpacity: { value: 1.0 },
         },
         vertexShader: galaxyVertexShader,
         fragmentShader: galaxyFragmentShader,
         transparent: true,
         depthWrite: false,
-        blending: AdditiveBlending,
+        blending: themeName === 'light' ? NormalBlending : AdditiveBlending,
       });
       const nodePoints = new Points(nodeGeometry, nodeMaterial);
       nodePointsRef.current = nodePoints;
@@ -542,30 +572,30 @@ export const GalaxyThree3D = forwardRef<CanvasGraph25DHandle, Props>(function Ga
 
       const relationSegments = buildRelationSegments(nodes, edges, selectedId);
       const relationMaterial = new LineBasicMaterial({
-        color: GALAXY_CYAN,
+        color: palette.accent,
         transparent: true,
-        opacity: isMobile ? 0.14 : 0.18,
-        blending: AdditiveBlending,
+        opacity: isMacro ? (themeName === 'light' ? 0.48 : 0.58) : (isMobile ? 0.18 : 0.24),
+        blending: themeName === 'light' ? NormalBlending : AdditiveBlending,
         depthWrite: false,
       });
       const selectedRelationMaterial = new LineBasicMaterial({
-        color: GALAXY_WHITE,
+        color: palette.strong,
         transparent: true,
-        opacity: 0.72,
-        blending: AdditiveBlending,
+        opacity: 0.86,
+        blending: themeName === 'light' ? NormalBlending : AdditiveBlending,
         depthWrite: false,
       });
       const relationLines = new LineSegments(relationSegments.normal, relationMaterial);
       const selectedRelationLines = new LineSegments(relationSegments.selected, selectedRelationMaterial);
       scene.add(relationLines, selectedRelationLines);
 
-      if (!isMobile) {
+      if (!isMobile && !isMacro && themeName === 'dark') {
         composer = new EffectComposer(renderer);
         composer.addPass(new RenderPass(scene, camera));
-        const bloom = new UnrealBloomPass(new Vector2(size.width, size.height), 0.58, 0.46, 0.28);
-        bloom.threshold = 0.22;
-        bloom.strength = 0.58;
-        bloom.radius = 0.46;
+        const bloom = new UnrealBloomPass(new Vector2(size.width, size.height), 0.34, 0.32, 0.34);
+        bloom.threshold = 0.30;
+        bloom.strength = 0.34;
+        bloom.radius = 0.32;
         composer.addPass(bloom);
       }
 
@@ -674,7 +704,7 @@ export const GalaxyThree3D = forwardRef<CanvasGraph25DHandle, Props>(function Ga
       onFailure?.();
       return;
     }
-  }, [ariaLabel, edges, failed, isMobile, nodes, onFailure, onSelect, reducedMotion, selectedId, size.height, size.width, visibleLabels]);
+  }, [ariaLabel, edges, failed, isMacro, isMobile, nodes, onFailure, onSelect, reducedMotion, selectedId, size.height, size.width, themeName, visibleLabels]);
 
   return (
     <div
@@ -682,6 +712,8 @@ export const GalaxyThree3D = forwardRef<CanvasGraph25DHandle, Props>(function Ga
       className={`galaxy-three-root ${className}`}
       data-renderer="three-procedural-galaxy"
       data-particle-profile={isMobile ? 'mobile' : 'desktop'}
+      data-view-mode={viewMode}
+      data-theme={themeName}
     >
       <div ref={mountRef} className="galaxy-three-mount" />
       <div className="galaxy-three-vignette" aria-hidden="true" />
