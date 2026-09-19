@@ -12,53 +12,35 @@ test('published shell does not mount the legacy projection overlay that probes /
 });
 
 test('Atlas exposes explicit touch navigation controls for mobile instead of depending only on gestures', async () => {
-  const atlas = await text('src/components/AtlasWebGL3D.tsx');
-  assert.match(atlas, /aria-label="Girar mapa para a esquerda"/);
-  assert.match(atlas, /aria-label="Girar mapa para a direita"/);
-  assert.match(atlas, /aria-label="Aproximar mapa"/);
-  assert.match(atlas, /aria-label="Afastar mapa"/);
-  assert.match(atlas, /rotateLeft/);
-  assert.match(atlas, /dollyIn/);
-  assert.match(atlas, /onWheelCapture=\{event => event\.preventDefault\(\)\}/);
+  const canvas = await text('src/components/CanvasGraph25D.tsx');
+  assert.match(canvas, /aria-label="Girar para a esquerda"/);
+  assert.match(canvas, /aria-label="Girar para a direita"/);
+  assert.match(canvas, /aria-label="Aproximar"/);
+  assert.match(canvas, /aria-label="Afastar"/);
+  assert.match(canvas, /onWheel=\{event=>\{/);
+  assert.match(canvas, /event\.preventDefault\(\)/);
 });
 
-test('Atlas uses Three.js force graph 3D with fixed positions and restrained links', async () => {
-  const atlas = await text('src/components/AtlasWebGL3D.tsx');
-  const view = await text('src/features/system/Atlas.tsx');
-  assert.match(atlas, /react-force-graph-3d/);
-  assert.match(atlas, /data-renderer="three-force-graph-3d"/);
-  assert.match(atlas, /controlType="orbit"/);
-  assert.match(atlas, /nodeThreeObject=\{makeNode\}/);
-  assert.match(atlas, /fx: node\.x, fy: node\.y, fz: node\.z/);
-  assert.match(atlas, /linkCurvature=/);
-  assert.match(view, /AtlasWebGL3D/);
+test('Atlas uses the deterministic Canvas 2.5D renderer with pointer-driven yaw/pitch/zoom, not a WebGL force graph', async () => {
+  const canvas = await text('src/components/CanvasGraph25D.tsx');
+  const atlas = await text('src/components/AtlasCanvas25D.tsx');
+  assert.match(canvas, /getContext\('2d'/);
+  assert.match(canvas, /data-renderer="canvas-2\.5d"/);
+  assert.match(canvas, /function rotatePoint/);
+  assert.match(canvas, /onPointerDown=\{/);
+  assert.match(canvas, /onPointerMove=\{/);
+  assert.doesNotMatch(canvas, /react-force-graph-3d|ForceGraph3D|THREE\./);
+  assert.match(atlas, /data-renderer="canvas-2\.5d"/);
+  assert.doesNotMatch(atlas, /react-force-graph-3d|ForceGraph3D/);
 });
 
-test('Atlas adapts the spaced world to portrait mobile viewports', async () => {
-  const atlas = await text('src/components/AtlasWebGL3D.tsx');
+test('Atlas adapts the spaced world and canvas controls to portrait mobile viewports', async () => {
+  const css = await text('src/components/CanvasGraph25D.css');
   const graph = await text('src/viewmodels/graph3d.ts');
-  const styles = await text('src/styles/atlas3d.css');
-  assert.match(atlas, /matchMedia\('\(max-width: 760px\)'\)/);
-  assert.match(atlas, /const distance = isMobile \? 34 : 42/);
-  assert.match(atlas, /const distance = Math\.max\(mobile \? 72 : 86/);
-  assert.match(styles, /touch-action: none/);
+  assert.match(css, /touch-action:none/);
+  assert.match(css, /@media\(max-width:760px\)/);
+  assert.match(css, /@media\(max-width:420px\)/);
   assert.match(graph, /const spacingScale = 1\.34/);
-  assert.match(styles, /min-height: 640px/);
-  assert.match(styles, /aspect-ratio: 3 \/ 4/);
-});
-
-test('Atlas orbit wraps a full 360 degrees and renders backend learning edges by scope', async () => {
-  const atlas = await text('src/components/AtlasWebGL3D.tsx');
-  assert.match(atlas, /controlType="orbit"/);
-  assert.match(atlas, /enableNavigationControls/);
-  assert.match(atlas, /edge\.is_learning/);
-  assert.match(atlas, /edge\.learning_scope === 'INTER_DOMAIN' \? '#f4c468' : '#d99a4f'/);
-  assert.match(atlas, /linkOpacity=\{0\.84\}/);
-  assert.match(atlas, /return 0\.72 \+ strength\(value\) \* 0\.32/);
-  assert.match(atlas, /linkMaterial=\{edge =>/);
-  assert.match(atlas, /MeshBasicMaterial/);
-  assert.match(atlas, /className="atlas-webgl-links"/);
-  assert.match(atlas, /atlas-webgl-link\$\{edge\.is_learning/);
 });
 
 test('Atlas surfaces backend learning scope counts beside the filament toggle', async () => {
@@ -70,35 +52,26 @@ test('Atlas surfaces backend learning scope counts beside the filament toggle', 
   assert.match(view, /intradomínio/);
 });
 
-test('Atlas starts at the NEXO hub and expands canonical domain clusters on selection', async () => {
+test('Atlas starts at the NEXO domain overview and expands canonical domain clusters on selection', async () => {
   const view = await text('src/features/system/Atlas.tsx');
-  assert.match(view, /const \[rootExpanded, setRootExpanded\] = useState\(false\)/);
+  assert.match(view, /const \[rootExpanded, setRootExpanded\] = useState\(true\)/);
   assert.match(view, /const \[expandAll, setExpandAll\] = useState\(false\)/);
-  assert.match(view, /if \(!rootExpanded\) return \{ nodes: nexoNode \? \[nexoNode\] : \[\], edges: \[\] \}/);
   assert.match(view, /atlas\.root\.edge/);
   assert.match(view, /visibleLearningEdges/);
   assert.match(view, /visibleIds\.has\(edge\.from\) && visibleIds\.has\(edge\.to\)/);
   assert.match(view, /const \[expandedDomain, setExpandedDomain\] = useState<GraphNode\['domain'\] \| null>\(null\)/);
   assert.match(view, /const \[expandedCluster, setExpandedCluster\] = useState<GraphNode\['type'\] \| null>\(null\)/);
   assert.match(view, /node\?\.type === 'DOMAIN'/);
-  assert.match(view, /Hub:<\/b> \{expandAll \? 'NEXO · Visão completa' : expandedDomain \?\? \(rootExpanded \? 'NEXO · Domínios' : 'NEXO'\)\}/);
-  assert.match(view, /aria-label="Voltar um nível no grafo"/);
-  assert.match(view, /aria-label="Expandir gráficos"/);
-  assert.match(view, /aria-label="Voltar à tela inicial dos gráficos"/);
   assert.match(view, /atlas\.cluster/);
   assert.match(view, /clusterFromId/);
   assert.match(view, /node\.domain === expandedDomain/);
-  assert.doesNotMatch(view, /topLevelIds\.add\(other\)/);
 });
 
-test('Atlas marks both endpoints of every visible learning edge', async () => {
-  const atlas = await text('src/components/AtlasWebGL3D.tsx');
-  assert.match(atlas, /filter\(edge => ids\.has\(edge\.from\) && ids\.has\(edge\.to\)\)/);
-  assert.match(atlas, /source: edge\.from, target: edge\.to/);
-  assert.match(atlas, /linkDirectionalParticles=/);
-  assert.match(atlas, /linkDirectionalParticleColor=/);
-  assert.match(atlas, /linkCurvature=/);
-  assert.match(atlas, /#f4c468/);
-  assert.match(atlas, /const graphData = useMemo/);
-  assert.match(atlas, /graph\.cameraPosition/);
+test('Atlas marks both endpoints of every rendered edge and keeps relation color coding legible', async () => {
+  const atlas = await text('src/components/AtlasCanvas25D.tsx');
+  const canvas = await text('src/components/CanvasGraph25D.tsx');
+  assert.match(atlas, /edges\.map\(edge=>\(\{/);
+  assert.match(atlas, /edgeColor\(edge\)/);
+  assert.match(canvas, /safeEdges=useMemo\(\(\)=>edges\.filter\(edge=>byId\.has\(edge\.from\)&&byId\.has\(edge\.to\)\)/);
+  assert.match(canvas, /dashed/);
 });
