@@ -22,6 +22,7 @@ import { ActionsView, ExecutionView, InboxView } from '../features/system/Operat
 import { CapabilitiesView, IntegrityView, SourcesView, TruthGraphView } from '../features/system/Integrity.tsx';
 import { AtlasView, LearningView } from '../features/system/Atlas.tsx';
 import { PersonalCockpit } from '../features/PersonalCockpit.tsx';
+import { installAtlasWebMcp } from '../webmcp/atlas.ts';
 
 const stored = (key: string, fallback: string): string => {
   try { return localStorage.getItem(key) || fallback; } catch { return fallback; }
@@ -62,6 +63,10 @@ export default function App() {
   const world = useWorld();
   const refreshWorld = world.refresh;
   const session = useSession(useCallback(() => refreshWorld(true), [refreshWorld]));
+  const systemRef = useRef(system);
+  const viewRef = useRef(view);
+  systemRef.current = system;
+  viewRef.current = view;
 
   useEffect(() => { document.documentElement.dataset.theme = theme; persist('nexo-theme', theme); }, [theme]);
   useEffect(() => { persist('nexo-view', view); }, [view]);
@@ -102,6 +107,18 @@ export default function App() {
     // filtros e estado inicial da nova seção.
     window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
   }, []);
+
+  useEffect(() => installAtlasWebMcp({
+    getState: () => systemRef.current.state,
+    getLoad: () => systemRef.current.load,
+    getView: () => viewRef.current,
+    refresh: () => systemRef.current.reload(),
+    navigate: go,
+    searchAtlas: query => {
+      setFilters(current => ({ ...current, search: query }));
+      go('ATLAS');
+    },
+  }), [go]);
 
   const submitCommand = (event: React.FormEvent) => {
     event.preventDefault();
