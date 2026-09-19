@@ -168,6 +168,15 @@ jobs:
             printf '[]\n' > nexo-one/data/tower-public/interdomain.json
           fi
 
+          # MCP Atlas consumes the current canonical structure directly from the
+          # same read-only Vault checkout. It publishes only structural metadata.
+          rm -rf nexo-one/data/mcp-source
+          mkdir -p nexo-one/data/mcp-source
+          cp _vault/TOWER_V06/manifests/capabilities.json nexo-one/data/mcp-source/capabilities.json
+          cp _vault/services/nexo-api/app/mcp_server.py nexo-one/data/mcp-source/mcp_server.py
+          cp _vault/services/nexo-api/app/remote_mcp.py nexo-one/data/mcp-source/remote_mcp.py
+          jq -n --arg tower_commit "$(git -C _vault rev-parse HEAD)"             '{authority:"TOWER_V06",tower_commit:$tower_commit}' > nexo-one/data/mcp-source/source.json
+
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
@@ -203,7 +212,10 @@ jobs:
         run: |
           set -euo pipefail
           node scripts/build-pages-system.mjs
+          node scripts/build-mcp-topology.mjs
           test -s dist/system.json
+          test -s dist/mcp/index.html
+          test -s dist/mcp/topology.json
           test -s dist/world-public.ndjson
           test -s dist/tower-projection/projection.json
           test -s dist/tower-projection/manifest.json
@@ -246,6 +258,7 @@ jobs:
           curl -fsSL "${base}/tower-projection/projection.json" -o /tmp/projection.json
           curl -fsSL "${base}/system.json" -o /tmp/system.json
           curl -fsSL "${base}/world-public.ndjson" -o /tmp/world.ndjson
+          curl -fsSL "${base}/mcp/topology.json" -o /tmp/mcp-topology.json
 
           node <<'NODE'
           const fs=require('fs');
@@ -253,6 +266,7 @@ jobs:
           const projection=JSON.parse(fs.readFileSync('/tmp/projection.json','utf8'));
           const system=JSON.parse(fs.readFileSync('/tmp/system.json','utf8'));
           const world=JSON.parse(fs.readFileSync('/tmp/world.ndjson','utf8').trim());
+          const mcp=JSON.parse(fs.readFileSync('/tmp/mcp-topology.json','utf8'));
           if(manifest.authority!=='TOWER_V06')throw new Error('READBACK_AUTHORITY_INVALID');
           if(manifest.projection_only!==true)throw new Error('READBACK_PROJECTION_ONLY_INVALID');
           if(manifest.writeback!=='FORBIDDEN')throw new Error('READBACK_WRITEBACK_INVALID');
@@ -264,8 +278,12 @@ jobs:
           if(world.truthGraph?.fingerprint!==manifest.projection_fingerprint)throw new Error('WORLD_NOT_BOUND_TO_TOWER_PROJECTION');
           const raw=JSON.stringify({system,world,projection});
           if(/truthgraph-projection|nexo-drive-projection|GOOGLE_DRIVE/i.test(raw))throw new Error('LEGACY_OPERATIONAL_SOURCE_PRESENT');
+          if(mcp.contract!=='NEXO_MCP_TOPOLOGY_V1')throw new Error('MCP_TOPOLOGY_CONTRACT_INVALID');
+          if(mcp.source?.authority!=='TOWER_V06'||!mcp.source?.commit)throw new Error('MCP_TOPOLOGY_SOURCE_INVALID');
+          if(!Array.isArray(mcp.nodes)||mcp.nodes.length<8||!Array.isArray(mcp.links)||mcp.links.length<7)throw new Error('MCP_TOPOLOGY_EMPTY');
           NODE
 
           echo "PAGES_TOWER_PROJECTION_READBACK_OK ${base}/tower-projection/manifest.json"
           echo "PAGES_SYSTEM_READBACK_OK ${base}/system.json"
           echo "PAGES_WORLD_READBACK_OK ${base}/world-public.ndjson"
+          echo "PAGES_MCP_ATLAS_READBACK_OK ${base}/mcp/topology.json"
