@@ -21,17 +21,22 @@ test('Canvas galaxy exposes explicit navigation controls in addition to gestures
   assert.match(canvas, /onWheel=/);
 });
 
-test('Atlas active surface uses Canvas 2.5D with deterministic galaxy geometry', async () => {
-  const [canvas,adapter,view,graph] = await Promise.all([
+test('Atlas active surface prefers procedural Three.js and keeps deterministic Canvas fallback', async () => {
+  const [canvas,adapter,router,three,view,graph] = await Promise.all([
     text('src/components/CanvasGraph25D.tsx'),
     text('src/components/AtlasCanvas25D.tsx'),
+    text('src/components/AtlasGalaxy.tsx'),
+    text('src/components/ThreeGalaxy.tsx'),
     text('src/features/system/Atlas.tsx'),
     text('src/viewmodels/graph3d.ts'),
   ]);
   assert.match(canvas, /data-renderer="canvas-2\.5d"/);
   assert.match(canvas, /getContext\('2d'/);
   assert.match(adapter, /GALAXY_ARMS/);
-  assert.match(view, /AtlasCanvas25D/);
+  assert.match(router, /<ThreeGalaxy/);
+  assert.match(router, /<AtlasCanvas25D/);
+  assert.match(three, /data-renderer="three-procedural-galaxy"/);
+  assert.match(view, /AtlasGalaxy/);
   assert.match(graph, /layoutGalaxy3D/);
   assert.doesNotMatch(view, /AtlasWebGL3D/);
 });
