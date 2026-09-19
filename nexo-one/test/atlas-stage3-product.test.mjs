@@ -29,7 +29,7 @@ test('Atlas wires Explore/Operate mode, search-to-fly, layers/presets, tour and 
 test('the galaxy stays visible under the intro, the HUD and the tour menu (nothing here navigates away)', async () => {
   const atlas = await text('src/features/system/Atlas.tsx');
   assert.doesNotMatch(atlas, /window\.location\.assign|window\.location\.href\s*=/);
-  assert.match(atlas, /<AtlasCanvas25D/);
+  assert.match(atlas, /<AtlasGalaxy/);
 });
 
 test('Operate HUD exposes exactly the four permanent indicators, sourced from the compiled galaxy snapshot', async () => {
