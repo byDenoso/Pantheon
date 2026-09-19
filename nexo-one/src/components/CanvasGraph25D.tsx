@@ -24,7 +24,6 @@ export type CanvasEdge25D={
 };
 
 type ViewState={yaw:number;pitch:number;zoom:number};
-
 type ScreenNode={
   node:CanvasNode25D;
   x:number;
@@ -36,10 +35,7 @@ type ScreenNode={
 
 const clamp=(value:number,min:number,max:number)=>Math.max(min,Math.min(max,value));
 
-function roundedRect(
-  ctx:CanvasRenderingContext2D,
-  x:number,y:number,w:number,h:number,r:number,
-){
+function roundedRect(ctx:CanvasRenderingContext2D,x:number,y:number,w:number,h:number,r:number){
   const radius=Math.min(r,w/2,h/2);
   ctx.beginPath();
   ctx.moveTo(x+radius,y);
@@ -84,11 +80,12 @@ export function CanvasGraph25D({
   useEffect(()=>{
     const host=hostRef.current;
     if(!host)return;
-    const update=()=>setSize({
-      width:Math.max(1,host.clientWidth),
-      height:Math.max(1,host.clientHeight),
-    });
+    const update=()=>setSize({width:Math.max(1,host.clientWidth),height:Math.max(1,host.clientHeight)});
     update();
+    if(typeof ResizeObserver==='undefined'){
+      window.addEventListener('resize',update);
+      return()=>window.removeEventListener('resize',update);
+    }
     const observer=new ResizeObserver(update);
     observer.observe(host);
     return()=>observer.disconnect();
@@ -118,18 +115,15 @@ export function CanvasGraph25D({
     const spanX=Math.max(1,Math.max(...xs)-Math.min(...xs));
     const spanY=Math.max(1,Math.max(...ys)-Math.min(...ys));
     const maxAbsZ=Math.max(1,...zs.map(value=>Math.abs(value)));
-    const reserveBottom=size.width<760?92:68;
+    const reserveBottom=size.width<760?100:72;
     const drawableHeight=Math.max(120,size.height-reserveBottom-46);
-    const baseScale=Math.min(
-      (size.width*0.72)/spanX,
-      (drawableHeight*0.68)/spanY,
-    );
+    const baseScale=Math.max(.1,Math.min((size.width*.72)/spanX,(drawableHeight*.68)/spanY));
     const centerX=size.width/2;
     const centerY=42+drawableHeight/2;
 
     const screen:ScreenNode[]=rotated.map(point=>{
       const depthNorm=clamp(point.z/maxAbsZ,-1,1);
-      const perspective=1+depthNorm*0.2;
+      const perspective=1+depthNorm*.2;
       const scale=baseScale*view.zoom*perspective;
       const radius=clamp((point.node.radius??1)*5.2*perspective,4,30);
       return {
@@ -144,11 +138,10 @@ export function CanvasGraph25D({
     screenRef.current=screen;
     const screenById=new Map(screen.map(item=>[item.node.id,item]));
 
-    // depth grid: CSS supplies the large grid; canvas adds three orbital guides.
     ctx.save();
     ctx.strokeStyle='rgba(121,231,255,.055)';
     ctx.lineWidth=1;
-    for(const radius of [0.18,0.31,0.44]){
+    for(const radius of [.18,.31,.44]){
       ctx.beginPath();
       ctx.ellipse(centerX,centerY,size.width*radius,drawableHeight*radius*.66,0,0,Math.PI*2);
       ctx.stroke();
@@ -162,11 +155,11 @@ export function CanvasGraph25D({
     }).sort((a,b)=>a.z-b.z);
 
     for(const item of edgeViews){
-      const alpha=clamp((item.edge.opacity??.38)*(0.82+(item.from.depth+item.to.depth)*.08),.08,.82);
+      const alpha=clamp((item.edge.opacity??.38)*(.82+(item.from.depth+item.to.depth)*.08),.08,.82);
       ctx.save();
       ctx.globalAlpha=alpha;
       ctx.strokeStyle=item.edge.color||'#68829b';
-      ctx.lineWidth=(item.edge.width??1)*(0.8+((item.from.depth+item.to.depth+2)/4)*.5);
+      ctx.lineWidth=(item.edge.width??1)*(.8+((item.from.depth+item.to.depth+2)/4)*.5);
       if(item.edge.dashed)ctx.setLineDash([7,6]);
       ctx.beginPath();
       ctx.moveTo(item.from.x,item.from.y);
@@ -189,7 +182,6 @@ export function CanvasGraph25D({
       ctx.globalAlpha=baseOpacity*depthAlpha;
       ctx.shadowColor=node.color||'#79e7ff';
       ctx.shadowBlur=selected?24:hot?18:node.major?13:7;
-
       const gradient=ctx.createRadialGradient(
         item.x-item.radius*.28,item.y-item.radius*.32,1,
         item.x,item.y,item.radius*1.25,
@@ -219,9 +211,7 @@ export function CanvasGraph25D({
       ctx.restore();
     }
 
-    const labelNodes=ordered.filter(item=>
-      item.node.major||item.node.id===selectedId||item.node.id===hovered
-    );
+    const labelNodes=ordered.filter(item=>item.node.major||item.node.id===selectedId||item.node.id===hovered);
     ctx.font='700 10px Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
     ctx.textBaseline='middle';
     for(const item of labelNodes){
@@ -240,7 +230,7 @@ export function CanvasGraph25D({
       ctx.fill();ctx.stroke();
       ctx.fillStyle='#eefaff';
       ctx.textAlign='center';
-      ctx.fillText(label,x+w/2,y+h/2+0.5);
+      ctx.fillText(label,x+w/2,y+h/2+.5);
       ctx.restore();
     }
   },[hovered,nodes,safeEdges,selectedId,size,view]);
@@ -254,7 +244,7 @@ export function CanvasGraph25D({
     return best;
   };
 
-  const reset=()=>setView({yaw:-0.38,pitch:0.18,zoom:1});
+  const reset=()=>setView({yaw:-.38,pitch:.18,zoom:1});
   const rotate=(delta:number)=>setView(current=>({...current,yaw:current.yaw+delta}));
   const zoom=(factor:number)=>setView(current=>({...current,zoom:clamp(current.zoom*factor,.48,3.2)}));
 

@@ -16,7 +16,7 @@ test('MCP Atlas is a Pages multipage surface built from canonical MCP sources',a
   assert.match(workflow,/manifests\/capabilities\.json/);
   assert.match(workflow,/mcp_server\.py/);
   assert.match(workflow,/build-mcp-topology\.mjs/);
-  assert.match(site,/react-force-graph-3d/);
+  assert.match(site,/CanvasGraph25D/);\n  assert.doesNotMatch(site,/react-force-graph-3d|ForceGraph3D/);
   assert.match(site,/\.\/topology\.json/);
   assert.match(builder,/NEXO_MCP_TOPOLOGY_V1/);
   assert.match(builder,/TOWER_V06/);

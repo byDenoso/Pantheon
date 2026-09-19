@@ -1,11 +1,11 @@
 // Atlas: mapa estrutural do sistema. Cada nó é uma entidade projetada com estado,
-// autoridade e proveniência próprios; o WebGL 3D é somente projeção.
+// autoridade e proveniência próprios; Canvas 2.5D é somente projeção.
 import { useMemo, useState } from 'react';
 import type { GraphNode, SystemState } from '../../contracts/system.ts';
 import {
   AuthorityClass, CAPABILITY_STATUSES, DOMAINS, GRAPH_NODE_TYPES, PROJECTION_STATES, RELATION_KINDS,
 } from '../../contracts/system.ts';
-import { AtlasWebGL3D } from '../../components/AtlasWebGL3D.tsx';
+import { AtlasCanvas25D } from '../../components/AtlasCanvas25D.tsx';
 import { EntityInspector } from '../../components/inspector.tsx';
 import { EmptyState } from '../../components/states.tsx';
 import { DomainBadge, SeverityBadge, StatusBadge } from '../../components/primitives.tsx';
@@ -273,7 +273,7 @@ export function AtlasView(
                 description="Um grafo vazio aqui é resultado do filtro, não ausência de dados no sistema."
                 hint="Remova um critério para voltar a ver o mapa." />
             : <>
-                <AtlasWebGL3D nodes={placed} edges={renderGraph.edges} selectedId={effectiveSelectedId} onSelect={handleGraphSelect} />
+                <AtlasCanvas25D nodes={placed} edges={renderGraph.edges} selectedId={effectiveSelectedId} onSelect={handleGraphSelect} />
                 <ul className="atlas-legend">
                   {legend.map(entry => (
                     <li key={entry.type}>

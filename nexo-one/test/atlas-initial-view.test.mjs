@@ -8,7 +8,7 @@ const text=path=>readFile(new URL(path,root),'utf8');
 test('Atlas opens on domain topology instead of an isolated NEXO root',async()=>{
   const [atlas,renderer]=await Promise.all([
     text('src/features/system/Atlas.tsx'),
-    text('src/components/AtlasWebGL3D.tsx'),
+    text('src/components/AtlasCanvas25D.tsx'),
   ]);
 
   assert.match(atlas,/setRootExpanded\] = useState\(true\)/);
