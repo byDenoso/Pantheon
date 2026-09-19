@@ -27,6 +27,11 @@ function isSnapshot(value) {
     && /^galaxy-[0-9a-f]+$/i.test(value.snapshot_id)
     && typeof value.generated_at === 'string'
     && typeof value.tower_revision === 'string'
+    && /^sha256:[0-9a-f]{64}$/i.test(value.tower_revision)
+    && typeof value.fingerprint === 'string'
+    && value.fingerprint === value.tower_revision
+    && Array.isArray(value.domains)
+    && value.domains.length === 4
     && Array.isArray(value.entities)
     && Array.isArray(value.relations),
   );
