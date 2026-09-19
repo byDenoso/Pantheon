@@ -1,0 +1,110 @@
+.canvas25d-root{
+  position:absolute;
+  inset:0;
+  z-index:1;
+  overflow:hidden;
+  min-width:0;
+  min-height:0;
+  background:
+    radial-gradient(circle at 50% 46%,rgba(42,141,181,.12),transparent 32%),
+    linear-gradient(rgba(121,231,255,.025) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(121,231,255,.025) 1px,transparent 1px);
+  background-size:auto,56px 56px,56px 56px;
+}
+.canvas25d-canvas{
+  position:absolute;
+  inset:0;
+  z-index:1;
+  display:block;
+  width:100%;
+  height:100%;
+  touch-action:none;
+  overscroll-behavior:contain;
+  cursor:grab;
+}
+.canvas25d-canvas:active{cursor:grabbing}
+.canvas25d-status{
+  position:absolute;
+  z-index:4;
+  top:12px;
+  left:12px;
+  right:12px;
+  width:max-content;
+  max-width:calc(100% - 24px);
+  padding:7px 10px;
+  overflow:hidden;
+  border:1px solid rgba(121,231,255,.16);
+  border-radius:999px;
+  background:rgba(2,8,16,.72);
+  box-shadow:inset 0 1px rgba(255,255,255,.04),0 8px 24px rgba(0,0,0,.18);
+  color:rgba(222,240,249,.76);
+  font:720 8px/1.2 "SFMono-Regular",Consolas,monospace;
+  letter-spacing:.12em;
+  text-overflow:ellipsis;
+  text-transform:uppercase;
+  white-space:nowrap;
+  backdrop-filter:blur(14px);
+}
+.canvas25d-status i{
+  display:inline-block;
+  width:5px;height:5px;
+  margin-right:8px;
+  border-radius:50%;
+  background:#79e7ff;
+  box-shadow:0 0 10px rgba(121,231,255,.8);
+  vertical-align:1px;
+}
+.canvas25d-controls{
+  position:absolute;
+  z-index:5;
+  left:50%;
+  bottom:14px;
+  display:grid;
+  grid-template-columns:1.35fr repeat(4,minmax(42px,.72fr));
+  gap:5px;
+  width:min(470px,calc(100% - 20px));
+  padding:5px;
+  border:1px solid rgba(121,231,255,.15);
+  border-radius:13px;
+  background:rgba(2,8,16,.76);
+  box-shadow:0 16px 36px rgba(0,0,0,.34),inset 0 1px rgba(255,255,255,.05);
+  transform:translateX(-50%);
+  backdrop-filter:blur(18px) saturate(120%);
+}
+.canvas25d-controls button{
+  min-width:0;
+  min-height:38px;
+  padding:0 9px;
+  border:1px solid rgba(121,231,255,.14);
+  border-radius:9px;
+  background:linear-gradient(180deg,rgba(17,31,47,.88),rgba(7,16,28,.88));
+  color:rgba(232,246,252,.9);
+  font:650 12px/1 Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  cursor:pointer;
+  box-shadow:inset 0 1px rgba(255,255,255,.05);
+}
+.canvas25d-controls button:first-child{
+  color:#dff9ff;
+  border-color:rgba(121,231,255,.24);
+  background:linear-gradient(180deg,rgba(22,50,66,.9),rgba(7,22,33,.92));
+}
+.canvas25d-controls button:active,
+.canvas25d-controls button:focus-visible{
+  border-color:rgba(121,231,255,.55);
+  background:linear-gradient(180deg,rgba(25,61,79,.96),rgba(9,27,39,.96));
+  color:#fff;
+}
+@media(max-width:760px){
+  .canvas25d-root{background-size:auto,44px 44px,44px 44px}
+  .canvas25d-status{top:8px;left:8px;right:8px;max-width:calc(100% - 16px);font-size:6.8px;letter-spacing:.105em}
+  .canvas25d-controls{
+    left:8px;right:8px;bottom:calc(80px + env(safe-area-inset-bottom));
+    width:auto;max-width:none;transform:none;
+  }
+  .canvas25d-controls button{min-height:42px;font-size:15px}
+  .canvas25d-controls button:first-child{font-size:10px}
+}
+@media(max-width:420px){
+  .canvas25d-controls{bottom:calc(76px + env(safe-area-inset-bottom));}
+  .canvas25d-controls button{min-height:40px}
+}
