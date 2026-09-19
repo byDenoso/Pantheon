@@ -1178,3 +1178,244 @@ body{
   }
 }
 
+
+
+/* NEXO ONE mobile cockpit pass */
+@media (max-width: 760px) {
+  html, body, #root {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: hidden;
+  }
+
+  .cockpit {
+    min-height: 100dvh;
+    padding-bottom: calc(76px + env(safe-area-inset-bottom));
+  }
+
+  .topbar {
+    min-height: 58px;
+    padding: 9px 12px;
+  }
+
+  .brand {
+    min-width: 0;
+    gap: 8px;
+  }
+
+  .brand-mark {
+    width: 29px;
+    height: 29px;
+    flex: 0 0 29px;
+  }
+
+  .brand strong {
+    font-size: 12px;
+    letter-spacing: 1.05px;
+    white-space: nowrap;
+  }
+
+  .header-tools {
+    gap: 5px;
+  }
+
+  .header-tools .header-date {
+    display: none;
+  }
+
+  .health-button {
+    min-height: 30px;
+    padding: 5px 8px;
+  }
+
+  .command-wrap {
+    padding: 8px 12px 10px;
+  }
+
+  .command-bar {
+    min-height: 42px;
+    padding-inline: 11px;
+    border-radius: 12px;
+  }
+
+  .command-bar input {
+    min-width: 0;
+    font-size: 12px;
+  }
+
+  .workspace {
+    padding: 18px 12px calc(98px + env(safe-area-inset-bottom));
+  }
+
+  .workspace-heading {
+    margin-bottom: 16px;
+    padding-bottom: 14px;
+  }
+
+  .workspace-heading > div:first-child {
+    padding-left: 10px;
+    padding-right: 76px;
+  }
+
+  .workspace-heading .eyebrow {
+    margin-bottom: 7px;
+    font-size: 7.5px;
+    letter-spacing: 1.45px;
+  }
+
+  .workspace-heading h1 {
+    margin-bottom: 6px;
+    font-size: 27px;
+    line-height: 1.02;
+    letter-spacing: -1px;
+  }
+
+  .workspace-heading p {
+    max-width: 31ch;
+    font-size: 11px;
+    line-height: 1.45;
+  }
+
+  .workspace-heading .sync-button {
+    top: 1px;
+    right: 0;
+    padding: 5px 7px;
+  }
+
+  .cockpit[data-view=ATLAS] .workspace {
+    padding: 12px 8px calc(92px + env(safe-area-inset-bottom));
+  }
+
+  .cockpit[data-view=ATLAS] .workspace-heading {
+    margin-bottom: 10px;
+    padding: 2px 4px 11px;
+  }
+
+  .cockpit[data-view=ATLAS] .workspace-heading h1 {
+    font-size: 25px;
+  }
+
+  .cockpit[data-view=ATLAS] .workspace-heading p {
+    font-size: 10.5px;
+    line-height: 1.35;
+  }
+
+  .cockpit[data-view=ATLAS] .atlas-layout {
+    gap: 8px;
+  }
+
+  .cockpit[data-view=ATLAS] .atlas-toolbar {
+    gap: 6px;
+    padding: 8px;
+    border-radius: 13px;
+  }
+
+  .cockpit[data-view=ATLAS] .atlas-search {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .cockpit[data-view=ATLAS] .atlas-search input {
+    min-width: 0;
+    font-size: 11px;
+  }
+
+  .cockpit[data-view=ATLAS] .filter-toggle,
+  .cockpit[data-view=ATLAS] .text-button,
+  .cockpit[data-view=ATLAS] .atlas-explorer-state button,
+  .cockpit[data-view=ATLAS] .atlas-graph-actions button {
+    min-height: 34px;
+    padding: 6px 9px;
+    font-size: 10px;
+  }
+
+  .cockpit[data-view=ATLAS] .atlas-count,
+  .cockpit[data-view=ATLAS] .atlas-learning-meta {
+    font-size: 9px;
+  }
+
+  .cockpit[data-view=ATLAS] .atlas-body {
+    gap: 0;
+  }
+
+  .cockpit[data-view=ATLAS] .atlas-stage {
+    min-width: 0;
+  }
+
+  .cockpit[data-view=ATLAS] .atlas-legend {
+    bottom: 10px;
+    left: 10px;
+    right: 10px;
+    max-width: calc(100% - 20px);
+    padding: 5px 7px;
+    gap: 5px 8px;
+    border-radius: 10px;
+    overflow-x: auto;
+    scrollbar-width: none;
+    white-space: nowrap;
+  }
+
+  .cockpit[data-view=ATLAS] .atlas-legend::-webkit-scrollbar {
+    display: none;
+  }
+
+  .cockpit[data-view=ATLAS] .atlas-legend li {
+    flex: 0 0 auto;
+    font-size: 8px;
+  }
+
+  .bottom-nav {
+    left: 8px;
+    right: 8px;
+    bottom: calc(8px + env(safe-area-inset-bottom));
+    width: auto;
+    min-height: 64px;
+    padding: 5px 6px;
+    border: 1px solid var(--command-hairline);
+    border-radius: 18px;
+    background: color-mix(in srgb,var(--surface-1) 90%,transparent);
+    box-shadow: 0 14px 36px #0006, inset 0 1px 0 #ffffff08;
+    backdrop-filter: blur(22px) saturate(135%);
+  }
+
+  .bottom-nav button {
+    min-width: 0;
+    min-height: 54px;
+    padding: 5px 3px;
+    border-radius: 13px;
+  }
+
+  .bottom-nav button i {
+    font-size: 18px;
+  }
+
+  .bottom-nav button span {
+    font-size: 9px;
+  }
+
+  .world-footer {
+    padding: 10px 12px calc(88px + env(safe-area-inset-bottom));
+  }
+}
+
+@media (max-width: 420px) {
+  .workspace {
+    padding-inline: 10px;
+  }
+
+  .cockpit[data-view=ATLAS] .workspace {
+    padding-inline: 6px;
+  }
+
+  .workspace-heading > div:first-child {
+    padding-right: 70px;
+  }
+
+  .workspace-heading h1 {
+    font-size: 25px;
+  }
+
+  .workspace-heading p {
+    max-width: 28ch;
+  }
+}
