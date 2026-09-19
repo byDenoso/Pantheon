@@ -20,17 +20,12 @@ test('NEXO Prime is loaded last and owns the final design tokens',async()=>{
   assert.match(css,/--text-hero:clamp\(38px,7vw,64px\)/);
 });
 
-test('visual style presets are persistent and available on desktop and the mobile sheet',async()=>{
+test('branded visual preset controls are not exposed in the product UI',async()=>{
   const app=await text('src/app/App.tsx');
-  const css=await text('src/styles/nexo-prime.css');
-  assert.match(app,/nexo-visual-style/);
-  assert.match(app,/dataset\.visualStyle = visualStyle/);
-  assert.match(app,/\['nexo-prime', 'NEXO'\]/);
-  assert.match(app,/\['openai', 'OpenAI'\]/);
-  assert.match(app,/\['apple', 'Apple'\]/);
-  assert.match(css,/:root\[data-visual-style="openai"\]/);
-  assert.match(css,/:root\[data-visual-style="apple"\]/);
-  assert.match(css,/\.visual-style-sheet-options/);
+  assert.doesNotMatch(app,/nexo-visual-style/);
+  assert.doesNotMatch(app,/dataset\.visualStyle/);
+  assert.doesNotMatch(app,/OpenAI|Apple/);
+  assert.doesNotMatch(app,/visual-style-switch|visual-style-sheet/);
 });
 
 test('Atlas is promoted to a full-screen environment rather than a card inside the dashboard',async()=>{
