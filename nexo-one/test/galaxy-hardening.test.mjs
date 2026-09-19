@@ -48,7 +48,7 @@ test('Atlas prefers the published versioned snapshot and exposes freshness witho
   assert.match(atlas,/useGalaxySnapshot\(state\)/);
   assert.match(atlas,/galaxySnapshotAgeLabel\(galaxySnapshot\.generated_at\)/);
   assert.match(hook,/loadGalaxySnapshot\(\{ signal: controller\.signal, fallback \}\)/);
-  assert.match(hook,/snapshot\.tower_revision === state\.bus\.fingerprint/);
+  assert.match(hook,/selectCompatibleGalaxySnapshot\(snapshot, fallback, state\.bus\.fingerprint\)/);
   assert.match(styles,/\.atlas-snapshot-age/);
   assert.match(styles,/freshness-stale/);
 });
