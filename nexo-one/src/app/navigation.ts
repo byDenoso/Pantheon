@@ -31,7 +31,7 @@ export const NAV_GROUPS: NavGroup[] = [
   {
     id: 'operation', label: 'OPERAÇÃO', entries: [
       { id: 'OVERVIEW', label: 'Overview', glyph: '◎', hint: 'Estado atual, atenção e lanes' },
-      { id: 'INBOX', label: 'Precisa de você', glyph: '⌾', hint: 'Human Inbox: só o que exige você' },
+      { id: 'INBOX', label: 'Needs Dener', glyph: '⌾', hint: 'Somente gates canônicos que exigem ação humana explícita' },
       { id: 'ACTIONS', label: 'Actions', glyph: '→', hint: 'Ações, elegibilidade e blockers' },
       { id: 'EXECUTION', label: 'Execution', glyph: '⟐', hint: 'Action → Capability → Runtime → Effect → Readback' },
     ],
@@ -66,7 +66,7 @@ export const MOBILE_PRIMARY: ViewId[] = ['INBOX', 'OVERVIEW', 'ACTIONS', 'ATLAS'
 
 export const VIEW_TITLES: Record<ViewId, { title: string; lead: string }> = {
   OVERVIEW: { title: 'Estado operacional da Tower.', lead: 'Gates humanos, blockers, capabilities, providers e filas por domínio na compilação atual.' },
-  INBOX: { title: 'Gates humanos abertos.', lead: 'Somente entidades com requisito humano explícito na projeção canônica.' },
+  INBOX: { title: 'Needs Dener.', lead: 'Gates canônicos com human_action_required=true. O restante continua autônomo.' },
   ACTIONS: { title: 'Fila operacional.', lead: 'Ações abertas, capability vinculada, runtime, dependências e motivo de avanço ou espera.' },
   EXECUTION: { title: 'Rastreamento de execução.', lead: 'ACTION → CAPABILITY → RUNTIME → EFFECT → READBACK, com fingerprint e horário por etapa.' },
   TRUTHGRAPH: { title: 'Autoridade e conflito de estado.', lead: 'Provider esperado, provider observado, freshness e divergências por domínio.' },
