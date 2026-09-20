@@ -1,3 +1,6 @@
 production deploy trigger
-source-main: a597d407d512c3b5a4aa184acafa491f9dfe6262
-requested: 2026-09-16
+source-main: d5cfd720f76c6cc1c3e7dd1e6d2189614f5d62e9
+requested: 2026-09-19
+reason: sanctioned Tower projection refresh
+projection-fingerprint: sha256:d0c43ffb66c72d8d365e752b6ea697750d1d83d53046350547bbfb940a4ec2d1
+tower-source: 2fd56cb4ab7ccb270a02485c9af18a1f18a81b76

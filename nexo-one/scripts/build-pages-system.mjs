@@ -283,7 +283,8 @@ function worldItem(kind, item, projection, observedAt, index) {
 
 export function buildPagesProjection({ projection, manifestFile = null, interdomain = [] } = {}) {
   const manifest = validateSanctionedProjection(projection, manifestFile);
-  const observedAt = cursorTime(manifest.event_cursor);
+  const generatedAt = Date.parse(String(manifest.generated_at || ''));
+  const observedAt = Number.isFinite(generatedAt) ? new Date(generatedAt).toISOString() : cursorTime(manifest.event_cursor);
   const source = sourceRef(manifest);
   const filaments = learningFilamentsFromTower(interdomain, manifest, observedAt);
   const graph = graphFromProjection(projection, observedAt, filaments);
