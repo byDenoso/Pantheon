@@ -167,6 +167,11 @@ jobs:
           else
             printf '[]\n' > nexo-one/data/tower-public/interdomain.json
           fi
+          if [ -s "_vault/TOWER_V06/runtime/artifacts/meta_learning/METALEARNING_CURRENT.json" ]; then
+            cp _vault/TOWER_V06/runtime/artifacts/meta_learning/METALEARNING_CURRENT.json nexo-one/data/tower-public/learning.json
+          else
+            printf '{}\n' > nexo-one/data/tower-public/learning.json
+          fi
 
           # MCP Atlas consumes the current canonical structure directly from the
           # same read-only Vault checkout. It publishes only structural metadata.
@@ -239,6 +244,7 @@ jobs:
           NEXO_PUBLIC_PROJECTION: data/tower-public/projection.json
           NEXO_PUBLIC_PROJECTION_MANIFEST: data/tower-public/manifest.json
           NEXO_PUBLIC_INTERDOMAIN: data/tower-public/interdomain.json
+          NEXO_PUBLIC_LEARNING: data/tower-public/learning.json
           NEXO_GALAXY_PREVIOUS: dist/galaxy/previous.json
           NEXO_GALAXY_RETENTION: '168'
         run: |
