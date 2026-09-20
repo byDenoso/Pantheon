@@ -35,6 +35,14 @@ const DOMAIN_WORLD_GLYPH: Partial<Record<GraphNode['domain'], string>> = {
   NEXO: 'N', SCIENCE: 'S', ENGINEERING: 'E', OLYMPUS: 'O', ARTIFACT: 'A',
 };
 
+const DOMAIN_WORLD_CAPTION: Partial<Record<GraphNode['domain'], string>> = {
+  NEXO: 'KNOWLEDGE ATLAS',
+  SCIENCE: 'PESQUISA · DADOS · DESCOBERTAS',
+  ENGINEERING: 'SISTEMAS · CONSTRUÇÃO · AUTOMAÇÃO',
+  OLYMPUS: 'ESTRATÉGIA · PESSOAS · PERFORMANCE',
+  ARTIFACT: 'PRODUTOS · IDEIAS · IMPLEMENTAÇÃO',
+};
+
 type FilterKey = 'domains' | 'types' | 'states' | 'freshness' | 'authorities' | 'relations';
 
 const ATLAS_CLUSTER_TYPES: GraphNode['type'][] = [
