@@ -762,12 +762,18 @@ export const GalaxyThree3D = forwardRef<CanvasGraph25DHandle, Props>(function Ga
               if (element) labelsRef.current.set(node.id, element);
               else labelsRef.current.delete(node.id);
             }}
-            className={`galaxy-three-label${node.type === 'DOMAIN' ? ' domain' : ''}${node.id === selectedId ? ' selected' : ''}`}
+            className={`galaxy-three-label${node.type === 'DOMAIN' ? ' domain' : ''}${node.id.startsWith('atlas.cluster.') ? ' cluster' : ''}${node.id === selectedId ? ' selected' : ''}`}
+            data-domain={node.domain}
+            data-state={stateClass(node.state)}
             style={{ '--galaxy-label-intensity': node.id === selectedId ? 1 : 0.72 } as CSSProperties}
           >
-            {node.type === 'DOMAIN' && node.domain === 'NEXO'
-              ? <><strong>NEXO</strong><small>CORE</small></>
-              : node.label}
+            <i className="node-status" aria-hidden="true" />
+            <span className="node-label-copy">
+              <strong>{node.type === 'DOMAIN' && node.domain === 'NEXO' ? 'NEXO' : node.label}</strong>
+              {(node.type === 'DOMAIN' || node.id.startsWith('atlas.cluster.') || node.id === selectedId) && (
+                <small>{node.type === 'DOMAIN' ? (node.domain === 'NEXO' ? 'CORE' : 'DOMAIN') : node.type}</small>
+              )}
+            </span>
           </span>
         ))}
       </div>
