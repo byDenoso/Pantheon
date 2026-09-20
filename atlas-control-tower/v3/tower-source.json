@@ -11,82 +11,503 @@
     "atlas_writeback_to_truth": "FORBIDDEN",
     "interdomain_layer": "ACTIVE_V1"
   },
-  "sourceVersion": "TOWER_V06@main:cbb7fa96f62960f1478f25855b1fa3f085308029;CONTROL:b5af26938a1d05fdd3e27e924e001dca0d102b55;ACTIVE_WORK:c0ff641fbbd6f40d8aaea41ba4fa76870660ff98;PROGRAMS:578a2c9c8834e3c144a8e249b838926b8dab0540;CAMPAIGNS:dd9b1fcc12acda9235a0ef0ca42f6f192580e905;INTERDOMAIN:61fbb4dca6551d1d03f185c7ade9cf77591661eb",
-  "generatedAt": "2026-09-15T03:32:00Z",
+  "sourceVersion": "TOWER_V06@main:cbb7fa96f62960f1478f25855b1fa3f085308029;CONTROL:b5af26938a1d05fdd3e27e924e001dca0d102b55;ACTIVE_WORK:c0ff641fbbd6f40d8aaea41ba4fa76870660ff98;PROGRAMS:578a2c9c8834e3c144a8e249b838926b8dab0540;CAMPAIGNS:dd9b1fcc12acda9235a0ef0ca42f6f192580e905;INTERDOMAIN:61fbb4dca6551d1d03f185c7ade9cf77591661eb;METALEARNING:v3",
+  "generatedAt": "2026-09-20T15:55:00Z",
   "completeness": "PARTIAL_TOWER_HOT_SET",
   "publicProjection": true,
   "entities": {
     "program": [
-      {"id":"PROG-CMB-EARLY-MICROPHYSICS","kind":"PROGRAM","label":"CMB, early universe & microphysics","status":"PROVISIONAL","campaign_count":3},
-      {"id":"PROG-COSMIC-HOMOGENEITY","kind":"PROGRAM","label":"Cosmic homogeneity & mega-structures","status":"PROVISIONAL","campaign_count":1},
-      {"id":"PROG-EXPANSION-GEOMETRY","kind":"PROGRAM","label":"Expansion, geometry & dark energy","status":"PROVISIONAL","campaign_count":4},
-      {"id":"PROG-HIGHZ-ASTROPHYSICS","kind":"PROGRAM","label":"High-z astrophysics","status":"PROVISIONAL","campaign_count":3},
-      {"id":"PROG-SCIENTIFIC-VALIDATION","kind":"PROGRAM","label":"Scientific validation & inference","status":"PROVISIONAL","campaign_count":2},
-      {"id":"PROG-STRUCTURE-DARK-SECTOR","kind":"PROGRAM","label":"Structure growth & dark sector","status":"PROVISIONAL","campaign_count":4}
+      {
+        "id": "PROG-CMB-EARLY-MICROPHYSICS",
+        "kind": "PROGRAM",
+        "label": "CMB, early universe & microphysics",
+        "status": "PROVISIONAL",
+        "campaign_count": 3
+      },
+      {
+        "id": "PROG-COSMIC-HOMOGENEITY",
+        "kind": "PROGRAM",
+        "label": "Cosmic homogeneity & mega-structures",
+        "status": "PROVISIONAL",
+        "campaign_count": 1
+      },
+      {
+        "id": "PROG-EXPANSION-GEOMETRY",
+        "kind": "PROGRAM",
+        "label": "Expansion, geometry & dark energy",
+        "status": "PROVISIONAL",
+        "campaign_count": 4
+      },
+      {
+        "id": "PROG-HIGHZ-ASTROPHYSICS",
+        "kind": "PROGRAM",
+        "label": "High-z astrophysics",
+        "status": "PROVISIONAL",
+        "campaign_count": 3
+      },
+      {
+        "id": "PROG-SCIENTIFIC-VALIDATION",
+        "kind": "PROGRAM",
+        "label": "Scientific validation & inference",
+        "status": "PROVISIONAL",
+        "campaign_count": 2
+      },
+      {
+        "id": "PROG-STRUCTURE-DARK-SECTOR",
+        "kind": "PROGRAM",
+        "label": "Structure growth & dark sector",
+        "status": "PROVISIONAL",
+        "campaign_count": 4
+      }
     ],
     "campaign": [
-      {"id":"CAMP-CMB-ANOMALIES","kind":"CAMPAIGN","status":"CHECKPOINTED","program_id":"PROG-CMB-EARLY-MICROPHYSICS","test_count":104},
-      {"id":"CAMP-CMB-EARLY-CROSSPROBE","kind":"CAMPAIGN","status":"ACTIVE","program_id":"PROG-CMB-EARLY-MICROPHYSICS","test_count":176},
-      {"id":"CAMP-CROSSPROBE-EXPANSION","kind":"CAMPAIGN","status":"ACTIVE","program_id":"PROG-EXPANSION-GEOMETRY","test_count":73},
-      {"id":"CAMP-CURVATURE-GEOMETRY","kind":"CAMPAIGN","status":"CHECKPOINTED","program_id":"PROG-EXPANSION-GEOMETRY","test_count":32},
-      {"id":"CAMP-DARK-SECTOR-DAO","kind":"CAMPAIGN","status":"CHECKPOINTED","program_id":"PROG-STRUCTURE-DARK-SECTOR","test_count":11},
-      {"id":"CAMP-DDE-ROBUSTNESS","kind":"CAMPAIGN","status":"CHECKPOINTED","program_id":"PROG-EXPANSION-GEOMETRY","test_count":172},
-      {"id":"CAMP-DM-UDM-MULTISCALE","kind":"CAMPAIGN","status":"CHECKPOINTED","program_id":"PROG-STRUCTURE-DARK-SECTOR","test_count":63},
-      {"id":"CAMP-GROWTH-LSS","kind":"CAMPAIGN","status":"CHECKPOINTED","program_id":"PROG-STRUCTURE-DARK-SECTOR","test_count":240},
-      {"id":"CAMP-H0-RULER-ANCHOR","kind":"CAMPAIGN","status":"CHECKPOINTED","program_id":"PROG-EXPANSION-GEOMETRY","test_count":127},
-      {"id":"CAMP-HIGHZ-GALAXIES","kind":"CAMPAIGN","status":"CHECKPOINTED","program_id":"PROG-HIGHZ-ASTROPHYSICS","test_count":183},
-      {"id":"CAMP-HIGHZ-SMBH","kind":"CAMPAIGN","status":"ACTIVE","program_id":"PROG-HIGHZ-ASTROPHYSICS","test_count":61},
-      {"id":"CAMP-INDEPENDENT-PHYSICS","kind":"CAMPAIGN","status":"COMPLETED","program_id":"PROG-SCIENTIFIC-VALIDATION","test_count":38},
-      {"id":"CAMP-LRD-AGN","kind":"CAMPAIGN","status":"CHECKPOINTED","program_id":"PROG-HIGHZ-ASTROPHYSICS","test_count":275},
-      {"id":"CAMP-MEGASTRUCTURES","kind":"CAMPAIGN","status":"ACTIVE","program_id":"PROG-COSMIC-HOMOGENEITY","test_count":146},
-      {"id":"CAMP-MICROPHYSICS","kind":"CAMPAIGN","status":"ACTIVE","program_id":"PROG-CMB-EARLY-MICROPHYSICS","test_count":349},
-      {"id":"CAMP-PARTICLE-DM","kind":"CAMPAIGN","status":"CHECKPOINTED","program_id":"PROG-STRUCTURE-DARK-SECTOR","test_count":110},
-      {"id":"CAMP-SCI-INTEGRITY","kind":"CAMPAIGN","status":"CHECKPOINTED","program_id":"PROG-SCIENTIFIC-VALIDATION","test_count":38},
-      {"id":"CAMP-GZ-01-GALAXY-REDSHIFT","kind":"CAMPAIGN","status":"ACTIVE","program_id":"PROG-COSMIC-HOMOGENEITY","test_count":6}
+      {
+        "id": "CAMP-CMB-ANOMALIES",
+        "kind": "CAMPAIGN",
+        "status": "CHECKPOINTED",
+        "program_id": "PROG-CMB-EARLY-MICROPHYSICS",
+        "test_count": 104
+      },
+      {
+        "id": "CAMP-CMB-EARLY-CROSSPROBE",
+        "kind": "CAMPAIGN",
+        "status": "ACTIVE",
+        "program_id": "PROG-CMB-EARLY-MICROPHYSICS",
+        "test_count": 176
+      },
+      {
+        "id": "CAMP-CROSSPROBE-EXPANSION",
+        "kind": "CAMPAIGN",
+        "status": "ACTIVE",
+        "program_id": "PROG-EXPANSION-GEOMETRY",
+        "test_count": 73
+      },
+      {
+        "id": "CAMP-CURVATURE-GEOMETRY",
+        "kind": "CAMPAIGN",
+        "status": "CHECKPOINTED",
+        "program_id": "PROG-EXPANSION-GEOMETRY",
+        "test_count": 32
+      },
+      {
+        "id": "CAMP-DARK-SECTOR-DAO",
+        "kind": "CAMPAIGN",
+        "status": "CHECKPOINTED",
+        "program_id": "PROG-STRUCTURE-DARK-SECTOR",
+        "test_count": 11
+      },
+      {
+        "id": "CAMP-DDE-ROBUSTNESS",
+        "kind": "CAMPAIGN",
+        "status": "CHECKPOINTED",
+        "program_id": "PROG-EXPANSION-GEOMETRY",
+        "test_count": 172
+      },
+      {
+        "id": "CAMP-DM-UDM-MULTISCALE",
+        "kind": "CAMPAIGN",
+        "status": "CHECKPOINTED",
+        "program_id": "PROG-STRUCTURE-DARK-SECTOR",
+        "test_count": 63
+      },
+      {
+        "id": "CAMP-GROWTH-LSS",
+        "kind": "CAMPAIGN",
+        "status": "CHECKPOINTED",
+        "program_id": "PROG-STRUCTURE-DARK-SECTOR",
+        "test_count": 240
+      },
+      {
+        "id": "CAMP-H0-RULER-ANCHOR",
+        "kind": "CAMPAIGN",
+        "status": "CHECKPOINTED",
+        "program_id": "PROG-EXPANSION-GEOMETRY",
+        "test_count": 127
+      },
+      {
+        "id": "CAMP-HIGHZ-GALAXIES",
+        "kind": "CAMPAIGN",
+        "status": "CHECKPOINTED",
+        "program_id": "PROG-HIGHZ-ASTROPHYSICS",
+        "test_count": 183
+      },
+      {
+        "id": "CAMP-HIGHZ-SMBH",
+        "kind": "CAMPAIGN",
+        "status": "ACTIVE",
+        "program_id": "PROG-HIGHZ-ASTROPHYSICS",
+        "test_count": 61
+      },
+      {
+        "id": "CAMP-INDEPENDENT-PHYSICS",
+        "kind": "CAMPAIGN",
+        "status": "COMPLETED",
+        "program_id": "PROG-SCIENTIFIC-VALIDATION",
+        "test_count": 38
+      },
+      {
+        "id": "CAMP-LRD-AGN",
+        "kind": "CAMPAIGN",
+        "status": "CHECKPOINTED",
+        "program_id": "PROG-HIGHZ-ASTROPHYSICS",
+        "test_count": 275
+      },
+      {
+        "id": "CAMP-MEGASTRUCTURES",
+        "kind": "CAMPAIGN",
+        "status": "ACTIVE",
+        "program_id": "PROG-COSMIC-HOMOGENEITY",
+        "test_count": 146
+      },
+      {
+        "id": "CAMP-MICROPHYSICS",
+        "kind": "CAMPAIGN",
+        "status": "ACTIVE",
+        "program_id": "PROG-CMB-EARLY-MICROPHYSICS",
+        "test_count": 349
+      },
+      {
+        "id": "CAMP-PARTICLE-DM",
+        "kind": "CAMPAIGN",
+        "status": "CHECKPOINTED",
+        "program_id": "PROG-STRUCTURE-DARK-SECTOR",
+        "test_count": 110
+      },
+      {
+        "id": "CAMP-SCI-INTEGRITY",
+        "kind": "CAMPAIGN",
+        "status": "CHECKPOINTED",
+        "program_id": "PROG-SCIENTIFIC-VALIDATION",
+        "test_count": 38
+      },
+      {
+        "id": "CAMP-GZ-01-GALAXY-REDSHIFT",
+        "kind": "CAMPAIGN",
+        "status": "ACTIVE",
+        "program_id": "PROG-COSMIC-HOMOGENEITY",
+        "test_count": 6
+      }
     ],
     "hypothesis": [
-      {"id":"CAND-READY-STATUS-NOT-EXEC-ELIGIBILITY-20260910","kind":"PROCEDURAL_HYPOTHESIS","domain":"ENGINEERING_PROCEDURAL","status":"CANDIDATE","entity_version":2,"label":"READY does not uniquely encode execution eligibility"},
-      {"id":"HYP-EMERG-V06-ACTIVE-CAMPAIGN-SEMANTICS-V1","kind":"PROCEDURAL_HYPOTHESIS","domain":"ENGINEERING_PROCEDURAL","status":"CANDIDATE","entity_version":1,"label":"Snapshot active_campaigns semantic mismatch"},
-      {"id":"HYP-EMERG-V06-EVENT-CONTINUITY-GAP-V1","kind":"PROCEDURAL_HYPOTHESIS","domain":"ENGINEERING","status":"CANDIDATE","entity_version":1},
-      {"id":"HYP-EMERG-V06-LAZY-HYDRATION-DEDUPE-BLINDSPOT-V1","kind":"PROCEDURAL_HYPOTHESIS","domain":"ENGINEERING","status":"CANDIDATE","entity_version":1,"label":"Lazy hydration semantic dedupe blind spot"},
-      {"id":"HYP-EMERG-V06-ROLE-QUEUE-PROJECTION-GAP-V1","kind":"PROCEDURAL_HYPOTHESIS","domain":"ENGINEERING","status":"CANDIDATE","entity_version":1},
-      {"id":"HYP-EMERG-V06-SNAPSHOT-LIVENESS-GAP-V1","kind":"PROCEDURAL_HYPOTHESIS","domain":"ENGINEERING","status":"CANDIDATE","entity_version":1},
-      {"id":"PH-EMERG-V05-VERIFICATION-BACKEND-SELECTION-GAP-V1","kind":"PROCEDURAL_HYPOTHESIS","domain":"ENGINEERING","status":"CANDIDATE","priority":"HIGH","entity_version":2}
+      {
+        "id": "CAND-READY-STATUS-NOT-EXEC-ELIGIBILITY-20260910",
+        "kind": "PROCEDURAL_HYPOTHESIS",
+        "domain": "ENGINEERING_PROCEDURAL",
+        "status": "CANDIDATE",
+        "entity_version": 2,
+        "label": "READY does not uniquely encode execution eligibility"
+      },
+      {
+        "id": "HYP-EMERG-V06-ACTIVE-CAMPAIGN-SEMANTICS-V1",
+        "kind": "PROCEDURAL_HYPOTHESIS",
+        "domain": "ENGINEERING_PROCEDURAL",
+        "status": "CANDIDATE",
+        "entity_version": 1,
+        "label": "Snapshot active_campaigns semantic mismatch"
+      },
+      {
+        "id": "HYP-EMERG-V06-EVENT-CONTINUITY-GAP-V1",
+        "kind": "PROCEDURAL_HYPOTHESIS",
+        "domain": "ENGINEERING",
+        "status": "CANDIDATE",
+        "entity_version": 1
+      },
+      {
+        "id": "HYP-EMERG-V06-LAZY-HYDRATION-DEDUPE-BLINDSPOT-V1",
+        "kind": "PROCEDURAL_HYPOTHESIS",
+        "domain": "ENGINEERING",
+        "status": "CANDIDATE",
+        "entity_version": 1,
+        "label": "Lazy hydration semantic dedupe blind spot"
+      },
+      {
+        "id": "HYP-EMERG-V06-ROLE-QUEUE-PROJECTION-GAP-V1",
+        "kind": "PROCEDURAL_HYPOTHESIS",
+        "domain": "ENGINEERING",
+        "status": "CANDIDATE",
+        "entity_version": 1
+      },
+      {
+        "id": "HYP-EMERG-V06-SNAPSHOT-LIVENESS-GAP-V1",
+        "kind": "PROCEDURAL_HYPOTHESIS",
+        "domain": "ENGINEERING",
+        "status": "CANDIDATE",
+        "entity_version": 1
+      },
+      {
+        "id": "PH-EMERG-V05-VERIFICATION-BACKEND-SELECTION-GAP-V1",
+        "kind": "PROCEDURAL_HYPOTHESIS",
+        "domain": "ENGINEERING",
+        "status": "CANDIDATE",
+        "priority": "HIGH",
+        "entity_version": 2
+      }
     ],
     "interdomain": [
       {
-        "id":"META::INTERDOMAIN::COSMO-OLYMPUS-SELECTION-AWARE-CHANGE-001",
-        "kind":"INTERDOMAIN",
-        "status":"TESTING",
-        "relation_type":"METHOD_TRANSFER",
-        "source_domains":["Cosmologia","Bodybuilding"],
-        "target_domains":["Bodybuilding"],
-        "source_nodes":["WORK::GZ-01-B03-GALAXY-3D-MAP"],
-        "test_refs":["WORK::OLYMPUS-SELECTION-AWARE-CHANGE-VALIDATION-001"],
-        "mapping":"Transfer selection-aware observational discipline from cosmology to longitudinal physique/body-composition evaluation: fixed inclusion rules, explicit measurement-condition metadata, condition-matched null/noise bands, confound controls and independent corroboration.",
-        "prediction_or_utility":"A preregistered condition-matched Olympus change detector should reduce false progress/regression calls and adjacent-check-in reversals relative to naive point-to-point deltas, without suppressing changes corroborated by independent observables.",
-        "falsifier_or_validation":"Reject if held-out reversal/contradiction rate is not meaningfully lower than naive classification, or any apparent improvement is achieved mainly by classifying nearly all observations as indeterminate.",
-        "entity_version":3
+        "id": "META::INTERDOMAIN::COSMO-OLYMPUS-SELECTION-AWARE-CHANGE-001",
+        "kind": "INTERDOMAIN",
+        "status": "TESTING",
+        "relation_type": "METHOD_TRANSFER",
+        "source_domains": [
+          "Cosmologia",
+          "Bodybuilding"
+        ],
+        "target_domains": [
+          "Bodybuilding"
+        ],
+        "source_nodes": [
+          "WORK::GZ-01-B03-GALAXY-3D-MAP"
+        ],
+        "test_refs": [
+          "WORK::OLYMPUS-SELECTION-AWARE-CHANGE-VALIDATION-001"
+        ],
+        "mapping": "Transfer selection-aware observational discipline from cosmology to longitudinal physique/body-composition evaluation: fixed inclusion rules, explicit measurement-condition metadata, condition-matched null/noise bands, confound controls and independent corroboration.",
+        "prediction_or_utility": "A preregistered condition-matched Olympus change detector should reduce false progress/regression calls and adjacent-check-in reversals relative to naive point-to-point deltas, without suppressing changes corroborated by independent observables.",
+        "falsifier_or_validation": "Reject if held-out reversal/contradiction rate is not meaningfully lower than naive classification, or any apparent improvement is achieved mainly by classifying nearly all observations as indeterminate.",
+        "entity_version": 3
       }
     ],
     "work": [
-      {"id":"CAND-SCI-SPTD1-CORRIDOR-20260903","kind":"RESEARCH","status":"READY","priority":"HIGH","writer_role":"ADVISOR","entity_version":3},
-      {"id":"CAND-CONT-GWTC5-SUPERRADIANCE-CONFLICT-20260903","kind":"RESEARCH","status":"READY","priority":"HIGH","entity_version":1},
-      {"id":"CAND-CONT-AZTEC1-SMBH-PTA-REVIEW-20260903","kind":"RESEARCH","status":"READY","priority":"HIGH","entity_version":1},
-      {"id":"CAND-CONT-LZ248-AXIONPORTAL-RIVAL-REVIEW-20260904","kind":"RESEARCH","status":"READY","priority":"HIGH","entity_version":1},
-      {"id":"CAND-CORE-DE-ST-IMPLICIT-PRIORS-REVIEW-20260905","kind":"RESEARCH","status":"READY","priority":"HIGH","entity_version":1},
-      {"id":"CAND-CORE-EUCLID-HALO-PROFILE-SYSTEMATICS-20260905","kind":"RESEARCH","status":"READY","priority":"MEDIUM_HIGH","entity_version":1},
-      {"id":"CAND-CORE-MOVING-LENS-VELOCITY-REVIEW-20260905","kind":"RESEARCH","status":"READY","priority":"MEDIUM_HIGH","entity_version":1},
-      {"id":"CAND-CONT-HUMAN-BAO-REMAINING-TESTS-20260905","kind":"RESEARCH","status":"READY","priority":"HIGH","entity_version":1},
-      {"id":"ACT-SCI-MG-SIGMA-NATIVE-REPLICATION-V2-001","kind":"ACTION","status":"CHECKPOINTED","priority":"HIGH","entity_version":1},
-      {"id":"WORK::SCI-MG-SIGMA-FUNCTIONAL-RECONSTRUCTION-CONTRACT-20260910","kind":"REVIEW","status":"CHECKPOINTED","priority":"HIGH","entity_version":1},
-      {"id":"WORK::SCI-DARK-SECTOR-DAO-DISCRIMINANT-FREEZE-20260911","kind":"REVIEW","status":"WAIT_DEPENDENCY","priority":"CRITICAL","entity_version":1},
-      {"id":"WORK::GZ-01-B01","kind":"ACTION","domain":"SCIENCE","status":"CHECKPOINTED","owner_role":"DIRECTOR","writer_role":"DIRECTOR","priority":"CRITICAL","entity_version":3},
-      {"id":"WORK::GZ-01-B03-GALAXY-3D-MAP","kind":"ACTION","domain":"SCIENCE","status":"VERIFIED","owner_role":"ADVISOR","writer_role":"EXECUTOR","priority":"CRITICAL","entity_version":6},
-      {"id":"ACT-ENG-NEXO-VAULT-SIDECHANNEL-HARDEN-001","kind":"ENGINEERING_FIX","domain":"ENGINEERING","status":"CHECKPOINTED","priority":"HIGH","entity_version":1},
-      {"id":"WORK::OLYMPUS-SELECTION-AWARE-CHANGE-VALIDATION-001","kind":"ACTION","domain":"OLYMPUS","status":"WAIT_DEPENDENCY","owner_role":"EXECUTOR","writer_role":"EXECUTOR","priority":"HIGH","entity_version":6},
-      {"id":"WORK::SCI-UNIFIED-DARK-SECTOR-SOURCE-BIND-20260911","kind":"ACTION","domain":"SCIENCE","status":"VERIFIED","owner_role":"EXECUTOR","writer_role":"EXECUTOR","priority":"CRITICAL","entity_version":5},
-      {"id":"WORK::GZ01-EROSITA-SUPERBATTERY-V1","kind":"ACTION","domain":"SCIENCE","status":"CHECKPOINTED","owner_role":"EXECUTOR","writer_role":"EXECUTOR","priority":"CRITICAL","entity_version":4}
+      {
+        "id": "ACT-ENG-NEXO-VAULT-SIDECHANNEL-HARDEN-001",
+        "kind": "ENGINEERING_FIX",
+        "domain": "ENGINEERING",
+        "status": "CHECKPOINTED",
+        "priority": "HIGH",
+        "entity_version": 1
+      },
+      {
+        "id": "ACT-SCI-MG-SIGMA-NATIVE-REPLICATION-V2-001",
+        "kind": "ACTION",
+        "status": "CHECKPOINTED",
+        "priority": "HIGH",
+        "entity_version": 1
+      },
+      {
+        "id": "CAND-CONT-AZTEC1-SMBH-PTA-REVIEW-20260903",
+        "kind": "RESEARCH",
+        "status": "READY",
+        "priority": "HIGH",
+        "entity_version": 1
+      },
+      {
+        "id": "CAND-CONT-GWTC5-SUPERRADIANCE-CONFLICT-20260903",
+        "kind": "RESEARCH",
+        "status": "READY",
+        "priority": "HIGH",
+        "entity_version": 1
+      },
+      {
+        "id": "CAND-CONT-HUMAN-BAO-REMAINING-TESTS-20260905",
+        "kind": "RESEARCH",
+        "status": "READY",
+        "priority": "HIGH",
+        "entity_version": 1
+      },
+      {
+        "id": "CAND-CONT-LZ248-AXIONPORTAL-RIVAL-REVIEW-20260904",
+        "kind": "RESEARCH",
+        "status": "READY",
+        "priority": "HIGH",
+        "entity_version": 1
+      },
+      {
+        "id": "CAND-CORE-DE-ST-IMPLICIT-PRIORS-REVIEW-20260905",
+        "kind": "RESEARCH",
+        "status": "READY",
+        "priority": "HIGH",
+        "entity_version": 1
+      },
+      {
+        "id": "CAND-CORE-EUCLID-HALO-PROFILE-SYSTEMATICS-20260905",
+        "kind": "RESEARCH",
+        "status": "READY",
+        "priority": "MEDIUM_HIGH",
+        "entity_version": 1
+      },
+      {
+        "id": "CAND-CORE-MOVING-LENS-VELOCITY-REVIEW-20260905",
+        "kind": "RESEARCH",
+        "status": "READY",
+        "priority": "MEDIUM_HIGH",
+        "entity_version": 1
+      },
+      {
+        "id": "CAND-SCI-SPTD1-CORRIDOR-20260903",
+        "kind": "RESEARCH",
+        "status": "READY",
+        "priority": "HIGH",
+        "writer_role": "ADVISOR",
+        "entity_version": 3
+      },
+      {
+        "id": "WORK::GZ-01-B01",
+        "kind": "ACTION",
+        "domain": "SCIENCE",
+        "status": "CHECKPOINTED",
+        "owner_role": "DIRECTOR",
+        "writer_role": "DIRECTOR",
+        "priority": "CRITICAL",
+        "entity_version": 3
+      },
+      {
+        "id": "WORK::GZ-01-B03-GALAXY-3D-MAP",
+        "kind": "ACTION",
+        "domain": "SCIENCE",
+        "status": "VERIFIED",
+        "owner_role": "ADVISOR",
+        "writer_role": "EXECUTOR",
+        "priority": "CRITICAL",
+        "entity_version": 6
+      },
+      {
+        "id": "WORK::GZ01-EROSITA-SUPERBATTERY-V1",
+        "kind": "ACTION",
+        "domain": "SCIENCE",
+        "status": "CHECKPOINTED",
+        "owner_role": "EXECUTOR",
+        "writer_role": "EXECUTOR",
+        "priority": "CRITICAL",
+        "entity_version": 4
+      },
+      {
+        "id": "WORK::OLYMPUS-SELECTION-AWARE-CHANGE-VALIDATION-001",
+        "kind": "ACTION",
+        "domain": "OLYMPUS",
+        "status": "WAIT_DEPENDENCY",
+        "owner_role": "EXECUTOR",
+        "writer_role": "EXECUTOR",
+        "priority": "HIGH",
+        "entity_version": 6
+      },
+      {
+        "id": "WORK::SCI-DARK-SECTOR-DAO-DISCRIMINANT-FREEZE-20260911",
+        "kind": "REVIEW",
+        "status": "WAIT_DEPENDENCY",
+        "priority": "CRITICAL",
+        "entity_version": 1
+      },
+      {
+        "id": "WORK::SCI-MG-SIGMA-FUNCTIONAL-RECONSTRUCTION-CONTRACT-20260910",
+        "kind": "REVIEW",
+        "status": "CHECKPOINTED",
+        "priority": "HIGH",
+        "entity_version": 1
+      },
+      {
+        "id": "WORK::SCI-UNIFIED-DARK-SECTOR-SOURCE-BIND-20260911",
+        "kind": "ACTION",
+        "domain": "SCIENCE",
+        "status": "VERIFIED",
+        "owner_role": "EXECUTOR",
+        "writer_role": "EXECUTOR",
+        "priority": "CRITICAL",
+        "entity_version": 5
+      },
+      {
+        "id": "WORK::T-H0HOM26-002",
+        "kind": "ACTION",
+        "domain": "SCIENCE",
+        "status": "VERIFIED",
+        "owner_role": "EXECUTOR",
+        "writer_role": "EXECUTOR",
+        "priority": "NORMAL",
+        "entity_version": 2
+      },
+      {
+        "id": "WORK::T-H0HOM26-009",
+        "kind": "ACTION",
+        "domain": "SCIENCE",
+        "status": "CHECKPOINTED",
+        "owner_role": "EXECUTOR",
+        "writer_role": "EXECUTOR",
+        "priority": "HIGH",
+        "entity_version": 6
+      }
+    ],
+    "learning": [
+      {
+        "id": "ML-EVID-H0-RECOVERY-20260917-001",
+        "kind": "LEARNING",
+        "stage": "OBSERVATION",
+        "status": "OBSERVED",
+        "relation_type": "PROCEDURAL_OBSERVATION",
+        "summary": "CAMP-H0-LCDM-ORIGIN-20260916 recovery after CHECKPOINTED dependency hydration diagnosis",
+        "source_nodes": [
+          "CAMP-H0-LCDM-ORIGIN-20260916"
+        ]
+      },
+      {
+        "id": "ML-EVID-H0HOM26-009-BINDING-20260918-002",
+        "kind": "LEARNING",
+        "stage": "OBSERVATION",
+        "status": "OBSERVED",
+        "relation_type": "PROCEDURAL_OBSERVATION",
+        "summary": "T-H0HOM26-009 LOCAL_VOID_CLUSTERING_DE_AMPLIFICATION after linear DE capability binding",
+        "test_refs": [
+          "T-H0HOM26-009"
+        ]
+      },
+      {
+        "id": "ML-EVID-OLY-LOWN-COMPLEXITY-20260919-004",
+        "kind": "LEARNING",
+        "stage": "OBSERVATION",
+        "status": "OBSERVED",
+        "relation_type": "PROCEDURAL_OBSERVATION",
+        "summary": "CAMP-OLY-COMPPHYS-20260919 low-N longitudinal Olympus computational-physics battery",
+        "source_nodes": [
+          "CAMP-OLY-COMPPHYS-20260919"
+        ]
+      },
+      {
+        "id": "ML-EVID-TOWER-WRITER-REBASE-20260918-003",
+        "kind": "LEARNING",
+        "stage": "OBSERVATION",
+        "status": "OBSERVED",
+        "relation_type": "PROCEDURAL_OBSERVATION",
+        "summary": "T-H0HOM26-002 TEST_RESULT persistence",
+        "test_refs": [
+          "T-H0HOM26-002"
+        ]
+      },
+      {
+        "id": "ML-OLY-BASELINE-UNCERTAINTY-BEFORE-COMPLEXITY-001",
+        "kind": "LEARNING",
+        "stage": "LESSON",
+        "status": "SUPPORTED",
+        "relation_type": "PROCEDURAL_LEARNING",
+        "summary": "For low-N longitudinal Olympus analyses, do not increase model complexity until the candidate method beats a simple preregistered baseline on holdout data and the resulting decision is stable across plausible measurement-uncertainty branches.",
+        "rule": "Use baseline challenge first, then uncertainty/null robustness. If either fails materially, collect a new comparable checkpoint or improve acquisition metadata before adding model state/parameters.",
+        "learning_refs": [
+          "ML-EVID-OLY-LOWN-COMPLEXITY-20260919-004"
+        ]
+      },
+      {
+        "id": "ML-WK-BLOCKER-CLASSIFICATION-001",
+        "kind": "LEARNING",
+        "stage": "LESSON",
+        "status": "SUPPORTED",
+        "relation_type": "PROCEDURAL_LEARNING",
+        "summary": "Before implementing a missing producer/adapter, separate runtime capability from frozen scientific binding completeness. Implement only when result-sensitive scientific mappings are already defined.",
+        "rule": "For MISSING_PRODUCER/MISSING_ADAPTER/CAPABILITY gaps: inspect existing evaluator/runtime and recoverable inputs first; then verify result-sensitive scientific mappings. Repair operational gaps automatically when bindings exist; otherwise classify the exact scientific-definition gap without fabricating choices.",
+        "learning_refs": [
+          "ML-EVID-H0-RECOVERY-20260917-001",
+          "ML-EVID-H0HOM26-009-BINDING-20260918-002"
+        ]
+      },
+      {
+        "id": "ML-WK-WRITER-CONCURRENCY-001",
+        "kind": "LEARNING",
+        "stage": "LESSON",
+        "status": "HYPOTHESIS",
+        "relation_type": "PROCEDURAL_LEARNING",
+        "summary": "Avoid unrelated direct main-branch writes while an Apply NEXO Mutations job is persisting globally refreshed derived views; on a pure rebase conflict, retry the same mutation identity after rereading main rather than duplicating work.",
+        "rule": "When a mutation writer fails after successful local application with only derived-view rebase conflicts, preserve request/run identity, reread canonical state, and replay the same request once main is stable.",
+        "learning_refs": [
+          "ML-EVID-TOWER-WRITER-REBASE-20260918-003"
+        ]
+      }
     ]
   }
 }
