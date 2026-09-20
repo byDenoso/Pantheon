@@ -5,6 +5,9 @@ const DISPATCH_REPO='byDenoso/TCC';
 const DISPATCH_REF='nexo/dispatch-runtime';
 const DEFAULT_RECEIPT_ATTEMPTS=28;
 const DEFAULT_RECEIPT_DELAY_MS=500;
+const MAINTENANCE_REPO='byDenoso/Pantheon';
+const MAINTENANCE_BASE_REF='main';
+const BRANCH_CLEANUP_PREFIXES=['atlas-','feat/atlas-','chatgpt/nexo-','claude/nexo-','backup/nexo-one-','feat/nexo-atlas-'];
 const FROZEN_CAPABILITIES={cosmology_benchmark_v1:{capability_id:'cosmology_benchmark_v1',task_id:'cosmology_benchmark',repository:'byDenoso/TCC',source_revision:'a9949e036220da7ab369a77aaa01b27e90149832',runtime_requirement:'MCMC',required_outputs:['benchmark_result.json'],timeout_minutes:15,seed:20260915}};
 
 export function selectGitHubToken(env=process.env){return env?.NEXO_TOWER_GITHUB_TOKEN||env?.NEXO_GITHUB_TOKEN||env?.GITHUB_TOKEN||env?.GH_TOKEN||null;}
@@ -33,6 +36,43 @@ export function createTowerGithubGateway({env=process.env,fetchImpl=globalThis.f
   async function readReceipt(requestId){return readJson(`mutations/receipts/${requestId}.json`);}
   async function submitTowerMutation(request){if(!token)throw new Error('GITHUB_WRITE_NOT_CONFIGURED');if(!request?.request_id||!request?.entity_name||!request?.entity_kind)throw new Error('INVALID_TOWER_MUTATION');const existingReceipt=await readReceipt(request.request_id);if(existingReceipt)return {request_id:request.request_id,status:'COMPLETE',receipt:existingReceipt};const inbox=`TOWER_V06/mutations/inbox/${request.request_id}.json`;await createContent({fetchImpl,token,repo:towerRepo,path:inbox,ref:towerRef,message:`nexo(mcp): submit ${request.entity_name}`,json:request});for(let attempt=0;attempt<receiptAttempts;attempt+=1){const receipt=await readReceipt(request.request_id);if(receipt)return {request_id:request.request_id,status:'COMPLETE',receipt};if(attempt+1<receiptAttempts)await sleep(receiptDelayMs);}throw new Error('TOWER_MUTATION_RECEIPT_TIMEOUT');}
   async function dispatchRuntime({trigger_id,run_id,work_id,capability_id,data_bounded=false}){if(!token)throw new Error('GITHUB_WRITE_NOT_CONFIGURED');for(const [key,value] of Object.entries({trigger_id,run_id,work_id,capability_id}))if(!String(value||'').trim())throw new Error(`${key.toUpperCase()}_REQUIRED`);const launch={schema_version:'1.0.0',event_type:'RUNTIME_LAUNCH_REQUESTED',trigger_id,run_id,work_id,capability_id,data_bounded:Boolean(data_bounded)};const path=`TOWER_V06/runtime/launch/inbox/${run_id}.json`;const existing=await readTower(path);if(existing){const actual=existing.json||{},expected={trigger_id,run_id,work_id,capability_id,data_bounded:Boolean(data_bounded)};if(Object.keys(expected).some(key=>actual[key]!==expected[key]))throw new Error(`RUNTIME_LAUNCH_CONFLICT:${run_id}`);return {status:'ACCEPTED',dispatch_mode:'LAUNCH_EVENT',ref:towerRef,trigger_id,run_id,work_id,capability_id,already_enqueued:true,launch_commit:null};}const write=await createContent({fetchImpl,token,repo:towerRepo,path,ref:towerRef,message:`nexo(mcp): launch ${run_id}`,json:launch});return {status:'ACCEPTED',dispatch_mode:'LAUNCH_EVENT',ref:towerRef,trigger_id,run_id,work_id,capability_id,already_enqueued:Boolean(write.idempotent),launch_commit:write.commit_sha||null};}
+
+  async function cleanupMergedBranches({repo=MAINTENANCE_REPO,baseRef=MAINTENANCE_BASE_REF,minAgeHours=72,dryRun=false}={}){
+    if(!token)throw new Error('GITHUB_WRITE_NOT_CONFIGURED');
+    if(repo!==MAINTENANCE_REPO)throw new Error('REPOSITORY_CLEANUP_SCOPE_FORBIDDEN');
+    if(baseRef!==MAINTENANCE_BASE_REF)throw new Error('BASE_REF_CLEANUP_SCOPE_FORBIDDEN');
+    const ageHours=Number(minAgeHours);
+    if(!Number.isFinite(ageHours)||ageHours<24)throw new Error('MIN_AGE_HOURS_INVALID');
+    const cutoff=Date.now()-ageHours*60*60*1000;
+    const branches=[];
+    for(let page=1;page<=10;page+=1){
+      const {response,payload}=await githubFetch(fetchImpl,token,`${API}/repos/${repo}/branches?per_page=100&page=${page}`);
+      if(!response.ok)throw new Error(`GITHUB_BRANCH_LIST_FAILED:${response.status}:${payload?.message||'UNKNOWN'}`);
+      const batch=Array.isArray(payload)?payload:[];
+      branches.push(...batch);
+      if(batch.length<100)break;
+    }
+    const deleted=[],kept=[];
+    for(const item of branches){
+      const branch=String(item?.name||'');
+      if(!branch||branch===baseRef||!BRANCH_CLEANUP_PREFIXES.some(prefix=>branch.startsWith(prefix)))continue;
+      const sha=String(item?.commit?.sha||'');
+      if(!sha){kept.push({branch,reason:'MISSING_SHA'});continue;}
+      const commitRead=await githubFetch(fetchImpl,token,`${API}/repos/${repo}/commits/${sha}`);
+      if(!commitRead.response.ok){kept.push({branch,reason:'COMMIT_READ_FAILED'});continue;}
+      const committedAt=Date.parse(commitRead.payload?.commit?.committer?.date||commitRead.payload?.commit?.author?.date||'');
+      if(!Number.isFinite(committedAt)||committedAt>cutoff){kept.push({branch,reason:'RECENT_OR_UNKNOWN_AGE'});continue;}
+      const compare=await githubFetch(fetchImpl,token,`${API}/repos/${repo}/compare/${encodeURIComponent(branch)}...${encodeURIComponent(baseRef)}`);
+      if(!compare.response.ok){kept.push({branch,reason:'COMPARE_FAILED'});continue;}
+      if(Number(compare.payload?.behind_by||0)!==0){kept.push({branch,reason:'UNMERGED_COMMITS'});continue;}
+      if(dryRun){deleted.push({branch,sha,dry_run:true});continue;}
+      const del=await githubFetch(fetchImpl,token,`${API}/repos/${repo}/git/refs/heads/${encodePath(branch)}`,{method:'DELETE'});
+      if(!del.response.ok&&del.response.status!==204){kept.push({branch,reason:`DELETE_FAILED_${del.response.status}`});continue;}
+      deleted.push({branch,sha});
+    }
+    return {repository:repo,base_ref:baseRef,min_age_hours:ageHours,dry_run:Boolean(dryRun),deleted,kept,policy:'DELETE_ONLY_MERGED_STALE_MATCHING_BRANCHES'};
+  }
+
   return {
     configured:{towerWrite:Boolean(token),towerRepo,towerRef,dispatchRepo,dispatchRef},
     readJson,
@@ -49,6 +89,7 @@ export function createTowerGithubGateway({env=process.env,fetchImpl=globalThis.f
     readInterdomainIndex:()=>requireJson('indexes/interdomain-active.json'),
     submitTowerMutation,
     dispatchRuntime,
+    cleanupMergedBranches,
     async findByFingerprint(fingerprint,{testId}={}){const id=testId||exactEntityIdFromFingerprint(fingerprint),entity=await readEntity('test',id);if(!entity)return null;if(entity.scientific_fingerprint&&entity.scientific_fingerprint!==fingerprint)return null;return entity;},
     async persistTest(request){const result=await submitTowerMutation({...request,entity_kind:request.entity_kind||'test'});return result.receipt;},
     async readbackTest(testId){const entity=await readEntity('test',testId);if(!entity)throw new Error('TOWER_TEST_READBACK_MISSING');return entity;},
