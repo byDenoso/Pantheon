@@ -144,19 +144,20 @@ export default function App() {
   };
 
   const openSession = () => {
-    if (session.session.authenticated) { void session.logout(); return; }
-    if (AUTH_BRIDGE_URL) { setLoginOpen(true); return; }
-    if (PRIVATE_COCKPIT_URL) {
-      try {
-        const target = new URL(PRIVATE_COCKPIT_URL, window.location.href);
-        if (target.origin !== window.location.origin) {
-          target.hash = window.location.hash || hashForView(view);
-          window.location.assign(target.toString());
-          return;
-        }
-      } catch { /* URL inválida cai no modal local */ }
-    }
+    // Avatar is a local account/session control. Never replace the current
+    // cockpit just because a private runtime lives on another origin.
     setLoginOpen(true);
+  };
+
+  const openPrivateCockpit = () => {
+    if (!PRIVATE_COCKPIT_URL) return;
+    try {
+      const target = new URL(PRIVATE_COCKPIT_URL, window.location.href);
+      target.hash = window.location.hash || hashForView(view);
+      window.open(target.toString(), '_blank', 'noopener,noreferrer');
+    } catch {
+      setNotice('URL do cockpit privado inválida.');
+    }
   };
 
   return (
@@ -189,7 +190,7 @@ export default function App() {
               {theme === 'dark' ? '☼' : '☾'}
             </button>
             <button className={`avatar${session.session.authenticated?' private':''}`} onClick={openSession}
-              aria-label={session.session.authenticated ? 'Sair da sessão privada' : 'Acessar sessão privada'}>D</button>
+              aria-label="Abrir conta e sessão">D</button>
           </div>
         </header>
 
@@ -383,30 +384,49 @@ export default function App() {
         {loginOpen && (
           <Modal title="ACESSO PRIVADO" onClose={() => { setLoginOpen(false); setPin(''); session.setError(''); }}>
             <div className="drawer-body">
-              <h2>Entre no cockpit privado.</h2>
-              {session.runtimeAvailable===false
-                ? <p role="alert">Runtime privado indisponível. A superfície pública continua em modo somente leitura.</p>
-                : session.session.configured
-                  ? <form className="login-form" onSubmit={async event => {
-                      event.preventDefault();
-                      const submitted=pin;setPin('');
-                      if (await session.login(submitted)) setLoginOpen(false);
-                    }}>
-                      <label>PIN
-                        <input type="password" inputMode="numeric" autoComplete="one-time-code" value={pin} required maxLength={12}
-                          onChange={event => setPin(event.target.value.replace(/\D/g,''))} />
-                      </label>
-                      {session.error && <p role="alert">{session.error}</p>}
-                      <button className="primary-button" disabled={session.pending}>
-                        {session.pending ? 'Entrando…' : 'Entrar →'}
-                      </button>
-                    </form>
-                  : <p>
-                      A autenticação privada ainda não está configurada neste runtime. A superfície pública permanece
-                      disponível sem promover dados privados a estado público.
-                      <button className="primary-button private-fallback" type="button"
-                        onClick={() => setLoginOpen(false)}>Continuar no cockpit público →</button>
-                    </p>}
+              <h2>{session.session.authenticated ? 'Sessão privada ativa.' : 'Acesso privado.'}</h2>
+              {session.session.authenticated
+                ? <div className="login-form">
+                    <p>Você está autenticado neste runtime. Fechar este painel não altera a sessão.</p>
+                    <button className="primary-button" type="button" disabled={session.pending}
+                      onClick={async () => { await session.logout(); setLoginOpen(false); }}>
+                      {session.pending ? 'Saindo…' : 'Sair da sessão'}
+                    </button>
+                  </div>
+                : session.runtimeAvailable===false
+                  ? <div className="login-form">
+                      <p role="alert">Runtime privado indisponível neste host. O cockpit atual continua aberto em modo público.</p>
+                      {PRIVATE_COCKPIT_URL && (
+                        <button className="primary-button" type="button" onClick={openPrivateCockpit}>
+                          Abrir cockpit privado em nova aba ↗
+                        </button>
+                      )}
+                    </div>
+                  : session.session.configured
+                    ? <form className="login-form" onSubmit={async event => {
+                        event.preventDefault();
+                        const submitted=pin;setPin('');
+                        if (await session.login(submitted)) setLoginOpen(false);
+                      }}>
+                        <label>PIN
+                          <input type="password" inputMode="numeric" autoComplete="one-time-code" value={pin} required maxLength={12}
+                            onChange={event => setPin(event.target.value.replace(/\D/g,''))} />
+                        </label>
+                        {session.error && <p role="alert">{session.error}</p>}
+                        <button className="primary-button" disabled={session.pending}>
+                          {session.pending ? 'Entrando…' : 'Entrar →'}
+                        </button>
+                      </form>
+                    : <div className="login-form">
+                        <p>A autenticação privada não está configurada neste host. O cockpit atual permanece aberto e não muda de domínio.</p>
+                        {PRIVATE_COCKPIT_URL && (
+                          <button className="primary-button" type="button" onClick={openPrivateCockpit}>
+                            Abrir cockpit privado em nova aba ↗
+                          </button>
+                        )}
+                        <button className="text-button private-fallback" type="button"
+                          onClick={() => setLoginOpen(false)}>Continuar aqui</button>
+                      </div>}
             </div>
           </Modal>
         )}
