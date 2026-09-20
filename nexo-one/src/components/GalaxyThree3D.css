@@ -79,3 +79,27 @@
   .galaxy-three-label .node-label-copy small{font-size:6px}
   .galaxy-three-label.cluster{min-width:96px;max-width:126px}
 }
+
+
+/* Hierarchical campaign drill-down */
+.galaxy-three-label.campaign{
+  --node-accent:#86d6ff;
+  min-width:148px;
+  max-width:220px;
+  padding:8px 11px;
+  border-radius:12px;
+  border-color:color-mix(in srgb,var(--node-accent) 46%,#293038);
+  background:linear-gradient(180deg,rgba(15,22,28,.96),rgba(9,13,17,.94));
+  box-shadow:0 14px 34px rgba(0,0,0,.34),0 0 28px color-mix(in srgb,var(--node-accent) 12%,transparent),inset 0 1px rgba(255,255,255,.05);
+}
+.galaxy-three-label.campaign .node-label-copy strong{font-size:10px;letter-spacing:.055em;color:#eef8ff}
+.galaxy-three-label.campaign .node-label-copy small{color:#79a8bc}
+.galaxy-three-root[data-theme=light] .galaxy-three-label.campaign{
+  background:rgba(255,255,255,.96);
+  border-color:rgba(65,111,174,.28);
+}
+.galaxy-three-root[data-theme=light] .galaxy-three-label.campaign .node-label-copy strong{color:#1c2730}
+@media(max-width:760px){
+  .galaxy-three-label.campaign{min-width:124px;max-width:166px;padding:7px 9px}
+  .galaxy-three-label.campaign .node-label-copy strong{font-size:9px}
+}
