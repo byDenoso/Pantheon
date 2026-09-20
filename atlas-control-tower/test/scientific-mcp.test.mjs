@@ -87,6 +87,9 @@ test('portable bootstrap is public, memory-independent and names canonical hypot
   assert.equal(bootstrap.contract,'NEXO_CAPABILITY_BOOTSTRAP_V1');
   assert.equal(bootstrap.canonical.root,'TOWER_V06');
   assert.equal(bootstrap.memory_dependency,false);
+  assert.equal(bootstrap.repository_policy.production_branch,'main');
+  assert.equal(bootstrap.repository_policy.deploy_branch_creation,'FORBIDDEN');
+  assert.equal(bootstrap.repository_policy.merged_branch_retention,'DELETE_AFTER_MERGE');
   assert.equal(bootstrap.science.registry,'nexo.get_hypotheses');
   assert.equal(bootstrap.science.frontier,'nexo.get_hypothesis_frontier');
   assert.equal(bootstrap.science.ingress,'nexo.ingest_hypothesis');
