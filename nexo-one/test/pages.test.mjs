@@ -82,6 +82,42 @@ test('sanctioned TOWER interdomain entities become visible learning filaments', 
   assert.ok(system.graph.edges.some(edge => edge.from === 'domain:SCIENCE' && edge.to === 'domain:OLYMPUS'));
 });
 
+test('explicit Tower human gates become Needs Dener inbox items', async () => {
+  const { buildPagesProjection } = await import('../scripts/build-pages-system.mjs');
+  const manifest = {
+    authority: 'TOWER_V06',
+    projection_only: true,
+    writeback: 'FORBIDDEN',
+    tower_commit: 'c'.repeat(40),
+    event_cursor: '20260919T230000000000Z-human',
+    projection_fingerprint: 'sha256:' + 'd'.repeat(64),
+    generated_at: '2026-09-20T00:00:00Z',
+  };
+  const projection = {
+    contract: 'NEXO_PUBLIC_PROJECTION_V1',
+    manifest,
+    event_cursor: manifest.event_cursor,
+    work: [{
+      id: 'WORK-HUMAN-1',
+      title: 'Provider authorization',
+      status: 'WAIT_DEPENDENCY',
+      priority: 'P0',
+      domain: 'ENGINEERING',
+      dependency_class: 'HUMAN_AUTH_REQUIRED',
+    }],
+    tests: [],
+    capabilities: {},
+    human_gates: { work_ids: ['WORK-HUMAN-1'], count: 1 },
+    counts: { active_work: 1, tests: 0, capabilities: 0, needs_dener: 1 },
+  };
+  const { system } = buildPagesProjection({ projection, manifestFile: manifest });
+  assert.equal(system.inbox.length, 1);
+  assert.equal(system.inbox[0].id, 'needs-dener:WORK-HUMAN-1');
+  assert.equal(system.inbox[0].kind, 'FORNECER_DADO');
+  assert.equal(system.inbox[0].domain, 'ENGINEERING');
+  assert.match(system.inbox[0].why, /Needs Dener/);
+});
+
 test('GitHub Pages deploys official artifact and exposes projection readback', async () => {
   const workflow = await text('../.github/workflows/nexo-one-pages.yml');
 
