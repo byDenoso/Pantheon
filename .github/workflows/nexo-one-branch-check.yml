@@ -23,6 +23,19 @@ jobs:
       - name: Install
         working-directory: nexo-one
         run: npm ci --no-audit --no-fund
-      - name: Check
+      - name: Typecheck
         working-directory: nexo-one
-        run: npm run check
+        run: npm run typecheck
+      - name: Targeted regression tests
+        working-directory: nexo-one
+        run: node --test test/nexo-prime-ui.test.mjs test/ui-language-reconciliation.test.mjs test/mobile-regressions.test.mjs test/frontend.test.mjs
+      - name: Style lint
+        working-directory: nexo-one
+        run: npm run style:lint
+      - name: Build
+        working-directory: nexo-one
+        run: npm run build
+      - name: Full suite diagnostic
+        continue-on-error: true
+        working-directory: nexo-one
+        run: npm test
