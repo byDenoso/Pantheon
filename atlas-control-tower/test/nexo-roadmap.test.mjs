@@ -41,3 +41,20 @@ test('roadmap frontier advances dependency after terminal work',async()=>{
  const next=await surface.getNextRoadmapTest('RM-1');
  assert.equal(next.state,'READY_TO_MATERIALIZE');assert.equal(next.roadmap_test_id,'R2');
 });
+
+
+test('materialization payload preserves v2 scientific identity and roadmap provenance',async()=>{
+ const surface=createRoadmapSurface({towerGateway:gateway()});
+ const payload=await surface.materializationPayload({roadmap_id:'RM-1',roadmap_test_id:'R1',correlation_id:'CORR-MAT',execute:true});
+ assert.equal(payload.tests.length,1);
+ assert.equal(payload.tests[0].roadmap_id,'RM-1');
+ assert.equal(payload.tests[0].roadmap_test_id,'R1');
+ assert.equal(payload.tests[0].roadmap_ref,'TOWER_V06/roadmaps/RM-1.json');
+ const expected=scientificFingerprintV2(payload.tests[0]);
+ assert.match(expected,/^sha256:[0-9a-f]{64}$/);
+});
+
+test('materialization payload fails closed while dependency is nonterminal',async()=>{
+ const surface=createRoadmapSurface({towerGateway:gateway()});
+ await assert.rejects(()=>surface.materializationPayload({roadmap_id:'RM-1',roadmap_test_id:'R2',correlation_id:'CORR-MAT'}),/ROADMAP_DEPENDENCY_PENDING/);
+});

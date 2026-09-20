@@ -140,5 +140,34 @@ export function createRoadmapSurface({towerGateway}={}){
     if(waiting.length)return {state:'WAIT_DEPENDENCY',roadmap_id:null,next:null,waiting,rule:'WAIT_ONLY_AFFECTED_CHAIN; CONTINUE_OTHER_NON_ROADMAP_LANES'};
     return {state:'COMPLETE',roadmap_id:null,next:null};
   }
-  return {getRoadmaps,getRoadmap,getNextRoadmapTest};
+  async function materializationPayload({roadmap_id,roadmap_test_id,correlation_id,execute=true,data_bounded=false}={}){
+    const rid=clean(roadmap_id),testRef=clean(roadmap_test_id),corr=clean(correlation_id);
+    if(!rid)throw new Error('ROADMAP_ID_REQUIRED');
+    if(!testRef)throw new Error('ROADMAP_TEST_ID_REQUIRED');
+    if(!corr)throw new Error('CORRELATION_ID_REQUIRED');
+    const resolved=await getRoadmap(rid),document=resolved.roadmap;
+    if(String(document.state||'').toUpperCase()!=='ACTIVE')throw new Error('ROADMAP_NOT_ACTIVE');
+    const match=(document.tests||[]).find(item=>String(item?.roadmap_test_id||'')===testRef);
+    if(!match)throw new Error('ROADMAP_TEST_NOT_FOUND');
+    const byId=new Map((document.tests||[]).map(item=>[String(item.roadmap_test_id),item]));
+    const terminalDependencies=[],unresolvedDependencies=[];
+    for(const dep of (match.depends_on||[]).map(String)){
+      const depItem=byId.get(dep);
+      if(!depItem){unresolvedDependencies.push(dep);continue;}
+      const x=await workFor(towerGateway,rid,depItem);
+      if(x.work&&TERMINAL.has(String(x.work.status||'').toUpperCase()))terminalDependencies.push(dep);
+      else unresolvedDependencies.push(dep);
+    }
+    if(unresolvedDependencies.length)throw new Error('ROADMAP_DEPENDENCY_PENDING:'+unresolvedDependencies.join(','));
+    const spec=specFromTest(rid,match);
+    spec.roadmap_ref=resolved.entry.canonical_path||resolved.entry.relative_path||null;
+    return {
+      correlation_id:corr,
+      execute:Boolean(execute),
+      data_bounded:Boolean(data_bounded),
+      tests:[spec],
+      roadmap:{roadmap_id:rid,roadmap_test_id:testRef,canonical_path:resolved.entry.canonical_path||null,terminal_dependencies:terminalDependencies}
+    };
+  }
+  return {getRoadmaps,getRoadmap,getNextRoadmapTest,materializationPayload};
 }
