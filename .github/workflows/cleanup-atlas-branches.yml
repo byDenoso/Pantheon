@@ -1,5 +1,4 @@
 name: Cleanup old Atlas branches
-# cleanup-policy-v1
 
 on:
   workflow_dispatch:
@@ -22,9 +21,6 @@ jobs:
           fetch-depth: 0
 
       - name: Delete merged stale Atlas/NEXO branches
-        env:
-          GH_TOKEN: ${{ github.token }}
-          REPO: ${{ github.repository }}
         shell: bash
         run: |
           set -euo pipefail
@@ -36,7 +32,9 @@ jobs:
           kept=0
 
           mapfile -t branches < <(
-            git for-each-ref --format='%(refname:strip=3)' refs/remotes/origin               | grep -Ev '^(HEAD|main)$'               | grep -E '^(atlas-|feat/atlas-|chatgpt/nexo-|claude/nexo-|backup/nexo-one-|feat/nexo-atlas-)'
+            git for-each-ref --format='%(refname:strip=3)' refs/remotes/origin \
+              | grep -Ev '^(HEAD|main)$' \
+              | grep -E '^(atlas-|feat/atlas-|chatgpt/nexo-|claude/nexo-|backup/nexo-one-|feat/nexo-atlas-)'
           )
 
           for branch in "${branches[@]}"; do
@@ -53,16 +51,14 @@ jobs:
               continue
             fi
 
-            encoded="$(python - <<'PY' "$branch"
-import sys, urllib.parse
-print(urllib.parse.quote(sys.argv[1], safe=''))
-PY
-)"
             echo "DELETE merged stale: $branch"
-            gh api --method DELETE "repos/$REPO/git/refs/heads/$encoded"
+            git push origin --delete "$branch"
             deleted=$((deleted+1))
           done
 
-          echo "deleted=$deleted" >> "$GITHUB_STEP_SUMMARY"
-          echo "kept=$kept" >> "$GITHUB_STEP_SUMMARY"
-          echo "Policy: never create a branch only to deploy; production deploys from main." >> "$GITHUB_STEP_SUMMARY"
+          {
+            echo "### Atlas/NEXO branch cleanup"
+            echo "- deleted: $deleted"
+            echo "- kept: $kept"
+            echo "- policy: deploys use main; merged stale experiment branches are pruned"
+          } >> "$GITHUB_STEP_SUMMARY"
