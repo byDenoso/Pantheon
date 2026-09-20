@@ -2,7 +2,6 @@ import {createHash} from 'node:crypto';
 import {gunzipSync} from 'node:zlib';
 import {createDriveClient} from './drive-client.mjs';
 import {createTowerGithubGateway,resolveFrozenCapability} from './tower-github-gateway.mjs';
-import {createTowerDriveLease} from './tower-drive-lease.mjs';
 import {applyDriveMutationToBundle} from './tower-drive-transaction.mjs';
 import {buildDriveSnapshotCandidate} from './tower-drive-writer.mjs';
 import {deriveRoleView} from './tower-role-view.mjs';
@@ -16,7 +15,6 @@ const stableId=(prefix,...parts)=>prefix+'-'+createHash('sha256').update(parts.j
 
 export function createTowerDriveGateway({env=process.env,fetchImpl=globalThis.fetch}={}){
   const drive=createDriveClient({env,fetchImpl});
-  const lease=createTowerDriveLease({env,fetchImpl});
   const migrationFallback=String(env.NEXO_DRIVE_MIGRATION_FALLBACK_GITHUB||'')==='1';
   const legacy=migrationFallback?createTowerGithubGateway({env,fetchImpl}):null;
   const maintenance=createTowerGithubGateway({env,fetchImpl});
@@ -90,42 +88,15 @@ export function createTowerDriveGateway({env=process.env,fetchImpl=globalThis.fe
   async function readEntity(kind,id){return readJson('entities/'+String(kind).toLowerCase()+'/'+id+'.json');}
   async function readReceipt(id){return readJson('mutations/receipts/'+id+'.json');}
 
-  async function submitTowerMutation(request){
-    if(!drive.configured)throw new Error('DRIVE_PRIMARY_NOT_CONFIGURED');
-    if(!lease.configured)throw new Error('DRIVE_MUTATION_LEASE_NOT_CONFIGURED');
-    return lease.runExclusive(async()=>{
-      bundleCache=null;
-      const current=await loadBundle({force:true});
-      const tx=applyDriveMutationToBundle(current.payload,request);
-      if(tx.idempotent)return {request_id:request.request_id,status:'COMPLETE',receipt:tx.receipt,idempotent:true,snapshot_id:current.pointer.snapshot_id};
-      const {candidate,verify}=await promote(current.pointer,tx.bundle,{requestId:request.request_id});
-      const receipt=verify.payload.files['mutations/receipts/'+request.request_id+'.json']?.value;
-      if(!receipt||receipt.readback!=='PASS')throw new Error('DRIVE_MUTATION_RECEIPT_READBACK_FAILED');
-      return {request_id:request.request_id,status:'COMPLETE',receipt:structuredClone(receipt),idempotent:false,snapshot_id:candidate.snapshotId,source_fingerprint:candidate.fingerprint};
-    },{owner:'NEXO_TOWER_MUTATION'});
+  async function submitTowerMutation(){
+    throw new Error('DRIVE_V2_CORE_DIRECT_ONLY');
   }
-  async function dispatchRuntime({trigger_id,run_id,work_id,capability_id,data_bounded=false}){
-    if(!drive.configured)throw new Error('DRIVE_PRIMARY_NOT_CONFIGURED');
-    if(!lease.configured)throw new Error('DRIVE_RUNTIME_LEASE_NOT_CONFIGURED');
-    for(const [key,value] of Object.entries({trigger_id,run_id,work_id,capability_id}))if(!String(value||'').trim())throw new Error(key.toUpperCase()+'_REQUIRED');
-    return lease.runExclusive(async()=>{
-      bundleCache=null;
-      const current=await loadBundle({force:true}),payload=structuredClone(current.payload);
-      const path='runtime/launch/inbox/'+run_id+'.json';
-      const existing=payload.files[path]?.value;
-      const launch={schema_version:'1.0.0',event_type:'RUNTIME_LAUNCH_REQUESTED',trigger_id,run_id,work_id,capability_id,data_bounded:Boolean(data_bounded),storage:'GOOGLE_DRIVE_PRIVATE'};
-      if(existing){
-        for(const key of ['trigger_id','run_id','work_id','capability_id','data_bounded'])if(existing[key]!==launch[key])throw new Error('RUNTIME_LAUNCH_CONFLICT:'+run_id);
-        return {status:'ACCEPTED',dispatch_mode:'DRIVE_LAUNCH_EVENT',trigger_id,run_id,work_id,capability_id,already_enqueued:true,snapshot_id:current.pointer.snapshot_id};
-      }
-      payload.files[path]={encoding:'json',value:launch};
-      const {candidate}=await promote(current.pointer,payload,{requestId:'LAUNCH-'+run_id});
-      return {status:'ACCEPTED',dispatch_mode:'DRIVE_LAUNCH_EVENT',trigger_id,run_id,work_id,capability_id,already_enqueued:false,snapshot_id:candidate.snapshotId};
-    },{owner:'NEXO_RUNTIME_DISPATCH'});
+  async function dispatchRuntime(){
+    throw new Error('DRIVE_V2_CORE_DIRECT_ONLY');
   }
 
   return {
-    configured:{towerWrite:Boolean(drive.configured&&lease.configured),towerStore:'GOOGLE_DRIVE',rootId:drive.rootId,migrationFallback,readMode:'COMPLETE_BUNDLE_ONLY',writeModel:'DRIVE_IMMUTABLE_SNAPSHOT_LEASED_CAS',leaseConfigured:lease.configured},
+    configured:{towerWrite:false,towerStore:'GOOGLE_DRIVE',rootId:drive.rootId,migrationFallback,readMode:'COMPLETE_BUNDLE_ONLY',writeModel:'DRIVE_IMMUTABLE_SNAPSHOT_SINGLE_WRITER_CURRENT',leaseConfigured:false,writerRole:'CHATGPT_CORE_DIRECT_ONLY'},
     readJson,listJsonDirectory,
     readControl:()=>requireJson('CONTROL.json'),
     readEntity,
@@ -137,7 +108,7 @@ export function createTowerDriveGateway({env=process.env,fetchImpl=globalThis.fe
     readEvidence:id=>readJson('runtime/evidence/'+id+'.json'),
     readCampaignIndex:()=>requireJson('indexes/campaigns.json'),
     readInterdomainIndex:()=>requireJson('indexes/interdomain-active.json'),
-    async getCurrentSnapshotMeta(){const {pointer}=await loadBundle({force:true});return {...structuredClone(pointer),writer_ready:Boolean(drive.configured&&lease.configured)};},
+    async getCurrentSnapshotMeta(){const {pointer}=await loadBundle({force:true});return {...structuredClone(pointer),writer_ready:false,write_model:'DRIVE_IMMUTABLE_SNAPSHOT_SINGLE_WRITER_CURRENT',writer_role:'CHATGPT_CORE_DIRECT_ONLY'};},
     submitTowerMutation,dispatchRuntime,
     cleanupMergedBranches:options=>maintenance.cleanupMergedBranches(options),
     async findByFingerprint(fingerprint,{testId}={}){const id=testId||exactEntityIdFromFingerprint(fingerprint),entity=await readEntity('test',id);if(!entity)return null;if(entity.scientific_fingerprint&&entity.scientific_fingerprint!==fingerprint)return null;return entity;},
@@ -145,6 +116,6 @@ export function createTowerDriveGateway({env=process.env,fetchImpl=globalThis.fe
     async readbackTest(testId){const entity=await readEntity('test',testId);if(!entity)throw new Error('TOWER_TEST_READBACK_MISSING');return entity;},
     async resolveCapability(spec){const frozen=resolveFrozenCapability(spec,env);if(frozen)return frozen;const requested=String(spec?.execution_capability||'').trim();if(!requested)return null;const manifest=await requireJson('manifests/capabilities.json');const item=manifest?.capabilities?.[requested];if(!item||!['ACTIVE','PROVEN','VALIDATED_CURRENT'].includes(String(item.status||'ACTIVE').toUpperCase()))return null;return {capability_id:requested,...item};},
     async dispatchTest({testId,correlationId,spec,capability}){const runId=stableId('RUN-SCI',testId,correlationId);await dispatchRuntime({trigger_id:correlationId,run_id:runId,work_id:testId,capability_id:capability?.capability_id||spec?.execution_capability||'SCIENCE',data_bounded:false});return 'drive:runtime:'+runId;},
-    drive,lease
+    drive,lease:null
   };
 }
