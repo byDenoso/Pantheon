@@ -34,11 +34,16 @@ function putJson(bundle,path,value){
 }
 function invalid(message){const error=new Error(message);error.code='INVALID_MUTATION_REQUEST';throw error;}
 function nonempty(value){return typeof value==='string'&&Boolean(value.trim());}
+function canonicalJson(value){
+  if(Array.isArray(value))return '['+value.map(canonicalJson).join(',')+']';
+  if(value&&typeof value==='object')return '{'+Object.keys(value).sort().map(key=>JSON.stringify(key)+':'+canonicalJson(value[key])).join(',')+'}';
+  return JSON.stringify(value);
+}
 function proposalHash(request){
-  return createHash('sha256').update(JSON.stringify({
+  return createHash('sha256').update(canonicalJson({
     entity_kind:request.entity_kind??null,entity_name:request.entity_name??null,
     expected_version:request.expected_version??null,changes:request.changes??null
-  },Object.keys({entity_kind:1,entity_name:1,expected_version:1,changes:1}).sort())).digest('hex');
+  })).digest('hex');
 }
 function validL3Intent(value){return value&&typeof value==='object'&&['summary','reason','metric'].every(key=>nonempty(value[key]));}
 function validPromotionEvidence(value){
