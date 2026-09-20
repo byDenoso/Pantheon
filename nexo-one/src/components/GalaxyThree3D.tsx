@@ -781,12 +781,12 @@ export const GalaxyThree3D = forwardRef<CanvasGraph25DHandle, Props>(function Ga
                 <button
                   key={node.id}
                   type="button"
-                  className={\`atlas-domain-world domain-\${node.domain.toLowerCase()}\`}
+                  className={'atlas-domain-world domain-' + node.domain.toLowerCase()}
                   data-domain={node.domain}
                   onClick={() => onSelect(node.id)}
                   aria-label={node.domain === 'NEXO'
                     ? 'Voltar ao núcleo NEXO'
-                    : \`Abrir domínio \${node.label}, \${count} entidades\`}
+                    : 'Abrir domínio ' + node.label + ', ' + count + ' entidades'
                 >
                   <span className="atlas-world-orb" aria-hidden="true">
                     <i className="atlas-world-ring ring-a" />
