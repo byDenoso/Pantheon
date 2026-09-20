@@ -163,6 +163,13 @@ test('public /api/system applies the same projection normalization used by Pages
 });
 
 
+test('public /api/system fails closed instead of serving the retired truthgraph fallback', async () => {
+  const handler = await readFile(fileURLToPath(new URL('../server/handler.mjs', import.meta.url)), 'utf8');
+  assert.match(handler, /SANCTIONED_PUBLIC_PROJECTION_UNAVAILABLE/);
+  assert.match(handler, /failing closed/);
+  assert.doesNotMatch(handler, /sanctioned public SystemState unavailable; using bounded runtime fallback/);
+});
+
 test('runtime reuses sanctioned projection reads without weakening explicit refresh', async () => {
   const handler = await readFile(fileURLToPath(new URL('../server/handler.mjs', import.meta.url)), 'utf8');
   assert.match(handler, /PUBLIC_SYSTEM_CACHE_TTL_MS=15000/);
