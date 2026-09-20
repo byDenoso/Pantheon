@@ -1,4 +1,5 @@
 name: Cleanup old Atlas branches
+# cleanup-policy-v1
 
 on:
   workflow_dispatch:
