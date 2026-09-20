@@ -5,6 +5,7 @@ import {createTowerGithubGateway,resolveFrozenCapability} from './tower-github-g
 import {createTowerDriveLease} from './tower-drive-lease.mjs';
 import {applyDriveMutationToBundle} from './tower-drive-transaction.mjs';
 import {buildDriveSnapshotCandidate} from './tower-drive-writer.mjs';
+import {deriveRoleView} from './tower-role-view.mjs';
 
 const exactEntityIdFromFingerprint=fingerprint=>{
   const hex=String(fingerprint||'').replace(/^sha256:/,'');
@@ -129,7 +130,7 @@ export function createTowerDriveGateway({env=process.env,fetchImpl=globalThis.fe
     readControl:()=>requireJson('CONTROL.json'),
     readEntity,
     readActiveWorkIndex:()=>requireJson('indexes/active-work.json'),
-    readRoleView:role=>requireJson('bootstrap/'+String(role).toLowerCase()+'.json'),
+    async readRoleView(role){const [control,activeWork,manifest]=await Promise.all([requireJson('CONTROL.json'),requireJson('indexes/active-work.json'),requireJson('manifests/capabilities.json')]);return deriveRoleView({role,control:{...control,event_cursor:(await requireJson('snapshot/latest.json')).event_cursor},activeWork,capabilities:manifest?.capabilities||{}});},
     readReceipt,
     readCapabilityManifest:()=>requireJson('manifests/capabilities.json'),
     readRuntimeReport:runId=>readJson('runtime/reports/'+runId+'.json'),
