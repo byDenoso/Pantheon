@@ -1,12 +1,21 @@
 {
-  "ignoreCommand":"git diff --quiet \"${VERCEL_GIT_PREVIOUS_SHA:-HEAD^}\" HEAD -- nexo-one vercel.json",
+  "ignoreCommand": "prev=\"${VERCEL_GIT_PREVIOUS_SHA:-}\"; [ -n \"$prev\" ] || exit 1; git cat-file -e \"$prev^{commit}\" 2>/dev/null || exit 1; git diff --quiet \"$prev\" HEAD -- nexo-one vercel.json",
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "installCommand": "cd nexo-one && npm ci --no-audit --no-fund --ignore-scripts",
   "buildCommand": "cd nexo-one && npm run build",
   "outputDirectory": "nexo-one/dist",
   "rewrites": [
-    {"source": "/api/:route", "destination": "/api/index?route=:route"},
-    {"source": "/api/:route/:subroute", "destination": "/api/index?route=:route/:subroute"},
-    {"source": "/((?!api/).*)", "destination": "/index.html"}
+    {
+      "source": "/api/:route",
+      "destination": "/api/index?route=:route"
+    },
+    {
+      "source": "/api/:route/:subroute",
+      "destination": "/api/index?route=:route/:subroute"
+    },
+    {
+      "source": "/((?!api/).*)",
+      "destination": "/index.html"
+    }
   ]
 }
