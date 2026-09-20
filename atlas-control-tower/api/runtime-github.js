@@ -13,7 +13,6 @@ function towerize(value){
  for(const [key,item] of Object.entries(value)){
   if(key==='authority')out[key]='TOWER_V06';
   else if(key==='source'&&item==='github')out[key]='tower';
-  else if(key==='projectionAuthority'&&item==='GOOGLE_DRIVE')out[key]='LEGACY_GOOGLE_DRIVE_SNAPSHOT';
   else out[key]=towerize(item);
  }
  if(!('truthOwner' in out))out.truthOwner=TRUTH_OWNER;
