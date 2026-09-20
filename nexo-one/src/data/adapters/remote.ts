@@ -17,13 +17,17 @@ export const remoteSource: SystemDataSource = {
   kind: 'remote',
 
   async load({ signal, force }): Promise<SystemState> {
+    const endpointPath = SYSTEM_ENDPOINT.split('?', 1)[0] ?? SYSTEM_ENDPOINT;
+    const staticProjection = endpointPath.endsWith('.json');
     const separator = SYSTEM_ENDPOINT.includes('?') ? '&' : '?';
-    const refresh = force && !SYSTEM_ENDPOINT.endsWith('.json') ? '&refresh=1' : '';
-    const requestUrl = `${SYSTEM_ENDPOINT}${separator}v=${Date.now()}${refresh}`;
+    const refresh = force && !staticProjection ? `${separator}refresh=1` : '';
+    const requestUrl = `${SYSTEM_ENDPOINT}${refresh}`;
 
     const response = await fetch(requestUrl, {
       signal,
-      cache: 'no-store',
+      // Static Pages assets keep a stable URL so the browser/CDN can revalidate
+      // with ETag/Last-Modified instead of downloading a timestamp-busted copy.
+      cache: staticProjection ? (force ? 'reload' : 'no-cache') : 'no-store',
     });
 
     if (response.status === 404) {
