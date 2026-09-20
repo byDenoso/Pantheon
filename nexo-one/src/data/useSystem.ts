@@ -5,10 +5,17 @@ import { DataSourceError, activeSource } from './adapters';
 import { preserveStateOnFailure } from './adapters/source.ts';
 import { DEFAULT_SCENARIO_ID } from './fixtures/scenarios.ts';
 
+export type SyncStatus = 'IDLE' | 'SYNCING' | 'CHANGED' | 'UNCHANGED' | 'FAILED';
+
 export interface SystemStore {
   state: SystemState | null;
   load: LoadState;
   error: string;
+  /** Atualização explícita nunca apaga o último snapshot válido enquanto a nova leitura está em voo. */
+  syncing: boolean;
+  syncStatus: SyncStatus;
+  syncMessage: string;
+  lastSuccessfulReadAt: string | null;
   /** Origem ativa; `fixture` deve permanecer visível na interface. */
   sourceKind: 'fixture' | 'remote';
   sourceLabel: string;
@@ -31,9 +38,17 @@ export function useSystem(initialScenario = DEFAULT_SCENARIO_ID): SystemStore {
   const [error, setError] = useState('');
   const [scenarioId, setScenarioId] = useState(initialScenario);
   const [nonce, setNonce] = useState(0);
+  const [syncStatus, setSyncStatus] = useState<SyncStatus>('IDLE');
+  const [syncMessage, setSyncMessage] = useState('');
+  const [lastSuccessfulReadAt, setLastSuccessfulReadAt] = useState<string | null>(null);
   const controller = useRef<AbortController | null>(null);
+  const stateRef = useRef<SystemState | null>(null);
+  const forceNextRead = useRef(false);
 
-  const reload = useCallback(() => setNonce(value => value + 1), []);
+  const reload = useCallback(() => {
+    forceNextRead.current = true;
+    setNonce(value => value + 1);
+  }, []);
 
   useEffect(() => {
     if (typeof window === 'undefined' || activeSource.kind !== 'remote') return;
@@ -44,29 +59,69 @@ export function useSystem(initialScenario = DEFAULT_SCENARIO_ID): SystemStore {
     controller.current?.abort();
     const ctrl = new AbortController();
     controller.current = ctrl;
-    setLoad('LOADING');
+
+    const previous = stateRef.current;
+    const isRefresh = previous !== null;
+    const force = forceNextRead.current;
+    forceNextRead.current = false;
+
+    if (!isRefresh) setLoad('LOADING');
     setError('');
-    activeSource.load({ signal: ctrl.signal, scenarioId })
+    if (isRefresh) {
+      setSyncStatus('SYNCING');
+      setSyncMessage('Atualizando leitura…');
+    }
+
+    activeSource.load({ signal: ctrl.signal, scenarioId, force })
       .then(next => {
-        if (ctrl.signal.aborted) return;
+        if (ctrl.signal.aborted || controller.current !== ctrl) return;
+
+        const previousFingerprint = previous?.bus.fingerprint ?? null;
+        stateRef.current = next;
         setState(next);
-        // Um estado que não é inteiramente LIVE é PARTIAL, nunca READY silencioso.
         setLoad(next.global_state === 'LIVE' ? 'READY' : 'PARTIAL');
+        setLastSuccessfulReadAt(new Date().toISOString());
+
+        if (isRefresh) {
+          const changed = previousFingerprint !== next.bus.fingerprint;
+          setSyncStatus(changed ? 'CHANGED' : 'UNCHANGED');
+          setSyncMessage(changed ? 'Nova projeção publicada' : 'Sem alterações');
+        } else {
+          setSyncStatus('IDLE');
+          setSyncMessage('');
+        }
       })
       .catch(failure => {
-        if (ctrl.signal.aborted || (failure as Error)?.name === 'AbortError') return;
+        if (ctrl.signal.aborted || controller.current !== ctrl || (failure as Error)?.name === 'AbortError') return;
+
         const { load: nextLoad, message } = messageFor(failure);
-        setLoad(nextLoad);
         setError(message);
-        if (!preserveStateOnFailure(nextLoad)) setState(null);
-        // Falhas transitórias mantêm o último snapshot explicitamente degradado;
-        // perda de autorização apaga o estado privado imediatamente.
+
+        if (previous && preserveStateOnFailure(nextLoad)) {
+          // Falha transitória: conserva o snapshot anterior e o marca como degradado
+          // na UI, em vez de trocar todo o cockpit por uma tela de erro.
+          setLoad(previous.global_state === 'LIVE' ? 'READY' : 'PARTIAL');
+          setSyncStatus('FAILED');
+          setSyncMessage('Falha na atualização');
+          return;
+        }
+
+        setLoad(nextLoad);
+        setSyncStatus('IDLE');
+        setSyncMessage('');
+        stateRef.current = null;
+        setState(null);
       });
+
     return () => ctrl.abort();
   }, [scenarioId, nonce]);
 
   return {
     state, load, error,
+    syncing: syncStatus === 'SYNCING',
+    syncStatus,
+    syncMessage,
+    lastSuccessfulReadAt,
     sourceKind: activeSource.kind,
     sourceLabel: activeSource.label,
     scenarioId, setScenarioId, reload,
