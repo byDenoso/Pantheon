@@ -29,7 +29,7 @@ export default withGoogleAuth(async(req,res)=>{
   const args=body?.args&&typeof body.args==='object'&&!Array.isArray(body.args)?body.args:{};
   if(!ALLOWED_COMMANDS.has(command)) return send(res,{error:'COMMAND_NOT_ALLOWED',command},400);
 
-  const towerGateway=createTowerGithubGateway();
+  const towerGateway=createTowerGateway();
   if(WRITE_COMMANDS.has(command)&&!towerGateway.configured.towerWrite){
     return send(res,{error:'TOWER_WRITE_NOT_CONFIGURED',command,write_available:false},503);
   }
