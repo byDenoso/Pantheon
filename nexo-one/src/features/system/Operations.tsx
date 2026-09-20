@@ -1,6 +1,6 @@
 // Human Inbox, Actions e Execution trace.
 import { useState } from 'react';
-import type { ActionRecord, ExecutionRun, InboxItem, InboxKind, SystemState } from '../../contracts/system.ts';
+import type { ActionRecord, ExecutionRun, GraphNode, InboxItem, InboxKind, SystemState } from '../../contracts/system.ts';
 import { INBOX_KINDS } from '../../contracts/system.ts';
 import { ActionCard, ExecutionTrace, HumanInboxItem } from '../../components/composites.tsx';
 import { EmptyState } from '../../components/states.tsx';
@@ -51,43 +51,151 @@ export function InboxView(
   );
 }
 
+
 type ActionFilter = 'ALL' | 'AUTONOMOUS' | 'HUMAN' | 'BLOCKED';
+type ProjectedWorkNode = GraphNode & { type: 'ACTION' };
+const PROJECTED_WORK_PAGE = 40;
+
+const priorityRank = (value?: string): number =>
+  ({ P0: 0, CRITICAL: 0, HIGH: 1, P1: 1, MEDIUM: 2, NORMAL: 3, LOW: 4 }[String(value || '').toUpperCase()] ?? 5);
+
+const sortProjectedWork = (rows: ProjectedWorkNode[]): ProjectedWorkNode[] =>
+  [...rows].sort((a, b) => Number(Boolean(b.human_gate)) - Number(Boolean(a.human_gate))
+    || Number(b.state === 'BLOCKED') - Number(a.state === 'BLOCKED')
+    || priorityRank(a.priority) - priorityRank(b.priority)
+    || a.domain.localeCompare(b.domain)
+    || a.label.localeCompare(b.label));
+
+function ProjectedWorkQueue({ rows, visible, onMore }:
+  { rows: ProjectedWorkNode[]; visible: number; onMore: () => void }) {
+  const shown = rows.slice(0, visible);
+  return (
+    <>
+      <div className="work-queue" role="list" aria-label="WORK projetado pela Tower">
+        {shown.map(node => (
+          <article key={node.id} className={'work-row tone-' + toneOf(node.state)} role="listitem">
+            <div className="work-row-main">
+              <header>
+                <DomainBadge domain={node.domain} muted />
+                <StatusBadge state={node.operational_status || node.state} tone={toneOf(node.state)} compact />
+                {node.human_gate && <span className="work-human-chip">Needs Dener</span>}
+                {node.priority && <span className="work-priority">{node.priority}</span>}
+              </header>
+              <h3>{node.label}</h3>
+              <div className="work-row-meta">
+                <code>{node.id.replace(/^work:/, '')}</code>
+                {node.campaign_id && <span>{node.campaign_id}</span>}
+                {node.owner_role && <span>{node.owner_role}</span>}
+                {node.dependency_class && <span>{node.dependency_class}</span>}
+              </div>
+            </div>
+          </article>
+        ))}
+      </div>
+      {rows.length > shown.length && (
+        <button className="work-more" onClick={onMore}>
+          Mostrar mais <b>{Math.min(PROJECTED_WORK_PAGE, rows.length - shown.length)}</b>
+          <span>{shown.length} de {rows.length}</span>
+        </button>
+      )}
+    </>
+  );
+}
 
 export function ActionsView(
   { state, onOpenAction }: { state: SystemState; onOpenAction: (action: ActionRecord) => void },
 ) {
   const [filter, setFilter] = useState<ActionFilter>('ALL');
-  const buckets: Record<ActionFilter, ActionRecord[]> = {
+  const [visibleWork, setVisibleWork] = useState(PROJECTED_WORK_PAGE);
+  const actionBuckets: Record<ActionFilter, ActionRecord[]> = {
     ALL: state.actions,
     AUTONOMOUS: resolvableActions(state),
     HUMAN: humanActions(state),
     BLOCKED: blockedActions(state),
   };
-  const rows = buckets[filter];
+
+  // Pages intentionally publishes WORK as a read-only Tower projection, not as an
+  // executable ActionRecord. Showing these nodes prevents "0 actions" from erasing
+  // real canonical work while preserving the capability/runtime authority boundary.
+  const projectedWork = sortProjectedWork(
+    state.graph.nodes.filter((node): node is ProjectedWorkNode => node.type === 'ACTION'),
+  );
+  const projectedBuckets: Record<ActionFilter, ProjectedWorkNode[]> = {
+    ALL: projectedWork,
+    AUTONOMOUS: [],
+    HUMAN: projectedWork.filter(node => node.human_gate),
+    BLOCKED: projectedWork.filter(node => node.state === 'BLOCKED'),
+  };
+
+  const hasActionRecords = state.actions.length > 0;
+  const counts = hasActionRecords
+    ? Object.fromEntries(Object.entries(actionBuckets).map(([key, value]) => [key, value.length])) as Record<ActionFilter, number>
+    : Object.fromEntries(Object.entries(projectedBuckets).map(([key, value]) => [key, value.length])) as Record<ActionFilter, number>;
+  const actionRows = actionBuckets[filter];
+  const workRows = projectedBuckets[filter];
+
+  const selectFilter = (value: ActionFilter) => {
+    setFilter(value);
+    setVisibleWork(PROJECTED_WORK_PAGE);
+  };
+
+  const emptyForProjectedWork = filter === 'AUTONOMOUS'
+    ? {
+        title: 'Nenhuma autonomia comprovada.',
+        description: 'Há ' + projectedWork.length + ' WORK projetados, mas esta projeção pública não publica o binding ActionRecord → capability → runtime.',
+        hint: 'Por isso o NEXO não presume elegibilidade de execução.',
+      }
+    : {
+        title: 'Nenhum WORK neste filtro.',
+        description: 'A Tower não projetou nenhum item que corresponda a este recorte.',
+        hint: 'Isso é um vazio do filtro atual, não uma afirmação sobre outras fontes.',
+      };
+
   return (
     <>
       <div className="filter-row" role="group" aria-label="Filtrar ações">
         {(['ALL', 'AUTONOMOUS', 'HUMAN', 'BLOCKED'] as ActionFilter[]).map(value => (
           <button key={value} className={filter === value ? 'filter active' : 'filter'} aria-pressed={filter === value}
-            onClick={() => setFilter(value)}>
+            onClick={() => selectFilter(value)}>
             {{ ALL: 'Todas', AUTONOMOUS: 'NEXO pode resolver', HUMAN: 'Exigem você', BLOCKED: 'Bloqueadas' }[value]}
-            <b>{buckets[value].length}</b>
+            <b>{counts[value]}</b>
           </button>
         ))}
       </div>
-      {rows.length
-        ? <div className="card-grid">
-            {rows.map(action => (
-              <ActionCard key={action.action_id} action={action}
-                capability={capabilityById(state, action.capability_id)} onOpen={onOpenAction} />
-            ))}
+
+      {!hasActionRecords && projectedWork.length > 0 && (
+        <div className="work-projection-note" role="status">
+          <div>
+            <strong>{projectedWork.length} WORK na projeção da Tower.</strong>
+            <span>Fila canônica visível; execução autônoma só é afirmada quando existir ActionRecord com capability e runtime vinculados.</span>
           </div>
-        : <EmptyState title="Nenhuma ação neste filtro."
-            description="Não há ActionRecord projetado para este filtro nesta compilação. Isso não prova ausência de trabalho fora do registro."
-            hint="Use Integrity e Sources para distinguir vazio real de falta de evidência." />}
+          <span className="work-projection-mode">READ ONLY</span>
+        </div>
+      )}
+
+      {hasActionRecords
+        ? actionRows.length
+          ? <div className="card-grid">
+              {actionRows.map(action => (
+                <ActionCard key={action.action_id} action={action}
+                  capability={capabilityById(state, action.capability_id)} onOpen={onOpenAction} />
+              ))}
+            </div>
+          : <EmptyState title="Nenhuma ação neste filtro."
+              description="Não há ActionRecord que corresponda a este recorte."
+              hint="A contagem reflete o registro executável, não todo WORK existente na Tower." />
+        : projectedWork.length
+          ? workRows.length
+            ? <ProjectedWorkQueue rows={workRows} visible={visibleWork}
+                onMore={() => setVisibleWork(value => value + PROJECTED_WORK_PAGE)} />
+            : <EmptyState {...emptyForProjectedWork} />
+          : <EmptyState title="Nenhuma ação projetada."
+              description="Não há ActionRecord nem WORK da Tower nesta compilação."
+              hint="Nesse caso, Sources e Integrity determinam se o vazio é real ou se faltou cobertura." />}
+
       <p className="write-disabled standalone">
-        Nenhuma ação é executada por esta interface. O frontend projeta estado e explica elegibilidade;
-        a execução pertence à camada de integração.
+        Esta visão é read-only. WORK representa a fila canônica projetada; ActionRecord representa trabalho com contrato
+        executável. A interface não promove um WORK a ação autônoma sem capability, runtime e readback explícitos.
       </p>
     </>
   );

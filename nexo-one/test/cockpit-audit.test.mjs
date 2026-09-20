@@ -56,3 +56,17 @@ test('empty Learning and Execution states explain the next operational path', as
   assert.match(atlas, /Ver Execution/);
   assert.match(operations, /ACTION → CAPABILITY → RUNTIME → EFFECT → READBACK/);
 });
+
+
+test('Actions shows projected Tower WORK when executable ActionRecords are intentionally absent', async () => {
+  const operations = await text('src/features/system/Operations.tsx');
+  const styles = await text('src/styles/system.css');
+  assert.match(operations, /node\.type === 'ACTION'/);
+  assert.match(operations, /WORK na projeção da Tower/);
+  assert.match(operations, /Nenhuma autonomia comprovada/);
+  assert.match(operations, /ActionRecord → capability → runtime/);
+  assert.match(operations, /PROJECTED_WORK_PAGE = 40/);
+  assert.match(styles, /\.work-projection-note/);
+  assert.match(styles, /\.work-queue/);
+  assert.match(styles, /\.work-human-chip/);
+});
