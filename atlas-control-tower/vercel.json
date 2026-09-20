@@ -1,38 +1,173 @@
 {
   "version": 2,
   "builds": [
-    {"src":"package.json","use":"@vercel/static-build","config":{"distDir":"dist"}},
-    {"src":"api/projection.js","use":"@vercel/node"},
-    {"src":"api/universal-projection.js","use":"@vercel/node"},
-    {"src":"api/runner.js","use":"@vercel/node"},
-    {"src":"api/science.js","use":"@vercel/node"},
-    {"src":"api/observatory-questions.js","use":"@vercel/node"},
-    {"src":"api/runtime-orphans.js","use":"@vercel/node"},
-    {"src":"api/runtime-semantic.js","use":"@vercel/node"},
-    {"src":"api/runtime-v2.js","use":"@vercel/node"},
-    {"src":"api/runtime.js","use":"@vercel/node"},
-    {"src":"api/auth/session.mjs","use":"@vercel/node"},
-    {"src":"api/private/index.mjs","use":"@vercel/node"},
-    {"src":"api/mcp.js","use":"@vercel/node","config":{"maxDuration":60}}
+    {
+      "src": "package.json",
+      "use": "@vercel/static-build",
+      "config": {
+        "distDir": "dist"
+      }
+    },
+    {
+      "src": "api/projection.js",
+      "use": "@vercel/node"
+    },
+    {
+      "src": "api/universal-projection.js",
+      "use": "@vercel/node"
+    },
+    {
+      "src": "api/runner.js",
+      "use": "@vercel/node"
+    },
+    {
+      "src": "api/science.js",
+      "use": "@vercel/node"
+    },
+    {
+      "src": "api/observatory-questions.js",
+      "use": "@vercel/node"
+    },
+    {
+      "src": "api/runtime-orphans.js",
+      "use": "@vercel/node"
+    },
+    {
+      "src": "api/runtime-semantic.js",
+      "use": "@vercel/node"
+    },
+    {
+      "src": "api/runtime-v2.js",
+      "use": "@vercel/node"
+    },
+    {
+      "src": "api/runtime.js",
+      "use": "@vercel/node"
+    },
+    {
+      "src": "api/auth/session.mjs",
+      "use": "@vercel/node"
+    },
+    {
+      "src": "api/private/index.mjs",
+      "use": "@vercel/node"
+    },
+    {
+      "src": "api/mcp.js",
+      "use": "@vercel/node",
+      "config": {
+        "maxDuration": 60
+      }
+    }
   ],
   "routes": [
-    {"src":"/api/projection","headers":{"Access-Control-Allow-Origin":"https://bydenoso.github.io","Access-Control-Allow-Methods":"GET,POST,OPTIONS","Access-Control-Allow-Headers":"Content-Type,Authorization","Vary":"Origin"},"dest":"/api/projection.js"},
-    {"src":"/api/universal-projection","headers":{"Access-Control-Allow-Origin":"https://bydenoso.github.io","Access-Control-Allow-Methods":"GET,OPTIONS","Access-Control-Allow-Headers":"Content-Type,Authorization","Vary":"Origin"},"dest":"/api/universal-projection.js"},
-    {"src":"/api/runner","headers":{"Access-Control-Allow-Origin":"https://bydenoso.github.io","Access-Control-Allow-Methods":"GET,POST,OPTIONS","Access-Control-Allow-Headers":"Content-Type,Authorization","Vary":"Origin"},"dest":"/api/runner.js"},
-    {"src":"/api/mcp","headers":{"Access-Control-Allow-Origin":"https://bydenoso.github.io","Access-Control-Allow-Methods":"GET,POST,OPTIONS","Access-Control-Allow-Headers":"Content-Type,Authorization,MCP-Protocol-Version","Vary":"Origin"},"dest":"/api/mcp.js"},
-    {"src":"/api/observatory-questions","headers":{"Access-Control-Allow-Origin":"https://bydenoso.github.io","Access-Control-Allow-Methods":"GET,OPTIONS","Access-Control-Allow-Headers":"Content-Type,Authorization","Vary":"Origin"},"dest":"/api/observatory-questions.js"},
-    {"src":"/api/live/activity","dest":"/api/runtime-orphans.js?route=live-activity"},
-    {"src":"/api/(state|sync|graph|entity|automation-runs|learning-relations|learning|audit|health|ops)","headers":{"Access-Control-Allow-Origin":"https://bydenoso.github.io","Access-Control-Allow-Methods":"GET,POST,OPTIONS","Access-Control-Allow-Headers":"Content-Type,Authorization","Vary":"Origin"},"dest":"/api/runtime-orphans.js?route=$1"},
-    {"src":"/api/auth/session","dest":"/api/auth/session.mjs"},
-    {"src":"/api/private/cockpit","dest":"/api/private/index.mjs?route=cockpit"},
-    {"src":"/api/private/activity","dest":"/api/private/index.mjs?route=activity"},
-    {"src":"/api/private/research","dest":"/api/private/index.mjs?route=research"},
-    {"src":"/api/private/entity","dest":"/api/private/index.mjs?route=entity"},
-    {"src":"/api/private/learner","dest":"/api/private/index.mjs?route=learner"},
-    {"src":"/api/private/sync","dest":"/api/private/index.mjs?route=sync"},
-    {"src":"/api/private/semantic","dest":"/api/private/index.mjs?route=semantic"},
-    {"src":"/api/private/control","dest":"/api/private/index.mjs?route=control"},
-    {"handle":"filesystem"},
-    {"src":"/(.*)","dest":"/index.html"}
-  ]
+    {
+      "src": "/api/projection",
+      "headers": {
+        "Access-Control-Allow-Origin": "https://bydenoso.github.io",
+        "Access-Control-Allow-Methods": "GET,POST,OPTIONS",
+        "Access-Control-Allow-Headers": "Content-Type,Authorization",
+        "Vary": "Origin"
+      },
+      "dest": "/api/projection.js"
+    },
+    {
+      "src": "/api/universal-projection",
+      "headers": {
+        "Access-Control-Allow-Origin": "https://bydenoso.github.io",
+        "Access-Control-Allow-Methods": "GET,OPTIONS",
+        "Access-Control-Allow-Headers": "Content-Type,Authorization",
+        "Vary": "Origin"
+      },
+      "dest": "/api/universal-projection.js"
+    },
+    {
+      "src": "/api/runner",
+      "headers": {
+        "Access-Control-Allow-Origin": "https://bydenoso.github.io",
+        "Access-Control-Allow-Methods": "GET,POST,OPTIONS",
+        "Access-Control-Allow-Headers": "Content-Type,Authorization",
+        "Vary": "Origin"
+      },
+      "dest": "/api/runner.js"
+    },
+    {
+      "src": "/api/mcp",
+      "headers": {
+        "Access-Control-Allow-Origin": "https://bydenoso.github.io",
+        "Access-Control-Allow-Methods": "GET,POST,OPTIONS",
+        "Access-Control-Allow-Headers": "Content-Type,Authorization,MCP-Protocol-Version",
+        "Vary": "Origin"
+      },
+      "dest": "/api/mcp.js"
+    },
+    {
+      "src": "/api/observatory-questions",
+      "headers": {
+        "Access-Control-Allow-Origin": "https://bydenoso.github.io",
+        "Access-Control-Allow-Methods": "GET,OPTIONS",
+        "Access-Control-Allow-Headers": "Content-Type,Authorization",
+        "Vary": "Origin"
+      },
+      "dest": "/api/observatory-questions.js"
+    },
+    {
+      "src": "/api/live/activity",
+      "dest": "/api/runtime-orphans.js?route=live-activity"
+    },
+    {
+      "src": "/api/(state|sync|graph|entity|automation-runs|learning-relations|learning|audit|health|ops)",
+      "headers": {
+        "Access-Control-Allow-Origin": "https://bydenoso.github.io",
+        "Access-Control-Allow-Methods": "GET,POST,OPTIONS",
+        "Access-Control-Allow-Headers": "Content-Type,Authorization",
+        "Vary": "Origin"
+      },
+      "dest": "/api/runtime-orphans.js?route=$1"
+    },
+    {
+      "src": "/api/auth/session",
+      "dest": "/api/auth/session.mjs"
+    },
+    {
+      "src": "/api/private/cockpit",
+      "dest": "/api/private/index.mjs?route=cockpit"
+    },
+    {
+      "src": "/api/private/activity",
+      "dest": "/api/private/index.mjs?route=activity"
+    },
+    {
+      "src": "/api/private/research",
+      "dest": "/api/private/index.mjs?route=research"
+    },
+    {
+      "src": "/api/private/entity",
+      "dest": "/api/private/index.mjs?route=entity"
+    },
+    {
+      "src": "/api/private/learner",
+      "dest": "/api/private/index.mjs?route=learner"
+    },
+    {
+      "src": "/api/private/sync",
+      "dest": "/api/private/index.mjs?route=sync"
+    },
+    {
+      "src": "/api/private/semantic",
+      "dest": "/api/private/index.mjs?route=semantic"
+    },
+    {
+      "src": "/api/private/control",
+      "dest": "/api/private/index.mjs?route=control"
+    },
+    {
+      "handle": "filesystem"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/index.html"
+    }
+  ],
+  "ignoreCommand": "git diff --quiet HEAD^ HEAD -- ."
 }
