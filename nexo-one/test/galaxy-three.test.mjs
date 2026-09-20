@@ -17,21 +17,22 @@ test('active Atlas renderer is a procedural raw Three.js galaxy with Canvas fall
   assert.match(adapter,/GalaxyThree3D/);
   assert.match(adapter,/AtlasCanvas25D/);
   assert.match(three,/new WebGLRenderer/);
-  assert.match(three,/buildGalaxyGeometry/);
+  assert.match(three,/buildFieldGeometry/);
   assert.match(three,/ShaderMaterial/);
   assert.match(three,/UnrealBloomPass/);
   assert.doesNotMatch(three,/ForceGraph3D|react-force-graph-3d/);
 });
 
-test('procedural galaxy uses dense particles instead of luminous arm polylines',async()=>{
+test('procedural NEXO field uses bounded contextual particles and domain rings',async()=>{
   const three=await text('src/components/GalaxyThree3D.tsx');
-  assert.match(three,/particleCount = isMacro \? \(isMobile \? 4200 : 11000\) : \(isMobile \? 26000 : 68000\)/);
-  assert.match(three,/signaturePoint/);
-  assert.match(three,/galaxyArmPoint/);
+  assert.match(three,/particleCount = isMacro \? \(isMobile \? 260 : 760\) : \(isMobile \? 620 : 1800\)/);
+  assert.match(three,/buildFieldGeometry/);
+  assert.match(three,/buildFieldRingSegments/);
+  assert.match(three,/GridHelper/);
   assert.match(three,/gaussian\(random\)/);
   assert.match(three,/AdditiveBlending/);
   assert.match(three,/gl_PointCoord/);
-  assert.match(three,/data-renderer="three-procedural-galaxy"/);
+  assert.match(three,/data-renderer="three-nexo-field"/);
 });
 
 test('three galaxy keeps semantic camera API compatible with tours and search',async()=>{
@@ -56,7 +57,7 @@ test('macro scene derives missing domain anchors from the Galaxy snapshot',async
 
 test('mobile profile reduces GPU particle and pixel load without changing topology',async()=>{
   const three=await text('src/components/GalaxyThree3D.tsx');
-  assert.match(three,/isMacro \? \(isMobile \? 4200 : 11000\) : \(isMobile \? 26000 : 68000\)/);
+  assert.match(three,/isMacro \? \(isMobile \? 260 : 760\) : \(isMobile \? 620 : 1800\)/);
   assert.match(three,/isMobile \? 1\.45 : 1\.9/);
   assert.match(three,/if \(!isMobile && !isMacro && themeName === 'dark'\) \{/);
   assert.match(three,/data-particle-profile=\{isMobile \? 'mobile' : 'desktop'\}/);
@@ -71,9 +72,9 @@ test('macro overview uses deterministic domain anchors and explicit renderer mod
     text('src/components/GalaxyThree3D.tsx'),
   ]);
   assert.match(layout,/layoutMacroDomains/);
-  assert.match(layout,/SCIENCE: \{ x: 92, y: 18, z: -8 \}/);
-  assert.match(layout,/ENGINEERING: \{ x: -84, y: 52, z: 8 \}/);
-  assert.match(layout,/OLYMPUS: \{ x: -68, y: -58, z: -6 \}/);
+  assert.match(layout,/SCIENCE: \{ x: -96, y: -4, z: -8 \}/);
+  assert.match(layout,/ENGINEERING: \{ x: 0, y: 76, z: 8 \}/);
+  assert.match(layout,/OLYMPUS: \{ x: 96, y: -2, z: -6 \}/);
   assert.match(view,/isMacroOverview/);
   assert.match(view,/layoutMacroDomains\(renderGraph\.nodes\)/);
   assert.match(view,/viewMode=\{isMacroOverview \? 'macro' : 'detail'\}/);

@@ -31,7 +31,7 @@ test('stage 2 canvas has imperative focus camera, lod and bounded rendering',asy
   assert.doesNotMatch(canvas,/WebGL|ForceGraph3D|react-force-graph-3d/);
 });
 
-test('atlas consumes the stage 1 galaxy compiler and renders one visual palette with three arms',async()=>{
+test('atlas consumes snapshot domain membership while the live graph owns field entities',async()=>{
   const [adapter,atlas]=await Promise.all([
     text('src/components/AtlasCanvas25D.tsx'),
     text('src/features/system/Atlas.tsx'),
@@ -41,8 +41,10 @@ test('atlas consumes the stage 1 galaxy compiler and renders one visual palette 
   assert.match(adapter,/GALAXY_COLOR='#79e7ff'/);
   assert.doesNotMatch(adapter,/DOMAIN_COLOR|ALERT_COLOR/);
   assert.match(atlas,/useGalaxySnapshot\(state\)/);
-  assert.match(atlas,/galaxySnapshot\.entities/);
-  assert.match(atlas,/galaxySnapshot\.subdomains/);
+  assert.match(atlas,/galaxySnapshot\.domains/);
+  assert.match(atlas,/visualDomainNode/);
+  assert.match(atlas,/graphForView/);
+  assert.doesNotMatch(atlas,/galaxySnapshot\.entities/);
   assert.match(atlas,/<AtlasGalaxyRenderer ref=\{galaxyRef\}/);
   assert.match(atlas,/focusDomain/);
   assert.match(atlas,/focusSubdomain/);
