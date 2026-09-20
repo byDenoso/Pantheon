@@ -317,10 +317,22 @@ export function AtlasView(
   const active = filterCount(filters);
   const handleGraphSelect = (id: string | null) => {
     if (id) {
+      const campaign = campaignFromId(id);
+      if (campaign) {
+        galaxyRef.current?.focusSubdomain(id);
+        setExpandedDomain(campaign.domain);
+        setExpandedCampaign(campaign.campaignId);
+        setExpandedCluster(null);
+        setRootExpanded(true);
+        setExpandAll(false);
+        onSelect(null);
+        return;
+      }
       const cluster = clusterFromId(id);
       if (cluster) {
         galaxyRef.current?.focusSubdomain(id);
         setExpandedDomain(cluster.domain);
+        setExpandedCampaign(null);
         setExpandedCluster(cluster.type);
         setRootExpanded(true);
         setExpandAll(false);
@@ -336,6 +348,7 @@ export function AtlasView(
           setRootExpanded(true);
           setExpandAll(false);
           setExpandedDomain(null);
+          setExpandedCampaign(null);
           setExpandedCluster(null);
           onSelect(null);
           return;
@@ -348,6 +361,7 @@ export function AtlasView(
         setRootExpanded(true);
         setExpandAll(false);
         setExpandedDomain(node.domain);
+        setExpandedCampaign(null);
         setExpandedCluster(null);
       } else {
         galaxyRef.current?.focusEntity(id);
@@ -426,8 +440,17 @@ export function AtlasView(
       setExpandAll(true);
       onSelect(initial.entity);
     } else if (initial.subdomain) {
+      const campaign = campaignFromId(initial.subdomain);
       const cluster = clusterFromId(initial.subdomain);
-      if (cluster) { setExpandedDomain(cluster.domain); setExpandedCluster(cluster.type); }
+      if (campaign) {
+        setExpandedDomain(campaign.domain);
+        setExpandedCampaign(campaign.campaignId);
+        setExpandedCluster(null);
+      } else if (cluster) {
+        setExpandedDomain(cluster.domain);
+        setExpandedCampaign(null);
+        setExpandedCluster(cluster.type);
+      }
     } else if (initial.domain && (DOMAINS as string[]).includes(initial.domain)) {
       setExpandedDomain(initial.domain as GraphNode['domain']);
     }
@@ -447,13 +470,17 @@ export function AtlasView(
 
   // Keep the URL in sync with camera/panel state (no reload, no history spam).
   useEffect(() => {
-    const subdomain = expandedDomain && expandedCluster ? clusterIdFor(expandedDomain, expandedCluster) : null;
+    const subdomain = expandedDomain && expandedCampaign
+      ? campaignNodeId(expandedDomain, expandedCampaign)
+      : expandedDomain && expandedCluster
+        ? clusterIdFor(expandedDomain, expandedCluster)
+        : null;
     const search = buildGalaxySearch({
       mode, domain: expandedDomain, subdomain, entity: effectiveSelectedId, panel: openPanel,
     });
     const url = `${window.location.pathname}${search}${window.location.hash}`;
     window.history.replaceState(null, '', url);
-  }, [mode, expandedDomain, expandedCluster, effectiveSelectedId, openPanel]);
+  }, [mode, expandedDomain, expandedCampaign, expandedCluster, effectiveSelectedId, openPanel]);
 
   // Optional read-only WebMCP surface. registerGalaxyWebMcpTools is a no-op
   // whenever no WebMCP host exists on window, which is every browser today —
@@ -470,6 +497,7 @@ export function AtlasView(
 
   const goBack = () => {
     if (expandAll) setExpandAll(false);
+    else if (expandedCampaign) setExpandedCampaign(null);
     else if (expandedCluster) setExpandedCluster(null);
     else if (expandedDomain) setExpandedDomain(null);
     setRootExpanded(true);
@@ -480,6 +508,7 @@ export function AtlasView(
     galaxyRef.current?.reset();
     setRootExpanded(true);
     setExpandedDomain(null);
+    setExpandedCampaign(null);
     setExpandedCluster(null);
     setExpandAll(true);
     onSelect(null);
@@ -491,6 +520,7 @@ export function AtlasView(
     setRootExpanded(true);
     setExpandAll(false);
     setExpandedDomain(null);
+    setExpandedCampaign(null);
     setExpandedCluster(null);
     onSelect(null);
   };
