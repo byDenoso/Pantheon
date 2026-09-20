@@ -227,34 +227,79 @@ export function AtlasView(
         : [];
       return { nodes: [macroNexoNode, ...childDomains], edges: [...edges, ...visibleLearningEdges] };
     }
-    const domainNode = domainNodes.find(node => node.domain === expandedDomain);
+    const domainNode = domainNodes.find(node => node.domain === expandedDomain)
+      ?? graphForView.nodes.find(node => node.type === 'DOMAIN' && node.domain === expandedDomain);
     if (!domainNode) return { nodes: domainNodes, edges: [] };
-    if (!expandedCluster) {
+
+    const domainChildren = baseNodes.filter(node =>
+      node.domain === expandedDomain && node.type !== 'DOMAIN' && node.type !== 'FILAMENT');
+    const canonicalCampaigns = new Set(
+      domainChildren.map(node => node.campaign_id?.trim()).filter((value): value is string => Boolean(value)),
+    );
+
+    if (!expandedCampaign && !expandedCluster) {
+      if (canonicalCampaigns.size > 0) {
+        const groups = new Map<string, GraphNode[]>();
+        for (const node of domainChildren) {
+          const key = node.campaign_id?.trim() || NO_CAMPAIGN;
+          groups.set(key, [...(groups.get(key) ?? []), node]);
+        }
+        const campaignNodes = [...groups.entries()]
+          .sort(([a], [b]) => a.localeCompare(b))
+          .map(([campaignId, members]) => campaignNode(expandedDomain, campaignId, members.length, members[0] ?? null));
+        const edges = campaignNodes.map(node => ({
+          id: 'atlas.campaign.edge.' + expandedDomain + '.' + node.id,
+          from: domainNode.id,
+          to: node.id,
+          kind: 'OWNS' as const,
+          weight: 0.86,
+          explanation: 'Campanha ' + node.label + ' derivada do campaign_id sancionado na projeção.',
+        }));
+        return { nodes: [domainNode, ...campaignNodes], edges };
+      }
+
       const clusterNodes = ATLAS_CLUSTER_TYPES
         .map(type => {
-          const count = baseNodes.filter(node => node.domain === expandedDomain && node.type === type).length;
+          const count = domainChildren.filter(node => node.type === type).length;
           return count > 0 ? clusterNode(expandedDomain, type, count) : null;
         })
         .filter((node): node is GraphNode => Boolean(node));
-      const nodes = [domainNode, ...clusterNodes];
       const edges = clusterNodes.map(node => ({
-        id: `atlas.cluster.edge.${expandedDomain}.${node.id}`,
+        id: 'atlas.cluster.edge.' + expandedDomain + '.' + node.id,
         from: domainNode.id, to: node.id, kind: 'OWNS' as const, weight: 0.72,
-        explanation: `Cluster ${node.label} projetado a partir do grafo canônico.`,
+        explanation: 'Cluster ' + node.label + ' projetado a partir do grafo canônico.',
       }));
-      return { nodes, edges };
+      return { nodes: [domainNode, ...clusterNodes], edges };
     }
-    const children = baseNodes.filter(node => node.domain === expandedDomain && node.type === expandedCluster);
+
+    if (expandedCampaign) {
+      const members = domainChildren.filter(node =>
+        (node.campaign_id?.trim() || NO_CAMPAIGN) === expandedCampaign);
+      const campaign = campaignNode(expandedDomain, expandedCampaign, members.length, members[0] ?? null);
+      const children = [...members].sort((a, b) =>
+        (a.type === 'TEST' ? 0 : 1) - (b.type === 'TEST' ? 0 : 1) || a.id.localeCompare(b.id));
+      const edges = children.map(node => ({
+        id: 'atlas.campaign.member.' + campaign.id + '.' + node.id,
+        from: campaign.id,
+        to: node.id,
+        kind: 'OWNS' as const,
+        weight: node.type === 'TEST' ? 0.92 : 0.60,
+        explanation: node.type + ' pertence à campanha ' + campaign.label + ' na projeção sancionada.',
+      }));
+      return { nodes: [campaign, ...children], edges };
+    }
+
+    const children = domainChildren.filter(node => node.type === expandedCluster);
     const nodes = [domainNode, ...children];
     const ids = new Set(nodes.map(node => node.id));
     return { nodes, edges: filtered.edges.filter(edge => (learningVisible || !edge.is_learning) && ids.has(edge.from) && ids.has(edge.to)) };
-  }, [expandAll, expandedCluster, expandedDomain, filtered, graphForView.nodes, learningEndpointIds, learningVisible, rootExpanded]);
-  const isMacroOverview = rootExpanded && !expandAll && !expandedDomain && !expandedCluster;
+  }, [expandAll, expandedCampaign, expandedCluster, expandedDomain, filtered, graphForView.nodes, learningVisible, rootExpanded]);
+  const isMacroOverview = rootExpanded && !expandAll && !expandedDomain && !expandedCampaign && !expandedCluster;
   const placed = useMemo(() => {
     if (isMacroOverview) return layoutMacroDomains(renderGraph.nodes, isMobile);
     return layoutGraph3D(renderGraph.nodes);
   }, [isMacroOverview, isMobile, renderGraph.nodes]);
-  const legend = useMemo(() => legendOf(renderGraph.nodes.filter(node => !clusterFromId(node.id))), [renderGraph.nodes]);
+  const legend = useMemo(() => legendOf(renderGraph.nodes.filter(node => !clusterFromId(node.id) && !campaignFromId(node.id))), [renderGraph.nodes]);
   const effectiveSelectedId = resolveSelection3D(placed, selectedId);
   const selected: GraphNode | null = filtered.nodes.find(n => n.id === effectiveSelectedId) ?? null;
   const relations = useMemo(
