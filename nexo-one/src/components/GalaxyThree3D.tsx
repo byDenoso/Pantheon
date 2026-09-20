@@ -16,6 +16,7 @@ import {
   Float32BufferAttribute,
   GridHelper,
   LineBasicMaterial,
+  LineDashedMaterial,
   LineSegments,
   PerspectiveCamera,
   Points,
@@ -38,15 +39,39 @@ import type { Canvas25DViewState, CanvasGraph25DHandle } from './CanvasGraph25D.
 import './GalaxyThree3D.css';
 
 const TAU = Math.PI * 2;
-const DEFAULT_CAMERA = new Vector3(0, 22, 268);
-const MACRO_CAMERA = new Vector3(0, 20, 340);
-const MOBILE_MACRO_CAMERA = new Vector3(0, 8, 220);
+const DEFAULT_CAMERA = new Vector3(0, 16, 286);
+const MACRO_CAMERA = new Vector3(0, 12, 360);
+const MOBILE_MACRO_CAMERA = new Vector3(0, 2, 236);
 const DEFAULT_TARGET = new Vector3(0, 0, 0);
 
 function paletteForTheme(theme: 'dark' | 'light') {
   return theme === 'light'
     ? { accent: new Color('#f47a20'), strong: new Color('#a94808') }
     : { accent: new Color('#7fddba'), strong: new Color('#eefcf7') };
+}
+
+const DARK_DOMAIN_COLORS: Partial<Record<PlacedNode3D['domain'], string>> = {
+  NEXO: '#dcecff',
+  ENGINEERING: '#7fddba',
+  SCIENCE: '#78a9ff',
+  OLYMPUS: '#b08cff',
+  ARTIFACT: '#e7b763',
+};
+const LIGHT_DOMAIN_COLORS: Partial<Record<PlacedNode3D['domain'], string>> = {
+  NEXO: '#344a5f',
+  ENGINEERING: '#2f8a69',
+  SCIENCE: '#416fae',
+  OLYMPUS: '#7256a8',
+  ARTIFACT: '#a86819',
+};
+
+function domainColor(domain: PlacedNode3D['domain'], theme: 'dark' | 'light'): Color {
+  const map = theme === 'light' ? LIGHT_DOMAIN_COLORS : DARK_DOMAIN_COLORS;
+  return new Color(map[domain] ?? (theme === 'light' ? '#59636d' : '#a7b2bc'));
+}
+
+function stateClass(value: unknown): string {
+  return String(value ?? 'UNKNOWN').toLowerCase().replace(/[^a-z0-9]+/g, '-');
 }
 
 type Props = {
@@ -161,7 +186,7 @@ varying float vBrightness;
 
 void main() {
   vec4 mv = modelViewMatrix * vec4(position, 1.0);
-  float twinkle = 0.9 + 0.1 * sin(uTime * 0.55 + position.x * 0.055 + position.y * 0.037);
+  float twinkle = 0.985 + 0.015 * sin(uTime * 0.45 + position.x * 0.055 + position.y * 0.037);
   float perspective = 250.0 / max(22.0, -mv.z);
   gl_PointSize = clamp(aSize * uPixelRatio * perspective * twinkle, 0.7, 10.0);
   gl_Position = projectionMatrix * mv;
@@ -429,7 +454,7 @@ export const GalaxyThree3D = forwardRef<CanvasGraph25DHandle, Props>(function Ga
       const scene = new Scene();
       sceneRef.current = scene;
 
-      const camera = new PerspectiveCamera(isMobile ? 50 : 44, size.width / size.height, 0.1, 1200);
+      const camera = new PerspectiveCamera(isMobile ? 35 : 40, size.width / size.height, 0.1, 1200);
       camera.position.copy(isMacro ? (isMobile ? MOBILE_MACRO_CAMERA : MACRO_CAMERA) : DEFAULT_CAMERA);
       cameraRef.current = camera;
 
@@ -438,6 +463,7 @@ export const GalaxyThree3D = forwardRef<CanvasGraph25DHandle, Props>(function Ga
       controls.enableDamping = true;
       controls.dampingFactor = 0.065;
       controls.enablePan = true;
+      controls.enableRotate = !(isMobile && isMacro);
       controls.screenSpacePanning = true;
       controls.rotateSpeed = 0.52;
       controls.zoomSpeed = 0.82;
