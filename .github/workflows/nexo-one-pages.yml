@@ -79,6 +79,16 @@ jobs:
           path: _tcc
           persist-credentials: false
 
+      - name: Compile sanctioned projection from current Tower
+        shell: bash
+        run: |
+          set -euo pipefail
+          tower_commit="$(git -C _vault rev-parse HEAD)"
+          python _tcc/scripts/build_public_projection.py \
+            --root _vault/TOWER_V06 \
+            --out _vault/TOWER_V06/projections/public \
+            --tower-commit "${tower_commit}"
+
       - name: Verify sanctioned Tower projection
         id: projection
         shell: bash
