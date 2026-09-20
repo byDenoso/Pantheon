@@ -18,6 +18,8 @@ test('Drive primary is explicit and fails closed when credentials are absent',as
   assert.equal(gateway.configured.towerWrite,false);
   assert.equal(gateway.configured.migrationFallback,false);
   await assert.rejects(()=>gateway.readControl(),/DRIVE_PRIMARY_NOT_CONFIGURED/);
+  await assert.rejects(()=>gateway.submitTowerMutation({}),/DRIVE_MUTATION_ENGINE_NOT_PROMOTED/);
+  await assert.rejects(()=>gateway.dispatchRuntime({}),/DRIVE_RUNTIME_DISPATCH_NOT_PROMOTED/);
 });
 
 test('GitHub fallback is migration-only and must be explicitly enabled',()=>{
