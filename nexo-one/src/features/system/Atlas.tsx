@@ -27,6 +27,7 @@ import { useGalaxyAudio } from '../../app/useGalaxyAudio.ts';
 import { registerGalaxyWebMcpTools } from '../../mcp/webmcpTools.ts';
 import { GalaxyIntro } from './GalaxyIntro.tsx';
 import { OperateHUD } from './OperateHUD.tsx';
+import './AtlasWorlds.css';
 
 const AUTHORITIES: AuthorityClass[] = ['TRUTH_OWNER', 'DELEGATED', 'DERIVED', 'NON_AUTHORITATIVE'];
 const FRESHNESS_VALUES = ['LIVE', 'RECENT', 'AGING', 'STALE', 'UNKNOWN'] as const;
