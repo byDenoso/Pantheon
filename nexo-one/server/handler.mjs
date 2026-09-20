@@ -23,14 +23,14 @@ const mcpWebHandler=createNexoMcpWebHandler({readSnapshot:()=>readAtlasSsot({env
 const mcpNodeHandler=toNodeHandler(mcpWebHandler);
 const DEFAULT_PUBLIC_SYSTEM_URL='https://bydenoso.github.io/Pantheon/system.json';
 const DEFAULT_PUBLIC_MANIFEST_URL='https://bydenoso.github.io/Pantheon/tower-projection/manifest.json';
-async function readPublishedTowerSystem({env=process.env,signal,now=Date.now()}={}){
-  const systemUrl=String(env.NEXO_PUBLIC_SYSTEM_URL||DEFAULT_PUBLIC_SYSTEM_URL).trim();
-  const manifestUrl=String(env.NEXO_PUBLIC_MANIFEST_URL||DEFAULT_PUBLIC_MANIFEST_URL).trim();
-  const suffix=url=>`${url}${url.includes('?')?'&':'?'}v=${now}`;
-  const options={signal,cache:'no-store',headers:{Accept:'application/json'}};
+const PUBLIC_SYSTEM_CACHE_TTL_MS=15000;
+let publishedSystemCache={key:'',expiresAt:0,value:null,inflight:null};
+
+async function fetchPublishedTowerSystem({systemUrl,manifestUrl,signal}){
+  const options={signal,cache:'no-store',headers:{Accept:'application/json','Cache-Control':'no-cache'}};
   const [systemResponse,manifestResponse]=await Promise.all([
-    fetch(suffix(systemUrl),options),
-    fetch(suffix(manifestUrl),options),
+    fetch(systemUrl,options),
+    fetch(manifestUrl,options),
   ]);
   if(!systemResponse.ok||!manifestResponse.ok)throw new Error('SANCTIONED_PUBLIC_PROJECTION_UNAVAILABLE');
   const [system,manifest]=await Promise.all([systemResponse.json(),manifestResponse.json()]);
@@ -42,6 +42,32 @@ async function readPublishedTowerSystem({env=process.env,signal,now=Date.now()}=
   if(system?.bus?.fingerprint!==manifest.projection_fingerprint)
     throw new Error('SANCTIONED_SYSTEM_FINGERPRINT_MISMATCH');
   return system;
+}
+
+async function readPublishedTowerSystem({env=process.env,signal,now=Date.now(),force=false}={}){
+  const systemUrl=String(env.NEXO_PUBLIC_SYSTEM_URL||DEFAULT_PUBLIC_SYSTEM_URL).trim();
+  const manifestUrl=String(env.NEXO_PUBLIC_MANIFEST_URL||DEFAULT_PUBLIC_MANIFEST_URL).trim();
+  const key=`${systemUrl}\n${manifestUrl}`;
+  if(force){
+    const value=await fetchPublishedTowerSystem({systemUrl,manifestUrl,signal});
+    publishedSystemCache={key,expiresAt:Date.now()+PUBLIC_SYSTEM_CACHE_TTL_MS,value,inflight:null};
+    return value;
+  }
+  if(publishedSystemCache.key===key&&publishedSystemCache.value&&now<publishedSystemCache.expiresAt)
+    return publishedSystemCache.value;
+  if(publishedSystemCache.key===key&&publishedSystemCache.inflight)return publishedSystemCache.inflight;
+
+  const inflight=fetchPublishedTowerSystem({systemUrl,manifestUrl})
+    .then(value=>{
+      publishedSystemCache={key,expiresAt:Date.now()+PUBLIC_SYSTEM_CACHE_TTL_MS,value,inflight:null};
+      return value;
+    })
+    .catch(error=>{
+      if(publishedSystemCache.key===key)publishedSystemCache={key:'',expiresAt:0,value:null,inflight:null};
+      throw error;
+    });
+  publishedSystemCache={key,expiresAt:0,value:publishedSystemCache.key===key?publishedSystemCache.value:null,inflight};
+  return inflight;
 }
 async function requestBody(req){
   if(req.body&&typeof req.body==='object'&&!Buffer.isBuffer(req.body))return req.body;
@@ -139,7 +165,7 @@ export default async function handler(req,res) {
     }
     if(route==='system'){
       if(!privateAccess){
-        try{return send(await readPublishedTowerSystem({env,signal:req.signal,now}));}
+        try{return send(await readPublishedTowerSystem({env,signal:req.signal,now,force}));}
         catch(error){console.warn('[nexo-one] sanctioned public SystemState unavailable; using bounded runtime fallback',String(error?.message||error));}
       }
       const options={now,access:'PUBLIC',env,force};
