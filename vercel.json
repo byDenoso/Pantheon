@@ -4,8 +4,18 @@
   "buildCommand": "cd nexo-one && npm run build",
   "outputDirectory": "nexo-one/dist",
   "rewrites": [
-    {"source": "/api/:route", "destination": "/api/index?route=:route"},
-    {"source": "/api/:route/:subroute", "destination": "/api/index?route=:route/:subroute"},
-    {"source": "/((?!api/).*)", "destination": "/index.html"}
-  ]
+    {
+      "source": "/api/:route",
+      "destination": "/api/index?route=:route"
+    },
+    {
+      "source": "/api/:route/:subroute",
+      "destination": "/api/index?route=:route/:subroute"
+    },
+    {
+      "source": "/((?!api/).*)",
+      "destination": "/index.html"
+    }
+  ],
+  "ignoreCommand": "git diff --quiet HEAD^ HEAD -- nexo-one vercel.json"
 }
