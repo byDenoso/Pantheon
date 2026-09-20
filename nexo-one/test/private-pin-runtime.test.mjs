@@ -33,6 +33,16 @@ test('private access UI is a numeric PIN flow with ephemeral input',async()=>{
   assert.doesNotMatch(session,/fetch\(['"]\/api\/session/);
 });
 
+test('avatar opens the local session modal and never replaces the current cockpit',async()=>{
+  const app=await text('src/app/App.tsx');
+  const openSession=app.match(/const openSession = \(\) => \{([\s\S]*?)\n  \};/)?.[1]||'';
+  assert.match(openSession,/setLoginOpen\(true\)/);
+  assert.doesNotMatch(openSession,/window\.location\.(?:assign|replace)/);
+  assert.match(app,/Abrir conta e sessão/);
+  assert.match(app,/window\.open\(target\.toString\(\), '_blank', 'noopener,noreferrer'\)/);
+  assert.match(app,/Abrir cockpit privado em nova aba/);
+});
+
 test('numeric PIN mode is protected by Apps Script server-side rate limiting',async()=>{
   const code=await text('apps-script-auth/Code.gs');
   assert.match(code,/NEXO_BROWSER_FAILURE_LIMIT=5/);
