@@ -1,10 +1,10 @@
 import {createScientificMcpService} from '../lib/scientific-mcp.mjs';
 import {createScientificMcpHttpHandler} from '../lib/scientific-mcp-http.mjs';
-import {createTowerGithubGateway} from '../lib/tower-github-gateway.mjs';
+import {createTowerGateway} from '../lib/tower-gateway.mjs';
 import {createNexoSemanticGateway} from '../lib/nexo-semantic-gateway.mjs';
 import {observeHealthIssue,startHealthRepair,resolveHealthIssue} from '../lib/nexo-health.mjs';
 
-const gateway=createTowerGithubGateway();
+const gateway=createTowerGateway();
 const service=createScientificMcpService({gateway});
 const semanticGateway=createNexoSemanticGateway({towerGateway:gateway});
 const semantic={
