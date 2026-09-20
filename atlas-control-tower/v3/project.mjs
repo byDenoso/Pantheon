@@ -190,7 +190,9 @@ export function buildAtlasProjectionV3(input) {
     const groupId = testToGroup.get(id);
     if (groupId) return addEdge(source, groupId, type, { allowExternal: false });
     const campaignId = testToCampaign.get(id);
-    if (campaignId) addEdge(source, campaignId, type, { allowExternal: false });
+    if (campaignId) return addEdge(source, campaignId, type, { allowExternal: false });
+    const workId = `WORK::${id}`;
+    if (nodeMap.has(workId)) addEdge(source, workId, type, { allowExternal: false });
   };
 
   for (const { bucket, entity } of canonicalEntities) {
