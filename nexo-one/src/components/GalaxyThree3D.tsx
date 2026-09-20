@@ -203,9 +203,11 @@ function buildFieldRingSegments(nodes: PlacedNode3D[], isMacro: boolean): Buffer
 const galaxyVertexShader = `
 attribute float aSize;
 attribute float aBrightness;
+attribute vec3 aColor;
 uniform float uTime;
 uniform float uPixelRatio;
 varying float vBrightness;
+varying vec3 vColor;
 
 void main() {
   vec4 mv = modelViewMatrix * vec4(position, 1.0);
@@ -214,6 +216,7 @@ void main() {
   gl_PointSize = clamp(aSize * uPixelRatio * perspective * twinkle, 0.7, 10.0);
   gl_Position = projectionMatrix * mv;
   vBrightness = aBrightness;
+  vColor = aColor;
 }
 `;
 
@@ -222,6 +225,7 @@ uniform vec3 uColorA;
 uniform vec3 uColorB;
 uniform float uOpacity;
 varying float vBrightness;
+varying vec3 vColor;
 
 void main() {
   vec2 uv = gl_PointCoord - vec2(0.5);
@@ -229,19 +233,20 @@ void main() {
   if (d > 0.5) discard;
   float core = smoothstep(0.5, 0.0, d);
   float halo = smoothstep(0.5, 0.18, d);
-  vec3 color = mix(uColorA, uColorB, clamp(vBrightness, 0.0, 1.0));
+  vec3 color = mix(vColor, uColorB, clamp(vBrightness * 0.16, 0.0, 0.16));
   float alpha = (halo * 0.36 + core * 0.60) * (0.18 + vBrightness * 0.64) * uOpacity;
   gl_FragColor = vec4(color, alpha);
 }
 `;
 
 function nodeSize(node: PlacedNode3D): number {
-  if (node.type === 'DOMAIN') return node.domain === 'NEXO' ? 13 : 9.5;
-  if (node.id.startsWith('atlas.cluster.')) return 7.2;
-  if (node.type === 'CAPABILITY') return 5.2;
-  if (node.type === 'PROVIDER') return 5;
-  if (node.type === 'TEST') return 4.5;
-  return 3.8;
+  if (node.type === 'DOMAIN') return node.domain === 'NEXO' ? 14.5 : 11.2;
+  if (node.id.startsWith('atlas.cluster.')) return 8.2;
+  if (node.type === 'CAPABILITY' || node.type === 'PROVIDER') return 5.8;
+  if (node.type === 'TEST') return 5.0;
+  if (node.type === 'ACTION' || node.type === 'CLAIM') return 4.7;
+  if (node.type === 'PROJECTION') return 4.3;
+  return 3.7;
 }
 
 function nodeIntensity(node: PlacedNode3D, selectedId: string | null): number {
@@ -253,26 +258,36 @@ function nodeIntensity(node: PlacedNode3D, selectedId: string | null): number {
   return 0.64;
 }
 
-function buildNodeGeometry(nodes: PlacedNode3D[], selectedId: string | null): BufferGeometry {
+function buildNodeGeometry(
+  nodes: PlacedNode3D[], selectedId: string | null, theme: 'dark' | 'light',
+): BufferGeometry {
   const positions = new Float32Array(nodes.length * 3);
   const sizes = new Float32Array(nodes.length);
   const brightness = new Float32Array(nodes.length);
+  const colors = new Float32Array(nodes.length * 3);
+  const selected = selectedId ? nodes.find(node => node.id === selectedId) : null;
+
   nodes.forEach((node, index) => {
     const p = index * 3;
     positions[p] = node.x;
     positions[p + 1] = node.y;
     positions[p + 2] = node.z;
     sizes[index] = nodeSize(node);
-    brightness[index] = nodeIntensity(node, selectedId);
+    const focusFactor = selected && node.id !== selected.id
+      ? node.domain === selected.domain ? 0.56 : 0.20
+      : 1;
+    brightness[index] = nodeIntensity(node, selectedId) * focusFactor;
+    domainColor(node.domain, theme).toArray(colors, p);
   });
+
   const geometry = new BufferGeometry();
   geometry.setAttribute('position', new Float32BufferAttribute(positions, 3));
   geometry.setAttribute('aSize', new Float32BufferAttribute(sizes, 1));
   geometry.setAttribute('aBrightness', new Float32BufferAttribute(brightness, 1));
+  geometry.setAttribute('aColor', new Float32BufferAttribute(colors, 3));
   geometry.computeBoundingSphere();
   return geometry;
 }
-
 function buildRelationSegments(
   nodes: PlacedNode3D[],
   edges: GraphEdge[],
@@ -529,7 +544,7 @@ export const GalaxyThree3D = forwardRef<CanvasGraph25DHandle, Props>(function Ga
       grid.visible = !isMobile;
       scene.add(grid);
 
-      const nodeGeometry = buildNodeGeometry(nodes, selectedId);
+      const nodeGeometry = buildNodeGeometry(nodes, selectedId, themeName);
       const nodeMaterial = new ShaderMaterial({
         uniforms: {
           uTime: { value: 0 },
