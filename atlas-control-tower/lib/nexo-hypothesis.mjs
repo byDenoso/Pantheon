@@ -1,3 +1,5 @@
+import {createHash} from 'node:crypto';
+
 const ABSORBING=new Set(['FALSIFIED','RETIRED']);
 const REQUIRED=Object.freeze(['hypothesis_id','proposition']);
 const RECOMMENDED=Object.freeze(['claim_boundary','success_criteria','kill_criteria','critical_tests','max_adaptive_followups','reopen_policy']);
@@ -57,13 +59,13 @@ export function createHypothesisSurface({towerGateway}){
     if(duplicate)return {status:'DUPLICATE',outcome:'MERGED_EXISTING_IDENTITY',hypothesis_id:duplicate.id,readback:'PASS'};
     const explicit=clean(payload.hypothesis_id);
     const material=[normalized,clean(payload.domain).toLowerCase(),clean(payload.claim_boundary).toLowerCase()].join('|');
-    const digest=(await import('node:crypto')).createHash('sha256').update(material).digest('hex').slice(0,20).toUpperCase();
+    const digest=createHash('sha256').update(material).digest('hex').slice(0,20).toUpperCase();
     const id=explicit?requireIdentifier(explicit,'hypothesis_id'):'HYP-USER-'+digest;
     const candidate={hypothesis_id:id,proposition:prop,claim_boundary:payload.claim_boundary,success_criteria:payload.success_criteria,kill_criteria:payload.kill_criteria,critical_tests:payload.critical_tests,max_adaptive_followups:payload.max_adaptive_followups,reopen_policy:payload.reopen_policy};
     const validation=validateHypothesisContract(candidate),correlation=clean(payload.correlation_id)||'CORR-'+id;
     const changes={id,hypothesis_id:id,entity_type:'SCIENTIFIC_HYPOTHESIS',status:'OPEN',contract_state:validation.valid?'FROZEN':'NEEDS_FREEZE',proposition:prop,origin:clean(payload.origin)||'USER_DIRECTED',authority:clean(payload.authority)||'USER_DIRECTED',correlation_id:correlation};
     for(const key of ['claim_boundary','success_criteria','kill_criteria','critical_tests','max_adaptive_followups','reopen_policy','domain','program_id','priority','expected_information_gain','title','scope'])if(payload[key]!==undefined&&payload[key]!==null)changes[key]=payload[key];
-    const requestDigest=(await import('node:crypto')).createHash('sha256').update(JSON.stringify({id,changes},Object.keys({id:1,changes:1}).sort())).digest('hex').slice(0,20).toUpperCase();
+    const requestDigest=createHash('sha256').update(canonicalJson({id,changes})).digest('hex').slice(0,20).toUpperCase();
     const request={request_id:'REQ-API-HYP-'+requestDigest,entity_kind:'hypothesis',entity_name:id,expected_version:0,writer_role:'ADVISOR',event_type:'HYPOTHESIS_CREATED',material:true,correlation_id:correlation,changes};
     const persisted=await towerGateway.submitTowerMutation(request),readback=await towerGateway.readEntity('hypothesis',id);
     if(!readback)throw new Error('HYPOTHESIS_READBACK_MISSING');
