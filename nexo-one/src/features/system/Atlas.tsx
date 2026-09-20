@@ -137,6 +137,49 @@ function visualDomainNode(
   };
 }
 
+
+function DomainWorlds(
+  { nodes, onOpen }: { nodes: GraphNode[]; onOpen: (id: string) => void },
+) {
+  const domains = nodes.filter(node => node.type === 'DOMAIN');
+  const total = domains.reduce((sum, node) => sum + (node.member_count ?? 0), 0);
+  return (
+    <div className="atlas-domain-worlds" aria-label="Domínios do NEXO Atlas">
+      <div className="atlas-world-heading" aria-hidden="true">
+        <strong>NEXO ATLAS</strong>
+        <span>CONHECIMENTO SEM FRONTEIRAS · INTELIGÊNCIA EM CONTEXTO</span>
+      </div>
+      {domains.map(node => {
+        const count = node.member_count ?? 0;
+        return (
+          <button key={node.id} type="button"
+            className={'atlas-domain-world domain-' + node.domain.toLowerCase()}
+            onClick={() => onOpen(node.id)}>
+            <span className="atlas-world-orb" aria-hidden="true">
+              <i className="atlas-world-ring ring-a" />
+              <i className="atlas-world-ring ring-b" />
+              <i className="atlas-world-satellite sat-a" />
+              <i className="atlas-world-satellite sat-b" />
+              <i className="atlas-world-satellite sat-c" />
+              <b>{DOMAIN_WORLD_GLYPH[node.domain] ?? '·'}</b>
+            </span>
+            <span className="atlas-world-copy">
+              <strong>{node.domain === 'NEXO' ? 'NEXO CORE' : node.label}</strong>
+              <small>{node.domain === 'NEXO' ? 'KNOWLEDGE ATLAS' : count + ' ENTIDADES'}</small>
+              {node.domain !== 'NEXO' && <em>{DOMAIN_WORLD_CAPTION[node.domain] ?? 'DOMÍNIO NEXO'}</em>}
+            </span>
+          </button>
+        );
+      })}
+      <div className="atlas-world-summary" aria-hidden="true">
+        <span><b>{domains.filter(node => node.domain !== 'NEXO').length}</b> domínios</span>
+        <span><b>{total}</b> entidades</span>
+        <span className="live"><i /> sincronizado</span>
+      </div>
+    </div>
+  );
+}
+
 function ChipGroup<T extends string>(
   { title, values, selected, onToggle }:
   { title: string; values: readonly T[]; selected: T[]; onToggle: (value: T) => void },
