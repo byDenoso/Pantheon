@@ -82,6 +82,42 @@ test('sanctioned TOWER interdomain entities become visible learning filaments', 
   assert.ok(system.graph.edges.some(edge => edge.from === 'domain:SCIENCE' && edge.to === 'domain:OLYMPUS'));
 });
 
+
+test('Tower meta-learning is projected as a transversal filament overlay with explicit canonical links', async () => {
+  const { buildPagesProjection } = await import('../scripts/build-pages-system.mjs');
+  const manifest = {
+    authority: 'TOWER_V06', projection_only: true, writeback: 'FORBIDDEN',
+    tower_commit: '1'.repeat(40), event_cursor: '20260920T150000000000Z-learning',
+    projection_fingerprint: 'sha256:' + '2'.repeat(64), generated_at: '2026-09-20T15:00:00Z',
+  };
+  const projection = {
+    contract: 'NEXO_PUBLIC_PROJECTION_V1', manifest, event_cursor: manifest.event_cursor,
+    work: [
+      {id:'WORK::T-SCI-001',domain:'SCIENCE',status:'VERIFIED',campaign_id:'CAMP-SCI'},
+      {id:'WORK::T-OLY-001',domain:'OLYMPUS',status:'VERIFIED',campaign_id:'CAMP-OLY'}
+    ],
+    tests: [], capabilities: {}, counts: {active_work:2,tests:0,capabilities:0},
+  };
+  const learning = {
+    schema:'nexo.meta-learning.v1', authority_boundary:'PROCEDURAL_ONLY_NO_SCIENTIFIC_AUTHORITY',
+    evidence:[
+      {evidence_id:'ML-EVID-SCI',context:'T-SCI-001 runtime recovery'},
+      {evidence_id:'ML-EVID-OLY',context:'T-OLY-001 low-N baseline audit'}
+    ],
+    lessons:[{
+      lesson_id:'ML-LESSON-CROSS',status:'SUPPORTED',evidence_refs:['ML-EVID-SCI','ML-EVID-OLY'],
+      lesson:'Use a simple baseline before adding complexity.'
+    }]
+  };
+  const {system}=buildPagesProjection({projection,manifestFile:manifest,learning});
+  assert.ok(system.graph.nodes.some(node=>node.id==='filament:ML-EVID-SCI'&&node.type==='FILAMENT'));
+  assert.ok(system.graph.nodes.some(node=>node.id==='filament:ML-LESSON-CROSS'&&node.type==='FILAMENT'));
+  assert.ok(system.graph.edges.some(edge=>edge.is_learning&&edge.from==='filament:ML-EVID-SCI'&&edge.to==='work:WORK::T-SCI-001'));
+  assert.ok(system.graph.edges.some(edge=>edge.is_learning&&edge.from==='domain:SCIENCE'&&edge.to==='domain:OLYMPUS'&&edge.learning_scope==='INTER_DOMAIN'));
+  assert.ok(system.filaments.some(item=>item.id==='ML-LESSON-CROSS'&&item.scope==='INTER_DOMAIN'));
+  assert.ok(system.filaments.every(item=>item.boundary));
+});
+
 test('sanctioned campaign metadata survives into Atlas graph nodes', async () => {
   const { buildPagesProjection } = await import('../scripts/build-pages-system.mjs');
   const manifest = {
