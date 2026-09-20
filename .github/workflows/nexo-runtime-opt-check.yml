@@ -1,0 +1,34 @@
+name: NEXO Runtime Optimization Check
+
+on:
+  push:
+    branches: [nexo-runtime-opt-20260920]
+    paths:
+      - 'nexo-one/**'
+      - '.github/workflows/nexo-one-pages.yml'
+      - '.github/workflows/nexo-runtime-opt-check.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: nexo-one/package-lock.json
+      - name: Parse production workflow
+        run: ruby -e "require 'yaml'; YAML.load_file('.github/workflows/nexo-one-pages.yml', aliases: true)"
+      - name: Install
+        working-directory: nexo-one
+        run: npm ci --no-audit --no-fund --ignore-scripts
+      - name: Check
+        working-directory: nexo-one
+        run: npm run check
+      - name: Runtime package count
+        working-directory: nexo-one
+        run: node -e "const l=require('./package-lock.json'); console.log('LOCK_PACKAGES='+Object.keys(l.packages).length)"
