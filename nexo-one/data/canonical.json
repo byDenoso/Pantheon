@@ -31,5 +31,16 @@
     "syncRequiresCanonicalValidation": true,
     "towerWinsOnDisagreement": true
   },
-  "notes": "TOWER_V06 is the sole operational truth owner. Pantheon/ATLAS stores only sanitized read-only projections. Google Drive is a legacy projection source and cannot write operational truth."
+  "notes": "TOWER_V06 remains current authority until the explicit Drive cutover. Target storage is private Google Drive with immutable snapshots and atomic CURRENT.json promotion; Git remains software-only after cutover.",
+  "storageMigration": {
+    "target": "GOOGLE_DRIVE_PRIVATE",
+    "modeEnv": "NEXO_STORAGE_MODE=DRIVE_PRIMARY",
+    "rootEnv": "NEXO_DRIVE_ROOT_ID",
+    "credentialEnv": "NEXO_DRIVE_SERVICE_ACCOUNT_JSON",
+    "pointer": "CURRENT.json",
+    "snapshotLayout": "SNAPSHOTS/<snapshot_id>/TOWER",
+    "bootstrapEndpoint": "/api/private/drive-bootstrap",
+    "migrationFallbackEnv": "NEXO_DRIVE_MIGRATION_FALLBACK_GITHUB=1",
+    "cutoverRule": "Disable migration fallback only after Drive bootstrap and readback pass."
+  }
 }
