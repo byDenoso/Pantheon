@@ -23,7 +23,7 @@ export function InboxView(
     <>
       <div className="filter-row" role="group" aria-label="Filtrar por tipo de intervenção">
         <button className={kind === 'ALL' ? 'filter active' : 'filter'} aria-pressed={kind === 'ALL'}
-          onClick={() => setKind('ALL')}>Todos</button>
+          onClick={() => setKind('ALL')}>Needs Dener <b>{state.inbox.length}</b></button>
         {INBOX_KINDS.map(value => {
           const count = state.inbox.filter(i => i.kind === value).length;
           return (
@@ -35,8 +35,8 @@ export function InboxView(
         })}
       </div>
       {total === 0
-        ? <EmptyState title="Nenhuma intervenção humana pendente neste filtro."
-            description="O Human Inbox mostra apenas o que exige você. Ações autônomas ficam em Actions." />
+        ? <EmptyState title="Nenhum Needs Dener pendente neste filtro."
+            description="Esta superfície mostra apenas gates com requisito humano explícito vindo da Tower. Ações autônomas continuam em Actions." />
         : groups.map(group => (
             <section key={group.kind}>
               <div className="section-head">
