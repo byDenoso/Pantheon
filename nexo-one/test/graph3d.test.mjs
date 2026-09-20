@@ -30,14 +30,19 @@ const fixture = [
   node('engineering:provider', 'PROVIDER', 'ENGINEERING'),
 ];
 
-test('NEXO anchors the galaxy at the origin and primary domains occupy unique near-core arm hubs', () => {
+test('NEXO anchors the field at the origin and primary domains occupy deterministic macro anchors', () => {
   const placed = layoutGraph3D(fixture);
   const byId = new Map(placed.map(n => [n.id, n]));
   const nexo = byId.get('domain:nexo');
   assert.deepEqual([nexo.x, nexo.y, nexo.z], [0, 0, 0]);
 
-  const hubs = ['domain:science', 'domain:engineering', 'domain:olympus'].map(id => byId.get(id));
-  assert.ok(hubs.every(h => distance3(h, nexo) >= 20 && distance3(h, nexo) <= 55));
+  const science = byId.get('domain:science');
+  const engineering = byId.get('domain:engineering');
+  const olympus = byId.get('domain:olympus');
+  assert.deepEqual([science.x, science.y, science.z], [-96, -4, -8]);
+  assert.deepEqual([engineering.x, engineering.y, engineering.z], [0, 76, 8]);
+  assert.deepEqual([olympus.x, olympus.y, olympus.z], [96, -2, -6]);
+  const hubs = [science, engineering, olympus];
   assert.equal(new Set(hubs.map(h => `${h.x}:${h.y}:${h.z}`)).size, hubs.length);
 });
 
