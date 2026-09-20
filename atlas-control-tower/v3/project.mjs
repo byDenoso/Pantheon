@@ -93,6 +93,18 @@ function publicEntityView(bucket, entity) {
     base.evidenceRef = entity.evidence_ref || null;
     base.artifactRef = entity.artifact_ref || null;
   }
+  if (bucket === 'learning' || String(entity.kind || '').toUpperCase() === 'LEARNING') {
+    return {
+      ...base,
+      stage: entity.stage || null,
+      relationType: entity.relation_type || 'PROCEDURAL_LEARNING',
+      summary: safePublicText(entity.summary),
+      rule: safePublicText(entity.rule),
+      testRefs: entity.test_refs || [],
+      sourceNodes: entity.source_nodes || [],
+      learningRefs: entity.learning_refs || []
+    };
+  }
   if (bucket === 'interdomain' || String(entity.kind || '').toUpperCase() === 'INTERDOMAIN') {
     return {
       ...base,
@@ -102,6 +114,7 @@ function publicEntityView(bucket, entity) {
       sourceNodes: entity.source_nodes || [],
       testRefs: entity.test_refs || [],
       evidenceRefs: entity.evidence_refs || [],
+      learningRefs: entity.learning_refs || [],
       mapping: safePublicText(entity.mapping),
       predictionOrUtility: safePublicText(entity.prediction_or_utility),
       falsifier: safePublicText(entity.falsifier_or_validation || entity.proposed_test?.falsifier)
@@ -177,7 +190,11 @@ export function buildAtlasProjectionV3(input) {
     if (bucket === 'campaign' && entity.program_id) addEdge(String(entity.program_id), source, 'CONTAINS');
     if (bucket === 'test_group' && entity.campaign_id) addEdge(String(entity.campaign_id), source, 'CONTAINS');
     if (bucket === 'test') continue;
-    if (bucket === 'interdomain' || String(entity.kind || '').toUpperCase() === 'INTERDOMAIN') {
+    if (bucket === 'learning' || String(entity.kind || '').toUpperCase() === 'LEARNING') {
+      for (const ref of entity.source_nodes || []) addEdge(source, String(ref), 'LEARNING_CONTEXT');
+      for (const ref of entity.test_refs || []) addTestReference(source, ref, 'TEST_REF');
+      for (const ref of entity.learning_refs || []) addEdge(source, String(ref), 'LEARNING_LINEAGE', { allowExternal: false });
+    } else if (bucket === 'interdomain' || String(entity.kind || '').toUpperCase() === 'INTERDOMAIN') {
       for (const ref of entity.source_nodes || []) addEdge(source, String(ref), entity.relation_type || 'METHOD_TRANSFER');
       // Test references remain in the learning filament envelope. They are
       // registry evidence, not structural Neural graph edges.
@@ -196,10 +213,11 @@ export function buildAtlasProjectionV3(input) {
   const nodes = [...nodeMap.values()].sort((a, b) => a.id.localeCompare(b.id));
   const entities = Object.fromEntries([...entityMap.entries()].sort(([a], [b]) => a.localeCompare(b)));
   const filaments = canonicalEntities
-    .filter(({ bucket, entity }) => bucket === 'interdomain' || String(entity.kind || '').toUpperCase() === 'INTERDOMAIN')
+    .filter(({ bucket, entity }) => bucket === 'interdomain' || bucket === 'learning' || ['INTERDOMAIN','LEARNING'].includes(String(entity.kind || '').toUpperCase()))
     .map(({ entity }) => ({
       id: String(entity.id),
       status: entity.status || 'UNKNOWN',
+      stage: entity.stage || null,
       relationType: entity.relation_type || 'INTERDOMAIN',
       sourceDomains: entity.source_domains || [],
       targetDomains: entity.target_domains || [],
