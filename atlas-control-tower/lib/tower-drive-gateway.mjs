@@ -23,7 +23,7 @@ export function createTowerDriveGateway({env=process.env,fetchImpl=globalThis.fe
       if(legacy)return legacy.readJson(relative);
       throw new Error('DRIVE_PRIMARY_NOT_CONFIGURED');
     }
-    const record=await drive.readPath(pathFor(relative));
+    const record=await drive.readPath(await pathFor(relative));
     if(record)return record.json;
     if(legacy)return legacy.readJson(relative);
     return null;
@@ -33,7 +33,7 @@ export function createTowerDriveGateway({env=process.env,fetchImpl=globalThis.fe
       if(legacy)return legacy.listJsonDirectory(relative);
       throw new Error('DRIVE_PRIMARY_NOT_CONFIGURED');
     }
-    const values=await drive.listJsonDirectory(pathFor(relative));
+    const values=await drive.listJsonDirectory(await pathFor(relative));
     if(values.length||!legacy)return values;
     return legacy.listJsonDirectory(relative);
   }
@@ -46,13 +46,13 @@ export function createTowerDriveGateway({env=process.env,fetchImpl=globalThis.fe
     if(!request?.request_id||!request?.entity_name||!request?.entity_kind)throw new Error('INVALID_TOWER_MUTATION');
     const existing=await readReceipt(request.request_id);
     if(existing)return {request_id:request.request_id,status:'COMPLETE',receipt:existing};
-    await drive.putJson(pathFor('mutations/inbox/'+request.request_id+'.json'),request,{conflict:'idempotent'});
+    await drive.putJson('EVENTS/mutations/inbox/'+request.request_id+'.json',request,{conflict:'idempotent'});
     return {request_id:request.request_id,status:'PENDING',receipt:null,storage:'DRIVE'};
   }
   async function dispatchRuntime({trigger_id,run_id,work_id,capability_id,data_bounded=false}){
     for(const [key,value] of Object.entries({trigger_id,run_id,work_id,capability_id}))if(!String(value||'').trim())throw new Error(key.toUpperCase()+'_REQUIRED');
     const launch={schema_version:'1.0.0',event_type:'RUNTIME_LAUNCH_REQUESTED',trigger_id,run_id,work_id,capability_id,data_bounded:Boolean(data_bounded),storage:'DRIVE'};
-    await drive.putJson(pathFor('runtime/launch/inbox/'+run_id+'.json'),launch,{conflict:'idempotent'});
+    await drive.putJson('EVENTS/runtime/launch/inbox/'+run_id+'.json',launch,{conflict:'idempotent'});
     return {status:'ACCEPTED',dispatch_mode:'DRIVE_LAUNCH_EVENT',trigger_id,run_id,work_id,capability_id,already_enqueued:false};
   }
 
