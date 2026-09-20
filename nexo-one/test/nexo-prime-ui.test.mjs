@@ -48,7 +48,7 @@ test('mobile Atlas keeps readable type and gesture-first camera controls',async(
 
 test('galaxy uses restrained exposure, macro framing and theme-aware rendering',async()=>{
   const galaxy=await text('src/components/GalaxyThree3D.tsx');
-  assert.match(galaxy,/DEFAULT_CAMERA = new Vector3\(0, 22, 268\)/);
+  assert.match(galaxy,/DEFAULT_CAMERA = new Vector3\(0, 16, 286\)/);
   assert.match(galaxy,/MACRO_CAMERA = new Vector3\(0, 20, 340\)/);
   assert.match(galaxy,/toneMappingExposure = themeName === 'light' \? 0\.92/);
   assert.match(galaxy,/bloom\.threshold = 0\.30/);
