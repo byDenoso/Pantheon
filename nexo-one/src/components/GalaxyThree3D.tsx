@@ -14,6 +14,7 @@ import {
   BufferGeometry,
   Color,
   Float32BufferAttribute,
+  GridHelper,
   LineBasicMaterial,
   LineSegments,
   PerspectiveCamera,
@@ -33,11 +34,6 @@ import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPa
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import type { GraphEdge } from '../contracts/system.ts';
 import type { PlacedNode3D } from '../viewmodels/graph3d.ts';
-import {
-  PRIMARY_GALAXY_DOMAINS,
-  galaxyArmPoint,
-  type Point3,
-} from '../viewmodels/graph3d.ts';
 import type { Canvas25DViewState, CanvasGraph25DHandle } from './CanvasGraph25D.tsx';
 import './GalaxyThree3D.css';
 
@@ -49,7 +45,7 @@ const DEFAULT_TARGET = new Vector3(0, 0, 0);
 function paletteForTheme(theme: 'dark' | 'light') {
   return theme === 'light'
     ? { accent: new Color('#f47a20'), strong: new Color('#a94808') }
-    : { accent: new Color('#8bd3ff'), strong: new Color('#eef8ff') };
+    : { accent: new Color('#7fddba'), strong: new Color('#eefcf7') };
 }
 
 type Props = {
@@ -98,135 +94,38 @@ function gaussian(random: () => number): number {
   return Math.sqrt(-2 * Math.log(u)) * Math.cos(TAU * v);
 }
 
-function signaturePoint(t: number): Point3 {
-  const clamped = Math.max(0, Math.min(1, t));
-  const angle = -1.82 + clamped * TAU * 1.08;
-  const radial = 14 + 118 * Math.pow(clamped, 0.92);
-  return {
-    x: Math.cos(angle) * radial,
-    y: Math.sin(angle) * radial * 0.74,
-    z: Math.sin(angle * 1.55) * (2.5 + clamped * 5.5),
-  };
-}
-
-function armTangent(domain: (typeof PRIMARY_GALAXY_DOMAINS)[number], t: number): number {
-  const a = galaxyArmPoint(domain, Math.max(0, t - 0.006));
-  const b = galaxyArmPoint(domain, Math.min(1, t + 0.006));
-  return Math.atan2(b.y - a.y, b.x - a.x);
-}
-
-function signatureTangent(t: number): number {
-  const a = signaturePoint(Math.max(0, t - 0.006));
-  const b = signaturePoint(Math.min(1, t + 0.006));
-  return Math.atan2(b.y - a.y, b.x - a.x);
-}
-
 function writeParticle(
-  positions: Float32Array,
-  sizes: Float32Array,
-  brightness: Float32Array,
-  index: number,
-  x: number,
-  y: number,
-  z: number,
-  size: number,
-  light: number,
+  positions: Float32Array, sizes: Float32Array, brightness: Float32Array, index: number,
+  x: number, y: number, z: number, size: number, light: number,
 ) {
   const p = index * 3;
-  positions[p] = x;
-  positions[p + 1] = y;
-  positions[p + 2] = z;
-  sizes[index] = size;
-  brightness[index] = light;
+  positions[p] = x; positions[p + 1] = y; positions[p + 2] = z;
+  sizes[index] = size; brightness[index] = light;
 }
 
-function buildGalaxyGeometry(count: number): BufferGeometry {
+function buildFieldGeometry(nodes: PlacedNode3D[], count: number, isMacro: boolean): BufferGeometry {
   const positions = new Float32Array(count * 3);
   const sizes = new Float32Array(count);
   const brightness = new Float32Array(count);
-
+  const domains = nodes.filter(node => node.type === 'DOMAIN');
+  const centers = domains.length ? domains : nodes.slice(0, Math.min(nodes.length, 24));
   for (let index = 0; index < count; index += 1) {
-    const random = rng(hash32(`nexo-galaxy:${index}`));
-    const lane = random();
-
-    if (lane < 0.12) {
-      const radius = Math.pow(random(), 1.72) * 34;
-      const angle = random() * TAU + radius * 0.075;
-      const coreTightness = Math.max(0.18, 1 - radius / 42);
-      writeParticle(
-        positions,
-        sizes,
-        brightness,
-        index,
-        Math.cos(angle) * radius + gaussian(random) * 1.8,
-        Math.sin(angle) * radius * 0.72 + gaussian(random) * 1.35,
-        gaussian(random) * (1.8 + 4.2 * (1 - coreTightness)),
-        1.25 + random() * 2.7,
-        0.62 + random() * 0.30,
-      );
+    const random = rng(hash32(`nexo-field:${index}`));
+    if (!centers.length || random() < (isMacro ? 0.12 : 0.08)) {
+      const angle = random() * TAU;
+      const radius = 70 + Math.sqrt(random()) * (isMacro ? 130 : 90);
+      writeParticle(positions, sizes, brightness, index, Math.cos(angle) * radius, Math.sin(angle) * radius * 0.58, (random() - 0.5) * 24, 0.5 + random() * 0.7, 0.08 + random() * 0.15);
       continue;
     }
-
-    if (lane < 0.47) {
-      const t = Math.pow(random(), 0.88);
-      const center = signaturePoint(t);
-      const tangent = signatureTangent(t);
-      const normal = tangent + Math.PI / 2;
-      const width = 2.2 + t * 10.8;
-      const cross = gaussian(random) * width;
-      const along = gaussian(random) * width * 0.2;
-      writeParticle(
-        positions,
-        sizes,
-        brightness,
-        index,
-        center.x + Math.cos(normal) * cross + Math.cos(tangent) * along,
-        center.y + Math.sin(normal) * cross * 0.76 + Math.sin(tangent) * along * 0.76,
-        center.z + gaussian(random) * (1.5 + t * 5.6),
-        0.78 + random() * (2.05 + (1 - t) * 1.05),
-        0.28 + random() * 0.52,
-      );
-      continue;
-    }
-
-    if (lane < 0.93) {
-      const domain = PRIMARY_GALAXY_DOMAINS[Math.floor(random() * PRIMARY_GALAXY_DOMAINS.length)]!;
-      const t = Math.pow(random(), 0.86);
-      const center = galaxyArmPoint(domain, t);
-      const tangent = armTangent(domain, t);
-      const normal = tangent + Math.PI / 2;
-      const width = 2.8 + t * 13.5;
-      const cross = gaussian(random) * width;
-      const along = gaussian(random) * width * 0.28;
-      writeParticle(
-        positions,
-        sizes,
-        brightness,
-        index,
-        center.x + Math.cos(normal) * cross + Math.cos(tangent) * along,
-        center.y + Math.sin(normal) * cross * 0.76 + Math.sin(tangent) * along * 0.76,
-        center.z + gaussian(random) * (1.8 + t * 6.2),
-        0.68 + random() * 2.15,
-        0.24 + random() * 0.50,
-      );
-      continue;
-    }
-
+    const center = centers[index % centers.length]!;
     const angle = random() * TAU;
-    const radius = 42 + Math.pow(random(), 0.55) * 128;
-    writeParticle(
-      positions,
-      sizes,
-      brightness,
-      index,
-      Math.cos(angle) * radius + gaussian(random) * 6,
-      Math.sin(angle) * radius * 0.76 + gaussian(random) * 5,
-      gaussian(random) * 18,
-      0.55 + random() * 1.2,
-      0.08 + random() * 0.2,
-    );
+    const radial = 6 + Math.sqrt(random()) * (isMacro ? 22 : 15);
+    const pin = random() < 0.11;
+    const x = center.x + Math.cos(angle) * radial + gaussian(random) * 1.2;
+    const y = pin ? center.y + 5 + random() * (isMacro ? 28 : 16) : center.y + Math.sin(angle) * radial * 0.58 + gaussian(random) * 0.9;
+    const z = center.z + gaussian(random) * (isMacro ? 5.5 : 3.8);
+    writeParticle(positions, sizes, brightness, index, x, y, z, 0.85 + random() * (pin ? 1.9 : 1.25), 0.24 + random() * 0.52);
   }
-
   const geometry = new BufferGeometry();
   geometry.setAttribute('position', new Float32BufferAttribute(positions, 3));
   geometry.setAttribute('aSize', new Float32BufferAttribute(sizes, 1));
@@ -235,6 +134,23 @@ function buildGalaxyGeometry(count: number): BufferGeometry {
   return geometry;
 }
 
+function buildFieldRingSegments(nodes: PlacedNode3D[], isMacro: boolean): BufferGeometry {
+  const vertices: number[] = [];
+  for (const node of nodes.filter(candidate => candidate.type === 'DOMAIN')) {
+    const radii = node.domain === 'NEXO' ? (isMacro ? [22, 36] : [18, 30]) : (isMacro ? [13, 21] : [11, 18]);
+    for (const radius of radii) {
+      const segments = 64;
+      for (let i = 0; i < segments; i += 1) {
+        const a0 = (i / segments) * TAU;
+        const a1 = ((i + 1) / segments) * TAU;
+        vertices.push(node.x + Math.cos(a0) * radius, node.y + Math.sin(a0) * radius * 0.62, node.z - 1.5, node.x + Math.cos(a1) * radius, node.y + Math.sin(a1) * radius * 0.62, node.z - 1.5);
+      }
+    }
+  }
+  const geometry = new BufferGeometry();
+  geometry.setAttribute('position', new Float32BufferAttribute(vertices, 3));
+  return geometry;
+}
 const galaxyVertexShader = `
 attribute float aSize;
 attribute float aBrightness;
@@ -371,7 +287,7 @@ export const GalaxyThree3D = forwardRef<CanvasGraph25DHandle, Props>(function Ga
   onSelect,
   onFailure,
   className = '',
-  ariaLabel = 'Galáxia tridimensional do NEXO ONE',
+  ariaLabel = 'Campo topológico tridimensional do NEXO ONE',
   viewMode = 'detail',
 }, ref) {
   const hostRef = useRef<HTMLDivElement | null>(null);
@@ -532,8 +448,8 @@ export const GalaxyThree3D = forwardRef<CanvasGraph25DHandle, Props>(function Ga
       controlsRef.current = controls;
 
       const palette = paletteForTheme(themeName);
-      const particleCount = isMacro ? (isMobile ? 4200 : 11000) : (isMobile ? 26000 : 68000);
-      const galaxyGeometry = buildGalaxyGeometry(particleCount);
+      const particleCount = isMacro ? (isMobile ? 260 : 760) : (isMobile ? 620 : 1800);
+      const galaxyGeometry = buildFieldGeometry(nodes, particleCount, isMacro);
       const galaxyMaterial = new ShaderMaterial({
         uniforms: {
           uTime: { value: 0 },
@@ -550,6 +466,17 @@ export const GalaxyThree3D = forwardRef<CanvasGraph25DHandle, Props>(function Ga
       });
       const galaxy = new Points(galaxyGeometry, galaxyMaterial);
       scene.add(galaxy);
+
+      const ringGeometry = buildFieldRingSegments(nodes, isMacro);
+      const ringMaterial = new LineBasicMaterial({ color: palette.accent, transparent: true, opacity: themeName === 'light' ? 0.12 : (isMacro ? 0.20 : 0.12), blending: themeName === 'light' ? NormalBlending : AdditiveBlending, depthWrite: false });
+      const ringLines = new LineSegments(ringGeometry, ringMaterial);
+      scene.add(ringLines);
+
+      const grid = new GridHelper(isMacro ? 430 : 300, isMacro ? 30 : 22, palette.accent, palette.accent);
+      grid.position.set(0, isMacro ? -94 : -74, -24);
+      const gridMaterial = grid.material as LineBasicMaterial;
+      gridMaterial.transparent = true; gridMaterial.opacity = themeName === 'light' ? 0.055 : 0.075; gridMaterial.depthWrite = false;
+      scene.add(grid);
 
       const nodeGeometry = buildNodeGeometry(nodes, selectedId);
       const nodeMaterial = new ShaderMaterial({
@@ -682,6 +609,10 @@ export const GalaxyThree3D = forwardRef<CanvasGraph25DHandle, Props>(function Ga
         controls.dispose();
         galaxyGeometry.dispose();
         galaxyMaterial.dispose();
+        ringGeometry.dispose();
+        ringMaterial.dispose();
+        grid.geometry.dispose();
+        gridMaterial.dispose();
         nodeGeometry.dispose();
         nodeMaterial.dispose();
         relationSegments.normal.dispose();
@@ -710,13 +641,14 @@ export const GalaxyThree3D = forwardRef<CanvasGraph25DHandle, Props>(function Ga
     <div
       ref={hostRef}
       className={`galaxy-three-root ${className}`}
-      data-renderer="three-procedural-galaxy"
+      data-renderer="three-nexo-field"
       data-particle-profile={isMobile ? 'mobile' : 'desktop'}
       data-view-mode={viewMode}
       data-theme={themeName}
     >
       <div ref={mountRef} className="galaxy-three-mount" />
       <div className="galaxy-three-vignette" aria-hidden="true" />
+      {isMacro && <div className="nexo-field-heading" aria-hidden="true"><strong>NEXO FIELD</strong><span>DOMÍNIOS · CONEXÕES · INTELIGÊNCIA EM CONTEXTO</span></div>}
       <div className="galaxy-three-labels" aria-hidden="true">
         {visibleLabels.map(node => (
           <span
@@ -736,16 +668,16 @@ export const GalaxyThree3D = forwardRef<CanvasGraph25DHandle, Props>(function Ga
       </div>
       <div className="galaxy-three-status" aria-live="polite">
         <i aria-hidden="true" />
-        <span>{nodes.length} nós · {edges.length} relações · GALAXY</span>
+        <span>{nodes.length} nós · {edges.length} relações · FIELD</span>
       </div>
-      <div className="galaxy-three-controls" role="group" aria-label="Controles da galáxia 3D">
+      <div className="galaxy-three-controls" role="group" aria-label="Controles do NEXO FIELD">
         <button type="button" onClick={reset}>NEXO</button>
         <button type="button" aria-label="Girar para a esquerda" onClick={() => controlsRef.current?.rotateLeft(0.28)}>←</button>
         <button type="button" aria-label="Girar para a direita" onClick={() => controlsRef.current?.rotateLeft(-0.28)}>→</button>
         <button type="button" aria-label="Aproximar" onClick={() => controlsRef.current?.dollyIn(1.18)}>+</button>
         <button type="button" aria-label="Afastar" onClick={() => controlsRef.current?.dollyOut(1.18)}>−</button>
       </div>
-      <div className="galaxy-three-a11y-list" aria-label="Entidades da galáxia">
+      <div className="galaxy-three-a11y-list" aria-label="Entidades do NEXO FIELD">
         {nodes.map(node => (
           <button key={node.id} type="button" onClick={() => onSelect(node.id)}>{node.label}</button>
         ))}
