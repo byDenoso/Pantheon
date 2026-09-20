@@ -701,6 +701,7 @@ export function AtlasView(
                 hint="Remova um critério para voltar a ver o mapa." />
             : <>
                 <AtlasGalaxyRenderer ref={galaxyRef} nodes={placed} edges={renderGraph.edges} selectedId={effectiveSelectedId} onSelect={handleGraphSelect} viewMode={isMacroOverview ? 'macro' : 'detail'} />
+                {isMacroOverview && <DomainWorlds nodes={renderGraph.nodes} onOpen={handleGraphSelect} />}
                 <ul className="atlas-legend">
                   {legend.map(entry => (
                     <li key={entry.type}>
@@ -712,7 +713,7 @@ export function AtlasView(
               </>}
         </div>
 
-        {!isMobile && (
+        {!isMobile && !isMacroOverview && (
           <aside className="atlas-inspector">
             {selected
               ? <EntityInspector node={selected} upstream={relations.upstream} downstream={relations.downstream}
