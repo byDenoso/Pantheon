@@ -36,7 +36,7 @@ export function Overview(
           <span>Saúde</span><strong>{label(summary.state)}</strong>
         </button>
         <button className={summary.needsHuman ? 'pulse-metric attention' : 'pulse-metric'} onClick={() => onNavigate('INBOX')}>
-          <span>Gates</span><strong>{summary.needsHuman}</strong>
+          <span>Needs Dener</span><strong>{summary.needsHuman}</strong>
         </button>
         <button className={summary.blockers.length ? 'pulse-metric attention' : 'pulse-metric'} onClick={() => onNavigate('ACTIONS')}>
           <span>Blockers</span><strong>{summary.blockers.length}</strong>
@@ -82,14 +82,14 @@ export function Overview(
 
       <section aria-labelledby="attention-title" data-order="attention">
         <div className="section-head">
-          <h2 id="attention-title">Gates humanos <span>{summary.needsHuman}</span></h2>
+          <h2 id="attention-title">Needs Dener <span>{summary.needsHuman}</span></h2>
           <button className="text-button" onClick={() => onNavigate('INBOX')}>Abrir inbox ↗</button>
         </div>
         {urgent.length
           ? urgent.map(item => (
               <HumanInboxItem key={item.id} item={item} action={actionById(state, item.action_id)} onOpen={onOpenInbox} />
             ))
-          : <EmptyState title="0 gates humanos."
+          : <EmptyState title="0 itens em Needs Dener."
               description="Nenhuma decisão ou autorização humana está pendente nesta compilação."
               hint="Cobertura e integridade das fontes são verificadas separadamente." />}
       </section>
