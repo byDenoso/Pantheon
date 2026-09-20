@@ -164,6 +164,11 @@ export function buildAtlasProjectionV3(input) {
       .filter(({ bucket, entity }) => bucket === 'test' && entity.test_group_id)
       .map(({ entity }) => [String(entity.id), String(entity.test_group_id)])
   );
+  const testToCampaign = new Map(
+    canonicalEntities
+      .filter(({ bucket, entity }) => bucket === 'test' && entity.campaign_id)
+      .map(({ entity }) => [String(entity.id), String(entity.campaign_id)])
+  );
 
   const nodeMap = new Map();
   const entityMap = new Map();
@@ -181,8 +186,11 @@ export function buildAtlasProjectionV3(input) {
     edges.push({ id: relationId(source, type, target), source, target, type });
   };
   const addTestReference = (source, testRef, type) => {
-    const groupId = testToGroup.get(String(testRef));
-    if (groupId) addEdge(source, groupId, type, { allowExternal: false });
+    const id = String(testRef);
+    const groupId = testToGroup.get(id);
+    if (groupId) return addEdge(source, groupId, type, { allowExternal: false });
+    const campaignId = testToCampaign.get(id);
+    if (campaignId) addEdge(source, campaignId, type, { allowExternal: false });
   };
 
   for (const { bucket, entity } of canonicalEntities) {
@@ -224,6 +232,7 @@ export function buildAtlasProjectionV3(input) {
       sourceNodes: entity.source_nodes || [],
       testRefs: entity.test_refs || [],
       evidenceRefs: entity.evidence_refs || [],
+      learningRefs: entity.learning_refs || [],
       mapping: publicProjection ? safePublicText(entity.mapping) : entity.mapping || null,
       predictionOrUtility: publicProjection ? safePublicText(entity.prediction_or_utility) : entity.prediction_or_utility || null,
       falsifier: publicProjection ? safePublicText(entity.falsifier_or_validation || entity.proposed_test?.falsifier) : entity.falsifier_or_validation || entity.proposed_test?.falsifier || null,
