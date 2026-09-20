@@ -38,9 +38,12 @@
     "rootEnv": "NEXO_DRIVE_ROOT_ID",
     "credentialEnv": "NEXO_DRIVE_SERVICE_ACCOUNT_JSON",
     "pointer": "CURRENT.json",
-    "snapshotLayout": "SNAPSHOTS/<snapshot_id>/TOWER",
+    "snapshotLayout": "SNAPSHOTS/<snapshot_id>/{TOWER.bundle.json.gz,SNAPSHOT.json}",
     "bootstrapEndpoint": "/api/private/drive-bootstrap",
     "migrationFallbackEnv": "NEXO_DRIVE_MIGRATION_FALLBACK_GITHUB=1",
-    "cutoverRule": "Disable migration fallback only after Drive bootstrap and readback pass."
+    "cutoverRule": "Disable migration fallback only after Drive bootstrap and readback pass.",
+    "bundleContract": "NEXO_TOWER_BUNDLE_V1",
+    "phase": "READ_CUTOVER_READY__WRITE_CUTOVER_BLOCKED_ON_CANONICAL_MUTATOR",
+    "writeRule": "Drive writes fail closed until canonical TCC mutation semantics are reused on Drive."
   }
 }
