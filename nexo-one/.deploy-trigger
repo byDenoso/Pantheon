@@ -1,6 +1,6 @@
 production deploy trigger
-source-main: d5cfd720f76c6cc1c3e7dd1e6d2189614f5d62e9
+source-main: a18248ad4f80b4bdfd06c267c9d18aabb4d65527
 requested: 2026-09-19
-reason: sanctioned Tower projection refresh
-projection-fingerprint: sha256:d0c43ffb66c72d8d365e752b6ea697750d1d83d53046350547bbfb940a4ec2d1
-tower-source: 2fd56cb4ab7ccb270a02485c9af18a1f18a81b76
+reason: canonical Needs Dener end-to-end fix
+projection-fingerprint: sha256:06e4b0da14737b4716b18f473fb1d0c494c604cd3ba500b34ef5b20f8d0096eb
+needs-dener-readback: 7
