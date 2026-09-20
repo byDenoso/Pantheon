@@ -1001,52 +1001,52 @@ p{
 
 
 /* NEXO V2 palette + restrained product surface ---------------------------
-   Dark: Black Titanium + ice blue. Light: porcelain white + orange.
+   Dark: Black Titanium + mineral mint. Light: porcelain white + orange.
    This intentionally removes the old neon/glass emphasis from ordinary UI. */
 :root{
   color-scheme:dark;
-  --nexo-bg-0:#090a0c;
-  --nexo-bg-1:#101216;
-  --nexo-bg-2:#15181d;
-  --nexo-surface-1:#101216;
-  --nexo-surface-2:#15181d;
-  --nexo-surface-3:#1b1f25;
-  --nexo-text:#f5f6f7;
-  --nexo-text-2:#b3b8c0;
-  --nexo-muted:#7e858f;
-  --nexo-accent:#6faeff;
-  --nexo-accent-strong:#a5ceff;
-  --nexo-accent-dim:#4d79ad;
-  --nexo-accent-soft:rgba(111,174,255,.10);
-  --nexo-border-strong:#39414b;
-  --nexo-success:#65c49a;
-  --nexo-attention:#d7aa63;
+  --nexo-bg-0:#090b0c;
+  --nexo-bg-1:#101315;
+  --nexo-bg-2:#15191b;
+  --nexo-surface-1:#101315;
+  --nexo-surface-2:#15191b;
+  --nexo-surface-3:#1b2022;
+  --nexo-text:#f4f7f6;
+  --nexo-text-2:#b5c0bc;
+  --nexo-muted:#7e8b87;
+  --nexo-accent:#8fd7c3;
+  --nexo-accent-strong:#bcebdd;
+  --nexo-accent-dim:#568f80;
+  --nexo-accent-soft:rgba(143,215,195,.10);
+  --nexo-border-strong:#3a4441;
+  --nexo-success:#68c99d;
+  --nexo-attention:#d5aa68;
   --nexo-danger:#df747d;
-  --nexo-experimental:#978ce1;
+  --nexo-experimental:#9a8fe0;
 
-  --surface-0:#090a0c;
-  --surface-1:#101216;
-  --surface-2:#15181d;
-  --surface-3:#1b1f25;
-  --bg:#090a0c;
-  --panel:#101216;
-  --raised:#15181d;
-  --hover:#20252c;
-  --ink:#f5f6f7;
-  --muted:#b3b8c0;
-  --quiet:#7e858f;
-  --line:#292e36;
-  --accent:#6faeff;
-  --blue:#6faeff;
-  --snapshot:#6faeff;
-  --live:#65c49a;
-  --degraded:#d7aa63;
+  --surface-0:#090b0c;
+  --surface-1:#101315;
+  --surface-2:#15191b;
+  --surface-3:#1b2022;
+  --bg:#090b0c;
+  --panel:#101315;
+  --raised:#15191b;
+  --hover:#202725;
+  --ink:#f4f7f6;
+  --muted:#b5c0bc;
+  --quiet:#7e8b87;
+  --line:#2a312f;
+  --accent:#8fd7c3;
+  --blue:#7d9fbe;
+  --snapshot:#7d9fbe;
+  --live:#68c99d;
+  --degraded:#d5aa68;
   --conflict:#df747d;
-  --blocked:#978ce1;
-  --command-accent:#6faeff;
-  --command-accent-strong:#a5ceff;
+  --blocked:#9a8fe0;
+  --command-accent:#8fd7c3;
+  --command-accent-strong:#bcebdd;
   --command-grid:transparent;
-  --command-hairline:#292e36;
+  --command-hairline:#2a312f;
   --command-shadow:0 12px 34px rgba(0,0,0,.24);
   --shadow:0 12px 34px rgba(0,0,0,.24);
 }
@@ -1487,3 +1487,87 @@ p{
   .bottom-nav{left:7px;right:7px}
 }
 
+
+
+/* NEXO V4 runtime feedback -------------------------------------------------
+   Refresh is background work: keep the last valid state visible and report
+   the readback result beside the action that initiated it. */
+.sync-button .sync-glyph{
+  display:grid;
+  place-items:center;
+  width:16px;
+  height:16px;
+  flex:0 0 16px;
+}
+.sync-button .sync-glyph.spinning{
+  animation:nexo-sync-spin .8s linear infinite;
+}
+.sync-label{
+  display:flex;
+  flex-direction:column;
+  align-items:flex-start;
+  gap:2px;
+  line-height:1.15;
+}
+.sync-label>span{
+  font-size:12px;
+}
+.sync-label small{
+  max-width:180px;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+  font-size:9.5px;
+  font-weight:500;
+  color:var(--quiet);
+}
+.sync-button.sync-changed{
+  border-color:color-mix(in srgb,var(--command-accent) 38%,var(--line));
+}
+.sync-button.sync-changed .sync-label small{
+  color:var(--command-accent);
+}
+.sync-button.sync-failed{
+  border-color:color-mix(in srgb,var(--degraded) 42%,var(--line));
+}
+.sync-button.sync-failed .sync-label small{
+  color:var(--degraded);
+}
+.sync-warning{
+  display:flex;
+  align-items:flex-start;
+  gap:8px;
+  margin:-8px 0 22px;
+  padding:10px 12px;
+  border:1px solid color-mix(in srgb,var(--degraded) 30%,var(--line));
+  border-left:2px solid var(--degraded);
+  border-radius:9px;
+  background:color-mix(in srgb,var(--degraded-bg) 60%,var(--surface-1));
+  font-size:11.5px;
+  line-height:1.55;
+}
+.sync-warning strong{
+  flex:0 0 auto;
+  color:var(--ink);
+  font-weight:600;
+}
+.sync-warning span{
+  color:var(--muted);
+}
+@keyframes nexo-sync-spin{
+  to{transform:rotate(360deg)}
+}
+
+@media(max-width:860px){
+  .sync-label small{display:none}
+  .sync-label>span{font-size:10px}
+  .sync-warning{
+    margin:-6px 0 18px;
+    flex-direction:column;
+    gap:2px;
+  }
+}
+
+@media(prefers-reduced-motion:reduce){
+  .sync-button .sync-glyph.spinning{animation:none}
+}
