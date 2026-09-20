@@ -130,10 +130,10 @@ const MACRO_DOMAIN_ANCHOR: Partial<Record<Domain, Point3>> = {
 };
 const MOBILE_MACRO_DOMAIN_ANCHOR: Partial<Record<Domain, Point3>> = {
   NEXO: { x: 0, y: -6, z: 0 },
-  SCIENCE: { x: -46, y: -10, z: -4 },
-  ENGINEERING: { x: 0, y: 46, z: 5 },
-  OLYMPUS: { x: 46, y: -10, z: -4 },
-  ARTIFACT: { x: 0, y: -52, z: 3 },
+  SCIENCE: { x: -31, y: -6, z: -4 },
+  ENGINEERING: { x: 0, y: 38, z: 5 },
+  OLYMPUS: { x: 31, y: -6, z: -4 },
+  ARTIFACT: { x: 0, y: -42, z: 3 },
 };
 
 export function macroDomainAnchor(domain: Domain, compact = false): Point3 {

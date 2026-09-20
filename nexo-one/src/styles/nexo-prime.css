@@ -1571,3 +1571,15 @@ p{
 @media(prefers-reduced-motion:reduce){
   .sync-button .sync-glyph.spinning{animation:none}
 }
+
+/* NEXO FIELD mobile toolbar final pass */
+@media(max-width:860px){
+  .cockpit[data-view=ATLAS] .atlas-toolbar{display:grid;grid-template-columns:auto auto minmax(74px,1fr) auto;align-items:center;width:calc(100% - 16px);padding:5px;gap:4px}
+  .cockpit[data-view=ATLAS] .atlas-mode-toggle{grid-column:1 / span 2}
+  .cockpit[data-view=ATLAS] .atlas-search{grid-column:1 / -1;grid-row:2;order:initial;width:100%;min-height:40px}
+  .cockpit[data-view=ATLAS] .sound-toggle,.cockpit[data-view=ATLAS] .atlas-toolbar>.text-button{display:none}
+  .cockpit[data-view=ATLAS] .atlas-tour{justify-self:end}
+  .cockpit[data-view=ATLAS] .filter-toggle{justify-self:stretch;justify-content:center}
+  .cockpit[data-view=ATLAS] .operate-hud{top:104px}
+}
+@media(max-width:420px){.cockpit[data-view=ATLAS] .atlas-toolbar{grid-template-columns:auto auto 1fr auto}}
