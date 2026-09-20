@@ -85,7 +85,6 @@ export function buildScienceReadModelV2(snapshot){
   return {...core,generatedAt:text(snapshot?.generatedAt),fingerprint:fingerprint(core)};
 }
 
-export function buildScienceChanges(snapshot){
-  const model=buildScienceReadModelV2(snapshot);
+export function buildScienceChanges(snapshot,model=buildScienceReadModelV2(snapshot)){
   return {contract:ACTIVITY_LEDGER_CONTRACT,state:model.state,sourceVersion:model.sourceVersion,fingerprint:fingerprint({contract:ACTIVITY_LEDGER_CONTRACT,items:model.activity}),items:model.activity,provenance:model.provenance};
 }

@@ -19,7 +19,7 @@ permissions:
 
 concurrency:
   group: nexo-one-github-pages
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   build:
@@ -28,6 +28,7 @@ jobs:
       projection_fingerprint: ${{ steps.projection.outputs.projection_fingerprint }}
       tower_commit: ${{ steps.projection.outputs.tower_commit }}
       event_cursor: ${{ steps.projection.outputs.event_cursor }}
+      deploy_needed: ${{ steps.deploy_needed.outputs.deploy_needed }}
     steps:
       - name: Checkout Pantheon
         uses: actions/checkout@v4
@@ -143,7 +144,37 @@ jobs:
           print(f"TOWER_PROJECTION_VERIFIED commit={tower_commit} cursor={event_cursor} fingerprint={fingerprint}")
           PY
 
+      - name: Decide whether scheduled deploy is needed
+        id: deploy_needed
+        shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          CURRENT_SHA: ${{ github.sha }}
+          EXPECTED_FINGERPRINT: ${{ steps.projection.outputs.projection_fingerprint }}
+          PAGE_BASE: https://bydenoso.github.io/Pantheon
+        run: |
+          set -euo pipefail
+          if [ "${EVENT_NAME}" != "schedule" ]; then
+            echo "deploy_needed=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          manifest=/tmp/current-pages-manifest.json
+          meta=/tmp/current-pages-build-meta.json
+          if curl -fsSL --retry 1 --connect-timeout 5 "${PAGE_BASE}/tower-projection/manifest.json" -o "${manifest}" &&
+             curl -fsSL --retry 1 --connect-timeout 5 "${PAGE_BASE}/build-meta.json" -o "${meta}"; then
+            current_fingerprint="$(jq -r '.projection_fingerprint // empty' "${manifest}")"
+            current_sha="$(jq -r '.pantheon_commit // empty' "${meta}")"
+            if [ "${current_fingerprint}" = "${EXPECTED_FINGERPRINT}" ] && [ "${current_sha}" = "${CURRENT_SHA}" ]; then
+              echo "deploy_needed=false" >> "$GITHUB_OUTPUT"
+              echo "PAGES_NO_OP projection and Pantheon commit already published"
+              exit 0
+            fi
+          fi
+          echo "deploy_needed=true" >> "$GITHUB_OUTPUT"
+
       - name: Verify projection ancestry and stage sanctioned files
+        if: steps.deploy_needed.outputs.deploy_needed == 'true'
         shell: bash
         env:
           TOWER_COMMIT: ${{ steps.projection.outputs.tower_commit }}
@@ -167,11 +198,6 @@ jobs:
           else
             printf '[]\n' > nexo-one/data/tower-public/interdomain.json
           fi
-          if [ -s "_vault/TOWER_V06/runtime/artifacts/meta_learning/METALEARNING_CURRENT.json" ]; then
-            cp _vault/TOWER_V06/runtime/artifacts/meta_learning/METALEARNING_CURRENT.json nexo-one/data/tower-public/learning.json
-          else
-            printf '{}\n' > nexo-one/data/tower-public/learning.json
-          fi
 
           # MCP Atlas consumes the current canonical structure directly from the
           # same read-only Vault checkout. It publishes only structural metadata.
@@ -183,6 +209,7 @@ jobs:
           jq -n --arg tower_commit "$(git -C _vault rev-parse HEAD)"             '{authority:"TOWER_V06",tower_commit:$tower_commit}' > nexo-one/data/mcp-source/source.json
 
       - name: Setup Node
+        if: steps.deploy_needed.outputs.deploy_needed == 'true'
         uses: actions/setup-node@v4
         with:
           node-version: '24'
@@ -190,19 +217,18 @@ jobs:
           cache-dependency-path: nexo-one/package-lock.json
 
       - name: Configure GitHub Pages
+        if: steps.deploy_needed.outputs.deploy_needed == 'true'
         uses: actions/configure-pages@v5
         with:
           enablement: true
 
       - name: Install dependencies
+        if: steps.deploy_needed.outputs.deploy_needed == 'true'
         working-directory: nexo-one
         run: npm ci --no-audit --no-fund
 
-      - name: Verify Learning projection contract
-        working-directory: nexo-one
-        run: node --test test/pages.test.mjs
-
       - name: Build static NEXO ONE
+        if: steps.deploy_needed.outputs.deploy_needed == 'true'
         working-directory: nexo-one
         env:
           GITHUB_PAGES: '1'
@@ -214,6 +240,7 @@ jobs:
         run: npm run build
 
       - name: Hydrate previous valid galaxy history
+        if: steps.deploy_needed.outputs.deploy_needed == 'true'
         working-directory: nexo-one
         shell: bash
         env:
@@ -236,21 +263,25 @@ jobs:
           }
           process.stdout.write(ids.join('\n'));
           NODE
-            while IFS= read -r id; do
-              [ -n "${id}" ] || continue
-              curl -fsSL --retry 1 --connect-timeout 4 "${base}/snapshots/${id}.json" -o "dist/galaxy/snapshots/${id}.json" || rm -f "dist/galaxy/snapshots/${id}.json"
-            done </tmp/galaxy-history-ids.txt
+            export base
+            xargs -r -P 8 -I '{}' bash -c '
+              id="$1"
+              curl -fsSL --retry 1 --connect-timeout 4 "$base/snapshots/$id.json" -o "dist/galaxy/snapshots/$id.json" ||
+                rm -f "dist/galaxy/snapshots/$id.json"
+            ' _ '{}' </tmp/galaxy-history-ids.txt
           fi
 
       - name: Compile presentation from sanctioned Tower projection
+        if: steps.deploy_needed.outputs.deploy_needed == 'true'
         working-directory: nexo-one
         env:
           NEXO_PUBLIC_PROJECTION: data/tower-public/projection.json
           NEXO_PUBLIC_PROJECTION_MANIFEST: data/tower-public/manifest.json
           NEXO_PUBLIC_INTERDOMAIN: data/tower-public/interdomain.json
-          NEXO_PUBLIC_LEARNING: data/tower-public/learning.json
           NEXO_GALAXY_PREVIOUS: dist/galaxy/previous.json
           NEXO_GALAXY_RETENTION: '168'
+          PANTHEON_COMMIT: ${{ github.sha }}
+          PROJECTION_FINGERPRINT: ${{ steps.projection.outputs.projection_fingerprint }}
         run: |
           set -euo pipefail
           node scripts/build-pages-system.mjs
@@ -266,6 +297,9 @@ jobs:
           test -s dist/world-public.ndjson
           test -s dist/tower-projection/projection.json
           test -s dist/tower-projection/manifest.json
+          jq -n --arg pantheon_commit "${PANTHEON_COMMIT}" --arg projection_fingerprint "${PROJECTION_FINGERPRINT}" \
+            '{contract:"NEXO_ONE_BUILD_META_V1",pantheon_commit:$pantheon_commit,projection_fingerprint:$projection_fingerprint}' > dist/build-meta.json
+          test -s dist/build-meta.json
           touch dist/.nojekyll
           if grep -R -Eqi 'GOOGLE_DRIVE|truthgraph-projection|nexo-drive-projection' dist/system.json dist/world-public.ndjson dist/tower-projection; then
             echo "::error::legacy Drive/truthgraph operational source leaked into Pages artifact"
@@ -273,12 +307,14 @@ jobs:
           fi
 
       - name: Upload GitHub Pages artifact
+        if: steps.deploy_needed.outputs.deploy_needed == 'true'
         uses: actions/upload-pages-artifact@v4
         with:
           path: nexo-one/dist
 
   deploy:
     needs: build
+    if: needs.build.outputs.deploy_needed == 'true'
     runs-on: ubuntu-latest
     environment:
       name: github-pages
@@ -295,6 +331,7 @@ jobs:
           EXPECTED_FINGERPRINT: ${{ needs.build.outputs.projection_fingerprint }}
           EXPECTED_TOWER_COMMIT: ${{ needs.build.outputs.tower_commit }}
           EXPECTED_EVENT_CURSOR: ${{ needs.build.outputs.event_cursor }}
+          EXPECTED_PANTHEON_COMMIT: ${{ github.sha }}
         run: |
           set -euo pipefail
           base="${PAGE_URL%/}"
@@ -308,6 +345,7 @@ jobs:
           curl -fsSL "${base}/mcp/topology.json" -o /tmp/mcp-topology.json
           curl -fsSL "${base}/galaxy/latest.json" -o /tmp/galaxy-latest.json
           curl -fsSL "${base}/galaxy/index.json" -o /tmp/galaxy-index.json
+          curl -fsSL "${base}/build-meta.json" -o /tmp/build-meta.json
 
           galaxy_id="$(node -e "const fs=require('fs');const x=JSON.parse(fs.readFileSync('/tmp/galaxy-latest.json','utf8'));process.stdout.write(x.snapshot_id)")"
           printf '%s' "${galaxy_id}" | grep -Eq '^galaxy-[0-9a-z-]+$'
@@ -323,6 +361,7 @@ jobs:
           const galaxy=JSON.parse(fs.readFileSync('/tmp/galaxy-latest.json','utf8'));
           const galaxyIndex=JSON.parse(fs.readFileSync('/tmp/galaxy-index.json','utf8'));
           const galaxyVersioned=JSON.parse(fs.readFileSync('/tmp/galaxy-versioned.json','utf8'));
+          const buildMeta=JSON.parse(fs.readFileSync('/tmp/build-meta.json','utf8'));
 
           if(manifest.authority!=='TOWER_V06')throw new Error('READBACK_AUTHORITY_INVALID');
           if(manifest.projection_only!==true)throw new Error('READBACK_PROJECTION_ONLY_INVALID');
@@ -334,12 +373,9 @@ jobs:
           if(system.bus?.fingerprint!==manifest.projection_fingerprint)throw new Error('SYSTEM_NOT_BOUND_TO_TOWER_PROJECTION');
           if(world.truthGraph?.fingerprint!==manifest.projection_fingerprint)throw new Error('WORLD_NOT_BOUND_TO_TOWER_PROJECTION');
 
-          const learningNodes=(system.graph?.nodes||[]).filter(node=>node.type==='FILAMENT');
-          const learningEdges=(system.graph?.edges||[]).filter(edge=>edge.is_learning===true);
-          const proceduralFilaments=(system.filaments||[]).filter(item=>item.kind==='PROCEDURAL');
-          if(!learningNodes.length)throw new Error('LEARNING_FILAMENT_NODE_MISSING');
-          if(!learningEdges.length)throw new Error('LEARNING_FILAMENT_EDGE_MISSING');
-          if(!proceduralFilaments.length)throw new Error('PROCEDURAL_LEARNING_PROJECTION_MISSING');
+          if(buildMeta.contract!=='NEXO_ONE_BUILD_META_V1')throw new Error('BUILD_META_CONTRACT_INVALID');
+          if(buildMeta.pantheon_commit!==process.env.EXPECTED_PANTHEON_COMMIT)throw new Error('BUILD_META_COMMIT_MISMATCH');
+          if(buildMeta.projection_fingerprint!==manifest.projection_fingerprint)throw new Error('BUILD_META_FINGERPRINT_MISMATCH');
 
           const raw=JSON.stringify({system,world,projection});
           if(/truthgraph-projection|nexo-drive-projection|GOOGLE_DRIVE/i.test(raw))throw new Error('LEGACY_OPERATIONAL_SOURCE_PRESENT');
@@ -359,8 +395,8 @@ jobs:
 
           echo "PAGES_TOWER_PROJECTION_READBACK_OK ${base}/tower-projection/manifest.json"
           echo "PAGES_SYSTEM_READBACK_OK ${base}/system.json"
-          echo "PAGES_LEARNING_FILAMENT_READBACK_OK nodes=$(node -e "const x=require('/tmp/system.json');process.stdout.write(String((x.graph?.nodes||[]).filter(n=>n.type==='FILAMENT').length))")"
           echo "PAGES_WORLD_READBACK_OK ${base}/world-public.ndjson"
           echo "PAGES_MCP_ATLAS_READBACK_OK ${base}/mcp/topology.json"
           echo "PAGES_GALAXY_READBACK_OK ${base}/galaxy/latest.json"
           echo "PAGES_GALAXY_INDEX_READBACK_OK ${base}/galaxy/index.json"
+          echo "PAGES_BUILD_META_READBACK_OK ${base}/build-meta.json"

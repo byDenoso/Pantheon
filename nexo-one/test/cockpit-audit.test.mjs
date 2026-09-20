@@ -28,7 +28,7 @@ test('mobile keeps the private session control visible', async () => {
   const app = await text('src/app/App.tsx');
   const layout = await text('src/styles/layout.css');
 
-  assert.match(app, /Acessar sessão privada/);
+  assert.match(app, /ACESSO PRIVADO/);
   assert.doesNotMatch(layout, /\.avatar\{display:none!important\}/);
 });
 

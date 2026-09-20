@@ -161,3 +161,23 @@ test('public /api/system applies the same projection normalization used by Pages
   assert.match(handler, /import\s+\{normalizePublicSystemState\}\s+from\s+['"]\.\/compiler\/public-system-state\.mjs['"]/);
   assert.match(handler, /normalizePublicSystemState\(buildSystemState\(\{world:compiled,bus,systemInput,now:new Date\(now\)\.toISOString\(\)\}\),compiled\)/);
 });
+
+
+test('runtime reuses sanctioned projection reads without weakening explicit refresh', async () => {
+  const handler = await readFile(fileURLToPath(new URL('../server/handler.mjs', import.meta.url)), 'utf8');
+  assert.match(handler, /PUBLIC_SYSTEM_CACHE_TTL_MS=15000/);
+  assert.match(handler, /publishedSystemCache=.*inflight/);
+  assert.match(handler, /readPublishedTowerSystem\(\{env,signal:req\.signal,now,force\}\)/);
+  assert.match(handler, /if\(force\)\{/);
+  assert.match(handler, /Cache-Control':'no-cache'/);
+});
+
+test('retired force-graph runtime is absent and Node runtime is pinned to major 24', async () => {
+  const packageJson = JSON.parse(await readFile(fileURLToPath(new URL('../package.json', import.meta.url)), 'utf8'));
+  const packageLock = JSON.parse(await readFile(fileURLToPath(new URL('../package-lock.json', import.meta.url)), 'utf8'));
+  assert.equal(packageJson.engines.node, '24.x');
+  assert.equal(packageJson.dependencies['react-force-graph-3d'], undefined);
+  assert.equal(packageLock.packages[''].dependencies['react-force-graph-3d'], undefined);
+  assert.equal(packageLock.packages['node_modules/react-force-graph-3d'], undefined);
+  assert(!Object.keys(packageLock.packages).some(key => /(?:3d-force-graph|three-forcegraph|react-kapsule)$/.test(key)));
+});
