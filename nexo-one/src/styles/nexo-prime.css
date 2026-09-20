@@ -1583,28 +1583,3 @@ p{
   .cockpit[data-view=ATLAS] .operate-hud{top:104px}
 }
 @media(max-width:420px){.cockpit[data-view=ATLAS] .atlas-toolbar{grid-template-columns:auto auto 1fr auto}}
-
-
-/* NEXO ATLAS spatial navigation V1 */
-.cockpit[data-view=ATLAS] .atlas-breadcrumb{
-  position:absolute;z-index:19;top:72px;left:20px;display:flex;align-items:center;gap:8px;
-  max-width:calc(100% - 440px);min-height:38px;padding:5px 7px;border:1px solid rgba(121,231,255,.10);
-  border-radius:11px;background:rgba(4,10,17,.68);box-shadow:0 12px 36px rgba(0,0,0,.25);
-  color:var(--nexo-muted);backdrop-filter:blur(18px)
-}
-.cockpit[data-view=ATLAS] .atlas-breadcrumb button,
-.cockpit[data-view=ATLAS] .atlas-breadcrumb strong{
-  min-height:28px;padding:0 9px;border:0;border-radius:7px;background:transparent;color:var(--nexo-text-2);
-  font:650 10px/1 Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif
-}
-.cockpit[data-view=ATLAS] .atlas-breadcrumb button{cursor:pointer}
-.cockpit[data-view=ATLAS] .atlas-breadcrumb button:hover{background:rgba(121,231,255,.06);color:var(--nexo-accent-strong)}
-.cockpit[data-view=ATLAS] .atlas-breadcrumb .atlas-breadcrumb-back{
-  margin-left:6px;border-left:1px solid rgba(255,255,255,.07);color:var(--nexo-accent-strong)
-}
-.cockpit[data-view=ATLAS] .atlas-stage-3d{overflow:hidden}
-@media(max-width:860px){
-  .cockpit[data-view=ATLAS] .atlas-breadcrumb{top:106px;left:10px;right:10px;max-width:none;overflow:auto;white-space:nowrap}
-  .cockpit[data-view=ATLAS] .atlas-breadcrumb button,
-  .cockpit[data-view=ATLAS] .atlas-breadcrumb strong{font-size:9px}
-}

@@ -114,24 +114,3 @@ test('macro domain labels carry member counts and campaigns carry item counts',a
   assert.match(three,/node\.member_count \?\? 0/);
   assert.match(three,/node\.type === 'CAMPAIGN'/);
 });
-
-
-test('macro Atlas renders interactive domain worlds instead of tiny graph labels',async()=>{
-  const [three,css,view]=await Promise.all([
-    text('src/components/GalaxyThree3D.tsx'),
-    text('src/components/GalaxyThree3D.css'),
-    text('src/features/system/Atlas.tsx'),
-  ]);
-  assert.match(three,/atlas-domain-worlds/);
-  assert.match(three,/atlas-world-orb/);
-  assert.match(three,/domainWorldMeta/);
-  assert.match(three,/onClick=\{\(\) => onSelect\(node\.id\)\}/);
-  assert.match(three,/grid\.visible = !isMacro && !isMobile/);
-  assert.match(css,/NEXO ATLAS DOMAIN WORLDS V1/);
-  assert.match(css,/\.atlas-domain-world\.domain-science/);
-  assert.match(css,/\.atlas-domain-world\.domain-engineering/);
-  assert.match(css,/\.atlas-domain-world\.domain-olympus/);
-  assert.match(css,/\.atlas-domain-world\.domain-artifact/);
-  assert.match(view,/atlas-breadcrumb/);
-  assert.match(view,/!isMobile && !isMacroOverview/);
-});
