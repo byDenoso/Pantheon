@@ -16,10 +16,10 @@ export const remoteSource: SystemDataSource = {
   label: 'Servidor NEXO · SystemState público',
   kind: 'remote',
 
-  async load({ signal }): Promise<SystemState> {
-    const requestUrl = SYSTEM_ENDPOINT.endsWith('.json')
-      ? `${SYSTEM_ENDPOINT}${SYSTEM_ENDPOINT.includes('?') ? '&' : '?'}v=${Date.now()}`
-      : `${SYSTEM_ENDPOINT}${SYSTEM_ENDPOINT.includes('?') ? '&' : '?'}v=${Date.now()}`;
+  async load({ signal, force }): Promise<SystemState> {
+    const separator = SYSTEM_ENDPOINT.includes('?') ? '&' : '?';
+    const refresh = force && !SYSTEM_ENDPOINT.endsWith('.json') ? '&refresh=1' : '';
+    const requestUrl = `${SYSTEM_ENDPOINT}${separator}v=${Date.now()}${refresh}`;
 
     const response = await fetch(requestUrl, {
       signal,
