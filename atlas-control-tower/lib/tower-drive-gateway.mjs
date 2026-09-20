@@ -20,7 +20,8 @@ export function createTowerDriveGateway({env=process.env,fetchImpl=globalThis.fe
     if(drive.configured){
       const pointer=await drive.readPath('CURRENT.json');
       const snapshotId=String(pointer?.json?.snapshot_id||'').trim();
-      if(snapshotId){
+      const complete=pointer?.json?.completeness==='COMPLETE_TOWER_V06';
+      if(snapshotId&&complete){
         if(!/^[A-Za-z0-9._-]+$/.test(snapshotId))throw new Error('DRIVE_CURRENT_SNAPSHOT_ID_INVALID');
         resolvedPrefix='SNAPSHOTS/'+snapshotId+'/TOWER';
         return resolvedPrefix;
@@ -54,23 +55,15 @@ export function createTowerDriveGateway({env=process.env,fetchImpl=globalThis.fe
   async function readEntity(kind,id){return readJson('entities/'+String(kind).toLowerCase()+'/'+id+'.json');}
   async function readReceipt(id){return readJson('mutations/receipts/'+id+'.json');}
 
-  async function submitTowerMutation(request){
-    if(!drive.configured)throw new Error('DRIVE_PRIMARY_NOT_CONFIGURED');
-    if(!request?.request_id||!request?.entity_name||!request?.entity_kind)throw new Error('INVALID_TOWER_MUTATION');
-    const existing=await readReceipt(request.request_id);
-    if(existing)return {request_id:request.request_id,status:'COMPLETE',receipt:existing};
-    await drive.putJson('EVENTS/mutations/inbox/'+request.request_id+'.json',request,{conflict:'idempotent'});
-    return {request_id:request.request_id,status:'PENDING',receipt:null,storage:'DRIVE'};
+  async function submitTowerMutation(){
+    throw new Error('DRIVE_MUTATION_ENGINE_NOT_PROMOTED');
   }
-  async function dispatchRuntime({trigger_id,run_id,work_id,capability_id,data_bounded=false}){
-    for(const [key,value] of Object.entries({trigger_id,run_id,work_id,capability_id}))if(!String(value||'').trim())throw new Error(key.toUpperCase()+'_REQUIRED');
-    const launch={schema_version:'1.0.0',event_type:'RUNTIME_LAUNCH_REQUESTED',trigger_id,run_id,work_id,capability_id,data_bounded:Boolean(data_bounded),storage:'DRIVE'};
-    await drive.putJson('EVENTS/runtime/launch/inbox/'+run_id+'.json',launch,{conflict:'idempotent'});
-    return {status:'ACCEPTED',dispatch_mode:'DRIVE_LAUNCH_EVENT',trigger_id,run_id,work_id,capability_id,already_enqueued:false};
+  async function dispatchRuntime(){
+    throw new Error('DRIVE_RUNTIME_DISPATCH_NOT_PROMOTED');
   }
 
   return {
-    configured:{towerWrite:drive.configured,towerStore:'GOOGLE_DRIVE',rootId:drive.rootId,migrationFallback},
+    configured:{towerWrite:false,towerStore:'GOOGLE_DRIVE',rootId:drive.rootId,migrationFallback,readMode:'COMPLETE_SNAPSHOT_ONLY'},
     readJson,listJsonDirectory,
     readControl:()=>requireJson('CONTROL.json'),
     readEntity,
