@@ -60,6 +60,51 @@ function clusterNode(domain: GraphNode['domain'], type: GraphNode['type'], count
 }
 
 
+const NO_CAMPAIGN = '__NO_CAMPAIGN__';
+
+const campaignNodeId = (domain: GraphNode['domain'], campaignId: string): string =>
+  'atlas.campaign.' + domain.toLowerCase() + '.' + encodeURIComponent(campaignId);
+
+const campaignFromId = (id: string): { domain: GraphNode['domain']; campaignId: string } | null => {
+  const match = /^atlas\.campaign\.([^.]+)\.(.+)$/.exec(id);
+  if (!match) return null;
+  try {
+    return {
+      domain: match[1].toUpperCase() as GraphNode['domain'],
+      campaignId: decodeURIComponent(match[2]),
+    };
+  } catch {
+    return null;
+  }
+};
+
+function campaignNode(
+  domain: GraphNode['domain'],
+  campaignId: string,
+  count: number,
+  sample: GraphNode | null,
+): GraphNode {
+  const now = new Date().toISOString();
+  const display = campaignId === NO_CAMPAIGN ? 'SEM CAMPANHA' : campaignId;
+  return {
+    id: campaignNodeId(domain, campaignId),
+    type: 'CAMPAIGN',
+    label: display,
+    domain,
+    state: sample?.state ?? 'LIVE',
+    authority_class: 'DERIVED',
+    source_ref: 'atlas://projection/campaign',
+    source_revision: sample?.source_revision ?? 'projection',
+    fingerprint: 'atlas-campaign:' + domain + ':' + campaignId,
+    freshness: sample?.freshness ?? { state: 'LIVE', observed_at: now, ttl_seconds: null },
+    checked_at: sample?.checked_at ?? now,
+    summary: count + ' entidades agrupadas pela campanha ' + display + '. Agrupamento visual derivado; a Tower continua autoridade.',
+    campaign_id: campaignId === NO_CAMPAIGN ? undefined : campaignId,
+    member_count: count,
+  };
+}
+
+
 function visualDomainNode(
   domain: GraphNode['domain'],
   snapshot: ReturnType<typeof useGalaxySnapshot>['snapshot'],
@@ -140,7 +185,6 @@ export function AtlasView(
     edges: state.graph.edges,
   }), [state.graph.edges, state.graph.nodes, visualDomainNodes]);
   const filtered = useMemo(() => filterGraph(graphForView, filters), [filters, graphForView]);
-  const learningEndpointIds = useMemo(() => new Set(filtered.edges.filter(edge => edge.is_learning).flatMap(edge => [edge.from, edge.to])), [filtered.edges]);
   const learningEdges = useMemo(() => filtered.edges.filter(edge => edge.is_learning), [filtered.edges]);
   const learningInterDomain = useMemo(
     () => learningEdges.filter(edge => edge.learning_scope === 'INTER_DOMAIN').length,
@@ -151,10 +195,17 @@ export function AtlasView(
     [learningEdges],
   );
   const [expandedCluster, setExpandedCluster] = useState<GraphNode['type'] | null>(null);
+  const [expandedCampaign, setExpandedCampaign] = useState<string | null>(null);
   const renderGraph = useMemo(() => {
-    const baseNodes = filtered.nodes.filter(node => learningVisible || (node.type !== 'FILAMENT' && !learningEndpointIds.has(node.id)));
+    // Learning Filaments are an overlay. Structural endpoints stay visible when it is OFF.
+    const baseNodes = filtered.nodes.filter(node => learningVisible || node.type !== 'FILAMENT');
     const domainNodes = baseNodes.filter(node => node.type === 'DOMAIN');
-    const macroDomainNodes = graphForView.nodes.filter(node => node.type === 'DOMAIN');
+    const macroDomainNodes = graphForView.nodes
+      .filter(node => node.type === 'DOMAIN')
+      .map(node => ({
+        ...node,
+        member_count: graphForView.nodes.filter(candidate => candidate.domain === node.domain && candidate.type !== 'DOMAIN' && candidate.type !== 'FILAMENT').length,
+      }));
     const nexoNode = domainNodes.find(node => node.domain === 'NEXO');
     const macroNexoNode = macroDomainNodes.find(node => node.domain === 'NEXO');
     if (expandAll) {
