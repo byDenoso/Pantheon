@@ -11,6 +11,9 @@ async function fixture() {
   await mkdir(path.join(tower, 'indexes'), { recursive: true });
   await mkdir(path.join(tower, 'entities', 'interdomain'), { recursive: true });
   await mkdir(path.join(tower, 'entities', 'hypothesis'), { recursive: true });
+  await mkdir(path.join(tower, 'entities', 'test_group'), { recursive: true });
+  await mkdir(path.join(tower, 'entities', 'test'), { recursive: true });
+  await mkdir(path.join(tower, 'runtime', 'artifacts', 'meta_learning'), { recursive: true });
   await writeFile(path.join(tower, 'CONTROL.json'), JSON.stringify({
     schema_version: '0.6',
     truth_owner: 'byDenoso/NEXO-Obsidian-Vault@main:TOWER_V06',
@@ -40,6 +43,18 @@ async function fixture() {
   await writeFile(path.join(tower, 'entities', 'hypothesis', 'HYP::A.json'), JSON.stringify({
     entity_id: 'HYP::A', entity_type: 'HYPOTHESIS', domain: 'SCIENCE', status: 'TESTING', priority: 'HIGH', entity_version: 1, title: 'Safe hypothesis', private_reasoning: 'must disappear'
   }));
+  await writeFile(path.join(tower, 'entities', 'test_group', 'GROUP-A.json'), JSON.stringify({
+    id: 'GROUP-A', kind: 'TEST_GROUP', campaign_id: 'CAMP-GROWTH', status: 'ACTIVE', test_count: 1
+  }));
+  await writeFile(path.join(tower, 'entities', 'test', 'T-SCI-001.json'), JSON.stringify({
+    id: 'T-SCI-001', kind: 'TEST', test_group_id: 'GROUP-A', campaign_id: 'CAMP-GROWTH', domain: 'SCIENCE', status: 'DONE'
+  }));
+  await writeFile(path.join(tower, 'runtime', 'artifacts', 'meta_learning', 'METALEARNING_CURRENT.json'), JSON.stringify({
+    schema: 'nexo.meta-learning.v1', authority_boundary: 'PROCEDURAL_ONLY_NO_SCIENTIFIC_AUTHORITY', version: 4,
+    evidence: [{ evidence_id: 'ML-EVID-SCI-001', context: 'T-SCI-001 deterministic recovery', outcome: 'PASS', decision_changed: true }],
+    lessons: [{ lesson_id: 'ML-LESSON-001', version: 1, status: 'SUPPORTED', evidence_refs: ['ML-EVID-SCI-001'], lesson: 'Reuse validated inputs before implementing adapters.', heuristic: 'Prefer reuse before create.' }],
+    adaptive_policy: { policy_version: 4, active_supported_guard: 'Reuse validated inputs before new adapters.' }
+  }));
   return tower;
 }
 
@@ -53,6 +68,11 @@ test('Tower source builder keeps TOWER_V06 authority and a bounded public hot se
   assert.equal(source.entities.hypothesis.length, 1);
   assert.equal(source.entities.program.length, 1);
   assert.equal(source.entities.campaign.length, 1);
+  assert.equal(source.entities.learning.length, 2);
+  assert.equal(source.entities.learning.find(item => item.id === 'ML-EVID-SCI-001')?.stage, 'OBSERVATION');
+  assert.deepEqual(source.entities.learning.find(item => item.id === 'ML-EVID-SCI-001')?.test_refs, ['T-SCI-001']);
+  assert.equal(source.entities.learning.find(item => item.id === 'ML-LESSON-001')?.stage, 'LESSON');
+  assert.deepEqual(source.entities.learning.find(item => item.id === 'ML-LESSON-001')?.learning_refs, ['ML-EVID-SCI-001']);
   assert.equal(source.entities.work[0].id, 'ACT-ENG-SAFE');
   assert.equal(source.entities.hypothesis[0].id, 'HYP::A');
   assert.equal(source.entities.campaign[0].program_id, 'PROG-STRUCTURE');
