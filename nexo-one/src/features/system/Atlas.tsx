@@ -207,11 +207,8 @@ export function AtlasView(
   const isMacroOverview = rootExpanded && !expandAll && !expandedDomain && !expandedCluster;
   const placed = useMemo(() => {
     if (isMacroOverview) return layoutMacroDomains(renderGraph.nodes);
-    return layoutGraph3D(renderGraph.nodes).map(node => {
-      const position = galaxyPositions.get(node.id);
-      return position ? { ...node, ...position } : node;
-    });
-  }, [isMacroOverview, renderGraph.nodes, galaxyPositions]);
+    return layoutGraph3D(renderGraph.nodes);
+  }, [isMacroOverview, renderGraph.nodes]);
   const legend = useMemo(() => legendOf(renderGraph.nodes.filter(node => !clusterFromId(node.id))), [renderGraph.nodes]);
   const effectiveSelectedId = resolveSelection3D(placed, selectedId);
   const selected: GraphNode | null = filtered.nodes.find(n => n.id === effectiveSelectedId) ?? null;
