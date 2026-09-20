@@ -78,3 +78,34 @@ test('gateway writes mutation inbox, waits for receipt, then reads canonical TES
   const entity=await gateway.readbackTest('T-1');assert.equal(entity.id,'T-1');
   assert.ok(calls.some(item=>item.startsWith('PUT byDenoso/NEXO-Obsidian-Vault@main:TOWER_V06/mutations/inbox/REQ-MCP-T-1.json')));assert.equal(calls.some(item=>item.includes('secret')),false);
 });
+
+
+test('cleanup deletes only stale merged Atlas branches',async()=>{
+  const calls=[];
+  const old='2026-09-01T00:00:00Z';
+  const recent=new Date(Date.now()-60*60*1000).toISOString();
+  const branches=[
+    {name:'main',commit:{sha:'mainsha'}},
+    {name:'atlas-old-merged',commit:{sha:'oldmerged'}},
+    {name:'feat/atlas-old-unmerged',commit:{sha:'oldunmerged'}},
+    {name:'chatgpt/nexo-recent',commit:{sha:'recent'}},
+    {name:'unrelated-branch',commit:{sha:'other'}},
+  ];
+  const fetchImpl=async(url,init={})=>{
+    const parsed=new URL(url),method=init.method||'GET';calls.push(method+' '+parsed.pathname+parsed.search);
+    if(parsed.pathname.endsWith('/branches'))return new Response(JSON.stringify(branches),{status:200,headers:{'content-type':'application/json'}});
+    if(parsed.pathname.endsWith('/commits/oldmerged'))return new Response(JSON.stringify({commit:{committer:{date:old}}}),{status:200,headers:{'content-type':'application/json'}});
+    if(parsed.pathname.endsWith('/commits/oldunmerged'))return new Response(JSON.stringify({commit:{committer:{date:old}}}),{status:200,headers:{'content-type':'application/json'}});
+    if(parsed.pathname.endsWith('/commits/recent'))return new Response(JSON.stringify({commit:{committer:{date:recent}}}),{status:200,headers:{'content-type':'application/json'}});
+    if(parsed.pathname.includes('/compare/atlas-old-merged...main'))return new Response(JSON.stringify({behind_by:0,ahead_by:3,status:'ahead'}),{status:200,headers:{'content-type':'application/json'}});
+    if(parsed.pathname.includes('/compare/feat%2Fatlas-old-unmerged...main')||parsed.pathname.includes('/compare/feat/atlas-old-unmerged...main'))return new Response(JSON.stringify({behind_by:2,ahead_by:3,status:'diverged'}),{status:200,headers:{'content-type':'application/json'}});
+    if(method==='DELETE'&&parsed.pathname.endsWith('/git/refs/heads/atlas-old-merged'))return new Response('',{status:204});
+    return new Response(JSON.stringify({message:'Not Found'}),{status:404,headers:{'content-type':'application/json'}});
+  };
+  const gateway=createTowerGithubGateway({env:{NEXO_TOWER_GITHUB_TOKEN:'secret'},fetchImpl});
+  const result=await gateway.cleanupMergedBranches({minAgeHours:24});
+  assert.deepEqual(result.deleted.map(item=>item.branch),['atlas-old-merged']);
+  assert.ok(result.kept.some(item=>item.branch==='feat/atlas-old-unmerged'&&item.reason==='UNMERGED_COMMITS'));
+  assert.ok(result.kept.some(item=>item.branch==='chatgpt/nexo-recent'&&item.reason==='RECENT_OR_UNKNOWN_AGE'));
+  assert.equal(calls.filter(item=>item.startsWith('DELETE ')).length,1);
+});
