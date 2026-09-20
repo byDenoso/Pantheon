@@ -92,3 +92,15 @@ test('Drive transaction keeps L4 policy human-gated',()=>{
   const request={request_id:'REQ-L4',entity_kind:'governance',entity_name:'NEXO_RSI_POLICY',expected_version:1,writer_role:'ADVISOR',event_type:'POLICY_UPDATED',changes:{retry_limit:3},autonomy_level:'L4',governance_evidence:{baseline_ref:'B',hypothesis_ref:'H',metric:'m',rollback_ref:'R',evidence_refs:['E'],observed_gain:1,regression_passed:true}};
   assert.throws(()=>applyDriveMutationToBundle(input,request),/L4_HUMAN_APPROVAL_REQUIRED/);
 });
+
+
+test('semantic entity counts are refreshed from canonical Drive bundle after mutation',()=>{
+  const input=bundle({
+    'entities/test/T-OLD.json':{encoding:'json',value:{id:'T-OLD',entity_version:1,status:'RESULT'}},
+    'entities/hypothesis/H-1.json':{encoding:'json',value:{id:'H-1',entity_version:1,status:'ACTIVE'}}
+  });
+  const request={request_id:'REQ-COUNT',entity_kind:'test',entity_name:'T-NEW',expected_version:0,writer_role:'EXECUTOR',event_type:'TEST_CREATED',changes:{id:'T-NEW',kind:'TEST',status:'READY'}};
+  const out=applyDriveMutationToBundle(input,request);
+  assert.equal(out.bundle.files['snapshot/latest.json'].value.counts.tests,2);
+  assert.equal(out.bundle.files['snapshot/latest.json'].value.counts.hypotheses,1);
+});

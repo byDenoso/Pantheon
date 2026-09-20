@@ -4,7 +4,6 @@ import {buildAtlasProjectionV3} from '../v3/project.mjs';
 
 const TTL=30000;
 let cache=null;
-const TRUTH_OWNER='byDenoso/NEXO-Obsidian-Vault@main:TOWER_V06';
 const hash=value=>'sha256:'+createHash('sha256').update(JSON.stringify(value)).digest('hex');
 
 async function loadSource(gateway){
@@ -36,7 +35,6 @@ async function loadSource(gateway){
   };
 }
 function project(snapshot,route,query){
-  if(route==='health')return {ok:true,authority:'TOWER_V06',truthOwner:TRUTH_OWNER,storage:'GOOGLE_DRIVE',manifest:snapshot.manifest,counts:snapshot.universe?.counts||{}};
   if(route==='state')return snapshot;
   if(route==='graph')return snapshot.graph;
   if(route==='learning'||route==='learning-relations')return snapshot.learning;
@@ -66,6 +64,35 @@ function send(res,body,status=200,{noStore=false}={}){
 export default async function handler(req,res){
   const gateway=createTowerDriveGateway();
   const route=routeOf(req),query=queryOf(req),method=String(req.method||'GET').toUpperCase();
+  if(method==='GET'&&route==='health'){
+    try{
+      const [meta,control,work]=await Promise.all([
+        gateway.getCurrentSnapshotMeta(),
+        gateway.readControl(),
+        gateway.readActiveWorkIndex().catch(()=>({work:[]}))
+      ]);
+      return send(res,{
+        contract:'DRIVE_TOWER_HEALTH_V1',
+        ok:true,
+        authority:'TOWER_V06',
+        truthOwner:control?.truth_owner||'TOWER_V06',
+        storage:'GOOGLE_DRIVE_PRIVATE',
+        snapshot_id:meta.snapshot_id,
+        parent_snapshot_id:meta.parent_snapshot_id||null,
+        generation:meta.generation??null,
+        source_fingerprint:meta.source_fingerprint,
+        state_fingerprint:meta.state_fingerprint||meta.source_fingerprint,
+        event_cursor:meta.event_cursor||null,
+        writer_ready:meta.writer_ready===true,
+        completeness:meta.completeness,
+        migration_fallback:gateway.configured.migrationFallback===true,
+        write_model:gateway.configured.writeModel,
+        counts:{active_work:Array.isArray(work?.work)?work.work.length:Number(work?.count||0)}
+      },200,{noStore:true});
+    }catch(error){
+      return send(res,{contract:'DRIVE_TOWER_HEALTH_V1',ok:false,error:'DRIVE_TOWER_UNAVAILABLE',detail:String(error?.message||error).slice(0,220),authority:'TOWER_V06',storage:'GOOGLE_DRIVE_PRIVATE'},503,{noStore:true});
+    }
+  }
   if(method==='POST'&&route==='sync'){
     try{const snapshot=await load({force:true,gateway});return send(res,{ok:true,outcome:'REFRESHED',authority:'TOWER_V06',storage:'GOOGLE_DRIVE',fingerprint:snapshot.manifest?.fingerprint},200,{noStore:true});}
     catch(error){return send(res,{ok:false,error:'DRIVE_TOWER_UNAVAILABLE',detail:String(error?.message||error).slice(0,220)},503,{noStore:true});}

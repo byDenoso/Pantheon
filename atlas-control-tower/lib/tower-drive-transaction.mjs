@@ -32,6 +32,21 @@ function entryValue(bundle,path){
 function putJson(bundle,path,value){
   bundle.files[path]={encoding:'json',value:clone(value)};
 }
+function countTopLevelJson(bundle,prefix){
+  const root=String(prefix).replace(/\/+$/,'')+'/';
+  return Object.keys(bundle?.files||{}).filter(path=>{
+    if(!path.startsWith(root)||!path.endsWith('.json'))return false;
+    return !path.slice(root.length).includes('/');
+  }).length;
+}
+function refreshSemanticCounts(bundle,snapshot){
+  const counts={...(snapshot.counts||{})};
+  counts.tests=countTopLevelJson(bundle,'entities/test');
+  counts.hypotheses=countTopLevelJson(bundle,'entities/hypothesis');
+  if(Object.keys(bundle.files).some(path=>path.startsWith('entities/campaign/')))counts.campaigns=countTopLevelJson(bundle,'entities/campaign');
+  if(Object.keys(bundle.files).some(path=>path.startsWith('entities/test_group/')))counts.test_groups=countTopLevelJson(bundle,'entities/test_group');
+  snapshot.counts=counts;
+}
 function invalid(message){const error=new Error(message);error.code='INVALID_MUTATION_REQUEST';throw error;}
 function nonempty(value){return typeof value==='string'&&Boolean(value.trim());}
 function canonicalJson(value){
@@ -161,6 +176,7 @@ export function applyDriveMutationToBundle(inputBundle,request,{now=new Date()}=
   const snapshot=entryValue(bundle,snapshotPath);
   if(snapshot){
     snapshot.event_cursor=eventId;
+    refreshSemanticCounts(bundle,snapshot);
     if(ids.entityKind==='work'){
       const hot=entryValue(bundle,'indexes/active-work.json');
       if(hot&&Array.isArray(hot.work)){
