@@ -84,7 +84,7 @@ export interface PlacedNode extends GraphNode { x: number; y: number; radius: nu
 
 /** Anel por tipo: domínios no centro, providers e capabilities em volta, evidência na borda. */
 const RING: Record<GraphNodeType, number> = {
-  DOMAIN: 0, PROVIDER: 1, CAPABILITY: 2, ACTION: 3, SIDE_QUEST: 3,
+  DOMAIN: 0, CAMPAIGN: 1, PROVIDER: 1, CAPABILITY: 2, ACTION: 3, SIDE_QUEST: 3,
   EFFECT: 4, PROJECTION: 4, CLAIM: 5, FILAMENT: 5, TEST: 6, MEMORY: 6,
 };
 
