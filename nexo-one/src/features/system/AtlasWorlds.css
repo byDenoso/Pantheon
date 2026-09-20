@@ -97,3 +97,40 @@
   .atlas-world-copy small{font-size:6px}
   .atlas-world-summary{bottom:82px;min-height:42px}
 }
+
+
+.atlas-breadcrumb{
+  position:absolute;
+  z-index:19;
+  top:72px;
+  left:20px;
+  display:flex;
+  align-items:center;
+  gap:8px;
+  max-width:calc(100% - 440px);
+  min-height:38px;
+  padding:5px 7px;
+  border:1px solid rgba(121,231,255,.10);
+  border-radius:11px;
+  background:rgba(4,10,17,.70);
+  box-shadow:0 12px 36px rgba(0,0,0,.25);
+  color:#718395;
+  backdrop-filter:blur(18px)
+}
+.atlas-breadcrumb button,.atlas-breadcrumb strong{
+  min-height:28px;
+  padding:0 9px;
+  border:0;
+  border-radius:7px;
+  background:transparent;
+  color:#cbd6df;
+  font:650 10px/1 Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif
+}
+.atlas-breadcrumb button{cursor:pointer}
+.atlas-breadcrumb button:hover{background:rgba(121,231,255,.06);color:#a7efff}
+.atlas-breadcrumb .atlas-breadcrumb-back{margin-left:6px;border-left:1px solid rgba(255,255,255,.07);color:#9eeaff}
+
+@media(max-width:860px){
+  .atlas-breadcrumb{top:106px;left:10px;right:10px;max-width:none;overflow:auto;white-space:nowrap}
+  .atlas-breadcrumb button,.atlas-breadcrumb strong{font-size:9px}
+}
