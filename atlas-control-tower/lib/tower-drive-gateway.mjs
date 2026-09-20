@@ -13,10 +13,23 @@ export function createTowerDriveGateway({env=process.env,fetchImpl=globalThis.fe
   const drive=createDriveClient({env,fetchImpl});
   const migrationFallback=String(env.NEXO_DRIVE_MIGRATION_FALLBACK_GITHUB||'')==='1';
   const legacy=migrationFallback?createTowerGithubGateway({env,fetchImpl}):null;
-  const towerPrefix=String(env.NEXO_DRIVE_TOWER_PREFIX||'TOWER').replace(/^\/+|\/+$/g,'');
-
-  const rel=value=>String(value).replace(/^TOWER_V\d+\//,'').replace(/^\/+/, '');
-  const pathFor=value=>towerPrefix+'/'+rel(value);
+  const rel=value=>String(value).replace(/^TOWER_V\\d+\\//,'').replace(/^\\/+/, '');
+  let resolvedPrefix=null;
+  async function towerPrefix(){
+    if(resolvedPrefix)return resolvedPrefix;
+    if(drive.configured){
+      const pointer=await drive.readPath('CURRENT.json');
+      const snapshotId=String(pointer?.json?.snapshot_id||'').trim();
+      if(snapshotId){
+        if(!/^[A-Za-z0-9._-]+$/.test(snapshotId))throw new Error('DRIVE_CURRENT_SNAPSHOT_ID_INVALID');
+        resolvedPrefix='SNAPSHOTS/'+snapshotId+'/TOWER';
+        return resolvedPrefix;
+      }
+    }
+    resolvedPrefix=String(env.NEXO_DRIVE_TOWER_PREFIX||'TOWER').replace(/^\\/+|\\/+$/g,'');
+    return resolvedPrefix;
+  }
+  const pathFor=async value=>(await towerPrefix())+'/'+rel(value);
 
   async function readJson(relative){
     if(!drive.configured){
