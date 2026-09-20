@@ -228,7 +228,7 @@ export interface LaneSnapshot {
 }
 
 export type GraphNodeType =
-  | 'DOMAIN' | 'ACTION' | 'EFFECT' | 'CLAIM' | 'TEST' | 'MEMORY'
+  | 'DOMAIN' | 'CAMPAIGN' | 'ACTION' | 'EFFECT' | 'CLAIM' | 'TEST' | 'MEMORY'
   | 'CAPABILITY' | 'PROVIDER' | 'PROJECTION' | 'SIDE_QUEST' | 'FILAMENT';
 export const GRAPH_NODE_TYPES: GraphNodeType[] = [
   'DOMAIN', 'ACTION', 'EFFECT', 'CLAIM', 'TEST', 'MEMORY',
@@ -263,6 +263,9 @@ export interface GraphNode {
   capability_id?: string;
   runtime?: Runtime;
   evidence?: string[];
+  campaign_id?: string;
+  test_group_id?: string;
+  member_count?: number;
 }
 
 export interface GraphEdge {
