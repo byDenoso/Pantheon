@@ -219,6 +219,9 @@ function learningFilamentsFromTower(interdomain, manifest, observedAt) {
 function graphFromProjection(projection, observedAt, filaments = []) {
   const manifest = projection.manifest;
   const source = sourceRef(manifest);
+  const humanWorkIds = new Set(Array.isArray(projection.human_gates?.work_ids)
+    ? projection.human_gates.work_ids.map(value => String(value || ''))
+    : []);
   const nodes = [];
   const edges = [];
   const seen = new Set();
@@ -277,6 +280,11 @@ function graphFromProjection(projection, observedAt, filaments = []) {
       summary: 'WORK projected without reinterpretation; canonical status=' + String(item.status || item.operational_status || 'UNSPECIFIED'),
       campaign_id: item.campaign_id ? String(item.campaign_id) : undefined,
       test_group_id: item.test_group_id ? String(item.test_group_id) : undefined,
+      operational_status: String(item.operational_status || item.status || 'UNSPECIFIED').toUpperCase(),
+      priority: item.priority ? String(item.priority).toUpperCase() : undefined,
+      dependency_class: item.dependency_class ? String(item.dependency_class).toUpperCase() : undefined,
+      owner_role: item.owner_role ? String(item.owner_role).toUpperCase() : undefined,
+      human_gate: humanWorkIds.has(rawId),
     });
     addEdge('domain:' + domain, id);
   }
