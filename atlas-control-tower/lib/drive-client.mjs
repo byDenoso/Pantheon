@@ -77,20 +77,23 @@ export function createDriveClient({env=process.env,fetchImpl=globalThis.fetch}={
       body:JSON.stringify({name,mimeType:'application/vnd.google-apps.folder',parents:[parentId]})
     }),'DRIVE_CREATE_FOLDER');
   }
-  async function createJson(parentId,name,value){
-    const metadata=JSON.stringify({name,mimeType:'application/json',parents:[parentId]});
+  async function createFile(parentId,name,content,{mimeType='application/octet-stream'}={}){
+    const metadata=JSON.stringify({name,mimeType,parents:[parentId]});
     const response=await request(DRIVE_API+'/files?fields=id,name,mimeType,modifiedTime',{
       method:'POST',headers:{'Content-Type':'application/json'},body:metadata
     });
-    const file=await jsonResponse(response,'DRIVE_CREATE_JSON_META');
-    await updateJson(file.id,value);
+    const file=await jsonResponse(response,'DRIVE_CREATE_FILE_META');
+    await updateFile(file.id,content,{mimeType});
     return file;
   }
-  async function updateJson(fileId,value){
-    return jsonResponse(await request(UPLOAD_API+'/files/'+encodeURIComponent(fileId)+'?uploadType=media&fields=id,name,mimeType,modifiedTime',{
-      method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify(value,null,2)+'\n'
-    }),'DRIVE_UPDATE_JSON');
+  async function updateFile(fileId,content,{mimeType='application/octet-stream'}={}){
+    const response=await request(UPLOAD_API+'/files/'+encodeURIComponent(fileId)+'?uploadType=media&fields=id,name,mimeType,modifiedTime',{
+      method:'PATCH',headers:{'Content-Type':mimeType},body:content
+    });
+    return jsonResponse(response,'DRIVE_UPDATE_FILE');
   }
+  async function createJson(parentId,name,value){return createFile(parentId,name,JSON.stringify(value,null,2)+'\n',{mimeType:'application/json'});}
+  async function updateJson(fileId,value){return updateFile(fileId,JSON.stringify(value,null,2)+'\n',{mimeType:'application/json'});}
 
   const pathCache=new Map();
   async function resolveDirectory(relative='',opts={}){
@@ -120,6 +123,16 @@ export function createDriveClient({env=process.env,fetchImpl=globalThis.fetch}={
     const files=(await listChildren(dir.id)).filter(f=>f.mimeType!=='application/vnd.google-apps.folder'&&f.name.endsWith('.json')).sort((a,b)=>a.name.localeCompare(b.name));
     const out=[];for(const file of files)out.push(await getJson(file.id));return out;
   }
+  async function putFile(relative,content,{createParents=true,conflict='replace',mimeType='application/octet-stream'}={}){
+    const parts=String(relative).replace(/^\/+|\/+$/g,'').split('/'),name=parts.pop();
+    const parent=await resolveDirectory(parts.join('/'),{create:createParents});if(!parent)throw new Error('DRIVE_PARENT_MISSING');
+    const existing=await findChild(parent.id,name);
+    if(existing){
+      if(conflict==='error')throw new Error('DRIVE_CONTENT_CONFLICT:'+relative);
+      return {idempotent:false,file:await updateFile(existing.id,content,{mimeType})};
+    }
+    return {idempotent:false,file:await createFile(parent.id,name,content,{mimeType})};
+  }
   async function putJson(relative,value,{createParents=true,conflict='replace'}={}){
     const parts=String(relative).replace(/^\/+|\/+$/g,'').split('/'),name=parts.pop();
     const parent=await resolveDirectory(parts.join('/'),{create:createParents});if(!parent)throw new Error('DRIVE_PARENT_MISSING');
@@ -131,5 +144,5 @@ export function createDriveClient({env=process.env,fetchImpl=globalThis.fetch}={
     }
     return {idempotent:false,file:await createJson(parent.id,name,value)};
   }
-  return {configured,rootId,listChildren,getJson,findChild,createFolder,resolveDirectory,readPath,listJsonDirectory,putJson};
+  return {configured,rootId,listChildren,getJson,findChild,createFolder,createFile,updateFile,resolveDirectory,readPath,listJsonDirectory,putFile,putJson};
 }
