@@ -198,6 +198,10 @@ jobs:
         working-directory: nexo-one
         run: npm ci --no-audit --no-fund
 
+      - name: Verify Learning projection contract
+        working-directory: nexo-one
+        run: node --test test/pages.test.mjs
+
       - name: Build static NEXO ONE
         working-directory: nexo-one
         env:
@@ -330,6 +334,13 @@ jobs:
           if(system.bus?.fingerprint!==manifest.projection_fingerprint)throw new Error('SYSTEM_NOT_BOUND_TO_TOWER_PROJECTION');
           if(world.truthGraph?.fingerprint!==manifest.projection_fingerprint)throw new Error('WORLD_NOT_BOUND_TO_TOWER_PROJECTION');
 
+          const learningNodes=(system.graph?.nodes||[]).filter(node=>node.type==='FILAMENT');
+          const learningEdges=(system.graph?.edges||[]).filter(edge=>edge.is_learning===true);
+          const proceduralFilaments=(system.filaments||[]).filter(item=>item.kind==='PROCEDURAL');
+          if(!learningNodes.length)throw new Error('LEARNING_FILAMENT_NODE_MISSING');
+          if(!learningEdges.length)throw new Error('LEARNING_FILAMENT_EDGE_MISSING');
+          if(!proceduralFilaments.length)throw new Error('PROCEDURAL_LEARNING_PROJECTION_MISSING');
+
           const raw=JSON.stringify({system,world,projection});
           if(/truthgraph-projection|nexo-drive-projection|GOOGLE_DRIVE/i.test(raw))throw new Error('LEGACY_OPERATIONAL_SOURCE_PRESENT');
 
@@ -348,6 +359,7 @@ jobs:
 
           echo "PAGES_TOWER_PROJECTION_READBACK_OK ${base}/tower-projection/manifest.json"
           echo "PAGES_SYSTEM_READBACK_OK ${base}/system.json"
+          echo "PAGES_LEARNING_FILAMENT_READBACK_OK nodes=$(node -e "const x=require('/tmp/system.json');process.stdout.write(String((x.graph?.nodes||[]).filter(n=>n.type==='FILAMENT').length))")"
           echo "PAGES_WORLD_READBACK_OK ${base}/world-public.ndjson"
           echo "PAGES_MCP_ATLAS_READBACK_OK ${base}/mcp/topology.json"
           echo "PAGES_GALAXY_READBACK_OK ${base}/galaxy/latest.json"
