@@ -292,10 +292,13 @@ function buildRelationSegments(
   nodes: PlacedNode3D[],
   edges: GraphEdge[],
   selectedId: string | null,
-): { normal: BufferGeometry; selected: BufferGeometry } {
+): { structural: BufferGeometry; dependency: BufferGeometry; blocked: BufferGeometry; selected: BufferGeometry } {
   const byId = new Map(nodes.map(node => [node.id, node]));
-  const normal: number[] = [];
+  const structural: number[] = [];
+  const dependency: number[] = [];
+  const blocked: number[] = [];
   const selected: number[] = [];
+  const dependencyKinds = new Set(['DEPENDS_ON', 'ROUTES_TO', 'VERIFIES']);
 
   for (const edge of edges) {
     const from = byId.get(edge.from);
@@ -306,11 +309,21 @@ function buildRelationSegments(
     const mid = a.clone().add(b).multiplyScalar(0.5);
     const direction = b.clone().sub(a);
     const normal2 = new Vector3(-direction.y, direction.x, 0).normalize();
-    mid.addScaledVector(normal2, Math.min(11, direction.length() * 0.08));
-    mid.z += Math.min(8, direction.length() * 0.045);
+    mid.addScaledVector(normal2, Math.min(8, direction.length() * 0.06));
+    mid.z += Math.min(4, direction.length() * 0.025);
     const curve = new QuadraticBezierCurve3(a, mid, b);
-    const points = curve.getPoints(8);
-    const target = edge.from === selectedId || edge.to === selectedId ? selected : normal;
+    const points = curve.getPoints(10);
+
+    const isSelected = edge.from === selectedId || edge.to === selectedId;
+    const isBlocked = edge.blocked || edge.kind === 'BLOCKS' || edge.kind === 'CONTRADICTS';
+    const target = isSelected
+      ? selected
+      : isBlocked
+        ? blocked
+        : dependencyKinds.has(edge.kind)
+          ? dependency
+          : structural;
+
     for (let index = 0; index < points.length - 1; index += 1) {
       const p0 = points[index]!;
       const p1 = points[index + 1]!;
@@ -318,13 +331,18 @@ function buildRelationSegments(
     }
   }
 
-  const normalGeometry = new BufferGeometry();
-  normalGeometry.setAttribute('position', new Float32BufferAttribute(normal, 3));
-  const selectedGeometry = new BufferGeometry();
-  selectedGeometry.setAttribute('position', new Float32BufferAttribute(selected, 3));
-  return { normal: normalGeometry, selected: selectedGeometry };
+  const geometryOf = (values: number[]) => {
+    const geometry = new BufferGeometry();
+    geometry.setAttribute('position', new Float32BufferAttribute(values, 3));
+    return geometry;
+  };
+  return {
+    structural: geometryOf(structural),
+    dependency: geometryOf(dependency),
+    blocked: geometryOf(blocked),
+    selected: geometryOf(selected),
+  };
 }
-
 function isMajor(node: PlacedNode3D, selectedId: string | null): boolean {
   return node.type === 'DOMAIN' || node.id.startsWith('atlas.cluster.') || node.id === selectedId;
 }
@@ -565,22 +583,39 @@ export const GalaxyThree3D = forwardRef<CanvasGraph25DHandle, Props>(function Ga
 
       const relationSegments = buildRelationSegments(nodes, edges, selectedId);
       const relationMaterial = new LineBasicMaterial({
-        color: palette.accent,
+        color: themeName === 'light' ? '#7d858d' : '#65727d',
         transparent: true,
-        opacity: isMacro ? (themeName === 'light' ? 0.48 : 0.58) : (isMobile ? 0.18 : 0.24),
-        blending: themeName === 'light' ? NormalBlending : AdditiveBlending,
+        opacity: selectedId ? 0.08 : (isMacro ? 0.34 : 0.18),
+        blending: NormalBlending,
+        depthWrite: false,
+      });
+      const dependencyMaterial = new LineDashedMaterial({
+        color: themeName === 'light' ? '#5d7488' : '#8ca3b5',
+        transparent: true,
+        opacity: selectedId ? 0.12 : 0.34,
+        dashSize: 2.1,
+        gapSize: 1.5,
+        depthWrite: false,
+      });
+      const blockedRelationMaterial = new LineBasicMaterial({
+        color: '#df747d',
+        transparent: true,
+        opacity: selectedId ? 0.18 : 0.58,
         depthWrite: false,
       });
       const selectedRelationMaterial = new LineBasicMaterial({
         color: palette.strong,
         transparent: true,
-        opacity: 0.86,
+        opacity: 0.92,
         blending: themeName === 'light' ? NormalBlending : AdditiveBlending,
         depthWrite: false,
       });
-      const relationLines = new LineSegments(relationSegments.normal, relationMaterial);
+      const relationLines = new LineSegments(relationSegments.structural, relationMaterial);
+      const dependencyLines = new LineSegments(relationSegments.dependency, dependencyMaterial);
+      dependencyLines.computeLineDistances();
+      const blockedRelationLines = new LineSegments(relationSegments.blocked, blockedRelationMaterial);
       const selectedRelationLines = new LineSegments(relationSegments.selected, selectedRelationMaterial);
-      scene.add(relationLines, selectedRelationLines);
+      scene.add(relationLines, dependencyLines, blockedRelationLines, selectedRelationLines);
 
       if (!isMobile && !isMacro && themeName === 'dark') {
         composer = new EffectComposer(renderer);
@@ -681,9 +716,13 @@ export const GalaxyThree3D = forwardRef<CanvasGraph25DHandle, Props>(function Ga
         gridMaterial.dispose();
         nodeGeometry.dispose();
         nodeMaterial.dispose();
-        relationSegments.normal.dispose();
+        relationSegments.structural.dispose();
+        relationSegments.dependency.dispose();
+        relationSegments.blocked.dispose();
         relationSegments.selected.dispose();
         relationMaterial.dispose();
+        dependencyMaterial.dispose();
+        blockedRelationMaterial.dispose();
         selectedRelationMaterial.dispose();
         composer?.dispose();
         renderer?.dispose();
