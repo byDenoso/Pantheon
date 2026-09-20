@@ -231,7 +231,7 @@ export type GraphNodeType =
   | 'DOMAIN' | 'CAMPAIGN' | 'ACTION' | 'EFFECT' | 'CLAIM' | 'TEST' | 'MEMORY'
   | 'CAPABILITY' | 'PROVIDER' | 'PROJECTION' | 'SIDE_QUEST' | 'FILAMENT';
 export const GRAPH_NODE_TYPES: GraphNodeType[] = [
-  'DOMAIN', 'ACTION', 'EFFECT', 'CLAIM', 'TEST', 'MEMORY',
+  'DOMAIN', 'CAMPAIGN', 'ACTION', 'EFFECT', 'CLAIM', 'TEST', 'MEMORY',
   'CAPABILITY', 'PROVIDER', 'PROJECTION', 'SIDE_QUEST', 'FILAMENT',
 ];
 
@@ -265,6 +265,12 @@ export interface GraphNode {
   evidence?: string[];
   campaign_id?: string;
   test_group_id?: string;
+  /** Canonical WORK metadata copied verbatim for read-only operational views. */
+  operational_status?: string;
+  priority?: string;
+  dependency_class?: string;
+  owner_role?: string;
+  human_gate?: boolean;
   member_count?: number;
 }
 
