@@ -23,6 +23,7 @@ import { layoutGraph3D, type PlacedNode3D } from './graph3d.ts';
  * Adding a Tower type here never changes what the type canonically means. */
 const KIND_BY_TYPE: Record<GraphNodeType, GalaxyKind> = {
   DOMAIN: 'DOMAIN',
+  CAMPAIGN: 'OTHER',
   CAPABILITY: 'CAPABILITY',
   PROVIDER: 'AUTOMATION',
   TEST: 'TEST',
