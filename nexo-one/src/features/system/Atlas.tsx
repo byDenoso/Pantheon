@@ -638,6 +638,35 @@ export function AtlasView(
           onFocusEntity={id => { flyToEntity(id); setOpenPanel(null); }} />
       )}
 
+      {!isMacroOverview && !expandAll && (
+        <nav className="atlas-breadcrumb" aria-label="Caminho do Atlas">
+          <button type="button" onClick={goHome}>Atlas</button>
+          {expandedDomain && (
+            <>
+              <span aria-hidden="true">/</span>
+              <button type="button" onClick={() => {
+                setExpandedCampaign(null);
+                setExpandedCluster(null);
+                onSelect(null);
+              }}>{expandedDomain}</button>
+            </>
+          )}
+          {expandedCampaign && (
+            <>
+              <span aria-hidden="true">/</span>
+              <strong>{expandedCampaign === NO_CAMPAIGN ? 'SEM CAMPANHA' : expandedCampaign}</strong>
+            </>
+          )}
+          {expandedCluster && (
+            <>
+              <span aria-hidden="true">/</span>
+              <strong>{label(expandedCluster)}</strong>
+            </>
+          )}
+          <button className="atlas-breadcrumb-back" type="button" onClick={goBack}>← Voltar</button>
+        </nav>
+      )}
+
       <div className="atlas-body">
         <div className="atlas-stage atlas-stage-3d">
           {renderGraph.nodes.length === 0
@@ -646,18 +675,18 @@ export function AtlasView(
                 hint="Remova um critério para voltar a ver o mapa." />
             : <>
                 <AtlasGalaxyRenderer ref={galaxyRef} nodes={placed} edges={renderGraph.edges} selectedId={effectiveSelectedId} onSelect={handleGraphSelect} viewMode={isMacroOverview ? 'macro' : 'detail'} />
-                <ul className="atlas-legend">
+                {!isMacroOverview && <ul className="atlas-legend">
                   {legend.map(entry => (
                     <li key={entry.type}>
                       <i aria-hidden="true" className={`legend-dot type-${entry.type.toLowerCase()}`} />
                       {label(entry.type)}<b>{entry.count}</b>
                     </li>
                   ))}
-                </ul>
+                </ul>}
               </>}
         </div>
 
-        {!isMobile && (
+        {!isMobile && !isMacroOverview && (
           <aside className="atlas-inspector">
             {selected
               ? <EntityInspector node={selected} upstream={relations.upstream} downstream={relations.downstream}
