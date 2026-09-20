@@ -112,6 +112,16 @@ function connectedOverlayIds(graph,types,domain){
     const otherDomain=semanticDomainForNode(other);
     const isLearning=types===OVERLAY_TYPES.LEARNING;
     if(isLearning||domain==='NEXO'||otherDomain===domain||other.presentationOnly)include.add(otherId);
+    if(isLearning){
+      let parent=typeof other.layoutParent==='string'?other.layoutParent:'';
+      const seenParents=new Set();
+      while(parent&&byId.has(parent)&&!seenParents.has(parent)){
+        seenParents.add(parent);
+        include.add(parent);
+        const parentNode=byId.get(parent);
+        parent=typeof parentNode?.layoutParent==='string'?parentNode.layoutParent:'';
+      }
+    }
   }
   return include;
 }
