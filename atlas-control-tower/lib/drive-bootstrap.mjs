@@ -70,8 +70,9 @@ export async function bootstrapDriveFromGithub({env=process.env,fetchImpl=global
     source_fingerprint:fingerprint,
     generated_at:new Date().toISOString(),
     records:records.length,
-    authority:'NEXO_DRIVE_PRIVATE',
-    immutable:true
+    authority:'TOWER_V06',
+    immutable:true,
+    storage:'GOOGLE_DRIVE_PRIVATE'
   };
   await drive.putJson('SNAPSHOTS/'+id+'/SNAPSHOT.json',manifest,{conflict:'error'});
 
@@ -83,7 +84,8 @@ export async function bootstrapDriveFromGithub({env=process.env,fetchImpl=global
     snapshot_id:id,
     source_fingerprint:fingerprint,
     promoted_at:new Date().toISOString(),
-    authority:'NEXO_DRIVE_PRIVATE'
+    authority:'TOWER_V06',
+    storage:'GOOGLE_DRIVE_PRIVATE'
   };
   await drive.putJson('CURRENT.json',pointer,{conflict:'replace'});
   return {outcome:'PROMOTED',snapshot_id:id,source_fingerprint:fingerprint,records:records.length,manifest,pointer};
