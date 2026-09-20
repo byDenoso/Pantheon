@@ -6,6 +6,7 @@ export function validateGithubAuthority(value){
  if(value?.truthOwner!=='byDenoso/NEXO-Obsidian-Vault@main:TOWER_V06')throw new Error('INVALID_TOWER_TRUTH_OWNER');
  if(value?.repository!=='byDenoso/NEXO-Obsidian-Vault'||!value?.controlPath)throw new Error('INVALID_TOWER_LOCATOR');
  if(value?.projection?.role!=='READ_ONLY_PROJECTION')throw new Error('INVALID_ATLAS_PROJECTION_ROLE');
+ if(String(value?.projection?.kind||'').includes('LEGACY_GOOGLE_DRIVE'))throw new Error('ATLAS_LEGACY_DRIVE_PROJECTION_RETIRED');
  return value;
 }
 export async function readGithubAuthority({fetcher=fetch,signal,url=process.env.NEXO_GITHUB_AUTHORITY_URL||DEFAULT_URL}={}){
