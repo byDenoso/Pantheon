@@ -1,5 +1,5 @@
 {
-  "ignoreCommand":"git diff --quiet HEAD^ HEAD -- .",
+  "ignoreCommand":"git diff --quiet \"${VERCEL_GIT_PREVIOUS_SHA:-HEAD^}\" HEAD -- .",
   "buildCommand":"npm run build", "outputDirectory":"dist", "framework":"vite",
   "functions":{"api/index.js":{"maxDuration":30}},
   "rewrites":[
