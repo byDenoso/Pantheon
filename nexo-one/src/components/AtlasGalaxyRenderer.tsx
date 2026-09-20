@@ -52,9 +52,9 @@ export const AtlasGalaxyRenderer = forwardRef<CanvasGraph25DHandle, {
 
   return (
     <div
-      className="atlas3d-shell atlas-three-galaxy-shell"
+      className="atlas3d-shell atlas-three-field-shell"
       data-testid="atlas-3d-shell"
-      data-renderer="three-procedural-galaxy"
+      data-renderer="three-nexo-field"
     >
       <GalaxyThree3D
         ref={ref}
