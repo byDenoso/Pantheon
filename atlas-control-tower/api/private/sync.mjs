@@ -9,8 +9,8 @@ import { proxyInternal } from './_proxy.mjs';
 import { resolveSyncReceipt } from '../../lib/sync-receipt.mjs';
 
 function sourceReadFrom(status, body) {
-  if (status < 200 || status >= 300 || body?.error) return { id: 'github-state', state: 'API_ERROR', observedAt: undefined };
-  return { id: 'github-state', state: 'READY', observedAt: body?.capabilities?.projection?.sourceVersion || body?.projection?.sourceVersion };
+  if (status < 200 || status >= 300 || body?.error) return { id: 'tower-state', state: 'API_ERROR', observedAt: undefined };
+  return { id: 'tower-state', state: 'READY', observedAt: body?.capabilities?.projection?.sourceVersion || body?.projection?.sourceVersion };
 }
 
 export async function performSync(req) {
