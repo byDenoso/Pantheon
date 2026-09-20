@@ -2,12 +2,13 @@ const arr=value=>Array.isArray(value)?value:[];
 const text=value=>String(value??'').trim();
 const upper=value=>text(value).toUpperCase();
 const unique=values=>[...new Set(values.filter(Boolean))];
+const projectionFreshness=payload=>upper(payload?.meta?.kind)==='LEGACY_GOOGLE_DRIVE_SNAPSHOT'?'SNAPSHOT':'LIVE';
 
 function base(state){
  const {authority,payload,fingerprint}=state;
- return {source:'github',freshness:'LIVE',sourceVersion:authority.ref||'main',fingerprint,authority:'GITHUB',projectionAuthority:payload?.meta?.authority||'PROJECTION',projectionOnly:true,sourceRef:`https://github.com/${authority.repository}/blob/${authority.ref}/${authority.projection.transportPath}`};
+ return {source:'github',freshness:projectionFreshness(payload),sourceVersion:authority.ref||'main',fingerprint,authority:'GITHUB',projectionAuthority:payload?.meta?.authority||'PROJECTION',projectionOnly:true,sourceRef:`https://github.com/${authority.repository}/blob/${authority.ref}/${authority.projection.transportPath}`};
 }
-const graph=(state,focus,nodes,edges,extra={})=>({...base(state),focus,nodes,edges,total:nodes.length,hasMore:false,truncated:false,depth:1,cache:'LIVE',issues:[],...extra});
+const graph=(state,focus,nodes,edges,extra={})=>({...base(state),focus,nodes,edges,total:nodes.length,hasMore:false,truncated:false,depth:1,cache:projectionFreshness(state.payload),issues:[],...extra});
 const systemNode=(id,label,summary)=>({id:`system:${id}`,type:'SYSTEM',label,status:'ACTIVE',summary,metadata:{authority:'GITHUB'}});
 
 function rootGraph(state){
