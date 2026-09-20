@@ -694,6 +694,35 @@ export function AtlasView(
           onFocusEntity={id => { flyToEntity(id); setOpenPanel(null); }} />
       )}
 
+      {!isMacroOverview && !expandAll && (
+        <nav className="atlas-breadcrumb" aria-label="Caminho do Atlas">
+          <button type="button" onClick={goHome}>Atlas</button>
+          {expandedDomain && (
+            <>
+              <span aria-hidden="true">/</span>
+              <button type="button" onClick={() => {
+                setExpandedCampaign(null);
+                setExpandedCluster(null);
+                onSelect(null);
+              }}>{expandedDomain}</button>
+            </>
+          )}
+          {expandedCampaign && (
+            <>
+              <span aria-hidden="true">/</span>
+              <strong>{expandedCampaign === NO_CAMPAIGN ? 'SEM CAMPANHA' : expandedCampaign}</strong>
+            </>
+          )}
+          {expandedCluster && (
+            <>
+              <span aria-hidden="true">/</span>
+              <strong>{label(expandedCluster)}</strong>
+            </>
+          )}
+          <button className="atlas-breadcrumb-back" type="button" onClick={goBack}>← Voltar</button>
+        </nav>
+      )}
+
       <div className="atlas-body">
         <div className="atlas-stage atlas-stage-3d">
           {renderGraph.nodes.length === 0
