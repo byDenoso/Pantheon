@@ -82,6 +82,39 @@ test('sanctioned TOWER interdomain entities become visible learning filaments', 
   assert.ok(system.graph.edges.some(edge => edge.from === 'domain:SCIENCE' && edge.to === 'domain:OLYMPUS'));
 });
 
+test('sanctioned campaign metadata survives into Atlas graph nodes', async () => {
+  const { buildPagesProjection } = await import('../scripts/build-pages-system.mjs');
+  const manifest = {
+    authority: 'TOWER_V06',
+    projection_only: true,
+    writeback: 'FORBIDDEN',
+    tower_commit: 'e'.repeat(40),
+    event_cursor: '20260920T120000000000Z-campaign',
+    projection_fingerprint: 'sha256:' + 'f'.repeat(64),
+    generated_at: '2026-09-20T12:00:00Z',
+  };
+  const projection = {
+    contract: 'NEXO_PUBLIC_PROJECTION_V1',
+    manifest,
+    event_cursor: manifest.event_cursor,
+    work: [],
+    tests: [{
+      id: 'T-CAMPAIGN-001',
+      title: 'Campaign test',
+      domain: 'SCIENCE',
+      status: 'READY',
+      campaign_id: 'CAMP-ALPHA',
+      test_group_id: 'GROUP-1',
+    }],
+    capabilities: {},
+    counts: { active_work: 0, tests: 1, capabilities: 0 },
+  };
+  const { system } = buildPagesProjection({ projection, manifestFile: manifest });
+  const node = system.graph.nodes.find(item => item.id === 'test:T-CAMPAIGN-001');
+  assert.equal(node?.campaign_id, 'CAMP-ALPHA');
+  assert.equal(node?.test_group_id, 'GROUP-1');
+});
+
 test('explicit Tower human gates become Needs Dener inbox items', async () => {
   const { buildPagesProjection } = await import('../scripts/build-pages-system.mjs');
   const manifest = {
