@@ -1,7 +1,6 @@
 const ABSORBING=new Set(['FALSIFIED','RETIRED']);
-const REQUIRED=Object.freeze([
-  'hypothesis_id','proposition','claim_boundary','success_criteria','kill_criteria','critical_tests','max_adaptive_followups','reopen_policy'
-]);
+const REQUIRED=Object.freeze(['hypothesis_id','proposition']);
+const RECOMMENDED=Object.freeze(['claim_boundary','success_criteria','kill_criteria','critical_tests','max_adaptive_followups','reopen_policy']);
 const IDENTIFIER=/^[A-Za-z0-9][A-Za-z0-9._:-]{0,191}$/;
 const clean=value=>String(value??'').trim().replace(/\s+/g,' ');
 const upper=value=>clean(value).toUpperCase();
@@ -14,7 +13,8 @@ function numericSortValue(value){const raw=clean(value);return /^\d+(?:\.\d+)?$/
 export function validateHypothesisContract(item={}){
   const normalized={...item,hypothesis_id:entityId(item),proposition:proposition(item)};
   const missing=REQUIRED.filter(field=>!present(normalized[field]));
-  return {contract:'HYPOTHESIS_LIFECYCLE_V1',valid:missing.length===0,missing,required:[...REQUIRED]};
+  const recommended_missing=RECOMMENDED.filter(field=>!present(normalized[field]));
+  return {contract:'HYPOTHESIS_LIFECYCLE_V1',valid:missing.length===0,missing,required:[...REQUIRED],recommended_missing,policy:'MINIMUM_IDENTITY_THEN_RESOLVE_BY_TESTING'};
 }
 
 export function normalizeHypothesis(item={}){
@@ -49,6 +49,26 @@ export function createHypothesisSurface({towerGateway}){
     if(!item)throw new Error(`HYPOTHESIS_NOT_FOUND:${id}`);
     return normalizeHypothesis(item);
   }
+  async function ingestHypothesis(payload={}){
+    const prop=proposition(payload);
+    if(!prop)throw new Error('HYPOTHESIS_PROPOSITION_REQUIRED');
+    const registry=await getHypotheses(),normalized=prop.toLocaleLowerCase('pt-BR');
+    const duplicate=registry.items.find(item=>String(item.proposition||'').toLocaleLowerCase('pt-BR')===normalized);
+    if(duplicate)return {status:'DUPLICATE',outcome:'MERGED_EXISTING_IDENTITY',hypothesis_id:duplicate.id,readback:'PASS'};
+    const explicit=clean(payload.hypothesis_id);
+    const material=[normalized,clean(payload.domain).toLowerCase(),clean(payload.claim_boundary).toLowerCase()].join('|');
+    const digest=(await import('node:crypto')).createHash('sha256').update(material).digest('hex').slice(0,20).toUpperCase();
+    const id=explicit?requireIdentifier(explicit,'hypothesis_id'):'HYP-USER-'+digest;
+    const candidate={hypothesis_id:id,proposition:prop,claim_boundary:payload.claim_boundary,success_criteria:payload.success_criteria,kill_criteria:payload.kill_criteria,critical_tests:payload.critical_tests,max_adaptive_followups:payload.max_adaptive_followups,reopen_policy:payload.reopen_policy};
+    const validation=validateHypothesisContract(candidate),correlation=clean(payload.correlation_id)||'CORR-'+id;
+    const changes={id,hypothesis_id:id,entity_type:'SCIENTIFIC_HYPOTHESIS',status:'OPEN',contract_state:validation.valid?'FROZEN':'NEEDS_FREEZE',proposition:prop,origin:clean(payload.origin)||'USER_DIRECTED',authority:clean(payload.authority)||'USER_DIRECTED',correlation_id:correlation};
+    for(const key of ['claim_boundary','success_criteria','kill_criteria','critical_tests','max_adaptive_followups','reopen_policy','domain','program_id','priority','expected_information_gain','title','scope'])if(payload[key]!==undefined&&payload[key]!==null)changes[key]=payload[key];
+    const requestDigest=(await import('node:crypto')).createHash('sha256').update(JSON.stringify({id,changes},Object.keys({id:1,changes:1}).sort())).digest('hex').slice(0,20).toUpperCase();
+    const request={request_id:'REQ-API-HYP-'+requestDigest,entity_kind:'hypothesis',entity_name:id,expected_version:0,writer_role:'ADVISOR',event_type:'HYPOTHESIS_CREATED',material:true,correlation_id:correlation,changes};
+    const persisted=await towerGateway.submitTowerMutation(request),readback=await towerGateway.readEntity('hypothesis',id);
+    if(!readback)throw new Error('HYPOTHESIS_READBACK_MISSING');
+    return {hypothesis_id:id,contract_state:changes.contract_state,execution_eligible:validation.valid,missing_contract_fields:validation.missing,recommended_missing:validation.recommended_missing,status:persisted?.status||'COMPLETE',receipt:persisted?.receipt||persisted,readback:'PASS',entity:readback};
+  }
   async function getHypothesisFrontier(){
     const registry=await getHypotheses();
     const items=registry.items.filter(item=>!ABSORBING.has(item.status)).sort((a,b)=>{
@@ -58,7 +78,7 @@ export function createHypothesisSurface({towerGateway}){
     });
     return {contract:'NEXO_HYPOTHESIS_FRONTIER_V1',items,total:items.length,excluded_statuses:[...ABSORBING].sort(),selection_owner:'NEXO_AUTOCONSISTENTE_V1_3'};
   }
-  return {getHypotheses,getHypothesis,getHypothesisFrontier,validateHypothesisContract};
+  return {getHypotheses,getHypothesis,getHypothesisFrontier,validateHypothesisContract,ingestHypothesis};
 }
 
-export const _internal={ABSORBING,REQUIRED,entityId,proposition,requireIdentifier,numericSortValue,present};
+export const _internal={ABSORBING,REQUIRED,RECOMMENDED,entityId,proposition,requireIdentifier,numericSortValue,present};
