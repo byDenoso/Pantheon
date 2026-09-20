@@ -82,6 +82,110 @@ function nodeFingerprint(kind, id, manifest) {
   return sha256({ kind, id, projection_fingerprint: manifest.projection_fingerprint });
 }
 
+const LEARNING_REF_TOKEN = /\b(?:T-[A-Za-z0-9_+≈.\-]+|GZSB-[A-Za-z0-9_.\-]+|WORK::[A-Za-z0-9_:._+\-]+|CAMP-[A-Za-z0-9_.\-]+)\b/g;
+
+function explicitLearningRefs(value) {
+  return [...new Set(String(value ?? '').match(LEARNING_REF_TOKEN) || [])];
+}
+
+function learningTargetsForRef(ref, projection) {
+  const work = Array.isArray(projection.work) ? projection.work : [];
+  const tests = Array.isArray(projection.tests) ? projection.tests : [];
+  const targets = [];
+  const add = (id, domain, label) => targets.push({ id, domain: domainOf(domain), label: String(label || id) });
+
+  for (const item of work) {
+    const rawId = String(item.id || '');
+    if (rawId === ref || rawId === 'WORK::' + ref) add('work:' + rawId, item.domain, item.title || rawId);
+  }
+  for (const item of tests) {
+    const rawId = String(item.id || '');
+    if (rawId === ref) add('test:' + rawId, item.domain || 'SCIENCE', item.title || rawId);
+  }
+  if (ref.startsWith('CAMP-')) {
+    const members = [...work, ...tests].filter(item => String(item.campaign_id || '') === ref);
+    const domains = [...new Set(members.map(item => domainOf(item.domain || 'SCIENCE')))];
+    for (const domain of domains) add('domain:' + domain, domain, ref);
+  }
+  return targets;
+}
+
+function proceduralLearningFilaments(metaLearning, projection, manifest, observedAt) {
+  if (!metaLearning || typeof metaLearning !== 'object') return [];
+  if (String(metaLearning.authority_boundary || '') !== 'PROCEDURAL_ONLY_NO_SCIENTIFIC_AUTHORITY') return [];
+  const evidence = Array.isArray(metaLearning.evidence) ? metaLearning.evidence : [];
+  const lessons = Array.isArray(metaLearning.lessons) ? metaLearning.lessons : [];
+  const evidenceById = new Map();
+  const out = [];
+
+  for (const item of evidence) {
+    const id = String(item.evidence_id || item.id || '').trim();
+    if (!id) continue;
+    const refText = [item.context, item.strategy_used, item.outcome, item.recovery, item.redundancy_avoided].filter(Boolean).join(' ');
+    const links = explicitLearningRefs(refText).flatMap(ref => learningTargetsForRef(ref, projection));
+    const deduped = [...new Map(links.map(link => [link.id, link])).values()];
+    const domains = [...new Set(deduped.map(link => link.domain))];
+    const fromDomain = domains[0] || 'NEXO';
+    const record = {
+      id,
+      label: String(item.outcome || item.context || id),
+      domain: fromDomain,
+      kind: 'PROCEDURAL',
+      weight: 0.72,
+      support: Number.isFinite(Number(item.supporting_count)) ? Number(item.supporting_count) : 1,
+      contradiction: Number.isFinite(Number(item.contradicting_count)) ? Number(item.contradicting_count) : 0,
+      status: 'PROVISIONAL',
+      evidence: deduped.map(link => link.id),
+      source_ref: `tower://${manifest.tower_repository || 'byDenoso/NEXO-Obsidian-Vault'}@${manifest.tower_commit}/TOWER_V06/runtime/artifacts/meta_learning/METALEARNING_CURRENT.json`,
+      boundary: 'Procedural learning only. It cannot promote or reinterpret a scientific claim.',
+      from_label: id,
+      to_label: deduped[0]?.label || fromDomain,
+      from_domain: fromDomain,
+      to_domain: domains[1] || fromDomain,
+      scope: domains.length > 1 ? 'INTER_DOMAIN' : 'INTRA_DOMAIN',
+      observed_at: observedAt,
+      links: deduped,
+      learning_refs: [],
+    };
+    evidenceById.set(id, record);
+    out.push(record);
+  }
+
+  for (const item of lessons) {
+    const id = String(item.lesson_id || item.id || '').trim();
+    if (!id) continue;
+    const refs = Array.isArray(item.evidence_refs) ? item.evidence_refs.map(String) : [];
+    const parentRecords = refs.map(ref => evidenceById.get(ref)).filter(Boolean);
+    const links = [...new Map(parentRecords.flatMap(record => record.links || []).map(link => [link.id, link])).values()];
+    const domains = [...new Set(links.map(link => link.domain))];
+    const fromDomain = domains[0] || 'NEXO';
+    const toDomain = domains[1] || fromDomain;
+    const status = String(item.status || '').toUpperCase();
+    out.push({
+      id,
+      label: String(item.lesson || item.heuristic || id),
+      domain: fromDomain,
+      kind: 'PROCEDURAL',
+      weight: status === 'SUPPORTED' ? 0.9 : 0.68,
+      support: Number.isFinite(Number(item.supporting_count)) ? Number(item.supporting_count) : refs.length,
+      contradiction: Number.isFinite(Number(item.contradicting_count)) ? Number(item.contradicting_count) : 0,
+      status: status === 'SUPPORTED' ? 'ESTABLISHED' : status === 'REJECTED' ? 'CONTESTED' : 'PROVISIONAL',
+      evidence: refs,
+      source_ref: `tower://${manifest.tower_repository || 'byDenoso/NEXO-Obsidian-Vault'}@${manifest.tower_commit}/TOWER_V06/runtime/artifacts/meta_learning/METALEARNING_CURRENT.json`,
+      boundary: String(item.falsifier || 'Procedural learning only. No scientific authority.'),
+      from_label: refs[0] || fromDomain,
+      to_label: refs[1] || toDomain,
+      from_domain: fromDomain,
+      to_domain: toDomain,
+      scope: domains.length > 1 ? 'INTER_DOMAIN' : 'INTRA_DOMAIN',
+      observed_at: observedAt,
+      links,
+      learning_refs: refs,
+    });
+  }
+  return out;
+}
+
 function learningFilamentsFromTower(interdomain, manifest, observedAt) {
   return (Array.isArray(interdomain) ? interdomain : []).map(item => {
     const sourceDomains = domainsOf(item.source_domains || item.sourceDomains || item.domain);
@@ -222,19 +326,65 @@ function graphFromProjection(projection, observedAt, filaments = []) {
   }
 
   for (const filament of filaments) {
+    const filamentId = 'filament:' + filament.id;
+    addNode({
+      id: filamentId,
+      type: 'FILAMENT',
+      label: filament.label,
+      domain: filament.domain || filament.from_domain || 'NEXO',
+      state: 'SNAPSHOT',
+      authority_class: 'DERIVED',
+      source_ref: filament.source_ref,
+      source_revision: manifest.tower_commit,
+      fingerprint: nodeFingerprint('learning', filament.id, manifest),
+      freshness: { state: 'RECENT', observed_at: observedAt, ttl_seconds: null },
+      checked_at: observedAt,
+      summary: filament.boundary,
+      evidence: filament.evidence,
+    });
+
+    for (const link of filament.links || []) {
+      if (!seen.has(link.id)) continue;
+      edges.push({
+        id: 'learning:' + sha256({ id: filament.id, target: link.id }).slice(7, 23),
+        from: filamentId,
+        to: link.id,
+        kind: 'DERIVES_FROM',
+        weight: filament.weight,
+        explanation: 'Procedural Learning linked only by an explicit canonical reference in METALEARNING_CURRENT.',
+        is_learning: true,
+        learning_scope: link.domain === filament.domain ? 'INTRA_DOMAIN' : 'INTER_DOMAIN',
+      });
+    }
+    for (const ref of filament.learning_refs || []) {
+      const target = 'filament:' + ref;
+      if (!seen.has(target)) continue;
+      edges.push({
+        id: 'learning:' + sha256({ id: filament.id, parent: ref }).slice(7, 23),
+        from: filamentId,
+        to: target,
+        kind: 'DERIVES_FROM',
+        weight: filament.weight,
+        explanation: 'Learning lineage declared by evidence_refs in METALEARNING_CURRENT.',
+        is_learning: true,
+        learning_scope: 'INTRA_DOMAIN',
+      });
+    }
+
     const from = 'domain:' + filament.from_domain;
     const to = 'domain:' + filament.to_domain;
-    if (!seen.has(from) || !seen.has(to)) continue;
-    edges.push({
-      id: 'learning:' + sha256({ id: filament.id, from, to }).slice(7, 23),
-      from,
-      to,
-      kind: 'SUPPORTS',
-      weight: filament.weight,
-      explanation: 'Learning filament declarado pelo TOWER_V06; a posição liga os domínios informados pela fonte.',
-      is_learning: true,
-      learning_scope: filament.scope,
-    });
+    if (filament.scope === 'INTER_DOMAIN' && seen.has(from) && seen.has(to) && from !== to) {
+      edges.push({
+        id: 'learning:' + sha256({ id: filament.id, from, to }).slice(7, 23),
+        from,
+        to,
+        kind: 'SUPPORTS',
+        weight: filament.weight,
+        explanation: 'Derived cross-domain Learning bridge from explicit evidence endpoints; procedural only.',
+        is_learning: true,
+        learning_scope: 'INTER_DOMAIN',
+      });
+    }
   }
 
   return { nodes, edges: edges.filter(edge => seen.has(edge.from) && seen.has(edge.to)) };
@@ -321,12 +471,15 @@ function worldItem(kind, item, projection, observedAt, index) {
   };
 }
 
-export function buildPagesProjection({ projection, manifestFile = null, interdomain = [] } = {}) {
+export function buildPagesProjection({ projection, manifestFile = null, interdomain = [], learning = {} } = {}) {
   const manifest = validateSanctionedProjection(projection, manifestFile);
   const generatedAt = Date.parse(String(manifest.generated_at || ''));
   const observedAt = Number.isFinite(generatedAt) ? new Date(generatedAt).toISOString() : cursorTime(manifest.event_cursor);
   const source = sourceRef(manifest);
-  const filaments = learningFilamentsFromTower(interdomain, manifest, observedAt);
+  const filaments = [
+    ...learningFilamentsFromTower(interdomain, manifest, observedAt),
+    ...proceduralLearningFilaments(learning, projection, manifest, observedAt),
+  ];
   const graph = graphFromProjection(projection, observedAt, filaments);
   const lanes = lanesFromProjection(projection, observedAt);
   const inbox = humanInboxFromProjection(projection, observedAt);
@@ -504,10 +657,12 @@ if (import.meta.url === invokedPath) {
   const projectionPath = resolve(process.env.NEXO_PUBLIC_PROJECTION || 'data/tower-public/projection.json');
   const manifestPath = resolve(process.env.NEXO_PUBLIC_PROJECTION_MANIFEST || 'data/tower-public/manifest.json');
   const interdomainPath = resolve(process.env.NEXO_PUBLIC_INTERDOMAIN || 'data/tower-public/interdomain.json');
+  const learningPath = resolve(process.env.NEXO_PUBLIC_LEARNING || 'data/tower-public/learning.json');
   const projection = await readJson(projectionPath);
   const manifestFile = await readJson(manifestPath);
   const interdomain = await readJsonIfPresent(interdomainPath);
-  const { system, world } = buildPagesProjection({ projection, manifestFile, interdomain });
+  const learning = await readJsonIfPresent(learningPath);
+  const { system, world } = buildPagesProjection({ projection, manifestFile, interdomain, learning });
 
   const dist = resolve('dist');
   const evidenceDir = resolve(dist, 'tower-projection');
