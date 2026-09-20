@@ -121,49 +121,72 @@ function gaussian(random: () => number): number {
 }
 
 function writeParticle(
-  positions: Float32Array, sizes: Float32Array, brightness: Float32Array, index: number,
-  x: number, y: number, z: number, size: number, light: number,
+  positions: Float32Array, sizes: Float32Array, brightness: Float32Array, colors: Float32Array, index: number,
+  x: number, y: number, z: number, size: number, light: number, color: Color,
 ) {
   const p = index * 3;
   positions[p] = x; positions[p + 1] = y; positions[p + 2] = z;
   sizes[index] = size; brightness[index] = light;
+  color.toArray(colors, p);
 }
 
-function buildFieldGeometry(nodes: PlacedNode3D[], count: number, isMacro: boolean): BufferGeometry {
+function buildFieldGeometry(
+  nodes: PlacedNode3D[], count: number, isMacro: boolean, theme: 'dark' | 'light',
+): BufferGeometry {
   const positions = new Float32Array(count * 3);
   const sizes = new Float32Array(count);
   const brightness = new Float32Array(count);
+  const colors = new Float32Array(count * 3);
   const domains = nodes.filter(node => node.type === 'DOMAIN');
-  const centers = domains.length ? domains : nodes.slice(0, Math.min(nodes.length, 24));
+  const clusters = nodes.filter(node => node.id.startsWith('atlas.cluster.'));
+  const detailCenters = nodes.filter(node => node.type !== 'FILAMENT').slice(0, Math.min(nodes.length, 24));
+  const centers = isMacro
+    ? domains
+    : clusters.length > 0
+      ? [...domains, ...clusters]
+      : detailCenters.length > 0
+        ? detailCenters
+        : domains;
+  const ambient = new Color(theme === 'light' ? '#a7a19a' : '#35404a');
+
   for (let index = 0; index < count; index += 1) {
-    const random = rng(hash32(`nexo-field:${index}`));
-    if (!centers.length || random() < (isMacro ? 0.12 : 0.08)) {
+    const random = rng(hash32('nexo-field:' + index));
+    if (!centers.length || random() < (isMacro ? 0.08 : 0.05)) {
       const angle = random() * TAU;
-      const radius = 70 + Math.sqrt(random()) * (isMacro ? 130 : 90);
-      writeParticle(positions, sizes, brightness, index, Math.cos(angle) * radius, Math.sin(angle) * radius * 0.58, (random() - 0.5) * 24, 0.5 + random() * 0.7, 0.08 + random() * 0.15);
+      const radius = 66 + Math.sqrt(random()) * (isMacro ? 116 : 82);
+      writeParticle(
+        positions, sizes, brightness, colors, index,
+        Math.cos(angle) * radius, Math.sin(angle) * radius * 0.56,
+        (random() - 0.5) * (isMacro ? 10 : 8),
+        0.42 + random() * 0.54, 0.06 + random() * 0.10, ambient,
+      );
       continue;
     }
+
     const center = centers[index % centers.length]!;
     const angle = random() * TAU;
-    const radial = 6 + Math.sqrt(random()) * (isMacro ? 22 : 15);
-    const pin = random() < 0.11;
-    const x = center.x + Math.cos(angle) * radial + gaussian(random) * 1.2;
-    const y = pin ? center.y + 5 + random() * (isMacro ? 28 : 16) : center.y + Math.sin(angle) * radial * 0.58 + gaussian(random) * 0.9;
-    const z = center.z + gaussian(random) * (isMacro ? 5.5 : 3.8);
-    writeParticle(positions, sizes, brightness, index, x, y, z, 0.85 + random() * (pin ? 1.9 : 1.25), 0.24 + random() * 0.52);
+    const radial = 4.5 + Math.sqrt(random()) * (isMacro ? 16 : 10.5);
+    const x = center.x + Math.cos(angle) * radial + gaussian(random) * 0.72;
+    const y = center.y + Math.sin(angle) * radial * 0.64 + gaussian(random) * 0.62;
+    const z = center.z + gaussian(random) * (isMacro ? 2.4 : 1.9);
+    writeParticle(
+      positions, sizes, brightness, colors, index, x, y, z,
+      0.72 + random() * 1.10, 0.20 + random() * 0.48, domainColor(center.domain, theme),
+    );
   }
+
   const geometry = new BufferGeometry();
   geometry.setAttribute('position', new Float32BufferAttribute(positions, 3));
   geometry.setAttribute('aSize', new Float32BufferAttribute(sizes, 1));
   geometry.setAttribute('aBrightness', new Float32BufferAttribute(brightness, 1));
+  geometry.setAttribute('aColor', new Float32BufferAttribute(colors, 3));
   geometry.computeBoundingSphere();
   return geometry;
 }
-
 function buildFieldRingSegments(nodes: PlacedNode3D[], isMacro: boolean): BufferGeometry {
   const vertices: number[] = [];
   for (const node of nodes.filter(candidate => candidate.type === 'DOMAIN')) {
-    const radii = node.domain === 'NEXO' ? (isMacro ? [22, 36] : [18, 30]) : (isMacro ? [13, 21] : [11, 18]);
+    const radii = node.domain === 'NEXO' ? [isMacro ? 30 : 24] : [isMacro ? 16 : 13];
     for (const radius of radii) {
       const segments = 64;
       for (let i = 0; i < segments; i += 1) {
@@ -476,14 +499,14 @@ export const GalaxyThree3D = forwardRef<CanvasGraph25DHandle, Props>(function Ga
 
       const palette = paletteForTheme(themeName);
       const particleCount = isMacro ? (isMobile ? 180 : 760) : (isMobile ? 520 : 1800);
-      const galaxyGeometry = buildFieldGeometry(nodes, particleCount, isMacro);
+      const galaxyGeometry = buildFieldGeometry(nodes, particleCount, isMacro, themeName);
       const galaxyMaterial = new ShaderMaterial({
         uniforms: {
           uTime: { value: 0 },
           uPixelRatio: { value: renderer.getPixelRatio() },
           uColorA: { value: palette.accent },
           uColorB: { value: palette.strong },
-          uOpacity: { value: isMacro ? (themeName === 'light' ? 0.24 : 0.32) : (themeName === 'light' ? 0.46 : 0.72) },
+          uOpacity: { value: isMacro ? (themeName === 'light' ? 0.20 : 0.24) : (themeName === 'light' ? 0.38 : 0.52) },
         },
         vertexShader: galaxyVertexShader,
         fragmentShader: galaxyFragmentShader,
@@ -495,7 +518,7 @@ export const GalaxyThree3D = forwardRef<CanvasGraph25DHandle, Props>(function Ga
       scene.add(galaxy);
 
       const ringGeometry = buildFieldRingSegments(nodes, isMacro);
-      const ringMaterial = new LineBasicMaterial({ color: palette.accent, transparent: true, opacity: themeName === 'light' ? 0.12 : (isMacro ? 0.20 : 0.12), blending: themeName === 'light' ? NormalBlending : AdditiveBlending, depthWrite: false });
+      const ringMaterial = new LineBasicMaterial({ color: palette.accent, transparent: true, opacity: themeName === 'light' ? 0.07 : (isMacro ? 0.09 : 0.06), blending: themeName === 'light' ? NormalBlending : AdditiveBlending, depthWrite: false });
       const ringLines = new LineSegments(ringGeometry, ringMaterial);
       scene.add(ringLines);
 
