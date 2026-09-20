@@ -20,6 +20,7 @@ const ARM_Z_PHASE: Record<PrimaryGalaxyDomain, number> = {
 
 const TYPE_PROGRESS: Record<GraphNodeType, number> = {
   DOMAIN: 0,
+  CAMPAIGN: 0.14,
   PROVIDER: 0.1,
   CAPABILITY: 0.18,
   ACTION: 0.28,
@@ -34,6 +35,7 @@ const TYPE_PROGRESS: Record<GraphNodeType, number> = {
 
 const NODE_RADIUS: Record<GraphNodeType, number> = {
   DOMAIN: 1.72,
+  CAMPAIGN: 1.05,
   PROVIDER: 0.72,
   CAPABILITY: 0.64,
   ACTION: 0.52,
@@ -310,8 +312,19 @@ function fieldDomainNodes(domain: Domain, nodes: GraphNode[], anchor: Point3): P
       const seed = hash32(node.id);
       const theta = (index / Math.max(1, sorted.length)) * TAU + unit(seed) * 0.72 + bandIndex * 0.42;
       const radial = baseRing + (unit(seed, 10) - 0.5) * 7;
-      const lift = (unit(seed, 18) - 0.5) * 5;
-      placed.push({ ...node, x: rounded(anchor.x + Math.cos(theta) * radial), y: rounded(anchor.y + Math.sin(theta) * radial * 0.68), z: rounded(anchor.z + lift), radius: NODE_RADIUS[node.type] });
+      const semanticDepth = semanticType === 'CAMPAIGN'
+        ? -14
+        : semanticType === 'TEST'
+          ? 18
+          : (TYPE_PROGRESS[semanticType] - 0.35) * 34;
+      const lift = (unit(seed, 18) - 0.5) * 12;
+      placed.push({
+        ...node,
+        x: rounded(anchor.x + Math.cos(theta) * radial),
+        y: rounded(anchor.y + Math.sin(theta) * radial * 0.68),
+        z: rounded(anchor.z + semanticDepth + lift),
+        radius: NODE_RADIUS[node.type],
+      });
     });
   });
   return placed;
