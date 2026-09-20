@@ -241,6 +241,7 @@ void main() {
 
 function nodeSize(node: PlacedNode3D): number {
   if (node.type === 'DOMAIN') return node.domain === 'NEXO' ? 14.5 : 11.2;
+  if (node.type === 'CAMPAIGN') return 9.4;
   if (node.id.startsWith('atlas.cluster.')) return 8.2;
   if (node.type === 'CAPABILITY' || node.type === 'PROVIDER') return 5.8;
   if (node.type === 'TEST') return 5.0;
@@ -762,7 +763,7 @@ export const GalaxyThree3D = forwardRef<CanvasGraph25DHandle, Props>(function Ga
               if (element) labelsRef.current.set(node.id, element);
               else labelsRef.current.delete(node.id);
             }}
-            className={`galaxy-three-label${node.type === 'DOMAIN' ? ' domain' : ''}${node.id.startsWith('atlas.cluster.') ? ' cluster' : ''}${node.id === selectedId ? ' selected' : ''}`}
+            className={`galaxy-three-label${node.type === 'DOMAIN' ? ' domain' : ''}${node.type === 'CAMPAIGN' ? ' campaign' : ''}${node.id.startsWith('atlas.cluster.') ? ' cluster' : ''}${node.id === selectedId ? ' selected' : ''}`}
             data-domain={node.domain}
             data-state={stateClass(node.state)}
             style={{ '--galaxy-label-intensity': node.id === selectedId ? 1 : 0.72 } as CSSProperties}
@@ -770,8 +771,14 @@ export const GalaxyThree3D = forwardRef<CanvasGraph25DHandle, Props>(function Ga
             <i className="node-status" aria-hidden="true" />
             <span className="node-label-copy">
               <strong>{node.type === 'DOMAIN' && node.domain === 'NEXO' ? 'NEXO' : node.label}</strong>
-              {(node.type === 'DOMAIN' || node.id.startsWith('atlas.cluster.') || node.id === selectedId) && (
-                <small>{node.type === 'DOMAIN' ? (node.domain === 'NEXO' ? 'CORE' : 'DOMAIN') : node.type}</small>
+              {(node.type === 'DOMAIN' || node.type === 'CAMPAIGN' || node.id.startsWith('atlas.cluster.') || node.id === selectedId) && (
+                <small>
+                  {node.type === 'DOMAIN'
+                    ? (node.domain === 'NEXO' ? 'CORE' : (node.member_count ?? 0) + ' ENTIDADES')
+                    : node.type === 'CAMPAIGN'
+                      ? (node.member_count ?? 0) + ' ITENS'
+                      : node.type}
+                </small>
               )}
             </span>
           </span>
