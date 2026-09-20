@@ -53,7 +53,7 @@ export const STATE_LABEL: Record<string, string> = {
   READ: 'Leitura', WRITE: 'Escrita', SCHEDULE: 'Agendamento', DEPLOY: 'Deploy', NOTIFY: 'Notificação',
   LOCAL: 'Local', GITHUB_ACTIONS: 'GitHub Actions', VERCEL: 'Vercel',
   NEXO_KERNEL: 'NEXO Kernel', HUMAN: 'Humano',
-  DOMAIN: 'Domínio', ACTION: 'Ação', EFFECT: 'Efeito', CLAIM: 'Claim', TEST: 'Teste',
+  DOMAIN: 'Domínio', CAMPAIGN: 'Campanha', ACTION: 'Ação', EFFECT: 'Efeito', CLAIM: 'Claim', TEST: 'Teste',
   MEMORY: 'Memória', CAPABILITY: 'Capability', PROVIDER: 'Provider', PROJECTION: 'Projeção',
   SIDE_QUEST: 'Side quest', FILAMENT: 'Filamento',
   OWNS: 'possui', PRODUCES: 'produz', VERIFIES: 'verifica', DEPENDS_ON: 'depende de',
