@@ -166,7 +166,10 @@ export default async function handler(req,res) {
     if(route==='system'){
       if(!privateAccess){
         try{return send(await readPublishedTowerSystem({env,signal:req.signal,now,force}));}
-        catch(error){console.warn('[nexo-one] sanctioned public SystemState unavailable; using bounded runtime fallback',String(error?.message||error));}
+        catch(error){
+          console.warn('[nexo-one] sanctioned public SystemState unavailable; failing closed',String(error?.message||error));
+          return send({error:'SANCTIONED_PUBLIC_PROJECTION_UNAVAILABLE',authority:'TOWER_V06',projection_only:true,writeback:'FORBIDDEN'},503);
+        }
       }
       const options={now,access:'PUBLIC',env,force};
       const results=await Promise.all(PUBLIC_SYSTEM_PROVIDERS.map(id=>readProvider(id,options)));
