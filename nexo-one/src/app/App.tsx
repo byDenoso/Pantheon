@@ -210,7 +210,7 @@ export default function App() {
           <form className="command-bar" onSubmit={submitCommand}>
             <span aria-hidden="true">⌕</span>
             <input ref={commandRef} value={command} onChange={event => setCommand(event.target.value)}
-              placeholder="Ir para uma visão, filtrar o Atlas ou consultar o registro" aria-label="Comando global" />
+              placeholder={isMobile ? "Buscar ou ir para…" : "Ir para uma visão, filtrar o Atlas ou consultar o registro"} aria-label="Comando global" />
             <kbd>Ctrl K</kbd>
             <button className="command-submit" aria-label="Executar comando">↵</button>
           </form>
@@ -250,7 +250,7 @@ export default function App() {
               </div>
               {isSystemView(view) && (
                 <button className="sync-button" onClick={system.reload} disabled={system.load === 'LOADING'}>
-                  <span>↻</span><span>{system.load === 'LOADING' ? 'Compilando' : 'Recompilar'}</span>
+                  <span>↻</span><span>{system.load === 'LOADING' ? 'Atualizando' : 'Atualizar'}</span>
                 </button>
               )}
             </div>

@@ -31,6 +31,21 @@ export function Overview(
 
   return (
     <div className="overview">
+      <section className="overview-pulse" aria-label="Resumo operacional" data-order="summary">
+        <button className={`pulse-metric health tone-${toneOf(summary.state)}`} onClick={() => onNavigate('SOURCES')}>
+          <span>Saúde</span><strong>{label(summary.state)}</strong>
+        </button>
+        <button className={summary.needsHuman ? 'pulse-metric attention' : 'pulse-metric'} onClick={() => onNavigate('INBOX')}>
+          <span>Gates</span><strong>{summary.needsHuman}</strong>
+        </button>
+        <button className={summary.blockers.length ? 'pulse-metric attention' : 'pulse-metric'} onClick={() => onNavigate('ACTIONS')}>
+          <span>Blockers</span><strong>{summary.blockers.length}</strong>
+        </button>
+        <button className={summary.degradedCapabilities.length ? 'pulse-metric attention' : 'pulse-metric'} onClick={() => onNavigate('SOURCES')}>
+          <span>Capabilities</span><strong>{summary.degradedCapabilities.length}</strong>
+        </button>
+      </section>
+
       <section className="current-state" aria-labelledby="current-state-title" data-order="state">
         <div className="section-head">
           <h2 id="current-state-title">Leitura canônica</h2>
@@ -58,20 +73,6 @@ export function Overview(
             </article>
           ))}
         </div>
-        <div className="state-counters">
-          <button onClick={() => onNavigate('TRUTHGRAPH')} className={summary.conflicts.length ? 'counter conflict' : 'counter'}>
-            <strong>{summary.conflicts.length}</strong><span>conflitos</span>
-          </button>
-          <button onClick={() => onNavigate('ACTIONS')} className="counter">
-            <strong>{summary.blockers.length}</strong><span>blockers</span>
-          </button>
-          <button onClick={() => onNavigate('SOURCES')} className="counter">
-            <strong>{summary.degradedCapabilities.length}</strong><span>capabilities sem PASS</span>
-          </button>
-          <button onClick={() => onNavigate('INBOX')} className="counter">
-            <strong>{summary.needsHuman}</strong><span>gates humanos</span>
-          </button>
-        </div>
         {unavailableProviders > 0 && (
           <p className="rule-note">
             Há provider indisponível nesta compilação. Contadores em zero não cobrem o estado ausente.
@@ -82,15 +83,15 @@ export function Overview(
       <section aria-labelledby="attention-title" data-order="attention">
         <div className="section-head">
           <h2 id="attention-title">Gates humanos <span>{summary.needsHuman}</span></h2>
-          <button className="text-button" onClick={() => onNavigate('INBOX')}>Ver Human Inbox ↗</button>
+          <button className="text-button" onClick={() => onNavigate('INBOX')}>Abrir inbox ↗</button>
         </div>
         {urgent.length
           ? urgent.map(item => (
               <HumanInboxItem key={item.id} item={item} action={actionById(state, item.action_id)} onOpen={onOpenInbox} />
             ))
-          : <EmptyState title="0 gates humanos explícitos."
-              description="Nenhuma entidade desta compilação está marcada como HUMAN_AUTH_REQUIRED ou HUMAN_DECISION_REQUIRED."
-              hint="Integridade e cobertura de providers são verificadas separadamente." />}
+          : <EmptyState title="0 gates humanos."
+              description="Nenhuma decisão ou autorização humana está pendente nesta compilação."
+              hint="Cobertura e integridade das fontes são verificadas separadamente." />}
       </section>
 
       <section aria-labelledby="autonomy-title" data-order="autonomy">

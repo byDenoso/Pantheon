@@ -1065,6 +1065,8 @@ p{
   --nexo-accent:#f47721;
   --nexo-accent-strong:#dc6410;
   --nexo-accent-dim:#bd6324;
+  --nexo-accent-soft:rgba(244,119,33,.09);
+  --nexo-border-strong:#d8d2ca;
   --nexo-success:#438b68;
   --nexo-attention:#c9822e;
   --nexo-danger:#bd5a55;
@@ -1274,5 +1276,214 @@ p{
 :root[data-theme=light] .bottom-nav{
   background:rgba(255,255,255,.94);
   border-color:var(--command-hairline);
+}
+
+
+
+/* NEXO V3 UI/UX pass ------------------------------------------------------
+   Decision-first overview and mobile composition. Kept as the final layer
+   so the change is reversible while legacy styles are consolidated. */
+.overview-pulse{
+  display:grid;
+  grid-template-columns:repeat(4,minmax(0,1fr));
+  gap:10px;
+}
+.pulse-metric{
+  min-height:72px;
+  padding:12px 14px;
+  border:1px solid var(--command-hairline);
+  border-radius:12px;
+  background:var(--surface-2);
+  text-align:left;
+  display:flex;
+  flex-direction:column;
+  justify-content:space-between;
+  gap:8px;
+  transition:background-color .14s ease,border-color .14s ease,transform .14s ease;
+}
+.pulse-metric:hover{
+  border-color:var(--nexo-border-strong);
+  background:var(--surface-3);
+}
+.pulse-metric:active{transform:translateY(1px)}
+.pulse-metric span{
+  color:var(--quiet);
+  font-size:10px;
+  font-weight:600;
+  letter-spacing:.035em;
+}
+.pulse-metric strong{
+  color:var(--ink);
+  font-size:18px;
+  font-weight:560;
+  line-height:1;
+  letter-spacing:-.02em;
+}
+.pulse-metric.health strong{color:var(--tone,var(--ink));font-size:14px;letter-spacing:0}
+.pulse-metric.attention strong{color:var(--degraded)}
+.overview .section-head h2{
+  color:var(--ink);
+  font-size:15px;
+  font-weight:600;
+  letter-spacing:-.01em;
+  text-transform:none;
+}
+
+@media(max-width:860px){
+  .cockpit.mobile:not([data-view=ATLAS]){
+    padding-bottom:calc(82px + env(safe-area-inset-bottom));
+  }
+
+  .topbar{
+    min-height:56px;
+    padding:7px 14px;
+  }
+  .brand-mark{width:29px;height:29px}
+  .brand strong{font-size:13px}
+
+  .command-wrap{padding:9px 16px 5px}
+  .command-bar{
+    min-height:42px;
+    height:42px;
+    padding:0 12px;
+    border-radius:10px;
+    box-shadow:none;
+  }
+  .command-bar>span{font-size:18px}
+  .command-bar input{font-size:13px}
+
+  .workspace{
+    padding:20px 18px 30px;
+  }
+  .workspace-heading{
+    margin-bottom:22px;
+    padding:2px 0 18px;
+    border-bottom-color:var(--command-hairline);
+  }
+  .workspace-heading>div:first-child{padding-left:14px;padding-right:76px}
+  .workspace-heading>div:first-child::before{
+    box-shadow:none;
+    opacity:.72;
+  }
+  .workspace-heading .eyebrow{
+    margin-bottom:8px;
+    font-size:9px;
+    letter-spacing:.06em;
+  }
+  .workspace-heading h1{
+    max-width:330px;
+    margin:14px 0 10px;
+    font-size:clamp(32px,9vw,38px);
+    line-height:1.01;
+    letter-spacing:-1.25px;
+  }
+  .workspace-heading p{
+    max-width:350px;
+    font-size:13px;
+    line-height:1.55;
+  }
+  .workspace-heading .sync-button{
+    top:-4px;
+    right:0;
+    min-height:30px;
+    margin:0;
+    padding:4px 8px;
+    border:1px solid var(--command-hairline);
+    border-radius:8px;
+    background:var(--surface-1);
+  }
+  .workspace-heading .sync-button>span:first-child{font-size:15px}
+  .workspace-heading .sync-button span:last-child{font-size:10px}
+
+  .overview{
+    gap:24px;
+  }
+  .overview>[data-order=summary]{order:0}
+  .overview>[data-order=attention]{order:1}
+  .overview>[data-order=state]{order:2}
+  .overview>[data-order=autonomy]{order:3}
+  .overview>[data-order=lanes]{order:4}
+  .overview>[data-order=bus]{order:5}
+  .overview>section{margin-bottom:0}
+  .overview-pulse{
+    grid-template-columns:repeat(2,minmax(0,1fr));
+    gap:8px;
+  }
+  .pulse-metric{
+    min-height:62px;
+    padding:10px 12px;
+    border-radius:10px;
+  }
+  .pulse-metric strong{font-size:17px}
+  .pulse-metric.health strong{font-size:13px}
+  .overview .section-head{
+    margin-bottom:9px;
+    padding:0 0 3px;
+    border-bottom:0;
+  }
+  .overview .section-head h2{font-size:14px}
+  .overview .head-side{
+    gap:7px;
+    align-items:flex-start;
+    flex-direction:column;
+  }
+
+  .surface-state.empty{
+    min-height:0;
+    padding:20px 16px;
+    gap:5px;
+    border-radius:12px;
+  }
+  .surface-state.empty .surface-glyph{
+    font-size:20px;
+    margin-bottom:2px;
+  }
+  .surface-state.empty h3{
+    margin:0;
+    font-size:14px;
+    line-height:1.35;
+  }
+  .surface-state.empty p{
+    margin:0;
+    font-size:12px;
+    line-height:1.55;
+  }
+  .surface-state.empty .surface-hint{
+    margin-top:3px;
+    font-size:10px;
+  }
+
+  .bottom-nav{
+    position:fixed;
+    left:10px;
+    right:10px;
+    bottom:calc(8px + env(safe-area-inset-bottom));
+    z-index:60;
+    min-height:56px;
+    padding:4px;
+    border:1px solid var(--command-hairline);
+    border-radius:16px;
+    background:color-mix(in srgb,var(--surface-1) 94%,transparent);
+    box-shadow:0 14px 34px rgba(0,0,0,.28);
+    backdrop-filter:blur(22px) saturate(110%);
+  }
+  .bottom-nav button{
+    min-height:46px;
+    padding:4px 2px;
+    border-radius:11px;
+    gap:2px;
+  }
+  .bottom-nav button.active{
+    color:var(--command-accent-strong);
+    background:var(--nexo-accent-soft);
+  }
+  .bottom-nav button span{font-size:9.5px}
+  .bottom-nav button i{font-size:15px}
+
+  .world-footer .fingerprint{display:none}
+}
+
+@media(max-width:480px){
+  .bottom-nav{left:7px;right:7px}
 }
 
