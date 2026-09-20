@@ -1571,15 +1571,3 @@ p{
 @media(prefers-reduced-motion:reduce){
   .sync-button .sync-glyph.spinning{animation:none}
 }
-
-
-/* Published Galaxy snapshot freshness belongs to the active Atlas surface. */
-.atlas-snapshot-age.freshness-aging{
-  border-color:color-mix(in srgb,var(--degraded) 28%,var(--line));
-  color:var(--muted);
-}
-.atlas-snapshot-age.freshness-stale,
-.atlas-snapshot-age.freshness-unknown{
-  border-style:dashed;
-  color:var(--quiet);
-}
