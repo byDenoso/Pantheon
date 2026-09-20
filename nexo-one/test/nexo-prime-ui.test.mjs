@@ -55,7 +55,7 @@ test('galaxy uses restrained exposure, macro framing and theme-aware rendering',
   assert.match(galaxy,/bloom\.strength = 0\.34/);
   assert.match(galaxy,/bloom\.radius = 0\.32/);
   assert.match(galaxy,/NormalBlending/);
-  assert.match(galaxy,/<small>CORE<\/small>/);
+  assert.match(galaxy,/node\.domain === 'NEXO' \? 'CORE'/);
 });
 
 
