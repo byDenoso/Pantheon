@@ -18,7 +18,7 @@ export interface SystemDataSource {
   label: string;
   /** Origem real dos dados. `fixture` nunca deve chegar a produção sem rótulo visível. */
   kind: 'fixture' | 'remote';
-  load(options: { signal?: AbortSignal; scenarioId?: string }): Promise<SystemState>;
+  load(options: { signal?: AbortSignal; scenarioId?: string; force?: boolean }): Promise<SystemState>;
 }
 
 /**
