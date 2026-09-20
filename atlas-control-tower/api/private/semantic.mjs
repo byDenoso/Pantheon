@@ -1,5 +1,5 @@
 import {withGoogleAuth,send} from './_middleware.mjs';
-import {createTowerGithubGateway} from '../../lib/tower-github-gateway.mjs';
+import {createTowerGateway} from '../../lib/tower-gateway.mjs';
 import {createNexoSemanticGateway} from '../../lib/nexo-semantic-gateway.mjs';
 
 const ALLOWED_COMMANDS=new Set([

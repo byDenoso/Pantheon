@@ -1,6 +1,6 @@
 import {withGoogleAuth,send} from './_middleware.mjs';
 import {performSync} from './sync.mjs';
-import {createTowerGithubGateway} from '../../lib/tower-github-gateway.mjs';
+import {createTowerGateway} from '../../lib/tower-gateway.mjs';
 import {createNexoSemanticGateway} from '../../lib/nexo-semantic-gateway.mjs';
 import {createAtlasControlPlane} from '../../lib/atlas-control-plane.mjs';
 
@@ -16,7 +16,7 @@ export default withGoogleAuth(async(req,res)=>{
   let body;
   try{body=parseBody(req.body);}catch{return send(res,{error:'INVALID_JSON'},400);}
 
-  const towerGateway=createTowerGithubGateway();
+  const towerGateway=createTowerGateway();
   const semantic=createNexoSemanticGateway({towerGateway});
   const control=createAtlasControlPlane({semantic,sync:()=>performSync(req)});
   try{
