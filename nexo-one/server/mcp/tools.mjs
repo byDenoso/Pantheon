@@ -13,6 +13,22 @@ const publicThread=row=>!/(OLYMPUS|CLIENT|PERSON|PRIVATE)/i.test(text(row?.threa
 const safeOperation=row=>({
   id:text(row?.work_id||row?.id),kind:text(row?.kind),title:text(row?.question||row?.title)||text(row?.work_id||row?.id),status:text(row?.status),priority:text(row?.priority),updatedAt:text(row?.updated_at||row?.updatedAt),threadId:text(row?.thread_id),resultRef:text(row?.result_ref)||undefined
 });
+const SCIENCE_MODEL_CACHE_LIMIT=4;
+const scienceModelCache=new Map();
+function scienceModelFor(snapshot){
+  const key=text(snapshot?.fingerprint);
+  if(!key)return buildScienceReadModelV2(snapshot);
+  const cached=scienceModelCache.get(key);
+  if(cached){
+    scienceModelCache.delete(key);
+    scienceModelCache.set(key,cached);
+    return {...cached,generatedAt:text(snapshot?.generatedAt)};
+  }
+  const model=scienceModelFor(snapshot);
+  scienceModelCache.set(key,model);
+  while(scienceModelCache.size>SCIENCE_MODEL_CACHE_LIMIT)scienceModelCache.delete(scienceModelCache.keys().next().value);
+  return model;
+}
 const withMeta=(model,data)=>({sourceVersion:model.sourceVersion,fingerprint:model.fingerprint,freshness:model.freshness,provenance:model.provenance,...data});
 
 function allInvestigation(model){return Object.values(model.investigation).flatMap(arr);}
@@ -51,7 +67,7 @@ export async function executeMcpTool(snapshot,name,args={}){
   const model=buildScienceReadModelV2(snapshot);
   switch(name){
     case 'get_science_state': return model;
-    case 'get_changes': return buildScienceChanges(snapshot);
+    case 'get_changes': return buildScienceChanges(snapshot,model);
     case 'search_atlas': {
       const needle=lower(args.query||args.q),limit=bounded(args.limit,50,200);
       const items=searchable(model).filter(item=>matches(item,needle)).slice(0,limit);
@@ -88,7 +104,7 @@ export async function executeMcpTool(snapshot,name,args={}){
       return withMeta(model,{items,total:items.length});
     }
     case 'get_activity': {
-      const changes=buildScienceChanges(snapshot);
+      const changes=buildScienceChanges(snapshot,model);
       const items=arr(changes.items).slice(0,bounded(args.limit,100,500));
       return {...changes,items,total:items.length};
     }
