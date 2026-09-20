@@ -6,6 +6,7 @@ import learner from './learner.mjs';
 import sync from './sync.mjs';
 import semantic from './semantic.mjs';
 import control from './control.mjs';
+import driveBootstrap from './drive-bootstrap.mjs';
 import { send } from './_middleware.mjs';
 
 const handlers = Object.freeze({
@@ -17,6 +18,7 @@ const handlers = Object.freeze({
   sync,
   semantic,
   control,
+  'drive-bootstrap': driveBootstrap,
 });
 
 export default async function privateDispatcher(req, res) {
