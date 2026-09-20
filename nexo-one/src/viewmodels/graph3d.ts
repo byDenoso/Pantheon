@@ -123,17 +123,17 @@ export function domainAnchor(domain: Domain): Point3 {
 
 const MACRO_DOMAIN_ANCHOR: Partial<Record<Domain, Point3>> = {
   NEXO: { x: 0, y: 0, z: 0 },
-  SCIENCE: { x: -96, y: -4, z: -8 },
-  ENGINEERING: { x: 0, y: 76, z: 8 },
-  OLYMPUS: { x: 96, y: -2, z: -6 },
-  ARTIFACT: { x: 0, y: -78, z: 5 },
+  SCIENCE: { x: -96, y: -4, z: -3 },
+  ENGINEERING: { x: 0, y: 76, z: 3 },
+  OLYMPUS: { x: 96, y: -2, z: -3 },
+  ARTIFACT: { x: 0, y: -78, z: 2 },
 };
 const MOBILE_MACRO_DOMAIN_ANCHOR: Partial<Record<Domain, Point3>> = {
   NEXO: { x: 0, y: -6, z: 0 },
-  SCIENCE: { x: -31, y: -6, z: -4 },
-  ENGINEERING: { x: 0, y: 38, z: 5 },
-  OLYMPUS: { x: 31, y: -6, z: -4 },
-  ARTIFACT: { x: 0, y: -42, z: 3 },
+  SCIENCE: { x: -31, y: -6, z: -2 },
+  ENGINEERING: { x: 0, y: 38, z: 2 },
+  OLYMPUS: { x: 31, y: -6, z: -2 },
+  ARTIFACT: { x: 0, y: -42, z: 1 },
 };
 
 export function macroDomainAnchor(domain: Domain, compact = false): Point3 {
@@ -310,7 +310,7 @@ function fieldDomainNodes(domain: Domain, nodes: GraphNode[], anchor: Point3): P
       const seed = hash32(node.id);
       const theta = (index / Math.max(1, sorted.length)) * TAU + unit(seed) * 0.72 + bandIndex * 0.42;
       const radial = baseRing + (unit(seed, 10) - 0.5) * 7;
-      const lift = (unit(seed, 18) - 0.5) * 11;
+      const lift = (unit(seed, 18) - 0.5) * 5;
       placed.push({ ...node, x: rounded(anchor.x + Math.cos(theta) * radial), y: rounded(anchor.y + Math.sin(theta) * radial * 0.68), z: rounded(anchor.z + lift), radius: NODE_RADIUS[node.type] });
     });
   });
