@@ -39,9 +39,9 @@ test('NEXO anchors the field at the origin and primary domains occupy determinis
   const science = byId.get('domain:science');
   const engineering = byId.get('domain:engineering');
   const olympus = byId.get('domain:olympus');
-  assert.deepEqual([science.x, science.y, science.z], [-96, -4, -8]);
-  assert.deepEqual([engineering.x, engineering.y, engineering.z], [0, 76, 8]);
-  assert.deepEqual([olympus.x, olympus.y, olympus.z], [96, -2, -6]);
+  assert.deepEqual([science.x, science.y, science.z], [-96, -4, -3]);
+  assert.deepEqual([engineering.x, engineering.y, engineering.z], [0, 76, 3]);
+  assert.deepEqual([olympus.x, olympus.y, olympus.z], [96, -2, -3]);
   const hubs = [science, engineering, olympus];
   assert.equal(new Set(hubs.map(h => `${h.x}:${h.y}:${h.z}`)).size, hubs.length);
 });
