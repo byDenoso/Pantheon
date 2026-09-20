@@ -15,7 +15,7 @@ test('NEXO ONE and MCP Atlas share product navigation and operational language',
   ]);
   assert.doesNotMatch(nav,/O estado real, agora|O que merece sua atenção|Encontre\. Retome\. Avance/);
   assert.match(nav,/Estado operacional da Tower/);
-  assert.match(overview,/0 gates humanos explícitos/);
+  assert.match(overview,/0 itens em Needs Dener/);
   assert.match(app,/MCP Atlas/);
   assert.match(app,/BASE_URL}mcp\//);
   assert.match(mcp,/Topologia MCP/);
