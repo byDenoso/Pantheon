@@ -1,0 +1,99 @@
+/* NEXO ATLAS spatial macro overview */
+.cockpit[data-view=ATLAS] .galaxy-three-root[data-view-mode=macro] .galaxy-three-labels,
+.cockpit[data-view=ATLAS] .galaxy-three-root[data-view-mode=macro] .galaxy-three-controls,
+.cockpit[data-view=ATLAS] .galaxy-three-root[data-view-mode=macro] .galaxy-three-status{display:none}
+
+.cockpit[data-view=ATLAS] .galaxy-three-root[data-view-mode=macro] .galaxy-three-mount{
+  opacity:.36;
+  filter:saturate(.82) brightness(.72)
+}
+
+.atlas-domain-worlds{position:absolute;inset:0;z-index:12;pointer-events:none}
+.atlas-world-heading{position:absolute;top:92px;left:42px;display:flex;flex-direction:column;gap:8px;pointer-events:none}
+.atlas-world-heading strong{color:#9eeaff;font-size:20px;letter-spacing:.32em}
+.atlas-world-heading span{color:#68839a;font:600 8px/1.4 monospace;letter-spacing:.2em}
+
+.atlas-domain-world{
+  --world:#a9dfff;
+  position:absolute;display:flex;align-items:center;gap:18px;min-width:250px;padding:0;
+  border:0;background:transparent;color:#eef8ff;text-align:left;cursor:pointer;pointer-events:auto;
+  transform:translate(-50%,-50%);transition:transform .2s ease,filter .2s ease
+}
+.atlas-domain-world:hover,.atlas-domain-world:focus-visible{outline:none;filter:brightness(1.14);transform:translate(-50%,-50%) scale(1.035)}
+.atlas-domain-world.domain-nexo{left:50%;top:50%;flex-direction:column;min-width:220px;text-align:center;--world:#8eeeff}
+.atlas-domain-world.domain-science{left:28%;top:31%;--world:#60a8ff}
+.atlas-domain-world.domain-engineering{left:72%;top:31%;--world:#72efd2}
+.atlas-domain-world.domain-olympus{left:28%;top:69%;--world:#b47cff}
+.atlas-domain-world.domain-artifact{left:72%;top:69%;--world:#efba67}
+
+.atlas-world-orb{
+  position:relative;display:grid;place-items:center;width:122px;height:122px;border:1px solid var(--world);border-radius:50%;
+  background:radial-gradient(circle at 38% 34%,rgba(255,255,255,.18),transparent 12%),radial-gradient(circle,#17323f 0%,#09121a 68%);
+  box-shadow:inset 0 0 34px rgba(121,231,255,.16),0 0 24px rgba(121,231,255,.22)
+}
+.domain-nexo .atlas-world-orb{width:176px;height:176px;box-shadow:inset 0 0 48px rgba(121,231,255,.20),0 0 70px rgba(121,231,255,.18)}
+.atlas-world-orb>b{color:var(--world);font-size:27px;text-shadow:0 0 20px var(--world)}
+.domain-nexo .atlas-world-orb>b{font-size:32px;letter-spacing:.2em;margin-left:.2em}
+.atlas-world-ring{position:absolute;inset:-16px;border:1px solid var(--world);border-radius:50%;opacity:.18}
+.atlas-world-ring.ring-b{inset:-30px;border-style:dashed;opacity:.11;transform:rotate(31deg)}
+.atlas-world-satellite{position:absolute;width:9px;height:9px;border:1px solid var(--world);border-radius:50%;background:var(--world);box-shadow:0 0 12px var(--world);opacity:.72}
+.atlas-world-satellite.sat-a{top:-15px;right:15px}
+.atlas-world-satellite.sat-b{right:-20px;bottom:18px;width:13px;height:13px}
+.atlas-world-satellite.sat-c{left:-16px;bottom:3px;width:7px;height:7px}
+
+.atlas-world-copy{display:flex;flex-direction:column;gap:5px;min-width:130px}
+.atlas-world-copy strong{color:#f3f7fa;font-size:16px;letter-spacing:.035em}
+.atlas-world-copy small{color:var(--world);font:650 10px/1.2 monospace;letter-spacing:.08em}
+.atlas-world-copy em{max-width:178px;margin-top:5px;color:#71869a;font:600 7px/1.55 monospace;font-style:normal;letter-spacing:.13em}
+.domain-nexo .atlas-world-copy strong{font-size:20px;letter-spacing:.13em}
+.domain-nexo .atlas-world-copy small{font-size:8px;color:#86b7c8;letter-spacing:.22em}
+
+.atlas-world-summary{
+  position:absolute;left:34px;bottom:28px;display:flex;align-items:center;min-height:50px;padding:0 8px;
+  border:1px solid rgba(121,231,255,.11);border-radius:13px;background:rgba(4,10,17,.70);
+  box-shadow:0 18px 45px rgba(0,0,0,.24);backdrop-filter:blur(18px)
+}
+.atlas-world-summary span{display:flex;align-items:baseline;gap:7px;min-width:116px;padding:0 15px;border-right:1px solid rgba(255,255,255,.07);color:#82919f;font:600 9px/1 monospace;text-transform:uppercase}
+.atlas-world-summary span:last-child{border-right:0}
+.atlas-world-summary b{color:#eef7fb;font-size:15px}
+.atlas-world-summary .live{color:#71dab7}
+.atlas-world-summary .live i{width:7px;height:7px;border-radius:50%;background:#63e1b4;box-shadow:0 0 12px rgba(99,225,180,.62)}
+
+@media(max-width:900px){
+  .atlas-world-heading{top:82px;left:18px}
+  .atlas-world-heading strong{font-size:15px}
+  .atlas-world-heading span{font-size:6.5px}
+  .atlas-domain-world{min-width:0;gap:7px;flex-direction:column;text-align:center}
+  .atlas-domain-world.domain-nexo{top:48%}
+  .atlas-domain-world.domain-science{left:24%;top:27%}
+  .atlas-domain-world.domain-engineering{left:76%;top:27%}
+  .atlas-domain-world.domain-olympus{left:24%;top:69%}
+  .atlas-domain-world.domain-artifact{left:76%;top:69%}
+  .atlas-world-orb{width:82px;height:82px}
+  .domain-nexo .atlas-world-orb{width:118px;height:118px}
+  .atlas-world-copy{min-width:0;align-items:center}
+  .atlas-world-copy strong{font-size:10px}
+  .domain-nexo .atlas-world-copy strong{font-size:13px}
+  .atlas-world-copy small{font-size:7px}
+  .atlas-world-copy em{display:none}
+  .atlas-world-summary{left:12px;right:12px;bottom:92px;justify-content:center}
+  .atlas-world-summary span{min-width:auto;padding:0 10px;font-size:8px}
+  .atlas-world-summary b{font-size:12px}
+}
+
+@media(max-width:520px){
+  .atlas-world-heading{display:none}
+  .atlas-domain-world.domain-science{left:24%;top:25%}
+  .atlas-domain-world.domain-engineering{left:76%;top:25%}
+  .atlas-domain-world.domain-olympus{left:24%;top:68%}
+  .atlas-domain-world.domain-artifact{left:76%;top:68%}
+  .atlas-world-orb{width:66px;height:66px}
+  .domain-nexo .atlas-world-orb{width:98px;height:98px}
+  .atlas-world-ring{inset:-9px}
+  .atlas-world-ring.ring-b{inset:-17px}
+  .atlas-world-satellite.sat-b{right:-12px}
+  .atlas-world-copy strong{font-size:9px}
+  .domain-nexo .atlas-world-copy strong{font-size:12px}
+  .atlas-world-copy small{font-size:6px}
+  .atlas-world-summary{bottom:82px;min-height:42px}
+}
