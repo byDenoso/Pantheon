@@ -37,6 +37,7 @@ export function validateSanctionedProjection(projection, manifestFile = null) {
   if (!/^sha256:[0-9a-f]{64}$/i.test(String(manifest.projection_fingerprint || ''))) fail('projection_fingerprint invalid');
   if (projection.event_cursor !== manifest.event_cursor) fail('projection event_cursor differs from manifest');
   if (!Array.isArray(projection.work) || !Array.isArray(projection.tests)) fail('work/tests arrays missing');
+  if (projection.human_gates && (!Array.isArray(projection.human_gates.work_ids) || !Number.isInteger(projection.human_gates.count))) fail('human_gates invalid');
   if (!projection.capabilities || typeof projection.capabilities !== 'object' || Array.isArray(projection.capabilities)) {
     fail('capabilities map missing');
   }
@@ -235,6 +236,41 @@ function graphFromProjection(projection, observedAt, filaments = []) {
   return { nodes, edges: edges.filter(edge => seen.has(edge.from) && seen.has(edge.to)) };
 }
 
+function humanInboxFromProjection(projection, observedAt) {
+  const manifest = projection.manifest;
+  const byId = new Map((projection.work || []).map(item => [String(item.id || ''), item]));
+  const ids = Array.isArray(projection.human_gates?.work_ids) ? projection.human_gates.work_ids : [];
+  return ids.map(rawId => {
+    const id = String(rawId || '');
+    const item = byId.get(id);
+    if (!item) return null;
+    const dependency = String(item.dependency_class || 'HUMAN_ACTION_REQUIRED').toUpperCase();
+    const kind = dependency.includes('AUTH') || dependency === 'MIXED' ? 'FORNECER_DADO' : 'DECIDIR';
+    const label = String(item.title || id);
+    const priority = String(item.priority || '').toUpperCase();
+    const severity = priority === 'P0' || priority === 'CRITICAL' ? 'P0' : 'P1';
+    const source = 'tower://' + String(manifest.tower_repository || 'byDenoso/NEXO-Obsidian-Vault')
+      + '@' + manifest.tower_commit + '/TOWER_V06/entities/work/' + id + '.json';
+    return {
+      id: 'needs-dener:' + id,
+      kind,
+      domain: domainOf(item.domain),
+      title: label,
+      question: kind === 'FORNECER_DADO'
+        ? 'Fornecer a autorização ou credencial externa exigida para liberar este WORK.'
+        : 'Tomar a decisão humana explícita exigida para liberar este WORK.',
+      why: 'TOWER_V06 marcou este WORK como Needs Dener; dependency_class=' + dependency + '.',
+      action_id: null,
+      options: [],
+      severity,
+      due_at: null,
+      source_ref: source,
+      fingerprint: nodeFingerprint('needs-dener', id, manifest),
+      checked_at: observedAt,
+      freshness: { state: 'RECENT', observed_at: observedAt, ttl_seconds: null },
+    };
+  }).filter(Boolean);
+}
 function lanesFromProjection(projection, observedAt) {
   const source = sourceRef(projection.manifest);
   return ['SCIENCE', 'ENGINEERING', 'OLYMPUS'].map(domain => {
@@ -289,6 +325,7 @@ export function buildPagesProjection({ projection, manifestFile = null, interdom
   const filaments = learningFilamentsFromTower(interdomain, manifest, observedAt);
   const graph = graphFromProjection(projection, observedAt, filaments);
   const lanes = lanesFromProjection(projection, observedAt);
+  const inbox = humanInboxFromProjection(projection, observedAt);
 
   const system = {
     contract_version: SYSTEM_CONTRACT,
@@ -346,7 +383,7 @@ export function buildPagesProjection({ projection, manifestFile = null, interdom
       source_observed_at: observedAt,
     }],
     actions: [],
-    inbox: [],
+    inbox,
     capabilities: [],
     runs: [],
     lanes,
