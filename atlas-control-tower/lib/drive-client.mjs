@@ -59,10 +59,14 @@ export function createDriveClient({env=process.env,fetchImpl=globalThis.fetch}={
     const params=new URLSearchParams({q:filters.join(' and '),fields:'files(id,name,mimeType,modifiedTime,size,md5Checksum)',pageSize:'1000',orderBy:'name'});
     return (await jsonResponse(await request(DRIVE_API+'/files?'+params),'DRIVE_LIST')).files||[];
   }
-  async function getJson(fileId){
+  async function getBuffer(fileId){
     const response=await request(DRIVE_API+'/files/'+encodeURIComponent(fileId)+'?alt=media');
     if(!response.ok)throw new Error('DRIVE_READ_HTTP_'+response.status);
-    const text=await response.text();try{return JSON.parse(text);}catch{throw new Error('DRIVE_FILE_INVALID_JSON');}
+    return Buffer.from(await response.arrayBuffer());
+  }
+  async function getJson(fileId){
+    const bytes=await getBuffer(fileId);
+    try{return JSON.parse(bytes.toString('utf8'));}catch{throw new Error('DRIVE_FILE_INVALID_JSON');}
   }
   async function findChild(parentId,name,{mimeType}={}){
     const files=await listChildren(parentId,{name,mimeType});
@@ -144,5 +148,5 @@ export function createDriveClient({env=process.env,fetchImpl=globalThis.fetch}={
     }
     return {idempotent:false,file:await createJson(parent.id,name,value)};
   }
-  return {configured,rootId,listChildren,getJson,findChild,createFolder,createFile,updateFile,resolveDirectory,readPath,listJsonDirectory,putFile,putJson};
+  return {configured,rootId,listChildren,getBuffer,getJson,findChild,createFolder,createFile,updateFile,resolveDirectory,readPath,listJsonDirectory,putFile,putJson};
 }
