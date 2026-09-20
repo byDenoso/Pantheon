@@ -292,6 +292,35 @@ export function AtlasView(
     const canonicalCampaigns = new Set(
       domainChildren.map(node => node.campaign_id?.trim()).filter((value): value is string => Boolean(value)),
     );
+    const learningOverlayForTargets = (targetIds: Set<string>, remap = new Map<string, string>()) => {
+      if (!learningVisible) return { nodes: [] as GraphNode[], edges: [] as typeof filtered.edges };
+      const filamentIds = new Set<string>();
+      const mapped = new Map<string, (typeof filtered.edges)[number]>();
+      for (const edge of filtered.edges) {
+        if (!edge.is_learning) continue;
+        const fromTarget = targetIds.has(edge.from);
+        const toTarget = targetIds.has(edge.to);
+        if (!fromTarget && !toTarget) continue;
+        const otherId = fromTarget ? edge.to : edge.from;
+        const other = baseNodes.find(node => node.id === otherId);
+        if (other?.type !== 'FILAMENT') continue;
+        filamentIds.add(otherId);
+        const from = remap.get(edge.from) ?? edge.from;
+        const to = remap.get(edge.to) ?? edge.to;
+        if (from === to) continue;
+        const key = from + '|' + to + '|' + edge.kind;
+        if (!mapped.has(key)) mapped.set(key, {
+          ...edge,
+          id: edge.id + ':atlas-overlay:' + encodeURIComponent(from) + ':' + encodeURIComponent(to),
+          from,
+          to,
+        });
+      }
+      return {
+        nodes: baseNodes.filter(node => filamentIds.has(node.id)),
+        edges: [...mapped.values()],
+      };
+    };
 
     if (!expandedCampaign && !expandedCluster) {
       if (canonicalCampaigns.size > 0) {
@@ -311,7 +340,13 @@ export function AtlasView(
           weight: 0.86,
           explanation: 'Campanha ' + node.label + ' derivada do campaign_id sancionado na projeção.',
         }));
-        return { nodes: [domainNode, ...campaignNodes], edges };
+        const memberToCampaign = new Map<string, string>();
+        for (const [campaignId, members] of groups) {
+          const renderedCampaignId = campaignNodeId(expandedDomain, campaignId);
+          for (const member of members) memberToCampaign.set(member.id, renderedCampaignId);
+        }
+        const overlay = learningOverlayForTargets(new Set(domainChildren.map(node => node.id)), memberToCampaign);
+        return { nodes: [domainNode, ...campaignNodes, ...overlay.nodes], edges: [...edges, ...overlay.edges] };
       }
 
       const clusterNodes = ATLAS_CLUSTER_TYPES
@@ -342,13 +377,16 @@ export function AtlasView(
         weight: node.type === 'TEST' ? 0.92 : 0.60,
         explanation: node.type + ' pertence à campanha ' + campaign.label + ' na projeção sancionada.',
       }));
-      return { nodes: [campaign, ...children], edges };
+      const overlay = learningOverlayForTargets(new Set(children.map(node => node.id)));
+      return { nodes: [campaign, ...children, ...overlay.nodes], edges: [...edges, ...overlay.edges] };
     }
 
     const children = domainChildren.filter(node => node.type === expandedCluster);
-    const nodes = [domainNode, ...children];
+    const overlay = learningOverlayForTargets(new Set(children.map(node => node.id)));
+    const nodes = [domainNode, ...children, ...overlay.nodes];
     const ids = new Set(nodes.map(node => node.id));
-    return { nodes, edges: filtered.edges.filter(edge => (learningVisible || !edge.is_learning) && ids.has(edge.from) && ids.has(edge.to)) };
+    const structural = filtered.edges.filter(edge => !edge.is_learning && ids.has(edge.from) && ids.has(edge.to));
+    return { nodes, edges: [...structural, ...overlay.edges] };
   }, [expandAll, expandedCampaign, expandedCluster, expandedDomain, filtered, graphForView.nodes, learningVisible, rootExpanded]);
   const isMacroOverview = rootExpanded && !expandAll && !expandedDomain && !expandedCampaign && !expandedCluster;
   const placed = useMemo(() => {
