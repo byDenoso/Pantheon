@@ -61,10 +61,10 @@ test('galaxy uses restrained exposure, macro framing and theme-aware rendering',
 
 test('dark and light themes use the requested black-mint and white-orange palettes',async()=>{
   const css=await text('src/styles/nexo-prime.css');
-  assert.match(css,/--nexo-bg-0:#020508/);
+  assert.match(css,/\/\* NEXO V2 palette[\s\S]*--nexo-bg-0:#090b0c/);
   assert.match(css,/\/\* NEXO V2 palette[\s\S]*--nexo-accent:#8fd7c3/);
-  assert.match(css,/:root\[data-theme=light\]\{[\s\S]*--nexo-bg-0:#fbfaf7/);
-  assert.match(css,/:root\[data-theme=light\]\{[\s\S]*--nexo-accent:#f47a20/);
+  assert.match(css,/:root\[data-theme=light\]\{[\s\S]*--nexo-bg-0:#fcfcfb/);
+  assert.match(css,/:root\[data-theme=light\]\{[\s\S]*--nexo-accent:#f47721/);
   assert.match(css,/\.galaxy-three-root\[data-view-mode="macro"\]/);
 });
 
