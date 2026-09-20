@@ -57,3 +57,14 @@ test('search_atlas never leaks Olympus/private rows',async()=>{
 test('unknown MCP tool fails closed',async()=>{
   await assert.rejects(()=>executeMcpTool(snapshot,'delete_everything',{}),/UNKNOWN_MCP_TOOL/);
 });
+
+
+test('science model cache keys on semantic fingerprint without freezing generatedAt',async()=>{
+  const fingerprint='sha256:'+'a'.repeat(64);
+  const first=await executeMcpTool({...snapshot,fingerprint,generatedAt:'2026-09-12T12:01:00Z'},'get_science_state',{});
+  const second=await executeMcpTool({...snapshot,fingerprint,generatedAt:'2026-09-12T12:02:00Z'},'get_science_state',{});
+  assert.equal(first.fingerprint,second.fingerprint);
+  assert.equal(second.generatedAt,'2026-09-12T12:02:00Z');
+  const changes=await executeMcpTool({...snapshot,fingerprint,generatedAt:'2026-09-12T12:03:00Z'},'get_changes',{});
+  assert.equal(changes.contract,'NEXO_ACTIVITY_LEDGER_V1');
+});
