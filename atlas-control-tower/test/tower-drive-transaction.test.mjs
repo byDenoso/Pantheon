@@ -70,3 +70,25 @@ test('protected identity/version fields cannot be overwritten',()=>{
   const request={request_id:'REQ-PROTECTED',entity_kind:'work',entity_name:'WORK-1',expected_version:1,writer_role:'EXECUTOR',event_type:'WORK_STARTED',changes:{entity_version:99}};
   assert.throws(()=>applyDriveMutationToBundle(input,request),/PROTECTED_FIELD_MUTATION/);
 });
+
+
+test('Drive transaction enforces L3 declared intent',()=>{
+  const input=bundle();
+  const base={request_id:'REQ-L3',entity_kind:'work',entity_name:'WORK-1',expected_version:1,writer_role:'EXECUTOR',event_type:'WORK_STARTED',changes:{status:'RUNNING'},autonomy_level:'L3'};
+  assert.throws(()=>applyDriveMutationToBundle(input,base),/L3_INTENT_REQUIRED/);
+  const out=applyDriveMutationToBundle(input,{...base,l3_intent:{summary:'start work',reason:'ready',metric:'terminal result'}});
+  assert.equal(out.receipt.autonomy_level,'L3');
+  assert.equal(out.receipt.governance_gate,'PASS_WITH_REPORT');
+});
+
+test('Drive transaction prevents L5 authority changes',()=>{
+  const input=bundle();
+  const request={request_id:'REQ-L5',entity_kind:'work',entity_name:'WORK-1',expected_version:1,writer_role:'EXECUTOR',event_type:'WORK_EDITED',changes:{truth_owner:'other'}};
+  assert.throws(()=>applyDriveMutationToBundle(input,request),/L5_BOUNDARY_HUMAN_AUTHORITY_REQUIRED/);
+});
+
+test('Drive transaction keeps L4 policy human-gated',()=>{
+  const input=bundle({'entities/governance/NEXO_RSI_POLICY.json':{encoding:'json',value:{id:'NEXO_RSI_POLICY',entity_version:1,retry_limit:2}}});
+  const request={request_id:'REQ-L4',entity_kind:'governance',entity_name:'NEXO_RSI_POLICY',expected_version:1,writer_role:'ADVISOR',event_type:'POLICY_UPDATED',changes:{retry_limit:3},autonomy_level:'L4',governance_evidence:{baseline_ref:'B',hypothesis_ref:'H',metric:'m',rollback_ref:'R',evidence_refs:['E'],observed_gain:1,regression_passed:true}};
+  assert.throws(()=>applyDriveMutationToBundle(input,request),/L4_HUMAN_APPROVAL_REQUIRED/);
+});

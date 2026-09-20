@@ -4,6 +4,9 @@ const SAFE_NAME=/^[A-Za-z0-9_.:-]+$/;
 const ROLES=new Set(['DAILY','ADVISOR','EXECUTOR','LEARNER','EMERGENT']);
 const CREATABLE=new Set(['work','project','hypothesis','campaign','test_group','test','run','result','artifact']);
 const PROTECTED=new Set(['id','entity_id','entity_version']);
+const L4_ALLOWED_KEYS=new Set(['retry_limit','parallelism','test_budget','ranking_weights','lane_priority','promotion_threshold','quarantine_threshold','rollback_window','shadow_evaluation_cycles']);
+const L5_ENTITY_KINDS=new Set(['constitution','l5','sovereign']);
+const L5_RESERVED_KEYS=new Set(['human_override','authority_root','truth_owner','truth_owners','writer_authority','writer_authorities','permission_boundary','permission_boundaries','repository_permissions','tool_permissions','autonomy_ceiling','l4_allowlist','l5_rules','constitution','sovereign_layer']);
 
 const clone=value=>structuredClone(value);
 const digest=value=>createHash('sha256').update(String(value)).digest('hex');
@@ -30,6 +33,40 @@ function putJson(bundle,path,value){
   bundle.files[path]={encoding:'json',value:clone(value)};
 }
 function invalid(message){const error=new Error(message);error.code='INVALID_MUTATION_REQUEST';throw error;}
+function nonempty(value){return typeof value==='string'&&Boolean(value.trim());}
+function proposalHash(request){
+  return createHash('sha256').update(JSON.stringify({
+    entity_kind:request.entity_kind??null,entity_name:request.entity_name??null,
+    expected_version:request.expected_version??null,changes:request.changes??null
+  },Object.keys({entity_kind:1,entity_name:1,expected_version:1,changes:1}).sort())).digest('hex');
+}
+function validL3Intent(value){return value&&typeof value==='object'&&['summary','reason','metric'].every(key=>nonempty(value[key]));}
+function validPromotionEvidence(value){
+  return value&&typeof value==='object'
+    &&['baseline_ref','hypothesis_ref','metric','rollback_ref'].every(key=>nonempty(value[key]))
+    &&Array.isArray(value.evidence_refs)&&value.evidence_refs.length>0&&value.evidence_refs.every(nonempty)
+    &&typeof value.observed_gain==='number'&&value.observed_gain>0&&value.regression_passed===true;
+}
+function governance(request,entityKind,entityName,changes){
+  const changedKeys=new Set(Object.keys(changes||{}));
+  if(L5_ENTITY_KINDS.has(entityKind)||[...changedKeys].some(key=>L5_RESERVED_KEYS.has(key)))throw new Error('L5_BOUNDARY_HUMAN_AUTHORITY_REQUIRED');
+  const raw=String(request.autonomy_level||'L0').toUpperCase();
+  const declared=new Set(['L0','L1','L2','L3','L4','L5']).has(raw)?raw:'L0';
+  const effective=(entityKind==='governance'&&entityName==='NEXO_RSI_POLICY')?'L4':declared;
+  if(effective==='L5')throw new Error('L5_BOUNDARY_HUMAN_AUTHORITY_REQUIRED');
+  if(effective==='L3'){
+    if(!validL3Intent(request.l3_intent))throw new Error('L3_INTENT_REQUIRED');
+    return {autonomy_level:'L3',governance_gate:'PASS_WITH_REPORT'};
+  }
+  if(effective!=='L4')return {autonomy_level:effective,governance_gate:'PASS'};
+  if(entityKind!=='governance'||entityName!=='NEXO_RSI_POLICY')throw new Error('L4_POLICY_TARGET_NOT_ALLOWLISTED');
+  const disallowed=[...changedKeys].filter(key=>!L4_ALLOWED_KEYS.has(key));
+  if(disallowed.length)throw new Error('L4_POLICY_KEY_NOT_ALLOWLISTED:'+disallowed.sort().join(','));
+  if(!validPromotionEvidence(request.governance_evidence))throw new Error('L4_PROMOTION_EVIDENCE_REQUIRED');
+  const hash=proposalHash(request),approval=request.human_approval;
+  if(!(approval&&approval.approved===true&&String(approval.approved_by||'').toUpperCase()==='HUMAN'&&nonempty(approval.approval_ref)&&approval.proposal_hash===hash))throw new Error('L4_HUMAN_APPROVAL_REQUIRED:'+hash);
+  return {autonomy_level:'L4',governance_gate:'L4_HUMAN_APPROVED',proposal_hash:hash};
+}
 
 export function validateDriveMutationRequest(request={}){
   const requestId=String(request.request_id||'');
@@ -76,6 +113,7 @@ export function applyDriveMutationToBundle(inputBundle,request,{now=new Date()}=
   }
 
   const changes={...request.changes};
+  const governanceMeta=governance(request,ids.entityKind,ids.entityName,changes);
   if(seeded&&Object.hasOwn(changes,'id')){
     if(String(changes.id)!==ids.entityName)invalid('create identity must match entity_name');
     delete changes.id;
@@ -105,6 +143,7 @@ export function applyDriveMutationToBundle(inputBundle,request,{now=new Date()}=
 
   const receipt={
     request_id:ids.requestId,
+    ...governanceMeta,
     accepted:true,
     entity_version:nextVersion,
     readback:'PASS',
