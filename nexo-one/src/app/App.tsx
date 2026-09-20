@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { ActionRecord, InboxItem } from '../contracts/system.ts';
 import { useWorld } from './useWorld.ts';
 import { useSystem } from '../data/useSystem.ts';
@@ -13,14 +13,13 @@ import { EMPTY_FILTERS, type GraphFilters } from '../viewmodels/graph.ts';
 import { capabilityById, globalSummary, runsForAction } from '../viewmodels/system.ts';
 import { label, toneOf } from '../viewmodels/tokens.ts';
 import { ProvenanceProvider } from '../components/provenance.tsx';
-import { Surface } from '../components/states.tsx';
+import { LoadingState, Surface } from '../components/states.tsx';
 import { StatusBadge } from '../components/primitives.tsx';
 import { ActionCard, ExecutionTrace, HumanInboxItem } from '../components/composites.tsx';
 import { Modal } from '../shell/Modal.tsx';
 import { Overview } from '../features/system/Overview.tsx';
 import { ActionsView, ExecutionView, InboxView } from '../features/system/Operations.tsx';
 import { CapabilitiesView, IntegrityView, SourcesView, TruthGraphView } from '../features/system/Integrity.tsx';
-import { AtlasView, LearningView } from '../features/system/Atlas.tsx';
 import { PersonalCockpit } from '../features/PersonalCockpit.tsx';
 
 const stored = (key: string, fallback: string): string => {
@@ -33,6 +32,8 @@ const persist = (key: string, value: string): void => {
 const ALL_VIEWS = NAV_GROUPS.flatMap(group => group.entries.map(entry => entry.id));
 const PRIVATE_COCKPIT_URL = String(import.meta.env.VITE_PRIVATE_COCKPIT_URL || '').trim().replace(/\/+$/, '');
 const AUTH_BRIDGE_URL = String(import.meta.env.VITE_NEXO_AUTH_BRIDGE_URL || '').trim();
+const AtlasView = lazy(() => import('../features/system/Atlas.tsx').then(module => ({ default: module.AtlasView })));
+const LearningView = lazy(() => import('../features/system/Atlas.tsx').then(module => ({ default: module.LearningView })));
 
 export default function App() {
   const isMobile = useIsMobile();
@@ -249,8 +250,17 @@ export default function App() {
                 <p>{titles.lead}</p>
               </div>
               {isSystemView(view) && (
-                <button className="sync-button" onClick={system.reload} disabled={system.load === 'LOADING'}>
-                  <span>↻</span><span>{system.load === 'LOADING' ? 'Sincronizando' : 'Sincronizar'}</span>
+                <button
+                  className={`sync-button sync-${system.syncStatus.toLowerCase()}`}
+                  onClick={system.reload}
+                  disabled={system.syncing || (!system.state && system.load === 'LOADING')}
+                  aria-label={system.syncing ? 'Sincronizando estado do sistema' : 'Sincronizar estado do sistema'}
+                >
+                  <span aria-hidden="true" className={system.syncing ? 'sync-glyph spinning' : 'sync-glyph'}>↻</span>
+                  <span className="sync-label">
+                    <span>{system.syncing ? 'Sincronizando' : 'Sincronizar'}</span>
+                    {system.syncMessage && <small role="status" aria-live="polite">{system.syncMessage}</small>}
+                  </span>
                 </button>
               )}
             </div>
@@ -261,8 +271,17 @@ export default function App() {
               </div>
             )}
 
+            {isSystemView(view) && system.state && system.syncStatus === 'FAILED' && (
+              <div className="sync-warning" role="status">
+                <strong>Último snapshot preservado.</strong>
+                <span>{system.error}</span>
+              </div>
+            )}
+
             {isSystemView(view)
-              ? <Surface load={system.load} error={system.error} onRetry={system.reload}>{systemContent()}</Surface>
+              ? <Surface load={system.load} error={system.error} onRetry={system.reload}>
+                  <Suspense fallback={<LoadingState label="Carregando módulo…" />}>{systemContent()}</Suspense>
+                </Surface>
               : <PersonalCockpit view={view} world={world.world} loading={world.loading} error={world.error}
                   refresh={world.refresh} authenticated={session.session.authenticated}
                   query={personalQuery} setQuery={setPersonalQuery}
