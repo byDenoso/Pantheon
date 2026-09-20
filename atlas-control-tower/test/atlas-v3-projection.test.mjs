@@ -23,6 +23,12 @@ const input = {
     campaign: [{ id: 'CAMP-GROWTH', kind: 'CAMPAIGN', status: 'ACTIVE', program_id: 'PROG-STRUCTURE', test_count: 12 }],
     hypothesis: [{ id: 'HYP::COSMO::A', status: 'TESTING', label: 'Cosmology hypothesis' }],
     work: [{ id: 'WORK::OLYMPUS::T01', status: 'READY', owner_role: 'EXECUTOR' }],
+    learning: [
+      { id: 'ML-EVID-001', kind: 'LEARNING', stage: 'OBSERVATION', status: 'OBSERVED', test_refs: ['T-SCI-001'], summary: 'Observed recovery pattern.' },
+      { id: 'ML-LESSON-001', kind: 'LEARNING', stage: 'LESSON', status: 'SUPPORTED', learning_refs: ['ML-EVID-001'], summary: 'Reuse validated inputs.' }
+    ],
+    test_group: [{ id: 'GROUP-SCI', kind: 'TEST_GROUP', campaign_id: 'CAMP-GROWTH', status: 'ACTIVE', test_count: 1 }],
+    test: [{ id: 'T-SCI-001', kind: 'TEST', test_group_id: 'GROUP-SCI', campaign_id: 'CAMP-GROWTH', domain: 'SCIENCE', status: 'DONE' }],
     interdomain: [{
       id: 'META::INTERDOMAIN::COSMO-OLYMPUS-001',
       kind: 'INTERDOMAIN',
@@ -68,6 +74,19 @@ test('projects inter-domain state as first-class learning filaments without mate
   assert.ok(relationTypes.includes('METHOD_TRANSFER'));
   assert.equal(relationTypes.includes('PROPOSES_TEST'), false);
   assert.equal(snapshot.graph.root.nodes.some(node => node.id === 'WORK::OLYMPUS::T01' && node.type === 'TEST'), false);
+});
+
+
+test('projects meta-learning as transversal filament nodes linked only through explicit refs', () => {
+  const snapshot = buildAtlasProjectionV3(input);
+  const observation = snapshot.graph.root.nodes.find(node => node.id === 'ML-EVID-001');
+  const lesson = snapshot.graph.root.nodes.find(node => node.id === 'ML-LESSON-001');
+  assert.equal(observation?.type, 'FILAMENT');
+  assert.equal(lesson?.type, 'FILAMENT');
+  assert.equal(snapshot.entities['ML-EVID-001'].stage, 'OBSERVATION');
+  assert.ok(snapshot.graph.root.edges.some(edge => edge.source === 'ML-EVID-001' && edge.target === 'GROUP-SCI' && edge.type === 'TEST_REF'));
+  assert.ok(snapshot.graph.root.edges.some(edge => edge.source === 'ML-LESSON-001' && edge.target === 'ML-EVID-001' && edge.type === 'LEARNING_LINEAGE'));
+  assert.ok(snapshot.learning.filaments.some(item => item.id === 'ML-LESSON-001' && item.stage === 'LESSON'));
 });
 
 test('fingerprint is deterministic and independent from generation time', () => {
