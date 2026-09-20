@@ -116,3 +116,18 @@ test('MCP JSON-RPC initialize, tools/list and tools/call expose capability boots
   const called=await handleMcpRpc({jsonrpc:'2.0',id:4,method:'tools/call',params:{name:TOOL_NAME,arguments:{utterance:'Teste X',source:'chat'}}},{service});
   assert.equal(called.result.structuredContent.accepted,true);assert.equal(called.result.isError,false);
 });
+
+
+test('Drive-primary bootstrap exposes storage identity without pretending Git is the truth locator', async () => {
+  const service=createScientificMcpService({gateway:{configured:{towerWrite:false,towerStore:'GOOGLE_DRIVE',rootId:'private-root'}}});
+  const bootstrap=await service.getBootstrap();
+  assert.equal(bootstrap.canonical.authority,'TOWER_V06');
+  assert.equal(bootstrap.canonical.storage,'GOOGLE_DRIVE_PRIVATE');
+  assert.equal(bootstrap.canonical.pointer,'CURRENT.json');
+  assert.equal(bootstrap.canonical.snapshot_root,'SNAPSHOTS');
+  assert.equal(bootstrap.canonical.truth_owner,'TOWER_V06');
+  assert.equal('repository' in bootstrap.canonical,false);
+  assert.equal('ref' in bootstrap.canonical,false);
+  assert.equal(bootstrap.repository_policy.scope,'CODE_ONLY');
+  assert.equal(bootstrap.hosted.tower_storage,'GOOGLE_DRIVE_PRIVATE');
+});
