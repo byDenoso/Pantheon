@@ -5,7 +5,7 @@ import {readFile} from 'node:fs/promises';
 const root=new URL('../',import.meta.url);
 const text=path=>readFile(new URL(path,root),'utf8');
 
-test('active Atlas renderer is a procedural raw Three.js galaxy with Canvas fallback',async()=>{
+test('active Atlas renderer is a semantic raw Three.js NEXO field with Canvas fallback',async()=>{
   const [view,adapter,three]=await Promise.all([
     text('src/features/system/Atlas.tsx'),
     text('src/components/AtlasGalaxyRenderer.tsx'),
@@ -23,7 +23,7 @@ test('active Atlas renderer is a procedural raw Three.js galaxy with Canvas fall
   assert.doesNotMatch(three,/ForceGraph3D|react-force-graph-3d/);
 });
 
-test('procedural NEXO field uses bounded contextual particles and domain rings',async()=>{
+test('NEXO field uses bounded semantic particles and restrained domain fields',async()=>{
   const three=await text('src/components/GalaxyThree3D.tsx');
   assert.match(three,/particleCount = isMacro \? \(isMobile \? 260 : 760\) : \(isMobile \? 620 : 1800\)/);
   assert.match(three,/buildFieldGeometry/);
@@ -35,6 +35,10 @@ test('procedural NEXO field uses bounded contextual particles and domain rings',
   assert.match(three,/AdditiveBlending/);
   assert.match(three,/gl_PointCoord/);
   assert.match(three,/data-renderer="three-nexo-field"/);
+  assert.match(three,/LineDashedMaterial/);
+  assert.match(three,/domainColor/);
+  assert.match(three,/aColor/);
+  assert.match(three,/blockedRelationMaterial/);
 });
 
 test('three galaxy keeps semantic camera API compatible with tours and search',async()=>{
@@ -74,12 +78,26 @@ test('macro overview uses deterministic domain anchors and explicit renderer mod
     text('src/components/GalaxyThree3D.tsx'),
   ]);
   assert.match(layout,/layoutMacroDomains/);
-  assert.match(layout,/SCIENCE: \{ x: -96, y: -4, z: -8 \}/);
-  assert.match(layout,/ENGINEERING: \{ x: 0, y: 76, z: 8 \}/);
-  assert.match(layout,/OLYMPUS: \{ x: 96, y: -2, z: -6 \}/);
+  assert.match(layout,/SCIENCE: \\{ x: -96, y: -4, z: -3 \\}/);
+  assert.match(layout,/ENGINEERING: \\{ x: 0, y: 76, z: 3 \\}/);
+  assert.match(layout,/OLYMPUS: \\{ x: 96, y: -2, z: -3 \\}/);
   assert.match(view,/isMacroOverview/);
   assert.match(view,/layoutMacroDomains\(renderGraph\.nodes\)/);
   assert.match(view,/viewMode=\{isMacroOverview \? 'macro' : 'detail'\}/);
   assert.match(adapter,/viewMode\?: 'macro' \| 'detail'/);
   assert.match(three,/data-view-mode=\{viewMode\}/);
+});
+
+test('graph labels expose domain, state and semantic hierarchy',async()=>{
+  const [three,css]=await Promise.all([
+    text('src/components/GalaxyThree3D.tsx'),
+    text('src/components/GalaxyThree3D.css'),
+  ]);
+  assert.match(three,/data-domain=\{node\.domain\}/);
+  assert.match(three,/data-state=\{stateClass\(node\.state\)\}/);
+  assert.match(three,/node-status/);
+  assert.match(three,/node-label-copy/);
+  assert.match(css,/semantic graph appearance V2/);
+  assert.match(css,/data-domain="ENGINEERING"/);
+  assert.match(css,/data-state\*="block"/);
 });
