@@ -1,4 +1,3 @@
-import {driveRoute} from '../lib/drive-ssot.mjs';
 import {loadGithubCanonical,syncGithubCanonical} from '../lib/github-canonical-runtime.mjs';
 import {projectGithubCanonical} from '../lib/github-canonical-projection.mjs';
 import liveActivity from './live/activity.mjs';
@@ -22,8 +21,6 @@ function towerize(value){
  return out;
 }
 function sendJson(res,value,status=200,{noStore=false}={}){res.statusCode=status;res.setHeader('Content-Type','application/json; charset=utf-8');res.setHeader('Cache-Control',noStore?'private, no-store':'public, max-age=30, stale-while-revalidate=120');res.setHeader('X-Content-Type-Options','nosniff');res.setHeader('X-Atlas-Authority','TOWER_V06');res.setHeader('X-Atlas-Truth-Owner',TRUTH_OWNER);return res.end(JSON.stringify(towerize(value)))}
-async function fallback(route,query,error){const value=await driveRoute(route,query,{method:'GET'}),issue={level:'WARN',type:'TOWER_PROJECTION_UNAVAILABLE',state:'STALE',detail:String(error?.message||error).slice(0,180)};return {...value,authority:'TOWER_V06',truthOwner:TRUTH_OWNER,source:'tower',projectionAuthority:'LEGACY_GOOGLE_DRIVE_SNAPSHOT',projectionOnly:true,freshness:'STALE',degraded:[issue],issues:[...(Array.isArray(value?.issues)?value.issues:[]),issue],usedFallback:true,lastValidPreserved:true}}
-
 export default async function handler(req,res){
  const route=routeOf(req),query=queryOf(req),method=String(req.method||'GET').toUpperCase();
  if(route==='live-activity')return liveActivity(req,res);
@@ -34,5 +31,5 @@ export default async function handler(req,res){
  if(method!=='GET')return sendJson(res,{ok:false,error:'METHOD_NOT_ALLOWED',authority:'TOWER_V06'},405,{noStore:true});
  if(route==='sync')return sendJson(res,{ok:false,error:'METHOD_NOT_ALLOWED',allowed:['POST'],authority:'TOWER_V06'},405,{noStore:true});
  try{const state=await loadGithubCanonical({force:query.refresh==='1',signal:req.signal});return sendJson(res,projectGithubCanonical(state,route,query))}
- catch(error){console.warn('[atlas:tower-projection]',route,String(error?.message||error));try{return sendJson(res,await fallback(route,query,error))}catch(fallbackError){const message=String(fallbackError?.message||fallbackError);return sendJson(res,{ok:false,error:message,authority:'TOWER_V06',truthOwner:TRUTH_OWNER,lastValidPreserved:true},/UNSUPPORTED/.test(message)?404:500)}}
+ catch(error){console.warn('[atlas:tower-projection]',route,String(error?.message||error));return sendJson(res,{ok:false,error:'TOWER_PROJECTION_UNAVAILABLE',detail:String(error?.message||error).slice(0,180),authority:'TOWER_V06',truthOwner:TRUTH_OWNER,projectionOnly:true,lastValidPreserved:true},503,{noStore:true})}
 }
