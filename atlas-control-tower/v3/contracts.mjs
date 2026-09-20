@@ -44,7 +44,7 @@ export function safePublicText(value) {
 }
 
 export function normalizeEntityKind(bucket, entity) {
-  if (bucket === 'interdomain' || String(entity?.kind || '').toUpperCase() === 'INTERDOMAIN') return 'FILAMENT';
+  if (bucket === 'interdomain' || bucket === 'learning' || ['INTERDOMAIN','LEARNING'].includes(String(entity?.kind || '').toUpperCase())) return 'FILAMENT';
   if (bucket === 'work') return 'WORK';
   if (bucket === 'hypothesis') return 'HYPOTHESIS';
   if (bucket === 'test_group') return 'TEST_GROUP';
