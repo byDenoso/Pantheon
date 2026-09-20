@@ -21,6 +21,28 @@ const PUBLIC_SYSTEM_PROVIDERS=['github','nexo','drive'];
 const isCorsRoute=route=>route==='mcp'||route==='atlas-public-ssot'||route==='world'||RESEARCH_ROUTES.has(route);
 const mcpWebHandler=createNexoMcpWebHandler({readSnapshot:()=>readAtlasSsot({env:process.env,now:Date.now()})});
 const mcpNodeHandler=toNodeHandler(mcpWebHandler);
+const DEFAULT_PUBLIC_SYSTEM_URL='https://bydenoso.github.io/Pantheon/system.json';
+const DEFAULT_PUBLIC_MANIFEST_URL='https://bydenoso.github.io/Pantheon/tower-projection/manifest.json';
+async function readPublishedTowerSystem({env=process.env,signal,now=Date.now()}={}){
+  const systemUrl=String(env.NEXO_PUBLIC_SYSTEM_URL||DEFAULT_PUBLIC_SYSTEM_URL).trim();
+  const manifestUrl=String(env.NEXO_PUBLIC_MANIFEST_URL||DEFAULT_PUBLIC_MANIFEST_URL).trim();
+  const suffix=url=>`${url}${url.includes('?')?'&':'?'}v=${now}`;
+  const options={signal,cache:'no-store',headers:{Accept:'application/json'}};
+  const [systemResponse,manifestResponse]=await Promise.all([
+    fetch(suffix(systemUrl),options),
+    fetch(suffix(manifestUrl),options),
+  ]);
+  if(!systemResponse.ok||!manifestResponse.ok)throw new Error('SANCTIONED_PUBLIC_PROJECTION_UNAVAILABLE');
+  const [system,manifest]=await Promise.all([systemResponse.json(),manifestResponse.json()]);
+  if(system?.contract_version!=='1')throw new Error('SANCTIONED_SYSTEM_CONTRACT_INVALID');
+  if(manifest?.authority!=='TOWER_V06'||manifest?.projection_only!==true||manifest?.writeback!=='FORBIDDEN')
+    throw new Error('SANCTIONED_MANIFEST_INVALID');
+  if(!/^sha256:[0-9a-f]{64}$/i.test(String(manifest?.projection_fingerprint||'')))
+    throw new Error('SANCTIONED_FINGERPRINT_INVALID');
+  if(system?.bus?.fingerprint!==manifest.projection_fingerprint)
+    throw new Error('SANCTIONED_SYSTEM_FINGERPRINT_MISMATCH');
+  return system;
+}
 async function requestBody(req){
   if(req.body&&typeof req.body==='object'&&!Buffer.isBuffer(req.body))return req.body;
   if(typeof req.body==='string'){try{return JSON.parse(req.body);}catch{return {};}}
@@ -116,6 +138,10 @@ export default async function handler(req,res) {
       });
     }
     if(route==='system'){
+      if(!privateAccess){
+        try{return send(await readPublishedTowerSystem({env,signal:req.signal,now}));}
+        catch(error){console.warn('[nexo-one] sanctioned public SystemState unavailable; using bounded runtime fallback',String(error?.message||error));}
+      }
       const options={now,access:'PUBLIC',env,force};
       const results=await Promise.all(PUBLIC_SYSTEM_PROVIDERS.map(id=>readProvider(id,options)));
       const compiled=compile(results,{now,access:'PUBLIC'}),byId=new Map(results.map(result=>[result.provider.id,result]));

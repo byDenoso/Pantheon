@@ -250,7 +250,7 @@ export default function App() {
               </div>
               {isSystemView(view) && (
                 <button className="sync-button" onClick={system.reload} disabled={system.load === 'LOADING'}>
-                  <span>↻</span><span>{system.load === 'LOADING' ? 'Atualizando' : 'Atualizar'}</span>
+                  <span>↻</span><span>{system.load === 'LOADING' ? 'Sincronizando' : 'Sincronizar'}</span>
                 </button>
               )}
             </div>
