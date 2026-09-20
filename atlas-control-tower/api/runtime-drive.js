@@ -4,7 +4,7 @@ import {buildAtlasProjectionV3} from '../v3/project.mjs';
 
 const TTL=30000;
 let cache=null;
-const TRUTH_OWNER='NEXO_DRIVE_PRIVATE:TOWER';
+const TRUTH_OWNER='byDenoso/NEXO-Obsidian-Vault@main:TOWER_V06';
 const hash=value=>'sha256:'+createHash('sha256').update(JSON.stringify(value)).digest('hex');
 
 async function loadSource(gateway){
@@ -36,13 +36,13 @@ async function loadSource(gateway){
   };
 }
 function project(snapshot,route,query){
-  if(route==='health')return {ok:true,authority:'NEXO_DRIVE_PRIVATE',truthOwner:TRUTH_OWNER,storage:'GOOGLE_DRIVE',manifest:snapshot.manifest,counts:snapshot.universe?.counts||{}};
+  if(route==='health')return {ok:true,authority:'TOWER_V06',truthOwner:TRUTH_OWNER,storage:'GOOGLE_DRIVE',manifest:snapshot.manifest,counts:snapshot.universe?.counts||{}};
   if(route==='state')return snapshot;
   if(route==='graph')return snapshot.graph;
   if(route==='learning'||route==='learning-relations')return snapshot.learning;
   if(route==='ops'||route==='automation-runs')return snapshot.operations;
   if(route==='entity'){const id=String(query.id||'');return id?snapshot.entities?.[id]||null:{error:'ENTITY_ID_REQUIRED'};}
-  if(route==='audit')return {authority:'NEXO_DRIVE_PRIVATE',manifest:snapshot.manifest,provenance:snapshot.provenance};
+  if(route==='audit')return {authority:'TOWER_V06',manifest:snapshot.manifest,provenance:snapshot.provenance};
   return snapshot;
 }
 async function load({force=false,gateway}={}){
@@ -59,17 +59,18 @@ function send(res,body,status=200,{noStore=false}={}){
   res.setHeader('Content-Type','application/json; charset=utf-8');
   res.setHeader('Cache-Control',noStore?'private, no-store':'public, max-age=30, stale-while-revalidate=120');
   res.setHeader('X-Content-Type-Options','nosniff');
-  res.setHeader('X-NEXO-Authority','NEXO_DRIVE_PRIVATE');
+  res.setHeader('X-NEXO-Authority','TOWER_V06');
+  res.setHeader('X-NEXO-Storage','GOOGLE_DRIVE');
   res.end(JSON.stringify(body));
 }
 export default async function handler(req,res){
   const gateway=createTowerDriveGateway();
   const route=routeOf(req),query=queryOf(req),method=String(req.method||'GET').toUpperCase();
   if(method==='POST'&&route==='sync'){
-    try{const snapshot=await load({force:true,gateway});return send(res,{ok:true,outcome:'REFRESHED',authority:'NEXO_DRIVE_PRIVATE',storage:'GOOGLE_DRIVE',fingerprint:snapshot.manifest?.fingerprint},200,{noStore:true});}
+    try{const snapshot=await load({force:true,gateway});return send(res,{ok:true,outcome:'REFRESHED',authority:'TOWER_V06',storage:'GOOGLE_DRIVE',fingerprint:snapshot.manifest?.fingerprint},200,{noStore:true});}
     catch(error){return send(res,{ok:false,error:'DRIVE_TOWER_UNAVAILABLE',detail:String(error?.message||error).slice(0,220)},503,{noStore:true});}
   }
   if(method!=='GET')return send(res,{ok:false,error:'METHOD_NOT_ALLOWED'},405,{noStore:true});
   try{return send(res,project(await load({force:query.refresh==='1',gateway}),route,query));}
-  catch(error){return send(res,{ok:false,error:'DRIVE_TOWER_UNAVAILABLE',detail:String(error?.message||error).slice(0,220),authority:'NEXO_DRIVE_PRIVATE',storage:'GOOGLE_DRIVE'},503,{noStore:true});}
+  catch(error){return send(res,{ok:false,error:'DRIVE_TOWER_UNAVAILABLE',detail:String(error?.message||error).slice(0,220),authority:'TOWER_V06',storage:'GOOGLE_DRIVE'},503,{noStore:true});}
 }
