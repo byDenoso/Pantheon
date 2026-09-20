@@ -59,11 +59,38 @@ test('galaxy uses restrained exposure, macro framing and theme-aware rendering',
 });
 
 
-test('dark and light themes use the requested black-blue and white-orange palettes',async()=>{
+test('dark and light themes use the requested black-mint and white-orange palettes',async()=>{
   const css=await text('src/styles/nexo-prime.css');
   assert.match(css,/--nexo-bg-0:#020508/);
-  assert.match(css,/--nexo-accent:#8bd3ff/);
+  assert.match(css,/\/\* NEXO V2 palette[\s\S]*--nexo-accent:#8fd7c3/);
   assert.match(css,/:root\[data-theme=light\]\{[\s\S]*--nexo-bg-0:#fbfaf7/);
   assert.match(css,/:root\[data-theme=light\]\{[\s\S]*--nexo-accent:#f47a20/);
   assert.match(css,/\.galaxy-three-root\[data-view-mode="macro"\]/);
+});
+
+
+test('manual sync preserves the last valid snapshot and reports readback state',async()=>{
+  const [hook,remote,app]=await Promise.all([
+    text('src/data/useSystem.ts'),
+    text('src/data/adapters/remote.ts'),
+    text('src/app/App.tsx'),
+  ]);
+  assert.match(hook,/const previous = stateRef\.current/);
+  assert.match(hook,/setSyncStatus\(changed \? 'CHANGED' : 'UNCHANGED'\)/);
+  assert.match(hook,/Último snapshot|snapshot anterior/);
+  assert.match(remote,/refresh=1/);
+  assert.match(app,/Último snapshot preservado\./);
+  assert.match(app,/syncMessage/);
+});
+
+test('heavy Atlas module is lazy-loaded outside the initial cockpit bundle',async()=>{
+  const app=await text('src/app/App.tsx');
+  assert.match(app,/lazy\(\(\) => import\('\.\.\/features\/system\/Atlas\.tsx'\)/);
+  assert.doesNotMatch(app,/import \{ AtlasView, LearningView \} from '\.\.\/features\/system\/Atlas\.tsx'/);
+});
+
+test('overview exposes the human decision queue consistently as Needs Dener',async()=>{
+  const overview=await text('src/features/system/Overview.tsx');
+  assert.match(overview,/Needs Dener/);
+  assert.doesNotMatch(overview,/>Gates<\/span>/);
 });
