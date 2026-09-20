@@ -1,6 +1,4 @@
 production deploy trigger
-source-main: a18248ad4f80b4bdfd06c267c9d18aabb4d65527
-requested: 2026-09-19
-reason: canonical Needs Dener end-to-end fix
-projection-fingerprint: sha256:06e4b0da14737b4716b18f473fb1d0c494c604cd3ba500b34ef5b20f8d0096eb
-needs-dener-readback: 7
+source-main: 9ca9f3ac410ad9ecd8c45dbb06adcb0f74c202b0
+requested: 2026-09-20
+reason: deploy current canonical main
