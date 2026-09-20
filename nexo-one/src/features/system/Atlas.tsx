@@ -140,14 +140,6 @@ export function AtlasView(
     edges: state.graph.edges,
   }), [state.graph.edges, state.graph.nodes, visualDomainNodes]);
   const filtered = useMemo(() => filterGraph(graphForView, filters), [filters, graphForView]);
-  const galaxyPositions = useMemo(() => {
-    const positions = new Map<string, { x: number; y: number; z: number }>();
-    for (const entity of galaxySnapshot.entities) positions.set(entity.id, entity.layout.position);
-    for (const subdomain of galaxySnapshot.subdomains) {
-      positions.set(clusterIdFor(subdomain.domain, subdomain.kind), subdomain.layout.position);
-    }
-    return positions;
-  }, [galaxySnapshot]);
   const learningEndpointIds = useMemo(() => new Set(filtered.edges.filter(edge => edge.is_learning).flatMap(edge => [edge.from, edge.to])), [filtered.edges]);
   const learningEdges = useMemo(() => filtered.edges.filter(edge => edge.is_learning), [filtered.edges]);
   const learningInterDomain = useMemo(
