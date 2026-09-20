@@ -86,3 +86,26 @@ test('runWork refuses caller-selected run_id',async()=>{
   await assert.rejects(()=>gateway.runWork({work_id:created.work_id,correlation_id:'CORR-RUN-4',run_id:'RUN-CHOSEN'}),/RUN_ID_CALLER_FORBIDDEN/);
   assert.equal(f.dispatches.length,0);
 });
+
+
+test('ACTIVE canonical capability is runnable without legacy PASS status', async()=>{
+  const gateway={
+    async readEntity(kind,id){return kind==='work'?{id,status:'READY',owner_role:'EXECUTOR',entity_version:1,capability_id:'scientific.generic_contract_executor_v1'}:null;},
+    async readActiveWorkIndex(){return {work:[]};},
+    async readCapabilityManifest(){return {capabilities:{'scientific.generic_contract_executor_v1':{status:'ACTIVE',backend:'nexo_runtime'}}};},
+    async dispatchRuntime(input){return {status:'ACCEPTED',...input};},
+    async readControl(){return {mode:'ACTIVE'};},
+    async listJsonDirectory(){return [];},
+    async readCampaignIndex(){return {campaigns:[]};},
+    async readInterdomainIndex(){return {};},
+    async readRoleView(){return {queue:[]};},
+    async readReceipt(){return null;},
+    async readRuntimeReport(){return null;},
+    async readEvidence(){return null;},
+    async cleanupMergedBranches(){return {};}
+  };
+  const semantic=createNexoSemanticGateway({towerGateway:gateway});
+  const result=await semantic.runWork({work_id:'WORK-1',correlation_id:'CORR-1',capability_id:'scientific.generic_contract_executor_v1'});
+  assert.equal(result.status,'ACCEPTED');
+  assert.equal(result.capability_id,'scientific.generic_contract_executor_v1');
+});
