@@ -1,4 +1,5 @@
 import {createHash} from 'node:crypto';
+import {gunzipSync} from 'node:zlib';
 import {createDriveClient} from './drive-client.mjs';
 import {createTowerGithubGateway} from './tower-github-gateway.mjs';
 
@@ -13,57 +14,69 @@ export function createTowerDriveGateway({env=process.env,fetchImpl=globalThis.fe
   const drive=createDriveClient({env,fetchImpl});
   const migrationFallback=String(env.NEXO_DRIVE_MIGRATION_FALLBACK_GITHUB||'')==='1';
   const legacy=migrationFallback?createTowerGithubGateway({env,fetchImpl}):null;
-  const rel=value=>String(value).replace(/^TOWER_V\\d+\\//,'').replace(/^\\/+/, '');
-  let resolvedPrefix=null;
-  async function towerPrefix(){
-    if(resolvedPrefix)return resolvedPrefix;
-    if(drive.configured){
-      const pointer=await drive.readPath('CURRENT.json');
-      const snapshotId=String(pointer?.json?.snapshot_id||'').trim();
-      const complete=pointer?.json?.completeness==='COMPLETE_TOWER_V06';
-      if(snapshotId&&complete){
-        if(!/^[A-Za-z0-9._-]+$/.test(snapshotId))throw new Error('DRIVE_CURRENT_SNAPSHOT_ID_INVALID');
-        resolvedPrefix='SNAPSHOTS/'+snapshotId+'/TOWER';
-        return resolvedPrefix;
-      }
-    }
-    resolvedPrefix=String(env.NEXO_DRIVE_TOWER_PREFIX||'TOWER').replace(/^\\/+|\\/+$/g,'');
-    return resolvedPrefix;
+  let bundleCache=null;
+
+  async function loadBundle(){
+    if(bundleCache)return bundleCache;
+    if(!drive.configured)throw new Error('DRIVE_PRIMARY_NOT_CONFIGURED');
+    const pointerRecord=await drive.readPath('CURRENT.json');
+    const pointer=pointerRecord?.json;
+    if(!pointer||pointer.completeness!=='COMPLETE_TOWER_V06'||!pointer.snapshot_id)throw new Error('DRIVE_COMPLETE_SNAPSHOT_REQUIRED');
+    if(!/^[A-Za-z0-9._-]+$/.test(String(pointer.snapshot_id)))throw new Error('DRIVE_CURRENT_SNAPSHOT_ID_INVALID');
+    const dir=await drive.resolveDirectory('SNAPSHOTS/'+pointer.snapshot_id);
+    if(!dir)throw new Error('DRIVE_CURRENT_SNAPSHOT_MISSING');
+    const file=await drive.findChild(dir.id,'TOWER.bundle.json.gz');
+    if(!file)throw new Error('DRIVE_CURRENT_BUNDLE_MISSING');
+    const bytes=await drive.getBuffer(file.id);
+    let payload;
+    try{payload=JSON.parse(gunzipSync(bytes).toString('utf8'));}catch{throw new Error('DRIVE_CURRENT_BUNDLE_INVALID');}
+    if(payload?.contract!=='NEXO_TOWER_BUNDLE_V1')throw new Error('DRIVE_CURRENT_BUNDLE_CONTRACT_INVALID');
+    if(payload?.authority!=='TOWER_V06')throw new Error('DRIVE_CURRENT_BUNDLE_AUTHORITY_INVALID');
+    if(payload?.source_fingerprint!==pointer.source_fingerprint)throw new Error('DRIVE_CURRENT_BUNDLE_FINGERPRINT_MISMATCH');
+    if(!payload.files||typeof payload.files!=='object')throw new Error('DRIVE_CURRENT_BUNDLE_FILES_INVALID');
+    bundleCache={pointer,payload};
+    return bundleCache;
   }
-  const pathFor=async value=>(await towerPrefix())+'/'+rel(value);
 
   async function readJson(relative){
-    if(!drive.configured){
+    const path=String(relative).replace(/^TOWER_V\d+\//,'').replace(/^\/+/, '');
+    try{
+      const {payload}=await loadBundle();
+      const entry=payload.files[path];
+      if(!entry)return null;
+      if(entry.encoding!=='json')throw new Error('DRIVE_BUNDLE_ENTRY_NOT_JSON:'+path);
+      return entry.value;
+    }catch(error){
       if(legacy)return legacy.readJson(relative);
-      throw new Error('DRIVE_PRIMARY_NOT_CONFIGURED');
+      throw error;
     }
-    const record=await drive.readPath(await pathFor(relative));
-    if(record)return record.json;
-    if(legacy)return legacy.readJson(relative);
-    return null;
   }
   async function listJsonDirectory(relative){
-    if(!drive.configured){
+    const prefix=String(relative).replace(/^TOWER_V\d+\//,'').replace(/^\/+|\/+$/g,'')+'/';
+    try{
+      const {payload}=await loadBundle();
+      const values=[];
+      for(const [path,entry] of Object.entries(payload.files)){
+        if(!path.startsWith(prefix)||!path.endsWith('.json'))continue;
+        const rest=path.slice(prefix.length);
+        if(rest.includes('/'))continue;
+        if(entry?.encoding==='json')values.push(entry.value);
+      }
+      return values;
+    }catch(error){
       if(legacy)return legacy.listJsonDirectory(relative);
-      throw new Error('DRIVE_PRIMARY_NOT_CONFIGURED');
+      throw error;
     }
-    const values=await drive.listJsonDirectory(await pathFor(relative));
-    if(values.length||!legacy)return values;
-    return legacy.listJsonDirectory(relative);
   }
   async function requireJson(relative){const value=await readJson(relative);if(value===null)throw new Error('DRIVE_CANONICAL_READ_MISSING:'+relative);return value;}
   async function readEntity(kind,id){return readJson('entities/'+String(kind).toLowerCase()+'/'+id+'.json');}
   async function readReceipt(id){return readJson('mutations/receipts/'+id+'.json');}
 
-  async function submitTowerMutation(){
-    throw new Error('DRIVE_MUTATION_ENGINE_NOT_PROMOTED');
-  }
-  async function dispatchRuntime(){
-    throw new Error('DRIVE_RUNTIME_DISPATCH_NOT_PROMOTED');
-  }
+  async function submitTowerMutation(){throw new Error('DRIVE_MUTATION_ENGINE_NOT_PROMOTED');}
+  async function dispatchRuntime(){throw new Error('DRIVE_RUNTIME_DISPATCH_NOT_PROMOTED');}
 
   return {
-    configured:{towerWrite:false,towerStore:'GOOGLE_DRIVE',rootId:drive.rootId,migrationFallback,readMode:'COMPLETE_SNAPSHOT_ONLY'},
+    configured:{towerWrite:false,towerStore:'GOOGLE_DRIVE',rootId:drive.rootId,migrationFallback,readMode:'COMPLETE_BUNDLE_ONLY'},
     readJson,listJsonDirectory,
     readControl:()=>requireJson('CONTROL.json'),
     readEntity,
