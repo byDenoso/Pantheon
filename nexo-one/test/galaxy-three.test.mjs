@@ -85,3 +85,32 @@ test('camera API remains compatible with search tours and drill-down',async()=>{
   assert.match(three,/getView:/);
   assert.match(three,/OrbitControls/);
 });
+
+
+test('Atlas hierarchy is domain to campaign to tests and learning is overlay-only',async()=>{
+  const [view,layout,contracts]=await Promise.all([
+    text('src/features/system/Atlas.tsx'),
+    text('src/viewmodels/graph3d.ts'),
+    text('src/contracts/system.ts'),
+  ]);
+  assert.match(view,/const NO_CAMPAIGN = '__NO_CAMPAIGN__'/);
+  assert.match(view,/campaignNodeId/);
+  assert.match(view,/setExpandedCampaign/);
+  assert.match(view,/canonicalCampaigns/);
+  assert.match(view,/node\.type !== 'FILAMENT'/);
+  assert.doesNotMatch(view,/!learningEndpointIds\.has/);
+  assert.match(contracts,/\| 'DOMAIN' \| 'CAMPAIGN'/);
+  assert.match(layout,/semanticType === 'CAMPAIGN'/);
+  assert.match(layout,/semanticType === 'TEST'/);
+  assert.match(layout,/semanticDepth/);
+});
+
+test('macro domain labels carry member counts and campaigns carry item counts',async()=>{
+  const [view,three]=await Promise.all([
+    text('src/features/system/Atlas.tsx'),
+    text('src/components/GalaxyThree3D.tsx'),
+  ]);
+  assert.match(view,/member_count: graphForView\.nodes\.filter/);
+  assert.match(three,/node\.member_count \?\? 0/);
+  assert.match(three,/node\.type === 'CAMPAIGN'/);
+});
