@@ -116,6 +116,13 @@ test('explicit Tower human gates become Needs Dener inbox items', async () => {
   assert.equal(system.inbox[0].kind, 'FORNECER_DADO');
   assert.equal(system.inbox[0].domain, 'ENGINEERING');
   assert.match(system.inbox[0].why, /Needs Dener/);
+  const workNode = system.graph.nodes.find(node => node.id === 'work:WORK-HUMAN-1');
+  assert.ok(workNode);
+  assert.equal(workNode.operational_status, 'WAIT_DEPENDENCY');
+  assert.equal(workNode.priority, 'P0');
+  assert.equal(workNode.dependency_class, 'HUMAN_AUTH_REQUIRED');
+  assert.equal(workNode.human_gate, true);
+  assert.equal(system.actions.length, 0, 'WORK projection must not impersonate an executable ActionRecord');
 });
 
 test('GitHub Pages deploys official artifact and exposes projection readback', async () => {
