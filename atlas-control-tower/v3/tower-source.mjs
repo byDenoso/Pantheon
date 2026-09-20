@@ -13,6 +13,7 @@ const HYPOTHESIS_FIELDS = ['domain', 'status', 'priority', 'entity_version'];
 const TEST_GROUP_FIELDS = ['campaign_id', 'program_id', 'group_kind', 'status', 'test_count', 'work_ref', 'entity_version', 'migration_only', 'grouping_basis'];
 const TEST_FIELDS = ['test_group_id', 'campaign_id', 'program_id', 'status', 'evidence_class', 'entity_version'];
 const INTERDOMAIN_ARRAY_FIELDS = ['source_domains', 'target_domains', 'source_nodes', 'test_refs', 'evidence_refs', 'lesson_refs', 'novelty_refs'];
+const LEARNING_REF_TOKEN = /\b(?:T-[A-Za-z0-9_+≈.\-]+|GZSB-[A-Za-z0-9_.\-]+|WORK::[A-Za-z0-9_:._+\-]+|CAMP-[A-Za-z0-9_.\-]+)\b/g;
 
 const pick = (value, fields) => Object.fromEntries(fields.filter(key => value?.[key] != null).map(key => [key, value[key]]));
 const safeArray = value => Array.isArray(value) ? value.filter(item => typeof item === 'string' && safePublicText(item) != null) : [];
@@ -69,6 +70,50 @@ function sanitizeHypothesis(entity) {
   };
   const label = safePublicText(entity.label || entity.name || entity.title || entity.question);
   if (label) out.label = label;
+  return out;
+}
+
+function explicitRefs(value) {
+  const text = String(value ?? '');
+  return [...new Set(text.match(LEARNING_REF_TOKEN) || [])];
+}
+
+function sanitizeLearningEvidence(entity) {
+  const id = normalizedIdentity(entity, 'evidence_id', 'id');
+  if (!safeIdentityEnvelope(entity, id)) return null;
+  const context = safePublicText(entity.context || entity.strategy_used || entity.outcome);
+  const refs = explicitRefs(context);
+  const testRefs = refs.filter(ref => ref.startsWith('T-') || ref.startsWith('GZSB-'));
+  const sourceNodes = refs.filter(ref => ref.startsWith('WORK::') || ref.startsWith('CAMP-'));
+  const out = {
+    id,
+    kind: 'LEARNING',
+    stage: 'OBSERVATION',
+    status: String(entity.status || 'OBSERVED'),
+    relation_type: 'PROCEDURAL_OBSERVATION'
+  };
+  if (context) out.summary = context;
+  if (testRefs.length) out.test_refs = testRefs;
+  if (sourceNodes.length) out.source_nodes = sourceNodes;
+  return out;
+}
+
+function sanitizeLearningLesson(entity) {
+  const id = normalizedIdentity(entity, 'lesson_id', 'id');
+  if (!safeIdentityEnvelope(entity, id)) return null;
+  const out = {
+    id,
+    kind: 'LEARNING',
+    stage: 'LESSON',
+    status: String(entity.status || 'HYPOTHESIS'),
+    relation_type: 'PROCEDURAL_LEARNING'
+  };
+  const summary = safePublicText(entity.lesson || entity.heuristic);
+  const rule = safePublicText(entity.heuristic);
+  if (summary) out.summary = summary;
+  if (rule) out.rule = rule;
+  const refs = safeArray(entity.evidence_refs);
+  if (refs.length) out.learning_refs = refs;
   return out;
 }
 
@@ -188,6 +233,11 @@ export async function buildSanitizedTowerSource({ towerDir, sourceRevision, gene
   const liveTestGroups = (await readJsonDirectory(path.join(towerDir, 'entities', 'test_group'))).map(entity => sanitizeTestGroup(entity, null)).filter(Boolean);
   const testGroup = mergeById(migratedTestGroups, liveTestGroups);
   const test = (await readJsonDirectory(path.join(towerDir, 'entities', 'test'))).map(sanitizeTest).filter(Boolean);
+  const metaLearning = await readJsonOptional(path.join(towerDir, 'runtime', 'artifacts', 'meta_learning', 'METALEARNING_CURRENT.json'), {});
+  const learning = [
+    ...(Array.isArray(metaLearning?.evidence) ? metaLearning.evidence.map(sanitizeLearningEvidence) : []),
+    ...(Array.isArray(metaLearning?.lessons) ? metaLearning.lessons.map(sanitizeLearningLesson) : [])
+  ].filter(Boolean);
 
   const byId = values => values.sort((a, b) => a.id.localeCompare(b.id));
   const entities = {
@@ -195,6 +245,7 @@ export async function buildSanitizedTowerSource({ towerDir, sourceRevision, gene
     campaign: byId(campaign),
     hypothesis: byId(hypothesis),
     interdomain: byId(interdomain),
+    learning: byId(learning),
     test_group: byId(testGroup),
     test: byId(test),
     work: byId(work)
