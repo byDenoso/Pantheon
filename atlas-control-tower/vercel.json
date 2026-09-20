@@ -46,10 +46,6 @@
       "use": "@vercel/node"
     },
     {
-      "src": "api/runtime.js",
-      "use": "@vercel/node"
-    },
-    {
       "src": "api/auth/session.mjs",
       "use": "@vercel/node"
     },
