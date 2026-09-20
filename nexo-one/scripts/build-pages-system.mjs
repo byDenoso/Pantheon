@@ -171,6 +171,8 @@ function graphFromProjection(projection, observedAt, filaments = []) {
       freshness: { state: 'RECENT', observed_at: observedAt, ttl_seconds: null },
       checked_at: observedAt,
       summary: 'WORK projected without reinterpretation; canonical status=' + String(item.status || item.operational_status || 'UNSPECIFIED'),
+      campaign_id: item.campaign_id ? String(item.campaign_id) : undefined,
+      test_group_id: item.test_group_id ? String(item.test_group_id) : undefined,
     });
     addEdge('domain:' + domain, id);
   }
@@ -193,6 +195,8 @@ function graphFromProjection(projection, observedAt, filaments = []) {
       freshness: { state: 'RECENT', observed_at: observedAt, ttl_seconds: null },
       checked_at: observedAt,
       summary: 'TEST projected without reinterpretation; canonical status=' + String(item.status || 'UNSPECIFIED'),
+      campaign_id: item.campaign_id ? String(item.campaign_id) : undefined,
+      test_group_id: item.test_group_id ? String(item.test_group_id) : undefined,
     });
     addEdge('domain:' + domain, id);
   }
