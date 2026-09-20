@@ -22,7 +22,8 @@ jobs:
           cache: npm
           cache-dependency-path: nexo-one/package-lock.json
       - name: Parse production workflow
-        run: ruby -e "require 'yaml'; YAML.load_file('.github/workflows/nexo-one-pages.yml', aliases: true)"
+        run: |
+          ruby -e "require 'yaml'; YAML.load_file('.github/workflows/nexo-one-pages.yml', aliases: true)"
       - name: Install
         working-directory: nexo-one
         run: npm ci --no-audit --no-fund --ignore-scripts
@@ -31,4 +32,5 @@ jobs:
         run: npm run check
       - name: Runtime package count
         working-directory: nexo-one
-        run: node -e "const l=require('./package-lock.json'); console.log('LOCK_PACKAGES='+Object.keys(l.packages).length)"
+        run: |
+          node -e "const l=require('./package-lock.json'); console.log('LOCK_PACKAGES='+Object.keys(l.packages).length)"
