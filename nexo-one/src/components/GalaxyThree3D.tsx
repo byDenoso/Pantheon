@@ -74,6 +74,18 @@ function stateClass(value: unknown): string {
   return String(value ?? 'UNKNOWN').toLowerCase().replace(/[^a-z0-9]+/g, '-');
 }
 
+const DOMAIN_WORLD_META: Partial<Record<PlacedNode3D['domain'], { glyph: string; caption: string }>> = {
+  NEXO: { glyph: 'N', caption: 'KNOWLEDGE ATLAS' },
+  SCIENCE: { glyph: '△', caption: 'PESQUISA · DADOS · DESCOBERTAS' },
+  ENGINEERING: { glyph: '⚙', caption: 'SISTEMAS · CONSTRUÇÃO · AUTOMAÇÃO' },
+  OLYMPUS: { glyph: '◇', caption: 'ESTRATÉGIA · PESSOAS · PERFORMANCE' },
+  ARTIFACT: { glyph: '⬡', caption: 'PRODUTOS · IDEIAS · IMPLEMENTAÇÃO' },
+};
+
+function domainWorldMeta(domain: PlacedNode3D['domain']) {
+  return DOMAIN_WORLD_META[domain] ?? { glyph: '•', caption: 'DOMÍNIO NEXO' };
+}
+
 type Props = {
   nodes: PlacedNode3D[];
   edges: GraphEdge[];
@@ -560,7 +572,7 @@ export const GalaxyThree3D = forwardRef<CanvasGraph25DHandle, Props>(function Ga
       grid.position.set(0, isMacro ? -94 : -74, -24);
       const gridMaterial = grid.material as LineBasicMaterial;
       gridMaterial.transparent = true; gridMaterial.opacity = themeName === 'light' ? 0.055 : 0.075; gridMaterial.depthWrite = false;
-      grid.visible = !isMobile;
+      grid.visible = !isMacro && !isMobile;
       scene.add(grid);
 
       const nodeGeometry = buildNodeGeometry(nodes, selectedId, themeName);
@@ -754,7 +766,52 @@ export const GalaxyThree3D = forwardRef<CanvasGraph25DHandle, Props>(function Ga
     >
       <div ref={mountRef} className="galaxy-three-mount" />
       <div className="galaxy-three-vignette" aria-hidden="true" />
-      {isMacro && <div className="nexo-field-heading" aria-hidden="true"><strong>NEXO FIELD</strong><span>DOMÍNIOS · CONEXÕES · INTELIGÊNCIA EM CONTEXTO</span></div>}
+      {!isMacro && <div className="nexo-field-heading" aria-hidden="true"><strong>NEXO FIELD</strong><span>DOMÍNIOS · CONEXÕES · INTELIGÊNCIA EM CONTEXTO</span></div>}
+      {isMacro && (
+        <>
+          <div className="atlas-world-heading" aria-hidden="true">
+            <strong>NEXO ATLAS</strong>
+            <span>CONHECIMENTO SEM FRONTEIRAS · INTELIGÊNCIA EM CONTEXTO</span>
+          </div>
+          <div className="atlas-domain-worlds" role="group" aria-label="Domínios do NEXO Atlas">
+            {nodes.filter(node => node.type === 'DOMAIN').map(node => {
+              const meta = domainWorldMeta(node.domain);
+              const count = node.member_count ?? 0;
+              return (
+                <button
+                  key={node.id}
+                  type="button"
+                  className={\`atlas-domain-world domain-\${node.domain.toLowerCase()}\`}
+                  data-domain={node.domain}
+                  onClick={() => onSelect(node.id)}
+                  aria-label={node.domain === 'NEXO'
+                    ? 'Voltar ao núcleo NEXO'
+                    : \`Abrir domínio \${node.label}, \${count} entidades\`}
+                >
+                  <span className="atlas-world-orb" aria-hidden="true">
+                    <i className="atlas-world-ring ring-a" />
+                    <i className="atlas-world-ring ring-b" />
+                    <i className="atlas-world-satellite sat-a" />
+                    <i className="atlas-world-satellite sat-b" />
+                    <i className="atlas-world-satellite sat-c" />
+                    <b>{meta.glyph}</b>
+                  </span>
+                  <span className="atlas-world-copy">
+                    <strong>{node.domain === 'NEXO' ? 'NEXO CORE' : node.label}</strong>
+                    <small>{node.domain === 'NEXO' ? meta.caption : count + ' ENTIDADES'}</small>
+                    {node.domain !== 'NEXO' && <em>{meta.caption}</em>}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+          <div className="atlas-world-summary" aria-hidden="true">
+            <span><b>{nodes.filter(node => node.type === 'DOMAIN' && node.domain !== 'NEXO').length}</b> domínios</span>
+            <span><b>{nodes.filter(node => node.type === 'DOMAIN').reduce((sum, node) => sum + (node.member_count ?? 0), 0)}</b> entidades</span>
+            <span className="live"><i /> sincronizado</span>
+          </div>
+        </>
+      )}
       <div className="galaxy-three-labels" aria-hidden="true">
         {visibleLabels.map(node => (
           <span
@@ -788,7 +845,7 @@ export const GalaxyThree3D = forwardRef<CanvasGraph25DHandle, Props>(function Ga
         <i aria-hidden="true" />
         <span>{nodes.length} nós · {edges.length} relações · FIELD</span>
       </div>
-      <div className="galaxy-three-controls" role="group" aria-label="Controles do NEXO FIELD">
+      <div className={`galaxy-three-controls${isMacro ? ' macro-hidden' : ''}`} role="group" aria-label="Controles do NEXO FIELD">
         <button type="button" onClick={reset}>NEXO</button>
         <button type="button" aria-label="Girar para a esquerda" onClick={() => controlsRef.current?.rotateLeft(0.28)}>←</button>
         <button type="button" aria-label="Girar para a direita" onClick={() => controlsRef.current?.rotateLeft(-0.28)}>→</button>
