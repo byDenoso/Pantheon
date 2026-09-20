@@ -20,16 +20,17 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Delete merged stale Atlas/NEXO branches
+      - name: Archive unique work and remove stale Atlas/NEXO branches
         shell: bash
         run: |
           set -euo pipefail
 
-          git fetch --all --prune
+          git fetch --all --tags --prune
           cutoff_epoch="$(date -u -d '72 hours ago' +%s)"
 
-          deleted=0
-          kept=0
+          merged_deleted=0
+          archived_deleted=0
+          recent_kept=0
 
           mapfile -t branches < <(
             git for-each-ref --format='%(refname:strip=3)' refs/remotes/origin \
@@ -38,27 +39,37 @@ jobs:
           )
 
           for branch in "${branches[@]}"; do
-            if ! git merge-base --is-ancestor "origin/$branch" origin/main; then
-              echo "KEEP unmerged: $branch"
-              kept=$((kept+1))
-              continue
-            fi
-
             commit_epoch="$(git show -s --format=%ct "origin/$branch")"
             if [ "$commit_epoch" -gt "$cutoff_epoch" ]; then
-              echo "KEEP recent merged: $branch"
-              kept=$((kept+1))
+              echo "KEEP recent: $branch"
+              recent_kept=$((recent_kept+1))
               continue
             fi
 
-            echo "DELETE merged stale: $branch"
+            if git merge-base --is-ancestor "origin/$branch" origin/main; then
+              echo "DELETE merged stale: $branch"
+              git push origin --delete "$branch"
+              merged_deleted=$((merged_deleted+1))
+              continue
+            fi
+
+            safe="${branch//\//--}"
+            tag="archive/branch/$safe"
+            if git ls-remote --exit-code --tags origin "refs/tags/$tag" >/dev/null 2>&1; then
+              echo "ARCHIVE exists: $tag"
+            else
+              echo "ARCHIVE unique branch: $branch -> $tag"
+              git tag "$tag" "origin/$branch"
+              git push origin "refs/tags/$tag"
+            fi
             git push origin --delete "$branch"
-            deleted=$((deleted+1))
+            archived_deleted=$((archived_deleted+1))
           done
 
           {
             echo "### Atlas/NEXO branch cleanup"
-            echo "- deleted: $deleted"
-            echo "- kept: $kept"
-            echo "- policy: deploys use main; merged stale experiment branches are pruned"
+            echo "- merged stale deleted: $merged_deleted"
+            echo "- unique stale archived as tags then deleted: $archived_deleted"
+            echo "- recent branches kept: $recent_kept"
+            echo "- deploy policy: production deploys from main; deployment-only branches are forbidden"
           } >> "$GITHUB_STEP_SUMMARY"
