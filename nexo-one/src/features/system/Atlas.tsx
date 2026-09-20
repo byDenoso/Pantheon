@@ -31,6 +31,10 @@ import { OperateHUD } from './OperateHUD.tsx';
 const AUTHORITIES: AuthorityClass[] = ['TRUTH_OWNER', 'DELEGATED', 'DERIVED', 'NON_AUTHORITATIVE'];
 const FRESHNESS_VALUES = ['LIVE', 'RECENT', 'AGING', 'STALE', 'UNKNOWN'] as const;
 
+const DOMAIN_WORLD_GLYPH: Partial<Record<GraphNode['domain'], string>> = {
+  NEXO: 'N', SCIENCE: 'S', ENGINEERING: 'E', OLYMPUS: 'O', ARTIFACT: 'A',
+};
+
 type FilterKey = 'domains' | 'types' | 'states' | 'freshness' | 'authorities' | 'relations';
 
 const ATLAS_CLUSTER_TYPES: GraphNode['type'][] = [
