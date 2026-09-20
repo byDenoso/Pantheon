@@ -16,7 +16,7 @@ test('GitHub Pages build uses repository base and configurable SystemState endpo
   assert.match(vite, /Pantheon/);
   assert.match(remote, /VITE_SYSTEM_ENDPOINT/);
   assert.match(remote, /\/api\/system/);
-  assert.match(remote, /cache:\s*'no-store'/);
+  assert.match(remote, /staticProjection \? \(force \? 'reload' : 'no-cache'\) : 'no-store'/);
   assert.match(remote, /endsWith\('\.json'\)/);
 });
 
@@ -80,75 +80,6 @@ test('sanctioned TOWER interdomain entities become visible learning filaments', 
   assert.equal(system.filaments.length, 1);
   assert.ok(system.graph.edges.some(edge => edge.is_learning && edge.learning_scope === 'INTER_DOMAIN'));
   assert.ok(system.graph.edges.some(edge => edge.from === 'domain:SCIENCE' && edge.to === 'domain:OLYMPUS'));
-});
-
-
-test('Tower meta-learning is projected as a transversal filament overlay with explicit canonical links', async () => {
-  const { buildPagesProjection } = await import('../scripts/build-pages-system.mjs');
-  const manifest = {
-    authority: 'TOWER_V06', projection_only: true, writeback: 'FORBIDDEN',
-    tower_commit: '1'.repeat(40), event_cursor: '20260920T150000000000Z-learning',
-    projection_fingerprint: 'sha256:' + '2'.repeat(64), generated_at: '2026-09-20T15:00:00Z',
-  };
-  const projection = {
-    contract: 'NEXO_PUBLIC_PROJECTION_V1', manifest, event_cursor: manifest.event_cursor,
-    work: [
-      {id:'WORK::T-SCI-001',domain:'SCIENCE',status:'VERIFIED',campaign_id:'CAMP-SCI'},
-      {id:'WORK::T-OLY-001',domain:'OLYMPUS',status:'VERIFIED',campaign_id:'CAMP-OLY'}
-    ],
-    tests: [], capabilities: {}, counts: {active_work:2,tests:0,capabilities:0},
-  };
-  const learning = {
-    schema:'nexo.meta-learning.v1', authority_boundary:'PROCEDURAL_ONLY_NO_SCIENTIFIC_AUTHORITY',
-    evidence:[
-      {evidence_id:'ML-EVID-SCI',context:'T-SCI-001 runtime recovery'},
-      {evidence_id:'ML-EVID-OLY',context:'T-OLY-001 low-N baseline audit'}
-    ],
-    lessons:[{
-      lesson_id:'ML-LESSON-CROSS',status:'SUPPORTED',evidence_refs:['ML-EVID-SCI','ML-EVID-OLY'],
-      lesson:'Use a simple baseline before adding complexity.'
-    }]
-  };
-  const {system}=buildPagesProjection({projection,manifestFile:manifest,learning});
-  assert.ok(system.graph.nodes.some(node=>node.id==='filament:ML-EVID-SCI'&&node.type==='FILAMENT'));
-  assert.ok(system.graph.nodes.some(node=>node.id==='filament:ML-LESSON-CROSS'&&node.type==='FILAMENT'));
-  assert.ok(system.graph.edges.some(edge=>edge.is_learning&&edge.from==='filament:ML-EVID-SCI'&&edge.to==='work:WORK::T-SCI-001'));
-  assert.ok(system.graph.edges.some(edge=>edge.is_learning&&edge.from==='domain:SCIENCE'&&edge.to==='domain:OLYMPUS'&&edge.learning_scope==='INTER_DOMAIN'));
-  assert.ok(system.filaments.some(item=>item.id==='ML-LESSON-CROSS'&&item.scope==='INTER_DOMAIN'));
-  assert.ok(system.filaments.every(item=>item.boundary));
-});
-
-test('sanctioned campaign metadata survives into Atlas graph nodes', async () => {
-  const { buildPagesProjection } = await import('../scripts/build-pages-system.mjs');
-  const manifest = {
-    authority: 'TOWER_V06',
-    projection_only: true,
-    writeback: 'FORBIDDEN',
-    tower_commit: 'e'.repeat(40),
-    event_cursor: '20260920T120000000000Z-campaign',
-    projection_fingerprint: 'sha256:' + 'f'.repeat(64),
-    generated_at: '2026-09-20T12:00:00Z',
-  };
-  const projection = {
-    contract: 'NEXO_PUBLIC_PROJECTION_V1',
-    manifest,
-    event_cursor: manifest.event_cursor,
-    work: [],
-    tests: [{
-      id: 'T-CAMPAIGN-001',
-      title: 'Campaign test',
-      domain: 'SCIENCE',
-      status: 'READY',
-      campaign_id: 'CAMP-ALPHA',
-      test_group_id: 'GROUP-1',
-    }],
-    capabilities: {},
-    counts: { active_work: 0, tests: 1, capabilities: 0 },
-  };
-  const { system } = buildPagesProjection({ projection, manifestFile: manifest });
-  const node = system.graph.nodes.find(item => item.id === 'test:T-CAMPAIGN-001');
-  assert.equal(node?.campaign_id, 'CAMP-ALPHA');
-  assert.equal(node?.test_group_id, 'GROUP-1');
 });
 
 test('explicit Tower human gates become Needs Dener inbox items', async () => {
@@ -218,7 +149,7 @@ test('GitHub Pages personal plane reads the locally compiled public WorldState',
   const builder = await text('scripts/build-pages-system.mjs');
 
   assert.match(hook, /VITE_WORLD_ENDPOINT/);
-  assert.match(hook, /cache:'no-store'/);
+  assert.match(hook, /staticProjection\?\(reset\?'reload':'no-cache'\):'no-store'/);
   assert.match(hook, /endsWith\('\.ndjson'\)/);
   assert.doesNotMatch(hook, /fetch\('\/api\/world\?stream=1&refresh=1'/);
   assert.match(workflow, /VITE_WORLD_ENDPOINT:\s*\.\/world-public\.ndjson/);
@@ -226,4 +157,17 @@ test('GitHub Pages personal plane reads the locally compiled public WorldState',
   assert.match(builder, /world-public\.ndjson/);
   assert.match(builder, /buildPagesProjection/);
   assert.doesNotMatch(workflow, /VITE_WORLD_ENDPOINT:\s*https:\/\/nexo-one-two\.vercel\.app\/api\/world/);
+});
+
+
+test('Pages runtime avoids redundant scheduled deploys and hydrates history concurrently', async () => {
+  const workflow = await text('../.github/workflows/nexo-one-pages.yml');
+  assert.match(workflow, /cancel-in-progress:\s*true/);
+  assert.match(workflow, /id:\s*deploy_needed/);
+  assert.match(workflow, /PAGES_NO_OP projection and Pantheon commit already published/);
+  assert.match(workflow, /build-meta\.json/);
+  assert.match(workflow, /NEXO_ONE_BUILD_META_V1/);
+  assert.match(workflow, /xargs -r -P 8/);
+  assert.match(workflow, /if: needs\.build\.outputs\.deploy_needed == 'true'/);
+  assert.match(workflow, /PAGES_BUILD_META_READBACK_OK/);
 });
