@@ -286,7 +286,7 @@ async function runSync({manual=false}={}) {
  if (!result) return toast('Sincronização indisponível. Último recorte preservado.');
  markAutoSync();
  const warning = result.sources?.drive?.error === 'GOOGLE_AUTH_NOT_CONFIGURED'
-  ? ' Drive: acesso do aplicativo não configurado; Neon preservado.' : '';
+  ? ' Drive: acesso do aplicativo não configurado; aguardando bootstrap canônico.' : '';
  const prefix = manual ? 'Sincronização manual concluída. ' : 'Sincronização automática concluída. ';
  toast(prefix + (result.changes ? `${result.changes} entidades alteradas.` : 'Nenhuma alteração nos dados lidos.') + warning);
  return result;
