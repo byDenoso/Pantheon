@@ -123,9 +123,10 @@ export function domainAnchor(domain: Domain): Point3 {
 
 const MACRO_DOMAIN_ANCHOR: Partial<Record<Domain, Point3>> = {
   NEXO: { x: 0, y: 0, z: 0 },
-  SCIENCE: { x: 92, y: 18, z: -8 },
-  ENGINEERING: { x: -84, y: 52, z: 8 },
-  OLYMPUS: { x: -68, y: -58, z: -6 },
+  SCIENCE: { x: -96, y: -4, z: -8 },
+  ENGINEERING: { x: 0, y: 76, z: 8 },
+  OLYMPUS: { x: 96, y: -2, z: -6 },
+  ARTIFACT: { x: 0, y: -78, z: 5 },
 };
 
 export function macroDomainAnchor(domain: Domain): Point3 {
@@ -289,8 +290,51 @@ export function forceLayoutGraph3D(nodes: GraphNode[], _edges: GraphEdge[], _ite
   return layoutGalaxy3D(nodes);
 }
 
+function fieldDomainNodes(domain: Domain, nodes: GraphNode[], anchor: Point3): PlacedNode3D[] {
+  const byType = new Map<GraphNodeType, GraphNode[]>();
+  for (const node of nodes) { const semanticType = clusterSemanticType(node); const group = byType.get(semanticType) ?? []; group.push(node); byType.set(semanticType, group); }
+  const placed: PlacedNode3D[] = [];
+  const orderedTypes = [...byType.entries()].sort((a, b) => TYPE_PROGRESS[a[0]] - TYPE_PROGRESS[b[0]] || a[0].localeCompare(b[0]));
+  orderedTypes.forEach(([semanticType, group], bandIndex) => {
+    const sorted = [...group].sort((a, b) => a.id.localeCompare(b.id));
+    const baseRing = 18 + bandIndex * 11 + TYPE_PROGRESS[semanticType] * 12;
+    sorted.forEach((node, index) => {
+      const seed = hash32(node.id);
+      const theta = (index / Math.max(1, sorted.length)) * TAU + unit(seed) * 0.72 + bandIndex * 0.42;
+      const radial = baseRing + (unit(seed, 10) - 0.5) * 7;
+      const lift = (unit(seed, 18) - 0.5) * 11;
+      placed.push({ ...node, x: rounded(anchor.x + Math.cos(theta) * radial), y: rounded(anchor.y + Math.sin(theta) * radial * 0.68), z: rounded(anchor.z + lift), radius: NODE_RADIUS[node.type] });
+    });
+  });
+  return placed;
+}
+
+export function layoutField3D(nodes: GraphNode[]): PlacedNode3D[] {
+  const ordered = [...nodes].sort((a, b) => a.id.localeCompare(b.id));
+  const domains = [...new Set(ordered.map(node => node.domain))];
+  const singleDomain = domains.length === 1;
+  const placed: PlacedNode3D[] = [];
+  const buckets = new Map<Domain, GraphNode[]>();
+  const domainOccurrences = new Map<Domain, number>();
+  for (const node of ordered) {
+    const anchor = singleDomain ? { x: 0, y: 0, z: 0 } : macroDomainAnchor(node.domain);
+    if (node.type === 'DOMAIN') {
+      const occurrence = domainOccurrences.get(node.domain) ?? 0; domainOccurrences.set(node.domain, occurrence + 1);
+      const offset = occurrence * 2.5;
+      placed.push({ ...node, x: rounded(anchor.x + offset), y: rounded(anchor.y - offset * 0.25), z: rounded(anchor.z + offset * 0.18), radius: node.domain === 'NEXO' ? 3.2 : 2.35 });
+      continue;
+    }
+    const group = buckets.get(node.domain) ?? []; group.push(node); buckets.set(node.domain, group);
+  }
+  for (const [domain, group] of [...buckets.entries()].sort(([a], [b]) => a.localeCompare(b))) {
+    const anchor = singleDomain ? { x: 0, y: 0, z: 0 } : macroDomainAnchor(domain);
+    placed.push(...fieldDomainNodes(domain, group, anchor));
+  }
+  return placed.sort((a, b) => a.id.localeCompare(b.id));
+}
+
 export function layoutGraph3D(nodes: GraphNode[]): PlacedNode3D[] {
-  return layoutGalaxy3D(nodes);
+  return layoutField3D(nodes);
 }
 
 export function graphBounds3D(nodes: PlacedNode3D[]): { center: Point3; radius: number } {
