@@ -21,7 +21,7 @@ test('Vercel projects skip builds when their project directory is unchanged',()=
   const atlas=JSON.parse(read('../vercel.json'));
   const nexo=JSON.parse(read('../../nexo-one/vercel.json'));
   const root=JSON.parse(read('../../vercel.json'));
-  assert.equal(atlas.ignoreCommand,'git diff --quiet HEAD^ HEAD -- .');
-  assert.equal(nexo.ignoreCommand,'git diff --quiet HEAD^ HEAD -- .');
-  assert.equal(root.ignoreCommand,'git diff --quiet HEAD^ HEAD -- nexo-one vercel.json');
+  assert.equal(atlas.ignoreCommand,'git diff --quiet "${VERCEL_GIT_PREVIOUS_SHA:-HEAD^}" HEAD -- .');
+  assert.equal(nexo.ignoreCommand,'git diff --quiet "${VERCEL_GIT_PREVIOUS_SHA:-HEAD^}" HEAD -- .');
+  assert.equal(root.ignoreCommand,'git diff --quiet "${VERCEL_GIT_PREVIOUS_SHA:-HEAD^}" HEAD -- nexo-one vercel.json');
 });
