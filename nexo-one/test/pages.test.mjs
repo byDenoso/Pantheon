@@ -158,3 +158,16 @@ test('GitHub Pages personal plane reads the locally compiled public WorldState',
   assert.match(builder, /buildPagesProjection/);
   assert.doesNotMatch(workflow, /VITE_WORLD_ENDPOINT:\s*https:\/\/nexo-one-two\.vercel\.app\/api\/world/);
 });
+
+
+test('Pages runtime avoids redundant scheduled deploys and hydrates history concurrently', async () => {
+  const workflow = await text('../.github/workflows/nexo-one-pages.yml');
+  assert.match(workflow, /cancel-in-progress:\s*true/);
+  assert.match(workflow, /id:\s*deploy_needed/);
+  assert.match(workflow, /PAGES_NO_OP projection and Pantheon commit already published/);
+  assert.match(workflow, /build-meta\.json/);
+  assert.match(workflow, /NEXO_ONE_BUILD_META_V1/);
+  assert.match(workflow, /xargs -r -P 8/);
+  assert.match(workflow, /if: needs\.build\.outputs\.deploy_needed == 'true'/);
+  assert.match(workflow, /PAGES_BUILD_META_READBACK_OK/);
+});
