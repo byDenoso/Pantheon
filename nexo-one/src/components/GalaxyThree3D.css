@@ -1,241 +1,42 @@
 .galaxy-three-root{
-  position:absolute;
-  inset:0;
-  z-index:1;
-  overflow:hidden;
-  min-width:0;
-  min-height:0;
-  background:
-    radial-gradient(circle at 50% 48%,rgba(64,168,214,.13),transparent 34%),
-    radial-gradient(circle at 78% 22%,rgba(121,231,255,.08),transparent 26%),
-    linear-gradient(145deg,#01050b 0%,#020812 52%,#01040a 100%);
+  --field-accent:#7fddba;
+  position:absolute;inset:0;z-index:1;overflow:hidden;min-width:0;min-height:0;
+  background:radial-gradient(circle at 50% 47%,rgba(127,221,186,.055),transparent 28%),radial-gradient(circle at 50% 52%,rgba(111,174,255,.035),transparent 48%),linear-gradient(145deg,#07090d 0%,#090b0f 54%,#07090d 100%);
 }
-.galaxy-three-mount,
-.galaxy-three-canvas{
-  position:absolute;
-  inset:0;
-  width:100%;
-  height:100%;
-}
-.galaxy-three-canvas{
-  display:block;
-  touch-action:none;
-  overscroll-behavior:contain;
-  outline:none;
-  cursor:grab;
-}
+.galaxy-three-root[data-theme=light]{--field-accent:#f47721;background:radial-gradient(circle at 50% 48%,rgba(244,119,33,.055),transparent 30%),linear-gradient(145deg,#fcfcfb,#f7f5f2)}
+.galaxy-three-mount,.galaxy-three-canvas{position:absolute;inset:0;width:100%;height:100%}
+.galaxy-three-canvas{display:block;touch-action:none;overscroll-behavior:contain;outline:none;cursor:grab}
 .galaxy-three-canvas:active{cursor:grabbing}
-.galaxy-three-vignette{
-  position:absolute;
-  inset:0;
-  z-index:2;
-  pointer-events:none;
-  background:
-    radial-gradient(circle at 50% 48%,transparent 0 38%,rgba(0,4,10,.18) 65%,rgba(0,3,8,.78) 100%),
-    linear-gradient(180deg,rgba(121,231,255,.025),transparent 18%,transparent 82%,rgba(121,231,255,.02));
-  box-shadow:inset 0 0 0 1px rgba(255,255,255,.025),inset 0 0 140px rgba(0,0,0,.42);
-}
-.galaxy-three-labels{
-  position:absolute;
-  inset:0;
-  z-index:4;
-  pointer-events:none;
-}
-.galaxy-three-label{
-  --galaxy-label-intensity:.72;
-  position:absolute;
-  top:0;
-  left:0;
-  max-width:170px;
-  overflow:hidden;
-  padding:4px 8px;
-  border:1px solid rgba(121,231,255,calc(.18 + var(--galaxy-label-intensity)*.18));
-  border-radius:999px;
-  background:linear-gradient(180deg,rgba(6,16,28,.82),rgba(1,7,14,.76));
-  box-shadow:
-    0 8px 24px rgba(0,0,0,.34),
-    0 0 18px rgba(121,231,255,calc(var(--galaxy-label-intensity)*.08)),
-    inset 0 1px rgba(255,255,255,.06);
-  color:rgba(234,249,255,.9);
-  font:740 8px/1.1 Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
-  letter-spacing:.09em;
-  text-overflow:ellipsis;
-  text-transform:uppercase;
-  white-space:nowrap;
-  text-shadow:0 1px 8px #01050c;
-  backdrop-filter:blur(10px);
-  will-change:transform,opacity;
-}
-.galaxy-three-label.domain{
-  padding:6px 11px;
-  border-color:rgba(190,244,255,.48);
-  background:linear-gradient(180deg,rgba(11,31,46,.88),rgba(2,10,18,.84));
-  color:#f4fdff;
-  font-size:10px;
-  letter-spacing:.12em;
-  box-shadow:
-    0 10px 30px rgba(0,0,0,.42),
-    0 0 28px rgba(121,231,255,.16),
-    inset 0 1px rgba(255,255,255,.08);
-}
-.galaxy-three-label.selected{
-  border-color:#fff;
-  color:#fff;
-  box-shadow:
-    0 10px 32px rgba(0,0,0,.44),
-    0 0 0 2px rgba(255,255,255,.07),
-    0 0 40px rgba(121,231,255,.28);
-}
-.galaxy-three-status{
-  position:absolute;
-  z-index:5;
-  top:12px;
-  left:12px;
-  width:max-content;
-  max-width:calc(100% - 24px);
-  padding:7px 10px;
-  overflow:hidden;
-  border:1px solid rgba(121,231,255,.16);
-  border-radius:999px;
-  background:rgba(2,8,16,.68);
-  box-shadow:inset 0 1px rgba(255,255,255,.04),0 8px 24px rgba(0,0,0,.18);
-  color:rgba(222,240,249,.76);
-  font:720 8px/1.2 "SFMono-Regular",Consolas,monospace;
-  letter-spacing:.12em;
-  text-overflow:ellipsis;
-  text-transform:uppercase;
-  white-space:nowrap;
-  backdrop-filter:blur(14px);
-}
-.galaxy-three-status i{
-  display:inline-block;
-  width:5px;
-  height:5px;
-  margin-right:8px;
-  border-radius:50%;
-  background:#79e7ff;
-  box-shadow:0 0 12px rgba(121,231,255,.88);
-  vertical-align:1px;
-}
-.galaxy-three-controls{
-  position:absolute;
-  z-index:5;
-  left:50%;
-  bottom:14px;
-  display:grid;
-  grid-template-columns:1.35fr repeat(4,minmax(42px,.72fr));
-  gap:5px;
-  width:min(470px,calc(100% - 20px));
-  padding:5px;
-  border:1px solid rgba(121,231,255,.15);
-  border-radius:13px;
-  background:rgba(2,8,16,.68);
-  box-shadow:0 16px 36px rgba(0,0,0,.34),inset 0 1px rgba(255,255,255,.05);
-  transform:translateX(-50%);
-  backdrop-filter:blur(18px) saturate(120%);
-}
-.galaxy-three-controls button{
-  min-width:0;
-  min-height:38px;
-  padding:0 9px;
-  border:1px solid rgba(121,231,255,.14);
-  border-radius:9px;
-  background:linear-gradient(180deg,rgba(17,31,47,.82),rgba(7,16,28,.82));
-  color:rgba(232,246,252,.9);
-  font:650 12px/1 Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
-  cursor:pointer;
-  box-shadow:inset 0 1px rgba(255,255,255,.05);
-}
-.galaxy-three-controls button:first-child{
-  color:#dff9ff;
-  border-color:rgba(121,231,255,.25);
-  background:linear-gradient(180deg,rgba(22,50,66,.88),rgba(7,22,33,.9));
-}
-.galaxy-three-controls button:active,
-.galaxy-three-controls button:focus-visible{
-  border-color:rgba(121,231,255,.55);
-  background:linear-gradient(180deg,rgba(25,61,79,.94),rgba(9,27,39,.94));
-  color:#fff;
-}
-.galaxy-three-a11y-list{
-  position:absolute;
-  top:10px;
-  left:10px;
-  z-index:8;
-  width:1px;
-  height:1px;
-  overflow:hidden;
-  opacity:0;
-}
-.galaxy-three-a11y-list:focus-within{
-  width:min(340px,calc(100% - 20px));
-  height:auto;
-  max-height:55%;
-  overflow:auto;
-  padding:8px;
-  border:1px solid rgba(121,231,255,.38);
-  border-radius:10px;
-  background:rgba(4,14,25,.96);
-  opacity:1;
-}
-.galaxy-three-a11y-list button{
-  width:100%;
-  min-height:36px;
-  margin:2px 0;
-  padding:7px 9px;
-  border:0;
-  border-radius:7px;
-  background:transparent;
-  color:#e8f6ff;
-  text-align:left;
-}
-.galaxy-three-a11y-list button:focus-visible{
-  outline:2px solid #79e7ff;
-  background:rgba(31,68,82,.74);
-}
+.galaxy-three-vignette{position:absolute;inset:0;z-index:2;pointer-events:none;background:radial-gradient(circle at 50% 48%,transparent 0 42%,rgba(0,0,0,.12) 70%,rgba(0,0,0,.48) 100%);box-shadow:inset 0 0 0 1px rgba(255,255,255,.02),inset 0 0 120px rgba(0,0,0,.28)}
+.galaxy-three-root[data-theme=light] .galaxy-three-vignette{background:radial-gradient(circle at 50% 48%,transparent 0 50%,rgba(92,72,50,.04) 78%,rgba(92,72,50,.08) 100%)}
+.nexo-field-heading{position:absolute;z-index:5;top:20px;left:22px;display:flex;flex-direction:column;gap:6px;pointer-events:none}
+.nexo-field-heading strong{color:#f4f7fa;font:650 12px/1 Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;letter-spacing:.34em}
+.nexo-field-heading span{color:#7e858f;font:560 7.5px/1.2 "SFMono-Regular",Consolas,monospace;letter-spacing:.13em;text-transform:uppercase}
+.galaxy-three-root[data-theme=light] .nexo-field-heading strong{color:#17191c}
+.galaxy-three-root[data-theme=light] .nexo-field-heading span{color:#858b92}
+.galaxy-three-labels{position:absolute;inset:0;z-index:4;pointer-events:none}
+.galaxy-three-label{--galaxy-label-intensity:.72;position:absolute;top:0;left:0;max-width:170px;overflow:hidden;padding:4px 8px;border:1px solid rgba(127,221,186,calc(.16 + var(--galaxy-label-intensity)*.16));border-radius:999px;background:rgba(16,18,22,.86);box-shadow:0 8px 22px rgba(0,0,0,.30),0 0 18px rgba(127,221,186,calc(var(--galaxy-label-intensity)*.08)),inset 0 1px rgba(255,255,255,.055);color:#e9eef2;font:740 8px/1.1 Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;letter-spacing:.09em;text-overflow:ellipsis;text-transform:uppercase;white-space:nowrap;text-shadow:0 1px 8px #050608;backdrop-filter:blur(10px);will-change:transform,opacity}
+.galaxy-three-label.domain{padding:6px 11px;border-color:rgba(127,221,186,.54);background:linear-gradient(180deg,rgba(18,28,27,.92),rgba(10,14,16,.88));color:#f5f6f7;font-size:10px;letter-spacing:.12em;box-shadow:0 10px 28px rgba(0,0,0,.38),0 0 28px rgba(127,221,186,.16),inset 0 1px rgba(255,255,255,.07)}
+.galaxy-three-root[data-theme=light] .galaxy-three-label{background:rgba(255,255,255,.90);color:#30343a;text-shadow:none;border-color:rgba(244,119,33,.22)}
+.galaxy-three-root[data-theme=light] .galaxy-three-label.domain{background:rgba(255,255,255,.96);color:#17191c;border-color:rgba(244,119,33,.45)}
+.galaxy-three-label.selected{border-color:#fff;color:#fff;box-shadow:0 10px 30px rgba(0,0,0,.42),0 0 0 2px rgba(255,255,255,.06),0 0 34px rgba(127,221,186,.28)}
+.galaxy-three-status{position:absolute;z-index:5;right:18px;bottom:18px;width:max-content;max-width:calc(100% - 36px);padding:8px 11px;overflow:hidden;border:1px solid rgba(127,221,186,.15);border-radius:10px;background:rgba(16,18,22,.76);box-shadow:inset 0 1px rgba(255,255,255,.04),0 10px 26px rgba(0,0,0,.22);color:#8d979f;font:680 8px/1.2 "SFMono-Regular",Consolas,monospace;letter-spacing:.11em;text-overflow:ellipsis;text-transform:uppercase;white-space:nowrap;backdrop-filter:blur(16px)}
+.galaxy-three-status i{display:inline-block;width:5px;height:5px;margin-right:8px;border-radius:50%;background:#7fddba;box-shadow:0 0 10px rgba(127,221,186,.65);vertical-align:1px}
+.galaxy-three-controls{position:absolute;z-index:5;left:18px;bottom:18px;display:grid;grid-template-columns:1.35fr repeat(4,minmax(38px,.72fr));gap:5px;width:min(330px,calc(100% - 20px));padding:5px;border:1px solid rgba(127,221,186,.13);border-radius:11px;background:rgba(16,18,22,.74);box-shadow:0 14px 32px rgba(0,0,0,.30),inset 0 1px rgba(255,255,255,.045);backdrop-filter:blur(18px) saturate(110%)}
+.galaxy-three-controls button{min-width:0;min-height:34px;padding:0 9px;border:1px solid rgba(127,221,186,.11);border-radius:8px;background:#15181d;color:#b3b8c0;font:650 11px/1 Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;cursor:pointer;box-shadow:inset 0 1px rgba(255,255,255,.04)}
+.galaxy-three-controls button:first-child{color:#dff7ed;border-color:rgba(127,221,186,.24);background:rgba(127,221,186,.08)}
+.galaxy-three-controls button:active,.galaxy-three-controls button:focus-visible{border-color:rgba(127,221,186,.52);background:rgba(127,221,186,.12);color:#fff}
+.galaxy-three-a11y-list{position:absolute;top:10px;left:10px;z-index:8;width:1px;height:1px;overflow:hidden;opacity:0}
+.galaxy-three-a11y-list:focus-within{width:min(340px,calc(100% - 20px));height:auto;max-height:55%;overflow:auto;padding:8px;border:1px solid rgba(127,221,186,.34);border-radius:10px;background:rgba(16,18,22,.97);opacity:1}
+.galaxy-three-a11y-list button{width:100%;min-height:36px;margin:2px 0;padding:7px 9px;border:0;border-radius:7px;background:transparent;color:#eef7f3;text-align:left}
+.galaxy-three-a11y-list button:focus-visible{outline:2px solid #7fddba;background:rgba(127,221,186,.10)}
 @media(max-width:760px){
-  .galaxy-three-status{
-    top:8px;
-    left:8px;
-    max-width:calc(100% - 16px);
-    font-size:6.8px;
-    letter-spacing:.105em;
-  }
-  .galaxy-three-label{
-    max-width:104px;
-    padding:3px 6px;
-    font-size:7.5px;
-    letter-spacing:.06em;
-  }
-  .galaxy-three-label.domain{
-    max-width:118px;
-    padding:5px 8px;
-    font-size:8.5px;
-    letter-spacing:.085em;
-  }
-  .galaxy-three-controls{
-    left:8px;
-    right:8px;
-    bottom:calc(80px + env(safe-area-inset-bottom));
-    width:auto;
-    max-width:none;
-    transform:none;
-  }
-  .galaxy-three-controls button{
-    min-height:42px;
-    font-size:15px;
-  }
-  .galaxy-three-controls button:first-child{font-size:10px}
+  .nexo-field-heading{top:12px;left:12px;gap:4px}.nexo-field-heading strong{font-size:10px}.nexo-field-heading span{display:none}
+  .galaxy-three-status{display:none}
+  .galaxy-three-label{max-width:104px;padding:3px 6px;font-size:7.5px;letter-spacing:.06em}
+  .galaxy-three-label.domain{max-width:118px;padding:5px 8px;font-size:8.5px;letter-spacing:.085em}
+  .galaxy-three-controls{left:8px;right:8px;bottom:calc(80px + env(safe-area-inset-bottom));width:auto;max-width:none;grid-template-columns:1.35fr repeat(4,minmax(42px,.72fr))}
+  .galaxy-three-controls button{min-height:42px;font-size:15px}.galaxy-three-controls button:first-child{font-size:10px}
 }
-@media(max-width:420px){
-  .galaxy-three-controls{bottom:calc(76px + env(safe-area-inset-bottom))}
-  .galaxy-three-controls button{min-height:40px}
-}
-@media(prefers-reduced-motion:reduce){
-  .galaxy-three-root *{
-    scroll-behavior:auto!important;
-    transition-duration:.001ms!important;
-    animation-duration:.001ms!important;
-    animation-iteration-count:1!important;
-  }
-}
+@media(max-width:420px){.galaxy-three-controls{bottom:calc(76px + env(safe-area-inset-bottom))}.galaxy-three-controls button{min-height:40px}}
+@media(prefers-reduced-motion:reduce){.galaxy-three-root *{scroll-behavior:auto!important;transition-duration:.001ms!important;animation-duration:.001ms!important;animation-iteration-count:1!important}}
