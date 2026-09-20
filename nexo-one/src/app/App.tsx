@@ -385,6 +385,7 @@ export default function App() {
           <Modal title="ACESSO PRIVADO" onClose={() => { setLoginOpen(false); setPin(''); session.setError(''); }}>
             <div className="drawer-body">
               <h2>{session.session.authenticated ? 'Sessão privada ativa.' : 'Acesso privado.'}</h2>
+              <p className="session-runtime">Runtime: <strong>{session.runtime === 'VERCEL_NATIVE' ? 'Vercel native' : session.runtime === 'APPS_SCRIPT_BRIDGE' ? 'Apps Script bridge' : 'indisponível'}</strong></p>
               {session.session.authenticated
                 ? <div className="login-form">
                     <p>Você está autenticado neste runtime. Fechar este painel não altera a sessão.</p>

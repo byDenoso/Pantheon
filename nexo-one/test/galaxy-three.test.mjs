@@ -29,6 +29,8 @@ test('procedural NEXO field uses bounded contextual particles and domain rings',
   assert.match(three,/buildFieldGeometry/);
   assert.match(three,/buildFieldRingSegments/);
   assert.match(three,/GridHelper/);
+  assert.match(three,/grid\.visible = !isMobile/);
+  assert.match(three,/MOBILE_MACRO_CAMERA/);
   assert.match(three,/gaussian\(random\)/);
   assert.match(three,/AdditiveBlending/);
   assert.match(three,/gl_PointCoord/);

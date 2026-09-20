@@ -29,8 +29,9 @@ test('private access UI is a numeric PIN flow with ephemeral input',async()=>{
   assert.doesNotMatch(app,/Senha do NEXO ONE/);
   assert.match(app,/VITE_NEXO_AUTH_BRIDGE_URL/);
   assert.match(session,/createAppsScriptAuthBridge/);
+  assert.match(session,/VERCEL_NATIVE/);
+  assert.match(session,/fetch\('\/api\/session'/);
   assert.match(session,/PIN inválido\./);
-  assert.doesNotMatch(session,/fetch\(['"]\/api\/session/);
 });
 
 test('avatar opens the local session modal and never replaces the current cockpit',async()=>{
@@ -41,6 +42,8 @@ test('avatar opens the local session modal and never replaces the current cockpi
   assert.match(app,/Abrir conta e sessão/);
   assert.match(app,/window\.open\(target\.toString\(\), '_blank', 'noopener,noreferrer'\)/);
   assert.match(app,/Abrir cockpit privado em nova aba/);
+  assert.match(app,/Runtime:/);
+  assert.match(app,/Vercel native/);
 });
 
 test('numeric PIN mode is protected by Apps Script server-side rate limiting',async()=>{

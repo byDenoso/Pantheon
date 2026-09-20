@@ -154,25 +154,27 @@ export function AtlasView(
   const renderGraph = useMemo(() => {
     const baseNodes = filtered.nodes.filter(node => learningVisible || (node.type !== 'FILAMENT' && !learningEndpointIds.has(node.id)));
     const domainNodes = baseNodes.filter(node => node.type === 'DOMAIN');
+    const macroDomainNodes = graphForView.nodes.filter(node => node.type === 'DOMAIN');
     const nexoNode = domainNodes.find(node => node.domain === 'NEXO');
+    const macroNexoNode = macroDomainNodes.find(node => node.domain === 'NEXO');
     if (expandAll) {
       const ids = new Set(baseNodes.map(node => node.id));
       return { nodes: baseNodes, edges: filtered.edges.filter(edge => (learningVisible || !edge.is_learning) && ids.has(edge.from) && ids.has(edge.to)) };
     }
     if (!rootExpanded) return { nodes: nexoNode ? [nexoNode] : [], edges: [] };
     if (!expandedDomain) {
-      if (!nexoNode) return { nodes: domainNodes, edges: [] };
-      const childDomains = domainNodes.filter(node => node.domain !== 'NEXO');
+      if (!macroNexoNode) return { nodes: macroDomainNodes, edges: [] };
+      const childDomains = macroDomainNodes.filter(node => node.domain !== 'NEXO');
       const edges = childDomains.map(node => ({
         id: `atlas.root.edge.${node.id}`,
-        from: nexoNode.id, to: node.id, kind: 'OWNS' as const, weight: 0.38,
+        from: macroNexoNode.id, to: node.id, kind: 'OWNS' as const, weight: 0.38,
         explanation: `Domínio ${node.label} projetado a partir do núcleo NEXO.`,
       }));
-      const visibleIds = new Set([nexoNode, ...childDomains].map(node => node.id));
+      const visibleIds = new Set([macroNexoNode, ...childDomains].map(node => node.id));
       const visibleLearningEdges = learningVisible
         ? filtered.edges.filter(edge => edge.is_learning && visibleIds.has(edge.from) && visibleIds.has(edge.to))
         : [];
-      return { nodes: [nexoNode, ...childDomains], edges: [...edges, ...visibleLearningEdges] };
+      return { nodes: [macroNexoNode, ...childDomains], edges: [...edges, ...visibleLearningEdges] };
     }
     const domainNode = domainNodes.find(node => node.domain === expandedDomain);
     if (!domainNode) return { nodes: domainNodes, edges: [] };
@@ -195,12 +197,12 @@ export function AtlasView(
     const nodes = [domainNode, ...children];
     const ids = new Set(nodes.map(node => node.id));
     return { nodes, edges: filtered.edges.filter(edge => (learningVisible || !edge.is_learning) && ids.has(edge.from) && ids.has(edge.to)) };
-  }, [expandAll, expandedCluster, expandedDomain, filtered, learningEndpointIds, learningVisible, rootExpanded]);
+  }, [expandAll, expandedCluster, expandedDomain, filtered, graphForView.nodes, learningEndpointIds, learningVisible, rootExpanded]);
   const isMacroOverview = rootExpanded && !expandAll && !expandedDomain && !expandedCluster;
   const placed = useMemo(() => {
-    if (isMacroOverview) return layoutMacroDomains(renderGraph.nodes);
+    if (isMacroOverview) return layoutMacroDomains(renderGraph.nodes, isMobile);
     return layoutGraph3D(renderGraph.nodes);
-  }, [isMacroOverview, renderGraph.nodes]);
+  }, [isMacroOverview, isMobile, renderGraph.nodes]);
   const legend = useMemo(() => legendOf(renderGraph.nodes.filter(node => !clusterFromId(node.id))), [renderGraph.nodes]);
   const effectiveSelectedId = resolveSelection3D(placed, selectedId);
   const selected: GraphNode | null = filtered.nodes.find(n => n.id === effectiveSelectedId) ?? null;
@@ -229,7 +231,7 @@ export function AtlasView(
         onSelect(null);
         return;
       }
-      const node = filtered.nodes.find(candidate => candidate.id === id);
+      const node = graphForView.nodes.find(candidate => candidate.id === id);
       if (node?.type === 'DOMAIN') {
         if (node.domain === 'NEXO') {
           galaxyRef.current?.reset();
@@ -241,6 +243,9 @@ export function AtlasView(
           setExpandedCluster(null);
           onSelect(null);
           return;
+        }
+        if (filters.domains.length && !filters.domains.includes(node.domain)) {
+          setFilters({ ...filters, domains: [node.domain] });
         }
         galaxyRef.current?.focusDomain(id);
         audio.playDomainTransition();
@@ -386,6 +391,7 @@ export function AtlasView(
 
   const goHome = () => {
     galaxyRef.current?.reset();
+    if (filters.domains.length) setFilters({ ...filters, domains: [] });
     setRootExpanded(true);
     setExpandAll(false);
     setExpandedDomain(null);
@@ -406,7 +412,7 @@ export function AtlasView(
         </div>
         <div className="atlas-search">
           <span aria-hidden="true">⌕</span>
-          <input value={filters.search} placeholder="Buscar e voar até uma entidade, ou filtrar por nome/resumo"
+          <input value={filters.search} placeholder={isMobile ? "Buscar no Atlas…" : "Buscar e voar até uma entidade, ou filtrar por nome/resumo"}
             aria-label="Buscar no grafo" onChange={e => setFilters({ ...filters, search: e.target.value })}
             onKeyDown={e => { if (e.key === 'Enter') handleSearchSubmit(); }} />
         </div>
@@ -417,7 +423,7 @@ export function AtlasView(
         {active > 0 && (
           <button className="text-button" onClick={() => setFilters({ ...EMPTY_FILTERS })}>Limpar</button>
         )}
-        <button className={`filter-toggle${audio.muted ? '' : ' has-filters'}`} type="button"
+        <button className={`filter-toggle sound-toggle${audio.muted ? '' : ' has-filters'}`} type="button"
           aria-pressed={!audio.muted} onClick={audio.toggle}>
           Som <b>{audio.muted ? 'OFF' : 'ON'}</b>
         </button>

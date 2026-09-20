@@ -40,3 +40,13 @@
 }
 @media(max-width:420px){.galaxy-three-controls{bottom:calc(76px + env(safe-area-inset-bottom))}.galaxy-three-controls button{min-height:40px}}
 @media(prefers-reduced-motion:reduce){.galaxy-three-root *{scroll-behavior:auto!important;transition-duration:.001ms!important;animation-duration:.001ms!important;animation-iteration-count:1!important}}
+
+/* NEXO FIELD mobile composition pass */
+@media(max-width:760px){
+  .galaxy-three-label.domain{max-width:none;min-width:96px;overflow:visible;text-overflow:clip;white-space:nowrap}
+  .galaxy-three-root[data-view-mode=macro] .galaxy-three-label.domain{min-width:104px;padding:6px 8px;font-size:10px;letter-spacing:.065em}
+  .galaxy-three-controls{left:10px!important;right:auto!important;bottom:calc(78px + env(safe-area-inset-bottom))!important;width:auto!important;max-width:210px!important;grid-template-columns:78px 44px 44px!important;padding:4px!important;border-radius:12px!important}
+  .galaxy-three-controls button{min-width:44px!important;min-height:40px!important;padding:0 7px!important}
+  .galaxy-three-controls button:nth-child(2),.galaxy-three-controls button:nth-child(3){display:none!important}
+  .galaxy-three-controls button:first-child{min-width:78px!important}
+}

@@ -40,6 +40,7 @@ import './GalaxyThree3D.css';
 const TAU = Math.PI * 2;
 const DEFAULT_CAMERA = new Vector3(0, 22, 268);
 const MACRO_CAMERA = new Vector3(0, 20, 340);
+const MOBILE_MACRO_CAMERA = new Vector3(0, 8, 220);
 const DEFAULT_TARGET = new Vector3(0, 0, 0);
 
 function paletteForTheme(theme: 'dark' | 'light') {
@@ -358,7 +359,7 @@ export const GalaxyThree3D = forwardRef<CanvasGraph25DHandle, Props>(function Ga
     const camera = cameraRef.current;
     const controls = controlsRef.current;
     if (!camera || !controls) return;
-    const homeCamera = isMacro ? MACRO_CAMERA : DEFAULT_CAMERA;
+    const homeCamera = isMacro ? (isMobile ? MOBILE_MACRO_CAMERA : MACRO_CAMERA) : DEFAULT_CAMERA;
     tweenRef.current = {
       startAt: performance.now(),
       duration: reducedMotion ? 0 : 760,
@@ -429,7 +430,7 @@ export const GalaxyThree3D = forwardRef<CanvasGraph25DHandle, Props>(function Ga
       sceneRef.current = scene;
 
       const camera = new PerspectiveCamera(isMobile ? 50 : 44, size.width / size.height, 0.1, 1200);
-      camera.position.copy(isMacro ? MACRO_CAMERA : DEFAULT_CAMERA);
+      camera.position.copy(isMacro ? (isMobile ? MOBILE_MACRO_CAMERA : MACRO_CAMERA) : DEFAULT_CAMERA);
       cameraRef.current = camera;
 
       const controls = new OrbitControls(camera, renderer.domElement);
@@ -448,7 +449,7 @@ export const GalaxyThree3D = forwardRef<CanvasGraph25DHandle, Props>(function Ga
       controlsRef.current = controls;
 
       const palette = paletteForTheme(themeName);
-      const particleCount = isMacro ? (isMobile ? 260 : 760) : (isMobile ? 620 : 1800);
+      const particleCount = isMacro ? (isMobile ? 180 : 760) : (isMobile ? 520 : 1800);
       const galaxyGeometry = buildFieldGeometry(nodes, particleCount, isMacro);
       const galaxyMaterial = new ShaderMaterial({
         uniforms: {
@@ -476,6 +477,7 @@ export const GalaxyThree3D = forwardRef<CanvasGraph25DHandle, Props>(function Ga
       grid.position.set(0, isMacro ? -94 : -74, -24);
       const gridMaterial = grid.material as LineBasicMaterial;
       gridMaterial.transparent = true; gridMaterial.opacity = themeName === 'light' ? 0.055 : 0.075; gridMaterial.depthWrite = false;
+      grid.visible = !isMobile;
       scene.add(grid);
 
       const nodeGeometry = buildNodeGeometry(nodes, selectedId);

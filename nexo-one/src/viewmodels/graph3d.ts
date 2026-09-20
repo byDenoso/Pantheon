@@ -128,20 +128,28 @@ const MACRO_DOMAIN_ANCHOR: Partial<Record<Domain, Point3>> = {
   OLYMPUS: { x: 96, y: -2, z: -6 },
   ARTIFACT: { x: 0, y: -78, z: 5 },
 };
+const MOBILE_MACRO_DOMAIN_ANCHOR: Partial<Record<Domain, Point3>> = {
+  NEXO: { x: 0, y: -6, z: 0 },
+  SCIENCE: { x: -46, y: -10, z: -4 },
+  ENGINEERING: { x: 0, y: 46, z: 5 },
+  OLYMPUS: { x: 46, y: -10, z: -4 },
+  ARTIFACT: { x: 0, y: -52, z: 3 },
+};
 
-export function macroDomainAnchor(domain: Domain): Point3 {
-  return { ...(MACRO_DOMAIN_ANCHOR[domain] ?? domainAnchor(domain)) };
+export function macroDomainAnchor(domain: Domain, compact = false): Point3 {
+  const anchors = compact ? MOBILE_MACRO_DOMAIN_ANCHOR : MACRO_DOMAIN_ANCHOR;
+  return { ...(anchors[domain] ?? MACRO_DOMAIN_ANCHOR[domain] ?? domainAnchor(domain)) };
 }
 
-export function layoutMacroDomains(nodes: GraphNode[]): PlacedNode3D[] {
+export function layoutMacroDomains(nodes: GraphNode[], compact = false): PlacedNode3D[] {
   const occurrences = new Map<Domain, number>();
   return [...nodes]
     .sort((a, b) => a.id.localeCompare(b.id))
     .map(node => {
-      const anchor = macroDomainAnchor(node.domain);
+      const anchor = macroDomainAnchor(node.domain, compact);
       const occurrence = occurrences.get(node.domain) ?? 0;
       occurrences.set(node.domain, occurrence + 1);
-      const offset = occurrence * 3;
+      const offset = occurrence * (compact ? 1.5 : 3);
       return {
         ...node,
         x: rounded(anchor.x + offset),
