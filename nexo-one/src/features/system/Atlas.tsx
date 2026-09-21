@@ -214,6 +214,7 @@ export function AtlasView(
   const galaxyRef = useRef<CanvasGraph25DHandle | null>(null);
   const [panelOpen, setPanelOpen] = useState(false);
   const [learningVisible, setLearningVisible] = useState(true);
+  const [localFocusId, setLocalFocusId] = useState<string | null>(null);
   // Start at the domain overview. A single isolated NEXO node looked like an
   // empty graph even when the sanctioned projection contained hundreds of entities.
   const [rootExpanded, setRootExpanded] = useState(true);
@@ -395,6 +396,8 @@ export function AtlasView(
   }, [isMacroOverview, isMobile, renderGraph.nodes]);
   const legend = useMemo(() => legendOf(renderGraph.nodes.filter(node => !clusterFromId(node.id) && !campaignFromId(node.id))), [renderGraph.nodes]);
   const effectiveSelectedId = resolveSelection3D(placed, selectedId);
+  const localRelations = useMemo(() => localFocusId ? relationsOf(filtered, localFocusId) : { upstream: [], downstream: [] }, [filtered, localFocusId]);
+  const localNeighborIds = useMemo(() => new Set([...localRelations.upstream, ...localRelations.downstream].map(relation => relation.node.id)), [localRelations]);
   const selected: GraphNode | null = filtered.nodes.find(n => n.id === effectiveSelectedId) ?? null;
   const relations = useMemo(
     () => (effectiveSelectedId ? relationsOf(filtered, effectiveSelectedId) : { upstream: [], downstream: [] }),
@@ -458,9 +461,14 @@ export function AtlasView(
         setExpandedCampaign(null);
         setExpandedCluster(null);
       } else {
+        setExpandAll(true);
+        setRootExpanded(true);
+        setLocalFocusId(id);
         galaxyRef.current?.focusEntity(id);
         audio.playSelection();
       }
+    } else {
+      setLocalFocusId(null);
     }
     onSelect(id);
   };
@@ -469,6 +477,7 @@ export function AtlasView(
   // substring match. Reveals the match (full-graph view, so hierarchy never
   // hides it), flies the camera, selects it and opens the inspector.
   const flyToEntity = (id: string) => {
+    setLocalFocusId(id);
     setExpandAll(true);
     setRootExpanded(true);
     onSelect(id);
