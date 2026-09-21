@@ -12,6 +12,7 @@ export default defineConfig({
       input: {
         main: resolve(process.cwd(), 'index.html'),
         mcp: resolve(process.cwd(), 'mcp/index.html'),
+        atlas3d: resolve(process.cwd(), 'atlas3d/index.html'),
       },
     },
   },
