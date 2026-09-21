@@ -5,7 +5,7 @@ import type { GraphNode, SystemState } from '../../contracts/system.ts';
 import {
   AuthorityClass, CAPABILITY_STATUSES, DOMAINS, GRAPH_NODE_TYPES, PROJECTION_STATES, RELATION_KINDS,
 } from '../../contracts/system.ts';
-import { AtlasGalaxyRenderer } from '../../components/AtlasGalaxyRenderer.tsx';
+import { LayeredGraphRenderer } from '../../components/LayeredGraphRenderer.tsx';
 import type { CanvasGraph25DHandle } from '../../components/CanvasGraph25D.tsx';
 import { EntityInspector } from '../../components/inspector.tsx';
 import { EmptyState } from '../../components/states.tsx';
@@ -14,7 +14,7 @@ import { useIsMobile } from '../../app/useMediaQuery.ts';
 import {
   EMPTY_FILTERS, filterCount, filterGraph, legendOf, relationsOf, type GraphFilters,
 } from '../../viewmodels/graph.ts';
-import { layoutGraph3D, layoutMacroDomains, resolveSelection3D } from '../../viewmodels/graph3d.ts';
+import { layoutLayeredGraph, resolveLayerSelection } from '../../viewmodels/layeredGraph.ts';
 import { ATLAS_TOP_DOMAINS, atlasSubdomainFromId, atlasSubdomainNodeId, atlasSubdomainOf, atlasTopDomainOf, type AtlasTopDomain } from '../../viewmodels/atlasTaxonomy.ts';
 import { useGalaxySnapshot } from '../../data/useGalaxySnapshot.ts';
 import { galaxySnapshotAgeLabel } from '../../data/galaxySnapshot.ts';
@@ -270,7 +270,7 @@ export function AtlasView(
   // Start in the semantic 3-domain overview. The full graph remains one tap away.
   const [expandAll, setExpandAll] = useState(false);
   const [expandedDomain, setExpandedDomain] = useState<GraphNode['domain'] | null>(null);
-  const [introDone, setIntroDone] = useState(false);
+  const [introDone, setIntroDone] = useState(true);
   const [mode, setMode] = useState<GalaxyMode>('explore');
   const [openPanel, setOpenPanel] = useState<GalaxyPanelId | null>(null);
   const [tourOpen, setTourOpen] = useState(false);
@@ -415,12 +415,12 @@ export function AtlasView(
     return { nodes, edges: [...structural, ...overlay.edges] };
   }, [expandAll, expandedCampaign, expandedCluster, expandedDomain, filtered, learningVisible, rootExpanded]);
   const isMacroOverview = rootExpanded && !expandAll && !expandedDomain && !expandedCampaign && !expandedCluster;
-  const placed = useMemo(() => {
-    if (isMacroOverview) return layoutMacroDomains(renderGraph.nodes, isMobile);
-    return layoutGraph3D(renderGraph.nodes);
-  }, [isMacroOverview, isMobile, renderGraph.nodes]);
+  const layeredGraph = useMemo(
+    () => layoutLayeredGraph(renderGraph),
+    [renderGraph],
+  );
   const legend = useMemo(() => legendOf(renderGraph.nodes.filter(node => !clusterFromId(node.id) && !campaignFromId(node.id) && !atlasSubdomainFromId(node.id))), [renderGraph.nodes]);
-  const effectiveSelectedId = resolveSelection3D(placed, selectedId);
+  const effectiveSelectedId = resolveLayerSelection(layeredGraph.nodes, selectedId);
   const localRelations = useMemo(() => localFocusId ? relationsOf(filtered, localFocusId) : { upstream: [], downstream: [] }, [filtered, localFocusId]);
   const localNeighborIds = useMemo(() => new Set([...localRelations.upstream, ...localRelations.downstream].map(relation => relation.node.id)), [localRelations]);
   const selected: GraphNode | null = filtered.nodes.find(n => n.id === effectiveSelectedId) ?? null;
@@ -593,13 +593,13 @@ export function AtlasView(
   // Once the deep-linked entity is actually part of the rendered graph, fly
   // the camera to it exactly once.
   useEffect(() => {
-    if (deepLinkAppliedRef.current || placed.length === 0) return;
+    if (deepLinkAppliedRef.current || layeredGraph.nodes.length === 0) return;
     const initial = parseGalaxyDeepLink(window.location.search);
-    if (initial.entity && placed.some(node => node.id === initial.entity)) {
+    if (initial.entity && layeredGraph.nodes.some(node => node.id === initial.entity)) {
       galaxyRef.current?.focusEntity(initial.entity);
     }
     deepLinkAppliedRef.current = true;
-  }, [placed]);
+  }, [layeredGraph.nodes]);
 
   // Keep the URL in sync with camera/panel state (no reload, no history spam).
   useEffect(() => {
@@ -722,7 +722,7 @@ export function AtlasView(
           {galaxySnapshotAgeLabel(galaxySnapshot.generated_at)}
         </span>
         <div className="atlas-explorer-state" role="status">
-          <span><b>Visão:</b> {expandAll ? 'grafo completo' : expandedCluster ? `${expandedDomain} · ${label(expandedCluster)}` : expandedDomain ?? 'domínios'}</span>
+          <span><b>Visão:</b> Camadas · {expandAll ? 'grafo completo' : expandedCampaign ? `${expandedDomain} · ${expandedCampaign}` : expandedCluster ? `${expandedDomain} · ${label(expandedCluster)}` : expandedDomain ?? 'domínios'}</span>
           {(expandAll || expandedDomain || expandedCluster) && <button type="button" aria-label="Voltar um nível no grafo" onClick={goBack}>Voltar nível</button>}
           {!expandAll && <button type="button" aria-label="Mostrar o grafo completo" onClick={expandEverything}>Mostrar tudo</button>}
           {expandedCluster && <span className="atlas-explorer-subtree">Subtree: {label(expandedCluster)}</span>}
@@ -801,13 +801,20 @@ export function AtlasView(
       )}
 
       <div className="atlas-body">
-        <div className="atlas-stage atlas-stage-3d">
+        <div className="atlas-stage atlas-stage-layered">
           {renderGraph.nodes.length === 0
             ? <EmptyState title="Nenhuma entidade sobrevive a este filtro."
                 description="Um grafo vazio aqui é resultado do filtro, não ausência de dados no sistema."
                 hint="Remova um critério para voltar a ver o mapa." />
             : <>
-                <AtlasGalaxyRenderer ref={galaxyRef} nodes={placed} edges={renderGraph.edges} selectedId={effectiveSelectedId} onSelect={handleGraphSelect} viewMode={isMacroOverview ? 'macro' : 'detail'} />
+                <LayeredGraphRenderer
+                  ref={galaxyRef}
+                  graph={layeredGraph}
+                  selectedId={effectiveSelectedId}
+                  onSelect={handleGraphSelect}
+                  sourceRevision={galaxySnapshot.tower_revision}
+                  sourceFingerprint={galaxySnapshot.fingerprint}
+                />
                 <ul className="atlas-legend">
                   {legend.map(entry => (
                     <li key={entry.type}>
