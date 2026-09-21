@@ -274,7 +274,7 @@ function buildNodeGeometry(
     positions[p + 2] = node.z;
     sizes[index] = nodeSize(node);
     const focusFactor = selected && node.id !== selected.id
-      ? node.domain === selected.domain ? 0.56 : 0.20
+      ? node.domain === selected.domain ? 0.72 : 0.34
       : 1;
     brightness[index] = nodeIntensity(node, selectedId) * focusFactor;
     domainColor(node.domain, theme).toArray(colors, p);
