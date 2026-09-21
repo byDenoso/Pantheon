@@ -347,6 +347,9 @@ jobs:
           done
           curl -fsSL "${base}/tower-projection/projection.json" -o /tmp/projection.json
           curl -fsSL "${base}/system.json" -o /tmp/system.json
+          curl -fsSL "${base}/atlas3d/" -o /tmp/atlas3d.html
+          grep -Fq '<title>NEXO Atlas 3D</title>' /tmp/atlas3d.html
+          grep -Fq '<div id="root"></div>' /tmp/atlas3d.html
           curl -fsSL "${base}/world-public.ndjson" -o /tmp/world.ndjson
           curl -fsSL "${base}/mcp/topology.json" -o /tmp/mcp-topology.json
           curl -fsSL "${base}/galaxy/latest.json" -o /tmp/galaxy-latest.json
