@@ -120,3 +120,15 @@ test('macro domain labels carry member counts and campaigns carry item counts',a
   assert.match(three,/node\.member_count \?\? 0/);
   assert.match(three,/node\.type === 'CAMPAIGN'/);
 });
+
+
+test('Atlas behaves as an Obsidian-like local graph navigator',async()=>{
+  const view=await text('src/features/system/Atlas.tsx');
+  assert.match(view,/localFocusId/);
+  assert.match(view,/localRelations/);
+  assert.match(view,/atlas-local-neighborhood/);
+  assert.match(view,/setExpandAll\(true\)/);
+  assert.match(view,/focusEntity\(id\)/);
+  assert.match(view,/relation\.edge\.is_learning/);
+  assert.doesNotMatch(view,/isMacroOverview && <DomainWorlds/);
+});
