@@ -63,6 +63,13 @@
   ],
   "routes": [
     {
+      "src": "/",
+      "status": 307,
+      "headers": {
+        "Location": "https://nexo-one-two.vercel.app/"
+      }
+    },
+    {
       "src": "/api/projection",
       "headers": {
         "Access-Control-Allow-Origin": "https://bydenoso.github.io",
@@ -181,7 +188,10 @@
     },
     {
       "src": "/(.*)",
-      "dest": "/index.html"
+      "status": 307,
+      "headers": {
+        "Location": "https://nexo-one-two.vercel.app/$1"
+      }
     }
   ]
 }
