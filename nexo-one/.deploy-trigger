@@ -1,4 +1,4 @@
 production deploy trigger
-source-main: 9ca9f3ac410ad9ecd8c45dbb06adcb0f74c202b0
-requested: 2026-09-20
-reason: deploy current canonical main
+requested: 2026-09-21T06:31:00-03:00
+reason: refresh production runtime after NEXO_PASSWORD_HASH rotation
+scope: nexo-one
