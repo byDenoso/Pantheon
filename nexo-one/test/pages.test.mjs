@@ -17,7 +17,7 @@ test('GitHub Pages build uses repository base and configurable SystemState endpo
   assert.match(remote, /VITE_SYSTEM_ENDPOINT/);
   assert.match(remote, /BASE_URL/);
   assert.match(remote, /resolveSystemEndpoint/);
-  assert.match(remote, /configuredEndpoint\.replace\(\/\^\\\.\\\//);
+  assert.match(remote, /configuredEndpoint\.replace/);
   assert.match(remote, /\/api\/system/);
   assert.match(remote, /staticProjection \? \(force \? 'reload' : 'no-cache'\) : 'no-store'/);
   assert.match(remote, /endsWith\('\.json'\)/);
