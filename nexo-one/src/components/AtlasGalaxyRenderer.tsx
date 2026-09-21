@@ -1,22 +1,9 @@
-import { forwardRef, useEffect, useState } from 'react';
+import { forwardRef, useState } from 'react';
 import type { GraphEdge } from '../contracts/system.ts';
 import type { PlacedNode3D } from '../viewmodels/graph3d.ts';
 import { AtlasCanvas25D } from './AtlasCanvas25D.tsx';
 import { GalaxyThree3D } from './GalaxyThree3D.tsx';
 import type { CanvasGraph25DHandle } from './CanvasGraph25D.tsx';
-
-function hasWebGL2(): boolean {
-  if (typeof document === 'undefined') return false;
-  try {
-    const canvas = document.createElement('canvas');
-    return Boolean(canvas.getContext('webgl2', {
-      antialias: false,
-      powerPreference: 'high-performance',
-    }));
-  } catch {
-    return false;
-  }
-}
 
 export const AtlasGalaxyRenderer = forwardRef<CanvasGraph25DHandle, {
   nodes: PlacedNode3D[];
@@ -31,14 +18,11 @@ export const AtlasGalaxyRenderer = forwardRef<CanvasGraph25DHandle, {
   onSelect,
   viewMode = 'detail',
 }, ref) {
-  const [webglAvailable, setWebglAvailable] = useState(false);
   const [threeFailed, setThreeFailed] = useState(false);
 
-  useEffect(() => {
-    setWebglAvailable(hasWebGL2());
-  }, []);
-
-  if (!webglAvailable || threeFailed) {
+  // Try the real Three.js renderer first. Preflighting WebGL2 in a throwaway
+  // canvas produced false negatives in some iOS/in-app browser contexts.
+  if (threeFailed) {
     return (
       <AtlasCanvas25D
         nodes={nodes}
