@@ -93,6 +93,10 @@ export default function App() {
   }, []);
 
   const go = useCallback((next: ViewId) => {
+    if (next === 'ATLAS') {
+      window.location.assign(`${import.meta.env.BASE_URL}atlas3d/`);
+      return;
+    }
     setView(next);
     setNotice('');
     setMoreOpen(false);
