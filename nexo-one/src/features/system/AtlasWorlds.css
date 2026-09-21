@@ -1,11 +1,12 @@
-/* NEXO ATLAS spatial macro overview */
+/* Semantic macro overview now uses the real Three.js graph directly.
+   Keep labels and controls visible: the old HTML world overlay is retired. */
 .cockpit[data-view=ATLAS] .galaxy-three-root[data-view-mode=macro] .galaxy-three-labels,
-.cockpit[data-view=ATLAS] .galaxy-three-root[data-view-mode=macro] .galaxy-three-controls,
-.cockpit[data-view=ATLAS] .galaxy-three-root[data-view-mode=macro] .galaxy-three-status{display:none}
-
+.cockpit[data-view=ATLAS] .galaxy-three-root[data-view-mode=macro] .galaxy-three-controls{
+  display:block
+}
 .cockpit[data-view=ATLAS] .galaxy-three-root[data-view-mode=macro] .galaxy-three-mount{
-  opacity:.36;
-  filter:saturate(.82) brightness(.72)
+  opacity:1;
+  filter:none
 }
 
 .atlas-domain-worlds{position:absolute;inset:0;z-index:12;pointer-events:none}
