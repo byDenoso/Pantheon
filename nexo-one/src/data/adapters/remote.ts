@@ -9,7 +9,29 @@ import type { SystemState } from '../../contracts/system.ts';
 import { DataSourceError, assertSystemState, type SystemDataSource } from './source.ts';
 
 const configuredSystemEndpoint = import.meta.env?.VITE_SYSTEM_ENDPOINT?.trim();
-export const SYSTEM_ENDPOINT = configuredSystemEndpoint || '/api/system';
+
+export function resolveSystemEndpoint(
+  configuredEndpoint: string | undefined,
+  baseUrl = import.meta.env?.BASE_URL || '/',
+): string {
+  if (!configuredEndpoint) return '/api/system';
+
+  // Absolute URLs and root-absolute paths already have an unambiguous origin.
+  if (/^[a-z][a-z\d+.-]*:/i.test(configuredEndpoint)
+      || configuredEndpoint.startsWith('//')
+      || configuredEndpoint.startsWith('/')) {
+    return configuredEndpoint;
+  }
+
+  // Vite multi-page builds share one BASE_URL. Resolve relative static assets
+  // against that deployment root, not against the current document directory.
+  // Otherwise /Pantheon/atlas3d/ + ./system.json incorrectly becomes
+  // /Pantheon/atlas3d/system.json instead of /Pantheon/system.json.
+  const base = baseUrl.endsWith('/') ? baseUrl : `${baseUrl}/`;
+  return `${base}${configuredEndpoint.replace(/^\.\//, '')}`;
+}
+
+export const SYSTEM_ENDPOINT = resolveSystemEndpoint(configuredSystemEndpoint);
 
 export const remoteSource: SystemDataSource = {
   id: 'remote',

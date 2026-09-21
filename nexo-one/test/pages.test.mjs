@@ -15,6 +15,9 @@ test('GitHub Pages build uses repository base and configurable SystemState endpo
   assert.match(vite, /GITHUB_PAGES/);
   assert.match(vite, /Pantheon/);
   assert.match(remote, /VITE_SYSTEM_ENDPOINT/);
+  assert.match(remote, /BASE_URL/);
+  assert.match(remote, /resolveSystemEndpoint/);
+  assert.match(remote, /configuredEndpoint\.replace/);
   assert.match(remote, /\/api\/system/);
   assert.match(remote, /staticProjection \? \(force \? 'reload' : 'no-cache'\) : 'no-store'/);
   assert.match(remote, /endsWith\('\.json'\)/);
@@ -131,7 +134,10 @@ test('GitHub Pages deploys official artifact and exposes projection readback', a
   assert.match(workflow, /actions\/configure-pages@v5/);
   assert.match(workflow, /actions\/upload-pages-artifact@v4/);
   assert.match(workflow, /actions\/deploy-pages@v4/);
-  assert.match(workflow, /VITE_SYSTEM_ENDPOINT:\s*\.\/system\.json/);
+  assert.match(workflow, /id:\s*pages/);
+  assert.match(workflow, /VITE_SYSTEM_ENDPOINT:\s*\$\{\{ steps\.pages\.outputs\.base_path \}\}\/system\.json/);
+  assert.match(workflow, /test -s dist\/atlas3d\/index\.html/);
+  assert.match(workflow, /GitHub Pages bundle does not contain the repository-root SystemState endpoint/);
   assert.match(workflow, /VITE_WORLD_ENDPOINT:\s*\.\/world-public\.ndjson/);
   assert.match(workflow, /tower-projection\/manifest\.json/);
   assert.match(workflow, /PAGES_TOWER_PROJECTION_READBACK_OK/);
