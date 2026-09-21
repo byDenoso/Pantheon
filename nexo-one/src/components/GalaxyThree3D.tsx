@@ -293,11 +293,12 @@ function buildRelationSegments(
   nodes: PlacedNode3D[],
   edges: GraphEdge[],
   selectedId: string | null,
-): { structural: BufferGeometry; dependency: BufferGeometry; blocked: BufferGeometry; selected: BufferGeometry } {
+): { structural: BufferGeometry; dependency: BufferGeometry; blocked: BufferGeometry; learning: BufferGeometry; selected: BufferGeometry } {
   const byId = new Map(nodes.map(node => [node.id, node]));
   const structural: number[] = [];
   const dependency: number[] = [];
   const blocked: number[] = [];
+  const learning: number[] = [];
   const selected: number[] = [];
   const dependencyKinds = new Set(['DEPENDS_ON', 'ROUTES_TO', 'VERIFIES']);
 
@@ -319,11 +320,13 @@ function buildRelationSegments(
     const isBlocked = edge.blocked || edge.kind === 'BLOCKS' || edge.kind === 'CONTRADICTS';
     const target = isSelected
       ? selected
-      : isBlocked
-        ? blocked
-        : dependencyKinds.has(edge.kind)
-          ? dependency
-          : structural;
+      : edge.is_learning
+        ? learning
+        : isBlocked
+          ? blocked
+          : dependencyKinds.has(edge.kind)
+            ? dependency
+            : structural;
 
     for (let index = 0; index < points.length - 1; index += 1) {
       const p0 = points[index]!;
@@ -341,6 +344,7 @@ function buildRelationSegments(
     structural: geometryOf(structural),
     dependency: geometryOf(dependency),
     blocked: geometryOf(blocked),
+    learning: geometryOf(learning),
     selected: geometryOf(selected),
   };
 }
@@ -598,6 +602,15 @@ export const GalaxyThree3D = forwardRef<CanvasGraph25DHandle, Props>(function Ga
         gapSize: 1.5,
         depthWrite: false,
       });
+      const learningRelationMaterial = new LineDashedMaterial({
+        color: themeName === 'light' ? '#8b4fb8' : '#c889ff',
+        transparent: true,
+        opacity: selectedId ? 0.30 : 0.78,
+        dashSize: 3.2,
+        gapSize: 1.1,
+        blending: themeName === 'light' ? NormalBlending : AdditiveBlending,
+        depthWrite: false,
+      });
       const blockedRelationMaterial = new LineBasicMaterial({
         color: '#df747d',
         transparent: true,
@@ -614,9 +627,11 @@ export const GalaxyThree3D = forwardRef<CanvasGraph25DHandle, Props>(function Ga
       const relationLines = new LineSegments(relationSegments.structural, relationMaterial);
       const dependencyLines = new LineSegments(relationSegments.dependency, dependencyMaterial);
       dependencyLines.computeLineDistances();
+      const learningRelationLines = new LineSegments(relationSegments.learning, learningRelationMaterial);
+      learningRelationLines.computeLineDistances();
       const blockedRelationLines = new LineSegments(relationSegments.blocked, blockedRelationMaterial);
       const selectedRelationLines = new LineSegments(relationSegments.selected, selectedRelationMaterial);
-      scene.add(relationLines, dependencyLines, blockedRelationLines, selectedRelationLines);
+      scene.add(relationLines, dependencyLines, learningRelationLines, blockedRelationLines, selectedRelationLines);
 
       if (!isMobile && !isMacro && themeName === 'dark') {
         composer = new EffectComposer(renderer);
@@ -720,10 +735,12 @@ export const GalaxyThree3D = forwardRef<CanvasGraph25DHandle, Props>(function Ga
         relationSegments.structural.dispose();
         relationSegments.dependency.dispose();
         relationSegments.blocked.dispose();
+        relationSegments.learning.dispose();
         relationSegments.selected.dispose();
         relationMaterial.dispose();
         dependencyMaterial.dispose();
         blockedRelationMaterial.dispose();
+        learningRelationMaterial.dispose();
         selectedRelationMaterial.dispose();
         composer?.dispose();
         renderer?.dispose();
