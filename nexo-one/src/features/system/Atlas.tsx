@@ -218,7 +218,9 @@ export function AtlasView(
   // Start at the domain overview. A single isolated NEXO node looked like an
   // empty graph even when the sanctioned projection contained hundreds of entities.
   const [rootExpanded, setRootExpanded] = useState(true);
-  const [expandAll, setExpandAll] = useState(false);
+  // The canonical public projection already contains the real graph. Start with
+  // it visible; domain-only mode made a healthy 200+ node payload look empty.
+  const [expandAll, setExpandAll] = useState(true);
   const [expandedDomain, setExpandedDomain] = useState<GraphNode['domain'] | null>(null);
   const [introDone, setIntroDone] = useState(false);
   const [mode, setMode] = useState<GalaxyMode>('explore');
