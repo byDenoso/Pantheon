@@ -134,7 +134,8 @@ test('GitHub Pages deploys official artifact and exposes projection readback', a
   assert.match(workflow, /actions\/configure-pages@v5/);
   assert.match(workflow, /actions\/upload-pages-artifact@v4/);
   assert.match(workflow, /actions\/deploy-pages@v4/);
-  assert.match(workflow, /VITE_SYSTEM_ENDPOINT:\s*\/Pantheon\/system\.json/);
+  assert.match(workflow, /id:\s*pages/);
+  assert.match(workflow, /VITE_SYSTEM_ENDPOINT:\s*\$\{\{ steps\.pages\.outputs\.base_path \}\}\/system\.json/);
   assert.match(workflow, /test -s dist\/atlas3d\/index\.html/);
   assert.match(workflow, /GitHub Pages bundle does not contain the repository-root SystemState endpoint/);
   assert.match(workflow, /VITE_WORLD_ENDPOINT:\s*\.\/world-public\.ndjson/);
