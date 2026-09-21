@@ -50,3 +50,15 @@ export function atlasSubdomainOf(node: GraphNode): string {
 export const atlasTopNodeId = (domain: AtlasTopDomain): string => `atlas.top.${domain.toLowerCase()}`;
 export const atlasSubdomainNodeId = (domain: AtlasTopDomain, subdomain: string): string =>
   `atlas.subdomain.${domain.toLowerCase()}.${encodeURIComponent(subdomain)}`;
+
+export function atlasSubdomainFromId(id: string): { domain: AtlasTopDomain; subdomain: string } | null {
+  const match = /^atlas\.subdomain\.([^.]+)\.(.+)$/.exec(id);
+  if (!match) return null;
+  const domain = match[1]!.toUpperCase() as AtlasTopDomain;
+  if (!ATLAS_TOP_DOMAINS.includes(domain)) return null;
+  try {
+    return { domain, subdomain: decodeURIComponent(match[2]!) };
+  } catch {
+    return null;
+  }
+}
