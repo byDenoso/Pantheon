@@ -15,6 +15,7 @@ import {
   EMPTY_FILTERS, filterCount, filterGraph, legendOf, relationsOf, type GraphFilters,
 } from '../../viewmodels/graph.ts';
 import { layoutGraph3D, layoutMacroDomains, resolveSelection3D } from '../../viewmodels/graph3d.ts';
+import { ATLAS_TOP_DOMAINS, atlasSubdomainFromId, atlasSubdomainNodeId, atlasSubdomainOf, atlasTopDomainOf, type AtlasTopDomain } from '../../viewmodels/atlasTaxonomy.ts';
 import { useGalaxySnapshot } from '../../data/useGalaxySnapshot.ts';
 import { galaxySnapshotAgeLabel } from '../../data/galaxySnapshot.ts';
 import { label, toneOf } from '../../viewmodels/tokens.ts';
@@ -113,6 +114,54 @@ function campaignNode(
     checked_at: sample?.checked_at ?? now,
     summary: count + ' entidades agrupadas pela campanha ' + display + '. Agrupamento visual derivado; a Tower continua autoridade.',
     campaign_id: campaignId === NO_CAMPAIGN ? undefined : campaignId,
+    member_count: count,
+  };
+}
+
+
+function semanticTopNode(
+  domain: AtlasTopDomain,
+  count: number,
+  snapshot: ReturnType<typeof useGalaxySnapshot>['snapshot'],
+): GraphNode {
+  const labels: Record<AtlasTopDomain, string> = { NEXO: 'Nexo', SCIENCE: 'Science', OLYMPUS: 'Olympus' };
+  return {
+    id: `atlas.top.${domain.toLowerCase()}`,
+    type: 'DOMAIN',
+    label: labels[domain],
+    domain,
+    state: 'LIVE',
+    authority_class: 'DERIVED',
+    source_ref: 'atlas://projection/top-domain',
+    source_revision: snapshot.tower_revision,
+    fingerprint: `atlas-top:${domain}:${snapshot.fingerprint}`,
+    freshness: { state: 'RECENT', observed_at: snapshot.generated_at, ttl_seconds: 3 * 60 * 60 },
+    checked_at: snapshot.generated_at,
+    summary: `${count} entidades agrupadas semanticamente em ${labels[domain]}. A Tower continua autoridade.`,
+    member_count: count,
+  };
+}
+
+function semanticSubdomainNode(
+  domain: AtlasTopDomain,
+  subdomain: string,
+  count: number,
+  sample: GraphNode | null,
+): GraphNode {
+  const now = new Date().toISOString();
+  return {
+    id: atlasSubdomainNodeId(domain, subdomain),
+    type: 'CAMPAIGN',
+    label: subdomain,
+    domain,
+    state: sample?.state ?? 'LIVE',
+    authority_class: 'DERIVED',
+    source_ref: 'atlas://projection/semantic-subdomain',
+    source_revision: sample?.source_revision ?? 'projection',
+    fingerprint: `atlas-subdomain:${domain}:${subdomain}`,
+    freshness: sample?.freshness ?? { state: 'LIVE', observed_at: now, ttl_seconds: null },
+    checked_at: sample?.checked_at ?? now,
+    summary: `${count} entidades agrupadas por afinidade semântica real da projeção atual. A Tower continua autoridade.`,
     member_count: count,
   };
 }
@@ -218,9 +267,8 @@ export function AtlasView(
   // Start at the domain overview. A single isolated NEXO node looked like an
   // empty graph even when the sanctioned projection contained hundreds of entities.
   const [rootExpanded, setRootExpanded] = useState(true);
-  // The canonical public projection already contains the real graph. Start with
-  // it visible; domain-only mode made a healthy 200+ node payload look empty.
-  const [expandAll, setExpandAll] = useState(true);
+  // Start in the semantic 3-domain overview. The full graph remains one tap away.
+  const [expandAll, setExpandAll] = useState(false);
   const [expandedDomain, setExpandedDomain] = useState<GraphNode['domain'] | null>(null);
   const [introDone, setIntroDone] = useState(false);
   const [mode, setMode] = useState<GalaxyMode>('explore');
@@ -231,18 +279,21 @@ export function AtlasView(
   const deepLinkAppliedRef = useRef(false);
   const galaxyState = useGalaxySnapshot(state);
   const galaxySnapshot = galaxyState.snapshot;
-  const visualDomainNodes = useMemo(() => {
-    const existing = new Set(
-      state.graph.nodes.filter(node => node.type === 'DOMAIN').map(node => node.domain),
-    );
-    return galaxySnapshot.domains
-      .filter(domain => !existing.has(domain))
-      .map(domain => visualDomainNode(domain, galaxySnapshot));
-  }, [galaxySnapshot, state.graph.nodes]);
-  const graphForView = useMemo(() => ({
-    nodes: [...state.graph.nodes, ...visualDomainNodes],
-    edges: state.graph.edges,
-  }), [state.graph.edges, state.graph.nodes, visualDomainNodes]);
+  const graphForView = useMemo(() => {
+    const contentNodes = state.graph.nodes
+      .filter(node => node.type !== 'DOMAIN')
+      .map(node => ({ ...node, domain: atlasTopDomainOf(node) as GraphNode['domain'] }));
+    const contentIds = new Set(contentNodes.map(node => node.id));
+    const topNodes = ATLAS_TOP_DOMAINS.map(domain => semanticTopNode(
+      domain,
+      contentNodes.filter(node => node.type !== 'FILAMENT' && node.domain === domain).length,
+      galaxySnapshot,
+    ));
+    return {
+      nodes: [...topNodes, ...contentNodes],
+      edges: state.graph.edges.filter(edge => contentIds.has(edge.from) && contentIds.has(edge.to)),
+    };
+  }, [galaxySnapshot, state.graph.edges, state.graph.nodes]);
   const filtered = useMemo(() => filterGraph(graphForView, filters), [filters, graphForView]);
   const learningEdges = useMemo(() => filtered.edges.filter(edge => edge.is_learning), [filtered.edges]);
   const learningInterDomain = useMemo(
@@ -256,45 +307,32 @@ export function AtlasView(
   const [expandedCluster, setExpandedCluster] = useState<GraphNode['type'] | null>(null);
   const [expandedCampaign, setExpandedCampaign] = useState<string | null>(null);
   const renderGraph = useMemo(() => {
-    // Learning Filaments are an overlay. Structural endpoints stay visible when it is OFF.
+    // Learning is transverse. Top domains and semantic subdomains are presentation-only.
     const baseNodes = filtered.nodes.filter(node => learningVisible || node.type !== 'FILAMENT');
     const domainNodes = baseNodes.filter(node => node.type === 'DOMAIN');
-    const macroDomainNodes = graphForView.nodes
-      .filter(node => node.type === 'DOMAIN')
-      .map(node => ({
-        ...node,
-        member_count: graphForView.nodes.filter(candidate => candidate.domain === node.domain && candidate.type !== 'DOMAIN' && candidate.type !== 'FILAMENT').length,
-      }));
-    const nexoNode = domainNodes.find(node => node.domain === 'NEXO');
-    const macroNexoNode = macroDomainNodes.find(node => node.domain === 'NEXO');
+    const contentNodes = baseNodes.filter(node => node.type !== 'DOMAIN' && node.type !== 'FILAMENT');
+
     if (expandAll) {
       const ids = new Set(baseNodes.map(node => node.id));
-      return { nodes: baseNodes, edges: filtered.edges.filter(edge => (learningVisible || !edge.is_learning) && ids.has(edge.from) && ids.has(edge.to)) };
+      return {
+        nodes: baseNodes,
+        edges: filtered.edges.filter(edge => (learningVisible || !edge.is_learning) && ids.has(edge.from) && ids.has(edge.to)),
+      };
     }
-    if (!rootExpanded) return { nodes: nexoNode ? [nexoNode] : [], edges: [] };
+
+    if (!rootExpanded) return { nodes: domainNodes, edges: [] };
+
     if (!expandedDomain) {
-      if (!macroNexoNode) return { nodes: macroDomainNodes, edges: [] };
-      const childDomains = macroDomainNodes.filter(node => node.domain !== 'NEXO');
-      const edges = childDomains.map(node => ({
-        id: `atlas.root.edge.${node.id}`,
-        from: macroNexoNode.id, to: node.id, kind: 'OWNS' as const, weight: 0.38,
-        explanation: `Domínio ${node.label} projetado a partir do núcleo NEXO.`,
-      }));
-      const visibleIds = new Set([macroNexoNode, ...childDomains].map(node => node.id));
-      const visibleLearningEdges = learningVisible
-        ? filtered.edges.filter(edge => edge.is_learning && visibleIds.has(edge.from) && visibleIds.has(edge.to))
-        : [];
-      return { nodes: [macroNexoNode, ...childDomains], edges: [...edges, ...visibleLearningEdges] };
+      // Exactly three top nodes: Nexo, Science, Olympus.
+      return { nodes: domainNodes.filter(node => ATLAS_TOP_DOMAINS.includes(node.domain as AtlasTopDomain)), edges: [] };
     }
-    const domainNode = domainNodes.find(node => node.domain === expandedDomain)
-      ?? graphForView.nodes.find(node => node.type === 'DOMAIN' && node.domain === expandedDomain);
+
+    const topDomain = expandedDomain as AtlasTopDomain;
+    const domainNode = domainNodes.find(node => node.domain === topDomain);
     if (!domainNode) return { nodes: domainNodes, edges: [] };
 
-    const domainChildren = baseNodes.filter(node =>
-      node.domain === expandedDomain && node.type !== 'DOMAIN' && node.type !== 'FILAMENT');
-    const canonicalCampaigns = new Set(
-      domainChildren.map(node => node.campaign_id?.trim()).filter((value): value is string => Boolean(value)),
-    );
+    const domainChildren = contentNodes.filter(node => node.domain === topDomain);
+
     const learningOverlayForTargets = (targetIds: Set<string>, remap = new Map<string, string>()) => {
       if (!learningVisible) return { nodes: [] as GraphNode[], edges: [] as typeof filtered.edges };
       const filamentIds = new Set<string>();
@@ -326,77 +364,62 @@ export function AtlasView(
     };
 
     if (!expandedCampaign && !expandedCluster) {
-      if (canonicalCampaigns.size > 0) {
-        const groups = new Map<string, GraphNode[]>();
-        for (const node of domainChildren) {
-          const key = node.campaign_id?.trim() || NO_CAMPAIGN;
-          groups.set(key, [...(groups.get(key) ?? []), node]);
-        }
-        const campaignNodes = [...groups.entries()]
-          .sort(([a], [b]) => a.localeCompare(b))
-          .map(([campaignId, members]) => campaignNode(expandedDomain, campaignId, members.length, members[0] ?? null));
-        const edges = campaignNodes.map(node => ({
-          id: 'atlas.campaign.edge.' + expandedDomain + '.' + node.id,
-          from: domainNode.id,
-          to: node.id,
-          kind: 'OWNS' as const,
-          weight: 0.86,
-          explanation: 'Campanha ' + node.label + ' derivada do campaign_id sancionado na projeção.',
-        }));
-        const memberToCampaign = new Map<string, string>();
-        for (const [campaignId, members] of groups) {
-          const renderedCampaignId = campaignNodeId(expandedDomain, campaignId);
-          for (const member of members) memberToCampaign.set(member.id, renderedCampaignId);
-        }
-        const overlay = learningOverlayForTargets(new Set(domainChildren.map(node => node.id)), memberToCampaign);
-        return { nodes: [domainNode, ...campaignNodes, ...overlay.nodes], edges: [...edges, ...overlay.edges] };
+      const groups = new Map<string, GraphNode[]>();
+      for (const node of domainChildren) {
+        const key = atlasSubdomainOf(node);
+        groups.set(key, [...(groups.get(key) ?? []), node]);
       }
-
-      const clusterNodes = ATLAS_CLUSTER_TYPES
-        .map(type => {
-          const count = domainChildren.filter(node => node.type === type).length;
-          return count > 0 ? clusterNode(expandedDomain, type, count) : null;
-        })
-        .filter((node): node is GraphNode => Boolean(node));
-      const edges = clusterNodes.map(node => ({
-        id: 'atlas.cluster.edge.' + expandedDomain + '.' + node.id,
-        from: domainNode.id, to: node.id, kind: 'OWNS' as const, weight: 0.72,
-        explanation: 'Cluster ' + node.label + ' projetado a partir do grafo canônico.',
+      const subdomainNodes = [...groups.entries()]
+        .sort((a, b) => b[1].length - a[1].length || a[0].localeCompare(b[0]))
+        .map(([subdomain, members]) => semanticSubdomainNode(topDomain, subdomain, members.length, members[0] ?? null));
+      const edges = subdomainNodes.map(node => ({
+        id: 'atlas.subdomain.edge.' + topDomain + '.' + node.id,
+        from: domainNode.id,
+        to: node.id,
+        kind: 'OWNS' as const,
+        weight: 0.86,
+        explanation: 'Subdomínio semântico derivado das entidades reais desta projeção.',
       }));
-      return { nodes: [domainNode, ...clusterNodes], edges };
+      const memberToSubdomain = new Map<string, string>();
+      for (const [subdomain, members] of groups) {
+        const renderedId = atlasSubdomainNodeId(topDomain, subdomain);
+        for (const member of members) memberToSubdomain.set(member.id, renderedId);
+      }
+      const overlay = learningOverlayForTargets(new Set(domainChildren.map(node => node.id)), memberToSubdomain);
+      return { nodes: [domainNode, ...subdomainNodes, ...overlay.nodes], edges: [...edges, ...overlay.edges] };
     }
 
     if (expandedCampaign) {
-      const members = domainChildren.filter(node =>
-        (node.campaign_id?.trim() || NO_CAMPAIGN) === expandedCampaign);
-      const campaign = campaignNode(expandedDomain, expandedCampaign, members.length, members[0] ?? null);
+      const members = domainChildren.filter(node => atlasSubdomainOf(node) === expandedCampaign);
+      const subdomain = semanticSubdomainNode(topDomain, expandedCampaign, members.length, members[0] ?? null);
       const children = [...members].sort((a, b) =>
-        (a.type === 'TEST' ? 0 : 1) - (b.type === 'TEST' ? 0 : 1) || a.id.localeCompare(b.id));
+        (a.type === 'TEST' ? 0 : 1) - (b.type === 'TEST' ? 0 : 1) || a.label.localeCompare(b.label));
       const edges = children.map(node => ({
-        id: 'atlas.campaign.member.' + campaign.id + '.' + node.id,
-        from: campaign.id,
+        id: 'atlas.subdomain.member.' + subdomain.id + '.' + node.id,
+        from: subdomain.id,
         to: node.id,
         kind: 'OWNS' as const,
-        weight: node.type === 'TEST' ? 0.92 : 0.60,
-        explanation: node.type + ' pertence à campanha ' + campaign.label + ' na projeção sancionada.',
+        weight: node.type === 'TEST' ? 0.92 : 0.66,
+        explanation: node.type + ' pertence ao subdomínio ' + subdomain.label + ' nesta projeção.',
       }));
       const overlay = learningOverlayForTargets(new Set(children.map(node => node.id)));
-      return { nodes: [campaign, ...children, ...overlay.nodes], edges: [...edges, ...overlay.edges] };
+      return { nodes: [subdomain, ...children, ...overlay.nodes], edges: [...edges, ...overlay.edges] };
     }
 
+    // Type cluster remains only as a compatibility fallback for old deep links.
     const children = domainChildren.filter(node => node.type === expandedCluster);
     const overlay = learningOverlayForTargets(new Set(children.map(node => node.id)));
     const nodes = [domainNode, ...children, ...overlay.nodes];
     const ids = new Set(nodes.map(node => node.id));
     const structural = filtered.edges.filter(edge => !edge.is_learning && ids.has(edge.from) && ids.has(edge.to));
     return { nodes, edges: [...structural, ...overlay.edges] };
-  }, [expandAll, expandedCampaign, expandedCluster, expandedDomain, filtered, graphForView.nodes, learningVisible, rootExpanded]);
+  }, [expandAll, expandedCampaign, expandedCluster, expandedDomain, filtered, learningVisible, rootExpanded]);
   const isMacroOverview = rootExpanded && !expandAll && !expandedDomain && !expandedCampaign && !expandedCluster;
   const placed = useMemo(() => {
     if (isMacroOverview) return layoutMacroDomains(renderGraph.nodes, isMobile);
     return layoutGraph3D(renderGraph.nodes);
   }, [isMacroOverview, isMobile, renderGraph.nodes]);
-  const legend = useMemo(() => legendOf(renderGraph.nodes.filter(node => !clusterFromId(node.id) && !campaignFromId(node.id))), [renderGraph.nodes]);
+  const legend = useMemo(() => legendOf(renderGraph.nodes.filter(node => !clusterFromId(node.id) && !campaignFromId(node.id) && !atlasSubdomainFromId(node.id))), [renderGraph.nodes]);
   const effectiveSelectedId = resolveSelection3D(placed, selectedId);
   const localRelations = useMemo(() => localFocusId ? relationsOf(filtered, localFocusId) : { upstream: [], downstream: [] }, [filtered, localFocusId]);
   const localNeighborIds = useMemo(() => new Set([...localRelations.upstream, ...localRelations.downstream].map(relation => relation.node.id)), [localRelations]);
@@ -416,6 +439,17 @@ export function AtlasView(
   const active = filterCount(filters);
   const handleGraphSelect = (id: string | null) => {
     if (id) {
+      const semanticSubdomain = atlasSubdomainFromId(id);
+      if (semanticSubdomain) {
+        galaxyRef.current?.focusSubdomain(id);
+        setExpandedDomain(semanticSubdomain.domain);
+        setExpandedCampaign(semanticSubdomain.subdomain);
+        setExpandedCluster(null);
+        setRootExpanded(true);
+        setExpandAll(false);
+        onSelect(null);
+        return;
+      }
       const campaign = campaignFromId(id);
       if (campaign) {
         galaxyRef.current?.focusSubdomain(id);
@@ -440,18 +474,6 @@ export function AtlasView(
       }
       const node = graphForView.nodes.find(candidate => candidate.id === id);
       if (node?.type === 'DOMAIN') {
-        if (node.domain === 'NEXO') {
-          galaxyRef.current?.reset();
-          // NEXO is the root of the domain overview. Selecting it resets the
-          // drill-down instead of collapsing the canvas to one lonely node.
-          setRootExpanded(true);
-          setExpandAll(false);
-          setExpandedDomain(null);
-          setExpandedCampaign(null);
-          setExpandedCluster(null);
-          onSelect(null);
-          return;
-        }
         if (filters.domains.length && !filters.domains.includes(node.domain)) {
           setFilters({ ...filters, domains: [node.domain] });
         }
@@ -525,7 +547,8 @@ export function AtlasView(
     audio.playDomainTransition();
     if (action.kind === 'RESET') { goHome(); return; }
     if (action.kind === 'FOCUS_DOMAIN') {
-      const domainNode = graphForView.nodes.find(node => node.type === 'DOMAIN' && node.domain === action.domain);
+      const requestedDomain = action.domain === 'ENGINEERING' ? 'NEXO' : action.domain;
+      const domainNode = graphForView.nodes.find(node => node.type === 'DOMAIN' && node.domain === requestedDomain);
       if (domainNode) handleGraphSelect(domainNode.id);
       return;
     }
@@ -545,9 +568,14 @@ export function AtlasView(
       setExpandAll(true);
       onSelect(initial.entity);
     } else if (initial.subdomain) {
+      const semanticSubdomain = atlasSubdomainFromId(initial.subdomain);
       const campaign = campaignFromId(initial.subdomain);
       const cluster = clusterFromId(initial.subdomain);
-      if (campaign) {
+      if (semanticSubdomain) {
+        setExpandedDomain(semanticSubdomain.domain);
+        setExpandedCampaign(semanticSubdomain.subdomain);
+        setExpandedCluster(null);
+      } else if (campaign) {
         setExpandedDomain(campaign.domain);
         setExpandedCampaign(campaign.campaignId);
         setExpandedCluster(null);
@@ -576,7 +604,7 @@ export function AtlasView(
   // Keep the URL in sync with camera/panel state (no reload, no history spam).
   useEffect(() => {
     const subdomain = expandedDomain && expandedCampaign
-      ? campaignNodeId(expandedDomain, expandedCampaign)
+      ? atlasSubdomainNodeId(expandedDomain as AtlasTopDomain, expandedCampaign)
       : expandedDomain && expandedCluster
         ? clusterIdFor(expandedDomain, expandedCluster)
         : null;
@@ -727,7 +755,7 @@ export function AtlasView(
               ))}
             </div>
           </div>
-          <ChipGroup title="DOMÍNIO" values={DOMAINS} selected={filters.domains} onToggle={v => toggle('domains', v)} />
+          <ChipGroup title="DOMÍNIO" values={ATLAS_TOP_DOMAINS} selected={filters.domains} onToggle={v => toggle('domains', v)} />
           <ChipGroup title="TIPO" values={GRAPH_NODE_TYPES} selected={filters.types} onToggle={v => toggle('types', v)} />
           <ChipGroup title="ESTADO" values={[...PROJECTION_STATES, ...CAPABILITY_STATUSES]}
             selected={filters.states} onToggle={v => toggle('states', v)} />
