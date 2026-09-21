@@ -124,7 +124,7 @@ function semanticTopNode(
   count: number,
   snapshot: ReturnType<typeof useGalaxySnapshot>['snapshot'],
 ): GraphNode {
-  const labels: Record<AtlasTopDomain, string> = { NEXO: 'Nexo', SCIENCE: 'Science', OLYMPUS: 'Olympus' };
+  const labels: Record<AtlasTopDomain, string> = { NEXO: 'Nexo', SCIENCE: 'Science', ENGINEERING: 'Engineering', OLYMPUS: 'Olympus' };
   return {
     id: `atlas.top.${domain.toLowerCase()}`,
     type: 'DOMAIN',
@@ -267,7 +267,7 @@ export function AtlasView(
   // Start at the domain overview. A single isolated NEXO node looked like an
   // empty graph even when the sanctioned projection contained hundreds of entities.
   const [rootExpanded, setRootExpanded] = useState(true);
-  // Start in the semantic 3-domain overview. The full graph remains one tap away.
+  // Start in the four-domain Tower overview. The full graph remains one tap away.
   const [expandAll, setExpandAll] = useState(false);
   const [expandedDomain, setExpandedDomain] = useState<GraphNode['domain'] | null>(null);
   const [introDone, setIntroDone] = useState(false);
@@ -323,7 +323,7 @@ export function AtlasView(
     if (!rootExpanded) return { nodes: domainNodes, edges: [] };
 
     if (!expandedDomain) {
-      // Exactly three top nodes: Nexo, Science, Olympus.
+      // Exactly four Tower domains: Nexo, Science, Engineering, Olympus.
       return { nodes: domainNodes.filter(node => ATLAS_TOP_DOMAINS.includes(node.domain as AtlasTopDomain)), edges: [] };
     }
 
