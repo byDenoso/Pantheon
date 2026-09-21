@@ -148,16 +148,22 @@ export function layoutMacroDomains(nodes: GraphNode[], compact = false): PlacedN
   return [...nodes]
     .sort((a, b) => a.id.localeCompare(b.id))
     .map(node => {
-      const anchor = macroDomainAnchor(node.domain, compact);
+      let anchor = macroDomainAnchor(node.domain, compact);
+      // Hierarchical Atlas: the Nexo root owns the center; Nexo Core becomes
+      // one navigable branch beside Science and Olympus instead of overlapping it.
+      if (node.id === 'atlas.root.nexo') anchor = { x: 0, y: compact ? -8 : -10, z: 0 };
+      if (node.id === 'atlas.top.nexo') anchor = { x: 0, y: compact ? 38 : 82, z: compact ? 5 : 8 };
+      if (node.id === 'atlas.top.science') anchor = { x: compact ? -34 : -94, y: compact ? 8 : 8, z: compact ? -4 : -8 };
+      if (node.id === 'atlas.top.olympus') anchor = { x: compact ? 34 : 94, y: compact ? 8 : 8, z: compact ? 4 : 8 };
       const occurrence = occurrences.get(node.domain) ?? 0;
       occurrences.set(node.domain, occurrence + 1);
-      const offset = occurrence * (compact ? 1.5 : 3);
+      const offset = node.id.startsWith('atlas.') ? 0 : occurrence * (compact ? 1.5 : 3);
       return {
         ...node,
         x: rounded(anchor.x + offset),
         y: rounded(anchor.y - offset * 0.25),
         z: rounded(anchor.z + offset * 0.2),
-        radius: node.domain === 'NEXO' ? 3.2 : 2.2,
+        radius: node.id === 'atlas.root.nexo' ? 3.8 : node.domain === 'NEXO' ? 3.0 : 2.4,
       };
     });
 }
