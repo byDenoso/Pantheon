@@ -213,7 +213,7 @@ export function AtlasView(
   const isMobile = useIsMobile();
   const galaxyRef = useRef<CanvasGraph25DHandle | null>(null);
   const [panelOpen, setPanelOpen] = useState(false);
-  const [learningVisible, setLearningVisible] = useState(false);
+  const [learningVisible, setLearningVisible] = useState(true);
   // Start at the domain overview. A single isolated NEXO node looked like an
   // empty graph even when the sanctioned projection contained hundreds of entities.
   const [rootExpanded, setRootExpanded] = useState(true);
@@ -769,7 +769,6 @@ export function AtlasView(
                 hint="Remova um critério para voltar a ver o mapa." />
             : <>
                 <AtlasGalaxyRenderer ref={galaxyRef} nodes={placed} edges={renderGraph.edges} selectedId={effectiveSelectedId} onSelect={handleGraphSelect} viewMode={isMacroOverview ? 'macro' : 'detail'} />
-                {isMacroOverview && <DomainWorlds nodes={renderGraph.nodes} onOpen={handleGraphSelect} />}
                 <ul className="atlas-legend">
                   {legend.map(entry => (
                     <li key={entry.type}>
