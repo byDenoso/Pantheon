@@ -20,6 +20,9 @@ test('active Atlas renderer is the semantic NEXO field with Canvas fallback',asy
   assert.match(three,/buildFieldGeometry/);
   assert.match(three,/data-renderer="three-nexo-field"/);
   assert.doesNotMatch(three,/ForceGraph3D|react-force-graph-3d/);
+  assert.match(three,/OrbitControls/);
+  assert.match(view,/useState\(true\)/);
+  assert.doesNotMatch(view,/isMacroOverview && <DomainWorlds/);
 });
 
 test('NEXO field uses bounded domain-colored clusters',async()=>{
@@ -43,6 +46,9 @@ test('semantic edges separate structure dependency blockers and selection',async
   assert.match(three,/relationSegments\.structural/);
   assert.match(three,/relationSegments\.dependency/);
   assert.match(three,/relationSegments\.blocked/);
+  assert.match(three,/relationSegments\.learning/);
+  assert.match(three,/learningRelationMaterial/);
+  assert.match(three,/edge\.is_learning/);
   assert.match(three,/relationSegments\.selected/);
 });
 
