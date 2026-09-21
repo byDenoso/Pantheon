@@ -229,12 +229,19 @@ jobs:
         working-directory: nexo-one
         env:
           GITHUB_PAGES: '1'
-          VITE_SYSTEM_ENDPOINT: ./system.json
+          VITE_SYSTEM_ENDPOINT: /Pantheon/system.json
           VITE_WORLD_ENDPOINT: ./world-public.ndjson
           VITE_GALAXY_ENDPOINT: ./galaxy/latest.json
           VITE_NEXO_AUTH_BRIDGE_URL: ${{ vars.VITE_NEXO_AUTH_BRIDGE_URL }}
           VITE_PRIVATE_COCKPIT_URL: https://nexo-one-two.vercel.app
-        run: npm run build
+        run: |
+          set -euo pipefail
+          npm run build
+          test -s dist/atlas3d/index.html
+          grep -R -Fq '/Pantheon/system.json' dist/assets || {
+            echo "::error::GitHub Pages bundle does not contain the repository-root SystemState endpoint"
+            exit 1
+          }
 
       - name: Hydrate previous valid galaxy history
         if: steps.deploy_needed.outputs.deploy_needed == 'true'
