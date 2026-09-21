@@ -90,7 +90,26 @@ export default async function handler(req,res){
         counts:{active_work:Array.isArray(work?.work)?work.work.length:Number(work?.count||0)}
       },200,{noStore:true});
     }catch(error){
-      return send(res,{contract:'DRIVE_TOWER_HEALTH_V1',ok:false,error:'DRIVE_TOWER_UNAVAILABLE',detail:String(error?.message||error).slice(0,220),authority:'TOWER_V06',storage:'GOOGLE_DRIVE_PRIVATE'},503,{noStore:true});
+      const detail=String(error?.message||error).slice(0,220);
+      if(detail.includes('DRIVE_PRIMARY_NOT_CONFIGURED')){
+        return send(res,{
+          contract:'DRIVE_TOWER_HEALTH_V1',
+          ok:false,
+          status:'NONCANONICAL_DEPRECATED',
+          error:'LEGACY_RUNTIME_RETIRED',
+          detail,
+          authority:'TOWER_V06@GOOGLE_DRIVE_PRIVATE',
+          storage:'GOOGLE_DRIVE_PRIVATE',
+          canonical_current:{
+            root_id:'14eRGK6QZnowu32XNOvpiE8AA_ffGVy-E',
+            pointer:'CURRENT.json',
+            file_id:'19URh1MGB3Gp1zIk4Jao1fKDcFCaBW9Is'
+          },
+          git_state_fallback:false,
+          message:'This Vercel runtime has no Drive credentials and is not a canonical health authority after cutover.'
+        },410,{noStore:true});
+      }
+      return send(res,{contract:'DRIVE_TOWER_HEALTH_V1',ok:false,error:'DRIVE_TOWER_UNAVAILABLE',detail,authority:'TOWER_V06@GOOGLE_DRIVE_PRIVATE',storage:'GOOGLE_DRIVE_PRIVATE'},503,{noStore:true});
     }
   }
   if(method==='POST'&&route==='sync'){
