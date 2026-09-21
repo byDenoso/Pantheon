@@ -173,18 +173,7 @@ export default async function handler(req,res) {
         console.warn('[nexo-one] sanctioned public SystemState unavailable; failing closed',String(error?.message||error));
         return send({error:'SANCTIONED_PUBLIC_PROJECTION_UNAVAILABLE',authority:'TOWER_V06',projection_only:true,writeback:'FORBIDDEN'},503);
       }
-      /* c8 ignore start -- legacy compiler retained below only until follow-up cleanup
-      const options={now,access:'PUBLIC',env,force};
-      const results=await Promise.all(PUBLIC_SYSTEM_PROVIDERS.map(id=>readProvider(id,options)));
-      const compiled=compile(results,{now,access:'PUBLIC'}),byId=new Map(results.map(result=>[result.provider.id,result]));
-      const truthGraphInput=byId.get('nexo')?.truthGraphInput;
-      const systemInput=privateAccess
-        ? await readSystemInput({env,signal:req.signal})
-        : await readPublicSystemInput();
-      if(!systemInput.capabilities?.length&&truthGraphInput?.capabilityRows)systemInput.capabilities=truthGraphInput.capabilityRows;
-      const bus=await buildProjectionBus({env,now,access:'PUBLIC',force,reader:async id=>byId.get(id)||readProvider(id,options)});
-      return send(normalizePublicSystemState(buildSystemState({world:compiled,bus,systemInput,now:new Date(now).toISOString()}),compiled));
-      c8 ignore stop */
+
     }
     const q=(url.searchParams.get('q')||'').trim().slice(0,200);
     if(route==='recall'&&!q)return send({error:'QUERY_REQUIRED'},400);
