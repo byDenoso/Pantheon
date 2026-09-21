@@ -17,4 +17,55 @@ const semantic={
 };
 const handler=createScientificMcpHttpHandler({gateway,service,semantic});
 
-export default handler;
+const LEGACY_GITHUB_MCP_RETIRED=
+  String(gateway.configured?.towerStore||'GITHUB').toUpperCase()==='GITHUB' &&
+  String(process.env.NEXO_ALLOW_LEGACY_GITHUB_MCP||'')!=='1';
+
+function sendJson(res,status,payload){
+  res.statusCode=status;
+  res.setHeader?.('Content-Type','application/json; charset=utf-8');
+  res.setHeader?.('Cache-Control','no-store');
+  if(typeof res.status==='function'&&typeof res.json==='function')return res.status(status).json(payload);
+  if(typeof res.end==='function')return res.end(JSON.stringify(payload));
+  return payload;
+}
+
+async function retiredHandler(req,res){
+  const method=String(req?.method||'GET').toUpperCase();
+  if(method==='OPTIONS'){
+    res.statusCode=204;
+    res.setHeader?.('Allow','GET, OPTIONS');
+    return res.end?.('');
+  }
+  const canonical={
+    authority:'TOWER_V06',
+    truth_owner:'TOWER_V06@GOOGLE_DRIVE_PRIVATE',
+    storage:'GOOGLE_DRIVE_PRIVATE',
+    root_id:'14eRGK6QZnowu32XNOvpiE8AA_ffGVy-E',
+    pointer:'CURRENT.json',
+    current_file_id:'19URh1MGB3Gp1zIk4Jao1fKDcFCaBW9Is',
+    git_state_fallback:false,
+  };
+  if(method==='GET'){
+    return sendJson(res,200,{
+      ok:true,
+      server:'nexo-legacy-mcp-retired',
+      version:'1.0.0',
+      status:'NONCANONICAL_DEPRECATED',
+      authority:'TOWER_V06@GOOGLE_DRIVE_PRIVATE',
+      canonical,
+      tools:[],
+      mutation_policy:'FORBIDDEN_ON_LEGACY_GITHUB_SURFACE',
+      message:'Legacy Vercel MCP is retired after Drive-primary cutover. Resolve CURRENT.json from Google Drive or use the active Drive-bootstrapped runtime.',
+    });
+  }
+  return sendJson(res,410,{
+    ok:false,
+    error:'LEGACY_MCP_RETIRED',
+    status:'NONCANONICAL_DEPRECATED',
+    canonical,
+    message:'This GitHub-backed MCP surface is retired and cannot execute canonical operations after Drive-primary cutover.',
+  });
+}
+
+export default LEGACY_GITHUB_MCP_RETIRED?retiredHandler:handler;
