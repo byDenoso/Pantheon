@@ -5,131 +5,61 @@ import {readFile} from 'node:fs/promises';
 const root=new URL('../',import.meta.url);
 const text=path=>readFile(new URL(path,root),'utf8');
 
-test('active Atlas renderer is the semantic NEXO field with Canvas fallback',async()=>{
-  const [view,adapter,three]=await Promise.all([
+test('active Atlas renderer is the layered Tower projection',async()=>{
+  const [view,renderer,layout]=await Promise.all([
     text('src/features/system/Atlas.tsx'),
-    text('src/components/AtlasGalaxyRenderer.tsx'),
-    text('src/components/GalaxyThree3D.tsx'),
+    text('src/components/LayeredGraphRenderer.tsx'),
+    text('src/viewmodels/layeredGraph.ts'),
   ]);
-  assert.match(view,/AtlasGalaxyRenderer/);
-  assert.doesNotMatch(view,/<AtlasCanvas25D/);
-  assert.match(adapter,/hasWebGL2/);
-  assert.match(adapter,/GalaxyThree3D/);
-  assert.match(adapter,/AtlasCanvas25D/);
-  assert.match(three,/new WebGLRenderer/);
-  assert.match(three,/buildFieldGeometry/);
-  assert.match(three,/data-renderer="three-nexo-field"/);
-  assert.doesNotMatch(three,/ForceGraph3D|react-force-graph-3d/);
-  assert.match(three,/OrbitControls/);
-  assert.match(view,/useState\(true\)/);
-  assert.doesNotMatch(view,/isMacroOverview && <DomainWorlds/);
+  assert.match(view,/LayeredGraphRenderer/);
+  assert.doesNotMatch(view,/<AtlasGalaxyRenderer/);
+  assert.match(renderer,/data-renderer="layered-tower-projection"/);
+  assert.match(renderer,/sourceRevision/);
+  assert.match(renderer,/sourceFingerprint/);
+  assert.match(layout,/DOMAIN.*ENTITY.*CAPABILITY.*WORK.*INSIGHT/s);
 });
 
-test('NEXO field uses bounded domain-colored clusters',async()=>{
-  const three=await text('src/components/GalaxyThree3D.tsx');
-  assert.match(three,/particleCount = isMacro \? \(isMobile \? 180 : 760\) : \(isMobile \? 520 : 1800\)/);
-  assert.match(three,/buildFieldGeometry/);
-  assert.match(three,/domainColor/);
-  assert.match(three,/aColor/);
-  assert.match(three,/clusters\.length > 0/);
-  assert.match(three,/GridHelper/);
-  assert.match(three,/grid\.visible = !isMobile/);
-  assert.match(three,/MOBILE_MACRO_CAMERA/);
-  assert.match(three,/AdditiveBlending/);
-});
-
-test('semantic edges separate structure dependency blockers and selection',async()=>{
-  const three=await text('src/components/GalaxyThree3D.tsx');
-  assert.match(three,/LineDashedMaterial/);
-  assert.match(three,/dependencyKinds/);
-  assert.match(three,/blockedRelationMaterial/);
-  assert.match(three,/relationSegments\.structural/);
-  assert.match(three,/relationSegments\.dependency/);
-  assert.match(three,/relationSegments\.blocked/);
-  assert.match(three,/relationSegments\.learning/);
-  assert.match(three,/learningRelationMaterial/);
-  assert.match(three,/edge\.is_learning/);
-  assert.match(three,/relationSegments\.selected/);
-});
-
-test('graph labels expose domain state and semantic hierarchy',async()=>{
-  const [three,css]=await Promise.all([
-    text('src/components/GalaxyThree3D.tsx'),
-    text('src/components/GalaxyThree3D.css'),
+test('layered renderer preserves semantic edge classes and focus neighborhood',async()=>{
+  const [renderer,layout]=await Promise.all([
+    text('src/components/LayeredGraphRenderer.tsx'),
+    text('src/viewmodels/layeredGraph.ts'),
   ]);
-  assert.match(three,/data-domain=\{node\.domain\}/);
-  assert.match(three,/data-state=\{stateClass\(node\.state\)\}/);
-  assert.match(three,/node-status/);
-  assert.match(three,/node-label-copy/);
-  assert.match(css,/semantic graph appearance V2/);
-  assert.match(css,/data-domain="ENGINEERING"/);
-  assert.match(css,/data-state\*="block"/);
+  assert.match(renderer,/edge\.kind === 'BLOCKS'/);
+  assert.match(renderer,/edge\.kind === 'CONTRADICTS'/);
+  assert.match(renderer,/edge\.is_learning/);
+  assert.match(renderer,/edge\.kind === 'SUPPORTS'/);
+  assert.match(renderer,/neighborhoodOf\(graph, selectedId\)/);
+  assert.match(layout,/crossLayer: from\.layer !== to\.layer/);
 });
 
-test('mobile macro field is compact flat and deterministic',async()=>{
-  const [view,layout,three]=await Promise.all([
+test('layered layout keeps canonical node types and deterministic domain lanes',async()=>{
+  const layout=await text('src/viewmodels/layeredGraph.ts');
+  assert.match(layout,/LAYER_BY_NODE_TYPE/);
+  assert.match(layout,/DOMAIN_ORDER/);
+  assert.match(layout,/hexOffset/);
+  assert.match(layout,/a\.id\.localeCompare\(b\.id\)/);
+  assert.doesNotMatch(layout,/Math\.random/);
+});
+
+test('camera compatibility API remains available for search tours and deep links',async()=>{
+  const renderer=await text('src/components/LayeredGraphRenderer.tsx');
+  assert.match(renderer,/forwardRef<CanvasGraph25DHandle/);
+  assert.match(renderer,/focusDomain:/);
+  assert.match(renderer,/focusSubdomain:/);
+  assert.match(renderer,/focusEntity:/);
+  assert.match(renderer,/focusPoint:/);
+  assert.match(renderer,/getView:/);
+});
+
+test('Tower revision and fingerprint are visible read-only provenance, not new authority',async()=>{
+  const [view,renderer,contracts]=await Promise.all([
     text('src/features/system/Atlas.tsx'),
-    text('src/viewmodels/graph3d.ts'),
-    text('src/components/GalaxyThree3D.tsx'),
-  ]);
-  assert.match(layout,/SCIENCE: \{ x: -31, y: -6, z: -2 \}/);
-  assert.match(layout,/ENGINEERING: \{ x: 0, y: 38, z: 2 \}/);
-  assert.match(layout,/OLYMPUS: \{ x: 31, y: -6, z: -2 \}/);
-  assert.match(view,/layoutMacroDomains\(renderGraph\.nodes, isMobile\)/);
-  assert.match(three,/PerspectiveCamera\(isMobile \? 35 : 40/);
-  assert.match(three,/controls\.enableRotate = !\(isMobile && isMacro\)/);
-  assert.match(three,/data-particle-profile=\{isMobile \? 'mobile' : 'desktop'\}/);
-});
-
-test('camera API remains compatible with search tours and drill-down',async()=>{
-  const three=await text('src/components/GalaxyThree3D.tsx');
-  assert.match(three,/forwardRef<CanvasGraph25DHandle/);
-  assert.match(three,/focusDomain:/);
-  assert.match(three,/focusSubdomain:/);
-  assert.match(three,/focusEntity:/);
-  assert.match(three,/focusPoint:/);
-  assert.match(three,/getView:/);
-  assert.match(three,/OrbitControls/);
-});
-
-
-test('Atlas hierarchy is domain to campaign to tests and learning is overlay-only',async()=>{
-  const [view,layout,contracts]=await Promise.all([
-    text('src/features/system/Atlas.tsx'),
-    text('src/viewmodels/graph3d.ts'),
+    text('src/components/LayeredGraphRenderer.tsx'),
     text('src/contracts/system.ts'),
   ]);
-  assert.match(view,/const NO_CAMPAIGN = '__NO_CAMPAIGN__'/);
-  assert.match(view,/campaignNodeId/);
-  assert.match(view,/setExpandedCampaign/);
-  assert.match(view,/canonicalCampaigns/);
-  assert.match(view,/node\.type !== 'FILAMENT'/);
-  assert.doesNotMatch(view,/!learningEndpointIds\.has/);
-  assert.match(contracts,/\| 'DOMAIN' \| 'CAMPAIGN'/);
-  assert.match(layout,/semanticType === 'CAMPAIGN'/);
-  assert.match(layout,/semanticType === 'TEST'/);
-  assert.match(layout,/semanticDepth/);
-});
-
-test('macro domain labels carry member counts and campaigns carry item counts',async()=>{
-  const [view,three]=await Promise.all([
-    text('src/features/system/Atlas.tsx'),
-    text('src/components/GalaxyThree3D.tsx'),
-  ]);
-  assert.match(view,/member_count: graphForView\.nodes\.filter/);
-  assert.match(three,/node\.member_count \?\? 0/);
-  assert.match(three,/node\.type === 'CAMPAIGN'/);
-});
-
-
-test('Atlas behaves as an Obsidian-like local graph navigator',async()=>{
-  const view=await text('src/features/system/Atlas.tsx');
-  assert.match(view,/localFocusId/);
-  assert.match(view,/localRelations/);
-  assert.match(view,/atlas-local-neighborhood/);
-  assert.match(view,/setExpandAll\(true\)/);
-  assert.match(view,/const \[expandAll, setExpandAll\] = useState\(true\)/);
-  assert.match(view,/focusEntity\(id\)/);
-  assert.match(view,/relation\.edge\.is_learning/);
-  assert.doesNotMatch(view,/isMacroOverview && <DomainWorlds/);
+  assert.match(view,/galaxySnapshot\.tower_revision/);
+  assert.match(view,/galaxySnapshot\.fingerprint/);
+  assert.match(renderer,/data-source-revision/);
+  assert.match(renderer,/data-source-fingerprint/);
+  assert.match(contracts,/frontend nunca é Truth Owner/);
 });

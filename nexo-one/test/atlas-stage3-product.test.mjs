@@ -5,7 +5,7 @@ import { readFile } from 'node:fs/promises';
 const root = new URL('../', import.meta.url);
 const text = path => readFile(new URL(path, root), 'utf8');
 
-test('Atlas wires Explore/Operate mode, search-to-fly, layers/presets, tour and deep links to the galaxy engine', async () => {
+test('Atlas wires Explore/Operate mode, search-to-fly, layers/presets, tour and deep links to the layered graph engine', async () => {
   const atlas = await text('src/features/system/Atlas.tsx');
   assert.match(atlas, /useState<GalaxyMode>\('explore'\)/);
   assert.match(atlas, /onClick=\{\(\) => setMode\('explore'\)\}/);
@@ -26,10 +26,10 @@ test('Atlas wires Explore/Operate mode, search-to-fly, layers/presets, tour and 
   assert.match(atlas, /<OperateHUD/);
 });
 
-test('the galaxy stays visible under the intro, the HUD and the tour menu (nothing here navigates away)', async () => {
+test('the layered Atlas stays visible under the intro, the HUD and the tour menu (nothing here navigates away)', async () => {
   const atlas = await text('src/features/system/Atlas.tsx');
   assert.doesNotMatch(atlas, /window\.location\.assign|window\.location\.href\s*=/);
-  assert.match(atlas, /<AtlasGalaxyRenderer/);
+  assert.match(atlas, /<LayeredGraphRenderer/);
 });
 
 test('Operate HUD exposes exactly the four permanent indicators, sourced from the compiled galaxy snapshot', async () => {
