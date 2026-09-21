@@ -140,6 +140,8 @@ test('GitHub Pages deploys official artifact and exposes projection readback', a
   assert.match(workflow, /GitHub Pages bundle does not contain the repository-root SystemState endpoint/);
   assert.match(workflow, /VITE_WORLD_ENDPOINT:\s*\.\/world-public\.ndjson/);
   assert.match(workflow, /tower-projection\/manifest\.json/);
+  assert.match(workflow, /\$\{base\}\/atlas3d\//);
+  assert.match(workflow, /<title>NEXO Atlas 3D<\/title>/);
   assert.match(workflow, /PAGES_TOWER_PROJECTION_READBACK_OK/);
   assert.match(workflow, /pages:\s*write/);
   assert.match(workflow, /id-token:\s*write/);
