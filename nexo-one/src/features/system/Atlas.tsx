@@ -270,7 +270,7 @@ export function AtlasView(
   // Start in the semantic 3-domain overview. The full graph remains one tap away.
   const [expandAll, setExpandAll] = useState(false);
   const [expandedDomain, setExpandedDomain] = useState<GraphNode['domain'] | null>(null);
-  const [introDone, setIntroDone] = useState(true);
+  const [introDone, setIntroDone] = useState(false);
   const [mode, setMode] = useState<GalaxyMode>('explore');
   const [openPanel, setOpenPanel] = useState<GalaxyPanelId | null>(null);
   const [tourOpen, setTourOpen] = useState(false);
