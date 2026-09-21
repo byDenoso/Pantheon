@@ -21,7 +21,6 @@ import {
   PerspectiveCamera,
   Points,
   QuadraticBezierCurve3,
-  Raycaster,
   Scene,
   ShaderMaterial,
   SRGBColorSpace,
@@ -349,7 +348,7 @@ function buildRelationSegments(
   };
 }
 function isMajor(node: PlacedNode3D, selectedId: string | null): boolean {
-  return node.type === 'DOMAIN' || node.id.startsWith('atlas.cluster.') || node.id === selectedId;
+  return node.type === 'DOMAIN' || node.type === 'CAMPAIGN' || node.id.startsWith('atlas.cluster.') || node.id === selectedId;
 }
 
 function easeOutCubic(value: number): number {
@@ -408,10 +407,19 @@ export const GalaxyThree3D = forwardRef<CanvasGraph25DHandle, Props>(function Ga
   }, []);
 
   const nodeMap = useMemo(() => new Map(nodes.map(node => [node.id, node])), [nodes]);
-  const visibleLabels = useMemo(
-    () => nodes.filter(node => isMajor(node, selectedId)).slice(0, isMobile ? 12 : 28),
-    [isMobile, nodes, selectedId],
-  );
+  const visibleLabels = useMemo(() => {
+    const local = new Set<string>();
+    if (selectedId) {
+      local.add(selectedId);
+      for (const edge of edges) {
+        if (edge.from === selectedId) local.add(edge.to);
+        if (edge.to === selectedId) local.add(edge.from);
+      }
+    }
+    return nodes
+      .filter(node => isMajor(node, selectedId) || local.has(node.id))
+      .slice(0, isMobile ? 18 : 42);
+  }, [edges, isMobile, nodes, selectedId]);
 
   const flyToPoint = (point: { x: number; y: number; z: number }, distance: number, duration = 720) => {
     const camera = cameraRef.current;
@@ -524,7 +532,7 @@ export const GalaxyThree3D = forwardRef<CanvasGraph25DHandle, Props>(function Ga
       controls.enableDamping = true;
       controls.dampingFactor = 0.065;
       controls.enablePan = true;
-      controls.enableRotate = !(isMobile && isMacro);
+      controls.enableRotate = true;
       controls.screenSpacePanning = true;
       controls.rotateSpeed = 0.52;
       controls.zoomSpeed = 0.82;
@@ -536,7 +544,7 @@ export const GalaxyThree3D = forwardRef<CanvasGraph25DHandle, Props>(function Ga
       controlsRef.current = controls;
 
       const palette = paletteForTheme(themeName);
-      const particleCount = isMacro ? (isMobile ? 180 : 760) : (isMobile ? 520 : 1800);
+      const particleCount = isMacro ? (isMobile ? 90 : 320) : (isMobile ? 240 : 900);
       const galaxyGeometry = buildFieldGeometry(nodes, particleCount, isMacro, themeName);
       const galaxyMaterial = new ShaderMaterial({
         uniforms: {
@@ -556,7 +564,7 @@ export const GalaxyThree3D = forwardRef<CanvasGraph25DHandle, Props>(function Ga
       scene.add(galaxy);
 
       const ringGeometry = buildFieldRingSegments(nodes, isMacro);
-      const ringMaterial = new LineBasicMaterial({ color: palette.accent, transparent: true, opacity: themeName === 'light' ? 0.07 : (isMacro ? 0.09 : 0.06), blending: themeName === 'light' ? NormalBlending : AdditiveBlending, depthWrite: false });
+      const ringMaterial = new LineBasicMaterial({ color: palette.accent, transparent: true, opacity: themeName === 'light' ? 0.05 : (isMacro ? 0.06 : 0.04), blending: NormalBlending, depthWrite: false });
       const ringLines = new LineSegments(ringGeometry, ringMaterial);
       scene.add(ringLines);
 
@@ -590,14 +598,14 @@ export const GalaxyThree3D = forwardRef<CanvasGraph25DHandle, Props>(function Ga
       const relationMaterial = new LineBasicMaterial({
         color: themeName === 'light' ? '#7d858d' : '#65727d',
         transparent: true,
-        opacity: selectedId ? 0.08 : (isMacro ? 0.34 : 0.18),
+        opacity: selectedId ? 0.16 : (isMacro ? 0.48 : 0.30),
         blending: NormalBlending,
         depthWrite: false,
       });
       const dependencyMaterial = new LineDashedMaterial({
         color: themeName === 'light' ? '#5d7488' : '#8ca3b5',
         transparent: true,
-        opacity: selectedId ? 0.12 : 0.34,
+        opacity: selectedId ? 0.22 : 0.46,
         dashSize: 2.1,
         gapSize: 1.5,
         depthWrite: false,
@@ -605,7 +613,7 @@ export const GalaxyThree3D = forwardRef<CanvasGraph25DHandle, Props>(function Ga
       const learningRelationMaterial = new LineDashedMaterial({
         color: themeName === 'light' ? '#8b4fb8' : '#c889ff',
         transparent: true,
-        opacity: selectedId ? 0.30 : 0.78,
+        opacity: selectedId ? 0.42 : 0.72,
         dashSize: 3.2,
         gapSize: 1.1,
         blending: themeName === 'light' ? NormalBlending : AdditiveBlending,
@@ -614,13 +622,13 @@ export const GalaxyThree3D = forwardRef<CanvasGraph25DHandle, Props>(function Ga
       const blockedRelationMaterial = new LineBasicMaterial({
         color: '#df747d',
         transparent: true,
-        opacity: selectedId ? 0.18 : 0.58,
+        opacity: selectedId ? 0.34 : 0.62,
         depthWrite: false,
       });
       const selectedRelationMaterial = new LineBasicMaterial({
         color: palette.strong,
         transparent: true,
-        opacity: 0.92,
+        opacity: 0.98,
         blending: themeName === 'light' ? NormalBlending : AdditiveBlending,
         depthWrite: false,
       });
@@ -636,26 +644,46 @@ export const GalaxyThree3D = forwardRef<CanvasGraph25DHandle, Props>(function Ga
       if (!isMobile && !isMacro && themeName === 'dark') {
         composer = new EffectComposer(renderer);
         composer.addPass(new RenderPass(scene, camera));
-        const bloom = new UnrealBloomPass(new Vector2(size.width, size.height), 0.34, 0.32, 0.34);
-        bloom.threshold = 0.30;
-        bloom.strength = 0.34;
-        bloom.radius = 0.32;
+        const bloom = new UnrealBloomPass(new Vector2(size.width, size.height), 0.18, 0.18, 0.54);
+        bloom.threshold = 0.54;
+        bloom.strength = 0.18;
+        bloom.radius = 0.18;
         composer.addPass(bloom);
       }
 
-      const raycaster = new Raycaster();
-      raycaster.params.Points = { threshold: isMobile ? 6.5 : 5.2 };
-      const pointer = new Vector2();
-
-      const pick = (clientX: number, clientY: number) => {
+      const projected = new Vector3();
+      const pickIndex = (clientX: number, clientY: number): number | null => {
         const rect = renderer!.domElement.getBoundingClientRect();
-        pointer.x = ((clientX - rect.left) / rect.width) * 2 - 1;
-        pointer.y = -((clientY - rect.top) / rect.height) * 2 + 1;
-        raycaster.setFromCamera(pointer, camera);
-        const hits = raycaster.intersectObject(nodePoints, false);
-        const first = hits.find(hit => Number.isInteger(hit.index));
-        if (first?.index != null && nodes[first.index]) onSelect(nodes[first.index]!.id);
-        else onSelect(null);
+        const hitRadius = isMobile ? 28 : 16;
+        let bestIndex: number | null = null;
+        let bestScore = Number.POSITIVE_INFINITY;
+        for (let index = 0; index < nodes.length; index += 1) {
+          const node = nodes[index]!;
+          projected.set(node.x, node.y, node.z).project(camera);
+          if (projected.z <= -1 || projected.z >= 1) continue;
+          const x = rect.left + (projected.x * 0.5 + 0.5) * rect.width;
+          const y = rect.top + (-projected.y * 0.5 + 0.5) * rect.height;
+          const distance = Math.hypot(clientX - x, clientY - y);
+          if (distance > hitRadius) continue;
+          // Favor the visually closest node when several points overlap.
+          const score = distance + Math.max(0, projected.z + 1) * 2.5;
+          if (score < bestScore) {
+            bestScore = score;
+            bestIndex = index;
+          }
+        }
+        return bestIndex;
+      };
+
+      const pick = (clientX: number, clientY: number, focus = false) => {
+        const index = pickIndex(clientX, clientY);
+        if (index == null || !nodes[index]) {
+          onSelect(null);
+          return;
+        }
+        const id = nodes[index]!.id;
+        onSelect(id);
+        if (focus) focusNode(id, isMobile ? 28 : 34);
       };
 
       const onPointerDown = (event: PointerEvent) => {
@@ -665,21 +693,19 @@ export const GalaxyThree3D = forwardRef<CanvasGraph25DHandle, Props>(function Ga
         const start = pointerDownRef.current;
         pointerDownRef.current = null;
         if (!start) return;
-        if (Math.hypot(event.clientX - start.x, event.clientY - start.y) <= 5) {
-          pick(event.clientX, event.clientY);
-        }
+        const travel = Math.hypot(event.clientX - start.x, event.clientY - start.y);
+        const tapTolerance = isMobile ? 16 : 7;
+        if (travel <= tapTolerance) pick(event.clientX, event.clientY);
+      };
+      const onPointerCancel = () => {
+        pointerDownRef.current = null;
       };
       const onDoubleClick = (event: MouseEvent) => {
-        pick(event.clientX, event.clientY);
-        const rect = renderer!.domElement.getBoundingClientRect();
-        pointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
-        pointer.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
-        raycaster.setFromCamera(pointer, camera);
-        const hit = raycaster.intersectObject(nodePoints, false)[0];
-        if (hit?.index != null && nodes[hit.index]) focusNode(nodes[hit.index]!.id, isMobile ? 28 : 34);
+        pick(event.clientX, event.clientY, true);
       };
       renderer.domElement.addEventListener('pointerdown', onPointerDown);
       renderer.domElement.addEventListener('pointerup', onPointerUp);
+      renderer.domElement.addEventListener('pointercancel', onPointerCancel);
       renderer.domElement.addEventListener('dblclick', onDoubleClick);
 
       const updateLabels = () => {
@@ -722,6 +748,7 @@ export const GalaxyThree3D = forwardRef<CanvasGraph25DHandle, Props>(function Ga
         cancelAnimationFrame(frame);
         renderer?.domElement.removeEventListener('pointerdown', onPointerDown);
         renderer?.domElement.removeEventListener('pointerup', onPointerUp);
+        renderer?.domElement.removeEventListener('pointercancel', onPointerCancel);
         renderer?.domElement.removeEventListener('dblclick', onDoubleClick);
         controls.dispose();
         galaxyGeometry.dispose();
@@ -791,7 +818,7 @@ export const GalaxyThree3D = forwardRef<CanvasGraph25DHandle, Props>(function Ga
               {(node.type === 'DOMAIN' || node.type === 'CAMPAIGN' || node.id.startsWith('atlas.cluster.') || node.id === selectedId) && (
                 <small>
                   {node.type === 'DOMAIN'
-                    ? (node.domain === 'NEXO' ? 'CORE' : (node.member_count ?? 0) + ' ENTIDADES')
+                    ? (node.member_count ?? 0) + ' ENTIDADES'
                     : node.type === 'CAMPAIGN'
                       ? (node.member_count ?? 0) + ' ITENS'
                       : node.type}
