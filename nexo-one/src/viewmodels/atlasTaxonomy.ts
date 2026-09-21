@@ -1,7 +1,7 @@
 import type { GraphNode } from '../contracts/system.ts';
 
-export type AtlasTopDomain = 'NEXO' | 'SCIENCE' | 'ENGINEERING' | 'OLYMPUS';
-export const ATLAS_TOP_DOMAINS: AtlasTopDomain[] = ['NEXO', 'SCIENCE', 'ENGINEERING', 'OLYMPUS'];
+export type AtlasTopDomain = 'NEXO' | 'SCIENCE' | 'OLYMPUS';
+export const ATLAS_TOP_DOMAINS: AtlasTopDomain[] = ['NEXO', 'SCIENCE', 'OLYMPUS'];
 
 const tokenOf = (node: GraphNode): string =>
   [node.campaign_id, node.id, node.label, node.summary].filter(Boolean).join(' ').toUpperCase();
@@ -9,7 +9,7 @@ const tokenOf = (node: GraphNode): string =>
 export function atlasTopDomainOf(node: GraphNode): AtlasTopDomain {
   const token = tokenOf(node);
   if (/CAMP-OLY-|T-OLY|OLYMPHYS|OLYCAUSE|OLYPIVOT/.test(token) || node.domain === 'OLYMPUS') return 'OLYMPUS';
-  if (node.domain === 'ENGINEERING') return 'ENGINEERING';
+  if (node.domain === 'ENGINEERING') return 'NEXO';
   if (node.type === 'CAPABILITY' && /(PEER\.|COSMOLOGY|GZ0|GZSB|IDM_)/i.test(node.id)) return 'SCIENCE';
   if (/CAND-SCI/.test(token) || node.domain === 'SCIENCE') return 'SCIENCE';
   return 'NEXO';
