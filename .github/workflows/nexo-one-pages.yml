@@ -33,18 +33,18 @@ jobs:
       - name: Checkout Pantheon
         uses: actions/checkout@v4
 
-      - name: Require read-only Vault credential
+      - name: Require read-only public-export credential
         shell: bash
         env:
           NEXO_VAULT_READ_TOKEN: ${{ secrets.NEXO_VAULT_READ_TOKEN }}
         run: |
           set -euo pipefail
           if [ -z "${NEXO_VAULT_READ_TOKEN}" ]; then
-            echo "::error::NEXO_VAULT_READ_TOKEN is required. Permission boundary: read-only Contents access to byDenoso/NEXO-Obsidian-Vault; no write/admin scope."
+            echo "::error::NEXO_VAULT_READ_TOKEN is required for the read-only Git export mirror."
             exit 1
           fi
 
-      - name: Checkout canonical Tower
+      - name: Checkout Drive-derived public export mirror
         uses: actions/checkout@v4
         with:
           repository: byDenoso/NEXO-Obsidian-Vault
@@ -54,19 +54,27 @@ jobs:
           persist-credentials: false
           fetch-depth: 0
 
-      - name: Resolve canonical runtime revision
+      - name: Verify Drive-primary export marker
+        shell: bash
+        run: |
+          set -euo pipefail
+          jq -e '.manifest.source_storage == "GOOGLE_DRIVE_PRIVATE" and (.manifest.source_snapshot_id|length)>0 and (.manifest.source_state_fingerprint|startswith("sha256:"))'             _vault/TOWER_V06/projections/public/projection.json >/dev/null
+          jq -e '.source_storage == "GOOGLE_DRIVE_PRIVATE" and (.source_snapshot_id|length)>0 and (.source_state_fingerprint|startswith("sha256:"))'             _vault/TOWER_V06/projections/public/manifest.json >/dev/null
+
+      - name: Resolve projection verifier revision from export
+
         id: runtime
         shell: bash
         run: |
           set -euo pipefail
-          rev="$(jq -er '.runtime_revision' _vault/TOWER_V06/CONTROL.json)"
+          rev="$(jq -er '.authority_declaration.runtime_revision' _vault/TOWER_V06/projections/public/projection.json)"
           case "${rev}" in
             byDenoso/TCC@*) ;;
-            *) echo "::error::CONTROL.runtime_revision must reference byDenoso/TCC, got ${rev}"; exit 1 ;;
+            *) echo "::error::export runtime_revision must reference byDenoso/TCC, got ${rev}"; exit 1 ;;
           esac
           sha="${rev#byDenoso/TCC@}"
           printf '%s' "${sha}" | grep -Eq '^[0-9a-f]{40}$' || {
-            echo "::error::CONTROL.runtime_revision must pin a full 40-hex TCC SHA, got ${sha}"
+            echo "::error::export runtime_revision must pin a full 40-hex TCC SHA, got ${sha}"
             exit 1
           }
           echo "sha=${sha}" >> "$GITHUB_OUTPUT"
@@ -78,16 +86,6 @@ jobs:
           ref: ${{ steps.runtime.outputs.sha }}
           path: _tcc
           persist-credentials: false
-
-      - name: Compile sanctioned projection from current Tower
-        shell: bash
-        run: |
-          set -euo pipefail
-          tower_commit="$(git -C _vault rev-parse HEAD)"
-          python _tcc/scripts/build_public_projection.py \
-            --root _vault/TOWER_V06 \
-            --out _vault/TOWER_V06/projections/public \
-            --tower-commit "${tower_commit}"
 
       - name: Verify sanctioned Tower projection
         id: projection
@@ -130,27 +128,26 @@ jobs:
           tower_commit = str(manifest.get("tower_commit") or "")
           event_cursor = str(manifest.get("event_cursor") or "")
           fingerprint = str(manifest.get("projection_fingerprint") or "")
-          if len(tower_commit) != 40:
-              raise SystemExit("tower_commit is not a full commit SHA")
+          source_storage = str(manifest.get("source_storage") or "")
+          source_snapshot_id = str(manifest.get("source_snapshot_id") or "")
+          source_state_fingerprint = str(manifest.get("source_state_fingerprint") or "")
+          if source_storage != "GOOGLE_DRIVE_PRIVATE":
+              raise SystemExit("public export source_storage is not GOOGLE_DRIVE_PRIVATE")
+          if not source_snapshot_id:
+              raise SystemExit("public export source_snapshot_id missing")
+          if not source_state_fingerprint.startswith("sha256:"):
+              raise SystemExit("public export source_state_fingerprint invalid")
           if not event_cursor:
               raise SystemExit("event_cursor missing")
           if not fingerprint.startswith("sha256:") or len(fingerprint) != 71:
               raise SystemExit("projection_fingerprint invalid")
-          snapshot_path = Path("_vault/TOWER_V06/snapshot/latest.json")
-          snapshot = json.loads(snapshot_path.read_text(encoding="utf-8"))
-          snapshot_cursor = str(snapshot.get("event_cursor") or "")
-          if not snapshot_cursor:
-              raise SystemExit("canonical snapshot event_cursor missing")
-          if event_cursor != snapshot_cursor:
-              raise SystemExit(
-                  f"projection event_cursor {event_cursor} differs from canonical snapshot {snapshot_cursor}"
-              )
-
           output = Path(os.environ["GITHUB_OUTPUT"])
           with output.open("a", encoding="utf-8") as handle:
               handle.write(f"tower_commit={tower_commit}\n")
               handle.write(f"event_cursor={event_cursor}\n")
               handle.write(f"projection_fingerprint={fingerprint}\n")
+              handle.write(f"source_snapshot_id={source_snapshot_id}\n")
+              handle.write(f"source_state_fingerprint={source_state_fingerprint}\n")
           print(f"TOWER_PROJECTION_VERIFIED commit={tower_commit} cursor={event_cursor} fingerprint={fingerprint}")
           PY
 
@@ -183,22 +180,11 @@ jobs:
           fi
           echo "deploy_needed=true" >> "$GITHUB_OUTPUT"
 
-      - name: Verify projection ancestry and stage sanctioned files
+      - name: Stage Drive-derived public export
         if: steps.deploy_needed.outputs.deploy_needed == 'true'
         shell: bash
-        env:
-          TOWER_COMMIT: ${{ steps.projection.outputs.tower_commit }}
         run: |
           set -euo pipefail
-          git -C _vault cat-file -e "${TOWER_COMMIT}^{commit}" || {
-            echo "::error::projection tower_commit ${TOWER_COMMIT} is not present in canonical Vault history"
-            exit 1
-          }
-          git -C _vault merge-base --is-ancestor "${TOWER_COMMIT}" HEAD || {
-            echo "::error::projection tower_commit ${TOWER_COMMIT} is not an ancestor of current Vault main"
-            exit 1
-          }
-
           rm -rf nexo-one/data/tower-public
           mkdir -p nexo-one/data/tower-public
           cp _vault/TOWER_V06/projections/public/projection.json nexo-one/data/tower-public/projection.json
@@ -208,15 +194,7 @@ jobs:
           else
             printf '[]\n' > nexo-one/data/tower-public/interdomain.json
           fi
-
-          # MCP Atlas consumes the current canonical structure directly from the
-          # same read-only Vault checkout. It publishes only structural metadata.
-          rm -rf nexo-one/data/mcp-source
-          mkdir -p nexo-one/data/mcp-source
-          cp _vault/TOWER_V06/manifests/capabilities.json nexo-one/data/mcp-source/capabilities.json
-          cp _vault/services/nexo-api/app/mcp_server.py nexo-one/data/mcp-source/mcp_server.py
-          cp _vault/services/nexo-api/app/remote_mcp.py nexo-one/data/mcp-source/remote_mcp.py
-          jq -n --arg tower_commit "$(git -C _vault rev-parse HEAD)"             '{authority:"TOWER_V06",tower_commit:$tower_commit}' > nexo-one/data/mcp-source/source.json
+          printf '[]\n' > nexo-one/data/tower-public/learning.json
 
       - name: Setup Node
         if: steps.deploy_needed.outputs.deploy_needed == 'true'
