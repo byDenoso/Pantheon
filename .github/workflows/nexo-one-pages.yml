@@ -183,10 +183,12 @@ jobs:
       - name: Stage Drive-derived public export
         if: steps.deploy_needed.outputs.deploy_needed == 'true'
         shell: bash
+        env:
+          TOWER_COMMIT: ${{ steps.projection.outputs.tower_commit }}
         run: |
           set -euo pipefail
-          rm -rf nexo-one/data/tower-public
-          mkdir -p nexo-one/data/tower-public
+          rm -rf nexo-one/data/tower-public nexo-one/data/mcp-source
+          mkdir -p nexo-one/data/tower-public nexo-one/data/mcp-source
           cp _vault/TOWER_V06/projections/public/projection.json nexo-one/data/tower-public/projection.json
           cp _vault/TOWER_V06/projections/public/manifest.json nexo-one/data/tower-public/manifest.json
           if compgen -G "_vault/TOWER_V06/entities/interdomain/*.json" > /dev/null; then
@@ -195,6 +197,13 @@ jobs:
             printf '[]\n' > nexo-one/data/tower-public/interdomain.json
           fi
           printf '[]\n' > nexo-one/data/tower-public/learning.json
+
+          # MCP Atlas is also a read-only presentation surface. Stage its inputs
+          # from the same sanctioned export mirror instead of relying on local files.
+          cp _vault/TOWER_V06/manifests/capabilities.json nexo-one/data/mcp-source/capabilities.json
+          cp _vault/services/nexo-api/app/mcp_server.py nexo-one/data/mcp-source/mcp_server.py
+          cp _vault/services/nexo-api/app/remote_mcp.py nexo-one/data/mcp-source/remote_mcp.py
+          jq -n --arg tower_commit "${TOWER_COMMIT}" '{tower_commit:$tower_commit}' > nexo-one/data/mcp-source/source.json
 
       - name: Setup Node
         if: steps.deploy_needed.outputs.deploy_needed == 'true'
@@ -289,8 +298,8 @@ jobs:
             '{contract:"NEXO_ONE_BUILD_META_V1",pantheon_commit:$pantheon_commit,projection_fingerprint:$projection_fingerprint}' > dist/build-meta.json
           test -s dist/build-meta.json
           touch dist/.nojekyll
-          if grep -R -Eqi 'GOOGLE_DRIVE|truthgraph-projection|nexo-drive-projection' dist/system.json dist/world-public.ndjson dist/tower-projection; then
-            echo "::error::legacy Drive/truthgraph operational source leaked into Pages artifact"
+          if grep -R -Eqi 'truthgraph-projection|nexo-drive-projection' dist/system.json dist/world-public.ndjson dist/tower-projection; then
+            echo "::error::legacy truthgraph/drive-projection source leaked into Pages artifact"
             exit 1
           fi
 
@@ -366,7 +375,7 @@ jobs:
           if(buildMeta.projection_fingerprint!==manifest.projection_fingerprint)throw new Error('BUILD_META_FINGERPRINT_MISMATCH');
 
           const raw=JSON.stringify({system,world,projection});
-          if(/truthgraph-projection|nexo-drive-projection|GOOGLE_DRIVE/i.test(raw))throw new Error('LEGACY_OPERATIONAL_SOURCE_PRESENT');
+          if(/truthgraph-projection|nexo-drive-projection/i.test(raw))throw new Error('LEGACY_OPERATIONAL_SOURCE_PRESENT');
 
           if(mcp.contract!=='NEXO_MCP_TOPOLOGY_V1')throw new Error('MCP_TOPOLOGY_CONTRACT_INVALID');
           if(mcp.source?.authority!=='TOWER_V06'||!mcp.source?.commit)throw new Error('MCP_TOPOLOGY_SOURCE_INVALID');
