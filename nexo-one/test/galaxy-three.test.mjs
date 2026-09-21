@@ -128,6 +128,7 @@ test('Atlas behaves as an Obsidian-like local graph navigator',async()=>{
   assert.match(view,/localRelations/);
   assert.match(view,/atlas-local-neighborhood/);
   assert.match(view,/setExpandAll\(true\)/);
+  assert.match(view,/const \[expandAll, setExpandAll\] = useState\(true\)/);
   assert.match(view,/focusEntity\(id\)/);
   assert.match(view,/relation\.edge\.is_learning/);
   assert.doesNotMatch(view,/isMacroOverview && <DomainWorlds/);
