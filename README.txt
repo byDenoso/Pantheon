@@ -20,7 +20,7 @@ Covariance-semantics references in the same public release:
   Pantheon+_Data/4_DISTANCES_AND_COVAR/README
   Pantheon+_Data/5_COSMOLOGY/cosmosis_likelihoods/Pantheon+_only_cosmosis_likelihood.py
 
-The public likelihood loads the released STAT+SYS covariance and returns the selected covariance matrix directly. The release README states that the *_ERR_DIAG columns are derived from the covariance diagonal, are for plotting/visual purposes, and are not a substitute for the full covariance in cosmological fits.
+The public likelihood loads the released STAT+SYS covariance and returns the selected covariance matrix directly. The release README explicitly warns that the *_ERR_DIAG columns are for plotting/visual purposes and are not a substitute for the full covariance in cosmological fits. The operative covariance convention for this package is anchored to the executable public likelihood and its numerical reproduction.
 
 Frozen numerical outputs
 ------------------------
