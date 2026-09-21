@@ -5,7 +5,7 @@ import type { GraphNode, SystemState } from '../../contracts/system.ts';
 import {
   AuthorityClass, CAPABILITY_STATUSES, DOMAINS, GRAPH_NODE_TYPES, PROJECTION_STATES, RELATION_KINDS,
 } from '../../contracts/system.ts';
-import { LayeredGraphRenderer } from '../../components/LayeredGraphRenderer.tsx';
+import { AtlasGalaxyRenderer } from '../../components/AtlasGalaxyRenderer.tsx';
 import type { CanvasGraph25DHandle } from '../../components/CanvasGraph25D.tsx';
 import { EntityInspector } from '../../components/inspector.tsx';
 import { EmptyState } from '../../components/states.tsx';
@@ -14,7 +14,7 @@ import { useIsMobile } from '../../app/useMediaQuery.ts';
 import {
   EMPTY_FILTERS, filterCount, filterGraph, legendOf, relationsOf, type GraphFilters,
 } from '../../viewmodels/graph.ts';
-import { layoutLayeredGraph, resolveLayerSelection } from '../../viewmodels/layeredGraph.ts';
+import { layoutGraph3D, layoutMacroDomains, resolveSelection3D } from '../../viewmodels/graph3d.ts';
 import { ATLAS_TOP_DOMAINS, atlasSubdomainFromId, atlasSubdomainNodeId, atlasSubdomainOf, atlasTopDomainOf, type AtlasTopDomain } from '../../viewmodels/atlasTaxonomy.ts';
 import { useGalaxySnapshot } from '../../data/useGalaxySnapshot.ts';
 import { galaxySnapshotAgeLabel } from '../../data/galaxySnapshot.ts';
@@ -124,7 +124,7 @@ function semanticTopNode(
   count: number,
   snapshot: ReturnType<typeof useGalaxySnapshot>['snapshot'],
 ): GraphNode {
-  const labels: Record<AtlasTopDomain, string> = { NEXO: 'Nexo', SCIENCE: 'Science', ENGINEERING: 'Engineering', OLYMPUS: 'Olympus' };
+  const labels: Record<AtlasTopDomain, string> = { NEXO: 'Nexo Core', SCIENCE: 'Science', OLYMPUS: 'Olympus' };
   return {
     id: `atlas.top.${domain.toLowerCase()}`,
     type: 'DOMAIN',
@@ -141,6 +141,28 @@ function semanticTopNode(
     member_count: count,
   };
 }
+
+function semanticRootNode(
+  count: number,
+  snapshot: ReturnType<typeof useGalaxySnapshot>['snapshot'],
+): GraphNode {
+  return {
+    id: 'atlas.root.nexo',
+    type: 'DOMAIN',
+    label: 'Nexo',
+    domain: 'NEXO',
+    state: 'LIVE',
+    authority_class: 'DERIVED',
+    source_ref: 'atlas://projection/root',
+    source_revision: snapshot.tower_revision,
+    fingerprint: `atlas-root:nexo:${snapshot.fingerprint}`,
+    freshness: { state: 'RECENT', observed_at: snapshot.generated_at, ttl_seconds: 3 * 60 * 60 },
+    checked_at: snapshot.generated_at,
+    summary: `Raiz visual do Atlas com ${count} entidades navegáveis. A Tower continua autoridade.`,
+    member_count: count,
+  };
+}
+
 
 function semanticSubdomainNode(
   domain: AtlasTopDomain,
@@ -266,8 +288,8 @@ export function AtlasView(
   const [localFocusId, setLocalFocusId] = useState<string | null>(null);
   // Start at the domain overview. A single isolated NEXO node looked like an
   // empty graph even when the sanctioned projection contained hundreds of entities.
-  const [rootExpanded, setRootExpanded] = useState(true);
-  // Start in the four-domain Tower overview. The full graph remains one tap away.
+  const [rootExpanded, setRootExpanded] = useState(false);
+  // Start at the single Nexo root; drill down spatially into domains and subdomains.
   const [expandAll, setExpandAll] = useState(false);
   const [expandedDomain, setExpandedDomain] = useState<GraphNode['domain'] | null>(null);
   const [introDone, setIntroDone] = useState(false);
@@ -289,8 +311,12 @@ export function AtlasView(
       contentNodes.filter(node => node.type !== 'FILAMENT' && node.domain === domain).length,
       galaxySnapshot,
     ));
+    const rootNode = semanticRootNode(
+      contentNodes.filter(node => node.type !== 'FILAMENT').length,
+      galaxySnapshot,
+    );
     return {
-      nodes: [...topNodes, ...contentNodes],
+      nodes: [rootNode, ...topNodes, ...contentNodes],
       edges: state.graph.edges.filter(edge => contentIds.has(edge.from) && contentIds.has(edge.to)),
     };
   }, [galaxySnapshot, state.graph.edges, state.graph.nodes]);
@@ -310,6 +336,8 @@ export function AtlasView(
     // Learning is transverse. Top domains and semantic subdomains are presentation-only.
     const baseNodes = filtered.nodes.filter(node => learningVisible || node.type !== 'FILAMENT');
     const domainNodes = baseNodes.filter(node => node.type === 'DOMAIN');
+    const rootNode = domainNodes.find(node => node.id === 'atlas.root.nexo');
+    const branchDomains = domainNodes.filter(node => node.id !== 'atlas.root.nexo' && ATLAS_TOP_DOMAINS.includes(node.domain as AtlasTopDomain));
     const contentNodes = baseNodes.filter(node => node.type !== 'DOMAIN' && node.type !== 'FILAMENT');
 
     if (expandAll) {
@@ -320,15 +348,25 @@ export function AtlasView(
       };
     }
 
-    if (!rootExpanded) return { nodes: domainNodes, edges: [] };
+    if (!rootExpanded) return { nodes: rootNode ? [rootNode] : branchDomains.slice(0, 1), edges: [] };
 
     if (!expandedDomain) {
-      // Exactly four Tower domains: Nexo, Science, Engineering, Olympus.
-      return { nodes: domainNodes.filter(node => ATLAS_TOP_DOMAINS.includes(node.domain as AtlasTopDomain)), edges: [] };
+      if (!rootNode) return { nodes: branchDomains, edges: [] };
+      const edges = branchDomains.map(node => ({
+        id: 'atlas.root.branch.' + node.id,
+        from: rootNode.id,
+        to: node.id,
+        kind: 'OWNS' as const,
+        weight: 0.92,
+        explanation: node.domain === 'NEXO'
+          ? 'Nexo Core agrupa operações, runtime, MCP e engenharia.'
+          : node.label + ' é um ramo de conhecimento dentro do Atlas Nexo.',
+      }));
+      return { nodes: [rootNode, ...branchDomains], edges };
     }
 
     const topDomain = expandedDomain as AtlasTopDomain;
-    const domainNode = domainNodes.find(node => node.domain === topDomain);
+    const domainNode = branchDomains.find(node => node.domain === topDomain);
     if (!domainNode) return { nodes: domainNodes, edges: [] };
 
     const domainChildren = contentNodes.filter(node => node.domain === topDomain);
@@ -415,12 +453,12 @@ export function AtlasView(
     return { nodes, edges: [...structural, ...overlay.edges] };
   }, [expandAll, expandedCampaign, expandedCluster, expandedDomain, filtered, learningVisible, rootExpanded]);
   const isMacroOverview = rootExpanded && !expandAll && !expandedDomain && !expandedCampaign && !expandedCluster;
-  const layeredGraph = useMemo(
-    () => layoutLayeredGraph(renderGraph),
-    [renderGraph],
-  );
+  const placed = useMemo(() => {
+    if (isMacroOverview) return layoutMacroDomains(renderGraph.nodes, isMobile);
+    return layoutGraph3D(renderGraph.nodes);
+  }, [isMacroOverview, isMobile, renderGraph.nodes]);
   const legend = useMemo(() => legendOf(renderGraph.nodes.filter(node => !clusterFromId(node.id) && !campaignFromId(node.id) && !atlasSubdomainFromId(node.id))), [renderGraph.nodes]);
-  const effectiveSelectedId = resolveLayerSelection(layeredGraph.nodes, selectedId);
+  const effectiveSelectedId = resolveSelection3D(placed, selectedId);
   const localRelations = useMemo(() => localFocusId ? relationsOf(filtered, localFocusId) : { upstream: [], downstream: [] }, [filtered, localFocusId]);
   const localNeighborIds = useMemo(() => new Set([...localRelations.upstream, ...localRelations.downstream].map(relation => relation.node.id)), [localRelations]);
   const selected: GraphNode | null = filtered.nodes.find(n => n.id === effectiveSelectedId) ?? null;
@@ -439,6 +477,18 @@ export function AtlasView(
   const active = filterCount(filters);
   const handleGraphSelect = (id: string | null) => {
     if (id) {
+      if (id === 'atlas.root.nexo') {
+        galaxyRef.current?.focusDomain(id);
+        audio.playDomainTransition();
+        setRootExpanded(true);
+        setExpandAll(false);
+        setExpandedDomain(null);
+        setExpandedCampaign(null);
+        setExpandedCluster(null);
+        setLocalFocusId(null);
+        onSelect(null);
+        return;
+      }
       const semanticSubdomain = atlasSubdomainFromId(id);
       if (semanticSubdomain) {
         galaxyRef.current?.focusSubdomain(id);
@@ -593,13 +643,13 @@ export function AtlasView(
   // Once the deep-linked entity is actually part of the rendered graph, fly
   // the camera to it exactly once.
   useEffect(() => {
-    if (deepLinkAppliedRef.current || layeredGraph.nodes.length === 0) return;
+    if (deepLinkAppliedRef.current || placed.length === 0) return;
     const initial = parseGalaxyDeepLink(window.location.search);
-    if (initial.entity && layeredGraph.nodes.some(node => node.id === initial.entity)) {
+    if (initial.entity && placed.some(node => node.id === initial.entity)) {
       galaxyRef.current?.focusEntity(initial.entity);
     }
     deepLinkAppliedRef.current = true;
-  }, [layeredGraph.nodes]);
+  }, [placed]);
 
   // Keep the URL in sync with camera/panel state (no reload, no history spam).
   useEffect(() => {
@@ -629,11 +679,18 @@ export function AtlasView(
   }, [galaxySnapshot]);
 
   const goBack = () => {
-    if (expandAll) setExpandAll(false);
-    else if (expandedCampaign) setExpandedCampaign(null);
-    else if (expandedCluster) setExpandedCluster(null);
-    else if (expandedDomain) setExpandedDomain(null);
-    setRootExpanded(true);
+    if (expandAll) {
+      setExpandAll(false);
+      setRootExpanded(true);
+    } else if (expandedCampaign) {
+      setExpandedCampaign(null);
+    } else if (expandedCluster) {
+      setExpandedCluster(null);
+    } else if (expandedDomain) {
+      setExpandedDomain(null);
+    } else {
+      setRootExpanded(false);
+    }
     onSelect(null);
   };
 
@@ -650,7 +707,7 @@ export function AtlasView(
   const goHome = () => {
     galaxyRef.current?.reset();
     if (filters.domains.length) setFilters({ ...filters, domains: [] });
-    setRootExpanded(true);
+    setRootExpanded(false);
     setExpandAll(false);
     setExpandedDomain(null);
     setExpandedCampaign(null);
@@ -730,7 +787,7 @@ export function AtlasView(
         <div className="atlas-graph-actions" role="group" aria-label="Navegação estrutural do grafo">
           <button type="button" aria-label="Mostrar o grafo completo" onClick={expandEverything} disabled={expandAll}>Mostrar grafo completo</button>
           <button type="button" aria-label="Voltar à visão por domínios" onClick={goHome}
-            disabled={!expandAll && !expandedDomain && !expandedCluster}>Visão por domínios</button>
+            disabled={!expandAll && !expandedDomain && !expandedCluster}>Raiz Nexo</button>
         </div>
       </div>
 
@@ -801,19 +858,19 @@ export function AtlasView(
       )}
 
       <div className="atlas-body">
-        <div className="atlas-stage atlas-stage-layered">
+        <div className="atlas-stage atlas-stage-3d">
           {renderGraph.nodes.length === 0
             ? <EmptyState title="Nenhuma entidade sobrevive a este filtro."
                 description="Um grafo vazio aqui é resultado do filtro, não ausência de dados no sistema."
                 hint="Remova um critério para voltar a ver o mapa." />
             : <>
-                <LayeredGraphRenderer
+                <AtlasGalaxyRenderer
                   ref={galaxyRef}
-                  graph={layeredGraph}
+                  nodes={placed}
+                  edges={renderGraph.edges}
                   selectedId={effectiveSelectedId}
                   onSelect={handleGraphSelect}
-                  sourceRevision={galaxySnapshot.tower_revision}
-                  sourceFingerprint={galaxySnapshot.fingerprint}
+                  viewMode={isMacroOverview ? 'macro' : 'detail'}
                 />
                 <ul className="atlas-legend">
                   {legend.map(entry => (
