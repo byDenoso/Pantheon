@@ -204,9 +204,8 @@ function resolveLearningEndpoint(
   const label = side === 'from' ? filament.from_label : filament.to_label;
   const declaredDomain = side === 'from' ? filament.from_domain : filament.to_domain;
 
-  const exact = rawId
-    ? aliases.get(String(rawId).trim().toLowerCase())
-    : aliases.get(String(label || '').trim().toLowerCase());
+  const exact = (rawId ? aliases.get(String(rawId).trim().toLowerCase()) : undefined)
+    || aliases.get(String(label || '').trim().toLowerCase());
   if (exact) return sourceToParent.get(exact.id) || ROOT_IDS[atlasTopDomainOf(exact)];
 
   const domain = rawDomainEndpoint(rawId) || topDomainFromValue(declaredDomain);
@@ -382,9 +381,8 @@ export function buildAtlasMetroModel(state: SystemState): AtlasMetroModel {
     for (const side of ['from', 'to'] as const) {
       const rawId = side === 'from' ? filament.from_id : filament.to_id;
       const label = side === 'from' ? filament.from_label : filament.to_label;
-      const exact = rawId
-        ? aliases.get(String(rawId).trim().toLowerCase())
-        : aliases.get(String(label || '').trim().toLowerCase());
+      const exact = (rawId ? aliases.get(String(rawId).trim().toLowerCase()) : undefined)
+        || aliases.get(String(label || '').trim().toLowerCase());
       if (exact) continue;
       const declaredDomain = side === 'from' ? filament.from_domain : filament.to_domain;
       const domain = rawDomainEndpoint(rawId) || topDomainFromValue(declaredDomain);
