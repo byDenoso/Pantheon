@@ -308,6 +308,14 @@ export interface Filament {
   from_domain?: Domain;
   to_domain?: Domain;
   scope?: 'INTRA_DOMAIN' | 'INTER_DOMAIN';
+  /** Optional presentation-routing metadata emitted by sanctioned Learning projections. */
+  links?: Array<{ id: string; domain: Domain; label: string }>;
+  learning_refs?: string[];
+  peer_detection_group?: string;
+  peer_detection_gate_ids?: string[];
+  peer_detection_gate_count?: number;
+  peer_detection_group_index?: number;
+  observed_at?: string;
 }
 
 export interface ProviderHealth {
