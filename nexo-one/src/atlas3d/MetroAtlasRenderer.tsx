@@ -1851,6 +1851,14 @@ function MetroThreeView({
   useEffect(() => {
     const runtime = runtimeRef.current;
     if (!runtime || lastFitNonce.current === fitNonce) return;
+    // fitNonce=0 is the initial render, not an explicit "fit all" request.
+    // The rebuild effect already fitted the selected semantic context. Letting
+    // this effect run on mount overwrote that camera with an all-nodes fit,
+    // which made QA selection and the visible camera disagree.
+    if (lastFitNonce.current < 0) {
+      lastFitNonce.current = fitNonce;
+      return;
+    }
     lastFitNonce.current = fitNonce;
     fitThree(runtime, true, null, 'all');
   }, [fitNonce]);
