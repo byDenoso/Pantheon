@@ -42,6 +42,7 @@ export const LAYERED_LAYERS: LayeredLayerDefinition[] = [
 
 export const LAYER_BY_NODE_TYPE: Record<GraphNodeType, LayeredLayerId> = {
   DOMAIN: 'DOMAIN',
+  SUBDOMAIN: 'ENTITY',
   CAMPAIGN: 'ENTITY',
   PROVIDER: 'ENTITY',
   PROJECTION: 'ENTITY',
@@ -59,6 +60,7 @@ const DOMAIN_ORDER: Domain[] = ['SCIENCE', 'ENGINEERING', 'OLYMPUS', 'NEXO', 'AR
 
 const SIZE_BY_TYPE: Record<GraphNodeType, number> = {
   DOMAIN: 13,
+  SUBDOMAIN: 9.5,
   CAMPAIGN: 8,
   PROVIDER: 6.5,
   PROJECTION: 6,
@@ -74,6 +76,7 @@ const SIZE_BY_TYPE: Record<GraphNodeType, number> = {
 
 const importanceOf = (node: GraphNode): number => {
   if (node.type === 'DOMAIN') return 100;
+  if (node.type === 'SUBDOMAIN') return 85;
   if (node.human_gate) return 90;
   if (node.type === 'CLAIM' || node.type === 'EFFECT') return 80;
   if (node.type === 'TEST' || node.type === 'CAPABILITY') return 70;
