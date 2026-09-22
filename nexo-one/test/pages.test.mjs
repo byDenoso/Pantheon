@@ -232,7 +232,13 @@ test('GitHub Pages deploys official artifact and exposes projection readback', a
   assert.match(workflow, /data-g6-learning-edges/);
   assert.match(workflow, /data-g6-scientific-learning-edges/);
   assert.match(workflow, /data-g6-peer-learning-edges/);
+  assert.match(workflow, /data-g6-learning-subdomain-edges/);
+  assert.match(workflow, /data-g6-peer-subdomain-edges/);
+  assert.match(workflow, /data-atlas-learning-subdomain-links/);
+  assert.match(workflow, /data-atlas-peer-subdomain-links/);
   assert.match(workflow, /data-three-scientific-learning-synapses/);
+  assert.match(workflow, /data-three-learning-subdomain-synapses/);
+  assert.match(workflow, /data-three-peer-subdomain-synapses/);
   assert.match(workflow, /data-three-peer-learning-synapses/);
   assert.match(workflow, /Scientific Learning underrepresented/);
   assert.match(workflow, /G6 rendered only.*Peer Detection bundles/);
