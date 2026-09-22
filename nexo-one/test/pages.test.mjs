@@ -32,6 +32,23 @@ test('GitHub Pages build uses repository base and configurable SystemState endpo
   assert.match(app, /onClick=\{system\.sync\}/);
 });
 
+test('manual sync is a server-side GitHub dispatch bridge with exact readback identity', async () => {
+  const handler = await text('server/handler.mjs');
+  const hook = await text('src/data/useSystem.ts');
+  const sync = await text('src/data/projectionSync.ts');
+
+  assert.match(handler, /route==='projection-sync'/);
+  assert.match(handler, /GITHUB_TOKEN/);
+  assert.match(handler, /\/dispatches/);
+  assert.match(handler, /nexo-public-projection-updated/);
+  assert.match(handler, /NEXO_ONE_COCKPIT_MANUAL_SYNC/);
+  assert.match(handler, /INVALID_PROJECTION_FINGERPRINT/);
+  assert.match(handler, /ATLAS_ORIGINS\.has\(origin\)/);
+  assert.match(hook, /dispatchProjectionSync/);
+  assert.match(hook, /waitForProjectionSync/);
+  assert.match(sync, /meta\.sync_request_id===requestId/);
+});
+
 test('GitHub Pages consumes only the sanctioned TOWER_V06 public projection', async () => {
   const workflow = await text('../.github/workflows/nexo-one-pages.yml');
   const builder = await text('scripts/build-pages-system.mjs');
