@@ -83,6 +83,10 @@ test('GitHub Pages consumes only the sanctioned TOWER_V06 public projection', as
   assert.match(workflow, /tower_commit/);
   assert.match(workflow, /event_cursor/);
   assert.match(workflow, /projection_fingerprint/);
+  assert.match(workflow, /presentation_input_fingerprint/);
+  assert.match(workflow, /METALEARNING_CURRENT\.json/);
+  assert.match(workflow, /PRESENTATION_INPUT_FINGERPRINT/);
+  assert.match(workflow, /BUILD_META_PRESENTATION_INPUT_FINGERPRINT_MISMATCH/);
   assert.doesNotMatch(workflow, /cp atlas-control-tower\/data\/nexo-drive-projection\.json/);
   assert.doesNotMatch(workflow, /truthgraph\.snapshot\.json/);
 
@@ -561,7 +565,7 @@ test('Pages runtime avoids redundant scheduled deploys and hydrates history conc
   const workflow = await text('../.github/workflows/nexo-one-pages.yml');
   assert.match(workflow, /cancel-in-progress:\s*true/);
   assert.match(workflow, /id:\s*deploy_needed/);
-  assert.match(workflow, /PAGES_NO_OP projection and Pantheon commit already published/);
+  assert.match(workflow, /PAGES_NO_OP projection, live semantic inputs and Pantheon commit already published/);
   assert.match(workflow, /build-meta\.json/);
   assert.match(workflow, /NEXO_ONE_BUILD_META_V1/);
   assert.match(workflow, /xargs -r -P 8/);
