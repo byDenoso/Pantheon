@@ -160,6 +160,16 @@ export function useSystem(initialScenario = DEFAULT_SCENARIO_ID): SystemStore {
         const receipt = await dispatchProjectionSync(previousFingerprint, ctrl.signal);
         if (ctrl.signal.aborted || syncController.current !== ctrl) return;
 
+        if (receipt.outcome === 'PUBLIC_PROJECTION_REFRESHED') {
+          setLastSuccessfulReadAt(new Date().toISOString());
+          const changedAtOrigin = previousFingerprint !== receipt.projection_fingerprint;
+          setSyncStatus(changedAtOrigin ? 'CHANGED' : 'UNCHANGED');
+          setSyncMessage(changedAtOrigin
+            ? 'Nova projeção detectada na origem · publicação pendente · ' + receipt.active_work + ' WORK'
+            : 'Sem alterações · projeção pública confirmada na origem');
+          return;
+        }
+
         setSyncMessage(receipt.deduplicated
           ? 'Sincronização já em andamento · aguardando readback…'
           : 'Dispatch aceito · aguardando publicação…');
