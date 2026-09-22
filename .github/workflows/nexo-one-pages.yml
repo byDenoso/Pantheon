@@ -591,7 +591,7 @@ jobs:
           grep -oE 'data-renderer-error="[^"]*"|class="atlas-render-error"[^<]*' /tmp/atlas3d-mobile-dom.html | head -10 || true
           echo "ATLAS3D_MOBILE_DOM_DIAGNOSTICS_END"
 
-          grep -Fq 'data-atlas-g6-source="jsdelivr"' /tmp/atlas3d-mobile-dom.html
+          grep -Fq 'data-atlas-g6-source="preloaded"' /tmp/atlas3d-mobile-dom.html
           grep -Fq 'data-atlas-ready="true"' /tmp/atlas3d-mobile-dom.html || echo "::warning::Mobile parent readiness state had not flushed yet; G6 readiness is checked separately"
           grep -Fq 'data-g6-ready="true"' /tmp/atlas3d-mobile-dom.html
           grep -Fq 'data-g6-profile="compact-touch"' /tmp/atlas3d-mobile-dom.html
@@ -819,7 +819,7 @@ jobs:
           echo "ATLAS3D_MOBILE_3D_DOM_DIAGNOSTICS_END"
 
           grep -Fq 'data-atlas-mode="3d"' /tmp/atlas3d-mobile-3d-dom.html
-          grep -Fq 'data-atlas-g6-source="local"' /tmp/atlas3d-mobile-3d-dom.html
+          grep -Fq 'data-atlas-g6-source="preloaded"' /tmp/atlas3d-mobile-3d-dom.html
           grep -Fq 'data-three-profile="compact-touch"' /tmp/atlas3d-mobile-3d-dom.html
           grep -Fq 'data-three-quality="reduced-gpu"' /tmp/atlas3d-mobile-3d-dom.html
           grep -Fq 'data-three-fit-policy="selection-safe-area-v5"' /tmp/atlas3d-mobile-3d-dom.html

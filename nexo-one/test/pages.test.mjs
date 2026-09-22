@@ -270,7 +270,7 @@ test('GitHub Pages deploys official artifact and exposes projection readback', a
   assert.match(workflow, /readback=1/);
   assert.match(workflow, /public\/vendor\/g6\.min\.js/);
   assert.match(workflow, /dist\/vendor\/g6\.min\.js/);
-  assert.match(workflow, /data-atlas-g6-source="local"/);
+  assert.match(workflow, /data-atlas-g6-source="preloaded"/);
   assert.match(workflow, /data-three-quality="reduced-gpu"/);
   assert.match(workflow, /data-three-fit-policy="selection-safe-area-v5"/);
   assert.match(workflow, /data-three-fit-scope="selection"/);
