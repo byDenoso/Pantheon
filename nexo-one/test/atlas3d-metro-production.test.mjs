@@ -75,6 +75,51 @@ test('entities stay below subdomain stations and preserve production provenance'
   assert.equal(path[1].entityType, 'subdomain');
 });
 
+test('campaign semantic parent and source links survive while hidden campaign tests stay out of Atlas', () => {
+  const source = state();
+  const template = source.graph.nodes.find(node => node.type !== 'DOMAIN' && node.type !== 'FILAMENT');
+  assert.ok(template);
+
+  source.graph.nodes.push(
+    {
+      ...template,
+      id: 'campaign:CAMP-DYNAMIC-1',
+      sourceId: undefined,
+      type: 'CAMPAIGN',
+      label: 'DDE · Dynamic campaign',
+      domain: 'SCIENCE',
+      campaign_id: 'CAMP-DYNAMIC-1',
+      parent_subdomain: 'Energia escura',
+      semantic_description: 'Dynamic campaign semantic description',
+      source_ref: 'tower://roadmaps/RM-DYNAMIC-1',
+      source_links: [{
+        label: 'Primary paper',
+        url: 'https://arxiv.org/abs/2503.14743',
+        kind: 'ARXIV',
+      }],
+      atlas_visible: true,
+    },
+    {
+      ...template,
+      id: 'test:T-DYNAMIC-1',
+      type: 'TEST',
+      label: 'Hidden campaign test',
+      domain: 'SCIENCE',
+      campaign_id: 'CAMP-DYNAMIC-1',
+      atlas_visible: false,
+    },
+  );
+
+  const model = buildAtlasMetroModel(source);
+  const campaign = model.nodeMap.get('campaign:CAMP-DYNAMIC-1');
+  assert.ok(campaign);
+  assert.equal(campaign.entityType, 'CAMPAIGN');
+  assert.equal(model.nodeMap.get(campaign.parentId)?.name, 'Energia escura');
+  assert.equal(campaign.sourceRef, 'tower://roadmaps/RM-DYNAMIC-1');
+  assert.equal(campaign.sourceLinks[0].url, 'https://arxiv.org/abs/2503.14743');
+  assert.equal(model.nodeMap.has('test:T-DYNAMIC-1'), false);
+});
+
 test('canonical graph relations become Metro bridge data instead of a second force layout', () => {
   const source = state();
   const model = buildAtlasMetroModel(source);
