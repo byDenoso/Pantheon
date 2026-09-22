@@ -55,6 +55,18 @@ export interface GlobalSummary {
   resolvable: number;
 }
 
+export const domainsInState = (state: SystemState): Domain[] => {
+  const observed = [
+    ...state.findings.map(item => item.domain),
+    ...state.lanes.map(item => item.domain),
+    ...state.actions.map(item => item.lane),
+    ...state.capabilities.map(item => item.domain),
+    ...state.inbox.map(item => item.domain),
+    ...state.graph.nodes.map(item => item.domain),
+  ];
+  return [...new Set([...DOMAINS, ...observed].filter(Boolean))] as Domain[];
+};
+
 const laneStateOf = (finding: TruthFinding | null, lane: LaneSnapshot | null): ProjectionState => {
   if (finding?.status === 'CONFLICT') return 'CONFLICT';
   if (finding?.status === 'MISSING_PROVIDER') return 'MISSING_PROVIDER';
@@ -66,7 +78,7 @@ const laneStateOf = (finding: TruthFinding | null, lane: LaneSnapshot | null): P
 };
 
 export function globalSummary(state: SystemState): GlobalSummary {
-  const domains: DomainSummary[] = DOMAINS.map(domain => {
+  const domains: DomainSummary[] = domainsInState(state).map(domain => {
     const finding = state.findings.find(f => f.domain === domain) ?? null;
     const lane = state.lanes.find(l => l.domain === domain) ?? null;
     return {
@@ -144,7 +156,7 @@ export function capabilityMatrix(state: SystemState): { runtimes: Runtime[]; cel
   const runtimes = [...new Set(state.capabilities.map(c => c.runtime))]
     .sort((a, b) => a.localeCompare(b)) as Runtime[];
   const cells: CapabilityCell[] = [];
-  for (const domain of DOMAINS) {
+  for (const domain of domainsInState(state)) {
     for (const runtime of runtimes) {
       const capabilities = state.capabilities.filter(c => c.domain === domain && c.runtime === runtime);
       if (!capabilities.length) continue;
@@ -176,8 +188,10 @@ export const capabilityById = (state: SystemState, id: string | null): Capabilit
 /** Lanes operacionais exibidas no cockpit, na ordem pedida pelo produto. */
 export const OPERATIONAL_LANES: Domain[] = ['SCIENCE', 'ENGINEERING', 'OLYMPUS'];
 
-export const laneViews = (state: SystemState, domains: Domain[] = OPERATIONAL_LANES): LaneSnapshot[] =>
-  domains.map(domain => state.lanes.find(l => l.domain === domain)).filter((l): l is LaneSnapshot => !!l);
+export const laneViews = (state: SystemState, domains?: Domain[]): LaneSnapshot[] => {
+  const selected = domains ?? domainsInState(state).filter(domain => domain !== 'NEXO' && domain !== 'ARTIFACT');
+  return selected.map(domain => state.lanes.find(l => l.domain === domain)).filter((l): l is LaneSnapshot => !!l);
+};
 
 export const nextActionsFor = (state: SystemState, domain: Domain): ActionRecord[] =>
   state.actions.filter(a => a.lane === domain);
