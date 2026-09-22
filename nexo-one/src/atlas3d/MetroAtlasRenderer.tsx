@@ -1426,6 +1426,7 @@ function rebuildThree(
   const ids = visibleAtlasIds(model, expanded);
   const visible = new Set(ids);
   const compact = isCompactRenderer(container);
+  const showLeafLabels = !compact && ids.length <= 44;
   const positions = threePositions(model, ids, Math.max(720, container.clientWidth), Math.max(560, container.clientHeight));
   runtime.worldPositions = positions;
   const depthMetrics = threeDepthMetrics(model, ids, positions);
@@ -1613,7 +1614,7 @@ function rebuildThree(
     selectionGlow.renderOrder = 7;
     group.add(selectionGlow);
 
-    if (!compact || node.entityType === 'hub' || node.entityType === 'subdomain' || id === selectedId) {
+    if (showLeafLabels || node.entityType === 'hub' || node.entityType === 'subdomain' || id === selectedId) {
       const label = createLabelSprite(node.name, DOMAIN_COLOR[node.domain], node.entityType === 'hub', compact);
       label.position.set(0, radius + (node.entityType === 'hub' ? 28 : 20), 0);
       group.add(label);
