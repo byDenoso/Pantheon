@@ -5,7 +5,7 @@ import {
 } from 'react';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
-import type { AtlasMetroModel, AtlasMetroNode } from './atlasAdapter.ts';
+import type { AtlasCrossLink, AtlasMetroModel, AtlasMetroNode } from './atlasAdapter.ts';
 import { visibleAtlasIds } from './atlasAdapter.ts';
 import {
   buildMetroScreenLabelLayout,
@@ -98,6 +98,59 @@ function learningWidth(kind: string | null | undefined): number {
   return 1.8;
 }
 
+type VisualCrossLink = AtlasCrossLink & {
+  visualCount: number;
+  visualRefs: string[];
+};
+
+function projectVisualCrossLinks(
+  links: AtlasCrossLink[],
+  visible: ReadonlySet<string>,
+  compact: boolean,
+): VisualCrossLink[] {
+  const filtered = links.filter(link => visible.has(link.source) && visible.has(link.target));
+  if (!compact) {
+    return filtered.map(link => ({
+      ...link,
+      visualCount: 1,
+      visualRefs: link.learningRef ? [link.learningRef] : [],
+    }));
+  }
+
+  const out: VisualCrossLink[] = [];
+  const learningGroups = new Map<string, AtlasCrossLink[]>();
+
+  for (const link of filtered) {
+    if (!link.isLearning) {
+      out.push({ ...link, visualCount: 1, visualRefs: [] });
+      continue;
+    }
+    const key = [link.source, link.target, link.learningKind || 'LEARNING'].join('↔');
+    const bucket = learningGroups.get(key) || [];
+    bucket.push(link);
+    learningGroups.set(key, bucket);
+  }
+
+  for (const [key, bucket] of learningGroups) {
+    bucket.sort((left, right) => left.id.localeCompare(right.id));
+    const base = bucket[0]!;
+    const refs = bucket.map(link => link.learningRef).filter((value): value is string => Boolean(value));
+    const weight = bucket.reduce((sum, link) => sum + Number(link.weight || 0), 0) / bucket.length;
+    out.push({
+      ...base,
+      id: `visual-learning:${key}`,
+      label: bucket.length > 1 ? `${base.label} · +${bucket.length - 1}` : base.label,
+      weight,
+      bundleIndex: 0,
+      bundleCount: 1,
+      visualCount: bucket.length,
+      visualRefs: refs,
+    });
+  }
+
+  return out;
+}
+
 function isAtlasReadback(): boolean {
   return typeof window !== 'undefined'
     && new URLSearchParams(window.location.search).get('readback') === '1';
@@ -146,7 +199,11 @@ function createG6Graph(
 
 function stampG6Metrics(container: HTMLElement, data: { nodes: any[]; edges: any[] }): void {
   container.dataset.g6NodeCount = String(data.nodes.length);
-  container.dataset.g6LearningEdges = String(data.edges.filter((edge: any) => edge.data?.isLearning).length);
+  const learningEdges = data.edges.filter((edge: any) => edge.data?.isLearning);
+  container.dataset.g6LearningEdges = String(learningEdges.length);
+  container.dataset.g6LearningRecords = String(
+    learningEdges.reduce((sum: number, edge: any) => sum + Math.max(1, Number(edge.data?.visualCount || 1)), 0),
+  );
   container.dataset.g6ScientificLearningEdges = String(
     data.edges.filter((edge: any) => edge.data?.learningKind === 'SCIENTIFIC_LEARNING_PIPELINE').length,
   );
@@ -217,6 +274,7 @@ function buildG6Data(
   showBeams: boolean,
   width: number,
   height: number,
+  compact = false,
 ) {
   const ids = visibleAtlasIds(model, expanded);
   const visible = new Set(ids);
@@ -249,8 +307,7 @@ function buildG6Data(
   });
 
   const bridgeEdges = showBeams
-    ? model.crossLinks
-      .filter(link => visible.has(link.source) && visible.has(link.target))
+    ? projectVisualCrossLinks(model.crossLinks, visible, compact)
       .map(link => ({
         id: link.id,
         source: link.source,
@@ -270,6 +327,8 @@ function buildG6Data(
           targetAnchor: link.targetAnchor,
           bundleIndex: link.bundleIndex,
           bundleCount: link.bundleCount,
+          visualCount: link.visualCount,
+          visualRefs: link.visualRefs,
         },
       }))
     : [];
@@ -503,7 +562,7 @@ function Metro2DView({
               ? '#91a4bd'
               : (DOMAIN_COLOR[String(datum.data?.domain)] || '#475569'),
           lineWidth: (datum: any) => datum.data?.isLearning
-            ? learningWidth(datum.data?.learningKind)
+            ? learningWidth(datum.data?.learningKind) + Math.min(2.1, Math.log2(Math.max(1, Number(datum.data?.visualCount || 1))) * .55)
             : datum.data?.kind === 'bridge' ? 1.05 : 2.25,
           opacity: (datum: any) => datum.data?.isLearning
             ? (datum.data?.learningKind === 'SCIENTIFIC_LEARNING_PIPELINE' ? .82 : .68)
