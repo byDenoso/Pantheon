@@ -17,9 +17,12 @@ test('Drive primary is explicit and fails closed when credentials are absent',as
   assert.equal(gateway.configured.towerStore,'GOOGLE_DRIVE');
   assert.equal(gateway.configured.towerWrite,false);
   assert.equal(gateway.configured.migrationFallback,false);
+  assert.equal(gateway.classifyBundlePath('CONTROL.json'),'CURRENT_CANONICAL');
+  assert.equal(gateway.classifyBundlePath('projections/public/manifest.json'),'DERIVED_STALE_ALLOWED');
+  assert.equal(gateway.classifyBundlePath('projections/public/projection.json'),'DERIVED_STALE_ALLOWED');
   await assert.rejects(()=>gateway.readControl(),/DRIVE_PRIMARY_NOT_CONFIGURED/);
-  await assert.rejects(()=>gateway.submitTowerMutation({}),/DRIVE_MUTATION_ENGINE_NOT_PROMOTED/);
-  await assert.rejects(()=>gateway.dispatchRuntime({}),/DRIVE_RUNTIME_DISPATCH_NOT_PROMOTED/);
+  await assert.rejects(()=>gateway.submitTowerMutation({}),/DRIVE_V2_CORE_DIRECT_ONLY/);
+  await assert.rejects(()=>gateway.dispatchRuntime({}),/DRIVE_V2_CORE_DIRECT_ONLY/);
 });
 
 test('GitHub fallback is migration-only and must be explicitly enabled',()=>{
