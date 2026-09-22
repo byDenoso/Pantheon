@@ -1,0 +1,54 @@
+name: NEXO Sync Bridge E2E Smoke
+
+on:
+  push:
+    branches: [fix/atlas-g6-render-timeout]
+    paths:
+      - '.github/workflows/nexo-sync-bridge-smoke.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger production sync and await exact Pages readback
+        shell: bash
+        env:
+          PAGE_BASE: https://bydenoso.github.io/Pantheon
+          SYNC_URL: https://nexo-one-two.vercel.app/api/projection-sync
+        run: |
+          set -euo pipefail
+          manifest="$(curl -fsSL --retry 3 --connect-timeout 5 "$PAGE_BASE/tower-projection/manifest.json")"
+          fingerprint="$(jq -er '.projection_fingerprint' <<<"$manifest")"
+
+          response="$(mktemp)"
+          http_status="$(
+            curl -sS -o "$response" -w '%{http_code}'               -X POST "$SYNC_URL"               -H 'Origin: https://bydenoso.github.io'               -H 'Content-Type: application/json'               -H 'Accept: application/json'               --data "$(jq -nc --arg fp "$fingerprint" '{current_fingerprint:$fp}')"
+          )"
+
+          cat "$response"
+          [ "$http_status" = "202" ] || {
+            echo "::error::sync bridge returned HTTP $http_status"
+            exit 1
+          }
+
+          request_id="$(jq -er '.request_id' "$response")"
+          [ "$(jq -r '.outcome' "$response")" = "DISPATCHED" ]
+          printf '%s' "$request_id" | grep -Eq '^cockpit-sync-[a-z0-9]+$'
+
+          for attempt in $(seq 1 75); do
+            meta="$(curl -fsSL --retry 1 --connect-timeout 5 "$PAGE_BASE/build-meta.json?sync_readback=$request_id&t=$attempt" || true)"
+            if [ -n "$meta" ]; then
+              observed="$(jq -r '.sync_request_id // empty' <<<"$meta" 2>/dev/null || true)"
+              if [ "$observed" = "$request_id" ]; then
+                echo "SYNC_BRIDGE_E2E_OK request_id=$request_id attempts=$attempt"
+                exit 0
+              fi
+            fi
+            sleep 2
+          done
+
+          echo "::error::sync request did not roundtrip through Pages request_id=$request_id"
+          exit 1
