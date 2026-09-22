@@ -201,7 +201,7 @@ jobs:
             [ -n "${work_id}" ] || continue
             work_path="_vault/TOWER_V06/entities/work/${work_id}.json"
             if [ -s "${work_path}" ]; then
-              jq --argfile item "${work_path}" '. + [$item]' nexo-one/data/tower-public/human-gates-details.json \
+              jq --slurpfile item "${work_path}" '. + [$item[0]]' nexo-one/data/tower-public/human-gates-details.json \
                 > nexo-one/data/tower-public/human-gates-details.next.json
               mv nexo-one/data/tower-public/human-gates-details.next.json nexo-one/data/tower-public/human-gates-details.json
             fi
