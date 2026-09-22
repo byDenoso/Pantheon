@@ -109,42 +109,89 @@ function projectVisualCrossLinks(
   compact: boolean,
 ): VisualCrossLink[] {
   const filtered = links.filter(link => visible.has(link.source) && visible.has(link.target));
-  if (!compact) {
-    return filtered.map(link => ({
-      ...link,
-      visualCount: 1,
-      visualRefs: link.learningRef ? [link.learningRef] : [],
-    }));
-  }
-
   const out: VisualCrossLink[] = [];
-  const learningGroups = new Map<string, AtlasCrossLink[]>();
+  const canonical = new Map<string, AtlasCrossLink[]>();
 
+  // A canonical Learning record may generate several graph edges that collapse
+  // to the same semantic source/target pair. Draw that path once and preserve
+  // multiplicity as metadata instead of stacking identical tubes/curves.
   for (const link of filtered) {
     if (!link.isLearning) {
       out.push({ ...link, visualCount: 1, visualRefs: [] });
       continue;
     }
-    const key = [link.source, link.target, link.learningKind || 'LEARNING'].join('↔');
-    const bucket = learningGroups.get(key) || [];
+    const recordKey = [
+      link.source,
+      link.target,
+      link.learningKind || 'LEARNING',
+      link.learningRef || link.id,
+    ].join('↔');
+    const bucket = canonical.get(recordKey) || [];
     bucket.push(link);
-    learningGroups.set(key, bucket);
+    canonical.set(recordKey, bucket);
   }
 
-  for (const [key, bucket] of learningGroups) {
+  const canonicalVisuals: VisualCrossLink[] = [];
+  for (const [key, bucket] of canonical) {
     bucket.sort((left, right) => left.id.localeCompare(right.id));
     const base = bucket[0]!;
-    const refs = bucket.map(link => link.learningRef).filter((value): value is string => Boolean(value));
-    const weight = bucket.reduce((sum, link) => sum + Number(link.weight || 0), 0) / bucket.length;
-    out.push({
+    const refs = [...new Set(
+      bucket.map(link => link.learningRef).filter((value): value is string => Boolean(value)),
+    )];
+    canonicalVisuals.push({
       ...base,
-      id: `visual-learning:${key}`,
-      label: bucket.length > 1 ? `${base.label} · +${bucket.length - 1}` : base.label,
-      weight,
-      bundleIndex: 0,
-      bundleCount: 1,
+      id: `visual-record:${key}`,
+      weight: bucket.reduce((sum, link) => sum + Number(link.weight || 0), 0) / bucket.length,
       visualCount: bucket.length,
       visualRefs: refs,
+    });
+  }
+
+  if (!compact) {
+    out.push(...canonicalVisuals);
+  } else {
+    const semanticBundles = new Map<string, VisualCrossLink[]>();
+    for (const link of canonicalVisuals) {
+      const key = [
+        link.source,
+        link.target,
+        link.learningKind || 'LEARNING',
+        link.learningTheme || 'UNTHEMED',
+      ].join('↔');
+      const bucket = semanticBundles.get(key) || [];
+      bucket.push(link);
+      semanticBundles.set(key, bucket);
+    }
+
+    for (const [key, bucket] of semanticBundles) {
+      bucket.sort((left, right) => left.id.localeCompare(right.id));
+      const base = bucket[0]!;
+      const refs = [...new Set(bucket.flatMap(link => link.visualRefs))];
+      const relationCount = bucket.reduce((sum, link) => sum + link.visualCount, 0);
+      out.push({
+        ...base,
+        id: `visual-learning:${key}`,
+        label: refs.length > 1 ? `${base.label} · +${refs.length - 1} aprendizados` : base.label,
+        weight: bucket.reduce((sum, link) => sum + Number(link.weight || 0), 0) / bucket.length,
+        visualCount: relationCount,
+        visualRefs: refs,
+      });
+    }
+  }
+
+  const learningPairs = new Map<string, VisualCrossLink[]>();
+  for (const link of out) {
+    if (!link.isLearning) continue;
+    const pair = [link.source, link.target].join('→');
+    const bucket = learningPairs.get(pair) || [];
+    bucket.push(link);
+    learningPairs.set(pair, bucket);
+  }
+  for (const bucket of learningPairs.values()) {
+    bucket.sort((left, right) => left.id.localeCompare(right.id));
+    bucket.forEach((link, index) => {
+      link.bundleIndex = index;
+      link.bundleCount = bucket.length;
     });
   }
 
@@ -201,7 +248,14 @@ function stampG6Metrics(container: HTMLElement, data: { nodes: any[]; edges: any
   container.dataset.g6NodeCount = String(data.nodes.length);
   const learningEdges = data.edges.filter((edge: any) => edge.data?.isLearning);
   container.dataset.g6LearningEdges = String(learningEdges.length);
-  container.dataset.g6LearningRecords = String(
+  container.dataset.g6LearningRecords = String(new Set(
+    learningEdges.flatMap((edge: any) =>
+      Array.isArray(edge.data?.visualRefs) && edge.data.visualRefs.length
+        ? edge.data.visualRefs
+        : [edge.data?.learningRef || edge.id]
+    ),
+  ).size);
+  container.dataset.g6LearningRelations = String(
     learningEdges.reduce((sum: number, edge: any) => sum + Math.max(1, Number(edge.data?.visualCount || 1)), 0),
   );
   container.dataset.g6ScientificLearningEdges = String(
@@ -1327,7 +1381,10 @@ function rebuildThree(
   const visualLearning = visualCrossLinks.filter(link => link.isLearning);
   container.dataset.threeLearningSynapses = String(visibleLearning.length);
   container.dataset.threeLearningVisualSynapses = String(visualLearning.length);
-  container.dataset.threeLearningRecords = String(
+  container.dataset.threeLearningRecords = String(new Set(
+    visualLearning.flatMap(link => link.visualRefs.length ? link.visualRefs : [link.learningRef || link.id]),
+  ).size);
+  container.dataset.threeLearningRelations = String(
     visualLearning.reduce((sum, link) => sum + Math.max(1, link.visualCount), 0),
   );
   container.dataset.threeScientificLearningSynapses = String(

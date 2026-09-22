@@ -264,9 +264,12 @@ test('GitHub Pages deploys official artifact and exposes projection readback', a
   assert.match(workflow, /data-atlas-g6-source="jsdelivr"/);
   assert.match(workflow, /data-three-quality="reduced-gpu"/);
   assert.match(workflow, /data-g6-learning-records/);
+  assert.match(workflow, /data-g6-learning-relations/);
+  assert.match(workflow, /Learning legend\/model record count diverges/);
   assert.match(workflow, /Mobile G6 did not compact parallel Learning filaments/);
   assert.match(workflow, /data-three-learning-visual-synapses/);
   assert.match(workflow, /data-three-learning-records/);
+  assert.match(workflow, /data-three-learning-relations/);
   assert.match(workflow, /! grep -Fq 'id="atlas-metro-g6"'/);
   assert.match(workflow, /atlas3d-production-readback/);
   assert.match(workflow, /PAGES_TOWER_PROJECTION_READBACK_OK/);

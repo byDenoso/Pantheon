@@ -208,7 +208,11 @@ export default function Atlas3DApp() {
     setSelectedId(id);
   };
 
-  const learningLinkCount = model.crossLinks.filter(link => link.isLearning).length;
+  const learningLinks = model.crossLinks.filter(link => link.isLearning);
+  const learningLinkCount = learningLinks.length;
+  const learningRecordCount = new Set(
+    learningLinks.map(link => link.learningRef || link.id),
+  ).size;
   const scientificLearningLinkCount = model.crossLinks.filter(link =>
     link.learningKind === 'SCIENTIFIC_LEARNING_PIPELINE'
   ).length;
@@ -300,6 +304,7 @@ export default function Atlas3DApp() {
       data-atlas-qa-expand={qaExpand || 'none'}
       data-atlas-qa-expanded-node={qaExpandedNode?.name || 'none'}
       data-atlas-learning-links={learningLinkCount}
+      data-atlas-learning-records={learningRecordCount}
       data-atlas-learning-scientific={scientificLearningLinkCount}
       data-atlas-learning-procedural={proceduralLearningLinkCount}
       data-atlas-learning-semantic={semanticLearningLinkCount}
@@ -399,9 +404,9 @@ export default function Atlas3DApp() {
           {learningLinkCount > 0 && (
             <span
               className="atlas-learning-legend"
-              title={`Scientific ${scientificLearningLinkCount} · Procedural ${proceduralLearningLinkCount} · Semantic ${semanticLearningLinkCount} · ${learningDistinctSubdomainCount} áreas · maior concentração ${learningMaxSubdomainShare}%`}
+              title={`${learningRecordCount} aprendizados canônicos · ${learningLinkCount} relações · Scientific ${scientificLearningLinkCount} · Procedural ${proceduralLearningLinkCount} · Semantic ${semanticLearningLinkCount} · ${learningDistinctSubdomainCount} áreas · maior concentração ${learningMaxSubdomainShare}%`}
             >
-              <i />Learning <b>{learningLinkCount}</b>
+              <i />Learning <b>{learningRecordCount}</b>
             </span>
           )}
           <small>{visibleIds.length} estações visíveis · {model.nodes.length} total</small>

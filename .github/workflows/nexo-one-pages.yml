@@ -400,6 +400,8 @@ jobs:
           g6_peer_subdomain="$(sed -n 's/.*data-g6-peer-subdomain-edges="\([0-9][0-9]*\)".*/\1/p' /tmp/atlas3d-dom.html | head -1)"
           g6_hub_learning="$(sed -n 's/.*data-g6-hub-learning-edges="\([0-9][0-9]*\)".*/\1/p' /tmp/atlas3d-dom.html | head -1)"
           peer_learning="$(sed -n 's/.*data-atlas-peer-learning-links="\([0-9][0-9]*\)".*/\1/p' /tmp/atlas3d-dom.html | head -1)"
+          atlas_learning_records="$(sed -n 's/.*data-atlas-learning-records="\([0-9][0-9]*\)".*/\1/p' /tmp/atlas3d-dom.html | head -1)"
+          system_learning_records="$(node -e "const s=require('/tmp/system.json');process.stdout.write(String((s.filaments||[]).length))")"
           atlas_scientific="$(sed -n 's/.*data-atlas-learning-scientific="\([0-9][0-9]*\)".*/\1/p' /tmp/atlas3d-dom.html | head -1)"
           atlas_procedural="$(sed -n 's/.*data-atlas-learning-procedural="\([0-9][0-9]*\)".*/\1/p' /tmp/atlas3d-dom.html | head -1)"
           atlas_semantic="$(sed -n 's/.*data-atlas-learning-semantic="\([0-9][0-9]*\)".*/\1/p' /tmp/atlas3d-dom.html | head -1)"
@@ -415,6 +417,10 @@ jobs:
           peer_artifacts="$(sed -n 's/.*data-atlas-peer-artifact-nodes="\([0-9][0-9]*\)".*/\1/p' /tmp/atlas3d-dom.html | head -1)"
           [ -n "${learning_edges}" ] && [ "${learning_edges}" -ge 8 ] || {
             echo "::error::Atlas rendered only ${learning_edges:-0} Learning filaments; semantic Learning projection is underrepresented"
+            exit 1
+          }
+          [ "${atlas_learning_records:-missing}" = "${system_learning_records:-missing}" ] || {
+            echo "::error::Atlas Learning legend/model record count diverges from canonical system filaments: atlas=${atlas_learning_records:-missing} system=${system_learning_records:-missing}"
             exit 1
           }
           [ -n "${peer_learning}" ] && [ "${peer_learning}" -ge 8 ] || {
@@ -510,7 +516,7 @@ jobs:
 
           echo "ATLAS3D_MOBILE_DOM_DIAGNOSTICS_BEGIN"
           grep -oE 'data-atlas-[a-z-]+="[^"]*"' /tmp/atlas3d-mobile-dom.html | head -24 || true
-          grep -oE 'data-g6-(ready|profile|viewport-width|viewport-height|node-count|label-visible|label-hidden|label-collisions|label-dom-collisions|label-ui-overlaps|learning-edges|learning-records)="[^"]*"' /tmp/atlas3d-mobile-dom.html | head -30 || true
+          grep -oE 'data-g6-(ready|profile|viewport-width|viewport-height|node-count|label-visible|label-hidden|label-collisions|label-dom-collisions|label-ui-overlaps|learning-edges|learning-records|learning-relations)="[^"]*"' /tmp/atlas3d-mobile-dom.html | head -30 || true
           grep -oE 'data-renderer-error="[^"]*"|class="atlas-render-error"[^<]*' /tmp/atlas3d-mobile-dom.html | head -10 || true
           echo "ATLAS3D_MOBILE_DOM_DIAGNOSTICS_END"
 
@@ -529,6 +535,7 @@ jobs:
           mobile_nodes="$(sed -n 's/.*data-g6-node-count="\([0-9][0-9]*\)".*/\1/p' /tmp/atlas3d-mobile-dom.html | head -1)"
           mobile_learning_visual="$(sed -n 's/.*data-g6-learning-edges="\([0-9][0-9]*\)".*/\1/p' /tmp/atlas3d-mobile-dom.html | head -1)"
           mobile_learning_records="$(sed -n 's/.*data-g6-learning-records="\([0-9][0-9]*\)".*/\1/p' /tmp/atlas3d-mobile-dom.html | head -1)"
+          mobile_learning_relations="$(sed -n 's/.*data-g6-learning-relations="\([0-9][0-9]*\)".*/\1/p' /tmp/atlas3d-mobile-dom.html | head -1)"
           [ -n "${mobile_width}" ] && [ "${mobile_width}" -ge 360 ] || {
             echo "::error::Atlas mobile workspace collapsed horizontally: ${mobile_width:-missing}px"
             exit 1
@@ -541,8 +548,12 @@ jobs:
             echo "::error::Atlas mobile G6 rendered only ${mobile_nodes:-0} nodes"
             exit 1
           }
-          [ -n "${mobile_learning_records}" ] && [ "${mobile_learning_records}" -ge 20 ] || {
-            echo "::error::Mobile Learning projection lost records: ${mobile_learning_records:-0}"
+          [ "${mobile_learning_records:-missing}" = "${system_learning_records:-missing}" ] || {
+            echo "::error::Mobile Learning canonical record count diverged: mobile=${mobile_learning_records:-missing} system=${system_learning_records:-missing}"
+            exit 1
+          }
+          [ -n "${mobile_learning_relations}" ] && [ "${mobile_learning_relations}" -ge "${mobile_learning_records}" ] || {
+            echo "::error::Mobile Learning relation multiplicity was lost: relations=${mobile_learning_relations:-missing} records=${mobile_learning_records:-missing}"
             exit 1
           }
           [ -n "${mobile_learning_visual}" ] && [ "${mobile_learning_visual}" -lt "${mobile_learning_records}" ] || {
@@ -555,7 +566,7 @@ jobs:
             --user-agent="${mobile_ua}" --virtual-time-budget=9000 \
             --screenshot=/tmp/atlas3d-readback-mobile.png "${mobile_url}" >/dev/null 2>&1
           test -s /tmp/atlas3d-readback-mobile.png
-          echo "PAGES_ATLAS3D_MOBILE_READBACK_OK width=${mobile_width} height=${mobile_height} nodes=${mobile_nodes} learning_visual=${mobile_learning_visual} learning_records=${mobile_learning_records} profile=compact-touch"
+          echo "PAGES_ATLAS3D_MOBILE_READBACK_OK width=${mobile_width} height=${mobile_height} nodes=${mobile_nodes} learning_visual=${mobile_learning_visual} learning_records=${mobile_learning_records} learning_relations=${mobile_learning_relations} profile=compact-touch"
 
           node --input-type=module <<'NODE'
           import fs from 'node:fs';
@@ -675,7 +686,7 @@ jobs:
             > /tmp/atlas3d-mobile-3d-dom.html
 
           echo "ATLAS3D_MOBILE_3D_DOM_DIAGNOSTICS_BEGIN"
-          grep -oE 'data-three-(ready|profile|viewport-width|viewport-height|node-count|paint-samples|synapse-count|learning-synapses|learning-visual-synapses|learning-records|visual)="[^"]*"' /tmp/atlas3d-mobile-3d-dom.html | head -26 || true
+          grep -oE 'data-three-(ready|profile|viewport-width|viewport-height|node-count|paint-samples|synapse-count|learning-synapses|learning-visual-synapses|learning-records|learning-relations|visual)="[^"]*"' /tmp/atlas3d-mobile-3d-dom.html | head -26 || true
           grep -oE 'data-renderer-error="[^"]*"|class="atlas-render-error"[^<]*' /tmp/atlas3d-mobile-3d-dom.html | head -10 || true
           echo "ATLAS3D_MOBILE_3D_DOM_DIAGNOSTICS_END"
 
@@ -692,11 +703,13 @@ jobs:
           mobile_three_paint="$(sed -n 's/.*data-three-paint-samples="\([0-9][0-9]*\)".*/\1/p' /tmp/atlas3d-mobile-3d-dom.html | head -1)"
           mobile_three_learning_visual="$(sed -n 's/.*data-three-learning-visual-synapses="\([0-9][0-9]*\)".*/\1/p' /tmp/atlas3d-mobile-3d-dom.html | head -1)"
           mobile_three_learning_records="$(sed -n 's/.*data-three-learning-records="\([0-9][0-9]*\)".*/\1/p' /tmp/atlas3d-mobile-3d-dom.html | head -1)"
+          mobile_three_learning_relations="$(sed -n 's/.*data-three-learning-relations="\([0-9][0-9]*\)".*/\1/p' /tmp/atlas3d-mobile-3d-dom.html | head -1)"
           [ -n "${mobile_three_width}" ] && [ "${mobile_three_width}" -ge 360 ]
           [ -n "${mobile_three_height}" ] && [ "${mobile_three_height}" -ge 700 ]
           [ -n "${mobile_three_nodes}" ] && [ "${mobile_three_nodes}" -gt 3 ]
           [ -n "${mobile_three_paint}" ] && [ "${mobile_three_paint}" -gt 20 ]
-          [ -n "${mobile_three_learning_records}" ] && [ "${mobile_three_learning_records}" -ge 20 ]
+          [ "${mobile_three_learning_records:-missing}" = "${system_learning_records:-missing}" ]
+          [ -n "${mobile_three_learning_relations}" ] && [ "${mobile_three_learning_relations}" -ge "${mobile_three_learning_records}" ]
           [ -n "${mobile_three_learning_visual}" ] && [ "${mobile_three_learning_visual}" -lt "${mobile_three_learning_records}" ]
 
           "${chrome_bin}" --headless=new --no-sandbox --disable-dev-shm-usage --hide-scrollbars \
@@ -704,7 +717,7 @@ jobs:
             --window-size=390,844 --force-device-scale-factor=1 --user-agent="${mobile_ua}" \
             --virtual-time-budget=9000 --screenshot=/tmp/atlas3d-readback-mobile-3d.png "${mobile_3d_url}" >/dev/null 2>&1
           test -s /tmp/atlas3d-readback-mobile-3d.png
-          echo "PAGES_ATLAS3D_MOBILE_3D_READBACK_OK width=${mobile_three_width} height=${mobile_three_height} nodes=${mobile_three_nodes} learning_visual=${mobile_three_learning_visual} learning_records=${mobile_three_learning_records} paint_samples=${mobile_three_paint}"
+          echo "PAGES_ATLAS3D_MOBILE_3D_READBACK_OK width=${mobile_three_width} height=${mobile_three_height} nodes=${mobile_three_nodes} learning_visual=${mobile_three_learning_visual} learning_records=${mobile_three_learning_records} learning_relations=${mobile_three_learning_relations} paint_samples=${mobile_three_paint}"
 
           curl -fsSL "${base}/world-public.ndjson" -o /tmp/world.ndjson
           curl -fsSL "${base}/mcp/topology.json" -o /tmp/mcp-topology.json
