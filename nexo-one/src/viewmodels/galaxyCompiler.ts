@@ -23,6 +23,7 @@ import { layoutGraph3D, type PlacedNode3D } from './graph3d.ts';
  * Adding a Tower type here never changes what the type canonically means. */
 const KIND_BY_TYPE: Record<GraphNodeType, GalaxyKind> = {
   DOMAIN: 'DOMAIN',
+  SUBDOMAIN: 'SUBDOMAIN',
   CAMPAIGN: 'OTHER',
   CAPABILITY: 'CAPABILITY',
   PROVIDER: 'AUTOMATION',
@@ -51,6 +52,7 @@ const GALAXY_PRESETS: GalaxyPreset[] = [
 
 function layerFor(node: GraphNode): GalaxyLayer {
   if (node.type === 'DOMAIN') return node.domain === 'NEXO' ? 'CORE' : 'DOMAIN';
+  if (node.type === 'SUBDOMAIN') return 'SUBDOMAIN';
   if (PERIPHERY_TYPES.includes(node.type)) return 'PERIPHERY';
   return 'ENTITY';
 }
@@ -99,7 +101,7 @@ export function compileGalaxySnapshot(
       kind: KIND_BY_TYPE[node.type] ?? 'OTHER',
       canonical_type: node.type,
       domain: node.domain,
-      subdomain_id: node.type === 'DOMAIN' ? null : subdomainId(node.domain, node.type),
+      subdomain_id: node.type === 'DOMAIN' || node.type === 'SUBDOMAIN' ? null : subdomainId(node.domain, node.type),
       status: node.state,
       title: node.label,
       summary: node.summary,
@@ -120,7 +122,7 @@ export function compileGalaxySnapshot(
   // tier; this grouping is presentation-only (every subdomain carries `derived: true`).
   const buckets = new Map<string, GalaxyEntity[]>();
   for (const entity of entities) {
-    if (entity.canonical_type === 'DOMAIN') continue;
+    if (entity.canonical_type === 'DOMAIN' || entity.canonical_type === 'SUBDOMAIN') continue;
     const key = entity.subdomain_id!;
     const list = buckets.get(key) ?? [];
     list.push(entity);
