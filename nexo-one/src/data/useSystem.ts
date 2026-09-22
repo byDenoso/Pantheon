@@ -68,7 +68,7 @@ export function useSystem(initialScenario = DEFAULT_SCENARIO_ID): SystemStore {
     }, 60_000);
 
     const onVisibility = () => {
-      if (document.visibilityState === 'visible') reload();
+      if (document.visibilityState === 'visible' && !syncController.current) reload();
     };
     document.addEventListener('visibilitychange', onVisibility);
 
