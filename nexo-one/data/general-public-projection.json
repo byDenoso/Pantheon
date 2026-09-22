@@ -3,7 +3,7 @@
   "authority": "GOOGLE_DRIVE_PRIVATE",
   "projection_only": true,
   "source": "STAGING/GENERAL",
-  "generated_at": "2026-09-22T22:31:00Z",
+  "generated_at": "2026-09-22T22:36:00Z",
   "execution": [
     {
       "atlas_id": "general-runtime-state",
@@ -11,8 +11,8 @@
       "summary": "Material General outputs persist in Drive and are projected into Atlas as aggregated operational state.",
       "domain": "ENGINEERING",
       "status": "ACTIVE",
-      "source_ref": "drive://STAGING/GENERAL/NEXO_GENERAL_RUNTIME_MANIFEST",
-      "updated_at": "2026-09-22T22:31:00Z",
+      "source_ref": "drive://STAGING/GENERAL/EXECUTION/GENEXEC-20260922T223600Z-GENERAL-ATLAS-V1",
+      "updated_at": "2026-09-22T22:36:00Z",
       "fingerprint": "sha256:da40584940f2af508c98fbf7f0c6b69b7f05acef2e2723d1cfadc92cbea96f12"
     }
   ],
@@ -26,8 +26,8 @@
       "to_domain": "ENGINEERING",
       "from_label": "General durable state",
       "to_label": "Atlas projection reliability",
-      "source_ref": "drive://STAGING/GENERAL/NEXO_GENERAL_RUNTIME_MANIFEST",
-      "updated_at": "2026-09-22T22:31:00Z",
+      "source_ref": "drive://STAGING/GENERAL/LEARNING/GENLEARN-20260922T223600Z-DURABLE-ATLAS-V1",
+      "updated_at": "2026-09-22T22:36:00Z",
       "support": 2,
       "contradiction": 0,
       "fingerprint": "sha256:bb5372dd10d6d6caf4513f7d17c94fd91dca6acd8af6234a2964b7f09be72a86"
