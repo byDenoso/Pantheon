@@ -351,12 +351,16 @@ function renderScreenLabels(
   container.dataset.g6LabelZoom = zoom.toFixed(3);
   container.dataset.g6LabelPolicy = 'viewport-adaptive-v2';
 
-  requestAnimationFrame(() => {
-    container.dataset.g6LabelDomCollisions = isAtlasReadback()
-      ? String(countDomLabelCollisions(labelLayer))
-      : 'runtime-skip';
+  if (isAtlasReadback()) {
+    // CI dump-dom can snapshot immediately after virtual time expires; publish
+    // diagnostic attributes synchronously so the production gate sees the same
+    // DOM that was just laid out.
+    container.dataset.g6LabelDomCollisions = String(countDomLabelCollisions(labelLayer));
     container.dataset.g6LabelUiOverlaps = String(layout.uiZoneViolations);
-  });
+  } else {
+    container.dataset.g6LabelDomCollisions = 'runtime-skip';
+    container.dataset.g6LabelUiOverlaps = String(layout.uiZoneViolations);
+  }
 }
 
 function Metro2DView({
