@@ -595,3 +595,9 @@
 .atlas-node text.anchor-label{fill:var(--muted);font-size:10px;font-weight:560;letter-spacing:.3px}
 .atlas-node.type-domain text.anchor-label{fill:var(--ink);font-size:11px;letter-spacing:1.1px}
 .atlas-node:hover circle,.atlas-node:hover rect{stroke-width:2.6}
+
+
+.inbox-requirements{display:grid;gap:8px}
+.inbox-requirements>.eyebrow{font-size:9px;letter-spacing:.9px;color:var(--quiet)}
+.inbox-options li code{display:block;margin-top:7px;font-size:9.5px;color:var(--quiet);overflow-wrap:anywhere}
+.inbox-automatic{padding:10px 12px;border-left:2px solid var(--line);background:color-mix(in srgb,var(--raised) 72%,transparent);border-radius:6px}
