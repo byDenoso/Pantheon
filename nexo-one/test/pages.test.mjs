@@ -34,8 +34,8 @@ test('GitHub Pages build uses repository base and configurable SystemState endpo
   assert.match(sync, /PUBLIC_PROJECTION_REFRESHED/);
   assert.match(sync, /source_storage==='GOOGLE_DRIVE_PRIVATE'/);
   assert.match(sync, /truth_owner==='TOWER_V06@GOOGLE_DRIVE_PRIVATE'/);
-  assert.match(hook, /Nova projeção publicada detectada/);
-  assert.match(hook, /Sem alterações · snapshot Pages validado/);
+  assert.match(hook, /Nova projeção pública detectada/);
+  assert.match(hook, /Sem alterações · projeção pública validada diretamente/);
   assert.match(hook, /dispatchProjectionSync/);
   assert.match(hook, /waitForProjectionSync/);
   assert.match(app, /onClick=\{system\.sync\}/);
