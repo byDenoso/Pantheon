@@ -567,6 +567,7 @@ export function buildMetroScreenLabelLayout(
   hoveredId: string | null = null,
 ): MetroScreenLabelLayout {
   const visibleSet = new Set(ids);
+  const compactViewport = viewportWidth <= 640;
   const siblingIndex = new Map<string, { index: number; count: number; sampled: boolean }>();
 
   for (const [parentId, allChildren] of model.childrenMap) {
@@ -619,10 +620,14 @@ export function buildMetroScreenLabelLayout(
     if (!position) continue;
 
     const siblings = siblingIndex.get(node.id);
+    // On compact touch viewports, forcing every subdomain label to remain visible
+    // recreates the exact pile-up that adaptive density is meant to prevent.
+    // Hubs and the actively selected/touched station stay mandatory; passive
+    // subdomain labels may yield when no collision-free placement exists.
     const mustShow = node.entityType === 'hub'
-      || node.entityType === 'subdomain'
       || node.id === selectedId
-      || node.id === hoveredId;
+      || node.id === hoveredId
+      || (!compactViewport && node.entityType === 'subdomain');
 
     if (!mustShow && siblings && !siblings.sampled) {
       byId.set(node.id, {
