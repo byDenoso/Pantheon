@@ -47,7 +47,7 @@ export const STATE_LABEL: Record<string, string> = {
   P0: 'P0', P1: 'P1', P2: 'P2', INFO: 'Info',
   LOW: 'Baixo', MEDIUM: 'Médio', HIGH: 'Alto',
   DECIDIR: 'Decidir', APROVAR: 'Aprovar', RESPONDER: 'Responder',
-  ESCOLHER: 'Escolher', FORNECER_DADO: 'Fornecer dado',
+  ESCOLHER: 'Escolher', FORNECER_DADO: 'Fornecer dado', CONFIGURAR_ACESSO: 'Autorizar / configurar',
   TRUTH_OWNER: 'Truth Owner', DELEGATED: 'Delegada', DERIVED: 'Derivada',
   NON_AUTHORITATIVE: 'Não autoritativa',
   READ: 'Leitura', WRITE: 'Escrita', SCHEDULE: 'Agendamento', DEPLOY: 'Deploy', NOTIFY: 'Notificação',
