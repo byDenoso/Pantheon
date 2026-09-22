@@ -63,3 +63,45 @@ footer{display:flex;justify-content:space-between;gap:20px;padding:30px 5vw;bord
   .hero-graph .canvas25d-status{top:96px}
   .hero-graph .canvas25d-controls{bottom:10px}
 }
+
+
+/* MCP interaction/readback hardening */
+.hero-actions{flex-wrap:wrap}
+.sync-button{padding:11px 14px;border:1px solid var(--hairline);border-radius:10px;background:var(--surface-2);color:var(--ink);font-size:11px;font-weight:700;cursor:pointer}
+.sync-button:hover:not(:disabled){border-color:color-mix(in srgb,var(--accent) 58%,var(--line));background:color-mix(in srgb,var(--accent) 7%,var(--surface-2))}
+.sync-button:disabled{cursor:progress;opacity:.66}
+.sync-feedback{font:600 8px/1.3 Space Mono,monospace;color:var(--quiet)}
+.sync-feedback.same{color:var(--green)}.sync-feedback.updated{color:var(--accent)}.sync-feedback.error{color:#ff9f9f}
+.freshness{width:100%;margin-top:9px}.freshness code{color:#9fcfe0}
+.search-readback{position:absolute;z-index:7;top:66px;left:14px;max-width:calc(100% - 28px);padding:7px 10px;border:1px solid var(--hairline);border-radius:9px;background:color-mix(in srgb,var(--surface-1) 86%,transparent);font:600 8px/1.25 Space Mono,monospace;color:var(--muted);pointer-events:none;backdrop-filter:blur(14px)}
+.search-readback b{color:var(--accent)}
+.node-inspector{max-height:72%}
+.relation-context{display:grid;gap:10px;margin-top:17px;padding-top:13px;border-top:1px solid var(--hairline)}
+.relation-group,.direct-relations{padding:10px;border:1px solid var(--hairline);border-radius:11px;background:color-mix(in srgb,var(--surface-2) 64%,transparent)}
+.relation-group header,.direct-relations header{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px}
+.relation-group header span,.direct-relations header span{font:600 8px/1.2 Space Mono,monospace;letter-spacing:.08em;text-transform:uppercase;color:var(--quiet)}
+.relation-group header b,.direct-relations header b{font:700 9px/1 Space Mono,monospace;color:var(--accent)}
+.relation-group>p{margin:0!important;font-size:9px!important;color:var(--quiet)!important}
+.relation-chips{display:flex;flex-wrap:wrap;gap:6px}
+.relation-chips button,.direct-relations button{border:1px solid var(--hairline);background:var(--surface-1);color:#d7e4ef;cursor:pointer}
+.relation-chips button{max-width:100%;padding:6px 8px;border-radius:8px;font-size:9px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.relation-chips button:hover,.direct-relations button:hover{border-color:color-mix(in srgb,var(--accent) 48%,var(--line));background:color-mix(in srgb,var(--accent) 7%,var(--surface-1))}
+.relation-chips>span{align-self:center;color:var(--quiet);font:600 8px Space Mono,monospace}
+.direct-relations{display:grid;gap:6px}
+.direct-relations header{grid-column:1/-1}
+.direct-relations button{display:grid;grid-template-columns:88px minmax(0,1fr);gap:7px;align-items:center;width:100%;padding:7px 8px;border-radius:8px;text-align:left}
+.direct-relations small{font:600 7px/1.2 Space Mono,monospace;color:var(--quiet);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.direct-relations strong{font-size:9px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.arch-flow button{min-height:222px;padding:22px;border:0;background:var(--surface-1);color:inherit;text-align:left;cursor:pointer;transition:background .16s ease,box-shadow .16s ease}
+.arch-flow button>span{font:600 8px Space Mono,monospace;color:var(--quiet)}
+.arch-flow button h3{margin:68px 0 12px;font-size:18px;letter-spacing:-.03em}
+.arch-flow button p{margin:0;color:var(--muted);font-size:11px;line-height:1.65}
+.arch-flow button em{display:block;margin-top:18px;font:600 8px/1.2 Space Mono,monospace;font-style:normal;color:var(--quiet)}
+.arch-flow button:hover,.arch-flow button.active{background:color-mix(in srgb,var(--accent) 6%,var(--surface-1));box-shadow:inset 0 2px 0 color-mix(in srgb,var(--accent) 58%,transparent)}
+.arch-flow button.active em{color:var(--accent)}
+@media(max-width:620px){
+  .hero-actions{gap:8px}.sync-feedback{flex-basis:100%}.freshness{font-size:7px;overflow-wrap:anywhere}
+  .search-readback{top:94px;left:8px;max-width:calc(100% - 16px)}
+  .node-inspector{max-height:58%}
+  .arch-flow button{min-height:165px;padding:18px}.arch-flow button h3{margin-top:44px}
+}
