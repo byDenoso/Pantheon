@@ -212,6 +212,7 @@ jobs:
           cp _vault/TOWER_V06/manifests/capabilities.json nexo-one/data/mcp-source/capabilities.json
           cp _vault/services/nexo-api/app/mcp_server.py nexo-one/data/mcp-source/mcp_server.py
           cp _vault/services/nexo-api/app/remote_mcp.py nexo-one/data/mcp-source/remote_mcp.py
+          cp _vault/TOWER_V06/projections/public/manifest.json nexo-one/data/mcp-source/projection-manifest.json
           jq -n --arg tower_commit "${TOWER_COMMIT}" '{tower_commit:$tower_commit}' > nexo-one/data/mcp-source/source.json
 
       - name: Setup Node
@@ -247,7 +248,7 @@ jobs:
         run: |
           set -euo pipefail
           npm run typecheck
-          node --test test/atlas3d-metro-production.test.mjs test/pages.test.mjs
+          node --test test/atlas3d-metro-production.test.mjs test/pages.test.mjs test/mcp-atlas-site.test.mjs
           mkdir -p public/vendor
           curl -fsSL --retry 3 --connect-timeout 8 https://cdn.jsdelivr.net/npm/@antv/g6@5/dist/g6.min.js -o public/vendor/g6.min.js
           test -s public/vendor/g6.min.js
@@ -891,6 +892,27 @@ jobs:
           if(system.bus?.fingerprint!==manifest.projection_fingerprint)throw new Error('SYSTEM_NOT_BOUND_TO_TOWER_PROJECTION');
           if(world.truthGraph?.fingerprint!==manifest.projection_fingerprint)throw new Error('WORLD_NOT_BOUND_TO_TOWER_PROJECTION');
 
+          const projectedWork=Array.isArray(projection.work)?projection.work:[];
+          const publishedWork=(system.graph?.nodes||[]).filter(node=>node.type==='ACTION');
+          if(publishedWork.length!==projectedWork.length){
+            throw new Error(`WORK_COUNT_DRIFT projection=${projectedWork.length} system=${publishedWork.length}`);
+          }
+          const projectedById=new Map(projectedWork.map(item=>[String(item.id||''),item]));
+          const systemById=new Map(publishedWork.map(node=>[String(node.id||'').replace(/^work:/,''),node]));
+          const humanIds=new Set(Array.isArray(projection.human_gates?.work_ids)?projection.human_gates.work_ids.map(String):[]);
+          for(const [id,item] of projectedById){
+            const node=systemById.get(id);
+            if(!node)throw new Error(`WORK_MISSING_FROM_SYSTEM ${id}`);
+            const expectedStatus=String(item.operational_status||item.status||'UNSPECIFIED').toUpperCase();
+            const actualStatus=String(node.operational_status||node.state||'UNSPECIFIED').toUpperCase();
+            if(actualStatus!==expectedStatus)throw new Error(`WORK_STATUS_DRIFT ${id} projection=${expectedStatus} system=${actualStatus}`);
+            if(Boolean(node.human_gate)!==humanIds.has(id))throw new Error(`WORK_HUMAN_GATE_DRIFT ${id}`);
+          }
+          const expectedBlocked=projectedWork.filter(item=>String(item.operational_status||item.status||'').toUpperCase()==='BLOCKED').length;
+          const actualBlocked=publishedWork.filter(node=>String(node.operational_status||node.state||'').toUpperCase()==='BLOCKED').length;
+          if(actualBlocked!==expectedBlocked)throw new Error(`WORK_BLOCKED_COUNT_DRIFT projection=${expectedBlocked} system=${actualBlocked}`);
+          if((system.inbox||[]).length!==humanIds.size)throw new Error(`WORK_HUMAN_COUNT_DRIFT projection=${humanIds.size} inbox=${(system.inbox||[]).length}`);
+
           if(buildMeta.contract!=='NEXO_ONE_BUILD_META_V1')throw new Error('BUILD_META_CONTRACT_INVALID');
           if(buildMeta.pantheon_commit!==process.env.EXPECTED_PANTHEON_COMMIT)throw new Error('BUILD_META_COMMIT_MISMATCH');
           if(buildMeta.projection_fingerprint!==manifest.projection_fingerprint)throw new Error('BUILD_META_FINGERPRINT_MISMATCH');
@@ -900,6 +922,8 @@ jobs:
 
           if(mcp.contract!=='NEXO_MCP_TOPOLOGY_V1')throw new Error('MCP_TOPOLOGY_CONTRACT_INVALID');
           if(mcp.source?.authority!=='TOWER_V06'||!mcp.source?.commit)throw new Error('MCP_TOPOLOGY_SOURCE_INVALID');
+          if(mcp.source?.source_storage!=='GOOGLE_DRIVE_PRIVATE'||mcp.source?.source_snapshot_id!==manifest.source_snapshot_id)throw new Error('MCP_TOPOLOGY_FRESHNESS_SOURCE_INVALID');
+          if(mcp.source?.source_state_fingerprint!==manifest.source_state_fingerprint||mcp.source?.projection_fingerprint!==manifest.projection_fingerprint)throw new Error('MCP_TOPOLOGY_FRESHNESS_FINGERPRINT_MISMATCH');
           if(!Array.isArray(mcp.nodes)||mcp.nodes.length<8||!Array.isArray(mcp.links)||mcp.links.length<7)throw new Error('MCP_TOPOLOGY_EMPTY');
 
           if(galaxy.contract!=='NEXO_ONE_GALAXY_V1')throw new Error('GALAXY_CONTRACT_INVALID');
