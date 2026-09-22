@@ -58,6 +58,7 @@ test('manual sync is a server-side GitHub dispatch bridge with exact readback id
   assert.match(handler, /status:String\(env\.GITHUB_TOKEN/);
   assert.match(handler, /event_type:'nexo-public-projection-updated'/);
   assert.match(handler, /ATLAS_ORIGINS\.has\(origin\)/);
+  assert.match(handler, /https:\/\/nexo-one-two\.vercel\.app/);
   assert.match(hook, /dispatchProjectionSync/);
   assert.match(hook, /waitForProjectionSync/);
   assert.match(sync, /meta\.sync_request_id===requestId/);
