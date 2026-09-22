@@ -180,6 +180,24 @@ function resolveLearningEndpoint({
     || topDomainFromValue(side === 'source' ? filament.from_domain : filament.to_domain);
   if (!resolvedDomain) return null;
 
+  // Sanctioned Learning projections may publish canonical entity links without
+  // assigning them to from_id/to_id. For inter-domain filaments the side domain
+  // disambiguates the role safely: exactly one linked canonical entity in that
+  // domain is strong enough evidence for leaf routing. Ambiguous or same-domain
+  // links deliberately remain at subdomain LOD instead of inventing precision.
+  if (filament.scope === 'INTER_DOMAIN') {
+    const linkedEntities = uniquePairs((filament.links || [])
+      .filter(link =>
+        topDomainFromValue(link.domain) === resolvedDomain
+        && sourceNodeIds.has(link.id)
+        && nodeMap.has(link.id)
+      )
+      .map(link => link.id));
+    if (linkedEntities.length === 1) {
+      return { id: linkedEntities[0]!, anchor: 'EXACT_ENTITY' };
+    }
+  }
+
   if (semanticAnchor) {
     const semanticId = atlasSubdomainNodeId(semanticAnchor.domain, semanticAnchor.subdomain);
     if (nodeMap.has(semanticId)) return { id: semanticId, anchor: 'SEMANTIC_SUBDOMAIN' };
