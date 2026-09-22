@@ -261,6 +261,7 @@ function renderScreenLabels(
 
   requestAnimationFrame(() => {
     container.dataset.g6LabelDomCollisions = String(countDomLabelCollisions(labelLayer));
+    container.dataset.g6LabelUiOverlaps = String(layout.uiZoneViolations);
   });
 }
 
