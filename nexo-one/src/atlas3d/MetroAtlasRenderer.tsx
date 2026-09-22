@@ -201,6 +201,7 @@ function buildG6Data(
 ) {
   const ids = visibleAtlasIds(model, expanded);
   const visible = new Set(ids);
+  const compact = isCompactRenderer(container);
   const positions = metroLayoutPositions(model, ids, width, height);
 
   const nodes = ids.map(id => {
@@ -384,6 +385,7 @@ function Metro2DView({
   const activateRef = useRef(onActivate);
   const showBeamsRef = useRef(showBeams);
   const lastFitNonce = useRef(-1);
+  const onReadyRef = useRef(onReady);
   const renderLabelsRef = useRef<() => void>(() => {});
 
   modelRef.current = model;
@@ -391,6 +393,7 @@ function Metro2DView({
   selectedRef.current = selectedId;
   activateRef.current = onActivate;
   showBeamsRef.current = showBeams;
+  onReadyRef.current = onReady;
 
   useEffect(() => {
     const surface = surfaceRef.current;
@@ -738,8 +741,8 @@ function hashNumber(value: string): number {
   return hash >>> 0;
 }
 
-function createOrganicGeometry(radius: number, seedKey: string): THREE.IcosahedronGeometry {
-  const geometry = new THREE.IcosahedronGeometry(radius, 3);
+function createOrganicGeometry(radius: number, seedKey: string, detail = 3): THREE.IcosahedronGeometry {
+  const geometry = new THREE.IcosahedronGeometry(radius, detail);
   const position = geometry.getAttribute('position') as THREE.BufferAttribute;
   const seed = (hashNumber(seedKey) % 10000) / 1000;
   const vertex = new THREE.Vector3();
@@ -847,16 +850,20 @@ function addSynapse(
   learning = false,
   bundleIndex = 0,
   bundleCount = 1,
+  compact = false,
 ) {
   const curve = synapseCurve(source, target, key, bridge, learning, bundleIndex, bundleCount);
   const span = source.distanceTo(target);
-  const segments = Math.max(18, Math.min(52, Math.round(span / 7)));
+  const segments = compact
+    ? Math.max(12, Math.min(30, Math.round(span / 11)))
+    : Math.max(18, Math.min(52, Math.round(span / 7)));
+  const radialSegments = compact ? 4 : 5;
   const color = new THREE.Color(colorValue);
   const coreRadius = (learning ? .46 : bridge ? .34 : .48) * Math.max(.72, Math.min(1.45, strength));
   const glowRadius = coreRadius * (learning ? 4.8 : 3.2);
 
   const glow = new THREE.Mesh(
-    new THREE.TubeGeometry(curve, segments, glowRadius, 5, false),
+    new THREE.TubeGeometry(curve, segments, glowRadius, radialSegments, false),
     new THREE.MeshBasicMaterial({
       color,
       transparent: true,
@@ -869,7 +876,7 @@ function addSynapse(
   content.add(glow);
 
   const core = new THREE.Mesh(
-    new THREE.TubeGeometry(curve, segments, coreRadius, 5, false),
+    new THREE.TubeGeometry(curve, segments, coreRadius, radialSegments, false),
     new THREE.MeshBasicMaterial({
       color,
       transparent: true,
@@ -883,7 +890,7 @@ function addSynapse(
 
   const particle = new THREE.Group();
   const pulseCore = new THREE.Mesh(
-    new THREE.SphereGeometry(learning ? 1.8 : bridge ? 1.15 : 1.45, 10, 8),
+    new THREE.SphereGeometry(learning ? 1.8 : bridge ? 1.15 : 1.45, compact ? 8 : 10, compact ? 6 : 8),
     new THREE.MeshBasicMaterial({
       color,
       transparent: true,
@@ -920,24 +927,25 @@ function updateSynapsePulses(runtime: ThreeRuntime, now: number) {
   }
 }
 
-function createLabelSprite(text: string, domainColor: string, isHub: boolean): THREE.Sprite {
+function createLabelSprite(text: string, domainColor: string, isHub: boolean, compact = false): THREE.Sprite {
   const canvas = document.createElement('canvas');
-  canvas.width = 512;
-  canvas.height = 128;
+  canvas.width = compact ? 256 : 512;
+  canvas.height = compact ? 64 : 128;
   const context = canvas.getContext('2d')!;
   context.fillStyle = 'rgba(7,11,20,.90)';
   context.strokeStyle = domainColor;
-  context.lineWidth = isHub ? 5 : 3;
+  context.lineWidth = (isHub ? 5 : 3) * (compact ? .5 : 1);
+  const unit = compact ? .5 : 1;
   context.beginPath();
-  context.roundRect(8, 18, 496, 92, 22);
+  context.roundRect(8 * unit, 18 * unit, 496 * unit, 92 * unit, 22 * unit);
   context.fill();
   context.stroke();
   context.fillStyle = '#e5edf8';
-  context.font = `${isHub ? 800 : 650} ${isHub ? 34 : 29}px Inter, Arial, sans-serif`;
+  context.font = `${isHub ? 800 : 650} ${(isHub ? 34 : 29) * unit}px Inter, Arial, sans-serif`;
   context.textAlign = 'center';
   context.textBaseline = 'middle';
   const label = text.length > 28 ? `${text.slice(0, 27)}…` : text;
-  context.fillText(label, 256, 64);
+  context.fillText(label, 256 * unit, 64 * unit);
 
   const texture = new THREE.CanvasTexture(canvas);
   texture.colorSpace = THREE.SRGBColorSpace;
@@ -1173,6 +1181,10 @@ function rebuildThree(
       `hierarchy:${node.parentId}:${id}`,
       false,
       node.entityType === 'subdomain' ? 1.08 : .9,
+      false,
+      0,
+      1,
+      compact,
     );
   }
 
@@ -1200,6 +1212,7 @@ function rebuildThree(
         link.isLearning,
         link.bundleIndex,
         link.bundleCount,
+        compact,
       );
     }
   }
@@ -1244,7 +1257,7 @@ function rebuildThree(
       roughness: .64,
       metalness: .03,
     });
-    const core = new THREE.Mesh(createOrganicGeometry(radius, id), coreMaterial);
+    const core = new THREE.Mesh(createOrganicGeometry(radius, id, compact ? 2 : 3), coreMaterial);
     core.userData = { nodeId: id, baseEmissive };
     const organicSeed = hashNumber(id);
     core.rotation.set(
@@ -1256,7 +1269,7 @@ function rebuildThree(
     runtime.interactive.push(core);
 
     const membrane = new THREE.Mesh(
-      createOrganicGeometry(radius * 1.13, `${id}:membrane`),
+      createOrganicGeometry(radius * 1.13, `${id}:membrane`, compact ? 2 : 3),
       new THREE.MeshBasicMaterial({
         color: new THREE.Color(domainColor),
         transparent: true,
@@ -1298,9 +1311,11 @@ function rebuildThree(
     selectionGlow.renderOrder = 7;
     group.add(selectionGlow);
 
-    const label = createLabelSprite(node.name, DOMAIN_COLOR[node.domain], node.entityType === 'hub');
-    label.position.set(0, radius + (node.entityType === 'hub' ? 28 : 20), 0);
-    group.add(label);
+    if (!compact || node.entityType === 'hub' || node.entityType === 'subdomain' || id === selectedId) {
+      const label = createLabelSprite(node.name, DOMAIN_COLOR[node.domain], node.entityType === 'hub', compact);
+      label.position.set(0, radius + (node.entityType === 'hub' ? 28 : 20), 0);
+      group.add(label);
+    }
 
     group.userData.core = core;
     group.userData.neuronGlow = neuronGlow;
@@ -1328,7 +1343,8 @@ function MetroThreeView({
   showBeams,
   fitNonce,
   onActivate,
-}: Omit<Props, 'viewMode' | 'onReady'>) {
+  onReady,
+}: Omit<Props, 'viewMode'>) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const tooltipRef = useRef<HTMLDivElement | null>(null);
   const runtimeRef = useRef<ThreeRuntime | null>(null);
@@ -1338,12 +1354,14 @@ function MetroThreeView({
   const activateRef = useRef(onActivate);
   const showBeamsRef = useRef(showBeams);
   const lastFitNonce = useRef(-1);
+  const onReadyRef = useRef(onReady);
 
   modelRef.current = model;
   expandedRef.current = expanded;
   selectedRef.current = selectedId;
   activateRef.current = onActivate;
   showBeamsRef.current = showBeams;
+  onReadyRef.current = onReady;
 
   useEffect(() => {
     const container = containerRef.current;
@@ -1359,6 +1377,7 @@ function MetroThreeView({
 
     const compact = isCompactRenderer(container);
     container.dataset.threeProfile = compact ? 'compact-touch' : 'desktop';
+    container.dataset.threeQuality = compact ? 'reduced-gpu' : 'full';
     const scene = new THREE.Scene();
     scene.fog = new THREE.FogExp2(0x070b14, .00075);
     const camera = new THREE.PerspectiveCamera(46, 1, 1, 5000);
@@ -1554,7 +1573,8 @@ function MetroThreeView({
       lastFitNonce.current = fitNonce;
       fitThree(runtime, !initialFit);
     }
-    renderAndMeasureThree(runtime, container);
+    const painted = renderAndMeasureThree(runtime, container);
+    if (painted > 0 || !isAtlasReadback()) onReadyRef.current?.();
   }, [model.revision, expansionKey, showBeams, fitNonce]);
 
   useEffect(() => {
@@ -1577,10 +1597,11 @@ function MetroThreeView({
 export function MetroAtlasRenderer(props: Props) {
   return (
     <div className="atlas-renderer" data-mode={props.viewMode}>
-      <div className={`atlas-render-layer ${props.viewMode === '2d' ? 'active' : 'inactive'}`} aria-hidden={props.viewMode !== '2d'}>
-        <Metro2DView {...props} />
-      </div>
-      {props.viewMode === '3d' && (
+      {props.viewMode === '2d' ? (
+        <div className="atlas-render-layer active" aria-hidden="false">
+          <Metro2DView {...props} />
+        </div>
+      ) : (
         <div className="atlas-render-layer active" aria-hidden="false">
           <MetroThreeView {...props} />
         </div>

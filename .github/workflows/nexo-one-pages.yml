@@ -450,7 +450,7 @@ jobs:
           echo "PAGES_ATLAS3D_VISUAL_READBACK_OK roots=3 visible=${visible_count} g6_nodes=${g6_node_count} renderer=metro-cluster"
 
           mobile_ua='Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1'
-          mobile_url="${base}/atlas3d/?readback=1"
+          mobile_url="${base}/atlas3d/?readback=1&g6Fallback=1"
           "${chrome_bin}" --headless=new --no-sandbox --disable-dev-shm-usage --hide-scrollbars \
             --touch-events=enabled --window-size=390,844 --force-device-scale-factor=1 \
             --user-agent="${mobile_ua}" --virtual-time-budget=14000 --dump-dom "${mobile_url}" \
@@ -462,6 +462,7 @@ jobs:
           grep -oE 'data-renderer-error="[^"]*"|class="atlas-render-error"[^<]*' /tmp/atlas3d-mobile-dom.html | head -10 || true
           echo "ATLAS3D_MOBILE_DOM_DIAGNOSTICS_END"
 
+          grep -Fq 'data-atlas-g6-source="jsdelivr"' /tmp/atlas3d-mobile-dom.html
           grep -Fq 'data-atlas-ready="true"' /tmp/atlas3d-mobile-dom.html
           grep -Fq 'data-g6-ready="true"' /tmp/atlas3d-mobile-dom.html
           grep -Fq 'data-g6-profile="compact-touch"' /tmp/atlas3d-mobile-dom.html
@@ -469,6 +470,7 @@ jobs:
           grep -Fq 'data-g6-label-dom-collisions="0"' /tmp/atlas3d-mobile-dom.html
           grep -Fq 'data-g6-label-ui-overlaps="0"' /tmp/atlas3d-mobile-dom.html
           ! grep -Fq 'data-renderer-error=' /tmp/atlas3d-mobile-dom.html
+          ! grep -Fq 'data-testid="atlas-metro-3d"' /tmp/atlas3d-mobile-dom.html
 
           mobile_width="$(sed -n 's/.*data-g6-viewport-width="\([0-9][0-9]*\)".*/\1/p' /tmp/atlas3d-mobile-dom.html | head -1)"
           mobile_height="$(sed -n 's/.*data-g6-viewport-height="\([0-9][0-9]*\)".*/\1/p' /tmp/atlas3d-mobile-dom.html | head -1)"
@@ -593,7 +595,7 @@ jobs:
           test -s /tmp/atlas3d-readback-3d.png
           echo "PAGES_ATLAS3D_3D_READBACK_OK visual=neural-synapse visible=${visible_count} three_nodes=${three_node_count} synapses=${three_synapse_count} learning=${three_learning} scientific=${three_scientific} peer=${three_peer} z_span=${three_z_span} same_level_z=${three_same_level_z} selected_siblings=${selected_sibling_count} selected_z=${selected_sibling_z} paint_samples=${three_paint_samples}"
 
-          mobile_3d_url="${base}/atlas3d/?mode=3d&readback=1"
+          mobile_3d_url="${base}/atlas3d/?mode=3d&readback=1&g6Fallback=1"
           "${chrome_bin}" --headless=new --no-sandbox --disable-dev-shm-usage --hide-scrollbars \
             --use-angle=swiftshader --enable-unsafe-swiftshader --touch-events=enabled \
             --window-size=390,844 --force-device-scale-factor=1 --user-agent="${mobile_ua}" \
@@ -606,9 +608,12 @@ jobs:
           echo "ATLAS3D_MOBILE_3D_DOM_DIAGNOSTICS_END"
 
           grep -Fq 'data-atlas-mode="3d"' /tmp/atlas3d-mobile-3d-dom.html
+          grep -Fq 'data-atlas-g6-source="jsdelivr"' /tmp/atlas3d-mobile-3d-dom.html
           grep -Fq 'data-three-profile="compact-touch"' /tmp/atlas3d-mobile-3d-dom.html
+          grep -Fq 'data-three-quality="reduced-gpu"' /tmp/atlas3d-mobile-3d-dom.html
           grep -Fq 'data-three-ready="true"' /tmp/atlas3d-mobile-3d-dom.html
           ! grep -Fq 'data-renderer-error=' /tmp/atlas3d-mobile-3d-dom.html
+          ! grep -Fq 'id="atlas-metro-g6"' /tmp/atlas3d-mobile-3d-dom.html
           mobile_three_width="$(sed -n 's/.*data-three-viewport-width="\([0-9][0-9]*\)".*/\1/p' /tmp/atlas3d-mobile-3d-dom.html | head -1)"
           mobile_three_height="$(sed -n 's/.*data-three-viewport-height="\([0-9][0-9]*\)".*/\1/p' /tmp/atlas3d-mobile-3d-dom.html | head -1)"
           mobile_three_nodes="$(sed -n 's/.*data-three-node-count="\([0-9][0-9]*\)".*/\1/p' /tmp/atlas3d-mobile-3d-dom.html | head -1)"
