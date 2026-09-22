@@ -244,6 +244,7 @@ jobs:
           VITE_WORLD_ENDPOINT: ./world-public.ndjson
           VITE_GALAXY_ENDPOINT: ./galaxy/latest.json
           VITE_NEXO_AUTH_BRIDGE_URL: ${{ vars.VITE_NEXO_AUTH_BRIDGE_URL }}
+          VITE_NEXO_SYNC_ENDPOINT: https://nexo-one-two.vercel.app/api/projection-sync
           VITE_PRIVATE_COCKPIT_URL: https://nexo-one-two.vercel.app
         run: |
           set -euo pipefail
@@ -306,6 +307,7 @@ jobs:
           NEXO_GALAXY_RETENTION: '168'
           PANTHEON_COMMIT: ${{ github.sha }}
           PROJECTION_FINGERPRINT: ${{ steps.projection.outputs.projection_fingerprint }}
+          SYNC_REQUEST_ID: ${{ github.event.client_payload.request_id }}
         run: |
           set -euo pipefail
           node scripts/build-pages-system.mjs
@@ -321,8 +323,10 @@ jobs:
           test -s dist/world-public.ndjson
           test -s dist/tower-projection/projection.json
           test -s dist/tower-projection/manifest.json
+          built_at="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
           jq -n --arg pantheon_commit "${PANTHEON_COMMIT}" --arg projection_fingerprint "${PROJECTION_FINGERPRINT}" \
-            '{contract:"NEXO_ONE_BUILD_META_V1",pantheon_commit:$pantheon_commit,projection_fingerprint:$projection_fingerprint}' > dist/build-meta.json
+            --arg sync_request_id "${SYNC_REQUEST_ID:-}" --arg built_at "${built_at}" \
+            '{contract:"NEXO_ONE_BUILD_META_V1",pantheon_commit:$pantheon_commit,projection_fingerprint:$projection_fingerprint,sync_request_id:$sync_request_id,built_at:$built_at}' > dist/build-meta.json
           test -s dist/build-meta.json
           touch dist/.nojekyll
           if grep -R -Eqi 'truthgraph-projection|nexo-drive-projection' dist/system.json dist/world-public.ndjson dist/tower-projection; then
