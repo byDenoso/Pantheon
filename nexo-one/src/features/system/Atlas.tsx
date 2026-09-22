@@ -334,11 +334,13 @@ export function AtlasView(
   const [expandedCampaign, setExpandedCampaign] = useState<string | null>(null);
   const renderGraph = useMemo(() => {
     // Learning is transverse. Top domains and semantic subdomains are presentation-only.
-    const baseNodes = filtered.nodes.filter(node => learningVisible || node.type !== 'FILAMENT');
+    const sourceNodes = filtered.nodes.filter(node => learningVisible || node.type !== 'FILAMENT');
+    const baseNodes = sourceNodes.filter(node => node.type !== 'TEST');
     const domainNodes = baseNodes.filter(node => node.type === 'DOMAIN');
     const rootNode = domainNodes.find(node => node.id === 'atlas.root.nexo');
     const branchDomains = domainNodes.filter(node => node.id !== 'atlas.root.nexo' && ATLAS_TOP_DOMAINS.includes(node.domain as AtlasTopDomain));
     const contentNodes = baseNodes.filter(node => node.type !== 'DOMAIN' && node.type !== 'FILAMENT');
+    const sourceContentNodes = sourceNodes.filter(node => node.type !== 'DOMAIN' && node.type !== 'FILAMENT');
 
     if (expandAll) {
       const ids = new Set(baseNodes.map(node => node.id));
@@ -370,6 +372,7 @@ export function AtlasView(
     if (!domainNode) return { nodes: domainNodes, edges: [] };
 
     const domainChildren = contentNodes.filter(node => node.domain === topDomain);
+    const sourceDomainChildren = sourceContentNodes.filter(node => node.domain === topDomain);
 
     const learningOverlayForTargets = (targetIds: Set<string>, remap = new Map<string, string>()) => {
       if (!learningVisible) return { nodes: [] as GraphNode[], edges: [] as typeof filtered.edges };
