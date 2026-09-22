@@ -668,8 +668,16 @@ function Metro2DView({
       container.dataset.g6ViewportHeight = Math.round(rect.height).toString();
 
       try {
-        await graph.render();
+        const renderTask = Promise.resolve(graph.render()).then(() => 'resolved' as const);
+        const renderTimeoutMs = isAtlasReadback() ? 450 : compact ? 900 : 1200;
+        const renderOutcome = await Promise.race([
+          renderTask,
+          new Promise<'timeout'>(resolve => window.setTimeout(() => resolve('timeout'), renderTimeoutMs)),
+        ]);
         if (sequence !== refreshSequence) return;
+        if (renderOutcome === 'timeout' && !container.querySelector('canvas')) {
+          throw new Error('G6 render timeout sem canvas materializado');
+        }
 
         applyG6Selection(graph, modelRef.current, expandedRef.current, selectedRef.current);
 
