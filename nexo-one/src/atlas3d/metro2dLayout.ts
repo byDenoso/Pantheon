@@ -480,14 +480,23 @@ function floatingLabelBox(
 }
 
 function atlasUiSafeZones(viewportWidth: number, viewportHeight: number): Rect[] {
-  return [
-    // Breadcrumb, segmented mode control and domain strip.
-    { x1: 0, y1: 0, x2: viewportWidth, y2: 116 },
-    // Minimap occupies the lower-right of the G6 workspace.
-    { x1: Math.max(0, viewportWidth - 190), y1: Math.max(0, viewportHeight - 205), x2: viewportWidth, y2: Math.max(0, viewportHeight - 78) },
-    // Legend, interaction hint and adaptive-density note live near the bottom edge.
-    { x1: 0, y1: Math.max(0, viewportHeight - 54), x2: viewportWidth, y2: viewportHeight },
+  const compact = viewportWidth <= 640;
+  const zones: Rect[] = [
+    // Mobile has a two-row topbar plus domain strip; desktop uses the compact single-row chrome.
+    { x1: 0, y1: 0, x2: viewportWidth, y2: compact ? 138 : 116 },
+    // Legend and adaptive-density note live near the bottom edge.
+    { x1: 0, y1: Math.max(0, viewportHeight - (compact ? 46 : 54)), x2: viewportWidth, y2: viewportHeight },
   ];
+  if (!compact) {
+    // Minimap is disabled on compact/coarse-pointer renderers to recover useful canvas area.
+    zones.push({
+      x1: Math.max(0, viewportWidth - 190),
+      y1: Math.max(0, viewportHeight - 205),
+      x2: viewportWidth,
+      y2: Math.max(0, viewportHeight - 78),
+    });
+  }
+  return zones;
 }
 
 function labelCollisionScore(
