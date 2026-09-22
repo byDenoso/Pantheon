@@ -169,6 +169,16 @@ function buildG6Data(
   };
 }
 
+function applyG6LabelMetrics(
+  container: HTMLElement,
+  layout: ReturnType<typeof buildMetroLabelLayout>,
+) {
+  container.dataset.g6LabelVisible = String(layout.visible);
+  container.dataset.g6LabelHidden = String(layout.hidden);
+  container.dataset.g6LabelCollisions = String(layout.collisions);
+  container.dataset.g6MaxSiblings = String(layout.maxSiblings);
+}
+
 function applyG6Selection(graph: G6Graph | null, model: AtlasMetroModel, expanded: ReadonlySet<string>, selectedId: string | null) {
   if (!graph) return;
   const visible = visibleAtlasIds(model, expanded);
@@ -216,11 +226,20 @@ function Metro2DView({
       container,
       theme: 'dark',
       data: { nodes: [], edges: [] },
-      padding: [74, 60, 62, 60],
-      zoomRange: [0.42, 2.7],
+      padding: [86, 76, 76, 76],
+      zoomRange: [0.38, 3.2],
+      animation: {
+        duration: 280,
+        easing: 'ease-in-out',
+      },
       behaviors: ['drag-canvas', 'zoom-canvas'],
       node: {
         type: 'donut',
+        animation: {
+          enter: 'fade',
+          update: 'translate',
+          exit: 'fade',
+        },
         style: {
           size: (datum: any) => metroNodeSize(datum.data),
           donuts: (datum: any) => [Math.max(8, Math.min(92, datum.data.mix || 50)), 100 - Math.max(8, Math.min(92, datum.data.mix || 50))],
@@ -234,15 +253,27 @@ function Metro2DView({
           lineWidth: (datum: any) => datum.data.entityType === 'hub' ? 3.6 : datum.data.entityType === 'subdomain' ? 2.5 : 2,
           shadowColor: (datum: any) => DOMAIN_COLOR[String(datum.data.domain)] || '#64748b',
           shadowBlur: (datum: any) => datum.data.entityType === 'hub' ? 20 : 8,
-          labelText: (datum: any) => datum.data.name,
-          labelPlacement: 'bottom',
-          labelFill: '#d6e2f1',
-          labelFontSize: (datum: any) => datum.data.entityType === 'hub' ? 13 : datum.data.entityType === 'subdomain' ? 11 : 9.5,
-          labelFontWeight: (datum: any) => datum.data.entityType === 'hub' ? 800 : 650,
+          labelText: (datum: any) => datum.data.labelVisible ? datum.data.name : '',
+          labelPlacement: (datum: any) => datum.data.labelPlacement || 'bottom',
+          labelOffsetX: (datum: any) => datum.data.labelOffsetX || 0,
+          labelOffsetY: (datum: any) => datum.data.labelOffsetY || 0,
+          labelFill: '#f3f7fd',
+          labelFontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+          labelFontSize: (datum: any) => datum.data.labelFontSize || 10,
+          labelFontWeight: (datum: any) => datum.data.entityType === 'hub' ? 800 : datum.data.entityType === 'subdomain' ? 700 : 620,
+          labelLetterSpacing: (datum: any) => datum.data.entityType === 'hub' ? .15 : 0,
+          labelMaxWidth: (datum: any) => datum.data.labelMaxWidth || 138,
+          labelMaxLines: 1,
+          labelTextOverflow: 'ellipsis',
           labelBackground: true,
-          labelBackgroundFill: 'rgba(7,11,20,.84)',
-          labelBackgroundRadius: 5,
-          labelPadding: [2, 5],
+          labelBackgroundFill: 'rgba(5,10,18,.95)',
+          labelBackgroundStroke: (datum: any) => DOMAIN_COLOR[String(datum.data.domain)] || '#334155',
+          labelBackgroundStrokeOpacity: .32,
+          labelBackgroundLineWidth: 1,
+          labelBackgroundRadius: 6,
+          labelBackgroundShadowColor: 'rgba(0,0,0,.48)',
+          labelBackgroundShadowBlur: 9,
+          labelPadding: [3, 6],
           cursor: 'pointer',
         },
         state: {
@@ -263,6 +294,10 @@ function Metro2DView({
         },
       },
       edge: {
+        animation: {
+          enter: 'fade',
+          exit: 'fade',
+        },
         style: {
           stroke: (datum: any) => datum.data?.kind === 'bridge'
             ? '#91a4bd'
@@ -321,9 +356,11 @@ function Metro2DView({
         showBeamsRef.current,
         rect.width,
         rect.height,
+        selectedRef.current,
       );
-      graph.setData(data);
+      graph.setData({ nodes: data.nodes, edges: data.edges });
       container.dataset.g6NodeCount = String(data.nodes.length);
+      applyG6LabelMetrics(container, data.labelLayout);
 
       // G6 creates its canvases before the render Promise settles. Mark readiness
       // from the observable renderer surface after a frame instead of coupling the
@@ -364,17 +401,21 @@ function Metro2DView({
     const container = containerRef.current;
     if (!graph || !container) return;
     const rect = container.getBoundingClientRect();
-    const data = buildG6Data(model, expanded, showBeams, rect.width, rect.height);
-    graph.setData(data);
+    const data = buildG6Data(model, expanded, showBeams, rect.width, rect.height, selectedId);
+    graph.setData({ nodes: data.nodes, edges: data.edges });
     container.dataset.g6NodeCount = String(data.nodes.length);
+    applyG6LabelMetrics(container, data.labelLayout);
     void graph.render().then(async () => {
       applyG6Selection(graph, model, expanded, selectedId);
       container.dataset.g6Ready = container.querySelector('canvas') ? 'true' : 'false';
       if (container.dataset.g6Ready === 'true') onReady?.();
-      if (lastFitNonce.current !== fitNonce) {
-        lastFitNonce.current = fitNonce;
-        await graph.fitView({ when: 'always', direction: 'both' }, { duration: 300, easing: 'ease-out' });
-      }
+
+      const forceFit = lastFitNonce.current !== fitNonce;
+      if (forceFit) lastFitNonce.current = fitNonce;
+      await graph.fitView(
+        { when: forceFit ? 'always' : 'overflow', direction: 'both' },
+        { duration: 280, easing: 'ease-in-out' },
+      );
     });
   }, [model.revision, expansionKey, showBeams, fitNonce]);
 
