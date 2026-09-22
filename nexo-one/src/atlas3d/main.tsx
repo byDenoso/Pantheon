@@ -14,7 +14,9 @@ class Boundary extends Component<{children: ReactNode},{failed:boolean}> {
   }
 }
 
+const LOCAL_G6_SOURCE = new URL('../vendor/g6.min.js', window.location.href).href;
 const G6_SOURCES = [
+  LOCAL_G6_SOURCE,
   'https://unpkg.com/@antv/g6@5/dist/g6.min.js',
   'https://cdn.jsdelivr.net/npm/@antv/g6@5/dist/g6.min.js',
 ] as const;
@@ -66,11 +68,15 @@ async function ensureG6(): Promise<void> {
   const forceFallback = new URLSearchParams(window.location.search).get('g6Fallback') === '1';
   let lastError: unknown = null;
   for (const source of G6_SOURCES) {
-    if (forceFallback && source.includes('unpkg.com')) continue;
+    if (forceFallback && !source.includes('jsdelivr.net')) continue;
     try {
       await loadScript(source);
       if ((window as any).G6?.Graph) {
-        document.documentElement.dataset.atlasG6Source = source.includes('jsdelivr') ? 'jsdelivr' : 'unpkg';
+        document.documentElement.dataset.atlasG6Source = source === LOCAL_G6_SOURCE
+          ? 'local'
+          : source.includes('jsdelivr')
+            ? 'jsdelivr'
+            : 'unpkg';
         return;
       }
     } catch (error) {
