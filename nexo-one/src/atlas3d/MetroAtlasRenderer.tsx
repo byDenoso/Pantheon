@@ -640,19 +640,27 @@ function Metro2DView({
         if (sequence !== refreshSequence) return;
 
         applyG6Selection(graph, modelRef.current, expandedRef.current, selectedRef.current);
-        if (fit) {
-          await graph.fitView(
-            { when: 'always', direction: 'both' },
-            { duration: compact ? 180 : 320, easing: 'ease-out' },
-          );
-          if (sequence !== refreshSequence) return;
-        }
 
+        // Renderer readiness is a canvas concern, not an animation concern. A
+        // stalled fit transition on touch/Safari must never keep the whole Atlas
+        // in a perpetual loading state after G6 has already drawn successfully.
         container.dataset.g6Ready = container.querySelector('canvas') ? 'true' : 'false';
         if (container.dataset.g6Ready === 'true') {
           clearRendererError(container);
           onReadyRef.current?.();
         }
+
+        if (fit) {
+          const fitDuration = isAtlasReadback() ? 0 : compact ? 180 : 320;
+          const fitTask = Promise.resolve(graph.fitView(
+            { when: 'always', direction: 'both' },
+            { duration: fitDuration, easing: 'ease-out' },
+          ));
+          const fitTimeout = new Promise<void>(resolve => window.setTimeout(resolve, compact ? 700 : 1000));
+          await Promise.race([fitTask, fitTimeout]);
+          if (sequence !== refreshSequence) return;
+        }
+
         scheduleLabels();
       } catch (error) {
         if (sequence !== refreshSequence) return;
