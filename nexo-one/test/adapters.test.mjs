@@ -6,6 +6,8 @@ import {github} from '../server/adapters/github.mjs';
 import {vercel} from '../server/adapters/vercel.mjs';
 import {nexo} from '../server/adapters/nexo.mjs';
 import {validateItem} from '../src/contracts/validate.mjs';
+import {json as httpJson} from '../server/adapters/http.mjs';
+import {readProvider,clearProviderCache} from '../server/adapters/registry.mjs';
 const now=Date.parse('2026-09-09T12:00:00Z');
 const env={GOOGLE_CLIENT_ID:'fixture',GOOGLE_CLIENT_SECRET:'fixture',GOOGLE_REFRESH_TOKEN:'fixture',VERCEL_READ_TOKEN:'fixture',VERCEL_PROJECT_ID:'prj_fixture',NEXO_SOURCE_URL:'https://source.example/export'};
 async function mock(routes,fn){const original=globalThis.fetch;globalThis.fetch=async(url,options)=>{const found=routes.find(([match])=>String(url).includes(match));assert.ok(found,`Unexpected outbound request: ${url}`);const value=typeof found[1]==='function'?found[1](url,options):found[1];return new Response(JSON.stringify(value),{status:200,headers:{'Content-Type':'application/json'}});};try{return await fn();}finally{globalThis.fetch=original;}}
@@ -100,3 +102,44 @@ test('NEXO rejects malformed canonical Sheet schema instead of inventing fields'
 });
 
 test('NEXO requires versioned owner export and never re-stamps it',async()=>mock([['source.example',{version:'1',revision:'r1',items:[{id:'nexo:a',observedAt:'2026-01-01T00:00:00Z'}]}]],async()=>{const x=await nexo({env});assert.equal(x.items[0].observedAt,'2026-01-01T00:00:00Z');assert.equal(x.revision,'r1');}));
+
+
+test('GitHub Raw/API transient 404 is retried before being classified unavailable',async()=>{
+  const original=globalThis.fetch;
+  let calls=0;
+  globalThis.fetch=async()=>{
+    calls+=1;
+    if(calls===1)return new Response(JSON.stringify({message:'transient edge miss'}),{status:404,headers:{'Content-Type':'application/json'}});
+    return new Response(JSON.stringify({ok:true}),{status:200,headers:{'Content-Type':'application/json'}});
+  };
+  try{
+    const value=await httpJson('https://raw.githubusercontent.com/byDenoso/Pantheon/main/transient.json');
+    assert.deepEqual(value,{ok:true});
+    assert.equal(calls,2);
+  }finally{globalThis.fetch=original;}
+});
+
+test('provider cache is generous but bounded: recent validated state survives outage, old state does not',async()=>{
+  clearProviderCache();
+  const base=Date.parse('2026-09-22T18:00:00Z');
+  let fail=false;
+  const reader=async({now})=>{
+    if(fail)throw new Error('UNAVAILABLE');
+    return {items:[{id:'fixture:1',title:'Validated',kind:'ENTITY',source:'fixture',observedAt:new Date(now).toISOString()}],partial:false};
+  };
+  const first=await readProvider('github',{access:'PRIVATE',now:base,reader,force:true});
+  assert.equal(first.provider.status,'AVAILABLE');
+
+  fail=true;
+  const recent=await readProvider('github',{access:'PRIVATE',now:base+6*60*1000,reader,force:true});
+  assert.equal(recent.provider.status,'UNAVAILABLE');
+  assert.equal(recent.provider.partial,true);
+  assert.equal(recent.items.length,1);
+  assert.ok(recent.provider.staleAgeMs>=6*60*1000);
+
+  const expired=await readProvider('github',{access:'PRIVATE',now:base+61*60*1000,reader,force:true});
+  assert.equal(expired.provider.status,'UNAVAILABLE');
+  assert.equal(expired.provider.partial,false);
+  assert.equal(expired.items.length,0);
+  clearProviderCache();
+});

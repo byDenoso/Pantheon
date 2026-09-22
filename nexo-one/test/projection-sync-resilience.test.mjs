@@ -62,6 +62,7 @@ test('projection sync fallback reads only the published Pages snapshot and valid
     const receipt=await dispatchProjectionSync('sha256:'+'d'.repeat(64));
     assert.equal(receipt.outcome,'PUBLIC_PROJECTION_REFRESHED');
     assert.equal(receipt.origin_channel,'GITHUB_PAGES_VALIDATED');
+    assert.equal(receipt.refresh_mode,'DIRECT_PUBLIC_READBACK');
     assert.equal(receipt.active_work,115);
     assert.equal(receipt.projection_fingerprint,fingerprint);
     assert.equal(calls.length,3);
@@ -113,7 +114,10 @@ test('projection sync source contains no browser path to the private Git export 
   assert.match(source,/tower-projection\/manifest\.json/);
   assert.match(source,/build-meta\.json/);
   assert.match(source,/GITHUB_PAGES_VALIDATED/);
-  assert.match(source,/SYNC_BRIDGE_NOT_CONFIGURED: a ponte de sincronização real está sem a credencial GITHUB_TOKEN/);
-  assert.match(source,/Nenhum dispatch foi confirmado/);
-  assert.doesNotMatch(source,/SYNC_BRIDGE_NOT_CONFIGURED'[\s\S]{0,180}return fetchFreshPublicProjection/);
+  assert.match(source,/DIRECT_PUBLIC_READBACK/);
+  assert.match(source,/PUBLISHED_RETRY_DELAYS_MS = \[0, 800, 2_500, 6_000\]/);
+  assert.match(source,/status===404/);
+  assert.match(source,/SYNC_BRIDGE_NOT_CONFIGURED/);
+  assert.match(source,/return fetchFreshPublicProjection\(signal\)/);
+  assert.match(source,/A leitura direta não substitui um dispatch que chegou ao bridge e foi rejeitado/);
 });

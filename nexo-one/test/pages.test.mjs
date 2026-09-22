@@ -34,8 +34,8 @@ test('GitHub Pages build uses repository base and configurable SystemState endpo
   assert.match(sync, /PUBLIC_PROJECTION_REFRESHED/);
   assert.match(sync, /source_storage==='GOOGLE_DRIVE_PRIVATE'/);
   assert.match(sync, /truth_owner==='TOWER_V06@GOOGLE_DRIVE_PRIVATE'/);
-  assert.match(hook, /Nova projeção publicada detectada/);
-  assert.match(hook, /Sem alterações · snapshot Pages validado/);
+  assert.match(hook, /Nova projeção pública detectada/);
+  assert.match(hook, /projeção pública relida e validada/);
   assert.match(hook, /dispatchProjectionSync/);
   assert.match(hook, /waitForProjectionSync/);
   assert.match(app, /onClick=\{system\.sync\}/);
@@ -55,7 +55,9 @@ test('manual sync is a server-side GitHub dispatch bridge with exact readback id
   assert.match(handler, /nexo-public-projection-updated/);
   assert.match(handler, /NEXO_ONE_COCKPIT_MANUAL_SYNC/);
   assert.match(handler, /INVALID_PROJECTION_FINGERPRINT/);
-  assert.match(handler, /status:String\(env\.GITHUB_TOKEN/);
+  assert.match(handler, /DIRECT_READBACK_ONLY/);
+  assert.match(handler, /DIRECT_PUBLIC_READBACK/);
+  assert.match(handler, /REPOSITORY_DISPATCH_PLUS_READBACK/);
   assert.match(handler, /event_type:'nexo-public-projection-updated'/);
   assert.match(handler, /ATLAS_ORIGINS\.has\(origin\)/);
   assert.match(handler, /https:\/\/nexo-one-two\.vercel\.app/);

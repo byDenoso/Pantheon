@@ -4,7 +4,7 @@ const configuredSyncEndpoint = String(import.meta.env?.VITE_NEXO_SYNC_ENDPOINT |
 const PUBLISHED_PROJECTION_ASSET = 'tower-projection/projection.json';
 const PUBLISHED_MANIFEST_ASSET = 'tower-projection/manifest.json';
 const PUBLISHED_BUILD_META_ASSET = 'build-meta.json';
-const PUBLISHED_RETRY_DELAYS_MS = [0, 350, 900] as const;
+const PUBLISHED_RETRY_DELAYS_MS = [0, 800, 2_500, 6_000] as const;
 
 export type ProjectionSyncReceipt =
   | {
@@ -21,6 +21,7 @@ export type ProjectionSyncReceipt =
       active_work: number;
       needs_dener: number;
       origin_channel: 'GITHUB_PAGES_VALIDATED';
+      refresh_mode: 'DIRECT_PUBLIC_READBACK';
     };
 
 type BuildMeta = {
@@ -80,7 +81,9 @@ class ProjectionOriginError extends Error {
 }
 
 function retryableStatus(status:number):boolean{
-  return status===408||status===425||status===429||status===500||status===502||status===503||status===504;
+  // GitHub Pages can transiently return 404 while a deployment edge converges.
+  // Retry it here, but only for the sanctioned published assets in this module.
+  return status===404||status===408||status===425||status===429||status===500||status===502||status===503||status===504;
 }
 
 async function fetchPublishedJson<T>(
@@ -196,6 +199,7 @@ function projectionReceipt(
     active_work:activeWork,
     needs_dener:needsDener,
     origin_channel:'GITHUB_PAGES_VALIDATED',
+    refresh_mode:'DIRECT_PUBLIC_READBACK',
   };
 }
 
@@ -249,19 +253,17 @@ export async function dispatchProjectionSync(currentFingerprint:string,signal?:A
     let error='SYNC_DISPATCH_FAILED';
     try{error=String((await response.json())?.error||error);}catch{/* resposta sem JSON */}
     if(response.status===503&&error==='SYNC_BRIDGE_NOT_CONFIGURED'){
-      throw new DataSourceError(
-        'UNAVAILABLE',
-        'SYNC_BRIDGE_NOT_CONFIGURED: a ponte de sincronização real está sem a credencial GITHUB_TOKEN no runtime Vercel; nenhum dispatch foi executado.',
-      );
+      // Deliberate no-token mode: manual sync means a fresh, contract-validated
+      // read of the public projection. This is not a repository_dispatch.
+      return fetchFreshPublicProjection(signal);
     }
-    throw new DataSourceError('UNAVAILABLE','A sincronização real não foi disparada: '+error+'.');
+    throw new DataSourceError('UNAVAILABLE','O dispatch configurado falhou: '+error+'. A leitura direta não substitui um dispatch que chegou ao bridge e foi rejeitado.');
   }catch(error){
     if(signal?.aborted||(error as Error)?.name==='AbortError')throw error;
     if(error instanceof DataSourceError)throw error;
-    throw new DataSourceError(
-      'UNAVAILABLE',
-      'A ponte de sincronização real não respondeu. Nenhum dispatch foi confirmado; o último snapshot publicado foi preservado.',
-    );
+    // Bridge transport unavailable: the public projection remains a valid manual
+    // synchronization surface. The receipt explicitly identifies DIRECT_PUBLIC_READBACK.
+    return fetchFreshPublicProjection(signal);
   }
 }
 
