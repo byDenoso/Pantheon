@@ -406,7 +406,7 @@ export function AtlasView(
 
     if (!expandedCampaign && !expandedCluster) {
       const groups = new Map<string, GraphNode[]>();
-      for (const node of domainChildren) {
+      for (const node of sourceDomainChildren) {
         const key = atlasSubdomainOf(node);
         groups.set(key, [...(groups.get(key) ?? []), node]);
       }
@@ -426,24 +426,40 @@ export function AtlasView(
         const renderedId = atlasSubdomainNodeId(topDomain, subdomain);
         for (const member of members) memberToSubdomain.set(member.id, renderedId);
       }
-      const overlay = learningOverlayForTargets(new Set(domainChildren.map(node => node.id)), memberToSubdomain);
+      const overlay = learningOverlayForTargets(new Set(sourceDomainChildren.map(node => node.id)), memberToSubdomain);
       return { nodes: [domainNode, ...subdomainNodes, ...overlay.nodes], edges: [...edges, ...overlay.edges] };
     }
 
     if (expandedCampaign) {
+      const sourceMembers = sourceDomainChildren.filter(node => atlasSubdomainOf(node) === expandedCampaign);
       const members = domainChildren.filter(node => atlasSubdomainOf(node) === expandedCampaign);
-      const subdomain = semanticSubdomainNode(topDomain, expandedCampaign, members.length, members[0] ?? null);
-      const children = [...members].sort((a, b) =>
-        (a.type === 'TEST' ? 0 : 1) - (b.type === 'TEST' ? 0 : 1) || a.label.localeCompare(b.label));
+      const subdomain = semanticSubdomainNode(topDomain, expandedCampaign, sourceMembers.length, sourceMembers[0] ?? null);
+      const grouped = new Map<string, GraphNode[]>();
+      for (const node of sourceMembers) {
+        if (!node.campaign_id) continue;
+        grouped.set(node.campaign_id, [...(grouped.get(node.campaign_id) ?? []), node]);
+      }
+      const campaignNodes = [...grouped.entries()].map(([campaignId, groupedMembers]) =>
+        campaignNode(topDomain, campaignId, groupedMembers.length, groupedMembers.find(node => node.type !== 'TEST') ?? groupedMembers[0] ?? null));
+      const standalone = members.filter(node => !node.campaign_id);
+      const children = [...campaignNodes, ...standalone].sort((a, b) =>
+        (a.type === 'CAMPAIGN' ? 0 : 1) - (b.type === 'CAMPAIGN' ? 0 : 1) || a.label.localeCompare(b.label));
       const edges = children.map(node => ({
         id: 'atlas.subdomain.member.' + subdomain.id + '.' + node.id,
         from: subdomain.id,
         to: node.id,
         kind: 'OWNS' as const,
-        weight: node.type === 'TEST' ? 0.92 : 0.66,
-        explanation: node.type + ' pertence ao subdomínio ' + subdomain.label + ' nesta projeção.',
+        weight: node.type === 'CAMPAIGN' ? 0.9 : 0.66,
+        explanation: node.type === 'CAMPAIGN'
+          ? 'Campanha científica agregada; testes permanecem na Tower/runtime.'
+          : node.type + ' pertence ao subdomínio ' + subdomain.label + ' nesta projeção.',
       }));
-      const overlay = learningOverlayForTargets(new Set(children.map(node => node.id)));
+      const remap = new Map<string, string>();
+      for (const [campaignId, groupedMembers] of grouped) {
+        const renderedId = campaignNodeId(topDomain, campaignId);
+        for (const member of groupedMembers) remap.set(member.id, renderedId);
+      }
+      const overlay = learningOverlayForTargets(new Set(sourceMembers.map(node => node.id)), remap);
       return { nodes: [subdomain, ...children, ...overlay.nodes], edges: [...edges, ...overlay.edges] };
     }
 
