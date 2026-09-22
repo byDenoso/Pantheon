@@ -77,6 +77,27 @@ function statusColor(status: string): string {
   return '#94a3b8';
 }
 
+function learningColor(kind: string | null | undefined): string {
+  if (kind === 'SCIENTIFIC_LEARNING_PIPELINE') return '#f59e0b';
+  if (kind === 'PROCEDURAL') return '#fbbf24';
+  if (kind === 'SEMANTIC') return '#d97706';
+  return '#f59e0b';
+}
+
+function learningDash(kind: string | null | undefined): number[] {
+  if (kind === 'SCIENTIFIC_LEARNING_PIPELINE') return [2, 4];
+  if (kind === 'PROCEDURAL') return [7, 4];
+  if (kind === 'SEMANTIC') return [10, 5];
+  return [2, 4];
+}
+
+function learningWidth(kind: string | null | undefined): number {
+  if (kind === 'SCIENTIFIC_LEARNING_PIPELINE') return 2.15;
+  if (kind === 'PROCEDURAL') return 1.7;
+  if (kind === 'SEMANTIC') return 1.9;
+  return 1.8;
+}
+
 function escapeHtml(value: unknown): string {
   return String(value ?? '')
     .replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;')
@@ -157,6 +178,9 @@ function buildG6Data(
           aggregated: link.aggregated,
           isLearning: link.isLearning,
           learningScope: link.learningScope,
+          learningRef: link.learningRef,
+          learningKind: link.learningKind,
+          learningGroup: link.learningGroup,
           bundleIndex: link.bundleIndex,
           bundleCount: link.bundleCount,
         },
@@ -368,15 +392,25 @@ function Metro2DView({
         },
         style: {
           stroke: (datum: any) => datum.data?.isLearning
-            ? '#f59e0b'
+            ? learningColor(datum.data?.learningKind)
             : datum.data?.kind === 'bridge'
               ? '#91a4bd'
               : (DOMAIN_COLOR[String(datum.data?.domain)] || '#475569'),
-          lineWidth: (datum: any) => datum.data?.isLearning ? 1.8 : datum.data?.kind === 'bridge' ? 1.05 : 2.25,
-          opacity: (datum: any) => datum.data?.isLearning ? .72 : datum.data?.kind === 'bridge' ? .20 : .43,
-          lineDash: (datum: any) => datum.data?.isLearning ? [2, 4] : datum.data?.kind === 'bridge' ? [5, 6] : [],
-          shadowColor: (datum: any) => datum.data?.isLearning ? '#f59e0b' : 'transparent',
-          shadowBlur: (datum: any) => datum.data?.isLearning ? 8 : 0,
+          lineWidth: (datum: any) => datum.data?.isLearning
+            ? learningWidth(datum.data?.learningKind)
+            : datum.data?.kind === 'bridge' ? 1.05 : 2.25,
+          opacity: (datum: any) => datum.data?.isLearning
+            ? (datum.data?.learningKind === 'SCIENTIFIC_LEARNING_PIPELINE' ? .82 : .68)
+            : datum.data?.kind === 'bridge' ? .20 : .43,
+          lineDash: (datum: any) => datum.data?.isLearning
+            ? learningDash(datum.data?.learningKind)
+            : datum.data?.kind === 'bridge' ? [5, 6] : [],
+          shadowColor: (datum: any) => datum.data?.isLearning
+            ? learningColor(datum.data?.learningKind)
+            : 'transparent',
+          shadowBlur: (datum: any) => datum.data?.isLearning
+            ? (datum.data?.learningKind === 'SCIENTIFIC_LEARNING_PIPELINE' ? 11 : 7)
+            : 0,
           curveOffset: (datum: any) => {
             if (!datum.data?.isLearning) return 20;
             const count = Math.max(1, Number(datum.data?.bundleCount || 1));
@@ -466,6 +500,21 @@ function Metro2DView({
       container.dataset.g6LearningEdges = String(
         data.edges.filter((edge: any) => edge.data?.isLearning).length,
       );
+      container.dataset.g6ScientificLearningEdges = String(
+        data.edges.filter((edge: any) => edge.data?.learningKind === 'SCIENTIFIC_LEARNING_PIPELINE').length,
+      );
+      container.dataset.g6ProceduralLearningEdges = String(
+        data.edges.filter((edge: any) => edge.data?.learningKind === 'PROCEDURAL').length,
+      );
+      container.dataset.g6SemanticLearningEdges = String(
+        data.edges.filter((edge: any) => edge.data?.learningKind === 'SEMANTIC').length,
+      );
+      container.dataset.g6PeerLearningEdges = String(
+        data.edges.filter((edge: any) =>
+          edge.data?.learningKind === 'SCIENTIFIC_LEARNING_PIPELINE'
+          && /^PEER-DETECTION-GROUP-/i.test(String(edge.data?.learningRef || ''))
+        ).length,
+      );
 
       const renderTask = graph.render();
       await new Promise<void>(resolve => requestAnimationFrame(() => resolve()));
@@ -512,6 +561,21 @@ function Metro2DView({
     container.dataset.g6NodeCount = String(data.nodes.length);
     container.dataset.g6LearningEdges = String(
       data.edges.filter((edge: any) => edge.data?.isLearning).length,
+    );
+    container.dataset.g6ScientificLearningEdges = String(
+      data.edges.filter((edge: any) => edge.data?.learningKind === 'SCIENTIFIC_LEARNING_PIPELINE').length,
+    );
+    container.dataset.g6ProceduralLearningEdges = String(
+      data.edges.filter((edge: any) => edge.data?.learningKind === 'PROCEDURAL').length,
+    );
+    container.dataset.g6SemanticLearningEdges = String(
+      data.edges.filter((edge: any) => edge.data?.learningKind === 'SEMANTIC').length,
+    );
+    container.dataset.g6PeerLearningEdges = String(
+      data.edges.filter((edge: any) =>
+        edge.data?.learningKind === 'SCIENTIFIC_LEARNING_PIPELINE'
+        && /^PEER-DETECTION-GROUP-/i.test(String(edge.data?.learningRef || ''))
+      ).length,
     );
 
     void graph.render().then(async () => {
@@ -1034,7 +1098,7 @@ function rebuildThree(
       const sourceColor = new THREE.Color(DOMAIN_COLOR[sourceNode?.domain || ''] || '#91a4bd');
       const targetColor = new THREE.Color(DOMAIN_COLOR[targetNode?.domain || ''] || '#91a4bd');
       const mixed = sourceColor.clone().lerp(targetColor, .5);
-      const color = link.isLearning ? new THREE.Color('#f59e0b') : mixed;
+      const color = link.isLearning ? new THREE.Color(learningColor(link.learningKind)) : mixed;
       addSynapse(
         runtime,
         content,
@@ -1051,8 +1115,24 @@ function rebuildThree(
     }
   }
 
-  container.dataset.threeLearningSynapses = String(
-    model.crossLinks.filter(link => link.isLearning && visible.has(link.source) && visible.has(link.target)).length,
+  const visibleLearning = model.crossLinks.filter(
+    link => link.isLearning && visible.has(link.source) && visible.has(link.target),
+  );
+  container.dataset.threeLearningSynapses = String(visibleLearning.length);
+  container.dataset.threeScientificLearningSynapses = String(
+    visibleLearning.filter(link => link.learningKind === 'SCIENTIFIC_LEARNING_PIPELINE').length,
+  );
+  container.dataset.threeProceduralLearningSynapses = String(
+    visibleLearning.filter(link => link.learningKind === 'PROCEDURAL').length,
+  );
+  container.dataset.threeSemanticLearningSynapses = String(
+    visibleLearning.filter(link => link.learningKind === 'SEMANTIC').length,
+  );
+  container.dataset.threePeerLearningSynapses = String(
+    visibleLearning.filter(link =>
+      link.learningKind === 'SCIENTIFIC_LEARNING_PIPELINE'
+      && /^PEER-DETECTION-GROUP-/i.test(String(link.learningRef || ''))
+    ).length,
   );
 
   for (const id of ids) {
