@@ -53,8 +53,8 @@ export interface AtlasCrossLink {
   learningGroup: string | null;
   learningTheme: string | null;
   learningBasis: string | null;
-  sourceAnchor: 'ENTITY_SUBDOMAIN' | 'SEMANTIC_SUBDOMAIN' | 'DOMAIN_HUB' | null;
-  targetAnchor: 'ENTITY_SUBDOMAIN' | 'SEMANTIC_SUBDOMAIN' | 'DOMAIN_HUB' | null;
+  sourceAnchor: 'EXACT_ENTITY' | 'ENTITY_SUBDOMAIN' | 'SEMANTIC_SUBDOMAIN' | 'DOMAIN_HUB' | null;
+  targetAnchor: 'EXACT_ENTITY' | 'ENTITY_SUBDOMAIN' | 'SEMANTIC_SUBDOMAIN' | 'DOMAIN_HUB' | null;
   bundleIndex: number;
   bundleCount: number;
 }
@@ -153,7 +153,6 @@ function resolveLearningEndpoint({
   side,
   semanticAnchor,
   sourceNodeIds,
-  sourceToParent,
   nodeMap,
 }: {
   rawId?: string;
@@ -162,32 +161,17 @@ function resolveLearningEndpoint({
   side: 'source' | 'target';
   semanticAnchor?: LearningSemanticAnchor | null;
   sourceNodeIds: Set<string>;
-  sourceToParent: Map<string, string>;
   nodeMap: Map<string, AtlasMetroNode>;
-}): { id: string; anchor: 'ENTITY_SUBDOMAIN' | 'SEMANTIC_SUBDOMAIN' | 'DOMAIN_HUB' } | null {
+}): { id: string; anchor: 'EXACT_ENTITY' | 'ENTITY_SUBDOMAIN' | 'SEMANTIC_SUBDOMAIN' | 'DOMAIN_HUB' } | null {
   const explicitId = side === 'source'
     ? (filament.from_id || rawId)
     : (filament.to_id || rawId);
 
-  if (explicitId && sourceNodeIds.has(explicitId)) {
-    const parent = sourceToParent.get(explicitId);
-    if (parent && nodeMap.get(parent)?.entityType === 'subdomain') {
-      return { id: parent, anchor: 'ENTITY_SUBDOMAIN' };
-    }
-  }
-
-  for (const link of filament.links || []) {
-    if (!sourceNodeIds.has(link.id)) continue;
-    const linkDomain = topDomainFromValue(link.domain);
-    const expectedDomain = semanticAnchor?.domain
-      || topDomainFromValue(domain)
-      || domainFromRawId(rawId)
-      || topDomainFromValue(side === 'source' ? filament.from_domain : filament.to_domain);
-    if (expectedDomain && linkDomain !== expectedDomain) continue;
-    const parent = sourceToParent.get(link.id);
-    if (parent && nodeMap.get(parent)?.entityType === 'subdomain') {
-      return { id: parent, anchor: 'ENTITY_SUBDOMAIN' };
-    }
+  if (explicitId && sourceNodeIds.has(explicitId) && nodeMap.has(explicitId)) {
+    // Canonical endpoint IDs are the strongest semantic evidence available.
+    // Keep entity precision in the model; visual LOD collapses hidden leaves
+    // to their nearest visible ancestor until the user expands that station.
+    return { id: explicitId, anchor: 'EXACT_ENTITY' };
   }
 
   const resolvedDomain = semanticAnchor?.domain
@@ -455,7 +439,6 @@ export function buildAtlasMetroModel(state: SystemState): AtlasMetroModel {
         side: 'source',
         semanticAnchor: learningRoute?.source,
         sourceNodeIds,
-        sourceToParent,
         nodeMap,
       });
       const targetResolved = resolveLearningEndpoint({
@@ -465,7 +448,6 @@ export function buildAtlasMetroModel(state: SystemState): AtlasMetroModel {
         side: 'target',
         semanticAnchor: learningRoute?.target,
         sourceNodeIds,
-        sourceToParent,
         nodeMap,
       });
       source = sourceResolved?.id || null;
@@ -523,7 +505,6 @@ export function buildAtlasMetroModel(state: SystemState): AtlasMetroModel {
       side: 'source',
       semanticAnchor: learningRoute?.source,
       sourceNodeIds,
-      sourceToParent,
       nodeMap,
     });
     const targetResolved = resolveLearningEndpoint({
@@ -533,7 +514,6 @@ export function buildAtlasMetroModel(state: SystemState): AtlasMetroModel {
       side: 'target',
       semanticAnchor: learningRoute?.target,
       sourceNodeIds,
-      sourceToParent,
       nodeMap,
     });
     const source = sourceResolved?.id || null;
