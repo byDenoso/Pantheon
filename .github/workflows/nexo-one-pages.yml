@@ -175,6 +175,7 @@ jobs:
 
           hash_file meta_learning _vault/TOWER_V06/runtime/artifacts/meta_learning/METALEARNING_CURRENT.json
           hash_file peer_detection _vault/TOWER_V06/contracts/PEER_DETECTION_BATTERY_V1.json
+          hash_file general_projection nexo-one/data/general-public-projection.json
 
           if compgen -G "_vault/TOWER_V06/entities/interdomain/*.json" > /dev/null; then
             while IFS= read -r path; do
@@ -366,6 +367,7 @@ jobs:
           NEXO_PUBLIC_LEARNING: data/tower-public/learning.json
           NEXO_PEER_DETECTION_BATTERY: data/tower-public/peer-detection-battery.json
           NEXO_PUBLIC_HUMAN_GATE_DETAILS: data/tower-public/human-gates-details.json
+          NEXO_PUBLIC_GENERAL: data/general-public-projection.json
           NEXO_GALAXY_PREVIOUS: dist/galaxy/previous.json
           NEXO_GALAXY_RETENTION: '168'
           PANTHEON_COMMIT: ${{ github.sha }}
