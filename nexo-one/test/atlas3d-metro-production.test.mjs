@@ -497,6 +497,8 @@ test('dedicated Atlas production page uses Metro renderer, G6 and deterministic 
   assert.match(renderer, /G6_ZERO_VIEWPORT/);
   assert.match(renderer, /G6_RENDER_FAILED/);
   assert.match(renderer, /refreshSequence/);
+  assert.match(renderer, /graph\.on\('afterrender'/);
+  assert.match(renderer, /container\.querySelector\('canvas'\)/);
   assert.match(renderer, /initializedRef/);
   assert.match(renderer, /refreshRef/);
   assert.match(renderer, /fitDuration = isAtlasReadback\(\) \? 0/);
