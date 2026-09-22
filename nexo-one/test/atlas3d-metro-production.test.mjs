@@ -8,6 +8,10 @@ import {
   buildAtlasMetroModel,
   visibleAtlasIds,
 } from '../src/atlas3d/atlasAdapter.ts';
+import {
+  buildMetroLabelLayout,
+  metroLayoutPositions,
+} from '../src/atlas3d/metro2dLayout.ts';
 
 const root = new URL('../', import.meta.url);
 const text = path => readFile(new URL(path, root), 'utf8');
@@ -75,6 +79,42 @@ test('canonical graph relations become Metro bridge data instead of a second for
   assert.ok(model.crossLinks.every(link => model.nodeMap.has(link.source) && model.nodeMap.has(link.target)));
 });
 
+test('dense Science expansion keeps stations spaced and labels collision-free', () => {
+  const model = buildAtlasMetroModel(state());
+  const scienceRoot = model.roots.find(id => model.nodeMap.get(id)?.domain === 'SCIENCE');
+  assert.ok(scienceRoot);
+
+  const densest = (model.childrenMap.get(scienceRoot) || [])
+    .map(id => model.nodeMap.get(id))
+    .filter(Boolean)
+    .sort((a, b) => b.childCount - a.childCount)[0];
+  assert.ok(densest);
+  assert.ok(densest.childCount > 0);
+
+  const expanded = new Set([...model.roots, densest.id]);
+  const visible = visibleAtlasIds(model, expanded);
+  const positions = metroLayoutPositions(model, visible, 1200, 760);
+  const labels = buildMetroLabelLayout(model, visible, positions, densest.id);
+
+  assert.equal(labels.collisions, 0);
+  assert.ok(labels.visible > 3);
+
+  const children = (model.childrenMap.get(densest.id) || []).map(id => positions.get(id)).filter(Boolean);
+  let minimumDistance = Infinity;
+  for (let left = 0; left < children.length; left += 1) {
+    for (let right = left + 1; right < children.length; right += 1) {
+      minimumDistance = Math.min(
+        minimumDistance,
+        Math.hypot(
+          children[left][0] - children[right][0],
+          children[left][1] - children[right][1],
+        ),
+      );
+    }
+  }
+  assert.ok(minimumDistance > 62, `dense sibling spacing collapsed to ${minimumDistance}px`);
+});
+
 test('dedicated Atlas production page uses Metro renderer, G6 and deterministic Three mode', async () => {
   const [app, renderer, index] = await Promise.all([
     text('src/atlas3d/Atlas3DApp.tsx'),
@@ -83,9 +123,9 @@ test('dedicated Atlas production page uses Metro renderer, G6 and deterministic 
   ]);
 
   assert.match(app, /data-atlas-renderer="metro-cluster"/);
-  assert.match(app, /new Set\(model\.roots\)/);
+  assert.match(app, /dense-science/);
   assert.match(app, /navigationRevision !== model\.revision/);
-  assert.match(app, /activeExpanded = navigationStale \? new Set\(model\.roots\) : expanded/);
+  assert.match(app, /activeExpanded = navigationStale \? new Set\(initialExpanded\) : expanded/);
   assert.match(app, /URLSearchParams/);
   assert.match(app, /mode.*=== '3d'/);
   assert.match(app, /3D Explorar/);
@@ -95,6 +135,11 @@ test('dedicated Atlas production page uses Metro renderer, G6 and deterministic 
 
   assert.match(renderer, /window\.G6\?\.Graph/);
   assert.match(renderer, /metroLayoutPositions/);
+  assert.match(renderer, /buildMetroLabelLayout/);
+  assert.match(renderer, /g6LabelCollisions/);
+  assert.match(renderer, /labelOffsetX/);
+  assert.match(renderer, /labelBackgroundStroke/);
+  assert.match(renderer, /update: 'translate'/);
   assert.match(renderer, /g6NodeCount/);
   assert.match(renderer, /querySelector\('canvas'\)/);
   assert.match(renderer, /OrbitControls/);
