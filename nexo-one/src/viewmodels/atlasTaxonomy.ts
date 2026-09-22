@@ -42,7 +42,7 @@ export function atlasSubdomainOf(node: GraphNode): string {
   if (node.domain === 'ENGINEERING' || /ACT-ENG|REQUEST-INGRESS|SIDECHANNEL/.test(token)) {
     return 'Engenharia, infraestrutura & segurança';
   }
-  if (/T-LEARN|LEARN/.test(token)) return 'Learning & governança';
+  if (/T-LEARN|LEARN/.test(token)) return 'Operações NEXO';
   if (node.type === 'CAPABILITY') return 'Runtime, MCP & execução';
   return 'Operações NEXO';
 }
