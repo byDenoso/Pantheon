@@ -713,3 +713,14 @@ test('dedicated Atlas production page uses Metro renderer, G6 and deterministic 
   assert.match(main, /data-atlas-bootstrap/);
   assert.match(main, /atlasG6Source/);
 });
+
+
+test('G6 selection changes wait for the current canvas render', async () => {
+  const renderer = await text('src/atlas3d/MetroAtlasRenderer.tsx');
+  const refreshStart = renderer.indexOf('const refresh = async');
+  const refreshEnd = renderer.indexOf('const expansionKey = useMemo', refreshStart);
+  const refresh = renderer.slice(refreshStart, refreshEnd);
+  assert.match(refresh, /container\.dataset\.g6Ready = 'false';\\s*const data = buildG6Data/);
+  assert.match(refresh, /if \(!canvasReady\)[\\s\\S]*?container\.dataset\.g6Ready = 'true';\\s*applyG6Selection/);
+  assert.match(refresh, /if \(container\?\.dataset\.g6Ready !== 'true'\) return;/);
+});
