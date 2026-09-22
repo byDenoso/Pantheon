@@ -1,8 +1,7 @@
 import {
   useEffect,
   useMemo,
-  useRef,
-  type MutableRefObject,
+  useRef
 } from 'react';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
@@ -742,12 +741,14 @@ function MetroThreeView({
   const expandedRef = useRef(expanded);
   const selectedRef = useRef(selectedId);
   const activateRef = useRef(onActivate);
+  const showBeamsRef = useRef(showBeams);
   const lastFitNonce = useRef(-1);
 
   modelRef.current = model;
   expandedRef.current = expanded;
   selectedRef.current = selectedId;
   activateRef.current = onActivate;
+  showBeamsRef.current = showBeams;
 
   useEffect(() => {
     const container = containerRef.current;
@@ -812,7 +813,7 @@ function MetroThreeView({
 
     const observer = new ResizeObserver(() => {
       resize();
-      rebuildThree(runtime, container, modelRef.current, expandedRef.current, selectedRef.current, showBeams);
+      rebuildThree(runtime, container, modelRef.current, expandedRef.current, selectedRef.current, showBeamsRef.current);
     });
     observer.observe(container);
 
