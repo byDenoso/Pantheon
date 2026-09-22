@@ -587,7 +587,7 @@ export default function Atlas3DApp() {
         />
         <div className="atlas-source-state">
           <span>{system.sourceLabel}</span>
-          <button onClick={system.reload} disabled={system.syncing}>{system.syncing ? 'Atualizando…' : '↻ Atualizar'}</button>
+          <button onClick={system.sync} disabled={system.syncing}>{system.syncing ? 'Sincronizando…' : '↻ Sincronizar'}</button>
         </div>
       </aside>
     </main>
