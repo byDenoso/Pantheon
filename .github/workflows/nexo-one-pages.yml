@@ -10,7 +10,7 @@ on:
     types: [nexo-public-projection-updated]
   workflow_dispatch:
   schedule:
-    - cron: '17 */2 * * *'
+    - cron: '*/15 * * * *'
 
 permissions:
   contents: read
@@ -196,7 +196,16 @@ jobs:
           else
             printf '[]\n' > nexo-one/data/tower-public/interdomain.json
           fi
-          printf '[]\n' > nexo-one/data/tower-public/learning.json
+          if [ -s "_vault/TOWER_V06/runtime/artifacts/meta_learning/METALEARNING_CURRENT.json" ]; then
+            cp _vault/TOWER_V06/runtime/artifacts/meta_learning/METALEARNING_CURRENT.json nexo-one/data/tower-public/learning.json
+          else
+            printf '{}\n' > nexo-one/data/tower-public/learning.json
+          fi
+          if [ -s "_vault/TOWER_V06/contracts/PEER_DETECTION_BATTERY_V1.json" ]; then
+            cp _vault/TOWER_V06/contracts/PEER_DETECTION_BATTERY_V1.json nexo-one/data/tower-public/peer-detection-battery.json
+          else
+            printf '{}\n' > nexo-one/data/tower-public/peer-detection-battery.json
+          fi
 
           # MCP Atlas is also a read-only presentation surface. Stage its inputs
           # from the same sanctioned export mirror instead of relying on local files.
@@ -286,6 +295,8 @@ jobs:
           NEXO_PUBLIC_PROJECTION: data/tower-public/projection.json
           NEXO_PUBLIC_PROJECTION_MANIFEST: data/tower-public/manifest.json
           NEXO_PUBLIC_INTERDOMAIN: data/tower-public/interdomain.json
+          NEXO_PUBLIC_LEARNING: data/tower-public/learning.json
+          NEXO_PEER_DETECTION_BATTERY: data/tower-public/peer-detection-battery.json
           NEXO_GALAXY_PREVIOUS: dist/galaxy/previous.json
           NEXO_GALAXY_RETENTION: '168'
           PANTHEON_COMMIT: ${{ github.sha }}
