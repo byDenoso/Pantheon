@@ -1048,7 +1048,12 @@ function createLabelSprite(text: string, domainColor: string, isHub: boolean, co
   const material = new THREE.SpriteMaterial({ map: texture, transparent: true, depthTest: false });
   const sprite = new THREE.Sprite(material);
   sprite.renderOrder = 20;
-  sprite.scale.set(isHub ? 118 : 90, isHub ? 30 : 23, 1);
+  const compactScale = compact ? 1.18 : 1;
+  sprite.scale.set(
+    (isHub ? 118 : 90) * compactScale,
+    (isHub ? 30 : 23) * compactScale,
+    1,
+  );
   return sprite;
 }
 
