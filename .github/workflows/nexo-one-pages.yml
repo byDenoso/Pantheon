@@ -369,9 +369,22 @@ jobs:
             echo "::error::A headless Chromium/Chrome binary is required for Atlas visual readback"
             exit 1
           }
-          "${chrome_bin}" --headless=new --no-sandbox --disable-dev-shm-usage --hide-scrollbars \
-            --window-size=1440,900 --virtual-time-budget=12000 --dump-dom "${base}/atlas3d/?readback=1" \
-            > /tmp/atlas3d-dom.html
+          dump_until_ready() {
+            local marker="$1"
+            local outfile="$2"
+            shift 2
+            for attempt in 1 2 3; do
+              "${chrome_bin}" "$@" > "${outfile}"
+              if grep -Fq "${marker}" "${outfile}"; then
+                return 0
+              fi
+              echo "::warning::Atlas visual readback attempt ${attempt} missed ${marker}; retrying fresh Chromium"
+            done
+            return 1
+          }
+          dump_until_ready 'data-g6-ready="true"' /tmp/atlas3d-dom.html \
+            --headless=new --no-sandbox --disable-dev-shm-usage --hide-scrollbars \
+            --window-size=1440,900 --virtual-time-budget=12000 --dump-dom "${base}/atlas3d/?readback=1"
 
           echo "ATLAS3D_DOM_DIAGNOSTICS_BEGIN"
           grep -oE 'data-atlas-[a-z-]+="[^"]*"' /tmp/atlas3d-dom.html | head -28 || true
@@ -563,10 +576,10 @@ jobs:
 
           mobile_ua='Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1'
           mobile_url="${base}/atlas3d/?readback=1&g6Fallback=1"
-          "${chrome_bin}" --headless=new --no-sandbox --disable-dev-shm-usage --hide-scrollbars \
+          dump_until_ready 'data-g6-ready="true"' /tmp/atlas3d-mobile-dom.html \
+            --headless=new --no-sandbox --disable-dev-shm-usage --hide-scrollbars \
             --touch-events=enabled --window-size=390,844 --force-device-scale-factor=1 \
-            --user-agent="${mobile_ua}" --virtual-time-budget=14000 --dump-dom "${mobile_url}" \
-            > /tmp/atlas3d-mobile-dom.html
+            --user-agent="${mobile_ua}" --virtual-time-budget=14000 --dump-dom "${mobile_url}"
 
           echo "ATLAS3D_MOBILE_DOM_DIAGNOSTICS_BEGIN"
           grep -oE 'data-atlas-[a-z-]+="[^"]*"' /tmp/atlas3d-mobile-dom.html | head -24 || true
@@ -653,10 +666,10 @@ jobs:
           NODE
 
           depth_url="${base}/atlas3d/?mode=3d&expand=dense-science&readback=1"
-          "${chrome_bin}" --headless=new --no-sandbox --disable-dev-shm-usage --hide-scrollbars \
+          dump_until_ready 'data-three-ready="true"' /tmp/atlas3d-3d-dom.html \
+            --headless=new --no-sandbox --disable-dev-shm-usage --hide-scrollbars \
             --use-angle=swiftshader --enable-unsafe-swiftshader \
-            --window-size=1440,900 --virtual-time-budget=12000 --dump-dom "${depth_url}" \
-            > /tmp/atlas3d-3d-dom.html
+            --window-size=1440,900 --virtual-time-budget=12000 --dump-dom "${depth_url}"
           echo "ATLAS3D_3D_DOM_DIAGNOSTICS_BEGIN"
           grep -oE 'data-atlas-[a-z-]+="[^"]*"' /tmp/atlas3d-3d-dom.html | head -20 || true
           grep -oE 'data-three-(ready|node-count|paint-samples|synapse-count|learning-synapses|learning-visual-synapses|learning-records|learning-relations|scientific-learning-synapses|procedural-learning-synapses|semantic-learning-synapses|peer-learning-synapses|subdomain-learning-synapses|peer-subdomain-synapses|z-span|same-level-z-span|selected-sibling-count|selected-sibling-z-span|depth-policy|fit-policy|fit-scope|fit-node-count|fit-distance|fit-coverage|fit-top-inset|fit-bottom-inset|visual)="[^"]*"' /tmp/atlas3d-3d-dom.html | head -36 || true
@@ -790,11 +803,11 @@ jobs:
           echo "PAGES_ATLAS3D_LEAF_3D_READBACK_OK direct_leaf_synapses=${leaf_three_direct} paint_samples=${leaf_three_paint}"
 
           mobile_3d_url="${base}/atlas3d/?mode=3d&readback=1&g6Fallback=1"
-          "${chrome_bin}" --headless=new --no-sandbox --disable-dev-shm-usage --hide-scrollbars \
+          dump_until_ready 'data-three-ready="true"' /tmp/atlas3d-mobile-3d-dom.html \
+            --headless=new --no-sandbox --disable-dev-shm-usage --hide-scrollbars \
             --use-angle=swiftshader --enable-unsafe-swiftshader --touch-events=enabled \
             --window-size=390,844 --force-device-scale-factor=1 --user-agent="${mobile_ua}" \
-            --virtual-time-budget=14000 --dump-dom "${mobile_3d_url}" \
-            > /tmp/atlas3d-mobile-3d-dom.html
+            --virtual-time-budget=14000 --dump-dom "${mobile_3d_url}"
 
           echo "ATLAS3D_MOBILE_3D_DOM_DIAGNOSTICS_BEGIN"
           grep -oE 'data-three-(ready|profile|viewport-width|viewport-height|node-count|paint-samples|synapse-count|learning-synapses|learning-visual-synapses|learning-records|learning-relations|fit-policy|fit-scope|fit-node-count|fit-distance|fit-coverage|fit-top-inset|fit-bottom-inset|visual)="[^"]*"' /tmp/atlas3d-mobile-3d-dom.html | head -30 || true
