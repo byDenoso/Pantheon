@@ -567,9 +567,8 @@ jobs:
           path: |
             /tmp/atlas3d-readback.png
             /tmp/atlas3d-dom.html
-            /tmp/atlas3d-readback-depth-learning.png
-            /tmp/atlas3d-3d-dom.html
             /tmp/atlas3d-readback-3d.png
             /tmp/atlas3d-3d-dom.html
+            /tmp/system.json
           if-no-files-found: warn
           retention-days: 7
