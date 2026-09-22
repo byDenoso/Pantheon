@@ -165,8 +165,8 @@ export function useSystem(initialScenario = DEFAULT_SCENARIO_ID): SystemStore {
           const changedAtOrigin = previousFingerprint !== receipt.projection_fingerprint;
           setSyncStatus(changedAtOrigin ? 'CHANGED' : 'UNCHANGED');
           setSyncMessage(changedAtOrigin
-            ? 'Nova projeção publicada detectada · ' + receipt.active_work + ' WORK · snapshot Pages validado'
-            : 'Sem alterações · snapshot Pages validado');
+            ? 'Nova projeção pública detectada · ' + receipt.active_work + ' WORK · readback direto validado'
+            : 'Sem alterações · projeção pública relida e validada');
           return;
         }
 
