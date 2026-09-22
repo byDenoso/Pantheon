@@ -424,7 +424,7 @@ function Metro2DView({
   useEffect(() => {
     const graph = graphRef.current;
     const container = containerRef.current;
-    if (!graph || !container) return;
+    if (!graph || !container || container.dataset.g6Ready !== 'true') return;
     const rect = container.getBoundingClientRect();
     graph.setData(buildG6Data(model, expanded, showBeams, rect.width, rect.height));
     void graph.render().then(async () => {
@@ -913,9 +913,11 @@ export function MetroAtlasRenderer(props: Props) {
       <div className={`atlas-render-layer ${props.viewMode === '2d' ? 'active' : 'inactive'}`} aria-hidden={props.viewMode !== '2d'}>
         <Metro2DView {...props} />
       </div>
-      <div className={`atlas-render-layer ${props.viewMode === '3d' ? 'active' : 'inactive'}`} aria-hidden={props.viewMode !== '3d'}>
-        <MetroThreeView {...props} />
-      </div>
+      {props.viewMode === '3d' && (
+        <div className="atlas-render-layer active" aria-hidden="false">
+          <MetroThreeView {...props} />
+        </div>
+      )}
     </div>
   );
 }
