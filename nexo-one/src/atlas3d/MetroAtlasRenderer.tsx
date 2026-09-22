@@ -744,10 +744,8 @@ function Metro2DView({
         onReady?.();
       }
 
-      const forceFit = lastFitNonce.current !== fitNonce;
-      if (forceFit) lastFitNonce.current = fitNonce;
       await graph.fitView(
-        { when: forceFit ? 'always' : 'overflow', direction: 'both' },
+        { when: 'overflow', direction: 'both' },
         { duration: isCompactRenderer(container) ? 160 : 280, easing: 'ease-in-out' },
       );
       renderLabelsRef.current();
@@ -759,7 +757,18 @@ function Metro2DView({
         `O renderer 2D falhou durante a atualização. ${error instanceof Error ? error.message : String(error)}`,
       );
     });
-  }, [model.revision, expansionKey, showBeams, fitNonce]);
+  }, [model.revision, expansionKey, showBeams]);
+
+  useEffect(() => {
+    const graph = graphRef.current;
+    const container = containerRef.current;
+    if (!graph || !container || lastFitNonce.current === fitNonce) return;
+    lastFitNonce.current = fitNonce;
+    void Promise.resolve(graph.fitView(
+      { when: 'always', direction: 'both' },
+      { duration: isCompactRenderer(container) ? 160 : 280, easing: 'ease-in-out' },
+    )).then(() => renderLabelsRef.current());
+  }, [fitNonce]);
 
   useEffect(() => {
     applyG6Selection(graphRef.current, model, expanded, selectedId);
@@ -949,7 +958,7 @@ function addSynapse(
     new THREE.MeshBasicMaterial({
       color,
       transparent: true,
-      opacity: (learning ? .18 : bridge ? .055 : .085) * (dimmed ? .42 : 1),
+      opacity: learning ? (compact ? .10 : .18) : bridge ? .055 : .085,
       depthWrite: false,
       blending: THREE.AdditiveBlending,
     }),
@@ -962,7 +971,7 @@ function addSynapse(
     new THREE.MeshBasicMaterial({
       color,
       transparent: true,
-      opacity: (learning ? .72 : bridge ? .28 : .44) * (dimmed ? .48 : 1),
+      opacity: learning ? (compact ? .50 : .72) : bridge ? .28 : .44,
       depthWrite: false,
       blending: THREE.AdditiveBlending,
     }),
@@ -976,7 +985,7 @@ function addSynapse(
     new THREE.MeshBasicMaterial({
       color,
       transparent: true,
-      opacity: dimmed ? .42 : .92,
+      opacity: learning && compact ? .72 : .92,
       depthWrite: false,
       blending: THREE.AdditiveBlending,
     }),
@@ -985,7 +994,7 @@ function addSynapse(
   const pulseGlow = createGlowSprite(
     colorValue,
     learning ? 18 : bridge ? 10 : 12,
-    (learning ? .72 : bridge ? .34 : .46) * (dimmed ? .45 : 1),
+    learning ? (compact ? .48 : .72) : bridge ? .34 : .46,
   );
   pulseGlow.material.depthTest = false;
   particle.add(pulseGlow);
@@ -1303,7 +1312,6 @@ function rebuildThree(
         link.bundleIndex,
         link.bundleCount,
         compact,
-        Boolean(compact && selectedId && link.source !== selectedId && link.target !== selectedId),
       );
     }
   }
@@ -1676,15 +1684,20 @@ function MetroThreeView({
     rebuildThree(runtime, container, model, expanded, selectedId, showBeams);
     container.dataset.threeNodeCount = String(visibleAtlasIds(model, expanded).length);
     container.dataset.threeSynapseCount = String(runtime.pulses.length);
-    if (!runtime.hasFit || lastFitNonce.current !== fitNonce) {
-      const initialFit = !runtime.hasFit;
+    if (!runtime.hasFit) {
       runtime.hasFit = true;
-      lastFitNonce.current = fitNonce;
-      fitThree(runtime, !initialFit);
+      fitThree(runtime, false);
     }
     const painted = renderAndMeasureThree(runtime, container);
     if (painted > 0 || !isAtlasReadback()) onReadyRef.current?.();
-  }, [model.revision, expansionKey, showBeams, fitNonce]);
+  }, [model.revision, expansionKey, showBeams]);
+
+  useEffect(() => {
+    const runtime = runtimeRef.current;
+    if (!runtime || lastFitNonce.current === fitNonce) return;
+    lastFitNonce.current = fitNonce;
+    fitThree(runtime, true);
+  }, [fitNonce]);
 
   useEffect(() => {
     const runtime = runtimeRef.current;
