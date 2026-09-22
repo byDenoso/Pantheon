@@ -167,7 +167,9 @@ function Graph({topology,search,mode,selected,onSelect,theme,view}:{topology:Top
     const source=byId.get(node.id)!;
     const isMatch=matchedIds.has(node.id);
     const isRelated=relatedIds.has(node.id);
-    const opacity=query?(isMatch?1:(isRelated?.56:.09)):(selected&&node.id!==selected?.42:1);
+    const opacity=query
+      ? (isMatch ? 1 : (isRelated ? .56 : .09))
+      : (selected && node.id!==selected ? .42 : 1);
     return {
       ...node,
       color:theme==='light'
@@ -176,7 +178,7 @@ function Graph({topology,search,mode,selected,onSelect,theme,view}:{topology:Top
       opacity,
       major:node.major||node.id===selected||isMatch,
       importance:isMatch?1:node.importance,
-      halo:isMatch?1:(node.id===selected?.9:node.halo),
+      halo:isMatch ? 1 : (node.id===selected ? .9 : node.halo),
     };
   });
   const canvasEdges:CanvasEdge25D[]=visible.links.map(link=>{
@@ -187,7 +189,7 @@ function Graph({topology,search,mode,selected,onSelect,theme,view}:{topology:Top
     return {
       id:link.id,from:source,to:target,
       color:relationColor(link.kind,theme),
-      opacity:query?(touchesMatch?.72:(related?.34:.045)):baseOpacity,
+      opacity:query ? (touchesMatch ? .72 : (related ? .34 : .045)) : baseOpacity,
       width:Math.max(.8,Number(link.weight||.2)*1.35)*(touchesMatch?1.25:1),
       dashed:link.kind==='AVAILABLE_TO',
     };
