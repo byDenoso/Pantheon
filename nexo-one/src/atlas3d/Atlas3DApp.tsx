@@ -222,11 +222,25 @@ export default function Atlas3DApp() {
     link.learningKind === 'SCIENTIFIC_LEARNING_PIPELINE'
     && /^PEER-DETECTION-GROUP-/i.test(String(link.learningRef || ''))
   ).length;
-  const learningSubdomainEndpointCount = model.crossLinks
-    .filter(link => link.isLearning)
-    .reduce((count, link) => count
-      + (model.nodeMap.get(link.source)?.entityType === 'subdomain' ? 1 : 0)
-      + (model.nodeMap.get(link.target)?.entityType === 'subdomain' ? 1 : 0), 0);
+  const learningSubdomainLoads = new Map<string, number>();
+  for (const link of model.crossLinks) {
+    if (!link.isLearning) continue;
+    for (const endpoint of [link.source, link.target]) {
+      if (model.nodeMap.get(endpoint)?.entityType !== 'subdomain') continue;
+      learningSubdomainLoads.set(endpoint, (learningSubdomainLoads.get(endpoint) || 0) + 1);
+    }
+  }
+  const learningSubdomainEndpointCount = [...learningSubdomainLoads.values()]
+    .reduce((total, count) => total + count, 0);
+  const learningDistinctSubdomainCount = learningSubdomainLoads.size;
+  const learningMaxSubdomainLoad = Math.max(0, ...learningSubdomainLoads.values());
+  const learningMaxSubdomainShare = learningSubdomainEndpointCount
+    ? Math.round((learningMaxSubdomainLoad / learningSubdomainEndpointCount) * 100)
+    : 0;
+  const peerTargetSubdomains = new Set(model.crossLinks
+    .filter(link => link.learningKind === 'SCIENTIFIC_LEARNING_PIPELINE')
+    .map(link => link.target)
+    .filter(id => model.nodeMap.get(id)?.entityType === 'subdomain'));
   const learningHubEndpointCount = model.crossLinks
     .filter(link => link.isLearning)
     .reduce((count, link) => count
@@ -292,6 +306,10 @@ export default function Atlas3DApp() {
       data-atlas-learning-semantic={semanticLearningLinkCount}
       data-atlas-peer-learning-links={peerLearningLinkCount}
       data-atlas-learning-subdomain-endpoints={learningSubdomainEndpointCount}
+      data-atlas-learning-distinct-subdomains={learningDistinctSubdomainCount}
+      data-atlas-learning-max-subdomain-load={learningMaxSubdomainLoad}
+      data-atlas-learning-max-subdomain-share={learningMaxSubdomainShare}
+      data-atlas-peer-target-subdomains={peerTargetSubdomains.size}
       data-atlas-learning-hub-endpoints={learningHubEndpointCount}
       data-atlas-peer-subdomain-links={peerSubdomainLinkCount}
       data-atlas-semantic-subdomain-links={semanticSubdomainLinkCount}
@@ -382,7 +400,7 @@ export default function Atlas3DApp() {
           {learningLinkCount > 0 && (
             <span
               className="atlas-learning-legend"
-              title={`Scientific ${scientificLearningLinkCount} · Procedural ${proceduralLearningLinkCount} · Semantic ${semanticLearningLinkCount}`}
+              title={`Scientific ${scientificLearningLinkCount} · Procedural ${proceduralLearningLinkCount} · Semantic ${semanticLearningLinkCount} · ${learningDistinctSubdomainCount} áreas · maior concentração ${learningMaxSubdomainShare}%`}
             >
               <i />Learning <b>{learningLinkCount}</b>
             </span>
