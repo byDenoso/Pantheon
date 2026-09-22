@@ -164,10 +164,9 @@ export function useSystem(initialScenario = DEFAULT_SCENARIO_ID): SystemStore {
           setLastSuccessfulReadAt(new Date().toISOString());
           const changedAtOrigin = previousFingerprint !== receipt.projection_fingerprint;
           setSyncStatus(changedAtOrigin ? 'CHANGED' : 'UNCHANGED');
-          const originSuffix=receipt.origin_channel==='GITHUB_API_FALLBACK'?' · fallback GitHub API':'';
           setSyncMessage(changedAtOrigin
-            ? 'Nova projeção detectada na origem · publicação pendente · ' + receipt.active_work + ' WORK' + originSuffix
-            : 'Sem alterações · projeção pública confirmada na origem' + originSuffix);
+            ? 'Nova projeção publicada detectada · ' + receipt.active_work + ' WORK · snapshot Pages validado'
+            : 'Sem alterações · snapshot Pages validado');
           return;
         }
 
@@ -197,8 +196,8 @@ export function useSystem(initialScenario = DEFAULT_SCENARIO_ID): SystemStore {
         if (previous && preserveStateOnFailure(nextLoad)) {
           setLoad(previous.global_state === 'LIVE' ? 'READY' : 'PARTIAL');
           setSyncStatus('FAILED');
-          setSyncMessage(failure instanceof DataSourceError && /GitHub/i.test(failure.message)
-            ? 'Origem GitHub indisponível'
+          setSyncMessage(failure instanceof DataSourceError && /snapshot/i.test(failure.message)
+            ? 'Snapshot publicado indisponível'
             : 'Sincronização não confirmada');
         } else {
           setLoad(nextLoad);
