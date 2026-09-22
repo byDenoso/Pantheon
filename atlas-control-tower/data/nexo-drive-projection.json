@@ -1,1 +1,642 @@
-{"meta":{"schemaVersion":"drive-ssot-v1","authority":"GOOGLE_DRIVE","sourceFileId":"1e6s2dKOYVLNsPUguHI85RLVLwJKtlCsQZBJ1BE-UhaY","sourceTitle":"DENER · SSOT CANONICAL","sourceUrl":"https://docs.google.com/spreadsheets/d/1e6s2dKOYVLNsPUguHI85RLVLwJKtlCsQZBJ1BE-UhaY/edit","sourceModifiedAt":"2026-09-14T16:33:47.394Z","generatedAt":"2026-09-14T13:47:28-03:00","projectionOnly":true,"privacy":"PUBLIC_SANITIZED__OLYMPUS_PERSONAL_DATA_EXCLUDED","provenance":["Science","Engineering","PROJECTS","TEST_REGISTRY_V1","Relations","SYSTEM","StructuralLearning","CrossDomain","Integrity"],"notes":"Read-only public projection generated from the authenticated Google Drive SSOT. Drive remains the Truth Owner; GitHub is code plus derived cache/projection. TOWER_V06 is migration provenance/rollback only.","fingerprint":"sha256:13dea7e12953975dc40453028e06bb9cbcc53bc8a42debef4d6a8b78c2153b7c"},"science":[{"type":"program","id":"PROG-EXPANSION-GEOMETRY","status":"ACTIVE","title":"Expansion, geometry & dark energy","summary":"Unifica H0/régua acústica/anchors, geometria-curvatura, expansão cross-probe e energia escura dinâmica como uma linha de investigação sobre a origem das discrepâncias de expansão e sua dependência de física early/late-time.","domain":"EXPANSION","sourceRef":"PEER_CONTROL_TOWER_CANONICAL/Test Registry + SCIENTIFIC_CAMPAIGNS"},{"type":"program","id":"PROG-STRUCTURE-DARK-SECTOR","status":"ACTIVE","title":"Structure growth & dark sector","summary":"Unifica crescimento de estrutura, LSS/S8, DM/UDM, particle DM e assinaturas DAO para testar supressão, clustering e mecanismos do setor escuro em múltiplas escalas.","domain":"STRUCTURE","sourceRef":"PEER_CONTROL_TOWER_CANONICAL/Test Registry + SCIENTIFIC_CAMPAIGNS"},{"type":"program","id":"PROG-CMB-EARLY-MICROPHYSICS","status":"ACTIVE","title":"CMB, early universe & microphysics","summary":"Unifica assinaturas CMB, anomalias/systematics, energia precoce e identificabilidade microfísica para separar efeitos instrumentais, degenerescências e mecanismos fundamentais.","domain":"EARLY","sourceRef":"PEER_CONTROL_TOWER_CANONICAL/Test Registry + SCIENTIFIC_CAMPAIGNS"},{"type":"program","id":"PROG-HIGHZ-ASTROPHYSICS","status":"ACTIVE","title":"High-z astrophysics","summary":"Unifica galáxias high-z, SMBH e LRD/AGN para testar se abundâncias e resíduos observados são explicados por astrofísica populacional, seleção ou física primordial.","domain":"HIGHZ","sourceRef":"PEER_CONTROL_TOWER_CANONICAL/Test Registry + SCIENTIFIC_CAMPAIGNS"},{"type":"program","id":"PROG-COSMIC-HOMOGENEITY","status":"ACTIVE","title":"Cosmic homogeneity & mega-structures","summary":"Linha de investigação sobre estruturas ultra-grandes e anisotropias de grande escala, com foco em descoberta, seleção, geometria, footprint, multiplicidade e abundância sob ΛCDM.","domain":"HOMOGENEITY","sourceRef":"PEER_CONTROL_TOWER_CANONICAL/Test Registry + SCIENTIFIC_CAMPAIGNS"},{"type":"program","id":"PROG-SCIENTIFIC-VALIDATION","status":"ACTIVE","title":"Scientific validation & inference","summary":"Linha transversal de falsificação independente, integridade de likelihood/runtime, reprodutibilidade, model comparison e consistência entre evidência e claims científicos.","domain":"VALIDATION","sourceRef":"PEER_CONTROL_TOWER_CANONICAL/Test Registry + SCIENTIFIC_CAMPAIGNS"},{"type":"campaign","id":"CAMP-H0-RULER-ANCHOR","status":"ACTIVE","title":"H0 / acoustic ruler / anchors","summary":"Pergunta: qual parte da separação high-z/local é causada por régua acústica, anchors/calibração ou microfísica? Mecanismo: decomposição de escala early/late e calibração local. 127 test_ids únicos.","domain":"D1","sourceRef":"PEER_CONTROL_TOWER_CANONICAL/Test Registry"},{"type":"campaign","id":"CAMP-DDE-ROBUSTNESS","status":"ACTIVE","title":"Dynamical dark energy robustness","summary":"Pergunta: a evidência por DDE/late-Lambda é universal ou condicional a dataset/modelo? Mecanismo: expansão tardia, w0wa/CPL, IDE/UDS e controles matched. 166 test_ids únicos.","domain":"D3","sourceRef":"PEER_CONTROL_TOWER_CANONICAL/Test Registry"},{"type":"campaign","id":"CAMP-CURVATURE-GEOMETRY","status":"ACTIVE","title":"Curvature & geometry","summary":"Pergunta: preferências de curvatura/geometria sobrevivem reotimização, mudança de stack e rivais? Mecanismo: distâncias/AP/acoustic geometry independentes de parametrizações incidentais. 32 test_ids únicos.","domain":"CROSS","sourceRef":"PEER_CONTROL_TOWER_CANONICAL/Test Registry"},{"type":"campaign","id":"CAMP-CROSSPROBE-EXPANSION","status":"ACTIVE","title":"Cross-probe expansion","summary":"Pergunta: sinais de expansão sobrevivem comparação entre CMB, BAO/AP, SN, chronometers, time delays e anchors? Mecanismo: consistência geométrica/ruler-independent entre probes. 73 test_ids únicos.","domain":"CROSS","sourceRef":"PEER_CONTROL_TOWER_CANONICAL/Test Registry"},{"type":"campaign","id":"CAMP-GROWTH-LSS","status":"ACTIVE","title":"Growth / LSS / S8","summary":"Pergunta: existe supressão cosmológica independente de seleção, scatter e sistemática? Mecanismo: growth factor, full-shape, weak lensing, clusters e transport/ShapeFit. 240 test_ids únicos.","domain":"D2","sourceRef":"PEER_CONTROL_TOWER_CANONICAL/Test Registry"},{"type":"campaign","id":"CAMP-DM-UDM-MULTISCALE","status":"ACTIVE","title":"Dark matter / UDM multiscale","summary":"Pergunta: quais classes fenomenológicas de DM/UDM sobrevivem a kills multi-scale? Mecanismo: dinâmica galáctica, clustering e consistência cosmologia→halo. 63 test_ids únicos.","domain":"D4","sourceRef":"PEER_CONTROL_TOWER_CANONICAL/Test Registry"},{"type":"campaign","id":"CAMP-PARTICLE-DM","status":"ACTIVE","title":"Particle DM & hidden sectors","summary":"Pergunta: quais modelos de particle DM/hidden sector sobrevivem relic, CMB, BBN, lifetime e escalas de estrutura? Mecanismo: microfísica de partículas traduzida em observáveis cosmológicos. 110 test_ids únicos.","domain":"D9","sourceRef":"PEER_CONTROL_TOWER_CANONICAL/Test Registry"},{"type":"campaign","id":"CAMP-DARK-SECTOR-DAO","status":"ACTIVE","title":"Dark-sector acoustic signatures","summary":"Pergunta: a assinatura DAO/dark-sector sobrevive a controles de fundo, BAO e estrutura? Mecanismo: oscilação acústica no setor escuro e matched filters full-shape. 11 test_ids únicos.","domain":"CROSS","sourceRef":"PEER_CONTROL_TOWER_CANONICAL/Test Registry"},{"type":"campaign","id":"CAMP-CMB-EARLY-CROSSPROBE","status":"ACTIVE","title":"CMB / early-energy cross-probe","summary":"Pergunta: quais sinais de CMB/energia precoce sobrevivem cross-instrument, release e mecanismos rivais? Mecanismo: compensação acústica, damping, primordial-shape e matched CMB likelihoods. 176 test_ids únicos.","domain":"CROSS","sourceRef":"PEER_CONTROL_TOWER_CANONICAL/Test Registry"},{"type":"campaign","id":"CAMP-CMB-ANOMALIES","status":"ACTIVE","title":"CMB anomalies & systematics","summary":"Pergunta: quais resíduos CMB sobrevivem release, frequência, lensing e instrumentos? Mecanismo: nulls instrumentais e cross-release sobre observáveis CMB. 104 test_ids únicos.","domain":"D7","sourceRef":"PEER_CONTROL_TOWER_CANONICAL/Test Registry"},{"type":"campaign","id":"CAMP-MICROPHYSICS","status":"ACTIVE","title":"Microphysics identifiability","summary":"Pergunta: os dados identificam apenas uma classe efetiva ou uma realização microscópica específica? Mecanismo: BBN, pNGB/axion, reheating, causal bridges e parâmetros fundamentais. 349 test_ids únicos.","domain":"D8","sourceRef":"PEER_CONTROL_TOWER_CANONICAL/Test Registry"},{"type":"campaign","id":"CAMP-HIGHZ-GALAXIES","status":"ACTIVE","title":"High-z galaxies / JWST","summary":"Pergunta: a abundância/resíduo JWST é astrofísica, sistemática ou primordial? Mecanismo: halo mass function, host-mass mapping, duty cycle, scatter e seleção. 183 test_ids únicos.","domain":"D5","sourceRef":"PEER_CONTROL_TOWER_CANONICAL/Test Registry"},{"type":"campaign","id":"CAMP-HIGHZ-SMBH","status":"ACTIVE","title":"High-z SMBH","summary":"Pergunta: um history populacional físico explica a amostra high-z de SMBH? Mecanismo: seeds, crescimento, duty cycle, seleção e constraints populacionais. 61 test_ids únicos.","domain":"D6","sourceRef":"PEER_CONTROL_TOWER_CANONICAL/Test Registry"},{"type":"campaign","id":"CAMP-LRD-AGN","status":"ACTIVE","title":"LRD / AGN compact sources","summary":"Pergunta: mass/selection systematics explicam resíduos de LRD/AGN? Mecanismo: host decomposition, masses, completeness e seleção de fontes compactas. 275 test_ids únicos.","domain":"D10","sourceRef":"PEER_CONTROL_TOWER_CANONICAL/Test Registry"},{"type":"campaign","id":"CAMP-MEGASTRUCTURES","status":"ACTIVE","title":"Mega-structures robustness","summary":"Pergunta: candidatos a megaestruturas sobrevivem aos mesmos controles congelados de descoberta, geometria, finder, footprint, multiplicidade e abundância? Mecanismo comum: robustez de estruturas ultra-grandes; objeto individual fica no nível Teste. 145 test_ids únicos.","domain":"CROSS","sourceRef":"PEER_CONTROL_TOWER_CANONICAL/Test Registry"},{"type":"campaign","id":"CAMP-INDEPENDENT-PHYSICS","status":"ACTIVE","title":"Independent physics constraints","summary":"Pergunta: benchmarks e anomalias sobrevivem a constraints independentes e model comparisons materialmente distintos? Mecanismo: falsificação cross-terminal e evidência externa independente. 38 test_ids únicos.","domain":"CROSS","sourceRef":"PEER_CONTROL_TOWER_CANONICAL/Test Registry"},{"type":"campaign","id":"CAMP-SCI-INTEGRITY","status":"ACTIVE","title":"Scientific inference integrity","summary":"Pergunta: contratos de likelihood, runtimes, convergência, data vectors e artefatos de publicação preservam reprodutibilidade e boundaries científicos? Mecanismo: validation gates e replay/readback. 38 test_ids únicos.","domain":"CROSS","sourceRef":"PEER_CONTROL_TOWER_CANONICAL/Test Registry"}],"olympus":[{"type":"domain","id":"OLY-DOM-OLYMPUS","status":"ACTIVE","title":"Olympus","summary":"Domínio operacional de treino, dieta, check-ins e recomposição. Dados pessoais, clínicos e de clientes são excluídos da projeção pública.","parentId":null,"sourceRef":"SSOT:Olympus (sanitized structure only)"},{"type":"program","id":"OLY-PROG-BODYCOMP-NULL-AUDIT","status":"ACTIVE","title":"Body composition null auditing","summary":"Programa abstrato para comparar evolução observada contra explicações nulas rivais antes de interpretar progresso ou ajustar intervenção.","parentId":"OLY-DOM-OLYMPUS","sourceRef":"SSOT:Olympus (sanitized structure only)"},{"type":"campaign","id":"OLY-CAMP-CLIENT-NULL-CHECKINS","status":"ACTIVE","title":"Longitudinal null-checkins","summary":"Campanha abstrata de auditoria longitudinal por nulls; nenhuma identidade, check-in, laboratório, foto, dieta ou dado de saúde é publicado.","parentId":"OLY-PROG-BODYCOMP-NULL-AUDIT","sourceRef":"SSOT:Olympus (sanitized structure only)"}],"engineering":[{"type":"domain","id":"ENG-DOM-ENGINEERING","status":"ACTIVE","title":"Engineering","summary":"Projeção navegável do domínio de engenharia; code truth continua em Git/GitHub e behavior truth no runtime/provider.","parentId":null,"sourceRef":"SSOT:Engineering"},{"type":"program","id":"ENG-PROG-NOVA-CAMB","status":"ACTIVE","title":"NOVA / CAMB","summary":"Portabilidade, fidelidade e execução reproduzível do CAMB/NOVA, incluindo port Rust e wrappers de runtime.","parentId":"ENG-DOM-ENGINEERING","sourceRef":"SSOT:Engineering"},{"type":"campaign","id":"ENG-CAMP-CAMB-PORT-FIDELITY","status":"ACTIVE","title":"CAMB Port Fidelity","summary":"Preservar equivalência física/numérica e repeatability durante o port CAMB 1.6.6 → Rust.","parentId":"ENG-PROG-NOVA-CAMB","sourceRef":"SSOT:Engineering"},{"type":"campaign","id":"ENG-CAMP-CAMB-PORTABILITY-RUNTIME","status":"ACTIVE","title":"Portable Runtime","summary":"Remover dependências frágeis de path/ambiente e tornar CAMB/CosmoRec relocável e executável fora do ambiente original.","parentId":"ENG-PROG-NOVA-CAMB","sourceRef":"SSOT:Engineering"},{"type":"campaign","id":"ENG-CAMP-CAMB-REPLAY-VALIDATION","status":"ACTIVE","title":"Scientific Replay Validation","summary":"Validar execução end-to-end e replay científico direto/repetível contra contratos congelados.","parentId":"ENG-PROG-NOVA-CAMB","sourceRef":"SSOT:Engineering"},{"type":"program","id":"ENG-PROG-ATLAS-CONTROL-TOWER","status":"ACTIVE","title":"Atlas Control Tower","summary":"Interface e projeção operacional do NEXO Atlas sobre estado canônico, grafos e sincronização.","parentId":"ENG-DOM-ENGINEERING","sourceRef":"SSOT:Engineering"},{"type":"campaign","id":"ENG-CAMP-ATLAS-GRAPH-SSOT","status":"ACTIVE","title":"Atlas Graph + SSOT Projection","summary":"Projetar Domínio → Programa → Campanha e relações/filamentos a partir do SSOT sem duplicar autoridade.","parentId":"ENG-PROG-ATLAS-CONTROL-TOWER","sourceRef":"SSOT:Engineering"},{"type":"campaign","id":"ENG-CAMP-ATLAS-SYNC-RUNTIME","status":"ACTIVE","title":"Atlas Sync + Runtime","summary":"Sincronização, leitura de fontes e comportamento real do Atlas/app sem transformar snapshots/legado em autoridade.","parentId":"ENG-PROG-ATLAS-CONTROL-TOWER","sourceRef":"SSOT:Engineering"}],"learning":[{"id":"SL-NEXO-NULL-MODEL-REASONING-V1","status":"TRANSFER_TESTED","title":"Null-model reasoning as a transferable structural method","domains":"Olympus|NEXO_INTEGRITY","summary":"Compare observed trajectory against explicit plausible null trajectories before attributing causality, intervention effect, anomaly or mechanism.","rule":"For any domain with an observed delta, define one or more plausible nulls preserving relevant constraints; compare observed-vs-null before promoting causal or anomalous interpretation.","support":2,"contradict":0,"confidence":0.7,"scope":"Methodological/structural, not domain truth","provenance":"SSOT:StructuralLearning"},{"id":"SL-NEXO-FROZEN-DECISION-CONTRACT-V1","status":"CANDIDATE","title":"Frozen decision contract before target inspection","domains":"SCIENCE_CORPUS","summary":"Define statistic, search range, threshold and decision rule before inspecting the target outcome.","rule":"Material extensions after target inspection become separate preregistered tests.","support":1,"contradict":0,"confidence":0.65,"scope":"Methodological/structural, not domain truth","provenance":"SSOT:StructuralLearning"},{"id":"SL-NEXO-INDEPENDENT-HOLDOUT-SEPARATION-V1","status":"CANDIDATE","title":"Independent holdout as adjudication channel","domains":"SCIENCE_CORPUS","summary":"Separate evidence used to formulate/tune a claim from evidence used to adjudicate it.","rule":"Require an independent channel for promotion beyond exploratory support.","support":1,"contradict":0,"confidence":0.68,"scope":"Methodological/structural, not domain truth","provenance":"SSOT:StructuralLearning"},{"id":"SL-NEXO-PERTURBATION-INVARIANCE-V1","status":"CANDIDATE","title":"Perturbation and invariance testing before claim promotion","domains":"SCIENCE_CORPUS","summary":"Stress-test claims under plausible probe, selection, calibration, finder, numerical or nuisance perturbations.","rule":"Measure verdict stability and use sensitivity/LOO/ablation when full alternatives are unavailable.","support":1,"contradict":0,"confidence":0.68,"scope":"Methodological/structural, not domain truth","provenance":"SSOT:StructuralLearning"},{"id":"SL-NEXO-CLAIM-BOUNDARY-DISCIPLINE-V1","status":"CANDIDATE","title":"Evidence-class claim boundary discipline","domains":"SCIENCE_CORPUS","summary":"The strongest allowed claim is capped by the weakest unresolved evidentiary condition.","rule":"Map evidence class, unresolved gates and dependence structure to an explicit maximum claim boundary.","support":1,"contradict":0,"confidence":0.72,"scope":"Methodological/structural, not domain truth","provenance":"SSOT:StructuralLearning"},{"id":"SL-NEXO-SEMANTIC-PROCEDURAL-ASSOCIATIVE-NET-V0P1","status":"ACTIVE","title":"Two-layer semantic/procedural associative network","domains":"NEXO|SCIENCE|ENGINEERING|OLYMPUS","summary":"Operational terms and procedures behave like nodes; outcomes update weighted filaments across meaning, method, actions and domains.","rule":"Capture semantic signals, activate candidate filaments, record method/outcome, then update support/contradiction/weight.","support":1,"contradict":0,"confidence":0.74,"scope":"Structural learning only; not science/health authority.","provenance":"SSOT:StructuralLearning"},{"id":"SL-NEXO-SEMANTIC-NULLS-DIET-V0P1","status":"SUPPORTED_CANDIDATE","title":"Semantic meaning of null-audit in diet/body-composition","domains":"OLYMPUS|SCIENCE","summary":"Body-composition null auditing means rival-explanation analysis rather than a single linear forecast.","rule":"Activate plausible rival explanations before attribution; public projection carries only the abstract method, never client data.","support":4,"contradict":0,"confidence":0.92,"scope":"Operational semantics for Olympus outputs.","provenance":"SSOT:StructuralLearning (sanitized)"}],"crossDomain":[{"id":"CD-EMERG-DISCOVERY-FUNCTION-FRAGILITY-V1","domains":"HOMOGENEITY|STATS|SELECTION","title":"Discovery-function fragility","summary":"Post-selection, threshold sensitivity and unreplayed optimization can inflate local rarity; independent physicality and discovery-aware global rarity are separate gates.","status":"SUPPORTED","provenance":"SSOT:CrossDomain"},{"id":"CD-EMERG-TOPOLOGY-AMPLIFICATION-V1","domains":"HOMOGENEITY|SELECTION|FINDER","title":"Topology amplification","summary":"Connectivity thresholds can respond nonlinearly near critical linkage scales, reorganizing components and conditioned significance.","status":"SUPPORTED","provenance":"SSOT:CrossDomain"},{"id":"CD-EMERG-SEMANTIC-PROCEDURAL-NULL-AUDIT-V0P1","domains":"SCIENCE|OLYMPUS|ENGINEERING","title":"Null-first auditing as a transferable pattern","summary":"For ambiguous signals, build rival explanations first, compare against trajectory/readback, then decide adjustment or claim.","status":"SUPPORTED_CANDIDATE","provenance":"SSOT:CrossDomain"},{"id":"META::INTERDOMAIN::COSMO-OLYMPUS-SELECTION-AWARE-CHANGE-001","domains":"COSMOLOGY|OLYMPUS","title":"Selection/noise-aware longitudinal classification","summary":"Candidate method-transfer hypothesis: frozen inclusion rules, measurement-condition metadata, null/noise bands and corroboration may reduce false longitudinal progress/regression calls.","status":"TESTING","provenance":"SSOT:CrossDomain; method transfer only; no client data"}],"integrity":[{"id":"SCI-HIER-TEST-CAMPAIGN-20260909","scope":"SCIENCE","type":"hierarchy_coverage","target":"Test Registry test_id → primary_campaign","status":"PASS","severity":"HIGH","observed":"2502/2502 registry rows mapped; 2191 unique test_ids; 0 UNMAPPED; 0 #ERROR","readbackRef":"SSOT:Integrity","checkedAt":"2026-09-09T01:43:00-03:00"},{"id":"SCI-HIER-CAMPAIGN-PROGRAM-20260909","scope":"SCIENCE","type":"hierarchy_coverage","target":"Canonical campaign → primary_program","status":"PASS","severity":"HIGH","observed":"17/17 campaigns mapped to one primary_program; 0 orphan campaigns","readbackRef":"SSOT:Integrity","checkedAt":"2026-09-09T01:43:00-03:00"},{"id":"SCI-HIER-SSOT-LEAN-20260909","scope":"SCIENCE","type":"ssot_shape","target":"Science SSOT projection","status":"PASS","severity":"MEDIUM","observed":"6 Programs + 17 Campaigns; 0 test records in Science","readbackRef":"SSOT:Integrity","checkedAt":"2026-09-09T01:43:00-03:00"},{"id":"NEXO-SELF-DUP-POLICY-20260909","scope":"NEXO","type":"INTEGRITY","target":"Recursive control policy identity","status":"RESOLVED","severity":"MEDIUM","observed":"Duplicate canonical policy resolved; Lean V1 retained ACTIVE","readbackRef":"SSOT:Integrity","checkedAt":"2026-09-09T07:19:00-03:00"},{"id":"NEXO-RUNTIME-ATTEST-POSTCURSOR-20260909-2354","scope":"NEXO","type":"RUNTIME_ATTESTATION","target":"Scheduled runtime capability state","status":"RESOLVED","severity":"NONE","observed":"Current canonical capability state resolved against scheduled Drive/Sheets storage/readback and GitHub write scopes.","readbackRef":"SSOT:Integrity","checkedAt":"2026-09-10T08:59:00-03:00"},{"id":"NEXO-ATLAS-PROJECTION-INTEGRITY-20260909-2354","scope":"ENGINEERING/NEXO","type":"PROJECTION_INTEGRITY","target":"Atlas projection","status":"LIVE","severity":"NONE","observed":"Atlas projection supports source-delta refresh with provider readback and derived-state authority only.","readbackRef":"SSOT:Integrity","checkedAt":"2026-09-10T07:51:37-03:00"},{"id":"NEXO-TRUTHGRAPH-OLYMPUS-AUTHORITY-CONFLICT-20260910","scope":"OLYMPUS","type":"AUTHORITY_LIVENESS","target":"Olympus authority-provider alignment","status":"LIVE","severity":"NONE","observed":"SSOT Olympus is the sole Truth Owner; external providers remain signals/readback only.","readbackRef":"SSOT:Integrity","checkedAt":"2026-09-10T06:05:26-03:00"}],"system":[{"key":"NEXO_STATE_VERSION","value":"0.2","status":"ACTIVE"},{"key":"CANONICAL_TABS","value":"THREADS|WORK|EVENTS|KNOWLEDGE|DECISIONS|SYSTEM|PROJECTS|TESTS|RELATIONS","status":"ACTIVE"},{"key":"RUNTIME_STATUS","value":"PORTABLE_CHATGPT_RUNTIME_SCHEDULED_PASS","status":"PASS"},{"key":"AUTOMATION_STATUS","value":"V1_ACTIVE_4_CORE_ROLES","status":"ACTIVE"},{"key":"ACTIVE_AUTOMATIONS","value":4,"status":"ACTIVE"},{"key":"AUTOMATION_ROLES","value":"DAILY|ADVISOR|EXECUTOR_LEARNER|META","status":"ACTIVE"},{"key":"STATE_TRUTH_OWNER","value":"DENER · SSOT CANONICAL / GOOGLE_DRIVE","status":"ACTIVE"},{"key":"GITHUB_ROLE","value":"CODE_COMPUTE_VALIDATION_PROVENANCE__NO_STATE_TRUTH","status":"ACTIVE"},{"key":"TOWER_V06_ROLE","value":"MIGRATION_PROVENANCE_ONLY__NO_CANONICAL_STATE_WRITES","status":"ACTIVE"},{"key":"SNAPSHOT_PRIVACY_GATE","value":"OLYMPUS_PRIVATE_DATA_EXCLUDED_FROM_PUBLIC_PROJECTION","status":"ACTIVE"},{"key":"ATLAS_PROJECTION_SYNC","value":"DRIVE_TO_GITHUB_EVERY_3_HOURS__LAST_VALID_PRESERVED","status":"ACTIVE"},{"key":"VERCEL","value":"RETIRED_RUNTIME_OPTIONAL_PUBLISH_ONLY","status":"RETIRED"}],"actions":[{"id":"SYSTEM_FIX_REQUIRED::EXECUTOR_STARVATION::OLY-SELCHANGE-T01-R2","status":"OPEN","title":"Executor starvation on abstract longitudinal-method validation","summary":"Flow issue only: a READY executor-owned Olympus method-validation work item has not advanced across multiple executor cadences. Public projection omits all client-level inputs and results.","updatedAt":"2026-09-14T16:32:37Z"},{"id":"GZSB-05-EROSITA-OUTLIER-MIXTURE-VS-SMOOTH-GROWTH","status":"VERIFIED","title":"eRASS1 localized nuisance vs smooth-growth morphology","summary":"Verified public science result: localized nuisance/high-z morphology is favored over a stable independent smooth-growth interpretation; physics stage remains closed.","updatedAt":"2026-09-14T12:17:05-03:00"},{"id":"GZ01-B03-T01-BIND-SELECTION","status":"COMPLETE_PASS","title":"DESI DR1 binding + selection readiness","summary":"Official bindings and selection metadata passed readiness; downstream scientific claims remain gated by frozen decision-relevant tests.","updatedAt":"2026-09-14T09:30:00Z"}]}
+{
+  "meta": {
+    "schemaVersion": "drive-ssot-v1",
+    "authority": "GOOGLE_DRIVE",
+    "sourceFileId": "1e6s2dKOYVLNsPUguHI85RLVLwJKtlCsQZBJ1BE-UhaY",
+    "sourceTitle": "DENER · SSOT CANONICAL",
+    "sourceUrl": "https://docs.google.com/spreadsheets/d/1e6s2dKOYVLNsPUguHI85RLVLwJKtlCsQZBJ1BE-UhaY/edit",
+    "sourceModifiedAt": "2026-09-14T16:33:47.394Z",
+    "generatedAt": "2026-09-14T13:47:28-03:00",
+    "projectionOnly": true,
+    "privacy": "PUBLIC_SANITIZED__OLYMPUS_PERSONAL_DATA_EXCLUDED",
+    "provenance": [
+      "Science",
+      "Engineering",
+      "PROJECTS",
+      "TEST_REGISTRY_V1",
+      "Relations",
+      "SYSTEM",
+      "StructuralLearning",
+      "CrossDomain",
+      "Integrity",
+      "TOWER_V06/active-roadmaps"
+    ],
+    "notes": "Read-only public projection generated from the authenticated Google Drive SSOT. Drive remains the Truth Owner; GitHub is code plus derived cache/projection. TOWER_V06 is migration provenance/rollback only.",
+    "fingerprint": "sha256:13dea7e12953975dc40453028e06bb9cbcc53bc8a42debef4d6a8b78c2153b7c"
+  },
+  "science": [
+    {
+      "type": "program",
+      "id": "PROG-EXPANSION-GEOMETRY",
+      "status": "ACTIVE",
+      "title": "Expansion, geometry & dark energy",
+      "summary": "Unifica H0/régua acústica/anchors, geometria-curvatura, expansão cross-probe e energia escura dinâmica como uma linha de investigação sobre a origem das discrepâncias de expansão e sua dependência de física early/late-time.",
+      "domain": "EXPANSION",
+      "sourceRef": "PEER_CONTROL_TOWER_CANONICAL/Test Registry + SCIENTIFIC_CAMPAIGNS"
+    },
+    {
+      "type": "program",
+      "id": "PROG-STRUCTURE-DARK-SECTOR",
+      "status": "ACTIVE",
+      "title": "Structure growth & dark sector",
+      "summary": "Unifica crescimento de estrutura, LSS/S8, DM/UDM, particle DM e assinaturas DAO para testar supressão, clustering e mecanismos do setor escuro em múltiplas escalas.",
+      "domain": "STRUCTURE",
+      "sourceRef": "PEER_CONTROL_TOWER_CANONICAL/Test Registry + SCIENTIFIC_CAMPAIGNS"
+    },
+    {
+      "type": "program",
+      "id": "PROG-CMB-EARLY-MICROPHYSICS",
+      "status": "ACTIVE",
+      "title": "CMB, early universe & microphysics",
+      "summary": "Unifica assinaturas CMB, anomalias/systematics, energia precoce e identificabilidade microfísica para separar efeitos instrumentais, degenerescências e mecanismos fundamentais.",
+      "domain": "EARLY",
+      "sourceRef": "PEER_CONTROL_TOWER_CANONICAL/Test Registry + SCIENTIFIC_CAMPAIGNS"
+    },
+    {
+      "type": "program",
+      "id": "PROG-HIGHZ-ASTROPHYSICS",
+      "status": "ACTIVE",
+      "title": "High-z astrophysics",
+      "summary": "Unifica galáxias high-z, SMBH e LRD/AGN para testar se abundâncias e resíduos observados são explicados por astrofísica populacional, seleção ou física primordial.",
+      "domain": "HIGHZ",
+      "sourceRef": "PEER_CONTROL_TOWER_CANONICAL/Test Registry + SCIENTIFIC_CAMPAIGNS"
+    },
+    {
+      "type": "program",
+      "id": "PROG-COSMIC-HOMOGENEITY",
+      "status": "ACTIVE",
+      "title": "Cosmic homogeneity & mega-structures",
+      "summary": "Linha de investigação sobre estruturas ultra-grandes e anisotropias de grande escala, com foco em descoberta, seleção, geometria, footprint, multiplicidade e abundância sob ΛCDM.",
+      "domain": "HOMOGENEITY",
+      "sourceRef": "PEER_CONTROL_TOWER_CANONICAL/Test Registry + SCIENTIFIC_CAMPAIGNS"
+    },
+    {
+      "type": "program",
+      "id": "PROG-SCIENTIFIC-VALIDATION",
+      "status": "ACTIVE",
+      "title": "Scientific validation & inference",
+      "summary": "Linha transversal de falsificação independente, integridade de likelihood/runtime, reprodutibilidade, model comparison e consistência entre evidência e claims científicos.",
+      "domain": "VALIDATION",
+      "sourceRef": "PEER_CONTROL_TOWER_CANONICAL/Test Registry + SCIENTIFIC_CAMPAIGNS"
+    },
+    {
+      "type": "campaign",
+      "id": "CAMP-H0-RULER-ANCHOR",
+      "status": "ACTIVE",
+      "title": "H0 / acoustic ruler / anchors",
+      "summary": "Pergunta: qual parte da separação high-z/local é causada por régua acústica, anchors/calibração ou microfísica? Mecanismo: decomposição de escala early/late e calibração local. 127 test_ids únicos.",
+      "domain": "D1",
+      "sourceRef": "PEER_CONTROL_TOWER_CANONICAL/Test Registry"
+    },
+    {
+      "type": "campaign",
+      "id": "CAMP-DDE-ROBUSTNESS",
+      "status": "ACTIVE",
+      "title": "Dynamical dark energy robustness",
+      "summary": "Pergunta: a evidência por DDE/late-Lambda é universal ou condicional a dataset/modelo? Mecanismo: expansão tardia, w0wa/CPL, IDE/UDS e controles matched. 166 test_ids únicos.",
+      "domain": "D3",
+      "sourceRef": "PEER_CONTROL_TOWER_CANONICAL/Test Registry"
+    },
+    {
+      "type": "campaign",
+      "id": "CAMP-CURVATURE-GEOMETRY",
+      "status": "ACTIVE",
+      "title": "Curvature & geometry",
+      "summary": "Pergunta: preferências de curvatura/geometria sobrevivem reotimização, mudança de stack e rivais? Mecanismo: distâncias/AP/acoustic geometry independentes de parametrizações incidentais. 32 test_ids únicos.",
+      "domain": "CROSS",
+      "sourceRef": "PEER_CONTROL_TOWER_CANONICAL/Test Registry"
+    },
+    {
+      "type": "campaign",
+      "id": "CAMP-CROSSPROBE-EXPANSION",
+      "status": "ACTIVE",
+      "title": "Cross-probe expansion",
+      "summary": "Pergunta: sinais de expansão sobrevivem comparação entre CMB, BAO/AP, SN, chronometers, time delays e anchors? Mecanismo: consistência geométrica/ruler-independent entre probes. 73 test_ids únicos.",
+      "domain": "CROSS",
+      "sourceRef": "PEER_CONTROL_TOWER_CANONICAL/Test Registry"
+    },
+    {
+      "type": "campaign",
+      "id": "CAMP-GROWTH-LSS",
+      "status": "ACTIVE",
+      "title": "Growth / LSS / S8",
+      "summary": "Pergunta: existe supressão cosmológica independente de seleção, scatter e sistemática? Mecanismo: growth factor, full-shape, weak lensing, clusters e transport/ShapeFit. 240 test_ids únicos.",
+      "domain": "D2",
+      "sourceRef": "PEER_CONTROL_TOWER_CANONICAL/Test Registry"
+    },
+    {
+      "type": "campaign",
+      "id": "CAMP-DM-UDM-MULTISCALE",
+      "status": "ACTIVE",
+      "title": "Dark matter / UDM multiscale",
+      "summary": "Pergunta: quais classes fenomenológicas de DM/UDM sobrevivem a kills multi-scale? Mecanismo: dinâmica galáctica, clustering e consistência cosmologia→halo. 63 test_ids únicos.",
+      "domain": "D4",
+      "sourceRef": "PEER_CONTROL_TOWER_CANONICAL/Test Registry"
+    },
+    {
+      "type": "campaign",
+      "id": "CAMP-PARTICLE-DM",
+      "status": "ACTIVE",
+      "title": "Particle DM & hidden sectors",
+      "summary": "Pergunta: quais modelos de particle DM/hidden sector sobrevivem relic, CMB, BBN, lifetime e escalas de estrutura? Mecanismo: microfísica de partículas traduzida em observáveis cosmológicos. 110 test_ids únicos.",
+      "domain": "D9",
+      "sourceRef": "PEER_CONTROL_TOWER_CANONICAL/Test Registry"
+    },
+    {
+      "type": "campaign",
+      "id": "CAMP-DARK-SECTOR-DAO",
+      "status": "ACTIVE",
+      "title": "Dark-sector acoustic signatures",
+      "summary": "Pergunta: a assinatura DAO/dark-sector sobrevive a controles de fundo, BAO e estrutura? Mecanismo: oscilação acústica no setor escuro e matched filters full-shape. 11 test_ids únicos.",
+      "domain": "CROSS",
+      "sourceRef": "PEER_CONTROL_TOWER_CANONICAL/Test Registry"
+    },
+    {
+      "type": "campaign",
+      "id": "CAMP-CMB-EARLY-CROSSPROBE",
+      "status": "ACTIVE",
+      "title": "CMB / early-energy cross-probe",
+      "summary": "Pergunta: quais sinais de CMB/energia precoce sobrevivem cross-instrument, release e mecanismos rivais? Mecanismo: compensação acústica, damping, primordial-shape e matched CMB likelihoods. 176 test_ids únicos.",
+      "domain": "CROSS",
+      "sourceRef": "PEER_CONTROL_TOWER_CANONICAL/Test Registry"
+    },
+    {
+      "type": "campaign",
+      "id": "CAMP-CMB-ANOMALIES",
+      "status": "ACTIVE",
+      "title": "CMB anomalies & systematics",
+      "summary": "Pergunta: quais resíduos CMB sobrevivem release, frequência, lensing e instrumentos? Mecanismo: nulls instrumentais e cross-release sobre observáveis CMB. 104 test_ids únicos.",
+      "domain": "D7",
+      "sourceRef": "PEER_CONTROL_TOWER_CANONICAL/Test Registry"
+    },
+    {
+      "type": "campaign",
+      "id": "CAMP-MICROPHYSICS",
+      "status": "ACTIVE",
+      "title": "Microphysics identifiability",
+      "summary": "Pergunta: os dados identificam apenas uma classe efetiva ou uma realização microscópica específica? Mecanismo: BBN, pNGB/axion, reheating, causal bridges e parâmetros fundamentais. 349 test_ids únicos.",
+      "domain": "D8",
+      "sourceRef": "PEER_CONTROL_TOWER_CANONICAL/Test Registry"
+    },
+    {
+      "type": "campaign",
+      "id": "CAMP-HIGHZ-GALAXIES",
+      "status": "ACTIVE",
+      "title": "High-z galaxies / JWST",
+      "summary": "Pergunta: a abundância/resíduo JWST é astrofísica, sistemática ou primordial? Mecanismo: halo mass function, host-mass mapping, duty cycle, scatter e seleção. 183 test_ids únicos.",
+      "domain": "D5",
+      "sourceRef": "PEER_CONTROL_TOWER_CANONICAL/Test Registry"
+    },
+    {
+      "type": "campaign",
+      "id": "CAMP-HIGHZ-SMBH",
+      "status": "ACTIVE",
+      "title": "High-z SMBH",
+      "summary": "Pergunta: um history populacional físico explica a amostra high-z de SMBH? Mecanismo: seeds, crescimento, duty cycle, seleção e constraints populacionais. 61 test_ids únicos.",
+      "domain": "D6",
+      "sourceRef": "PEER_CONTROL_TOWER_CANONICAL/Test Registry"
+    },
+    {
+      "type": "campaign",
+      "id": "CAMP-LRD-AGN",
+      "status": "ACTIVE",
+      "title": "LRD / AGN compact sources",
+      "summary": "Pergunta: mass/selection systematics explicam resíduos de LRD/AGN? Mecanismo: host decomposition, masses, completeness e seleção de fontes compactas. 275 test_ids únicos.",
+      "domain": "D10",
+      "sourceRef": "PEER_CONTROL_TOWER_CANONICAL/Test Registry"
+    },
+    {
+      "type": "campaign",
+      "id": "CAMP-MEGASTRUCTURES",
+      "status": "ACTIVE",
+      "title": "Mega-structures robustness",
+      "summary": "Pergunta: candidatos a megaestruturas sobrevivem aos mesmos controles congelados de descoberta, geometria, finder, footprint, multiplicidade e abundância? Mecanismo comum: robustez de estruturas ultra-grandes; objeto individual fica no nível Teste. 145 test_ids únicos.",
+      "domain": "CROSS",
+      "sourceRef": "PEER_CONTROL_TOWER_CANONICAL/Test Registry"
+    },
+    {
+      "type": "campaign",
+      "id": "CAMP-INDEPENDENT-PHYSICS",
+      "status": "ACTIVE",
+      "title": "Independent physics constraints",
+      "summary": "Pergunta: benchmarks e anomalias sobrevivem a constraints independentes e model comparisons materialmente distintos? Mecanismo: falsificação cross-terminal e evidência externa independente. 38 test_ids únicos.",
+      "domain": "CROSS",
+      "sourceRef": "PEER_CONTROL_TOWER_CANONICAL/Test Registry"
+    },
+    {
+      "type": "campaign",
+      "id": "CAMP-SCI-INTEGRITY",
+      "status": "ACTIVE",
+      "title": "Scientific inference integrity",
+      "summary": "Pergunta: contratos de likelihood, runtimes, convergência, data vectors e artefatos de publicação preservam reprodutibilidade e boundaries científicos? Mecanismo: validation gates e replay/readback. 38 test_ids únicos.",
+      "domain": "CROSS",
+      "sourceRef": "PEER_CONTROL_TOWER_CANONICAL/Test Registry"
+    },
+    {
+      "type": "campaign",
+      "id": "CAMP-DDE-ANOMALIES-MEGA-20260922",
+      "status": "ACTIVE",
+      "title": "DDE × anomalies & megastructures",
+      "summary": "Testa se energia escura dinâmica pode produzir alterações de expansão e crescimento grandes o suficiente para explicar anomalias cosmológicas tardias e eventuais megaestruturas robustas, sem violar DESI/CMB/SNe, controles de seleção, nulls ΛCDM e estabilidade física.",
+      "semantic_description": "Testa se energia escura dinâmica pode produzir alterações de expansão e crescimento grandes o suficiente para explicar anomalias cosmológicas tardias e eventuais megaestruturas robustas, sem violar DESI/CMB/SNe, controles de seleção, nulls ΛCDM e estabilidade física.",
+      "semantic_state": "ACTIVE — primeiro estabelece se existe uma anomalia de megaestrutura real sob o null ΛCDM; em paralelo mede o espaço DDE atualmente permitido e seu alcance em H0, S8/crescimento e altas redshifts.",
+      "domain": "D3",
+      "sourceRef": "byDenoso/NEXO-Obsidian-Vault@main:TOWER_V06/roadmaps/RM-DDE-ANOMALIES-MEGA-20260922-V1.json",
+      "updatedAt": "2026-09-22"
+    }
+  ],
+  "olympus": [
+    {
+      "type": "domain",
+      "id": "OLY-DOM-OLYMPUS",
+      "status": "ACTIVE",
+      "title": "Olympus",
+      "summary": "Domínio operacional de treino, dieta, check-ins e recomposição. Dados pessoais, clínicos e de clientes são excluídos da projeção pública.",
+      "parentId": null,
+      "sourceRef": "SSOT:Olympus (sanitized structure only)"
+    },
+    {
+      "type": "program",
+      "id": "OLY-PROG-BODYCOMP-NULL-AUDIT",
+      "status": "ACTIVE",
+      "title": "Body composition null auditing",
+      "summary": "Programa abstrato para comparar evolução observada contra explicações nulas rivais antes de interpretar progresso ou ajustar intervenção.",
+      "parentId": "OLY-DOM-OLYMPUS",
+      "sourceRef": "SSOT:Olympus (sanitized structure only)"
+    },
+    {
+      "type": "campaign",
+      "id": "OLY-CAMP-CLIENT-NULL-CHECKINS",
+      "status": "ACTIVE",
+      "title": "Longitudinal null-checkins",
+      "summary": "Campanha abstrata de auditoria longitudinal por nulls; nenhuma identidade, check-in, laboratório, foto, dieta ou dado de saúde é publicado.",
+      "parentId": "OLY-PROG-BODYCOMP-NULL-AUDIT",
+      "sourceRef": "SSOT:Olympus (sanitized structure only)"
+    }
+  ],
+  "engineering": [
+    {
+      "type": "domain",
+      "id": "ENG-DOM-ENGINEERING",
+      "status": "ACTIVE",
+      "title": "Engineering",
+      "summary": "Projeção navegável do domínio de engenharia; code truth continua em Git/GitHub e behavior truth no runtime/provider.",
+      "parentId": null,
+      "sourceRef": "SSOT:Engineering"
+    },
+    {
+      "type": "program",
+      "id": "ENG-PROG-NOVA-CAMB",
+      "status": "ACTIVE",
+      "title": "NOVA / CAMB",
+      "summary": "Portabilidade, fidelidade e execução reproduzível do CAMB/NOVA, incluindo port Rust e wrappers de runtime.",
+      "parentId": "ENG-DOM-ENGINEERING",
+      "sourceRef": "SSOT:Engineering"
+    },
+    {
+      "type": "campaign",
+      "id": "ENG-CAMP-CAMB-PORT-FIDELITY",
+      "status": "ACTIVE",
+      "title": "CAMB Port Fidelity",
+      "summary": "Preservar equivalência física/numérica e repeatability durante o port CAMB 1.6.6 → Rust.",
+      "parentId": "ENG-PROG-NOVA-CAMB",
+      "sourceRef": "SSOT:Engineering"
+    },
+    {
+      "type": "campaign",
+      "id": "ENG-CAMP-CAMB-PORTABILITY-RUNTIME",
+      "status": "ACTIVE",
+      "title": "Portable Runtime",
+      "summary": "Remover dependências frágeis de path/ambiente e tornar CAMB/CosmoRec relocável e executável fora do ambiente original.",
+      "parentId": "ENG-PROG-NOVA-CAMB",
+      "sourceRef": "SSOT:Engineering"
+    },
+    {
+      "type": "campaign",
+      "id": "ENG-CAMP-CAMB-REPLAY-VALIDATION",
+      "status": "ACTIVE",
+      "title": "Scientific Replay Validation",
+      "summary": "Validar execução end-to-end e replay científico direto/repetível contra contratos congelados.",
+      "parentId": "ENG-PROG-NOVA-CAMB",
+      "sourceRef": "SSOT:Engineering"
+    },
+    {
+      "type": "program",
+      "id": "ENG-PROG-ATLAS-CONTROL-TOWER",
+      "status": "ACTIVE",
+      "title": "Atlas Control Tower",
+      "summary": "Interface e projeção operacional do NEXO Atlas sobre estado canônico, grafos e sincronização.",
+      "parentId": "ENG-DOM-ENGINEERING",
+      "sourceRef": "SSOT:Engineering"
+    },
+    {
+      "type": "campaign",
+      "id": "ENG-CAMP-ATLAS-GRAPH-SSOT",
+      "status": "ACTIVE",
+      "title": "Atlas Graph + SSOT Projection",
+      "summary": "Projetar Domínio → Programa → Campanha e relações/filamentos a partir do SSOT sem duplicar autoridade.",
+      "parentId": "ENG-PROG-ATLAS-CONTROL-TOWER",
+      "sourceRef": "SSOT:Engineering"
+    },
+    {
+      "type": "campaign",
+      "id": "ENG-CAMP-ATLAS-SYNC-RUNTIME",
+      "status": "ACTIVE",
+      "title": "Atlas Sync + Runtime",
+      "summary": "Sincronização, leitura de fontes e comportamento real do Atlas/app sem transformar snapshots/legado em autoridade.",
+      "parentId": "ENG-PROG-ATLAS-CONTROL-TOWER",
+      "sourceRef": "SSOT:Engineering"
+    }
+  ],
+  "learning": [
+    {
+      "id": "SL-NEXO-NULL-MODEL-REASONING-V1",
+      "status": "TRANSFER_TESTED",
+      "title": "Null-model reasoning as a transferable structural method",
+      "domains": "Olympus|NEXO_INTEGRITY",
+      "summary": "Compare observed trajectory against explicit plausible null trajectories before attributing causality, intervention effect, anomaly or mechanism.",
+      "rule": "For any domain with an observed delta, define one or more plausible nulls preserving relevant constraints; compare observed-vs-null before promoting causal or anomalous interpretation.",
+      "support": 2,
+      "contradict": 0,
+      "confidence": 0.7,
+      "scope": "Methodological/structural, not domain truth",
+      "provenance": "SSOT:StructuralLearning"
+    },
+    {
+      "id": "SL-NEXO-FROZEN-DECISION-CONTRACT-V1",
+      "status": "CANDIDATE",
+      "title": "Frozen decision contract before target inspection",
+      "domains": "SCIENCE_CORPUS",
+      "summary": "Define statistic, search range, threshold and decision rule before inspecting the target outcome.",
+      "rule": "Material extensions after target inspection become separate preregistered tests.",
+      "support": 1,
+      "contradict": 0,
+      "confidence": 0.65,
+      "scope": "Methodological/structural, not domain truth",
+      "provenance": "SSOT:StructuralLearning"
+    },
+    {
+      "id": "SL-NEXO-INDEPENDENT-HOLDOUT-SEPARATION-V1",
+      "status": "CANDIDATE",
+      "title": "Independent holdout as adjudication channel",
+      "domains": "SCIENCE_CORPUS",
+      "summary": "Separate evidence used to formulate/tune a claim from evidence used to adjudicate it.",
+      "rule": "Require an independent channel for promotion beyond exploratory support.",
+      "support": 1,
+      "contradict": 0,
+      "confidence": 0.68,
+      "scope": "Methodological/structural, not domain truth",
+      "provenance": "SSOT:StructuralLearning"
+    },
+    {
+      "id": "SL-NEXO-PERTURBATION-INVARIANCE-V1",
+      "status": "CANDIDATE",
+      "title": "Perturbation and invariance testing before claim promotion",
+      "domains": "SCIENCE_CORPUS",
+      "summary": "Stress-test claims under plausible probe, selection, calibration, finder, numerical or nuisance perturbations.",
+      "rule": "Measure verdict stability and use sensitivity/LOO/ablation when full alternatives are unavailable.",
+      "support": 1,
+      "contradict": 0,
+      "confidence": 0.68,
+      "scope": "Methodological/structural, not domain truth",
+      "provenance": "SSOT:StructuralLearning"
+    },
+    {
+      "id": "SL-NEXO-CLAIM-BOUNDARY-DISCIPLINE-V1",
+      "status": "CANDIDATE",
+      "title": "Evidence-class claim boundary discipline",
+      "domains": "SCIENCE_CORPUS",
+      "summary": "The strongest allowed claim is capped by the weakest unresolved evidentiary condition.",
+      "rule": "Map evidence class, unresolved gates and dependence structure to an explicit maximum claim boundary.",
+      "support": 1,
+      "contradict": 0,
+      "confidence": 0.72,
+      "scope": "Methodological/structural, not domain truth",
+      "provenance": "SSOT:StructuralLearning"
+    },
+    {
+      "id": "SL-NEXO-SEMANTIC-PROCEDURAL-ASSOCIATIVE-NET-V0P1",
+      "status": "ACTIVE",
+      "title": "Two-layer semantic/procedural associative network",
+      "domains": "NEXO|SCIENCE|ENGINEERING|OLYMPUS",
+      "summary": "Operational terms and procedures behave like nodes; outcomes update weighted filaments across meaning, method, actions and domains.",
+      "rule": "Capture semantic signals, activate candidate filaments, record method/outcome, then update support/contradiction/weight.",
+      "support": 1,
+      "contradict": 0,
+      "confidence": 0.74,
+      "scope": "Structural learning only; not science/health authority.",
+      "provenance": "SSOT:StructuralLearning"
+    },
+    {
+      "id": "SL-NEXO-SEMANTIC-NULLS-DIET-V0P1",
+      "status": "SUPPORTED_CANDIDATE",
+      "title": "Semantic meaning of null-audit in diet/body-composition",
+      "domains": "OLYMPUS|SCIENCE",
+      "summary": "Body-composition null auditing means rival-explanation analysis rather than a single linear forecast.",
+      "rule": "Activate plausible rival explanations before attribution; public projection carries only the abstract method, never client data.",
+      "support": 4,
+      "contradict": 0,
+      "confidence": 0.92,
+      "scope": "Operational semantics for Olympus outputs.",
+      "provenance": "SSOT:StructuralLearning (sanitized)"
+    }
+  ],
+  "crossDomain": [
+    {
+      "id": "CD-EMERG-DISCOVERY-FUNCTION-FRAGILITY-V1",
+      "domains": "HOMOGENEITY|STATS|SELECTION",
+      "title": "Discovery-function fragility",
+      "summary": "Post-selection, threshold sensitivity and unreplayed optimization can inflate local rarity; independent physicality and discovery-aware global rarity are separate gates.",
+      "status": "SUPPORTED",
+      "provenance": "SSOT:CrossDomain"
+    },
+    {
+      "id": "CD-EMERG-TOPOLOGY-AMPLIFICATION-V1",
+      "domains": "HOMOGENEITY|SELECTION|FINDER",
+      "title": "Topology amplification",
+      "summary": "Connectivity thresholds can respond nonlinearly near critical linkage scales, reorganizing components and conditioned significance.",
+      "status": "SUPPORTED",
+      "provenance": "SSOT:CrossDomain"
+    },
+    {
+      "id": "CD-EMERG-SEMANTIC-PROCEDURAL-NULL-AUDIT-V0P1",
+      "domains": "SCIENCE|OLYMPUS|ENGINEERING",
+      "title": "Null-first auditing as a transferable pattern",
+      "summary": "For ambiguous signals, build rival explanations first, compare against trajectory/readback, then decide adjustment or claim.",
+      "status": "SUPPORTED_CANDIDATE",
+      "provenance": "SSOT:CrossDomain"
+    },
+    {
+      "id": "META::INTERDOMAIN::COSMO-OLYMPUS-SELECTION-AWARE-CHANGE-001",
+      "domains": "COSMOLOGY|OLYMPUS",
+      "title": "Selection/noise-aware longitudinal classification",
+      "summary": "Candidate method-transfer hypothesis: frozen inclusion rules, measurement-condition metadata, null/noise bands and corroboration may reduce false longitudinal progress/regression calls.",
+      "status": "TESTING",
+      "provenance": "SSOT:CrossDomain; method transfer only; no client data"
+    }
+  ],
+  "integrity": [
+    {
+      "id": "SCI-HIER-TEST-CAMPAIGN-20260909",
+      "scope": "SCIENCE",
+      "type": "hierarchy_coverage",
+      "target": "Test Registry test_id → primary_campaign",
+      "status": "PASS",
+      "severity": "HIGH",
+      "observed": "2502/2502 registry rows mapped; 2191 unique test_ids; 0 UNMAPPED; 0 #ERROR",
+      "readbackRef": "SSOT:Integrity",
+      "checkedAt": "2026-09-09T01:43:00-03:00"
+    },
+    {
+      "id": "SCI-HIER-CAMPAIGN-PROGRAM-20260909",
+      "scope": "SCIENCE",
+      "type": "hierarchy_coverage",
+      "target": "Canonical campaign → primary_program",
+      "status": "PASS",
+      "severity": "HIGH",
+      "observed": "17/17 campaigns mapped to one primary_program; 0 orphan campaigns",
+      "readbackRef": "SSOT:Integrity",
+      "checkedAt": "2026-09-09T01:43:00-03:00"
+    },
+    {
+      "id": "SCI-HIER-SSOT-LEAN-20260909",
+      "scope": "SCIENCE",
+      "type": "ssot_shape",
+      "target": "Science SSOT projection",
+      "status": "PASS",
+      "severity": "MEDIUM",
+      "observed": "6 Programs + 17 Campaigns; 0 test records in Science",
+      "readbackRef": "SSOT:Integrity",
+      "checkedAt": "2026-09-09T01:43:00-03:00"
+    },
+    {
+      "id": "NEXO-SELF-DUP-POLICY-20260909",
+      "scope": "NEXO",
+      "type": "INTEGRITY",
+      "target": "Recursive control policy identity",
+      "status": "RESOLVED",
+      "severity": "MEDIUM",
+      "observed": "Duplicate canonical policy resolved; Lean V1 retained ACTIVE",
+      "readbackRef": "SSOT:Integrity",
+      "checkedAt": "2026-09-09T07:19:00-03:00"
+    },
+    {
+      "id": "NEXO-RUNTIME-ATTEST-POSTCURSOR-20260909-2354",
+      "scope": "NEXO",
+      "type": "RUNTIME_ATTESTATION",
+      "target": "Scheduled runtime capability state",
+      "status": "RESOLVED",
+      "severity": "NONE",
+      "observed": "Current canonical capability state resolved against scheduled Drive/Sheets storage/readback and GitHub write scopes.",
+      "readbackRef": "SSOT:Integrity",
+      "checkedAt": "2026-09-10T08:59:00-03:00"
+    },
+    {
+      "id": "NEXO-ATLAS-PROJECTION-INTEGRITY-20260909-2354",
+      "scope": "ENGINEERING/NEXO",
+      "type": "PROJECTION_INTEGRITY",
+      "target": "Atlas projection",
+      "status": "LIVE",
+      "severity": "NONE",
+      "observed": "Atlas projection supports source-delta refresh with provider readback and derived-state authority only.",
+      "readbackRef": "SSOT:Integrity",
+      "checkedAt": "2026-09-10T07:51:37-03:00"
+    },
+    {
+      "id": "NEXO-TRUTHGRAPH-OLYMPUS-AUTHORITY-CONFLICT-20260910",
+      "scope": "OLYMPUS",
+      "type": "AUTHORITY_LIVENESS",
+      "target": "Olympus authority-provider alignment",
+      "status": "LIVE",
+      "severity": "NONE",
+      "observed": "SSOT Olympus is the sole Truth Owner; external providers remain signals/readback only.",
+      "readbackRef": "SSOT:Integrity",
+      "checkedAt": "2026-09-10T06:05:26-03:00"
+    }
+  ],
+  "system": [
+    {
+      "key": "NEXO_STATE_VERSION",
+      "value": "0.2",
+      "status": "ACTIVE"
+    },
+    {
+      "key": "CANONICAL_TABS",
+      "value": "THREADS|WORK|EVENTS|KNOWLEDGE|DECISIONS|SYSTEM|PROJECTS|TESTS|RELATIONS",
+      "status": "ACTIVE"
+    },
+    {
+      "key": "RUNTIME_STATUS",
+      "value": "PORTABLE_CHATGPT_RUNTIME_SCHEDULED_PASS",
+      "status": "PASS"
+    },
+    {
+      "key": "AUTOMATION_STATUS",
+      "value": "V1_ACTIVE_4_CORE_ROLES",
+      "status": "ACTIVE"
+    },
+    {
+      "key": "ACTIVE_AUTOMATIONS",
+      "value": 4,
+      "status": "ACTIVE"
+    },
+    {
+      "key": "AUTOMATION_ROLES",
+      "value": "DAILY|ADVISOR|EXECUTOR_LEARNER|META",
+      "status": "ACTIVE"
+    },
+    {
+      "key": "STATE_TRUTH_OWNER",
+      "value": "DENER · SSOT CANONICAL / GOOGLE_DRIVE",
+      "status": "ACTIVE"
+    },
+    {
+      "key": "GITHUB_ROLE",
+      "value": "CODE_COMPUTE_VALIDATION_PROVENANCE__NO_STATE_TRUTH",
+      "status": "ACTIVE"
+    },
+    {
+      "key": "TOWER_V06_ROLE",
+      "value": "MIGRATION_PROVENANCE_ONLY__NO_CANONICAL_STATE_WRITES",
+      "status": "ACTIVE"
+    },
+    {
+      "key": "SNAPSHOT_PRIVACY_GATE",
+      "value": "OLYMPUS_PRIVATE_DATA_EXCLUDED_FROM_PUBLIC_PROJECTION",
+      "status": "ACTIVE"
+    },
+    {
+      "key": "ATLAS_PROJECTION_SYNC",
+      "value": "DRIVE_TO_GITHUB_EVERY_3_HOURS__LAST_VALID_PRESERVED",
+      "status": "ACTIVE"
+    },
+    {
+      "key": "VERCEL",
+      "value": "RETIRED_RUNTIME_OPTIONAL_PUBLISH_ONLY",
+      "status": "RETIRED"
+    }
+  ],
+  "actions": [
+    {
+      "id": "SYSTEM_FIX_REQUIRED::EXECUTOR_STARVATION::OLY-SELCHANGE-T01-R2",
+      "status": "OPEN",
+      "title": "Executor starvation on abstract longitudinal-method validation",
+      "summary": "Flow issue only: a READY executor-owned Olympus method-validation work item has not advanced across multiple executor cadences. Public projection omits all client-level inputs and results.",
+      "updatedAt": "2026-09-14T16:32:37Z"
+    },
+    {
+      "id": "GZSB-05-EROSITA-OUTLIER-MIXTURE-VS-SMOOTH-GROWTH",
+      "status": "VERIFIED",
+      "title": "eRASS1 localized nuisance vs smooth-growth morphology",
+      "summary": "Verified public science result: localized nuisance/high-z morphology is favored over a stable independent smooth-growth interpretation; physics stage remains closed.",
+      "updatedAt": "2026-09-14T12:17:05-03:00"
+    },
+    {
+      "id": "GZ01-B03-T01-BIND-SELECTION",
+      "status": "COMPLETE_PASS",
+      "title": "DESI DR1 binding + selection readiness",
+      "summary": "Official bindings and selection metadata passed readiness; downstream scientific claims remain gated by frozen decision-relevant tests.",
+      "updatedAt": "2026-09-14T09:30:00Z"
+    }
+  ]
+}
