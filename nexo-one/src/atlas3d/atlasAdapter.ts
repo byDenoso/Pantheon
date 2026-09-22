@@ -1,6 +1,7 @@
-import type { GraphEdge, GraphNode, SystemState } from '../contracts/system.ts';
+import type { Filament, GraphEdge, GraphNode, SystemState } from '../contracts/system.ts';
 import {
   ATLAS_TOP_DOMAINS,
+  atlasSubdomainHint,
   atlasSubdomainNodeId,
   atlasSubdomainOf,
   atlasTopDomainOf,
@@ -49,6 +50,8 @@ export interface AtlasCrossLink {
   learningRef: string | null;
   learningKind: 'SEMANTIC' | 'PROCEDURAL' | 'SCIENTIFIC_LEARNING_PIPELINE' | null;
   learningGroup: string | null;
+  sourceAnchor: 'ENTITY_SUBDOMAIN' | 'SEMANTIC_SUBDOMAIN' | 'DOMAIN_HUB' | null;
+  targetAnchor: 'ENTITY_SUBDOMAIN' | 'SEMANTIC_SUBDOMAIN' | 'DOMAIN_HUB' | null;
   bundleIndex: number;
   bundleCount: number;
 }
@@ -122,11 +125,85 @@ function atlasEndpointFor(
   return ROOT_IDS[domain] || null;
 }
 
-function learningEndpointFromDomain(domain: string | undefined): string | null {
-  if (!domain) return null;
-  const normalized = domain.toUpperCase() === 'ENGINEERING' ? 'NEXO' : domain.toUpperCase();
-  if (!ATLAS_TOP_DOMAINS.includes(normalized as AtlasTopDomain)) return null;
-  return ROOT_IDS[normalized as AtlasTopDomain];
+function topDomainFromValue(value: string | undefined): AtlasTopDomain | null {
+  if (!value) return null;
+  const normalized = value.toUpperCase() === 'ENGINEERING' ? 'NEXO' : value.toUpperCase();
+  return ATLAS_TOP_DOMAINS.includes(normalized as AtlasTopDomain)
+    ? normalized as AtlasTopDomain
+    : null;
+}
+
+function domainFromRawId(rawId: string | undefined): AtlasTopDomain | null {
+  const match = /^domain:(NEXO|SCIENCE|OLYMPUS|ENGINEERING)$/i.exec(String(rawId || ''));
+  return match ? topDomainFromValue(match[1]) : null;
+}
+
+function learningSignal(filament: Filament, side: 'source' | 'target'): string {
+  const endpointLabel = side === 'source' ? filament.from_label : filament.to_label;
+  const linkedLabels = (filament.links || []).map(link => link.label);
+  return [
+    endpointLabel,
+    filament.label,
+    filament.id,
+    filament.kind,
+    filament.peer_detection_group,
+    ...linkedLabels,
+  ].filter(Boolean).join(' ');
+}
+
+function resolveLearningEndpoint({
+  rawId,
+  domain,
+  filament,
+  side,
+  sourceNodeIds,
+  sourceToParent,
+  nodeMap,
+}: {
+  rawId?: string;
+  domain?: string;
+  filament: Filament;
+  side: 'source' | 'target';
+  sourceNodeIds: Set<string>;
+  sourceToParent: Map<string, string>;
+  nodeMap: Map<string, AtlasMetroNode>;
+}): { id: string; anchor: 'ENTITY_SUBDOMAIN' | 'SEMANTIC_SUBDOMAIN' | 'DOMAIN_HUB' } | null {
+  const explicitId = side === 'source'
+    ? (filament.from_id || rawId)
+    : (filament.to_id || rawId);
+
+  if (explicitId && sourceNodeIds.has(explicitId)) {
+    const parent = sourceToParent.get(explicitId);
+    if (parent && nodeMap.get(parent)?.entityType === 'subdomain') {
+      return { id: parent, anchor: 'ENTITY_SUBDOMAIN' };
+    }
+  }
+
+  for (const link of filament.links || []) {
+    if (!sourceNodeIds.has(link.id)) continue;
+    const linkDomain = topDomainFromValue(link.domain);
+    const expectedDomain = topDomainFromValue(domain)
+      || domainFromRawId(rawId)
+      || topDomainFromValue(side === 'source' ? filament.from_domain : filament.to_domain);
+    if (expectedDomain && linkDomain !== expectedDomain) continue;
+    const parent = sourceToParent.get(link.id);
+    if (parent && nodeMap.get(parent)?.entityType === 'subdomain') {
+      return { id: parent, anchor: 'ENTITY_SUBDOMAIN' };
+    }
+  }
+
+  const resolvedDomain = topDomainFromValue(domain)
+    || domainFromRawId(rawId)
+    || topDomainFromValue(side === 'source' ? filament.from_domain : filament.to_domain);
+  if (!resolvedDomain) return null;
+
+  const hint = atlasSubdomainHint(resolvedDomain, learningSignal(filament, side));
+  if (hint) {
+    const hintedId = atlasSubdomainNodeId(resolvedDomain, hint);
+    if (nodeMap.has(hintedId)) return { id: hintedId, anchor: 'SEMANTIC_SUBDOMAIN' };
+  }
+
+  return { id: ROOT_IDS[resolvedDomain], anchor: 'DOMAIN_HUB' };
 }
 
 function safeRatio(structure: number, relations: number): number {
@@ -295,8 +372,43 @@ export function buildAtlasMetroModel(state: SystemState): AtlasMetroModel {
   const filamentById = new Map((state.filaments || []).map(filament => [filament.id, filament]));
 
   for (const edge of state.graph.edges) {
-    const source = atlasEndpointFor(edge.from, sourceNodeIds);
-    const target = atlasEndpointFor(edge.to, sourceNodeIds);
+    const learningFilament = edge.is_learning && edge.learning_ref
+      ? filamentById.get(edge.learning_ref)
+      : undefined;
+
+    let source: string | null;
+    let target: string | null;
+    let sourceAnchor: AtlasCrossLink['sourceAnchor'] = null;
+    let targetAnchor: AtlasCrossLink['targetAnchor'] = null;
+
+    if (edge.is_learning && learningFilament) {
+      const sourceResolved = resolveLearningEndpoint({
+        rawId: edge.from,
+        domain: learningFilament.from_domain,
+        filament: learningFilament,
+        side: 'source',
+        sourceNodeIds,
+        sourceToParent,
+        nodeMap,
+      });
+      const targetResolved = resolveLearningEndpoint({
+        rawId: edge.to,
+        domain: learningFilament.to_domain,
+        filament: learningFilament,
+        side: 'target',
+        sourceNodeIds,
+        sourceToParent,
+        nodeMap,
+      });
+      source = sourceResolved?.id || null;
+      target = targetResolved?.id || null;
+      sourceAnchor = sourceResolved?.anchor || null;
+      targetAnchor = targetResolved?.anchor || null;
+    } else {
+      source = atlasEndpointFor(edge.from, sourceNodeIds);
+      target = atlasEndpointFor(edge.to, sourceNodeIds);
+    }
+
     if (!source || !target || source === target) continue;
 
     // Ordinary graph structure only becomes a cross-link when both endpoints are
@@ -305,7 +417,6 @@ export function buildAtlasMetroModel(state: SystemState): AtlasMetroModel {
     if (!edge.is_learning && !(sourceNodeIds.has(edge.from) && sourceNodeIds.has(edge.to))) continue;
     if (!edge.is_learning) canonicalEntityEdges.push(edge);
 
-    const learningFilament = edge.learning_ref ? filamentById.get(edge.learning_ref) : undefined;
     crossLinks.push({
       id: `entity:${edge.id}`,
       source,
@@ -320,22 +431,40 @@ export function buildAtlasMetroModel(state: SystemState): AtlasMetroModel {
       learningScope: edge.learning_scope || learningFilament?.scope || null,
       learningRef: edge.learning_ref || null,
       learningKind: learningFilament?.kind || null,
-      learningGroup: String((learningFilament as any)?.peer_detection_group || '') || null,
+      learningGroup: learningFilament?.peer_detection_group || null,
+      sourceAnchor,
+      targetAnchor,
       bundleIndex: 0,
       bundleCount: 1,
     });
     if (edge.is_learning && edge.learning_ref) renderedLearningRefs.add(edge.learning_ref);
   }
 
-  // Filaments are presentation relationships, never stations. When a canonical
-  // filament omits entity IDs but carries domain endpoints, anchor it to the
-  // corresponding domain hubs instead of creating synthetic Learning nodes.
+  // Filaments are presentation relationships, never stations. Prefer exact
+  // entity parents and strong semantic subdomains; use the domain hub only when
+  // the sanctioned projection does not contain enough evidence for finer routing.
   for (const filament of state.filaments || []) {
     if (renderedLearningRefs.has(filament.id)) continue;
-    const source = atlasEndpointFor(filament.from_id, sourceNodeIds)
-      || learningEndpointFromDomain(filament.from_domain);
-    const target = atlasEndpointFor(filament.to_id, sourceNodeIds)
-      || learningEndpointFromDomain(filament.to_domain);
+    const sourceResolved = resolveLearningEndpoint({
+      rawId: filament.from_id,
+      domain: filament.from_domain,
+      filament,
+      side: 'source',
+      sourceNodeIds,
+      sourceToParent,
+      nodeMap,
+    });
+    const targetResolved = resolveLearningEndpoint({
+      rawId: filament.to_id,
+      domain: filament.to_domain,
+      filament,
+      side: 'target',
+      sourceNodeIds,
+      sourceToParent,
+      nodeMap,
+    });
+    const source = sourceResolved?.id || null;
+    const target = targetResolved?.id || null;
     if (!source || !target || source === target) continue;
 
     crossLinks.push({
@@ -350,7 +479,9 @@ export function buildAtlasMetroModel(state: SystemState): AtlasMetroModel {
       learningScope: filament.scope || null,
       learningRef: filament.id,
       learningKind: filament.kind,
-      learningGroup: String((filament as any)?.peer_detection_group || '') || null,
+      learningGroup: filament.peer_detection_group || null,
+      sourceAnchor: sourceResolved?.anchor || null,
+      targetAnchor: targetResolved?.anchor || null,
       bundleIndex: 0,
       bundleCount: 1,
     });
@@ -384,6 +515,8 @@ export function buildAtlasMetroModel(state: SystemState): AtlasMetroModel {
       learningRef: null,
       learningKind: null,
       learningGroup: null,
+      sourceAnchor: null,
+      targetAnchor: null,
       bundleIndex: 0,
       bundleCount: 1,
     });

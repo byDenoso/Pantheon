@@ -222,6 +222,36 @@ export default function Atlas3DApp() {
     link.learningKind === 'SCIENTIFIC_LEARNING_PIPELINE'
     && /^PEER-DETECTION-GROUP-/i.test(String(link.learningRef || ''))
   ).length;
+  const learningSubdomainEndpointCount = model.crossLinks
+    .filter(link => link.isLearning)
+    .reduce((count, link) => count
+      + (model.nodeMap.get(link.source)?.entityType === 'subdomain' ? 1 : 0)
+      + (model.nodeMap.get(link.target)?.entityType === 'subdomain' ? 1 : 0), 0);
+  const learningHubEndpointCount = model.crossLinks
+    .filter(link => link.isLearning)
+    .reduce((count, link) => count
+      + (model.nodeMap.get(link.source)?.entityType === 'hub' ? 1 : 0)
+      + (model.nodeMap.get(link.target)?.entityType === 'hub' ? 1 : 0), 0);
+  const peerSubdomainLinkCount = model.crossLinks.filter(link =>
+    link.learningKind === 'SCIENTIFIC_LEARNING_PIPELINE'
+    && /^PEER-DETECTION-GROUP-/i.test(String(link.learningRef || ''))
+    && model.nodeMap.get(link.target)?.entityType === 'subdomain'
+    && /Peer Detection/i.test(model.nodeMap.get(link.target)?.name || '')
+  ).length;
+  const semanticSubdomainLinkCount = model.crossLinks.filter(link =>
+    link.learningKind === 'SEMANTIC'
+    && (
+      model.nodeMap.get(link.source)?.entityType === 'subdomain'
+      || model.nodeMap.get(link.target)?.entityType === 'subdomain'
+    )
+  ).length;
+  const proceduralSubdomainLinkCount = model.crossLinks.filter(link =>
+    link.learningKind === 'PROCEDURAL'
+    && (
+      model.nodeMap.get(link.source)?.entityType === 'subdomain'
+      || model.nodeMap.get(link.target)?.entityType === 'subdomain'
+    )
+  ).length;
   const peerArtifactNodeCount = model.nodes.filter(node => {
     const source = String(node.sourceId || '');
     return /^work:PEER-DETECTION-D\d+/i.test(source)
@@ -261,6 +291,11 @@ export default function Atlas3DApp() {
       data-atlas-learning-procedural={proceduralLearningLinkCount}
       data-atlas-learning-semantic={semanticLearningLinkCount}
       data-atlas-peer-learning-links={peerLearningLinkCount}
+      data-atlas-learning-subdomain-endpoints={learningSubdomainEndpointCount}
+      data-atlas-learning-hub-endpoints={learningHubEndpointCount}
+      data-atlas-peer-subdomain-links={peerSubdomainLinkCount}
+      data-atlas-semantic-subdomain-links={semanticSubdomainLinkCount}
+      data-atlas-procedural-subdomain-links={proceduralSubdomainLinkCount}
       data-atlas-peer-artifact-nodes={peerArtifactNodeCount}
     >
       <section className="atlas-workspace">

@@ -15,34 +15,77 @@ export function atlasTopDomainOf(node: GraphNode): AtlasTopDomain {
   return 'NEXO';
 }
 
+/**
+ * Conservative semantic router used by Learning filaments.
+ * Returns only a strong subdomain match. It deliberately has no generic
+ * "Outros ativos" fallback because filaments should fall back to the domain hub
+ * rather than claim a false semantic precision.
+ */
+export function atlasSubdomainHint(
+  domain: AtlasTopDomain,
+  signal: string,
+  entityType?: GraphNode['type'],
+): string | null {
+  const token = String(signal || '').toUpperCase();
+
+  if (domain === 'OLYMPUS') {
+    if (/MIQUEIAS|OLYCAUSE/.test(token)) return 'Miquéias · Cause/Nulls';
+    if (/COMPPHYS|OLYPHYS|BODY\s*COMPOSITION|COMPOSI[CÇ][AÃ]O\s*CORPORAL/.test(token)) {
+      return 'Composição corporal · Física computacional';
+    }
+    if (/PIVOT|OLYPIVOT|NULL\s*CROSS/.test(token)) return 'Pivot & Null cross-checks';
+    return null;
+  }
+
+  if (domain === 'SCIENCE') {
+    if (/H0-LCDM|H0LCDM|H0HOM|H0-HOMOGENEITY|T-H0|SH0ES|HUBBLE/.test(token)) {
+      return 'Expansão do Universo · H0';
+    }
+    if (/PEER[.\-\s]DETECTION|PEER\.DETECTION|A_LENS|EDE/.test(token)) {
+      return 'Consistência cosmológica · Peer Detection';
+    }
+    if (/GROWTH-LSS|GZSB|EROSITA|S8|LARGE[ -]?SCALE|LSS/.test(token)) {
+      return 'Estrutura em larga escala · Growth/LSS';
+    }
+    if (/DE-MICROPHYSICS|T-DEM|DARK-SECTOR|DARK_ENERGY|DARK\s+ENERGY/.test(token)) {
+      return 'Energia escura & setor escuro';
+    }
+    if (/BLINDSPOT-LIGHT|BLIND26|PROPAGA[CÇ][AÃ]O.*LUZ/.test(token)) {
+      return 'Propagação da luz · Blindspots';
+    }
+    if (/MEGASTRUCTURE|T-MEGA/.test(token)) return 'Megaestruturas · ΛCDM';
+    if (/GALAXY-REDSHIFT|GALAXY-3D|GZ-01|GZ01|REDSHIFT\s*3D/.test(token)) {
+      return 'Galáxias · Redshift 3D';
+    }
+    if (/AVERAGING-PROBLEM|AVERAGING\s+PROBLEM/.test(token)) {
+      return 'Transferência metodológica · Averaging';
+    }
+    if (entityType === 'CAPABILITY' && /SCI|COSMO|CAMB|CLASS/.test(token)) return 'Capacidades científicas';
+    return null;
+  }
+
+  if (/ACT-ENG|REQUEST-INGRESS|SIDECHANNEL|INFRA|SECURITY|HOSTING|GITHUB/.test(token)) {
+    return 'Engenharia, infraestrutura & segurança';
+  }
+  if (entityType === 'CAPABILITY' || /RUNTIME|MCP|EXECUTOR|PRODUCER|ADAPTER|CANARY/.test(token)) {
+    return 'Runtime, MCP & execução';
+  }
+  if (/T-LEARN|LEARN|NEXO\s+EXECUTION|METALEARNING|PROCEDURAL/.test(token)) return 'Operações NEXO';
+  return null;
+}
+
 export function atlasSubdomainOf(node: GraphNode): string {
   const token = tokenOf(node);
   const top = atlasTopDomainOf(node);
+  const hinted = atlasSubdomainHint(top, token, node.type);
+  if (hinted) return hinted;
 
-  if (top === 'OLYMPUS') {
-    if (/MIQUEIAS|OLYCAUSE/.test(token)) return 'Miquéias · Cause/Nulls';
-    if (/COMPPHYS|OLYPHYS/.test(token)) return 'Composição corporal · Física computacional';
-    if (/PIVOT|OLYPIVOT/.test(token)) return 'Pivot & Null cross-checks';
-    return 'Olympus · Outros ativos';
-  }
-
+  if (top === 'OLYMPUS') return 'Olympus · Outros ativos';
   if (top === 'SCIENCE') {
-    if (/H0-LCDM|H0HOM|H0-HOMOGENEITY|T-H0/.test(token)) return 'Expansão do Universo · H0';
-    if (/PEER[.-]DETECTION|PEER\.DETECTION|A_LENS|EDE/.test(token)) return 'Consistência cosmológica · Peer Detection';
-    if (/GROWTH-LSS|GZSB|EROSITA|S8/.test(token)) return 'Estrutura em larga escala · Growth/LSS';
-    if (/DE-MICROPHYSICS|T-DEM|DARK-SECTOR|DARK_ENERGY/.test(token)) return 'Energia escura & setor escuro';
-    if (/BLINDSPOT-LIGHT|BLIND26/.test(token)) return 'Propagação da luz · Blindspots';
-    if (/MEGASTRUCTURE|T-MEGA/.test(token)) return 'Megaestruturas · ΛCDM';
-    if (/GALAXY-REDSHIFT|GZ-01|GZ01/.test(token)) return 'Galáxias · Redshift 3D';
-    if (/AVERAGING-PROBLEM/.test(token)) return 'Transferência metodológica · Averaging';
     if (node.type === 'CAPABILITY') return 'Capacidades científicas';
     return 'Science · Outros ativos';
   }
-
-  if (node.domain === 'ENGINEERING' || /ACT-ENG|REQUEST-INGRESS|SIDECHANNEL/.test(token)) {
-    return 'Engenharia, infraestrutura & segurança';
-  }
-  if (/T-LEARN|LEARN/.test(token)) return 'Operações NEXO';
+  if (node.domain === 'ENGINEERING') return 'Engenharia, infraestrutura & segurança';
   if (node.type === 'CAPABILITY') return 'Runtime, MCP & execução';
   return 'Operações NEXO';
 }
