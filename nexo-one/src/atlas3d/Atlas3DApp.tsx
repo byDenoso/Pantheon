@@ -128,7 +128,6 @@ export default function Atlas3DApp() {
     setSelectedId(model.roots[0] || null);
     setNavigationRevision(model.revision);
     setRendererReady(false);
-    setFitNonce(value => value + 1);
   }, [model?.revision]);
 
   if (!system.state || !model) {
