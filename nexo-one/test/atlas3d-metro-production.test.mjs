@@ -394,6 +394,10 @@ test('dedicated Atlas production page uses Metro renderer, G6 and deterministic 
   assert.match(renderer, /threePeerLearningSynapses/);
   assert.match(renderer, /G6_ZERO_VIEWPORT/);
   assert.match(renderer, /G6_RENDER_FAILED/);
+  assert.match(renderer, /refreshSequence/);
+  assert.match(renderer, /initializedRef/);
+  assert.match(renderer, /refreshRef/);
+  assert.doesNotMatch(renderer, /G6_UPDATE_FAILED/);
   assert.match(renderer, /WEBGL_INIT_FAILED/);
   assert.match(renderer, /WEBGL_CONTEXT_LOST/);
   assert.match(renderer, /compact-touch/);
