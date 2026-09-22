@@ -197,7 +197,8 @@ function Graph({topology,search,mode,selected,onSelect,theme,view}:{topology:Top
 
   const nodePositions=new Map(canvasNodes.map(node=>[node.id,node]));
   return <div className="graph-shell" aria-label={view==='2d'?'Mapa neural 2D da estrutura MCP':'Mapa neural 3D da estrutura MCP'}
-    data-mcp-renderer={view==='2d'?'neural-2d':'neural-3d'} data-mcp-theme={theme}>
+    data-mcp-renderer={view==='2d'?'neural-2d':'neural-3d'} data-mcp-theme={theme}
+    data-mcp-visible-nodes={visible.nodes.length} data-mcp-visible-links={visible.links.length}>
     {view==='2d'?<svg className="mcp-neural-2d" viewBox="-330 -225 660 450" role="img" aria-label="Topologia MCP neural em 2D">
       <defs>
         <filter id="mcp-node-glow" x="-120%" y="-120%" width="340%" height="340%"><feGaussianBlur stdDeviation="5" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
