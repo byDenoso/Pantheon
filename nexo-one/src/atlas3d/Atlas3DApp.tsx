@@ -116,6 +116,7 @@ export default function Atlas3DApp() {
   const model = useMemo(() => system.state ? buildAtlasMetroModel(system.state) : null, [system.state]);
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [navigationRevision, setNavigationRevision] = useState('');
   const [viewMode, setViewMode] = useState<ViewMode>('2d');
   const [showBeams, setShowBeams] = useState(true);
   const [fitNonce, setFitNonce] = useState(0);
@@ -125,6 +126,7 @@ export default function Atlas3DApp() {
     if (!model) return;
     setExpanded(new Set(model.roots));
     setSelectedId(model.roots[0] || null);
+    setNavigationRevision(model.revision);
     setRendererReady(false);
     setFitNonce(value => value + 1);
   }, [model?.revision]);
@@ -139,9 +141,16 @@ export default function Atlas3DApp() {
     );
   }
 
-  const visibleIds = visibleAtlasIds(model, expanded);
+  // The first render after SystemState arrives must already contain the three
+  // expanded domain hubs. Waiting for useEffect here produces one stale G6 frame
+  // with only the roots and can lose the expansion update while render() is in flight.
+  const navigationStale = navigationRevision !== model.revision;
+  const activeExpanded = navigationStale ? new Set(model.roots) : expanded;
+  const activeSelectedId = navigationStale ? (model.roots[0] || null) : selectedId;
+
+  const visibleIds = visibleAtlasIds(model, activeExpanded);
   const visibleSet = new Set(visibleIds);
-  const selected = selectedId ? model.nodeMap.get(selectedId) || null : null;
+  const selected = activeSelectedId ? model.nodeMap.get(activeSelectedId) || null : null;
   const children = selected ? (model.childrenMap.get(selected.id) || []).map(id => model.nodeMap.get(id)!).filter(Boolean) : [];
   const related = selected ? relatedAtlasNodes(model, selected.id) : [];
   const breadcrumbs = selected ? atlasPathTo(model, selected.id) : [];
@@ -183,8 +192,8 @@ export default function Atlas3DApp() {
       <section className="atlas-workspace">
         <MetroAtlasRenderer
           model={model}
-          expanded={expanded}
-          selectedId={selectedId}
+          expanded={activeExpanded}
+          selectedId={activeSelectedId}
           showBeams={showBeams}
           viewMode={viewMode}
           fitNonce={fitNonce}
@@ -226,7 +235,7 @@ export default function Atlas3DApp() {
             return (
               <button
                 key={rootId}
-                className={selectedId === rootId ? 'selected' : ''}
+                className={activeSelectedId === rootId ? 'selected' : ''}
                 style={{ '--domain-color': DOMAIN_COLOR[root.domain] } as CSSProperties}
                 onClick={() => setSelectedId(rootId)}
               >
