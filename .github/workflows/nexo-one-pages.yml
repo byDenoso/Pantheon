@@ -249,7 +249,7 @@ jobs:
         run: |
           set -euo pipefail
           npm run typecheck
-          node --test test/atlas3d-metro-production.test.mjs test/pages.test.mjs test/mcp-atlas-site.test.mjs
+          node --test test/atlas3d-metro-production.test.mjs test/pages.test.mjs test/mcp-atlas-site.test.mjs test/projection-sync-resilience.test.mjs
           mkdir -p public/vendor
           curl -fsSL --retry 3 --connect-timeout 8 https://cdn.jsdelivr.net/npm/@antv/g6@5/dist/g6.min.js -o public/vendor/g6.min.js
           test -s public/vendor/g6.min.js
