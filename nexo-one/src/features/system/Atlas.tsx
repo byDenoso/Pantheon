@@ -48,7 +48,7 @@ const DOMAIN_WORLD_CAPTION: Partial<Record<GraphNode['domain'], string>> = {
 type FilterKey = 'domains' | 'types' | 'states' | 'freshness' | 'authorities' | 'relations';
 
 const ATLAS_CLUSTER_TYPES: GraphNode['type'][] = [
-  'PROVIDER', 'CAPABILITY', 'ACTION', 'EFFECT', 'PROJECTION', 'CLAIM', 'TEST', 'MEMORY', 'SIDE_QUEST', 'FILAMENT',
+  'PROVIDER', 'CAPABILITY', 'ACTION', 'EFFECT', 'PROJECTION', 'CLAIM', 'MEMORY', 'SIDE_QUEST', 'FILAMENT',
 ];
 
 const clusterIdFor = (domain: GraphNode['domain'], type: GraphNode['type']): string =>
@@ -173,7 +173,7 @@ function semanticSubdomainNode(
   const now = new Date().toISOString();
   return {
     id: atlasSubdomainNodeId(domain, subdomain),
-    type: 'CAMPAIGN',
+    type: 'SUBDOMAIN',
     label: subdomain,
     domain,
     state: sample?.state ?? 'LIVE',
@@ -561,7 +561,7 @@ export function AtlasView(
   const handleSearchSubmit = () => {
     const query = filters.search.trim().toLowerCase();
     if (!query) return;
-    const pool = state.graph.nodes.filter(node => node.type !== 'DOMAIN');
+    const pool = state.graph.nodes.filter(node => node.type !== 'DOMAIN' && node.type !== 'TEST');
     const match = pool.find(node => node.id.toLowerCase() === query)
       ?? pool.find(node => node.id.toLowerCase().includes(query) || node.label.toLowerCase().includes(query));
     if (match) flyToEntity(match.id);
@@ -813,7 +813,7 @@ export function AtlasView(
             </div>
           </div>
           <ChipGroup title="DOMÍNIO" values={ATLAS_TOP_DOMAINS} selected={filters.domains} onToggle={v => toggle('domains', v)} />
-          <ChipGroup title="TIPO" values={GRAPH_NODE_TYPES} selected={filters.types} onToggle={v => toggle('types', v)} />
+          <ChipGroup title="TIPO" values={GRAPH_NODE_TYPES.filter(type => type !== 'TEST')} selected={filters.types} onToggle={v => toggle('types', v)} />
           <ChipGroup title="ESTADO" values={[...PROJECTION_STATES, ...CAPABILITY_STATUSES]}
             selected={filters.states} onToggle={v => toggle('states', v)} />
           <ChipGroup title="FRESHNESS" values={FRESHNESS_VALUES} selected={filters.freshness} onToggle={v => toggle('freshness', v)} />
