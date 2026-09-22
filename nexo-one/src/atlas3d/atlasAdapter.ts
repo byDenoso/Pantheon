@@ -266,7 +266,13 @@ export function buildAtlasMetroModel(state: SystemState): AtlasMetroModel {
   }
 
   const sourceNodes = state.graph.nodes
-    .filter(node => node.type !== 'DOMAIN' && node.type !== 'FILAMENT')
+    .filter(node =>
+      node.type !== 'DOMAIN'
+      && node.type !== 'FILAMENT'
+      && !/^work:PEER-DETECTION-D\d+/i.test(String(node.id || ''))
+      && !/^test:PEER-DETECTION-D\d+/i.test(String(node.id || ''))
+      && !/^capability:peer\.detection\./i.test(String(node.id || ''))
+    )
     .map(node => ({ ...node, domain: atlasTopDomainOf(node) as GraphNode['domain'] }));
 
   const sourceNodeIds = new Set(sourceNodes.map(node => node.id));

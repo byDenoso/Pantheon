@@ -198,6 +198,22 @@ test('Learning preserves an explicit canonical entity as a leaf endpoint', () =>
   assert.equal(model.nodeMap.get(link.target)?.parentId?.startsWith('atlas.subdomain.'), true);
 });
 
+test('raw Peer Detection runtime artifacts never materialize as Atlas stations', () => {
+  const source = state();
+  const template = source.graph.nodes.find(node => node.type !== 'DOMAIN' && node.type !== 'FILAMENT');
+  assert.ok(template, 'fixture needs a canonical node template');
+  source.graph.nodes.push(
+    { ...template, id: 'work:PEER-DETECTION-D99-runtime', label: 'Peer runtime work' },
+    { ...template, id: 'test:PEER-DETECTION-D99-runtime', label: 'Peer runtime test' },
+    { ...template, id: 'capability:peer.detection.runtime', label: 'Peer runtime capability', type: 'CAPABILITY' },
+  );
+
+  const model = buildAtlasMetroModel(source);
+  assert.equal(model.nodes.some(node => /^work:PEER-DETECTION-D\d+/i.test(String(node.sourceId || ''))), false);
+  assert.equal(model.nodes.some(node => /^test:PEER-DETECTION-D\d+/i.test(String(node.sourceId || ''))), false);
+  assert.equal(model.nodes.some(node => /^capability:peer\.detection\./i.test(String(node.sourceId || ''))), false);
+});
+
 test('Learning uses a unique canonical linked entity as an inter-domain leaf endpoint', () => {
   const source = state();
   const target = source.graph.nodes.find(node =>
