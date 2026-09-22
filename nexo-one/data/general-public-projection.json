@@ -1,0 +1,38 @@
+{
+  "contract": "NEXO_GENERAL_PUBLIC_PROJECTION_V1",
+  "authority": "GOOGLE_DRIVE_PRIVATE",
+  "projection_only": true,
+  "source": "STAGING/GENERAL",
+  "generated_at": "2026-09-22T22:31:00Z",
+  "execution": [
+    {
+      "atlas_id": "general-runtime-state",
+      "title": "General Execution · durable state",
+      "summary": "Material General outputs persist in Drive and are projected into Atlas as aggregated operational state.",
+      "domain": "ENGINEERING",
+      "status": "ACTIVE",
+      "source_ref": "drive://STAGING/GENERAL/NEXO_GENERAL_RUNTIME_MANIFEST",
+      "updated_at": "2026-09-22T22:31:00Z",
+      "fingerprint": "sha256:da40584940f2af508c98fbf7f0c6b69b7f05acef2e2723d1cfadc92cbea96f12"
+    }
+  ],
+  "learning": [
+    {
+      "id": "GENLEARN-DURABLE-GENERAL-ATLAS-V1",
+      "title": "Durable General state must close into Atlas",
+      "rule": "Persist material General state in Drive, then project only durable aggregates and reusable Learning into Atlas; never project cursors or handoffs as stations.",
+      "status": "PROMOTED",
+      "from_domain": "NEXO",
+      "to_domain": "ENGINEERING",
+      "from_label": "General durable state",
+      "to_label": "Atlas projection reliability",
+      "source_ref": "drive://STAGING/GENERAL/NEXO_GENERAL_RUNTIME_MANIFEST",
+      "updated_at": "2026-09-22T22:31:00Z",
+      "support": 2,
+      "contradiction": 0,
+      "fingerprint": "sha256:bb5372dd10d6d6caf4513f7d17c94fd91dca6acd8af6234a2964b7f09be72a86"
+    }
+  ],
+  "cursors": [],
+  "handoffs": []
+}
