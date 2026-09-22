@@ -112,7 +112,11 @@ function campaignNode(
     fingerprint: 'atlas-campaign:' + domain + ':' + campaignId,
     freshness: sample?.freshness ?? { state: 'LIVE', observed_at: now, ttl_seconds: null },
     checked_at: sample?.checked_at ?? now,
-    summary: count + ' entidades agrupadas pela campanha ' + display + '. Agrupamento visual derivado; a Tower continua autoridade.',
+    summary: sample?.semantic_description
+      ?? sample?.summary
+      ?? ('Campanha científica ' + display + ' com ' + count + ' entidades operacionais agregadas.'),
+    semantic_description: sample?.semantic_description ?? sample?.summary,
+    semantic_state: sample?.semantic_state ?? (count + ' entidades operacionais agregadas; testes individuais não são projetados no Atlas.'),
     campaign_id: campaignId === NO_CAMPAIGN ? undefined : campaignId,
     member_count: count,
   };
