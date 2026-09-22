@@ -641,3 +641,14 @@ test('General durable Drive state projects into Atlas as aggregates and Learning
 
   assert.equal(system.graph.nodes.some(node => /cursor|handoff/i.test(node.id)), false);
 });
+
+
+test('Pages fingerprints and compiles the derived General projection', async () => {
+  const workflow = await text('../.github/workflows/nexo-one-pages.yml');
+  const builder = await text('scripts/build-pages-system.mjs');
+  assert.match(workflow, /general-public-projection\.json/);
+  assert.match(workflow, /NEXO_PUBLIC_GENERAL/);
+  assert.match(builder, /NEXO_PUBLIC_GENERAL/);
+  assert.match(builder, /generalLearningFilaments/);
+  assert.match(builder, /applyGeneralExecutionToGraph/);
+});
