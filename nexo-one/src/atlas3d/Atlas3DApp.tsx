@@ -222,6 +222,15 @@ export default function Atlas3DApp() {
     link.learningKind === 'SCIENTIFIC_LEARNING_PIPELINE'
     && /^PEER-DETECTION-GROUP-/i.test(String(link.learningRef || ''))
   ).length;
+  const learningSubdomainLinkCount = model.crossLinks.filter(link =>
+    link.isLearning
+    && (link.source.startsWith('atlas.subdomain.') || link.target.startsWith('atlas.subdomain.'))
+  ).length;
+  const peerSubdomainLinkCount = model.crossLinks.filter(link =>
+    link.learningKind === 'SCIENTIFIC_LEARNING_PIPELINE'
+    && /^PEER-DETECTION-GROUP-/i.test(String(link.learningRef || ''))
+    && model.nodeMap.get(link.target)?.name === 'Consistência cosmológica · Peer Detection'
+  ).length;
   const peerArtifactNodeCount = model.nodes.filter(node => {
     const source = String(node.sourceId || '');
     return /^work:PEER-DETECTION-D\d+/i.test(source)
@@ -261,6 +270,8 @@ export default function Atlas3DApp() {
       data-atlas-learning-procedural={proceduralLearningLinkCount}
       data-atlas-learning-semantic={semanticLearningLinkCount}
       data-atlas-peer-learning-links={peerLearningLinkCount}
+      data-atlas-learning-subdomain-links={learningSubdomainLinkCount}
+      data-atlas-peer-subdomain-links={peerSubdomainLinkCount}
       data-atlas-peer-artifact-nodes={peerArtifactNodeCount}
     >
       <section className="atlas-workspace">
