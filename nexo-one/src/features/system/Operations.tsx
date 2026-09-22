@@ -52,7 +52,7 @@ export function InboxView(
 }
 
 
-type ActionFilter = 'ALL' | 'AUTONOMOUS' | 'HUMAN' | 'BLOCKED';
+type ActionFilter = 'ALL' | 'AUTONOMOUS' | 'HUMAN' | 'WAITING' | 'BLOCKED';
 type ProjectedWorkNode = GraphNode & { type: 'ACTION' };
 const PROJECTED_WORK_PAGE = 40;
 
@@ -61,7 +61,8 @@ const priorityRank = (value?: string): number =>
 
 const sortProjectedWork = (rows: ProjectedWorkNode[]): ProjectedWorkNode[] =>
   [...rows].sort((a, b) => Number(Boolean(b.human_gate)) - Number(Boolean(a.human_gate))
-    || Number(b.state === 'BLOCKED') - Number(a.state === 'BLOCKED')
+    || Number(b.operational_status === 'BLOCKED') - Number(a.operational_status === 'BLOCKED')
+    || Number(b.operational_status === 'WAIT_DEPENDENCY') - Number(a.operational_status === 'WAIT_DEPENDENCY')
     || priorityRank(a.priority) - priorityRank(b.priority)
     || a.domain.localeCompare(b.domain)
     || a.label.localeCompare(b.label));
@@ -111,6 +112,7 @@ export function ActionsView(
     ALL: state.actions,
     AUTONOMOUS: resolvableActions(state),
     HUMAN: humanActions(state),
+    WAITING: state.actions.filter(action => action.state === 'BLOCKED' && action.dependency_ids.length > 0),
     BLOCKED: blockedActions(state),
   };
 
@@ -118,13 +120,15 @@ export function ActionsView(
   // executable ActionRecord. Showing these nodes prevents "0 actions" from erasing
   // real canonical work while preserving the capability/runtime authority boundary.
   const projectedWork = sortProjectedWork(
-    state.graph.nodes.filter((node): node is ProjectedWorkNode => node.type === 'ACTION'),
+    (state.projected_work || state.graph.nodes)
+      .filter((node): node is ProjectedWorkNode => node.type === 'ACTION'),
   );
   const projectedBuckets: Record<ActionFilter, ProjectedWorkNode[]> = {
     ALL: projectedWork,
     AUTONOMOUS: [],
     HUMAN: projectedWork.filter(node => node.human_gate),
-    BLOCKED: projectedWork.filter(node => node.state === 'BLOCKED'),
+    WAITING: projectedWork.filter(node => node.operational_status === 'WAIT_DEPENDENCY'),
+    BLOCKED: projectedWork.filter(node => node.operational_status === 'BLOCKED'),
   };
 
   const hasActionRecords = state.actions.length > 0;
@@ -154,10 +158,10 @@ export function ActionsView(
   return (
     <>
       <div className="filter-row" role="group" aria-label="Filtrar ações">
-        {(['ALL', 'AUTONOMOUS', 'HUMAN', 'BLOCKED'] as ActionFilter[]).map(value => (
+        {(['ALL', 'AUTONOMOUS', 'HUMAN', 'WAITING', 'BLOCKED'] as ActionFilter[]).map(value => (
           <button key={value} className={filter === value ? 'filter active' : 'filter'} aria-pressed={filter === value}
             onClick={() => selectFilter(value)}>
-            {{ ALL: 'Todas', AUTONOMOUS: 'NEXO pode resolver', HUMAN: 'Exigem você', BLOCKED: 'Bloqueadas' }[value]}
+            {{ ALL: 'Todas', AUTONOMOUS: 'NEXO pode resolver', HUMAN: 'Exigem você', WAITING: 'Aguardam dependência', BLOCKED: 'Bloqueadas' }[value]}
             <b>{counts[value]}</b>
           </button>
         ))}
