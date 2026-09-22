@@ -385,17 +385,27 @@ function Metro2DView({
 
     const refresh = async (fit: boolean) => {
       const rect = container.getBoundingClientRect();
-      graph.setData(buildG6Data(
+      const data = buildG6Data(
         modelRef.current,
         expandedRef.current,
         showBeamsRef.current,
         rect.width,
         rect.height,
-      ));
-      await graph.render();
+      );
+      graph.setData(data);
+      container.dataset.g6NodeCount = String(data.nodes.length);
+
+      // G6 creates its canvases before the render Promise settles. Mark readiness
+      // from the observable renderer surface after a frame instead of coupling the
+      // whole page readiness flag to an animation Promise.
+      const renderTask = graph.render();
+      await new Promise<void>(resolve => requestAnimationFrame(() => resolve()));
+      if (container.querySelector('canvas')) {
+        container.dataset.g6Ready = 'true';
+        onReady?.();
+      }
+      await renderTask;
       applyG6Selection(graph, modelRef.current, expandedRef.current, selectedRef.current);
-      container.dataset.g6Ready = 'true';
-      onReady?.();
       if (fit) await graph.fitView({ when: 'always', direction: 'both' }, { duration: 320, easing: 'ease-out' });
     };
 
@@ -422,12 +432,15 @@ function Metro2DView({
   useEffect(() => {
     const graph = graphRef.current;
     const container = containerRef.current;
-    if (!graph || !container || container.dataset.g6Ready !== 'true') return;
+    if (!graph || !container) return;
     const rect = container.getBoundingClientRect();
-    graph.setData(buildG6Data(model, expanded, showBeams, rect.width, rect.height));
+    const data = buildG6Data(model, expanded, showBeams, rect.width, rect.height);
+    graph.setData(data);
+    container.dataset.g6NodeCount = String(data.nodes.length);
     void graph.render().then(async () => {
       applyG6Selection(graph, model, expanded, selectedId);
-      container.dataset.g6Ready = 'true';
+      container.dataset.g6Ready = container.querySelector('canvas') ? 'true' : 'false';
+      if (container.dataset.g6Ready === 'true') onReady?.();
       if (lastFitNonce.current !== fitNonce) {
         lastFitNonce.current = fitNonce;
         await graph.fitView({ when: 'always', direction: 'both' }, { duration: 300, easing: 'ease-out' });
