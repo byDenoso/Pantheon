@@ -191,6 +191,21 @@ jobs:
           mkdir -p nexo-one/data/tower-public nexo-one/data/mcp-source
           cp _vault/TOWER_V06/projections/public/projection.json nexo-one/data/tower-public/projection.json
           cp _vault/TOWER_V06/projections/public/manifest.json nexo-one/data/tower-public/manifest.json
+
+          # Needs Dener must explain the real human dependency, not flatten every
+          # auth/configuration gate into the generic label "fornecer dado".
+          # Stage only the canonical WORK records explicitly referenced by
+          # projection.human_gates, preserving the projection's read-only role.
+          printf '[]\n' > nexo-one/data/tower-public/human-gates-details.json
+          while IFS= read -r work_id; do
+            [ -n "${work_id}" ] || continue
+            work_path="_vault/TOWER_V06/entities/work/${work_id}.json"
+            if [ -s "${work_path}" ]; then
+              jq --argfile item "${work_path}" '. + [$item]' nexo-one/data/tower-public/human-gates-details.json \
+                > nexo-one/data/tower-public/human-gates-details.next.json
+              mv nexo-one/data/tower-public/human-gates-details.next.json nexo-one/data/tower-public/human-gates-details.json
+            fi
+          done < <(jq -r '.human_gates.work_ids[]?' nexo-one/data/tower-public/projection.json)
           if compgen -G "_vault/TOWER_V06/entities/interdomain/*.json" > /dev/null; then
             jq -s '.' _vault/TOWER_V06/entities/interdomain/*.json > nexo-one/data/tower-public/interdomain.json
           else
@@ -303,6 +318,7 @@ jobs:
           NEXO_PUBLIC_INTERDOMAIN: data/tower-public/interdomain.json
           NEXO_PUBLIC_LEARNING: data/tower-public/learning.json
           NEXO_PEER_DETECTION_BATTERY: data/tower-public/peer-detection-battery.json
+          NEXO_PUBLIC_HUMAN_GATE_DETAILS: data/tower-public/human-gates-details.json
           NEXO_GALAXY_PREVIOUS: dist/galaxy/previous.json
           NEXO_GALAXY_RETENTION: '168'
           PANTHEON_COMMIT: ${{ github.sha }}
