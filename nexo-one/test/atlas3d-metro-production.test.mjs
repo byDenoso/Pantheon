@@ -177,6 +177,10 @@ test('dedicated Atlas production page uses Metro renderer, G6 and deterministic 
   assert.match(renderer, /getViewportByCanvas/);
   assert.match(renderer, /g6LabelDomCollisions/);
   assert.match(renderer, /viewport-adaptive-v2/);
+  const layout = await text('src/atlas3d/metro2dLayout.ts');
+  assert.match(layout, /floatingLabelBox/);
+  assert.match(layout, /angularCandidates/);
+  assert.match(layout, /radialCandidates/);
   assert.match(renderer, /atlas-label-leaders/);
   assert.match(renderer, /labelText: ''/);
   assert.match(renderer, /update: 'translate'/);
