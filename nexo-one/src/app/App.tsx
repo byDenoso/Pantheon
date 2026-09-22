@@ -257,9 +257,9 @@ export default function App() {
               {isSystemView(view) && (
                 <button
                   className={`sync-button sync-${system.syncStatus.toLowerCase()}`}
-                  onClick={system.reload}
+                  onClick={system.sync}
                   disabled={system.syncing || (!system.state && system.load === 'LOADING')}
-                  aria-label={system.syncing ? 'Sincronizando estado do sistema' : 'Sincronizar estado do sistema'}
+                  aria-label={system.syncing ? 'Sincronizando Tower e publicação do sistema' : 'Sincronizar Tower e publicação do sistema'}
                 >
                   <span aria-hidden="true" className={system.syncing ? 'sync-glyph spinning' : 'sync-glyph'}>↻</span>
                   <span className="sync-label">

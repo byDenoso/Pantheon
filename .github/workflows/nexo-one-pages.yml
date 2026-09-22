@@ -244,6 +244,7 @@ jobs:
           VITE_WORLD_ENDPOINT: ./world-public.ndjson
           VITE_GALAXY_ENDPOINT: ./galaxy/latest.json
           VITE_NEXO_AUTH_BRIDGE_URL: ${{ vars.VITE_NEXO_AUTH_BRIDGE_URL }}
+          VITE_NEXO_SYNC_ENDPOINT: https://nexo-one-two.vercel.app/api/projection-sync
           VITE_PRIVATE_COCKPIT_URL: https://nexo-one-two.vercel.app
         run: |
           set -euo pipefail
@@ -306,6 +307,7 @@ jobs:
           NEXO_GALAXY_RETENTION: '168'
           PANTHEON_COMMIT: ${{ github.sha }}
           PROJECTION_FINGERPRINT: ${{ steps.projection.outputs.projection_fingerprint }}
+          SYNC_REQUEST_ID: ${{ github.event.client_payload.request_id }}
         run: |
           set -euo pipefail
           node scripts/build-pages-system.mjs
@@ -321,8 +323,10 @@ jobs:
           test -s dist/world-public.ndjson
           test -s dist/tower-projection/projection.json
           test -s dist/tower-projection/manifest.json
+          built_at="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
           jq -n --arg pantheon_commit "${PANTHEON_COMMIT}" --arg projection_fingerprint "${PROJECTION_FINGERPRINT}" \
-            '{contract:"NEXO_ONE_BUILD_META_V1",pantheon_commit:$pantheon_commit,projection_fingerprint:$projection_fingerprint}' > dist/build-meta.json
+            --arg sync_request_id "${SYNC_REQUEST_ID:-}" --arg built_at "${built_at}" \
+            '{contract:"NEXO_ONE_BUILD_META_V1",pantheon_commit:$pantheon_commit,projection_fingerprint:$projection_fingerprint,sync_request_id:$sync_request_id,built_at:$built_at}' > dist/build-meta.json
           test -s dist/build-meta.json
           touch dist/.nojekyll
           if grep -R -Eqi 'truthgraph-projection|nexo-drive-projection' dist/system.json dist/world-public.ndjson dist/tower-projection; then
@@ -387,6 +391,24 @@ jobs:
             done
             return 1
           }
+          expected_work="$(jq '[.work[]] | length' /tmp/projection.json)"
+          expected_human="$(jq '[.human_gates.work_ids[]?] | length' /tmp/projection.json)"
+          expected_waiting="$(jq '[.work[] | select(((.operational_status // .status // "") | ascii_upcase) == "WAIT_DEPENDENCY")] | length' /tmp/projection.json)"
+          expected_blocked="$(jq '[.work[] | select(((.operational_status // .status // "") | ascii_upcase) == "BLOCKED")] | length' /tmp/projection.json)"
+          cockpit_url="${base}/#actions"
+          dump_until_ready 'class="work-projection-note"' /tmp/cockpit-actions-dom.html \
+            --headless=new --no-sandbox --disable-dev-shm-usage --hide-scrollbars \
+            --window-size=1440,1000 --virtual-time-budget=9000 --dump-dom "${cockpit_url}"
+          grep -Fq "data-work-count=\"${expected_work}\"" /tmp/cockpit-actions-dom.html
+          grep -Fq "data-human-count=\"${expected_human}\"" /tmp/cockpit-actions-dom.html
+          grep -Fq "data-waiting-count=\"${expected_waiting}\"" /tmp/cockpit-actions-dom.html
+          grep -Fq "data-blocked-count=\"${expected_blocked}\"" /tmp/cockpit-actions-dom.html
+          "${chrome_bin}" --headless=new --no-sandbox --disable-dev-shm-usage --hide-scrollbars \
+            --window-size=1440,1000 --virtual-time-budget=9000 \
+            --screenshot=/tmp/cockpit-actions-readback.png "${cockpit_url}" >/dev/null 2>&1
+          test -s /tmp/cockpit-actions-readback.png
+          echo "PAGES_COCKPIT_ACTIONS_READBACK_OK work=${expected_work} human=${expected_human} waiting=${expected_waiting} blocked=${expected_blocked}"
+
           dump_until_ready 'data-g6-ready="true"' /tmp/atlas3d-dom.html \
             --headless=new --no-sandbox --disable-dev-shm-usage --hide-scrollbars \
             --window-size=1440,900 --virtual-time-budget=12000 --dump-dom "${base}/atlas3d/?readback=1"
@@ -913,7 +935,7 @@ jobs:
           if(world.truthGraph?.fingerprint!==manifest.projection_fingerprint)throw new Error('WORLD_NOT_BOUND_TO_TOWER_PROJECTION');
 
           const projectedWork=Array.isArray(projection.work)?projection.work:[];
-          const publishedWork=(system.graph?.nodes||[]).filter(node=>node.type==='ACTION');
+          const publishedWork=Array.isArray(system.projected_work)?system.projected_work:[];
           if(publishedWork.length!==projectedWork.length){
             throw new Error(`WORK_COUNT_DRIFT projection=${projectedWork.length} system=${publishedWork.length}`);
           }
@@ -931,6 +953,9 @@ jobs:
           const expectedBlocked=projectedWork.filter(item=>String(item.operational_status||item.status||'').toUpperCase()==='BLOCKED').length;
           const actualBlocked=publishedWork.filter(node=>String(node.operational_status||node.state||'').toUpperCase()==='BLOCKED').length;
           if(actualBlocked!==expectedBlocked)throw new Error(`WORK_BLOCKED_COUNT_DRIFT projection=${expectedBlocked} system=${actualBlocked}`);
+          const expectedWaiting=projectedWork.filter(item=>String(item.operational_status||item.status||'').toUpperCase()==='WAIT_DEPENDENCY').length;
+          const actualWaiting=publishedWork.filter(node=>String(node.operational_status||node.state||'').toUpperCase()==='WAIT_DEPENDENCY').length;
+          if(actualWaiting!==expectedWaiting)throw new Error(`WORK_WAITING_COUNT_DRIFT projection=${expectedWaiting} system=${actualWaiting}`);
           if((system.inbox||[]).length!==humanIds.size)throw new Error(`WORK_HUMAN_COUNT_DRIFT projection=${humanIds.size} inbox=${(system.inbox||[]).length}`);
 
           if(buildMeta.contract!=='NEXO_ONE_BUILD_META_V1')throw new Error('BUILD_META_CONTRACT_INVALID');
@@ -979,6 +1004,8 @@ jobs:
             /tmp/atlas3d-mobile-3d-dom.html
             /tmp/mcp-readback-cosmology.png
             /tmp/mcp-readback-dom.html
+            /tmp/cockpit-actions-readback.png
+            /tmp/cockpit-actions-dom.html
             /tmp/system.json
           if-no-files-found: warn
           retention-days: 7

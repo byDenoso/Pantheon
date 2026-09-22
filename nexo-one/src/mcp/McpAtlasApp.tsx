@@ -1,5 +1,6 @@
 import {useCallback,useEffect,useMemo,useRef,useState} from 'react';
 import {CanvasGraph25D,type CanvasEdge25D,type CanvasGraph25DHandle,type CanvasNode25D} from '../components/CanvasGraph25D.tsx';
+import {dispatchProjectionSync,waitForProjectionSync} from '../data/projectionSync.ts';
 
 type NodeKind='ROOT'|'LAYER'|'TRANSPORT'|'TOOL'|'FAMILY'|'CAPABILITY'|'BACKEND'|'ROLE';
 type TopologyNode={
@@ -214,6 +215,24 @@ export function McpAtlasApp(){
     return()=>controller.abort();
   },[loadTopology]);
 
+  const synchronizeTopology=useCallback(async()=>{
+    const current=topologyRef.current;
+    if(!current){
+      await loadTopology(true);
+      return;
+    }
+    setSyncState('loading');
+    try{
+      const receipt=await dispatchProjectionSync(current.source.projection_fingerprint||'');
+      await waitForProjectionSync(receipt.request_id);
+      await loadTopology(true);
+    }catch(err){
+      setError(String(err));
+      setCheckedAt(new Date());
+      setSyncState('error');
+    }
+  },[loadTopology]);
+
   useEffect(()=>{
     if(!topology)return;
     const query=search.trim().toLowerCase();
@@ -310,7 +329,7 @@ export function McpAtlasApp(){
           </div>}
           <div className="hero-actions">
             <a className="primary-cta" href="../">Abrir NEXO ONE</a>
-            <button className="sync-button" type="button" onClick={()=>void loadTopology(true)} disabled={syncState==='loading'}>
+            <button className="sync-button" type="button" onClick={()=>void synchronizeTopology()} disabled={syncState==='loading'}>
               {syncState==='loading'?'Sincronizando…':'Sincronizar'}
             </button>
             {syncMessage&&<span className={['sync-feedback',syncState].join(' ')}>{syncMessage}</span>}

@@ -443,6 +443,10 @@ export default function Atlas3DApp() {
         />
 
         <div className="atlas-topbar">
+          <a className="atlas-product-brand glass" href="../" aria-label="Voltar ao NEXO ONE">
+            <span className="atlas-product-mark">N</span>
+            <span className="atlas-product-copy"><strong>NEXO ONE</strong><small>ATLAS</small></span>
+          </a>
           <nav className="atlas-breadcrumb glass" aria-label="Caminho atual">
             <button onClick={() => { setSelectedId(model.roots[0] || null); }} className="atlas-crumb">Atlas</button>
             {breadcrumbs.map(node => (
@@ -587,7 +591,7 @@ export default function Atlas3DApp() {
         />
         <div className="atlas-source-state">
           <span>{system.sourceLabel}</span>
-          <button onClick={system.reload} disabled={system.syncing}>{system.syncing ? 'Atualizando…' : '↻ Atualizar'}</button>
+          <button onClick={system.sync} disabled={system.syncing}>{system.syncing ? 'Sincronizando…' : '↻ Sincronizar'}</button>
         </div>
       </aside>
     </main>

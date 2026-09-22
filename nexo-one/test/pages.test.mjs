@@ -21,6 +21,32 @@ test('GitHub Pages build uses repository base and configurable SystemState endpo
   assert.match(remote, /\/api\/system/);
   assert.match(remote, /staticProjection \? \(force \? 'reload' : 'no-cache'\) : 'no-store'/);
   assert.match(remote, /endsWith\('\.json'\)/);
+  const sync = await text('src/data/projectionSync.ts');
+  const hook = await text('src/data/useSystem.ts');
+  const app = await text('src/app/App.tsx');
+  assert.match(sync, /VITE_NEXO_SYNC_ENDPOINT/);
+  assert.match(sync, /sync_request_id===requestId/);
+  assert.match(sync, /build-meta\.json/);
+  assert.match(hook, /dispatchProjectionSync/);
+  assert.match(hook, /waitForProjectionSync/);
+  assert.match(app, /onClick=\{system\.sync\}/);
+});
+
+test('manual sync is a server-side GitHub dispatch bridge with exact readback identity', async () => {
+  const handler = await text('server/handler.mjs');
+  const hook = await text('src/data/useSystem.ts');
+  const sync = await text('src/data/projectionSync.ts');
+
+  assert.match(handler, /route==='projection-sync'/);
+  assert.match(handler, /GITHUB_TOKEN/);
+  assert.match(handler, /\/dispatches/);
+  assert.match(handler, /nexo-public-projection-updated/);
+  assert.match(handler, /NEXO_ONE_COCKPIT_MANUAL_SYNC/);
+  assert.match(handler, /INVALID_PROJECTION_FINGERPRINT/);
+  assert.match(handler, /ATLAS_ORIGINS\.has\(origin\)/);
+  assert.match(hook, /dispatchProjectionSync/);
+  assert.match(hook, /waitForProjectionSync/);
+  assert.match(sync, /meta\.sync_request_id===requestId/);
 });
 
 test('GitHub Pages consumes only the sanctioned TOWER_V06 public projection', async () => {
@@ -129,6 +155,11 @@ test('Peer Detection battery is projected by canonical semantic groups, not raw 
     /^work:PEER-DETECTION-|^test:PEER-DETECTION-|^capability:peer\.detection\./i.test(node.id)
   );
   assert.equal(rawPeer.length, 0);
+  assert.equal(system.projected_work.length, 2, 'operational queue must preserve peer WORK hidden from Atlas');
+  assert.deepEqual(system.projected_work.map(node => node.id).sort(), [
+    'work:PEER-DETECTION-D00',
+    'work:PEER-DETECTION-D01',
+  ]);
   const semantic = system.filaments.filter(item => item.kind === 'SCIENTIFIC_LEARNING_PIPELINE');
   assert.equal(semantic.length, 2);
   assert.deepEqual(new Set(semantic.map(item => item.peer_detection_group)), new Set(['GOVERNANCE', 'BASELINE_PROFILE']));
@@ -151,6 +182,7 @@ test('published Pages auto-syncs Tower snapshots without a new infrastructure se
   assert.match(remote, /VITE_SYSTEM_ENDPOINT/);
   assert.match(remote, /staticProjection/);
   assert.match(remote, /'no-cache'/);
+  assert.match(hook, /!syncController\.current/);
 });
 
 test('explicit Tower human gates become Needs Dener inbox items', async () => {
@@ -214,6 +246,12 @@ test('GitHub Pages deploys official artifact and exposes projection readback', a
   assert.match(workflow, /data-atlas-ready="true"/);
   assert.match(workflow, /data-atlas-root-count="3"/);
   assert.match(workflow, /PAGES_ATLAS3D_VISUAL_READBACK_OK/);
+  assert.match(workflow, /PAGES_COCKPIT_ACTIONS_READBACK_OK/);
+  assert.match(workflow, /cockpit-actions-readback\.png/);
+  assert.match(workflow, /data-work-count/);
+  assert.match(workflow, /VITE_NEXO_SYNC_ENDPOINT/);
+  assert.match(workflow, /SYNC_REQUEST_ID/);
+  assert.match(workflow, /sync_request_id/);
   assert.match(workflow, /PAGES_ATLAS_LEARNING_SEMANTIC_OK/);
   assert.match(workflow, /SCIENTIFIC_LEARNING_PIPELINE/);
   assert.match(workflow, /raw_peer_source_nodes/);
@@ -271,6 +309,8 @@ test('GitHub Pages deploys official artifact and exposes projection readback', a
   assert.match(workflow, /public\/vendor\/g6\.min\.js/);
   assert.match(workflow, /dist\/vendor\/g6\.min\.js/);
   assert.match(workflow, /data-atlas-g6-source="preloaded"/);
+  assert.match(workflow, /WORK_WAITING_COUNT_DRIFT/);
+  assert.match(workflow, /system\.projected_work/);
   assert.match(workflow, /data-three-quality="reduced-gpu"/);
   assert.match(workflow, /data-three-fit-policy="selection-safe-area-v5"/);
   assert.match(workflow, /data-three-fit-scope="selection"/);

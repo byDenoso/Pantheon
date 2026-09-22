@@ -346,6 +346,8 @@ export interface SystemState {
   capabilities: Capability[];
   runs: ExecutionRun[];
   lanes: LaneSnapshot[];
+  /** Complete WORK queue from the sanctioned projection. Kept separate from Atlas graph shaping. */
+  projected_work?: GraphNode[];
   graph: { nodes: GraphNode[]; edges: GraphEdge[] };
   filaments: Filament[];
   providers: ProviderHealth[];
