@@ -216,7 +216,8 @@ test('GitHub Pages deploys official artifact and exposes projection readback', a
   assert.match(workflow, /PAGES_ATLAS3D_VISUAL_READBACK_OK/);
   assert.match(workflow, /PAGES_ATLAS_LEARNING_SEMANTIC_OK/);
   assert.match(workflow, /SCIENTIFIC_LEARNING_PIPELINE/);
-  assert.match(workflow, /RAW_PEER_ARTIFACTS_VISIBLE/);
+  assert.match(workflow, /raw_peer_source_nodes/);
+  assert.match(workflow, /data-atlas-peer-artifact-nodes/);
   assert.match(workflow, /METALEARNING_NOT_PROJECTED/);
   assert.match(workflow, /data-g6-label-collisions="0"/);
   assert.match(workflow, /data-g6-label-dom-collisions/);
