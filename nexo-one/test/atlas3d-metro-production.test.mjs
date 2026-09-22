@@ -62,6 +62,8 @@ test('dedicated Atlas production page uses Metro renderer, G6 and deterministic 
 
   assert.match(app, /data-atlas-renderer="metro-cluster"/);
   assert.match(app, /new Set\(model\.roots\)/);
+  assert.match(app, /navigationRevision !== model\.revision/);
+  assert.match(app, /activeExpanded = navigationStale \? new Set\(model\.roots\) : expanded/);
   assert.match(app, /3D Explorar/);
   assert.match(app, /2D Metro/);
   assert.doesNotMatch(app, /kind: 'ROOT'/);
@@ -69,6 +71,8 @@ test('dedicated Atlas production page uses Metro renderer, G6 and deterministic 
 
   assert.match(renderer, /window\.G6\?\.Graph/);
   assert.match(renderer, /metroLayoutPositions/);
+  assert.match(renderer, /g6NodeCount/);
+  assert.match(renderer, /querySelector\('canvas'\)/);
   assert.match(renderer, /OrbitControls/);
   assert.match(renderer, /domainBaseZ|NEXO: -155/);
   assert.doesNotMatch(renderer, /forceSimulation|forceManyBody|forceLink/);
