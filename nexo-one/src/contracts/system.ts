@@ -85,8 +85,8 @@ export type ActionStatus =
   | 'PROPOSED' | 'ELIGIBLE' | 'AWAITING_HUMAN' | 'RUNNING' | 'APPLIED'
   | 'NO_OP_ALREADY_APPLIED' | 'WAITING_SIDE_QUEST' | 'BLOCKED' | 'FAILED';
 
-export type InboxKind = 'DECIDIR' | 'APROVAR' | 'RESPONDER' | 'ESCOLHER' | 'FORNECER_DADO';
-export const INBOX_KINDS: InboxKind[] = ['DECIDIR', 'APROVAR', 'RESPONDER', 'ESCOLHER', 'FORNECER_DADO'];
+export type InboxKind = 'DECIDIR' | 'APROVAR' | 'RESPONDER' | 'ESCOLHER' | 'FORNECER_DADO' | 'CONFIGURAR_ACESSO';
+export const INBOX_KINDS: InboxKind[] = ['DECIDIR', 'APROVAR', 'RESPONDER', 'ESCOLHER', 'FORNECER_DADO', 'CONFIGURAR_ACESSO'];
 
 export interface HumanGate {
   kind: InboxKind;
@@ -136,12 +136,18 @@ export interface InboxItem {
   fingerprint: string;
   checked_at: string;
   freshness: Freshness;
-  /** Presentation-only label for the concrete human intervention required. */
+  /** Optional presentation label when the canonical kind needs a more concrete phrase. */
   kind_label?: string;
   /** Dependencies that actually require a human action. */
-  human_requirements?: { id: string; label: string; detail: string }[];
-  /** Explicitly non-human dependencies kept visible so they are not misassigned to the user. */
-  automatic_note?: string | null;
+  human_requirements?: { id: string; label: string; detail: string; state?: string | null }[];
+  /** Non-human dependencies owned by the system/provider, never by the user. */
+  automatic_requirements?: { id: string; label: string; detail: string; state?: string | null; retryable?: boolean }[];
+  /** Canonical next action after the human gate is satisfied. */
+  system_next?: string | null;
+  /** Acceptance/readback criteria copied from the canonical WORK. */
+  readback_criteria?: string[];
+  /** Safe location/context for the human action; never carries a secret. */
+  action_location?: string | null;
 }
 
 /** UNVERIFIED nunca é "parcialmente funcional": é ausência de prova. */
