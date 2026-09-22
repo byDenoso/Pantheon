@@ -87,6 +87,7 @@ type Props={
   onSelect:(id:string|null)=>void;
   className?:string;
   ariaLabel?:string;
+  theme?:'dark'|'light';
 };
 
 const DEFAULT_VIEW:Canvas25DViewState={
@@ -143,6 +144,7 @@ export const CanvasGraph25D=forwardRef<CanvasGraph25DHandle,Props>(function Canv
   onSelect,
   className='',
   ariaLabel='Grafo Canvas 2.5D',
+  theme='dark',
 },ref){
   const hostRef=useRef<HTMLDivElement|null>(null);
   const canvasRef=useRef<HTMLCanvasElement|null>(null);
@@ -284,6 +286,13 @@ export const CanvasGraph25D=forwardRef<CanvasGraph25DHandle,Props>(function Canv
 
       const view=viewRef.current;
       const reducedMotion=prefersReducedMotion();
+      const light=theme==='light';
+      const ambientGrid=light?'rgba(3,105,161,.08)':'rgba(121,231,255,.055)';
+      const labelBackground=light?'rgba(255,255,255,.92)':'rgba(3,10,18,.86)';
+      const labelText=light?'#0f172a':'#eefaff';
+      const labelStroke=light?'rgba(3,105,161,.46)':'rgba(121,231,255,.62)';
+      const nodeShadowFallback=light?'#0369a1':'#79e7ff';
+      const nodeEdgeDark=light?'rgba(255,255,255,.96)':'rgba(3,10,18,.94)';
       const dpr=clamp(window.devicePixelRatio||1,1,2);
       const pixelWidth=Math.max(1,Math.round(size.width*dpr));
       const pixelHeight=Math.max(1,Math.round(size.height*dpr));
@@ -338,7 +347,7 @@ export const CanvasGraph25D=forwardRef<CanvasGraph25DHandle,Props>(function Canv
 
       ctx.save();
       ctx.globalAlpha=.42;
-      ctx.strokeStyle='rgba(121,231,255,.055)';
+      ctx.strokeStyle=ambientGrid;
       ctx.lineWidth=1;
       for(const radius of [.16,.29,.43]){
         ctx.beginPath();
@@ -485,22 +494,22 @@ export const CanvasGraph25D=forwardRef<CanvasGraph25DHandle,Props>(function Canv
 
         ctx.save();
         ctx.globalAlpha=baseOpacity*depthAlpha;
-        ctx.shadowColor=node.color||'#79e7ff';
+        ctx.shadowColor=node.color||nodeShadowFallback;
         ctx.shadowBlur=selected?26:hot?19:node.major?14:6;
         const gradient=ctx.createRadialGradient(
           item.x-radius*.25,item.y-radius*.28,1,
           item.x,item.y,radius*1.22,
         );
         gradient.addColorStop(0,'rgba(255,255,255,.98)');
-        gradient.addColorStop(.2,node.color||'#79e7ff');
-        gradient.addColorStop(1,'rgba(3,10,18,.94)');
+        gradient.addColorStop(.2,node.color||nodeShadowFallback);
+        gradient.addColorStop(1,nodeEdgeDark);
         ctx.fillStyle=gradient;
         ctx.beginPath();
         ctx.arc(item.x,item.y,radius,0,Math.PI*2);
         ctx.fill();
 
         ctx.shadowBlur=0;
-        ctx.strokeStyle=selected?'#ffffff':node.color||'#79e7ff';
+        ctx.strokeStyle=selected?(light?'#0f172a':'#ffffff'):node.color||nodeShadowFallback;
         ctx.globalAlpha=selected?1:baseOpacity*.62;
         ctx.lineWidth=selected?2:1;
         if(node.broken)ctx.setLineDash([3,4]);
@@ -547,12 +556,12 @@ export const CanvasGraph25D=forwardRef<CanvasGraph25DHandle,Props>(function Canv
         const y=clamp(item.y+item.radius+8,8,size.height-h-8);
         ctx.save();
         ctx.globalAlpha=clamp(item.node.opacity??1,.15,1);
-        ctx.fillStyle='rgba(3,10,18,.86)';
-        ctx.strokeStyle=item.node.id===selectedId?'rgba(255,255,255,.82)':'rgba(121,231,255,.62)';
+        ctx.fillStyle=labelBackground;
+        ctx.strokeStyle=item.node.id===selectedId?(light?'rgba(15,23,42,.8)':'rgba(255,255,255,.82)'):labelStroke;
         ctx.lineWidth=1;
         roundedRect(ctx,x,y,w,h,12);
         ctx.fill();ctx.stroke();
-        ctx.fillStyle='#eefaff';
+        ctx.fillStyle=labelText;
         ctx.textAlign='center';
         ctx.fillText(label,x+w/2,y+h/2+.5);
         ctx.restore();
@@ -567,7 +576,7 @@ export const CanvasGraph25D=forwardRef<CanvasGraph25DHandle,Props>(function Canv
       if(nodes.some(node=>node.pulse)&&!reducedMotion)scheduleDraw();
     };
     scheduleDraw();
-  },[arms,nodes,safeEdges,selectedId,size]);
+  },[arms,nodes,safeEdges,selectedId,size,theme]);
 
   useEffect(()=>scheduleDraw(),[selectedId]);
 
@@ -620,6 +629,7 @@ export const CanvasGraph25D=forwardRef<CanvasGraph25DHandle,Props>(function Canv
     ref={hostRef}
     className={`canvas25d-root ${className}`}
     data-renderer="canvas-2.5d"
+    data-theme={theme}
     data-lod="macro"
   >
     {canvasFailed && <div className="canvas25d-fallback" role="status">

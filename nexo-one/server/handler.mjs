@@ -16,7 +16,7 @@ import {createNexoMcpWebHandler} from './mcp/server.mjs';
 import {summarizeConnectionHealth} from './health/connection-state.mjs';
 import {readSystemInput} from './adapters/system-input.mjs';
 import {readPublicSystemInput} from './compiler/public-system-input.mjs';
-const ATLAS_ORIGINS=new Set(['https://bydenoso.github.io','https://nexo-atlas-control-tower.vercel.app','https://nexo-atlas-cockpit.vercel.app']);
+const ATLAS_ORIGINS=new Set(['https://bydenoso.github.io','https://nexo-one-two.vercel.app','https://nexo-atlas-control-tower.vercel.app','https://nexo-atlas-cockpit.vercel.app']);
 const PUBLIC_SYSTEM_PROVIDERS=['github','nexo','drive'];
 const isCorsRoute=route=>route==='mcp'||route==='projection-sync'||route==='atlas-public-ssot'||route==='world'||RESEARCH_ROUTES.has(route);
 const mcpWebHandler=createNexoMcpWebHandler({readSnapshot:()=>readAtlasSsot({env:process.env,now:Date.now()})});

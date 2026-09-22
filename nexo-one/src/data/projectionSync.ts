@@ -249,13 +249,19 @@ export async function dispatchProjectionSync(currentFingerprint:string,signal?:A
     let error='SYNC_DISPATCH_FAILED';
     try{error=String((await response.json())?.error||error);}catch{/* resposta sem JSON */}
     if(response.status===503&&error==='SYNC_BRIDGE_NOT_CONFIGURED'){
-      return fetchFreshPublicProjection(signal);
+      throw new DataSourceError(
+        'UNAVAILABLE',
+        'SYNC_BRIDGE_NOT_CONFIGURED: a ponte de sincronização real está sem a credencial GITHUB_TOKEN no runtime Vercel; nenhum dispatch foi executado.',
+      );
     }
-    throw new DataSourceError('UNAVAILABLE','A sincronização não foi disparada: '+error+'.');
+    throw new DataSourceError('UNAVAILABLE','A sincronização real não foi disparada: '+error+'.');
   }catch(error){
     if(signal?.aborted||(error as Error)?.name==='AbortError')throw error;
     if(error instanceof DataSourceError)throw error;
-    return fetchFreshPublicProjection(signal);
+    throw new DataSourceError(
+      'UNAVAILABLE',
+      'A ponte de sincronização real não respondeu. Nenhum dispatch foi confirmado; o último snapshot publicado foi preservado.',
+    );
   }
 }
 
