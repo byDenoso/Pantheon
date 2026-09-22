@@ -5,8 +5,9 @@ import {
 } from 'react';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
-import type { AtlasCrossLink, AtlasMetroModel, AtlasMetroNode } from './atlasAdapter.ts';
+import type { AtlasMetroModel, AtlasMetroNode } from './atlasAdapter.ts';
 import { visibleAtlasIds } from './atlasAdapter.ts';
+import { projectVisualCrossLinks } from './learningVisuals.ts';
 import {
   buildMetroScreenLabelLayout,
   metroLayoutPositions,
@@ -101,107 +102,6 @@ function learningWidth(kind: string | null | undefined): number {
   if (kind === 'PROCEDURAL') return 1.7;
   if (kind === 'SEMANTIC') return 1.9;
   return 1.8;
-}
-
-type VisualCrossLink = AtlasCrossLink & {
-  visualCount: number;
-  visualRefs: string[];
-};
-
-function projectVisualCrossLinks(
-  links: AtlasCrossLink[],
-  visible: ReadonlySet<string>,
-): VisualCrossLink[] {
-  const filtered = links.filter(link => visible.has(link.source) && visible.has(link.target));
-  const out: VisualCrossLink[] = [];
-  const canonicalRecords = new Map<string, AtlasCrossLink[]>();
-
-  // First collapse duplicate graph edges emitted from the same canonical Learning
-  // record. One record is one semantic relation, regardless of how many graph
-  // projection edges were needed to express it.
-  for (const link of filtered) {
-    if (!link.isLearning) {
-      out.push({ ...link, visualCount: 1, visualRefs: [] });
-      continue;
-    }
-    const recordKey = [
-      link.source,
-      link.target,
-      link.learningKind || 'LEARNING',
-      link.learningRef || link.id,
-    ].join('↔');
-    const bucket = canonicalRecords.get(recordKey) || [];
-    bucket.push(link);
-    canonicalRecords.set(recordKey, bucket);
-  }
-
-  const recordVisuals: VisualCrossLink[] = [];
-  for (const [key, bucket] of canonicalRecords) {
-    bucket.sort((left, right) => left.id.localeCompare(right.id));
-    const base = bucket[0]!;
-    const refs = [...new Set(
-      bucket.map(link => link.learningRef).filter((value): value is string => Boolean(value)),
-    )];
-    recordVisuals.push({
-      ...base,
-      id: `visual-record:${key}`,
-      weight: bucket.reduce((sum, link) => sum + Number(link.weight || 0), 0) / bucket.length,
-      visualCount: bucket.length,
-      visualRefs: refs,
-    });
-  }
-
-  // Then bundle records that carry the same semantic route. This is deliberately
-  // enabled on desktop too: the visual layer represents semantic paths, while
-  // visualRefs/visualCount preserve the underlying records and relations.
-  const semanticBundles = new Map<string, VisualCrossLink[]>();
-  for (const link of recordVisuals) {
-    const semanticKey = link.learningTheme
-      ? `theme:${link.learningTheme}`
-      : `record:${link.learningRef || link.id}`;
-    const key = [
-      link.source,
-      link.target,
-      link.learningKind || 'LEARNING',
-      semanticKey,
-    ].join('↔');
-    const bucket = semanticBundles.get(key) || [];
-    bucket.push(link);
-    semanticBundles.set(key, bucket);
-  }
-
-  for (const [key, bucket] of semanticBundles) {
-    bucket.sort((left, right) => left.id.localeCompare(right.id));
-    const base = bucket[0]!;
-    const refs = [...new Set(bucket.flatMap(link => link.visualRefs))];
-    const relationCount = bucket.reduce((sum, link) => sum + link.visualCount, 0);
-    out.push({
-      ...base,
-      id: `visual-learning:${key}`,
-      label: refs.length > 1 ? `${base.label} · ${refs.length} registros` : base.label,
-      weight: bucket.reduce((sum, link) => sum + Number(link.weight || 0), 0) / bucket.length,
-      visualCount: relationCount,
-      visualRefs: refs,
-    });
-  }
-
-  const learningPairs = new Map<string, VisualCrossLink[]>();
-  for (const link of out) {
-    if (!link.isLearning) continue;
-    const pair = [link.source, link.target].join('→');
-    const bucket = learningPairs.get(pair) || [];
-    bucket.push(link);
-    learningPairs.set(pair, bucket);
-  }
-  for (const bucket of learningPairs.values()) {
-    bucket.sort((left, right) => left.id.localeCompare(right.id));
-    bucket.forEach((link, index) => {
-      link.bundleIndex = index;
-      link.bundleCount = bucket.length;
-    });
-  }
-
-  return out;
 }
 
 function isAtlasReadback(): boolean {
