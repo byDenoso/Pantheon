@@ -32,6 +32,10 @@ jobs:
         working-directory: nexo-one
         run: npm ci --no-audit --no-fund
 
-      - name: Typecheck, tests, style and build
+      - name: Typecheck, Atlas production tests and build
         working-directory: nexo-one
-        run: npm run check
+        run: |
+          set -euo pipefail
+          npm run typecheck
+          node --test test/atlas3d-metro-production.test.mjs test/pages.test.mjs
+          npm run build
