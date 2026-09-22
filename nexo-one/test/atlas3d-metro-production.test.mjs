@@ -196,10 +196,11 @@ test('dense Science expansion keeps stations spaced and labels collision-free', 
 });
 
 test('dedicated Atlas production page uses Metro renderer, G6 and deterministic Three mode', async () => {
-  const [app, renderer, index] = await Promise.all([
+  const [app, renderer, index, css] = await Promise.all([
     text('src/atlas3d/Atlas3DApp.tsx'),
     text('src/atlas3d/MetroAtlasRenderer.tsx'),
     text('atlas3d/index.html'),
+    text('src/atlas3d/atlas3d.css'),
   ]);
 
   assert.match(app, /data-atlas-renderer="metro-cluster"/);
@@ -221,6 +222,9 @@ test('dedicated Atlas production page uses Metro renderer, G6 and deterministic 
   assert.match(app, /<strong>2D<\/strong><small>Metro<\/small>/);
   assert.match(app, /3D EXPLORAR ATIVO/);
   assert.match(app, /2D METRO ATIVO/);
+  assert.match(app, /atlas-mobile-details-toggle/);
+  assert.match(app, /atlas-sidebar-backdrop/);
+  assert.match(app, /mobile-open/);
   assert.doesNotMatch(app, /kind: 'ROOT'/);
   assert.doesNotMatch(app, /GalaxyThree3D/);
 
@@ -246,6 +250,14 @@ test('dedicated Atlas production page uses Metro renderer, G6 and deterministic 
   assert.match(renderer, /g6PeerLearningEdges/);
   assert.match(renderer, /threeScientificLearningSynapses/);
   assert.match(renderer, /threePeerLearningSynapses/);
+  assert.match(renderer, /G6_ZERO_VIEWPORT/);
+  assert.match(renderer, /G6_RENDER_FAILED/);
+  assert.match(renderer, /WEBGL_INIT_FAILED/);
+  assert.match(renderer, /WEBGL_CONTEXT_LOST/);
+  assert.match(renderer, /compact-touch/);
+  assert.match(renderer, /runtime-skip/);
+  assert.match(renderer, /isAtlasReadback/);
+  assert.match(renderer, /preserveDrawingBuffer: isAtlasReadback\(\)/);
   assert.match(renderer, /learningColor/);
   assert.match(renderer, /SCIENTIFIC_LEARNING_PIPELINE/);
   assert.match(renderer, /bundleIndex/);
@@ -274,6 +286,12 @@ test('dedicated Atlas production page uses Metro renderer, G6 and deterministic 
   assert.match(renderer, /threeSameLevelZSpan/);
   assert.match(renderer, /domain-depth-sibling-v3/);
   assert.doesNotMatch(renderer, /forceSimulation|forceManyBody|forceLink/);
+
+  assert.match(css, /height:100dvh/);
+  assert.match(css, /\.atlas-workspace\{position:absolute;inset:0;width:100%;height:100%/);
+  assert.match(css, /\.atlas-sidebar\.mobile-open/);
+  assert.match(css, /touch-action:none/);
+  assert.doesNotMatch(css, /pointer-events:none;opacity:\.18/);
 
   assert.match(index, /@antv\/g6@5\/dist\/g6\.min\.js/);
 });

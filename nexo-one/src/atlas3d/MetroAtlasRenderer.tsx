@@ -98,6 +98,72 @@ function learningWidth(kind: string | null | undefined): number {
   return 1.8;
 }
 
+function isAtlasReadback(): boolean {
+  return typeof window !== 'undefined'
+    && new URLSearchParams(window.location.search).get('readback') === '1';
+}
+
+function isCompactRenderer(container: HTMLElement): boolean {
+  return container.clientWidth <= 640
+    || (typeof window !== 'undefined' && window.matchMedia?.('(pointer: coarse)').matches === true);
+}
+
+function setRendererError(container: HTMLElement, code: string, message: string): void {
+  container.dataset.rendererError = code;
+  container.dataset.g6Ready = container.dataset.g6Ready || 'false';
+  container.dataset.threeReady = container.dataset.threeReady || 'false';
+  let error = container.querySelector<HTMLElement>('.atlas-render-error');
+  if (!error) {
+    error = document.createElement('div');
+    error.className = 'atlas-render-error';
+    container.appendChild(error);
+  }
+  error.dataset.errorCode = code;
+  error.textContent = message;
+}
+
+function clearRendererError(container: HTMLElement): void {
+  delete container.dataset.rendererError;
+  container.querySelector('.atlas-render-error')?.remove();
+}
+
+function createG6Graph(
+  Graph: new (options: any) => G6Graph,
+  options: any,
+): G6Graph | null {
+  try {
+    return new Graph(options);
+  } catch (error) {
+    const container = options.container as HTMLElement;
+    setRendererError(
+      container,
+      'G6_INIT_FAILED',
+      `O renderer 2D não conseguiu iniciar neste dispositivo. ${error instanceof Error ? error.message : String(error)}`,
+    );
+    return null;
+  }
+}
+
+function stampG6Metrics(container: HTMLElement, data: { nodes: any[]; edges: any[] }): void {
+  container.dataset.g6NodeCount = String(data.nodes.length);
+  container.dataset.g6LearningEdges = String(data.edges.filter((edge: any) => edge.data?.isLearning).length);
+  container.dataset.g6ScientificLearningEdges = String(
+    data.edges.filter((edge: any) => edge.data?.learningKind === 'SCIENTIFIC_LEARNING_PIPELINE').length,
+  );
+  container.dataset.g6ProceduralLearningEdges = String(
+    data.edges.filter((edge: any) => edge.data?.learningKind === 'PROCEDURAL').length,
+  );
+  container.dataset.g6SemanticLearningEdges = String(
+    data.edges.filter((edge: any) => edge.data?.learningKind === 'SEMANTIC').length,
+  );
+  container.dataset.g6PeerLearningEdges = String(
+    data.edges.filter((edge: any) =>
+      edge.data?.learningKind === 'SCIENTIFIC_LEARNING_PIPELINE'
+      && /^PEER-DETECTION-GROUP-/i.test(String(edge.data?.learningRef || ''))
+    ).length,
+  );
+}
+
 function escapeHtml(value: unknown): string {
   return String(value ?? '')
     .replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;')
@@ -286,7 +352,9 @@ function renderScreenLabels(
   container.dataset.g6LabelPolicy = 'viewport-adaptive-v2';
 
   requestAnimationFrame(() => {
-    container.dataset.g6LabelDomCollisions = String(countDomLabelCollisions(labelLayer));
+    container.dataset.g6LabelDomCollisions = isAtlasReadback()
+      ? String(countDomLabelCollisions(labelLayer))
+      : 'runtime-skip';
     container.dataset.g6LabelUiOverlaps = String(layout.uiZoneViolations);
   });
 }
@@ -329,19 +397,30 @@ function Metro2DView({
     if (!surface || !container || !labelLayer || !leaderLayer || !Graph) {
       if (container) {
         container.dataset.g6Ready = 'false';
-        container.innerHTML = '<div class="atlas-render-error">G6 não carregou. O Atlas mantém os dados, mas o renderer 2D ficou indisponível.</div>';
+        setRendererError(container, 'G6_MISSING', 'G6 não carregou. O Atlas mantém os dados, mas o renderer 2D ficou indisponível.');
       }
       return;
     }
 
-    const graph = new Graph({
+    const initialRect = surface.getBoundingClientRect();
+    container.dataset.g6ViewportWidth = Math.round(initialRect.width).toString();
+    container.dataset.g6ViewportHeight = Math.round(initialRect.height).toString();
+    if (initialRect.width < 2 || initialRect.height < 2) {
+      container.dataset.g6Ready = 'false';
+      setRendererError(container, 'G6_ZERO_VIEWPORT', 'O Atlas recebeu uma área de desenho inválida. Reoriente a tela ou recarregue a página.');
+      return;
+    }
+
+    const compact = isCompactRenderer(container);
+    container.dataset.g6Profile = compact ? 'compact-touch' : 'desktop';
+    const graph = createG6Graph(Graph, {
       container,
       theme: 'dark',
       data: { nodes: [], edges: [] },
-      padding: [86, 76, 76, 76],
+      padding: compact ? [142, 22, 50, 22] : [86, 76, 76, 76],
       zoomRange: [0.30, 3.2],
       animation: {
-        duration: 280,
+        duration: compact ? 160 : 280,
         easing: 'ease-in-out',
       },
       behaviors: ['drag-canvas', 'zoom-canvas'],
@@ -422,7 +501,7 @@ function Metro2DView({
           endArrow: false,
         },
       },
-      plugins: [
+      plugins: compact ? [] : [
         {
           type: 'tooltip',
           trigger: 'hover',
@@ -440,6 +519,8 @@ function Metro2DView({
         },
       ],
     });
+    if (!graph) return;
+    clearRendererError(container);
 
     graphRef.current = graph;
 
@@ -496,44 +577,48 @@ function Metro2DView({
         rect.height,
       );
       graph.setData({ nodes: data.nodes, edges: data.edges });
-      container.dataset.g6NodeCount = String(data.nodes.length);
-      container.dataset.g6LearningEdges = String(
-        data.edges.filter((edge: any) => edge.data?.isLearning).length,
-      );
-      container.dataset.g6ScientificLearningEdges = String(
-        data.edges.filter((edge: any) => edge.data?.learningKind === 'SCIENTIFIC_LEARNING_PIPELINE').length,
-      );
-      container.dataset.g6ProceduralLearningEdges = String(
-        data.edges.filter((edge: any) => edge.data?.learningKind === 'PROCEDURAL').length,
-      );
-      container.dataset.g6SemanticLearningEdges = String(
-        data.edges.filter((edge: any) => edge.data?.learningKind === 'SEMANTIC').length,
-      );
-      container.dataset.g6PeerLearningEdges = String(
-        data.edges.filter((edge: any) =>
-          edge.data?.learningKind === 'SCIENTIFIC_LEARNING_PIPELINE'
-          && /^PEER-DETECTION-GROUP-/i.test(String(edge.data?.learningRef || ''))
-        ).length,
-      );
+      stampG6Metrics(container, data);
+      container.dataset.g6ViewportWidth = Math.round(rect.width).toString();
+      container.dataset.g6ViewportHeight = Math.round(rect.height).toString();
 
-      const renderTask = graph.render();
-      await new Promise<void>(resolve => requestAnimationFrame(() => resolve()));
-      if (container.querySelector('canvas')) {
-        container.dataset.g6Ready = 'true';
-        onReady?.();
+      try {
+        const renderTask = graph.render();
+        await new Promise<void>(resolve => requestAnimationFrame(() => resolve()));
+        if (container.querySelector('canvas')) {
+          container.dataset.g6Ready = 'true';
+          clearRendererError(container);
+          onReady?.();
+        }
+        await renderTask;
+        applyG6Selection(graph, modelRef.current, expandedRef.current, selectedRef.current);
+        if (fit) {
+          await graph.fitView(
+            { when: 'always', direction: 'both' },
+            { duration: compact ? 180 : 320, easing: 'ease-out' },
+          );
+        }
+        scheduleLabels();
+      } catch (error) {
+        container.dataset.g6Ready = 'false';
+        setRendererError(
+          container,
+          'G6_RENDER_FAILED',
+          `O renderer 2D falhou ao desenhar. ${error instanceof Error ? error.message : String(error)}`,
+        );
       }
-      await renderTask;
-      applyG6Selection(graph, modelRef.current, expandedRef.current, selectedRef.current);
-      if (fit) {
-        await graph.fitView({ when: 'always', direction: 'both' }, { duration: 320, easing: 'ease-out' });
-      }
-      scheduleLabels();
     };
 
     let frame = 0;
+    let lastWidth = Math.round(surface.clientWidth);
+    let lastHeight = Math.round(surface.clientHeight);
     const resizeObserver = new ResizeObserver(() => {
       cancelAnimationFrame(frame);
       frame = requestAnimationFrame(() => {
+        const width = Math.round(surface.clientWidth);
+        const height = Math.round(surface.clientHeight);
+        if (Math.abs(width - lastWidth) < 4 && Math.abs(height - lastHeight) < 4) return;
+        lastWidth = width;
+        lastHeight = height;
         graph.resize?.();
         void refresh(false);
       });
@@ -558,38 +643,32 @@ function Metro2DView({
     const rect = container.getBoundingClientRect();
     const data = buildG6Data(model, expanded, showBeams, rect.width, rect.height);
     graph.setData({ nodes: data.nodes, edges: data.edges });
-    container.dataset.g6NodeCount = String(data.nodes.length);
-    container.dataset.g6LearningEdges = String(
-      data.edges.filter((edge: any) => edge.data?.isLearning).length,
-    );
-    container.dataset.g6ScientificLearningEdges = String(
-      data.edges.filter((edge: any) => edge.data?.learningKind === 'SCIENTIFIC_LEARNING_PIPELINE').length,
-    );
-    container.dataset.g6ProceduralLearningEdges = String(
-      data.edges.filter((edge: any) => edge.data?.learningKind === 'PROCEDURAL').length,
-    );
-    container.dataset.g6SemanticLearningEdges = String(
-      data.edges.filter((edge: any) => edge.data?.learningKind === 'SEMANTIC').length,
-    );
-    container.dataset.g6PeerLearningEdges = String(
-      data.edges.filter((edge: any) =>
-        edge.data?.learningKind === 'SCIENTIFIC_LEARNING_PIPELINE'
-        && /^PEER-DETECTION-GROUP-/i.test(String(edge.data?.learningRef || ''))
-      ).length,
-    );
+    stampG6Metrics(container, data);
+    container.dataset.g6ViewportWidth = Math.round(rect.width).toString();
+    container.dataset.g6ViewportHeight = Math.round(rect.height).toString();
 
     void graph.render().then(async () => {
       applyG6Selection(graph, model, expanded, selectedId);
       container.dataset.g6Ready = container.querySelector('canvas') ? 'true' : 'false';
-      if (container.dataset.g6Ready === 'true') onReady?.();
+      if (container.dataset.g6Ready === 'true') {
+        clearRendererError(container);
+        onReady?.();
+      }
 
       const forceFit = lastFitNonce.current !== fitNonce;
       if (forceFit) lastFitNonce.current = fitNonce;
       await graph.fitView(
         { when: forceFit ? 'always' : 'overflow', direction: 'both' },
-        { duration: 280, easing: 'ease-in-out' },
+        { duration: isCompactRenderer(container) ? 160 : 280, easing: 'ease-in-out' },
       );
       renderLabelsRef.current();
+    }).catch(error => {
+      container.dataset.g6Ready = 'false';
+      setRendererError(
+        container,
+        'G6_UPDATE_FAILED',
+        `O renderer 2D falhou durante a atualização. ${error instanceof Error ? error.message : String(error)}`,
+      );
     });
   }, [model.revision, expansionKey, showBeams, fitNonce]);
 
@@ -1007,6 +1086,12 @@ function renderAndMeasureThree(runtime: ThreeRuntime, container: HTMLElement): n
   runtime.controls.update();
   runtime.renderer.render(runtime.scene, runtime.camera);
 
+  if (!isAtlasReadback()) {
+    container.dataset.threePaintSamples = 'runtime-skip';
+    container.dataset.threeReady = 'true';
+    return 1;
+  }
+
   const gl = runtime.renderer.getContext();
   const width = runtime.renderer.domElement.width;
   const height = runtime.renderer.domElement.height;
@@ -1260,17 +1345,38 @@ function MetroThreeView({
     const container = containerRef.current;
     if (!container) return;
 
+    const initialRect = container.getBoundingClientRect();
+    container.dataset.threeViewportWidth = Math.round(initialRect.width).toString();
+    container.dataset.threeViewportHeight = Math.round(initialRect.height).toString();
+    if (initialRect.width < 2 || initialRect.height < 2) {
+      setRendererError(container, 'THREE_ZERO_VIEWPORT', 'O modo 3D recebeu uma área de desenho inválida.');
+      return;
+    }
+
+    const compact = isCompactRenderer(container);
+    container.dataset.threeProfile = compact ? 'compact-touch' : 'desktop';
     const scene = new THREE.Scene();
     scene.fog = new THREE.FogExp2(0x070b14, .00075);
     const camera = new THREE.PerspectiveCamera(46, 1, 1, 5000);
     camera.position.set(520, 360, 780);
-    const renderer = new THREE.WebGLRenderer({
-      antialias: true,
-      alpha: true,
-      powerPreference: 'high-performance',
-      preserveDrawingBuffer: true,
-    });
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+
+    let renderer: THREE.WebGLRenderer;
+    try {
+      renderer = new THREE.WebGLRenderer({
+        antialias: !compact,
+        alpha: true,
+        powerPreference: compact ? 'default' : 'high-performance',
+        preserveDrawingBuffer: isAtlasReadback(),
+      });
+    } catch (error) {
+      setRendererError(
+        container,
+        'WEBGL_INIT_FAILED',
+        `O modo 3D não conseguiu criar um contexto WebGL neste dispositivo. Use 2D Metro. ${error instanceof Error ? error.message : String(error)}`,
+      );
+      return;
+    }
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, compact ? 1.35 : 2));
     renderer.setClearColor(0x070b14, 0);
     renderer.outputColorSpace = THREE.SRGBColorSpace;
     renderer.domElement.tabIndex = 0;
@@ -1317,23 +1423,52 @@ function MetroThreeView({
     const resize = () => {
       const width = Math.max(1, container.clientWidth);
       const height = Math.max(1, container.clientHeight);
+      container.dataset.threeViewportWidth = Math.round(width).toString();
+      container.dataset.threeViewportHeight = Math.round(height).toString();
       camera.aspect = width / height;
       camera.updateProjectionMatrix();
       renderer.setSize(width, height, false);
     };
     resize();
+    clearRendererError(container);
 
+    let resizeFrame = 0;
+    let lastWidth = Math.round(container.clientWidth);
+    let lastHeight = Math.round(container.clientHeight);
     const observer = new ResizeObserver(() => {
-      resize();
-      rebuildThree(runtime, container, modelRef.current, expandedRef.current, selectedRef.current, showBeamsRef.current);
-      container.dataset.threeNodeCount = String(visibleAtlasIds(modelRef.current, expandedRef.current).length);
-      container.dataset.threeSynapseCount = String(runtime.pulses.length);
-      renderAndMeasureThree(runtime, container);
+      cancelAnimationFrame(resizeFrame);
+      resizeFrame = requestAnimationFrame(() => {
+        const width = Math.round(container.clientWidth);
+        const height = Math.round(container.clientHeight);
+        if (Math.abs(width - lastWidth) < 4 && Math.abs(height - lastHeight) < 4) return;
+        lastWidth = width;
+        lastHeight = height;
+        resize();
+        rebuildThree(runtime, container, modelRef.current, expandedRef.current, selectedRef.current, showBeamsRef.current);
+        container.dataset.threeNodeCount = String(visibleAtlasIds(modelRef.current, expandedRef.current).length);
+        container.dataset.threeSynapseCount = String(runtime.pulses.length);
+        renderAndMeasureThree(runtime, container);
+      });
     });
     observer.observe(container);
 
     const tooltip = tooltipRef.current;
     renderer.domElement.addEventListener('contextmenu', event => event.preventDefault());
+    const onContextLost = (event: Event) => {
+      event.preventDefault();
+      container.dataset.threeContext = 'lost';
+      container.dataset.threeReady = 'false';
+      setRendererError(container, 'WEBGL_CONTEXT_LOST', 'O contexto WebGL foi perdido. Volte para 2D Metro ou recarregue a página.');
+    };
+    const onContextRestored = () => {
+      container.dataset.threeContext = 'restored';
+      clearRendererError(container);
+      resize();
+      rebuildThree(runtime, container, modelRef.current, expandedRef.current, selectedRef.current, showBeamsRef.current);
+      renderAndMeasureThree(runtime, container);
+    };
+    renderer.domElement.addEventListener('webglcontextlost', onContextLost);
+    renderer.domElement.addEventListener('webglcontextrestored', onContextRestored);
 
     const onPointerDown = (event: PointerEvent) => {
       runtime.pointerDown = { x: event.clientX, y: event.clientY, button: event.button };
@@ -1384,7 +1519,10 @@ function MetroThreeView({
 
     return () => {
       observer.disconnect();
+      cancelAnimationFrame(resizeFrame);
       cancelAnimationFrame(runtime.frame);
+      renderer.domElement.removeEventListener('webglcontextlost', onContextLost);
+      renderer.domElement.removeEventListener('webglcontextrestored', onContextRestored);
       renderer.domElement.removeEventListener('pointerdown', onPointerDown);
       renderer.domElement.removeEventListener('pointermove', onPointerMove);
       renderer.domElement.removeEventListener('pointerleave', onPointerLeave);

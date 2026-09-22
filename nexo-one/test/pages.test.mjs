@@ -236,6 +236,16 @@ test('GitHub Pages deploys official artifact and exposes projection readback', a
   assert.match(workflow, /data-three-peer-learning-synapses/);
   assert.match(workflow, /Scientific Learning underrepresented/);
   assert.match(workflow, /G6 rendered only.*Peer Detection bundles/);
+  assert.match(workflow, /PAGES_ATLAS3D_MOBILE_READBACK_OK/);
+  assert.match(workflow, /PAGES_ATLAS3D_MOBILE_3D_READBACK_OK/);
+  assert.match(workflow, /window-size=390,844/);
+  assert.match(workflow, /touch-events=enabled/);
+  assert.match(workflow, /data-g6-profile="compact-touch"/);
+  assert.match(workflow, /data-three-profile="compact-touch"/);
+  assert.match(workflow, /Atlas mobile workspace collapsed vertically/);
+  assert.match(workflow, /atlas3d-readback-mobile\.png/);
+  assert.match(workflow, /atlas3d-readback-mobile-3d\.png/);
+  assert.match(workflow, /readback=1/);
   assert.match(workflow, /atlas3d-production-readback/);
   assert.match(workflow, /PAGES_TOWER_PROJECTION_READBACK_OK/);
   assert.match(workflow, /pages:\s*write/);
