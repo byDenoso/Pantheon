@@ -117,6 +117,24 @@ export default function Atlas3DApp() {
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [navigationRevision, setNavigationRevision] = useState('');
+  const qaExpand = useMemo(
+    () => typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('expand') : null,
+    [],
+  );
+  const initialExpanded = useMemo(() => {
+    const initial = new Set(model?.roots || []);
+    if (!model || qaExpand !== 'dense-science') return initial;
+
+    const scienceRoot = model.roots.find(id => model.nodeMap.get(id)?.domain === 'SCIENCE');
+    if (!scienceRoot) return initial;
+    const densest = (model.childrenMap.get(scienceRoot) || [])
+      .map(id => model.nodeMap.get(id))
+      .filter((node): node is NonNullable<typeof node> => Boolean(node))
+      .sort((a, b) => b.childCount - a.childCount || b.descendantCount - a.descendantCount)[0];
+    if (densest?.childCount) initial.add(densest.id);
+    return initial;
+  }, [model?.revision, qaExpand]);
+
   const [viewMode, setViewMode] = useState<ViewMode>(() =>
     typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('mode') === '3d' ? '3d' : '2d'
   );
@@ -126,11 +144,11 @@ export default function Atlas3DApp() {
 
   useEffect(() => {
     if (!model) return;
-    setExpanded(new Set(model.roots));
+    setExpanded(new Set(initialExpanded));
     setSelectedId(model.roots[0] || null);
     setNavigationRevision(model.revision);
     setRendererReady(false);
-  }, [model?.revision]);
+  }, [model?.revision, initialExpanded]);
 
   if (!system.state || !model) {
     return (
@@ -146,7 +164,7 @@ export default function Atlas3DApp() {
   // expanded domain hubs. Waiting for useEffect here produces one stale G6 frame
   // with only the roots and can lose the expansion update while render() is in flight.
   const navigationStale = navigationRevision !== model.revision;
-  const activeExpanded = navigationStale ? new Set(model.roots) : expanded;
+  const activeExpanded = navigationStale ? new Set(initialExpanded) : expanded;
   const activeSelectedId = navigationStale ? (model.roots[0] || null) : selectedId;
 
   const visibleIds = visibleAtlasIds(model, activeExpanded);
@@ -189,6 +207,7 @@ export default function Atlas3DApp() {
       data-atlas-root-count={model.roots.length}
       data-atlas-visible-count={visibleIds.length}
       data-atlas-mode={viewMode}
+      data-atlas-qa-expand={qaExpand || 'none'}
     >
       <section className="atlas-workspace">
         <MetroAtlasRenderer
