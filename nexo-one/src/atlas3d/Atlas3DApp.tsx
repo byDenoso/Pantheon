@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, type CSSProperties } from 'react';
 import { useSystem } from '../data/useSystem.ts';
 import {
   atlasPathTo,
@@ -227,7 +227,7 @@ export default function Atlas3DApp() {
               <button
                 key={rootId}
                 className={selectedId === rootId ? 'selected' : ''}
-                style={{ '--domain-color': DOMAIN_COLOR[root.domain] } as React.CSSProperties}
+                style={{ '--domain-color': DOMAIN_COLOR[root.domain] } as CSSProperties}
                 onClick={() => setSelectedId(rootId)}
               >
                 <span />{root.name}<small>{root.descendantCount}</small>
