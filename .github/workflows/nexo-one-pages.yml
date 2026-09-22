@@ -391,6 +391,24 @@ jobs:
             done
             return 1
           }
+          expected_work="$(jq '[.work[]] | length' /tmp/projection.json)"
+          expected_human="$(jq '[.human_gates.work_ids[]?] | length' /tmp/projection.json)"
+          expected_waiting="$(jq '[.work[] | select(((.operational_status // .status // "") | ascii_upcase) == "WAIT_DEPENDENCY")] | length' /tmp/projection.json)"
+          expected_blocked="$(jq '[.work[] | select(((.operational_status // .status // "") | ascii_upcase) == "BLOCKED")] | length' /tmp/projection.json)"
+          cockpit_url="${base}/#actions"
+          dump_until_ready 'class="work-projection-note"' /tmp/cockpit-actions-dom.html \
+            --headless=new --no-sandbox --disable-dev-shm-usage --hide-scrollbars \
+            --window-size=1440,1000 --virtual-time-budget=9000 --dump-dom "${cockpit_url}"
+          grep -Fq "data-work-count=\"${expected_work}\"" /tmp/cockpit-actions-dom.html
+          grep -Fq "data-human-count=\"${expected_human}\"" /tmp/cockpit-actions-dom.html
+          grep -Fq "data-waiting-count=\"${expected_waiting}\"" /tmp/cockpit-actions-dom.html
+          grep -Fq "data-blocked-count=\"${expected_blocked}\"" /tmp/cockpit-actions-dom.html
+          "${chrome_bin}" --headless=new --no-sandbox --disable-dev-shm-usage --hide-scrollbars \
+            --window-size=1440,1000 --virtual-time-budget=9000 \
+            --screenshot=/tmp/cockpit-actions-readback.png "${cockpit_url}" >/dev/null 2>&1
+          test -s /tmp/cockpit-actions-readback.png
+          echo "PAGES_COCKPIT_ACTIONS_READBACK_OK work=${expected_work} human=${expected_human} waiting=${expected_waiting} blocked=${expected_blocked}"
+
           dump_until_ready 'data-g6-ready="true"' /tmp/atlas3d-dom.html \
             --headless=new --no-sandbox --disable-dev-shm-usage --hide-scrollbars \
             --window-size=1440,900 --virtual-time-budget=12000 --dump-dom "${base}/atlas3d/?readback=1"
@@ -986,6 +1004,8 @@ jobs:
             /tmp/atlas3d-mobile-3d-dom.html
             /tmp/mcp-readback-cosmology.png
             /tmp/mcp-readback-dom.html
+            /tmp/cockpit-actions-readback.png
+            /tmp/cockpit-actions-dom.html
             /tmp/system.json
           if-no-files-found: warn
           retention-days: 7
