@@ -913,7 +913,7 @@ jobs:
           if(world.truthGraph?.fingerprint!==manifest.projection_fingerprint)throw new Error('WORLD_NOT_BOUND_TO_TOWER_PROJECTION');
 
           const projectedWork=Array.isArray(projection.work)?projection.work:[];
-          const publishedWork=(system.graph?.nodes||[]).filter(node=>node.type==='ACTION');
+          const publishedWork=Array.isArray(system.projected_work)?system.projected_work:[];
           if(publishedWork.length!==projectedWork.length){
             throw new Error(`WORK_COUNT_DRIFT projection=${projectedWork.length} system=${publishedWork.length}`);
           }
@@ -931,6 +931,9 @@ jobs:
           const expectedBlocked=projectedWork.filter(item=>String(item.operational_status||item.status||'').toUpperCase()==='BLOCKED').length;
           const actualBlocked=publishedWork.filter(node=>String(node.operational_status||node.state||'').toUpperCase()==='BLOCKED').length;
           if(actualBlocked!==expectedBlocked)throw new Error(`WORK_BLOCKED_COUNT_DRIFT projection=${expectedBlocked} system=${actualBlocked}`);
+          const expectedWaiting=projectedWork.filter(item=>String(item.operational_status||item.status||'').toUpperCase()==='WAIT_DEPENDENCY').length;
+          const actualWaiting=publishedWork.filter(node=>String(node.operational_status||node.state||'').toUpperCase()==='WAIT_DEPENDENCY').length;
+          if(actualWaiting!==expectedWaiting)throw new Error(`WORK_WAITING_COUNT_DRIFT projection=${expectedWaiting} system=${actualWaiting}`);
           if((system.inbox||[]).length!==humanIds.size)throw new Error(`WORK_HUMAN_COUNT_DRIFT projection=${humanIds.size} inbox=${(system.inbox||[]).length}`);
 
           if(buildMeta.contract!=='NEXO_ONE_BUILD_META_V1')throw new Error('BUILD_META_CONTRACT_INVALID');
