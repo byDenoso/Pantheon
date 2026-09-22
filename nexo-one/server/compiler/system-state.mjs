@@ -192,10 +192,33 @@ function mapLanes(actions,runs,sideQuests,findings,now){
     return {domain,current_state:active?`${active.status}: ${active.title}`:(finding?.explanation||'Sem ação operacional aberta.'),next_action:active?.next_action||'Aguardar próximo sinal material.',last_effect:last?.effect_key?{effect_key:last.effect_key,at:last.ended_at||last.started_at,status:last.status}:null,blockers,side_quests:quests.map(q=>({id:text(q.side_quest_id),title:text(q.blocker)||text(q.side_quest_id),status:upper(q.status)==='WAITING'?'WAITING':upper(q.status)==='DONE'||upper(q.status)==='RESOLVED'?'DONE':'OPEN'})),freshness:active?.freshness||finding?.freshness||{state:'UNKNOWN',observed_at:null,ttl_seconds:null},state:projectionState(finding?.status|| (blockers.length?'BLOCKED':'LIVE')),source_ref:active?.source_ref||finding?.source_ref||SHEET_REF,fingerprint:`LANE-${hash({domain,active:active?.fingerprint,last:last?.run_id,blockers})}`,checked_at:active?.checked_at||finding?.checked_at||now};
   });
 }
-function buildGraph({actions,capabilities,providers,envelopes,filaments,sideQuests,findings,now}){
+function buildGraph({actions,campaigns,capabilities,providers,envelopes,filaments,sideQuests,findings,now}){
   const nodes=[],edges=[];const add=n=>{if(!nodes.some(x=>x.id===n.id))nodes.push(n);};const edge=(from,to,kind,explanation,weight=1,meta={})=>edges.push({id:`edge:${hash({from,to,kind,explanation})}`,from,to,kind,weight,explanation,...meta});
   for(const domain of DOMAINS)add({id:`domain:${domain}`,type:'DOMAIN',label:domain,domain,state:projectionState(findings.find(f=>f.domain===domain)?.status||'LIVE'),authority_class:'NON_AUTHORITATIVE',source_ref:SHEET_REF,source_revision:'LIVE',fingerprint:`DOMAIN-${hash(domain)}`,freshness:{state:'LIVE',observed_at:now,ttl_seconds:900},checked_at:now,summary:'Domínio operacional projetado.'});
   for(const domain of DOMAINS.filter(value=>value!=='NEXO'))edge('domain:NEXO',`domain:${domain}`,'PROJECTS','Spine estrutural de navegação do Atlas; relação de projeção, não evidência científica.',0.42);
+  for(const campaign of campaigns||[]){
+    const campaignId=text(campaign.campaign_id);
+    if(!campaignId)continue;
+    const domain=domainOf(campaign.domain||'SCIENCE');
+    const id=`campaign:${campaignId}`;
+    const description=text(campaign.semantic_description)||text(campaign.summary)||text(campaign.title)||campaignId;
+    const semanticState=text(campaign.semantic_state);
+    add({
+      id,type:'CAMPAIGN',label:text(campaign.title)||campaignId,domain,
+      state:/REJECTED|CLOSED|SUPERSEDED/.test(upper(campaign.status))?'DEGRADED':'LIVE',
+      authority_class:'DERIVED',
+      source_ref:text(campaign.source_ref)||SHEET_REF,
+      source_revision:text(campaign.source_revision)||'PUBLIC_PROJECTION',
+      fingerprint:text(campaign.fingerprint)||`CAMPAIGN-${hash(campaign)}`,
+      freshness:{state:'RECENT',observed_at:now,ttl_seconds:null},
+      checked_at:now,
+      summary:[description,semanticState].filter(Boolean).join(' · '),
+      campaign_id:campaignId,
+      semantic_description:description,
+      semantic_state:semanticState||undefined,
+    });
+    edge(`domain:${domain}`,id,'OWNS','Campanha científica agregada; detalhes de TEST permanecem fora do Atlas.',0.9);
+  }
   for(const p of providers){const id=`provider:${p.id}`;add({id,type:'PROVIDER',label:p.label,domain:p.expected_for[0]||'NEXO',state:p.state,authority_class:'NON_AUTHORITATIVE',source_ref:p.id,source_revision:p.checked_at,fingerprint:`PROV-${hash(p)}`,freshness:freshness(p.last_success_at,now),checked_at:p.checked_at,summary:p.explanation});edge(`domain:${p.expected_for[0]||'NEXO'}`,id,'DEPENDS_ON','Domínio observa saúde do provider.');}
   for(const c of capabilities){const id=`capability:${c.capability_id}`;add({id,type:'CAPABILITY',label:c.label,domain:c.domain,state:c.status,authority_class:'NON_AUTHORITATIVE',source_ref:c.evidence_ref||SHEET_REF,source_revision:c.last_verified_at||'UNVERIFIED',fingerprint:`CAP-${hash(c)}`,freshness:freshness(c.last_verified_at,now),checked_at:c.last_verified_at||now,summary:c.explanation,capability_id:c.capability_id,runtime:c.runtime});edge(`domain:${c.domain}`,id,'OWNS','Capability pertence ao domínio operacional.');}
   for(const a of actions){const id=`action:${a.action_id}`;add({id,type:'ACTION',label:a.title,domain:a.lane,state:['BLOCKED','FAILED','WAITING_SIDE_QUEST'].includes(a.status)?'BLOCKED':'LIVE',authority_class:'NON_AUTHORITATIVE',source_ref:a.source_ref,source_revision:a.updated_at,fingerprint:a.fingerprint,freshness:a.freshness,checked_at:a.checked_at,summary:a.eligibility,runtime:a.runtime,evidence:a.receipt_ref?[a.receipt_ref]:[]});edge(`domain:${a.lane}`,id,'OWNS','Ação pertence à lane.');if(a.capability_id&&nodes.some(n=>n.id===`capability:${a.capability_id}`))edge(id,`capability:${a.capability_id}`,'ROUTES_TO','Ação roteada pela capability.');if(a.effect_key){const eff=`effect:${a.effect_key}`;add({id:eff,type:'EFFECT',label:a.effect_key,domain:a.lane,state:a.readback.status==='CONFIRMED'?'LIVE':a.readback.status==='FAILED'?'BLOCKED':'DEGRADED',authority_class:'NON_AUTHORITATIVE',source_ref:a.receipt_ref||a.source_ref,source_revision:a.checked_at,fingerprint:`EFF-${hash(a.effect_key)}`,freshness:a.freshness,checked_at:a.checked_at,summary:a.readback.explanation});edge(id,eff,'PRODUCES','Ação produz efeito projetado.');}}
@@ -212,8 +235,8 @@ function buildGraph({actions,capabilities,providers,envelopes,filaments,sideQues
 }
 
 export function buildSystemState({world,bus,systemInput={},now=world?.generatedAt||new Date().toISOString()}={}){
-  const generated=iso(now,new Date().toISOString()),providers=mapProviders(world?.providers||[],generated),findings=mapFindings(world||{},generated),capabilities=mapCapabilities(systemInput.capabilities||[],generated),rawRuns=systemInput.executionRuns||[],runs=mapRuns(rawRuns,generated),sideQuests=(systemInput.sideQuests||[]).filter(q=>!isSystemOwnedAutoRecovery(q)),actions=mapActions(systemInput.actions||[],rawRuns,sideQuests,generated),inbox=mapInbox(sideQuests,generated),filaments=mapFilaments(systemInput.learningFilaments||[]),envelopes=mapEnvelopes(bus||{},generated),projectionBus=mapBus(bus||{},providers,generated),lanes=mapLanes(actions,runs,sideQuests,findings,generated);
-  const graph=buildGraph({actions,capabilities,providers,envelopes,filaments,sideQuests,findings,now:generated});
+  const generated=iso(now,new Date().toISOString()),providers=mapProviders(world?.providers||[],generated),findings=mapFindings(world||{},generated),campaigns=systemInput.campaigns||[],capabilities=mapCapabilities(systemInput.capabilities||[],generated),rawRuns=systemInput.executionRuns||[],runs=mapRuns(rawRuns,generated),sideQuests=(systemInput.sideQuests||[]).filter(q=>!isSystemOwnedAutoRecovery(q)),actions=mapActions(systemInput.actions||[],rawRuns,sideQuests,generated),inbox=mapInbox(sideQuests,generated),filaments=mapFilaments(systemInput.learningFilaments||[]),envelopes=mapEnvelopes(bus||{},generated),projectionBus=mapBus(bus||{},providers,generated),lanes=mapLanes(actions,runs,sideQuests,findings,generated);
+  const graph=buildGraph({actions,campaigns,capabilities,providers,envelopes,filaments,sideQuests,findings,now:generated});
   const globalProviders=providers.filter(provider=>provider.id!=='vercel');
   const global_state=worst([projectionBus.state,...globalProviders.map(p=>p.state),...findings.map(f=>f.status),...lanes.map(l=>l.state)]);
   return {contract_version:'1',scenario_id:'live',scenario_label:'Estado real · fontes conectadas',generated_at:generated,global_state,bus:projectionBus,envelopes,findings,actions,inbox,capabilities,runs,lanes,graph,filaments,providers};
