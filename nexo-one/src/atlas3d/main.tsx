@@ -19,7 +19,7 @@ const G6_SOURCES = [
   'https://cdn.jsdelivr.net/npm/@antv/g6@5/dist/g6.min.js',
 ] as const;
 
-function loadScript(src: string, timeoutMs = 8000): Promise<void> {
+function loadScript(src: string, timeoutMs = 4500): Promise<void> {
   return new Promise((resolve, reject) => {
     const existing = [...document.scripts].find(script => script.src === src);
     if (existing && (window as any).G6?.Graph) {
