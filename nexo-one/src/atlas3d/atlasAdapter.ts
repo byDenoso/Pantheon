@@ -288,6 +288,7 @@ export function buildAtlasMetroModel(state: SystemState): AtlasMetroModel {
 
   const crossLinks: AtlasCrossLink[] = [];
   const canonicalEntityEdges: GraphEdge[] = [];
+  const renderedLearningRefs = new Set<string>();
 
   for (const edge of state.graph.edges) {
     const source = atlasEndpointFor(edge.from, sourceNodeIds);
@@ -313,12 +314,14 @@ export function buildAtlasMetroModel(state: SystemState): AtlasMetroModel {
       bundleIndex: 0,
       bundleCount: 1,
     });
+    if (edge.is_learning && edge.learning_ref) renderedLearningRefs.add(edge.learning_ref);
   }
 
   // Filaments are presentation relationships, never stations. When a canonical
   // filament omits entity IDs but carries domain endpoints, anchor it to the
   // corresponding domain hubs instead of creating synthetic Learning nodes.
   for (const filament of state.filaments || []) {
+    if (renderedLearningRefs.has(filament.id)) continue;
     const source = atlasEndpointFor(filament.from_id, sourceNodeIds)
       || learningEndpointFromDomain(filament.from_domain);
     const target = atlasEndpointFor(filament.to_id, sourceNodeIds)
