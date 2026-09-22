@@ -101,7 +101,7 @@ const peerRoutes: Record<string, { theme: string; source: string; target: string
   },
 };
 
-function signalOf(filament: Filament): string {
+export function learningSignalOf(filament: Filament): string {
   return [
     filament.id,
     filament.label,
@@ -131,7 +131,7 @@ function proceduralTheme(signal: string): ProceduralTheme | null {
 function proceduralNexoPair(theme: ProceduralTheme): { source: string; target: string } {
   switch (theme) {
     case 'EXECUTION':
-      return { source: LEARNING_ANCHORS.NEXO.execution, target: LEARNING_ANCHORS.NEXO.governance };
+      return { source: LEARNING_ANCHORS.NEXO.execution, target: LEARNING_ANCHORS.NEXO.robustness };
     case 'CAUSALITY':
       return { source: LEARNING_ANCHORS.NEXO.data, target: LEARNING_ANCHORS.NEXO.causality };
     case 'DATA':
@@ -139,9 +139,9 @@ function proceduralNexoPair(theme: ProceduralTheme): { source: string; target: s
     case 'GOVERNANCE':
       return { source: LEARNING_ANCHORS.NEXO.inference, target: LEARNING_ANCHORS.NEXO.governance };
     case 'INFERENCE':
-      return { source: LEARNING_ANCHORS.NEXO.inference, target: LEARNING_ANCHORS.NEXO.governance };
+      return { source: LEARNING_ANCHORS.NEXO.data, target: LEARNING_ANCHORS.NEXO.inference };
     case 'ROBUSTNESS':
-      return { source: LEARNING_ANCHORS.NEXO.robustness, target: LEARNING_ANCHORS.NEXO.governance };
+      return { source: LEARNING_ANCHORS.NEXO.inference, target: LEARNING_ANCHORS.NEXO.robustness };
   }
 }
 
@@ -167,7 +167,7 @@ export function learningSemanticRoute(filament: Filament): LearningSemanticRoute
     };
   }
 
-  const signal = signalOf(filament);
+  const signal = learningSignalOf(filament);
 
   if (filament.kind === 'SEMANTIC' && /METHOD_TRANSFER|SELECTION[-_ ]?AWARE/.test(signal)) {
     return {
