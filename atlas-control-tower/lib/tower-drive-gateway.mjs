@@ -3,7 +3,7 @@ import {gunzipSync} from 'node:zlib';
 import {createDriveClient} from './drive-client.mjs';
 import {createTowerGithubGateway,resolveFrozenCapability} from './tower-github-gateway.mjs';
 import {applyDriveMutationToBundle} from './tower-drive-transaction.mjs';
-import {buildDriveSnapshotCandidate} from './tower-drive-writer.mjs';
+import {buildDriveSnapshotCandidate,isCurrentTowerBundlePath,towerBundlePathRole} from './tower-drive-writer.mjs';
 import {deriveRoleView} from './tower-role-view.mjs';
 
 const exactEntityIdFromFingerprint=fingerprint=>{
@@ -60,6 +60,7 @@ export function createTowerDriveGateway({env=process.env,fetchImpl=globalThis.fe
       const {payload}=await loadBundle();
       const entry=payload.files[path];
       if(!entry)return null;
+      if(!isCurrentTowerBundlePath(path,payload))return null;
       if(entry.encoding!=='json')throw new Error('DRIVE_BUNDLE_ENTRY_NOT_JSON:'+path);
       return structuredClone(entry.value);
     }catch(error){
@@ -74,6 +75,7 @@ export function createTowerDriveGateway({env=process.env,fetchImpl=globalThis.fe
       const values=[];
       for(const [path,entry] of Object.entries(payload.files)){
         if(!path.startsWith(prefix)||!path.endsWith('.json'))continue;
+        if(!isCurrentTowerBundlePath(path,payload))continue;
         const rest=path.slice(prefix.length);
         if(rest.includes('/'))continue;
         if(entry?.encoding==='json')values.push(structuredClone(entry.value));
@@ -108,7 +110,8 @@ export function createTowerDriveGateway({env=process.env,fetchImpl=globalThis.fe
     readEvidence:id=>readJson('runtime/evidence/'+id+'.json'),
     readCampaignIndex:()=>requireJson('indexes/campaigns.json'),
     readInterdomainIndex:()=>requireJson('indexes/interdomain-active.json'),
-    async getCurrentSnapshotMeta(){const {pointer}=await loadBundle({force:true});return {...structuredClone(pointer),writer_ready:false,write_model:'DRIVE_IMMUTABLE_SNAPSHOT_SINGLE_WRITER_CURRENT',writer_role:'CHATGPT_CORE_DIRECT_ONLY'};},
+    async getCurrentSnapshotMeta(){const {pointer,payload}=await loadBundle({force:true});return {...structuredClone(pointer),writer_ready:false,write_model:'DRIVE_IMMUTABLE_SNAPSHOT_SINGLE_WRITER_CURRENT',writer_role:'CHATGPT_CORE_DIRECT_ONLY',derived_stale_policy:payload.derived_stale_policy||'HISTORICAL_ONLY__NEVER_CURRENT_INPUT',derived_stale_allowed_prefixes:payload.derived_stale_allowed_prefixes||['projections/public/']};},
+    classifyBundlePath:relative=>towerBundlePathRole(String(relative).replace(/^TOWER_V\d+\//,'').replace(/^\/+/,'')),
     submitTowerMutation,dispatchRuntime,
     cleanupMergedBranches:options=>maintenance.cleanupMergedBranches(options),
     async findByFingerprint(fingerprint,{testId}={}){const id=testId||exactEntityIdFromFingerprint(fingerprint),entity=await readEntity('test',id);if(!entity)return null;if(entity.scientific_fingerprint&&entity.scientific_fingerprint!==fingerprint)return null;return entity;},
