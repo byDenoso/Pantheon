@@ -196,11 +196,12 @@ test('dense Science expansion keeps stations spaced and labels collision-free', 
 });
 
 test('dedicated Atlas production page uses Metro renderer, G6 and deterministic Three mode', async () => {
-  const [app, renderer, index, css] = await Promise.all([
+  const [app, renderer, index, css, main] = await Promise.all([
     text('src/atlas3d/Atlas3DApp.tsx'),
     text('src/atlas3d/MetroAtlasRenderer.tsx'),
     text('atlas3d/index.html'),
     text('src/atlas3d/atlas3d.css'),
+    text('src/atlas3d/main.tsx'),
   ]);
 
   assert.match(app, /data-atlas-renderer="metro-cluster"/);
@@ -257,6 +258,12 @@ test('dedicated Atlas production page uses Metro renderer, G6 and deterministic 
   assert.match(renderer, /WEBGL_INIT_FAILED/);
   assert.match(renderer, /WEBGL_CONTEXT_LOST/);
   assert.match(renderer, /compact-touch/);
+  assert.match(renderer, /reduced-gpu/);
+  assert.match(renderer, /compact \? 2 : 3/);
+  assert.match(renderer, /compact \? 4 : 5/);
+  assert.match(renderer, /node\.entityType === 'hub'.*node\.entityType === 'subdomain'.*id === selectedId/s);
+  assert.match(renderer, /props\.viewMode === '2d' \?/);
+  assert.match(renderer, /onReadyRef\.current\?\.\(\)/);
   assert.match(renderer, /runtime-skip/);
   assert.match(renderer, /isAtlasReadback/);
   assert.match(renderer, /preserveDrawingBuffer: isAtlasReadback\(\)/);
@@ -295,5 +302,11 @@ test('dedicated Atlas production page uses Metro renderer, G6 and deterministic 
   assert.match(css, /touch-action:none/);
   assert.doesNotMatch(css, /pointer-events:none;opacity:\.18/);
 
-  assert.match(index, /@antv\/g6@5\/dist\/g6\.min\.js/);
+  assert.doesNotMatch(index, /@antv\/g6@5\/dist\/g6\.min\.js/);
+  assert.match(main, /G6_SOURCES/);
+  assert.match(main, /unpkg\.com\/\@antv\/g6/);
+  assert.match(main, /cdn\.jsdelivr\.net\/npm\/\@antv\/g6/);
+  assert.match(main, /g6Fallback/);
+  assert.match(main, /data-atlas-bootstrap/);
+  assert.match(main, /atlasG6Source/);
 });
