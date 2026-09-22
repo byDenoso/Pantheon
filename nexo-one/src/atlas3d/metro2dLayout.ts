@@ -46,6 +46,7 @@ export interface MetroScreenLabelLayout {
   visible: number;
   hidden: number;
   collisions: number;
+  uiZoneViolations: number;
   maxSiblings: number;
   zoom: number;
 }
@@ -726,11 +727,18 @@ export function buildMetroScreenLabelLayout(
     }
   }
 
+  let uiZoneViolations = 0;
+  const safeZones = atlasUiSafeZones(viewportWidth, viewportHeight);
+  for (const item of occupied) {
+    if (safeZones.some(zone => intersects(item.rect, zone, 1))) uiZoneViolations += 1;
+  }
+
   return {
     byId,
     visible: [...byId.values()].filter(spec => spec.visible).length,
     hidden: [...byId.values()].filter(spec => !spec.visible).length,
     collisions,
+    uiZoneViolations,
     maxSiblings: maxVisibleSiblingCount(model, visibleSet),
     zoom,
   };
