@@ -860,6 +860,26 @@ jobs:
           test -s /tmp/atlas3d-readback-mobile-3d.png
           echo "PAGES_ATLAS3D_MOBILE_3D_READBACK_OK width=${mobile_three_width} height=${mobile_three_height} nodes=${mobile_three_nodes} learning_visual=${mobile_three_learning_visual} learning_records=${mobile_three_learning_records} learning_relations=${mobile_three_learning_relations} fit_scope=selection fit_nodes=${mobile_three_fit_nodes} fit_coverage=${mobile_three_fit_coverage} paint_samples=${mobile_three_paint}"
 
+          mcp_url="${base}/mcp/?q=Cosmology"
+          dump_until_ready 'data-mcp-ready="true"' /tmp/mcp-readback-dom.html \
+            --headless=new --no-sandbox --disable-dev-shm-usage --hide-scrollbars \
+            --window-size=1440,900 --virtual-time-budget=9000 --dump-dom "${mcp_url}"
+          grep -Fq 'data-mcp-ready="true"' /tmp/mcp-readback-dom.html
+          grep -Fq 'data-mcp-selected="COSMOLOGY"' /tmp/mcp-readback-dom.html
+          grep -Fq 'data-mcp-selected-kind="FAMILY"' /tmp/mcp-readback-dom.html
+          grep -Fq 'data-mcp-query="Cosmology"' /tmp/mcp-readback-dom.html
+          grep -Fq '>Capabilities<' /tmp/mcp-readback-dom.html
+          grep -Fq '>Runtimes<' /tmp/mcp-readback-dom.html
+          grep -Fq '>Roles<' /tmp/mcp-readback-dom.html
+          mcp_nodes="$(sed -n 's/.*data-mcp-node-count="\([0-9][0-9]*\)".*/\1/p' /tmp/mcp-readback-dom.html | head -1)"
+          mcp_links="$(sed -n 's/.*data-mcp-link-count="\([0-9][0-9]*\)".*/\1/p' /tmp/mcp-readback-dom.html | head -1)"
+          [ -n "${mcp_nodes}" ] && [ "${mcp_nodes}" -gt 8 ]
+          [ -n "${mcp_links}" ] && [ "${mcp_links}" -gt 7 ]
+          "${chrome_bin}" --headless=new --no-sandbox --disable-dev-shm-usage --hide-scrollbars \
+            --window-size=1440,900 --virtual-time-budget=9000 \
+            --screenshot=/tmp/mcp-readback-cosmology.png "${mcp_url}" >/dev/null 2>&1
+          test -s /tmp/mcp-readback-cosmology.png
+          echo "PAGES_MCP_VISUAL_READBACK_OK selected=COSMOLOGY nodes=${mcp_nodes} links=${mcp_links}"
           curl -fsSL "${base}/world-public.ndjson" -o /tmp/world.ndjson
           curl -fsSL "${base}/mcp/topology.json" -o /tmp/mcp-topology.json
           curl -fsSL "${base}/galaxy/latest.json" -o /tmp/galaxy-latest.json
@@ -957,6 +977,8 @@ jobs:
             /tmp/atlas3d-mobile-dom.html
             /tmp/atlas3d-readback-mobile-3d.png
             /tmp/atlas3d-mobile-3d-dom.html
+            /tmp/mcp-readback-cosmology.png
+            /tmp/mcp-readback-dom.html
             /tmp/system.json
           if-no-files-found: warn
           retention-days: 7

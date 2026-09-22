@@ -178,8 +178,11 @@ export function McpAtlasApp(){
   const topologyRef=useRef<Topology|null>(null);
   const [error,setError]=useState('');
   const [selected,setSelected]=useState<string|null>(null);
-  const [search,setSearch]=useState('');
-  const [mode,setMode]=useState<ViewMode>('all');
+  const [search,setSearch]=useState(()=>new URLSearchParams(window.location.search).get('q')||'');
+  const [mode,setMode]=useState<ViewMode>(()=>{
+    const candidate=new URLSearchParams(window.location.search).get('mode') as ViewMode|null;
+    return candidate&&Object.hasOwn(modeKinds,candidate)?candidate:'all';
+  });
   const [syncState,setSyncState]=useState<SyncState>('idle');
   const [checkedAt,setCheckedAt]=useState<Date|null>(null);
 
@@ -279,7 +282,14 @@ export function McpAtlasApp(){
     {mode:'roles',index:'04',title:'Roles declaradas',body:String(topology.stats.roles)+' papéis conectados às capabilities declaradas.'},
   ] : [];
 
-  return <div className="mcp-site">
+  return <div className="mcp-site"
+    data-mcp-ready={topology?'true':'false'}
+    data-mcp-selected={selectedNode?.label||''}
+    data-mcp-selected-kind={selectedNode?.kind||''}
+    data-mcp-mode={mode}
+    data-mcp-query={search}
+    data-mcp-node-count={topology?.nodes.length||0}
+    data-mcp-link-count={topology?.links.length||0}>
     <nav className="mcp-nav">
       <a className="mcp-brand" href="../"><span className="mark">N</span><span>NEXO <em>ONE</em></span><b>MCP ATLAS</b></a>
       <div className="nav-links"><a href="../">Cockpit</a><a href="#topology">Topologia</a><a href="#architecture">Relações</a><a href="#source">Fonte</a></div>
