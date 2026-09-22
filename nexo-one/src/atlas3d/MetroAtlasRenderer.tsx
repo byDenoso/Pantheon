@@ -1195,6 +1195,35 @@ function threeDepthMetrics(model: AtlasMetroModel, ids: string[], positions: Map
   return { zSpan, maxSameLevelSpan };
 }
 
+function threeFocusIds(
+  model: AtlasMetroModel,
+  expanded: ReadonlySet<string>,
+  selectedId: string | null,
+): string[] {
+  const visible = new Set(visibleAtlasIds(model, expanded));
+  if (!selectedId || !visible.has(selectedId)) return [...visible];
+
+  const selected = model.nodeMap.get(selectedId);
+  if (!selected) return [...visible];
+
+  const focus = new Set<string>([selectedId]);
+  const children = (model.childrenMap.get(selectedId) || []).filter(id => visible.has(id));
+  if (children.length) {
+    children.forEach(id => focus.add(id));
+  } else if (selected.parentId && visible.has(selected.parentId)) {
+    focus.add(selected.parentId);
+  }
+
+  const seed = new Set(focus);
+  for (const link of model.crossLinks) {
+    if (!link.isLearning) continue;
+    if (seed.has(link.source) && visible.has(link.target)) focus.add(link.target);
+    if (seed.has(link.target) && visible.has(link.source)) focus.add(link.source);
+  }
+
+  return [...focus];
+}
+
 function applyThreeSelection(runtime: ThreeRuntime, selectedId: string | null) {
   runtime.nodeGroups.forEach((group, id) => {
     const selected = id === selectedId;
@@ -1236,11 +1265,20 @@ function threeFitInsets(runtime: ThreeRuntime) {
     : { width, height, top: 118, right: 24, bottom: 62, left: 24, compact };
 }
 
-function fitThree(runtime: ThreeRuntime, animated = true) {
+function fitThree(
+  runtime: ThreeRuntime,
+  animated = true,
+  focusIds: readonly string[] | null = null,
+  scope: 'selection' | 'all' = focusIds?.length ? 'selection' : 'all',
+) {
   if (!runtime.worldPositions.size) return;
 
+  const fitPositions = (focusIds || [])
+    .map(id => runtime.worldPositions.get(id))
+    .filter((position): position is THREE.Vector3 => Boolean(position));
+  const positions = fitPositions.length ? fitPositions : [...runtime.worldPositions.values()];
   const box = new THREE.Box3();
-  runtime.worldPositions.forEach(position => box.expandByPoint(position));
+  positions.forEach(position => box.expandByPoint(position));
   const center = box.getCenter(new THREE.Vector3());
   const direction = new THREE.Vector3(.82, .54, 1.15).normalize();
   const forward = direction.clone().multiplyScalar(-1);
@@ -1301,7 +1339,9 @@ function fitThree(runtime: ThreeRuntime, animated = true) {
 
   const container = runtime.renderer.domElement.parentElement as HTMLElement | null;
   if (container) {
-    container.dataset.threeFitPolicy = 'projected-safe-area-v4';
+    container.dataset.threeFitPolicy = 'selection-safe-area-v5';
+    container.dataset.threeFitScope = scope;
+    container.dataset.threeFitNodeCount = String(positions.length);
     container.dataset.threeFitDistance = distance.toFixed(1);
     container.dataset.threeFitCoverage = coverage.toFixed(2);
     container.dataset.threeFitTopInset = String(top);
@@ -1508,7 +1548,8 @@ function rebuildThree(
 
     const domainColor = DOMAIN_COLOR[node.domain] || '#94a3b8';
     const typeColor = TYPE_COLOR[String(node.entityType)] || '#cbd5e1';
-    const baseEmissive = node.entityType === 'hub' ? .56 : node.entityType === 'subdomain' ? .42 : .32;
+    const baseEmissive = (node.entityType === 'hub' ? .56 : node.entityType === 'subdomain' ? .42 : .32)
+      + (compact ? .12 : .04);
 
     const coreMaterial = new THREE.MeshStandardMaterial({
       color: new THREE.Color(domainColor).lerp(new THREE.Color(typeColor), .20),
@@ -1544,7 +1585,7 @@ function rebuildThree(
     const neuronGlow = createGlowSprite(
       domainColor,
       radius * (node.entityType === 'hub' ? 5.6 : 4.9),
-      node.entityType === 'hub' ? .56 : .44,
+      (node.entityType === 'hub' ? .56 : .44) + (compact ? .12 : .04),
     );
     neuronGlow.material.depthTest = false;
     neuronGlow.userData.baseOpacity = (neuronGlow.material as THREE.SpriteMaterial).opacity;
@@ -1639,8 +1680,8 @@ function MetroThreeView({
     container.dataset.threeProfile = compact ? 'compact-touch' : 'desktop';
     container.dataset.threeQuality = compact ? 'reduced-gpu' : 'full';
     const scene = new THREE.Scene();
-    scene.fog = new THREE.FogExp2(0x070b14, .00075);
-    const camera = new THREE.PerspectiveCamera(46, 1, 1, 5000);
+    scene.fog = new THREE.FogExp2(0x070b14, compact ? .00013 : .00017);
+    const camera = new THREE.PerspectiveCamera(compact ? 50 : 46, 1, 1, 6000);
     camera.position.set(520, 360, 780);
 
     let renderer: THREE.WebGLRenderer;
@@ -1673,17 +1714,17 @@ function MetroThreeView({
     controls.zoomSpeed = .85;
     controls.zoomToCursor = true;
     controls.minDistance = 95;
-    controls.maxDistance = 2400;
+    controls.maxDistance = compact ? 3600 : 5200;
     controls.screenSpacePanning = true;
     controls.mouseButtons.LEFT = THREE.MOUSE.ROTATE;
     controls.mouseButtons.MIDDLE = THREE.MOUSE.DOLLY;
     controls.mouseButtons.RIGHT = THREE.MOUSE.PAN;
 
-    scene.add(new THREE.HemisphereLight(0xd7e8ff, 0x111827, 1.25));
-    const key = new THREE.DirectionalLight(0xffffff, 1.4);
+    scene.add(new THREE.HemisphereLight(0xd7e8ff, 0x111827, compact ? 1.62 : 1.38));
+    const key = new THREE.DirectionalLight(0xffffff, compact ? 1.72 : 1.52);
     key.position.set(400, 650, 500);
     scene.add(key);
-    const rim = new THREE.DirectionalLight(0x6ee7ff, .7);
+    const rim = new THREE.DirectionalLight(0x6ee7ff, compact ? .92 : .78);
     rim.position.set(-520, -180, -360);
     scene.add(rim);
 
