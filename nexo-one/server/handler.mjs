@@ -149,9 +149,11 @@ export default async function handler(req,res) {
     }
     if(route==='projection-sync'){
       if(req.method==='GET'){
+        const dispatchConfigured=Boolean(String(env.GITHUB_TOKEN||'').trim());
         return send({
-          status:String(env.GITHUB_TOKEN||'').trim()?'READY':'NOT_CONFIGURED',
-          configured:Boolean(String(env.GITHUB_TOKEN||'').trim()),
+          status:dispatchConfigured?'READY':'DIRECT_READBACK_ONLY',
+          configured:dispatchConfigured,
+          mode:dispatchConfigured?'REPOSITORY_DISPATCH_PLUS_READBACK':'DIRECT_PUBLIC_READBACK',
           repository:String(env.GITHUB_REPOSITORY||'byDenoso/Pantheon'),
           event_type:'nexo-public-projection-updated',
         },200);
