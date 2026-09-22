@@ -161,7 +161,6 @@ function resolveLearningEndpoint({
   side,
   semanticAnchor,
   sourceNodeIds,
-  sourceToParent,
   nodeMap,
 }: {
   rawId?: string;
@@ -170,7 +169,6 @@ function resolveLearningEndpoint({
   side: 'source' | 'target';
   semanticAnchor?: LearningSemanticAnchor | null;
   sourceNodeIds: Set<string>;
-  sourceToParent: Map<string, string>;
   nodeMap: Map<string, AtlasMetroNode>;
 }): { id: string; anchor: 'EXACT_ENTITY' | 'ENTITY_SUBDOMAIN' | 'SEMANTIC_SUBDOMAIN' | 'DOMAIN_HUB' } | null {
   const explicitId = side === 'source'
@@ -449,7 +447,6 @@ export function buildAtlasMetroModel(state: SystemState): AtlasMetroModel {
         side: 'source',
         semanticAnchor: learningRoute?.source,
         sourceNodeIds,
-        sourceToParent,
         nodeMap,
       });
       const targetResolved = resolveLearningEndpoint({
@@ -459,7 +456,6 @@ export function buildAtlasMetroModel(state: SystemState): AtlasMetroModel {
         side: 'target',
         semanticAnchor: learningRoute?.target,
         sourceNodeIds,
-        sourceToParent,
         nodeMap,
       });
       source = sourceResolved?.id || null;
@@ -518,7 +514,6 @@ export function buildAtlasMetroModel(state: SystemState): AtlasMetroModel {
       side: 'source',
       semanticAnchor: learningRoute?.source,
       sourceNodeIds,
-      sourceToParent,
       nodeMap,
     });
     const targetResolved = resolveLearningEndpoint({
@@ -528,7 +523,6 @@ export function buildAtlasMetroModel(state: SystemState): AtlasMetroModel {
       side: 'target',
       semanticAnchor: learningRoute?.target,
       sourceNodeIds,
-      sourceToParent,
       nodeMap,
     });
     const source = sourceResolved?.id || null;
