@@ -1,5 +1,5 @@
 import type { Filament, GraphEdge, GraphNode, SystemState } from '../contracts/system.ts';
-import { learningSemanticRoute, type LearningSemanticAnchor } from './learningSemantics.ts';
+import { learningSemanticRoute, learningSignalOf, type LearningSemanticAnchor } from './learningSemantics.ts';
 import {
   ATLAS_TOP_DOMAINS,
   atlasSubdomainHint,
@@ -143,15 +143,7 @@ function domainFromRawId(rawId: string | undefined): AtlasTopDomain | null {
 
 function learningSignal(filament: Filament, side: 'source' | 'target'): string {
   const endpointLabel = side === 'source' ? filament.from_label : filament.to_label;
-  const linkedLabels = (filament.links || []).map(link => link.label);
-  return [
-    endpointLabel,
-    filament.label,
-    filament.id,
-    filament.kind,
-    filament.peer_detection_group,
-    ...linkedLabels,
-  ].filter(Boolean).join(' ');
+  return [endpointLabel, learningSignalOf(filament)].filter(Boolean).join(' ');
 }
 
 function resolveLearningEndpoint({
@@ -608,7 +600,7 @@ export function buildAtlasMetroModel(state: SystemState): AtlasMetroModel {
   }
 
   const descendantsById = descendantCounts(childrenMap);
-    const relationCounts = new Map(nodes.map(node => [node.id, 0]));
+  const relationCounts = new Map(nodes.map(node => [node.id, 0]));
   for (const link of crossLinks) {
     relationCounts.set(link.source, (relationCounts.get(link.source) || 0) + 1);
     relationCounts.set(link.target, (relationCounts.get(link.target) || 0) + 1);

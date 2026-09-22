@@ -5,8 +5,9 @@ import {
 } from 'react';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
-import type { AtlasCrossLink, AtlasMetroModel, AtlasMetroNode } from './atlasAdapter.ts';
+import type { AtlasMetroModel, AtlasMetroNode } from './atlasAdapter.ts';
 import { visibleAtlasIds } from './atlasAdapter.ts';
+import { projectVisualCrossLinks } from './learningVisuals.ts';
 import {
   buildMetroScreenLabelLayout,
   metroLayoutPositions,
@@ -77,11 +78,16 @@ function statusColor(status: string): string {
   return '#94a3b8';
 }
 
-function learningColor(kind: string | null | undefined): string {
-  if (kind === 'SCIENTIFIC_LEARNING_PIPELINE') return '#f59e0b';
-  if (kind === 'PROCEDURAL') return '#fbbf24';
-  if (kind === 'SEMANTIC') return '#d97706';
-  return '#f59e0b';
+const LEARNING_PALETTE: Record<string, string[]> = {
+  SCIENTIFIC_LEARNING_PIPELINE: ['#f59e0b', '#f6ad1b', '#e8910a', '#f3b64d'],
+  PROCEDURAL: ['#fbbf24', '#f7c948', '#eab308', '#ffd166'],
+  SEMANTIC: ['#fb923c', '#f97316', '#d97706', '#fdba74'],
+};
+
+function learningColor(kind: string | null | undefined, theme?: string | null): string {
+  const palette = LEARNING_PALETTE[kind || ''] || LEARNING_PALETTE.SCIENTIFIC_LEARNING_PIPELINE;
+  const seed = hashNumber(theme || kind || 'learning');
+  return palette[seed % palette.length]!;
 }
 
 function learningDash(kind: string | null | undefined): number[] {
@@ -96,106 +102,6 @@ function learningWidth(kind: string | null | undefined): number {
   if (kind === 'PROCEDURAL') return 1.7;
   if (kind === 'SEMANTIC') return 1.9;
   return 1.8;
-}
-
-type VisualCrossLink = AtlasCrossLink & {
-  visualCount: number;
-  visualRefs: string[];
-};
-
-function projectVisualCrossLinks(
-  links: AtlasCrossLink[],
-  visible: ReadonlySet<string>,
-  compact: boolean,
-): VisualCrossLink[] {
-  const filtered = links.filter(link => visible.has(link.source) && visible.has(link.target));
-  const out: VisualCrossLink[] = [];
-  const canonical = new Map<string, AtlasCrossLink[]>();
-
-  // A canonical Learning record may generate several graph edges that collapse
-  // to the same semantic source/target pair. Draw that path once and preserve
-  // multiplicity as metadata instead of stacking identical tubes/curves.
-  for (const link of filtered) {
-    if (!link.isLearning) {
-      out.push({ ...link, visualCount: 1, visualRefs: [] });
-      continue;
-    }
-    const recordKey = [
-      link.source,
-      link.target,
-      link.learningKind || 'LEARNING',
-      link.learningRef || link.id,
-    ].join('↔');
-    const bucket = canonical.get(recordKey) || [];
-    bucket.push(link);
-    canonical.set(recordKey, bucket);
-  }
-
-  const canonicalVisuals: VisualCrossLink[] = [];
-  for (const [key, bucket] of canonical) {
-    bucket.sort((left, right) => left.id.localeCompare(right.id));
-    const base = bucket[0]!;
-    const refs = [...new Set(
-      bucket.map(link => link.learningRef).filter((value): value is string => Boolean(value)),
-    )];
-    canonicalVisuals.push({
-      ...base,
-      id: `visual-record:${key}`,
-      weight: bucket.reduce((sum, link) => sum + Number(link.weight || 0), 0) / bucket.length,
-      visualCount: bucket.length,
-      visualRefs: refs,
-    });
-  }
-
-  if (!compact) {
-    out.push(...canonicalVisuals);
-  } else {
-    const semanticBundles = new Map<string, VisualCrossLink[]>();
-    for (const link of canonicalVisuals) {
-      const key = [
-        link.source,
-        link.target,
-        link.learningKind || 'LEARNING',
-        link.learningTheme || 'UNTHEMED',
-      ].join('↔');
-      const bucket = semanticBundles.get(key) || [];
-      bucket.push(link);
-      semanticBundles.set(key, bucket);
-    }
-
-    for (const [key, bucket] of semanticBundles) {
-      bucket.sort((left, right) => left.id.localeCompare(right.id));
-      const base = bucket[0]!;
-      const refs = [...new Set(bucket.flatMap(link => link.visualRefs))];
-      const relationCount = bucket.reduce((sum, link) => sum + link.visualCount, 0);
-      out.push({
-        ...base,
-        id: `visual-learning:${key}`,
-        label: refs.length > 1 ? `${base.label} · +${refs.length - 1} aprendizados` : base.label,
-        weight: bucket.reduce((sum, link) => sum + Number(link.weight || 0), 0) / bucket.length,
-        visualCount: relationCount,
-        visualRefs: refs,
-      });
-    }
-  }
-
-  const learningPairs = new Map<string, VisualCrossLink[]>();
-  for (const link of out) {
-    if (!link.isLearning) continue;
-    const pair = [link.source, link.target].join('→');
-    const bucket = learningPairs.get(pair) || [];
-    bucket.push(link);
-    learningPairs.set(pair, bucket);
-  }
-  for (const bucket of learningPairs.values()) {
-    bucket.sort((left, right) => left.id.localeCompare(right.id));
-    bucket.forEach((link, index) => {
-      link.bundleIndex = index;
-      link.bundleCount = bucket.length;
-    });
-  }
-
-  return out;
 }
 
 function isAtlasReadback(): boolean {
@@ -361,7 +267,7 @@ function buildG6Data(
   });
 
   const bridgeEdges = showBeams
-    ? projectVisualCrossLinks(model.crossLinks, visible, compact)
+    ? projectVisualCrossLinks(model.crossLinks, visible)
       .map(link => ({
         id: link.id,
         source: link.source,
@@ -377,6 +283,8 @@ function buildG6Data(
           learningRef: link.learningRef,
           learningKind: link.learningKind,
           learningGroup: link.learningGroup,
+          learningTheme: link.learningTheme,
+          learningBasis: link.learningBasis,
           sourceAnchor: link.sourceAnchor,
           targetAnchor: link.targetAnchor,
           bundleIndex: link.bundleIndex,
@@ -518,6 +426,7 @@ function Metro2DView({
   const activateRef = useRef(onActivate);
   const showBeamsRef = useRef(showBeams);
   const lastFitNonce = useRef(-1);
+  const lastFocusKey = useRef('');
   const onReadyRef = useRef(onReady);
   const renderLabelsRef = useRef<() => void>(() => {});
 
@@ -611,7 +520,7 @@ function Metro2DView({
         },
         style: {
           stroke: (datum: any) => datum.data?.isLearning
-            ? learningColor(datum.data?.learningKind)
+            ? learningColor(datum.data?.learningKind, datum.data?.learningTheme)
             : datum.data?.kind === 'bridge'
               ? '#91a4bd'
               : (DOMAIN_COLOR[String(datum.data?.domain)] || '#475569'),
@@ -625,7 +534,7 @@ function Metro2DView({
             ? learningDash(datum.data?.learningKind)
             : datum.data?.kind === 'bridge' ? [5, 6] : [],
           shadowColor: (datum: any) => datum.data?.isLearning
-            ? learningColor(datum.data?.learningKind)
+            ? learningColor(datum.data?.learningKind, datum.data?.learningTheme)
             : 'transparent',
           shadowBlur: (datum: any) => datum.data?.isLearning
             ? (datum.data?.learningKind === 'SCIENTIFIC_LEARNING_PIPELINE' ? 11 : 7)
@@ -870,7 +779,7 @@ function disposeThreeObject(root: THREE.Object3D) {
     if (!material) return;
     const materials = Array.isArray(material) ? material : [material];
     for (const item of materials) {
-      item.map?.dispose?.();
+      if (item.map && item.map.userData?.atlasSharedTexture !== true) item.map.dispose?.();
       item.dispose?.();
     }
   });
@@ -907,29 +816,33 @@ function createOrganicGeometry(radius: number, seedKey: string, detail = 3): THR
   return geometry;
 }
 
-function createGlowSprite(colorValue: string | number, diameter: number, opacity: number): THREE.Sprite {
-  const color = new THREE.Color(colorValue);
-  const red = Math.round(color.r * 255);
-  const green = Math.round(color.g * 255);
-  const blue = Math.round(color.b * 255);
+let sharedGlowTexture: THREE.CanvasTexture | null = null;
+
+function getSharedGlowTexture(): THREE.CanvasTexture {
+  if (sharedGlowTexture) return sharedGlowTexture;
   const canvas = document.createElement('canvas');
   canvas.width = 128;
   canvas.height = 128;
   const context = canvas.getContext('2d')!;
   const gradient = context.createRadialGradient(64, 64, 0, 64, 64, 62);
-  gradient.addColorStop(0, `rgba(${red},${green},${blue},.82)`);
-  gradient.addColorStop(.20, `rgba(${red},${green},${blue},.50)`);
-  gradient.addColorStop(.48, `rgba(${red},${green},${blue},.16)`);
-  gradient.addColorStop(1, `rgba(${red},${green},${blue},0)`);
+  gradient.addColorStop(0, 'rgba(255,255,255,.88)');
+  gradient.addColorStop(.20, 'rgba(255,255,255,.54)');
+  gradient.addColorStop(.48, 'rgba(255,255,255,.18)');
+  gradient.addColorStop(1, 'rgba(255,255,255,0)');
   context.fillStyle = gradient;
   context.fillRect(0, 0, 128, 128);
 
-  const texture = new THREE.CanvasTexture(canvas);
-  texture.colorSpace = THREE.SRGBColorSpace;
-  texture.minFilter = THREE.LinearFilter;
+  sharedGlowTexture = new THREE.CanvasTexture(canvas);
+  sharedGlowTexture.colorSpace = THREE.SRGBColorSpace;
+  sharedGlowTexture.minFilter = THREE.LinearFilter;
+  sharedGlowTexture.userData.atlasSharedTexture = true;
+  return sharedGlowTexture;
+}
+
+function createGlowSprite(colorValue: string | number, diameter: number, opacity: number): THREE.Sprite {
   const material = new THREE.SpriteMaterial({
-    map: texture,
-    color: 0xffffff,
+    map: getSharedGlowTexture(),
+    color: new THREE.Color(colorValue),
     transparent: true,
     opacity,
     depthWrite: false,
@@ -1011,7 +924,7 @@ function addSynapse(
     new THREE.MeshBasicMaterial({
       color,
       transparent: true,
-      opacity: learning ? (compact ? .10 : .18) : bridge ? .055 : .085,
+      opacity: learning ? (compact ? .16 : .20) : bridge ? (compact ? .075 : .055) : (compact ? .11 : .085),
       depthWrite: false,
       blending: THREE.AdditiveBlending,
     }),
@@ -1024,7 +937,7 @@ function addSynapse(
     new THREE.MeshBasicMaterial({
       color,
       transparent: true,
-      opacity: learning ? (compact ? .50 : .72) : bridge ? .28 : .44,
+      opacity: learning ? (compact ? .68 : .76) : bridge ? (compact ? .36 : .28) : (compact ? .54 : .44),
       depthWrite: false,
       blending: THREE.AdditiveBlending,
     }),
@@ -1047,7 +960,7 @@ function addSynapse(
   const pulseGlow = createGlowSprite(
     colorValue,
     learning ? 18 : bridge ? 10 : 12,
-    learning ? (compact ? .48 : .72) : bridge ? .34 : .46,
+    learning ? (compact ? .66 : .74) : bridge ? (compact ? .44 : .34) : (compact ? .56 : .46),
   );
   pulseGlow.material.depthTest = false;
   particle.add(pulseGlow);
@@ -1183,6 +1096,35 @@ function threeDepthMetrics(model: AtlasMetroModel, ids: string[], positions: Map
   return { zSpan, maxSameLevelSpan };
 }
 
+function threeFocusIds(
+  model: AtlasMetroModel,
+  expanded: ReadonlySet<string>,
+  selectedId: string | null,
+): string[] {
+  const visible = new Set(visibleAtlasIds(model, expanded));
+  if (!selectedId || !visible.has(selectedId)) return [...visible];
+
+  const selected = model.nodeMap.get(selectedId);
+  if (!selected) return [...visible];
+
+  const focus = new Set<string>([selectedId]);
+  const children = (model.childrenMap.get(selectedId) || []).filter(id => visible.has(id));
+  if (children.length) {
+    children.forEach(id => focus.add(id));
+  } else if (selected.parentId && visible.has(selected.parentId)) {
+    focus.add(selected.parentId);
+  }
+
+  const seed = new Set(focus);
+  for (const link of model.crossLinks) {
+    if (!link.isLearning) continue;
+    if (seed.has(link.source) && visible.has(link.target)) focus.add(link.target);
+    if (seed.has(link.target) && visible.has(link.source)) focus.add(link.source);
+  }
+
+  return [...focus];
+}
+
 function applyThreeSelection(runtime: ThreeRuntime, selectedId: string | null) {
   runtime.nodeGroups.forEach((group, id) => {
     const selected = id === selectedId;
@@ -1224,11 +1166,20 @@ function threeFitInsets(runtime: ThreeRuntime) {
     : { width, height, top: 118, right: 24, bottom: 62, left: 24, compact };
 }
 
-function fitThree(runtime: ThreeRuntime, animated = true) {
+function fitThree(
+  runtime: ThreeRuntime,
+  animated = true,
+  focusIds: readonly string[] | null = null,
+  scope: 'selection' | 'all' = focusIds?.length ? 'selection' : 'all',
+) {
   if (!runtime.worldPositions.size) return;
 
+  const fitPositions = (focusIds || [])
+    .map(id => runtime.worldPositions.get(id))
+    .filter((position): position is THREE.Vector3 => Boolean(position));
+  const positions = fitPositions.length ? fitPositions : [...runtime.worldPositions.values()];
   const box = new THREE.Box3();
-  runtime.worldPositions.forEach(position => box.expandByPoint(position));
+  positions.forEach(position => box.expandByPoint(position));
   const center = box.getCenter(new THREE.Vector3());
   const direction = new THREE.Vector3(.82, .54, 1.15).normalize();
   const forward = direction.clone().multiplyScalar(-1);
@@ -1289,7 +1240,9 @@ function fitThree(runtime: ThreeRuntime, animated = true) {
 
   const container = runtime.renderer.domElement.parentElement as HTMLElement | null;
   if (container) {
-    container.dataset.threeFitPolicy = 'projected-safe-area-v4';
+    container.dataset.threeFitPolicy = 'selection-safe-area-v5';
+    container.dataset.threeFitScope = scope;
+    container.dataset.threeFitNodeCount = String(positions.length);
     container.dataset.threeFitDistance = distance.toFixed(1);
     container.dataset.threeFitCoverage = coverage.toFixed(2);
     container.dataset.threeFitTopInset = String(top);
@@ -1373,6 +1326,7 @@ function rebuildThree(
   const ids = visibleAtlasIds(model, expanded);
   const visible = new Set(ids);
   const compact = isCompactRenderer(container);
+  const showLeafLabels = !compact && ids.length <= 44;
   const positions = threePositions(model, ids, Math.max(720, container.clientWidth), Math.max(560, container.clientHeight));
   runtime.worldPositions = positions;
   const depthMetrics = threeDepthMetrics(model, ids, positions);
@@ -1414,7 +1368,7 @@ function rebuildThree(
   }
 
   const visualCrossLinks = showBeams
-    ? projectVisualCrossLinks(model.crossLinks, visible, compact)
+    ? projectVisualCrossLinks(model.crossLinks, visible)
     : [];
 
   if (showBeams) {
@@ -1427,7 +1381,7 @@ function rebuildThree(
       const sourceColor = new THREE.Color(DOMAIN_COLOR[sourceNode?.domain || ''] || '#91a4bd');
       const targetColor = new THREE.Color(DOMAIN_COLOR[targetNode?.domain || ''] || '#91a4bd');
       const mixed = sourceColor.clone().lerp(targetColor, .5);
-      const color = link.isLearning ? new THREE.Color(learningColor(link.learningKind)) : mixed;
+      const color = link.isLearning ? new THREE.Color(learningColor(link.learningKind, link.learningTheme)) : mixed;
       addSynapse(
         runtime,
         content,
@@ -1496,7 +1450,8 @@ function rebuildThree(
 
     const domainColor = DOMAIN_COLOR[node.domain] || '#94a3b8';
     const typeColor = TYPE_COLOR[String(node.entityType)] || '#cbd5e1';
-    const baseEmissive = node.entityType === 'hub' ? .56 : node.entityType === 'subdomain' ? .42 : .32;
+    const baseEmissive = (node.entityType === 'hub' ? .56 : node.entityType === 'subdomain' ? .42 : .32)
+      + (compact ? .12 : .04);
 
     const coreMaterial = new THREE.MeshStandardMaterial({
       color: new THREE.Color(domainColor).lerp(new THREE.Color(typeColor), .20),
@@ -1532,7 +1487,7 @@ function rebuildThree(
     const neuronGlow = createGlowSprite(
       domainColor,
       radius * (node.entityType === 'hub' ? 5.6 : 4.9),
-      node.entityType === 'hub' ? .56 : .44,
+      (node.entityType === 'hub' ? .56 : .44) + (compact ? .12 : .04),
     );
     neuronGlow.material.depthTest = false;
     neuronGlow.userData.baseOpacity = (neuronGlow.material as THREE.SpriteMaterial).opacity;
@@ -1559,7 +1514,7 @@ function rebuildThree(
     selectionGlow.renderOrder = 7;
     group.add(selectionGlow);
 
-    if (!compact || node.entityType === 'hub' || node.entityType === 'subdomain' || id === selectedId) {
+    if (showLeafLabels || node.entityType === 'hub' || node.entityType === 'subdomain' || id === selectedId) {
       const label = createLabelSprite(node.name, DOMAIN_COLOR[node.domain], node.entityType === 'hub', compact);
       label.position.set(0, radius + (node.entityType === 'hub' ? 28 : 20), 0);
       group.add(label);
@@ -1627,8 +1582,8 @@ function MetroThreeView({
     container.dataset.threeProfile = compact ? 'compact-touch' : 'desktop';
     container.dataset.threeQuality = compact ? 'reduced-gpu' : 'full';
     const scene = new THREE.Scene();
-    scene.fog = new THREE.FogExp2(0x070b14, .00075);
-    const camera = new THREE.PerspectiveCamera(46, 1, 1, 5000);
+    scene.fog = new THREE.FogExp2(0x070b14, compact ? .00013 : .00017);
+    const camera = new THREE.PerspectiveCamera(compact ? 50 : 46, 1, 1, 6000);
     camera.position.set(520, 360, 780);
 
     let renderer: THREE.WebGLRenderer;
@@ -1661,17 +1616,17 @@ function MetroThreeView({
     controls.zoomSpeed = .85;
     controls.zoomToCursor = true;
     controls.minDistance = 95;
-    controls.maxDistance = 2400;
+    controls.maxDistance = compact ? 3600 : 5200;
     controls.screenSpacePanning = true;
     controls.mouseButtons.LEFT = THREE.MOUSE.ROTATE;
     controls.mouseButtons.MIDDLE = THREE.MOUSE.DOLLY;
     controls.mouseButtons.RIGHT = THREE.MOUSE.PAN;
 
-    scene.add(new THREE.HemisphereLight(0xd7e8ff, 0x111827, 1.25));
-    const key = new THREE.DirectionalLight(0xffffff, 1.4);
+    scene.add(new THREE.HemisphereLight(0xd7e8ff, 0x111827, compact ? 1.62 : 1.38));
+    const key = new THREE.DirectionalLight(0xffffff, compact ? 1.72 : 1.52);
     key.position.set(400, 650, 500);
     scene.add(key);
-    const rim = new THREE.DirectionalLight(0x6ee7ff, .7);
+    const rim = new THREE.DirectionalLight(0x6ee7ff, compact ? .92 : .78);
     rim.position.set(-520, -180, -360);
     scene.add(rim);
 
@@ -1711,13 +1666,27 @@ function MetroThreeView({
       resizeFrame = requestAnimationFrame(() => {
         const width = Math.round(container.clientWidth);
         const height = Math.round(container.clientHeight);
-        if (Math.abs(width - lastWidth) < 4 && Math.abs(height - lastHeight) < 4) return;
+        const widthDelta = Math.abs(width - lastWidth);
+        const heightDelta = Math.abs(height - lastHeight);
+        if (widthDelta < 4 && heightDelta < 4) return;
+
+        const orientationChanged = (width > height) !== (lastWidth > lastHeight);
+        const majorLayoutChange = orientationChanged
+          || widthDelta >= (compact ? 24 : 18)
+          || heightDelta >= (compact ? 56 : 28);
+
         lastWidth = width;
         lastHeight = height;
         resize();
-        rebuildThree(runtime, container, modelRef.current, expandedRef.current, selectedRef.current, showBeamsRef.current);
-        container.dataset.threeNodeCount = String(visibleAtlasIds(modelRef.current, expandedRef.current).length);
-        container.dataset.threeSynapseCount = String(runtime.pulses.length);
+
+        if (majorLayoutChange) {
+          rebuildThree(runtime, container, modelRef.current, expandedRef.current, selectedRef.current, showBeamsRef.current);
+          container.dataset.threeNodeCount = String(visibleAtlasIds(modelRef.current, expandedRef.current).length);
+          container.dataset.threeSynapseCount = String(runtime.pulses.length);
+        }
+
+        const focusIds = threeFocusIds(modelRef.current, expandedRef.current, selectedRef.current);
+        fitThree(runtime, false, focusIds, 'selection');
         renderAndMeasureThree(runtime, container);
       });
     });
@@ -1736,6 +1705,12 @@ function MetroThreeView({
       clearRendererError(container);
       resize();
       rebuildThree(runtime, container, modelRef.current, expandedRef.current, selectedRef.current, showBeamsRef.current);
+      fitThree(
+        runtime,
+        false,
+        threeFocusIds(modelRef.current, expandedRef.current, selectedRef.current),
+        'selection',
+      );
       renderAndMeasureThree(runtime, container);
     };
     renderer.domElement.addEventListener('webglcontextlost', onContextLost);
@@ -1780,14 +1755,18 @@ function MetroThreeView({
     renderer.domElement.addEventListener('pointerleave', onPointerLeave);
     renderer.domElement.addEventListener('pointerup', onPointerUp);
 
-    const animate = () => {
+    let lastFrameAt = 0;
+    const minimumFrameMs = compact ? 1000 / 36 : 0;
+    const animate = (now: number) => {
       runtime.frame = requestAnimationFrame(animate);
       if (document.hidden) return;
-      updateSynapsePulses(runtime, performance.now());
+      if (minimumFrameMs && now - lastFrameAt < minimumFrameMs) return;
+      lastFrameAt = now;
+      updateSynapsePulses(runtime, now);
       controls.update();
       renderer.render(scene, camera);
     };
-    animate();
+    runtime.frame = requestAnimationFrame(animate);
 
     return () => {
       observer.disconnect();
@@ -1816,10 +1795,18 @@ function MetroThreeView({
     rebuildThree(runtime, container, model, expanded, selectedId, showBeams);
     container.dataset.threeNodeCount = String(visibleAtlasIds(model, expanded).length);
     container.dataset.threeSynapseCount = String(runtime.pulses.length);
+
+    const focusIds = threeFocusIds(model, expanded, selectedId);
+    const focusKey = `${model.revision}|${expansionKey}|${selectedId || ''}`;
     if (!runtime.hasFit) {
       runtime.hasFit = true;
-      fitThree(runtime, false);
+      fitThree(runtime, false, focusIds, 'selection');
+      lastFocusKey.current = focusKey;
+    } else if (lastFocusKey.current !== focusKey) {
+      fitThree(runtime, true, focusIds, 'selection');
+      lastFocusKey.current = focusKey;
     }
+
     const painted = renderAndMeasureThree(runtime, container);
     if (painted > 0 || !isAtlasReadback()) onReadyRef.current?.();
   }, [model.revision, expansionKey, showBeams]);
@@ -1828,13 +1815,18 @@ function MetroThreeView({
     const runtime = runtimeRef.current;
     if (!runtime || lastFitNonce.current === fitNonce) return;
     lastFitNonce.current = fitNonce;
-    fitThree(runtime, true);
+    fitThree(runtime, true, null, 'all');
   }, [fitNonce]);
 
   useEffect(() => {
     const runtime = runtimeRef.current;
-    if (runtime) applyThreeSelection(runtime, selectedId);
-  }, [selectedId]);
+    if (!runtime) return;
+    applyThreeSelection(runtime, selectedId);
+    const focusKey = `${model.revision}|${expansionKey}|${selectedId || ''}`;
+    if (lastFocusKey.current === focusKey) return;
+    fitThree(runtime, true, threeFocusIds(model, expanded, selectedId), 'selection');
+    lastFocusKey.current = focusKey;
+  }, [selectedId, model.revision, expansionKey]);
 
   return (
     <div

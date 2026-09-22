@@ -223,15 +223,16 @@ test('procedural Learning separates execution, inference, data and causal semant
     scope: 'INTRA_DOMAIN',
   };
   const cases = [
-    ['writer-rebase', 'Writer recovery after rebase', 'Execução & confiabilidade'],
-    ['global-null', 'Global null calibration and covariance', 'Inferência, nulls & calibração'],
-    ['averaging', 'Averaging aggregation and low-N uncertainty', 'Dados, agregação & incerteza'],
-    ['causal', 'Localization is not causation', 'Dados, agregação & incerteza'],
+    ['writer-rebase', 'Writer recovery after rebase', 'Execução & confiabilidade', 'Robustez & reprodutibilidade'],
+    ['global-null', 'Global null calibration and covariance', 'Dados, agregação & incerteza', 'Inferência, nulls & calibração'],
+    ['averaging', 'Averaging aggregation and low-N uncertainty', 'Dados, agregação & incerteza', 'Inferência, nulls & calibração'],
+    ['causal', 'Localization is not causation', 'Dados, agregação & incerteza', 'Causalidade & interpretação'],
   ];
-  for (const [id, label, expectedSource] of cases) {
+  for (const [id, label, expectedSource, expectedTarget] of cases) {
     const route = learningSemanticRoute({ ...base, id, label });
     assert.ok(route, `missing procedural route for ${id}`);
     assert.equal(route.source?.subdomain, expectedSource);
+    assert.equal(route.target?.subdomain, expectedTarget);
   }
 });
 
@@ -305,7 +306,10 @@ test('dedicated Atlas production page uses Metro renderer, G6 and deterministic 
   assert.match(app, /Modo 3D ativo/);
   assert.match(app, /data-atlas-learning-links/);
   assert.match(app, /data-atlas-learning-records/);
+  assert.match(app, /data-atlas-learning-themes/);
   assert.match(app, /aprendizados canônicos/);
+  assert.match(app, /atlas-learning-route/);
+  assert.match(app, /onSelectNode/);
   assert.match(app, /data-atlas-learning-scientific/);
   assert.match(app, /data-atlas-learning-procedural/);
   assert.match(app, /data-atlas-learning-semantic/);
@@ -343,6 +347,7 @@ test('dedicated Atlas production page uses Metro renderer, G6 and deterministic 
   assert.match(taxonomy, /Conservative semantic router/);
   const semantics = await text('src/atlas3d/learningSemantics.ts');
   assert.match(semantics, /STRUCTURED_GROUP/);
+  assert.match(semantics, /learningSignalOf/);
   assert.match(semantics, /peerRoutes/);
   assert.match(semantics, /Governança científica & decisão/);
   assert.match(semantics, /Inferência bayesiana · Priors & evidência/);
@@ -372,8 +377,12 @@ test('dedicated Atlas production page uses Metro renderer, G6 and deterministic 
   assert.match(renderer, /projectVisualCrossLinks/);
   assert.match(renderer, /g6LearningRecords/);
   assert.match(renderer, /g6LearningRelations/);
-  assert.match(renderer, /visual-record:/);
-  assert.match(renderer, /learningRef \|\| link\.id/);
+  const learningVisuals = await text('src/atlas3d/learningVisuals.ts');
+  assert.match(learningVisuals, /visual-record:/);
+  assert.match(learningVisuals, /visual-learning:/);
+  assert.match(learningVisuals, /theme:/);
+  assert.match(learningVisuals, /learningRef \|\| link\.id/);
+  assert.match(learningVisuals, /canonical Learning relations/);
   assert.match(renderer, /threeLearningVisualSynapses/);
   assert.match(renderer, /threeLearningRecords/);
   assert.match(renderer, /threeLearningRelations/);
@@ -396,6 +405,11 @@ test('dedicated Atlas production page uses Metro renderer, G6 and deterministic 
   assert.match(renderer, /onReadyRef\.current\?\.\(\)/);
   assert.match(renderer, /runtime-skip/);
   assert.match(renderer, /isAtlasReadback/);
+  assert.match(renderer, /sharedGlowTexture/);
+  assert.match(renderer, /atlasSharedTexture/);
+  assert.match(renderer, /minimumFrameMs/);
+  assert.match(renderer, /showLeafLabels/);
+  assert.match(renderer, /threeFocusIds/);
   assert.match(renderer, /preserveDrawingBuffer: isAtlasReadback\(\)/);
   assert.match(renderer, /learningColor/);
   assert.match(renderer, /SCIENTIFIC_LEARNING_PIPELINE/);
@@ -418,10 +432,11 @@ test('dedicated Atlas production page uses Metro renderer, G6 and deterministic 
   assert.match(renderer, /updateSynapsePulses/);
   assert.match(renderer, /synapseCurve/);
   assert.doesNotMatch(renderer, /TorusGeometry|RingGeometry/);
-  assert.match(renderer, /fitThree\(runtime, false\)/);
-  assert.match(renderer, /fitThree\(runtime, true\)/);
+  assert.match(renderer, /fitThree\(/);
   assert.match(renderer, /threeFitInsets/);
-  assert.match(renderer, /projected-safe-area-v4/);
+  assert.match(renderer, /selection-safe-area-v5/);
+  assert.match(renderer, /threeFitScope/);
+  assert.match(renderer, /threeFitNodeCount/);
   assert.match(renderer, /threeFitCoverage/);
   assert.doesNotMatch(renderer, /\[model\.revision, expansionKey, showBeams, fitNonce\]/);
   assert.match(renderer, /NEXO: -520/);
@@ -438,6 +453,9 @@ test('dedicated Atlas production page uses Metro renderer, G6 and deterministic 
   assert.match(css, /grid-template-columns:minmax\(116px,1fr\) auto auto auto auto/);
   assert.match(css, /atlas-mobile-details-toggle::after/);
   assert.match(css, /prefers-reduced-motion:reduce/);
+  assert.match(css, /\.g6-minimap/);
+  assert.match(css, /contain:layout paint/);
+  assert.match(css, /backdrop-filter:none/);
   assert.doesNotMatch(css, /pointer-events:none;opacity:\.18/);
 
   assert.doesNotMatch(index, /@antv\/g6@5\/dist\/g6\.min\.js/);

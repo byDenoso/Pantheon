@@ -5,6 +5,7 @@ import {
   buildAtlasMetroModel,
   relatedAtlasNodes,
   visibleAtlasIds,
+  type AtlasCrossLink,
   type AtlasMetroNode,
 } from './atlasAdapter.ts';
 import { MetroAtlasRenderer } from './MetroAtlasRenderer.tsx';
@@ -34,16 +35,31 @@ function formatDate(value: string | null): string {
   }).format(date);
 }
 
+type LearningConnection = {
+  id: string;
+  kind: AtlasCrossLink['learningKind'];
+  theme: string;
+  label: string;
+  otherId: string;
+  otherName: string;
+  direction: 'entrada' | 'saída';
+  records: number;
+};
+
 function DetailPanel({
   node,
   children,
   related,
+  learning,
   generatedAt,
+  onSelectNode,
 }: {
   node: AtlasMetroNode | null;
   children: AtlasMetroNode[];
   related: AtlasMetroNode[];
+  learning: LearningConnection[];
   generatedAt: string;
+  onSelectNode: (id: string) => void;
 }) {
   if (!node) {
     return <div className="atlas-empty"><strong>Nenhuma estação selecionada</strong><span>Clique em uma estação do mapa.</span></div>;
@@ -72,7 +88,9 @@ function DetailPanel({
         <header><strong>Subestações</strong><span>{children.length}</span></header>
         <div className="atlas-chips">
           {children.length
-            ? children.map(child => <span className="atlas-chip" key={child.id}>{child.name}</span>)
+            ? children.map(child => (
+              <button className="atlas-chip" key={child.id} onClick={() => onSelectNode(child.id)}>{child.name}</button>
+            ))
             : <span className="atlas-chip">folha</span>}
         </div>
       </section>
@@ -81,8 +99,24 @@ function DetailPanel({
         <header><strong>Pontes</strong><span>{related.length}</span></header>
         <div className="atlas-chips">
           {related.length
-            ? related.slice(0, 18).map(item => <span className="atlas-chip" key={item.id}>{item.name}</span>)
+            ? related.slice(0, 18).map(item => (
+              <button className="atlas-chip" key={item.id} onClick={() => onSelectNode(item.id)}>{item.name}</button>
+            ))
             : <span className="atlas-chip">sem relação transversal visível</span>}
+        </div>
+      </section>
+
+      <section className="atlas-detail-section atlas-learning-detail">
+        <header><strong>Learning</strong><span>{learning.length} rotas</span></header>
+        <div className="atlas-learning-list">
+          {learning.length ? learning.slice(0, 12).map(item => (
+            <button key={item.id} className="atlas-learning-route" onClick={() => onSelectNode(item.otherId)}>
+              <span data-kind={item.kind || 'LEARNING'}>{item.kind === 'SCIENTIFIC_LEARNING_PIPELINE' ? 'Scientific' : item.kind === 'PROCEDURAL' ? 'Procedural' : 'Semantic'}</span>
+              <strong>{item.theme}</strong>
+              <small>{item.direction} · {item.otherName}{item.records > 1 ? ` · ${item.records} registros` : ''}</small>
+            </button>
+          )) : <span className="atlas-chip">sem Learning direto nesta estação</span>}
+          {learning.length > 12 && <small className="atlas-learning-more">+{learning.length - 12} rotas adicionais</small>}
         </div>
       </section>
 
@@ -213,6 +247,9 @@ export default function Atlas3DApp() {
   const learningRecordCount = new Set(
     learningLinks.map(link => link.learningRef || link.id),
   ).size;
+  const learningThemeCount = new Set(
+    learningLinks.map(link => link.learningTheme || link.learningRef || link.id),
+  ).size;
   const scientificLearningLinkCount = model.crossLinks.filter(link =>
     link.learningKind === 'SCIENTIFIC_LEARNING_PIPELINE'
   ).length;
@@ -269,6 +306,38 @@ export default function Atlas3DApp() {
       || model.nodeMap.get(link.target)?.entityType === 'subdomain'
     )
   ).length;
+  const learningConnections: LearningConnection[] = [];
+  if (selected) {
+    const grouped = new Map<string, LearningConnection>();
+    for (const link of learningLinks) {
+      if (link.source !== selected.id && link.target !== selected.id) continue;
+      const outgoing = link.source === selected.id;
+      const otherId = outgoing ? link.target : link.source;
+      const other = model.nodeMap.get(otherId);
+      if (!other) continue;
+      const theme = link.learningTheme || link.learningGroup || link.label.replace(/^Learning ·\s*/i, '');
+      const key = [outgoing ? 'out' : 'in', otherId, link.learningKind || 'LEARNING', theme].join('|');
+      const current = grouped.get(key);
+      if (current) {
+        current.records += 1;
+        continue;
+      }
+      grouped.set(key, {
+        id: key,
+        kind: link.learningKind,
+        theme,
+        label: link.label,
+        otherId,
+        otherName: other.name,
+        direction: outgoing ? 'saída' : 'entrada',
+        records: 1,
+      });
+    }
+    learningConnections.push(...[...grouped.values()].sort((left, right) =>
+      left.otherName.localeCompare(right.otherName) || left.theme.localeCompare(right.theme)
+    ));
+  }
+
   const peerArtifactNodeCount = model.nodes.filter(node => {
     const source = String(node.sourceId || '');
     return /^work:PEER-DETECTION-D\d+/i.test(source)
@@ -305,6 +374,7 @@ export default function Atlas3DApp() {
       data-atlas-qa-expanded-node={qaExpandedNode?.name || 'none'}
       data-atlas-learning-links={learningLinkCount}
       data-atlas-learning-records={learningRecordCount}
+      data-atlas-learning-themes={learningThemeCount}
       data-atlas-learning-scientific={scientificLearningLinkCount}
       data-atlas-learning-procedural={proceduralLearningLinkCount}
       data-atlas-learning-semantic={semanticLearningLinkCount}
@@ -404,9 +474,9 @@ export default function Atlas3DApp() {
           {learningLinkCount > 0 && (
             <span
               className="atlas-learning-legend"
-              title={`${learningRecordCount} aprendizados canônicos · ${learningLinkCount} relações · Scientific ${scientificLearningLinkCount} · Procedural ${proceduralLearningLinkCount} · Semantic ${semanticLearningLinkCount} · ${learningDistinctSubdomainCount} áreas · maior concentração ${learningMaxSubdomainShare}%`}
+              title={`${learningRecordCount} aprendizados canônicos · ${learningThemeCount} temas · ${learningLinkCount} relações · Scientific ${scientificLearningLinkCount} · Procedural ${proceduralLearningLinkCount} · Semantic ${semanticLearningLinkCount} · ${learningDistinctSubdomainCount} áreas · maior concentração ${learningMaxSubdomainShare}%`}
             >
-              <i />Learning <b>{learningRecordCount}</b>
+              <i />Learning <b>{learningRecordCount}</b><em>{learningThemeCount} temas</em>
             </span>
           )}
           <small>{visibleIds.length} estações visíveis · {model.nodes.length} total</small>
@@ -471,7 +541,9 @@ export default function Atlas3DApp() {
           node={selected}
           children={children}
           related={related}
+          learning={learningConnections}
           generatedAt={model.generatedAt}
+          onSelectNode={setSelectedId}
         />
         <div className="atlas-source-state">
           <span>{system.sourceLabel}</span>
