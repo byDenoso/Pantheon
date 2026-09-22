@@ -4,6 +4,7 @@ import { onSessionChange } from '../contracts/session-events.ts';
 import { DataSourceError, activeSource } from './adapters';
 import { preserveStateOnFailure } from './adapters/source.ts';
 import { DEFAULT_SCENARIO_ID } from './fixtures/scenarios.ts';
+import { dispatchProjectionSync, waitForProjectionSync } from './projectionSync.ts';
 
 export type SyncStatus = 'IDLE' | 'SYNCING' | 'CHANGED' | 'UNCHANGED' | 'FAILED';
 
@@ -21,6 +22,9 @@ export interface SystemStore {
   sourceLabel: string;
   scenarioId: string;
   setScenarioId: (id: string) => void;
+  /** Dispara o pipeline real de sincronização e só conclui após readback do mesmo request_id. */
+  sync: () => void;
+  /** Revalida somente a origem atualmente publicada; não dispara pipeline. */
   reload: () => void;
 }
 
@@ -42,6 +46,7 @@ export function useSystem(initialScenario = DEFAULT_SCENARIO_ID): SystemStore {
   const [syncMessage, setSyncMessage] = useState('');
   const [lastSuccessfulReadAt, setLastSuccessfulReadAt] = useState<string | null>(null);
   const controller = useRef<AbortController | null>(null);
+  const syncController = useRef<AbortController | null>(null);
   const stateRef = useRef<SystemState | null>(null);
   const forceNextRead = useRef(false);
 
@@ -59,7 +64,7 @@ export function useSystem(initialScenario = DEFAULT_SCENARIO_ID): SystemStore {
     if (typeof window === 'undefined' || activeSource.kind !== 'remote') return;
 
     const poll = window.setInterval(() => {
-      if (document.visibilityState === 'visible') reload();
+      if (document.visibilityState === 'visible' && !syncController.current) reload();
     }, 60_000);
 
     const onVisibility = () => {
@@ -134,6 +139,65 @@ export function useSystem(initialScenario = DEFAULT_SCENARIO_ID): SystemStore {
     return () => ctrl.abort();
   }, [scenarioId, nonce]);
 
+  const sync = useCallback(() => {
+    const previous = stateRef.current;
+    if (!previous || activeSource.kind !== 'remote') {
+      reload();
+      return;
+    }
+
+    syncController.current?.abort();
+    const ctrl = new AbortController();
+    syncController.current = ctrl;
+    const previousFingerprint = previous.bus.fingerprint;
+
+    setError('');
+    setSyncStatus('SYNCING');
+    setSyncMessage('Disparando sincronização real…');
+
+    void (async () => {
+      try {
+        const receipt = await dispatchProjectionSync(previousFingerprint, ctrl.signal);
+        if (ctrl.signal.aborted || syncController.current !== ctrl) return;
+
+        setSyncMessage(receipt.deduplicated
+          ? 'Sincronização já em andamento · aguardando readback…'
+          : 'Dispatch aceito · aguardando publicação…');
+
+        await waitForProjectionSync(receipt.request_id, ctrl.signal);
+        if (ctrl.signal.aborted || syncController.current !== ctrl) return;
+
+        setSyncMessage('Publicação confirmada · atualizando estado…');
+        const next = await activeSource.load({ signal: ctrl.signal, scenarioId, force: true });
+        if (ctrl.signal.aborted || syncController.current !== ctrl) return;
+
+        stateRef.current = next;
+        setState(next);
+        setLoad(next.global_state === 'LIVE' ? 'READY' : 'PARTIAL');
+        setLastSuccessfulReadAt(new Date().toISOString());
+
+        const changed = previousFingerprint !== next.bus.fingerprint;
+        setSyncStatus(changed ? 'CHANGED' : 'UNCHANGED');
+        setSyncMessage(changed ? 'Nova projeção publicada' : 'Sem alterações · sincronização concluída');
+      } catch (failure) {
+        if (ctrl.signal.aborted || syncController.current !== ctrl || (failure as Error)?.name === 'AbortError') return;
+        const { load: nextLoad, message } = messageFor(failure);
+        setError(message);
+        if (previous && preserveStateOnFailure(nextLoad)) {
+          setLoad(previous.global_state === 'LIVE' ? 'READY' : 'PARTIAL');
+          setSyncStatus('FAILED');
+          setSyncMessage('Sincronização não confirmada');
+        } else {
+          setLoad(nextLoad);
+          setSyncStatus('FAILED');
+          setSyncMessage('Sincronização falhou');
+        }
+      } finally {
+        if (syncController.current === ctrl) syncController.current = null;
+      }
+    })();
+  }, [reload, scenarioId]);
+
   return {
     state, load, error,
     syncing: syncStatus === 'SYNCING',
@@ -142,6 +206,6 @@ export function useSystem(initialScenario = DEFAULT_SCENARIO_ID): SystemStore {
     lastSuccessfulReadAt,
     sourceKind: activeSource.kind,
     sourceLabel: activeSource.label,
-    scenarioId, setScenarioId, reload,
+    scenarioId, setScenarioId, sync, reload,
   };
 }
