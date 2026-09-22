@@ -75,6 +75,51 @@ test('entities stay below subdomain stations and preserve production provenance'
   assert.equal(path[1].entityType, 'subdomain');
 });
 
+test('campaign semantic parent and source links survive while hidden campaign tests stay out of Atlas', () => {
+  const source = state();
+  const template = source.graph.nodes.find(node => node.type !== 'DOMAIN' && node.type !== 'FILAMENT');
+  assert.ok(template);
+
+  source.graph.nodes.push(
+    {
+      ...template,
+      id: 'campaign:CAMP-DYNAMIC-1',
+      sourceId: undefined,
+      type: 'CAMPAIGN',
+      label: 'DDE · Dynamic campaign',
+      domain: 'SCIENCE',
+      campaign_id: 'CAMP-DYNAMIC-1',
+      parent_subdomain: 'Energia escura',
+      semantic_description: 'Dynamic campaign semantic description',
+      source_ref: 'tower://roadmaps/RM-DYNAMIC-1',
+      source_links: [{
+        label: 'Primary paper',
+        url: 'https://arxiv.org/abs/2503.14743',
+        kind: 'ARXIV',
+      }],
+      atlas_visible: true,
+    },
+    {
+      ...template,
+      id: 'test:T-DYNAMIC-1',
+      type: 'TEST',
+      label: 'Hidden campaign test',
+      domain: 'SCIENCE',
+      campaign_id: 'CAMP-DYNAMIC-1',
+      atlas_visible: false,
+    },
+  );
+
+  const model = buildAtlasMetroModel(source);
+  const campaign = model.nodeMap.get('campaign:CAMP-DYNAMIC-1');
+  assert.ok(campaign);
+  assert.equal(campaign.entityType, 'CAMPAIGN');
+  assert.equal(model.nodeMap.get(campaign.parentId)?.name, 'Energia escura');
+  assert.equal(campaign.sourceRef, 'tower://roadmaps/RM-DYNAMIC-1');
+  assert.equal(campaign.sourceLinks[0].url, 'https://arxiv.org/abs/2503.14743');
+  assert.equal(model.nodeMap.has('test:T-DYNAMIC-1'), false);
+});
+
 test('canonical graph relations become Metro bridge data instead of a second force layout', () => {
   const source = state();
   const model = buildAtlasMetroModel(source);
@@ -449,6 +494,10 @@ test('dedicated Atlas production page uses Metro renderer, G6 and deterministic 
   assert.match(app, /data-atlas-semantic-subdomain-links/);
   assert.match(app, /data-atlas-procedural-subdomain-links/);
   assert.match(app, /data-atlas-peer-artifact-nodes/);
+  assert.match(app, /data-atlas-campaign-count/);
+  assert.match(app, /data-atlas-campaign-source-links/);
+  assert.match(app, /atlas-source-link/);
+  assert.match(app, /node\.sourceLinks/);
   assert.match(app, /atlas-view-switch/);
   assert.match(app, /THEME_STORAGE_KEY/);
   assert.match(app, /theme.*=== 'light'/);
@@ -509,6 +558,8 @@ test('dedicated Atlas production page uses Metro renderer, G6 and deterministic 
   assert.match(graph3d, /SUBDOMAIN: 0\.09/);
   assert.match(layered, /SUBDOMAIN: 'ENTITY'/);
     const taxonomy = await text('src/viewmodels/atlasTaxonomy.ts');
+  assert.match(taxonomy, /parent_subdomain/);
+  assert.match(taxonomy, /node\.type === 'CAMPAIGN'/);
   assert.match(taxonomy, /atlasSubdomainHint/);
   assert.match(taxonomy, /Conservative semantic router/);
   const semantics = await text('src/atlas3d/learningSemantics.ts');
@@ -518,6 +569,8 @@ test('dedicated Atlas production page uses Metro renderer, G6 and deterministic 
   assert.match(semantics, /Governança científica & decisão/);
   assert.match(semantics, /Inferência bayesiana · Priors & evidência/);
   const adapter = await text('src/atlas3d/atlasAdapter.ts');
+  assert.match(adapter, /node\.atlas_visible !== false/);
+  assert.match(adapter, /sourceLinks/);
   assert.match(adapter, /resolveLearningEndpoint/);
   assert.match(adapter, /descendantCounts/);
   assert.match(adapter, /ENTITY_SUBDOMAIN/);
@@ -638,6 +691,7 @@ test('dedicated Atlas production page uses Metro renderer, G6 and deterministic 
   assert.match(css, /atlas-theme-button/);
   assert.match(css, /atlas-expand-button/);
   assert.match(css, /atlas-learning-legend i/);
+  assert.match(css, /atlas-source-link/);
   assert.match(css, /repeat\(6,auto\)/);
   assert.match(css, /\.atlas-workspace\{position:absolute;inset:0;width:100%;height:100%/);
   assert.match(css, /\.atlas-sidebar\.mobile-open/);

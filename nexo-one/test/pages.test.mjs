@@ -95,6 +95,111 @@ test('GitHub Pages consumes only the sanctioned TOWER_V06 public projection', as
   assert.doesNotMatch(builder, /truthgraph\.snapshot/);
 });
 
+test('campaigns are first-class, source-linked and hide member tests from Atlas by default', async () => {
+  const { buildPagesProjection } = await import('../scripts/build-pages-system.mjs');
+  const manifest = {
+    authority: 'TOWER_V06',
+    projection_only: true,
+    writeback: 'FORBIDDEN',
+    tower_commit: 'e'.repeat(40),
+    event_cursor: '20260922T120000000000Z-campaign',
+    projection_fingerprint: 'sha256:' + 'f'.repeat(64),
+    generated_at: '2026-09-22T12:00:00Z',
+  };
+  const projection = {
+    contract: 'NEXO_PUBLIC_PROJECTION_V1',
+    manifest,
+    event_cursor: manifest.event_cursor,
+    campaigns: [{
+      campaign_id: 'CAMP-DEMO',
+      roadmap_id: 'RM-DEMO',
+      title: 'Demo dark-energy campaign',
+      domain: 'SCIENCE',
+      subdomain: 'COSMOLOGY/DARK_ENERGY',
+      state: 'ACTIVE',
+      semantic_description: 'Tests a bounded dark-energy hypothesis.',
+      semantic_state: 'ACTIVE',
+      atlas_projection: {
+        visible: true,
+        parent_subdomain: 'Energia escura',
+        label: 'DDE · demo',
+        show_tests: false,
+      },
+      source_links: [{
+        label: 'Primary source',
+        url: 'https://arxiv.org/abs/2503.14743',
+        kind: 'ARXIV',
+      }],
+    }],
+    work: [{
+      id: 'WORK-DEMO',
+      title: 'Campaign work',
+      domain: 'SCIENCE',
+      status: 'READY',
+      campaign_id: 'CAMP-DEMO',
+    }],
+    tests: [{
+      id: 'T-DEMO-001',
+      title: 'Campaign test',
+      domain: 'SCIENCE',
+      status: 'READY',
+      campaign_id: 'CAMP-DEMO',
+    }],
+    capabilities: {},
+    counts: { active_work: 1, tests: 1, campaigns: 1, capabilities: 0 },
+  };
+
+  const { system } = buildPagesProjection({ projection, manifestFile: manifest });
+  const campaign = system.graph.nodes.find(node => node.id === 'campaign:CAMP-DEMO');
+  const work = system.graph.nodes.find(node => node.id === 'work:WORK-DEMO');
+  const childTest = system.graph.nodes.find(node => node.id === 'test:T-DEMO-001');
+
+  assert.ok(campaign);
+  assert.equal(campaign.type, 'CAMPAIGN');
+  assert.equal(campaign.label, 'DDE · demo');
+  assert.equal(campaign.parent_subdomain, 'Energia escura');
+  assert.equal(campaign.member_count, 2);
+  assert.equal(campaign.source_links[0].url, 'https://arxiv.org/abs/2503.14743');
+  assert.equal(work.atlas_visible, undefined);
+  assert.equal(childTest.atlas_visible, false);
+  assert.ok(system.graph.edges.some(edge => edge.from === 'domain:SCIENCE' && edge.to === campaign.id));
+  assert.ok(system.graph.edges.some(edge => edge.from === campaign.id && edge.to === work.id));
+  assert.ok(system.graph.edges.some(edge => edge.from === campaign.id && edge.to === childTest.id));
+});
+
+test('legacy projection campaign_id still creates a campaign node without hardcoded campaign ids', async () => {
+  const { buildPagesProjection } = await import('../scripts/build-pages-system.mjs');
+  const manifest = {
+    authority: 'TOWER_V06',
+    projection_only: true,
+    writeback: 'FORBIDDEN',
+    tower_commit: '7'.repeat(40),
+    event_cursor: '20260922T120100000000Z-campaign-fallback',
+    projection_fingerprint: 'sha256:' + '8'.repeat(64),
+    generated_at: '2026-09-22T12:01:00Z',
+  };
+  const projection = {
+    contract: 'NEXO_PUBLIC_PROJECTION_V1',
+    manifest,
+    event_cursor: manifest.event_cursor,
+    work: [],
+    tests: [{
+      id: 'T-FUTURE-001',
+      domain: 'SCIENCE',
+      status: 'READY',
+      campaign_id: 'CAMP-FUTURE-UNSEEN',
+    }],
+    capabilities: {},
+    counts: { active_work: 0, tests: 1, capabilities: 0 },
+  };
+
+  const { system } = buildPagesProjection({ projection, manifestFile: manifest });
+  assert.ok(system.graph.nodes.some(node => node.id === 'campaign:CAMP-FUTURE-UNSEEN'));
+  assert.ok(system.graph.edges.some(edge =>
+    edge.from === 'campaign:CAMP-FUTURE-UNSEEN' && edge.to === 'test:T-FUTURE-001'
+  ));
+});
+
 test('sanctioned TOWER interdomain entities become visible learning filaments', async () => {
   const { buildPagesProjection } = await import('../scripts/build-pages-system.mjs');
   const manifest = {

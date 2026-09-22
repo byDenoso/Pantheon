@@ -34,6 +34,8 @@ export interface AtlasMetroNode {
   sourceRevision: string | null;
   fingerprint: string | null;
   authorityClass: string | null;
+  sourceRef: string | null;
+  sourceLinks: Array<{ label: string; url: string; kind?: string }>;
   temporal: AtlasTemporalPoint[];
   synthetic: boolean;
 }
@@ -267,7 +269,8 @@ export function buildAtlasMetroModel(state: SystemState): AtlasMetroModel {
 
   const sourceNodes = state.graph.nodes
     .filter(node =>
-      node.type !== 'DOMAIN'
+      node.atlas_visible !== false
+      && node.type !== 'DOMAIN'
       && node.type !== 'FILAMENT'
       && !/^work:PEER-DETECTION-D\d+/i.test(String(node.id || ''))
       && !/^test:PEER-DETECTION-D\d+/i.test(String(node.id || ''))
@@ -299,6 +302,8 @@ export function buildAtlasMetroModel(state: SystemState): AtlasMetroModel {
       sourceRevision: state.bus.fingerprint,
       fingerprint: state.bus.fingerprint,
       authorityClass: 'DERIVED',
+      sourceRef: null,
+      sourceLinks: [],
       temporal: state.generated_at ? [{ label: 'projection', at: state.generated_at }] : [],
       synthetic: true,
     });
@@ -336,6 +341,8 @@ export function buildAtlasMetroModel(state: SystemState): AtlasMetroModel {
           sourceRevision: state.bus.fingerprint,
           fingerprint: lane.fingerprint || null,
           authorityClass: 'DERIVED',
+          sourceRef: lane.source_ref || null,
+          sourceLinks: [],
           temporal: observedAt ? [{ label: 'projection', at: observedAt }] : [],
           synthetic: true,
         });
@@ -366,6 +373,8 @@ export function buildAtlasMetroModel(state: SystemState): AtlasMetroModel {
         sourceRevision: state.bus.fingerprint,
         fingerprint: `${state.bus.fingerprint}:semantic-anchor:${id}`,
         authorityClass: 'DERIVED',
+        sourceRef: null,
+        sourceLinks: [],
         temporal: state.generated_at ? [{ label: 'projection', at: state.generated_at }] : [],
         synthetic: true,
       });
@@ -398,6 +407,8 @@ export function buildAtlasMetroModel(state: SystemState): AtlasMetroModel {
         sourceRevision: state.bus.fingerprint,
         fingerprint: `${state.bus.fingerprint}:${id}`,
         authorityClass: 'DERIVED',
+        sourceRef: null,
+        sourceLinks: [],
         temporal: latest ? [{ label: 'projection', at: latest }] : [],
         synthetic: true,
       });
@@ -422,6 +433,8 @@ export function buildAtlasMetroModel(state: SystemState): AtlasMetroModel {
           sourceRevision: member.source_revision || null,
           fingerprint: member.fingerprint || null,
           authorityClass: member.authority_class || null,
+          sourceRef: member.source_ref || null,
+          sourceLinks: Array.isArray(member.source_links) ? member.source_links : [],
           temporal: temporalPoints(member, state),
           synthetic: false,
         });

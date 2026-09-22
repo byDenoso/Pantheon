@@ -37,6 +37,7 @@ export function validateSanctionedProjection(projection, manifestFile = null) {
   if (!/^sha256:[0-9a-f]{64}$/i.test(String(manifest.projection_fingerprint || ''))) fail('projection_fingerprint invalid');
   if (projection.event_cursor !== manifest.event_cursor) fail('projection event_cursor differs from manifest');
   if (!Array.isArray(projection.work) || !Array.isArray(projection.tests)) fail('work/tests arrays missing');
+  if (projection.campaigns !== undefined && !Array.isArray(projection.campaigns)) fail('campaigns must be an array when present');
   if (projection.human_gates && (!Array.isArray(projection.human_gates.work_ids) || !Number.isInteger(projection.human_gates.count))) fail('human_gates invalid');
   if (!projection.capabilities || typeof projection.capabilities !== 'object' || Array.isArray(projection.capabilities)) {
     fail('capabilities map missing');
@@ -366,6 +367,45 @@ function projectedWorkNode(item, manifest, observedAt, humanWorkIds) {
   };
 }
 
+function campaignRecordsFromProjection(projection) {
+  const explicit = Array.isArray(projection.campaigns) ? projection.campaigns : [];
+  const byId = new Map();
+
+  for (const raw of explicit) {
+    if (!raw || typeof raw !== 'object') continue;
+    const campaignId = String(raw.campaign_id || raw.id || '').trim();
+    if (!campaignId) continue;
+    byId.set(campaignId, { ...raw, campaign_id: campaignId, derived_fallback: false });
+  }
+
+  // Backward-compatible bridge for projections produced before campaigns[] existed.
+  // This is intentionally weaker than canonical campaign metadata, but it means the
+  // current Atlas can group already-materialized TEST/WORK immediately.
+  const members = [...(projection.work || []), ...(projection.tests || [])];
+  for (const item of members) {
+    const campaignId = String(item?.campaign_id || '').trim();
+    if (!campaignId || byId.has(campaignId)) continue;
+    byId.set(campaignId, {
+      campaign_id: campaignId,
+      title: campaignId,
+      domain: item?.domain || 'SCIENCE',
+      state: 'ACTIVE',
+      semantic_description: 'Campaign inferred from canonical member campaign_id; richer metadata awaits campaign projection.',
+      atlas_projection: {
+        visible: true,
+        label: campaignId,
+        show_tests: false,
+      },
+      source_links: [],
+      derived_fallback: true,
+    });
+  }
+
+  return [...byId.values()].sort((left, right) =>
+    String(left.campaign_id).localeCompare(String(right.campaign_id))
+  );
+}
+
 function graphFromProjection(projection, observedAt, filaments = [], peerDetectionBattery = null) {
   const manifest = projection.manifest;
   const source = sourceRef(manifest);
@@ -376,6 +416,14 @@ function graphFromProjection(projection, observedAt, filaments = [], peerDetecti
   const edges = [];
   const seen = new Set();
   const peerMembership = peerDetectionPresentationMembership(peerDetectionBattery, projection);
+  const campaigns = campaignRecordsFromProjection(projection);
+  const campaignById = new Map(campaigns.map(item => [String(item.campaign_id), item]));
+  const campaignMemberCounts = new Map();
+  for (const item of [...(projection.work || []), ...(projection.tests || [])]) {
+    const campaignId = String(item?.campaign_id || '').trim();
+    if (!campaignId) continue;
+    campaignMemberCounts.set(campaignId, (campaignMemberCounts.get(campaignId) || 0) + 1);
+  }
 
   const addNode = node => {
     if (!seen.has(node.id)) {
@@ -411,13 +459,59 @@ function graphFromProjection(projection, observedAt, filaments = [], peerDetecti
     });
   }
 
+  for (const campaign of campaigns) {
+    const campaignId = String(campaign.campaign_id || '');
+    if (!campaignId) continue;
+    const domain = domainOf(campaign.domain || 'SCIENCE');
+    const atlas = campaign.atlas_projection && typeof campaign.atlas_projection === 'object'
+      ? campaign.atlas_projection
+      : {};
+    const id = 'campaign:' + campaignId;
+    addNode({
+      id,
+      type: 'CAMPAIGN',
+      label: String(atlas.label || campaign.title || campaignId),
+      domain,
+      state: projectionState(campaign.state || 'ACTIVE'),
+      authority_class: campaign.derived_fallback ? 'DERIVED' : 'NON_AUTHORITATIVE',
+      source_ref: source,
+      source_revision: manifest.tower_commit,
+      fingerprint: nodeFingerprint('campaign', campaignId, manifest),
+      freshness: { state: 'RECENT', observed_at: observedAt, ttl_seconds: null },
+      checked_at: observedAt,
+      summary: String(campaign.semantic_description || campaign.question || campaign.title || campaignId),
+      campaign_id: campaignId,
+      member_count: campaignMemberCounts.get(campaignId) || 0,
+      semantic_description: campaign.semantic_description ? String(campaign.semantic_description) : undefined,
+      semantic_state: campaign.semantic_state ? String(campaign.semantic_state) : undefined,
+      parent_subdomain: atlas.parent_subdomain
+        ? String(atlas.parent_subdomain)
+        : campaign.subdomain
+          ? String(campaign.subdomain).split('/').filter(Boolean).at(-1)
+          : undefined,
+      atlas_visible: atlas.visible !== false,
+      source_links: Array.isArray(campaign.source_links)
+        ? campaign.source_links
+            .filter(link => link && typeof link === 'object' && /^https?:\/\//.test(String(link.url || '')))
+            .map(link => ({
+              label: String(link.label || link.url),
+              url: String(link.url),
+              kind: link.kind ? String(link.kind) : undefined,
+            }))
+        : [],
+    });
+    addEdge('domain:' + domain, id);
+  }
+
   for (const item of projection.work) {
     const rawId = String(item.id || '');
     if (!rawId || peerMembership.workIds.has(rawId)) continue;
     const node = projectedWorkNode(item, manifest, observedAt, humanWorkIds);
     if (!node) continue;
     addNode(node);
-    addEdge('domain:' + node.domain, node.id);
+    const campaignId = String(item.campaign_id || '').trim();
+    const campaignNodeId = campaignId && campaignById.has(campaignId) ? 'campaign:' + campaignId : null;
+    addEdge(campaignNodeId || ('domain:' + node.domain), node.id);
   }
 
   for (const item of projection.tests) {
@@ -440,8 +534,13 @@ function graphFromProjection(projection, observedAt, filaments = [], peerDetecti
       summary: 'TEST projected without reinterpretation; canonical status=' + String(item.status || 'UNSPECIFIED'),
       campaign_id: item.campaign_id ? String(item.campaign_id) : undefined,
       test_group_id: item.test_group_id ? String(item.test_group_id) : undefined,
+      atlas_visible: item.campaign_id
+        ? (campaignById.get(String(item.campaign_id))?.atlas_projection?.show_tests === true)
+        : true,
     });
-    addEdge('domain:' + domain, id);
+    const campaignId = String(item.campaign_id || '').trim();
+    const campaignNodeId = campaignId && campaignById.has(campaignId) ? 'campaign:' + campaignId : null;
+    addEdge(campaignNodeId || ('domain:' + domain), id);
   }
 
   for (const [capabilityId, definition] of Object.entries(projection.capabilities)) {

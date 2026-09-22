@@ -146,6 +146,26 @@ function DetailPanel({
         </div>
       </section>
 
+      {node.sourceLinks.length > 0 && (
+        <section className="atlas-detail-section atlas-source-detail">
+          <header><strong>Fontes</strong><span>{node.sourceLinks.length}</span></header>
+          <div className="atlas-source-list">
+            {node.sourceLinks.map(source => (
+              <a
+                className="atlas-source-link"
+                key={source.url}
+                href={source.url}
+                target="_blank"
+                rel="noreferrer"
+              >
+                <span>{source.kind || 'Fonte'}</span>
+                <strong>{source.label}</strong>
+              </a>
+            ))}
+          </div>
+        </section>
+      )}
+
       <section className="atlas-detail-section">
         <header><strong>Temporal</strong><span>{node.temporal.length}</span></header>
         <div className="atlas-timeline">
@@ -162,6 +182,7 @@ function DetailPanel({
         <header><strong>Proveniência</strong><span>{node.synthetic ? 'derivada' : 'canônica'}</span></header>
         <dl>
           <dt>ID</dt><dd>{node.id}</dd>
+          <dt>source_ref</dt><dd>{node.sourceRef || '—'}</dd>
           <dt>source_revision</dt><dd>{node.sourceRevision || '—'}</dd>
           <dt>fingerprint</dt><dd>{node.fingerprint || '—'}</dd>
           <dt>authority</dt><dd>{node.authorityClass || '—'}</dd>
@@ -435,6 +456,8 @@ export default function Atlas3DApp() {
     ));
   }
 
+  const campaignNodes = model.nodes.filter(node => node.entityType === 'CAMPAIGN');
+  const campaignSourceLinkCount = campaignNodes.reduce((sum, node) => sum + node.sourceLinks.length, 0);
   const peerArtifactNodeCount = model.nodes.filter(node => {
     const source = String(node.sourceId || '');
     return /^work:PEER-DETECTION-D\d+/i.test(source)
@@ -494,6 +517,8 @@ export default function Atlas3DApp() {
       data-atlas-semantic-subdomain-links={semanticSubdomainLinkCount}
       data-atlas-procedural-subdomain-links={proceduralSubdomainLinkCount}
       data-atlas-peer-artifact-nodes={peerArtifactNodeCount}
+      data-atlas-campaign-count={campaignNodes.length}
+      data-atlas-campaign-source-links={campaignSourceLinkCount}
     >
       <section className="atlas-workspace">
         <MetroAtlasRenderer
