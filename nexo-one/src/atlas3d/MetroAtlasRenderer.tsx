@@ -526,6 +526,7 @@ function Metro2DView({
   const activateRef = useRef(onActivate);
   const showBeamsRef = useRef(showBeams);
   const lastFitNonce = useRef(-1);
+  const lastFocusKey = useRef('');
   const onReadyRef = useRef(onReady);
   const renderLabelsRef = useRef<() => void>(() => {});
 
@@ -1764,13 +1765,27 @@ function MetroThreeView({
       resizeFrame = requestAnimationFrame(() => {
         const width = Math.round(container.clientWidth);
         const height = Math.round(container.clientHeight);
-        if (Math.abs(width - lastWidth) < 4 && Math.abs(height - lastHeight) < 4) return;
+        const widthDelta = Math.abs(width - lastWidth);
+        const heightDelta = Math.abs(height - lastHeight);
+        if (widthDelta < 4 && heightDelta < 4) return;
+
+        const orientationChanged = (width > height) !== (lastWidth > lastHeight);
+        const majorLayoutChange = orientationChanged
+          || widthDelta >= (compact ? 24 : 18)
+          || heightDelta >= (compact ? 56 : 28);
+
         lastWidth = width;
         lastHeight = height;
         resize();
-        rebuildThree(runtime, container, modelRef.current, expandedRef.current, selectedRef.current, showBeamsRef.current);
-        container.dataset.threeNodeCount = String(visibleAtlasIds(modelRef.current, expandedRef.current).length);
-        container.dataset.threeSynapseCount = String(runtime.pulses.length);
+
+        if (majorLayoutChange) {
+          rebuildThree(runtime, container, modelRef.current, expandedRef.current, selectedRef.current, showBeamsRef.current);
+          container.dataset.threeNodeCount = String(visibleAtlasIds(modelRef.current, expandedRef.current).length);
+          container.dataset.threeSynapseCount = String(runtime.pulses.length);
+        }
+
+        const focusIds = threeFocusIds(modelRef.current, expandedRef.current, selectedRef.current);
+        fitThree(runtime, false, focusIds, 'selection');
         renderAndMeasureThree(runtime, container);
       });
     });
@@ -1789,6 +1804,12 @@ function MetroThreeView({
       clearRendererError(container);
       resize();
       rebuildThree(runtime, container, modelRef.current, expandedRef.current, selectedRef.current, showBeamsRef.current);
+      fitThree(
+        runtime,
+        false,
+        threeFocusIds(modelRef.current, expandedRef.current, selectedRef.current),
+        'selection',
+      );
       renderAndMeasureThree(runtime, container);
     };
     renderer.domElement.addEventListener('webglcontextlost', onContextLost);
@@ -1833,14 +1854,18 @@ function MetroThreeView({
     renderer.domElement.addEventListener('pointerleave', onPointerLeave);
     renderer.domElement.addEventListener('pointerup', onPointerUp);
 
-    const animate = () => {
+    let lastFrameAt = 0;
+    const minimumFrameMs = compact ? 1000 / 36 : 0;
+    const animate = (now: number) => {
       runtime.frame = requestAnimationFrame(animate);
       if (document.hidden) return;
-      updateSynapsePulses(runtime, performance.now());
+      if (minimumFrameMs && now - lastFrameAt < minimumFrameMs) return;
+      lastFrameAt = now;
+      updateSynapsePulses(runtime, now);
       controls.update();
       renderer.render(scene, camera);
     };
-    animate();
+    runtime.frame = requestAnimationFrame(animate);
 
     return () => {
       observer.disconnect();
@@ -1869,10 +1894,18 @@ function MetroThreeView({
     rebuildThree(runtime, container, model, expanded, selectedId, showBeams);
     container.dataset.threeNodeCount = String(visibleAtlasIds(model, expanded).length);
     container.dataset.threeSynapseCount = String(runtime.pulses.length);
+
+    const focusIds = threeFocusIds(model, expanded, selectedId);
+    const focusKey = `${model.revision}|${expansionKey}|${selectedId || ''}`;
     if (!runtime.hasFit) {
       runtime.hasFit = true;
-      fitThree(runtime, false);
+      fitThree(runtime, false, focusIds, 'selection');
+      lastFocusKey.current = focusKey;
+    } else if (lastFocusKey.current !== focusKey) {
+      fitThree(runtime, true, focusIds, 'selection');
+      lastFocusKey.current = focusKey;
     }
+
     const painted = renderAndMeasureThree(runtime, container);
     if (painted > 0 || !isAtlasReadback()) onReadyRef.current?.();
   }, [model.revision, expansionKey, showBeams]);
@@ -1881,13 +1914,18 @@ function MetroThreeView({
     const runtime = runtimeRef.current;
     if (!runtime || lastFitNonce.current === fitNonce) return;
     lastFitNonce.current = fitNonce;
-    fitThree(runtime, true);
+    fitThree(runtime, true, null, 'all');
   }, [fitNonce]);
 
   useEffect(() => {
     const runtime = runtimeRef.current;
-    if (runtime) applyThreeSelection(runtime, selectedId);
-  }, [selectedId]);
+    if (!runtime) return;
+    applyThreeSelection(runtime, selectedId);
+    const focusKey = `${model.revision}|${expansionKey}|${selectedId || ''}`;
+    if (lastFocusKey.current === focusKey) return;
+    fitThree(runtime, true, threeFocusIds(model, expanded, selectedId), 'selection');
+    lastFocusKey.current = focusKey;
+  }, [selectedId, model.revision, expansionKey]);
 
   return (
     <div
