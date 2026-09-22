@@ -83,9 +83,10 @@ async function ensureG6(): Promise<void> {
 }
 
 async function boot() {
-  await ensureG6();
   const root = document.getElementById('root');
   if (!root) throw new Error('Atlas root element missing');
+  root.innerHTML = '<main class="atlas3d-boot" data-atlas-bootstrap="dependencies"><strong>NEXO ATLAS</strong><span>Carregando renderer…</span></main>';
+  await ensureG6();
   createRoot(root).render(<Boundary><Atlas3DApp/></Boundary>);
 }
 
