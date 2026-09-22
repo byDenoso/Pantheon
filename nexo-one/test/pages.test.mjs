@@ -39,6 +39,9 @@ test('GitHub Pages build uses repository base and configurable SystemState endpo
   assert.match(hook, /dispatchProjectionSync/);
   assert.match(hook, /waitForProjectionSync/);
   assert.match(app, /onClick=\{system\.sync\}/);
+  assert.match(app, /VITE_PUBLIC_NEXO_BASE/);
+  assert.match(app, /publicNexoUrl\('atlas3d\/'\)/);
+  assert.match(app, /publicNexoUrl\('mcp\/'\)/);
 });
 
 test('manual sync is a server-side GitHub dispatch bridge with exact readback identity', async () => {
@@ -261,6 +264,8 @@ test('GitHub Pages deploys official artifact and exposes projection readback', a
   assert.match(workflow, /cockpit-actions-readback\.png/);
   assert.match(workflow, /data-work-count/);
   assert.match(workflow, /VITE_NEXO_SYNC_ENDPOINT/);
+  assert.match(workflow, /VITE_PUBLIC_NEXO_BASE:\s*https:\/\/bydenoso\.github\.io\/Pantheon\//);
+  assert.doesNotMatch(workflow, /VITE_PRIVATE_COCKPIT_URL:\s*https:\/\/nexo-one-two\.vercel\.app/);
   assert.match(workflow, /SYNC_REQUEST_ID/);
   assert.match(workflow, /sync_request_id/);
   assert.match(workflow, /PAGES_ATLAS_LEARNING_SEMANTIC_OK/);
