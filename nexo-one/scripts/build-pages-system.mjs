@@ -6,7 +6,7 @@ import { pathToFileURL } from 'node:url';
 const CONTRACT = 'NEXO_PUBLIC_PROJECTION_V1';
 const SYSTEM_CONTRACT = '1';
 const WORLD_CONTRACT = '1';
-const DOMAINS = ['NEXO', 'SCIENCE', 'ENGINEERING', 'OLYMPUS'];
+const CORE_DOMAINS = ['NEXO', 'SCIENCE', 'ENGINEERING', 'OLYMPUS'];
 
 function canonical(value) {
   if (Array.isArray(value)) return value.map(canonical);
@@ -54,10 +54,23 @@ function cursorTime(cursor) {
 
 function domainOf(value) {
   const domain = String(value || '').trim().toUpperCase();
+  if (!domain) return 'NEXO';
   if (domain === 'COSMOLOGY' || domain === 'COSMOLOGIA' || domain === 'SCIENCE') return 'SCIENCE';
   if (domain === 'ENGINEERING') return 'ENGINEERING';
   if (domain === 'OLYMPUS' || domain === 'BODYBUILDING' || domain === 'PHYSIQUE') return 'OLYMPUS';
-  return 'NEXO';
+  if (domain === 'NEXO') return 'NEXO';
+  return domain.replace(/\s+/g, '_');
+}
+
+function projectionDomains(projection) {
+  const domains = new Set(CORE_DOMAINS);
+  for (const item of [...(projection?.work || []), ...(projection?.tests || [])]) {
+    domains.add(domainOf(item?.domain));
+  }
+  for (const definition of Object.values(projection?.capabilities || {})) {
+    if (definition?.domain) domains.add(domainOf(definition.domain));
+  }
+  return [...domains];
 }
 
 function domainsOf(value) {
@@ -381,7 +394,7 @@ function graphFromProjection(projection, observedAt, filaments = [], peerDetecti
     });
   };
 
-  for (const domain of DOMAINS) {
+  for (const domain of projectionDomains(projection)) {
     addNode({
       id: 'domain:' + domain,
       type: 'DOMAIN',
@@ -685,7 +698,7 @@ function humanInboxFromProjection(projection, observedAt, humanGateDetails = [])
 }
 function lanesFromProjection(projection, observedAt) {
   const source = sourceRef(projection.manifest);
-  return ['SCIENCE', 'ENGINEERING', 'OLYMPUS'].map(domain => {
+  return projectionDomains(projection).filter(domain => domain !== 'NEXO').map(domain => {
     const work = projection.work.filter(item => domainOf(item.domain) === domain);
     const tests = projection.tests.filter(item => domainOf(item.domain || 'SCIENCE') === domain);
     const blocked = work.filter(item => projectionState(item.status || item.operational_status) === 'BLOCKED');
@@ -835,13 +848,17 @@ export function buildPagesProjection({
     ...projection.work.map((item, index) => worldItem('WORK', item, projection, observedAt, index)),
     ...projection.tests.map((item, index) => worldItem('TEST', item, projection, observedAt, index)),
   ];
-  const contexts = [
+  const contextLabels = new Map([
     ['NEXO', 'NEXO'],
     ['COSMOLOGY', 'Cosmologia'],
     ['OLYMPUS', 'Olympus'],
     ['ENGINEERING', 'Engenharia'],
     ['PERSONAL', 'Pessoal'],
-  ].map(([id, title]) => ({
+  ]);
+  for (const item of items) {
+    if (!contextLabels.has(item.contextId)) contextLabels.set(item.contextId, item.contextId);
+  }
+  const contexts = [...contextLabels].map(([id, title]) => ({
     id,
     title,
     description: 'Presentation-only context derived from TOWER_V06.',
