@@ -2,7 +2,12 @@ import {createHash} from 'node:crypto';
 import {readGithubAuthority} from './github-authority.mjs';
 import {buildAtlasProjectionV3} from '../v3/project.mjs';
 
-const TTL=30000;let cache=null;
+const TTL=60000;
+const STALE_MAX_AGE_MS=30*60*1000;
+const RETRY_DELAYS_MS=[0,800,2400,6000];
+let cache=null;
+const sleepDefault=ms=>new Promise(resolve=>setTimeout(resolve,ms));
+const retryable=status=>status===404||status===408||status===425||status===429||status===500||status===502||status===503||status===504;
 const arr=value=>Array.isArray(value)?value:[];
 const hash=value=>`sha256:${createHash('sha256').update(JSON.stringify(value)).digest('hex')}`;
 const KEYS=['science','engineering','olympus','learning','crossDomain','integrity','actions'];
@@ -56,27 +61,47 @@ function validatePayload(payload,authority){
  if(!/^sha256:[0-9a-f]{64}$/i.test(String(actual||'')))throw new Error('ATLAS_PROJECTION_FINGERPRINT_INVALID');
  return payload;
 }
-async function fetchPayload(authority,{fetcher=fetch,signal}={}){
+async function fetchPayload(authority,{fetcher=fetch,signal,sleep=sleepDefault}={}){
  const projection=authority?.projection||{};
  const repo=projection.repository||authority.repository;
  const ref=projection.ref||authority.ref||'main';
  const path=projection.transportPath;
  if(!repo||!path)throw new Error('ATLAS_PROJECTION_LOCATOR_MISSING');
  const url=`https://api.github.com/repos/${repo}/contents/${path}?ref=${encodeURIComponent(ref)}`;
- const response=await fetcher(url,{headers:{Accept:'application/vnd.github.raw+json','X-GitHub-Api-Version':'2022-11-28','User-Agent':'nexo-atlas'},signal,cache:'no-store'});
- if(!response?.ok)throw new Error(`ATLAS_PROJECTION_HTTP_${response?.status||0}`);
- const raw=await response.json();
- if(projection.kind==='TOWER_V3_SANITIZED_SOURCE'){
-  if(raw?.control?.truth_owner!==authority.truthOwner)throw new Error('ATLAS_V3_TRUTH_OWNER_MISMATCH');
-  if(raw?.publicProjection!==true)throw new Error('ATLAS_V3_PUBLIC_PROJECTION_REQUIRED');
-  return validatePayload(adaptAtlasV3Snapshot(buildAtlasProjectionV3(raw)),authority);
+ let lastStatus=0;
+ for(let attempt=0;attempt<RETRY_DELAYS_MS.length;attempt+=1){
+  const delay=RETRY_DELAYS_MS[attempt];
+  if(delay)await sleep(delay);
+  const response=await fetcher(url,{headers:{Accept:'application/vnd.github.raw+json','X-GitHub-Api-Version':'2022-11-28','User-Agent':'nexo-atlas'},signal,cache:'no-store'});
+  lastStatus=response?.status||0;
+  if(response?.ok){
+   const raw=await response.json();
+   if(projection.kind==='TOWER_V3_SANITIZED_SOURCE'){
+    if(raw?.control?.truth_owner!==authority.truthOwner)throw new Error('ATLAS_V3_TRUTH_OWNER_MISMATCH');
+    if(raw?.publicProjection!==true)throw new Error('ATLAS_V3_PUBLIC_PROJECTION_REQUIRED');
+    return validatePayload(adaptAtlasV3Snapshot(buildAtlasProjectionV3(raw)),authority);
+   }
+   return validatePayload(raw,authority);
+  }
+  if(!retryable(lastStatus))break;
  }
- return validatePayload(raw,authority);
+ throw new Error(`ATLAS_PROJECTION_HTTP_${lastStatus}`);
 }
-export async function loadGithubCanonical({force=false,fetcher=fetch,signal}={}){
- if(!force&&cache&&Date.now()-cache.at<TTL)return cache;
- const authority=await readGithubAuthority({fetcher,signal}),payload=await fetchPayload(authority,{fetcher,signal});
- cache={at:Date.now(),authority,payload,fingerprint:payload.meta?.fingerprint||hash(payload)};return cache;
+export async function loadGithubCanonical({force=false,fetcher=fetch,signal,sleep=sleepDefault}={}){
+ const now=Date.now();
+ if(!force&&cache&&now-cache.at<TTL)return cache;
+ try{
+  const authority=await readGithubAuthority({fetcher,signal,sleep});
+  const payload=await fetchPayload(authority,{fetcher,signal,sleep});
+  cache={at:Date.now(),authority,payload,fingerprint:payload.meta?.fingerprint||hash(payload),freshness:'LIVE',staleReason:null};
+  return cache;
+ }catch(error){
+  if(signal?.aborted||(error instanceof Error&&error.name==='AbortError'))throw error;
+  if(cache&&now-cache.at<=STALE_MAX_AGE_MS){
+   return {...cache,freshness:'STALE_FALLBACK',staleReason:String(error?.message||error),staleAgeMs:now-cache.at};
+  }
+  throw error;
+ }
 }
 export function lastGithubCanonical(){return cache}
 function diff(before,after){
@@ -87,3 +112,4 @@ function diff(before,after){
 }
 export async function syncGithubCanonical(options={}){const before=cache,after=await loadGithubCanonical({...options,force:true});return {state:after,diff:diff(before,after)}}
 export {adaptAtlasV3Snapshot};
+export const _resilience={TTL,STALE_MAX_AGE_MS,RETRY_DELAYS_MS,retryable};
