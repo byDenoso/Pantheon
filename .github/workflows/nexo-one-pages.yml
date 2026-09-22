@@ -364,7 +364,7 @@ jobs:
 
           echo "ATLAS3D_DOM_DIAGNOSTICS_BEGIN"
           grep -oE 'data-atlas-[a-z-]+="[^"]*"' /tmp/atlas3d-dom.html | head -20 || true
-          grep -oE 'data-g6-(ready|node-count|label-visible|label-hidden|label-collisions|label-dom-collisions|label-zoom|label-policy|max-siblings|learning-edges)="[^"]*"' /tmp/atlas3d-dom.html | head -24 || true
+          grep -oE 'data-g6-(ready|node-count|label-visible|label-hidden|label-collisions|label-dom-collisions|label-ui-overlaps|label-zoom|label-policy|max-siblings|learning-edges)="[^"]*"' /tmp/atlas3d-dom.html | head -24 || true
           grep -oE 'class="atlas-render-error"[^<]*|G6 não carregou[^<]*|Atlas 3D indisponível[^<]*' /tmp/atlas3d-dom.html | head -10 || true
           echo "ATLAS3D_DOM_DIAGNOSTICS_END"
 
@@ -378,6 +378,7 @@ jobs:
           grep -Fq 'data-g6-ready="true"' /tmp/atlas3d-dom.html
           grep -Fq 'data-g6-label-collisions="0"' /tmp/atlas3d-dom.html
           grep -Fq 'data-g6-label-dom-collisions="0"' /tmp/atlas3d-dom.html
+          grep -Fq 'data-g6-label-ui-overlaps="0"' /tmp/atlas3d-dom.html
           grep -Fq 'data-g6-label-policy="viewport-adaptive-v2"' /tmp/atlas3d-dom.html
           learning_edges="$(sed -n 's/.*data-g6-learning-edges="\([0-9][0-9]*\)".*/\1/p' /tmp/atlas3d-dom.html | head -1)"
           [ -n "${learning_edges}" ] && [ "${learning_edges}" -gt 0 ] || {
@@ -407,7 +408,7 @@ jobs:
             > /tmp/atlas3d-peer-detection-dom.html
           echo "ATLAS2D_PEER51_DOM_DIAGNOSTICS_BEGIN"
           grep -oE 'data-atlas-[a-z-]+="[^"]*"' /tmp/atlas3d-peer-detection-dom.html | head -24 || true
-          grep -oE 'data-g6-(ready|node-count|label-visible|label-hidden|label-collisions|label-dom-collisions|label-zoom|label-policy|max-siblings|learning-edges)="[^"]*"' /tmp/atlas3d-peer-detection-dom.html | head -28 || true
+          grep -oE 'data-g6-(ready|node-count|label-visible|label-hidden|label-collisions|label-dom-collisions|label-ui-overlaps|label-zoom|label-policy|max-siblings|learning-edges)="[^"]*"' /tmp/atlas3d-peer-detection-dom.html | head -28 || true
           echo "ATLAS2D_PEER51_DOM_DIAGNOSTICS_END"
 
           grep -Fq 'data-atlas-qa-expand="peer-detection"' /tmp/atlas3d-peer-detection-dom.html
@@ -417,8 +418,9 @@ jobs:
 
           peer_collisions="$(sed -n 's/.*data-g6-label-collisions="\([0-9][0-9]*\)".*/\1/p' /tmp/atlas3d-peer-detection-dom.html | head -1)"
           peer_dom_collisions="$(sed -n 's/.*data-g6-label-dom-collisions="\([0-9][0-9]*\)".*/\1/p' /tmp/atlas3d-peer-detection-dom.html | head -1)"
-          [ "${peer_collisions:-}" = "0" ] && [ "${peer_dom_collisions:-}" = "0" ] || {
-            echo "::error::Peer Detection 51-child label collision regression: model=${peer_collisions:-missing} DOM=${peer_dom_collisions:-missing}"
+          peer_ui_overlaps="$(sed -n 's/.*data-g6-label-ui-overlaps="\([0-9][0-9]*\)".*/\1/p' /tmp/atlas3d-peer-detection-dom.html | head -1)"
+          [ "${peer_collisions:-}" = "0" ] && [ "${peer_dom_collisions:-}" = "0" ] && [ "${peer_ui_overlaps:-}" = "0" ] || {
+            echo "::error::Peer Detection 51-child label regression: model=${peer_collisions:-missing} DOM=${peer_dom_collisions:-missing} UI=${peer_ui_overlaps:-missing}"
             exit 1
           }
 
@@ -443,7 +445,7 @@ jobs:
             --window-size=1440,900 --virtual-time-budget=12000 \
             --screenshot=/tmp/atlas3d-readback-peer-detection-51.png "${peer_url}" >/dev/null 2>&1
           test -s /tmp/atlas3d-readback-peer-detection-51.png
-          echo "PAGES_ATLAS2D_PEER51_READBACK_OK labels=${peer_labels} hidden=${peer_hidden} collisions=0 siblings=51"
+          echo "PAGES_ATLAS2D_PEER51_READBACK_OK labels=${peer_labels} hidden=${peer_hidden} collisions=0 ui_overlaps=0 siblings=51"
 
           three_url="${base}/atlas3d/?mode=3d"
           "${chrome_bin}" --headless=new --no-sandbox --disable-dev-shm-usage --hide-scrollbars \

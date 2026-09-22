@@ -46,6 +46,7 @@ export interface MetroScreenLabelLayout {
   visible: number;
   hidden: number;
   collisions: number;
+  uiZoneViolations: number;
   maxSiblings: number;
   zoom: number;
 }
@@ -478,6 +479,17 @@ function floatingLabelBox(
   };
 }
 
+function atlasUiSafeZones(viewportWidth: number, viewportHeight: number): Rect[] {
+  return [
+    // Breadcrumb, segmented mode control and domain strip.
+    { x1: 0, y1: 0, x2: viewportWidth, y2: 116 },
+    // Minimap occupies the lower-right of the G6 workspace.
+    { x1: Math.max(0, viewportWidth - 190), y1: Math.max(0, viewportHeight - 205), x2: viewportWidth, y2: Math.max(0, viewportHeight - 78) },
+    // Legend, interaction hint and adaptive-density note live near the bottom edge.
+    { x1: 0, y1: Math.max(0, viewportHeight - 54), x2: viewportWidth, y2: viewportHeight },
+  ];
+}
+
 function labelCollisionScore(
   rect: Rect,
   nodeId: string,
@@ -487,6 +499,11 @@ function labelCollisionScore(
   viewportHeight: number,
 ): number {
   let score = rectWithinViewport(rect, viewportWidth, viewportHeight) ? 0 : 2400;
+  for (const safeZone of atlasUiSafeZones(viewportWidth, viewportHeight)) {
+    if (intersects(rect, safeZone, 3)) {
+      score += intersectionArea(rect, safeZone) + 5200;
+    }
+  }
   for (const item of occupied) {
     if (intersects(rect, item.rect, 4)) score += intersectionArea(rect, item.rect) + 900;
   }
@@ -710,11 +727,18 @@ export function buildMetroScreenLabelLayout(
     }
   }
 
+  let uiZoneViolations = 0;
+  const safeZones = atlasUiSafeZones(viewportWidth, viewportHeight);
+  for (const item of occupied) {
+    if (safeZones.some(zone => intersects(item.rect, zone, 1))) uiZoneViolations += 1;
+  }
+
   return {
     byId,
     visible: [...byId.values()].filter(spec => spec.visible).length,
     hidden: [...byId.values()].filter(spec => !spec.visible).length,
     collisions,
+    uiZoneViolations,
     maxSiblings: maxVisibleSiblingCount(model, visibleSet),
     zoom,
   };
