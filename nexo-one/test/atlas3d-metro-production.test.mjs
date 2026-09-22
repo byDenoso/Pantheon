@@ -421,8 +421,12 @@ test('dedicated Atlas production page uses Metro renderer, G6 and deterministic 
   assert.match(renderer, /fitThree\(runtime, false\)/);
   assert.match(renderer, /fitThree\(runtime, true\)/);
   assert.match(renderer, /threeFitInsets/);
-  assert.match(renderer, /projected-safe-area-v4/);
+  assert.match(renderer, /projected-screen-bounds-v5/);
   assert.match(renderer, /threeFitCoverage/);
+  assert.match(renderer, /projectedThreeBounds/);
+  assert.match(renderer, /threeFitFillX/);
+  assert.match(renderer, /threeFitFillY/);
+  assert.match(renderer, /portrait-compact-v2/);
   assert.doesNotMatch(renderer, /\[model\.revision, expansionKey, showBeams, fitNonce\]/);
   assert.match(renderer, /NEXO: -520/);
   assert.match(renderer, /depthStep = 150/);
