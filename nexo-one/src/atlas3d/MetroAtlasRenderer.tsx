@@ -162,6 +162,20 @@ function stampG6Metrics(container: HTMLElement, data: { nodes: any[]; edges: any
       && /^PEER-DETECTION-GROUP-/i.test(String(edge.data?.learningRef || ''))
     ).length,
   );
+  container.dataset.g6LearningSubdomainEdges = String(
+    data.edges.filter((edge: any) =>
+      edge.data?.isLearning
+      && (String(edge.source || '').startsWith('atlas.subdomain.')
+        || String(edge.target || '').startsWith('atlas.subdomain.'))
+    ).length,
+  );
+  container.dataset.g6PeerSubdomainEdges = String(
+    data.edges.filter((edge: any) =>
+      edge.data?.learningKind === 'SCIENTIFIC_LEARNING_PIPELINE'
+      && /^PEER-DETECTION-GROUP-/i.test(String(edge.data?.learningRef || ''))
+      && String(edge.target || '').includes('Consist%C3%AAncia%20cosmol%C3%B3gica%20%C2%B7%20Peer%20Detection')
+    ).length,
+  );
 }
 
 function escapeHtml(value: unknown): string {
@@ -1234,6 +1248,18 @@ function rebuildThree(
     visibleLearning.filter(link =>
       link.learningKind === 'SCIENTIFIC_LEARNING_PIPELINE'
       && /^PEER-DETECTION-GROUP-/i.test(String(link.learningRef || ''))
+    ).length,
+  );
+  container.dataset.threeLearningSubdomainSynapses = String(
+    visibleLearning.filter(link =>
+      link.source.startsWith('atlas.subdomain.') || link.target.startsWith('atlas.subdomain.')
+    ).length,
+  );
+  container.dataset.threePeerSubdomainSynapses = String(
+    visibleLearning.filter(link =>
+      link.learningKind === 'SCIENTIFIC_LEARNING_PIPELINE'
+      && /^PEER-DETECTION-GROUP-/i.test(String(link.learningRef || ''))
+      && model.nodeMap.get(link.target)?.name === 'Consistência cosmológica · Peer Detection'
     ).length,
   );
 
