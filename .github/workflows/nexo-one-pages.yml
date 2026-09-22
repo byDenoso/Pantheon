@@ -603,7 +603,7 @@ jobs:
             > /tmp/atlas3d-3d-dom.html
           echo "ATLAS3D_3D_DOM_DIAGNOSTICS_BEGIN"
           grep -oE 'data-atlas-[a-z-]+="[^"]*"' /tmp/atlas3d-3d-dom.html | head -20 || true
-          grep -oE 'data-three-(ready|node-count|paint-samples|synapse-count|learning-synapses|scientific-learning-synapses|procedural-learning-synapses|semantic-learning-synapses|peer-learning-synapses|subdomain-learning-synapses|peer-subdomain-synapses|z-span|same-level-z-span|selected-sibling-count|selected-sibling-z-span|depth-policy|visual)="[^"]*"' /tmp/atlas3d-3d-dom.html | head -28 || true
+          grep -oE 'data-three-(ready|node-count|paint-samples|synapse-count|learning-synapses|scientific-learning-synapses|procedural-learning-synapses|semantic-learning-synapses|peer-learning-synapses|subdomain-learning-synapses|peer-subdomain-synapses|z-span|same-level-z-span|selected-sibling-count|selected-sibling-z-span|depth-policy|fit-policy|fit-distance|fit-coverage|fit-top-inset|fit-bottom-inset|visual)="[^"]*"' /tmp/atlas3d-3d-dom.html | head -28 || true
           echo "ATLAS3D_3D_DOM_DIAGNOSTICS_END"
           grep -Fq 'data-atlas-mode="3d"' /tmp/atlas3d-3d-dom.html
           grep -Fq 'data-active-mode="3d"' /tmp/atlas3d-3d-dom.html
@@ -646,6 +646,12 @@ jobs:
             exit 1
           }
           grep -Fq 'data-three-depth-policy="domain-depth-sibling-v3"' /tmp/atlas3d-3d-dom.html
+          grep -Fq 'data-three-fit-policy="projected-safe-area-v4"' /tmp/atlas3d-3d-dom.html
+          three_fit_coverage="$(sed -n 's/.*data-three-fit-coverage="\([0-9.][0-9.]*\)".*/\1/p' /tmp/atlas3d-3d-dom.html | head -1)"
+          awk -v value="${three_fit_coverage:-0}" 'BEGIN { exit !(value >= 0.60 && value <= 1.10) }' || {
+            echo "::error::Three projected fit is under/over-filling the viewport: coverage=${three_fit_coverage:-missing}"
+            exit 1
+          }
           three_z_span="$(sed -n 's/.*data-three-z-span="\([0-9.][0-9.]*\)".*/\1/p' /tmp/atlas3d-3d-dom.html | head -1)"
           three_same_level_z="$(sed -n 's/.*data-three-same-level-z-span="\([0-9.][0-9.]*\)".*/\1/p' /tmp/atlas3d-3d-dom.html | head -1)"
           selected_sibling_count="$(sed -n 's/.*data-three-selected-sibling-count="\([0-9][0-9]*\)".*/\1/p' /tmp/atlas3d-3d-dom.html | head -1)"
@@ -676,7 +682,7 @@ jobs:
             --window-size=1440,900 --virtual-time-budget=8000 \
             --screenshot=/tmp/atlas3d-readback-3d.png "${depth_url}" >/dev/null 2>&1
           test -s /tmp/atlas3d-readback-3d.png
-          echo "PAGES_ATLAS3D_3D_READBACK_OK visual=neural-synapse visible=${visible_count} three_nodes=${three_node_count} synapses=${three_synapse_count} learning=${three_learning} scientific=${three_scientific} peer=${three_peer} peer_subdomains=${three_peer_subdomain} learning_subdomains=${three_subdomain_learning} z_span=${three_z_span} same_level_z=${three_same_level_z} selected_siblings=${selected_sibling_count} selected_z=${selected_sibling_z} paint_samples=${three_paint_samples}"
+          echo "PAGES_ATLAS3D_3D_READBACK_OK visual=neural-synapse visible=${visible_count} three_nodes=${three_node_count} synapses=${three_synapse_count} learning=${three_learning} scientific=${three_scientific} peer=${three_peer} peer_subdomains=${three_peer_subdomain} learning_subdomains=${three_subdomain_learning} fit_coverage=${three_fit_coverage} z_span=${three_z_span} same_level_z=${three_same_level_z} selected_siblings=${selected_sibling_count} selected_z=${selected_sibling_z} paint_samples=${three_paint_samples}"
 
           mobile_3d_url="${base}/atlas3d/?mode=3d&readback=1&g6Fallback=1"
           "${chrome_bin}" --headless=new --no-sandbox --disable-dev-shm-usage --hide-scrollbars \
@@ -686,7 +692,7 @@ jobs:
             > /tmp/atlas3d-mobile-3d-dom.html
 
           echo "ATLAS3D_MOBILE_3D_DOM_DIAGNOSTICS_BEGIN"
-          grep -oE 'data-three-(ready|profile|viewport-width|viewport-height|node-count|paint-samples|synapse-count|learning-synapses|learning-visual-synapses|learning-records|learning-relations|visual)="[^"]*"' /tmp/atlas3d-mobile-3d-dom.html | head -26 || true
+          grep -oE 'data-three-(ready|profile|viewport-width|viewport-height|node-count|paint-samples|synapse-count|learning-synapses|learning-visual-synapses|learning-records|learning-relations|fit-policy|fit-distance|fit-coverage|fit-top-inset|fit-bottom-inset|visual)="[^"]*"' /tmp/atlas3d-mobile-3d-dom.html | head -26 || true
           grep -oE 'data-renderer-error="[^"]*"|class="atlas-render-error"[^<]*' /tmp/atlas3d-mobile-3d-dom.html | head -10 || true
           echo "ATLAS3D_MOBILE_3D_DOM_DIAGNOSTICS_END"
 
@@ -694,6 +700,7 @@ jobs:
           grep -Fq 'data-atlas-g6-source="jsdelivr"' /tmp/atlas3d-mobile-3d-dom.html
           grep -Fq 'data-three-profile="compact-touch"' /tmp/atlas3d-mobile-3d-dom.html
           grep -Fq 'data-three-quality="reduced-gpu"' /tmp/atlas3d-mobile-3d-dom.html
+          grep -Fq 'data-three-fit-policy="projected-safe-area-v4"' /tmp/atlas3d-mobile-3d-dom.html
           grep -Fq 'data-three-ready="true"' /tmp/atlas3d-mobile-3d-dom.html
           ! grep -Fq 'data-renderer-error=' /tmp/atlas3d-mobile-3d-dom.html
           ! grep -Fq 'id="atlas-metro-g6"' /tmp/atlas3d-mobile-3d-dom.html
@@ -704,10 +711,15 @@ jobs:
           mobile_three_learning_visual="$(sed -n 's/.*data-three-learning-visual-synapses="\([0-9][0-9]*\)".*/\1/p' /tmp/atlas3d-mobile-3d-dom.html | head -1)"
           mobile_three_learning_records="$(sed -n 's/.*data-three-learning-records="\([0-9][0-9]*\)".*/\1/p' /tmp/atlas3d-mobile-3d-dom.html | head -1)"
           mobile_three_learning_relations="$(sed -n 's/.*data-three-learning-relations="\([0-9][0-9]*\)".*/\1/p' /tmp/atlas3d-mobile-3d-dom.html | head -1)"
+          mobile_three_fit_coverage="$(sed -n 's/.*data-three-fit-coverage="\([0-9.][0-9.]*\)".*/\1/p' /tmp/atlas3d-mobile-3d-dom.html | head -1)"
           [ -n "${mobile_three_width}" ] && [ "${mobile_three_width}" -ge 360 ]
           [ -n "${mobile_three_height}" ] && [ "${mobile_three_height}" -ge 700 ]
           [ -n "${mobile_three_nodes}" ] && [ "${mobile_three_nodes}" -gt 3 ]
           [ -n "${mobile_three_paint}" ] && [ "${mobile_three_paint}" -gt 20 ]
+          awk -v value="${mobile_three_fit_coverage:-0}" 'BEGIN { exit !(value >= 0.62 && value <= 1.10) }' || {
+            echo "::error::Mobile Three fit wastes viewport or clips content: coverage=${mobile_three_fit_coverage:-missing}"
+            exit 1
+          }
           [ "${mobile_three_learning_records:-missing}" = "${system_learning_records:-missing}" ]
           [ -n "${mobile_three_learning_relations}" ] && [ "${mobile_three_learning_relations}" -ge "${mobile_three_learning_records}" ]
           [ -n "${mobile_three_learning_visual}" ] && [ "${mobile_three_learning_visual}" -lt "${mobile_three_learning_records}" ]
@@ -717,7 +729,7 @@ jobs:
             --window-size=390,844 --force-device-scale-factor=1 --user-agent="${mobile_ua}" \
             --virtual-time-budget=9000 --screenshot=/tmp/atlas3d-readback-mobile-3d.png "${mobile_3d_url}" >/dev/null 2>&1
           test -s /tmp/atlas3d-readback-mobile-3d.png
-          echo "PAGES_ATLAS3D_MOBILE_3D_READBACK_OK width=${mobile_three_width} height=${mobile_three_height} nodes=${mobile_three_nodes} learning_visual=${mobile_three_learning_visual} learning_records=${mobile_three_learning_records} learning_relations=${mobile_three_learning_relations} paint_samples=${mobile_three_paint}"
+          echo "PAGES_ATLAS3D_MOBILE_3D_READBACK_OK width=${mobile_three_width} height=${mobile_three_height} nodes=${mobile_three_nodes} learning_visual=${mobile_three_learning_visual} learning_records=${mobile_three_learning_records} learning_relations=${mobile_three_learning_relations} fit_coverage=${mobile_three_fit_coverage} paint_samples=${mobile_three_paint}"
 
           curl -fsSL "${base}/world-public.ndjson" -o /tmp/world.ndjson
           curl -fsSL "${base}/mcp/topology.json" -o /tmp/mcp-topology.json

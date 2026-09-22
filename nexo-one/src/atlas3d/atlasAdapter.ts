@@ -235,9 +235,18 @@ function depthOf(nodeMap: Map<string, AtlasMetroNode>, id: string): number {
   return depth;
 }
 
-function descendantCount(childrenMap: Map<string, string[]>, id: string): number {
-  const children = childrenMap.get(id) || [];
-  return children.reduce((total, child) => total + 1 + descendantCount(childrenMap, child), 0);
+function descendantCounts(childrenMap: Map<string, string[]>): Map<string, number> {
+  const memo = new Map<string, number>();
+  const visit = (id: string): number => {
+    const cached = memo.get(id);
+    if (cached !== undefined) return cached;
+    const total = (childrenMap.get(id) || [])
+      .reduce((sum, child) => sum + 1 + visit(child), 0);
+    memo.set(id, total);
+    return total;
+  };
+  for (const id of childrenMap.keys()) visit(id);
+  return memo;
 }
 
 export function buildAtlasMetroModel(state: SystemState): AtlasMetroModel {
@@ -598,7 +607,8 @@ export function buildAtlasMetroModel(state: SystemState): AtlasMetroModel {
     });
   }
 
-  const relationCounts = new Map(nodes.map(node => [node.id, 0]));
+  const descendantsById = descendantCounts(childrenMap);
+    const relationCounts = new Map(nodes.map(node => [node.id, 0]));
   for (const link of crossLinks) {
     relationCounts.set(link.source, (relationCounts.get(link.source) || 0) + 1);
     relationCounts.set(link.target, (relationCounts.get(link.target) || 0) + 1);
@@ -606,7 +616,7 @@ export function buildAtlasMetroModel(state: SystemState): AtlasMetroModel {
 
   for (const node of nodes) {
     const childCount = childrenMap.get(node.id)?.length || 0;
-    const descendants = descendantCount(childrenMap, node.id);
+    const descendants = descendantsById.get(node.id) || 0;
     const relations = relationCounts.get(node.id) || 0;
     node.depth = depthOf(nodeMap, node.id);
     node.childCount = childCount;

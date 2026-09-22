@@ -330,7 +330,15 @@ test('dedicated Atlas production page uses Metro renderer, G6 and deterministic 
   assert.match(renderer, /getViewportByCanvas/);
   assert.match(renderer, /g6LabelDomCollisions/);
   assert.match(renderer, /viewport-adaptive-v2/);
-  const taxonomy = await text('src/viewmodels/atlasTaxonomy.ts');
+  const galaxyCompiler = await text('src/viewmodels/galaxyCompiler.ts');
+  const graph2d = await text('src/viewmodels/graph.ts');
+  const graph3d = await text('src/viewmodels/graph3d.ts');
+  const layered = await text('src/viewmodels/layeredGraph.ts');
+  assert.match(galaxyCompiler, /SUBDOMAIN: 'SUBDOMAIN'/);
+  assert.match(graph2d, /SUBDOMAIN: 1/);
+  assert.match(graph3d, /SUBDOMAIN: 0\.09/);
+  assert.match(layered, /SUBDOMAIN: 'ENTITY'/);
+    const taxonomy = await text('src/viewmodels/atlasTaxonomy.ts');
   assert.match(taxonomy, /atlasSubdomainHint/);
   assert.match(taxonomy, /Conservative semantic router/);
   const semantics = await text('src/atlas3d/learningSemantics.ts');
@@ -340,6 +348,7 @@ test('dedicated Atlas production page uses Metro renderer, G6 and deterministic 
   assert.match(semantics, /Inferência bayesiana · Priors & evidência/);
   const adapter = await text('src/atlas3d/atlasAdapter.ts');
   assert.match(adapter, /resolveLearningEndpoint/);
+  assert.match(adapter, /descendantCounts/);
   assert.match(adapter, /ENTITY_SUBDOMAIN/);
   assert.match(adapter, /SEMANTIC_SUBDOMAIN/);
   assert.match(adapter, /DOMAIN_HUB/);
@@ -411,6 +420,9 @@ test('dedicated Atlas production page uses Metro renderer, G6 and deterministic 
   assert.doesNotMatch(renderer, /TorusGeometry|RingGeometry/);
   assert.match(renderer, /fitThree\(runtime, false\)/);
   assert.match(renderer, /fitThree\(runtime, true\)/);
+  assert.match(renderer, /threeFitInsets/);
+  assert.match(renderer, /projected-safe-area-v4/);
+  assert.match(renderer, /threeFitCoverage/);
   assert.doesNotMatch(renderer, /\[model\.revision, expansionKey, showBeams, fitNonce\]/);
   assert.match(renderer, /NEXO: -520/);
   assert.match(renderer, /depthStep = 150/);

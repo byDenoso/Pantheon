@@ -84,7 +84,7 @@ export interface PlacedNode extends GraphNode { x: number; y: number; radius: nu
 
 /** Anel por tipo: domínios no centro, providers e capabilities em volta, evidência na borda. */
 const RING: Record<GraphNodeType, number> = {
-  DOMAIN: 0, CAMPAIGN: 1, PROVIDER: 1, CAPABILITY: 2, ACTION: 3, SIDE_QUEST: 3,
+  DOMAIN: 0, SUBDOMAIN: 1, CAMPAIGN: 2, PROVIDER: 1, CAPABILITY: 2, ACTION: 3, SIDE_QUEST: 3,
   EFFECT: 4, PROJECTION: 4, CLAIM: 5, FILAMENT: 5, TEST: 6, MEMORY: 6,
 };
 
@@ -129,7 +129,10 @@ export function layoutGraph(nodes: GraphNode[]): PlacedNode[] {
         ...node,
         x: center + Math.cos(angle) * radius,
         y: center + Math.sin(angle) * radius,
-        radius: node.type === 'PROVIDER' ? 17 : node.type === 'CAPABILITY' ? 14 : 12,
+        radius: node.type === 'SUBDOMAIN' ? 19
+          : node.type === 'PROVIDER' ? 17
+            : node.type === 'CAPABILITY' ? 14
+              : 12,
       });
     });
   }

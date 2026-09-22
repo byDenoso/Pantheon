@@ -20,6 +20,7 @@ const ARM_Z_PHASE: Record<PrimaryGalaxyDomain, number> = {
 
 const TYPE_PROGRESS: Record<GraphNodeType, number> = {
   DOMAIN: 0,
+  SUBDOMAIN: 0.09,
   CAMPAIGN: 0.14,
   PROVIDER: 0.1,
   CAPABILITY: 0.18,
@@ -35,6 +36,7 @@ const TYPE_PROGRESS: Record<GraphNodeType, number> = {
 
 const NODE_RADIUS: Record<GraphNodeType, number> = {
   DOMAIN: 1.72,
+  SUBDOMAIN: 1.28,
   CAMPAIGN: 1.05,
   PROVIDER: 0.72,
   CAPABILITY: 0.64,
