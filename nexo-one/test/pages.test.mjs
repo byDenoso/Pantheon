@@ -268,8 +268,9 @@ test('GitHub Pages deploys official artifact and exposes projection readback', a
   assert.match(workflow, /atlas3d-readback-mobile\.png/);
   assert.match(workflow, /atlas3d-readback-mobile-3d\.png/);
   assert.match(workflow, /readback=1/);
-  assert.match(workflow, /g6Fallback=1/);
-  assert.match(workflow, /data-atlas-g6-source="jsdelivr"/);
+  assert.match(workflow, /public\/vendor\/g6\.min\.js/);
+  assert.match(workflow, /dist\/vendor\/g6\.min\.js/);
+  assert.match(workflow, /data-atlas-g6-source="local"/);
   assert.match(workflow, /data-three-quality="reduced-gpu"/);
   assert.match(workflow, /data-three-fit-policy="selection-safe-area-v5"/);
   assert.match(workflow, /data-three-fit-scope="selection"/);
