@@ -27,6 +27,12 @@ test('MCP Atlas is a Pages multipage surface built from canonical MCP sources',a
   assert.match(site,/publicNexoUrl/);
   assert.match(workflow,/VITE_PUBLIC_NEXO_BASE:\s*https:\/\/bydenoso\.github\.io\/Pantheon\//);
   assert.doesNotMatch(workflow,/VITE_PRIVATE_COCKPIT_URL:\s*https:\/\/nexo-one-two\.vercel\.app/);
+  assert.match(workflow,/PAGES_MCP_NEURAL_DARK_2D_OK/);
+  assert.match(workflow,/PAGES_MCP_NEURAL_LIGHT_2D_OK/);
+  assert.match(workflow,/PAGES_MCP_NEURAL_DARK_3D_OK/);
+  assert.match(workflow,/PAGES_MCP_NEURAL_LIGHT_3D_OK/);
+  assert.match(workflow,/PAGES_MCP_NEURAL_MOBILE_LIGHT_2D_OK/);
+  assert.match(workflow,/PAGES_MCP_NEURAL_MOBILE_DARK_3D_OK/);
   assert.doesNotMatch(site,/react-force-graph-3d|ForceGraph3D/);
   assert.match(site,/\.\/topology\.json/);
   assert.match(builder,/NEXO_MCP_TOPOLOGY_V1/);
