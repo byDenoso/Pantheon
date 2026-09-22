@@ -148,6 +148,14 @@ export default async function handler(req,res) {
       return send(decision.body,decision.status);
     }
     if(route==='projection-sync'){
+      if(req.method==='GET'){
+        return send({
+          status:String(env.GITHUB_TOKEN||'').trim()?'READY':'NOT_CONFIGURED',
+          configured:Boolean(String(env.GITHUB_TOKEN||'').trim()),
+          repository:String(env.GITHUB_REPOSITORY||'byDenoso/Pantheon'),
+          event_type:'nexo-public-projection-updated',
+        },200);
+      }
       if(req.method!=='POST')return send({error:'METHOD_NOT_ALLOWED'},405);
       if(!ATLAS_ORIGINS.has(origin))return send({error:'ORIGIN_NOT_ALLOWED'},403);
       const body=await requestBody(req);
