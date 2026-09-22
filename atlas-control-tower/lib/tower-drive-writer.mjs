@@ -1,6 +1,19 @@
 import {createHash} from 'node:crypto';
 import {gzipSync} from 'node:zlib';
 
+export const DERIVED_STALE_ALLOWED_PREFIXES=Object.freeze(['projections/public/']);
+export function towerBundlePathRole(path,bundle={}){
+  const normalized=String(path||'').replace(/^\/+/, '');
+  const declared=Array.isArray(bundle?.derived_stale_allowed_prefixes)
+    ? bundle.derived_stale_allowed_prefixes
+    : [];
+  const prefixes=[...new Set([...DERIVED_STALE_ALLOWED_PREFIXES,...declared].map(value=>String(value||'').replace(/^\/+/, '')).filter(Boolean))];
+  return prefixes.some(prefix=>normalized.startsWith(prefix))?'DERIVED_STALE_ALLOWED':'CURRENT_CANONICAL';
+}
+export function isCurrentTowerBundlePath(path,bundle={}){
+  return towerBundlePathRole(path,bundle)==='CURRENT_CANONICAL';
+}
+
 export function canonicalJson(value){
   if(Array.isArray(value))return '['+value.map(canonicalJson).join(',')+']';
   if(value&&typeof value==='object')return '{'+Object.keys(value).sort().map(key=>JSON.stringify(key)+':'+canonicalJson(value[key])).join(',')+'}';
@@ -28,6 +41,8 @@ export function buildDriveSnapshotCandidate(inputBundle,parentPointer,{now=new D
     ref:bundle.migration_source_ref||bundle.source_ref||parentPointer.migration_source_ref||null,
     commit:bundle.migration_source_commit||bundle.source_commit||parentPointer.migration_source_commit||parentPointer.source_commit||null
   };
+  bundle.derived_stale_allowed_prefixes=[...DERIVED_STALE_ALLOWED_PREFIXES];
+  bundle.derived_stale_policy='HISTORICAL_ONLY__NEVER_CURRENT_INPUT';
   bundle.source_fingerprint=fingerprint;
   bundle.state_fingerprint=fingerprint;
   bundle.storage='GOOGLE_DRIVE_PRIVATE';
