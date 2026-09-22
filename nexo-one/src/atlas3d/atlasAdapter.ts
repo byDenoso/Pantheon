@@ -46,6 +46,8 @@ export interface AtlasCrossLink {
   aggregated: boolean;
   isLearning: boolean;
   learningScope: 'INTRA_DOMAIN' | 'INTER_DOMAIN' | null;
+  bundleIndex: number;
+  bundleCount: number;
 }
 
 export interface AtlasMetroModel {
@@ -308,6 +310,8 @@ export function buildAtlasMetroModel(state: SystemState): AtlasMetroModel {
       aggregated: false,
       isLearning: edge.is_learning === true,
       learningScope: edge.learning_scope || null,
+      bundleIndex: 0,
+      bundleCount: 1,
     });
   }
 
@@ -321,12 +325,6 @@ export function buildAtlasMetroModel(state: SystemState): AtlasMetroModel {
       || learningEndpointFromDomain(filament.to_domain);
     if (!source || !target || source === target) continue;
 
-    const duplicate = crossLinks.some(link =>
-      link.isLearning
-      && ((link.source === source && link.target === target) || (link.source === target && link.target === source))
-    );
-    if (duplicate) continue;
-
     crossLinks.push({
       id: `filament:${filament.id}`,
       source,
@@ -337,6 +335,8 @@ export function buildAtlasMetroModel(state: SystemState): AtlasMetroModel {
       aggregated: false,
       isLearning: true,
       learningScope: filament.scope || null,
+      bundleIndex: 0,
+      bundleCount: 1,
     });
   }
 
@@ -365,6 +365,8 @@ export function buildAtlasMetroModel(state: SystemState): AtlasMetroModel {
       aggregated: true,
       isLearning: false,
       learningScope: null,
+      bundleIndex: 0,
+      bundleCount: 1,
     });
   }
 
@@ -383,6 +385,22 @@ export function buildAtlasMetroModel(state: SystemState): AtlasMetroModel {
     node.descendantCount = descendants;
     node.relationCount = relations + childCount + (node.parentId ? 1 : 0);
     node.mix = safeRatio(childCount + (node.parentId ? 1 : 0), relations);
+  }
+
+  const learningBundles = new Map<string, AtlasCrossLink[]>();
+  for (const link of crossLinks) {
+    if (!link.isLearning) continue;
+    const pair = [link.source, link.target].sort().join('↔');
+    const bucket = learningBundles.get(pair) || [];
+    bucket.push(link);
+    learningBundles.set(pair, bucket);
+  }
+  for (const bucket of learningBundles.values()) {
+    bucket.sort((left, right) => left.id.localeCompare(right.id));
+    bucket.forEach((link, index) => {
+      link.bundleIndex = index;
+      link.bundleCount = bucket.length;
+    });
   }
 
   return {
