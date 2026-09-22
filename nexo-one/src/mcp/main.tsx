@@ -1,6 +1,7 @@
 import {Component,type ReactNode} from 'react';
 import {createRoot} from 'react-dom/client';
 import {McpAtlasApp} from './McpAtlasApp';
+import '../styles/product-foundation.css';
 import './mcp-atlas.css';
 
 class Boundary extends Component<{children:ReactNode},{failed:boolean}>{
