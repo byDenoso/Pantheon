@@ -79,10 +79,16 @@ export async function waitForProjectionSync(
     const url=new URL(metaUrl);
     url.searchParams.set('sync_readback',requestId);
     url.searchParams.set('t',String(Date.now()));
-    const response=await fetch(url,{cache:'no-store',signal,headers:{'Cache-Control':'no-cache'}});
-    if(response.ok){
-      const meta=await response.json() as BuildMeta;
-      if(meta.contract==='NEXO_ONE_BUILD_META_V1'&&meta.sync_request_id===requestId)return meta;
+    try{
+      const response=await fetch(url,{cache:'no-store',signal,headers:{'Cache-Control':'no-cache'}});
+      if(response.ok){
+        const meta=await response.json() as BuildMeta;
+        if(meta.contract==='NEXO_ONE_BUILD_META_V1'&&meta.sync_request_id===requestId)return meta;
+      }
+    }catch(error){
+      if(signal?.aborted||(error as Error)?.name==='AbortError')throw error;
+      // Pages can briefly return a network/CDN miss while a deployment propagates.
+      // Keep polling the exact request_id instead of converting propagation into failure.
     }
     await abortableDelay(pollMs,signal);
   }
