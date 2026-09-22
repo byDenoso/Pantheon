@@ -459,6 +459,44 @@ function rectWithinViewport(rect: Rect, width: number, height: number, padding =
   return rect.x1 >= padding && rect.y1 >= padding && rect.x2 <= width - padding && rect.y2 <= height - padding;
 }
 
+function floatingLabelBox(
+  position: [number, number],
+  node: AtlasMetroNode,
+  angleDegrees: number,
+  distance: number,
+): Rect {
+  const width = estimateLabelWidth(node);
+  const height = estimateLabelHeight(node) + 1;
+  const angle = radians(angleDegrees);
+  const centerX = position[0] + Math.cos(angle) * distance;
+  const centerY = position[1] + Math.sin(angle) * distance;
+  return {
+    x1: centerX - width / 2,
+    x2: centerX + width / 2,
+    y1: centerY - height / 2,
+    y2: centerY + height / 2,
+  };
+}
+
+function labelCollisionScore(
+  rect: Rect,
+  nodeId: string,
+  occupied: Array<{ id: string; rect: Rect }>,
+  nodeRects: Map<string, Rect>,
+  viewportWidth: number,
+  viewportHeight: number,
+): number {
+  let score = rectWithinViewport(rect, viewportWidth, viewportHeight) ? 0 : 2400;
+  for (const item of occupied) {
+    if (intersects(rect, item.rect, 4)) score += intersectionArea(rect, item.rect) + 900;
+  }
+  for (const [otherId, nodeRect] of nodeRects) {
+    if (otherId === nodeId) continue;
+    if (intersects(rect, nodeRect, 2)) score += intersectionArea(rect, nodeRect) + 420;
+  }
+  return score;
+}
+
 function leaderFor(
   position: [number, number],
   rect: Rect,
@@ -584,15 +622,14 @@ export function buildMetroScreenLabelLayout(
     for (const extra of distances) {
       for (const placement of placements) {
         const rect = screenCandidateBox(position, node, placement, extra, zoom);
-        let score = rectWithinViewport(rect, viewportWidth, viewportHeight) ? 0 : 2400;
-
-        for (const item of occupied) {
-          if (intersects(rect, item.rect, 4)) score += intersectionArea(rect, item.rect) + 900;
-        }
-        for (const [otherId, nodeRect] of nodeRects) {
-          if (otherId === node.id) continue;
-          if (intersects(rect, nodeRect, 2)) score += intersectionArea(rect, nodeRect) + 420;
-        }
+        const score = labelCollisionScore(
+          rect,
+          node.id,
+          occupied,
+          nodeRects,
+          viewportWidth,
+          viewportHeight,
+        );
 
         const candidate = { placement, extra, rect, score };
         if (score === 0) {
@@ -602,6 +639,36 @@ export function buildMetroScreenLabelLayout(
         if (!fallback || score < fallback.score) fallback = candidate;
       }
       if (chosen) break;
+    }
+
+    if (!chosen && mustShow) {
+      const angularCandidates = [0, 45, 90, 135, 180, 225, 270, 315, 22.5, 67.5, 112.5, 157.5, 202.5, 247.5, 292.5, 337.5];
+      const radialCandidates = [58, 76, 96, 120, 148, 182, 220];
+      for (const distance of radialCandidates) {
+        for (const angle of angularCandidates) {
+          const rect = floatingLabelBox(position, node, angle, distance);
+          const score = labelCollisionScore(
+            rect,
+            node.id,
+            occupied,
+            nodeRects,
+            viewportWidth,
+            viewportHeight,
+          );
+          const candidate = {
+            placement: preferred,
+            extra: distance,
+            rect,
+            score,
+          };
+          if (score === 0) {
+            chosen = candidate;
+            break;
+          }
+          if (!fallback || score < fallback.score) fallback = candidate;
+        }
+        if (chosen) break;
+      }
     }
 
     const finalChoice = chosen || (mustShow ? fallback : null);
