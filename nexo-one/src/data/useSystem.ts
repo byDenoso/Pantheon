@@ -197,7 +197,9 @@ export function useSystem(initialScenario = DEFAULT_SCENARIO_ID): SystemStore {
         if (previous && preserveStateOnFailure(nextLoad)) {
           setLoad(previous.global_state === 'LIVE' ? 'READY' : 'PARTIAL');
           setSyncStatus('FAILED');
-          setSyncMessage('Sincronização não confirmada');
+          setSyncMessage(failure instanceof DataSourceError && /GitHub/i.test(failure.message)
+            ? 'Origem GitHub indisponível'
+            : 'Sincronização não confirmada');
         } else {
           setLoad(nextLoad);
           setSyncStatus('FAILED');
