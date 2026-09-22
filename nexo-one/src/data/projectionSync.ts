@@ -1,8 +1,12 @@
 import {DataSourceError} from './adapters/source.ts';
 
 const configuredSyncEndpoint = String(import.meta.env?.VITE_NEXO_SYNC_ENDPOINT || '').trim();
-const PUBLIC_PROJECTION_ENDPOINT =
+const PUBLIC_PROJECTION_RAW_ENDPOINT =
   'https://raw.githubusercontent.com/byDenoso/NEXO-Obsidian-Vault/main/TOWER_V06/projections/public/projection.json';
+const PUBLIC_PROJECTION_API_ENDPOINT =
+  'https://api.github.com/repos/byDenoso/NEXO-Obsidian-Vault/contents/TOWER_V06/projections/public/projection.json?ref=main';
+const RAW_RETRY_DELAYS_MS = [0, 350, 900] as const;
+const API_RETRY_DELAYS_MS = [0, 450] as const;
 
 export type ProjectionSyncReceipt =
   | {
@@ -18,6 +22,7 @@ export type ProjectionSyncReceipt =
       generated_at: string;
       active_work: number;
       needs_dener: number;
+      origin_channel: 'GITHUB_RAW' | 'GITHUB_API_FALLBACK';
     };
 
 type BuildMeta = {
@@ -65,18 +70,75 @@ function abortableDelay(ms:number,signal?:AbortSignal):Promise<void>{
   });
 }
 
-async function fetchFreshPublicProjection(signal?:AbortSignal):Promise<ProjectionSyncReceipt>{
-  const url=new URL(PUBLIC_PROJECTION_ENDPOINT);
-  url.searchParams.set('sync_readback',String(Date.now()));
-  const response=await fetch(url,{
-    cache:'no-store',
-    signal,
-    headers:{Accept:'application/json','Cache-Control':'no-cache'},
-  });
-  if(!response.ok){
-    throw new DataSourceError('UNAVAILABLE','A projeção pública sancionada não pôde ser consultada na origem.');
+class ProjectionOriginError extends Error {
+  status?: number;
+  constructor(message:string,status?:number){
+    super(message);
+    this.name='ProjectionOriginError';
+    this.status=status;
   }
-  const projection=await response.json() as PublicProjection;
+}
+
+function retryableStatus(status:number):boolean{
+  return status===408||status===425||status===429||status===500||status===502||status===503||status===504;
+}
+
+async function fetchProjectionJson(
+  endpoint:string,
+  originLabel:string,
+  accept:string,
+  retryDelays:readonly number[],
+  signal?:AbortSignal,
+):Promise<PublicProjection>{
+  let lastMessage=originLabel+' não respondeu.';
+  let lastStatus:number|undefined;
+
+  for(let attempt=0;attempt<retryDelays.length;attempt+=1){
+    const delay=retryDelays[attempt]||0;
+    if(delay>0)await abortableDelay(delay,signal);
+
+    const url=new URL(endpoint);
+    if(originLabel==='GitHub Raw'){
+      url.searchParams.set('sync_readback',String(Date.now())+'-'+String(attempt));
+    }
+
+    try{
+      const response=await fetch(url,{
+        cache:'no-store',
+        signal,
+        headers:{Accept:accept},
+      });
+
+      if(!response.ok){
+        lastStatus=response.status;
+        lastMessage=originLabel+' retornou HTTP '+String(response.status)
+          +(response.statusText?' '+response.statusText:'')+'.';
+        if(!retryableStatus(response.status))break;
+        continue;
+      }
+
+      try{
+        return await response.json() as PublicProjection;
+      }catch{
+        lastStatus=response.status;
+        lastMessage=originLabel+' respondeu HTTP '+String(response.status)+', mas sem JSON válido.';
+        break;
+      }
+    }catch(error){
+      if(signal?.aborted||(error as Error)?.name==='AbortError')throw error;
+      lastStatus=undefined;
+      lastMessage=originLabel+' não respondeu ao JavaScript. Em respostas HTTP 5xx sem headers CORS, '
+        +'o navegador pode mascarar a indisponibilidade upstream como erro de CORS; o DevTools mostra o HTTP real.';
+    }
+  }
+
+  throw new ProjectionOriginError(lastMessage,lastStatus);
+}
+
+function projectionReceipt(
+  projection:PublicProjection,
+  originChannel:'GITHUB_RAW'|'GITHUB_API_FALLBACK',
+):ProjectionSyncReceipt{
   const manifest=projection.manifest||{};
   const fingerprint=String(manifest.projection_fingerprint||'');
   const stateFingerprint=String(manifest.source_state_fingerprint||'');
@@ -102,13 +164,57 @@ async function fetchFreshPublicProjection(signal?:AbortSignal):Promise<Projectio
     generated_at:String(manifest.generated_at||''),
     active_work:Number(projection.counts?.active_work||0),
     needs_dener:Number(projection.counts?.needs_dener||0),
+    origin_channel:originChannel,
   };
+}
+
+async function fetchFreshPublicProjection(signal?:AbortSignal):Promise<ProjectionSyncReceipt>{
+  let rawFailure:ProjectionOriginError;
+
+  try{
+    const projection=await fetchProjectionJson(
+      PUBLIC_PROJECTION_RAW_ENDPOINT,
+      'GitHub Raw',
+      'application/json',
+      RAW_RETRY_DELAYS_MS,
+      signal,
+    );
+    return projectionReceipt(projection,'GITHUB_RAW');
+  }catch(error){
+    if(signal?.aborted||(error as Error)?.name==='AbortError')throw error;
+    if(error instanceof DataSourceError)throw error;
+    rawFailure=error instanceof ProjectionOriginError
+      ? error
+      : new ProjectionOriginError('GitHub Raw falhou por uma causa não classificada.');
+  }
+
+  try{
+    const projection=await fetchProjectionJson(
+      PUBLIC_PROJECTION_API_ENDPOINT,
+      'Fallback GitHub API',
+      'application/vnd.github.raw+json',
+      API_RETRY_DELAYS_MS,
+      signal,
+    );
+    return projectionReceipt(projection,'GITHUB_API_FALLBACK');
+  }catch(error){
+    if(signal?.aborted||(error as Error)?.name==='AbortError')throw error;
+    if(error instanceof DataSourceError)throw error;
+    const apiFailure=error instanceof ProjectionOriginError
+      ? error
+      : new ProjectionOriginError('Fallback GitHub API falhou por uma causa não classificada.');
+    throw new DataSourceError(
+      'UNAVAILABLE',
+      'A origem GitHub da projeção está indisponível. '+rawFailure.message+' '+apiFailure.message
+        +' O último snapshot válido foi preservado; tente sincronizar novamente quando a origem estabilizar.',
+    );
+  }
 }
 
 export function projectionSyncAvailable():boolean{
   // Mesmo sem bridge autenticado, a projeção pública sancionada continua sendo
   // uma fonte real e no-cache de verificação da cadeia Drive -> export mirror.
-  return Boolean(configuredSyncEndpoint||PUBLIC_PROJECTION_ENDPOINT);
+  return Boolean(configuredSyncEndpoint||PUBLIC_PROJECTION_RAW_ENDPOINT||PUBLIC_PROJECTION_API_ENDPOINT);
 }
 
 export async function dispatchProjectionSync(currentFingerprint:string,signal?:AbortSignal):Promise<ProjectionSyncReceipt>{
