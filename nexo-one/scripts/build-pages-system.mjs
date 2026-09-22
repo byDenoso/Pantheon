@@ -469,6 +469,7 @@ function graphFromProjection(projection, observedAt, filaments = [], peerDetecti
         explanation: 'Procedural Learning linked only by an explicit canonical reference in METALEARNING_CURRENT.',
         is_learning: true,
         learning_scope: link.domain === filament.domain ? 'INTRA_DOMAIN' : 'INTER_DOMAIN',
+        learning_ref: filament.id,
       });
     }
     for (const ref of filament.learning_refs || []) {
@@ -483,6 +484,7 @@ function graphFromProjection(projection, observedAt, filaments = [], peerDetecti
         explanation: 'Learning lineage declared by evidence_refs in METALEARNING_CURRENT.',
         is_learning: true,
         learning_scope: 'INTRA_DOMAIN',
+        learning_ref: filament.id,
       });
     }
 
@@ -498,6 +500,7 @@ function graphFromProjection(projection, observedAt, filaments = [], peerDetecti
         explanation: 'Derived cross-domain Learning bridge from explicit evidence endpoints; procedural only.',
         is_learning: true,
         learning_scope: 'INTER_DOMAIN',
+        learning_ref: filament.id,
       });
     }
   }
