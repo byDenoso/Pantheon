@@ -375,7 +375,7 @@ jobs:
 
           echo "ATLAS3D_DOM_DIAGNOSTICS_BEGIN"
           grep -oE 'data-atlas-[a-z-]+="[^"]*"' /tmp/atlas3d-dom.html | head -28 || true
-          grep -oE 'data-g6-(ready|node-count|label-visible|label-hidden|label-collisions|label-dom-collisions|label-ui-overlaps|label-zoom|label-policy|max-siblings|learning-edges|scientific-learning-edges|procedural-learning-edges|semantic-learning-edges|peer-learning-edges)="[^"]*"' /tmp/atlas3d-dom.html | head -24 || true
+          grep -oE 'data-g6-(ready|node-count|label-visible|label-hidden|label-collisions|label-dom-collisions|label-ui-overlaps|label-zoom|label-policy|max-siblings|learning-edges|scientific-learning-edges|procedural-learning-edges|semantic-learning-edges|peer-learning-edges|learning-subdomain-edges|peer-subdomain-edges)="[^"]*"' /tmp/atlas3d-dom.html | head -24 || true
           grep -oE 'class="atlas-render-error"[^<]*|G6 não carregou[^<]*|Atlas 3D indisponível[^<]*' /tmp/atlas3d-dom.html | head -10 || true
           echo "ATLAS3D_DOM_DIAGNOSTICS_END"
 
@@ -396,7 +396,11 @@ jobs:
           g6_procedural="$(sed -n 's/.*data-g6-procedural-learning-edges="\([0-9][0-9]*\)".*/\1/p' /tmp/atlas3d-dom.html | head -1)"
           g6_semantic="$(sed -n 's/.*data-g6-semantic-learning-edges="\([0-9][0-9]*\)".*/\1/p' /tmp/atlas3d-dom.html | head -1)"
           g6_peer="$(sed -n 's/.*data-g6-peer-learning-edges="\([0-9][0-9]*\)".*/\1/p' /tmp/atlas3d-dom.html | head -1)"
+          g6_learning_subdomains="$(sed -n 's/.*data-g6-learning-subdomain-edges="\([0-9][0-9]*\)".*/\1/p' /tmp/atlas3d-dom.html | head -1)"
+          g6_peer_subdomains="$(sed -n 's/.*data-g6-peer-subdomain-edges="\([0-9][0-9]*\)".*/\1/p' /tmp/atlas3d-dom.html | head -1)"
           peer_learning="$(sed -n 's/.*data-atlas-peer-learning-links="\([0-9][0-9]*\)".*/\1/p' /tmp/atlas3d-dom.html | head -1)"
+          atlas_learning_subdomains="$(sed -n 's/.*data-atlas-learning-subdomain-links="\([0-9][0-9]*\)".*/\1/p' /tmp/atlas3d-dom.html | head -1)"
+          atlas_peer_subdomains="$(sed -n 's/.*data-atlas-peer-subdomain-links="\([0-9][0-9]*\)".*/\1/p' /tmp/atlas3d-dom.html | head -1)"
           atlas_scientific="$(sed -n 's/.*data-atlas-learning-scientific="\([0-9][0-9]*\)".*/\1/p' /tmp/atlas3d-dom.html | head -1)"
           atlas_procedural="$(sed -n 's/.*data-atlas-learning-procedural="\([0-9][0-9]*\)".*/\1/p' /tmp/atlas3d-dom.html | head -1)"
           atlas_semantic="$(sed -n 's/.*data-atlas-learning-semantic="\([0-9][0-9]*\)".*/\1/p' /tmp/atlas3d-dom.html | head -1)"
@@ -427,6 +431,22 @@ jobs:
           }
           [ -n "${g6_scientific}" ] && [ "${g6_scientific}" -ge 8 ] || {
             echo "::error::G6 rendered only ${g6_scientific:-0} Scientific Learning filaments"
+            exit 1
+          }
+          [ -n "${atlas_learning_subdomains}" ] && [ "${atlas_learning_subdomains}" -ge 8 ] || {
+            echo "::error::Learning still terminates mostly at domain hubs: atlas_subdomain_links=${atlas_learning_subdomains:-0}"
+            exit 1
+          }
+          [ -n "${atlas_peer_subdomains}" ] && [ "${atlas_peer_subdomains}" -ge 8 ] || {
+            echo "::error::Peer Detection Learning is not anchored to its Science subdomain: ${atlas_peer_subdomains:-0}"
+            exit 1
+          }
+          [ -n "${g6_learning_subdomains}" ] && [ "${g6_learning_subdomains}" -ge 8 ] || {
+            echo "::error::G6 did not render semantic subdomain Learning endpoints: ${g6_learning_subdomains:-0}"
+            exit 1
+          }
+          [ -n "${g6_peer_subdomains}" ] && [ "${g6_peer_subdomains}" -ge 8 ] || {
+            echo "::error::G6 Peer Detection filaments still terminate at the Science hub: ${g6_peer_subdomains:-0}"
             exit 1
           }
           [ "${peer_artifacts:-missing}" = "0" ] || {
@@ -530,7 +550,7 @@ jobs:
             > /tmp/atlas3d-3d-dom.html
           echo "ATLAS3D_3D_DOM_DIAGNOSTICS_BEGIN"
           grep -oE 'data-atlas-[a-z-]+="[^"]*"' /tmp/atlas3d-3d-dom.html | head -20 || true
-          grep -oE 'data-three-(ready|node-count|paint-samples|synapse-count|learning-synapses|scientific-learning-synapses|procedural-learning-synapses|semantic-learning-synapses|peer-learning-synapses|z-span|same-level-z-span|selected-sibling-count|selected-sibling-z-span|depth-policy|visual)="[^"]*"' /tmp/atlas3d-3d-dom.html | head -28 || true
+          grep -oE 'data-three-(ready|node-count|paint-samples|synapse-count|learning-synapses|scientific-learning-synapses|procedural-learning-synapses|semantic-learning-synapses|peer-learning-synapses|learning-subdomain-synapses|peer-subdomain-synapses|z-span|same-level-z-span|selected-sibling-count|selected-sibling-z-span|depth-policy|visual)="[^"]*"' /tmp/atlas3d-3d-dom.html | head -28 || true
           echo "ATLAS3D_3D_DOM_DIAGNOSTICS_END"
           grep -Fq 'data-atlas-mode="3d"' /tmp/atlas3d-3d-dom.html
           grep -Fq 'data-active-mode="3d"' /tmp/atlas3d-3d-dom.html
@@ -550,6 +570,8 @@ jobs:
           three_learning="$(sed -n 's/.*data-three-learning-synapses="\([0-9][0-9]*\)".*/\1/p' /tmp/atlas3d-3d-dom.html | head -1)"
           three_scientific="$(sed -n 's/.*data-three-scientific-learning-synapses="\([0-9][0-9]*\)".*/\1/p' /tmp/atlas3d-3d-dom.html | head -1)"
           three_peer="$(sed -n 's/.*data-three-peer-learning-synapses="\([0-9][0-9]*\)".*/\1/p' /tmp/atlas3d-3d-dom.html | head -1)"
+          three_learning_subdomains="$(sed -n 's/.*data-three-learning-subdomain-synapses="\([0-9][0-9]*\)".*/\1/p' /tmp/atlas3d-3d-dom.html | head -1)"
+          three_peer_subdomains="$(sed -n 's/.*data-three-peer-subdomain-synapses="\([0-9][0-9]*\)".*/\1/p' /tmp/atlas3d-3d-dom.html | head -1)"
           [ -n "${three_learning}" ] && [ "${three_learning}" -ge 8 ] || {
             echo "::error::Three renderer materialized only ${three_learning:-0} Learning synapses"
             exit 1
@@ -560,6 +582,14 @@ jobs:
           }
           [ -n "${three_peer}" ] && [ "${three_peer}" -ge 8 ] || {
             echo "::error::Three renderer materialized only ${three_peer:-0} Peer Detection bundles"
+            exit 1
+          }
+          [ -n "${three_learning_subdomains}" ] && [ "${three_learning_subdomains}" -ge 8 ] || {
+            echo "::error::Three Learning synapses still terminate mostly at domain hubs: ${three_learning_subdomains:-0}"
+            exit 1
+          }
+          [ -n "${three_peer_subdomains}" ] && [ "${three_peer_subdomains}" -ge 8 ] || {
+            echo "::error::Three Peer Detection synapses do not reach the exact Science subdomain: ${three_peer_subdomains:-0}"
             exit 1
           }
           grep -Fq 'data-three-depth-policy="domain-depth-sibling-v3"' /tmp/atlas3d-3d-dom.html
@@ -593,7 +623,7 @@ jobs:
             --window-size=1440,900 --virtual-time-budget=8000 \
             --screenshot=/tmp/atlas3d-readback-3d.png "${depth_url}" >/dev/null 2>&1
           test -s /tmp/atlas3d-readback-3d.png
-          echo "PAGES_ATLAS3D_3D_READBACK_OK visual=neural-synapse visible=${visible_count} three_nodes=${three_node_count} synapses=${three_synapse_count} learning=${three_learning} scientific=${three_scientific} peer=${three_peer} z_span=${three_z_span} same_level_z=${three_same_level_z} selected_siblings=${selected_sibling_count} selected_z=${selected_sibling_z} paint_samples=${three_paint_samples}"
+          echo "PAGES_ATLAS3D_3D_READBACK_OK visual=neural-synapse visible=${visible_count} three_nodes=${three_node_count} synapses=${three_synapse_count} learning=${three_learning} scientific=${three_scientific} peer=${three_peer} subdomains=${three_learning_subdomains} peer_subdomains=${three_peer_subdomains} z_span=${three_z_span} same_level_z=${three_same_level_z} selected_siblings=${selected_sibling_count} selected_z=${selected_sibling_z} paint_samples=${three_paint_samples}"
 
           mobile_3d_url="${base}/atlas3d/?mode=3d&readback=1&g6Fallback=1"
           "${chrome_bin}" --headless=new --no-sandbox --disable-dev-shm-usage --hide-scrollbars \
