@@ -136,6 +136,12 @@ export interface InboxItem {
   fingerprint: string;
   checked_at: string;
   freshness: Freshness;
+  /** Presentation-only label for the concrete human intervention required. */
+  kind_label?: string;
+  /** Dependencies that actually require a human action. */
+  human_requirements?: { id: string; label: string; detail: string }[];
+  /** Explicitly non-human dependencies kept visible so they are not misassigned to the user. */
+  automatic_note?: string | null;
 }
 
 /** UNVERIFIED nunca é "parcialmente funcional": é ausência de prova. */
