@@ -878,7 +878,7 @@ function disposeThreeObject(root: THREE.Object3D) {
     if (!material) return;
     const materials = Array.isArray(material) ? material : [material];
     for (const item of materials) {
-      item.map?.dispose?.();
+      if (item.map && item.map.userData?.atlasSharedTexture !== true) item.map.dispose?.();
       item.dispose?.();
     }
   });
@@ -915,29 +915,33 @@ function createOrganicGeometry(radius: number, seedKey: string, detail = 3): THR
   return geometry;
 }
 
-function createGlowSprite(colorValue: string | number, diameter: number, opacity: number): THREE.Sprite {
-  const color = new THREE.Color(colorValue);
-  const red = Math.round(color.r * 255);
-  const green = Math.round(color.g * 255);
-  const blue = Math.round(color.b * 255);
+let sharedGlowTexture: THREE.CanvasTexture | null = null;
+
+function getSharedGlowTexture(): THREE.CanvasTexture {
+  if (sharedGlowTexture) return sharedGlowTexture;
   const canvas = document.createElement('canvas');
   canvas.width = 128;
   canvas.height = 128;
   const context = canvas.getContext('2d')!;
   const gradient = context.createRadialGradient(64, 64, 0, 64, 64, 62);
-  gradient.addColorStop(0, `rgba(${red},${green},${blue},.82)`);
-  gradient.addColorStop(.20, `rgba(${red},${green},${blue},.50)`);
-  gradient.addColorStop(.48, `rgba(${red},${green},${blue},.16)`);
-  gradient.addColorStop(1, `rgba(${red},${green},${blue},0)`);
+  gradient.addColorStop(0, 'rgba(255,255,255,.88)');
+  gradient.addColorStop(.20, 'rgba(255,255,255,.54)');
+  gradient.addColorStop(.48, 'rgba(255,255,255,.18)');
+  gradient.addColorStop(1, 'rgba(255,255,255,0)');
   context.fillStyle = gradient;
   context.fillRect(0, 0, 128, 128);
 
-  const texture = new THREE.CanvasTexture(canvas);
-  texture.colorSpace = THREE.SRGBColorSpace;
-  texture.minFilter = THREE.LinearFilter;
+  sharedGlowTexture = new THREE.CanvasTexture(canvas);
+  sharedGlowTexture.colorSpace = THREE.SRGBColorSpace;
+  sharedGlowTexture.minFilter = THREE.LinearFilter;
+  sharedGlowTexture.userData.atlasSharedTexture = true;
+  return sharedGlowTexture;
+}
+
+function createGlowSprite(colorValue: string | number, diameter: number, opacity: number): THREE.Sprite {
   const material = new THREE.SpriteMaterial({
-    map: texture,
-    color: 0xffffff,
+    map: getSharedGlowTexture(),
+    color: new THREE.Color(colorValue),
     transparent: true,
     opacity,
     depthWrite: false,
@@ -1019,7 +1023,7 @@ function addSynapse(
     new THREE.MeshBasicMaterial({
       color,
       transparent: true,
-      opacity: learning ? (compact ? .10 : .18) : bridge ? .055 : .085,
+      opacity: learning ? (compact ? .16 : .20) : bridge ? (compact ? .075 : .055) : (compact ? .11 : .085),
       depthWrite: false,
       blending: THREE.AdditiveBlending,
     }),
@@ -1032,7 +1036,7 @@ function addSynapse(
     new THREE.MeshBasicMaterial({
       color,
       transparent: true,
-      opacity: learning ? (compact ? .50 : .72) : bridge ? .28 : .44,
+      opacity: learning ? (compact ? .68 : .76) : bridge ? (compact ? .36 : .28) : (compact ? .54 : .44),
       depthWrite: false,
       blending: THREE.AdditiveBlending,
     }),
@@ -1055,7 +1059,7 @@ function addSynapse(
   const pulseGlow = createGlowSprite(
     colorValue,
     learning ? 18 : bridge ? 10 : 12,
-    learning ? (compact ? .48 : .72) : bridge ? .34 : .46,
+    learning ? (compact ? .66 : .74) : bridge ? (compact ? .44 : .34) : (compact ? .56 : .46),
   );
   pulseGlow.material.depthTest = false;
   particle.add(pulseGlow);
