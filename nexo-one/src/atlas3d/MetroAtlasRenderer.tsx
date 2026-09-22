@@ -635,7 +635,20 @@ function Metro2DView({
     });
 
     graph.on('aftertransform', scheduleLabels);
-    graph.on('afterrender', scheduleLabels);
+    graph.on('afterrender', () => {
+      scheduleLabels();
+      // G6 can complete a real canvas render in headless Chromium while the
+      // render() promise remains unsettled. Readiness belongs to the renderer
+      // event + materialized canvas, not to that promise implementation detail.
+      requestAnimationFrame(() => {
+        if (graphRef.current !== graph) return;
+        const ready = Boolean(container.querySelector('canvas'));
+        container.dataset.g6Ready = ready ? 'true' : 'false';
+        if (!ready) return;
+        clearRendererError(container);
+        onReadyRef.current?.();
+      });
+    });
 
     let refreshSequence = 0;
     const refresh = async (fit: boolean) => {
