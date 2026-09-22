@@ -21,4 +21,16 @@ test('MCP Atlas is a Pages multipage surface built from canonical MCP sources',a
   assert.match(site,/\.\/topology\.json/);
   assert.match(builder,/NEXO_MCP_TOPOLOGY_V1/);
   assert.match(builder,/TOWER_V06/);
+
+  assert.match(workflow,/projection-manifest\.json/);
+  assert.match(workflow,/WORK_COUNT_DRIFT/);
+  assert.match(workflow,/WORK_STATUS_DRIFT/);
+  assert.match(workflow,/MCP_TOPOLOGY_FRESHNESS_FINGERPRINT_MISMATCH/);
+  assert.match(site,/Sem alterações/);
+  assert.match(site,/focusNode/);
+  assert.match(site,/relationContext/);
+  assert.match(site,/Filtrar grafo/);
+  assert.match(site,/\['roles','Roles'\]/);
+  assert.match(builder,/source_snapshot_id/);
+  assert.match(builder,/projection_fingerprint/);
 });
