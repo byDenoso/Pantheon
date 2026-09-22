@@ -228,10 +228,10 @@ export interface LaneSnapshot {
 }
 
 export type GraphNodeType =
-  | 'DOMAIN' | 'CAMPAIGN' | 'ACTION' | 'EFFECT' | 'CLAIM' | 'TEST' | 'MEMORY'
+  | 'DOMAIN' | 'SUBDOMAIN' | 'CAMPAIGN' | 'ACTION' | 'EFFECT' | 'CLAIM' | 'TEST' | 'MEMORY'
   | 'CAPABILITY' | 'PROVIDER' | 'PROJECTION' | 'SIDE_QUEST' | 'FILAMENT';
 export const GRAPH_NODE_TYPES: GraphNodeType[] = [
-  'DOMAIN', 'CAMPAIGN', 'ACTION', 'EFFECT', 'CLAIM', 'TEST', 'MEMORY',
+  'DOMAIN', 'SUBDOMAIN', 'CAMPAIGN', 'ACTION', 'EFFECT', 'CLAIM', 'TEST', 'MEMORY',
   'CAPABILITY', 'PROVIDER', 'PROJECTION', 'SIDE_QUEST', 'FILAMENT',
 ];
 
@@ -272,6 +272,8 @@ export interface GraphNode {
   owner_role?: string;
   human_gate?: boolean;
   member_count?: number;
+  semantic_description?: string;
+  semantic_state?: string;
 }
 
 export interface GraphEdge {
