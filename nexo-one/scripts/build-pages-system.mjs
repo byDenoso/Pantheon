@@ -326,6 +326,33 @@ function learningFilamentsFromTower(interdomain, manifest, observedAt) {
   });
 }
 
+function projectedWorkNode(item, manifest, observedAt, humanWorkIds) {
+  const rawId = String(item?.id || '');
+  if (!rawId) return null;
+  const domain = domainOf(item.domain);
+  return {
+    id: 'work:' + rawId,
+    type: 'ACTION',
+    label: String(item.title || rawId),
+    domain,
+    state: projectionState(item.status || item.operational_status),
+    authority_class: 'NON_AUTHORITATIVE',
+    source_ref: sourceRef(manifest),
+    source_revision: manifest.tower_commit,
+    fingerprint: nodeFingerprint('work', rawId, manifest),
+    freshness: { state: 'RECENT', observed_at: observedAt, ttl_seconds: null },
+    checked_at: observedAt,
+    summary: 'WORK projected without reinterpretation; canonical status=' + String(item.status || item.operational_status || 'UNSPECIFIED'),
+    campaign_id: item.campaign_id ? String(item.campaign_id) : undefined,
+    test_group_id: item.test_group_id ? String(item.test_group_id) : undefined,
+    operational_status: String(item.operational_status || item.status || 'UNSPECIFIED').toUpperCase(),
+    priority: item.priority ? String(item.priority).toUpperCase() : undefined,
+    dependency_class: item.dependency_class ? String(item.dependency_class).toUpperCase() : undefined,
+    owner_role: item.owner_role ? String(item.owner_role).toUpperCase() : undefined,
+    human_gate: humanWorkIds.has(rawId),
+  };
+}
+
 function graphFromProjection(projection, observedAt, filaments = [], peerDetectionBattery = null) {
   const manifest = projection.manifest;
   const source = sourceRef(manifest);
@@ -374,30 +401,10 @@ function graphFromProjection(projection, observedAt, filaments = [], peerDetecti
   for (const item of projection.work) {
     const rawId = String(item.id || '');
     if (!rawId || peerMembership.workIds.has(rawId)) continue;
-    const domain = domainOf(item.domain);
-    const id = 'work:' + rawId;
-    addNode({
-      id,
-      type: 'ACTION',
-      label: String(item.title || rawId),
-      domain,
-      state: projectionState(item.status || item.operational_status),
-      authority_class: 'NON_AUTHORITATIVE',
-      source_ref: source,
-      source_revision: manifest.tower_commit,
-      fingerprint: nodeFingerprint('work', rawId, manifest),
-      freshness: { state: 'RECENT', observed_at: observedAt, ttl_seconds: null },
-      checked_at: observedAt,
-      summary: 'WORK projected without reinterpretation; canonical status=' + String(item.status || item.operational_status || 'UNSPECIFIED'),
-      campaign_id: item.campaign_id ? String(item.campaign_id) : undefined,
-      test_group_id: item.test_group_id ? String(item.test_group_id) : undefined,
-      operational_status: String(item.operational_status || item.status || 'UNSPECIFIED').toUpperCase(),
-      priority: item.priority ? String(item.priority).toUpperCase() : undefined,
-      dependency_class: item.dependency_class ? String(item.dependency_class).toUpperCase() : undefined,
-      owner_role: item.owner_role ? String(item.owner_role).toUpperCase() : undefined,
-      human_gate: humanWorkIds.has(rawId),
-    });
-    addEdge('domain:' + domain, id);
+    const node = projectedWorkNode(item, manifest, observedAt, humanWorkIds);
+    if (!node) continue;
+    addNode(node);
+    addEdge('domain:' + node.domain, node.id);
   }
 
   for (const item of projection.tests) {
@@ -611,6 +618,12 @@ export function buildPagesProjection({
     ...peerDetectionLearningFilaments(peerDetectionBattery, projection, manifest, observedAt),
   ];
   const graph = graphFromProjection(projection, observedAt, filaments, peerDetectionBattery);
+  const humanWorkIds = new Set(Array.isArray(projection.human_gates?.work_ids)
+    ? projection.human_gates.work_ids.map(value => String(value || ''))
+    : []);
+  const projectedWork = (projection.work || [])
+    .map(item => projectedWorkNode(item, manifest, observedAt, humanWorkIds))
+    .filter(Boolean);
   const lanes = lanesFromProjection(projection, observedAt);
   const inbox = humanInboxFromProjection(projection, observedAt);
 
@@ -674,6 +687,7 @@ export function buildPagesProjection({
     capabilities: [],
     runs: [],
     lanes,
+    projected_work: projectedWork,
     graph,
     filaments,
     providers: [{
