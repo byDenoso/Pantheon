@@ -8,8 +8,7 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import type { AtlasMetroModel, AtlasMetroNode } from './atlasAdapter.ts';
 import { visibleAtlasIds } from './atlasAdapter.ts';
 import {
-  buildMetroLabelLayout,
-  metroLabelFontSize,
+  buildMetroScreenLabelLayout,
   metroLayoutPositions,
   metroNodeSize,
 } from './metro2dLayout.ts';
@@ -35,6 +34,8 @@ type G6Graph = {
   getElementState: (id: string) => string[];
   setElementState: (...args: any[]) => Promise<void> | void;
   on: (event: string, callback: (event: any) => void) => void;
+  getZoom: () => number;
+  getViewportByCanvas: (point: [number, number]) => [number, number];
   resize?: () => void;
   destroy?: () => void;
 };
@@ -110,29 +111,20 @@ function buildG6Data(
   showBeams: boolean,
   width: number,
   height: number,
-  selectedId: string | null = null,
 ) {
   const ids = visibleAtlasIds(model, expanded);
   const visible = new Set(ids);
   const positions = metroLayoutPositions(model, ids, width, height);
-  const labelLayout = buildMetroLabelLayout(model, ids, positions, selectedId);
 
   const nodes = ids.map(id => {
     const node = model.nodeMap.get(id)!;
     const position = positions.get(id) || [width / 2, height / 2];
-    const label = labelLayout.byId.get(id);
     return {
       id,
       type: 'donut',
       data: {
         ...node,
         expanded: expanded.has(id),
-        labelVisible: label?.visible ?? true,
-        labelPlacement: label?.placement || 'bottom',
-        labelOffsetX: label?.offsetX || 0,
-        labelOffsetY: label?.offsetY || 0,
-        labelMaxWidth: label?.maxWidth || 138,
-        labelFontSize: label?.fontSize || metroLabelFontSize(node),
       },
       style: { x: position[0], y: position[1] },
     };
@@ -146,7 +138,7 @@ function buildG6Data(
       source: node.parentId,
       target: id,
       type: 'line',
-      data: { kind: 'hierarchy', domain: node.domain },
+      data: { kind: 'hierarchy', domain: node.domain, isLearning: false },
     }];
   });
 
@@ -158,25 +150,22 @@ function buildG6Data(
         source: link.source,
         target: link.target,
         type: 'cubic',
-        data: { kind: 'bridge', label: link.label, weight: link.weight, aggregated: link.aggregated },
+        data: {
+          kind: 'bridge',
+          label: link.label,
+          weight: link.weight,
+          aggregated: link.aggregated,
+          isLearning: link.isLearning,
+          learningScope: link.learningScope,
+        },
       }))
     : [];
 
   return {
     nodes,
     edges: [...hierarchyEdges, ...bridgeEdges],
-    labelLayout,
+    positions,
   };
-}
-
-function applyG6LabelMetrics(
-  container: HTMLElement,
-  layout: ReturnType<typeof buildMetroLabelLayout>,
-) {
-  container.dataset.g6LabelVisible = String(layout.visible);
-  container.dataset.g6LabelHidden = String(layout.hidden);
-  container.dataset.g6LabelCollisions = String(layout.collisions);
-  container.dataset.g6MaxSiblings = String(layout.maxSiblings);
 }
 
 function applyG6Selection(graph: G6Graph | null, model: AtlasMetroModel, expanded: ReadonlySet<string>, selectedId: string | null) {
@@ -185,6 +174,90 @@ function applyG6Selection(graph: G6Graph | null, model: AtlasMetroModel, expande
   const states: Record<string, string[]> = {};
   for (const id of visible) states[id] = id === selectedId ? ['selected'] : [];
   void graph.setElementState(states, false);
+}
+
+function countDomLabelCollisions(layer: HTMLElement): number {
+  const labels = [...layer.querySelectorAll<HTMLElement>('.atlas-screen-label')];
+  let collisions = 0;
+  for (let left = 0; left < labels.length; left += 1) {
+    const a = labels[left]!.getBoundingClientRect();
+    for (let right = left + 1; right < labels.length; right += 1) {
+      const b = labels[right]!.getBoundingClientRect();
+      const separated = a.right + 1 <= b.left
+        || a.left >= b.right + 1
+        || a.bottom + 1 <= b.top
+        || a.top >= b.bottom + 1;
+      if (!separated) collisions += 1;
+    }
+  }
+  return collisions;
+}
+
+function renderScreenLabels(
+  graph: G6Graph,
+  container: HTMLElement,
+  labelLayer: HTMLElement,
+  leaderLayer: SVGSVGElement,
+  model: AtlasMetroModel,
+  expanded: ReadonlySet<string>,
+  selectedId: string | null,
+  hoveredId: string | null,
+) {
+  const rect = container.getBoundingClientRect();
+  const ids = visibleAtlasIds(model, expanded);
+  const canvasPositions = metroLayoutPositions(model, ids, rect.width, rect.height);
+  const screenPositions = new Map<string, [number, number]>();
+
+  for (const id of ids) {
+    const position = canvasPositions.get(id);
+    if (!position) continue;
+    const viewport = graph.getViewportByCanvas(position);
+    screenPositions.set(id, [viewport[0], viewport[1]]);
+  }
+
+  const zoom = graph.getZoom();
+  const layout = buildMetroScreenLabelLayout(
+    model,
+    ids,
+    screenPositions,
+    rect.width,
+    rect.height,
+    zoom,
+    selectedId,
+    hoveredId,
+  );
+
+  leaderLayer.innerHTML = [...layout.byId.values()]
+    .filter(spec => spec.visible && spec.leader)
+    .map(spec => {
+      const node = model.nodeMap.get(spec.id);
+      const color = DOMAIN_COLOR[node?.domain || ''] || '#64748b';
+      const leader = spec.leader!;
+      return `<line x1="${leader.x1.toFixed(1)}" y1="${leader.y1.toFixed(1)}" x2="${leader.x2.toFixed(1)}" y2="${leader.y2.toFixed(1)}" stroke="${color}" stroke-opacity=".42" stroke-width="1" vector-effect="non-scaling-stroke" />`;
+    })
+    .join('');
+
+  labelLayer.innerHTML = [...layout.byId.values()]
+    .filter(spec => spec.visible)
+    .map(spec => {
+      const node = model.nodeMap.get(spec.id)!;
+      const color = DOMAIN_COLOR[node.domain] || '#64748b';
+      const stateClass = spec.id === selectedId ? ' selected' : spec.id === hoveredId ? ' hovered' : '';
+      const typeClass = node.entityType === 'hub' ? ' hub' : node.entityType === 'subdomain' ? ' subdomain' : ' leaf';
+      return `<div class="atlas-screen-label${stateClass}${typeClass}" data-node-id="${escapeHtml(spec.id)}" style="left:${spec.left.toFixed(1)}px;top:${spec.top.toFixed(1)}px;width:${spec.width.toFixed(1)}px;height:${spec.height.toFixed(1)}px;--label-domain:${color};font-size:${spec.fontSize}px"><span>${escapeHtml(node.name)}</span></div>`;
+    })
+    .join('');
+
+  container.dataset.g6LabelVisible = String(layout.visible);
+  container.dataset.g6LabelHidden = String(layout.hidden);
+  container.dataset.g6LabelCollisions = String(layout.collisions);
+  container.dataset.g6MaxSiblings = String(layout.maxSiblings);
+  container.dataset.g6LabelZoom = zoom.toFixed(3);
+  container.dataset.g6LabelPolicy = 'viewport-adaptive-v2';
+
+  requestAnimationFrame(() => {
+    container.dataset.g6LabelDomCollisions = String(countDomLabelCollisions(labelLayer));
+  });
 }
 
 function Metro2DView({
@@ -196,14 +269,19 @@ function Metro2DView({
   onActivate,
   onReady,
 }: Omit<Props, 'viewMode'>) {
+  const surfaceRef = useRef<HTMLDivElement | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
+  const labelLayerRef = useRef<HTMLDivElement | null>(null);
+  const leaderLayerRef = useRef<SVGSVGElement | null>(null);
   const graphRef = useRef<G6Graph | null>(null);
   const modelRef = useRef(model);
   const expandedRef = useRef(expanded);
   const selectedRef = useRef(selectedId);
+  const hoveredRef = useRef<string | null>(null);
   const activateRef = useRef(onActivate);
   const showBeamsRef = useRef(showBeams);
   const lastFitNonce = useRef(-1);
+  const renderLabelsRef = useRef<() => void>(() => {});
 
   modelRef.current = model;
   expandedRef.current = expanded;
@@ -212,9 +290,12 @@ function Metro2DView({
   showBeamsRef.current = showBeams;
 
   useEffect(() => {
+    const surface = surfaceRef.current;
     const container = containerRef.current;
+    const labelLayer = labelLayerRef.current;
+    const leaderLayer = leaderLayerRef.current;
     const Graph = window.G6?.Graph;
-    if (!container || !Graph) {
+    if (!surface || !container || !labelLayer || !leaderLayer || !Graph) {
       if (container) {
         container.dataset.g6Ready = 'false';
         container.innerHTML = '<div class="atlas-render-error">G6 não carregou. O Atlas mantém os dados, mas o renderer 2D ficou indisponível.</div>';
@@ -227,7 +308,7 @@ function Metro2DView({
       theme: 'dark',
       data: { nodes: [], edges: [] },
       padding: [86, 76, 76, 76],
-      zoomRange: [0.38, 3.2],
+      zoomRange: [0.30, 3.2],
       animation: {
         duration: 280,
         easing: 'ease-in-out',
@@ -253,27 +334,7 @@ function Metro2DView({
           lineWidth: (datum: any) => datum.data.entityType === 'hub' ? 3.6 : datum.data.entityType === 'subdomain' ? 2.5 : 2,
           shadowColor: (datum: any) => DOMAIN_COLOR[String(datum.data.domain)] || '#64748b',
           shadowBlur: (datum: any) => datum.data.entityType === 'hub' ? 20 : 8,
-          labelText: (datum: any) => datum.data.labelVisible ? datum.data.name : '',
-          labelPlacement: (datum: any) => datum.data.labelPlacement || 'bottom',
-          labelOffsetX: (datum: any) => datum.data.labelOffsetX || 0,
-          labelOffsetY: (datum: any) => datum.data.labelOffsetY || 0,
-          labelFill: '#f3f7fd',
-          labelFontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
-          labelFontSize: (datum: any) => datum.data.labelFontSize || 10,
-          labelFontWeight: (datum: any) => datum.data.entityType === 'hub' ? 800 : datum.data.entityType === 'subdomain' ? 700 : 620,
-          labelLetterSpacing: (datum: any) => datum.data.entityType === 'hub' ? .15 : 0,
-          labelMaxWidth: (datum: any) => datum.data.labelMaxWidth || 138,
-          labelMaxLines: 1,
-          labelTextOverflow: 'ellipsis',
-          labelBackground: true,
-          labelBackgroundFill: 'rgba(5,10,18,.95)',
-          labelBackgroundStroke: (datum: any) => DOMAIN_COLOR[String(datum.data.domain)] || '#334155',
-          labelBackgroundStrokeOpacity: .32,
-          labelBackgroundLineWidth: 1,
-          labelBackgroundRadius: 6,
-          labelBackgroundShadowColor: 'rgba(0,0,0,.48)',
-          labelBackgroundShadowBlur: 9,
-          labelPadding: [3, 6],
+          labelText: '',
           cursor: 'pointer',
         },
         state: {
@@ -299,12 +360,16 @@ function Metro2DView({
           exit: 'fade',
         },
         style: {
-          stroke: (datum: any) => datum.data?.kind === 'bridge'
-            ? '#91a4bd'
-            : (DOMAIN_COLOR[String(datum.data?.domain)] || '#475569'),
-          lineWidth: (datum: any) => datum.data?.kind === 'bridge' ? 1.05 : 2.25,
-          opacity: (datum: any) => datum.data?.kind === 'bridge' ? .20 : .43,
-          lineDash: (datum: any) => datum.data?.kind === 'bridge' ? [5, 6] : [],
+          stroke: (datum: any) => datum.data?.isLearning
+            ? '#f59e0b'
+            : datum.data?.kind === 'bridge'
+              ? '#91a4bd'
+              : (DOMAIN_COLOR[String(datum.data?.domain)] || '#475569'),
+          lineWidth: (datum: any) => datum.data?.isLearning ? 1.8 : datum.data?.kind === 'bridge' ? 1.05 : 2.25,
+          opacity: (datum: any) => datum.data?.isLearning ? .72 : datum.data?.kind === 'bridge' ? .20 : .43,
+          lineDash: (datum: any) => datum.data?.isLearning ? [2, 4] : datum.data?.kind === 'bridge' ? [5, 6] : [],
+          shadowColor: (datum: any) => datum.data?.isLearning ? '#f59e0b' : 'transparent',
+          shadowBlur: (datum: any) => datum.data?.isLearning ? 8 : 0,
           endArrow: false,
         },
       },
@@ -329,24 +394,48 @@ function Metro2DView({
 
     graphRef.current = graph;
 
+    const scheduleLabels = () => {
+      cancelAnimationFrame((scheduleLabels as any).frame || 0);
+      (scheduleLabels as any).frame = requestAnimationFrame(() => {
+        renderScreenLabels(
+          graph,
+          container,
+          labelLayer,
+          leaderLayer,
+          modelRef.current,
+          expandedRef.current,
+          selectedRef.current,
+          hoveredRef.current,
+        );
+      });
+    };
+    renderLabelsRef.current = scheduleLabels;
+
     graph.on('node:pointerenter', event => {
       const id = event.target?.id;
       if (!id) return;
+      hoveredRef.current = id;
       const current = graph.getElementState(id) || [];
       void graph.setElementState(id, [...new Set([...current, 'hover'])], false);
+      scheduleLabels();
     });
 
     graph.on('node:pointerleave', event => {
       const id = event.target?.id;
       if (!id) return;
+      hoveredRef.current = null;
       const current = (graph.getElementState(id) || []).filter(state => state !== 'hover');
       void graph.setElementState(id, current, false);
+      scheduleLabels();
     });
 
     graph.on('node:click', event => {
       const id = event.target?.id;
       if (id && modelRef.current.nodeMap.has(id)) activateRef.current(id);
     });
+
+    graph.on('aftertransform', scheduleLabels);
+    graph.on('afterrender', scheduleLabels);
 
     const refresh = async (fit: boolean) => {
       const rect = container.getBoundingClientRect();
@@ -356,15 +445,13 @@ function Metro2DView({
         showBeamsRef.current,
         rect.width,
         rect.height,
-        selectedRef.current,
       );
       graph.setData({ nodes: data.nodes, edges: data.edges });
       container.dataset.g6NodeCount = String(data.nodes.length);
-      applyG6LabelMetrics(container, data.labelLayout);
+      container.dataset.g6LearningEdges = String(
+        data.edges.filter((edge: any) => edge.data?.isLearning).length,
+      );
 
-      // G6 creates its canvases before the render Promise settles. Mark readiness
-      // from the observable renderer surface after a frame instead of coupling the
-      // whole page readiness flag to an animation Promise.
       const renderTask = graph.render();
       await new Promise<void>(resolve => requestAnimationFrame(() => resolve()));
       if (container.querySelector('canvas')) {
@@ -373,7 +460,10 @@ function Metro2DView({
       }
       await renderTask;
       applyG6Selection(graph, modelRef.current, expandedRef.current, selectedRef.current);
-      if (fit) await graph.fitView({ when: 'always', direction: 'both' }, { duration: 320, easing: 'ease-out' });
+      if (fit) {
+        await graph.fitView({ when: 'always', direction: 'both' }, { duration: 320, easing: 'ease-out' });
+      }
+      scheduleLabels();
     };
 
     let frame = 0;
@@ -384,13 +474,14 @@ function Metro2DView({
         void refresh(false);
       });
     });
-    void refresh(true).then(() => resizeObserver.observe(container));
+    void refresh(true).then(() => resizeObserver.observe(surface));
 
     return () => {
       cancelAnimationFrame(frame);
       resizeObserver.disconnect();
       graph.destroy?.();
       graphRef.current = null;
+      renderLabelsRef.current = () => {};
     };
   }, []);
 
@@ -401,10 +492,13 @@ function Metro2DView({
     const container = containerRef.current;
     if (!graph || !container) return;
     const rect = container.getBoundingClientRect();
-    const data = buildG6Data(model, expanded, showBeams, rect.width, rect.height, selectedId);
+    const data = buildG6Data(model, expanded, showBeams, rect.width, rect.height);
     graph.setData({ nodes: data.nodes, edges: data.edges });
     container.dataset.g6NodeCount = String(data.nodes.length);
-    applyG6LabelMetrics(container, data.labelLayout);
+    container.dataset.g6LearningEdges = String(
+      data.edges.filter((edge: any) => edge.data?.isLearning).length,
+    );
+
     void graph.render().then(async () => {
       applyG6Selection(graph, model, expanded, selectedId);
       container.dataset.g6Ready = container.querySelector('canvas') ? 'true' : 'false';
@@ -416,14 +510,22 @@ function Metro2DView({
         { when: forceFit ? 'always' : 'overflow', direction: 'both' },
         { duration: 280, easing: 'ease-in-out' },
       );
+      renderLabelsRef.current();
     });
   }, [model.revision, expansionKey, showBeams, fitNonce]);
 
   useEffect(() => {
     applyG6Selection(graphRef.current, model, expanded, selectedId);
+    renderLabelsRef.current();
   }, [selectedId, model.revision, expansionKey]);
 
-  return <div ref={containerRef} id="atlas-metro-g6" className="atlas-metro-surface" data-testid="atlas-metro-2d" />;
+  return (
+    <div ref={surfaceRef} className="atlas-metro-surface" data-testid="atlas-metro-2d">
+      <div ref={containerRef} id="atlas-metro-g6" className="atlas-g6-canvas" />
+      <svg ref={leaderLayerRef} className="atlas-label-leaders" aria-hidden="true" />
+      <div ref={labelLayerRef} className="atlas-label-overlay" aria-hidden="true" />
+    </div>
+  );
 }
 
 type SynapsePulse = {
