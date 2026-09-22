@@ -411,7 +411,7 @@ jobs:
 
           dump_until_ready 'data-g6-ready="true"' /tmp/atlas3d-dom.html \
             --headless=new --no-sandbox --disable-dev-shm-usage --hide-scrollbars \
-            --window-size=1440,900 --virtual-time-budget=12000 --dump-dom "${base}/atlas3d/?readback=1"
+            --window-size=1440,900 --virtual-time-budget=12000 --dump-dom "${base}/atlas3d/?readback=1&theme=dark"
 
           echo "ATLAS3D_DOM_DIAGNOSTICS_BEGIN"
           grep -oE 'data-atlas-[a-z-]+="[^"]*"' /tmp/atlas3d-dom.html | head -28 || true
@@ -421,10 +421,14 @@ jobs:
 
           "${chrome_bin}" --headless=new --no-sandbox --disable-dev-shm-usage --hide-scrollbars \
             --window-size=1440,900 --virtual-time-budget=8000 \
-            --screenshot=/tmp/atlas3d-readback.png "${base}/atlas3d/?readback=1" >/dev/null 2>&1 || true
+            --screenshot=/tmp/atlas3d-readback.png "${base}/atlas3d/?readback=1&theme=dark" >/dev/null 2>&1 || true
           test -s /tmp/atlas3d-readback.png || echo "::warning::Atlas screenshot was not produced"
 
           grep -Fq 'data-atlas-renderer="metro-cluster"' /tmp/atlas3d-dom.html
+          grep -Fq 'data-atlas-theme="dark"' /tmp/atlas3d-dom.html
+          grep -Fq 'data-atlas-expansion="context"' /tmp/atlas3d-dom.html
+          grep -Fq 'data-g6-theme="dark"' /tmp/atlas3d-dom.html
+          grep -Fq '>Expandir tudo<' /tmp/atlas3d-dom.html
           grep -Fq 'data-atlas-ready="true"' /tmp/atlas3d-dom.html || echo "::warning::Atlas parent readiness state had not flushed yet; renderer-level readiness remains authoritative for readback"
           grep -Fq 'data-g6-ready="true"' /tmp/atlas3d-dom.html
           grep -Fq 'data-g6-label-collisions="0"' /tmp/atlas3d-dom.html
@@ -602,7 +606,7 @@ jobs:
           echo "PAGES_ATLAS3D_LEAF_READBACK_OK exact_records=${atlas_exact_records} exact_entities=${atlas_distinct_exact_entities} direct_leaf_paths=${leaf_g6_direct}"
 
           mobile_ua='Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1'
-          mobile_url="${base}/atlas3d/?readback=1"
+          mobile_url="${base}/atlas3d/?readback=1&theme=dark"
           dump_until_ready 'data-g6-ready="true"' /tmp/atlas3d-mobile-dom.html \
             --headless=new --no-sandbox --disable-dev-shm-usage --hide-scrollbars \
             --touch-events=enabled --window-size=390,844 --force-device-scale-factor=1 \
@@ -618,6 +622,8 @@ jobs:
           grep -Fq 'data-atlas-ready="true"' /tmp/atlas3d-mobile-dom.html || echo "::warning::Mobile parent readiness state had not flushed yet; G6 readiness is checked separately"
           grep -Fq 'data-g6-ready="true"' /tmp/atlas3d-mobile-dom.html
           grep -Fq 'data-g6-profile="compact-touch"' /tmp/atlas3d-mobile-dom.html
+          grep -Fq 'data-atlas-theme="dark"' /tmp/atlas3d-mobile-dom.html
+          grep -Fq 'data-g6-theme="dark"' /tmp/atlas3d-mobile-dom.html
           grep -Fq 'data-g6-label-collisions="0"' /tmp/atlas3d-mobile-dom.html
           grep -Fq 'data-g6-label-dom-collisions="0"' /tmp/atlas3d-mobile-dom.html
           grep -Fq 'data-g6-label-ui-overlaps="0"' /tmp/atlas3d-mobile-dom.html
@@ -692,7 +698,7 @@ jobs:
           );
           NODE
 
-          depth_url="${base}/atlas3d/?mode=3d&expand=dense-science&readback=1"
+          depth_url="${base}/atlas3d/?mode=3d&expand=dense-science&readback=1&theme=dark"
           dump_until_ready 'data-three-ready="true"' /tmp/atlas3d-3d-dom.html \
             --headless=new --no-sandbox --disable-dev-shm-usage --hide-scrollbars \
             --use-angle=swiftshader --enable-unsafe-swiftshader \
@@ -705,6 +711,8 @@ jobs:
           grep -Fq 'data-active-mode="3d"' /tmp/atlas3d-3d-dom.html
           grep -Fq '3D EXPLORAR ATIVO' /tmp/atlas3d-3d-dom.html
           grep -Fq 'data-three-ready="true"' /tmp/atlas3d-3d-dom.html
+          grep -Fq 'data-atlas-theme="dark"' /tmp/atlas3d-3d-dom.html
+          grep -Fq 'data-three-theme="dark"' /tmp/atlas3d-3d-dom.html
           grep -Fq 'data-three-visual="neural-synapse"' /tmp/atlas3d-3d-dom.html
           three_node_count="$(sed -n 's/.*data-three-node-count="\([0-9][0-9]*\)".*/\1/p' /tmp/atlas3d-3d-dom.html | head -1)"
           [ -n "${three_node_count}" ] && [ "${three_node_count}" -gt 3 ] || {
@@ -829,7 +837,7 @@ jobs:
           test -s /tmp/atlas3d-readback-learning-leaf-3d.png
           echo "PAGES_ATLAS3D_LEAF_3D_READBACK_OK direct_leaf_synapses=${leaf_three_direct} paint_samples=${leaf_three_paint}"
 
-          mobile_3d_url="${base}/atlas3d/?mode=3d&readback=1"
+          mobile_3d_url="${base}/atlas3d/?mode=3d&readback=1&theme=dark"
           dump_until_ready 'data-three-ready="true"' /tmp/atlas3d-mobile-3d-dom.html \
             --headless=new --no-sandbox --disable-dev-shm-usage --hide-scrollbars \
             --use-angle=swiftshader --enable-unsafe-swiftshader --touch-events=enabled \
@@ -844,6 +852,8 @@ jobs:
           grep -Fq 'data-atlas-mode="3d"' /tmp/atlas3d-mobile-3d-dom.html
           grep -Fq 'data-atlas-g6-source="preloaded"' /tmp/atlas3d-mobile-3d-dom.html
           grep -Fq 'data-three-profile="compact-touch"' /tmp/atlas3d-mobile-3d-dom.html
+          grep -Fq 'data-atlas-theme="dark"' /tmp/atlas3d-mobile-3d-dom.html
+          grep -Fq 'data-three-theme="dark"' /tmp/atlas3d-mobile-3d-dom.html
           grep -Fq 'data-three-quality="reduced-gpu"' /tmp/atlas3d-mobile-3d-dom.html
           grep -Fq 'data-three-fit-policy="selection-safe-area-v5"' /tmp/atlas3d-mobile-3d-dom.html
           grep -Fq 'data-three-fit-scope="selection"' /tmp/atlas3d-mobile-3d-dom.html
@@ -881,6 +891,118 @@ jobs:
             --virtual-time-budget=9000 --screenshot=/tmp/atlas3d-readback-mobile-3d.png "${mobile_3d_url}" >/dev/null 2>&1
           test -s /tmp/atlas3d-readback-mobile-3d.png
           echo "PAGES_ATLAS3D_MOBILE_3D_READBACK_OK width=${mobile_three_width} height=${mobile_three_height} nodes=${mobile_three_nodes} learning_visual=${mobile_three_learning_visual} learning_records=${mobile_three_learning_records} learning_relations=${mobile_three_learning_relations} fit_scope=selection fit_nodes=${mobile_three_fit_nodes} fit_coverage=${mobile_three_fit_coverage} paint_samples=${mobile_three_paint}"
+
+          # Feature matrix: light theme + global expansion. Dark-mode readbacks
+          # above remain mandatory; these four probes cover light desktop/mobile
+          # in both renderers and exercise expand-all in 2D and 3D.
+          light_2d_url="${base}/atlas3d/?readback=1&theme=light&expand=all"
+          dump_until_ready 'data-g6-ready="true"' /tmp/atlas3d-light-dom.html \
+            --headless=new --no-sandbox --disable-dev-shm-usage --hide-scrollbars \
+            --window-size=1440,900 --virtual-time-budget=15000 --dump-dom "${light_2d_url}"
+          grep -Fq 'data-atlas-theme="light"' /tmp/atlas3d-light-dom.html
+          grep -Fq 'data-atlas-expansion="all"' /tmp/atlas3d-light-dom.html
+          grep -Fq 'data-g6-theme="light"' /tmp/atlas3d-light-dom.html
+          grep -Fq '>Contrair tudo<' /tmp/atlas3d-light-dom.html
+          grep -Fq 'data-g6-ready="true"' /tmp/atlas3d-light-dom.html
+          grep -Fq 'data-g6-label-collisions="0"' /tmp/atlas3d-light-dom.html
+          grep -Fq 'data-g6-label-dom-collisions="0"' /tmp/atlas3d-light-dom.html
+          grep -Fq 'data-g6-label-ui-overlaps="0"' /tmp/atlas3d-light-dom.html
+          ! grep -Fq 'data-renderer-error=' /tmp/atlas3d-light-dom.html
+          light_2d_visible="$(sed -n 's/.*data-atlas-visible-count="\([0-9][0-9]*\)".*/\1/p' /tmp/atlas3d-light-dom.html | head -1)"
+          light_2d_total="$(sed -n 's/.*data-atlas-total-count="\([0-9][0-9]*\)".*/\1/p' /tmp/atlas3d-light-dom.html | head -1)"
+          light_2d_nodes="$(sed -n 's/.*data-g6-node-count="\([0-9][0-9]*\)".*/\1/p' /tmp/atlas3d-light-dom.html | head -1)"
+          light_2d_learning="$(sed -n 's/.*data-g6-learning-edges="\([0-9][0-9]*\)".*/\1/p' /tmp/atlas3d-light-dom.html | head -1)"
+          [ -n "${light_2d_total}" ] && [ "${light_2d_visible}" = "${light_2d_total}" ] && [ "${light_2d_nodes}" = "${light_2d_total}" ] || {
+            echo "::error::Expand-all 2D did not materialize the full Atlas: visible=${light_2d_visible:-missing} g6=${light_2d_nodes:-missing} total=${light_2d_total:-missing}"
+            exit 1
+          }
+          [ -n "${light_2d_learning}" ] && [ "${light_2d_learning}" -ge 8 ] || {
+            echo "::error::Light 2D lost Learning filament visibility: ${light_2d_learning:-0}"
+            exit 1
+          }
+          "${chrome_bin}" --headless=new --no-sandbox --disable-dev-shm-usage --hide-scrollbars \
+            --window-size=1440,900 --virtual-time-budget=10000 \
+            --screenshot=/tmp/atlas3d-readback-light.png "${light_2d_url}" >/dev/null 2>&1
+          test -s /tmp/atlas3d-readback-light.png
+          echo "PAGES_ATLAS_THEME_LIGHT_2D_READBACK_OK visible=${light_2d_visible} total=${light_2d_total} learning=${light_2d_learning}"
+
+          light_mobile_url="${base}/atlas3d/?readback=1&theme=light"
+          dump_until_ready 'data-g6-ready="true"' /tmp/atlas3d-mobile-light-dom.html \
+            --headless=new --no-sandbox --disable-dev-shm-usage --hide-scrollbars \
+            --touch-events=enabled --window-size=390,844 --force-device-scale-factor=1 \
+            --user-agent="${mobile_ua}" --virtual-time-budget=14000 --dump-dom "${light_mobile_url}"
+          grep -Fq 'data-atlas-theme="light"' /tmp/atlas3d-mobile-light-dom.html
+          grep -Fq 'data-g6-theme="light"' /tmp/atlas3d-mobile-light-dom.html
+          grep -Fq 'data-g6-profile="compact-touch"' /tmp/atlas3d-mobile-light-dom.html
+          grep -Fq 'data-g6-label-collisions="0"' /tmp/atlas3d-mobile-light-dom.html
+          grep -Fq 'data-g6-label-dom-collisions="0"' /tmp/atlas3d-mobile-light-dom.html
+          grep -Fq 'data-g6-label-ui-overlaps="0"' /tmp/atlas3d-mobile-light-dom.html
+          ! grep -Fq 'data-renderer-error=' /tmp/atlas3d-mobile-light-dom.html
+          "${chrome_bin}" --headless=new --no-sandbox --disable-dev-shm-usage --hide-scrollbars \
+            --touch-events=enabled --window-size=390,844 --force-device-scale-factor=1 \
+            --user-agent="${mobile_ua}" --virtual-time-budget=9000 \
+            --screenshot=/tmp/atlas3d-readback-mobile-light.png "${light_mobile_url}" >/dev/null 2>&1
+          test -s /tmp/atlas3d-readback-mobile-light.png
+          echo "PAGES_ATLAS_THEME_LIGHT_MOBILE_READBACK_OK"
+
+          light_3d_url="${base}/atlas3d/?mode=3d&readback=1&theme=light&expand=all"
+          dump_until_ready 'data-three-ready="true"' /tmp/atlas3d-light-3d-dom.html \
+            --headless=new --no-sandbox --disable-dev-shm-usage --hide-scrollbars \
+            --use-angle=swiftshader --enable-unsafe-swiftshader \
+            --window-size=1440,900 --virtual-time-budget=18000 --dump-dom "${light_3d_url}"
+          grep -Fq 'data-atlas-theme="light"' /tmp/atlas3d-light-3d-dom.html
+          grep -Fq 'data-atlas-expansion="all"' /tmp/atlas3d-light-3d-dom.html
+          grep -Fq 'data-three-theme="light"' /tmp/atlas3d-light-3d-dom.html
+          grep -Fq 'data-three-ready="true"' /tmp/atlas3d-light-3d-dom.html
+          grep -Fq '>Contrair tudo<' /tmp/atlas3d-light-3d-dom.html
+          ! grep -Fq 'data-renderer-error=' /tmp/atlas3d-light-3d-dom.html
+          light_3d_visible="$(sed -n 's/.*data-atlas-visible-count="\([0-9][0-9]*\)".*/\1/p' /tmp/atlas3d-light-3d-dom.html | head -1)"
+          light_3d_total="$(sed -n 's/.*data-atlas-total-count="\([0-9][0-9]*\)".*/\1/p' /tmp/atlas3d-light-3d-dom.html | head -1)"
+          light_3d_nodes="$(sed -n 's/.*data-three-node-count="\([0-9][0-9]*\)".*/\1/p' /tmp/atlas3d-light-3d-dom.html | head -1)"
+          light_3d_learning="$(sed -n 's/.*data-three-learning-visual-synapses="\([0-9][0-9]*\)".*/\1/p' /tmp/atlas3d-light-3d-dom.html | head -1)"
+          light_3d_paint="$(sed -n 's/.*data-three-paint-samples="\([0-9][0-9]*\)".*/\1/p' /tmp/atlas3d-light-3d-dom.html | head -1)"
+          [ -n "${light_3d_total}" ] && [ "${light_3d_visible}" = "${light_3d_total}" ] && [ "${light_3d_nodes}" = "${light_3d_total}" ] || {
+            echo "::error::Expand-all 3D did not materialize the full Atlas: visible=${light_3d_visible:-missing} three=${light_3d_nodes:-missing} total=${light_3d_total:-missing}"
+            exit 1
+          }
+          [ -n "${light_3d_learning}" ] && [ "${light_3d_learning}" -ge 8 ] || {
+            echo "::error::Light 3D lost Learning synapse visibility: ${light_3d_learning:-0}"
+            exit 1
+          }
+          [ -n "${light_3d_paint}" ] && [ "${light_3d_paint}" -gt 20 ] || {
+            echo "::error::Light 3D framebuffer is visually empty: ${light_3d_paint:-0}"
+            exit 1
+          }
+          "${chrome_bin}" --headless=new --no-sandbox --disable-dev-shm-usage --hide-scrollbars \
+            --use-angle=swiftshader --enable-unsafe-swiftshader \
+            --window-size=1440,900 --virtual-time-budget=11000 \
+            --screenshot=/tmp/atlas3d-readback-light-3d.png "${light_3d_url}" >/dev/null 2>&1
+          test -s /tmp/atlas3d-readback-light-3d.png
+          echo "PAGES_ATLAS_THEME_LIGHT_3D_READBACK_OK visible=${light_3d_visible} total=${light_3d_total} learning=${light_3d_learning} paint=${light_3d_paint}"
+
+          light_mobile_3d_url="${base}/atlas3d/?mode=3d&readback=1&theme=light"
+          dump_until_ready 'data-three-ready="true"' /tmp/atlas3d-mobile-light-3d-dom.html \
+            --headless=new --no-sandbox --disable-dev-shm-usage --hide-scrollbars \
+            --use-angle=swiftshader --enable-unsafe-swiftshader --touch-events=enabled \
+            --window-size=390,844 --force-device-scale-factor=1 --user-agent="${mobile_ua}" \
+            --virtual-time-budget=16000 --dump-dom "${light_mobile_3d_url}"
+          grep -Fq 'data-atlas-theme="light"' /tmp/atlas3d-mobile-light-3d-dom.html
+          grep -Fq 'data-three-theme="light"' /tmp/atlas3d-mobile-light-3d-dom.html
+          grep -Fq 'data-three-profile="compact-touch"' /tmp/atlas3d-mobile-light-3d-dom.html
+          grep -Fq 'data-three-ready="true"' /tmp/atlas3d-mobile-light-3d-dom.html
+          ! grep -Fq 'data-renderer-error=' /tmp/atlas3d-mobile-light-3d-dom.html
+          light_mobile_3d_paint="$(sed -n 's/.*data-three-paint-samples="\([0-9][0-9]*\)".*/\1/p' /tmp/atlas3d-mobile-light-3d-dom.html | head -1)"
+          [ -n "${light_mobile_3d_paint}" ] && [ "${light_mobile_3d_paint}" -gt 20 ] || {
+            echo "::error::Light mobile 3D framebuffer is visually empty: ${light_mobile_3d_paint:-0}"
+            exit 1
+          }
+          "${chrome_bin}" --headless=new --no-sandbox --disable-dev-shm-usage --hide-scrollbars \
+            --use-angle=swiftshader --enable-unsafe-swiftshader --touch-events=enabled \
+            --window-size=390,844 --force-device-scale-factor=1 --user-agent="${mobile_ua}" \
+            --virtual-time-budget=10000 \
+            --screenshot=/tmp/atlas3d-readback-mobile-light-3d.png "${light_mobile_3d_url}" >/dev/null 2>&1
+          test -s /tmp/atlas3d-readback-mobile-light-3d.png
+          echo "PAGES_ATLAS_THEME_LIGHT_MOBILE_3D_READBACK_OK paint=${light_mobile_3d_paint}"
 
           mcp_url="${base}/mcp/?q=Cosmology"
           dump_until_ready 'data-mcp-ready="true"' /tmp/mcp-readback-dom.html \
@@ -1002,6 +1124,14 @@ jobs:
             /tmp/atlas3d-mobile-dom.html
             /tmp/atlas3d-readback-mobile-3d.png
             /tmp/atlas3d-mobile-3d-dom.html
+            /tmp/atlas3d-readback-light.png
+            /tmp/atlas3d-light-dom.html
+            /tmp/atlas3d-readback-mobile-light.png
+            /tmp/atlas3d-mobile-light-dom.html
+            /tmp/atlas3d-readback-light-3d.png
+            /tmp/atlas3d-light-3d-dom.html
+            /tmp/atlas3d-readback-mobile-light-3d.png
+            /tmp/atlas3d-mobile-light-3d-dom.html
             /tmp/mcp-readback-cosmology.png
             /tmp/mcp-readback-dom.html
             /tmp/cockpit-actions-readback.png
