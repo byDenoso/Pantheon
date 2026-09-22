@@ -26,6 +26,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       projection_fingerprint: ${{ steps.projection.outputs.projection_fingerprint }}
+      presentation_input_fingerprint: ${{ steps.presentation_inputs.outputs.presentation_input_fingerprint }}
       tower_commit: ${{ steps.projection.outputs.tower_commit }}
       event_cursor: ${{ steps.projection.outputs.event_cursor }}
       deploy_needed: ${{ steps.deploy_needed.outputs.deploy_needed }}
@@ -151,6 +152,48 @@ jobs:
           print(f"TOWER_PROJECTION_VERIFIED commit={tower_commit} cursor={event_cursor} fingerprint={fingerprint}")
           PY
 
+      - name: Fingerprint all live presentation inputs
+        id: presentation_inputs
+        shell: bash
+        env:
+          PROJECTION_FINGERPRINT: ${{ steps.projection.outputs.projection_fingerprint }}
+        run: |
+          set -euo pipefail
+          inputs=/tmp/nexo-presentation-inputs.txt
+          : > "${inputs}"
+          printf 'projection\t%s\n' "${PROJECTION_FINGERPRINT}" >> "${inputs}"
+
+          hash_file() {
+            local label="$1"
+            local path="$2"
+            if [ -s "${path}" ]; then
+              printf '%s\t%s\n' "${label}" "$(sha256sum "${path}" | awk '{print $1}')" >> "${inputs}"
+            else
+              printf '%s\tMISSING\n' "${label}" >> "${inputs}"
+            fi
+          }
+
+          hash_file meta_learning _vault/TOWER_V06/runtime/artifacts/meta_learning/METALEARNING_CURRENT.json
+          hash_file peer_detection _vault/TOWER_V06/contracts/PEER_DETECTION_BATTERY_V1.json
+
+          if compgen -G "_vault/TOWER_V06/entities/interdomain/*.json" > /dev/null; then
+            while IFS= read -r path; do
+              printf 'interdomain:%s\t%s\n' "$(basename "${path}")" "$(sha256sum "${path}" | awk '{print $1}')" >> "${inputs}"
+            done < <(find _vault/TOWER_V06/entities/interdomain -maxdepth 1 -type f -name '*.json' -print | sort)
+          else
+            printf 'interdomain\tEMPTY\n' >> "${inputs}"
+          fi
+
+          while IFS= read -r work_id; do
+            [ -n "${work_id}" ] || continue
+            hash_file "human_gate:${work_id}" "_vault/TOWER_V06/entities/work/${work_id}.json"
+          done < <(jq -r '.human_gates.work_ids[]?' _vault/TOWER_V06/projections/public/projection.json | sort)
+
+          digest="$(sort "${inputs}" | sha256sum | awk '{print $1}')"
+          echo "presentation_input_fingerprint=sha256:${digest}" >> "$GITHUB_OUTPUT"
+          echo "PRESENTATION_INPUT_FINGERPRINT sha256:${digest}"
+          cat "${inputs}"
+
       - name: Decide whether scheduled deploy is needed
         id: deploy_needed
         shell: bash
@@ -158,6 +201,7 @@ jobs:
           EVENT_NAME: ${{ github.event_name }}
           CURRENT_SHA: ${{ github.sha }}
           EXPECTED_FINGERPRINT: ${{ steps.projection.outputs.projection_fingerprint }}
+          EXPECTED_PRESENTATION_FINGERPRINT: ${{ steps.presentation_inputs.outputs.presentation_input_fingerprint }}
           PAGE_BASE: https://bydenoso.github.io/Pantheon
         run: |
           set -euo pipefail
@@ -171,10 +215,13 @@ jobs:
           if curl -fsSL --retry 1 --connect-timeout 5 "${PAGE_BASE}/tower-projection/manifest.json" -o "${manifest}" &&
              curl -fsSL --retry 1 --connect-timeout 5 "${PAGE_BASE}/build-meta.json" -o "${meta}"; then
             current_fingerprint="$(jq -r '.projection_fingerprint // empty' "${manifest}")"
+            current_presentation_fingerprint="$(jq -r '.presentation_input_fingerprint // empty' "${meta}")"
             current_sha="$(jq -r '.pantheon_commit // empty' "${meta}")"
-            if [ "${current_fingerprint}" = "${EXPECTED_FINGERPRINT}" ] && [ "${current_sha}" = "${CURRENT_SHA}" ]; then
+            if [ "${current_fingerprint}" = "${EXPECTED_FINGERPRINT}" ] &&
+               [ "${current_presentation_fingerprint}" = "${EXPECTED_PRESENTATION_FINGERPRINT}" ] &&
+               [ "${current_sha}" = "${CURRENT_SHA}" ]; then
               echo "deploy_needed=false" >> "$GITHUB_OUTPUT"
-              echo "PAGES_NO_OP projection and Pantheon commit already published"
+              echo "PAGES_NO_OP projection, live semantic inputs and Pantheon commit already published"
               exit 0
             fi
           fi
@@ -323,6 +370,7 @@ jobs:
           NEXO_GALAXY_RETENTION: '168'
           PANTHEON_COMMIT: ${{ github.sha }}
           PROJECTION_FINGERPRINT: ${{ steps.projection.outputs.projection_fingerprint }}
+          PRESENTATION_INPUT_FINGERPRINT: ${{ steps.presentation_inputs.outputs.presentation_input_fingerprint }}
           SYNC_REQUEST_ID: ${{ github.event.client_payload.request_id }}
         run: |
           set -euo pipefail
@@ -341,8 +389,9 @@ jobs:
           test -s dist/tower-projection/manifest.json
           built_at="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
           jq -n --arg pantheon_commit "${PANTHEON_COMMIT}" --arg projection_fingerprint "${PROJECTION_FINGERPRINT}" \
+            --arg presentation_input_fingerprint "${PRESENTATION_INPUT_FINGERPRINT}" \
             --arg sync_request_id "${SYNC_REQUEST_ID:-}" --arg built_at "${built_at}" \
-            '{contract:"NEXO_ONE_BUILD_META_V1",pantheon_commit:$pantheon_commit,projection_fingerprint:$projection_fingerprint,sync_request_id:$sync_request_id,built_at:$built_at}' > dist/build-meta.json
+            '{contract:"NEXO_ONE_BUILD_META_V1",pantheon_commit:$pantheon_commit,projection_fingerprint:$projection_fingerprint,presentation_input_fingerprint:$presentation_input_fingerprint,sync_request_id:$sync_request_id,built_at:$built_at}' > dist/build-meta.json
           test -s dist/build-meta.json
           touch dist/.nojekyll
           if grep -R -Eqi 'truthgraph-projection|nexo-drive-projection' dist/system.json dist/world-public.ndjson dist/tower-projection; then
@@ -373,6 +422,7 @@ jobs:
         env:
           PAGE_URL: ${{ steps.deployment.outputs.page_url }}
           EXPECTED_FINGERPRINT: ${{ needs.build.outputs.projection_fingerprint }}
+          EXPECTED_PRESENTATION_FINGERPRINT: ${{ needs.build.outputs.presentation_input_fingerprint }}
           EXPECTED_TOWER_COMMIT: ${{ needs.build.outputs.tower_commit }}
           EXPECTED_EVENT_CURSOR: ${{ needs.build.outputs.event_cursor }}
           EXPECTED_PANTHEON_COMMIT: ${{ github.sha }}
@@ -1203,6 +1253,7 @@ jobs:
           if(buildMeta.contract!=='NEXO_ONE_BUILD_META_V1')throw new Error('BUILD_META_CONTRACT_INVALID');
           if(buildMeta.pantheon_commit!==process.env.EXPECTED_PANTHEON_COMMIT)throw new Error('BUILD_META_COMMIT_MISMATCH');
           if(buildMeta.projection_fingerprint!==manifest.projection_fingerprint)throw new Error('BUILD_META_FINGERPRINT_MISMATCH');
+          if(buildMeta.presentation_input_fingerprint!==process.env.EXPECTED_PRESENTATION_FINGERPRINT)throw new Error('BUILD_META_PRESENTATION_INPUT_FINGERPRINT_MISMATCH');
 
           const raw=JSON.stringify({system,world,projection});
           if(/truthgraph-projection|nexo-drive-projection/i.test(raw))throw new Error('LEGACY_OPERATIONAL_SOURCE_PRESENT');
