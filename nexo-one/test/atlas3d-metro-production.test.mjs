@@ -392,6 +392,39 @@ test('global expansion exposes every Atlas node and collapse returns to the init
   );
 });
 
+test('ultra-dense expand-all overview never forces passive subdomain labels into collisions', () => {
+  const model = buildAtlasMetroModel(state());
+  const ids = model.nodes.map(node => node.id);
+  const raw = metroLayoutPositions(model, ids, 1080, 813);
+  const values = [...raw.values()];
+  const minX = Math.min(...values.map(([x]) => x));
+  const maxX = Math.max(...values.map(([x]) => x));
+  const minY = Math.min(...values.map(([, y]) => y));
+  const maxY = Math.max(...values.map(([, y]) => y));
+  const scale = Math.min(900 / Math.max(1, maxX - minX), 620 / Math.max(1, maxY - minY));
+  const screen = new Map([...raw].map(([id, [x, y]]) => [
+    id,
+    [90 + (x - minX) * scale, 130 + (y - minY) * scale],
+  ]));
+
+  const labels = buildMetroScreenLabelLayout(
+    model,
+    ids,
+    screen,
+    1080,
+    813,
+    Math.min(.42, scale),
+    model.roots[0],
+    null,
+  );
+
+  assert.equal(labels.collisions, 0);
+  assert.equal(labels.uiZoneViolations, 0);
+  assert.ok(labels.hidden > 0, 'expand-all overview should use semantic label density');
+  assert.ok(model.roots.every(id => labels.byId.get(id)?.visible), 'domain hubs must stay labeled');
+  assert.equal(labels.byId.get(model.roots[0])?.visible, true, 'selected hub must stay labeled');
+});
+
 test('dedicated Atlas production page uses Metro renderer, G6 and deterministic Three mode', async () => {
   const [app, renderer, index, css, main] = await Promise.all([
     text('src/atlas3d/Atlas3DApp.tsx'),
@@ -498,7 +531,9 @@ test('dedicated Atlas production page uses Metro renderer, G6 and deterministic 
   assert.match(layout, /atlasUiSafeZones/);
   assert.match(layout, /uiZoneViolations/);
   assert.match(layout, /compactViewport/);
-  assert.match(layout, /!compactViewport && node\.entityType === 'subdomain'/);
+  assert.match(layout, /ultraDenseOverview/);
+  assert.match(layout, /ids\.length > 140/);
+  assert.match(layout, /!compactViewport && !ultraDenseOverview && node\.entityType === 'subdomain'/);
   assert.match(renderer, /atlas-label-leaders/);
   assert.match(renderer, /labelText: ''/);
   assert.match(renderer, /update: 'translate'/);
