@@ -70,6 +70,8 @@ test('GitHub Pages consumes only the sanctioned TOWER_V06 public projection', as
   assert.match(workflow, /TOWER_V06\/projections\/public\/manifest\.json/);
   assert.match(workflow, /METALEARNING_CURRENT\.json/);
   assert.match(workflow, /PEER_DETECTION_BATTERY_V1\.json/);
+  assert.match(workflow, /human-gates-details\.json/);
+  assert.match(workflow, /NEXO_PUBLIC_HUMAN_GATE_DETAILS/);
   assert.match(workflow, /verify_projection/);
   assert.match(workflow, /authority.*TOWER_V06/);
   assert.match(workflow, /projection_only/);
@@ -224,12 +226,34 @@ test('explicit Tower human gates become Needs Dener inbox items', async () => {
     human_gates: { work_ids: ['WORK-HUMAN-1'], count: 1 },
     counts: { active_work: 1, tests: 0, capabilities: 0, needs_dener: 1 },
   };
-  const { system } = buildPagesProjection({ projection, manifestFile: manifest });
+  const humanGateDetails = [{
+    id: 'WORK-HUMAN-1',
+    dependency_class: 'HUMAN_AUTH_REQUIRED',
+    next_action: 'Provision secure provider settings.',
+    remaining_dependencies: [
+      {
+        id: 'HOSTED_MCP_TOWER_WRITE_CREDENTIAL',
+        dependency_class: 'HUMAN_AUTH_REQUIRED',
+        detail: 'Secure server-side Tower write/readback credential is required.',
+      },
+      {
+        id: 'VERCEL_FAILOVER_LIVE_CANARY_CAPACITY',
+        dependency_class: 'EXTERNAL_TRANSIENT',
+        detail: 'Vercel capacity is transient and retryable by the system.',
+      },
+    ],
+  }];
+  const { system } = buildPagesProjection({ projection, manifestFile: manifest, humanGateDetails });
   assert.equal(system.inbox.length, 1);
   assert.equal(system.inbox[0].id, 'needs-dener:WORK-HUMAN-1');
   assert.equal(system.inbox[0].kind, 'FORNECER_DADO');
+  assert.equal(system.inbox[0].kind_label, 'Autorizar / configurar credencial');
   assert.equal(system.inbox[0].domain, 'ENGINEERING');
-  assert.match(system.inbox[0].why, /Needs Dener/);
+  assert.equal(system.inbox[0].human_requirements.length, 1);
+  assert.equal(system.inbox[0].human_requirements[0].id, 'HOSTED_MCP_TOWER_WRITE_CREDENTIAL');
+  assert.match(system.inbox[0].human_requirements[0].label, /Credencial server-side/);
+  assert.match(system.inbox[0].automatic_note, /Vercel capacity/);
+  assert.match(system.inbox[0].why, /Dependências automáticas ficam separadas/);
   const workNode = system.graph.nodes.find(node => node.id === 'work:WORK-HUMAN-1');
   assert.ok(workNode);
   assert.equal(workNode.operational_status, 'WAIT_DEPENDENCY');
