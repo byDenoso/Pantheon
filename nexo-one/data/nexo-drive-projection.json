@@ -18,7 +18,8 @@
       "SYSTEM",
       "StructuralLearning",
       "CrossDomain",
-      "Integrity"
+      "Integrity",
+      "TOWER_V06/active-roadmaps"
     ],
     "notes": "Read-only public projection generated from the authenticated Google Drive SSOT. Drive remains the Truth Owner; GitHub is code plus derived cache/projection. TOWER_V06 is migration provenance/rollback only.",
     "fingerprint": "sha256:13dea7e12953975dc40453028e06bb9cbcc53bc8a42debef4d6a8b78c2153b7c"
@@ -230,6 +231,18 @@
       "summary": "Pergunta: contratos de likelihood, runtimes, convergência, data vectors e artefatos de publicação preservam reprodutibilidade e boundaries científicos? Mecanismo: validation gates e replay/readback. 38 test_ids únicos.",
       "domain": "CROSS",
       "sourceRef": "PEER_CONTROL_TOWER_CANONICAL/Test Registry"
+    },
+    {
+      "type": "campaign",
+      "id": "CAMP-DDE-ANOMALIES-MEGA-20260922",
+      "status": "ACTIVE",
+      "title": "DDE × anomalies & megastructures",
+      "summary": "Testa se energia escura dinâmica pode produzir alterações de expansão e crescimento grandes o suficiente para explicar anomalias cosmológicas tardias e eventuais megaestruturas robustas, sem violar DESI/CMB/SNe, controles de seleção, nulls ΛCDM e estabilidade física.",
+      "semantic_description": "Testa se energia escura dinâmica pode produzir alterações de expansão e crescimento grandes o suficiente para explicar anomalias cosmológicas tardias e eventuais megaestruturas robustas, sem violar DESI/CMB/SNe, controles de seleção, nulls ΛCDM e estabilidade física.",
+      "semantic_state": "ACTIVE — primeiro estabelece se existe uma anomalia de megaestrutura real sob o null ΛCDM; em paralelo mede o espaço DDE atualmente permitido e seu alcance em H0, S8/crescimento e altas redshifts.",
+      "domain": "D3",
+      "sourceRef": "byDenoso/NEXO-Obsidian-Vault@main:TOWER_V06/roadmaps/RM-DDE-ANOMALIES-MEGA-20260922-V1.json",
+      "updatedAt": "2026-09-22"
     }
   ],
   "olympus": [
