@@ -15,34 +15,51 @@ export function atlasTopDomainOf(node: GraphNode): AtlasTopDomain {
   return 'NEXO';
 }
 
+export function atlasSemanticSubdomain(
+  domain: AtlasTopDomain,
+  hint: string,
+): string | null {
+  const token = String(hint || '').toUpperCase();
+
+  if (domain === 'OLYMPUS') {
+    if (/MIQUEIAS|OLYCAUSE/.test(token)) return 'Miquéias · Cause/Nulls';
+    if (/COMPPHYS|OLYPHYS|BODY\s*COMPOSITION/.test(token)) return 'Composição corporal · Física computacional';
+    if (/PIVOT|OLYPIVOT|NULL\s*CROSS/.test(token)) return 'Pivot & Null cross-checks';
+    if (/BODYBUILDING|OLYMPUS/.test(token)) return 'Olympus · Outros ativos';
+    return null;
+  }
+
+  if (domain === 'SCIENCE') {
+    if (/H0-LCDM|H0HOM|H0-HOMOGENEITY|T-H0|HUBBLE/.test(token)) return 'Expansão do Universo · H0';
+    if (/PEER[ ._-]?DETECTION|PEER\.DETECTION|PEER\s+INFERENCE|A_LENS|EDE/.test(token)) return 'Consistência cosmológica · Peer Detection';
+    if (/GROWTH-LSS|GZSB|EROSITA|\bS8\b/.test(token)) return 'Estrutura em larga escala · Growth/LSS';
+    if (/DE-MICROPHYSICS|T-DEM|DARK-SECTOR|DARK_ENERGY|DARK\s+ENERGY/.test(token)) return 'Energia escura & setor escuro';
+    if (/BLINDSPOT-LIGHT|BLIND26/.test(token)) return 'Propagação da luz · Blindspots';
+    if (/MEGASTRUCTURE|T-MEGA/.test(token)) return 'Megaestruturas · ΛCDM';
+    if (/GALAXY-REDSHIFT|GZ-01|GZ01|GALAXY-3D-MAP/.test(token)) return 'Galáxias · Redshift 3D';
+    if (/AVERAGING-PROBLEM|AVERAGING\s+SENSITIVITY/.test(token)) return 'Transferência metodológica · Averaging';
+    return null;
+  }
+
+  if (/ACT-ENG|REQUEST-INGRESS|SIDECHANNEL|INFRASTRUCTURE|SECURITY/.test(token)) {
+    return 'Engenharia, infraestrutura & segurança';
+  }
+  if (/RUNTIME|\bMCP\b|NEXO\s+EXECUTION|EXECUTION\s*[·:-]/.test(token)) return 'Runtime, MCP & execução';
+  if (/T-LEARN|NEXO\s+LEARNING|LEARNING|GOVERNANCE|OPERATIONS|OPERAÇÕES/.test(token)) return 'Operações NEXO';
+  return null;
+}
+
 export function atlasSubdomainOf(node: GraphNode): string {
   const token = tokenOf(node);
   const top = atlasTopDomainOf(node);
+  const semantic = atlasSemanticSubdomain(top, token);
+  if (semantic) return semantic;
 
-  if (top === 'OLYMPUS') {
-    if (/MIQUEIAS|OLYCAUSE/.test(token)) return 'Miquéias · Cause/Nulls';
-    if (/COMPPHYS|OLYPHYS/.test(token)) return 'Composição corporal · Física computacional';
-    if (/PIVOT|OLYPIVOT/.test(token)) return 'Pivot & Null cross-checks';
-    return 'Olympus · Outros ativos';
-  }
-
+  if (top === 'OLYMPUS') return 'Olympus · Outros ativos';
   if (top === 'SCIENCE') {
-    if (/H0-LCDM|H0HOM|H0-HOMOGENEITY|T-H0/.test(token)) return 'Expansão do Universo · H0';
-    if (/PEER[.-]DETECTION|PEER\.DETECTION|A_LENS|EDE/.test(token)) return 'Consistência cosmológica · Peer Detection';
-    if (/GROWTH-LSS|GZSB|EROSITA|S8/.test(token)) return 'Estrutura em larga escala · Growth/LSS';
-    if (/DE-MICROPHYSICS|T-DEM|DARK-SECTOR|DARK_ENERGY/.test(token)) return 'Energia escura & setor escuro';
-    if (/BLINDSPOT-LIGHT|BLIND26/.test(token)) return 'Propagação da luz · Blindspots';
-    if (/MEGASTRUCTURE|T-MEGA/.test(token)) return 'Megaestruturas · ΛCDM';
-    if (/GALAXY-REDSHIFT|GZ-01|GZ01/.test(token)) return 'Galáxias · Redshift 3D';
-    if (/AVERAGING-PROBLEM/.test(token)) return 'Transferência metodológica · Averaging';
     if (node.type === 'CAPABILITY') return 'Capacidades científicas';
     return 'Science · Outros ativos';
   }
-
-  if (node.domain === 'ENGINEERING' || /ACT-ENG|REQUEST-INGRESS|SIDECHANNEL/.test(token)) {
-    return 'Engenharia, infraestrutura & segurança';
-  }
-  if (/T-LEARN|LEARN/.test(token)) return 'Operações NEXO';
   if (node.type === 'CAPABILITY') return 'Runtime, MCP & execução';
   return 'Operações NEXO';
 }
