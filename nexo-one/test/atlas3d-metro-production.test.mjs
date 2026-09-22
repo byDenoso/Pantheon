@@ -533,7 +533,7 @@ test('dedicated Atlas production page uses Metro renderer, G6 and deterministic 
   assert.match(layout, /compactViewport/);
   assert.match(layout, /ultraDenseOverview/);
   assert.match(layout, /ids\.length > 140/);
-  assert.match(layout, /!compactViewport && node\.entityType === 'subdomain'/);
+  assert.match(layout, /!compactViewport && !ultraDenseOverview && node\.entityType === 'subdomain'/);
   assert.match(renderer, /atlas-label-leaders/);
   assert.match(renderer, /labelText: ''/);
   assert.match(renderer, /update: 'translate'/);
