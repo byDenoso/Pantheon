@@ -201,7 +201,6 @@ function buildG6Data(
 ) {
   const ids = visibleAtlasIds(model, expanded);
   const visible = new Set(ids);
-  const compact = isCompactRenderer(container);
   const positions = metroLayoutPositions(model, ids, width, height);
 
   const nodes = ids.map(id => {
@@ -1148,6 +1147,7 @@ function rebuildThree(
 
   const ids = visibleAtlasIds(model, expanded);
   const visible = new Set(ids);
+  const compact = isCompactRenderer(container);
   const positions = threePositions(model, ids, Math.max(720, container.clientWidth), Math.max(560, container.clientHeight));
   runtime.worldPositions = positions;
   const depthMetrics = threeDepthMetrics(model, ids, positions);
@@ -1293,7 +1293,7 @@ function rebuildThree(
     group.add(neuronGlow);
 
     const statusNucleus = new THREE.Mesh(
-      new THREE.SphereGeometry(Math.max(1.4, radius * .18), 14, 10),
+      new THREE.SphereGeometry(Math.max(1.4, radius * .18), compact ? 8 : 14, compact ? 6 : 10),
       new THREE.MeshBasicMaterial({
         color: new THREE.Color(statusColor(node.status)),
         transparent: true,
