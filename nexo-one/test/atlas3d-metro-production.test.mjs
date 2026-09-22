@@ -100,6 +100,10 @@ test('dedicated Atlas production page uses Metro renderer, G6 and deterministic 
   assert.match(renderer, /OrbitControls/);
   assert.match(renderer, /threeNodeCount/);
   assert.match(renderer, /threeReady/);
+  assert.match(renderer, /threePaintSamples/);
+  assert.match(renderer, /preserveDrawingBuffer/);
+  assert.match(renderer, /renderAndMeasureThree/);
+  assert.match(renderer, /fitThree\(runtime, !initialFit\)/);
   assert.match(renderer, /domainBaseZ|NEXO: -155/);
   assert.doesNotMatch(renderer, /forceSimulation|forceManyBody|forceLink/);
 
