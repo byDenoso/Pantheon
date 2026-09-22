@@ -44,16 +44,25 @@ export function atlasSubdomainHint(
     if (/PEER[.\-\s]DETECTION|PEER\.DETECTION|A_LENS|EDE/.test(token)) {
       return 'Consistência cosmológica · Peer Detection';
     }
+    // A campaign is routed by its scientific object, not by incidental words in
+    // its description. This keeps DDE×LSS campaigns inside Dark Energy even
+    // when the question mentions growth, megastructures or ΛCDM anomalies.
+    if (entityType === 'CAMPAIGN' && /\bDDE\b|DYNAMIC[ -]?DARK[ -]?ENERGY|DARK_ENERGY|DARK\s+ENERGY/.test(token)) {
+      return 'Energia escura';
+    }
+    if (/DE-MICROPHYSICS|T-DEM|\bDDE\b|DYNAMIC[ -]?DARK[ -]?ENERGY|DARK_ENERGY|DARK\s+ENERGY/.test(token)) {
+      return 'Energia escura';
+    }
+    if (/DARK-SECTOR|DARK\s+SECTOR|INTERACTING[ -]?DARK/.test(token)) {
+      return 'Setor escuro';
+    }
+    if (/MEGASTRUCTURE|T-MEGA|GIANT[ -]?ARC|BIG[ -]?RING/.test(token)) return 'Megaestruturas cosmológicas';
     if (/GROWTH-LSS|GZSB|EROSITA|S8|LARGE[ -]?SCALE|LSS/.test(token)) {
       return 'Estrutura em larga escala · Growth/LSS';
-    }
-    if (/DE-MICROPHYSICS|T-DEM|DARK-SECTOR|DARK_ENERGY|DARK\s+ENERGY/.test(token)) {
-      return 'Energia escura & setor escuro';
     }
     if (/BLINDSPOT-LIGHT|BLIND26|PROPAGA[CÇ][AÃ]O.*LUZ/.test(token)) {
       return 'Propagação da luz · Blindspots';
     }
-    if (/MEGASTRUCTURE|T-MEGA/.test(token)) return 'Megaestruturas · ΛCDM';
     if (/GALAXY-REDSHIFT|GALAXY-3D|GZ-01|GZ01|REDSHIFT\s*3D/.test(token)) {
       return 'Galáxias · Redshift 3D';
     }
