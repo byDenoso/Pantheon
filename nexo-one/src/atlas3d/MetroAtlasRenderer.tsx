@@ -77,11 +77,16 @@ function statusColor(status: string): string {
   return '#94a3b8';
 }
 
-function learningColor(kind: string | null | undefined): string {
-  if (kind === 'SCIENTIFIC_LEARNING_PIPELINE') return '#f59e0b';
-  if (kind === 'PROCEDURAL') return '#fbbf24';
-  if (kind === 'SEMANTIC') return '#d97706';
-  return '#f59e0b';
+const LEARNING_PALETTE: Record<string, string[]> = {
+  SCIENTIFIC_LEARNING_PIPELINE: ['#f59e0b', '#f6ad1b', '#e8910a', '#f3b64d'],
+  PROCEDURAL: ['#fbbf24', '#f7c948', '#eab308', '#ffd166'],
+  SEMANTIC: ['#fb923c', '#f97316', '#d97706', '#fdba74'],
+};
+
+function learningColor(kind: string | null | undefined, theme?: string | null): string {
+  const palette = LEARNING_PALETTE[kind || ''] || LEARNING_PALETTE.SCIENTIFIC_LEARNING_PIPELINE;
+  const seed = hashNumber(theme || kind || 'learning');
+  return palette[seed % palette.length]!;
 }
 
 function learningDash(kind: string | null | undefined): number[] {
@@ -106,15 +111,14 @@ type VisualCrossLink = AtlasCrossLink & {
 function projectVisualCrossLinks(
   links: AtlasCrossLink[],
   visible: ReadonlySet<string>,
-  compact: boolean,
 ): VisualCrossLink[] {
   const filtered = links.filter(link => visible.has(link.source) && visible.has(link.target));
   const out: VisualCrossLink[] = [];
-  const canonical = new Map<string, AtlasCrossLink[]>();
+  const canonicalRecords = new Map<string, AtlasCrossLink[]>();
 
-  // A canonical Learning record may generate several graph edges that collapse
-  // to the same semantic source/target pair. Draw that path once and preserve
-  // multiplicity as metadata instead of stacking identical tubes/curves.
+  // First collapse duplicate graph edges emitted from the same canonical Learning
+  // record. One record is one semantic relation, regardless of how many graph
+  // projection edges were needed to express it.
   for (const link of filtered) {
     if (!link.isLearning) {
       out.push({ ...link, visualCount: 1, visualRefs: [] });
@@ -126,19 +130,19 @@ function projectVisualCrossLinks(
       link.learningKind || 'LEARNING',
       link.learningRef || link.id,
     ].join('↔');
-    const bucket = canonical.get(recordKey) || [];
+    const bucket = canonicalRecords.get(recordKey) || [];
     bucket.push(link);
-    canonical.set(recordKey, bucket);
+    canonicalRecords.set(recordKey, bucket);
   }
 
-  const canonicalVisuals: VisualCrossLink[] = [];
-  for (const [key, bucket] of canonical) {
+  const recordVisuals: VisualCrossLink[] = [];
+  for (const [key, bucket] of canonicalRecords) {
     bucket.sort((left, right) => left.id.localeCompare(right.id));
     const base = bucket[0]!;
     const refs = [...new Set(
       bucket.map(link => link.learningRef).filter((value): value is string => Boolean(value)),
     )];
-    canonicalVisuals.push({
+    recordVisuals.push({
       ...base,
       id: `visual-record:${key}`,
       weight: bucket.reduce((sum, link) => sum + Number(link.weight || 0), 0) / bucket.length,
@@ -147,36 +151,38 @@ function projectVisualCrossLinks(
     });
   }
 
-  if (!compact) {
-    out.push(...canonicalVisuals);
-  } else {
-    const semanticBundles = new Map<string, VisualCrossLink[]>();
-    for (const link of canonicalVisuals) {
-      const key = [
-        link.source,
-        link.target,
-        link.learningKind || 'LEARNING',
-        link.learningTheme || 'UNTHEMED',
-      ].join('↔');
-      const bucket = semanticBundles.get(key) || [];
-      bucket.push(link);
-      semanticBundles.set(key, bucket);
-    }
+  // Then bundle records that carry the same semantic route. This is deliberately
+  // enabled on desktop too: the visual layer represents semantic paths, while
+  // visualRefs/visualCount preserve the underlying records and relations.
+  const semanticBundles = new Map<string, VisualCrossLink[]>();
+  for (const link of recordVisuals) {
+    const semanticKey = link.learningTheme
+      ? `theme:${link.learningTheme}`
+      : `record:${link.learningRef || link.id}`;
+    const key = [
+      link.source,
+      link.target,
+      link.learningKind || 'LEARNING',
+      semanticKey,
+    ].join('↔');
+    const bucket = semanticBundles.get(key) || [];
+    bucket.push(link);
+    semanticBundles.set(key, bucket);
+  }
 
-    for (const [key, bucket] of semanticBundles) {
-      bucket.sort((left, right) => left.id.localeCompare(right.id));
-      const base = bucket[0]!;
-      const refs = [...new Set(bucket.flatMap(link => link.visualRefs))];
-      const relationCount = bucket.reduce((sum, link) => sum + link.visualCount, 0);
-      out.push({
-        ...base,
-        id: `visual-learning:${key}`,
-        label: refs.length > 1 ? `${base.label} · +${refs.length - 1} aprendizados` : base.label,
-        weight: bucket.reduce((sum, link) => sum + Number(link.weight || 0), 0) / bucket.length,
-        visualCount: relationCount,
-        visualRefs: refs,
-      });
-    }
+  for (const [key, bucket] of semanticBundles) {
+    bucket.sort((left, right) => left.id.localeCompare(right.id));
+    const base = bucket[0]!;
+    const refs = [...new Set(bucket.flatMap(link => link.visualRefs))];
+    const relationCount = bucket.reduce((sum, link) => sum + link.visualCount, 0);
+    out.push({
+      ...base,
+      id: `visual-learning:${key}`,
+      label: refs.length > 1 ? `${base.label} · ${refs.length} registros` : base.label,
+      weight: bucket.reduce((sum, link) => sum + Number(link.weight || 0), 0) / bucket.length,
+      visualCount: relationCount,
+      visualRefs: refs,
+    });
   }
 
   const learningPairs = new Map<string, VisualCrossLink[]>();
@@ -361,7 +367,7 @@ function buildG6Data(
   });
 
   const bridgeEdges = showBeams
-    ? projectVisualCrossLinks(model.crossLinks, visible, compact)
+    ? projectVisualCrossLinks(model.crossLinks, visible)
       .map(link => ({
         id: link.id,
         source: link.source,
@@ -377,6 +383,8 @@ function buildG6Data(
           learningRef: link.learningRef,
           learningKind: link.learningKind,
           learningGroup: link.learningGroup,
+          learningTheme: link.learningTheme,
+          learningBasis: link.learningBasis,
           sourceAnchor: link.sourceAnchor,
           targetAnchor: link.targetAnchor,
           bundleIndex: link.bundleIndex,
@@ -611,7 +619,7 @@ function Metro2DView({
         },
         style: {
           stroke: (datum: any) => datum.data?.isLearning
-            ? learningColor(datum.data?.learningKind)
+            ? learningColor(datum.data?.learningKind, datum.data?.learningTheme)
             : datum.data?.kind === 'bridge'
               ? '#91a4bd'
               : (DOMAIN_COLOR[String(datum.data?.domain)] || '#475569'),
@@ -625,7 +633,7 @@ function Metro2DView({
             ? learningDash(datum.data?.learningKind)
             : datum.data?.kind === 'bridge' ? [5, 6] : [],
           shadowColor: (datum: any) => datum.data?.isLearning
-            ? learningColor(datum.data?.learningKind)
+            ? learningColor(datum.data?.learningKind, datum.data?.learningTheme)
             : 'transparent',
           shadowBlur: (datum: any) => datum.data?.isLearning
             ? (datum.data?.learningKind === 'SCIENTIFIC_LEARNING_PIPELINE' ? 11 : 7)
@@ -1414,7 +1422,7 @@ function rebuildThree(
   }
 
   const visualCrossLinks = showBeams
-    ? projectVisualCrossLinks(model.crossLinks, visible, compact)
+    ? projectVisualCrossLinks(model.crossLinks, visible)
     : [];
 
   if (showBeams) {
@@ -1427,7 +1435,7 @@ function rebuildThree(
       const sourceColor = new THREE.Color(DOMAIN_COLOR[sourceNode?.domain || ''] || '#91a4bd');
       const targetColor = new THREE.Color(DOMAIN_COLOR[targetNode?.domain || ''] || '#91a4bd');
       const mixed = sourceColor.clone().lerp(targetColor, .5);
-      const color = link.isLearning ? new THREE.Color(learningColor(link.learningKind)) : mixed;
+      const color = link.isLearning ? new THREE.Color(learningColor(link.learningKind, link.learningTheme)) : mixed;
       addSynapse(
         runtime,
         content,
