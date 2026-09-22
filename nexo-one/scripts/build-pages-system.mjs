@@ -74,6 +74,61 @@ function projectionDomains(projection) {
   return [...domains];
 }
 
+function capabilityStatusFromProjection(value) {
+  const status = String(value || '').trim().toUpperCase();
+  if (/RETIRED|REMOVED|DISABLED/.test(status)) return 'RETIRED_RUNTIME';
+  if (/BLOCK|UNAVAILABLE|MISSING|FAILED|ERROR/.test(status)) return 'BLOCKED';
+  if (/PROVEN|VALIDATED_CURRENT|VERIFIED|PASS|SUCCEEDED|COMPLETE/.test(status)) return 'PASS';
+  if (/ACTIVE|DECLARED|READY|AVAILABLE/.test(status)) return 'UNVERIFIED';
+  return 'UNKNOWN';
+}
+
+function capabilityRuntimeFromProjection(capabilityId, definition = {}) {
+  const backend = String(definition?.backend || '').trim().toLowerCase();
+  const id = String(capabilityId || '').trim().toLowerCase();
+  if (/github[_ .-]?actions/.test(backend) || id.startsWith('github.actions.')) return 'GITHUB_ACTIONS';
+  if (backend.includes('vercel')) return 'VERCEL';
+  if (backend.includes('human')) return 'HUMAN';
+  if (backend.includes('local')) return 'LOCAL';
+  return 'NEXO_KERNEL';
+}
+
+function capabilitiesFromProjection(projection, source) {
+  return Object.entries(projection?.capabilities || {}).map(([capabilityId, rawDefinition]) => {
+    const definition = rawDefinition && typeof rawDefinition === 'object' ? rawDefinition : {};
+    const canonicalStatus = String(definition.status || '').trim().toUpperCase();
+    const backend = String(definition.backend || '').trim();
+    const status = capabilityStatusFromProjection(canonicalStatus);
+    const proofNote = status === 'PASS'
+      ? 'PASS derives only from the explicit canonical proof state published by TOWER_V06; no execution timestamp or lower-level receipt was published in this projection.'
+      : status === 'UNVERIFIED'
+        ? 'The capability is declared active, but this public projection publishes no execution/readback proof.'
+        : status === 'RETIRED_RUNTIME'
+          ? 'The canonical projection explicitly marks this capability as retired.'
+          : status === 'BLOCKED'
+            ? 'The canonical projection explicitly marks this capability unavailable or blocked.'
+            : 'The canonical state is not sufficient to classify execution proof.';
+
+    return {
+      capability_id: capabilityId,
+      label: capabilityId,
+      // The sanctioned public capability map currently publishes no domain field.
+      // Keep registry-level capabilities under NEXO instead of inventing a domain.
+      domain: definition.domain ? domainOf(definition.domain) : 'NEXO',
+      runtime: capabilityRuntimeFromProjection(capabilityId, definition),
+      // Operation and risk are intentionally null when the projection does not publish them.
+      operation: null,
+      status,
+      risk: null,
+      provider: backend || 'UNSPECIFIED',
+      last_verified_at: null,
+      evidence_ref: status === 'PASS' ? source : null,
+      explanation: 'canonical status=' + (canonicalStatus || 'UNSPECIFIED')
+        + '; backend=' + (backend || 'UNSPECIFIED') + '. ' + proofNote,
+    };
+  });
+}
+
 function domainsOf(value) {
   if (Array.isArray(value)) return value.map(domainOf);
   return String(value || '').split(/[|,;]/).map(item => item.trim()).filter(Boolean).map(domainOf);
@@ -966,6 +1021,7 @@ export function buildPagesProjection({
     .filter(Boolean);
   const lanes = lanesFromProjection(projection, observedAt);
   const inbox = humanInboxFromProjection(projection, observedAt, humanGateDetails);
+  const capabilities = capabilitiesFromProjection(projection, source);
 
   const system = {
     contract_version: SYSTEM_CONTRACT,
@@ -1024,7 +1080,7 @@ export function buildPagesProjection({
     }],
     actions: [],
     inbox,
-    capabilities: [],
+    capabilities,
     runs: [],
     lanes,
     projected_work: projectedWork,
@@ -1035,7 +1091,7 @@ export function buildPagesProjection({
       label: 'TOWER_V06 sanctioned projection',
       expected_for: ['NEXO', 'SCIENCE', 'ENGINEERING', 'OLYMPUS'],
       state: 'SNAPSHOT',
-      capabilities: [],
+      capabilities: capabilities.map(capability => capability.capability_id),
       last_success_at: observedAt,
       checked_at: observedAt,
       explanation: 'projection_only=true · writeback=FORBIDDEN · ' + manifest.projection_fingerprint,
