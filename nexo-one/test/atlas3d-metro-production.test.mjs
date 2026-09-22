@@ -181,6 +181,8 @@ test('dedicated Atlas production page uses Metro renderer, G6 and deterministic 
   assert.match(layout, /floatingLabelBox/);
   assert.match(layout, /angularCandidates/);
   assert.match(layout, /radialCandidates/);
+  assert.match(layout, /atlasUiSafeZones/);
+  assert.match(layout, /uiZoneViolations/);
   assert.match(renderer, /atlas-label-leaders/);
   assert.match(renderer, /labelText: ''/);
   assert.match(renderer, /update: 'translate'/);
