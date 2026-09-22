@@ -455,6 +455,8 @@ jobs:
           grep -oE 'data-three-(ready|node-count|paint-samples|synapse-count|learning-synapses|visual)="[^"]*"' /tmp/atlas3d-3d-dom.html | head -20 || true
           echo "ATLAS3D_3D_DOM_DIAGNOSTICS_END"
           grep -Fq 'data-atlas-mode="3d"' /tmp/atlas3d-3d-dom.html
+          grep -Fq 'data-active-mode="3d"' /tmp/atlas3d-3d-dom.html
+          grep -Fq '3D EXPLORAR ATIVO' /tmp/atlas3d-3d-dom.html
           grep -Fq 'data-three-ready="true"' /tmp/atlas3d-3d-dom.html
           grep -Fq 'data-three-visual="neural-synapse"' /tmp/atlas3d-3d-dom.html
           three_node_count="$(sed -n 's/.*data-three-node-count="\([0-9][0-9]*\)".*/\1/p' /tmp/atlas3d-3d-dom.html | head -1)"
