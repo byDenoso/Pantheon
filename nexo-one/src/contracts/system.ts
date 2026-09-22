@@ -308,6 +308,8 @@ export interface Filament {
   from_domain?: Domain;
   to_domain?: Domain;
   scope?: 'INTRA_DOMAIN' | 'INTER_DOMAIN';
+  /** Optional canonical semantic bundle key used by Scientific Learning pipelines. */
+  peer_detection_group?: string;
 }
 
 export interface ProviderHealth {
