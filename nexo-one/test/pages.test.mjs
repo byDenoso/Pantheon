@@ -235,6 +235,12 @@ test('GitHub Pages deploys official artifact and exposes projection readback', a
   assert.match(workflow, /data-g6-subdomain-learning-edges/);
   assert.match(workflow, /data-g6-peer-subdomain-edges/);
   assert.match(workflow, /data-atlas-learning-subdomain-endpoints/);
+  assert.match(workflow, /data-atlas-learning-exact-entity-records/);
+  assert.match(workflow, /learning-leaf/);
+  assert.match(workflow, /data-g6-direct-exact-entity-learning-edges/);
+  assert.match(workflow, /PAGES_ATLAS3D_LEAF_READBACK_OK/);
+  assert.match(workflow, /data-three-direct-exact-entity-learning-synapses/);
+  assert.match(workflow, /PAGES_ATLAS3D_LEAF_3D_READBACK_OK/);
   assert.match(workflow, /data-atlas-learning-themes/);
   assert.match(workflow, /data-atlas-learning-distinct-subdomains/);
   assert.match(workflow, /data-atlas-learning-max-subdomain-share/);
