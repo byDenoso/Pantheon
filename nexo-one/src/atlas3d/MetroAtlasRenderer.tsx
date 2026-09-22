@@ -275,6 +275,7 @@ function buildG6Data(
   width: number,
   height: number,
   compact = false,
+  dimmed = false,
 ) {
   const ids = visibleAtlasIds(model, expanded);
   const visible = new Set(ids);
@@ -661,6 +662,7 @@ function Metro2DView({
         showBeamsRef.current,
         rect.width,
         rect.height,
+        compact,
       );
       graph.setData({ nodes: data.nodes, edges: data.edges });
       stampG6Metrics(container, data);
@@ -727,7 +729,8 @@ function Metro2DView({
     const container = containerRef.current;
     if (!graph || !container) return;
     const rect = container.getBoundingClientRect();
-    const data = buildG6Data(model, expanded, showBeams, rect.width, rect.height);
+    const compact = isCompactRenderer(container);
+    const data = buildG6Data(model, expanded, showBeams, rect.width, rect.height, compact);
     graph.setData({ nodes: data.nodes, edges: data.edges });
     stampG6Metrics(container, data);
     container.dataset.g6ViewportWidth = Math.round(rect.width).toString();
@@ -946,7 +949,7 @@ function addSynapse(
     new THREE.MeshBasicMaterial({
       color,
       transparent: true,
-      opacity: learning ? .18 : bridge ? .055 : .085,
+      opacity: (learning ? .18 : bridge ? .055 : .085) * (dimmed ? .42 : 1),
       depthWrite: false,
       blending: THREE.AdditiveBlending,
     }),
@@ -959,7 +962,7 @@ function addSynapse(
     new THREE.MeshBasicMaterial({
       color,
       transparent: true,
-      opacity: learning ? .72 : bridge ? .28 : .44,
+      opacity: (learning ? .72 : bridge ? .28 : .44) * (dimmed ? .48 : 1),
       depthWrite: false,
       blending: THREE.AdditiveBlending,
     }),
@@ -973,13 +976,17 @@ function addSynapse(
     new THREE.MeshBasicMaterial({
       color,
       transparent: true,
-      opacity: .92,
+      opacity: dimmed ? .42 : .92,
       depthWrite: false,
       blending: THREE.AdditiveBlending,
     }),
   );
   particle.add(pulseCore);
-  const pulseGlow = createGlowSprite(colorValue, learning ? 18 : bridge ? 10 : 12, learning ? .72 : bridge ? .34 : .46);
+  const pulseGlow = createGlowSprite(
+    colorValue,
+    learning ? 18 : bridge ? 10 : 12,
+    (learning ? .72 : bridge ? .34 : .46) * (dimmed ? .45 : 1),
+  );
   pulseGlow.material.depthTest = false;
   particle.add(pulseGlow);
 
@@ -1268,9 +1275,12 @@ function rebuildThree(
     );
   }
 
+  const visualCrossLinks = showBeams
+    ? projectVisualCrossLinks(model.crossLinks, visible, compact)
+    : [];
+
   if (showBeams) {
-    for (const link of model.crossLinks) {
-      if (!visible.has(link.source) || !visible.has(link.target)) continue;
+    for (const link of visualCrossLinks) {
       const source = positions.get(link.source);
       const target = positions.get(link.target);
       if (!source || !target) continue;
@@ -1293,6 +1303,7 @@ function rebuildThree(
         link.bundleIndex,
         link.bundleCount,
         compact,
+        Boolean(compact && selectedId && link.source !== selectedId && link.target !== selectedId),
       );
     }
   }
@@ -1300,7 +1311,12 @@ function rebuildThree(
   const visibleLearning = model.crossLinks.filter(
     link => link.isLearning && visible.has(link.source) && visible.has(link.target),
   );
+  const visualLearning = visualCrossLinks.filter(link => link.isLearning);
   container.dataset.threeLearningSynapses = String(visibleLearning.length);
+  container.dataset.threeLearningVisualSynapses = String(visualLearning.length);
+  container.dataset.threeLearningRecords = String(
+    visualLearning.reduce((sum, link) => sum + Math.max(1, link.visualCount), 0),
+  );
   container.dataset.threeScientificLearningSynapses = String(
     visibleLearning.filter(link => link.learningKind === 'SCIENTIFIC_LEARNING_PIPELINE').length,
   );
@@ -1626,6 +1642,7 @@ function MetroThreeView({
 
     const animate = () => {
       runtime.frame = requestAnimationFrame(animate);
+      if (document.hidden) return;
       updateSynapsePulses(runtime, performance.now());
       controls.update();
       renderer.render(scene, camera);
