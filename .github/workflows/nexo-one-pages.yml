@@ -248,8 +248,12 @@ jobs:
           set -euo pipefail
           npm run typecheck
           node --test test/atlas3d-metro-production.test.mjs test/pages.test.mjs
+          mkdir -p public/vendor
+          curl -fsSL --retry 3 --connect-timeout 8 https://cdn.jsdelivr.net/npm/@antv/g6@5/dist/g6.min.js -o public/vendor/g6.min.js
+          test -s public/vendor/g6.min.js
           npm run build
           test -s dist/atlas3d/index.html
+          test -s dist/vendor/g6.min.js
           expected_system_endpoint="${{ steps.pages.outputs.base_path }}/system.json"
           grep -R -Fq "${expected_system_endpoint}" dist/assets || {
             echo "::error::GitHub Pages bundle does not contain the repository-root SystemState endpoint"
@@ -551,7 +555,7 @@ jobs:
           }
           echo "PAGES_ATLAS3D_VISUAL_READBACK_OK roots=3 visible=${visible_count} g6_nodes=${g6_node_count} learning_visual=${learning_edges} learning_records=${g6_learning_records} learning_relations=${g6_learning_relations} themes=${atlas_learning_themes} learning_subdomains=${atlas_distinct_subdomains} max_share=${atlas_max_subdomain_share}% peer_targets=${atlas_peer_target_subdomains} hub_endpoints=${atlas_hub_endpoints} renderer=metro-cluster"
 
-          leaf_url="${base}/atlas3d/?readback=1&g6Fallback=1&expand=learning-leaf"
+          leaf_url="${base}/atlas3d/?readback=1&expand=learning-leaf"
           for attempt in 1 2 3; do
             "${chrome_bin}" --headless=new --no-sandbox --disable-dev-shm-usage --hide-scrollbars \
               --window-size=1440,900 --virtual-time-budget=12000 --dump-dom "${leaf_url}" \
@@ -575,7 +579,7 @@ jobs:
           echo "PAGES_ATLAS3D_LEAF_READBACK_OK exact_records=${atlas_exact_records} exact_entities=${atlas_distinct_exact_entities} direct_leaf_paths=${leaf_g6_direct}"
 
           mobile_ua='Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1'
-          mobile_url="${base}/atlas3d/?readback=1&g6Fallback=1"
+          mobile_url="${base}/atlas3d/?readback=1"
           dump_until_ready 'data-g6-ready="true"' /tmp/atlas3d-mobile-dom.html \
             --headless=new --no-sandbox --disable-dev-shm-usage --hide-scrollbars \
             --touch-events=enabled --window-size=390,844 --force-device-scale-factor=1 \
@@ -774,7 +778,7 @@ jobs:
           test -s /tmp/atlas3d-readback-3d.png
           echo "PAGES_ATLAS3D_3D_READBACK_OK visual=neural-synapse visible=${visible_count} three_nodes=${three_node_count} synapses=${three_synapse_count} learning=${three_learning} learning_visual=${three_learning_visual} learning_records=${three_learning_records} learning_relations=${three_learning_relations} scientific=${three_scientific} peer=${three_peer} peer_subdomains=${three_peer_subdomain} learning_subdomains=${three_subdomain_learning} fit_scope=selection fit_nodes=${three_fit_nodes} fit_coverage=${three_fit_coverage} z_span=${three_z_span} same_level_z=${three_same_level_z} selected_siblings=${selected_sibling_count} selected_z=${selected_sibling_z} paint_samples=${three_paint_samples}"
 
-          leaf_3d_url="${base}/atlas3d/?mode=3d&readback=1&expand=learning-leaf&g6Fallback=1"
+          leaf_3d_url="${base}/atlas3d/?mode=3d&readback=1&expand=learning-leaf"
           for attempt in 1 2 3; do
             "${chrome_bin}" --headless=new --no-sandbox --disable-dev-shm-usage --hide-scrollbars \
               --use-angle=swiftshader --enable-unsafe-swiftshader \
@@ -802,7 +806,7 @@ jobs:
           test -s /tmp/atlas3d-readback-learning-leaf-3d.png
           echo "PAGES_ATLAS3D_LEAF_3D_READBACK_OK direct_leaf_synapses=${leaf_three_direct} paint_samples=${leaf_three_paint}"
 
-          mobile_3d_url="${base}/atlas3d/?mode=3d&readback=1&g6Fallback=1"
+          mobile_3d_url="${base}/atlas3d/?mode=3d&readback=1"
           dump_until_ready 'data-three-ready="true"' /tmp/atlas3d-mobile-3d-dom.html \
             --headless=new --no-sandbox --disable-dev-shm-usage --hide-scrollbars \
             --use-angle=swiftshader --enable-unsafe-swiftshader --touch-events=enabled \
@@ -815,7 +819,7 @@ jobs:
           echo "ATLAS3D_MOBILE_3D_DOM_DIAGNOSTICS_END"
 
           grep -Fq 'data-atlas-mode="3d"' /tmp/atlas3d-mobile-3d-dom.html
-          grep -Fq 'data-atlas-g6-source="jsdelivr"' /tmp/atlas3d-mobile-3d-dom.html
+          grep -Fq 'data-atlas-g6-source="local"' /tmp/atlas3d-mobile-3d-dom.html
           grep -Fq 'data-three-profile="compact-touch"' /tmp/atlas3d-mobile-3d-dom.html
           grep -Fq 'data-three-quality="reduced-gpu"' /tmp/atlas3d-mobile-3d-dom.html
           grep -Fq 'data-three-fit-policy="selection-safe-area-v5"' /tmp/atlas3d-mobile-3d-dom.html
