@@ -350,6 +350,32 @@ jobs:
           curl -fsSL "${base}/atlas3d/" -o /tmp/atlas3d.html
           grep -Fq '<title>NEXO Atlas 3D</title>' /tmp/atlas3d.html
           grep -Fq '<div id="root"></div>' /tmp/atlas3d.html
+
+          chrome_bin="$(command -v google-chrome || command -v chromium || command -v chromium-browser || true)"
+          [ -n "${chrome_bin}" ] || {
+            echo "::error::A headless Chromium/Chrome binary is required for Atlas visual readback"
+            exit 1
+          }
+          "${chrome_bin}" --headless=new --no-sandbox --disable-dev-shm-usage --hide-scrollbars \
+            --window-size=1440,900 --virtual-time-budget=12000 --dump-dom "${base}/atlas3d/" \
+            > /tmp/atlas3d-dom.html
+          grep -Fq 'data-atlas-renderer="metro-cluster"' /tmp/atlas3d-dom.html
+          grep -Fq 'data-atlas-ready="true"' /tmp/atlas3d-dom.html
+          grep -Fq 'data-atlas-root-count="3"' /tmp/atlas3d-dom.html
+          grep -Fq 'Nexo' /tmp/atlas3d-dom.html
+          grep -Fq 'Science' /tmp/atlas3d-dom.html
+          grep -Fq 'Olympus' /tmp/atlas3d-dom.html
+          visible_count="$(grep -o 'data-atlas-visible-count="[0-9]*"' /tmp/atlas3d-dom.html | head -1 | tr -cd '0-9')"
+          [ -n "${visible_count}" ] && [ "${visible_count}" -gt 3 ] || {
+            echo "::error::Atlas Metro rendered only ${visible_count:-0} visible stations; expected the 3 hubs plus named stations"
+            exit 1
+          }
+          "${chrome_bin}" --headless=new --no-sandbox --disable-dev-shm-usage --hide-scrollbars \
+            --window-size=1440,900 --virtual-time-budget=8000 \
+            --screenshot=/tmp/atlas3d-readback.png "${base}/atlas3d/" >/dev/null 2>&1
+          test -s /tmp/atlas3d-readback.png
+          echo "PAGES_ATLAS3D_VISUAL_READBACK_OK roots=3 visible=${visible_count} renderer=metro-cluster"
+
           curl -fsSL "${base}/world-public.ndjson" -o /tmp/world.ndjson
           curl -fsSL "${base}/mcp/topology.json" -o /tmp/mcp-topology.json
           curl -fsSL "${base}/galaxy/latest.json" -o /tmp/galaxy-latest.json
@@ -409,3 +435,12 @@ jobs:
           echo "PAGES_GALAXY_READBACK_OK ${base}/galaxy/latest.json"
           echo "PAGES_GALAXY_INDEX_READBACK_OK ${base}/galaxy/index.json"
           echo "PAGES_BUILD_META_READBACK_OK ${base}/build-meta.json"
+
+      - name: Upload Atlas 3D visual readback
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: atlas3d-production-readback
+          path: /tmp/atlas3d-readback.png
+          if-no-files-found: error
+          retention-days: 7

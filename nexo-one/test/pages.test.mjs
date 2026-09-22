@@ -142,6 +142,11 @@ test('GitHub Pages deploys official artifact and exposes projection readback', a
   assert.match(workflow, /tower-projection\/manifest\.json/);
   assert.match(workflow, /\$\{base\}\/atlas3d\//);
   assert.match(workflow, /<title>NEXO Atlas 3D<\/title>/);
+  assert.match(workflow, /data-atlas-renderer="metro-cluster"/);
+  assert.match(workflow, /data-atlas-ready="true"/);
+  assert.match(workflow, /data-atlas-root-count="3"/);
+  assert.match(workflow, /PAGES_ATLAS3D_VISUAL_READBACK_OK/);
+  assert.match(workflow, /atlas3d-production-readback/);
   assert.match(workflow, /PAGES_TOWER_PROJECTION_READBACK_OK/);
   assert.match(workflow, /pages:\s*write/);
   assert.match(workflow, /id-token:\s*write/);
