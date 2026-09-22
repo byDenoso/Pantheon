@@ -426,7 +426,6 @@ function Metro2DView({
   const activateRef = useRef(onActivate);
   const showBeamsRef = useRef(showBeams);
   const lastFitNonce = useRef(-1);
-  const lastFocusKey = useRef('');
   const onReadyRef = useRef(onReady);
   const renderLabelsRef = useRef<() => void>(() => {});
 
@@ -1557,6 +1556,7 @@ function MetroThreeView({
   const activateRef = useRef(onActivate);
   const showBeamsRef = useRef(showBeams);
   const lastFitNonce = useRef(-1);
+  const lastFocusKey = useRef('');
   const onReadyRef = useRef(onReady);
 
   modelRef.current = model;
