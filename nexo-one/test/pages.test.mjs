@@ -83,6 +83,10 @@ test('GitHub Pages consumes only the sanctioned TOWER_V06 public projection', as
   assert.match(workflow, /tower_commit/);
   assert.match(workflow, /event_cursor/);
   assert.match(workflow, /projection_fingerprint/);
+  assert.match(workflow, /presentation_input_fingerprint/);
+  assert.match(workflow, /METALEARNING_CURRENT\.json/);
+  assert.match(workflow, /PRESENTATION_INPUT_FINGERPRINT/);
+  assert.match(workflow, /BUILD_META_PRESENTATION_INPUT_FINGERPRINT_MISMATCH/);
   assert.doesNotMatch(workflow, /cp atlas-control-tower\/data\/nexo-drive-projection\.json/);
   assert.doesNotMatch(workflow, /truthgraph\.snapshot\.json/);
 
