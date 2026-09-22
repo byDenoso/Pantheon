@@ -206,6 +206,56 @@ function resolveLearningEndpoint({
   return { id: ROOT_IDS[resolvedDomain], anchor: 'DOMAIN_HUB' };
 }
 
+function ensureLearningSemanticAnchors(
+  state: SystemState,
+  nodes: AtlasMetroNode[],
+  sourceNodeIds: Set<string>,
+): void {
+  const known = new Set(nodes.map(node => node.id));
+  for (const filament of state.filaments || []) {
+    for (const side of ['source', 'target'] as const) {
+      const explicitId = side === 'source' ? filament.from_id : filament.to_id;
+      const declaredDomain = side === 'source' ? filament.from_domain : filament.to_domain;
+      const resolvedDomain = domainFromRawId(explicitId) || topDomainFromValue(declaredDomain);
+      if (!resolvedDomain) continue;
+
+      const hasExactEntity = Boolean(explicitId && sourceNodeIds.has(explicitId))
+        || (filament.links || []).some(link =>
+          sourceNodeIds.has(link.id) && topDomainFromValue(link.domain) === resolvedDomain
+        );
+      if (hasExactEntity) continue;
+
+      const hint = atlasSubdomainHint(resolvedDomain, learningSignal(filament, side));
+      if (!hint) continue;
+      const id = atlasSubdomainNodeId(resolvedDomain, hint);
+      if (known.has(id)) continue;
+
+      nodes.push({
+        id,
+        sourceId: null,
+        name: hint,
+        domain: resolvedDomain,
+        parentId: ROOT_IDS[resolvedDomain],
+        entityType: 'subdomain',
+        status: filament.status === 'CONTESTED' ? 'WATCH' : 'LIVE',
+        summary: `Âncora semântica derivada da projeção canônica de ${filament.kind}.`,
+        depth: 1,
+        childCount: 0,
+        descendantCount: 0,
+        relationCount: 0,
+        mix: 50,
+        updatedAt: filament.observed_at || state.generated_at,
+        sourceRevision: state.bus.fingerprint,
+        fingerprint: `${state.bus.fingerprint}:${id}:semantic-anchor`,
+        authorityClass: 'DERIVED',
+        temporal: state.generated_at ? [{ label: 'projection', at: state.generated_at }] : [],
+        synthetic: true,
+      });
+      known.add(id);
+    }
+  }
+}
+
 function safeRatio(structure: number, relations: number): number {
   const total = Math.max(1, structure + relations);
   return Math.max(10, Math.min(90, Math.round((structure / total) * 100)));
@@ -355,6 +405,8 @@ export function buildAtlasMetroModel(state: SystemState): AtlasMetroModel {
       }
     }
   }
+
+  ensureLearningSemanticAnchors(state, nodes, sourceNodeIds);
 
   const nodeMap = new Map(nodes.map(node => [node.id, node]));
   const childrenMap = new Map(nodes.map(node => [node.id, [] as string[]]));
