@@ -263,6 +263,9 @@ test('GitHub Pages deploys official artifact and exposes projection readback', a
   assert.match(workflow, /g6Fallback=1/);
   assert.match(workflow, /data-atlas-g6-source="jsdelivr"/);
   assert.match(workflow, /data-three-quality="reduced-gpu"/);
+  assert.match(workflow, /data-three-fit-policy="projected-safe-area-v4"/);
+  assert.match(workflow, /data-three-fit-coverage/);
+  assert.match(workflow, /Mobile Three fit wastes viewport or clips content/);
   assert.match(workflow, /data-g6-learning-records/);
   assert.match(workflow, /data-g6-learning-relations/);
   assert.match(workflow, /Learning legend\/model record count diverges/);
