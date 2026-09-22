@@ -1,6 +1,7 @@
-import type { GraphEdge, GraphNode, SystemState } from '../contracts/system.ts';
+import type { Filament, GraphEdge, GraphNode, SystemState } from '../contracts/system.ts';
 import {
   ATLAS_TOP_DOMAINS,
+  atlasSemanticSubdomain,
   atlasSubdomainNodeId,
   atlasSubdomainOf,
   atlasTopDomainOf,
@@ -122,11 +123,104 @@ function atlasEndpointFor(
   return ROOT_IDS[domain] || null;
 }
 
-function learningEndpointFromDomain(domain: string | undefined): string | null {
+function topDomainFromValue(domain: string | undefined): AtlasTopDomain | null {
   if (!domain) return null;
   const normalized = domain.toUpperCase() === 'ENGINEERING' ? 'NEXO' : domain.toUpperCase();
-  if (!ATLAS_TOP_DOMAINS.includes(normalized as AtlasTopDomain)) return null;
-  return ROOT_IDS[normalized as AtlasTopDomain];
+  return ATLAS_TOP_DOMAINS.includes(normalized as AtlasTopDomain)
+    ? normalized as AtlasTopDomain
+    : null;
+}
+
+function rawDomainEndpoint(rawId: string | undefined): AtlasTopDomain | null {
+  const match = /^domain:(NEXO|SCIENCE|OLYMPUS|ENGINEERING)$/i.exec(String(rawId || ''));
+  return match ? topDomainFromValue(match[1]) : null;
+}
+
+function learningHint(filament: Filament, side: 'from' | 'to'): string {
+  const label = side === 'from' ? filament.from_label : filament.to_label;
+  return [
+    label,
+    filament.label,
+    filament.peer_detection_group,
+    filament.boundary,
+    ...(filament.evidence || []),
+  ].filter(Boolean).join(' · ');
+}
+
+function ensureSemanticSubdomain(
+  nodes: AtlasMetroNode[],
+  state: SystemState,
+  domain: AtlasTopDomain,
+  subdomain: string,
+  filament: Filament,
+): string {
+  const id = atlasSubdomainNodeId(domain, subdomain);
+  if (nodes.some(node => node.id === id)) return id;
+  const learningName = filament.kind === 'SCIENTIFIC_LEARNING_PIPELINE'
+    ? 'Scientific Learning'
+    : filament.kind === 'PROCEDURAL' ? 'Procedural Learning' : 'Semantic Learning';
+  nodes.push({
+    id,
+    sourceId: null,
+    name: subdomain,
+    domain,
+    parentId: ROOT_IDS[domain],
+    entityType: 'subdomain',
+    status: filament.status === 'CONTESTED' ? 'WATCH' : 'LIVE',
+    summary: `Âncora semântica para ${learningName}.`,
+    depth: 1,
+    childCount: 0,
+    descendantCount: 0,
+    relationCount: 0,
+    mix: 50,
+    updatedAt: state.generated_at,
+    sourceRevision: state.bus.fingerprint,
+    fingerprint: `${state.bus.fingerprint}:${id}:semantic-anchor`,
+    authorityClass: 'DERIVED',
+    temporal: state.generated_at ? [{ label: 'projection', at: state.generated_at }] : [],
+    synthetic: true,
+  });
+  return id;
+}
+
+function sourceAliasMap(sourceNodes: GraphNode[]): Map<string, GraphNode> {
+  const aliases = new Map<string, GraphNode>();
+  for (const node of sourceNodes) {
+    for (const value of [node.id, node.label, node.campaign_id]) {
+      if (value) aliases.set(String(value).trim().toLowerCase(), node);
+    }
+  }
+  return aliases;
+}
+
+function resolveLearningEndpoint(
+  filament: Filament,
+  side: 'from' | 'to',
+  sourceToParent: Map<string, string>,
+  aliases: Map<string, GraphNode>,
+  nodes: AtlasMetroNode[],
+): string | null {
+  const rawId = side === 'from' ? filament.from_id : filament.to_id;
+  const label = side === 'from' ? filament.from_label : filament.to_label;
+  const declaredDomain = side === 'from' ? filament.from_domain : filament.to_domain;
+
+  const exact = rawId
+    ? aliases.get(String(rawId).trim().toLowerCase())
+    : aliases.get(String(label || '').trim().toLowerCase());
+  if (exact) return sourceToParent.get(exact.id) || ROOT_IDS[atlasTopDomainOf(exact)];
+
+  const domain = rawDomainEndpoint(rawId) || topDomainFromValue(declaredDomain);
+  if (!domain) return null;
+
+  const semantic = atlasSemanticSubdomain(domain, learningHint(filament, side));
+  if (semantic) {
+    const id = atlasSubdomainNodeId(domain, semantic);
+    if (nodes.some(node => node.id === id)) return id;
+  }
+
+  const subdomains = nodes.filter(node => node.domain === domain && node.entityType === 'subdomain');
+  if (subdomains.length === 1) return subdomains[0]!.id;
+  return ROOT_IDS[domain];
 }
 
 function safeRatio(structure: number, relations: number): number {
