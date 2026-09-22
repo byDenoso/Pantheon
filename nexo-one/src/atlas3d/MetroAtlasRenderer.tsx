@@ -301,20 +301,19 @@ function createG6Graph(
   }
 }
 
-function stampG6Metrics(container: HTMLElement, data: { nodes: any[]; edges: any[] }): void {
+function stampG6Metrics(
+  container: HTMLElement,
+  data: { nodes: any[]; edges: any[] },
+  model: AtlasMetroModel,
+): void {
   container.dataset.g6NodeCount = String(data.nodes.length);
   const learningEdges = data.edges.filter((edge: any) => edge.data?.isLearning);
+  const logicalLearning = model.crossLinks.filter(link => link.isLearning);
   container.dataset.g6LearningEdges = String(learningEdges.length);
   container.dataset.g6LearningRecords = String(new Set(
-    learningEdges.flatMap((edge: any) =>
-      Array.isArray(edge.data?.visualRefs) && edge.data.visualRefs.length
-        ? edge.data.visualRefs
-        : [edge.data?.learningRef || edge.id]
-    ),
+    logicalLearning.map(link => link.learningRef || link.id),
   ).size);
-  container.dataset.g6LearningRelations = String(
-    learningEdges.reduce((sum: number, edge: any) => sum + Math.max(1, Number(edge.data?.visualCount || 1)), 0),
-  );
+  container.dataset.g6LearningRelations = String(logicalLearning.length);
   container.dataset.g6ScientificLearningEdges = String(
     data.edges.filter((edge: any) => edge.data?.learningKind === 'SCIENTIFIC_LEARNING_PIPELINE').length,
   );
@@ -795,7 +794,7 @@ function Metro2DView({
         compact,
       );
       graph.setData({ nodes: data.nodes, edges: data.edges });
-      stampG6Metrics(container, data);
+      stampG6Metrics(container, data, modelRef.current);
       container.dataset.g6ViewportWidth = Math.round(rect.width).toString();
       container.dataset.g6ViewportHeight = Math.round(rect.height).toString();
 
@@ -862,7 +861,7 @@ function Metro2DView({
     const compact = isCompactRenderer(container);
     const data = buildG6Data(model, expanded, showBeams, rect.width, rect.height, compact);
     graph.setData({ nodes: data.nodes, edges: data.edges });
-    stampG6Metrics(container, data);
+    stampG6Metrics(container, data, model);
     container.dataset.g6ViewportWidth = Math.round(rect.width).toString();
     container.dataset.g6ViewportHeight = Math.round(rect.height).toString();
 
@@ -1531,12 +1530,11 @@ function rebuildThree(
   const visualLearning = visualCrossLinks.filter(link => link.isLearning);
   container.dataset.threeLearningSynapses = String(visibleLearning.length);
   container.dataset.threeLearningVisualSynapses = String(visualLearning.length);
+  const logicalLearning = model.crossLinks.filter(link => link.isLearning);
   container.dataset.threeLearningRecords = String(new Set(
-    visualLearning.flatMap(link => link.visualRefs.length ? link.visualRefs : [link.learningRef || link.id]),
+    logicalLearning.map(link => link.learningRef || link.id),
   ).size);
-  container.dataset.threeLearningRelations = String(
-    visualLearning.reduce((sum, link) => sum + Math.max(1, link.visualCount), 0),
-  );
+  container.dataset.threeLearningRelations = String(logicalLearning.length);
   container.dataset.threeScientificLearningSynapses = String(
     visibleLearning.filter(link => link.learningKind === 'SCIENTIFIC_LEARNING_PIPELINE').length,
   );
