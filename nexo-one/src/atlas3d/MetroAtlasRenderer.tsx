@@ -691,6 +691,7 @@ function Metro2DView({
     const refresh = async (fit: boolean) => {
       const sequence = ++refreshSequence;
       const rect = container.getBoundingClientRect();
+      container.dataset.g6Ready = 'false';
       const data = buildG6Data(
         modelRef.current,
         expandedRef.current,
@@ -712,9 +713,11 @@ function Metro2DView({
           new Promise<'timeout'>(resolve => window.setTimeout(() => resolve('timeout'), renderTimeoutMs)),
         ]);
         if (sequence !== refreshSequence) return;
-        if (renderOutcome === 'timeout' && !container.querySelector('canvas')) {
-          throw new Error('G6 render timeout sem canvas materializado');
+        const canvasReady = Boolean(container.querySelector('canvas'));
+        if (!canvasReady) {
+          throw new Error('G6 render sem canvas materializado');
         }
+        container.dataset.g6Ready = 'true';
 
         applyG6Selection(graph, modelRef.current, expandedRef.current, selectedRef.current);
 
@@ -809,6 +812,8 @@ function Metro2DView({
   }, [fitNonce]);
 
   useEffect(() => {
+    const container = containerRef.current;
+    if (container?.dataset.g6Ready !== 'true') return;
     applyG6Selection(graphRef.current, model, expanded, selectedId);
     renderLabelsRef.current();
   }, [selectedId, model.revision, expansionKey]);
