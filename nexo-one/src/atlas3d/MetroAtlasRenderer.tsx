@@ -101,23 +101,76 @@ function learningWidth(kind: string | null | undefined): number {
 type VisualCrossLink = AtlasCrossLink & {
   visualCount: number;
   visualRefs: string[];
+  logicalSource: string;
+  logicalTarget: string;
+  sourceCollapsed: boolean;
+  targetCollapsed: boolean;
 };
 
+function nearestVisibleAtlasAncestor(
+  model: AtlasMetroModel,
+  id: string,
+  visible: ReadonlySet<string>,
+): string | null {
+  let current = model.nodeMap.get(id);
+  const seen = new Set<string>();
+  while (current && !seen.has(current.id)) {
+    if (visible.has(current.id)) return current.id;
+    seen.add(current.id);
+    current = current.parentId ? model.nodeMap.get(current.parentId) : undefined;
+  }
+  return null;
+}
+
 function projectVisualCrossLinks(
+  model: AtlasMetroModel,
   links: AtlasCrossLink[],
   visible: ReadonlySet<string>,
   compact: boolean,
 ): VisualCrossLink[] {
-  const filtered = links.filter(link => visible.has(link.source) && visible.has(link.target));
+  const projected: VisualCrossLink[] = [];
+
+  for (const link of links) {
+    if (!link.isLearning) {
+      if (!visible.has(link.source) || !visible.has(link.target)) continue;
+      projected.push({
+        ...link,
+        visualCount: 1,
+        visualRefs: [],
+        logicalSource: link.source,
+        logicalTarget: link.target,
+        sourceCollapsed: false,
+        targetCollapsed: false,
+      });
+      continue;
+    }
+
+    const source = nearestVisibleAtlasAncestor(model, link.source, visible);
+    const target = nearestVisibleAtlasAncestor(model, link.target, visible);
+    if (!source || !target || source === target) continue;
+
+    projected.push({
+      ...link,
+      source,
+      target,
+      visualCount: 1,
+      visualRefs: link.learningRef ? [link.learningRef] : [],
+      logicalSource: link.source,
+      logicalTarget: link.target,
+      sourceCollapsed: source !== link.source,
+      targetCollapsed: target !== link.target,
+    });
+  }
+
   const out: VisualCrossLink[] = [];
-  const canonical = new Map<string, AtlasCrossLink[]>();
+  const canonical = new Map<string, VisualCrossLink[]>();
 
   // A canonical Learning record may generate several graph edges that collapse
-  // to the same semantic source/target pair. Draw that path once and preserve
-  // multiplicity as metadata instead of stacking identical tubes/curves.
-  for (const link of filtered) {
+  // to the same currently-visible path. Draw that path once and preserve the
+  // logical leaf endpoint in metadata so semantic zoom can restore it on expand.
+  for (const link of projected) {
     if (!link.isLearning) {
-      out.push({ ...link, visualCount: 1, visualRefs: [] });
+      out.push(link);
       continue;
     }
     const recordKey = [
@@ -144,6 +197,8 @@ function projectVisualCrossLinks(
       weight: bucket.reduce((sum, link) => sum + Number(link.weight || 0), 0) / bucket.length,
       visualCount: bucket.length,
       visualRefs: refs,
+      sourceCollapsed: bucket.some(link => link.sourceCollapsed),
+      targetCollapsed: bucket.some(link => link.targetCollapsed),
     });
   }
 
@@ -175,6 +230,8 @@ function projectVisualCrossLinks(
         weight: bucket.reduce((sum, link) => sum + Number(link.weight || 0), 0) / bucket.length,
         visualCount: relationCount,
         visualRefs: refs,
+        sourceCollapsed: bucket.some(link => link.sourceCollapsed),
+        targetCollapsed: bucket.some(link => link.targetCollapsed),
       });
     }
   }
@@ -292,6 +349,22 @@ function stampG6Metrics(container: HTMLElement, data: { nodes: any[]; edges: any
       && (edge.data?.sourceAnchor === 'DOMAIN_HUB' || edge.data?.targetAnchor === 'DOMAIN_HUB')
     ).length,
   );
+  const exactEntityLearning = learningEdges.filter((edge: any) =>
+    edge.data?.sourceAnchor === 'EXACT_ENTITY' || edge.data?.targetAnchor === 'EXACT_ENTITY'
+  );
+  container.dataset.g6ExactEntityLearningEdges = String(exactEntityLearning.length);
+  container.dataset.g6DirectExactEntityLearningEdges = String(
+    exactEntityLearning.filter((edge: any) =>
+      (edge.data?.sourceAnchor === 'EXACT_ENTITY' && !edge.data?.sourceCollapsed)
+      || (edge.data?.targetAnchor === 'EXACT_ENTITY' && !edge.data?.targetCollapsed)
+    ).length,
+  );
+  container.dataset.g6CollapsedExactEntityLearningEdges = String(
+    exactEntityLearning.filter((edge: any) =>
+      (edge.data?.sourceAnchor === 'EXACT_ENTITY' && edge.data?.sourceCollapsed)
+      || (edge.data?.targetAnchor === 'EXACT_ENTITY' && edge.data?.targetCollapsed)
+    ).length,
+  );
 }
 
 function escapeHtml(value: unknown): string {
@@ -361,7 +434,7 @@ function buildG6Data(
   });
 
   const bridgeEdges = showBeams
-    ? projectVisualCrossLinks(model.crossLinks, visible, compact)
+    ? projectVisualCrossLinks(model, model.crossLinks, visible, compact)
       .map(link => ({
         id: link.id,
         source: link.source,
@@ -383,6 +456,10 @@ function buildG6Data(
           bundleCount: link.bundleCount,
           visualCount: link.visualCount,
           visualRefs: link.visualRefs,
+          logicalSource: link.logicalSource,
+          logicalTarget: link.logicalTarget,
+          sourceCollapsed: link.sourceCollapsed,
+          targetCollapsed: link.targetCollapsed,
         },
       }))
     : [];
@@ -1414,7 +1491,7 @@ function rebuildThree(
   }
 
   const visualCrossLinks = showBeams
-    ? projectVisualCrossLinks(model.crossLinks, visible, compact)
+    ? projectVisualCrossLinks(model, model.crossLinks, visible, compact)
     : [];
 
   if (showBeams) {
@@ -1445,9 +1522,12 @@ function rebuildThree(
     }
   }
 
-  const visibleLearning = model.crossLinks.filter(
-    link => link.isLearning && visible.has(link.source) && visible.has(link.target),
-  );
+  const visibleLearning = model.crossLinks.filter(link => {
+    if (!link.isLearning) return false;
+    const source = nearestVisibleAtlasAncestor(model, link.source, visible);
+    const target = nearestVisibleAtlasAncestor(model, link.target, visible);
+    return Boolean(source && target && source !== target);
+  });
   const visualLearning = visualCrossLinks.filter(link => link.isLearning);
   container.dataset.threeLearningSynapses = String(visibleLearning.length);
   container.dataset.threeLearningVisualSynapses = String(visualLearning.length);
@@ -1482,6 +1562,22 @@ function rebuildThree(
     visibleLearning.filter(link =>
       link.learningKind === 'SCIENTIFIC_LEARNING_PIPELINE'
       && /SUBDOMAIN$/.test(String(link.targetAnchor || ''))
+    ).length,
+  );
+  const exactEntityVisual = visualLearning.filter(link =>
+    link.sourceAnchor === 'EXACT_ENTITY' || link.targetAnchor === 'EXACT_ENTITY'
+  );
+  container.dataset.threeExactEntityLearningSynapses = String(exactEntityVisual.length);
+  container.dataset.threeDirectExactEntityLearningSynapses = String(
+    exactEntityVisual.filter(link =>
+      (link.sourceAnchor === 'EXACT_ENTITY' && !link.sourceCollapsed)
+      || (link.targetAnchor === 'EXACT_ENTITY' && !link.targetCollapsed)
+    ).length,
+  );
+  container.dataset.threeCollapsedExactEntityLearningSynapses = String(
+    exactEntityVisual.filter(link =>
+      (link.sourceAnchor === 'EXACT_ENTITY' && link.sourceCollapsed)
+      || (link.targetAnchor === 'EXACT_ENTITY' && link.targetCollapsed)
     ).length,
   );
 
