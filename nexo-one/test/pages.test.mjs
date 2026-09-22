@@ -129,6 +129,11 @@ test('Peer Detection battery is projected by canonical semantic groups, not raw 
     /^work:PEER-DETECTION-|^test:PEER-DETECTION-|^capability:peer\.detection\./i.test(node.id)
   );
   assert.equal(rawPeer.length, 0);
+  assert.equal(system.projected_work.length, 2, 'operational queue must preserve peer WORK hidden from Atlas');
+  assert.deepEqual(system.projected_work.map(node => node.id).sort(), [
+    'work:PEER-DETECTION-D00',
+    'work:PEER-DETECTION-D01',
+  ]);
   const semantic = system.filaments.filter(item => item.kind === 'SCIENTIFIC_LEARNING_PIPELINE');
   assert.equal(semantic.length, 2);
   assert.deepEqual(new Set(semantic.map(item => item.peer_detection_group)), new Set(['GOVERNANCE', 'BASELINE_PROFILE']));
@@ -271,6 +276,8 @@ test('GitHub Pages deploys official artifact and exposes projection readback', a
   assert.match(workflow, /public\/vendor\/g6\.min\.js/);
   assert.match(workflow, /dist\/vendor\/g6\.min\.js/);
   assert.match(workflow, /data-atlas-g6-source="preloaded"/);
+  assert.match(workflow, /WORK_WAITING_COUNT_DRIFT/);
+  assert.match(workflow, /system\.projected_work/);
   assert.match(workflow, /data-three-quality="reduced-gpu"/);
   assert.match(workflow, /data-three-fit-policy="selection-safe-area-v5"/);
   assert.match(workflow, /data-three-fit-scope="selection"/);
