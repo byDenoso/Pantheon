@@ -626,7 +626,9 @@ jobs:
             || /^test:PEER-DETECTION-D\d+/i.test(String(node.id || ''))
             || /^capability:peer\.detection\./i.test(String(node.id || ''))
           );
-          if (rawPeer.length) throw new Error('RAW_PEER_ARTIFACTS_VISIBLE:' + rawPeer.map(node => node.id).join(','));
+          // Raw operational capabilities may legitimately exist in SystemState.
+          // Presentation leakage is gated earlier by data-atlas-peer-artifact-nodes=0;
+          // do not confuse source truth with Atlas station policy.
           const peerFilaments = system.filaments.filter(item => item.kind === 'SCIENTIFIC_LEARNING_PIPELINE');
           const peerGroups = new Set(peerFilaments.map(item => item.peer_detection_group));
           if (peerFilaments.length < 8 || peerGroups.size < 8) {
@@ -642,7 +644,7 @@ jobs:
             + ' peer_groups=' + peerGroups.size
             + ' meta_learning=' + meta.length
             + ' semantic=' + semantic.length
-            + ' raw_peer_nodes=0'
+            + ' raw_peer_source_nodes=' + rawPeer.length
           );
           NODE
 
