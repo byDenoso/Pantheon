@@ -21,6 +21,35 @@ export interface MetroLabelLayout {
   maxSiblings: number;
 }
 
+export interface MetroScreenLeader {
+  x1: number;
+  y1: number;
+  x2: number;
+  y2: number;
+}
+
+export interface MetroScreenLabelSpec {
+  id: string;
+  visible: boolean;
+  left: number;
+  top: number;
+  width: number;
+  height: number;
+  fontSize: number;
+  maxWidth: number;
+  placement: MetroLabelPlacement;
+  leader: MetroScreenLeader | null;
+}
+
+export interface MetroScreenLabelLayout {
+  byId: Map<string, MetroScreenLabelSpec>;
+  visible: number;
+  hidden: number;
+  collisions: number;
+  maxSiblings: number;
+  zoom: number;
+}
+
 type Rect = { x1: number; y1: number; x2: number; y2: number };
 
 const clampValue = (value: number, min: number, max: number) => Math.max(min, Math.min(max, value));
@@ -221,18 +250,21 @@ export function metroLayoutPositions(
 
     const maxLabel = Math.max(...siblings.map(id => estimateLabelWidth(model.nodeMap.get(id)!)), 74);
     const total = siblings.length;
-    const perRing = total <= 8 ? total : total <= 18 ? 9 : 10;
+    const perRing = total <= 8 ? total : total <= 18 ? 9 : total <= 32 ? 11 : 12;
     let cursor = 0;
     let ringIndex = 0;
 
     while (cursor < total) {
       const ringCount = Math.min(perRing, total - cursor);
-      const sweep = ringCount <= 3 ? 100 : ringCount <= 6 ? 170 : 230;
-      const minArc = clampValue(maxLabel * .72 + 46, 96, 168);
+      const sweep = total >= 36
+        ? 318
+        : ringCount <= 3 ? 100 : ringCount <= 6 ? 170 : 244;
+      const minArc = clampValue(maxLabel * .72 + 46, 96, 176);
       const radiusByArc = ringCount > 1
         ? minArc * (ringCount - 1) / radians(sweep)
         : 118;
-      const radius = Math.max(124 + ringIndex * 112, radiusByArc);
+      const radialStep = total >= 36 ? 132 : 112;
+      const radius = Math.max((total >= 36 ? 148 : 124) + ringIndex * radialStep, radiusByArc);
       const start = outwardAngle - sweep / 2;
 
       for (let localIndex = 0; localIndex < ringCount; localIndex += 1) {
@@ -375,5 +407,248 @@ export function buildMetroLabelLayout(
     hidden: [...byId.values()].filter(spec => !spec.visible).length,
     collisions,
     maxSiblings: maxVisibleSiblingCount(model, visibleSet),
+  };
+}
+
+
+function densityCap(siblingCount: number, zoom: number): number {
+  if (siblingCount <= 16) return siblingCount;
+  if (zoom >= 1.55) return siblingCount;
+  if (zoom >= 1.15) return Math.min(siblingCount, 36);
+  if (zoom >= .82) return Math.min(siblingCount, 26);
+  if (zoom >= .58) return Math.min(siblingCount, 19);
+  return Math.min(siblingCount, 14);
+}
+
+function evenlySampledIndices(count: number, cap: number): Set<number> {
+  if (cap >= count) return new Set(Array.from({ length: count }, (_, index) => index));
+  const out = new Set<number>();
+  for (let slot = 0; slot < cap; slot += 1) {
+    out.add(Math.min(count - 1, Math.floor((slot + .5) * count / cap)));
+  }
+  return out;
+}
+
+function screenCandidateBox(
+  position: [number, number],
+  node: AtlasMetroNode,
+  placement: MetroLabelPlacement,
+  extraOffset: number,
+  zoom: number,
+): Rect {
+  const [x, y] = position;
+  const radius = Math.max(5, metroNodeSize(node) * zoom / 2);
+  const width = estimateLabelWidth(node);
+  const height = estimateLabelHeight(node) + 1;
+  const gap = node.entityType === 'hub' ? 11 : node.entityType === 'subdomain' ? 9 : 7;
+  const distance = radius + gap + extraOffset;
+
+  if (placement === 'top') {
+    return { x1: x - width / 2, x2: x + width / 2, y1: y - distance - height, y2: y - distance };
+  }
+  if (placement === 'bottom') {
+    return { x1: x - width / 2, x2: x + width / 2, y1: y + distance, y2: y + distance + height };
+  }
+  if (placement === 'left') {
+    return { x1: x - distance - width, x2: x - distance, y1: y - height / 2, y2: y + height / 2 };
+  }
+  return { x1: x + distance, x2: x + distance + width, y1: y - height / 2, y2: y + height / 2 };
+}
+
+function rectWithinViewport(rect: Rect, width: number, height: number, padding = 7): boolean {
+  return rect.x1 >= padding && rect.y1 >= padding && rect.x2 <= width - padding && rect.y2 <= height - padding;
+}
+
+function leaderFor(
+  position: [number, number],
+  rect: Rect,
+  node: AtlasMetroNode,
+  zoom: number,
+  extraOffset: number,
+): MetroScreenLeader | null {
+  if (extraOffset < 18) return null;
+  const centerX = (rect.x1 + rect.x2) / 2;
+  const centerY = (rect.y1 + rect.y2) / 2;
+  const dx = centerX - position[0];
+  const dy = centerY - position[1];
+  const length = Math.max(1, Math.hypot(dx, dy));
+  const ux = dx / length;
+  const uy = dy / length;
+  const radius = Math.max(5, metroNodeSize(node) * zoom / 2) + 3;
+
+  let x2 = centerX;
+  let y2 = centerY;
+  if (Math.abs(dx) > Math.abs(dy)) {
+    x2 = dx > 0 ? rect.x1 : rect.x2;
+  } else {
+    y2 = dy > 0 ? rect.y1 : rect.y2;
+  }
+
+  return {
+    x1: position[0] + ux * radius,
+    y1: position[1] + uy * radius,
+    x2,
+    y2,
+  };
+}
+
+export function buildMetroScreenLabelLayout(
+  model: AtlasMetroModel,
+  ids: string[],
+  screenPositions: Map<string, [number, number]>,
+  viewportWidth: number,
+  viewportHeight: number,
+  zoom: number,
+  selectedId: string | null = null,
+  hoveredId: string | null = null,
+): MetroScreenLabelLayout {
+  const visibleSet = new Set(ids);
+  const siblingIndex = new Map<string, { index: number; count: number; sampled: boolean }>();
+
+  for (const [parentId, allChildren] of model.childrenMap) {
+    const children = allChildren.filter(id => visibleSet.has(id));
+    const cap = densityCap(children.length, zoom);
+    const sampled = evenlySampledIndices(children.length, cap);
+    children.forEach((id, index) => siblingIndex.set(id, {
+      index,
+      count: children.length,
+      sampled: sampled.has(index),
+    }));
+  }
+
+  const nodeRects = new Map<string, Rect>();
+  for (const id of ids) {
+    const node = model.nodeMap.get(id);
+    const position = screenPositions.get(id);
+    if (!node || !position) continue;
+    const radius = Math.max(5, metroNodeSize(node) * zoom / 2) + 5;
+    nodeRects.set(id, {
+      x1: position[0] - radius,
+      y1: position[1] - radius,
+      x2: position[0] + radius,
+      y2: position[1] + radius,
+    });
+  }
+
+  const ordered = ids
+    .map(id => model.nodeMap.get(id))
+    .filter((node): node is AtlasMetroNode => Boolean(node))
+    .sort((a, b) => {
+      const priority = (node: AtlasMetroNode) =>
+        node.id === selectedId ? -3
+          : node.id === hoveredId ? -2
+            : node.entityType === 'hub' ? -1
+              : node.entityType === 'subdomain' ? 0
+                : 1;
+      return priority(a) - priority(b)
+        || b.childCount - a.childCount
+        || b.relationCount - a.relationCount
+        || a.name.localeCompare(b.name);
+    });
+
+  const occupied: Array<{ id: string; rect: Rect }> = [];
+  const byId = new Map<string, MetroScreenLabelSpec>();
+  const distances = [0, 8, 18, 30, 46, 64, 86, 112, 142];
+
+  for (const node of ordered) {
+    const position = screenPositions.get(node.id);
+    if (!position) continue;
+
+    const siblings = siblingIndex.get(node.id);
+    const mustShow = node.entityType === 'hub'
+      || node.entityType === 'subdomain'
+      || node.id === selectedId
+      || node.id === hoveredId;
+
+    if (!mustShow && siblings && !siblings.sampled) {
+      byId.set(node.id, {
+        id: node.id,
+        visible: false,
+        left: 0,
+        top: 0,
+        width: estimateLabelWidth(node),
+        height: estimateLabelHeight(node),
+        fontSize: metroLabelFontSize(node),
+        maxWidth: labelMaxWidth(node),
+        placement: 'bottom',
+        leader: null,
+      });
+      continue;
+    }
+
+    const preferred = preferredPlacement(model, node, screenPositions);
+    const placements = placementOrder(preferred);
+    let chosen: { placement: MetroLabelPlacement; extra: number; rect: Rect; score: number } | null = null;
+    let fallback: { placement: MetroLabelPlacement; extra: number; rect: Rect; score: number } | null = null;
+
+    for (const extra of distances) {
+      for (const placement of placements) {
+        const rect = screenCandidateBox(position, node, placement, extra, zoom);
+        let score = rectWithinViewport(rect, viewportWidth, viewportHeight) ? 0 : 2400;
+
+        for (const item of occupied) {
+          if (intersects(rect, item.rect, 4)) score += intersectionArea(rect, item.rect) + 900;
+        }
+        for (const [otherId, nodeRect] of nodeRects) {
+          if (otherId === node.id) continue;
+          if (intersects(rect, nodeRect, 2)) score += intersectionArea(rect, nodeRect) + 420;
+        }
+
+        const candidate = { placement, extra, rect, score };
+        if (score === 0) {
+          chosen = candidate;
+          break;
+        }
+        if (!fallback || score < fallback.score) fallback = candidate;
+      }
+      if (chosen) break;
+    }
+
+    const finalChoice = chosen || (mustShow ? fallback : null);
+    if (!finalChoice) {
+      byId.set(node.id, {
+        id: node.id,
+        visible: false,
+        left: 0,
+        top: 0,
+        width: estimateLabelWidth(node),
+        height: estimateLabelHeight(node),
+        fontSize: metroLabelFontSize(node),
+        maxWidth: labelMaxWidth(node),
+        placement: preferred,
+        leader: null,
+      });
+      continue;
+    }
+
+    occupied.push({ id: node.id, rect: finalChoice.rect });
+    byId.set(node.id, {
+      id: node.id,
+      visible: true,
+      left: finalChoice.rect.x1,
+      top: finalChoice.rect.y1,
+      width: finalChoice.rect.x2 - finalChoice.rect.x1,
+      height: finalChoice.rect.y2 - finalChoice.rect.y1,
+      fontSize: metroLabelFontSize(node),
+      maxWidth: labelMaxWidth(node),
+      placement: finalChoice.placement,
+      leader: leaderFor(position, finalChoice.rect, node, zoom, finalChoice.extra),
+    });
+  }
+
+  let collisions = 0;
+  for (let left = 0; left < occupied.length; left += 1) {
+    for (let right = left + 1; right < occupied.length; right += 1) {
+      if (intersects(occupied[left]!.rect, occupied[right]!.rect, 1)) collisions += 1;
+    }
+  }
+
+  return {
+    byId,
+    visible: [...byId.values()].filter(spec => spec.visible).length,
+    hidden: [...byId.values()].filter(spec => !spec.visible).length,
+    collisions,
+    maxSiblings: maxVisibleSiblingCount(model, visibleSet),
+    zoom,
   };
 }

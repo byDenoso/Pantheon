@@ -9,7 +9,7 @@ import {
   visibleAtlasIds,
 } from '../src/atlas3d/atlasAdapter.ts';
 import {
-  buildMetroLabelLayout,
+  buildMetroScreenLabelLayout,
   metroLayoutPositions,
 } from '../src/atlas3d/metro2dLayout.ts';
 
@@ -79,6 +79,29 @@ test('canonical graph relations become Metro bridge data instead of a second for
   assert.ok(model.crossLinks.every(link => model.nodeMap.has(link.source) && model.nodeMap.has(link.target)));
 });
 
+test('Learning is projected as filaments between existing stations, never as a Learning cluster', () => {
+  const source = state();
+  source.graph.edges.push({
+    id: 'learning:test-interdomain',
+    from: 'domain:SCIENCE',
+    to: 'domain:OLYMPUS',
+    kind: 'SUPPORTS',
+    weight: .82,
+    explanation: 'test learning bridge',
+    is_learning: true,
+    learning_scope: 'INTER_DOMAIN',
+  });
+
+  const model = buildAtlasMetroModel(source);
+  const learning = model.crossLinks.find(link => link.id === 'entity:learning:test-interdomain');
+  assert.ok(learning);
+  assert.equal(learning.source, 'atlas.domain.science');
+  assert.equal(learning.target, 'atlas.domain.olympus');
+  assert.equal(learning.isLearning, true);
+  assert.equal(learning.learningScope, 'INTER_DOMAIN');
+  assert.equal(model.nodes.some(node => /Learning & governança/i.test(node.name)), false);
+});
+
 test('dense Science expansion keeps stations spaced and labels collision-free', () => {
   const model = buildAtlasMetroModel(state());
   const scienceRoot = model.roots.find(id => model.nodeMap.get(id)?.domain === 'SCIENCE');
@@ -94,7 +117,16 @@ test('dense Science expansion keeps stations spaced and labels collision-free', 
   const expanded = new Set([...model.roots, densest.id]);
   const visible = visibleAtlasIds(model, expanded);
   const positions = metroLayoutPositions(model, visible, 1200, 760);
-  const labels = buildMetroLabelLayout(model, visible, positions, densest.id);
+  const labels = buildMetroScreenLabelLayout(
+    model,
+    visible,
+    positions,
+    1200,
+    760,
+    .62,
+    densest.id,
+    null,
+  );
 
   assert.equal(labels.collisions, 0);
   assert.ok(labels.visible > 3);
@@ -123,7 +155,11 @@ test('dedicated Atlas production page uses Metro renderer, G6 and deterministic 
   ]);
 
   assert.match(app, /data-atlas-renderer="metro-cluster"/);
-  assert.match(app, /dense-science/);
+  assert.match(app, /peer-detection/);
+  assert.match(app, /Consistência cosmológica · Peer Detection/);
+  assert.match(app, /atlas-view-switch/);
+  assert.match(app, /Modo 3D ativo/);
+  assert.match(app, /data-atlas-learning-links/);
   assert.match(app, /navigationRevision !== model\.revision/);
   assert.match(app, /activeExpanded = navigationStale \? new Set\(initialExpanded\) : expanded/);
   assert.match(app, /URLSearchParams/);
@@ -135,11 +171,16 @@ test('dedicated Atlas production page uses Metro renderer, G6 and deterministic 
 
   assert.match(renderer, /window\.G6\?\.Graph/);
   assert.match(renderer, /metroLayoutPositions/);
-  assert.match(renderer, /buildMetroLabelLayout/);
-  assert.match(renderer, /g6LabelCollisions/);
-  assert.match(renderer, /labelOffsetX/);
-  assert.match(renderer, /labelBackgroundStroke/);
+  assert.match(renderer, /buildMetroScreenLabelLayout/);
+  assert.match(renderer, /getViewportByCanvas/);
+  assert.match(renderer, /g6LabelDomCollisions/);
+  assert.match(renderer, /viewport-adaptive-v2/);
+  assert.match(renderer, /atlas-label-leaders/);
+  assert.match(renderer, /labelText: ''/);
   assert.match(renderer, /update: 'translate'/);
+  assert.match(renderer, /isLearning/);
+  assert.match(renderer, /#f59e0b/);
+  assert.match(renderer, /threeLearningSynapses/);
   assert.match(renderer, /g6NodeCount/);
   assert.match(renderer, /querySelector\('canvas'\)/);
   assert.match(renderer, /OrbitControls/);
