@@ -519,6 +519,25 @@ jobs:
           }
           echo "PAGES_ATLAS3D_VISUAL_READBACK_OK roots=3 visible=${visible_count} g6_nodes=${g6_node_count} learning_subdomains=${atlas_distinct_subdomains} max_share=${atlas_max_subdomain_share}% peer_targets=${atlas_peer_target_subdomains} hub_endpoints=${atlas_hub_endpoints} renderer=metro-cluster"
 
+          leaf_url="${base}/atlas3d/?readback=1&g6Fallback=1&expand=learning-leaf"
+          "${chrome_bin}" --headless=new --no-sandbox --disable-dev-shm-usage --hide-scrollbars \
+            --window-size=1440,900 --virtual-time-budget=12000 --dump-dom "${leaf_url}" \
+            > /tmp/atlas3d-learning-leaf-dom.html
+          grep -Fq 'data-atlas-qa-expand="learning-leaf"' /tmp/atlas3d-learning-leaf-dom.html
+          grep -Fq 'data-atlas-ready="true"' /tmp/atlas3d-learning-leaf-dom.html
+          grep -Fq 'data-g6-ready="true"' /tmp/atlas3d-learning-leaf-dom.html
+          grep -Fq 'data-g6-label-collisions="0"' /tmp/atlas3d-learning-leaf-dom.html
+          leaf_g6_direct="$(sed -n 's/.*data-g6-direct-exact-entity-learning-edges="\([0-9][0-9]*\)".*/\1/p' /tmp/atlas3d-learning-leaf-dom.html | head -1)"
+          [ -n "${leaf_g6_direct}" ] && [ "${leaf_g6_direct}" -ge 1 ] || {
+            echo "::error::Semantic zoom did not descend any G6 Learning filament to its exact canonical entity: ${leaf_g6_direct:-0}"
+            exit 1
+          }
+          "${chrome_bin}" --headless=new --no-sandbox --disable-dev-shm-usage --hide-scrollbars \
+            --window-size=1440,900 --virtual-time-budget=8000 \
+            --screenshot=/tmp/atlas3d-readback-learning-leaf.png "${leaf_url}" >/dev/null 2>&1
+          test -s /tmp/atlas3d-readback-learning-leaf.png
+          echo "PAGES_ATLAS3D_LEAF_READBACK_OK exact_records=${atlas_exact_records} exact_entities=${atlas_distinct_exact_entities} direct_leaf_paths=${leaf_g6_direct}"
+
           mobile_ua='Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1'
           mobile_url="${base}/atlas3d/?readback=1&g6Fallback=1"
           "${chrome_bin}" --headless=new --no-sandbox --disable-dev-shm-usage --hide-scrollbars \
@@ -695,6 +714,30 @@ jobs:
             --screenshot=/tmp/atlas3d-readback-3d.png "${depth_url}" >/dev/null 2>&1
           test -s /tmp/atlas3d-readback-3d.png
           echo "PAGES_ATLAS3D_3D_READBACK_OK visual=neural-synapse visible=${visible_count} three_nodes=${three_node_count} synapses=${three_synapse_count} learning=${three_learning} scientific=${three_scientific} peer=${three_peer} peer_subdomains=${three_peer_subdomain} learning_subdomains=${three_subdomain_learning} fit_coverage=${three_fit_coverage} z_span=${three_z_span} same_level_z=${three_same_level_z} selected_siblings=${selected_sibling_count} selected_z=${selected_sibling_z} paint_samples=${three_paint_samples}"
+
+          leaf_3d_url="${base}/atlas3d/?mode=3d&readback=1&expand=learning-leaf"
+          "${chrome_bin}" --headless=new --no-sandbox --disable-dev-shm-usage --hide-scrollbars \
+            --use-angle=swiftshader --enable-unsafe-swiftshader \
+            --window-size=1440,900 --virtual-time-budget=14000 --dump-dom "${leaf_3d_url}" \
+            > /tmp/atlas3d-learning-leaf-3d-dom.html
+          grep -Fq 'data-atlas-qa-expand="learning-leaf"' /tmp/atlas3d-learning-leaf-3d-dom.html
+          grep -Fq 'data-three-ready="true"' /tmp/atlas3d-learning-leaf-3d-dom.html
+          leaf_three_direct="$(sed -n 's/.*data-three-direct-exact-entity-learning-synapses="\([0-9][0-9]*\)".*/\1/p' /tmp/atlas3d-learning-leaf-3d-dom.html | head -1)"
+          leaf_three_paint="$(sed -n 's/.*data-three-paint-samples="\([0-9][0-9]*\)".*/\1/p' /tmp/atlas3d-learning-leaf-3d-dom.html | head -1)"
+          [ -n "${leaf_three_direct}" ] && [ "${leaf_three_direct}" -ge 1 ] || {
+            echo "::error::Semantic zoom did not descend any Three.js Learning synapse to its exact canonical entity: ${leaf_three_direct:-0}"
+            exit 1
+          }
+          [ -n "${leaf_three_paint}" ] && [ "${leaf_three_paint}" -gt 20 ] || {
+            echo "::error::Leaf-level Three.js readback is visually empty: ${leaf_three_paint:-0}"
+            exit 1
+          }
+          "${chrome_bin}" --headless=new --no-sandbox --disable-dev-shm-usage --hide-scrollbars \
+            --use-angle=swiftshader --enable-unsafe-swiftshader \
+            --window-size=1440,900 --virtual-time-budget=9000 \
+            --screenshot=/tmp/atlas3d-readback-learning-leaf-3d.png "${leaf_3d_url}" >/dev/null 2>&1
+          test -s /tmp/atlas3d-readback-learning-leaf-3d.png
+          echo "PAGES_ATLAS3D_LEAF_3D_READBACK_OK direct_leaf_synapses=${leaf_three_direct} paint_samples=${leaf_three_paint}"
 
           mobile_3d_url="${base}/atlas3d/?mode=3d&readback=1&g6Fallback=1"
           "${chrome_bin}" --headless=new --no-sandbox --disable-dev-shm-usage --hide-scrollbars \
