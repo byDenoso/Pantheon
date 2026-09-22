@@ -1022,6 +1022,12 @@ export function buildPagesProjection({
   const lanes = lanesFromProjection(projection, observedAt);
   const inbox = humanInboxFromProjection(projection, observedAt, humanGateDetails);
   const capabilities = capabilitiesFromProjection(projection, source);
+  const declaredCapabilityCount = Number(projection?.counts?.capabilities);
+  if (Number.isFinite(declaredCapabilityCount) && declaredCapabilityCount !== capabilities.length) {
+    throw new Error(
+      'CAPABILITY_COUNT_DRIFT:declared=' + declaredCapabilityCount + ':compiled=' + capabilities.length,
+    );
+  }
 
   const system = {
     contract_version: SYSTEM_CONTRACT,
