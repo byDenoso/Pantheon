@@ -841,6 +841,98 @@ function worldItem(kind, item, projection, observedAt, index) {
   };
 }
 
+
+function generalLearningFilaments(general, observedAt) {
+  if (!general || typeof general !== 'object') return [];
+  const records = Array.isArray(general.learning) ? general.learning : [];
+  return records.flatMap(item => {
+    const id = String(item?.id || '').trim();
+    const status = String(item?.status || '').toUpperCase();
+    if (!id || status === 'REJECTED' || status === 'RETIRED') return [];
+    if (status !== 'PROMOTED' && item?.atlas_visible !== true) return [];
+
+    const fromDomain = domainOf(item.from_domain || item.domain || 'NEXO');
+    const toDomain = domainOf(item.to_domain || item.domain || fromDomain);
+    return [{
+      id,
+      label: String(item.title || item.rule || id),
+      domain: fromDomain,
+      kind: 'PROCEDURAL',
+      weight: status === 'PROMOTED' ? 0.9 : 0.68,
+      support: Number.isFinite(Number(item.support)) ? Number(item.support) : 1,
+      contradiction: Number.isFinite(Number(item.contradiction)) ? Number(item.contradiction) : 0,
+      status: status === 'PROMOTED' ? 'ESTABLISHED' : 'PROVISIONAL',
+      evidence: [String(item.source_ref || '')].filter(Boolean),
+      source_ref: String(item.source_ref || 'drive://STAGING/GENERAL/LEARNING'),
+      boundary: String(item.rule || item.summary || 'General procedural learning; derived from durable Drive state.'),
+      from_label: String(item.from_label || 'NEXO General Learning'),
+      to_label: String(item.to_label || toDomain),
+      from_domain: fromDomain,
+      to_domain: toDomain,
+      from_id: item.from_id ? String(item.from_id) : undefined,
+      to_id: item.to_id ? String(item.to_id) : undefined,
+      scope: fromDomain === toDomain ? 'INTRA_DOMAIN' : 'INTER_DOMAIN',
+      observed_at: String(item.updated_at || observedAt),
+      links: [],
+      learning_refs: [],
+      general_fingerprint: item.fingerprint ? String(item.fingerprint) : undefined,
+    }];
+  });
+}
+
+function applyGeneralExecutionToGraph(graph, general, manifest, observedAt) {
+  if (!general || typeof general !== 'object') return graph;
+  const records = Array.isArray(general.execution) ? general.execution : [];
+  const seen = new Set(graph.nodes.map(node => node.id));
+
+  for (const item of records) {
+    const atlasId = String(item?.atlas_id || '').trim();
+    if (!atlasId) continue;
+    const id = 'general:' + atlasId;
+    if (seen.has(id)) continue;
+
+    const domain = domainOf(item.domain || 'NEXO');
+    const rawStatus = String(item.status || '').toUpperCase();
+    const state = /BLOCK|FAIL|ERROR/.test(rawStatus) ? 'BLOCKED'
+      : /STALE|DEGRADED|INCONCLUSIVE|WATCH/.test(rawStatus) ? 'DEGRADED'
+      : 'LIVE';
+    const updatedAt = String(item.updated_at || observedAt);
+    const sourceRef = String(item.source_ref || 'drive://STAGING/GENERAL/EXECUTION');
+    const fingerprint = String(item.fingerprint || nodeFingerprint('general', atlasId, manifest));
+
+    graph.nodes.push({
+      id,
+      type: 'ACTION',
+      label: String(item.title || atlasId),
+      domain,
+      state,
+      authority_class: 'DERIVED',
+      source_ref: sourceRef,
+      source_revision: updatedAt,
+      fingerprint,
+      freshness: { state: 'RECENT', observed_at: updatedAt, ttl_seconds: null },
+      checked_at: updatedAt,
+      summary: String(item.summary || item.result || 'Durable General execution aggregate projected from Drive.'),
+      atlas_general: true,
+    });
+    seen.add(id);
+
+    const parent = 'domain:' + domain;
+    if (seen.has(parent)) {
+      graph.edges.push({
+        id: 'general:' + sha256({ parent, id }).slice(7, 23),
+        from: parent,
+        to: id,
+        kind: 'OWNS',
+        weight: 0.82,
+        explanation: 'Derived General execution aggregate. Drive remains authoritative.',
+      });
+    }
+  }
+
+  return graph;
+}
+
 export function buildPagesProjection({
   projection,
   manifestFile = null,
@@ -848,6 +940,7 @@ export function buildPagesProjection({
   learning = {},
   peerDetectionBattery = null,
   humanGateDetails = [],
+  general = {},
 } = {}) {
   const manifest = validateSanctionedProjection(projection, manifestFile);
   const generatedAt = Date.parse(String(manifest.generated_at || ''));
@@ -857,8 +950,14 @@ export function buildPagesProjection({
     ...learningFilamentsFromTower(interdomain, manifest, observedAt),
     ...proceduralLearningFilaments(learning, projection, manifest, observedAt),
     ...peerDetectionLearningFilaments(peerDetectionBattery, projection, manifest, observedAt),
+    ...generalLearningFilaments(general, observedAt),
   ];
-  const graph = graphFromProjection(projection, observedAt, filaments, peerDetectionBattery);
+  const graph = applyGeneralExecutionToGraph(
+    graphFromProjection(projection, observedAt, filaments, peerDetectionBattery),
+    general,
+    manifest,
+    observedAt,
+  );
   const humanWorkIds = new Set(Array.isArray(projection.human_gates?.work_ids)
     ? projection.human_gates.work_ids.map(value => String(value || ''))
     : []);
@@ -1053,12 +1152,16 @@ if (import.meta.url === invokedPath) {
   const humanGateDetailsPath = resolve(
     process.env.NEXO_PUBLIC_HUMAN_GATE_DETAILS || 'data/tower-public/human-gates-details.json',
   );
+  const generalPath = resolve(
+    process.env.NEXO_PUBLIC_GENERAL || 'data/general-public-projection.json',
+  );
   const projection = await readJson(projectionPath);
   const manifestFile = await readJson(manifestPath);
   const interdomain = await readJsonIfPresent(interdomainPath);
   const learning = await readJsonIfPresent(learningPath);
   const peerDetectionBattery = await readJsonIfPresent(peerDetectionBatteryPath);
   const humanGateDetails = await readJsonIfPresent(humanGateDetailsPath);
+  const general = await readJsonIfPresent(generalPath);
   const { system, world } = buildPagesProjection({
     projection,
     manifestFile,
@@ -1066,6 +1169,7 @@ if (import.meta.url === invokedPath) {
     learning,
     peerDetectionBattery,
     humanGateDetails,
+    general,
   });
 
   const dist = resolve('dist');

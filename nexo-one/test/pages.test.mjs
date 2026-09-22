@@ -572,3 +572,83 @@ test('Pages runtime avoids redundant scheduled deploys and hydrates history conc
   assert.match(workflow, /if: needs\.build\.outputs\.deploy_needed == 'true'/);
   assert.match(workflow, /PAGES_BUILD_META_READBACK_OK/);
 });
+
+
+test('General durable Drive state projects into Atlas as aggregates and Learning filaments', async () => {
+  const { buildPagesProjection } = await import('../scripts/build-pages-system.mjs');
+  const manifest = {
+    authority: 'TOWER_V06',
+    projection_only: true,
+    writeback: 'FORBIDDEN',
+    tower_commit: '9'.repeat(40),
+    event_cursor: '20260922T221800000000Z-general',
+    projection_fingerprint: 'sha256:' + 'a'.repeat(64),
+    generated_at: '2026-09-22T22:18:00Z',
+  };
+  const projection = {
+    contract: 'NEXO_PUBLIC_PROJECTION_V1',
+    manifest,
+    event_cursor: manifest.event_cursor,
+    work: [],
+    tests: [],
+    capabilities: {},
+    counts: { active_work: 0, tests: 0, capabilities: 0, needs_dener: 0 },
+  };
+  const general = {
+    contract: 'NEXO_GENERAL_PUBLIC_PROJECTION_V1',
+    authority: 'GOOGLE_DRIVE_PRIVATE',
+    execution: [{
+      atlas_id: 'general-runtime-persistence',
+      title: 'General durable runtime',
+      summary: 'Material General outputs persist in Drive and reconcile into Atlas.',
+      domain: 'ENGINEERING',
+      status: 'ACTIVE',
+      source_ref: 'drive://STAGING/GENERAL/EXECUTION/GENEXEC-001',
+      fingerprint: 'genexec:001',
+      updated_at: '2026-09-22T22:17:00Z',
+    }],
+    learning: [{
+      id: 'GENLEARN-PROJECTION-PROVENANCE',
+      title: 'Projection provenance integrity',
+      rule: 'Validate payload plus source identity plus source revision.',
+      status: 'PROMOTED',
+      from_domain: 'NEXO',
+      to_domain: 'ENGINEERING',
+      from_label: 'NEXO execution',
+      to_label: 'Projection reliability',
+      source_ref: 'drive://STAGING/GENERAL/LEARNING/GENLEARN-001',
+      fingerprint: 'genlearn:001',
+      support: 2,
+      contradiction: 0,
+    }],
+    cursors: [{ id: 'cursor:general-learning' }],
+    handoffs: [{ id: 'handoff:science' }],
+  };
+
+  const { system } = buildPagesProjection({ projection, manifestFile: manifest, general });
+  const aggregate = system.graph.nodes.find(node => node.id === 'general:general-runtime-persistence');
+  assert.ok(aggregate);
+  assert.equal(aggregate.domain, 'ENGINEERING');
+  assert.equal(aggregate.source_ref, 'drive://STAGING/GENERAL/EXECUTION/GENEXEC-001');
+  assert.equal(aggregate.fingerprint, 'genexec:001');
+
+  const learned = system.filaments.find(item => item.id === 'GENLEARN-PROJECTION-PROVENANCE');
+  assert.ok(learned);
+  assert.equal(learned.kind, 'PROCEDURAL');
+  assert.equal(learned.status, 'ESTABLISHED');
+  assert.equal(learned.source_ref, 'drive://STAGING/GENERAL/LEARNING/GENLEARN-001');
+  assert.ok(system.graph.edges.some(edge => edge.is_learning && edge.learning_ref === learned.id));
+
+  assert.equal(system.graph.nodes.some(node => /cursor|handoff/i.test(node.id)), false);
+});
+
+
+test('Pages fingerprints and compiles the derived General projection', async () => {
+  const workflow = await text('../.github/workflows/nexo-one-pages.yml');
+  const builder = await text('scripts/build-pages-system.mjs');
+  assert.match(workflow, /general-public-projection\.json/);
+  assert.match(workflow, /NEXO_PUBLIC_GENERAL/);
+  assert.match(builder, /NEXO_PUBLIC_GENERAL/);
+  assert.match(builder, /generalLearningFilaments/);
+  assert.match(builder, /applyGeneralExecutionToGraph/);
+});
