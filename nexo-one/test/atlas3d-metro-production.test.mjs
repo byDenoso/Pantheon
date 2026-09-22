@@ -373,6 +373,25 @@ test('dense Science expansion keeps stations spaced and labels collision-free', 
   assert.ok(minimumDistance > 62, `dense sibling spacing collapsed to ${minimumDistance}px`);
 });
 
+test('global expansion exposes every Atlas node and collapse returns to the initial root-expanded context', () => {
+  const model = buildAtlasMetroModel(state());
+  const initial = new Set(model.roots);
+  const initialVisible = visibleAtlasIds(model, initial);
+
+  const expandedAll = new Set(
+    model.nodes.filter(node => node.childCount > 0).map(node => node.id),
+  );
+  const allVisible = visibleAtlasIds(model, expandedAll);
+
+  assert.equal(allVisible.length, model.nodes.length, 'expand all must expose every Atlas node');
+  assert.ok(allVisible.length > initialVisible.length, 'expand all must materially increase the visible graph');
+  assert.deepEqual(
+    visibleAtlasIds(model, new Set(model.roots)),
+    initialVisible,
+    'collapse all must restore the original root-expanded context',
+  );
+});
+
 test('dedicated Atlas production page uses Metro renderer, G6 and deterministic Three mode', async () => {
   const [app, renderer, index, css, main] = await Promise.all([
     text('src/atlas3d/Atlas3DApp.tsx'),
@@ -398,6 +417,18 @@ test('dedicated Atlas production page uses Metro renderer, G6 and deterministic 
   assert.match(app, /data-atlas-procedural-subdomain-links/);
   assert.match(app, /data-atlas-peer-artifact-nodes/);
   assert.match(app, /atlas-view-switch/);
+  assert.match(app, /THEME_STORAGE_KEY/);
+  assert.match(app, /theme.*=== 'light'/);
+  assert.match(app, /data-atlas-theme=\{atlasTheme\}/);
+  assert.match(app, /data-atlas-expansion=\{allExpanded \? 'all' : 'context'\}/);
+  assert.match(app, /data-atlas-expanded-count/);
+  assert.match(app, /data-atlas-total-count/);
+  assert.match(app, /qaExpand === 'all'/);
+  assert.match(app, /toggleExpandAll/);
+  assert.match(app, /Expandir tudo/);
+  assert.match(app, /Contrair tudo/);
+  assert.match(app, /Ativar tema claro/);
+  assert.match(app, /Ativar tema escuro/);
   assert.match(app, /Modo 3D ativo/);
   assert.match(app, /data-atlas-learning-links/);
   assert.match(app, /data-atlas-learning-records/);
@@ -424,6 +455,13 @@ test('dedicated Atlas production page uses Metro renderer, G6 and deterministic 
   assert.doesNotMatch(app, /GalaxyThree3D/);
 
   assert.match(renderer, /window\.G6\?\.Graph/);
+  assert.match(renderer, /type AtlasTheme = 'dark' \| 'light'/);
+  assert.match(renderer, /DOMAIN_COLOR_LIGHT/);
+  assert.match(renderer, /LEARNING_PALETTE_LIGHT/);
+  assert.match(renderer, /container\.dataset\.g6Theme = theme/);
+  assert.match(renderer, /container\.dataset\.threeTheme = theme/);
+  assert.match(renderer, /theme === 'light' \? THREE\.NormalBlending : THREE\.AdditiveBlending/);
+  assert.match(renderer, /theme === 'light' \? '#0f172a' : '#e5edf8'/);
   assert.match(renderer, /metroLayoutPositions/);
   assert.match(renderer, /buildMetroScreenLabelLayout/);
   assert.match(renderer, /getViewportByCanvas/);
@@ -561,6 +599,11 @@ test('dedicated Atlas production page uses Metro renderer, G6 and deterministic 
   assert.doesNotMatch(renderer, /forceSimulation|forceManyBody|forceLink/);
 
   assert.match(css, /height:100dvh/);
+  assert.match(css, /data-atlas-theme="light"/);
+  assert.match(css, /atlas-theme-button/);
+  assert.match(css, /atlas-expand-button/);
+  assert.match(css, /atlas-learning-legend i/);
+  assert.match(css, /repeat\(6,auto\)/);
   assert.match(css, /\.atlas-workspace\{position:absolute;inset:0;width:100%;height:100%/);
   assert.match(css, /\.atlas-sidebar\.mobile-open/);
   assert.match(css, /touch-action:none/);

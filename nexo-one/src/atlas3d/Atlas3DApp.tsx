@@ -11,12 +11,36 @@ import {
 import { MetroAtlasRenderer } from './MetroAtlasRenderer.tsx';
 
 type ViewMode = '2d' | '3d';
+type AtlasTheme = 'dark' | 'light';
 
-const DOMAIN_COLOR: Record<string, string> = {
+const THEME_STORAGE_KEY = 'nexo.atlas.theme.v1';
+
+function initialAtlasTheme(): AtlasTheme {
+  if (typeof window === 'undefined') return 'dark';
+  const query = new URLSearchParams(window.location.search).get('theme');
+  if (query === 'light' || query === 'dark') return query;
+  try {
+    return window.localStorage.getItem(THEME_STORAGE_KEY) === 'light' ? 'light' : 'dark';
+  } catch {
+    return 'dark';
+  }
+}
+
+const DOMAIN_COLOR_DARK: Record<string, string> = {
   NEXO: '#7c3aed',
   SCIENCE: '#00c2ff',
   OLYMPUS: '#f97316',
 };
+
+const DOMAIN_COLOR_LIGHT: Record<string, string> = {
+  NEXO: '#6d28d9',
+  SCIENCE: '#0369a1',
+  OLYMPUS: '#c2410c',
+};
+
+function atlasDomainColor(domain: string, theme: AtlasTheme): string {
+  return (theme === 'light' ? DOMAIN_COLOR_LIGHT : DOMAIN_COLOR_DARK)[domain] || '#64748b';
+}
 
 function statusTone(status: string): string {
   const value = status.toUpperCase();
@@ -53,6 +77,7 @@ function DetailPanel({
   learning,
   generatedAt,
   onSelectNode,
+  theme,
 }: {
   node: AtlasMetroNode | null;
   children: AtlasMetroNode[];
@@ -60,12 +85,13 @@ function DetailPanel({
   learning: LearningConnection[];
   generatedAt: string;
   onSelectNode: (id: string) => void;
+  theme: AtlasTheme;
 }) {
   if (!node) {
     return <div className="atlas-empty"><strong>Nenhuma estação selecionada</strong><span>Clique em uma estação do mapa.</span></div>;
   }
 
-  const color = DOMAIN_COLOR[node.domain];
+  const color = atlasDomainColor(node.domain, theme);
 
   return (
     <div className="atlas-detail" data-selected-node={node.id}>
@@ -150,6 +176,7 @@ export default function Atlas3DApp() {
   const model = useMemo(() => system.state ? buildAtlasMetroModel(system.state) : null, [system.state]);
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [atlasTheme, setAtlasTheme] = useState<AtlasTheme>(initialAtlasTheme);
   const [navigationRevision, setNavigationRevision] = useState('');
   const qaExpand = useMemo(
     () => typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('expand') : null,
@@ -184,10 +211,13 @@ export default function Atlas3DApp() {
   }, [model?.revision, qaExpand]);
 
   const initialExpanded = useMemo(() => {
+    if (qaExpand === 'all' && model) {
+      return new Set(model.nodes.filter(node => node.childCount > 0).map(node => node.id));
+    }
     const initial = new Set(model?.roots || []);
     if (qaExpandedNode?.childCount) initial.add(qaExpandedNode.id);
     return initial;
-  }, [model?.revision, qaExpandedNode?.id]);
+  }, [model?.revision, qaExpandedNode?.id, qaExpand]);
 
   const [viewMode, setViewMode] = useState<ViewMode>(() =>
     typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('mode') === '3d' ? '3d' : '2d'
@@ -197,6 +227,20 @@ export default function Atlas3DApp() {
   const [mobileDetailsOpen, setMobileDetailsOpen] = useState(false);
   const [fitNonce, setFitNonce] = useState(0);
   const [rendererReady, setRendererReady] = useState(false);
+
+  useEffect(() => {
+    document.documentElement.dataset.atlasTheme = atlasTheme;
+    document.documentElement.style.colorScheme = atlasTheme;
+    try {
+      window.localStorage.setItem(THEME_STORAGE_KEY, atlasTheme);
+    } catch {
+      // Theme persistence is a convenience; rendering must not depend on storage.
+    }
+    return () => {
+      delete document.documentElement.dataset.atlasTheme;
+      document.documentElement.style.colorScheme = '';
+    };
+  }, [atlasTheme]);
 
   useEffect(() => {
     if (!model) return;
@@ -226,6 +270,8 @@ export default function Atlas3DApp() {
 
   const visibleIds = visibleAtlasIds(model, activeExpanded);
   const visibleSet = new Set(visibleIds);
+  const expandableIds = model.nodes.filter(node => node.childCount > 0).map(node => node.id);
+  const allExpanded = expandableIds.length > 0 && expandableIds.every(id => activeExpanded.has(id));
   const selected = activeSelectedId ? model.nodeMap.get(activeSelectedId) || null : null;
   const children = selected ? (model.childrenMap.get(selected.id) || []).map(id => model.nodeMap.get(id)!).filter(Boolean) : [];
   const related = selected ? relatedAtlasNodes(model, selected.id) : [];
@@ -245,11 +291,26 @@ export default function Atlas3DApp() {
     }
   };
 
-  const reset = () => {
+  const collapseToInitial = () => {
     setExpanded(new Set(model.roots));
     setSelectedId(model.roots[0] || null);
     setFitNonce(value => value + 1);
   };
+
+  const toggleExpandAll = () => {
+    if (allExpanded) {
+      collapseToInitial();
+      return;
+    }
+    setExpanded(new Set(expandableIds));
+    setFitNonce(value => value + 1);
+  };
+
+  const toggleTheme = () => {
+    setAtlasTheme(current => current === 'dark' ? 'light' : 'dark');
+  };
+
+  const reset = collapseToInitial;
 
   const selectBreadcrumb = (id: string) => {
     if (!model.nodeMap.has(id)) return;
@@ -405,7 +466,11 @@ export default function Atlas3DApp() {
       data-atlas-ready={rendererReady ? 'true' : 'false'}
       data-atlas-root-count={model.roots.length}
       data-atlas-visible-count={visibleIds.length}
+      data-atlas-total-count={model.nodes.length}
       data-atlas-mode={viewMode}
+      data-atlas-theme={atlasTheme}
+      data-atlas-expansion={allExpanded ? 'all' : 'context'}
+      data-atlas-expanded-count={activeExpanded.size}
       data-atlas-qa-expand={qaExpand || 'none'}
       data-atlas-qa-expanded-node={qaExpandedNode?.name || 'none'}
       data-atlas-learning-links={learningLinkCount}
@@ -437,6 +502,7 @@ export default function Atlas3DApp() {
           selectedId={activeSelectedId}
           showBeams={showBeams}
           viewMode={viewMode}
+          theme={atlasTheme}
           fitNonce={fitNonce}
           onActivate={activate}
           onReady={() => setRendererReady(true)}
@@ -478,6 +544,23 @@ export default function Atlas3DApp() {
                 {viewMode === '3d' && <em>ATIVO</em>}
               </button>
             </div>
+            <button
+              className="atlas-button atlas-theme-button"
+              aria-pressed={atlasTheme === 'light'}
+              aria-label={atlasTheme === 'dark' ? 'Ativar tema claro' : 'Ativar tema escuro'}
+              onClick={toggleTheme}
+            >
+              <span aria-hidden="true">{atlasTheme === 'dark' ? '☼' : '☾'}</span>
+              {atlasTheme === 'dark' ? 'Claro' : 'Escuro'}
+            </button>
+            <button
+              className="atlas-button atlas-expand-button"
+              aria-pressed={allExpanded}
+              onClick={toggleExpandAll}
+            >
+              <span aria-hidden="true">{allExpanded ? '⊟' : '⊞'}</span>
+              {allExpanded ? 'Contrair tudo' : 'Expandir tudo'}
+            </button>
             <label className="atlas-toggle">
               <input type="checkbox" checked={showBeams} onChange={event => setShowBeams(event.target.checked)} />
               Feixes
@@ -502,7 +585,7 @@ export default function Atlas3DApp() {
               <button
                 key={rootId}
                 className={activeSelectedId === rootId ? 'selected' : ''}
-                style={{ '--domain-color': DOMAIN_COLOR[root.domain] } as CSSProperties}
+                style={{ '--domain-color': atlasDomainColor(root.domain, atlasTheme) } as CSSProperties}
                 onClick={() => setSelectedId(rootId)}
               >
                 <span />{root.name}<small>{root.descendantCount}</small>
@@ -512,9 +595,9 @@ export default function Atlas3DApp() {
         </div>
 
         <div className="atlas-legend glass">
-          <span><i style={{ background: DOMAIN_COLOR.NEXO }} />Nexo</span>
-          <span><i style={{ background: DOMAIN_COLOR.SCIENCE }} />Science</span>
-          <span><i style={{ background: DOMAIN_COLOR.OLYMPUS }} />Olympus</span>
+          <span><i style={{ background: atlasDomainColor('NEXO', atlasTheme) }} />Nexo</span>
+          <span><i style={{ background: atlasDomainColor('SCIENCE', atlasTheme) }} />Science</span>
+          <span><i style={{ background: atlasDomainColor('OLYMPUS', atlasTheme) }} />Olympus</span>
           {learningLinkCount > 0 && (
             <span
               className="atlas-learning-legend"
@@ -588,6 +671,7 @@ export default function Atlas3DApp() {
           learning={learningConnections}
           generatedAt={model.generatedAt}
           onSelectNode={setSelectedId}
+          theme={atlasTheme}
         />
         <div className="atlas-source-state">
           <span>{system.sourceLabel}</span>

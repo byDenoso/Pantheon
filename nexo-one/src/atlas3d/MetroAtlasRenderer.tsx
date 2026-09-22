@@ -15,6 +15,7 @@ import {
 } from './metro2dLayout.ts';
 
 type ViewMode = '2d' | '3d';
+type AtlasTheme = 'dark' | 'light';
 
 type Props = {
   model: AtlasMetroModel;
@@ -22,6 +23,7 @@ type Props = {
   selectedId: string | null;
   showBeams: boolean;
   viewMode: ViewMode;
+  theme: AtlasTheme;
   fitNonce: number;
   onActivate: (id: string) => void;
   onReady?: () => void;
@@ -47,11 +49,22 @@ declare global {
   }
 }
 
-const DOMAIN_COLOR: Record<string, string> = {
+const DOMAIN_COLOR_DARK: Record<string, string> = {
   NEXO: '#7c3aed',
   SCIENCE: '#00c2ff',
   OLYMPUS: '#f97316',
 };
+
+const DOMAIN_COLOR_LIGHT: Record<string, string> = {
+  NEXO: '#6d28d9',
+  SCIENCE: '#0369a1',
+  OLYMPUS: '#c2410c',
+};
+
+function domainColor(domain: string, theme: AtlasTheme): string {
+  return (theme === 'light' ? DOMAIN_COLOR_LIGHT : DOMAIN_COLOR_DARK)[domain]
+    || (theme === 'light' ? '#475569' : '#64748b');
+}
 
 const TYPE_COLOR: Record<string, string> = {
   hub: '#f8fafc',
@@ -78,15 +91,26 @@ function statusColor(status: string): string {
   return '#94a3b8';
 }
 
-const LEARNING_PALETTE: Record<string, string[]> = {
+const LEARNING_PALETTE_DARK: Record<string, string[]> = {
   SCIENTIFIC_LEARNING_PIPELINE: ['#f59e0b', '#f6ad1b', '#e8910a', '#f3b64d'],
   PROCEDURAL: ['#fbbf24', '#f7c948', '#eab308', '#ffd166'],
   SEMANTIC: ['#fb923c', '#f97316', '#d97706', '#fdba74'],
 };
 
-function learningColor(kind: string | null | undefined, theme?: string | null): string {
-  const palette = LEARNING_PALETTE[kind || ''] || LEARNING_PALETTE.SCIENTIFIC_LEARNING_PIPELINE;
-  const seed = hashNumber(theme || kind || 'learning');
+const LEARNING_PALETTE_LIGHT: Record<string, string[]> = {
+  SCIENTIFIC_LEARNING_PIPELINE: ['#92400e', '#a16207', '#b45309', '#9a3412'],
+  PROCEDURAL: ['#854d0e', '#a16207', '#713f12', '#ca8a04'],
+  SEMANTIC: ['#9a3412', '#c2410c', '#b45309', '#7c2d12'],
+};
+
+function learningColor(
+  kind: string | null | undefined,
+  learningTheme: string | null | undefined,
+  theme: AtlasTheme,
+): string {
+  const palettes = theme === 'light' ? LEARNING_PALETTE_LIGHT : LEARNING_PALETTE_DARK;
+  const palette = palettes[kind || ''] || palettes.SCIENTIFIC_LEARNING_PIPELINE;
+  const seed = hashNumber(learningTheme || kind || 'learning');
   return palette[seed % palette.length]!;
 }
 
@@ -221,21 +245,30 @@ function escapeHtml(value: unknown): string {
     .replaceAll('"', '&quot;').replaceAll("'", '&#039;');
 }
 
-function tooltipHtml(node: AtlasMetroNode | undefined, expanded: ReadonlySet<string>): string {
+function tooltipHtml(
+  node: AtlasMetroNode | undefined,
+  expanded: ReadonlySet<string>,
+  theme: AtlasTheme,
+): string {
   if (!node) return '';
-  const domain = DOMAIN_COLOR[node.domain] || '#94a3b8';
+  const domain = domainColor(node.domain, theme);
   const status = statusColor(node.status);
   const expandable = node.childCount > 0
     ? `${node.childCount} filhos · ${expanded.has(node.id) ? 'expandido' : 'fechado'}`
     : 'folha';
+  const surface = theme === 'light' ? '#ffffff' : '#09111f';
+  const border = theme === 'light' ? '#cbd5e1' : '#24324a';
+  const text = theme === 'light' ? '#0f172a' : '#dbe7f5';
+  const muted = theme === 'light' ? '#475569' : '#8ea0b8';
+  const quiet = theme === 'light' ? '#64748b' : '#70829b';
   return `
-    <div style="min-width:235px;padding:10px 11px;background:#09111f;border:1px solid #24324a;border-radius:10px;box-shadow:0 14px 34px rgba(0,0,0,.35);color:#dbe7f5;font:12px/1.4 Inter,system-ui,sans-serif">
+    <div style="min-width:235px;padding:10px 11px;background:${surface};border:1px solid ${border};border-radius:10px;box-shadow:0 14px 34px rgba(15,23,42,.18);color:${text};font:12px/1.4 Inter,system-ui,sans-serif">
       <div style="display:flex;align-items:center;gap:7px;margin-bottom:5px">
         <span style="width:8px;height:8px;border-radius:999px;background:${domain};box-shadow:0 0 10px ${domain}"></span>
         <strong style="font-size:13px">${escapeHtml(node.name)}</strong>
       </div>
-      <div style="color:#8ea0b8;margin-bottom:7px">${escapeHtml(node.summary)}</div>
-      <div style="display:flex;gap:9px;color:#70829b;font-size:10px">
+      <div style="color:${muted};margin-bottom:7px">${escapeHtml(node.summary)}</div>
+      <div style="display:flex;gap:9px;color:${quiet};font-size:10px">
         <span>${escapeHtml(node.entityType)}</span>
         <span style="color:${status}">${escapeHtml(node.status)}</span>
         <span>${expandable}</span>
@@ -355,6 +388,7 @@ function renderScreenLabels(
   expanded: ReadonlySet<string>,
   selectedId: string | null,
   hoveredId: string | null,
+  theme: AtlasTheme,
 ) {
   const rect = container.getBoundingClientRect();
   const ids = visibleAtlasIds(model, expanded);
@@ -384,7 +418,7 @@ function renderScreenLabels(
     .filter(spec => spec.visible && spec.leader)
     .map(spec => {
       const node = model.nodeMap.get(spec.id);
-      const color = DOMAIN_COLOR[node?.domain || ''] || '#64748b';
+      const color = domainColor(node?.domain || '', theme);
       const leader = spec.leader!;
       return `<line x1="${leader.x1.toFixed(1)}" y1="${leader.y1.toFixed(1)}" x2="${leader.x2.toFixed(1)}" y2="${leader.y2.toFixed(1)}" stroke="${color}" stroke-opacity=".42" stroke-width="1" vector-effect="non-scaling-stroke" />`;
     })
@@ -394,7 +428,7 @@ function renderScreenLabels(
     .filter(spec => spec.visible)
     .map(spec => {
       const node = model.nodeMap.get(spec.id)!;
-      const color = DOMAIN_COLOR[node.domain] || '#64748b';
+      const color = domainColor(node.domain, theme);
       const stateClass = spec.id === selectedId ? ' selected' : spec.id === hoveredId ? ' hovered' : '';
       const typeClass = node.entityType === 'hub' ? ' hub' : node.entityType === 'subdomain' ? ' subdomain' : ' leaf';
       return `<div class="atlas-screen-label${stateClass}${typeClass}" data-node-id="${escapeHtml(spec.id)}" style="left:${spec.left.toFixed(1)}px;top:${spec.top.toFixed(1)}px;width:${spec.width.toFixed(1)}px;height:${spec.height.toFixed(1)}px;--label-domain:${color};font-size:${spec.fontSize}px"><span>${escapeHtml(node.name)}</span></div>`;
@@ -432,6 +466,7 @@ function Metro2DView({
   fitNonce,
   onActivate,
   onReady,
+  theme,
 }: Omit<Props, 'viewMode'>) {
   const surfaceRef = useRef<HTMLDivElement | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -483,9 +518,10 @@ function Metro2DView({
 
     const compact = isCompactRenderer(container);
     container.dataset.g6Profile = compact ? 'compact-touch' : 'desktop';
+    container.dataset.g6Theme = theme;
     const graph = createG6Graph(Graph, {
       container,
-      theme: 'dark',
+      theme,
       data: { nodes: [], edges: [] },
       padding: compact ? [142, 22, 50, 22] : [86, 76, 76, 76],
       zoomRange: [0.30, 3.2],
@@ -505,14 +541,14 @@ function Metro2DView({
           size: (datum: any) => metroNodeSize(datum.data),
           donuts: (datum: any) => [Math.max(8, Math.min(92, datum.data.mix || 50)), 100 - Math.max(8, Math.min(92, datum.data.mix || 50))],
           donutPalette: (datum: any) => [
-            TYPE_COLOR[String(datum.data.entityType)] || '#94a3b8',
-            DOMAIN_COLOR[String(datum.data.domain)] || '#64748b',
+            TYPE_COLOR[String(datum.data.entityType)] || (theme === 'light' ? '#334155' : '#94a3b8'),
+            domainColor(String(datum.data.domain), theme),
           ],
           innerR: (datum: any) => datum.data.entityType === 'hub' ? '58%' : '63%',
           fill: 'transparent',
           stroke: (datum: any) => statusColor(String(datum.data.status || '')),
           lineWidth: (datum: any) => datum.data.entityType === 'hub' ? 3.6 : datum.data.entityType === 'subdomain' ? 2.5 : 2,
-          shadowColor: (datum: any) => DOMAIN_COLOR[String(datum.data.domain)] || '#64748b',
+          shadowColor: (datum: any) => domainColor(String(datum.data.domain), theme),
           shadowBlur: (datum: any) => datum.data.entityType === 'hub' ? 20 : 8,
           labelText: '',
           cursor: 'pointer',
@@ -541,10 +577,10 @@ function Metro2DView({
         },
         style: {
           stroke: (datum: any) => datum.data?.isLearning
-            ? learningColor(datum.data?.learningKind, datum.data?.learningTheme)
+            ? learningColor(datum.data?.learningKind, datum.data?.learningTheme, theme)
             : datum.data?.kind === 'bridge'
-              ? '#91a4bd'
-              : (DOMAIN_COLOR[String(datum.data?.domain)] || '#475569'),
+              ? (theme === 'light' ? '#64748b' : '#91a4bd')
+              : domainColor(String(datum.data?.domain), theme),
           lineWidth: (datum: any) => datum.data?.isLearning
             ? learningWidth(datum.data?.learningKind) + Math.min(2.1, Math.log2(Math.max(1, Number(datum.data?.visualCount || 1))) * .55)
             : datum.data?.kind === 'bridge' ? 1.05 : 2.25,
@@ -555,7 +591,7 @@ function Metro2DView({
             ? learningDash(datum.data?.learningKind)
             : datum.data?.kind === 'bridge' ? [5, 6] : [],
           shadowColor: (datum: any) => datum.data?.isLearning
-            ? learningColor(datum.data?.learningKind, datum.data?.learningTheme)
+            ? learningColor(datum.data?.learningKind, datum.data?.learningTheme, theme)
             : 'transparent',
           shadowBlur: (datum: any) => datum.data?.isLearning
             ? (datum.data?.learningKind === 'SCIENTIFIC_LEARNING_PIPELINE' ? 11 : 7)
@@ -578,7 +614,7 @@ function Metro2DView({
           enable: (event: any) => event.targetType === 'node',
           getContent: (_event: any, items: any[]) => {
             const id = items?.[0]?.id || items?.[0]?.data?.id;
-            return tooltipHtml(modelRef.current.nodeMap.get(id), expandedRef.current);
+            return tooltipHtml(modelRef.current.nodeMap.get(id), expandedRef.current, theme);
           },
           offset: [12, 12],
         },
@@ -606,6 +642,7 @@ function Metro2DView({
           expandedRef.current,
           selectedRef.current,
           hoveredRef.current,
+          theme,
         );
       });
     };
@@ -748,7 +785,7 @@ function Metro2DView({
       graphRef.current = null;
       renderLabelsRef.current = () => {};
     };
-  }, []);
+  }, [theme]);
 
   const expansionKey = useMemo(() => [...expanded].sort().join('|'), [expanded]);
 
@@ -758,7 +795,7 @@ function Metro2DView({
     const fit = structureKey !== lastStructureKeyRef.current;
     lastStructureKeyRef.current = structureKey;
     void refreshRef.current(fit);
-  }, [model.revision, expansionKey, showBeams]);
+  }, [model.revision, expansionKey, showBeams, theme]);
 
   useEffect(() => {
     const graph = graphRef.current;
@@ -878,7 +915,12 @@ function getSharedGlowTexture(): THREE.CanvasTexture {
   return sharedGlowTexture;
 }
 
-function createGlowSprite(colorValue: string | number, diameter: number, opacity: number): THREE.Sprite {
+function createGlowSprite(
+  colorValue: string | number,
+  diameter: number,
+  opacity: number,
+  theme: AtlasTheme = 'dark',
+): THREE.Sprite {
   const material = new THREE.SpriteMaterial({
     map: getSharedGlowTexture(),
     color: new THREE.Color(colorValue),
@@ -886,7 +928,7 @@ function createGlowSprite(colorValue: string | number, diameter: number, opacity
     opacity,
     depthWrite: false,
     depthTest: true,
-    blending: THREE.AdditiveBlending,
+    blending: theme === 'light' ? THREE.NormalBlending : THREE.AdditiveBlending,
   });
   const sprite = new THREE.Sprite(material);
   sprite.scale.set(diameter, diameter, 1);
@@ -947,6 +989,7 @@ function addSynapse(
   bundleIndex = 0,
   bundleCount = 1,
   compact = false,
+  theme: AtlasTheme = 'dark',
 ) {
   const curve = synapseCurve(source, target, key, bridge, learning, bundleIndex, bundleCount);
   const span = source.distanceTo(target);
@@ -965,7 +1008,7 @@ function addSynapse(
       transparent: true,
       opacity: learning ? (compact ? .16 : .20) : bridge ? (compact ? .075 : .055) : (compact ? .11 : .085),
       depthWrite: false,
-      blending: THREE.AdditiveBlending,
+      blending: theme === 'light' ? THREE.NormalBlending : THREE.AdditiveBlending,
     }),
   );
   glow.renderOrder = 2;
@@ -978,7 +1021,7 @@ function addSynapse(
       transparent: true,
       opacity: learning ? (compact ? .68 : .76) : bridge ? (compact ? .36 : .28) : (compact ? .54 : .44),
       depthWrite: false,
-      blending: THREE.AdditiveBlending,
+      blending: theme === 'light' ? THREE.NormalBlending : THREE.AdditiveBlending,
     }),
   );
   core.renderOrder = 3;
@@ -992,7 +1035,7 @@ function addSynapse(
       transparent: true,
       opacity: learning && compact ? .72 : .92,
       depthWrite: false,
-      blending: THREE.AdditiveBlending,
+      blending: theme === 'light' ? THREE.NormalBlending : THREE.AdditiveBlending,
     }),
   );
   particle.add(pulseCore);
@@ -1000,6 +1043,7 @@ function addSynapse(
     colorValue,
     learning ? 18 : bridge ? 10 : 12,
     learning ? (compact ? .66 : .74) : bridge ? (compact ? .44 : .34) : (compact ? .56 : .46),
+    theme,
   );
   pulseGlow.material.depthTest = false;
   particle.add(pulseGlow);
@@ -1027,12 +1071,18 @@ function updateSynapsePulses(runtime: ThreeRuntime, now: number) {
   }
 }
 
-function createLabelSprite(text: string, domainColor: string, isHub: boolean, compact = false): THREE.Sprite {
+function createLabelSprite(
+  text: string,
+  domainColor: string,
+  isHub: boolean,
+  compact = false,
+  theme: AtlasTheme = 'dark',
+): THREE.Sprite {
   const canvas = document.createElement('canvas');
   canvas.width = compact ? 256 : 512;
   canvas.height = compact ? 64 : 128;
   const context = canvas.getContext('2d')!;
-  context.fillStyle = 'rgba(7,11,20,.90)';
+  context.fillStyle = theme === 'light' ? 'rgba(255,255,255,.95)' : 'rgba(7,11,20,.90)';
   context.strokeStyle = domainColor;
   context.lineWidth = (isHub ? 5 : 3) * (compact ? .5 : 1);
   const unit = compact ? .5 : 1;
@@ -1040,7 +1090,7 @@ function createLabelSprite(text: string, domainColor: string, isHub: boolean, co
   context.roundRect(8 * unit, 18 * unit, 496 * unit, 92 * unit, 22 * unit);
   context.fill();
   context.stroke();
-  context.fillStyle = '#e5edf8';
+  context.fillStyle = theme === 'light' ? '#0f172a' : '#e5edf8';
   context.font = `${isHub ? 800 : 650} ${(isHub ? 34 : 29) * unit}px Inter, Arial, sans-serif`;
   context.textAlign = 'center';
   context.textBaseline = 'middle';
@@ -1351,6 +1401,7 @@ function rebuildThree(
   expanded: ReadonlySet<string>,
   selectedId: string | null,
   showBeams: boolean,
+  theme: AtlasTheme,
 ) {
   if (runtime.content) {
     runtime.scene.remove(runtime.content);
@@ -1395,7 +1446,7 @@ function rebuildThree(
       content,
       source,
       target,
-      DOMAIN_COLOR[node.domain] || '#94a3b8',
+      domainColor(node.domain, theme),
       `hierarchy:${node.parentId}:${id}`,
       false,
       node.entityType === 'subdomain' ? 1.08 : .9,
@@ -1403,6 +1454,7 @@ function rebuildThree(
       0,
       1,
       compact,
+      theme,
     );
   }
 
@@ -1417,10 +1469,10 @@ function rebuildThree(
       if (!source || !target) continue;
       const sourceNode = model.nodeMap.get(link.source);
       const targetNode = model.nodeMap.get(link.target);
-      const sourceColor = new THREE.Color(DOMAIN_COLOR[sourceNode?.domain || ''] || '#91a4bd');
-      const targetColor = new THREE.Color(DOMAIN_COLOR[targetNode?.domain || ''] || '#91a4bd');
+      const sourceColor = new THREE.Color(domainColor(sourceNode?.domain || '', theme));
+      const targetColor = new THREE.Color(domainColor(targetNode?.domain || '', theme));
       const mixed = sourceColor.clone().lerp(targetColor, .5);
-      const color = link.isLearning ? new THREE.Color(learningColor(link.learningKind, link.learningTheme)) : mixed;
+      const color = link.isLearning ? new THREE.Color(learningColor(link.learningKind, link.learningTheme, theme)) : mixed;
       addSynapse(
         runtime,
         content,
@@ -1434,6 +1486,7 @@ function rebuildThree(
         link.bundleIndex,
         link.bundleCount,
         compact,
+        theme,
       );
     }
   }
@@ -1505,14 +1558,15 @@ function rebuildThree(
     group.position.copy(position);
     group.userData.nodeId = id;
 
-    const domainColor = DOMAIN_COLOR[node.domain] || '#94a3b8';
+    const nodeDomainColor = domainColor(node.domain, theme);
     const typeColor = TYPE_COLOR[String(node.entityType)] || '#cbd5e1';
-    const baseEmissive = (node.entityType === 'hub' ? .56 : node.entityType === 'subdomain' ? .42 : .32)
+    const baseEmissiveDark = (node.entityType === 'hub' ? .56 : node.entityType === 'subdomain' ? .42 : .32)
       + (compact ? .12 : .04);
+    const baseEmissive = theme === 'light' ? baseEmissiveDark * .42 : baseEmissiveDark;
 
     const coreMaterial = new THREE.MeshStandardMaterial({
-      color: new THREE.Color(domainColor).lerp(new THREE.Color(typeColor), .20),
-      emissive: new THREE.Color(domainColor),
+      color: new THREE.Color(nodeDomainColor).lerp(new THREE.Color(typeColor), .20),
+      emissive: new THREE.Color(nodeDomainColor),
       emissiveIntensity: baseEmissive,
       roughness: .64,
       metalness: .03,
@@ -1531,20 +1585,21 @@ function rebuildThree(
     const membrane = new THREE.Mesh(
       createOrganicGeometry(radius * 1.13, `${id}:membrane`, compact ? 2 : 3),
       new THREE.MeshBasicMaterial({
-        color: new THREE.Color(domainColor),
+        color: new THREE.Color(nodeDomainColor),
         transparent: true,
         opacity: node.entityType === 'hub' ? .13 : .09,
         depthWrite: false,
-        blending: THREE.AdditiveBlending,
+        blending: theme === 'light' ? THREE.NormalBlending : THREE.AdditiveBlending,
         side: THREE.BackSide,
       }),
     );
     group.add(membrane);
 
     const neuronGlow = createGlowSprite(
-      domainColor,
+      nodeDomainColor,
       radius * (node.entityType === 'hub' ? 5.6 : 4.9),
       (node.entityType === 'hub' ? .56 : .44) + (compact ? .12 : .04),
+      theme,
     );
     neuronGlow.material.depthTest = false;
     neuronGlow.userData.baseOpacity = (neuronGlow.material as THREE.SpriteMaterial).opacity;
@@ -1559,20 +1614,31 @@ function rebuildThree(
         transparent: true,
         opacity: .86,
         depthWrite: false,
-        blending: THREE.AdditiveBlending,
+        blending: theme === 'light' ? THREE.NormalBlending : THREE.AdditiveBlending,
       }),
     );
     statusNucleus.renderOrder = 9;
     group.add(statusNucleus);
 
-    const selectionGlow = createGlowSprite('#ffffff', radius * 7.2, .64);
+    const selectionGlow = createGlowSprite(
+      theme === 'light' ? '#0f172a' : '#ffffff',
+      radius * 7.2,
+      theme === 'light' ? .24 : .64,
+      theme,
+    );
     selectionGlow.material.depthTest = false;
     selectionGlow.visible = id === selectedId;
     selectionGlow.renderOrder = 7;
     group.add(selectionGlow);
 
     if (showLeafLabels || node.entityType === 'hub' || node.entityType === 'subdomain' || id === selectedId) {
-      const label = createLabelSprite(node.name, DOMAIN_COLOR[node.domain], node.entityType === 'hub', compact);
+      const label = createLabelSprite(
+        node.name,
+        nodeDomainColor,
+        node.entityType === 'hub',
+        compact,
+        theme,
+      );
       label.position.set(0, radius + (node.entityType === 'hub' ? 28 : 20), 0);
       group.add(label);
     }
@@ -1604,6 +1670,7 @@ function MetroThreeView({
   fitNonce,
   onActivate,
   onReady,
+  theme,
 }: Omit<Props, 'viewMode'>) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const tooltipRef = useRef<HTMLDivElement | null>(null);
@@ -1638,9 +1705,10 @@ function MetroThreeView({
 
     const compact = isCompactRenderer(container);
     container.dataset.threeProfile = compact ? 'compact-touch' : 'desktop';
+    container.dataset.threeTheme = theme;
     container.dataset.threeQuality = compact ? 'reduced-gpu' : 'full';
     const scene = new THREE.Scene();
-    scene.fog = new THREE.FogExp2(0x070b14, compact ? .00013 : .00017);
+    scene.fog = new THREE.FogExp2(theme === 'light' ? 0xf5f7fb : 0x070b14, compact ? .00013 : .00017);
     const camera = new THREE.PerspectiveCamera(compact ? 50 : 46, 1, 1, 6000);
     camera.position.set(520, 360, 780);
 
@@ -1661,7 +1729,7 @@ function MetroThreeView({
       return;
     }
     renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, compact ? 1.35 : 2));
-    renderer.setClearColor(0x070b14, 0);
+    renderer.setClearColor(theme === 'light' ? 0xf8fafc : 0x070b14, 0);
     renderer.outputColorSpace = THREE.SRGBColorSpace;
     renderer.domElement.tabIndex = 0;
     container.appendChild(renderer.domElement);
@@ -1680,11 +1748,18 @@ function MetroThreeView({
     controls.mouseButtons.MIDDLE = THREE.MOUSE.DOLLY;
     controls.mouseButtons.RIGHT = THREE.MOUSE.PAN;
 
-    scene.add(new THREE.HemisphereLight(0xd7e8ff, 0x111827, compact ? 1.62 : 1.38));
+    scene.add(new THREE.HemisphereLight(
+      theme === 'light' ? 0xffffff : 0xd7e8ff,
+      theme === 'light' ? 0xcbd5e1 : 0x111827,
+      theme === 'light' ? (compact ? 1.18 : 1.05) : (compact ? 1.62 : 1.38),
+    ));
     const key = new THREE.DirectionalLight(0xffffff, compact ? 1.72 : 1.52);
     key.position.set(400, 650, 500);
     scene.add(key);
-    const rim = new THREE.DirectionalLight(0x6ee7ff, compact ? .92 : .78);
+    const rim = new THREE.DirectionalLight(
+      theme === 'light' ? 0x0284c7 : 0x6ee7ff,
+      theme === 'light' ? .46 : (compact ? .92 : .78),
+    );
     rim.position.set(-520, -180, -360);
     scene.add(rim);
 
@@ -1738,7 +1813,7 @@ function MetroThreeView({
         resize();
 
         if (majorLayoutChange) {
-          rebuildThree(runtime, container, modelRef.current, expandedRef.current, selectedRef.current, showBeamsRef.current);
+          rebuildThree(runtime, container, modelRef.current, expandedRef.current, selectedRef.current, showBeamsRef.current, theme);
           container.dataset.threeNodeCount = String(visibleAtlasIds(modelRef.current, expandedRef.current).length);
           container.dataset.threeSynapseCount = String(runtime.pulses.length);
         }
@@ -1762,7 +1837,7 @@ function MetroThreeView({
       container.dataset.threeContext = 'restored';
       clearRendererError(container);
       resize();
-      rebuildThree(runtime, container, modelRef.current, expandedRef.current, selectedRef.current, showBeamsRef.current);
+      rebuildThree(runtime, container, modelRef.current, expandedRef.current, selectedRef.current, showBeamsRef.current, theme);
       fitThree(
         runtime,
         false,
@@ -1787,7 +1862,7 @@ function MetroThreeView({
         renderer.domElement.style.cursor = 'grab';
         return;
       }
-      tooltip.innerHTML = tooltipHtml(modelRef.current.nodeMap.get(id), expandedRef.current);
+      tooltip.innerHTML = tooltipHtml(modelRef.current.nodeMap.get(id), expandedRef.current, theme);
       tooltip.style.display = 'block';
       const rect = container.getBoundingClientRect();
       tooltip.style.left = `${event.clientX - rect.left}px`;
@@ -1842,7 +1917,7 @@ function MetroThreeView({
       renderer.domElement.remove();
       runtimeRef.current = null;
     };
-  }, []);
+  }, [theme]);
 
   const expansionKey = useMemo(() => [...expanded].sort().join('|'), [expanded]);
 
@@ -1850,7 +1925,7 @@ function MetroThreeView({
     const runtime = runtimeRef.current;
     const container = containerRef.current;
     if (!runtime || !container) return;
-    rebuildThree(runtime, container, model, expanded, selectedId, showBeams);
+    rebuildThree(runtime, container, model, expanded, selectedId, showBeams, theme);
     container.dataset.threeNodeCount = String(visibleAtlasIds(model, expanded).length);
     container.dataset.threeSynapseCount = String(runtime.pulses.length);
 
@@ -1867,7 +1942,7 @@ function MetroThreeView({
 
     const painted = renderAndMeasureThree(runtime, container);
     if (painted > 0 || !isAtlasReadback()) onReadyRef.current?.();
-  }, [model.revision, expansionKey, showBeams]);
+  }, [model.revision, expansionKey, showBeams, theme]);
 
   useEffect(() => {
     const runtime = runtimeRef.current;
