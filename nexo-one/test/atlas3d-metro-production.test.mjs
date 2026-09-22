@@ -12,6 +12,10 @@ import {
   buildMetroScreenLabelLayout,
   metroLayoutPositions,
 } from '../src/atlas3d/metro2dLayout.ts';
+import {
+  LEARNING_ANCHORS,
+  learningSemanticRoute,
+} from '../src/atlas3d/learningSemantics.ts';
 
 const root = new URL('../', import.meta.url);
 const text = path => readFile(new URL(path, root), 'utf8');
@@ -143,15 +147,92 @@ test('Learning semantic identity survives graph projection into Atlas links', ()
   const model = buildAtlasMetroModel(source);
   const link = model.crossLinks.find(item => item.learningRef === 'PEER-DETECTION-GROUP-ROBUSTNESS');
   assert.ok(link);
-  assert.equal(model.nodeMap.get(link.source)?.name, 'Operações NEXO');
-  assert.equal(model.nodeMap.get(link.target)?.name, 'Consistência cosmológica · Peer Detection');
+  assert.equal(model.nodeMap.get(link.source)?.name, 'Robustez & reprodutibilidade');
+  assert.equal(model.nodeMap.get(link.target)?.name, 'Reprodutibilidade científica · Robustez');
   assert.equal(model.nodeMap.get(link.source)?.entityType, 'subdomain');
   assert.equal(model.nodeMap.get(link.target)?.entityType, 'subdomain');
   assert.equal(link.sourceAnchor, 'SEMANTIC_SUBDOMAIN');
   assert.equal(link.targetAnchor, 'SEMANTIC_SUBDOMAIN');
   assert.equal(link.learningKind, 'SCIENTIFIC_LEARNING_PIPELINE');
   assert.equal(link.learningGroup, 'ROBUSTNESS');
+  assert.equal(link.learningTheme, 'reproducibility');
+  assert.equal(link.learningBasis, 'STRUCTURED_GROUP');
   assert.match(link.label, /Peer Detection · Robustness/);
+});
+
+test('Peer Detection semantic groups fan out across scientific areas instead of one mega-subdomain', () => {
+  const groups = [
+    'GOVERNANCE',
+    'BASELINE_PROFILE',
+    'ANCHOR',
+    'DATA_SPLITS',
+    'GLOBAL_NULL',
+    'CALIBRATION',
+    'BAYES_PRIORS',
+    'RIVALS',
+    'PREDICTION',
+    'ROBUSTNESS',
+    'SYNTHESIS',
+  ];
+  const routes = groups.map(group => learningSemanticRoute({
+    id: `PEER-DETECTION-GROUP-${group}`,
+    label: `Peer Detection · ${group}`,
+    domain: 'SCIENCE',
+    kind: 'SCIENTIFIC_LEARNING_PIPELINE',
+    weight: .8,
+    support: 1,
+    contradiction: 0,
+    status: 'TESTING',
+    evidence: [],
+    source_ref: 'tower://peer',
+    boundary: 'Scientific pipeline.',
+    from_label: `NEXO execution · ${group}`,
+    to_label: 'Science · PEER inference',
+    from_domain: 'NEXO',
+    to_domain: 'SCIENCE',
+    scope: 'INTER_DOMAIN',
+    peer_detection_group: group,
+  })).filter(Boolean);
+
+  assert.equal(routes.length, groups.length);
+  const scienceTargets = new Set(routes.map(route => route.target?.subdomain).filter(Boolean));
+  const nexoSources = new Set(routes.map(route => route.source?.subdomain).filter(Boolean));
+  assert.ok(scienceTargets.size >= 7, `Peer target semantics collapsed to ${scienceTargets.size} areas`);
+  assert.ok(nexoSources.size >= 5, `Peer source semantics collapsed to ${nexoSources.size} areas`);
+  assert.ok(scienceTargets.has(LEARNING_ANCHORS.SCIENCE.bayes));
+  assert.ok(scienceTargets.has(LEARNING_ANCHORS.SCIENCE.robustness));
+  assert.ok(scienceTargets.has(LEARNING_ANCHORS.SCIENCE.h0));
+  assert.ok(scienceTargets.has(LEARNING_ANCHORS.SCIENCE.growth));
+});
+
+test('procedural Learning separates execution, inference, data and causal semantics', () => {
+  const base = {
+    domain: 'NEXO',
+    kind: 'PROCEDURAL',
+    weight: .72,
+    support: 1,
+    contradiction: 0,
+    status: 'PROVISIONAL',
+    evidence: [],
+    source_ref: 'tower://meta',
+    boundary: 'Procedural only.',
+    from_label: 'NEXO Learning',
+    to_label: 'NEXO',
+    from_domain: 'NEXO',
+    to_domain: 'NEXO',
+    scope: 'INTRA_DOMAIN',
+  };
+  const cases = [
+    ['writer-rebase', 'Writer recovery after rebase', 'Execução & confiabilidade'],
+    ['global-null', 'Global null calibration and covariance', 'Inferência, nulls & calibração'],
+    ['averaging', 'Averaging aggregation and low-N uncertainty', 'Dados, agregação & incerteza'],
+    ['causal', 'Localization is not causation', 'Dados, agregação & incerteza'],
+  ];
+  for (const [id, label, expectedSource] of cases) {
+    const route = learningSemanticRoute({ ...base, id, label });
+    assert.ok(route, `missing procedural route for ${id}`);
+    assert.equal(route.source?.subdomain, expectedSource);
+  }
 });
 
 test('dense Science expansion keeps stations spaced and labels collision-free', () => {
@@ -212,6 +293,9 @@ test('dedicated Atlas production page uses Metro renderer, G6 and deterministic 
   assert.match(app, /dense-science/);
   assert.match(app, /data-atlas-peer-learning-links/);
   assert.match(app, /data-atlas-learning-subdomain-endpoints/);
+  assert.match(app, /data-atlas-learning-distinct-subdomains/);
+  assert.match(app, /data-atlas-learning-max-subdomain-share/);
+  assert.match(app, /data-atlas-peer-target-subdomains/);
   assert.match(app, /data-atlas-learning-hub-endpoints/);
   assert.match(app, /data-atlas-peer-subdomain-links/);
   assert.match(app, /data-atlas-semantic-subdomain-links/);
@@ -247,6 +331,11 @@ test('dedicated Atlas production page uses Metro renderer, G6 and deterministic 
   const taxonomy = await text('src/viewmodels/atlasTaxonomy.ts');
   assert.match(taxonomy, /atlasSubdomainHint/);
   assert.match(taxonomy, /Conservative semantic router/);
+  const semantics = await text('src/atlas3d/learningSemantics.ts');
+  assert.match(semantics, /STRUCTURED_GROUP/);
+  assert.match(semantics, /peerRoutes/);
+  assert.match(semantics, /Governança científica & decisão/);
+  assert.match(semantics, /Inferência bayesiana · Priors & evidência/);
   const adapter = await text('src/atlas3d/atlasAdapter.ts');
   assert.match(adapter, /resolveLearningEndpoint/);
   assert.match(adapter, /ENTITY_SUBDOMAIN/);
@@ -269,6 +358,10 @@ test('dedicated Atlas production page uses Metro renderer, G6 and deterministic 
   assert.match(renderer, /g6ScientificLearningEdges/);
   assert.match(renderer, /g6PeerLearningEdges/);
   assert.match(renderer, /g6SubdomainLearningEdges/);
+  assert.match(renderer, /projectVisualCrossLinks/);
+  assert.match(renderer, /g6LearningRecords/);
+  assert.match(renderer, /threeLearningVisualSynapses/);
+  assert.match(renderer, /document\.hidden/);
   assert.match(renderer, /g6PeerSubdomainEdges/);
   assert.match(renderer, /threeSubdomainLearningSynapses/);
   assert.match(renderer, /threePeerSubdomainSynapses/);
@@ -309,7 +402,9 @@ test('dedicated Atlas production page uses Metro renderer, G6 and deterministic 
   assert.match(renderer, /updateSynapsePulses/);
   assert.match(renderer, /synapseCurve/);
   assert.doesNotMatch(renderer, /TorusGeometry|RingGeometry/);
-  assert.match(renderer, /fitThree\(runtime, !initialFit\)/);
+  assert.match(renderer, /fitThree\(runtime, false\)/);
+  assert.match(renderer, /fitThree\(runtime, true\)/);
+  assert.doesNotMatch(renderer, /\[model\.revision, expansionKey, showBeams, fitNonce\]/);
   assert.match(renderer, /NEXO: -520/);
   assert.match(renderer, /depthStep = 150/);
   assert.match(renderer, /siblingZ/);
@@ -321,6 +416,9 @@ test('dedicated Atlas production page uses Metro renderer, G6 and deterministic 
   assert.match(css, /\.atlas-workspace\{position:absolute;inset:0;width:100%;height:100%/);
   assert.match(css, /\.atlas-sidebar\.mobile-open/);
   assert.match(css, /touch-action:none/);
+  assert.match(css, /grid-template-columns:minmax\(116px,1fr\) auto auto auto auto/);
+  assert.match(css, /atlas-mobile-details-toggle::after/);
+  assert.match(css, /prefers-reduced-motion:reduce/);
   assert.doesNotMatch(css, /pointer-events:none;opacity:\.18/);
 
   assert.doesNotMatch(index, /@antv\/g6@5\/dist\/g6\.min\.js/);
