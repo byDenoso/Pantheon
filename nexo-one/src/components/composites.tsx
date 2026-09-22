@@ -156,6 +156,9 @@ export function CapabilityMatrix(
 export function HumanInboxItem(
   { item, action, onOpen }: { item: InboxItem; action?: ActionRecord | null; onOpen?: (item: InboxItem) => void },
 ) {
+  const humanHeading = item.kind === 'CONFIGURAR_ACESSO'
+    ? 'O QUE VOCÊ PRECISA AUTORIZAR / CONFIGURAR'
+    : 'O QUE DEPENDE DE VOCÊ';
   return (
     <article className={`inbox-item tone-${toneOf(item.severity === 'P0' ? 'CONFLICT' : 'DEGRADED')}`}>
       <header>
@@ -169,12 +172,13 @@ export function HumanInboxItem(
       <p className="inbox-why"><span className="eyebrow">POR QUE VOCÊ</span>{item.why}</p>
       {(item.human_requirements?.length ?? 0) > 0 && (
         <div className="inbox-requirements">
-          <span className="eyebrow">O QUE VOCÊ PRECISA CONFIGURAR</span>
+          <span className="eyebrow">{humanHeading}</span>
           <ul className="inbox-options">
             {item.human_requirements!.map(requirement => (
               <li key={requirement.id}>
                 <strong>{requirement.label}</strong>
                 <span>{requirement.detail}</span>
+                {requirement.state && <small>estado: {requirement.state}</small>}
                 <code>{requirement.id}</code>
               </li>
             ))}
@@ -191,10 +195,38 @@ export function HumanInboxItem(
           ))}
         </ul>
       )}
-      {item.automatic_note && (
-        <p className="inbox-why inbox-automatic">
-          <span className="eyebrow">NÃO É AÇÃO SUA</span>{item.automatic_note}
+      {item.action_location && (
+        <p className="inbox-why inbox-location">
+          <span className="eyebrow">ONDE FAZER</span>{item.action_location}
         </p>
+      )}
+      {(item.automatic_requirements?.length ?? 0) > 0 && (
+        <div className="inbox-requirements inbox-automatic">
+          <span className="eyebrow">NÃO É AÇÃO SUA</span>
+          <ul className="inbox-options">
+            {item.automatic_requirements!.map(requirement => (
+              <li key={requirement.id}>
+                <strong>{requirement.label}{requirement.retryable ? ' · retry automático' : ''}</strong>
+                <span>{requirement.detail}</span>
+                {requirement.state && <small>estado: {requirement.state}</small>}
+                <code>{requirement.id}</code>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+      {item.system_next && (
+        <p className="inbox-why inbox-system-next">
+          <span className="eyebrow">DEPOIS DISSO</span>{item.system_next}
+        </p>
+      )}
+      {(item.readback_criteria?.length ?? 0) > 0 && (
+        <div className="inbox-readback">
+          <span className="eyebrow">READBACK QUE FECHA O GATE</span>
+          <ul>
+            {item.readback_criteria!.map((criterion, index) => <li key={index}>{criterion}</li>)}
+          </ul>
+        </div>
       )}
       <footer>
         {action && <span className="inbox-action-ref">ação {action.action_id}</span>}
