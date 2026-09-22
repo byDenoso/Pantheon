@@ -286,6 +286,12 @@ export interface GraphNode {
   member_count?: number;
   semantic_description?: string;
   semantic_state?: string;
+  /** Presentation-only Atlas visibility. Hidden nodes remain in system.json for audit/relations. */
+  atlas_visible?: boolean;
+  /** Canonical/allowlisted semantic parent hint, e.g. "Energia escura". */
+  parent_subdomain?: string;
+  /** Public external sources associated with a campaign/entity. */
+  source_links?: Array<{ label: string; url: string; kind?: string }>;
 }
 
 export interface GraphEdge {
