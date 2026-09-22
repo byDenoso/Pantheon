@@ -426,8 +426,11 @@ function Metro2DView({
   const activateRef = useRef(onActivate);
   const showBeamsRef = useRef(showBeams);
   const lastFitNonce = useRef(-1);
+  const initializedRef = useRef(false);
+  const lastStructureKeyRef = useRef('');
   const onReadyRef = useRef(onReady);
   const renderLabelsRef = useRef<() => void>(() => {});
+  const refreshRef = useRef<(fit: boolean) => Promise<void>>(async () => {});
 
   modelRef.current = model;
   expandedRef.current = expanded;
@@ -615,7 +618,9 @@ function Metro2DView({
     graph.on('aftertransform', scheduleLabels);
     graph.on('afterrender', scheduleLabels);
 
+    let refreshSequence = 0;
     const refresh = async (fit: boolean) => {
+      const sequence = ++refreshSequence;
       const rect = container.getBoundingClientRect();
       const data = buildG6Data(
         modelRef.current,
@@ -631,23 +636,26 @@ function Metro2DView({
       container.dataset.g6ViewportHeight = Math.round(rect.height).toString();
 
       try {
-        const renderTask = graph.render();
-        await new Promise<void>(resolve => requestAnimationFrame(() => resolve()));
-        if (container.querySelector('canvas')) {
-          container.dataset.g6Ready = 'true';
-          clearRendererError(container);
-          onReady?.();
-        }
-        await renderTask;
+        await graph.render();
+        if (sequence !== refreshSequence) return;
+
         applyG6Selection(graph, modelRef.current, expandedRef.current, selectedRef.current);
         if (fit) {
           await graph.fitView(
             { when: 'always', direction: 'both' },
             { duration: compact ? 180 : 320, easing: 'ease-out' },
           );
+          if (sequence !== refreshSequence) return;
+        }
+
+        container.dataset.g6Ready = container.querySelector('canvas') ? 'true' : 'false';
+        if (container.dataset.g6Ready === 'true') {
+          clearRendererError(container);
+          onReadyRef.current?.();
         }
         scheduleLabels();
       } catch (error) {
+        if (sequence !== refreshSequence) return;
         container.dataset.g6Ready = 'false';
         setRendererError(
           container,
@@ -656,6 +664,7 @@ function Metro2DView({
         );
       }
     };
+    refreshRef.current = refresh;
 
     let frame = 0;
     let lastWidth = Math.round(surface.clientWidth);
@@ -672,11 +681,21 @@ function Metro2DView({
         void refresh(false);
       });
     });
-    void refresh(true).then(() => resizeObserver.observe(surface));
+    void refresh(true).then(() => {
+      if (graphRef.current !== graph) return;
+      initializedRef.current = true;
+      lastStructureKeyRef.current = [
+        modelRef.current.revision,
+        [...expandedRef.current].sort().join('|'),
+      ].join('::');
+      resizeObserver.observe(surface);
+    });
 
     return () => {
+      initializedRef.current = false;
       cancelAnimationFrame(frame);
       resizeObserver.disconnect();
+      refreshRef.current = async () => {};
       graph.destroy?.();
       graphRef.current = null;
       renderLabelsRef.current = () => {};
@@ -686,38 +705,11 @@ function Metro2DView({
   const expansionKey = useMemo(() => [...expanded].sort().join('|'), [expanded]);
 
   useEffect(() => {
-    const graph = graphRef.current;
-    const container = containerRef.current;
-    if (!graph || !container) return;
-    const rect = container.getBoundingClientRect();
-    const compact = isCompactRenderer(container);
-    const data = buildG6Data(model, expanded, showBeams, rect.width, rect.height, compact);
-    graph.setData({ nodes: data.nodes, edges: data.edges });
-    stampG6Metrics(container, data);
-    container.dataset.g6ViewportWidth = Math.round(rect.width).toString();
-    container.dataset.g6ViewportHeight = Math.round(rect.height).toString();
-
-    void graph.render().then(async () => {
-      applyG6Selection(graph, model, expanded, selectedId);
-      container.dataset.g6Ready = container.querySelector('canvas') ? 'true' : 'false';
-      if (container.dataset.g6Ready === 'true') {
-        clearRendererError(container);
-        onReady?.();
-      }
-
-      await graph.fitView(
-        { when: 'overflow', direction: 'both' },
-        { duration: isCompactRenderer(container) ? 160 : 280, easing: 'ease-in-out' },
-      );
-      renderLabelsRef.current();
-    }).catch(error => {
-      container.dataset.g6Ready = 'false';
-      setRendererError(
-        container,
-        'G6_UPDATE_FAILED',
-        `O renderer 2D falhou durante a atualização. ${error instanceof Error ? error.message : String(error)}`,
-      );
-    });
+    if (!initializedRef.current) return;
+    const structureKey = [model.revision, expansionKey].join('::');
+    const fit = structureKey !== lastStructureKeyRef.current;
+    lastStructureKeyRef.current = structureKey;
+    void refreshRef.current(fit);
   }, [model.revision, expansionKey, showBeams]);
 
   useEffect(() => {
