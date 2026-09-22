@@ -122,13 +122,17 @@ export default function Atlas3DApp() {
     [],
   );
   const qaExpandedNode = useMemo(() => {
-    if (!model || (qaExpand !== 'peer-detection' && qaExpand !== 'dense-science')) return null;
+    if (!model || qaExpand !== 'dense-science') return null;
     const scienceRoot = model.roots.find(id => model.nodeMap.get(id)?.domain === 'SCIENCE');
     if (!scienceRoot) return null;
     return (model.childrenMap.get(scienceRoot) || [])
       .map(id => model.nodeMap.get(id))
-      .find(node => node?.name === 'Consistência cosmológica · Peer Detection')
-      || null;
+      .filter((node): node is NonNullable<typeof node> => Boolean(node))
+      .sort((left, right) =>
+        right.childCount - left.childCount
+        || right.descendantCount - left.descendantCount
+        || left.name.localeCompare(right.name)
+      )[0] || null;
   }, [model?.revision, qaExpand]);
 
   const initialExpanded = useMemo(() => {
@@ -203,6 +207,15 @@ export default function Atlas3DApp() {
   };
 
   const learningLinkCount = model.crossLinks.filter(link => link.isLearning).length;
+  const peerLearningLinkCount = model.crossLinks.filter(link =>
+    link.isLearning && link.id.includes('PEER-DETECTION-GROUP-')
+  ).length;
+  const peerArtifactNodeCount = model.nodes.filter(node => {
+    const source = String(node.sourceId || '');
+    return /^work:PEER-DETECTION-D\d+/i.test(source)
+      || /^test:PEER-DETECTION-D\d+/i.test(source)
+      || /^capability:peer\.detection\./i.test(source);
+  }).length;
 
   const switchViewMode = (mode: ViewMode) => {
     setViewMode(mode);
@@ -232,6 +245,8 @@ export default function Atlas3DApp() {
       data-atlas-qa-expand={qaExpand || 'none'}
       data-atlas-qa-expanded-node={qaExpandedNode?.name || 'none'}
       data-atlas-learning-links={learningLinkCount}
+      data-atlas-peer-learning-links={peerLearningLinkCount}
+      data-atlas-peer-artifact-nodes={peerArtifactNodeCount}
     >
       <section className="atlas-workspace">
         <MetroAtlasRenderer
