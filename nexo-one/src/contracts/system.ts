@@ -159,9 +159,9 @@ export interface Capability {
   label: string;
   domain: Domain;
   runtime: Runtime;
-  operation: RequiredOperation;
+  operation: RequiredOperation | null;
   status: CapabilityStatus;
-  risk: Risk;
+  risk: Risk | null;
   provider: string;
   last_verified_at: string | null;
   evidence_ref: string | null;
