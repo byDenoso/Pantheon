@@ -146,6 +146,7 @@ export default function Atlas3DApp() {
   );
   const [showBeams, setShowBeams] = useState(true);
   const [show3dHint, setShow3dHint] = useState(false);
+  const [mobileDetailsOpen, setMobileDetailsOpen] = useState(false);
   const [fitNonce, setFitNonce] = useState(0);
   const [rendererReady, setRendererReady] = useState(false);
 
@@ -155,6 +156,7 @@ export default function Atlas3DApp() {
     setSelectedId(qaExpandedNode?.id || model.roots[0] || null);
     setNavigationRevision(model.revision);
     setRendererReady(false);
+    setMobileDetailsOpen(false);
   }, [model?.revision, initialExpanded, qaExpandedNode?.id]);
 
   if (!system.state || !model) {
@@ -311,6 +313,14 @@ export default function Atlas3DApp() {
             </label>
             <button className="atlas-button" onClick={() => setFitNonce(value => value + 1)}>Fit</button>
             <button className="atlas-button" onClick={reset}>Reset</button>
+            <button
+              className="atlas-button atlas-mobile-details-toggle"
+              aria-expanded={mobileDetailsOpen}
+              aria-controls="atlas-details-panel"
+              onClick={() => setMobileDetailsOpen(value => !value)}
+            >
+              Detalhes
+            </button>
           </div>
         </div>
 
@@ -377,10 +387,28 @@ export default function Atlas3DApp() {
         </div>
       </section>
 
-      <aside className="atlas-sidebar">
+      {mobileDetailsOpen && (
+        <button
+          className="atlas-sidebar-backdrop"
+          aria-label="Fechar painel de detalhes"
+          onClick={() => setMobileDetailsOpen(false)}
+        />
+      )}
+      <aside
+        id="atlas-details-panel"
+        className={`atlas-sidebar${mobileDetailsOpen ? ' mobile-open' : ''}`}
+        aria-hidden={!mobileDetailsOpen ? undefined : false}
+      >
         <div className="atlas-brand">
           <div><strong>NEXO ATLAS</strong><small>METRO + 3D</small></div>
           <span>{system.state.graph.nodes.length} entidades fonte</span>
+          <button
+            className="atlas-mobile-sidebar-close"
+            aria-label="Fechar painel de detalhes"
+            onClick={() => setMobileDetailsOpen(false)}
+          >
+            ×
+          </button>
         </div>
         <DetailPanel
           node={selected}
