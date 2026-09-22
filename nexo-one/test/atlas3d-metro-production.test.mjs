@@ -107,6 +107,49 @@ test('Learning preserves parallel semantic filaments between existing stations, 
   assert.equal(model.nodes.some(node => /Learning & governança/i.test(node.name)), false);
 });
 
+test('Learning semantic identity survives graph projection into Atlas links', () => {
+  const source = state();
+  source.filaments.push({
+    id: 'PEER-DETECTION-GROUP-ROBUSTNESS',
+    label: 'Peer Detection · Robustness',
+    domain: 'SCIENCE',
+    kind: 'SCIENTIFIC_LEARNING_PIPELINE',
+    weight: .91,
+    support: 3,
+    contradiction: 0,
+    status: 'TESTING',
+    evidence: [],
+    source_ref: 'tower://test/peer-battery',
+    boundary: 'Scientific test architecture, not a verdict.',
+    from_label: 'NEXO execution · Robustness',
+    to_label: 'Science · PEER inference',
+    from_domain: 'NEXO',
+    to_domain: 'SCIENCE',
+    scope: 'INTER_DOMAIN',
+    peer_detection_group: 'ROBUSTNESS',
+  });
+  source.graph.edges.push({
+    id: 'learning:peer-robustness',
+    from: 'domain:NEXO',
+    to: 'domain:SCIENCE',
+    kind: 'SUPPORTS',
+    weight: .91,
+    explanation: 'Peer robustness bundle',
+    is_learning: true,
+    learning_scope: 'INTER_DOMAIN',
+    learning_ref: 'PEER-DETECTION-GROUP-ROBUSTNESS',
+  });
+
+  const model = buildAtlasMetroModel(source);
+  const link = model.crossLinks.find(item => item.learningRef === 'PEER-DETECTION-GROUP-ROBUSTNESS');
+  assert.ok(link);
+  assert.equal(link.source, 'atlas.domain.nexo');
+  assert.equal(link.target, 'atlas.domain.science');
+  assert.equal(link.learningKind, 'SCIENTIFIC_LEARNING_PIPELINE');
+  assert.equal(link.learningGroup, 'ROBUSTNESS');
+  assert.match(link.label, /Peer Detection · Robustness/);
+});
+
 test('dense Science expansion keeps stations spaced and labels collision-free', () => {
   const model = buildAtlasMetroModel(state());
   const scienceRoot = model.roots.find(id => model.nodeMap.get(id)?.domain === 'SCIENCE');
@@ -166,6 +209,10 @@ test('dedicated Atlas production page uses Metro renderer, G6 and deterministic 
   assert.match(app, /atlas-view-switch/);
   assert.match(app, /Modo 3D ativo/);
   assert.match(app, /data-atlas-learning-links/);
+  assert.match(app, /data-atlas-learning-scientific/);
+  assert.match(app, /data-atlas-learning-procedural/);
+  assert.match(app, /data-atlas-learning-semantic/);
+  assert.match(app, /learningRef/);
   assert.match(app, /navigationRevision !== model\.revision/);
   assert.match(app, /activeExpanded = navigationStale \? new Set\(initialExpanded\) : expanded/);
   assert.match(app, /URLSearchParams/);
@@ -195,6 +242,12 @@ test('dedicated Atlas production page uses Metro renderer, G6 and deterministic 
   assert.match(renderer, /isLearning/);
   assert.match(renderer, /#f59e0b/);
   assert.match(renderer, /threeLearningSynapses/);
+  assert.match(renderer, /g6ScientificLearningEdges/);
+  assert.match(renderer, /g6PeerLearningEdges/);
+  assert.match(renderer, /threeScientificLearningSynapses/);
+  assert.match(renderer, /threePeerLearningSynapses/);
+  assert.match(renderer, /learningColor/);
+  assert.match(renderer, /SCIENTIFIC_LEARNING_PIPELINE/);
   assert.match(renderer, /bundleIndex/);
   assert.match(renderer, /bundleCount/);
   assert.match(renderer, /curveOffset/);
