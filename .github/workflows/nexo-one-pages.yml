@@ -401,6 +401,10 @@ jobs:
           g6_hub_learning="$(sed -n 's/.*data-g6-hub-learning-edges="\([0-9][0-9]*\)".*/\1/p' /tmp/atlas3d-dom.html | head -1)"
           peer_learning="$(sed -n 's/.*data-atlas-peer-learning-links="\([0-9][0-9]*\)".*/\1/p' /tmp/atlas3d-dom.html | head -1)"
           atlas_learning_records="$(sed -n 's/.*data-atlas-learning-records="\([0-9][0-9]*\)".*/\1/p' /tmp/atlas3d-dom.html | head -1)"
+          atlas_exact_links="$(sed -n 's/.*data-atlas-learning-exact-entity-links="\([0-9][0-9]*\)".*/\1/p' /tmp/atlas3d-dom.html | head -1)"
+          atlas_exact_endpoints="$(sed -n 's/.*data-atlas-learning-exact-entity-endpoints="\([0-9][0-9]*\)".*/\1/p' /tmp/atlas3d-dom.html | head -1)"
+          atlas_exact_records="$(sed -n 's/.*data-atlas-learning-exact-entity-records="\([0-9][0-9]*\)".*/\1/p' /tmp/atlas3d-dom.html | head -1)"
+          atlas_distinct_exact_entities="$(sed -n 's/.*data-atlas-learning-distinct-exact-entities="\([0-9][0-9]*\)".*/\1/p' /tmp/atlas3d-dom.html | head -1)"
           system_learning_records="$(node -e "const s=require('/tmp/system.json');process.stdout.write(String((s.filaments||[]).length))")"
           atlas_scientific="$(sed -n 's/.*data-atlas-learning-scientific="\([0-9][0-9]*\)".*/\1/p' /tmp/atlas3d-dom.html | head -1)"
           atlas_procedural="$(sed -n 's/.*data-atlas-learning-procedural="\([0-9][0-9]*\)".*/\1/p' /tmp/atlas3d-dom.html | head -1)"
@@ -421,6 +425,14 @@ jobs:
           }
           [ "${atlas_learning_records:-missing}" = "${system_learning_records:-missing}" ] || {
             echo "::error::Atlas Learning legend/model record count diverges from canonical system filaments: atlas=${atlas_learning_records:-missing} system=${system_learning_records:-missing}"
+            exit 1
+          }
+          [ -n "${atlas_exact_records}" ] && [ "${atlas_exact_records}" -ge 1 ] || {
+            echo "::error::No canonical Learning record reaches an exact entity endpoint; leaf-level semantic routing is inactive"
+            exit 1
+          }
+          [ -n "${atlas_distinct_exact_entities}" ] && [ "${atlas_distinct_exact_entities}" -ge 1 ] || {
+            echo "::error::Exact Learning endpoint routing resolved no distinct canonical entity"
             exit 1
           }
           [ -n "${peer_learning}" ] && [ "${peer_learning}" -ge 8 ] || {
