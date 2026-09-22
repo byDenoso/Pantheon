@@ -121,34 +121,37 @@ export default function Atlas3DApp() {
     () => typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('expand') : null,
     [],
   );
+  const qaExpandedNode = useMemo(() => {
+    if (!model || (qaExpand !== 'peer-detection' && qaExpand !== 'dense-science')) return null;
+    const scienceRoot = model.roots.find(id => model.nodeMap.get(id)?.domain === 'SCIENCE');
+    if (!scienceRoot) return null;
+    return (model.childrenMap.get(scienceRoot) || [])
+      .map(id => model.nodeMap.get(id))
+      .find(node => node?.name === 'Consistência cosmológica · Peer Detection')
+      || null;
+  }, [model?.revision, qaExpand]);
+
   const initialExpanded = useMemo(() => {
     const initial = new Set(model?.roots || []);
-    if (!model || qaExpand !== 'dense-science') return initial;
-
-    const scienceRoot = model.roots.find(id => model.nodeMap.get(id)?.domain === 'SCIENCE');
-    if (!scienceRoot) return initial;
-    const densest = (model.childrenMap.get(scienceRoot) || [])
-      .map(id => model.nodeMap.get(id))
-      .filter((node): node is NonNullable<typeof node> => Boolean(node))
-      .sort((a, b) => b.childCount - a.childCount || b.descendantCount - a.descendantCount)[0];
-    if (densest?.childCount) initial.add(densest.id);
+    if (qaExpandedNode?.childCount) initial.add(qaExpandedNode.id);
     return initial;
-  }, [model?.revision, qaExpand]);
+  }, [model?.revision, qaExpandedNode?.id]);
 
   const [viewMode, setViewMode] = useState<ViewMode>(() =>
     typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('mode') === '3d' ? '3d' : '2d'
   );
   const [showBeams, setShowBeams] = useState(true);
+  const [show3dHint, setShow3dHint] = useState(false);
   const [fitNonce, setFitNonce] = useState(0);
   const [rendererReady, setRendererReady] = useState(false);
 
   useEffect(() => {
     if (!model) return;
     setExpanded(new Set(initialExpanded));
-    setSelectedId(model.roots[0] || null);
+    setSelectedId(qaExpandedNode?.id || model.roots[0] || null);
     setNavigationRevision(model.revision);
     setRendererReady(false);
-  }, [model?.revision, initialExpanded]);
+  }, [model?.revision, initialExpanded, qaExpandedNode?.id]);
 
   if (!system.state || !model) {
     return (
@@ -165,7 +168,7 @@ export default function Atlas3DApp() {
   // with only the roots and can lose the expansion update while render() is in flight.
   const navigationStale = navigationRevision !== model.revision;
   const activeExpanded = navigationStale ? new Set(initialExpanded) : expanded;
-  const activeSelectedId = navigationStale ? (model.roots[0] || null) : selectedId;
+  const activeSelectedId = navigationStale ? (qaExpandedNode?.id || model.roots[0] || null) : selectedId;
 
   const visibleIds = visibleAtlasIds(model, activeExpanded);
   const visibleSet = new Set(visibleIds);
@@ -199,6 +202,25 @@ export default function Atlas3DApp() {
     setSelectedId(id);
   };
 
+  const learningLinkCount = model.crossLinks.filter(link => link.isLearning).length;
+
+  const switchViewMode = (mode: ViewMode) => {
+    setViewMode(mode);
+    if (mode !== '3d') {
+      setShow3dHint(false);
+      return;
+    }
+    try {
+      const key = 'nexo.atlas.3d-affordance-seen.v1';
+      if (window.localStorage.getItem(key) !== '1') {
+        setShow3dHint(true);
+        window.localStorage.setItem(key, '1');
+      }
+    } catch {
+      setShow3dHint(true);
+    }
+  };
+
   return (
     <main
       className="atlas3d-page atlas-metro-page"
@@ -208,6 +230,8 @@ export default function Atlas3DApp() {
       data-atlas-visible-count={visibleIds.length}
       data-atlas-mode={viewMode}
       data-atlas-qa-expand={qaExpand || 'none'}
+      data-atlas-qa-expanded-node={qaExpandedNode?.name || 'none'}
+      data-atlas-learning-links={learningLinkCount}
     >
       <section className="atlas-workspace">
         <MetroAtlasRenderer
@@ -233,13 +257,26 @@ export default function Atlas3DApp() {
           </nav>
 
           <div className="atlas-controls">
-            <button
-              className="atlas-button atlas-mode-button"
-              data-mode={viewMode}
-              onClick={() => setViewMode(mode => mode === '2d' ? '3d' : '2d')}
-            >
-              {viewMode === '2d' ? '3D Explorar' : '2D Metro'}
-            </button>
+            <div className="atlas-view-switch" role="group" aria-label="Modo de visualização" data-active-mode={viewMode}>
+              <button
+                className={viewMode === '2d' ? 'active' : ''}
+                aria-pressed={viewMode === '2d'}
+                onClick={() => switchViewMode('2d')}
+              >
+                <span className="atlas-view-icon">▦</span>
+                <span><strong>2D</strong><small>Metro</small></span>
+                {viewMode === '2d' && <em>ATIVO</em>}
+              </button>
+              <button
+                className={viewMode === '3d' ? 'active' : ''}
+                aria-pressed={viewMode === '3d'}
+                onClick={() => switchViewMode('3d')}
+              >
+                <span className="atlas-view-icon">◇</span>
+                <span><strong>3D</strong><small>Explorar</small></span>
+                {viewMode === '3d' && <em>ATIVO</em>}
+              </button>
+            </div>
             <label className="atlas-toggle">
               <input type="checkbox" checked={showBeams} onChange={event => setShowBeams(event.target.checked)} />
               Feixes
@@ -269,13 +306,22 @@ export default function Atlas3DApp() {
           <span><i style={{ background: DOMAIN_COLOR.NEXO }} />Nexo</span>
           <span><i style={{ background: DOMAIN_COLOR.SCIENCE }} />Science</span>
           <span><i style={{ background: DOMAIN_COLOR.OLYMPUS }} />Olympus</span>
+          {learningLinkCount > 0 && <span className="atlas-learning-legend"><i />Learning <b>{learningLinkCount}</b></span>}
           <small>{visibleIds.length} estações visíveis · {model.nodes.length} total</small>
         </div>
 
-        <div className="atlas-interaction-hint">
+        {viewMode === '3d' && show3dHint && (
+          <div className="atlas-mode-onboarding glass" role="status">
+            <div><strong>Modo 3D ativo</strong><span>Arraste o fundo para orbitar a câmera. A orientação espacial agora é livre.</span></div>
+            <button onClick={() => setShow3dHint(false)} aria-label="Fechar dica">×</button>
+          </div>
+        )}
+
+        <div className="atlas-interaction-hint" data-active-mode={viewMode}>
+          <strong>{viewMode === '2d' ? '2D METRO ATIVO' : '3D EXPLORAR ATIVO'}</strong><br />
           {viewMode === '2d'
-            ? <>click: seleciona + expande/colapsa<br />drag: pan · wheel: zoom</>
-            : <>click: seleciona + expande/colapsa<br />drag: orbita · wheel: zoom · shift+drag / botão direito: pan</>}
+            ? <>click: seleciona + expande/colapsa · drag: pan · wheel: zoom</>
+            : <>drag: orbita · wheel: zoom · shift+drag / botão direito: pan</>}
         </div>
 
         <div className="atlas-a11y-stations" aria-label="Estações atualmente renderizadas">
