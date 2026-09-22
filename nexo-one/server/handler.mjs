@@ -32,6 +32,8 @@ async function dispatchProjectionSync({env=process.env,currentFingerprint='' }={
   const token=String(env.GITHUB_TOKEN||'').trim();
   const repository=String(env.GITHUB_REPOSITORY||'byDenoso/Pantheon').trim();
   if(!token)return {ok:false,status:503,error:'SYNC_BRIDGE_NOT_CONFIGURED'};
+  if(currentFingerprint&&!/^sha256:[0-9a-f]{64}$/i.test(String(currentFingerprint)))
+    return {ok:false,status:400,error:'INVALID_PROJECTION_FINGERPRINT'};
   const now=Date.now();
   if(lastProjectionDispatch.requestId&&now-lastProjectionDispatch.at<PROJECTION_DISPATCH_THROTTLE_MS){
     return {ok:true,status:202,outcome:'DISPATCHED',request_id:lastProjectionDispatch.requestId,deduplicated:true};
