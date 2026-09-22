@@ -32,6 +32,8 @@ const persist = (key: string, value: string): void => {
 const ALL_VIEWS = NAV_GROUPS.flatMap(group => group.entries.map(entry => entry.id));
 const PRIVATE_COCKPIT_URL = String(import.meta.env.VITE_PRIVATE_COCKPIT_URL || '').trim().replace(/\/+$/, '');
 const AUTH_BRIDGE_URL = String(import.meta.env.VITE_NEXO_AUTH_BRIDGE_URL || '').trim();
+const PUBLIC_NEXO_BASE = String(import.meta.env.VITE_PUBLIC_NEXO_BASE || 'https://bydenoso.github.io/Pantheon/').trim().replace(/\/?$/, '/');
+const publicNexoUrl = (path = '') => new URL(path, PUBLIC_NEXO_BASE).toString();
 const AtlasView = lazy(() => import('../features/system/Atlas.tsx').then(module => ({ default: module.AtlasView })));
 const LearningView = lazy(() => import('../features/system/Atlas.tsx').then(module => ({ default: module.LearningView })));
 
@@ -94,7 +96,7 @@ export default function App() {
 
   const go = useCallback((next: ViewId) => {
     if (next === 'ATLAS') {
-      window.location.assign(`${import.meta.env.BASE_URL}atlas3d/`);
+      window.location.assign(publicNexoUrl('atlas3d/'));
       return;
     }
     setView(next);
@@ -176,7 +178,7 @@ export default function App() {
             <span className="brand-descriptor">PERSONAL COMMAND DECK</span>
           </a>
           <div className="header-tools">
-            <a className="product-switch" href={`${import.meta.env.BASE_URL}mcp/`} title="Abrir a topologia MCP 3D">
+            <a className="product-switch" href={publicNexoUrl('mcp/')} title="Abrir a topologia MCP 3D">
               MCP Atlas <span>↗</span>
             </a>
             <span className="header-date">
@@ -340,7 +342,7 @@ export default function App() {
               ))}
               <div className="sheet-group product-group">
                 <span className="eyebrow">ESTRUTURA</span>
-                <a className="sheet-item product-sheet-link" href={`${import.meta.env.BASE_URL}mcp/`}>
+                <a className="sheet-item product-sheet-link" href={publicNexoUrl('mcp/')}>
                   <i aria-hidden="true">⌬</i>
                   <span><strong>MCP Atlas</strong><small>Tools, capabilities, runtimes e roles no grafo 3D</small></span>
                 </a>
