@@ -588,6 +588,34 @@ function fitThree(runtime: ThreeRuntime, animated = true) {
   requestAnimationFrame(tick);
 }
 
+function renderAndMeasureThree(runtime: ThreeRuntime, container: HTMLElement): number {
+  runtime.controls.update();
+  runtime.renderer.render(runtime.scene, runtime.camera);
+
+  const gl = runtime.renderer.getContext();
+  const width = runtime.renderer.domElement.width;
+  const height = runtime.renderer.domElement.height;
+  if (!width || !height) {
+    container.dataset.threePaintSamples = '0';
+    container.dataset.threeReady = 'false';
+    return 0;
+  }
+
+  // Clear alpha is zero; opaque geometry writes alpha. Sampling the rendered
+  // framebuffer makes the production gate prove that 3D content was actually
+  // painted, not merely that a WebGL canvas exists.
+  const pixels = new Uint8Array(width * height * 4);
+  gl.finish();
+  gl.readPixels(0, 0, width, height, gl.RGBA, gl.UNSIGNED_BYTE, pixels);
+  let painted = 0;
+  for (let offset = 3; offset < pixels.length; offset += 64) {
+    if (pixels[offset] > 8) painted += 1;
+  }
+  container.dataset.threePaintSamples = String(painted);
+  container.dataset.threeReady = painted > 20 ? 'true' : 'false';
+  return painted;
+}
+
 function rebuildThree(
   runtime: ThreeRuntime,
   container: HTMLElement,
@@ -769,7 +797,12 @@ function MetroThreeView({
     scene.fog = new THREE.FogExp2(0x070b14, .00075);
     const camera = new THREE.PerspectiveCamera(46, 1, 1, 5000);
     camera.position.set(520, 360, 780);
-    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: 'high-performance' });
+    const renderer = new THREE.WebGLRenderer({
+      antialias: true,
+      alpha: true,
+      powerPreference: 'high-performance',
+      preserveDrawingBuffer: true,
+    });
     renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
     renderer.setClearColor(0x070b14, 0);
     renderer.outputColorSpace = THREE.SRGBColorSpace;
@@ -826,7 +859,7 @@ function MetroThreeView({
       resize();
       rebuildThree(runtime, container, modelRef.current, expandedRef.current, selectedRef.current, showBeamsRef.current);
       container.dataset.threeNodeCount = String(visibleAtlasIds(modelRef.current, expandedRef.current).length);
-      container.dataset.threeReady = container.querySelector('canvas') ? 'true' : 'false';
+      renderAndMeasureThree(runtime, container);
     });
     observer.observe(container);
 
@@ -902,12 +935,13 @@ function MetroThreeView({
     if (!runtime || !container) return;
     rebuildThree(runtime, container, model, expanded, selectedId, showBeams);
     container.dataset.threeNodeCount = String(visibleAtlasIds(model, expanded).length);
-    container.dataset.threeReady = container.querySelector('canvas') ? 'true' : 'false';
     if (!runtime.hasFit || lastFitNonce.current !== fitNonce) {
+      const initialFit = !runtime.hasFit;
       runtime.hasFit = true;
       lastFitNonce.current = fitNonce;
-      fitThree(runtime, runtime.hasFit);
+      fitThree(runtime, !initialFit);
     }
+    renderAndMeasureThree(runtime, container);
   }, [model.revision, expansionKey, showBeams, fitNonce]);
 
   useEffect(() => {
