@@ -36,6 +36,9 @@ test('MCP Atlas is a Pages multipage surface built from canonical MCP sources',a
   assert.match(site,/dispatchProjectionSync/);
   assert.match(site,/waitForProjectionSync/);
   assert.match(site,/synchronizeTopology/);
+  assert.match(site,/PUBLIC_PROJECTION_REFRESHED/);
+  assert.match(site,/source-newer/);
+  assert.match(site,/origem pública confirmada/);
   const main=await text('src/mcp/main.tsx');
   const foundation=await text('src/styles/product-foundation.css');
   assert.match(main,/product-foundation\.css/);

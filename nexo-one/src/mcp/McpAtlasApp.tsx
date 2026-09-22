@@ -73,7 +73,7 @@ function topologyLayout(nodes:TopologyNode[]):CanvasNode25D[]{
 
 
 type ViewMode='all'|'tools'|'capabilities'|'runtime'|'roles';
-type SyncState='idle'|'loading'|'same'|'updated'|'error';
+type SyncState='idle'|'loading'|'same'|'updated'|'source-newer'|'error';
 
 const modeKinds:Record<ViewMode,NodeKind[]>={
   all:['ROOT','LAYER','TRANSPORT','TOOL','FAMILY','CAPABILITY','BACKEND','ROLE'],
@@ -224,6 +224,11 @@ export function McpAtlasApp(){
     setSyncState('loading');
     try{
       const receipt=await dispatchProjectionSync(current.source.projection_fingerprint||'');
+      if(receipt.outcome==='PUBLIC_PROJECTION_REFRESHED'){
+        setCheckedAt(new Date());
+        setSyncState(receipt.projection_fingerprint===(current.source.projection_fingerprint||'')?'same':'source-newer');
+        return;
+      }
       await waitForProjectionSync(receipt.request_id);
       await loadTopology(true);
     }catch(err){
@@ -283,8 +288,9 @@ export function McpAtlasApp(){
   const updated=topology?new Intl.DateTimeFormat('pt-BR',{dateStyle:'medium',timeStyle:'short'}).format(new Date(topology.generated_at)):'';
   const checked=checkedAt?new Intl.DateTimeFormat('pt-BR',{timeStyle:'medium'}).format(checkedAt):'';
   const syncMessage=syncState==='loading'?'Sincronizando…'
-    :syncState==='same'?'Sem alterações · verificado '+checked
+    :syncState==='same'?'Sem alterações · origem pública confirmada '+checked
     :syncState==='updated'?'Atualizado · verificado '+checked
+    :syncState==='source-newer'?'Nova projeção detectada na origem · publicação pendente'
     :syncState==='error'?'Falha ao verificar a projeção publicada'
     :checked?'Verificado '+checked:'';
 
