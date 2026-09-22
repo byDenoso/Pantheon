@@ -77,7 +77,16 @@ button,input{font:inherit}
 .atlas-label-density-note{bottom:48px;max-width:calc(100vw - 24px);overflow:hidden;text-overflow:ellipsis}
 }
 @media(max-width:430px){
-.atlas-view-switch button{min-width:78px}.atlas-view-switch button em{display:none}.atlas-view-icon{font-size:13px}
-.atlas-toggle{font-size:10px}.atlas-button{font-size:10px}
-.atlas-domain-strip{top:94px}
+.atlas-topbar{gap:5px}
+.atlas-controls{display:grid;grid-template-columns:minmax(116px,1fr) auto auto auto auto;gap:4px;overflow:visible;padding-bottom:0}
+.atlas-view-switch{min-width:0;width:100%;height:38px;padding:3px}.atlas-view-switch button{min-width:0;height:30px;padding:0 5px;grid-template-columns:13px auto;grid-template-rows:1fr;column-gap:4px}.atlas-view-switch strong{grid-column:2;grid-row:1;font-size:10px}.atlas-view-switch small,.atlas-view-switch button em{display:none}.atlas-view-icon{grid-column:1;grid-row:1;font-size:12px}
+.atlas-toggle,.atlas-button{height:36px;min-width:36px;padding:0 6px;font-size:9px;justify-content:center;gap:4px}
+.atlas-toggle input{width:14px;height:14px;margin:0}.atlas-toggle{font-size:0}.atlas-toggle::after{content:'Feixes';font-size:9px}
+.atlas-mobile-details-toggle{width:36px;padding:0;font-size:0}.atlas-mobile-details-toggle::after{content:'⋯';font-size:17px;line-height:1}
+.atlas-domain-strip{top:91px}
+.atlas-mode-onboarding{top:137px}
+.atlas-legend{padding:7px;gap:7px}.atlas-legend span{font-size:8.5px}
+}
+@media(prefers-reduced-motion:reduce){
+.atlas-render-layer,.atlas-sidebar,.atlas-screen-label,.atlas-view-switch button{transition:none!important}
 }
