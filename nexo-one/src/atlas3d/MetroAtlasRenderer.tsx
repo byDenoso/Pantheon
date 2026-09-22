@@ -455,6 +455,13 @@ function Metro2DView({
   return <div ref={containerRef} id="atlas-metro-g6" className="atlas-metro-surface" data-testid="atlas-metro-2d" />;
 }
 
+type SynapsePulse = {
+  particle: THREE.Group;
+  curve: THREE.Curve<THREE.Vector3>;
+  phase: number;
+  speed: number;
+};
+
 type ThreeRuntime = {
   scene: THREE.Scene;
   camera: THREE.PerspectiveCamera;
@@ -470,6 +477,7 @@ type ThreeRuntime = {
   pointerDown: { x: number; y: number; button: number } | null;
   frame: number;
   hasFit: boolean;
+  pulses: SynapsePulse[];
 };
 
 function disposeThreeObject(root: THREE.Object3D) {
@@ -484,6 +492,172 @@ function disposeThreeObject(root: THREE.Object3D) {
       item.dispose?.();
     }
   });
+}
+
+function hashNumber(value: string): number {
+  let hash = 2166136261;
+  for (let index = 0; index < value.length; index += 1) {
+    hash ^= value.charCodeAt(index);
+    hash = Math.imul(hash, 16777619);
+  }
+  return hash >>> 0;
+}
+
+function createOrganicGeometry(radius: number, seedKey: string): THREE.IcosahedronGeometry {
+  const geometry = new THREE.IcosahedronGeometry(radius, 3);
+  const position = geometry.getAttribute('position') as THREE.BufferAttribute;
+  const seed = (hashNumber(seedKey) % 10000) / 1000;
+  const vertex = new THREE.Vector3();
+
+  for (let index = 0; index < position.count; index += 1) {
+    vertex.fromBufferAttribute(position, index);
+    const normal = vertex.clone().normalize();
+    const waveA = Math.sin(normal.x * 7.1 + normal.y * 4.7 + seed);
+    const waveB = Math.cos(normal.z * 8.3 - normal.x * 3.9 + seed * .73);
+    const waveC = Math.sin((normal.x + normal.y - normal.z) * 5.2 + seed * 1.31);
+    const scale = 1 + waveA * .032 + waveB * .024 + waveC * .018;
+    vertex.multiplyScalar(scale);
+    position.setXYZ(index, vertex.x, vertex.y, vertex.z);
+  }
+
+  position.needsUpdate = true;
+  geometry.computeVertexNormals();
+  return geometry;
+}
+
+function createGlowSprite(colorValue: string | number, diameter: number, opacity: number): THREE.Sprite {
+  const color = new THREE.Color(colorValue);
+  const red = Math.round(color.r * 255);
+  const green = Math.round(color.g * 255);
+  const blue = Math.round(color.b * 255);
+  const canvas = document.createElement('canvas');
+  canvas.width = 128;
+  canvas.height = 128;
+  const context = canvas.getContext('2d')!;
+  const gradient = context.createRadialGradient(64, 64, 0, 64, 64, 62);
+  gradient.addColorStop(0, `rgba(${red},${green},${blue},.82)`);
+  gradient.addColorStop(.20, `rgba(${red},${green},${blue},.50)`);
+  gradient.addColorStop(.48, `rgba(${red},${green},${blue},.16)`);
+  gradient.addColorStop(1, `rgba(${red},${green},${blue},0)`);
+  context.fillStyle = gradient;
+  context.fillRect(0, 0, 128, 128);
+
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  texture.minFilter = THREE.LinearFilter;
+  const material = new THREE.SpriteMaterial({
+    map: texture,
+    color: 0xffffff,
+    transparent: true,
+    opacity,
+    depthWrite: false,
+    depthTest: true,
+    blending: THREE.AdditiveBlending,
+  });
+  const sprite = new THREE.Sprite(material);
+  sprite.scale.set(diameter, diameter, 1);
+  return sprite;
+}
+
+function synapseCurve(source: THREE.Vector3, target: THREE.Vector3, key: string, bridge: boolean): THREE.QuadraticBezierCurve3 {
+  const midpoint = source.clone().add(target).multiplyScalar(.5);
+  const direction = target.clone().sub(source);
+  const span = Math.max(1, direction.length());
+  direction.normalize();
+
+  const reference = Math.abs(direction.y) < .88
+    ? new THREE.Vector3(0, 1, 0)
+    : new THREE.Vector3(1, 0, 0);
+  const perpendicular = direction.clone().cross(reference).normalize();
+  const seed = hashNumber(key);
+  const sign = seed % 2 === 0 ? 1 : -1;
+  const bend = Math.min(bridge ? 62 : 34, span * (bridge ? .14 : .085));
+  const vertical = ((seed % 9) - 4) * (bridge ? 2.6 : 1.5);
+  midpoint.addScaledVector(perpendicular, bend * sign);
+  midpoint.y += vertical;
+  if (bridge) midpoint.z += Math.min(86, 24 + span * .08) * (seed % 3 === 0 ? -1 : 1);
+
+  return new THREE.QuadraticBezierCurve3(source, midpoint, target);
+}
+
+function addSynapse(
+  runtime: ThreeRuntime,
+  content: THREE.Group,
+  source: THREE.Vector3,
+  target: THREE.Vector3,
+  colorValue: string | number,
+  key: string,
+  bridge: boolean,
+  strength = 1,
+) {
+  const curve = synapseCurve(source, target, key, bridge);
+  const span = source.distanceTo(target);
+  const segments = Math.max(18, Math.min(52, Math.round(span / 7)));
+  const color = new THREE.Color(colorValue);
+  const coreRadius = (bridge ? .34 : .48) * Math.max(.72, Math.min(1.35, strength));
+  const glowRadius = coreRadius * 3.2;
+
+  const glow = new THREE.Mesh(
+    new THREE.TubeGeometry(curve, segments, glowRadius, 5, false),
+    new THREE.MeshBasicMaterial({
+      color,
+      transparent: true,
+      opacity: bridge ? .055 : .085,
+      depthWrite: false,
+      blending: THREE.AdditiveBlending,
+    }),
+  );
+  glow.renderOrder = 2;
+  content.add(glow);
+
+  const core = new THREE.Mesh(
+    new THREE.TubeGeometry(curve, segments, coreRadius, 5, false),
+    new THREE.MeshBasicMaterial({
+      color,
+      transparent: true,
+      opacity: bridge ? .28 : .44,
+      depthWrite: false,
+      blending: THREE.AdditiveBlending,
+    }),
+  );
+  core.renderOrder = 3;
+  content.add(core);
+
+  const particle = new THREE.Group();
+  const pulseCore = new THREE.Mesh(
+    new THREE.SphereGeometry(bridge ? 1.15 : 1.45, 10, 8),
+    new THREE.MeshBasicMaterial({
+      color,
+      transparent: true,
+      opacity: .92,
+      depthWrite: false,
+      blending: THREE.AdditiveBlending,
+    }),
+  );
+  particle.add(pulseCore);
+  const pulseGlow = createGlowSprite(colorValue, bridge ? 10 : 12, bridge ? .34 : .46);
+  pulseGlow.material.depthTest = false;
+  particle.add(pulseGlow);
+
+  const seed = hashNumber(key);
+  const phase = (seed % 1000) / 1000;
+  particle.position.copy(curve.getPointAt(phase));
+  content.add(particle);
+  runtime.pulses.push({
+    particle,
+    curve,
+    phase,
+    speed: bridge ? .000022 + (seed % 7) * .000002 : .000034 + (seed % 9) * .0000025,
+  });
+}
+
+function updateSynapsePulses(runtime: ThreeRuntime, now: number) {
+  for (const pulse of runtime.pulses) {
+    const t = (pulse.phase + now * pulse.speed) % 1;
+    pulse.particle.position.copy(pulse.curve.getPointAt(t));
+    const breathe = .84 + Math.sin((t + pulse.phase) * Math.PI * 2) * .16;
+    pulse.particle.scale.setScalar(breathe);
+  }
 }
 
 function createLabelSprite(text: string, domainColor: string, isHub: boolean): THREE.Sprite {
@@ -545,12 +719,31 @@ function threePositions(
 
 function applyThreeSelection(runtime: ThreeRuntime, selectedId: string | null) {
   runtime.nodeGroups.forEach((group, id) => {
-    const selection = group.userData.selectionRing as THREE.Object3D | undefined;
-    if (selection) selection.visible = id === selectedId;
-    const sphere = group.userData.sphere as THREE.Mesh<THREE.SphereGeometry, THREE.MeshStandardMaterial> | undefined;
-    if (!sphere) return;
-    const base = Number(sphere.userData.baseEmissive || .24);
-    sphere.material.emissiveIntensity = id === runtime.hoveredId ? .88 : id === selectedId ? Math.max(.72, base) : base;
+    const selected = id === selectedId;
+    const hovered = id === runtime.hoveredId;
+    const selectionGlow = group.userData.selectionGlow as THREE.Sprite | undefined;
+    const neuronGlow = group.userData.neuronGlow as THREE.Sprite | undefined;
+    const core = group.userData.core as THREE.Mesh<THREE.BufferGeometry, THREE.MeshStandardMaterial> | undefined;
+
+    if (selectionGlow) {
+      selectionGlow.visible = selected;
+      const selectionMaterial = selectionGlow.material as THREE.SpriteMaterial;
+      selectionMaterial.opacity = selected ? .64 : 0;
+    }
+
+    if (neuronGlow) {
+      const glowMaterial = neuronGlow.material as THREE.SpriteMaterial;
+      const baseOpacity = Number(neuronGlow.userData.baseOpacity || .48);
+      glowMaterial.opacity = hovered ? Math.min(.92, baseOpacity + .28) : selected ? Math.min(.86, baseOpacity + .18) : baseOpacity;
+      const baseScale = Number(neuronGlow.userData.baseScale || neuronGlow.scale.x);
+      const factor = hovered ? 1.18 : selected ? 1.11 : 1;
+      neuronGlow.scale.set(baseScale * factor, baseScale * factor, 1);
+    }
+
+    if (core) {
+      const base = Number(core.userData.baseEmissive || .34);
+      core.material.emissiveIntensity = hovered ? Math.max(.92, base + .42) : selected ? Math.max(.76, base + .26) : base;
+    }
   });
 }
 
@@ -632,6 +825,7 @@ function rebuildThree(
   runtime.nodeGroups.clear();
   runtime.worldPositions.clear();
   runtime.hoveredId = null;
+  runtime.pulses = [];
 
   const ids = visibleAtlasIds(model, expanded);
   const visible = new Set(ids);
@@ -642,41 +836,22 @@ function rebuildThree(
   runtime.content = content;
   runtime.scene.add(content);
 
-  for (const rootId of model.roots) {
-    const root = model.nodeMap.get(rootId);
-    if (!root) continue;
-    const z = ({ NEXO: -155, SCIENCE: 0, OLYMPUS: 155 } as Record<string, number>)[root.domain];
-    const ring = new THREE.Mesh(
-      new THREE.RingGeometry(82, 84, 64),
-      new THREE.MeshBasicMaterial({
-        color: new THREE.Color(DOMAIN_COLOR[root.domain]),
-        transparent: true,
-        opacity: .06,
-        side: THREE.DoubleSide,
-        depthWrite: false,
-      }),
-    );
-    ring.position.set(0, 0, z);
-    content.add(ring);
-  }
-
   for (const id of ids) {
     const node = model.nodeMap.get(id);
     if (!node?.parentId || !visible.has(node.parentId)) continue;
     const source = positions.get(node.parentId);
     const target = positions.get(id);
     if (!source || !target) continue;
-    const geometry = new THREE.BufferGeometry().setFromPoints([source, target]);
-    const line = new THREE.Line(
-      geometry,
-      new THREE.LineBasicMaterial({
-        color: new THREE.Color(DOMAIN_COLOR[node.domain]),
-        transparent: true,
-        opacity: .42,
-        depthWrite: false,
-      }),
+    addSynapse(
+      runtime,
+      content,
+      source,
+      target,
+      DOMAIN_COLOR[node.domain] || '#94a3b8',
+      `hierarchy:${node.parentId}:${id}`,
+      false,
+      node.entityType === 'subdomain' ? 1.08 : .9,
     );
-    content.add(line);
   }
 
   if (showBeams) {
@@ -685,15 +860,21 @@ function rebuildThree(
       const source = positions.get(link.source);
       const target = positions.get(link.target);
       if (!source || !target) continue;
-      const midpoint = source.clone().add(target).multiplyScalar(.5);
-      const span = source.distanceTo(target);
-      midpoint.z += Math.min(120, 34 + span * .16);
-      midpoint.y += Math.min(55, span * .07);
-      const curve = new THREE.QuadraticBezierCurve3(source, midpoint, target);
-      content.add(new THREE.Line(
-        new THREE.BufferGeometry().setFromPoints(curve.getPoints(38)),
-        new THREE.LineBasicMaterial({ color: 0x91a4bd, transparent: true, opacity: .20, depthWrite: false }),
-      ));
+      const sourceNode = model.nodeMap.get(link.source);
+      const targetNode = model.nodeMap.get(link.target);
+      const sourceColor = new THREE.Color(DOMAIN_COLOR[sourceNode?.domain || ''] || '#91a4bd');
+      const targetColor = new THREE.Color(DOMAIN_COLOR[targetNode?.domain || ''] || '#91a4bd');
+      const mixed = sourceColor.clone().lerp(targetColor, .5);
+      addSynapse(
+        runtime,
+        content,
+        source,
+        target,
+        mixed.getHex(),
+        `bridge:${link.id}`,
+        true,
+        Math.max(.72, Math.min(1.25, link.weight || 1)),
+      );
     }
   }
 
@@ -706,49 +887,78 @@ function rebuildThree(
     group.position.copy(position);
     group.userData.nodeId = id;
 
-    const sphereMaterial = new THREE.MeshStandardMaterial({
-      color: new THREE.Color(TYPE_COLOR[String(node.entityType)] || '#94a3b8'),
-      emissive: new THREE.Color(DOMAIN_COLOR[node.domain]),
-      emissiveIntensity: node.entityType === 'hub' ? .48 : .24,
-      roughness: .42,
-      metalness: .12,
+    const domainColor = DOMAIN_COLOR[node.domain] || '#94a3b8';
+    const typeColor = TYPE_COLOR[String(node.entityType)] || '#cbd5e1';
+    const baseEmissive = node.entityType === 'hub' ? .56 : node.entityType === 'subdomain' ? .42 : .32;
+
+    const coreMaterial = new THREE.MeshStandardMaterial({
+      color: new THREE.Color(domainColor).lerp(new THREE.Color(typeColor), .20),
+      emissive: new THREE.Color(domainColor),
+      emissiveIntensity: baseEmissive,
+      roughness: .64,
+      metalness: .03,
     });
-    const sphere = new THREE.Mesh(
-      new THREE.SphereGeometry(radius, node.entityType === 'hub' ? 36 : 24, node.entityType === 'hub' ? 24 : 16),
-      sphereMaterial,
+    const core = new THREE.Mesh(createOrganicGeometry(radius, id), coreMaterial);
+    core.userData = { nodeId: id, baseEmissive };
+    const organicSeed = hashNumber(id);
+    core.rotation.set(
+      ((organicSeed >> 2) % 31) / 31,
+      ((organicSeed >> 7) % 37) / 37,
+      ((organicSeed >> 12) % 41) / 41,
     );
-    sphere.userData = { nodeId: id, baseEmissive: sphereMaterial.emissiveIntensity };
-    group.add(sphere);
-    runtime.interactive.push(sphere);
+    group.add(core);
+    runtime.interactive.push(core);
 
-    const domainRing = new THREE.Mesh(
-      new THREE.TorusGeometry(radius * 1.30, Math.max(1, radius * .085), 10, 42),
-      new THREE.MeshBasicMaterial({ color: new THREE.Color(DOMAIN_COLOR[node.domain]), transparent: true, opacity: .92, depthWrite: false }),
+    const membrane = new THREE.Mesh(
+      createOrganicGeometry(radius * 1.13, `${id}:membrane`),
+      new THREE.MeshBasicMaterial({
+        color: new THREE.Color(domainColor),
+        transparent: true,
+        opacity: node.entityType === 'hub' ? .13 : .09,
+        depthWrite: false,
+        blending: THREE.AdditiveBlending,
+        side: THREE.BackSide,
+      }),
     );
-    domainRing.rotation.x = Math.PI / 2;
-    group.add(domainRing);
+    group.add(membrane);
 
-    const stateRing = new THREE.Mesh(
-      new THREE.TorusGeometry(radius * 1.54, Math.max(.65, radius * .045), 8, 42),
-      new THREE.MeshBasicMaterial({ color: new THREE.Color(statusColor(node.status)), transparent: true, opacity: .72, depthWrite: false }),
+    const neuronGlow = createGlowSprite(
+      domainColor,
+      radius * (node.entityType === 'hub' ? 5.6 : 4.9),
+      node.entityType === 'hub' ? .56 : .44,
     );
-    stateRing.rotation.x = Math.PI / 2;
-    group.add(stateRing);
+    neuronGlow.material.depthTest = false;
+    neuronGlow.userData.baseOpacity = (neuronGlow.material as THREE.SpriteMaterial).opacity;
+    neuronGlow.userData.baseScale = neuronGlow.scale.x;
+    neuronGlow.renderOrder = 8;
+    group.add(neuronGlow);
 
-    const selectionRing = new THREE.Mesh(
-      new THREE.TorusGeometry(radius * 1.82, Math.max(.8, radius * .055), 8, 44),
-      new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: .78, depthWrite: false }),
+    const statusNucleus = new THREE.Mesh(
+      new THREE.SphereGeometry(Math.max(1.4, radius * .18), 14, 10),
+      new THREE.MeshBasicMaterial({
+        color: new THREE.Color(statusColor(node.status)),
+        transparent: true,
+        opacity: .86,
+        depthWrite: false,
+        blending: THREE.AdditiveBlending,
+      }),
     );
-    selectionRing.rotation.x = Math.PI / 2;
-    selectionRing.visible = id === selectedId;
-    group.add(selectionRing);
+    statusNucleus.renderOrder = 9;
+    group.add(statusNucleus);
+
+    const selectionGlow = createGlowSprite('#ffffff', radius * 7.2, .64);
+    selectionGlow.material.depthTest = false;
+    selectionGlow.visible = id === selectedId;
+    selectionGlow.renderOrder = 7;
+    group.add(selectionGlow);
 
     const label = createLabelSprite(node.name, DOMAIN_COLOR[node.domain], node.entityType === 'hub');
     label.position.set(0, radius + (node.entityType === 'hub' ? 28 : 20), 0);
     group.add(label);
 
-    group.userData.sphere = sphere;
-    group.userData.selectionRing = selectionRing;
+    group.userData.core = core;
+    group.userData.neuronGlow = neuronGlow;
+    group.userData.selectionGlow = selectionGlow;
     content.add(group);
     runtime.nodeGroups.set(id, group);
   }
@@ -843,6 +1053,7 @@ function MetroThreeView({
       pointerDown: null,
       frame: 0,
       hasFit: false,
+      pulses: [],
     };
     runtimeRef.current = runtime;
 
@@ -907,6 +1118,7 @@ function MetroThreeView({
 
     const animate = () => {
       runtime.frame = requestAnimationFrame(animate);
+      updateSynapsePulses(runtime, performance.now());
       controls.update();
       renderer.render(scene, camera);
     };
@@ -950,7 +1162,12 @@ function MetroThreeView({
   }, [selectedId]);
 
   return (
-    <div ref={containerRef} className="atlas-three-surface" data-testid="atlas-metro-3d">
+    <div
+      ref={containerRef}
+      className="atlas-three-surface"
+      data-testid="atlas-metro-3d"
+      data-three-visual="neural-synapse"
+    >
       <div ref={tooltipRef} className="atlas-three-tooltip" />
     </div>
   );
