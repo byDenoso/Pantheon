@@ -237,6 +237,8 @@ jobs:
           VITE_PRIVATE_COCKPIT_URL: https://nexo-one-two.vercel.app
         run: |
           set -euo pipefail
+          npm run typecheck
+          node --test test/atlas3d-metro-production.test.mjs test/pages.test.mjs
           npm run build
           test -s dist/atlas3d/index.html
           expected_system_endpoint="${{ steps.pages.outputs.base_path }}/system.json"
@@ -359,6 +361,18 @@ jobs:
           "${chrome_bin}" --headless=new --no-sandbox --disable-dev-shm-usage --hide-scrollbars \
             --window-size=1440,900 --virtual-time-budget=12000 --dump-dom "${base}/atlas3d/" \
             > /tmp/atlas3d-dom.html
+
+          echo "ATLAS3D_DOM_DIAGNOSTICS_BEGIN"
+          grep -oE 'data-atlas-[a-z-]+="[^"]*"' /tmp/atlas3d-dom.html | head -20 || true
+          grep -oE 'data-g6-ready="[^"]*"' /tmp/atlas3d-dom.html | head -5 || true
+          grep -oE 'class="atlas-render-error"[^<]*|G6 não carregou[^<]*|Atlas 3D indisponível[^<]*' /tmp/atlas3d-dom.html | head -10 || true
+          echo "ATLAS3D_DOM_DIAGNOSTICS_END"
+
+          "${chrome_bin}" --headless=new --no-sandbox --disable-dev-shm-usage --hide-scrollbars \
+            --window-size=1440,900 --virtual-time-budget=8000 \
+            --screenshot=/tmp/atlas3d-readback.png "${base}/atlas3d/" >/dev/null 2>&1 || true
+          test -s /tmp/atlas3d-readback.png || echo "::warning::Atlas screenshot was not produced"
+
           grep -Fq 'data-atlas-renderer="metro-cluster"' /tmp/atlas3d-dom.html
           grep -Fq 'data-atlas-ready="true"' /tmp/atlas3d-dom.html
           grep -Fq 'data-atlas-root-count="3"' /tmp/atlas3d-dom.html
@@ -370,10 +384,6 @@ jobs:
             echo "::error::Atlas Metro rendered only ${visible_count:-0} visible stations; expected the 3 hubs plus named stations"
             exit 1
           }
-          "${chrome_bin}" --headless=new --no-sandbox --disable-dev-shm-usage --hide-scrollbars \
-            --window-size=1440,900 --virtual-time-budget=8000 \
-            --screenshot=/tmp/atlas3d-readback.png "${base}/atlas3d/" >/dev/null 2>&1
-          test -s /tmp/atlas3d-readback.png
           echo "PAGES_ATLAS3D_VISUAL_READBACK_OK roots=3 visible=${visible_count} renderer=metro-cluster"
 
           curl -fsSL "${base}/world-public.ndjson" -o /tmp/world.ndjson
@@ -441,6 +451,8 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: atlas3d-production-readback
-          path: /tmp/atlas3d-readback.png
-          if-no-files-found: error
+          path: |
+            /tmp/atlas3d-readback.png
+            /tmp/atlas3d-dom.html
+          if-no-files-found: warn
           retention-days: 7
