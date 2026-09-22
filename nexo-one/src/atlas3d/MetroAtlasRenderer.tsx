@@ -1354,12 +1354,14 @@ function MetroThreeView({
   const activateRef = useRef(onActivate);
   const showBeamsRef = useRef(showBeams);
   const lastFitNonce = useRef(-1);
+  const onReadyRef = useRef(onReady);
 
   modelRef.current = model;
   expandedRef.current = expanded;
   selectedRef.current = selectedId;
   activateRef.current = onActivate;
   showBeamsRef.current = showBeams;
+  onReadyRef.current = onReady;
 
   useEffect(() => {
     const container = containerRef.current;
@@ -1375,6 +1377,7 @@ function MetroThreeView({
 
     const compact = isCompactRenderer(container);
     container.dataset.threeProfile = compact ? 'compact-touch' : 'desktop';
+    container.dataset.threeQuality = compact ? 'reduced-gpu' : 'full';
     const scene = new THREE.Scene();
     scene.fog = new THREE.FogExp2(0x070b14, .00075);
     const camera = new THREE.PerspectiveCamera(46, 1, 1, 5000);
