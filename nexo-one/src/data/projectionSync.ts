@@ -52,7 +52,7 @@ type PublicProjection = {
 function rootAsset(name:string):string{
   const base = typeof window === 'undefined'
     ? 'http://localhost/'
-    : new URL(import.meta.env.BASE_URL || '/', window.location.origin).toString();
+    : new URL(import.meta.env?.BASE_URL || '/', window.location.origin).toString();
   return new URL(name, base).toString();
 }
 
