@@ -143,11 +143,48 @@ test('Learning semantic identity survives graph projection into Atlas links', ()
   const model = buildAtlasMetroModel(source);
   const link = model.crossLinks.find(item => item.learningRef === 'PEER-DETECTION-GROUP-ROBUSTNESS');
   assert.ok(link);
-  assert.equal(link.source, 'atlas.domain.nexo');
-  assert.equal(link.target, 'atlas.domain.science');
+  assert.equal(model.nodeMap.get(link.source)?.name, 'Runtime, MCP & execução');
+  assert.equal(model.nodeMap.get(link.target)?.name, 'Consistência cosmológica · Peer Detection');
+  assert.equal(model.nodeMap.get(link.source)?.entityType, 'subdomain');
+  assert.equal(model.nodeMap.get(link.target)?.entityType, 'subdomain');
   assert.equal(link.learningKind, 'SCIENTIFIC_LEARNING_PIPELINE');
   assert.equal(link.learningGroup, 'ROBUSTNESS');
   assert.match(link.label, /Peer Detection · Robustness/);
+});
+
+test('Semantic Learning resolves an exact entity label to its parent subdomain', () => {
+  const source = state();
+  const scienceEntity = source.graph.nodes.find(node =>
+    node.type !== 'DOMAIN' && node.type !== 'FILAMENT' && node.domain === 'SCIENCE'
+  );
+  assert.ok(scienceEntity);
+
+  source.filaments.push({
+    id: 'semantic:exact-source-area',
+    label: 'METHOD_TRANSFER',
+    domain: 'SCIENCE',
+    kind: 'SEMANTIC',
+    weight: .8,
+    support: 2,
+    contradiction: 0,
+    status: 'ESTABLISHED',
+    evidence: [],
+    source_ref: 'tower://test',
+    boundary: 'Presentation-only semantic bridge.',
+    from_label: scienceEntity.id,
+    to_label: 'Bodybuilding',
+    from_domain: 'SCIENCE',
+    to_domain: 'OLYMPUS',
+    scope: 'INTER_DOMAIN',
+  });
+
+  const model = buildAtlasMetroModel(source);
+  const link = model.crossLinks.find(item => item.learningRef === 'semantic:exact-source-area');
+  assert.ok(link);
+  assert.equal(model.nodeMap.get(link.source)?.entityType, 'subdomain');
+  assert.equal(model.nodeMap.get(link.source)?.domain, 'SCIENCE');
+  assert.equal(model.nodeMap.get(link.target)?.entityType, 'subdomain');
+  assert.equal(model.nodeMap.get(link.target)?.name, 'Olympus · Outros ativos');
 });
 
 test('dense Science expansion keeps stations spaced and labels collision-free', () => {
@@ -207,6 +244,8 @@ test('dedicated Atlas production page uses Metro renderer, G6 and deterministic 
   assert.match(app, /data-atlas-renderer="metro-cluster"/);
   assert.match(app, /dense-science/);
   assert.match(app, /data-atlas-peer-learning-links/);
+  assert.match(app, /data-atlas-learning-subdomain-links/);
+  assert.match(app, /data-atlas-peer-subdomain-links/);
   assert.match(app, /data-atlas-peer-artifact-nodes/);
   assert.match(app, /atlas-view-switch/);
   assert.match(app, /Modo 3D ativo/);
@@ -251,8 +290,12 @@ test('dedicated Atlas production page uses Metro renderer, G6 and deterministic 
   assert.match(renderer, /threeLearningSynapses/);
   assert.match(renderer, /g6ScientificLearningEdges/);
   assert.match(renderer, /g6PeerLearningEdges/);
+  assert.match(renderer, /g6LearningSubdomainEdges/);
+  assert.match(renderer, /g6PeerSubdomainEdges/);
   assert.match(renderer, /threeScientificLearningSynapses/);
   assert.match(renderer, /threePeerLearningSynapses/);
+  assert.match(renderer, /threeLearningSubdomainSynapses/);
+  assert.match(renderer, /threePeerSubdomainSynapses/);
   assert.match(renderer, /G6_ZERO_VIEWPORT/);
   assert.match(renderer, /G6_RENDER_FAILED/);
   assert.match(renderer, /WEBGL_INIT_FAILED/);
