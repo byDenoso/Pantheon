@@ -1,12 +1,10 @@
 import {DataSourceError} from './adapters/source.ts';
 
 const configuredSyncEndpoint = String(import.meta.env?.VITE_NEXO_SYNC_ENDPOINT || '').trim();
-const PUBLIC_PROJECTION_RAW_ENDPOINT =
-  'https://raw.githubusercontent.com/byDenoso/NEXO-Obsidian-Vault/main/TOWER_V06/projections/public/projection.json';
-const PUBLIC_PROJECTION_API_ENDPOINT =
-  'https://api.github.com/repos/byDenoso/NEXO-Obsidian-Vault/contents/TOWER_V06/projections/public/projection.json?ref=main';
-const RAW_RETRY_DELAYS_MS = [0, 350, 900] as const;
-const API_RETRY_DELAYS_MS = [0, 450] as const;
+const PUBLISHED_PROJECTION_ASSET = 'tower-projection/projection.json';
+const PUBLISHED_MANIFEST_ASSET = 'tower-projection/manifest.json';
+const PUBLISHED_BUILD_META_ASSET = 'build-meta.json';
+const PUBLISHED_RETRY_DELAYS_MS = [0, 350, 900] as const;
 
 export type ProjectionSyncReceipt =
   | {
@@ -22,7 +20,7 @@ export type ProjectionSyncReceipt =
       generated_at: string;
       active_work: number;
       needs_dener: number;
-      origin_channel: 'GITHUB_RAW' | 'GITHUB_API_FALLBACK';
+      origin_channel: 'GITHUB_PAGES_VALIDATED';
     };
 
 type BuildMeta = {
@@ -33,20 +31,22 @@ type BuildMeta = {
   built_at?: string;
 };
 
+type PublicManifest = {
+  authority?: string;
+  projection_only?: boolean;
+  writeback?: string;
+  projection_fingerprint?: string;
+  generated_at?: string;
+  source_storage?: string;
+  source_snapshot_id?: string;
+  source_state_fingerprint?: string;
+  truth_owner?: string;
+};
+
 type PublicProjection = {
   contract?: string;
   counts?: {active_work?:number;needs_dener?:number};
-  manifest?: {
-    authority?: string;
-    projection_only?: boolean;
-    writeback?: string;
-    projection_fingerprint?: string;
-    generated_at?: string;
-    source_storage?: string;
-    source_snapshot_id?: string;
-    source_state_fingerprint?: string;
-    truth_owner?: string;
-  };
+  manifest?: PublicManifest;
 };
 
 function rootAsset(name:string):string{
@@ -62,9 +62,9 @@ function abortableDelay(ms:number,signal?:AbortSignal):Promise<void>{
       reject(new DOMException('Aborted','AbortError'));
       return;
     }
-    const timer=window.setTimeout(resolve,ms);
+    const timer=(typeof window === 'undefined' ? globalThis.setTimeout : window.setTimeout)(resolve,ms);
     signal?.addEventListener('abort',()=>{
-      window.clearTimeout(timer);
+      (typeof window === 'undefined' ? globalThis.clearTimeout : window.clearTimeout)(timer);
       reject(new DOMException('Aborted','AbortError'));
     },{once:true});
   });
@@ -83,77 +83,108 @@ function retryableStatus(status:number):boolean{
   return status===408||status===425||status===429||status===500||status===502||status===503||status===504;
 }
 
-async function fetchProjectionJson(
-  endpoint:string,
-  originLabel:string,
-  accept:string,
-  retryDelays:readonly number[],
+async function fetchPublishedJson<T>(
+  asset:string,
+  label:string,
   signal?:AbortSignal,
-):Promise<PublicProjection>{
-  let lastMessage=originLabel+' não respondeu.';
+):Promise<T>{
+  let lastMessage=label+' não respondeu.';
   let lastStatus:number|undefined;
 
-  for(let attempt=0;attempt<retryDelays.length;attempt+=1){
-    const delay=retryDelays[attempt]||0;
+  for(let attempt=0;attempt<PUBLISHED_RETRY_DELAYS_MS.length;attempt+=1){
+    const delay=PUBLISHED_RETRY_DELAYS_MS[attempt]||0;
     if(delay>0)await abortableDelay(delay,signal);
 
-    const url=new URL(endpoint);
-    if(originLabel==='GitHub Raw'){
-      url.searchParams.set('sync_readback',String(Date.now())+'-'+String(attempt));
-    }
+    const url=new URL(rootAsset(asset));
+    url.searchParams.set('sync_readback',String(Date.now())+'-'+String(attempt));
 
     try{
       const response=await fetch(url,{
         cache:'no-store',
         signal,
-        headers:{Accept:accept},
+        headers:{Accept:'application/json'},
       });
 
       if(!response.ok){
         lastStatus=response.status;
-        lastMessage=originLabel+' retornou HTTP '+String(response.status)
+        lastMessage=label+' retornou HTTP '+String(response.status)
           +(response.statusText?' '+response.statusText:'')+'.';
         if(!retryableStatus(response.status))break;
         continue;
       }
 
       try{
-        return await response.json() as PublicProjection;
+        return await response.json() as T;
       }catch{
         lastStatus=response.status;
-        lastMessage=originLabel+' respondeu HTTP '+String(response.status)+', mas sem JSON válido.';
+        lastMessage=label+' respondeu HTTP '+String(response.status)+', mas sem JSON válido.';
         break;
       }
     }catch(error){
       if(signal?.aborted||(error as Error)?.name==='AbortError')throw error;
       lastStatus=undefined;
-      lastMessage=originLabel+' não respondeu ao JavaScript. Em respostas HTTP 5xx sem headers CORS, '
-        +'o navegador pode mascarar a indisponibilidade upstream como erro de CORS; o DevTools mostra o HTTP real.';
+      lastMessage=label+' não respondeu.';
     }
   }
 
   throw new ProjectionOriginError(lastMessage,lastStatus);
 }
 
+function validSha256(value:string):boolean{
+  return /^sha256:[0-9a-f]{64}$/i.test(value);
+}
+
+function sameManifest(a:PublicManifest,b:PublicManifest):boolean{
+  return String(a.projection_fingerprint||'')===String(b.projection_fingerprint||'')
+    &&String(a.source_snapshot_id||'')===String(b.source_snapshot_id||'')
+    &&String(a.source_state_fingerprint||'')===String(b.source_state_fingerprint||'');
+}
+
 function projectionReceipt(
   projection:PublicProjection,
-  originChannel:'GITHUB_RAW'|'GITHUB_API_FALLBACK',
+  publishedManifest:PublicManifest,
+  buildMeta:BuildMeta,
 ):ProjectionSyncReceipt{
   const manifest=projection.manifest||{};
   const fingerprint=String(manifest.projection_fingerprint||'');
   const stateFingerprint=String(manifest.source_state_fingerprint||'');
   const snapshotId=String(manifest.source_snapshot_id||'');
+  const generatedAt=String(manifest.generated_at||'');
+  const activeWork=Number(projection.counts?.active_work);
+  const needsDener=Number(projection.counts?.needs_dener);
 
-  if(projection.contract!=='NEXO_PUBLIC_PROJECTION_V1'
-    ||manifest.authority!=='TOWER_V06'
-    ||manifest.projection_only!==true
-    ||manifest.writeback!=='FORBIDDEN'
-    ||manifest.source_storage!=='GOOGLE_DRIVE_PRIVATE'
-    ||manifest.truth_owner!=='TOWER_V06@GOOGLE_DRIVE_PRIVATE'
-    ||!snapshotId
-    ||!/^sha256:[0-9a-f]{64}$/i.test(fingerprint)
-    ||!/^sha256:[0-9a-f]{64}$/i.test(stateFingerprint)){
-    throw new DataSourceError('CONTRACT_MISMATCH','A origem pública respondeu, mas não passou o contrato Drive-primary da Tower.');
+  const validContract=projection.contract==='NEXO_PUBLIC_PROJECTION_V1'
+    &&manifest.authority==='TOWER_V06'
+    &&manifest.projection_only===true
+    &&manifest.writeback==='FORBIDDEN'
+    &&manifest.source_storage==='GOOGLE_DRIVE_PRIVATE'
+    &&manifest.truth_owner==='TOWER_V06@GOOGLE_DRIVE_PRIVATE'
+    &&Boolean(snapshotId)
+    &&validSha256(fingerprint)
+    &&validSha256(stateFingerprint)
+    &&Number.isFinite(Date.parse(generatedAt))
+    &&Number.isInteger(activeWork)
+    &&activeWork>=0
+    &&Number.isInteger(needsDener)
+    &&needsDener>=0;
+
+  const validPublishedPair=sameManifest(manifest,publishedManifest)
+    &&publishedManifest.authority==='TOWER_V06'
+    &&publishedManifest.projection_only===true
+    &&publishedManifest.writeback==='FORBIDDEN'
+    &&publishedManifest.source_storage==='GOOGLE_DRIVE_PRIVATE'
+    &&publishedManifest.truth_owner==='TOWER_V06@GOOGLE_DRIVE_PRIVATE';
+
+  const validBuildMeta=buildMeta.contract==='NEXO_ONE_BUILD_META_V1'
+    &&String(buildMeta.projection_fingerprint||'')===fingerprint
+    &&/^[0-9a-f]{40}$/i.test(String(buildMeta.pantheon_commit||''))
+    &&Number.isFinite(Date.parse(String(buildMeta.built_at||'')));
+
+  if(!validContract||!validPublishedPair||!validBuildMeta){
+    throw new DataSourceError(
+      'CONTRACT_MISMATCH',
+      'O snapshot publicado respondeu, mas projeção, manifesto e build-meta não fecharam o mesmo fingerprint validado.',
+    );
   }
 
   return {
@@ -161,60 +192,37 @@ function projectionReceipt(
     projection_fingerprint:fingerprint,
     source_snapshot_id:snapshotId,
     source_state_fingerprint:stateFingerprint,
-    generated_at:String(manifest.generated_at||''),
-    active_work:Number(projection.counts?.active_work||0),
-    needs_dener:Number(projection.counts?.needs_dener||0),
-    origin_channel:originChannel,
+    generated_at:generatedAt,
+    active_work:activeWork,
+    needs_dener:needsDener,
+    origin_channel:'GITHUB_PAGES_VALIDATED',
   };
 }
 
 async function fetchFreshPublicProjection(signal?:AbortSignal):Promise<ProjectionSyncReceipt>{
-  let rawFailure:ProjectionOriginError;
-
   try{
-    const projection=await fetchProjectionJson(
-      PUBLIC_PROJECTION_RAW_ENDPOINT,
-      'GitHub Raw',
-      'application/json',
-      RAW_RETRY_DELAYS_MS,
-      signal,
-    );
-    return projectionReceipt(projection,'GITHUB_RAW');
+    const [projection,manifest,buildMeta]=await Promise.all([
+      fetchPublishedJson<PublicProjection>(PUBLISHED_PROJECTION_ASSET,'Snapshot publicado',signal),
+      fetchPublishedJson<PublicManifest>(PUBLISHED_MANIFEST_ASSET,'Manifesto publicado',signal),
+      fetchPublishedJson<BuildMeta>(PUBLISHED_BUILD_META_ASSET,'Build-meta publicado',signal),
+    ]);
+    return projectionReceipt(projection,manifest,buildMeta);
   }catch(error){
     if(signal?.aborted||(error as Error)?.name==='AbortError')throw error;
     if(error instanceof DataSourceError)throw error;
-    rawFailure=error instanceof ProjectionOriginError
-      ? error
-      : new ProjectionOriginError('GitHub Raw falhou por uma causa não classificada.');
-  }
-
-  try{
-    const projection=await fetchProjectionJson(
-      PUBLIC_PROJECTION_API_ENDPOINT,
-      'Fallback GitHub API',
-      'application/vnd.github.raw+json',
-      API_RETRY_DELAYS_MS,
-      signal,
-    );
-    return projectionReceipt(projection,'GITHUB_API_FALLBACK');
-  }catch(error){
-    if(signal?.aborted||(error as Error)?.name==='AbortError')throw error;
-    if(error instanceof DataSourceError)throw error;
-    const apiFailure=error instanceof ProjectionOriginError
-      ? error
-      : new ProjectionOriginError('Fallback GitHub API falhou por uma causa não classificada.');
+    const failure=error instanceof ProjectionOriginError
+      ? error.message
+      : 'Falha não classificada na leitura do snapshot publicado.';
     throw new DataSourceError(
       'UNAVAILABLE',
-      'A origem GitHub da projeção está indisponível. '+rawFailure.message+' '+apiFailure.message
-        +' O último snapshot válido foi preservado; tente sincronizar novamente quando a origem estabilizar.',
+      'O snapshot validado do Atlas está indisponível. '+failure
+        +' O último snapshot válido foi preservado; a interface não regride para uma origem privada ou não validada.',
     );
   }
 }
 
 export function projectionSyncAvailable():boolean{
-  // Mesmo sem bridge autenticado, a projeção pública sancionada continua sendo
-  // uma fonte real e no-cache de verificação da cadeia Drive -> export mirror.
-  return Boolean(configuredSyncEndpoint||PUBLIC_PROJECTION_RAW_ENDPOINT||PUBLIC_PROJECTION_API_ENDPOINT);
+  return Boolean(configuredSyncEndpoint||PUBLISHED_PROJECTION_ASSET);
 }
 
 export async function dispatchProjectionSync(currentFingerprint:string,signal?:AbortSignal):Promise<ProjectionSyncReceipt>{
@@ -247,8 +255,6 @@ export async function dispatchProjectionSync(currentFingerprint:string,signal?:A
   }catch(error){
     if(signal?.aborted||(error as Error)?.name==='AbortError')throw error;
     if(error instanceof DataSourceError)throw error;
-    // Falha de rede no bridge não deve rebaixar o botão a um refresh local.
-    // Faz uma consulta real e no-cache à projeção pública sancionada.
     return fetchFreshPublicProjection(signal);
   }
 }
@@ -261,7 +267,7 @@ export async function waitForProjectionSync(
   const timeoutMs=options.timeoutMs??120_000;
   const pollMs=options.pollMs??2_000;
   const started=Date.now();
-  const metaUrl=rootAsset('build-meta.json');
+  const metaUrl=rootAsset(PUBLISHED_BUILD_META_ASSET);
 
   while(Date.now()-started<timeoutMs){
     const url=new URL(metaUrl);
