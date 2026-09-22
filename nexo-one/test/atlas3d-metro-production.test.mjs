@@ -546,6 +546,8 @@ test('dedicated Atlas production page uses Metro renderer, G6 and deterministic 
   assert.match(renderer, /threeFitScope/);
   assert.match(renderer, /threeFitNodeCount/);
   assert.match(renderer, /threeFitCoverage/);
+  assert.match(renderer, /if \(lastFitNonce\.current < 0\) \{/);
+  assert.match(renderer, /fitThree\(runtime, true, null, 'all'\)/);
   assert.doesNotMatch(renderer, /\[model\.revision, expansionKey, showBeams, fitNonce\]/);
   assert.match(renderer, /NEXO: -520/);
   assert.match(renderer, /depthStep = 150/);
