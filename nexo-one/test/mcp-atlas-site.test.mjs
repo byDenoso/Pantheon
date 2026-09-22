@@ -17,6 +17,16 @@ test('MCP Atlas is a Pages multipage surface built from canonical MCP sources',a
   assert.match(workflow,/mcp_server\.py/);
   assert.match(workflow,/build-mcp-topology\.mjs/);
   assert.match(site,/CanvasGraph25D/);
+  assert.match(site,/mcp-neural-2d/);
+  assert.match(site,/type GraphView='2d'\|'3d'/);
+  assert.match(site,/Metro 2D/);
+  assert.match(site,/3D Explorar/);
+  assert.match(site,/THEME_STORAGE_KEY/);
+  assert.match(site,/data-mcp-theme/);
+  assert.match(site,/data-mcp-graph-view/);
+  assert.match(site,/publicNexoUrl/);
+  assert.match(workflow,/VITE_PUBLIC_NEXO_BASE:\s*https:\/\/bydenoso\.github\.io\/Pantheon\//);
+  assert.doesNotMatch(workflow,/VITE_PRIVATE_COCKPIT_URL:\s*https:\/\/nexo-one-two\.vercel\.app/);
   assert.doesNotMatch(site,/react-force-graph-3d|ForceGraph3D/);
   assert.match(site,/\.\/topology\.json/);
   assert.match(builder,/NEXO_MCP_TOPOLOGY_V1/);
