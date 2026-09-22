@@ -198,6 +198,44 @@ test('Learning preserves an explicit canonical entity as a leaf endpoint', () =>
   assert.equal(model.nodeMap.get(link.target)?.parentId?.startsWith('atlas.subdomain.'), true);
 });
 
+test('Learning uses a unique canonical linked entity as an inter-domain leaf endpoint', () => {
+  const source = state();
+  const target = source.graph.nodes.find(node =>
+    node.type !== 'DOMAIN'
+    && node.type !== 'FILAMENT'
+    && (node.domain === 'SCIENCE' || node.domain === 'OLYMPUS')
+  );
+  assert.ok(target, 'fixture needs an inter-domain canonical entity leaf');
+
+  source.filaments.push({
+    id: 'LEARNING-LINKED-ENTITY-1',
+    label: 'Cross-domain learning with sanctioned entity link',
+    domain: 'NEXO',
+    kind: 'SEMANTIC',
+    weight: .81,
+    support: 2,
+    contradiction: 0,
+    status: 'ESTABLISHED',
+    evidence: [target.id],
+    source_ref: 'tower://meta/linked-entity',
+    boundary: 'Linked target is canonical routing metadata.',
+    from_label: 'NEXO method',
+    to_label: target.label,
+    from_domain: 'NEXO',
+    to_domain: target.domain,
+    scope: 'INTER_DOMAIN',
+    links: [{ id: target.id, domain: target.domain, label: target.label }],
+  });
+
+  const model = buildAtlasMetroModel(source);
+  const link = model.crossLinks.find(item => item.learningRef === 'LEARNING-LINKED-ENTITY-1');
+  assert.ok(link);
+  assert.equal(link.target, target.id);
+  assert.equal(link.targetAnchor, 'EXACT_ENTITY');
+  assert.equal(model.nodeMap.get(link.target)?.synthetic, false);
+  assert.equal(model.nodeMap.get(link.target)?.depth, 2);
+});
+
 test('Peer Detection semantic groups fan out across scientific areas instead of one mega-subdomain', () => {
   const groups = [
     'GOVERNANCE',
