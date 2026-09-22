@@ -373,6 +373,27 @@ export function buildAtlasMetroModel(state: SystemState): AtlasMetroModel {
     }
   }
 
+  const aliases = sourceAliasMap(sourceNodes);
+
+  // Learning stays a relationship. If its semantic destination is a real
+  // Atlas area whose raw runtime artifacts were intentionally suppressed,
+  // materialize only that subdomain anchor, never a Learning station.
+  for (const filament of state.filaments || []) {
+    for (const side of ['from', 'to'] as const) {
+      const rawId = side === 'from' ? filament.from_id : filament.to_id;
+      const label = side === 'from' ? filament.from_label : filament.to_label;
+      const exact = rawId
+        ? aliases.get(String(rawId).trim().toLowerCase())
+        : aliases.get(String(label || '').trim().toLowerCase());
+      if (exact) continue;
+      const declaredDomain = side === 'from' ? filament.from_domain : filament.to_domain;
+      const domain = rawDomainEndpoint(rawId) || topDomainFromValue(declaredDomain);
+      if (!domain) continue;
+      const semantic = atlasSemanticSubdomain(domain, learningHint(filament, side));
+      if (semantic) ensureSemanticSubdomain(nodes, state, domain, semantic, filament);
+    }
+  }
+
   const nodeMap = new Map(nodes.map(node => [node.id, node]));
   const childrenMap = new Map(nodes.map(node => [node.id, [] as string[]]));
   for (const node of nodes) {
@@ -389,17 +410,19 @@ export function buildAtlasMetroModel(state: SystemState): AtlasMetroModel {
   const filamentById = new Map((state.filaments || []).map(filament => [filament.id, filament]));
 
   for (const edge of state.graph.edges) {
-    const source = atlasEndpointFor(edge.from, sourceNodeIds);
-    const target = atlasEndpointFor(edge.to, sourceNodeIds);
+    const learningFilament = edge.learning_ref ? filamentById.get(edge.learning_ref) : undefined;
+    const source = edge.is_learning && learningFilament
+      ? resolveLearningEndpoint(learningFilament, 'from', sourceToParent, aliases, nodes)
+      : atlasEndpointFor(edge.from, sourceNodeIds);
+    const target = edge.is_learning && learningFilament
+      ? resolveLearningEndpoint(learningFilament, 'to', sourceToParent, aliases, nodes)
+      : atlasEndpointFor(edge.to, sourceNodeIds);
     if (!source || !target || source === target) continue;
 
-    // Ordinary graph structure only becomes a cross-link when both endpoints are
-    // canonical visible entities. Domain-level projection edges are admitted only
-    // when the source explicitly marks them as Learning.
+    // Ordinary graph structure stays entity-based. Learning relations are
+    // semantic presentation links and therefore resolve to stable subdomains.
     if (!edge.is_learning && !(sourceNodeIds.has(edge.from) && sourceNodeIds.has(edge.to))) continue;
     if (!edge.is_learning) canonicalEntityEdges.push(edge);
-
-    const learningFilament = edge.learning_ref ? filamentById.get(edge.learning_ref) : undefined;
     crossLinks.push({
       id: `entity:${edge.id}`,
       source,
@@ -414,22 +437,19 @@ export function buildAtlasMetroModel(state: SystemState): AtlasMetroModel {
       learningScope: edge.learning_scope || learningFilament?.scope || null,
       learningRef: edge.learning_ref || null,
       learningKind: learningFilament?.kind || null,
-      learningGroup: String((learningFilament as any)?.peer_detection_group || '') || null,
+      learningGroup: learningFilament?.peer_detection_group || null,
       bundleIndex: 0,
       bundleCount: 1,
     });
     if (edge.is_learning && edge.learning_ref) renderedLearningRefs.add(edge.learning_ref);
   }
 
-  // Filaments are presentation relationships, never stations. When a canonical
-  // filament omits entity IDs but carries domain endpoints, anchor it to the
-  // corresponding domain hubs instead of creating synthetic Learning nodes.
+  // Canonical filaments never become Learning nodes. Resolve each endpoint to
+  // the nearest semantic subdomain and use the domain hub only as a true fallback.
   for (const filament of state.filaments || []) {
     if (renderedLearningRefs.has(filament.id)) continue;
-    const source = atlasEndpointFor(filament.from_id, sourceNodeIds)
-      || learningEndpointFromDomain(filament.from_domain);
-    const target = atlasEndpointFor(filament.to_id, sourceNodeIds)
-      || learningEndpointFromDomain(filament.to_domain);
+    const source = resolveLearningEndpoint(filament, 'from', sourceToParent, aliases, nodes);
+    const target = resolveLearningEndpoint(filament, 'to', sourceToParent, aliases, nodes);
     if (!source || !target || source === target) continue;
 
     crossLinks.push({
@@ -444,7 +464,7 @@ export function buildAtlasMetroModel(state: SystemState): AtlasMetroModel {
       learningScope: filament.scope || null,
       learningRef: filament.id,
       learningKind: filament.kind,
-      learningGroup: String((filament as any)?.peer_detection_group || '') || null,
+      learningGroup: filament.peer_detection_group || null,
       bundleIndex: 0,
       bundleCount: 1,
     });
