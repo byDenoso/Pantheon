@@ -160,6 +160,44 @@ test('Learning semantic identity survives graph projection into Atlas links', ()
   assert.match(link.label, /Peer Detection · Robustness/);
 });
 
+test('Learning preserves an explicit canonical entity as a leaf endpoint', () => {
+  const source = state();
+  const target = source.graph.nodes.find(node =>
+    node.type !== 'DOMAIN' && node.type !== 'FILAMENT'
+  );
+  assert.ok(target, 'fixture needs at least one canonical entity leaf');
+
+  source.filaments.push({
+    id: 'LEARNING-EXACT-ENTITY-1',
+    label: 'Writer recovery applied to explicit canonical entity',
+    domain: 'NEXO',
+    kind: 'PROCEDURAL',
+    weight: .84,
+    support: 2,
+    contradiction: 0,
+    status: 'ESTABLISHED',
+    evidence: [target.id],
+    source_ref: 'tower://meta/exact-entity',
+    boundary: 'Exact target comes from an explicit canonical reference.',
+    from_label: 'NEXO writer recovery',
+    to_label: target.label,
+    from_domain: 'NEXO',
+    to_domain: target.domain,
+    to_id: target.id,
+    scope: target.domain === 'NEXO' || target.domain === 'ENGINEERING' ? 'INTRA_DOMAIN' : 'INTER_DOMAIN',
+    links: [{ id: target.id, domain: target.domain, label: target.label }],
+  });
+
+  const model = buildAtlasMetroModel(source);
+  const link = model.crossLinks.find(item => item.learningRef === 'LEARNING-EXACT-ENTITY-1');
+  assert.ok(link);
+  assert.equal(link.target, target.id);
+  assert.equal(link.targetAnchor, 'EXACT_ENTITY');
+  assert.equal(model.nodeMap.get(link.target)?.synthetic, false);
+  assert.equal(model.nodeMap.get(link.target)?.depth, 2);
+  assert.equal(model.nodeMap.get(link.target)?.parentId?.startsWith('atlas.subdomain.'), true);
+});
+
 test('Peer Detection semantic groups fan out across scientific areas instead of one mega-subdomain', () => {
   const groups = [
     'GOVERNANCE',
@@ -291,6 +329,9 @@ test('dedicated Atlas production page uses Metro renderer, G6 and deterministic 
 
   assert.match(app, /data-atlas-renderer="metro-cluster"/);
   assert.match(app, /dense-science/);
+  assert.match(app, /learning-leaf/);
+  assert.match(app, /data-atlas-learning-exact-entity-records/);
+  assert.match(app, /data-atlas-learning-distinct-exact-entities/);
   assert.match(app, /data-atlas-peer-learning-links/);
   assert.match(app, /data-atlas-learning-subdomain-endpoints/);
   assert.match(app, /data-atlas-learning-distinct-subdomains/);
@@ -352,6 +393,7 @@ test('dedicated Atlas production page uses Metro renderer, G6 and deterministic 
   assert.match(adapter, /ENTITY_SUBDOMAIN/);
   assert.match(adapter, /SEMANTIC_SUBDOMAIN/);
   assert.match(adapter, /DOMAIN_HUB/);
+  assert.match(adapter, /EXACT_ENTITY/);
     const layout = await text('src/atlas3d/metro2dLayout.ts');
   assert.match(layout, /floatingLabelBox/);
   assert.match(layout, /angularCandidates/);
@@ -370,6 +412,10 @@ test('dedicated Atlas production page uses Metro renderer, G6 and deterministic 
   assert.match(renderer, /g6PeerLearningEdges/);
   assert.match(renderer, /g6SubdomainLearningEdges/);
   assert.match(renderer, /projectVisualCrossLinks/);
+  assert.match(renderer, /nearestVisibleAtlasAncestor/);
+  assert.match(renderer, /logicalTarget/);
+  assert.match(renderer, /g6DirectExactEntityLearningEdges/);
+  assert.match(renderer, /threeDirectExactEntityLearningSynapses/);
   assert.match(renderer, /g6LearningRecords/);
   assert.match(renderer, /g6LearningRelations/);
   assert.match(renderer, /visual-record:/);

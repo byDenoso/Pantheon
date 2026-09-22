@@ -122,7 +122,26 @@ export default function Atlas3DApp() {
     [],
   );
   const qaExpandedNode = useMemo(() => {
-    if (!model || qaExpand !== 'dense-science') return null;
+    if (!model) return null;
+
+    if (qaExpand === 'learning-leaf') {
+      for (const link of model.crossLinks) {
+        if (!link.isLearning) continue;
+        const endpoints = [
+          [link.source, link.sourceAnchor],
+          [link.target, link.targetAnchor],
+        ] as const;
+        for (const [endpoint, anchor] of endpoints) {
+          if (anchor !== 'EXACT_ENTITY') continue;
+          const leaf = model.nodeMap.get(endpoint);
+          const parent = leaf?.parentId ? model.nodeMap.get(leaf.parentId) : null;
+          if (parent?.entityType === 'subdomain' && parent.childCount > 0) return parent;
+        }
+      }
+      return null;
+    }
+
+    if (qaExpand !== 'dense-science') return null;
     const scienceRoot = model.roots.find(id => model.nodeMap.get(id)?.domain === 'SCIENCE');
     if (!scienceRoot) return null;
     return (model.childrenMap.get(scienceRoot) || [])
@@ -213,6 +232,23 @@ export default function Atlas3DApp() {
   const learningRecordCount = new Set(
     learningLinks.map(link => link.learningRef || link.id),
   ).size;
+  const learningExactEntityLinks = learningLinks.filter(link =>
+    link.sourceAnchor === 'EXACT_ENTITY' || link.targetAnchor === 'EXACT_ENTITY'
+  );
+  const learningExactEntityLinkCount = learningExactEntityLinks.length;
+  const learningExactEntityEndpointCount = learningExactEntityLinks.reduce((count, link) =>
+    count
+      + (link.sourceAnchor === 'EXACT_ENTITY' ? 1 : 0)
+      + (link.targetAnchor === 'EXACT_ENTITY' ? 1 : 0), 0);
+  const learningExactEntityRecordCount = new Set(
+    learningExactEntityLinks.map(link => link.learningRef || link.id),
+  ).size;
+  const learningDistinctExactEntities = new Set(
+    learningExactEntityLinks.flatMap(link => [
+      ...(link.sourceAnchor === 'EXACT_ENTITY' ? [link.source] : []),
+      ...(link.targetAnchor === 'EXACT_ENTITY' ? [link.target] : []),
+    ]),
+  ).size;
   const scientificLearningLinkCount = model.crossLinks.filter(link =>
     link.learningKind === 'SCIENTIFIC_LEARNING_PIPELINE'
   ).length;
@@ -226,12 +262,19 @@ export default function Atlas3DApp() {
     link.learningKind === 'SCIENTIFIC_LEARNING_PIPELINE'
     && /^PEER-DETECTION-GROUP-/i.test(String(link.learningRef || ''))
   ).length;
+  const semanticAreaForEndpoint = (endpoint: string): string | null => {
+    const node = model.nodeMap.get(endpoint);
+    if (!node) return null;
+    if (node.entityType === 'subdomain') return node.id;
+    if (!node.parentId) return null;
+    return model.nodeMap.get(node.parentId)?.entityType === 'subdomain' ? node.parentId : null;
+  };
   const learningSubdomainLoads = new Map<string, number>();
-  for (const link of model.crossLinks) {
-    if (!link.isLearning) continue;
+  for (const link of learningLinks) {
     for (const endpoint of [link.source, link.target]) {
-      if (model.nodeMap.get(endpoint)?.entityType !== 'subdomain') continue;
-      learningSubdomainLoads.set(endpoint, (learningSubdomainLoads.get(endpoint) || 0) + 1);
+      const semanticArea = semanticAreaForEndpoint(endpoint);
+      if (!semanticArea) continue;
+      learningSubdomainLoads.set(semanticArea, (learningSubdomainLoads.get(semanticArea) || 0) + 1);
     }
   }
   const learningSubdomainEndpointCount = [...learningSubdomainLoads.values()]
@@ -243,8 +286,8 @@ export default function Atlas3DApp() {
     : 0;
   const peerTargetSubdomains = new Set(model.crossLinks
     .filter(link => link.learningKind === 'SCIENTIFIC_LEARNING_PIPELINE')
-    .map(link => link.target)
-    .filter(id => model.nodeMap.get(id)?.entityType === 'subdomain'));
+    .map(link => semanticAreaForEndpoint(link.target))
+    .filter((id): id is string => Boolean(id)));
   const learningHubEndpointCount = model.crossLinks
     .filter(link => link.isLearning)
     .reduce((count, link) => count
@@ -305,6 +348,10 @@ export default function Atlas3DApp() {
       data-atlas-qa-expanded-node={qaExpandedNode?.name || 'none'}
       data-atlas-learning-links={learningLinkCount}
       data-atlas-learning-records={learningRecordCount}
+      data-atlas-learning-exact-entity-links={learningExactEntityLinkCount}
+      data-atlas-learning-exact-entity-endpoints={learningExactEntityEndpointCount}
+      data-atlas-learning-exact-entity-records={learningExactEntityRecordCount}
+      data-atlas-learning-distinct-exact-entities={learningDistinctExactEntities}
       data-atlas-learning-scientific={scientificLearningLinkCount}
       data-atlas-learning-procedural={proceduralLearningLinkCount}
       data-atlas-learning-semantic={semanticLearningLinkCount}
