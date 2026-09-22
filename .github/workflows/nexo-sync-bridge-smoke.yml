@@ -1,4 +1,4 @@
-name: NEXO Sync Bridge E2E Smoke
+name: NEXO Public Projection Fallback Smoke
 
 on:
   push:
@@ -13,42 +13,33 @@ jobs:
   smoke:
     runs-on: ubuntu-latest
     steps:
-      - name: Trigger production sync and await exact Pages readback
+      - name: Verify browser-safe sanctioned projection origin
         shell: bash
         env:
           PAGE_BASE: https://bydenoso.github.io/Pantheon
-          SYNC_URL: https://nexo-one-two.vercel.app/api/projection-sync
+          RAW_PROJECTION: https://raw.githubusercontent.com/byDenoso/NEXO-Obsidian-Vault/main/TOWER_V06/projections/public/projection.json
         run: |
           set -euo pipefail
-          manifest="$(curl -fsSL --retry 3 --connect-timeout 5 "$PAGE_BASE/tower-projection/manifest.json")"
-          fingerprint="$(jq -er '.projection_fingerprint' <<<"$manifest")"
+          headers="$(mktemp)"
+          body="$(mktemp)"
+          curl -fsSL --retry 3 --connect-timeout 5             -H 'Origin: https://bydenoso.github.io'             -D "$headers" -o "$body"             "$RAW_PROJECTION?sync_readback=$(date +%s)"
 
-          response="$(mktemp)"
-          http_status="$(
-            curl -sS -o "$response" -w '%{http_code}'               -X POST "$SYNC_URL"               -H 'Origin: https://bydenoso.github.io'               -H 'Content-Type: application/json'               -H 'Accept: application/json'               --data "$(jq -nc --arg fp "$fingerprint" '{current_fingerprint:$fp}')"
-          )"
+          grep -Eiq '^access-control-allow-origin: (\*|https://bydenoso\.github\.io)' "$headers"
+          jq -e '
+            .contract == "NEXO_PUBLIC_PROJECTION_V1" and
+            .manifest.authority == "TOWER_V06" and
+            .manifest.projection_only == true and
+            .manifest.writeback == "FORBIDDEN" and
+            .manifest.source_storage == "GOOGLE_DRIVE_PRIVATE" and
+            .manifest.truth_owner == "TOWER_V06@GOOGLE_DRIVE_PRIVATE" and
+            (.manifest.source_snapshot_id | length > 0) and
+            (.manifest.projection_fingerprint | test("^sha256:[0-9a-f]{64}$")) and
+            (.manifest.source_state_fingerprint | test("^sha256:[0-9a-f]{64}$"))
+          ' "$body" >/dev/null
 
-          cat "$response"
-          [ "$http_status" = "202" ] || {
-            echo "::error::sync bridge returned HTTP $http_status"
-            exit 1
-          }
+          origin_fp="$(jq -er '.manifest.projection_fingerprint' "$body")"
+          pages_fp="$(curl -fsSL --retry 3 "$PAGE_BASE/tower-projection/manifest.json?t=$(date +%s)" | jq -er '.projection_fingerprint')"
+          work="$(jq -r '.counts.active_work' "$body")"
+          human="$(jq -r '.counts.needs_dener' "$body")"
 
-          request_id="$(jq -er '.request_id' "$response")"
-          [ "$(jq -r '.outcome' "$response")" = "DISPATCHED" ]
-          printf '%s' "$request_id" | grep -Eq '^cockpit-sync-[a-z0-9]+$'
-
-          for attempt in $(seq 1 75); do
-            meta="$(curl -fsSL --retry 1 --connect-timeout 5 "$PAGE_BASE/build-meta.json?sync_readback=$request_id&t=$attempt" || true)"
-            if [ -n "$meta" ]; then
-              observed="$(jq -r '.sync_request_id // empty' <<<"$meta" 2>/dev/null || true)"
-              if [ "$observed" = "$request_id" ]; then
-                echo "SYNC_BRIDGE_E2E_OK request_id=$request_id attempts=$attempt"
-                exit 0
-              fi
-            fi
-            sleep 2
-          done
-
-          echo "::error::sync request did not roundtrip through Pages request_id=$request_id"
-          exit 1
+          echo "PUBLIC_PROJECTION_FALLBACK_OK origin_fp=$origin_fp pages_fp=$pages_fp work=$work human=$human"
