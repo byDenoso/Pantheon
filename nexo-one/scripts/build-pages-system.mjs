@@ -125,11 +125,13 @@ function proceduralLearningFilaments(metaLearning, projection, manifest, observe
     const links = explicitLearningRefs(refText).flatMap(ref => learningTargetsForRef(ref, projection));
     const deduped = [...new Map(links.map(link => [link.id, link])).values()];
     const domains = [...new Set(deduped.map(link => link.domain))];
-    const fromDomain = domains[0] || 'NEXO';
+    const target = deduped[0] || null;
+    const fromDomain = 'NEXO';
+    const toDomain = target?.domain || 'NEXO';
     const record = {
       id,
       label: String(item.outcome || item.context || id),
-      domain: fromDomain,
+      domain: 'NEXO',
       kind: 'PROCEDURAL',
       weight: 0.72,
       support: Number.isFinite(Number(item.supporting_count)) ? Number(item.supporting_count) : 1,
@@ -139,10 +141,11 @@ function proceduralLearningFilaments(metaLearning, projection, manifest, observe
       source_ref: `tower://${manifest.tower_repository || 'byDenoso/NEXO-Obsidian-Vault'}@${manifest.tower_commit}/TOWER_V06/runtime/artifacts/meta_learning/METALEARNING_CURRENT.json`,
       boundary: 'Procedural learning only. It cannot promote or reinterpret a scientific claim.',
       from_label: id,
-      to_label: deduped[0]?.label || fromDomain,
+      to_label: target?.label || toDomain,
       from_domain: fromDomain,
-      to_domain: domains[1] || fromDomain,
-      scope: domains.length > 1 ? 'INTER_DOMAIN' : 'INTRA_DOMAIN',
+      to_domain: toDomain,
+      to_id: target?.id,
+      scope: toDomain !== fromDomain ? 'INTER_DOMAIN' : 'INTRA_DOMAIN',
       observed_at: observedAt,
       links: deduped,
       learning_refs: [],
@@ -158,13 +161,14 @@ function proceduralLearningFilaments(metaLearning, projection, manifest, observe
     const parentRecords = refs.map(ref => evidenceById.get(ref)).filter(Boolean);
     const links = [...new Map(parentRecords.flatMap(record => record.links || []).map(link => [link.id, link])).values()];
     const domains = [...new Set(links.map(link => link.domain))];
-    const fromDomain = domains[0] || 'NEXO';
-    const toDomain = domains[1] || fromDomain;
+    const target = links[0] || null;
+    const fromDomain = 'NEXO';
+    const toDomain = target?.domain || 'NEXO';
     const status = String(item.status || '').toUpperCase();
     out.push({
       id,
       label: String(item.lesson || item.heuristic || id),
-      domain: fromDomain,
+      domain: 'NEXO',
       kind: 'PROCEDURAL',
       weight: status === 'SUPPORTED' ? 0.9 : 0.68,
       support: Number.isFinite(Number(item.supporting_count)) ? Number(item.supporting_count) : refs.length,
@@ -173,11 +177,12 @@ function proceduralLearningFilaments(metaLearning, projection, manifest, observe
       evidence: refs,
       source_ref: `tower://${manifest.tower_repository || 'byDenoso/NEXO-Obsidian-Vault'}@${manifest.tower_commit}/TOWER_V06/runtime/artifacts/meta_learning/METALEARNING_CURRENT.json`,
       boundary: String(item.falsifier || 'Procedural learning only. No scientific authority.'),
-      from_label: refs[0] || fromDomain,
-      to_label: refs[1] || toDomain,
+      from_label: 'NEXO Learning',
+      to_label: target?.label || toDomain,
       from_domain: fromDomain,
       to_domain: toDomain,
-      scope: domains.length > 1 ? 'INTER_DOMAIN' : 'INTRA_DOMAIN',
+      to_id: target?.id,
+      scope: toDomain !== fromDomain ? 'INTER_DOMAIN' : 'INTRA_DOMAIN',
       observed_at: observedAt,
       links,
       learning_refs: refs,
@@ -488,8 +493,8 @@ function graphFromProjection(projection, observedAt, filaments = [], peerDetecti
       });
     }
 
-    const from = 'domain:' + filament.from_domain;
-    const to = 'domain:' + filament.to_domain;
+    const from = filament.from_id || ('domain:' + filament.from_domain);
+    const to = filament.to_id || ('domain:' + filament.to_domain);
     if (filament.scope === 'INTER_DOMAIN' && seen.has(from) && seen.has(to) && from !== to) {
       edges.push({
         id: 'learning:' + sha256({ id: filament.id, from, to }).slice(7, 23),
