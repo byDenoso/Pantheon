@@ -304,6 +304,8 @@ test('dedicated Atlas production page uses Metro renderer, G6 and deterministic 
   assert.match(app, /atlas-view-switch/);
   assert.match(app, /Modo 3D ativo/);
   assert.match(app, /data-atlas-learning-links/);
+  assert.match(app, /data-atlas-learning-records/);
+  assert.match(app, /aprendizados canônicos/);
   assert.match(app, /data-atlas-learning-scientific/);
   assert.match(app, /data-atlas-learning-procedural/);
   assert.match(app, /data-atlas-learning-semantic/);
@@ -360,7 +362,12 @@ test('dedicated Atlas production page uses Metro renderer, G6 and deterministic 
   assert.match(renderer, /g6SubdomainLearningEdges/);
   assert.match(renderer, /projectVisualCrossLinks/);
   assert.match(renderer, /g6LearningRecords/);
+  assert.match(renderer, /g6LearningRelations/);
+  assert.match(renderer, /visual-record:/);
+  assert.match(renderer, /learningRef \|\| link\.id/);
   assert.match(renderer, /threeLearningVisualSynapses/);
+  assert.match(renderer, /threeLearningRecords/);
+  assert.match(renderer, /threeLearningRelations/);
   assert.match(renderer, /document\.hidden/);
   assert.match(renderer, /g6PeerSubdomainEdges/);
   assert.match(renderer, /threeSubdomainLearningSynapses/);
