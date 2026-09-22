@@ -1558,15 +1558,15 @@ function rebuildThree(
     group.position.copy(position);
     group.userData.nodeId = id;
 
-    const domainColor = domainColor(node.domain, theme);
+    const nodeDomainColor = domainColor(node.domain, theme);
     const typeColor = TYPE_COLOR[String(node.entityType)] || '#cbd5e1';
     const baseEmissiveDark = (node.entityType === 'hub' ? .56 : node.entityType === 'subdomain' ? .42 : .32)
       + (compact ? .12 : .04);
     const baseEmissive = theme === 'light' ? baseEmissiveDark * .42 : baseEmissiveDark;
 
     const coreMaterial = new THREE.MeshStandardMaterial({
-      color: new THREE.Color(domainColor).lerp(new THREE.Color(typeColor), .20),
-      emissive: new THREE.Color(domainColor),
+      color: new THREE.Color(nodeDomainColor).lerp(new THREE.Color(typeColor), .20),
+      emissive: new THREE.Color(nodeDomainColor),
       emissiveIntensity: baseEmissive,
       roughness: .64,
       metalness: .03,
@@ -1585,7 +1585,7 @@ function rebuildThree(
     const membrane = new THREE.Mesh(
       createOrganicGeometry(radius * 1.13, `${id}:membrane`, compact ? 2 : 3),
       new THREE.MeshBasicMaterial({
-        color: new THREE.Color(domainColor),
+        color: new THREE.Color(nodeDomainColor),
         transparent: true,
         opacity: node.entityType === 'hub' ? .13 : .09,
         depthWrite: false,
@@ -1596,7 +1596,7 @@ function rebuildThree(
     group.add(membrane);
 
     const neuronGlow = createGlowSprite(
-      domainColor,
+      nodeDomainColor,
       radius * (node.entityType === 'hub' ? 5.6 : 4.9),
       (node.entityType === 'hub' ? .56 : .44) + (compact ? .12 : .04),
       theme,
@@ -1634,7 +1634,7 @@ function rebuildThree(
     if (showLeafLabels || node.entityType === 'hub' || node.entityType === 'subdomain' || id === selectedId) {
       const label = createLabelSprite(
         node.name,
-        domainColor(node.domain, theme),
+        nodeDomainColor,
         node.entityType === 'hub',
         compact,
         theme,
