@@ -454,7 +454,7 @@ jobs:
             > /tmp/atlas3d-3d-dom.html
           echo "ATLAS3D_3D_DOM_DIAGNOSTICS_BEGIN"
           grep -oE 'data-atlas-[a-z-]+="[^"]*"' /tmp/atlas3d-3d-dom.html | head -20 || true
-          grep -oE 'data-three-(ready|node-count|paint-samples|synapse-count|learning-synapses|z-span|same-level-z-span|depth-policy|visual)="[^"]*"' /tmp/atlas3d-3d-dom.html | head -28 || true
+          grep -oE 'data-three-(ready|node-count|paint-samples|synapse-count|learning-synapses|z-span|same-level-z-span|selected-sibling-count|selected-sibling-z-span|depth-policy|visual)="[^"]*"' /tmp/atlas3d-3d-dom.html | head -28 || true
           echo "ATLAS3D_3D_DOM_DIAGNOSTICS_END"
           grep -Fq 'data-atlas-mode="3d"' /tmp/atlas3d-3d-dom.html
           grep -Fq 'data-active-mode="3d"' /tmp/atlas3d-3d-dom.html
@@ -479,12 +479,22 @@ jobs:
           grep -Fq 'data-three-depth-policy="domain-depth-sibling-v3"' /tmp/atlas3d-3d-dom.html
           three_z_span="$(sed -n 's/.*data-three-z-span="\([0-9.][0-9.]*\)".*/\1/p' /tmp/atlas3d-3d-dom.html | head -1)"
           three_same_level_z="$(sed -n 's/.*data-three-same-level-z-span="\([0-9.][0-9.]*\)".*/\1/p' /tmp/atlas3d-3d-dom.html | head -1)"
+          selected_sibling_count="$(sed -n 's/.*data-three-selected-sibling-count="\([0-9][0-9]*\)".*/\1/p' /tmp/atlas3d-3d-dom.html | head -1)"
+          selected_sibling_z="$(sed -n 's/.*data-three-selected-sibling-z-span="\([0-9.][0-9.]*\)".*/\1/p' /tmp/atlas3d-3d-dom.html | head -1)"
           awk -v value="${three_z_span:-0}" 'BEGIN { exit !(value > 700) }' || {
             echo "::error::Three total Z depth is too flat: ${three_z_span:-missing}"
             exit 1
           }
           awk -v value="${three_same_level_z:-0}" 'BEGIN { exit !(value > 120) }' || {
             echo "::error::Three same-level siblings still form a flat totem: ${three_same_level_z:-missing}"
+            exit 1
+          }
+          [ -n "${selected_sibling_count}" ] && [ "${selected_sibling_count}" -gt 2 ] || {
+            echo "::error::Dense Science depth probe selected only ${selected_sibling_count:-0} children"
+            exit 1
+          }
+          awk -v value="${selected_sibling_z:-0}" 'BEGIN { exit !(value > 120) }' || {
+            echo "::error::Selected dense Science siblings still form a flat totem: ${selected_sibling_z:-missing}"
             exit 1
           }
           three_paint_samples="$(sed -n 's/.*data-three-paint-samples="\([0-9][0-9]*\)".*/\1/p' /tmp/atlas3d-3d-dom.html | head -1)"
@@ -497,7 +507,7 @@ jobs:
             --window-size=1440,900 --virtual-time-budget=8000 \
             --screenshot=/tmp/atlas3d-readback-3d.png "${depth_url}" >/dev/null 2>&1
           test -s /tmp/atlas3d-readback-3d.png
-          echo "PAGES_ATLAS3D_3D_READBACK_OK visual=neural-synapse visible=${visible_count} three_nodes=${three_node_count} synapses=${three_synapse_count} learning=${three_learning} z_span=${three_z_span} same_level_z=${three_same_level_z} paint_samples=${three_paint_samples}"
+          echo "PAGES_ATLAS3D_3D_READBACK_OK visual=neural-synapse visible=${visible_count} three_nodes=${three_node_count} synapses=${three_synapse_count} learning=${three_learning} z_span=${three_z_span} same_level_z=${three_same_level_z} selected_siblings=${selected_sibling_count} selected_z=${selected_sibling_z} paint_samples=${three_paint_samples}"
 
           curl -fsSL "${base}/world-public.ndjson" -o /tmp/world.ndjson
           curl -fsSL "${base}/mcp/topology.json" -o /tmp/mcp-topology.json
