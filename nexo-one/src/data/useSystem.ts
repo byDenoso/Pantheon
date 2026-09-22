@@ -160,13 +160,16 @@ export function useSystem(initialScenario = DEFAULT_SCENARIO_ID): SystemStore {
         const receipt = await dispatchProjectionSync(previousFingerprint, ctrl.signal);
         if (ctrl.signal.aborted || syncController.current !== ctrl) return;
 
-        if (receipt.outcome === 'PUBLIC_PROJECTION_REFRESHED') {
-          setLastSuccessfulReadAt(new Date().toISOString());
+        if (receipt.outcome === 'PUBLIC_PROJECTION_REFRESHED' || receipt.outcome === 'PUBLIC_PROJECTION_CACHED') {
+          const cached = receipt.outcome === 'PUBLIC_PROJECTION_CACHED';
+          if (!cached) setLastSuccessfulReadAt(new Date().toISOString());
           const changedAtOrigin = previousFingerprint !== receipt.projection_fingerprint;
-          setSyncStatus(changedAtOrigin ? 'CHANGED' : 'UNCHANGED');
-          setSyncMessage(changedAtOrigin
-            ? 'Nova projeção publicada detectada · ' + receipt.active_work + ' WORK · snapshot Pages validado'
-            : 'Sem alterações · snapshot Pages validado');
+          setSyncStatus(changedAtOrigin && !cached ? 'CHANGED' : 'UNCHANGED');
+          setSyncMessage(cached
+            ? 'Origem temporariamente indisponível · cache validado recente preservado'
+            : changedAtOrigin
+              ? 'Nova projeção pública detectada · ' + receipt.active_work + ' WORK · snapshot Pages validado'
+              : 'Sem alterações · projeção pública validada diretamente');
           return;
         }
 

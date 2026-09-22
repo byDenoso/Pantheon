@@ -4,7 +4,9 @@ const configuredSyncEndpoint = String(import.meta.env?.VITE_NEXO_SYNC_ENDPOINT |
 const PUBLISHED_PROJECTION_ASSET = 'tower-projection/projection.json';
 const PUBLISHED_MANIFEST_ASSET = 'tower-projection/manifest.json';
 const PUBLISHED_BUILD_META_ASSET = 'build-meta.json';
-const PUBLISHED_RETRY_DELAYS_MS = [0, 350, 900] as const;
+const PUBLISHED_RETRY_DELAYS_MS = [0, 800, 2400, 6000] as const;
+const VALIDATED_CACHE_KEY = 'nexo.public-projection-receipt.v1';
+const VALIDATED_CACHE_MAX_AGE_MS = 30 * 60 * 1000;
 
 export type ProjectionSyncReceipt =
   | {
@@ -21,6 +23,18 @@ export type ProjectionSyncReceipt =
       active_work: number;
       needs_dener: number;
       origin_channel: 'GITHUB_PAGES_VALIDATED';
+    }
+  | {
+      outcome: 'PUBLIC_PROJECTION_CACHED';
+      projection_fingerprint: string;
+      source_snapshot_id: string;
+      source_state_fingerprint: string;
+      generated_at: string;
+      active_work: number;
+      needs_dener: number;
+      origin_channel: 'GITHUB_PAGES_VALIDATED_CACHE';
+      cached_at: string;
+      stale_age_ms: number;
     };
 
 type BuildMeta = {
@@ -80,7 +94,9 @@ class ProjectionOriginError extends Error {
 }
 
 function retryableStatus(status:number):boolean{
-  return status===408||status===425||status===429||status===500||status===502||status===503||status===504;
+  // GitHub Pages/Raw/API can transiently surface 404 while edges converge.
+  // Retry it, but only within this bounded sequence; a persistent 404 still fails.
+  return status===404||status===408||status===425||status===429||status===500||status===502||status===503||status===504;
 }
 
 async function fetchPublishedJson<T>(
@@ -199,6 +215,36 @@ function projectionReceipt(
   };
 }
 
+type CachedProjectionReceipt = {
+  cached_at:string;
+  receipt:Extract<ProjectionSyncReceipt,{outcome:'PUBLIC_PROJECTION_REFRESHED'}>;
+};
+
+function rememberValidatedReceipt(receipt:Extract<ProjectionSyncReceipt,{outcome:'PUBLIC_PROJECTION_REFRESHED'}>):void{
+  if(typeof window==='undefined')return;
+  try{
+    window.localStorage.setItem(VALIDATED_CACHE_KEY,JSON.stringify({cached_at:new Date().toISOString(),receipt}));
+  }catch{/* cache is resilience only */}
+}
+
+function readValidatedReceiptCache():Extract<ProjectionSyncReceipt,{outcome:'PUBLIC_PROJECTION_CACHED'}>|null{
+  if(typeof window==='undefined')return null;
+  try{
+    const parsed=JSON.parse(window.localStorage.getItem(VALIDATED_CACHE_KEY)||'null') as CachedProjectionReceipt|null;
+    if(!parsed?.receipt||parsed.receipt.origin_channel!=='GITHUB_PAGES_VALIDATED')return null;
+    const cachedAt=Date.parse(parsed.cached_at);
+    const age=Date.now()-cachedAt;
+    if(!Number.isFinite(cachedAt)||age<0||age>VALIDATED_CACHE_MAX_AGE_MS)return null;
+    return {
+      ...parsed.receipt,
+      outcome:'PUBLIC_PROJECTION_CACHED',
+      origin_channel:'GITHUB_PAGES_VALIDATED_CACHE',
+      cached_at:parsed.cached_at,
+      stale_age_ms:age,
+    };
+  }catch{return null;}
+}
+
 async function fetchFreshPublicProjection(signal?:AbortSignal):Promise<ProjectionSyncReceipt>{
   try{
     const [projection,manifest,buildMeta]=await Promise.all([
@@ -206,17 +252,21 @@ async function fetchFreshPublicProjection(signal?:AbortSignal):Promise<Projectio
       fetchPublishedJson<PublicManifest>(PUBLISHED_MANIFEST_ASSET,'Manifesto publicado',signal),
       fetchPublishedJson<BuildMeta>(PUBLISHED_BUILD_META_ASSET,'Build-meta publicado',signal),
     ]);
-    return projectionReceipt(projection,manifest,buildMeta);
+    const receipt=projectionReceipt(projection,manifest,buildMeta) as Extract<ProjectionSyncReceipt,{outcome:'PUBLIC_PROJECTION_REFRESHED'}>;
+    rememberValidatedReceipt(receipt);
+    return receipt;
   }catch(error){
     if(signal?.aborted||(error as Error)?.name==='AbortError')throw error;
     if(error instanceof DataSourceError)throw error;
     const failure=error instanceof ProjectionOriginError
       ? error.message
       : 'Falha não classificada na leitura do snapshot publicado.';
+    const cached=readValidatedReceiptCache();
+    if(cached)return cached;
     throw new DataSourceError(
       'UNAVAILABLE',
-      'O snapshot validado do Atlas está indisponível. '+failure
-        +' O último snapshot válido foi preservado; a interface não regride para uma origem privada ou não validada.',
+      'O snapshot validado do Atlas está indisponível após retries espaçados. '+failure
+        +' Nenhum cache validado recente existe; a interface preserva o último estado em memória e não regride para uma origem privada ou não validada.',
     );
   }
 }
@@ -249,19 +299,17 @@ export async function dispatchProjectionSync(currentFingerprint:string,signal?:A
     let error='SYNC_DISPATCH_FAILED';
     try{error=String((await response.json())?.error||error);}catch{/* resposta sem JSON */}
     if(response.status===503&&error==='SYNC_BRIDGE_NOT_CONFIGURED'){
-      throw new DataSourceError(
-        'UNAVAILABLE',
-        'SYNC_BRIDGE_NOT_CONFIGURED: a ponte de sincronização real está sem a credencial GITHUB_TOKEN no runtime Vercel; nenhum dispatch foi executado.',
-      );
+      // No token is a supported deployment mode: "Sincronizar" means revalidate
+      // the sanctioned public projection directly. It does not claim a dispatch.
+      return fetchFreshPublicProjection(signal);
     }
-    throw new DataSourceError('UNAVAILABLE','A sincronização real não foi disparada: '+error+'.');
+    throw new DataSourceError('UNAVAILABLE','A ponte de sincronização não aceitou o dispatch: '+error+'.');
   }catch(error){
     if(signal?.aborted||(error as Error)?.name==='AbortError')throw error;
-    if(error instanceof DataSourceError)throw error;
-    throw new DataSourceError(
-      'UNAVAILABLE',
-      'A ponte de sincronização real não respondeu. Nenhum dispatch foi confirmado; o último snapshot publicado foi preservado.',
-    );
+    // Bridge reachability is not a dependency for read-only deployments.
+    // Fall back to the public projection, which has its own bounded retries,
+    // evidence-trio validation and explicitly stale cache mode.
+    return fetchFreshPublicProjection(signal);
   }
 }
 

@@ -5,7 +5,7 @@ const unique=values=>[...new Set(values.filter(Boolean))];
 
 function base(state){
  const {authority,payload,fingerprint}=state;
- return {source:'github',freshness:'LIVE',sourceVersion:authority.ref||'main',fingerprint,authority:'GITHUB',projectionAuthority:payload?.meta?.authority||'PROJECTION',projectionOnly:true,sourceRef:`https://github.com/${authority.repository}/blob/${authority.ref}/${authority.projection.transportPath}`};
+ return {source:'github',freshness:state.freshness||'LIVE',sourceVersion:authority.ref||'main',fingerprint,authority:'GITHUB',projectionAuthority:payload?.meta?.authority||'PROJECTION',projectionOnly:true,sourceRef:`https://github.com/${authority.repository}/blob/${authority.ref}/${authority.projection.transportPath}`,staleReason:state.staleReason||null,staleAgeMs:state.staleAgeMs||0};
 }
 const graph=(state,focus,nodes,edges,extra={})=>({...base(state),focus,nodes,edges,total:nodes.length,hasMore:false,truncated:false,depth:1,cache:'LIVE',issues:[],...extra});
 const systemNode=(id,label,summary)=>({id:`system:${id}`,type:'SYSTEM',label,status:'ACTIVE',summary,metadata:{authority:'GITHUB'}});

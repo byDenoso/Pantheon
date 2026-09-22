@@ -300,9 +300,15 @@ export function McpAtlasApp(){
     setSyncState('loading');
     try{
       const receipt=await dispatchProjectionSync(current.source.projection_fingerprint||'');
-      if(receipt.outcome==='PUBLIC_PROJECTION_REFRESHED'){
+      if(receipt.outcome==='PUBLIC_PROJECTION_REFRESHED'||receipt.outcome==='PUBLIC_PROJECTION_CACHED'){
         setCheckedAt(new Date());
-        setSyncState(receipt.projection_fingerprint===(current.source.projection_fingerprint||'')?'same':'source-newer');
+        if(receipt.outcome==='PUBLIC_PROJECTION_CACHED'){
+          setError('Origem pública temporariamente indisponível; usando cache validado recente.');
+          setSyncState('same');
+        }else{
+          setError('');
+          setSyncState(receipt.projection_fingerprint===(current.source.projection_fingerprint||'')?'same':'source-newer');
+        }
         return;
       }
       await waitForProjectionSync(receipt.request_id);
@@ -367,7 +373,7 @@ export function McpAtlasApp(){
     :syncState==='same'?'Sem alterações · origem pública confirmada '+checked
     :syncState==='updated'?'Atualizado · verificado '+checked
     :syncState==='source-newer'?'Nova projeção detectada na origem · publicação pendente'
-    :syncState==='error'?(error.includes('credencial')||error.includes('SYNC_BRIDGE_NOT_CONFIGURED')?'Sync real indisponível · bridge sem credencial':'Sincronização real não confirmada')
+    :syncState==='error'?'Sincronização não confirmada'
     :checked?'Verificado '+checked:'';
 
   const applyMode=(next:ViewMode)=>{

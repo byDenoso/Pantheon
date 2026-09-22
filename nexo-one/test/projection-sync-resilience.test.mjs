@@ -113,7 +113,11 @@ test('projection sync source contains no browser path to the private Git export 
   assert.match(source,/tower-projection\/manifest\.json/);
   assert.match(source,/build-meta\.json/);
   assert.match(source,/GITHUB_PAGES_VALIDATED/);
-  assert.match(source,/SYNC_BRIDGE_NOT_CONFIGURED: a ponte de sincronização real está sem a credencial GITHUB_TOKEN/);
-  assert.match(source,/Nenhum dispatch foi confirmado/);
-  assert.doesNotMatch(source,/SYNC_BRIDGE_NOT_CONFIGURED'[\s\S]{0,180}return fetchFreshPublicProjection/);
+  assert.match(source,/SYNC_BRIDGE_NOT_CONFIGURED/);
+  assert.match(source,/return fetchFreshPublicProjection\(signal\)/);
+  assert.match(source,/PUBLIC_PROJECTION_CACHED/);
+  assert.match(source,/GITHUB_PAGES_VALIDATED_CACHE/);
+  assert.match(source,/VALIDATED_CACHE_MAX_AGE_MS = 30 \* 60 \* 1000/);
+  assert.match(source,/status===404/);
+  assert.match(source,/\[0, 800, 2400, 6000\]/);
 });
