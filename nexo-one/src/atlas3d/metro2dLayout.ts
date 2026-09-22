@@ -568,6 +568,8 @@ export function buildMetroScreenLabelLayout(
 ): MetroScreenLabelLayout {
   const visibleSet = new Set(ids);
   const compactViewport = viewportWidth <= 640;
+  const visibleMaxSiblings = maxVisibleSiblingCount(model, visibleSet);
+  const ultraDenseOverview = ids.length > 140 || visibleMaxSiblings > 52 || zoom < .45;
   const siblingIndex = new Map<string, { index: number; count: number; sampled: boolean }>();
 
   for (const [parentId, allChildren] of model.childrenMap) {
@@ -627,7 +629,7 @@ export function buildMetroScreenLabelLayout(
     const mustShow = node.entityType === 'hub'
       || node.id === selectedId
       || node.id === hoveredId
-      || (!compactViewport && node.entityType === 'subdomain');
+      || (!compactViewport && !ultraDenseOverview && node.entityType === 'subdomain');
 
     if (!mustShow && siblings && !siblings.sampled) {
       byId.set(node.id, {
@@ -753,7 +755,7 @@ export function buildMetroScreenLabelLayout(
     hidden: [...byId.values()].filter(spec => !spec.visible).length,
     collisions,
     uiZoneViolations,
-    maxSiblings: maxVisibleSiblingCount(model, visibleSet),
+    maxSiblings: visibleMaxSiblings,
     zoom,
   };
 }
