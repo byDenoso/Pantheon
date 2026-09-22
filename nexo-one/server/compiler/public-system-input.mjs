@@ -40,6 +40,20 @@ export async function readPublicSystemInput({url} = {}) {
     type: 'HUMAN', status: 'WAITING', blocker: row.action, required_resolution: 'Revisar o sinal projetado e confirmar o próximo passo.',
     blocks_scope: row.domain, created_at: row.last_checked, source_ref: 'PUBLIC_PROJECTION', fingerprint: row.fingerprint,
   }));
+  const campaigns = (source.science || [])
+    .filter(row => upper(row?.type) === 'CAMPAIGN')
+    .map(row => ({
+      campaign_id: text(row.id),
+      title: text(row.title) || text(row.id),
+      domain: 'SCIENCE',
+      status: upper(row.status) || 'ACTIVE',
+      semantic_description: text(row.semantic_description) || text(row.summary),
+      semantic_state: text(row.semantic_state),
+      source_ref: text(row.sourceRef) || 'PUBLIC_PROJECTION',
+      source_revision: text(row.updatedAt) || text(source?.meta?.generatedAt) || 'PUBLIC_PROJECTION',
+      fingerprint: text(row.fingerprint) || text(row.id),
+    }))
+    .filter(row => row.campaign_id);
   const learning = [...(source.learning || []), ...(source.crossDomain || [])];
   const learningFilaments = learning.map(row => {
     const id = text(row.id);
@@ -57,7 +71,7 @@ export async function readPublicSystemInput({url} = {}) {
       evidence_refs: text(row.provenance), next_discriminant: text(row.scope),
     };
   }).filter(row => row.filament_id);
-  return {actions, executionRuns: [], sideQuests, capabilities: [], semanticMemory: source.learning || [], proceduralMemory: [], learningFilaments, automationHealth: []};
+  return {actions, campaigns, executionRuns: [], sideQuests, capabilities: [], semanticMemory: source.learning || [], proceduralMemory: [], learningFilaments, automationHealth: []};
 }
 
-function emptyInput() { return {actions: [], executionRuns: [], sideQuests: [], capabilities: [], semanticMemory: [], proceduralMemory: [], learningFilaments: [], automationHealth: []}; }
+function emptyInput() { return {actions: [], campaigns: [], executionRuns: [], sideQuests: [], capabilities: [], semanticMemory: [], proceduralMemory: [], learningFilaments: [], automationHealth: []}; }
