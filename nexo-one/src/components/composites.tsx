@@ -137,7 +137,7 @@ export function CapabilityMatrix(
                             title={capability.explanation}>
                             <i aria-hidden="true" className={`glyph glyph-${toneOf(capability.status)}`} />
                             <span>{capability.label}</span>
-                            <small>{label(capability.operation)} · risco {label(capability.risk).toLowerCase()}</small>
+                            <small>{capability.operation ? label(capability.operation) : 'operação não publicada'} · {capability.risk ? `risco ${label(capability.risk).toLowerCase()}` : 'risco não publicado'}</small>
                           </button>
                         </li>
                       ))}
