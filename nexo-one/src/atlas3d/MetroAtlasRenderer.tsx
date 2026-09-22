@@ -714,6 +714,9 @@ function Metro2DView({
         ]);
         if (sequence !== refreshSequence) return;
         const canvasReady = Boolean(container.querySelector('canvas'));
+        if (renderOutcome === 'timeout' && !canvasReady) {
+          throw new Error('G6 render timeout sem canvas materializado');
+        }
         if (!canvasReady) {
           throw new Error('G6 render sem canvas materializado');
         }
