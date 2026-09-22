@@ -1214,21 +1214,92 @@ function applyThreeSelection(runtime: ThreeRuntime, selectedId: string | null) {
   });
 }
 
+function threeFitInsets(runtime: ThreeRuntime) {
+  const canvas = runtime.renderer.domElement;
+  const width = Math.max(1, canvas.clientWidth || canvas.parentElement?.clientWidth || 1);
+  const height = Math.max(1, canvas.clientHeight || canvas.parentElement?.clientHeight || 1);
+  const container = canvas.parentElement as HTMLElement | null;
+  const compact = container ? isCompactRenderer(container) : width <= 640;
+  return compact
+    ? { width, height, top: 154, right: 12, bottom: 64, left: 12, compact }
+    : { width, height, top: 118, right: 24, bottom: 62, left: 24, compact };
+}
+
 function fitThree(runtime: ThreeRuntime, animated = true) {
   if (!runtime.worldPositions.size) return;
+
   const box = new THREE.Box3();
   runtime.worldPositions.forEach(position => box.expandByPoint(position));
   const center = box.getCenter(new THREE.Vector3());
-  const size = box.getSize(new THREE.Vector3());
-  const radius = Math.max(160, size.length() * .58);
-  const fov = THREE.MathUtils.degToRad(runtime.camera.fov);
-  const distance = Math.max(420, radius / Math.tan(fov / 2) * .92);
   const direction = new THREE.Vector3(.82, .54, 1.15).normalize();
-  const destination = center.clone().add(direction.multiplyScalar(distance));
+  const forward = direction.clone().multiplyScalar(-1);
+  const right = forward.clone().cross(runtime.camera.up).normalize();
+  const cameraUp = right.clone().cross(forward).normalize();
+
+  let horizontalExtent = 0;
+  let verticalExtent = 0;
+  let depthExtent = 0;
+  for (const x of [box.min.x, box.max.x]) {
+    for (const y of [box.min.y, box.max.y]) {
+      for (const z of [box.min.z, box.max.z]) {
+        const offset = new THREE.Vector3(x, y, z).sub(center);
+        horizontalExtent = Math.max(horizontalExtent, Math.abs(offset.dot(right)));
+        verticalExtent = Math.max(verticalExtent, Math.abs(offset.dot(cameraUp)));
+        depthExtent = Math.max(depthExtent, Math.abs(offset.dot(direction)));
+      }
+    }
+  }
+
+  const { width, height, top, right: insetRight, bottom, left, compact } = threeFitInsets(runtime);
+  const usableWidth = Math.max(80, width - left - insetRight);
+  const usableHeight = Math.max(120, height - top - bottom);
+  const widthFraction = Math.max(.24, usableWidth / width);
+  const heightFraction = Math.max(.24, usableHeight / height);
+  const fov = THREE.MathUtils.degToRad(runtime.camera.fov);
+  const tanVertical = Math.tan(fov / 2);
+  const tanHorizontal = tanVertical * Math.max(.35, runtime.camera.aspect);
+  const padding = compact ? 34 : 48;
+
+  horizontalExtent += padding;
+  verticalExtent += padding * .72;
+  depthExtent += padding * .18;
+
+  // Fit against the plane actually seen by the camera. The previous implementation
+  // used the full 3D diagonal; once Z became meaningful that pushed the camera far
+  // away and made mobile look like a tiny graph floating in an empty viewport.
+  const requiredForWidth = horizontalExtent / Math.max(.001, tanHorizontal * widthFraction);
+  const requiredForHeight = verticalExtent / Math.max(.001, tanVertical * heightFraction);
+  const fitPlaneDistance = Math.max(requiredForWidth, requiredForHeight);
+  const distance = Math.max(
+    compact ? 330 : 410,
+    depthExtent + fitPlaneDistance * (compact ? 1.06 : 1.10),
+  );
+
+  const availableAtClosest = Math.max(1, distance - depthExtent);
+  const coverage = Math.min(2,
+    Math.max(
+      horizontalExtent / Math.max(1, availableAtClosest * tanHorizontal * widthFraction),
+      verticalExtent / Math.max(1, availableAtClosest * tanVertical * heightFraction),
+    ),
+  );
+
+  const screenOffsetPx = (top - bottom) / 2;
+  const worldPerPixel = (2 * distance * tanVertical) / height;
+  const target = center.clone().addScaledVector(cameraUp, screenOffsetPx * worldPerPixel);
+  const destination = target.clone().add(direction.clone().multiplyScalar(distance));
+
+  const container = runtime.renderer.domElement.parentElement as HTMLElement | null;
+  if (container) {
+    container.dataset.threeFitPolicy = 'projected-safe-area-v4';
+    container.dataset.threeFitDistance = distance.toFixed(1);
+    container.dataset.threeFitCoverage = coverage.toFixed(2);
+    container.dataset.threeFitTopInset = String(top);
+    container.dataset.threeFitBottomInset = String(bottom);
+  }
 
   if (!animated) {
     runtime.camera.position.copy(destination);
-    runtime.controls.target.copy(center);
+    runtime.controls.target.copy(target);
     runtime.controls.update();
     return;
   }
@@ -1241,7 +1312,7 @@ function fitThree(runtime: ThreeRuntime, animated = true) {
     const t = Math.min(1, (now - start) / duration);
     const eased = 1 - Math.pow(1 - t, 3);
     runtime.camera.position.lerpVectors(fromPosition, destination, eased);
-    runtime.controls.target.lerpVectors(fromTarget, center, eased);
+    runtime.controls.target.lerpVectors(fromTarget, target, eased);
     runtime.controls.update();
     if (t < 1) requestAnimationFrame(tick);
   };
