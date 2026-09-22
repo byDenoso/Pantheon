@@ -1180,6 +1180,25 @@ jobs:
           const actualWaiting=publishedWork.filter(node=>String(node.operational_status||node.state||'').toUpperCase()==='WAIT_DEPENDENCY').length;
           if(actualWaiting!==expectedWaiting)throw new Error(`WORK_WAITING_COUNT_DRIFT projection=${expectedWaiting} system=${actualWaiting}`);
           if((system.inbox||[]).length!==humanIds.size)throw new Error(`WORK_HUMAN_COUNT_DRIFT projection=${humanIds.size} inbox=${(system.inbox||[]).length}`);
+          const inboxByWork=new Map((system.inbox||[]).map(item=>[String(item.id||'').replace(/^needs-dener:/,''),item]));
+          for(const id of humanIds){
+            const inbox=inboxByWork.get(id);
+            if(!inbox)throw new Error(`WORK_HUMAN_INBOX_MISSING ${id}`);
+            if(!Array.isArray(inbox.human_requirements)||inbox.human_requirements.length<1){
+              throw new Error(`WORK_HUMAN_REQUIREMENTS_EMPTY ${id}`);
+            }
+            if(!inbox.human_requirements.every(req=>String(req?.detail||'').trim()&&String(req?.label||'').trim())){
+              throw new Error(`WORK_HUMAN_REQUIREMENTS_UNEXPLAINED ${id}`);
+            }
+            if(Array.isArray(inbox.automatic_requirements)&&inbox.automatic_requirements.some(req=>
+              inbox.human_requirements.some(human=>String(human?.id||'')===String(req?.id||'')))){
+              throw new Error(`WORK_DEPENDENCY_CLASSIFICATION_OVERLAP ${id}`);
+            }
+            if(inbox.kind==='CONFIGURAR_ACESSO'&&!String(inbox.action_location||'').trim()){
+              throw new Error(`WORK_AUTH_LOCATION_MISSING ${id}`);
+            }
+          }
+          console.log('PAGES_NEEDS_DENER_SEMANTIC_READBACK_OK gates='+humanIds.size);
 
           if(buildMeta.contract!=='NEXO_ONE_BUILD_META_V1')throw new Error('BUILD_META_CONTRACT_INVALID');
           if(buildMeta.pantheon_commit!==process.env.EXPECTED_PANTHEON_COMMIT)throw new Error('BUILD_META_COMMIT_MISMATCH');
