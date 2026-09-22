@@ -117,7 +117,9 @@ export default function Atlas3DApp() {
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [navigationRevision, setNavigationRevision] = useState('');
-  const [viewMode, setViewMode] = useState<ViewMode>('2d');
+  const [viewMode, setViewMode] = useState<ViewMode>(() =>
+    typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('mode') === '3d' ? '3d' : '2d'
+  );
   const [showBeams, setShowBeams] = useState(true);
   const [fitNonce, setFitNonce] = useState(0);
   const [rendererReady, setRendererReady] = useState(false);

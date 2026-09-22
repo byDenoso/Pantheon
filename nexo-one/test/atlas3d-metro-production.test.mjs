@@ -31,6 +31,28 @@ test('production Metro adapter materializes Nexo, Science and Olympus simultaneo
   assert.ok(visible.some(id => model.nodeMap.get(id)?.depth === 1), 'initial view must expose named subdomains');
 });
 
+test('an empty public domain still gets an honest operational station from its lane', () => {
+  const source = state();
+  source.graph.nodes = source.graph.nodes.filter(node => node.domain !== 'OLYMPUS' || node.type === 'DOMAIN');
+  source.graph.edges = source.graph.edges.filter(edge =>
+    source.graph.nodes.some(node => node.id === edge.from) &&
+    source.graph.nodes.some(node => node.id === edge.to)
+  );
+  source.lanes = source.lanes.map(lane => lane.domain === 'OLYMPUS'
+    ? { ...lane, current_state: '0 WORK · 0 TEST in sanctioned projection', next_action: 'Await next canonical projection.' }
+    : lane
+  );
+
+  const model = buildAtlasMetroModel(source);
+  const olympus = model.nodeMap.get('atlas.domain.olympus');
+  assert.ok(olympus);
+  assert.equal(olympus.childCount, 1);
+  const child = model.nodeMap.get(model.childrenMap.get(olympus.id)[0]);
+  assert.equal(child.name, 'Estado operacional');
+  assert.match(child.summary, /0 WORK/);
+  assert.equal(child.synthetic, true);
+});
+
 test('entities stay below subdomain stations and preserve production provenance', () => {
   const model = buildAtlasMetroModel(state());
   const canonical = model.nodes.find(node => !node.synthetic);
@@ -64,6 +86,8 @@ test('dedicated Atlas production page uses Metro renderer, G6 and deterministic 
   assert.match(app, /new Set\(model\.roots\)/);
   assert.match(app, /navigationRevision !== model\.revision/);
   assert.match(app, /activeExpanded = navigationStale \? new Set\(model\.roots\) : expanded/);
+  assert.match(app, /URLSearchParams/);
+  assert.match(app, /mode.*=== '3d'/);
   assert.match(app, /3D Explorar/);
   assert.match(app, /2D Metro/);
   assert.doesNotMatch(app, /kind: 'ROOT'/);
@@ -74,6 +98,8 @@ test('dedicated Atlas production page uses Metro renderer, G6 and deterministic 
   assert.match(renderer, /g6NodeCount/);
   assert.match(renderer, /querySelector\('canvas'\)/);
   assert.match(renderer, /OrbitControls/);
+  assert.match(renderer, /threeNodeCount/);
+  assert.match(renderer, /threeReady/);
   assert.match(renderer, /domainBaseZ|NEXO: -155/);
   assert.doesNotMatch(renderer, /forceSimulation|forceManyBody|forceLink/);
 

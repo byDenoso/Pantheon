@@ -170,6 +170,35 @@ export function buildAtlasMetroModel(state: SystemState): AtlasMetroModel {
     const orderedGroups = [...groups.entries()]
       .sort((a, b) => b[1].length - a[1].length || a[0].localeCompare(b[0]));
 
+    if (orderedGroups.length === 0) {
+      const lane = state.lanes.find(candidate => candidate.domain === domain);
+      if (lane) {
+        const id = atlasSubdomainNodeId(domain, 'Estado operacional');
+        const observedAt = lane.freshness?.observed_at || lane.checked_at || state.generated_at;
+        nodes.push({
+          id,
+          sourceId: null,
+          name: 'Estado operacional',
+          domain,
+          parentId: ROOT_IDS[domain],
+          entityType: 'subdomain',
+          status: String(lane.state || 'SNAPSHOT'),
+          summary: [lane.current_state, lane.next_action].filter(Boolean).join(' · '),
+          depth: 1,
+          childCount: 0,
+          descendantCount: 0,
+          relationCount: 0,
+          mix: 50,
+          updatedAt: observedAt,
+          sourceRevision: state.bus.fingerprint,
+          fingerprint: lane.fingerprint || null,
+          authorityClass: 'DERIVED',
+          temporal: observedAt ? [{ label: 'projection', at: observedAt }] : [],
+          synthetic: true,
+        });
+      }
+    }
+
     for (const [subdomain, members] of orderedGroups) {
       const id = atlasSubdomainNodeId(domain, subdomain);
       const latest = members
