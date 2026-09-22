@@ -168,7 +168,11 @@ export function ActionsView(
       </div>
 
       {!hasActionRecords && projectedWork.length > 0 && (
-        <div className="work-projection-note" role="status">
+        <div className="work-projection-note" role="status"
+          data-work-count={projectedWork.length}
+          data-human-count={projectedBuckets.HUMAN.length}
+          data-waiting-count={projectedBuckets.WAITING.length}
+          data-blocked-count={projectedBuckets.BLOCKED.length}>
           <div>
             <strong>{projectedWork.length} WORK na projeção da Tower.</strong>
             <span>Fila canônica visível; execução autônoma só é afirmada quando existir ActionRecord com capability e runtime vinculados.</span>
