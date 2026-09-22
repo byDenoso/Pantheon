@@ -1011,7 +1011,7 @@ function addSynapse(
     new THREE.MeshBasicMaterial({
       color,
       transparent: true,
-      opacity: learning ? (compact ? .10 : .18) : bridge ? .055 : .085,
+      opacity: learning ? (compact ? .14 : .18) : bridge ? .055 : .085,
       depthWrite: false,
       blending: THREE.AdditiveBlending,
     }),
@@ -1120,12 +1120,15 @@ function threePositions(
   ids: string[],
   width: number,
   height: number,
+  compact = false,
 ): Map<string, THREE.Vector3> {
   const metro = metroLayoutPositions(model, ids, width, height);
   const visible = new Set(ids);
   const domainBaseZ: Record<string, number> = { NEXO: -520, SCIENCE: 0, OLYMPUS: 520 };
   const depthStep = 150;
-  const scale = .72;
+  const portrait = compact && height > width * 1.15;
+  const scaleX = portrait ? .48 : compact ? .60 : .72;
+  const scaleY = compact ? .76 : .72;
   const out = new Map<string, THREE.Vector3>();
 
   for (const id of ids) {
@@ -1151,8 +1154,8 @@ function threePositions(
     }
 
     out.set(id, new THREE.Vector3(
-      (position[0] - width / 2) * scale,
-      -(position[1] - height / 2) * scale,
+      (position[0] - width / 2) * scaleX,
+      -(position[1] - height / 2) * scaleY,
       domainBaseZ[node.domain] + node.depth * depthStep + siblingZ,
     ));
   }
@@ -1224,6 +1227,47 @@ function threeFitInsets(runtime: ThreeRuntime) {
     : { width, height, top: 118, right: 24, bottom: 62, left: 24, compact };
 }
 
+function projectedThreeBounds(
+  runtime: ThreeRuntime,
+  center: THREE.Vector3,
+  direction: THREE.Vector3,
+  cameraUp: THREE.Vector3,
+  distance: number,
+  screenOffsetX: number,
+  screenOffsetY: number,
+) {
+  const { width, height } = threeFitInsets(runtime);
+  const fov = THREE.MathUtils.degToRad(runtime.camera.fov);
+  const worldPerPixel = (2 * distance * Math.tan(fov / 2)) / height;
+  const forward = direction.clone().multiplyScalar(-1);
+  const right = forward.clone().cross(runtime.camera.up).normalize();
+  const target = center.clone()
+    .addScaledVector(right, screenOffsetX * worldPerPixel)
+    .addScaledVector(cameraUp, screenOffsetY * worldPerPixel);
+  const camera = runtime.camera.clone();
+  camera.aspect = runtime.camera.aspect;
+  camera.position.copy(target).add(direction.clone().multiplyScalar(distance));
+  camera.up.copy(runtime.camera.up);
+  camera.lookAt(target);
+  camera.updateProjectionMatrix();
+  camera.updateMatrixWorld(true);
+
+  let minX = Infinity;
+  let maxX = -Infinity;
+  let minY = Infinity;
+  let maxY = -Infinity;
+  for (const position of runtime.worldPositions.values()) {
+    const projected = position.clone().project(camera);
+    const x = (projected.x * .5 + .5) * width;
+    const y = (-projected.y * .5 + .5) * height;
+    minX = Math.min(minX, x);
+    maxX = Math.max(maxX, x);
+    minY = Math.min(minY, y);
+    maxY = Math.max(maxY, y);
+  }
+  return { minX, maxX, minY, maxY, target, cameraPosition: camera.position.clone() };
+}
+
 function fitThree(runtime: ThreeRuntime, animated = true) {
   if (!runtime.worldPositions.size) return;
 
@@ -1234,67 +1278,68 @@ function fitThree(runtime: ThreeRuntime, animated = true) {
   const forward = direction.clone().multiplyScalar(-1);
   const right = forward.clone().cross(runtime.camera.up).normalize();
   const cameraUp = right.clone().cross(forward).normalize();
+  const { width, height, top, right: insetRight, bottom, left, compact } = threeFitInsets(runtime);
+  const safe = {
+    left: left + (compact ? 16 : 22),
+    right: width - insetRight - (compact ? 16 : 22),
+    top: top + (compact ? 14 : 18),
+    bottom: height - bottom - (compact ? 14 : 18),
+  };
+  const desiredCenterX = (safe.left + safe.right) / 2;
+  const desiredCenterY = (safe.top + safe.bottom) / 2;
+  const screenOffsetX = desiredCenterX - width / 2;
+  const screenOffsetY = desiredCenterY - height / 2;
 
-  let horizontalExtent = 0;
-  let verticalExtent = 0;
-  let depthExtent = 0;
-  for (const x of [box.min.x, box.max.x]) {
-    for (const y of [box.min.y, box.max.y]) {
-      for (const z of [box.min.z, box.max.z]) {
-        const offset = new THREE.Vector3(x, y, z).sub(center);
-        horizontalExtent = Math.max(horizontalExtent, Math.abs(offset.dot(right)));
-        verticalExtent = Math.max(verticalExtent, Math.abs(offset.dot(cameraUp)));
-        depthExtent = Math.max(depthExtent, Math.abs(offset.dot(direction)));
-      }
-    }
+  const fits = (distance: number) => {
+    const bounds = projectedThreeBounds(
+      runtime, center, direction, cameraUp, distance, screenOffsetX, screenOffsetY,
+    );
+    return {
+      bounds,
+      ok: bounds.minX >= safe.left
+        && bounds.maxX <= safe.right
+        && bounds.minY >= safe.top
+        && bounds.maxY <= safe.bottom,
+    };
+  };
+
+  let low = compact ? 120 : 180;
+  let high = compact ? 5200 : 6200;
+  while (!fits(high).ok && high < 16000) high *= 1.35;
+  for (let iteration = 0; iteration < 24; iteration += 1) {
+    const mid = (low + high) / 2;
+    if (fits(mid).ok) high = mid;
+    else low = mid;
   }
 
-  const { width, height, top, right: insetRight, bottom, left, compact } = threeFitInsets(runtime);
-  const usableWidth = Math.max(80, width - left - insetRight);
-  const usableHeight = Math.max(120, height - top - bottom);
-  const widthFraction = Math.max(.24, usableWidth / width);
-  const heightFraction = Math.max(.24, usableHeight / height);
-  const fov = THREE.MathUtils.degToRad(runtime.camera.fov);
-  const tanVertical = Math.tan(fov / 2);
-  const tanHorizontal = tanVertical * Math.max(.35, runtime.camera.aspect);
-  const padding = compact ? 34 : 48;
-
-  horizontalExtent += padding;
-  verticalExtent += padding * .72;
-  depthExtent += padding * .18;
-
-  // Fit against the plane actually seen by the camera. The previous implementation
-  // used the full 3D diagonal; once Z became meaningful that pushed the camera far
-  // away and made mobile look like a tiny graph floating in an empty viewport.
-  const requiredForWidth = horizontalExtent / Math.max(.001, tanHorizontal * widthFraction);
-  const requiredForHeight = verticalExtent / Math.max(.001, tanVertical * heightFraction);
-  const fitPlaneDistance = Math.max(requiredForWidth, requiredForHeight);
-  const distance = Math.max(
-    compact ? 330 : 410,
-    depthExtent + fitPlaneDistance * (compact ? 1.06 : 1.10),
+  const distance = high * (compact ? 1.035 : 1.055);
+  const final = projectedThreeBounds(
+    runtime, center, direction, cameraUp, distance, screenOffsetX, screenOffsetY,
   );
-
-  const availableAtClosest = Math.max(1, distance - depthExtent);
-  const coverage = Math.min(2,
-    Math.max(
-      horizontalExtent / Math.max(1, availableAtClosest * tanHorizontal * widthFraction),
-      verticalExtent / Math.max(1, availableAtClosest * tanVertical * heightFraction),
-    ),
-  );
-
-  const screenOffsetPx = (top - bottom) / 2;
-  const worldPerPixel = (2 * distance * tanVertical) / height;
-  const target = center.clone().addScaledVector(cameraUp, screenOffsetPx * worldPerPixel);
-  const destination = target.clone().add(direction.clone().multiplyScalar(distance));
+  const spanX = Math.max(1, final.maxX - final.minX);
+  const spanY = Math.max(1, final.maxY - final.minY);
+  const usableWidth = Math.max(1, safe.right - safe.left);
+  const usableHeight = Math.max(1, safe.bottom - safe.top);
+  const fillX = Math.min(2, spanX / usableWidth);
+  const fillY = Math.min(2, spanY / usableHeight);
+  const fillMax = Math.max(fillX, fillY);
+  const fillArea = Math.min(2, (spanX * spanY) / (usableWidth * usableHeight));
 
   const container = runtime.renderer.domElement.parentElement as HTMLElement | null;
   if (container) {
-    container.dataset.threeFitPolicy = 'projected-safe-area-v4';
+    container.dataset.threeFitPolicy = 'projected-screen-bounds-v5';
     container.dataset.threeFitDistance = distance.toFixed(1);
-    container.dataset.threeFitCoverage = coverage.toFixed(2);
+    container.dataset.threeFitCoverage = fillMax.toFixed(2);
+    container.dataset.threeFitFillX = fillX.toFixed(2);
+    container.dataset.threeFitFillY = fillY.toFixed(2);
+    container.dataset.threeFitArea = fillArea.toFixed(2);
     container.dataset.threeFitTopInset = String(top);
     container.dataset.threeFitBottomInset = String(bottom);
+    container.dataset.threeComposition = compact ? 'portrait-compact-v2' : 'desktop-v1';
   }
+
+  const target = final.target;
+  const destination = final.cameraPosition;
 
   if (!animated) {
     runtime.camera.position.copy(destination);
@@ -1373,7 +1418,13 @@ function rebuildThree(
   const ids = visibleAtlasIds(model, expanded);
   const visible = new Set(ids);
   const compact = isCompactRenderer(container);
-  const positions = threePositions(model, ids, Math.max(720, container.clientWidth), Math.max(560, container.clientHeight));
+  const positions = threePositions(
+    model,
+    ids,
+    Math.max(720, container.clientWidth),
+    Math.max(560, container.clientHeight),
+    compact,
+  );
   runtime.worldPositions = positions;
   const depthMetrics = threeDepthMetrics(model, ids, positions);
   container.dataset.threeZSpan = depthMetrics.zSpan.toFixed(1);
@@ -1489,7 +1540,7 @@ function rebuildThree(
     const node = model.nodeMap.get(id)!;
     const position = positions.get(id);
     if (!position) continue;
-    const radius = nodeRadius3D(node);
+    const radius = nodeRadius3D(node) * (compact ? 1.16 : 1);
     const group = new THREE.Group();
     group.position.copy(position);
     group.userData.nodeId = id;
