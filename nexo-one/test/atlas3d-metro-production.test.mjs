@@ -164,8 +164,10 @@ test('dedicated Atlas production page uses Metro renderer, G6 and deterministic 
   assert.match(app, /activeExpanded = navigationStale \? new Set\(initialExpanded\) : expanded/);
   assert.match(app, /URLSearchParams/);
   assert.match(app, /mode.*=== '3d'/);
-  assert.match(app, /3D Explorar/);
-  assert.match(app, /2D Metro/);
+  assert.match(app, /<strong>3D<\/strong><small>Explorar<\/small>/);
+  assert.match(app, /<strong>2D<\/strong><small>Metro<\/small>/);
+  assert.match(app, /3D EXPLORAR ATIVO/);
+  assert.match(app, /2D METRO ATIVO/);
   assert.doesNotMatch(app, /kind: 'ROOT'/);
   assert.doesNotMatch(app, /GalaxyThree3D/);
 
