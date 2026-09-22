@@ -1,6 +1,7 @@
 import {Component,type ReactNode} from 'react';
 import {createRoot} from 'react-dom/client';
 import App from './app/App';
+import './styles/product-foundation.css';
 import './styles/tokens.css';
 import './styles/layout.css';
 import './styles/components.css';
