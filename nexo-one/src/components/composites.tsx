@@ -159,7 +159,7 @@ export function HumanInboxItem(
   return (
     <article className={`inbox-item tone-${toneOf(item.severity === 'P0' ? 'CONFLICT' : 'DEGRADED')}`}>
       <header>
-        <span className="inbox-kind">{label(item.kind)}</span>
+        <span className="inbox-kind">{item.kind_label ?? label(item.kind)}</span>
         <DomainBadge domain={item.domain} muted />
         <SeverityBadge severity={item.severity} />
         {item.due_at && <time className="inbox-due">prazo {dateTime(item.due_at)}</time>}
@@ -167,7 +167,21 @@ export function HumanInboxItem(
       <h3>{item.title}</h3>
       <p className="inbox-question">{item.question}</p>
       <p className="inbox-why"><span className="eyebrow">POR QUE VOCÊ</span>{item.why}</p>
-      {item.options.length > 0 && (
+      {(item.human_requirements?.length ?? 0) > 0 && (
+        <div className="inbox-requirements">
+          <span className="eyebrow">O QUE VOCÊ PRECISA CONFIGURAR</span>
+          <ul className="inbox-options">
+            {item.human_requirements!.map(requirement => (
+              <li key={requirement.id}>
+                <strong>{requirement.label}</strong>
+                <span>{requirement.detail}</span>
+                <code>{requirement.id}</code>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+      {item.options.length > 0 && !(item.human_requirements?.length) && (
         <ul className="inbox-options">
           {item.options.map(option => (
             <li key={option.id}>
@@ -176,6 +190,11 @@ export function HumanInboxItem(
             </li>
           ))}
         </ul>
+      )}
+      {item.automatic_note && (
+        <p className="inbox-why inbox-automatic">
+          <span className="eyebrow">NÃO É AÇÃO SUA</span>{item.automatic_note}
+        </p>
       )}
       <footer>
         {action && <span className="inbox-action-ref">ação {action.action_id}</span>}
