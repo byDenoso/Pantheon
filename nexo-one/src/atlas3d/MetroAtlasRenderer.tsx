@@ -825,6 +825,8 @@ function MetroThreeView({
     const observer = new ResizeObserver(() => {
       resize();
       rebuildThree(runtime, container, modelRef.current, expandedRef.current, selectedRef.current, showBeamsRef.current);
+      container.dataset.threeNodeCount = String(visibleAtlasIds(modelRef.current, expandedRef.current).length);
+      container.dataset.threeReady = container.querySelector('canvas') ? 'true' : 'false';
     });
     observer.observe(container);
 
@@ -899,6 +901,8 @@ function MetroThreeView({
     const container = containerRef.current;
     if (!runtime || !container) return;
     rebuildThree(runtime, container, model, expanded, selectedId, showBeams);
+    container.dataset.threeNodeCount = String(visibleAtlasIds(model, expanded).length);
+    container.dataset.threeReady = container.querySelector('canvas') ? 'true' : 'false';
     if (!runtime.hasFit || lastFitNonce.current !== fitNonce) {
       runtime.hasFit = true;
       lastFitNonce.current = fitNonce;
