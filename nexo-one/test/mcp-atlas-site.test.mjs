@@ -33,4 +33,12 @@ test('MCP Atlas is a Pages multipage surface built from canonical MCP sources',a
   assert.match(site,/\['roles','Roles'\]/);
   assert.match(builder,/source_snapshot_id/);
   assert.match(builder,/projection_fingerprint/);
+  assert.match(site,/dispatchProjectionSync/);
+  assert.match(site,/waitForProjectionSync/);
+  assert.match(site,/synchronizeTopology/);
+  const main=await text('src/mcp/main.tsx');
+  const foundation=await text('src/styles/product-foundation.css');
+  assert.match(main,/product-foundation\.css/);
+  assert.match(foundation,/--nexo-shell-height:68px/);
+  assert.match(foundation,/--font-ui:Inter/);
 });
