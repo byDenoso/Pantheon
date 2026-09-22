@@ -377,10 +377,12 @@ test('dedicated Atlas production page uses Metro renderer, G6 and deterministic 
   assert.match(renderer, /projectVisualCrossLinks/);
   assert.match(renderer, /g6LearningRecords/);
   assert.match(renderer, /g6LearningRelations/);
-  assert.match(renderer, /visual-record:/);
-  assert.match(renderer, /visual-learning:/);
-  assert.match(renderer, /theme:/);
-  assert.match(renderer, /learningRef \|\| link\.id/);
+  const learningVisuals = await text('src/atlas3d/learningVisuals.ts');
+  assert.match(learningVisuals, /visual-record:/);
+  assert.match(learningVisuals, /visual-learning:/);
+  assert.match(learningVisuals, /theme:/);
+  assert.match(learningVisuals, /learningRef \|\| link\.id/);
+  assert.match(learningVisuals, /canonical Learning relations/);
   assert.match(renderer, /threeLearningVisualSynapses/);
   assert.match(renderer, /threeLearningRecords/);
   assert.match(renderer, /threeLearningRelations/);
