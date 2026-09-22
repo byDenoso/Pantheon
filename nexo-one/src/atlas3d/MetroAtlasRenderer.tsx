@@ -7,7 +7,7 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import type { AtlasMetroModel, AtlasMetroNode } from './atlasAdapter.ts';
 import { visibleAtlasIds } from './atlasAdapter.ts';
-import { projectVisualCrossLinks } from './learningVisuals.ts';
+import { nearestVisibleAtlasAncestor, projectVisualCrossLinks } from './learningVisuals.ts';
 import {
   buildMetroScreenLabelLayout,
   metroLayoutPositions,
@@ -150,20 +150,19 @@ function createG6Graph(
   }
 }
 
-function stampG6Metrics(container: HTMLElement, data: { nodes: any[]; edges: any[] }): void {
+function stampG6Metrics(
+  container: HTMLElement,
+  data: { nodes: any[]; edges: any[] },
+  model: AtlasMetroModel,
+): void {
   container.dataset.g6NodeCount = String(data.nodes.length);
   const learningEdges = data.edges.filter((edge: any) => edge.data?.isLearning);
+  const logicalLearning = model.crossLinks.filter(link => link.isLearning);
   container.dataset.g6LearningEdges = String(learningEdges.length);
   container.dataset.g6LearningRecords = String(new Set(
-    learningEdges.flatMap((edge: any) =>
-      Array.isArray(edge.data?.visualRefs) && edge.data.visualRefs.length
-        ? edge.data.visualRefs
-        : [edge.data?.learningRef || edge.id]
-    ),
+    logicalLearning.map(link => link.learningRef || link.id),
   ).size);
-  container.dataset.g6LearningRelations = String(
-    learningEdges.reduce((sum: number, edge: any) => sum + Math.max(1, Number(edge.data?.visualCount || 1)), 0),
-  );
+  container.dataset.g6LearningRelations = String(logicalLearning.length);
   container.dataset.g6ScientificLearningEdges = String(
     data.edges.filter((edge: any) => edge.data?.learningKind === 'SCIENTIFIC_LEARNING_PIPELINE').length,
   );
@@ -196,6 +195,22 @@ function stampG6Metrics(container: HTMLElement, data: { nodes: any[]; edges: any
     data.edges.filter((edge: any) =>
       edge.data?.isLearning
       && (edge.data?.sourceAnchor === 'DOMAIN_HUB' || edge.data?.targetAnchor === 'DOMAIN_HUB')
+    ).length,
+  );
+  const exactEntityLearning = learningEdges.filter((edge: any) =>
+    edge.data?.sourceAnchor === 'EXACT_ENTITY' || edge.data?.targetAnchor === 'EXACT_ENTITY'
+  );
+  container.dataset.g6ExactEntityLearningEdges = String(exactEntityLearning.length);
+  container.dataset.g6DirectExactEntityLearningEdges = String(
+    exactEntityLearning.filter((edge: any) =>
+      (edge.data?.sourceAnchor === 'EXACT_ENTITY' && !edge.data?.sourceCollapsed)
+      || (edge.data?.targetAnchor === 'EXACT_ENTITY' && !edge.data?.targetCollapsed)
+    ).length,
+  );
+  container.dataset.g6CollapsedExactEntityLearningEdges = String(
+    exactEntityLearning.filter((edge: any) =>
+      (edge.data?.sourceAnchor === 'EXACT_ENTITY' && edge.data?.sourceCollapsed)
+      || (edge.data?.targetAnchor === 'EXACT_ENTITY' && edge.data?.targetCollapsed)
     ).length,
   );
 }
@@ -267,7 +282,7 @@ function buildG6Data(
   });
 
   const bridgeEdges = showBeams
-    ? projectVisualCrossLinks(model.crossLinks, visible)
+    ? projectVisualCrossLinks(model, model.crossLinks, visible)
       .map(link => ({
         id: link.id,
         source: link.source,
@@ -291,6 +306,10 @@ function buildG6Data(
           bundleCount: link.bundleCount,
           visualCount: link.visualCount,
           visualRefs: link.visualRefs,
+          logicalSource: link.logicalSource,
+          logicalTarget: link.logicalTarget,
+          sourceCollapsed: link.sourceCollapsed,
+          targetCollapsed: link.targetCollapsed,
         },
       }))
     : [];
@@ -631,7 +650,7 @@ function Metro2DView({
         compact,
       );
       graph.setData({ nodes: data.nodes, edges: data.edges });
-      stampG6Metrics(container, data);
+      stampG6Metrics(container, data, modelRef.current);
       container.dataset.g6ViewportWidth = Math.round(rect.width).toString();
       container.dataset.g6ViewportHeight = Math.round(rect.height).toString();
 
@@ -1367,7 +1386,7 @@ function rebuildThree(
   }
 
   const visualCrossLinks = showBeams
-    ? projectVisualCrossLinks(model.crossLinks, visible)
+    ? projectVisualCrossLinks(model, model.crossLinks, visible)
     : [];
 
   if (showBeams) {
@@ -1398,18 +1417,20 @@ function rebuildThree(
     }
   }
 
-  const visibleLearning = model.crossLinks.filter(
-    link => link.isLearning && visible.has(link.source) && visible.has(link.target),
-  );
+  const visibleLearning = model.crossLinks.filter(link => {
+    if (!link.isLearning) return false;
+    const source = nearestVisibleAtlasAncestor(model, link.source, visible);
+    const target = nearestVisibleAtlasAncestor(model, link.target, visible);
+    return Boolean(source && target && source !== target);
+  });
   const visualLearning = visualCrossLinks.filter(link => link.isLearning);
+  const logicalLearning = model.crossLinks.filter(link => link.isLearning);
   container.dataset.threeLearningSynapses = String(visibleLearning.length);
   container.dataset.threeLearningVisualSynapses = String(visualLearning.length);
   container.dataset.threeLearningRecords = String(new Set(
-    visualLearning.flatMap(link => link.visualRefs.length ? link.visualRefs : [link.learningRef || link.id]),
+    logicalLearning.map(link => link.learningRef || link.id),
   ).size);
-  container.dataset.threeLearningRelations = String(
-    visualLearning.reduce((sum, link) => sum + Math.max(1, link.visualCount), 0),
-  );
+  container.dataset.threeLearningRelations = String(logicalLearning.length);
   container.dataset.threeScientificLearningSynapses = String(
     visibleLearning.filter(link => link.learningKind === 'SCIENTIFIC_LEARNING_PIPELINE').length,
   );
@@ -1435,6 +1456,22 @@ function rebuildThree(
     visibleLearning.filter(link =>
       link.learningKind === 'SCIENTIFIC_LEARNING_PIPELINE'
       && /SUBDOMAIN$/.test(String(link.targetAnchor || ''))
+    ).length,
+  );
+  const exactEntityVisual = visualLearning.filter(link =>
+    link.sourceAnchor === 'EXACT_ENTITY' || link.targetAnchor === 'EXACT_ENTITY'
+  );
+  container.dataset.threeExactEntityLearningSynapses = String(exactEntityVisual.length);
+  container.dataset.threeDirectExactEntityLearningSynapses = String(
+    exactEntityVisual.filter(link =>
+      (link.sourceAnchor === 'EXACT_ENTITY' && !link.sourceCollapsed)
+      || (link.targetAnchor === 'EXACT_ENTITY' && !link.targetCollapsed)
+    ).length,
+  );
+  container.dataset.threeCollapsedExactEntityLearningSynapses = String(
+    exactEntityVisual.filter(link =>
+      (link.sourceAnchor === 'EXACT_ENTITY' && link.sourceCollapsed)
+      || (link.targetAnchor === 'EXACT_ENTITY' && link.targetCollapsed)
     ).length,
   );
 
