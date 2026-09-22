@@ -99,6 +99,51 @@ test('GitHub Pages consumes only the sanctioned TOWER_V06 public projection', as
   assert.doesNotMatch(builder, /truthgraph\.snapshot/);
 });
 
+test('Pages capability projection cannot silently collapse a non-empty Tower registry to zero', async () => {
+  const { buildPagesProjection } = await import('../scripts/build-pages-system.mjs');
+  const manifest = {
+    authority: 'TOWER_V06',
+    projection_only: true,
+    writeback: 'FORBIDDEN',
+    tower_commit: '6'.repeat(40),
+    event_cursor: '20260922T220000000000Z-capabilities',
+    projection_fingerprint: 'sha256:' + '7'.repeat(64),
+    generated_at: '2026-09-22T22:00:00Z',
+  };
+  const projection = {
+    contract: 'NEXO_PUBLIC_PROJECTION_V1',
+    manifest,
+    event_cursor: manifest.event_cursor,
+    work: [],
+    tests: [],
+    capabilities: {
+      'cap.proven': { backend: 'chatgpt_runtime', status: 'PROVEN' },
+      'cap.active': { backend: 'nexo_runtime', status: 'ACTIVE' },
+      'cap.retired': { backend: 'chatgpt_runtime', status: 'RETIRED' },
+    },
+    counts: { active_work: 0, tests: 0, capabilities: 3 },
+  };
+
+  const { system } = buildPagesProjection({ projection, manifestFile: manifest });
+  assert.equal(system.capabilities.length, 3);
+  assert.deepEqual(
+    Object.fromEntries(system.capabilities.map(item => [item.capability_id, item.status])),
+    {
+      'cap.proven': 'PASS',
+      'cap.active': 'UNVERIFIED',
+      'cap.retired': 'RETIRED_RUNTIME',
+    },
+  );
+
+  assert.throws(
+    () => buildPagesProjection({
+      projection: { ...projection, counts: { ...projection.counts, capabilities: 4 } },
+      manifestFile: manifest,
+    }),
+    /CAPABILITY_COUNT_DRIFT:declared=4:compiled=3/,
+  );
+});
+
 test('campaigns are first-class, source-linked and hide member tests from Atlas by default', async () => {
   const { buildPagesProjection } = await import('../scripts/build-pages-system.mjs');
   const manifest = {
