@@ -157,6 +157,8 @@ function buildG6Data(
           aggregated: link.aggregated,
           isLearning: link.isLearning,
           learningScope: link.learningScope,
+          bundleIndex: link.bundleIndex,
+          bundleCount: link.bundleCount,
         },
       }))
     : [];
@@ -375,6 +377,14 @@ function Metro2DView({
           lineDash: (datum: any) => datum.data?.isLearning ? [2, 4] : datum.data?.kind === 'bridge' ? [5, 6] : [],
           shadowColor: (datum: any) => datum.data?.isLearning ? '#f59e0b' : 'transparent',
           shadowBlur: (datum: any) => datum.data?.isLearning ? 8 : 0,
+          curveOffset: (datum: any) => {
+            if (!datum.data?.isLearning) return 20;
+            const count = Math.max(1, Number(datum.data?.bundleCount || 1));
+            const index = Number(datum.data?.bundleIndex || 0);
+            const centered = index - (count - 1) / 2;
+            return centered * 18;
+          },
+          curvePosition: .5,
           endArrow: false,
         },
       },
@@ -637,7 +647,15 @@ function createGlowSprite(colorValue: string | number, diameter: number, opacity
   return sprite;
 }
 
-function synapseCurve(source: THREE.Vector3, target: THREE.Vector3, key: string, bridge: boolean): THREE.QuadraticBezierCurve3 {
+function synapseCurve(
+  source: THREE.Vector3,
+  target: THREE.Vector3,
+  key: string,
+  bridge: boolean,
+  learning = false,
+  bundleIndex = 0,
+  bundleCount = 1,
+): THREE.QuadraticBezierCurve3 {
   const midpoint = source.clone().add(target).multiplyScalar(.5);
   const direction = target.clone().sub(source);
   const span = Math.max(1, direction.length());
@@ -647,13 +665,25 @@ function synapseCurve(source: THREE.Vector3, target: THREE.Vector3, key: string,
     ? new THREE.Vector3(0, 1, 0)
     : new THREE.Vector3(1, 0, 0);
   const perpendicular = direction.clone().cross(reference).normalize();
+  const secondary = direction.clone().cross(perpendicular).normalize();
   const seed = hashNumber(key);
   const sign = seed % 2 === 0 ? 1 : -1;
-  const bend = Math.min(bridge ? 62 : 34, span * (bridge ? .14 : .085));
-  const vertical = ((seed % 9) - 4) * (bridge ? 2.6 : 1.5);
-  midpoint.addScaledVector(perpendicular, bend * sign);
-  midpoint.y += vertical;
-  if (bridge) midpoint.z += Math.min(86, 24 + span * .08) * (seed % 3 === 0 ? -1 : 1);
+
+  if (learning && bundleCount > 1) {
+    const centered = bundleIndex - (bundleCount - 1) / 2;
+    const fan = centered / Math.max(1, (bundleCount - 1) / 2);
+    const lateral = Math.min(210, Math.max(64, span * .22));
+    const twist = Math.min(145, Math.max(38, span * .13));
+    midpoint.addScaledVector(perpendicular, lateral * fan);
+    midpoint.addScaledVector(secondary, twist * Math.sin((bundleIndex + 1) * 1.37));
+    midpoint.y += ((seed % 7) - 3) * 3.2;
+  } else {
+    const bend = Math.min(bridge ? 78 : 38, span * (bridge ? .16 : .09));
+    const vertical = ((seed % 9) - 4) * (bridge ? 3.2 : 1.7);
+    midpoint.addScaledVector(perpendicular, bend * sign);
+    midpoint.y += vertical;
+    if (bridge) midpoint.addScaledVector(secondary, Math.min(104, 28 + span * .09) * (seed % 3 === 0 ? -1 : 1));
+  }
 
   return new THREE.QuadraticBezierCurve3(source, midpoint, target);
 }
@@ -668,8 +698,10 @@ function addSynapse(
   bridge: boolean,
   strength = 1,
   learning = false,
+  bundleIndex = 0,
+  bundleCount = 1,
 ) {
-  const curve = synapseCurve(source, target, key, bridge);
+  const curve = synapseCurve(source, target, key, bridge, learning, bundleIndex, bundleCount);
   const span = source.distanceTo(target);
   const segments = Math.max(18, Math.min(52, Math.round(span / 7)));
   const color = new THREE.Color(colorValue);
@@ -782,20 +814,65 @@ function threePositions(
   height: number,
 ): Map<string, THREE.Vector3> {
   const metro = metroLayoutPositions(model, ids, width, height);
-  const domainBaseZ: Record<string, number> = { NEXO: -155, SCIENCE: 0, OLYMPUS: 155 };
+  const visible = new Set(ids);
+  const domainBaseZ: Record<string, number> = { NEXO: -520, SCIENCE: 0, OLYMPUS: 520 };
+  const depthStep = 150;
   const scale = .72;
   const out = new Map<string, THREE.Vector3>();
+
   for (const id of ids) {
     const node = model.nodeMap.get(id);
     const position = metro.get(id);
     if (!node || !position) continue;
+
+    let siblingZ = 0;
+    if (node.parentId) {
+      const siblings = (model.childrenMap.get(node.parentId) || []).filter(siblingId => visible.has(siblingId));
+      const siblingIndex = siblings.indexOf(id);
+      if (siblingIndex >= 0 && siblings.length > 1) {
+        const normalized = (siblingIndex / (siblings.length - 1)) * 2 - 1;
+        const siblingSpan = 48 + Math.min(280, (siblings.length - 1) * 18);
+        const parentPosition = metro.get(node.parentId);
+        const angle = parentPosition
+          ? Math.atan2(position[1] - parentPosition[1], position[0] - parentPosition[0])
+          : 0;
+        const phase = ((hashNumber(id) % 1000) / 1000) * Math.PI * 2;
+        siblingZ = normalized * siblingSpan
+          + Math.sin(angle * 1.7 + phase) * Math.min(92, siblingSpan * .36);
+      }
+    }
+
     out.set(id, new THREE.Vector3(
       (position[0] - width / 2) * scale,
       -(position[1] - height / 2) * scale,
-      domainBaseZ[node.domain] + node.depth * 52,
+      domainBaseZ[node.domain] + node.depth * depthStep + siblingZ,
     ));
   }
   return out;
+}
+
+function threeDepthMetrics(model: AtlasMetroModel, ids: string[], positions: Map<string, THREE.Vector3>) {
+  const values = [...positions.values()].map(position => position.z);
+  const zSpan = values.length ? Math.max(...values) - Math.min(...values) : 0;
+  let maxSameLevelSpan = 0;
+  const groups = new Map<string, number[]>();
+
+  for (const id of ids) {
+    const node = model.nodeMap.get(id);
+    const position = positions.get(id);
+    if (!node || !position) continue;
+    const key = `${node.domain}|${node.parentId || 'ROOT'}|${node.depth}`;
+    const bucket = groups.get(key) || [];
+    bucket.push(position.z);
+    groups.set(key, bucket);
+  }
+
+  for (const bucket of groups.values()) {
+    if (bucket.length < 2) continue;
+    maxSameLevelSpan = Math.max(maxSameLevelSpan, Math.max(...bucket) - Math.min(...bucket));
+  }
+
+  return { zSpan, maxSameLevelSpan };
 }
 
 function applyThreeSelection(runtime: ThreeRuntime, selectedId: string | null) {
@@ -912,6 +989,17 @@ function rebuildThree(
   const visible = new Set(ids);
   const positions = threePositions(model, ids, Math.max(720, container.clientWidth), Math.max(560, container.clientHeight));
   runtime.worldPositions = positions;
+  const depthMetrics = threeDepthMetrics(model, ids, positions);
+  container.dataset.threeZSpan = depthMetrics.zSpan.toFixed(1);
+  container.dataset.threeSameLevelZSpan = depthMetrics.maxSameLevelSpan.toFixed(1);
+  const selectedChildren = selectedId
+    ? (model.childrenMap.get(selectedId) || []).filter(id => visible.has(id) && positions.has(id))
+    : [];
+  const selectedZ = selectedChildren.map(id => positions.get(id)!.z);
+  const selectedSiblingZSpan = selectedZ.length > 1 ? Math.max(...selectedZ) - Math.min(...selectedZ) : 0;
+  container.dataset.threeSelectedSiblingCount = String(selectedChildren.length);
+  container.dataset.threeSelectedSiblingZSpan = selectedSiblingZSpan.toFixed(1);
+  container.dataset.threeDepthPolicy = 'domain-depth-sibling-v3';
 
   const content = new THREE.Group();
   runtime.content = content;
@@ -957,6 +1045,8 @@ function rebuildThree(
         true,
         Math.max(.72, Math.min(link.isLearning ? 1.5 : 1.25, link.weight || 1)),
         link.isLearning,
+        link.bundleIndex,
+        link.bundleCount,
       );
     }
   }

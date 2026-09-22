@@ -31,6 +31,8 @@ test('GitHub Pages consumes only the sanctioned TOWER_V06 public projection', as
   assert.match(workflow, /byDenoso\/NEXO-Obsidian-Vault/);
   assert.match(workflow, /TOWER_V06\/projections\/public\/projection\.json/);
   assert.match(workflow, /TOWER_V06\/projections\/public\/manifest\.json/);
+  assert.match(workflow, /METALEARNING_CURRENT\.json/);
+  assert.match(workflow, /PEER_DETECTION_BATTERY_V1\.json/);
   assert.match(workflow, /verify_projection/);
   assert.match(workflow, /authority.*TOWER_V06/);
   assert.match(workflow, /projection_only/);
@@ -83,6 +85,72 @@ test('sanctioned TOWER interdomain entities become visible learning filaments', 
   assert.equal(system.filaments.length, 1);
   assert.ok(system.graph.edges.some(edge => edge.is_learning && edge.learning_scope === 'INTER_DOMAIN'));
   assert.ok(system.graph.edges.some(edge => edge.from === 'domain:SCIENCE' && edge.to === 'domain:OLYMPUS'));
+});
+
+test('Peer Detection battery is projected by canonical semantic groups, not raw runtime stations', async () => {
+  const { buildPagesProjection } = await import('../scripts/build-pages-system.mjs');
+  const manifest = {
+    authority: 'TOWER_V06',
+    projection_only: true,
+    writeback: 'FORBIDDEN',
+    tower_commit: '1'.repeat(40),
+    event_cursor: '20260921T230000000000Z-peer',
+    projection_fingerprint: 'sha256:' + '2'.repeat(64),
+    generated_at: '2026-09-21T23:00:00Z',
+  };
+  const projection = {
+    contract: 'NEXO_PUBLIC_PROJECTION_V1',
+    manifest,
+    event_cursor: manifest.event_cursor,
+    work: [
+      { id: 'PEER-DETECTION-D00', title: 'freeze', domain: 'COSMOLOGY', status: 'READY' },
+      { id: 'PEER-DETECTION-D01', title: 'baseline', domain: 'COSMOLOGY', status: 'READY' },
+    ],
+    tests: [
+      { id: 'PEER-DETECTION-D00-V1', title: 'freeze test', domain: 'COSMOLOGY', status: 'VERIFIED' },
+    ],
+    capabilities: {
+      'peer.detection.d00_v1': { battery_id: 'PEER_DETECTION_BATTERY_V1', gate_id: 'D00', status: 'ACTIVE' },
+      'peer.detection.d01_v1': { battery_id: 'PEER_DETECTION_BATTERY_V1', gate_id: 'D01', status: 'ACTIVE' },
+    },
+    counts: { active_work: 2, tests: 1, capabilities: 2 },
+  };
+  const peerDetectionBattery = {
+    id: 'PEER_DETECTION_BATTERY_V1',
+    execution_order: ['D00', 'D01'],
+    gates: {
+      D00: { group: 'GOVERNANCE', purpose: 'freeze', capability_id: 'peer.detection.d00_v1' },
+      D01: { group: 'BASELINE_PROFILE', purpose: 'baseline', capability_id: 'peer.detection.d01_v1' },
+    },
+  };
+
+  const { system } = buildPagesProjection({ projection, manifestFile: manifest, peerDetectionBattery });
+  const rawPeer = system.graph.nodes.filter(node =>
+    /^work:PEER-DETECTION-|^test:PEER-DETECTION-|^capability:peer\.detection\./i.test(node.id)
+  );
+  assert.equal(rawPeer.length, 0);
+  const semantic = system.filaments.filter(item => item.kind === 'SCIENTIFIC_LEARNING_PIPELINE');
+  assert.equal(semantic.length, 2);
+  assert.deepEqual(new Set(semantic.map(item => item.peer_detection_group)), new Set(['GOVERNANCE', 'BASELINE_PROFILE']));
+  assert.ok(system.graph.edges.filter(edge => edge.is_learning).length >= 2);
+});
+
+test('published Pages auto-syncs Tower snapshots without a new infrastructure service', async () => {
+  const workflow = await text('../.github/workflows/nexo-one-pages.yml');
+  const hook = await text('src/data/useSystem.ts');
+  const remote = await text('src/data/adapters/remote.ts');
+
+  assert.match(workflow, /repository_dispatch:/);
+  assert.match(workflow, /nexo-public-projection-updated/);
+  assert.match(workflow, /cron:\s*'\*\/15 \* \* \* \*'/);
+  assert.match(workflow, /METALEARNING_CURRENT\.json/);
+  assert.match(workflow, /PEER_DETECTION_BATTERY_V1\.json/);
+  assert.match(hook, /setInterval/);
+  assert.match(hook, /60_000/);
+  assert.match(hook, /visibilitychange/);
+  assert.match(remote, /VITE_SYSTEM_ENDPOINT/);
+  assert.match(remote, /staticProjection/);
+  assert.match(remote, /'no-cache'/);
 });
 
 test('explicit Tower human gates become Needs Dener inbox items', async () => {
@@ -146,18 +214,21 @@ test('GitHub Pages deploys official artifact and exposes projection readback', a
   assert.match(workflow, /data-atlas-ready="true"/);
   assert.match(workflow, /data-atlas-root-count="3"/);
   assert.match(workflow, /PAGES_ATLAS3D_VISUAL_READBACK_OK/);
-  assert.match(workflow, /PAGES_ATLAS2D_PEER51_READBACK_OK/);
-  assert.match(workflow, /expand=peer-detection/);
-  assert.match(workflow, /Consistência cosmológica · Peer Detection/);
+  assert.match(workflow, /PAGES_ATLAS_LEARNING_SEMANTIC_OK/);
+  assert.match(workflow, /SCIENTIFIC_LEARNING_PIPELINE/);
+  assert.match(workflow, /RAW_PEER_ARTIFACTS_VISIBLE/);
+  assert.match(workflow, /METALEARNING_NOT_PROJECTED/);
   assert.match(workflow, /data-g6-label-collisions="0"/);
   assert.match(workflow, /data-g6-label-dom-collisions/);
   assert.match(workflow, /viewport-adaptive-v2/);
-  assert.match(workflow, /Peer Detection QA must exercise exactly 51 children/);
-  assert.match(workflow, /atlas3d-readback-peer-detection-51\.png/);
+  assert.match(workflow, /mode=3d&expand=dense-science/);
+  assert.match(workflow, /data-three-depth-policy="domain-depth-sibling-v3"/);
+  assert.match(workflow, /Three same-level siblings still form a flat totem/);
   assert.match(workflow, /PAGES_ATLAS3D_3D_READBACK_OK visual=neural-synapse/);
   assert.match(workflow, /data-three-visual="neural-synapse"/);
   assert.match(workflow, /three_synapse_count/);
   assert.match(workflow, /three_learning/);
+  assert.match(workflow, /three_same_level_z/);
   assert.match(workflow, /data-g6-learning-edges/);
   assert.match(workflow, /atlas3d-production-readback/);
   assert.match(workflow, /PAGES_TOWER_PROJECTION_READBACK_OK/);

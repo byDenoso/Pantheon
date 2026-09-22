@@ -125,11 +125,13 @@ function proceduralLearningFilaments(metaLearning, projection, manifest, observe
     const links = explicitLearningRefs(refText).flatMap(ref => learningTargetsForRef(ref, projection));
     const deduped = [...new Map(links.map(link => [link.id, link])).values()];
     const domains = [...new Set(deduped.map(link => link.domain))];
-    const fromDomain = domains[0] || 'NEXO';
+    const target = deduped[0] || null;
+    const fromDomain = 'NEXO';
+    const toDomain = target?.domain || 'NEXO';
     const record = {
       id,
       label: String(item.outcome || item.context || id),
-      domain: fromDomain,
+      domain: 'NEXO',
       kind: 'PROCEDURAL',
       weight: 0.72,
       support: Number.isFinite(Number(item.supporting_count)) ? Number(item.supporting_count) : 1,
@@ -139,10 +141,11 @@ function proceduralLearningFilaments(metaLearning, projection, manifest, observe
       source_ref: `tower://${manifest.tower_repository || 'byDenoso/NEXO-Obsidian-Vault'}@${manifest.tower_commit}/TOWER_V06/runtime/artifacts/meta_learning/METALEARNING_CURRENT.json`,
       boundary: 'Procedural learning only. It cannot promote or reinterpret a scientific claim.',
       from_label: id,
-      to_label: deduped[0]?.label || fromDomain,
+      to_label: target?.label || toDomain,
       from_domain: fromDomain,
-      to_domain: domains[1] || fromDomain,
-      scope: domains.length > 1 ? 'INTER_DOMAIN' : 'INTRA_DOMAIN',
+      to_domain: toDomain,
+      to_id: target?.id,
+      scope: toDomain !== fromDomain ? 'INTER_DOMAIN' : 'INTRA_DOMAIN',
       observed_at: observedAt,
       links: deduped,
       learning_refs: [],
@@ -158,13 +161,14 @@ function proceduralLearningFilaments(metaLearning, projection, manifest, observe
     const parentRecords = refs.map(ref => evidenceById.get(ref)).filter(Boolean);
     const links = [...new Map(parentRecords.flatMap(record => record.links || []).map(link => [link.id, link])).values()];
     const domains = [...new Set(links.map(link => link.domain))];
-    const fromDomain = domains[0] || 'NEXO';
-    const toDomain = domains[1] || fromDomain;
+    const target = links[0] || null;
+    const fromDomain = 'NEXO';
+    const toDomain = target?.domain || 'NEXO';
     const status = String(item.status || '').toUpperCase();
     out.push({
       id,
       label: String(item.lesson || item.heuristic || id),
-      domain: fromDomain,
+      domain: 'NEXO',
       kind: 'PROCEDURAL',
       weight: status === 'SUPPORTED' ? 0.9 : 0.68,
       support: Number.isFinite(Number(item.supporting_count)) ? Number(item.supporting_count) : refs.length,
@@ -173,17 +177,123 @@ function proceduralLearningFilaments(metaLearning, projection, manifest, observe
       evidence: refs,
       source_ref: `tower://${manifest.tower_repository || 'byDenoso/NEXO-Obsidian-Vault'}@${manifest.tower_commit}/TOWER_V06/runtime/artifacts/meta_learning/METALEARNING_CURRENT.json`,
       boundary: String(item.falsifier || 'Procedural learning only. No scientific authority.'),
-      from_label: refs[0] || fromDomain,
-      to_label: refs[1] || toDomain,
+      from_label: 'NEXO Learning',
+      to_label: target?.label || toDomain,
       from_domain: fromDomain,
       to_domain: toDomain,
-      scope: domains.length > 1 ? 'INTER_DOMAIN' : 'INTRA_DOMAIN',
+      to_id: target?.id,
+      scope: toDomain !== fromDomain ? 'INTER_DOMAIN' : 'INTRA_DOMAIN',
       observed_at: observedAt,
       links,
       learning_refs: refs,
     });
   }
   return out;
+}
+
+function peerDetectionPresentationMembership(peerBattery, projection = {}) {
+  const workIds = new Set();
+  const testIds = new Set();
+  const capabilityIds = new Set();
+  const gates = peerBattery && typeof peerBattery === 'object' && peerBattery.id === 'PEER_DETECTION_BATTERY_V1'
+    && peerBattery.gates && typeof peerBattery.gates === 'object'
+    ? peerBattery.gates
+    : {};
+
+  for (const [gateId, gate] of Object.entries(gates)) {
+    workIds.add('PEER-DETECTION-' + gateId);
+    testIds.add('PEER-DETECTION-' + gateId + '-V1');
+    const capabilityId = String(gate?.capability_id || '').trim();
+    if (capabilityId) capabilityIds.add(capabilityId);
+  }
+
+  for (const [capabilityId, definition] of Object.entries(projection.capabilities || {})) {
+    const batteryId = String(definition?.battery_id || '').trim();
+    const contractName = String(definition?.contract_name || '').trim();
+    if (batteryId === 'PEER_DETECTION_BATTERY_V1' || contractName === 'peer-detection-battery-v1.json') {
+      capabilityIds.add(capabilityId);
+    }
+  }
+
+  return { workIds, testIds, capabilityIds };
+}
+
+function peerDetectionLearningFilaments(peerBattery, projection, manifest, observedAt) {
+  if (!peerBattery || typeof peerBattery !== 'object' || peerBattery.id !== 'PEER_DETECTION_BATTERY_V1') return [];
+  if (!peerBattery.gates || typeof peerBattery.gates !== 'object') return [];
+
+  const order = Array.isArray(peerBattery.execution_order)
+    ? peerBattery.execution_order.map(String)
+    : Object.keys(peerBattery.gates);
+  const rank = new Map(order.map((gateId, index) => [gateId, index]));
+  const groups = new Map();
+
+  for (const [gateId, rawGate] of Object.entries(peerBattery.gates)) {
+    const gate = rawGate && typeof rawGate === 'object' ? rawGate : {};
+    const group = String(gate.group || 'UNCLASSIFIED').toUpperCase();
+    const list = groups.get(group) || [];
+    list.push({
+      gateId,
+      purpose: String(gate.purpose || gateId),
+      capabilityId: String(gate.capability_id || ''),
+      taskId: String(gate.task_id || ''),
+      rank: rank.get(gateId) ?? Number.MAX_SAFE_INTEGER,
+    });
+    groups.set(group, list);
+  }
+
+  const workById = new Map((projection.work || []).map(item => [String(item.id || ''), item]));
+  const groupOrder = [...groups.entries()]
+    .map(([group, gates]) => ({ group, gates: gates.sort((a, b) => a.rank - b.rank) }))
+    .sort((a, b) => Math.min(...a.gates.map(g => g.rank)) - Math.min(...b.gates.map(g => g.rank)));
+
+  return groupOrder.map(({ group, gates }, groupIndex) => {
+    const works = gates
+      .map(gate => workById.get('PEER-DETECTION-' + gate.gateId))
+      .filter(Boolean);
+    const finished = works.filter(item =>
+      /VERIFIED|PASS|COMPLETE|DONE|SUCCEEDED|CLOSED/.test(String(item.last_outcome || item.status || '').toUpperCase())
+    ).length;
+    const active = works.filter(item =>
+      /READY|RUNNING|ACTIVE|PENDING|WAIT/.test(String(item.status || '').toUpperCase())
+    ).length;
+    const groupLabel = group
+      .toLowerCase()
+      .split('_')
+      .map(token => token.charAt(0).toUpperCase() + token.slice(1))
+      .join(' ');
+
+    return {
+      id: 'PEER-DETECTION-GROUP-' + group,
+      label: 'Peer Detection · ' + groupLabel,
+      domain: 'SCIENCE',
+      kind: 'SCIENTIFIC_LEARNING_PIPELINE',
+      weight: Math.min(1, 0.66 + Math.min(0.22, gates.length * 0.035) + Math.min(0.08, finished * 0.02)),
+      support: gates.length,
+      contradiction: 0,
+      status: finished === gates.length && gates.length > 0 ? 'ESTABLISHED'
+        : active > 0 ? 'TESTING' : 'PROVISIONAL',
+      evidence: gates.flatMap(gate => [
+        'work:PEER-DETECTION-' + gate.gateId,
+        ...(gate.capabilityId ? ['capability:' + gate.capabilityId] : []),
+      ]),
+      source_ref: `tower://${manifest.tower_repository || 'byDenoso/NEXO-Obsidian-Vault'}@${manifest.tower_commit}/TOWER_V06/contracts/PEER_DETECTION_BATTERY_V1.json`,
+      boundary: 'Scientific test architecture, not a scientific verdict. Gates: '
+        + gates.map(gate => gate.gateId + ' ' + gate.purpose).join(' · '),
+      from_label: 'NEXO execution · ' + groupLabel,
+      to_label: 'Science · PEER inference',
+      from_domain: 'NEXO',
+      to_domain: 'SCIENCE',
+      scope: 'INTER_DOMAIN',
+      observed_at: observedAt,
+      links: [],
+      learning_refs: [],
+      peer_detection_group: group,
+      peer_detection_gate_ids: gates.map(gate => gate.gateId),
+      peer_detection_gate_count: gates.length,
+      peer_detection_group_index: groupIndex,
+    };
+  });
 }
 
 function learningFilamentsFromTower(interdomain, manifest, observedAt) {
@@ -216,7 +326,7 @@ function learningFilamentsFromTower(interdomain, manifest, observedAt) {
   });
 }
 
-function graphFromProjection(projection, observedAt, filaments = []) {
+function graphFromProjection(projection, observedAt, filaments = [], peerDetectionBattery = null) {
   const manifest = projection.manifest;
   const source = sourceRef(manifest);
   const humanWorkIds = new Set(Array.isArray(projection.human_gates?.work_ids)
@@ -225,6 +335,7 @@ function graphFromProjection(projection, observedAt, filaments = []) {
   const nodes = [];
   const edges = [];
   const seen = new Set();
+  const peerMembership = peerDetectionPresentationMembership(peerDetectionBattery, projection);
 
   const addNode = node => {
     if (!seen.has(node.id)) {
@@ -262,7 +373,7 @@ function graphFromProjection(projection, observedAt, filaments = []) {
 
   for (const item of projection.work) {
     const rawId = String(item.id || '');
-    if (!rawId) continue;
+    if (!rawId || peerMembership.workIds.has(rawId)) continue;
     const domain = domainOf(item.domain);
     const id = 'work:' + rawId;
     addNode({
@@ -291,7 +402,7 @@ function graphFromProjection(projection, observedAt, filaments = []) {
 
   for (const item of projection.tests) {
     const rawId = String(item.id || '');
-    if (!rawId) continue;
+    if (!rawId || peerMembership.testIds.has(rawId)) continue;
     const domain = domainOf(item.domain || 'SCIENCE');
     const id = 'test:' + rawId;
     addNode({
@@ -314,6 +425,7 @@ function graphFromProjection(projection, observedAt, filaments = []) {
   }
 
   for (const [capabilityId, definition] of Object.entries(projection.capabilities)) {
+    if (peerMembership.capabilityIds.has(capabilityId)) continue;
     const id = 'capability:' + capabilityId;
     addNode({
       id,
@@ -362,6 +474,7 @@ function graphFromProjection(projection, observedAt, filaments = []) {
         explanation: 'Procedural Learning linked only by an explicit canonical reference in METALEARNING_CURRENT.',
         is_learning: true,
         learning_scope: link.domain === filament.domain ? 'INTRA_DOMAIN' : 'INTER_DOMAIN',
+        learning_ref: filament.id,
       });
     }
     for (const ref of filament.learning_refs || []) {
@@ -376,11 +489,12 @@ function graphFromProjection(projection, observedAt, filaments = []) {
         explanation: 'Learning lineage declared by evidence_refs in METALEARNING_CURRENT.',
         is_learning: true,
         learning_scope: 'INTRA_DOMAIN',
+        learning_ref: filament.id,
       });
     }
 
-    const from = 'domain:' + filament.from_domain;
-    const to = 'domain:' + filament.to_domain;
+    const from = filament.from_id || ('domain:' + filament.from_domain);
+    const to = filament.to_id || ('domain:' + filament.to_domain);
     if (filament.scope === 'INTER_DOMAIN' && seen.has(from) && seen.has(to) && from !== to) {
       edges.push({
         id: 'learning:' + sha256({ id: filament.id, from, to }).slice(7, 23),
@@ -391,6 +505,7 @@ function graphFromProjection(projection, observedAt, filaments = []) {
         explanation: 'Derived cross-domain Learning bridge from explicit evidence endpoints; procedural only.',
         is_learning: true,
         learning_scope: 'INTER_DOMAIN',
+        learning_ref: filament.id,
       });
     }
   }
@@ -479,7 +594,13 @@ function worldItem(kind, item, projection, observedAt, index) {
   };
 }
 
-export function buildPagesProjection({ projection, manifestFile = null, interdomain = [], learning = {} } = {}) {
+export function buildPagesProjection({
+  projection,
+  manifestFile = null,
+  interdomain = [],
+  learning = {},
+  peerDetectionBattery = null,
+} = {}) {
   const manifest = validateSanctionedProjection(projection, manifestFile);
   const generatedAt = Date.parse(String(manifest.generated_at || ''));
   const observedAt = Number.isFinite(generatedAt) ? new Date(generatedAt).toISOString() : cursorTime(manifest.event_cursor);
@@ -487,8 +608,9 @@ export function buildPagesProjection({ projection, manifestFile = null, interdom
   const filaments = [
     ...learningFilamentsFromTower(interdomain, manifest, observedAt),
     ...proceduralLearningFilaments(learning, projection, manifest, observedAt),
+    ...peerDetectionLearningFilaments(peerDetectionBattery, projection, manifest, observedAt),
   ];
-  const graph = graphFromProjection(projection, observedAt, filaments);
+  const graph = graphFromProjection(projection, observedAt, filaments, peerDetectionBattery);
   const lanes = lanesFromProjection(projection, observedAt);
   const inbox = humanInboxFromProjection(projection, observedAt);
 
@@ -666,11 +788,21 @@ if (import.meta.url === invokedPath) {
   const manifestPath = resolve(process.env.NEXO_PUBLIC_PROJECTION_MANIFEST || 'data/tower-public/manifest.json');
   const interdomainPath = resolve(process.env.NEXO_PUBLIC_INTERDOMAIN || 'data/tower-public/interdomain.json');
   const learningPath = resolve(process.env.NEXO_PUBLIC_LEARNING || 'data/tower-public/learning.json');
+  const peerDetectionBatteryPath = resolve(
+    process.env.NEXO_PEER_DETECTION_BATTERY || 'data/tower-public/peer-detection-battery.json',
+  );
   const projection = await readJson(projectionPath);
   const manifestFile = await readJson(manifestPath);
   const interdomain = await readJsonIfPresent(interdomainPath);
   const learning = await readJsonIfPresent(learningPath);
-  const { system, world } = buildPagesProjection({ projection, manifestFile, interdomain, learning });
+  const peerDetectionBattery = await readJsonIfPresent(peerDetectionBatteryPath);
+  const { system, world } = buildPagesProjection({
+    projection,
+    manifestFile,
+    interdomain,
+    learning,
+    peerDetectionBattery,
+  });
 
   const dist = resolve('dist');
   const evidenceDir = resolve(dist, 'tower-projection');

@@ -46,6 +46,8 @@ export interface AtlasCrossLink {
   aggregated: boolean;
   isLearning: boolean;
   learningScope: 'INTRA_DOMAIN' | 'INTER_DOMAIN' | null;
+  bundleIndex: number;
+  bundleCount: number;
 }
 
 export interface AtlasMetroModel {
@@ -286,6 +288,7 @@ export function buildAtlasMetroModel(state: SystemState): AtlasMetroModel {
 
   const crossLinks: AtlasCrossLink[] = [];
   const canonicalEntityEdges: GraphEdge[] = [];
+  const renderedLearningRefs = new Set<string>();
 
   for (const edge of state.graph.edges) {
     const source = atlasEndpointFor(edge.from, sourceNodeIds);
@@ -308,24 +311,22 @@ export function buildAtlasMetroModel(state: SystemState): AtlasMetroModel {
       aggregated: false,
       isLearning: edge.is_learning === true,
       learningScope: edge.learning_scope || null,
+      bundleIndex: 0,
+      bundleCount: 1,
     });
+    if (edge.is_learning && edge.learning_ref) renderedLearningRefs.add(edge.learning_ref);
   }
 
   // Filaments are presentation relationships, never stations. When a canonical
   // filament omits entity IDs but carries domain endpoints, anchor it to the
   // corresponding domain hubs instead of creating synthetic Learning nodes.
   for (const filament of state.filaments || []) {
+    if (renderedLearningRefs.has(filament.id)) continue;
     const source = atlasEndpointFor(filament.from_id, sourceNodeIds)
       || learningEndpointFromDomain(filament.from_domain);
     const target = atlasEndpointFor(filament.to_id, sourceNodeIds)
       || learningEndpointFromDomain(filament.to_domain);
     if (!source || !target || source === target) continue;
-
-    const duplicate = crossLinks.some(link =>
-      link.isLearning
-      && ((link.source === source && link.target === target) || (link.source === target && link.target === source))
-    );
-    if (duplicate) continue;
 
     crossLinks.push({
       id: `filament:${filament.id}`,
@@ -337,6 +338,8 @@ export function buildAtlasMetroModel(state: SystemState): AtlasMetroModel {
       aggregated: false,
       isLearning: true,
       learningScope: filament.scope || null,
+      bundleIndex: 0,
+      bundleCount: 1,
     });
   }
 
@@ -365,6 +368,8 @@ export function buildAtlasMetroModel(state: SystemState): AtlasMetroModel {
       aggregated: true,
       isLearning: false,
       learningScope: null,
+      bundleIndex: 0,
+      bundleCount: 1,
     });
   }
 
@@ -383,6 +388,22 @@ export function buildAtlasMetroModel(state: SystemState): AtlasMetroModel {
     node.descendantCount = descendants;
     node.relationCount = relations + childCount + (node.parentId ? 1 : 0);
     node.mix = safeRatio(childCount + (node.parentId ? 1 : 0), relations);
+  }
+
+  const learningBundles = new Map<string, AtlasCrossLink[]>();
+  for (const link of crossLinks) {
+    if (!link.isLearning) continue;
+    const pair = [link.source, link.target].sort().join('↔');
+    const bucket = learningBundles.get(pair) || [];
+    bucket.push(link);
+    learningBundles.set(pair, bucket);
+  }
+  for (const bucket of learningBundles.values()) {
+    bucket.sort((left, right) => left.id.localeCompare(right.id));
+    bucket.forEach((link, index) => {
+      link.bundleIndex = index;
+      link.bundleCount = bucket.length;
+    });
   }
 
   return {

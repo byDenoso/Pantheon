@@ -283,16 +283,17 @@ export interface GraphEdge {
   explanation: string;
   is_learning?: boolean;
   learning_scope?: 'INTRA_DOMAIN' | 'INTER_DOMAIN';
+  learning_ref?: string;
   blocked?: boolean;
 }
 
-export type FilamentStatus = 'ESTABLISHED' | 'PROVISIONAL' | 'CONTESTED' | 'RETIRED';
+export type FilamentStatus = 'ESTABLISHED' | 'PROVISIONAL' | 'TESTING' | 'CONTESTED' | 'RETIRED';
 
 export interface Filament {
   id: string;
   label: string;
   domain: Domain;
-  kind: 'SEMANTIC' | 'PROCEDURAL';
+  kind: 'SEMANTIC' | 'PROCEDURAL' | 'SCIENTIFIC_LEARNING_PIPELINE';
   weight: number;
   support: number;
   contradiction: number;

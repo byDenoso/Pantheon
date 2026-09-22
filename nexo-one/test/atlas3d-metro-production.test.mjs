@@ -79,26 +79,31 @@ test('canonical graph relations become Metro bridge data instead of a second for
   assert.ok(model.crossLinks.every(link => model.nodeMap.has(link.source) && model.nodeMap.has(link.target)));
 });
 
-test('Learning is projected as filaments between existing stations, never as a Learning cluster', () => {
+test('Learning preserves parallel semantic filaments between existing stations, never as a Learning cluster', () => {
   const source = state();
-  source.graph.edges.push({
-    id: 'learning:test-interdomain',
-    from: 'domain:SCIENCE',
-    to: 'domain:OLYMPUS',
-    kind: 'SUPPORTS',
-    weight: .82,
-    explanation: 'test learning bridge',
-    is_learning: true,
-    learning_scope: 'INTER_DOMAIN',
-  });
+  for (const [suffix, weight] of [['a', .82], ['b', .91]]) {
+    source.graph.edges.push({
+      id: 'learning:test-interdomain-' + suffix,
+      from: 'domain:SCIENCE',
+      to: 'domain:OLYMPUS',
+      kind: 'SUPPORTS',
+      weight,
+      explanation: 'test learning bridge ' + suffix,
+      is_learning: true,
+      learning_scope: 'INTER_DOMAIN',
+    });
+  }
 
   const model = buildAtlasMetroModel(source);
-  const learning = model.crossLinks.find(link => link.id === 'entity:learning:test-interdomain');
-  assert.ok(learning);
-  assert.equal(learning.source, 'atlas.domain.science');
-  assert.equal(learning.target, 'atlas.domain.olympus');
-  assert.equal(learning.isLearning, true);
-  assert.equal(learning.learningScope, 'INTER_DOMAIN');
+  const learning = model.crossLinks
+    .filter(link => link.id.startsWith('entity:learning:test-interdomain-'))
+    .sort((left, right) => left.id.localeCompare(right.id));
+  assert.equal(learning.length, 2);
+  assert.ok(learning.every(link => link.source === 'atlas.domain.science'));
+  assert.ok(learning.every(link => link.target === 'atlas.domain.olympus'));
+  assert.ok(learning.every(link => link.isLearning && link.learningScope === 'INTER_DOMAIN'));
+  assert.deepEqual(learning.map(link => link.bundleIndex), [0, 1]);
+  assert.deepEqual(learning.map(link => link.bundleCount), [2, 2]);
   assert.equal(model.nodes.some(node => /Learning & governança/i.test(node.name)), false);
 });
 
@@ -155,8 +160,9 @@ test('dedicated Atlas production page uses Metro renderer, G6 and deterministic 
   ]);
 
   assert.match(app, /data-atlas-renderer="metro-cluster"/);
-  assert.match(app, /peer-detection/);
-  assert.match(app, /Consistência cosmológica · Peer Detection/);
+  assert.match(app, /dense-science/);
+  assert.match(app, /data-atlas-peer-learning-links/);
+  assert.match(app, /data-atlas-peer-artifact-nodes/);
   assert.match(app, /atlas-view-switch/);
   assert.match(app, /Modo 3D ativo/);
   assert.match(app, /data-atlas-learning-links/);
@@ -189,6 +195,9 @@ test('dedicated Atlas production page uses Metro renderer, G6 and deterministic 
   assert.match(renderer, /isLearning/);
   assert.match(renderer, /#f59e0b/);
   assert.match(renderer, /threeLearningSynapses/);
+  assert.match(renderer, /bundleIndex/);
+  assert.match(renderer, /bundleCount/);
+  assert.match(renderer, /curveOffset/);
   assert.match(renderer, /g6NodeCount/);
   assert.match(renderer, /querySelector\('canvas'\)/);
   assert.match(renderer, /OrbitControls/);
@@ -206,7 +215,11 @@ test('dedicated Atlas production page uses Metro renderer, G6 and deterministic 
   assert.match(renderer, /synapseCurve/);
   assert.doesNotMatch(renderer, /TorusGeometry|RingGeometry/);
   assert.match(renderer, /fitThree\(runtime, !initialFit\)/);
-  assert.match(renderer, /domainBaseZ|NEXO: -155/);
+  assert.match(renderer, /NEXO: -520/);
+  assert.match(renderer, /depthStep = 150/);
+  assert.match(renderer, /siblingZ/);
+  assert.match(renderer, /threeSameLevelZSpan/);
+  assert.match(renderer, /domain-depth-sibling-v3/);
   assert.doesNotMatch(renderer, /forceSimulation|forceManyBody|forceLink/);
 
   assert.match(index, /@antv\/g6@5\/dist\/g6\.min\.js/);

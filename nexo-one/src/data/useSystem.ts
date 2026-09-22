@@ -56,6 +56,24 @@ export function useSystem(initialScenario = DEFAULT_SCENARIO_ID): SystemStore {
   }, [reload]);
 
   useEffect(() => {
+    if (typeof window === 'undefined' || activeSource.kind !== 'remote') return;
+
+    const poll = window.setInterval(() => {
+      if (document.visibilityState === 'visible') reload();
+    }, 60_000);
+
+    const onVisibility = () => {
+      if (document.visibilityState === 'visible') reload();
+    };
+    document.addEventListener('visibilitychange', onVisibility);
+
+    return () => {
+      window.clearInterval(poll);
+      document.removeEventListener('visibilitychange', onVisibility);
+    };
+  }, [reload]);
+
+  useEffect(() => {
     controller.current?.abort();
     const ctrl = new AbortController();
     controller.current = ctrl;
