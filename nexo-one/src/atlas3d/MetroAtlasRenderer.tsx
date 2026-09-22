@@ -162,6 +162,25 @@ function stampG6Metrics(container: HTMLElement, data: { nodes: any[]; edges: any
       && /^PEER-DETECTION-GROUP-/i.test(String(edge.data?.learningRef || ''))
     ).length,
   );
+  container.dataset.g6SubdomainLearningEdges = String(
+    data.edges.filter((edge: any) =>
+      edge.data?.isLearning
+      && (/SUBDOMAIN$/.test(String(edge.data?.sourceAnchor || ''))
+        || /SUBDOMAIN$/.test(String(edge.data?.targetAnchor || '')))
+    ).length,
+  );
+  container.dataset.g6PeerSubdomainEdges = String(
+    data.edges.filter((edge: any) =>
+      edge.data?.learningKind === 'SCIENTIFIC_LEARNING_PIPELINE'
+      && /SUBDOMAIN$/.test(String(edge.data?.targetAnchor || ''))
+    ).length,
+  );
+  container.dataset.g6HubLearningEdges = String(
+    data.edges.filter((edge: any) =>
+      edge.data?.isLearning
+      && (edge.data?.sourceAnchor === 'DOMAIN_HUB' || edge.data?.targetAnchor === 'DOMAIN_HUB')
+    ).length,
+  );
 }
 
 function escapeHtml(value: unknown): string {
@@ -247,6 +266,8 @@ function buildG6Data(
           learningRef: link.learningRef,
           learningKind: link.learningKind,
           learningGroup: link.learningGroup,
+          sourceAnchor: link.sourceAnchor,
+          targetAnchor: link.targetAnchor,
           bundleIndex: link.bundleIndex,
           bundleCount: link.bundleCount,
         },
@@ -1236,6 +1257,18 @@ function rebuildThree(
       && /^PEER-DETECTION-GROUP-/i.test(String(link.learningRef || ''))
     ).length,
   );
+  container.dataset.threeSubdomainLearningSynapses = String(
+    visibleLearning.filter(link =>
+      /SUBDOMAIN$/.test(String(link.sourceAnchor || ''))
+      || /SUBDOMAIN$/.test(String(link.targetAnchor || ''))
+    ).length,
+  );
+  container.dataset.threePeerSubdomainSynapses = String(
+    visibleLearning.filter(link =>
+      link.learningKind === 'SCIENTIFIC_LEARNING_PIPELINE'
+      && /SUBDOMAIN$/.test(String(link.targetAnchor || ''))
+    ).length,
+  );
 
   for (const id of ids) {
     const node = model.nodeMap.get(id)!;
@@ -1293,7 +1326,7 @@ function rebuildThree(
     group.add(neuronGlow);
 
     const statusNucleus = new THREE.Mesh(
-      new THREE.SphereGeometry(Math.max(1.4, radius * .18), 14, 10),
+      new THREE.SphereGeometry(Math.max(1.4, radius * .18), compact ? 8 : 14, compact ? 6 : 10),
       new THREE.MeshBasicMaterial({
         color: new THREE.Color(statusColor(node.status)),
         transparent: true,
