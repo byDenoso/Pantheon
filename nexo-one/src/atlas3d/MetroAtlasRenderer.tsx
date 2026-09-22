@@ -992,6 +992,13 @@ function rebuildThree(
   const depthMetrics = threeDepthMetrics(model, ids, positions);
   container.dataset.threeZSpan = depthMetrics.zSpan.toFixed(1);
   container.dataset.threeSameLevelZSpan = depthMetrics.maxSameLevelSpan.toFixed(1);
+  const selectedChildren = selectedId
+    ? (model.childrenMap.get(selectedId) || []).filter(id => visible.has(id) && positions.has(id))
+    : [];
+  const selectedZ = selectedChildren.map(id => positions.get(id)!.z);
+  const selectedSiblingZSpan = selectedZ.length > 1 ? Math.max(...selectedZ) - Math.min(...selectedZ) : 0;
+  container.dataset.threeSelectedSiblingCount = String(selectedChildren.length);
+  container.dataset.threeSelectedSiblingZSpan = selectedSiblingZSpan.toFixed(1);
   container.dataset.threeDepthPolicy = 'domain-depth-sibling-v3';
 
   const content = new THREE.Group();
