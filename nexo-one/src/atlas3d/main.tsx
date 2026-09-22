@@ -63,8 +63,10 @@ async function ensureG6(): Promise<void> {
     return;
   }
 
+  const forceFallback = new URLSearchParams(window.location.search).get('g6Fallback') === '1';
   let lastError: unknown = null;
   for (const source of G6_SOURCES) {
+    if (forceFallback && source.includes('unpkg.com')) continue;
     try {
       await loadScript(source);
       if ((window as any).G6?.Graph) {
