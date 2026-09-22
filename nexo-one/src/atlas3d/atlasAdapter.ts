@@ -229,6 +229,18 @@ function descendantCount(childrenMap: Map<string, string[]>, id: string): number
 }
 
 export function buildAtlasMetroModel(state: SystemState): AtlasMetroModel {
+  const semanticAnchorCounts = new Map<string, number>();
+  for (const filament of state.filaments || []) {
+    for (const side of ['source', 'target'] as const) {
+      const domain = topDomainFromValue(side === 'source' ? filament.from_domain : filament.to_domain);
+      if (!domain) continue;
+      const hint = atlasSubdomainHint(domain, learningSignal(filament, side));
+      if (!hint) continue;
+      const key = `${domain}::${hint}`;
+      semanticAnchorCounts.set(key, (semanticAnchorCounts.get(key) || 0) + 1);
+    }
+  }
+
   const sourceNodes = state.graph.nodes
     .filter(node => node.type !== 'DOMAIN' && node.type !== 'FILAMENT')
     .map(node => ({ ...node, domain: atlasTopDomainOf(node) as GraphNode['domain'] }));
@@ -269,6 +281,7 @@ export function buildAtlasMetroModel(state: SystemState): AtlasMetroModel {
 
     const orderedGroups = [...groups.entries()]
       .sort((a, b) => b[1].length - a[1].length || a[0].localeCompare(b[0]));
+    const materializedSubdomains = new Set(orderedGroups.map(([name]) => name));
 
     if (orderedGroups.length === 0) {
       const lane = state.lanes.find(candidate => candidate.domain === domain);
@@ -297,6 +310,36 @@ export function buildAtlasMetroModel(state: SystemState): AtlasMetroModel {
           synthetic: true,
         });
       }
+    }
+
+    for (const [key, count] of semanticAnchorCounts) {
+      const [anchorDomain, ...nameParts] = key.split('::');
+      if (anchorDomain !== domain) continue;
+      const subdomain = nameParts.join('::');
+      if (!subdomain || materializedSubdomains.has(subdomain)) continue;
+      const id = atlasSubdomainNodeId(domain, subdomain);
+      nodes.push({
+        id,
+        sourceId: null,
+        name: subdomain,
+        domain,
+        parentId: ROOT_IDS[domain],
+        entityType: 'subdomain',
+        status: 'LIVE',
+        summary: `${count} filamento${count === 1 ? '' : 's'} Learning ancorado${count === 1 ? '' : 's'} semanticamente neste subdomínio.`,
+        depth: 1,
+        childCount: 0,
+        descendantCount: 0,
+        relationCount: 0,
+        mix: 50,
+        updatedAt: state.generated_at,
+        sourceRevision: state.bus.fingerprint,
+        fingerprint: `${state.bus.fingerprint}:semantic-anchor:${id}`,
+        authorityClass: 'DERIVED',
+        temporal: state.generated_at ? [{ label: 'projection', at: state.generated_at }] : [],
+        synthetic: true,
+      });
+      materializedSubdomains.add(subdomain);
     }
 
     for (const [subdomain, members] of orderedGroups) {
