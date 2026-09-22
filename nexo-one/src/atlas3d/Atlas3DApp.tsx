@@ -466,6 +466,7 @@ export default function Atlas3DApp() {
       data-atlas-ready={rendererReady ? 'true' : 'false'}
       data-atlas-root-count={model.roots.length}
       data-atlas-visible-count={visibleIds.length}
+      data-atlas-total-count={model.nodes.length}
       data-atlas-mode={viewMode}
       data-atlas-theme={atlasTheme}
       data-atlas-expansion={allExpanded ? 'all' : 'context'}
