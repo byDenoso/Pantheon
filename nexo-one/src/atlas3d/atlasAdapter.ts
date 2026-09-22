@@ -1,4 +1,5 @@
 import type { Filament, GraphEdge, GraphNode, SystemState } from '../contracts/system.ts';
+import { learningSemanticRoute, type LearningSemanticAnchor } from './learningSemantics.ts';
 import {
   ATLAS_TOP_DOMAINS,
   atlasSubdomainHint,
@@ -50,6 +51,8 @@ export interface AtlasCrossLink {
   learningRef: string | null;
   learningKind: 'SEMANTIC' | 'PROCEDURAL' | 'SCIENTIFIC_LEARNING_PIPELINE' | null;
   learningGroup: string | null;
+  learningTheme: string | null;
+  learningBasis: string | null;
   sourceAnchor: 'ENTITY_SUBDOMAIN' | 'SEMANTIC_SUBDOMAIN' | 'DOMAIN_HUB' | null;
   targetAnchor: 'ENTITY_SUBDOMAIN' | 'SEMANTIC_SUBDOMAIN' | 'DOMAIN_HUB' | null;
   bundleIndex: number;
@@ -156,6 +159,7 @@ function resolveLearningEndpoint({
   domain,
   filament,
   side,
+  semanticAnchor,
   sourceNodeIds,
   sourceToParent,
   nodeMap,
@@ -164,6 +168,7 @@ function resolveLearningEndpoint({
   domain?: string;
   filament: Filament;
   side: 'source' | 'target';
+  semanticAnchor?: LearningSemanticAnchor | null;
   sourceNodeIds: Set<string>;
   sourceToParent: Map<string, string>;
   nodeMap: Map<string, AtlasMetroNode>;
@@ -182,7 +187,8 @@ function resolveLearningEndpoint({
   for (const link of filament.links || []) {
     if (!sourceNodeIds.has(link.id)) continue;
     const linkDomain = topDomainFromValue(link.domain);
-    const expectedDomain = topDomainFromValue(domain)
+    const expectedDomain = semanticAnchor?.domain
+      || topDomainFromValue(domain)
       || domainFromRawId(rawId)
       || topDomainFromValue(side === 'source' ? filament.from_domain : filament.to_domain);
     if (expectedDomain && linkDomain !== expectedDomain) continue;
@@ -192,10 +198,16 @@ function resolveLearningEndpoint({
     }
   }
 
-  const resolvedDomain = topDomainFromValue(domain)
+  const resolvedDomain = semanticAnchor?.domain
+    || topDomainFromValue(domain)
     || domainFromRawId(rawId)
     || topDomainFromValue(side === 'source' ? filament.from_domain : filament.to_domain);
   if (!resolvedDomain) return null;
+
+  if (semanticAnchor) {
+    const semanticId = atlasSubdomainNodeId(semanticAnchor.domain, semanticAnchor.subdomain);
+    if (nodeMap.has(semanticId)) return { id: semanticId, anchor: 'SEMANTIC_SUBDOMAIN' };
+  }
 
   const hint = atlasSubdomainHint(resolvedDomain, learningSignal(filament, side));
   if (hint) {
@@ -230,14 +242,23 @@ function descendantCount(childrenMap: Map<string, string[]>, id: string): number
 
 export function buildAtlasMetroModel(state: SystemState): AtlasMetroModel {
   const semanticAnchorCounts = new Map<string, number>();
+  const registerAnchor = (anchor: LearningSemanticAnchor | null | undefined) => {
+    if (!anchor) return;
+    const key = `${anchor.domain}::${anchor.subdomain}`;
+    semanticAnchorCounts.set(key, (semanticAnchorCounts.get(key) || 0) + 1);
+  };
+
   for (const filament of state.filaments || []) {
+    const route = learningSemanticRoute(filament);
+    registerAnchor(route?.source);
+    registerAnchor(route?.target);
+
     for (const side of ['source', 'target'] as const) {
       const domain = topDomainFromValue(side === 'source' ? filament.from_domain : filament.to_domain);
       if (!domain) continue;
       const hint = atlasSubdomainHint(domain, learningSignal(filament, side));
       if (!hint) continue;
-      const key = `${domain}::${hint}`;
-      semanticAnchorCounts.set(key, (semanticAnchorCounts.get(key) || 0) + 1);
+      registerAnchor({ domain, subdomain: hint });
     }
   }
 
@@ -418,6 +439,7 @@ export function buildAtlasMetroModel(state: SystemState): AtlasMetroModel {
     const learningFilament = edge.is_learning && edge.learning_ref
       ? filamentById.get(edge.learning_ref)
       : undefined;
+    const learningRoute = learningFilament ? learningSemanticRoute(learningFilament) : null;
 
     let source: string | null;
     let target: string | null;
@@ -430,6 +452,7 @@ export function buildAtlasMetroModel(state: SystemState): AtlasMetroModel {
         domain: learningFilament.from_domain,
         filament: learningFilament,
         side: 'source',
+        semanticAnchor: learningRoute?.source,
         sourceNodeIds,
         sourceToParent,
         nodeMap,
@@ -439,6 +462,7 @@ export function buildAtlasMetroModel(state: SystemState): AtlasMetroModel {
         domain: learningFilament.to_domain,
         filament: learningFilament,
         side: 'target',
+        semanticAnchor: learningRoute?.target,
         sourceNodeIds,
         sourceToParent,
         nodeMap,
@@ -475,6 +499,8 @@ export function buildAtlasMetroModel(state: SystemState): AtlasMetroModel {
       learningRef: edge.learning_ref || null,
       learningKind: learningFilament?.kind || null,
       learningGroup: learningFilament?.peer_detection_group || null,
+      learningTheme: learningRoute?.theme || null,
+      learningBasis: learningRoute?.basis || null,
       sourceAnchor,
       targetAnchor,
       bundleIndex: 0,
@@ -488,11 +514,13 @@ export function buildAtlasMetroModel(state: SystemState): AtlasMetroModel {
   // the sanctioned projection does not contain enough evidence for finer routing.
   for (const filament of state.filaments || []) {
     if (renderedLearningRefs.has(filament.id)) continue;
+    const learningRoute = learningSemanticRoute(filament);
     const sourceResolved = resolveLearningEndpoint({
       rawId: filament.from_id,
       domain: filament.from_domain,
       filament,
       side: 'source',
+      semanticAnchor: learningRoute?.source,
       sourceNodeIds,
       sourceToParent,
       nodeMap,
@@ -502,6 +530,7 @@ export function buildAtlasMetroModel(state: SystemState): AtlasMetroModel {
       domain: filament.to_domain,
       filament,
       side: 'target',
+      semanticAnchor: learningRoute?.target,
       sourceNodeIds,
       sourceToParent,
       nodeMap,
@@ -523,6 +552,8 @@ export function buildAtlasMetroModel(state: SystemState): AtlasMetroModel {
       learningRef: filament.id,
       learningKind: filament.kind,
       learningGroup: filament.peer_detection_group || null,
+      learningTheme: learningRoute?.theme || null,
+      learningBasis: learningRoute?.basis || null,
       sourceAnchor: sourceResolved?.anchor || null,
       targetAnchor: targetResolved?.anchor || null,
       bundleIndex: 0,
@@ -558,6 +589,8 @@ export function buildAtlasMetroModel(state: SystemState): AtlasMetroModel {
       learningRef: null,
       learningKind: null,
       learningGroup: null,
+      learningTheme: null,
+      learningBasis: null,
       sourceAnchor: null,
       targetAnchor: null,
       bundleIndex: 0,

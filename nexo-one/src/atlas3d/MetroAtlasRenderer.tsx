@@ -5,7 +5,7 @@ import {
 } from 'react';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
-import type { AtlasMetroModel, AtlasMetroNode } from './atlasAdapter.ts';
+import type { AtlasCrossLink, AtlasMetroModel, AtlasMetroNode } from './atlasAdapter.ts';
 import { visibleAtlasIds } from './atlasAdapter.ts';
 import {
   buildMetroScreenLabelLayout,
@@ -98,6 +98,59 @@ function learningWidth(kind: string | null | undefined): number {
   return 1.8;
 }
 
+type VisualCrossLink = AtlasCrossLink & {
+  visualCount: number;
+  visualRefs: string[];
+};
+
+function projectVisualCrossLinks(
+  links: AtlasCrossLink[],
+  visible: ReadonlySet<string>,
+  compact: boolean,
+): VisualCrossLink[] {
+  const filtered = links.filter(link => visible.has(link.source) && visible.has(link.target));
+  if (!compact) {
+    return filtered.map(link => ({
+      ...link,
+      visualCount: 1,
+      visualRefs: link.learningRef ? [link.learningRef] : [],
+    }));
+  }
+
+  const out: VisualCrossLink[] = [];
+  const learningGroups = new Map<string, AtlasCrossLink[]>();
+
+  for (const link of filtered) {
+    if (!link.isLearning) {
+      out.push({ ...link, visualCount: 1, visualRefs: [] });
+      continue;
+    }
+    const key = [link.source, link.target, link.learningKind || 'LEARNING'].join('↔');
+    const bucket = learningGroups.get(key) || [];
+    bucket.push(link);
+    learningGroups.set(key, bucket);
+  }
+
+  for (const [key, bucket] of learningGroups) {
+    bucket.sort((left, right) => left.id.localeCompare(right.id));
+    const base = bucket[0]!;
+    const refs = bucket.map(link => link.learningRef).filter((value): value is string => Boolean(value));
+    const weight = bucket.reduce((sum, link) => sum + Number(link.weight || 0), 0) / bucket.length;
+    out.push({
+      ...base,
+      id: `visual-learning:${key}`,
+      label: bucket.length > 1 ? `${base.label} · +${bucket.length - 1}` : base.label,
+      weight,
+      bundleIndex: 0,
+      bundleCount: 1,
+      visualCount: bucket.length,
+      visualRefs: refs,
+    });
+  }
+
+  return out;
+}
+
 function isAtlasReadback(): boolean {
   return typeof window !== 'undefined'
     && new URLSearchParams(window.location.search).get('readback') === '1';
@@ -146,7 +199,11 @@ function createG6Graph(
 
 function stampG6Metrics(container: HTMLElement, data: { nodes: any[]; edges: any[] }): void {
   container.dataset.g6NodeCount = String(data.nodes.length);
-  container.dataset.g6LearningEdges = String(data.edges.filter((edge: any) => edge.data?.isLearning).length);
+  const learningEdges = data.edges.filter((edge: any) => edge.data?.isLearning);
+  container.dataset.g6LearningEdges = String(learningEdges.length);
+  container.dataset.g6LearningRecords = String(
+    learningEdges.reduce((sum: number, edge: any) => sum + Math.max(1, Number(edge.data?.visualCount || 1)), 0),
+  );
   container.dataset.g6ScientificLearningEdges = String(
     data.edges.filter((edge: any) => edge.data?.learningKind === 'SCIENTIFIC_LEARNING_PIPELINE').length,
   );
@@ -217,6 +274,8 @@ function buildG6Data(
   showBeams: boolean,
   width: number,
   height: number,
+  compact = false,
+  dimmed = false,
 ) {
   const ids = visibleAtlasIds(model, expanded);
   const visible = new Set(ids);
@@ -249,8 +308,7 @@ function buildG6Data(
   });
 
   const bridgeEdges = showBeams
-    ? model.crossLinks
-      .filter(link => visible.has(link.source) && visible.has(link.target))
+    ? projectVisualCrossLinks(model.crossLinks, visible, compact)
       .map(link => ({
         id: link.id,
         source: link.source,
@@ -270,6 +328,8 @@ function buildG6Data(
           targetAnchor: link.targetAnchor,
           bundleIndex: link.bundleIndex,
           bundleCount: link.bundleCount,
+          visualCount: link.visualCount,
+          visualRefs: link.visualRefs,
         },
       }))
     : [];
@@ -503,7 +563,7 @@ function Metro2DView({
               ? '#91a4bd'
               : (DOMAIN_COLOR[String(datum.data?.domain)] || '#475569'),
           lineWidth: (datum: any) => datum.data?.isLearning
-            ? learningWidth(datum.data?.learningKind)
+            ? learningWidth(datum.data?.learningKind) + Math.min(2.1, Math.log2(Math.max(1, Number(datum.data?.visualCount || 1))) * .55)
             : datum.data?.kind === 'bridge' ? 1.05 : 2.25,
           opacity: (datum: any) => datum.data?.isLearning
             ? (datum.data?.learningKind === 'SCIENTIFIC_LEARNING_PIPELINE' ? .82 : .68)
@@ -602,6 +662,7 @@ function Metro2DView({
         showBeamsRef.current,
         rect.width,
         rect.height,
+        compact,
       );
       graph.setData({ nodes: data.nodes, edges: data.edges });
       stampG6Metrics(container, data);
@@ -668,7 +729,8 @@ function Metro2DView({
     const container = containerRef.current;
     if (!graph || !container) return;
     const rect = container.getBoundingClientRect();
-    const data = buildG6Data(model, expanded, showBeams, rect.width, rect.height);
+    const compact = isCompactRenderer(container);
+    const data = buildG6Data(model, expanded, showBeams, rect.width, rect.height, compact);
     graph.setData({ nodes: data.nodes, edges: data.edges });
     stampG6Metrics(container, data);
     container.dataset.g6ViewportWidth = Math.round(rect.width).toString();
@@ -682,10 +744,8 @@ function Metro2DView({
         onReady?.();
       }
 
-      const forceFit = lastFitNonce.current !== fitNonce;
-      if (forceFit) lastFitNonce.current = fitNonce;
       await graph.fitView(
-        { when: forceFit ? 'always' : 'overflow', direction: 'both' },
+        { when: 'overflow', direction: 'both' },
         { duration: isCompactRenderer(container) ? 160 : 280, easing: 'ease-in-out' },
       );
       renderLabelsRef.current();
@@ -697,7 +757,18 @@ function Metro2DView({
         `O renderer 2D falhou durante a atualização. ${error instanceof Error ? error.message : String(error)}`,
       );
     });
-  }, [model.revision, expansionKey, showBeams, fitNonce]);
+  }, [model.revision, expansionKey, showBeams]);
+
+  useEffect(() => {
+    const graph = graphRef.current;
+    const container = containerRef.current;
+    if (!graph || !container || lastFitNonce.current === fitNonce) return;
+    lastFitNonce.current = fitNonce;
+    void Promise.resolve(graph.fitView(
+      { when: 'always', direction: 'both' },
+      { duration: isCompactRenderer(container) ? 160 : 280, easing: 'ease-in-out' },
+    )).then(() => renderLabelsRef.current());
+  }, [fitNonce]);
 
   useEffect(() => {
     applyG6Selection(graphRef.current, model, expanded, selectedId);
@@ -887,7 +958,7 @@ function addSynapse(
     new THREE.MeshBasicMaterial({
       color,
       transparent: true,
-      opacity: learning ? .18 : bridge ? .055 : .085,
+      opacity: learning ? (compact ? .10 : .18) : bridge ? .055 : .085,
       depthWrite: false,
       blending: THREE.AdditiveBlending,
     }),
@@ -900,7 +971,7 @@ function addSynapse(
     new THREE.MeshBasicMaterial({
       color,
       transparent: true,
-      opacity: learning ? .72 : bridge ? .28 : .44,
+      opacity: learning ? (compact ? .50 : .72) : bridge ? .28 : .44,
       depthWrite: false,
       blending: THREE.AdditiveBlending,
     }),
@@ -914,13 +985,17 @@ function addSynapse(
     new THREE.MeshBasicMaterial({
       color,
       transparent: true,
-      opacity: .92,
+      opacity: learning && compact ? .72 : .92,
       depthWrite: false,
       blending: THREE.AdditiveBlending,
     }),
   );
   particle.add(pulseCore);
-  const pulseGlow = createGlowSprite(colorValue, learning ? 18 : bridge ? 10 : 12, learning ? .72 : bridge ? .34 : .46);
+  const pulseGlow = createGlowSprite(
+    colorValue,
+    learning ? 18 : bridge ? 10 : 12,
+    learning ? (compact ? .48 : .72) : bridge ? .34 : .46,
+  );
   pulseGlow.material.depthTest = false;
   particle.add(pulseGlow);
 
@@ -973,7 +1048,12 @@ function createLabelSprite(text: string, domainColor: string, isHub: boolean, co
   const material = new THREE.SpriteMaterial({ map: texture, transparent: true, depthTest: false });
   const sprite = new THREE.Sprite(material);
   sprite.renderOrder = 20;
-  sprite.scale.set(isHub ? 118 : 90, isHub ? 30 : 23, 1);
+  const compactScale = compact ? 1.18 : 1;
+  sprite.scale.set(
+    (isHub ? 118 : 90) * compactScale,
+    (isHub ? 30 : 23) * compactScale,
+    1,
+  );
   return sprite;
 }
 
@@ -1209,9 +1289,12 @@ function rebuildThree(
     );
   }
 
+  const visualCrossLinks = showBeams
+    ? projectVisualCrossLinks(model.crossLinks, visible, compact)
+    : [];
+
   if (showBeams) {
-    for (const link of model.crossLinks) {
-      if (!visible.has(link.source) || !visible.has(link.target)) continue;
+    for (const link of visualCrossLinks) {
       const source = positions.get(link.source);
       const target = positions.get(link.target);
       if (!source || !target) continue;
@@ -1241,7 +1324,12 @@ function rebuildThree(
   const visibleLearning = model.crossLinks.filter(
     link => link.isLearning && visible.has(link.source) && visible.has(link.target),
   );
+  const visualLearning = visualCrossLinks.filter(link => link.isLearning);
   container.dataset.threeLearningSynapses = String(visibleLearning.length);
+  container.dataset.threeLearningVisualSynapses = String(visualLearning.length);
+  container.dataset.threeLearningRecords = String(
+    visualLearning.reduce((sum, link) => sum + Math.max(1, link.visualCount), 0),
+  );
   container.dataset.threeScientificLearningSynapses = String(
     visibleLearning.filter(link => link.learningKind === 'SCIENTIFIC_LEARNING_PIPELINE').length,
   );
@@ -1567,6 +1655,7 @@ function MetroThreeView({
 
     const animate = () => {
       runtime.frame = requestAnimationFrame(animate);
+      if (document.hidden) return;
       updateSynapsePulses(runtime, performance.now());
       controls.update();
       renderer.render(scene, camera);
@@ -1600,15 +1689,20 @@ function MetroThreeView({
     rebuildThree(runtime, container, model, expanded, selectedId, showBeams);
     container.dataset.threeNodeCount = String(visibleAtlasIds(model, expanded).length);
     container.dataset.threeSynapseCount = String(runtime.pulses.length);
-    if (!runtime.hasFit || lastFitNonce.current !== fitNonce) {
-      const initialFit = !runtime.hasFit;
+    if (!runtime.hasFit) {
       runtime.hasFit = true;
-      lastFitNonce.current = fitNonce;
-      fitThree(runtime, !initialFit);
+      fitThree(runtime, false);
     }
     const painted = renderAndMeasureThree(runtime, container);
     if (painted > 0 || !isAtlasReadback()) onReadyRef.current?.();
-  }, [model.revision, expansionKey, showBeams, fitNonce]);
+  }, [model.revision, expansionKey, showBeams]);
+
+  useEffect(() => {
+    const runtime = runtimeRef.current;
+    if (!runtime || lastFitNonce.current === fitNonce) return;
+    lastFitNonce.current = fitNonce;
+    fitThree(runtime, true);
+  }, [fitNonce]);
 
   useEffect(() => {
     const runtime = runtimeRef.current;

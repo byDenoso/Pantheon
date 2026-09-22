@@ -235,6 +235,11 @@ test('GitHub Pages deploys official artifact and exposes projection readback', a
   assert.match(workflow, /data-g6-subdomain-learning-edges/);
   assert.match(workflow, /data-g6-peer-subdomain-edges/);
   assert.match(workflow, /data-atlas-learning-subdomain-endpoints/);
+  assert.match(workflow, /data-atlas-learning-distinct-subdomains/);
+  assert.match(workflow, /data-atlas-learning-max-subdomain-share/);
+  assert.match(workflow, /data-atlas-peer-target-subdomains/);
+  assert.match(workflow, /Learning semantics collapsed into too few subdomains/);
+  assert.match(workflow, /mega-subdomain/);
   assert.match(workflow, /data-atlas-peer-subdomain-links/);
   assert.match(workflow, /data-atlas-semantic-subdomain-links/);
   assert.match(workflow, /data-atlas-procedural-subdomain-links/);
@@ -258,6 +263,10 @@ test('GitHub Pages deploys official artifact and exposes projection readback', a
   assert.match(workflow, /g6Fallback=1/);
   assert.match(workflow, /data-atlas-g6-source="jsdelivr"/);
   assert.match(workflow, /data-three-quality="reduced-gpu"/);
+  assert.match(workflow, /data-g6-learning-records/);
+  assert.match(workflow, /Mobile G6 did not compact parallel Learning filaments/);
+  assert.match(workflow, /data-three-learning-visual-synapses/);
+  assert.match(workflow, /data-three-learning-records/);
   assert.match(workflow, /! grep -Fq 'id="atlas-metro-g6"'/);
   assert.match(workflow, /atlas3d-production-readback/);
   assert.match(workflow, /PAGES_TOWER_PROJECTION_READBACK_OK/);
