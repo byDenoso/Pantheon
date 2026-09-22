@@ -26,11 +26,21 @@ function initialAtlasTheme(): AtlasTheme {
   }
 }
 
-const DOMAIN_COLOR: Record<string, string> = {
+const DOMAIN_COLOR_DARK: Record<string, string> = {
   NEXO: '#7c3aed',
   SCIENCE: '#00c2ff',
   OLYMPUS: '#f97316',
 };
+
+const DOMAIN_COLOR_LIGHT: Record<string, string> = {
+  NEXO: '#6d28d9',
+  SCIENCE: '#0369a1',
+  OLYMPUS: '#c2410c',
+};
+
+function atlasDomainColor(domain: string, theme: AtlasTheme): string {
+  return (theme === 'light' ? DOMAIN_COLOR_LIGHT : DOMAIN_COLOR_DARK)[domain] || '#64748b';
+}
 
 function statusTone(status: string): string {
   const value = status.toUpperCase();
@@ -67,6 +77,7 @@ function DetailPanel({
   learning,
   generatedAt,
   onSelectNode,
+  theme,
 }: {
   node: AtlasMetroNode | null;
   children: AtlasMetroNode[];
@@ -74,12 +85,13 @@ function DetailPanel({
   learning: LearningConnection[];
   generatedAt: string;
   onSelectNode: (id: string) => void;
+  theme: AtlasTheme;
 }) {
   if (!node) {
     return <div className="atlas-empty"><strong>Nenhuma estação selecionada</strong><span>Clique em uma estação do mapa.</span></div>;
   }
 
-  const color = DOMAIN_COLOR[node.domain];
+  const color = atlasDomainColor(node.domain, theme);
 
   return (
     <div className="atlas-detail" data-selected-node={node.id}>
@@ -572,7 +584,7 @@ export default function Atlas3DApp() {
               <button
                 key={rootId}
                 className={activeSelectedId === rootId ? 'selected' : ''}
-                style={{ '--domain-color': DOMAIN_COLOR[root.domain] } as CSSProperties}
+                style={{ '--domain-color': atlasDomainColor(root.domain, atlasTheme) } as CSSProperties}
                 onClick={() => setSelectedId(rootId)}
               >
                 <span />{root.name}<small>{root.descendantCount}</small>
@@ -582,9 +594,9 @@ export default function Atlas3DApp() {
         </div>
 
         <div className="atlas-legend glass">
-          <span><i style={{ background: DOMAIN_COLOR.NEXO }} />Nexo</span>
-          <span><i style={{ background: DOMAIN_COLOR.SCIENCE }} />Science</span>
-          <span><i style={{ background: DOMAIN_COLOR.OLYMPUS }} />Olympus</span>
+          <span><i style={{ background: atlasDomainColor('NEXO', atlasTheme) }} />Nexo</span>
+          <span><i style={{ background: atlasDomainColor('SCIENCE', atlasTheme) }} />Science</span>
+          <span><i style={{ background: atlasDomainColor('OLYMPUS', atlasTheme) }} />Olympus</span>
           {learningLinkCount > 0 && (
             <span
               className="atlas-learning-legend"
@@ -658,6 +670,7 @@ export default function Atlas3DApp() {
           learning={learningConnections}
           generatedAt={model.generatedAt}
           onSelectNode={setSelectedId}
+          theme={atlasTheme}
         />
         <div className="atlas-source-state">
           <span>{system.sourceLabel}</span>
