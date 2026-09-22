@@ -4,7 +4,15 @@ export type AtlasTopDomain = 'NEXO' | 'SCIENCE' | 'OLYMPUS';
 export const ATLAS_TOP_DOMAINS: AtlasTopDomain[] = ['NEXO', 'SCIENCE', 'OLYMPUS'];
 
 const tokenOf = (node: GraphNode): string =>
-  [node.campaign_id, node.id, node.label, node.summary].filter(Boolean).join(' ').toUpperCase();
+  [
+    node.parent_subdomain,
+    node.semantic_description,
+    node.semantic_state,
+    node.campaign_id,
+    node.id,
+    node.label,
+    node.summary,
+  ].filter(Boolean).join(' ').toUpperCase();
 
 export function atlasTopDomainOf(node: GraphNode): AtlasTopDomain {
   const token = tokenOf(node);
@@ -86,6 +94,14 @@ export function atlasSubdomainHint(
 export function atlasSubdomainOf(node: GraphNode): string {
   const token = tokenOf(node);
   const top = atlasTopDomainOf(node);
+
+  // Campaign roadmaps may declare their semantic parent explicitly. This is
+  // stronger than presentation regexes and lets new campaigns land correctly
+  // without a frontend code change.
+  if (node.type === 'CAMPAIGN' && String(node.parent_subdomain || '').trim()) {
+    return String(node.parent_subdomain).trim();
+  }
+
   const hinted = atlasSubdomainHint(top, token, node.type);
   if (hinted) return hinted;
 
