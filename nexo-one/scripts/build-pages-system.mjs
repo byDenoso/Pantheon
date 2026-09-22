@@ -520,12 +520,75 @@ function graphFromProjection(projection, observedAt, filaments = [], peerDetecti
   return { nodes, edges: edges.filter(edge => seen.has(edge.from) && seen.has(edge.to)) };
 }
 
-function humanRequirementLabel(id) {
-  const value = String(id || '').toUpperCase();
-  if (value === 'HOSTED_MCP_TOWER_WRITE_CREDENTIAL') return 'Credencial server-side de escrita/readback da Tower';
-  if (value === 'PERSONAL_LOOP_PRIVATE_PROVIDER_AUTHORIZATION') return 'Autorização dos providers privados do PERSONAL_LOOP_V1';
-  if (value.includes('HOST') && value.includes('CREDENTIAL')) return 'Conexão do host + credenciais externas';
-  return String(id || 'Autorização externa').replace(/[_:-]+/g, ' ').replace(/\b\w/g, char => char.toUpperCase());
+const HUMAN_DEPENDENCY_KIND = Object.freeze({
+  HUMAN_AUTH_REQUIRED: 'CONFIGURAR_ACESSO',
+  HUMAN_APPROVAL_REQUIRED: 'APROVAR',
+  HUMAN_DECISION_REQUIRED: 'DECIDIR',
+  HUMAN_INPUT_REQUIRED: 'FORNECER_DADO',
+  HUMAN_RESPONSE_REQUIRED: 'RESPONDER',
+  HUMAN_CHOICE_REQUIRED: 'ESCOLHER',
+});
+
+function dependencyClassOf(value) {
+  return String(value?.dependency_class || value || '').trim().toUpperCase();
+}
+
+function dependencyClassesOf(item, detail) {
+  const raw = [
+    ...(Array.isArray(item?.dependency_classes) ? item.dependency_classes : []),
+    ...(Array.isArray(detail?.dependency_classes) ? detail.dependency_classes : []),
+    item?.dependency_class,
+    detail?.dependency_class,
+  ];
+  return [...new Set(raw.map(dependencyClassOf).filter(Boolean))];
+}
+
+function humanKindFor(classes) {
+  for (const dependencyClass of classes) {
+    if (HUMAN_DEPENDENCY_KIND[dependencyClass]) return HUMAN_DEPENDENCY_KIND[dependencyClass];
+  }
+  if (classes.some(value => value.includes('AUTH'))) return 'CONFIGURAR_ACESSO';
+  if (classes.some(value => value.includes('APPROV'))) return 'APROVAR';
+  if (classes.some(value => value.includes('INPUT') || value.includes('DATA'))) return 'FORNECER_DADO';
+  if (classes.some(value => value.includes('RESPOND'))) return 'RESPONDER';
+  if (classes.some(value => value.includes('CHOICE') || value.includes('SELECT'))) return 'ESCOLHER';
+  return 'DECIDIR';
+}
+
+function isHumanDependency(dep) {
+  const dependencyClass = dependencyClassOf(dep);
+  return dependencyClass.startsWith('HUMAN_') || dependencyClass.includes('AUTH_REQUIRED');
+}
+
+function dependencySemanticLabel(dep) {
+  const declared = String(dep?.title || dep?.label || dep?.name || '').trim();
+  if (declared) return declared;
+  const dependencyClass = dependencyClassOf(dep);
+  if (dependencyClass.includes('AUTH')) return 'Autorizar / configurar acesso externo';
+  if (dependencyClass.includes('APPROV')) return 'Aprovar operação';
+  if (dependencyClass.includes('DECISION')) return 'Tomar decisão humana';
+  if (dependencyClass.includes('INPUT') || dependencyClass.includes('DATA')) return 'Fornecer informação exigida';
+  if (dependencyClass.includes('EXTERNAL_TRANSIENT')) return 'Dependência externa transitória';
+  if (dependencyClass.includes('CANONICAL_WORK')) return 'Aguardar WORK canônico';
+  if (dependencyClass.includes('EXTERNAL')) return 'Dependência externa';
+  const id = String(dep?.id || '').trim();
+  return id
+    ? id.replace(/[_:-]+/g, ' ').trim().toLowerCase().replace(/^./, char => char.toUpperCase())
+    : 'Dependência declarada pela Tower';
+}
+
+function requirementFromDependency(dep, defaultRetryable = false) {
+  const dependencyClass = dependencyClassOf(dep);
+  return {
+    id: String(dep?.id || dependencyClass || 'DEPENDENCY'),
+    label: dependencySemanticLabel(dep),
+    detail: String(dep?.detail || dep?.description || dep?.next_action || 'Dependência declarada pela Tower.'),
+    state: dep?.state ? String(dep.state) : null,
+    retryable: Boolean(dep?.auto_retry_eligible)
+      || defaultRetryable
+      || dependencyClass.includes('TRANSIENT')
+      || dependencyClass.includes('RETRYABLE'),
+  };
 }
 
 function humanInboxFromProjection(projection, observedAt, humanGateDetails = []) {
@@ -534,68 +597,83 @@ function humanInboxFromProjection(projection, observedAt, humanGateDetails = [])
   const detailsById = new Map((Array.isArray(humanGateDetails) ? humanGateDetails : [])
     .map(item => [String(item?.id || ''), item]));
   const ids = Array.isArray(projection.human_gates?.work_ids) ? projection.human_gates.work_ids : [];
+
   return ids.map(rawId => {
     const id = String(rawId || '');
     const item = byId.get(id);
     if (!item) return null;
+
     const detail = detailsById.get(id) || {};
-    const dependency = String(item.dependency_class || detail.dependency_class || 'HUMAN_ACTION_REQUIRED').toUpperCase();
-    const authGate = dependency.includes('AUTH') || dependency === 'MIXED';
-    const kind = authGate ? 'FORNECER_DADO' : 'DECIDIR';
-    const label = String(item.title || detail.title || id);
+    const dependencyClasses = dependencyClassesOf(item, detail);
+    const kind = humanKindFor(dependencyClasses);
+    const projectedTitle = String(item.title || '').trim();
+    const canonicalQuestion = String(detail.question || '').trim();
+    const title = projectedTitle && projectedTitle !== id ? projectedTitle : (canonicalQuestion || id);
     const priority = String(item.priority || detail.priority || '').toUpperCase();
     const severity = priority === 'P0' || priority === 'CRITICAL' ? 'P0' : 'P1';
     const source = 'tower://' + String(manifest.tower_repository || 'byDenoso/NEXO-Obsidian-Vault')
       + '@' + manifest.tower_commit + '/TOWER_V06/entities/work/' + id + '.json';
 
     const remaining = Array.isArray(detail.remaining_dependencies) ? detail.remaining_dependencies : [];
-    const humanDependencies = remaining.filter(dep =>
-      String(dep?.dependency_class || '').toUpperCase().includes('HUMAN')
-      || String(dep?.dependency_class || '').toUpperCase().includes('AUTH')
-    );
-    const automaticDependencies = remaining.filter(dep =>
-      !humanDependencies.includes(dep)
-      && String(dep?.dependency_class || '').toUpperCase().includes('EXTERNAL')
-    );
+    const humanDependencies = remaining.filter(isHumanDependency);
+    const automaticDependencies = remaining.filter(dep => !isHumanDependency(dep));
 
-    const humanRequirements = humanDependencies.map(dep => ({
-      id: String(dep.id || 'HUMAN_REQUIREMENT'),
-      label: humanRequirementLabel(dep.id),
-      detail: String(dep.detail || 'Configuração externa exigida pela Tower.'),
-    }));
-
-    if (authGate && humanRequirements.length === 0) {
-      humanRequirements.push({
-        id: id.includes('REQUEST-INGRESS-HOSTING-V1') ? 'HOST_CONNECTION_AND_GITHUB_MCP_CREDENTIALS' : 'EXTERNAL_AUTHORIZATION',
-        label: id.includes('REQUEST-INGRESS-HOSTING-V1')
-          ? 'Conexão do host + credenciais GitHub/MCP'
-          : 'Autorização ou credencial externa',
-        detail: String(detail.next_action || detail.question || 'Provisionar a autorização externa exigida pela Tower fora do chat e do código-fonte.'),
-      });
+    const humanRequirements = humanDependencies.map(dep => requirementFromDependency(dep));
+    if (humanRequirements.length === 0) {
+      const rootHumanClass = dependencyClasses.find(value =>
+        value.startsWith('HUMAN_') || value.includes('AUTH_REQUIRED')
+      );
+      if (rootHumanClass || kind !== 'DECIDIR') {
+        humanRequirements.push(requirementFromDependency({
+          id: rootHumanClass || 'HUMAN_GATE',
+          dependency_class: rootHumanClass || 'HUMAN_ACTION_REQUIRED',
+          detail: detail.next_action || detail.question || item.next_action || item.title
+            || 'Ação humana exigida pela Tower para liberar este WORK.',
+        }));
+      }
     }
 
-    const automaticNote = automaticDependencies.length
-      ? automaticDependencies.map(dep => String(dep.detail || dep.id || '')).filter(Boolean).join(' ')
-      : null;
+    const automaticRequirements = automaticDependencies.map(dep =>
+      requirementFromDependency(dep, Boolean(detail.auto_retry_eligible || item.auto_retry_eligible))
+    );
+
+    const constraints = [
+      ...(Array.isArray(item.constraints) ? item.constraints : []),
+      ...(Array.isArray(detail.constraints) ? detail.constraints : []),
+    ].map(String);
+    const secureExternalAction = kind === 'CONFIGURAR_ACESSO';
+    const explicitlyNoSecretInSource = constraints.some(value =>
+      /NO_SECRETS_IN_CHAT|NO_STATIC_.*TOKEN|NO_SECRETS.*SOURCE/i.test(value)
+    );
+    const actionLocation = secureExternalAction
+      ? (String(detail.action_location || '').trim()
+        || (explicitlyNoSecretInSource
+          ? 'Configurações seguras do provider/host. Não inserir segredo no chat ou no código-fonte.'
+          : 'Configurações seguras do provider/host, fora do código-fonte.'))
+      : (String(detail.action_location || '').trim() || null);
+
+    const readbackCriteria = (Array.isArray(detail.acceptance) ? detail.acceptance : [])
+      .map(String).filter(Boolean);
+    const systemNext = String(detail.next_action || item.next_action || '').trim() || null;
 
     return {
       id: 'needs-dener:' + id,
       kind,
-      kind_label: authGate ? 'Autorizar / configurar credencial' : undefined,
       domain: domainOf(item.domain),
-      title: label,
-      question: authGate
+      title,
+      question: kind === 'CONFIGURAR_ACESSO'
         ? (humanRequirements.length > 1
-          ? 'Configure as ' + humanRequirements.length + ' autorizações externas abaixo para liberar somente a parte humana deste WORK.'
-          : 'Configure a autorização externa abaixo para liberar somente a parte humana deste WORK.')
-        : String(detail.question || 'Tomar a decisão humana explícita exigida para liberar este WORK.'),
-      why: authGate
-        ? 'A Tower marcou este WORK como dependente de autorização humana. Dependências automáticas ficam separadas e não são atribuídas a você.'
-        : 'TOWER_V06 marcou este WORK como Needs Dener; dependency_class=' + dependency + '.',
+          ? 'Configure as ' + humanRequirements.length + ' autorizações abaixo. O restante permanece com o NEXO/provider.'
+          : 'Configure a autorização abaixo. O restante permanece com o NEXO/provider.')
+        : canonicalQuestion || 'Executar a intervenção humana explicitamente exigida pela Tower.',
+      why: 'Este WORK está no human_gates canônico da TOWER_V06. Só as dependências humanas abaixo são atribuídas a você.',
       action_id: null,
       options: [],
       human_requirements: humanRequirements,
-      automatic_note: automaticNote,
+      automatic_requirements: automaticRequirements,
+      system_next: systemNext,
+      readback_criteria: readbackCriteria,
+      action_location: actionLocation,
       severity,
       due_at: null,
       source_ref: source,
