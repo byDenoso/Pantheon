@@ -112,7 +112,7 @@ export function ActionsView(
     ALL: state.actions,
     AUTONOMOUS: resolvableActions(state),
     HUMAN: humanActions(state),
-    WAITING: state.actions.filter(action => action.state === 'BLOCKED' && action.dependency_ids.length > 0),
+    WAITING: state.actions.filter(action => action.status === 'WAITING_SIDE_QUEST'),
     BLOCKED: blockedActions(state),
   };
 
