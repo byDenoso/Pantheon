@@ -399,8 +399,6 @@ function Metro2DView({
       if (fit) await graph.fitView({ when: 'always', direction: 'both' }, { duration: 320, easing: 'ease-out' });
     };
 
-    void refresh(true);
-
     let frame = 0;
     const resizeObserver = new ResizeObserver(() => {
       cancelAnimationFrame(frame);
@@ -409,7 +407,7 @@ function Metro2DView({
         void refresh(false);
       });
     });
-    resizeObserver.observe(container);
+    void refresh(true).then(() => resizeObserver.observe(container));
 
     return () => {
       cancelAnimationFrame(frame);
