@@ -1,8 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import {readGithubAuthority,_internal as authorityInternal} from '../atlas-control-tower/lib/github-authority.mjs';
-import {_resilience as runtimeResilience} from '../atlas-control-tower/lib/github-canonical-runtime.mjs';
+import {readGithubAuthority,_internal as authorityInternal} from '../../atlas-control-tower/lib/github-authority.mjs';
+import {_resilience as runtimeResilience} from '../../atlas-control-tower/lib/github-canonical-runtime.mjs';
 
 const authority={
   contract:'NEXO_ATLAS_AUTHORITY_V2',
