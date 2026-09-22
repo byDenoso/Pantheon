@@ -7,6 +7,8 @@ import {hash,semantic} from '../compiler/world-state.mjs';
 export const readers={drive,gmail,calendar,github,vercel,nexo,atlas};
 export const labels={drive:'Google Drive',gmail:'Gmail',calendar:'Calendar',github:'GitHub',vercel:'Vercel',nexo:'NEXO SSoT',atlas:'Atlas'};
 const cache=new Map(), inflight=new Map();
+const PROVIDER_FRESH_TTL_MS=5*60*1000;
+const PROVIDER_STALE_IF_ERROR_MS=60*60*1000;
 const publicTruthGraphProjection=env=>`https://raw.githubusercontent.com/${env.GITHUB_REPOSITORY||'byDenoso/Pantheon'}/main/nexo-one/data/truthgraph.snapshot.json`;
 export function pending(id,now,message='Aguardando leitura.') {return {provider:{id,label:labels[id],status:'UNAVAILABLE',lastSuccessAt:null,checkedAt:new Date(now).toISOString(),revision:null,message,partial:false,count:null},items:[]};}
 export async function readProvider(id,{env=process.env,now=Date.now(),access='PUBLIC',query='',reader=readers[id],timeout=8000,force=false}={}) {
@@ -14,7 +16,7 @@ export async function readProvider(id,{env=process.env,now=Date.now(),access='PU
   if(access==='PUBLIC'&&!['github','nexo'].includes(id))return {...pending(id,now,'Conecte sua conta para consultar esta fonte.'),provider:{...pending(id,now).provider,status:'AUTH_REQUIRED',message:'Acesso privado ainda não configurado.'}};
   const effectiveEnv=access==='PUBLIC'?(id==='nexo'?{NEXO_SOURCE_URL:publicTruthGraphProjection(env)}:{GITHUB_REPOSITORY:env.GITHUB_REPOSITORY}):env;
   const old=cache.get(key);
-  if(!query&&!force&&old&&now-Date.parse(old.provider.lastSuccessAt)<60000)return old;
+  if(!query&&!force&&old&&now-Date.parse(old.provider.lastSuccessAt)<PROVIDER_FRESH_TTL_MS)return old;
   if(!query&&inflight.has(key))return inflight.get(key);
   const controller=new AbortController();let timer;
   const work=(async()=>{
@@ -28,8 +30,29 @@ export async function readProvider(id,{env=process.env,now=Date.now(),access='PU
     }catch(error){
       const code=['AUTH_REQUIRED','RATE_LIMITED'].includes(error.code||error.message)?error.code||error.message:'UNAVAILABLE';
       if(code==='AUTH_REQUIRED'&&!query)cache.delete(key);
-      const fallback=!query&&code!=='AUTH_REQUIRED'?old:null;
-      return {items:fallback?fallback.items.map(x=>({...x,freshness:{...x.freshness,state:'STALE'}})):[],...(fallback?.truthGraphInput?{truthGraphInput:fallback.truthGraphInput}:{}),provider:{...pending(id,now).provider,status:code,lastSuccessAt:fallback?.provider.lastSuccessAt||null,revision:fallback?.provider.revision||null,count:fallback?.items.length??null,partial:!!fallback,message:code==='AUTH_REQUIRED'?'Credencial ou permissão de leitura necessária.':code==='RATE_LIMITED'?'Limite de consultas atingido.':fallback?'Fonte indisponível; exibindo a última leitura válida.':'Não foi possível consultar esta fonte.'}};
+      const lastSuccessMs=old?.provider?.lastSuccessAt?Date.parse(old.provider.lastSuccessAt):NaN;
+      const staleAgeMs=Number.isFinite(lastSuccessMs)?Math.max(0,now-lastSuccessMs):Infinity;
+      const fallback=!query&&code!=='AUTH_REQUIRED'&&old&&staleAgeMs<=PROVIDER_STALE_IF_ERROR_MS?old:null;
+      return {
+        items:fallback?fallback.items.map(x=>({...x,freshness:{...x.freshness,state:'STALE'}})):[],
+        ...(fallback?.truthGraphInput?{truthGraphInput:fallback.truthGraphInput}:{}),
+        provider:{
+          ...pending(id,now).provider,
+          status:code,
+          lastSuccessAt:fallback?.provider.lastSuccessAt||null,
+          revision:fallback?.provider.revision||null,
+          count:fallback?.items.length??null,
+          partial:!!fallback,
+          ...(fallback?{staleAgeMs}:{}),
+          message:code==='AUTH_REQUIRED'
+            ?'Credencial ou permissão de leitura necessária.'
+            :code==='RATE_LIMITED'
+              ?(fallback?'Limite de consultas atingido; mantendo leitura validada recente em modo stale.':'Limite de consultas atingido.')
+              :fallback
+                ?'Fonte indisponível após retries; mantendo leitura validada recente em modo stale.'
+                :'Não foi possível consultar esta fonte após retries; cache validado ausente ou expirado.',
+        },
+      };
     }finally{clearTimeout(timer);}
   })();
   if(!query)inflight.set(key,work);
