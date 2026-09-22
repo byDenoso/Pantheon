@@ -374,7 +374,7 @@ jobs:
             > /tmp/atlas3d-dom.html
 
           echo "ATLAS3D_DOM_DIAGNOSTICS_BEGIN"
-          grep -oE 'data-atlas-[a-z-]+="[^"]*"' /tmp/atlas3d-dom.html | head -20 || true
+          grep -oE 'data-atlas-[a-z-]+="[^"]*"' /tmp/atlas3d-dom.html | head -28 || true
           grep -oE 'data-g6-(ready|node-count|label-visible|label-hidden|label-collisions|label-dom-collisions|label-ui-overlaps|label-zoom|label-policy|max-siblings|learning-edges)="[^"]*"' /tmp/atlas3d-dom.html | head -24 || true
           grep -oE 'class="atlas-render-error"[^<]*|G6 não carregou[^<]*|Atlas 3D indisponível[^<]*' /tmp/atlas3d-dom.html | head -10 || true
           echo "ATLAS3D_DOM_DIAGNOSTICS_END"
@@ -392,11 +392,20 @@ jobs:
           grep -Fq 'data-g6-label-ui-overlaps="0"' /tmp/atlas3d-dom.html
           grep -Fq 'data-g6-label-policy="viewport-adaptive-v2"' /tmp/atlas3d-dom.html
           learning_edges="$(sed -n 's/.*data-g6-learning-edges="\([0-9][0-9]*\)".*/\1/p' /tmp/atlas3d-dom.html | head -1)"
-          [ -n "${learning_edges}" ] && [ "${learning_edges}" -gt 0 ] || {
-            echo "::error::Atlas did not render the published Learning filament"
+          peer_learning="$(sed -n 's/.*data-atlas-peer-learning-links="\([0-9][0-9]*\)".*/\1/p' /tmp/atlas3d-dom.html | head -1)"
+          peer_artifacts="$(sed -n 's/.*data-atlas-peer-artifact-nodes="\([0-9][0-9]*\)".*/\1/p' /tmp/atlas3d-dom.html | head -1)"
+          [ -n "${learning_edges}" ] && [ "${learning_edges}" -ge 8 ] || {
+            echo "::error::Atlas rendered only ${learning_edges:-0} Learning filaments; semantic Learning projection is underrepresented"
             exit 1
           }
-          grep -Eq 'data-atlas-learning-links="[1-9][0-9]*"' /tmp/atlas3d-dom.html
+          [ -n "${peer_learning}" ] && [ "${peer_learning}" -ge 8 ] || {
+            echo "::error::Peer Detection semantic bundles missing: ${peer_learning:-0}"
+            exit 1
+          }
+          [ "${peer_artifacts:-missing}" = "0" ] || {
+            echo "::error::Raw Peer Detection runtime artifacts leaked back into Atlas stations: ${peer_artifacts:-missing}"
+            exit 1
+          }
           g6_node_count="$(sed -n 's/.*data-g6-node-count="\([0-9][0-9]*\)".*/\1/p' /tmp/atlas3d-dom.html | head -1)"
           [ -n "${g6_node_count}" ] && [ "${g6_node_count}" -gt 3 ] || {
             echo "::error::G6 received only ${g6_node_count:-0} nodes; expected the three hubs plus their initial stations"
@@ -413,59 +422,39 @@ jobs:
           }
           echo "PAGES_ATLAS3D_VISUAL_READBACK_OK roots=3 visible=${visible_count} g6_nodes=${g6_node_count} renderer=metro-cluster"
 
-          peer_url="${base}/atlas3d/?expand=peer-detection"
-          "${chrome_bin}" --headless=new --no-sandbox --disable-dev-shm-usage --hide-scrollbars \
-            --window-size=1440,900 --virtual-time-budget=16000 --dump-dom "${peer_url}" \
-            > /tmp/atlas3d-peer-detection-dom.html
-          echo "ATLAS2D_PEER51_DOM_DIAGNOSTICS_BEGIN"
-          grep -oE 'data-atlas-[a-z-]+="[^"]*"' /tmp/atlas3d-peer-detection-dom.html | head -24 || true
-          grep -oE 'data-g6-(ready|node-count|label-visible|label-hidden|label-collisions|label-dom-collisions|label-ui-overlaps|label-zoom|label-policy|max-siblings|learning-edges)="[^"]*"' /tmp/atlas3d-peer-detection-dom.html | head -28 || true
-          echo "ATLAS2D_PEER51_DOM_DIAGNOSTICS_END"
-
-          grep -Fq 'data-atlas-qa-expand="peer-detection"' /tmp/atlas3d-peer-detection-dom.html
-          grep -Fq 'data-atlas-qa-expanded-node="Consistência cosmológica · Peer Detection"' /tmp/atlas3d-peer-detection-dom.html
-          grep -Fq 'data-g6-ready="true"' /tmp/atlas3d-peer-detection-dom.html
-          grep -Fq 'data-g6-label-policy="viewport-adaptive-v2"' /tmp/atlas3d-peer-detection-dom.html
-
-          peer_collisions="$(sed -n 's/.*data-g6-label-collisions="\([0-9][0-9]*\)".*/\1/p' /tmp/atlas3d-peer-detection-dom.html | head -1)"
-          peer_dom_collisions="$(sed -n 's/.*data-g6-label-dom-collisions="\([0-9][0-9]*\)".*/\1/p' /tmp/atlas3d-peer-detection-dom.html | head -1)"
-          peer_ui_overlaps="$(sed -n 's/.*data-g6-label-ui-overlaps="\([0-9][0-9]*\)".*/\1/p' /tmp/atlas3d-peer-detection-dom.html | head -1)"
-          [ "${peer_collisions:-}" = "0" ] && [ "${peer_dom_collisions:-}" = "0" ] && [ "${peer_ui_overlaps:-}" = "0" ] || {
-            echo "::error::Peer Detection 51-child label regression: model=${peer_collisions:-missing} DOM=${peer_dom_collisions:-missing} UI=${peer_ui_overlaps:-missing}"
-            exit 1
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          const system = JSON.parse(fs.readFileSync('/tmp/system.json', 'utf8'));
+          const rawPeer = system.graph.nodes.filter(node =>
+            /^work:PEER-DETECTION-D\d+/i.test(String(node.id || ''))
+            || /^test:PEER-DETECTION-D\d+/i.test(String(node.id || ''))
+            || /^capability:peer\.detection\./i.test(String(node.id || ''))
+          );
+          if (rawPeer.length) throw new Error('RAW_PEER_ARTIFACTS_VISIBLE:' + rawPeer.map(node => node.id).join(','));
+          const peerFilaments = system.filaments.filter(item => item.kind === 'SCIENTIFIC_LEARNING_PIPELINE');
+          const peerGroups = new Set(peerFilaments.map(item => item.peer_detection_group));
+          if (peerFilaments.length < 8 || peerGroups.size < 8) {
+            throw new Error('PEER_SEMANTIC_BUNDLES_MISSING:' + peerFilaments.length + ':' + peerGroups.size);
           }
+          const meta = system.filaments.filter(item => item.kind === 'PROCEDURAL');
+          if (!meta.length) throw new Error('METALEARNING_NOT_PROJECTED');
+          console.log(
+            'PAGES_ATLAS_LEARNING_SEMANTIC_OK'
+            + ' peer_bundles=' + peerFilaments.length
+            + ' peer_groups=' + peerGroups.size
+            + ' meta_learning=' + meta.length
+            + ' raw_peer_nodes=0'
+          );
+          NODE
 
-          peer_siblings="$(sed -n 's/.*data-g6-max-siblings="\([0-9][0-9]*\)".*/\1/p' /tmp/atlas3d-peer-detection-dom.html | head -1)"
-          [ "${peer_siblings:-}" = "51" ] || {
-            echo "::error::Peer Detection QA must exercise exactly 51 children; observed=${peer_siblings:-missing}"
-            exit 1
-          }
-
-          peer_labels="$(sed -n 's/.*data-g6-label-visible="\([0-9][0-9]*\)".*/\1/p' /tmp/atlas3d-peer-detection-dom.html | head -1)"
-          peer_hidden="$(sed -n 's/.*data-g6-label-hidden="\([0-9][0-9]*\)".*/\1/p' /tmp/atlas3d-peer-detection-dom.html | head -1)"
-          [ -n "${peer_labels}" ] && [ "${peer_labels}" -gt 10 ] || {
-            echo "::error::Peer Detection adaptive labels became too sparse: visible=${peer_labels:-0}"
-            exit 1
-          }
-          [ -n "${peer_hidden}" ] && [ "${peer_hidden}" -gt 0 ] || {
-            echo "::error::Peer Detection QA did not engage zoom-dependent label density"
-            exit 1
-          }
-
-          "${chrome_bin}" --headless=new --no-sandbox --disable-dev-shm-usage --hide-scrollbars \
-            --window-size=1440,900 --virtual-time-budget=12000 \
-            --screenshot=/tmp/atlas3d-readback-peer-detection-51.png "${peer_url}" >/dev/null 2>&1
-          test -s /tmp/atlas3d-readback-peer-detection-51.png
-          echo "PAGES_ATLAS2D_PEER51_READBACK_OK labels=${peer_labels} hidden=${peer_hidden} collisions=0 ui_overlaps=0 siblings=51"
-
-          three_url="${base}/atlas3d/?mode=3d"
+          depth_url="${base}/atlas3d/?mode=3d&expand=dense-science"
           "${chrome_bin}" --headless=new --no-sandbox --disable-dev-shm-usage --hide-scrollbars \
             --use-angle=swiftshader --enable-unsafe-swiftshader \
-            --window-size=1440,900 --virtual-time-budget=12000 --dump-dom "${three_url}" \
+            --window-size=1440,900 --virtual-time-budget=12000 --dump-dom "${depth_url}" \
             > /tmp/atlas3d-3d-dom.html
           echo "ATLAS3D_3D_DOM_DIAGNOSTICS_BEGIN"
           grep -oE 'data-atlas-[a-z-]+="[^"]*"' /tmp/atlas3d-3d-dom.html | head -20 || true
-          grep -oE 'data-three-(ready|node-count|paint-samples|synapse-count|learning-synapses|visual)="[^"]*"' /tmp/atlas3d-3d-dom.html | head -20 || true
+          grep -oE 'data-three-(ready|node-count|paint-samples|synapse-count|learning-synapses|z-span|same-level-z-span|depth-policy|visual)="[^"]*"' /tmp/atlas3d-3d-dom.html | head -28 || true
           echo "ATLAS3D_3D_DOM_DIAGNOSTICS_END"
           grep -Fq 'data-atlas-mode="3d"' /tmp/atlas3d-3d-dom.html
           grep -Fq 'data-active-mode="3d"' /tmp/atlas3d-3d-dom.html
@@ -483,8 +472,19 @@ jobs:
             exit 1
           }
           three_learning="$(sed -n 's/.*data-three-learning-synapses="\([0-9][0-9]*\)".*/\1/p' /tmp/atlas3d-3d-dom.html | head -1)"
-          [ -n "${three_learning}" ] && [ "${three_learning}" -gt 0 ] || {
-            echo "::error::Three renderer did not materialize the Learning filament"
+          [ -n "${three_learning}" ] && [ "${three_learning}" -ge 8 ] || {
+            echo "::error::Three renderer materialized only ${three_learning:-0} Learning synapses"
+            exit 1
+          }
+          grep -Fq 'data-three-depth-policy="domain-depth-sibling-v3"' /tmp/atlas3d-3d-dom.html
+          three_z_span="$(sed -n 's/.*data-three-z-span="\([0-9.][0-9.]*\)".*/\1/p' /tmp/atlas3d-3d-dom.html | head -1)"
+          three_same_level_z="$(sed -n 's/.*data-three-same-level-z-span="\([0-9.][0-9.]*\)".*/\1/p' /tmp/atlas3d-3d-dom.html | head -1)"
+          awk -v value="${three_z_span:-0}" 'BEGIN { exit !(value > 700) }' || {
+            echo "::error::Three total Z depth is too flat: ${three_z_span:-missing}"
+            exit 1
+          }
+          awk -v value="${three_same_level_z:-0}" 'BEGIN { exit !(value > 120) }' || {
+            echo "::error::Three same-level siblings still form a flat totem: ${three_same_level_z:-missing}"
             exit 1
           }
           three_paint_samples="$(sed -n 's/.*data-three-paint-samples="\([0-9][0-9]*\)".*/\1/p' /tmp/atlas3d-3d-dom.html | head -1)"
@@ -495,9 +495,9 @@ jobs:
           "${chrome_bin}" --headless=new --no-sandbox --disable-dev-shm-usage --hide-scrollbars \
             --use-angle=swiftshader --enable-unsafe-swiftshader \
             --window-size=1440,900 --virtual-time-budget=8000 \
-            --screenshot=/tmp/atlas3d-readback-3d.png "${three_url}" >/dev/null 2>&1
+            --screenshot=/tmp/atlas3d-readback-3d.png "${depth_url}" >/dev/null 2>&1
           test -s /tmp/atlas3d-readback-3d.png
-          echo "PAGES_ATLAS3D_3D_READBACK_OK visual=neural-synapse visible=${visible_count} three_nodes=${three_node_count} synapses=${three_synapse_count} learning=${three_learning} paint_samples=${three_paint_samples}"
+          echo "PAGES_ATLAS3D_3D_READBACK_OK visual=neural-synapse visible=${visible_count} three_nodes=${three_node_count} synapses=${three_synapse_count} learning=${three_learning} z_span=${three_z_span} same_level_z=${three_same_level_z} paint_samples=${three_paint_samples}"
 
           curl -fsSL "${base}/world-public.ndjson" -o /tmp/world.ndjson
           curl -fsSL "${base}/mcp/topology.json" -o /tmp/mcp-topology.json
@@ -567,8 +567,8 @@ jobs:
           path: |
             /tmp/atlas3d-readback.png
             /tmp/atlas3d-dom.html
-            /tmp/atlas3d-readback-peer-detection-51.png
-            /tmp/atlas3d-peer-detection-dom.html
+            /tmp/atlas3d-readback-depth-learning.png
+            /tmp/atlas3d-3d-dom.html
             /tmp/atlas3d-readback-3d.png
             /tmp/atlas3d-3d-dom.html
           if-no-files-found: warn
