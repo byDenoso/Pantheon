@@ -250,7 +250,6 @@ export default function Atlas3DApp() {
     link.learningKind === 'SCIENTIFIC_LEARNING_PIPELINE'
     && /^PEER-DETECTION-GROUP-/i.test(String(link.learningRef || ''))
     && model.nodeMap.get(link.target)?.entityType === 'subdomain'
-    && /Peer Detection/i.test(model.nodeMap.get(link.target)?.name || '')
   ).length;
   const semanticSubdomainLinkCount = model.crossLinks.filter(link =>
     link.learningKind === 'SEMANTIC'
