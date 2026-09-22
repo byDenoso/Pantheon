@@ -494,6 +494,10 @@ test('dedicated Atlas production page uses Metro renderer, G6 and deterministic 
   assert.match(app, /data-atlas-semantic-subdomain-links/);
   assert.match(app, /data-atlas-procedural-subdomain-links/);
   assert.match(app, /data-atlas-peer-artifact-nodes/);
+  assert.match(app, /data-atlas-campaign-count/);
+  assert.match(app, /data-atlas-campaign-source-links/);
+  assert.match(app, /atlas-source-link/);
+  assert.match(app, /node\.sourceLinks/);
   assert.match(app, /atlas-view-switch/);
   assert.match(app, /THEME_STORAGE_KEY/);
   assert.match(app, /theme.*=== 'light'/);
@@ -554,6 +558,8 @@ test('dedicated Atlas production page uses Metro renderer, G6 and deterministic 
   assert.match(graph3d, /SUBDOMAIN: 0\.09/);
   assert.match(layered, /SUBDOMAIN: 'ENTITY'/);
     const taxonomy = await text('src/viewmodels/atlasTaxonomy.ts');
+  assert.match(taxonomy, /parent_subdomain/);
+  assert.match(taxonomy, /node\.type === 'CAMPAIGN'/);
   assert.match(taxonomy, /atlasSubdomainHint/);
   assert.match(taxonomy, /Conservative semantic router/);
   const semantics = await text('src/atlas3d/learningSemantics.ts');
@@ -563,6 +569,8 @@ test('dedicated Atlas production page uses Metro renderer, G6 and deterministic 
   assert.match(semantics, /Governança científica & decisão/);
   assert.match(semantics, /Inferência bayesiana · Priors & evidência/);
   const adapter = await text('src/atlas3d/atlasAdapter.ts');
+  assert.match(adapter, /node\.atlas_visible !== false/);
+  assert.match(adapter, /sourceLinks/);
   assert.match(adapter, /resolveLearningEndpoint/);
   assert.match(adapter, /descendantCounts/);
   assert.match(adapter, /ENTITY_SUBDOMAIN/);
@@ -683,6 +691,7 @@ test('dedicated Atlas production page uses Metro renderer, G6 and deterministic 
   assert.match(css, /atlas-theme-button/);
   assert.match(css, /atlas-expand-button/);
   assert.match(css, /atlas-learning-legend i/);
+  assert.match(css, /atlas-source-link/);
   assert.match(css, /repeat\(6,auto\)/);
   assert.match(css, /\.atlas-workspace\{position:absolute;inset:0;width:100%;height:100%/);
   assert.match(css, /\.atlas-sidebar\.mobile-open/);
