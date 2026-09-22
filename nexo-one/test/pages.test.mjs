@@ -287,6 +287,35 @@ test('Needs Dener semantic compiler has no WORK-id special cases', async () => {
   assert.match(builder, /readback_criteria/);
 });
 
+test('new projected domains expand without compiler switch edits', async () => {
+  const { buildPagesProjection } = await import('../scripts/build-pages-system.mjs');
+  const manifest = {
+    authority: 'TOWER_V06',
+    projection_only: true,
+    writeback: 'FORBIDDEN',
+    tower_commit: 'e'.repeat(40),
+    event_cursor: '20260922T120000000000Z-domain',
+    projection_fingerprint: 'sha256:' + 'f'.repeat(64),
+    generated_at: '2026-09-22T12:00:00Z',
+  };
+  const projection = {
+    contract: 'NEXO_PUBLIC_PROJECTION_V1',
+    manifest,
+    event_cursor: manifest.event_cursor,
+    work: [{ id: 'WORK-FIN-1', title: 'Finance pilot', domain: 'FINANCE', status: 'READY' }],
+    tests: [],
+    capabilities: {},
+    counts: { active_work: 1, tests: 0, capabilities: 0, needs_dener: 0 },
+  };
+  const { system, world } = buildPagesProjection({ projection, manifestFile: manifest });
+  assert.ok(system.graph.nodes.some(node => node.id === 'domain:FINANCE' && node.domain === 'FINANCE'));
+  assert.ok(system.graph.nodes.some(node => node.id === 'work:WORK-FIN-1' && node.domain === 'FINANCE'));
+  assert.ok(system.lanes.some(lane => lane.domain === 'FINANCE'));
+  assert.ok(world.contexts.some(context => context.id === 'FINANCE' && context.coverage === 'AVAILABLE'));
+  const primitives = await text('src/components/primitives.tsx');
+  assert.match(primitives, /DOMAIN_GLYPH\[domain\] \?\? '◇'/);
+});
+
 test('GitHub Pages deploys official artifact and exposes projection readback', async () => {
   const workflow = await text('../.github/workflows/nexo-one-pages.yml');
 
