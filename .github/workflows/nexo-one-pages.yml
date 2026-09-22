@@ -364,7 +364,7 @@ jobs:
 
           echo "ATLAS3D_DOM_DIAGNOSTICS_BEGIN"
           grep -oE 'data-atlas-[a-z-]+="[^"]*"' /tmp/atlas3d-dom.html | head -20 || true
-          grep -oE 'data-g6-(ready|node-count)="[^"]*"' /tmp/atlas3d-dom.html | head -10 || true
+          grep -oE 'data-g6-(ready|node-count|label-visible|label-hidden|label-collisions|max-siblings)="[^"]*"' /tmp/atlas3d-dom.html | head -16 || true
           grep -oE 'class="atlas-render-error"[^<]*|G6 não carregou[^<]*|Atlas 3D indisponível[^<]*' /tmp/atlas3d-dom.html | head -10 || true
           echo "ATLAS3D_DOM_DIAGNOSTICS_END"
 
@@ -376,6 +376,7 @@ jobs:
           grep -Fq 'data-atlas-renderer="metro-cluster"' /tmp/atlas3d-dom.html
           grep -Fq 'data-atlas-ready="true"' /tmp/atlas3d-dom.html
           grep -Fq 'data-g6-ready="true"' /tmp/atlas3d-dom.html
+          grep -Fq 'data-g6-label-collisions="0"' /tmp/atlas3d-dom.html
           g6_node_count="$(sed -n 's/.*data-g6-node-count="\([0-9][0-9]*\)".*/\1/p' /tmp/atlas3d-dom.html | head -1)"
           [ -n "${g6_node_count}" ] && [ "${g6_node_count}" -gt 3 ] || {
             echo "::error::G6 received only ${g6_node_count:-0} nodes; expected the three hubs plus their initial stations"
@@ -391,6 +392,38 @@ jobs:
             exit 1
           }
           echo "PAGES_ATLAS3D_VISUAL_READBACK_OK roots=3 visible=${visible_count} g6_nodes=${g6_node_count} renderer=metro-cluster"
+
+          dense_url="${base}/atlas3d/?expand=dense-science"
+          "${chrome_bin}" --headless=new --no-sandbox --disable-dev-shm-usage --hide-scrollbars \
+            --window-size=1440,900 --virtual-time-budget=14000 --dump-dom "${dense_url}" \
+            > /tmp/atlas3d-dense-dom.html
+          echo "ATLAS2D_DENSE_DOM_DIAGNOSTICS_BEGIN"
+          grep -oE 'data-atlas-[a-z-]+="[^"]*"' /tmp/atlas3d-dense-dom.html | head -20 || true
+          grep -oE 'data-g6-(ready|node-count|label-visible|label-hidden|label-collisions|max-siblings)="[^"]*"' /tmp/atlas3d-dense-dom.html | head -20 || true
+          echo "ATLAS2D_DENSE_DOM_DIAGNOSTICS_END"
+
+          grep -Fq 'data-atlas-qa-expand="dense-science"' /tmp/atlas3d-dense-dom.html
+          grep -Fq 'data-g6-ready="true"' /tmp/atlas3d-dense-dom.html
+          dense_collisions="$(sed -n 's/.*data-g6-label-collisions="\([0-9][0-9]*\)".*/\1/p' /tmp/atlas3d-dense-dom.html | head -1)"
+          [ "${dense_collisions:-}" = "0" ] || {
+            echo "::error::Dense Science label collision regression: ${dense_collisions:-missing} overlaps"
+            exit 1
+          }
+          dense_labels="$(sed -n 's/.*data-g6-label-visible="\([0-9][0-9]*\)".*/\1/p' /tmp/atlas3d-dense-dom.html | head -1)"
+          [ -n "${dense_labels}" ] && [ "${dense_labels}" -gt 6 ] || {
+            echo "::error::Dense Science view suppressed too many labels: visible=${dense_labels:-0}"
+            exit 1
+          }
+          dense_siblings="$(sed -n 's/.*data-g6-max-siblings="\([0-9][0-9]*\)".*/\1/p' /tmp/atlas3d-dense-dom.html | head -1)"
+          [ -n "${dense_siblings}" ] && [ "${dense_siblings}" -gt 0 ] || {
+            echo "::error::Dense Science QA did not expand a populated cluster"
+            exit 1
+          }
+          "${chrome_bin}" --headless=new --no-sandbox --disable-dev-shm-usage --hide-scrollbars \
+            --window-size=1440,900 --virtual-time-budget=10000 \
+            --screenshot=/tmp/atlas3d-readback-dense.png "${dense_url}" >/dev/null 2>&1
+          test -s /tmp/atlas3d-readback-dense.png
+          echo "PAGES_ATLAS2D_DENSE_READBACK_OK labels=${dense_labels} collisions=0 max_siblings=${dense_siblings}"
 
           three_url="${base}/atlas3d/?mode=3d"
           "${chrome_bin}" --headless=new --no-sandbox --disable-dev-shm-usage --hide-scrollbars \
@@ -494,6 +527,8 @@ jobs:
           path: |
             /tmp/atlas3d-readback.png
             /tmp/atlas3d-dom.html
+            /tmp/atlas3d-readback-dense.png
+            /tmp/atlas3d-dense-dom.html
             /tmp/atlas3d-readback-3d.png
             /tmp/atlas3d-3d-dom.html
           if-no-files-found: warn

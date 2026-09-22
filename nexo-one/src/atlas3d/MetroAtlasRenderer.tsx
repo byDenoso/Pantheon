@@ -6,7 +6,13 @@ import {
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import type { AtlasMetroModel, AtlasMetroNode } from './atlasAdapter.ts';
-import { atlasPathTo, visibleAtlasIds } from './atlasAdapter.ts';
+import { visibleAtlasIds } from './atlasAdapter.ts';
+import {
+  buildMetroLabelLayout,
+  metroLabelFontSize,
+  metroLayoutPositions,
+  metroNodeSize,
+} from './metro2dLayout.ts';
 
 type ViewMode = '2d' | '3d';
 
@@ -76,95 +82,6 @@ function escapeHtml(value: unknown): string {
     .replaceAll('"', '&quot;').replaceAll("'", '&#039;');
 }
 
-const clamp = (value: number, min: number, max: number) => Math.max(min, Math.min(max, value));
-const radians = (degrees: number) => degrees * Math.PI / 180;
-
-function rootFor(model: AtlasMetroModel, id: string): string {
-  return atlasPathTo(model, id)[0]?.id || id;
-}
-
-export function metroLayoutPositions(
-  model: AtlasMetroModel,
-  ids: string[],
-  width: number,
-  height: number,
-): Map<string, [number, number]> {
-  const w = Math.max(720, width || 900);
-  const h = Math.max(560, height || 700);
-  const anchorsByDomain: Record<string, [number, number]> = {
-    NEXO: [w * 0.23, h * 0.52],
-    SCIENCE: [w * 0.55, h * 0.33],
-    OLYMPUS: [w * 0.77, h * 0.69],
-  };
-  const firstAngles: Record<string, number[]> = {
-    NEXO: [-135, -90, -45, 0, 45, 90, 135, 180],
-    SCIENCE: [-180, -135, -90, -45, 0, 45, 90, 135],
-    OLYMPUS: [-180, -135, -90, -45, 0, 45, 90, 135],
-  };
-  const visible = new Set(ids);
-  const positions = new Map<string, [number, number]>();
-
-  for (const rootId of model.roots) {
-    const root = model.nodeMap.get(rootId);
-    if (!root) continue;
-    positions.set(rootId, anchorsByDomain[root.domain]);
-  }
-
-  for (const rootId of model.roots) {
-    const root = model.nodeMap.get(rootId);
-    if (!root) continue;
-    const direct = (model.childrenMap.get(rootId) || []).filter(id => visible.has(id));
-    const anchor = anchorsByDomain[root.domain];
-    direct.forEach((id, index) => {
-      const angles = firstAngles[root.domain];
-      const angle = angles[index % angles.length]!;
-      const ring = 136 + (index % 2) * 18 + Math.floor(index / angles.length) * 34;
-      positions.set(id, [
-        anchor[0] + Math.cos(radians(angle)) * ring,
-        anchor[1] + Math.sin(radians(angle)) * ring,
-      ]);
-    });
-  }
-
-  const deeper = ids
-    .map(id => ({ id, depth: model.nodeMap.get(id)?.depth || 0 }))
-    .filter(item => item.depth >= 2)
-    .sort((a, b) => a.depth - b.depth || a.id.localeCompare(b.id));
-
-  for (const { id, depth } of deeper) {
-    const node = model.nodeMap.get(id);
-    if (!node?.parentId) continue;
-    const parentPosition = positions.get(node.parentId);
-    if (!parentPosition) continue;
-    const siblings = (model.childrenMap.get(node.parentId) || []).filter(candidate => visible.has(candidate));
-    const index = Math.max(0, siblings.indexOf(id));
-    const offsets = siblings.length <= 1
-      ? [0]
-      : siblings.length === 2
-        ? [-22.5, 22.5]
-        : [-45, 0, 45, 90, -90, 135, -135, 180];
-    const rootId = rootFor(model, node.parentId);
-    const root = model.nodeMap.get(rootId);
-    const anchor = root ? anchorsByDomain[root.domain] : [w / 2, h / 2] as [number, number];
-    const baseAngle = Math.round(
-      (Math.atan2(parentPosition[1] - anchor[1], parentPosition[0] - anchor[0]) * 180 / Math.PI) / 45,
-    ) * 45;
-    const angle = baseAngle + offsets[index % offsets.length]!;
-    const distance = 78 + Math.min(30, depth * 8) + Math.floor(index / offsets.length) * 18;
-    positions.set(id, [
-      clamp(parentPosition[0] + Math.cos(radians(angle)) * distance, 58, w - 58),
-      clamp(parentPosition[1] + Math.sin(radians(angle)) * distance, 72, h - 58),
-    ]);
-  }
-
-  return positions;
-}
-
-function nodeSize(node: AtlasMetroNode): number {
-  const base = node.entityType === 'hub' ? 58 : node.entityType === 'subdomain' ? 30 : 20;
-  return Math.round(base + Math.min(34, Math.sqrt(node.descendantCount + 1) * 6));
-}
-
 function tooltipHtml(node: AtlasMetroNode | undefined, expanded: ReadonlySet<string>): string {
   if (!node) return '';
   const domain = DOMAIN_COLOR[node.domain] || '#94a3b8';
@@ -193,20 +110,29 @@ function buildG6Data(
   showBeams: boolean,
   width: number,
   height: number,
+  selectedId: string | null = null,
 ) {
   const ids = visibleAtlasIds(model, expanded);
   const visible = new Set(ids);
   const positions = metroLayoutPositions(model, ids, width, height);
+  const labelLayout = buildMetroLabelLayout(model, ids, positions, selectedId);
 
   const nodes = ids.map(id => {
     const node = model.nodeMap.get(id)!;
     const position = positions.get(id) || [width / 2, height / 2];
+    const label = labelLayout.byId.get(id);
     return {
       id,
       type: 'donut',
       data: {
         ...node,
         expanded: expanded.has(id),
+        labelVisible: label?.visible ?? true,
+        labelPlacement: label?.placement || 'bottom',
+        labelOffsetX: label?.offsetX || 0,
+        labelOffsetY: label?.offsetY || 0,
+        labelMaxWidth: label?.maxWidth || 138,
+        labelFontSize: label?.fontSize || metroLabelFontSize(node),
       },
       style: { x: position[0], y: position[1] },
     };
@@ -236,7 +162,21 @@ function buildG6Data(
       }))
     : [];
 
-  return { nodes, edges: [...hierarchyEdges, ...bridgeEdges] };
+  return {
+    nodes,
+    edges: [...hierarchyEdges, ...bridgeEdges],
+    labelLayout,
+  };
+}
+
+function applyG6LabelMetrics(
+  container: HTMLElement,
+  layout: ReturnType<typeof buildMetroLabelLayout>,
+) {
+  container.dataset.g6LabelVisible = String(layout.visible);
+  container.dataset.g6LabelHidden = String(layout.hidden);
+  container.dataset.g6LabelCollisions = String(layout.collisions);
+  container.dataset.g6MaxSiblings = String(layout.maxSiblings);
 }
 
 function applyG6Selection(graph: G6Graph | null, model: AtlasMetroModel, expanded: ReadonlySet<string>, selectedId: string | null) {
@@ -286,13 +226,22 @@ function Metro2DView({
       container,
       theme: 'dark',
       data: { nodes: [], edges: [] },
-      padding: [74, 60, 62, 60],
-      zoomRange: [0.42, 2.7],
+      padding: [86, 76, 76, 76],
+      zoomRange: [0.38, 3.2],
+      animation: {
+        duration: 280,
+        easing: 'ease-in-out',
+      },
       behaviors: ['drag-canvas', 'zoom-canvas'],
       node: {
         type: 'donut',
+        animation: {
+          enter: 'fade',
+          update: 'translate',
+          exit: 'fade',
+        },
         style: {
-          size: (datum: any) => nodeSize(datum.data),
+          size: (datum: any) => metroNodeSize(datum.data),
           donuts: (datum: any) => [Math.max(8, Math.min(92, datum.data.mix || 50)), 100 - Math.max(8, Math.min(92, datum.data.mix || 50))],
           donutPalette: (datum: any) => [
             TYPE_COLOR[String(datum.data.entityType)] || '#94a3b8',
@@ -304,15 +253,27 @@ function Metro2DView({
           lineWidth: (datum: any) => datum.data.entityType === 'hub' ? 3.6 : datum.data.entityType === 'subdomain' ? 2.5 : 2,
           shadowColor: (datum: any) => DOMAIN_COLOR[String(datum.data.domain)] || '#64748b',
           shadowBlur: (datum: any) => datum.data.entityType === 'hub' ? 20 : 8,
-          labelText: (datum: any) => datum.data.name,
-          labelPlacement: 'bottom',
-          labelFill: '#d6e2f1',
-          labelFontSize: (datum: any) => datum.data.entityType === 'hub' ? 13 : datum.data.entityType === 'subdomain' ? 11 : 9.5,
-          labelFontWeight: (datum: any) => datum.data.entityType === 'hub' ? 800 : 650,
+          labelText: (datum: any) => datum.data.labelVisible ? datum.data.name : '',
+          labelPlacement: (datum: any) => datum.data.labelPlacement || 'bottom',
+          labelOffsetX: (datum: any) => datum.data.labelOffsetX || 0,
+          labelOffsetY: (datum: any) => datum.data.labelOffsetY || 0,
+          labelFill: '#f3f7fd',
+          labelFontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+          labelFontSize: (datum: any) => datum.data.labelFontSize || 10,
+          labelFontWeight: (datum: any) => datum.data.entityType === 'hub' ? 800 : datum.data.entityType === 'subdomain' ? 700 : 620,
+          labelLetterSpacing: (datum: any) => datum.data.entityType === 'hub' ? .15 : 0,
+          labelMaxWidth: (datum: any) => datum.data.labelMaxWidth || 138,
+          labelMaxLines: 1,
+          labelTextOverflow: 'ellipsis',
           labelBackground: true,
-          labelBackgroundFill: 'rgba(7,11,20,.84)',
-          labelBackgroundRadius: 5,
-          labelPadding: [2, 5],
+          labelBackgroundFill: 'rgba(5,10,18,.95)',
+          labelBackgroundStroke: (datum: any) => DOMAIN_COLOR[String(datum.data.domain)] || '#334155',
+          labelBackgroundStrokeOpacity: .32,
+          labelBackgroundLineWidth: 1,
+          labelBackgroundRadius: 6,
+          labelBackgroundShadowColor: 'rgba(0,0,0,.48)',
+          labelBackgroundShadowBlur: 9,
+          labelPadding: [3, 6],
           cursor: 'pointer',
         },
         state: {
@@ -333,6 +294,10 @@ function Metro2DView({
         },
       },
       edge: {
+        animation: {
+          enter: 'fade',
+          exit: 'fade',
+        },
         style: {
           stroke: (datum: any) => datum.data?.kind === 'bridge'
             ? '#91a4bd'
@@ -391,9 +356,11 @@ function Metro2DView({
         showBeamsRef.current,
         rect.width,
         rect.height,
+        selectedRef.current,
       );
-      graph.setData(data);
+      graph.setData({ nodes: data.nodes, edges: data.edges });
       container.dataset.g6NodeCount = String(data.nodes.length);
+      applyG6LabelMetrics(container, data.labelLayout);
 
       // G6 creates its canvases before the render Promise settles. Mark readiness
       // from the observable renderer surface after a frame instead of coupling the
@@ -434,17 +401,21 @@ function Metro2DView({
     const container = containerRef.current;
     if (!graph || !container) return;
     const rect = container.getBoundingClientRect();
-    const data = buildG6Data(model, expanded, showBeams, rect.width, rect.height);
-    graph.setData(data);
+    const data = buildG6Data(model, expanded, showBeams, rect.width, rect.height, selectedId);
+    graph.setData({ nodes: data.nodes, edges: data.edges });
     container.dataset.g6NodeCount = String(data.nodes.length);
+    applyG6LabelMetrics(container, data.labelLayout);
     void graph.render().then(async () => {
       applyG6Selection(graph, model, expanded, selectedId);
       container.dataset.g6Ready = container.querySelector('canvas') ? 'true' : 'false';
       if (container.dataset.g6Ready === 'true') onReady?.();
-      if (lastFitNonce.current !== fitNonce) {
-        lastFitNonce.current = fitNonce;
-        await graph.fitView({ when: 'always', direction: 'both' }, { duration: 300, easing: 'ease-out' });
-      }
+
+      const forceFit = lastFitNonce.current !== fitNonce;
+      if (forceFit) lastFitNonce.current = fitNonce;
+      await graph.fitView(
+        { when: forceFit ? 'always' : 'overflow', direction: 'both' },
+        { duration: 280, easing: 'ease-in-out' },
+      );
     });
   }, [model.revision, expansionKey, showBeams, fitNonce]);
 
