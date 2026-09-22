@@ -422,6 +422,7 @@ test('dedicated Atlas production page uses Metro renderer, G6 and deterministic 
   assert.match(app, /data-atlas-theme=\{atlasTheme\}/);
   assert.match(app, /data-atlas-expansion=\{allExpanded \? 'all' : 'context'\}/);
   assert.match(app, /data-atlas-expanded-count/);
+  assert.match(app, /data-atlas-total-count/);
   assert.match(app, /qaExpand === 'all'/);
   assert.match(app, /toggleExpandAll/);
   assert.match(app, /Expandir tudo/);
