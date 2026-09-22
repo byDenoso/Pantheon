@@ -4,6 +4,7 @@ on:
   pull_request:
     paths:
       - 'nexo-one/**'
+      - 'atlas-control-tower/**'
       - '.github/workflows/nexo-one-pages.yml'
       - '.github/workflows/nexo-one-pr-ci.yml'
 
@@ -38,4 +39,16 @@ jobs:
           set -euo pipefail
           npm run typecheck
           node --test test/atlas3d-metro-production.test.mjs test/pages.test.mjs test/projection-sync-resilience.test.mjs test/github-origin-resilience.test.mjs
+          npm run build
+
+      - name: Install Tower dependencies
+        working-directory: atlas-control-tower
+        run: npm ci --no-audit --no-fund
+
+      - name: Verify Drive bundle semantics and Tower build
+        working-directory: atlas-control-tower
+        run: |
+          set -euo pipefail
+          node --test test/tower-drive-writer.test.mjs test/drive-storage-authority.test.mjs
+          npm run typecheck
           npm run build
