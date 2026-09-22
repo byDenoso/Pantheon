@@ -652,3 +652,56 @@ test('Pages fingerprints and compiles the derived General projection', async () 
   assert.match(builder, /generalLearningFilaments/);
   assert.match(builder, /applyGeneralExecutionToGraph/);
 });
+
+
+test('public system state projects capability registry with conservative evidence semantics', async () => {
+  const { buildPagesProjection } = await import('../scripts/build-pages-system.mjs');
+  const manifest = {
+    authority: 'TOWER_V06',
+    projection_only: true,
+    writeback: 'FORBIDDEN',
+    tower_commit: 'c'.repeat(40),
+    event_cursor: '20260922T230000000000Z-capabilities',
+    projection_fingerprint: 'sha256:' + 'd'.repeat(64),
+    generated_at: '2026-09-22T23:00:00Z',
+  };
+  const projection = {
+    contract: 'NEXO_PUBLIC_PROJECTION_V1',
+    manifest,
+    event_cursor: manifest.event_cursor,
+    work: [],
+    tests: [],
+    capabilities: {
+      'cap.proven': { backend: 'chatgpt_runtime', status: 'PROVEN' },
+      'cap.validated': { backend: 'nexo_runtime', status: 'VALIDATED_CURRENT' },
+      'cap.active': { backend: 'nexo_agent_api', status: 'ACTIVE' },
+      'github.actions.alias': { status: 'ALIAS' },
+      'cap.retired': { backend: 'chatgpt_runtime', status: 'RETIRED' },
+    },
+    counts: { active_work: 0, tests: 0, capabilities: 5, needs_dener: 0 },
+  };
+
+  const { system } = buildPagesProjection({ projection, manifestFile: manifest });
+
+  assert.equal(system.capabilities.length, 5);
+  assert.deepEqual(
+    Object.fromEntries(system.capabilities.map(item => [item.capability_id, item.status])),
+    {
+      'cap.proven': 'PASS',
+      'cap.validated': 'PASS',
+      'cap.active': 'UNVERIFIED',
+      'github.actions.alias': 'UNKNOWN',
+      'cap.retired': 'RETIRED_RUNTIME',
+    },
+  );
+  assert.equal(system.capabilities.find(item => item.capability_id === 'cap.active').operation, null);
+  assert.equal(system.capabilities.find(item => item.capability_id === 'cap.active').risk, null);
+  assert.equal(system.capabilities.find(item => item.capability_id === 'cap.active').domain, 'NEXO');
+  assert.equal(system.capabilities.find(item => item.capability_id === 'github.actions.alias').runtime, 'GITHUB_ACTIONS');
+  assert.match(system.capabilities.find(item => item.capability_id === 'cap.active').explanation, /no execution\/readback proof/i);
+  assert.match(system.capabilities.find(item => item.capability_id === 'cap.proven').evidence_ref, /^tower:\/\//);
+  assert.deepEqual(
+    system.providers[0].capabilities.sort(),
+    ['cap.active', 'cap.proven', 'cap.retired', 'cap.validated', 'github.actions.alias'].sort(),
+  );
+});

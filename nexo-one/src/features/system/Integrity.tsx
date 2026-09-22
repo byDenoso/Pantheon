@@ -76,8 +76,10 @@ export function CapabilitiesView({ state }: { state: SystemState }) {
             <DomainBadge domain={selected.domain} />
             <CapabilityBadge status={selected.status} id={selected.capability_id} />
             <span className="runtime-chip">{label(selected.runtime)}</span>
-            <span className="op-chip">{label(selected.operation)}</span>
-            <span className={`risk-chip risk-${selected.risk.toLowerCase()}`}>risco {label(selected.risk).toLowerCase()}</span>
+            <span className="op-chip">{selected.operation ? label(selected.operation) : 'operação não publicada'}</span>
+            {selected.risk
+              ? <span className={`risk-chip risk-${selected.risk.toLowerCase()}`}>risco {label(selected.risk).toLowerCase()}</span>
+              : <span className="risk-chip">risco não publicado</span>}
           </div>
           <p>{selected.explanation}</p>
           <dl className="meta-row">
