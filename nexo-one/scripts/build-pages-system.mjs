@@ -520,32 +520,82 @@ function graphFromProjection(projection, observedAt, filaments = [], peerDetecti
   return { nodes, edges: edges.filter(edge => seen.has(edge.from) && seen.has(edge.to)) };
 }
 
-function humanInboxFromProjection(projection, observedAt) {
+function humanRequirementLabel(id) {
+  const value = String(id || '').toUpperCase();
+  if (value === 'HOSTED_MCP_TOWER_WRITE_CREDENTIAL') return 'Credencial server-side de escrita/readback da Tower';
+  if (value === 'PERSONAL_LOOP_PRIVATE_PROVIDER_AUTHORIZATION') return 'Autorização dos providers privados do PERSONAL_LOOP_V1';
+  if (value.includes('HOST') && value.includes('CREDENTIAL')) return 'Conexão do host + credenciais externas';
+  return String(id || 'Autorização externa').replace(/[_:-]+/g, ' ').replace(/\b\w/g, char => char.toUpperCase());
+}
+
+function humanInboxFromProjection(projection, observedAt, humanGateDetails = []) {
   const manifest = projection.manifest;
   const byId = new Map((projection.work || []).map(item => [String(item.id || ''), item]));
+  const detailsById = new Map((Array.isArray(humanGateDetails) ? humanGateDetails : [])
+    .map(item => [String(item?.id || ''), item]));
   const ids = Array.isArray(projection.human_gates?.work_ids) ? projection.human_gates.work_ids : [];
   return ids.map(rawId => {
     const id = String(rawId || '');
     const item = byId.get(id);
     if (!item) return null;
-    const dependency = String(item.dependency_class || 'HUMAN_ACTION_REQUIRED').toUpperCase();
-    const kind = dependency.includes('AUTH') || dependency === 'MIXED' ? 'FORNECER_DADO' : 'DECIDIR';
-    const label = String(item.title || id);
-    const priority = String(item.priority || '').toUpperCase();
+    const detail = detailsById.get(id) || {};
+    const dependency = String(item.dependency_class || detail.dependency_class || 'HUMAN_ACTION_REQUIRED').toUpperCase();
+    const authGate = dependency.includes('AUTH') || dependency === 'MIXED';
+    const kind = authGate ? 'FORNECER_DADO' : 'DECIDIR';
+    const label = String(item.title || detail.title || id);
+    const priority = String(item.priority || detail.priority || '').toUpperCase();
     const severity = priority === 'P0' || priority === 'CRITICAL' ? 'P0' : 'P1';
     const source = 'tower://' + String(manifest.tower_repository || 'byDenoso/NEXO-Obsidian-Vault')
       + '@' + manifest.tower_commit + '/TOWER_V06/entities/work/' + id + '.json';
+
+    const remaining = Array.isArray(detail.remaining_dependencies) ? detail.remaining_dependencies : [];
+    const humanDependencies = remaining.filter(dep =>
+      String(dep?.dependency_class || '').toUpperCase().includes('HUMAN')
+      || String(dep?.dependency_class || '').toUpperCase().includes('AUTH')
+    );
+    const automaticDependencies = remaining.filter(dep =>
+      !humanDependencies.includes(dep)
+      && String(dep?.dependency_class || '').toUpperCase().includes('EXTERNAL')
+    );
+
+    const humanRequirements = humanDependencies.map(dep => ({
+      id: String(dep.id || 'HUMAN_REQUIREMENT'),
+      label: humanRequirementLabel(dep.id),
+      detail: String(dep.detail || 'Configuração externa exigida pela Tower.'),
+    }));
+
+    if (authGate && humanRequirements.length === 0) {
+      humanRequirements.push({
+        id: id.includes('REQUEST-INGRESS-HOSTING-V1') ? 'HOST_CONNECTION_AND_GITHUB_MCP_CREDENTIALS' : 'EXTERNAL_AUTHORIZATION',
+        label: id.includes('REQUEST-INGRESS-HOSTING-V1')
+          ? 'Conexão do host + credenciais GitHub/MCP'
+          : 'Autorização ou credencial externa',
+        detail: String(detail.next_action || detail.question || 'Provisionar a autorização externa exigida pela Tower fora do chat e do código-fonte.'),
+      });
+    }
+
+    const automaticNote = automaticDependencies.length
+      ? automaticDependencies.map(dep => String(dep.detail || dep.id || '')).filter(Boolean).join(' ')
+      : null;
+
     return {
       id: 'needs-dener:' + id,
       kind,
+      kind_label: authGate ? 'Autorizar / configurar credencial' : undefined,
       domain: domainOf(item.domain),
       title: label,
-      question: kind === 'FORNECER_DADO'
-        ? 'Fornecer a autorização ou credencial externa exigida para liberar este WORK.'
-        : 'Tomar a decisão humana explícita exigida para liberar este WORK.',
-      why: 'TOWER_V06 marcou este WORK como Needs Dener; dependency_class=' + dependency + '.',
+      question: authGate
+        ? (humanRequirements.length > 1
+          ? 'Configure as ' + humanRequirements.length + ' autorizações externas abaixo para liberar somente a parte humana deste WORK.'
+          : 'Configure a autorização externa abaixo para liberar somente a parte humana deste WORK.')
+        : String(detail.question || 'Tomar a decisão humana explícita exigida para liberar este WORK.'),
+      why: authGate
+        ? 'A Tower marcou este WORK como dependente de autorização humana. Dependências automáticas ficam separadas e não são atribuídas a você.'
+        : 'TOWER_V06 marcou este WORK como Needs Dener; dependency_class=' + dependency + '.',
       action_id: null,
       options: [],
+      human_requirements: humanRequirements,
+      automatic_note: automaticNote,
       severity,
       due_at: null,
       source_ref: source,
@@ -607,6 +657,7 @@ export function buildPagesProjection({
   interdomain = [],
   learning = {},
   peerDetectionBattery = null,
+  humanGateDetails = [],
 } = {}) {
   const manifest = validateSanctionedProjection(projection, manifestFile);
   const generatedAt = Date.parse(String(manifest.generated_at || ''));
@@ -625,7 +676,7 @@ export function buildPagesProjection({
     .map(item => projectedWorkNode(item, manifest, observedAt, humanWorkIds))
     .filter(Boolean);
   const lanes = lanesFromProjection(projection, observedAt);
-  const inbox = humanInboxFromProjection(projection, observedAt);
+  const inbox = humanInboxFromProjection(projection, observedAt, humanGateDetails);
 
   const system = {
     contract_version: SYSTEM_CONTRACT,
@@ -805,17 +856,22 @@ if (import.meta.url === invokedPath) {
   const peerDetectionBatteryPath = resolve(
     process.env.NEXO_PEER_DETECTION_BATTERY || 'data/tower-public/peer-detection-battery.json',
   );
+  const humanGateDetailsPath = resolve(
+    process.env.NEXO_PUBLIC_HUMAN_GATE_DETAILS || 'data/tower-public/human-gates-details.json',
+  );
   const projection = await readJson(projectionPath);
   const manifestFile = await readJson(manifestPath);
   const interdomain = await readJsonIfPresent(interdomainPath);
   const learning = await readJsonIfPresent(learningPath);
   const peerDetectionBattery = await readJsonIfPresent(peerDetectionBatteryPath);
+  const humanGateDetails = await readJsonIfPresent(humanGateDetailsPath);
   const { system, world } = buildPagesProjection({
     projection,
     manifestFile,
     interdomain,
     learning,
     peerDetectionBattery,
+    humanGateDetails,
   });
 
   const dist = resolve('dist');
