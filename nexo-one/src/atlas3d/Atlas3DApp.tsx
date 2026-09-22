@@ -207,8 +207,18 @@ export default function Atlas3DApp() {
   };
 
   const learningLinkCount = model.crossLinks.filter(link => link.isLearning).length;
+  const scientificLearningLinkCount = model.crossLinks.filter(link =>
+    link.learningKind === 'SCIENTIFIC_LEARNING_PIPELINE'
+  ).length;
+  const proceduralLearningLinkCount = model.crossLinks.filter(link =>
+    link.learningKind === 'PROCEDURAL'
+  ).length;
+  const semanticLearningLinkCount = model.crossLinks.filter(link =>
+    link.learningKind === 'SEMANTIC'
+  ).length;
   const peerLearningLinkCount = model.crossLinks.filter(link =>
-    link.isLearning && link.id.includes('PEER-DETECTION-GROUP-')
+    link.learningKind === 'SCIENTIFIC_LEARNING_PIPELINE'
+    && /^PEER-DETECTION-GROUP-/i.test(String(link.learningRef || ''))
   ).length;
   const peerArtifactNodeCount = model.nodes.filter(node => {
     const source = String(node.sourceId || '');
@@ -245,6 +255,9 @@ export default function Atlas3DApp() {
       data-atlas-qa-expand={qaExpand || 'none'}
       data-atlas-qa-expanded-node={qaExpandedNode?.name || 'none'}
       data-atlas-learning-links={learningLinkCount}
+      data-atlas-learning-scientific={scientificLearningLinkCount}
+      data-atlas-learning-procedural={proceduralLearningLinkCount}
+      data-atlas-learning-semantic={semanticLearningLinkCount}
       data-atlas-peer-learning-links={peerLearningLinkCount}
       data-atlas-peer-artifact-nodes={peerArtifactNodeCount}
     >
@@ -321,7 +334,14 @@ export default function Atlas3DApp() {
           <span><i style={{ background: DOMAIN_COLOR.NEXO }} />Nexo</span>
           <span><i style={{ background: DOMAIN_COLOR.SCIENCE }} />Science</span>
           <span><i style={{ background: DOMAIN_COLOR.OLYMPUS }} />Olympus</span>
-          {learningLinkCount > 0 && <span className="atlas-learning-legend"><i />Learning <b>{learningLinkCount}</b></span>}
+          {learningLinkCount > 0 && (
+            <span
+              className="atlas-learning-legend"
+              title={`Scientific ${scientificLearningLinkCount} · Procedural ${proceduralLearningLinkCount} · Semantic ${semanticLearningLinkCount}`}
+            >
+              <i />Learning <b>{learningLinkCount}</b>
+            </span>
+          )}
           <small>{visibleIds.length} estações visíveis · {model.nodes.length} total</small>
         </div>
 

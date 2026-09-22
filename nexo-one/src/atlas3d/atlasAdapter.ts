@@ -46,6 +46,9 @@ export interface AtlasCrossLink {
   aggregated: boolean;
   isLearning: boolean;
   learningScope: 'INTRA_DOMAIN' | 'INTER_DOMAIN' | null;
+  learningRef: string | null;
+  learningKind: 'SEMANTIC' | 'PROCEDURAL' | 'SCIENTIFIC_LEARNING_PIPELINE' | null;
+  learningGroup: string | null;
   bundleIndex: number;
   bundleCount: number;
 }
@@ -289,6 +292,7 @@ export function buildAtlasMetroModel(state: SystemState): AtlasMetroModel {
   const crossLinks: AtlasCrossLink[] = [];
   const canonicalEntityEdges: GraphEdge[] = [];
   const renderedLearningRefs = new Set<string>();
+  const filamentById = new Map((state.filaments || []).map(filament => [filament.id, filament]));
 
   for (const edge of state.graph.edges) {
     const source = atlasEndpointFor(edge.from, sourceNodeIds);
@@ -301,16 +305,22 @@ export function buildAtlasMetroModel(state: SystemState): AtlasMetroModel {
     if (!edge.is_learning && !(sourceNodeIds.has(edge.from) && sourceNodeIds.has(edge.to))) continue;
     if (!edge.is_learning) canonicalEntityEdges.push(edge);
 
+    const learningFilament = edge.learning_ref ? filamentById.get(edge.learning_ref) : undefined;
     crossLinks.push({
       id: `entity:${edge.id}`,
       source,
       target,
-      label: edge.explanation || edge.kind,
+      label: learningFilament
+        ? `Learning · ${learningFilament.label}`
+        : edge.explanation || edge.kind,
       kind: edge.kind,
       weight: edge.weight,
       aggregated: false,
       isLearning: edge.is_learning === true,
-      learningScope: edge.learning_scope || null,
+      learningScope: edge.learning_scope || learningFilament?.scope || null,
+      learningRef: edge.learning_ref || null,
+      learningKind: learningFilament?.kind || null,
+      learningGroup: String((learningFilament as any)?.peer_detection_group || '') || null,
       bundleIndex: 0,
       bundleCount: 1,
     });
@@ -338,6 +348,9 @@ export function buildAtlasMetroModel(state: SystemState): AtlasMetroModel {
       aggregated: false,
       isLearning: true,
       learningScope: filament.scope || null,
+      learningRef: filament.id,
+      learningKind: filament.kind,
+      learningGroup: String((filament as any)?.peer_detection_group || '') || null,
       bundleIndex: 0,
       bundleCount: 1,
     });
@@ -368,6 +381,9 @@ export function buildAtlasMetroModel(state: SystemState): AtlasMetroModel {
       aggregated: true,
       isLearning: false,
       learningScope: null,
+      learningRef: null,
+      learningKind: null,
+      learningGroup: null,
       bundleIndex: 0,
       bundleCount: 1,
     });
