@@ -234,6 +234,8 @@ test('explicit Tower human gates become Needs Dener inbox items', async () => {
     id: 'WORK-HUMAN-1',
     dependency_class: 'HUMAN_AUTH_REQUIRED',
     next_action: 'Provision secure provider settings.',
+    acceptance: ['Authenticated canonical write/readback PASS', 'Remote smoke PASS'],
+    constraints: ['NO_SECRETS_IN_CHAT_OR_SOURCE'],
     remaining_dependencies: [
       {
         id: 'HOSTED_MCP_TOWER_WRITE_CREDENTIAL',
@@ -250,14 +252,22 @@ test('explicit Tower human gates become Needs Dener inbox items', async () => {
   const { system } = buildPagesProjection({ projection, manifestFile: manifest, humanGateDetails });
   assert.equal(system.inbox.length, 1);
   assert.equal(system.inbox[0].id, 'needs-dener:WORK-HUMAN-1');
-  assert.equal(system.inbox[0].kind, 'FORNECER_DADO');
-  assert.equal(system.inbox[0].kind_label, 'Autorizar / configurar credencial');
+  assert.equal(system.inbox[0].kind, 'CONFIGURAR_ACESSO');
   assert.equal(system.inbox[0].domain, 'ENGINEERING');
   assert.equal(system.inbox[0].human_requirements.length, 1);
   assert.equal(system.inbox[0].human_requirements[0].id, 'HOSTED_MCP_TOWER_WRITE_CREDENTIAL');
-  assert.match(system.inbox[0].human_requirements[0].label, /Credencial server-side/);
-  assert.match(system.inbox[0].automatic_note, /Vercel capacity/);
-  assert.match(system.inbox[0].why, /Dependências automáticas ficam separadas/);
+  assert.equal(system.inbox[0].human_requirements[0].label, 'Autorizar / configurar acesso externo');
+  assert.equal(system.inbox[0].automatic_requirements.length, 1);
+  assert.equal(system.inbox[0].automatic_requirements[0].id, 'VERCEL_FAILOVER_LIVE_CANARY_CAPACITY');
+  assert.equal(system.inbox[0].automatic_requirements[0].retryable, true);
+  assert.match(system.inbox[0].automatic_requirements[0].detail, /Vercel capacity/);
+  assert.match(system.inbox[0].why, /Só as dependências humanas/);
+  assert.match(system.inbox[0].action_location, /Não inserir segredo/);
+  assert.equal(system.inbox[0].system_next, 'Provision secure provider settings.');
+  assert.deepEqual(system.inbox[0].readback_criteria, [
+    'Authenticated canonical write/readback PASS',
+    'Remote smoke PASS',
+  ]);
   const workNode = system.graph.nodes.find(node => node.id === 'work:WORK-HUMAN-1');
   assert.ok(workNode);
   assert.equal(workNode.operational_status, 'WAIT_DEPENDENCY');
@@ -265,6 +275,16 @@ test('explicit Tower human gates become Needs Dener inbox items', async () => {
   assert.equal(workNode.dependency_class, 'HUMAN_AUTH_REQUIRED');
   assert.equal(workNode.human_gate, true);
   assert.equal(system.actions.length, 0, 'WORK projection must not impersonate an executable ActionRecord');
+});
+
+test('Needs Dener semantic compiler has no WORK-id special cases', async () => {
+  const builder = await text('scripts/build-pages-system.mjs');
+  assert.doesNotMatch(builder, /HOSTED_MCP_TOWER_WRITE_CREDENTIAL/);
+  assert.doesNotMatch(builder, /PERSONAL_LOOP_PRIVATE_PROVIDER_AUTHORIZATION/);
+  assert.doesNotMatch(builder, /REQUEST-INGRESS-HOSTING-V1/);
+  assert.match(builder, /HUMAN_DEPENDENCY_KIND/);
+  assert.match(builder, /automatic_requirements/);
+  assert.match(builder, /readback_criteria/);
 });
 
 test('GitHub Pages deploys official artifact and exposes projection readback', async () => {
