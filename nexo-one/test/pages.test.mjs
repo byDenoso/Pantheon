@@ -27,6 +27,12 @@ test('GitHub Pages build uses repository base and configurable SystemState endpo
   assert.match(sync, /VITE_NEXO_SYNC_ENDPOINT/);
   assert.match(sync, /sync_request_id===requestId/);
   assert.match(sync, /build-meta\.json/);
+  assert.match(sync, /raw\.githubusercontent\.com\/byDenoso\/NEXO-Obsidian-Vault\/main\/TOWER_V06\/projections\/public\/projection\.json/);
+  assert.match(sync, /PUBLIC_PROJECTION_REFRESHED/);
+  assert.match(sync, /source_storage!==\'GOOGLE_DRIVE_PRIVATE\'/);
+  assert.match(sync, /truth_owner!==\'TOWER_V06@GOOGLE_DRIVE_PRIVATE\'/);
+  assert.match(hook, /Nova projeção detectada na origem/);
+  assert.match(hook, /Sem alterações · projeção pública confirmada na origem/);
   assert.match(hook, /dispatchProjectionSync/);
   assert.match(hook, /waitForProjectionSync/);
   assert.match(app, /onClick=\{system\.sync\}/);
