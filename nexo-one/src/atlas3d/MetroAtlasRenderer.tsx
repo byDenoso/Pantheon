@@ -662,20 +662,21 @@ function addSynapse(
   key: string,
   bridge: boolean,
   strength = 1,
+  learning = false,
 ) {
   const curve = synapseCurve(source, target, key, bridge);
   const span = source.distanceTo(target);
   const segments = Math.max(18, Math.min(52, Math.round(span / 7)));
   const color = new THREE.Color(colorValue);
-  const coreRadius = (bridge ? .34 : .48) * Math.max(.72, Math.min(1.35, strength));
-  const glowRadius = coreRadius * 3.2;
+  const coreRadius = (learning ? .46 : bridge ? .34 : .48) * Math.max(.72, Math.min(1.45, strength));
+  const glowRadius = coreRadius * (learning ? 4.8 : 3.2);
 
   const glow = new THREE.Mesh(
     new THREE.TubeGeometry(curve, segments, glowRadius, 5, false),
     new THREE.MeshBasicMaterial({
       color,
       transparent: true,
-      opacity: bridge ? .055 : .085,
+      opacity: learning ? .18 : bridge ? .055 : .085,
       depthWrite: false,
       blending: THREE.AdditiveBlending,
     }),
@@ -688,7 +689,7 @@ function addSynapse(
     new THREE.MeshBasicMaterial({
       color,
       transparent: true,
-      opacity: bridge ? .28 : .44,
+      opacity: learning ? .72 : bridge ? .28 : .44,
       depthWrite: false,
       blending: THREE.AdditiveBlending,
     }),
@@ -698,7 +699,7 @@ function addSynapse(
 
   const particle = new THREE.Group();
   const pulseCore = new THREE.Mesh(
-    new THREE.SphereGeometry(bridge ? 1.15 : 1.45, 10, 8),
+    new THREE.SphereGeometry(learning ? 1.8 : bridge ? 1.15 : 1.45, 10, 8),
     new THREE.MeshBasicMaterial({
       color,
       transparent: true,
@@ -708,7 +709,7 @@ function addSynapse(
     }),
   );
   particle.add(pulseCore);
-  const pulseGlow = createGlowSprite(colorValue, bridge ? 10 : 12, bridge ? .34 : .46);
+  const pulseGlow = createGlowSprite(colorValue, learning ? 18 : bridge ? 10 : 12, learning ? .72 : bridge ? .34 : .46);
   pulseGlow.material.depthTest = false;
   particle.add(pulseGlow);
 
@@ -720,7 +721,9 @@ function addSynapse(
     particle,
     curve,
     phase,
-    speed: bridge ? .000022 + (seed % 7) * .000002 : .000034 + (seed % 9) * .0000025,
+    speed: learning
+      ? .000072 + (seed % 7) * .000005
+      : bridge ? .000022 + (seed % 7) * .000002 : .000034 + (seed % 9) * .0000025,
   });
 }
 
@@ -938,18 +941,24 @@ function rebuildThree(
       const sourceColor = new THREE.Color(DOMAIN_COLOR[sourceNode?.domain || ''] || '#91a4bd');
       const targetColor = new THREE.Color(DOMAIN_COLOR[targetNode?.domain || ''] || '#91a4bd');
       const mixed = sourceColor.clone().lerp(targetColor, .5);
+      const color = link.isLearning ? new THREE.Color('#f59e0b') : mixed;
       addSynapse(
         runtime,
         content,
         source,
         target,
-        mixed.getHex(),
+        color.getHex(),
         `bridge:${link.id}`,
         true,
-        Math.max(.72, Math.min(1.25, link.weight || 1)),
+        Math.max(.72, Math.min(link.isLearning ? 1.5 : 1.25, link.weight || 1)),
+        link.isLearning,
       );
     }
   }
+
+  container.dataset.threeLearningSynapses = String(
+    model.crossLinks.filter(link => link.isLearning && visible.has(link.source) && visible.has(link.target)).length,
+  );
 
   for (const id of ids) {
     const node = model.nodeMap.get(id)!;
