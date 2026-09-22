@@ -40,6 +40,7 @@ const manifest=await readJson('capabilities.json');
 const mcpServer=await readText('mcp_server.py');
 const remoteMcp=await readText('remote_mcp.py');
 const source=await readJson('source.json');
+const projectionManifest=await readJson('projection-manifest.json');
 
 const capabilities=Object.entries(manifest.capabilities||{}).map(([id,value])=>compactCapability(id,value));
 const internalTools=extractTools(mcpServer);
@@ -138,6 +139,11 @@ const topology={
     manifest:'TOWER_V06/manifests/capabilities.json',
     mcp_server:'services/nexo-api/app/mcp_server.py',
     remote_mcp:'services/nexo-api/app/remote_mcp.py',
+    source_storage:String(projectionManifest.source_storage||''),
+    source_snapshot_id:String(projectionManifest.source_snapshot_id||''),
+    source_state_fingerprint:String(projectionManifest.source_state_fingerprint||''),
+    source_promoted_at:String(projectionManifest.source_promoted_at||''),
+    projection_fingerprint:String(projectionManifest.projection_fingerprint||''),
   },
   stats:{
     tools:tools.length,
