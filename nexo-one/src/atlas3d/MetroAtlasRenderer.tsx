@@ -237,7 +237,7 @@ function renderScreenLabels(
     })
     .join('');
 
-  labelLayer.innerHTML = [...layout.byId.values()]
+  const renderedLabels = [...layout.byId.values()]
     .filter(spec => spec.visible)
     .map(spec => {
       const node = model.nodeMap.get(spec.id)!;
@@ -247,6 +247,10 @@ function renderScreenLabels(
       return `<div class="atlas-screen-label${stateClass}${typeClass}" data-node-id="${escapeHtml(spec.id)}" style="left:${spec.left.toFixed(1)}px;top:${spec.top.toFixed(1)}px;width:${spec.width.toFixed(1)}px;height:${spec.height.toFixed(1)}px;--label-domain:${color};font-size:${spec.fontSize}px"><span>${escapeHtml(node.name)}</span></div>`;
     })
     .join('');
+  const densityNote = layout.hidden > 0
+    ? `<div class="atlas-label-density-note" data-hidden-labels="${layout.hidden}">+${layout.hidden} nomes sob demanda · aproxime para revelar</div>`
+    : '';
+  labelLayer.innerHTML = renderedLabels + densityNote;
 
   container.dataset.g6LabelVisible = String(layout.visible);
   container.dataset.g6LabelHidden = String(layout.hidden);
