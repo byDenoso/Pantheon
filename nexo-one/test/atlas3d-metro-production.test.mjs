@@ -103,6 +103,14 @@ test('dedicated Atlas production page uses Metro renderer, G6 and deterministic 
   assert.match(renderer, /threePaintSamples/);
   assert.match(renderer, /preserveDrawingBuffer/);
   assert.match(renderer, /renderAndMeasureThree/);
+  assert.match(renderer, /data-three-visual="neural-synapse"/);
+  assert.match(renderer, /IcosahedronGeometry/);
+  assert.match(renderer, /TubeGeometry/);
+  assert.match(renderer, /AdditiveBlending/);
+  assert.match(renderer, /createGlowSprite/);
+  assert.match(renderer, /updateSynapsePulses/);
+  assert.match(renderer, /synapseCurve/);
+  assert.doesNotMatch(renderer, /TorusGeometry|RingGeometry/);
   assert.match(renderer, /fitThree\(runtime, !initialFit\)/);
   assert.match(renderer, /domainBaseZ|NEXO: -155/);
   assert.doesNotMatch(renderer, /forceSimulation|forceManyBody|forceLink/);

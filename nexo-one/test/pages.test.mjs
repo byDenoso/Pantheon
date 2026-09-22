@@ -146,6 +146,9 @@ test('GitHub Pages deploys official artifact and exposes projection readback', a
   assert.match(workflow, /data-atlas-ready="true"/);
   assert.match(workflow, /data-atlas-root-count="3"/);
   assert.match(workflow, /PAGES_ATLAS3D_VISUAL_READBACK_OK/);
+  assert.match(workflow, /PAGES_ATLAS3D_3D_READBACK_OK visual=neural-synapse/);
+  assert.match(workflow, /data-three-visual="neural-synapse"/);
+  assert.match(workflow, /three_synapse_count/);
   assert.match(workflow, /atlas3d-production-readback/);
   assert.match(workflow, /PAGES_TOWER_PROJECTION_READBACK_OK/);
   assert.match(workflow, /pages:\s*write/);
