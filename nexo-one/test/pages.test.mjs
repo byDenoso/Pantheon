@@ -21,6 +21,15 @@ test('GitHub Pages build uses repository base and configurable SystemState endpo
   assert.match(remote, /\/api\/system/);
   assert.match(remote, /staticProjection \? \(force \? 'reload' : 'no-cache'\) : 'no-store'/);
   assert.match(remote, /endsWith\('\.json'\)/);
+  const sync = await text('src/data/projectionSync.ts');
+  const hook = await text('src/data/useSystem.ts');
+  const app = await text('src/app/App.tsx');
+  assert.match(sync, /VITE_NEXO_SYNC_ENDPOINT/);
+  assert.match(sync, /sync_request_id===requestId/);
+  assert.match(sync, /build-meta\.json/);
+  assert.match(hook, /dispatchProjectionSync/);
+  assert.match(hook, /waitForProjectionSync/);
+  assert.match(app, /onClick=\{system\.sync\}/);
 });
 
 test('GitHub Pages consumes only the sanctioned TOWER_V06 public projection', async () => {
@@ -156,6 +165,7 @@ test('published Pages auto-syncs Tower snapshots without a new infrastructure se
   assert.match(remote, /VITE_SYSTEM_ENDPOINT/);
   assert.match(remote, /staticProjection/);
   assert.match(remote, /'no-cache'/);
+  assert.match(hook, /!syncController\.current/);
 });
 
 test('explicit Tower human gates become Needs Dener inbox items', async () => {
@@ -219,6 +229,12 @@ test('GitHub Pages deploys official artifact and exposes projection readback', a
   assert.match(workflow, /data-atlas-ready="true"/);
   assert.match(workflow, /data-atlas-root-count="3"/);
   assert.match(workflow, /PAGES_ATLAS3D_VISUAL_READBACK_OK/);
+  assert.match(workflow, /PAGES_COCKPIT_ACTIONS_READBACK_OK/);
+  assert.match(workflow, /cockpit-actions-readback\.png/);
+  assert.match(workflow, /data-work-count/);
+  assert.match(workflow, /VITE_NEXO_SYNC_ENDPOINT/);
+  assert.match(workflow, /SYNC_REQUEST_ID/);
+  assert.match(workflow, /sync_request_id/);
   assert.match(workflow, /PAGES_ATLAS_LEARNING_SEMANTIC_OK/);
   assert.match(workflow, /SCIENTIFIC_LEARNING_PIPELINE/);
   assert.match(workflow, /raw_peer_source_nodes/);
