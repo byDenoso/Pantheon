@@ -1,315 +1,288 @@
-import { useMemo, useRef, useState } from 'react';
-import type { GraphEdge, GraphNode, SystemState } from '../contracts/system.ts';
+import { useEffect, useMemo, useState } from 'react';
 import { useSystem } from '../data/useSystem.ts';
-import { GalaxyThree3D } from '../components/GalaxyThree3D.tsx';
-import type { CanvasGraph25DHandle } from '../components/CanvasGraph25D.tsx';
-import { layoutGraph3D, layoutMacroDomains, resolveSelection3D } from '../viewmodels/graph3d.ts';
 import {
-  ATLAS_TOP_DOMAINS,
-  atlasSubdomainNodeId,
-  atlasSubdomainOf,
-  atlasTopDomainOf,
-  type AtlasTopDomain,
-} from '../viewmodels/atlasTaxonomy.ts';
+  atlasPathTo,
+  buildAtlasMetroModel,
+  relatedAtlasNodes,
+  visibleAtlasIds,
+  type AtlasMetroNode,
+} from './atlasAdapter.ts';
+import { MetroAtlasRenderer } from './MetroAtlasRenderer.tsx';
 
-type Level =
-  | { kind: 'ROOT' }
-  | { kind: 'BRANCHES' }
-  | { kind: 'DOMAIN'; domain: AtlasTopDomain }
-  | { kind: 'SUBDOMAIN'; domain: AtlasTopDomain; subdomain: string }
-  | { kind: 'ENTITY'; domain: AtlasTopDomain; subdomain: string; entityId: string };
+type ViewMode = '2d' | '3d';
 
-const nowIso = () => new Date().toISOString();
+const DOMAIN_COLOR: Record<string, string> = {
+  NEXO: '#7c3aed',
+  SCIENCE: '#00c2ff',
+  OLYMPUS: '#f97316',
+};
 
-function derivedNode(
-  id: string,
-  type: GraphNode['type'],
-  label: string,
-  domain: AtlasTopDomain,
-  count: number,
-  summary: string,
-  sourceRevision: string,
-): GraphNode {
-  const now = nowIso();
-  return {
-    id, type, label, domain,
-    state: 'LIVE',
-    authority_class: 'DERIVED',
-    source_ref: 'atlas3d://projection',
-    source_revision: sourceRevision,
-    fingerprint: `atlas3d:${id}:${count}`,
-    freshness: { state: 'RECENT', observed_at: now, ttl_seconds: 10800 },
-    checked_at: now,
-    summary,
-    member_count: count,
-  };
+function statusTone(status: string): string {
+  const value = status.toUpperCase();
+  if (/CONFLICT|FAILED|BLOCKED|REJECTED|MISSING/.test(value)) return 'bad';
+  if (/WATCH|AGING|STALE|DEGRADED|UNKNOWN|UNVERIFIED|INCONCLUSIVE/.test(value)) return 'warn';
+  return 'good';
 }
 
-function buildContent(state: SystemState) {
-  return state.graph.nodes
-    .filter(node => node.type !== 'DOMAIN' && node.type !== 'FILAMENT')
-    .map(node => ({ ...node, domain: atlasTopDomainOf(node) as GraphNode['domain'] }));
+function formatDate(value: string | null): string {
+  if (!value) return '—';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return new Intl.DateTimeFormat('pt-BR', {
+    day: '2-digit', month: '2-digit', year: '2-digit',
+    hour: '2-digit', minute: '2-digit',
+  }).format(date);
 }
 
-function branchLabel(domain: AtlasTopDomain): string {
-  return domain === 'NEXO' ? 'Nexo Core' : domain === 'SCIENCE' ? 'Science' : 'Olympus';
-}
+function DetailPanel({
+  node,
+  children,
+  related,
+  generatedAt,
+}: {
+  node: AtlasMetroNode | null;
+  children: AtlasMetroNode[];
+  related: AtlasMetroNode[];
+  generatedAt: string;
+}) {
+  if (!node) {
+    return <div className="atlas-empty"><strong>Nenhuma estação selecionada</strong><span>Clique em uma estação do mapa.</span></div>;
+  }
 
-function branchNode(domain: AtlasTopDomain, content: GraphNode[], revision: string): GraphNode {
-  const members = content.filter(node => node.domain === domain);
-  return derivedNode(
-    `atlas3d.branch.${domain.toLowerCase()}`,
-    'DOMAIN',
-    branchLabel(domain),
-    domain,
-    members.length,
-    `${members.length} entidades neste ramo do Atlas Nexo.`,
-    revision,
+  const color = DOMAIN_COLOR[node.domain];
+
+  return (
+    <div className="atlas-detail" data-selected-node={node.id}>
+      <div className="atlas-domain-pill" style={{ color, borderColor: `${color}55`, background: `${color}12` }}>
+        <span style={{ background: color }} />{node.domain}
+      </div>
+      <h1>{node.name}</h1>
+      <p className="atlas-summary">{node.summary}</p>
+
+      <div className="atlas-meta-grid">
+        <div><span>Tipo</span><strong>{node.entityType}</strong></div>
+        <div><span>Estado</span><strong className={`tone-${statusTone(node.status)}`}>{node.status}</strong></div>
+        <div><span>Filhos</span><strong>{node.childCount}</strong></div>
+        <div><span>Relações</span><strong>{node.relationCount}</strong></div>
+        <div><span>Profundidade</span><strong>{node.depth}</strong></div>
+        <div><span>Atualizado</span><strong>{formatDate(node.updatedAt)}</strong></div>
+      </div>
+
+      <section className="atlas-detail-section">
+        <header><strong>Subestações</strong><span>{children.length}</span></header>
+        <div className="atlas-chips">
+          {children.length
+            ? children.map(child => <span className="atlas-chip" key={child.id}>{child.name}</span>)
+            : <span className="atlas-chip">folha</span>}
+        </div>
+      </section>
+
+      <section className="atlas-detail-section">
+        <header><strong>Pontes</strong><span>{related.length}</span></header>
+        <div className="atlas-chips">
+          {related.length
+            ? related.slice(0, 18).map(item => <span className="atlas-chip" key={item.id}>{item.name}</span>)
+            : <span className="atlas-chip">sem relação transversal visível</span>}
+        </div>
+      </section>
+
+      <section className="atlas-detail-section">
+        <header><strong>Temporal</strong><span>{node.temporal.length}</span></header>
+        <div className="atlas-timeline">
+          {node.temporal.length ? node.temporal.map(point => (
+            <div key={`${point.label}:${point.at}`}>
+              <span>{point.label}</span><strong>{formatDate(point.at)}</strong>
+            </div>
+          )) : <p>Não há série histórica publicada para esta entidade.</p>}
+          <div><span>projeção atual</span><strong>{formatDate(generatedAt)}</strong></div>
+        </div>
+      </section>
+
+      <section className="atlas-detail-section atlas-provenance">
+        <header><strong>Proveniência</strong><span>{node.synthetic ? 'derivada' : 'canônica'}</span></header>
+        <dl>
+          <dt>ID</dt><dd>{node.id}</dd>
+          <dt>source_revision</dt><dd>{node.sourceRevision || '—'}</dd>
+          <dt>fingerprint</dt><dd>{node.fingerprint || '—'}</dd>
+          <dt>authority</dt><dd>{node.authorityClass || '—'}</dd>
+        </dl>
+      </section>
+    </div>
   );
-}
-
-function subdomainNode(
-  domain: AtlasTopDomain,
-  subdomain: string,
-  members: GraphNode[],
-  revision: string,
-): GraphNode {
-  return derivedNode(
-    atlasSubdomainNodeId(domain, subdomain),
-    'CAMPAIGN',
-    subdomain,
-    domain,
-    members.length,
-    `${members.length} entidades relacionadas neste subdomínio.`,
-    revision,
-  );
-}
-
-function hierarchy(state: SystemState, level: Level): { nodes: GraphNode[]; edges: GraphEdge[] } {
-  const content = buildContent(state);
-  const revision = state.bus.fingerprint;
-
-  const root = derivedNode(
-    'atlas3d.root.nexo',
-    'DOMAIN',
-    'Nexo',
-    'NEXO',
-    content.length,
-    `Raiz do Atlas com ${content.length} entidades navegáveis.`,
-    revision,
-  );
-
-  if (level.kind === 'ROOT') return { nodes: [root], edges: [] };
-
-  const branches = ATLAS_TOP_DOMAINS.map(domain => branchNode(domain, content, revision));
-  if (level.kind === 'BRANCHES') {
-    return {
-      nodes: [root, ...branches],
-      edges: branches.map(node => ({
-        id: `atlas3d.edge.root.${node.id}`,
-        from: root.id,
-        to: node.id,
-        kind: 'OWNS',
-        weight: 1,
-        explanation: `${node.label} é um ramo do Atlas Nexo.`,
-      })),
-    };
-  }
-
-  const branch = branches.find(node => node.domain === level.domain)!;
-  const domainMembers = content.filter(node => node.domain === level.domain);
-  const groups = new Map<string, GraphNode[]>();
-  for (const node of domainMembers) {
-    const key = atlasSubdomainOf(node);
-    groups.set(key, [...(groups.get(key) ?? []), node]);
-  }
-
-  const subdomains = [...groups.entries()]
-    .sort((a, b) => b[1].length - a[1].length || a[0].localeCompare(b[0]))
-    .map(([name, members]) => subdomainNode(level.domain, name, members, revision));
-
-  if (level.kind === 'DOMAIN') {
-    return {
-      nodes: [branch, ...subdomains],
-      edges: subdomains.map(node => ({
-        id: `atlas3d.edge.domain.${node.id}`,
-        from: branch.id,
-        to: node.id,
-        kind: 'OWNS',
-        weight: .92,
-        explanation: `${node.label} pertence a ${branch.label}.`,
-      })),
-    };
-  }
-
-  const members = (groups.get(level.subdomain) ?? [])
-    .sort((a, b) => a.label.localeCompare(b.label));
-  const sub = subdomainNode(level.domain, level.subdomain, members, revision);
-
-  const canonicalEdges = state.graph.edges.filter(edge =>
-    members.some(node => node.id === edge.from) &&
-    members.some(node => node.id === edge.to),
-  );
-
-  if (level.kind === 'SUBDOMAIN') {
-    return {
-      nodes: [sub, ...members],
-      edges: [
-        ...members.map(node => ({
-          id: `atlas3d.edge.subdomain.${sub.id}.${node.id}`,
-          from: sub.id,
-          to: node.id,
-          kind: 'OWNS' as const,
-          weight: .84,
-          explanation: `${node.label} pertence a ${sub.label}.`,
-        })),
-        ...canonicalEdges,
-      ],
-    };
-  }
-
-  const selected = members.find(node => node.id === level.entityId);
-  if (!selected) return { nodes: [sub, ...members], edges: canonicalEdges };
-
-  const neighborIds = new Set<string>();
-  for (const edge of state.graph.edges) {
-    if (edge.from === selected.id) neighborIds.add(edge.to);
-    if (edge.to === selected.id) neighborIds.add(edge.from);
-  }
-  const neighbors = content.filter(node => neighborIds.has(node.id));
-  const localNodes = [selected, ...neighbors];
-  const localIds = new Set(localNodes.map(node => node.id));
-  return {
-    nodes: localNodes,
-    edges: state.graph.edges.filter(edge => localIds.has(edge.from) && localIds.has(edge.to)),
-  };
 }
 
 export default function Atlas3DApp() {
   const system = useSystem();
-  const [level, setLevel] = useState<Level>({ kind: 'ROOT' });
+  const model = useMemo(() => system.state ? buildAtlasMetroModel(system.state) : null, [system.state]);
+  const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [threeFailed, setThreeFailed] = useState(false);
-  const graphRef = useRef<CanvasGraph25DHandle | null>(null);
+  const [viewMode, setViewMode] = useState<ViewMode>('2d');
+  const [showBeams, setShowBeams] = useState(true);
+  const [fitNonce, setFitNonce] = useState(0);
+  const [rendererReady, setRendererReady] = useState(false);
 
-  const graph = useMemo(
-    () => system.state ? hierarchy(system.state, level) : { nodes: [], edges: [] },
-    [level, system.state],
-  );
+  useEffect(() => {
+    if (!model) return;
+    setExpanded(new Set(model.roots));
+    setSelectedId(model.roots[0] || null);
+    setRendererReady(false);
+    setFitNonce(value => value + 1);
+  }, [model?.revision]);
 
-  const placed = useMemo(() => {
-    if (level.kind === 'ROOT' || level.kind === 'BRANCHES') return layoutMacroDomains(graph.nodes, window.innerWidth < 760);
-    return layoutGraph3D(graph.nodes);
-  }, [graph.nodes, level.kind]);
-
-  const effectiveSelected = resolveSelection3D(placed, selectedId);
-
-  const goBack = () => {
-    setSelectedId(null);
-    if (level.kind === 'ROOT') return;
-    if (level.kind === 'BRANCHES') setLevel({ kind: 'ROOT' });
-    else if (level.kind === 'DOMAIN') setLevel({ kind: 'BRANCHES' });
-    else if (level.kind === 'SUBDOMAIN') setLevel({ kind: 'DOMAIN', domain: level.domain });
-    else setLevel({ kind: 'SUBDOMAIN', domain: level.domain, subdomain: level.subdomain });
-    requestAnimationFrame(() => graphRef.current?.reset());
-  };
-
-  const onSelect = (id: string | null) => {
-    if (!id) { setSelectedId(null); return; }
-    const node = graph.nodes.find(candidate => candidate.id === id);
-    if (!node) return;
-
-    if (id === 'atlas3d.root.nexo') {
-      setLevel({ kind: 'BRANCHES' });
-      setSelectedId(null);
-      return;
-    }
-
-    if (id.startsWith('atlas3d.branch.')) {
-      setLevel({ kind: 'DOMAIN', domain: node.domain as AtlasTopDomain });
-      setSelectedId(null);
-      return;
-    }
-
-    if (node.type === 'CAMPAIGN') {
-      setLevel({ kind: 'SUBDOMAIN', domain: node.domain as AtlasTopDomain, subdomain: node.label });
-      setSelectedId(null);
-      return;
-    }
-
-    const domain = atlasTopDomainOf(node);
-    const subdomain = atlasSubdomainOf(node);
-    setLevel({ kind: 'ENTITY', domain, subdomain, entityId: id });
-    setSelectedId(id);
-    requestAnimationFrame(() => graphRef.current?.focusEntity(id));
-  };
-
-  const crumbs = (() => {
-    const out = ['Nexo'];
-    if (level.kind === 'ROOT') return out;
-    if (level.kind === 'BRANCHES') return out;
-    out.push(branchLabel(level.domain));
-    if (level.kind === 'SUBDOMAIN' || level.kind === 'ENTITY') out.push(level.subdomain);
-    if (level.kind === 'ENTITY') out.push(graph.nodes.find(n => n.id === level.entityId)?.label ?? level.entityId);
-    return out;
-  })();
-
-  if (!system.state) {
-    return <main className="atlas3d-boot">
-      <strong>NEXO ATLAS 3D</strong>
-      <span>{system.error || 'Carregando projeção…'}</span>
-      {system.error && <button onClick={system.reload}>Tentar novamente</button>}
-    </main>;
+  if (!system.state || !model) {
+    return (
+      <main className="atlas3d-boot">
+        <strong>NEXO ATLAS</strong>
+        <span>{system.error || 'Carregando projeção…'}</span>
+        {system.error && <button onClick={system.reload}>Tentar novamente</button>}
+      </main>
+    );
   }
 
+  const visibleIds = visibleAtlasIds(model, expanded);
+  const visibleSet = new Set(visibleIds);
+  const selected = selectedId ? model.nodeMap.get(selectedId) || null : null;
+  const children = selected ? (model.childrenMap.get(selected.id) || []).map(id => model.nodeMap.get(id)!).filter(Boolean) : [];
+  const related = selected ? relatedAtlasNodes(model, selected.id) : [];
+  const breadcrumbs = selected ? atlasPathTo(model, selected.id) : [];
+
+  const activate = (id: string) => {
+    const node = model.nodeMap.get(id);
+    if (!node) return;
+    setSelectedId(id);
+    if (node.childCount > 0) {
+      setExpanded(current => {
+        const next = new Set(current);
+        if (next.has(id)) next.delete(id);
+        else next.add(id);
+        return next;
+      });
+    }
+  };
+
+  const reset = () => {
+    setExpanded(new Set(model.roots));
+    setSelectedId(model.roots[0] || null);
+    setFitNonce(value => value + 1);
+  };
+
+  const selectBreadcrumb = (id: string) => {
+    if (!model.nodeMap.has(id)) return;
+    setSelectedId(id);
+  };
+
   return (
-    <main className="atlas3d-page">
-      <header className="atlas3d-topbar">
-        <div className="atlas3d-brand">
-          <a href="/" aria-label="Voltar ao NEXO ONE">N</a>
-          <div><strong>NEXO ATLAS</strong><small>3D GRAPH</small></div>
-        </div>
-        <div className="atlas3d-meta">
-          <span>{system.state.graph.nodes.length} entidades</span>
-          <button onClick={system.reload} disabled={system.syncing}>↻</button>
-        </div>
-      </header>
+    <main
+      className="atlas3d-page atlas-metro-page"
+      data-atlas-renderer="metro-cluster"
+      data-atlas-ready={rendererReady ? 'true' : 'false'}
+      data-atlas-root-count={model.roots.length}
+      data-atlas-visible-count={visibleIds.length}
+      data-atlas-mode={viewMode}
+    >
+      <section className="atlas-workspace">
+        <MetroAtlasRenderer
+          model={model}
+          expanded={expanded}
+          selectedId={selectedId}
+          showBeams={showBeams}
+          viewMode={viewMode}
+          fitNonce={fitNonce}
+          onActivate={activate}
+          onReady={() => setRendererReady(true)}
+        />
 
-      <nav className="atlas3d-breadcrumb" aria-label="Caminho atual">
-        {level.kind !== 'ROOT' && <button onClick={goBack}>←</button>}
-        {crumbs.map((crumb, index) => <span key={index}>{crumb}</span>)}
-      </nav>
+        <div className="atlas-topbar">
+          <nav className="atlas-breadcrumb glass" aria-label="Caminho atual">
+            <button onClick={() => { setSelectedId(model.roots[0] || null); }} className="atlas-crumb">Atlas</button>
+            {breadcrumbs.map(node => (
+              <span className="atlas-crumb-group" key={node.id}>
+                <span>›</span>
+                <button className="atlas-crumb" onClick={() => selectBreadcrumb(node.id)}>{node.name}</button>
+              </span>
+            ))}
+          </nav>
 
-      <section className="atlas3d-stage">
-        {threeFailed ? (
-          <div className="atlas3d-error">
-            <strong>O renderer 3D falhou neste navegador.</strong>
-            <span>Nesta página não existe fallback 2D. Recarregue para tentar novamente.</span>
-            <button onClick={() => location.reload()}>Recarregar</button>
+          <div className="atlas-controls">
+            <button
+              className="atlas-button atlas-mode-button"
+              data-mode={viewMode}
+              onClick={() => setViewMode(mode => mode === '2d' ? '3d' : '2d')}
+            >
+              {viewMode === '2d' ? '3D Explorar' : '2D Metro'}
+            </button>
+            <label className="atlas-toggle">
+              <input type="checkbox" checked={showBeams} onChange={event => setShowBeams(event.target.checked)} />
+              Feixes
+            </label>
+            <button className="atlas-button" onClick={() => setFitNonce(value => value + 1)}>Fit</button>
+            <button className="atlas-button" onClick={reset}>Reset</button>
           </div>
-        ) : (
-          <GalaxyThree3D
-            ref={graphRef}
-            nodes={placed}
-            edges={graph.edges}
-            selectedId={effectiveSelected}
-            onSelect={onSelect}
-            onFailure={() => setThreeFailed(true)}
-            viewMode={level.kind === 'ROOT' || level.kind === 'BRANCHES' ? 'macro' : 'detail'}
-            ariaLabel="NEXO Atlas 3D hierárquico"
-          />
-        )}
+        </div>
+
+        <div className="atlas-domain-strip glass" aria-label="Domínios visíveis">
+          {model.roots.map(rootId => {
+            const root = model.nodeMap.get(rootId)!;
+            return (
+              <button
+                key={rootId}
+                className={selectedId === rootId ? 'selected' : ''}
+                style={{ '--domain-color': DOMAIN_COLOR[root.domain] } as React.CSSProperties}
+                onClick={() => setSelectedId(rootId)}
+              >
+                <span />{root.name}<small>{root.descendantCount}</small>
+              </button>
+            );
+          })}
+        </div>
+
+        <div className="atlas-legend glass">
+          <span><i style={{ background: DOMAIN_COLOR.NEXO }} />Nexo</span>
+          <span><i style={{ background: DOMAIN_COLOR.SCIENCE }} />Science</span>
+          <span><i style={{ background: DOMAIN_COLOR.OLYMPUS }} />Olympus</span>
+          <small>{visibleIds.length} estações visíveis · {model.nodes.length} total</small>
+        </div>
+
+        <div className="atlas-interaction-hint">
+          {viewMode === '2d'
+            ? <>click: seleciona + expande/colapsa<br />drag: pan · wheel: zoom</>
+            : <>click: seleciona + expande/colapsa<br />drag: orbita · wheel: zoom · shift+drag / botão direito: pan</>}
+        </div>
+
+        <div className="atlas-a11y-stations" aria-label="Estações atualmente renderizadas">
+          {visibleIds.map(id => {
+            const node = model.nodeMap.get(id)!;
+            return (
+              <button
+                key={id}
+                data-domain={node.domain}
+                data-depth={node.depth}
+                data-visible={visibleSet.has(id) ? 'true' : 'false'}
+                onClick={() => activate(id)}
+              >
+                {node.name}
+              </button>
+            );
+          })}
+        </div>
       </section>
 
-      <footer className="atlas3d-hint">
-        <span>
-          {level.kind === 'ROOT' && 'Toque em Nexo para abrir o Atlas'}
-          {level.kind === 'BRANCHES' && 'Escolha um ramo'}
-          {level.kind === 'DOMAIN' && 'Escolha um subdomínio'}
-          {level.kind === 'SUBDOMAIN' && 'Escolha uma entidade'}
-          {level.kind === 'ENTITY' && 'Arraste para orbitar · pinça para zoom · toque num vizinho para navegar'}
-        </span>
-      </footer>
+      <aside className="atlas-sidebar">
+        <div className="atlas-brand">
+          <div><strong>NEXO ATLAS</strong><small>METRO + 3D</small></div>
+          <span>{system.state.graph.nodes.length} entidades fonte</span>
+        </div>
+        <DetailPanel
+          node={selected}
+          children={children}
+          related={related}
+          generatedAt={model.generatedAt}
+        />
+        <div className="atlas-source-state">
+          <span>{system.sourceLabel}</span>
+          <button onClick={system.reload} disabled={system.syncing}>{system.syncing ? 'Atualizando…' : '↻ Atualizar'}</button>
+        </div>
+      </aside>
     </main>
   );
 }
