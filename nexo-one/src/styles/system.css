@@ -600,4 +600,11 @@
 .inbox-requirements{display:grid;gap:8px}
 .inbox-requirements>.eyebrow{font-size:9px;letter-spacing:.9px;color:var(--quiet)}
 .inbox-options li code{display:block;margin-top:7px;font-size:9.5px;color:var(--quiet);overflow-wrap:anywhere}
+.inbox-options li small{font-size:9.5px;color:var(--muted);margin-top:3px}
 .inbox-automatic{padding:10px 12px;border-left:2px solid var(--line);background:color-mix(in srgb,var(--raised) 72%,transparent);border-radius:6px}
+.inbox-location{padding:9px 11px;border-left:2px solid var(--accent);background:color-mix(in srgb,var(--raised) 55%,transparent);border-radius:6px}
+.inbox-system-next{padding:9px 11px;border-left:2px solid var(--green);background:color-mix(in srgb,var(--raised) 55%,transparent);border-radius:6px}
+.inbox-readback{display:grid;gap:7px;padding:10px 12px;border:1px solid var(--line);border-radius:7px}
+.inbox-readback>.eyebrow{font-size:9px;letter-spacing:.9px;color:var(--quiet)}
+.inbox-readback ul{margin:0;padding-left:18px;display:grid;gap:5px}
+.inbox-readback li{font-size:11px;color:var(--muted);line-height:1.5}
