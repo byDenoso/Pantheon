@@ -329,7 +329,6 @@ function buildG6Data(
   width: number,
   height: number,
   compact = false,
-  dimmed = false,
 ) {
   const ids = visibleAtlasIds(model, expanded);
   const visible = new Set(ids);
