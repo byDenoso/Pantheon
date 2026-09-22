@@ -1,6 +1,7 @@
 import { Component, type ReactNode } from 'react';
 import { createRoot } from 'react-dom/client';
 import Atlas3DApp from './Atlas3DApp.tsx';
+import '../styles/product-foundation.css';
 import '../components/GalaxyThree3D.css';
 import './atlas3d.css';
 
