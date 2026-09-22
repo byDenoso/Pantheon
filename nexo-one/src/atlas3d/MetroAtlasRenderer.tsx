@@ -1070,6 +1070,7 @@ function MetroThreeView({
       resize();
       rebuildThree(runtime, container, modelRef.current, expandedRef.current, selectedRef.current, showBeamsRef.current);
       container.dataset.threeNodeCount = String(visibleAtlasIds(modelRef.current, expandedRef.current).length);
+      container.dataset.threeSynapseCount = String(runtime.pulses.length);
       renderAndMeasureThree(runtime, container);
     });
     observer.observe(container);
@@ -1147,6 +1148,7 @@ function MetroThreeView({
     if (!runtime || !container) return;
     rebuildThree(runtime, container, model, expanded, selectedId, showBeams);
     container.dataset.threeNodeCount = String(visibleAtlasIds(model, expanded).length);
+    container.dataset.threeSynapseCount = String(runtime.pulses.length);
     if (!runtime.hasFit || lastFitNonce.current !== fitNonce) {
       const initialFit = !runtime.hasFit;
       runtime.hasFit = true;
