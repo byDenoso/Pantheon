@@ -18,13 +18,50 @@ import {readSystemInput} from './adapters/system-input.mjs';
 import {readPublicSystemInput} from './compiler/public-system-input.mjs';
 const ATLAS_ORIGINS=new Set(['https://bydenoso.github.io','https://nexo-atlas-control-tower.vercel.app','https://nexo-atlas-cockpit.vercel.app']);
 const PUBLIC_SYSTEM_PROVIDERS=['github','nexo','drive'];
-const isCorsRoute=route=>route==='mcp'||route==='atlas-public-ssot'||route==='world'||RESEARCH_ROUTES.has(route);
+const isCorsRoute=route=>route==='mcp'||route==='projection-sync'||route==='atlas-public-ssot'||route==='world'||RESEARCH_ROUTES.has(route);
 const mcpWebHandler=createNexoMcpWebHandler({readSnapshot:()=>readAtlasSsot({env:process.env,now:Date.now()})});
 const mcpNodeHandler=toNodeHandler(mcpWebHandler);
 const DEFAULT_PUBLIC_SYSTEM_URL='https://bydenoso.github.io/Pantheon/system.json';
 const DEFAULT_PUBLIC_MANIFEST_URL='https://bydenoso.github.io/Pantheon/tower-projection/manifest.json';
 const PUBLIC_SYSTEM_CACHE_TTL_MS=15000;
 let publishedSystemCache={key:'',expiresAt:0,value:null,inflight:null};
+let lastProjectionDispatch={at:0,requestId:''};
+const PROJECTION_DISPATCH_THROTTLE_MS=8000;
+
+async function dispatchProjectionSync({env=process.env,currentFingerprint='' }={}){
+  const token=String(env.GITHUB_TOKEN||'').trim();
+  const repository=String(env.GITHUB_REPOSITORY||'byDenoso/Pantheon').trim();
+  if(!token)return {ok:false,status:503,error:'SYNC_BRIDGE_NOT_CONFIGURED'};
+  const now=Date.now();
+  if(lastProjectionDispatch.requestId&&now-lastProjectionDispatch.at<PROJECTION_DISPATCH_THROTTLE_MS){
+    return {ok:true,status:202,outcome:'DISPATCHED',request_id:lastProjectionDispatch.requestId,deduplicated:true};
+  }
+  const requestId='cockpit-sync-'+now.toString(36);
+  const response=await fetch('https://api.github.com/repos/'+repository+'/dispatches',{
+    method:'POST',
+    headers:{
+      Authorization:'Bearer '+token,
+      Accept:'application/vnd.github+json',
+      'Content-Type':'application/json',
+      'X-GitHub-Api-Version':'2022-11-28',
+    },
+    body:JSON.stringify({
+      event_type:'nexo-public-projection-updated',
+      client_payload:{
+        request_id:requestId,
+        source:'NEXO_ONE_COCKPIT_MANUAL_SYNC',
+        before_fingerprint:String(currentFingerprint||'').slice(0,96),
+      },
+    }),
+  });
+  if(response.status!==204){
+    const detail=(await response.text()).slice(0,500);
+    console.error('[nexo-one] projection dispatch failed',response.status,detail);
+    return {ok:false,status:502,error:'PROJECTION_DISPATCH_FAILED'};
+  }
+  lastProjectionDispatch={at:now,requestId};
+  return {ok:true,status:202,outcome:'DISPATCHED',request_id:requestId,deduplicated:false};
+}
 
 async function fetchPublishedTowerSystem({systemUrl,manifestUrl,signal}){
   const options={signal,cache:'no-store',headers:{Accept:'application/json','Cache-Control':'no-cache'}};
@@ -94,7 +131,7 @@ export default async function handler(req,res) {
   if(ATLAS_ORIGINS.has(origin)&&isCorsRoute(route)){
     res.setHeader('Access-Control-Allow-Origin',origin);
     res.setHeader('Access-Control-Allow-Methods','GET,OPTIONS');
-    if(route==='mcp')res.setHeader('Access-Control-Allow-Methods','POST,OPTIONS');
+    if(route==='mcp'||route==='projection-sync')res.setHeader('Access-Control-Allow-Methods','POST,OPTIONS');
     res.setHeader('Access-Control-Allow-Headers','Accept,Content-Type,Mcp-Protocol-Version');
   }
   if(req.method==='OPTIONS'&&ATLAS_ORIGINS.has(origin)&&isCorsRoute(route)){res.statusCode=204;return res.end();}
@@ -107,6 +144,13 @@ export default async function handler(req,res) {
       const decision=sessionRoute(req,env,now,await requestBody(req));
       if(decision.setCookie)res.setHeader('Set-Cookie',decision.setCookie);
       return send(decision.body,decision.status);
+    }
+    if(route==='projection-sync'){
+      if(req.method!=='POST')return send({error:'METHOD_NOT_ALLOWED'},405);
+      if(!ATLAS_ORIGINS.has(origin))return send({error:'ORIGIN_NOT_ALLOWED'},403);
+      const body=await requestBody(req);
+      const receipt=await dispatchProjectionSync({env,currentFingerprint:body?.current_fingerprint});
+      return send(receipt.ok?receipt:{error:receipt.error},receipt.status);
     }
     if(route==='personal'){
       if(req.method!=='GET')return send({error:'METHOD_NOT_ALLOWED'},405);
