@@ -577,7 +577,7 @@ export function Atlas3DContent({system,themeOverride}:{system:SystemStore;themeO
                 {ATLAS_LENSES.map(([id,name])=><button type="button" key={id} className={lens===id?'active':''} aria-pressed={lens===id} onClick={()=>switchLens(id)}>{name}</button>)}
               </div>
               <div className="atlas-layer-switch" role="group" aria-label="Camadas do ATLAS">
-                {ATLAS_GRAPH_LAYERS.map(layer=><button type="button" key={layer} className={visibleLayers.has(layer)?'active':''} aria-pressed={visibleLayers.has(layer)} onClick={()=>setVisibleLayers(current=>{const next=new Set(current);if(next.has(layer))next.delete(layer);else next.add(layer);return next;})}>{layer==='knowledge'?'Knowledge':layer==='execution'?'Execution':'Capability'}</button>)}
+                {ATLAS_GRAPH_LAYERS.map(layer=><button type="button" key={layer} className={visibleLayers.has(layer)?'active':''} aria-pressed={visibleLayers.has(layer)} onClick={()=>setVisibleLayers(current=>{const next=new Set(current);if(next.has(layer))next.delete(layer);else next.add(layer);return next;})}>{layer==='knowledge'?'Knowledge':layer==='execution'?'Execution':layer==='capability'?'Capability':'Governance'}</button>)}
               </div>
               <GraphViewSwitch view={viewMode} onChange={switchViewMode}/>
               <button className="atlas-button atlas-expand-button" aria-pressed={allExpanded} onClick={toggleExpandAll}>
