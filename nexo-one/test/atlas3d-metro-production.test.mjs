@@ -22,6 +22,15 @@ const root = new URL('../', import.meta.url);
 const text = path => readFile(new URL(path, root), 'utf8');
 const state = () => scenarioById(DEFAULT_SCENARIO_ID).build();
 
+test('embedded Atlas styling leaves document scrolling available on other routes', async () => {
+  const css = await text('src/atlas3d/atlas3d.css');
+  assert.doesNotMatch(css, /html\s*,\s*body\s*,\s*#root\s*\{[^}]*overflow\s*:\s*hidden/s);
+  assert.doesNotMatch(css, /:root\s*\{[^}]*--bg:/s);
+  assert.match(css, /\.atlas3d-page\{position:fixed;inset:0/);
+  assert.match(css, /\.atlas-workspace\{[^}]*overflow:hidden/s);
+  assert.match(css, /\.atlas-metro-page\{[^}]*--bg:var\(--nexo-bg-0\)/s);
+});
+
 test('production Metro adapter materializes Nexo, Science and Olympus simultaneously', () => {
   const model = buildAtlasMetroModel(state());
   assert.deepEqual(model.roots, ATLAS_METRO_ROOTS);
