@@ -34,9 +34,9 @@ test('legacy MCP and Atlas pages are minimal bridges and retain the SPA entries 
   assert.match(mcp, /destination\.hash\s*=\s*'\/sistema'/);
   assert.match(mcp, /location\.replace/);
   assert.match(mcp, /location\.search/);
-  assert.match(mcp, /content="0;url=\.\.\/#\/sistema/);
+  assert.match(mcp, /content="[01];url=\.\.\/#\/sistema/);
   assert.match(atlas, /params\.set\('view',\s*params\.get\('view'\) \|\| '3d'\)/);
-  assert.match(atlas, /content="1;url=\.\.\/#\/atlas/);
+  assert.match(atlas, /content="[01];url=\.\.\/#\/atlas/);
   assert.match(atlas, /location\.replace/);
   assert.match(vite, /main:\s*'index\.html'/);
   assert.match(vite, /atlas3d:\s*'atlas3d\/index\.html'/);
@@ -89,6 +89,7 @@ test('cockpit and Sistema share the instrument shell, palette and compact rail',
   ]);
   assert.match(app, /<InstrumentHeader mode=\{currentMode\}/);
   assert.match(app, /unified-shell system-route/);
+  assert.match(app, /new URLSearchParams\(systemQuery\)\.get\('theme'\)/);
   assert.match(app, /<EmbeddedMcp theme=\{theme\}/);
   assert.match(header, /Science :20 · Exec :05 · drift 0/);
   assert.match(header, /aria-label="Modo do produto"/);
