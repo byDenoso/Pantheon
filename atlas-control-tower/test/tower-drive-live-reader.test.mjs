@@ -14,12 +14,15 @@ function livePayload(overrides={}){
     ...overrides
   };
 }
-function fakeDrive(payload){
+// Por padrão serve o objeto vivo atual (NEXO_TOWER_LIVE.json, JSON puro); legacy=true
+// serve o nome comprimido anterior ao cutover.
+function fakeDrive(payload,{legacy=false}={}){
   let reads=0;
+  const stored=legacy?'NEXO_TOWER_LIVE.json.gz':'NEXO_TOWER_LIVE.json';
   return {
     configured:true,rootId:'drive-root',
-    async findChild(parentId,name){assert.equal(parentId,'drive-root');assert.equal(name,'NEXO_TOWER_LIVE.json.gz');return {id:FILE_ID,name};},
-    async getBuffer(id){assert.equal(id,FILE_ID);reads+=1;return gzipSync(Buffer.from(JSON.stringify(payload)));},
+    async findChild(parentId,name){assert.equal(parentId,'drive-root');return name===stored?{id:FILE_ID,name}:null;},
+    async getBuffer(id){assert.equal(id,FILE_ID);reads+=1;const raw=Buffer.from(JSON.stringify(payload));return legacy?gzipSync(raw):raw;},
     get reads(){return reads}
   };
 }
@@ -51,4 +54,10 @@ test('Drive gateway fails closed when the live Tower CONTROL disagrees with its 
   const gateway=createTowerDriveGateway({env:{NEXO_DRIVE_MIGRATION_FALLBACK_GITHUB:'1'},driveClient:fakeDrive(payload),fetchImpl:async()=>{throw new Error('unexpected network')}});
   assert.equal(gateway.configured.migrationFallback,false);
   await assert.rejects(()=>gateway.readControl(),/DRIVE_LIVE_TOWER_CONTROL_MISMATCH/);
+});
+
+test('Drive gateway still reads the pre-cutover gzip live file for rollback',async()=>{
+  const drive=fakeDrive(livePayload(),{legacy:true}),gateway=createTowerDriveGateway({env:{},driveClient:drive,fetchImpl:async()=>{throw new Error('unexpected network')}});
+  assert.deepEqual(await gateway.readEntity('work','WORK-1'),{id:'WORK-1',status:'READY'});
+  assert.equal((await gateway.getCurrentSnapshotMeta()).revision,REVISION);
 });

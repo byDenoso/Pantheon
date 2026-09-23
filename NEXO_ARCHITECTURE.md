@@ -4,7 +4,7 @@ The sole operational truth owner is:
 
 `TOWER_V06@GOOGLE_DRIVE_PRIVATE`
 
-The canonical live object is the stable Google Drive file `NEXO_TOWER_LIVE.json.gz` (stable file id `1m97cFmEkw19yiqD_6FWPG4j1lDCAYM4z`). Its live contract is `NEXO_TOWER_LIVE_V1` and the operational write model is `IN_PLACE_FILE_REVISION_CAS_READBACK`.
+The canonical live object is the stable Google Drive file `NEXO_TOWER_LIVE.json` (stable file id `1m97cFmEkw19yiqD_6FWPG4j1lDCAYM4z`). Its live contract is `NEXO_TOWER_LIVE_V1` and the operational write model is `IN_PLACE_FILE_REVISION_CAS_READBACK`.
 
 `byDenoso/NEXO-Obsidian-Vault@main:TOWER_V06` is no longer operational state authority. Git remains code and provenance only. Historical `CURRENT.json -> SNAPSHOTS/<snapshot_id>` lineage is retained for rollback/archive and must not silently override the live Tower.
 
