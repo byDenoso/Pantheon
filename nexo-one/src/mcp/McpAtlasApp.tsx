@@ -1,7 +1,6 @@
 import {useCallback,useEffect,useMemo,useRef,useState} from 'react';
 import {useNexoStore} from '../data/NexoStore.tsx';
 import {CanvasGraph25D,type CanvasEdge25D,type CanvasGraph25DHandle,type CanvasNode25D} from '../components/CanvasGraph25D.tsx';
-import {dispatchProjectionSync,waitForProjectionSync} from '../data/projectionSync.ts';
 
 type NodeKind='ROOT'|'LAYER'|'TRANSPORT'|'TOOL'|'FAMILY'|'CAPABILITY'|'BACKEND'|'ROLE';
 type TopologyNode={
@@ -75,16 +74,20 @@ function topologyLayout(nodes:TopologyNode[]):CanvasNode25D[]{
 type ViewMode='all'|'tools'|'capabilities'|'runtime'|'roles';
 type McpTheme='dark'|'light';
 type GraphView='2d'|'3d';
-type SyncState='idle'|'loading'|'same'|'updated'|'source-newer'|'error';
+type SystemTab='overview'|'tools'|'capabilities'|'runtimes'|'roles'|'relations'|'provenance'|'graph';
+const SYSTEM_TABS:Array<[SystemTab,string]>=[['overview','Visão geral'],['tools','Tools'],['capabilities','Capabilities'],['runtimes','Runtimes'],['roles','Roles'],['relations','Relações'],['provenance','Proveniência'],['graph','Grafo']];
 
 const THEME_STORAGE_KEY='nexo.mcp.theme.v1';
 const GRAPH_VIEW_STORAGE_KEY='nexo.mcp.graph-view.v1';
-const COCKPIT_ROUTE='#/cockpit/comando';
 const routeParams=()=>{
   const hash=window.location.hash;
   const query=hash.match(/^#\/?sistema\?(.+)$/i)?.[1];
   return query?new URLSearchParams(query):new URLSearchParams(window.location.search);
 };
+function initialSystemTab():SystemTab{
+  const value=routeParams().get('tab') as SystemTab|null;
+  return value&&SYSTEM_TABS.some(([id])=>id===value)?value:'overview';
+}
 
 function initialTheme():McpTheme{
   const query=routeParams().get('theme');
@@ -103,10 +106,6 @@ const modeKinds:Record<ViewMode,NodeKind[]>={
   capabilities:['ROOT','LAYER','FAMILY','CAPABILITY','BACKEND','ROLE'],
   runtime:['ROOT','LAYER','CAPABILITY','BACKEND'],
   roles:['ROOT','LAYER','FAMILY','CAPABILITY','ROLE'],
-};
-const relationKindLabels:Record<NodeKind,string>={
-  ROOT:'MCP',LAYER:'Camadas',TRANSPORT:'Transportes',TOOL:'Tools',
-  FAMILY:'Famílias',CAPABILITY:'Capabilities',BACKEND:'Runtimes',ROLE:'Roles',
 };
 function allowedInMode(node:TopologyNode,mode:ViewMode){
   return modeKinds[mode].includes(node.kind);
@@ -245,277 +244,45 @@ function Graph({topology,search,mode,selected,onSelect,theme,view}:{topology:Top
   </div>;
 }
 
-export function McpAtlasApp({themeOverride,onThemeToggle,embedded=false}:{themeOverride?:string;onThemeToggle?:()=>void;embedded?:boolean}={}){
-  const {loadPublishedContext}=useNexoStore();
-  const [topology,setTopology]=useState<Topology|null>(null);
-  const topologyRef=useRef<Topology|null>(null);
-  const [error,setError]=useState('');
-  const [selected,setSelected]=useState<string|null>(null);
-  const [search,setSearch]=useState(()=>routeParams().get('q')||'');
-  const [mode,setMode]=useState<ViewMode>(()=>{
-    const candidate=routeParams().get('mode') as ViewMode|null;
-    return candidate&&Object.hasOwn(modeKinds,candidate)?candidate:'all';
-  });
-  const [syncState,setSyncState]=useState<SyncState>('idle');
-  const [checkedAt,setCheckedAt]=useState<Date|null>(null);
-  const [theme,setTheme]=useState<McpTheme>(initialTheme);
-  const activeTheme=(themeOverride as McpTheme|undefined)||theme;
-  const [graphView,setGraphView]=useState<GraphView>(initialGraphView);
-
-  useEffect(()=>{
-    document.documentElement.dataset.mcpTheme=activeTheme;
-    if(!embedded){document.documentElement.style.colorScheme=activeTheme;try{window.localStorage.setItem(THEME_STORAGE_KEY,activeTheme);}catch{}}
-  },[activeTheme,embedded]);
-  useEffect(()=>{try{window.localStorage.setItem(GRAPH_VIEW_STORAGE_KEY,graphView);}catch{}},[graphView]);
-
-  const loadTopology=useCallback(async(manual=false,signal?:AbortSignal)=>{
-    if(manual)setSyncState('loading');
-    try{
-      const {topology:value}=await loadPublishedContext<Topology>(manual,signal);
-      const previous=topologyRef.current;
-      const changed=Boolean(previous)&&topologySignature(previous!)!==topologySignature(value);
-      topologyRef.current=value;
-      setTopology(value);
-      setError('');
-      setCheckedAt(new Date());
-      if(manual)setSyncState(changed?'updated':'same');
-    }catch(err){
-      if((err as {name?:string})?.name==='AbortError')return;
-      setError(String(err));
-      if(manual)setSyncState('error');
-    }
-  },[loadPublishedContext]);
-
-  useEffect(()=>{
-    const controller=new AbortController();
-    void loadTopology(false,controller.signal);
-    return()=>controller.abort();
-  },[loadTopology]);
-
-  const synchronizeTopology=useCallback(async()=>{
-    const current=topologyRef.current;
-    if(!current){
-      await loadTopology(true);
-      return;
-    }
-    setSyncState('loading');
-    try{
-      const receipt=await dispatchProjectionSync(current.source.projection_fingerprint||'');
-      if(receipt.outcome==='PUBLIC_PROJECTION_REFRESHED'||receipt.outcome==='PUBLIC_PROJECTION_CACHED'){
-        setCheckedAt(new Date());
-        if(receipt.outcome==='PUBLIC_PROJECTION_CACHED'){
-          setError('Origem pública temporariamente indisponível; usando cache validado recente.');
-          setSyncState('same');
-        }else{
-          setError('');
-          setSyncState(receipt.projection_fingerprint===(current.source.projection_fingerprint||'')?'same':'source-newer');
-        }
-        return;
-      }
-      await waitForProjectionSync(receipt.request_id);
-      await loadTopology(true);
-    }catch(err){
-      setError(String(err));
-      setCheckedAt(new Date());
-      setSyncState('error');
-    }
-  },[loadTopology]);
-
-  useEffect(()=>{
-    if(!topology)return;
-    const query=search.trim().toLowerCase();
-    if(!query)return;
-    const candidates=topology.nodes
-      .filter(node=>allowedInMode(node,mode)&&nodeMatches(node,query))
-      .sort((a,b)=>matchRank(a,query)-matchRank(b,query)||a.label.length-b.label.length||a.label.localeCompare(b.label));
-    if(candidates[0])setSelected(candidates[0].id);
-  },[search,mode,topology]);
-
-  const selectedNode=useMemo(()=>topology?.nodes.find(node=>node.id===selected)||null,[topology,selected]);
-  const relationContext=useMemo(()=>{
-    if(!topology||!selectedNode)return null;
-    const byId=new Map(topology.nodes.map(node=>[node.id,node]));
-    const direct:Array<{link:TopologyLink;node:TopologyNode;direction:'in'|'out'}>=[];
-    for(const link of topology.links){
-      const source=idOf(link.source),target=idOf(link.target);
-      if(source===selectedNode.id){
-        const node=byId.get(target);if(node)direct.push({link,node,direction:'out'});
-      }else if(target===selectedNode.id){
-        const node=byId.get(source);if(node)direct.push({link,node,direction:'in'});
-      }
-    }
-    const distances=new Map<string,number>([[selectedNode.id,0]]);
-    let frontier=[selectedNode.id];
-    for(let depth=1;depth<=2;depth+=1){
-      const next:string[]=[];
-      for(const current of frontier){
-        for(const link of topology.links){
-          const source=idOf(link.source),target=idOf(link.target);
-          const other=source===current?target:target===current?source:null;
-          if(other&&!distances.has(other)){distances.set(other,depth);next.push(other);}
-        }
-      }
-      frontier=next;
-    }
-    const groups=new Map<NodeKind,TopologyNode[]>();
-    for(const [id,distance] of distances){
-      if(distance===0)continue;
-      const node=byId.get(id);if(!node)continue;
-      const bucket=groups.get(node.kind)||[];
-      bucket.push(node);groups.set(node.kind,bucket);
-    }
-    for(const bucket of groups.values())bucket.sort((a,b)=>a.label.localeCompare(b.label));
-    return {direct,groups};
-  },[topology,selectedNode]);
-
-  const updated=topology?new Intl.DateTimeFormat('pt-BR',{dateStyle:'medium',timeStyle:'short'}).format(new Date(topology.generated_at)):'';
-  const checked=checkedAt?new Intl.DateTimeFormat('pt-BR',{timeStyle:'medium'}).format(checkedAt):'';
-  const syncMessage=syncState==='loading'?'Sincronizando…'
-    :syncState==='same'?'Sem alterações · origem pública confirmada '+checked
-    :syncState==='updated'?'Atualizado · verificado '+checked
-    :syncState==='source-newer'?'Nova projeção detectada na origem · publicação pendente'
-    :syncState==='error'?'Sincronização não confirmada'
-    :checked?'Verificado '+checked:'';
-
-  const applyMode=(next:ViewMode)=>{
-    setMode(next);
-    setSelected(null);
-    requestAnimationFrame(()=>document.getElementById('topology')?.scrollIntoView({behavior:'smooth',block:'start'}));
-  };
-
-  const statCards:Array<{mode:ViewMode;index:string;title:string;body:string}> = topology ? [
-    {mode:'tools',index:'01',title:'Tools expostas',body:String(topology.stats.remote_tools)+' tools remotos e '+String(topology.stats.internal_tools)+' internos.'},
-    {mode:'capabilities',index:'02',title:'Capabilities registradas',body:String(topology.stats.capabilities)+' capabilities registradas na Tower.'},
-    {mode:'runtime',index:'03',title:'Backends de runtime',body:Object.entries(topology.stats.backend_counts).slice(0,4).map(([k,v])=>k+' ('+String(v)+')').join(' · ')},
-    {mode:'roles',index:'04',title:'Roles declaradas',body:String(topology.stats.roles)+' papéis conectados às capabilities declaradas.'},
-  ] : [];
-
-  return <div className="mcp-site" data-mcp-embedded={embedded?'true':'false'}
-    data-mcp-ready={topology?'true':'false'}
-    data-mcp-selected={selectedNode?.label||''}
-    data-mcp-selected-kind={selectedNode?.kind||''}
-    data-mcp-mode={mode}
-    data-mcp-theme={activeTheme}
-    data-mcp-graph-view={graphView}
-    data-mcp-query={search}
-    data-mcp-node-count={topology?.nodes.length||0}
-    data-mcp-link-count={topology?.links.length||0}>
-    <nav className="mcp-nav">
-      <a className="mcp-brand" href={COCKPIT_ROUTE}><span className="mark">N</span><span>NEXO <em>ONE</em></span><b>MCP ATLAS</b></a>
-      <div className="nav-links"><a href={COCKPIT_ROUTE}>Cockpit</a><a href="#topology">Topologia</a><a href="#architecture">Relações</a><a href="#source">Fonte</a></div>
-      <div className="nav-utilities">
-        <button className="theme-toggle" type="button" onClick={()=>onThemeToggle?onThemeToggle():setTheme(current=>current==='dark'?'light':'dark')}
-          aria-label={activeTheme==='dark'?'Ativar tema claro':'Ativar tema escuro'}>{activeTheme==='dark'?'☼':'☾'}</button>
-        <span className="live-pill"><i/> TOWER_V06</span>
-      </div>
-    </nav>
-
-    <main>
-      <section className="hero" id="topology">
-        <div className="hero-copy">
-          <div className="kicker">TOWER_V06 · TOPOLOGIA MCP · SOMENTE LEITURA</div>
-          <h1>Topologia MCP<br/><span>da projeção publicada.</span></h1>
-          <p>Ferramentas, capabilities registradas, runtimes e papéis. O mapa mantém apenas relações publicadas; a ficha abaixo identifica a origem declarada e a revisão usada no build.</p>
-          {topology&&<div className="metrics">
-            <div><strong>{topology.stats.tools}</strong><span>tools</span></div>
-            <div><strong>{topology.stats.capabilities}</strong><span>capabilities registradas</span></div>
-            <div><strong>{topology.stats.backends}</strong><span>runtimes</span></div>
-            <div><strong>{topology.stats.roles}</strong><span>roles</span></div>
-          </div>}
-          <div className="hero-actions">
-            <a className="primary-cta" href={COCKPIT_ROUTE}>Abrir NEXO ONE</a>
-            <button className="sync-button" type="button" onClick={()=>void synchronizeTopology()} disabled={syncState==='loading'}>
-              {syncState==='loading'?'Sincronizando…':'Sincronizar'}
-            </button>
-            {syncMessage&&<span className={['sync-feedback',syncState].join(' ')}>{syncMessage}</span>}
-          </div>
-          {topology&&<div className="freshness">
-            Publicado {updated}
-            {topology.source.source_snapshot_id&&<> · snapshot <code>{topology.source.source_snapshot_id}</code></>}
-          </div>}
-        </div>
-
-        <div className="hero-graph">
-          <div className="graph-toolbar">
-            <div className="search"><span>⌕</span><input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Buscar node, tool, runtime..." /></div>
-            <div className="graph-view-switch" role="group" aria-label="Modo de visualização">
-              <button type="button" className={graphView==='2d'?'active':''} onClick={()=>setGraphView('2d')}>Metro 2D</button>
-              <button type="button" className={graphView==='3d'?'active':''} onClick={()=>setGraphView('3d')}>3D Explorar</button>
-            </div>
-            <div className="modes">
-              {([['all','Tudo'],['tools','Tools'],['capabilities','Capabilities'],['runtime','Runtime'],['roles','Roles']] as const).map(([id,label])=>
-                <button key={id} className={mode===id?'active':''} onClick={()=>applyMode(id)}>{label}</button>
-              )}
-            </div>
-          </div>
-          {error&&!topology?<div className="graph-error"><b>Topologia indisponível</b><span>{error}</span></div>:
-            topology?<Graph topology={topology} search={search} mode={mode} selected={selected} onSelect={setSelected} theme={activeTheme} view={graphView}/>:
-            <div className="graph-loading"><span/><p>Compilando topologia MCP…</p></div>}
-          {selectedNode&&<aside className="node-inspector">
-            <button className="close" onClick={()=>setSelected(null)}>×</button>
-            <span className="node-kind">{kindLabel(selectedNode.kind)}</span>
-            <h2>{selectedNode.label}</h2>
-            <div className="node-status">{selectedNode.status}</div>
-            {selectedNode.summary&&<p>{selectedNode.summary}</p>}
-            {selectedNode.meta&&<dl>{Object.entries(selectedNode.meta).filter(([,v])=>v!==null&&v!==''&&!(Array.isArray(v)&&!v.length)).map(([k,v])=>
-              <div key={k}><dt>{k.replaceAll('_',' ')}</dt><dd>{Array.isArray(v)?v.join(', '):String(v)}</dd></div>
-            )}</dl>}
-            {relationContext&&<div className="relation-context">
-              {(['TOOL','CAPABILITY','BACKEND','ROLE'] as NodeKind[]).map(kind=>{
-                const rows=relationContext.groups.get(kind)||[];
-                return <section key={kind} className="relation-group">
-                  <header><span>{relationKindLabels[kind]}</span><b>{rows.length}</b></header>
-                  {rows.length?<div className="relation-chips">{rows.slice(0,12).map(node=>
-                    <button type="button" key={node.id} onClick={()=>setSelected(node.id)}>{node.label}</button>
-                  )}{rows.length>12&&<span>+{rows.length-12}</span>}</div>:<p>Nenhuma relação declarada em até 2 saltos.</p>}
-                </section>;
-              })}
-              <section className="direct-relations">
-                <header><span>Relações diretas</span><b>{relationContext.direct.length}</b></header>
-                {relationContext.direct.slice(0,14).map(({link,node,direction})=>
-                  <button type="button" key={link.id+':'+node.id} onClick={()=>setSelected(node.id)}>
-                    <small>{direction==='out'?'→':'←'} {link.kind}</small><strong>{node.label}</strong>
-                  </button>
-                )}
-              </section>
-            </div>}
-          </aside>}
-        </div>
-      </section>
-
-      {topology&&<section className="architecture" id="architecture">
-        <div className="section-head">
-          <span>RELAÇÕES PUBLICADAS</span>
-          <h2>Encadeamento declarado<br/>no MCP e na Tower.</h2>
-          <p>As arestas publicadas são EXPOSES, CONTAINS, RUNS_ON e AVAILABLE_TO. Os cards abaixo também funcionam como filtros do grafo.</p>
-        </div>
-        <div className="arch-flow">
-          {statCards.map(card=><button type="button" key={card.mode} className={mode===card.mode?'active':''} aria-pressed={mode===card.mode} onClick={()=>applyMode(card.mode)}>
-            <span>{card.index}</span><h3>{card.title}</h3><p>{card.body}</p><em>Filtrar grafo ↑</em>
-          </button>)}
-        </div>
-      </section>}
-
-      <section className="source-section" id="source">
-        <div><span className="kicker">PROVENIÊNCIA PUBLICADA</span><h2>Revisão e snapshot<br/>usados no build.</h2></div>
-        {topology&&<div className="source-card">
-          <div><span>authority</span><b>{topology.source.authority}</b></div>
-          <div><span>storage</span><b>{topology.source.source_storage||'projection mirror'}</b></div>
-          <div><span>snapshot</span><code>{topology.source.source_snapshot_id||'n/a'}</code></div>
-          <div><span>state fp</span><code>{topology.source.source_state_fingerprint?.slice(0,28)||'n/a'}</code></div>
-          <div><span>projection fp</span><code>{topology.source.projection_fingerprint?.slice(0,28)||'n/a'}</code></div>
-          <div><span>commit</span><code>{topology.source.commit.slice(0,12)}</code></div>
-          <div><span>manifest</span><code>{topology.source.manifest}</code></div>
-        </div>}
-      </section>
-    </main>
-
-    <nav className="mcp-bottom-nav" aria-label="Navegação do MCP Atlas">
-      <a href={COCKPIT_ROUTE}><i>◎</i><span>NEXO ONE</span></a>
-      <a href="#topology" className="active"><i>⌬</i><span>Topologia</span></a>
-      <a href="#architecture"><i>→</i><span>Relações</span></a>
-      <a href="#source"><i>⊞</i><span>Fonte</span></a>
-    </nav>
-    <footer><span>NEXO ONE · MCP ATLAS</span><span>TOWER_V06 · projection-only</span></footer>
-  </div>;
+export function McpAtlasApp({themeOverride,embedded=false}:{themeOverride?:string;onThemeToggle?:()=>void;embedded?:boolean}={}){
+ const {loadPublishedContext}=useNexoStore();
+ const [topology,setTopology]=useState<Topology|null>(null),[error,setError]=useState('');
+ const [selected,setSelected]=useState<string|null>(null),[search,setSearch]=useState(()=>routeParams().get('q')||'');
+ const [mode,setMode]=useState<ViewMode>(()=>{const m=routeParams().get('mode') as ViewMode|null;return m&&Object.hasOwn(modeKinds,m)?m:'all';});
+ const [theme,setTheme]=useState<McpTheme>(initialTheme),[graphView,setGraphView]=useState<GraphView>(initialGraphView);
+ const [tab,setTab]=useState<SystemTab>(initialSystemTab),activeTheme=(themeOverride as McpTheme|undefined)||theme;
+ useEffect(()=>{document.documentElement.dataset.mcpTheme=activeTheme;if(!embedded){document.documentElement.style.colorScheme=activeTheme;try{localStorage.setItem(THEME_STORAGE_KEY,activeTheme);}catch{}}},[activeTheme,embedded]);
+ useEffect(()=>{try{localStorage.setItem(GRAPH_VIEW_STORAGE_KEY,graphView);}catch{}},[graphView]);
+ useEffect(()=>{const ctrl=new AbortController();void loadPublishedContext<Topology>(false,ctrl.signal).then(v=>setTopology(v.topology)).catch(e=>{if((e as {name?:string})?.name!=='AbortError')setError(String(e));});return()=>ctrl.abort();},[loadPublishedContext]);
+ useEffect(()=>{if(!topology||!search.trim())return;const query=search.trim().toLowerCase();const match=topology.nodes.filter(node=>nodeMatches(node,query)).sort((a,b)=>matchRank(a,query)-matchRank(b,query))[0];if(match)setSelected(match.id);},[topology,search]);
+ useEffect(()=>{const restore=()=>setTab(initialSystemTab());window.addEventListener('hashchange',restore);window.addEventListener('popstate',restore);return()=>{window.removeEventListener('hashchange',restore);window.removeEventListener('popstate',restore);};},[]);
+ const selectTab=(next:SystemTab)=>{setTab(next);const params=routeParams();params.set('tab',next);window.history.pushState(null,'',`#/sistema?${params.toString()}`);window.scrollTo({top:0,left:0,behavior:'auto'});};
+ const q=search.trim().toLowerCase(),named=(id:string)=>topology?.nodes.find(n=>n.id===id)?.label||id;
+ const rows=(kind:NodeKind)=>topology?.nodes.filter(n=>n.kind===kind&&nodeMatches(n,q))||[];
+ const tools=rows('TOOL'),caps=rows('CAPABILITY'),runtimes=rows('BACKEND'),roles=rows('ROLE'),selectedNode=topology?.nodes.find(n=>n.id===selected)||null;
+ const relations=topology?.links.filter(l=>!q||`${named(idOf(l.source))} ${named(idOf(l.target))} ${l.kind}`.toLowerCase().includes(q))||[];
+ const table=(heads:string[],body:React.ReactNode[],empty:string)=><div className="system-table-wrap"><table className="system-table"><thead><tr>{heads.map(h=><th key={h}>{h}</th>)}</tr></thead><tbody>{body.length?body:<tr><td colSpan={heads.length} className="system-empty">{empty}</td></tr>}</tbody></table></div>;
+ const status=(s:string)=>({REMOTE:'Remota',INTERNAL:'Interna',PASS:'Verificada',VERIFIED:'Verificada',UNKNOWN:'Desconhecida',UNVERIFIED:'Sem prova',RETIRED:'Retirada',LIVE:'Ativa',RUNTIME:'Runtime',ROLE:'Papel'} as Record<string,string>)[s.toUpperCase()]||s;
+ const relation=(s:string)=>({EXPOSES:'Expõe',CONTAINS:'Contém',RUNS_ON:'Executa em',AVAILABLE_TO:'Disponível para',OWNS:'Mantém',GROUPS:'Agrupa'} as Record<string,string>)[s]||s;
+ const updated=topology?new Intl.DateTimeFormat('pt-BR',{dateStyle:'medium',timeStyle:'short'}).format(new Date(topology.generated_at)):'';
+ const label=SYSTEM_TABS.find(([id])=>id===tab)?.[1]||'Visão geral';
+ return <div className="mcp-site system-native-root" data-mcp-embedded={embedded?'true':'false'} data-mcp-ready={topology?'true':'false'} data-mcp-query={search} data-mcp-selected={selectedNode?.label||''} data-mcp-selected-kind={selectedNode?.kind||''} data-mcp-theme={activeTheme} data-mcp-graph-view={graphView} data-mcp-node-count={topology?.nodes.length||0} data-mcp-link-count={topology?.links.length||0}>
+ <main className="system-native" data-system-tab={tab} data-system-ready={topology?'true':'false'}>
+  <header className="system-page-heading"><div><h1>Sistema</h1><p>Tools, capabilities, runtimes, papéis e relações da projeção.</p></div>{topology&&<span className="system-generated">Projeção · {updated}</span>}</header>
+  <nav className="system-tabs" aria-label="Seções do Sistema">{SYSTEM_TABS.map(([id,name])=>{const count=id==='tools'?topology?.stats.tools:id==='capabilities'?topology?.stats.capabilities:id==='runtimes'?topology?.stats.backends:id==='roles'?topology?.stats.roles:id==='relations'?topology?.links.length:undefined;return <button key={id} type="button" className={tab===id?'active':''} aria-current={tab===id?'page':undefined} onClick={()=>selectTab(id)}>{name}{count!==undefined&&<span>{count}</span>}</button>;})}</nav>
+  {tab!=='overview'&&tab!=='provenance'&&<div className="system-filter"><label htmlFor="system-filter">Filtrar {label.toLowerCase()}</label><input id="system-filter" value={search} onChange={e=>setSearch(e.target.value)} placeholder="Nome, identificador ou estado"/></div>}
+  {!topology&&<div className="system-loading" role="status">{error?'A projeção do Sistema não pôde ser carregada.':'Carregando a projeção do Sistema…'}</div>}
+  {topology&&tab==='overview'&&<><div className="system-stat-row">{[[topology.stats.tools,'tools',`${topology.stats.remote_tools} remotas · ${topology.stats.internal_tools} internas`],[topology.stats.capabilities,'capabilities','registradas na projeção'],[topology.stats.backends,'runtimes',topology.stats.backend_counts.unknown?`${topology.stats.backend_counts.unknown} desconhecidos`:'identificados'],[topology.stats.roles,'papéis','declarados'],[topology.links.length,'relações','publicadas']].map(([v,n,d])=><div key={String(n)}><strong>{v}</strong><span>{n}</span><small>{d}</small></div>)}</div>
+   {topology.stats.backend_counts.unknown>0&&<a className="system-integrity-note" href="#/cockpit/prova?view=integrity">Lacuna de integridade · {topology.stats.backend_counts.unknown} runtime desconhecido · ver Integridade ↗</a>}
+   <div className="system-shortcuts">{SYSTEM_TABS.filter(([id])=>!['overview','graph'].includes(id)).map(([id,n])=>{const c=id==='tools'?topology.stats.tools:id==='capabilities'?topology.stats.capabilities:id==='runtimes'?topology.stats.backends:id==='roles'?topology.stats.roles:id==='relations'?topology.links.length:undefined;return <button key={id} type="button" onClick={()=>selectTab(id)}><span>{n}</span><strong>{c??'↗'}</strong></button>;})}</div>
+   <div className="system-source-compact"><strong>Fonte consultada</strong><span>TOWER_V06 · snapshot {topology.source.source_snapshot_id||'não publicado'}</span><button type="button" onClick={()=>selectTab('provenance')}>Ver proveniência</button></div></>}
+  {topology&&tab==='tools'&&table(['Tool','Acesso','Domínio / prefixo','Capabilities expostas','Runtime'],tools.map(n=><tr key={n.id} onClick={()=>setSelected(n.id)}><td><strong>{n.label}</strong><small className="system-mono">{n.id}</small></td><td>{n.meta?.remote===true?'Remota':'Interna'}</td><td>{String(n.meta?.namespace||n.group)}</td><td>Não publicado</td><td>Não publicado</td></tr>),'Nenhuma tool corresponde ao filtro.')}
+  {topology&&tab==='capabilities'&&table(['Capability','Domínio','Runtime','Evidência','Última verificação','Tools','Papéis','WORK'],caps.map(n=>{const m=n.meta||{};return <tr key={n.id} onClick={()=>setSelected(n.id)}><td><strong>{String(m.id||n.label)}</strong><small className="system-mono">{n.id}</small></td><td>{String(m.scope||n.group||'Não publicado')}</td><td>{String(m.backend||'Não publicado')}</td><td><span className={`system-state ${String(m.status||n.status).toLowerCase()}`}>{status(String(m.status||n.status))}</span></td><td>Não publicado</td><td>Não publicado</td><td>{Array.isArray(m.roles)?m.roles.join(', '):'Não publicado'}</td><td>Não publicado</td></tr>;}),'Nenhuma capability corresponde ao filtro.')}
+  {topology&&tab==='runtimes'&&table(['Runtime','Capabilities associadas','Estado','Evidência'],runtimes.map(n=><tr key={n.id} onClick={()=>setSelected(n.id)}><td><strong>{n.label}</strong></td><td>{topology.stats.backend_counts[n.label]||0}</td><td>{n.label.toLowerCase()==='unknown'?'Lacuna de integridade':'Registrado'}</td><td>Não publicado</td></tr>),'Nenhum runtime corresponde ao filtro.')}
+  {topology&&tab==='roles'&&table(['Papel','Capabilities disponíveis','Estado','Origem'],roles.map(n=><tr key={n.id} onClick={()=>setSelected(n.id)}><td><strong>{n.label}</strong></td><td>{caps.filter(c=>Array.isArray(c.meta?.roles)&&c.meta.roles.includes(n.label)).length}</td><td>{status(n.status)}</td><td>Não publicado</td></tr>),'Nenhum papel corresponde ao filtro.')}
+  {topology&&tab==='relations'&&table(['Origem','Relação','Destino','Peso'],relations.map(l=><tr key={l.id}><td>{named(idOf(l.source))}</td><td>{relation(l.kind)} <small className="system-mono">{l.kind}</small></td><td>{named(idOf(l.target))}</td><td className="system-mono">{Number(l.weight).toFixed(2)}</td></tr>),'Nenhuma relação corresponde ao filtro.')}
+  {topology&&tab==='provenance'&&<div className="system-provenance"><h2>Proveniência da projeção publicada</h2><p>A Tower atribui autoridade ao repositório GitHub; esta publicação identifica um snapshot espelhado em Google Drive. Autoridade e origem da cópia pública precisam permanecer alinhadas.</p>{[['Autoridade declarada','TOWER_V06'],['Armazenamento',topology.source.source_storage||'Não publicado'],['Snapshot',topology.source.source_snapshot_id||'Não publicado'],['Fingerprint do estado',topology.source.source_state_fingerprint||'Não publicado'],['Fingerprint da projeção',topology.source.projection_fingerprint||'Não publicado'],['Commit',topology.source.commit||'Não publicado'],['Manifest',topology.source.manifest||'Não publicado']].map(([n,v])=><div key={n}><span>{n}</span><code>{v}</code></div>)}</div>}
+  {topology&&tab==='graph'&&<div className="system-graph-panel"><div className="system-graph-controls"><div className="system-graph-filters">{([['all','Tudo'],['tools','Tools'],['capabilities','Capabilities'],['runtime','Runtimes'],['roles','Papéis']] as const).map(([id,n])=><button type="button" className={mode===id?'active':''} onClick={()=>setMode(id)} key={id}>{n}</button>)}</div><div className="system-graph-views" role="group" aria-label="Visualização do grafo"><button type="button" className={graphView==='2d'?'active':''} onClick={()=>setGraphView('2d')}>2D</button><button type="button" className={graphView==='3d'?'active':''} onClick={()=>setGraphView('3d')}>3D</button></div><span>{topology.nodes.length} entidades · {topology.links.length} relações</span></div><Graph topology={topology} search={search} mode={mode} selected={selected} onSelect={setSelected} theme={activeTheme} view={graphView}/></div>}
+  {selectedNode&&tab!=='graph'&&<aside className="system-row-inspector"><button type="button" onClick={()=>setSelected(null)} aria-label="Fechar detalhes">Fechar</button><strong>{selectedNode.label}</strong><span>{status(selectedNode.status)} · {kindLabel(selectedNode.kind)}</span>{selectedNode.summary&&<p>{selectedNode.summary}</p>}<a href={`#/atlas?lente=sistema&sel=${encodeURIComponent(selectedNode.id)}&view=2d`}>Ver no Mapa ↗</a></aside>}
+ </main></div>;
 }
