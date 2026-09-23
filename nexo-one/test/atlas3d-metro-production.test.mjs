@@ -567,7 +567,9 @@ test('dedicated Atlas production page uses Metro renderer, G6 and deterministic 
   assert.match(renderer, /metroLayoutPositions/);
   assert.match(renderer, /buildMetroScreenLabelLayout/);
   assert.match(renderer, /function graphFocusLevels/);
-  assert.match(renderer, /depth <= 2/);
+  assert.match(renderer, /atlasHopDistances\(model, focusId, visible\)/);
+  const graphCore = await text('src/atlas3d/atlasAdapter.ts');
+  assert.match(graphCore, /for \(let depth = 1; depth <= 2; depth \+= 1\)/);
   assert.match(renderer, /focus-muted/);
   assert.match(renderer, /edge-active/);
   assert.match(renderer, /relationStrength/);

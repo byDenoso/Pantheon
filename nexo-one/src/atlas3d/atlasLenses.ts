@@ -1,4 +1,4 @@
-import type {AtlasMetroModel,AtlasMetroNode,AtlasCrossLink} from './atlasAdapter.ts';
+import {buildAtlasGraphIndexes,type AtlasMetroModel,type AtlasMetroNode,type AtlasCrossLink} from './atlasAdapter.ts';
 
 export type AtlasLens='operacao'|'ciencia'|'sistema'|'aprendizado';
 export const ATLAS_LENSES:Array<[AtlasLens,string]>=[
@@ -77,6 +77,7 @@ export function atlasModelForLens(model:AtlasMetroModel,lens:AtlasLens):AtlasMet
     nodeMap,
     childrenMap,
     crossLinks:crossLinks as AtlasCrossLink[],
+    ...buildAtlasGraphIndexes(nodes,crossLinks as AtlasCrossLink[]),
     sourceNodeIds:new Set([...model.sourceNodeIds].filter(id=>keep.has(id))),
   };
 }

@@ -61,7 +61,19 @@ export interface AtlasCrossLink {
   bundleCount: number;
 }
 
-export interface AtlasMetroModel {
+export type AtlasGraphLayer = 'knowledge' | 'execution' | 'capability';
+
+export const ATLAS_GRAPH_LAYERS: AtlasGraphLayer[] = ['knowledge', 'execution', 'capability'];
+
+export interface AtlasGraphIndexes {
+  /** Directed semantic relations retain the source edge direction. */
+  incoming: Map<string, AtlasCrossLink[]>;
+  outgoing: Map<string, AtlasCrossLink[]>;
+  /** Undirected view adjacency also includes parent/child context edges. */
+  adjacency: Map<string, Set<string>>;
+}
+
+export interface AtlasMetroModel extends AtlasGraphIndexes {
   revision: string;
   generatedAt: string;
   roots: string[];
@@ -115,6 +127,87 @@ function aggregateStatus(nodes: GraphNode[]): string {
 
 function uniquePairs<T>(values: T[]): T[] {
   return [...new Set(values)];
+}
+
+export function atlasGraphLayersForNode(node: AtlasMetroNode | undefined): AtlasGraphLayer[] {
+  if (!node || node.synthetic || node.entityType === 'hub' || node.entityType === 'subdomain') return [];
+  const type = String(node.entityType);
+  const layers: AtlasGraphLayer[] = [];
+  if (['TEST', 'EFFECT', 'CLAIM', 'MEMORY', 'FILAMENT'].includes(type)) layers.push('knowledge');
+  if (['CAMPAIGN', 'ACTION', 'SIDE_QUEST', 'PROJECTION', 'TEST', 'EFFECT'].includes(type)) layers.push('execution');
+  if (['CAPABILITY', 'PROVIDER', 'TOOL'].includes(type)) layers.push('capability');
+  return layers;
+}
+
+export function buildAtlasGraphIndexes(
+  nodes: AtlasMetroNode[],
+  crossLinks: AtlasCrossLink[],
+): AtlasGraphIndexes {
+  const incoming = new Map(nodes.map(node => [node.id, [] as AtlasCrossLink[]]));
+  const outgoing = new Map(nodes.map(node => [node.id, [] as AtlasCrossLink[]]));
+  const adjacency = new Map(nodes.map(node => [node.id, new Set<string>()]));
+  const connect = (from: string, to: string) => {
+    if (!adjacency.has(from) || !adjacency.has(to)) return;
+    adjacency.get(from)!.add(to);
+    adjacency.get(to)!.add(from);
+  };
+
+  for (const node of nodes) if (node.parentId) connect(node.parentId, node.id);
+  for (const link of crossLinks) {
+    outgoing.get(link.source)?.push(link);
+    incoming.get(link.target)?.push(link);
+    connect(link.source, link.target);
+  }
+  return { incoming, outgoing, adjacency };
+}
+
+export function atlasHopDistances(
+  model: Pick<AtlasMetroModel, 'adjacency' | 'crossLinks' | 'nodeMap'>,
+  selectedId: string | null,
+  visibleIds: ReadonlySet<string>,
+): Map<string, number> {
+  const distances = new Map<string, number>([...visibleIds].map(id => [id, 3]));
+  if (!selectedId || !visibleIds.has(selectedId)) return distances;
+
+  const adjacency = new Map([...visibleIds].map(id => [id, new Set<string>()]));
+  const connect = (source: string, target: string) => {
+    if (source === target || !visibleIds.has(source) || !visibleIds.has(target)) return;
+    adjacency.get(source)!.add(target);
+    adjacency.get(target)!.add(source);
+  };
+  for (const id of visibleIds) {
+    for (const neighbor of model.adjacency.get(id) || []) connect(id, neighbor);
+  }
+  const nearestVisibleAncestor = (id: string): string | null => {
+    const seen = new Set<string>();
+    let current = model.nodeMap.get(id);
+    while (current && !seen.has(current.id)) {
+      if (visibleIds.has(current.id)) return current.id;
+      seen.add(current.id);
+      current = current.parentId ? model.nodeMap.get(current.parentId) : undefined;
+    }
+    return null;
+  };
+  for (const link of model.crossLinks) {
+    if (!link.isLearning) continue;
+    const source = nearestVisibleAncestor(link.source);
+    const target = nearestVisibleAncestor(link.target);
+    if (source && target) connect(source, target);
+  }
+
+  distances.set(selectedId, 0);
+  let frontier = [selectedId];
+  for (let depth = 1; depth <= 2; depth += 1) {
+    const next: string[] = [];
+    for (const id of frontier) for (const neighbor of adjacency.get(id) || []) {
+      if (visibleIds.has(neighbor) && (distances.get(neighbor) ?? 3) > depth) {
+        distances.set(neighbor, depth);
+        next.push(neighbor);
+      }
+    }
+    frontier = next;
+  }
+  return distances;
 }
 
 function atlasEndpointFor(
@@ -658,13 +751,32 @@ export function buildAtlasMetroModel(state: SystemState): AtlasMetroModel {
     nodeMap,
     childrenMap,
     crossLinks,
+    ...buildAtlasGraphIndexes(nodes, crossLinks),
     sourceNodeIds,
   };
 }
 
-export function visibleAtlasIds(model: AtlasMetroModel, expanded: ReadonlySet<string>): string[] {
+export function visibleAtlasIds(
+  model: AtlasMetroModel,
+  expanded: ReadonlySet<string>,
+  visibleLayers?: ReadonlySet<AtlasGraphLayer>,
+): string[] {
+  let layerContext: Set<string> | null = null;
+  if (visibleLayers && visibleLayers.size < ATLAS_GRAPH_LAYERS.length) {
+    layerContext = new Set<string>(model.roots);
+    for (const node of model.nodes) {
+      if (!atlasGraphLayersForNode(node).some(layer => visibleLayers.has(layer))) continue;
+      let current: AtlasMetroNode | undefined = node;
+      while (current && !layerContext.has(current.id)) {
+        layerContext.add(current.id);
+        current = current.parentId ? model.nodeMap.get(current.parentId) : undefined;
+      }
+    }
+  }
+
   const out: string[] = [];
   const walk = (id: string) => {
+    if (layerContext && !layerContext.has(id)) return;
     if (!model.nodeMap.has(id)) return;
     out.push(id);
     if (expanded.has(id)) {
@@ -689,9 +801,7 @@ export function atlasPathTo(model: AtlasMetroModel, id: string): AtlasMetroNode[
 
 export function relatedAtlasNodes(model: AtlasMetroModel, id: string): AtlasMetroNode[] {
   const ids = new Set<string>();
-  for (const link of model.crossLinks) {
-    if (link.source === id) ids.add(link.target);
-    if (link.target === id) ids.add(link.source);
-  }
+  for (const link of model.outgoing.get(id) || []) ids.add(link.target);
+  for (const link of model.incoming.get(id) || []) ids.add(link.source);
   return [...ids].map(candidate => model.nodeMap.get(candidate)).filter((node): node is AtlasMetroNode => Boolean(node));
 }

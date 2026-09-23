@@ -1,7 +1,7 @@
 import {useCallback,useEffect,useMemo,useState} from 'react';
 import {useNexoStore} from '../data/NexoStore.tsx';
 import {NexoGraph,type NexoGraphView} from '../components/NexoGraph.tsx';
-import type {AtlasMetroModel,AtlasMetroNode,AtlasCrossLink} from '../atlas3d/atlasAdapter.ts';
+import {buildAtlasGraphIndexes,type AtlasMetroModel,type AtlasMetroNode,type AtlasCrossLink} from '../atlas3d/atlasAdapter.ts';
 
 type NodeKind='ROOT'|'LAYER'|'TRANSPORT'|'TOOL'|'FAMILY'|'CAPABILITY'|'BACKEND'|'ROLE';
 type TopologyNode={
@@ -133,7 +133,7 @@ function systemGraphModel(topology:Topology,mode:ViewMode,search:string):AtlasMe
   }));
   return {
     revision:[topologySignature(topology),mode,query].join('|'),generatedAt:topology.generated_at,roots:[rootId],nodes,nodeMap,
-    childrenMap,crossLinks,sourceNodeIds:new Set(nodes.map(node=>node.id)),
+    childrenMap,crossLinks,...buildAtlasGraphIndexes(nodes,crossLinks),sourceNodeIds:new Set(nodes.map(node=>node.id)),
   };
 }
 

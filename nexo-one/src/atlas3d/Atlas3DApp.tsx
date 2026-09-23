@@ -3,11 +3,13 @@ import { useSystem } from '../data/useSystem.ts';
 import { atlasRouteParams } from './route-params.ts';
 import type { SystemStore } from '../data/useSystem.ts';
 import {
+  ATLAS_GRAPH_LAYERS,
   atlasPathTo,
   buildAtlasMetroModel,
   relatedAtlasNodes,
   visibleAtlasIds,
   type AtlasCrossLink,
+  type AtlasGraphLayer,
   type AtlasMetroNode,
 } from './atlasAdapter.ts';
 import { GraphViewSwitch, NexoGraph } from '../components/NexoGraph.tsx';
@@ -206,6 +208,7 @@ export function Atlas3DContent({system,themeOverride}:{system:SystemStore;themeO
   const fullModel = useMemo(() => system.state ? buildAtlasMetroModel(system.state) : null, [system.state]);
   const model = useMemo(() => fullModel ? atlasModelForLens(fullModel,lens) : null, [fullModel,lens]);
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
+  const [visibleLayers, setVisibleLayers] = useState<Set<AtlasGraphLayer>>(() => new Set(ATLAS_GRAPH_LAYERS));
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [localAtlasTheme] = useState<AtlasTheme>(initialAtlasTheme);
   const atlasTheme:AtlasTheme=themeOverride==='light'||themeOverride==='dark'?themeOverride:localAtlasTheme;
@@ -303,7 +306,7 @@ export function Atlas3DContent({system,themeOverride}:{system:SystemStore;themeO
   const activeExpanded = navigationStale ? new Set(initialExpanded) : expanded;
   const activeSelectedId = navigationStale ? (qaExpandedNode?.id || model.roots[0] || null) : selectedId;
 
-  const visibleIds = visibleAtlasIds(model, activeExpanded);
+  const visibleIds = visibleAtlasIds(model, activeExpanded, visibleLayers);
   const visibleSet = new Set(visibleIds);
   const expandableIds = model.nodes.filter(node => node.childCount > 0).map(node => node.id);
   const allExpanded = expandableIds.length > 0 && expandableIds.every(id => activeExpanded.has(id));
@@ -545,6 +548,7 @@ export function Atlas3DContent({system,themeOverride}:{system:SystemStore;themeO
         <NexoGraph
           model={model}
           expanded={activeExpanded}
+          visibleLayers={visibleLayers}
           selectedId={activeSelectedId}
           showRelations={showBeams}
           view={viewMode}
@@ -571,6 +575,9 @@ export function Atlas3DContent({system,themeOverride}:{system:SystemStore;themeO
             <div className="atlas-graph-filters">
               <div className="atlas-lens-switch" role="group" aria-label="Lente do mapa">
                 {ATLAS_LENSES.map(([id,name])=><button type="button" key={id} className={lens===id?'active':''} aria-pressed={lens===id} onClick={()=>switchLens(id)}>{name}</button>)}
+              </div>
+              <div className="atlas-layer-switch" role="group" aria-label="Camadas do ATLAS">
+                {ATLAS_GRAPH_LAYERS.map(layer=><button type="button" key={layer} className={visibleLayers.has(layer)?'active':''} aria-pressed={visibleLayers.has(layer)} onClick={()=>setVisibleLayers(current=>{const next=new Set(current);if(next.has(layer))next.delete(layer);else next.add(layer);return next;})}>{layer==='knowledge'?'Knowledge':layer==='execution'?'Execution':'Capability'}</button>)}
               </div>
               <GraphViewSwitch view={viewMode} onChange={switchViewMode}/>
               <button className="atlas-button atlas-expand-button" aria-pressed={allExpanded} onClick={toggleExpandAll}>
