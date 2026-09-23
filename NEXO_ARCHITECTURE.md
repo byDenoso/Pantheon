@@ -24,6 +24,15 @@ Canonical mutation loop:
 
 No dual-write to Git is permitted.
 
+## Writer, readers and sync (2026-09-23)
+
+- **Single writer:** `byDenoso/TCC:scripts/nexo_tower.py apply` (local lock -> download -> mutate -> head re-read -> write same file id -> readback -> `repository_dispatch` to Pages). It runs on the operator's machine under the Claude automations (`TCC/automations/`). Credential: an Editor service account on the Tower file only.
+- **ChatGPT** reads the Tower through its Drive connector and never writes it. Proposals, hypotheses and learning signals go to the create-only Drive folder `NEXO_INBOX`; the writer applies them.
+- **ATLAS (Pages)** reads the Tower from Drive with a Reader-only secret (`NEXO_DRIVE_READER_JSON`) and builds the public projection inside the job. The vault export mirror is a fallback only while that secret is absent. The scheduled cron is a slow reconciler (GitHub runs it every few hours); the writer's dispatch is the sync path.
+- **Drift check:** `nexo_tower.py status` compares the Tower `state_fingerprint` with the published `tower-projection/manifest.json` and reports `CURRENT` or `OUTDATED`.
+- **Meaning:** `TCC/runtime/nexo_agent_api/contracts/SEMANTIC_TAXONOMY_V1.json` (Git contract). Every projected test/campaign carries a resolved `semantic` block; the ATLAS renders domains/stations from it.
+- **MCP:** one read-only surface; it must read the live Tower, not the frozen Git copy. Mutations are forwarded to the writer, never written by the MCP.
+
 Current Atlas V3 design: `docs/superpowers/specs/2026-09-14-atlas-neural-v3.md`.
 
 Historical sovereign architecture: `docs/superpowers/specs/2026-09-13-nexo-sovereign-architecture.md`.
