@@ -1,4 +1,4 @@
-import {useEffect,useMemo,useRef,useState} from 'react';
+import {useEffect,useMemo,useRef,useState,type ReactNode} from 'react';
 import {MetroAtlasRenderer} from '../atlas3d/MetroAtlasRenderer.tsx';
 import {ensureAtlasG6} from '../atlas3d/g6-loader.ts';
 import {visibleAtlasIds,type AtlasMetroModel} from '../atlas3d/atlasAdapter.ts';
@@ -14,11 +14,11 @@ export function GraphViewSwitch({view,onChange}:{view:NexoGraphView;onChange:(vi
 }
 
 export function NexoGraph({
-  model,expanded,selectedId,view,theme='dark',showRelations=true,fitNonce=0,onSelect,onViewChange,onFit,onReset,onReady,
+  model,expanded,selectedId,view,theme='dark',showRelations=true,fitNonce=0,onSelect,onViewChange,onFit,onReset,onReady,toolbarStart,toolbarExtraActions,
 }:{
   model:AtlasMetroModel;expanded:ReadonlySet<string>;selectedId:string|null;view:NexoGraphView;theme?:'dark'|'light';
   showRelations?:boolean;fitNonce?:number;onSelect:(id:string)=>void;onViewChange:(view:NexoGraphView)=>void;
-  onFit?:()=>void;onReset?:()=>void;onReady?:()=>void;
+  onFit?:()=>void;onReset?:()=>void;onReady?:()=>void;toolbarStart?:ReactNode;toolbarExtraActions?:ReactNode;
 }){
   const hostRef=useRef<HTMLDivElement|null>(null);
   const [g6Ready,setG6Ready]=useState(()=>view==='3d'||Boolean((window as any).G6?.Graph));
@@ -60,9 +60,9 @@ export function NexoGraph({
 
   return <section ref={hostRef} tabIndex={-1} className="nexo-graph" data-graph-view={view} data-graph-visible={visible.length} data-graph-total={model.nodes.length}>
     <div className="nexo-graph-toolbar">
-      <div className="nexo-graph-count"><strong>{visible.length}</strong> visíveis · <span>{model.nodes.length} total</span> · <span>{relationCount} relações</span></div>
+      <div className="nexo-graph-toolbar-start">{toolbarStart}<div className="nexo-graph-count"><strong>{visible.length}</strong> visíveis · <span>{model.nodes.length} total</span> · <span>{relationCount} relações</span></div></div>
       <div className="nexo-graph-actions">
-        <GraphViewSwitch view={view} onChange={onViewChange}/>
+        <GraphViewSwitch view={view} onChange={onViewChange}/>{toolbarExtraActions}
         {onFit&&<button type="button" onClick={onFit}>Enquadrar</button>}
         {onReset&&<button type="button" onClick={onReset}>Resetar</button>}
         <button type="button" onClick={fullscreen}>Tela cheia</button>
