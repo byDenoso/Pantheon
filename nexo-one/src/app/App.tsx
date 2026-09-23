@@ -18,7 +18,7 @@ import { LoadingState, Surface } from '../components/states.tsx';
 import { StatusBadge } from '../components/primitives.tsx';
 import { ActionCard, ExecutionTrace, HumanInboxItem } from '../components/composites.tsx';
 import { Modal } from '../shell/Modal.tsx';
-import { InstrumentHeader } from '../shell/InstrumentHeader.tsx';
+import { InstrumentHeader, type ProductProvenance } from '../shell/InstrumentHeader.tsx';
 import { Overview } from '../features/system/Overview.tsx';
 import { ActionsView, ExecutionView, InboxView } from '../features/system/Operations.tsx';
 import { CapabilitiesView, IntegrityView, SourcesView, TruthGraphView } from '../features/system/Integrity.tsx';
@@ -68,13 +68,31 @@ export default function App() {
   const [personalContext, setPersonalContext] = useState('NEXO');
 
   const commandRef = useRef<HTMLInputElement>(null);
-  const {system} = useNexoStore();
+  const {system,loadPublishedContext} = useNexoStore();
+  const [productProvenance,setProductProvenance]=useState<ProductProvenance>({
+    authority:null,storage:null,snapshot:null,stateFingerprint:null,projectionFingerprint:null,commit:null,
+  });
   const world = useWorld();
   const refreshWorld = world.refresh;
   const session = useSession(useCallback(() => refreshWorld(true), [refreshWorld]));
 
   useEffect(() => { document.documentElement.dataset.theme = theme; persist('nexo-theme', theme); }, [theme]);
   useEffect(() => { persist('nexo-view', view); }, [view]);
+  useEffect(()=>{
+    const ctrl=new AbortController();
+    void loadPublishedContext(false,ctrl.signal).then(({towerManifest,buildMeta})=>{
+      const manifest=towerManifest||{};
+      setProductProvenance({
+        authority:String(manifest.authority||'')||null,
+        storage:String(manifest.source_storage||'')||null,
+        snapshot:String(manifest.source_snapshot_id||'')||null,
+        stateFingerprint:String(manifest.source_state_fingerprint||'')||null,
+        projectionFingerprint:String(manifest.projection_fingerprint||buildMeta?.projection_fingerprint||'')||null,
+        commit:String(manifest.tower_commit||buildMeta?.tower_commit||'')||null,
+      });
+    }).catch(()=>{});
+    return()=>ctrl.abort();
+  },[loadPublishedContext]);
   useEffect(() => {
     if (!viewFromHash(window.location.hash)) window.history.replaceState(null, '', hashForView(view));
   }, []);
@@ -150,7 +168,7 @@ export default function App() {
     if(mode==='sistema'){goSystem();return;}
   };
   const header = <InstrumentHeader mode={currentMode} view={view} theme={theme} syncStatus={system.syncing?'SYNCING':system.syncStatus}
-    readAt={system.lastSuccessfulReadAt} fingerprint={system.state?.bus.fingerprint||''} command={command} commandRef={commandRef}
+    readAt={system.lastSuccessfulReadAt} provenance={{...productProvenance,projectionFingerprint:productProvenance.projectionFingerprint||system.state?.bus.fingerprint||null}} command={command} commandRef={commandRef}
     onCommandChange={setCommand} onCommandSubmit={submitCommand} onThemeToggle={()=>setTheme(theme==='dark'?'light':'dark')}
     onSync={system.sync} onNavigate={navigateMode} onAccountClick={()=>setLoginOpen(true)} privateSession={session.session.authenticated}/>;
   if (systemRoute) return <ProvenanceProvider><div className={`cockpit unified-shell system-route${isMobile?' mobile':''}`} data-view="SYSTEM" data-access={session.session.authenticated?'PRIVATE':'PUBLIC'}>
