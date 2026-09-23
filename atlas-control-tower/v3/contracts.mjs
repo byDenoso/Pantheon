@@ -2,7 +2,7 @@ export const ATLAS_PROJECTION_CONTRACT = 'ATLAS_PROJECTION_V3';
 export const ATLAS_PROJECTION_VERSION = '3.0.0';
 export const ATLAS_SCHEMA_VERSION = '3.0';
 export const TOWER_AUTHORITY = 'TOWER_V06';
-export const TOWER_TRUTH_OWNER = 'byDenoso/NEXO-Obsidian-Vault@main:TOWER_V06';
+export const TOWER_TRUTH_OWNER = 'TOWER_V06@GOOGLE_DRIVE_PRIVATE';
 
 export const LAYERS = Object.freeze(['SCIENCE', 'LEARNING', 'OPERATIONS', 'EVIDENCE', 'PROVENANCE', 'HEALTH']);
 export const FRESHNESS = Object.freeze(['SNAPSHOT', 'STALE', 'UNAVAILABLE', 'CORRUPT']);
@@ -16,8 +16,8 @@ export function assertTowerControl(control) {
   if (control.atlas_role && control.atlas_role !== 'READ_ONLY_PROJECTION') {
     throw new Error('ATLAS_V3_INVALID_ATLAS_ROLE');
   }
-  if (control.drive_writeback_to_truth && control.drive_writeback_to_truth !== 'FORBIDDEN') {
-    throw new Error('ATLAS_V3_DRIVE_WRITEBACK_FORBIDDEN');
+  if (control.drive_writeback_to_truth && !['CORE_SERIALIZED_CANONICAL_WRITE','IN_PLACE_FILE_REVISION_CAS_READBACK'].includes(control.drive_writeback_to_truth)) {
+    throw new Error('ATLAS_V3_INVALID_DRIVE_WRITE_MODEL');
   }
   return control;
 }
