@@ -1952,8 +1952,15 @@ function MetroThreeView({
     const structureChanged = lastStructureKey.current !== structureKey;
     if (!runtime.hasFit || structureChanged) {
       const hadFit = runtime.hasFit;
+      const selectedNode=selectedId?model.nodeMap.get(selectedId):null;
+      const initialSelectionFocus=!hadFit&&Boolean(selectedNode?.parentId);
       runtime.hasFit = true;
-      fitThree(runtime, hadFit && structureChanged, null, 'all');
+      fitThree(
+        runtime,
+        hadFit && structureChanged,
+        initialSelectionFocus?threeFocusIds(model,expanded,selectedId):null,
+        initialSelectionFocus?'selection':'all',
+      );
       lastStructureKey.current = structureKey;
       // Prevent the selection effect from immediately undoing the structural fit.
       lastFocusKey.current = focusKey;
