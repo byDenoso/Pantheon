@@ -572,7 +572,7 @@ export function Atlas3DContent({system,themeOverride}:{system:SystemStore;themeO
                 {ATLAS_LENSES.map(([id,name])=><button type="button" key={id} className={lens===id?'active':''} aria-pressed={lens===id} onClick={()=>switchLens(id)}>{name}</button>)}
               </div>
               <button className="atlas-button atlas-expand-button" aria-pressed={allExpanded} onClick={toggleExpandAll}>
-                {allExpanded ? 'Contrair' : 'Expandir'}
+                {allExpanded ? 'Contrair tudo' : 'Expandir tudo'}
               </button>
               <label className="atlas-toggle"><input type="checkbox" checked={showBeams} onChange={event => setShowBeams(event.target.checked)} />Relações</label>
               <button className="atlas-button atlas-mobile-details-toggle" aria-expanded={mobileDetailsOpen} aria-controls="atlas-details-panel" onClick={() => setMobileDetailsOpen(value => !value)}>Detalhes</button>
