@@ -93,7 +93,8 @@ test('app navigation uses seven primary tabs and removes duplicate rail navigati
   ]);
   assert.match(app, /<InstrumentHeader mode=\{currentMode\}/);
   assert.match(app, /unified-shell system-route/);
-  assert.match(app, /new URLSearchParams\(systemQuery\)\.get\('theme'\)/);
+  assert.match(app, /window\.location\.hash\.split\('\?', 2\)\[1\]/);
+  assert.match(app, /routeTheme === 'light' \|\| routeTheme === 'dark'/);
   assert.match(app, /<EmbeddedMcp theme=\{theme\}/);
   assert.match(header, /Science :20 · Exec :05 · drift 0/);
   assert.match(header, /aria-label="Modo do produto"/);
