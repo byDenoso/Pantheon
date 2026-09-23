@@ -9,7 +9,7 @@ import {
   type AtlasTopDomain,
 } from '../viewmodels/atlasTaxonomy.ts';
 
-export type AtlasNodeKind = 'hub' | 'subdomain' | GraphNode['type'];
+export type AtlasNodeKind = 'hub' | 'subdomain' | GraphNode['type'] | 'ROOT' | 'LAYER' | 'TRANSPORT' | 'TOOL' | 'FAMILY' | 'RUNTIME' | 'ROLE';
 
 export interface AtlasTemporalPoint {
   label: 'observed' | 'checked' | 'projection';
