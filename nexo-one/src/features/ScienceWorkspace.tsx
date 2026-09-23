@@ -1,4 +1,4 @@
-import {useMemo,useRef,useState} from 'react';
+import {useMemo,useRef,useState,type ReactNode,type RefObject} from 'react';
 import type {Filament,ScienceEvidenceField,ScienceProjectionRecord,ScienceProjectionV1,SystemState} from '../contracts/system.ts';
 import {NexoGraph,type NexoGraphView} from '../components/NexoGraph.tsx';
 import type {AtlasCrossLink,AtlasMetroModel,AtlasMetroNode} from '../atlas3d/atlasAdapter.ts';
@@ -68,6 +68,15 @@ function downloadPlotPng(svg:SVGSVGElement|null){
   if(!svg)return;
   const clone=svg.cloneNode(true) as SVGSVGElement;
   clone.setAttribute('xmlns','http://www.w3.org/2000/svg');
+  const originals=[svg,...Array.from(svg.querySelectorAll('*'))] as Element[];
+  const copies=[clone,...Array.from(clone.querySelectorAll('*'))] as Element[];
+  copies.forEach((item,index)=>{
+    const source=originals[index];if(!source)return;
+    const style=getComputedStyle(source);
+    for(const key of ['fill','stroke','stroke-width','font','font-size','font-family','font-weight','opacity']){
+      const value=style.getPropertyValue(key);if(value)item.setAttribute(key,value);
+    }
+  });
   const data=new XMLSerializer().serializeToString(clone);
   const source=URL.createObjectURL(new Blob([data],{type:'image/svg+xml'}));
   const image=new Image();
@@ -155,7 +164,7 @@ function scienceGraphModel(projection:ScienceProjectionV1,generatedAt:string):At
 
 function StateText({value}:{value:unknown}){return <span className={value===null||value===undefined?'science-unpublished':''}>{textOf(value)}</span>;}
 
-function DenseTable({heads,rows,empty}:{heads:string[];rows:React.ReactNode[];empty:string}){
+function DenseTable({heads,rows,empty}:{heads:string[];rows:ReactNode[];empty:string}){
   return <div className="science-table-wrap"><table className="science-table"><thead><tr>{heads.map(head=><th key={head}>{head}</th>)}</tr></thead><tbody>{rows.length?rows:<tr><td colSpan={heads.length} className="science-empty">{empty}</td></tr>}</tbody></table></div>;
 }
 
@@ -250,7 +259,7 @@ export default function ScienceWorkspace({state}:{state:SystemState}){
   </section>;
 }
 
-function EvidencePlot({rows,svgRef}:{rows:Array<{id:string;parameter:string;value:number;lo:number|null;hi:number|null;unit:string;verdict:string}>;svgRef:React.RefObject<SVGSVGElement|null>}){
+function EvidencePlot({rows,svgRef}:{rows:Array<{id:string;parameter:string;value:number;lo:number|null;hi:number|null;unit:string;verdict:string}>;svgRef:RefObject<SVGSVGElement|null>}){
   const lows=rows.map(row=>row.value-(row.lo??0)),highs=rows.map(row=>row.value+(row.hi??0));
   let min=Math.min(...lows),max=Math.max(...highs);if(min===max){min-=1;max+=1;}
   const x=(value:number)=>220+((value-min)/(max-min))*1040;
