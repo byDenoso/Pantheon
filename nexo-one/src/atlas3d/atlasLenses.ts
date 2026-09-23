@@ -5,8 +5,8 @@ export const ATLAS_LENSES:Array<[AtlasLens,string]>=[
   ['operacao','Operação'],['ciencia','Ciência'],['sistema','Sistema'],['aprendizado','Aprendizado'],
 ];
 
-const OPERATION_TYPES=new Set(['ACTION','EFFECT','CAPABILITY','PROVIDER','PROJECTION']);
-const SYSTEM_TYPES=new Set(['CAPABILITY','PROVIDER','PROJECTION','MEMORY']);
+const OPERATION_TYPES=new Set(['CAMPAIGN','TEST','ACTION','AUTOMATION','RUN','EFFECT','ARTIFACT','SIDE_QUEST','CAPABILITY','PROVIDER','PROJECTION']);
+const SYSTEM_TYPES=new Set(['CAPABILITY','PROVIDER','TOOL','PROJECTION','MEMORY','GOVERNANCE_RULE']);
 
 function addAncestors(model:AtlasMetroModel,id:string,keep:Set<string>){
   let current=model.nodeMap.get(id);
