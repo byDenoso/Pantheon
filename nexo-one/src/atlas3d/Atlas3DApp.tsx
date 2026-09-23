@@ -11,6 +11,7 @@ import {
   type AtlasMetroNode,
 } from './atlasAdapter.ts';
 import { NexoGraph } from '../components/NexoGraph.tsx';
+import { ConsultInspector } from '../components/ConsultInspector.tsx';
 import { ATLAS_LENSES, atlasModelForLens, normalizeAtlasLens, type AtlasLens } from './atlasLenses.ts';
 
 type ViewMode = '2d' | '3d';
@@ -262,6 +263,12 @@ export function Atlas3DContent({system,themeOverride}:{system:SystemStore;themeO
   const [mobileDetailsOpen, setMobileDetailsOpen] = useState(false);
   const [fitNonce, setFitNonce] = useState(0);
   const [rendererReady, setRendererReady] = useState(false);
+  const requestedSelection = useMemo(()=>{
+    if(!model||typeof window==='undefined')return null;
+    const requested=atlasRouteParams().get('sel');
+    if(!requested)return null;
+    return model.nodes.find(node=>node.id===requested||node.sourceId===requested||node.sourceId===`capability:${requested}`||node.id===`capability:${requested}`)?.id||null;
+  },[model?.revision]);
 
   useEffect(() => {
     document.documentElement.dataset.atlasTheme = atlasTheme;
@@ -280,11 +287,11 @@ export function Atlas3DContent({system,themeOverride}:{system:SystemStore;themeO
   useEffect(() => {
     if (!model) return;
     setExpanded(new Set(initialExpanded));
-    setSelectedId(qaExpandedNode?.id || model.roots[0] || null);
+    setSelectedId(requestedSelection || qaExpandedNode?.id || model.roots[0] || null);
     setNavigationRevision(model.revision);
     setRendererReady(false);
     setMobileDetailsOpen(false);
-  }, [model?.revision, initialExpanded, qaExpandedNode?.id]);
+  }, [model?.revision, initialExpanded, qaExpandedNode?.id, requestedSelection]);
 
   if (!system.state || !model) {
     return (
@@ -301,7 +308,7 @@ export function Atlas3DContent({system,themeOverride}:{system:SystemStore;themeO
   // with only the roots and can lose the expansion update while render() is in flight.
   const navigationStale = navigationRevision !== model.revision;
   const activeExpanded = navigationStale ? new Set(initialExpanded) : expanded;
-  const activeSelectedId = navigationStale ? (qaExpandedNode?.id || model.roots[0] || null) : selectedId;
+  const activeSelectedId = navigationStale ? (requestedSelection || qaExpandedNode?.id || model.roots[0] || null) : selectedId;
 
   const visibleIds = visibleAtlasIds(model, activeExpanded);
   const visibleSet = new Set(visibleIds);
@@ -643,40 +650,20 @@ export function Atlas3DContent({system,themeOverride}:{system:SystemStore;themeO
         </div>
       </section>
 
-      {mobileDetailsOpen && (
-        <button
-          className="atlas-sidebar-backdrop"
-          aria-label="Fechar painel de detalhes"
-          onClick={() => setMobileDetailsOpen(false)}
-        />
-      )}
-      <aside
-        id="atlas-details-panel"
-        className={`atlas-sidebar${mobileDetailsOpen ? ' mobile-open' : ''}`}
-        aria-hidden={!mobileDetailsOpen ? undefined : false}
-      >
-        <div className="atlas-brand">
-          <div><strong>NEXO ATLAS</strong><small>METRO + 3D</small></div>
-          <span>{system.state.graph.nodes.length} entidades fonte</span>
-          <button
-            className="atlas-mobile-sidebar-close"
-            aria-label="Fechar painel de detalhes"
-            onClick={() => setMobileDetailsOpen(false)}
-          >
-            ×
-          </button>
-        </div>
-        <DetailPanel
-          node={selected}
-          children={children}
-          related={related}
-          learning={learningConnections}
-          generatedAt={model.generatedAt}
-          onSelectNode={setSelectedId}
-          theme={atlasTheme}
-        />
-        <div className="atlas-source-state"><span>{system.sourceLabel}</span></div>
-      </aside>
+      {mobileDetailsOpen && <button className="atlas-sidebar-backdrop" aria-label="Fechar painel de detalhes" onClick={() => setMobileDetailsOpen(false)}/>}
+      {selected&&<ConsultInspector
+        entityId={selected.sourceId||selected.id}
+        title={selected.name}
+        kind={String(selected.entityType)}
+        status={selected.status}
+        onClose={()=>{setSelectedId(null);setMobileDetailsOpen(false);}}
+        mapHref={`#/atlas?lente=${lens}&sel=${encodeURIComponent(selected.sourceId||selected.id)}&view=${viewMode}`}
+        systemHref={selected.entityType==='CAPABILITY'?`#/sistema?tab=capabilities&q=${encodeURIComponent(selected.sourceId||selected.id)}`:'#/sistema?tab=graph'}
+        summary={<><p>{selected.summary}</p><dl><div><dt>Domínio</dt><dd>{selected.domain}</dd></div><div><dt>Tipo</dt><dd>{selected.entityType}</dd></div><div><dt>Estado</dt><dd>{selected.status}</dd></div><div><dt>Atualizado</dt><dd>{formatDate(selected.updatedAt)}</dd></div></dl></>}
+        relations={<dl>{children.map(child=><div key={child.id}><dt>Contém</dt><dd><button className="text-button" onClick={()=>activate(child.id)}>{child.name}</button></dd></div>)}{related.slice(0,18).map(item=><div key={item.id}><dt>Relacionado</dt><dd><button className="text-button" onClick={()=>activate(item.id)}>{item.name}</button></dd></div>)}{learningConnections.slice(0,12).map(item=><div key={item.id}><dt>{item.direction==='saída'?'Learning →':'Learning ←'}</dt><dd><button className="text-button" onClick={()=>activate(item.otherId)}>{item.otherName}</button> · {item.theme}</dd></div>)}</dl>}
+        proof={<dl><div><dt>Relações</dt><dd>{selected.relationCount}</dd></div><div><dt>Filhos</dt><dd>{selected.childCount}</dd></div><div><dt>Authority</dt><dd>{selected.authorityClass||'não publicado'}</dd></div></dl>}
+        origin={<dl><div><dt>ID canônico</dt><dd><code>{selected.sourceId||selected.id}</code></dd></div><div><dt>ID do mapa</dt><dd><code>{selected.id}</code></dd></div><div><dt>source_ref</dt><dd><code>{selected.sourceRef||'não publicado'}</code></dd></div><div><dt>source_revision</dt><dd><code>{selected.sourceRevision||'não publicado'}</code></dd></div><div><dt>fingerprint</dt><dd><code>{selected.fingerprint||'não publicado'}</code></dd></div></dl>}
+      />}
     </main>
   );
 }
