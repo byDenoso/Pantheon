@@ -57,6 +57,38 @@ jobs:
           persist-credentials: false
           fetch-depth: 0
 
+      # Tower -> ATLAS without an intermediate commit. With a Drive *reader*
+      # credential the live Tower replaces the export mirror in-place, so every
+      # later step reads operational truth directly. Without it the mirror is
+      # used unchanged (legacy path).
+      - name: Materialize live Tower from Drive
+        id: live_tower
+        shell: bash
+        env:
+          GOOGLE_SERVICE_ACCOUNT_JSON: ${{ secrets.NEXO_DRIVE_READER_JSON }}
+        run: |
+          set -euo pipefail
+          if [ -z "${GOOGLE_SERVICE_ACCOUNT_JSON}" ]; then
+            echo "source=VAULT_EXPORT_MIRROR" >> "$GITHUB_OUTPUT"
+            echo "::warning::NEXO_DRIVE_READER_JSON is not set; ATLAS falls back to the vault export mirror"
+            exit 0
+          fi
+          git clone -q --depth 1 https://github.com/byDenoso/TCC.git _tcc_reader
+          python3 -m pip install -q google-auth requests
+          python3 _tcc_reader/scripts/nexo_tower.py download --out /tmp/NEXO_TOWER_LIVE.json
+          rm -rf _vault/TOWER_V06
+          python3 - <<'PY'
+          import sys
+          from pathlib import Path
+          sys.path.insert(0, "_tcc_reader")
+          from runtime.nexo_agent_api.live_tower import materialize_live_tower
+          materialize_live_tower(Path("/tmp/NEXO_TOWER_LIVE.json").read_bytes(), "_vault/TOWER_V06")
+          PY
+          python3 _tcc_reader/scripts/build_public_projection.py \
+            --live-tower /tmp/NEXO_TOWER_LIVE.json \
+            --out _vault/TOWER_V06/projections/public
+          echo "source=DRIVE_LIVE" >> "$GITHUB_OUTPUT"
+
       - name: Verify Drive-primary export marker
         shell: bash
         run: |
