@@ -780,6 +780,9 @@ test('dedicated Atlas production page uses Metro renderer, G6 and deterministic 
   assert.match(sharedGraph, /MetroAtlasRenderer/);
   assert.match(sharedGraph, /Ver como tabela/);
   assert.match(sharedGraph, /GraphViewSwitch/);
+  assert.match(sharedGraph, /nexo\.graph\.illuminated\.v1/);
+  assert.match(sharedGraph, /Iluminar tudo/);
+  assert.match(sharedGraph, /allIlluminated=\{illuminated\}/);
   assert.match(main, /data-atlas-bootstrap/);
   assert.match(loader, /atlasG6Source/);
 });
@@ -793,4 +796,14 @@ test('G6 selection changes wait for the current canvas render', async () => {
   assert.match(refresh, /container\.dataset\.g6Ready = 'false';\s*const data = buildG6Data/);
   assert.match(refresh, /if \(!canvasReady\)[\s\S]*?container\.dataset\.g6Ready = 'true';\s*applyG6Selection/);
   assert.match(renderer, /if \(container\?\.dataset\.g6Ready !== 'true'\) return;/);
+});
+
+test('shared graph illumination preserves a bright context across 2D and 3D renderers', async () => {
+  const renderer = await text('src/atlas3d/MetroAtlasRenderer.tsx');
+  assert.match(renderer, /allIlluminated:\s*boolean/);
+  assert.match(renderer, /lit-focus-muted/);
+  assert.match(renderer, /lit-edge-muted/);
+  assert.match(renderer, /runtime\.illuminated/);
+  assert.match(renderer, /const faded = Boolean\(focusId\) && level > 2/);
+  assert.match(renderer, /edge\.baseGlowOpacity \* factor \* \(runtime\.illuminated \? 2\.8 : 1\)/);
 });
