@@ -32,7 +32,8 @@ function initialGraphView():NexoGraphView{
   try{return localStorage.getItem('nexo.graph.view.v1')==='3d'?'3d':'2d';}catch{return'2d';}
 }
 function initialGraphMode():GraphMode{
-  return routeParams().get('graph')==='relacoes'?'relacoes':'evidencia';
+  const params=routeParams();
+  return params.get('graph')==='relacoes'||params.get('view')==='2d'||params.get('view')==='3d'?'relacoes':'evidencia';
 }
 function envelope(record:ScienceProjectionRecord,key:string):ScienceEvidenceField|undefined{
   const value=record[key];
@@ -165,7 +166,11 @@ function scienceGraphModel(projection:ScienceProjectionV1,generatedAt:string):At
   return {revision:projection.fingerprint,generatedAt,roots:[rootId],nodes,nodeMap,childrenMap,crossLinks,sourceNodeIds:new Set(nodes.map(node=>node.id))};
 }
 
-function StateText({value}:{value:unknown}){return <span className={value===null||value===undefined?'science-unpublished':''}>{textOf(value)}</span>;}
+function StateText({value}:{value:unknown}){
+  const raw=typeof value==='string'?value.toUpperCase():'';
+  const human:Record<string,string>={ACTIVE:'Em andamento',RUNNING:'Em andamento',IN_PROGRESS:'Em andamento',PAUSED:'Pausada',CHECKPOINTED:'Em espera',CLOSED:'Encerrada',COMPLETED:'Concluída',SUPPORTS:'Compatível',FALSIFIES:'Refuta',NULL:'Nulo',INCONCLUSIVE:'Inconclusivo',PENDING:'Pendente'};
+  return <span className={value===null||value===undefined?'science-unpublished':''}>{human[raw]||textOf(value)}</span>;
+}
 
 function DenseTable({heads,rows,empty}:{heads:string[];rows:ReactNode[];empty:string}){
   return <div className="science-table-wrap"><table className="science-table"><thead><tr>{heads.map(head=><th key={head}>{head}</th>)}</tr></thead><tbody>{rows.length?rows:<tr><td colSpan={heads.length} className="science-empty">{empty}</td></tr>}</tbody></table></div>;
@@ -196,13 +201,13 @@ export default function ScienceWorkspace({state}:{state:SystemState}){
   };
   const setView=(next:NexoGraphView)=>{
     setGraphView(next);try{localStorage.setItem('nexo.graph.view.v1',next);}catch{}
-    const params=routeParams();params.set('tab','graficos');params.set('view',next);
+    const params=routeParams();params.set('tab','graficos');params.set('graph','relacoes');params.set('view',next);
     window.history.replaceState(null,'',`#/cockpit/ciencia?${params.toString()}`);
   };
   const setGraphSurface=(next:GraphMode)=>{
     setGraphMode(next);
     const params=routeParams();params.set('tab','graficos');
-    if(next==='relacoes')params.set('graph','relacoes');else params.delete('graph');
+    if(next==='relacoes')params.set('graph','relacoes');else {params.delete('graph');params.delete('view');}
     window.history.replaceState(null,'',`#/cockpit/ciencia?${params.toString()}`);
   };
 
