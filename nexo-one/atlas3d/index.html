@@ -1,10 +1,10 @@
 <!doctype html>
-<html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta http-equiv="refresh" content="0;url=../#/atlas?lente=operacao&view=3d"><title>NEXO · Atlas</title></head>
+<html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta http-equiv="refresh" content="1;url=../#/atlas?lente=operacao&view=3d"><title>NEXO · Atlas</title></head>
 <body><p>Abrindo Atlas…</p><script>
   const destination = new URL('../', location.href);
   const params = new URLSearchParams(location.search);
   params.set('lente', params.get('lente') || 'operacao');
-  params.set('view', '3d');
+  params.set('view', params.get('view') || '3d');
   if (location.hash) params.set('legacy', location.hash.slice(1));
   destination.hash = `/atlas?${params.toString()}`;
   location.replace(destination.toString());
