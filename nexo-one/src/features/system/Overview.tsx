@@ -42,7 +42,7 @@ export function Overview(
           <span>Blockers</span><strong>{summary.blockers.length}</strong>
         </button>
         <button className={summary.degradedCapabilities.length ? 'pulse-metric attention' : 'pulse-metric'} onClick={() => onNavigate('SOURCES')}>
-          <span>Capabilities</span><strong>{summary.degradedCapabilities.length}</strong>
+          <span>Capabilities fora de PASS</span><strong>{summary.degradedCapabilities.length}</strong>
         </button>
       </section>
 

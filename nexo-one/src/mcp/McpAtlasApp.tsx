@@ -1,4 +1,5 @@
 import {useCallback,useEffect,useMemo,useRef,useState} from 'react';
+import {useNexoStore} from '../data/NexoStore.tsx';
 import {CanvasGraph25D,type CanvasEdge25D,type CanvasGraph25DHandle,type CanvasNode25D} from '../components/CanvasGraph25D.tsx';
 import {dispatchProjectionSync,waitForProjectionSync} from '../data/projectionSync.ts';
 
@@ -22,7 +23,6 @@ const COLORS:Record<NodeKind,string>={
   ROOT:'#eafcff',LAYER:'#9fe9ff',TRANSPORT:'#8fdcf7',TOOL:'#79e7ff',
   FAMILY:'#6fc3e8',CAPABILITY:'#79e7ff',BACKEND:'#8fdcf7',ROLE:'#5fa7c4',
 };
-const endpoint=()=>new URL('./topology.json',window.location.href).toString();
 const idOf=(value:string|TopologyNode)=>typeof value==='string'?value:value.id;
 
 function kindLabel(kind:NodeKind){
@@ -79,16 +79,20 @@ type SyncState='idle'|'loading'|'same'|'updated'|'source-newer'|'error';
 
 const THEME_STORAGE_KEY='nexo.mcp.theme.v1';
 const GRAPH_VIEW_STORAGE_KEY='nexo.mcp.graph-view.v1';
-const PUBLIC_NEXO_BASE=String(import.meta.env.VITE_PUBLIC_NEXO_BASE||'https://bydenoso.github.io/Pantheon/').replace(/\/?$/,'/');
-const publicNexoUrl=(path='')=>new URL(path,PUBLIC_NEXO_BASE).toString();
+const COCKPIT_ROUTE='#/cockpit/comando';
+const routeParams=()=>{
+  const hash=window.location.hash;
+  const query=hash.match(/^#\/?sistema\?(.+)$/i)?.[1];
+  return query?new URLSearchParams(query):new URLSearchParams(window.location.search);
+};
 
 function initialTheme():McpTheme{
-  const query=new URLSearchParams(window.location.search).get('theme');
+  const query=routeParams().get('theme');
   if(query==='light'||query==='dark')return query;
   try{return window.localStorage.getItem(THEME_STORAGE_KEY)==='light'?'light':'dark';}catch{return'dark';}
 }
 function initialGraphView():GraphView{
-  const query=new URLSearchParams(window.location.search).get('graph');
+  const query=routeParams().get('graph');
   if(query==='2d'||query==='3d')return query;
   try{return window.localStorage.getItem(GRAPH_VIEW_STORAGE_KEY)==='3d'?'3d':'2d';}catch{return'2d';}
 }
@@ -242,13 +246,14 @@ function Graph({topology,search,mode,selected,onSelect,theme,view}:{topology:Top
 }
 
 export function McpAtlasApp(){
+  const {loadPublishedContext}=useNexoStore();
   const [topology,setTopology]=useState<Topology|null>(null);
   const topologyRef=useRef<Topology|null>(null);
   const [error,setError]=useState('');
   const [selected,setSelected]=useState<string|null>(null);
-  const [search,setSearch]=useState(()=>new URLSearchParams(window.location.search).get('q')||'');
+  const [search,setSearch]=useState(()=>routeParams().get('q')||'');
   const [mode,setMode]=useState<ViewMode>(()=>{
-    const candidate=new URLSearchParams(window.location.search).get('mode') as ViewMode|null;
+    const candidate=routeParams().get('mode') as ViewMode|null;
     return candidate&&Object.hasOwn(modeKinds,candidate)?candidate:'all';
   });
   const [syncState,setSyncState]=useState<SyncState>('idle');
@@ -266,11 +271,7 @@ export function McpAtlasApp(){
   const loadTopology=useCallback(async(manual=false,signal?:AbortSignal)=>{
     if(manual)setSyncState('loading');
     try{
-      const url=new URL(endpoint());
-      url.searchParams.set('readback',String(Date.now()));
-      const response=await fetch(url,{cache:'no-store',signal});
-      if(!response.ok)throw new Error('HTTP '+response.status);
-      const value=await response.json() as Topology;
+      const {topology:value}=await loadPublishedContext<Topology>(manual,signal);
       const previous=topologyRef.current;
       const changed=Boolean(previous)&&topologySignature(previous!)!==topologySignature(value);
       topologyRef.current=value;
@@ -283,7 +284,7 @@ export function McpAtlasApp(){
       setError(String(err));
       if(manual)setSyncState('error');
     }
-  },[]);
+  },[loadPublishedContext]);
 
   useEffect(()=>{
     const controller=new AbortController();
@@ -400,8 +401,8 @@ export function McpAtlasApp(){
     data-mcp-node-count={topology?.nodes.length||0}
     data-mcp-link-count={topology?.links.length||0}>
     <nav className="mcp-nav">
-      <a className="mcp-brand" href={publicNexoUrl()}><span className="mark">N</span><span>NEXO <em>ONE</em></span><b>MCP ATLAS</b></a>
-      <div className="nav-links"><a href={publicNexoUrl()}>Cockpit</a><a href="#topology">Topologia</a><a href="#architecture">Relações</a><a href="#source">Fonte</a></div>
+      <a className="mcp-brand" href={COCKPIT_ROUTE}><span className="mark">N</span><span>NEXO <em>ONE</em></span><b>MCP ATLAS</b></a>
+      <div className="nav-links"><a href={COCKPIT_ROUTE}>Cockpit</a><a href="#topology">Topologia</a><a href="#architecture">Relações</a><a href="#source">Fonte</a></div>
       <div className="nav-utilities">
         <button className="theme-toggle" type="button" onClick={()=>setTheme(current=>current==='dark'?'light':'dark')}
           aria-label={theme==='dark'?'Ativar tema claro':'Ativar tema escuro'}>{theme==='dark'?'☼':'☾'}</button>
@@ -412,17 +413,17 @@ export function McpAtlasApp(){
     <main>
       <section className="hero" id="topology">
         <div className="hero-copy">
-          <div className="kicker">TOWER_V06 · MCP STRUCTURE · READ-ONLY</div>
-          <h1>Topologia MCP<br/><span>da revisão atual.</span></h1>
-          <p>Tools expostas, capabilities registradas, backends de runtime e roles. O mapa preserva as relações declaradas e usa o snapshot Drive publicado como origem verificável.</p>
+          <div className="kicker">TOWER_V06 · TOPOLOGIA MCP · SOMENTE LEITURA</div>
+          <h1>Topologia MCP<br/><span>da projeção publicada.</span></h1>
+          <p>Ferramentas, capabilities registradas, runtimes e papéis. O mapa mantém apenas relações publicadas; a ficha abaixo identifica a origem declarada e a revisão usada no build.</p>
           {topology&&<div className="metrics">
             <div><strong>{topology.stats.tools}</strong><span>tools</span></div>
-            <div><strong>{topology.stats.capabilities}</strong><span>capabilities</span></div>
+            <div><strong>{topology.stats.capabilities}</strong><span>capabilities registradas</span></div>
             <div><strong>{topology.stats.backends}</strong><span>runtimes</span></div>
             <div><strong>{topology.stats.roles}</strong><span>roles</span></div>
           </div>}
           <div className="hero-actions">
-            <a className="primary-cta" href={publicNexoUrl()}>Abrir NEXO ONE</a>
+            <a className="primary-cta" href={COCKPIT_ROUTE}>Abrir NEXO ONE</a>
             <button className="sync-button" type="button" onClick={()=>void synchronizeTopology()} disabled={syncState==='loading'}>
               {syncState==='loading'?'Sincronizando…':'Sincronizar'}
             </button>
@@ -496,7 +497,7 @@ export function McpAtlasApp(){
       </section>}
 
       <section className="source-section" id="source">
-        <div><span className="kicker">FONTE CANÔNICA</span><h2>Revisão e snapshot<br/>usados no build.</h2></div>
+        <div><span className="kicker">PROVENIÊNCIA PUBLICADA</span><h2>Revisão e snapshot<br/>usados no build.</h2></div>
         {topology&&<div className="source-card">
           <div><span>authority</span><b>{topology.source.authority}</b></div>
           <div><span>storage</span><b>{topology.source.source_storage||'projection mirror'}</b></div>
@@ -510,7 +511,7 @@ export function McpAtlasApp(){
     </main>
 
     <nav className="mcp-bottom-nav" aria-label="Navegação do MCP Atlas">
-      <a href={publicNexoUrl()}><i>◎</i><span>NEXO ONE</span></a>
+      <a href={COCKPIT_ROUTE}><i>◎</i><span>NEXO ONE</span></a>
       <a href="#topology" className="active"><i>⌬</i><span>Topologia</span></a>
       <a href="#architecture"><i>→</i><span>Relações</span></a>
       <a href="#source"><i>⊞</i><span>Fonte</span></a>

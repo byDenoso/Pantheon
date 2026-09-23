@@ -40,8 +40,9 @@ test('GitHub Pages build uses repository base and configurable SystemState endpo
   assert.match(hook, /waitForProjectionSync/);
   assert.match(app, /onClick=\{system\.sync\}/);
   assert.match(app, /VITE_PUBLIC_NEXO_BASE/);
-  assert.match(app, /publicNexoUrl\('atlas3d\/'\)/);
-  assert.match(app, /publicNexoUrl\('mcp\/'\)/);
+  assert.match(app, /hashForView\(next\)/);
+  assert.match(app, /href="#\/sistema"/);
+  assert.match(app, /goSystem\(\)/);
 });
 
 test('manual sync is a server-side GitHub dispatch bridge with exact readback identity', async () => {

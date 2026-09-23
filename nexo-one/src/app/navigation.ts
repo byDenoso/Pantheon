@@ -17,10 +17,49 @@ const VIEW_IDS: readonly ViewId[] = [...SYSTEM_VIEWS, ...PERSONAL_VIEWS];
 export const isSystemView = (view: ViewId): view is SystemView =>
   (SYSTEM_VIEWS as readonly string[]).includes(view);
 
-export const hashForView = (view: ViewId): string => `#${view.toLowerCase()}`;
+const CANONICAL_ROUTE: Record<ViewId, string> = {
+  OVERVIEW: '#/cockpit/comando', INBOX: '#/cockpit/comando?view=needs',
+  ACTIONS: '#/cockpit/pipeline', EXECUTION: '#/cockpit/pipeline?view=execution',
+  TRUTHGRAPH: '#/cockpit/prova', CAPABILITIES: '#/cockpit/prova?view=capabilities',
+  SOURCES: '#/cockpit/prova?view=sources', INTEGRITY: '#/cockpit/prova?view=integrity',
+  ATLAS: '#/atlas?lente=operacao&view=2d', LEARNING: '#/atlas?lente=aprendizado&view=2d',
+  NOW: '#/cockpit/pessoal/now', LOOPS: '#/cockpit/pessoal/loops', DAY: '#/cockpit/pessoal/day',
+  CONTEXT: '#/cockpit/pessoal/context', RECALL: '#/cockpit/pessoal/recall',
+};
+
+const LEGACY_VIEW: Record<string, ViewId> = {
+  OVERVIEW: 'OVERVIEW', NEEDS: 'INBOX', INBOX: 'INBOX', ACTIONS: 'ACTIONS', EXECUTION: 'EXECUTION',
+  TRUTHGRAPH: 'TRUTHGRAPH', CAPABILITIES: 'CAPABILITIES', SOURCES: 'SOURCES', INTEGRITY: 'INTEGRITY',
+  ATLAS: 'ATLAS', LEARNING: 'LEARNING', NOW: 'NOW', LOOPS: 'LOOPS', DAY: 'DAY', CONTEXT: 'CONTEXT', RECALL: 'RECALL',
+};
+
+export const hashForView = (view: ViewId): string => CANONICAL_ROUTE[view];
+
+export const isSystemRoute = (hash: string): boolean => /^#\/?sistema(?:[?&]|$)/i.test(hash);
+
+export const isObservatoryRoute = (hash: string): boolean => /^#\/?observatorio(?:[?&]|$)/i.test(hash);
 
 export const viewFromHash = (hash: string): ViewId | null => {
-  const value = hash.replace(/^#\/?/, '').trim().toUpperCase();
+  const raw = hash.replace(/^#\/?/, '').trim();
+  const [path, query = ''] = raw.split('?', 2);
+  const value = path.toUpperCase();
+  const pane = new URLSearchParams(query).get('view')?.toUpperCase();
+  if (pane && LEGACY_VIEW[pane]) return LEGACY_VIEW[pane];
+  if (value === 'ATLAS') {
+    const lens = new URLSearchParams(query).get('lente')?.toLowerCase();
+    return lens === 'aprendizado' ? 'LEARNING' : 'ATLAS';
+  }
+  const legacy = LEGACY_VIEW[value];
+  if (legacy) return legacy;
+  if (value === 'COCKPIT/COMANDO') return 'OVERVIEW';
+  if (value === 'COCKPIT/CIENCIA') return 'OVERVIEW';
+  if (value === 'COCKPIT/PIPELINE') return 'ACTIONS';
+  if (value === 'COCKPIT/PROVA') return 'TRUTHGRAPH';
+  if (value.startsWith('COCKPIT/PESSOAL/')) {
+    const personal = value.slice('COCKPIT/PESSOAL/'.length);
+    return LEGACY_VIEW[personal.toUpperCase()] ?? null;
+  }
+  if (value === 'OBSERVATORIO' || value === 'SISTEMA') return 'OVERVIEW';
   return (VIEW_IDS as readonly string[]).includes(value) ? value as ViewId : null;
 };
 

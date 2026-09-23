@@ -5,7 +5,7 @@ import {readFile} from 'node:fs/promises';
 const root=new URL('../',import.meta.url);
 const text=path=>readFile(new URL(path,root),'utf8');
 
-test('MCP Atlas is a Pages multipage surface built from canonical MCP sources',async()=>{
+test('MCP Atlas is a routed surface in the unified SPA with canonical Tower sources',async()=>{
   const [vite,workflow,site,builder]=await Promise.all([
     text('vite.config.ts'),
     text('../.github/workflows/nexo-one-pages.yml'),
@@ -24,7 +24,8 @@ test('MCP Atlas is a Pages multipage surface built from canonical MCP sources',a
   assert.match(site,/THEME_STORAGE_KEY/);
   assert.match(site,/data-mcp-theme/);
   assert.match(site,/data-mcp-graph-view/);
-  assert.match(site,/publicNexoUrl/);
+  assert.match(site,/COCKPIT_ROUTE='#\/cockpit\/comando'/);
+  assert.match(site,/loadPublishedContext<Topology>/);
   assert.match(workflow,/VITE_PUBLIC_NEXO_BASE:\s*https:\/\/bydenoso\.github\.io\/Pantheon\//);
   assert.doesNotMatch(workflow,/VITE_PRIVATE_COCKPIT_URL:\s*https:\/\/nexo-one-two\.vercel\.app/);
   assert.match(workflow,/PAGES_MCP_NEURAL_DARK_2D_OK/);
@@ -34,7 +35,9 @@ test('MCP Atlas is a Pages multipage surface built from canonical MCP sources',a
   assert.match(workflow,/PAGES_MCP_NEURAL_MOBILE_LIGHT_2D_OK/);
   assert.match(workflow,/PAGES_MCP_NEURAL_MOBILE_DARK_3D_OK/);
   assert.doesNotMatch(site,/react-force-graph-3d|ForceGraph3D/);
-  assert.match(site,/\.\/topology\.json/);
+  assert.match(site,/routeParams\(\)/);
+  const bridge=await text('mcp/index.html');
+  assert.match(bridge,/destination\.hash\s*=\s*'\/sistema'/);
   assert.match(builder,/NEXO_MCP_TOPOLOGY_V1/);
   assert.match(builder,/TOWER_V06/);
 
@@ -60,4 +63,6 @@ test('MCP Atlas is a Pages multipage surface built from canonical MCP sources',a
   assert.match(main,/product-foundation\.css/);
   assert.match(foundation,/--nexo-shell-height:68px/);
   assert.match(foundation,/--font-ui:Inter/);
+  const rootApp=await text('src/app/App.tsx');
+  assert.match(rootApp,/lazy\(\(\) => import\('\.\.\/mcp\/EmbeddedMcp\.tsx'\)\)/);
 });

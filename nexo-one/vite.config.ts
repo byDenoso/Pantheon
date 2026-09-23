@@ -1,4 +1,3 @@
-import { resolve } from 'node:path';
 import { defineConfig } from 'vite';
 
 const pagesBase = process.env.GITHUB_PAGES ? '/Pantheon/' : '/';
@@ -8,11 +7,13 @@ export default defineConfig({
   build: {
     target: 'es2022',
     sourcemap: false,
+    // The legacy entries remain in the build until their public redirects have
+    // been verified. Their HTML payloads are now minimal bridge documents.
     rollupOptions: {
       input: {
-        main: resolve(process.cwd(), 'index.html'),
-        mcp: resolve(process.cwd(), 'mcp/index.html'),
-        atlas3d: resolve(process.cwd(), 'atlas3d/index.html'),
+        main: 'index.html',
+        mcp: 'mcp/index.html',
+        atlas3d: 'atlas3d/index.html',
       },
     },
   },
