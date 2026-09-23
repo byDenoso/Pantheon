@@ -4,6 +4,7 @@ const configuredSyncEndpoint = String(import.meta.env?.VITE_NEXO_SYNC_ENDPOINT |
 const PUBLISHED_PROJECTION_ASSET = 'tower-projection/projection.json';
 const PUBLISHED_MANIFEST_ASSET = 'tower-projection/manifest.json';
 const PUBLISHED_BUILD_META_ASSET = 'build-meta.json';
+const PUBLISHED_ATOMIC_ASSET = 'tower-projection/publication.json';
 const PUBLISHED_RETRY_DELAYS_MS = [0, 800, 2400, 6000] as const;
 const PUBLISHED_PAIR_RETRY_DELAYS_MS = [0, 800, 2400, 6000] as const;
 const VALIDATED_CACHE_KEY = 'nexo.public-projection-receipt.v1';
@@ -62,6 +63,13 @@ type PublicProjection = {
   contract?: string;
   counts?: {active_work?:number;needs_dener?:number};
   manifest?: PublicManifest;
+};
+
+type AtomicPublication = {
+  contract?: string;
+  projection?: PublicProjection;
+  manifest?: PublicManifest;
+  build_meta?: BuildMeta;
 };
 
 function rootAsset(name:string):string{
@@ -248,6 +256,24 @@ function readValidatedReceiptCache():Extract<ProjectionSyncReceipt,{outcome:'PUB
 
 async function fetchFreshPublicProjection(signal?:AbortSignal):Promise<ProjectionSyncReceipt>{
   try{
+    // Prefer one immutable publication envelope. Reading one object removes the
+    // CDN race where projection.json, manifest.json and build-meta.json can be
+    // served from different deployment generations.
+    try{
+      const atomic=await fetchPublishedJson<AtomicPublication>(PUBLISHED_ATOMIC_ASSET,'Publicação atômica',signal);
+      if(atomic?.contract!=='NEXO_PUBLIC_PROJECTION_PUBLICATION_V1'||!atomic.projection||!atomic.manifest||!atomic.build_meta){
+        throw new DataSourceError('CONTRACT_MISMATCH','A publicação atômica respondeu com contrato inválido.');
+      }
+      const receipt=projectionReceipt(atomic.projection,atomic.manifest,atomic.build_meta) as Extract<ProjectionSyncReceipt,{outcome:'PUBLIC_PROJECTION_REFRESHED'}>;
+      rememberValidatedReceipt(receipt);
+      return receipt;
+    }catch(error){
+      if(signal?.aborted||(error as Error)?.name==='AbortError')throw error;
+      // During rollout, an older Pages edge may not have publication.json yet.
+      // Keep the validated trio as a bounded compatibility path only.
+      if(!(error instanceof ProjectionOriginError)&&!(error instanceof DataSourceError))throw error;
+    }
+
     let lastMismatch:DataSourceError|undefined;
     for(let attempt=0;attempt<PUBLISHED_PAIR_RETRY_DELAYS_MS.length;attempt+=1){
       const delay=PUBLISHED_PAIR_RETRY_DELAYS_MS[attempt]||0;
@@ -266,10 +292,7 @@ async function fetchFreshPublicProjection(signal?:AbortSignal):Promise<Projectio
         lastMismatch=error;
       }
     }
-    // A deployment can briefly expose different generations of these three
-    // static files at CDN edges. Re-read them as a set, but never accept a
-    // mixed set or relax fingerprint validation.
-    throw lastMismatch||new DataSourceError('CONTRACT_MISMATCH','Os arquivos publicados não fecharam um conjunto validado.');
+    throw lastMismatch||new DataSourceError('CONTRACT_MISMATCH','A publicação não fechou um conjunto validado.');
   }catch(error){
     if(signal?.aborted||(error as Error)?.name==='AbortError')throw error;
     if(error instanceof DataSourceError)throw error;
