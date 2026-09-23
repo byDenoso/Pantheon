@@ -485,6 +485,9 @@ test('GitHub Pages deploys the unified SPA and reads back routes, parity and pro
   assert.match(workflow, /id:\s*pages/);
   assert.match(workflow, /test -s dist\/atlas3d\/index\.html/);
   assert.match(workflow, /PAGES_ATLAS_ROUTE_READBACK_OK/);
+  assert.match(workflow, /ready_marker='data-atlas-ready/);
+  assert.match(workflow, /data-three-ready=\"true\"/);
+  assert.match(workflow, /data-three-paint-samples/);
   assert.match(workflow, /PAGES_MCP_NEURAL_DARK_2D_OK/);
   assert.match(workflow, /CAPABILITY_SEMANTICS_PARITY/);
   assert.match(workflow, /PAGES_TOWER_PROJECTION_READBACK_OK/);

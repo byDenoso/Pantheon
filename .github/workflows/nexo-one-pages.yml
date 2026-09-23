@@ -484,13 +484,21 @@ jobs:
             local name="$1" width="$2" height="$3" theme="$4" view="$5"
             local url="${base}/atlas3d/?theme=${theme}&view=${view}&expand=all&readback=1"
             local dom="/tmp/atlas-${name}.html"
-            dump_until_ready 'data-atlas-ready="true"' "${dom}" \
+            local ready_marker='data-atlas-ready="true"'
+            if [ "${view}" = "3d" ]; then ready_marker='data-three-ready="true"'; fi
+            dump_until_ready "${ready_marker}" "${dom}" \
               --headless=new --no-sandbox --disable-dev-shm-usage --hide-scrollbars \
               --window-size="${width},${height}" --virtual-time-budget=16000 --dump-dom "${url}"
             grep -Fq 'data-atlas-renderer="metro-cluster"' "${dom}"
             grep -Fq "data-atlas-mode=\"${view}\"" "${dom}"
             grep -Fq "data-atlas-theme=\"${theme}\"" "${dom}"
-            grep -Fq 'data-atlas-ready="true"' "${dom}"
+            if [ "${view}" = "2d" ]; then
+              grep -Fq 'data-atlas-ready="true"' "${dom}"
+            else
+              local paint_samples
+              paint_samples="$(sed -n 's/.*data-three-paint-samples="\([0-9][0-9]*\)".*/\1/p' "${dom}" | head -1)"
+              [ -n "${paint_samples}" ] && [ "${paint_samples}" -gt 20 ] || { echo "::error::Atlas 3D canvas did not paint enough sampled pixels (${name})"; exit 1; }
+            fi
             local total visible
             total="$(sed -n 's/.*data-atlas-total-count="\([0-9][0-9]*\)".*/\1/p' "${dom}" | head -1)"
             visible="$(sed -n 's/.*data-atlas-visible-count="\([0-9][0-9]*\)".*/\1/p' "${dom}" | head -1)"
