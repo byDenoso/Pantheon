@@ -137,15 +137,15 @@ function DetailPanel({
       </section>
 
       <section className="atlas-detail-section atlas-learning-detail">
-        <header><strong>Learning</strong><span>{learning.length} rotas</span></header>
+        <header><strong>Aprendizado</strong><span>{learning.length} rotas</span></header>
         <div className="atlas-learning-list">
           {learning.length ? learning.slice(0, 12).map(item => (
             <button key={item.id} className="atlas-learning-route" onClick={() => onSelectNode(item.otherId)}>
-              <span data-kind={item.kind || 'LEARNING'}>{item.kind === 'SCIENTIFIC_LEARNING_PIPELINE' ? 'Scientific' : item.kind === 'PROCEDURAL' ? 'Procedural' : 'Semantic'}</span>
+              <span data-kind={item.kind || 'LEARNING'}>{item.kind === 'SCIENTIFIC_LEARNING_PIPELINE' ? 'Científico' : item.kind === 'PROCEDURAL' ? 'Procedural' : 'Semântico'}</span>
               <strong>{item.theme}</strong>
               <small>{item.direction} · {item.otherName}{item.records > 1 ? ` · ${item.records} registros` : ''}</small>
             </button>
-          )) : <span className="atlas-chip">sem Learning direto nesta estação</span>}
+          )) : <span className="atlas-chip">sem aprendizado direto nesta estação</span>}
           {learning.length > 12 && <small className="atlas-learning-more">+{learning.length - 12} rotas adicionais</small>}
         </div>
       </section>
@@ -598,14 +598,14 @@ export function Atlas3DContent({system,themeOverride}:{system:SystemStore;themeO
 
         <div className="atlas-legend glass">
           <span><i style={{ background: atlasDomainColor('NEXO', atlasTheme) }} />Nexo</span>
-          <span><i style={{ background: atlasDomainColor('SCIENCE', atlasTheme) }} />Science</span>
+          <span><i style={{ background: atlasDomainColor('SCIENCE', atlasTheme) }} />Ciência</span>
           <span><i style={{ background: atlasDomainColor('OLYMPUS', atlasTheme) }} />Olympus</span>
           {learningLinkCount > 0 && (
             <span
               className="atlas-learning-legend"
-              title={`${learningRecordCount} aprendizados canônicos · ${learningThemeCount} temas · ${learningLinkCount} relações · Scientific ${scientificLearningLinkCount} · Procedural ${proceduralLearningLinkCount} · Semantic ${semanticLearningLinkCount} · ${learningDistinctSubdomainCount} áreas · maior concentração ${learningMaxSubdomainShare}%`}
+              title={`${learningRecordCount} aprendizados canônicos · ${learningThemeCount} temas · ${learningLinkCount} relações · científicos ${scientificLearningLinkCount} · procedurais ${proceduralLearningLinkCount} · semânticos ${semanticLearningLinkCount} · ${learningDistinctSubdomainCount} áreas · maior concentração ${learningMaxSubdomainShare}%`}
             >
-              <i />Learning <b>{learningRecordCount}</b><em>{learningThemeCount} temas</em>
+              <i / >Aprendizado <b>{learningRecordCount}</b><em>{learningThemeCount} temas</em>
             </span>
           )}
           <small>{visibleIds.length} visíveis · {fullModel?.nodes.length || model.nodes.length} total</small>
@@ -613,16 +613,16 @@ export function Atlas3DContent({system,themeOverride}:{system:SystemStore;themeO
 
         {viewMode === '3d' && show3dHint && (
           <div className="atlas-mode-onboarding glass" role="status">
-            <div><strong>Modo 3D ativo</strong><span>Arraste o fundo para orbitar a câmera. A orientação espacial agora é livre.</span></div>
+            <div><strong>Modo 3D ativo</strong><span>Arraste o mapa para orbitar a câmera.</span></div>
             <button onClick={() => setShow3dHint(false)} aria-label="Fechar dica">×</button>
           </div>
         )}
 
         <div className="atlas-interaction-hint" data-active-mode={viewMode}>
-          <strong>{viewMode === '2d' ? '2D METRO ATIVO' : '3D EXPLORAR ATIVO'}</strong><br />
+          <strong>{viewMode === '2d' ? '2D · MAPA' : '3D · MAPA'}</strong><br />
           {viewMode === '2d'
-            ? <>click: seleciona + expande/colapsa · drag: pan · wheel: zoom</>
-            : <>drag: orbita · wheel: zoom · shift+drag / botão direito: pan</>}
+            ? <>clique: seleciona e expande/contrai · arraste: mover · roda: zoom</>
+            : <>arraste: orbitar · roda: zoom · Shift+arraste ou botão direito: mover</>}
         </div>
 
         <div className="atlas-a11y-stations" aria-label="Estações atualmente renderizadas">
@@ -656,7 +656,7 @@ export function Atlas3DContent({system,themeOverride}:{system:SystemStore;themeO
         aria-hidden={!mobileDetailsOpen ? undefined : false}
       >
         <div className="atlas-brand">
-          <div><strong>NEXO ATLAS</strong><small>METRO + 3D</small></div>
+          <div><strong>Mapa de conhecimento</strong><small>ATLAS · CONSULTA</small></div>
           <span>{system.state.graph.nodes.length} entidades fonte</span>
           <button
             className="atlas-mobile-sidebar-close"

@@ -51,6 +51,19 @@ test('science projection does not treat governance PASS as a scientific verdict'
   assert.match(output.tests[0].verdict.unavailable_reason, /not an approved scientific verdict/i);
 });
 
+test('science projection gives test rows their own identity instead of campaign identity', async () => {
+  const { buildScienceProjectionV1 } = await import('../scripts/science-projection-v1.mjs');
+  const output = buildScienceProjectionV1({
+    projection: { campaigns: [], hypotheses: [], tests: [
+      { id: 'TEST-1', campaign_id: 'CAMP-1' },
+      { id: 'TEST-2', campaign_id: 'CAMP-1' },
+    ] },
+    manifest,
+  });
+  assert.deepEqual(output.tests.map(item => item.id), ['TEST-1', 'TEST-2']);
+  assert.notEqual(output.tests[0].source_ref, output.tests[1].source_ref);
+});
+
 test('science projection rejects records without source identity or a matching fingerprint', async () => {
   const { validateScienceProjectionV1 } = await import('../scripts/science-projection-v1.mjs');
   assert.throws(() => validateScienceProjectionV1({

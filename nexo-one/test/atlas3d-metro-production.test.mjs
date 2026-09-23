@@ -11,6 +11,7 @@ import {
 import {
   buildMetroScreenLabelLayout,
   metroLayoutPositions,
+  metroNodeSize,
 } from '../src/atlas3d/metro2dLayout.ts';
 import {
   LEARNING_ANCHORS,
@@ -37,6 +38,22 @@ test('production Metro adapter materializes Nexo, Science and Olympus simultaneo
   assert.ok(visible.length > 3, 'initial view must contain stations in addition to the three hubs');
   assert.ok(model.roots.every(id => visible.includes(id)));
   assert.ok(visible.some(id => model.nodeMap.get(id)?.depth === 1), 'initial view must expose named subdomains');
+});
+
+test('Atlas overview keeps hub scale restrained and reveals labels by zoom or focus', () => {
+  const model = buildAtlasMetroModel(state());
+  const visible = visibleAtlasIds(model, new Set(model.roots));
+  const positions = metroLayoutPositions(model, visible, 1200, 760);
+  const overview = buildMetroScreenLabelLayout(model, visible, positions, 1200, 760, .38);
+  assert.ok(model.roots.every(id => overview.byId.get(id)?.visible));
+  assert.ok(overview.visible <= model.roots.length + 1, `overview exposed ${overview.visible} labels`);
+  const hub = model.nodeMap.get(model.roots[0]);
+  const leaf = visible.map(id => model.nodeMap.get(id)).find(node => node?.entityType === 'subdomain');
+  assert.ok(hub && leaf);
+  assert.ok(metroNodeSize(hub) < 72, 'hub size should remain within the compressed scale');
+  assert.ok(metroNodeSize(leaf) < metroNodeSize(hub), 'importance remains encoded by node size');
+  const focused = buildMetroScreenLabelLayout(model, visible, positions, 1200, 760, .38, leaf.id, null, new Set([leaf.id]));
+  assert.equal(focused.byId.get(leaf.id)?.visible, true);
 });
 
 test('an empty public domain still gets an honest operational station from its lane', () => {
@@ -529,8 +546,8 @@ test('dedicated Atlas production page uses Metro renderer, G6 and deterministic 
   assert.match(app, /atlasRouteParams/);
   assert.match(app, /query==='2d'\|\|query==='3d'/);
   assert.match(app, /GRAPH_VIEW_STORAGE_KEY/);
-  assert.match(app, /3D EXPLORAR ATIVO/);
-  assert.match(app, /2D METRO ATIVO/);
+  assert.match(app, /3D · MAPA/);
+  assert.match(app, /2D · MAPA/);
   assert.match(app, /atlas-mobile-details-toggle/);
   assert.match(app, /atlas-sidebar-backdrop/);
   assert.match(app, /mobile-open/);
@@ -547,6 +564,12 @@ test('dedicated Atlas production page uses Metro renderer, G6 and deterministic 
   assert.match(renderer, /theme === 'light' \? '#0f172a' : '#e5edf8'/);
   assert.match(renderer, /metroLayoutPositions/);
   assert.match(renderer, /buildMetroScreenLabelLayout/);
+  assert.match(renderer, /function graphFocusLevels/);
+  assert.match(renderer, /depth <= 2/);
+  assert.match(renderer, /focus-muted/);
+  assert.match(renderer, /edge-active/);
+  assert.match(renderer, /relationStrength/);
+  assert.match(renderer, /zoomedLabels/);
   assert.match(renderer, /getViewportByCanvas/);
   assert.match(renderer, /g6LabelDomCollisions/);
   assert.match(renderer, /viewport-adaptive-v2/);
@@ -587,7 +610,7 @@ test('dedicated Atlas production page uses Metro renderer, G6 and deterministic 
   assert.match(layout, /compactViewport/);
   assert.match(layout, /ultraDenseOverview/);
   assert.match(layout, /ids\.length > 140/);
-  assert.match(layout, /!compactViewport && !ultraDenseOverview && node\.entityType === 'subdomain'/);
+  assert.match(layout, /node\.entityType === 'subdomain' && !compactViewport && !ultraDenseOverview && zoom >= 1\.05/);
   assert.match(renderer, /atlas-label-leaders/);
   assert.match(renderer, /labelText: ''/);
   assert.match(renderer, /update: 'translate'/);

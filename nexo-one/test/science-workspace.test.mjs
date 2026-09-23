@@ -19,6 +19,9 @@ test('Science workspace consumes projection v1 without invented counts',async()=
   assert.match(science,/CSV/);
   assert.match(science,/PNG/);
   assert.match(science,/nexo\.graph\.view\.v1/);
+  assert.match(science,/RUNNING:'Em andamento'/);
+  assert.match(science,/IN_PROGRESS:'Em andamento'/);
+  assert.match(science,/params\.get\('view'\)==='2d'\|\|params\.get\('view'\)==='3d'/);
   assert.doesNotMatch(science,/\b14\b.*Campanhas|Campanhas.*\b14\b/);
   assert.doesNotMatch(science,/\b74\b.*Testes|Testes.*\b74\b/);
   assert.match(app,/ScienceWorkspace/);

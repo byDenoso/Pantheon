@@ -78,7 +78,15 @@ function normalizedClaimLevel(raw, manifest, path) {
 }
 
 function makeRecord(record, kind, manifest, mapping) {
-  const id = String(record?.campaign_id || record?.hypothesis_id || record?.id || record?.entity_id || '').trim();
+  // Foreign keys on a test (campaign_id / hypothesis_id) identify its parents,
+  // not the row itself. Prefer kind-specific source identities before generic
+  // ids so multiple tests in one campaign cannot collapse into one table row.
+  const identityFields = kind === 'test'
+    ? ['test_id', 'test_record_id', 'id', 'entity_id']
+    : kind === 'campaign'
+      ? ['campaign_id', 'id', 'entity_id']
+      : ['hypothesis_id', 'id', 'entity_id'];
+  const id = String(identityFields.map(key => record?.[key]).find(value => value !== null && value !== undefined && String(value).trim()) || '').trim();
   if (!id) return null;
   const path = sourcePath(kind, id);
   return Object.fromEntries([...Object.entries(mapping).map(([key, config]) => [
