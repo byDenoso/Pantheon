@@ -61,9 +61,9 @@ export interface AtlasCrossLink {
   bundleCount: number;
 }
 
-export type AtlasGraphLayer = 'knowledge' | 'execution' | 'capability';
+export type AtlasGraphLayer = 'knowledge' | 'execution' | 'capability' | 'governance';
 
-export const ATLAS_GRAPH_LAYERS: AtlasGraphLayer[] = ['knowledge', 'execution', 'capability'];
+export const ATLAS_GRAPH_LAYERS: AtlasGraphLayer[] = ['knowledge', 'execution', 'capability', 'governance'];
 
 export interface AtlasGraphIndexes {
   /** Directed semantic relations retain the source edge direction. */
@@ -133,9 +133,10 @@ export function atlasGraphLayersForNode(node: AtlasMetroNode | undefined): Atlas
   if (!node || node.synthetic || node.entityType === 'hub' || node.entityType === 'subdomain') return [];
   const type = String(node.entityType);
   const layers: AtlasGraphLayer[] = [];
-  if (['TEST', 'EFFECT', 'CLAIM', 'MEMORY', 'FILAMENT'].includes(type)) layers.push('knowledge');
-  if (['CAMPAIGN', 'ACTION', 'SIDE_QUEST', 'PROJECTION', 'TEST', 'EFFECT'].includes(type)) layers.push('execution');
+  if (['HYPOTHESIS', 'TEST', 'RESULT', 'EVIDENCE', 'CLAIM', 'DATASET', 'MEMORY', 'FILAMENT'].includes(type)) layers.push('knowledge');
+  if (['CAMPAIGN', 'ACTION', 'AUTOMATION', 'RUN', 'SIDE_QUEST', 'PROJECTION', 'TEST', 'RESULT', 'EFFECT', 'ARTIFACT'].includes(type)) layers.push('execution');
   if (['CAPABILITY', 'PROVIDER', 'TOOL'].includes(type)) layers.push('capability');
+  if (['GOVERNANCE_RULE'].includes(type)) layers.push('governance');
   return layers;
 }
 
