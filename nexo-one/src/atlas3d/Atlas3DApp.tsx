@@ -287,7 +287,7 @@ export function Atlas3DContent({system,themeOverride}:{system:SystemStore;themeO
   useEffect(() => {
     if (!model) return;
     setExpanded(new Set(initialExpanded));
-    setSelectedId(requestedSelection || qaExpandedNode?.id || model.roots[0] || null);
+    setSelectedId(requestedSelection || qaExpandedNode?.id || null);
     setNavigationRevision(model.revision);
     setRendererReady(false);
     setMobileDetailsOpen(false);
@@ -308,7 +308,7 @@ export function Atlas3DContent({system,themeOverride}:{system:SystemStore;themeO
   // with only the roots and can lose the expansion update while render() is in flight.
   const navigationStale = navigationRevision !== model.revision;
   const activeExpanded = navigationStale ? new Set(initialExpanded) : expanded;
-  const activeSelectedId = navigationStale ? (requestedSelection || qaExpandedNode?.id || model.roots[0] || null) : selectedId;
+  const activeSelectedId = navigationStale ? (requestedSelection || qaExpandedNode?.id || null) : selectedId;
 
   const visibleIds = visibleAtlasIds(model, activeExpanded);
   const visibleSet = new Set(visibleIds);
@@ -335,7 +335,7 @@ export function Atlas3DContent({system,themeOverride}:{system:SystemStore;themeO
 
   const collapseToInitial = () => {
     setExpanded(new Set(model.roots));
-    setSelectedId(model.roots[0] || null);
+    setSelectedId(null);
     setFitNonce(value => value + 1);
   };
 
@@ -616,20 +616,6 @@ export function Atlas3DContent({system,themeOverride}:{system:SystemStore;themeO
             </span>
           )}
           <small>{visibleIds.length} visíveis · {fullModel?.nodes.length || model.nodes.length} total</small>
-        </div>
-
-        {viewMode === '3d' && show3dHint && (
-          <div className="atlas-mode-onboarding glass" role="status">
-            <div><strong>Modo 3D ativo</strong><span>Arraste o fundo para orbitar a câmera. A orientação espacial agora é livre.</span></div>
-            <button onClick={() => setShow3dHint(false)} aria-label="Fechar dica">×</button>
-          </div>
-        )}
-
-        <div className="atlas-interaction-hint" data-active-mode={viewMode}>
-          <strong>{viewMode === '2d' ? '2D METRO ATIVO' : '3D EXPLORAR ATIVO'}</strong><br />
-          {viewMode === '2d'
-            ? <>click: seleciona + expande/colapsa · drag: pan · wheel: zoom</>
-            : <>drag: orbita · wheel: zoom · shift+drag / botão direito: pan</>}
         </div>
 
         <div className="atlas-a11y-stations" aria-label="Estações atualmente renderizadas">
