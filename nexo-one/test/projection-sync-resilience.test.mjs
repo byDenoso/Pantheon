@@ -13,7 +13,8 @@ const validManifest={
   projection_fingerprint:fingerprint,
   generated_at:generatedAt,
   source_storage:'GOOGLE_DRIVE_PRIVATE',
-  source_snapshot_id:'SNP-TEST',
+  tower_file_id:'1m97cFmEkw19yiqD_6FWPG4j1lDCAYM4z',
+  tower_revision:'sha256:'+'c'.repeat(64),
   source_state_fingerprint:stateFingerprint,
   truth_owner:'TOWER_V06@GOOGLE_DRIVE_PRIVATE',
 };
@@ -96,7 +97,7 @@ test('projection sync rejects a published snapshot whose build-meta fingerprint 
     const {dispatchProjectionSync}=await import('../src/data/projectionSync.ts');
     await assert.rejects(
       dispatchProjectionSync('sha256:'+'d'.repeat(64)),
-      error=>error?.code==='CONTRACT_MISMATCH'&&/não fecharam o mesmo fingerprint/.test(error.message),
+      error=>error?.code==='CONTRACT_MISMATCH'&&/não fecharam a mesma revisão/.test(error.message),
     );
   }finally{
     globalThis.fetch=originalFetch;

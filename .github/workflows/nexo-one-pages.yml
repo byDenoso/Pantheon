@@ -28,6 +28,8 @@ jobs:
       projection_fingerprint: ${{ steps.projection.outputs.projection_fingerprint }}
       presentation_input_fingerprint: ${{ steps.presentation_inputs.outputs.presentation_input_fingerprint }}
       tower_commit: ${{ steps.projection.outputs.tower_commit }}
+      tower_revision: ${{ steps.projection.outputs.tower_revision }}
+      tower_file_id: ${{ steps.projection.outputs.tower_file_id }}
       event_cursor: ${{ steps.projection.outputs.event_cursor }}
       deploy_needed: ${{ steps.deploy_needed.outputs.deploy_needed }}
     steps:
@@ -59,8 +61,8 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          jq -e '.manifest.source_storage == "GOOGLE_DRIVE_PRIVATE" and (.manifest.source_snapshot_id|length)>0 and (.manifest.source_state_fingerprint|startswith("sha256:"))'             _vault/TOWER_V06/projections/public/projection.json >/dev/null
-          jq -e '.source_storage == "GOOGLE_DRIVE_PRIVATE" and (.source_snapshot_id|length)>0 and (.source_state_fingerprint|startswith("sha256:"))'             _vault/TOWER_V06/projections/public/manifest.json >/dev/null
+          jq -e '.manifest.source_storage == "GOOGLE_DRIVE_PRIVATE" and (.manifest.source_state_fingerprint|startswith("sha256:")) and (((.manifest.tower_file_id // "")|length)>0 or ((.manifest.tower_commit // "")|length)>0)' _vault/TOWER_V06/projections/public/projection.json >/dev/null
+          jq -e '.source_storage == "GOOGLE_DRIVE_PRIVATE" and (.source_state_fingerprint|startswith("sha256:")) and (((.tower_file_id // "")|length)>0 or ((.tower_commit // "")|length)>0)' _vault/TOWER_V06/projections/public/manifest.json >/dev/null
 
       - name: Resolve projection verifier revision from export
 
@@ -127,15 +129,18 @@ jobs:
           if manifest.get("writeback") != "FORBIDDEN":
               raise SystemExit("writeback != FORBIDDEN")
           tower_commit = str(manifest.get("tower_commit") or "")
+          tower_revision = str(manifest.get("tower_revision") or tower_commit)
+          tower_file_id = str(manifest.get("tower_file_id") or "")
           event_cursor = str(manifest.get("event_cursor") or "")
           fingerprint = str(manifest.get("projection_fingerprint") or "")
           source_storage = str(manifest.get("source_storage") or "")
-          source_snapshot_id = str(manifest.get("source_snapshot_id") or "")
-          source_state_fingerprint = str(manifest.get("source_state_fingerprint") or "")
+          source_state_fingerprint = str(manifest.get("source_state_fingerprint") or manifest.get("tower_revision") or "")
           if source_storage != "GOOGLE_DRIVE_PRIVATE":
               raise SystemExit("public export source_storage is not GOOGLE_DRIVE_PRIVATE")
-          if not source_snapshot_id:
-              raise SystemExit("public export source_snapshot_id missing")
+          live_identity = bool(tower_file_id) and tower_revision.startswith("sha256:")
+          legacy_identity = len(tower_commit) == 40
+          if not live_identity and not legacy_identity:
+              raise SystemExit("public export lacks live Tower file/revision or legacy commit identity")
           if not source_state_fingerprint.startswith("sha256:"):
               raise SystemExit("public export source_state_fingerprint invalid")
           if not event_cursor:
@@ -145,11 +150,12 @@ jobs:
           output = Path(os.environ["GITHUB_OUTPUT"])
           with output.open("a", encoding="utf-8") as handle:
               handle.write(f"tower_commit={tower_commit}\n")
+              handle.write(f"tower_revision={tower_revision}\n")
+              handle.write(f"tower_file_id={tower_file_id}\n")
               handle.write(f"event_cursor={event_cursor}\n")
               handle.write(f"projection_fingerprint={fingerprint}\n")
-              handle.write(f"source_snapshot_id={source_snapshot_id}\n")
               handle.write(f"source_state_fingerprint={source_state_fingerprint}\n")
-          print(f"TOWER_PROJECTION_VERIFIED commit={tower_commit} cursor={event_cursor} fingerprint={fingerprint}")
+          print(f"TOWER_PROJECTION_VERIFIED revision={tower_revision} file_id={tower_file_id or 'LEGACY'} cursor={event_cursor} fingerprint={fingerprint}")
           PY
 
       - name: Fingerprint all live presentation inputs
@@ -233,6 +239,8 @@ jobs:
         shell: bash
         env:
           TOWER_COMMIT: ${{ steps.projection.outputs.tower_commit }}
+          TOWER_REVISION: ${{ steps.projection.outputs.tower_revision }}
+          TOWER_FILE_ID: ${{ steps.projection.outputs.tower_file_id }}
         run: |
           set -euo pipefail
           rm -rf nexo-one/data/tower-public nexo-one/data/mcp-source
@@ -276,7 +284,7 @@ jobs:
           cp _vault/services/nexo-api/app/mcp_server.py nexo-one/data/mcp-source/mcp_server.py
           cp _vault/services/nexo-api/app/remote_mcp.py nexo-one/data/mcp-source/remote_mcp.py
           cp _vault/TOWER_V06/projections/public/manifest.json nexo-one/data/mcp-source/projection-manifest.json
-          jq -n --arg tower_commit "${TOWER_COMMIT}" '{tower_commit:$tower_commit}' > nexo-one/data/mcp-source/source.json
+          jq -n --arg tower_commit "${TOWER_COMMIT}" --arg tower_revision "${TOWER_REVISION}" --arg tower_file_id "${TOWER_FILE_ID}"             '{tower_commit:($tower_commit|select(length>0)),tower_revision:$tower_revision,tower_file_id:($tower_file_id|select(length>0))}' > nexo-one/data/mcp-source/source.json
 
       - name: Setup Node
         if: steps.deploy_needed.outputs.deploy_needed == 'true'
@@ -428,6 +436,8 @@ jobs:
           EXPECTED_FINGERPRINT: ${{ needs.build.outputs.projection_fingerprint }}
           EXPECTED_PRESENTATION_FINGERPRINT: ${{ needs.build.outputs.presentation_input_fingerprint }}
           EXPECTED_TOWER_COMMIT: ${{ needs.build.outputs.tower_commit }}
+          EXPECTED_TOWER_REVISION: ${{ needs.build.outputs.tower_revision }}
+          EXPECTED_TOWER_FILE_ID: ${{ needs.build.outputs.tower_file_id }}
           EXPECTED_EVENT_CURSOR: ${{ needs.build.outputs.event_cursor }}
           EXPECTED_PANTHEON_COMMIT: ${{ github.sha }}
         run: |
@@ -716,13 +726,15 @@ jobs:
           if(manifest.authority!=='TOWER_V06')throw new Error('READBACK_AUTHORITY_INVALID');
           if(manifest.projection_only!==true)throw new Error('READBACK_PROJECTION_ONLY_INVALID');
           if(manifest.writeback!=='FORBIDDEN')throw new Error('READBACK_WRITEBACK_INVALID');
-          if(manifest.tower_commit!==process.env.EXPECTED_TOWER_COMMIT)throw new Error('READBACK_TOWER_COMMIT_MISMATCH');
+          const manifestRevision=String(manifest.tower_revision||manifest.tower_commit||'');
+          if(manifestRevision!==process.env.EXPECTED_TOWER_REVISION)throw new Error('READBACK_TOWER_REVISION_MISMATCH');
+          if(process.env.EXPECTED_TOWER_FILE_ID&&String(manifest.tower_file_id||'')!==process.env.EXPECTED_TOWER_FILE_ID)throw new Error('READBACK_TOWER_FILE_ID_MISMATCH');
           if(manifest.event_cursor!==process.env.EXPECTED_EVENT_CURSOR)throw new Error('READBACK_EVENT_CURSOR_MISMATCH');
           if(manifest.projection_fingerprint!==process.env.EXPECTED_FINGERPRINT)throw new Error('READBACK_FINGERPRINT_MISMATCH');
           if(JSON.stringify(projection.manifest)!==JSON.stringify(manifest))throw new Error('READBACK_MANIFEST_SPLIT_BRAIN');
           if(system.bus?.fingerprint!==manifest.projection_fingerprint)throw new Error('SYSTEM_NOT_BOUND_TO_TOWER_PROJECTION');
           if(science.contract!=='NEXO_SCIENCE_PROJECTION_V1'||science.version!==1)throw new Error('SCIENCE_PROJECTION_CONTRACT_INVALID');
-          if(science.source?.projection_fingerprint!==manifest.projection_fingerprint||science.source?.tower_commit!==manifest.tower_commit)throw new Error('SCIENCE_PROJECTION_SOURCE_MISMATCH');
+          if(science.source?.projection_fingerprint!==manifest.projection_fingerprint||String(science.source?.tower_revision||science.source?.tower_commit||'')!==manifestRevision)throw new Error('SCIENCE_PROJECTION_SOURCE_MISMATCH');
           if(science.source?.writeback!=='FORBIDDEN'||scienceSchema.properties?.contract?.const!==science.contract)throw new Error('SCIENCE_PROJECTION_SCHEMA_OR_WRITEBACK_INVALID');
           if(JSON.stringify(system.science_projection_v1)!==JSON.stringify(science))throw new Error('SYSTEM_SCIENCE_PROJECTION_READBACK_MISMATCH');
           const scienceBase={...science}; delete scienceBase.fingerprint;
@@ -786,7 +798,9 @@ jobs:
 
           if(mcp.contract!=='NEXO_MCP_TOPOLOGY_V1')throw new Error('MCP_TOPOLOGY_CONTRACT_INVALID');
           if(mcp.source?.authority!=='TOWER_V06'||!mcp.source?.commit)throw new Error('MCP_TOPOLOGY_SOURCE_INVALID');
-          if(mcp.source?.source_storage!=='GOOGLE_DRIVE_PRIVATE'||mcp.source?.source_snapshot_id!==manifest.source_snapshot_id)throw new Error('MCP_TOPOLOGY_FRESHNESS_SOURCE_INVALID');
+          if(mcp.source?.source_storage!=='GOOGLE_DRIVE_PRIVATE')throw new Error('MCP_TOPOLOGY_FRESHNESS_SOURCE_INVALID');
+          if(String(mcp.source?.tower_revision||mcp.source?.commit||'')!==manifestRevision)throw new Error('MCP_TOPOLOGY_TOWER_REVISION_MISMATCH');
+          if(manifest.tower_file_id&&mcp.source?.tower_file_id!==manifest.tower_file_id)throw new Error('MCP_TOPOLOGY_TOWER_FILE_ID_MISMATCH');
           if(mcp.source?.source_state_fingerprint!==manifest.source_state_fingerprint||mcp.source?.projection_fingerprint!==manifest.projection_fingerprint)throw new Error('MCP_TOPOLOGY_FRESHNESS_FINGERPRINT_MISMATCH');
           if(!Array.isArray(mcp.nodes)||mcp.nodes.length<8||!Array.isArray(mcp.links)||mcp.links.length<7)throw new Error('MCP_TOPOLOGY_EMPTY');
           const registeredCapabilityNodes=mcp.nodes.filter(node=>node.kind==='CAPABILITY');
@@ -800,7 +814,7 @@ jobs:
 
           if(galaxy.contract!=='NEXO_ONE_GALAXY_V1')throw new Error('GALAXY_CONTRACT_INVALID');
           if(galaxy.provenance?.source_fingerprint!==manifest.projection_fingerprint)throw new Error('GALAXY_NOT_BOUND_TO_TOWER_PROJECTION');
-          if(galaxy.tower_revision!==manifest.tower_commit)throw new Error('GALAXY_TOWER_REVISION_MISMATCH');
+          if(galaxy.tower_revision!==manifestRevision)throw new Error('GALAXY_TOWER_REVISION_MISMATCH');
           if(galaxyIndex.contract!=='NEXO_ONE_GALAXY_INDEX_V1')throw new Error('GALAXY_INDEX_CONTRACT_INVALID');
           if(galaxyIndex.latest_snapshot_id!==galaxy.snapshot_id)throw new Error('GALAXY_INDEX_LATEST_MISMATCH');
           if(!Array.isArray(galaxyIndex.snapshots)||!galaxyIndex.snapshots.some(item=>item.snapshot_id===galaxy.snapshot_id))throw new Error('GALAXY_INDEX_MISSING_LATEST');

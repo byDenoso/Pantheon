@@ -6,7 +6,9 @@ const manifest = {
   projection_only: true,
   writeback: 'FORBIDDEN',
   tower_repository: 'byDenoso/NEXO-Obsidian-Vault',
-  tower_commit: 'a'.repeat(40),
+  tower_commit: null,
+  tower_file_id: '1m97cFmEkw19yiqD_6FWPG4j1lDCAYM4z',
+  tower_revision: 'sha256:' + 'a'.repeat(64),
   event_cursor: '20260922T120000000000Z-science',
   projection_fingerprint: 'sha256:' + 'b'.repeat(64),
 };
@@ -36,7 +38,7 @@ test('science projection v1 keeps published Tower fields and marks missing field
   assert.match(scienceTest.statistics.delta_bic.unavailable_reason, /absent from the source/i);
   assert.equal(scienceTest.verdict.value, 'SUPPORTS');
   for (const field of [campaign.question, scienceTest.result.value, scienceTest.statistics.p_value]) {
-    assert.match(field.source_ref, /^tower:\/\//);
+    assert.match(field.source_ref, /^tower-live:\/\//);
     assert.match(field.fingerprint, /^sha256:[0-9a-f]{64}$/);
   }
 });

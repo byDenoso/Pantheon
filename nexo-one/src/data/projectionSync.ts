@@ -17,7 +17,8 @@ export type ProjectionSyncReceipt =
   | {
       outcome: 'PUBLIC_PROJECTION_REFRESHED';
       projection_fingerprint: string;
-      source_snapshot_id: string;
+      tower_file_id: string;
+      tower_revision: string;
       source_state_fingerprint: string;
       generated_at: string;
       active_work: number;
@@ -27,7 +28,8 @@ export type ProjectionSyncReceipt =
   | {
       outcome: 'PUBLIC_PROJECTION_CACHED';
       projection_fingerprint: string;
-      source_snapshot_id: string;
+      tower_file_id: string;
+      tower_revision: string;
       source_state_fingerprint: string;
       generated_at: string;
       active_work: number;
@@ -52,7 +54,8 @@ type PublicManifest = {
   projection_fingerprint?: string;
   generated_at?: string;
   source_storage?: string;
-  source_snapshot_id?: string;
+  tower_file_id?: string;
+  tower_revision?: string;
   source_state_fingerprint?: string;
   truth_owner?: string;
 };
@@ -152,7 +155,8 @@ function validSha256(value:string):boolean{
 
 function sameManifest(a:PublicManifest,b:PublicManifest):boolean{
   return String(a.projection_fingerprint||'')===String(b.projection_fingerprint||'')
-    &&String(a.source_snapshot_id||'')===String(b.source_snapshot_id||'')
+    &&String(a.tower_file_id||'')===String(b.tower_file_id||'')
+    &&String(a.tower_revision||'')===String(b.tower_revision||'')
     &&String(a.source_state_fingerprint||'')===String(b.source_state_fingerprint||'');
 }
 
@@ -163,8 +167,9 @@ function projectionReceipt(
 ):ProjectionSyncReceipt{
   const manifest=projection.manifest||{};
   const fingerprint=String(manifest.projection_fingerprint||'');
-  const stateFingerprint=String(manifest.source_state_fingerprint||'');
-  const snapshotId=String(manifest.source_snapshot_id||'');
+  const stateFingerprint=String(manifest.source_state_fingerprint||manifest.tower_revision||'');
+  const towerFileId=String(manifest.tower_file_id||'');
+  const towerRevision=String(manifest.tower_revision||'');
   const generatedAt=String(manifest.generated_at||'');
   const activeWork=Number(projection.counts?.active_work);
   const needsDener=Number(projection.counts?.needs_dener);
@@ -175,7 +180,8 @@ function projectionReceipt(
     &&manifest.writeback==='FORBIDDEN'
     &&manifest.source_storage==='GOOGLE_DRIVE_PRIVATE'
     &&manifest.truth_owner==='TOWER_V06@GOOGLE_DRIVE_PRIVATE'
-    &&Boolean(snapshotId)
+    &&Boolean(towerFileId)
+    &&validSha256(towerRevision)
     &&validSha256(fingerprint)
     &&validSha256(stateFingerprint)
     &&Number.isFinite(Date.parse(generatedAt))
@@ -199,14 +205,15 @@ function projectionReceipt(
   if(!validContract||!validPublishedPair||!validBuildMeta){
     throw new DataSourceError(
       'CONTRACT_MISMATCH',
-      'O snapshot publicado respondeu, mas projeção, manifesto e build-meta não fecharam o mesmo fingerprint validado.',
+      'A projeção publicada respondeu, mas Tower, manifesto e build-meta não fecharam a mesma revisão validada.',
     );
   }
 
   return {
     outcome:'PUBLIC_PROJECTION_REFRESHED',
     projection_fingerprint:fingerprint,
-    source_snapshot_id:snapshotId,
+    tower_file_id:towerFileId,
+    tower_revision:towerRevision,
     source_state_fingerprint:stateFingerprint,
     generated_at:generatedAt,
     active_work:activeWork,
@@ -248,7 +255,7 @@ function readValidatedReceiptCache():Extract<ProjectionSyncReceipt,{outcome:'PUB
 async function fetchFreshPublicProjection(signal?:AbortSignal):Promise<ProjectionSyncReceipt>{
   try{
     const [projection,manifest,buildMeta]=await Promise.all([
-      fetchPublishedJson<PublicProjection>(PUBLISHED_PROJECTION_ASSET,'Snapshot publicado',signal),
+      fetchPublishedJson<PublicProjection>(PUBLISHED_PROJECTION_ASSET,'Projeção publicada',signal),
       fetchPublishedJson<PublicManifest>(PUBLISHED_MANIFEST_ASSET,'Manifesto publicado',signal),
       fetchPublishedJson<BuildMeta>(PUBLISHED_BUILD_META_ASSET,'Build-meta publicado',signal),
     ]);
@@ -260,12 +267,12 @@ async function fetchFreshPublicProjection(signal?:AbortSignal):Promise<Projectio
     if(error instanceof DataSourceError)throw error;
     const failure=error instanceof ProjectionOriginError
       ? error.message
-      : 'Falha não classificada na leitura do snapshot publicado.';
+      : 'Falha não classificada na leitura da projeção publicada.';
     const cached=readValidatedReceiptCache();
     if(cached)return cached;
     throw new DataSourceError(
       'UNAVAILABLE',
-      'O snapshot validado do Atlas está indisponível após retries espaçados. '+failure
+      'A projeção validada do Atlas está indisponível após retries espaçados. '+failure
         +' Nenhum cache validado recente existe; a interface preserva o último estado em memória e não regride para uma origem privada ou não validada.',
     );
   }

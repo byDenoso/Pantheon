@@ -369,7 +369,9 @@ export interface ScienceProjectionV1 {
   source: {
     authority: 'TOWER_V06';
     tower_repository: string;
-    tower_commit: string;
+    tower_commit: string | null;
+    tower_file_id: string | null;
+    tower_revision: string | null;
     projection_fingerprint: string;
     projection_ref: string;
     writeback: 'FORBIDDEN';

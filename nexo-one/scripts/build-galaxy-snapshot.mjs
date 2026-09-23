@@ -26,7 +26,7 @@ function validSnapshot(value){
     && typeof value.generated_at==='string'
     && Number.isFinite(Date.parse(value.generated_at))
     && typeof value.tower_revision==='string'
-    && /^[0-9a-f]{40}$/i.test(value.tower_revision)
+    && (/^[0-9a-f]{40}$/i.test(value.tower_revision)||/^sha256:[0-9a-f]{64}$/i.test(value.tower_revision))
     && typeof value.fingerprint==='string'
     && /^sha256:[0-9a-f]{64}$/i.test(value.fingerprint)
     && value.provenance?.authority==='TOWER_V06'
@@ -54,7 +54,7 @@ if(!validSnapshot(snapshot))throw new Error('GALAXY_COMPILE_OUTPUT_INVALID');
 if(snapshot.provenance.source_fingerprint!==manifestFile.projection_fingerprint){
   throw new Error('GALAXY_PROJECTION_FINGERPRINT_MISMATCH');
 }
-if(snapshot.tower_revision!==manifestFile.tower_commit){
+if(snapshot.tower_revision!==String(manifestFile.tower_revision||manifestFile.tower_commit||'')){
   throw new Error('GALAXY_TOWER_REVISION_MISMATCH');
 }
 
