@@ -500,7 +500,7 @@ test('dedicated Atlas production page uses Metro renderer, G6 and deterministic 
   assert.match(app, /data-atlas-campaign-source-links/);
   assert.match(app, /atlas-source-link/);
   assert.match(app, /node\.sourceLinks/);
-  assert.match(app, /atlas-view-switch/);
+  assert.match(app, /<NexoGraph/);\n  assert.match(app, /ATLAS_LENSES/);\n  assert.match(app, /data-atlas-lens=\{lens\}/);
   assert.match(app, /THEME_STORAGE_KEY/);
   assert.match(app, /theme.*=== 'light'/);
   assert.match(app, /data-atlas-theme=\{atlasTheme\}/);
@@ -715,7 +715,7 @@ test('dedicated Atlas production page uses Metro renderer, G6 and deterministic 
   assert.match(loader, /cdn\.jsdelivr\.net\/npm\/\@antv\/g6/);
   assert.match(loader, /g6Fallback/);
   assert.match(embedded, /ensureAtlasG6/);
-  assert.match(embedded, /Atlas3DContent/);
+  assert.match(embedded, /Atlas3DContent/);\n  const sharedGraph = await text('src/components/NexoGraph.tsx');\n  assert.match(sharedGraph, /MetroAtlasRenderer/);\n  assert.match(sharedGraph, /Ver como tabela/);\n  assert.match(sharedGraph, /GraphViewSwitch/);
   assert.match(main, /data-atlas-bootstrap/);
   assert.match(loader, /atlasG6Source/);
 });
