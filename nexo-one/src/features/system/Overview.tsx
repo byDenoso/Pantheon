@@ -1,135 +1,55 @@
-// Tela principal do NEXO ONE. Ordem no desktop: estado, atenção, autonomia, lanes, bus.
-// No mobile a ordem passa a: atenção -> estado -> blockers -> próximas ações -> lanes (ver layout.css).
-import type { ActionRecord, InboxItem, SystemState } from '../../contracts/system.ts';
-import { ActionCard, HumanInboxItem, LaneState, ProjectionHealth } from '../../components/composites.tsx';
-import { EmptyState } from '../../components/states.tsx';
-import {
-  DomainBadge, FreshnessIndicator, SeverityBadge, StatusBadge,
-} from '../../components/primitives.tsx';
-import {
-  actionById, capabilityById, globalSummary, inboxGroups, laneViews, nextActionsFor, resolvableActions,
-} from '../../viewmodels/system.ts';
-import { dateTime, label, toneOf } from '../../viewmodels/tokens.ts';
+import type {ActionRecord,InboxItem,SystemState} from '../../contracts/system.ts';
+import {HumanInboxItem} from '../../components/composites.tsx';
+import {StatusBadge} from '../../components/primitives.tsx';
+import {inboxGroups,globalSummary,laneViews,resolvableActions} from '../../viewmodels/system.ts';
 
-export function Overview(
-  { state, onOpenAction, onOpenInbox, onNavigate }:
-  {
-    state: SystemState;
-    onOpenAction: (action: ActionRecord) => void;
-    onOpenInbox: (item: InboxItem) => void;
-    onNavigate: (view: 'INBOX' | 'ACTIONS' | 'TRUTHGRAPH' | 'SOURCES') => void;
-  },
-) {
-  const summary = globalSummary(state);
-  const groups = inboxGroups(state);
-  const urgent = groups.flatMap(group => group.items).slice(0, 3);
-  const resolvable = resolvableActions(state);
-  const lanes = laneViews(state);
-  const unavailableProviders = state.providers.filter(provider =>
-    provider.state === 'MISSING_PROVIDER' || provider.state === 'BLOCKED').length;
-  const representedProviders = Math.max(0, state.providers.length - unavailableProviders);
+const activeAction=(status:string)=>!['APPLIED','NO_OP_ALREADY_APPLIED','FAILED'].includes(status);
+const actionClass=(status:string)=>status==='BLOCKED'||status==='FAILED'?'block':status==='AWAITING_HUMAN'||status==='WAITING_SIDE_QUEST'?'wait':status==='APPLIED'||status==='NO_OP_ALREADY_APPLIED'?'pass':'';
 
-  return (
-    <div className="overview">
-      <section className="overview-pulse" aria-label="Resumo operacional" data-order="summary">
-        <button className={`pulse-metric health tone-${toneOf(summary.state)}`} onClick={() => onNavigate('SOURCES')}>
-          <span>Saúde</span><strong>{label(summary.state)}</strong>
-        </button>
-        <button className={summary.needsHuman ? 'pulse-metric attention' : 'pulse-metric'} onClick={() => onNavigate('INBOX')}>
-          <span>Needs Dener</span><strong>{summary.needsHuman}</strong>
-        </button>
-        <button className={summary.blockers.length ? 'pulse-metric attention' : 'pulse-metric'} onClick={() => onNavigate('ACTIONS')}>
-          <span>Blockers</span><strong>{summary.blockers.length}</strong>
-        </button>
-        <button className={summary.degradedCapabilities.length ? 'pulse-metric attention' : 'pulse-metric'} onClick={() => onNavigate('SOURCES')}>
-          <span>Capabilities fora de PASS</span><strong>{summary.degradedCapabilities.length}</strong>
-        </button>
-      </section>
+export function Overview({state,onOpenAction,onOpenInbox,onNavigate}:{
+  state:SystemState;
+  onOpenAction:(action:ActionRecord)=>void;
+  onOpenInbox:(item:InboxItem)=>void;
+  onNavigate:(view:'INBOX'|'ACTIONS'|'TRUTHGRAPH'|'SOURCES')=>void;
+}){
+  const summary=globalSummary(state);
+  const urgent=inboxGroups(state).flatMap(group=>group.items).slice(0,2);
+  const resolvable=resolvableActions(state);
+  const next=resolvable[0]||state.actions.find(action=>activeAction(action.status))||null;
+  const lanes=laneViews(state);
+  const unavailable=state.providers.filter(provider=>provider.state==='MISSING_PROVIDER'||provider.state==='BLOCKED').length;
+  const outsidePass=state.capabilities.filter(capability=>capability.status!=='PASS').length;
 
-      <section className="current-state" aria-labelledby="current-state-title" data-order="state">
-        <div className="section-head">
-          <h2 id="current-state-title">Leitura canônica</h2>
-          <div className="head-side">
-            <StatusBadge state={summary.state} />
-            <span className="quiet-note">última leitura {dateTime(summary.lastRead)}</span>
-            <span className="quiet-note">
-              Cobertura {representedProviders}/{state.providers.length} fontes com leitura ou snapshot · {unavailableProviders} indisponíveis
-            </span>
-          </div>
-        </div>
-        <div className="domain-strip">
-          {summary.domains.map(domain => (
-            <article key={domain.domain} className={`domain-tile tone-${toneOf(domain.state)}`}>
-              <header>
-                <DomainBadge domain={domain.domain} />
-                <SeverityBadge severity={domain.severity} />
-              </header>
-              <StatusBadge state={domain.state} />
-              {domain.freshness && <FreshnessIndicator freshness={domain.freshness} />}
-              <p>{domain.finding?.explanation ?? 'Sem finding registrado para este domínio nesta projeção.'}</p>
-              {domain.blockers.length > 0 && (
-                <ul className="tile-blockers">{domain.blockers.map(b => <li key={b}>{b}</li>)}</ul>
-              )}
-            </article>
-          ))}
-        </div>
-        {unavailableProviders > 0 && (
-          <p className="rule-note">
-            Há provider indisponível nesta compilação. Contadores em zero não cobrem o estado ausente.
-          </p>
-        )}
-      </section>
+  return <div className="overview-consult">
+    <section className="consult-section" aria-labelledby="needs-title">
+      <div className="consult-section-head"><h2 id="needs-title">Precisa de você</h2><button className="text-button" onClick={()=>onNavigate('INBOX')}>{summary.needsHuman} pendentes</button></div>
+      {urgent.length?<div className="consult-gates">{urgent.map(item=><HumanInboxItem key={item.id} item={item} onOpen={onOpenInbox}/>)}</div>:<div className="consult-empty">Nenhum gate humano publicado nesta leitura.</div>}
+    </section>
 
-      <section aria-labelledby="attention-title" data-order="attention">
-        <div className="section-head">
-          <h2 id="attention-title">Needs Dener <span>{summary.needsHuman}</span></h2>
-          <button className="text-button" onClick={() => onNavigate('INBOX')}>Abrir inbox ↗</button>
-        </div>
-        {urgent.length
-          ? urgent.map(item => (
-              <HumanInboxItem key={item.id} item={item} action={actionById(state, item.action_id)} onOpen={onOpenInbox} />
-            ))
-          : <EmptyState title="0 itens em Needs Dener."
-              description="Nenhuma decisão ou autorização humana está pendente nesta compilação."
-              hint="Cobertura e integridade das fontes são verificadas separadamente." />}
-      </section>
+    <section className="consult-section" aria-labelledby="next-title">
+      <div className="consult-section-head"><h2 id="next-title">Próxima ação do sistema</h2><button className="text-button" onClick={()=>onNavigate('ACTIONS')}>Abrir fila</button></div>
+      {next?<button className="consult-next" type="button" onClick={()=>onOpenAction(next)}>
+        <strong>{next.title}</strong><span>{next.lane} · {next.status}</span><code>{next.action_id}</code>
+      </button>:<div className="consult-empty">Próxima ação: não publicada.</div>}
+    </section>
 
-      <section aria-labelledby="autonomy-title" data-order="autonomy">
-        <div className="section-head">
-          <h2 id="autonomy-title">Fila autônoma elegível <span>{resolvable.length}</span></h2>
-          <span className="eyebrow">SEM GATE HUMANO</span>
-        </div>
-        {resolvable.length
-          ? <div className="card-grid">
-              {resolvable.map(action => (
-                <ActionCard key={action.action_id} action={action}
-                  capability={capabilityById(state, action.capability_id)} onOpen={onOpenAction} />
-              ))}
-            </div>
-          : <EmptyState title="0 ações executáveis sem gate humano."
-              description="Não há ação aberta com capability executável e dependências resolvidas nesta compilação." />}
-      </section>
+    <section className="consult-kpis" aria-label="Indicadores">
+      <button className="consult-kpi" type="button" onClick={()=>onNavigate('INBOX')}><span>Gates humanos</span><strong>{summary.needsHuman}</strong></button>
+      <button className="consult-kpi" type="button" onClick={()=>onNavigate('ACTIONS')}><span>Blockers</span><strong>{summary.blockers.length}</strong></button>
+      <button className="consult-kpi" type="button" onClick={()=>onNavigate('SOURCES')}><span>Capabilities fora de PASS</span><strong>{outsidePass}<small> / {state.capabilities.length}</small></strong></button>
+      <button className="consult-kpi" type="button" onClick={()=>onNavigate('SOURCES')}><span>Fontes indisponíveis</span><strong>{unavailable}<small> / {state.providers.length}</small></strong></button>
+    </section>
 
-      <section aria-labelledby="lanes-title" data-order="lanes">
-        <div className="section-head">
-          <h2 id="lanes-title">Próxima operação por domínio</h2>
-          <span className="eyebrow">SCIENCE · ENGINEERING · OLYMPUS</span>
-        </div>
-        <div className="lane-grid">
-          {lanes.map(lane => (
-            <LaneState key={lane.domain} lane={lane} actions={nextActionsFor(state, lane.domain)}
-              onSelectAction={onOpenAction} />
-          ))}
-        </div>
-      </section>
+    <section className="consult-section" aria-labelledby="domains-title">
+      <div className="consult-section-head"><h2 id="domains-title">Domínios</h2><span>estado e distribuição da fila</span></div>
+      <div className="science-table-wrap"><table className="consult-domain-table"><thead><tr><th>Domínio</th><th>Estado</th><th>Fila</th><th>Próxima operação</th></tr></thead><tbody>
+        {lanes.map(lane=>{const actions=state.actions.filter(action=>action.lane===lane.domain);return <tr key={lane.domain}><td><strong>{lane.domain}</strong></td><td><StatusBadge state={lane.state}/></td><td><div className="state-distribution" aria-label={`${actions.length} ações no domínio`}>{actions.map(action=><i key={action.action_id} className={actionClass(action.status)} style={{flexGrow:1}} title={action.status}/>)}</div></td><td>{lane.next_action||'não publicado'}</td></tr>;})}
+      </tbody></table></div>
+    </section>
 
-      <section aria-labelledby="bus-title" data-order="bus">
-        <div className="section-head">
-          <h2 id="bus-title">Projeção publicada</h2>
-          <span className="eyebrow">{label(state.bus.state)}</span>
-        </div>
-        <ProjectionHealth bus={state.bus} />
-      </section>
-    </div>
-  );
+    <section className="consult-section" aria-labelledby="diff-title">
+      <div className="consult-section-head"><h2 id="diff-title">O que mudou desde o último sync</h2><span>comparação de snapshots</span></div>
+      <div className="consult-empty">Diff entre snapshots: não publicado neste contrato.</div>
+    </section>
+  </div>;
 }
