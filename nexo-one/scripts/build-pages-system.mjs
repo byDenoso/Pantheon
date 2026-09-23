@@ -262,7 +262,7 @@ function proceduralLearningFilaments(metaLearning, projection, manifest, observe
       contradiction: Number.isFinite(Number(item.contradicting_count)) ? Number(item.contradicting_count) : 0,
       status: status === 'SUPPORTED' ? 'ESTABLISHED' : status === 'REJECTED' ? 'CONTESTED' : 'PROVISIONAL',
       evidence: refs,
-      source_ref: `tower://${manifest.tower_repository || 'byDenoso/NEXO-Obsidian-Vault'}@${manifest.tower_commit}/TOWER_V06/runtime/artifacts/meta_learning/METALEARNING_CURRENT.json`,
+      source_ref: sourcePathRef(manifest, 'runtime/artifacts/meta_learning/METALEARNING_CURRENT.json'),
       boundary: String(item.falsifier || 'Procedural learning only. No scientific authority.'),
       from_label: 'NEXO Learning',
       to_label: target?.label || toDomain,
