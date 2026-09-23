@@ -79,7 +79,7 @@ export function CapabilityBadge({ status, id }: { status: CapabilityStatus; id?:
 }
 
 export function SeverityBadge({ severity }: { severity: Severity }) {
-  if (severity === 'INFO') return <span className="badge outline tone-live compact">INFO</span>;
+  if (severity === 'INFO') return null;
   const tone: Tone = severity === 'P0' ? 'conflict' : severity === 'P1' ? 'degraded' : 'snapshot';
   return <span className={`badge severity tone-${tone} compact`} title={`Severidade ${severity}`}>{severity}</span>;
 }
