@@ -673,10 +673,12 @@ test('dedicated Atlas production page uses Metro renderer, G6 and deterministic 
   assert.doesNotMatch(renderer, /TorusGeometry|RingGeometry/);
   assert.match(renderer, /fitThree\(/);
   assert.match(renderer, /threeFitInsets/);
-  assert.match(renderer, /selection-safe-area-v5/);
+  assert.match(renderer, /perspective-point-safe-area-v6/);
   assert.match(renderer, /threeFitScope/);
   assert.match(renderer, /threeFitNodeCount/);
   assert.match(renderer, /threeFitCoverage/);
+  assert.match(renderer, /threeFitTargetCoverage/);
+  assert.match(renderer, /solveDistance/);
   assert.match(renderer, /if \(lastFitNonce\.current < 0\) \{/);
   assert.match(renderer, /fitThree\(runtime, true, null, 'all'\)/);
   assert.doesNotMatch(renderer, /\[model\.revision, expansionKey, showBeams, fitNonce\]/);
