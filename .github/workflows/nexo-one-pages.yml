@@ -486,7 +486,7 @@ jobs:
 
           capture_system_shell() {
             local name="$1" width="$2" height="$3" theme="$4"
-            local url="${base}/mcp/?q=Cosmology&theme=${theme}&graph=2d&tab=graph"
+            local url="${base}/mcp/?q=Cosmology&theme=${theme}&view=2d&tab=graph"
             local dom="/tmp/shell-${name}.html"
             dump_until_ready 'data-mcp-ready="true"' "${dom}" \
               --headless=new --no-sandbox --disable-dev-shm-usage --hide-scrollbars \
@@ -547,7 +547,7 @@ jobs:
 
           # WebMCP visual matrix: same neural graph language as Atlas across
           # 2D/3D, dark/light and desktop/mobile.
-          mcp_url="${base}/mcp/?q=Cosmology&theme=dark&graph=2d&tab=graph"
+          mcp_url="${base}/mcp/?q=Cosmology&theme=dark&view=2d&tab=graph"
           dump_until_ready 'data-mcp-ready="true"' /tmp/mcp-readback-dom.html \
             --headless=new --no-sandbox --disable-dev-shm-usage --hide-scrollbars \
             --window-size=1440,900 --virtual-time-budget=9000 --dump-dom "${mcp_url}"
@@ -557,7 +557,7 @@ jobs:
           grep -Fq 'data-mcp-query="Cosmology"' /tmp/mcp-readback-dom.html
           grep -Fq 'data-mcp-theme="dark"' /tmp/mcp-readback-dom.html
           grep -Fq 'data-mcp-graph-view="2d"' /tmp/mcp-readback-dom.html
-          grep -Fq 'data-mcp-renderer="neural-2d"' /tmp/mcp-readback-dom.html
+          grep -Fq 'data-mcp-renderer="metro-2d"' /tmp/mcp-readback-dom.html
           grep -Fq 'class="mcp-neural-2d"' /tmp/mcp-readback-dom.html
           grep -Fq '>Capabilities<' /tmp/mcp-readback-dom.html
           grep -Fq '>Runtimes<' /tmp/mcp-readback-dom.html
@@ -576,13 +576,13 @@ jobs:
           test -s /tmp/mcp-readback-dark-2d.png
           echo "PAGES_MCP_NEURAL_DARK_2D_OK selected=COSMOLOGY nodes=${mcp_nodes} links=${mcp_links}"
 
-          mcp_light_2d_url="${base}/mcp/?q=Cosmology&theme=light&graph=2d&tab=graph"
+          mcp_light_2d_url="${base}/mcp/?q=Cosmology&theme=light&view=2d&tab=graph"
           dump_until_ready 'data-mcp-ready="true"' /tmp/mcp-readback-light-2d-dom.html \
             --headless=new --no-sandbox --disable-dev-shm-usage --hide-scrollbars \
             --window-size=1440,900 --virtual-time-budget=9000 --dump-dom "${mcp_light_2d_url}"
           grep -Fq 'data-mcp-theme="light"' /tmp/mcp-readback-light-2d-dom.html
           grep -Fq 'data-mcp-graph-view="2d"' /tmp/mcp-readback-light-2d-dom.html
-          grep -Fq 'data-mcp-renderer="neural-2d"' /tmp/mcp-readback-light-2d-dom.html
+          grep -Fq 'data-mcp-renderer="metro-2d"' /tmp/mcp-readback-light-2d-dom.html
           grep -Fq 'class="mcp-neural-2d"' /tmp/mcp-readback-light-2d-dom.html
           "${chrome_bin}" --headless=new --no-sandbox --disable-dev-shm-usage --hide-scrollbars \
             --window-size=1440,900 --virtual-time-budget=9000 \
@@ -590,7 +590,7 @@ jobs:
           test -s /tmp/mcp-readback-light-2d.png
           echo "PAGES_MCP_NEURAL_LIGHT_2D_OK"
 
-          mcp_dark_3d_url="${base}/mcp/?q=Cosmology&theme=dark&graph=3d&tab=graph"
+          mcp_dark_3d_url="${base}/mcp/?q=Cosmology&theme=dark&view=3d&tab=graph"
           dump_until_ready 'data-mcp-ready="true"' /tmp/mcp-readback-dark-3d-dom.html \
             --headless=new --no-sandbox --disable-dev-shm-usage --hide-scrollbars \
             --window-size=1440,900 --virtual-time-budget=9000 --dump-dom "${mcp_dark_3d_url}"
@@ -605,7 +605,7 @@ jobs:
           test -s /tmp/mcp-readback-dark-3d.png
           echo "PAGES_MCP_NEURAL_DARK_3D_OK"
 
-          mcp_light_3d_url="${base}/mcp/?q=Cosmology&theme=light&graph=3d&tab=graph"
+          mcp_light_3d_url="${base}/mcp/?q=Cosmology&theme=light&view=3d&tab=graph"
           dump_until_ready 'data-mcp-ready="true"' /tmp/mcp-readback-light-3d-dom.html \
             --headless=new --no-sandbox --disable-dev-shm-usage --hide-scrollbars \
             --window-size=1440,900 --virtual-time-budget=9000 --dump-dom "${mcp_light_3d_url}"
@@ -620,21 +620,21 @@ jobs:
           test -s /tmp/mcp-readback-light-3d.png
           echo "PAGES_MCP_NEURAL_LIGHT_3D_OK"
 
-          mcp_mobile_light_url="${base}/mcp/?q=Cosmology&theme=light&graph=2d&tab=graph"
+          mcp_mobile_light_url="${base}/mcp/?q=Cosmology&theme=light&view=2d&tab=graph"
           dump_until_ready 'data-mcp-ready="true"' /tmp/mcp-readback-mobile-light-dom.html \
             --headless=new --no-sandbox --disable-dev-shm-usage --hide-scrollbars --touch-events=enabled \
             --window-size=390,844 --force-device-scale-factor=1 --user-agent="${mobile_ua}" \
             --virtual-time-budget=10000 --dump-dom "${mcp_mobile_light_url}"
           grep -Fq 'data-mcp-theme="light"' /tmp/mcp-readback-mobile-light-dom.html
           grep -Fq 'data-mcp-graph-view="2d"' /tmp/mcp-readback-mobile-light-dom.html
-          grep -Fq 'data-mcp-renderer="neural-2d"' /tmp/mcp-readback-mobile-light-dom.html
+          grep -Fq 'data-mcp-renderer="metro-2d"' /tmp/mcp-readback-mobile-light-dom.html
           "${chrome_bin}" --headless=new --no-sandbox --disable-dev-shm-usage --hide-scrollbars --touch-events=enabled \
             --window-size=390,844 --force-device-scale-factor=1 --user-agent="${mobile_ua}" --virtual-time-budget=9000 \
             --screenshot=/tmp/mcp-readback-mobile-light-2d.png "${mcp_mobile_light_url}" >/dev/null 2>&1
           test -s /tmp/mcp-readback-mobile-light-2d.png
           echo "PAGES_MCP_NEURAL_MOBILE_LIGHT_2D_OK"
 
-          mcp_mobile_dark_3d_url="${base}/mcp/?q=Cosmology&theme=dark&graph=3d&tab=graph"
+          mcp_mobile_dark_3d_url="${base}/mcp/?q=Cosmology&theme=dark&view=3d&tab=graph"
           dump_until_ready 'data-mcp-ready="true"' /tmp/mcp-readback-mobile-dark-3d-dom.html \
             --headless=new --no-sandbox --disable-dev-shm-usage --hide-scrollbars --touch-events=enabled \
             --window-size=390,844 --force-device-scale-factor=1 --user-agent="${mobile_ua}" \
