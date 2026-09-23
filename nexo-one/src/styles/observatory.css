@@ -63,6 +63,14 @@
   --live-bg:transparent;--snapshot-bg:transparent;--stale-bg:transparent;--degraded-bg:transparent;
   --conflict-bg:transparent;--blocked-bg:transparent;--unknown-bg:transparent;
   --grid:transparent;--rail:var(--obs-void);
+  --nexo-surface-1:var(--obs-void);--nexo-surface-2:var(--obs-deep);--nexo-surface-3:var(--obs-raise);
+  --nexo-accent-dim:var(--obs-sodium-ink);--nexo-accent-soft:color-mix(in srgb,var(--obs-sodium) 8%,transparent);
+  --nexo-border-strong:var(--obs-line-strong);--nexo-experimental:var(--obs-violet);
+  --surface-0:var(--obs-void);--surface-1:var(--obs-void);--surface-2:var(--obs-deep);--surface-3:var(--obs-raise);
+  --command-accent:var(--obs-sodium);--command-accent-strong:var(--obs-sodium-ink);--command-grid:transparent;
+  --command-hairline:var(--obs-line);--command-radius:0;--command-shadow:none;
+  --hairline:var(--obs-line);--violet:var(--obs-violet);
+  --radius-button:0;--radius-control:0;--radius-panel:0;--radius-sheet:0;
   font-family:var(--obs-body);
 }
 :root[data-theme=light]{color-scheme:light}
@@ -163,7 +171,7 @@
 }
 
 /* ── Workspace ──────────────────────────────────────────── */
-:root[data-theme] .unified-shell{background:var(--obs-void)}
+:root[data-theme] .unified-shell{background:var(--obs-void);overflow-x:clip}
 :root[data-theme] .unified-shell .workspace{max-width:1480px;padding:32px clamp(16px,3vw,40px) 72px}
 :root[data-theme] .unified-shell .workspace-heading{margin:0 0 24px}
 :root[data-theme] .unified-shell .workspace-heading h1{font-size:clamp(44px,5.6vw,88px);font-weight:900;line-height:.88;margin:0 0 14px}
@@ -178,7 +186,7 @@
   background:#05070B;
 }
 @media(min-width:1480px){
-  :root[data-theme] .unified-shell .workspace-heading--hero{margin-inline:calc((1480px - 100vw)/2);padding-inline:calc((100vw - 1480px)/2 + 40px)}
+  :root[data-theme] .unified-shell .workspace-heading--hero{margin-inline:calc((1480px - 100vw)/2 - 40px);padding-inline:calc((100vw - 1480px)/2 + 40px)}
 }
 .hero-sky{position:absolute;inset:0;width:100%;height:100%;display:block}
 :root[data-theme] .workspace-heading--hero::after{
@@ -373,3 +381,4 @@
 @media(prefers-reduced-motion:reduce){
   :root[data-theme] :is(.inbox-item,.item-row,.work-row,.pulse-metric){transition:none}
 }
+:root[data-theme] .galaxy-three-root{--field-accent:var(--obs-sodium)}
