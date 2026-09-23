@@ -12,7 +12,7 @@ test('V3 exposes explicit loading error empty and navigation affordances',()=>{
   assert.match(app,/aria-busy/);
   assert.match(app,/role=["']alert["']/);
   assert.match(app,/Nenhuma entidade encontrada/);
-  assert.match(app,/Voltar ao NEXO/);
+  assert.match(app,/Voltar ao Nexo/);
   assert.match(app,/Escape/);
   assert.match(app,/aria-live/);
 });

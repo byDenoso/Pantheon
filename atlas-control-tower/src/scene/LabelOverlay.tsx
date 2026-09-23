@@ -97,12 +97,15 @@ export function labelText(node:PositionedNode){
 }
 
 export function labelType(node:PositionedNode){
-  return String(node.type||'ENTITY').replaceAll('_',' ');
+  const type=String(node.type||'ENTITY').toUpperCase();
+  const labels:Record<string,string>={SYSTEM:'Sistema',DOMAIN:'Domínio',CAMPAIGN:'Campanha',HYPOTHESIS:'Hipótese',TEST:'Teste',WORK:'Trabalho',CAPABILITY:'Capacidade',RUNTIME:'Ambiente',ROLE:'Papel',TOOL:'Ferramenta',EVIDENCE:'Evidência',REFERENCE:'Referência',FILAMENT:'Filamento',AUTOMATION:'Automação',DOCUMENT:'Documento',PUBLICATION:'Publicação',CLAIM:'Afirmação',RESULT:'Resultado',RUN:'Execução'};
+  return labels[type]||type.replaceAll('_',' ').toLocaleLowerCase('pt-BR');
 }
 
 export function labelStatus(node:PositionedNode){
-  const status=String(node.status||'').trim();
-  return status ? status.replaceAll('_',' ') : '';
+  const status=String(node.status||'').trim().toUpperCase();
+  const labels:Record<string,string>={LIVE:'Ao vivo',ACTIVE:'Ativo',PASS:'Verificado',VERIFIED:'Verificado',BLOCKED:'Bloqueado',WAIT_DEPENDENCY:'Aguardando dependência',PENDING:'Pendente',UNKNOWN:'Desconhecido',WATCH:'Em observação',STALE:'Desatualizado',SNAPSHOT:'Instantâneo',UNVERIFIED:'Sem verificação',CONFLICT:'Conflito',RETIRED:'Retirado',READY:'Pronto',FAILED:'Falhou'};
+  return status ? labels[status]||status.replaceAll('_',' ').toLocaleLowerCase('pt-BR') : '';
 }
 
 // Positions are projected by the R3F camera component; this layer intentionally owns text only.

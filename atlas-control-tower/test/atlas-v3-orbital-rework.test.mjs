@@ -13,7 +13,7 @@ test('Atlas V3 exposes the approved cinematic orbital workspace instead of a das
   assert.match(app, /AtlasCanvas/);
   assert.match(app, /className="neural-layer-bar/);
   assert.match(app, /atlas-v3-search/);
-  assert.match(app, /Buscar campanha, claim, teste ou work/);
+  assert.match(app, /Buscar campanha, afirmação, teste ou trabalho/);
   assert.match(css, /\.cinematic-stage/);
   assert.match(css, /\.brand-orbit/);
   assert.match(css, /radial-gradient/);

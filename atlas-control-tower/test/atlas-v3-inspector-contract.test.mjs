@@ -9,5 +9,5 @@ test('V3 inspector never treats presentation hubs as canonical entities',()=>{
   assert.equal(fs.existsSync(appPath),true,'V3 app must exist');
   const app=fs.readFileSync(appPath,'utf8');
   assert.match(app,/presentationOnly/);
-  assert.match(app,/CANONICAL|APRESENTAÇÃO/);
+  assert.match(app,/Registro publicado|Contexto visual/);
 });

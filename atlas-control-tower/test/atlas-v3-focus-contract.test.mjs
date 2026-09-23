@@ -9,7 +9,7 @@ test('V3 app supports focus history home and Escape navigation',()=>{
   assert.equal(fs.existsSync(appPath),true,'V3 app must exist');
   const app=fs.readFileSync(appPath,'utf8');
   assert.match(app,/focusHistory/);
-  assert.match(app,/Voltar ao NEXO/);
+  assert.match(app,/Voltar ao Nexo/);
   assert.match(app,/event\.key===['"]Escape['"]/);
   assert.match(app,/setFocusId/);
 });

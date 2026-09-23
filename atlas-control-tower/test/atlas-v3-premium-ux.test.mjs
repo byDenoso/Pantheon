@@ -9,7 +9,7 @@ const canvas=fs.readFileSync(new URL('src/scene/AtlasCanvas.tsx',root),'utf8');
 test('inspector exposes contextual premium content only from published fields',()=>{
   assert.match(app,/inspector-context/);
   assert.match(app,/Resumo/);
-  assert.match(app,/Próximo movimento/);
+  assert.match(app,/Próxima ação/);
   assert.match(app,/node\.summary/);
   assert.match(app,/entity\?\./);
 });
