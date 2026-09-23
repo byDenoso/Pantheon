@@ -1,18 +1,18 @@
 {
   "control": {
     "schema_version": "0.6",
-    "truth_owner": "byDenoso/NEXO-Obsidian-Vault@main:TOWER_V06",
-    "write_model": "GITHUB_CAS_ENTITY_EVENT",
-    "drive_role": "LEGACY_PROJECTION_ONLY",
-    "drive_sync_model": "GITHUB_TO_DRIVE_ONLY",
-    "drive_writeback_to_truth": "FORBIDDEN",
+    "truth_owner": "TOWER_V06@GOOGLE_DRIVE_PRIVATE",
+    "write_model": "IN_PLACE_FILE_REVISION_CAS_READBACK",
+    "drive_role": "PRIMARY_CANONICAL_STORAGE",
+    "drive_sync_model": "LIVE_TOWER_REVISION",
+    "drive_writeback_to_truth": "CORE_SERIALIZED_CANONICAL_WRITE",
     "atlas_role": "READ_ONLY_PROJECTION",
     "atlas_truth_source": "TOWER_V06",
     "atlas_writeback_to_truth": "FORBIDDEN",
     "interdomain_layer": "ACTIVE_V1"
   },
-  "sourceVersion": "TOWER_V06@main:cbb7fa96f62960f1478f25855b1fa3f085308029;CONTROL:b5af26938a1d05fdd3e27e924e001dca0d102b55;ACTIVE_WORK:c0ff641fbbd6f40d8aaea41ba4fa76870660ff98;PROGRAMS:578a2c9c8834e3c144a8e249b838926b8dab0540;CAMPAIGNS:dd9b1fcc12acda9235a0ef0ca42f6f192580e905;INTERDOMAIN:61fbb4dca6551d1d03f185c7ade9cf77591661eb;METALEARNING:v3",
-  "generatedAt": "2026-09-20T15:55:00Z",
+  "sourceVersion": "TOWER_V06@GOOGLE_DRIVE_PRIVATE:NEXO_TOWER_LIVE.json.gz",
+  "generatedAt": "2026-09-23T15:10:00Z",
   "completeness": "PARTIAL_TOWER_HOT_SET",
   "publicProjection": true,
   "entities": {
