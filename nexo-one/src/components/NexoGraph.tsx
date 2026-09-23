@@ -6,7 +6,7 @@ import './NexoGraph.css';
 
 export type NexoGraphView='2d'|'3d';
 const ILLUMINATION_STORAGE_KEY='nexo.graph.illuminated.v1';
-const ALL_GRAPH_LAYERS=new Set<AtlasGraphLayer>(['knowledge','execution','capability']);
+const ALL_GRAPH_LAYERS=new Set<AtlasGraphLayer>(['knowledge','execution','capability','governance']);
 
 export function GraphViewSwitch({view,onChange}:{view:NexoGraphView;onChange:(view:NexoGraphView)=>void}){
   return <div className="nexo-graph-view-switch" role="group" aria-label="Visualização do grafo">
