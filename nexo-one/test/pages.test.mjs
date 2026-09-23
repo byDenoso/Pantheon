@@ -92,11 +92,16 @@ test('GitHub Pages consumes only the sanctioned TOWER_V06 public projection', as
 
   assert.match(builder, /NEXO_PUBLIC_PROJECTION_V1/);
   assert.match(builder, /validateSanctionedProjection/);
+  assert.match(builder, /buildScienceProjectionV1/);
+  assert.match(builder, /science-projection-v1\.json/);
+  assert.match(builder, /validateScienceProjectionV1\(scienceReadback\)/);
   assert.match(builder, /Pantheon performs presentation shaping only/);
   assert.doesNotMatch(builder, /readProvider/);
   assert.doesNotMatch(builder, /public-system-input/);
   assert.doesNotMatch(builder, /nexo-drive-projection/);
   assert.doesNotMatch(builder, /truthgraph\.snapshot/);
+  assert.match(workflow, /SCIENCE_PROJECTION_SOURCE_MISMATCH/);
+  assert.match(workflow, /PAGES_SCIENCE_PROJECTION_READBACK_OK/);
 });
 
 test('Pages capability projection cannot silently collapse a non-empty Tower registry to zero', async () => {

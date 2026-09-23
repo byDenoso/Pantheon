@@ -349,6 +349,37 @@ export interface ProviderHealth {
   explanation: string;
 }
 
+export interface ScienceEvidenceField<T = unknown> {
+  value: T | null;
+  unavailable_reason: string | null;
+  source_ref: string;
+  fingerprint: string;
+}
+
+export interface ScienceProjectionRecord {
+  id: string;
+  source_ref: string;
+  fingerprint: string;
+  [field: string]: ScienceEvidenceField | Record<string, ScienceEvidenceField> | string;
+}
+
+export interface ScienceProjectionV1 {
+  contract: 'NEXO_SCIENCE_PROJECTION_V1';
+  version: 1;
+  source: {
+    authority: 'TOWER_V06';
+    tower_repository: string;
+    tower_commit: string;
+    projection_fingerprint: string;
+    projection_ref: string;
+    writeback: 'FORBIDDEN';
+  };
+  campaigns: ScienceProjectionRecord[];
+  hypotheses: ScienceProjectionRecord[];
+  tests: ScienceProjectionRecord[];
+  fingerprint: string;
+}
+
 /** Raiz consumida por NEXO ONE e Atlas. Mesmo estado, projeções diferentes. */
 export interface SystemState {
   contract_version: '1';
@@ -366,6 +397,8 @@ export interface SystemState {
   lanes: LaneSnapshot[];
   /** Complete WORK queue from the sanctioned projection. Kept separate from Atlas graph shaping. */
   projected_work?: GraphNode[];
+  /** Source-linked scientific evidence; absent canonical values remain null with a reason. */
+  science_projection_v1?: ScienceProjectionV1;
   graph: { nodes: GraphNode[]; edges: GraphEdge[] };
   filaments: Filament[];
   providers: ProviderHealth[];

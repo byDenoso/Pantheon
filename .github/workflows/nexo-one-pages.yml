@@ -312,7 +312,7 @@ jobs:
         run: |
           set -euo pipefail
           npm run typecheck
-          node --test test/atlas3d-metro-production.test.mjs test/pages.test.mjs test/mcp-atlas-site.test.mjs test/projection-sync-resilience.test.mjs test/github-origin-resilience.test.mjs
+          node --test test/atlas3d-metro-production.test.mjs test/pages.test.mjs test/science-projection-v1.test.mjs test/mcp-atlas-site.test.mjs test/projection-sync-resilience.test.mjs test/github-origin-resilience.test.mjs
           mkdir -p public/vendor
           curl -fsSL --retry 3 --connect-timeout 8 https://cdn.jsdelivr.net/npm/@antv/g6@5/dist/g6.min.js -o public/vendor/g6.min.js
           test -s public/vendor/g6.min.js
@@ -380,6 +380,8 @@ jobs:
           node scripts/build-mcp-topology.mjs
           node scripts/build-galaxy-snapshot.mjs
           test -s dist/system.json
+          test -s dist/science-projection-v1.json
+          test -s dist/contracts/science-projection-v1.schema.json
           test -s dist/galaxy/latest.json
           test -s dist/galaxy/index.json
           node -e "const fs=require('fs');const x=JSON.parse(fs.readFileSync('dist/galaxy/latest.json'));const i=JSON.parse(fs.readFileSync('dist/galaxy/index.json'));if(i.latest_snapshot_id!==x.snapshot_id)throw new Error('GALAXY_INDEX_LATEST_MISMATCH');if(!fs.existsSync('dist/galaxy/snapshots/'+x.snapshot_id+'.json'))throw new Error('GALAXY_VERSIONED_SNAPSHOT_MISSING')"
@@ -1178,6 +1180,8 @@ jobs:
 
           echo "PAGES_MCP_VISUAL_READBACK_OK selected=COSMOLOGY nodes=${mcp_nodes} links=${mcp_links}"
           curl -fsSL "${base}/world-public.ndjson" -o /tmp/world.ndjson
+          curl -fsSL "${base}/science-projection-v1.json" -o /tmp/science-projection-v1.json
+          curl -fsSL "${base}/contracts/science-projection-v1.schema.json" -o /tmp/science-projection-v1.schema.json
           curl -fsSL "${base}/mcp/topology.json" -o /tmp/mcp-topology.json
           curl -fsSL "${base}/galaxy/latest.json" -o /tmp/galaxy-latest.json
           curl -fsSL "${base}/galaxy/index.json" -o /tmp/galaxy-index.json
@@ -1192,6 +1196,8 @@ jobs:
           const manifest=JSON.parse(fs.readFileSync('/tmp/manifest.json','utf8'));
           const projection=JSON.parse(fs.readFileSync('/tmp/projection.json','utf8'));
           const system=JSON.parse(fs.readFileSync('/tmp/system.json','utf8'));
+          const science=JSON.parse(fs.readFileSync('/tmp/science-projection-v1.json','utf8'));
+          const scienceSchema=JSON.parse(fs.readFileSync('/tmp/science-projection-v1.schema.json','utf8'));
           const world=JSON.parse(fs.readFileSync('/tmp/world.ndjson','utf8').trim());
           const mcp=JSON.parse(fs.readFileSync('/tmp/mcp-topology.json','utf8'));
           const galaxy=JSON.parse(fs.readFileSync('/tmp/galaxy-latest.json','utf8'));
@@ -1207,6 +1213,16 @@ jobs:
           if(manifest.projection_fingerprint!==process.env.EXPECTED_FINGERPRINT)throw new Error('READBACK_FINGERPRINT_MISMATCH');
           if(JSON.stringify(projection.manifest)!==JSON.stringify(manifest))throw new Error('READBACK_MANIFEST_SPLIT_BRAIN');
           if(system.bus?.fingerprint!==manifest.projection_fingerprint)throw new Error('SYSTEM_NOT_BOUND_TO_TOWER_PROJECTION');
+          if(science.contract!=='NEXO_SCIENCE_PROJECTION_V1'||science.version!==1)throw new Error('SCIENCE_PROJECTION_CONTRACT_INVALID');
+          if(science.source?.projection_fingerprint!==manifest.projection_fingerprint||science.source?.tower_commit!==manifest.tower_commit)throw new Error('SCIENCE_PROJECTION_SOURCE_MISMATCH');
+          if(science.source?.writeback!=='FORBIDDEN'||scienceSchema.properties?.contract?.const!==science.contract)throw new Error('SCIENCE_PROJECTION_SCHEMA_OR_WRITEBACK_INVALID');
+          if(JSON.stringify(system.science_projection_v1)!==JSON.stringify(science))throw new Error('SYSTEM_SCIENCE_PROJECTION_READBACK_MISMATCH');
+          const scienceBase={...science}; delete scienceBase.fingerprint;
+          const canonical=value=>Array.isArray(value)?value.map(canonical):value&&typeof value==='object'?Object.fromEntries(Object.keys(value).sort().map(key=>[key,canonical(value[key])])):value;
+          const scienceDigest='sha256:'+require('crypto').createHash('sha256').update(JSON.stringify(canonical(scienceBase))).digest('hex');
+          if(science.fingerprint!==scienceDigest)throw new Error('SCIENCE_PROJECTION_FINGERPRINT_INVALID');
+          const checkScienceRecords=records=>{for(const record of records){if(!record.source_ref?.startsWith('tower://')||!/^sha256:[0-9a-f]{64}$/i.test(record.fingerprint||''))throw new Error('SCIENCE_RECORD_PROVENANCE_INVALID '+record.id);const visit=value=>{if(Array.isArray(value)){for(const item of value)visit(item);return;}if(!value||typeof value!=='object')return;if(Object.hasOwn(value,'value')&&Object.hasOwn(value,'source_ref')){if(!value.source_ref.startsWith('tower://')||!/^sha256:[0-9a-f]{64}$/i.test(value.fingerprint||''))throw new Error('SCIENCE_FIELD_PROVENANCE_INVALID '+record.id);if(value.value===null&&!String(value.unavailable_reason||'').trim())throw new Error('SCIENCE_NULL_REASON_MISSING '+record.id);if(value.value!==null&&value.unavailable_reason!==null)throw new Error('SCIENCE_VALUE_REASON_CONFLICT '+record.id);return;}for(const child of Object.values(value))visit(child);};for(const [key,value] of Object.entries(record)){if(!['id','source_ref','fingerprint'].includes(key))visit(value);}}};
+          checkScienceRecords([...(science.campaigns||[]),...(science.hypotheses||[]),...(science.tests||[])]);
           if(world.truthGraph?.fingerprint!==manifest.projection_fingerprint)throw new Error('WORLD_NOT_BOUND_TO_TOWER_PROJECTION');
 
           const projectedWork=Array.isArray(projection.work)?projection.work:[];
@@ -1277,6 +1293,7 @@ jobs:
 
           echo "PAGES_TOWER_PROJECTION_READBACK_OK ${base}/tower-projection/manifest.json"
           echo "PAGES_SYSTEM_READBACK_OK ${base}/system.json"
+          echo "PAGES_SCIENCE_PROJECTION_READBACK_OK ${base}/science-projection-v1.json"
           echo "PAGES_WORLD_READBACK_OK ${base}/world-public.ndjson"
           echo "PAGES_MCP_ATLAS_READBACK_OK ${base}/mcp/topology.json"
           echo "PAGES_GALAXY_READBACK_OK ${base}/galaxy/latest.json"

@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto';
 import { copyFile, mkdir, readFile, writeFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
+import { buildScienceProjectionV1, validateScienceProjectionV1 } from './science-projection-v1.mjs';
 
 const CONTRACT = 'NEXO_PUBLIC_PROJECTION_V1';
 const SYSTEM_CONTRACT = '1';
@@ -998,6 +999,7 @@ export function buildPagesProjection({
   general = {},
 } = {}) {
   const manifest = validateSanctionedProjection(projection, manifestFile);
+  const scienceProjection = buildScienceProjectionV1({ projection, manifest });
   const generatedAt = Date.parse(String(manifest.generated_at || ''));
   const observedAt = Number.isFinite(generatedAt) ? new Date(generatedAt).toISOString() : cursorTime(manifest.event_cursor);
   const source = sourceRef(manifest);
@@ -1030,6 +1032,7 @@ export function buildPagesProjection({
   }
 
   const system = {
+    science_projection_v1: scienceProjection,
     contract_version: SYSTEM_CONTRACT,
     scenario_id: 'live',
     scenario_label: 'TOWER_V06 · sanctioned public projection',
@@ -1182,7 +1185,7 @@ export function buildPagesProjection({
     access: 'PUBLIC',
   };
 
-  return { system, world };
+  return { system, world, scienceProjection };
 }
 
 export async function buildPagesSystemState(options = {}) {
@@ -1224,7 +1227,7 @@ if (import.meta.url === invokedPath) {
   const peerDetectionBattery = await readJsonIfPresent(peerDetectionBatteryPath);
   const humanGateDetails = await readJsonIfPresent(humanGateDetailsPath);
   const general = await readJsonIfPresent(generalPath);
-  const { system, world } = buildPagesProjection({
+  const { system, world, scienceProjection } = buildPagesProjection({
     projection,
     manifestFile,
     interdomain,
@@ -1236,11 +1239,16 @@ if (import.meta.url === invokedPath) {
 
   const dist = resolve('dist');
   const evidenceDir = resolve(dist, 'tower-projection');
-  await mkdir(evidenceDir, { recursive: true });
+  const contractsDir = resolve(dist, 'contracts');
+  await Promise.all([mkdir(evidenceDir, { recursive: true }), mkdir(contractsDir, { recursive: true })]);
   await Promise.all([
     writeFile(resolve(dist, 'system.json'), JSON.stringify(system, null, 2) + '\n', 'utf8'),
+    writeFile(resolve(dist, 'science-projection-v1.json'), JSON.stringify(scienceProjection, null, 2) + '\n', 'utf8'),
     writeFile(resolve(dist, 'world-public.ndjson'), JSON.stringify(world) + '\n', 'utf8'),
     copyFile(projectionPath, resolve(evidenceDir, 'projection.json')),
     copyFile(manifestPath, resolve(evidenceDir, 'manifest.json')),
+    copyFile(resolve('contracts/science-projection-v1.schema.json'), resolve(contractsDir, 'science-projection-v1.schema.json')),
   ]);
+  const scienceReadback = await readJson(resolve(dist, 'science-projection-v1.json'));
+  validateScienceProjectionV1(scienceReadback);
 }

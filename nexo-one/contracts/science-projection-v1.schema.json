@@ -1,0 +1,65 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://bydenoso.github.io/Pantheon/contracts/science-projection-v1.schema.json",
+  "title": "NEXO Science Projection v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["contract", "version", "source", "campaigns", "hypotheses", "tests", "fingerprint"],
+  "properties": {
+    "contract": { "const": "NEXO_SCIENCE_PROJECTION_V1" },
+    "version": { "const": 1 },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["authority", "tower_repository", "tower_commit", "projection_fingerprint", "projection_ref", "writeback"],
+      "properties": {
+        "authority": { "const": "TOWER_V06" },
+        "tower_repository": { "type": "string", "minLength": 1 },
+        "tower_commit": { "type": "string", "pattern": "^[0-9a-fA-F]{40}$" },
+        "projection_fingerprint": { "$ref": "#/$defs/fingerprint" },
+        "projection_ref": { "type": "string", "pattern": "^tower://" },
+        "writeback": { "const": "FORBIDDEN" }
+      }
+    },
+    "campaigns": { "$ref": "#/$defs/records" },
+    "hypotheses": { "$ref": "#/$defs/records" },
+    "tests": { "$ref": "#/$defs/records" },
+    "fingerprint": { "$ref": "#/$defs/fingerprint" }
+  },
+  "$defs": {
+    "fingerprint": { "type": "string", "pattern": "^sha256:[0-9a-fA-F]{64}$" },
+    "envelope": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["value", "unavailable_reason", "source_ref", "fingerprint"],
+      "properties": {
+        "value": {},
+        "unavailable_reason": { "type": ["string", "null"] },
+        "source_ref": { "type": "string", "pattern": "^tower://" },
+        "fingerprint": { "$ref": "#/$defs/fingerprint" }
+      },
+      "oneOf": [
+        { "properties": { "value": { "type": "null" }, "unavailable_reason": { "type": "string", "minLength": 1 } } },
+        { "properties": { "value": { "not": { "type": "null" } }, "unavailable_reason": { "type": "null" } } }
+      ]
+    },
+    "records": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "source_ref", "fingerprint"],
+        "properties": {
+          "id": { "type": "string", "minLength": 1 },
+          "source_ref": { "type": "string", "pattern": "^tower://" },
+          "fingerprint": { "$ref": "#/$defs/fingerprint" }
+        },
+        "additionalProperties": {
+          "anyOf": [
+            { "$ref": "#/$defs/envelope" },
+            { "type": "object", "additionalProperties": { "$ref": "#/$defs/envelope" } }
+          ]
+        }
+      }
+    }
+  }
+}
