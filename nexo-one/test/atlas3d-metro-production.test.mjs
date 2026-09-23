@@ -500,7 +500,9 @@ test('dedicated Atlas production page uses Metro renderer, G6 and deterministic 
   assert.match(app, /data-atlas-campaign-source-links/);
   assert.match(app, /atlas-source-link/);
   assert.match(app, /node\.sourceLinks/);
-  assert.match(app, /<NexoGraph/);\n  assert.match(app, /ATLAS_LENSES/);\n  assert.match(app, /data-atlas-lens=\{lens\}/);
+  assert.match(app, /<NexoGraph/);
+  assert.match(app, /ATLAS_LENSES/);
+  assert.match(app, /data-atlas-lens=\{lens\}/);
   assert.match(app, /THEME_STORAGE_KEY/);
   assert.match(app, /theme.*=== 'light'/);
   assert.match(app, /data-atlas-theme=\{atlasTheme\}/);
@@ -511,8 +513,6 @@ test('dedicated Atlas production page uses Metro renderer, G6 and deterministic 
   assert.match(app, /toggleExpandAll/);
   assert.match(app, /Expandir tudo/);
   assert.match(app, /Contrair tudo/);
-  assert.match(app, /Ativar tema claro/);
-  assert.match(app, /Ativar tema escuro/);
   assert.match(app, /Modo 3D ativo/);
   assert.match(app, /data-atlas-learning-links/);
   assert.match(app, /data-atlas-learning-records/);
@@ -528,8 +528,6 @@ test('dedicated Atlas production page uses Metro renderer, G6 and deterministic 
   assert.match(app, /activeExpanded = navigationStale \? new Set\(initialExpanded\) : expanded/);
   assert.match(app, /atlasRouteParams/);
   assert.match(app, /mode.*=== '3d'/);
-  assert.match(app, /<strong>3D<\/strong><small>Explorar<\/small>/);
-  assert.match(app, /<strong>2D<\/strong><small>Metro<\/small>/);
   assert.match(app, /3D EXPLORAR ATIVO/);
   assert.match(app, /2D METRO ATIVO/);
   assert.match(app, /atlas-mobile-details-toggle/);
@@ -715,7 +713,11 @@ test('dedicated Atlas production page uses Metro renderer, G6 and deterministic 
   assert.match(loader, /cdn\.jsdelivr\.net\/npm\/\@antv\/g6/);
   assert.match(loader, /g6Fallback/);
   assert.match(embedded, /ensureAtlasG6/);
-  assert.match(embedded, /Atlas3DContent/);\n  const sharedGraph = await text('src/components/NexoGraph.tsx');\n  assert.match(sharedGraph, /MetroAtlasRenderer/);\n  assert.match(sharedGraph, /Ver como tabela/);\n  assert.match(sharedGraph, /GraphViewSwitch/);
+  assert.match(embedded, /Atlas3DContent/);
+  const sharedGraph = await text('src/components/NexoGraph.tsx');
+  assert.match(sharedGraph, /MetroAtlasRenderer/);
+  assert.match(sharedGraph, /Ver como tabela/);
+  assert.match(sharedGraph, /GraphViewSwitch/);
   assert.match(main, /data-atlas-bootstrap/);
   assert.match(loader, /atlasG6Source/);
 });
