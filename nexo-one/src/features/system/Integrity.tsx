@@ -9,6 +9,7 @@ import {
 } from '../../components/primitives.tsx';
 import { ProvenanceButton } from '../../components/provenance.tsx';
 import { CapabilityCountLine } from '../../components/CapabilityCountLine.tsx';
+import { ConsultInspector } from '../../components/ConsultInspector.tsx';
 import {
   capabilityById, capabilityCounts, capabilityMatrix, integrityIssues, provenanceOf,
 } from '../../viewmodels/system.ts';
@@ -68,30 +69,23 @@ export function CapabilitiesView({ state }: { state: SystemState }) {
         readback. Nenhum indicador desta tela representa esse estado como meio funcionando.
       </p>
       <CapabilityMatrix runtimes={runtimes} cells={cells} onSelect={setSelected} />
-      {selected && (
-        <section className={`capability-detail tone-${toneOf(selected.status)}`}>
-          <div className="section-head">
-            <h2>{selected.label}</h2>
-            <button className="icon-btn" onClick={() => setSelected(null)} aria-label="Fechar detalhe">×</button>
-          </div>
-          <div className="inspector-badges">
-            <DomainBadge domain={selected.domain} />
-            <CapabilityBadge status={selected.status} id={selected.capability_id} />
-            <span className="runtime-chip">{label(selected.runtime)}</span>
-            <span className="op-chip">{selected.operation ? label(selected.operation) : 'operação não publicada'}</span>
-            {selected.risk
-              ? <span className={`risk-chip risk-${selected.risk.toLowerCase()}`}>risco {label(selected.risk).toLowerCase()}</span>
-              : <span className="risk-chip">risco não publicado</span>}
-          </div>
+      {selected && <ConsultInspector
+        entityId={selected.capability_id}
+        title={selected.label}
+        kind="Capability"
+        status={label(selected.status)}
+        onClose={()=>setSelected(null)}
+        mapHref={`#/atlas?lente=sistema&sel=${encodeURIComponent(selected.capability_id)}&view=2d`}
+        systemHref={`#/sistema?tab=capabilities&q=${encodeURIComponent(selected.capability_id)}`}
+        summary={<>
+          <div className="inspector-badges"><DomainBadge domain={selected.domain}/><CapabilityBadge status={selected.status} id={selected.capability_id}/></div>
           <p>{selected.explanation}</p>
-          <dl className="meta-row">
-            <div><dt>capability_id</dt><dd><code>{selected.capability_id}</code></dd></div>
-            <div><dt>provider</dt><dd><code>{selected.provider}</code></dd></div>
-            <div><dt>última verificação</dt><dd>{selected.last_verified_at ? dateTime(selected.last_verified_at) : <em>nunca</em>}</dd></div>
-            <div><dt>evidência</dt><dd>{selected.evidence_ref ? <SourceRef value={selected.evidence_ref} /> : <em>nenhuma</em>}</dd></div>
-          </dl>
-        </section>
-      )}
+          <dl><div><dt>Runtime</dt><dd>{label(selected.runtime)}</dd></div><div><dt>Operação</dt><dd>{selected.operation?label(selected.operation):'não publicado'}</dd></div></dl>
+        </>}
+        relations={<dl><div><dt>Provider</dt><dd>{selected.provider||'não publicado'}</dd></div><div><dt>Runtime</dt><dd>{label(selected.runtime)}</dd></div></dl>}
+        proof={<dl><div><dt>Estado de evidência</dt><dd>{label(selected.status)}</dd></div><div><dt>Última verificação</dt><dd>{selected.last_verified_at?dateTime(selected.last_verified_at):'nunca'}</dd></div><div><dt>Evidência</dt><dd>{selected.evidence_ref?<SourceRef value={selected.evidence_ref}/>:<em>nenhuma</em>}</dd></div></dl>}
+        origin={<dl><div><dt>capability_id</dt><dd><code>{selected.capability_id}</code></dd></div><div><dt>Provider</dt><dd><code>{selected.provider}</code></dd></div></dl>}
+      />}
     </>
   );
 }
