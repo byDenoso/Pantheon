@@ -33,7 +33,10 @@ export function validateSanctionedProjection(projection, manifestFile = null) {
   if (manifest.authority !== 'TOWER_V06') fail('authority must be TOWER_V06');
   if (manifest.projection_only !== true) fail('projection_only must be true');
   if (manifest.writeback !== 'FORBIDDEN') fail('writeback must be FORBIDDEN');
-  if (!/^[0-9a-f]{40}$/i.test(String(manifest.tower_commit || ''))) fail('tower_commit must be a full commit SHA');
+  const hasLiveTower = /^sha256:[0-9a-f]{64}$/i.test(String(manifest.tower_revision || ''))
+    && Boolean(String(manifest.tower_file_id || '').trim());
+  const hasLegacyCommit = /^[0-9a-f]{40}$/i.test(String(manifest.tower_commit || ''));
+  if (!hasLiveTower && !hasLegacyCommit) fail('live Tower revision/file_id or legacy tower_commit required');
   if (!String(manifest.event_cursor || '').trim()) fail('event_cursor missing');
   if (!/^sha256:[0-9a-f]{64}$/i.test(String(manifest.projection_fingerprint || ''))) fail('projection_fingerprint invalid');
   if (projection.event_cursor !== manifest.event_cursor) fail('projection event_cursor differs from manifest');
@@ -140,12 +143,26 @@ function projectionState(value) {
   return /BLOCK|WAIT_DEPENDENCY|FAIL|ERROR|REJECT/.test(state) ? 'BLOCKED' : 'SNAPSHOT';
 }
 
+function sourceRevision(manifest) {
+  return String(manifest.tower_revision || manifest.tower_commit || '');
+}
+
 function sourceUrl(manifest) {
+  if (manifest.tower_file_id) {
+    return 'https://drive.google.com/file/d/' + String(manifest.tower_file_id) + '/view';
+  }
   return 'https://github.com/' + String(manifest.tower_repository || 'byDenoso/NEXO-Obsidian-Vault') + '/commit/' + manifest.tower_commit;
 }
 
 function sourceRef(manifest) {
+  if (manifest.tower_file_id) {
+    return 'tower-live://' + String(manifest.tower_file_id) + '@' + sourceRevision(manifest);
+  }
   return 'tower://' + String(manifest.tower_repository || 'byDenoso/NEXO-Obsidian-Vault') + '@' + manifest.tower_commit + '/TOWER_V06/projections/public/projection.json';
+}
+
+function sourcePathRef(manifest, path) {
+  return sourceRef(manifest) + '#' + String(path || '').replace(/^\/+/, '');
 }
 
 function nodeFingerprint(kind, id, manifest) {
@@ -208,7 +225,7 @@ function proceduralLearningFilaments(metaLearning, projection, manifest, observe
       contradiction: Number.isFinite(Number(item.contradicting_count)) ? Number(item.contradicting_count) : 0,
       status: 'PROVISIONAL',
       evidence: deduped.map(link => link.id),
-      source_ref: `tower://${manifest.tower_repository || 'byDenoso/NEXO-Obsidian-Vault'}@${manifest.tower_commit}/TOWER_V06/runtime/artifacts/meta_learning/METALEARNING_CURRENT.json`,
+      source_ref: sourcePathRef(manifest, 'runtime/artifacts/meta_learning/METALEARNING_CURRENT.json'),
       boundary: 'Procedural learning only. It cannot promote or reinterpret a scientific claim.',
       from_label: id,
       to_label: target?.label || toDomain,
@@ -347,7 +364,7 @@ function peerDetectionLearningFilaments(peerBattery, projection, manifest, obser
         'work:PEER-DETECTION-' + gate.gateId,
         ...(gate.capabilityId ? ['capability:' + gate.capabilityId] : []),
       ]),
-      source_ref: `tower://${manifest.tower_repository || 'byDenoso/NEXO-Obsidian-Vault'}@${manifest.tower_commit}/TOWER_V06/contracts/PEER_DETECTION_BATTERY_V1.json`,
+      source_ref: sourcePathRef(manifest, 'contracts/PEER_DETECTION_BATTERY_V1.json'),
       boundary: 'Scientific test architecture, not a scientific verdict. Gates: '
         + gates.map(gate => gate.gateId + ' ' + gate.purpose).join(' · '),
       from_label: 'NEXO execution · ' + groupLabel,
@@ -383,8 +400,8 @@ function learningFilamentsFromTower(interdomain, manifest, observedAt) {
       contradiction: Number.isFinite(Number(item.contradict)) ? Number(item.contradict) : 0,
       status: status.includes('RETIR') ? 'RETIRED' : status.includes('CONTEST') ? 'CONTESTED'
         : status === 'ACTIVE' || status === 'SUPPORTED' || status === 'ADMIT' ? 'ESTABLISHED' : 'PROVISIONAL',
-      evidence: [`tower://${manifest.tower_repository || 'byDenoso/NEXO-Obsidian-Vault'}@${manifest.tower_commit}/${String(item.id || 'interdomain')}`],
-      source_ref: `tower://${manifest.tower_repository || 'byDenoso/NEXO-Obsidian-Vault'}@${manifest.tower_commit}/TOWER_V06/entities/interdomain`,
+      evidence: [sourcePathRef(manifest, String(item.id || 'interdomain'))],
+      source_ref: sourcePathRef(manifest, 'entities/interdomain'),
       boundary: String(item.falsifier_or_validation || item.mapping || item.summary || 'Limite declarado no registro interdomínio.'),
       from_label: String(item.source_nodes?.[0] || fromDomain),
       to_label: String(item.target_domains?.[0] || toDomain),
@@ -408,7 +425,7 @@ function projectedWorkNode(item, manifest, observedAt, humanWorkIds) {
     state: projectionState(item.status || item.operational_status),
     authority_class: 'NON_AUTHORITATIVE',
     source_ref: sourceRef(manifest),
-    source_revision: manifest.tower_commit,
+    source_revision: sourceRevision(manifest),
     fingerprint: nodeFingerprint('work', rawId, manifest),
     freshness: { state: 'RECENT', observed_at: observedAt, ttl_seconds: null },
     checked_at: observedAt,
@@ -507,7 +524,7 @@ function graphFromProjection(projection, observedAt, filaments = [], peerDetecti
       state: 'SNAPSHOT',
       authority_class: 'NON_AUTHORITATIVE',
       source_ref: source,
-      source_revision: manifest.tower_commit,
+      source_revision: sourceRevision(manifest),
       fingerprint: nodeFingerprint('domain', domain, manifest),
       freshness: { state: 'RECENT', observed_at: observedAt, ttl_seconds: null },
       checked_at: observedAt,
@@ -531,7 +548,7 @@ function graphFromProjection(projection, observedAt, filaments = [], peerDetecti
       state: projectionState(campaign.state || 'ACTIVE'),
       authority_class: campaign.derived_fallback ? 'DERIVED' : 'NON_AUTHORITATIVE',
       source_ref: source,
-      source_revision: manifest.tower_commit,
+      source_revision: sourceRevision(manifest),
       fingerprint: nodeFingerprint('campaign', campaignId, manifest),
       freshness: { state: 'RECENT', observed_at: observedAt, ttl_seconds: null },
       checked_at: observedAt,
@@ -583,7 +600,7 @@ function graphFromProjection(projection, observedAt, filaments = [], peerDetecti
       state: projectionState(item.status),
       authority_class: 'NON_AUTHORITATIVE',
       source_ref: source,
-      source_revision: manifest.tower_commit,
+      source_revision: sourceRevision(manifest),
       fingerprint: String(item.scientific_fingerprint || nodeFingerprint('test', rawId, manifest)),
       freshness: { state: 'RECENT', observed_at: observedAt, ttl_seconds: null },
       checked_at: observedAt,
@@ -610,7 +627,7 @@ function graphFromProjection(projection, observedAt, filaments = [], peerDetecti
       state: 'SNAPSHOT',
       authority_class: 'NON_AUTHORITATIVE',
       source_ref: source,
-      source_revision: manifest.tower_commit,
+      source_revision: sourceRevision(manifest),
       fingerprint: nodeFingerprint('capability', capabilityId, manifest),
       freshness: { state: 'RECENT', observed_at: observedAt, ttl_seconds: null },
       checked_at: observedAt,
@@ -630,7 +647,7 @@ function graphFromProjection(projection, observedAt, filaments = [], peerDetecti
       state: 'SNAPSHOT',
       authority_class: 'DERIVED',
       source_ref: filament.source_ref,
-      source_revision: manifest.tower_commit,
+      source_revision: sourceRevision(manifest),
       fingerprint: nodeFingerprint('learning', filament.id, manifest),
       freshness: { state: 'RECENT', observed_at: observedAt, ttl_seconds: null },
       checked_at: observedAt,
@@ -779,8 +796,7 @@ function humanInboxFromProjection(projection, observedAt, humanGateDetails = [])
     const title = projectedTitle && projectedTitle !== id ? projectedTitle : (canonicalQuestion || id);
     const priority = String(item.priority || detail.priority || '').toUpperCase();
     const severity = priority === 'P0' || priority === 'CRITICAL' ? 'P0' : 'P1';
-    const source = 'tower://' + String(manifest.tower_repository || 'byDenoso/NEXO-Obsidian-Vault')
-      + '@' + manifest.tower_commit + '/TOWER_V06/entities/work/' + id + '.json';
+    const source = sourcePathRef(manifest, 'entities/work/' + id + '.json');
 
     const remaining = Array.isArray(detail.remaining_dependencies) ? detail.remaining_dependencies : [];
     const humanDependencies = remaining.filter(isHumanDependency);
@@ -1046,7 +1062,7 @@ export function buildPagesProjection({
       sources: [{
         id: 'tower_v06',
         label: 'TOWER_V06',
-        source_revision: manifest.tower_commit,
+        source_revision: sourceRevision(manifest),
         freshness: { state: 'RECENT', observed_at: observedAt, ttl_seconds: null },
         state: 'SNAPSHOT',
         envelopes: 1,
@@ -1061,7 +1077,7 @@ export function buildPagesProjection({
       domain: 'NEXO',
       authority_class: 'DERIVED',
       source_ref: source,
-      source_revision: manifest.tower_commit,
+      source_revision: sourceRevision(manifest),
       fingerprint: manifest.projection_fingerprint,
       freshness: { state: 'RECENT', observed_at: observedAt, ttl_seconds: null },
       derivation_rule: 'TCC NEXO_PUBLIC_PROJECTION_V1; Pantheon performs presentation shaping only.',
@@ -1140,7 +1156,7 @@ export function buildPagesProjection({
       status: 'AVAILABLE',
       lastSuccessAt: observedAt,
       checkedAt: observedAt,
-      revision: manifest.tower_commit,
+      revision: sourceRevision(manifest),
       message: 'Sanctioned public projection · ' + manifest.projection_fingerprint,
       partial: false,
       count: items.length,
