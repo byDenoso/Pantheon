@@ -1951,8 +1951,9 @@ function MetroThreeView({
     const focusKey = `${structureKey}|${selectedId || ''}`;
     const structureChanged = lastStructureKey.current !== structureKey;
     if (!runtime.hasFit || structureChanged) {
+      const hadFit = runtime.hasFit;
       runtime.hasFit = true;
-      fitThree(runtime, runtime.hasFit && structureChanged, null, 'all');
+      fitThree(runtime, hadFit && structureChanged, null, 'all');
       lastStructureKey.current = structureKey;
       // Prevent the selection effect from immediately undoing the structural fit.
       lastFocusKey.current = focusKey;
