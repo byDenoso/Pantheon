@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState, type CSSProperties } from 'react';
 import { useSystem } from '../data/useSystem.ts';
+import type { SystemStore } from '../data/useSystem.ts';
 import {
   atlasPathTo,
   buildAtlasMetroModel,
@@ -15,9 +16,14 @@ type AtlasTheme = 'dark' | 'light';
 
 const THEME_STORAGE_KEY = 'nexo.atlas.theme.v1';
 
+function atlasRouteParams(){
+  const route=window.location.hash.match(/^#\/?atlas\?(.+)$/i)?.[1];
+  return route?new URLSearchParams(route):new URLSearchParams(window.location.search);
+}
+
 function initialAtlasTheme(): AtlasTheme {
   if (typeof window === 'undefined') return 'dark';
-  const query = new URLSearchParams(window.location.search).get('theme');
+  const query = atlasRouteParams().get('theme');
   if (query === 'light' || query === 'dark') return query;
   try {
     return window.localStorage.getItem(THEME_STORAGE_KEY) === 'light' ? 'light' : 'dark';
@@ -194,13 +200,17 @@ function DetailPanel({
 
 export default function Atlas3DApp() {
   const system = useSystem();
+  return <Atlas3DContent system={system}/>;
+}
+
+export function Atlas3DContent({system}:{system:SystemStore}) {
   const model = useMemo(() => system.state ? buildAtlasMetroModel(system.state) : null, [system.state]);
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [atlasTheme, setAtlasTheme] = useState<AtlasTheme>(initialAtlasTheme);
   const [navigationRevision, setNavigationRevision] = useState('');
   const qaExpand = useMemo(
-    () => typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('expand') : null,
+    () => typeof window !== 'undefined' ? atlasRouteParams().get('expand') : null,
     [],
   );
   const qaExpandedNode = useMemo(() => {
@@ -241,7 +251,7 @@ export default function Atlas3DApp() {
   }, [model?.revision, qaExpandedNode?.id, qaExpand]);
 
   const [viewMode, setViewMode] = useState<ViewMode>(() =>
-    typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('mode') === '3d' ? '3d' : '2d'
+    typeof window !== 'undefined' && (atlasRouteParams().get('view') === '3d' || atlasRouteParams().get('mode') === '3d') ? '3d' : '2d'
   );
   const [showBeams, setShowBeams] = useState(true);
   const [show3dHint, setShow3dHint] = useState(false);

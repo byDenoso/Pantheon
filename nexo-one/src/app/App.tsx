@@ -35,8 +35,8 @@ const PRIVATE_COCKPIT_URL = String(import.meta.env.VITE_PRIVATE_COCKPIT_URL || '
 const AUTH_BRIDGE_URL = String(import.meta.env.VITE_NEXO_AUTH_BRIDGE_URL || '').trim();
 const PUBLIC_NEXO_BASE = String(import.meta.env.VITE_PUBLIC_NEXO_BASE || 'https://bydenoso.github.io/Pantheon/').trim().replace(/\/?$/, '/');
 const publicNexoUrl = (path = '') => new URL(path, PUBLIC_NEXO_BASE).toString();
-const AtlasView = lazy(() => import('../features/system/Atlas.tsx').then(module => ({ default: module.AtlasView })));
 const LearningView = lazy(() => import('../features/system/Atlas.tsx').then(module => ({ default: module.LearningView })));
+const EmbeddedAtlas3D = lazy(() => import('../atlas3d/EmbeddedAtlas3D.tsx'));
 const EmbeddedMcp = lazy(() => import('../mcp/EmbeddedMcp.tsx'));
 
 export default function App() {
@@ -154,8 +154,7 @@ export default function App() {
       case 'SOURCES': return <SourcesView state={state} />;
       case 'INTEGRITY': return <IntegrityView state={state} />;
       case 'ATLAS':
-        return <AtlasView state={state} filters={filters} setFilters={setFilters}
-          selectedId={selectedNode} onSelect={setSelectedNode} />;
+        return <EmbeddedAtlas3D system={system} />;
       case 'LEARNING': return <LearningView state={state} onNavigate={go} />;
       default: return null;
     }

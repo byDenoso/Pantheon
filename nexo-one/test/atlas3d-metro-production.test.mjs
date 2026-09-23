@@ -471,12 +471,14 @@ test('ultra-dense expand-all overview never forces passive subdomain labels into
 });
 
 test('dedicated Atlas production page uses Metro renderer, G6 and deterministic Three mode', async () => {
-  const [app, renderer, index, css, main] = await Promise.all([
+  const [app, renderer, index, css, main, loader, embedded] = await Promise.all([
     text('src/atlas3d/Atlas3DApp.tsx'),
     text('src/atlas3d/MetroAtlasRenderer.tsx'),
     text('atlas3d/index.html'),
     text('src/atlas3d/atlas3d.css'),
     text('src/atlas3d/main.tsx'),
+    text('src/atlas3d/g6-loader.ts'),
+    text('src/atlas3d/EmbeddedAtlas3D.tsx'),
   ]);
 
   assert.match(app, /data-atlas-renderer="metro-cluster"/);
@@ -705,13 +707,17 @@ test('dedicated Atlas production page uses Metro renderer, G6 and deterministic 
   assert.doesNotMatch(css, /pointer-events:none;opacity:\.18/);
 
   assert.doesNotMatch(index, /@antv\/g6@5\/dist\/g6\.min\.js/);
+  assert.match(index, /destination\.hash\s*=\s*`\/atlas\?/);
   assert.match(main, /G6_SOURCES/);
   assert.match(main, /product-foundation\.css/);
-  assert.match(main, /unpkg\.com\/\@antv\/g6/);
-  assert.match(main, /cdn\.jsdelivr\.net\/npm\/\@antv\/g6/);
-  assert.match(main, /g6Fallback/);
+  assert.match(main, /ensureAtlasG6/);
+  assert.match(loader, /unpkg\.com\/\@antv\/g6/);
+  assert.match(loader, /cdn\.jsdelivr\.net\/npm\/\@antv\/g6/);
+  assert.match(loader, /g6Fallback/);
+  assert.match(embedded, /ensureAtlasG6/);
+  assert.match(embedded, /Atlas3DContent/);
   assert.match(main, /data-atlas-bootstrap/);
-  assert.match(main, /atlasG6Source/);
+  assert.match(loader, /atlasG6Source/);
 });
 
 
