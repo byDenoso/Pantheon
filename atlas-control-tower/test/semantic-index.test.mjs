@@ -15,15 +15,11 @@ test('legacy semantic wrapper remains provider-neutral compatibility code',()=>{
   assert.match(runtime,/why_pt/);
 });
 
-test('Vercel compatibility APIs route through Tower projection runtime and expose only POST sync as mutation-shaped refresh',()=>{
+test('Vercel compatibility APIs route through the canonical Drive Tower reader',()=>{
   const vercel=read('vercel.json');
   assert.match(vercel,/api\/runtime-orphans\.js/);
   assert.match(vercel,/"dest":\s*"\/api\/runtime-orphans\.js\?route=\$1"/);
   const wrapper=read('api/runtime-orphans.js');
-  const runtime=read('api/runtime-github.js');
-  assert.match(wrapper,/runtime-github\.js/);
-  assert.match(runtime,/loadGithubCanonical/);
-  assert.match(runtime,/method==='POST'&&route==='sync'/);
-  assert.match(runtime,/METHOD_NOT_ALLOWED/);
-  assert.match(runtime,/TOWER_V06/);
+  assert.match(wrapper,/runtime-drive\.js/);
+  assert.doesNotMatch(wrapper,/runtime-github\.js/);
 });

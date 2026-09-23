@@ -29,18 +29,19 @@ export default withGoogleAuth(async(req,res)=>{
   const args=body?.args&&typeof body.args==='object'&&!Array.isArray(body.args)?body.args:{};
   if(!ALLOWED_COMMANDS.has(command)) return send(res,{error:'COMMAND_NOT_ALLOWED',command},400);
 
-  const towerGateway=createTowerGateway();
-  if(WRITE_COMMANDS.has(command)&&!towerGateway.configured.towerWrite){
-    return send(res,{error:'TOWER_WRITE_NOT_CONFIGURED',command,write_available:false},503);
-  }
-  const semantic=createNexoSemanticGateway({towerGateway});
+  let towerGateway=null;
   try{
+    towerGateway=createTowerGateway();
+    if(WRITE_COMMANDS.has(command)&&!towerGateway.configured.towerWrite){
+      return send(res,{error:'TOWER_WRITE_NOT_CONFIGURED',command,write_available:false},503);
+    }
+    const semantic=createNexoSemanticGateway({towerGateway});
     const result=await semantic.call(command,args);
     return send(res,{ok:true,command,write_available:Boolean(towerGateway.configured.towerWrite),result});
   }catch(error){
     const message=String(error?.message||error);
-    const status=/AUTHORITY_DENIED|FORBIDDEN/.test(message)?403:/VERSION_CONFLICT|CONTENT_CONFLICT|STALE/.test(message)?409:400;
-    return send(res,{ok:false,error:message,command,write_available:Boolean(towerGateway.configured.towerWrite)},status);
+    const status=/AUTHORITY_DENIED|FORBIDDEN/.test(message)?403:/VERSION_CONFLICT|CONTENT_CONFLICT|STALE/.test(message)?409:/NEXO_STORAGE_MODE_REQUIRED|LEGACY_GITHUB_STATE_BACKEND_DISABLED|DRIVE_PRIMARY_NOT_CONFIGURED|READBACK|PERSISTENCE|RECEIPT_PENDING|RECEIPT_TIMEOUT/.test(message)?503:400;
+    return send(res,{ok:false,error:message,command,write_available:Boolean(towerGateway?.configured?.towerWrite)},status);
   }
 });
 

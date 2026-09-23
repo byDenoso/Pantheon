@@ -40,6 +40,17 @@ test('createWork matches the canonical Python generated WORK identity and return
   assert.equal(result.readback.entity_version,1);
 });
 
+test('mutation reports readback mismatch instead of accepting a partial commit',async()=>{
+  const f=fakeTower(),gateway=createNexoSemanticGateway({towerGateway:f.tower});
+  const original=f.tower.readEntity;
+  f.tower.readEntity=async(kind,id)=>{
+    const entity=await original(kind,id);
+    return entity?{...entity,status:'RUNNING'}:entity;
+  };
+  await assert.rejects(()=>gateway.createWork({title:'W',correlation_id:'CORR-READBACK'}),/TOWER_READBACK_MISMATCH:status/);
+  assert.equal(f.mutations.length,1);
+});
+
 test('createWork blocks protected details exactly at the semantic boundary',async()=>{
   const f=fakeTower(),gateway=createNexoSemanticGateway({towerGateway:f.tower});
   await assert.rejects(()=>gateway.createWork({title:'W',correlation_id:'CORR-P',details:{truth_owners:['evil']}}),/PROTECTED_DETAIL_FIELD/);

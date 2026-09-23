@@ -4,21 +4,13 @@ import fs from 'node:fs';
 
 const read = path => fs.readFileSync(new URL(path, import.meta.url), 'utf8');
 const orphanRuntime = read('../api/runtime-orphans.js');
-const githubRuntime = read('../api/runtime-github.js');
 const drive = read('../lib/drive-ssot.mjs');
 const inspector = read('../ui/inspector.mjs');
 
-test('runtime compatibility delegates to Tower authority with explicit stale projection fallback', () => {
-  assert.match(orphanRuntime, /runtime-github\.js/);
-  assert.match(githubRuntime, /loadGithubCanonical/);
-  assert.match(githubRuntime, /syncGithubCanonical/);
-  assert.match(githubRuntime, /projectGithubCanonical/);
-  assert.match(githubRuntime, /driveRoute/);
-  assert.match(githubRuntime, /X-Atlas-Authority/);
-  assert.match(githubRuntime, /TOWER_V06/);
-  assert.match(githubRuntime, /TOWER_PROJECTION_UNAVAILABLE/);
-  assert.match(githubRuntime, /freshness:'STALE'/);
-  assert.match(githubRuntime, /METHOD_NOT_ALLOWED/);
+test('runtime compatibility delegates canonical reads to Drive and has no GitHub fallback', () => {
+  assert.match(orphanRuntime, /runtime-drive\.js/);
+  assert.doesNotMatch(orphanRuntime, /runtime-github\.js/);
+  assert.match(orphanRuntime, /return drive\(req,res\)/);
 });
 
 test('Drive entities preserve source references as projection provenance metadata', () => {

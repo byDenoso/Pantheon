@@ -2,12 +2,13 @@ import {createHash} from 'node:crypto';
 import {createTowerDriveGateway} from '../lib/tower-drive-gateway.mjs';
 import {buildAtlasProjectionV3} from '../v3/project.mjs';
 
-const TTL=30000;
+const TTL=5000;
 let cache=null;
 const hash=value=>'sha256:'+createHash('sha256').update(JSON.stringify(value)).digest('hex');
 
 async function loadSource(gateway){
-  const [control,work,campaigns,hypotheses,interdomain,tests,testGroups]=await Promise.all([
+  const [meta,control,work,campaigns,hypotheses,interdomain,tests,testGroups]=await Promise.all([
+    gateway.getCurrentSnapshotMeta(),
     gateway.readControl(),
     gateway.readActiveWorkIndex().catch(()=>({work:[]})),
     gateway.readCampaignIndex().catch(()=>({campaigns:[]})),
@@ -18,7 +19,7 @@ async function loadSource(gateway){
   ]);
   return {
     control,
-    sourceVersion:String(control?.event_cursor||control?.revision||control?.schema_version||hash(control)),
+    sourceVersion:String(meta?.revision||control?.event_cursor||control?.revision||control?.schema_version||hash(control)),
     generatedAt:new Date().toISOString(),
     completeness:'DRIVE_TOWER_LIVE',
     publicProjection:true,
@@ -52,13 +53,15 @@ async function load({force=false,gateway}={}){
 const urlOf=req=>new URL(req.url||'/','https://atlas.local');
 const routeOf=req=>{const u=urlOf(req);return u.searchParams.get('route')||u.pathname.split('/').filter(Boolean).pop()||'health';};
 const queryOf=req=>Object.fromEntries(urlOf(req).searchParams);
-function send(res,body,status=200,{noStore=false}={}){
+function send(res,body,status=200,{noStore=true}={}){
   res.statusCode=status;
   res.setHeader('Content-Type','application/json; charset=utf-8');
-  res.setHeader('Cache-Control',noStore?'private, no-store':'public, max-age=30, stale-while-revalidate=120');
+  res.setHeader('Cache-Control',noStore?'private, no-store':'private, max-age=5, stale-while-revalidate=5');
   res.setHeader('X-Content-Type-Options','nosniff');
   res.setHeader('X-NEXO-Authority','TOWER_V06');
-  res.setHeader('X-NEXO-Storage','GOOGLE_DRIVE');
+  res.setHeader('X-NEXO-Storage','GOOGLE_DRIVE_PRIVATE');
+  res.setHeader('X-Atlas-Authority','TOWER_V06');
+  res.setHeader('X-Atlas-Truth-Owner','TOWER_V06@GOOGLE_DRIVE_PRIVATE');
   res.end(JSON.stringify(body));
 }
 export default async function handler(req,res){
@@ -77,9 +80,11 @@ export default async function handler(req,res){
         authority:'TOWER_V06',
         truthOwner:control?.truth_owner||'TOWER_V06',
         storage:'GOOGLE_DRIVE_PRIVATE',
-        snapshot_id:meta.snapshot_id,
-        parent_snapshot_id:meta.parent_snapshot_id||null,
-        generation:meta.generation??null,
+        snapshot_id:null,
+        revision:meta.revision,
+        updated_at:meta.updated_at,
+        file_count:meta.file_count,
+        stable_file_id:meta.stable_file_id,
         source_fingerprint:meta.source_fingerprint,
         state_fingerprint:meta.state_fingerprint||meta.source_fingerprint,
         event_cursor:meta.event_cursor||null,
@@ -102,8 +107,8 @@ export default async function handler(req,res){
           storage:'GOOGLE_DRIVE_PRIVATE',
           canonical_current:{
             root_id:'14eRGK6QZnowu32XNOvpiE8AA_ffGVy-E',
-            pointer:'CURRENT.json',
-            file_id:'19URh1MGB3Gp1zIk4Jao1fKDcFCaBW9Is'
+            live_file:'NEXO_TOWER_LIVE.json.gz',
+            write_model:'IN_PLACE_FILE_REVISION_CAS_READBACK'
           },
           git_state_fallback:false,
           message:'This Vercel runtime has no Drive credentials and is not a canonical health authority after cutover.'
@@ -113,10 +118,12 @@ export default async function handler(req,res){
     }
   }
   if(method==='POST'&&route==='sync'){
-    try{const snapshot=await load({force:true,gateway});return send(res,{ok:true,outcome:'REFRESHED',authority:'TOWER_V06',storage:'GOOGLE_DRIVE',fingerprint:snapshot.manifest?.fingerprint},200,{noStore:true});}
+    try{const snapshot=await load({force:true,gateway});return send(res,{ok:true,outcome:'PROJECTION_REFRESHED',tower_mutation:false,authority:'TOWER_V06',storage:'GOOGLE_DRIVE_PRIVATE',tower_revision:snapshot.manifest?.sourceVersion,projection_fingerprint:snapshot.manifest?.fingerprint},200,{noStore:true});}
     catch(error){return send(res,{ok:false,error:'DRIVE_TOWER_UNAVAILABLE',detail:String(error?.message||error).slice(0,220)},503,{noStore:true});}
   }
   if(method!=='GET')return send(res,{ok:false,error:'METHOD_NOT_ALLOWED'},405,{noStore:true});
   try{return send(res,project(await load({force:query.refresh==='1',gateway}),route,query));}
-  catch(error){return send(res,{ok:false,error:'DRIVE_TOWER_UNAVAILABLE',detail:String(error?.message||error).slice(0,220),authority:'TOWER_V06',storage:'GOOGLE_DRIVE'},503,{noStore:true});}
+  catch(error){return send(res,{ok:false,error:'DRIVE_TOWER_UNAVAILABLE',detail:String(error?.message||error).slice(0,220),authority:'TOWER_V06',storage:'GOOGLE_DRIVE_PRIVATE'},503,{noStore:true});}
 }
+
+export const __runtimeDriveInternal={loadSource,project};

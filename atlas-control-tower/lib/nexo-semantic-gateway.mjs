@@ -28,6 +28,17 @@ function requestId(command,workId,correlationId){return `REQ-API-${upper(command
 function generatedWorkId(title,correlationId,domain){return `WORK-PLUGIN-${hash(`${title}|${correlationId}|${domain}`).slice(0,20).toUpperCase()}`;}
 function workIdFor(input){if(text(input.work_id))return requireIdentifier(input.work_id,'work_id');const title=requireText(input,'title'),correlationId=requireText(input,'correlation_id'),domain=text(input.domain)||'SCIENCE';return generatedWorkId(title,correlationId,domain);}
 function readbackRequired(entity,label){if(!entity)throw new Error(`${label}_READBACK_MISSING`);return entity;}
+function assertMutationReadback(request,receipt,entity){
+  const receiptValue=receipt?.receipt&&typeof receipt.receipt==='object'?receipt.receipt:receipt;
+  if(receiptValue?.request_id&&receiptValue.request_id!==request.request_id)throw new Error('TOWER_READBACK_MISMATCH:request_id');
+  const entityId=text(entity?.id||entity?.work_id||entity?.entity_id);
+  if(entityId&&entityId!==request.entity_name)throw new Error('TOWER_READBACK_MISMATCH:entity_id');
+  if(Number.isInteger(request.expected_version)&&Number(entity?.entity_version)!==request.expected_version+1)throw new Error('TOWER_READBACK_MISMATCH:entity_version');
+  for(const [key,value] of Object.entries(request.changes||{})){
+    if(JSON.stringify(canonical(entity?.[key]))!==JSON.stringify(canonical(value)))throw new Error(`TOWER_READBACK_MISMATCH:${key}`);
+  }
+  return entity;
+}
 
 export function createNexoSemanticGateway({towerGateway}){
   if(!towerGateway)throw new Error('TOWER_GATEWAY_REQUIRED');
@@ -38,7 +49,7 @@ export function createNexoSemanticGateway({towerGateway}){
   const closure=createClosureSurface({towerGateway});
   const batteryComposer=createBatteryComposer({towerGateway,hypothesisSurface:hypotheses});
   async function requireActive(){const control=await towerGateway.readControl();const mode=upper(control?.mode);if(mode!=='ACTIVE')throw new Error(`TOWER_NOT_ACTIVE:${mode||'UNKNOWN'}`);return control;}
-  async function submitAndRead(request){const receipt=await towerGateway.submitTowerMutation(request);const readback=readbackRequired(await towerGateway.readEntity(request.entity_kind,request.entity_name),`${upper(request.entity_kind)}_${request.entity_name}`);return {request_id:request.request_id,status:receipt?.status||'COMPLETE',receipt:receipt?.receipt||receipt,readback};}
+  async function submitAndRead(request){const receipt=await towerGateway.submitTowerMutation(request);if(receipt?.status==='PENDING')throw new Error('TOWER_MUTATION_RECEIPT_PENDING');const entity=readbackRequired(await towerGateway.readEntity(request.entity_kind,request.entity_name),`${upper(request.entity_kind)}_${request.entity_name}`),readback=assertMutationReadback(request,receipt,entity);return {request_id:request.request_id,status:receipt?.status||'COMPLETE',receipt:receipt?.receipt||receipt,readback};}
   async function getWork(workIdValue){const workId=requireIdentifier(workIdValue,'work_id');let item=await towerGateway.readEntity('work',workId);if(!item&&typeof towerGateway.readActiveWorkIndex==='function'){const index=await towerGateway.readActiveWorkIndex();item=(index?.work||[]).find(candidate=>text(candidate?.id||candidate?.work_id)===workId)||null;}if(!item)throw new Error('WORK_NOT_FOUND');return item;}
   async function mutateWork({work,event_type,correlation_id,writer_role='ADVISOR',changes,discriminator='mutate',request_id=null}){await requireActive();const workId=requireIdentifier(work?.id||work?.work_id,'work_id'),eventType=requireText({event_type},'event_type'),corr=requireText({correlation_id},'correlation_id'),role=upper(writer_role);if(!ROLES.has(role))throw new Error('WRITER_ROLE_NOT_SUPPORTED');const request={request_id:request_id?requireIdentifier(request_id,'request_id'):requestId(discriminator,workId,corr),entity_kind:'work',entity_name:workId,expected_version:Number(work.entity_version||0),writer_role:role,material:true,correlation_id:corr,changes:{...changes},event_type:eventType};return submitAndRead(request);}
   async function createWork(input={}){await requireActive();const title=requireText(input,'title'),correlationId=requireText(input,'correlation_id'),domain=text(input.domain)||'SCIENCE',workId=workIdFor({...input,title,correlation_id:correlationId,domain}),campaignId=text(input.campaign_id)?requireIdentifier(input.campaign_id,'campaign_id'):null;const changes={status:'READY',owner_role:'EXECUTOR',title,kind:upper(input.kind)||'RESEARCH',priority:upper(input.priority)||'NORMAL',domain,...details(input,['status','owner_role','title','campaign_id'])};if(campaignId)changes.campaign_id=campaignId;const request={request_id:requestId('create',workId,correlationId),entity_kind:'work',entity_name:workId,expected_version:0,writer_role:'ADVISOR',material:true,correlation_id:correlationId,changes,event_type:'WORK_CREATED'};if(input.autonomy_level!==undefined)request.autonomy_level=upper(input.autonomy_level);if(input.l3_intent!==undefined)request.l3_intent=input.l3_intent;const result=await submitAndRead(request);return {work_id:workId,...result};}
@@ -113,4 +124,4 @@ export function createNexoSemanticGateway({towerGateway}){
   return {status,getState,getWork,getNextWork,getMutation,createWork,ingestRequest:ingress.ingestRequest,ingestObjective:ingress.ingestObjective,transitionWork,mutateWork,prepareCampaign,prepareBatteries,composeScientificBattery:composeScientificBatteryTool,runBatteries,reconcileWork:closure.reconcileWork,submitScientificTests:scienceIntake.submit,runWork,runCampaign,getHypotheses:hypotheses.getHypotheses,getHypothesis:hypotheses.getHypothesis,getHypothesisFrontier:hypotheses.getHypothesisFrontier,validateHypothesisContract:hypotheses.validateHypothesisContract,ingestHypothesis:hypotheses.ingestHypothesis,readback:runId=>towerGateway.readRuntimeReport(requireIdentifier(runId,'run_id')),getEvidence:id=>towerGateway.readEvidence(requireIdentifier(id,'evidence_id')),getCampaigns:()=>towerGateway.readCampaignIndex(),getCampaign,getRequestReadback,getRoadmaps:roadmaps.getRoadmaps,getRoadmap:roadmaps.getRoadmap,getNextRoadmapTest:roadmaps.getNextRoadmapTest,materializeRoadmapTest,getInterdomain:()=>towerGateway.readInterdomainIndex(),cleanupRepositoryBranches:options=>towerGateway.cleanupMergedBranches(options),call};
 }
 
-export const _internal={stableId,requestId,workIdFor,generatedWorkId,requireIdentifier};
+export const _internal={stableId,requestId,workIdFor,generatedWorkId,requireIdentifier,assertMutationReadback};
