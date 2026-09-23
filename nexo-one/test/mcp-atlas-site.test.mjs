@@ -16,8 +16,8 @@ test('MCP Atlas is a routed surface in the unified SPA with canonical Tower sour
   assert.match(workflow,/manifests\/capabilities\.json/);
   assert.match(workflow,/mcp_server\.py/);
   assert.match(workflow,/build-mcp-topology\.mjs/);
-  assert.match(site,/CanvasGraph25D/);
-  assert.match(site,/mcp-neural-2d/);
+  assert.match(site,/NexoGraph/);
+  assert.doesNotMatch(site,/mcp-neural-2d/);
   assert.match(site,/type GraphView='2d'\|'3d'/);
   assert.match(site,/SYSTEM_TABS/);
   assert.match(site,/system-table/);
@@ -44,8 +44,8 @@ test('MCP Atlas is a routed surface in the unified SPA with canonical Tower sour
   assert.match(workflow,/WORK_COUNT_DRIFT/);
   assert.match(workflow,/WORK_STATUS_DRIFT/);
   assert.match(workflow,/MCP_TOPOLOGY_FRESHNESS_FINGERPRINT_MISMATCH/);
-  assert.match(site,/focusNode/);
-  assert.match(site,/system-graph-views/);
+  assert.match(site,/systemGraphModel/);
+  assert.doesNotMatch(site,/system-graph-views/);
   assert.match(site,/\['roles','Roles'\]/);
   assert.match(builder,/source_snapshot_id/);
   assert.match(builder,/projection_fingerprint/);
