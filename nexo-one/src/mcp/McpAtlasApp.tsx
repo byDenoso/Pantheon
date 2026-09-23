@@ -3,6 +3,7 @@ import {useNexoStore} from '../data/NexoStore.tsx';
 import {NexoGraph,type NexoGraphView} from '../components/NexoGraph.tsx';
 import type {AtlasMetroModel,AtlasMetroNode,AtlasCrossLink} from '../atlas3d/atlasAdapter.ts';
 import {CapabilityCountLine} from '../components/CapabilityCountLine.tsx';
+import {ConsultInspector} from '../components/ConsultInspector.tsx';
 
 type NodeKind='ROOT'|'LAYER'|'TRANSPORT'|'TOOL'|'FAMILY'|'CAPABILITY'|'BACKEND'|'ROLE';
 type TopologyNode={
@@ -174,6 +175,8 @@ export function McpAtlasApp({themeOverride,embedded=false}:{themeOverride?:strin
  const updated=topology?new Intl.DateTimeFormat('pt-BR',{dateStyle:'medium',timeStyle:'short'}).format(new Date(topology.generated_at)):'';
  const statusCount=(name:string)=>Number(topology?.stats.status_counts?.[name]??topology?.stats.status_counts?.[name.toLowerCase()]??0);
  const capCounts=topology?{total:topology.stats.capabilities,pass:statusCount('PASS')||statusCount('VERIFIED'),unverified:statusCount('UNVERIFIED'),unknown:statusCount('UNKNOWN'),retired:statusCount('RETIRED')||statusCount('RETIRED_RUNTIME'),blocked:statusCount('BLOCKED')}:null;
+ const selectedEntityId=selectedNode?.kind==='CAPABILITY'?String(selectedNode.meta?.id||selectedNode.label):selectedNode?.id||'';
+ const selectedLinks=topology&&selectedNode?topology.links.filter(link=>idOf(link.source)===selectedNode.id||idOf(link.target)===selectedNode.id):[];
  const label=SYSTEM_TABS.find(([id])=>id===tab)?.[1]||'Visão geral';
  return <div className="mcp-site system-native-root" data-mcp-embedded={embedded?'true':'false'} data-mcp-ready={topology?'true':'false'} data-mcp-query={search} data-mcp-selected={selectedNode?.label||''} data-mcp-selected-kind={selectedNode?.kind||''} data-mcp-theme={activeTheme} data-mcp-graph-view={graphView} data-mcp-node-count={topology?.nodes.length||0} data-mcp-link-count={topology?.links.length||0}>
  <main className="system-native" data-system-tab={tab} data-system-ready={topology?'true':'false'}>
@@ -192,6 +195,18 @@ export function McpAtlasApp({themeOverride,embedded=false}:{themeOverride?:strin
   {topology&&tab==='relations'&&table(['Origem','Relação','Destino','Peso'],relations.map(l=><tr key={l.id}><td>{named(idOf(l.source))}</td><td>{relation(l.kind)} <small className="system-mono">{l.kind}</small></td><td>{named(idOf(l.target))}</td><td className="system-mono">{Number(l.weight).toFixed(2)}</td></tr>),'Nenhuma relação corresponde ao filtro.')}
   {topology&&tab==='provenance'&&<div className="system-provenance"><h2>Proveniência da projeção publicada</h2><p>TOWER_V06 é a autoridade; o estado canônico publicado vem do armazenamento privado em Google Drive. GitHub hospeda a projeção/espelho de entrega e não substitui a autoridade.</p>{[['Autoridade declarada','TOWER_V06'],['Armazenamento',topology.source.source_storage||'Não publicado'],['Snapshot',topology.source.source_snapshot_id||'Não publicado'],['Fingerprint do estado',topology.source.source_state_fingerprint||'Não publicado'],['Fingerprint da projeção',topology.source.projection_fingerprint||'Não publicado'],['Commit',topology.source.commit||'Não publicado'],['Manifest',topology.source.manifest||'Não publicado']].map(([n,v])=><div key={n}><span>{n}</span><code>{v}</code></div>)}</div>}
   {topology&&tab==='graph'&&<div className="system-graph-panel"><div className="system-graph-controls"><div className="system-graph-filters">{([['all','Tudo'],['tools','Tools'],['capabilities','Capabilities'],['runtime','Runtimes'],['roles','Papéis']] as const).map(([id,n])=><button type="button" className={mode===id?'active':''} onClick={()=>setMode(id)} key={id}>{n}</button>)}</div><span>{topology.nodes.length} entidades · {topology.links.length} relações</span></div><Graph topology={topology} search={search} mode={mode} selected={selected} onSelect={setSelected} theme={activeTheme} view={graphView} onViewChange={changeGraphView}/></div>}
-  {selectedNode&&tab!=='graph'&&<aside className="system-row-inspector"><button type="button" onClick={()=>setSelected(null)} aria-label="Fechar detalhes">Fechar</button><strong>{selectedNode.label}</strong><span>{status(selectedNode.status)} · {kindLabel(selectedNode.kind)}</span>{selectedNode.summary&&<p>{selectedNode.summary}</p>}<a href={`#/atlas?lente=sistema&sel=${encodeURIComponent(selectedNode.id)}&view=2d`}>Ver no Mapa ↗</a></aside>}
+  {selectedNode&&tab!=='graph'&&<ConsultInspector
+    entityId={selectedEntityId}
+    title={selectedNode.label}
+    kind={kindLabel(selectedNode.kind)}
+    status={status(selectedNode.status)}
+    onClose={()=>setSelected(null)}
+    mapHref={`#/atlas?lente=sistema&sel=${encodeURIComponent(selectedEntityId)}&view=2d`}
+    systemHref={`#/sistema?tab=${selectedNode.kind==='CAPABILITY'?'capabilities':tab}&q=${encodeURIComponent(selectedEntityId)}`}
+    summary={<><p>{selectedNode.summary||'Resumo não publicado.'}</p><dl><div><dt>Grupo</dt><dd>{selectedNode.group||'não publicado'}</dd></div><div><dt>Estado</dt><dd>{status(selectedNode.status)}</dd></div></dl></>}
+    relations={<dl>{selectedLinks.length?selectedLinks.map(link=><div key={link.id}><dt>{relation(link.kind)}</dt><dd>{named(idOf(link.source))} → {named(idOf(link.target))}</dd></div>):<div><dt>Relações</dt><dd>não publicado</dd></div>}</dl>}
+    proof={<dl><div><dt>Evidência</dt><dd>{String(selectedNode.meta?.evidence_status||selectedNode.meta?.status||selectedNode.status||'não publicado')}</dd></div><div><dt>Última verificação</dt><dd>{String(selectedNode.meta?.last_verified_at||'não publicado')}</dd></div></dl>}
+    origin={<dl><div><dt>ID canônico</dt><dd><code>{selectedEntityId}</code></dd></div><div><dt>ID da projeção</dt><dd><code>{selectedNode.id}</code></dd></div><div><dt>Snapshot</dt><dd><code>{topology?.source.source_snapshot_id||'não publicado'}</code></dd></div></dl>}
+  />}
  </main></div>;
 }
