@@ -1,5 +1,5 @@
 // TruthGraph, Capability Radar, Sources e Integrity.
-import { useState } from 'react';
+import { lazy, Suspense, useState } from 'react';
 import type { Capability, SystemState } from '../../contracts/system.ts';
 import { CapabilityMatrix, ProjectionHealth, TruthGraphCard } from '../../components/composites.tsx';
 import { EmptyState } from '../../components/states.tsx';
@@ -13,29 +13,58 @@ import {
 } from '../../viewmodels/system.ts';
 import { dateTime, label, toneOf } from '../../viewmodels/tokens.ts';
 
-export function TruthGraphView({ state }: { state: SystemState }) {
+const McpTopologyGraph = lazy(() => import('../../mcp/McpAtlasApp.tsx').then(module => ({ default: module.McpTopologyGraph })));
+
+export function TruthGraphView({ state, theme = 'dark' }: { state: SystemState; theme?: 'dark' | 'light' }) {
+  const [surface, setSurface] = useState<'table' | 'graph'>(() => {
+    if (typeof window === 'undefined') return 'table';
+    const view = new URLSearchParams(window.location.hash.split('?', 2)[1] || '').get('view');
+    return view === '2d' || view === '3d' ? 'graph' : 'table';
+  });
   const findings = [...state.findings].sort((a, b) =>
     (a.status === 'CONFLICT' ? -1 : 0) - (b.status === 'CONFLICT' ? -1 : 0));
   const conflicts = findings.filter(f => f.status === 'CONFLICT');
+  const selectSurface = (next: 'table' | 'graph') => {
+    setSurface(next);
+    if (typeof window === 'undefined') return;
+    const path = window.location.hash.replace(/^#\/?/, '').split('?', 1)[0] || 'cockpit/prova';
+    const params = new URLSearchParams(window.location.hash.split('?', 2)[1] || '');
+    params.set('tab', 'autoridade');
+    if (next === 'graph') {
+      const current = params.get('view');
+      if (current !== '2d' && current !== '3d') params.set('view', '2d');
+    } else {
+      params.delete('view');
+    }
+    window.history.replaceState(null, '', `#/${path}?${params.toString()}`);
+  };
   return (
     <>
-      {conflicts.length > 0 && (
-        <div className="p0-banner" role="alert">
-          <span className="p0-mark" aria-hidden="true">⚠</span>
-          <div>
-            <strong>{conflicts.length} conflito{conflicts.length > 1 ? 's' : ''} de autoridade em aberto.</strong>
-            <span>
-              {conflicts.map(c => c.domain).join(', ')} — escritas suspensas e leituras marcadas como não autoritativas
-              até que a posse da verdade seja resolvida.
-            </span>
-          </div>
-        </div>
-      )}
-      <div className="truth-grid-outer">
-        {findings.map(finding => (
-          <TruthGraphCard key={finding.id} finding={finding} capability={capabilityById(state, finding.capability)} />
-        ))}
+      <div className="proof-surface-switch" role="group" aria-label="Visualização da prova">
+        <button type="button" className={surface === 'table' ? 'active' : ''} aria-pressed={surface === 'table'} onClick={() => selectSurface('table')}>Tabela</button>
+        <button type="button" className={surface === 'graph' ? 'active' : ''} aria-pressed={surface === 'graph'} onClick={() => selectSurface('graph')}>Grafo</button>
       </div>
+      {surface === 'graph'
+        ? <Suspense fallback={<div className="system-loading" role="status">Carregando grafo de prova…</div>}><McpTopologyGraph theme={theme} /></Suspense>
+        : <>
+            {conflicts.length > 0 && (
+              <div className="p0-banner" role="alert">
+                <span className="p0-mark" aria-hidden="true">⚠</span>
+                <div>
+                  <strong>{conflicts.length} conflito{conflicts.length > 1 ? 's' : ''} de autoridade em aberto.</strong>
+                  <span>
+                    {conflicts.map(c => c.domain).join(', ')} — escritas suspensas e leituras marcadas como não autoritativas
+                    até que a posse da verdade seja resolvida.
+                  </span>
+                </div>
+              </div>
+            )}
+            <div className="truth-grid-outer">
+              {findings.map(finding => (
+                <TruthGraphCard key={finding.id} finding={finding} capability={capabilityById(state, finding.capability)} />
+              ))}
+            </div>
+          </>}
     </>
   );
 }
