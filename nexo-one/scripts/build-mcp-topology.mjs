@@ -140,9 +140,9 @@ const topology={
     mcp_server:'services/nexo-api/app/mcp_server.py',
     remote_mcp:'services/nexo-api/app/remote_mcp.py',
     source_storage:String(projectionManifest.source_storage||''),
-    source_snapshot_id:String(projectionManifest.source_snapshot_id||''),
-    source_state_fingerprint:String(projectionManifest.source_state_fingerprint||''),
-    source_promoted_at:String(projectionManifest.source_promoted_at||''),
+    tower_file_id:String(projectionManifest.tower_file_id||''),
+    tower_revision:String(projectionManifest.tower_revision||''),
+    source_state_fingerprint:String(projectionManifest.source_state_fingerprint||projectionManifest.tower_revision||''),
     projection_fingerprint:String(projectionManifest.projection_fingerprint||''),
   },
   stats:{
