@@ -1284,19 +1284,14 @@ function fitThree(
   const right = forward.clone().cross(runtime.camera.up).normalize();
   const cameraUp = right.clone().cross(forward).normalize();
 
-  let horizontalExtent = 0;
-  let verticalExtent = 0;
-  let depthExtent = 0;
-  for (const x of [box.min.x, box.max.x]) {
-    for (const y of [box.min.y, box.max.y]) {
-      for (const z of [box.min.z, box.max.z]) {
-        const offset = new THREE.Vector3(x, y, z).sub(center);
-        horizontalExtent = Math.max(horizontalExtent, Math.abs(offset.dot(right)));
-        verticalExtent = Math.max(verticalExtent, Math.abs(offset.dot(cameraUp)));
-        depthExtent = Math.max(depthExtent, Math.abs(offset.dot(direction)));
-      }
-    }
-  }
+  const projected = positions.map(position => {
+    const offset = position.clone().sub(center);
+    return {
+      x: Math.abs(offset.dot(right)),
+      y: offset.dot(cameraUp),
+      depth: offset.dot(direction),
+    };
+  });
 
   const { width, height, top, right: insetRight, bottom, left, compact } = threeFitInsets(runtime);
   const usableWidth = Math.max(80, width - left - insetRight);
@@ -1306,43 +1301,61 @@ function fitThree(
   const fov = THREE.MathUtils.degToRad(runtime.camera.fov);
   const tanVertical = Math.tan(fov / 2);
   const tanHorizontal = tanVertical * Math.max(.35, runtime.camera.aspect);
-  const padding = compact ? 34 : 48;
+  const targetCoverage = compact ? .78 : .82;
+  const horizontalLimit = Math.max(.001, tanHorizontal * widthFraction * targetCoverage);
+  const verticalLimit = Math.max(.001, tanVertical * heightFraction * targetCoverage);
+  const paddingX = compact ? 42 : 52;
+  const paddingY = compact ? 34 : 44;
+  const nearMargin = compact ? 86 : 104;
+  const minimumDistance = compact ? 160 : 180;
 
-  horizontalExtent += padding;
-  verticalExtent += padding * .72;
-  depthExtent += padding * .18;
+  // Solve the perspective constraint per actual node. The previous fit combined
+  // the deepest point with the widest point even when they were different nodes,
+  // which overestimated camera distance by 2–3× on layered graphs.
+  const solveDistance = (verticalShift: number) => {
+    let solved = minimumDistance;
+    for (const point of projected) {
+      solved = Math.max(
+        solved,
+        point.depth + nearMargin,
+        point.depth + (point.x + paddingX) / horizontalLimit,
+        point.depth + (Math.abs(point.y - verticalShift) + paddingY) / verticalLimit,
+      );
+    }
+    return solved;
+  };
 
-  // Fit against the plane actually seen by the camera. The previous implementation
-  // used the full 3D diagonal; once Z became meaningful that pushed the camera far
-  // away and made mobile look like a tiny graph floating in an empty viewport.
-  const requiredForWidth = horizontalExtent / Math.max(.001, tanHorizontal * widthFraction);
-  const requiredForHeight = verticalExtent / Math.max(.001, tanVertical * heightFraction);
-  const fitPlaneDistance = Math.max(requiredForWidth, requiredForHeight);
-  const distance = Math.max(
-    compact ? 330 : 410,
-    depthExtent + fitPlaneDistance * (compact ? 1.06 : 1.10),
-  );
+  let distance = solveDistance(0);
+  const safeCenterFactor = ((top - bottom) * tanVertical) / Math.max(1, height);
+  let verticalShift = distance * safeCenterFactor;
+  // The safe-area center shift depends on camera distance. Two fixed-point passes
+  // converge enough for this linear projection while keeping the fit deterministic.
+  for (let iteration = 0; iteration < 2; iteration += 1) {
+    distance = solveDistance(verticalShift);
+    verticalShift = distance * safeCenterFactor;
+  }
 
-  const availableAtClosest = Math.max(1, distance - depthExtent);
-  const coverage = Math.min(2,
-    Math.max(
-      horizontalExtent / Math.max(1, availableAtClosest * tanHorizontal * widthFraction),
-      verticalExtent / Math.max(1, availableAtClosest * tanVertical * heightFraction),
-    ),
-  );
+  let coverage = 0;
+  for (const point of projected) {
+    const forwardDistance = Math.max(nearMargin, distance - point.depth);
+    coverage = Math.max(
+      coverage,
+      (point.x + paddingX) / Math.max(.001, forwardDistance * tanHorizontal * widthFraction),
+      (Math.abs(point.y - verticalShift) + paddingY) / Math.max(.001, forwardDistance * tanVertical * heightFraction),
+    );
+  }
 
-  const screenOffsetPx = (top - bottom) / 2;
-  const worldPerPixel = (2 * distance * tanVertical) / height;
-  const target = center.clone().addScaledVector(cameraUp, screenOffsetPx * worldPerPixel);
+  const target = center.clone().addScaledVector(cameraUp, verticalShift);
   const destination = target.clone().add(direction.clone().multiplyScalar(distance));
 
   const container = runtime.renderer.domElement.parentElement as HTMLElement | null;
   if (container) {
-    container.dataset.threeFitPolicy = 'selection-safe-area-v5';
+    container.dataset.threeFitPolicy = 'perspective-point-safe-area-v6';
     container.dataset.threeFitScope = scope;
     container.dataset.threeFitNodeCount = String(positions.length);
     container.dataset.threeFitDistance = distance.toFixed(1);
     container.dataset.threeFitCoverage = coverage.toFixed(2);
+    container.dataset.threeFitTargetCoverage = targetCoverage.toFixed(2);
     container.dataset.threeFitTopInset = String(top);
     container.dataset.threeFitBottomInset = String(bottom);
   }
@@ -1691,6 +1704,7 @@ function MetroThreeView({
   const showBeamsRef = useRef(showBeams);
   const lastFitNonce = useRef(-1);
   const lastFocusKey = useRef('');
+  const lastStructureKey = useRef('');
   const onReadyRef = useRef(onReady);
 
   modelRef.current = model;
@@ -1827,8 +1841,8 @@ function MetroThreeView({
           container.dataset.threeSynapseCount = String(runtime.pulses.length);
         }
 
-        const focusIds = threeFocusIds(modelRef.current, expandedRef.current, selectedRef.current);
-        fitThree(runtime, false, focusIds, 'selection');
+        fitThree(runtime, false, null, 'all');
+        lastFocusKey.current = `${modelRef.current.revision}|${[...expandedRef.current].sort().join('|')}|${selectedRef.current || ''}`;
         renderAndMeasureThree(runtime, container);
       });
     });
@@ -1847,12 +1861,7 @@ function MetroThreeView({
       clearRendererError(container);
       resize();
       rebuildThree(runtime, container, modelRef.current, expandedRef.current, selectedRef.current, showBeamsRef.current, theme);
-      fitThree(
-        runtime,
-        false,
-        threeFocusIds(modelRef.current, expandedRef.current, selectedRef.current),
-        'selection',
-      );
+      fitThree(runtime, false, null, 'all');
       renderAndMeasureThree(runtime, container);
     };
     renderer.domElement.addEventListener('webglcontextlost', onContextLost);
@@ -1938,14 +1947,15 @@ function MetroThreeView({
     container.dataset.threeNodeCount = String(visibleAtlasIds(model, expanded).length);
     container.dataset.threeSynapseCount = String(runtime.pulses.length);
 
-    const focusIds = threeFocusIds(model, expanded, selectedId);
-    const focusKey = `${model.revision}|${expansionKey}|${selectedId || ''}`;
-    if (!runtime.hasFit) {
+    const structureKey = `${model.revision}|${expansionKey}`;
+    const focusKey = `${structureKey}|${selectedId || ''}`;
+    const structureChanged = lastStructureKey.current !== structureKey;
+    if (!runtime.hasFit || structureChanged) {
+      const hadFit = runtime.hasFit;
       runtime.hasFit = true;
-      fitThree(runtime, false, focusIds, 'selection');
-      lastFocusKey.current = focusKey;
-    } else if (lastFocusKey.current !== focusKey) {
-      fitThree(runtime, true, focusIds, 'selection');
+      fitThree(runtime, hadFit && structureChanged, null, 'all');
+      lastStructureKey.current = structureKey;
+      // Prevent the selection effect from immediately undoing the structural fit.
       lastFocusKey.current = focusKey;
     }
 
