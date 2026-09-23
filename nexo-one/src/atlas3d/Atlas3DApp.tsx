@@ -10,12 +10,14 @@ import {
   type AtlasCrossLink,
   type AtlasMetroNode,
 } from './atlasAdapter.ts';
-import { MetroAtlasRenderer } from './MetroAtlasRenderer.tsx';
+import { NexoGraph } from '../components/NexoGraph.tsx';
+import { ATLAS_LENSES, atlasModelForLens, normalizeAtlasLens, type AtlasLens } from './atlasLenses.ts';
 
 type ViewMode = '2d' | '3d';
 type AtlasTheme = 'dark' | 'light';
 
 const THEME_STORAGE_KEY = 'nexo.atlas.theme.v1';
+const GRAPH_VIEW_STORAGE_KEY = 'nexo.graph.view.v1';
 
 function initialAtlasTheme(): AtlasTheme {
   if (typeof window === 'undefined') return 'dark';
@@ -199,11 +201,14 @@ export default function Atlas3DApp() {
   return <Atlas3DContent system={system}/>;
 }
 
-export function Atlas3DContent({system}:{system:SystemStore}) {
-  const model = useMemo(() => system.state ? buildAtlasMetroModel(system.state) : null, [system.state]);
+export function Atlas3DContent({system,themeOverride}:{system:SystemStore;themeOverride?:AtlasTheme}) {
+  const [lens,setLens]=useState<AtlasLens>(()=>normalizeAtlasLens(typeof window!=='undefined'?atlasRouteParams().get('lente'):null));
+  const fullModel = useMemo(() => system.state ? buildAtlasMetroModel(system.state) : null, [system.state]);
+  const model = useMemo(() => fullModel ? atlasModelForLens(fullModel,lens) : null, [fullModel,lens]);
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [atlasTheme, setAtlasTheme] = useState<AtlasTheme>(initialAtlasTheme);
+  const [localAtlasTheme] = useState<AtlasTheme>(initialAtlasTheme);
+  const atlasTheme:AtlasTheme=themeOverride==='light'||themeOverride==='dark'?themeOverride:localAtlasTheme;
   const [navigationRevision, setNavigationRevision] = useState('');
   const qaExpand = useMemo(
     () => typeof window !== 'undefined' ? atlasRouteParams().get('expand') : null,
@@ -246,9 +251,12 @@ export function Atlas3DContent({system}:{system:SystemStore}) {
     return initial;
   }, [model?.revision, qaExpandedNode?.id, qaExpand]);
 
-  const [viewMode, setViewMode] = useState<ViewMode>(() =>
-    typeof window !== 'undefined' && (atlasRouteParams().get('view') === '3d' || atlasRouteParams().get('mode') === '3d') ? '3d' : '2d'
-  );
+  const [viewMode, setViewMode] = useState<ViewMode>(() => {
+    if(typeof window==='undefined')return'2d';
+    const query=atlasRouteParams().get('view')||atlasRouteParams().get('mode');
+    if(query==='2d'||query==='3d')return query;
+    try{return window.localStorage.getItem(GRAPH_VIEW_STORAGE_KEY)==='3d'?'3d':'2d';}catch{return'2d';}
+  });
   const [showBeams, setShowBeams] = useState(true);
   const [show3dHint, setShow3dHint] = useState(false);
   const [mobileDetailsOpen, setMobileDetailsOpen] = useState(false);
@@ -259,7 +267,7 @@ export function Atlas3DContent({system}:{system:SystemStore}) {
     document.documentElement.dataset.atlasTheme = atlasTheme;
     document.documentElement.style.colorScheme = atlasTheme;
     try {
-      window.localStorage.setItem(THEME_STORAGE_KEY, atlasTheme);
+      if(!themeOverride) window.localStorage.setItem(THEME_STORAGE_KEY, atlasTheme);
     } catch {
       // Theme persistence is a convenience; rendering must not depend on storage.
     }
@@ -267,7 +275,7 @@ export function Atlas3DContent({system}:{system:SystemStore}) {
       delete document.documentElement.dataset.atlasTheme;
       document.documentElement.style.colorScheme = '';
     };
-  }, [atlasTheme]);
+  }, [atlasTheme, themeOverride]);
 
   useEffect(() => {
     if (!model) return;
@@ -333,11 +341,16 @@ export function Atlas3DContent({system}:{system:SystemStore}) {
     setFitNonce(value => value + 1);
   };
 
-  const toggleTheme = () => {
-    setAtlasTheme(current => current === 'dark' ? 'light' : 'dark');
-  };
-
   const reset = collapseToInitial;
+
+  const switchLens = (next: AtlasLens) => {
+    setLens(next);
+    const params=atlasRouteParams();
+    params.set('lente',next);
+    params.set('view',viewMode);
+    window.history.replaceState(null,'',`#/atlas?${params.toString()}`);
+    setFitNonce(value=>value+1);
+  };
 
   const selectBreadcrumb = (id: string) => {
     if (!model.nodeMap.has(id)) return;
@@ -473,19 +486,20 @@ export function Atlas3DContent({system}:{system:SystemStore}) {
 
   const switchViewMode = (mode: ViewMode) => {
     setViewMode(mode);
-    if (mode !== '3d') {
-      setShow3dHint(false);
-      return;
-    }
+    try{window.localStorage.setItem(GRAPH_VIEW_STORAGE_KEY,mode);}catch{}
+    const params=atlasRouteParams();
+    params.set('lente',lens);
+    params.set('view',mode);
+    params.delete('mode');
+    window.history.replaceState(null,'',`#/atlas?${params.toString()}`);
+    if (mode !== '3d') { setShow3dHint(false); return; }
     try {
       const key = 'nexo.atlas.3d-affordance-seen.v1';
       if (window.localStorage.getItem(key) !== '1') {
         setShow3dHint(true);
         window.localStorage.setItem(key, '1');
       }
-    } catch {
-      setShow3dHint(true);
-    }
+    } catch { setShow3dHint(true); }
   };
 
   return (
@@ -495,9 +509,10 @@ export function Atlas3DContent({system}:{system:SystemStore}) {
       data-atlas-ready={rendererReady ? 'true' : 'false'}
       data-atlas-root-count={model.roots.length}
       data-atlas-visible-count={visibleIds.length}
-      data-atlas-total-count={model.nodes.length}
+      data-atlas-total-count={fullModel?.nodes.length || model.nodes.length}
       data-atlas-mode={viewMode}
       data-atlas-theme={atlasTheme}
+      data-atlas-lens={lens}
       data-atlas-expansion={allExpanded ? 'all' : 'context'}
       data-atlas-expanded-count={activeExpanded.size}
       data-atlas-qa-expand={qaExpand || 'none'}
@@ -527,23 +542,22 @@ export function Atlas3DContent({system}:{system:SystemStore}) {
       data-atlas-campaign-source-links={campaignSourceLinkCount}
     >
       <section className="atlas-workspace">
-        <MetroAtlasRenderer
+        <NexoGraph
           model={model}
           expanded={activeExpanded}
           selectedId={activeSelectedId}
-          showBeams={showBeams}
-          viewMode={viewMode}
+          showRelations={showBeams}
+          view={viewMode}
           theme={atlasTheme}
           fitNonce={fitNonce}
-          onActivate={activate}
+          onSelect={activate}
+          onViewChange={switchViewMode}
+          onFit={() => setFitNonce(value => value + 1)}
+          onReset={reset}
           onReady={() => setRendererReady(true)}
         />
 
         <div className="atlas-topbar">
-          <a className="atlas-product-brand glass" href="../" aria-label="Voltar ao NEXO ONE">
-            <span className="atlas-product-mark">N</span>
-            <span className="atlas-product-copy"><strong>NEXO ONE</strong><small>ATLAS</small></span>
-          </a>
           <nav className="atlas-breadcrumb glass" aria-label="Caminho atual">
             <button onClick={() => { setSelectedId(model.roots[0] || null); }} className="atlas-crumb">Atlas</button>
             {breadcrumbs.map(node => (
@@ -555,57 +569,14 @@ export function Atlas3DContent({system}:{system:SystemStore}) {
           </nav>
 
           <div className="atlas-controls">
-            <div className="atlas-view-switch" role="group" aria-label="Modo de visualização" data-active-mode={viewMode}>
-              <button
-                className={viewMode === '2d' ? 'active' : ''}
-                aria-pressed={viewMode === '2d'}
-                onClick={() => switchViewMode('2d')}
-              >
-                <span className="atlas-view-icon">▦</span>
-                <span><strong>2D</strong><small>Metro</small></span>
-                {viewMode === '2d' && <em>ATIVO</em>}
-              </button>
-              <button
-                className={viewMode === '3d' ? 'active' : ''}
-                aria-pressed={viewMode === '3d'}
-                onClick={() => switchViewMode('3d')}
-              >
-                <span className="atlas-view-icon">◇</span>
-                <span><strong>3D</strong><small>Explorar</small></span>
-                {viewMode === '3d' && <em>ATIVO</em>}
-              </button>
+            <div className="atlas-lens-switch" role="group" aria-label="Lente do mapa">
+              {ATLAS_LENSES.map(([id,name])=><button type="button" key={id} className={lens===id?'active':''} aria-pressed={lens===id} onClick={()=>switchLens(id)}>{name}</button>)}
             </div>
-            <button
-              className="atlas-button atlas-theme-button"
-              aria-pressed={atlasTheme === 'light'}
-              aria-label={atlasTheme === 'dark' ? 'Ativar tema claro' : 'Ativar tema escuro'}
-              onClick={toggleTheme}
-            >
-              <span aria-hidden="true">{atlasTheme === 'dark' ? '☼' : '☾'}</span>
-              {atlasTheme === 'dark' ? 'Claro' : 'Escuro'}
-            </button>
-            <button
-              className="atlas-button atlas-expand-button"
-              aria-pressed={allExpanded}
-              onClick={toggleExpandAll}
-            >
-              <span aria-hidden="true">{allExpanded ? '⊟' : '⊞'}</span>
+            <button className="atlas-button atlas-expand-button" aria-pressed={allExpanded} onClick={toggleExpandAll}>
               {allExpanded ? 'Contrair tudo' : 'Expandir tudo'}
             </button>
-            <label className="atlas-toggle">
-              <input type="checkbox" checked={showBeams} onChange={event => setShowBeams(event.target.checked)} />
-              Feixes
-            </label>
-            <button className="atlas-button" onClick={() => setFitNonce(value => value + 1)}>Fit</button>
-            <button className="atlas-button" onClick={reset}>Reset</button>
-            <button
-              className="atlas-button atlas-mobile-details-toggle"
-              aria-expanded={mobileDetailsOpen}
-              aria-controls="atlas-details-panel"
-              onClick={() => setMobileDetailsOpen(value => !value)}
-            >
-              Detalhes
-            </button>
+            <label className="atlas-toggle"><input type="checkbox" checked={showBeams} onChange={event => setShowBeams(event.target.checked)} />Relações</label>
+            <button className="atlas-button atlas-mobile-details-toggle" aria-expanded={mobileDetailsOpen} aria-controls="atlas-details-panel" onClick={() => setMobileDetailsOpen(value => !value)}>Detalhes</button>
           </div>
         </div>
 
@@ -637,7 +608,7 @@ export function Atlas3DContent({system}:{system:SystemStore}) {
               <i />Learning <b>{learningRecordCount}</b><em>{learningThemeCount} temas</em>
             </span>
           )}
-          <small>{visibleIds.length} estações visíveis · {model.nodes.length} total</small>
+          <small>{visibleIds.length} visíveis · {fullModel?.nodes.length || model.nodes.length} total</small>
         </div>
 
         {viewMode === '3d' && show3dHint && (
@@ -704,10 +675,7 @@ export function Atlas3DContent({system}:{system:SystemStore}) {
           onSelectNode={setSelectedId}
           theme={atlasTheme}
         />
-        <div className="atlas-source-state">
-          <span>{system.sourceLabel}</span>
-          <button onClick={system.sync} disabled={system.syncing}>{system.syncing ? 'Sincronizando…' : '↻ Sincronizar'}</button>
-        </div>
+        <div className="atlas-source-state"><span>{system.sourceLabel}</span></div>
       </aside>
     </main>
   );

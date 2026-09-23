@@ -7,7 +7,7 @@ import '../styles/product-foundation.css';
 import '../components/GalaxyThree3D.css';
 import './atlas3d.css';
 
-export default function EmbeddedAtlas3D({system}:{system:SystemStore}){
+export default function EmbeddedAtlas3D({system,theme}:{system:SystemStore;theme?:'dark'|'light'}){
   const [ready,setReady]=useState(()=>Boolean((window as any).G6?.Graph));
   useEffect(()=>{
     let active=true;
@@ -15,5 +15,5 @@ export default function EmbeddedAtlas3D({system}:{system:SystemStore}){
     return()=>{active=false;};
   },[]);
   if(!ready)return <LoadingState label="Preparando o Atlas…"/>;
-  return <Atlas3DContent system={system}/>;
+  return <Atlas3DContent system={system} themeOverride={theme}/>;
 }
