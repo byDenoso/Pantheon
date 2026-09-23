@@ -937,7 +937,7 @@ function createGlowSprite(
     opacity,
     depthWrite: false,
     depthTest: true,
-    blending: theme === 'light' ? THREE.NormalBlending : THREE.AdditiveBlending,
+    blending: THREE.NormalBlending,
   });
   const sprite = new THREE.Sprite(material);
   sprite.scale.set(diameter, diameter, 1);
@@ -1008,67 +1008,20 @@ function addSynapse(
   const radialSegments = compact ? 4 : 5;
   const color = new THREE.Color(colorValue);
   const coreRadius = (learning ? .46 : bridge ? .34 : .48) * Math.max(.72, Math.min(1.45, strength));
-  const glowRadius = coreRadius * (learning ? 4.8 : 3.2);
-
-  const glow = new THREE.Mesh(
-    new THREE.TubeGeometry(curve, segments, glowRadius, radialSegments, false),
-    new THREE.MeshBasicMaterial({
-      color,
-      transparent: true,
-      opacity: learning ? (compact ? .16 : .20) : bridge ? (compact ? .075 : .055) : (compact ? .11 : .085),
-      depthWrite: false,
-      blending: theme === 'light' ? THREE.NormalBlending : THREE.AdditiveBlending,
-    }),
-  );
-  glow.renderOrder = 2;
-  content.add(glow);
-
+  void runtime;
+  void theme;
   const core = new THREE.Mesh(
     new THREE.TubeGeometry(curve, segments, coreRadius, radialSegments, false),
     new THREE.MeshBasicMaterial({
       color,
       transparent: true,
-      opacity: learning ? (compact ? .68 : .76) : bridge ? (compact ? .36 : .28) : (compact ? .54 : .44),
+      opacity: learning ? (compact ? .56 : .62) : bridge ? (compact ? .22 : .18) : (compact ? .34 : .28),
       depthWrite: false,
-      blending: theme === 'light' ? THREE.NormalBlending : THREE.AdditiveBlending,
+      blending: THREE.NormalBlending,
     }),
   );
   core.renderOrder = 3;
   content.add(core);
-
-  const particle = new THREE.Group();
-  const pulseCore = new THREE.Mesh(
-    new THREE.SphereGeometry(learning ? 1.8 : bridge ? 1.15 : 1.45, compact ? 8 : 10, compact ? 6 : 8),
-    new THREE.MeshBasicMaterial({
-      color,
-      transparent: true,
-      opacity: learning && compact ? .72 : .92,
-      depthWrite: false,
-      blending: theme === 'light' ? THREE.NormalBlending : THREE.AdditiveBlending,
-    }),
-  );
-  particle.add(pulseCore);
-  const pulseGlow = createGlowSprite(
-    colorValue,
-    learning ? 18 : bridge ? 10 : 12,
-    learning ? (compact ? .66 : .74) : bridge ? (compact ? .44 : .34) : (compact ? .56 : .46),
-    theme,
-  );
-  pulseGlow.material.depthTest = false;
-  particle.add(pulseGlow);
-
-  const seed = hashNumber(key);
-  const phase = (seed % 1000) / 1000;
-  particle.position.copy(curve.getPointAt(phase));
-  content.add(particle);
-  runtime.pulses.push({
-    particle,
-    curve,
-    phase,
-    speed: learning
-      ? .000072 + (seed % 7) * .000005
-      : bridge ? .000022 + (seed % 7) * .000002 : .000034 + (seed % 9) * .0000025,
-  });
 }
 
 function updateSynapsePulses(runtime: ThreeRuntime, now: number) {
@@ -1598,7 +1551,7 @@ function rebuildThree(
         transparent: true,
         opacity: node.entityType === 'hub' ? .13 : .09,
         depthWrite: false,
-        blending: theme === 'light' ? THREE.NormalBlending : THREE.AdditiveBlending,
+        blending: THREE.NormalBlending,
         side: THREE.BackSide,
       }),
     );
@@ -1607,7 +1560,7 @@ function rebuildThree(
     const neuronGlow = createGlowSprite(
       nodeDomainColor,
       radius * (node.entityType === 'hub' ? 5.6 : 4.9),
-      (node.entityType === 'hub' ? .56 : .44) + (compact ? .12 : .04),
+      (node.entityType === 'hub' ? .20 : .13) + (compact ? .04 : .02),
       theme,
     );
     neuronGlow.material.depthTest = false;
@@ -1623,7 +1576,7 @@ function rebuildThree(
         transparent: true,
         opacity: .86,
         depthWrite: false,
-        blending: theme === 'light' ? THREE.NormalBlending : THREE.AdditiveBlending,
+        blending: THREE.NormalBlending,
       }),
     );
     statusNucleus.renderOrder = 9;
@@ -1632,7 +1585,7 @@ function rebuildThree(
     const selectionGlow = createGlowSprite(
       theme === 'light' ? '#0f172a' : '#ffffff',
       radius * 7.2,
-      theme === 'light' ? .24 : .64,
+      theme === 'light' ? .18 : .28,
       theme,
     );
     selectionGlow.material.depthTest = false;
@@ -1904,7 +1857,6 @@ function MetroThreeView({
       if (document.hidden) return;
       if (minimumFrameMs && now - lastFrameAt < minimumFrameMs) return;
       lastFrameAt = now;
-      updateSynapsePulses(runtime, now);
       controls.update();
       renderer.render(scene, camera);
     };
