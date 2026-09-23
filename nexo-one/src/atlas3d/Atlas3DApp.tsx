@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type CSSProperties } from 'react';
-import { useSystem } from '../data/useSystem.ts';
+import { useNexoStore } from '../data/NexoStore.tsx';
 import { atlasRouteParams } from './route-params.ts';
 import type { SystemStore } from '../data/useSystem.ts';
 import {
@@ -12,6 +12,7 @@ import {
 } from './atlasAdapter.ts';
 import { NexoGraph } from '../components/NexoGraph.tsx';
 import { ATLAS_LENSES, atlasModelForLens, normalizeAtlasLens, type AtlasLens } from './atlasLenses.ts';
+import { systemGraphModel, type Topology } from '../mcp/topologyModel.ts';
 
 type ViewMode = '2d' | '3d';
 type AtlasTheme = 'dark' | 'light';
@@ -197,14 +198,29 @@ function DetailPanel({
 }
 
 export default function Atlas3DApp() {
-  const system = useSystem();
+  const {system} = useNexoStore();
   return <Atlas3DContent system={system}/>;
 }
 
 export function Atlas3DContent({system,themeOverride}:{system:SystemStore;themeOverride?:AtlasTheme}) {
+  const {loadPublishedContext}=useNexoStore();
   const [lens,setLens]=useState<AtlasLens>(()=>normalizeAtlasLens(typeof window!=='undefined'?atlasRouteParams().get('lente'):null));
+  const [systemTopology,setSystemTopology]=useState<Topology|null>(null);
+  const [systemTopologyError,setSystemTopologyError]=useState('');
   const fullModel = useMemo(() => system.state ? buildAtlasMetroModel(system.state) : null, [system.state]);
-  const model = useMemo(() => fullModel ? atlasModelForLens(fullModel,lens) : null, [fullModel,lens]);
+  useEffect(()=>{
+    if(lens!=='sistema'||systemTopology)return;
+    const controller=new AbortController();
+    setSystemTopologyError('');
+    void loadPublishedContext<Topology>(false,controller.signal)
+      .then(value=>setSystemTopology(value.topology))
+      .catch(error=>{if((error as {name?:string})?.name!=='AbortError')setSystemTopologyError(String(error));});
+    return()=>controller.abort();
+  },[lens,systemTopology,loadPublishedContext]);
+  const model = useMemo(() => {
+    if(lens==='sistema')return systemTopology?systemGraphModel(systemTopology,'all',''):null;
+    return fullModel?atlasModelForLens(fullModel,lens):null;
+  }, [fullModel,lens,systemTopology]);
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [localAtlasTheme] = useState<AtlasTheme>(initialAtlasTheme);
@@ -290,7 +306,7 @@ export function Atlas3DContent({system,themeOverride}:{system:SystemStore;themeO
     return (
       <main className="atlas3d-boot">
         <strong>NEXO ATLAS</strong>
-        <span>{system.error || 'Carregando projeção…'}</span>
+        <span>{lens==='sistema'?(systemTopologyError||'Carregando topologia MCP…'):(system.error||'Carregando projeção…')}</span>
         {system.error && <button onClick={system.reload}>Tentar novamente</button>}
       </main>
     );
