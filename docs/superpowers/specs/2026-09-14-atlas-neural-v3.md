@@ -11,11 +11,11 @@ Build ATLAS as a read-only spatial projection of NEXO canonical state, with one 
 
 Operational truth is owned exclusively by:
 
-`byDenoso/NEXO-Obsidian-Vault@main:TOWER_V06`
+`TOWER_V06@GOOGLE_DRIVE_PRIVATE`
 
-`TOWER_V06/CONTROL.json` is the control-plane authority. Its write model is `GITHUB_CAS_ENTITY_EVENT`.
+The canonical current object is the stable Drive file `NEXO_TOWER_LIVE.json.gz` (file id `1m97cFmEkw19yiqD_6FWPG4j1lDCAYM4z`) under `NEXO_TOWER_LIVE_V1`. Its write model is `IN_PLACE_FILE_REVISION_CAS_READBACK`.
 
-Google Drive is not an operational truth owner. It may remain an evidence, artifact, dataset or legacy projection provider, but it cannot override TOWER_V06.
+GitHub stores code, contracts and provenance only; Git operational state writes are frozen. Historical Drive snapshot/CURRENT lineage is rollback/archive only.
 
 Pantheon/ATLAS never mutates TOWER_V06.
 
@@ -26,7 +26,7 @@ Pantheon/ATLAS never mutates TOWER_V06.
 ## Target flow
 
 ```text
-TOWER_V06
+DRIVE LIVE TOWER
    |
    v
 ATLAS PROJECTION V3
