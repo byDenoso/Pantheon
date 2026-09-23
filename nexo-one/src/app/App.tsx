@@ -49,7 +49,11 @@ export default function App() {
     return ALL_VIEWS.includes(saved) ? saved : 'OVERVIEW';
   });
   const [systemRoute, setSystemRoute] = useState(() => typeof window !== 'undefined' && isSystemRoute(window.location.hash));
-  const [theme, setTheme] = useState(() => stored('nexo-theme', 'dark'));
+  const [theme, setTheme] = useState(() => {
+    const systemQuery = typeof window !== 'undefined' ? window.location.hash.match(/^#\/?sistema\?(.+)$/i)?.[1] : undefined;
+    const routeTheme = systemQuery ? new URLSearchParams(systemQuery).get('theme') : null;
+    return routeTheme === 'light' || routeTheme === 'dark' ? routeTheme : stored('nexo-theme', 'dark');
+  });
   const [command, setCommand] = useState('');
   const [notice, setNotice] = useState('');
   const [moreOpen, setMoreOpen] = useState(false);
