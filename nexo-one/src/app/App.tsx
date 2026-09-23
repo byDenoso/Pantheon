@@ -167,7 +167,7 @@ export default function App() {
       case 'INBOX': return <InboxView state={state} onOpenInbox={setOpenInbox} />;
       case 'ACTIONS': return <ActionsView state={state} onOpenAction={setOpenAction} />;
       case 'EXECUTION': return <ExecutionView state={state} selectedRunId={selectedRun} onSelectRun={setSelectedRun} />;
-      case 'TRUTHGRAPH': return <TruthGraphView state={state} />;
+      case 'TRUTHGRAPH': return <TruthGraphView state={state} theme={theme as 'dark'|'light'} />;
       case 'CAPABILITIES': return <CapabilitiesView state={state} />;
       case 'SOURCES': return <SourcesView state={state} />;
       case 'INTEGRITY': return <IntegrityView state={state} />;
