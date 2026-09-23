@@ -40,9 +40,13 @@ export function StarfieldCanvas({className='starfield-canvas'}:{className?:strin
       if(visible&&!was&&!still)frame=requestAnimationFrame(draw);
     }):null;
     observer?.observe(canvas);
-    const onResize=()=>{resize();if(still)draw();};
+    // O hero muda de altura depois do carregamento (fontes, dados); medir só no
+    // resize da janela deixava o canvas esticado.
+    const onResize=()=>{if(canvas.clientWidth===width&&canvas.clientHeight===height)return;resize();if(still)draw();};
+    const sizer=typeof ResizeObserver==='function'?new ResizeObserver(onResize):null;
+    sizer?.observe(canvas);
     resize();draw();window.addEventListener('resize',onResize);
-    return()=>{cancelAnimationFrame(frame);observer?.disconnect();window.removeEventListener('resize',onResize);};
+    return()=>{cancelAnimationFrame(frame);observer?.disconnect();sizer?.disconnect();window.removeEventListener('resize',onResize);};
   },[]);
   return <canvas ref={ref} className={className} aria-hidden="true"/>;
 }
