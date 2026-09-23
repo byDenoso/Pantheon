@@ -1307,7 +1307,7 @@ function fitThree(
   const paddingX = compact ? 42 : 52;
   const paddingY = compact ? 34 : 44;
   const nearMargin = compact ? 86 : 104;
-  const minimumDistance = compact ? 250 : 300;
+  const minimumDistance = compact ? 160 : 180;
 
   // Solve the perspective constraint per actual node. The previous fit combined
   // the deepest point with the widest point even when they were different nodes,
@@ -1704,6 +1704,7 @@ function MetroThreeView({
   const showBeamsRef = useRef(showBeams);
   const lastFitNonce = useRef(-1);
   const lastFocusKey = useRef('');
+  const lastStructureKey = useRef('');
   const onReadyRef = useRef(onReady);
 
   modelRef.current = model;
@@ -1840,8 +1841,8 @@ function MetroThreeView({
           container.dataset.threeSynapseCount = String(runtime.pulses.length);
         }
 
-        const focusIds = threeFocusIds(modelRef.current, expandedRef.current, selectedRef.current);
-        fitThree(runtime, false, focusIds, 'selection');
+        fitThree(runtime, false, null, 'all');
+        lastFocusKey.current = `${modelRef.current.revision}|${[...expandedRef.current].sort().join('|')}|${selectedRef.current || ''}`;
         renderAndMeasureThree(runtime, container);
       });
     });
@@ -1860,12 +1861,7 @@ function MetroThreeView({
       clearRendererError(container);
       resize();
       rebuildThree(runtime, container, modelRef.current, expandedRef.current, selectedRef.current, showBeamsRef.current, theme);
-      fitThree(
-        runtime,
-        false,
-        threeFocusIds(modelRef.current, expandedRef.current, selectedRef.current),
-        'selection',
-      );
+      fitThree(runtime, false, null, 'all');
       renderAndMeasureThree(runtime, container);
     };
     renderer.domElement.addEventListener('webglcontextlost', onContextLost);
@@ -1951,14 +1947,14 @@ function MetroThreeView({
     container.dataset.threeNodeCount = String(visibleAtlasIds(model, expanded).length);
     container.dataset.threeSynapseCount = String(runtime.pulses.length);
 
-    const focusIds = threeFocusIds(model, expanded, selectedId);
-    const focusKey = `${model.revision}|${expansionKey}|${selectedId || ''}`;
-    if (!runtime.hasFit) {
+    const structureKey = `${model.revision}|${expansionKey}`;
+    const focusKey = `${structureKey}|${selectedId || ''}`;
+    const structureChanged = lastStructureKey.current !== structureKey;
+    if (!runtime.hasFit || structureChanged) {
       runtime.hasFit = true;
-      fitThree(runtime, false, focusIds, 'selection');
-      lastFocusKey.current = focusKey;
-    } else if (lastFocusKey.current !== focusKey) {
-      fitThree(runtime, true, focusIds, 'selection');
+      fitThree(runtime, runtime.hasFit && structureChanged, null, 'all');
+      lastStructureKey.current = structureKey;
+      // Prevent the selection effect from immediately undoing the structural fit.
       lastFocusKey.current = focusKey;
     }
 
