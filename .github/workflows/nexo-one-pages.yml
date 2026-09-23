@@ -482,7 +482,7 @@ jobs:
 
           capture_system_shell() {
             local name="$1" width="$2" height="$3" theme="$4"
-            local url="${base}/mcp/?theme=${theme}"
+            local url="${base}/mcp/?q=Cosmology&theme=${theme}&graph=2d"
             local dom="/tmp/shell-${name}.html"
             dump_until_ready 'data-mcp-ready="true"' "${dom}" \
               --headless=new --no-sandbox --disable-dev-shm-usage --hide-scrollbars \
@@ -784,6 +784,8 @@ jobs:
           name: atlas3d-production-readback
           path: |
             /tmp/atlas-*.html
+            /tmp/shell-*.html
+            /tmp/shell-*.png
             /tmp/atlas-desktop-1440-dark.png
             /tmp/atlas-desktop-1024-dark.png
             /tmp/atlas-mobile-390-dark.png
