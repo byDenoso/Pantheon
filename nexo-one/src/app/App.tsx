@@ -50,8 +50,8 @@ export default function App() {
   });
   const [systemRoute, setSystemRoute] = useState(() => typeof window !== 'undefined' && isSystemRoute(window.location.hash));
   const [theme, setTheme] = useState(() => {
-    const systemQuery = typeof window !== 'undefined' ? window.location.hash.match(/^#\/?sistema\?(.+)$/i)?.[1] : undefined;
-    const routeTheme = systemQuery ? new URLSearchParams(systemQuery).get('theme') : null;
+    const routeQuery = typeof window !== 'undefined' ? window.location.hash.split('?', 2)[1] : undefined;
+    const routeTheme = routeQuery ? new URLSearchParams(routeQuery).get('theme') : null;
     return routeTheme === 'light' || routeTheme === 'dark' ? routeTheme : stored('nexo-theme', 'dark');
   });
   const [command, setCommand] = useState('');
@@ -80,9 +80,12 @@ export default function App() {
   }, []);
   useEffect(() => {
     const restore = () => {
-      const isSystem = isSystemRoute(window.location.hash);
+      const hash = window.location.hash;
+      const isSystem = isSystemRoute(hash);
       setSystemRoute(isSystem);
-      const next = viewFromHash(window.location.hash);
+      const routeTheme = new URLSearchParams(hash.split('?', 2)[1] || '').get('theme');
+      if (routeTheme === 'light' || routeTheme === 'dark') setTheme(routeTheme);
+      const next = viewFromHash(hash);
       if (next) { setView(next); setNotice(''); }
     };
     window.addEventListener('hashchange', restore);
