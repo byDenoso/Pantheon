@@ -1,6 +1,7 @@
 import type {ActionRecord,InboxItem,SystemState} from '../../contracts/system.ts';
 import {HumanInboxItem} from '../../components/composites.tsx';
 import {StatusBadge} from '../../components/primitives.tsx';
+import {CapabilityCountLine} from '../../components/CapabilityCountLine.tsx';
 import {inboxGroups,globalSummary,laneViews,resolvableActions} from '../../viewmodels/system.ts';
 
 const activeAction=(status:string)=>!['APPLIED','NO_OP_ALREADY_APPLIED','FAILED'].includes(status);
@@ -19,6 +20,14 @@ export function Overview({state,onOpenAction,onOpenInbox,onNavigate}:{
   const lanes=laneViews(state);
   const unavailable=state.providers.filter(provider=>provider.state==='MISSING_PROVIDER'||provider.state==='BLOCKED').length;
   const outsidePass=state.capabilities.filter(capability=>capability.status!=='PASS').length;
+  const capabilityCounts={
+    total:state.capabilities.length,
+    pass:state.capabilities.filter(item=>item.status==='PASS').length,
+    unverified:state.capabilities.filter(item=>item.status==='UNVERIFIED').length,
+    unknown:state.capabilities.filter(item=>item.status==='UNKNOWN').length,
+    retired:state.capabilities.filter(item=>item.status==='RETIRED_RUNTIME').length,
+    blocked:state.capabilities.filter(item=>item.status==='BLOCKED').length,
+  };
 
   return <div className="overview-consult">
     <section className="consult-section" aria-labelledby="needs-title">
@@ -39,6 +48,7 @@ export function Overview({state,onOpenAction,onOpenInbox,onNavigate}:{
       <button className="consult-kpi" type="button" onClick={()=>onNavigate('SOURCES')}><span>Capabilities fora de PASS</span><strong>{outsidePass}<small> / {state.capabilities.length}</small></strong></button>
       <button className="consult-kpi" type="button" onClick={()=>onNavigate('SOURCES')}><span>Fontes indisponíveis</span><strong>{unavailable}<small> / {state.providers.length}</small></strong></button>
     </section>
+    <CapabilityCountLine counts={capabilityCounts} compact />
 
     <section className="consult-section" aria-labelledby="domains-title">
       <div className="consult-section-head"><h2 id="domains-title">Domínios</h2><span>estado e distribuição da fila</span></div>
