@@ -14,11 +14,12 @@ export function GraphViewSwitch({view,onChange}:{view:NexoGraphView;onChange:(vi
 }
 
 export function NexoGraph({
-  model,expanded,selectedId,view,theme='dark',showRelations=true,fitNonce=0,onSelect,onViewChange,onFit,onReset,onReady,toolbarContext,toolbarFilters,
+  model,expanded,selectedId,view,theme='dark',showRelations=true,fitNonce=0,onSelect,onViewChange,onFit,onReset,onReady,toolbarContext,toolbarFilters,showViewSwitch=true,
 }:{
   model:AtlasMetroModel;expanded:ReadonlySet<string>;selectedId:string|null;view:NexoGraphView;theme?:'dark'|'light';
   showRelations?:boolean;fitNonce?:number;onSelect:(id:string)=>void;onViewChange:(view:NexoGraphView)=>void;
   onFit?:()=>void;onReset?:()=>void;onReady?:()=>void;toolbarContext?:ReactNode;toolbarFilters?:ReactNode;
+  showViewSwitch?:boolean;
 }){
   const hostRef=useRef<HTMLDivElement|null>(null);
   const [g6Ready,setG6Ready]=useState(()=>view==='3d'||Boolean((window as any).G6?.Graph));
@@ -64,7 +65,7 @@ export function NexoGraph({
       <div className="nexo-graph-toolbar-row nexo-graph-toolbar-primary">
         <div className="nexo-graph-toolbar-context">{toolbarContext||(!toolbarFilters&&count)}</div>
         <div className="nexo-graph-actions">
-          <GraphViewSwitch view={view} onChange={onViewChange}/>
+          {showViewSwitch&&<GraphViewSwitch view={view} onChange={onViewChange}/>}
           {onFit&&<button type="button" onClick={onFit}>Enquadrar</button>}
           {onReset&&<button type="button" onClick={onReset}>Resetar</button>}
           <button type="button" onClick={fullscreen}>Tela cheia</button>

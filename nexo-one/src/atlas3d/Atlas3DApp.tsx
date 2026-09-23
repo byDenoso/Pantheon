@@ -10,7 +10,7 @@ import {
   type AtlasCrossLink,
   type AtlasMetroNode,
 } from './atlasAdapter.ts';
-import { NexoGraph } from '../components/NexoGraph.tsx';
+import { GraphViewSwitch, NexoGraph } from '../components/NexoGraph.tsx';
 import { ATLAS_LENSES, atlasModelForLens, normalizeAtlasLens, type AtlasLens } from './atlasLenses.ts';
 
 type ViewMode = '2d' | '3d';
@@ -555,6 +555,7 @@ export function Atlas3DContent({system,themeOverride}:{system:SystemStore;themeO
           onFit={() => setFitNonce(value => value + 1)}
           onReset={reset}
           onReady={() => setRendererReady(true)}
+          showViewSwitch={false}
           toolbarContext={
             <nav className="atlas-breadcrumb" aria-label="Caminho atual">
               <button onClick={() => { setSelectedId(model.roots[0] || null); }} className="atlas-crumb">Atlas</button>
@@ -571,6 +572,7 @@ export function Atlas3DContent({system,themeOverride}:{system:SystemStore;themeO
               <div className="atlas-lens-switch" role="group" aria-label="Lente do mapa">
                 {ATLAS_LENSES.map(([id,name])=><button type="button" key={id} className={lens===id?'active':''} aria-pressed={lens===id} onClick={()=>switchLens(id)}>{name}</button>)}
               </div>
+              <GraphViewSwitch view={viewMode} onChange={switchViewMode}/>
               <button className="atlas-button atlas-expand-button" aria-pressed={allExpanded} onClick={toggleExpandAll}>
                 {allExpanded ? 'Contrair tudo' : 'Expandir tudo'}
               </button>

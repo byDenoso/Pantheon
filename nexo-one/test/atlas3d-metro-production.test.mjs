@@ -518,6 +518,8 @@ test('dedicated Atlas production page uses Metro renderer, G6 and deterministic 
   assert.match(app, /atlas-source-link/);
   assert.match(app, /node\.sourceLinks/);
   assert.match(app, /<NexoGraph/);
+  assert.match(app, /showViewSwitch=\{false\}/);
+  assert.match(app, /<GraphViewSwitch view=\{viewMode\} onChange=\{switchViewMode\}/);
   assert.match(app, /ATLAS_LENSES/);
   assert.match(app, /data-atlas-lens=\{lens\}/);
   assert.match(app, /THEME_STORAGE_KEY/);

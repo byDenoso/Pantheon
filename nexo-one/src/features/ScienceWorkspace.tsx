@@ -51,8 +51,8 @@ function valueOf(record:ScienceProjectionRecord,key:string):unknown{
   return envelope(record,key)?.value??null;
 }
 function textOf(value:unknown):string{
-  if(value===null||value===undefined||value==='')return'não publicado';
-  if(Array.isArray(value))return value.length?value.map(textOf).join(', '):'não publicado';
+  if(value===null||value===undefined||value==='')return'—';
+  if(Array.isArray(value))return value.length?value.map(textOf).join(', '):'—';
   if(typeof value==='object')return JSON.stringify(value);
   return String(value);
 }
@@ -116,19 +116,19 @@ function scienceGraphModel(projection:ScienceProjectionV1,generatedAt:string):At
   const campaignIds=new Set(projection.campaigns.map(item=>item.id));
   const base:AtlasMetroNode[]=[{
     id:rootId,sourceId:null,name:'Ciência',domain:'SCIENCE',parentId:null,entityType:'hub',status:'LIVE',
-    summary:'Campanhas, hipóteses e testes publicados no contrato científico.',depth:0,childCount:0,descendantCount:0,
+    summary:'Campanhas, hipóteses e testes presentes no contrato científico.',depth:0,childCount:0,descendantCount:0,
     relationCount:0,mix:50,updatedAt:generatedAt,sourceRevision:projection.source.tower_commit,
     fingerprint:projection.fingerprint,authorityClass:'TOWER_V06',sourceRef:projection.source.projection_ref,
     sourceLinks:[],temporal:[],synthetic:true,
   }];
   for(const item of projection.campaigns)base.push({
-    id:campaignId(item.id),sourceId:item.id,name:textOf(valueOf(item,'question'))==='não publicado'?item.id:textOf(valueOf(item,'question')),
+    id:campaignId(item.id),sourceId:item.id,name:textOf(valueOf(item,'question'))==='—'?item.id:textOf(valueOf(item,'question')),
     domain:'SCIENCE',parentId:rootId,entityType:'CAMPAIGN',status:textOf(valueOf(item,'status')),summary:textOf(valueOf(item,'question')),
-    depth:1,childCount:0,descendantCount:0,relationCount:0,mix:50,updatedAt:textOf(valueOf(item,'started_at'))==='não publicado'?generatedAt:textOf(valueOf(item,'started_at')),
+    depth:1,childCount:0,descendantCount:0,relationCount:0,mix:50,updatedAt:textOf(valueOf(item,'started_at'))==='—'?generatedAt:textOf(valueOf(item,'started_at')),
     sourceRevision:projection.source.tower_commit,fingerprint:item.fingerprint,authorityClass:'TOWER_V06',sourceRef:item.source_ref,sourceLinks:[],temporal:[],synthetic:false,
   });
   for(const item of projection.hypotheses)base.push({
-    id:hypothesisId(item.id),sourceId:item.id,name:textOf(valueOf(item,'statement'))==='não publicado'?item.id:textOf(valueOf(item,'statement')),
+    id:hypothesisId(item.id),sourceId:item.id,name:textOf(valueOf(item,'statement'))==='—'?item.id:textOf(valueOf(item,'statement')),
     domain:'SCIENCE',parentId:parentForHypothesis.get(item.id)||rootId,entityType:'CLAIM',status:'PUBLISHED',summary:textOf(valueOf(item,'statement')),
     depth:parentForHypothesis.has(item.id)?2:1,childCount:0,descendantCount:0,relationCount:0,mix:50,updatedAt:generatedAt,
     sourceRevision:projection.source.tower_commit,fingerprint:item.fingerprint,authorityClass:'TOWER_V06',sourceRef:item.source_ref,sourceLinks:[],temporal:[],synthetic:false,
@@ -168,8 +168,15 @@ function scienceGraphModel(projection:ScienceProjectionV1,generatedAt:string):At
 
 function StateText({value}:{value:unknown}){
   const raw=typeof value==='string'?value.toUpperCase():'';
-  const human:Record<string,string>={ACTIVE:'Em andamento',RUNNING:'Em andamento',IN_PROGRESS:'Em andamento',PAUSED:'Pausada',CHECKPOINTED:'Em espera',CLOSED:'Encerrada',COMPLETED:'Concluída',SUPPORTS:'Compatível',FALSIFIES:'Refuta',NULL:'Nulo',INCONCLUSIVE:'Inconclusivo',PENDING:'Pendente'};
-  return <span className={value===null||value===undefined?'science-unpublished':''}>{human[raw]||textOf(value)}</span>;
+  const human:Record<string,string>={ACTIVE:'Em andamento',RUNNING:'Em andamento',IN_PROGRESS:'Em andamento',PAUSED:'Pausada',CHECKPOINTED:'Em espera',CLOSED:'Encerrada',COMPLETED:'Concluída',DONE:'Concluído',READY:'Pronto',VERIFIED:'Verificado',RESULT:'Resultado disponível',REJECTED:'Rejeitado',SUPPORTS:'Compatível',FALSIFIES:'Refuta',NULL:'Nulo',INCONCLUSIVE:'Inconclusivo',PENDING:'Pendente'};
+  return <span className={value===null||value===undefined||value===''?'science-no-value':''}>{human[raw]||textOf(value)}</span>;
+}
+
+function PublicationStatus({value}:{value:unknown}){
+  if(value===null||value===undefined||value==='')return null;
+  const raw=String(value).toUpperCase();
+  const label=raw==='PUBLISHED'?'Publicado':raw==='UNPUBLISHED'||raw==='NOT_PUBLISHED'?'Não publicado':null;
+  return label?<span>{label}</span>:<StateText value={value}/>;
 }
 
 function DenseTable({heads,rows,empty}:{heads:string[];rows:ReactNode[];empty:string}){
@@ -231,20 +238,21 @@ export default function ScienceWorkspace({state}:{state:SystemState}){
     <nav className="science-tabs" aria-label="Seções de Ciência">{TABS.map(([id,label])=><button type="button" key={id} className={tab===id?'active':''} aria-current={tab===id?'page':undefined} onClick={()=>setScienceTab(id)}>{label}<span>{counts[id]}</span></button>)}</nav>
     <div className="science-filterbar">
       <label><span>Buscar</span><input value={query} onChange={event=>setQuery(event.target.value)} placeholder="ID, pergunta, método ou estado"/></label>
-      <span className="science-source">Fonte: {projection?'TOWER_V06 · contrato científico':'não publicado'}</span>
+      <span className="science-source">Fonte: {projection?'TOWER_V06 · contrato científico':'Projeção científica indisponível'}</span>
     </div>
 
-    {!projection&&tab!=='aprendizado'&&<div className="science-not-published">Projeção científica não publicada neste snapshot.</div>}
+    {!projection&&tab!=='aprendizado'&&<div className="science-projection-missing">Projeção científica indisponível neste snapshot.</div>}
 
     {projection&&tab==='campanhas'&&<DenseTable heads={['Campanha','Pergunta','Estado','Hipóteses','Início','Pré-registro']} empty="Nenhuma campanha corresponde ao filtro." rows={campaigns.map(item=><tr key={item.id}>
       <td><strong>{shortId(item.id)}</strong><small>{item.id}</small></td><td><StateText value={valueOf(item,'question')}/></td><td><StateText value={valueOf(item,'status')}/></td>
       <td><StateText value={valueOf(item,'hypothesis_ids')}/></td><td><StateText value={valueOf(item,'started_at')}/></td><td><StateText value={valueOf(item,'prereg_ref')}/></td>
     </tr>)}/>}
 
-    {projection&&tab==='testes'&&<DenseTable heads={['Teste','Campanha','Hipótese','Método','Datasets','Veredito','Claim','σ LEE']} empty="Nenhum teste corresponde ao filtro." rows={tests.map(item=><tr key={item.id}>
-      <td><strong>{shortId(item.id)}</strong><small>{item.id}</small></td><td><StateText value={valueOf(item,'campaign_id')}/></td><td><StateText value={valueOf(item,'hypothesis_id')}/></td>
+    {projection&&tab==='testes'&&<DenseTable heads={['Teste','Campanha','Estado','Hipótese','Método','Datasets','Veredito','Claim','σ LEE',...(tests.some(item=>valueOf(item,'publication_status')!==null)?['Publicação']:[])]} empty="Nenhum teste corresponde ao filtro." rows={tests.map(item=><tr key={item.id}>
+      <td><strong>{shortId(item.id)}</strong><small>{item.id}</small></td><td><StateText value={valueOf(item,'campaign_id')}/></td><td><StateText value={valueOf(item,'status')}/></td><td><StateText value={valueOf(item,'hypothesis_id')}/></td>
       <td><StateText value={valueOf(item,'method')}/></td><td><StateText value={valueOf(item,'datasets')}/></td><td><StateText value={valueOf(item,'verdict')}/></td>
       <td><StateText value={valueOf(item,'claim_level')}/></td><td><StateText value={nested(item,'statistics','sigma_lee')?.value}/></td>
+      {tests.some(candidate=>valueOf(candidate,'publication_status')!==null)&&<td><PublicationStatus value={valueOf(item,'publication_status')}/></td>}
     </tr>)}/>}
 
     {projection&&tab==='hipoteses'&&<DenseTable heads={['Hipótese','Enunciado','Modelo','Baseline','Critério de falsificação']} empty="Nenhuma hipótese corresponde ao filtro." rows={hypotheses.map(item=><tr key={item.id}>
@@ -254,7 +262,7 @@ export default function ScienceWorkspace({state}:{state:SystemState}){
 
     {tab==='aprendizado'&&<DenseTable heads={['Filamento','Relação','Tipo','Estado','Suporte','Contradição','Peso','Limite']} empty="Nenhum filamento corresponde ao filtro." rows={filaments.map(item=><tr key={item.id}>
       <td><strong>{item.label}</strong><small>{item.id}</small></td><td>{item.from_label} → {item.to_label}</td><td>{item.kind}</td><td>{item.status}</td>
-      <td className="science-num">{item.support}</td><td className="science-num">{item.contradiction}</td><td className="science-num">{item.weight.toFixed(2)}</td><td>{item.boundary||'não publicado'}</td>
+      <td className="science-num">{item.support}</td><td className="science-num">{item.contradiction}</td><td className="science-num">{item.weight.toFixed(2)}</td><td>{item.boundary||'—'}</td>
     </tr>)}/>}
 
     {projection&&tab==='graficos'&&<div className="science-graphics">
@@ -264,11 +272,11 @@ export default function ScienceWorkspace({state}:{state:SystemState}){
         <button type="button" onClick={()=>downloadCsv('ciencia-evidencia.csv',['Teste','Parâmetro','Valor','Erro -','Erro +','Unidade','Veredito'],quantitative.map(row=>[row.id,row.parameter,row.value,row.lo,row.hi,row.unit,row.verdict]))}>CSV</button>
         <button type="button" disabled={!quantitative.length||plotMode!=='grafico'} onClick={()=>downloadPlotPng(svgRef.current)}>PNG</button></>}
       </div>
-      {graphMode==='evidencia'&&(quantitative.length===0?<div className="science-not-published">Evidência quantitativa para forest plot: não publicado.</div>:plotMode==='tabela'
-        ?<DenseTable heads={['Teste','Parâmetro','Valor','Erro −','Erro +','Unidade','Veredito']} empty="não publicado" rows={quantitative.map(row=><tr key={row.id}><td>{row.id}</td><td>{row.parameter}</td><td className="science-num">{row.value}</td><td className="science-num">{row.lo??'não publicado'}</td><td className="science-num">{row.hi??'não publicado'}</td><td>{row.unit}</td><td>{row.verdict}</td></tr>)}/>
+      {graphMode==='evidencia'&&(quantitative.length===0?<div className="science-projection-missing">Nenhum resultado quantitativo disponível na projeção.</div>:plotMode==='tabela'
+        ?<DenseTable heads={['Teste','Parâmetro','Valor','Erro −','Erro +','Unidade','Veredito']} empty="Nenhum resultado quantitativo disponível." rows={quantitative.map(row=><tr key={row.id}><td>{row.id}</td><td>{row.parameter}</td><td className="science-num">{row.value}</td><td className="science-num">{row.lo??'—'}</td><td className="science-num">{row.hi??'—'}</td><td>{row.unit}</td><td>{row.verdict}</td></tr>)}/>
         :<EvidencePlot svgRef={svgRef} rows={quantitative}/>)}
       {graphMode==='relacoes'&&graphModel&&<NexoGraph model={graphModel} expanded={graphExpanded} selectedId={selectedId} view={graphView} theme={(document.documentElement.dataset.theme==='light'?'light':'dark')} onSelect={setSelectedId} onViewChange={setView}/>}
-      <p className="science-chart-source">Fonte: NEXO_SCIENCE_PROJECTION_V1 · TOWER_V06 · campos ausentes permanecem “não publicado”.</p>
+      <p className="science-chart-source">Fonte: NEXO_SCIENCE_PROJECTION_V1 · TOWER_V06 · campos ausentes são exibidos como “—”.</p>
     </div>}
   </section>;
 }
