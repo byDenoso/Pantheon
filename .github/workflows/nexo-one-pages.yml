@@ -558,7 +558,7 @@ jobs:
           grep -Fq 'data-mcp-theme="dark"' /tmp/mcp-readback-dom.html
           grep -Fq 'data-mcp-graph-view="2d"' /tmp/mcp-readback-dom.html
           grep -Fq 'data-mcp-renderer="metro-2d"' /tmp/mcp-readback-dom.html
-          grep -Fq 'class="mcp-neural-2d"' /tmp/mcp-readback-dom.html
+          grep -Fq 'class="nexo-graph"' /tmp/mcp-readback-dom.html
           grep -Fq '>Capabilities<' /tmp/mcp-readback-dom.html
           grep -Fq '>Runtimes<' /tmp/mcp-readback-dom.html
           grep -Fq '>Roles<' /tmp/mcp-readback-dom.html
@@ -583,7 +583,7 @@ jobs:
           grep -Fq 'data-mcp-theme="light"' /tmp/mcp-readback-light-2d-dom.html
           grep -Fq 'data-mcp-graph-view="2d"' /tmp/mcp-readback-light-2d-dom.html
           grep -Fq 'data-mcp-renderer="metro-2d"' /tmp/mcp-readback-light-2d-dom.html
-          grep -Fq 'class="mcp-neural-2d"' /tmp/mcp-readback-light-2d-dom.html
+          grep -Fq 'class="nexo-graph"' /tmp/mcp-readback-light-2d-dom.html
           "${chrome_bin}" --headless=new --no-sandbox --disable-dev-shm-usage --hide-scrollbars \
             --window-size=1440,900 --virtual-time-budget=9000 \
             --screenshot=/tmp/mcp-readback-light-2d.png "${mcp_light_2d_url}" >/dev/null 2>&1
@@ -596,9 +596,9 @@ jobs:
             --window-size=1440,900 --virtual-time-budget=9000 --dump-dom "${mcp_dark_3d_url}"
           grep -Fq 'data-mcp-theme="dark"' /tmp/mcp-readback-dark-3d-dom.html
           grep -Fq 'data-mcp-graph-view="3d"' /tmp/mcp-readback-dark-3d-dom.html
-          grep -Fq 'data-mcp-renderer="neural-3d"' /tmp/mcp-readback-dark-3d-dom.html
-          grep -Fq 'data-renderer="canvas-2.5d"' /tmp/mcp-readback-dark-3d-dom.html
-          grep -Fq 'data-theme="dark"' /tmp/mcp-readback-dark-3d-dom.html
+          grep -Fq 'data-mcp-renderer="three-3d"' /tmp/mcp-readback-dark-3d-dom.html
+          grep -Fq 'data-testid="atlas-metro-3d"' /tmp/mcp-readback-dark-3d-dom.html
+          grep -Fq 'data-three-theme="dark"' /tmp/mcp-readback-dark-3d-dom.html
           "${chrome_bin}" --headless=new --no-sandbox --disable-dev-shm-usage --hide-scrollbars \
             --window-size=1440,900 --virtual-time-budget=9000 \
             --screenshot=/tmp/mcp-readback-dark-3d.png "${mcp_dark_3d_url}" >/dev/null 2>&1
@@ -611,9 +611,9 @@ jobs:
             --window-size=1440,900 --virtual-time-budget=9000 --dump-dom "${mcp_light_3d_url}"
           grep -Fq 'data-mcp-theme="light"' /tmp/mcp-readback-light-3d-dom.html
           grep -Fq 'data-mcp-graph-view="3d"' /tmp/mcp-readback-light-3d-dom.html
-          grep -Fq 'data-mcp-renderer="neural-3d"' /tmp/mcp-readback-light-3d-dom.html
-          grep -Fq 'data-renderer="canvas-2.5d"' /tmp/mcp-readback-light-3d-dom.html
-          grep -Fq 'data-theme="light"' /tmp/mcp-readback-light-3d-dom.html
+          grep -Fq 'data-mcp-renderer="three-3d"' /tmp/mcp-readback-light-3d-dom.html
+          grep -Fq 'data-testid="atlas-metro-3d"' /tmp/mcp-readback-light-3d-dom.html
+          grep -Fq 'data-three-theme="light"' /tmp/mcp-readback-light-3d-dom.html
           "${chrome_bin}" --headless=new --no-sandbox --disable-dev-shm-usage --hide-scrollbars \
             --window-size=1440,900 --virtual-time-budget=9000 \
             --screenshot=/tmp/mcp-readback-light-3d.png "${mcp_light_3d_url}" >/dev/null 2>&1
@@ -641,8 +641,8 @@ jobs:
             --virtual-time-budget=10000 --dump-dom "${mcp_mobile_dark_3d_url}"
           grep -Fq 'data-mcp-theme="dark"' /tmp/mcp-readback-mobile-dark-3d-dom.html
           grep -Fq 'data-mcp-graph-view="3d"' /tmp/mcp-readback-mobile-dark-3d-dom.html
-          grep -Fq 'data-mcp-renderer="neural-3d"' /tmp/mcp-readback-mobile-dark-3d-dom.html
-          grep -Fq 'data-renderer="canvas-2.5d"' /tmp/mcp-readback-mobile-dark-3d-dom.html
+          grep -Fq 'data-mcp-renderer="three-3d"' /tmp/mcp-readback-mobile-dark-3d-dom.html
+          grep -Fq 'data-testid="atlas-metro-3d"' /tmp/mcp-readback-mobile-dark-3d-dom.html
           "${chrome_bin}" --headless=new --no-sandbox --disable-dev-shm-usage --hide-scrollbars --touch-events=enabled \
             --window-size=390,844 --force-device-scale-factor=1 --user-agent="${mobile_ua}" --virtual-time-budget=9000 \
             --screenshot=/tmp/mcp-readback-mobile-dark-3d.png "${mcp_mobile_dark_3d_url}" >/dev/null 2>&1
