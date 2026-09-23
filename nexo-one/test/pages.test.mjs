@@ -42,7 +42,8 @@ test('GitHub Pages build uses repository base and configurable SystemState endpo
   assert.match(app, /VITE_PUBLIC_NEXO_BASE/);
   assert.match(app, /goSystem\(\)/);
   assert.match(app, /hashForView\(next\)/);
-  assert.match(app, /href="#\/sistema"/);
+  const header = await text('src/shell/InstrumentHeader.tsx');
+  assert.match(header, /\['sistema','Sistema'\]/);
   assert.match(app, /goSystem\(\)/);
 });
 
