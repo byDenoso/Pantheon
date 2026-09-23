@@ -1,0 +1,375 @@
+/* Direção A · Observatório — sistema visual do NEXO ONE.
+   Última camada da pilha. Os tokens abaixo alimentam as três famílias legadas
+   (--bg/--ink…, --nexo-*, tons de status), então cada tela herda a paleta mesmo
+   onde nenhuma regra específica existe. Seletores usam :root[data-theme] para
+   vencer a especificidade das camadas anteriores sem !important. */
+
+/* ── Tokens ─────────────────────────────────────────────── */
+:root{
+  --obs-void:#05070B;
+  --obs-deep:#0A0E15;
+  --obs-raise:#0F1520;
+  --obs-line:#1C2533;
+  --obs-line-strong:#2B3748;
+  --obs-dim:#7A889C;
+  --obs-text:#D6DEE8;
+  --obs-bright:#F4F7FA;
+  --obs-sodium:#E9B35B;
+  --obs-sodium-ink:#E9B35B;
+  --obs-crit:#E0645A;
+  --obs-ok:#7FB59A;
+  --obs-info:#8FA7C4;
+  --obs-violet:#B7A0D8;
+  --obs-display:"Big Shoulders Display",Impact,"Arial Narrow",sans-serif;
+  --obs-body:"IBM Plex Sans",-apple-system,"Segoe UI",sans-serif;
+  --obs-mono:"IBM Plex Mono","SFMono-Regular",Consolas,monospace;
+  --obs-ease:cubic-bezier(.2,.7,.2,1);
+}
+:root[data-theme=light]{
+  --obs-void:#ECEEF1;
+  --obs-deep:#E3E6EA;
+  --obs-raise:#F6F7F9;
+  --obs-line:#CDD2D9;
+  --obs-line-strong:#AEB5BF;
+  --obs-dim:#5A6573;
+  --obs-text:#2A323D;
+  --obs-bright:#0A0E14;
+  --obs-sodium:#B87A16;
+  --obs-sodium-ink:#8A5A0C;
+  --obs-crit:#B3261E;
+  --obs-ok:#2F7A5A;
+  --obs-info:#3C5F8C;
+  --obs-violet:#6B4FA0;
+}
+
+:root[data-theme]{
+  color-scheme:dark;
+  --bg:var(--obs-void);--panel:var(--obs-deep);--raised:var(--obs-raise);--hover:var(--obs-raise);
+  --ink:var(--obs-bright);--muted:var(--obs-text);--quiet:var(--obs-dim);--line:var(--obs-line);
+  --accent:var(--obs-sodium);--amber:var(--obs-sodium);--green:var(--obs-ok);--blue:var(--obs-info);
+  --shadow:none;
+  --radius-sm:0;--radius-md:0;--radius-lg:0;
+  --font-ui:var(--obs-body);--font-mono:var(--obs-mono);
+
+  --nexo-bg-0:var(--obs-void);--nexo-bg-1:var(--obs-void);--nexo-bg-2:var(--obs-deep);--nexo-bg-3:var(--obs-raise);
+  --nexo-text:var(--obs-bright);--nexo-text-2:var(--obs-text);--nexo-muted:var(--obs-dim);
+  --nexo-accent:var(--obs-sodium);--nexo-accent-strong:var(--obs-sodium);
+  --nexo-success:var(--obs-ok);--nexo-attention:var(--obs-sodium);--nexo-danger:var(--obs-crit);
+  --nexo-hairline:var(--obs-line);
+  --nexo-radius-control:0;--nexo-radius-button:0;--nexo-radius-panel:0;
+
+  --live:var(--obs-ok);--degraded:var(--obs-sodium-ink);--conflict:var(--obs-crit);--snapshot:var(--obs-info);
+  --blocked:var(--obs-violet);--stale:var(--obs-dim);--unknown:var(--obs-dim);
+  --live-bg:transparent;--snapshot-bg:transparent;--stale-bg:transparent;--degraded-bg:transparent;
+  --conflict-bg:transparent;--blocked-bg:transparent;--unknown-bg:transparent;
+  --grid:transparent;--rail:var(--obs-void);
+  font-family:var(--obs-body);
+}
+:root[data-theme=light]{color-scheme:light}
+
+/* ── Base ───────────────────────────────────────────────── */
+:root[data-theme] body{background:var(--obs-void);color:var(--obs-text);font-family:var(--obs-body);font-weight:400}
+:root[data-theme=dark] body{font-weight:300}
+:root[data-theme] :focus-visible{outline:1px solid var(--obs-sodium);outline-offset:3px}
+:root[data-theme] ::selection{background:var(--obs-sodium);color:var(--obs-void)}
+:root[data-theme] :is(h1,h2,h3){font-family:var(--obs-display);font-weight:600;text-transform:uppercase;color:var(--obs-bright);letter-spacing:.01em;text-wrap:balance}
+:root[data-theme] :is(.eyebrow,.quiet-note,kbd,code,pre){font-family:var(--obs-mono)}
+:root[data-theme] .eyebrow{font-size:10.5px;font-weight:500;letter-spacing:.16em;text-transform:uppercase;color:var(--obs-dim)}
+:root[data-theme] .quiet-note{font-size:11px;letter-spacing:.04em;color:var(--obs-dim)}
+:root[data-theme] a{color:var(--obs-sodium-ink)}
+:root[data-theme] :is(input,select,textarea){border-radius:0;background:var(--obs-deep);border:1px solid var(--obs-line-strong);color:var(--obs-bright);font-family:var(--obs-body)}
+:root[data-theme] :is(input,select,textarea):focus{border-color:var(--obs-sodium);outline:0}
+:root[data-theme] button:hover{background:transparent}
+
+/* O skip-link ficava no fluxo e empurrava o header 48px para baixo. */
+:root[data-theme] .skip-link{position:absolute;left:16px;top:-100px;z-index:200}
+:root[data-theme] .skip-link:focus{top:8px}
+
+/* Controles: fio fino, canto vivo, rótulo mono. */
+:root[data-theme] :is(.text-button,.primary-button,button.secondary,.icon-btn):not(.atlas-metro-page *){
+  display:inline-flex;align-items:center;justify-content:center;gap:6px;
+  min-height:34px;padding:8px 14px;border:1px solid var(--obs-line-strong);border-radius:0;background:transparent;box-shadow:none;
+  font:500 11px/1 var(--obs-mono);letter-spacing:.12em;text-transform:uppercase;color:var(--obs-text);
+  transition:border-color .2s,color .2s;
+}
+:root[data-theme] :is(.text-button,.primary-button,button.secondary,.icon-btn):not(.atlas-metro-page *):hover:not(:disabled){border-color:var(--obs-sodium);color:var(--obs-bright);background:transparent;text-decoration:none}
+:root[data-theme] .primary-button:not(.atlas-metro-page *){border-color:var(--obs-sodium);color:var(--obs-sodium-ink)}
+:root[data-theme] .primary-button:not(.atlas-metro-page *):hover:not(:disabled){background:var(--obs-sodium);color:var(--obs-void)}
+
+/* Filtros e chips: sublinhado em vez de pílula. */
+:root[data-theme] :is(.filter:not(.atlas-metro-page *),.unified-shell:not([data-view=ATLAS]) .chip,.science-tabs button,.system-tabs button,.system-filter button,.proof-surface-switch button){
+  min-height:32px;padding:8px 12px 7px;border:0;border-bottom:1px solid transparent;border-radius:0;background:none;box-shadow:none;
+  font:500 11px/1 var(--obs-mono);letter-spacing:.12em;text-transform:uppercase;color:var(--obs-dim);
+}
+:root[data-theme] :is(.filter:not(.atlas-metro-page *),.unified-shell:not([data-view=ATLAS]) .chip,.science-tabs button,.system-tabs button,.system-filter button,.proof-surface-switch button):hover{color:var(--obs-text);background:none}
+:root[data-theme] :is(.filter.active:not(.atlas-metro-page *),.unified-shell:not([data-view=ATLAS]) .chip.on,.science-tabs button.active,.system-tabs button.active,.system-filter button.active,.proof-surface-switch button.active,.filter[aria-pressed=true]){
+  color:var(--obs-bright);border-color:var(--obs-sodium);background:none;
+}
+:root[data-theme] :is(.filter,.science-tabs button) :is(span,small,b){font-family:var(--obs-mono);color:var(--obs-sodium-ink);background:none;border:0;margin-left:6px}
+:root[data-theme] :is(.filter-row,.science-tabs,.system-tabs,.unified-shell:not([data-view=ATLAS]) :is(.chip-row,.chip-group)){gap:0 4px;border:0;border-bottom:1px solid var(--obs-line);border-radius:0;background:none;padding:0;box-shadow:none}
+
+/* Badges: fio na cor do tom, texto mono. */
+:root[data-theme] :is(.badge,.freshness,.op-chip,.risk-chip,.capability-chip,.runtime-chip,.fingerprint-chip,.provider-pill,.status,.plane-tag,.fixture-tag,.work-human-chip,.kind){
+  border-radius:0;background:transparent;box-shadow:none;
+  font-family:var(--obs-mono);font-weight:500;letter-spacing:.1em;text-transform:uppercase;
+}
+:root[data-theme] .badge{border:1px solid color-mix(in srgb,var(--tone,var(--obs-dim)) 50%,transparent);color:var(--tone,var(--obs-text))}
+:root[data-theme] :is(.op-chip,.risk-chip,.capability-chip,.runtime-chip,.provider-pill,.plane-tag,.kind){border:1px solid var(--obs-line-strong);color:var(--obs-dim)}
+:root[data-theme] :is(.risk-high,.risk-alto){color:var(--obs-crit);border-color:color-mix(in srgb,var(--obs-crit) 50%,transparent)}
+:root[data-theme] :is(.plane-tag,.fixture-tag){color:var(--obs-sodium-ink);border:1px solid var(--obs-sodium);background:none}
+:root[data-theme] .domain-badge{border:0;padding:0;background:none;font:600 20px/1 var(--obs-display);letter-spacing:.06em;color:var(--obs-bright)}
+
+/* Avisos: fio lateral âmbar. */
+:root[data-theme] :is(.plane-banner,.write-disabled.standalone,.rule-note,.notice-box,.p0-banner,.stale-banner,.conflict-banner,.sync-warning,.work-projection-note,.system-integrity-note){
+  border:0;border-left:1px solid var(--obs-sodium);border-radius:0;background:none;box-shadow:none;padding:10px 16px;color:var(--obs-text);
+}
+:root[data-theme] :is(.p0-banner,.conflict-banner){border-left-color:var(--obs-crit)}
+
+/* ── Header ─────────────────────────────────────────────── */
+:root[data-theme] .instrument-header{
+  height:48px;padding-inline:clamp(16px,3vw,40px);
+  background:color-mix(in srgb,var(--obs-void) 86%,transparent);border-bottom:1px solid var(--obs-line);backdrop-filter:blur(10px);
+}
+:root[data-theme] .instrument-mark{border:0;color:var(--obs-sodium);font:900 20px/1 var(--obs-display)}
+:root[data-theme] .instrument-brand strong{font:600 18px/1 var(--obs-display);letter-spacing:.3em;color:var(--obs-bright)}
+:root[data-theme] .instrument-brand em{color:var(--obs-dim)}
+:root[data-theme] .instrument-modes{gap:2px;align-self:stretch}
+:root[data-theme] .instrument-modes button{
+  height:48px;padding:0 10px;border:0;border-bottom:1px solid transparent;border-radius:0;background:none;
+  font:500 11px/1 var(--obs-mono);letter-spacing:.14em;text-transform:uppercase;color:var(--obs-dim);
+}
+:root[data-theme] .instrument-modes button svg{display:none}
+:root[data-theme] .instrument-modes button:hover{background:none;color:var(--obs-text);border-color:var(--obs-line-strong)}
+:root[data-theme] .instrument-modes button.active{background:none;color:var(--obs-bright);border-color:var(--obs-sodium)}
+:root[data-theme] .instrument-provenance{font-family:var(--obs-mono);letter-spacing:.06em;color:var(--obs-dim)}
+:root[data-theme] .instrument-provenance strong{color:var(--obs-bright)}
+:root[data-theme] .instrument-live-dot{background:var(--obs-sodium)}
+:root[data-theme] .instrument-search{border-radius:0;border-color:var(--obs-line-strong);background:transparent}
+:root[data-theme] .instrument-search input{border:0;background:transparent}
+:root[data-theme] .instrument-search kbd{border-radius:0}
+:root[data-theme] :is(.instrument-sync,.instrument-theme,.instrument-account){
+  border-radius:0;border:1px solid var(--obs-line-strong);background:transparent;color:var(--obs-text);
+  font:500 11px/1 var(--obs-mono);letter-spacing:.12em;text-transform:uppercase;
+}
+:root[data-theme] :is(.instrument-sync,.instrument-theme,.instrument-account):hover:not(:disabled){border-color:var(--obs-sodium);color:var(--obs-bright);background:transparent}
+
+:root[data-theme] .fixture-strip{background:var(--obs-void);border-bottom:1px solid var(--obs-line);font-family:var(--obs-mono);font-size:11px;color:var(--obs-dim)}
+:root[data-theme] .fixture-strip select{height:32px}
+:root[data-theme] .world-footer{border-top:1px solid var(--obs-line);background:none;font:500 10.5px/1.4 var(--obs-mono);letter-spacing:.12em;text-transform:uppercase;color:var(--obs-dim)}
+
+@media(max-width:760px){
+  :root[data-theme] .instrument-modes{top:48px;background:var(--obs-void);border-bottom:1px solid var(--obs-line)}
+  :root[data-theme] .instrument-modes button{height:38px;padding:0 2px;font-size:9px;letter-spacing:0}
+}
+
+/* ── Workspace ──────────────────────────────────────────── */
+:root[data-theme] .unified-shell{background:var(--obs-void)}
+:root[data-theme] .unified-shell .workspace{max-width:1480px;padding:32px clamp(16px,3vw,40px) 72px}
+:root[data-theme] .unified-shell .workspace-heading{margin:0 0 24px}
+:root[data-theme] .unified-shell .workspace-heading h1{font-size:clamp(44px,5.6vw,88px);font-weight:900;line-height:.88;margin:0 0 14px}
+:root[data-theme] .unified-shell .workspace-heading p{max-width:56ch;font-size:15px;line-height:1.6;color:var(--obs-text)}
+
+/* Hero do Início: faixa noturna em ambos os temas. */
+:root[data-theme] .unified-shell .workspace-heading--hero{
+  --obs-bright:#F4F7FA;--obs-text:#D6DEE8;--obs-dim:#7A889C;
+  position:relative;display:grid;align-content:end;overflow:hidden;
+  min-height:clamp(380px,44vw,640px);
+  margin:-32px calc(-1 * clamp(16px,3vw,40px)) 0;padding:96px clamp(16px,3vw,40px) 48px;
+  background:#05070B;
+}
+@media(min-width:1480px){
+  :root[data-theme] .unified-shell .workspace-heading--hero{margin-inline:calc((1480px - 100vw)/2);padding-inline:calc((100vw - 1480px)/2 + 40px)}
+}
+.hero-sky{position:absolute;inset:0;width:100%;height:100%;display:block}
+:root[data-theme] .workspace-heading--hero::after{
+  content:"";position:absolute;inset:0;pointer-events:none;
+  background:radial-gradient(ellipse at 72% 40%,transparent 30%,#05070B 88%),linear-gradient(transparent 70%,#05070B);
+}
+:root[data-theme] .workspace-heading--hero > div{position:relative;z-index:2}
+:root[data-theme] .unified-shell .workspace-heading--hero h1{font-size:clamp(72px,13vw,200px);line-height:.82;letter-spacing:-.01em;margin:14px 0 22px;color:#F4F7FA}
+:root[data-theme] .unified-shell .workspace-heading--hero p{font-size:clamp(15px,1.3vw,18px);color:#D6DEE8}
+.hero-eyebrow{display:block;font:500 10.5px/1.4 "IBM Plex Mono",ui-monospace,monospace;letter-spacing:.16em;text-transform:uppercase;color:#7A889C}
+
+:root[data-theme] .section-tabs{gap:0;border-bottom:1px solid var(--obs-line);margin-bottom:28px}
+:root[data-theme] .unified-shell .workspace-heading--hero + .section-tabs{margin-bottom:0}
+:root[data-theme] .section-tabs button{
+  border:0;border-bottom:1px solid transparent;border-radius:0;background:none;padding:14px 16px 12px;
+  font:500 11px/1 var(--obs-mono);letter-spacing:.14em;text-transform:uppercase;color:var(--obs-dim);
+}
+:root[data-theme] .section-tabs button.active{color:var(--obs-bright);border-color:var(--obs-sodium);background:none}
+
+/* Cabeçalhos de seção: título display + fio. */
+:root[data-theme] .section-head{
+  display:flex;justify-content:space-between;align-items:end;gap:12px 24px;flex-wrap:wrap;
+  margin:clamp(40px,5vw,72px) 0 0;padding:0 0 16px;border:0;border-bottom:1px solid var(--obs-line);background:none;
+}
+:root[data-theme] .section-head:first-child,:root[data-theme] .overview > section > .section-head{margin-top:0}
+:root[data-theme] .section-head h2{margin:0;font-size:clamp(28px,3.2vw,48px);line-height:.95}
+:root[data-theme] .section-head h2 span{color:var(--obs-sodium-ink);margin-left:.2em;font-weight:600}
+:root[data-theme] .overview > section + section{margin-top:clamp(56px,7vw,104px)}
+
+/* ── Leitura em faixa (métricas) ────────────────────────── */
+:root[data-theme] :is(.overview-pulse,.capability-counters,.system-stat-row){
+  display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:0;margin:0 0 8px;padding:0;
+  border:0;border-bottom:1px solid var(--obs-line);border-radius:0;background:none;box-shadow:none;
+}
+:root[data-theme] :is(.pulse-metric,.capability-counters > *,.system-stat-row > *){
+  display:flex;flex-direction:column;align-items:flex-start;gap:12px;min-height:0;
+  padding:24px clamp(12px,2vw,28px);border:0;border-left:1px solid var(--obs-line);border-radius:0;background:none;box-shadow:none;text-align:left;
+  transition:background .3s;
+}
+:root[data-theme] :is(.pulse-metric,.capability-counters > *,.system-stat-row > *)::before{display:none}
+:root[data-theme] :is(.pulse-metric,.capability-counters > *,.system-stat-row > *):first-child{border-left:0;padding-left:0}
+:root[data-theme] .pulse-metric:hover{background:linear-gradient(transparent,color-mix(in srgb,var(--obs-sodium) 6%,transparent))}
+:root[data-theme] .pulse-metric span{font:500 10.5px/1.4 var(--obs-mono);letter-spacing:.16em;text-transform:uppercase;color:var(--obs-dim)}
+:root[data-theme] :is(.pulse-metric strong,.capability-counters strong,.capability-counters b:first-child,.system-stat-row strong){
+  font:600 clamp(40px,5.2vw,84px)/1 var(--obs-display);text-transform:uppercase;color:var(--obs-bright);font-variant-numeric:tabular-nums;
+}
+:root[data-theme] .pulse-metric.attention strong{color:var(--obs-sodium-ink)}
+:root[data-theme] .pulse-metric.health strong{font-size:clamp(28px,3.2vw,48px);padding-top:clamp(6px,1vw,18px)}
+:root[data-theme] .capability-counters small{color:var(--obs-dim)}
+@media(max-width:760px){
+  :root[data-theme] .overview-pulse{grid-template-columns:1fr 1fr}
+  :root[data-theme] :is(.pulse-metric,.capability-counters > *,.system-stat-row > *){border-left:0;padding-left:0;border-top:1px solid var(--obs-line)}
+  :root[data-theme] .pulse-metric:nth-child(even){border-left:1px solid var(--obs-line);padding-left:16px}
+  :root[data-theme] .pulse-metric:nth-child(-n+2){border-top:0}
+}
+
+/* ── Registros: cartões viram linhas e colunas com fios ─── */
+:root[data-theme] :is(.domain-tile,.lane-card,.action-card,.truth-card,.inbox-item,.provider-card,.filament,.capability-detail,.projection-health,.surface-state,.empty-state,.context-option,.run-detail,.surface,.atlas-world-summary){
+  border:0;border-radius:0;background:none;box-shadow:none;backdrop-filter:none;
+}
+:root[data-theme] :is(.domain-tile,.lane-card,.action-card,.truth-card,.inbox-item,.provider-card,.filament,.capability-detail,.projection-health,.surface-state,.context-option)::before,
+:root[data-theme] :is(.domain-tile,.lane-card,.action-card,.truth-card,.inbox-item,.provider-card,.filament,.capability-detail,.projection-health,.surface-state,.context-option)::after{display:none}
+:root[data-theme] :is(.action-card,.lane-card,.truth-card,.inbox-item,.provider-card,.filament):hover{transform:none;background:none;box-shadow:none}
+
+/* Grades de colunas. */
+:root[data-theme] :is(.domain-strip,.card-grid,.lane-grid,.provider-grid,.context-grid){gap:0;border-bottom:1px solid var(--obs-line)}
+:root[data-theme] :is(.domain-tile,.lane-card,.action-card,.provider-card,.context-option){
+  padding:24px clamp(12px,1.6vw,24px);border-left:1px solid var(--obs-line);border-top:1px solid var(--obs-line);
+}
+:root[data-theme] :is(.domain-strip,.card-grid,.lane-grid,.provider-grid,.context-grid){border-left:0;margin-left:0}
+:root[data-theme] :is(.domain-strip,.card-grid,.lane-grid,.provider-grid,.context-grid) > :first-child{border-left:0}
+:root[data-theme] :is(.domain-strip,.card-grid,.lane-grid,.provider-grid,.context-grid) > *{margin:0}
+:root[data-theme] .domain-tile header{margin-bottom:14px}
+:root[data-theme] :is(.domain-tile,.lane-card,.action-card,.provider-card) p{color:var(--obs-dim);font-size:13px;line-height:1.55}
+:root[data-theme] .tile-blockers{padding-left:0;list-style:none;font:11px/1.6 var(--obs-mono);color:var(--obs-sodium-ink)}
+:root[data-theme] .tile-blockers li{padding:6px 0;border-top:1px solid var(--obs-line);overflow-wrap:anywhere}
+:root[data-theme] :is(.lane-card,.action-card,.inbox-item,.provider-card,.truth-card) :is(h3,strong){font-family:var(--obs-display);font-weight:600;text-transform:uppercase;letter-spacing:.03em;color:var(--obs-bright)}
+:root[data-theme] .provider-card :is(strong,h3){font-size:22px}
+:root[data-theme] :is(.action-card,.lane-card) :is(.action-next,.lane-next,.lane-current,.action-blocker){border:0;border-left:1px solid var(--obs-line-strong);border-radius:0;background:none;padding:6px 12px}
+:root[data-theme] .action-blocker{border-left-color:var(--obs-crit)}
+
+/* Listas empilhadas. */
+:root[data-theme] :is(.inbox-item,.item-row,.work-row,.integrity-list > *,.run-list > *,.filament-list > *,.evidence-list > *,.atlas-learning-list > *,.atlas-source-list > *){
+  border:0;border-bottom:1px solid var(--obs-line);border-radius:0;background:none;box-shadow:none;
+  transition:padding .4s var(--obs-ease),background .3s;
+}
+:root[data-theme] .inbox-item{padding:24px 0}
+:root[data-theme] :is(.inbox-item,.item-row,.work-row):hover{padding-left:12px;background:none}
+:root[data-theme] :is(.inbox-why,.inbox-requirements,.inbox-readback,.inbox-question){border:0;border-radius:0;background:none;padding:8px 0 8px 14px;border-left:1px solid var(--obs-line-strong)}
+:root[data-theme] .inbox-options{gap:0;border-top:1px solid var(--obs-line)}
+:root[data-theme] .inbox-options > *{border:0;border-right:1px solid var(--obs-line);border-radius:0;background:none;padding:14px 16px 14px 0;text-align:left}
+:root[data-theme] .inbox-options > *:last-child{border-right:0;padding-left:16px}
+:root[data-theme] .inbox-options > * :is(strong,b){font-family:var(--obs-display);font-size:18px;text-transform:uppercase}
+:root[data-theme] .item-row{border-radius:0;padding:18px 0}
+:root[data-theme] .item-row strong{font-family:var(--obs-display);font-weight:600;font-size:20px;text-transform:uppercase;letter-spacing:.02em;color:var(--obs-bright)}
+:root[data-theme] .item-marker{border-radius:0;background:none;border:1px solid var(--obs-line-strong);font-family:var(--obs-mono)}
+:root[data-theme] :is(.surface-state,.empty-state){display:block;padding:40px 0;text-align:left;color:var(--obs-dim)}
+:root[data-theme] :is(.surface-state,.empty-state) p{max-width:60ch;margin:0}
+:root[data-theme] :is(.surface-state,.empty-state) h3{font-size:28px;margin-bottom:8px}
+:root[data-theme] :is(.empty-mark,.surface-glyph){color:var(--obs-sodium)}
+
+/* ── Tabelas ────────────────────────────────────────────── */
+:root[data-theme] :is(.science-table-wrap,.envelope-table-scroll,.system-table-wrap,.matrix-scroll,.truth-grid-outer){border:0;border-radius:0;background:none;box-shadow:none}
+:root[data-theme] :is(.science-table,.envelope-table,.system-table,.capability-matrix,table){border-collapse:collapse;background:none;font-variant-numeric:tabular-nums}
+:root[data-theme] :is(.science-table,.envelope-table,.system-table,.capability-matrix,table) th{
+  background:none;border:0;border-bottom:1px solid var(--obs-line-strong);padding:12px 14px 12px 0;
+  font:500 10.5px/1.3 var(--obs-mono);letter-spacing:.14em;text-transform:uppercase;color:var(--obs-dim);text-align:left;
+}
+:root[data-theme] :is(.science-table,.envelope-table,.system-table,.capability-matrix,table) td{background:none;border:0;border-bottom:1px solid var(--obs-line);padding:14px 14px 14px 0;color:var(--obs-text)}
+:root[data-theme] :is(.science-table,.envelope-table,.system-table) tbody tr:hover td{background:color-mix(in srgb,var(--obs-sodium) 5%,transparent)}
+:root[data-theme] .matrix-cell{border:0;border-left:1px solid var(--obs-line);border-radius:0;background:none}
+:root[data-theme] .science-num{font-family:var(--obs-mono)}
+
+/* ── Ciência ────────────────────────────────────────────── */
+:root[data-theme] .science-filterbar{border:0;border-bottom:1px solid var(--obs-line);border-radius:0;background:none;padding:16px 0}
+:root[data-theme] :is(.science-empty,.science-projection-missing){border:0;border-left:1px solid var(--obs-sodium);border-radius:0;background:none;padding:20px 20px;color:var(--obs-text)}
+:root[data-theme] .science-source{font-family:var(--obs-mono);font-size:11px;letter-spacing:.06em;color:var(--obs-dim)}
+:root[data-theme] :is(.science-graphics,.science-plot-wrap){border:0;border-radius:0;background:none}
+:root[data-theme] .science-plot-bg{fill:transparent}
+:root[data-theme] :is(.science-plot-axis,.science-plot-tick){stroke:var(--obs-line-strong);fill:var(--obs-dim)}
+:root[data-theme] .science-plot-dot{fill:var(--obs-sodium)}
+:root[data-theme] .science-plot-error{stroke:var(--obs-dim)}
+:root[data-theme] :is(.science-plot-label,.science-plot-value){fill:var(--obs-text);font-family:var(--obs-mono)}
+
+/* ── Operação ───────────────────────────────────────────── */
+:root[data-theme] .work-priority{font-family:var(--obs-display);color:var(--obs-sodium-ink)}
+:root[data-theme] :is(.execution-layout,.run-detail){gap:0}
+:root[data-theme] .run-detail{border-left:1px solid var(--obs-line);padding-left:clamp(16px,2vw,28px)}
+:root[data-theme] :is(.trace-node,.trace-stage){border-radius:0;background:none}
+:root[data-theme] .trace-rail{background:var(--obs-line)}
+
+/* ── Prova ──────────────────────────────────────────────── */
+:root[data-theme] .integrity-head{border:0;border-bottom:1px solid var(--obs-line);background:none;border-radius:0}
+:root[data-theme] .p0-mark{color:var(--obs-crit)}
+
+/* Blocos rótulo/valor dentro de registros. */
+:root[data-theme] .action-card dl{display:grid;grid-template-columns:minmax(96px,auto) 1fr;gap:8px 16px;align-items:baseline;margin:16px 0}
+:root[data-theme] .action-card dt{font:500 10.5px/1.4 var(--obs-mono);letter-spacing:.14em;text-transform:uppercase;color:var(--obs-dim)}
+:root[data-theme] .action-card dd{margin:0;min-width:0;overflow-wrap:anywhere;font-family:var(--obs-mono);font-size:12px;color:var(--obs-text)}
+
+/* ── Pessoal ────────────────────────────────────────────── */
+:root[data-theme] :is(.personal-plane,.connection-center){border:0;border-style:solid;border-radius:0;background:none;box-shadow:none;padding-inline:0}
+:root[data-theme] .personal-plane{border-top:1px solid var(--obs-line);border-bottom:1px solid var(--obs-line)}
+:root[data-theme] .connection-center{margin-top:24px;padding-block:0}
+:root[data-theme] .provider-card :is(dt,small,.eyebrow){font-family:var(--obs-mono);letter-spacing:.14em;color:var(--obs-dim)}
+:root[data-theme] :is(.context-option.selected){border-top:1px solid var(--obs-sodium)}
+:root[data-theme] .context-symbol{color:var(--obs-sodium)}
+:root[data-theme] .atlas-launch{border:0;border-top:1px solid var(--obs-line);border-bottom:1px solid var(--obs-line);border-radius:0;background:none}
+:root[data-theme] .time-label{font-family:var(--obs-mono);color:var(--obs-dim)}
+:root[data-theme] .recall-form{gap:0}
+:root[data-theme] .recall-form input{min-height:44px;border-right:0}
+
+/* ── Mapa ───────────────────────────────────────────────── */
+/* O mapa ocupa exatamente o espaço abaixo do header. */
+:root[data-theme] .cockpit[data-view=ATLAS]{display:flex;flex-direction:column;height:100dvh;min-height:0;overflow:hidden}
+:root[data-theme] .cockpit[data-view=ATLAS] .cockpit-body{flex:1 1 auto;min-height:0}
+:root[data-theme] .cockpit[data-view=ATLAS] .workspace{height:100%;min-height:0;padding:0;max-width:none}
+:root[data-theme] .cockpit[data-view=ATLAS] .workspace > div,
+:root[data-theme] .cockpit[data-view=ATLAS] .atlas-metro-page{width:100%;height:100%;min-height:0}
+:root[data-theme] .atlas-metro-page{background:var(--obs-void)}
+:root[data-theme] :is(.atlas-sidebar,.atlas-detail,.atlas-inspector,.atlas-sheet){background:var(--obs-void);border:0;border-left:1px solid var(--obs-line);border-radius:0;box-shadow:none;backdrop-filter:none}
+:root[data-theme] .atlas-detail h1{font:900 clamp(36px,3vw,52px)/.9 var(--obs-display);text-transform:uppercase;color:var(--obs-bright)}
+:root[data-theme] :is(.atlas-detail-section,.atlas-provenance,.atlas-timeline,.atlas-learning-detail,.atlas-source-detail){border:0;border-top:1px solid var(--obs-line);border-radius:0;background:none}
+:root[data-theme] .atlas-meta-grid{gap:0;border-top:1px solid var(--obs-line)}
+:root[data-theme] .atlas-meta-grid > *{border:0;border-bottom:1px solid var(--obs-line);border-radius:0;background:none;padding:10px 0}
+:root[data-theme] .atlas-meta-grid > * :is(b,strong,dd){font-family:var(--obs-mono);color:var(--obs-bright)}
+:root[data-theme] :is(.atlas-graph-filters,.atlas-legend,.glass){
+  border:1px solid var(--obs-line);border-radius:0;background:color-mix(in srgb,var(--obs-void) 88%,transparent);box-shadow:none;backdrop-filter:blur(8px);
+}
+:root[data-theme] .atlas-source-link{color:var(--obs-sodium-ink)}
+
+/* Mapa: controles próprios mantêm geometria; só cor e canto. */
+:root[data-theme] .atlas-metro-page :is(button,.atlas-chip,.atlas-domain-pill,.chip){border-radius:0}
+:root[data-theme] .atlas-metro-page :is(.atlas-button,.atlas-toggle,.atlas-chip,.atlas-domain-pill,.chip).active{border-color:var(--obs-sodium);color:var(--obs-bright)}
+
+/* ── Sistema ────────────────────────────────────────────── */
+:root[data-theme] .system-page-heading h1{font:900 clamp(44px,5.6vw,88px)/.88 var(--obs-display);text-transform:uppercase;color:var(--obs-bright)}
+:root[data-theme] :is(.system-graph-panel,.system-row-inspector,.system-provenance,.system-source-compact,.system-empty,.proof-topology-surface,.graph-shell){border:0;border-top:1px solid var(--obs-line);border-radius:0;background:none;box-shadow:none}
+:root[data-theme] .system-mono{font-family:var(--obs-mono)}
+
+/* ── Sobreposições ──────────────────────────────────────── */
+:root[data-theme] :is(.focus-drawer,.modal,[role=dialog]:not(.atlas-sheet)){
+  border:0;border-left:1px solid var(--obs-line-strong);border-radius:0;background:var(--obs-void);box-shadow:0 40px 120px rgba(0,0,0,.55);
+}
+
+@media(max-width:760px){
+  :root[data-theme] .unified-shell .workspace-heading--hero{margin-top:-20px;padding-top:72px}
+  :root[data-theme] :is(.domain-tile,.lane-card,.action-card,.provider-card,.context-option){border-left:0;padding-inline:0}
+  :root[data-theme] .inbox-options > *{border-right:0;border-bottom:1px solid var(--obs-line);padding-inline:0}
+  :root[data-theme] .inbox-options > *:last-child{padding-left:0;border-bottom:0}
+}
+@media(prefers-reduced-motion:reduce){
+  :root[data-theme] :is(.inbox-item,.item-row,.work-row,.pulse-metric){transition:none}
+}

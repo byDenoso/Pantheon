@@ -19,6 +19,7 @@ import { StatusBadge } from '../components/primitives.tsx';
 import { ActionCard, ExecutionTrace, HumanInboxItem } from '../components/composites.tsx';
 import { Modal } from '../shell/Modal.tsx';
 import { InstrumentHeader } from '../shell/InstrumentHeader.tsx';
+import { StarfieldCanvas } from '../components/StarfieldCanvas.tsx';
 import { Overview } from '../features/system/Overview.tsx';
 import { ActionsView, ExecutionView, InboxView } from '../features/system/Operations.tsx';
 import { CapabilitiesView, IntegrityView, SourcesView, TruthGraphView } from '../features/system/Integrity.tsx';
@@ -218,8 +219,10 @@ export default function App() {
         <div className="cockpit-body">
 
           <main id="workspace" tabIndex={-1} className="workspace">
-            <div className="workspace-heading">
+            <div className={currentMode==='inicio'?'workspace-heading workspace-heading--hero':'workspace-heading'}>
+              {currentMode==='inicio'&&<StarfieldCanvas className="hero-sky"/>}
               <div>
+                {currentMode==='inicio'&&<span className="hero-eyebrow">NEXO ONE / Comando</span>}
                 <h1>{titles.title}</h1>
                 <p>{titles.lead}</p>
               </div>
