@@ -34,7 +34,7 @@ test('legacy MCP and Atlas pages are minimal bridges and retain the SPA entries 
   assert.match(mcp, /destination\.hash\s*=\s*'\/sistema'/);
   assert.match(mcp, /location\.replace/);
   assert.match(mcp, /location\.search/);
-  assert.match(mcp, /content="1;url=\.\.\/#\/sistema/);
+  assert.match(mcp, /content="0;url=\.\.\/#\/sistema/);
   assert.match(atlas, /params\.set\('view',\s*params\.get\('view'\) \|\| '3d'\)/);
   assert.match(atlas, /content="1;url=\.\.\/#\/atlas/);
   assert.match(atlas, /location\.replace/);

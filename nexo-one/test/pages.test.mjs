@@ -39,7 +39,8 @@ test('GitHub Pages build uses repository base and configurable SystemState endpo
   assert.match(hook, /dispatchProjectionSync/);
   assert.match(hook, /waitForProjectionSync/);
   assert.match(app, /onSync=\{system\.sync\}/);
-  assert.match(app, /VITE_PUBLIC_NEXO_BASE/);\n  assert.match(app, /goSystem\(\)/);
+  assert.match(app, /VITE_PUBLIC_NEXO_BASE/);
+  assert.match(app, /goSystem\(\)/);
   assert.match(app, /hashForView\(next\)/);
   assert.match(app, /href="#\/sistema"/);
   assert.match(app, /goSystem\(\)/);
