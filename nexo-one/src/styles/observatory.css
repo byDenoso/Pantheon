@@ -437,6 +437,6 @@
 :root[data-theme] :is(.capability-matrix,.envelope-table,.science-table,.system-table) tr:hover > .is-col{background:color-mix(in srgb,var(--obs-sodium) 14%,transparent);box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--obs-sodium) 40%,transparent)}
 
 /* Entrada em cena. Só existe com JS e movimento permitido (classe .cinematic). */
-:root.cinematic .reveal{opacity:0;transform:translateY(18px);transition:opacity .7s var(--obs-ease) var(--reveal-delay,0ms),transform .7s var(--obs-ease) var(--reveal-delay,0ms)}
-:root.cinematic .reveal.is-in{opacity:1;transform:none}
-@media(prefers-reduced-motion:reduce){:root.cinematic .reveal{opacity:1;transform:none;transition:none}}
+:root.cinematic [data-reveal]{opacity:0;transform:translateY(18px);transition:opacity .7s var(--obs-ease) var(--reveal-delay,0ms),transform .7s var(--obs-ease) var(--reveal-delay,0ms)}
+:root.cinematic [data-reveal=in]{opacity:1;transform:none}
+@media(prefers-reduced-motion:reduce){:root.cinematic [data-reveal]{opacity:1;transform:none;transition:none}}

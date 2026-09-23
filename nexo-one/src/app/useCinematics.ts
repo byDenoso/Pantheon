@@ -1,7 +1,8 @@
 import {useEffect} from 'react';
 
 // Comportamentos de apresentação compartilhados por todas as abas:
-// - seções entram em cena ao rolar (classe .reveal / .is-in);
+// - seções entram em cena ao rolar (atributo data-reveal="wait|in"; as classes
+//   geradas pelo React ficam intactas, e o readback de produção depende delas);
 // - números grandes contam até o valor publicado quando aparecem;
 // - a matriz de capabilities ganha mira de linha e coluna.
 // Nada aqui altera dados; com prefers-reduced-motion a página fica estática.
@@ -33,7 +34,7 @@ export function useCinematics(routeKey:string,enabled=true){
         for(const entry of entries){
           if(!entry.isIntersecting)continue;
           const el=entry.target as HTMLElement;
-          el.classList.add('is-in');
+          el.dataset.reveal='in';
           observer.unobserve(el);
           el.querySelectorAll(COUNT_SELECTOR).forEach(node=>{if(!counted.has(node)){counted.add(node);countUp(node as HTMLElement);}});
           if(el.matches(COUNT_SELECTOR)&&!counted.has(el)){counted.add(el);countUp(el);}
@@ -43,8 +44,8 @@ export function useCinematics(routeKey:string,enabled=true){
       const scan=()=>{
         stagger=0;
         root.querySelectorAll<HTMLElement>(REVEAL_SELECTOR).forEach(el=>{
-          if(el.classList.contains('reveal'))return;
-          el.classList.add('reveal');
+          if(el.dataset.reveal)return;
+          el.dataset.reveal='wait';
           el.style.setProperty('--reveal-delay',`${Math.min(stagger++,8)*55}ms`);
           observer.observe(el);
         });
