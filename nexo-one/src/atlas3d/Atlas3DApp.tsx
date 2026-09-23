@@ -207,7 +207,7 @@ export function Atlas3DContent({system,themeOverride}:{system:SystemStore;themeO
   const model = useMemo(() => fullModel ? atlasModelForLens(fullModel,lens) : null, [fullModel,lens]);
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [localAtlasTheme, setLocalAtlasTheme] = useState<AtlasTheme>(initialAtlasTheme);
+  const [localAtlasTheme] = useState<AtlasTheme>(initialAtlasTheme);
   const atlasTheme:AtlasTheme=themeOverride==='light'||themeOverride==='dark'?themeOverride:localAtlasTheme;
   const [navigationRevision, setNavigationRevision] = useState('');
   const qaExpand = useMemo(
@@ -554,6 +554,7 @@ export function Atlas3DContent({system,themeOverride}:{system:SystemStore;themeO
           onViewChange={switchViewMode}
           onFit={() => setFitNonce(value => value + 1)}
           onReset={reset}
+          onReady={() => setRendererReady(true)}
         />
 
         <div className="atlas-topbar">
