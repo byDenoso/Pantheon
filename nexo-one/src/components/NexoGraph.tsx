@@ -75,7 +75,7 @@ export function NexoGraph({
         <div className="nexo-graph-toolbar-context">{toolbarContext||(!toolbarFilters&&count)}</div>
         <div className="nexo-graph-actions">
           {showViewSwitch&&<GraphViewSwitch view={view} onChange={onViewChange}/>}
-          {!tableMode&&<button type="button" className="nexo-illumination-toggle" aria-label="Iluminar todos os nós e relações" aria-pressed={illuminated} title="Iluminar todos os nós e relações" onClick={()=>setIlluminated(value=>!value)}>Iluminar tudo</button>}
+          {!toolbarFilters&&!tableMode&&<button type="button" className="nexo-illumination-toggle" aria-label="Iluminar todos os nós e relações" aria-pressed={illuminated} title="Iluminar todos os nós e relações" onClick={()=>setIlluminated(value=>!value)}>Iluminar tudo</button>}
           {onFit&&<button type="button" onClick={onFit}>Enquadrar</button>}
           {onReset&&<button type="button" onClick={onReset}>Resetar</button>}
           <button type="button" onClick={fullscreen}>Tela cheia</button>
@@ -83,7 +83,10 @@ export function NexoGraph({
         </div>
       </div>
       {toolbarFilters&&<div className="nexo-graph-toolbar-row nexo-graph-toolbar-secondary">
-        <div className="nexo-graph-filters">{toolbarFilters}</div>
+        <div className="nexo-graph-filters">
+          {!tableMode&&<button type="button" className="nexo-illumination-toggle" aria-label="Iluminar todos os nós e relações" aria-pressed={illuminated} title="Iluminar todos os nós e relações" onClick={()=>setIlluminated(value=>!value)}>Iluminar tudo</button>}
+          {toolbarFilters}
+        </div>
         {count}
       </div>}
     </div>
