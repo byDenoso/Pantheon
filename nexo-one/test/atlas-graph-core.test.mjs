@@ -18,11 +18,12 @@ function coreFixture() {
   state.graph.nodes.push(
     { ...template, id: 'test:atlas-core-a', type: 'TEST', domain: 'SCIENCE', label: 'Core test A', parent_subdomain: 'Core A' },
     { ...template, id: 'capability:atlas-core-b', type: 'CAPABILITY', domain: 'OLYMPUS', label: 'Core capability B', parent_subdomain: 'Core B' },
-    { ...template, id: 'claim:atlas-core-c', type: 'CLAIM', domain: 'NEXO', label: 'Core claim C', parent_subdomain: 'Core C' },
+    { ...template, id: 'hypothesis:atlas-core-c', type: 'HYPOTHESIS', domain: 'NEXO', label: 'Core hypothesis C', parent_subdomain: 'Core C' },
+    { ...template, id: 'governance:atlas-core-d', type: 'GOVERNANCE_RULE', domain: 'NEXO', label: 'Core governance D', parent_subdomain: 'Architecture' },
   );
   state.graph.edges.push(
     { id: 'atlas-core-edge-a-b', from: 'test:atlas-core-a', to: 'capability:atlas-core-b', kind: 'DEPENDS_ON', weight: 0.8, explanation: 'cross-domain dependency', is_learning: true, learning_scope: 'INTER_DOMAIN' },
-    { id: 'atlas-core-edge-b-c', from: 'capability:atlas-core-b', to: 'claim:atlas-core-c', kind: 'SUPPORTS', weight: 0.9, explanation: 'cross-domain support', is_learning: true, learning_scope: 'INTER_DOMAIN' },
+    { id: 'atlas-core-edge-b-c', from: 'capability:atlas-core-b', to: 'hypothesis:atlas-core-c', kind: 'SUPPORTS', weight: 0.9, explanation: 'cross-domain support', is_learning: true, learning_scope: 'INTER_DOMAIN' },
   );
   return state;
 }
@@ -31,7 +32,7 @@ test('ATLAS graph core indexes directed relations and derives undirected one/two
   const model = buildAtlasMetroModel(coreFixture());
   const a = 'test:atlas-core-a';
   const b = 'capability:atlas-core-b';
-  const c = 'claim:atlas-core-c';
+  const c = 'hypothesis:atlas-core-c';
 
   assert.deepEqual(model.outgoing.get(a).map(link => link.id), ['entity:atlas-core-edge-a-b']);
   assert.deepEqual(model.incoming.get(b).map(link => link.id), ['entity:atlas-core-edge-a-b']);
@@ -62,18 +63,25 @@ test('Knowledge, Execution and Capability are view layers over the same canonica
   const allLayerIds = visibleAtlasIds(model, allExpanded);
   const everyLayer = visibleAtlasIds(model, allExpanded, new Set(ATLAS_GRAPH_LAYERS));
   const capabilityOnly = new Set(visibleAtlasIds(model, allExpanded, new Set(['capability'])));
+  const governanceOnly = new Set(visibleAtlasIds(model, allExpanded, new Set(['governance'])));
   const testNode = model.nodeMap.get('test:atlas-core-a');
   const capabilityNode = model.nodeMap.get('capability:atlas-core-b');
+  const hypothesisNode = model.nodeMap.get('hypothesis:atlas-core-c');
+  const governanceNode = model.nodeMap.get('governance:atlas-core-d');
   const root = model.nodeMap.get('atlas.domain.science');
 
   assert.deepEqual(allLayerIds, everyLayer);
   assert.deepEqual(atlasGraphLayersForNode(testNode), ['knowledge', 'execution']);
   assert.deepEqual(atlasGraphLayersForNode(capabilityNode), ['capability']);
+  assert.deepEqual(atlasGraphLayersForNode(hypothesisNode), ['knowledge']);
+  assert.deepEqual(atlasGraphLayersForNode(governanceNode), ['governance']);
   assert.deepEqual(atlasGraphLayersForNode(root), []);
   assert.ok(capabilityOnly.has('capability:atlas-core-b'));
   assert.ok(capabilityOnly.has('atlas.domain.olympus'), 'domain hubs stay as visual context');
   assert.ok(!capabilityOnly.has('test:atlas-core-a'));
-  assert.ok(!capabilityOnly.has('claim:atlas-core-c'));
+  assert.ok(!capabilityOnly.has('hypothesis:atlas-core-c'));
+  assert.ok(governanceOnly.has('governance:atlas-core-d'));
+  assert.ok(!governanceOnly.has('hypothesis:atlas-core-c'));
 
   assert.deepEqual(new Set(model.nodes.map(node => node.id)), allIds);
   assert.ok(model.crossLinks.some(link => link.id === 'entity:atlas-core-edge-a-b'));
