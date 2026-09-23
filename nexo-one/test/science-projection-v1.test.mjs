@@ -28,12 +28,12 @@ test('science projection v1 keeps published Tower fields and marks missing field
   const [scienceTest] = output.tests;
   assert.equal(campaign.question.value, 'Does model X fit?');
   assert.equal(campaign.started_at.value, null);
-  assert.match(campaign.started_at.unavailable_reason, /not published/i);
+  assert.match(campaign.started_at.unavailable_reason, /absent from the source/i);
   assert.equal(hypothesis.statement.value, 'Model X fits');
   assert.equal(scienceTest.result.value.value, 71.2);
   assert.equal(scienceTest.statistics.p_value.value, 0.03);
   assert.equal(scienceTest.statistics.delta_bic.value, null);
-  assert.match(scienceTest.statistics.delta_bic.unavailable_reason, /not published/i);
+  assert.match(scienceTest.statistics.delta_bic.unavailable_reason, /absent from the source/i);
   assert.equal(scienceTest.verdict.value, 'SUPPORTS');
   for (const field of [campaign.question, scienceTest.result.value, scienceTest.statistics.p_value]) {
     assert.match(field.source_ref, /^tower:\/\//);
@@ -62,6 +62,23 @@ test('science projection gives test rows their own identity instead of campaign 
   });
   assert.deepEqual(output.tests.map(item => item.id), ['TEST-1', 'TEST-2']);
   assert.notEqual(output.tests[0].source_ref, output.tests[1].source_ref);
+});
+
+test('science test status comes from Tower and missing test fields are not mislabeled as unpublished', async () => {
+  const { buildScienceProjectionV1 } = await import('../scripts/science-projection-v1.mjs');
+  const output = buildScienceProjectionV1({
+    projection: { campaigns: [], hypotheses: [], tests: [
+      { id: 'T-CHECKPOINTED', status: 'CHECKPOINTED' },
+      { id: 'T-PAPER', status: 'READY', publication_status: 'UNPUBLISHED' },
+    ] },
+    manifest,
+  });
+  assert.equal(output.tests[0].status.value, 'CHECKPOINTED');
+  assert.equal(output.tests[0].method.value, null);
+  assert.match(output.tests[0].method.unavailable_reason, /absent from the source/i);
+  assert.doesNotMatch(output.tests[0].method.unavailable_reason, /publish/i);
+  assert.equal(output.tests[1].publication_status.value, 'UNPUBLISHED');
+  assert.equal(output.tests[0].publication_status.value, null);
 });
 
 test('science projection rejects records without source identity or a matching fingerprint', async () => {

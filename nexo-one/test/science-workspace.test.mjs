@@ -12,7 +12,7 @@ test('Science workspace consumes projection v1 without invented counts',async()=
   assert.match(science,/projection\?\.campaigns\.length/);
   assert.match(science,/projection\?\.tests\.length/);
   assert.match(science,/projection\?\.hypotheses\.length/);
-  assert.match(science,/não publicado/);
+  assert.match(science,/PublicationStatus/);
   assert.match(science,/NexoGraph/);
   assert.match(science,/Evidência/);
   assert.match(science,/Relações/);
@@ -22,6 +22,12 @@ test('Science workspace consumes projection v1 without invented counts',async()=
   assert.match(science,/RUNNING:'Em andamento'/);
   assert.match(science,/IN_PROGRESS:'Em andamento'/);
   assert.match(science,/params\.get\('view'\)==='2d'\|\|params\.get\('view'\)==='3d'/);
+  assert.match(science,/value===null\|\|value===undefined\|\|value===''\)return'—'/);
+  assert.match(science,/heads=\{\['Teste','Campanha','Estado','Hipótese'/);
+  assert.match(science,/publication_status/);
+  assert.match(science,/tests\.some\(item=>valueOf\(item,'publication_status'\)!==null\)/);
+  assert.match(science,/raw==='UNPUBLISHED'\|\|raw==='NOT_PUBLISHED'\?'Não publicado'/);
+  assert.doesNotMatch(science.slice(science.indexOf('function textOf'),science.indexOf('function shortId')),/publicad/i);
   assert.doesNotMatch(science,/\b14\b.*Campanhas|Campanhas.*\b14\b/);
   assert.doesNotMatch(science,/\b74\b.*Testes|Testes.*\b74\b/);
   assert.match(app,/ScienceWorkspace/);

@@ -47,7 +47,7 @@ function firstOwn(object, names) {
 function field(object, names, reason, manifest, path) {
   const found = firstOwn(object, names);
   const hasValue = found.present && found.value !== null && found.value !== undefined;
-  return envelope(hasValue ? found.value : null, hasValue, found.present ? 'Tower explicitly published null for this field.' : reason,
+  return envelope(hasValue ? found.value : null, hasValue, found.present ? 'Tower explicitly provided null for this field.' : reason,
     manifest, path, found.name);
 }
 
@@ -55,7 +55,7 @@ function normalizedStatus(object, names, reason, manifest, path) {
   const found = firstOwn(object, names);
   const value = typeof found.value === 'string' ? found.value : found.value;
   return envelope(found.present && value != null ? value : null, found.present && value != null,
-    found.present ? 'Tower explicitly published null for this field.' : reason, manifest, path, found.name);
+    found.present ? 'Tower explicitly provided null for this field.' : reason, manifest, path, found.name);
 }
 
 function normalizedVerdict(raw, manifest, path) {
@@ -63,8 +63,8 @@ function normalizedVerdict(raw, manifest, path) {
   const value = typeof found.value === 'string' ? found.value.toUpperCase() : '';
   if (found.present && VERDICTS.has(value)) return envelope(value, true, null, manifest, path, found.name);
   const reason = found.present
-    ? 'Published value is not an approved scientific verdict; operational or governance PASS is not scientific evidence.'
-    : 'Scientific verdict is not published in the sanctioned projection.';
+    ? 'Source value is not an approved scientific verdict; operational or governance PASS is not scientific evidence.'
+    : 'Scientific verdict is absent from the source record.';
   return envelope(null, false, reason, manifest, path, found.name);
 }
 
@@ -73,8 +73,8 @@ function normalizedClaimLevel(raw, manifest, path) {
   const value = typeof found.value === 'string' ? found.value.toLowerCase() : '';
   if (found.present && CLAIM_LEVELS.has(value)) return envelope(value, true, null, manifest, path, found.name);
   return envelope(null, false, found.present
-    ? 'Published claim level is not one of the calibrated levels.'
-    : 'Calibrated claim level is not published in the sanctioned projection.', manifest, path, found.name);
+    ? 'Source claim level is not one of the calibrated levels.'
+    : 'Calibrated claim level is absent from the source record.', manifest, path, found.name);
 }
 
 function makeRecord(record, kind, manifest, mapping) {
@@ -106,19 +106,19 @@ function mapRecords(records, kind, manifest, mapping) {
 }
 
 const campaignFields = {
-  question: { names: ['question', 'scientific_question'], reason: 'Campaign question is not published in the sanctioned projection.' },
-  hypothesis_ids: { names: ['hypothesis_ids', 'hypothesis_refs', 'hypothesis_ref'], reason: 'Campaign hypothesis references are not published in the sanctioned projection.' },
-  status: { names: ['status', 'state'], reason: 'Campaign status is not published in the sanctioned projection.', special: 'status' },
-  prereg_ref: { names: ['prereg_ref', 'preregistration_ref'], reason: 'Campaign preregistration reference is not published in the sanctioned projection.' },
-  started_at: { names: ['started_at'], reason: 'Campaign start time is not published in the sanctioned projection.' },
-  members: { names: ['members', 'test_ids'], reason: 'Campaign members are not published in the sanctioned projection.' },
+  question: { names: ['question', 'scientific_question'], reason: 'Campaign question is absent from the source record.' },
+  hypothesis_ids: { names: ['hypothesis_ids', 'hypothesis_refs', 'hypothesis_ref'], reason: 'Campaign hypothesis references are absent from the source record.' },
+  status: { names: ['status', 'state'], reason: 'Campaign status is absent from the source record.', special: 'status' },
+  prereg_ref: { names: ['prereg_ref', 'preregistration_ref'], reason: 'Campaign preregistration reference is absent from the source record.' },
+  started_at: { names: ['started_at'], reason: 'Campaign start time is absent from the source record.' },
+  members: { names: ['members', 'test_ids'], reason: 'Campaign members are absent from the source record.' },
 };
 
 const hypothesisFields = {
-  statement: { names: ['statement', 'proposition'], reason: 'Hypothesis statement is not published in the sanctioned projection.' },
-  model: { names: ['model'], reason: 'Hypothesis model is not published in the sanctioned projection.' },
-  baseline: { names: ['baseline'], reason: 'Hypothesis baseline is not published in the sanctioned projection.' },
-  falsification_criterion: { names: ['falsification_criterion', 'kill_criteria'], reason: 'Hypothesis falsification criterion is not published in the sanctioned projection.' },
+  statement: { names: ['statement', 'proposition'], reason: 'Hypothesis statement is absent from the source record.' },
+  model: { names: ['model'], reason: 'Hypothesis model is absent from the source record.' },
+  baseline: { names: ['baseline'], reason: 'Hypothesis baseline is absent from the source record.' },
+  falsification_criterion: { names: ['falsification_criterion', 'kill_criteria'], reason: 'Hypothesis falsification criterion is absent from the source record.' },
 };
 
 function testRecord(raw, manifest) {
@@ -135,19 +135,21 @@ function testRecord(raw, manifest) {
   const metric = firstOwn(raw, ['preregistered_metric', 'metric']);
   const threshold = firstOwn(raw, ['threshold', 'preregistered_threshold']);
   const base = makeRecord(raw, 'test', manifest, {
-    campaign_id: { names: ['campaign_id'], reason: 'Test campaign reference is not published in the sanctioned projection.' },
-    hypothesis_id: { names: ['hypothesis_id', 'hypothesis_ref'], reason: 'Test hypothesis reference is not published in the sanctioned projection.' },
-    method: { names: ['method', 'methodology', 'mechanism'], reason: 'Test method is not published in the sanctioned projection.' },
+    campaign_id: { names: ['campaign_id'], reason: 'Test campaign reference is absent from the source record.' },
+    hypothesis_id: { names: ['hypothesis_id', 'hypothesis_ref'], reason: 'Test hypothesis reference is absent from the source record.' },
+    status: { names: ['status'], reason: 'Test status is absent from the source record.', special: 'status' },
+    method: { names: ['method', 'methodology', 'mechanism'], reason: 'Test method is absent from the source record.' },
     datasets: { names: [], reason: '' },
     preregistered_metric: { names: [], reason: '' },
     threshold: { names: [], reason: '' },
     verdict: { names: [], reason: '', special: 'verdict' },
     claim_level: { names: [], reason: '', special: 'claim_level' },
+    publication_status: { names: ['publication_status'], reason: 'Paper publication status is absent from the source record.', special: 'status' },
   });
   if (!base) return null;
   const path = sourcePath('test', base.id);
   for (const [key, found, value, absence] of [
-    ['datasets', datasetFound, datasets, 'Test datasets are not published in the sanctioned projection.'],
+    ['datasets', datasetFound, datasets, 'Test datasets are absent from the source record.'],
     ['preregistered_metric', metric, metric.present ? metric.value : firstOwn(decisionContract, ['preregistered_metric', 'metric']), null],
     ['threshold', threshold, threshold.present ? threshold.value : firstOwn(decisionContract, ['threshold', 'preregistered_threshold']), null],
   ]) {
@@ -163,10 +165,10 @@ function testRecord(raw, manifest) {
       hasValue = selected ? selected.present && selected.value != null : found.present && found.value != null;
       if (selected) { resolved = selected.value; fieldName = selected.name; }
       else { resolved = found.value; fieldName = found.name; }
-      reason = hasValue ? null : 'Prerequisite metric or threshold is not published in the sanctioned projection.';
+      reason = hasValue ? null : 'Prerequisite metric or threshold is absent from the source record.';
     }
     base[key] = envelope(hasValue ? resolved : null, hasValue,
-      hasValue ? null : reason || (found.present ? 'Tower explicitly published null for this field.' : 'Field is not published in the sanctioned projection.'),
+      hasValue ? null : reason || (found.present ? 'Tower explicitly provided null for this field.' : 'Field is absent from the source record.'),
       manifest, path, fieldName);
   }
   const result = raw?.result && typeof raw.result === 'object' ? raw.result : raw?.scientific_result;
@@ -174,12 +176,12 @@ function testRecord(raw, manifest) {
   base.result = Object.fromEntries(['parameter', 'value', 'err_lo', 'err_hi', 'unit'].map(key => {
     const found = firstOwn(result, [key]);
     return [key, envelope(found.present && found.value != null ? found.value : null, found.present && found.value != null,
-      found.present ? 'Tower explicitly published null for this field.' : `Test result ${key} is not published in the sanctioned projection.`, manifest, path, `result.${key}`)];
+      found.present ? 'Tower explicitly provided null for this field.' : `Test result ${key} is absent from the source record.`, manifest, path, `result.${key}`)];
   }));
   base.statistics = Object.fromEntries(['delta_chi2', 'delta_bic', 'ln_bayes_factor', 'sigma_raw', 'sigma_lee', 'p_value'].map(key => {
     const found = firstOwn(statistics, [key]);
     return [key, envelope(found.present && found.value != null ? found.value : null, found.present && found.value != null,
-      found.present ? 'Tower explicitly published null for this field.' : `Statistic ${key} is not published in the sanctioned projection.`, manifest, path, `statistics.${key}`)];
+      found.present ? 'Tower explicitly provided null for this field.' : `Statistic ${key} is absent from the source record.`, manifest, path, `statistics.${key}`)];
   }));
   const checks = firstOwn(raw, ['robustness_checks']);
   const safeChecks = checks.present && Array.isArray(checks.value) ? checks.value.map((item, index) => ({
@@ -189,7 +191,7 @@ function testRecord(raw, manifest) {
   })) : null;
   base.robustness_checks = envelope(safeChecks, safeChecks !== null, checks.present
       ? 'Tower robustness_checks is not an array.'
-      : 'Robustness checks are not published on this test in the sanctioned projection.', manifest, path, 'robustness_checks');
+      : 'Robustness checks are absent from this test record.', manifest, path, 'robustness_checks');
   const artifacts = firstOwn(raw, ['artifacts', 'artifact_refs', 'evidence_refs']);
   const safeArtifacts = artifacts.present && Array.isArray(artifacts.value)
     ? artifacts.value.flatMap(item => {
@@ -201,19 +203,19 @@ function testRecord(raw, manifest) {
     })
     : null;
   base.artifacts = envelope(safeArtifacts, safeArtifacts !== null, artifacts.present
-    ? 'No Tower_V06 artifact reference was published for this test.'
-    : 'Artifacts are not published in the sanctioned projection.', manifest, path, 'artifacts');
+    ? 'No Tower_V06 artifact reference is present on this test.'
+    : 'Artifacts are absent from the source record.', manifest, path, 'artifacts');
   const reproducibility = raw?.reproducibility || {};
   base.reproducibility = Object.fromEntries(['script_hash', 'commit', 'seed', 'data_lock'].map(key => {
     const found = firstOwn(reproducibility, [key]);
     return [key, envelope(found.present && found.value != null ? found.value : null, found.present && found.value != null,
-      found.present ? 'Tower explicitly published null for this field.' : `Reproducibility field ${key} is not published in the sanctioned projection.`, manifest, path, `reproducibility.${key}`)];
+      found.present ? 'Tower explicitly provided null for this field.' : `Reproducibility field ${key} is absent from the source record.`, manifest, path, `reproducibility.${key}`)];
   }));
   const audit = firstOwn(raw?.audit, ['data_lock']);
   base.audit = { data_lock: envelope(audit.present && typeof audit.value === 'boolean' ? audit.value : null,
     audit.present && typeof audit.value === 'boolean', audit.present
-      ? 'Tower published a non-boolean data-lock audit value.'
-      : 'Data-lock audit decision is not published in the sanctioned projection.', manifest, path, 'audit.data_lock') };
+      ? 'Tower data-lock audit value is not boolean.'
+      : 'Data-lock audit decision is absent from the source record.', manifest, path, 'audit.data_lock') };
   return base;
 }
 
@@ -265,7 +267,7 @@ export function validateScienceProjectionV1(output) {
     const allowedFields = {
       campaigns: ['question', 'hypothesis_ids', 'status', 'prereg_ref', 'started_at', 'members'],
       hypotheses: ['statement', 'model', 'baseline', 'falsification_criterion'],
-      tests: ['campaign_id', 'hypothesis_id', 'method', 'datasets', 'preregistered_metric', 'threshold', 'verdict', 'claim_level', 'result', 'statistics', 'robustness_checks', 'artifacts', 'reproducibility', 'audit'],
+      tests: ['campaign_id', 'hypothesis_id', 'status', 'method', 'datasets', 'preregistered_metric', 'threshold', 'verdict', 'claim_level', 'publication_status', 'result', 'statistics', 'robustness_checks', 'artifacts', 'reproducibility', 'audit'],
     }[collection];
     for (const record of output[collection]) {
       if (!record || typeof record.id !== 'string') reject(`${collection} record identity missing`);
