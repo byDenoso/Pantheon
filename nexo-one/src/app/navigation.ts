@@ -20,8 +20,8 @@ export const isSystemView = (view: ViewId): view is SystemView =>
 const CANONICAL_ROUTE: Record<ViewId, string> = {
   OVERVIEW: '#/cockpit/comando', INBOX: '#/cockpit/comando?view=needs',
   ACTIONS: '#/cockpit/pipeline', EXECUTION: '#/cockpit/pipeline?view=execution',
-  TRUTHGRAPH: '#/cockpit/prova', CAPABILITIES: '#/cockpit/prova?view=capabilities',
-  SOURCES: '#/cockpit/prova?view=sources', INTEGRITY: '#/cockpit/prova?view=integrity',
+  TRUTHGRAPH: '#/cockpit/prova?tab=autoridade', CAPABILITIES: '#/cockpit/prova?tab=capabilities',
+  SOURCES: '#/cockpit/prova?tab=fontes', INTEGRITY: '#/cockpit/prova?tab=integridade',
   ATLAS: '#/atlas?lente=operacao&view=2d', LEARNING: '#/cockpit/ciencia?tab=campanhas',
   NOW: '#/cockpit/pessoal/now', LOOPS: '#/cockpit/pessoal/loops', DAY: '#/cockpit/pessoal/day',
   CONTEXT: '#/cockpit/pessoal/context', RECALL: '#/cockpit/pessoal/recall',
@@ -43,7 +43,13 @@ export const viewFromHash = (hash: string): ViewId | null => {
   const raw = hash.replace(/^#\/?/, '').trim();
   const [path, query = ''] = raw.split('?', 2);
   const value = path.toUpperCase();
-  const pane = new URLSearchParams(query).get('view')?.toUpperCase();
+  const params = new URLSearchParams(query);
+  const pane = params.get('view')?.toUpperCase();
+  const tab = params.get('tab')?.toUpperCase();
+  if (value === 'COCKPIT/PROVA' && tab) {
+    const proofTabs: Record<string, ViewId> = { AUTORIDADE: 'TRUTHGRAPH', CAPABILITIES: 'CAPABILITIES', FONTES: 'SOURCES', INTEGRIDADE: 'INTEGRITY' };
+    if (proofTabs[tab]) return proofTabs[tab];
+  }
   if (pane && LEGACY_VIEW[pane]) return LEGACY_VIEW[pane];
   if (value === 'ATLAS') return 'ATLAS';
   const legacy = LEGACY_VIEW[value];
