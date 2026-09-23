@@ -529,8 +529,8 @@ test('dedicated Atlas production page uses Metro renderer, G6 and deterministic 
   assert.match(app, /atlasRouteParams/);
   assert.match(app, /query==='2d'\|\|query==='3d'/);
   assert.match(app, /GRAPH_VIEW_STORAGE_KEY/);
-  assert.match(app, /3D EXPLORAR ATIVO/);
-  assert.match(app, /2D METRO ATIVO/);
+  assert.match(app, /3D · MAPA/);
+  assert.match(app, /2D · MAPA/);
   assert.match(app, /atlas-mobile-details-toggle/);
   assert.match(app, /atlas-sidebar-backdrop/);
   assert.match(app, /mobile-open/);
