@@ -10,5 +10,13 @@ import './styles/system.css';
 import './styles/command-os.css';
 import './styles/nexo-prime.css';
 import './styles/product-shell.css';
+import '@fontsource/big-shoulders-display/600';
+import '@fontsource/big-shoulders-display/900';
+import '@fontsource/ibm-plex-sans/300';
+import '@fontsource/ibm-plex-sans/400';
+import '@fontsource/ibm-plex-sans/500';
+import '@fontsource/ibm-plex-mono/400';
+import '@fontsource/ibm-plex-mono/500';
+import './styles/observatory.css';
 class Boundary extends Component<{children:ReactNode},{failed:boolean}>{state={failed:false};static getDerivedStateFromError(){return {failed:true};}render(){return this.state.failed?<main className="fatal-state"><h1>Não foi possível abrir esta visão.</h1><p>Recarregue para consultar novamente suas fontes.</p><button onClick={()=>location.reload()}>Recarregar</button></main>:this.props.children;}}
 createRoot(document.getElementById('root')!).render(<Boundary><NexoStoreProvider><App/></NexoStoreProvider></Boundary>);

@@ -1,0 +1,192 @@
+/* Direção A · Observatório.
+   Última camada da pilha de estilos. Vale para o tema escuro; o tema claro mantém
+   a pilha anterior até a fase de tema claro editorial. */
+
+:root:not([data-theme=light]){
+  color-scheme:dark;
+  --obs-void:#05070B;
+  --obs-deep:#0A0E15;
+  --obs-raise:#0F1520;
+  --obs-line:#1C2533;
+  --obs-line-strong:#2B3748;
+  --obs-dim:#7A889C;
+  --obs-text:#D6DEE8;
+  --obs-bright:#F4F7FA;
+  --obs-sodium:#E9B35B;
+  --obs-crit:#E0645A;
+  --obs-ok:#7FB59A;
+  --obs-display:"Big Shoulders Display",Impact,"Arial Narrow",sans-serif;
+  --obs-body:"IBM Plex Sans",-apple-system,"Segoe UI",sans-serif;
+  --obs-mono:"IBM Plex Mono","SFMono-Regular",Consolas,monospace;
+
+  --bg:var(--obs-void);--panel:var(--obs-deep);--raised:var(--obs-raise);--hover:var(--obs-raise);
+  --ink:var(--obs-bright);--muted:var(--obs-text);--quiet:var(--obs-dim);--line:var(--obs-line);
+  --accent:var(--obs-sodium);--amber:var(--obs-sodium);--green:var(--obs-ok);--blue:#8FA7C4;
+  --shadow:none;
+  --radius-sm:0;--radius-md:0;--radius-lg:0;
+  --font-ui:var(--obs-body);--font-mono:var(--obs-mono);
+
+  --nexo-bg-0:var(--obs-void);--nexo-bg-1:var(--obs-void);--nexo-bg-2:var(--obs-deep);--nexo-bg-3:var(--obs-raise);
+  --nexo-text:var(--obs-bright);--nexo-text-2:var(--obs-text);--nexo-muted:var(--obs-dim);
+  --nexo-accent:var(--obs-sodium);--nexo-accent-strong:var(--obs-sodium);
+  --nexo-success:var(--obs-ok);--nexo-attention:var(--obs-sodium);--nexo-danger:var(--obs-crit);
+  --nexo-hairline:var(--obs-line);
+  --nexo-radius-control:0;--nexo-radius-button:0;--nexo-radius-panel:0;
+
+  --live:var(--obs-ok);--degraded:var(--obs-sodium);--conflict:var(--obs-crit);--snapshot:#8FA7C4;--blocked:#B7A0D8;
+  --live-bg:transparent;--snapshot-bg:transparent;--stale-bg:transparent;--degraded-bg:transparent;
+  --conflict-bg:transparent;--blocked-bg:transparent;--unknown-bg:transparent;
+  --grid:transparent;--rail:var(--obs-void);
+  font-family:var(--obs-body);
+}
+
+:root:not([data-theme=light]) body{background:var(--obs-void);color:var(--obs-text);font-family:var(--obs-body);font-weight:300}
+:root:not([data-theme=light]) :focus-visible{outline:1px solid var(--obs-sodium);outline-offset:3px}
+:root:not([data-theme=light]) :is(h1,h2,h3){font-family:var(--obs-display);text-transform:uppercase;color:var(--obs-bright);letter-spacing:.01em;text-wrap:balance}
+:root:not([data-theme=light]) :is(.eyebrow,.quiet-note,kbd,code){font-family:var(--obs-mono)}
+:root:not([data-theme=light]) .eyebrow{font-size:10.5px;font-weight:500;letter-spacing:.16em;text-transform:uppercase;color:var(--obs-dim)}
+
+/* ── Header ───────────────────────────────────────────── */
+:root:not([data-theme=light]) .instrument-header{
+  height:56px;padding-inline:clamp(16px,3vw,40px);background:rgba(5,7,11,.82);
+  border-bottom:1px solid var(--obs-line);backdrop-filter:blur(10px);
+}
+:root:not([data-theme=light]) .instrument-mark{border:0;color:var(--obs-sodium);font:900 20px/1 var(--obs-display)}
+:root:not([data-theme=light]) .instrument-brand strong{font:600 18px/1 var(--obs-display);letter-spacing:.3em;color:var(--obs-bright)}
+:root:not([data-theme=light]) .instrument-brand em{color:var(--obs-dim)}
+:root:not([data-theme=light]) .instrument-modes{gap:2px}
+:root:not([data-theme=light]) .instrument-modes button{
+  height:56px;padding:0 10px;border:0;border-bottom:1px solid transparent;border-radius:0;background:none;
+  font:500 11px/1 var(--obs-mono);letter-spacing:.14em;text-transform:uppercase;color:var(--obs-dim);
+}
+:root:not([data-theme=light]) .instrument-modes button svg{display:none}
+:root:not([data-theme=light]) .instrument-modes button:hover{background:none;color:var(--obs-text);border-color:var(--obs-line-strong)}
+:root:not([data-theme=light]) .instrument-modes button.active{background:none;color:var(--obs-bright);border-color:var(--obs-sodium)}
+:root:not([data-theme=light]) .instrument-provenance{font-family:var(--obs-mono);letter-spacing:.06em;color:var(--obs-dim)}
+:root:not([data-theme=light]) .instrument-live-dot{background:var(--obs-sodium)}
+:root:not([data-theme=light]) .instrument-search{border-radius:0;border-color:var(--obs-line-strong);background:transparent}
+:root:not([data-theme=light]) :is(.instrument-sync,.instrument-theme,.instrument-account){
+  border-radius:0;border:1px solid var(--obs-line-strong);background:transparent;color:var(--obs-text);
+  font:500 11px/1 var(--obs-mono);letter-spacing:.12em;text-transform:uppercase;
+}
+:root:not([data-theme=light]) :is(.instrument-sync,.instrument-theme,.instrument-account):hover:not(:disabled){border-color:var(--obs-sodium);color:var(--obs-bright);background:transparent}
+@media(max-width:760px){
+  :root:not([data-theme=light]) .instrument-header{height:48px}
+  :root:not([data-theme=light]) .instrument-modes{top:48px;background:var(--obs-void);border-bottom:1px solid var(--obs-line)}
+  :root:not([data-theme=light]) .instrument-modes button{height:38px;padding:0 2px;font-size:9px;letter-spacing:0}
+}
+
+/* ── Workspace ────────────────────────────────────────── */
+:root:not([data-theme=light]) .unified-shell{background:var(--obs-void)}
+:root:not([data-theme=light]) .unified-shell .workspace{max-width:1480px;padding:32px clamp(16px,3vw,40px) 72px}
+:root:not([data-theme=light]) .unified-shell .workspace-heading{margin:0 0 20px}
+:root:not([data-theme=light]) .unified-shell .workspace-heading h1{font-size:clamp(40px,5vw,72px);font-weight:900;line-height:.9;margin:0 0 12px}
+:root:not([data-theme=light]) .unified-shell .workspace-heading p{max-width:56ch;font-size:15px;line-height:1.6;color:var(--obs-text)}
+
+/* Hero da tela Início: céu em sangria total, título monumental. */
+:root:not([data-theme=light]) .unified-shell .workspace-heading--hero{
+  position:relative;display:grid;align-content:end;overflow:hidden;
+  min-height:clamp(380px,44vw,640px);
+  margin:-32px calc(-1 * clamp(16px,3vw,40px)) 0;padding:96px clamp(16px,3vw,40px) 48px;
+  background:var(--obs-void);
+}
+@media(min-width:1480px){
+  :root:not([data-theme=light]) .unified-shell .workspace-heading--hero{margin-inline:calc((1480px - 100vw)/2);padding-inline:calc((100vw - 1480px)/2 + 40px)}
+}
+.hero-sky{position:absolute;inset:0;width:100%;height:100%;display:block}
+:root:not([data-theme=light]) .workspace-heading--hero::after{
+  content:"";position:absolute;inset:0;pointer-events:none;
+  background:radial-gradient(ellipse at 72% 40%,transparent 30%,var(--obs-void) 88%),linear-gradient(transparent 65%,var(--obs-void));
+}
+:root:not([data-theme=light]) .workspace-heading--hero > div{position:relative;z-index:2}
+:root:not([data-theme=light]) .unified-shell .workspace-heading--hero h1{font-size:clamp(72px,13vw,200px);line-height:.82;letter-spacing:-.01em;margin:14px 0 22px}
+:root:not([data-theme=light]) .unified-shell .workspace-heading--hero p{font-size:clamp(15px,1.3vw,18px)}
+.hero-eyebrow{display:block;font:500 10.5px/1.4 "IBM Plex Mono",ui-monospace,monospace;letter-spacing:.16em;text-transform:uppercase;color:#7A889C}
+
+:root:not([data-theme=light]) .section-tabs{gap:0;border-bottom:1px solid var(--obs-line);margin-bottom:0}
+:root:not([data-theme=light]) .section-tabs button{
+  border:0;border-bottom:1px solid transparent;border-radius:0;background:none;padding:14px 16px 12px;
+  font:500 11px/1 var(--obs-mono);letter-spacing:.14em;text-transform:uppercase;color:var(--obs-dim);
+}
+:root:not([data-theme=light]) .section-tabs button.active{color:var(--obs-bright);border-color:var(--obs-sodium);background:none}
+
+/* ── Readout: métricas numa faixa, sem cartões ─────────── */
+:root:not([data-theme=light]) .overview-pulse{
+  display:grid;grid-template-columns:repeat(4,1fr);gap:0;margin:0;border-bottom:1px solid var(--obs-line);background:none;
+}
+:root:not([data-theme=light]) .pulse-metric{
+  display:flex;flex-direction:column;align-items:flex-start;gap:12px;min-height:0;
+  padding:26px clamp(12px,2vw,28px);border:0;border-left:1px solid var(--obs-line);border-radius:0;background:none;box-shadow:none;text-align:left;
+  transition:background .3s;
+}
+:root:not([data-theme=light]) .pulse-metric:first-child{border-left:0;padding-left:0}
+:root:not([data-theme=light]) .pulse-metric:hover{background:linear-gradient(transparent,rgba(233,179,91,.05))}
+:root:not([data-theme=light]) .pulse-metric span{font:500 10.5px/1.4 var(--obs-mono);letter-spacing:.16em;text-transform:uppercase;color:var(--obs-dim)}
+:root:not([data-theme=light]) .pulse-metric strong{font:600 clamp(40px,5.2vw,84px)/1 var(--obs-display);text-transform:uppercase;color:var(--obs-bright);font-variant-numeric:tabular-nums}
+:root:not([data-theme=light]) .pulse-metric.attention strong{color:var(--obs-sodium)}
+:root:not([data-theme=light]) .pulse-metric.health strong{font-size:clamp(28px,3.2vw,48px);padding-top:clamp(6px,1vw,18px)}
+@media(max-width:760px){
+  :root:not([data-theme=light]) .overview-pulse{grid-template-columns:1fr 1fr}
+  :root:not([data-theme=light]) .pulse-metric:nth-child(3){border-left:0;padding-left:0}
+  :root:not([data-theme=light]) .pulse-metric:nth-child(n+3){border-top:1px solid var(--obs-line)}
+}
+
+/* ── Seções ───────────────────────────────────────────── */
+:root:not([data-theme=light]) .overview > section + section{margin-top:clamp(56px,7vw,104px)}
+:root:not([data-theme=light]) .section-head{
+  display:flex;justify-content:space-between;align-items:end;gap:16px 24px;flex-wrap:wrap;
+  margin:0 0 0;padding-bottom:16px;border-bottom:1px solid var(--obs-line);
+}
+:root:not([data-theme=light]) .section-head h2{margin:0;font-size:clamp(28px,3.2vw,48px);font-weight:600;line-height:.95}
+:root:not([data-theme=light]) .section-head h2 span{color:var(--obs-sodium);margin-left:.2em}
+:root:not([data-theme=light]) .quiet-note{font-size:11px;letter-spacing:.06em;color:var(--obs-dim)}
+:root:not([data-theme=light]) :is(.text-button,.primary-button){
+  border:1px solid var(--obs-line-strong);border-radius:0;background:transparent;padding:9px 14px;
+  font:500 11px/1 var(--obs-mono);letter-spacing:.12em;text-transform:uppercase;color:var(--obs-text);
+}
+:root:not([data-theme=light]) :is(.text-button,.primary-button):hover:not(:disabled){border-color:var(--obs-sodium);color:var(--obs-bright);background:transparent;text-decoration:none}
+:root:not([data-theme=light]) .primary-button{border-color:var(--obs-sodium);color:var(--obs-sodium)}
+
+/* Badges: hairline + mono. */
+:root:not([data-theme=light]) :is(.badge,.domain-badge,.freshness,.op-chip,.risk-chip,.capability-chip,.runtime-chip,.fingerprint-chip,.provider-pill,.status){
+  border-radius:0;background:transparent;box-shadow:none;
+  font-family:var(--obs-mono);font-weight:500;letter-spacing:.1em;text-transform:uppercase;
+}
+:root:not([data-theme=light]) .badge{border:1px solid color-mix(in srgb,var(--tone,var(--obs-dim)) 45%,transparent);color:var(--tone,var(--obs-text))}
+:root:not([data-theme=light]) .domain-badge{border:0;padding:0;font:600 20px/1 var(--obs-display);letter-spacing:.06em;color:var(--obs-bright)}
+
+/* Cartões viram colunas separadas por fios. */
+:root:not([data-theme=light]) .domain-strip{gap:0;border-bottom:1px solid var(--obs-line)}
+:root:not([data-theme=light]) :is(.domain-tile,.lane-card,.action-card,.inbox-item,.projection-health,.surface-state){
+  border:0;border-radius:0;background:none;box-shadow:none;
+}
+:root:not([data-theme=light]) :is(.domain-tile,.lane-card,.action-card,.inbox-item,.projection-health,.surface-state)::before,
+:root:not([data-theme=light]) :is(.domain-tile,.lane-card,.action-card,.inbox-item,.projection-health,.surface-state)::after{display:none}
+:root:not([data-theme=light]) .domain-tile{padding:24px clamp(12px,1.6vw,24px);border-left:1px solid var(--obs-line)}
+:root:not([data-theme=light]) .domain-tile:first-child{border-left:0;padding-left:0}
+:root:not([data-theme=light]) .domain-tile header{margin-bottom:14px}
+:root:not([data-theme=light]) .domain-tile p{color:var(--obs-dim);font-size:13px;line-height:1.55}
+:root:not([data-theme=light]) .tile-blockers{padding-left:0;list-style:none;font:11px/1.6 var(--obs-mono);color:var(--obs-sodium)}
+:root:not([data-theme=light]) .tile-blockers li{padding:6px 0;border-top:1px solid var(--obs-line);overflow-wrap:anywhere}
+
+:root:not([data-theme=light]) :is(.card-grid,.lane-grid){gap:0}
+:root:not([data-theme=light]) :is(.lane-card,.action-card){padding:24px clamp(12px,1.6vw,24px);border-bottom:1px solid var(--obs-line)}
+:root:not([data-theme=light]) :is(.lane-grid,.card-grid) > * + *{border-left:1px solid var(--obs-line)}
+:root:not([data-theme=light]) .inbox-item{padding:20px 0;border-bottom:1px solid var(--obs-line);transition:padding .4s cubic-bezier(.2,.7,.2,1)}
+:root:not([data-theme=light]) .inbox-item:hover{padding-left:12px}
+:root:not([data-theme=light]) :is(.lane-card,.action-card,.inbox-item) :is(h3,strong){font-family:var(--obs-display);font-weight:600;text-transform:uppercase;letter-spacing:.03em;color:var(--obs-bright)}
+:root:not([data-theme=light]) .projection-health{padding:20px 0}
+:root:not([data-theme=light]) .surface-state{padding:32px 0;color:var(--obs-dim)}
+:root:not([data-theme=light]) .surface-state h3{font-size:28px}
+:root:not([data-theme=light]) :is(.rule-note,.notice-box){border-radius:0;border:0;border-left:1px solid var(--obs-sodium);background:none;padding:10px 14px;color:var(--obs-text)}
+
+:root:not([data-theme=light]) :is(input,select,textarea){border-radius:0;background:var(--obs-deep);border-color:var(--obs-line-strong);color:var(--obs-bright)}
+
+@media(max-width:760px){
+  :root:not([data-theme=light]) .unified-shell .workspace-heading--hero{margin-top:-20px;padding-top:72px}
+  :root:not([data-theme=light]) :is(.lane-grid,.card-grid) > * + *{border-left:0}
+  :root:not([data-theme=light]) .domain-tile{border-left:0;padding-left:0;border-top:1px solid var(--obs-line)}
+}
+@media(prefers-reduced-motion:reduce){
+  :root:not([data-theme=light]) :is(.inbox-item,.pulse-metric){transition:none}
+}
