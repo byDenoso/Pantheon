@@ -38,7 +38,7 @@ jobs:
         run: |
           set -euo pipefail
           npm run typecheck
-          node --test test/atlas3d-metro-production.test.mjs test/pages.test.mjs test/projection-sync-resilience.test.mjs test/github-origin-resilience.test.mjs
+          node --test test/atlas3d-metro-production.test.mjs test/pages.test.mjs test/science-projection-v1.test.mjs test/projection-sync-resilience.test.mjs test/github-origin-resilience.test.mjs
           npm run build
 
       - name: Install Tower dependencies
