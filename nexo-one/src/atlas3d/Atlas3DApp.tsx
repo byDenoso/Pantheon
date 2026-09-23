@@ -555,30 +555,30 @@ export function Atlas3DContent({system,themeOverride}:{system:SystemStore;themeO
           onFit={() => setFitNonce(value => value + 1)}
           onReset={reset}
           onReady={() => setRendererReady(true)}
-        />
-
-        <div className="atlas-topbar">
-          <nav className="atlas-breadcrumb glass" aria-label="Caminho atual">
-            <button onClick={() => { setSelectedId(model.roots[0] || null); }} className="atlas-crumb">Atlas</button>
-            {breadcrumbs.map(node => (
-              <span className="atlas-crumb-group" key={node.id}>
-                <span>›</span>
-                <button className="atlas-crumb" onClick={() => selectBreadcrumb(node.id)}>{node.name}</button>
-              </span>
-            ))}
-          </nav>
-
-          <div className="atlas-controls">
-            <div className="atlas-lens-switch" role="group" aria-label="Lente do mapa">
-              {ATLAS_LENSES.map(([id,name])=><button type="button" key={id} className={lens===id?'active':''} aria-pressed={lens===id} onClick={()=>switchLens(id)}>{name}</button>)}
+          toolbarContext={
+            <nav className="atlas-breadcrumb" aria-label="Caminho atual">
+              <button onClick={() => { setSelectedId(model.roots[0] || null); }} className="atlas-crumb">Atlas</button>
+              {breadcrumbs.map(node => (
+                <span className="atlas-crumb-group" key={node.id}>
+                  <span>›</span>
+                  <button className="atlas-crumb" onClick={() => selectBreadcrumb(node.id)}>{node.name}</button>
+                </span>
+              ))}
+            </nav>
+          }
+          toolbarFilters={
+            <div className="atlas-graph-filters">
+              <div className="atlas-lens-switch" role="group" aria-label="Lente do mapa">
+                {ATLAS_LENSES.map(([id,name])=><button type="button" key={id} className={lens===id?'active':''} aria-pressed={lens===id} onClick={()=>switchLens(id)}>{name}</button>)}
+              </div>
+              <button className="atlas-button atlas-expand-button" aria-pressed={allExpanded} onClick={toggleExpandAll}>
+                {allExpanded ? 'Contrair' : 'Expandir'}
+              </button>
+              <label className="atlas-toggle"><input type="checkbox" checked={showBeams} onChange={event => setShowBeams(event.target.checked)} />Relações</label>
+              <button className="atlas-button atlas-mobile-details-toggle" aria-expanded={mobileDetailsOpen} aria-controls="atlas-details-panel" onClick={() => setMobileDetailsOpen(value => !value)}>Detalhes</button>
             </div>
-            <button className="atlas-button atlas-expand-button" aria-pressed={allExpanded} onClick={toggleExpandAll}>
-              {allExpanded ? 'Contrair tudo' : 'Expandir tudo'}
-            </button>
-            <label className="atlas-toggle"><input type="checkbox" checked={showBeams} onChange={event => setShowBeams(event.target.checked)} />Relações</label>
-            <button className="atlas-button atlas-mobile-details-toggle" aria-expanded={mobileDetailsOpen} aria-controls="atlas-details-panel" onClick={() => setMobileDetailsOpen(value => !value)}>Detalhes</button>
-          </div>
-        </div>
+          }
+        />
 
         <div className="atlas-domain-strip glass" aria-label="Domínios visíveis">
           {model.roots.map(rootId => {
