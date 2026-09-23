@@ -165,18 +165,9 @@ test('Tower dark-energy aliases share one Atlas station without changing canonic
 
 test('Atlas illumination toggle is placed in the visible filter row when graph filters exist', async () => {
   const app = await text('src/components/NexoGraph.tsx');
-  assert.equal((app.match(/className="nexo-illumination-toggle"/g) || []).length, 1, 'one shared toggle implementation is rendered in either toolbar row');
-  assert.match(app, /const illuminationToggle\s*=\s*!tableMode\s*&&\s*<button[^>]*nexo-illumination-toggle/s);
-  assert.match(app, /toolbarFilters&&<div className="nexo-graph-toolbar-row nexo-graph-toolbar-secondary">\s*<div className="nexo-graph-filters">\s*\{illuminationToggle\}/s);
-  assert.match(app, /!toolbarFilters&&illuminationToggle/);
-  assert.match(app, /illuminated\s*\?\s*'Apagar iluminação'\s*:\s*'Iluminar tudo'/);
-});
-
-test('all-lit 3D rendering keeps distant nodes visibly illuminated while preserving hop emphasis', async () => {
-  const renderer = await text('src/atlas3d/MetroAtlasRenderer.tsx');
-  assert.match(renderer, /'lit-focus-muted': \{ opacity: \.78, shadowBlur: 7/);
-  assert.match(renderer, /faded\s*\?\s*runtime\.illuminated\s*\?\s*\.82\s*:\s*\.12/);
-  assert.match(renderer, /runtime\.illuminated\s*\?\s*\.34\s*:\s*\.055/);
+  assert.match(app, /toolbarFilters&&<div className="nexo-graph-toolbar-row nexo-graph-toolbar-secondary">\s*<div className="nexo-graph-filters">\s*\{spotlightToggle\}\s*\{illuminationToggle\}/s);
+  assert.match(app, /const spotlightToggle=!tableMode&&<button[^>]*nexo-spotlight-toggle/);
+  assert.match(app, /const illuminationToggle=!tableMode&&<button[^>]*nexo-illumination-toggle/);
 });
 
 test('canonical graph relations become Metro bridge data instead of a second force layout', () => {
@@ -589,7 +580,7 @@ test('dedicated Atlas production page uses Metro renderer, G6 and deterministic 
   assert.match(app, /activeExpanded = navigationStale \? new Set\(initialExpanded\) : expanded/);
   assert.match(app, /atlasRouteParams/);
   assert.match(app, /query==='2d'\|\|query==='3d'/);
-  assert.match(app, /GRAPH_VIEW_STORAGE_KEY/);
+  assert.doesNotMatch(app, /GRAPH_VIEW_STORAGE_KEY|nexo\.graph\.view\.v1/);
   assert.match(app, /3D · MAPA/);
   assert.match(app, /2D · MAPA/);
   assert.match(app, /atlas-mobile-details-toggle/);
@@ -790,9 +781,11 @@ test('dedicated Atlas production page uses Metro renderer, G6 and deterministic 
   assert.match(sharedGraph, /MetroAtlasRenderer/);
   assert.match(sharedGraph, /Ver como tabela/);
   assert.match(sharedGraph, /GraphViewSwitch/);
-  assert.match(sharedGraph, /nexo\.graph\.illuminated\.v1/);
+  assert.doesNotMatch(sharedGraph, /nexo\.graph\.illuminated\.v1|localStorage\.(?:getItem|setItem)/);
   assert.match(sharedGraph, /Iluminar tudo/);
   assert.match(sharedGraph, /allIlluminated=\{illuminated\}/);
+  assert.match(sharedGraph, /className="nexo-spotlight-toggle"/);
+  assert.match(sharedGraph, /selectedId=\{spotlightActive\?selectedId:null\}/);
   assert.match(main, /data-atlas-bootstrap/);
   assert.match(loader, /atlasG6Source/);
 });
@@ -814,6 +807,20 @@ test('shared graph illumination preserves a bright context across 2D and 3D rend
   assert.match(renderer, /lit-focus-muted/);
   assert.match(renderer, /lit-edge-muted/);
   assert.match(renderer, /runtime\.illuminated/);
+  assert.match(renderer, /lit-focus-muted': \{ opacity: \.78/);
+  assert.match(renderer, /runtime\.illuminated \? \.46 : \.012/);
   assert.match(renderer, /const faded = Boolean\(focusId\) && level > 2/);
   assert.match(renderer, /edge\.baseGlowOpacity \* factor \* \(runtime\.illuminated \? 2\.8 : 1\)/);
+});
+
+test('spotlight and graph illumination are session-only presentation state', async () => {
+  const graph = await text('src/components/NexoGraph.tsx');
+  const atlas = await text('src/atlas3d/Atlas3DApp.tsx');
+  const science = await text('src/features/ScienceWorkspace.tsx');
+  const mcp = await text('src/mcp/McpAtlasApp.tsx');
+  assert.match(graph, /const \[illuminated,setIlluminated\]=useState\(false\)/);
+  assert.match(graph, /const \[spotlight,setSpotlight\]=useState\(true\)/);
+  for (const source of [graph, atlas, science, mcp]) {
+    assert.doesNotMatch(source, /localStorage\.(?:getItem|setItem).*nexo\.graph\.(?:illuminated|view)/);
+  }
 });
