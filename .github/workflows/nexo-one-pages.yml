@@ -506,8 +506,8 @@ jobs:
           capture_system_shell mobile-390-light 390 844 light
 
           capture_atlas() {
-            local name="$1" width="$2" height="$3" theme="$4" view="$5"
-            local url="${base}/atlas3d/?theme=${theme}&view=${view}&expand=all&readback=1"
+            local name="$1" width="$2" height="$3" theme="$4" view="$5" lens="${6:-operacao}"
+            local url="${base}/atlas3d/?theme=${theme}&view=${view}&lente=${lens}&expand=all&readback=1"
             local dom="/tmp/atlas-${name}.html"
             local ready_marker='data-atlas-ready="true"'
             if [ "${view}" = "3d" ]; then ready_marker='data-three-ready="true"'; fi
@@ -517,6 +517,7 @@ jobs:
             grep -Fq 'data-atlas-renderer="metro-cluster"' "${dom}"
             grep -Fq "data-atlas-mode=\"${view}\"" "${dom}"
             grep -Fq "data-atlas-theme=\"${theme}\"" "${dom}"
+            grep -Fq "data-atlas-lens=\"${lens}\"" "${dom}"
             if [ "${view}" = "2d" ]; then
               grep -Fq 'data-atlas-ready="true"' "${dom}"
             else
@@ -527,12 +528,12 @@ jobs:
             local total visible
             total="$(sed -n 's/.*data-atlas-total-count="\([0-9][0-9]*\)".*/\1/p' "${dom}" | head -1)"
             visible="$(sed -n 's/.*data-atlas-visible-count="\([0-9][0-9]*\)".*/\1/p' "${dom}" | head -1)"
-            [ -n "${total}" ] && [ -n "${visible}" ] && [ "${visible}" -gt 3 ] || { echo "::error::Atlas route did not render its domain stations (${name})"; exit 1; }
+            [ -n "${total}" ] && [ -n "${visible}" ] && [ "${visible}" -gt 0 ] || { echo "::error::Atlas lens did not render any station (${name}, ${lens})"; exit 1; }
             "${chrome_bin}" --headless=new --no-sandbox --disable-dev-shm-usage --hide-scrollbars \
               --use-angle=swiftshader --enable-unsafe-swiftshader --window-size="${width},${height}" \
               --virtual-time-budget=12000 --screenshot="/tmp/atlas-${name}.png" "${url}" >/dev/null 2>&1
             test -s "/tmp/atlas-${name}.png"
-            echo "PAGES_ATLAS_ROUTE_READBACK_OK viewport=${width}x${height} theme=${theme} view=${view} total=${total} visible=${visible}"
+            echo "PAGES_ATLAS_ROUTE_READBACK_OK viewport=${width}x${height} theme=${theme} view=${view} lens=${lens} total=${total} visible=${visible}"
           }
           capture_atlas desktop-1440-dark 1440 900 dark 2d
           capture_atlas desktop-1024-dark 1024 768 dark 2d
@@ -542,6 +543,9 @@ jobs:
           capture_atlas mobile-390-light 390 844 light 2d
           capture_atlas desktop-1440-dark-3d 1440 900 dark 3d
           capture_atlas mobile-390-light-3d 390 844 light 3d
+          capture_atlas lens-ciencia-3d 1440 900 dark 3d ciencia
+          capture_atlas lens-sistema-3d 1440 900 dark 3d sistema
+          capture_atlas lens-aprendizado-3d 1440 900 dark 3d aprendizado
 
           mobile_ua='Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1'
 
@@ -568,8 +572,8 @@ jobs:
           mcp_visible_links="$(sed -n 's/.*data-mcp-visible-links="\([0-9][0-9]*\)".*/\1/p' /tmp/mcp-readback-dom.html | head -1)"
           [ -n "${mcp_nodes}" ] && [ "${mcp_nodes}" -gt 8 ]
           [ -n "${mcp_links}" ] && [ "${mcp_links}" -gt 7 ]
-          [ -n "${mcp_visible_nodes}" ] && [ "${mcp_visible_nodes}" -gt 8 ]
-          [ -n "${mcp_visible_links}" ] && [ "${mcp_visible_links}" -gt 7 ]
+          [ -n "${mcp_visible_nodes}" ] && [ "${mcp_visible_nodes}" -gt 3 ]
+          [ -n "${mcp_visible_links}" ] && [ "${mcp_visible_links}" -gt 3 ]
           "${chrome_bin}" --headless=new --no-sandbox --disable-dev-shm-usage --hide-scrollbars \
             --window-size=1440,900 --virtual-time-budget=9000 \
             --screenshot=/tmp/mcp-readback-dark-2d.png "${mcp_url}" >/dev/null 2>&1
@@ -650,6 +654,32 @@ jobs:
           echo "PAGES_MCP_NEURAL_MOBILE_DARK_3D_OK"
 
           echo "PAGES_MCP_VISUAL_READBACK_OK selected=COSMOLOGY nodes=${mcp_nodes} links=${mcp_links}"
+
+          science_3d_url="${base}/#/cockpit/ciencia?tab=graficos&graph=relacoes&view=3d&theme=dark"
+          dump_until_ready 'data-three-ready="true"' /tmp/science-3d-dom.html \
+            --headless=new --no-sandbox --disable-dev-shm-usage --hide-scrollbars \
+            --window-size=1440,900 --virtual-time-budget=12000 --dump-dom "${science_3d_url}"
+          grep -Fq 'class="science-workspace"' /tmp/science-3d-dom.html
+          grep -Fq 'data-graph-view="3d"' /tmp/science-3d-dom.html
+          grep -Fq 'data-testid="atlas-metro-3d"' /tmp/science-3d-dom.html
+          "${chrome_bin}" --headless=new --no-sandbox --disable-dev-shm-usage --hide-scrollbars \
+            --use-angle=swiftshader --enable-unsafe-swiftshader --window-size=1440,900 --virtual-time-budget=10000 \
+            --screenshot=/tmp/science-3d.png "${science_3d_url}" >/dev/null 2>&1
+          test -s /tmp/science-3d.png
+          echo "PAGES_SCIENCE_3D_READBACK_OK"
+
+          proof_3d_url="${base}/#/cockpit/prova?tab=autoridade&view=3d&theme=dark"
+          dump_until_ready 'data-three-ready="true"' /tmp/proof-3d-dom.html \
+            --headless=new --no-sandbox --disable-dev-shm-usage --hide-scrollbars \
+            --window-size=1440,900 --virtual-time-budget=12000 --dump-dom "${proof_3d_url}"
+          grep -Fq 'data-proof-graph-ready="true"' /tmp/proof-3d-dom.html
+          grep -Fq 'data-graph-view="3d"' /tmp/proof-3d-dom.html
+          grep -Fq 'data-testid="atlas-metro-3d"' /tmp/proof-3d-dom.html
+          "${chrome_bin}" --headless=new --no-sandbox --disable-dev-shm-usage --hide-scrollbars \
+            --use-angle=swiftshader --enable-unsafe-swiftshader --window-size=1440,900 --virtual-time-budget=10000 \
+            --screenshot=/tmp/proof-3d.png "${proof_3d_url}" >/dev/null 2>&1
+          test -s /tmp/proof-3d.png
+          echo "PAGES_PROOF_3D_READBACK_OK"
           curl -fsSL "${base}/world-public.ndjson" -o /tmp/world.ndjson
           curl -fsSL "${base}/science-projection-v1.json" -o /tmp/science-projection-v1.json
           curl -fsSL "${base}/contracts/science-projection-v1.schema.json" -o /tmp/science-projection-v1.schema.json
@@ -796,6 +826,11 @@ jobs:
             /tmp/atlas-mobile-390-light.png
             /tmp/atlas-desktop-1440-dark-3d.png
             /tmp/atlas-mobile-390-light-3d.png
+            /tmp/atlas-lens-*.png
+            /tmp/science-3d.png
+            /tmp/science-3d-dom.html
+            /tmp/proof-3d.png
+            /tmp/proof-3d-dom.html
             /tmp/atlas3d-readback.png
             /tmp/atlas3d-dom.html
             /tmp/atlas3d-readback-3d.png

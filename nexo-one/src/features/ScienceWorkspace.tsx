@@ -31,6 +31,9 @@ function initialGraphView():NexoGraphView{
   if(value==='3d'||value==='2d')return value;
   try{return localStorage.getItem('nexo.graph.view.v1')==='3d'?'3d':'2d';}catch{return'2d';}
 }
+function initialGraphMode():GraphMode{
+  return routeParams().get('graph')==='relacoes'?'relacoes':'evidencia';
+}
 function envelope(record:ScienceProjectionRecord,key:string):ScienceEvidenceField|undefined{
   const value=record[key];
   return value&&typeof value==='object'&&!Array.isArray(value)&&Object.hasOwn(value,'value')
@@ -177,7 +180,7 @@ export default function ScienceWorkspace({state}:{state:SystemState}){
   const [tab,setTab]=useState<ScienceTab>(initialTab);
   const [query,setQuery]=useState('');
   const [graphView,setGraphView]=useState<NexoGraphView>(initialGraphView);
-  const [graphMode,setGraphMode]=useState<GraphMode>('evidencia');
+  const [graphMode,setGraphMode]=useState<GraphMode>(initialGraphMode);
   const [plotMode,setPlotMode]=useState<PlotMode>('grafico');
   const [selectedId,setSelectedId]=useState<string|null>(null);
   const svgRef=useRef<SVGSVGElement|null>(null);
@@ -194,6 +197,12 @@ export default function ScienceWorkspace({state}:{state:SystemState}){
   const setView=(next:NexoGraphView)=>{
     setGraphView(next);try{localStorage.setItem('nexo.graph.view.v1',next);}catch{}
     const params=routeParams();params.set('tab','graficos');params.set('view',next);
+    window.history.replaceState(null,'',`#/cockpit/ciencia?${params.toString()}`);
+  };
+  const setGraphSurface=(next:GraphMode)=>{
+    setGraphMode(next);
+    const params=routeParams();params.set('tab','graficos');
+    if(next==='relacoes')params.set('graph','relacoes');else params.delete('graph');
     window.history.replaceState(null,'',`#/cockpit/ciencia?${params.toString()}`);
   };
 
@@ -245,7 +254,7 @@ export default function ScienceWorkspace({state}:{state:SystemState}){
 
     {projection&&tab==='graficos'&&<div className="science-graphics">
       <div className="science-graphics-toolbar">
-        <div role="group" aria-label="Conteúdo gráfico"><button type="button" className={graphMode==='evidencia'?'active':''} onClick={()=>setGraphMode('evidencia')}>Evidência</button><button type="button" className={graphMode==='relacoes'?'active':''} onClick={()=>setGraphMode('relacoes')}>Relações</button></div>
+        <div role="group" aria-label="Conteúdo gráfico"><button type="button" className={graphMode==='evidencia'?'active':''} onClick={()=>setGraphSurface('evidencia')}>Evidência</button><button type="button" className={graphMode==='relacoes'?'active':''} onClick={()=>setGraphSurface('relacoes')}>Relações</button></div>
         {graphMode==='evidencia'&&<><div role="group" aria-label="Gráfico ou tabela"><button type="button" className={plotMode==='grafico'?'active':''} onClick={()=>setPlotMode('grafico')}>Gráfico</button><button type="button" className={plotMode==='tabela'?'active':''} onClick={()=>setPlotMode('tabela')}>Tabela</button></div>
         <button type="button" onClick={()=>downloadCsv('ciencia-evidencia.csv',['Teste','Parâmetro','Valor','Erro -','Erro +','Unidade','Veredito'],quantitative.map(row=>[row.id,row.parameter,row.value,row.lo,row.hi,row.unit,row.verdict]))}>CSV</button>
         <button type="button" disabled={!quantitative.length||plotMode!=='grafico'} onClick={()=>downloadPlotPng(svgRef.current)}>PNG</button></>}
