@@ -108,21 +108,21 @@ export const NAV_GROUPS: NavGroup[] = [
 export const MOBILE_PRIMARY: ViewId[] = ['INBOX', 'OVERVIEW', 'ACTIONS', 'ATLAS'];
 
 export const VIEW_TITLES: Record<ViewId, { title: string; lead: string }> = {
-  OVERVIEW: { title: 'Estado operacional da Tower.', lead: 'Gates humanos, blockers, capabilities, providers e filas por domínio na compilação atual.' },
-  INBOX: { title: 'Needs Dener.', lead: 'Gates canônicos com human_action_required=true. O restante continua autônomo.' },
-  ACTIONS: { title: 'Fila operacional.', lead: 'Ações abertas, capability vinculada, runtime, dependências e motivo de avanço ou espera.' },
-  EXECUTION: { title: 'Rastreamento de execução.', lead: 'ACTION → CAPABILITY → RUNTIME → EFFECT → READBACK, com fingerprint e horário por etapa.' },
-  TRUTHGRAPH: { title: 'Autoridade e conflito de estado.', lead: 'Provider esperado, provider observado, freshness e divergências por domínio.' },
-  CAPABILITIES: { title: 'Capabilities executáveis.', lead: 'Backend, status, contrato de execução e evidência disponível por capability.' },
-  SOURCES: { title: 'Cobertura de providers.', lead: 'Disponibilidade, freshness e consumidores atendidos pelo Projection Bus.' },
-  INTEGRITY: { title: 'Falhas de prova e readback.', lead: 'Invariantes abertos, capabilities sem evidência e leituras que não fecharam.' },
-  ATLAS: { title: 'Topologia operacional.', lead: 'Entidades, relações e proveniência materializadas no grafo atual.' },
-  LEARNING: { title: 'Relações promovidas e rejeitadas.', lead: 'Filamentos com suporte, contradição, escopo e limite de validade.' },
-  NOW: { title: 'Pendências pessoais com fonte.', lead: 'Itens atuais vindos das fontes pessoais conectadas.' },
-  LOOPS: { title: 'Compromissos abertos.', lead: 'Estado declarado na fonte e última atualização observada.' },
-  DAY: { title: 'Agenda consolidada.', lead: 'Eventos da agenda conectada; propostas permanecem separadas do calendário.' },
-  CONTEXT: { title: 'Contextos e ferramentas.', lead: 'Objetivos, registros e integrações disponíveis por área.' },
-  RECALL: { title: 'Busca com proveniência.', lead: 'Resultados das fontes conectadas com origem preservada.' },
+  OVERVIEW: { title: 'Início', lead: 'Gates, próxima ação do sistema e mudanças da última sincronização.' },
+  INBOX: { title: 'Precisa de você', lead: 'Aprovações humanas que aguardam decisão.' },
+  ACTIONS: { title: 'Fila operacional', lead: 'Trabalho por estado, domínio, campanha e dependência.' },
+  EXECUTION: { title: 'Execução', lead: 'Rastro ACTION → CAPABILITY → RUNTIME → EFFECT → READBACK.' },
+  TRUTHGRAPH: { title: 'Autoridade', lead: 'Fontes esperadas, fontes observadas e divergências.' },
+  CAPABILITIES: { title: 'Capabilities', lead: 'Capacidades registradas e evidências publicadas.' },
+  SOURCES: { title: 'Fontes', lead: 'Disponibilidade e atualização das fontes conectadas.' },
+  INTEGRITY: { title: 'Integridade', lead: 'Lacunas de prova, invariantes e leituras pendentes.' },
+  ATLAS: { title: 'Mapa', lead: 'Entidades e relações da projeção atual.' },
+  LEARNING: { title: 'Aprendizado', lead: 'Filamentos com suporte, contradição, escopo e validade.' },
+  NOW: { title: 'Agora', lead: 'Pendências pessoais vindas das fontes conectadas.' },
+  LOOPS: { title: 'Loops', lead: 'Compromissos abertos e atualização observada.' },
+  DAY: { title: 'Agenda', lead: 'Eventos da agenda conectada.' },
+  CONTEXT: { title: 'Contextos', lead: 'Objetivos, registros e integrações disponíveis.' },
+  RECALL: { title: 'Busca', lead: 'Resultados das fontes conectadas com origem preservada.' },
 };
 
 export const entryFor = (view: ViewId): NavEntry =>

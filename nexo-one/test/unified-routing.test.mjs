@@ -81,7 +81,7 @@ test('capability counters name their different semantics explicitly', async () =
   assert.match(mcp, /capabilities registradas/);
 });
 
-test('cockpit and Sistema share the instrument shell, palette and compact rail', async () => {
+test('app navigation uses seven primary tabs and removes duplicate rail navigation', async () => {
   const [app, header, foundation, shell, mcp] = await Promise.all([
     read('../src/app/App.tsx'), read('../src/shell/InstrumentHeader.tsx'),
     read('../src/styles/tokens.css'), read('../src/styles/product-shell.css'),
@@ -93,8 +93,10 @@ test('cockpit and Sistema share the instrument shell, palette and compact rail',
   assert.match(app, /<EmbeddedMcp theme=\{theme\}/);
   assert.match(header, /Science :20 · Exec :05 · drift 0/);
   assert.match(header, /aria-label="Modo do produto"/);
-  assert.match(shell, /grid-template-columns:56px minmax\(0,1fr\)/);
-  assert.match(shell, /nav-rail:hover/);
+  for (const label of ['Início','Ciência','Operação','Prova','Sistema','Mapa','Pessoal']) assert.match(header, new RegExp(label));
+  assert.match(app, /className="section-tabs"/);
+  assert.match(shell, /\.unified-shell \.cockpit-body\{display:block!important/);
+  assert.match(shell, /\.unified-shell \.nav-rail,\.unified-shell \.bottom-nav\{display:none!important\}/);
   assert.match(shell, /prefers-reduced-motion:reduce/);
   assert.match(shell, /mcp-site\[data-mcp-embedded=true\] \.mcp-nav/);
   assert.match(foundation, /--bg:#0b0c0d/);
