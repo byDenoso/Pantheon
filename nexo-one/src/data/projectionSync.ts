@@ -5,6 +5,7 @@ const PUBLISHED_PROJECTION_ASSET = 'tower-projection/projection.json';
 const PUBLISHED_MANIFEST_ASSET = 'tower-projection/manifest.json';
 const PUBLISHED_BUILD_META_ASSET = 'build-meta.json';
 const PUBLISHED_RETRY_DELAYS_MS = [0, 800, 2400, 6000] as const;
+const PUBLISHED_PAIR_RETRY_DELAYS_MS = [0, 800, 2400, 6000] as const;
 const VALIDATED_CACHE_KEY = 'nexo.public-projection-receipt.v1';
 const VALIDATED_CACHE_MAX_AGE_MS = 30 * 60 * 1000;
 
@@ -247,14 +248,28 @@ function readValidatedReceiptCache():Extract<ProjectionSyncReceipt,{outcome:'PUB
 
 async function fetchFreshPublicProjection(signal?:AbortSignal):Promise<ProjectionSyncReceipt>{
   try{
-    const [projection,manifest,buildMeta]=await Promise.all([
-      fetchPublishedJson<PublicProjection>(PUBLISHED_PROJECTION_ASSET,'Snapshot publicado',signal),
-      fetchPublishedJson<PublicManifest>(PUBLISHED_MANIFEST_ASSET,'Manifesto publicado',signal),
-      fetchPublishedJson<BuildMeta>(PUBLISHED_BUILD_META_ASSET,'Build-meta publicado',signal),
-    ]);
-    const receipt=projectionReceipt(projection,manifest,buildMeta) as Extract<ProjectionSyncReceipt,{outcome:'PUBLIC_PROJECTION_REFRESHED'}>;
-    rememberValidatedReceipt(receipt);
-    return receipt;
+    let lastMismatch:DataSourceError|undefined;
+    for(let attempt=0;attempt<PUBLISHED_PAIR_RETRY_DELAYS_MS.length;attempt+=1){
+      const delay=PUBLISHED_PAIR_RETRY_DELAYS_MS[attempt]||0;
+      if(delay>0)await abortableDelay(delay,signal);
+      const [projection,manifest,buildMeta]=await Promise.all([
+        fetchPublishedJson<PublicProjection>(PUBLISHED_PROJECTION_ASSET,'Snapshot publicado',signal),
+        fetchPublishedJson<PublicManifest>(PUBLISHED_MANIFEST_ASSET,'Manifesto publicado',signal),
+        fetchPublishedJson<BuildMeta>(PUBLISHED_BUILD_META_ASSET,'Build-meta publicado',signal),
+      ]);
+      try{
+        const receipt=projectionReceipt(projection,manifest,buildMeta) as Extract<ProjectionSyncReceipt,{outcome:'PUBLIC_PROJECTION_REFRESHED'}>;
+        rememberValidatedReceipt(receipt);
+        return receipt;
+      }catch(error){
+        if(!(error instanceof DataSourceError)||error.code!=='CONTRACT_MISMATCH')throw error;
+        lastMismatch=error;
+      }
+    }
+    // A deployment can briefly expose different generations of these three
+    // static files at CDN edges. Re-read them as a set, but never accept a
+    // mixed set or relax fingerprint validation.
+    throw lastMismatch||new DataSourceError('CONTRACT_MISMATCH','Os arquivos publicados não fecharam um conjunto validado.');
   }catch(error){
     if(signal?.aborted||(error as Error)?.name==='AbortError')throw error;
     if(error instanceof DataSourceError)throw error;

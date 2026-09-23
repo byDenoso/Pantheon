@@ -105,6 +105,46 @@ test('projection sync rejects a published snapshot whose build-meta fingerprint 
   }
 });
 
+test('projection sync re-reads the full published evidence set when CDN edges serve mixed generations',async()=>{
+  const originalFetch=globalThis.fetch;
+  const originalWindow=globalThis.window;
+  const reads=new Map();
+  const previousFingerprint='sha256:'+'e'.repeat(64);
+  const currentFingerprint='sha256:'+'d'.repeat(64);
+  const currentManifest={...validManifest,projection_fingerprint:currentFingerprint};
+  const currentProjection={...validProjection,manifest:currentManifest};
+  const currentBuildMeta={...validBuildMeta,projection_fingerprint:currentFingerprint};
+
+  globalThis.window={
+    location:{origin:'https://bydenoso.github.io'},
+    setTimeout(callback){queueMicrotask(callback);return 0;},
+    clearTimeout(){},
+  };
+  globalThis.fetch=async(url)=>{
+    const href=String(url);
+    const asset=href.includes('projection.json')?'projection':href.includes('manifest.json')?'manifest':'build-meta';
+    const count=(reads.get(asset)||0)+1;
+    reads.set(asset,count);
+    // First read simulates an edge that has the new projection but stale
+    // manifest/build-meta. The next complete read is internally consistent.
+    if(asset==='projection')return new Response(JSON.stringify(currentProjection),{status:200});
+    if(asset==='manifest')return new Response(JSON.stringify(count===1?validManifest:currentManifest),{status:200});
+    return new Response(JSON.stringify(count===1?validBuildMeta:currentBuildMeta),{status:200});
+  };
+
+  try{
+    const {dispatchProjectionSync}=await import('../src/data/projectionSync.ts');
+    const receipt=await dispatchProjectionSync(previousFingerprint);
+    assert.equal(receipt.outcome,'PUBLIC_PROJECTION_REFRESHED');
+    assert.equal(receipt.projection_fingerprint,currentFingerprint);
+    assert.deepEqual(Object.fromEntries(reads),{projection:2,manifest:2,'build-meta':2});
+  }finally{
+    globalThis.fetch=originalFetch;
+    if(originalWindow===undefined)delete globalThis.window;
+    else globalThis.window=originalWindow;
+  }
+});
+
 test('projection sync source contains no browser path to the private Git export mirror',async()=>{
   const source=await readFile(new URL('../src/data/projectionSync.ts',import.meta.url),'utf8');
   assert.doesNotMatch(source,/raw\.githubusercontent\.com/);
