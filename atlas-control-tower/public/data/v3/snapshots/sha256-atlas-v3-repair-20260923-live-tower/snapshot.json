@@ -1,0 +1,1754 @@
+{
+  "manifest": {
+    "contractVersion": "ATLAS_PROJECTION_V3",
+    "schemaVersion": "3.0",
+    "projectionVersion": "3.0.0",
+    "fingerprint": "sha256:atlas-v3-repair-20260923-live-tower",
+    "sourceVersion": "TOWER_V06@GOOGLE_DRIVE_PRIVATE:NEXO_TOWER_LIVE.json.gz",
+    "generatedAt": "2026-09-23T15:10:00Z",
+    "authority": "TOWER_V06",
+    "truthOwner": "TOWER_V06@GOOGLE_DRIVE_PRIVATE",
+    "projectionOnly": true,
+    "completeness": "PARTIAL_TOWER_HOT_SET",
+    "freshness": "SNAPSHOT",
+    "publicProjection": true
+  },
+  "universe": {
+    "counts": {
+      "canonicalEntities": 58,
+      "nodes": 58,
+      "edges": 23,
+      "filaments": 8,
+      "works": 19,
+      "testGroups": 0,
+      "tests": 0,
+      "historicalTests": 0
+    }
+  },
+  "graph": {
+    "root": {
+      "nodes": [
+        {
+          "id": "ACT-ENG-NEXO-VAULT-SIDECHANNEL-HARDEN-001",
+          "type": "WORK",
+          "label": "ACT-ENG-NEXO-VAULT-SIDECHANNEL-HARDEN-001",
+          "status": "CHECKPOINTED",
+          "domain": "ENGINEERING",
+          "parentId": null,
+          "entityVersion": 1,
+          "projectionAuthority": "TOWER_V06"
+        },
+        {
+          "id": "ACT-SCI-MG-SIGMA-NATIVE-REPLICATION-V2-001",
+          "type": "WORK",
+          "label": "ACT-SCI-MG-SIGMA-NATIVE-REPLICATION-V2-001",
+          "status": "CHECKPOINTED",
+          "domain": null,
+          "parentId": null,
+          "entityVersion": 1,
+          "projectionAuthority": "TOWER_V06"
+        },
+        {
+          "id": "CAMP-CMB-ANOMALIES",
+          "type": "CAMPAIGN",
+          "label": "CAMP-CMB-ANOMALIES",
+          "status": "CHECKPOINTED",
+          "domain": null,
+          "parentId": "PROG-CMB-EARLY-MICROPHYSICS",
+          "entityVersion": null,
+          "projectionAuthority": "TOWER_V06"
+        },
+        {
+          "id": "CAMP-CMB-EARLY-CROSSPROBE",
+          "type": "CAMPAIGN",
+          "label": "CAMP-CMB-EARLY-CROSSPROBE",
+          "status": "ACTIVE",
+          "domain": null,
+          "parentId": "PROG-CMB-EARLY-MICROPHYSICS",
+          "entityVersion": null,
+          "projectionAuthority": "TOWER_V06"
+        },
+        {
+          "id": "CAMP-CROSSPROBE-EXPANSION",
+          "type": "CAMPAIGN",
+          "label": "CAMP-CROSSPROBE-EXPANSION",
+          "status": "ACTIVE",
+          "domain": null,
+          "parentId": "PROG-EXPANSION-GEOMETRY",
+          "entityVersion": null,
+          "projectionAuthority": "TOWER_V06"
+        },
+        {
+          "id": "CAMP-CURVATURE-GEOMETRY",
+          "type": "CAMPAIGN",
+          "label": "CAMP-CURVATURE-GEOMETRY",
+          "status": "CHECKPOINTED",
+          "domain": null,
+          "parentId": "PROG-EXPANSION-GEOMETRY",
+          "entityVersion": null,
+          "projectionAuthority": "TOWER_V06"
+        },
+        {
+          "id": "CAMP-DARK-SECTOR-DAO",
+          "type": "CAMPAIGN",
+          "label": "CAMP-DARK-SECTOR-DAO",
+          "status": "CHECKPOINTED",
+          "domain": null,
+          "parentId": "PROG-STRUCTURE-DARK-SECTOR",
+          "entityVersion": null,
+          "projectionAuthority": "TOWER_V06"
+        },
+        {
+          "id": "CAMP-DDE-ROBUSTNESS",
+          "type": "CAMPAIGN",
+          "label": "CAMP-DDE-ROBUSTNESS",
+          "status": "CHECKPOINTED",
+          "domain": null,
+          "parentId": "PROG-EXPANSION-GEOMETRY",
+          "entityVersion": null,
+          "projectionAuthority": "TOWER_V06"
+        },
+        {
+          "id": "CAMP-DM-UDM-MULTISCALE",
+          "type": "CAMPAIGN",
+          "label": "CAMP-DM-UDM-MULTISCALE",
+          "status": "CHECKPOINTED",
+          "domain": null,
+          "parentId": "PROG-STRUCTURE-DARK-SECTOR",
+          "entityVersion": null,
+          "projectionAuthority": "TOWER_V06"
+        },
+        {
+          "id": "CAMP-GROWTH-LSS",
+          "type": "CAMPAIGN",
+          "label": "CAMP-GROWTH-LSS",
+          "status": "CHECKPOINTED",
+          "domain": null,
+          "parentId": "PROG-STRUCTURE-DARK-SECTOR",
+          "entityVersion": null,
+          "projectionAuthority": "TOWER_V06"
+        },
+        {
+          "id": "CAMP-GZ-01-GALAXY-REDSHIFT",
+          "type": "CAMPAIGN",
+          "label": "CAMP-GZ-01-GALAXY-REDSHIFT",
+          "status": "ACTIVE",
+          "domain": null,
+          "parentId": "PROG-COSMIC-HOMOGENEITY",
+          "entityVersion": null,
+          "projectionAuthority": "TOWER_V06"
+        },
+        {
+          "id": "CAMP-H0-RULER-ANCHOR",
+          "type": "CAMPAIGN",
+          "label": "CAMP-H0-RULER-ANCHOR",
+          "status": "CHECKPOINTED",
+          "domain": null,
+          "parentId": "PROG-EXPANSION-GEOMETRY",
+          "entityVersion": null,
+          "projectionAuthority": "TOWER_V06"
+        },
+        {
+          "id": "CAMP-HIGHZ-GALAXIES",
+          "type": "CAMPAIGN",
+          "label": "CAMP-HIGHZ-GALAXIES",
+          "status": "CHECKPOINTED",
+          "domain": null,
+          "parentId": "PROG-HIGHZ-ASTROPHYSICS",
+          "entityVersion": null,
+          "projectionAuthority": "TOWER_V06"
+        },
+        {
+          "id": "CAMP-HIGHZ-SMBH",
+          "type": "CAMPAIGN",
+          "label": "CAMP-HIGHZ-SMBH",
+          "status": "ACTIVE",
+          "domain": null,
+          "parentId": "PROG-HIGHZ-ASTROPHYSICS",
+          "entityVersion": null,
+          "projectionAuthority": "TOWER_V06"
+        },
+        {
+          "id": "CAMP-INDEPENDENT-PHYSICS",
+          "type": "CAMPAIGN",
+          "label": "CAMP-INDEPENDENT-PHYSICS",
+          "status": "COMPLETED",
+          "domain": null,
+          "parentId": "PROG-SCIENTIFIC-VALIDATION",
+          "entityVersion": null,
+          "projectionAuthority": "TOWER_V06"
+        },
+        {
+          "id": "CAMP-LRD-AGN",
+          "type": "CAMPAIGN",
+          "label": "CAMP-LRD-AGN",
+          "status": "CHECKPOINTED",
+          "domain": null,
+          "parentId": "PROG-HIGHZ-ASTROPHYSICS",
+          "entityVersion": null,
+          "projectionAuthority": "TOWER_V06"
+        },
+        {
+          "id": "CAMP-MEGASTRUCTURES",
+          "type": "CAMPAIGN",
+          "label": "CAMP-MEGASTRUCTURES",
+          "status": "ACTIVE",
+          "domain": null,
+          "parentId": "PROG-COSMIC-HOMOGENEITY",
+          "entityVersion": null,
+          "projectionAuthority": "TOWER_V06"
+        },
+        {
+          "id": "CAMP-MICROPHYSICS",
+          "type": "CAMPAIGN",
+          "label": "CAMP-MICROPHYSICS",
+          "status": "ACTIVE",
+          "domain": null,
+          "parentId": "PROG-CMB-EARLY-MICROPHYSICS",
+          "entityVersion": null,
+          "projectionAuthority": "TOWER_V06"
+        },
+        {
+          "id": "CAMP-PARTICLE-DM",
+          "type": "CAMPAIGN",
+          "label": "CAMP-PARTICLE-DM",
+          "status": "CHECKPOINTED",
+          "domain": null,
+          "parentId": "PROG-STRUCTURE-DARK-SECTOR",
+          "entityVersion": null,
+          "projectionAuthority": "TOWER_V06"
+        },
+        {
+          "id": "CAMP-SCI-INTEGRITY",
+          "type": "CAMPAIGN",
+          "label": "CAMP-SCI-INTEGRITY",
+          "status": "CHECKPOINTED",
+          "domain": null,
+          "parentId": "PROG-SCIENTIFIC-VALIDATION",
+          "entityVersion": null,
+          "projectionAuthority": "TOWER_V06"
+        },
+        {
+          "id": "CAND-CONT-AZTEC1-SMBH-PTA-REVIEW-20260903",
+          "type": "WORK",
+          "label": "CAND-CONT-AZTEC1-SMBH-PTA-REVIEW-20260903",
+          "status": "READY",
+          "domain": null,
+          "parentId": null,
+          "entityVersion": 1,
+          "projectionAuthority": "TOWER_V06"
+        },
+        {
+          "id": "CAND-CONT-GWTC5-SUPERRADIANCE-CONFLICT-20260903",
+          "type": "WORK",
+          "label": "CAND-CONT-GWTC5-SUPERRADIANCE-CONFLICT-20260903",
+          "status": "READY",
+          "domain": null,
+          "parentId": null,
+          "entityVersion": 1,
+          "projectionAuthority": "TOWER_V06"
+        },
+        {
+          "id": "CAND-CONT-HUMAN-BAO-REMAINING-TESTS-20260905",
+          "type": "WORK",
+          "label": "CAND-CONT-HUMAN-BAO-REMAINING-TESTS-20260905",
+          "status": "READY",
+          "domain": null,
+          "parentId": null,
+          "entityVersion": 1,
+          "projectionAuthority": "TOWER_V06"
+        },
+        {
+          "id": "CAND-CONT-LZ248-AXIONPORTAL-RIVAL-REVIEW-20260904",
+          "type": "WORK",
+          "label": "CAND-CONT-LZ248-AXIONPORTAL-RIVAL-REVIEW-20260904",
+          "status": "READY",
+          "domain": null,
+          "parentId": null,
+          "entityVersion": 1,
+          "projectionAuthority": "TOWER_V06"
+        },
+        {
+          "id": "CAND-CORE-DE-ST-IMPLICIT-PRIORS-REVIEW-20260905",
+          "type": "WORK",
+          "label": "CAND-CORE-DE-ST-IMPLICIT-PRIORS-REVIEW-20260905",
+          "status": "READY",
+          "domain": null,
+          "parentId": null,
+          "entityVersion": 1,
+          "projectionAuthority": "TOWER_V06"
+        },
+        {
+          "id": "CAND-CORE-EUCLID-HALO-PROFILE-SYSTEMATICS-20260905",
+          "type": "WORK",
+          "label": "CAND-CORE-EUCLID-HALO-PROFILE-SYSTEMATICS-20260905",
+          "status": "READY",
+          "domain": null,
+          "parentId": null,
+          "entityVersion": 1,
+          "projectionAuthority": "TOWER_V06"
+        },
+        {
+          "id": "CAND-CORE-MOVING-LENS-VELOCITY-REVIEW-20260905",
+          "type": "WORK",
+          "label": "CAND-CORE-MOVING-LENS-VELOCITY-REVIEW-20260905",
+          "status": "READY",
+          "domain": null,
+          "parentId": null,
+          "entityVersion": 1,
+          "projectionAuthority": "TOWER_V06"
+        },
+        {
+          "id": "CAND-READY-STATUS-NOT-EXEC-ELIGIBILITY-20260910",
+          "type": "HYPOTHESIS",
+          "label": "READY does not uniquely encode execution eligibility",
+          "status": "CANDIDATE",
+          "domain": "ENGINEERING_PROCEDURAL",
+          "parentId": null,
+          "entityVersion": 2,
+          "projectionAuthority": "TOWER_V06"
+        },
+        {
+          "id": "CAND-SCI-SPTD1-CORRIDOR-20260903",
+          "type": "WORK",
+          "label": "CAND-SCI-SPTD1-CORRIDOR-20260903",
+          "status": "READY",
+          "domain": null,
+          "parentId": null,
+          "entityVersion": 3,
+          "projectionAuthority": "TOWER_V06"
+        },
+        {
+          "id": "HYP-EMERG-V06-ACTIVE-CAMPAIGN-SEMANTICS-V1",
+          "type": "HYPOTHESIS",
+          "label": "Snapshot active_campaigns semantic mismatch",
+          "status": "CANDIDATE",
+          "domain": "ENGINEERING_PROCEDURAL",
+          "parentId": null,
+          "entityVersion": 1,
+          "projectionAuthority": "TOWER_V06"
+        },
+        {
+          "id": "HYP-EMERG-V06-EVENT-CONTINUITY-GAP-V1",
+          "type": "HYPOTHESIS",
+          "label": "HYP-EMERG-V06-EVENT-CONTINUITY-GAP-V1",
+          "status": "CANDIDATE",
+          "domain": "ENGINEERING",
+          "parentId": null,
+          "entityVersion": 1,
+          "projectionAuthority": "TOWER_V06"
+        },
+        {
+          "id": "HYP-EMERG-V06-LAZY-HYDRATION-DEDUPE-BLINDSPOT-V1",
+          "type": "HYPOTHESIS",
+          "label": "Lazy hydration semantic dedupe blind spot",
+          "status": "CANDIDATE",
+          "domain": "ENGINEERING",
+          "parentId": null,
+          "entityVersion": 1,
+          "projectionAuthority": "TOWER_V06"
+        },
+        {
+          "id": "HYP-EMERG-V06-ROLE-QUEUE-PROJECTION-GAP-V1",
+          "type": "HYPOTHESIS",
+          "label": "HYP-EMERG-V06-ROLE-QUEUE-PROJECTION-GAP-V1",
+          "status": "CANDIDATE",
+          "domain": "ENGINEERING",
+          "parentId": null,
+          "entityVersion": 1,
+          "projectionAuthority": "TOWER_V06"
+        },
+        {
+          "id": "HYP-EMERG-V06-SNAPSHOT-LIVENESS-GAP-V1",
+          "type": "HYPOTHESIS",
+          "label": "HYP-EMERG-V06-SNAPSHOT-LIVENESS-GAP-V1",
+          "status": "CANDIDATE",
+          "domain": "ENGINEERING",
+          "parentId": null,
+          "entityVersion": 1,
+          "projectionAuthority": "TOWER_V06"
+        },
+        {
+          "id": "META::INTERDOMAIN::COSMO-OLYMPUS-SELECTION-AWARE-CHANGE-001",
+          "type": "FILAMENT",
+          "label": "META::INTERDOMAIN::COSMO-OLYMPUS-SELECTION-AWARE-CHANGE-001",
+          "status": "TESTING",
+          "domain": "Cosmologia",
+          "parentId": null,
+          "entityVersion": 3,
+          "projectionAuthority": "TOWER_V06"
+        },
+        {
+          "id": "ML-EVID-H0-RECOVERY-20260917-001",
+          "type": "FILAMENT",
+          "label": "ML-EVID-H0-RECOVERY-20260917-001",
+          "status": "OBSERVED",
+          "domain": null,
+          "parentId": null,
+          "entityVersion": null,
+          "projectionAuthority": "TOWER_V06"
+        },
+        {
+          "id": "ML-EVID-H0HOM26-009-BINDING-20260918-002",
+          "type": "FILAMENT",
+          "label": "ML-EVID-H0HOM26-009-BINDING-20260918-002",
+          "status": "OBSERVED",
+          "domain": null,
+          "parentId": null,
+          "entityVersion": null,
+          "projectionAuthority": "TOWER_V06"
+        },
+        {
+          "id": "ML-EVID-OLY-LOWN-COMPLEXITY-20260919-004",
+          "type": "FILAMENT",
+          "label": "ML-EVID-OLY-LOWN-COMPLEXITY-20260919-004",
+          "status": "OBSERVED",
+          "domain": null,
+          "parentId": null,
+          "entityVersion": null,
+          "projectionAuthority": "TOWER_V06"
+        },
+        {
+          "id": "ML-EVID-TOWER-WRITER-REBASE-20260918-003",
+          "type": "FILAMENT",
+          "label": "ML-EVID-TOWER-WRITER-REBASE-20260918-003",
+          "status": "OBSERVED",
+          "domain": null,
+          "parentId": null,
+          "entityVersion": null,
+          "projectionAuthority": "TOWER_V06"
+        },
+        {
+          "id": "ML-OLY-BASELINE-UNCERTAINTY-BEFORE-COMPLEXITY-001",
+          "type": "FILAMENT",
+          "label": "ML-OLY-BASELINE-UNCERTAINTY-BEFORE-COMPLEXITY-001",
+          "status": "SUPPORTED",
+          "domain": null,
+          "parentId": null,
+          "entityVersion": null,
+          "projectionAuthority": "TOWER_V06"
+        },
+        {
+          "id": "ML-WK-BLOCKER-CLASSIFICATION-001",
+          "type": "FILAMENT",
+          "label": "ML-WK-BLOCKER-CLASSIFICATION-001",
+          "status": "SUPPORTED",
+          "domain": null,
+          "parentId": null,
+          "entityVersion": null,
+          "projectionAuthority": "TOWER_V06"
+        },
+        {
+          "id": "ML-WK-WRITER-CONCURRENCY-001",
+          "type": "FILAMENT",
+          "label": "ML-WK-WRITER-CONCURRENCY-001",
+          "status": "HYPOTHESIS",
+          "domain": null,
+          "parentId": null,
+          "entityVersion": null,
+          "projectionAuthority": "TOWER_V06"
+        },
+        {
+          "id": "PH-EMERG-V05-VERIFICATION-BACKEND-SELECTION-GAP-V1",
+          "type": "HYPOTHESIS",
+          "label": "PH-EMERG-V05-VERIFICATION-BACKEND-SELECTION-GAP-V1",
+          "status": "CANDIDATE",
+          "domain": "ENGINEERING",
+          "parentId": null,
+          "entityVersion": 2,
+          "projectionAuthority": "TOWER_V06"
+        },
+        {
+          "id": "PROG-CMB-EARLY-MICROPHYSICS",
+          "type": "PROGRAM",
+          "label": "CMB, early universe & microphysics",
+          "status": "PROVISIONAL",
+          "domain": null,
+          "parentId": null,
+          "entityVersion": null,
+          "projectionAuthority": "TOWER_V06"
+        },
+        {
+          "id": "PROG-COSMIC-HOMOGENEITY",
+          "type": "PROGRAM",
+          "label": "Cosmic homogeneity & mega-structures",
+          "status": "PROVISIONAL",
+          "domain": null,
+          "parentId": null,
+          "entityVersion": null,
+          "projectionAuthority": "TOWER_V06"
+        },
+        {
+          "id": "PROG-EXPANSION-GEOMETRY",
+          "type": "PROGRAM",
+          "label": "Expansion, geometry & dark energy",
+          "status": "PROVISIONAL",
+          "domain": null,
+          "parentId": null,
+          "entityVersion": null,
+          "projectionAuthority": "TOWER_V06"
+        },
+        {
+          "id": "PROG-HIGHZ-ASTROPHYSICS",
+          "type": "PROGRAM",
+          "label": "High-z astrophysics",
+          "status": "PROVISIONAL",
+          "domain": null,
+          "parentId": null,
+          "entityVersion": null,
+          "projectionAuthority": "TOWER_V06"
+        },
+        {
+          "id": "PROG-SCIENTIFIC-VALIDATION",
+          "type": "PROGRAM",
+          "label": "Scientific validation & inference",
+          "status": "PROVISIONAL",
+          "domain": null,
+          "parentId": null,
+          "entityVersion": null,
+          "projectionAuthority": "TOWER_V06"
+        },
+        {
+          "id": "PROG-STRUCTURE-DARK-SECTOR",
+          "type": "PROGRAM",
+          "label": "Structure growth & dark sector",
+          "status": "PROVISIONAL",
+          "domain": null,
+          "parentId": null,
+          "entityVersion": null,
+          "projectionAuthority": "TOWER_V06"
+        },
+        {
+          "id": "WORK::GZ-01-B01",
+          "type": "WORK",
+          "label": "WORK::GZ-01-B01",
+          "status": "CHECKPOINTED",
+          "domain": "SCIENCE",
+          "parentId": null,
+          "entityVersion": 3,
+          "projectionAuthority": "TOWER_V06"
+        },
+        {
+          "id": "WORK::GZ-01-B03-GALAXY-3D-MAP",
+          "type": "WORK",
+          "label": "WORK::GZ-01-B03-GALAXY-3D-MAP",
+          "status": "VERIFIED",
+          "domain": "SCIENCE",
+          "parentId": null,
+          "entityVersion": 6,
+          "projectionAuthority": "TOWER_V06"
+        },
+        {
+          "id": "WORK::GZ01-EROSITA-SUPERBATTERY-V1",
+          "type": "WORK",
+          "label": "WORK::GZ01-EROSITA-SUPERBATTERY-V1",
+          "status": "CHECKPOINTED",
+          "domain": "SCIENCE",
+          "parentId": null,
+          "entityVersion": 4,
+          "projectionAuthority": "TOWER_V06"
+        },
+        {
+          "id": "WORK::OLYMPUS-SELECTION-AWARE-CHANGE-VALIDATION-001",
+          "type": "WORK",
+          "label": "WORK::OLYMPUS-SELECTION-AWARE-CHANGE-VALIDATION-001",
+          "status": "WAIT_DEPENDENCY",
+          "domain": "OLYMPUS",
+          "parentId": null,
+          "entityVersion": 6,
+          "projectionAuthority": "TOWER_V06"
+        },
+        {
+          "id": "WORK::SCI-DARK-SECTOR-DAO-DISCRIMINANT-FREEZE-20260911",
+          "type": "WORK",
+          "label": "WORK::SCI-DARK-SECTOR-DAO-DISCRIMINANT-FREEZE-20260911",
+          "status": "WAIT_DEPENDENCY",
+          "domain": null,
+          "parentId": null,
+          "entityVersion": 1,
+          "projectionAuthority": "TOWER_V06"
+        },
+        {
+          "id": "WORK::SCI-MG-SIGMA-FUNCTIONAL-RECONSTRUCTION-CONTRACT-20260910",
+          "type": "WORK",
+          "label": "WORK::SCI-MG-SIGMA-FUNCTIONAL-RECONSTRUCTION-CONTRACT-20260910",
+          "status": "CHECKPOINTED",
+          "domain": null,
+          "parentId": null,
+          "entityVersion": 1,
+          "projectionAuthority": "TOWER_V06"
+        },
+        {
+          "id": "WORK::SCI-UNIFIED-DARK-SECTOR-SOURCE-BIND-20260911",
+          "type": "WORK",
+          "label": "WORK::SCI-UNIFIED-DARK-SECTOR-SOURCE-BIND-20260911",
+          "status": "VERIFIED",
+          "domain": "SCIENCE",
+          "parentId": null,
+          "entityVersion": 5,
+          "projectionAuthority": "TOWER_V06"
+        },
+        {
+          "id": "WORK::T-H0HOM26-002",
+          "type": "WORK",
+          "label": "WORK::T-H0HOM26-002",
+          "status": "VERIFIED",
+          "domain": "SCIENCE",
+          "parentId": null,
+          "entityVersion": 2,
+          "projectionAuthority": "TOWER_V06"
+        },
+        {
+          "id": "WORK::T-H0HOM26-009",
+          "type": "WORK",
+          "label": "WORK::T-H0HOM26-009",
+          "status": "CHECKPOINTED",
+          "domain": "SCIENCE",
+          "parentId": null,
+          "entityVersion": 6,
+          "projectionAuthority": "TOWER_V06"
+        }
+      ],
+      "edges": [
+        {
+          "id": "rel:META%3A%3AINTERDOMAIN%3A%3ACOSMO-OLYMPUS-SELECTION-AWARE-CHANGE-001:METHOD_TRANSFER:WORK%3A%3AGZ-01-B03-GALAXY-3D-MAP",
+          "source": "META::INTERDOMAIN::COSMO-OLYMPUS-SELECTION-AWARE-CHANGE-001",
+          "target": "WORK::GZ-01-B03-GALAXY-3D-MAP",
+          "type": "METHOD_TRANSFER"
+        },
+        {
+          "id": "rel:ML-OLY-BASELINE-UNCERTAINTY-BEFORE-COMPLEXITY-001:LEARNING_LINEAGE:ML-EVID-OLY-LOWN-COMPLEXITY-20260919-004",
+          "source": "ML-OLY-BASELINE-UNCERTAINTY-BEFORE-COMPLEXITY-001",
+          "target": "ML-EVID-OLY-LOWN-COMPLEXITY-20260919-004",
+          "type": "LEARNING_LINEAGE"
+        },
+        {
+          "id": "rel:ML-WK-BLOCKER-CLASSIFICATION-001:LEARNING_LINEAGE:ML-EVID-H0-RECOVERY-20260917-001",
+          "source": "ML-WK-BLOCKER-CLASSIFICATION-001",
+          "target": "ML-EVID-H0-RECOVERY-20260917-001",
+          "type": "LEARNING_LINEAGE"
+        },
+        {
+          "id": "rel:ML-WK-BLOCKER-CLASSIFICATION-001:LEARNING_LINEAGE:ML-EVID-H0HOM26-009-BINDING-20260918-002",
+          "source": "ML-WK-BLOCKER-CLASSIFICATION-001",
+          "target": "ML-EVID-H0HOM26-009-BINDING-20260918-002",
+          "type": "LEARNING_LINEAGE"
+        },
+        {
+          "id": "rel:ML-WK-WRITER-CONCURRENCY-001:LEARNING_LINEAGE:ML-EVID-TOWER-WRITER-REBASE-20260918-003",
+          "source": "ML-WK-WRITER-CONCURRENCY-001",
+          "target": "ML-EVID-TOWER-WRITER-REBASE-20260918-003",
+          "type": "LEARNING_LINEAGE"
+        },
+        {
+          "id": "rel:PROG-CMB-EARLY-MICROPHYSICS:CONTAINS:CAMP-CMB-ANOMALIES",
+          "source": "PROG-CMB-EARLY-MICROPHYSICS",
+          "target": "CAMP-CMB-ANOMALIES",
+          "type": "CONTAINS"
+        },
+        {
+          "id": "rel:PROG-CMB-EARLY-MICROPHYSICS:CONTAINS:CAMP-CMB-EARLY-CROSSPROBE",
+          "source": "PROG-CMB-EARLY-MICROPHYSICS",
+          "target": "CAMP-CMB-EARLY-CROSSPROBE",
+          "type": "CONTAINS"
+        },
+        {
+          "id": "rel:PROG-CMB-EARLY-MICROPHYSICS:CONTAINS:CAMP-MICROPHYSICS",
+          "source": "PROG-CMB-EARLY-MICROPHYSICS",
+          "target": "CAMP-MICROPHYSICS",
+          "type": "CONTAINS"
+        },
+        {
+          "id": "rel:PROG-COSMIC-HOMOGENEITY:CONTAINS:CAMP-GZ-01-GALAXY-REDSHIFT",
+          "source": "PROG-COSMIC-HOMOGENEITY",
+          "target": "CAMP-GZ-01-GALAXY-REDSHIFT",
+          "type": "CONTAINS"
+        },
+        {
+          "id": "rel:PROG-COSMIC-HOMOGENEITY:CONTAINS:CAMP-MEGASTRUCTURES",
+          "source": "PROG-COSMIC-HOMOGENEITY",
+          "target": "CAMP-MEGASTRUCTURES",
+          "type": "CONTAINS"
+        },
+        {
+          "id": "rel:PROG-EXPANSION-GEOMETRY:CONTAINS:CAMP-CROSSPROBE-EXPANSION",
+          "source": "PROG-EXPANSION-GEOMETRY",
+          "target": "CAMP-CROSSPROBE-EXPANSION",
+          "type": "CONTAINS"
+        },
+        {
+          "id": "rel:PROG-EXPANSION-GEOMETRY:CONTAINS:CAMP-CURVATURE-GEOMETRY",
+          "source": "PROG-EXPANSION-GEOMETRY",
+          "target": "CAMP-CURVATURE-GEOMETRY",
+          "type": "CONTAINS"
+        },
+        {
+          "id": "rel:PROG-EXPANSION-GEOMETRY:CONTAINS:CAMP-DDE-ROBUSTNESS",
+          "source": "PROG-EXPANSION-GEOMETRY",
+          "target": "CAMP-DDE-ROBUSTNESS",
+          "type": "CONTAINS"
+        },
+        {
+          "id": "rel:PROG-EXPANSION-GEOMETRY:CONTAINS:CAMP-H0-RULER-ANCHOR",
+          "source": "PROG-EXPANSION-GEOMETRY",
+          "target": "CAMP-H0-RULER-ANCHOR",
+          "type": "CONTAINS"
+        },
+        {
+          "id": "rel:PROG-HIGHZ-ASTROPHYSICS:CONTAINS:CAMP-HIGHZ-GALAXIES",
+          "source": "PROG-HIGHZ-ASTROPHYSICS",
+          "target": "CAMP-HIGHZ-GALAXIES",
+          "type": "CONTAINS"
+        },
+        {
+          "id": "rel:PROG-HIGHZ-ASTROPHYSICS:CONTAINS:CAMP-HIGHZ-SMBH",
+          "source": "PROG-HIGHZ-ASTROPHYSICS",
+          "target": "CAMP-HIGHZ-SMBH",
+          "type": "CONTAINS"
+        },
+        {
+          "id": "rel:PROG-HIGHZ-ASTROPHYSICS:CONTAINS:CAMP-LRD-AGN",
+          "source": "PROG-HIGHZ-ASTROPHYSICS",
+          "target": "CAMP-LRD-AGN",
+          "type": "CONTAINS"
+        },
+        {
+          "id": "rel:PROG-SCIENTIFIC-VALIDATION:CONTAINS:CAMP-INDEPENDENT-PHYSICS",
+          "source": "PROG-SCIENTIFIC-VALIDATION",
+          "target": "CAMP-INDEPENDENT-PHYSICS",
+          "type": "CONTAINS"
+        },
+        {
+          "id": "rel:PROG-SCIENTIFIC-VALIDATION:CONTAINS:CAMP-SCI-INTEGRITY",
+          "source": "PROG-SCIENTIFIC-VALIDATION",
+          "target": "CAMP-SCI-INTEGRITY",
+          "type": "CONTAINS"
+        },
+        {
+          "id": "rel:PROG-STRUCTURE-DARK-SECTOR:CONTAINS:CAMP-DARK-SECTOR-DAO",
+          "source": "PROG-STRUCTURE-DARK-SECTOR",
+          "target": "CAMP-DARK-SECTOR-DAO",
+          "type": "CONTAINS"
+        },
+        {
+          "id": "rel:PROG-STRUCTURE-DARK-SECTOR:CONTAINS:CAMP-DM-UDM-MULTISCALE",
+          "source": "PROG-STRUCTURE-DARK-SECTOR",
+          "target": "CAMP-DM-UDM-MULTISCALE",
+          "type": "CONTAINS"
+        },
+        {
+          "id": "rel:PROG-STRUCTURE-DARK-SECTOR:CONTAINS:CAMP-GROWTH-LSS",
+          "source": "PROG-STRUCTURE-DARK-SECTOR",
+          "target": "CAMP-GROWTH-LSS",
+          "type": "CONTAINS"
+        },
+        {
+          "id": "rel:PROG-STRUCTURE-DARK-SECTOR:CONTAINS:CAMP-PARTICLE-DM",
+          "source": "PROG-STRUCTURE-DARK-SECTOR",
+          "target": "CAMP-PARTICLE-DM",
+          "type": "CONTAINS"
+        }
+      ]
+    }
+  },
+  "entities": {
+    "PROG-CMB-EARLY-MICROPHYSICS": {
+      "id": "PROG-CMB-EARLY-MICROPHYSICS",
+      "projectedType": "PROGRAM",
+      "label": "CMB, early universe & microphysics",
+      "status": "PROVISIONAL",
+      "domain": null,
+      "priority": null,
+      "ownerRole": null,
+      "parentId": null,
+      "entityVersion": null,
+      "campaignCount": 3
+    },
+    "PROG-COSMIC-HOMOGENEITY": {
+      "id": "PROG-COSMIC-HOMOGENEITY",
+      "projectedType": "PROGRAM",
+      "label": "Cosmic homogeneity & mega-structures",
+      "status": "PROVISIONAL",
+      "domain": null,
+      "priority": null,
+      "ownerRole": null,
+      "parentId": null,
+      "entityVersion": null,
+      "campaignCount": 1
+    },
+    "PROG-EXPANSION-GEOMETRY": {
+      "id": "PROG-EXPANSION-GEOMETRY",
+      "projectedType": "PROGRAM",
+      "label": "Expansion, geometry & dark energy",
+      "status": "PROVISIONAL",
+      "domain": null,
+      "priority": null,
+      "ownerRole": null,
+      "parentId": null,
+      "entityVersion": null,
+      "campaignCount": 4
+    },
+    "PROG-HIGHZ-ASTROPHYSICS": {
+      "id": "PROG-HIGHZ-ASTROPHYSICS",
+      "projectedType": "PROGRAM",
+      "label": "High-z astrophysics",
+      "status": "PROVISIONAL",
+      "domain": null,
+      "priority": null,
+      "ownerRole": null,
+      "parentId": null,
+      "entityVersion": null,
+      "campaignCount": 3
+    },
+    "PROG-SCIENTIFIC-VALIDATION": {
+      "id": "PROG-SCIENTIFIC-VALIDATION",
+      "projectedType": "PROGRAM",
+      "label": "Scientific validation & inference",
+      "status": "PROVISIONAL",
+      "domain": null,
+      "priority": null,
+      "ownerRole": null,
+      "parentId": null,
+      "entityVersion": null,
+      "campaignCount": 2
+    },
+    "PROG-STRUCTURE-DARK-SECTOR": {
+      "id": "PROG-STRUCTURE-DARK-SECTOR",
+      "projectedType": "PROGRAM",
+      "label": "Structure growth & dark sector",
+      "status": "PROVISIONAL",
+      "domain": null,
+      "priority": null,
+      "ownerRole": null,
+      "parentId": null,
+      "entityVersion": null,
+      "campaignCount": 4
+    },
+    "CAMP-CMB-ANOMALIES": {
+      "id": "CAMP-CMB-ANOMALIES",
+      "projectedType": "CAMPAIGN",
+      "label": "CAMP-CMB-ANOMALIES",
+      "status": "CHECKPOINTED",
+      "domain": null,
+      "priority": null,
+      "ownerRole": null,
+      "parentId": "PROG-CMB-EARLY-MICROPHYSICS",
+      "entityVersion": null,
+      "testCount": 104
+    },
+    "CAMP-CMB-EARLY-CROSSPROBE": {
+      "id": "CAMP-CMB-EARLY-CROSSPROBE",
+      "projectedType": "CAMPAIGN",
+      "label": "CAMP-CMB-EARLY-CROSSPROBE",
+      "status": "ACTIVE",
+      "domain": null,
+      "priority": null,
+      "ownerRole": null,
+      "parentId": "PROG-CMB-EARLY-MICROPHYSICS",
+      "entityVersion": null,
+      "testCount": 176
+    },
+    "CAMP-CROSSPROBE-EXPANSION": {
+      "id": "CAMP-CROSSPROBE-EXPANSION",
+      "projectedType": "CAMPAIGN",
+      "label": "CAMP-CROSSPROBE-EXPANSION",
+      "status": "ACTIVE",
+      "domain": null,
+      "priority": null,
+      "ownerRole": null,
+      "parentId": "PROG-EXPANSION-GEOMETRY",
+      "entityVersion": null,
+      "testCount": 73
+    },
+    "CAMP-CURVATURE-GEOMETRY": {
+      "id": "CAMP-CURVATURE-GEOMETRY",
+      "projectedType": "CAMPAIGN",
+      "label": "CAMP-CURVATURE-GEOMETRY",
+      "status": "CHECKPOINTED",
+      "domain": null,
+      "priority": null,
+      "ownerRole": null,
+      "parentId": "PROG-EXPANSION-GEOMETRY",
+      "entityVersion": null,
+      "testCount": 32
+    },
+    "CAMP-DARK-SECTOR-DAO": {
+      "id": "CAMP-DARK-SECTOR-DAO",
+      "projectedType": "CAMPAIGN",
+      "label": "CAMP-DARK-SECTOR-DAO",
+      "status": "CHECKPOINTED",
+      "domain": null,
+      "priority": null,
+      "ownerRole": null,
+      "parentId": "PROG-STRUCTURE-DARK-SECTOR",
+      "entityVersion": null,
+      "testCount": 11
+    },
+    "CAMP-DDE-ROBUSTNESS": {
+      "id": "CAMP-DDE-ROBUSTNESS",
+      "projectedType": "CAMPAIGN",
+      "label": "CAMP-DDE-ROBUSTNESS",
+      "status": "CHECKPOINTED",
+      "domain": null,
+      "priority": null,
+      "ownerRole": null,
+      "parentId": "PROG-EXPANSION-GEOMETRY",
+      "entityVersion": null,
+      "testCount": 172
+    },
+    "CAMP-DM-UDM-MULTISCALE": {
+      "id": "CAMP-DM-UDM-MULTISCALE",
+      "projectedType": "CAMPAIGN",
+      "label": "CAMP-DM-UDM-MULTISCALE",
+      "status": "CHECKPOINTED",
+      "domain": null,
+      "priority": null,
+      "ownerRole": null,
+      "parentId": "PROG-STRUCTURE-DARK-SECTOR",
+      "entityVersion": null,
+      "testCount": 63
+    },
+    "CAMP-GROWTH-LSS": {
+      "id": "CAMP-GROWTH-LSS",
+      "projectedType": "CAMPAIGN",
+      "label": "CAMP-GROWTH-LSS",
+      "status": "CHECKPOINTED",
+      "domain": null,
+      "priority": null,
+      "ownerRole": null,
+      "parentId": "PROG-STRUCTURE-DARK-SECTOR",
+      "entityVersion": null,
+      "testCount": 240
+    },
+    "CAMP-H0-RULER-ANCHOR": {
+      "id": "CAMP-H0-RULER-ANCHOR",
+      "projectedType": "CAMPAIGN",
+      "label": "CAMP-H0-RULER-ANCHOR",
+      "status": "CHECKPOINTED",
+      "domain": null,
+      "priority": null,
+      "ownerRole": null,
+      "parentId": "PROG-EXPANSION-GEOMETRY",
+      "entityVersion": null,
+      "testCount": 127
+    },
+    "CAMP-HIGHZ-GALAXIES": {
+      "id": "CAMP-HIGHZ-GALAXIES",
+      "projectedType": "CAMPAIGN",
+      "label": "CAMP-HIGHZ-GALAXIES",
+      "status": "CHECKPOINTED",
+      "domain": null,
+      "priority": null,
+      "ownerRole": null,
+      "parentId": "PROG-HIGHZ-ASTROPHYSICS",
+      "entityVersion": null,
+      "testCount": 183
+    },
+    "CAMP-HIGHZ-SMBH": {
+      "id": "CAMP-HIGHZ-SMBH",
+      "projectedType": "CAMPAIGN",
+      "label": "CAMP-HIGHZ-SMBH",
+      "status": "ACTIVE",
+      "domain": null,
+      "priority": null,
+      "ownerRole": null,
+      "parentId": "PROG-HIGHZ-ASTROPHYSICS",
+      "entityVersion": null,
+      "testCount": 61
+    },
+    "CAMP-INDEPENDENT-PHYSICS": {
+      "id": "CAMP-INDEPENDENT-PHYSICS",
+      "projectedType": "CAMPAIGN",
+      "label": "CAMP-INDEPENDENT-PHYSICS",
+      "status": "COMPLETED",
+      "domain": null,
+      "priority": null,
+      "ownerRole": null,
+      "parentId": "PROG-SCIENTIFIC-VALIDATION",
+      "entityVersion": null,
+      "testCount": 38
+    },
+    "CAMP-LRD-AGN": {
+      "id": "CAMP-LRD-AGN",
+      "projectedType": "CAMPAIGN",
+      "label": "CAMP-LRD-AGN",
+      "status": "CHECKPOINTED",
+      "domain": null,
+      "priority": null,
+      "ownerRole": null,
+      "parentId": "PROG-HIGHZ-ASTROPHYSICS",
+      "entityVersion": null,
+      "testCount": 275
+    },
+    "CAMP-MEGASTRUCTURES": {
+      "id": "CAMP-MEGASTRUCTURES",
+      "projectedType": "CAMPAIGN",
+      "label": "CAMP-MEGASTRUCTURES",
+      "status": "ACTIVE",
+      "domain": null,
+      "priority": null,
+      "ownerRole": null,
+      "parentId": "PROG-COSMIC-HOMOGENEITY",
+      "entityVersion": null,
+      "testCount": 146
+    },
+    "CAMP-MICROPHYSICS": {
+      "id": "CAMP-MICROPHYSICS",
+      "projectedType": "CAMPAIGN",
+      "label": "CAMP-MICROPHYSICS",
+      "status": "ACTIVE",
+      "domain": null,
+      "priority": null,
+      "ownerRole": null,
+      "parentId": "PROG-CMB-EARLY-MICROPHYSICS",
+      "entityVersion": null,
+      "testCount": 349
+    },
+    "CAMP-PARTICLE-DM": {
+      "id": "CAMP-PARTICLE-DM",
+      "projectedType": "CAMPAIGN",
+      "label": "CAMP-PARTICLE-DM",
+      "status": "CHECKPOINTED",
+      "domain": null,
+      "priority": null,
+      "ownerRole": null,
+      "parentId": "PROG-STRUCTURE-DARK-SECTOR",
+      "entityVersion": null,
+      "testCount": 110
+    },
+    "CAMP-SCI-INTEGRITY": {
+      "id": "CAMP-SCI-INTEGRITY",
+      "projectedType": "CAMPAIGN",
+      "label": "CAMP-SCI-INTEGRITY",
+      "status": "CHECKPOINTED",
+      "domain": null,
+      "priority": null,
+      "ownerRole": null,
+      "parentId": "PROG-SCIENTIFIC-VALIDATION",
+      "entityVersion": null,
+      "testCount": 38
+    },
+    "CAMP-GZ-01-GALAXY-REDSHIFT": {
+      "id": "CAMP-GZ-01-GALAXY-REDSHIFT",
+      "projectedType": "CAMPAIGN",
+      "label": "CAMP-GZ-01-GALAXY-REDSHIFT",
+      "status": "ACTIVE",
+      "domain": null,
+      "priority": null,
+      "ownerRole": null,
+      "parentId": "PROG-COSMIC-HOMOGENEITY",
+      "entityVersion": null,
+      "testCount": 6
+    },
+    "CAND-READY-STATUS-NOT-EXEC-ELIGIBILITY-20260910": {
+      "id": "CAND-READY-STATUS-NOT-EXEC-ELIGIBILITY-20260910",
+      "projectedType": "HYPOTHESIS",
+      "label": "READY does not uniquely encode execution eligibility",
+      "status": "CANDIDATE",
+      "domain": "ENGINEERING_PROCEDURAL",
+      "priority": null,
+      "ownerRole": null,
+      "parentId": null,
+      "entityVersion": 2
+    },
+    "HYP-EMERG-V06-ACTIVE-CAMPAIGN-SEMANTICS-V1": {
+      "id": "HYP-EMERG-V06-ACTIVE-CAMPAIGN-SEMANTICS-V1",
+      "projectedType": "HYPOTHESIS",
+      "label": "Snapshot active_campaigns semantic mismatch",
+      "status": "CANDIDATE",
+      "domain": "ENGINEERING_PROCEDURAL",
+      "priority": null,
+      "ownerRole": null,
+      "parentId": null,
+      "entityVersion": 1
+    },
+    "HYP-EMERG-V06-EVENT-CONTINUITY-GAP-V1": {
+      "id": "HYP-EMERG-V06-EVENT-CONTINUITY-GAP-V1",
+      "projectedType": "HYPOTHESIS",
+      "label": "HYP-EMERG-V06-EVENT-CONTINUITY-GAP-V1",
+      "status": "CANDIDATE",
+      "domain": "ENGINEERING",
+      "priority": null,
+      "ownerRole": null,
+      "parentId": null,
+      "entityVersion": 1
+    },
+    "HYP-EMERG-V06-LAZY-HYDRATION-DEDUPE-BLINDSPOT-V1": {
+      "id": "HYP-EMERG-V06-LAZY-HYDRATION-DEDUPE-BLINDSPOT-V1",
+      "projectedType": "HYPOTHESIS",
+      "label": "Lazy hydration semantic dedupe blind spot",
+      "status": "CANDIDATE",
+      "domain": "ENGINEERING",
+      "priority": null,
+      "ownerRole": null,
+      "parentId": null,
+      "entityVersion": 1
+    },
+    "HYP-EMERG-V06-ROLE-QUEUE-PROJECTION-GAP-V1": {
+      "id": "HYP-EMERG-V06-ROLE-QUEUE-PROJECTION-GAP-V1",
+      "projectedType": "HYPOTHESIS",
+      "label": "HYP-EMERG-V06-ROLE-QUEUE-PROJECTION-GAP-V1",
+      "status": "CANDIDATE",
+      "domain": "ENGINEERING",
+      "priority": null,
+      "ownerRole": null,
+      "parentId": null,
+      "entityVersion": 1
+    },
+    "HYP-EMERG-V06-SNAPSHOT-LIVENESS-GAP-V1": {
+      "id": "HYP-EMERG-V06-SNAPSHOT-LIVENESS-GAP-V1",
+      "projectedType": "HYPOTHESIS",
+      "label": "HYP-EMERG-V06-SNAPSHOT-LIVENESS-GAP-V1",
+      "status": "CANDIDATE",
+      "domain": "ENGINEERING",
+      "priority": null,
+      "ownerRole": null,
+      "parentId": null,
+      "entityVersion": 1
+    },
+    "PH-EMERG-V05-VERIFICATION-BACKEND-SELECTION-GAP-V1": {
+      "id": "PH-EMERG-V05-VERIFICATION-BACKEND-SELECTION-GAP-V1",
+      "projectedType": "HYPOTHESIS",
+      "label": "PH-EMERG-V05-VERIFICATION-BACKEND-SELECTION-GAP-V1",
+      "status": "CANDIDATE",
+      "domain": "ENGINEERING",
+      "priority": "HIGH",
+      "ownerRole": null,
+      "parentId": null,
+      "entityVersion": 2
+    },
+    "META::INTERDOMAIN::COSMO-OLYMPUS-SELECTION-AWARE-CHANGE-001": {
+      "id": "META::INTERDOMAIN::COSMO-OLYMPUS-SELECTION-AWARE-CHANGE-001",
+      "projectedType": "FILAMENT",
+      "label": "META::INTERDOMAIN::COSMO-OLYMPUS-SELECTION-AWARE-CHANGE-001",
+      "status": "TESTING",
+      "domain": "Cosmologia",
+      "priority": null,
+      "ownerRole": null,
+      "parentId": null,
+      "entityVersion": 3
+    },
+    "ACT-ENG-NEXO-VAULT-SIDECHANNEL-HARDEN-001": {
+      "id": "ACT-ENG-NEXO-VAULT-SIDECHANNEL-HARDEN-001",
+      "projectedType": "WORK",
+      "label": "ACT-ENG-NEXO-VAULT-SIDECHANNEL-HARDEN-001",
+      "status": "CHECKPOINTED",
+      "domain": "ENGINEERING",
+      "priority": "HIGH",
+      "ownerRole": null,
+      "parentId": null,
+      "entityVersion": 1
+    },
+    "ACT-SCI-MG-SIGMA-NATIVE-REPLICATION-V2-001": {
+      "id": "ACT-SCI-MG-SIGMA-NATIVE-REPLICATION-V2-001",
+      "projectedType": "WORK",
+      "label": "ACT-SCI-MG-SIGMA-NATIVE-REPLICATION-V2-001",
+      "status": "CHECKPOINTED",
+      "domain": null,
+      "priority": "HIGH",
+      "ownerRole": null,
+      "parentId": null,
+      "entityVersion": 1
+    },
+    "CAND-CONT-AZTEC1-SMBH-PTA-REVIEW-20260903": {
+      "id": "CAND-CONT-AZTEC1-SMBH-PTA-REVIEW-20260903",
+      "projectedType": "WORK",
+      "label": "CAND-CONT-AZTEC1-SMBH-PTA-REVIEW-20260903",
+      "status": "READY",
+      "domain": null,
+      "priority": "HIGH",
+      "ownerRole": null,
+      "parentId": null,
+      "entityVersion": 1
+    },
+    "CAND-CONT-GWTC5-SUPERRADIANCE-CONFLICT-20260903": {
+      "id": "CAND-CONT-GWTC5-SUPERRADIANCE-CONFLICT-20260903",
+      "projectedType": "WORK",
+      "label": "CAND-CONT-GWTC5-SUPERRADIANCE-CONFLICT-20260903",
+      "status": "READY",
+      "domain": null,
+      "priority": "HIGH",
+      "ownerRole": null,
+      "parentId": null,
+      "entityVersion": 1
+    },
+    "CAND-CONT-HUMAN-BAO-REMAINING-TESTS-20260905": {
+      "id": "CAND-CONT-HUMAN-BAO-REMAINING-TESTS-20260905",
+      "projectedType": "WORK",
+      "label": "CAND-CONT-HUMAN-BAO-REMAINING-TESTS-20260905",
+      "status": "READY",
+      "domain": null,
+      "priority": "HIGH",
+      "ownerRole": null,
+      "parentId": null,
+      "entityVersion": 1
+    },
+    "CAND-CONT-LZ248-AXIONPORTAL-RIVAL-REVIEW-20260904": {
+      "id": "CAND-CONT-LZ248-AXIONPORTAL-RIVAL-REVIEW-20260904",
+      "projectedType": "WORK",
+      "label": "CAND-CONT-LZ248-AXIONPORTAL-RIVAL-REVIEW-20260904",
+      "status": "READY",
+      "domain": null,
+      "priority": "HIGH",
+      "ownerRole": null,
+      "parentId": null,
+      "entityVersion": 1
+    },
+    "CAND-CORE-DE-ST-IMPLICIT-PRIORS-REVIEW-20260905": {
+      "id": "CAND-CORE-DE-ST-IMPLICIT-PRIORS-REVIEW-20260905",
+      "projectedType": "WORK",
+      "label": "CAND-CORE-DE-ST-IMPLICIT-PRIORS-REVIEW-20260905",
+      "status": "READY",
+      "domain": null,
+      "priority": "HIGH",
+      "ownerRole": null,
+      "parentId": null,
+      "entityVersion": 1
+    },
+    "CAND-CORE-EUCLID-HALO-PROFILE-SYSTEMATICS-20260905": {
+      "id": "CAND-CORE-EUCLID-HALO-PROFILE-SYSTEMATICS-20260905",
+      "projectedType": "WORK",
+      "label": "CAND-CORE-EUCLID-HALO-PROFILE-SYSTEMATICS-20260905",
+      "status": "READY",
+      "domain": null,
+      "priority": "MEDIUM_HIGH",
+      "ownerRole": null,
+      "parentId": null,
+      "entityVersion": 1
+    },
+    "CAND-CORE-MOVING-LENS-VELOCITY-REVIEW-20260905": {
+      "id": "CAND-CORE-MOVING-LENS-VELOCITY-REVIEW-20260905",
+      "projectedType": "WORK",
+      "label": "CAND-CORE-MOVING-LENS-VELOCITY-REVIEW-20260905",
+      "status": "READY",
+      "domain": null,
+      "priority": "MEDIUM_HIGH",
+      "ownerRole": null,
+      "parentId": null,
+      "entityVersion": 1
+    },
+    "CAND-SCI-SPTD1-CORRIDOR-20260903": {
+      "id": "CAND-SCI-SPTD1-CORRIDOR-20260903",
+      "projectedType": "WORK",
+      "label": "CAND-SCI-SPTD1-CORRIDOR-20260903",
+      "status": "READY",
+      "domain": null,
+      "priority": "HIGH",
+      "ownerRole": "ADVISOR",
+      "parentId": null,
+      "entityVersion": 3
+    },
+    "WORK::GZ-01-B01": {
+      "id": "WORK::GZ-01-B01",
+      "projectedType": "WORK",
+      "label": "WORK::GZ-01-B01",
+      "status": "CHECKPOINTED",
+      "domain": "SCIENCE",
+      "priority": "CRITICAL",
+      "ownerRole": "DIRECTOR",
+      "parentId": null,
+      "entityVersion": 3
+    },
+    "WORK::GZ-01-B03-GALAXY-3D-MAP": {
+      "id": "WORK::GZ-01-B03-GALAXY-3D-MAP",
+      "projectedType": "WORK",
+      "label": "WORK::GZ-01-B03-GALAXY-3D-MAP",
+      "status": "VERIFIED",
+      "domain": "SCIENCE",
+      "priority": "CRITICAL",
+      "ownerRole": "ADVISOR",
+      "parentId": null,
+      "entityVersion": 6
+    },
+    "WORK::GZ01-EROSITA-SUPERBATTERY-V1": {
+      "id": "WORK::GZ01-EROSITA-SUPERBATTERY-V1",
+      "projectedType": "WORK",
+      "label": "WORK::GZ01-EROSITA-SUPERBATTERY-V1",
+      "status": "CHECKPOINTED",
+      "domain": "SCIENCE",
+      "priority": "CRITICAL",
+      "ownerRole": "EXECUTOR",
+      "parentId": null,
+      "entityVersion": 4
+    },
+    "WORK::OLYMPUS-SELECTION-AWARE-CHANGE-VALIDATION-001": {
+      "id": "WORK::OLYMPUS-SELECTION-AWARE-CHANGE-VALIDATION-001",
+      "projectedType": "WORK",
+      "label": "WORK::OLYMPUS-SELECTION-AWARE-CHANGE-VALIDATION-001",
+      "status": "WAIT_DEPENDENCY",
+      "domain": "OLYMPUS",
+      "priority": "HIGH",
+      "ownerRole": "EXECUTOR",
+      "parentId": null,
+      "entityVersion": 6
+    },
+    "WORK::SCI-DARK-SECTOR-DAO-DISCRIMINANT-FREEZE-20260911": {
+      "id": "WORK::SCI-DARK-SECTOR-DAO-DISCRIMINANT-FREEZE-20260911",
+      "projectedType": "WORK",
+      "label": "WORK::SCI-DARK-SECTOR-DAO-DISCRIMINANT-FREEZE-20260911",
+      "status": "WAIT_DEPENDENCY",
+      "domain": null,
+      "priority": "CRITICAL",
+      "ownerRole": null,
+      "parentId": null,
+      "entityVersion": 1
+    },
+    "WORK::SCI-MG-SIGMA-FUNCTIONAL-RECONSTRUCTION-CONTRACT-20260910": {
+      "id": "WORK::SCI-MG-SIGMA-FUNCTIONAL-RECONSTRUCTION-CONTRACT-20260910",
+      "projectedType": "WORK",
+      "label": "WORK::SCI-MG-SIGMA-FUNCTIONAL-RECONSTRUCTION-CONTRACT-20260910",
+      "status": "CHECKPOINTED",
+      "domain": null,
+      "priority": "HIGH",
+      "ownerRole": null,
+      "parentId": null,
+      "entityVersion": 1
+    },
+    "WORK::SCI-UNIFIED-DARK-SECTOR-SOURCE-BIND-20260911": {
+      "id": "WORK::SCI-UNIFIED-DARK-SECTOR-SOURCE-BIND-20260911",
+      "projectedType": "WORK",
+      "label": "WORK::SCI-UNIFIED-DARK-SECTOR-SOURCE-BIND-20260911",
+      "status": "VERIFIED",
+      "domain": "SCIENCE",
+      "priority": "CRITICAL",
+      "ownerRole": "EXECUTOR",
+      "parentId": null,
+      "entityVersion": 5
+    },
+    "WORK::T-H0HOM26-002": {
+      "id": "WORK::T-H0HOM26-002",
+      "projectedType": "WORK",
+      "label": "WORK::T-H0HOM26-002",
+      "status": "VERIFIED",
+      "domain": "SCIENCE",
+      "priority": "NORMAL",
+      "ownerRole": "EXECUTOR",
+      "parentId": null,
+      "entityVersion": 2
+    },
+    "WORK::T-H0HOM26-009": {
+      "id": "WORK::T-H0HOM26-009",
+      "projectedType": "WORK",
+      "label": "WORK::T-H0HOM26-009",
+      "status": "CHECKPOINTED",
+      "domain": "SCIENCE",
+      "priority": "HIGH",
+      "ownerRole": "EXECUTOR",
+      "parentId": null,
+      "entityVersion": 6
+    },
+    "ML-EVID-H0-RECOVERY-20260917-001": {
+      "id": "ML-EVID-H0-RECOVERY-20260917-001",
+      "projectedType": "FILAMENT",
+      "label": "ML-EVID-H0-RECOVERY-20260917-001",
+      "status": "OBSERVED",
+      "domain": null,
+      "priority": null,
+      "ownerRole": null,
+      "parentId": null,
+      "entityVersion": null
+    },
+    "ML-EVID-H0HOM26-009-BINDING-20260918-002": {
+      "id": "ML-EVID-H0HOM26-009-BINDING-20260918-002",
+      "projectedType": "FILAMENT",
+      "label": "ML-EVID-H0HOM26-009-BINDING-20260918-002",
+      "status": "OBSERVED",
+      "domain": null,
+      "priority": null,
+      "ownerRole": null,
+      "parentId": null,
+      "entityVersion": null
+    },
+    "ML-EVID-OLY-LOWN-COMPLEXITY-20260919-004": {
+      "id": "ML-EVID-OLY-LOWN-COMPLEXITY-20260919-004",
+      "projectedType": "FILAMENT",
+      "label": "ML-EVID-OLY-LOWN-COMPLEXITY-20260919-004",
+      "status": "OBSERVED",
+      "domain": null,
+      "priority": null,
+      "ownerRole": null,
+      "parentId": null,
+      "entityVersion": null
+    },
+    "ML-EVID-TOWER-WRITER-REBASE-20260918-003": {
+      "id": "ML-EVID-TOWER-WRITER-REBASE-20260918-003",
+      "projectedType": "FILAMENT",
+      "label": "ML-EVID-TOWER-WRITER-REBASE-20260918-003",
+      "status": "OBSERVED",
+      "domain": null,
+      "priority": null,
+      "ownerRole": null,
+      "parentId": null,
+      "entityVersion": null
+    },
+    "ML-OLY-BASELINE-UNCERTAINTY-BEFORE-COMPLEXITY-001": {
+      "id": "ML-OLY-BASELINE-UNCERTAINTY-BEFORE-COMPLEXITY-001",
+      "projectedType": "FILAMENT",
+      "label": "ML-OLY-BASELINE-UNCERTAINTY-BEFORE-COMPLEXITY-001",
+      "status": "SUPPORTED",
+      "domain": null,
+      "priority": null,
+      "ownerRole": null,
+      "parentId": null,
+      "entityVersion": null
+    },
+    "ML-WK-BLOCKER-CLASSIFICATION-001": {
+      "id": "ML-WK-BLOCKER-CLASSIFICATION-001",
+      "projectedType": "FILAMENT",
+      "label": "ML-WK-BLOCKER-CLASSIFICATION-001",
+      "status": "SUPPORTED",
+      "domain": null,
+      "priority": null,
+      "ownerRole": null,
+      "parentId": null,
+      "entityVersion": null
+    },
+    "ML-WK-WRITER-CONCURRENCY-001": {
+      "id": "ML-WK-WRITER-CONCURRENCY-001",
+      "projectedType": "FILAMENT",
+      "label": "ML-WK-WRITER-CONCURRENCY-001",
+      "status": "HYPOTHESIS",
+      "domain": null,
+      "priority": null,
+      "ownerRole": null,
+      "parentId": null,
+      "entityVersion": null
+    }
+  },
+  "learning": {
+    "filaments": [
+      {
+        "id": "META::INTERDOMAIN::COSMO-OLYMPUS-SELECTION-AWARE-CHANGE-001",
+        "status": "TESTING",
+        "stage": null,
+        "relationType": "METHOD_TRANSFER",
+        "sourceDomains": [
+          "Cosmologia",
+          "Bodybuilding"
+        ],
+        "targetDomains": [
+          "Bodybuilding"
+        ],
+        "sourceNodes": [
+          "WORK::GZ-01-B03-GALAXY-3D-MAP"
+        ],
+        "testRefs": [
+          "WORK::OLYMPUS-SELECTION-AWARE-CHANGE-VALIDATION-001"
+        ],
+        "evidenceRefs": [],
+        "learningRefs": [],
+        "mapping": "Transfer selection-aware observational discipline from cosmology to longitudinal physique/body-composition evaluation: fixed inclusion rules, explicit measurement-condition metadata, condition-matched null/noise bands, confound controls and independent corroboration.",
+        "predictionOrUtility": "A preregistered condition-matched Olympus change detector should reduce false progress/regression calls and adjacent-check-in reversals relative to naive point-to-point deltas, without suppressing changes corroborated by independent observables.",
+        "falsifier": "Reject if held-out reversal/contradiction rate is not meaningfully lower than naive classification, or any apparent improvement is achieved mainly by classifying nearly all observations as indeterminate.",
+        "proposedTest": null,
+        "entityVersion": 3
+      },
+      {
+        "id": "ML-EVID-H0-RECOVERY-20260917-001",
+        "status": "OBSERVED",
+        "stage": "OBSERVATION",
+        "relationType": "PROCEDURAL_OBSERVATION",
+        "sourceDomains": [],
+        "targetDomains": [],
+        "sourceNodes": [
+          "CAMP-H0-LCDM-ORIGIN-20260916"
+        ],
+        "testRefs": [],
+        "evidenceRefs": [],
+        "learningRefs": [],
+        "mapping": null,
+        "predictionOrUtility": null,
+        "falsifier": null,
+        "proposedTest": null,
+        "entityVersion": null
+      },
+      {
+        "id": "ML-EVID-H0HOM26-009-BINDING-20260918-002",
+        "status": "OBSERVED",
+        "stage": "OBSERVATION",
+        "relationType": "PROCEDURAL_OBSERVATION",
+        "sourceDomains": [],
+        "targetDomains": [],
+        "sourceNodes": [],
+        "testRefs": [
+          "T-H0HOM26-009"
+        ],
+        "evidenceRefs": [],
+        "learningRefs": [],
+        "mapping": null,
+        "predictionOrUtility": null,
+        "falsifier": null,
+        "proposedTest": null,
+        "entityVersion": null
+      },
+      {
+        "id": "ML-EVID-OLY-LOWN-COMPLEXITY-20260919-004",
+        "status": "OBSERVED",
+        "stage": "OBSERVATION",
+        "relationType": "PROCEDURAL_OBSERVATION",
+        "sourceDomains": [],
+        "targetDomains": [],
+        "sourceNodes": [
+          "CAMP-OLY-COMPPHYS-20260919"
+        ],
+        "testRefs": [],
+        "evidenceRefs": [],
+        "learningRefs": [],
+        "mapping": null,
+        "predictionOrUtility": null,
+        "falsifier": null,
+        "proposedTest": null,
+        "entityVersion": null
+      },
+      {
+        "id": "ML-EVID-TOWER-WRITER-REBASE-20260918-003",
+        "status": "OBSERVED",
+        "stage": "OBSERVATION",
+        "relationType": "PROCEDURAL_OBSERVATION",
+        "sourceDomains": [],
+        "targetDomains": [],
+        "sourceNodes": [],
+        "testRefs": [
+          "T-H0HOM26-002"
+        ],
+        "evidenceRefs": [],
+        "learningRefs": [],
+        "mapping": null,
+        "predictionOrUtility": null,
+        "falsifier": null,
+        "proposedTest": null,
+        "entityVersion": null
+      },
+      {
+        "id": "ML-OLY-BASELINE-UNCERTAINTY-BEFORE-COMPLEXITY-001",
+        "status": "SUPPORTED",
+        "stage": "LESSON",
+        "relationType": "PROCEDURAL_LEARNING",
+        "sourceDomains": [],
+        "targetDomains": [],
+        "sourceNodes": [],
+        "testRefs": [],
+        "evidenceRefs": [],
+        "learningRefs": [
+          "ML-EVID-OLY-LOWN-COMPLEXITY-20260919-004"
+        ],
+        "mapping": null,
+        "predictionOrUtility": null,
+        "falsifier": null,
+        "proposedTest": null,
+        "entityVersion": null
+      },
+      {
+        "id": "ML-WK-BLOCKER-CLASSIFICATION-001",
+        "status": "SUPPORTED",
+        "stage": "LESSON",
+        "relationType": "PROCEDURAL_LEARNING",
+        "sourceDomains": [],
+        "targetDomains": [],
+        "sourceNodes": [],
+        "testRefs": [],
+        "evidenceRefs": [],
+        "learningRefs": [
+          "ML-EVID-H0-RECOVERY-20260917-001",
+          "ML-EVID-H0HOM26-009-BINDING-20260918-002"
+        ],
+        "mapping": null,
+        "predictionOrUtility": null,
+        "falsifier": null,
+        "proposedTest": null,
+        "entityVersion": null
+      },
+      {
+        "id": "ML-WK-WRITER-CONCURRENCY-001",
+        "status": "HYPOTHESIS",
+        "stage": "LESSON",
+        "relationType": "PROCEDURAL_LEARNING",
+        "sourceDomains": [],
+        "targetDomains": [],
+        "sourceNodes": [],
+        "testRefs": [],
+        "evidenceRefs": [],
+        "learningRefs": [
+          "ML-EVID-TOWER-WRITER-REBASE-20260918-003"
+        ],
+        "mapping": null,
+        "predictionOrUtility": null,
+        "falsifier": null,
+        "proposedTest": null,
+        "entityVersion": null
+      }
+    ]
+  },
+  "operations": {
+    "works": [
+      {
+        "id": "ACT-ENG-NEXO-VAULT-SIDECHANNEL-HARDEN-001",
+        "status": "CHECKPOINTED",
+        "ownerRole": null,
+        "nextAction": null,
+        "entityVersion": 1
+      },
+      {
+        "id": "ACT-SCI-MG-SIGMA-NATIVE-REPLICATION-V2-001",
+        "status": "CHECKPOINTED",
+        "ownerRole": null,
+        "nextAction": null,
+        "entityVersion": 1
+      },
+      {
+        "id": "CAND-CONT-AZTEC1-SMBH-PTA-REVIEW-20260903",
+        "status": "READY",
+        "ownerRole": null,
+        "nextAction": null,
+        "entityVersion": 1
+      },
+      {
+        "id": "CAND-CONT-GWTC5-SUPERRADIANCE-CONFLICT-20260903",
+        "status": "READY",
+        "ownerRole": null,
+        "nextAction": null,
+        "entityVersion": 1
+      },
+      {
+        "id": "CAND-CONT-HUMAN-BAO-REMAINING-TESTS-20260905",
+        "status": "READY",
+        "ownerRole": null,
+        "nextAction": null,
+        "entityVersion": 1
+      },
+      {
+        "id": "CAND-CONT-LZ248-AXIONPORTAL-RIVAL-REVIEW-20260904",
+        "status": "READY",
+        "ownerRole": null,
+        "nextAction": null,
+        "entityVersion": 1
+      },
+      {
+        "id": "CAND-CORE-DE-ST-IMPLICIT-PRIORS-REVIEW-20260905",
+        "status": "READY",
+        "ownerRole": null,
+        "nextAction": null,
+        "entityVersion": 1
+      },
+      {
+        "id": "CAND-CORE-EUCLID-HALO-PROFILE-SYSTEMATICS-20260905",
+        "status": "READY",
+        "ownerRole": null,
+        "nextAction": null,
+        "entityVersion": 1
+      },
+      {
+        "id": "CAND-CORE-MOVING-LENS-VELOCITY-REVIEW-20260905",
+        "status": "READY",
+        "ownerRole": null,
+        "nextAction": null,
+        "entityVersion": 1
+      },
+      {
+        "id": "CAND-SCI-SPTD1-CORRIDOR-20260903",
+        "status": "READY",
+        "ownerRole": "ADVISOR",
+        "nextAction": null,
+        "entityVersion": 3
+      },
+      {
+        "id": "WORK::GZ-01-B01",
+        "status": "CHECKPOINTED",
+        "ownerRole": "DIRECTOR",
+        "nextAction": null,
+        "entityVersion": 3
+      },
+      {
+        "id": "WORK::GZ-01-B03-GALAXY-3D-MAP",
+        "status": "VERIFIED",
+        "ownerRole": "ADVISOR",
+        "nextAction": null,
+        "entityVersion": 6
+      },
+      {
+        "id": "WORK::GZ01-EROSITA-SUPERBATTERY-V1",
+        "status": "CHECKPOINTED",
+        "ownerRole": "EXECUTOR",
+        "nextAction": null,
+        "entityVersion": 4
+      },
+      {
+        "id": "WORK::OLYMPUS-SELECTION-AWARE-CHANGE-VALIDATION-001",
+        "status": "WAIT_DEPENDENCY",
+        "ownerRole": "EXECUTOR",
+        "nextAction": null,
+        "entityVersion": 6
+      },
+      {
+        "id": "WORK::SCI-DARK-SECTOR-DAO-DISCRIMINANT-FREEZE-20260911",
+        "status": "WAIT_DEPENDENCY",
+        "ownerRole": null,
+        "nextAction": null,
+        "entityVersion": 1
+      },
+      {
+        "id": "WORK::SCI-MG-SIGMA-FUNCTIONAL-RECONSTRUCTION-CONTRACT-20260910",
+        "status": "CHECKPOINTED",
+        "ownerRole": null,
+        "nextAction": null,
+        "entityVersion": 1
+      },
+      {
+        "id": "WORK::SCI-UNIFIED-DARK-SECTOR-SOURCE-BIND-20260911",
+        "status": "VERIFIED",
+        "ownerRole": "EXECUTOR",
+        "nextAction": null,
+        "entityVersion": 5
+      },
+      {
+        "id": "WORK::T-H0HOM26-002",
+        "status": "VERIFIED",
+        "ownerRole": "EXECUTOR",
+        "nextAction": null,
+        "entityVersion": 2
+      },
+      {
+        "id": "WORK::T-H0HOM26-009",
+        "status": "CHECKPOINTED",
+        "ownerRole": "EXECUTOR",
+        "nextAction": null,
+        "entityVersion": 6
+      }
+    ]
+  },
+  "testing": {
+    "groups": [],
+    "tests": [],
+    "historicalRegistry": {
+      "uniqueTests": 0,
+      "groupCount": 0,
+      "sourceFileId": null,
+      "sourceSheetId": null,
+      "sourceTitle": null,
+      "sourceSheet": null,
+      "accessMode": null
+    }
+  },
+  "health": {
+    "state": "SNAPSHOT",
+    "authority": "TOWER_V06",
+    "fingerprint": "sha256:atlas-v3-repair-20260923-live-tower",
+    "sourceVersion": "TOWER_V06@GOOGLE_DRIVE_PRIVATE:NEXO_TOWER_LIVE.json.gz",
+    "completeness": "PARTIAL_TOWER_HOT_SET",
+    "lastProjectionAt": "2026-09-23T15:10:00Z",
+    "olympusSync": {
+      "state": "UNKNOWN",
+      "source": "OLYMPUS",
+      "authority": "TOWER_V06",
+      "sourceVersion": "TOWER_V06@GOOGLE_DRIVE_PRIVATE:NEXO_TOWER_LIVE.json.gz",
+      "publicEntityCount": 0,
+      "privateDataExcluded": true
+    }
+  },
+  "provenance": {
+    "authority": "TOWER_V06@GOOGLE_DRIVE_PRIVATE",
+    "source": "NEXO_TOWER_LIVE.json.gz",
+    "sourceVersion": "TOWER_V06@GOOGLE_DRIVE_PRIVATE:NEXO_TOWER_LIVE.json.gz",
+    "projectionContract": "ATLAS_PROJECTION_V3"
+  }
+}
