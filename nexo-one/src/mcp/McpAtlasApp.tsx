@@ -149,6 +149,42 @@ function Graph({topology,search,mode,selected,onSelect,theme,view,onViewChange}:
   </div>;
 }
 
+function currentHashParams(){
+  return new URLSearchParams(window.location.hash.split('?',2)[1]||'');
+}
+function replaceCurrentHashParams(params:URLSearchParams){
+  const path=window.location.hash.replace(/^#\/?/,'').split('?',1)[0]||'cockpit/prova';
+  window.history.replaceState(null,'',`#/${path}?${params.toString()}`);
+}
+
+export function McpTopologyGraph({theme='dark'}:{theme?:McpTheme}){
+  const {loadPublishedContext}=useNexoStore();
+  const [topology,setTopology]=useState<Topology|null>(null);
+  const [error,setError]=useState('');
+  const [selected,setSelected]=useState<string|null>(null);
+  const [view,setView]=useState<GraphView>(()=>{
+    const value=typeof window!=='undefined'?currentHashParams().get('view'):null;
+    if(value==='2d'||value==='3d')return value;
+    try{return localStorage.getItem(GRAPH_VIEW_STORAGE_KEY)==='3d'?'3d':'2d';}catch{return'2d';}
+  });
+  useEffect(()=>{
+    const ctrl=new AbortController();
+    void loadPublishedContext<Topology>(false,ctrl.signal).then(value=>setTopology(value.topology)).catch(reason=>{
+      if((reason as {name?:string})?.name!=='AbortError')setError(String(reason));
+    });
+    return()=>ctrl.abort();
+  },[loadPublishedContext]);
+  const changeView=(next:GraphView)=>{
+    setView(next);
+    try{localStorage.setItem(GRAPH_VIEW_STORAGE_KEY,next);}catch{}
+    const params=currentHashParams();params.set('view',next);replaceCurrentHashParams(params);
+  };
+  if(!topology)return <div className="system-loading" role="status">{error?'A topologia de prova não pôde ser carregada.':'Carregando topologia de prova…'}</div>;
+  return <div className="proof-topology-surface" data-proof-graph-ready="true" data-proof-graph-view={view}>
+    <Graph topology={topology} search="" mode="all" selected={selected} onSelect={setSelected} theme={theme} view={view} onViewChange={changeView}/>
+  </div>;
+}
+
 export function McpAtlasApp({themeOverride,embedded=false}:{themeOverride?:string;onThemeToggle?:()=>void;embedded?:boolean}={}){
  const {loadPublishedContext}=useNexoStore();
  const [topology,setTopology]=useState<Topology|null>(null),[error,setError]=useState('');
