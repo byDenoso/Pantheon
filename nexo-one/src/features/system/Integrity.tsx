@@ -8,6 +8,7 @@ import {
   SeverityBadge, SourceRef, StatusBadge,
 } from '../../components/primitives.tsx';
 import { ProvenanceButton } from '../../components/provenance.tsx';
+import { CapabilityCountLine } from '../../components/CapabilityCountLine.tsx';
 import {
   capabilityById, capabilityCounts, capabilityMatrix, integrityIssues, provenanceOf,
 } from '../../viewmodels/system.ts';
@@ -46,6 +47,7 @@ export function CapabilitiesView({ state }: { state: SystemState }) {
   const counts = capabilityCounts(state);
   return (
     <>
+      <CapabilityCountLine counts={{total:state.capabilities.length,pass:counts.PASS,unverified:counts.UNVERIFIED,unknown:counts.UNKNOWN,retired:counts.RETIRED_RUNTIME,blocked:counts.BLOCKED}} />
       <div className="capability-counters">
         {(['PASS', 'UNVERIFIED', 'UNKNOWN', 'RETIRED_RUNTIME', 'BLOCKED'] as const).map(status => (
           <div key={status} className={`capability-counter tone-${toneOf(status)}`}>
