@@ -2,3 +2,12 @@
 @media(max-width:760px){.connection-banner{padding:15px;gap:10px;align-items:flex-start;flex-wrap:wrap}.banner-icon{font-size:20px}.connection-banner div{flex:1;min-width:200px}.connection-banner strong{font-size:12px;line-height:1.5}.connection-banner button{margin-left:26px;padding:3px 0}.section-head{padding:15px 0}.section-head>.eyebrow{max-width:100px;line-height:1.7}.item-row{padding:20px 0;gap:11px}.item-copy strong{font-size:13px}.item-copy>span{font-size:8px}.item-marker{min-width:21px}.row-end{gap:3px}.row-end .status{display:none}.empty-state{padding:30px 10px}.empty-state p{font-size:12px}.context-grid{grid-template-columns:repeat(3,1fr);gap:8px}.context-option{padding:13px 10px}.context-symbol{margin-bottom:8px}.modal{max-height:calc(100dvh - 20px)}.focus-drawer{inset:auto 0 0 0;width:100%;height:auto;max-height:92dvh;border-radius:14px 14px 0 0}.drawer-body{padding:22px}.drawer-body h2{font-size:22px}.provider-line{gap:10px}.provider-line .provider-pill{font-size:8px;padding:5px}.recall-form{flex-direction:column}.recall-form button{justify-content:center}.date-label{gap:5px}.section-head h2{font-size:13px}.diff-counts{gap:18px}.diff-counts dt{font-size:9px}}
 .learning-toggle{display:inline-flex;align-items:center;gap:8px;min-height:34px;padding-inline:11px;border-color:color-mix(in srgb,var(--accent) 35%,var(--line))}.learning-toggle b{color:var(--accent);font-size:10px;letter-spacing:.12em}.learning-toggle.has-filters{background:color-mix(in srgb,var(--accent) 12%,transparent)}
 .private-fallback{margin-top:20px;width:100%;justify-content:center}
+
+
+/* Prova keeps tables as the default consultation surface; graph is an explicit alternate view. */
+.proof-surface-switch{display:inline-flex;align-items:center;gap:2px;margin:0 0 12px;padding:2px;border:1px solid var(--line);border-radius:6px;background:var(--panel)}
+.proof-surface-switch button{height:28px;padding:0 10px;border:0;border-radius:5px;background:transparent;color:var(--muted);font-size:11px}
+.proof-surface-switch button.active{background:color-mix(in srgb,var(--accent) 10%,var(--raised));color:var(--accent);font-weight:600}
+.proof-topology-surface{min-height:560px}
+.proof-topology-surface .graph-shell{min-height:560px}
+@media(max-width:640px){.proof-topology-surface,.proof-topology-surface .graph-shell{min-height:500px}.proof-surface-switch{margin-bottom:8px}}
