@@ -3,6 +3,10 @@ import type {SyncStatus} from '../data/useSystem.ts';
 import type {ViewId} from '../app/navigation.ts';
 
 type ProductMode='inicio'|'ciencia'|'operacao'|'prova'|'sistema'|'mapa'|'pessoal';
+export interface ProductProvenance{
+  authority:string|null;storage:string|null;snapshot:string|null;stateFingerprint:string|null;
+  projectionFingerprint:string|null;commit:string|null;
+}
 const PATHS:Record<string,string>={
   inicio:'M2 8 8 2l6 6v6H9v-4H7v4H2z', ciencia:'M8 2v4m0 0a4 4 0 1 0 0 8 4 4 0 0 0 0-8m0 0 3-3',
   operacao:'M2 3h12M2 8h12M2 13h12', prova:'M3 2h10v12H3zM5 5h6m-6 3h6m-6 3h3',
@@ -12,9 +16,9 @@ const PATHS:Record<string,string>={
 export function ProductIcon({name,size=16}:{name:string;size?:number}){return <svg aria-hidden="true" width={size} height={size} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d={PATHS[name]||PATHS.cockpit}/></svg>}
 
 export function InstrumentHeader({
-  mode,view,theme,syncStatus,readAt,fingerprint,command,commandRef,onCommandChange,onCommandSubmit,onThemeToggle,onSync,onNavigate,onAccountClick,privateSession,
+  mode,view,theme,syncStatus,readAt,provenance,command,commandRef,onCommandChange,onCommandSubmit,onThemeToggle,onSync,onNavigate,onAccountClick,privateSession,
 }:{
-  mode:ProductMode;view:ViewId;theme:string;syncStatus:SyncStatus;readAt:string|null;fingerprint:string;command:string;
+  mode:ProductMode;view:ViewId;theme:string;syncStatus:SyncStatus;readAt:string|null;provenance:ProductProvenance;command:string;
   commandRef:RefObject<HTMLInputElement|null>;onCommandChange:(value:string)=>void;onCommandSubmit:(event:FormEvent)=>void;
   onThemeToggle:()=>void;onSync:()=>void;onNavigate:(mode:ProductMode)=>void;onAccountClick?:()=>void;privateSession?:boolean;
 }){
@@ -30,11 +34,18 @@ export function InstrumentHeader({
         <ProductIcon name={id}/><span>{label}</span>
       </button>)}
     </nav>
-    <div className="instrument-provenance" title={fingerprint||'Aguardando fingerprint da projeção'}>
-      <span className="instrument-live-dot"/>
-      <strong>TOWER G6</strong><code>{fingerprint?fingerprint.slice(0,14):'fp pendente'}</code>
-      <span>sync {freshness}</span><span className="instrument-schedulers">Science :20 · Exec :05 · drift 0</span>
-    </div>
+    <details className="instrument-provenance-menu">
+      <summary><span className="instrument-live-dot"/><strong>{provenance.authority||'Autoridade não publicada'}</strong><span>sync {freshness}</span></summary>
+      <div className="instrument-provenance-popover" role="group" aria-label="Proveniência publicada">
+        <div><span>Autoridade</span><code>{provenance.authority||'não publicado'}</code></div>
+        <div><span>Armazenamento</span><code>{provenance.storage||'não publicado'}</code></div>
+        <div><span>Snapshot</span><code>{provenance.snapshot||'não publicado'}</code></div>
+        <div><span>Fingerprint do estado</span><code>{provenance.stateFingerprint||'não publicado'}</code></div>
+        <div><span>Fingerprint da projeção</span><code>{provenance.projectionFingerprint||'não publicado'}</code></div>
+        <div><span>Commit</span><code>{provenance.commit||'não publicado'}</code></div>
+        <p>Google Drive privado é a origem autoritativa publicada; GitHub é projeção/espelho de entrega.</p>
+      </div>
+    </details>
     <form className="instrument-search" onSubmit={onCommandSubmit}>
       <ProductIcon name="RECALL"/><input ref={commandRef} value={command} onChange={e=>onCommandChange(e.target.value)} placeholder="Ir para…" aria-label="Buscar e navegar"/>
       <kbd>⌘K</kbd>
