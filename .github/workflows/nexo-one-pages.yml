@@ -1281,6 +1281,14 @@ jobs:
           if(mcp.source?.source_storage!=='GOOGLE_DRIVE_PRIVATE'||mcp.source?.source_snapshot_id!==manifest.source_snapshot_id)throw new Error('MCP_TOPOLOGY_FRESHNESS_SOURCE_INVALID');
           if(mcp.source?.source_state_fingerprint!==manifest.source_state_fingerprint||mcp.source?.projection_fingerprint!==manifest.projection_fingerprint)throw new Error('MCP_TOPOLOGY_FRESHNESS_FINGERPRINT_MISMATCH');
           if(!Array.isArray(mcp.nodes)||mcp.nodes.length<8||!Array.isArray(mcp.links)||mcp.links.length<7)throw new Error('MCP_TOPOLOGY_EMPTY');
+          const registeredCapabilityNodes=mcp.nodes.filter(node=>node.kind==='CAPABILITY');
+          const registeredCapabilityIds=registeredCapabilityNodes.map(node=>String(node.meta?.id||node.id||'')).filter(Boolean);
+          if(registeredCapabilityIds.length!==new Set(registeredCapabilityIds).size)throw new Error('MCP_CAPABILITY_ID_DUPLICATE');
+          if(mcp.stats?.capabilities!==registeredCapabilityNodes.length)throw new Error('MCP_CAPABILITY_REGISTRY_COUNT_MISMATCH');
+          const systemCapabilityIds=(system.capabilities||[]).map(item=>String(item.capability_id||'')).filter(Boolean);
+          if(systemCapabilityIds.length!==new Set(systemCapabilityIds).size)throw new Error('SYSTEM_CAPABILITY_ID_DUPLICATE');
+          const outsidePass=(system.capabilities||[]).filter(item=>item.status!=='PASS'&&item.status!=='RETIRED_RUNTIME').length;
+          console.log(`CAPABILITY_SEMANTICS_PARITY registered=${registeredCapabilityIds.length} system_total=${systemCapabilityIds.length} system_outside_pass=${outsidePass} projection=${manifest.projection_fingerprint}`);
 
           if(galaxy.contract!=='NEXO_ONE_GALAXY_V1')throw new Error('GALAXY_CONTRACT_INVALID');
           if(galaxy.provenance?.source_fingerprint!==manifest.projection_fingerprint)throw new Error('GALAXY_NOT_BOUND_TO_TOWER_PROJECTION');

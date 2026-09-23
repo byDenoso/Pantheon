@@ -1,14 +1,10 @@
 <!doctype html>
-<html lang="pt-BR">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-    <meta name="theme-color" content="#050505" />
-    <meta name="description" content="NEXO MCP Atlas — visualização 3D da estrutura canônica do MCP, capabilities, runtimes e ferramentas." />
-    <title>NEXO MCP Atlas</title>
-  </head>
-  <body>
-    <div id="mcp-root"></div>
-    <script type="module" src="/src/mcp/main.tsx"></script>
-  </body>
-</html>
+<html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta http-equiv="refresh" content="0;url=../#/sistema"><title>NEXO · Sistema</title></head>
+<body><p>Abrindo Sistema NEXO…</p><script>
+  const destination = new URL('../', location.href);
+  const search = new URLSearchParams(location.search);
+  destination.hash = '/sistema';
+  if (location.hash) search.set('legacy', location.hash.slice(1));
+  if (search.size) destination.hash += `?${search.toString()}`;
+  location.replace(destination.toString());
+</script></body></html>

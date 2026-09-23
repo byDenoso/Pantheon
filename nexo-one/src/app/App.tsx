@@ -1,12 +1,13 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { ActionRecord, InboxItem } from '../contracts/system.ts';
 import { useWorld } from './useWorld.ts';
-import { useSystem } from '../data/useSystem.ts';
+import { useNexoStore } from '../data/NexoStore.tsx';
 import { useSession } from './useSession.ts';
 import { useIsMobile } from './useMediaQuery.ts';
 import { SCENARIOS } from '../data/fixtures/scenarios.ts';
 import {
   MOBILE_PRIMARY, NAV_GROUPS, VIEW_TITLES, entryFor, hashForView, isSystemView, viewFromHash, type ViewId,
+  isSystemRoute,
 } from './navigation.ts';
 import { parseCommand } from './command.ts';
 import { EMPTY_FILTERS, type GraphFilters } from '../viewmodels/graph.ts';
@@ -36,6 +37,7 @@ const PUBLIC_NEXO_BASE = String(import.meta.env.VITE_PUBLIC_NEXO_BASE || 'https:
 const publicNexoUrl = (path = '') => new URL(path, PUBLIC_NEXO_BASE).toString();
 const AtlasView = lazy(() => import('../features/system/Atlas.tsx').then(module => ({ default: module.AtlasView })));
 const LearningView = lazy(() => import('../features/system/Atlas.tsx').then(module => ({ default: module.LearningView })));
+const EmbeddedMcp = lazy(() => import('../mcp/EmbeddedMcp.tsx'));
 
 export default function App() {
   const isMobile = useIsMobile();
@@ -45,6 +47,7 @@ export default function App() {
     const saved = stored('nexo-view', 'OVERVIEW') as ViewId;
     return ALL_VIEWS.includes(saved) ? saved : 'OVERVIEW';
   });
+  const [systemRoute, setSystemRoute] = useState(() => typeof window !== 'undefined' && isSystemRoute(window.location.hash));
   const [theme, setTheme] = useState(() => stored('nexo-theme', 'dark'));
   const [command, setCommand] = useState('');
   const [notice, setNotice] = useState('');
@@ -61,7 +64,7 @@ export default function App() {
   const [personalContext, setPersonalContext] = useState('NEXO');
 
   const commandRef = useRef<HTMLInputElement>(null);
-  const system = useSystem();
+  const {system} = useNexoStore();
   const world = useWorld();
   const refreshWorld = world.refresh;
   const session = useSession(useCallback(() => refreshWorld(true), [refreshWorld]));
@@ -73,6 +76,8 @@ export default function App() {
   }, []);
   useEffect(() => {
     const restore = () => {
+      const isSystem = isSystemRoute(window.location.hash);
+      setSystemRoute(isSystem);
       const next = viewFromHash(window.location.hash);
       if (next) { setView(next); setNotice(''); setMoreOpen(false); }
     };
@@ -95,11 +100,8 @@ export default function App() {
   }, []);
 
   const go = useCallback((next: ViewId) => {
-    if (next === 'ATLAS') {
-      window.location.assign(publicNexoUrl('atlas3d/'));
-      return;
-    }
     setView(next);
+    setSystemRoute(false);
     setNotice('');
     setMoreOpen(false);
     const hash = hashForView(next);
@@ -107,6 +109,14 @@ export default function App() {
     // Cada superfície começa no próprio cabeçalho. Sem este reset, trocar de uma
     // tela longa para outra preserva o scroll anterior e pode esconder título,
     // filtros e estado inicial da nova seção.
+    window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+  }, []);
+
+  const goSystem = useCallback(() => {
+    setSystemRoute(true);
+    setNotice('');
+    setMoreOpen(false);
+    if (window.location.hash !== '#/sistema') window.history.pushState(null, '', '#/sistema');
     window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
   }, []);
 
@@ -127,6 +137,8 @@ export default function App() {
   const entry = entryFor(view);
   const titles = VIEW_TITLES[view];
   const scenario = useMemo(() => SCENARIOS.find(s => s.id === system.scenarioId) ?? SCENARIOS[0], [system.scenarioId]);
+
+  if (systemRoute) return <Suspense fallback={<LoadingState label="Abrindo Sistema…" />}><EmbeddedMcp /></Suspense>;
 
   const systemContent = () => {
     const state = system.state;
@@ -178,8 +190,8 @@ export default function App() {
             <span className="brand-descriptor">PERSONAL COMMAND DECK</span>
           </a>
           <div className="header-tools">
-            <a className="product-switch" href={publicNexoUrl('mcp/')} title="Abrir a topologia MCP 3D">
-              MCP Atlas <span>↗</span>
+            <a className="product-switch" href="#/sistema" onClick={event => { event.preventDefault(); goSystem(); }} title="Abrir a topologia MCP">
+              Sistema <span>↗</span>
             </a>
             <span className="header-date">
               {new Intl.DateTimeFormat('pt-BR', { weekday: 'short', day: '2-digit', month: 'short' }).format(new Date())}
@@ -342,7 +354,7 @@ export default function App() {
               ))}
               <div className="sheet-group product-group">
                 <span className="eyebrow">ESTRUTURA</span>
-                <a className="sheet-item product-sheet-link" href={publicNexoUrl('mcp/')}>
+                <a className="sheet-item product-sheet-link" href="#/sistema" onClick={event => { event.preventDefault(); goSystem(); }}>
                   <i aria-hidden="true">⌬</i>
                   <span><strong>MCP Atlas</strong><small>Tools, capabilities, runtimes e roles no grafo 3D</small></span>
                 </a>
