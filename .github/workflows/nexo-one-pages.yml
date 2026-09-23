@@ -454,8 +454,12 @@ jobs:
             local outfile="$2"
             shift 2
             for attempt in 1 2 3; do
-              "${chrome_bin}" "$@" > "${outfile}"
+              local chrome_status=0
+              "${chrome_bin}" "$@" > "${outfile}" || chrome_status=$?
               if grep -Fq "${marker}" "${outfile}"; then
+                if [ "${chrome_status}" -ne 0 ]; then
+                  echo "::warning::Chromium exited ${chrome_status} after writing the expected readback marker ${marker}"
+                fi
                 return 0
               fi
               echo "::warning::Atlas visual readback attempt ${attempt} missed ${marker}; retrying fresh Chromium"
