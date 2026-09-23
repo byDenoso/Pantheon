@@ -69,13 +69,14 @@ export function NexoGraph({
   };
 
   const count=<div className="nexo-graph-count"><strong>{visible.length}</strong> visíveis · <span>{model.nodes.length} total</span> · <span>{relationCount} relações</span></div>;
+  const illuminationToggle=!tableMode&&<button type="button" className="nexo-illumination-toggle" aria-label="Iluminar todos os nós e relações" aria-pressed={illuminated} title={illuminated?"Apagar iluminação de todos os nós e relações":"Iluminar todos os nós e relações"} onClick={()=>setIlluminated(value=>!value)}>{illuminated?'Apagar iluminação':'Iluminar tudo'}</button>;
   return <section ref={hostRef} tabIndex={-1} className="nexo-graph" data-graph-view={view} data-graph-illuminated={illuminated} data-graph-visible={visible.length} data-graph-total={model.nodes.length} data-toolbar-rows={toolbarFilters?2:1}>
     <div className="nexo-graph-toolbar">
       <div className="nexo-graph-toolbar-row nexo-graph-toolbar-primary">
         <div className="nexo-graph-toolbar-context">{toolbarContext||(!toolbarFilters&&count)}</div>
         <div className="nexo-graph-actions">
           {showViewSwitch&&<GraphViewSwitch view={view} onChange={onViewChange}/>}
-          {!toolbarFilters&&!tableMode&&<button type="button" className="nexo-illumination-toggle" aria-label="Iluminar todos os nós e relações" aria-pressed={illuminated} title="Iluminar todos os nós e relações" onClick={()=>setIlluminated(value=>!value)}>Iluminar tudo</button>}
+          {!toolbarFilters&&illuminationToggle}
           {onFit&&<button type="button" onClick={onFit}>Enquadrar</button>}
           {onReset&&<button type="button" onClick={onReset}>Resetar</button>}
           <button type="button" onClick={fullscreen}>Tela cheia</button>
@@ -84,7 +85,7 @@ export function NexoGraph({
       </div>
       {toolbarFilters&&<div className="nexo-graph-toolbar-row nexo-graph-toolbar-secondary">
         <div className="nexo-graph-filters">
-          {!tableMode&&<button type="button" className="nexo-illumination-toggle" aria-label="Iluminar todos os nós e relações" aria-pressed={illuminated} title="Iluminar todos os nós e relações" onClick={()=>setIlluminated(value=>!value)}>Iluminar tudo</button>}
+          {illuminationToggle}
           {toolbarFilters}
         </div>
         {count}

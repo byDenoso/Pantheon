@@ -631,7 +631,7 @@ function Metro2DView({
           'lit-focus-active': { opacity: 1, shadowBlur: 16, shadowColor: '#a78bfa' },
           'lit-focus-neighbor': { opacity: .98, shadowBlur: 12, shadowColor: '#8b5cf6' },
           'lit-focus-related': { opacity: .84, shadowBlur: 9, shadowColor: '#8b5cf6' },
-          'lit-focus-muted': { opacity: .48, shadowBlur: 7, shadowColor: '#7c3aed' },
+          'lit-focus-muted': { opacity: .78, shadowBlur: 7, shadowColor: '#7c3aed' },
         },
       },
       edge: {
@@ -1334,7 +1334,7 @@ function applyThreeSelection(runtime: ThreeRuntime, selectedId: string | null) {
       const baseOpacity = Number(neuronGlow.userData.baseOpacity || .10);
       const litOpacity = Math.max(.32, baseOpacity * 2.8);
       material.opacity = hovered || selected ? Math.max(.52, litOpacity) : faded
-        ? runtime.illuminated ? .25 : .012
+        ? runtime.illuminated ? .46 : .012
         : related ? runtime.illuminated ? litOpacity * .76 : baseOpacity * .42
           : runtime.illuminated ? litOpacity : baseOpacity;
       const baseScale = Number(neuronGlow.userData.baseScale || neuronGlow.scale.x);
@@ -1349,17 +1349,17 @@ function applyThreeSelection(runtime: ThreeRuntime, selectedId: string | null) {
         : related ? runtime.illuminated ? litEmissive * .84 : base * .66
           : runtime.illuminated ? litEmissive : base;
       core.material.transparent = Boolean(focusId);
-      core.material.opacity = faded ? runtime.illuminated ? .58 : .12
+      core.material.opacity = faded ? runtime.illuminated ? .82 : .12
         : related ? runtime.illuminated ? .84 : .48 : 1;
     }
     const membrane = group.userData.membrane as THREE.Mesh | undefined;
     if (membrane) (membrane.material as THREE.MeshBasicMaterial).opacity = faded
-      ? runtime.illuminated ? .046 : .012
+      ? runtime.illuminated ? .082 : .012
       : related ? runtime.illuminated ? .078 : .025
         : Number(membrane.userData.baseOpacity || .045) * (runtime.illuminated ? 2.2 : 1);
     const status = group.userData.statusNucleus as THREE.Mesh | undefined;
     if (status) (status.material as THREE.MeshBasicMaterial).opacity = faded
-      ? runtime.illuminated ? .48 : .04
+      ? runtime.illuminated ? .78 : .04
       : related ? runtime.illuminated ? .72 : .40 : runtime.illuminated ? .96 : .86;
     const label = group.userData.label as THREE.Sprite | undefined;
     if (label) label.visible = id === selectedId || hovered || level <= 1 || group.userData.isHub === true
@@ -1368,7 +1368,7 @@ function applyThreeSelection(runtime: ThreeRuntime, selectedId: string | null) {
   runtime.pulses.forEach(edge => {
     const a = levels.get(edge.sourceId) ?? 3, b = levels.get(edge.targetId) ?? 3;
     const edgeLevel = Math.max(a, b);
-    const factor = !focusId ? 1 : edgeLevel <= 1 ? 1 : edgeLevel === 2 ? (runtime.illuminated ? .68 : .34) : (runtime.illuminated ? .22 : .055);
+    const factor = !focusId ? 1 : edgeLevel <= 1 ? 1 : edgeLevel === 2 ? (runtime.illuminated ? .68 : .34) : (runtime.illuminated ? .34 : .055);
     (edge.core.material as THREE.MeshBasicMaterial).opacity = edge.baseCoreOpacity * factor * (runtime.illuminated ? 1.8 : 1);
     (edge.glow.material as THREE.MeshBasicMaterial).opacity = edge.baseGlowOpacity * factor * (runtime.illuminated ? 2.8 : 1);
     edge.particle.visible = !focusId || edgeLevel <= 2;
