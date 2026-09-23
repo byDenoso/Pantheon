@@ -245,7 +245,7 @@ function Graph({topology,search,mode,selected,onSelect,theme,view}:{topology:Top
   </div>;
 }
 
-export function McpAtlasApp(){
+export function McpAtlasApp({themeOverride,onThemeToggle,embedded=false}:{themeOverride?:string;onThemeToggle?:()=>void;embedded?:boolean}={}){
   const {loadPublishedContext}=useNexoStore();
   const [topology,setTopology]=useState<Topology|null>(null);
   const topologyRef=useRef<Topology|null>(null);
@@ -259,13 +259,13 @@ export function McpAtlasApp(){
   const [syncState,setSyncState]=useState<SyncState>('idle');
   const [checkedAt,setCheckedAt]=useState<Date|null>(null);
   const [theme,setTheme]=useState<McpTheme>(initialTheme);
+  const activeTheme=(themeOverride as McpTheme|undefined)||theme;
   const [graphView,setGraphView]=useState<GraphView>(initialGraphView);
 
   useEffect(()=>{
-    document.documentElement.dataset.mcpTheme=theme;
-    document.documentElement.style.colorScheme=theme;
-    try{window.localStorage.setItem(THEME_STORAGE_KEY,theme);}catch{}
-  },[theme]);
+    document.documentElement.dataset.mcpTheme=activeTheme;
+    if(!embedded){document.documentElement.style.colorScheme=activeTheme;try{window.localStorage.setItem(THEME_STORAGE_KEY,activeTheme);}catch{}}
+  },[activeTheme,embedded]);
   useEffect(()=>{try{window.localStorage.setItem(GRAPH_VIEW_STORAGE_KEY,graphView);}catch{}},[graphView]);
 
   const loadTopology=useCallback(async(manual=false,signal?:AbortSignal)=>{
@@ -390,12 +390,12 @@ export function McpAtlasApp(){
     {mode:'roles',index:'04',title:'Roles declaradas',body:String(topology.stats.roles)+' papéis conectados às capabilities declaradas.'},
   ] : [];
 
-  return <div className="mcp-site"
+  return <div className="mcp-site" data-mcp-embedded={embedded?'true':'false'}
     data-mcp-ready={topology?'true':'false'}
     data-mcp-selected={selectedNode?.label||''}
     data-mcp-selected-kind={selectedNode?.kind||''}
     data-mcp-mode={mode}
-    data-mcp-theme={theme}
+    data-mcp-theme={activeTheme}
     data-mcp-graph-view={graphView}
     data-mcp-query={search}
     data-mcp-node-count={topology?.nodes.length||0}
@@ -404,8 +404,8 @@ export function McpAtlasApp(){
       <a className="mcp-brand" href={COCKPIT_ROUTE}><span className="mark">N</span><span>NEXO <em>ONE</em></span><b>MCP ATLAS</b></a>
       <div className="nav-links"><a href={COCKPIT_ROUTE}>Cockpit</a><a href="#topology">Topologia</a><a href="#architecture">Relações</a><a href="#source">Fonte</a></div>
       <div className="nav-utilities">
-        <button className="theme-toggle" type="button" onClick={()=>setTheme(current=>current==='dark'?'light':'dark')}
-          aria-label={theme==='dark'?'Ativar tema claro':'Ativar tema escuro'}>{theme==='dark'?'☼':'☾'}</button>
+        <button className="theme-toggle" type="button" onClick={()=>onThemeToggle?onThemeToggle():setTheme(current=>current==='dark'?'light':'dark')}
+          aria-label={activeTheme==='dark'?'Ativar tema claro':'Ativar tema escuro'}>{activeTheme==='dark'?'☼':'☾'}</button>
         <span className="live-pill"><i/> TOWER_V06</span>
       </div>
     </nav>
@@ -449,7 +449,7 @@ export function McpAtlasApp(){
             </div>
           </div>
           {error&&!topology?<div className="graph-error"><b>Topologia indisponível</b><span>{error}</span></div>:
-            topology?<Graph topology={topology} search={search} mode={mode} selected={selected} onSelect={setSelected} theme={theme} view={graphView}/>:
+            topology?<Graph topology={topology} search={search} mode={mode} selected={selected} onSelect={setSelected} theme={activeTheme} view={graphView}/>:
             <div className="graph-loading"><span/><p>Compilando topologia MCP…</p></div>}
           {selectedNode&&<aside className="node-inspector">
             <button className="close" onClick={()=>setSelected(null)}>×</button>

@@ -18,6 +18,7 @@ import { LoadingState, Surface } from '../components/states.tsx';
 import { StatusBadge } from '../components/primitives.tsx';
 import { ActionCard, ExecutionTrace, HumanInboxItem } from '../components/composites.tsx';
 import { Modal } from '../shell/Modal.tsx';
+import { InstrumentHeader, ProductIcon } from '../shell/InstrumentHeader.tsx';
 import { Overview } from '../features/system/Overview.tsx';
 import { ActionsView, ExecutionView, InboxView } from '../features/system/Operations.tsx';
 import { CapabilitiesView, IntegrityView, SourcesView, TruthGraphView } from '../features/system/Integrity.tsx';
@@ -138,7 +139,32 @@ export default function App() {
   const titles = VIEW_TITLES[view];
   const scenario = useMemo(() => SCENARIOS.find(s => s.id === system.scenarioId) ?? SCENARIOS[0], [system.scenarioId]);
 
-  if (systemRoute) return <Suspense fallback={<LoadingState label="Abrindo Sistema…" />}><EmbeddedMcp /></Suspense>;
+  const currentMode = systemRoute ? 'sistema' : view === 'ATLAS' ? 'atlas' : window.location.hash.startsWith('#/observatorio') ? 'observatorio' : 'cockpit';
+  const navigateMode = (mode:'observatorio'|'cockpit'|'atlas'|'sistema') => {
+    if(mode==='cockpit'){go('OVERVIEW');return;}
+    if(mode==='atlas'){go('ATLAS');return;}
+    if(mode==='sistema'){goSystem();return;}
+    setSystemRoute(false);setView('OVERVIEW');window.history.pushState(null,'','#/observatorio');window.scrollTo({top:0,left:0,behavior:'auto'});
+  };
+  const header = <InstrumentHeader mode={currentMode} view={view} theme={theme} syncStatus={system.syncing?'SYNCING':system.syncStatus}
+    readAt={system.lastSuccessfulReadAt} fingerprint={system.state?.bus.fingerprint||''} command={command} commandRef={commandRef}
+    onCommandChange={setCommand} onCommandSubmit={submitCommand} onThemeToggle={()=>setTheme(theme==='dark'?'light':'dark')}
+    onSync={system.sync} onNavigate={navigateMode} onAccountClick={()=>setLoginOpen(true)} privateSession={session.session.authenticated}/>;
+  const rail = <nav className="nav-rail" aria-label="Navegação principal">
+    {NAV_GROUPS.map(group=><div key={group.id} className="nav-group"><span className="eyebrow">{group.label}</span>
+      {group.entries.map(item=><button key={item.id} className={`nav-item${view===item.id?' active':''}`} onClick={()=>go(item.id)}
+        aria-current={view===item.id?'page':undefined} title={`${item.label} · ${item.hint}`} aria-label={item.label}>
+        <ProductIcon name={item.id}/><span>{item.label}</span>
+        {item.id==='INBOX'&&summary&&summary.needsHuman>0&&<b>{summary.needsHuman}</b>}
+        {item.id==='TRUTHGRAPH'&&summary&&summary.conflicts.length>0&&<b className="alarm">{summary.conflicts.length}</b>}
+      </button>)}
+    </div>)}
+  </nav>;
+
+  if (systemRoute) return <ProvenanceProvider><div className={`cockpit unified-shell system-route${isMobile?' mobile':''}`} data-view="SYSTEM" data-access={session.session.authenticated?'PRIVATE':'PUBLIC'}>
+    <a className="skip-link" href="#workspace">Ir ao conteúdo</a>{header}<div className="cockpit-body">{!isMobile&&rail}
+      <main id="workspace" tabIndex={-1} className="workspace system-workspace"><Suspense fallback={<LoadingState label="Abrindo Sistema…" />}><EmbeddedMcp theme={theme} onThemeToggle={()=>setTheme(theme==='dark'?'light':'dark')}/></Suspense></main>
+    </div></div></ProvenanceProvider>;
 
   const systemContent = () => {
     const state = system.state;
@@ -160,12 +186,6 @@ export default function App() {
     }
   };
 
-  const openSession = () => {
-    // Avatar is a local account/session control. Never replace the current
-    // cockpit just because a private runtime lives on another origin.
-    setLoginOpen(true);
-  };
-
   const openPrivateCockpit = () => {
     if (!PRIVATE_COCKPIT_URL) return;
     try {
@@ -179,37 +199,10 @@ export default function App() {
 
   return (
     <ProvenanceProvider>
-      <div className={`cockpit${isMobile ? ' mobile' : ''}`} data-view={view} data-access={session.session.authenticated?'PRIVATE':'PUBLIC'}>
+      <div className={`cockpit unified-shell${isMobile ? ' mobile' : ''}`} data-view={view} data-access={session.session.authenticated?'PRIVATE':'PUBLIC'}>
         <a className="skip-link" href="#workspace">Ir ao conteúdo</a>
 
-        <header className="topbar">
-          <a href="#overview" className="brand" onClick={event => { event.preventDefault(); go('OVERVIEW'); }}>
-            <span className="brand-mark">N</span>
-            <strong>NEXO <span>ONE</span></strong>
-            <span className="brand-descriptor">PERSONAL COMMAND DECK</span>
-          </a>
-          <div className="header-tools">
-            <a className="product-switch" href="#/sistema" onClick={event => { event.preventDefault(); goSystem(); }} title="Abrir a topologia MCP">
-              Sistema <span>↗</span>
-            </a>
-            <span className="header-date">
-              {new Intl.DateTimeFormat('pt-BR', { weekday: 'short', day: '2-digit', month: 'short' }).format(new Date())}
-            </span>
-            {summary && (
-              <button className={`health-button tone-${toneOf(summary.state)}`} onClick={() => go('SOURCES')}>
-                <i aria-hidden="true" className={`glyph glyph-${toneOf(summary.state)}`} />
-                <span>{label(summary.state)}</span>
-              </button>
-            )}
-            {session.session.authenticated && <span className="private-session-badge" role="status">PRIVATE</span>}
-            <button className="icon-btn" onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-              aria-label={theme === 'dark' ? 'Ativar tema claro' : 'Ativar tema escuro'}>
-              {theme === 'dark' ? '☼' : '☾'}
-            </button>
-            <button className={`avatar${session.session.authenticated?' private':''}`} onClick={openSession}
-              aria-label="Abrir conta e sessão">D</button>
-          </div>
-        </header>
+        {header}
 
         {system.sourceKind === 'fixture' && (
           <div className="fixture-strip" role="status">
@@ -225,37 +218,10 @@ export default function App() {
           </div>
         )}
 
-        <div className="command-wrap">
-          <form className="command-bar" onSubmit={submitCommand}>
-            <span aria-hidden="true">⌕</span>
-            <input ref={commandRef} value={command} onChange={event => setCommand(event.target.value)}
-              placeholder={isMobile ? "Buscar ou ir para…" : "Ir para uma visão, filtrar o Atlas ou consultar o registro"} aria-label="Comando global" />
-            <kbd>Ctrl K</kbd>
-            <button className="command-submit" aria-label="Executar comando">↵</button>
-          </form>
-        </div>
+
 
         <div className="cockpit-body">
-          {!isMobile && (
-            <nav className="nav-rail" aria-label="Navegação principal">
-              {NAV_GROUPS.map(group => (
-                <div key={group.id} className="nav-group">
-                  <span className="eyebrow">{group.label}</span>
-                  {group.entries.map(item => (
-                    <button key={item.id} className={`nav-item${view === item.id ? ' active' : ''}`}
-                      onClick={() => go(item.id)} aria-current={view === item.id ? 'page' : undefined} title={item.hint}>
-                      <i aria-hidden="true">{item.glyph}</i>
-                      <span>{item.label}</span>
-                      {item.id === 'INBOX' && summary && summary.needsHuman > 0 && <b>{summary.needsHuman}</b>}
-                      {item.id === 'TRUTHGRAPH' && summary && summary.conflicts.length > 0 && (
-                        <b className="alarm">{summary.conflicts.length}</b>
-                      )}
-                    </button>
-                  ))}
-                </div>
-              ))}
-            </nav>
-          )}
+          {!isMobile && rail}
 
           <main id="workspace" tabIndex={-1} className="workspace">
             <div className="workspace-heading">
@@ -267,20 +233,6 @@ export default function App() {
                 <h1>{titles.title}</h1>
                 <p>{titles.lead}</p>
               </div>
-              {isSystemView(view) && (
-                <button
-                  className={`sync-button sync-${system.syncStatus.toLowerCase()}`}
-                  onClick={system.sync}
-                  disabled={system.syncing || (!system.state && system.load === 'LOADING')}
-                  aria-label={system.syncing ? 'Sincronizando Tower e publicação do sistema' : 'Sincronizar Tower e publicação do sistema'}
-                >
-                  <span aria-hidden="true" className={system.syncing ? 'sync-glyph spinning' : 'sync-glyph'}>↻</span>
-                  <span className="sync-label">
-                    <span>{system.syncing ? 'Sincronizando' : 'Sincronizar'}</span>
-                    {system.syncMessage && <small role="status" aria-live="polite">{system.syncMessage}</small>}
-                  </span>
-                </button>
-              )}
             </div>
 
             {notice && (
@@ -324,14 +276,14 @@ export default function App() {
               return (
                 <button key={id} className={view === id ? 'active' : ''} onClick={() => go(id)}
                   aria-current={view === id ? 'page' : undefined}>
-                  <i aria-hidden="true">{item.glyph}</i>
+                  <ProductIcon name={item.id}/>
                   <span>{item.label}</span>
                   {id === 'INBOX' && summary && summary.needsHuman > 0 && <b>{summary.needsHuman}</b>}
                 </button>
               );
             })}
             <button className={moreOpen ? 'active' : ''} onClick={() => setMoreOpen(true)} aria-expanded={moreOpen}>
-              <i aria-hidden="true">⋯</i><span>Mais</span>
+              <ProductIcon name="ACTIONS"/><span>Mais</span>
             </button>
           </nav>
         )}
@@ -345,7 +297,7 @@ export default function App() {
                   {group.entries.map(item => (
                     <button key={item.id} className={`sheet-item${view === item.id ? ' active' : ''}`}
                       onClick={() => go(item.id)}>
-                      <i aria-hidden="true">{item.glyph}</i>
+                      <ProductIcon name={item.id}/>
                       <span><strong>{item.label}</strong><small>{item.hint}</small></span>
                     </button>
                   ))}
