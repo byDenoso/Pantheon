@@ -13,7 +13,7 @@ test('canonical cockpit routes and legacy view hashes resolve to the same screen
     ['#/cockpit/pipeline', 'ACTIONS'], ['#/cockpit/pipeline?view=execution', 'EXECUTION'],
     ['#truthgraph', 'TRUTHGRAPH'], ['#capabilities', 'CAPABILITIES'], ['#sources', 'SOURCES'],
     ['#integrity', 'INTEGRITY'], ['#/cockpit/prova?view=integrity', 'INTEGRITY'],
-    ['#atlas', 'ATLAS'], ['#/atlas?lente=aprendizado', 'LEARNING'],
+    ['#atlas', 'ATLAS'], ['#/atlas?lente=aprendizado', 'ATLAS'], ['#/cockpit/ciencia?view=learning', 'LEARNING'],
     ['#now', 'NOW'], ['#/cockpit/pessoal/recall', 'RECALL'],
   ];
   for (const [hash, expected] of cases) assert.equal(viewFromHash(hash), expected, hash);
