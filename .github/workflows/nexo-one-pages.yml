@@ -482,7 +482,7 @@ jobs:
 
           capture_atlas() {
             local name="$1" width="$2" height="$3" theme="$4" view="$5"
-            local url="${base}/atlas3d/?theme=${theme}&view=${view}&expand=all"
+            local url="${base}/atlas3d/?theme=${theme}&view=${view}&expand=all&readback=1"
             local dom="/tmp/atlas-${name}.html"
             dump_until_ready 'data-atlas-ready="true"' "${dom}" \
               --headless=new --no-sandbox --disable-dev-shm-usage --hide-scrollbars \
@@ -752,6 +752,7 @@ jobs:
         with:
           name: atlas3d-production-readback
           path: |
+            /tmp/atlas-*.html
             /tmp/atlas-desktop-1440-dark.png
             /tmp/atlas-desktop-1024-dark.png
             /tmp/atlas-mobile-390-dark.png

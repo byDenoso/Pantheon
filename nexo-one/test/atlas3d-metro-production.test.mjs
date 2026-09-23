@@ -526,7 +526,7 @@ test('dedicated Atlas production page uses Metro renderer, G6 and deterministic 
   assert.match(app, /learningRef/);
   assert.match(app, /navigationRevision !== model\.revision/);
   assert.match(app, /activeExpanded = navigationStale \? new Set\(initialExpanded\) : expanded/);
-  assert.match(app, /URLSearchParams/);
+  assert.match(app, /atlasRouteParams/);
   assert.match(app, /mode.*=== '3d'/);
   assert.match(app, /<strong>3D<\/strong><small>Explorar<\/small>/);
   assert.match(app, /<strong>2D<\/strong><small>Metro<\/small>/);

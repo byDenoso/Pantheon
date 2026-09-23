@@ -1,3 +1,4 @@
+import { atlasRouteParam } from './route-params.ts';
 import {
   useEffect,
   useMemo,
@@ -130,7 +131,7 @@ function learningWidth(kind: string | null | undefined): number {
 
 function isAtlasReadback(): boolean {
   return typeof window !== 'undefined'
-    && new URLSearchParams(window.location.search).get('readback') === '1';
+    && atlasRouteParam('readback') === '1';
 }
 
 function isCompactRenderer(container: HTMLElement): boolean {

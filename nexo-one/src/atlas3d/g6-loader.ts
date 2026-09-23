@@ -1,3 +1,4 @@
+import {atlasRouteParam} from './route-params.ts';
 const LOCAL_G6_SOURCE = new URL(`${import.meta.env.BASE_URL}vendor/g6.min.js`, window.location.origin).href;
 export const G6_SOURCES = [
   LOCAL_G6_SOURCE,
@@ -34,7 +35,7 @@ export function ensureAtlasG6():Promise<void>{
   if((window as any).G6?.Graph){document.documentElement.dataset.atlasG6Source='preloaded';return Promise.resolve();}
   if(loading)return loading;
   loading=(async()=>{
-    const forceFallback=new URLSearchParams(window.location.search).get('g6Fallback')==='1';
+    const forceFallback=atlasRouteParam('g6Fallback')==='1';
     let lastError:unknown=null;
     for(const source of G6_SOURCES){
       if(forceFallback&&!source.includes('jsdelivr.net'))continue;
