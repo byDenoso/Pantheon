@@ -12,9 +12,9 @@ const adapter=fs.readFileSync(new URL('src/atlas-v3/scene-adapter.mjs',root),'ut
 test('V3 presents a cinematic neural canvas rather than the retired SVG dashboard',()=>{
   assert.match(html,/NEXO Atlas/);
   assert.match(app,/AtlasCanvas/);
-  assert.match(app,/Mapa neural em canvas 2\.5D/);
-  assert.match(app,/SPATIAL CANVAS/);
-  assert.match(app,/Buscar campanha, claim, teste ou work/);
+  assert.match(app,/Mapa de conhecimento/);
+  assert.match(app,/Mapa de conhecimento/);
+  assert.match(app,/Buscar campanha, afirmação, teste ou trabalho/);
   assert.match(app,/TOWER_V06/);
   assert.match(css,/radial-gradient/);
   assert.match(css,/backdrop-filter/);
