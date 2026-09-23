@@ -18,6 +18,10 @@ test('canonical cockpit routes and legacy view hashes resolve to the same screen
   ];
   for (const [hash, expected] of cases) assert.equal(viewFromHash(hash), expected, hash);
   assert.equal(hashForView('INBOX'), '#/cockpit/comando?view=needs');
+  assert.equal(hashForView('TRUTHGRAPH'), '#/cockpit/prova?tab=autoridade');
+  assert.equal(hashForView('CAPABILITIES'), '#/cockpit/prova?tab=capabilities');
+  assert.equal(viewFromHash('#/cockpit/prova?tab=autoridade&view=3d'), 'TRUTHGRAPH');
+  assert.equal(viewFromHash('#/cockpit/prova?view=capabilities'), 'CAPABILITIES');
   assert.equal(hashForView('ATLAS'), '#/atlas?lente=operacao&view=2d');
 });
 
@@ -102,4 +106,27 @@ test('app navigation uses seven primary tabs and removes duplicate rail navigati
   assert.match(foundation, /--bg:#0b0c0d/);
   assert.match(foundation, /--radius-sm:6px;--radius-md:8px;--radius-lg:16px/);
   assert.match(mcp, /themeOverride=\{theme\}/);
+});
+
+
+test('shared graph is available in Atlas, Sistema, Ciencia and Prova with one mobile toolbar', async () => {
+  const [atlas, graph, graphCss, proof, mcp, science] = await Promise.all([
+    read('../src/atlas3d/Atlas3DApp.tsx'),
+    read('../src/components/NexoGraph.tsx'),
+    read('../src/components/NexoGraph.css'),
+    read('../src/features/system/Integrity.tsx'),
+    read('../src/mcp/McpAtlasApp.tsx'),
+    read('../src/features/ScienceWorkspace.tsx'),
+  ]);
+  assert.match(atlas, /toolbarContext=/);
+  assert.match(atlas, /toolbarFilters=/);
+  assert.doesNotMatch(atlas, /className="atlas-topbar"/);
+  assert.match(atlas, /atlas-lens-switch/);
+  assert.match(graph, /data-toolbar-rows/);
+  assert.match(graph, /GraphViewSwitch/);
+  assert.match(graphCss, /nexo-graph-toolbar-primary/);
+  assert.match(proof, /McpTopologyGraph/);
+  assert.match(mcp, /export function McpTopologyGraph/);
+  assert.match(mcp, /mode="all"/);
+  assert.match(science, /<NexoGraph/);
 });

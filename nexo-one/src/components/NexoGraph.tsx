@@ -1,4 +1,4 @@
-import {useEffect,useMemo,useRef,useState} from 'react';
+import {useEffect,useMemo,useRef,useState,type ReactNode} from 'react';
 import {MetroAtlasRenderer} from '../atlas3d/MetroAtlasRenderer.tsx';
 import {ensureAtlasG6} from '../atlas3d/g6-loader.ts';
 import {visibleAtlasIds,type AtlasMetroModel} from '../atlas3d/atlasAdapter.ts';
@@ -14,11 +14,11 @@ export function GraphViewSwitch({view,onChange}:{view:NexoGraphView;onChange:(vi
 }
 
 export function NexoGraph({
-  model,expanded,selectedId,view,theme='dark',showRelations=true,fitNonce=0,onSelect,onViewChange,onFit,onReset,onReady,
+  model,expanded,selectedId,view,theme='dark',showRelations=true,fitNonce=0,onSelect,onViewChange,onFit,onReset,onReady,toolbarContext,toolbarFilters,
 }:{
   model:AtlasMetroModel;expanded:ReadonlySet<string>;selectedId:string|null;view:NexoGraphView;theme?:'dark'|'light';
   showRelations?:boolean;fitNonce?:number;onSelect:(id:string)=>void;onViewChange:(view:NexoGraphView)=>void;
-  onFit?:()=>void;onReset?:()=>void;onReady?:()=>void;
+  onFit?:()=>void;onReset?:()=>void;onReady?:()=>void;toolbarContext?:ReactNode;toolbarFilters?:ReactNode;
 }){
   const hostRef=useRef<HTMLDivElement|null>(null);
   const [g6Ready,setG6Ready]=useState(()=>view==='3d'||Boolean((window as any).G6?.Graph));
@@ -58,16 +58,23 @@ export function NexoGraph({
     else void node.requestFullscreen?.();
   };
 
-  return <section ref={hostRef} tabIndex={-1} className="nexo-graph" data-graph-view={view} data-graph-visible={visible.length} data-graph-total={model.nodes.length}>
+  const count=<div className="nexo-graph-count"><strong>{visible.length}</strong> visíveis · <span>{model.nodes.length} total</span> · <span>{relationCount} relações</span></div>;
+  return <section ref={hostRef} tabIndex={-1} className="nexo-graph" data-graph-view={view} data-graph-visible={visible.length} data-graph-total={model.nodes.length} data-toolbar-rows={toolbarFilters?2:1}>
     <div className="nexo-graph-toolbar">
-      <div className="nexo-graph-count"><strong>{visible.length}</strong> visíveis · <span>{model.nodes.length} total</span> · <span>{relationCount} relações</span></div>
-      <div className="nexo-graph-actions">
-        <GraphViewSwitch view={view} onChange={onViewChange}/>
-        {onFit&&<button type="button" onClick={onFit}>Enquadrar</button>}
-        {onReset&&<button type="button" onClick={onReset}>Resetar</button>}
-        <button type="button" onClick={fullscreen}>Tela cheia</button>
-        <button type="button" aria-pressed={tableMode} onClick={()=>setTableMode(value=>!value)}>{tableMode?'Ver grafo':'Ver como tabela'}</button>
+      <div className="nexo-graph-toolbar-row nexo-graph-toolbar-primary">
+        <div className="nexo-graph-toolbar-context">{toolbarContext||(!toolbarFilters&&count)}</div>
+        <div className="nexo-graph-actions">
+          <GraphViewSwitch view={view} onChange={onViewChange}/>
+          {onFit&&<button type="button" onClick={onFit}>Enquadrar</button>}
+          {onReset&&<button type="button" onClick={onReset}>Resetar</button>}
+          <button type="button" onClick={fullscreen}>Tela cheia</button>
+          <button type="button" aria-pressed={tableMode} onClick={()=>setTableMode(value=>!value)}>{tableMode?'Ver grafo':'Ver como tabela'}</button>
+        </div>
       </div>
+      {toolbarFilters&&<div className="nexo-graph-toolbar-row nexo-graph-toolbar-secondary">
+        <div className="nexo-graph-filters">{toolbarFilters}</div>
+        {count}
+      </div>}
     </div>
     {tableMode
       ? <div className="nexo-graph-table-wrap"><table className="nexo-graph-table"><thead><tr><th>Entidade</th><th>Tipo</th><th>Domínio</th><th>Estado</th><th>Relações</th></tr></thead><tbody>{rows.map(node=><tr key={node!.id} className={node!.id===selectedId?'selected':''} onClick={()=>onSelect(node!.id)}><td><strong>{node!.name}</strong><small>{node!.id}</small></td><td>{node!.entityType}</td><td>{node!.domain}</td><td>{node!.status}</td><td>{node!.relationCount}</td></tr>)}</tbody></table></div>
