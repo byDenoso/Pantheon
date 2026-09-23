@@ -613,7 +613,7 @@ export function Atlas3DContent({system,themeOverride}:{system:SystemStore;themeO
 
         {viewMode === '3d' && show3dHint && (
           <div className="atlas-mode-onboarding glass" role="status">
-            <div><strong>Visualização 3D</strong><span>Arraste o mapa para orbitar a câmera.</span></div>
+            <div><strong>Modo 3D ativo</strong><span>Arraste o mapa para orbitar a câmera.</span></div>
             <button onClick={() => setShow3dHint(false)} aria-label="Fechar dica">×</button>
           </div>
         )}
