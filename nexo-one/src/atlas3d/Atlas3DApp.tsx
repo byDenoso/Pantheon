@@ -295,8 +295,10 @@ export function Atlas3DContent({system,themeOverride}:{system:SystemStore;themeO
 
   useEffect(() => {
     if (!model) return;
+    const requestedSelection=typeof window!=='undefined'?atlasRouteParams().get('sel'):null;
+    const routedSelection=requestedSelection&&model.nodeMap.has(requestedSelection)?requestedSelection:null;
     setExpanded(new Set(initialExpanded));
-    setSelectedId(qaExpandedNode?.id || model.roots[0] || null);
+    setSelectedId(routedSelection || qaExpandedNode?.id || model.roots[0] || null);
     setNavigationRevision(model.revision);
     setRendererReady(false);
     setMobileDetailsOpen(false);
@@ -317,7 +319,9 @@ export function Atlas3DContent({system,themeOverride}:{system:SystemStore;themeO
   // with only the roots and can lose the expansion update while render() is in flight.
   const navigationStale = navigationRevision !== model.revision;
   const activeExpanded = navigationStale ? new Set(initialExpanded) : expanded;
-  const activeSelectedId = navigationStale ? (qaExpandedNode?.id || model.roots[0] || null) : selectedId;
+  const routedSelection=typeof window!=='undefined'?atlasRouteParams().get('sel'):null;
+  const staleSelectedId=routedSelection&&model.nodeMap.has(routedSelection)?routedSelection:(qaExpandedNode?.id || model.roots[0] || null);
+  const activeSelectedId = navigationStale ? staleSelectedId : selectedId;
 
   const visibleIds = visibleAtlasIds(model, activeExpanded);
   const visibleSet = new Set(visibleIds);
@@ -328,10 +332,19 @@ export function Atlas3DContent({system,themeOverride}:{system:SystemStore;themeO
   const related = selected ? relatedAtlasNodes(model, selected.id) : [];
   const breadcrumbs = selected ? atlasPathTo(model, selected.id) : [];
 
+  const routeSelection=(id:string|null)=>{
+    const params=atlasRouteParams();
+    params.set('lente',lens);
+    params.set('view',viewMode);
+    if(id)params.set('sel',id);else params.delete('sel');
+    window.history.replaceState(null,'',`#/atlas?${params.toString()}`);
+  };
+
   const activate = (id: string) => {
     const node = model.nodeMap.get(id);
     if (!node) return;
     setSelectedId(id);
+    routeSelection(id);
     if (node.childCount > 0) {
       setExpanded(current => {
         const next = new Set(current);
@@ -344,7 +357,9 @@ export function Atlas3DContent({system,themeOverride}:{system:SystemStore;themeO
 
   const collapseToInitial = () => {
     setExpanded(new Set(model.roots));
-    setSelectedId(model.roots[0] || null);
+    const root=model.roots[0] || null;
+    setSelectedId(root);
+    routeSelection(root);
     setFitNonce(value => value + 1);
   };
 
@@ -364,6 +379,7 @@ export function Atlas3DContent({system,themeOverride}:{system:SystemStore;themeO
     const params=atlasRouteParams();
     params.set('lente',next);
     params.set('view',viewMode);
+    params.delete('sel');
     window.history.replaceState(null,'',`#/atlas?${params.toString()}`);
     setFitNonce(value=>value+1);
   };
@@ -371,6 +387,7 @@ export function Atlas3DContent({system,themeOverride}:{system:SystemStore;themeO
   const selectBreadcrumb = (id: string) => {
     if (!model.nodeMap.has(id)) return;
     setSelectedId(id);
+    routeSelection(id);
   };
 
   const learningLinks = model.crossLinks.filter(link => link.isLearning);
@@ -525,7 +542,8 @@ export function Atlas3DContent({system,themeOverride}:{system:SystemStore;themeO
       data-atlas-ready={rendererReady ? 'true' : 'false'}
       data-atlas-root-count={model.roots.length}
       data-atlas-visible-count={visibleIds.length}
-      data-atlas-total-count={fullModel?.nodes.length || model.nodes.length}
+      data-atlas-total-count={lens==='sistema'?model.nodes.length:(fullModel?.nodes.length || model.nodes.length)}
+      data-atlas-system-source={lens==='sistema'?'mcp-topology':'atlas-projection'}
       data-atlas-mode={viewMode}
       data-atlas-theme={atlasTheme}
       data-atlas-lens={lens}
@@ -573,7 +591,7 @@ export function Atlas3DContent({system,themeOverride}:{system:SystemStore;themeO
           onReady={() => setRendererReady(true)}
           toolbarContext={
             <nav className="atlas-breadcrumb" aria-label="Caminho atual">
-              <button onClick={() => { setSelectedId(model.roots[0] || null); }} className="atlas-crumb">Atlas</button>
+              <button onClick={() => { const root=model.roots[0]||null; setSelectedId(root); routeSelection(root); }} className="atlas-crumb">Atlas</button>
               {breadcrumbs.map(node => (
                 <span className="atlas-crumb-group" key={node.id}>
                   <span>›</span>
@@ -604,7 +622,7 @@ export function Atlas3DContent({system,themeOverride}:{system:SystemStore;themeO
                 key={rootId}
                 className={activeSelectedId === rootId ? 'selected' : ''}
                 style={{ '--domain-color': atlasDomainColor(root.domain, atlasTheme) } as CSSProperties}
-                onClick={() => setSelectedId(rootId)}
+                onClick={() => { setSelectedId(rootId); routeSelection(rootId); }}
               >
                 <span />{root.name}<small>{root.descendantCount}</small>
               </button>
