@@ -11,7 +11,8 @@ import {
 } from './navigation.ts';
 import { parseCommand } from './command.ts';
 import { EMPTY_FILTERS, type GraphFilters } from '../viewmodels/graph.ts';
-import { capabilityById, runsForAction } from '../viewmodels/system.ts';
+import { capabilityById, globalSummary, runsForAction } from '../viewmodels/system.ts';
+import { domainHex } from '../viewmodels/domainPalette.ts';
 import { label, toneOf } from '../viewmodels/tokens.ts';
 import { ProvenanceProvider } from '../components/provenance.tsx';
 import { LoadingState, Surface } from '../components/states.tsx';
@@ -20,6 +21,7 @@ import { ActionCard, ExecutionTrace, HumanInboxItem } from '../components/compos
 import { Modal } from '../shell/Modal.tsx';
 import { InstrumentHeader } from '../shell/InstrumentHeader.tsx';
 import { StarfieldCanvas } from '../components/StarfieldCanvas.tsx';
+import { useCinematics } from './useCinematics.ts';
 import { Overview } from '../features/system/Overview.tsx';
 import { ActionsView, ExecutionView, InboxView } from '../features/system/Operations.tsx';
 import { CapabilitiesView, IntegrityView, SourcesView, TruthGraphView } from '../features/system/Integrity.tsx';
@@ -141,6 +143,19 @@ export default function App() {
 
   const entry = entryFor(view);
   const titles = VIEW_TITLES[view];
+  useCinematics(`${view}:${system.state ? 'ready' : 'loading'}`, view !== 'ATLAS');
+
+  // Um aglomerado por domínio no céu do Início, dimensionado pelos blockers publicados.
+  const heroClusters = useMemo(() => {
+    if (!system.state) return [];
+    return globalSummary(system.state).domains.map(domain => ({
+      id: domain.domain,
+      label: domain.domain,
+      color: domainHex(domain.domain, 'dark'),
+      weight: domain.blockers.length + 1,
+      detail: domain.blockers.length ? `${domain.blockers.length} blocker${domain.blockers.length === 1 ? '' : 's'}` : 'sem blocker',
+    }));
+  }, [system.state]);
   const scenario = useMemo(() => SCENARIOS.find(s => s.id === system.scenarioId) ?? SCENARIOS[0], [system.scenarioId]);
 
   const currentMode = systemRoute ? 'sistema' : view === 'ATLAS' ? 'mapa' : view === 'LEARNING' ? 'ciencia' : ['NOW','LOOPS','DAY','CONTEXT','RECALL'].includes(view) ? 'pessoal' : ['ACTIONS','EXECUTION','INBOX'].includes(view) ? 'operacao' : ['TRUTHGRAPH','CAPABILITIES','SOURCES','INTEGRITY'].includes(view) ? 'prova' : 'inicio';
@@ -220,7 +235,7 @@ export default function App() {
 
           <main id="workspace" tabIndex={-1} className="workspace">
             <div className={currentMode==='inicio'?'workspace-heading workspace-heading--hero':'workspace-heading'}>
-              {currentMode==='inicio'&&<StarfieldCanvas className="hero-sky"/>}
+              {currentMode==='inicio'&&<StarfieldCanvas className="hero-sky" clusters={heroClusters}/>}
               <div>
                 {currentMode==='inicio'&&<span className="hero-eyebrow">NEXO ONE / Comando</span>}
                 <h1>{titles.title}</h1>

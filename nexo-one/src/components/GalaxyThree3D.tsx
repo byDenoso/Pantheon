@@ -35,6 +35,7 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import type { GraphEdge } from '../contracts/system.ts';
 import type { PlacedNode3D } from '../viewmodels/graph3d.ts';
 import type { Canvas25DViewState, CanvasGraph25DHandle } from './CanvasGraph25D.tsx';
+import { domainHex } from '../viewmodels/domainPalette.ts';
 import './GalaxyThree3D.css';
 
 const TAU = Math.PI * 2;
@@ -49,24 +50,9 @@ function paletteForTheme(theme: 'dark' | 'light') {
     : { accent: new Color('#7fddba'), strong: new Color('#eefcf7') };
 }
 
-const DARK_DOMAIN_COLORS: Partial<Record<PlacedNode3D['domain'], string>> = {
-  NEXO: '#dcecff',
-  ENGINEERING: '#7fddba',
-  SCIENCE: '#78a9ff',
-  OLYMPUS: '#b08cff',
-  ARTIFACT: '#e7b763',
-};
-const LIGHT_DOMAIN_COLORS: Partial<Record<PlacedNode3D['domain'], string>> = {
-  NEXO: '#344a5f',
-  ENGINEERING: '#2f8a69',
-  SCIENCE: '#416fae',
-  OLYMPUS: '#7256a8',
-  ARTIFACT: '#a86819',
-};
 
 function domainColor(domain: PlacedNode3D['domain'], theme: 'dark' | 'light'): Color {
-  const map = theme === 'light' ? LIGHT_DOMAIN_COLORS : DARK_DOMAIN_COLORS;
-  return new Color(map[domain] ?? (theme === 'light' ? '#59636d' : '#a7b2bc'));
+  return new Color(domainHex(domain, theme));
 }
 
 function stateClass(value: unknown): string {

@@ -382,3 +382,61 @@
   :root[data-theme] :is(.inbox-item,.item-row,.work-row,.pulse-metric){transition:none}
 }
 :root[data-theme] .galaxy-three-root{--field-accent:var(--obs-sodium)}
+
+/* ── Domínios: mesma paleta de src/viewmodels/domainPalette.ts ── */
+:root{
+  --domain-nexo:#E9B35B;--domain-science:#5AB4F2;--domain-engineering:#62CC96;
+  --domain-olympus:#E36A9C;--domain-artifact:#A58BEA;--domain-personal:#4FD1C5;--domain-other:#8FA7C4;
+}
+:root[data-theme=light]{
+  --domain-nexo:#A86A0E;--domain-science:#1F6FAE;--domain-engineering:#1F7A4F;
+  --domain-olympus:#A8316A;--domain-artifact:#5F45A8;--domain-personal:#157A70;--domain-other:#4A5E78;
+}
+[data-domain]{--dom:var(--domain-other)}
+[data-domain=NEXO]{--dom:var(--domain-nexo)}
+[data-domain=SCIENCE],[data-domain=COSMOLOGY]{--dom:var(--domain-science)}
+[data-domain=ENGINEERING]{--dom:var(--domain-engineering)}
+[data-domain=OLYMPUS]{--dom:var(--domain-olympus)}
+[data-domain=ARTIFACT]{--dom:var(--domain-artifact)}
+[data-domain=PERSONAL]{--dom:var(--domain-personal)}
+
+:root[data-theme] .domain-badge[data-domain] i{color:var(--dom);font-style:normal}
+:root[data-theme] .domain-badge.muted[data-domain]{color:var(--obs-text)}
+/* Cada registro carrega um fio superior na cor do seu domínio. */
+:root[data-theme] :is(.domain-tile,.lane-card,.action-card)[data-domain]{box-shadow:inset 0 2px 0 var(--dom)}
+:root[data-theme] .work-row[data-domain]{box-shadow:inset 2px 0 0 var(--dom);padding-left:16px}
+:root[data-theme] .work-row[data-domain]:hover{padding-left:24px}
+:root[data-theme] .galaxy-three-label[data-domain]{--node-accent:var(--dom)}
+
+/* Tiles de domínio conversam com a constelação do hero. */
+:root[data-theme] .domain-tile[data-domain]{cursor:crosshair;transition:background .3s,opacity .3s}
+:root[data-theme] .domain-tile[data-domain]:is(:hover,:focus-visible){background:linear-gradient(color-mix(in srgb,var(--dom) 9%,transparent),transparent 70%)}
+:root[data-domain-focus] .domain-strip:has(.domain-tile[data-domain]) .domain-tile:not(:hover):not(:focus-visible){opacity:.45}
+:root[data-domain-focus=NEXO] .domain-tile[data-domain=NEXO],
+:root[data-domain-focus=SCIENCE] .domain-tile[data-domain=SCIENCE],
+:root[data-domain-focus=ENGINEERING] .domain-tile[data-domain=ENGINEERING],
+:root[data-domain-focus=OLYMPUS] .domain-tile[data-domain=OLYMPUS]{opacity:1!important;background:linear-gradient(color-mix(in srgb,var(--dom) 9%,transparent),transparent 70%)}
+/* O texto do hero não bloqueia o ponteiro sobre a constelação. */
+:root[data-theme] .workspace-heading--hero > div{pointer-events:none}
+
+/* Spotlight de domínio. */
+:root[data-theme] .domain-spotlight{display:flex;flex-wrap:wrap;gap:0 4px;margin:0 0 20px;border-bottom:1px solid var(--obs-line)}
+:root[data-theme] .domain-spotlight button{
+  display:inline-flex;align-items:center;gap:8px;min-height:36px;padding:8px 12px 7px;border:0;border-bottom:1px solid transparent;background:none;
+  font:500 11px/1 var(--obs-mono);letter-spacing:.12em;text-transform:uppercase;color:var(--obs-dim);transition:color .2s,border-color .2s;
+}
+:root[data-theme] .domain-spotlight button i{width:8px;height:8px;background:var(--dom);box-shadow:0 0 0 3px color-mix(in srgb,var(--dom) 18%,transparent)}
+:root[data-theme] .domain-spotlight button b{color:var(--obs-dim);font-weight:500}
+:root[data-theme] .domain-spotlight button:hover{color:var(--obs-text)}
+:root[data-theme] .domain-spotlight button.active{color:var(--obs-bright);border-color:var(--dom,var(--obs-sodium))}
+:root[data-theme] .domain-spotlight button.active b{color:var(--dom,var(--obs-sodium))}
+
+/* Mira da matriz: linha por :hover, coluna por .is-col. */
+:root[data-theme] :is(.capability-matrix,.envelope-table,.science-table,.system-table) tr:hover > :is(td,th),
+:root[data-theme] :is(.capability-matrix,.envelope-table,.science-table,.system-table) .is-col{background:color-mix(in srgb,var(--obs-sodium) 6%,transparent)}
+:root[data-theme] :is(.capability-matrix,.envelope-table,.science-table,.system-table) tr:hover > .is-col{background:color-mix(in srgb,var(--obs-sodium) 14%,transparent);box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--obs-sodium) 40%,transparent)}
+
+/* Entrada em cena. Só existe com JS e movimento permitido (classe .cinematic). */
+:root.cinematic .reveal{opacity:0;transform:translateY(18px);transition:opacity .7s var(--obs-ease) var(--reveal-delay,0ms),transform .7s var(--obs-ease) var(--reveal-delay,0ms)}
+:root.cinematic .reveal.is-in{opacity:1;transform:none}
+@media(prefers-reduced-motion:reduce){:root.cinematic .reveal{opacity:1;transform:none;transition:none}}

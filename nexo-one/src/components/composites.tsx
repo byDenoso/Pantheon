@@ -251,7 +251,7 @@ export function LaneState(
 ) {
   const next = actions.find(a => a.status !== 'APPLIED' && a.status !== 'NO_OP_ALREADY_APPLIED') ?? actions[0] ?? null;
   return (
-    <article className={`lane-card tone-${toneOf(lane.state)}`}>
+    <article className={`lane-card tone-${toneOf(lane.state)}`} data-domain={lane.domain}>
       <header>
         <DomainBadge domain={lane.domain} />
         <StatusBadge state={lane.state} />
@@ -352,7 +352,7 @@ export function ActionCard(
   { action: ActionRecord; capability?: Capability | null; onOpen?: (action: ActionRecord) => void },
 ) {
   return (
-    <article className={`action-card tone-${toneOf(action.status)}`}>
+    <article className={`action-card tone-${toneOf(action.status)}`} data-domain={action.lane}>
       <header>
         <DomainBadge domain={action.lane} muted />
         <StatusBadge state={action.status} />

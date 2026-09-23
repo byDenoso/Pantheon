@@ -14,6 +14,7 @@ import {
   metroLayoutPositions,
   metroNodeSize,
 } from './metro2dLayout.ts';
+import { domainHex } from '../viewmodels/domainPalette.ts';
 
 type ViewMode = '2d' | '3d';
 type AtlasTheme = 'dark' | 'light';
@@ -52,17 +53,6 @@ declare global {
   }
 }
 
-const DOMAIN_COLOR_DARK: Record<string, string> = {
-  NEXO: '#7c3aed',
-  SCIENCE: '#8b6bd1',
-  OLYMPUS: '#a184d8',
-};
-
-const DOMAIN_COLOR_LIGHT: Record<string, string> = {
-  NEXO: '#6d28d9',
-  SCIENCE: '#7254b5',
-  OLYMPUS: '#8669c2',
-};
 
 function relationStrength(data: any): number {
   const weight = Number(data?.weight);
@@ -70,8 +60,7 @@ function relationStrength(data: any): number {
 }
 
 function domainColor(domain: string, theme: AtlasTheme): string {
-  return (theme === 'light' ? DOMAIN_COLOR_LIGHT : DOMAIN_COLOR_DARK)[domain]
-    || (theme === 'light' ? '#475569' : '#64748b');
+  return domainHex(domain, theme);
 }
 
 const TYPE_COLOR: Record<string, string> = {
