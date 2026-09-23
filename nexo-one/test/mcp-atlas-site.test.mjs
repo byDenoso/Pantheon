@@ -18,7 +18,7 @@ test('MCP Atlas is a routed surface in the unified SPA with canonical Tower sour
   assert.match(workflow,/build-mcp-topology\.mjs/);
   assert.match(site,/NexoGraph/);
   assert.doesNotMatch(site,/mcp-neural-2d/);
-  assert.match(site,/type GraphView='2d'\|'3d'/);
+  assert.match(site,/type GraphView=NexoGraphView/);
   assert.match(site,/SYSTEM_TABS/);
   assert.match(site,/system-table/);
   assert.match(site,/THEME_STORAGE_KEY/);
