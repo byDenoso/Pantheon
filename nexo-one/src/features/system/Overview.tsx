@@ -3,6 +3,7 @@
 import type { ActionRecord, InboxItem, SystemState } from '../../contracts/system.ts';
 import { ActionCard, HumanInboxItem, LaneState, ProjectionHealth } from '../../components/composites.tsx';
 import { EmptyState } from '../../components/states.tsx';
+import { MissionControl } from './MissionControl.tsx';
 import {
   DomainBadge, FreshnessIndicator, SeverityBadge, StatusBadge,
 } from '../../components/primitives.tsx';
@@ -21,7 +22,7 @@ export function Overview(
     state: SystemState;
     onOpenAction: (action: ActionRecord) => void;
     onOpenInbox: (item: InboxItem) => void;
-    onNavigate: (view: 'INBOX' | 'ACTIONS' | 'TRUTHGRAPH' | 'SOURCES') => void;
+    onNavigate: (view: 'INBOX' | 'ACTIONS' | 'TRUTHGRAPH' | 'SOURCES' | 'LEARNING') => void;
   },
 ) {
   const summary = globalSummary(state);
@@ -35,6 +36,7 @@ export function Overview(
 
   return (
     <div className="overview">
+      <MissionControl state={state} onOpenScience={() => onNavigate('LEARNING')} />
       <section className="overview-pulse" aria-label="Resumo operacional" data-order="summary">
         <button className={`pulse-metric health tone-${toneOf(summary.state)}`} onClick={() => onNavigate('SOURCES')}>
           <span>Saúde</span><strong>{label(summary.state)}</strong>

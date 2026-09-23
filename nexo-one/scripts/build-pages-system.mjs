@@ -74,7 +74,8 @@ function semanticLabels(projection) {
 }
 function semanticFields(record, labels) {
   const semantic = record?.semantic;
-  if (!semantic || semantic.basis === 'UNMAPPED' || !labels.has(semantic.subdomain_id)) return {};
+  const lifecycle = record?.status_group ? { status_group: String(record.status_group) } : {};
+  if (!semantic || semantic.basis === 'UNMAPPED' || !labels.has(semantic.subdomain_id)) return lifecycle;
   return {
     semantic_domain: SEMANTIC_TOP[semantic.domain_id] || undefined,
     semantic_subdomain_id: String(semantic.subdomain_id),
