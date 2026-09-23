@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState, type CSSProperties } from 'react';
 import { useSystem } from '../data/useSystem.ts';
+import { atlasRouteParams } from './route-params.ts';
 import type { SystemStore } from '../data/useSystem.ts';
 import {
   atlasPathTo,
@@ -15,11 +16,6 @@ type ViewMode = '2d' | '3d';
 type AtlasTheme = 'dark' | 'light';
 
 const THEME_STORAGE_KEY = 'nexo.atlas.theme.v1';
-
-function atlasRouteParams(){
-  const route=window.location.hash.match(/^#\/?atlas\?(.+)$/i)?.[1];
-  return route?new URLSearchParams(route):new URLSearchParams(window.location.search);
-}
 
 function initialAtlasTheme(): AtlasTheme {
   if (typeof window === 'undefined') return 'dark';
