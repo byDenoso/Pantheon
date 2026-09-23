@@ -407,6 +407,20 @@ jobs:
             --arg sync_request_id "${SYNC_REQUEST_ID:-}" --arg built_at "${built_at}" \
             '{contract:"NEXO_ONE_BUILD_META_V1",pantheon_commit:$pantheon_commit,projection_fingerprint:$projection_fingerprint,presentation_input_fingerprint:$presentation_input_fingerprint,sync_request_id:$sync_request_id,built_at:$built_at}' > dist/build-meta.json
           test -s dist/build-meta.json
+          node <<'NODE'
+          const fs=require('fs');
+          const projection=JSON.parse(fs.readFileSync('dist/tower-projection/projection.json','utf8'));
+          const manifest=JSON.parse(fs.readFileSync('dist/tower-projection/manifest.json','utf8'));
+          const buildMeta=JSON.parse(fs.readFileSync('dist/build-meta.json','utf8'));
+          if(JSON.stringify(projection.manifest)!==JSON.stringify(manifest))throw new Error('ATOMIC_PUBLICATION_MANIFEST_SPLIT_BRAIN');
+          if(buildMeta.projection_fingerprint!==manifest.projection_fingerprint)throw new Error('ATOMIC_PUBLICATION_BUILD_META_MISMATCH');
+          fs.writeFileSync(
+            'dist/tower-projection/publication.json',
+            JSON.stringify({contract:'NEXO_PUBLIC_PROJECTION_PUBLICATION_V1',projection,manifest,build_meta:buildMeta},null,2)+'\n',
+            'utf8',
+          );
+          NODE
+          test -s dist/tower-projection/publication.json
           touch dist/.nojekyll
           if grep -R -Eqi 'truthgraph-projection|nexo-drive-projection' dist/system.json dist/world-public.ndjson dist/tower-projection; then
             echo "::error::legacy truthgraph/drive-projection source leaked into Pages artifact"
@@ -450,6 +464,7 @@ jobs:
             sleep 5
           done
           curl -fsSL "${base}/tower-projection/projection.json" -o /tmp/projection.json
+          curl -fsSL "${base}/tower-projection/publication.json" -o /tmp/publication.json
           curl -fsSL "${base}/system.json" -o /tmp/system.json
           curl -fsSL "${base}/atlas3d/" -o /tmp/atlas3d.html
           grep -Fq '<title>NEXO · Atlas</title>' /tmp/atlas3d.html
@@ -724,6 +739,12 @@ jobs:
           const galaxyIndex=JSON.parse(fs.readFileSync('/tmp/galaxy-index.json','utf8'));
           const galaxyVersioned=JSON.parse(fs.readFileSync('/tmp/galaxy-versioned.json','utf8'));
           const buildMeta=JSON.parse(fs.readFileSync('/tmp/build-meta.json','utf8'));
+          const publication=JSON.parse(fs.readFileSync('/tmp/publication.json','utf8'));
+
+          if(publication.contract!=='NEXO_PUBLIC_PROJECTION_PUBLICATION_V1')throw new Error('ATOMIC_PUBLICATION_CONTRACT_INVALID');
+          if(JSON.stringify(publication.projection)!==JSON.stringify(projection))throw new Error('ATOMIC_PUBLICATION_PROJECTION_MISMATCH');
+          if(JSON.stringify(publication.manifest)!==JSON.stringify(manifest))throw new Error('ATOMIC_PUBLICATION_MANIFEST_MISMATCH');
+          if(JSON.stringify(publication.build_meta)!==JSON.stringify(buildMeta))throw new Error('ATOMIC_PUBLICATION_BUILD_META_MISMATCH');
 
           if(manifest.authority!=='TOWER_V06')throw new Error('READBACK_AUTHORITY_INVALID');
           if(manifest.projection_only!==true)throw new Error('READBACK_PROJECTION_ONLY_INVALID');
