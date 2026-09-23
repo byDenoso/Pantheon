@@ -6,19 +6,19 @@ import { useSession } from './useSession.ts';
 import { useIsMobile } from './useMediaQuery.ts';
 import { SCENARIOS } from '../data/fixtures/scenarios.ts';
 import {
-  MOBILE_PRIMARY, NAV_GROUPS, VIEW_TITLES, entryFor, hashForView, isSystemView, viewFromHash, type ViewId,
+  NAV_GROUPS, VIEW_TITLES, entryFor, hashForView, isSystemView, viewFromHash, type ViewId,
   isSystemRoute,
 } from './navigation.ts';
 import { parseCommand } from './command.ts';
 import { EMPTY_FILTERS, type GraphFilters } from '../viewmodels/graph.ts';
-import { capabilityById, globalSummary, runsForAction } from '../viewmodels/system.ts';
+import { capabilityById, runsForAction } from '../viewmodels/system.ts';
 import { label, toneOf } from '../viewmodels/tokens.ts';
 import { ProvenanceProvider } from '../components/provenance.tsx';
 import { LoadingState, Surface } from '../components/states.tsx';
 import { StatusBadge } from '../components/primitives.tsx';
 import { ActionCard, ExecutionTrace, HumanInboxItem } from '../components/composites.tsx';
 import { Modal } from '../shell/Modal.tsx';
-import { InstrumentHeader, ProductIcon } from '../shell/InstrumentHeader.tsx';
+import { InstrumentHeader } from '../shell/InstrumentHeader.tsx';
 import { Overview } from '../features/system/Overview.tsx';
 import { ActionsView, ExecutionView, InboxView } from '../features/system/Operations.tsx';
 import { CapabilitiesView, IntegrityView, SourcesView, TruthGraphView } from '../features/system/Integrity.tsx';
@@ -56,7 +56,6 @@ export default function App() {
   });
   const [command, setCommand] = useState('');
   const [notice, setNotice] = useState('');
-  const [moreOpen, setMoreOpen] = useState(false);
   const [loginOpen, setLoginOpen] = useState(false);
   const [pin, setPin] = useState('');
 
@@ -84,7 +83,7 @@ export default function App() {
       const isSystem = isSystemRoute(window.location.hash);
       setSystemRoute(isSystem);
       const next = viewFromHash(window.location.hash);
-      if (next) { setView(next); setNotice(''); setMoreOpen(false); }
+      if (next) { setView(next); setNotice(''); }
     };
     window.addEventListener('hashchange', restore);
     window.addEventListener('popstate', restore);
@@ -108,7 +107,6 @@ export default function App() {
     setView(next);
     setSystemRoute(false);
     setNotice('');
-    setMoreOpen(false);
     const hash = hashForView(next);
     if (window.location.hash !== hash) window.history.pushState(null, '', hash);
     // Cada superfície começa no próprio cabeçalho. Sem este reset, trocar de uma
@@ -120,7 +118,6 @@ export default function App() {
   const goSystem = useCallback(() => {
     setSystemRoute(true);
     setNotice('');
-    setMoreOpen(false);
     if (window.location.hash !== '#/sistema') window.history.pushState(null, '', '#/sistema');
     window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
   }, []);
@@ -138,35 +135,26 @@ export default function App() {
     setCommand('');
   };
 
-  const summary = system.state ? globalSummary(system.state) : null;
   const entry = entryFor(view);
   const titles = VIEW_TITLES[view];
   const scenario = useMemo(() => SCENARIOS.find(s => s.id === system.scenarioId) ?? SCENARIOS[0], [system.scenarioId]);
 
-  const currentMode = systemRoute ? 'sistema' : view === 'ATLAS' ? 'atlas' : window.location.hash.startsWith('#/observatorio') ? 'observatorio' : 'cockpit';
-  const navigateMode = (mode:'observatorio'|'cockpit'|'atlas'|'sistema') => {
-    if(mode==='cockpit'){go('OVERVIEW');return;}
-    if(mode==='atlas'){go('ATLAS');return;}
+  const currentMode = systemRoute ? 'sistema' : view === 'ATLAS' ? 'mapa' : view === 'LEARNING' ? 'ciencia' : ['NOW','LOOPS','DAY','CONTEXT','RECALL'].includes(view) ? 'pessoal' : ['ACTIONS','EXECUTION','INBOX'].includes(view) ? 'operacao' : ['TRUTHGRAPH','CAPABILITIES','SOURCES','INTEGRITY'].includes(view) ? 'prova' : 'inicio';
+  const navigateMode = (mode:'inicio'|'ciencia'|'operacao'|'prova'|'mapa'|'pessoal'|'sistema') => {
+    if(mode==='inicio'){go('OVERVIEW');return;}
+    if(mode==='ciencia'){go('LEARNING');return;}
+    if(mode==='operacao'){go('ACTIONS');return;}
+    if(mode==='prova'){go('TRUTHGRAPH');return;}
+    if(mode==='mapa'){go('ATLAS');return;}
+    if(mode==='pessoal'){go('NOW');return;}
     if(mode==='sistema'){goSystem();return;}
-    setSystemRoute(false);setView('OVERVIEW');window.history.pushState(null,'','#/observatorio');window.scrollTo({top:0,left:0,behavior:'auto'});
   };
   const header = <InstrumentHeader mode={currentMode} view={view} theme={theme} syncStatus={system.syncing?'SYNCING':system.syncStatus}
     readAt={system.lastSuccessfulReadAt} fingerprint={system.state?.bus.fingerprint||''} command={command} commandRef={commandRef}
     onCommandChange={setCommand} onCommandSubmit={submitCommand} onThemeToggle={()=>setTheme(theme==='dark'?'light':'dark')}
     onSync={system.sync} onNavigate={navigateMode} onAccountClick={()=>setLoginOpen(true)} privateSession={session.session.authenticated}/>;
-  const rail = <nav className="nav-rail" aria-label="Navegação principal">
-    {NAV_GROUPS.map(group=><div key={group.id} className="nav-group"><span className="eyebrow">{group.label}</span>
-      {group.entries.map(item=><button key={item.id} className={`nav-item${view===item.id?' active':''}`} onClick={()=>go(item.id)}
-        aria-current={view===item.id?'page':undefined} title={`${item.label} · ${item.hint}`} aria-label={item.label}>
-        <ProductIcon name={item.id}/><span>{item.label}</span>
-        {item.id==='INBOX'&&summary&&summary.needsHuman>0&&<b>{summary.needsHuman}</b>}
-        {item.id==='TRUTHGRAPH'&&summary&&summary.conflicts.length>0&&<b className="alarm">{summary.conflicts.length}</b>}
-      </button>)}
-    </div>)}
-  </nav>;
-
   if (systemRoute) return <ProvenanceProvider><div className={`cockpit unified-shell system-route${isMobile?' mobile':''}`} data-view="SYSTEM" data-access={session.session.authenticated?'PRIVATE':'PUBLIC'}>
-    <a className="skip-link" href="#workspace">Ir ao conteúdo</a>{header}<div className="cockpit-body">{!isMobile&&rail}
+    <a className="skip-link" href="#workspace">Ir ao conteúdo</a>{header}<div className="cockpit-body">
       <main id="workspace" tabIndex={-1} className="workspace system-workspace"><Suspense fallback={<LoadingState label="Abrindo Sistema…" />}><EmbeddedMcp theme={theme} onThemeToggle={()=>setTheme(theme==='dark'?'light':'dark')}/></Suspense></main>
     </div></div></ProvenanceProvider>;
 
@@ -225,19 +213,19 @@ export default function App() {
 
 
         <div className="cockpit-body">
-          {!isMobile && rail}
 
           <main id="workspace" tabIndex={-1} className="workspace">
             <div className="workspace-heading">
               <div>
-                <div className="eyebrow">
-                  <span className="accent-text">{entry.label}</span>
-                  <span className="breadcrumb"> / {isSystemView(view) ? 'SISTEMA' : 'PESSOAL'}</span>
-                </div>
                 <h1>{titles.title}</h1>
                 <p>{titles.lead}</p>
               </div>
             </div>
+
+            <nav className="section-tabs" aria-label={`Seções de ${currentMode}`}>
+              {(currentMode==='inicio' ? [['OVERVIEW','Visão geral']] : currentMode==='ciencia' ? [['LEARNING','Aprendizado'],['ATLAS','Mapa da ciência']] : currentMode==='operacao' ? [['ACTIONS','Fila'],['INBOX','Gates'],['EXECUTION','Execução']] : currentMode==='prova' ? [['CAPABILITIES','Capabilities'],['INTEGRITY','Integridade'],['SOURCES','Fontes'],['TRUTHGRAPH','Autoridade']] : [['NOW','Agora'],['LOOPS','Loops'],['DAY','Agenda'],['CONTEXT','Contextos'],['RECALL','Busca']])
+                .map(([id,label])=><button type="button" key={id} className={view===id?'active':''} aria-current={view===id?'page':undefined} onClick={()=>go(id as ViewId)}>{label}</button>)}
+            </nav>
 
             {notice && (
               <div role="status" className="notice-box">
@@ -272,51 +260,6 @@ export default function App() {
           {system.state && <StatusBadge state={system.state.global_state} compact />}
           <code className="fingerprint">{system.state?.bus.fingerprint ?? 'AGUARDANDO ESTADO'}</code>
         </footer>
-
-        {isMobile && (
-          <nav className="bottom-nav" aria-label="Navegação">
-            {MOBILE_PRIMARY.map(id => {
-              const item = entryFor(id);
-              return (
-                <button key={id} className={view === id ? 'active' : ''} onClick={() => go(id)}
-                  aria-current={view === id ? 'page' : undefined}>
-                  <ProductIcon name={item.id}/>
-                  <span>{item.label}</span>
-                  {id === 'INBOX' && summary && summary.needsHuman > 0 && <b>{summary.needsHuman}</b>}
-                </button>
-              );
-            })}
-            <button className={moreOpen ? 'active' : ''} onClick={() => setMoreOpen(true)} aria-expanded={moreOpen}>
-              <ProductIcon name="ACTIONS"/><span>Mais</span>
-            </button>
-          </nav>
-        )}
-
-        {moreOpen && (
-          <Modal title="TODAS AS VISÕES" className="nav-sheet" onClose={() => setMoreOpen(false)}>
-            <div className="drawer-body">
-              {NAV_GROUPS.map(group => (
-                <div key={group.id} className="sheet-group">
-                  <span className="eyebrow">{group.label}</span>
-                  {group.entries.map(item => (
-                    <button key={item.id} className={`sheet-item${view === item.id ? ' active' : ''}`}
-                      onClick={() => go(item.id)}>
-                      <ProductIcon name={item.id}/>
-                      <span><strong>{item.label}</strong><small>{item.hint}</small></span>
-                    </button>
-                  ))}
-                </div>
-              ))}
-              <div className="sheet-group product-group">
-                <span className="eyebrow">ESTRUTURA</span>
-                <a className="sheet-item product-sheet-link" href="#/sistema" onClick={event => { event.preventDefault(); goSystem(); }}>
-                  <i aria-hidden="true">⌬</i>
-                  <span><strong>MCP Atlas</strong><small>Tools, capabilities, runtimes e roles no grafo 3D</small></span>
-                </a>
-              </div>
-            </div>
-          </Modal>
-        )}
 
         {openAction && system.state && (
           <Modal title="AÇÃO / EXECUÇÃO" className="focus-drawer" onClose={() => setOpenAction(null)}>
