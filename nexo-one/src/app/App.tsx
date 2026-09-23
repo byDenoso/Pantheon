@@ -36,7 +36,7 @@ const PRIVATE_COCKPIT_URL = String(import.meta.env.VITE_PRIVATE_COCKPIT_URL || '
 const AUTH_BRIDGE_URL = String(import.meta.env.VITE_NEXO_AUTH_BRIDGE_URL || '').trim();
 const PUBLIC_NEXO_BASE = String(import.meta.env.VITE_PUBLIC_NEXO_BASE || 'https://bydenoso.github.io/Pantheon/').trim().replace(/\/?$/, '/');
 const publicNexoUrl = (path = '') => new URL(path, PUBLIC_NEXO_BASE).toString();
-const LearningView = lazy(() => import('../features/system/Atlas.tsx').then(module => ({ default: module.LearningView })));
+const ScienceWorkspace = lazy(() => import('../features/ScienceWorkspace.tsx'));
 const EmbeddedAtlas3D = lazy(() => import('../atlas3d/EmbeddedAtlas3D.tsx'));
 const EmbeddedMcp = lazy(() => import('../mcp/EmbeddedMcp.tsx'));
 
@@ -173,7 +173,7 @@ export default function App() {
       case 'INTEGRITY': return <IntegrityView state={state} />;
       case 'ATLAS':
         return <EmbeddedAtlas3D system={system} theme={theme as 'dark'|'light'} />;
-      case 'LEARNING': return <LearningView state={state} onNavigate={go} />;
+      case 'LEARNING': return <ScienceWorkspace state={state} />;
       default: return null;
     }
   };
@@ -222,10 +222,10 @@ export default function App() {
               </div>
             </div>
 
-            <nav className="section-tabs" aria-label={`Seções de ${currentMode}`}>
-              {(currentMode==='inicio' ? [['OVERVIEW','Visão geral']] : currentMode==='ciencia' ? [['LEARNING','Aprendizado'],['ATLAS','Mapa da ciência']] : currentMode==='operacao' ? [['ACTIONS','Fila'],['INBOX','Gates'],['EXECUTION','Execução']] : currentMode==='prova' ? [['CAPABILITIES','Capabilities'],['INTEGRITY','Integridade'],['SOURCES','Fontes'],['TRUTHGRAPH','Autoridade']] : [['NOW','Agora'],['LOOPS','Loops'],['DAY','Agenda'],['CONTEXT','Contextos'],['RECALL','Busca']])
+            {currentMode!=='ciencia'&&<nav className="section-tabs" aria-label={`Seções de ${currentMode}`}>
+              {(currentMode==='inicio' ? [['OVERVIEW','Visão geral']] : currentMode==='operacao' ? [['ACTIONS','Fila'],['INBOX','Gates'],['EXECUTION','Execução']] : currentMode==='prova' ? [['CAPABILITIES','Capabilities'],['INTEGRITY','Integridade'],['SOURCES','Fontes'],['TRUTHGRAPH','Autoridade']] : [['NOW','Agora'],['LOOPS','Loops'],['DAY','Agenda'],['CONTEXT','Contextos'],['RECALL','Busca']])
                 .map(([id,label])=><button type="button" key={id} className={view===id?'active':''} aria-current={view===id?'page':undefined} onClick={()=>go(id as ViewId)}>{label}</button>)}
-            </nav>
+            </nav>}
 
             {notice && (
               <div role="status" className="notice-box">
