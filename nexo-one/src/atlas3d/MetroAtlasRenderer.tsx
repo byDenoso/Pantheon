@@ -6,8 +6,8 @@ import {
 } from 'react';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
-import type { AtlasMetroModel, AtlasMetroNode } from './atlasAdapter.ts';
-import { visibleAtlasIds } from './atlasAdapter.ts';
+import type { AtlasGraphLayer, AtlasMetroModel, AtlasMetroNode } from './atlasAdapter.ts';
+import { atlasHopDistances, visibleAtlasIds } from './atlasAdapter.ts';
 import { nearestVisibleAtlasAncestor, projectVisualCrossLinks } from './learningVisuals.ts';
 import {
   buildMetroScreenLabelLayout,
@@ -21,11 +21,13 @@ type AtlasTheme = 'dark' | 'light';
 type Props = {
   model: AtlasMetroModel;
   expanded: ReadonlySet<string>;
+  visibleLayers: ReadonlySet<AtlasGraphLayer>;
   selectedId: string | null;
   showBeams: boolean;
   viewMode: ViewMode;
   theme: AtlasTheme;
   fitNonce: number;
+  allIlluminated: boolean;
   onActivate: (id: string) => void;
   onReady?: () => void;
 };
@@ -285,12 +287,13 @@ function tooltipHtml(
 function buildG6Data(
   model: AtlasMetroModel,
   expanded: ReadonlySet<string>,
+  visibleLayers: ReadonlySet<AtlasGraphLayer>,
   showBeams: boolean,
   width: number,
   height: number,
   compact = false,
 ) {
-  const ids = visibleAtlasIds(model, expanded);
+  const ids = visibleAtlasIds(model, expanded, visibleLayers);
   const visible = new Set(ids);
   const positions = metroLayoutPositions(model, ids, width, height);
 
@@ -362,34 +365,7 @@ function buildG6Data(
 
 function graphFocusLevels(model: AtlasMetroModel, visibleIds: string[], focusId: string | null): Map<string, number> {
   const visible = new Set(visibleIds);
-  const levels = new Map<string, number>(visibleIds.map(id => [id, 3]));
-  if (!focusId || !visible.has(focusId)) return levels;
-  const adjacency = new Map<string, Set<string>>();
-  const connect = (source: string, target: string) => {
-    if (!visible.has(source) || !visible.has(target)) return;
-    if (!adjacency.has(source)) adjacency.set(source, new Set());
-    if (!adjacency.has(target)) adjacency.set(target, new Set());
-    adjacency.get(source)!.add(target);
-    adjacency.get(target)!.add(source);
-  };
-  for (const id of visibleIds) {
-    const node = model.nodeMap.get(id);
-    if (node?.parentId) connect(node.parentId, id);
-  }
-  for (const link of projectVisualCrossLinks(model, model.crossLinks, visible)) connect(link.source, link.target);
-  levels.set(focusId, 0);
-  let frontier = [focusId];
-  for (let depth = 1; depth <= 2; depth += 1) {
-    const next: string[] = [];
-    for (const id of frontier) for (const neighbor of adjacency.get(id) || []) {
-      if ((levels.get(neighbor) ?? 3) > depth) {
-        levels.set(neighbor, depth);
-        next.push(neighbor);
-      }
-    }
-    frontier = next;
-  }
-  return levels;
+  return atlasHopDistances(model, focusId, visible);
 }
 
 function applyG6Selection(
@@ -399,29 +375,41 @@ function applyG6Selection(
   selectedId: string | null,
   hoveredId: string | null = null,
   showBeams = true,
+  visibleLayers: ReadonlySet<AtlasGraphLayer>,
+  allIlluminated = false,
 ) {
   if (!graph) return;
-  const visible = visibleAtlasIds(model, expanded);
+  const visible = visibleAtlasIds(model, expanded, visibleLayers);
   const focusId = hoveredId || selectedId;
   const levels = graphFocusLevels(model, visible, focusId);
   const states: Record<string, string[]> = {};
   for (const id of visible) {
     const level = levels.get(id) ?? 3;
-    states[id] = id === selectedId ? ['selected'] : level === 0 ? ['focus-active']
-      : level === 1 ? ['focus-neighbor'] : level === 2 ? ['focus-related'] : focusId ? ['focus-muted'] : [];
+    states[id] = allIlluminated
+      ? id === selectedId ? ['selected', 'illuminated'] : !focusId ? ['illuminated']
+        : level === 0 ? ['lit-focus-active'] : level === 1 ? ['lit-focus-neighbor']
+          : level === 2 ? ['lit-focus-related'] : ['lit-focus-muted']
+      : id === selectedId ? ['selected'] : level === 0 ? ['focus-active']
+        : level === 1 ? ['focus-neighbor'] : level === 2 ? ['focus-related'] : focusId ? ['focus-muted'] : [];
   }
   for (const id of visible) {
     const node = model.nodeMap.get(id);
     if (node?.parentId && visible.includes(node.parentId)) {
       const a = levels.get(node.parentId) ?? 3, b = levels.get(id) ?? 3;
-      states['hierarchy:' + node.parentId + ':' + id] = !focusId ? [] : Math.max(a, b) <= 1 ? ['edge-active']
-        : Math.max(a, b) === 2 ? ['edge-related'] : ['edge-muted'];
+      states['hierarchy:' + node.parentId + ':' + id] = allIlluminated
+        ? !focusId ? ['edge-illuminated'] : Math.max(a, b) <= 1 ? ['lit-edge-active']
+          : Math.max(a, b) === 2 ? ['lit-edge-related'] : ['lit-edge-muted']
+        : !focusId ? [] : Math.max(a, b) <= 1 ? ['edge-active']
+          : Math.max(a, b) === 2 ? ['edge-related'] : ['edge-muted'];
     }
   }
   if (showBeams) for (const link of projectVisualCrossLinks(model, model.crossLinks, new Set(visible))) {
     const a = levels.get(link.source) ?? 3, b = levels.get(link.target) ?? 3;
-    states[link.id] = !focusId ? [] : Math.max(a, b) <= 1 ? ['edge-active']
-      : Math.max(a, b) === 2 ? ['edge-related'] : ['edge-muted'];
+    states[link.id] = allIlluminated
+      ? !focusId ? ['edge-illuminated'] : Math.max(a, b) <= 1 ? ['lit-edge-active']
+        : Math.max(a, b) === 2 ? ['lit-edge-related'] : ['lit-edge-muted']
+      : !focusId ? [] : Math.max(a, b) <= 1 ? ['edge-active']
+        : Math.max(a, b) === 2 ? ['edge-related'] : ['edge-muted'];
   }
   void graph.setElementState(states, false);
 }
@@ -450,12 +438,13 @@ function renderScreenLabels(
   leaderLayer: SVGSVGElement,
   model: AtlasMetroModel,
   expanded: ReadonlySet<string>,
+  visibleLayers: ReadonlySet<AtlasGraphLayer>,
   selectedId: string | null,
   hoveredId: string | null,
   theme: AtlasTheme,
 ) {
   const rect = container.getBoundingClientRect();
-  const ids = visibleAtlasIds(model, expanded);
+  const ids = visibleAtlasIds(model, expanded, visibleLayers);
   const canvasPositions = metroLayoutPositions(model, ids, rect.width, rect.height);
   const screenPositions = new Map<string, [number, number]>();
 
@@ -521,12 +510,14 @@ function renderScreenLabels(
 function Metro2DView({
   model,
   expanded,
+  visibleLayers,
   selectedId,
   showBeams,
   fitNonce,
   onActivate,
   onReady,
   theme,
+  allIlluminated,
 }: Omit<Props, 'viewMode'>) {
   const surfaceRef = useRef<HTMLDivElement | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -539,6 +530,8 @@ function Metro2DView({
   const hoveredRef = useRef<string | null>(null);
   const activateRef = useRef(onActivate);
   const showBeamsRef = useRef(showBeams);
+  const visibleLayersRef = useRef(visibleLayers);
+  const illuminatedRef = useRef(allIlluminated);
   const lastFitNonce = useRef(-1);
   const initializedRef = useRef(false);
   const lastStructureKeyRef = useRef('');
@@ -551,6 +544,8 @@ function Metro2DView({
   selectedRef.current = selectedId;
   activateRef.current = onActivate;
   showBeamsRef.current = showBeams;
+  visibleLayersRef.current = visibleLayers;
+  illuminatedRef.current = allIlluminated;
   onReadyRef.current = onReady;
 
   useEffect(() => {
@@ -632,6 +627,11 @@ function Metro2DView({
           'focus-neighbor': { opacity: .96 },
           'focus-related': { opacity: .48 },
           'focus-muted': { opacity: .10 },
+          illuminated: { opacity: 1, shadowBlur: 13, shadowColor: '#8b5cf6' },
+          'lit-focus-active': { opacity: 1, shadowBlur: 16, shadowColor: '#a78bfa' },
+          'lit-focus-neighbor': { opacity: .98, shadowBlur: 12, shadowColor: '#8b5cf6' },
+          'lit-focus-related': { opacity: .84, shadowBlur: 9, shadowColor: '#8b5cf6' },
+          'lit-focus-muted': { opacity: .48, shadowBlur: 7, shadowColor: '#7c3aed' },
         },
       },
       edge: {
@@ -643,6 +643,10 @@ function Metro2DView({
           'edge-active': { opacity: .92, lineWidth: 2.8 },
           'edge-related': { opacity: .32, lineWidth: 1.4 },
           'edge-muted': { opacity: .035, lineWidth: .7 },
+          'edge-illuminated': { opacity: .62, lineWidth: 1.45 },
+          'lit-edge-active': { opacity: 1, lineWidth: 3.2 },
+          'lit-edge-related': { opacity: .76, lineWidth: 2.2 },
+          'lit-edge-muted': { opacity: .40, lineWidth: 1.2 },
         },
         style: {
           stroke: (datum: any) => datum.data?.isLearning
@@ -709,6 +713,7 @@ function Metro2DView({
           leaderLayer,
           modelRef.current,
           expandedRef.current,
+          visibleLayersRef.current,
           selectedRef.current,
           hoveredRef.current,
           theme,
@@ -721,7 +726,7 @@ function Metro2DView({
       const id = event.target?.id;
       if (!id) return;
       hoveredRef.current = id;
-      applyG6Selection(graph, modelRef.current, expandedRef.current, selectedRef.current, id, showBeamsRef.current);
+      applyG6Selection(graph, modelRef.current, expandedRef.current, selectedRef.current, id, showBeamsRef.current, visibleLayersRef.current, illuminatedRef.current);
       scheduleLabels();
     });
 
@@ -729,7 +734,7 @@ function Metro2DView({
       const id = event.target?.id;
       if (!id) return;
       hoveredRef.current = null;
-      applyG6Selection(graph, modelRef.current, expandedRef.current, selectedRef.current, null, showBeamsRef.current);
+      applyG6Selection(graph, modelRef.current, expandedRef.current, selectedRef.current, null, showBeamsRef.current, visibleLayersRef.current, illuminatedRef.current);
       scheduleLabels();
     });
 
@@ -762,6 +767,7 @@ function Metro2DView({
       const data = buildG6Data(
         modelRef.current,
         expandedRef.current,
+        visibleLayersRef.current,
         showBeamsRef.current,
         rect.width,
         rect.height,
@@ -789,7 +795,7 @@ function Metro2DView({
         }
         container.dataset.g6Ready = 'true';
 
-        applyG6Selection(graph, modelRef.current, expandedRef.current, selectedRef.current, hoveredRef.current, showBeamsRef.current);
+        applyG6Selection(graph, modelRef.current, expandedRef.current, selectedRef.current, hoveredRef.current, showBeamsRef.current, visibleLayersRef.current, illuminatedRef.current);
 
         // Renderer readiness is a canvas concern, not an animation concern. A
         // stalled fit transition on touch/Safari must never keep the whole Atlas
@@ -845,6 +851,7 @@ function Metro2DView({
       lastStructureKeyRef.current = [
         modelRef.current.revision,
         [...expandedRef.current].sort().join('|'),
+        [...visibleLayersRef.current].sort().join('|'),
       ].join('::');
       resizeObserver.observe(surface);
     });
@@ -864,11 +871,12 @@ function Metro2DView({
 
   useEffect(() => {
     if (!initializedRef.current) return;
-    const structureKey = [model.revision, expansionKey].join('::');
+    const layerKey = [...visibleLayers].sort().join('|');
+    const structureKey = [model.revision, expansionKey, layerKey].join('::');
     const fit = structureKey !== lastStructureKeyRef.current;
     lastStructureKeyRef.current = structureKey;
     void refreshRef.current(fit);
-  }, [model.revision, expansionKey, showBeams, theme]);
+  }, [model.revision, expansionKey, visibleLayers, showBeams, theme]);
 
   useEffect(() => {
     const graph = graphRef.current;
@@ -884,12 +892,12 @@ function Metro2DView({
   useEffect(() => {
     const container = containerRef.current;
     if (container?.dataset.g6Ready !== 'true') return;
-    applyG6Selection(graphRef.current, model, expanded, selectedId, hoveredRef.current, showBeams);
+    applyG6Selection(graphRef.current, model, expanded, selectedId, hoveredRef.current, showBeams, visibleLayers, allIlluminated);
     renderLabelsRef.current();
-  }, [selectedId, model.revision, expansionKey]);
+  }, [selectedId, model.revision, expansionKey, visibleLayers, showBeams, allIlluminated]);
 
   return (
-    <div ref={surfaceRef} className="atlas-metro-surface" data-testid="atlas-metro-2d">
+    <div ref={surfaceRef} className="atlas-metro-surface" data-testid="atlas-metro-2d" data-illuminated={allIlluminated}>
       <div ref={containerRef} id="atlas-metro-g6" className="atlas-g6-canvas" />
       <svg ref={leaderLayerRef} className="atlas-label-leaders" aria-hidden="true" />
       <div ref={labelLayerRef} className="atlas-label-overlay" aria-hidden="true" />
@@ -929,6 +937,7 @@ type ThreeRuntime = {
   focusModel: AtlasMetroModel | null;
   visibleIds: string[];
   zoomedLabels: boolean;
+  illuminated: boolean;
 };
 
 function disposeThreeObject(root: THREE.Object3D) {
@@ -1277,8 +1286,9 @@ function threeFocusIds(
   model: AtlasMetroModel,
   expanded: ReadonlySet<string>,
   selectedId: string | null,
+  visibleLayers: ReadonlySet<AtlasGraphLayer>,
 ): string[] {
-  const visible = new Set(visibleAtlasIds(model, expanded));
+  const visible = new Set(visibleAtlasIds(model, expanded, visibleLayers));
   if (!selectedId || !visible.has(selectedId)) return [...visible];
 
   const selected = model.nodeMap.get(selectedId);
@@ -1322,21 +1332,35 @@ function applyThreeSelection(runtime: ThreeRuntime, selectedId: string | null) {
     if (neuronGlow) {
       const material = neuronGlow.material as THREE.SpriteMaterial;
       const baseOpacity = Number(neuronGlow.userData.baseOpacity || .10);
-      material.opacity = hovered || selected ? Math.max(.44, baseOpacity) : faded ? .012 : related ? baseOpacity * .42 : baseOpacity;
+      const litOpacity = Math.max(.32, baseOpacity * 2.8);
+      material.opacity = hovered || selected ? Math.max(.52, litOpacity) : faded
+        ? runtime.illuminated ? .25 : .012
+        : related ? runtime.illuminated ? litOpacity * .76 : baseOpacity * .42
+          : runtime.illuminated ? litOpacity : baseOpacity;
       const baseScale = Number(neuronGlow.userData.baseScale || neuronGlow.scale.x);
       const factor = hovered ? 1.14 : selected ? 1.08 : 1;
       neuronGlow.scale.set(baseScale * factor, baseScale * factor, 1);
     }
     if (core) {
       const base = Number(core.userData.baseEmissive || .14);
-      core.material.emissiveIntensity = hovered || selected ? Math.max(.60, base + .32) : faded ? base * .32 : related ? base * .66 : base;
+      const litEmissive = Math.max(.48, base + .30);
+      core.material.emissiveIntensity = hovered || selected ? Math.max(.64, litEmissive) : faded
+        ? runtime.illuminated ? litEmissive * .62 : base * .32
+        : related ? runtime.illuminated ? litEmissive * .84 : base * .66
+          : runtime.illuminated ? litEmissive : base;
       core.material.transparent = Boolean(focusId);
-      core.material.opacity = faded ? .12 : related ? .48 : 1;
+      core.material.opacity = faded ? runtime.illuminated ? .58 : .12
+        : related ? runtime.illuminated ? .84 : .48 : 1;
     }
     const membrane = group.userData.membrane as THREE.Mesh | undefined;
-    if (membrane) (membrane.material as THREE.MeshBasicMaterial).opacity = faded ? .012 : related ? .025 : Number(membrane.userData.baseOpacity || .045);
+    if (membrane) (membrane.material as THREE.MeshBasicMaterial).opacity = faded
+      ? runtime.illuminated ? .046 : .012
+      : related ? runtime.illuminated ? .078 : .025
+        : Number(membrane.userData.baseOpacity || .045) * (runtime.illuminated ? 2.2 : 1);
     const status = group.userData.statusNucleus as THREE.Mesh | undefined;
-    if (status) (status.material as THREE.MeshBasicMaterial).opacity = faded ? .04 : related ? .40 : .86;
+    if (status) (status.material as THREE.MeshBasicMaterial).opacity = faded
+      ? runtime.illuminated ? .48 : .04
+      : related ? runtime.illuminated ? .72 : .40 : runtime.illuminated ? .96 : .86;
     const label = group.userData.label as THREE.Sprite | undefined;
     if (label) label.visible = id === selectedId || hovered || level <= 1 || group.userData.isHub === true
       || (runtime.zoomedLabels && label.userData.entityType !== 'hub');
@@ -1344,9 +1368,9 @@ function applyThreeSelection(runtime: ThreeRuntime, selectedId: string | null) {
   runtime.pulses.forEach(edge => {
     const a = levels.get(edge.sourceId) ?? 3, b = levels.get(edge.targetId) ?? 3;
     const edgeLevel = Math.max(a, b);
-    const factor = !focusId ? 1 : edgeLevel <= 1 ? 1 : edgeLevel === 2 ? .34 : .055;
-    (edge.core.material as THREE.MeshBasicMaterial).opacity = edge.baseCoreOpacity * factor;
-    (edge.glow.material as THREE.MeshBasicMaterial).opacity = edge.baseGlowOpacity * factor;
+    const factor = !focusId ? 1 : edgeLevel <= 1 ? 1 : edgeLevel === 2 ? (runtime.illuminated ? .68 : .34) : (runtime.illuminated ? .22 : .055);
+    (edge.core.material as THREE.MeshBasicMaterial).opacity = edge.baseCoreOpacity * factor * (runtime.illuminated ? 1.8 : 1);
+    (edge.glow.material as THREE.MeshBasicMaterial).opacity = edge.baseGlowOpacity * factor * (runtime.illuminated ? 2.8 : 1);
     edge.particle.visible = !focusId || edgeLevel <= 2;
   });
 }
@@ -1518,6 +1542,7 @@ function rebuildThree(
   container: HTMLElement,
   model: AtlasMetroModel,
   expanded: ReadonlySet<string>,
+  visibleLayers: ReadonlySet<AtlasGraphLayer>,
   selectedId: string | null,
   showBeams: boolean,
   theme: AtlasTheme,
@@ -1532,7 +1557,7 @@ function rebuildThree(
   runtime.hoveredId = null;
   runtime.pulses = [];
 
-  const ids = visibleAtlasIds(model, expanded);
+  const ids = visibleAtlasIds(model, expanded, visibleLayers);
   runtime.focusModel = model;
   runtime.visibleIds = ids;
   const visible = new Set(ids);
@@ -1797,18 +1822,21 @@ function hitThreeNode(runtime: ThreeRuntime, event: PointerEvent): string | null
 function MetroThreeView({
   model,
   expanded,
+  visibleLayers,
   selectedId,
   showBeams,
   fitNonce,
   onActivate,
   onReady,
   theme,
+  allIlluminated,
 }: Omit<Props, 'viewMode'>) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const tooltipRef = useRef<HTMLDivElement | null>(null);
   const runtimeRef = useRef<ThreeRuntime | null>(null);
   const modelRef = useRef(model);
   const expandedRef = useRef(expanded);
+  const visibleLayersRef = useRef(visibleLayers);
   const selectedRef = useRef(selectedId);
   const activateRef = useRef(onActivate);
   const showBeamsRef = useRef(showBeams);
@@ -1819,6 +1847,7 @@ function MetroThreeView({
 
   modelRef.current = model;
   expandedRef.current = expanded;
+  visibleLayersRef.current = visibleLayers;
   selectedRef.current = selectedId;
   activateRef.current = onActivate;
   showBeamsRef.current = showBeams;
@@ -1912,6 +1941,7 @@ function MetroThreeView({
       focusModel: null,
       visibleIds: [],
       zoomedLabels: false,
+      illuminated: allIlluminated,
     };
     runtimeRef.current = runtime;
 
@@ -1949,8 +1979,8 @@ function MetroThreeView({
         resize();
 
         if (majorLayoutChange) {
-          rebuildThree(runtime, container, modelRef.current, expandedRef.current, selectedRef.current, showBeamsRef.current, theme);
-          container.dataset.threeNodeCount = String(visibleAtlasIds(modelRef.current, expandedRef.current).length);
+          rebuildThree(runtime, container, modelRef.current, expandedRef.current, visibleLayersRef.current, selectedRef.current, showBeamsRef.current, theme);
+          container.dataset.threeNodeCount = String(visibleAtlasIds(modelRef.current, expandedRef.current, visibleLayersRef.current).length);
           container.dataset.threeSynapseCount = String(runtime.pulses.length);
         }
 
@@ -1973,7 +2003,7 @@ function MetroThreeView({
       container.dataset.threeContext = 'restored';
       clearRendererError(container);
       resize();
-      rebuildThree(runtime, container, modelRef.current, expandedRef.current, selectedRef.current, showBeamsRef.current, theme);
+      rebuildThree(runtime, container, modelRef.current, expandedRef.current, visibleLayersRef.current, selectedRef.current, showBeamsRef.current, theme);
       fitThree(runtime, false, null, 'all');
       renderAndMeasureThree(runtime, container);
     };
@@ -2061,11 +2091,12 @@ function MetroThreeView({
     const runtime = runtimeRef.current;
     const container = containerRef.current;
     if (!runtime || !container) return;
-    rebuildThree(runtime, container, model, expanded, selectedId, showBeams, theme);
-    container.dataset.threeNodeCount = String(visibleAtlasIds(model, expanded).length);
+    rebuildThree(runtime, container, model, expanded, visibleLayers, selectedId, showBeams, theme);
+    container.dataset.threeNodeCount = String(visibleAtlasIds(model, expanded, visibleLayers).length);
     container.dataset.threeSynapseCount = String(runtime.pulses.length);
 
-    const structureKey = `${model.revision}|${expansionKey}`;
+    const layerKey = [...visibleLayers].sort().join('|');
+    const structureKey = `${model.revision}|${expansionKey}|${layerKey}`;
     const focusKey = `${structureKey}|${selectedId || ''}`;
     const structureChanged = lastStructureKey.current !== structureKey;
     if (!runtime.hasFit || structureChanged) {
@@ -2079,7 +2110,7 @@ function MetroThreeView({
 
     const painted = renderAndMeasureThree(runtime, container);
     if (painted > 0 || !isAtlasReadback()) onReadyRef.current?.();
-  }, [model.revision, expansionKey, showBeams, theme]);
+  }, [model.revision, expansionKey, visibleLayers, showBeams, theme]);
 
   useEffect(() => {
     const runtime = runtimeRef.current;
@@ -2100,11 +2131,21 @@ function MetroThreeView({
     const runtime = runtimeRef.current;
     if (!runtime) return;
     applyThreeSelection(runtime, selectedId);
-    const focusKey = `${model.revision}|${expansionKey}|${selectedId || ''}`;
+    const focusKey = `${model.revision}|${expansionKey}|${[...visibleLayers].sort().join('|')}|${selectedId || ''}`;
     if (lastFocusKey.current === focusKey) return;
-    fitThree(runtime, true, threeFocusIds(model, expanded, selectedId), 'selection');
+    fitThree(runtime, true, threeFocusIds(model, expanded, selectedId, visibleLayers), 'selection');
     lastFocusKey.current = focusKey;
-  }, [selectedId, model.revision, expansionKey]);
+  }, [selectedId, model.revision, expansionKey, visibleLayers]);
+
+  useEffect(() => {
+    const runtime = runtimeRef.current;
+    const container = containerRef.current;
+    if (!runtime || !container) return;
+    runtime.illuminated = allIlluminated;
+    container.dataset.illuminated = String(allIlluminated);
+    applyThreeSelection(runtime, selectedRef.current);
+    renderAndMeasureThree(runtime, container);
+  }, [allIlluminated]);
 
   return (
     <div
@@ -2112,6 +2153,7 @@ function MetroThreeView({
       className="atlas-three-surface"
       data-testid="atlas-metro-3d"
       data-three-visual="neural-synapse"
+      data-illuminated={allIlluminated}
     >
       <div ref={tooltipRef} className="atlas-three-tooltip" />
     </div>

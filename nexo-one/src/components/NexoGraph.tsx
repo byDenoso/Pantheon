@@ -1,10 +1,12 @@
 import {useEffect,useMemo,useRef,useState,type ReactNode} from 'react';
 import {MetroAtlasRenderer} from '../atlas3d/MetroAtlasRenderer.tsx';
 import {ensureAtlasG6} from '../atlas3d/g6-loader.ts';
-import {visibleAtlasIds,type AtlasMetroModel} from '../atlas3d/atlasAdapter.ts';
+import {visibleAtlasIds,type AtlasGraphLayer,type AtlasMetroModel} from '../atlas3d/atlasAdapter.ts';
 import './NexoGraph.css';
 
 export type NexoGraphView='2d'|'3d';
+const ILLUMINATION_STORAGE_KEY='nexo.graph.illuminated.v1';
+const ALL_GRAPH_LAYERS=new Set<AtlasGraphLayer>(['knowledge','execution','capability']);
 
 export function GraphViewSwitch({view,onChange}:{view:NexoGraphView;onChange:(view:NexoGraphView)=>void}){
   return <div className="nexo-graph-view-switch" role="group" aria-label="Visualização do grafo">
@@ -14,9 +16,9 @@ export function GraphViewSwitch({view,onChange}:{view:NexoGraphView;onChange:(vi
 }
 
 export function NexoGraph({
-  model,expanded,selectedId,view,theme='dark',showRelations=true,fitNonce=0,onSelect,onViewChange,onFit,onReset,onReady,toolbarContext,toolbarFilters,showViewSwitch=true,
+  model,expanded,visibleLayers=ALL_GRAPH_LAYERS,selectedId,view,theme='dark',showRelations=true,fitNonce=0,onSelect,onViewChange,onFit,onReset,onReady,toolbarContext,toolbarFilters,showViewSwitch=true,
 }:{
-  model:AtlasMetroModel;expanded:ReadonlySet<string>;selectedId:string|null;view:NexoGraphView;theme?:'dark'|'light';
+  model:AtlasMetroModel;expanded:ReadonlySet<string>;visibleLayers?:ReadonlySet<AtlasGraphLayer>;selectedId:string|null;view:NexoGraphView;theme?:'dark'|'light';
   showRelations?:boolean;fitNonce?:number;onSelect:(id:string)=>void;onViewChange:(view:NexoGraphView)=>void;
   onFit?:()=>void;onReset?:()=>void;onReady?:()=>void;toolbarContext?:ReactNode;toolbarFilters?:ReactNode;
   showViewSwitch?:boolean;
@@ -24,7 +26,10 @@ export function NexoGraph({
   const hostRef=useRef<HTMLDivElement|null>(null);
   const [g6Ready,setG6Ready]=useState(()=>view==='3d'||Boolean((window as any).G6?.Graph));
   const [tableMode,setTableMode]=useState(false);
-  const visible=useMemo(()=>visibleAtlasIds(model,expanded),[model.revision,expanded]);
+  const [illuminated,setIlluminated]=useState(()=>{
+    try{return localStorage.getItem(ILLUMINATION_STORAGE_KEY)==='true';}catch{return false;}
+  });
+  const visible=useMemo(()=>visibleAtlasIds(model,expanded,visibleLayers),[model.revision,expanded,visibleLayers]);
   const visibleSet=useMemo(()=>new Set(visible),[visible]);
   const rows=useMemo(()=>visible.map(id=>model.nodeMap.get(id)).filter(Boolean),[visible,model]);
   const relationCount=useMemo(()=>model.crossLinks.filter(link=>visibleSet.has(link.source)&&visibleSet.has(link.target)).length,[model.crossLinks,visibleSet]);
@@ -39,6 +44,10 @@ export function NexoGraph({
   useEffect(()=>{
     try{localStorage.setItem('nexo.graph.view.v1',view);}catch{}
   },[view]);
+
+  useEffect(()=>{
+    try{localStorage.setItem(ILLUMINATION_STORAGE_KEY,String(illuminated));}catch{}
+  },[illuminated]);
 
   useEffect(()=>{
     const onKey=(event:KeyboardEvent)=>{
@@ -60,12 +69,13 @@ export function NexoGraph({
   };
 
   const count=<div className="nexo-graph-count"><strong>{visible.length}</strong> visíveis · <span>{model.nodes.length} total</span> · <span>{relationCount} relações</span></div>;
-  return <section ref={hostRef} tabIndex={-1} className="nexo-graph" data-graph-view={view} data-graph-visible={visible.length} data-graph-total={model.nodes.length} data-toolbar-rows={toolbarFilters?2:1}>
+  return <section ref={hostRef} tabIndex={-1} className="nexo-graph" data-graph-view={view} data-graph-illuminated={illuminated} data-graph-visible={visible.length} data-graph-total={model.nodes.length} data-toolbar-rows={toolbarFilters?2:1}>
     <div className="nexo-graph-toolbar">
       <div className="nexo-graph-toolbar-row nexo-graph-toolbar-primary">
         <div className="nexo-graph-toolbar-context">{toolbarContext||(!toolbarFilters&&count)}</div>
         <div className="nexo-graph-actions">
           {showViewSwitch&&<GraphViewSwitch view={view} onChange={onViewChange}/>}
+          {!tableMode&&<button type="button" className="nexo-illumination-toggle" aria-label="Iluminar todos os nós e relações" aria-pressed={illuminated} title="Iluminar todos os nós e relações" onClick={()=>setIlluminated(value=>!value)}>Iluminar tudo</button>}
           {onFit&&<button type="button" onClick={onFit}>Enquadrar</button>}
           {onReset&&<button type="button" onClick={onReset}>Resetar</button>}
           <button type="button" onClick={fullscreen}>Tela cheia</button>
@@ -81,6 +91,6 @@ export function NexoGraph({
       ? <div className="nexo-graph-table-wrap"><table className="nexo-graph-table"><thead><tr><th>Entidade</th><th>Tipo</th><th>Domínio</th><th>Estado</th><th>Relações</th></tr></thead><tbody>{rows.map(node=><tr key={node!.id} className={node!.id===selectedId?'selected':''} onClick={()=>onSelect(node!.id)}><td><strong>{node!.name}</strong><small>{node!.id}</small></td><td>{node!.entityType}</td><td>{node!.domain}</td><td>{node!.status}</td><td>{node!.relationCount}</td></tr>)}</tbody></table></div>
       : view==='2d'&&!g6Ready
         ? <div className="nexo-graph-fallback" role="status">2D indisponível neste instante. Os dados continuam acessíveis em tabela.</div>
-        : <MetroAtlasRenderer model={model} expanded={expanded} selectedId={selectedId} showBeams={showRelations} viewMode={view} theme={theme} fitNonce={fitNonce} onActivate={onSelect} onReady={onReady}/>}
+        : <MetroAtlasRenderer model={model} expanded={expanded} visibleLayers={visibleLayers} selectedId={selectedId} showBeams={showRelations} viewMode={view} theme={theme} fitNonce={fitNonce} allIlluminated={illuminated} onActivate={onSelect} onReady={onReady}/>}
   </section>;
 }

@@ -1,7 +1,7 @@
 import {useMemo,useRef,useState,type ReactNode,type RefObject} from 'react';
 import type {Filament,ScienceEvidenceField,ScienceProjectionRecord,ScienceProjectionV1,SystemState} from '../contracts/system.ts';
 import {NexoGraph,type NexoGraphView} from '../components/NexoGraph.tsx';
-import type {AtlasCrossLink,AtlasMetroModel,AtlasMetroNode} from '../atlas3d/atlasAdapter.ts';
+import {buildAtlasGraphIndexes,type AtlasCrossLink,type AtlasMetroModel,type AtlasMetroNode} from '../atlas3d/atlasAdapter.ts';
 import './ScienceWorkspace.css';
 
 type ScienceTab='campanhas'|'testes'|'hipoteses'|'aprendizado'|'graficos';
@@ -163,7 +163,7 @@ function scienceGraphModel(projection:ScienceProjectionV1,generatedAt:string):At
   for(const link of crossLinks){relationCounts.set(link.source,(relationCounts.get(link.source)||0)+1);relationCounts.set(link.target,(relationCounts.get(link.target)||0)+1);}
   const nodes=base.map(node=>({...node,childCount:(childrenMap.get(node.id)||[]).length,descendantCount:descendants(childrenMap,node.id),relationCount:(childrenMap.get(node.id)||[]).length+(relationCounts.get(node.id)||0)+(node.parentId?1:0)}));
   const nodeMap=new Map(nodes.map(node=>[node.id,node]));
-  return {revision:projection.fingerprint,generatedAt,roots:[rootId],nodes,nodeMap,childrenMap,crossLinks,sourceNodeIds:new Set(nodes.map(node=>node.id))};
+  return {revision:projection.fingerprint,generatedAt,roots:[rootId],nodes,nodeMap,childrenMap,crossLinks,...buildAtlasGraphIndexes(nodes,crossLinks),sourceNodeIds:new Set(nodes.map(node=>node.id))};
 }
 
 function StateText({value}:{value:unknown}){

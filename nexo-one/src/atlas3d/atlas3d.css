@@ -214,6 +214,9 @@ button,input{font:inherit}
 .atlas-lens-switch{min-width:0;display:flex;align-items:center;gap:2px;padding:2px;border:1px solid var(--line,var(--nexo-hairline));border-radius:6px;background:var(--bg,var(--nexo-bg-0))}
 .atlas-lens-switch button{height:26px;flex:none;padding:0 8px;border:0;border-radius:5px;background:transparent;color:var(--muted,var(--nexo-muted));font-size:11px;white-space:nowrap;cursor:pointer}
 .atlas-lens-switch button.active{color:var(--accent,#65e6c4);background:color-mix(in srgb,var(--accent,#65e6c4) 10%,var(--panel,var(--nexo-bg-2)));box-shadow:0 0 0 1px color-mix(in srgb,var(--accent,#65e6c4) 30%,transparent) inset}
+.atlas-layer-switch{display:flex;align-items:center;gap:2px;padding:2px;border:1px solid var(--line,var(--nexo-hairline));border-radius:6px;background:var(--bg,var(--nexo-bg-0))}
+.atlas-layer-switch button{height:26px;flex:none;padding:0 7px;border:0;border-radius:5px;background:transparent;color:var(--muted,var(--nexo-muted));font-size:10px;white-space:nowrap;cursor:pointer}
+.atlas-layer-switch button.active{color:#c4b5fd;background:color-mix(in srgb,#8b5cf6 14%,var(--panel,var(--nexo-bg-2)));box-shadow:0 0 0 1px color-mix(in srgb,#8b5cf6 40%,transparent) inset}
 .atlas-graph-filters .atlas-button,.atlas-graph-filters .atlas-toggle{height:30px;min-height:30px;padding:0 8px;border-radius:6px;font-size:10px;background:var(--bg,var(--nexo-bg-0));border-color:var(--line,var(--nexo-hairline));white-space:nowrap}
 .atlas-domain-strip{top:84px}
 .atlas-mode-onboarding{top:92px}
