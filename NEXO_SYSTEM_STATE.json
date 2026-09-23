@@ -4,7 +4,7 @@
   "authority": {
     "operationalTruth": "TOWER_V06",
     "truthOwner": "TOWER_V06@GOOGLE_DRIVE_PRIVATE",
-    "canonicalLiveFile": "NEXO_TOWER_LIVE.json.gz",
+    "canonicalLiveFile": "NEXO_TOWER_LIVE.json",
     "canonicalLiveFileId": "1m97cFmEkw19yiqD_6FWPG4j1lDCAYM4z",
     "writeModel": "IN_PLACE_FILE_REVISION_CAS_READBACK",
     "gitOperationalState": "FROZEN_CODE_AND_PROVENANCE_ONLY",

@@ -6,7 +6,7 @@ Operational truth is owned exclusively by `TOWER_V06@GOOGLE_DRIVE_PRIVATE`.
 
 Bootstrap current state from the stable Drive live Tower:
 
-- file: `NEXO_TOWER_LIVE.json.gz`
+- file: `NEXO_TOWER_LIVE.json`
 - stable file id: `1m97cFmEkw19yiqD_6FWPG4j1lDCAYM4z`
 - contract: `NEXO_TOWER_LIVE_V1`
 - write model: `IN_PLACE_FILE_REVISION_CAS_READBACK`

@@ -5,7 +5,10 @@ import {createTowerGithubGateway,resolveFrozenCapability} from './tower-github-g
 import {isCurrentTowerBundlePath,towerBundlePathRole} from './tower-drive-writer.mjs';
 import {deriveRoleView} from './tower-role-view.mjs';
 
-const LIVE_TOWER_FILE='NEXO_TOWER_LIVE.json.gz';
+// Nome atual do objeto vivo (JSON puro, contrato NEXO_TOWER_LIVE_V1). O nome .json.gz
+// anterior ao cutover de 2026-09-23 continua legível para rollback.
+const LIVE_TOWER_FILES=['NEXO_TOWER_LIVE.json','NEXO_TOWER_LIVE.json.gz'];
+const decodeLiveTower=bytes=>JSON.parse((bytes[0]===0x1f&&bytes[1]===0x8b?gunzipSync(bytes):Buffer.from(bytes)).toString('utf8'));
 const LIVE_CACHE_TTL_MS=5000;
 const SHA256=/^sha256:[0-9a-f]{64}$/i;
 
@@ -30,11 +33,12 @@ export function createTowerDriveGateway({env=process.env,fetchImpl=globalThis.fe
     }
     bundleLoad=(async()=>{
     if(!drive.configured)throw new Error('DRIVE_PRIMARY_NOT_CONFIGURED');
-    const file=await drive.findChild(drive.rootId,LIVE_TOWER_FILE);
+    let file=null;
+    for(const name of LIVE_TOWER_FILES){file=await drive.findChild(drive.rootId,name);if(file)break;}
     if(!file)throw new Error('DRIVE_LIVE_TOWER_FILE_MISSING');
     const bytes=await drive.getBuffer(file.id);
     let payload;
-    try{payload=JSON.parse(gunzipSync(bytes).toString('utf8'));}catch{throw new Error('DRIVE_LIVE_TOWER_FILE_INVALID');}
+    try{payload=decodeLiveTower(bytes);}catch{throw new Error('DRIVE_LIVE_TOWER_FILE_INVALID');}
     if(payload?.contract!=='NEXO_TOWER_LIVE_V1')throw new Error('DRIVE_LIVE_TOWER_CONTRACT_INVALID');
     if(payload?.authority!=='TOWER_V06')throw new Error('DRIVE_LIVE_TOWER_AUTHORITY_INVALID');
     if(payload?.truth_owner!=='TOWER_V06@GOOGLE_DRIVE_PRIVATE'||payload?.storage!=='GOOGLE_DRIVE_PRIVATE')throw new Error('DRIVE_LIVE_TOWER_TRUTH_OWNER_INVALID');
