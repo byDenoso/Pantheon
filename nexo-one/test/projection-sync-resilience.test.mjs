@@ -32,7 +32,14 @@ const validBuildMeta={
   built_at:'2026-09-22T14:01:00Z',
 };
 
-test('projection sync fallback reads only the published Pages snapshot and validates its evidence trio',async()=>{
+const validAtomicPublication={
+  contract:'NEXO_PUBLIC_PROJECTION_PUBLICATION_V1',
+  projection:validProjection,
+  manifest:validManifest,
+  build_meta:validBuildMeta,
+};
+
+test('projection sync prefers one atomic published Pages envelope',async()=>{
   const originalFetch=globalThis.fetch;
   const originalWindow=globalThis.window;
   const calls=[];
@@ -45,14 +52,8 @@ test('projection sync fallback reads only the published Pages snapshot and valid
   globalThis.fetch=async(url,init={})=>{
     const href=String(url);
     calls.push({href,init});
-    if(href.includes('/Pantheon/tower-projection/projection.json')||href.includes('/tower-projection/projection.json')){
-      return new Response(JSON.stringify(validProjection),{status:200,headers:{'content-type':'application/json'}});
-    }
-    if(href.includes('/Pantheon/tower-projection/manifest.json')||href.includes('/tower-projection/manifest.json')){
-      return new Response(JSON.stringify(validManifest),{status:200,headers:{'content-type':'application/json'}});
-    }
-    if(href.includes('/Pantheon/build-meta.json')||href.includes('/build-meta.json')){
-      return new Response(JSON.stringify(validBuildMeta),{status:200,headers:{'content-type':'application/json'}});
+    if(href.includes('/tower-projection/publication.json')){
+      return new Response(JSON.stringify(validAtomicPublication),{status:200,headers:{'content-type':'application/json'}});
     }
     throw new Error('unexpected fetch '+href);
   };
@@ -64,10 +65,9 @@ test('projection sync fallback reads only the published Pages snapshot and valid
     assert.equal(receipt.origin_channel,'GITHUB_PAGES_VALIDATED');
     assert.equal(receipt.active_work,115);
     assert.equal(receipt.projection_fingerprint,fingerprint);
-    assert.equal(calls.length,3);
-    assert.ok(calls.every(call=>!call.href.includes('NEXO-Obsidian-Vault')),
-      'browser fallback must never read the private export mirror directly');
-    assert.ok(calls.every(call=>call.init.cache==='no-store'));
+    assert.equal(calls.length,1);
+    assert.match(calls[0].href,/tower-projection\/publication\.json/);
+    assert.equal(calls[0].init.cache,'no-store');
   }finally{
     globalThis.fetch=originalFetch;
     if(originalWindow===undefined)delete globalThis.window;
@@ -75,7 +75,7 @@ test('projection sync fallback reads only the published Pages snapshot and valid
   }
 });
 
-test('projection sync rejects a published snapshot whose build-meta fingerprint diverges',async()=>{
+test('projection sync rejects an atomic envelope whose build-meta fingerprint diverges',async()=>{
   const originalFetch=globalThis.fetch;
   const originalWindow=globalThis.window;
 
@@ -86,6 +86,12 @@ test('projection sync rejects a published snapshot whose build-meta fingerprint 
   };
   globalThis.fetch=async(url)=>{
     const href=String(url);
+    if(href.includes('publication.json'))return new Response(JSON.stringify({
+      ...validAtomicPublication,
+      build_meta:{...validBuildMeta,projection_fingerprint:'sha256:'+'f'.repeat(64)},
+    }),{status:200});
+    // Atomic contract mismatch intentionally falls through to compatibility
+    // reads; keep those mismatched too so the overall result remains rejected.
     if(href.includes('projection.json'))return new Response(JSON.stringify(validProjection),{status:200});
     if(href.includes('manifest.json'))return new Response(JSON.stringify(validManifest),{status:200});
     if(href.includes('build-meta.json'))return new Response(JSON.stringify({...validBuildMeta,projection_fingerprint:'sha256:'+'f'.repeat(64)}),{status:200});
@@ -105,15 +111,10 @@ test('projection sync rejects a published snapshot whose build-meta fingerprint 
   }
 });
 
-test('projection sync re-reads the full published evidence set when CDN edges serve mixed generations',async()=>{
+test('projection sync falls back to validated trio while an older edge lacks atomic publication',async()=>{
   const originalFetch=globalThis.fetch;
   const originalWindow=globalThis.window;
   const reads=new Map();
-  const previousFingerprint='sha256:'+'e'.repeat(64);
-  const currentFingerprint='sha256:'+'d'.repeat(64);
-  const currentManifest={...validManifest,projection_fingerprint:currentFingerprint};
-  const currentProjection={...validProjection,manifest:currentManifest};
-  const currentBuildMeta={...validBuildMeta,projection_fingerprint:currentFingerprint};
 
   globalThis.window={
     location:{origin:'https://bydenoso.github.io'},
@@ -122,22 +123,20 @@ test('projection sync re-reads the full published evidence set when CDN edges se
   };
   globalThis.fetch=async(url)=>{
     const href=String(url);
+    if(href.includes('publication.json'))return new Response('',{status:404});
     const asset=href.includes('projection.json')?'projection':href.includes('manifest.json')?'manifest':'build-meta';
-    const count=(reads.get(asset)||0)+1;
-    reads.set(asset,count);
-    // First read simulates an edge that has the new projection but stale
-    // manifest/build-meta. The next complete read is internally consistent.
-    if(asset==='projection')return new Response(JSON.stringify(currentProjection),{status:200});
-    if(asset==='manifest')return new Response(JSON.stringify(count===1?validManifest:currentManifest),{status:200});
-    return new Response(JSON.stringify(count===1?validBuildMeta:currentBuildMeta),{status:200});
+    reads.set(asset,(reads.get(asset)||0)+1);
+    if(asset==='projection')return new Response(JSON.stringify(validProjection),{status:200});
+    if(asset==='manifest')return new Response(JSON.stringify(validManifest),{status:200});
+    return new Response(JSON.stringify(validBuildMeta),{status:200});
   };
 
   try{
     const {dispatchProjectionSync}=await import('../src/data/projectionSync.ts');
-    const receipt=await dispatchProjectionSync(previousFingerprint);
+    const receipt=await dispatchProjectionSync('sha256:'+'e'.repeat(64));
     assert.equal(receipt.outcome,'PUBLIC_PROJECTION_REFRESHED');
-    assert.equal(receipt.projection_fingerprint,currentFingerprint);
-    assert.deepEqual(Object.fromEntries(reads),{projection:2,manifest:2,'build-meta':2});
+    assert.equal(receipt.projection_fingerprint,fingerprint);
+    assert.deepEqual(Object.fromEntries(reads),{projection:1,manifest:1,'build-meta':1});
   }finally{
     globalThis.fetch=originalFetch;
     if(originalWindow===undefined)delete globalThis.window;
@@ -149,6 +148,7 @@ test('projection sync source contains no browser path to the private Git export 
   const source=await readFile(new URL('../src/data/projectionSync.ts',import.meta.url),'utf8');
   assert.doesNotMatch(source,/raw\.githubusercontent\.com/);
   assert.doesNotMatch(source,/api\.github\.com\/repos\/byDenoso\/NEXO-Obsidian-Vault/);
+  assert.match(source,/tower-projection\/publication\.json/);
   assert.match(source,/tower-projection\/projection\.json/);
   assert.match(source,/tower-projection\/manifest\.json/);
   assert.match(source,/build-meta\.json/);
