@@ -104,9 +104,10 @@ function descendants(children:Map<string,string[]>,id:string):number{
 }
 function scienceGraphModel(projection:ScienceProjectionV1,generatedAt:string):AtlasMetroModel{
   const rootId='science.root';
-  const campaignId=(id:string)=>`science.campaign:${id}`;
-  const hypothesisId=(id:string)=>`science.hypothesis:${id}`;
-  const testId=(id:string)=>`science.test:${id}`;
+  // Preserve canonical Tower IDs end-to-end. Synthetic IDs are reserved for visual-only roots.
+  const campaignId=(id:string)=>id;
+  const hypothesisId=(id:string)=>id;
+  const testId=(id:string)=>id;
   const parentForHypothesis=new Map<string,string>();
   for(const campaign of projection.campaigns){
     const raw=valueOf(campaign,'hypothesis_ids');
@@ -127,18 +128,22 @@ function scienceGraphModel(projection:ScienceProjectionV1,generatedAt:string):At
     depth:1,childCount:0,descendantCount:0,relationCount:0,mix:50,updatedAt:textOf(valueOf(item,'started_at'))==='—'?generatedAt:textOf(valueOf(item,'started_at')),
     sourceRevision:projection.source.tower_commit,fingerprint:item.fingerprint,authorityClass:'TOWER_V06',sourceRef:item.source_ref,sourceLinks:[],temporal:[],synthetic:false,
   });
-  for(const item of projection.hypotheses)base.push({
-    id:hypothesisId(item.id),sourceId:item.id,name:textOf(valueOf(item,'statement'))==='—'?item.id:textOf(valueOf(item,'statement')),
-    domain:'SCIENCE',parentId:parentForHypothesis.get(item.id)||rootId,entityType:'CLAIM',status:'PUBLISHED',summary:textOf(valueOf(item,'statement')),
-    depth:parentForHypothesis.has(item.id)?2:1,childCount:0,descendantCount:0,relationCount:0,mix:50,updatedAt:generatedAt,
-    sourceRevision:projection.source.tower_commit,fingerprint:item.fingerprint,authorityClass:'TOWER_V06',sourceRef:item.source_ref,sourceLinks:[],temporal:[],synthetic:false,
-  });
+  for(const item of projection.hypotheses){
+    const statement=valueOf(item,'statement')??valueOf(item,'proposition');
+    const epistemicStatus=valueOf(item,'epistemic_status')??valueOf(item,'status')??'ACTIVE';
+    base.push({
+      id:hypothesisId(item.id),sourceId:item.id,name:textOf(statement)==='—'?item.id:textOf(statement),
+      domain:'SCIENCE',parentId:parentForHypothesis.get(item.id)||rootId,entityType:'HYPOTHESIS',status:textOf(epistemicStatus),summary:textOf(statement),
+      depth:parentForHypothesis.has(item.id)?2:1,childCount:0,descendantCount:0,relationCount:0,mix:50,updatedAt:generatedAt,
+      sourceRevision:projection.source.tower_commit,fingerprint:item.fingerprint,authorityClass:'TOWER_V06',sourceRef:item.source_ref,sourceLinks:[],temporal:[],synthetic:false,
+    });
+  }
   for(const item of projection.tests){
     const campaign=String(valueOf(item,'campaign_id')||'');
     const parent=campaign&&campaignIds.has(campaign)?campaignId(campaign):rootId;
     base.push({
       id:testId(item.id),sourceId:item.id,name:item.id,domain:'SCIENCE',parentId:parent,entityType:'TEST',
-      status:textOf(valueOf(item,'verdict')),summary:textOf(valueOf(item,'method')),depth:parent===rootId?1:2,
+      status:textOf(valueOf(item,'status')??valueOf(item,'verdict')),summary:textOf(valueOf(item,'method')),depth:parent===rootId?1:2,
       childCount:0,descendantCount:0,relationCount:0,mix:50,updatedAt:generatedAt,sourceRevision:projection.source.tower_commit,
       fingerprint:item.fingerprint,authorityClass:'TOWER_V06',sourceRef:item.source_ref,sourceLinks:[],temporal:[],synthetic:false,
     });
@@ -150,14 +155,26 @@ function scienceGraphModel(projection:ScienceProjectionV1,generatedAt:string):At
     if(node.parentId&&nodeMap0.has(node.parentId))childrenMap.get(node.parentId)!.push(node.id);
   }
   const crossLinks:AtlasCrossLink[]=[];
+  const relation=(id:string,source:string,target:string,label:string,kind:string):AtlasCrossLink=>({
+    id,source,target,label,kind,weight:1,aggregated:false,isLearning:false,learningScope:null,learningRef:null,
+    learningKind:null,learningGroup:null,learningTheme:null,learningBasis:null,sourceAnchor:null,targetAnchor:null,bundleIndex:0,bundleCount:1,
+  });
+  for(const item of projection.hypotheses){
+    const parent=parentForHypothesis.get(item.id);
+    if(parent&&nodeMap0.has(parent)&&nodeMap0.has(hypothesisId(item.id))){
+      crossLinks.push(relation(`science.contains:${parent}:${item.id}`,parent,hypothesisId(item.id),'Contém','CONTAINS'));
+    }
+  }
   for(const item of projection.tests){
+    const test=testId(item.id);
+    const campaign=String(valueOf(item,'campaign_id')||'');
+    if(campaign&&nodeMap0.has(campaignId(campaign))&&nodeMap0.has(test)){
+      crossLinks.push(relation(`science.contains:${campaign}:${item.id}`,campaignId(campaign),test,'Contém','CONTAINS'));
+    }
     const hypothesis=String(valueOf(item,'hypothesis_id')||'');
-    if(!hypothesis||!nodeMap0.has(hypothesisId(hypothesis)))continue;
-    crossLinks.push({
-      id:`science.relation:${hypothesis}:${item.id}`,source:hypothesisId(hypothesis),target:testId(item.id),
-      label:'Testa',kind:'VERIFIES',weight:1,aggregated:false,isLearning:false,learningScope:null,learningRef:null,
-      learningKind:null,learningGroup:null,learningTheme:null,learningBasis:null,sourceAnchor:null,targetAnchor:null,bundleIndex:0,bundleCount:1,
-    });
+    if(hypothesis&&nodeMap0.has(hypothesisId(hypothesis))&&nodeMap0.has(test)){
+      crossLinks.push(relation(`science.tests:${hypothesis}:${item.id}`,hypothesisId(hypothesis),test,'Testa','TESTS'));
+    }
   }
   const relationCounts=new Map<string,number>();
   for(const link of crossLinks){relationCounts.set(link.source,(relationCounts.get(link.source)||0)+1);relationCounts.set(link.target,(relationCounts.get(link.target)||0)+1);}
