@@ -4,6 +4,7 @@ import type { ActionRecord, ExecutionRun, GraphNode, InboxItem, InboxKind, Syste
 import { INBOX_KINDS } from '../../contracts/system.ts';
 import { ActionCard, ExecutionTrace, HumanInboxItem } from '../../components/composites.tsx';
 import { EmptyState } from '../../components/states.tsx';
+import { DomainSpotlight, countByDomain } from '../../components/DomainSpotlight.tsx';
 import {
   DomainBadge, Fingerprint, ReadbackBadge, SourceRef, StatusBadge,
 } from '../../components/primitives.tsx';
@@ -74,7 +75,7 @@ function ProjectedWorkQueue({ rows, visible, onMore }:
     <>
       <div className="work-queue" role="list" aria-label="WORK projetado pela Tower">
         {shown.map(node => (
-          <article key={node.id} className={'work-row tone-' + toneOf(node.state)} role="listitem">
+          <article key={node.id} className={'work-row tone-' + toneOf(node.state)} data-domain={node.domain} role="listitem">
             <div className="work-row-main">
               <header>
                 <DomainBadge domain={node.domain} muted />
@@ -108,6 +109,7 @@ export function ActionsView(
 ) {
   const [filter, setFilter] = useState<ActionFilter>('ALL');
   const [visibleWork, setVisibleWork] = useState(PROJECTED_WORK_PAGE);
+  const [spotlight, setSpotlight] = useState<string | null>(null);
   const actionBuckets: Record<ActionFilter, ActionRecord[]> = {
     ALL: state.actions,
     AUTONOMOUS: resolvableActions(state),
@@ -135,8 +137,12 @@ export function ActionsView(
   const counts = hasActionRecords
     ? Object.fromEntries(Object.entries(actionBuckets).map(([key, value]) => [key, value.length])) as Record<ActionFilter, number>
     : Object.fromEntries(Object.entries(projectedBuckets).map(([key, value]) => [key, value.length])) as Record<ActionFilter, number>;
-  const actionRows = actionBuckets[filter];
-  const workRows = projectedBuckets[filter];
+  const domainOf = (row: ActionRecord | ProjectedWorkNode) => String('lane' in row ? row.lane : row.domain ?? '');
+  const inSpotlight = (row: ActionRecord | ProjectedWorkNode) => spotlight === null || domainOf(row) === spotlight;
+  const actionRows = actionBuckets[filter].filter(inSpotlight);
+  const workRows = projectedBuckets[filter].filter(inSpotlight);
+  const spotlightDomains = countByDomain(
+    (hasActionRecords ? actionBuckets[filter] : projectedBuckets[filter]).map(row => ({ domain: domainOf(row) })));
 
   const selectFilter = (value: ActionFilter) => {
     setFilter(value);
@@ -166,6 +172,9 @@ export function ActionsView(
           </button>
         ))}
       </div>
+
+      <DomainSpotlight domains={spotlightDomains} value={spotlight}
+        onChange={value => { setSpotlight(value); setVisibleWork(PROJECTED_WORK_PAGE); }} />
 
       {!hasActionRecords && projectedWork.length > 0 && (
         <div className="work-projection-note" role="status"

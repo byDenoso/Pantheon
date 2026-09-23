@@ -11,6 +11,10 @@ import {
 } from '../../viewmodels/system.ts';
 import { dateTime, label, toneOf } from '../../viewmodels/tokens.ts';
 
+// O hero do Início escuta este evento para acender o aglomerado do domínio.
+const focusDomain = (domain: string | null) =>
+  window.dispatchEvent(new CustomEvent('nexo:domain-focus', { detail: domain }));
+
 export function Overview(
   { state, onOpenAction, onOpenInbox, onNavigate }:
   {
@@ -59,7 +63,9 @@ export function Overview(
         </div>
         <div className="domain-strip">
           {summary.domains.map(domain => (
-            <article key={domain.domain} className={`domain-tile tone-${toneOf(domain.state)}`}>
+            <article key={domain.domain} className={`domain-tile tone-${toneOf(domain.state)}`} data-domain={domain.domain}
+              tabIndex={0} onMouseEnter={() => focusDomain(domain.domain)} onFocus={() => focusDomain(domain.domain)}
+              onMouseLeave={() => focusDomain(null)} onBlur={() => focusDomain(null)}>
               <header>
                 <DomainBadge domain={domain.domain} />
                 <SeverityBadge severity={domain.severity} />

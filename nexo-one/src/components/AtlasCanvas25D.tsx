@@ -12,6 +12,7 @@ import {
   type CanvasGraph25DHandle,
   type CanvasNode25D,
 } from './CanvasGraph25D.tsx';
+import {domainHex} from '../viewmodels/domainPalette.ts';
 import '../styles/atlas3d.css';
 
 const GALAXY_COLOR='#79e7ff';
@@ -85,6 +86,7 @@ export function AtlasCanvas25D({
   onSelect:(id:string|null)=>void;
   controllerRef?:Ref<CanvasGraph25DHandle>;
 }){
+  const theme=typeof document!=='undefined'&&document.documentElement.dataset.theme==='light'?'light':'dark';
   const canvasNodes:CanvasNode25D[]=nodes.map(node=>{
     const state=visualState(node);
     return{
@@ -94,7 +96,7 @@ export function AtlasCanvas25D({
       y:node.y,
       z:node.z,
       radius:radiusFor(node),
-      color:node.domain==='NEXO'?'#dffaff':GALAXY_COLOR,
+      color:domainHex(node.domain,theme),
       opacity:state.opacity,
       major:node.type==='DOMAIN'||isCluster(node)||node.id===selectedId,
       importance:importanceFor(node),

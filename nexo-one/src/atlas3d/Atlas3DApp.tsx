@@ -14,6 +14,7 @@ import {
 } from './atlasAdapter.ts';
 import { GraphViewSwitch, NexoGraph } from '../components/NexoGraph.tsx';
 import { ATLAS_LENSES, atlasModelForLens, normalizeAtlasLens, type AtlasLens } from './atlasLenses.ts';
+import { domainHex } from '../viewmodels/domainPalette.ts';
 
 type ViewMode = '2d' | '3d';
 type AtlasTheme = 'dark' | 'light';
@@ -31,20 +32,9 @@ function initialAtlasTheme(): AtlasTheme {
   }
 }
 
-const DOMAIN_COLOR_DARK: Record<string, string> = {
-  NEXO: '#7c3aed',
-  SCIENCE: '#00c2ff',
-  OLYMPUS: '#f97316',
-};
-
-const DOMAIN_COLOR_LIGHT: Record<string, string> = {
-  NEXO: '#6d28d9',
-  SCIENCE: '#0369a1',
-  OLYMPUS: '#c2410c',
-};
 
 function atlasDomainColor(domain: string, theme: AtlasTheme): string {
-  return (theme === 'light' ? DOMAIN_COLOR_LIGHT : DOMAIN_COLOR_DARK)[domain] || '#64748b';
+  return domainHex(domain, theme === 'light' ? 'light' : 'dark');
 }
 
 function statusTone(status: string): string {

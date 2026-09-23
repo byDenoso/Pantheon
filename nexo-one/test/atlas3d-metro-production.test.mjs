@@ -600,7 +600,9 @@ test('dedicated Atlas production page uses Metro renderer, G6 and deterministic 
 
   assert.match(renderer, /window\.G6\?\.Graph/);
   assert.match(renderer, /type AtlasTheme = 'dark' \| 'light'/);
-  assert.match(renderer, /DOMAIN_COLOR_LIGHT/);
+  // A paleta de domínios vive num módulo único; o renderer passa o tema adiante.
+  assert.match(renderer, /domainHex\(domain, theme\)/);
+  assert.match(await text('src/viewmodels/domainPalette.ts'), /const LIGHT: Record<string, string>/);
   assert.match(renderer, /LEARNING_PALETTE_LIGHT/);
   assert.match(renderer, /container\.dataset\.g6Theme = theme/);
   assert.match(renderer, /container\.dataset\.threeTheme = theme/);
