@@ -28,6 +28,8 @@ jobs:
       projection_fingerprint: ${{ steps.projection.outputs.projection_fingerprint }}
       presentation_input_fingerprint: ${{ steps.presentation_inputs.outputs.presentation_input_fingerprint }}
       tower_commit: ${{ steps.projection.outputs.tower_commit }}
+      tower_revision: ${{ steps.projection.outputs.tower_revision }}
+      tower_file_id: ${{ steps.projection.outputs.tower_file_id }}
       event_cursor: ${{ steps.projection.outputs.event_cursor }}
       deploy_needed: ${{ steps.deploy_needed.outputs.deploy_needed }}
     steps:
@@ -59,8 +61,8 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          jq -e '.manifest.source_storage == "GOOGLE_DRIVE_PRIVATE" and (.manifest.source_snapshot_id|length)>0 and (.manifest.source_state_fingerprint|startswith("sha256:"))'             _vault/TOWER_V06/projections/public/projection.json >/dev/null
-          jq -e '.source_storage == "GOOGLE_DRIVE_PRIVATE" and (.source_snapshot_id|length)>0 and (.source_state_fingerprint|startswith("sha256:"))'             _vault/TOWER_V06/projections/public/manifest.json >/dev/null
+          jq -e '.manifest.source_storage == "GOOGLE_DRIVE_PRIVATE" and (((.manifest.tower_file_id // "")|length)>0) and ((.manifest.tower_revision // "")|startswith("sha256:")) and ((.manifest.source_state_fingerprint // .manifest.tower_revision)|startswith("sha256:"))' _vault/TOWER_V06/projections/public/projection.json >/dev/null
+          jq -e '.source_storage == "GOOGLE_DRIVE_PRIVATE" and (((.tower_file_id // "")|length)>0) and ((.tower_revision // "")|startswith("sha256:")) and ((.source_state_fingerprint // .tower_revision)|startswith("sha256:"))' _vault/TOWER_V06/projections/public/manifest.json >/dev/null
 
       - name: Resolve projection verifier revision from export
 
@@ -130,14 +132,17 @@ jobs:
           event_cursor = str(manifest.get("event_cursor") or "")
           fingerprint = str(manifest.get("projection_fingerprint") or "")
           source_storage = str(manifest.get("source_storage") or "")
-          source_snapshot_id = str(manifest.get("source_snapshot_id") or "")
-          source_state_fingerprint = str(manifest.get("source_state_fingerprint") or "")
+          tower_file_id = str(manifest.get("tower_file_id") or "")
+          tower_revision = str(manifest.get("tower_revision") or "")
+          source_state_fingerprint = str(manifest.get("source_state_fingerprint") or tower_revision)
           if source_storage != "GOOGLE_DRIVE_PRIVATE":
               raise SystemExit("public export source_storage is not GOOGLE_DRIVE_PRIVATE")
-          if not source_snapshot_id:
-              raise SystemExit("public export source_snapshot_id missing")
-          if not source_state_fingerprint.startswith("sha256:"):
-              raise SystemExit("public export source_state_fingerprint invalid")
+          if tower_file_id != "1m97cFmEkw19yiqD_6FWPG4j1lDCAYM4z":
+              raise SystemExit("public export tower_file_id is not the stable live Tower")
+          if not tower_revision.startswith("sha256:") or len(tower_revision) != 71:
+              raise SystemExit("public export tower_revision invalid")
+          if source_state_fingerprint != tower_revision:
+              raise SystemExit("public export source_state_fingerprint differs from tower_revision")
           if not event_cursor:
               raise SystemExit("event_cursor missing")
           if not fingerprint.startswith("sha256:") or len(fingerprint) != 71:
@@ -147,9 +152,10 @@ jobs:
               handle.write(f"tower_commit={tower_commit}\n")
               handle.write(f"event_cursor={event_cursor}\n")
               handle.write(f"projection_fingerprint={fingerprint}\n")
-              handle.write(f"source_snapshot_id={source_snapshot_id}\n")
+              handle.write(f"tower_file_id={tower_file_id}\n")
+              handle.write(f"tower_revision={tower_revision}\n")
               handle.write(f"source_state_fingerprint={source_state_fingerprint}\n")
-          print(f"TOWER_PROJECTION_VERIFIED commit={tower_commit} cursor={event_cursor} fingerprint={fingerprint}")
+          print(f"TOWER_PROJECTION_VERIFIED file_id={tower_file_id} revision={tower_revision} cursor={event_cursor} fingerprint={fingerprint}")
           PY
 
       - name: Fingerprint all live presentation inputs
@@ -276,7 +282,11 @@ jobs:
           cp _vault/services/nexo-api/app/mcp_server.py nexo-one/data/mcp-source/mcp_server.py
           cp _vault/services/nexo-api/app/remote_mcp.py nexo-one/data/mcp-source/remote_mcp.py
           cp _vault/TOWER_V06/projections/public/manifest.json nexo-one/data/mcp-source/projection-manifest.json
-          jq -n --arg tower_commit "${TOWER_COMMIT}" '{tower_commit:$tower_commit}' > nexo-one/data/mcp-source/source.json
+          jq -n \
+            --arg tower_commit "${TOWER_COMMIT}" \
+            --arg tower_file_id "${{ steps.projection.outputs.tower_file_id }}" \
+            --arg tower_revision "${{ steps.projection.outputs.tower_revision }}" \
+            '{tower_commit:$tower_commit,tower_file_id:$tower_file_id,tower_revision:$tower_revision}' > nexo-one/data/mcp-source/source.json
 
       - name: Setup Node
         if: steps.deploy_needed.outputs.deploy_needed == 'true'
@@ -428,6 +438,8 @@ jobs:
           EXPECTED_FINGERPRINT: ${{ needs.build.outputs.projection_fingerprint }}
           EXPECTED_PRESENTATION_FINGERPRINT: ${{ needs.build.outputs.presentation_input_fingerprint }}
           EXPECTED_TOWER_COMMIT: ${{ needs.build.outputs.tower_commit }}
+          EXPECTED_TOWER_REVISION: ${{ needs.build.outputs.tower_revision }}
+          EXPECTED_TOWER_FILE_ID: ${{ needs.build.outputs.tower_file_id }}
           EXPECTED_EVENT_CURSOR: ${{ needs.build.outputs.event_cursor }}
           EXPECTED_PANTHEON_COMMIT: ${{ github.sha }}
         run: |
@@ -717,6 +729,8 @@ jobs:
           if(manifest.projection_only!==true)throw new Error('READBACK_PROJECTION_ONLY_INVALID');
           if(manifest.writeback!=='FORBIDDEN')throw new Error('READBACK_WRITEBACK_INVALID');
           if(manifest.tower_commit!==process.env.EXPECTED_TOWER_COMMIT)throw new Error('READBACK_TOWER_COMMIT_MISMATCH');
+          if(manifest.tower_file_id!==process.env.EXPECTED_TOWER_FILE_ID)throw new Error('READBACK_TOWER_FILE_ID_MISMATCH');
+          if(manifest.tower_revision!==process.env.EXPECTED_TOWER_REVISION)throw new Error('READBACK_TOWER_REVISION_MISMATCH');
           if(manifest.event_cursor!==process.env.EXPECTED_EVENT_CURSOR)throw new Error('READBACK_EVENT_CURSOR_MISMATCH');
           if(manifest.projection_fingerprint!==process.env.EXPECTED_FINGERPRINT)throw new Error('READBACK_FINGERPRINT_MISMATCH');
           if(JSON.stringify(projection.manifest)!==JSON.stringify(manifest))throw new Error('READBACK_MANIFEST_SPLIT_BRAIN');
@@ -786,8 +800,8 @@ jobs:
 
           if(mcp.contract!=='NEXO_MCP_TOPOLOGY_V1')throw new Error('MCP_TOPOLOGY_CONTRACT_INVALID');
           if(mcp.source?.authority!=='TOWER_V06'||!mcp.source?.commit)throw new Error('MCP_TOPOLOGY_SOURCE_INVALID');
-          if(mcp.source?.source_storage!=='GOOGLE_DRIVE_PRIVATE'||mcp.source?.source_snapshot_id!==manifest.source_snapshot_id)throw new Error('MCP_TOPOLOGY_FRESHNESS_SOURCE_INVALID');
-          if(mcp.source?.source_state_fingerprint!==manifest.source_state_fingerprint||mcp.source?.projection_fingerprint!==manifest.projection_fingerprint)throw new Error('MCP_TOPOLOGY_FRESHNESS_FINGERPRINT_MISMATCH');
+          if(mcp.source?.source_storage!=='GOOGLE_DRIVE_PRIVATE'||mcp.source?.tower_file_id!==manifest.tower_file_id||mcp.source?.tower_revision!==manifest.tower_revision)throw new Error('MCP_TOPOLOGY_LIVE_TOWER_SOURCE_INVALID');
+          if(mcp.source?.source_state_fingerprint!==manifest.tower_revision||mcp.source?.projection_fingerprint!==manifest.projection_fingerprint)throw new Error('MCP_TOPOLOGY_FRESHNESS_FINGERPRINT_MISMATCH');
           if(!Array.isArray(mcp.nodes)||mcp.nodes.length<8||!Array.isArray(mcp.links)||mcp.links.length<7)throw new Error('MCP_TOPOLOGY_EMPTY');
           const registeredCapabilityNodes=mcp.nodes.filter(node=>node.kind==='CAPABILITY');
           const registeredCapabilityIds=registeredCapabilityNodes.map(node=>String(node.meta?.id||node.id||'')).filter(Boolean);
