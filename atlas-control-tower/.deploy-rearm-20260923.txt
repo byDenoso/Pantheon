@@ -1,0 +1,1 @@
+Hosted MCP deployment rearm. No runtime semantics changed.
