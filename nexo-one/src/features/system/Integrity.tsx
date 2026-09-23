@@ -1,5 +1,5 @@
 // TruthGraph, Capability Radar, Sources e Integrity.
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import type { Capability, SystemState } from '../../contracts/system.ts';
 import { CapabilityMatrix, ProjectionHealth, TruthGraphCard } from '../../components/composites.tsx';
 import { EmptyState } from '../../components/states.tsx';
@@ -10,6 +10,9 @@ import {
 import { ProvenanceButton } from '../../components/provenance.tsx';
 import { CapabilityCountLine } from '../../components/CapabilityCountLine.tsx';
 import { ConsultInspector } from '../../components/ConsultInspector.tsx';
+import { NexoGraph, type NexoGraphView } from '../../components/NexoGraph.tsx';
+import { buildAtlasMetroModel } from '../../atlas3d/atlasAdapter.ts';
+import { atlasModelForLens } from '../../atlas3d/atlasLenses.ts';
 import {
   capabilityById, capabilityCounts, capabilityMatrix, integrityIssues, provenanceOf,
 } from '../../viewmodels/system.ts';
@@ -44,7 +47,19 @@ export function TruthGraphView({ state }: { state: SystemState }) {
 
 export function CapabilitiesView({ state }: { state: SystemState }) {
   const [selected, setSelected] = useState<Capability | null>(null);
+  const [graphSelected,setGraphSelected]=useState<string|null>(null);
+  const [graphView,setGraphView]=useState<NexoGraphView>(()=>{try{return localStorage.getItem('nexo.graph.view.v1')==='3d'?'3d':'2d';}catch{return'2d';}});
   const { runtimes, cells } = capabilityMatrix(state);
+  const proofGraph=useMemo(()=>atlasModelForLens(buildAtlasMetroModel(state),'sistema'),[state.bus.fingerprint]);
+  const proofExpanded=useMemo(()=>new Set(proofGraph.nodes.filter(node=>node.entityType==='hub'||node.entityType==='subdomain').map(node=>node.id)),[proofGraph.revision]);
+  const selectGraphEntity=(id:string)=>{
+    setGraphSelected(id);
+    const node=proofGraph.nodeMap.get(id);
+    const canonical=node?.sourceId||node?.id||'';
+    const capability=state.capabilities.find(item=>item.capability_id===canonical||`capability:${item.capability_id}`===canonical);
+    if(capability)setSelected(capability);
+  };
+  const changeGraphView=(next:NexoGraphView)=>{setGraphView(next);try{localStorage.setItem('nexo.graph.view.v1',next);}catch{}};
   const counts = capabilityCounts(state);
   return (
     <>
@@ -69,6 +84,10 @@ export function CapabilitiesView({ state }: { state: SystemState }) {
         readback. Nenhum indicador desta tela representa esse estado como meio funcionando.
       </p>
       <CapabilityMatrix runtimes={runtimes} cells={cells} onSelect={setSelected} />
+      <section className="consult-section proof-capability-graph" aria-labelledby="proof-graph-title">
+        <div className="consult-section-head"><h2 id="proof-graph-title">Relações de capabilities</h2><span>mesma entidade do Sistema e do Mapa</span></div>
+        <NexoGraph model={proofGraph} expanded={proofExpanded} selectedId={graphSelected} view={graphView} theme={(document.documentElement.dataset.theme==='light'?'light':'dark')} onSelect={selectGraphEntity} onViewChange={changeGraphView}/>
+      </section>
       {selected && <ConsultInspector
         entityId={selected.capability_id}
         title={selected.label}
