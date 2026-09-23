@@ -52,15 +52,20 @@ declare global {
 
 const DOMAIN_COLOR_DARK: Record<string, string> = {
   NEXO: '#7c3aed',
-  SCIENCE: '#00c2ff',
-  OLYMPUS: '#f97316',
+  SCIENCE: '#8b6bd1',
+  OLYMPUS: '#a184d8',
 };
 
 const DOMAIN_COLOR_LIGHT: Record<string, string> = {
   NEXO: '#6d28d9',
-  SCIENCE: '#0369a1',
-  OLYMPUS: '#c2410c',
+  SCIENCE: '#7254b5',
+  OLYMPUS: '#8669c2',
 };
+
+function relationStrength(data: any): number {
+  const weight = Number(data?.weight);
+  return Number.isFinite(weight) && weight > 0 ? .72 + Math.min(.28, Math.log2(1 + weight) * .12) : 1;
+}
 
 function domainColor(domain: string, theme: AtlasTheme): string {
   return (theme === 'light' ? DOMAIN_COLOR_LIGHT : DOMAIN_COLOR_DARK)[domain]
@@ -71,16 +76,16 @@ const TYPE_COLOR: Record<string, string> = {
   hub: '#f8fafc',
   subdomain: '#cbd5e1',
   DOMAIN: '#f8fafc',
-  CAMPAIGN: '#a78bfa',
-  ACTION: '#f59e0b',
-  EFFECT: '#22c55e',
-  CLAIM: '#38bdf8',
-  TEST: '#e879f9',
-  MEMORY: '#60a5fa',
-  CAPABILITY: '#2dd4bf',
-  PROVIDER: '#84cc16',
+  CAMPAIGN: '#b9a2e9',
+  ACTION: '#aa94d5',
+  EFFECT: '#c5b5e6',
+  CLAIM: '#9a80ce',
+  TEST: '#d1c4e9',
+  MEMORY: '#8b78b5',
+  CAPABILITY: '#aa95cf',
+  PROVIDER: '#c1b1df',
   PROJECTION: '#94a3b8',
-  SIDE_QUEST: '#fb7185',
+  SIDE_QUEST: '#b49edb',
   FILAMENT: '#c084fc',
 };
 
@@ -355,11 +360,69 @@ function buildG6Data(
   };
 }
 
-function applyG6Selection(graph: G6Graph | null, model: AtlasMetroModel, expanded: ReadonlySet<string>, selectedId: string | null) {
+function graphFocusLevels(model: AtlasMetroModel, visibleIds: string[], focusId: string | null): Map<string, number> {
+  const visible = new Set(visibleIds);
+  const levels = new Map<string, number>(visibleIds.map(id => [id, 3]));
+  if (!focusId || !visible.has(focusId)) return levels;
+  const adjacency = new Map<string, Set<string>>();
+  const connect = (source: string, target: string) => {
+    if (!visible.has(source) || !visible.has(target)) return;
+    if (!adjacency.has(source)) adjacency.set(source, new Set());
+    if (!adjacency.has(target)) adjacency.set(target, new Set());
+    adjacency.get(source)!.add(target);
+    adjacency.get(target)!.add(source);
+  };
+  for (const id of visibleIds) {
+    const node = model.nodeMap.get(id);
+    if (node?.parentId) connect(node.parentId, id);
+  }
+  for (const link of projectVisualCrossLinks(model, model.crossLinks, visible)) connect(link.source, link.target);
+  levels.set(focusId, 0);
+  let frontier = [focusId];
+  for (let depth = 1; depth <= 2; depth += 1) {
+    const next: string[] = [];
+    for (const id of frontier) for (const neighbor of adjacency.get(id) || []) {
+      if ((levels.get(neighbor) ?? 3) > depth) {
+        levels.set(neighbor, depth);
+        next.push(neighbor);
+      }
+    }
+    frontier = next;
+  }
+  return levels;
+}
+
+function applyG6Selection(
+  graph: G6Graph | null,
+  model: AtlasMetroModel,
+  expanded: ReadonlySet<string>,
+  selectedId: string | null,
+  hoveredId: string | null = null,
+  showBeams = true,
+) {
   if (!graph) return;
   const visible = visibleAtlasIds(model, expanded);
+  const focusId = hoveredId || selectedId;
+  const levels = graphFocusLevels(model, visible, focusId);
   const states: Record<string, string[]> = {};
-  for (const id of visible) states[id] = id === selectedId ? ['selected'] : [];
+  for (const id of visible) {
+    const level = levels.get(id) ?? 3;
+    states[id] = id === selectedId ? ['selected'] : level === 0 ? ['focus-active']
+      : level === 1 ? ['focus-neighbor'] : level === 2 ? ['focus-related'] : focusId ? ['focus-muted'] : [];
+  }
+  for (const id of visible) {
+    const node = model.nodeMap.get(id);
+    if (node?.parentId && visible.includes(node.parentId)) {
+      const a = levels.get(node.parentId) ?? 3, b = levels.get(id) ?? 3;
+      states['hierarchy:' + node.parentId + ':' + id] = !focusId ? [] : Math.max(a, b) <= 1 ? ['edge-active']
+        : Math.max(a, b) === 2 ? ['edge-related'] : ['edge-muted'];
+    }
+  }
+  if (showBeams) for (const link of projectVisualCrossLinks(model, model.crossLinks, new Set(visible))) {
+    const a = levels.get(link.source) ?? 3, b = levels.get(link.target) ?? 3;
+    states[link.id] = !focusId ? [] : Math.max(a, b) <= 1 ? ['edge-active']
+      : Math.max(a, b) === 2 ? ['edge-related'] : ['edge-muted'];
+  }
   void graph.setElementState(states, false);
 }
 
@@ -404,15 +467,11 @@ function renderScreenLabels(
   }
 
   const zoom = graph.getZoom();
+  const focusId = hoveredId || selectedId;
+  const levels = graphFocusLevels(model, ids, focusId);
+  const focusedIds = new Set([...levels].filter(([, level]) => level <= 1).map(([id]) => id));
   const layout = buildMetroScreenLabelLayout(
-    model,
-    ids,
-    screenPositions,
-    rect.width,
-    rect.height,
-    zoom,
-    selectedId,
-    hoveredId,
+    model, ids, screenPositions, rect.width, rect.height, zoom, selectedId, hoveredId, focusedIds,
   );
 
   leaderLayer.innerHTML = [...layout.byId.values()]
@@ -550,7 +609,7 @@ function Metro2DView({
           stroke: (datum: any) => statusColor(String(datum.data.status || '')),
           lineWidth: (datum: any) => datum.data.entityType === 'hub' ? 3.6 : datum.data.entityType === 'subdomain' ? 2.5 : 2,
           shadowColor: (datum: any) => domainColor(String(datum.data.domain), theme),
-          shadowBlur: (datum: any) => datum.data.entityType === 'hub' ? 20 : 8,
+          shadowBlur: (datum: any) => datum.data.entityType === 'hub' ? 9 : datum.data.entityType === 'subdomain' ? 3 : 1,
           labelText: '',
           cursor: 'pointer',
         },
@@ -569,12 +628,21 @@ function Metro2DView({
             haloStrokeOpacity: .30,
             haloLineWidth: 10,
           },
+          'focus-active': { opacity: 1 },
+          'focus-neighbor': { opacity: .96 },
+          'focus-related': { opacity: .48 },
+          'focus-muted': { opacity: .10 },
         },
       },
       edge: {
         animation: {
           enter: 'fade',
           exit: 'fade',
+        },
+        state: {
+          'edge-active': { opacity: .92, lineWidth: 2.8 },
+          'edge-related': { opacity: .32, lineWidth: 1.4 },
+          'edge-muted': { opacity: .035, lineWidth: .7 },
         },
         style: {
           stroke: (datum: any) => datum.data?.isLearning
@@ -583,11 +651,11 @@ function Metro2DView({
               ? (theme === 'light' ? '#64748b' : '#91a4bd')
               : domainColor(String(datum.data?.domain), theme),
           lineWidth: (datum: any) => datum.data?.isLearning
-            ? learningWidth(datum.data?.learningKind) + Math.min(2.1, Math.log2(Math.max(1, Number(datum.data?.visualCount || 1))) * .55)
-            : datum.data?.kind === 'bridge' ? 1.05 : 2.25,
+            ? (learningWidth(datum.data?.learningKind) + Math.min(2.1, Math.log2(Math.max(1, Number(datum.data?.visualCount || 1))) * .55)) * relationStrength(datum.data)
+            : (datum.data?.kind === 'bridge' ? 1.05 : 2.25) * relationStrength(datum.data),
           opacity: (datum: any) => datum.data?.isLearning
-            ? (datum.data?.learningKind === 'SCIENTIFIC_LEARNING_PIPELINE' ? .82 : .68)
-            : datum.data?.kind === 'bridge' ? .20 : .43,
+            ? (datum.data?.learningKind === 'SCIENTIFIC_LEARNING_PIPELINE' ? .38 : .30) * relationStrength(datum.data)
+            : (datum.data?.kind === 'bridge' ? .12 : .25) * relationStrength(datum.data),
           lineDash: (datum: any) => datum.data?.isLearning
             ? learningDash(datum.data?.learningKind)
             : datum.data?.kind === 'bridge' ? [5, 6] : [],
@@ -598,7 +666,7 @@ function Metro2DView({
             ? (datum.data?.learningKind === 'SCIENTIFIC_LEARNING_PIPELINE' ? 11 : 7)
             : 0,
           curveOffset: (datum: any) => {
-            if (!datum.data?.isLearning) return 20;
+            if (!datum.data?.isLearning && Number(datum.data?.bundleCount || 1) <= 1) return 0;
             const count = Math.max(1, Number(datum.data?.bundleCount || 1));
             const index = Number(datum.data?.bundleIndex || 0);
             const centered = index - (count - 1) / 2;
@@ -653,8 +721,7 @@ function Metro2DView({
       const id = event.target?.id;
       if (!id) return;
       hoveredRef.current = id;
-      const current = graph.getElementState(id) || [];
-      void graph.setElementState(id, [...new Set([...current, 'hover'])], false);
+      applyG6Selection(graph, modelRef.current, expandedRef.current, selectedRef.current, id, showBeamsRef.current);
       scheduleLabels();
     });
 
@@ -662,8 +729,7 @@ function Metro2DView({
       const id = event.target?.id;
       if (!id) return;
       hoveredRef.current = null;
-      const current = (graph.getElementState(id) || []).filter(state => state !== 'hover');
-      void graph.setElementState(id, current, false);
+      applyG6Selection(graph, modelRef.current, expandedRef.current, selectedRef.current, null, showBeamsRef.current);
       scheduleLabels();
     });
 
@@ -723,7 +789,7 @@ function Metro2DView({
         }
         container.dataset.g6Ready = 'true';
 
-        applyG6Selection(graph, modelRef.current, expandedRef.current, selectedRef.current);
+        applyG6Selection(graph, modelRef.current, expandedRef.current, selectedRef.current, hoveredRef.current, showBeamsRef.current);
 
         // Renderer readiness is a canvas concern, not an animation concern. A
         // stalled fit transition on touch/Safari must never keep the whole Atlas
@@ -818,7 +884,7 @@ function Metro2DView({
   useEffect(() => {
     const container = containerRef.current;
     if (container?.dataset.g6Ready !== 'true') return;
-    applyG6Selection(graphRef.current, model, expanded, selectedId);
+    applyG6Selection(graphRef.current, model, expanded, selectedId, hoveredRef.current, showBeams);
     renderLabelsRef.current();
   }, [selectedId, model.revision, expansionKey]);
 
@@ -836,6 +902,12 @@ type SynapsePulse = {
   curve: THREE.Curve<THREE.Vector3>;
   phase: number;
   speed: number;
+  sourceId: string;
+  targetId: string;
+  core: THREE.Mesh;
+  glow: THREE.Mesh;
+  baseCoreOpacity: number;
+  baseGlowOpacity: number;
 };
 
 type ThreeRuntime = {
@@ -854,6 +926,9 @@ type ThreeRuntime = {
   frame: number;
   hasFit: boolean;
   pulses: SynapsePulse[];
+  focusModel: AtlasMetroModel | null;
+  visibleIds: string[];
+  zoomedLabels: boolean;
 };
 
 function disposeThreeObject(root: THREE.Object3D) {
@@ -975,11 +1050,12 @@ function synapseCurve(
     midpoint.addScaledVector(secondary, twist * Math.sin((bundleIndex + 1) * 1.37));
     midpoint.y += ((seed % 7) - 3) * 3.2;
   } else {
-    const bend = Math.min(bridge ? 78 : 38, span * (bridge ? .16 : .09));
-    const vertical = ((seed % 9) - 4) * (bridge ? 3.2 : 1.7);
-    midpoint.addScaledVector(perpendicular, bend * sign);
+    const bundled = bridge && bundleCount > 1;
+    const bend = bundled ? Math.min(48, span * .09) : bridge ? 0 : Math.min(18, span * .035);
+    const vertical = bridge && !bundled ? 0 : ((seed % 9) - 4) * (bridge ? 1.5 : 1.2);
+    midpoint.addScaledVector(perpendicular, bend * (bundled ? bundleIndex - (bundleCount - 1) / 2 : sign));
     midpoint.y += vertical;
-    if (bridge) midpoint.addScaledVector(secondary, Math.min(104, 28 + span * .09) * (seed % 3 === 0 ? -1 : 1));
+    if (bundled) midpoint.addScaledVector(secondary, Math.min(54, 14 + span * .045) * (seed % 3 === 0 ? -1 : 1));
   }
 
   return new THREE.QuadraticBezierCurve3(source, midpoint, target);
@@ -999,6 +1075,8 @@ function addSynapse(
   bundleCount = 1,
   compact = false,
   theme: AtlasTheme = 'dark',
+  sourceId = '',
+  targetId = '',
 ) {
   const curve = synapseCurve(source, target, key, bridge, learning, bundleIndex, bundleCount);
   const span = source.distanceTo(target);
@@ -1007,6 +1085,7 @@ function addSynapse(
     : Math.max(18, Math.min(52, Math.round(span / 7)));
   const radialSegments = compact ? 4 : 5;
   const color = new THREE.Color(colorValue);
+  const edgeStrength = .72 + Math.min(.28, Math.log2(1 + Math.max(0, strength)) * .12);
   const coreRadius = (learning ? .46 : bridge ? .34 : .48) * Math.max(.72, Math.min(1.45, strength));
   const glowRadius = coreRadius * (learning ? 4.8 : 3.2);
 
@@ -1015,7 +1094,7 @@ function addSynapse(
     new THREE.MeshBasicMaterial({
       color,
       transparent: true,
-      opacity: learning ? (compact ? .16 : .20) : bridge ? (compact ? .075 : .055) : (compact ? .11 : .085),
+      opacity: (learning ? (compact ? .16 : .20) : bridge ? (compact ? .075 : .055) : (compact ? .11 : .085)) * edgeStrength,
       depthWrite: false,
       blending: theme === 'light' ? THREE.NormalBlending : THREE.AdditiveBlending,
     }),
@@ -1028,7 +1107,7 @@ function addSynapse(
     new THREE.MeshBasicMaterial({
       color,
       transparent: true,
-      opacity: learning ? (compact ? .68 : .76) : bridge ? (compact ? .36 : .28) : (compact ? .54 : .44),
+      opacity: (learning ? (compact ? .42 : .36) : bridge ? (compact ? .16 : .12) : (compact ? .28 : .22)) * edgeStrength,
       depthWrite: false,
       blending: theme === 'light' ? THREE.NormalBlending : THREE.AdditiveBlending,
     }),
@@ -1042,7 +1121,7 @@ function addSynapse(
     new THREE.MeshBasicMaterial({
       color,
       transparent: true,
-      opacity: learning && compact ? .72 : .92,
+      opacity: learning && compact ? .42 : .48,
       depthWrite: false,
       blending: theme === 'light' ? THREE.NormalBlending : THREE.AdditiveBlending,
     }),
@@ -1051,7 +1130,7 @@ function addSynapse(
   const pulseGlow = createGlowSprite(
     colorValue,
     learning ? 18 : bridge ? 10 : 12,
-    learning ? (compact ? .66 : .74) : bridge ? (compact ? .44 : .34) : (compact ? .56 : .46),
+    learning ? (compact ? .32 : .30) : bridge ? (compact ? .18 : .14) : (compact ? .22 : .18),
     theme,
   );
   pulseGlow.material.depthTest = false;
@@ -1062,11 +1141,11 @@ function addSynapse(
   particle.position.copy(curve.getPointAt(phase));
   content.add(particle);
   runtime.pulses.push({
-    particle,
-    curve,
-    phase,
-    speed: learning
-      ? .000072 + (seed % 7) * .000005
+    particle, curve, phase, sourceId, targetId,
+    core, glow,
+    baseCoreOpacity: (core.material as THREE.MeshBasicMaterial).opacity,
+    baseGlowOpacity: (glow.material as THREE.MeshBasicMaterial).opacity,
+    speed: learning ? .000072 + (seed % 7) * .000005
       : bridge ? .000022 + (seed % 7) * .000002 : .000034 + (seed % 9) * .0000025,
   });
 }
@@ -1122,8 +1201,8 @@ function createLabelSprite(
 }
 
 function nodeRadius3D(node: AtlasMetroNode): number {
-  const base = node.entityType === 'hub' ? 20 : node.entityType === 'subdomain' ? 11 : 7;
-  return base + Math.min(10, Math.sqrt(node.descendantCount + 1) * 1.4);
+  const base = node.entityType === 'hub' ? 15 : node.entityType === 'subdomain' ? 9 : 6;
+  return base + Math.min(7, Math.sqrt(node.descendantCount + 1));
 }
 
 function threePositions(
@@ -1224,35 +1303,53 @@ function threeFocusIds(
 }
 
 function applyThreeSelection(runtime: ThreeRuntime, selectedId: string | null) {
+  const focusId = runtime.hoveredId || selectedId;
+  const levels = runtime.focusModel ? graphFocusLevels(runtime.focusModel, runtime.visibleIds, focusId) : new Map<string, number>();
   runtime.nodeGroups.forEach((group, id) => {
     const selected = id === selectedId;
     const hovered = id === runtime.hoveredId;
+    const level = levels.get(id) ?? 0;
+    const faded = Boolean(focusId) && level > 2;
+    const related = Boolean(focusId) && level === 2;
     const selectionGlow = group.userData.selectionGlow as THREE.Sprite | undefined;
     const neuronGlow = group.userData.neuronGlow as THREE.Sprite | undefined;
     const core = group.userData.core as THREE.Mesh<THREE.BufferGeometry, THREE.MeshStandardMaterial> | undefined;
 
     if (selectionGlow) {
       selectionGlow.visible = selected;
-      const selectionMaterial = selectionGlow.material as THREE.SpriteMaterial;
-      selectionMaterial.opacity = selected ? .64 : 0;
+      (selectionGlow.material as THREE.SpriteMaterial).opacity = selected ? .52 : 0;
     }
-
     if (neuronGlow) {
-      const glowMaterial = neuronGlow.material as THREE.SpriteMaterial;
-      const baseOpacity = Number(neuronGlow.userData.baseOpacity || .48);
-      glowMaterial.opacity = hovered ? Math.min(.92, baseOpacity + .28) : selected ? Math.min(.86, baseOpacity + .18) : baseOpacity;
+      const material = neuronGlow.material as THREE.SpriteMaterial;
+      const baseOpacity = Number(neuronGlow.userData.baseOpacity || .10);
+      material.opacity = hovered || selected ? Math.max(.44, baseOpacity) : faded ? .012 : related ? baseOpacity * .42 : baseOpacity;
       const baseScale = Number(neuronGlow.userData.baseScale || neuronGlow.scale.x);
-      const factor = hovered ? 1.18 : selected ? 1.11 : 1;
+      const factor = hovered ? 1.14 : selected ? 1.08 : 1;
       neuronGlow.scale.set(baseScale * factor, baseScale * factor, 1);
     }
-
     if (core) {
-      const base = Number(core.userData.baseEmissive || .34);
-      core.material.emissiveIntensity = hovered ? Math.max(.92, base + .42) : selected ? Math.max(.76, base + .26) : base;
+      const base = Number(core.userData.baseEmissive || .14);
+      core.material.emissiveIntensity = hovered || selected ? Math.max(.60, base + .32) : faded ? base * .32 : related ? base * .66 : base;
+      core.material.transparent = Boolean(focusId);
+      core.material.opacity = faded ? .12 : related ? .48 : 1;
     }
+    const membrane = group.userData.membrane as THREE.Mesh | undefined;
+    if (membrane) (membrane.material as THREE.MeshBasicMaterial).opacity = faded ? .012 : related ? .025 : Number(membrane.userData.baseOpacity || .045);
+    const status = group.userData.statusNucleus as THREE.Mesh | undefined;
+    if (status) (status.material as THREE.MeshBasicMaterial).opacity = faded ? .04 : related ? .40 : .86;
+    const label = group.userData.label as THREE.Sprite | undefined;
+    if (label) label.visible = id === selectedId || hovered || level <= 1 || group.userData.isHub === true
+      || (runtime.zoomedLabels && label.userData.entityType !== 'hub');
+  });
+  runtime.pulses.forEach(edge => {
+    const a = levels.get(edge.sourceId) ?? 3, b = levels.get(edge.targetId) ?? 3;
+    const edgeLevel = Math.max(a, b);
+    const factor = !focusId ? 1 : edgeLevel <= 1 ? 1 : edgeLevel === 2 ? .34 : .055;
+    (edge.core.material as THREE.MeshBasicMaterial).opacity = edge.baseCoreOpacity * factor;
+    (edge.glow.material as THREE.MeshBasicMaterial).opacity = edge.baseGlowOpacity * factor;
+    edge.particle.visible = !focusId || edgeLevel <= 2;
   });
 }
-
 function threeFitInsets(runtime: ThreeRuntime) {
   const canvas = runtime.renderer.domElement;
   const width = Math.max(1, canvas.clientWidth || canvas.parentElement?.clientWidth || 1);
@@ -1436,9 +1533,11 @@ function rebuildThree(
   runtime.pulses = [];
 
   const ids = visibleAtlasIds(model, expanded);
+  runtime.focusModel = model;
+  runtime.visibleIds = ids;
   const visible = new Set(ids);
   const compact = isCompactRenderer(container);
-  const showLeafLabels = !compact && ids.length <= 44;
+  const showLeafLabels = !compact && ids.length <= 30;
   const positions = threePositions(model, ids, Math.max(720, container.clientWidth), Math.max(560, container.clientHeight));
   runtime.worldPositions = positions;
   const depthMetrics = threeDepthMetrics(model, ids, positions);
@@ -1477,6 +1576,8 @@ function rebuildThree(
       1,
       compact,
       theme,
+      node.parentId,
+      id,
     );
   }
 
@@ -1509,6 +1610,8 @@ function rebuildThree(
         link.bundleCount,
         compact,
         theme,
+        link.source,
+        link.target,
       );
     }
   }
@@ -1582,8 +1685,8 @@ function rebuildThree(
 
     const nodeDomainColor = domainColor(node.domain, theme);
     const typeColor = TYPE_COLOR[String(node.entityType)] || '#cbd5e1';
-    const baseEmissiveDark = (node.entityType === 'hub' ? .56 : node.entityType === 'subdomain' ? .42 : .32)
-      + (compact ? .12 : .04);
+    const baseEmissiveDark = (node.entityType === 'hub' ? .42 : node.entityType === 'subdomain' ? .24 : .13)
+      + (compact ? .02 : 0);
     const baseEmissive = theme === 'light' ? baseEmissiveDark * .42 : baseEmissiveDark;
 
     const coreMaterial = new THREE.MeshStandardMaterial({
@@ -1609,7 +1712,7 @@ function rebuildThree(
       new THREE.MeshBasicMaterial({
         color: new THREE.Color(nodeDomainColor),
         transparent: true,
-        opacity: node.entityType === 'hub' ? .13 : .09,
+        opacity: node.entityType === 'hub' ? .10 : .045,
         depthWrite: false,
         blending: theme === 'light' ? THREE.NormalBlending : THREE.AdditiveBlending,
         side: THREE.BackSide,
@@ -1619,8 +1722,8 @@ function rebuildThree(
 
     const neuronGlow = createGlowSprite(
       nodeDomainColor,
-      radius * (node.entityType === 'hub' ? 5.6 : 4.9),
-      (node.entityType === 'hub' ? .56 : .44) + (compact ? .12 : .04),
+      radius * (node.entityType === 'hub' ? 4.5 : 3.2),
+      (node.entityType === 'hub' ? .30 : .095) + (compact ? .015 : 0),
       theme,
     );
     neuronGlow.material.depthTest = false;
@@ -1641,6 +1744,7 @@ function rebuildThree(
     );
     statusNucleus.renderOrder = 9;
     group.add(statusNucleus);
+    group.userData.statusNucleus = statusNucleus;
 
     const selectionGlow = createGlowSprite(
       theme === 'light' ? '#0f172a' : '#ffffff',
@@ -1653,7 +1757,7 @@ function rebuildThree(
     selectionGlow.renderOrder = 7;
     group.add(selectionGlow);
 
-    if (showLeafLabels || node.entityType === 'hub' || node.entityType === 'subdomain' || id === selectedId) {
+    if (showLeafLabels || node.entityType === 'hub' || (node.entityType === 'subdomain' && node.childCount > 0) || id === selectedId) {
       const label = createLabelSprite(
         node.name,
         nodeDomainColor,
@@ -1662,10 +1766,16 @@ function rebuildThree(
         theme,
       );
       label.position.set(0, radius + (node.entityType === 'hub' ? 28 : 20), 0);
+      label.userData.entityType = node.entityType;
+      label.visible = node.entityType === 'hub' || id === selectedId || showLeafLabels;
       group.add(label);
+      group.userData.label = label;
     }
 
     group.userData.core = core;
+    group.userData.isHub = node.entityType === 'hub';
+    membrane.userData.baseOpacity = node.entityType === 'hub' ? .10 : .045;
+    group.userData.membrane = membrane;
     group.userData.neuronGlow = neuronGlow;
     group.userData.selectionGlow = selectionGlow;
     content.add(group);
@@ -1799,6 +1909,9 @@ function MetroThreeView({
       frame: 0,
       hasFit: false,
       pulses: [],
+      focusModel: null,
+      visibleIds: [],
+      zoomedLabels: false,
     };
     runtimeRef.current = runtime;
 
@@ -1915,6 +2028,11 @@ function MetroThreeView({
       lastFrameAt = now;
       updateSynapsePulses(runtime, now);
       controls.update();
+      const zoomedLabels = camera.position.distanceTo(controls.target) < 820;
+      if (zoomedLabels !== runtime.zoomedLabels) {
+        runtime.zoomedLabels = zoomedLabels;
+        applyThreeSelection(runtime, selectedRef.current);
+      }
       renderer.render(scene, camera);
     };
     runtime.frame = requestAnimationFrame(animate);

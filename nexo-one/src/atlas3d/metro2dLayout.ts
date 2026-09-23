@@ -61,8 +61,8 @@ function rootFor(model: AtlasMetroModel, id: string): string {
 }
 
 export function metroNodeSize(node: AtlasMetroNode): number {
-  const base = node.entityType === 'hub' ? 58 : node.entityType === 'subdomain' ? 30 : 20;
-  return Math.round(base + Math.min(34, Math.sqrt(node.descendantCount + 1) * 6));
+  const base = node.entityType === 'hub' ? 42 : node.entityType === 'subdomain' ? 24 : 17;
+  return Math.round(base + Math.min(23, Math.sqrt(node.descendantCount + 1) * 4.2));
 }
 
 export function metroLabelFontSize(node: AtlasMetroNode): number {
@@ -282,6 +282,13 @@ export function metroLayoutPositions(
       cursor += ringCount;
       ringIndex += 1;
     }
+  }
+
+  for (const id of ids) {
+    const node = model.nodeMap.get(id);
+    const position = positions.get(id);
+    if (!node || !position || rootFor(model, id) !== 'atlas.domain.nexo' || position[0] >= anchorsByDomain.NEXO[0] - w * .10) continue;
+    position[0] = anchorsByDomain.NEXO[0] - (anchorsByDomain.NEXO[0] - position[0]) * .88;
   }
 
   return positions;
@@ -565,6 +572,7 @@ export function buildMetroScreenLabelLayout(
   zoom: number,
   selectedId: string | null = null,
   hoveredId: string | null = null,
+  focusedIds: ReadonlySet<string> = new Set(),
 ): MetroScreenLabelLayout {
   const visibleSet = new Set(ids);
   const compactViewport = viewportWidth <= 640;
@@ -626,10 +634,15 @@ export function buildMetroScreenLabelLayout(
     // recreates the exact pile-up that adaptive density is meant to prevent.
     // Hubs and the actively selected/touched station stay mandatory; passive
     // subdomain labels may yield when no collision-free placement exists.
-    const mustShow = node.entityType === 'hub'
-      || node.id === selectedId
-      || node.id === hoveredId
-      || (!compactViewport && !ultraDenseOverview && node.entityType === 'subdomain');
+    const interactive = node.id === selectedId || node.id === hoveredId || focusedIds.has(node.id);
+    const scaleEligible = node.entityType === 'hub'
+      || (node.entityType === 'subdomain' && !compactViewport && !ultraDenseOverview && zoom >= 1.05)
+      || (node.entityType !== 'subdomain' && zoom >= 1.45);
+    if (!interactive && !scaleEligible) {
+      byId.set(node.id, { id: node.id, visible: false, left: 0, top: 0, width: estimateLabelWidth(node), height: estimateLabelHeight(node), fontSize: metroLabelFontSize(node), maxWidth: labelMaxWidth(node), placement: 'bottom', leader: null });
+      continue;
+    }
+    const mustShow = node.entityType === 'hub' || interactive || scaleEligible && node.entityType === 'subdomain';
 
     if (!mustShow && siblings && !siblings.sampled) {
       byId.set(node.id, {
