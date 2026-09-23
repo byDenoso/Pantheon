@@ -34,6 +34,7 @@ test('legacy MCP and Atlas pages are minimal bridges and retain the SPA entries 
   assert.match(mcp, /destination\.hash\s*=\s*'\/sistema'/);
   assert.match(mcp, /location\.replace/);
   assert.match(mcp, /location\.search/);
+  assert.match(mcp, /content="1;url=\.\.\/#\/sistema/);
   assert.match(atlas, /params\.set\('view',\s*params\.get\('view'\) \|\| '3d'\)/);
   assert.match(atlas, /content="1;url=\.\.\/#\/atlas/);
   assert.match(atlas, /location\.replace/);
@@ -78,4 +79,24 @@ test('capability counters name their different semantics explicitly', async () =
   ]);
   assert.match(overview, /Capabilities fora de PASS/);
   assert.match(mcp, /capabilities registradas/);
+});
+
+test('cockpit and Sistema share the instrument shell, palette and compact rail', async () => {
+  const [app, header, foundation, shell, mcp] = await Promise.all([
+    read('../src/app/App.tsx'), read('../src/shell/InstrumentHeader.tsx'),
+    read('../src/styles/tokens.css'), read('../src/styles/product-shell.css'),
+    read('../src/mcp/EmbeddedMcp.tsx'),
+  ]);
+  assert.match(app, /<InstrumentHeader mode=\{currentMode\}/);
+  assert.match(app, /unified-shell system-route/);
+  assert.match(app, /<EmbeddedMcp theme=\{theme\}/);
+  assert.match(header, /Science :20 · Exec :05 · drift 0/);
+  assert.match(header, /aria-label="Modo do produto"/);
+  assert.match(shell, /grid-template-columns:56px minmax\(0,1fr\)/);
+  assert.match(shell, /nav-rail:hover/);
+  assert.match(shell, /prefers-reduced-motion:reduce/);
+  assert.match(shell, /mcp-site\[data-mcp-embedded=true\] \.mcp-nav/);
+  assert.match(foundation, /--bg:#0b0c0d/);
+  assert.match(foundation, /--radius-sm:6px;--radius-md:8px;--radius-lg:16px/);
+  assert.match(mcp, /themeOverride=\{theme\}/);
 });

@@ -68,15 +68,19 @@ export interface NavGroup { id: string; label: string; entries: NavEntry[] }
 
 export const NAV_GROUPS: NavGroup[] = [
   {
-    id: 'operation', label: 'OPERAÇÃO', entries: [
+    id: 'command', label: 'COMANDO', entries: [
       { id: 'OVERVIEW', label: 'Overview', glyph: '◎', hint: 'Estado atual, atenção e lanes' },
       { id: 'INBOX', label: 'Needs Dener', glyph: '⌾', hint: 'Somente gates canônicos que exigem ação humana explícita' },
+    ],
+  },
+  {
+    id: 'pipeline', label: 'PIPELINE', entries: [
       { id: 'ACTIONS', label: 'Actions', glyph: '→', hint: 'Ações, elegibilidade e blockers' },
       { id: 'EXECUTION', label: 'Execution', glyph: '⟐', hint: 'Action → Capability → Runtime → Effect → Readback' },
     ],
   },
   {
-    id: 'integrity', label: 'INTEGRIDADE', entries: [
+    id: 'proof', label: 'PROVA', entries: [
       { id: 'TRUTHGRAPH', label: 'TruthGraph', glyph: '⊹', hint: 'Autoridade e posse da verdade' },
       { id: 'CAPABILITIES', label: 'Capabilities', glyph: '⬡', hint: 'O que pode ser feito, e com qual prova' },
       { id: 'SOURCES', label: 'Sources', glyph: '⊞', hint: 'Providers e Universal Projection Bus' },
@@ -84,7 +88,7 @@ export const NAV_GROUPS: NavGroup[] = [
     ],
   },
   {
-    id: 'knowledge', label: 'CONHECIMENTO', entries: [
+    id: 'atlas', label: 'ATLAS', entries: [
       { id: 'ATLAS', label: 'Atlas', glyph: '✧', hint: 'Grafo estrutural e exploração' },
       { id: 'LEARNING', label: 'Learning', glyph: '≋', hint: 'Memória semântica, procedural e filamentos' },
     ],

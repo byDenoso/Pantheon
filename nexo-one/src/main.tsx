@@ -9,5 +9,6 @@ import './styles/components.css';
 import './styles/system.css';
 import './styles/command-os.css';
 import './styles/nexo-prime.css';
+import './styles/product-shell.css';
 class Boundary extends Component<{children:ReactNode},{failed:boolean}>{state={failed:false};static getDerivedStateFromError(){return {failed:true};}render(){return this.state.failed?<main className="fatal-state"><h1>Não foi possível abrir esta visão.</h1><p>Recarregue para consultar novamente suas fontes.</p><button onClick={()=>location.reload()}>Recarregar</button></main>:this.props.children;}}
 createRoot(document.getElementById('root')!).render(<Boundary><NexoStoreProvider><App/></NexoStoreProvider></Boundary>);
