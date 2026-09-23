@@ -1,6 +1,7 @@
-import {useCallback,useEffect,useMemo,useRef,useState} from 'react';
+import {useCallback,useEffect,useMemo,useState} from 'react';
 import {useNexoStore} from '../data/NexoStore.tsx';
-import {CanvasGraph25D,type CanvasEdge25D,type CanvasGraph25DHandle,type CanvasNode25D} from '../components/CanvasGraph25D.tsx';
+import {NexoGraph,type NexoGraphView} from '../components/NexoGraph.tsx';
+import type {AtlasMetroModel,AtlasMetroNode,AtlasCrossLink} from '../atlas3d/atlasAdapter.ts';
 
 type NodeKind='ROOT'|'LAYER'|'TRANSPORT'|'TOOL'|'FAMILY'|'CAPABILITY'|'BACKEND'|'ROLE';
 type TopologyNode={
@@ -15,70 +16,14 @@ type Topology={
   nodes:TopologyNode[];links:TopologyLink[];
 };
 
-// One coherent cyan/blue galaxy identity: node kind is read from radial position
-// and label, not from hue. Brightness alone separates the structural core from
-// leaf nodes so the map never reads as a rainbow dashboard.
-const COLORS:Record<NodeKind,string>={
-  ROOT:'#eafcff',LAYER:'#9fe9ff',TRANSPORT:'#8fdcf7',TOOL:'#79e7ff',
-  FAMILY:'#6fc3e8',CAPABILITY:'#79e7ff',BACKEND:'#8fdcf7',ROLE:'#5fa7c4',
-};
-const idOf=(value:string|TopologyNode)=>typeof value==='string'?value:value.id;
-
-function kindLabel(kind:NodeKind){
-  return ({ROOT:'MCP',LAYER:'CAMADA',TRANSPORT:'TRANSPORTE',TOOL:'TOOL',FAMILY:'FAMÍLIA',CAPABILITY:'CAPABILITY',BACKEND:'RUNTIME',ROLE:'ROLE'} as Record<NodeKind,string>)[kind];
-}
-function hash32(value:string){
-  let hash=2166136261;
-  for(let i=0;i<value.length;i+=1){hash^=value.charCodeAt(i);hash=Math.imul(hash,16777619);}
-  return hash>>>0;
-}
-function topologyLayout(nodes:TopologyNode[]):CanvasNode25D[]{
-  const radiusByKind:Record<NodeKind,number>={
-    ROOT:0,LAYER:72,TRANSPORT:96,FAMILY:150,BACKEND:166,ROLE:178,TOOL:235,CAPABILITY:252,
-  };
-  const nodeRadius:Record<NodeKind,number>={
-    ROOT:2.9,LAYER:1.8,TRANSPORT:1.55,FAMILY:1.45,BACKEND:1.38,ROLE:1.28,TOOL:.78,CAPABILITY:.88,
-  };
-  const buckets=new Map<NodeKind,TopologyNode[]>();
-  for(const node of nodes){
-    const group=buckets.get(node.kind)??[];
-    group.push(node);buckets.set(node.kind,group);
-  }
-  const result:CanvasNode25D[]=[];
-  for(const [kind,group] of buckets){
-    const ordered=[...group].sort((a,b)=>a.id.localeCompare(b.id));
-    ordered.forEach((node,index)=>{
-      if(kind==='ROOT'){
-        result.push({id:node.id,label:node.label,x:0,y:0,z:0,radius:nodeRadius[kind],color:COLORS[kind],major:true});
-        return;
-      }
-      const count=Math.max(1,ordered.length);
-      const phase=((hash32(kind)%1000)/1000)*Math.PI*2;
-      const angle=phase+(index/count)*Math.PI*2;
-      const radius=radiusByKind[kind];
-      const wobble=((hash32(node.id)%1000)/1000-.5);
-      result.push({
-        id:node.id,label:node.label,
-        x:Math.cos(angle)*radius,
-        y:Math.sin(angle)*radius*.62+wobble*26,
-        z:Math.sin(angle*1.7)*radius*.46+wobble*34,
-        radius:nodeRadius[kind],color:COLORS[kind],
-        major:['LAYER','TRANSPORT','FAMILY','BACKEND','ROLE'].includes(kind),
-      });
-    });
-  }
-  return result;
-}
-
-
 type ViewMode='all'|'tools'|'capabilities'|'runtime'|'roles';
 type McpTheme='dark'|'light';
-type GraphView='2d'|'3d';
+type GraphView=NexoGraphView;
 type SystemTab='overview'|'tools'|'capabilities'|'runtimes'|'roles'|'relations'|'provenance'|'graph';
 const SYSTEM_TABS:Array<[SystemTab,string]>=[['overview','Visão geral'],['tools','Tools'],['capabilities','Capabilities'],['runtimes','Runtimes'],['roles','Roles'],['relations','Relações'],['provenance','Proveniência'],['graph','Grafo']];
 
 const THEME_STORAGE_KEY='nexo.mcp.theme.v1';
-const GRAPH_VIEW_STORAGE_KEY='nexo.mcp.graph-view.v1';
+const GRAPH_VIEW_STORAGE_KEY='nexo.graph.view.v1';
 const routeParams=()=>{
   const hash=window.location.hash;
   const query=hash.match(/^#\/?sistema\?(.+)$/i)?.[1];
@@ -95,7 +40,7 @@ function initialTheme():McpTheme{
   try{return window.localStorage.getItem(THEME_STORAGE_KEY)==='light'?'light':'dark';}catch{return'dark';}
 }
 function initialGraphView():GraphView{
-  const query=routeParams().get('graph');
+  const query=routeParams().get('view')||routeParams().get('graph');
   if(query==='2d'||query==='3d')return query;
   try{return window.localStorage.getItem(GRAPH_VIEW_STORAGE_KEY)==='3d'?'3d':'2d';}catch{return'2d';}
 }
@@ -130,117 +75,71 @@ function topologySignature(topology:Topology){
     ||[topology.source.commit,topology.generated_at,topology.nodes.length,topology.links.length].join('|');
 }
 
-function relationColor(kind:string,theme:McpTheme){
-  if(kind==='RUNS_ON')return theme==='light'?'#15803d':'#67ef9a';
-  if(kind==='AVAILABLE_TO')return theme==='light'?'#b45309':'#ffc76b';
-  if(kind==='EXPOSES')return theme==='light'?'#0369a1':'#79e9ff';
-  return theme==='light'?'#64748b':'#64718a';
+function systemDepth(kind:NodeKind):number{
+  return ({ROOT:0,LAYER:1,TRANSPORT:1,TOOL:1,FAMILY:2,CAPABILITY:2,BACKEND:3,ROLE:4} as Record<NodeKind,number>)[kind]??1;
+}
+function systemEntityType(kind:NodeKind):AtlasMetroNode['entityType']{
+  return kind==='BACKEND'?'RUNTIME':kind;
+}
+function systemGraphModel(topology:Topology,mode:ViewMode,search:string):AtlasMetroModel{
+  const query=search.trim().toLowerCase();
+  const allowed=topology.nodes.filter(node=>allowedInMode(node,mode));
+  const allowedIds=new Set(allowed.map(node=>node.id));
+  let included=new Set(allowedIds);
+  if(query){
+    const matched=new Set(allowed.filter(node=>nodeMatches(node,query)).map(node=>node.id));
+    included=new Set(matched);
+    for(const link of topology.links){
+      const source=idOf(link.source),target=idOf(link.target);
+      if(!allowedIds.has(source)||!allowedIds.has(target))continue;
+      if(matched.has(source)||matched.has(target)){included.add(source);included.add(target);}
+    }
+  }
+  const rootId='nexo.system.root';
+  const visible=allowed.filter(node=>included.has(node.id));
+  const relationCounts=new Map<string,number>();
+  const links=topology.links.filter(link=>included.has(idOf(link.source))&&included.has(idOf(link.target)));
+  for(const link of links){
+    relationCounts.set(idOf(link.source),(relationCounts.get(idOf(link.source))||0)+1);
+    relationCounts.set(idOf(link.target),(relationCounts.get(idOf(link.target))||0)+1);
+  }
+  const root:AtlasMetroNode={
+    id:rootId,sourceId:null,name:'Sistema',domain:'NEXO',parentId:null,entityType:'ROOT',status:'LIVE',
+    summary:'Topologia MCP publicada.',depth:0,childCount:visible.length,descendantCount:visible.length,
+    relationCount:visible.length,mix:50,updatedAt:topology.generated_at,sourceRevision:topology.source.commit||null,
+    fingerprint:topology.source.projection_fingerprint||null,authorityClass:topology.source.authority||null,
+    sourceRef:null,sourceLinks:[],temporal:[],synthetic:true,
+  };
+  const nodes:AtlasMetroNode[]=[root,...visible.map(node=>({
+    id:node.id,sourceId:node.id,name:node.label,domain:'NEXO' as const,parentId:rootId,entityType:systemEntityType(node.kind),
+    status:node.status,summary:node.summary||kindLabel(node.kind),depth:systemDepth(node.kind),childCount:0,descendantCount:0,
+    relationCount:relationCounts.get(node.id)||0,mix:50,updatedAt:topology.generated_at,sourceRevision:topology.source.commit||null,
+    fingerprint:topology.source.projection_fingerprint||null,authorityClass:topology.source.authority||null,
+    sourceRef:null,sourceLinks:[],temporal:[],synthetic:false,
+  }))];
+  const nodeMap=new Map(nodes.map(node=>[node.id,node]));
+  const childrenMap=new Map<string,string[]>([[rootId,visible.map(node=>node.id)]]);
+  for(const node of visible)childrenMap.set(node.id,[]);
+  const crossLinks:AtlasCrossLink[]=links.map(link=>({
+    id:link.id,source:idOf(link.source),target:idOf(link.target),label:link.kind,kind:link.kind,weight:Number(link.weight||1),
+    aggregated:false,isLearning:false,learningScope:null,learningRef:null,learningKind:null,learningGroup:null,learningTheme:null,
+    learningBasis:null,sourceAnchor:null,targetAnchor:null,bundleIndex:0,bundleCount:1,
+  }));
+  return {
+    revision:[topologySignature(topology),mode,query].join('|'),generatedAt:topology.generated_at,roots:[rootId],nodes,nodeMap,
+    childrenMap,crossLinks,sourceNodeIds:new Set(nodes.map(node=>node.id)),
+  };
 }
 
-function Graph({topology,search,mode,selected,onSelect,theme,view}:{topology:Topology;search:string;mode:ViewMode;selected:string|null;onSelect:(id:string|null)=>void;theme:McpTheme;view:GraphView}){
-  const ref=useRef<CanvasGraph25DHandle|null>(null);
-  const query=search.trim().toLowerCase();
-  const visible=useMemo(()=>{
-    const nodes=topology.nodes.filter(node=>allowedInMode(node,mode));
-    const ids=new Set(nodes.map(node=>node.id));
-    const links=topology.links.filter(link=>ids.has(idOf(link.source))&&ids.has(idOf(link.target)));
-    return {nodes,links};
-  },[topology,mode]);
-
-  const matchedIds=useMemo(
-    ()=>new Set(query?visible.nodes.filter(node=>nodeMatches(node,query)).map(node=>node.id):[]),
-    [query,visible.nodes],
-  );
-  const relatedIds=useMemo(()=>{
-    const ids=new Set<string>(matchedIds);
-    if(!query)return ids;
-    for(const link of visible.links){
-      const source=idOf(link.source),target=idOf(link.target);
-      if(matchedIds.has(source)||matchedIds.has(target)){ids.add(source);ids.add(target);}
-    }
-    return ids;
-  },[matchedIds,query,visible.links]);
-
-  useEffect(()=>{
-    if(view==='3d'&&selected)ref.current?.focusNode(selected,query?2.45:2.2);
-  },[selected,query,view]);
-
-  const byId=new Map(visible.nodes.map(node=>[node.id,node]));
-  const canvasNodes=topologyLayout(visible.nodes).map(node=>{
-    const source=byId.get(node.id)!;
-    const isMatch=matchedIds.has(node.id);
-    const isRelated=relatedIds.has(node.id);
-    const opacity=query
-      ? (isMatch ? 1 : (isRelated ? .56 : .09))
-      : (selected && node.id!==selected ? .42 : 1);
-    return {
-      ...node,
-      color:theme==='light'
-        ? ({ROOT:'#6d28d9',LAYER:'#0369a1',TRANSPORT:'#0284c7',TOOL:'#0e7490',FAMILY:'#7c3aed',CAPABILITY:'#0369a1',BACKEND:'#0f766e',ROLE:'#c2410c'} as Record<NodeKind,string>)[source.kind]
-        : COLORS[source.kind],
-      opacity,
-      major:node.major||node.id===selected||isMatch,
-      importance:isMatch?1:node.importance,
-      halo:isMatch ? 1 : (node.id===selected ? .9 : node.halo),
-    };
-  });
-  const canvasEdges:CanvasEdge25D[]=visible.links.map(link=>{
-    const source=idOf(link.source),target=idOf(link.target);
-    const touchesMatch=matchedIds.has(source)||matchedIds.has(target);
-    const related=query&&(relatedIds.has(source)&&relatedIds.has(target));
-    const baseOpacity=link.kind==='EXPOSES'?.58:.32;
-    return {
-      id:link.id,from:source,to:target,
-      color:relationColor(link.kind,theme),
-      opacity:query ? (touchesMatch ? .72 : (related ? .34 : .045)) : baseOpacity,
-      width:Math.max(.8,Number(link.weight||.2)*1.35)*(touchesMatch?1.25:1),
-      dashed:link.kind==='AVAILABLE_TO',
-    };
-  });
-
-  const nodePositions=new Map(canvasNodes.map(node=>[node.id,node]));
-  return <div className="graph-shell" aria-label={view==='2d'?'Mapa neural 2D da estrutura MCP':'Mapa neural 3D da estrutura MCP'}
-    data-mcp-renderer={view==='2d'?'neural-2d':'neural-3d'} data-mcp-theme={theme}
-    data-mcp-visible-nodes={visible.nodes.length} data-mcp-visible-links={visible.links.length}>
-    {view==='2d'?<svg className="mcp-neural-2d" viewBox="-330 -225 660 450" role="img" aria-label="Topologia MCP neural em 2D">
-      <defs>
-        <filter id="mcp-node-glow" x="-120%" y="-120%" width="340%" height="340%"><feGaussianBlur stdDeviation="5" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
-      </defs>
-      <g className="mcp-neural-edges">
-        {visible.links.map(link=>{
-          const from=nodePositions.get(idOf(link.source)),to=nodePositions.get(idOf(link.target));
-          if(!from||!to)return null;
-          const touches=selected&&(from.id===selected||to.id===selected);
-          const mx=(from.x+to.x)/2, my=(from.y+to.y)/2-18;
-          return <path key={link.id} d={`M ${from.x} ${from.y} Q ${mx} ${my} ${to.x} ${to.y}`}
-            stroke={relationColor(link.kind,theme)} className={touches?'selected':''}
-            data-relation-kind={link.kind}/>;
-        })}
-      </g>
-      <g className="mcp-neural-nodes">
-        {canvasNodes.map(node=>{
-          const source=byId.get(node.id)!;
-          const active=node.id===selected;
-          const matched=matchedIds.has(node.id);
-          const r=Math.max(5,(node.radius||1)*5.2);
-          const showLabel=active||matched||Boolean(node.major);
-          return <g key={node.id} className={active?'mcp-neuron active':'mcp-neuron'} transform={`translate(${node.x} ${node.y})`}
-            onClick={()=>onSelect(node.id)} role="button" tabIndex={0}
-            onKeyDown={event=>{if(event.key==='Enter'||event.key===' '){event.preventDefault();onSelect(node.id);}}}
-            aria-label={source.label}>
-            <circle className="halo" r={r+9} fill={node.color}/>
-            <circle className="core" r={r} fill={node.color} filter="url(#mcp-node-glow)"/>
-            <circle className="spark" r={Math.max(1.7,r*.22)}/>
-            {showLabel&&<text y={r+12} textAnchor="middle">{source.label.length>28?source.label.slice(0,27)+'…':source.label}</text>}
-          </g>;
-        })}
-      </g>
-    </svg>:<CanvasGraph25D ref={ref} nodes={canvasNodes} edges={canvasEdges} selectedId={selected} onSelect={onSelect}
-      ariaLabel="Topologia MCP neural em 3D" theme={theme}/>}
-    {query&&<div className="search-readback" role="status">
-      <b>{matchedIds.size}</b> correspondência{matchedIds.size===1?'':'s'} · conexões preservadas em contexto
-    </div>}
-    <div className="graph-vignette"/>
+function Graph({topology,search,mode,selected,onSelect,theme,view,onViewChange}:{topology:Topology;search:string;mode:ViewMode;selected:string|null;onSelect:(id:string|null)=>void;theme:McpTheme;view:GraphView;onViewChange:(view:GraphView)=>void}){
+  const model=useMemo(()=>systemGraphModel(topology,mode,search),[topology,mode,search]);
+  const expanded=useMemo(()=>new Set(model.roots),[model.revision]);
+  const visible=Math.max(0,model.nodes.length-1);
+  return <div className="graph-shell" aria-label={view==='2d'?'Mapa 2D da estrutura MCP':'Mapa 3D da estrutura MCP'}
+    data-mcp-renderer={view==='2d'?'metro-2d':'three-3d'} data-mcp-theme={theme}
+    data-mcp-visible-nodes={visible} data-mcp-visible-links={model.crossLinks.length}>
+    <NexoGraph model={model} expanded={expanded} selectedId={selected} onSelect={id=>onSelect(id)}
+      view={view} onViewChange={onViewChange} theme={theme}/>
   </div>;
 }
 
@@ -257,6 +156,7 @@ export function McpAtlasApp({themeOverride,embedded=false}:{themeOverride?:strin
  useEffect(()=>{if(!topology||!search.trim())return;const query=search.trim().toLowerCase();const match=topology.nodes.filter(node=>nodeMatches(node,query)).sort((a,b)=>matchRank(a,query)-matchRank(b,query))[0];if(match)setSelected(match.id);},[topology,search]);
  useEffect(()=>{const restore=()=>setTab(initialSystemTab());window.addEventListener('hashchange',restore);window.addEventListener('popstate',restore);return()=>{window.removeEventListener('hashchange',restore);window.removeEventListener('popstate',restore);};},[]);
  const selectTab=(next:SystemTab)=>{setTab(next);const params=routeParams();params.set('tab',next);window.history.pushState(null,'',`#/sistema?${params.toString()}`);window.scrollTo({top:0,left:0,behavior:'auto'});};
+ const changeGraphView=(next:GraphView)=>{setGraphView(next);const params=routeParams();params.set('tab','graph');params.set('view',next);params.delete('graph');window.history.replaceState(null,'',`#/sistema?${params.toString()}`);};
  const q=search.trim().toLowerCase(),named=(id:string)=>topology?.nodes.find(n=>n.id===id)?.label||id;
  const rows=(kind:NodeKind)=>topology?.nodes.filter(n=>n.kind===kind&&nodeMatches(n,q))||[];
  const tools=rows('TOOL'),caps=rows('CAPABILITY'),runtimes=rows('BACKEND'),roles=rows('ROLE'),selectedNode=topology?.nodes.find(n=>n.id===selected)||null;
@@ -282,7 +182,7 @@ export function McpAtlasApp({themeOverride,embedded=false}:{themeOverride?:strin
   {topology&&tab==='roles'&&table(['Papel','Capabilities disponíveis','Estado','Origem'],roles.map(n=><tr key={n.id} onClick={()=>setSelected(n.id)}><td><strong>{n.label}</strong></td><td>{caps.filter(c=>Array.isArray(c.meta?.roles)&&c.meta.roles.includes(n.label)).length}</td><td>{status(n.status)}</td><td>Não publicado</td></tr>),'Nenhum papel corresponde ao filtro.')}
   {topology&&tab==='relations'&&table(['Origem','Relação','Destino','Peso'],relations.map(l=><tr key={l.id}><td>{named(idOf(l.source))}</td><td>{relation(l.kind)} <small className="system-mono">{l.kind}</small></td><td>{named(idOf(l.target))}</td><td className="system-mono">{Number(l.weight).toFixed(2)}</td></tr>),'Nenhuma relação corresponde ao filtro.')}
   {topology&&tab==='provenance'&&<div className="system-provenance"><h2>Proveniência da projeção publicada</h2><p>A Tower atribui autoridade ao repositório GitHub; esta publicação identifica um snapshot espelhado em Google Drive. Autoridade e origem da cópia pública precisam permanecer alinhadas.</p>{[['Autoridade declarada','TOWER_V06'],['Armazenamento',topology.source.source_storage||'Não publicado'],['Snapshot',topology.source.source_snapshot_id||'Não publicado'],['Fingerprint do estado',topology.source.source_state_fingerprint||'Não publicado'],['Fingerprint da projeção',topology.source.projection_fingerprint||'Não publicado'],['Commit',topology.source.commit||'Não publicado'],['Manifest',topology.source.manifest||'Não publicado']].map(([n,v])=><div key={n}><span>{n}</span><code>{v}</code></div>)}</div>}
-  {topology&&tab==='graph'&&<div className="system-graph-panel"><div className="system-graph-controls"><div className="system-graph-filters">{([['all','Tudo'],['tools','Tools'],['capabilities','Capabilities'],['runtime','Runtimes'],['roles','Papéis']] as const).map(([id,n])=><button type="button" className={mode===id?'active':''} onClick={()=>setMode(id)} key={id}>{n}</button>)}</div><div className="system-graph-views" role="group" aria-label="Visualização do grafo"><button type="button" className={graphView==='2d'?'active':''} onClick={()=>setGraphView('2d')}>2D</button><button type="button" className={graphView==='3d'?'active':''} onClick={()=>setGraphView('3d')}>3D</button></div><span>{topology.nodes.length} entidades · {topology.links.length} relações</span></div><Graph topology={topology} search={search} mode={mode} selected={selected} onSelect={setSelected} theme={activeTheme} view={graphView}/></div>}
+  {topology&&tab==='graph'&&<div className="system-graph-panel"><div className="system-graph-controls"><div className="system-graph-filters">{([['all','Tudo'],['tools','Tools'],['capabilities','Capabilities'],['runtime','Runtimes'],['roles','Papéis']] as const).map(([id,n])=><button type="button" className={mode===id?'active':''} onClick={()=>setMode(id)} key={id}>{n}</button>)}</div><span>{topology.nodes.length} entidades · {topology.links.length} relações</span></div><Graph topology={topology} search={search} mode={mode} selected={selected} onSelect={setSelected} theme={activeTheme} view={graphView} onViewChange={changeGraphView}/></div>}
   {selectedNode&&tab!=='graph'&&<aside className="system-row-inspector"><button type="button" onClick={()=>setSelected(null)} aria-label="Fechar detalhes">Fechar</button><strong>{selectedNode.label}</strong><span>{status(selectedNode.status)} · {kindLabel(selectedNode.kind)}</span>{selectedNode.summary&&<p>{selectedNode.summary}</p>}<a href={`#/atlas?lente=sistema&sel=${encodeURIComponent(selectedNode.id)}&view=2d`}>Ver no Mapa ↗</a></aside>}
  </main></div>;
 }
