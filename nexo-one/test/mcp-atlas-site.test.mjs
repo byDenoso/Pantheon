@@ -47,7 +47,8 @@ test('MCP Atlas is a routed surface in the unified SPA with canonical Tower sour
   assert.match(site,/systemGraphModel/);
   assert.doesNotMatch(site,/system-graph-views/);
   assert.match(site,/\['roles','Roles'\]/);
-  assert.match(builder,/source_snapshot_id/);
+  assert.match(builder, /tower_file_id/);
+  assert.match(builder, /tower_revision/);
   assert.match(builder,/projection_fingerprint/);
   assert.doesNotMatch(site,/Abrir NEXO ONE/);
   assert.doesNotMatch(site,/dispatchProjectionSync|waitForProjectionSync/);
