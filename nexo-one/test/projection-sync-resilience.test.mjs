@@ -97,7 +97,7 @@ test('projection sync rejects a published snapshot whose build-meta fingerprint 
     const {dispatchProjectionSync}=await import('../src/data/projectionSync.ts');
     await assert.rejects(
       dispatchProjectionSync('sha256:'+'d'.repeat(64)),
-      error=>error?.code==='CONTRACT_MISMATCH'&&/não fecharam o mesmo fingerprint/.test(error.message),
+      error=>error?.code==='CONTRACT_MISMATCH'&&/não fecharam a mesma revisão/.test(error.message),
     );
   }finally{
     globalThis.fetch=originalFetch;
