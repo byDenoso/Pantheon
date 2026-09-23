@@ -482,7 +482,7 @@ jobs:
 
           capture_system_shell() {
             local name="$1" width="$2" height="$3" theme="$4"
-            local url="${base}/#/sistema?theme=${theme}"
+            local url="${base}/mcp/?theme=${theme}"
             local dom="/tmp/shell-${name}.html"
             dump_until_ready 'data-mcp-ready="true"' "${dom}" \
               --headless=new --no-sandbox --disable-dev-shm-usage --hide-scrollbars \
