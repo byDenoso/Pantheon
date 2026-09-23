@@ -22,7 +22,7 @@ const CANONICAL_ROUTE: Record<ViewId, string> = {
   ACTIONS: '#/cockpit/pipeline', EXECUTION: '#/cockpit/pipeline?view=execution',
   TRUTHGRAPH: '#/cockpit/prova', CAPABILITIES: '#/cockpit/prova?view=capabilities',
   SOURCES: '#/cockpit/prova?view=sources', INTEGRITY: '#/cockpit/prova?view=integrity',
-  ATLAS: '#/atlas?lente=operacao&view=2d', LEARNING: '#/atlas?lente=aprendizado&view=2d',
+  ATLAS: '#/atlas?lente=operacao&view=2d', LEARNING: '#/cockpit/ciencia?view=learning',
   NOW: '#/cockpit/pessoal/now', LOOPS: '#/cockpit/pessoal/loops', DAY: '#/cockpit/pessoal/day',
   CONTEXT: '#/cockpit/pessoal/context', RECALL: '#/cockpit/pessoal/recall',
 };
@@ -45,14 +45,11 @@ export const viewFromHash = (hash: string): ViewId | null => {
   const value = path.toUpperCase();
   const pane = new URLSearchParams(query).get('view')?.toUpperCase();
   if (pane && LEGACY_VIEW[pane]) return LEGACY_VIEW[pane];
-  if (value === 'ATLAS') {
-    const lens = new URLSearchParams(query).get('lente')?.toLowerCase();
-    return lens === 'aprendizado' ? 'LEARNING' : 'ATLAS';
-  }
+  if (value === 'ATLAS') return 'ATLAS';
   const legacy = LEGACY_VIEW[value];
   if (legacy) return legacy;
   if (value === 'COCKPIT/COMANDO') return 'OVERVIEW';
-  if (value === 'COCKPIT/CIENCIA') return 'OVERVIEW';
+  if (value === 'COCKPIT/CIENCIA') return 'LEARNING';
   if (value === 'COCKPIT/PIPELINE') return 'ACTIONS';
   if (value === 'COCKPIT/PROVA') return 'TRUTHGRAPH';
   if (value.startsWith('COCKPIT/PESSOAL/')) {
