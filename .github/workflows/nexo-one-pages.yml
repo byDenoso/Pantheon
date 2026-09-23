@@ -493,7 +493,7 @@ jobs:
               --window-size="${width},${height}" --virtual-time-budget=9000 \
               --screenshot="/tmp/shell-${name}.png" --dump-dom "${url}"
             grep -Fq 'class="instrument-header"' "${dom}"
-            grep -Fq 'class="unified-shell system-route' "${dom}"
+            grep -Fq 'class="cockpit unified-shell system-route' "${dom}"
             grep -Fq "data-mcp-theme=\"${theme}\"" "${dom}"
             test -s "/tmp/shell-${name}.png"
             echo "PAGES_UNIFIED_SHELL_READBACK_OK viewport=${width}x${height} theme=${theme}"
