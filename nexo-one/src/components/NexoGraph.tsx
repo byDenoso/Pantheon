@@ -14,11 +14,11 @@ export function GraphViewSwitch({view,onChange}:{view:NexoGraphView;onChange:(vi
 }
 
 export function NexoGraph({
-  model,expanded,selectedId,view,theme='dark',showRelations=true,fitNonce=0,onSelect,onViewChange,onFit,onReset,
+  model,expanded,selectedId,view,theme='dark',showRelations=true,fitNonce=0,onSelect,onViewChange,onFit,onReset,onReady,
 }:{
   model:AtlasMetroModel;expanded:ReadonlySet<string>;selectedId:string|null;view:NexoGraphView;theme?:'dark'|'light';
   showRelations?:boolean;fitNonce?:number;onSelect:(id:string)=>void;onViewChange:(view:NexoGraphView)=>void;
-  onFit?:()=>void;onReset?:()=>void;
+  onFit?:()=>void;onReset?:()=>void;onReady?:()=>void;
 }){
   const hostRef=useRef<HTMLDivElement|null>(null);
   const [g6Ready,setG6Ready]=useState(()=>view==='3d'||Boolean((window as any).G6?.Graph));
@@ -73,6 +73,6 @@ export function NexoGraph({
       ? <div className="nexo-graph-table-wrap"><table className="nexo-graph-table"><thead><tr><th>Entidade</th><th>Tipo</th><th>Domínio</th><th>Estado</th><th>Relações</th></tr></thead><tbody>{rows.map(node=><tr key={node!.id} className={node!.id===selectedId?'selected':''} onClick={()=>onSelect(node!.id)}><td><strong>{node!.name}</strong><small>{node!.id}</small></td><td>{node!.entityType}</td><td>{node!.domain}</td><td>{node!.status}</td><td>{node!.relationCount}</td></tr>)}</tbody></table></div>
       : view==='2d'&&!g6Ready
         ? <div className="nexo-graph-fallback" role="status">2D indisponível neste instante. Os dados continuam acessíveis em tabela.</div>
-        : <MetroAtlasRenderer model={model} expanded={expanded} selectedId={selectedId} showBeams={showRelations} viewMode={view} theme={theme} fitNonce={fitNonce} onActivate={onSelect}/>}
+        : <MetroAtlasRenderer model={model} expanded={expanded} selectedId={selectedId} showBeams={showRelations} viewMode={view} theme={theme} fitNonce={fitNonce} onActivate={onSelect} onReady={onReady}/>}
   </section>;
 }
