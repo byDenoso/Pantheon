@@ -9,6 +9,12 @@ type TopologyNode={
   meta?:Record<string,unknown>;
 };
 type TopologyLink={id:string;source:string|TopologyNode;target:string|TopologyNode;kind:string;weight:number};
+const idOf=(value:string|TopologyNode)=>typeof value==='string'?value:value.id;
+
+function kindLabel(kind:NodeKind){
+  return ({ROOT:'MCP',LAYER:'Camada',TRANSPORT:'Transporte',TOOL:'Tool',FAMILY:'Família',CAPABILITY:'Capability',BACKEND:'Runtime',ROLE:'Papel'} as Record<NodeKind,string>)[kind];
+}
+
 type Topology={
   contract:string;generated_at:string;
   source:{authority:string;repository:string;commit:string;manifest:string;mcp_server:string;remote_mcp:string;source_storage?:string;source_snapshot_id?:string;source_state_fingerprint?:string;source_promoted_at?:string;projection_fingerprint?:string};
