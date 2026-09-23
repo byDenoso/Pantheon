@@ -22,7 +22,7 @@ const CANONICAL_ROUTE: Record<ViewId, string> = {
   ACTIONS: '#/cockpit/pipeline', EXECUTION: '#/cockpit/pipeline?view=execution',
   TRUTHGRAPH: '#/cockpit/prova', CAPABILITIES: '#/cockpit/prova?view=capabilities',
   SOURCES: '#/cockpit/prova?view=sources', INTEGRITY: '#/cockpit/prova?view=integrity',
-  ATLAS: '#/atlas?lente=operacao&view=2d', LEARNING: '#/cockpit/ciencia?view=learning',
+  ATLAS: '#/atlas?lente=operacao&view=2d', LEARNING: '#/cockpit/ciencia?tab=campanhas',
   NOW: '#/cockpit/pessoal/now', LOOPS: '#/cockpit/pessoal/loops', DAY: '#/cockpit/pessoal/day',
   CONTEXT: '#/cockpit/pessoal/context', RECALL: '#/cockpit/pessoal/recall',
 };
@@ -114,7 +114,7 @@ export const VIEW_TITLES: Record<ViewId, { title: string; lead: string }> = {
   SOURCES: { title: 'Fontes', lead: 'Disponibilidade e atualização das fontes conectadas.' },
   INTEGRITY: { title: 'Integridade', lead: 'Lacunas de prova, invariantes e leituras pendentes.' },
   ATLAS: { title: 'Mapa', lead: 'Entidades e relações da projeção atual.' },
-  LEARNING: { title: 'Aprendizado', lead: 'Filamentos com suporte, contradição, escopo e validade.' },
+  LEARNING: { title: 'Ciência', lead: 'Campanhas, testes, hipóteses, aprendizado e evidência publicada.' },
   NOW: { title: 'Agora', lead: 'Pendências pessoais vindas das fontes conectadas.' },
   LOOPS: { title: 'Loops', lead: 'Compromissos abertos e atualização observada.' },
   DAY: { title: 'Agenda', lead: 'Eventos da agenda conectada.' },
