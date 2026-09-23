@@ -243,19 +243,19 @@ export default function ScienceWorkspace({state}:{state:SystemState}){
       </div>
       {graphMode==='evidencia'&&(quantitative.length===0?<div className="science-not-published">Evidência quantitativa para forest plot: não publicado.</div>:plotMode==='tabela'
         ?<DenseTable heads={['Teste','Parâmetro','Valor','Erro −','Erro +','Unidade','Veredito']} empty="não publicado" rows={quantitative.map(row=><tr key={row.id}><td>{row.id}</td><td>{row.parameter}</td><td className="science-num">{row.value}</td><td className="science-num">{row.lo??'não publicado'}</td><td className="science-num">{row.hi??'não publicado'}</td><td>{row.unit}</td><td>{row.verdict}</td></tr>)}/>
-        :<EvidencePlot ref={svgRef} rows={quantitative}/>)}
+        :<EvidencePlot svgRef={svgRef} rows={quantitative}/>)}
       {graphMode==='relacoes'&&graphModel&&<NexoGraph model={graphModel} expanded={graphExpanded} selectedId={selectedId} view={graphView} theme={(document.documentElement.dataset.theme==='light'?'light':'dark')} onSelect={setSelectedId} onViewChange={setView}/>}
       <p className="science-chart-source">Fonte: NEXO_SCIENCE_PROJECTION_V1 · TOWER_V06 · campos ausentes permanecem “não publicado”.</p>
     </div>}
   </section>;
 }
 
-function EvidencePlot({rows,ref}:{rows:Array<{id:string;parameter:string;value:number;lo:number|null;hi:number|null;unit:string;verdict:string}>;ref:React.RefObject<SVGSVGElement|null>}){
+function EvidencePlot({rows,svgRef}:{rows:Array<{id:string;parameter:string;value:number;lo:number|null;hi:number|null;unit:string;verdict:string}>;svgRef:React.RefObject<SVGSVGElement|null>}){
   const lows=rows.map(row=>row.value-(row.lo??0)),highs=rows.map(row=>row.value+(row.hi??0));
   let min=Math.min(...lows),max=Math.max(...highs);if(min===max){min-=1;max+=1;}
   const x=(value:number)=>220+((value-min)/(max-min))*1040;
   const height=Math.max(260,80+rows.length*42);
-  return <div className="science-plot-wrap"><svg ref={ref} viewBox={`0 0 1400 ${height}`} role="img" aria-label="Estimativas quantitativas publicadas">
+  return <div className="science-plot-wrap"><svg ref={svgRef} viewBox={`0 0 1400 ${height}`} role="img" aria-label="Estimativas quantitativas publicadas">
     <rect width="1400" height={height} className="science-plot-bg"/>
     {rows.map((row,index)=>{const y=62+index*42;const left=x(row.value-(row.lo??0)),right=x(row.value+(row.hi??0));return <g key={row.id}>
       <text x="16" y={y+4} className="science-plot-label">{shortId(row.id)}</text>
