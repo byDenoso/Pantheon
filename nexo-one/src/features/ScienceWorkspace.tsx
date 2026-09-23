@@ -29,7 +29,7 @@ function initialTab():ScienceTab{
 function initialGraphView():NexoGraphView{
   const value=routeParams().get('view');
   if(value==='3d'||value==='2d')return value;
-  try{return localStorage.getItem('nexo.graph.view.v1')==='3d'?'3d':'2d';}catch{return'2d';}
+  return '2d';
 }
 function initialGraphMode():GraphMode{
   const params=routeParams();
@@ -207,7 +207,7 @@ export default function ScienceWorkspace({state}:{state:SystemState}){
     window.history.replaceState(null,'',`#/cockpit/ciencia?${params.toString()}`);
   };
   const setView=(next:NexoGraphView)=>{
-    setGraphView(next);try{localStorage.setItem('nexo.graph.view.v1',next);}catch{}
+    setGraphView(next);
     const params=routeParams();params.set('tab','graficos');params.set('graph','relacoes');params.set('view',next);
     window.history.replaceState(null,'',`#/cockpit/ciencia?${params.toString()}`);
   };

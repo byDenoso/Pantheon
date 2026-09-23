@@ -29,7 +29,6 @@ type SystemTab='overview'|'tools'|'capabilities'|'runtimes'|'roles'|'relations'|
 const SYSTEM_TABS:Array<[SystemTab,string]>=[['overview','Visão geral'],['tools','Tools'],['capabilities','Capabilities'],['runtimes','Runtimes'],['roles','Roles'],['relations','Relações'],['provenance','Proveniência'],['graph','Grafo']];
 
 const THEME_STORAGE_KEY='nexo.mcp.theme.v1';
-const GRAPH_VIEW_STORAGE_KEY='nexo.graph.view.v1';
 const routeParams=()=>{
   const hash=window.location.hash;
   const query=hash.match(/^#\/?sistema\?(.+)$/i)?.[1];
@@ -48,7 +47,7 @@ function initialTheme():McpTheme{
 function initialGraphView():GraphView{
   const query=routeParams().get('view')||routeParams().get('graph');
   if(query==='2d'||query==='3d')return query;
-  try{return window.localStorage.getItem(GRAPH_VIEW_STORAGE_KEY)==='3d'?'3d':'2d';}catch{return'2d';}
+  return '2d';
 }
 
 const modeKinds:Record<ViewMode,NodeKind[]>={
@@ -165,7 +164,7 @@ export function McpTopologyGraph({theme='dark'}:{theme?:McpTheme}){
   const [view,setView]=useState<GraphView>(()=>{
     const value=typeof window!=='undefined'?currentHashParams().get('view'):null;
     if(value==='2d'||value==='3d')return value;
-    try{return localStorage.getItem(GRAPH_VIEW_STORAGE_KEY)==='3d'?'3d':'2d';}catch{return'2d';}
+    return '2d';
   });
   useEffect(()=>{
     const ctrl=new AbortController();
@@ -176,7 +175,6 @@ export function McpTopologyGraph({theme='dark'}:{theme?:McpTheme}){
   },[loadPublishedContext]);
   const changeView=(next:GraphView)=>{
     setView(next);
-    try{localStorage.setItem(GRAPH_VIEW_STORAGE_KEY,next);}catch{}
     const params=currentHashParams();params.set('view',next);replaceCurrentHashParams(params);
   };
   if(!topology)return <div className="system-loading" role="status">{error?'A topologia de prova não pôde ser carregada.':'Carregando topologia de prova…'}</div>;
@@ -193,7 +191,6 @@ export function McpAtlasApp({themeOverride,embedded=false}:{themeOverride?:strin
  const [theme,setTheme]=useState<McpTheme>(initialTheme),[graphView,setGraphView]=useState<GraphView>(initialGraphView);
  const [tab,setTab]=useState<SystemTab>(initialSystemTab),activeTheme=(themeOverride as McpTheme|undefined)||theme;
  useEffect(()=>{document.documentElement.dataset.mcpTheme=activeTheme;if(!embedded){document.documentElement.style.colorScheme=activeTheme;try{localStorage.setItem(THEME_STORAGE_KEY,activeTheme);}catch{}}},[activeTheme,embedded]);
- useEffect(()=>{try{localStorage.setItem(GRAPH_VIEW_STORAGE_KEY,graphView);}catch{}},[graphView]);
  useEffect(()=>{const ctrl=new AbortController();void loadPublishedContext<Topology>(false,ctrl.signal).then(v=>setTopology(v.topology)).catch(e=>{if((e as {name?:string})?.name!=='AbortError')setError(String(e));});return()=>ctrl.abort();},[loadPublishedContext]);
  useEffect(()=>{if(!topology||!search.trim())return;const query=search.trim().toLowerCase();const match=topology.nodes.filter(node=>nodeMatches(node,query)).sort((a,b)=>matchRank(a,query)-matchRank(b,query))[0];if(match)setSelected(match.id);},[topology,search]);
  useEffect(()=>{const restore=()=>setTab(initialSystemTab());window.addEventListener('hashchange',restore);window.addEventListener('popstate',restore);return()=>{window.removeEventListener('hashchange',restore);window.removeEventListener('popstate',restore);};},[]);

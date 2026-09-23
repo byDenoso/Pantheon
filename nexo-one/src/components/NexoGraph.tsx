@@ -5,7 +5,6 @@ import {visibleAtlasIds,type AtlasGraphLayer,type AtlasMetroModel} from '../atla
 import './NexoGraph.css';
 
 export type NexoGraphView='2d'|'3d';
-const ILLUMINATION_STORAGE_KEY='nexo.graph.illuminated.v1';
 const ALL_GRAPH_LAYERS=new Set<AtlasGraphLayer>(['knowledge','execution','capability']);
 
 export function GraphViewSwitch({view,onChange}:{view:NexoGraphView;onChange:(view:NexoGraphView)=>void}){
@@ -26,9 +25,8 @@ export function NexoGraph({
   const hostRef=useRef<HTMLDivElement|null>(null);
   const [g6Ready,setG6Ready]=useState(()=>view==='3d'||Boolean((window as any).G6?.Graph));
   const [tableMode,setTableMode]=useState(false);
-  const [illuminated,setIlluminated]=useState(()=>{
-    try{return localStorage.getItem(ILLUMINATION_STORAGE_KEY)==='true';}catch{return false;}
-  });
+  const [spotlight,setSpotlight]=useState(true);
+  const [illuminated,setIlluminated]=useState(false);
   const visible=useMemo(()=>visibleAtlasIds(model,expanded,visibleLayers),[model.revision,expanded,visibleLayers]);
   const visibleSet=useMemo(()=>new Set(visible),[visible]);
   const rows=useMemo(()=>visible.map(id=>model.nodeMap.get(id)).filter(Boolean),[visible,model]);
@@ -40,14 +38,6 @@ export function NexoGraph({
     void ensureAtlasG6().then(()=>{if(active)setG6Ready(true);}).catch(()=>{if(active)setG6Ready(false);});
     return()=>{active=false;};
   },[view]);
-
-  useEffect(()=>{
-    try{localStorage.setItem('nexo.graph.view.v1',view);}catch{}
-  },[view]);
-
-  useEffect(()=>{
-    try{localStorage.setItem(ILLUMINATION_STORAGE_KEY,String(illuminated));}catch{}
-  },[illuminated]);
 
   useEffect(()=>{
     const onKey=(event:KeyboardEvent)=>{
@@ -69,13 +59,16 @@ export function NexoGraph({
   };
 
   const count=<div className="nexo-graph-count"><strong>{visible.length}</strong> visíveis · <span>{model.nodes.length} total</span> · <span>{relationCount} relações</span></div>;
-  const illuminationToggle=!tableMode&&<button type="button" className="nexo-illumination-toggle" aria-label="Iluminar todos os nós e relações" aria-pressed={illuminated} title={illuminated?"Apagar iluminação de todos os nós e relações":"Iluminar todos os nós e relações"} onClick={()=>setIlluminated(value=>!value)}>{illuminated?'Apagar iluminação':'Iluminar tudo'}</button>;
+  const spotlightActive=spotlight&&Boolean(selectedId);
+  const spotlightToggle=!tableMode&&<button type="button" className="nexo-spotlight-toggle" aria-label={spotlightActive?"Desativar foco visual no nó selecionado":"Ativar foco visual no nó selecionado"} aria-pressed={spotlightActive} disabled={!selectedId} title={selectedId?(spotlightActive?"Mostrar todo o grafo com o mesmo peso":"Destacar o nó selecionado e sua vizinhança"):"Selecione um nó para ativar o foco"} onClick={()=>setSpotlight(value=>!value)}>{spotlightActive?'Foco ativo':'Focar seleção'}</button>;
+  const illuminationToggle=!tableMode&&<button type="button" className="nexo-illumination-toggle" aria-label={illuminated?"Desativar iluminação global":"Iluminar todos os nós e relações"} aria-pressed={illuminated} title={illuminated?"Desativar iluminação global":"Iluminar todos os nós e relações"} onClick={()=>setIlluminated(value=>!value)}>{illuminated?'Apagar iluminação':'Iluminar tudo'}</button>;
   return <section ref={hostRef} tabIndex={-1} className="nexo-graph" data-graph-view={view} data-graph-illuminated={illuminated} data-graph-visible={visible.length} data-graph-total={model.nodes.length} data-toolbar-rows={toolbarFilters?2:1}>
     <div className="nexo-graph-toolbar">
       <div className="nexo-graph-toolbar-row nexo-graph-toolbar-primary">
         <div className="nexo-graph-toolbar-context">{toolbarContext||(!toolbarFilters&&count)}</div>
         <div className="nexo-graph-actions">
           {showViewSwitch&&<GraphViewSwitch view={view} onChange={onViewChange}/>}
+          {!toolbarFilters&&spotlightToggle}
           {!toolbarFilters&&illuminationToggle}
           {onFit&&<button type="button" onClick={onFit}>Enquadrar</button>}
           {onReset&&<button type="button" onClick={onReset}>Resetar</button>}
@@ -85,6 +78,7 @@ export function NexoGraph({
       </div>
       {toolbarFilters&&<div className="nexo-graph-toolbar-row nexo-graph-toolbar-secondary">
         <div className="nexo-graph-filters">
+          {spotlightToggle}
           {illuminationToggle}
           {toolbarFilters}
         </div>
@@ -95,6 +89,6 @@ export function NexoGraph({
       ? <div className="nexo-graph-table-wrap"><table className="nexo-graph-table"><thead><tr><th>Entidade</th><th>Tipo</th><th>Domínio</th><th>Estado</th><th>Relações</th></tr></thead><tbody>{rows.map(node=><tr key={node!.id} className={node!.id===selectedId?'selected':''} onClick={()=>onSelect(node!.id)}><td><strong>{node!.name}</strong><small>{node!.id}</small></td><td>{node!.entityType}</td><td>{node!.domain}</td><td>{node!.status}</td><td>{node!.relationCount}</td></tr>)}</tbody></table></div>
       : view==='2d'&&!g6Ready
         ? <div className="nexo-graph-fallback" role="status">2D indisponível neste instante. Os dados continuam acessíveis em tabela.</div>
-        : <MetroAtlasRenderer model={model} expanded={expanded} visibleLayers={visibleLayers} selectedId={selectedId} showBeams={showRelations} viewMode={view} theme={theme} fitNonce={fitNonce} allIlluminated={illuminated} onActivate={onSelect} onReady={onReady}/>}
+        : <MetroAtlasRenderer model={model} expanded={expanded} visibleLayers={visibleLayers} selectedId={spotlightActive?selectedId:null} showBeams={showRelations} viewMode={view} theme={theme} fitNonce={fitNonce} allIlluminated={illuminated} onActivate={onSelect} onReady={onReady}/>}
   </section>;
 }

@@ -19,7 +19,6 @@ type ViewMode = '2d' | '3d';
 type AtlasTheme = 'dark' | 'light';
 
 const THEME_STORAGE_KEY = 'nexo.atlas.theme.v1';
-const GRAPH_VIEW_STORAGE_KEY = 'nexo.graph.view.v1';
 
 function initialAtlasTheme(): AtlasTheme {
   if (typeof window === 'undefined') return 'dark';
@@ -258,7 +257,7 @@ export function Atlas3DContent({system,themeOverride}:{system:SystemStore;themeO
     if(typeof window==='undefined')return'2d';
     const query=atlasRouteParams().get('view')||atlasRouteParams().get('mode');
     if(query==='2d'||query==='3d')return query;
-    try{return window.localStorage.getItem(GRAPH_VIEW_STORAGE_KEY)==='3d'?'3d':'2d';}catch{return'2d';}
+    return '2d';
   });
   const [showBeams, setShowBeams] = useState(true);
   const [show3dHint, setShow3dHint] = useState(false);
@@ -489,7 +488,6 @@ export function Atlas3DContent({system,themeOverride}:{system:SystemStore;themeO
 
   const switchViewMode = (mode: ViewMode) => {
     setViewMode(mode);
-    try{window.localStorage.setItem(GRAPH_VIEW_STORAGE_KEY,mode);}catch{}
     const params=atlasRouteParams();
     params.set('lente',lens);
     params.set('view',mode);
