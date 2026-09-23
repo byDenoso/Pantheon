@@ -13,7 +13,8 @@ const validManifest={
   projection_fingerprint:fingerprint,
   generated_at:generatedAt,
   source_storage:'GOOGLE_DRIVE_PRIVATE',
-  source_snapshot_id:'SNP-TEST',
+  tower_file_id:'1m97cFmEkw19yiqD_6FWPG4j1lDCAYM4z',
+  tower_revision:'sha256:'+'c'.repeat(64),
   source_state_fingerprint:stateFingerprint,
   truth_owner:'TOWER_V06@GOOGLE_DRIVE_PRIVATE',
 };
