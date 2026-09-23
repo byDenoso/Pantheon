@@ -78,7 +78,7 @@ test('capability counters name their different semantics explicitly', async () =
     read('../src/features/system/Overview.tsx'), read('../src/mcp/McpAtlasApp.tsx'),
   ]);
   assert.match(overview, /Capabilities fora de PASS/);
-  assert.match(mcp, /capabilities registradas/);
+  assert.match(mcp, /topology\.stats\.capabilities/);
 });
 
 test('app navigation uses seven primary tabs and removes duplicate rail navigation', async () => {
