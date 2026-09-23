@@ -480,6 +480,29 @@ jobs:
           test -s /tmp/cockpit-actions-readback.png
           echo "PAGES_COCKPIT_ACTIONS_READBACK_OK work=${expected_work} human=${expected_human} waiting=${expected_waiting} blocked=${expected_blocked}"
 
+          capture_system_shell() {
+            local name="$1" width="$2" height="$3" theme="$4"
+            local url="${base}/#/sistema?theme=${theme}"
+            local dom="/tmp/shell-${name}.html"
+            dump_until_ready 'data-mcp-ready="true"' "${dom}" \
+              --headless=new --no-sandbox --disable-dev-shm-usage --hide-scrollbars \
+              --window-size="${width},${height}" --virtual-time-budget=9000 --dump-dom "${url}"
+            grep -Fq 'class="instrument-header"' "${dom}"
+            grep -Fq 'class="unified-shell system-route' "${dom}"
+            grep -Fq "data-mcp-theme=\"${theme}\"" "${dom}"
+            "${chrome_bin}" --headless=new --no-sandbox --disable-dev-shm-usage --hide-scrollbars \
+              --window-size="${width},${height}" --virtual-time-budget=9000 \
+              --screenshot="/tmp/shell-${name}.png" "${url}" >/dev/null 2>&1
+            test -s "/tmp/shell-${name}.png"
+            echo "PAGES_UNIFIED_SHELL_READBACK_OK viewport=${width}x${height} theme=${theme}"
+          }
+          capture_system_shell desktop-1440-dark 1440 900 dark
+          capture_system_shell desktop-1024-dark 1024 768 dark
+          capture_system_shell mobile-390-dark 390 844 dark
+          capture_system_shell desktop-1440-light 1440 900 light
+          capture_system_shell desktop-1024-light 1024 768 light
+          capture_system_shell mobile-390-light 390 844 light
+
           capture_atlas() {
             local name="$1" width="$2" height="$3" theme="$4" view="$5"
             local url="${base}/atlas3d/?theme=${theme}&view=${view}&expand=all&readback=1"
