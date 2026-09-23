@@ -137,6 +137,38 @@ test('campaign semantic parent and source links survive while hidden campaign te
   assert.equal(model.nodeMap.has('test:T-DYNAMIC-1'), false);
 });
 
+test('Tower dark-energy aliases share one Atlas station without changing canonical IDs', () => {
+  const source = state();
+  const template = source.graph.nodes.find(node => node.type !== 'DOMAIN' && node.type !== 'FILAMENT');
+  assert.ok(template);
+  const campaign = {
+    ...template,
+    id: 'campaign:CAMP-DARK-ENERGY-ALIAS-1',
+    sourceId: undefined,
+    type: 'CAMPAIGN',
+    label: 'Dark energy campaign',
+    domain: 'SCIENCE',
+    campaign_id: 'CAMP-DARK-ENERGY-ALIAS-1',
+    parent_subdomain: 'DARK_ENERGY',
+    atlas_visible: true,
+  };
+  source.graph.nodes.push(campaign);
+
+  const model = buildAtlasMetroModel(source);
+  const stations = model.nodes.filter(node => node.entityType === 'subdomain' && /dark.energy|energia escura/i.test(node.name));
+  assert.equal(stations.length, 1);
+  assert.equal(stations[0].name, 'Energia escura');
+  const projectedCampaign = model.nodeMap.get(campaign.id);
+  assert.equal(projectedCampaign.id, campaign.id);
+  assert.equal(projectedCampaign.parentId, stations[0].id);
+});
+
+test('Atlas illumination toggle is placed in the visible filter row when graph filters exist', async () => {
+  const app = await text('src/components/NexoGraph.tsx');
+  assert.match(app, /toolbarFilters&&<div className="nexo-graph-toolbar-row nexo-graph-toolbar-secondary">\s*<div className="nexo-graph-filters">\s*\{!tableMode&&<button[^>]*nexo-illumination-toggle/s);
+  assert.match(app, /!toolbarFilters&&!tableMode&&<button[^>]*nexo-illumination-toggle/s);
+});
+
 test('canonical graph relations become Metro bridge data instead of a second force layout', () => {
   const source = state();
   const model = buildAtlasMetroModel(source);
