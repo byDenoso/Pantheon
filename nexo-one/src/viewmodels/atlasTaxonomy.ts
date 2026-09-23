@@ -99,7 +99,11 @@ export function atlasSubdomainOf(node: GraphNode): string {
   // stronger than presentation regexes and lets new campaigns land correctly
   // without a frontend code change.
   if (node.type === 'CAMPAIGN' && String(node.parent_subdomain || '').trim()) {
-    return String(node.parent_subdomain).trim();
+    const declared = String(node.parent_subdomain).trim();
+    // Tower roadmaps may use the canonical machine namespace while the Atlas
+    // taxonomy uses a localized station label. This is projection-only.
+    if (top === 'SCIENCE' && /^(DARK[ _-]?ENERGY|ENERGIA ESCURA)$/i.test(declared)) return 'Energia escura';
+    return declared;
   }
 
   const hinted = atlasSubdomainHint(top, token, node.type);
