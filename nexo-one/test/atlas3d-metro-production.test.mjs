@@ -165,8 +165,18 @@ test('Tower dark-energy aliases share one Atlas station without changing canonic
 
 test('Atlas illumination toggle is placed in the visible filter row when graph filters exist', async () => {
   const app = await text('src/components/NexoGraph.tsx');
-  assert.match(app, /toolbarFilters&&<div className="nexo-graph-toolbar-row nexo-graph-toolbar-secondary">\s*<div className="nexo-graph-filters">\s*\{!tableMode&&<button[^>]*nexo-illumination-toggle/s);
-  assert.match(app, /!toolbarFilters&&!tableMode&&<button[^>]*nexo-illumination-toggle/s);
+  assert.equal((app.match(/className="nexo-illumination-toggle"/g) || []).length, 1, 'one shared toggle implementation is rendered in either toolbar row');
+  assert.match(app, /const illuminationToggle\s*=\s*!tableMode\s*&&\s*<button[^>]*nexo-illumination-toggle/s);
+  assert.match(app, /toolbarFilters&&<div className="nexo-graph-toolbar-row nexo-graph-toolbar-secondary">\s*<div className="nexo-graph-filters">\s*\{illuminationToggle\}/s);
+  assert.match(app, /!toolbarFilters&&illuminationToggle/);
+  assert.match(app, /illuminated\s*\?\s*'Apagar iluminação'\s*:\s*'Iluminar tudo'/);
+});
+
+test('all-lit 3D rendering keeps distant nodes visibly illuminated while preserving hop emphasis', async () => {
+  const renderer = await text('src/atlas3d/MetroAtlasRenderer.tsx');
+  assert.match(renderer, /'lit-focus-muted': \{ opacity: \.78, shadowBlur: 7/);
+  assert.match(renderer, /faded\s*\?\s*runtime\.illuminated\s*\?\s*\.82\s*:\s*\.12/);
+  assert.match(renderer, /runtime\.illuminated\s*\?\s*\.34\s*:\s*\.055/);
 });
 
 test('canonical graph relations become Metro bridge data instead of a second force layout', () => {
