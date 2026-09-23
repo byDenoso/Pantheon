@@ -172,7 +172,7 @@ export default function App() {
       case 'SOURCES': return <SourcesView state={state} />;
       case 'INTEGRITY': return <IntegrityView state={state} />;
       case 'ATLAS':
-        return <EmbeddedAtlas3D system={system} />;
+        return <EmbeddedAtlas3D system={system} theme={theme as 'dark'|'light'} />;
       case 'LEARNING': return <LearningView state={state} onNavigate={go} />;
       default: return null;
     }
