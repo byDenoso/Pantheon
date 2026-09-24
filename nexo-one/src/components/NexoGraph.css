@@ -18,3 +18,5 @@
 
 .atlas-workspace>.nexo-graph{position:absolute;inset:0;width:100%;height:100%;min-height:0;border:0;border-radius:0}
 .atlas-workspace>.nexo-graph .atlas-renderer,.atlas-workspace>.nexo-graph .atlas-render-layer,.atlas-workspace>.nexo-graph .atlas-metro-surface,.atlas-workspace>.nexo-graph .atlas-three-surface{min-height:0}
+/* Galaxy inside any NexoGraph (Prova, Ciência…) fills the graph box; only the Mapa sized it before. */
+.nexo-graph>.atlas-galaxy-view{position:absolute;inset:0;width:100%;height:100%}
