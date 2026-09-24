@@ -472,7 +472,7 @@ function renderScreenLabels(
       const color = domainColor(node.domain, theme);
       const stateClass = spec.id === selectedId ? ' selected' : spec.id === hoveredId ? ' hovered' : '';
       const typeClass = node.entityType === 'hub' ? ' hub' : node.entityType === 'subdomain' ? ' subdomain' : ' leaf';
-      return `<div class="atlas-screen-label${stateClass}${typeClass}" data-node-id="${escapeHtml(spec.id)}" style="left:${spec.left.toFixed(1)}px;top:${spec.top.toFixed(1)}px;width:${spec.width.toFixed(1)}px;height:${spec.height.toFixed(1)}px;--label-domain:${color};font-size:${spec.fontSize}px"><span>${escapeHtml(node.name)}</span></div>`;
+      return `<div class="atlas-screen-label${stateClass}${typeClass}" data-node-id="${escapeHtml(spec.id)}" title="${escapeHtml(node.name)}" style="left:${spec.left.toFixed(1)}px;top:${spec.top.toFixed(1)}px;width:${spec.width.toFixed(1)}px;height:${spec.height.toFixed(1)}px;--label-domain:${color};font-size:${spec.fontSize}px"><span>${escapeHtml(node.name)}</span></div>`;
     })
     .join('');
   const densityNote = layout.hidden > 0

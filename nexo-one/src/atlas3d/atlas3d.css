@@ -402,3 +402,10 @@ button,input{font:inherit}
 
 .atlas-back{display:inline-flex;align-items:center;gap:6px;margin:0 0 12px;padding:6px 10px;border:1px solid var(--obs-line,#1c2533);background:transparent;color:var(--obs-sodium,#e9b35b);font:500 11px/1 var(--obs-mono,monospace);letter-spacing:.12em;text-transform:uppercase;cursor:pointer}
 .atlas-back:hover{color:var(--obs-bright,#fff);border-color:currentColor}
+/* QoL: avisos fora do caminho dos rótulos e do minimapa; atalhos visíveis */
+.atlas-label-density-note{left:auto;right:14px;top:14px;bottom:auto;transform:none;pointer-events:none}
+.atlas-interaction-hint{right:196px}
+.atlas-interaction-hint kbd{display:inline-block;min-width:14px;padding:0 4px;border:1px solid rgba(148,163,184,.28);border-bottom-width:2px;border-radius:4px;font:inherit;font-size:9px;line-height:14px;text-align:center;color:#a9bad2}
+:is(.atlas-metro-page,.atlas-metro-surface,.atlas-three-surface)[data-atlas-theme="light"] .atlas-interaction-hint kbd{border-color:rgba(15,23,42,.18);color:#334155}
+.atlas-screen-label.selected,.atlas-screen-label.hovered{z-index:2}
+@media (max-width:760px){.atlas-label-density-note{right:8px;top:8px;max-width:60vw}}
