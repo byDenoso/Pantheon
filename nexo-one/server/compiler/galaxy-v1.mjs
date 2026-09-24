@@ -135,18 +135,14 @@ function entityLayout(entity,indexWithinCluster,totalWithinCluster,clusterLayout
 
 function clusterLayout(cluster,indexWithinDomain,totalWithinDomain){
   const domain=cluster.domain;
-  if(domain==='NEXO'&&(indexWithinDomain%2===0||!MORPH.arms.NEXO)){
-    // Half of the NEXO stations sit on the bar; the rest grow the NEXO arm.
-    const onBar=MORPH.arms.NEXO?Math.ceil(totalWithinDomain/2):totalWithinDomain;
-    const index=MORPH.arms.NEXO?indexWithinDomain/2:indexWithinDomain;
-    const t=onBar<=1?0:(index/(onBar-1))*2-1;
+  if(domain==='NEXO'){
+    // NEXO is the nucleus: its stations sit on the bar.
+    const t=totalWithinDomain<=1?0:(indexWithinDomain/(totalWithinDomain-1))*2-1;
     return {x:round(t*MORPH.bulge.bar*.9),y:round((hashFraction(cluster.id,'bar-y')-.5)*10),z:round((hashFraction(cluster.id,'z')-.5)*6),sector:'NEXO',lod:'MEDIUM'};
   }
   if(!MORPH.arms[domain])return {x:0,y:0,z:0,sector:domain,lod:'MEDIUM'};
-  const onArm=domain==='NEXO'?Math.floor(totalWithinDomain/2):totalWithinDomain;
-  const slot=domain==='NEXO'?(indexWithinDomain-1)/2:indexWithinDomain;
-  const span=1/Math.max(1,onArm);
-  const t=span*(slot+.5);
+  const span=1/Math.max(1,totalWithinDomain);
+  const t=span*(indexWithinDomain+.5);
   const p=armPoint(domain,t);
   return {x:round(p.x),y:round(p.y),z:0,sector:domain,lod:'MEDIUM',arm:{domain,t:round(t),span:round(span*1.1)}};
 }

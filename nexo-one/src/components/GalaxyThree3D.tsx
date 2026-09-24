@@ -242,7 +242,7 @@ export type GalaxyMorphology = {
 };
 // Used only until the published snapshot arrives; same rules, typical counts.
 const DEFAULT_MORPHOLOGY = morphologyFrom({
-  counts: { NEXO: { entities: 45, subdomains: 6 }, SCIENCE: { entities: 120, subdomains: 12 }, OLYMPUS: { entities: 20, subdomains: 2 }, ENGINEERING: { entities: 10, subdomains: 2 } },
+  counts: { SCIENCE: { entities: 120, subdomains: 12 }, OLYMPUS: { entities: 20, subdomains: 2 }, ENGINEERING: { entities: 10, subdomains: 2 } },
   core: 45,
 }) as unknown as GalaxyMorphology;
 

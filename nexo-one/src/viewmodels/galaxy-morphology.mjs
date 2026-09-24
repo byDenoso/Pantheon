@@ -10,8 +10,8 @@
 //   fragmentation     = number of subdomains (star-forming knots on the arm)
 //   bridges           = cross-domain relations
 //   bulge / bar       = NEXO core entities (hubs, infrastructure, capabilities)
-// Young barred spiral: SCIENCE and NEXO leave from the two bar ends,
-// ENGINEERING from the ring; OLYMPUS is a spur that diverges from the arm it
+// Young barred spiral (NGC 1300-like): NEXO is the nucleus and bar; SCIENCE
+// and ENGINEERING leave from the two bar ends; OLYMPUS is a spur that diverges from the arm it
 // shares most bridges with (the largest arm when there are none).
 // Any new domain gets an arm automatically; known domains keep stable phases.
 
@@ -19,7 +19,7 @@ const TAU = Math.PI * 2;
 export const MORPHOLOGY_VERSION = 2;
 export const BAR_BASE = 30;
 
-const KNOWN_PHASES = { SCIENCE: 0, NEXO: Math.PI, ENGINEERING: Math.PI / 2 };
+const KNOWN_PHASES = { SCIENCE: 0, ENGINEERING: Math.PI };
 const BRANCHES = new Set(['OLYMPUS']);
 export const DOMAIN_TINTS = {
   NEXO: '#ffd36b',
@@ -41,6 +41,7 @@ function hashPhase(domain) {
 export function morphologyFrom({ counts, core, bridges = [] }) {
   const arms = {};
   for (const [domain, c] of Object.entries(counts).sort(([a], [b]) => a.localeCompare(b))) {
+    if (domain === 'NEXO') continue;
     const entities = Number(c.entities || 0);
     const subdomains = Math.max(1, Number(c.subdomains || 0));
     const density = entities / subdomains;
