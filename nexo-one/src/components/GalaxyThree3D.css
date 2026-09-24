@@ -225,50 +225,73 @@
 @media(max-width:760px){.galaxy-metrics{display:none}.galaxy-hud{top:8px;right:8px}}
 /* Night-sky window in every theme (see themeName in GalaxyThree3D). */
 :root .atlas3d-shell.atlas-galaxy-view,:root[data-theme] .atlas3d-shell.atlas-galaxy-view,:root .atlas-galaxy-view .galaxy-three-root,:root[data-theme] .atlas-galaxy-view .galaxy-three-root{background:radial-gradient(ellipse at center,#0b1020 0%,#05070b 70%) !important;border-radius:inherit}
-
-/* Astrophysical events: operational state as phenomena in the domain where it happens. */
-.galaxy-events{position:absolute;inset:0;pointer-events:none;z-index:3}
-.galaxy-event{position:absolute;left:0;top:0;width:0;height:0;transition:opacity .6s}
-.galaxy-event i{position:absolute;left:0;top:0;border-radius:50%;transform:translate(-50%,-50%)}
-/* SUPERNOVA — precisa de você agora: bright core + expanding shell */
-.galaxy-event[data-kind=SUPERNOVA] i{width:10px;height:10px;background:#fff;box-shadow:0 0 12px 4px #fff,0 0 34px 10px #ffb36b,0 0 70px 20px rgba(255,120,80,.45);animation:ev-sn-core 2.4s ease-in-out infinite}
-.galaxy-event[data-kind=SUPERNOVA]::after{content:"";position:absolute;left:0;top:0;width:26px;height:26px;border-radius:50%;border:2px solid #ff7a45;transform:translate(-50%,-50%) scale(1);animation:ev-shell 2.4s cubic-bezier(.2,.7,.1,1) infinite}
-/* NOVA — atenção, menor */
-.galaxy-event[data-kind=NOVA] i{width:6px;height:6px;background:#fff6e0;box-shadow:0 0 10px 3px #ffe2a8,0 0 24px 6px rgba(255,210,140,.4);animation:ev-sn-core 3.2s ease-in-out infinite}
-/* AGN — campanha intensa: pulsing nucleus-like glow at the arm root */
-.galaxy-event[data-kind=AGN] i{width:calc(10px + 10px * var(--event-intensity));height:calc(10px + 10px * var(--event-intensity));background:radial-gradient(circle,#fff 0,#bfe0ff 18%,rgba(127,178,255,.35) 45%,transparent 70%);animation:ev-agn 3.6s ease-in-out infinite}
-/* H II — muitas hipóteses/testes novos: soft pink haze */
-.galaxy-event[data-kind=HII] i{width:calc(14px + 16px * var(--event-intensity));height:calc(14px + 16px * var(--event-intensity));background:radial-gradient(circle,rgba(255,143,176,.55) 0,rgba(255,143,176,.18) 45%,transparent 70%);filter:blur(1px);animation:ev-breathe 6s ease-in-out infinite}
-/* REMNANT — resolvido, efeitos ainda espalhados: faint ring */
-.galaxy-event[data-kind=REMNANT] i{width:22px;height:22px;border:1px solid rgba(143,240,168,.5);box-shadow:0 0 10px rgba(143,240,168,.25) inset}
-/* FLARE — pico temporário: quick sparkle */
-.galaxy-event[data-kind=FLARE] i{width:4px;height:4px;background:#fff;box-shadow:0 0 8px 2px #cfe4ff;animation:ev-flare 2.8s ease-in-out infinite}
-@keyframes ev-sn-core{0%,100%{opacity:.85;transform:translate(-50%,-50%) scale(1)}50%{opacity:1;transform:translate(-50%,-50%) scale(1.25)}}
-@keyframes ev-shell{0%{opacity:.9;transform:translate(-50%,-50%) scale(.6)}100%{opacity:0;transform:translate(-50%,-50%) scale(3.4)}}
-@keyframes ev-agn{0%,100%{opacity:.7;transform:translate(-50%,-50%) scale(.9)}50%{opacity:1;transform:translate(-50%,-50%) scale(1.15)}}
-@keyframes ev-breathe{0%,100%{opacity:.65}50%{opacity:1}}
-@keyframes ev-flare{0%,70%,100%{opacity:.2}80%{opacity:1}}
-@media (prefers-reduced-motion:reduce){.galaxy-event i,.galaxy-event::after{animation:none}}
 .galaxy-stage{margin:0;display:flex;gap:10px;align-items:baseline;font:500 10.5px/1.4 "IBM Plex Mono",ui-monospace,monospace;letter-spacing:.16em;text-transform:uppercase;color:#7A889C}
 .galaxy-stage strong{color:#F4F7FA;font-weight:500}
-.galaxy-event-legend{list-style:none;margin:0;padding:0;display:grid;gap:6px;font:500 10.5px/1.3 "IBM Plex Mono",ui-monospace,monospace;letter-spacing:.06em;color:#C9D3DF}
-.galaxy-event-legend li{display:flex;align-items:center;gap:8px}
-.galaxy-event-legend b{color:#F4F7FA;font-weight:500}
-.galaxy-event-legend i{width:8px;height:8px;border-radius:50%;flex:none;background:#fff}
-.galaxy-event-legend [data-kind=SUPERNOVA] i{box-shadow:0 0 8px 2px #ffb36b}
-.galaxy-event-legend [data-kind=NOVA] i{background:#fff6e0;box-shadow:0 0 6px 1px #ffe2a8}
-.galaxy-event-legend [data-kind=AGN] i{background:#bfe0ff;box-shadow:0 0 8px 2px #7fb2ff}
-.galaxy-event-legend [data-kind=HII] i{background:#ff8fb0;box-shadow:0 0 8px 2px rgba(255,143,176,.6)}
-.galaxy-event-legend [data-kind=REMNANT] i{background:none;border:1px solid #8ff0a8}
-.galaxy-event-legend [data-kind=FLARE] i{width:5px;height:5px}
-.galaxy-event-legend button{display:flex;align-items:center;gap:8px;padding:4px 8px;border:1px solid rgba(255,255,255,.14);border-radius:999px;background:rgba(5,7,11,.55);color:inherit;font:inherit;letter-spacing:inherit;cursor:pointer;transition:opacity .3s,border-color .3s}
-.galaxy-event-legend button:hover{border-color:rgba(255,255,255,.35)}
-.galaxy-event-legend button.off{opacity:.38}
-.galaxy-event-legend button.off i{box-shadow:none}
 
-/* Events must read over the bright core: coloured rings + a small tag. */
-.galaxy-event[data-kind=SUPERNOVA]::before{content:"SN";position:absolute;left:14px;top:-22px;padding:2px 6px;border-radius:999px;background:rgba(5,7,11,.8);border:1px solid #ff7a45;color:#ffb38f;font:600 9px/1.3 "IBM Plex Mono",ui-monospace,monospace;letter-spacing:.12em;white-space:nowrap}
-.galaxy-event[data-kind=NOVA]::before{content:"NOVA";position:absolute;left:10px;top:-18px;padding:1px 5px;border-radius:999px;background:rgba(5,7,11,.75);border:1px solid #ffd27a;color:#ffe2a8;font:600 8.5px/1.3 "IBM Plex Mono",ui-monospace,monospace;letter-spacing:.12em}
-.galaxy-event[data-kind=AGN]::after{content:"";position:absolute;left:0;top:0;width:30px;height:30px;border-radius:50%;border:1.5px solid #6fd3ff;transform:translate(-50%,-50%);animation:ev-agn 3.6s ease-in-out infinite}
-.galaxy-event[data-kind=AGN]::before{content:"AGN";position:absolute;left:16px;top:-24px;padding:2px 6px;border-radius:999px;background:rgba(5,7,11,.8);border:1px solid #6fd3ff;color:#bfe9ff;font:600 9px/1.3 "IBM Plex Mono",ui-monospace,monospace;letter-spacing:.12em}
-.galaxy-event[data-kind=HII] i{outline:1px solid rgba(255,143,176,.55);outline-offset:-2px}
+/* Astrophysical events: operational state as phenomena in the domain where it
+   happens. Each kind has its own silhouette + colour + tag so it never blends
+   into the star field: a dark halo punches a hole in the particles behind it. */
+.galaxy-events{position:absolute;inset:0;pointer-events:none;z-index:3}
+.galaxy-event{--ev:#fff;--ev-soft:rgba(255,255,255,.35);--s:1;position:absolute;left:0;top:0;width:0;height:0;transition:opacity .6s}
+.galaxy-event[data-kind=SUPERNOVA]{--ev:#ff6a3d;--ev-soft:rgba(255,106,61,.4);--s:1.25}
+.galaxy-event[data-kind=NOVA]{--ev:#ffc857;--ev-soft:rgba(255,200,87,.35);--s:1}
+.galaxy-event[data-kind=AGN]{--ev:#5fd4ff;--ev-soft:rgba(95,212,255,.35);--s:calc(1 + .3 * var(--event-intensity,0))}
+.galaxy-event[data-kind=HII]{--ev:#ff7fb0;--ev-soft:rgba(255,127,176,.3);--s:calc(.6 + .25 * var(--event-intensity,0))}
+.galaxy-event[data-kind=REMNANT]{--ev:#7ff0a4;--ev-soft:rgba(127,240,164,.3);--s:.95}
+.galaxy-event[data-kind=FLARE]{--ev:#e8f1ff;--ev-soft:rgba(200,225,255,.35);--s:.8}
+.galaxy-event-hit{position:absolute;left:0;top:0;width:calc(44px * var(--s));height:calc(44px * var(--s));padding:0;border:0;border-radius:50%;transform:translate(-50%,-50%);cursor:pointer;pointer-events:auto;background:radial-gradient(circle,rgba(3,5,9,.78) 0,rgba(3,5,9,.5) 40%,transparent 70%)}
+.galaxy-event-hit svg{width:100%;height:100%;overflow:visible;filter:drop-shadow(0 0 4px var(--ev-soft))}
+.galaxy-event-hit:focus-visible{outline:1px solid var(--ev);outline-offset:2px}
+.galaxy-event svg *{vector-effect:non-scaling-stroke}
+.galaxy-event .ev-core{fill:#fff}
+.galaxy-event .ev-spike{fill:var(--ev);opacity:.95}
+.galaxy-event .ev-ring{fill:none;stroke:var(--ev);stroke-width:1.2}
+.galaxy-event .ev-shell{fill:none;stroke:var(--ev);stroke-width:1.4;transform-box:fill-box;transform-origin:center;animation:ev-shell 2.6s cubic-bezier(.2,.7,.1,1) infinite}
+.galaxy-event .ev-shell-2{animation-delay:1.3s}
+.galaxy-event .ev-jet{fill:var(--ev);opacity:.8;animation:ev-breathe 3.6s ease-in-out infinite}
+.galaxy-event .ev-cloud{fill:var(--ev-soft);opacity:.55}
+.galaxy-event .ev-dash{stroke-dasharray:3 3;animation:ev-spin 24s linear infinite;transform-box:fill-box;transform-origin:center}
+.galaxy-event .ev-dot{fill:#fff}
+.galaxy-event .ev-broken{stroke-dasharray:14 6;opacity:.9}
+.galaxy-event .ev-inner{opacity:.5;stroke-dasharray:6 5}
+.galaxy-event[data-kind=SUPERNOVA] .ev-core,.galaxy-event[data-kind=NOVA] .ev-core{animation:ev-pulse 2.4s ease-in-out infinite;transform-box:fill-box;transform-origin:center}
+.galaxy-event[data-kind=FLARE] svg{animation:ev-flare 2.8s ease-in-out infinite}
+/* Tag: kind always visible; the label expands on hover/focus. */
+.galaxy-event-tag{position:absolute;left:calc(16px * var(--s));top:calc(-18px * var(--s) + var(--tag-shift,0px));display:flex;align-items:center;gap:6px;max-width:26ch;padding:2px 7px;border:1px solid var(--ev);border-radius:999px;background:rgba(5,7,11,.84);color:var(--ev);font:600 9px/1.3 "IBM Plex Mono",ui-monospace,monospace;letter-spacing:.12em;white-space:nowrap;pointer-events:none}
+.galaxy-event-tag b{font-weight:600}
+.galaxy-event-tag span{display:none;overflow:hidden;text-overflow:ellipsis;color:#dfe6ef;font-weight:400;letter-spacing:.04em}
+.galaxy-event:hover .galaxy-event-tag span,.galaxy-event.focused .galaxy-event-tag span{display:inline}
+.galaxy-event:hover,.galaxy-event.focused{z-index:2}
+.galaxy-event.focused .galaxy-event-hit svg{filter:drop-shadow(0 0 8px var(--ev))}
+.galaxy-events.dimmed .galaxy-event:not(.focused){opacity:.35 !important}
+@keyframes ev-shell{0%{opacity:.9;transform:scale(.5)}100%{opacity:0;transform:scale(2.3)}}
+@keyframes ev-pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.35)}}
+@keyframes ev-breathe{0%,100%{opacity:.55}50%{opacity:1}}
+@keyframes ev-spin{to{transform:rotate(360deg)}}
+@keyframes ev-flare{0%,65%,100%{opacity:.35}80%{opacity:1}}
+@media (prefers-reduced-motion:reduce){.galaxy-event svg,.galaxy-event svg *{animation:none !important}}
+
+/* Legend: click the row to fly to the event, the eye toggles visibility. */
+.galaxy-event-legend{list-style:none;margin:0;padding:0;display:grid;gap:6px;justify-items:end;font:500 10.5px/1.3 "IBM Plex Mono",ui-monospace,monospace;letter-spacing:.06em;color:#C9D3DF}
+.galaxy-event-legend li{--ev:#fff;display:flex;align-items:stretch;border:1px solid rgba(255,255,255,.14);border-radius:999px;background:rgba(5,7,11,.72);backdrop-filter:blur(10px);overflow:hidden;transition:opacity .3s,border-color .3s}
+.galaxy-event-legend li[data-kind=SUPERNOVA]{--ev:#ff6a3d}.galaxy-event-legend li[data-kind=NOVA]{--ev:#ffc857}.galaxy-event-legend li[data-kind=AGN]{--ev:#5fd4ff}
+.galaxy-event-legend li[data-kind=HII]{--ev:#ff7fb0}.galaxy-event-legend li[data-kind=REMNANT]{--ev:#7ff0a4}.galaxy-event-legend li[data-kind=FLARE]{--ev:#e8f1ff}
+.galaxy-event-legend li:hover{border-color:var(--ev)}
+.galaxy-event-legend li.off{opacity:.45;border-style:dashed}
+.galaxy-event-legend button{display:flex;align-items:center;gap:8px;padding:4px 10px;border:0;background:transparent;color:inherit;font:inherit;letter-spacing:inherit;cursor:pointer}
+.galaxy-event-legend button:disabled{cursor:default}
+.galaxy-event-legend .ev-go:hover:not(:disabled){color:#fff}
+.galaxy-event-legend .ev-glyph{width:18px;height:18px;flex:none;color:var(--ev)}
+.galaxy-event-legend .ev-glyph svg{width:100%;height:100%;overflow:visible}
+.galaxy-event-legend .ev-glyph svg *{animation:none !important;vector-effect:non-scaling-stroke}
+.galaxy-event-legend .ev-glyph .ev-core,.galaxy-event-legend .ev-glyph .ev-dot{fill:#fff}
+.galaxy-event-legend .ev-glyph .ev-spike,.galaxy-event-legend .ev-glyph .ev-jet{fill:var(--ev)}
+.galaxy-event-legend .ev-glyph .ev-ring,.galaxy-event-legend .ev-glyph .ev-shell{fill:none;stroke:var(--ev);stroke-width:1.2}
+.galaxy-event-legend .ev-glyph .ev-shell-2{display:none}
+.galaxy-event-legend .ev-glyph .ev-cloud{fill:var(--ev);opacity:.3}
+.galaxy-event-legend .ev-glyph .ev-dash{stroke-dasharray:3 3}
+.galaxy-event-legend .ev-glyph .ev-broken{stroke-dasharray:14 6}
+.galaxy-event-legend b{color:var(--ev);font-weight:600}
+.galaxy-event-legend .ev-eye{padding:4px 9px;border-left:1px solid rgba(255,255,255,.1);color:#7a889c;font-size:9px;letter-spacing:.14em;text-transform:uppercase}
+.galaxy-event-legend .ev-eye:hover{color:#fff}
+

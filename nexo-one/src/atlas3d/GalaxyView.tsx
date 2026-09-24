@@ -2,8 +2,8 @@
 // compiler derives arm mass/length/thickness/fragmentation, bridges and core
 // from Tower semantics (galaxy-morphology.mjs) and publishes it with shape
 // metrics in the snapshot. This view renders it and never reinterprets it.
-import { useEffect, useMemo, useState } from 'react';
-import { GalaxyThree3D, type GalaxyEvent, type GalaxyMorphology } from '../components/GalaxyThree3D.tsx';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { EventGlyph, GalaxyThree3D, type GalaxyEvent, type GalaxyMorphology } from '../components/GalaxyThree3D.tsx';
 import type { GraphNode, GraphNodeType } from '../contracts/system.ts';
 import type { PlacedNode3D } from '../viewmodels/graph3d.ts';
 
@@ -29,7 +29,7 @@ const EVENT_LEGEND = [
   { kind: 'NOVA', label: 'Nova · atenção' },
   { kind: 'AGN', label: 'AGN · campanha em andamento' },
   { kind: 'HII', label: 'Região H II · muitos testes novos' },
-  { kind: 'REMNANT', label: 'Remanescente · resolvido agora' },
+  { kind: 'REMNANT', label: 'Remanescente · resolvido' },
   { kind: 'FLARE', label: 'Flare · novidade' },
 ] as const;
 
@@ -96,6 +96,20 @@ export function GalaxyView({ selectedId, onSelect }: { selectedId: string | null
     return next;
   });
   const [glow, setGlow] = useState<number>(readGlow);
+  // Stable callbacks: they are scene deps, and a new identity rebuilds the whole
+  // WebGL scene (and resets the camera) on every re-render.
+  const handleSelect = useCallback((id: string | null) => { if (id) onSelect(id); }, [onSelect]);
+  const handleFailure = useCallback(() => setFailed(true), []);
+  const handleEventSelect = useCallback((id: string) => setFocus(current => current?.id === id ? null : { id, nonce: Date.now() }), []);
+  // Legend click cycles through the events of that kind, most intense first.
+  const [focus, setFocus] = useState<{ id: string; nonce: number } | null>(null);
+  const focusKind = (kind: string) => {
+    const list = rawEvents.filter(e => e.kind === kind).sort((a, b) => b.intensity - a.intensity);
+    if (!list.length) return;
+    if (hiddenEvents.includes(kind)) toggleEvent(kind);
+    const at = list.findIndex(e => e.id === focus?.id);
+    setFocus({ id: list[(at + 1) % list.length]!.id, nonce: Date.now() });
+  };
 
   useEffect(() => {
     const controller = new AbortController();
@@ -132,12 +146,14 @@ export function GalaxyView({ selectedId, onSelect }: { selectedId: string | null
         nodes={nodes}
         edges={[]}
         selectedId={selectedId}
-        onSelect={id => { if (id) onSelect(id); }}
-        onFailure={() => setFailed(true)}
+        onSelect={handleSelect}
+        onFailure={handleFailure}
         viewMode="detail"
         morphology={morphology}
         glow={glow}
         events={events}
+        focusEvent={focus}
+        onEventSelect={handleEventSelect}
       />
       <div className="galaxy-hud">
         <div className="galaxy-glow" role="group" aria-label="Intensidade do brilho">
@@ -156,9 +172,12 @@ export function GalaxyView({ selectedId, onSelect }: { selectedId: string | null
             {EVENT_LEGEND.filter(item => eventCounts[item.kind]).map(item => {
               const on = !hiddenEvents.includes(item.kind);
               return (
-                <li key={item.kind} data-kind={item.kind}>
-                  <button type="button" aria-pressed={on} className={on ? 'on' : 'off'} onClick={() => toggleEvent(item.kind)} title={on ? 'Ocultar' : 'Mostrar'}>
-                    <i aria-hidden="true" />{item.label} <b>{eventCounts[item.kind]}</b>
+                <li key={item.kind} data-kind={item.kind} className={on ? 'on' : 'off'}>
+                  <button type="button" className="ev-go" onClick={() => focusKind(item.kind)} title="Ir até o evento">
+                    <span className="ev-glyph"><EventGlyph kind={item.kind} /></span>{item.label} <b>{eventCounts[item.kind]}</b>
+                  </button>
+                  <button type="button" className="ev-eye" aria-pressed={on} onClick={() => { toggleEvent(item.kind); if (on && focus && rawEvents.find(e => e.id === focus.id)?.kind === item.kind) setFocus(null); }} title={on ? 'Ocultar' : 'Mostrar'}>
+                    {on ? 'ver' : 'oculto'}
                   </button>
                 </li>
               );
