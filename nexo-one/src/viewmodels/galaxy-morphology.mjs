@@ -114,7 +114,8 @@ export function armPoint(morph, domain, t) {
   const theta = arm.turns * TAU * t;
   // NGC 1300-like: each arm leaves from an end of the NEXO bar (the bar fills
   // the space in between, so the galaxy has no gap) and grows outward.
-  const radius = barEnd(morph) * Math.exp(arm.pitch * theta) + t * 10;
+  // The opening eases off towards the tip, so arm ends curl back toward the nucleus.
+  const radius = barEnd(morph) * Math.exp(arm.pitch * theta * (1 - 0.3 * t)) + t * 4;
   const angle = arm.phase + theta;
   return { x: Math.cos(angle) * radius, y: Math.sin(angle) * radius };
 }
