@@ -237,11 +237,11 @@ const G_SCALE = 0.55;
 
 export type GalaxyMorphology = {
   bulge: { radius: number; bar: number; tint: string };
-  arms: Record<string, { phase: number; turns: number; pitch: number; width: number; mass: number; segments: number; tint: string }>;
+  arms: Record<string, { phase: number; turns: number; pitch: number; width: number; mass: number; segments: number; tint: string; parent?: string; branch_at?: number }>;
 };
 // Used only until the published snapshot arrives; same rules, typical counts.
 const DEFAULT_MORPHOLOGY = morphologyFrom({
-  counts: { SCIENCE: { entities: 120, subdomains: 12 }, OLYMPUS: { entities: 20, subdomains: 2 }, ENGINEERING: { entities: 10, subdomains: 2 } },
+  counts: { NEXO: { entities: 45, subdomains: 6 }, SCIENCE: { entities: 120, subdomains: 12 }, OLYMPUS: { entities: 20, subdomains: 2 }, ENGINEERING: { entities: 10, subdomains: 2 } },
   core: 45,
 }) as unknown as GalaxyMorphology;
 
@@ -267,21 +267,26 @@ function buildSpiralGalaxy(count: number, morph: GalaxyMorphology): BufferGeomet
   const tints = Object.fromEntries(arms.map(key => [key, new Color(morph.arms[key].tint)]));
   const coreTint = new Color(morph.bulge.tint);
   const bulgeRadius = morph.bulge.radius * G_SCALE * 1.6;
-  const barStretchMax = morph.bulge.bar / 18;
   const tmp = new Color();
   for (let i = 0; i < count; i += 1) {
     const r = rng(hash32('nexo-spiral:' + i));
     const kind = r();
     let x: number; let y: number; let z: number; let size: number; let light: number;
-    if (kind < 0.2) {
+    if (kind < 0.16) {
       // Bulge + bar: dense warm core stretched along the bar axis.
       const rad = Math.abs(gaussian(r)) * bulgeRadius;
       const a = r() * TAU;
-      const barStretch = r() < 0.45 ? barStretchMax : 1.1;
-      x = Math.cos(a) * rad * barStretch; y = Math.sin(a) * rad * 0.8; z = gaussian(r) * 2.2;
+      if (r() < 0.5) {
+        // The bar: a straight, bright stellar bar whose ends feed the arms.
+        const along = (r() * 2 - 1) * morph.bulge.bar * G_SCALE * 0.95;
+        const taper = 1 - 0.6 * Math.abs(along) / (morph.bulge.bar * G_SCALE);
+        x = along; y = gaussian(r) * bulgeRadius * 0.28 * taper; z = gaussian(r) * 1.4;
+      } else {
+        x = Math.cos(a) * rad * 1.15; y = Math.sin(a) * rad * 0.85; z = gaussian(r) * 2.2;
+      }
       size = 0.9 + r() * 1.8; light = 0.55 + r() * 0.45;
       tmp.copy(STAR_CORE).lerp(STAR_WARM, r() * 0.5).lerp(coreTint, 0.35);
-    } else if (kind < 0.7) {
+    } else if (kind < 0.8) {
       // Arm stars, star-forming knots and dust lanes.
       let pick = r() * totalMass; let arm = arms[0] ?? 'SCIENCE';
       for (const key of arms) { pick -= Math.max(0.05, morph.arms[key].mass); if (pick <= 0) { arm = key; break; } }
@@ -302,7 +307,7 @@ function buildSpiralGalaxy(count: number, morph: GalaxyMorphology): BufferGeomet
       // Each arm keeps the natural star mix but leans to its domain's tone.
       tmp.copy(c < 0.62 ? STAR_WHITE : c < 0.86 ? STAR_BLUE : c < 0.95 ? HII_PINK : DUST_RED).lerp(tints[arm], 0.55);
       if (knot && r() < 0.5) tmp.copy(HII_PINK).lerp(STAR_WHITE, 0.35);
-    } else if (kind < 0.95) {
+    } else if (kind < 0.96) {
       // Inter-arm disk: faint exponential glow.
       const rad = -Math.log(Math.max(1e-6, r())) * 22;
       const a = r() * TAU;

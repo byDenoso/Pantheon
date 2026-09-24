@@ -10,13 +10,17 @@
 //   fragmentation     = number of subdomains (star-forming knots on the arm)
 //   bridges           = cross-domain relations
 //   bulge / bar       = NEXO core entities (hubs, infrastructure, capabilities)
+// Young barred spiral: SCIENCE and NEXO leave from the two bar ends,
+// ENGINEERING from the ring; OLYMPUS is a spur that diverges from the arm it
+// shares most bridges with (the largest arm when there are none).
 // Any new domain gets an arm automatically; known domains keep stable phases.
 
 const TAU = Math.PI * 2;
-export const MORPHOLOGY_VERSION = 1;
+export const MORPHOLOGY_VERSION = 2;
 export const BAR_BASE = 30;
 
-const KNOWN_PHASES = { SCIENCE: 0, OLYMPUS: Math.PI, ENGINEERING: Math.PI / 2 };
+const KNOWN_PHASES = { SCIENCE: 0, NEXO: Math.PI, ENGINEERING: Math.PI / 2 };
+const BRANCHES = new Set(['OLYMPUS']);
 export const DOMAIN_TINTS = {
   NEXO: '#ffd36b',
   SCIENCE: '#7fb2ff',
@@ -37,22 +41,35 @@ function hashPhase(domain) {
 export function morphologyFrom({ counts, core, bridges = [] }) {
   const arms = {};
   for (const [domain, c] of Object.entries(counts).sort(([a], [b]) => a.localeCompare(b))) {
-    if (domain === 'NEXO') continue;
     const entities = Number(c.entities || 0);
     const subdomains = Math.max(1, Number(c.subdomains || 0));
     const density = entities / subdomains;
     arms[domain] = {
       phase: round(KNOWN_PHASES[domain] ?? hashPhase(domain)),
-      // Compact today (~40% of the full sweep) so growth has visible room:
-      // the arm lengthens as the domain expands, up to ~0.62 turns.
       // Young galaxy: every arm is a real spiral arm; growth lengthens it slowly.
-      turns: round(0.62 + 0.36 * saturate(entities + subdomains * 4, 250)),
-      pitch: round(0.2 + 0.06 * saturate(subdomains, 8)),
+      turns: round(0.46 + 0.34 * saturate(entities + subdomains * 4, 250)),
+      pitch: round(0.3 + 0.06 * saturate(subdomains, 8)),
       width: round(7 + 9 * saturate(density, 8)),
       mass: round(0.25 + 0.75 * saturate(entities, 60)),
       segments: subdomains,
       tint: DOMAIN_TINTS[domain] || '#dfe9ff',
     };
+  }
+  // Spurs: attach to the arm they bridge to most, else to the largest arm.
+  const primary = Object.keys(arms).filter(d => !BRANCHES.has(d));
+  const largest = primary.slice().sort((a, b) => arms[b].mass - arms[a].mass || a.localeCompare(b))[0];
+  for (const domain of Object.keys(arms)) {
+    if (!BRANCHES.has(domain) || !largest) continue;
+    const linked = primary
+      .map(d => [d, bridges.filter(b => (b.from === domain && b.to === d) || (b.to === domain && b.from === d)).reduce((s, b) => s + b.count, 0)])
+      .filter(([, n]) => n > 0).sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
+    const arm = arms[domain];
+    arm.parent = linked[0]?.[0] ?? largest;
+    // Diverges a third of the way along the parent, opening outward faster.
+    arm.branch_at = 0.34;
+    arm.turns = round(0.22 + 0.3 * saturate(counts[domain].entities || 0, 120));
+    arm.pitch = round(arm.pitch + 0.18);
+    arm.width = round(arm.width * 0.8);
   }
   return {
     version: MORPHOLOGY_VERSION,
@@ -69,6 +86,14 @@ export function morphologyFrom({ counts, core, bridges = [] }) {
 export function armPoint(morph, domain, t) {
   const arm = morph.arms[domain];
   if (!arm) return { x: 0, y: 0 };
+  if (arm.parent && morph.arms[arm.parent]) {
+    const root = armPoint(morph, arm.parent, arm.branch_at ?? 0.34);
+    const r0 = Math.hypot(root.x, root.y);
+    const a0 = Math.atan2(root.y, root.x);
+    const theta = arm.turns * TAU * t;
+    const radius = r0 * Math.exp(arm.pitch * theta) + t * 12;
+    return { x: Math.cos(a0 + theta) * radius, y: Math.sin(a0 + theta) * radius };
+  }
   const theta = arm.turns * TAU * t;
   const radius = morph.bulge.bar * Math.exp(arm.pitch * theta) + t * 18;
   const angle = arm.phase + theta;
