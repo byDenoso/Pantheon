@@ -138,7 +138,7 @@ function clusterLayout(cluster,indexWithinDomain,totalWithinDomain){
   if(domain==='NEXO'){
     // NEXO stations sit on the bar.
     const t=totalWithinDomain<=1?0:(indexWithinDomain/(totalWithinDomain-1))*2-1;
-    return {x:round(t*MORPH.bulge.bar*.9),y:round((hashFraction(cluster.id,'bar-y')-.5)*10),z:round((hashFraction(cluster.id,'z')-.5)*6),sector:'NEXO',lod:'MEDIUM'};
+    return {x:round(t*MORPH.bulge.bar*.72),y:round((hashFraction(cluster.id,'bar-y')-.5)*10),z:round((hashFraction(cluster.id,'z')-.5)*6),sector:'NEXO',lod:'MEDIUM'};
   }
   if(!MORPH.arms[domain])return {x:0,y:0,z:0,sector:domain,lod:'MEDIUM'};
   const span=1/Math.max(1,totalWithinDomain);

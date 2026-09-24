@@ -50,7 +50,7 @@ export function morphologyFrom({ counts, core, bridges = [] }) {
       phase: round(KNOWN_PHASES[domain] ?? hashPhase(domain)),
       // Short today; lengthens as the domain expands (room to ~0.9 turns).
       turns: round(0.3 + 0.6 * saturate(entities + subdomains * 4, 250)),
-      pitch: round(0.2 + 0.1 * saturate(subdomains, 8)),
+      pitch: round(0.3 + 0.08 * saturate(subdomains, 8)),
       width: round(6 + 14 * saturate(density, 8)),
       mass: round(saturate(entities, 60)),
       segments: subdomains,
@@ -83,6 +83,9 @@ export function morphologyFrom({ counts, core, bridges = [] }) {
   };
 }
 
+/** Half-length of the NEXO bar: where the main arms attach. */
+export const barEnd = morph => morph.bulge.bar * 0.75;
+
 export function armPoint(morph, domain, t) {
   const arm = morph.arms[domain];
   if (!arm) return { x: 0, y: 0 };
@@ -95,8 +98,9 @@ export function armPoint(morph, domain, t) {
     return { x: Math.cos(a0 + theta) * radius, y: Math.sin(a0 + theta) * radius };
   }
   const theta = arm.turns * TAU * t;
-  // Starts inside the nucleus (t=0 at ~20% of the bar) and grows outward.
-  const radius = morph.bulge.bar * 0.8 * (Math.exp(arm.pitch * theta) - 0.8 * (1 - t) ** 2) + t * 10;
+  // NGC 1300-like: each arm leaves from an end of the NEXO bar (the bar fills
+  // the space in between, so the galaxy has no gap) and grows outward.
+  const radius = barEnd(morph) * Math.exp(arm.pitch * theta) + t * 10;
   const angle = arm.phase + theta;
   return { x: Math.cos(angle) * radius, y: Math.sin(angle) * radius };
 }

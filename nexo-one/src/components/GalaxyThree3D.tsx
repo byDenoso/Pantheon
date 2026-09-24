@@ -37,7 +37,7 @@ import type { PlacedNode3D } from '../viewmodels/graph3d.ts';
 import type { Canvas25DViewState, CanvasGraph25DHandle } from './CanvasGraph25D.tsx';
 import { domainHex } from '../viewmodels/domainPalette.ts';
 // @ts-ignore -- shared plain-JS geometry module (server + browser)
-import { armPoint as morphArmPoint, morphologyFrom } from '../viewmodels/galaxy-morphology.mjs';
+import { armPoint as morphArmPoint, barEnd, morphologyFrom } from '../viewmodels/galaxy-morphology.mjs';
 import './GalaxyThree3D.css';
 
 const TAU = Math.PI * 2;
@@ -234,7 +234,7 @@ void main() {
 // Same barred-spiral geometry as the server galaxy compiler (galaxy-v1.mjs),
 // scaled like layoutFromGalaxy, so data nodes sit inside the arms they belong to.
 // Half the original footprint: the galaxy reads small and whole.
-const G_SCALE = 0.275;
+const G_SCALE = 0.36;
 
 export type GalaxyMorphology = {
   bulge: { radius: number; bar: number; tint: string };
@@ -268,7 +268,6 @@ function buildSpiralGalaxy(count: number, morph: GalaxyMorphology): BufferGeomet
   const tints = Object.fromEntries(arms.map(key => [key, new Color(morph.arms[key].tint)]));
   const coreTint = new Color(morph.bulge.tint);
   const bulgeRadius = morph.bulge.radius * G_SCALE * 1.6;
-  const barStretchMax = morph.bulge.bar / 18;
   const tmp = new Color();
   for (let i = 0; i < count; i += 1) {
     const r = rng(hash32('nexo-spiral:' + i));
@@ -278,9 +277,17 @@ function buildSpiralGalaxy(count: number, morph: GalaxyMorphology): BufferGeomet
       // Bulge + bar: dense warm core stretched along the bar axis.
       const rad = Math.abs(gaussian(r)) * bulgeRadius;
       const a = r() * TAU;
-      const barStretch = r() < 0.45 ? barStretchMax : 1.1;
-      x = Math.cos(a) * rad * barStretch; y = Math.sin(a) * rad * 0.8; z = gaussian(r) * 2.2;
-      size = 0.9 + r() * 1.8; light = 0.55 + r() * 0.45;
+      const haze = r() < 0.12;
+      if (r() < 0.6) {
+        // The bar: bright, straight, running exactly to the arm roots.
+        const half = barEnd(morph) * G_SCALE;
+        const along = (r() * 2 - 1) * half;
+        x = along; y = gaussian(r) * bulgeRadius * 0.32 * (1 - 0.45 * Math.abs(along) / half); z = gaussian(r) * 1.4;
+      } else {
+        x = Math.cos(a) * rad * 1.1; y = Math.sin(a) * rad * 0.8; z = gaussian(r) * 2.2;
+      }
+      // Soft haze makes the bar read as one glowing body, like NGC 1300.
+      size = haze ? 8 + r() * 8 : 0.9 + r() * 1.8; light = haze ? 0.04 + r() * 0.05 : 0.55 + r() * 0.45;
       tmp.copy(STAR_CORE).lerp(STAR_WARM, r() * 0.5).lerp(coreTint, 0.35);
     } else if (kind < 0.80) {
       // Arm stars, star-forming knots and dust lanes.
@@ -298,14 +305,15 @@ function buildSpiralGalaxy(count: number, morph: GalaxyMorphology): BufferGeomet
       const q = spiralPoint(morph, arm, Math.max(0, t) + 0.01);
       const tx = q.x - p.x; const ty = q.y - p.y; const len = Math.hypot(tx, ty) || 1;
       const width = spec.width * G_SCALE * (0.35 + t * 0.9);
-      const across = gaussian(r) * width * 0.42;
+      const across = gaussian(r) * width * 0.3;
       x = p.x + (-ty / len) * across; y = p.y + (tx / len) * across; z = gaussian(r) * (1 + t * 1.6);
       const knot = r() < 0.07;
-      size = knot ? 2.2 + r() * 2.6 : 0.6 + r() * 1.4;
-      light = knot ? 0.9 : 0.25 + r() * 0.55;
+      const haze = !knot && r() < 0.06;
+      size = knot ? 2.2 + r() * 2.6 : haze ? 6 + r() * 6 : 0.6 + r() * 1.4;
+      light = knot ? 0.9 : haze ? 0.03 + r() * 0.04 : 0.25 + r() * 0.55;
       const c = r();
       // Each arm keeps the natural star mix but leans to its domain's tone.
-      tmp.copy(c < 0.62 ? STAR_WHITE : c < 0.86 ? STAR_BLUE : c < 0.95 ? HII_PINK : DUST_RED).lerp(tints[arm], 0.55);
+      tmp.copy(c < 0.62 ? STAR_WHITE : c < 0.86 ? STAR_BLUE : c < 0.95 ? HII_PINK : DUST_RED).lerp(tints[arm], 0.4);
       if (knot && r() < 0.5) tmp.copy(HII_PINK).lerp(STAR_WHITE, 0.35);
     } else if (kind < 0.95) {
       // Inter-arm disk: faint exponential glow.
