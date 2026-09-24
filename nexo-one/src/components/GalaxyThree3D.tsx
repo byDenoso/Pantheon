@@ -273,7 +273,7 @@ function buildSpiralGalaxy(count: number, morph: GalaxyMorphology): BufferGeomet
     const r = rng(hash32('nexo-spiral:' + i));
     const kind = r();
     let x: number; let y: number; let z: number; let size: number; let light: number;
-    if (kind < 0.16) {
+    if (kind < 0.2) {
       // Bulge + bar: dense warm core stretched along the bar axis.
       const rad = Math.abs(gaussian(r)) * bulgeRadius;
       const a = r() * TAU;
@@ -281,22 +281,22 @@ function buildSpiralGalaxy(count: number, morph: GalaxyMorphology): BufferGeomet
       x = Math.cos(a) * rad * barStretch; y = Math.sin(a) * rad * 0.8; z = gaussian(r) * 2.2;
       size = 0.9 + r() * 1.8; light = 0.55 + r() * 0.45;
       tmp.copy(STAR_CORE).lerp(STAR_WARM, r() * 0.5).lerp(coreTint, 0.35);
-    } else if (kind < 0.80) {
+    } else if (kind < 0.7) {
       // Arm stars, star-forming knots and dust lanes.
       let pick = r() * totalMass; let arm = arms[0] ?? 'SCIENCE';
       for (const key of arms) { pick -= Math.max(0.05, morph.arms[key].mass); if (pick <= 0) { arm = key; break; } }
       const spec = morph.arms[arm];
       // Fragmentation: stars clump around one knot per subdomain.
       const segment = Math.floor(r() * Math.max(1, spec.segments));
-      const t = Math.min(1.04, (segment + 0.5 + gaussian(r) * 0.35) / Math.max(1, spec.segments));
+      const t = Math.min(1.04, (segment + 0.5 + gaussian(r) * 0.7) / Math.max(1, spec.segments));
       const p = spiralPoint(morph, arm, Math.max(0, t));
       const q = spiralPoint(morph, arm, Math.max(0, t) + 0.01);
       const tx = q.x - p.x; const ty = q.y - p.y; const len = Math.hypot(tx, ty) || 1;
-      const width = spec.width * G_SCALE * (0.35 + t * 0.9);
-      const across = gaussian(r) * width * 0.42;
+      const width = spec.width * G_SCALE * (0.45 + t * 0.9);
+      const across = gaussian(r) * width * 0.5;
       x = p.x + (-ty / len) * across; y = p.y + (tx / len) * across; z = gaussian(r) * (1 + t * 1.6);
-      const knot = r() < 0.07;
-      size = knot ? 2.2 + r() * 2.6 : 0.6 + r() * 1.4;
+      const knot = t > 0.25 && r() < 0.06;
+      size = knot ? 1.6 + r() * 1.6 : 0.6 + r() * 1.4;
       light = knot ? 0.9 : 0.25 + r() * 0.55;
       const c = r();
       // Each arm keeps the natural star mix but leans to its domain's tone.
@@ -304,7 +304,7 @@ function buildSpiralGalaxy(count: number, morph: GalaxyMorphology): BufferGeomet
       if (knot && r() < 0.5) tmp.copy(HII_PINK).lerp(STAR_WHITE, 0.35);
     } else if (kind < 0.95) {
       // Inter-arm disk: faint exponential glow.
-      const rad = -Math.log(Math.max(1e-6, r())) * 34;
+      const rad = -Math.log(Math.max(1e-6, r())) * 22;
       const a = r() * TAU;
       x = Math.cos(a) * rad; y = Math.sin(a) * rad; z = gaussian(r) * 3;
       size = 0.5 + r() * 0.8; light = 0.12 + r() * 0.22;
@@ -312,7 +312,8 @@ function buildSpiralGalaxy(count: number, morph: GalaxyMorphology): BufferGeomet
     } else {
       // Field stars far outside the disk.
       const a = r() * TAU; const b = Math.acos(2 * r() - 1); const rad = 220 + r() * 260;
-      x = Math.sin(b) * Math.cos(a) * rad; y = Math.sin(b) * Math.sin(a) * rad; z = Math.cos(b) * rad;
+      // Background only: never between the camera and the disk.
+      x = Math.sin(b) * Math.cos(a) * rad; y = Math.sin(b) * Math.sin(a) * rad; z = -80 - Math.abs(Math.cos(b)) * rad;
       size = 0.5 + r() * 1.1; light = 0.2 + r() * 0.5;
       tmp.copy(r() < 0.8 ? STAR_WHITE : STAR_WARM);
     }
@@ -339,7 +340,7 @@ void main() {
   vec4 mv = modelViewMatrix * vec4(position, 1.0);
   float twinkle = 0.9 + 0.1 * sin(uTime * 1.3 + position.x * 0.31 + position.y * 0.17);
   float perspective = 720.0 / max(18.0, -mv.z);
-  gl_PointSize = clamp(aSize * uPixelRatio * perspective * (aBrightness > 0.85 ? twinkle : 1.0), 1.2, 34.0);
+  gl_PointSize = clamp(aSize * uPixelRatio * perspective * (aBrightness > 0.85 ? twinkle : 1.0), 1.2, 18.0);
   gl_Position = projectionMatrix * mv;
   vBrightness = aBrightness;
   vColor = aColor;
@@ -357,7 +358,7 @@ void main() {
   float glow = exp(-d * d * 22.0);
   float spikeX = max(0.0, 1.0 - abs(uv.y) * 30.0) * smoothstep(0.5, 0.0, abs(uv.x));
   float spikeY = max(0.0, 1.0 - abs(uv.x) * 30.0) * smoothstep(0.5, 0.0, abs(uv.y));
-  float spike = vBrightness > 0.85 ? spikeX + spikeY : 0.0;
+  float spike = 0.0 * (spikeX + spikeY);
   float alpha = (glow + spike * 0.35) * (0.25 + vBrightness * 0.75) * uOpacity;
   gl_FragColor = vec4(vColor * (0.8 + vBrightness * 0.6), alpha);
 }

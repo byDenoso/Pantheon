@@ -45,10 +45,11 @@ export function morphologyFrom({ counts, core, bridges = [] }) {
       phase: round(KNOWN_PHASES[domain] ?? hashPhase(domain)),
       // Compact today (~40% of the full sweep) so growth has visible room:
       // the arm lengthens as the domain expands, up to ~0.62 turns.
-      turns: round(0.12 + 0.5 * saturate(entities + subdomains * 4, 250)),
-      pitch: round(0.2 + 0.1 * saturate(subdomains, 8)),
-      width: round(6 + 14 * saturate(density, 8)),
-      mass: round(saturate(entities, 60)),
+      // Young galaxy: every arm is a real spiral arm; growth lengthens it slowly.
+      turns: round(0.62 + 0.36 * saturate(entities + subdomains * 4, 250)),
+      pitch: round(0.2 + 0.06 * saturate(subdomains, 8)),
+      width: round(7 + 9 * saturate(density, 8)),
+      mass: round(0.25 + 0.75 * saturate(entities, 60)),
       segments: subdomains,
       tint: DOMAIN_TINTS[domain] || '#dfe9ff',
     };
