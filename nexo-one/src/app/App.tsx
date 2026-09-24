@@ -171,6 +171,20 @@ export default function App() {
       detail: domain.blockers.length ? `${domain.blockers.length} blocker${domain.blockers.length === 1 ? '' : 's'}` : 'sem blocker',
     }));
   }, [system.state]);
+  // Filamentos da teia: contagem de relações publicadas entre domínios distintos.
+  const heroLinks = useMemo(() => {
+    const graph = system.state?.graph;
+    if (!graph) return [];
+    const domainOf = new Map(graph.nodes.map(node => [node.id, node.domain]));
+    const counts = new Map<string, number>();
+    for (const edge of graph.edges) {
+      const a = domainOf.get(edge.from), b = domainOf.get(edge.to);
+      if (!a || !b || a === b) continue;
+      const key = [a, b].sort().join('|');
+      counts.set(key, (counts.get(key) || 0) + 1);
+    }
+    return [...counts].map(([key, count]) => { const [a, b] = key.split('|'); return { a: a!, b: b!, count }; });
+  }, [system.state]);
   const scenario = useMemo(() => SCENARIOS.find(s => s.id === system.scenarioId) ?? SCENARIOS[0], [system.scenarioId]);
 
   const currentMode = galaxyRoute ? 'galaxia' : systemRoute ? 'sistema' : view === 'ATLAS' ? 'mapa' : view === 'LEARNING' ? 'ciencia' : ['NOW','LOOPS','DAY','CONTEXT','RECALL'].includes(view) ? 'pessoal' : ['ACTIONS','EXECUTION','INBOX'].includes(view) ? 'operacao' : ['TRUTHGRAPH','CAPABILITIES','SOURCES','INTEGRITY'].includes(view) ? 'prova' : 'inicio';
@@ -259,7 +273,7 @@ export default function App() {
 
           <main id="workspace" tabIndex={-1} className="workspace">
             <div className={currentMode==='inicio'?'workspace-heading workspace-heading--hero':'workspace-heading'}>
-              {currentMode==='inicio'&&<StarfieldCanvas className="hero-sky" clusters={heroClusters}/>}
+              {currentMode==='inicio'&&<StarfieldCanvas className="hero-sky" clusters={heroClusters} links={heroLinks}/>}
               <div>
                 {currentMode==='inicio'&&<span className="hero-eyebrow">NEXO ONE / Comando</span>}
                 <h1>{titles.title}</h1>
