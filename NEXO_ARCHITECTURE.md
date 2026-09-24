@@ -31,7 +31,7 @@ No dual-write to Git is permitted.
 - **ATLAS (Pages)** reads the Tower from Drive with a Reader-only secret (`NEXO_DRIVE_READER_JSON`) and builds the public projection inside the job. The vault export mirror is a fallback only while that secret is absent. The scheduled cron is a slow reconciler (GitHub runs it every few hours); the writer's dispatch is the sync path.
 - **Drift check:** `nexo_tower.py status` compares the Tower `state_fingerprint` with the published `tower-projection/manifest.json` and reports `CURRENT` or `OUTDATED`.
 - **Meaning:** `TCC/runtime/nexo_agent_api/contracts/SEMANTIC_TAXONOMY_V1.json` (Git contract). Every projected test/campaign carries a resolved `semantic` block; the ATLAS renders domains/stations from it.
-- **MCP:** one read-only surface; it must read the live Tower, not the frozen Git copy. Mutations are forwarded to the writer, never written by the MCP.
+- **MCP:** optional and currently not hosted. No consumer needs it: ChatGPT reads the Tower through its Drive connector and proposes via `NEXO_INBOX`; Claude automations use `nexo_tower.py`; ATLAS reads Drive in the Pages build. The Railway service is retired (trial). If a hosted MCP is ever needed, revive the free Vercel `nexo-atlas-control-tower` endpoint as a read-only view of the live Tower; mutations still go only through the writer.
 
 Current Atlas V3 design: `docs/superpowers/specs/2026-09-14-atlas-neural-v3.md`.
 
