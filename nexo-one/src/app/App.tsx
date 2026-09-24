@@ -306,7 +306,7 @@ export default function App() {
                   <Suspense fallback={<LoadingState label="Carregando módulo…" />}>{systemContent()}</Suspense>
                 </Surface>
               : <PersonalCockpit view={view} world={world.world} loading={world.loading} error={world.error}
-                  refresh={world.refresh} authenticated={session.session.authenticated}
+                  refresh={() => { void world.refresh(false); system.sync(); }} authenticated={session.session.authenticated}
                   query={personalQuery} setQuery={setPersonalQuery}
                   context={personalContext} setContext={setPersonalContext} />}
           </main>
