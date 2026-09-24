@@ -1,5 +1,5 @@
 import {createHash} from 'node:crypto';
-import {armFrame as morphFrame,armPoint as morphPoint,metricsDelta,morphologyFrom,shapeMetrics} from './galaxy-morphology.mjs';
+import {armFrame as morphFrame,armPoint as morphPoint,metricsDelta,morphologyFrom,shapeMetrics} from '../../src/viewmodels/galaxy-morphology.mjs';
 
 export const GALAXY_CONTRACT='NEXO_ONE_GALAXY_V1';
 export const GALAXY_DOMAINS=['NEXO','SCIENCE','ENGINEERING','OLYMPUS'];
@@ -347,7 +347,7 @@ export function compileGalaxySnapshot({projection,manifestFile=null,interdomain=
     id:cluster.id,kind:'SUBDOMAIN',title:cluster.label,domain:cluster.domain,canonical:cluster.canonical,source_basis:cluster.basis,
     entity_count:cluster.members.length,layout:cluster.layout,
   }));
-  const domains=domainDefinitions([...new Set(['NEXO',...Object.keys(counts)])]);
+  const domains=domainDefinitions([...new Set([...GALAXY_DOMAINS,...Object.keys(counts)])]);
   const needs_you=entities.map(entity=>({entity,reason:humanReason(entity._raw)})).filter(item=>item.reason).map(({entity,reason})=>({entity:entity.id,reason,status:entity.status,importance:entity.importance})).sort((a,b)=>b.importance-a.importance||a.entity.localeCompare(b.entity));
   const generated_at=text(manifest.generated_at)||sourceTime(manifest.event_cursor||projection.event_cursor);
 

@@ -37,7 +37,7 @@ import type { PlacedNode3D } from '../viewmodels/graph3d.ts';
 import type { Canvas25DViewState, CanvasGraph25DHandle } from './CanvasGraph25D.tsx';
 import { domainHex } from '../viewmodels/domainPalette.ts';
 // @ts-ignore -- shared plain-JS geometry module (server + browser)
-import { armPoint as morphArmPoint, morphologyFrom } from '../../server/compiler/galaxy-morphology.mjs';
+import { armPoint as morphArmPoint, morphologyFrom } from '../viewmodels/galaxy-morphology.mjs';
 import './GalaxyThree3D.css';
 
 const TAU = Math.PI * 2;
