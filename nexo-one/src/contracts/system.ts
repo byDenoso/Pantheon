@@ -283,6 +283,12 @@ export interface GraphNode {
   dependency_class?: string;
   owner_role?: string;
   human_gate?: boolean;
+  /** Tower WORK: when the item entered BLOCKED/WAIT_DEPENDENCY, and why. */
+  blocked_since?: string;
+  blocker?: string;
+  /** Tower WORK: whether NEXO automation can resolve it (undefined = not declared). */
+  automation_eligible?: boolean;
+  automation_reason?: string;
   member_count?: number;
   semantic_description?: string;
   semantic_state?: string;

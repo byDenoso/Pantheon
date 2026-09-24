@@ -68,6 +68,20 @@ const sortProjectedWork = (rows: ProjectedWorkNode[]): ProjectedWorkNode[] =>
     || a.domain.localeCompare(b.domain)
     || a.label.localeCompare(b.label));
 
+const isStalled = (node: ProjectedWorkNode) =>
+  node.operational_status === 'BLOCKED' || node.operational_status === 'WAIT_DEPENDENCY';
+
+function daysSince(iso: string): number {
+  return Math.max(0, Math.floor((Date.now() - Date.parse(iso)) / 86_400_000));
+}
+
+function AutomationChip({ node }: { node: ProjectedWorkNode }) {
+  if (node.human_gate) return <span className="work-auto-chip manual" title="Human gate na Tower">Exige você</span>;
+  if (node.automation_eligible === true) return <span className="work-auto-chip auto" title={node.automation_reason || 'Tower declara elegível para automação'}>NEXO resolve</span>;
+  if (node.automation_eligible === false) return <span className="work-auto-chip manual" title={node.automation_reason || 'Tower declara não elegível para automação'}>Manual</span>;
+  return <span className="work-auto-chip unknown" title="A Tower ainda não publica elegibilidade de automação para este WORK">Automação ?</span>;
+}
+
 function ProjectedWorkQueue({ rows, visible, onMore }:
   { rows: ProjectedWorkNode[]; visible: number; onMore: () => void }) {
   const shown = rows.slice(0, visible);
@@ -82,8 +96,17 @@ function ProjectedWorkQueue({ rows, visible, onMore }:
                 <StatusBadge state={node.operational_status || node.state} tone={toneOf(node.state)} compact />
                 {node.human_gate && <span className="work-human-chip">Needs Dener</span>}
                 {node.priority && <span className="work-priority">{node.priority}</span>}
+                <AutomationChip node={node} />
               </header>
               <h3>{node.label}</h3>
+              {isStalled(node) && (
+                <p className="work-blocker">
+                  {node.blocked_since
+                    ? <><b>{node.operational_status === 'BLOCKED' ? 'Bloqueado' : 'Aguardando'} desde {dateTime(node.blocked_since)}</b><span>há {daysSince(node.blocked_since)} d</span></>
+                    : <b>{node.operational_status === 'BLOCKED' ? 'Bloqueado' : 'Aguardando'} · data não publicada pela Tower</b>}
+                  {node.blocker && <span>{node.blocker}</span>}
+                </p>
+              )}
               <div className="work-row-meta">
                 <code>{node.id.replace(/^work:/, '')}</code>
                 {node.campaign_id && <span>{node.campaign_id}</span>}
@@ -127,7 +150,7 @@ export function ActionsView(
   );
   const projectedBuckets: Record<ActionFilter, ProjectedWorkNode[]> = {
     ALL: projectedWork,
-    AUTONOMOUS: [],
+    AUTONOMOUS: projectedWork.filter(node => node.automation_eligible === true && !node.human_gate),
     HUMAN: projectedWork.filter(node => node.human_gate),
     WAITING: projectedWork.filter(node => node.operational_status === 'WAIT_DEPENDENCY'),
     BLOCKED: projectedWork.filter(node => node.operational_status === 'BLOCKED'),
@@ -152,8 +175,10 @@ export function ActionsView(
   const emptyForProjectedWork = filter === 'AUTONOMOUS'
     ? {
         title: 'Nenhuma autonomia comprovada.',
-        description: 'Há ' + projectedWork.length + ' WORK projetados, mas esta projeção pública não publica o binding ActionRecord → capability → runtime.',
-        hint: 'Por isso o NEXO não presume elegibilidade de execução.',
+        description: projectedWork.some(node => typeof node.automation_eligible === 'boolean')
+          ? 'A Tower marcou os ' + projectedWork.length + ' WORK projetados, e nenhum está elegível para automação sem você.'
+          : 'A Tower ainda não publica automation_eligible por WORK, nem o binding ActionRecord → capability → runtime.',
+        hint: 'O NEXO não presume elegibilidade: só conta o que a Tower declara.',
       }
     : {
         title: 'Nenhum WORK neste filtro.',
