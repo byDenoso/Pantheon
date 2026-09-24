@@ -170,6 +170,15 @@ export function useSystem(initialScenario = DEFAULT_SCENARIO_ID): SystemStore {
           const cached = receipt.outcome === 'PUBLIC_PROJECTION_CACHED';
           if (!cached) setLastSuccessfulReadAt(new Date().toISOString());
           const changedAtOrigin = previousFingerprint !== receipt.projection_fingerprint;
+          if (changedAtOrigin && !cached) {
+            // Fallback sem bridge: a projeção publicada mudou, então o estado precisa ser relido.
+            setSyncMessage('Nova projeção publicada · atualizando estado…');
+            const next = await activeSource.load({ signal: ctrl.signal, scenarioId, force: true });
+            if (ctrl.signal.aborted || syncController.current !== ctrl) return;
+            stateRef.current = next;
+            setState(next);
+            setLoad(next.global_state === 'LIVE' ? 'READY' : 'PARTIAL');
+          }
           setSyncStatus(changedAtOrigin && !cached ? 'CHANGED' : 'UNCHANGED');
           setSyncMessage(cached
             ? 'Origem temporariamente indisponível · cache validado recente preservado'

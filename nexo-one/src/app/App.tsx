@@ -200,7 +200,7 @@ export default function App() {
     if(mode==='pessoal'){go('NOW');return;}
     if(mode==='sistema'){goSystem();return;}
   };
-  const header = <InstrumentHeader mode={currentMode} view={view} theme={theme} syncStatus={system.syncing?'SYNCING':system.syncStatus}
+  const header = <InstrumentHeader mode={currentMode} view={view} theme={theme} syncStatus={system.syncing?'SYNCING':system.syncStatus} syncMessage={system.syncMessage}
     readAt={system.lastSuccessfulReadAt} fingerprint={system.state?.bus.fingerprint||''} command={command} commandRef={commandRef}
     onCommandChange={setCommand} onCommandSubmit={submitCommand} onThemeToggle={()=>setTheme(theme==='dark'?'light':'dark')}
     onSync={system.sync} onNavigate={navigateMode} onAccountClick={()=>setLoginOpen(true)} privateSession={session.session.authenticated}/>;

@@ -108,3 +108,14 @@ button.capability-counter:focus-visible{outline:2px solid var(--accent);outline-
 .mc-more-tile:hover{background:color-mix(in srgb,var(--accent) 6%,var(--obs-bg,var(--bg)))}
 .mc-more-tile:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
 .plane-public-note{display:block;margin-top:4px;font-size:11px;color:var(--quiet)}
+
+/* ── Feedback do Sync (todas as telas) ─────────────────────────────────── */
+.instrument-sync-toast{position:fixed;z-index:1000;top:56px;right:16px;max-width:min(420px,calc(100vw - 24px));display:flex;align-items:center;gap:9px;padding:10px 14px;border:1px solid var(--line);border-radius:10px;background:var(--panel);box-shadow:0 14px 40px rgba(0,0,0,.35);color:var(--ink);font-size:12px;line-height:1.4;cursor:pointer;animation:sync-toast-in .2s ease}
+.instrument-sync-toast>span{flex:none;display:inline-grid;place-items:center;width:18px;height:18px;border-radius:50%;font-size:12px;color:var(--accent)}
+.instrument-sync-toast.tone-changed>span,.instrument-sync-toast.tone-unchanged>span{color:var(--live,#7bd88f)}
+.instrument-sync-toast.tone-failed{border-color:color-mix(in srgb,var(--attention,#f0b35a) 55%,var(--line))}
+.instrument-sync-toast.tone-failed>span{color:var(--attention,#f0b35a)}
+.instrument-sync-toast .spinning{animation:instrument-spin 1s linear infinite}
+@keyframes sync-toast-in{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:none}}
+@media (max-width:760px){.instrument-sync-toast{top:auto;bottom:calc(76px + env(safe-area-inset-bottom));left:12px;right:12px;max-width:none}}
+@media (prefers-reduced-motion:reduce){.instrument-sync-toast{animation:none}}

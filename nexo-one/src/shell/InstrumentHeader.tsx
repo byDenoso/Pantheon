@@ -1,4 +1,4 @@
-import type {FormEvent, RefObject} from 'react';
+import {useEffect,useState,type FormEvent,type RefObject} from 'react';
 import type {SyncStatus} from '../data/useSystem.ts';
 import type {ViewId} from '../app/navigation.ts';
 
@@ -12,15 +12,24 @@ const PATHS:Record<string,string>={
 export function ProductIcon({name,size=16}:{name:string;size?:number}){return <svg aria-hidden="true" width={size} height={size} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d={PATHS[name]||PATHS.cockpit}/></svg>}
 
 export function InstrumentHeader({
-  mode,view,theme,syncStatus,readAt,fingerprint,command,commandRef,onCommandChange,onCommandSubmit,onThemeToggle,onSync,onNavigate,onAccountClick,privateSession,
+  mode,view,theme,syncStatus,readAt,fingerprint,command,commandRef,onCommandChange,onCommandSubmit,onThemeToggle,onSync,onNavigate,onAccountClick,privateSession,syncMessage,
 }:{
   mode:ProductMode;view:ViewId;theme:string;syncStatus:SyncStatus;readAt:string|null;fingerprint:string;command:string;
   commandRef:RefObject<HTMLInputElement|null>;onCommandChange:(value:string)=>void;onCommandSubmit:(event:FormEvent)=>void;
-  onThemeToggle:()=>void;onSync:()=>void;onNavigate:(mode:ProductMode)=>void;onAccountClick?:()=>void;privateSession?:boolean;
+  onThemeToggle:()=>void;onSync:()=>void;onNavigate:(mode:ProductMode)=>void;onAccountClick?:()=>void;privateSession?:boolean;syncMessage?:string;
 }){
   const freshness=readAt?formatAge(readAt):'sem leitura';
   const modes:Array<[ProductMode,string]>=[['inicio','Início'],['galaxia','Galáxia'],['ciencia','Ciência'],['operacao','Operação'],['prova','Prova'],['sistema','Sistema'],['mapa','Mapa'],['pessoal','Pessoal']];
   const busy=syncStatus==='SYNCING';
+  // Feedback visível em qualquer viewport: o botão sozinho não diz o que aconteceu.
+  const [toast,setToast]=useState('');
+  useEffect(()=>{
+    if(!syncMessage){setToast('');return;}
+    setToast(syncMessage);
+    if(busy)return;
+    const timer=window.setTimeout(()=>setToast(''),6000);
+    return()=>window.clearTimeout(timer);
+  },[syncMessage,busy]);
   return <header className="instrument-header">
     <a href="#/cockpit/comando" className="instrument-brand" onClick={e=>{e.preventDefault();onNavigate('inicio')}} aria-label="NEXO ONE — Início">
       <span className="instrument-mark">N</span><strong>NEXO <em>ONE</em></strong>
@@ -43,6 +52,9 @@ export function InstrumentHeader({
       <span className={busy?'spinning':''} aria-hidden="true">↻</span><span>{busy?'Verificando':'Sync'}</span>
     </button>
     <button className="instrument-theme" type="button" onClick={onThemeToggle} aria-label={theme==='dark'?'Ativar tema claro':'Ativar tema escuro'} title="Alternar tema">{theme==='dark'?'☼':'☾'}</button>
+    {toast&&<div className={`instrument-sync-toast tone-${syncStatus.toLowerCase()}`} role="status" aria-live="polite" onClick={()=>setToast('')}>
+      <span className={busy?'spinning':''} aria-hidden="true">{busy?'↻':syncStatus==='FAILED'?'!':'✓'}</span>{toast}
+    </div>}
     {onAccountClick&&<button className="instrument-account" type="button" onClick={onAccountClick} aria-label="Abrir conta e sessão">{privateSession?'P':'D'}</button>}
   </header>;
 }
