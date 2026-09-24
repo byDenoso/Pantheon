@@ -4,3 +4,17 @@
 .science-graphics{display:grid;gap:10px}.science-graphics-toolbar{display:flex;align-items:center;gap:6px;flex-wrap:wrap}.science-graphics-toolbar>div{display:flex;gap:2px}.science-graphics-toolbar button{height:28px;padding:0 9px;border:1px solid var(--line);border-radius:6px;background:var(--panel);color:var(--muted);font-size:11px}.science-graphics-toolbar button.active{color:var(--accent);background:color-mix(in srgb,var(--accent) 9%,var(--panel));border-color:color-mix(in srgb,var(--accent) 40%,var(--line))}.science-graphics-toolbar button:disabled{opacity:.45}.science-chart-source{margin:0;color:var(--quiet);font-size:11px}
 .science-plot-wrap{overflow:auto;border:1px solid var(--line);border-radius:8px;background:var(--panel)}.science-plot-wrap svg{display:block;width:100%;min-width:760px;max-height:68vh}.science-plot-bg{fill:var(--panel)}.science-plot-label,.science-plot-value,.science-plot-tick{fill:var(--muted);font:12px var(--font-ui,Arial)}.science-plot-value{font-family:var(--font-mono,monospace);font-variant-numeric:tabular-nums}.science-plot-error,.science-plot-axis{stroke:var(--line);stroke-width:2}.science-plot-dot{fill:var(--accent);stroke:var(--panel);stroke-width:2}
 @media(max-width:760px){.science-filterbar{top:86px;align-items:stretch;flex-direction:column}.science-filterbar label{min-width:0;width:100%}.science-filterbar input{min-width:0;flex:1}.science-source{margin-left:0}.science-table-wrap{max-height:none}.science-graphics .nexo-graph{height:calc(100dvh - 220px)}}
+/* Phone: each row becomes a card with labelled fields instead of a squeezed table. */
+@media(max-width:760px){
+  .science-table thead{display:none}
+  .science-table,.science-table tbody,.science-table tr,.science-table td{display:block;width:100%}
+  .science-table tr{margin:0 0 10px;padding:10px 12px;border:1px solid var(--obs-line,var(--line));background:color-mix(in srgb,var(--obs-void,#05070b) 70%,transparent)}
+  .science-table td{display:grid;grid-template-columns:92px 1fr;gap:8px;padding:6px 0;border:0;text-align:left;height:auto;max-height:none;overflow:visible;white-space:normal}
+  .science-table td>*{min-width:0;overflow-wrap:anywhere}
+  .science-table td:first-child small{display:none}
+  .science-table td::before{content:attr(data-label);font:500 9.5px/1.5 var(--obs-mono,monospace);letter-spacing:.1em;text-transform:uppercase;color:var(--obs-dim,var(--muted))}
+  .science-table td:first-child{grid-template-columns:1fr;padding-bottom:8px}
+  .science-table td:first-child::before{display:none}
+  .science-table td.science-empty{grid-template-columns:1fr}
+  .science-table td.science-empty::before{display:none}
+}

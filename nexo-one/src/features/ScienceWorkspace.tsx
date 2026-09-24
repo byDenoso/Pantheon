@@ -1,4 +1,4 @@
-import {useMemo,useRef,useState,type ReactNode,type RefObject} from 'react';
+import {useEffect,useMemo,useRef,useState,type ReactNode,type RefObject} from 'react';
 import type {Filament,ScienceEvidenceField,ScienceProjectionRecord,ScienceProjectionV1,SystemState} from '../contracts/system.ts';
 import {NexoGraph,type NexoGraphView} from '../components/NexoGraph.tsx';
 import {buildAtlasGraphIndexes,type AtlasCrossLink,type AtlasMetroModel,type AtlasMetroNode} from '../atlas3d/atlasAdapter.ts';
@@ -180,7 +180,10 @@ function PublicationStatus({value}:{value:unknown}){
 }
 
 function DenseTable({heads,rows,empty}:{heads:string[];rows:ReactNode[];empty:string}){
-  return <div className="science-table-wrap"><table className="science-table"><thead><tr>{heads.map(head=><th key={head}>{head}</th>)}</tr></thead><tbody>{rows.length?rows:<tr><td colSpan={heads.length} className="science-empty">{empty}</td></tr>}</tbody></table></div>;
+  // Each cell carries its column name so phones can render rows as labelled cards.
+  const tableRef=useRef<HTMLTableElement>(null);
+  useEffect(()=>{tableRef.current?.querySelectorAll('tbody tr').forEach(tr=>[...tr.children].forEach((td,i)=>{if(heads[i])(td as HTMLElement).dataset.label=heads[i];}));});
+  return <div className="science-table-wrap"><table ref={tableRef} className="science-table"><thead><tr>{heads.map(head=><th key={head}>{head}</th>)}</tr></thead><tbody>{rows.length?rows:<tr><td colSpan={heads.length} className="science-empty">{empty}</td></tr>}</tbody></table></div>;
 }
 
 function learningRows(filaments:Filament[],query:string){
