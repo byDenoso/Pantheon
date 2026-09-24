@@ -194,7 +194,11 @@ export function armPoint(morph, domain, t) {
   // NGC 1300-like: each arm leaves from an end of the NEXO bar (the bar fills
   // the space in between, so the galaxy has no gap) and grows outward.
   // The opening eases off towards the tip, so arm ends curl back toward the nucleus.
-  const radius = barEnd(morph) * Math.exp(arm.pitch * theta * (1 - 0.3 * t)) + t * 4;
+  // Without a bar the arm grows out of the nucleus itself: near the root it dips
+  // inside the core glow, so there is never an empty ring between core and arm.
+  const noBar = 1 - Math.max(0, Math.min(1, Number(morph.bulge.bar_strength ?? 1)));
+  const rootDip = 1 - 0.62 * noBar * Math.max(0, 1 - t) ** 2.2;
+  const radius = barEnd(morph) * Math.exp(arm.pitch * theta * (1 - 0.3 * t)) * rootDip + t * 4;
   const angle = arm.phase + theta;
   return { x: Math.cos(angle) * radius, y: Math.sin(angle) * radius };
 }

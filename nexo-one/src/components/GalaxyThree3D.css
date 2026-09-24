@@ -232,7 +232,7 @@
 .galaxy-event i{position:absolute;left:0;top:0;border-radius:50%;transform:translate(-50%,-50%)}
 /* SUPERNOVA — precisa de você agora: bright core + expanding shell */
 .galaxy-event[data-kind=SUPERNOVA] i{width:10px;height:10px;background:#fff;box-shadow:0 0 12px 4px #fff,0 0 34px 10px #ffb36b,0 0 70px 20px rgba(255,120,80,.45);animation:ev-sn-core 2.4s ease-in-out infinite}
-.galaxy-event[data-kind=SUPERNOVA]::after{content:"";position:absolute;left:0;top:0;width:18px;height:18px;border-radius:50%;border:1.5px solid rgba(255,200,150,.9);transform:translate(-50%,-50%) scale(1);animation:ev-shell 2.4s cubic-bezier(.2,.7,.1,1) infinite}
+.galaxy-event[data-kind=SUPERNOVA]::after{content:"";position:absolute;left:0;top:0;width:26px;height:26px;border-radius:50%;border:2px solid #ff7a45;transform:translate(-50%,-50%) scale(1);animation:ev-shell 2.4s cubic-bezier(.2,.7,.1,1) infinite}
 /* NOVA — atenção, menor */
 .galaxy-event[data-kind=NOVA] i{width:6px;height:6px;background:#fff6e0;box-shadow:0 0 10px 3px #ffe2a8,0 0 24px 6px rgba(255,210,140,.4);animation:ev-sn-core 3.2s ease-in-out infinite}
 /* AGN — campanha intensa: pulsing nucleus-like glow at the arm root */
@@ -261,3 +261,14 @@
 .galaxy-event-legend [data-kind=HII] i{background:#ff8fb0;box-shadow:0 0 8px 2px rgba(255,143,176,.6)}
 .galaxy-event-legend [data-kind=REMNANT] i{background:none;border:1px solid #8ff0a8}
 .galaxy-event-legend [data-kind=FLARE] i{width:5px;height:5px}
+.galaxy-event-legend button{display:flex;align-items:center;gap:8px;padding:4px 8px;border:1px solid rgba(255,255,255,.14);border-radius:999px;background:rgba(5,7,11,.55);color:inherit;font:inherit;letter-spacing:inherit;cursor:pointer;transition:opacity .3s,border-color .3s}
+.galaxy-event-legend button:hover{border-color:rgba(255,255,255,.35)}
+.galaxy-event-legend button.off{opacity:.38}
+.galaxy-event-legend button.off i{box-shadow:none}
+
+/* Events must read over the bright core: coloured rings + a small tag. */
+.galaxy-event[data-kind=SUPERNOVA]::before{content:"SN";position:absolute;left:14px;top:-22px;padding:2px 6px;border-radius:999px;background:rgba(5,7,11,.8);border:1px solid #ff7a45;color:#ffb38f;font:600 9px/1.3 "IBM Plex Mono",ui-monospace,monospace;letter-spacing:.12em;white-space:nowrap}
+.galaxy-event[data-kind=NOVA]::before{content:"NOVA";position:absolute;left:10px;top:-18px;padding:1px 5px;border-radius:999px;background:rgba(5,7,11,.75);border:1px solid #ffd27a;color:#ffe2a8;font:600 8.5px/1.3 "IBM Plex Mono",ui-monospace,monospace;letter-spacing:.12em}
+.galaxy-event[data-kind=AGN]::after{content:"";position:absolute;left:0;top:0;width:30px;height:30px;border-radius:50%;border:1.5px solid #6fd3ff;transform:translate(-50%,-50%);animation:ev-agn 3.6s ease-in-out infinite}
+.galaxy-event[data-kind=AGN]::before{content:"AGN";position:absolute;left:16px;top:-24px;padding:2px 6px;border-radius:999px;background:rgba(5,7,11,.8);border:1px solid #6fd3ff;color:#bfe9ff;font:600 9px/1.3 "IBM Plex Mono",ui-monospace,monospace;letter-spacing:.12em}
+.galaxy-event[data-kind=HII] i{outline:1px solid rgba(255,143,176,.55);outline-offset:-2px}
