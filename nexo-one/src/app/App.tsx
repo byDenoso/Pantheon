@@ -1,4 +1,5 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useReveal } from './useReveal.ts';
 import type { ActionRecord, InboxItem } from '../contracts/system.ts';
 import { useWorld } from './useWorld.ts';
 import { useNexoStore } from '../data/NexoStore.tsx';
@@ -159,6 +160,7 @@ export default function App() {
   const scenario = useMemo(() => SCENARIOS.find(s => s.id === system.scenarioId) ?? SCENARIOS[0], [system.scenarioId]);
 
   const currentMode = systemRoute ? 'sistema' : view === 'ATLAS' ? 'mapa' : view === 'LEARNING' ? 'ciencia' : ['NOW','LOOPS','DAY','CONTEXT','RECALL'].includes(view) ? 'pessoal' : ['ACTIONS','EXECUTION','INBOX'].includes(view) ? 'operacao' : ['TRUTHGRAPH','CAPABILITIES','SOURCES','INTEGRITY'].includes(view) ? 'prova' : 'inicio';
+  useReveal([currentMode, view, system.load]);
   const navigateMode = (mode:'inicio'|'ciencia'|'operacao'|'prova'|'mapa'|'pessoal'|'sistema') => {
     if(mode==='inicio'){go('OVERVIEW');return;}
     if(mode==='ciencia'){go('LEARNING');return;}
@@ -241,6 +243,7 @@ export default function App() {
                 <h1>{titles.title}</h1>
                 <p>{titles.lead}</p>
               </div>
+              {currentMode==='inicio'&&<span className="hero-scroll-cue" aria-hidden="true">Explorar</span>}
             </div>
 
             {/* Only modes with real sub-sections get a tab row (Mapa and Início have none). */}

@@ -1,0 +1,108 @@
+/* ─────────────────────────────────────────────────────────────────────
+   Scientific Editorial / Cinematic Data Experience (ESO, Hubble, NASA).
+   Layout and aesthetics only: the galaxy, graphs and data are untouched.
+   Rules: one dominant element per screen · huge titles, little text ·
+   neutral UI (the imagery and domain tints carry the colour) · generous
+   space · slow motion (0.8–2 s) that respects prefers-reduced-motion.
+   Loaded last (main.tsx).
+   ───────────────────────────────────────────────────────────────────── */
+
+:root[data-theme]{
+  --ed-ease:cubic-bezier(.2,.7,.1,1);
+  --ed-slow:1.1s;
+  --ed-section-gap:clamp(96px,14vw,200px);
+  --ed-measure:58ch;
+}
+
+/* 1 · Hero — the sky is the dominant element; text sits in its negative space */
+:root[data-theme] .unified-shell .workspace-heading--hero{
+  min-height:calc(100svh - 48px);
+  align-content:end;
+  padding-bottom:clamp(56px,9vh,112px);
+}
+:root[data-theme] .workspace-heading--hero .hero-sky{animation:ed-sky 2.6s var(--ed-ease) both}
+@keyframes ed-sky{from{transform:scale(1.08);opacity:0}to{transform:none;opacity:1}}
+:root[data-theme] .workspace-heading--hero > div{max-width:min(92vw,980px)}
+:root[data-theme] .unified-shell .workspace-heading--hero h1{
+  font-size:clamp(88px,17vw,260px);line-height:.8;letter-spacing:-.015em;margin:18px 0 28px;
+  animation:ed-rise 1.6s var(--ed-ease) .25s both;
+}
+:root[data-theme] .unified-shell .workspace-heading--hero p{
+  max-width:38ch;font-size:clamp(16px,1.45vw,20px);line-height:1.55;
+  animation:ed-rise 1.6s var(--ed-ease) .5s both;
+}
+:root[data-theme] .workspace-heading--hero .hero-eyebrow{animation:ed-rise 1.4s var(--ed-ease) .1s both}
+.hero-scroll-cue{
+  position:absolute;z-index:2;right:clamp(16px,3vw,40px);bottom:clamp(24px,5vh,56px);
+  display:flex;align-items:center;gap:12px;
+  font:500 10.5px/1 "IBM Plex Mono",ui-monospace,monospace;letter-spacing:.24em;text-transform:uppercase;color:#7A889C;
+  animation:ed-rise 1.4s var(--ed-ease) 1s both;
+}
+.hero-scroll-cue::after{content:"";width:1px;height:44px;background:linear-gradient(#7A889C,transparent);animation:ed-cue 2.4s var(--ed-ease) infinite}
+@keyframes ed-cue{0%{transform:scaleY(0);transform-origin:top}50%{transform:scaleY(1);transform-origin:top}51%{transform-origin:bottom}100%{transform:scaleY(0);transform-origin:bottom}}
+@keyframes ed-rise{from{opacity:0;transform:translateY(40px)}to{opacity:1;transform:none}}
+
+/* 2 · Page headings (other tabs) — title large, text short, then air */
+:root[data-theme] .unified-shell .workspace-heading:not(.workspace-heading--hero){margin:clamp(24px,6vw,72px) 0 clamp(32px,5vw,64px)}
+:root[data-theme] .unified-shell .workspace-heading:not(.workspace-heading--hero) h1{
+  font-size:clamp(56px,9vw,148px);line-height:.84;letter-spacing:-.01em;margin:0 0 20px;
+}
+:root[data-theme] .unified-shell .workspace-heading p{max-width:var(--ed-measure);font-size:clamp(15px,1.25vw,18px);line-height:1.6}
+
+/* 3 · Vertical rhythm */
+:root[data-theme] .mission-control{gap:var(--ed-section-gap);margin:var(--ed-section-gap) 0}
+:root[data-theme] .mc-head{gap:14px;margin-bottom:clamp(32px,5vw,64px)}
+:root[data-theme] .mc-head h2{font-size:clamp(48px,8.5vw,128px);line-height:.86;letter-spacing:-.005em}
+:root[data-theme] .mc-eyebrow{font-size:11px;letter-spacing:.3em}
+
+/* Telemetry: quiet instrument strip, not a dashboard */
+:root[data-theme] .mc-telemetry{font-size:13px;border-color:var(--obs-line)}
+:root[data-theme] .mc-telemetry span{padding-block:18px}
+
+/* 4 · Missions — one dominant feature, then a calm two-column index */
+:root[data-theme] .mc-missions{grid-template-columns:repeat(2,minmax(0,1fr));gap:1px}
+:root[data-theme] .mc-mission{padding:clamp(28px,4vw,56px);gap:22px}
+:root[data-theme] .mc-mission::before{background:radial-gradient(120% 90% at 100% 0%,color-mix(in srgb,var(--dom) 9%,transparent),transparent 60%)}
+:root[data-theme] .mc-mission:first-child{grid-column:1 / -1;padding:clamp(36px,6vw,88px)}
+:root[data-theme] .mc-mission:first-child h3{font-size:clamp(32px,4.6vw,68px);line-height:.98;max-width:22ch}
+:root[data-theme] .mc-mission:first-child .mc-question{font-size:clamp(15px,1.3vw,18px);max-width:var(--ed-measure);-webkit-line-clamp:4}
+:root[data-theme] .mc-mission:first-child .mc-ring{width:120px;height:120px}
+:root[data-theme] .mc-mission h3{font-size:clamp(22px,2.2vw,30px)}
+
+/* 5 · Discoveries — numbered editorial index */
+:root[data-theme] .mc-results{counter-reset:ed;grid-template-columns:repeat(auto-fill,minmax(min(100%,420px),1fr));gap:clamp(40px,5vw,72px) clamp(32px,5vw,80px)}
+:root[data-theme] .mc-results li{counter-increment:ed}
+:root[data-theme] .mc-results button{padding-top:24px;gap:14px}
+:root[data-theme] .mc-results button::before{
+  content:counter(ed,decimal-leading-zero);
+  font:900 clamp(40px,4.4vw,64px)/.8 var(--obs-display);color:var(--obs-line-strong);transition:color .8s var(--ed-ease);
+}
+:root[data-theme] .mc-results button:hover::before{color:var(--dom)}
+:root[data-theme] .mc-results strong{font-size:clamp(22px,2vw,28px);line-height:1.08}
+:root[data-theme] .mc-results p{font-size:15px;line-height:1.65;-webkit-line-clamp:5}
+
+/* 6 · Tabs and tables: editorial calm */
+:root[data-theme] .section-tabs{margin-bottom:clamp(32px,4vw,56px)}
+:root[data-theme] .section-tabs button{padding:18px 20px 16px}
+
+/* Scroll reveal (useReveal adds .ed-reveal / .is-visible) */
+/* Motion only, never hidden: if a browser freezes the transition the content is still readable. */
+.ed-reveal{transform:translateY(60px);transition:transform var(--ed-slow) var(--ed-ease)}
+.ed-reveal.is-visible{transform:none}
+
+@media (max-width:760px){
+  :root[data-theme]{--ed-section-gap:clamp(72px,18vw,112px)}
+  :root[data-theme] .unified-shell .workspace-heading--hero{min-height:calc(100svh - 48px - 60px)}
+  :root[data-theme] .unified-shell .workspace-heading--hero h1{font-size:clamp(72px,22vw,120px)}
+  :root[data-theme] .mc-missions{grid-template-columns:1fr}
+  .hero-scroll-cue{display:none}
+}
+
+@media (prefers-reduced-motion:reduce){
+  :root[data-theme] .workspace-heading--hero .hero-sky,
+  :root[data-theme] .unified-shell .workspace-heading--hero h1,
+  :root[data-theme] .unified-shell .workspace-heading--hero p,
+  :root[data-theme] .workspace-heading--hero .hero-eyebrow,
+  .hero-scroll-cue,.hero-scroll-cue::after{animation:none}
+  .ed-reveal{transform:none;transition:none}
+}
