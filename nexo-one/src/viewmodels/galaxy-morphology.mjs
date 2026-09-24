@@ -17,11 +17,16 @@ export const MORPHOLOGY_VERSION = 2;
 export const BAR_BASE = 30;
 
 // NEXO is the nucleus; SCIENCE and ENGINEERING are the two main arms, on
-// opposite sides; OLYMPUS is a sub-arm that diverges from the arm it bridges
-// to most (the largest arm when there are no bridges). Every arm grows out of
-// the nucleus, so there is never a gap between the core and an arm.
+// opposite sides. Every other domain (OLYMPUS and any new one) is a branch
+// that leaves its parent arm close to the nucleus. Parent = the main arm it
+// shares most cross-domain relations with; without relations, its semantic
+// affinity; otherwise the largest arm. Every arm grows out of the nucleus, so
+// there is never a gap between the core and an arm.
 const KNOWN_PHASES = { SCIENCE: 0, ENGINEERING: Math.PI };
-const BRANCHES = new Set(['OLYMPUS']);
+const MAIN_ARMS = new Set(['SCIENCE', 'ENGINEERING']);
+const SEMANTIC_AFFINITY = { OLYMPUS: 'SCIENCE' };
+const BRANCH_ROOT = 0.08; // fraction along the parent arm, right next to the bar end
+const BRANCH_STEP = 0.07; // further branches on the same arm root a little further out
 export const DOMAIN_TINTS = {
   NEXO: '#ffd36b',
   SCIENCE: '#7fb2ff',
@@ -57,7 +62,7 @@ export function morphologyFrom({ counts, core, bridges = [] }) {
       tint: DOMAIN_TINTS[domain] || '#dfe9ff',
     };
   }
-  const primary = Object.keys(arms).filter(d => !BRANCHES.has(d));
+  const primary = Object.keys(arms).filter(d => MAIN_ARMS.has(d));
   // Balanced arms: the longest arm follows the largest domain's expansion;
   // every other main arm is 77-100% of it, in proportion to its own
   // expansion. So the biggest arm is at most ~30% longer than the smallest,
@@ -73,17 +78,20 @@ export function morphologyFrom({ counts, core, bridges = [] }) {
   const sharedPitch = Math.max(0, ...primary.map(d => arms[d].pitch));
   for (const d of primary) arms[d].pitch = round(sharedPitch);
   const largest = primary.slice().sort((a, b) => arms[b].mass - arms[a].mass || a.localeCompare(b))[0];
+  const branchesOn = {};
   for (const domain of Object.keys(arms)) {
-    if (!BRANCHES.has(domain) || !largest) continue;
+    if (MAIN_ARMS.has(domain) || !largest) continue;
     const linked = primary
       .map(d => [d, bridges.filter(b => (b.from === domain && b.to === d) || (b.to === domain && b.from === d)).reduce((s, b) => s + b.count, 0)])
       .filter(([, n]) => n > 0).sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
     const arm = arms[domain];
-    arm.parent = linked[0]?.[0] ?? largest;
-    arm.branch_at = 0.3;
-    // The sub-arm lengthens as OLYMPUS grows, opening a little faster than its parent.
+    const affinity = SEMANTIC_AFFINITY[domain];
+    arm.parent = linked[0]?.[0] ?? (arms[affinity] ? affinity : largest);
+    const order = (branchesOn[arm.parent] = (branchesOn[arm.parent] ?? -1) + 1);
+    arm.branch_at = round(BRANCH_ROOT + BRANCH_STEP * order);
+    // The branch lengthens as its domain grows, opening a little faster than its parent.
     arm.turns = round(0.15 + 0.45 * saturate(counts[domain].entities || 0, 90));
-    arm.pitch = round(arm.pitch + 0.12);
+    arm.pitch = round(arm.pitch + 0.45); // opens away from the parent quickly
   }
   return {
     version: MORPHOLOGY_VERSION,
@@ -104,7 +112,7 @@ export function armPoint(morph, domain, t) {
   const arm = morph.arms[domain];
   if (!arm) return { x: 0, y: 0 };
   if (arm.parent && morph.arms[arm.parent]) {
-    const root = armPoint(morph, arm.parent, arm.branch_at ?? 0.3);
+    const root = armPoint(morph, arm.parent, arm.branch_at ?? BRANCH_ROOT);
     const r0 = Math.hypot(root.x, root.y);
     const a0 = Math.atan2(root.y, root.x);
     const theta = arm.turns * TAU * t;
