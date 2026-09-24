@@ -398,8 +398,18 @@ export interface ScienceProjectionV1 {
 }
 
 /** Raiz consumida por NEXO ONE e Atlas. Mesmo estado, projeções diferentes. */
+export interface GuardianStatus {
+  status: 'GREEN' | 'YELLOW' | 'RED';
+  checked_at: string;
+  checks_total: number;
+  checks_failing: number;
+  failing_areas: string[];
+}
+
 export interface SystemState {
   contract_version: '1';
+  /** Latest NEXO · Guardião audit (projection.integrity); absent until the first report. */
+  guardian?: GuardianStatus | null;
   scenario_id: string;
   scenario_label: string;
   generated_at: string;

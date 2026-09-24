@@ -1185,6 +1185,7 @@ export function buildPagesProjection({
     runs: [],
     lanes,
     projected_work: projectedWork,
+    guardian: projection.integrity || null,
     graph,
     filaments,
     providers: [{

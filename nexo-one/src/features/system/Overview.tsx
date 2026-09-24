@@ -39,6 +39,7 @@ export function Overview(
 
   return (
     <div className="overview">
+      {state.guardian && <GuardianStrip guardian={state.guardian} />}
       <MissionControl state={state} onOpenScience={() => onNavigate('LEARNING')} />
       <section className="overview-pulse" aria-label="Resumo operacional" data-order="summary">
         <button className={`pulse-metric health tone-${toneOf(summary.state)}`} onClick={() => onNavigate('SOURCES')}>
@@ -145,5 +146,28 @@ export function Overview(
         <ProjectionHealth bus={state.bus} />
       </section>
     </div>
+  );
+}
+
+const AREA_PT: Record<string, string> = {
+  tower: 'Tower', site: 'site', inbox: 'fila de propostas', tasks: 'automações', science: 'ciência',
+  cycle: 'ciclo de aprendizado', contract: 'contrato', semantic: 'leituras simples',
+};
+
+function GuardianStrip({ guardian }: { guardian: NonNullable<SystemState['guardian']> }) {
+  // The Guardião's last audit in one line: green / attention / problem, and where.
+  const label = guardian.status === 'GREEN' ? 'Sistema íntegro'
+    : guardian.status === 'YELLOW' ? `Atenção em ${guardian.checks_failing} de ${guardian.checks_total} verificações`
+    : `Problema em ${guardian.checks_failing} verificações`;
+  const areas = [...new Set(guardian.failing_areas.map(area => AREA_PT[area.split('.')[0]] ?? area.split('.')[0]))];
+  const minutes = Math.max(0, Math.round((Date.now() - Date.parse(guardian.checked_at)) / 60000));
+  const ago = !Number.isFinite(minutes) ? '' : minutes < 60 ? `há ${minutes} min` : `há ${Math.round(minutes / 60)} h`;
+  return (
+    <p className={`guardian-strip guardian-${guardian.status.toLowerCase()}`} role="status">
+      <span className="guardian-dot" aria-hidden="true" />
+      <strong>{label}</strong>
+      {areas.length > 0 && <span> · {areas.join(', ')}</span>}
+      {ago && <span className="guardian-ago"> · Guardião {ago}</span>}
+    </p>
   );
 }

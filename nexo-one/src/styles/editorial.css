@@ -124,3 +124,13 @@
 :root[data-theme] .galaxy-route .workspace.galaxy-workspace{max-width:none;padding:0;height:calc(100svh - 48px)}
 :root[data-theme] .galaxy-route .galaxy-workspace>.atlas-galaxy-view{height:100%;border-radius:0}
 @media (max-width:760px){:root[data-theme] .galaxy-route .workspace.galaxy-workspace{height:calc(100svh - 48px - 60px - env(safe-area-inset-bottom))}}
+
+/* Guardião status strip (Início): one calm line, colour only on the dot. */
+.guardian-strip{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin:clamp(24px,4vw,48px) 0 0;
+  font:500 13px/1.5 "IBM Plex Mono",ui-monospace,monospace;letter-spacing:.04em;color:var(--obs-dim,#7A889C)}
+.guardian-strip strong{color:var(--obs-bright,#E8ECF2);font-weight:600}
+.guardian-dot{width:9px;height:9px;border-radius:50%;background:#63D19E;box-shadow:0 0 0 4px color-mix(in srgb,#63D19E 18%,transparent)}
+.guardian-yellow .guardian-dot{background:#E9C27A;box-shadow:0 0 0 4px color-mix(in srgb,#E9C27A 18%,transparent)}
+.guardian-red .guardian-dot{background:#FF4D2E;box-shadow:0 0 0 4px color-mix(in srgb,#FF4D2E 22%,transparent);animation:guardian-pulse 1.6s ease-in-out infinite}
+@keyframes guardian-pulse{50%{box-shadow:0 0 0 9px transparent}}
+@media (prefers-reduced-motion:reduce){.guardian-red .guardian-dot{animation:none}}
