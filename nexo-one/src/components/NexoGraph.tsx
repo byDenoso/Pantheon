@@ -91,7 +91,7 @@ export function NexoGraph({
     {tableMode
       ? <div className="nexo-graph-table-wrap"><table className="nexo-graph-table"><thead><tr><th>Entidade</th><th>Tipo</th><th>Domínio</th><th>Estado</th><th>Relações</th></tr></thead><tbody>{rows.map(node=><tr key={node!.id} className={node!.id===selectedId?'selected':''} onClick={()=>onSelect(node!.id)}><td><strong>{node!.name}</strong><small>{node!.id}</small></td><td>{node!.entityType}</td><td>{node!.domain}</td><td>{node!.status}</td><td>{node!.relationCount}</td></tr>)}</tbody></table></div>
       : view==='galaxy'
-        ? <GalaxyView model={model} selectedId={selectedId} onSelect={onSelect}/>
+        ? <GalaxyView selectedId={selectedId} onSelect={onSelect}/>
       : view==='2d'&&!g6Ready
         ? <div className="nexo-graph-fallback" role="status">2D indisponível neste instante. Os dados continuam acessíveis em tabela.</div>
         : <MetroAtlasRenderer model={model} expanded={expanded} visibleLayers={visibleLayers} selectedId={spotlightActive?selectedId:null} showBeams={showRelations} viewMode={view} theme={theme} fitNonce={fitNonce} allIlluminated={illuminated} onActivate={onSelect} onReady={onReady}/>}
