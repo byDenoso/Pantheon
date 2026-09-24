@@ -77,9 +77,76 @@ type Props = {
   glow?: number;
   /** Astrophysical events (world coordinates, already scaled like the nodes). */
   events?: GalaxyEvent[];
+  /** Fly the camera to an event; bump `nonce` to repeat the same id. */
+  focusEvent?: { id: string; nonce: number } | null;
+  /** A marker was clicked. */
+  onEventSelect?: (id: string) => void;
 };
 
 const NO_EVENTS: GalaxyEvent[] = [];
+
+export const EVENT_TAG: Record<GalaxyEvent['kind'], string> = {
+  SUPERNOVA: 'SN', NOVA: 'NOVA', AGN: 'AGN', HII: 'H II', REMNANT: 'SNR', FLARE: 'FLARE',
+};
+
+/**
+ * One silhouette per event kind, so they read by shape (not only colour)
+ * against the particle field: spikes = needs you, jets = campaign,
+ * dashed cloud = new tests, broken ring = resolved, cross = new.
+ */
+export function EventGlyph({ kind }: { kind: GalaxyEvent['kind'] }) {
+  switch (kind) {
+    case 'SUPERNOVA':
+      return (
+        <svg viewBox="-24 -24 48 48" aria-hidden="true">
+          <circle className="ev-shell" r="10" />
+          <circle className="ev-shell ev-shell-2" r="10" />
+          <path className="ev-spike" d="M0-21L2.2-2.2 21 0 2.2 2.2 0 21-2.2 2.2-21 0-2.2-2.2Z" />
+          <circle className="ev-core" r="3.2" />
+        </svg>
+      );
+    case 'NOVA':
+      return (
+        <svg viewBox="-16 -16 32 32" aria-hidden="true">
+          <circle className="ev-ring" r="9" />
+          <path className="ev-spike" d="M0-13L1.6-1.6 13 0 1.6 1.6 0 13-1.6 1.6-13 0-1.6-1.6Z" />
+          <circle className="ev-core" r="2.2" />
+        </svg>
+      );
+    case 'AGN':
+      return (
+        <svg viewBox="-26 -26 52 52" aria-hidden="true">
+          <path className="ev-jet" d="M0-4L-2.4-24h4.8ZM0 4L-2.4 24h4.8Z" />
+          <ellipse className="ev-ring" rx="11" ry="4.5" />
+          <circle className="ev-core" r="3.4" />
+        </svg>
+      );
+    case 'HII':
+      return (
+        <svg viewBox="-20 -20 40 40" aria-hidden="true">
+          <circle className="ev-cloud" r="14" />
+          <circle className="ev-ring ev-dash" r="14" />
+          <circle className="ev-dot" cx="-4" cy="-3" r="1.6" />
+          <circle className="ev-dot" cx="4" cy="1" r="1.3" />
+          <circle className="ev-dot" cx="-1" cy="5" r="1.1" />
+        </svg>
+      );
+    case 'REMNANT':
+      return (
+        <svg viewBox="-18 -18 36 36" aria-hidden="true">
+          <circle className="ev-ring ev-broken" r="12" />
+          <circle className="ev-ring ev-broken ev-inner" r="7" />
+        </svg>
+      );
+    default:
+      return (
+        <svg viewBox="-12 -12 24 24" aria-hidden="true">
+          <path className="ev-spike" d="M0-10L1-1 10 0 1 1 0 10-1 1-10 0-1-1Z" />
+          <circle className="ev-core" r="1.6" />
+        </svg>
+      );
+  }
+}
 const Z_AXIS = new Vector3(0, 0, 1);
 
 export type GalaxyEvent = {
@@ -88,6 +155,7 @@ export type GalaxyEvent = {
   label: string;
   domain?: string;
   entity?: string;
+  reason?: string;
   x: number; y: number; z: number;
   intensity: number;
 };
@@ -268,12 +336,14 @@ function spiralPoint(morph: GalaxyMorphology, arm: string, t: number) {
   return { x: p.x * G_SCALE, y: p.y * G_SCALE };
 }
 
-const STAR_WHITE = new Color('#dfe9ff');
-const STAR_BLUE = new Color('#9cc3ff');
-const STAR_WARM = new Color('#ffd7a8');
-const STAR_CORE = new Color('#fff1d6');
-const HII_PINK = new Color('#ff8fb0');
-const DUST_RED = new Color('#c9785a');
+// Muted, analogous star palette (slate · periwinkle · lavender · ivory): the
+// disk blends into one calm body so the saturated event glyphs carry the contrast.
+const STAR_WHITE = new Color('#c9d2e3');
+const STAR_BLUE = new Color('#8e9fc4');
+const STAR_WARM = new Color('#d6c8b0');
+const STAR_CORE = new Color('#e6dcc8');
+const HII_PINK = new Color('#a898c4');
+const DUST_RED = new Color('#8c8196');
 
 function buildSpiralGalaxy(count: number, morph: GalaxyMorphology): BufferGeometry {
   const positions = new Float32Array(count * 3);
@@ -310,8 +380,8 @@ function buildSpiralGalaxy(count: number, morph: GalaxyMorphology): BufferGeomet
         x = Math.cos(a) * rad * (1.1 - 0.1 * (1 - barStrength)); y = Math.sin(a) * rad * (0.8 + 0.15 * (1 - barStrength)); z = gaussian(r) * 2.2;
       }
       // Soft haze makes the bar read as one glowing body, like NGC 1300.
-      size = haze ? 6 + r() * 6 : 0.8 + r() * 1.5; light = haze ? 0.025 + r() * 0.03 : 0.4 + r() * 0.4;
-      tmp.copy(STAR_CORE).lerp(STAR_WARM, r() * 0.5).lerp(coreTint, 0.35);
+      size = haze ? 5 + r() * 5 : 0.5 + r() * 0.9; light = haze ? 0.02 + r() * 0.025 : 0.4 + r() * 0.4;
+      tmp.copy(STAR_CORE).lerp(STAR_WARM, r() * 0.5).lerp(coreTint, 0.12);
     } else if (kind < 0.80) {
       // Arm stars, star-forming knots and dust lanes.
       let pick = r() * totalMass; let arm = arms[0] ?? 'SCIENCE';
@@ -332,18 +402,19 @@ function buildSpiralGalaxy(count: number, morph: GalaxyMorphology): BufferGeomet
       x = p.x + (-ty / len) * across; y = p.y + (tx / len) * across; z = gaussian(r) * (1 + t * 1.6);
       const knot = r() < 0.07;
       const haze = !knot && r() < 0.06;
-      size = knot ? 2.2 + r() * 2.6 : haze ? 6 + r() * 6 : 0.6 + r() * 1.4;
-      light = knot ? 0.9 : haze ? 0.03 + r() * 0.04 : 0.25 + r() * 0.55;
+      size = knot ? 1.4 + r() * 1.6 : haze ? 5 + r() * 5 : 0.35 + r() * 0.8;
+      light = knot ? 0.9 : haze ? 0.025 + r() * 0.03 : 0.25 + r() * 0.55;
       const c = r();
-      // Each arm keeps the natural star mix but leans to its domain's tone.
-      tmp.copy(c < 0.62 ? STAR_WHITE : c < 0.86 ? STAR_BLUE : c < 0.95 ? HII_PINK : DUST_RED).lerp(tints[arm], 0.4);
-      if (knot && r() < 0.5) tmp.copy(HII_PINK).lerp(STAR_WHITE, 0.35);
+      // Natural star mix with only a hint of the domain's tone: arms stay
+      // distinguishable without the galaxy turning into a colour gradient.
+      tmp.copy(c < 0.66 ? STAR_WHITE : c < 0.9 ? STAR_BLUE : c < 0.96 ? HII_PINK : DUST_RED).lerp(tints[arm], 0.14);
+      if (knot && r() < 0.5) tmp.copy(HII_PINK).lerp(STAR_WHITE, 0.45);
     } else if (kind < 0.95) {
       // Inter-arm disk: faint exponential glow.
       const rad = -Math.log(Math.max(1e-6, r())) * 17;
       const a = r() * TAU;
       x = Math.cos(a) * rad; y = Math.sin(a) * rad; z = gaussian(r) * 3;
-      size = 0.5 + r() * 0.8; light = 0.12 + r() * 0.22;
+      size = 0.35 + r() * 0.6; light = 0.12 + r() * 0.22;
       tmp.copy(STAR_WHITE).lerp(STAR_WARM, r() * 0.5);
     } else {
       // Field stars far outside the disk.
@@ -375,7 +446,7 @@ void main() {
   vec4 mv = modelViewMatrix * vec4(position, 1.0);
   float twinkle = 0.9 + 0.1 * sin(uTime * 1.3 + position.x * 0.31 + position.y * 0.17);
   float perspective = 720.0 / max(18.0, -mv.z);
-  gl_PointSize = clamp(aSize * uPixelRatio * perspective * (aBrightness > 0.85 ? twinkle : 1.0), 1.2, 34.0);
+  gl_PointSize = clamp(aSize * uPixelRatio * perspective * (aBrightness > 0.85 ? twinkle : 1.0), 0.9, 30.0);
   gl_Position = projectionMatrix * mv;
   vBrightness = aBrightness;
   vColor = aColor;
@@ -390,12 +461,12 @@ void main() {
   vec2 uv = gl_PointCoord - vec2(0.5);
   float d = length(uv);
   if (d > 0.5) discard;
-  float glow = exp(-d * d * 22.0);
+  float glow = exp(-d * d * 30.0);
   float spikeX = max(0.0, 1.0 - abs(uv.y) * 30.0) * smoothstep(0.5, 0.0, abs(uv.x));
   float spikeY = max(0.0, 1.0 - abs(uv.x) * 30.0) * smoothstep(0.5, 0.0, abs(uv.y));
   float spike = vBrightness > 0.85 ? spikeX + spikeY : 0.0;
   float alpha = (glow + spike * 0.35) * (0.25 + vBrightness * 0.75) * uOpacity;
-  gl_FragColor = vec4(vColor * (0.8 + vBrightness * 0.6), alpha);
+  gl_FragColor = vec4(vColor * (0.7 + vBrightness * 0.45), alpha);
 }
 `;
 
@@ -539,6 +610,8 @@ export const GalaxyThree3D = forwardRef<CanvasGraph25DHandle, Props>(function Ga
   morphology = null,
   glow = 0.21,
   events = NO_EVENTS,
+  focusEvent = null,
+  onEventSelect,
 }, ref) {
   const hostRef = useRef<HTMLDivElement | null>(null);
   const mountRef = useRef<HTMLDivElement | null>(null);
@@ -550,6 +623,8 @@ export const GalaxyThree3D = forwardRef<CanvasGraph25DHandle, Props>(function Ga
   const labelsRef = useRef(new Map<string, HTMLSpanElement>());
   const eventsRef = useRef(new Map<string, HTMLSpanElement>());
   const tweenRef = useRef<Tween | null>(null);
+  // Disk angle survives scene rebuilds, so markers and camera focus stay in sync.
+  const diskAngleRef = useRef(0);
   const pointerDownRef = useRef<{ x: number; y: number } | null>(null);
   const [size, setSize] = useState({ width: 1, height: 1 });
   const [failed, setFailed] = useState(false);
@@ -714,7 +789,7 @@ export const GalaxyThree3D = forwardRef<CanvasGraph25DHandle, Props>(function Ga
       const palette = paletteForTheme(themeName);
       const spiral = themeName === 'dark';
       const particleCount = spiral
-        ? (isMobile ? 5000 : 16000)
+        ? (isMobile ? 7000 : 26000)
         : isMacro ? (isMobile ? 90 : 320) : (isMobile ? 240 : 900);
       const galaxyGeometry = spiral ? buildSpiralGalaxy(particleCount, morphology ?? DEFAULT_MORPHOLOGY) : buildFieldGeometry(nodes, particleCount, isMacro, themeName);
       const galaxyMaterial = new ShaderMaterial({
@@ -723,7 +798,7 @@ export const GalaxyThree3D = forwardRef<CanvasGraph25DHandle, Props>(function Ga
           uPixelRatio: { value: renderer.getPixelRatio() },
           uColorA: { value: palette.accent },
           uColorB: { value: palette.strong },
-          uOpacity: { value: spiral ? 1.25 * glow : isMacro ? (themeName === 'light' ? 0.20 : 0.24) : (themeName === 'light' ? 0.38 : 0.52) },
+          uOpacity: { value: spiral ? 0.95 * glow : isMacro ? (themeName === 'light' ? 0.20 : 0.24) : (themeName === 'light' ? 0.38 : 0.52) },
         },
         vertexShader: spiral ? spiralVertexShader : galaxyVertexShader,
         fragmentShader: spiral ? spiralFragmentShader : galaxyFragmentShader,
@@ -734,6 +809,7 @@ export const GalaxyThree3D = forwardRef<CanvasGraph25DHandle, Props>(function Ga
       const galaxy = new Points(galaxyGeometry, galaxyMaterial);
       // Everything that belongs to the disk turns together (stars, data points, relations).
       const disk = new Group();
+      disk.rotation.z = diskAngleRef.current;
       scene.add(disk);
       disk.add(galaxy);
 
@@ -819,10 +895,10 @@ export const GalaxyThree3D = forwardRef<CanvasGraph25DHandle, Props>(function Ga
       if (!isMobile && themeName === 'dark') {
         composer = new EffectComposer(renderer);
         composer.addPass(new RenderPass(scene, camera));
-        const bloom = new UnrealBloomPass(new Vector2(size.width, size.height), 0.9 * glow, 0.55, 0.12);
-        bloom.threshold = 0.12;
-        bloom.strength = 0.9 * glow;
-        bloom.radius = 0.55;
+        const bloom = new UnrealBloomPass(new Vector2(size.width, size.height), 0.55 * glow, 0.5, 0.2);
+        bloom.threshold = 0.2;
+        bloom.strength = 0.55 * glow;
+        bloom.radius = 0.5;
         composer.addPass(bloom);
       }
 
@@ -896,13 +972,21 @@ export const GalaxyThree3D = forwardRef<CanvasGraph25DHandle, Props>(function Ga
           label.style.opacity = visible ? '1' : '0';
           label.style.transform = `translate(-50%, -50%) translate(${x}px, ${y + (node.type === 'DOMAIN' ? 22 : 15)}px)`;
         }
+        // Tags that would collide stack downwards instead of overlapping.
+        const placed: Array<{ x: number; y: number }> = [];
         for (const event of events) {
           const marker = eventsRef.current.get(event.id);
           if (!marker) continue;
           const projected = new Vector3(event.x, event.y, event.z).applyAxisAngle(Z_AXIS, disk.rotation.z).project(camera);
           const visible = projected.z > -1 && projected.z < 1;
+          const x = (projected.x * 0.5 + 0.5) * width;
+          const y = (-projected.y * 0.5 + 0.5) * height;
+          let shift = 0;
+          while (placed.some(p => Math.abs(p.x - x) < 70 && Math.abs(p.y - (y + shift)) < 17)) shift += 17;
+          placed.push({ x, y: y + shift });
           marker.style.opacity = visible ? '1' : '0';
-          marker.style.transform = `translate(-50%, -50%) translate(${(projected.x * 0.5 + 0.5) * width}px, ${(-projected.y * 0.5 + 0.5) * height}px)`;
+          marker.style.setProperty('--tag-shift', `${shift}px`);
+          marker.style.transform = `translate(-50%, -50%) translate(${x}px, ${y}px)`;
         }
       };
 
@@ -914,6 +998,7 @@ export const GalaxyThree3D = forwardRef<CanvasGraph25DHandle, Props>(function Ga
           const dt = lastFrame ? Math.min(0.1, (now - lastFrame) / 1000) : 0;
           disk.rotation.z += dt * 0.0116;
         }
+        diskAngleRef.current = disk.rotation.z;
         lastFrame = now;
         const tween = tweenRef.current;
         if (tween) {
@@ -977,6 +1062,15 @@ export const GalaxyThree3D = forwardRef<CanvasGraph25DHandle, Props>(function Ga
     }
   }, [ariaLabel, edges, events, failed, glow, isMacro, isMobile, morphology, nodes, onFailure, onSelect, reducedMotion, selectedId, size.height, size.width, themeName, visibleLabels]);
 
+  useEffect(() => {
+    if (!focusEvent) return;
+    const event = events.find(item => item.id === focusEvent.id);
+    if (!event) return;
+    const point = new Vector3(event.x, event.y, event.z).applyAxisAngle(Z_AXIS, diskAngleRef.current);
+    flyToPoint(point, isMobile ? 70 : 60, 900);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [focusEvent]);
+
   return (
     <div
       ref={hostRef}
@@ -989,16 +1083,21 @@ export const GalaxyThree3D = forwardRef<CanvasGraph25DHandle, Props>(function Ga
       <div ref={mountRef} className="galaxy-three-mount" />
       <div className="galaxy-three-vignette" aria-hidden="true" />
       {isMacro && <div className="nexo-field-heading" aria-hidden="true"><strong>NEXO FIELD</strong><span>DOMÍNIOS · CONEXÕES · INTELIGÊNCIA EM CONTEXTO</span></div>}
-      <div className="galaxy-events" aria-hidden="true">
+      <div className={`galaxy-events${focusEvent && events.some(e => e.id === focusEvent.id) ? ' dimmed' : ''}`} aria-hidden="true">
         {events.map(event => (
           <span
             key={event.id}
             ref={element => { if (element) eventsRef.current.set(event.id, element); else eventsRef.current.delete(event.id); }}
-            className="galaxy-event"
+            className={`galaxy-event${focusEvent?.id === event.id ? ' focused' : ''}`}
             data-kind={event.kind}
             title={event.label}
             style={{ '--event-intensity': event.intensity } as CSSProperties}
-          ><i /></span>
+          >
+            <button type="button" tabIndex={-1} className="galaxy-event-hit" onClick={() => onEventSelect?.(event.id)}>
+              <EventGlyph kind={event.kind} />
+            </button>
+            <span className="galaxy-event-tag"><b>{EVENT_TAG[event.kind]}</b><span>{event.label}</span></span>
+          </span>
         ))}
       </div>
       <div className="galaxy-three-labels" aria-hidden="true">

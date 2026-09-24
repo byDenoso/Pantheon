@@ -469,7 +469,19 @@ function projectedWorkNode(item, manifest, observedAt, humanWorkIds) {
     dependency_class: item.dependency_class ? String(item.dependency_class).toUpperCase() : undefined,
     owner_role: item.owner_role ? String(item.owner_role).toUpperCase() : undefined,
     human_gate: humanWorkIds.has(rawId),
+    // Optional Tower fields, copied verbatim when the projection publishes them.
+    blocked_since: isoOrUndefined(item.blocked_since || item.blocked_at),
+    blocker: item.blocker ? String(item.blocker) : undefined,
+    automation_eligible: typeof item.automation_eligible === 'boolean' ? item.automation_eligible
+      : typeof item.automation?.eligible === 'boolean' ? item.automation.eligible : undefined,
+    automation_reason: item.automation_reason || item.automation?.reason ? String(item.automation_reason || item.automation.reason) : undefined,
   };
+}
+
+function isoOrUndefined(value) {
+  if (!value) return undefined;
+  const time = Date.parse(String(value));
+  return Number.isFinite(time) ? new Date(time).toISOString() : undefined;
 }
 
 function campaignRecordsFromProjection(projection) {
