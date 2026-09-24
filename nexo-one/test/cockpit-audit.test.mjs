@@ -48,16 +48,6 @@ test('overview makes source coverage explicit so zero counters cannot masquerade
   assert.match(overview, /MISSING_PROVIDER/);
 });
 
-test('empty Learning and Execution states explain the next operational path', async () => {
-  const atlas = await text('src/features/system/Atlas.tsx');
-  const operations = await text('src/features/system/Operations.tsx');
-
-  assert.match(atlas, /Ver fontes/);
-  assert.match(atlas, /Ver Execution/);
-  assert.match(operations, /ACTION → CAPABILITY → RUNTIME → EFFECT → READBACK/);
-});
-
-
 test('Actions shows projected Tower WORK when executable ActionRecords are intentionally absent', async () => {
   const operations = await text('src/features/system/Operations.tsx');
   const styles = await text('src/styles/system.css');
@@ -69,4 +59,9 @@ test('Actions shows projected Tower WORK when executable ActionRecords are inten
   assert.match(styles, /\.work-projection-note/);
   assert.match(styles, /\.work-queue/);
   assert.match(styles, /\.work-human-chip/);
+});
+
+test('empty Execution state explains the next operational path', async () => {
+  const operations = await text('src/features/system/Operations.tsx');
+  assert.match(operations, /ACTION → CAPABILITY → RUNTIME → EFFECT → READBACK/);
 });

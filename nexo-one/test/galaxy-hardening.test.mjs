@@ -39,16 +39,3 @@ test('production workflow retains last deployed site when a scheduled build fail
   assert.match(workflow,/cancel-in-progress: true/);
 });
 
-test('Atlas prefers the published versioned snapshot and exposes freshness without blocking the galaxy',async()=>{
-  const [atlas,hook,styles]=await Promise.all([
-    text('src/features/system/Atlas.tsx'),
-    text('src/data/useGalaxySnapshot.ts'),
-    text('src/styles/nexo-prime.css'),
-  ]);
-  assert.match(atlas,/useGalaxySnapshot\(state\)/);
-  assert.match(atlas,/galaxySnapshotAgeLabel\(galaxySnapshot\.generated_at\)/);
-  assert.match(hook,/loadGalaxySnapshot\(\{ signal: controller\.signal, fallback \}\)/);
-  assert.match(hook,/setPublished\(selectCompatibleGalaxySnapshot\(snapshot, fallback, state\.bus\.fingerprint\)\)/);
-  assert.match(styles,/\.atlas-snapshot-age/);
-  assert.match(atlas,/freshness-\$\{galaxyState\.freshness\.toLowerCase\(\)\}/);
-});

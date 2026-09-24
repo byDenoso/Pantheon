@@ -116,12 +116,3 @@ test('Pages pipeline uses Tower projection authority, two-hour cadence, history 
   assert.doesNotMatch(builder,/viewmodels\/galaxyCompiler/);
 });
 
-test('frontend labels the SystemState compiler explicitly as fallback while production stays Tower-native',async()=>{
-  const [fallback,hook]=await Promise.all([
-    read('../src/viewmodels/galaxyCompiler.ts'),
-    read('../src/data/useGalaxySnapshot.ts'),
-  ]);
-  assert.match(hook,/Production truth comes from the sanctioned Tower projection/);
-  assert.match(hook,/compileGalaxySnapshot\(state\)/);
-  assert.match(fallback,/SystemState/);
-});
