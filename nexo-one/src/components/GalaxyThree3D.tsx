@@ -518,7 +518,7 @@ export const GalaxyThree3D = forwardRef<CanvasGraph25DHandle, Props>(function Ga
   ariaLabel = 'Campo topológico tridimensional do NEXO ONE',
   viewMode = 'detail',
   morphology = null,
-  glow = 0.85,
+  glow = 0.425,
 }, ref) {
   const hostRef = useRef<HTMLDivElement | null>(null);
   const mountRef = useRef<HTMLDivElement | null>(null);

@@ -14,9 +14,9 @@ const TYPE: Record<string, GraphNodeType> = {
 };
 const RADIUS: Partial<Record<GraphNodeType, number>> = { TEST: 1.4, ACTION: 1.2, CAPABILITY: 1.0 };
 const GLOW_LEVELS = [
-  { id: 'soft', label: 'Suave', value: 0.6 },
-  { id: 'medium', label: 'Médio', value: 0.85 },
-  { id: 'strong', label: 'Forte', value: 1.1 },
+  { id: 'soft', label: 'Suave', value: 0.3 },
+  { id: 'medium', label: 'Médio', value: 0.425 },
+  { id: 'strong', label: 'Forte', value: 0.55 },
 ] as const;
 const GLOW_KEY = 'nexo.galaxy.glow.v1';
 
