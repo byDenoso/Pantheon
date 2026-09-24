@@ -45,6 +45,8 @@ const TAU = Math.PI * 2;
 const DEFAULT_CAMERA = new Vector3(0, 16, 286);
 const MACRO_CAMERA = new Vector3(0, 12, 360);
 const MOBILE_MACRO_CAMERA = new Vector3(0, 2, 236);
+// Narrow portrait screens: closer, so the disk fills the width.
+const MOBILE_CAMERA = new Vector3(0, 10, 236);
 const DEFAULT_TARGET = new Vector3(0, 0, 0);
 
 function paletteForTheme(theme: 'dark' | 'light') {
@@ -336,6 +338,20 @@ function spiralPoint(morph: GalaxyMorphology, arm: string, t: number) {
   return { x: p.x * G_SCALE, y: p.y * G_SCALE };
 }
 
+/** Main arm whose inner stretch passes closest to (x, y); drives the core -> arm colour blend. */
+function nearestArm(morph: GalaxyMorphology, x: number, y: number): string | null {
+  let best: string | null = null; let bestD = Infinity;
+  for (const arm of Object.keys(morph.arms)) {
+    if (morph.arms[arm]!.parent) continue;
+    for (let t = 0; t <= 0.35; t += 0.035) {
+      const p = spiralPoint(morph, arm, t);
+      const d = (p.x - x) ** 2 + (p.y - y) ** 2;
+      if (d < bestD) { bestD = d; best = arm; }
+    }
+  }
+  return best;
+}
+
 // Muted, analogous star palette (slate · periwinkle · lavender · ivory): the
 // disk blends into one calm body so the saturated event glyphs carry the contrast.
 const STAR_WHITE = new Color('#c9d2e3');
@@ -360,6 +376,8 @@ function buildSpiralGalaxy(count: number, morph: GalaxyMorphology): BufferGeomet
   const totalMass = arms.reduce((sum, key) => sum + armWeight(key), 0) || 1;
   const tints = Object.fromEntries(arms.map(key => [key, new Color(morph.arms[key].tint)]));
   const coreTint = new Color(morph.bulge.tint);
+  // Arm colour as seen at the arm root: the muted star tone leaning to the domain.
+  const armBlend = Object.fromEntries(arms.map(key => [key, STAR_WHITE.clone().lerp(tints[key]!, 0.35)]));
   const bulgeRadius = morph.bulge.radius * G_SCALE * 1.6;
   const tmp = new Color();
   for (let i = 0; i < count; i += 1) {
@@ -384,7 +402,8 @@ function buildSpiralGalaxy(count: number, morph: GalaxyMorphology): BufferGeomet
       tmp.copy(STAR_CORE).lerp(STAR_WARM, r() * 0.5).lerp(coreTint, 0.12);
       // Outer bulge cools towards the arm palette: no hard edge at the arm roots.
       const edge = Math.min(1, Math.hypot(x, y) / Math.max(1, bulgeRadius * 1.4));
-      tmp.lerp(STAR_WHITE, edge * edge * 0.55);
+      const near = nearestArm(morph, x, y);
+      tmp.lerp(near ? armBlend[near]! : STAR_WHITE, edge * edge * 0.6);
     } else if (kind < 0.80) {
       // Arm stars, star-forming knots and dust lanes.
       let pick = r() * totalMass; let arm = arms[0] ?? 'SCIENCE';
@@ -562,8 +581,10 @@ function nodeIntensity(node: PlacedNode3D, selectedId: string | null): number {
 }
 
 function buildNodeGeometry(
-  nodes: PlacedNode3D[], selectedId: string | null, theme: 'dark' | 'light',
+  nodes: PlacedNode3D[], selectedId: string | null, theme: 'dark' | 'light', morph: GalaxyMorphology | null = null,
 ): BufferGeometry {
+  const tmp = new Color();
+  const coreEdge = morph ? morph.bulge.radius * G_SCALE * 2.4 : 0;
   const positions = new Float32Array(nodes.length * 3);
   const sizes = new Float32Array(nodes.length);
   const brightness = new Float32Array(nodes.length);
@@ -580,7 +601,14 @@ function buildNodeGeometry(
       ? node.domain === selected.domain ? 0.72 : 0.34
       : 1;
     brightness[index] = nodeIntensity(node, selectedId) * focusFactor;
-    domainColor(node.domain, theme).toArray(colors, p);
+    tmp.copy(domainColor(node.domain, theme));
+    // Nucleus (NEXO) points fade from gold into the colour of the arm they drift towards.
+    if (morph && node.domain === 'NEXO' && node.type !== 'DOMAIN') {
+      const near = nearestArm(morph, node.x, node.y);
+      const f = Math.min(1, Math.max(0, Math.hypot(node.x, node.y) / Math.max(1, coreEdge)));
+      if (near) tmp.lerp(domainColor(near as PlacedNode3D['domain'], theme), f * f * (3 - 2 * f) * 0.85);
+    }
+    tmp.toArray(colors, p);
   });
 
   const geometry = new BufferGeometry();
@@ -767,7 +795,7 @@ export const GalaxyThree3D = forwardRef<CanvasGraph25DHandle, Props>(function Ga
     const camera = cameraRef.current;
     const controls = controlsRef.current;
     if (!camera || !controls) return;
-    const homeCamera = isMacro ? (isMobile ? MOBILE_MACRO_CAMERA : MACRO_CAMERA) : DEFAULT_CAMERA;
+    const homeCamera = isMacro ? (isMobile ? MOBILE_MACRO_CAMERA : MACRO_CAMERA) : (isMobile ? MOBILE_CAMERA : DEFAULT_CAMERA);
     tweenRef.current = {
       startAt: performance.now(),
       duration: reducedMotion ? 0 : 760,
@@ -838,7 +866,7 @@ export const GalaxyThree3D = forwardRef<CanvasGraph25DHandle, Props>(function Ga
       sceneRef.current = scene;
 
       const camera = new PerspectiveCamera(isMobile ? 35 : 40, size.width / size.height, 0.1, 1200);
-      camera.position.copy(isMacro ? (isMobile ? MOBILE_MACRO_CAMERA : MACRO_CAMERA) : DEFAULT_CAMERA);
+      camera.position.copy(isMacro ? (isMobile ? MOBILE_MACRO_CAMERA : MACRO_CAMERA) : (isMobile ? MOBILE_CAMERA : DEFAULT_CAMERA));
       cameraRef.current = camera;
 
       const controls = new OrbitControls(camera, renderer.domElement);
@@ -869,7 +897,7 @@ export const GalaxyThree3D = forwardRef<CanvasGraph25DHandle, Props>(function Ga
           uPixelRatio: { value: renderer.getPixelRatio() },
           uColorA: { value: palette.accent },
           uColorB: { value: palette.strong },
-          uOpacity: { value: spiral ? 0.95 * glow : isMacro ? (themeName === 'light' ? 0.20 : 0.24) : (themeName === 'light' ? 0.38 : 0.52) },
+          uOpacity: { value: spiral ? (isMobile ? 1.6 : 0.95) * glow : isMacro ? (themeName === 'light' ? 0.20 : 0.24) : (themeName === 'light' ? 0.38 : 0.52) },
         },
         vertexShader: spiral ? spiralVertexShader : galaxyVertexShader,
         fragmentShader: spiral ? spiralFragmentShader : galaxyFragmentShader,
@@ -907,7 +935,7 @@ export const GalaxyThree3D = forwardRef<CanvasGraph25DHandle, Props>(function Ga
       grid.visible = !isMobile && !spiral;
       scene.add(grid);
 
-      const nodeGeometry = buildNodeGeometry(nodes, selectedId, themeName);
+      const nodeGeometry = buildNodeGeometry(nodes, selectedId, themeName, spiral ? (morphology ?? DEFAULT_MORPHOLOGY) : null);
       const nodeMaterial = new ShaderMaterial({
         uniforms: {
           uTime: { value: 0 },
@@ -1144,6 +1172,14 @@ export const GalaxyThree3D = forwardRef<CanvasGraph25DHandle, Props>(function Ga
       return;
     }
   }, [ariaLabel, edges, events, failed, glow, isMacro, isMobile, morphology, nodes, onFailure, onSelect, reducedMotion, selectedId, size.height, size.width, themeName, visibleLabels]);
+
+  // Phones: the event sheet covers the lower half, so lift the framing while it is open.
+  useEffect(() => {
+    const camera = cameraRef.current;
+    if (!camera) return;
+    if (isMobile && focusEvent) camera.setViewOffset(size.width, size.height, 0, size.height * 0.26, size.width, size.height);
+    else camera.clearViewOffset();
+  }, [focusEvent, isMobile, size.width, size.height]);
 
   useEffect(() => {
     if (!focusEvent) return;

@@ -330,4 +330,29 @@
 .galaxy-event-panel li span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .galaxy-event-panel li small{flex:none;font:500 9.5px/1.6 "IBM Plex Mono",monospace;color:#7a889c}
 @keyframes ev-panel-in{from{opacity:0;transform:translateX(-12px)}to{opacity:1;transform:none}}
-@media(max-width:760px){.galaxy-event-panel{top:auto;height:55%}}
+
+/* Legend short tag only on phones. */
+.galaxy-event-legend .ev-short{display:none}
+
+/* Phones: compact HUD (one scrollable chip row), bottom-sheet panel, smaller markers. */
+@media(max-width:760px){
+  .galaxy-hud{top:8px;left:8px;right:8px;align-items:stretch;gap:6px}
+  .galaxy-stage{display:none}
+  .galaxy-glow{align-self:flex-end;padding:2px}
+  .galaxy-glow span{display:none}
+  .galaxy-glow button{padding:6px 8px;font-size:9px}
+  .galaxy-event-legend{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;justify-content:flex-start;padding-bottom:2px;-webkit-overflow-scrolling:touch}
+  .galaxy-event-legend::-webkit-scrollbar{display:none}
+  .galaxy-event-legend li{flex:none}
+  .galaxy-event-legend .ev-name,.galaxy-event-legend .ev-eye{display:none}
+  .galaxy-event-legend .ev-short{display:inline;letter-spacing:.12em}
+  .galaxy-event-legend button{min-height:36px;padding:4px 12px 4px 8px}
+  .galaxy-event{--s:.8}
+  .galaxy-event[data-kind=AGN],.galaxy-event[data-kind=SUPERNOVA]{--s:.95}
+  .galaxy-event[data-kind=HII]{--s:.6}
+  .galaxy-event-tag{font-size:8px;padding:1px 5px}
+  .galaxy-event-panel{top:auto;left:0;right:0;bottom:0;width:auto;max-height:58%;padding:14px 16px calc(14px + env(safe-area-inset-bottom));border:0;border-top:2px solid var(--ev);border-radius:14px 14px 0 0;animation:ev-sheet-in .25s ease-out}
+  .galaxy-event-panel::before{content:"";align-self:center;width:36px;height:4px;margin:-4px 0 2px;border-radius:2px;background:rgba(255,255,255,.2)}
+  .galaxy-event-panel header button{width:36px;height:36px}
+}
+@keyframes ev-sheet-in{from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:none}}
