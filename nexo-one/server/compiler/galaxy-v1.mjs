@@ -111,11 +111,11 @@ function entityLayout(entity,indexWithinCluster,totalWithinCluster,clusterLayout
   let point;
   if(clusterLayout.arm){
     // Dust lane: trail along the arm around the segment, thin across it.
-    const span=Math.min(.3,clusterLayout.arm.span);
+    const span=clusterLayout.arm.span;
     const along=clusterLayout.arm.t+(hashFraction(entity.id,'dust-along')-.5)*span;
     const frame=armFrame(clusterLayout.arm.domain,Math.max(0,along));
     const width=(MORPH.arms[clusterLayout.arm.domain]?.width??10)*(1+along*.8);
-    const across=gaussian(entity.id,'dust-across')*width*.5;
+    const across=gaussian(entity.id,'dust-across')*width*.45;
     point={x:frame.x+frame.nx*across,y:frame.y+frame.ny*across,z:gaussian(entity.id,'dust-z')*4};
   }else{
     // Bulge and bar: dense core stretched along the bar axis.
@@ -136,7 +136,7 @@ function entityLayout(entity,indexWithinCluster,totalWithinCluster,clusterLayout
 function clusterLayout(cluster,indexWithinDomain,totalWithinDomain){
   const domain=cluster.domain;
   if(domain==='NEXO'){
-    // NEXO is the nucleus: its stations sit on the bar.
+    // NEXO stations sit on the bar.
     const t=totalWithinDomain<=1?0:(indexWithinDomain/(totalWithinDomain-1))*2-1;
     return {x:round(t*MORPH.bulge.bar*.9),y:round((hashFraction(cluster.id,'bar-y')-.5)*10),z:round((hashFraction(cluster.id,'z')-.5)*6),sector:'NEXO',lod:'MEDIUM'};
   }

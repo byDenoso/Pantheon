@@ -7,7 +7,7 @@ import { GalaxyThree3D, type GalaxyMorphology } from '../components/GalaxyThree3
 import type { GraphNode, GraphNodeType } from '../contracts/system.ts';
 import type { PlacedNode3D } from '../viewmodels/graph3d.ts';
 
-const SCALE = 0.55;
+const SCALE = 0.275; // matches G_SCALE in GalaxyThree3D (half size)
 const ENDPOINT = import.meta.env?.VITE_GALAXY_ENDPOINT?.trim() || './galaxy/latest.json';
 const TYPE: Record<string, GraphNodeType> = {
   TEST: 'TEST', WORK: 'ACTION', CAPABILITY: 'CAPABILITY', HYPOTHESIS: 'CLAIM', RESULT: 'EFFECT',
