@@ -48,7 +48,8 @@ export function morphologyFrom({ counts, core, bridges = [] }) {
     const density = entities / subdomains;
     arms[domain] = {
       phase: round(KNOWN_PHASES[domain] ?? hashPhase(domain)),
-      turns: round(0.3 + 0.8 * saturate(entities + subdomains * 4, 90)),
+      // Short today; lengthens as the domain expands (room to ~0.9 turns).
+      turns: round(0.3 + 0.6 * saturate(entities + subdomains * 4, 250)),
       pitch: round(0.2 + 0.1 * saturate(subdomains, 8)),
       width: round(6 + 14 * saturate(density, 8)),
       mass: round(saturate(entities, 60)),
@@ -95,7 +96,7 @@ export function armPoint(morph, domain, t) {
   }
   const theta = arm.turns * TAU * t;
   // Starts inside the nucleus (t=0 at ~20% of the bar) and grows outward.
-  const radius = morph.bulge.bar * (Math.exp(arm.pitch * theta) - 0.8 * (1 - t) ** 2) + t * 18;
+  const radius = morph.bulge.bar * 0.8 * (Math.exp(arm.pitch * theta) - 0.8 * (1 - t) ** 2) + t * 10;
   const angle = arm.phase + theta;
   return { x: Math.cos(angle) * radius, y: Math.sin(angle) * radius };
 }
