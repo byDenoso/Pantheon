@@ -8,6 +8,7 @@ import {
   type CSSProperties,
 } from 'react';
 import {
+  Group,
   ACESFilmicToneMapping,
   AdditiveBlending,
   NormalBlending,
@@ -79,6 +80,7 @@ type Props = {
 };
 
 const NO_EVENTS: GalaxyEvent[] = [];
+const Z_AXIS = new Vector3(0, 0, 1);
 
 export type GalaxyEvent = {
   id: string;
@@ -308,7 +310,7 @@ function buildSpiralGalaxy(count: number, morph: GalaxyMorphology): BufferGeomet
         x = Math.cos(a) * rad * (1.1 - 0.1 * (1 - barStrength)); y = Math.sin(a) * rad * (0.8 + 0.15 * (1 - barStrength)); z = gaussian(r) * 2.2;
       }
       // Soft haze makes the bar read as one glowing body, like NGC 1300.
-      size = haze ? 8 + r() * 8 : 0.9 + r() * 1.8; light = haze ? 0.04 + r() * 0.05 : 0.55 + r() * 0.45;
+      size = haze ? 6 + r() * 6 : 0.8 + r() * 1.5; light = haze ? 0.025 + r() * 0.03 : 0.4 + r() * 0.4;
       tmp.copy(STAR_CORE).lerp(STAR_WARM, r() * 0.5).lerp(coreTint, 0.35);
     } else if (kind < 0.80) {
       // Arm stars, star-forming knots and dust lanes.
@@ -535,7 +537,7 @@ export const GalaxyThree3D = forwardRef<CanvasGraph25DHandle, Props>(function Ga
   ariaLabel = 'Campo topológico tridimensional do NEXO ONE',
   viewMode = 'detail',
   morphology = null,
-  glow = 0.425,
+  glow = 0.21,
   events = NO_EVENTS,
 }, ref) {
   const hostRef = useRef<HTMLDivElement | null>(null);
@@ -730,7 +732,10 @@ export const GalaxyThree3D = forwardRef<CanvasGraph25DHandle, Props>(function Ga
         blending: themeName === 'light' ? NormalBlending : AdditiveBlending,
       });
       const galaxy = new Points(galaxyGeometry, galaxyMaterial);
-      scene.add(galaxy);
+      // Everything that belongs to the disk turns together (stars, data points, relations).
+      const disk = new Group();
+      scene.add(disk);
+      disk.add(galaxy);
 
       const ringGeometry = buildFieldRingSegments(nodes, isMacro);
       const ringMaterial = new LineBasicMaterial({ color: palette.accent, transparent: true, opacity: themeName === 'light' ? 0.05 : (isMacro ? 0.06 : 0.04), blending: NormalBlending, depthWrite: false });
@@ -762,7 +767,7 @@ export const GalaxyThree3D = forwardRef<CanvasGraph25DHandle, Props>(function Ga
       });
       const nodePoints = new Points(nodeGeometry, nodeMaterial);
       nodePointsRef.current = nodePoints;
-      scene.add(nodePoints);
+      disk.add(nodePoints);
 
       const relationSegments = buildRelationSegments(nodes, edges, selectedId);
       const relationMaterial = new LineBasicMaterial({
@@ -809,7 +814,7 @@ export const GalaxyThree3D = forwardRef<CanvasGraph25DHandle, Props>(function Ga
       learningRelationLines.computeLineDistances();
       const blockedRelationLines = new LineSegments(relationSegments.blocked, blockedRelationMaterial);
       const selectedRelationLines = new LineSegments(relationSegments.selected, selectedRelationMaterial);
-      scene.add(relationLines, dependencyLines, learningRelationLines, blockedRelationLines, selectedRelationLines);
+      disk.add(relationLines, dependencyLines, learningRelationLines, blockedRelationLines, selectedRelationLines);
 
       if (!isMobile && themeName === 'dark') {
         composer = new EffectComposer(renderer);
@@ -829,7 +834,7 @@ export const GalaxyThree3D = forwardRef<CanvasGraph25DHandle, Props>(function Ga
         let bestScore = Number.POSITIVE_INFINITY;
         for (let index = 0; index < nodes.length; index += 1) {
           const node = nodes[index]!;
-          projected.set(node.x, node.y, node.z).project(camera);
+          projected.set(node.x, node.y, node.z).applyAxisAngle(Z_AXIS, disk.rotation.z).project(camera);
           if (projected.z <= -1 || projected.z >= 1) continue;
           const x = rect.left + (projected.x * 0.5 + 0.5) * rect.width;
           const y = rect.top + (-projected.y * 0.5 + 0.5) * rect.height;
@@ -884,7 +889,7 @@ export const GalaxyThree3D = forwardRef<CanvasGraph25DHandle, Props>(function Ga
         for (const node of visibleLabels) {
           const label = labelsRef.current.get(node.id);
           if (!label) continue;
-          const projected = new Vector3(node.x, node.y, node.z).project(camera);
+          const projected = new Vector3(node.x, node.y, node.z).applyAxisAngle(Z_AXIS, disk.rotation.z).project(camera);
           const visible = projected.z > -1 && projected.z < 1;
           const x = (projected.x * 0.5 + 0.5) * width;
           const y = (-projected.y * 0.5 + 0.5) * height;
@@ -894,15 +899,22 @@ export const GalaxyThree3D = forwardRef<CanvasGraph25DHandle, Props>(function Ga
         for (const event of events) {
           const marker = eventsRef.current.get(event.id);
           if (!marker) continue;
-          const projected = new Vector3(event.x, event.y, event.z).project(camera);
+          const projected = new Vector3(event.x, event.y, event.z).applyAxisAngle(Z_AXIS, disk.rotation.z).project(camera);
           const visible = projected.z > -1 && projected.z < 1;
           marker.style.opacity = visible ? '1' : '0';
           marker.style.transform = `translate(-50%, -50%) translate(${(projected.x * 0.5 + 0.5) * width}px, ${(-projected.y * 0.5 + 0.5) * height}px)`;
         }
       };
 
+      // Slow, continuous rotation of the disk (≈ one turn every 9 minutes); frame-rate independent.
+      let lastFrame = 0;
       const animate = (now: number) => {
         if (disposed) return;
+        if (spiral && !reducedMotion) {
+          const dt = lastFrame ? Math.min(0.1, (now - lastFrame) / 1000) : 0;
+          disk.rotation.z += dt * 0.0116;
+        }
+        lastFrame = now;
         const tween = tweenRef.current;
         if (tween) {
           const raw = tween.duration <= 0 ? 1 : Math.min(1, (now - tween.startAt) / tween.duration);

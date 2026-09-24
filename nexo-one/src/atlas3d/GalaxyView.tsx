@@ -14,11 +14,16 @@ const TYPE: Record<string, GraphNodeType> = {
 };
 const RADIUS: Partial<Record<GraphNodeType, number>> = { TEST: 1.4, ACTION: 1.2, CAPABILITY: 1.0 };
 const GLOW_LEVELS = [
-  { id: 'soft', label: 'Suave', value: 0.3 },
-  { id: 'medium', label: 'Médio', value: 0.425 },
-  { id: 'strong', label: 'Forte', value: 0.55 },
+  { id: 'soft', label: 'Suave', value: 0.15 },
+  { id: 'medium', label: 'Médio', value: 0.21 },
+  { id: 'strong', label: 'Forte', value: 0.28 },
 ] as const;
 const GLOW_KEY = 'nexo.galaxy.glow.v1';
+const EVENTS_KEY = 'nexo.galaxy.events-off.v1';
+
+function readHiddenEvents(): string[] {
+  try { const v = JSON.parse(window.localStorage.getItem(EVENTS_KEY) || '[]'); return Array.isArray(v) ? v.map(String) : []; } catch { return []; }
+}
 const EVENT_LEGEND = [
   { kind: 'SUPERNOVA', label: 'Supernova · precisa de você agora' },
   { kind: 'NOVA', label: 'Nova · atenção' },
@@ -84,6 +89,12 @@ export function GalaxyView({ selectedId, onSelect }: { selectedId: string | null
   const [morphology, setMorphology] = useState<(GalaxyMorphology & { metrics?: Metrics; metrics_delta?: MetricsDelta | null }) | null>(null);
   const [failed, setFailed] = useState(false);
   const [rawEvents, setRawEvents] = useState<GalaxyEvent[]>([]);
+  const [hiddenEvents, setHiddenEvents] = useState<string[]>(readHiddenEvents);
+  const toggleEvent = (kind: string) => setHiddenEvents(current => {
+    const next = current.includes(kind) ? current.filter(k => k !== kind) : [...current, kind];
+    try { window.localStorage.setItem(EVENTS_KEY, JSON.stringify(next)); } catch { /* per-viewer convenience only */ }
+    return next;
+  });
   const [glow, setGlow] = useState<number>(readGlow);
 
   useEffect(() => {
@@ -108,7 +119,7 @@ export function GalaxyView({ selectedId, onSelect }: { selectedId: string | null
   // system. Lenses (Operação, Ciência, Sistema, Aprendizado, Tudo) drive 2D/3D.
   const nodes = useMemo(() => (entities ?? []).map(toNode), [entities]);
   // Events share the nodes' world scale so they sit exactly on their domain.
-  const events = useMemo(() => rawEvents.map(event => ({ ...event, x: event.x * SCALE, y: event.y * SCALE, z: (event.z || 0) * SCALE })), [rawEvents]);
+  const events = useMemo(() => rawEvents.filter(event => !hiddenEvents.includes(event.kind)).map(event => ({ ...event, x: event.x * SCALE, y: event.y * SCALE, z: (event.z || 0) * SCALE })), [rawEvents, hiddenEvents]);
   const eventCounts = useMemo(() => rawEvents.reduce<Record<string, number>>((acc, e) => { acc[e.kind] = (acc[e.kind] || 0) + 1; return acc; }, {}), [rawEvents]);
   const metrics = morphology?.metrics;
   const delta = morphology?.metrics_delta ?? null;
@@ -142,9 +153,16 @@ export function GalaxyView({ selectedId, onSelect }: { selectedId: string | null
         )}
         {rawEvents.length > 0 && (
           <ul className="galaxy-event-legend" aria-label="Eventos na galáxia">
-            {EVENT_LEGEND.filter(item => eventCounts[item.kind]).map(item => (
-              <li key={item.kind} data-kind={item.kind}><i aria-hidden="true" />{item.label} <b>{eventCounts[item.kind]}</b></li>
-            ))}
+            {EVENT_LEGEND.filter(item => eventCounts[item.kind]).map(item => {
+              const on = !hiddenEvents.includes(item.kind);
+              return (
+                <li key={item.kind} data-kind={item.kind}>
+                  <button type="button" aria-pressed={on} className={on ? 'on' : 'off'} onClick={() => toggleEvent(item.kind)} title={on ? 'Ocultar' : 'Mostrar'}>
+                    <i aria-hidden="true" />{item.label} <b>{eventCounts[item.kind]}</b>
+                  </button>
+                </li>
+              );
+            })}
           </ul>
         )}
         {metrics && (
