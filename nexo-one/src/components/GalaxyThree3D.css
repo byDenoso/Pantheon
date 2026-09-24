@@ -204,3 +204,6 @@
   .galaxy-three-label.campaign .node-label-copy strong{font-size:9px}
   .atlas-local-neighborhood{max-height:42%}
 }
+
+/* Mapa · Galáxia: the Atlas shell owns controls and legend. */
+.atlas-galaxy-view .galaxy-three-controls,.atlas-galaxy-view .galaxy-three-status{display:none}
