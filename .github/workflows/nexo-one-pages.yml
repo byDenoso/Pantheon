@@ -86,6 +86,7 @@ jobs:
           PY
           python3 _tcc_reader/scripts/build_public_projection.py \
             --live-tower /tmp/NEXO_TOWER_LIVE.json \
+            --tower-commit "$(git -C _vault rev-parse HEAD)" \
             --out _vault/TOWER_V06/projections/public
           echo "source=DRIVE_LIVE" >> "$GITHUB_OUTPUT"
 
