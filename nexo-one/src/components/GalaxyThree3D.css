@@ -207,3 +207,19 @@
 
 /* Mapa · Galáxia: the Atlas shell owns controls and legend. */
 .atlas-galaxy-view .galaxy-three-controls,.atlas-galaxy-view .galaxy-three-status{display:none}
+
+/* Mapa · Galáxia HUD: glow control + shape metrics */
+.atlas-galaxy-view{position:relative}
+.galaxy-hud{position:absolute;z-index:6;top:96px;right:14px;display:flex;flex-direction:column;align-items:flex-end;gap:10px;pointer-events:none}
+.galaxy-hud>*{pointer-events:auto}
+.galaxy-glow{display:flex;align-items:center;gap:4px;padding:4px;border:1px solid rgba(255,255,255,.08);background:rgba(5,7,11,.62);backdrop-filter:blur(12px)}
+.galaxy-glow span{padding:0 8px;font:500 9px/1 "IBM Plex Mono",monospace;letter-spacing:.2em;text-transform:uppercase;color:#7a889c}
+.galaxy-glow button{padding:6px 10px;border:1px solid transparent;background:transparent;color:#aab4c2;font:500 10px/1 "IBM Plex Mono",monospace;letter-spacing:.12em;text-transform:uppercase;cursor:pointer}
+.galaxy-glow button.active{border-color:rgba(233,179,91,.5);color:#e9b35b}
+.galaxy-metrics{margin:0;display:grid;grid-template-columns:repeat(2,auto);gap:6px 16px;padding:10px 12px;border:1px solid rgba(255,255,255,.08);background:rgba(5,7,11,.62);backdrop-filter:blur(12px);font:400 10px/1.3 "IBM Plex Mono",monospace;color:#d6dee8}
+.galaxy-metrics dt{font-size:8.5px;letter-spacing:.2em;text-transform:uppercase;color:#7a889c}
+.galaxy-metrics dd{margin:2px 0 0}
+.galaxy-metrics .galaxy-mass{grid-column:1/-1}
+.galaxy-metrics .galaxy-mass dd{display:flex;flex-wrap:wrap;gap:8px}
+.galaxy-metrics .galaxy-mass span{color:var(--dom,#d6dee8)}
+@media(max-width:760px){.galaxy-metrics{display:none}.galaxy-hud{top:8px;right:8px}}
