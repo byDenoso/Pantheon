@@ -22,7 +22,7 @@ const CANONICAL_ROUTE: Record<ViewId, string> = {
   ACTIONS: '#/cockpit/pipeline', EXECUTION: '#/cockpit/pipeline?view=execution',
   TRUTHGRAPH: '#/cockpit/prova?tab=autoridade', CAPABILITIES: '#/cockpit/prova?tab=capabilities',
   SOURCES: '#/cockpit/prova?tab=fontes', INTEGRITY: '#/cockpit/prova?tab=integridade',
-  ATLAS: '#/atlas?lente=operacao&view=galaxy', LEARNING: '#/cockpit/ciencia?tab=campanhas',
+  ATLAS: '#/atlas?lente=operacao&view=2d', LEARNING: '#/cockpit/ciencia?tab=campanhas',
   NOW: '#/cockpit/pessoal/now', LOOPS: '#/cockpit/pessoal/loops', DAY: '#/cockpit/pessoal/day',
   CONTEXT: '#/cockpit/pessoal/context', RECALL: '#/cockpit/pessoal/recall',
 };

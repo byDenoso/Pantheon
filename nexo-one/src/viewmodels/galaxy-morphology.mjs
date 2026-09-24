@@ -13,7 +13,7 @@
 // Any new domain gets an arm automatically; known domains keep stable phases.
 
 const TAU = Math.PI * 2;
-export const MORPHOLOGY_VERSION = 2;
+export const MORPHOLOGY_VERSION = 3;
 export const BAR_BASE = 30;
 
 // NEXO is the nucleus; SCIENCE and ENGINEERING are the two main arms, on
@@ -35,6 +35,19 @@ export const DOMAIN_TINTS = {
 };
 
 const saturate = (value, scale) => 1 - Math.exp(-Math.max(0, value) / scale);
+
+/*
+ * Evolution (data-driven, never by clock):
+ *   1 NÚCLEO        only the NEXO core has content
+ *   2 PRIMEIROS BRAÇOS  arms exist but the system is small (<30 domain entities)
+ *   3 DOMÍNIOS PRINCIPAIS  the main arms carry content, no branches yet
+ *   4 RAMIFICAÇÕES  branches (sub-arms / bridges / satellites) have appeared
+ *   5 MADURA        large, interconnected system; only here a stellar bar forms
+ * New domains enter by affinity: RAMO (one arm), PONTE (two arms),
+ * SATÉLITE (no affinity with any arm). Bar strength stays 0 before stage 5.
+ */
+export const STAGES = ['', 'NÚCLEO', 'PRIMEIROS BRAÇOS', 'DOMÍNIOS PRINCIPAIS', 'RAMIFICAÇÕES', 'MADURA'];
+const MATURE_ENTITIES = 1200;
 const round = value => Math.round(value * 1000) / 1000;
 
 function hashPhase(domain) {
@@ -86,6 +99,21 @@ export function morphologyFrom({ counts, core, bridges = [] }) {
       .filter(([, n]) => n > 0).sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
     const arm = arms[domain];
     const affinity = SEMANTIC_AFFINITY[domain];
+    if (linked.length >= 2 && linked[1][1] >= linked[0][1] * 0.5) {
+      // Strong affinity with two arms: a bridge between them.
+      arm.mode = 'bridge';
+      arm.parent = linked[0][0];
+      arm.bridge_to = linked[1][0];
+      continue;
+    }
+    if (!linked.length && !arms[affinity]) {
+      // No affinity with any arm: a satellite galaxy outside the disk.
+      arm.mode = 'satellite';
+      arm.orbit_phase = round(hashPhase(domain));
+      arm.satellite_radius = round(4 + 10 * saturate(counts[domain].entities || 0, 80));
+      continue;
+    }
+    arm.mode = 'branch';
     arm.parent = linked[0]?.[0] ?? (arms[affinity] ? affinity : largest);
     const order = (branchesOn[arm.parent] = (branchesOn[arm.parent] ?? -1) + 1);
     arm.branch_at = round(BRANCH_ROOT + BRANCH_STEP * order);
@@ -96,11 +124,24 @@ export function morphologyFrom({ counts, core, bridges = [] }) {
     arm.turns = round(arms[arm.parent].turns * Math.min(1, Math.max(0.08, 0.6 * Math.sqrt(ratio))));
     arm.pitch = round(arm.pitch + 0.3); // opens away from the parent
   }
+  const domainEntities = Object.entries(counts).filter(([d]) => d !== 'NEXO').reduce((s, [, c]) => s + Number(c.entities || 0), 0);
+  const withContent = primary.filter(d => (counts[d].entities || 0) > 0);
+  const offshoots = Object.values(arms).filter(a => a.mode).length;
+  const crossLinks = bridges.filter(b => b.from !== b.to).reduce((s, b) => s + b.count, 0);
+  const stage = !Object.keys(arms).length ? 1
+    : domainEntities < 30 ? 2
+    : domainEntities >= MATURE_ENTITIES && crossLinks >= 20 ? 5
+    : offshoots > 0 ? 4
+    : withContent.length >= 2 ? 3 : 2;
+  const barStrength = stage === 5 ? round(saturate(domainEntities - MATURE_ENTITIES, 800)) : 0;
   return {
     version: MORPHOLOGY_VERSION,
+    stage,
+    stage_label: STAGES[stage],
     bulge: {
       radius: round(5 + 9 * saturate(core, 50)),
       bar: round(BAR_BASE + 26 * saturate(core, 40)),
+      bar_strength: barStrength,
       tint: DOMAIN_TINTS.NEXO,
     },
     arms,
@@ -108,12 +149,39 @@ export function morphologyFrom({ counts, core, bridges = [] }) {
   };
 }
 
-/** Half-length of the NEXO bar: where the main arms attach. */
-export const barEnd = morph => morph.bulge.bar * 0.75;
+/** Where the main arms attach: the bulge edge today, the bar ends once a bar forms (stage 5). */
+export const barEnd = morph => {
+  const strength = Number(morph.bulge.bar_strength ?? 1);
+  const bulgeEdge = morph.bulge.bar * 0.7; // keeps the approved disk size while there is no bar
+  return bulgeEdge + (morph.bulge.bar * 0.75 - bulgeEdge) * Math.max(0, Math.min(1, strength));
+};
+
+/** Outer radius of the main disk (tips of the main arms). */
+function diskRadius(morph) {
+  const tips = Object.entries(morph.arms).filter(([, a]) => !a.mode).map(([d]) => {
+    const p = armPoint(morph, d, 1);
+    return Math.hypot(p.x, p.y);
+  });
+  return Math.max(60, ...tips);
+}
 
 export function armPoint(morph, domain, t) {
   const arm = morph.arms[domain];
   if (!arm) return { x: 0, y: 0 };
+  if (arm.mode === 'satellite') {
+    // A small spiral orbiting outside the disk.
+    const R = diskRadius(morph) * 1.45;
+    const cx = Math.cos(arm.orbit_phase) * R, cy = Math.sin(arm.orbit_phase) * R;
+    const theta = 1.2 * TAU * t;
+    const r = arm.satellite_radius * (0.25 + t);
+    return { x: cx + Math.cos(theta + arm.orbit_phase) * r, y: cy + Math.sin(theta + arm.orbit_phase) * r };
+  }
+  if (arm.mode === 'bridge' && morph.arms[arm.parent] && morph.arms[arm.bridge_to]) {
+    // A stream of stars between two arms, bowing slightly outward.
+    const a = armPoint(morph, arm.parent, 0.55), b = armPoint(morph, arm.bridge_to, 0.55);
+    const mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2, bow = Math.sin(Math.PI * t) * 0.25;
+    return { x: a.x + (b.x - a.x) * t + mx * bow, y: a.y + (b.y - a.y) * t + my * bow };
+  }
   if (arm.parent && morph.arms[arm.parent]) {
     const root = armPoint(morph, arm.parent, arm.branch_at ?? BRANCH_ROOT);
     const r0 = Math.hypot(root.x, root.y);
