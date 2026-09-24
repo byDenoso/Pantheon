@@ -399,3 +399,6 @@ button,input{font:inherit}
     box-shadow:0 8px 24px rgba(0,0,0,.14);
   }
 }
+
+.atlas-back{display:inline-flex;align-items:center;gap:6px;margin:0 0 12px;padding:6px 10px;border:1px solid var(--obs-line,#1c2533);background:transparent;color:var(--obs-sodium,#e9b35b);font:500 11px/1 var(--obs-mono,monospace);letter-spacing:.12em;text-transform:uppercase;cursor:pointer}
+.atlas-back:hover{color:var(--obs-bright,#fff);border-color:currentColor}

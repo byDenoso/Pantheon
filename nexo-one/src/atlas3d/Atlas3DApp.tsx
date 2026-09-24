@@ -73,7 +73,9 @@ function DetailPanel({
   generatedAt,
   onSelectNode,
   theme,
+  parent = null,
 }: {
+  parent?: AtlasMetroNode | null;
   node: AtlasMetroNode | null;
   children: AtlasMetroNode[];
   related: AtlasMetroNode[];
@@ -90,6 +92,11 @@ function DetailPanel({
 
   return (
     <div className="atlas-detail" data-selected-node={node.id}>
+      {parent && (
+        <button type="button" className="atlas-back" onClick={() => onSelectNode(parent.id)}>
+          ← Voltar para {parent.name}
+        </button>
+      )}
       <div className="atlas-domain-pill" style={{ color, borderColor: `${color}55`, background: `${color}12` }}>
         <span style={{ background: color }} />{node.domain}
       </div>
@@ -101,7 +108,7 @@ function DetailPanel({
         <div><span>Estado</span><strong className={`tone-${statusTone(node.status)}`}>{node.status}</strong></div>
         <div><span>Filhos</span><strong>{node.childCount}</strong></div>
         <div><span>Relações</span><strong>{node.relationCount}</strong></div>
-        <div><span>Profundidade</span><strong>{node.depth}</strong></div>
+        <div><span>Nível na hierarquia</span><strong>{node.depth === 0 ? 'raiz' : node.depth}</strong></div>
         <div><span>Atualizado</span><strong>{formatDate(node.updatedAt)}</strong></div>
       </div>
 
@@ -671,6 +678,7 @@ export function Atlas3DContent({system,themeOverride}:{system:SystemStore;themeO
           generatedAt={model.generatedAt}
           onSelectNode={setSelectedId}
           theme={atlasTheme}
+          parent={selected?.parentId ? model.nodeMap.get(selected.parentId) || null : null}
         />
         <div className="atlas-source-state"><span>{system.sourceLabel}</span></div>
       </aside>
