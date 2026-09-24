@@ -172,7 +172,7 @@ function domainsOf(value) {
 
 function projectionState(value) {
   const state = String(value || '').trim().toUpperCase();
-  return /BLOCK|WAIT_DEPENDENCY|FAIL|ERROR|REJECT/.test(state) ? 'BLOCKED' : 'SNAPSHOT';
+  return /BLOCK|FAIL|ERROR|REJECT/.test(state) ? 'BLOCKED' : 'SNAPSHOT';
 }
 
 function sourceRevision(manifest) {
