@@ -254,7 +254,7 @@ export function Atlas3DContent({system,themeOverride}:{system:SystemStore;themeO
     if(typeof window==='undefined')return'2d';
     const query=atlasRouteParams().get('view')||atlasRouteParams().get('mode');
     if(query==='2d'||query==='3d'||query==='galaxy')return query;
-    return 'galaxy';
+    return '2d';
   });
   const [showBeams, setShowBeams] = useState(true);
   const [show3dHint, setShow3dHint] = useState(false);

@@ -12,7 +12,7 @@ export function GraphViewSwitch({view,onChange}:{view:NexoGraphView;onChange:(vi
   return <div className="nexo-graph-view-switch" role="group" aria-label="Visualização do grafo">
     <button type="button" className={view==='2d'?'active':''} aria-pressed={view==='2d'} onClick={()=>onChange('2d')}>2D</button>
     <button type="button" className={view==='3d'?'active':''} aria-pressed={view==='3d'} onClick={()=>onChange('3d')}>3D</button>
-    <button type="button" className={view==='galaxy'?'active':''} aria-pressed={view==='galaxy'} onClick={()=>onChange('galaxy')}>Galáxia</button>
+    {/* The galaxy has its own tab (#/galaxia); graphs keep 2D/3D. */}
   </div>;
 }
 
@@ -47,7 +47,7 @@ export function NexoGraph({
       if(target&&/INPUT|TEXTAREA|SELECT/.test(target.tagName))return;
       if(event.key==='2')onViewChange('2d');
       if(event.key==='3')onViewChange('3d');
-      if(event.key==='g')onViewChange('galaxy');
+      if(event.key==='g')window.location.hash='#/galaxia';
       if(event.key==='Escape'&&selectedId)hostRef.current?.focus();
     };
     window.addEventListener('keydown',onKey);

@@ -1,5 +1,8 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useReveal } from './useReveal.ts';
+const GalaxyView = lazy(() => import('../atlas3d/GalaxyView.tsx').then(module => ({ default: module.GalaxyView })));
+
+const isGalaxyRoute = (hash: string) => /^#\/galaxia(?:[/?]|$)/.test(hash);
 import type { ActionRecord, InboxItem } from '../contracts/system.ts';
 import { useWorld } from './useWorld.ts';
 import { useNexoStore } from '../data/NexoStore.tsx';
@@ -53,6 +56,7 @@ export default function App() {
     return ALL_VIEWS.includes(saved) ? saved : 'OVERVIEW';
   });
   const [systemRoute, setSystemRoute] = useState(() => typeof window !== 'undefined' && isSystemRoute(window.location.hash));
+  const [galaxyRoute, setGalaxyRoute] = useState(() => typeof window !== 'undefined' && isGalaxyRoute(window.location.hash));
   const [theme, setTheme] = useState(() => {
     const routeQuery = typeof window !== 'undefined' ? window.location.hash.split('?', 2)[1] : undefined;
     const routeTheme = routeQuery ? new URLSearchParams(routeQuery).get('theme') : null;
@@ -87,6 +91,7 @@ export default function App() {
       const hash = window.location.hash;
       const isSystem = isSystemRoute(hash);
       setSystemRoute(isSystem);
+      setGalaxyRoute(isGalaxyRoute(hash));
       const routeTheme = new URLSearchParams(hash.split('?', 2)[1] || '').get('theme');
       if (routeTheme === 'light' || routeTheme === 'dark') setTheme(routeTheme);
       const next = viewFromHash(hash);
@@ -122,7 +127,16 @@ export default function App() {
     window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
   }, []);
 
+  const goGalaxy = useCallback(() => {
+    setSystemRoute(false);
+    setGalaxyRoute(true);
+    setNotice('');
+    if (!isGalaxyRoute(window.location.hash)) window.history.pushState(null, '', '#/galaxia');
+    window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+  }, []);
+
   const goSystem = useCallback(() => {
+    setGalaxyRoute(false);
     setSystemRoute(true);
     setNotice('');
     if (window.location.hash !== '#/sistema') window.history.pushState(null, '', '#/sistema');
@@ -159,9 +173,11 @@ export default function App() {
   }, [system.state]);
   const scenario = useMemo(() => SCENARIOS.find(s => s.id === system.scenarioId) ?? SCENARIOS[0], [system.scenarioId]);
 
-  const currentMode = systemRoute ? 'sistema' : view === 'ATLAS' ? 'mapa' : view === 'LEARNING' ? 'ciencia' : ['NOW','LOOPS','DAY','CONTEXT','RECALL'].includes(view) ? 'pessoal' : ['ACTIONS','EXECUTION','INBOX'].includes(view) ? 'operacao' : ['TRUTHGRAPH','CAPABILITIES','SOURCES','INTEGRITY'].includes(view) ? 'prova' : 'inicio';
+  const currentMode = galaxyRoute ? 'galaxia' : systemRoute ? 'sistema' : view === 'ATLAS' ? 'mapa' : view === 'LEARNING' ? 'ciencia' : ['NOW','LOOPS','DAY','CONTEXT','RECALL'].includes(view) ? 'pessoal' : ['ACTIONS','EXECUTION','INBOX'].includes(view) ? 'operacao' : ['TRUTHGRAPH','CAPABILITIES','SOURCES','INTEGRITY'].includes(view) ? 'prova' : 'inicio';
   useReveal([currentMode, view, system.load]);
-  const navigateMode = (mode:'inicio'|'ciencia'|'operacao'|'prova'|'mapa'|'pessoal'|'sistema') => {
+  const navigateMode = (mode:'inicio'|'ciencia'|'operacao'|'prova'|'mapa'|'pessoal'|'sistema'|'galaxia') => {
+    if(mode==='galaxia'){goGalaxy();return;}
+    setGalaxyRoute(false);
     if(mode==='inicio'){go('OVERVIEW');return;}
     if(mode==='ciencia'){go('LEARNING');return;}
     if(mode==='operacao'){go('ACTIONS');return;}
@@ -174,6 +190,12 @@ export default function App() {
     readAt={system.lastSuccessfulReadAt} fingerprint={system.state?.bus.fingerprint||''} command={command} commandRef={commandRef}
     onCommandChange={setCommand} onCommandSubmit={submitCommand} onThemeToggle={()=>setTheme(theme==='dark'?'light':'dark')}
     onSync={system.sync} onNavigate={navigateMode} onAccountClick={()=>setLoginOpen(true)} privateSession={session.session.authenticated}/>;
+  if (galaxyRoute) return <ProvenanceProvider><div className={`cockpit unified-shell galaxy-route${isMobile?' mobile':''}`} data-view="GALAXY" data-access={session.session.authenticated?'PRIVATE':'PUBLIC'}>
+    <a className="skip-link" href="#workspace">Ir ao conteúdo</a>{header}<div className="cockpit-body">
+      <main id="workspace" tabIndex={-1} className="workspace galaxy-workspace"><Suspense fallback={<LoadingState label="Abrindo a galáxia…" />}>
+        <GalaxyView selectedId={null} onSelect={id => { setGalaxyRoute(false); window.location.hash = `#/atlas?lente=tudo&view=2d&sel=${encodeURIComponent(id)}`; }}/>
+      </Suspense></main>
+    </div></div></ProvenanceProvider>;
   if (systemRoute) return <ProvenanceProvider><div className={`cockpit unified-shell system-route${isMobile?' mobile':''}`} data-view="SYSTEM" data-access={session.session.authenticated?'PRIVATE':'PUBLIC'}>
     <a className="skip-link" href="#workspace">Ir ao conteúdo</a>{header}<div className="cockpit-body">
       <main id="workspace" tabIndex={-1} className="workspace system-workspace"><Suspense fallback={<LoadingState label="Abrindo Sistema…" />}><EmbeddedMcp theme={theme} onThemeToggle={()=>setTheme(theme==='dark'?'light':'dark')}/></Suspense></main>

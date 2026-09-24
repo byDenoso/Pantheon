@@ -74,6 +74,20 @@ type Props = {
   morphology?: GalaxyMorphology | null;
   /** Glow multiplier (0.5 soft … 1.2 strong). */
   glow?: number;
+  /** Astrophysical events (world coordinates, already scaled like the nodes). */
+  events?: GalaxyEvent[];
+};
+
+const NO_EVENTS: GalaxyEvent[] = [];
+
+export type GalaxyEvent = {
+  id: string;
+  kind: 'SUPERNOVA' | 'NOVA' | 'AGN' | 'HII' | 'REMNANT' | 'FLARE';
+  label: string;
+  domain?: string;
+  entity?: string;
+  x: number; y: number; z: number;
+  intensity: number;
 };
 
 type Tween = {
@@ -237,8 +251,9 @@ void main() {
 const G_SCALE = 0.36;
 
 export type GalaxyMorphology = {
-  bulge: { radius: number; bar: number; tint: string };
-  arms: Record<string, { phase: number; turns: number; pitch: number; width: number; mass: number; segments: number; tint: string; parent?: string; branch_at?: number }>;
+  stage?: number; stage_label?: string;
+  bulge: { radius: number; bar: number; bar_strength?: number; tint: string };
+  arms: Record<string, { phase: number; turns: number; pitch: number; width: number; mass: number; segments: number; tint: string; parent?: string; branch_at?: number; mode?: 'branch' | 'bridge' | 'satellite'; bridge_to?: string; orbit_phase?: number; satellite_radius?: number }>;
 };
 // Used only until the published snapshot arrives; same rules, typical counts.
 const DEFAULT_MORPHOLOGY = morphologyFrom({
@@ -267,7 +282,9 @@ function buildSpiralGalaxy(count: number, morph: GalaxyMorphology): BufferGeomet
   // Star budget per arm follows mass, but a main arm never gets less than
   // 77% of the heaviest one, so arms read as a balanced pair.
   const heaviest = Math.max(0.3, ...arms.map(key => morph.arms[key].mass));
-  const armWeight = (key: string) => Math.max(morph.arms[key].parent ? 0.3 : heaviest / 1.3, morph.arms[key].mass);
+  const armWeight = (key: string) => Math.max(morph.arms[key].mode || morph.arms[key].parent ? 0.3 : heaviest / 1.3, morph.arms[key].mass);
+  // No bar before the mature stage: a round, bright nucleus.
+  const barStrength = Math.max(0, Math.min(1, Number(morph.bulge.bar_strength ?? 1)));
   const totalMass = arms.reduce((sum, key) => sum + armWeight(key), 0) || 1;
   const tints = Object.fromEntries(arms.map(key => [key, new Color(morph.arms[key].tint)]));
   const coreTint = new Color(morph.bulge.tint);
@@ -282,13 +299,13 @@ function buildSpiralGalaxy(count: number, morph: GalaxyMorphology): BufferGeomet
       const rad = Math.abs(gaussian(r)) * bulgeRadius;
       const a = r() * TAU;
       const haze = r() < 0.12;
-      if (r() < 0.6) {
-        // The bar: bright, straight, running exactly to the arm roots.
+      if (r() < 0.6 * barStrength) {
+        // The bar (stage 5 only): bright, straight, running exactly to the arm roots.
         const half = barEnd(morph) * G_SCALE;
         const along = (r() * 2 - 1) * half;
         x = along; y = gaussian(r) * bulgeRadius * 0.32 * (1 - 0.45 * Math.abs(along) / half); z = gaussian(r) * 1.4;
       } else {
-        x = Math.cos(a) * rad * 1.1; y = Math.sin(a) * rad * 0.8; z = gaussian(r) * 2.2;
+        x = Math.cos(a) * rad * (1.1 - 0.1 * (1 - barStrength)); y = Math.sin(a) * rad * (0.8 + 0.15 * (1 - barStrength)); z = gaussian(r) * 2.2;
       }
       // Soft haze makes the bar read as one glowing body, like NGC 1300.
       size = haze ? 8 + r() * 8 : 0.9 + r() * 1.8; light = haze ? 0.04 + r() * 0.05 : 0.55 + r() * 0.45;
@@ -519,6 +536,7 @@ export const GalaxyThree3D = forwardRef<CanvasGraph25DHandle, Props>(function Ga
   viewMode = 'detail',
   morphology = null,
   glow = 0.425,
+  events = NO_EVENTS,
 }, ref) {
   const hostRef = useRef<HTMLDivElement | null>(null);
   const mountRef = useRef<HTMLDivElement | null>(null);
@@ -528,6 +546,7 @@ export const GalaxyThree3D = forwardRef<CanvasGraph25DHandle, Props>(function Ga
   const sceneRef = useRef<Scene | null>(null);
   const nodePointsRef = useRef<Points | null>(null);
   const labelsRef = useRef(new Map<string, HTMLSpanElement>());
+  const eventsRef = useRef(new Map<string, HTMLSpanElement>());
   const tweenRef = useRef<Tween | null>(null);
   const pointerDownRef = useRef<{ x: number; y: number } | null>(null);
   const [size, setSize] = useState({ width: 1, height: 1 });
@@ -872,6 +891,14 @@ export const GalaxyThree3D = forwardRef<CanvasGraph25DHandle, Props>(function Ga
           label.style.opacity = visible ? '1' : '0';
           label.style.transform = `translate(-50%, -50%) translate(${x}px, ${y + (node.type === 'DOMAIN' ? 22 : 15)}px)`;
         }
+        for (const event of events) {
+          const marker = eventsRef.current.get(event.id);
+          if (!marker) continue;
+          const projected = new Vector3(event.x, event.y, event.z).project(camera);
+          const visible = projected.z > -1 && projected.z < 1;
+          marker.style.opacity = visible ? '1' : '0';
+          marker.style.transform = `translate(-50%, -50%) translate(${(projected.x * 0.5 + 0.5) * width}px, ${(-projected.y * 0.5 + 0.5) * height}px)`;
+        }
       };
 
       const animate = (now: number) => {
@@ -936,7 +963,7 @@ export const GalaxyThree3D = forwardRef<CanvasGraph25DHandle, Props>(function Ga
       onFailure?.();
       return;
     }
-  }, [ariaLabel, edges, failed, glow, isMacro, isMobile, morphology, nodes, onFailure, onSelect, reducedMotion, selectedId, size.height, size.width, themeName, visibleLabels]);
+  }, [ariaLabel, edges, events, failed, glow, isMacro, isMobile, morphology, nodes, onFailure, onSelect, reducedMotion, selectedId, size.height, size.width, themeName, visibleLabels]);
 
   return (
     <div
@@ -950,6 +977,18 @@ export const GalaxyThree3D = forwardRef<CanvasGraph25DHandle, Props>(function Ga
       <div ref={mountRef} className="galaxy-three-mount" />
       <div className="galaxy-three-vignette" aria-hidden="true" />
       {isMacro && <div className="nexo-field-heading" aria-hidden="true"><strong>NEXO FIELD</strong><span>DOMÍNIOS · CONEXÕES · INTELIGÊNCIA EM CONTEXTO</span></div>}
+      <div className="galaxy-events" aria-hidden="true">
+        {events.map(event => (
+          <span
+            key={event.id}
+            ref={element => { if (element) eventsRef.current.set(event.id, element); else eventsRef.current.delete(event.id); }}
+            className="galaxy-event"
+            data-kind={event.kind}
+            title={event.label}
+            style={{ '--event-intensity': event.intensity } as CSSProperties}
+          ><i /></span>
+        ))}
+      </div>
       <div className="galaxy-three-labels" aria-hidden="true">
         {visibleLabels.map(node => (
           <span

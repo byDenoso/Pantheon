@@ -3,7 +3,7 @@
 // from Tower semantics (galaxy-morphology.mjs) and publishes it with shape
 // metrics in the snapshot. This view renders it and never reinterprets it.
 import { useEffect, useMemo, useState } from 'react';
-import { GalaxyThree3D, type GalaxyMorphology } from '../components/GalaxyThree3D.tsx';
+import { GalaxyThree3D, type GalaxyEvent, type GalaxyMorphology } from '../components/GalaxyThree3D.tsx';
 import type { GraphNode, GraphNodeType } from '../contracts/system.ts';
 import type { PlacedNode3D } from '../viewmodels/graph3d.ts';
 
@@ -19,6 +19,14 @@ const GLOW_LEVELS = [
   { id: 'strong', label: 'Forte', value: 0.55 },
 ] as const;
 const GLOW_KEY = 'nexo.galaxy.glow.v1';
+const EVENT_LEGEND = [
+  { kind: 'SUPERNOVA', label: 'Supernova · precisa de você agora' },
+  { kind: 'NOVA', label: 'Nova · atenção' },
+  { kind: 'AGN', label: 'AGN · campanha em andamento' },
+  { kind: 'HII', label: 'Região H II · muitos testes novos' },
+  { kind: 'REMNANT', label: 'Remanescente · resolvido agora' },
+  { kind: 'FLARE', label: 'Flare · novidade' },
+] as const;
 
 interface RawEntity {
   id: string; canonical_id?: string; kind?: string; title?: string; status?: string | null;
@@ -75,6 +83,7 @@ export function GalaxyView({ selectedId, onSelect }: { selectedId: string | null
   const [entities, setEntities] = useState<RawEntity[] | null>(null);
   const [morphology, setMorphology] = useState<(GalaxyMorphology & { metrics?: Metrics; metrics_delta?: MetricsDelta | null }) | null>(null);
   const [failed, setFailed] = useState(false);
+  const [rawEvents, setRawEvents] = useState<GalaxyEvent[]>([]);
   const [glow, setGlow] = useState<number>(readGlow);
 
   useEffect(() => {
@@ -84,6 +93,7 @@ export function GalaxyView({ selectedId, onSelect }: { selectedId: string | null
       .then(snapshot => {
         setEntities(Array.isArray(snapshot?.entities) ? snapshot.entities : []);
         setMorphology(snapshot?.morphology && typeof snapshot.morphology === 'object' ? snapshot.morphology : null);
+        setRawEvents(Array.isArray(snapshot?.events) ? snapshot.events : []);
       })
       .catch(error => { if (error?.name !== 'AbortError') setFailed(true); });
     return () => controller.abort();
@@ -97,6 +107,9 @@ export function GalaxyView({ selectedId, onSelect }: { selectedId: string | null
   // The galaxy always shows every published entity: it reads best as the whole
   // system. Lenses (Operação, Ciência, Sistema, Aprendizado, Tudo) drive 2D/3D.
   const nodes = useMemo(() => (entities ?? []).map(toNode), [entities]);
+  // Events share the nodes' world scale so they sit exactly on their domain.
+  const events = useMemo(() => rawEvents.map(event => ({ ...event, x: event.x * SCALE, y: event.y * SCALE, z: (event.z || 0) * SCALE })), [rawEvents]);
+  const eventCounts = useMemo(() => rawEvents.reduce<Record<string, number>>((acc, e) => { acc[e.kind] = (acc[e.kind] || 0) + 1; return acc; }, {}), [rawEvents]);
   const metrics = morphology?.metrics;
   const delta = morphology?.metrics_delta ?? null;
 
@@ -113,6 +126,7 @@ export function GalaxyView({ selectedId, onSelect }: { selectedId: string | null
         viewMode="detail"
         morphology={morphology}
         glow={glow}
+        events={events}
       />
       <div className="galaxy-hud">
         <div className="galaxy-glow" role="group" aria-label="Intensidade do brilho">
@@ -123,6 +137,16 @@ export function GalaxyView({ selectedId, onSelect }: { selectedId: string | null
             </button>
           ))}
         </div>
+        {morphology?.stage_label && (
+          <p className="galaxy-stage"><span>Estágio {morphology.stage}/5</span><strong>{morphology.stage_label}</strong></p>
+        )}
+        {rawEvents.length > 0 && (
+          <ul className="galaxy-event-legend" aria-label="Eventos na galáxia">
+            {EVENT_LEGEND.filter(item => eventCounts[item.kind]).map(item => (
+              <li key={item.kind} data-kind={item.kind}><i aria-hidden="true" />{item.label} <b>{eventCounts[item.kind]}</b></li>
+            ))}
+          </ul>
+        )}
         {metrics && (
           <dl className="galaxy-metrics" aria-label="Métricas da forma da galáxia">
             <div><dt>Assimetria</dt><dd>{metrics.asymmetry.toFixed(2)}{signed(delta?.asymmetry)}</dd></div>

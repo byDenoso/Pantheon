@@ -119,3 +119,8 @@
 /* Long machine codes (readback checks, ids) wrap instead of being clipped on phones. */
 :root[data-theme] .inbox-readback ul{flex-wrap:wrap;max-width:100%}
 :root[data-theme] .inbox-readback li,:root[data-theme] .inbox-item code{overflow-wrap:anywhere;min-width:0}
+
+/* Galáxia tab: the galaxy alone, full-bleed under the header (dominant element, nothing competing). */
+:root[data-theme] .galaxy-route .workspace.galaxy-workspace{max-width:none;padding:0;height:calc(100svh - 48px)}
+:root[data-theme] .galaxy-route .galaxy-workspace>.atlas-galaxy-view{height:100%;border-radius:0}
+@media (max-width:760px){:root[data-theme] .galaxy-route .workspace.galaxy-workspace{height:calc(100svh - 48px - 60px - env(safe-area-inset-bottom))}}

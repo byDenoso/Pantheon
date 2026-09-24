@@ -121,7 +121,8 @@ function entityLayout(entity,indexWithinCluster,totalWithinCluster,clusterLayout
     // Bulge and bar: dense core stretched along the bar axis.
     const r=Math.abs(gaussian(entity.id,'bulge-r'))*MORPH.bulge.radius*2;
     const a=hashFraction(entity.id,'bulge-a')*Math.PI*2;
-    point={x:Math.cos(a)*r*1.9,y:Math.sin(a)*r*.7,z:gaussian(entity.id,'bulge-z')*6};
+    const bar=Math.max(0,Math.min(1,Number(MORPH.bulge.bar_strength??1)));
+    point={x:Math.cos(a)*r*(1+0.9*bar),y:Math.sin(a)*r*(1-0.3*bar),z:gaussian(entity.id,'bulge-z')*6};
   }
   return {
     x:round(point.x),
@@ -136,9 +137,15 @@ function entityLayout(entity,indexWithinCluster,totalWithinCluster,clusterLayout
 function clusterLayout(cluster,indexWithinDomain,totalWithinDomain){
   const domain=cluster.domain;
   if(domain==='NEXO'){
-    // NEXO stations sit on the bar.
+    // NEXO stations: a ring inside the round nucleus; along the bar once one forms (stage 5).
+    const strength=Number(MORPH.bulge.bar_strength??1);
+    if(strength<=0){
+      const a=(indexWithinDomain/Math.max(1,totalWithinDomain))*Math.PI*2+hashFraction(cluster.id,'ring')*0.4;
+      const r=MORPH.bulge.radius*(0.9+0.5*hashFraction(cluster.id,'ring-r'));
+      return {x:round(Math.cos(a)*r),y:round(Math.sin(a)*r),z:round((hashFraction(cluster.id,'z')-.5)*6),sector:'NEXO',lod:'MEDIUM'};
+    }
     const t=totalWithinDomain<=1?0:(indexWithinDomain/(totalWithinDomain-1))*2-1;
-    return {x:round(t*MORPH.bulge.bar*.72),y:round((hashFraction(cluster.id,'bar-y')-.5)*10),z:round((hashFraction(cluster.id,'z')-.5)*6),sector:'NEXO',lod:'MEDIUM'};
+    return {x:round(t*MORPH.bulge.bar*.72*strength),y:round((hashFraction(cluster.id,'bar-y')-.5)*10),z:round((hashFraction(cluster.id,'z')-.5)*6),sector:'NEXO',lod:'MEDIUM'};
   }
   if(!MORPH.arms[domain])return {x:0,y:0,z:0,sector:domain,lod:'MEDIUM'};
   const span=1/Math.max(1,totalWithinDomain);
@@ -148,6 +155,45 @@ function clusterLayout(cluster,indexWithinDomain,totalWithinDomain){
 }
 
 function round(value){return Math.round(value*1000)/1000;}
+
+/*
+ * Astrophysical events: operational state rendered as phenomena in the domain where it happens.
+ *   SUPERNOVA  needs Dener now (human gate, importance >= .9)   NOVA  needs attention, lower
+ *   AGN        scientific campaign running in the domain        HII   many new/READY tests in a subdomain
+ *   REMNANT    something just resolved (since last snapshot)    FLARE something just added
+ * Derived only from the snapshot; positions are the entities'/subdomains' own layout.
+ */
+const RUNNING_STATES=new Set(['RUNNING','IN_PROGRESS','CHECKPOINTED','EXECUTING','CLAIMED']);
+const DONE_STATES=new Set(['DONE','RESULT','VERIFIED','PROVEN','REJECTED','CLOSED','COMPLETED']);
+function astroEvents({entities,subdomains,needs_you,changes}){
+  const byId=new Map(entities.map(entity=>[entity.id,entity]));
+  const at=entity=>entity?.layout?{x:entity.layout.x,y:entity.layout.y,z:entity.layout.z||0}:null;
+  const events=[];
+  for(const item of needs_you){
+    const entity=byId.get(item.entity);const pos=at(entity);if(!pos)continue;
+    const urgent=Number(item.importance||0)>=.9||/HUMAN|AUTH/.test(String(item.reason||''));
+    events.push({id:`${urgent?'supernova':'nova'}:${item.entity}`,kind:urgent?'SUPERNOVA':'NOVA',domain:entity.visual_domain,entity:item.entity,label:entity.title||item.entity,reason:item.reason,...pos,intensity:urgent?1:.6});
+  }
+  const running={};
+  for(const entity of entities)if(entity.kind==='TEST'&&RUNNING_STATES.has(String(entity.status||'').toUpperCase())&&entity.visual_domain!=='NEXO')(running[entity.visual_domain]||(running[entity.visual_domain]=[])).push(entity);
+  for(const [domain,tests] of Object.entries(running)){
+    const p=armPoint(domain,.08);
+    events.push({id:`agn:${domain}`,kind:'AGN',domain,label:`${tests.length} testes em andamento`,x:round(p.x),y:round(p.y),z:0,intensity:round(1-Math.exp(-tests.length/10))});
+  }
+  const bySub={};
+  for(const entity of entities)if(entity.kind==='TEST'&&String(entity.status||'').toUpperCase()==='READY')bySub[entity.cluster_id]=(bySub[entity.cluster_id]||0)+1;
+  for(const sub of subdomains){
+    const n=bySub[sub.id]||0;if(n<3||!sub.layout)continue;
+    events.push({id:`hii:${sub.id}`,kind:'HII',domain:sub.domain,label:`${n} testes novos em ${sub.title}`,x:sub.layout.x,y:sub.layout.y,z:0,intensity:round(1-Math.exp(-n/8))});
+  }
+  for(const change of changes.slice(0,40)){
+    const entity=byId.get(change.entity);const pos=at(entity);if(!pos)continue;
+    const status=String(change.after?.status||'').toUpperCase();
+    if(change.change_type==='UPDATED'&&DONE_STATES.has(status))events.push({id:`remnant:${change.entity}`,kind:'REMNANT',domain:entity.visual_domain,label:`${entity.title||change.entity} concluído`,...pos,intensity:.5});
+    else if(change.change_type==='ADDED')events.push({id:`flare:${change.entity}`,kind:'FLARE',domain:entity.visual_domain,label:`${entity.title||change.entity} novo`,...pos,intensity:.4});
+  }
+  return events.sort((a,b)=>b.intensity-a.intensity||a.id.localeCompare(b.id)).slice(0,60);
+}
 function importanceOf(item){
   const priority=upper(item?.priority);
   if(priority&&PRIORITY_WEIGHT[priority]!==undefined)return PRIORITY_WEIGHT[priority];
@@ -361,6 +407,7 @@ export function compileGalaxySnapshot({projection,manifestFile=null,interdomain=
   const fingerprint=sha256({tower_revision:text(manifest.tower_commit),projection_fingerprint:text(manifest.projection_fingerprint),...core});
   const snapshot_id=`galaxy-${text(manifest.tower_commit).slice(0,12)||'unknown'}-${fingerprint.slice(7,19)}`;
   const changes=deriveChanges(previousSnapshot,{entities:publicEntities},generated_at);
+  const events=astroEvents({entities:publicEntities,subdomains,needs_you,changes});
   const byKind=Object.fromEntries(['WORK','TEST','CAPABILITY','HYPOTHESIS','AUTOMATION','RESULT','OTHER'].map(kind=>[kind,publicEntities.filter(entity=>entity.kind===kind).length]));
   const byDomain=Object.fromEntries(GALAXY_DOMAINS.map(domain=>[domain,publicEntities.filter(entity=>entity.visual_domain===domain).length]));
 
@@ -381,6 +428,7 @@ export function compileGalaxySnapshot({projection,manifestFile=null,interdomain=
     },
     ...core,
     changes,
+    events,
     stats:{domains:domains.length,subdomains:subdomains.length,entities:publicEntities.length,relations:relations.length,needs_you:needs_you.length,changes:changes.length,by_kind:byKind,by_visual_domain:byDomain},
   };
 }
