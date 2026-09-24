@@ -95,14 +95,25 @@ export const nextHintFor = (state: EntityState): string => {
 /** Estados que exigem que a UI diga explicitamente o que não sabe. */
 export const NEEDS_EXPLANATION: Tone[] = ['stale', 'degraded', 'conflict', 'blocked', 'unknown'];
 
-export const dateTime = (value?: string | null): string =>
-  value
-    ? new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })
-        .format(new Date(value))
-    : 'Sem leitura válida';
+// A malformed timestamp in published data must degrade to a label, never throw
+// (Intl.format throws RangeError on an invalid Date and takes the whole view down).
+const validDate = (value?: string | null): Date | null => {
+  if (!value) return null;
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date;
+};
 
-export const shortTime = (value?: string | null): string =>
-  value ? new Intl.DateTimeFormat('pt-BR', { hour: '2-digit', minute: '2-digit' }).format(new Date(value)) : '—';
+export const dateTime = (value?: string | null): string => {
+  const date = validDate(value);
+  return date
+    ? new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }).format(date)
+    : 'Sem leitura válida';
+};
+
+export const shortTime = (value?: string | null): string => {
+  const date = validDate(value);
+  return date ? new Intl.DateTimeFormat('pt-BR', { hour: '2-digit', minute: '2-digit' }).format(date) : '—';
+};
 
 const capabilityTone: Record<CapabilityStatus, Tone> = {
   PASS: 'live', UNVERIFIED: 'unknown', UNKNOWN: 'unknown', RETIRED_RUNTIME: 'stale', BLOCKED: 'blocked',

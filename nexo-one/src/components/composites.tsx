@@ -268,7 +268,9 @@ export function LaneState(
       <dl className="lane-meta">
         <div>
           <dt>Último efeito</dt>
-          <dd>{lane.last_effect
+          <dd>{typeof lane.last_effect === 'string'
+            ? <span>{lane.last_effect}</span>
+            : lane.last_effect
             ? <><code>{lane.last_effect.effect_key}</code> <StatusBadge state={lane.last_effect.status} compact /> <time>{dateTime(lane.last_effect.at)}</time></>
             : <em>nenhum efeito registrado</em>}</dd>
         </div>
