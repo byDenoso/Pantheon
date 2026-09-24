@@ -47,8 +47,8 @@ export function morphologyFrom({ counts, core, bridges = [] }) {
     arms[domain] = {
       phase: round(KNOWN_PHASES[domain] ?? hashPhase(domain)),
       // Young galaxy: every arm is a real spiral arm; growth lengthens it slowly.
-      turns: round(0.46 + 0.34 * saturate(entities + subdomains * 4, 250)),
-      pitch: round(0.3 + 0.06 * saturate(subdomains, 8)),
+      turns: round(0.44 + 0.3 * saturate(entities + subdomains * 4, 250)),
+      pitch: round(0.34 + 0.06 * saturate(subdomains, 8)),
       width: round(7 + 9 * saturate(density, 8)),
       mass: round(0.25 + 0.75 * saturate(entities, 60)),
       segments: subdomains,

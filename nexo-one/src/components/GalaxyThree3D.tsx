@@ -41,7 +41,8 @@ import { armPoint as morphArmPoint, morphologyFrom } from '../viewmodels/galaxy-
 import './GalaxyThree3D.css';
 
 const TAU = Math.PI * 2;
-const DEFAULT_CAMERA = new Vector3(0, 16, 286);
+// Far enough that the whole galaxy reads as one formed object (NGC 1300-like).
+const DEFAULT_CAMERA = new Vector3(0, 60, 470);
 const MACRO_CAMERA = new Vector3(0, 12, 360);
 const MOBILE_MACRO_CAMERA = new Vector3(0, 2, 236);
 const DEFAULT_TARGET = new Vector3(0, 0, 0);
@@ -272,21 +273,22 @@ function buildSpiralGalaxy(count: number, morph: GalaxyMorphology): BufferGeomet
     const r = rng(hash32('nexo-spiral:' + i));
     const kind = r();
     let x: number; let y: number; let z: number; let size: number; let light: number;
-    if (kind < 0.16) {
+    if (kind < 0.18) {
       // Bulge + bar: dense warm core stretched along the bar axis.
       const rad = Math.abs(gaussian(r)) * bulgeRadius;
       const a = r() * TAU;
-      if (r() < 0.5) {
-        // The bar: a straight, bright stellar bar whose ends feed the arms.
-        const along = (r() * 2 - 1) * morph.bulge.bar * G_SCALE * 0.95;
-        const taper = 1 - 0.6 * Math.abs(along) / (morph.bulge.bar * G_SCALE);
-        x = along; y = gaussian(r) * bulgeRadius * 0.28 * taper; z = gaussian(r) * 1.4;
+      if (r() < 0.62) {
+        // NGC 1300-style bar: long, thin and straight, running into the arm roots.
+        const along = (r() * 2 - 1) * morph.bulge.bar * G_SCALE;
+        const taper = 1 - 0.55 * Math.abs(along) / (morph.bulge.bar * G_SCALE);
+        x = along; y = gaussian(r) * bulgeRadius * 0.2 * taper; z = gaussian(r) * 1.2;
       } else {
-        x = Math.cos(a) * rad * 1.15; y = Math.sin(a) * rad * 0.85; z = gaussian(r) * 2.2;
+        // Compact bright nucleus.
+        x = Math.cos(a) * rad * 0.55; y = Math.sin(a) * rad * 0.5; z = gaussian(r) * 1.6;
       }
       size = 0.9 + r() * 1.8; light = 0.55 + r() * 0.45;
       tmp.copy(STAR_CORE).lerp(STAR_WARM, r() * 0.5).lerp(coreTint, 0.35);
-    } else if (kind < 0.8) {
+    } else if (kind < 0.86) {
       // Arm stars, star-forming knots and dust lanes.
       let pick = r() * totalMass; let arm = arms[0] ?? 'SCIENCE';
       for (const key of arms) { pick -= Math.max(0.05, morph.arms[key].mass); if (pick <= 0) { arm = key; break; } }
@@ -297,22 +299,24 @@ function buildSpiralGalaxy(count: number, morph: GalaxyMorphology): BufferGeomet
       const p = spiralPoint(morph, arm, Math.max(0, t));
       const q = spiralPoint(morph, arm, Math.max(0, t) + 0.01);
       const tx = q.x - p.x; const ty = q.y - p.y; const len = Math.hypot(tx, ty) || 1;
-      const width = spec.width * G_SCALE * (0.45 + t * 0.9);
-      const across = gaussian(r) * width * 0.5;
+      // Thin, crisp arms with a faint envelope around them.
+      const envelope = r() < 0.3;
+      const width = spec.width * G_SCALE * (0.35 + t * 0.5) * (envelope ? 1.8 : 1);
+      const across = gaussian(r) * width * 0.45;
       x = p.x + (-ty / len) * across; y = p.y + (tx / len) * across; z = gaussian(r) * (1 + t * 1.6);
       const knot = t > 0.25 && r() < 0.06;
       size = knot ? 1.6 + r() * 1.6 : 0.6 + r() * 1.4;
-      light = knot ? 0.9 : 0.25 + r() * 0.55;
+      light = knot ? 0.9 : envelope ? 0.12 + r() * 0.2 : 0.3 + r() * 0.55;
       const c = r();
       // Each arm keeps the natural star mix but leans to its domain's tone.
       tmp.copy(c < 0.62 ? STAR_WHITE : c < 0.86 ? STAR_BLUE : c < 0.95 ? HII_PINK : DUST_RED).lerp(tints[arm], 0.55);
       if (knot && r() < 0.5) tmp.copy(HII_PINK).lerp(STAR_WHITE, 0.35);
     } else if (kind < 0.96) {
       // Inter-arm disk: faint exponential glow.
-      const rad = -Math.log(Math.max(1e-6, r())) * 22;
+      const rad = -Math.log(Math.max(1e-6, r())) * 30;
       const a = r() * TAU;
       x = Math.cos(a) * rad; y = Math.sin(a) * rad; z = gaussian(r) * 3;
-      size = 0.5 + r() * 0.8; light = 0.12 + r() * 0.22;
+      size = 0.5 + r() * 0.8; light = 0.08 + r() * 0.14;
       tmp.copy(STAR_WHITE).lerp(STAR_WARM, r() * 0.5);
     } else {
       // Field stars far outside the disk.
@@ -671,7 +675,7 @@ export const GalaxyThree3D = forwardRef<CanvasGraph25DHandle, Props>(function Ga
       controls.zoomSpeed = 0.82;
       controls.panSpeed = 0.58;
       controls.minDistance = 12;
-      controls.maxDistance = 360;
+      controls.maxDistance = 720;
       controls.minPolarAngle = 0.18;
       controls.maxPolarAngle = Math.PI - 0.18;
       controlsRef.current = controls;
