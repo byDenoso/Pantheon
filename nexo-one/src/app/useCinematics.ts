@@ -39,18 +39,25 @@ export function useCinematics(routeKey:string,enabled=true){
           el.querySelectorAll(COUNT_SELECTOR).forEach(node=>{if(!counted.has(node)){counted.add(node);countUp(node as HTMLElement);}});
           if(el.matches(COUNT_SELECTOR)&&!counted.has(el)){counted.add(el);countUp(el);}
         }
-      },{rootMargin:'0px 0px -8% 0px',threshold:.08});
+      },{rootMargin:'0px 0px -4% 0px',threshold:0});
       let stagger=0;
       const scan=()=>{
         stagger=0;
         root.querySelectorAll<HTMLElement>(REVEAL_SELECTOR).forEach(el=>{
           if(el.dataset.reveal)return;
+          // Containers (tall, or wrapping other targets) never hide: hiding a parent multiplies the
+          // children's opacity and blanks whole screens if its observer is late.
+          if(el.offsetHeight>innerHeight*.9||el.querySelector(REVEAL_SELECTOR)){el.dataset.reveal='in';return;}
           el.dataset.reveal='wait';
           el.style.setProperty('--reveal-delay',`${Math.min(stagger++,8)*55}ms`);
           observer.observe(el);
         });
       };
       scan();
+      // Safety net: nothing stays invisible, whatever the observer does.
+      const failsafe=window.setInterval(()=>root.querySelectorAll<HTMLElement>('[data-reveal=wait]').forEach(el=>{
+        const r=el.getBoundingClientRect();if(r.top<innerHeight&&r.bottom>0)el.dataset.reveal='in';}),700);
+      cleanups.push(()=>clearInterval(failsafe));
       let pending=0;
       const mutations=new MutationObserver(()=>{cancelAnimationFrame(pending);pending=requestAnimationFrame(scan);});
       mutations.observe(root,{childList:true,subtree:true});
