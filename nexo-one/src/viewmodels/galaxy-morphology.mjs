@@ -25,7 +25,7 @@ export const BAR_BASE = 30;
 const KNOWN_PHASES = { SCIENCE: 0, ENGINEERING: Math.PI };
 const MAIN_ARMS = new Set(['SCIENCE', 'ENGINEERING']);
 const SEMANTIC_AFFINITY = { OLYMPUS: 'SCIENCE' };
-const BRANCH_ROOT = 0.08; // fraction along the parent arm, right next to the bar end
+const BRANCH_ROOT = 0.4; // fraction along the parent arm: where it sweeps past the far side of the bar
 const BRANCH_STEP = 0.07; // further branches on the same arm root a little further out
 export const DOMAIN_TINTS = {
   NEXO: '#ffd36b',
@@ -54,8 +54,8 @@ export function morphologyFrom({ counts, core, bridges = [] }) {
     arms[domain] = {
       phase: round(KNOWN_PHASES[domain] ?? hashPhase(domain)),
       // Short today; lengthens as the domain expands (room to ~0.9 turns).
-      turns: round(0.46 + 0.8 * saturate(entities + subdomains * 4, 250)),
-      pitch: round(0.21 + 0.06 * saturate(subdomains, 8)),
+      turns: round(0.54 + 0.9 * saturate(entities + subdomains * 4, 250)),
+      pitch: round(0.18 + 0.05 * saturate(subdomains, 8)),
       width: round(6 + 14 * saturate(density, 8)),
       mass: round(saturate(entities, 60)),
       segments: subdomains,
@@ -90,8 +90,11 @@ export function morphologyFrom({ counts, core, bridges = [] }) {
     const order = (branchesOn[arm.parent] = (branchesOn[arm.parent] ?? -1) + 1);
     arm.branch_at = round(BRANCH_ROOT + BRANCH_STEP * order);
     // The branch lengthens as its domain grows, opening a little faster than its parent.
-    arm.turns = round(0.15 + 0.45 * saturate(counts[domain].entities || 0, 90));
-    arm.pitch = round(arm.pitch + 0.45); // opens away from the parent quickly
+    // Length proportional to the domain: sqrt of its size relative to the
+    // parent domain, so a small domain is a short spur and grows with it.
+    const ratio = (counts[domain].entities || 0) / Math.max(1, counts[arm.parent]?.entities || 1);
+    arm.turns = round(arms[arm.parent].turns * Math.min(1, Math.max(0.08, 0.6 * Math.sqrt(ratio))));
+    arm.pitch = round(arm.pitch + 0.3); // opens away from the parent
   }
   return {
     version: MORPHOLOGY_VERSION,
