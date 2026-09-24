@@ -17,7 +17,9 @@ export { sourceKindForHost } from './select.ts';
  * Browser publicado -> estado remoto real.
  * Node/localhost -> fixtures determinísticas para testes e regressão visual.
  */
-const runtimeKind = typeof window === 'undefined' ? 'fixture' : sourceKindForHost(window.location.hostname);
+// VITE_SYSTEM_SOURCE=remote previews a real system.json on localhost.
+const forcedRemote = import.meta.env?.VITE_SYSTEM_SOURCE === 'remote';
+const runtimeKind = typeof window === 'undefined' ? 'fixture' : forcedRemote ? 'remote' : sourceKindForHost(window.location.hostname);
 export const activeSource: SystemDataSource = runtimeKind === 'remote' ? remoteSource : fixtureSource;
 
 export const AVAILABLE_SOURCES: SystemDataSource[] = [fixtureSource, remoteSource];

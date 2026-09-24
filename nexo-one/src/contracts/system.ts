@@ -290,6 +290,16 @@ export interface GraphNode {
   atlas_visible?: boolean;
   /** Canonical/allowlisted semantic parent hint, e.g. "Energia escura". */
   parent_subdomain?: string;
+  /** Resolved SEMANTIC_TAXONOMY_V1 meaning (projection-owned, never inferred in the UI). */
+  semantic_domain?: 'SCIENCE' | 'ENGINEERING' | 'OLYMPUS';
+  semantic_subdomain_id?: string;
+  semantic_topic_id?: string;
+  semantic_subdomain?: string;
+  semantic_topic?: string;
+  semantic_basis?: string;
+  status_group?: string;
+  question_plain?: string;
+  result_meaning?: string;
   /** Public external sources associated with a campaign/entity. */
   source_links?: Array<{ label: string; url: string; kind?: string }>;
 }

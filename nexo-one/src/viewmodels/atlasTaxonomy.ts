@@ -15,6 +15,9 @@ const tokenOf = (node: GraphNode): string =>
   ].filter(Boolean).join(' ').toUpperCase();
 
 export function atlasTopDomainOf(node: GraphNode): AtlasTopDomain {
+  if (node.semantic_domain === 'OLYMPUS') return 'OLYMPUS';
+  if (node.semantic_domain === 'SCIENCE') return 'SCIENCE';
+  if (node.semantic_domain === 'ENGINEERING') return 'NEXO';
   const token = tokenOf(node);
   if (/CAMP-OLY-|T-OLY|OLYMPHYS|OLYCAUSE|OLYPIVOT/.test(token) || node.domain === 'OLYMPUS') return 'OLYMPUS';
   if (node.domain === 'ENGINEERING') return 'NEXO';
@@ -37,7 +40,7 @@ export function atlasSubdomainHint(
   const token = String(signal || '').toUpperCase();
 
   if (domain === 'OLYMPUS') {
-    if (/MIQUEIAS|OLYCAUSE/.test(token)) return 'Miquéias · Cause/Nulls';
+    if (/MIQUEIAS|OLYCAUSE/.test(token)) return 'Cause/Nulls';
     if (/COMPPHYS|OLYPHYS|BODY\s*COMPOSITION|COMPOSI[CÇ][AÃ]O\s*CORPORAL/.test(token)) {
       return 'Composição corporal · Física computacional';
     }
@@ -91,7 +94,37 @@ export function atlasSubdomainHint(
   return null;
 }
 
+/**
+ * SEMANTIC_TAXONOMY_V1 ids -> Atlas station labels. Topic entries win over
+ * their subdomain so distinct stations (3D map, megastructures) survive.
+ * This is the only place presentation names meaning.
+ */
+const SEMANTIC_STATIONS: Record<string, string> = {
+  'science.cosmology.h0': 'Expansão do Universo · H0',
+  'science.cosmology.dark_energy': 'Energia escura',
+  'science.cosmology.dark_matter': 'Matéria escura',
+  'science.cosmology.lss_growth': 'Estrutura em larga escala · Growth/LSS',
+  'science.cosmology.lss_growth.galaxy_distribution': 'Galáxias · Redshift 3D',
+  'science.cosmology.lss_growth.megastructures': 'Megaestruturas cosmológicas',
+  'science.methods.inference': 'Inferência estatística · Nulls & calibração',
+  'science.methods.robustness': 'Reprodutibilidade científica · Robustez',
+  'engineering.nexo_runtime': 'Operações NEXO',
+  'engineering.ai_agents': 'Agentes de IA',
+  'olympus.body_composition': 'Composição corporal · Física computacional',
+  'olympus.training': 'Treino',
+  'olympus.nutrition': 'Nutrição',
+};
+
+export function atlasSemanticStation(node: GraphNode): string | null {
+  if (node.semantic_topic_id && SEMANTIC_STATIONS[node.semantic_topic_id]) return SEMANTIC_STATIONS[node.semantic_topic_id];
+  if (node.semantic_subdomain_id && SEMANTIC_STATIONS[node.semantic_subdomain_id]) return SEMANTIC_STATIONS[node.semantic_subdomain_id];
+  return node.semantic_subdomain || null;
+}
+
 export function atlasSubdomainOf(node: GraphNode): string {
+  // Canonical meaning first: the Tower/taxonomy decides, not presentation regexes.
+  const station = atlasSemanticStation(node);
+  if (station) return station;
   const token = tokenOf(node);
   const top = atlasTopDomainOf(node);
 

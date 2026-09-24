@@ -57,6 +57,38 @@ function cursorTime(cursor) {
   return Number.isFinite(Date.parse(value)) ? value : '1970-01-01T00:00:00.000Z';
 }
 
+// SEMANTIC_TAXONOMY_V1 (TCC contract) travels inside the projection. The Atlas
+// renders meaning from it; the regex router in atlasTaxonomy.ts is only the
+// fallback for records that predate the semantic block.
+const SEMANTIC_TOP = { science: 'SCIENCE', engineering: 'ENGINEERING', olympus: 'OLYMPUS' };
+function semanticLabels(projection) {
+  const labels = new Map();
+  for (const domain of Array.isArray(projection?.taxonomy) ? projection.taxonomy : []) {
+    labels.set(domain.id, domain.label);
+    for (const sub of domain.subdomains || []) {
+      labels.set(sub.id, sub.label);
+      for (const topic of sub.topics || []) labels.set(topic.id, topic.label);
+    }
+  }
+  return labels;
+}
+function semanticFields(record, labels) {
+  const semantic = record?.semantic;
+  const lifecycle = record?.status_group ? { status_group: String(record.status_group) } : {};
+  if (!semantic || semantic.basis === 'UNMAPPED' || !labels.has(semantic.subdomain_id)) return lifecycle;
+  return {
+    semantic_domain: SEMANTIC_TOP[semantic.domain_id] || undefined,
+    semantic_subdomain_id: String(semantic.subdomain_id),
+    semantic_topic_id: semantic.topic_id ? String(semantic.topic_id) : undefined,
+    semantic_subdomain: labels.get(semantic.subdomain_id),
+    semantic_topic: semantic.topic_id ? labels.get(semantic.topic_id) : undefined,
+    semantic_basis: semantic.basis,
+    status_group: record.status_group ? String(record.status_group) : undefined,
+    question_plain: semantic.question_plain ? String(semantic.question_plain) : undefined,
+    result_meaning: semantic.result_meaning ? String(semantic.result_meaning) : undefined,
+  };
+}
+
 function domainOf(value) {
   const domain = String(value || '').trim().toUpperCase();
   if (!domain) return 'NEXO';
@@ -490,6 +522,7 @@ function graphFromProjection(projection, observedAt, filaments = [], peerDetecti
   const seen = new Set();
   const peerMembership = peerDetectionPresentationMembership(peerDetectionBattery, projection);
   const campaigns = campaignRecordsFromProjection(projection);
+  const labels = semanticLabels(projection);
   const campaignById = new Map(campaigns.map(item => [String(item.campaign_id), item]));
   const campaignMemberCounts = new Map();
   for (const item of [...(projection.work || []), ...(projection.tests || [])]) {
@@ -563,6 +596,7 @@ function graphFromProjection(projection, observedAt, filaments = [], peerDetecti
           ? String(campaign.subdomain).split('/').filter(Boolean).at(-1)
           : undefined,
       atlas_visible: atlas.visible !== false,
+      ...semanticFields(campaign, labels),
       source_links: Array.isArray(campaign.source_links)
         ? campaign.source_links
             .filter(link => link && typeof link === 'object' && /^https?:\/\//.test(String(link.url || '')))
@@ -610,6 +644,7 @@ function graphFromProjection(projection, observedAt, filaments = [], peerDetecti
       atlas_visible: item.campaign_id
         ? (campaignById.get(String(item.campaign_id))?.atlas_projection?.show_tests === true)
         : true,
+      ...semanticFields(item, labels),
     });
     const campaignId = String(item.campaign_id || '').trim();
     const campaignNodeId = campaignId && campaignById.has(campaignId) ? 'campaign:' + campaignId : null;
