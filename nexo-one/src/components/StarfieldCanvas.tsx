@@ -28,10 +28,26 @@ export function StarfieldCanvas({className='starfield-canvas',clusters=[],links=
     let stars:Array<{angle:number;radius:number;size:number;seed:number;speed:number}>=[];
     type Placed=StarCluster&{x:number;y:number;r:number;glow:number;members:Array<{dx:number;dy:number;size:number;seed:number}>};
     let placed:Placed[]=[];
-    type Strand={a:Placed;b:Placed;count:number;bend:number;beads:Array<{t:number;off:number;size:number;seed:number}>};
+    // Every filament particle carries a displacement + velocity: the pointer scatters it,
+    // a damped spring pulls it back, so the web comes apart under the cursor and re-knits.
+    type Mote={t:number;off:number;seed:number;px:number;py:number;vx:number;vy:number};
+    type Strand={a:Placed;b:Placed;count:number;bend:number;waves:number;phase:number;beads:Array<Mote&{size:number}>};
+    let pointer:{x:number;y:number}|null=null;
+    const REACH=110;
+    const moteAt=(m:Mote,x:number,y:number)=>{
+      if(!still){
+        if(pointer){
+          const ddx=x+m.px-pointer.x,ddy=y+m.py-pointer.y,dist=Math.hypot(ddx,ddy);
+          if(dist<REACH&&dist>.01){const f=(1-dist/REACH)**2*2.4;m.vx+=ddx/dist*f;m.vy+=ddy/dist*f;}
+        }
+        m.vx=(m.vx-m.px*.035)*.9;m.vy=(m.vy-m.py*.035)*.9;m.px+=m.vx;m.py+=m.vy;
+      }
+      return [x+m.px,y+m.py] as const;
+    };
+    const mote=(off:number)=>({t:Math.random(),off,seed:Math.random(),px:0,py:0,vx:0,vy:0});
     let strands:Strand[]=[];
     // Background web: faint knots and dotted threads, the domains embedded in it.
-    let web:Array<{x1:number;y1:number;x2:number;y2:number;dots:Array<{t:number;off:number;seed:number}>}>=[];
+    let web:Array<{x1:number;y1:number;x2:number;y2:number;bend:number;waves:number;phase:number;dots:Mote[]}>=[];
     let knots:Array<{x:number;y:number;r:number;seed:number}>=[];
 
     const place=()=>{
@@ -74,14 +90,14 @@ export function StarfieldCanvas({className='starfield-canvas',clusters=[],links=
         nodes.map((m,j)=>({j,d:Math.hypot(m.x-n.x,m.y-n.y)})).filter(o=>o.j!==i).sort((p,q)=>p.d-q.d).slice(0,3).forEach(({j,d})=>{
           const key=[i,j].sort().join('-');if(seen.has(key)||d>Math.max(width,height)*.32)return;seen.add(key);
           const m=nodes[j]!;
-          web.push({x1:n.x,y1:n.y,x2:m.x,y2:m.y,dots:Array.from({length:Math.round(d/3.5)},()=>({t:Math.random(),off:(Math.random()+Math.random()-1)*4,seed:Math.random()}))});
+          web.push({x1:n.x,y1:n.y,x2:m.x,y2:m.y,bend:(Math.random()-.5)*.45,waves:1+Math.floor(Math.random()*3),phase:Math.random()*6.28,dots:Array.from({length:Math.round(d/3.5)},()=>mote((Math.random()+Math.random()-1)*4))});
         });
       });
       const maxLink=Math.max(1,...[...pairs.values()].map(p=>p.count));
       strands=[...pairs.values()].map(({a,b,count})=>{
         const beads=Math.round(24+(count?150*Math.sqrt(count/maxLink):0));
-        return {a,b,count,bend:(Math.random()-.5)*.5,beads:Array.from({length:beads},()=>({
-          t:Math.random(),off:(Math.random()+Math.random()-1)*(count?9+14*count/maxLink:5),size:Math.random()*1.3+.3,seed:Math.random(),
+        return {a,b,count,bend:(Math.random()-.5)*.5,waves:1+Math.floor(Math.random()*2),phase:Math.random()*6.28,beads:Array.from({length:beads},()=>({
+          ...mote((Math.random()+Math.random()-1)*(count?9+14*count/maxLink:5)),size:Math.random()*1.3+.3,
         }))};
       });
     };
@@ -114,10 +130,13 @@ export function StarfieldCanvas({className='starfield-canvas',clusters=[],links=
       }
       for(const w of web){
         const dx=w.x2-w.x1,dy=w.y2-w.y1,len=Math.hypot(dx,dy)||1,nx=-dy/len,ny=dx/len;
+        const mx=(w.x1+w.x2)/2+nx*len*w.bend,my=(w.y1+w.y2)/2+ny*len*w.bend;
         context.fillStyle='#9fb0cc';
         for(const d of w.dots){
+          const t=d.t,u=1-t,wave=Math.sin(t*Math.PI*w.waves+w.phase+time*.0004)*len*.04*Math.sin(t*Math.PI);
+          const [x,y]=moteAt(d,u*u*w.x1+2*u*t*mx+t*t*w.x2+nx*(d.off+wave),u*u*w.y1+2*u*t*my+t*t*w.y2+ny*(d.off+wave));
           context.globalAlpha=(.1+.22*Math.abs(Math.sin(time*.001+d.seed*11)))*(placed.length?1:.6);
-          context.fillRect(w.x1+dx*d.t+nx*d.off,w.y1+dy*d.t+ny*d.off,1.2,1.2);
+          context.fillRect(x,y,1.2,1.2);
         }
       }
       for(const k of knots){
@@ -136,11 +155,11 @@ export function StarfieldCanvas({className='starfield-canvas',clusters=[],links=
         const strength=s.count?.35+.65*Math.min(1,s.count/10):.12;
         const grad=context.createLinearGradient(a.x,a.y,b.x,b.y);
         grad.addColorStop(0,hexAlpha(a.color,.07*strength*lit));grad.addColorStop(1,hexAlpha(b.color,.07*strength*lit));
-        context.globalAlpha=1;context.strokeStyle=grad;context.lineWidth=s.count?6+10*strength:1;
+        context.globalAlpha=pointer?.55:1;context.strokeStyle=grad;context.lineWidth=s.count?4+8*strength:1;
         context.beginPath();context.moveTo(a.x,a.y);context.quadraticCurveTo(mx,my,b.x,b.y);context.stroke();
         for(const bead of s.beads){
-          const t=bead.t,u=1-t;
-          const x=u*u*a.x+2*u*t*mx+t*t*b.x+nx*bead.off,y=u*u*a.y+2*u*t*my+t*t*b.y+ny*bead.off;
+          const t=bead.t,u=1-t,wave=Math.sin(t*Math.PI*s.waves+s.phase+time*.0005)*len*.035*Math.sin(t*Math.PI);
+          const [x,y]=moteAt(bead,u*u*a.x+2*u*t*mx+t*t*b.x+nx*(bead.off+wave),u*u*a.y+2*u*t*my+t*t*b.y+ny*(bead.off+wave));
           context.fillStyle=t<.5?a.color:b.color;
           context.globalAlpha=(.2+.55*Math.abs(Math.sin(time*.0015+bead.seed*9)))*strength*lit;
           context.fillRect(x,y,bead.size,bead.size);
@@ -186,11 +205,12 @@ export function StarfieldCanvas({className='starfield-canvas',clusters=[],links=
     const onPointer=(event:PointerEvent)=>{
       const box=canvas.getBoundingClientRect();
       const x=event.clientX-box.left,y=event.clientY-box.top;
+      pointer={x,y};
       const hit=placed.find(c=>Math.hypot(x-c.x,(y-c.y)/.62)<c.r*1.3);
       setFocus(hit?.id??null);
       canvas.style.cursor=hit?'crosshair':'';
     };
-    const onLeave=()=>setFocus(null);
+    const onLeave=()=>{pointer=null;setFocus(null);};
 
     const observer=typeof IntersectionObserver==='function'?new IntersectionObserver(([entry])=>{
       const was=visible;visible=entry.isIntersecting;
