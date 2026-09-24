@@ -36,3 +36,13 @@ No dual-write to Git is permitted.
 Current Atlas V3 design: `docs/superpowers/specs/2026-09-14-atlas-neural-v3.md`.
 
 Historical sovereign architecture: `docs/superpowers/specs/2026-09-13-nexo-sovereign-architecture.md`.
+
+## Expansion (adding a domain, subdomain or automation)
+
+Nothing in the UI or compilers lists domains by hand.
+
+1. **New domain/subdomain/topic:** add it to `TCC/runtime/nexo_agent_api/contracts/SEMANTIC_TAXONOMY_V1.json` (Git contract, PR). Optionally add a tint in `nexo-one/src/viewmodels/galaxy-morphology.mjs` (`DOMAIN_TINTS`); otherwise a neutral tint is used.
+2. **Entities:** create TEST/CAMPAIGN/HYPOTHESIS/LESSON through `nexo_tower.py apply` with a `semantic` block using the new ids. Roadmaps and indexes are documents and use `{"document": "roadmaps/X.json", "merge": {...}}` in the same apply.
+3. **ATLAS:** the projection carries the taxonomy tree and resolved `semantic`; the galaxy compiler gives every visual domain an arm whose mass, length, thickness, fragmentation and bridges come from the data (fixed constants, comparable snapshots). No front-end change is needed.
+4. **Automations:** playbooks live in `TCC/automations/`; new inbox kinds are ignored with a log until a playbook handles them. The frontier (`nexo_tower.py frontier`) reads V1 (inline tests) and V2 (`frontier_refs`) roadmaps and reports invalid ones instead of failing.
+
