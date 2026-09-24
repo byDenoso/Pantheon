@@ -14,7 +14,7 @@ import { useIsMobile } from '../../app/useMediaQuery.ts';
 import {
   EMPTY_FILTERS, filterCount, filterGraph, legendOf, relationsOf, type GraphFilters,
 } from '../../viewmodels/graph.ts';
-import { layoutGraph3D, layoutMacroDomains, resolveSelection3D } from '../../viewmodels/graph3d.ts';
+import { layoutFromGalaxy, layoutMacroDomains, resolveSelection3D } from '../../viewmodels/graph3d.ts';
 import { ATLAS_TOP_DOMAINS, atlasSubdomainFromId, atlasSubdomainNodeId, atlasSubdomainOf, atlasTopDomainOf, type AtlasTopDomain } from '../../viewmodels/atlasTaxonomy.ts';
 import { useGalaxySnapshot } from '../../data/useGalaxySnapshot.ts';
 import { galaxySnapshotAgeLabel } from '../../data/galaxySnapshot.ts';
@@ -478,8 +478,8 @@ export function AtlasView(
   const isMacroOverview = rootExpanded && !expandAll && !expandedDomain && !expandedCampaign && !expandedCluster;
   const placed = useMemo(() => {
     if (isMacroOverview) return layoutMacroDomains(renderGraph.nodes, isMobile);
-    return layoutGraph3D(renderGraph.nodes);
-  }, [isMacroOverview, isMobile, renderGraph.nodes]);
+    return layoutFromGalaxy(renderGraph.nodes, galaxySnapshot, atlasSubdomainOf);
+  }, [galaxySnapshot, isMacroOverview, isMobile, renderGraph.nodes]);
   const legend = useMemo(() => legendOf(renderGraph.nodes.filter(node => !clusterFromId(node.id) && !campaignFromId(node.id) && !atlasSubdomainFromId(node.id))), [renderGraph.nodes]);
   const effectiveSelectedId = resolveSelection3D(placed, selectedId);
   const localRelations = useMemo(() => localFocusId ? relationsOf(filtered, localFocusId) : { upstream: [], downstream: [] }, [filtered, localFocusId]);

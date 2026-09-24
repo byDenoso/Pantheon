@@ -4,7 +4,6 @@ export const GALAXY_CONTRACT='NEXO_ONE_GALAXY_V1';
 export const GALAXY_DOMAINS=['NEXO','SCIENCE','ENGINEERING','OLYMPUS'];
 
 const PRIORITY_WEIGHT={CRITICAL:1,HIGH:.82,NORMAL:.58,MEDIUM:.54,LOW:.34};
-const DOMAIN_ANGLE={NEXO:0,SCIENCE:-2*Math.PI/3,ENGINEERING:0,OLYMPUS:2*Math.PI/3};
 
 function canonical(value){
   if(Array.isArray(value))return value.map(canonical);
@@ -44,6 +43,8 @@ export function mapVisualDomain(value){
 }
 
 function explicitSubdomain(item){
+  const semantic=item?.semantic;
+  if(semantic&&semantic.basis!=='UNMAPPED'&&text(semantic.subdomain_id)&&semantic.subdomain_id!=='UNMAPPED')return text(semantic.subdomain_id);
   const candidate=text(item?.subdomain_id||item?.subdomain);
   return candidate||null;
 }
@@ -67,7 +68,10 @@ function campaignConsensus(work){
   return new Map([...map].map(([campaign,domains])=>[campaign,domains.size===1?[...domains][0]:null]));
 }
 
+const SEMANTIC_VISUAL={science:'SCIENCE',engineering:'ENGINEERING',olympus:'OLYMPUS'};
 function resolveDomain(item,consensus,{kind}={}){
+  const semanticDomain=SEMANTIC_VISUAL[text(item?.semantic?.domain_id)];
+  if(semanticDomain)return {domain:semanticDomain,visual_domain:semanticDomain,source_domain:text(item?.domain)||null,derivation:'semantic_taxonomy'};
   const sourceDomain=text(item?.domain)||null;
   const direct=mapVisualDomain(sourceDomain);
   if(direct)return {domain:direct,visual_domain:direct,source_domain:sourceDomain,derivation:sourceDomain&&upper(sourceDomain)!==direct?'domain_alias_mapping':'direct_domain'};
@@ -92,16 +96,52 @@ function clusterFor(kind,id,item,resolved){
   return {id:`cluster:${resolved.visual_domain}:${kind.toLowerCase()}`,label:kind,basis:'entity_kind',canonical:false};
 }
 
+// Barred spiral. NEXO is the bulge and bar; each domain is an arm leaving a
+// bar end; semantic subdomains are ordered segments along the arm; tests are
+// dust trailing along it. Deterministic: position comes from ids and order.
+const BAR_HALF=46;
+const ARMS={
+  SCIENCE:{phase:0,turns:.95,length:1,pitch:.23,width:14},
+  OLYMPUS:{phase:Math.PI,turns:.8,length:.85,pitch:.25,width:12},
+  ENGINEERING:{phase:Math.PI/2,turns:.42,length:.5,pitch:.34,width:18},
+};
+function armPoint(domain,t){
+  const arm=ARMS[domain]||ARMS.ENGINEERING;
+  const theta=arm.turns*Math.PI*2*t*arm.length;
+  const radius=BAR_HALF*Math.exp(arm.pitch*theta)+t*18;
+  const angle=arm.phase+theta;
+  return {x:Math.cos(angle)*radius,y:Math.sin(angle)*radius,angle,radius};
+}
+function armFrame(domain,t){
+  const p=armPoint(domain,t),q=armPoint(domain,Math.min(1.05,t+.01));
+  const tx=q.x-p.x,ty=q.y-p.y,len=Math.hypot(tx,ty)||1;
+  return {...p,tx:tx/len,ty:ty/len,nx:-ty/len,ny:tx/len};
+}
+function gaussian(id,salt){
+  const u=Math.max(1e-6,hashFraction(id,salt+'u')),v=hashFraction(id,salt+'v');
+  return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v);
+}
+
 function entityLayout(entity,indexWithinCluster,totalWithinCluster,clusterLayout){
-  const phase=hashFraction(entity.id,'entity-angle')*Math.PI*2;
-  const ordinal=(indexWithinCluster+1)/(Math.max(1,totalWithinCluster)+1);
-  const radius=20+ordinal*38+hashFraction(entity.id,'entity-radius')*12;
-  const angle=phase+(indexWithinCluster/Math.max(1,totalWithinCluster))*Math.PI*1.2;
-  const z=(hashFraction(entity.id,'entity-z')-.5)*24;
+  let point;
+  if(clusterLayout.arm){
+    // Dust lane: trail along the arm around the segment, thin across it.
+    const span=clusterLayout.arm.span;
+    const along=clusterLayout.arm.t+(hashFraction(entity.id,'dust-along')-.5)*span;
+    const frame=armFrame(clusterLayout.arm.domain,Math.max(0,along));
+    const width=(ARMS[clusterLayout.arm.domain]||ARMS.ENGINEERING).width*(1+along*.8);
+    const across=gaussian(entity.id,'dust-across')*width*.45;
+    point={x:frame.x+frame.nx*across,y:frame.y+frame.ny*across,z:gaussian(entity.id,'dust-z')*4};
+  }else{
+    // Bulge and bar: dense core stretched along the bar axis.
+    const r=Math.abs(gaussian(entity.id,'bulge-r'))*18;
+    const a=hashFraction(entity.id,'bulge-a')*Math.PI*2;
+    point={x:Math.cos(a)*r*1.9,y:Math.sin(a)*r*.7,z:gaussian(entity.id,'bulge-z')*6};
+  }
   return {
-    x:round(clusterLayout.x+Math.cos(angle)*radius),
-    y:round(clusterLayout.y+Math.sin(angle)*radius*.62),
-    z:round(clusterLayout.z+z),
+    x:round(point.x),
+    y:round(point.y),
+    z:round(point.z),
     cluster_id:entity.cluster_id,
     lod:entity.importance>=.8?'MEDIUM':'LOCAL',
     importance:entity.importance,
@@ -111,16 +151,14 @@ function entityLayout(entity,indexWithinCluster,totalWithinCluster,clusterLayout
 function clusterLayout(cluster,indexWithinDomain,totalWithinDomain){
   const domain=cluster.domain;
   if(domain==='NEXO'){
-    const angle=hashFraction(cluster.id,'cluster-nexo')*Math.PI*2;
-    const radius=92+indexWithinDomain*6;
-    return {x:round(Math.cos(angle)*radius),y:round(Math.sin(angle)*radius*.62),z:round((hashFraction(cluster.id,'z')-.5)*34),sector:'NEXO',lod:'MEDIUM'};
+    // NEXO stations sit on the bar.
+    const t=totalWithinDomain<=1?0:(indexWithinDomain/(totalWithinDomain-1))*2-1;
+    return {x:round(t*BAR_HALF*.9),y:round((hashFraction(cluster.id,'bar-y')-.5)*10),z:round((hashFraction(cluster.id,'z')-.5)*6),sector:'NEXO',lod:'MEDIUM'};
   }
-  const center=DOMAIN_ANGLE[domain]??0;
-  const spread=.92;
-  const t=totalWithinDomain<=1?0:(indexWithinDomain/(totalWithinDomain-1)-.5);
-  const angle=center+t*spread+(hashFraction(cluster.id,'cluster-jitter')-.5)*.12;
-  const radius=138+indexWithinDomain*18+hashFraction(cluster.id,'cluster-radius')*20;
-  return {x:round(Math.cos(angle)*radius),y:round(Math.sin(angle)*radius*.68),z:round((hashFraction(cluster.id,'z')-.5)*54),sector:domain,lod:'MEDIUM'};
+  const span=1/Math.max(1,totalWithinDomain);
+  const t=span*(indexWithinDomain+.5);
+  const p=armPoint(domain,t);
+  return {x:round(p.x),y:round(p.y),z:0,sector:domain,lod:'MEDIUM',arm:{domain,t:round(t),span:round(span*1.1)}};
 }
 
 function round(value){return Math.round(value*1000)/1000;}
@@ -188,8 +226,8 @@ function domainDefinitions(){
     title:id,
     canonical:id!=='NEXO',
     layout:id==='NEXO'?{x:0,y:0,z:0,sector:'CORE',lod:'MACRO'}:{
-      x:round(Math.cos(DOMAIN_ANGLE[id])*88),
-      y:round(Math.sin(DOMAIN_ANGLE[id])*88*.68),
+      x:round(armPoint(id,.12).x),
+      y:round(armPoint(id,.12).y),
       z:0,sector:id,lod:'MACRO',
     },
   }));
@@ -291,6 +329,7 @@ export function compileGalaxySnapshot({projection,manifestFile=null,interdomain=
     const group=membersByCluster.get(entity.cluster_id);
     entity.layout=entityLayout(entity,group.indexOf(entity),group.length,clusterById.get(entity.cluster_id).layout);
   }
+  for(const cluster of clusters)delete cluster.layout.arm;
 
   const relations=[];
   for(const cluster of clusters){
