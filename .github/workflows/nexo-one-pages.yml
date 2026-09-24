@@ -351,6 +351,7 @@ jobs:
           VITE_GALAXY_ENDPOINT: ./galaxy/latest.json
           VITE_NEXO_AUTH_BRIDGE_URL: ${{ vars.VITE_NEXO_AUTH_BRIDGE_URL }}
           VITE_NEXO_SYNC_ENDPOINT: https://nexo-one-two.vercel.app/api/projection-sync
+          VITE_NEXO_FORCE_SYNC_URL: ${{ github.server_url }}/${{ github.repository }}/actions/workflows/nexo-one-pages.yml
           VITE_PUBLIC_NEXO_BASE: https://bydenoso.github.io/Pantheon/
         run: |
           set -euo pipefail
