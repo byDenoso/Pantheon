@@ -2,6 +2,9 @@ import {useEffect,useState,type FormEvent,type RefObject} from 'react';
 import type {SyncStatus} from '../data/useSystem.ts';
 import type {ViewId} from '../app/navigation.ts';
 
+// Disparo manual do build do Pages (workflow_dispatch), injetado pelo workflow no build.
+const FORCE_SYNC_URL=String(import.meta.env.VITE_NEXO_FORCE_SYNC_URL||'');
+
 type ProductMode='inicio'|'ciencia'|'operacao'|'prova'|'sistema'|'mapa'|'pessoal'|'galaxia';
 const PATHS:Record<string,string>={
   inicio:'M2 8 8 2l6 6v6H9v-4H7v4H2z', ciencia:'M8 2v4m0 0a4 4 0 1 0 0 8 4 4 0 0 0 0-8m0 0 3-3',
@@ -12,11 +15,11 @@ const PATHS:Record<string,string>={
 export function ProductIcon({name,size=16}:{name:string;size?:number}){return <svg aria-hidden="true" width={size} height={size} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d={PATHS[name]||PATHS.cockpit}/></svg>}
 
 export function InstrumentHeader({
-  mode,view,theme,syncStatus,readAt,fingerprint,command,commandRef,onCommandChange,onCommandSubmit,onThemeToggle,onSync,onNavigate,onAccountClick,privateSession,syncMessage,
+  mode,view,theme,syncStatus,readAt,fingerprint,command,commandRef,onCommandChange,onCommandSubmit,onThemeToggle,onSync,onNavigate,onAccountClick,privateSession,syncMessage,watching,onForceSync,
 }:{
   mode:ProductMode;view:ViewId;theme:string;syncStatus:SyncStatus;readAt:string|null;fingerprint:string;command:string;
   commandRef:RefObject<HTMLInputElement|null>;onCommandChange:(value:string)=>void;onCommandSubmit:(event:FormEvent)=>void;
-  onThemeToggle:()=>void;onSync:()=>void;onNavigate:(mode:ProductMode)=>void;onAccountClick?:()=>void;privateSession?:boolean;syncMessage?:string;
+  onThemeToggle:()=>void;onSync:()=>void;onNavigate:(mode:ProductMode)=>void;onAccountClick?:()=>void;privateSession?:boolean;syncMessage?:string;watching?:boolean;onForceSync?:()=>void;
 }){
   const freshness=readAt?formatAge(readAt):'sem leitura';
   const modes:Array<[ProductMode,string]>=[['inicio','Início'],['galaxia','Galáxia'],['ciencia','Ciência'],['operacao','Operação'],['prova','Prova'],['sistema','Sistema'],['mapa','Mapa'],['pessoal','Pessoal']];
@@ -26,10 +29,11 @@ export function InstrumentHeader({
   useEffect(()=>{
     if(!syncMessage){setToast('');return;}
     setToast(syncMessage);
-    if(busy)return;
-    const timer=window.setTimeout(()=>setToast(''),6000);
+    if(busy||watching)return;
+    const timer=window.setTimeout(()=>setToast(''),12000);
     return()=>window.clearTimeout(timer);
-  },[syncMessage,busy]);
+  },[syncMessage,busy,watching]);
+  const canForce=Boolean(onForceSync&&FORCE_SYNC_URL)&&!busy&&!watching&&(syncStatus==='UNCHANGED'||syncStatus==='FAILED');
   return <header className="instrument-header">
     <a href="#/cockpit/comando" className="instrument-brand" onClick={e=>{e.preventDefault();onNavigate('inicio')}} aria-label="NEXO ONE — Início">
       <span className="instrument-mark">N</span><strong>NEXO <em>ONE</em></strong>
@@ -53,7 +57,10 @@ export function InstrumentHeader({
     </button>
     <button className="instrument-theme" type="button" onClick={onThemeToggle} aria-label={theme==='dark'?'Ativar tema claro':'Ativar tema escuro'} title="Alternar tema">{theme==='dark'?'☼':'☾'}</button>
     {toast&&<div className={`instrument-sync-toast tone-${syncStatus.toLowerCase()}`} role="status" aria-live="polite" onClick={()=>setToast('')}>
-      <span className={busy?'spinning':''} aria-hidden="true">{busy?'↻':syncStatus==='FAILED'?'!':'✓'}</span>{toast}
+      <span className={busy||watching?'spinning':''} aria-hidden="true">{busy||watching?'↻':syncStatus==='FAILED'?'!':'✓'}</span>
+      <em>{toast}</em>
+      {canForce&&<a className="instrument-sync-force" href={FORCE_SYNC_URL} target="_blank" rel="noopener noreferrer"
+        onClick={event=>{event.stopPropagation();onForceSync?.();}}>Forçar pelo GitHub ↗</a>}
     </div>}
     {onAccountClick&&<button className="instrument-account" type="button" onClick={onAccountClick} aria-label="Abrir conta e sessão">{privateSession?'P':'D'}</button>}
   </header>;

@@ -26,6 +26,9 @@ export interface SystemStore {
   sync: () => void;
   /** Revalida somente a origem atualmente publicada; não dispara pipeline. */
   reload: () => void;
+  /** Após um disparo manual no GitHub, relê a projeção até ela mudar. */
+  watchForPublication: () => void;
+  watching: boolean;
 }
 
 const messageFor = (error: unknown): { load: LoadState; message: string } => {
@@ -44,6 +47,9 @@ export function useSystem(initialScenario = DEFAULT_SCENARIO_ID): SystemStore {
   const [nonce, setNonce] = useState(0);
   const [syncStatus, setSyncStatus] = useState<SyncStatus>('IDLE');
   const [syncMessage, setSyncMessage] = useState('');
+  const [watching, setWatching] = useState(false);
+  const watchingRef = useRef(false);
+  watchingRef.current = watching;
   const [lastSuccessfulReadAt, setLastSuccessfulReadAt] = useState<string | null>(null);
   const controller = useRef<AbortController | null>(null);
   const syncController = useRef<AbortController | null>(null);
@@ -145,6 +151,31 @@ export function useSystem(initialScenario = DEFAULT_SCENARIO_ID): SystemStore {
     return () => ctrl.abort();
   }, [scenarioId, nonce]);
 
+  const watchTimer = useRef<number | null>(null);
+  const syncRef = useRef<() => void>(() => {});
+  // Sem bridge na Vercel, o disparo real é o "Run workflow" do GitHub. Depois dele,
+  // relemos a projeção publicada a cada 40 s até o fingerprint mudar (máx. 15 min).
+  const watchForPublication = useCallback(() => {
+    if (watchTimer.current) window.clearInterval(watchTimer.current);
+    const startedAt = Date.now();
+    const baseline = stateRef.current?.bus.fingerprint;
+    setWatching(true);
+    setSyncMessage('Aguardando o GitHub publicar a nova projeção…');
+    watchTimer.current = window.setInterval(() => {
+      const current = stateRef.current?.bus.fingerprint;
+      const elapsed = Date.now() - startedAt;
+      if ((baseline && current && current !== baseline) || elapsed > 15 * 60_000) {
+        if (watchTimer.current) window.clearInterval(watchTimer.current);
+        watchTimer.current = null;
+        setWatching(false);
+        if (elapsed > 15 * 60_000 && current === baseline) setSyncMessage('Publicação não detectada em 15 min · confira o workflow no GitHub');
+        return;
+      }
+      syncRef.current();
+    }, 40_000);
+  }, []);
+  useEffect(() => () => { if (watchTimer.current) window.clearInterval(watchTimer.current); }, []);
+
   const sync = useCallback(() => {
     const previous = stateRef.current;
     if (!previous || activeSource.kind !== 'remote') {
@@ -184,7 +215,9 @@ export function useSystem(initialScenario = DEFAULT_SCENARIO_ID): SystemStore {
             ? 'Origem temporariamente indisponível · cache validado recente preservado'
             : changedAtOrigin
               ? 'Nova projeção pública detectada · ' + receipt.active_work + ' WORK · snapshot Pages validado'
-              : 'Sem alterações · projeção pública validada diretamente');
+              : watchingRef.current
+                ? 'Aguardando o GitHub publicar a nova projeção… · verificado ' + new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+                : 'Sem alterações · projeção pública validada diretamente');
           return;
         }
 
@@ -227,8 +260,10 @@ export function useSystem(initialScenario = DEFAULT_SCENARIO_ID): SystemStore {
       }
     })();
   }, [reload, scenarioId]);
+  syncRef.current = sync;
 
   return {
+    watchForPublication, watching,
     state, load, error,
     syncing: syncStatus === 'SYNCING',
     syncStatus,
