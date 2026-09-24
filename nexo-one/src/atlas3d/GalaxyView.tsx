@@ -3,7 +3,7 @@
 // from Tower semantics (galaxy-morphology.mjs) and publishes it with shape
 // metrics in the snapshot. This view renders it and never reinterprets it.
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { EventGlyph, GalaxyThree3D, type GalaxyEvent, type GalaxyMorphology } from '../components/GalaxyThree3D.tsx';
+import { EVENT_TAG, EventGlyph, GalaxyThree3D, type GalaxyEvent, type GalaxyMorphology } from '../components/GalaxyThree3D.tsx';
 import type { GraphNode, GraphNodeType } from '../contracts/system.ts';
 import type { PlacedNode3D } from '../viewmodels/graph3d.ts';
 
@@ -219,7 +219,7 @@ export function GalaxyView({ selectedId }: { selectedId: string | null; onSelect
               return (
                 <li key={item.kind} data-kind={item.kind} className={on ? 'on' : 'off'}>
                   <button type="button" className="ev-go" onClick={() => focusKind(item.kind)} title="Ir até o evento">
-                    <span className="ev-glyph"><EventGlyph kind={item.kind} /></span>{item.label} <b>{eventCounts[item.kind]}</b>
+                    <span className="ev-glyph"><EventGlyph kind={item.kind} /></span><span className="ev-name">{item.label}</span><span className="ev-short">{EVENT_TAG[item.kind]}</span> <b>{eventCounts[item.kind]}</b>
                   </button>
                   <button type="button" className="ev-eye" aria-pressed={on} onClick={() => { toggleEvent(item.kind); if (on && focus && rawEvents.find(e => e.id === focus.id)?.kind === item.kind) setFocus(null); }} title={on ? 'Ocultar' : 'Mostrar'}>
                     {on ? 'ver' : 'oculto'}

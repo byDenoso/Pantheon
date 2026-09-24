@@ -45,6 +45,8 @@ const TAU = Math.PI * 2;
 const DEFAULT_CAMERA = new Vector3(0, 16, 286);
 const MACRO_CAMERA = new Vector3(0, 12, 360);
 const MOBILE_MACRO_CAMERA = new Vector3(0, 2, 236);
+// Narrow portrait screens: closer, so the disk fills the width.
+const MOBILE_CAMERA = new Vector3(0, 10, 236);
 const DEFAULT_TARGET = new Vector3(0, 0, 0);
 
 function paletteForTheme(theme: 'dark' | 'light') {
@@ -793,7 +795,7 @@ export const GalaxyThree3D = forwardRef<CanvasGraph25DHandle, Props>(function Ga
     const camera = cameraRef.current;
     const controls = controlsRef.current;
     if (!camera || !controls) return;
-    const homeCamera = isMacro ? (isMobile ? MOBILE_MACRO_CAMERA : MACRO_CAMERA) : DEFAULT_CAMERA;
+    const homeCamera = isMacro ? (isMobile ? MOBILE_MACRO_CAMERA : MACRO_CAMERA) : (isMobile ? MOBILE_CAMERA : DEFAULT_CAMERA);
     tweenRef.current = {
       startAt: performance.now(),
       duration: reducedMotion ? 0 : 760,
@@ -864,7 +866,7 @@ export const GalaxyThree3D = forwardRef<CanvasGraph25DHandle, Props>(function Ga
       sceneRef.current = scene;
 
       const camera = new PerspectiveCamera(isMobile ? 35 : 40, size.width / size.height, 0.1, 1200);
-      camera.position.copy(isMacro ? (isMobile ? MOBILE_MACRO_CAMERA : MACRO_CAMERA) : DEFAULT_CAMERA);
+      camera.position.copy(isMacro ? (isMobile ? MOBILE_MACRO_CAMERA : MACRO_CAMERA) : (isMobile ? MOBILE_CAMERA : DEFAULT_CAMERA));
       cameraRef.current = camera;
 
       const controls = new OrbitControls(camera, renderer.domElement);
@@ -895,7 +897,7 @@ export const GalaxyThree3D = forwardRef<CanvasGraph25DHandle, Props>(function Ga
           uPixelRatio: { value: renderer.getPixelRatio() },
           uColorA: { value: palette.accent },
           uColorB: { value: palette.strong },
-          uOpacity: { value: spiral ? 0.95 * glow : isMacro ? (themeName === 'light' ? 0.20 : 0.24) : (themeName === 'light' ? 0.38 : 0.52) },
+          uOpacity: { value: spiral ? (isMobile ? 1.6 : 0.95) * glow : isMacro ? (themeName === 'light' ? 0.20 : 0.24) : (themeName === 'light' ? 0.38 : 0.52) },
         },
         vertexShader: spiral ? spiralVertexShader : galaxyVertexShader,
         fragmentShader: spiral ? spiralFragmentShader : galaxyFragmentShader,
@@ -1170,6 +1172,14 @@ export const GalaxyThree3D = forwardRef<CanvasGraph25DHandle, Props>(function Ga
       return;
     }
   }, [ariaLabel, edges, events, failed, glow, isMacro, isMobile, morphology, nodes, onFailure, onSelect, reducedMotion, selectedId, size.height, size.width, themeName, visibleLabels]);
+
+  // Phones: the event sheet covers the lower half, so lift the framing while it is open.
+  useEffect(() => {
+    const camera = cameraRef.current;
+    if (!camera) return;
+    if (isMobile && focusEvent) camera.setViewOffset(size.width, size.height, 0, size.height * 0.26, size.width, size.height);
+    else camera.clearViewOffset();
+  }, [focusEvent, isMobile, size.width, size.height]);
 
   useEffect(() => {
     if (!focusEvent) return;
