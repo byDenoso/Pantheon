@@ -33,8 +33,18 @@ const EVENT_LEGEND = [
   { kind: 'FLARE', label: 'Flare · novidade' },
 ] as const;
 
+const EVENT_INFO: Record<GalaxyEvent['kind'], { title: string; meaning: string; action: string }> = {
+  SUPERNOVA: { title: 'Supernova', meaning: 'Item com human gate ou importância ≥ 0.9: a Tower está esperando uma decisão sua.', action: 'Resolva o gate ou delegue. Enquanto isso, o item não avança.' },
+  NOVA: { title: 'Nova', meaning: 'Item que pede sua atenção, com urgência menor que uma supernova.', action: 'Revise quando puder. Não bloqueia o fluxo agora.' },
+  AGN: { title: 'AGN · núcleo ativo', meaning: 'Campanha científica rodando no domínio: testes em RUNNING, IN_PROGRESS ou CHECKPOINTED.', action: 'Nada a fazer. Acompanhe os resultados à medida que saem.' },
+  HII: { title: 'Região H II', meaning: 'Subdomínio com 3 ou mais testes novos em READY: área de formação de hipóteses.', action: 'Candidato a próxima campanha: priorize ou agrupe os testes.' },
+  REMNANT: { title: 'Remanescente', meaning: 'Item concluído desde o último snapshot (DONE, VERIFIED, REJECTED…).', action: 'Confira se os efeitos e artefatos já foram absorvidos.' },
+  FLARE: { title: 'Flare', meaning: 'Item adicionado desde o último snapshot.', action: 'Classifique e priorize se ainda não foi feito.' },
+};
+const RUNNING = new Set(['RUNNING', 'IN_PROGRESS', 'CHECKPOINTED', 'EXECUTING', 'CLAIMED']);
+
 interface RawEntity {
-  id: string; canonical_id?: string; kind?: string; title?: string; status?: string | null;
+  id: string; canonical_id?: string; kind?: string; title?: string; status?: string | null; cluster_id?: string;
   visual_domain?: string; layout?: { x?: number; y?: number; z?: number };
 }
 
@@ -136,6 +146,14 @@ export function GalaxyView({ selectedId, onSelect }: { selectedId: string | null
   const events = useMemo(() => rawEvents.filter(event => !hiddenEvents.includes(event.kind)).map(event => ({ ...event, x: event.x * SCALE, y: event.y * SCALE, z: (event.z || 0) * SCALE })), [rawEvents, hiddenEvents]);
   const eventCounts = useMemo(() => rawEvents.reduce<Record<string, number>>((acc, e) => { acc[e.kind] = (acc[e.kind] || 0) + 1; return acc; }, {}), [rawEvents]);
   const metrics = morphology?.metrics;
+  const focused = focus ? rawEvents.find(e => e.id === focus.id) ?? null : null;
+  const related = useMemo(() => {
+    if (!focused || !entities) return [];
+    const list = entities ?? [];
+    if (focused.kind === 'AGN') return list.filter(e => e.kind === 'TEST' && e.visual_domain === focused.domain && RUNNING.has(String(e.status || '').toUpperCase()));
+    if (focused.kind === 'HII') { const sub = focused.id.replace(/^hii:/, ''); return list.filter(e => e.kind === 'TEST' && e.cluster_id === sub && String(e.status || '').toUpperCase() === 'READY'); }
+    return list.filter(e => e.id === focused.entity || e.canonical_id === focused.entity);
+  }, [focused, entities]);
   const delta = morphology?.metrics_delta ?? null;
 
   if (failed) return <div className="nexo-graph-fallback" role="status">Galáxia indisponível neste instante. Use 2D ou 3D.</div>;
@@ -155,6 +173,34 @@ export function GalaxyView({ selectedId, onSelect }: { selectedId: string | null
         focusEvent={focus}
         onEventSelect={handleEventSelect}
       />
+      {focused && (
+        <aside className="galaxy-event-panel" data-kind={focused.kind} aria-label="Detalhes do evento">
+          <header>
+            <span className="ev-glyph"><EventGlyph kind={focused.kind} /></span>
+            <div><small>{focused.domain || 'NEXO'}</small><h2>{EVENT_INFO[focused.kind].title}</h2></div>
+            <button type="button" onClick={() => setFocus(null)} aria-label="Fechar">×</button>
+          </header>
+          <p className="ev-label">{focused.label}</p>
+          {focused.reason && <p className="ev-reason"><b>Motivo</b>{focused.reason}</p>}
+          <dl>
+            <div><dt>O que é</dt><dd>{EVENT_INFO[focused.kind].meaning}</dd></div>
+            <div><dt>O que fazer</dt><dd>{EVENT_INFO[focused.kind].action}</dd></div>
+            <div><dt>Intensidade</dt><dd><meter min={0} max={1} value={focused.intensity} /> {Math.round(focused.intensity * 100)}%</dd></div>
+          </dl>
+          {related.length > 0 && (
+            <section>
+              <h3>{related.length === 1 ? 'Item' : `Itens (${related.length})`}</h3>
+              <ul>
+                {related.slice(0, 30).map(e => (
+                  <li key={e.id}><button type="button" onClick={() => onSelect(e.canonical_id || e.id)}>
+                    <span>{e.title || e.canonical_id || e.id}</span>{e.status && <small>{e.status}</small>}
+                  </button></li>
+                ))}
+              </ul>
+            </section>
+          )}
+        </aside>
+      )}
       <div className="galaxy-hud">
         <div className="galaxy-glow" role="group" aria-label="Intensidade do brilho">
           <span>Brilho</span>

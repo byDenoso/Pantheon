@@ -155,6 +155,7 @@ export type GalaxyEvent = {
   label: string;
   domain?: string;
   entity?: string;
+  reason?: string;
   x: number; y: number; z: number;
   intensity: number;
 };
@@ -335,12 +336,14 @@ function spiralPoint(morph: GalaxyMorphology, arm: string, t: number) {
   return { x: p.x * G_SCALE, y: p.y * G_SCALE };
 }
 
-const STAR_WHITE = new Color('#dfe9ff');
-const STAR_BLUE = new Color('#9cc3ff');
-const STAR_WARM = new Color('#ffd7a8');
-const STAR_CORE = new Color('#fff1d6');
-const HII_PINK = new Color('#ff8fb0');
-const DUST_RED = new Color('#c9785a');
+// Muted, analogous star palette (slate · periwinkle · lavender · ivory): the
+// disk blends into one calm body so the saturated event glyphs carry the contrast.
+const STAR_WHITE = new Color('#c9d2e3');
+const STAR_BLUE = new Color('#8e9fc4');
+const STAR_WARM = new Color('#d6c8b0');
+const STAR_CORE = new Color('#e6dcc8');
+const HII_PINK = new Color('#a898c4');
+const DUST_RED = new Color('#8c8196');
 
 function buildSpiralGalaxy(count: number, morph: GalaxyMorphology): BufferGeometry {
   const positions = new Float32Array(count * 3);
@@ -378,7 +381,7 @@ function buildSpiralGalaxy(count: number, morph: GalaxyMorphology): BufferGeomet
       }
       // Soft haze makes the bar read as one glowing body, like NGC 1300.
       size = haze ? 5 + r() * 5 : 0.5 + r() * 0.9; light = haze ? 0.02 + r() * 0.025 : 0.4 + r() * 0.4;
-      tmp.copy(STAR_CORE).lerp(STAR_WARM, r() * 0.5).lerp(coreTint, 0.35);
+      tmp.copy(STAR_CORE).lerp(STAR_WARM, r() * 0.5).lerp(coreTint, 0.12);
     } else if (kind < 0.80) {
       // Arm stars, star-forming knots and dust lanes.
       let pick = r() * totalMass; let arm = arms[0] ?? 'SCIENCE';
@@ -405,7 +408,7 @@ function buildSpiralGalaxy(count: number, morph: GalaxyMorphology): BufferGeomet
       // Natural star mix with only a hint of the domain's tone: arms stay
       // distinguishable without the galaxy turning into a colour gradient.
       tmp.copy(c < 0.66 ? STAR_WHITE : c < 0.9 ? STAR_BLUE : c < 0.96 ? HII_PINK : DUST_RED).lerp(tints[arm], 0.14);
-      if (knot && r() < 0.5) tmp.copy(HII_PINK).lerp(STAR_WHITE, 0.35);
+      if (knot && r() < 0.5) tmp.copy(HII_PINK).lerp(STAR_WHITE, 0.45);
     } else if (kind < 0.95) {
       // Inter-arm disk: faint exponential glow.
       const rad = -Math.log(Math.max(1e-6, r())) * 17;
@@ -463,7 +466,7 @@ void main() {
   float spikeY = max(0.0, 1.0 - abs(uv.x) * 30.0) * smoothstep(0.5, 0.0, abs(uv.y));
   float spike = vBrightness > 0.85 ? spikeX + spikeY : 0.0;
   float alpha = (glow + spike * 0.35) * (0.25 + vBrightness * 0.75) * uOpacity;
-  gl_FragColor = vec4(vColor * (0.8 + vBrightness * 0.6), alpha);
+  gl_FragColor = vec4(vColor * (0.7 + vBrightness * 0.45), alpha);
 }
 `;
 
@@ -795,7 +798,7 @@ export const GalaxyThree3D = forwardRef<CanvasGraph25DHandle, Props>(function Ga
           uPixelRatio: { value: renderer.getPixelRatio() },
           uColorA: { value: palette.accent },
           uColorB: { value: palette.strong },
-          uOpacity: { value: spiral ? 1.25 * glow : isMacro ? (themeName === 'light' ? 0.20 : 0.24) : (themeName === 'light' ? 0.38 : 0.52) },
+          uOpacity: { value: spiral ? 0.95 * glow : isMacro ? (themeName === 'light' ? 0.20 : 0.24) : (themeName === 'light' ? 0.38 : 0.52) },
         },
         vertexShader: spiral ? spiralVertexShader : galaxyVertexShader,
         fragmentShader: spiral ? spiralFragmentShader : galaxyFragmentShader,
@@ -892,10 +895,10 @@ export const GalaxyThree3D = forwardRef<CanvasGraph25DHandle, Props>(function Ga
       if (!isMobile && themeName === 'dark') {
         composer = new EffectComposer(renderer);
         composer.addPass(new RenderPass(scene, camera));
-        const bloom = new UnrealBloomPass(new Vector2(size.width, size.height), 0.9 * glow, 0.55, 0.12);
-        bloom.threshold = 0.12;
-        bloom.strength = 0.9 * glow;
-        bloom.radius = 0.55;
+        const bloom = new UnrealBloomPass(new Vector2(size.width, size.height), 0.55 * glow, 0.5, 0.2);
+        bloom.threshold = 0.2;
+        bloom.strength = 0.55 * glow;
+        bloom.radius = 0.5;
         composer.addPass(bloom);
       }
 
