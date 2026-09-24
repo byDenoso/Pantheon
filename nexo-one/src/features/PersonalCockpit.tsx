@@ -39,7 +39,7 @@ export function PersonalCockpit(
             : error || 'Leitura indisponível: nenhuma fonte respondeu nesta leitura.'}
           {!authenticated && <small className="plane-public-note">Sessão pública — fontes privadas aparecem como protegidas. Abra o cockpit privado pelo avatar D.</small>}
         </span>
-        <button className="text-button" onClick={() => refresh(true)} disabled={loading}>
+        <button className="text-button" onClick={() => refresh()} disabled={loading}>
           {loading ? 'Lendo fontes…' : 'Sincronizar agora ↻'}
         </button>
       </div>
