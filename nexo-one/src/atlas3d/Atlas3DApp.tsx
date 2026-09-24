@@ -16,7 +16,7 @@ import { GraphViewSwitch, NexoGraph } from '../components/NexoGraph.tsx';
 import { ATLAS_LENSES, atlasModelForLens, normalizeAtlasLens, type AtlasLens } from './atlasLenses.ts';
 import { domainHex } from '../viewmodels/domainPalette.ts';
 
-type ViewMode = '2d' | '3d';
+type ViewMode = '2d' | '3d' | 'galaxy';
 type AtlasTheme = 'dark' | 'light';
 
 const THEME_STORAGE_KEY = 'nexo.atlas.theme.v1';
@@ -246,8 +246,8 @@ export function Atlas3DContent({system,themeOverride}:{system:SystemStore;themeO
   const [viewMode, setViewMode] = useState<ViewMode>(() => {
     if(typeof window==='undefined')return'2d';
     const query=atlasRouteParams().get('view')||atlasRouteParams().get('mode');
-    if(query==='2d'||query==='3d')return query;
-    return '2d';
+    if(query==='2d'||query==='3d'||query==='galaxy')return query;
+    return 'galaxy';
   });
   const [showBeams, setShowBeams] = useState(true);
   const [show3dHint, setShow3dHint] = useState(false);
