@@ -721,6 +721,9 @@ export const GalaxyThree3D = forwardRef<CanvasGraph25DHandle, Props>(function Ga
   const nodePointsRef = useRef<Points | null>(null);
   const labelsRef = useRef(new Map<string, HTMLSpanElement>());
   const eventsRef = useRef(new Map<string, HTMLSpanElement>());
+  // Events are read per frame from a ref: toggling a kind must not rebuild the WebGL scene.
+  const eventListRef = useRef(events);
+  eventListRef.current = events;
   const tweenRef = useRef<Tween | null>(null);
   // Disk angle survives scene rebuilds, so markers and camera focus stay in sync.
   const diskAngleRef = useRef(0);
@@ -1068,13 +1071,14 @@ export const GalaxyThree3D = forwardRef<CanvasGraph25DHandle, Props>(function Ga
       renderer.domElement.addEventListener('pointercancel', onPointerCancel);
       renderer.domElement.addEventListener('dblclick', onDoubleClick);
 
+      const scratch = new Vector3();
       const updateLabels = () => {
         const width = size.width;
         const height = size.height;
         for (const node of visibleLabels) {
           const label = labelsRef.current.get(node.id);
           if (!label) continue;
-          const projected = new Vector3(node.x, node.y, node.z).applyAxisAngle(Z_AXIS, disk.rotation.z).project(camera);
+          const projected = scratch.set(node.x, node.y, node.z).applyAxisAngle(Z_AXIS, disk.rotation.z).project(camera);
           const visible = projected.z > -1 && projected.z < 1;
           const x = (projected.x * 0.5 + 0.5) * width;
           const y = (-projected.y * 0.5 + 0.5) * height;
@@ -1083,10 +1087,10 @@ export const GalaxyThree3D = forwardRef<CanvasGraph25DHandle, Props>(function Ga
         }
         // Tags that would collide stack downwards instead of overlapping.
         const placed: Array<{ x: number; y: number }> = [];
-        for (const event of events) {
+        for (const event of eventListRef.current) {
           const marker = eventsRef.current.get(event.id);
           if (!marker) continue;
-          const projected = new Vector3(event.x, event.y, event.z).applyAxisAngle(Z_AXIS, disk.rotation.z).project(camera);
+          const projected = scratch.set(event.x, event.y, event.z).applyAxisAngle(Z_AXIS, disk.rotation.z).project(camera);
           const visible = projected.z > -1 && projected.z < 1;
           const x = (projected.x * 0.5 + 0.5) * width;
           const y = (-projected.y * 0.5 + 0.5) * height;
@@ -1171,7 +1175,7 @@ export const GalaxyThree3D = forwardRef<CanvasGraph25DHandle, Props>(function Ga
       onFailure?.();
       return;
     }
-  }, [ariaLabel, edges, events, failed, glow, isMacro, isMobile, morphology, nodes, onFailure, onSelect, reducedMotion, selectedId, size.height, size.width, themeName, visibleLabels]);
+  }, [ariaLabel, edges, failed, glow, isMacro, isMobile, morphology, nodes, onFailure, onSelect, reducedMotion, selectedId, size.height, size.width, themeName, visibleLabels]);
 
   // Phones: the event sheet covers the lower half, so lift the framing while it is open.
   useEffect(() => {
