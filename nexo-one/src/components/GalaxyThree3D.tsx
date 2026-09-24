@@ -532,9 +532,12 @@ export const GalaxyThree3D = forwardRef<CanvasGraph25DHandle, Props>(function Ga
   const pointerDownRef = useRef<{ x: number; y: number } | null>(null);
   const [size, setSize] = useState({ width: 1, height: 1 });
   const [failed, setFailed] = useState(false);
-  const [themeName, setThemeName] = useState<'dark' | 'light'>(() =>
+  const [pageTheme, setThemeName] = useState<'dark' | 'light'>(() =>
     typeof document !== 'undefined' && document.documentElement.dataset.theme === 'light' ? 'light' : 'dark',
   );
+  // The galaxy is a night sky in both site themes (like the Início hero): additive
+  // starlight is invisible on a white page, so the spiral always renders dark.
+  const themeName: 'dark' | 'light' = morphology ? 'dark' : pageTheme;
 
   const isMacro = viewMode === 'macro';
   const isMobile = size.width < 760;
