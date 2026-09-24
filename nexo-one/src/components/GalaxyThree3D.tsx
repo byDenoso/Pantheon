@@ -336,6 +336,20 @@ function spiralPoint(morph: GalaxyMorphology, arm: string, t: number) {
   return { x: p.x * G_SCALE, y: p.y * G_SCALE };
 }
 
+/** Main arm whose inner stretch passes closest to (x, y); drives the core -> arm colour blend. */
+function nearestArm(morph: GalaxyMorphology, x: number, y: number): string | null {
+  let best: string | null = null; let bestD = Infinity;
+  for (const arm of Object.keys(morph.arms)) {
+    if (morph.arms[arm]!.parent) continue;
+    for (let t = 0; t <= 0.35; t += 0.035) {
+      const p = spiralPoint(morph, arm, t);
+      const d = (p.x - x) ** 2 + (p.y - y) ** 2;
+      if (d < bestD) { bestD = d; best = arm; }
+    }
+  }
+  return best;
+}
+
 // Muted, analogous star palette (slate · periwinkle · lavender · ivory): the
 // disk blends into one calm body so the saturated event glyphs carry the contrast.
 const STAR_WHITE = new Color('#c9d2e3');
@@ -360,6 +374,8 @@ function buildSpiralGalaxy(count: number, morph: GalaxyMorphology): BufferGeomet
   const totalMass = arms.reduce((sum, key) => sum + armWeight(key), 0) || 1;
   const tints = Object.fromEntries(arms.map(key => [key, new Color(morph.arms[key].tint)]));
   const coreTint = new Color(morph.bulge.tint);
+  // Arm colour as seen at the arm root: the muted star tone leaning to the domain.
+  const armBlend = Object.fromEntries(arms.map(key => [key, STAR_WHITE.clone().lerp(tints[key]!, 0.35)]));
   const bulgeRadius = morph.bulge.radius * G_SCALE * 1.6;
   const tmp = new Color();
   for (let i = 0; i < count; i += 1) {
@@ -384,7 +400,8 @@ function buildSpiralGalaxy(count: number, morph: GalaxyMorphology): BufferGeomet
       tmp.copy(STAR_CORE).lerp(STAR_WARM, r() * 0.5).lerp(coreTint, 0.12);
       // Outer bulge cools towards the arm palette: no hard edge at the arm roots.
       const edge = Math.min(1, Math.hypot(x, y) / Math.max(1, bulgeRadius * 1.4));
-      tmp.lerp(STAR_WHITE, edge * edge * 0.55);
+      const near = nearestArm(morph, x, y);
+      tmp.lerp(near ? armBlend[near]! : STAR_WHITE, edge * edge * 0.6);
     } else if (kind < 0.80) {
       // Arm stars, star-forming knots and dust lanes.
       let pick = r() * totalMass; let arm = arms[0] ?? 'SCIENCE';
@@ -562,8 +579,10 @@ function nodeIntensity(node: PlacedNode3D, selectedId: string | null): number {
 }
 
 function buildNodeGeometry(
-  nodes: PlacedNode3D[], selectedId: string | null, theme: 'dark' | 'light',
+  nodes: PlacedNode3D[], selectedId: string | null, theme: 'dark' | 'light', morph: GalaxyMorphology | null = null,
 ): BufferGeometry {
+  const tmp = new Color();
+  const coreEdge = morph ? morph.bulge.radius * G_SCALE * 2.4 : 0;
   const positions = new Float32Array(nodes.length * 3);
   const sizes = new Float32Array(nodes.length);
   const brightness = new Float32Array(nodes.length);
@@ -580,7 +599,14 @@ function buildNodeGeometry(
       ? node.domain === selected.domain ? 0.72 : 0.34
       : 1;
     brightness[index] = nodeIntensity(node, selectedId) * focusFactor;
-    domainColor(node.domain, theme).toArray(colors, p);
+    tmp.copy(domainColor(node.domain, theme));
+    // Nucleus (NEXO) points fade from gold into the colour of the arm they drift towards.
+    if (morph && node.domain === 'NEXO' && node.type !== 'DOMAIN') {
+      const near = nearestArm(morph, node.x, node.y);
+      const f = Math.min(1, Math.max(0, Math.hypot(node.x, node.y) / Math.max(1, coreEdge)));
+      if (near) tmp.lerp(domainColor(near as PlacedNode3D['domain'], theme), f * f * (3 - 2 * f) * 0.85);
+    }
+    tmp.toArray(colors, p);
   });
 
   const geometry = new BufferGeometry();
@@ -907,7 +933,7 @@ export const GalaxyThree3D = forwardRef<CanvasGraph25DHandle, Props>(function Ga
       grid.visible = !isMobile && !spiral;
       scene.add(grid);
 
-      const nodeGeometry = buildNodeGeometry(nodes, selectedId, themeName);
+      const nodeGeometry = buildNodeGeometry(nodes, selectedId, themeName, spiral ? (morphology ?? DEFAULT_MORPHOLOGY) : null);
       const nodeMaterial = new ShaderMaterial({
         uniforms: {
           uTime: { value: 0 },
