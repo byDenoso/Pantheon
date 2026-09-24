@@ -322,7 +322,7 @@ export default function App() {
         {loginOpen && (
           <Modal title="ACESSO PRIVADO" onClose={() => { setLoginOpen(false); setPin(''); session.setError(''); }}>
             <div className="drawer-body">
-              <h2>{session.session.authenticated ? 'Sessão privada ativa.' : 'Acesso privado.'}</h2>
+              <h2>{session.session.authenticated ? 'Sessão privada ativa.' : session.runtimeAvailable===false ? 'Modo público.' : 'Acesso privado.'}</h2>
               <p className="session-runtime">Runtime: <strong>{session.runtime === 'VERCEL_NATIVE' ? 'Vercel native' : session.runtime === 'APPS_SCRIPT_BRIDGE' ? 'Apps Script bridge' : 'indisponível'}</strong></p>
               {session.session.authenticated
                 ? <div className="login-form">
@@ -334,7 +334,8 @@ export default function App() {
                   </div>
                 : session.runtimeAvailable===false
                   ? <div className="login-form">
-                      <p role="alert">Runtime privado indisponível neste host. O cockpit atual continua aberto em modo público.</p>
+                      <p>Este site é a leitura pública da Tower: tudo o que aparece aqui vem dela, é somente leitura e não precisa de login.</p>
+                      <p className="muted">Mudanças entram pela Tower (writer do Claude ou propostas do GPT no NEXO_INBOX) e o site se atualiza sozinho em poucos minutos.</p>
                       {PRIVATE_COCKPIT_URL && (
                         <button className="primary-button" type="button" onClick={openPrivateCockpit}>
                           Abrir cockpit privado em nova aba ↗
