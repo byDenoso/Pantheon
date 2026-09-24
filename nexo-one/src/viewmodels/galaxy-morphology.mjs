@@ -90,8 +90,11 @@ export function morphologyFrom({ counts, core, bridges = [] }) {
     const order = (branchesOn[arm.parent] = (branchesOn[arm.parent] ?? -1) + 1);
     arm.branch_at = round(BRANCH_ROOT + BRANCH_STEP * order);
     // The branch lengthens as its domain grows, opening a little faster than its parent.
-    arm.turns = round(0.15 + 0.45 * saturate(counts[domain].entities || 0, 90));
-    arm.pitch = round(arm.pitch + 0.45); // opens away from the parent quickly
+    // Length proportional to the domain: sqrt of its size relative to the
+    // parent domain, so a small domain is a short spur and grows with it.
+    const ratio = (counts[domain].entities || 0) / Math.max(1, counts[arm.parent]?.entities || 1);
+    arm.turns = round(arms[arm.parent].turns * Math.min(1, Math.max(0.08, 0.6 * Math.sqrt(ratio))));
+    arm.pitch = round(arm.pitch + 0.3); // opens away from the parent
   }
   return {
     version: MORPHOLOGY_VERSION,
