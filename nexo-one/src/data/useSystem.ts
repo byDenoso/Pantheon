@@ -49,6 +49,7 @@ export function useSystem(initialScenario = DEFAULT_SCENARIO_ID): SystemStore {
   const syncController = useRef<AbortController | null>(null);
   const stateRef = useRef<SystemState | null>(null);
   const forceNextRead = useRef(false);
+  const lastReadAt = useRef(0);
 
   const reload = useCallback(() => {
     forceNextRead.current = true;
@@ -67,8 +68,12 @@ export function useSystem(initialScenario = DEFAULT_SCENARIO_ID): SystemStore {
       if (document.visibilityState === 'visible' && !syncController.current) reload();
     }, 60_000);
 
+    // Returning to the tab only re-reads when the last read is stale; phones
+    // flip visibility constantly and each re-read downloads the whole state.
     const onVisibility = () => {
-      if (document.visibilityState === 'visible' && !syncController.current) reload();
+      if (document.visibilityState !== 'visible' || syncController.current) return;
+      if (Date.now() - lastReadAt.current < 60_000) return;
+      reload();
     };
     document.addEventListener('visibilitychange', onVisibility);
 
@@ -100,6 +105,7 @@ export function useSystem(initialScenario = DEFAULT_SCENARIO_ID): SystemStore {
         if (ctrl.signal.aborted || controller.current !== ctrl) return;
 
         const previousFingerprint = previous?.bus.fingerprint ?? null;
+        lastReadAt.current = Date.now();
         stateRef.current = next;
         setState(next);
         setLoad(next.global_state === 'LIVE' ? 'READY' : 'PARTIAL');

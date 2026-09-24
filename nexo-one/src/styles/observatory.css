@@ -165,9 +165,24 @@
 :root[data-theme] .fixture-strip select{height:32px}
 :root[data-theme] .world-footer{border-top:1px solid var(--obs-line);background:none;font:500 10.5px/1.4 var(--obs-mono);letter-spacing:.12em;text-transform:uppercase;color:var(--obs-dim)}
 
+/* Phone: the seven modes live in a bottom tab bar (thumb reach, icon + label,
+   nothing cut off). Content keeps clear of it, including the home indicator. */
 @media(max-width:760px){
-  :root[data-theme] .instrument-modes{top:48px;background:var(--obs-void);border-bottom:1px solid var(--obs-line)}
-  :root[data-theme] .instrument-modes button{height:38px;padding:0 2px;font-size:9px;letter-spacing:0}
+  :root[data-theme] .instrument-modes{
+    top:auto;bottom:0;height:calc(56px + env(safe-area-inset-bottom));padding:0 2px env(safe-area-inset-bottom);
+    background:color-mix(in srgb,var(--obs-void) 94%,transparent);backdrop-filter:blur(10px);
+    border-top:1px solid var(--obs-line);border-bottom:0;
+  }
+  :root[data-theme] .instrument-modes button{
+    height:56px;flex-direction:column;gap:4px;padding:0 1px;border-bottom:0;border-top:2px solid transparent;
+    font-size:9px;letter-spacing:.04em;
+  }
+  :root[data-theme] .instrument-modes button svg{display:block;width:18px;height:18px}
+  :root[data-theme] .instrument-modes button.active{border-top-color:var(--obs-sodium);color:var(--obs-bright)}
+  :root[data-theme] .instrument-modes button.active svg{color:var(--obs-sodium)}
+  :root[data-theme] .unified-shell{padding-bottom:calc(60px + env(safe-area-inset-bottom))}
+  /* backdrop-filter on the header would make it the containing block of the fixed bar. */
+  :root[data-theme] .instrument-header{backdrop-filter:none !important;background:var(--obs-void)}
 }
 
 /* ── Workspace ──────────────────────────────────────────── */

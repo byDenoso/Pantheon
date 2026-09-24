@@ -809,3 +809,11 @@
 }
 .atlas-snapshot-age.freshness-aging{border-color:rgba(121,231,255,.2);color:rgba(222,240,249,.72)}
 .atlas-snapshot-age.freshness-stale,.atlas-snapshot-age.freshness-unknown{border-style:dashed;color:rgba(222,240,249,.68)}
+
+/* Phone: the 2D/3D/Galáxia switch comes first in the swipeable filter row and
+   a soft fade on the right edge signals there is more to scroll. */
+@media (max-width: 760px) {
+  .atlas-graph-filters { scrollbar-width: none; -webkit-mask-image: linear-gradient(90deg, #000 88%, transparent); mask-image: linear-gradient(90deg, #000 88%, transparent); }
+  .atlas-graph-filters::-webkit-scrollbar { display: none; }
+  .atlas-graph-filters .nexo-graph-view-switch { order: -1; }
+}
