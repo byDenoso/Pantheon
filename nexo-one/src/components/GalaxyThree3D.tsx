@@ -264,7 +264,11 @@ function buildSpiralGalaxy(count: number, morph: GalaxyMorphology): BufferGeomet
   const brightness = new Float32Array(count);
   const colors = new Float32Array(count * 3);
   const arms = Object.keys(morph.arms);
-  const totalMass = arms.reduce((sum, key) => sum + Math.max(0.3, morph.arms[key].mass), 0) || 1;
+  // Star budget per arm follows mass, but a main arm never gets less than
+  // 77% of the heaviest one, so arms read as a balanced pair.
+  const heaviest = Math.max(0.3, ...arms.map(key => morph.arms[key].mass));
+  const armWeight = (key: string) => Math.max(morph.arms[key].parent ? 0.3 : heaviest / 1.3, morph.arms[key].mass);
+  const totalMass = arms.reduce((sum, key) => sum + armWeight(key), 0) || 1;
   const tints = Object.fromEntries(arms.map(key => [key, new Color(morph.arms[key].tint)]));
   const coreTint = new Color(morph.bulge.tint);
   const bulgeRadius = morph.bulge.radius * G_SCALE * 1.6;
@@ -292,7 +296,7 @@ function buildSpiralGalaxy(count: number, morph: GalaxyMorphology): BufferGeomet
     } else if (kind < 0.80) {
       // Arm stars, star-forming knots and dust lanes.
       let pick = r() * totalMass; let arm = arms[0] ?? 'SCIENCE';
-      for (const key of arms) { pick -= Math.max(0.3, morph.arms[key].mass); if (pick <= 0) { arm = key; break; } }
+      for (const key of arms) { pick -= armWeight(key); if (pick <= 0) { arm = key; break; } }
       const spec = morph.arms[arm];
       // Fragmentation: stars clump around one knot per subdomain.
       // Half the stars fill the arm continuously from the nucleus outward, so

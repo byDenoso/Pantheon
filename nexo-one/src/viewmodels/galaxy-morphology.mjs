@@ -58,6 +58,20 @@ export function morphologyFrom({ counts, core, bridges = [] }) {
     };
   }
   const primary = Object.keys(arms).filter(d => !BRANCHES.has(d));
+  // Balanced arms: the longest arm follows the largest domain's expansion;
+  // every other main arm is 77-100% of it, in proportion to its own
+  // expansion. So the biggest arm is at most ~30% longer than the smallest,
+  // and the whole galaxy still grows as NEXO grows.
+  const MIN_RATIO = 1 / 1.3;
+  const longest = Math.max(0, ...primary.map(d => arms[d].turns));
+  for (const d of primary) {
+    const share = longest > 0 ? arms[d].turns / longest : 1;
+    arms[d].turns = round(longest * (MIN_RATIO + (1 - MIN_RATIO) * share));
+  }
+  // Same pitch on every main arm (the widest domain's), so length alone
+  // carries the difference instead of compounding it in the outer radius.
+  const sharedPitch = Math.max(0, ...primary.map(d => arms[d].pitch));
+  for (const d of primary) arms[d].pitch = round(sharedPitch);
   const largest = primary.slice().sort((a, b) => arms[b].mass - arms[a].mass || a.localeCompare(b))[0];
   for (const domain of Object.keys(arms)) {
     if (!BRANCHES.has(domain) || !largest) continue;
