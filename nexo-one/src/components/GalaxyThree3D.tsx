@@ -224,6 +224,136 @@ void main() {
 }
 `;
 
+// ── Procedural spiral galaxy (decoration only) ─────────────────────────────
+// Same barred-spiral geometry as the server galaxy compiler (galaxy-v1.mjs),
+// scaled like layoutFromGalaxy, so data nodes sit inside the arms they belong to.
+const G_SCALE = 0.55;
+const G_BAR = 46;
+const G_ARMS = {
+  SCIENCE: { phase: 0, turns: 0.95, length: 1, pitch: 0.23, width: 14, weight: 0.46 },
+  OLYMPUS: { phase: Math.PI, turns: 0.8, length: 0.85, pitch: 0.25, width: 12, weight: 0.38 },
+  ENGINEERING: { phase: Math.PI / 2, turns: 0.42, length: 0.5, pitch: 0.34, width: 18, weight: 0.16 },
+} as const;
+type ArmKey = keyof typeof G_ARMS;
+
+function spiralPoint(arm: ArmKey, t: number) {
+  const a = G_ARMS[arm];
+  const theta = a.turns * TAU * t * a.length;
+  const radius = G_BAR * Math.exp(a.pitch * theta) + t * 18;
+  const angle = a.phase + theta;
+  return { x: Math.cos(angle) * radius * G_SCALE, y: Math.sin(angle) * radius * G_SCALE };
+}
+
+const STAR_WHITE = new Color('#dfe9ff');
+const STAR_BLUE = new Color('#9cc3ff');
+const STAR_WARM = new Color('#ffd7a8');
+const STAR_CORE = new Color('#fff1d6');
+const HII_PINK = new Color('#ff8fb0');
+const DUST_RED = new Color('#c9785a');
+const ARM_TINT: Record<ArmKey, Color> = {
+  SCIENCE: new Color('#7fb2ff'),
+  OLYMPUS: new Color('#ffcf7a'),
+  ENGINEERING: new Color('#9ff0c4'),
+};
+
+function buildSpiralGalaxy(count: number): BufferGeometry {
+  const positions = new Float32Array(count * 3);
+  const sizes = new Float32Array(count);
+  const brightness = new Float32Array(count);
+  const colors = new Float32Array(count * 3);
+  const arms = Object.keys(G_ARMS) as ArmKey[];
+  const tmp = new Color();
+  for (let i = 0; i < count; i += 1) {
+    const r = rng(hash32('nexo-spiral:' + i));
+    const kind = r();
+    let x: number; let y: number; let z: number; let size: number; let light: number;
+    if (kind < 0.16) {
+      // Bulge + bar: dense warm core stretched along the bar axis.
+      const rad = Math.abs(gaussian(r)) * 9;
+      const a = r() * TAU;
+      const barStretch = r() < 0.45 ? 2.6 : 1.1;
+      x = Math.cos(a) * rad * barStretch; y = Math.sin(a) * rad * 0.8; z = gaussian(r) * 2.2;
+      size = 0.9 + r() * 1.8; light = 0.55 + r() * 0.45;
+      tmp.copy(STAR_CORE).lerp(STAR_WARM, r() * 0.7);
+    } else if (kind < 0.80) {
+      // Arm stars, star-forming knots and dust lanes.
+      let pick = r(); let arm: ArmKey = 'SCIENCE';
+      for (const key of arms) { pick -= G_ARMS[key].weight; if (pick <= 0) { arm = key; break; } }
+      const t = Math.pow(r(), 0.85) * 1.04;
+      const p = spiralPoint(arm, t);
+      const q = spiralPoint(arm, t + 0.01);
+      const tx = q.x - p.x; const ty = q.y - p.y; const len = Math.hypot(tx, ty) || 1;
+      const width = G_ARMS[arm].width * G_SCALE * (0.35 + t * 0.9);
+      const across = gaussian(r) * width * 0.42;
+      x = p.x + (-ty / len) * across; y = p.y + (tx / len) * across; z = gaussian(r) * (1 + t * 1.6);
+      const knot = r() < 0.07;
+      size = knot ? 2.2 + r() * 2.6 : 0.6 + r() * 1.4;
+      light = knot ? 0.9 : 0.25 + r() * 0.55;
+      const c = r();
+      // Each arm keeps the natural star mix but leans to its domain's tone.
+      tmp.copy(c < 0.62 ? STAR_WHITE : c < 0.86 ? STAR_BLUE : c < 0.95 ? HII_PINK : DUST_RED).lerp(ARM_TINT[arm], 0.55);
+      if (knot && r() < 0.5) tmp.copy(HII_PINK).lerp(STAR_WHITE, 0.35);
+    } else if (kind < 0.95) {
+      // Inter-arm disk: faint exponential glow.
+      const rad = -Math.log(Math.max(1e-6, r())) * 34;
+      const a = r() * TAU;
+      x = Math.cos(a) * rad; y = Math.sin(a) * rad; z = gaussian(r) * 3;
+      size = 0.5 + r() * 0.8; light = 0.12 + r() * 0.22;
+      tmp.copy(STAR_WHITE).lerp(STAR_WARM, r() * 0.5);
+    } else {
+      // Field stars far outside the disk.
+      const a = r() * TAU; const b = Math.acos(2 * r() - 1); const rad = 220 + r() * 260;
+      x = Math.sin(b) * Math.cos(a) * rad; y = Math.sin(b) * Math.sin(a) * rad; z = Math.cos(b) * rad;
+      size = 0.5 + r() * 1.1; light = 0.2 + r() * 0.5;
+      tmp.copy(r() < 0.8 ? STAR_WHITE : STAR_WARM);
+    }
+    writeParticle(positions, sizes, brightness, colors, i, x, y, z, size, light, tmp);
+  }
+  const geometry = new BufferGeometry();
+  geometry.setAttribute('position', new Float32BufferAttribute(positions, 3));
+  geometry.setAttribute('aSize', new Float32BufferAttribute(sizes, 1));
+  geometry.setAttribute('aBrightness', new Float32BufferAttribute(brightness, 1));
+  geometry.setAttribute('aColor', new Float32BufferAttribute(colors, 3));
+  geometry.computeBoundingSphere();
+  return geometry;
+}
+
+const spiralVertexShader = `
+attribute float aSize;
+attribute float aBrightness;
+attribute vec3 aColor;
+uniform float uTime;
+uniform float uPixelRatio;
+varying float vBrightness;
+varying vec3 vColor;
+void main() {
+  vec4 mv = modelViewMatrix * vec4(position, 1.0);
+  float twinkle = 0.9 + 0.1 * sin(uTime * 1.3 + position.x * 0.31 + position.y * 0.17);
+  float perspective = 720.0 / max(18.0, -mv.z);
+  gl_PointSize = clamp(aSize * uPixelRatio * perspective * (aBrightness > 0.85 ? twinkle : 1.0), 1.2, 34.0);
+  gl_Position = projectionMatrix * mv;
+  vBrightness = aBrightness;
+  vColor = aColor;
+}
+`;
+
+const spiralFragmentShader = `
+uniform float uOpacity;
+varying float vBrightness;
+varying vec3 vColor;
+void main() {
+  vec2 uv = gl_PointCoord - vec2(0.5);
+  float d = length(uv);
+  if (d > 0.5) discard;
+  float glow = exp(-d * d * 22.0);
+  float spikeX = max(0.0, 1.0 - abs(uv.y) * 30.0) * smoothstep(0.5, 0.0, abs(uv.x));
+  float spikeY = max(0.0, 1.0 - abs(uv.x) * 30.0) * smoothstep(0.5, 0.0, abs(uv.y));
+  float spike = vBrightness > 0.85 ? spikeX + spikeY : 0.0;
+  float alpha = (glow + spike * 0.35) * (0.25 + vBrightness * 0.75) * uOpacity;
+  gl_FragColor = vec4(vColor * (0.8 + vBrightness * 0.6), alpha);
+}
+`;
+
 function nodeSize(node: PlacedNode3D): number {
   if (node.type === 'DOMAIN') return node.domain === 'NEXO' ? 14.5 : 11.2;
   if (node.type === 'CAMPAIGN') return 9.4;
@@ -530,18 +660,21 @@ export const GalaxyThree3D = forwardRef<CanvasGraph25DHandle, Props>(function Ga
       controlsRef.current = controls;
 
       const palette = paletteForTheme(themeName);
-      const particleCount = isMacro ? (isMobile ? 90 : 320) : (isMobile ? 240 : 900);
-      const galaxyGeometry = buildFieldGeometry(nodes, particleCount, isMacro, themeName);
+      const spiral = themeName === 'dark';
+      const particleCount = spiral
+        ? (isMobile ? 5000 : 16000)
+        : isMacro ? (isMobile ? 90 : 320) : (isMobile ? 240 : 900);
+      const galaxyGeometry = spiral ? buildSpiralGalaxy(particleCount) : buildFieldGeometry(nodes, particleCount, isMacro, themeName);
       const galaxyMaterial = new ShaderMaterial({
         uniforms: {
           uTime: { value: 0 },
           uPixelRatio: { value: renderer.getPixelRatio() },
           uColorA: { value: palette.accent },
           uColorB: { value: palette.strong },
-          uOpacity: { value: isMacro ? (themeName === 'light' ? 0.20 : 0.24) : (themeName === 'light' ? 0.38 : 0.52) },
+          uOpacity: { value: spiral ? 1.25 : isMacro ? (themeName === 'light' ? 0.20 : 0.24) : (themeName === 'light' ? 0.38 : 0.52) },
         },
-        vertexShader: galaxyVertexShader,
-        fragmentShader: galaxyFragmentShader,
+        vertexShader: spiral ? spiralVertexShader : galaxyVertexShader,
+        fragmentShader: spiral ? spiralFragmentShader : galaxyFragmentShader,
         transparent: true,
         depthWrite: false,
         blending: themeName === 'light' ? NormalBlending : AdditiveBlending,
@@ -552,13 +685,14 @@ export const GalaxyThree3D = forwardRef<CanvasGraph25DHandle, Props>(function Ga
       const ringGeometry = buildFieldRingSegments(nodes, isMacro);
       const ringMaterial = new LineBasicMaterial({ color: palette.accent, transparent: true, opacity: themeName === 'light' ? 0.05 : (isMacro ? 0.06 : 0.04), blending: NormalBlending, depthWrite: false });
       const ringLines = new LineSegments(ringGeometry, ringMaterial);
+      ringLines.visible = !spiral;
       scene.add(ringLines);
 
       const grid = new GridHelper(isMacro ? 430 : 300, isMacro ? 30 : 22, palette.accent, palette.accent);
       grid.position.set(0, isMacro ? -94 : -74, -24);
       const gridMaterial = grid.material as LineBasicMaterial;
       gridMaterial.transparent = true; gridMaterial.opacity = themeName === 'light' ? 0.055 : 0.075; gridMaterial.depthWrite = false;
-      grid.visible = !isMobile;
+      grid.visible = !isMobile && !spiral;
       scene.add(grid);
 
       const nodeGeometry = buildNodeGeometry(nodes, selectedId, themeName);
@@ -627,13 +761,13 @@ export const GalaxyThree3D = forwardRef<CanvasGraph25DHandle, Props>(function Ga
       const selectedRelationLines = new LineSegments(relationSegments.selected, selectedRelationMaterial);
       scene.add(relationLines, dependencyLines, learningRelationLines, blockedRelationLines, selectedRelationLines);
 
-      if (!isMobile && !isMacro && themeName === 'dark') {
+      if (!isMobile && themeName === 'dark') {
         composer = new EffectComposer(renderer);
         composer.addPass(new RenderPass(scene, camera));
-        const bloom = new UnrealBloomPass(new Vector2(size.width, size.height), 0.18, 0.18, 0.54);
-        bloom.threshold = 0.54;
-        bloom.strength = 0.18;
-        bloom.radius = 0.18;
+        const bloom = new UnrealBloomPass(new Vector2(size.width, size.height), 0.9, 0.55, 0.12);
+        bloom.threshold = 0.12;
+        bloom.strength = 0.9;
+        bloom.radius = 0.55;
         composer.addPass(bloom);
       }
 

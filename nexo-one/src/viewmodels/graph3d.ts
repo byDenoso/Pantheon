@@ -378,3 +378,50 @@ export function graphBounds3D(nodes: PlacedNode3D[]): { center: Point3; radius: 
   const radius = Math.max(12, ...nodes.map(node => distance3(node, center) + node.radius));
   return { center, radius };
 }
+
+const GALAXY_SCALE = 0.55;
+
+/**
+ * Barred-spiral layout from the published galaxy snapshot (server compiler,
+ * derived from Tower semantics). Entities take their compiled position; hubs
+ * (root, domains, stations, campaigns) sit at the centroid of what they hold;
+ * anything the snapshot does not know keeps the local field position.
+ */
+export function layoutFromGalaxy(
+  nodes: GraphNode[],
+  snapshot: { entities: Array<{ id: string; domain: Domain; layout: { position: Point3 } }> } | null,
+  groupOf: (node: GraphNode) => string,
+): PlacedNode3D[] {
+  const fallback = layoutGraph3D(nodes);
+  if (!snapshot?.entities?.length) return fallback;
+  const byId = new Map(snapshot.entities.map(entity => [entity.id, entity.layout.position]));
+  const exact = new Map<string, Point3>();
+  for (const node of nodes) {
+    const position = byId.get(node.id.replace(/^[a-z_]+:/i, '')) ?? byId.get(node.id);
+    if (position) exact.set(node.id, { x: position.x * GALAXY_SCALE, y: position.y * GALAXY_SCALE, z: position.z * GALAXY_SCALE });
+  }
+  const centroids = new Map<string, { x: number; y: number; z: number; n: number }>();
+  const add = (key: string, p: Point3) => {
+    const c = centroids.get(key) ?? { x: 0, y: 0, z: 0, n: 0 };
+    c.x += p.x; c.y += p.y; c.z += p.z; c.n += 1; centroids.set(key, c);
+  };
+  for (const node of nodes) {
+    const p = exact.get(node.id);
+    if (!p) continue;
+    add(`group:${groupOf(node)}`, p);
+    add(`domain:${node.domain}`, p);
+    if (node.campaign_id) add(`campaign:${node.campaign_id}`, p);
+  }
+  const at = (key: string): Point3 | null => {
+    const c = centroids.get(key);
+    return c ? { x: rounded(c.x / c.n), y: rounded(c.y / c.n), z: rounded(c.z / c.n) } : null;
+  };
+  return fallback.map(node => {
+    const p = exact.get(node.id)
+      ?? (node.id === 'atlas.root.nexo' ? { x: 0, y: 0, z: 0 } : null)
+      ?? (node.type === 'DOMAIN' ? at(`domain:${node.domain}`) : null)
+      ?? (node.type === 'CAMPAIGN' && node.campaign_id ? at(`campaign:${node.campaign_id}`) : null)
+      ?? at(`group:${groupOf(node)}`);
+    return p ? { ...node, x: rounded(p.x), y: rounded(p.y), z: rounded(p.z) } : node;
+  });
+}
