@@ -229,7 +229,8 @@ export interface LaneSnapshot {
   domain: Domain;
   current_state: string;
   next_action: string;
-  last_effect: { effect_key: string; at: string; status: RunStatus } | null;
+  /** Structured effect record, or a plain-language summary from the Pages projection. */
+  last_effect: { effect_key: string; at: string; status: RunStatus } | string | null;
   blockers: string[];
   side_quests: { id: string; title: string; status: 'OPEN' | 'WAITING' | 'DONE' }[];
   freshness: Freshness;

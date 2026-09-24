@@ -4,8 +4,10 @@ export type Tab=typeof tabs[number];
 export const titles:Record<Tab,string>={NOW:'O que merece sua atenção.',LOOPS:'Compromissos em movimento.',DAY:'Um dia que cabe no dia.',CONTEXT:'Entre no contexto certo.',RECALL:'Encontre. Retome. Avance.'};
 export const providerLabel:Record<string,string>={drive:'Google Drive',gmail:'Gmail',calendar:'Calendar',github:'GitHub',vercel:'Vercel',nexo:'NEXO SSoT',atlas:'Atlas'};
 export const stateLabel:Record<string,string>={NEEDS_ME:'Precisa de mim',WAITING_OTHER:'Aguardando',SCHEDULED:'Agendado',BLOCKED:'Bloqueado',DONE:'Concluído',AVAILABLE:'Disponível',STALE:'Leitura anterior',UNAVAILABLE:'Indisponível',AUTH_REQUIRED:'Conectar',RATE_LIMITED:'Limite atingido',ACT:'Ação',ESCALATE:'Atenção',NOTICE:'Contexto',IGNORE:'Encerrado'};
-export const time=(date?:string)=>date?new Intl.DateTimeFormat('pt-BR',{hour:'2-digit',minute:'2-digit'}).format(new Date(date)):'—';
-export const dateTime=(date?:string|null)=>date?new Intl.DateTimeFormat('pt-BR',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}).format(new Date(date)):'Sem leitura válida';
+// Invalid timestamps degrade to a label; Intl.format would throw and blank the view.
+const validDate=(date?:string|null)=>{if(!date)return null;const d=new Date(date);return Number.isNaN(d.getTime())?null:d;};
+export const time=(date?:string)=>{const d=validDate(date);return d?new Intl.DateTimeFormat('pt-BR',{hour:'2-digit',minute:'2-digit'}).format(d):'—';};
+export const dateTime=(date?:string|null)=>{const d=validDate(date);return d?new Intl.DateTimeFormat('pt-BR',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}).format(d):'Sem leitura válida';};
 export function diffWorld(old:WorldState|null,current:WorldState):WorldDiff {
   const key=(i:CockpitItem)=>JSON.stringify({...i,observedAt:undefined,freshness:{state:i.freshness.state}});
   const before=new Map(old?.items.map(i=>[i.id,key(i)])||[]), after=new Map(current.items.map(i=>[i.id,key(i)]));
