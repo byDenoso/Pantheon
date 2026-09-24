@@ -1,3 +1,6 @@
+// The renderer owns its styles: it is mounted from Prova/Sistema/Ciência too, not only
+// from the Mapa (EmbeddedAtlas3D), so relying on that screen's import left it unstyled.
+import './atlas3d.css';
 import { atlasRouteParam } from './route-params.ts';
 import {
   useEffect,
