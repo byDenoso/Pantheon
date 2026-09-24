@@ -13,10 +13,15 @@
 // Any new domain gets an arm automatically; known domains keep stable phases.
 
 const TAU = Math.PI * 2;
-export const MORPHOLOGY_VERSION = 1;
+export const MORPHOLOGY_VERSION = 2;
 export const BAR_BASE = 30;
 
-const KNOWN_PHASES = { SCIENCE: 0, OLYMPUS: Math.PI, ENGINEERING: Math.PI / 2 };
+// NEXO is the nucleus; SCIENCE and ENGINEERING are the two main arms, on
+// opposite sides; OLYMPUS is a sub-arm that diverges from the arm it bridges
+// to most (the largest arm when there are no bridges). Every arm grows out of
+// the nucleus, so there is never a gap between the core and an arm.
+const KNOWN_PHASES = { SCIENCE: 0, ENGINEERING: Math.PI };
+const BRANCHES = new Set(['OLYMPUS']);
 export const DOMAIN_TINTS = {
   NEXO: '#ffd36b',
   SCIENCE: '#7fb2ff',
@@ -51,6 +56,20 @@ export function morphologyFrom({ counts, core, bridges = [] }) {
       tint: DOMAIN_TINTS[domain] || '#dfe9ff',
     };
   }
+  const primary = Object.keys(arms).filter(d => !BRANCHES.has(d));
+  const largest = primary.slice().sort((a, b) => arms[b].mass - arms[a].mass || a.localeCompare(b))[0];
+  for (const domain of Object.keys(arms)) {
+    if (!BRANCHES.has(domain) || !largest) continue;
+    const linked = primary
+      .map(d => [d, bridges.filter(b => (b.from === domain && b.to === d) || (b.to === domain && b.from === d)).reduce((s, b) => s + b.count, 0)])
+      .filter(([, n]) => n > 0).sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
+    const arm = arms[domain];
+    arm.parent = linked[0]?.[0] ?? largest;
+    arm.branch_at = 0.3;
+    // The sub-arm lengthens as OLYMPUS grows, opening a little faster than its parent.
+    arm.turns = round(0.15 + 0.45 * saturate(counts[domain].entities || 0, 90));
+    arm.pitch = round(arm.pitch + 0.12);
+  }
   return {
     version: MORPHOLOGY_VERSION,
     bulge: {
@@ -66,8 +85,17 @@ export function morphologyFrom({ counts, core, bridges = [] }) {
 export function armPoint(morph, domain, t) {
   const arm = morph.arms[domain];
   if (!arm) return { x: 0, y: 0 };
+  if (arm.parent && morph.arms[arm.parent]) {
+    const root = armPoint(morph, arm.parent, arm.branch_at ?? 0.3);
+    const r0 = Math.hypot(root.x, root.y);
+    const a0 = Math.atan2(root.y, root.x);
+    const theta = arm.turns * TAU * t;
+    const radius = r0 * Math.exp(arm.pitch * theta) + t * 10;
+    return { x: Math.cos(a0 + theta) * radius, y: Math.sin(a0 + theta) * radius };
+  }
   const theta = arm.turns * TAU * t;
-  const radius = morph.bulge.bar * Math.exp(arm.pitch * theta) + t * 18;
+  // Starts inside the nucleus (t=0 at ~20% of the bar) and grows outward.
+  const radius = morph.bulge.bar * (Math.exp(arm.pitch * theta) - 0.8 * (1 - t) ** 2) + t * 18;
   const angle = arm.phase + theta;
   return { x: Math.cos(angle) * radius, y: Math.sin(angle) * radius };
 }

@@ -238,7 +238,7 @@ const G_SCALE = 0.275;
 
 export type GalaxyMorphology = {
   bulge: { radius: number; bar: number; tint: string };
-  arms: Record<string, { phase: number; turns: number; pitch: number; width: number; mass: number; segments: number; tint: string }>;
+  arms: Record<string, { phase: number; turns: number; pitch: number; width: number; mass: number; segments: number; tint: string; parent?: string; branch_at?: number }>;
 };
 // Used only until the published snapshot arrives; same rules, typical counts.
 const DEFAULT_MORPHOLOGY = morphologyFrom({
@@ -264,7 +264,7 @@ function buildSpiralGalaxy(count: number, morph: GalaxyMorphology): BufferGeomet
   const brightness = new Float32Array(count);
   const colors = new Float32Array(count * 3);
   const arms = Object.keys(morph.arms);
-  const totalMass = arms.reduce((sum, key) => sum + Math.max(0.05, morph.arms[key].mass), 0) || 1;
+  const totalMass = arms.reduce((sum, key) => sum + Math.max(0.3, morph.arms[key].mass), 0) || 1;
   const tints = Object.fromEntries(arms.map(key => [key, new Color(morph.arms[key].tint)]));
   const coreTint = new Color(morph.bulge.tint);
   const bulgeRadius = morph.bulge.radius * G_SCALE * 1.6;
@@ -285,11 +285,13 @@ function buildSpiralGalaxy(count: number, morph: GalaxyMorphology): BufferGeomet
     } else if (kind < 0.80) {
       // Arm stars, star-forming knots and dust lanes.
       let pick = r() * totalMass; let arm = arms[0] ?? 'SCIENCE';
-      for (const key of arms) { pick -= Math.max(0.05, morph.arms[key].mass); if (pick <= 0) { arm = key; break; } }
+      for (const key of arms) { pick -= Math.max(0.3, morph.arms[key].mass); if (pick <= 0) { arm = key; break; } }
       const spec = morph.arms[arm];
       // Fragmentation: stars clump around one knot per subdomain.
+      // Half the stars fill the arm continuously from the nucleus outward, so
+      // there are no gaps; the rest clump around one knot per subdomain.
       const segment = Math.floor(r() * Math.max(1, spec.segments));
-      let t = (segment + 0.5 + gaussian(r) * 0.35) / Math.max(1, spec.segments);
+      let t = r() < 0.5 ? r() * 1.02 : (segment + 0.5 + gaussian(r) * 0.35) / Math.max(1, spec.segments);
       // Resample instead of clamping: clamped stars pile up on one line (streaks).
       if (t < 0 || t > 1.04) t = r() * 1.04;
       const p = spiralPoint(morph, arm, Math.max(0, t));
