@@ -43,7 +43,9 @@ export function morphologyFrom({ counts, core, bridges = [] }) {
     const density = entities / subdomains;
     arms[domain] = {
       phase: round(KNOWN_PHASES[domain] ?? hashPhase(domain)),
-      turns: round(0.3 + 0.8 * saturate(entities + subdomains * 4, 90)),
+      // Compact today (~40% of the full sweep) so growth has visible room:
+      // the arm lengthens as the domain expands, up to ~0.62 turns.
+      turns: round(0.12 + 0.5 * saturate(entities + subdomains * 4, 250)),
       pitch: round(0.2 + 0.1 * saturate(subdomains, 8)),
       width: round(6 + 14 * saturate(density, 8)),
       mass: round(saturate(entities, 60)),
