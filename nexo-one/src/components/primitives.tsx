@@ -2,7 +2,7 @@
 import type {
   AuthorityClass, CapabilityStatus, Domain, EntityState, Freshness, Readback, Severity,
 } from '../contracts/system.ts';
-import { STATE_LABEL, capabilityToneOf, dateTime, label, toneOf, type Tone } from '../viewmodels/tokens.ts';
+import { STATE_LABEL, capabilityToneOf, dateTime, domainLabel, label, toneOf, type Tone } from '../viewmodels/tokens.ts';
 
 export function StatusBadge(
   { state, tone, title, compact }: { state: string; tone?: Tone; title?: string; compact?: boolean },
@@ -89,7 +89,7 @@ const DOMAIN_GLYPH: Partial<Record<Domain, string>> = { NEXO: '⌘', SCIENCE: '�
 export function DomainBadge({ domain, muted }: { domain: Domain; muted?: boolean }) {
   return (
     <span className={`domain-badge${muted ? ' muted' : ''}`} data-domain={domain}>
-      <i aria-hidden="true">{DOMAIN_GLYPH[domain] ?? '◇'}</i>{domain}
+      <i aria-hidden="true">{DOMAIN_GLYPH[domain] ?? '◇'}</i>{domainLabel(domain)}
     </span>
   );
 }

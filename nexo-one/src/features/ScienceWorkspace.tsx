@@ -1,8 +1,10 @@
-import {useEffect,useMemo,useRef,useState,type ReactNode,type RefObject} from 'react';
+import {useCallback,useEffect,useMemo,useRef,useState,type ReactNode,type RefObject} from 'react';
 import type {Filament,ScienceEvidenceField,ScienceProjectionRecord,ScienceProjectionV1,SystemState} from '../contracts/system.ts';
 import {NexoGraph,type NexoGraphView} from '../components/NexoGraph.tsx';
 import {buildAtlasGraphIndexes,type AtlasCrossLink,type AtlasMetroModel,type AtlasMetroNode} from '../atlas3d/atlasAdapter.ts';
+import {DetailDrawer,type DetailField} from '../components/DetailDrawer.tsx';
 import './ScienceWorkspace.css';
+import {STATE_LABEL} from '../viewmodels/tokens.ts';
 
 type ScienceTab='campanhas'|'testes'|'hipoteses'|'aprendizado'|'graficos';
 type PlotMode='grafico'|'tabela';
@@ -167,7 +169,7 @@ function scienceGraphModel(projection:ScienceProjectionV1,generatedAt:string):At
 }
 
 const HUMAN_STATE:Record<string,string>={ACTIVE:'Em andamento',RUNNING:'Em andamento',IN_PROGRESS:'Em andamento',PAUSED:'Pausada',CHECKPOINTED:'Em espera',CLOSED:'Encerrada',COMPLETED:'Concluída',DONE:'Concluído',READY:'Pronto',VERIFIED:'Verificado',RESULT:'Resultado disponível',REJECTED:'Rejeitado',SUPPORTS:'Compatível',FALSIFIES:'Refuta',NULL:'Nulo',INCONCLUSIVE:'Inconclusivo',PENDING:'Pendente',PLANNED:'Planejada',PROPOSED:'Proposta',DRAFT:'Rascunho',QUEUED:'Na fila',BLOCKED:'Bloqueado',WAITING:'Aguardando',FAILED:'Falhou',SUPERSEDED:'Substituído',PROMOTED:'Promovido',ARCHIVED:'Arquivado',OPEN:'Aberto',BLOCKED_SCIENTIFIC_CONTRACT:'Bloqueado pelo contrato'};
-function humanState(raw:string){return HUMAN_STATE[raw.toUpperCase()]||raw;}
+function humanState(raw:string){return HUMAN_STATE[raw.toUpperCase()]||STATE_LABEL[raw.toUpperCase()]||raw;}
 function StateText({value}:{value:unknown}){
   const raw=typeof value==='string'?value.toUpperCase():'';
   const human=HUMAN_STATE;
@@ -179,6 +181,31 @@ function PublicationStatus({value}:{value:unknown}){
   const raw=String(value).toUpperCase();
   const label=raw==='PUBLISHED'?'Publicado':raw==='UNPUBLISHED'||raw==='NOT_PUBLISHED'?'Não publicado':null;
   return label?<span>{label}</span>:<StateText value={value}/>;
+}
+
+const FIELD_LABEL:Record<string,string>={question:'Pergunta',status:'Estado',hypothesis_ids:'Hipóteses',hypothesis_id:'Hipótese',campaign_id:'Campanha',started_at:'Início',prereg_ref:'Pré-registro',method:'Método',datasets:'Datasets',verdict:'Veredito',claim_level:'Nível de claim',publication_status:'Publicação',statement:'Enunciado',result:'Resultado',statistics:'Estatística',parameter:'Parâmetro',value:'Valor',err_lo:'Erro −',err_hi:'Erro +',unit:'Unidade',sigma_lee:'σ LEE',source_ref:'Fonte'};
+const fieldLabel=(key:string)=>FIELD_LABEL[key]||key.replace(/_/g,' ').replace(/^./,c=>c.toUpperCase());
+function recordFields(record:ScienceProjectionRecord):DetailField[]{
+  const fields:DetailField[]=[];
+  for(const [key,raw] of Object.entries(record)){
+    if(key==='id'||key==='fingerprint'||key==='source_ref'||!raw||typeof raw!=='object')continue;
+    if(Object.hasOwn(raw,'value')){
+      let value:unknown=(raw as ScienceEvidenceField).value;
+      // Envelopes aninhados ({value,unavailable_reason}) mostram o motivo, nunca JSON cru.
+      if(value&&typeof value==='object'&&!Array.isArray(value)&&Object.hasOwn(value,'value')){
+        const inner=value as {value?:unknown;unavailable_reason?:string};
+        value=inner.value??(inner.unavailable_reason?`Indisponível — ${inner.unavailable_reason}`:null);
+      }
+      if(value!==null&&value!==undefined&&value!=='')fields.push([fieldLabel(key),<StateText value={value}/>]);
+      continue;
+    }
+    for(const [sub,item] of Object.entries(raw as Record<string,ScienceEvidenceField>)){
+      const value=item&&typeof item==='object'?item.value:undefined;
+      if(value!==null&&value!==undefined&&value!=='')fields.push([`${fieldLabel(key)} · ${fieldLabel(sub)}`,<StateText value={value}/>]);
+    }
+  }
+  fields.push(['Fonte',<code>{record.source_ref}</code>]);
+  return fields;
 }
 
 function DenseTable({heads,rows,empty}:{heads:string[];rows:ReactNode[];empty:string}){
@@ -212,6 +239,8 @@ export default function ScienceWorkspace({state}:{state:SystemState}){
   const projection=state.science_projection_v1;
   const [tab,setTab]=useState<ScienceTab>(initialTab);
   const [query,setQuery]=useState('');
+  const [openRecord,setOpenRecord]=useState<{kind:string;record:ScienceProjectionRecord}|null>(null);
+  const closeRecord=useCallback(()=>setOpenRecord(null),[]);
   const [testStatus,setTestStatus]=useState<string|null>(()=>routeParams().get('status'));
   const [graphView,setGraphView]=useState<NexoGraphView>(initialGraphView);
   const [graphMode,setGraphMode]=useState<GraphMode>(initialGraphMode);
@@ -275,7 +304,7 @@ export default function ScienceWorkspace({state}:{state:SystemState}){
 
     {!projection&&tab!=='aprendizado'&&<div className="science-projection-missing">Projeção científica indisponível neste snapshot.</div>}
 
-    {projection&&tab==='campanhas'&&<DenseTable heads={['Campanha','Pergunta','Estado','Hipóteses','Início','Pré-registro']} empty="Nenhuma campanha corresponde ao filtro." rows={campaigns.map(item=><tr key={item.id}>
+    {projection&&tab==='campanhas'&&<DenseTable heads={['Campanha','Pergunta','Estado','Hipóteses','Início','Pré-registro']} empty="Nenhuma campanha corresponde ao filtro." rows={campaigns.map(item=><tr key={item.id} className="science-row-open" tabIndex={0} onClick={()=>setOpenRecord({kind:'Campanha',record:item})} onKeyDown={event=>{if(event.key==='Enter')setOpenRecord({kind:'Campanha',record:item});}}>
       <td><strong>{shortId(item.id)}</strong><small>{item.id}</small></td><td><StateText value={valueOf(item,'question')}/></td><td><StateText value={valueOf(item,'status')}/></td>
       <td><StateText value={valueOf(item,'hypothesis_ids')}/></td><td><StateText value={valueOf(item,'started_at')}/></td><td><StateText value={valueOf(item,'prereg_ref')}/></td>
     </tr>)}/>}
@@ -286,14 +315,14 @@ export default function ScienceWorkspace({state}:{state:SystemState}){
       {testStatus&&!testStatusCounts.some(([status])=>status===testStatus)&&<button type="button" className="active" aria-pressed onClick={()=>pickTestStatus(null)}>{humanState(testStatus)}<span>0</span></button>}
     </div>}
 
-    {projection&&tab==='testes'&&<DenseTable heads={['Teste','Campanha','Estado','Hipótese','Método','Datasets','Veredito','Claim','σ LEE',...(tests.some(item=>valueOf(item,'publication_status')!==null)?['Publicação']:[])]} empty="Nenhum teste corresponde ao filtro." rows={tests.map(item=><tr key={item.id}>
+    {projection&&tab==='testes'&&<DenseTable heads={['Teste','Campanha','Estado','Hipótese','Método','Datasets','Veredito','Claim','σ LEE',...(tests.some(item=>valueOf(item,'publication_status')!==null)?['Publicação']:[])]} empty="Nenhum teste corresponde ao filtro." rows={tests.map(item=><tr key={item.id} className="science-row-open" tabIndex={0} onClick={()=>setOpenRecord({kind:'Teste',record:item})} onKeyDown={event=>{if(event.key==='Enter')setOpenRecord({kind:'Teste',record:item});}}>
       <td><strong>{shortId(item.id)}</strong><small>{item.id}</small></td><td><StateText value={valueOf(item,'campaign_id')}/></td><td><StateText value={valueOf(item,'status')}/></td><td><StateText value={valueOf(item,'hypothesis_id')}/></td>
       <td><StateText value={valueOf(item,'method')}/></td><td><StateText value={valueOf(item,'datasets')}/></td><td><StateText value={valueOf(item,'verdict')}/></td>
       <td><StateText value={valueOf(item,'claim_level')}/></td><td><StateText value={nested(item,'statistics','sigma_lee')?.value}/></td>
       {tests.some(candidate=>valueOf(candidate,'publication_status')!==null)&&<td><PublicationStatus value={valueOf(item,'publication_status')}/></td>}
     </tr>)}/>}
 
-    {projection&&tab==='hipoteses'&&<DenseTable heads={['Hipótese','Enunciado','Modelo','Baseline','Critério de falsificação']} empty="Nenhuma hipótese corresponde ao filtro." rows={hypotheses.map(item=><tr key={item.id}>
+    {projection&&tab==='hipoteses'&&<DenseTable heads={['Hipótese','Enunciado','Modelo','Baseline','Critério de falsificação']} empty="Nenhuma hipótese corresponde ao filtro." rows={hypotheses.map(item=><tr key={item.id} className="science-row-open" tabIndex={0} onClick={()=>setOpenRecord({kind:'Hipótese',record:item})} onKeyDown={event=>{if(event.key==='Enter')setOpenRecord({kind:'Hipótese',record:item});}}>
       <td><strong>{shortId(item.id)}</strong><small>{item.id}</small></td><td><StateText value={valueOf(item,'statement')}/></td><td><StateText value={valueOf(item,'model')}/></td>
       <td><StateText value={valueOf(item,'baseline')}/></td><td><StateText value={valueOf(item,'falsification_criterion')}/></td>
     </tr>)}/>}
@@ -316,6 +345,7 @@ export default function ScienceWorkspace({state}:{state:SystemState}){
       {graphMode==='relacoes'&&graphModel&&<NexoGraph model={graphModel} expanded={graphExpanded} selectedId={selectedId} view={graphView} theme={(document.documentElement.dataset.theme==='light'?'light':'dark')} onSelect={setSelectedId} onViewChange={setView}/>}
       <p className="science-chart-source">Fonte: NEXO_SCIENCE_PROJECTION_V1 · TOWER_V06 · campos ausentes são exibidos como “—”.</p>
     </div>}
+    {openRecord&&<DetailDrawer kicker={`${openRecord.kind} · Ciência`} title={textOf(valueOf(openRecord.record,'question'))!=='—'&&openRecord.kind==='Campanha'?textOf(valueOf(openRecord.record,'question')):openRecord.record.id} code={openRecord.record.id} fields={recordFields(openRecord.record)} onClose={closeRecord}/>}
   </section>;
 }
 

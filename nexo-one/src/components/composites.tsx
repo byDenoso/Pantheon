@@ -105,6 +105,37 @@ export function TruthGraphCard({ finding, capability }: { finding: TruthFinding;
   );
 }
 
+function capabilityMeta(capability: Capability): string | null {
+  if (!capability.operation && !capability.risk) return null;
+  return `${capability.operation ? label(capability.operation) : 'operação não publicada'} · ${capability.risk ? `risco ${label(capability.risk).toLowerCase()}` : 'risco não publicado'}`;
+}
+
+function CapabilityChip({ capability, onSelect }: { capability: Capability; onSelect?: (capability: Capability) => void }) {
+  const meta = capabilityMeta(capability);
+  return (
+    <button className="capability-chip" onClick={() => onSelect?.(capability)}
+      title={[capability.explanation, meta ?? 'Operação e risco não publicados'].filter(Boolean).join(' — ')}>
+      <i aria-hidden="true" className={`glyph glyph-${toneOf(capability.status)}`} />
+      <span>{capability.label}</span>
+      {meta && <small>{meta}</small>}
+    </button>
+  );
+}
+
+/** Agrupa séries numeradas (PEER.DETECTION.D00_V1…D25_V1) numa família expansível. */
+export function capabilityFamilies(capabilities: Capability[]) {
+  const families = new Map<string, Capability[]>();
+  for (const capability of capabilities) {
+    const key = capability.label.replace(/([._-])D\d+(?:[._-]V\d+)?$/i, '$1D*');
+    families.set(key, [...(families.get(key) ?? []), capability]);
+  }
+  return [...families].map(([key, members]) => ({
+    key, members,
+    status: members.find(m => m.status !== 'PASS' && m.status !== 'UNVERIFIED')?.status
+      ?? (members.some(m => m.status === 'UNVERIFIED') ? 'UNVERIFIED' : 'PASS'),
+  }));
+}
+
 export function CapabilityMatrix(
   { runtimes, cells, onSelect }:
   { runtimes: string[]; cells: CapabilityCell[]; onSelect?: (capability: Capability) => void },
@@ -131,16 +162,26 @@ export function CapabilityMatrix(
                   <td key={runtime} className={`matrix-cell tone-${toneOf(cell.status)}`}>
                     <span className="cell-status"><CapabilityBadge status={cell.status} /></span>
                     <ul>
-                      {cell.capabilities.map(capability => (
-                        <li key={capability.capability_id}>
-                          <button className="capability-chip" onClick={() => onSelect?.(capability)}
-                            title={capability.explanation}>
-                            <i aria-hidden="true" className={`glyph glyph-${toneOf(capability.status)}`} />
-                            <span>{capability.label}</span>
-                            <small>{capability.operation ? label(capability.operation) : 'operação não publicada'} · {capability.risk ? `risco ${label(capability.risk).toLowerCase()}` : 'risco não publicado'}</small>
-                          </button>
-                        </li>
-                      ))}
+                      {capabilityFamilies(cell.capabilities).map(family => family.members.length < 3
+                        ? family.members.map(capability => (
+                            <li key={capability.capability_id}><CapabilityChip capability={capability} onSelect={onSelect} /></li>
+                          ))
+                        : (
+                          <li key={family.key} className="capability-family">
+                            <details>
+                              <summary>
+                                <i aria-hidden="true" className={`glyph glyph-${toneOf(family.status)}`} />
+                                <span>{family.key}</span>
+                                <b>{family.members.length}</b>
+                              </summary>
+                              <ul>
+                                {family.members.map(capability => (
+                                  <li key={capability.capability_id}><CapabilityChip capability={capability} onSelect={onSelect} /></li>
+                                ))}
+                              </ul>
+                            </details>
+                          </li>
+                        ))}
                     </ul>
                   </td>
                 );

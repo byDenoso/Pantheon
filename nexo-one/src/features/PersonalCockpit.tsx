@@ -36,14 +36,15 @@ export function PersonalCockpit(
         <span>
           {readValid
             ? `${available} de ${total} fontes responderam nesta leitura.`
-            : 'Leitura indisponível: nenhuma fonte respondeu nesta leitura.'}
+            : error || 'Leitura indisponível: nenhuma fonte respondeu nesta leitura.'}
+          {!authenticated && <small className="plane-public-note">Sessão pública — fontes privadas aparecem como protegidas. Abra o cockpit privado pelo avatar D.</small>}
         </span>
-        <button className="text-button" onClick={() => refresh()} disabled={loading}>
+        <button className="text-button" onClick={() => refresh(true)} disabled={loading}>
           {loading ? 'Lendo fontes…' : 'Sincronizar agora ↻'}
         </button>
       </div>
 
-      {(providers.length > 0 || error) && (
+      {providers.length > 0 && (
         <section className="connection-center" aria-labelledby="connection-center-title">
           <div className="section-head">
             <div>
@@ -54,7 +55,7 @@ export function PersonalCockpit(
               {impaired.length === 0 ? 'Todas as fontes desta leitura responderam.' : `${impaired.length} fonte${impaired.length > 1 ? 's' : ''} exige${impaired.length === 1 ? '' : 'm'} atenção.`}
             </span>
           </div>
-          {error && <div role="alert" className="notice-box">{error}</div>}
+          {error && readValid && <div role="alert" className="notice-box">{error}</div>}
           {providers.length > 0 && (
             <div className="provider-grid">
               {providers.map(provider => (
@@ -74,17 +75,9 @@ export function PersonalCockpit(
               ))}
             </div>
           )}
-          <button className="text-button" onClick={() => refresh(true)} disabled={loading}>
-            {loading ? 'Sincronizando…' : 'Sincronizar agora'}
-          </button>
         </section>
       )}
 
-      {!authenticated && (
-        <div className="notice-box">
-          Sessão pública: fontes privadas permanecem identificadas como indisponíveis ou protegidas. Use o avatar D para abrir o cockpit privado.
-        </div>
-      )}
       {!world && !loading && !error
         ? <EmptyState title="Nenhuma leitura recebida do servidor."
             description="O cockpit pessoal depende do backend publicado. Uma fonte sem resposta permanece visível como indisponível; nunca vira zero." />
