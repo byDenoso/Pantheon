@@ -182,7 +182,23 @@ function PublicationStatus({value}:{value:unknown}){
 function DenseTable({heads,rows,empty}:{heads:string[];rows:ReactNode[];empty:string}){
   // Each cell carries its column name so phones can render rows as labelled cards.
   const tableRef=useRef<HTMLTableElement>(null);
-  useEffect(()=>{tableRef.current?.querySelectorAll('tbody tr').forEach(tr=>[...tr.children].forEach((td,i)=>{if(heads[i])(td as HTMLElement).dataset.label=heads[i];}));});
+  useEffect(()=>{
+    const table=tableRef.current;if(!table)return;
+    const bodyRows=[...table.querySelectorAll('tbody tr')].filter(tr=>!tr.querySelector('.science-empty'));
+    bodyRows.forEach(tr=>[...tr.children].forEach((td,i)=>{
+      if(heads[i])(td as HTMLElement).dataset.label=heads[i];
+      // The id line under the title is noise when it repeats the title.
+      const strong=td.querySelector('strong'),small=td.querySelector('small');
+      if(strong&&small)(small as HTMLElement).hidden=strong.textContent?.trim()===small.textContent?.trim();
+    }));
+    // Columns with no value in any row are hidden: a column of "—" says nothing.
+    heads.forEach((_,i)=>{
+      const cells=bodyRows.map(tr=>tr.children[i] as HTMLElement|undefined);
+      const blank=bodyRows.length>0&&cells.every(td=>!td||/^[\s—-]*$/.test(td.textContent||''));
+      (table.querySelectorAll('thead th')[i] as HTMLElement|undefined)?.toggleAttribute('hidden',blank);
+      cells.forEach(td=>td?.toggleAttribute('hidden',blank));
+    });
+  });
   return <div className="science-table-wrap"><table ref={tableRef} className="science-table"><thead><tr>{heads.map(head=><th key={head}>{head}</th>)}</tr></thead><tbody>{rows.length?rows:<tr><td colSpan={heads.length} className="science-empty">{empty}</td></tr>}</tbody></table></div>;
 }
 

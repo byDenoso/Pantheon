@@ -159,8 +159,7 @@ function capabilitiesFromProjection(projection, source) {
       provider: backend || 'UNSPECIFIED',
       last_verified_at: null,
       evidence_ref: status === 'PASS' ? source : null,
-      explanation: 'canonical status=' + (canonicalStatus || 'UNSPECIFIED')
-        + '; backend=' + (backend || 'UNSPECIFIED') + '. ' + proofNote,
+      explanation: 'Status ' + statusPt(canonicalStatus) + (backend ? ' · ' + backend : '') + '. ' + proofNote,
     };
   });
 }
@@ -461,7 +460,7 @@ function projectedWorkNode(item, manifest, observedAt, humanWorkIds) {
     fingerprint: nodeFingerprint('work', rawId, manifest),
     freshness: { state: 'RECENT', observed_at: observedAt, ttl_seconds: null },
     checked_at: observedAt,
-    summary: 'WORK projected without reinterpretation; canonical status=' + String(item.status || item.operational_status || 'UNSPECIFIED'),
+    summary: String(item.title || ('Trabalho · ' + statusPt(item.status || item.operational_status))),
     campaign_id: item.campaign_id ? String(item.campaign_id) : undefined,
     test_group_id: item.test_group_id ? String(item.test_group_id) : undefined,
     operational_status: String(item.operational_status || item.status || 'UNSPECIFIED').toUpperCase(),
@@ -556,7 +555,7 @@ function graphFromProjection(projection, observedAt, filaments = [], peerDetecti
       to,
       kind: 'OWNS',
       weight: 1,
-      explanation: 'Presentation-only relation derived from the sanctioned Tower projection.',
+      explanation: 'Relação publicada pela Tower.',
     });
   };
 
@@ -573,7 +572,7 @@ function graphFromProjection(projection, observedAt, filaments = [], peerDetecti
       fingerprint: nodeFingerprint('domain', domain, manifest),
       freshness: { state: 'RECENT', observed_at: observedAt, ttl_seconds: null },
       checked_at: observedAt,
-      summary: 'Domain rendered from the sanctioned TOWER_V06 public projection.',
+      summary: 'Domínio ' + domainLabelPt(domain) + ' do NEXO.',
     });
   }
 
@@ -650,7 +649,7 @@ function graphFromProjection(projection, observedAt, filaments = [], peerDetecti
       fingerprint: String(item.scientific_fingerprint || nodeFingerprint('test', rawId, manifest)),
       freshness: { state: 'RECENT', observed_at: observedAt, ttl_seconds: null },
       checked_at: observedAt,
-      summary: 'TEST projected without reinterpretation; canonical status=' + String(item.status || 'UNSPECIFIED'),
+      summary: String((item.semantic || {}).question_plain || item.title || (item.semantic || {}).result_meaning || ('Teste · ' + statusPt(item.status))),
       campaign_id: item.campaign_id ? String(item.campaign_id) : undefined,
       test_group_id: item.test_group_id ? String(item.test_group_id) : undefined,
       atlas_visible: item.campaign_id
@@ -678,7 +677,7 @@ function graphFromProjection(projection, observedAt, filaments = [], peerDetecti
       fingerprint: nodeFingerprint('capability', capabilityId, manifest),
       freshness: { state: 'RECENT', observed_at: observedAt, ttl_seconds: null },
       checked_at: observedAt,
-      summary: 'Capability projection; canonical status=' + String(definition?.status || 'UNSPECIFIED') + '; backend=' + String(definition?.backend || 'UNSPECIFIED'),
+      summary: 'Capacidade · ' + statusPt(definition?.status) + (definition?.backend ? ' · ' + String(definition.backend) : ''),
       capability_id: capabilityId,
     });
     addEdge('domain:NEXO', id);
@@ -914,17 +913,61 @@ function humanInboxFromProjection(projection, observedAt, humanGateDetails = [])
     };
   }).filter(Boolean);
 }
+const STATUS_PT = { DONE: 'concluído', VERIFIED: 'verificado', RESULT: 'com resultado', READY: 'pronto', CHECKPOINTED: 'em espera',
+  RUNNING: 'em andamento', REJECTED: 'rejeitado', ACTIVE: 'ativo', BLOCKED: 'bloqueado', PASS: 'aprovado', PROMOTED: 'promovido' };
+function statusPt(value) {
+  const key = String(value || '').toUpperCase();
+  return STATUS_PT[key] || (key.startsWith('BLOCKED') ? 'bloqueado' : key ? key.toLowerCase().replace(/_/g, ' ') : 'sem status');
+}
+const DOMAIN_PT = { NEXO: 'NEXO', SCIENCE: 'Ciência', ENGINEERING: 'Engenharia', OLYMPUS: 'Olympus', GPT_PERFORMANCE: 'Desempenho do GPT' };
+function domainLabelPt(domain) { return DOMAIN_PT[domain] || String(domain); }
+function testLabel(item) {
+  const semantic = item.semantic || {};
+  return String(semantic.question_plain || item.title || item.id);
+}
+function testMeaning(item) {
+  const text = (item.semantic || {}).result_meaning;
+  return text ? String(text) : null;
+}
+function domainFindings(projection, source, manifest, observedAt) {
+  // One finding per domain: its latest result in plain language (what the Início tiles show).
+  return projectionDomains(projection).map(domain => {
+    const tests = projection.tests.filter(item => domainOf(item.domain || 'SCIENCE') === domain);
+    const withMeaning = tests.filter(testMeaning);
+    const latest = withMeaning[withMeaning.length - 1];
+    const explanation = domain === 'NEXO'
+      ? 'Tower sincronizada: ' + projection.counts.tests + ' testes e ' + projection.counts.capabilities + ' capacidades publicados.'
+      : latest ? 'Último resultado · ' + testLabel(latest) + ': ' + testMeaning(latest)
+      : tests.length ? tests.length + ' testes neste domínio; nenhum resultado com leitura simples ainda.' : null;
+    if (!explanation) return null;
+    return {
+      id: 'finding-' + domain.toLowerCase(), domain, status: 'SNAPSHOT', source_ref: source,
+      fingerprint: manifest.projection_fingerprint, checked_at: observedAt,
+      authority: { owner: 'TOWER_V06', class: 'DERIVED' }, provider: { expected: 'TOWER_V06', observed: 'TOWER_V06' },
+      capability: null, severity: 'INFO', explanation,
+      freshness: { state: 'RECENT', observed_at: observedAt, ttl_seconds: null }, source_observed_at: observedAt,
+    };
+  }).filter(Boolean);
+}
 function lanesFromProjection(projection, observedAt) {
   const source = sourceRef(projection.manifest);
   return projectionDomains(projection).filter(domain => domain !== 'NEXO').map(domain => {
     const work = projection.work.filter(item => domainOf(item.domain) === domain);
     const tests = projection.tests.filter(item => domainOf(item.domain || 'SCIENCE') === domain);
     const blocked = work.filter(item => projectionState(item.status || item.operational_status) === 'BLOCKED');
+    const phase = item => String(item.status || item.state || '').toUpperCase();
+    const running = tests.filter(item => /RUNNING|CHECKPOINT/.test(phase(item)));
+    const ready = tests.filter(item => /READY/.test(phase(item)));
+    const done = tests.filter(item => /DONE|COMPLETE|VERIFIED|PROMOTED|REJECTED|INCONCLUSIVE/.test(phase(item)));
+    const next = running[0] || ready[0];
+    const latest = [...done].reverse().find(item => testMeaning(item)) || done[done.length - 1];
     return {
       domain,
-      current_state: work.length + ' WORK · ' + tests.length + ' TEST in sanctioned projection',
-      next_action: 'Await next canonical TOWER_V06 projection.',
-      last_effect: null,
+      current_state: tests.length + ' testes · ' + done.length + ' concluídos · ' + running.length + ' em andamento · ' + ready.length + ' prontos',
+      next_action: next
+        ? (running.includes(next) ? 'Continuar ' : 'Executar ') + testLabel(next) + ' (Executor científico, próxima hora).'
+        : 'Sem teste pronto: o Learner levanta novas hipóteses a cada 2 h.',
+      last_effect: latest ? testLabel(latest) + ': ' + (testMeaning(latest) || 'concluído, leitura simples pendente.') : null,
       blockers: blocked.map(item => String(item.id) + ': ' + String(item.status || item.operational_status || 'BLOCKED')),
       side_quests: [],
       freshness: { state: 'RECENT', observed_at: observedAt, ttl_seconds: null },
@@ -1135,21 +1178,7 @@ export function buildPagesProjection({
       title: 'TOWER_V06 sanctioned public projection',
       summary: projection.counts.active_work + ' active WORK · ' + projection.counts.tests + ' TEST · ' + projection.counts.capabilities + ' capabilities',
     }],
-    findings: [{
-      id: 'tower-v06-public-projection',
-      domain: 'NEXO',
-      status: 'SNAPSHOT',
-      source_ref: source,
-      fingerprint: manifest.projection_fingerprint,
-      checked_at: observedAt,
-      authority: { owner: 'TOWER_V06', class: 'DERIVED' },
-      provider: { expected: 'TOWER_V06', observed: 'TOWER_V06' },
-      capability: null,
-      severity: 'INFO',
-      explanation: 'Read-only sanctioned projection. Presentation cannot write back.',
-      freshness: { state: 'RECENT', observed_at: observedAt, ttl_seconds: null },
-      source_observed_at: observedAt,
-    }],
+    findings: domainFindings(projection, source, manifest, observedAt),
     actions: [],
     inbox,
     capabilities,

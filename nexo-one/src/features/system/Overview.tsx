@@ -4,6 +4,7 @@ import type { ActionRecord, InboxItem, SystemState } from '../../contracts/syste
 import { ActionCard, HumanInboxItem, LaneState, ProjectionHealth } from '../../components/composites.tsx';
 import { EmptyState } from '../../components/states.tsx';
 import { MissionControl } from './MissionControl.tsx';
+import { phaseOf } from '../../viewmodels/missions.ts';
 import {
   DomainBadge, FreshnessIndicator, SeverityBadge, StatusBadge,
 } from '../../components/primitives.tsx';
@@ -29,6 +30,8 @@ export function Overview(
   const groups = inboxGroups(state);
   const urgent = groups.flatMap(group => group.items).slice(0, 3);
   const resolvable = resolvableActions(state);
+  // The autonomous queue that actually runs is the test frontier (Executor, hourly).
+  const frontier = state.graph.nodes.filter(node => node.type === 'TEST' && (phaseOf(node) === 'READY' || phaseOf(node) === 'RUNNING'));
   const lanes = laneViews(state);
   const unavailableProviders = state.providers.filter(provider =>
     provider.state === 'MISSING_PROVIDER' || provider.state === 'BLOCKED').length;
@@ -114,8 +117,11 @@ export function Overview(
                   capability={capabilityById(state, action.capability_id)} onOpen={onOpenAction} />
               ))}
             </div>
-          : <EmptyState title="0 ações executáveis sem gate humano."
-              description="Não há ação aberta com capability executável e dependências resolvidas nesta compilação." />}
+          : frontier.length
+            ? <EmptyState title={`${frontier.length} testes na fronteira do Executor.`}
+                description={`O Executor científico roda sozinho a cada hora. Próximos: ${frontier.slice(0, 3).map(node => node.question_plain || node.label).join(' · ')}.`} />
+            : <EmptyState title="Fronteira vazia."
+                description="Nenhum teste pronto agora; o Learner levanta novas hipóteses a cada 2 horas." />}
       </section>
 
       <section aria-labelledby="lanes-title" data-order="lanes">
