@@ -166,9 +166,11 @@ function scienceGraphModel(projection:ScienceProjectionV1,generatedAt:string):At
   return {revision:projection.fingerprint,generatedAt,roots:[rootId],nodes,nodeMap,childrenMap,crossLinks,...buildAtlasGraphIndexes(nodes,crossLinks),sourceNodeIds:new Set(nodes.map(node=>node.id))};
 }
 
+const HUMAN_STATE:Record<string,string>={ACTIVE:'Em andamento',RUNNING:'Em andamento',IN_PROGRESS:'Em andamento',PAUSED:'Pausada',CHECKPOINTED:'Em espera',CLOSED:'Encerrada',COMPLETED:'Concluída',DONE:'Concluído',READY:'Pronto',VERIFIED:'Verificado',RESULT:'Resultado disponível',REJECTED:'Rejeitado',SUPPORTS:'Compatível',FALSIFIES:'Refuta',NULL:'Nulo',INCONCLUSIVE:'Inconclusivo',PENDING:'Pendente',PLANNED:'Planejada',PROPOSED:'Proposta',DRAFT:'Rascunho',QUEUED:'Na fila',BLOCKED:'Bloqueado',WAITING:'Aguardando',FAILED:'Falhou',SUPERSEDED:'Substituído',PROMOTED:'Promovido',ARCHIVED:'Arquivado',OPEN:'Aberto',BLOCKED_SCIENTIFIC_CONTRACT:'Bloqueado pelo contrato'};
+function humanState(raw:string){return HUMAN_STATE[raw.toUpperCase()]||raw;}
 function StateText({value}:{value:unknown}){
   const raw=typeof value==='string'?value.toUpperCase():'';
-  const human:Record<string,string>={ACTIVE:'Em andamento',RUNNING:'Em andamento',IN_PROGRESS:'Em andamento',PAUSED:'Pausada',CHECKPOINTED:'Em espera',CLOSED:'Encerrada',COMPLETED:'Concluída',DONE:'Concluído',READY:'Pronto',VERIFIED:'Verificado',RESULT:'Resultado disponível',REJECTED:'Rejeitado',SUPPORTS:'Compatível',FALSIFIES:'Refuta',NULL:'Nulo',INCONCLUSIVE:'Inconclusivo',PENDING:'Pendente',PLANNED:'Planejada',PROPOSED:'Proposta',DRAFT:'Rascunho',QUEUED:'Na fila',BLOCKED:'Bloqueado',WAITING:'Aguardando',FAILED:'Falhou',SUPERSEDED:'Substituído',PROMOTED:'Promovido',ARCHIVED:'Arquivado',OPEN:'Aberto'};
+  const human=HUMAN_STATE;
   return <span className={value===null||value===undefined||value===''?'science-no-value':''}>{human[raw]||textOf(value)}</span>;
 }
 
@@ -210,6 +212,7 @@ export default function ScienceWorkspace({state}:{state:SystemState}){
   const projection=state.science_projection_v1;
   const [tab,setTab]=useState<ScienceTab>(initialTab);
   const [query,setQuery]=useState('');
+  const [testStatus,setTestStatus]=useState<string|null>(()=>routeParams().get('status'));
   const [graphView,setGraphView]=useState<NexoGraphView>(initialGraphView);
   const [graphMode,setGraphMode]=useState<GraphMode>(initialGraphMode);
   const [plotMode,setPlotMode]=useState<PlotMode>('grafico');
@@ -239,7 +242,17 @@ export default function ScienceWorkspace({state}:{state:SystemState}){
 
   const q=query.trim().toLowerCase();
   const campaigns=projection?.campaigns.filter(item=>recordSearch(item,q))??[];
-  const tests=projection?.tests.filter(item=>recordSearch(item,q))??[];
+  const testStatusOf=(item:ScienceProjectionRecord)=>textOf(valueOf(item,'status'))||'SEM ESTADO';
+  const searchedTests=projection?.tests.filter(item=>recordSearch(item,q))??[];
+  const testStatusCounts=[...searchedTests.reduce((acc,item)=>acc.set(testStatusOf(item),(acc.get(testStatusOf(item))||0)+1),new Map<string,number>())].sort((a,b)=>b[1]-a[1]);
+  const tests=testStatus?searchedTests.filter(item=>testStatusOf(item)===testStatus):searchedTests;
+  const pickTestStatus=(next:string|null)=>{
+    setTestStatus(next);
+    const params=routeParams();
+    if(next)params.set('status',next);else params.delete('status');
+    const base=window.location.hash.split('?',1)[0];
+    window.history.replaceState(null,'',`${base}?${params.toString()}`);
+  };
   const hypotheses=projection?.hypotheses.filter(item=>recordSearch(item,q))??[];
   const filaments=learningRows(state.filaments,q);
   const quantitative=projection?.tests.flatMap(test=>{
@@ -266,6 +279,12 @@ export default function ScienceWorkspace({state}:{state:SystemState}){
       <td><strong>{shortId(item.id)}</strong><small>{item.id}</small></td><td><StateText value={valueOf(item,'question')}/></td><td><StateText value={valueOf(item,'status')}/></td>
       <td><StateText value={valueOf(item,'hypothesis_ids')}/></td><td><StateText value={valueOf(item,'started_at')}/></td><td><StateText value={valueOf(item,'prereg_ref')}/></td>
     </tr>)}/>}
+
+    {projection&&tab==='testes'&&<div className="science-status-filter" role="group" aria-label="Filtrar testes por estado">
+      <button type="button" className={!testStatus?'active':''} aria-pressed={!testStatus} onClick={()=>pickTestStatus(null)}>Todos<span>{searchedTests.length}</span></button>
+      {testStatusCounts.map(([status,count])=><button type="button" key={status} data-status={status} className={testStatus===status?'active':''} aria-pressed={testStatus===status} title={status} onClick={()=>pickTestStatus(testStatus===status?null:status)}>{humanState(status)}<span>{count}</span></button>)}
+      {testStatus&&!testStatusCounts.some(([status])=>status===testStatus)&&<button type="button" className="active" aria-pressed onClick={()=>pickTestStatus(null)}>{humanState(testStatus)}<span>0</span></button>}
+    </div>}
 
     {projection&&tab==='testes'&&<DenseTable heads={['Teste','Campanha','Estado','Hipótese','Método','Datasets','Veredito','Claim','σ LEE',...(tests.some(item=>valueOf(item,'publication_status')!==null)?['Publicação']:[])]} empty="Nenhum teste corresponde ao filtro." rows={tests.map(item=><tr key={item.id}>
       <td><strong>{shortId(item.id)}</strong><small>{item.id}</small></td><td><StateText value={valueOf(item,'campaign_id')}/></td><td><StateText value={valueOf(item,'status')}/></td><td><StateText value={valueOf(item,'hypothesis_id')}/></td>
