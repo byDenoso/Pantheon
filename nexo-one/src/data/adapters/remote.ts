@@ -33,20 +33,48 @@ export function resolveSystemEndpoint(
 
 export const SYSTEM_ENDPOINT = resolveSystemEndpoint(configuredSystemEndpoint);
 
+// Several views (cockpit, Atlas, science) mount at once and each asks for the
+// SystemState. Non-forced loads share one request for a short window instead
+// of downloading the same projection N times.
+const SHARE_WINDOW_MS = 3_000;
+let shared: { at: number; promise: Promise<SystemState> } | null = null;
+
+function abortable<T>(promise: Promise<T>, signal?: AbortSignal): Promise<T> {
+  if (!signal) return promise;
+  if (signal.aborted) return Promise.reject(new DOMException('Aborted', 'AbortError'));
+  return new Promise<T>((resolve, reject) => {
+    const onAbort = () => reject(new DOMException('Aborted', 'AbortError'));
+    signal.addEventListener('abort', onAbort, { once: true });
+    promise.then(
+      value => { signal.removeEventListener('abort', onAbort); resolve(value); },
+      error => { signal.removeEventListener('abort', onAbort); reject(error); },
+    );
+  });
+}
+
 export const remoteSource: SystemDataSource = {
   id: 'remote',
   label: 'Servidor NEXO · SystemState público',
   kind: 'remote',
 
   async load({ signal, force }): Promise<SystemState> {
+    if (!force && shared && Date.now() - shared.at < SHARE_WINDOW_MS) return abortable(shared.promise, signal);
+    const promise = loadSystemState(Boolean(force));
+    shared = { at: Date.now(), promise };
+    promise.catch(() => { if (shared?.promise === promise) shared = null; });
+    return abortable(promise, signal);
+  },
+};
+
+async function loadSystemState(force: boolean): Promise<SystemState> {
     const endpointPath = SYSTEM_ENDPOINT.split('?', 1)[0] ?? SYSTEM_ENDPOINT;
     const staticProjection = endpointPath.endsWith('.json');
     const separator = SYSTEM_ENDPOINT.includes('?') ? '&' : '?';
     const refresh = force && !staticProjection ? `${separator}refresh=1` : '';
     const requestUrl = `${SYSTEM_ENDPOINT}${refresh}`;
 
+    // No per-caller signal here: the request is shared; callers abort their own wait.
     const response = await fetch(requestUrl, {
-      signal,
       // Static Pages assets keep a stable URL so the browser/CDN can revalidate
       // with ETag/Last-Modified instead of downloading a timestamp-busted copy.
       cache: staticProjection ? (force ? 'reload' : 'no-cache') : 'no-store',
@@ -67,5 +95,4 @@ export const remoteSource: SystemDataSource = {
     }
 
     return assertSystemState(await response.json());
-  },
-};
+}
