@@ -94,7 +94,8 @@ function readGlow(): number {
 const signed = (value: number | null | undefined, digits = 2) =>
   typeof value === 'number' && value !== 0 ? ` (${value > 0 ? '+' : ''}${value.toFixed(digits)})` : '';
 
-export function GalaxyView({ selectedId, onSelect }: { selectedId: string | null; onSelect: (id: string) => void }) {
+// Overview only: clicking the galaxy never navigates away to the graphs.
+export function GalaxyView({ selectedId }: { selectedId: string | null; onSelect?: (id: string) => void }) {
   const [entities, setEntities] = useState<RawEntity[] | null>(null);
   const [morphology, setMorphology] = useState<(GalaxyMorphology & { metrics?: Metrics; metrics_delta?: MetricsDelta | null }) | null>(null);
   const [failed, setFailed] = useState(false);
@@ -108,7 +109,7 @@ export function GalaxyView({ selectedId, onSelect }: { selectedId: string | null
   const [glow, setGlow] = useState<number>(readGlow);
   // Stable callbacks: they are scene deps, and a new identity rebuilds the whole
   // WebGL scene (and resets the camera) on every re-render.
-  const handleSelect = useCallback((id: string | null) => { if (id) onSelect(id); }, [onSelect]);
+  const handleSelect = useCallback((_id: string | null) => {}, []);
   const handleFailure = useCallback(() => setFailed(true), []);
   const handleEventSelect = useCallback((id: string) => setFocus(current => current?.id === id ? null : { id, nonce: Date.now() }), []);
   // Legend click cycles through the events of that kind, most intense first.
@@ -192,9 +193,7 @@ export function GalaxyView({ selectedId, onSelect }: { selectedId: string | null
               <h3>{related.length === 1 ? 'Item' : `Itens (${related.length})`}</h3>
               <ul>
                 {related.slice(0, 30).map(e => (
-                  <li key={e.id}><button type="button" onClick={() => onSelect(e.canonical_id || e.id)}>
-                    <span>{e.title || e.canonical_id || e.id}</span>{e.status && <small>{e.status}</small>}
-                  </button></li>
+                  <li key={e.id}><span>{e.title || e.canonical_id || e.id}</span>{e.status && <small>{e.status}</small>}</li>
                 ))}
               </ul>
             </section>

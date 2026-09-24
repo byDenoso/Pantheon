@@ -382,6 +382,9 @@ function buildSpiralGalaxy(count: number, morph: GalaxyMorphology): BufferGeomet
       // Soft haze makes the bar read as one glowing body, like NGC 1300.
       size = haze ? 5 + r() * 5 : 0.5 + r() * 0.9; light = haze ? 0.02 + r() * 0.025 : 0.4 + r() * 0.4;
       tmp.copy(STAR_CORE).lerp(STAR_WARM, r() * 0.5).lerp(coreTint, 0.12);
+      // Outer bulge cools towards the arm palette: no hard edge at the arm roots.
+      const edge = Math.min(1, Math.hypot(x, y) / Math.max(1, bulgeRadius * 1.4));
+      tmp.lerp(STAR_WHITE, edge * edge * 0.55);
     } else if (kind < 0.80) {
       // Arm stars, star-forming knots and dust lanes.
       let pick = r() * totalMass; let arm = arms[0] ?? 'SCIENCE';
@@ -409,6 +412,9 @@ function buildSpiralGalaxy(count: number, morph: GalaxyMorphology): BufferGeomet
       // distinguishable without the galaxy turning into a colour gradient.
       tmp.copy(c < 0.66 ? STAR_WHITE : c < 0.9 ? STAR_BLUE : c < 0.96 ? HII_PINK : DUST_RED).lerp(tints[arm], 0.14);
       if (knot && r() < 0.5) tmp.copy(HII_PINK).lerp(STAR_WHITE, 0.45);
+      // Arm roots inherit the nucleus' warmth and fade into the arm tone.
+      const root = Math.max(0, 1 - t / 0.28);
+      if (root > 0) tmp.lerp(STAR_CORE, root * root * 0.6);
     } else if (kind < 0.95) {
       // Inter-arm disk: faint exponential glow.
       const rad = -Math.log(Math.max(1e-6, r())) * 17;
@@ -433,6 +439,71 @@ function buildSpiralGalaxy(count: number, morph: GalaxyMorphology): BufferGeomet
   geometry.computeBoundingSphere();
   return geometry;
 }
+
+/**
+ * Deep field: a few hundred faint, distant galaxies (tiny tilted ellipses and
+ * specks) on a far shell. Static, never rotates with the disk, never picked.
+ */
+function buildDeepField(count: number): BufferGeometry {
+  const positions = new Float32Array(count * 3);
+  const sizes = new Float32Array(count);
+  const colors = new Float32Array(count * 3);
+  const shape = new Float32Array(count * 2); // angle, aspect
+  const tints = [new Color('#b9c4dc'), new Color('#d9c7a8'), new Color('#c3b3d6'), new Color('#9fb3d1'), new Color('#e0b9a4')];
+  const tmp = new Color();
+  for (let i = 0; i < count; i += 1) {
+    const r = rng(hash32('nexo-deep-field:' + i));
+    const a = r() * TAU; const b = Math.acos(2 * r() - 1); const rad = 520 + r() * 260;
+    positions[i * 3] = Math.sin(b) * Math.cos(a) * rad;
+    positions[i * 3 + 1] = Math.sin(b) * Math.sin(a) * rad;
+    positions[i * 3 + 2] = Math.cos(b) * rad;
+    const big = r() < 0.12;
+    sizes[i] = big ? 12 + r() * 12 : 4 + r() * 5;
+    tmp.copy(tints[Math.floor(r() * tints.length)]!);
+    colors[i * 3] = tmp.r; colors[i * 3 + 1] = tmp.g; colors[i * 3 + 2] = tmp.b;
+    shape[i * 2] = r() * Math.PI;
+    shape[i * 2 + 1] = r() < 0.25 ? 1 : 0.2 + r() * 0.5;
+  }
+  const geometry = new BufferGeometry();
+  geometry.setAttribute('position', new Float32BufferAttribute(positions, 3));
+  geometry.setAttribute('aSize', new Float32BufferAttribute(sizes, 1));
+  geometry.setAttribute('aColor', new Float32BufferAttribute(colors, 3));
+  geometry.setAttribute('aShape', new Float32BufferAttribute(shape, 2));
+  return geometry;
+}
+
+const deepFieldVertexShader = `
+attribute float aSize;
+attribute vec3 aColor;
+attribute vec2 aShape;
+uniform float uPixelRatio;
+varying vec3 vColor;
+varying vec2 vShape;
+void main() {
+  vec4 mv = modelViewMatrix * vec4(position, 1.0);
+  gl_PointSize = clamp(aSize * uPixelRatio * (620.0 / max(60.0, -mv.z)), 1.2, 26.0);
+  gl_Position = projectionMatrix * mv;
+  vColor = aColor;
+  vShape = aShape;
+}
+`;
+
+const deepFieldFragmentShader = `
+uniform float uOpacity;
+varying vec3 vColor;
+varying vec2 vShape;
+void main() {
+  vec2 uv = gl_PointCoord - vec2(0.5);
+  float c = cos(vShape.x); float s = sin(vShape.x);
+  vec2 p = vec2(c * uv.x - s * uv.y, s * uv.x + c * uv.y);
+  p.y /= max(0.18, vShape.y);
+  float d = length(p) * 2.0;
+  if (d > 1.0) discard;
+  float core = exp(-d * d * 14.0);
+  float disk = exp(-d * d * 3.5) * 0.45;
+  gl_FragColor = vec4(vColor, (core + disk) * uOpacity);
+}
+`;
 
 const spiralVertexShader = `
 attribute float aSize;
@@ -811,6 +882,16 @@ export const GalaxyThree3D = forwardRef<CanvasGraph25DHandle, Props>(function Ga
       const disk = new Group();
       disk.rotation.z = diskAngleRef.current;
       scene.add(disk);
+      const deepFieldGeometry = spiral ? buildDeepField(isMobile ? 220 : 560) : null;
+      const deepFieldMaterial = spiral ? new ShaderMaterial({
+        uniforms: { uPixelRatio: { value: renderer.getPixelRatio() }, uOpacity: { value: 0.75 } },
+        vertexShader: deepFieldVertexShader,
+        fragmentShader: deepFieldFragmentShader,
+        transparent: true,
+        depthWrite: false,
+        blending: AdditiveBlending,
+      }) : null;
+      if (deepFieldGeometry && deepFieldMaterial) scene.add(new Points(deepFieldGeometry, deepFieldMaterial));
       disk.add(galaxy);
 
       const ringGeometry = buildFieldRingSegments(nodes, isMacro);
@@ -1028,6 +1109,8 @@ export const GalaxyThree3D = forwardRef<CanvasGraph25DHandle, Props>(function Ga
         controls.dispose();
         galaxyGeometry.dispose();
         galaxyMaterial.dispose();
+        deepFieldGeometry?.dispose();
+        deepFieldMaterial?.dispose();
         ringGeometry.dispose();
         ringMaterial.dispose();
         grid.geometry.dispose();
