@@ -1,8 +1,8 @@
 import {buildAtlasGraphIndexes,type AtlasMetroModel,type AtlasMetroNode,type AtlasCrossLink} from './atlasAdapter.ts';
 
-export type AtlasLens='operacao'|'ciencia'|'sistema'|'aprendizado';
+export type AtlasLens='operacao'|'ciencia'|'sistema'|'aprendizado'|'tudo';
 export const ATLAS_LENSES:Array<[AtlasLens,string]>=[
-  ['operacao','Operação'],['ciencia','Ciência'],['sistema','Sistema'],['aprendizado','Aprendizado'],
+  ['operacao','Operação'],['ciencia','Ciência'],['sistema','Sistema'],['aprendizado','Aprendizado'],['tudo','Tudo'],
 ];
 
 const OPERATION_TYPES=new Set(['ACTION','EFFECT','CAPABILITY','PROVIDER','PROJECTION']);
@@ -27,6 +27,7 @@ export function normalizeAtlasLens(value:string|null|undefined):AtlasLens{
   if(lens==='science'||lens==='ciencia')return'ciencia';
   if(lens==='system'||lens==='sistema')return'sistema';
   if(lens==='learning'||lens==='aprendizado')return'aprendizado';
+  if(lens==='all'||lens==='tudo')return'tudo';
   return'operacao';
 }
 
@@ -34,7 +35,10 @@ export function atlasModelForLens(model:AtlasMetroModel,lens:AtlasLens):AtlasMet
   const keep=new Set<string>();
   let candidateIds:string[]=[];
 
-  if(lens==='ciencia'){
+  if(lens==='tudo'){
+    // Ciência + Operação + Sistema + Aprendizado: the whole published graph.
+    candidateIds=model.nodes.map(node=>node.id);
+  }else if(lens==='ciencia'){
     candidateIds=model.nodes.filter(node=>node.domain==='SCIENCE').map(node=>node.id);
   }else if(lens==='sistema'){
     candidateIds=model.nodes.filter(node=>node.domain==='NEXO'&&(node.entityType==='hub'||node.entityType==='subdomain'||SYSTEM_TYPES.has(String(node.entityType)))).map(node=>node.id);
