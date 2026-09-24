@@ -409,3 +409,21 @@ button,input{font:inherit}
 :is(.atlas-metro-page,.atlas-metro-surface,.atlas-three-surface)[data-atlas-theme="light"] .atlas-interaction-hint kbd{border-color:rgba(15,23,42,.18);color:#334155}
 .atlas-screen-label.selected,.atlas-screen-label.hovered{z-index:2}
 @media (max-width:760px){.atlas-label-density-note{right:8px;top:8px;max-width:60vw}}
+/* Celular: filtros do Atlas como pílulas roláveis de 32px. */
+@media(max-width:640px){
+  .atlas-graph-filters{gap:6px}
+  .atlas-lens-switch,.atlas-layer-switch{padding:2px;border-radius:999px}
+  .atlas-lens-switch button,.atlas-layer-switch button{height:28px;padding:0 10px;border-radius:999px;font-size:11px}
+  .atlas-graph-filters .atlas-button,.atlas-graph-filters .atlas-toggle{height:32px;min-width:32px;border-radius:999px}
+  .atlas-graph-filters .nexo-graph-view-switch button{height:32px;border-radius:999px;padding:0 11px}
+}
+@media(max-width:640px){
+  /* Um único trilho rolável: o contêiner do NexoGraph rola, os grupos internos não. */
+  .nexo-graph-toolbar-secondary .atlas-graph-filters{width:auto;flex:none;overflow:visible}
+  :root[data-theme] .nexo-graph .nexo-graph-filters :is(.nexo-spotlight-toggle,.nexo-illumination-toggle,.atlas-button,.atlas-toggle){border-radius:999px}
+}
+:root[data-theme] :is(.atlas-lens-switch,.atlas-layer-switch){border-radius:999px!important;background:transparent}
+:root[data-theme] :is(.atlas-lens-switch,.atlas-layer-switch) button{border:0!important;border-radius:999px!important}
+:root[data-theme=light] .atlas-layer-switch button.active{color:#5b21b6;background:color-mix(in srgb,#8b5cf6 14%,#fff);box-shadow:0 0 0 1px color-mix(in srgb,#8b5cf6 45%,transparent) inset}
+:root[data-theme=light] .nexo-graph-filters .nexo-illumination-toggle[aria-pressed="true"]{color:#4c1d95;background:color-mix(in srgb,#8b5cf6 18%,#fff);border-color:#a78bfa}
+@media(max-width:640px){:root[data-theme] .nexo-graph-toolbar-secondary :is(.nexo-graph-filters,.atlas-graph-filters){border:0!important;background:none!important;box-shadow:none!important;outline:0}}
