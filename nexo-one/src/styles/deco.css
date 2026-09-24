@@ -1,0 +1,50 @@
+/* Ambient decoration (Linear/Vercel/Resend/Supabase technique): structure and light
+   behind the content, never on top of it. Grid + concentric rings + a warm glow behind
+   the page title, a FIG caption above it, and framed cards with an accent bar.
+   Início (teia cósmica), Galáxia and Mapa have their own scenes and stay out. */
+
+.cockpit{--deco-line:rgba(200,215,240,.075);--deco-ring:rgba(200,215,240,.085);--deco-glow:233,194,122;--deco-glow-a:.30;--deco-caption:rgba(233,194,122,.85);
+  --deco-card-bg:rgba(10,13,20,.72);--deco-card-border:rgba(200,215,240,.10);--deco-card-sep:rgba(200,215,240,.08);--deco-card-tint:.10;--deco-card-shadow:0 1px 0 rgba(255,255,255,.05) inset,0 40px 90px -40px rgba(0,0,0,.8)}
+:root[data-theme=light] .cockpit{--deco-line:rgba(20,30,50,.13);--deco-ring:rgba(20,30,50,.14);--deco-glow-a:.42;--deco-caption:rgba(150,110,40,.85);
+  --deco-card-bg:rgba(255,255,255,.72);--deco-card-border:rgba(20,30,50,.10);--deco-card-sep:rgba(20,30,50,.08);--deco-card-tint:.16;--deco-card-shadow:0 1px 0 rgba(255,255,255,.8) inset,0 40px 80px -40px rgba(20,30,50,.35)}
+
+/* Glow in the tab's main domain colour. */
+.cockpit[data-view=LEARNING]{--deco-glow:127,184,217}
+.cockpit[data-view=SYSTEM]{--deco-glow:169,155,201}
+.cockpit:is([data-view=NOW],[data-view=LOOPS],[data-view=DAY],[data-view=CONTEXT],[data-view=RECALL]){--deco-glow:159,179,138}
+:root[data-theme=light] .cockpit[data-view=LEARNING]{--deco-caption:rgba(40,100,140,.85)}
+:root[data-theme=light] .cockpit[data-view=SYSTEM]{--deco-caption:rgba(90,70,140,.85)}
+:root[data-theme=light] .cockpit:is([data-view=NOW],[data-view=LOOPS],[data-view=DAY],[data-view=CONTEXT],[data-view=RECALL]){--deco-caption:rgba(80,110,60,.9)}
+
+.cockpit:not([data-view=OVERVIEW]):not([data-view=GALAXY]):not([data-view=ATLAS]) main.workspace{position:relative;isolation:isolate}
+.cockpit:not([data-view=OVERVIEW]):not([data-view=GALAXY]):not([data-view=ATLAS]) main.workspace::before{content:"";position:absolute;inset:0 0 auto 0;height:980px;z-index:-1;pointer-events:none;
+  background-image:linear-gradient(to right,var(--deco-line) 1px,transparent 1px),linear-gradient(to bottom,var(--deco-line) 1px,transparent 1px);background-size:64px 64px;
+  -webkit-mask-image:radial-gradient(ellipse 70% 60% at 78% 18%,#000 0%,transparent 70%);mask-image:radial-gradient(ellipse 70% 60% at 78% 18%,#000 0%,transparent 70%)}
+.cockpit:not([data-view=OVERVIEW]):not([data-view=GALAXY]):not([data-view=ATLAS]) main.workspace::after{content:"";position:absolute;top:-220px;right:-120px;width:980px;height:980px;z-index:-1;pointer-events:none;border-radius:50%;
+  background:radial-gradient(circle,rgba(var(--deco-glow),var(--deco-glow-a)) 0%,rgba(var(--deco-glow),calc(var(--deco-glow-a)*.32)) 30%,transparent 55%),repeating-radial-gradient(circle,transparent 0 46px,var(--deco-ring) 46px 47.5px);
+  -webkit-mask-image:radial-gradient(circle,#000 30%,transparent 68%);mask-image:radial-gradient(circle,#000 30%,transparent 68%)}
+
+/* FIG caption above the title (numbered in navigation order). */
+.cockpit main.workspace .workspace-heading:not(.workspace-heading--hero){position:relative;margin-top:18px}
+.cockpit main.workspace .workspace-heading:not(.workspace-heading--hero)::before{position:absolute;left:0;top:-46px;font:500 10px/1 "IBM Plex Mono",ui-monospace,monospace;letter-spacing:.22em;color:var(--deco-caption);white-space:nowrap}
+.cockpit[data-view=LEARNING] .workspace-heading::before{content:"FIG 03 · CIÊNCIA"}
+.cockpit[data-view=ACTIONS] .workspace-heading::before{content:"FIG 04 · OPERAÇÃO / FILA"}
+.cockpit[data-view=INBOX] .workspace-heading::before{content:"FIG 04 · OPERAÇÃO / PRECISA DE VOCÊ"}
+.cockpit[data-view=EXECUTION] .workspace-heading::before{content:"FIG 04 · OPERAÇÃO / EXECUÇÃO"}
+.cockpit[data-view=CAPABILITIES] .workspace-heading::before{content:"FIG 05 · PROVA / CAPABILITIES"}
+.cockpit[data-view=INTEGRITY] .workspace-heading::before{content:"FIG 05 · PROVA / INTEGRIDADE"}
+.cockpit[data-view=SOURCES] .workspace-heading::before{content:"FIG 05 · PROVA / FONTES"}
+.cockpit[data-view=TRUTHGRAPH] .workspace-heading::before{content:"FIG 05 · PROVA / AUTORIDADE"}
+.cockpit:is([data-view=NOW],[data-view=LOOPS],[data-view=DAY],[data-view=CONTEXT],[data-view=RECALL]) .workspace-heading::before{content:"FIG 08 · PESSOAL"}
+
+/* Cards: framed, accent bar on top, warm tint fading down. */
+.cockpit .truth-grid-outer{border:1px solid var(--deco-card-border);border-radius:14px;background:var(--deco-card-bg);backdrop-filter:blur(6px);overflow:hidden;box-shadow:var(--deco-card-shadow)}
+.cockpit :is(.truth-grid-outer .truth-card,.truth-grid-outer>article){border-radius:0!important;border:0!important;border-right:1px solid var(--deco-card-sep)!important;border-bottom:1px solid var(--deco-card-sep)!important}
+.cockpit :is(.action-card,.lane-card,.truth-card,.inbox-item,.provider-card,.capability-detail,.work-row){
+  background-image:linear-gradient(180deg,rgba(var(--deco-glow),var(--deco-card-tint)),transparent 130px);box-shadow:inset 0 2px 0 rgba(var(--deco-glow),.7),var(--deco-card-shadow)}
+
+@media (max-width:760px){
+  .cockpit main.workspace::after{width:620px;height:620px;top:-160px;right:-260px}
+  .cockpit main.workspace .workspace-heading::before{top:-26px;font-size:9px}
+}
+@media print{.cockpit main.workspace::before,.cockpit main.workspace::after{display:none}}
