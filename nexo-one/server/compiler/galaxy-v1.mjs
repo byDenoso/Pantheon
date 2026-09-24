@@ -1,4 +1,5 @@
 import {createHash} from 'node:crypto';
+import {armFrame as morphFrame,armPoint as morphPoint,metricsDelta,morphologyFrom,shapeMetrics} from '../../src/viewmodels/galaxy-morphology.mjs';
 
 export const GALAXY_CONTRACT='NEXO_ONE_GALAXY_V1';
 export const GALAXY_DOMAINS=['NEXO','SCIENCE','ENGINEERING','OLYMPUS'];
@@ -96,27 +97,11 @@ function clusterFor(kind,id,item,resolved){
   return {id:`cluster:${resolved.visual_domain}:${kind.toLowerCase()}`,label:kind,basis:'entity_kind',canonical:false};
 }
 
-// Barred spiral. NEXO is the bulge and bar; each domain is an arm leaving a
-// bar end; semantic subdomains are ordered segments along the arm; tests are
-// dust trailing along it. Deterministic: position comes from ids and order.
-const BAR_HALF=46;
-const ARMS={
-  SCIENCE:{phase:0,turns:.95,length:1,pitch:.23,width:14},
-  OLYMPUS:{phase:Math.PI,turns:.8,length:.85,pitch:.25,width:12},
-  ENGINEERING:{phase:Math.PI/2,turns:.42,length:.5,pitch:.34,width:18},
-};
-function armPoint(domain,t){
-  const arm=ARMS[domain]||ARMS.ENGINEERING;
-  const theta=arm.turns*Math.PI*2*t*arm.length;
-  const radius=BAR_HALF*Math.exp(arm.pitch*theta)+t*18;
-  const angle=arm.phase+theta;
-  return {x:Math.cos(angle)*radius,y:Math.sin(angle)*radius,angle,radius};
-}
-function armFrame(domain,t){
-  const p=armPoint(domain,t),q=armPoint(domain,Math.min(1.05,t+.01));
-  const tx=q.x-p.x,ty=q.y-p.y,len=Math.hypot(tx,ty)||1;
-  return {...p,tx:tx/len,ty:ty/len,nx:-ty/len,ny:tx/len};
-}
+// Barred spiral whose shape comes from the data (see galaxy-morphology.mjs).
+// MORPH is set per compile before any layout runs.
+let MORPH=null;
+function armPoint(domain,t){return morphPoint(MORPH,domain,t);}
+function armFrame(domain,t){return morphFrame(MORPH,domain,t);}
 function gaussian(id,salt){
   const u=Math.max(1e-6,hashFraction(id,salt+'u')),v=hashFraction(id,salt+'v');
   return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v);
@@ -129,12 +114,12 @@ function entityLayout(entity,indexWithinCluster,totalWithinCluster,clusterLayout
     const span=clusterLayout.arm.span;
     const along=clusterLayout.arm.t+(hashFraction(entity.id,'dust-along')-.5)*span;
     const frame=armFrame(clusterLayout.arm.domain,Math.max(0,along));
-    const width=(ARMS[clusterLayout.arm.domain]||ARMS.ENGINEERING).width*(1+along*.8);
+    const width=(MORPH.arms[clusterLayout.arm.domain]?.width??10)*(1+along*.8);
     const across=gaussian(entity.id,'dust-across')*width*.45;
     point={x:frame.x+frame.nx*across,y:frame.y+frame.ny*across,z:gaussian(entity.id,'dust-z')*4};
   }else{
     // Bulge and bar: dense core stretched along the bar axis.
-    const r=Math.abs(gaussian(entity.id,'bulge-r'))*18;
+    const r=Math.abs(gaussian(entity.id,'bulge-r'))*MORPH.bulge.radius*2;
     const a=hashFraction(entity.id,'bulge-a')*Math.PI*2;
     point={x:Math.cos(a)*r*1.9,y:Math.sin(a)*r*.7,z:gaussian(entity.id,'bulge-z')*6};
   }
@@ -153,8 +138,9 @@ function clusterLayout(cluster,indexWithinDomain,totalWithinDomain){
   if(domain==='NEXO'){
     // NEXO stations sit on the bar.
     const t=totalWithinDomain<=1?0:(indexWithinDomain/(totalWithinDomain-1))*2-1;
-    return {x:round(t*BAR_HALF*.9),y:round((hashFraction(cluster.id,'bar-y')-.5)*10),z:round((hashFraction(cluster.id,'z')-.5)*6),sector:'NEXO',lod:'MEDIUM'};
+    return {x:round(t*MORPH.bulge.bar*.9),y:round((hashFraction(cluster.id,'bar-y')-.5)*10),z:round((hashFraction(cluster.id,'z')-.5)*6),sector:'NEXO',lod:'MEDIUM'};
   }
+  if(!MORPH.arms[domain])return {x:0,y:0,z:0,sector:domain,lod:'MEDIUM'};
   const span=1/Math.max(1,totalWithinDomain);
   const t=span*(indexWithinDomain+.5);
   const p=armPoint(domain,t);
@@ -218,16 +204,16 @@ function makeEntity(kind,id,item,collection,consensus,manifest){
   };
 }
 
-function domainDefinitions(){
-  return GALAXY_DOMAINS.map(id=>({
+function domainDefinitions(ids=GALAXY_DOMAINS){
+  return ids.map(id=>({
     id:`domain:${id}`,
     domain:id,
     kind:'DOMAIN',
     title:id,
     canonical:id!=='NEXO',
     layout:id==='NEXO'?{x:0,y:0,z:0,sector:'CORE',lod:'MACRO'}:{
-      x:round(armPoint(id,.12).x),
-      y:round(armPoint(id,.12).y),
+      x:round(MORPH.arms[id]?armPoint(id,.12).x:0),
+      y:round(MORPH.arms[id]?armPoint(id,.12).y:0),
       z:0,sector:id,lod:'MACRO',
     },
   }));
@@ -320,6 +306,17 @@ export function compileGalaxySnapshot({projection,manifestFile=null,interdomain=
   const clusters=[...clusterMap.values()].sort((a,b)=>a.domain.localeCompare(b.domain)||a.id.localeCompare(b.id));
   const clustersByDomain=new Map();
   for(const cluster of clusters){const group=clustersByDomain.get(cluster.domain)||[];group.push(cluster);clustersByDomain.set(cluster.domain,group);}
+  const counts={};
+  for(const entity of entities){const c=counts[entity.visual_domain]||(counts[entity.visual_domain]={entities:0,subdomains:0});c.entities+=1;}
+  for(const [domain,group] of clustersByDomain){(counts[domain]||(counts[domain]={entities:0,subdomains:0})).subdomains=group.length;}
+  const bridgeCounts=new Map();
+  for(const item of Array.isArray(interdomain)?interdomain:[]){
+    for(const from of [].concat(item?.source_domains||[]))for(const to of [].concat(item?.target_domains||[])){
+      const a=mapVisualDomain(from),b=mapVisualDomain(to);if(!a||!b||a===b)continue;
+      const key=a+'>'+b;bridgeCounts.set(key,(bridgeCounts.get(key)||0)+1);
+    }
+  }
+  MORPH=morphologyFrom({counts,core:counts.NEXO?.entities||0,bridges:[...bridgeCounts].map(([k,count])=>{const [from,to]=k.split('>');return {from,to,count};})});
   for(const [,group] of clustersByDomain)group.forEach((cluster,index)=>{cluster.layout=clusterLayout(cluster,index,group.length);});
   const clusterById=new Map(clusters.map(cluster=>[cluster.id,cluster]));
   const membersByCluster=new Map();
@@ -350,12 +347,15 @@ export function compileGalaxySnapshot({projection,manifestFile=null,interdomain=
     id:cluster.id,kind:'SUBDOMAIN',title:cluster.label,domain:cluster.domain,canonical:cluster.canonical,source_basis:cluster.basis,
     entity_count:cluster.members.length,layout:cluster.layout,
   }));
-  const domains=domainDefinitions();
+  const domains=domainDefinitions([...new Set([...GALAXY_DOMAINS,...Object.keys(counts)])]);
   const needs_you=entities.map(entity=>({entity,reason:humanReason(entity._raw)})).filter(item=>item.reason).map(({entity,reason})=>({entity:entity.id,reason,status:entity.status,importance:entity.importance})).sort((a,b)=>b.importance-a.importance||a.entity.localeCompare(b.entity));
   const generated_at=text(manifest.generated_at)||sourceTime(manifest.event_cursor||projection.event_cursor);
 
+  const crossRelations=relations.filter(relation=>!relation.derived).length;
+  const metrics=shapeMetrics({entities:publicEntities,crossRelations});
+  const morphology={...MORPH,metrics,metrics_delta:metricsDelta(metrics,previousSnapshot?.morphology?.metrics)};
   const core={
-    domains,subdomains,entities:publicEntities,relations,needs_you,
+    domains,subdomains,entities:publicEntities,relations,needs_you,morphology,
     layout:{model:'DETERMINISTIC_SEMANTIC_GALAXY_V1',core:'NEXO',sectors:['SCIENCE','ENGINEERING','OLYMPUS'],coordinate_system:'CARTESIAN_2_5D',deterministic:true},
   };
   const fingerprint=sha256({tower_revision:text(manifest.tower_commit),projection_fingerprint:text(manifest.projection_fingerprint),...core});

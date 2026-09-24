@@ -36,6 +36,8 @@ import type { GraphEdge } from '../contracts/system.ts';
 import type { PlacedNode3D } from '../viewmodels/graph3d.ts';
 import type { Canvas25DViewState, CanvasGraph25DHandle } from './CanvasGraph25D.tsx';
 import { domainHex } from '../viewmodels/domainPalette.ts';
+// @ts-ignore -- shared plain-JS geometry module (server + browser)
+import { armPoint as morphArmPoint, morphologyFrom } from '../viewmodels/galaxy-morphology.mjs';
 import './GalaxyThree3D.css';
 
 const TAU = Math.PI * 2;
@@ -68,6 +70,10 @@ type Props = {
   className?: string;
   ariaLabel?: string;
   viewMode?: 'macro' | 'detail';
+  /** Data-driven galaxy shape from the published snapshot. */
+  morphology?: GalaxyMorphology | null;
+  /** Glow multiplier (0.5 soft … 1.2 strong). */
+  glow?: number;
 };
 
 type Tween = {
@@ -228,20 +234,20 @@ void main() {
 // Same barred-spiral geometry as the server galaxy compiler (galaxy-v1.mjs),
 // scaled like layoutFromGalaxy, so data nodes sit inside the arms they belong to.
 const G_SCALE = 0.55;
-const G_BAR = 46;
-const G_ARMS = {
-  SCIENCE: { phase: 0, turns: 0.95, length: 1, pitch: 0.23, width: 14, weight: 0.46 },
-  OLYMPUS: { phase: Math.PI, turns: 0.8, length: 0.85, pitch: 0.25, width: 12, weight: 0.38 },
-  ENGINEERING: { phase: Math.PI / 2, turns: 0.42, length: 0.5, pitch: 0.34, width: 18, weight: 0.16 },
-} as const;
-type ArmKey = keyof typeof G_ARMS;
 
-function spiralPoint(arm: ArmKey, t: number) {
-  const a = G_ARMS[arm];
-  const theta = a.turns * TAU * t * a.length;
-  const radius = G_BAR * Math.exp(a.pitch * theta) + t * 18;
-  const angle = a.phase + theta;
-  return { x: Math.cos(angle) * radius * G_SCALE, y: Math.sin(angle) * radius * G_SCALE };
+export type GalaxyMorphology = {
+  bulge: { radius: number; bar: number; tint: string };
+  arms: Record<string, { phase: number; turns: number; pitch: number; width: number; mass: number; segments: number; tint: string }>;
+};
+// Used only until the published snapshot arrives; same rules, typical counts.
+const DEFAULT_MORPHOLOGY = morphologyFrom({
+  counts: { SCIENCE: { entities: 120, subdomains: 12 }, OLYMPUS: { entities: 20, subdomains: 2 }, ENGINEERING: { entities: 10, subdomains: 2 } },
+  core: 45,
+}) as unknown as GalaxyMorphology;
+
+function spiralPoint(morph: GalaxyMorphology, arm: string, t: number) {
+  const p = morphArmPoint(morph, arm, t) as { x: number; y: number };
+  return { x: p.x * G_SCALE, y: p.y * G_SCALE };
 }
 
 const STAR_WHITE = new Color('#dfe9ff');
@@ -250,18 +256,18 @@ const STAR_WARM = new Color('#ffd7a8');
 const STAR_CORE = new Color('#fff1d6');
 const HII_PINK = new Color('#ff8fb0');
 const DUST_RED = new Color('#c9785a');
-const ARM_TINT: Record<ArmKey, Color> = {
-  SCIENCE: new Color('#7fb2ff'),
-  OLYMPUS: new Color('#ffcf7a'),
-  ENGINEERING: new Color('#9ff0c4'),
-};
 
-function buildSpiralGalaxy(count: number): BufferGeometry {
+function buildSpiralGalaxy(count: number, morph: GalaxyMorphology): BufferGeometry {
   const positions = new Float32Array(count * 3);
   const sizes = new Float32Array(count);
   const brightness = new Float32Array(count);
   const colors = new Float32Array(count * 3);
-  const arms = Object.keys(G_ARMS) as ArmKey[];
+  const arms = Object.keys(morph.arms);
+  const totalMass = arms.reduce((sum, key) => sum + Math.max(0.05, morph.arms[key].mass), 0) || 1;
+  const tints = Object.fromEntries(arms.map(key => [key, new Color(morph.arms[key].tint)]));
+  const coreTint = new Color(morph.bulge.tint);
+  const bulgeRadius = morph.bulge.radius * G_SCALE * 1.6;
+  const barStretchMax = morph.bulge.bar / 18;
   const tmp = new Color();
   for (let i = 0; i < count; i += 1) {
     const r = rng(hash32('nexo-spiral:' + i));
@@ -269,21 +275,24 @@ function buildSpiralGalaxy(count: number): BufferGeometry {
     let x: number; let y: number; let z: number; let size: number; let light: number;
     if (kind < 0.16) {
       // Bulge + bar: dense warm core stretched along the bar axis.
-      const rad = Math.abs(gaussian(r)) * 9;
+      const rad = Math.abs(gaussian(r)) * bulgeRadius;
       const a = r() * TAU;
-      const barStretch = r() < 0.45 ? 2.6 : 1.1;
+      const barStretch = r() < 0.45 ? barStretchMax : 1.1;
       x = Math.cos(a) * rad * barStretch; y = Math.sin(a) * rad * 0.8; z = gaussian(r) * 2.2;
       size = 0.9 + r() * 1.8; light = 0.55 + r() * 0.45;
-      tmp.copy(STAR_CORE).lerp(STAR_WARM, r() * 0.7);
+      tmp.copy(STAR_CORE).lerp(STAR_WARM, r() * 0.5).lerp(coreTint, 0.35);
     } else if (kind < 0.80) {
       // Arm stars, star-forming knots and dust lanes.
-      let pick = r(); let arm: ArmKey = 'SCIENCE';
-      for (const key of arms) { pick -= G_ARMS[key].weight; if (pick <= 0) { arm = key; break; } }
-      const t = Math.pow(r(), 0.85) * 1.04;
-      const p = spiralPoint(arm, t);
-      const q = spiralPoint(arm, t + 0.01);
+      let pick = r() * totalMass; let arm = arms[0] ?? 'SCIENCE';
+      for (const key of arms) { pick -= Math.max(0.05, morph.arms[key].mass); if (pick <= 0) { arm = key; break; } }
+      const spec = morph.arms[arm];
+      // Fragmentation: stars clump around one knot per subdomain.
+      const segment = Math.floor(r() * Math.max(1, spec.segments));
+      const t = Math.min(1.04, (segment + 0.5 + gaussian(r) * 0.35) / Math.max(1, spec.segments));
+      const p = spiralPoint(morph, arm, Math.max(0, t));
+      const q = spiralPoint(morph, arm, Math.max(0, t) + 0.01);
       const tx = q.x - p.x; const ty = q.y - p.y; const len = Math.hypot(tx, ty) || 1;
-      const width = G_ARMS[arm].width * G_SCALE * (0.35 + t * 0.9);
+      const width = spec.width * G_SCALE * (0.35 + t * 0.9);
       const across = gaussian(r) * width * 0.42;
       x = p.x + (-ty / len) * across; y = p.y + (tx / len) * across; z = gaussian(r) * (1 + t * 1.6);
       const knot = r() < 0.07;
@@ -291,7 +300,7 @@ function buildSpiralGalaxy(count: number): BufferGeometry {
       light = knot ? 0.9 : 0.25 + r() * 0.55;
       const c = r();
       // Each arm keeps the natural star mix but leans to its domain's tone.
-      tmp.copy(c < 0.62 ? STAR_WHITE : c < 0.86 ? STAR_BLUE : c < 0.95 ? HII_PINK : DUST_RED).lerp(ARM_TINT[arm], 0.55);
+      tmp.copy(c < 0.62 ? STAR_WHITE : c < 0.86 ? STAR_BLUE : c < 0.95 ? HII_PINK : DUST_RED).lerp(tints[arm], 0.55);
       if (knot && r() < 0.5) tmp.copy(HII_PINK).lerp(STAR_WHITE, 0.35);
     } else if (kind < 0.95) {
       // Inter-arm disk: faint exponential glow.
@@ -491,6 +500,8 @@ export const GalaxyThree3D = forwardRef<CanvasGraph25DHandle, Props>(function Ga
   className = '',
   ariaLabel = 'Campo topológico tridimensional do NEXO ONE',
   viewMode = 'detail',
+  morphology = null,
+  glow = 0.85,
 }, ref) {
   const hostRef = useRef<HTMLDivElement | null>(null);
   const mountRef = useRef<HTMLDivElement | null>(null);
@@ -664,14 +675,14 @@ export const GalaxyThree3D = forwardRef<CanvasGraph25DHandle, Props>(function Ga
       const particleCount = spiral
         ? (isMobile ? 5000 : 16000)
         : isMacro ? (isMobile ? 90 : 320) : (isMobile ? 240 : 900);
-      const galaxyGeometry = spiral ? buildSpiralGalaxy(particleCount) : buildFieldGeometry(nodes, particleCount, isMacro, themeName);
+      const galaxyGeometry = spiral ? buildSpiralGalaxy(particleCount, morphology ?? DEFAULT_MORPHOLOGY) : buildFieldGeometry(nodes, particleCount, isMacro, themeName);
       const galaxyMaterial = new ShaderMaterial({
         uniforms: {
           uTime: { value: 0 },
           uPixelRatio: { value: renderer.getPixelRatio() },
           uColorA: { value: palette.accent },
           uColorB: { value: palette.strong },
-          uOpacity: { value: spiral ? 1.25 : isMacro ? (themeName === 'light' ? 0.20 : 0.24) : (themeName === 'light' ? 0.38 : 0.52) },
+          uOpacity: { value: spiral ? 1.25 * glow : isMacro ? (themeName === 'light' ? 0.20 : 0.24) : (themeName === 'light' ? 0.38 : 0.52) },
         },
         vertexShader: spiral ? spiralVertexShader : galaxyVertexShader,
         fragmentShader: spiral ? spiralFragmentShader : galaxyFragmentShader,
@@ -764,9 +775,9 @@ export const GalaxyThree3D = forwardRef<CanvasGraph25DHandle, Props>(function Ga
       if (!isMobile && themeName === 'dark') {
         composer = new EffectComposer(renderer);
         composer.addPass(new RenderPass(scene, camera));
-        const bloom = new UnrealBloomPass(new Vector2(size.width, size.height), 0.9, 0.55, 0.12);
+        const bloom = new UnrealBloomPass(new Vector2(size.width, size.height), 0.9 * glow, 0.55, 0.12);
         bloom.threshold = 0.12;
-        bloom.strength = 0.9;
+        bloom.strength = 0.9 * glow;
         bloom.radius = 0.55;
         composer.addPass(bloom);
       }
@@ -905,7 +916,7 @@ export const GalaxyThree3D = forwardRef<CanvasGraph25DHandle, Props>(function Ga
       onFailure?.();
       return;
     }
-  }, [ariaLabel, edges, failed, isMacro, isMobile, nodes, onFailure, onSelect, reducedMotion, selectedId, size.height, size.width, themeName, visibleLabels]);
+  }, [ariaLabel, edges, failed, glow, isMacro, isMobile, morphology, nodes, onFailure, onSelect, reducedMotion, selectedId, size.height, size.width, themeName, visibleLabels]);
 
   return (
     <div
