@@ -223,3 +223,5 @@
 .galaxy-metrics .galaxy-mass dd{display:flex;flex-wrap:wrap;gap:8px}
 .galaxy-metrics .galaxy-mass span{color:var(--dom,#d6dee8)}
 @media(max-width:760px){.galaxy-metrics{display:none}.galaxy-hud{top:8px;right:8px}}
+/* Night-sky window in every theme (see themeName in GalaxyThree3D). */
+:root .atlas3d-shell.atlas-galaxy-view,:root[data-theme] .atlas3d-shell.atlas-galaxy-view,:root .atlas-galaxy-view .galaxy-three-root,:root[data-theme] .atlas-galaxy-view .galaxy-three-root{background:radial-gradient(ellipse at center,#0b1020 0%,#05070b 70%) !important;border-radius:inherit}
