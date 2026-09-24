@@ -33,11 +33,18 @@ export function StarfieldCanvas({className='starfield-canvas',clusters=[],links=
     type Mote={t:number;off:number;seed:number;px:number;py:number;vx:number;vy:number};
     type Strand={a:Placed;b:Placed;count:number;bend:number;waves:number;phase:number;beads:Array<Mote&{size:number}>};
     let pointer:{x:number;y:number}|null=null;
+    // Parallax: layers slide against the pointer (stars least, domains most).
+    const par={x:0,y:0};let shift={x:0,y:0};
+    const layer=(k:number)=>{shift={x:par.x*k,y:par.y*k};context.setTransform(ratioNow,0,0,ratioNow,shift.x*ratioNow,shift.y*ratioNow);};
+    let ratioNow=1;
+    // Intro: the web draws itself out of the nodes over ~2.6 s, then stays.
+    const INTRO=2600;
+    const ease=(v:number)=>{const c=Math.max(0,Math.min(1,v));return 1-Math.pow(1-c,3);};
     const REACH=110;
     const moteAt=(m:Mote,x:number,y:number)=>{
       if(!still){
         if(pointer){
-          const ddx=x+m.px-pointer.x,ddy=y+m.py-pointer.y,dist=Math.hypot(ddx,ddy);
+          const ddx=x+m.px-(pointer.x-shift.x),ddy=y+m.py-(pointer.y-shift.y),dist=Math.hypot(ddx,ddy);
           if(dist<REACH&&dist>.01){const f=(1-dist/REACH)**2*2.4;m.vx+=ddx/dist*f;m.vy+=ddy/dist*f;}
         }
         m.vx=(m.vx-m.px*.035)*.9;m.vy=(m.vy-m.py*.035)*.9;m.px+=m.vx;m.py+=m.vy;
@@ -103,7 +110,7 @@ export function StarfieldCanvas({className='starfield-canvas',clusters=[],links=
     };
 
     const resize=()=>{
-      const ratio=Math.min(window.devicePixelRatio||1,2);
+      const ratio=Math.min(window.devicePixelRatio||1,2);ratioNow=ratio;
       width=canvas.clientWidth;height=canvas.clientHeight;
       canvas.width=width*ratio;canvas.height=height*ratio;
       context.setTransform(ratio,0,0,ratio,0,0);
@@ -116,18 +123,26 @@ export function StarfieldCanvas({className='starfield-canvas',clusters=[],links=
 
     const draw=()=>{
       const cx=width*.72,cy=height*.4;
+      const intro=still?1:ease(time/INTRO);
+      if(!still){
+        const tx=pointer?-(pointer.x-width/2)/width*28:0,ty=pointer?-(pointer.y-height/2)/height*18:0;
+        par.x+=(tx-par.x)*.05;par.y+=(ty-par.y)*.05;
+      }
+      layer(0);
       context.fillStyle='#05070B';context.fillRect(0,0,width,height);
       if(!placed.length){
         const glow=context.createRadialGradient(cx,cy,0,cx,cy,Math.max(width,height)*.35);
         glow.addColorStop(0,'rgba(233,179,91,.16)');glow.addColorStop(.4,'rgba(80,110,150,.06)');glow.addColorStop(1,'rgba(0,0,0,0)');
         context.fillStyle=glow;context.fillRect(0,0,width,height);
       }
+      layer(.25);
       for(const star of stars){
         const angle=star.angle+time*star.speed*(400/(star.radius+60));
         context.globalAlpha=(.25+.6*Math.abs(Math.sin(time*.002+star.seed*9)))*(placed.length?.7:1);
         context.fillStyle=!placed.length&&star.seed>.93?'#E9B35B':'#D6DEE8';
         context.fillRect(cx+Math.cos(angle)*star.radius,cy+Math.sin(angle)*star.radius*.42,star.size,star.size);
       }
+      layer(.55);
       for(const w of web){
         const dx=w.x2-w.x1,dy=w.y2-w.y1,len=Math.hypot(dx,dy)||1,nx=-dy/len,ny=dx/len;
         const mx=(w.x1+w.x2)/2+nx*len*w.bend,my=(w.y1+w.y2)/2+ny*len*w.bend;
@@ -135,49 +150,85 @@ export function StarfieldCanvas({className='starfield-canvas',clusters=[],links=
         for(const d of w.dots){
           const t=d.t,u=1-t,wave=Math.sin(t*Math.PI*w.waves+w.phase+time*.0004)*len*.04*Math.sin(t*Math.PI);
           const [x,y]=moteAt(d,u*u*w.x1+2*u*t*mx+t*t*w.x2+nx*(d.off+wave),u*u*w.y1+2*u*t*my+t*t*w.y2+ny*(d.off+wave));
-          context.globalAlpha=(.1+.22*Math.abs(Math.sin(time*.001+d.seed*11)))*(placed.length?1:.6);
+          const grow=Math.max(0,Math.min(1,(intro*1.25-Math.min(t,1-t)*1.1)*3));
+          if(grow<=0)continue;
+          context.globalAlpha=(.1+.22*Math.abs(Math.sin(time*.001+d.seed*11)))*(placed.length?1:.6)*grow;
           context.fillRect(x,y,1.2,1.2);
         }
       }
       for(const k of knots){
+        context.save();context.globalAlpha=intro;
         const halo=context.createRadialGradient(k.x,k.y,0,k.x,k.y,k.r*6);
         halo.addColorStop(0,'rgba(190,205,230,.14)');halo.addColorStop(1,'rgba(190,205,230,0)');
         context.globalAlpha=1;context.fillStyle=halo;context.fillRect(k.x-k.r*6,k.y-k.r*6,k.r*12,k.r*12);
         context.globalAlpha=.35+.3*Math.abs(Math.sin(time*.0012+k.seed*7));context.fillStyle='#d6dee8';
-        context.fillRect(k.x-.6,k.y-.6,1.3,1.3);
+        context.globalAlpha*=intro;context.fillRect(k.x-.6,k.y-.6,1.3,1.3);
+        context.restore();
       }
       // Filaments first, under the nodes: a bent strand whose colour fades from one domain to the other.
+      layer(.8);
       for(const s of strands){
         const {a,b}=s;const dx=b.x-a.x,dy=b.y-a.y,len=Math.hypot(dx,dy)||1;
+        const reach=still?1:ease((time-500)/2200);
         const nx=-dy/len,ny=dx/len;
         const mx=(a.x+b.x)/2+nx*len*s.bend,my=(a.y+b.y)/2+ny*len*s.bend;
-        const lit=Math.min(1,(a.glow+b.glow)/2);
+        const lit=Math.min(1.7,Math.max(a.glow,b.glow)*.75+Math.min(a.glow,b.glow)*.25);
         const strength=s.count?.35+.65*Math.min(1,s.count/10):.12;
         const grad=context.createLinearGradient(a.x,a.y,b.x,b.y);
         grad.addColorStop(0,hexAlpha(a.color,.07*strength*lit));grad.addColorStop(1,hexAlpha(b.color,.07*strength*lit));
         context.globalAlpha=pointer?.55:1;context.strokeStyle=grad;context.lineWidth=s.count?4+8*strength:1;
-        context.beginPath();context.moveTo(a.x,a.y);context.quadraticCurveTo(mx,my,b.x,b.y);context.stroke();
+        if(reach>=1){context.beginPath();context.moveTo(a.x,a.y);context.quadraticCurveTo(mx,my,b.x,b.y);context.stroke();}
         for(const bead of s.beads){
+          if(bead.t>reach)continue;
           const t=bead.t,u=1-t,wave=Math.sin(t*Math.PI*s.waves+s.phase+time*.0005)*len*.035*Math.sin(t*Math.PI);
           const [x,y]=moteAt(bead,u*u*a.x+2*u*t*mx+t*t*b.x+nx*(bead.off+wave),u*u*a.y+2*u*t*my+t*t*b.y+ny*(bead.off+wave));
           context.fillStyle=t<.5?a.color:b.color;
           context.globalAlpha=(.2+.55*Math.abs(Math.sin(time*.0015+bead.seed*9)))*strength*lit;
           context.fillRect(x,y,bead.size,bead.size);
         }
+        // Light pulses travelling the filament: more relations, more traffic.
+        if(!still&&reach>=1){
+          const pulses=s.count?Math.min(4,1+Math.floor(s.count/6)):0;
+          for(let i=0;i<pulses;i++){
+            const t=((time*(.00007+.00002*i)+i/pulses+s.phase)%1+1)%1,u=1-t;
+            const wave=Math.sin(t*Math.PI*s.waves+s.phase+time*.0005)*len*.035*Math.sin(t*Math.PI);
+            const x=u*u*a.x+2*u*t*mx+t*t*b.x+nx*wave,y=u*u*a.y+2*u*t*my+t*t*b.y+ny*wave;
+            const col=t<.5?a.color:b.color;const rad=5+6*strength;
+            const glow=context.createRadialGradient(x,y,0,x,y,rad*2.4);
+            glow.addColorStop(0,hexAlpha('#ffffff',.85*Math.min(1,lit)));glow.addColorStop(.25,hexAlpha(col,.5*Math.min(1,lit)));glow.addColorStop(1,hexAlpha(col,0));
+            context.globalAlpha=Math.sin(t*Math.PI);context.fillStyle=glow;
+            context.fillRect(x-rad*2.4,y-rad*2.4,rad*4.8,rad*4.8);
+          }
+        }
       }
-      for(const cluster of placed){
+      layer(1);
+      const labelBoxes:Array<{x:number;y:number;w:number;h:number}>=[];
+      placed.forEach((cluster,index)=>{
         const target=focus===null?1:focus===cluster.id?1.9:.28;
         cluster.glow+=(target-cluster.glow)*(still?1:.08);
-        const g=cluster.glow;
+        const born=still?1:ease((time-index*180)/1400);
+        if(born<=0)return;
+        const g=cluster.glow*born;
         const halo=context.createRadialGradient(cluster.x,cluster.y,0,cluster.x,cluster.y,cluster.r*2.4);
         halo.addColorStop(0,hexAlpha(cluster.color,.22*g));halo.addColorStop(1,hexAlpha(cluster.color,0));
         context.globalAlpha=1;context.fillStyle=halo;
         context.fillRect(cluster.x-cluster.r*2.4,cluster.y-cluster.r*2.4,cluster.r*4.8,cluster.r*4.8);
+        // Breathing core and a slow tilted ring: each domain reads as a living node.
+        const breath=still?1:.85+.15*Math.sin(time*.0016+index);
+        const coreR=cluster.r*.28*breath;
+        const core=context.createRadialGradient(cluster.x,cluster.y,0,cluster.x,cluster.y,coreR);
+        core.addColorStop(0,hexAlpha('#ffffff',.55*Math.min(1,g)));core.addColorStop(.3,hexAlpha(cluster.color,.45*Math.min(1,g)));core.addColorStop(1,hexAlpha(cluster.color,0));
+        context.globalAlpha=1;context.fillStyle=core;context.fillRect(cluster.x-coreR,cluster.y-coreR,coreR*2,coreR*2);
+        context.save();context.translate(cluster.x,cluster.y);context.rotate(-.35+index*.4);
+        context.strokeStyle=hexAlpha(cluster.color,.28*Math.min(1.3,g));context.lineWidth=1;
+        const arc=time*.0004*(index%2?1:-1);
+        context.beginPath();context.ellipse(0,0,cluster.r*.95*born,cluster.r*.36*born,0,arc,arc+Math.PI*1.35);context.stroke();
+        context.restore();
         const spin=time*.00005;
         context.fillStyle=cluster.color;
         for(const m of cluster.members){
           const cos=Math.cos(spin),sin=Math.sin(spin);
-          const x=cluster.x+m.dx*cos-m.dy*sin,y=cluster.y+m.dx*sin+m.dy*cos;
+          const x=cluster.x+(m.dx*cos-m.dy*sin)*(.4+.6*born),y=cluster.y+(m.dx*sin+m.dy*cos)*(.4+.6*born);
           context.globalAlpha=Math.min(1,(.35+.55*Math.abs(Math.sin(time*.0018+m.seed*7)))*Math.min(1,g));
           context.fillRect(x,y,m.size,m.size);
         }
@@ -187,10 +238,16 @@ export function StarfieldCanvas({className='starfield-canvas',clusters=[],links=
         // Labels flip to the left of the cluster instead of running off the right edge.
         const label=cluster.label.toUpperCase();
         const labelWidth=Math.max(context.measureText(label).width,cluster.detail?context.measureText(cluster.detail).width:0);
-        const labelX=cluster.x+cluster.r*.9+labelWidth>context.canvas.clientWidth-12?cluster.x-cluster.r*.9-labelWidth:cluster.x+cluster.r*.9;
-        context.fillText(label,labelX,cluster.y-cluster.r*.9);
-        if(cluster.detail){context.fillStyle='#7A889C';context.fillText(cluster.detail,labelX,cluster.y-cluster.r*.9+14);}
-      }
+        const labelX=cluster.x+cluster.r*.9+labelWidth>width-12?cluster.x-cluster.r*.9-labelWidth:cluster.x+cluster.r*.9;
+        // Labels never overlap: push down until the box is free.
+        let labelY=cluster.y-cluster.r*.9;const h=cluster.detail?28:16;
+        while(labelBoxes.some(o=>labelX<o.x+o.w+8&&labelX+labelWidth+8>o.x&&labelY-12<o.y+o.h&&labelY-12+h>o.y))labelY+=h+4;
+        labelBoxes.push({x:labelX,y:labelY-12,w:labelWidth,h});
+        context.globalAlpha*=born;
+        context.fillText(label,labelX,labelY);
+        if(cluster.detail){context.fillStyle='#7A889C';context.fillText(cluster.detail,labelX,labelY+14);}
+      });
+      layer(0);
       context.globalAlpha=1;time+=16;
       if(!still&&visible)frame=requestAnimationFrame(draw);
     };
@@ -206,7 +263,7 @@ export function StarfieldCanvas({className='starfield-canvas',clusters=[],links=
       const box=canvas.getBoundingClientRect();
       const x=event.clientX-box.left,y=event.clientY-box.top;
       pointer={x,y};
-      const hit=placed.find(c=>Math.hypot(x-c.x,(y-c.y)/.62)<c.r*1.3);
+      const hit=placed.find(c=>Math.hypot(x-par.x-c.x,(y-par.y-c.y)/.62)<c.r*1.3);
       setFocus(hit?.id??null);
       canvas.style.cursor=hit?'crosshair':'';
     };

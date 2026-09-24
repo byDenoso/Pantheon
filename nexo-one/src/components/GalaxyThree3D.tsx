@@ -338,18 +338,33 @@ function spiralPoint(morph: GalaxyMorphology, arm: string, t: number) {
   return { x: p.x * G_SCALE, y: p.y * G_SCALE };
 }
 
-/** Main arm whose inner stretch passes closest to (x, y); drives the core -> arm colour blend. */
-function nearestArm(morph: GalaxyMorphology, x: number, y: number): string | null {
-  let best: string | null = null; let bestD = Infinity;
-  for (const arm of Object.keys(morph.arms)) {
-    if (morph.arms[arm]!.parent) continue;
-    for (let t = 0; t <= 0.35; t += 0.035) {
-      const p = spiralPoint(morph, arm, t);
-      const d = (p.x - x) ** 2 + (p.y - y) ** 2;
-      if (d < bestD) { bestD = d; best = arm; }
+/**
+ * Spatial colour field: every point's tone is a distance-weighted mix of all arms
+ * (plus the nucleus), so colour flows continuously across arm junctions and from
+ * the bulge into the arm roots instead of switching by membership.
+ */
+function colorField(morph: GalaxyMorphology) {
+  const arms = Object.keys(morph.arms);
+  const samples = arms.map(arm => {
+    const sigma = Math.max(5, morph.arms[arm]!.width * G_SCALE * 0.9);
+    const pts: Array<{ x: number; y: number }> = [];
+    for (let t = 0; t <= 1.05; t += 0.025) pts.push(spiralPoint(morph, arm, t));
+    return { arm, pts, inv: 1 / (2 * sigma * sigma) };
+  });
+  const coreR = Math.max(4, morph.bulge.radius * G_SCALE * 1.8);
+  return (x: number, y: number, palette: Record<string, Color>, core: Color, out: Color): Color => {
+    let total = 2.4 * Math.exp(-(x * x + y * y) / (coreR * coreR));
+    let r = core.r * total; let g = core.g * total; let b = core.b * total;
+    for (const { arm, pts, inv } of samples) {
+      let best = Infinity;
+      for (const p of pts) { const d = (p.x - x) ** 2 + (p.y - y) ** 2; if (d < best) best = d; }
+      const w = Math.exp(-best * inv);
+      const c = palette[arm]; if (!c) continue;
+      r += c.r * w; g += c.g * w; b += c.b * w; total += w;
     }
-  }
-  return best;
+    if (total < 1e-6) return out.copy(core);
+    return out.setRGB(r / total, g / total, b / total);
+  };
 }
 
 // Muted, analogous star palette (slate · periwinkle · lavender · ivory): the
@@ -378,6 +393,9 @@ function buildSpiralGalaxy(count: number, morph: GalaxyMorphology): BufferGeomet
   const coreTint = new Color(morph.bulge.tint);
   // Arm colour as seen at the arm root: the muted star tone leaning to the domain.
   const armBlend = Object.fromEntries(arms.map(key => [key, STAR_WHITE.clone().lerp(tints[key]!, 0.35)]));
+  const field = colorField(morph);
+  const fieldTint = new Color();
+  const coreBlend = STAR_CORE.clone().lerp(coreTint, 0.12);
   const bulgeRadius = morph.bulge.radius * G_SCALE * 1.6;
   const tmp = new Color();
   for (let i = 0; i < count; i += 1) {
@@ -402,8 +420,7 @@ function buildSpiralGalaxy(count: number, morph: GalaxyMorphology): BufferGeomet
       tmp.copy(STAR_CORE).lerp(STAR_WARM, r() * 0.5).lerp(coreTint, 0.12);
       // Outer bulge cools towards the arm palette: no hard edge at the arm roots.
       const edge = Math.min(1, Math.hypot(x, y) / Math.max(1, bulgeRadius * 1.4));
-      const near = nearestArm(morph, x, y);
-      tmp.lerp(near ? armBlend[near]! : STAR_WHITE, edge * edge * 0.6);
+      tmp.lerp(field(x, y, armBlend, coreBlend, fieldTint), edge * edge * 0.6);
     } else if (kind < 0.80) {
       // Arm stars, star-forming knots and dust lanes.
       let pick = r() * totalMass; let arm = arms[0] ?? 'SCIENCE';
@@ -429,7 +446,7 @@ function buildSpiralGalaxy(count: number, morph: GalaxyMorphology): BufferGeomet
       const c = r();
       // Natural star mix with only a hint of the domain's tone: arms stay
       // distinguishable without the galaxy turning into a colour gradient.
-      tmp.copy(c < 0.66 ? STAR_WHITE : c < 0.9 ? STAR_BLUE : c < 0.96 ? HII_PINK : DUST_RED).lerp(tints[arm], 0.14);
+      tmp.copy(c < 0.66 ? STAR_WHITE : c < 0.9 ? STAR_BLUE : c < 0.96 ? HII_PINK : DUST_RED).lerp(field(x, y, tints, coreTint, fieldTint), 0.16);
       if (knot && r() < 0.5) tmp.copy(HII_PINK).lerp(STAR_WHITE, 0.45);
       // Arm roots inherit the nucleus' warmth and fade into the arm tone.
       const root = Math.max(0, 1 - t / 0.28);
@@ -584,7 +601,10 @@ function buildNodeGeometry(
   nodes: PlacedNode3D[], selectedId: string | null, theme: 'dark' | 'light', morph: GalaxyMorphology | null = null,
 ): BufferGeometry {
   const tmp = new Color();
-  const coreEdge = morph ? morph.bulge.radius * G_SCALE * 2.4 : 0;
+  const field = morph ? colorField(morph) : null;
+  const fieldTint = new Color();
+  const palette = morph ? Object.fromEntries(Object.keys(morph.arms).map(arm => [arm, domainColor(arm as PlacedNode3D['domain'], theme)])) : {};
+  const coreColor = domainColor('NEXO' as PlacedNode3D['domain'], theme);
   const positions = new Float32Array(nodes.length * 3);
   const sizes = new Float32Array(nodes.length);
   const brightness = new Float32Array(nodes.length);
@@ -603,11 +623,9 @@ function buildNodeGeometry(
     brightness[index] = nodeIntensity(node, selectedId) * focusFactor;
     tmp.copy(domainColor(node.domain, theme));
     // Nucleus (NEXO) points fade from gold into the colour of the arm they drift towards.
-    if (morph && node.domain === 'NEXO' && node.type !== 'DOMAIN') {
-      const near = nearestArm(morph, node.x, node.y);
-      const f = Math.min(1, Math.max(0, Math.hypot(node.x, node.y) / Math.max(1, coreEdge)));
-      if (near) tmp.lerp(domainColor(near as PlacedNode3D['domain'], theme), f * f * (3 - 2 * f) * 0.85);
-    }
+    // Data points take the local field colour (mostly), keeping a hint of their own domain,
+    // so they blend across junctions and the bulge edge like the stars around them.
+    if (field && node.type !== 'DOMAIN') tmp.lerp(field(node.x, node.y, palette, coreColor, fieldTint), 0.7);
     tmp.toArray(colors, p);
   });
 
