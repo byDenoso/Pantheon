@@ -168,7 +168,7 @@ function scienceGraphModel(projection:ScienceProjectionV1,generatedAt:string):At
 
 function StateText({value}:{value:unknown}){
   const raw=typeof value==='string'?value.toUpperCase():'';
-  const human:Record<string,string>={ACTIVE:'Em andamento',RUNNING:'Em andamento',IN_PROGRESS:'Em andamento',PAUSED:'Pausada',CHECKPOINTED:'Em espera',CLOSED:'Encerrada',COMPLETED:'Concluída',DONE:'Concluído',READY:'Pronto',VERIFIED:'Verificado',RESULT:'Resultado disponível',REJECTED:'Rejeitado',SUPPORTS:'Compatível',FALSIFIES:'Refuta',NULL:'Nulo',INCONCLUSIVE:'Inconclusivo',PENDING:'Pendente'};
+  const human:Record<string,string>={ACTIVE:'Em andamento',RUNNING:'Em andamento',IN_PROGRESS:'Em andamento',PAUSED:'Pausada',CHECKPOINTED:'Em espera',CLOSED:'Encerrada',COMPLETED:'Concluída',DONE:'Concluído',READY:'Pronto',VERIFIED:'Verificado',RESULT:'Resultado disponível',REJECTED:'Rejeitado',SUPPORTS:'Compatível',FALSIFIES:'Refuta',NULL:'Nulo',INCONCLUSIVE:'Inconclusivo',PENDING:'Pendente',PLANNED:'Planejada',PROPOSED:'Proposta',DRAFT:'Rascunho',QUEUED:'Na fila',BLOCKED:'Bloqueado',WAITING:'Aguardando',FAILED:'Falhou',SUPERSEDED:'Substituído',PROMOTED:'Promovido',ARCHIVED:'Arquivado',OPEN:'Aberto'};
   return <span className={value===null||value===undefined||value===''?'science-no-value':''}>{human[raw]||textOf(value)}</span>;
 }
 

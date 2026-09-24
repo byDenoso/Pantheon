@@ -22,7 +22,7 @@ test('canonical cockpit routes and legacy view hashes resolve to the same screen
   assert.equal(hashForView('CAPABILITIES'), '#/cockpit/prova?tab=capabilities');
   assert.equal(viewFromHash('#/cockpit/prova?tab=autoridade&view=3d'), 'TRUTHGRAPH');
   assert.equal(viewFromHash('#/cockpit/prova?view=capabilities'), 'CAPABILITIES');
-  assert.equal(hashForView('ATLAS'), '#/atlas?lente=operacao&view=2d');
+  assert.equal(hashForView('ATLAS'), '#/atlas?lente=operacao&view=galaxy');
 });
 
 test('system route is recognized separately from cockpit views', () => {

@@ -691,10 +691,14 @@ function Metro2DView({
     clearRendererError(container);
 
     graphRef.current = graph;
+    // Set on unmount/theme change: frames and renders queued before that must
+    // not touch the destroyed G6 graph (it throws getData/getViewportByCanvas).
+    let disposed = false;
 
     const scheduleLabels = () => {
       cancelAnimationFrame((scheduleLabels as any).frame || 0);
       (scheduleLabels as any).frame = requestAnimationFrame(() => {
+        if (disposed) return;
         renderScreenLabels(
           graph,
           container,
@@ -750,6 +754,7 @@ function Metro2DView({
 
     let refreshSequence = 0;
     const refresh = async (fit: boolean) => {
+      if (disposed) return;
       const sequence = ++refreshSequence;
       const rect = container.getBoundingClientRect();
       container.dataset.g6Ready = 'false';
@@ -846,8 +851,11 @@ function Metro2DView({
     });
 
     return () => {
+      disposed = true;
+      refreshSequence += 1; // pending renders see a stale sequence and stop
       initializedRef.current = false;
       cancelAnimationFrame(frame);
+      cancelAnimationFrame((scheduleLabels as any).frame || 0);
       resizeObserver.disconnect();
       refreshRef.current = async () => {};
       graph.destroy?.();
