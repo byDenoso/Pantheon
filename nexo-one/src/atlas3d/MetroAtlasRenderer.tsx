@@ -1,3 +1,6 @@
+// The renderer owns its styles: it is mounted from Prova/Sistema/Ciência too, not only
+// from the Mapa (EmbeddedAtlas3D), so relying on that screen's import left it unstyled.
+import './atlas3d.css';
 import { atlasRouteParam } from './route-params.ts';
 import {
   useEffect,
@@ -894,7 +897,7 @@ function Metro2DView({
   }, [selectedId, model.revision, expansionKey, visibleLayers, showBeams, allIlluminated]);
 
   return (
-    <div ref={surfaceRef} className="atlas-metro-surface" data-testid="atlas-metro-2d" data-illuminated={allIlluminated}>
+    <div ref={surfaceRef} className="atlas-metro-surface" data-atlas-theme={theme} data-testid="atlas-metro-2d" data-illuminated={allIlluminated}>
       <div ref={containerRef} id="atlas-metro-g6" className="atlas-g6-canvas" />
       <svg ref={leaderLayerRef} className="atlas-label-leaders" aria-hidden="true" />
       <div ref={labelLayerRef} className="atlas-label-overlay" aria-hidden="true" />
@@ -2148,6 +2151,7 @@ function MetroThreeView({
     <div
       ref={containerRef}
       className="atlas-three-surface"
+      data-atlas-theme={theme}
       data-testid="atlas-metro-3d"
       data-three-visual="neural-synapse"
       data-illuminated={allIlluminated}
