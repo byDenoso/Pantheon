@@ -64,7 +64,7 @@ export function NexoGraph({
   const count=<div className="nexo-graph-count"><strong>{visible.length}</strong> visíveis · <span>{model.nodes.length} total</span> · <span>{relationCount} relações</span></div>;
   const spotlightActive=spotlight&&Boolean(selectedId);
   const spotlightToggle=!tableMode&&<button type="button" className="nexo-spotlight-toggle" aria-label={spotlightActive?"Desativar foco visual no nó selecionado":"Ativar foco visual no nó selecionado"} aria-pressed={spotlightActive} disabled={!selectedId} title={selectedId?(spotlightActive?"Mostrar todo o grafo com o mesmo peso":"Destacar o nó selecionado e sua vizinhança"):"Selecione um nó para ativar o foco"} onClick={()=>setSpotlight(value=>!value)}>{spotlightActive?'Foco ativo':'Focar seleção'}</button>;
-  const illuminationToggle=!tableMode&&<button type="button" className="nexo-illumination-toggle" aria-label={illuminated?"Desativar iluminação global":"Iluminar todos os nós e relações"} aria-pressed={illuminated} title={illuminated?"Desativar iluminação global":"Iluminar todos os nós e relações"} onClick={()=>setIlluminated(value=>!value)}>{illuminated?'Apagar iluminação':'Iluminar tudo'}</button>;
+  const illuminationToggle=!tableMode&&<button type="button" className="nexo-illumination-toggle" aria-label={illuminated?"Desativar iluminação global":"Iluminar todos os nós e relações"} aria-pressed={illuminated} title={illuminated?"Desativar iluminação global":"Iluminar todos os nós e relações"} onClick={()=>setIlluminated(value=>!value)}>{illuminated?'Apagar luz':'Iluminar tudo'}</button>;
   return <section ref={hostRef} tabIndex={-1} className="nexo-graph" data-graph-view={view} data-graph-illuminated={illuminated} data-graph-visible={visible.length} data-graph-total={model.nodes.length} data-toolbar-rows={toolbarFilters?2:1}>
     <div className="nexo-graph-toolbar">
       <div className="nexo-graph-toolbar-row nexo-graph-toolbar-primary">
@@ -73,10 +73,10 @@ export function NexoGraph({
           {showViewSwitch&&<GraphViewSwitch view={view} onChange={onViewChange}/>}
           {!toolbarFilters&&spotlightToggle}
           {!toolbarFilters&&illuminationToggle}
-          {onFit&&<button type="button" onClick={onFit}>Enquadrar</button>}
-          {onReset&&<button type="button" onClick={onReset}>Resetar</button>}
-          <button type="button" onClick={fullscreen}>Tela cheia</button>
-          <button type="button" aria-pressed={tableMode} onClick={()=>setTableMode(value=>!value)}>{tableMode?'Ver grafo':'Ver como tabela'}</button>
+          {onFit&&<button type="button" className="nexo-graph-icon-btn" onClick={onFit} aria-label="Enquadrar" title="Enquadrar"><i aria-hidden="true">⤢</i><span>Enquadrar</span></button>}
+          {onReset&&<button type="button" className="nexo-graph-icon-btn" onClick={onReset} aria-label="Resetar" title="Resetar"><i aria-hidden="true">↺</i><span>Resetar</span></button>}
+          <button type="button" className="nexo-graph-icon-btn" onClick={fullscreen} aria-label="Tela cheia" title="Tela cheia"><i aria-hidden="true">⛶</i><span>Tela cheia</span></button>
+          <button type="button" className="nexo-graph-icon-btn" aria-pressed={tableMode} onClick={()=>setTableMode(value=>!value)} aria-label={tableMode?'Ver grafo':'Ver como tabela'} title={tableMode?'Ver grafo':'Ver como tabela'}><i aria-hidden="true">{tableMode?'◉':'☰'}</i><span>{tableMode?'Ver grafo':'Ver como tabela'}</span></button>
         </div>
       </div>
       {toolbarFilters&&<div className="nexo-graph-toolbar-row nexo-graph-toolbar-secondary">

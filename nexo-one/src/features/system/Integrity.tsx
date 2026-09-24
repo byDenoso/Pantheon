@@ -1,8 +1,9 @@
 // TruthGraph, Capability Radar, Sources e Integrity.
-import { lazy, Suspense, useState } from 'react';
-import type { Capability, SystemState } from '../../contracts/system.ts';
+import { lazy, Suspense, useCallback, useState } from 'react';
+import type { Capability, CapabilityStatus, SystemState } from '../../contracts/system.ts';
 import { CapabilityMatrix, ProjectionHealth, TruthGraphCard } from '../../components/composites.tsx';
 import { EmptyState } from '../../components/states.tsx';
+import { DetailDrawer } from '../../components/DetailDrawer.tsx';
 import {
   AuthorityBadge, CapabilityBadge, DomainBadge, Fingerprint, FreshnessIndicator,
   SeverityBadge, SourceRef, StatusBadge,
@@ -11,7 +12,7 @@ import { ProvenanceButton } from '../../components/provenance.tsx';
 import {
   capabilityById, capabilityCounts, capabilityMatrix, integrityIssues, provenanceOf,
 } from '../../viewmodels/system.ts';
-import { dateTime, label, toneOf } from '../../viewmodels/tokens.ts';
+import { dateTime, domainLabel, label, toneOf } from '../../viewmodels/tokens.ts';
 
 const McpTopologyGraph = lazy(() => import('../../mcp/McpAtlasApp.tsx').then(module => ({ default: module.McpTopologyGraph })));
 
@@ -71,13 +72,18 @@ export function TruthGraphView({ state, theme = 'dark' }: { state: SystemState; 
 
 export function CapabilitiesView({ state }: { state: SystemState }) {
   const [selected, setSelected] = useState<Capability | null>(null);
-  const { runtimes, cells } = capabilityMatrix(state);
+  const [statusFilter, setStatusFilter] = useState<CapabilityStatus | null>(null);
+  const close = useCallback(() => setSelected(null), []);
+  const filteredState = statusFilter ? { ...state, capabilities: state.capabilities.filter(c => c.status === statusFilter) } : state;
+  const { runtimes, cells } = capabilityMatrix(filteredState);
   const counts = capabilityCounts(state);
   return (
     <>
-      <div className="capability-counters">
+      <div className="capability-counters" role="group" aria-label="Filtrar capabilities por estado">
         {(['PASS', 'UNVERIFIED', 'UNKNOWN', 'RETIRED_RUNTIME', 'BLOCKED'] as const).map(status => (
-          <div key={status} className={`capability-counter tone-${toneOf(status)}`}>
+          <button type="button" key={status} disabled={counts[status] === 0}
+            className={`capability-counter tone-${toneOf(status)}${statusFilter === status ? ' active' : ''}${statusFilter && statusFilter !== status ? ' dimmed' : ''}`}
+            aria-pressed={statusFilter === status} onClick={() => setStatusFilter(value => value === status ? null : status)}>
             <strong>{counts[status]}</strong>
             <CapabilityBadge status={status} />
             <small>{{
@@ -87,37 +93,28 @@ export function CapabilitiesView({ state }: { state: SystemState }) {
               RETIRED_RUNTIME: 'retiradas por decisão explícita',
               BLOCKED: 'impedidas de serem tentadas',
             }[status]}</small>
-          </div>
+          </button>
         ))}
       </div>
       <p className="rule-note">
-        <strong>UNVERIFIED não é funcionalidade parcial.</strong> Significa que a operação nunca foi exercida com
+        <strong>Sem prova não é funcionalidade parcial.</strong> Significa que a operação nunca foi exercida com
         readback. Nenhum indicador desta tela representa esse estado como meio funcionando.
+        {statusFilter && <button type="button" className="capability-filter-clear" onClick={() => setStatusFilter(null)}>Limpar filtro ×</button>}
       </p>
       <CapabilityMatrix runtimes={runtimes} cells={cells} onSelect={setSelected} />
       {selected && (
-        <section className={`capability-detail tone-${toneOf(selected.status)}`}>
-          <div className="section-head">
-            <h2>{selected.label}</h2>
-            <button className="icon-btn" onClick={() => setSelected(null)} aria-label="Fechar detalhe">×</button>
-          </div>
-          <div className="inspector-badges">
-            <DomainBadge domain={selected.domain} />
-            <CapabilityBadge status={selected.status} id={selected.capability_id} />
-            <span className="runtime-chip">{label(selected.runtime)}</span>
-            <span className="op-chip">{selected.operation ? label(selected.operation) : 'operação não publicada'}</span>
-            {selected.risk
-              ? <span className={`risk-chip risk-${selected.risk.toLowerCase()}`}>risco {label(selected.risk).toLowerCase()}</span>
-              : <span className="risk-chip">risco não publicado</span>}
-          </div>
-          <p>{selected.explanation}</p>
-          <dl className="meta-row">
-            <div><dt>capability_id</dt><dd><code>{selected.capability_id}</code></dd></div>
-            <div><dt>provider</dt><dd><code>{selected.provider}</code></dd></div>
-            <div><dt>última verificação</dt><dd>{selected.last_verified_at ? dateTime(selected.last_verified_at) : <em>nunca</em>}</dd></div>
-            <div><dt>evidência</dt><dd>{selected.evidence_ref ? <SourceRef value={selected.evidence_ref} /> : <em>nenhuma</em>}</dd></div>
-          </dl>
-        </section>
+        <DetailDrawer kicker={`Capability · ${domainLabel(selected.domain)}`} title={selected.label} code={selected.capability_id} onClose={close}
+          fields={[
+            ['Estado', <CapabilityBadge status={selected.status} id={selected.capability_id} />],
+            ['Runtime', label(selected.runtime)],
+            ['Operação', selected.operation ? label(selected.operation) : 'não publicada'],
+            ['Risco', selected.risk ? label(selected.risk) : 'não publicado'],
+            ['Provider', <code>{selected.provider}</code>],
+            ['Última verificação', selected.last_verified_at ? dateTime(selected.last_verified_at) : 'nunca'],
+            ['Evidência', selected.evidence_ref ? <SourceRef value={selected.evidence_ref} /> : 'nenhuma'],
+          ]}>
+          {selected.explanation && <p className="detail-drawer-note">{selected.explanation}</p>}
+        </DetailDrawer>
       )}
     </>
   );

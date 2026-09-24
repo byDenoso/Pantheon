@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type CSSProperties } from 'react';
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { useSystem } from '../data/useSystem.ts';
 import { atlasRouteParams } from './route-params.ts';
 import type { SystemStore } from '../data/useSystem.ts';
@@ -261,6 +261,21 @@ export function Atlas3DContent({system,themeOverride}:{system:SystemStore;themeO
   const [mobileDetailsOpen, setMobileDetailsOpen] = useState(false);
   const [fitNonce, setFitNonce] = useState(0);
   const [rendererReady, setRendererReady] = useState(false);
+  const keyActionsRef = useRef<Record<string, () => void>>({});
+
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      if (event.metaKey || event.ctrlKey || event.altKey) return;
+      const target = event.target as HTMLElement | null;
+      if (target && (target.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(target.tagName))) return;
+      const action = keyActionsRef.current[event.key.length === 1 ? event.key.toLowerCase() : event.key];
+      if (!action) return;
+      event.preventDefault();
+      action();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
 
   useEffect(() => {
     document.documentElement.dataset.atlasTheme = atlasTheme;
@@ -341,6 +356,16 @@ export function Atlas3DContent({system,themeOverride}:{system:SystemStore;themeO
   };
 
   const reset = collapseToInitial;
+
+  keyActionsRef.current = {
+    Escape: () => { if (selected?.parentId) setSelectedId(selected.parentId); else setMobileDetailsOpen(false); },
+    f: () => setFitNonce(value => value + 1),
+    r: reset,
+    e: toggleExpandAll,
+    l: () => setShowBeams(value => !value),
+    '2': () => switchViewMode('2d'),
+    '3': () => switchViewMode('3d'),
+  };
 
   const switchLens = (next: AtlasLens) => {
     setLens(next);
@@ -572,7 +597,7 @@ export function Atlas3DContent({system,themeOverride}:{system:SystemStore;themeO
                 {ATLAS_LENSES.map(([id,name])=><button type="button" key={id} className={lens===id?'active':''} aria-pressed={lens===id} onClick={()=>switchLens(id)}>{name}</button>)}
               </div>
               <div className="atlas-layer-switch" role="group" aria-label="Camadas do ATLAS">
-                {ATLAS_GRAPH_LAYERS.map(layer=><button type="button" key={layer} className={visibleLayers.has(layer)?'active':''} aria-pressed={visibleLayers.has(layer)} onClick={()=>setVisibleLayers(current=>{const next=new Set(current);if(next.has(layer))next.delete(layer);else next.add(layer);return next;})}>{layer==='knowledge'?'Knowledge':layer==='execution'?'Execution':'Capability'}</button>)}
+                {ATLAS_GRAPH_LAYERS.map(layer=><button type="button" key={layer} className={visibleLayers.has(layer)?'active':''} aria-pressed={visibleLayers.has(layer)} onClick={()=>setVisibleLayers(current=>{const next=new Set(current);if(next.has(layer))next.delete(layer);else next.add(layer);return next;})}>{layer==='knowledge'?'Conhecimento':layer==='execution'?'Execução':'Capacidade'}</button>)}
               </div>
               <GraphViewSwitch view={viewMode} onChange={switchViewMode}/>
               <button className="atlas-button atlas-expand-button" aria-pressed={allExpanded} onClick={toggleExpandAll}>
@@ -625,8 +650,8 @@ export function Atlas3DContent({system,themeOverride}:{system:SystemStore;themeO
         <div className="atlas-interaction-hint" data-active-mode={viewMode}>
           <strong>{viewMode === '2d' ? '2D · MAPA' : '3D · MAPA'}</strong><br />
           {viewMode === '2d'
-            ? <>clique: seleciona e expande/contrai · arraste: mover · roda: zoom</>
-            : <>arraste: orbitar · roda: zoom · Shift+arraste ou botão direito: mover</>}
+            ? <>clique: seleciona e expande/contrai · arraste: mover · roda: zoom<br /><kbd>F</kbd> enquadrar · <kbd>R</kbd> resetar · <kbd>E</kbd> expandir · <kbd>L</kbd> relações · <kbd>Esc</kbd> subir</>
+            : <>arraste: orbitar · roda: zoom · Shift+arraste ou botão direito: mover<br /><kbd>F</kbd> enquadrar · <kbd>2</kbd>/<kbd>3</kbd> modo · <kbd>Esc</kbd> subir</>}
         </div>
 
         <div className="atlas-a11y-stations" aria-label="Estações atualmente renderizadas">

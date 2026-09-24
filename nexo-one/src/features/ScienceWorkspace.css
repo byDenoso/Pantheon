@@ -18,3 +18,13 @@
   .science-table td.science-empty{grid-template-columns:1fr}
   .science-table td.science-empty::before{display:none}
 }
+.science-status-filter{display:flex;flex-wrap:wrap;gap:5px;padding:8px 0}
+.science-status-filter button{display:inline-flex;align-items:center;gap:6px;height:28px;padding:0 9px;border:1px solid var(--line);border-radius:999px;background:var(--panel);color:var(--muted);font-size:11px;cursor:pointer}
+.science-status-filter button span{color:var(--quiet);font-size:10px}
+.science-status-filter button:hover{color:var(--ink);border-color:color-mix(in srgb,var(--accent) 40%,var(--line))}
+.science-status-filter button.active{color:var(--ink);border-color:color-mix(in srgb,var(--accent) 60%,var(--line));background:color-mix(in srgb,var(--accent) 12%,var(--panel))}
+.science-status-filter button.active span{color:var(--accent)}
+@media(max-width:760px){.science-status-filter{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none}.science-status-filter button{flex:none}}
+.science-row-open{cursor:pointer}
+.science-row-open:hover td{background:color-mix(in srgb,var(--accent) 5%,transparent)}
+.science-row-open:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}

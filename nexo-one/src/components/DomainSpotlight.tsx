@@ -1,4 +1,5 @@
 import {canonicalDomain,DOMAIN_ORDER} from '../viewmodels/domainPalette.ts';
+import {domainLabel} from '../viewmodels/tokens.ts';
 
 // Isola um domínio numa lista. Cada chip leva a cor do domínio; "Todos" limpa.
 export function DomainSpotlight({domains,value,onChange,label='Destacar domínio'}:{
@@ -18,7 +19,7 @@ export function DomainSpotlight({domains,value,onChange,label='Destacar domínio
     {ordered.map(item=><button type="button" key={item.domain} data-domain={canonicalDomain(item.domain)}
       className={value===item.domain?'active':''} aria-pressed={value===item.domain}
       onClick={()=>onChange(value===item.domain?null:item.domain)}>
-      <i aria-hidden="true"/>{item.domain}<b>{item.count}</b>
+      <i aria-hidden="true"/>{domainLabel(item.domain)}<b>{item.count}</b>
     </button>)}
   </div>;
 }

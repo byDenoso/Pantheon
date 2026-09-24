@@ -1,9 +1,10 @@
 // Human Inbox, Actions e Execution trace.
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 import type { ActionRecord, ExecutionRun, GraphNode, InboxItem, InboxKind, SystemState } from '../../contracts/system.ts';
 import { INBOX_KINDS } from '../../contracts/system.ts';
 import { ActionCard, ExecutionTrace, HumanInboxItem } from '../../components/composites.tsx';
 import { EmptyState } from '../../components/states.tsx';
+import { DetailDrawer } from '../../components/DetailDrawer.tsx';
 import { DomainSpotlight, countByDomain } from '../../components/DomainSpotlight.tsx';
 import {
   DomainBadge, Fingerprint, ReadbackBadge, SourceRef, StatusBadge,
@@ -12,7 +13,7 @@ import { ProvenanceButton } from '../../components/provenance.tsx';
 import {
   actionById, blockedActions, capabilityById, humanActions, inboxGroups, provenanceOf, resolvableActions,
 } from '../../viewmodels/system.ts';
-import { dateTime, label, toneOf } from '../../viewmodels/tokens.ts';
+import { dateTime, domainLabel, label, toneOf } from '../../viewmodels/tokens.ts';
 
 export function InboxView(
   { state, onOpenInbox }: { state: SystemState; onOpenInbox: (item: InboxItem) => void },
@@ -79,41 +80,69 @@ function AutomationChip({ node }: { node: ProjectedWorkNode }) {
   if (node.human_gate) return <span className="work-auto-chip manual" title="Human gate na Tower">Exige você</span>;
   if (node.automation_eligible === true) return <span className="work-auto-chip auto" title={node.automation_reason || 'Tower declara elegível para automação'}>NEXO resolve</span>;
   if (node.automation_eligible === false) return <span className="work-auto-chip manual" title={node.automation_reason || 'Tower declara não elegível para automação'}>Manual</span>;
-  return <span className="work-auto-chip unknown" title="A Tower ainda não publica elegibilidade de automação para este WORK">Automação ?</span>;
+  return <span className="work-auto-chip unknown" title="A Tower ainda não publica elegibilidade de automação para este WORK" aria-label="Automação não avaliada">⚙ ?</span>;
+}
+
+const workIdOf = (node: ProjectedWorkNode) => node.id.replace(/^work:/, '').replace(/^WORK::/, '');
+const workTitleOf = (node: ProjectedWorkNode) => {
+  const title = node.label.replace(/^WORK::/, '');
+  return title === workIdOf(node) ? title.replace(/[-_]+/g, ' ') : title;
+};
+
+function stallText(node: ProjectedWorkNode) {
+  const verb = node.operational_status === 'BLOCKED' ? 'Bloqueado' : 'Aguardando';
+  return node.blocked_since ? `${verb} desde ${dateTime(node.blocked_since)} · há ${daysSince(node.blocked_since)} d` : `${verb} · data não publicada pela Tower`;
+}
+
+function WorkDetail({ node, onClose }: { node: ProjectedWorkNode; onClose: () => void }) {
+  return (
+    <DetailDrawer kicker={`WORK · ${domainLabel(node.domain)}`} title={workTitleOf(node)} code={workIdOf(node)} onClose={onClose}
+      fields={[
+        ['Estado', <StatusBadge state={node.operational_status || node.state} tone={toneOf(node.state)} compact />],
+        ['Prioridade', node.priority],
+        ['Automação', node.human_gate ? 'Exige você' : node.automation_eligible === true ? 'NEXO resolve' : node.automation_eligible === false ? 'Manual' : 'Não avaliada pela Tower'],
+        ['Motivo', node.automation_reason],
+        ['Parado', isStalled(node) ? stallText(node) : null],
+        ['Bloqueio', node.blocker],
+        ['Gate humano', node.human_gate ? 'Sim — exige você' : null],
+        ['Campanha', node.campaign_id],
+        ['Responsável', node.owner_role],
+        ['Dependência', node.dependency_class],
+      ]} />
+  );
 }
 
 function ProjectedWorkQueue({ rows, visible, onMore }:
   { rows: ProjectedWorkNode[]; visible: number; onMore: () => void }) {
   const shown = rows.slice(0, visible);
+  const [openId, setOpenId] = useState<string | null>(null);
+  const close = useCallback(() => setOpenId(null), []);
+  const open = openId ? rows.find(node => node.id === openId) ?? null : null;
   return (
     <>
       <div className="work-queue" role="list" aria-label="WORK projetado pela Tower">
         {shown.map(node => (
-          <article key={node.id} className={'work-row tone-' + toneOf(node.state)} data-domain={node.domain} role="listitem">
-            <div className="work-row-main">
+          <article key={node.id} className={'work-row tone-' + toneOf(node.state) + (openId === node.id ? ' is-open' : '')} data-domain={node.domain} role="listitem">
+            <button type="button" className="work-row-main" onClick={() => setOpenId(node.id)} aria-haspopup="dialog">
+              <h3>{workTitleOf(node)}</h3>
               <header>
                 <DomainBadge domain={node.domain} muted />
                 <StatusBadge state={node.operational_status || node.state} tone={toneOf(node.state)} compact />
-                {node.human_gate && <span className="work-human-chip">Needs Dener</span>}
+                {node.human_gate && <span className="work-human-chip">Exige você</span>}
                 {node.priority && <span className="work-priority">{node.priority}</span>}
                 <AutomationChip node={node} />
               </header>
-              <h3>{node.label}</h3>
               {isStalled(node) && (
                 <p className="work-blocker">
-                  {node.blocked_since
-                    ? <><b>{node.operational_status === 'BLOCKED' ? 'Bloqueado' : 'Aguardando'} desde {dateTime(node.blocked_since)}</b><span>há {daysSince(node.blocked_since)} d</span></>
-                    : <b>{node.operational_status === 'BLOCKED' ? 'Bloqueado' : 'Aguardando'} · data não publicada pela Tower</b>}
+                  <b>{stallText(node)}</b>
                   {node.blocker && <span>{node.blocker}</span>}
                 </p>
               )}
               <div className="work-row-meta">
-                <code>{node.id.replace(/^work:/, '')}</code>
+                <code>{workIdOf(node)}</code>
                 {node.campaign_id && <span>{node.campaign_id}</span>}
-                {node.owner_role && <span>{node.owner_role}</span>}
-                {node.dependency_class && <span>{node.dependency_class}</span>}
               </div>
-            </div>
+            </button>
           </article>
         ))}
       </div>
@@ -123,6 +152,7 @@ function ProjectedWorkQueue({ rows, visible, onMore }:
           <span>{shown.length} de {rows.length}</span>
         </button>
       )}
+      {open && <WorkDetail node={open} onClose={close} />}
     </>
   );
 }
@@ -211,7 +241,7 @@ export function ActionsView(
             <strong>{projectedWork.length} WORK na projeção da Tower.</strong>
             <span>Fila canônica visível; execução autônoma só é afirmada quando existir ActionRecord com capability e runtime vinculados.</span>
           </div>
-          <span className="work-projection-mode">READ ONLY</span>
+          <span className="work-projection-mode">Somente leitura</span>
         </div>
       )}
 

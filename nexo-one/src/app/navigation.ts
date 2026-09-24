@@ -85,7 +85,7 @@ export const NAV_GROUPS: NavGroup[] = [
   {
     id: 'proof', label: 'PROVA', entries: [
       { id: 'TRUTHGRAPH', label: 'TruthGraph', glyph: '⊹', hint: 'Autoridade e posse da verdade' },
-      { id: 'CAPABILITIES', label: 'Capabilities', glyph: '⬡', hint: 'O que pode ser feito, e com qual prova' },
+      { id: 'CAPABILITIES', label: 'Capacidades', glyph: '⬡', hint: 'O que pode ser feito, e com qual prova' },
       { id: 'SOURCES', label: 'Sources', glyph: '⊞', hint: 'Providers e Universal Projection Bus' },
       { id: 'INTEGRITY', label: 'Integrity', glyph: '⚖', hint: 'Tudo que a interface não consegue provar' },
     ],
@@ -116,7 +116,7 @@ export const VIEW_TITLES: Record<ViewId, { title: string; lead: string }> = {
   ACTIONS: { title: 'Fila operacional', lead: 'Trabalho por estado, domínio, campanha e dependência.' },
   EXECUTION: { title: 'Execução', lead: 'Rastro ACTION → CAPABILITY → RUNTIME → EFFECT → READBACK.' },
   TRUTHGRAPH: { title: 'Autoridade', lead: 'Fontes esperadas, fontes observadas e divergências.' },
-  CAPABILITIES: { title: 'Capabilities', lead: 'Capacidades registradas e evidências publicadas.' },
+  CAPABILITIES: { title: 'Capacidades', lead: 'Capacidades registradas e evidências publicadas.' },
   SOURCES: { title: 'Fontes', lead: 'Disponibilidade e atualização das fontes conectadas.' },
   INTEGRITY: { title: 'Integridade', lead: 'Lacunas de prova, invariantes e leituras pendentes.' },
   ATLAS: { title: 'Mapa', lead: 'Entidades e relações da projeção atual.' },

@@ -92,8 +92,14 @@ export function MissionControl(
             {visible.map((mission, index) => (
               <MissionCard key={mission.id} mission={mission} index={index} onOpen={onOpenScience} />
             ))}
+            {!expanded && missions.length > visible.length && visible.length % 2 === 0 && (
+              <button className="mc-more-tile" onClick={() => setExpanded(true)}>
+                <strong>+{missions.length - visible.length}</strong>
+                <span>Ver todas as {missions.length} missões →</span>
+              </button>
+            )}
           </div>
-          {missions.length > 4 && (
+          {missions.length > 4 && (expanded || visible.length % 2 === 1) && (
             <button className="mc-more" onClick={() => setExpanded(value => !value)}>
               {expanded ? 'Mostrar menos' : `Ver todas as ${missions.length} missões`} →
             </button>

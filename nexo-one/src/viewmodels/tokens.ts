@@ -61,7 +61,18 @@ export const STATE_LABEL: Record<string, string> = {
   ROUTES_TO: 'roteia para', BLOCKS: 'bloqueia', DERIVES_FROM: 'deriva de',
   SEMANTIC: 'Semântica', PROCEDURAL: 'Procedural',
   OPEN: 'Aberta', WAITING: 'Aguardando', DONE: 'Concluída',
+  WAIT_DEPENDENCY: 'Aguardando dependência', READY: 'Pronto', IN_PROGRESS: 'Em andamento', ACTIVE: 'Em andamento',
+  VERIFIED: 'Verificado', RESULT: 'Resultado disponível', CHECKPOINTED: 'Em espera', REJECTED: 'Rejeitado',
+  QUEUED: 'Na fila', PAUSED: 'Pausada', COMPLETED: 'Concluída', CLOSED: 'Encerrada', TODO: 'A fazer',
+  BLOCKED_SCIENTIFIC_CONTRACT: 'Bloqueado pelo contrato', WATCH: 'Em observação',
 };
+
+/** Nome de exibição dos domínios. O código do domínio segue no atributo data-domain. */
+export const DOMAIN_LABEL: Record<string, string> = {
+  NEXO: 'Nexo', SCIENCE: 'Ciência', ENGINEERING: 'Engenharia', OLYMPUS: 'Olympus', GPT_PERFORMANCE: 'Desempenho GPT',
+};
+export const domainLabel = (value: string | null | undefined): string =>
+  value ? DOMAIN_LABEL[value.toUpperCase()] ?? value : '—';
 
 export const label = (value: string | null | undefined): string =>
   value ? STATE_LABEL[value] ?? value : '—';

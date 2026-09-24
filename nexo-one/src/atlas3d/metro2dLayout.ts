@@ -77,10 +77,12 @@ function labelMaxWidth(node: AtlasMetroNode): number {
   return 138;
 }
 
-function estimateLabelWidth(node: AtlasMetroNode): number {
+function estimateLabelWidth(node: AtlasMetroNode, emphasized = false): number {
   const fontSize = metroLabelFontSize(node);
-  const estimated = node.name.length * fontSize * .58 + 14;
-  return clampValue(estimated, 42, labelMaxWidth(node));
+  // Bold hubs run wider than the average glyph; under-estimating clipped short names ("Ne…").
+  const glyph = node.entityType === 'hub' ? .7 : node.entityType === 'subdomain' ? .62 : .6;
+  const estimated = node.name.length * fontSize * glyph + 16;
+  return clampValue(estimated, 48, emphasized ? 300 : labelMaxWidth(node));
 }
 
 function estimateLabelHeight(node: AtlasMetroNode): number {
@@ -443,10 +445,11 @@ function screenCandidateBox(
   placement: MetroLabelPlacement,
   extraOffset: number,
   zoom: number,
+  emphasized = false,
 ): Rect {
   const [x, y] = position;
   const radius = Math.max(5, metroNodeSize(node) * zoom / 2);
-  const width = estimateLabelWidth(node);
+  const width = estimateLabelWidth(node, emphasized);
   const height = estimateLabelHeight(node) + 1;
   const gap = node.entityType === 'hub' ? 11 : node.entityType === 'subdomain' ? 9 : 7;
   const distance = radius + gap + extraOffset;
@@ -472,8 +475,9 @@ function floatingLabelBox(
   node: AtlasMetroNode,
   angleDegrees: number,
   distance: number,
+  emphasized = false,
 ): Rect {
-  const width = estimateLabelWidth(node);
+  const width = estimateLabelWidth(node, emphasized);
   const height = estimateLabelHeight(node) + 1;
   const angle = radians(angleDegrees);
   const centerX = position[0] + Math.cos(angle) * distance;
@@ -660,6 +664,7 @@ export function buildMetroScreenLabelLayout(
       continue;
     }
 
+    const emphasized = node.id === selectedId || node.id === hoveredId;
     const preferred = preferredPlacement(model, node, screenPositions);
     const placements = placementOrder(preferred);
     let chosen: { placement: MetroLabelPlacement; extra: number; rect: Rect; score: number } | null = null;
@@ -667,7 +672,7 @@ export function buildMetroScreenLabelLayout(
 
     for (const extra of distances) {
       for (const placement of placements) {
-        const rect = screenCandidateBox(position, node, placement, extra, zoom);
+        const rect = screenCandidateBox(position, node, placement, extra, zoom, emphasized);
         const score = labelCollisionScore(
           rect,
           node.id,
@@ -692,7 +697,7 @@ export function buildMetroScreenLabelLayout(
       const radialCandidates = [58, 76, 96, 120, 148, 182, 220];
       for (const distance of radialCandidates) {
         for (const angle of angularCandidates) {
-          const rect = floatingLabelBox(position, node, angle, distance);
+          const rect = floatingLabelBox(position, node, angle, distance, emphasized);
           const score = labelCollisionScore(
             rect,
             node.id,

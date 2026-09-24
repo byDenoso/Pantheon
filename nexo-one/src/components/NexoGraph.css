@@ -20,3 +20,20 @@
 .atlas-workspace>.nexo-graph .atlas-renderer,.atlas-workspace>.nexo-graph .atlas-render-layer,.atlas-workspace>.nexo-graph .atlas-metro-surface,.atlas-workspace>.nexo-graph .atlas-three-surface{min-height:0}
 /* Galaxy inside any NexoGraph (Prova, Ciência…) fills the graph box; only the Mapa sized it before. */
 .nexo-graph>.atlas-galaxy-view{position:absolute;inset:0;width:100%;height:100%}
+
+/* Botões de ação: ícone + texto; no celular só ícone, alvo de toque de 34px. */
+.nexo-graph-icon-btn{display:inline-flex;align-items:center;gap:5px}
+.nexo-graph-icon-btn i{font-style:normal;font-size:13px;line-height:1;opacity:.85}
+@media(max-width:640px){
+  .nexo-graph-toolbar{padding:5px;gap:5px;border-radius:12px}
+  .nexo-graph-toolbar-primary .nexo-graph-actions,.atlas-workspace>.nexo-graph .nexo-graph-toolbar-primary .nexo-graph-actions{max-width:none;flex:none;overflow:visible;gap:4px}
+  .nexo-graph-actions .nexo-graph-icon-btn{width:34px;height:34px;padding:0;justify-content:center;border-radius:9px}
+  .nexo-graph-actions .nexo-graph-icon-btn span{display:none}
+  .nexo-graph-actions .nexo-graph-icon-btn i{font-size:16px}
+  .nexo-graph-toolbar-secondary{flex-direction:column;align-items:stretch;gap:4px}
+  .nexo-graph-toolbar-secondary .nexo-graph-filters{width:100%;gap:6px;padding-right:18px;-webkit-mask-image:linear-gradient(90deg,#000 90%,transparent);mask-image:linear-gradient(90deg,#000 90%,transparent)}
+  .nexo-graph-toolbar-secondary .nexo-graph-count{align-self:flex-end;font-size:10px;padding:0 4px}
+  .nexo-graph-filters .nexo-spotlight-toggle,.nexo-graph-filters .nexo-illumination-toggle{height:32px;padding:0 11px;border-radius:999px;font-size:11px}
+  .nexo-graph-filters .nexo-illumination-toggle[aria-pressed="true"]{box-shadow:none}
+  .nexo-graph[data-toolbar-rows="2"] .nexo-graph-table-wrap{padding-top:112px}.nexo-graph[data-toolbar-rows="2"] .nexo-graph-table th{top:112px}
+}
