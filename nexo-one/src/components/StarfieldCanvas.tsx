@@ -86,8 +86,12 @@ export function StarfieldCanvas({className='starfield-canvas',clusters=[]}:{clas
         context.globalAlpha=Math.min(1,.45+.55*Math.min(1,g));
         context.fillStyle=cluster.color;
         context.font='500 10.5px "IBM Plex Mono", ui-monospace, monospace';
-        context.fillText(cluster.label.toUpperCase(),cluster.x+cluster.r*.9,cluster.y-cluster.r*.9);
-        if(cluster.detail){context.fillStyle='#7A889C';context.fillText(cluster.detail,cluster.x+cluster.r*.9,cluster.y-cluster.r*.9+14);}
+        // Labels flip to the left of the cluster instead of running off the right edge.
+        const label=cluster.label.toUpperCase();
+        const labelWidth=Math.max(context.measureText(label).width,cluster.detail?context.measureText(cluster.detail).width:0);
+        const labelX=cluster.x+cluster.r*.9+labelWidth>context.canvas.clientWidth-12?cluster.x-cluster.r*.9-labelWidth:cluster.x+cluster.r*.9;
+        context.fillText(label,labelX,cluster.y-cluster.r*.9);
+        if(cluster.detail){context.fillStyle='#7A889C';context.fillText(cluster.detail,labelX,cluster.y-cluster.r*.9+14);}
       }
       context.globalAlpha=1;time+=16;
       if(!still&&visible)frame=requestAnimationFrame(draw);

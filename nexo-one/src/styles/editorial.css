@@ -106,3 +106,16 @@
   .hero-scroll-cue,.hero-scroll-cue::after{animation:none}
   .ed-reveal{transform:none;transition:none}
 }
+
+/* 7 · Operational log (Início, below the narrative): same content, quieter editorial frame */
+:root[data-theme] .overview > section:not(.mission-control){
+  margin-top:clamp(56px,8vw,112px);padding-top:clamp(28px,3vw,40px);border-top:1px solid var(--obs-line);
+}
+:root[data-theme] .overview > section:not(.mission-control) :is(h2,h3):first-of-type{
+  font-family:var(--obs-display);font-weight:900;text-transform:uppercase;letter-spacing:.01em;
+  font-size:clamp(28px,3.6vw,52px);line-height:.95;color:var(--obs-bright);margin:0 0 clamp(16px,2vw,28px);
+}
+:root[data-theme] .overview > section:not(.mission-control) p{max-width:var(--ed-measure);line-height:1.65}
+/* Long machine codes (readback checks, ids) wrap instead of being clipped on phones. */
+:root[data-theme] .inbox-readback ul{flex-wrap:wrap;max-width:100%}
+:root[data-theme] .inbox-readback li,:root[data-theme] .inbox-item code{overflow-wrap:anywhere;min-width:0}
