@@ -406,8 +406,29 @@ export interface GuardianStatus {
   failing_areas: string[];
 }
 
+/** Ciclo fechado (projection.evolution): portão do Dener, cartas, revisão em 2 árbitros, genoma, diário da Pítia. */
+export interface EvolutionRoadmapProgress {
+  roadmap_id: string; confirmed: number; success_target?: number | null; tests_used: number;
+  max_tests?: number | null; refuted_streak: number; kill_streak?: number | null; stop_reached?: string | null;
+}
+export interface EvolutionThought { id: string; at: string; kind: string; text: string; refs: string[] }
+export interface EvolutionStatus {
+  gate: { charters_waiting: { roadmap_id: string; question?: string | null }[];
+          canaries_waiting: { gene: string; canary: unknown; since?: string | null }[] };
+  review_queue: { referee_1: string[]; referee_2: string[] };
+  roadmaps: EvolutionRoadmapProgress[];
+  genome: { generation: number; genes: { id: string; status: string; canonical: unknown; canary: unknown }[];
+            lineage?: { generation: number; gene: string; from: unknown; to: unknown; at: string; rationale?: string }[] };
+  decoys: { planted: number; revealed: number; caught: number };
+  charters?: { roadmap_id: string; status: string; question?: string | null; chartered_at?: string | null }[];
+  thoughts?: EvolutionThought[];
+  reviews?: Record<string, number>;
+}
+
 export interface SystemState {
   contract_version: '1';
+  /** Ciclo fechado do NEXO; ausente até o primeiro bootstrap. */
+  evolution?: EvolutionStatus | null;
   /** Latest NEXO · Guardião audit (projection.integrity); absent until the first report. */
   guardian?: GuardianStatus | null;
   scenario_id: string;

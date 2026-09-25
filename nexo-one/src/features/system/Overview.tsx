@@ -4,6 +4,7 @@ import type { ActionRecord, InboxItem, SystemState } from '../../contracts/syste
 import { ActionCard, HumanInboxItem, LaneState, ProjectionHealth } from '../../components/composites.tsx';
 import { EmptyState } from '../../components/states.tsx';
 import { MissionControl } from './MissionControl.tsx';
+import { EvolutionPanel } from './EvolutionPanel.tsx';
 import { phaseOf } from '../../viewmodels/missions.ts';
 import {
   DomainBadge, FreshnessIndicator, SeverityBadge, StatusBadge,
@@ -40,6 +41,7 @@ export function Overview(
   return (
     <div className="overview">
       {state.guardian && <GuardianStrip guardian={state.guardian} />}
+      {state.evolution && <EvolutionPanel evolution={state.evolution} />}
       <MissionControl state={state} onOpenScience={() => onNavigate('LEARNING')} />
       <section className="overview-pulse" aria-label="Resumo operacional" data-order="summary">
         <button className={`pulse-metric health tone-${toneOf(summary.state)}`} onClick={() => onNavigate('SOURCES')}>
