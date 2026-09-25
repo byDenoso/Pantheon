@@ -11,6 +11,7 @@ on:
 permissions:
   contents: write
   actions: write
+  id-token: write
 
 concurrency:
   group: nexo-writer-robot
@@ -55,13 +56,27 @@ jobs:
           print("bundle bytes", len(r.content))
           EOF
 
+      - name: Collect proposals from the inbox gateway (OIDC, no secret)
+        if: steps.cred.outputs.ok == 'true'
+        run: |
+          TOKEN=$(curl -sS -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=nexo-inbox" | python -c "import sys,json;print(json.load(sys.stdin)['value'])")
+          echo "::add-mask::$TOKEN"
+          curl -sS -H "Authorization: Bearer $TOKEN" https://nexo-one-two.vercel.app/api/inbox-list -o /tmp/gateway.json || echo '{"items":[]}' > /tmp/gateway.json
+          python -c "import json;d=json.load(open('/tmp/gateway.json'));print('gateway items',len(d.get('items') or []), d.get('error',''))"
+          echo "$TOKEN" > /tmp/oidc.txt
+
       - name: Apply inbox to the Tower
         id: robot
         if: steps.cred.outputs.ok == 'true'
         env:
           GOOGLE_SERVICE_ACCOUNT_JSON: ${{ secrets.NEXO_DRIVE_WRITER_JSON }}
           NEXO_INBOX_GITHUB_TOKEN: ${{ secrets.NEXO_INBOX_TOKEN }}
+          NEXO_GATEWAY_ITEMS: /tmp/gateway.json
         run: python /tmp/nexo_gpt_writer.py robot
+
+      - name: Acknowledge applied gateway proposals
+        if: steps.robot.outputs.gateway_applied != ''
+        run: curl -sS -H "Authorization: Bearer $(cat /tmp/oidc.txt)" "https://nexo-one-two.vercel.app/api/inbox-ack?ids=${{ steps.robot.outputs.gateway_applied }}"
 
       - name: Signal the ATLAS (tower-head)
         if: steps.robot.outputs.tower_revision != ''
