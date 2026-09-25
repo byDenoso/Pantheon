@@ -68,7 +68,7 @@ export function EvolutionPanel({ evolution }: { evolution: EvolutionStatus }) {
 
         <article className="evolution-card">
           <h3>Iscas plantadas</h3>
-          <p className="evolution-big">{decoys.revealed ? `${decoys.caught}/${decoys.revealed}` : '—'}<span> detectadas</span></p>
+          <p className="evolution-big">{decoys.revealed ? `${decoys.caught}/${decoys.revealed}` : decoys.planted}<span>{decoys.revealed ? ' detectadas' : ' plantadas, ainda secretas'}</span></p>
           <p className="evolution-muted">O NEXO tenta enganar a si mesmo para provar que não se deixa enganar.</p>
         </article>
       </div>

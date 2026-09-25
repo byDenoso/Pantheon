@@ -1129,6 +1129,32 @@ export function buildPagesProjection({
     .filter(Boolean);
   const lanes = lanesFromProjection(projection, observedAt);
   const inbox = humanInboxFromProjection(projection, observedAt, humanGateDetails);
+  // Closed-loop gate: charters and canaries waiting for Dener are real "needs you" items.
+  const gate = projection.evolution?.gate || {};
+  for (const charter of gate.charters_waiting || []) {
+    inbox.push({
+      id: 'gate-charter:' + charter.roadmap_id, kind: 'APROVAR', domain: 'NEXO',
+      title: 'Carta de roadmap: ' + (charter.question || charter.roadmap_id),
+      question: 'Aprovar esta carta? Diga ao GPT: "aprovo a carta ' + charter.roadmap_id + '" (ou "recuso").',
+      why: charter.renewable ? 'Campanha permanente: só roda com a sua aprovação.' : 'Congela orçamento e critério de parada deste roadmap.',
+      action_id: null, options: [], human_requirements: [], automatic_requirements: [], severity: 'P1', due_at: null,
+      source_ref: sourcePathRef(projection.manifest, 'roadmaps/' + charter.roadmap_id + '.json'),
+      fingerprint: nodeFingerprint('gate-charter', charter.roadmap_id, projection.manifest),
+      checked_at: observedAt, freshness: { state: 'RECENT', observed_at: observedAt, ttl_seconds: null },
+    });
+  }
+  for (const canary of gate.canaries_waiting || []) {
+    inbox.push({
+      id: 'gate-canary:' + canary.gene, kind: 'DECIDIR', domain: 'NEXO',
+      title: 'Canonizar mudança: ' + canary.gene,
+      question: 'Tornar oficial? Diga ao GPT: "canoniza ' + canary.gene + '" (ou "recusa").',
+      why: 'A mudança rodou em teste (canary) e está esperando a sua decisão.',
+      action_id: null, options: [], human_requirements: [], automatic_requirements: [], severity: 'P1', due_at: null,
+      source_ref: sourcePathRef(projection.manifest, 'evolution/genome.json'),
+      fingerprint: nodeFingerprint('gate-canary', canary.gene, projection.manifest),
+      checked_at: observedAt, freshness: { state: 'RECENT', observed_at: observedAt, ttl_seconds: null },
+    });
+  }
   const capabilities = capabilitiesFromProjection(projection, source);
   const declaredCapabilityCount = Number(projection?.counts?.capabilities);
   if (Number.isFinite(declaredCapabilityCount) && declaredCapabilityCount !== capabilities.length) {
