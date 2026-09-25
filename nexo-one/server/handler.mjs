@@ -139,7 +139,7 @@ export default async function handler(req,res) {
   }
   if(req.method==='OPTIONS'&&ATLAS_ORIGINS.has(origin)&&isCorsRoute(route)){res.statusCode=204;return res.end();}
   try{
-    if(route==='inbox-drop'){const [value,status]=await inboxDrop(url,env,req);return send(value,status);}
+    if(route==='inbox-drop'){try{const [value,status]=await inboxDrop(url,env,req);return send(value,status);}catch(error){return send({ok:false,error:String(error?.message||error).slice(0,120)},502);}}
     if(route==='inbox-list'||route==='inbox-ack'){const [value,status]=await inboxRobot(route,url,req,env);return send(value,status);}
     if(route==='mcp'){
       if(origin&&!ATLAS_ORIGINS.has(origin))return send({error:'ORIGIN_NOT_ALLOWED'},403);
