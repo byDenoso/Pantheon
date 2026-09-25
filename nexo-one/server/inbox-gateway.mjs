@@ -9,7 +9,7 @@
 //        verified against GitHub's public keys: the robot holds no GitHub secret at all.
 // The GitHub credential lives only here (Vercel env NEXO_INBOX_TOKEN, Contents RW on byDenoso/TCC).
 // Gate actions (APPROVE_CHARTER, CANONIZE, ...) are refused: they are born only in a conversation with Dener.
-import { createHash, createPublicKey, createVerify } from 'node:crypto';
+import { createHash, createHmac, createPublicKey, createVerify } from 'node:crypto';
 import { googleToken } from './adapters/google.mjs';
 import { GOOGLE_WRITE_SCOPES } from './adapters/connect.mjs';
 
@@ -26,6 +26,27 @@ const SPOOL_SCAN='A:K';
 const googleConfigured=env=>Boolean(env.GOOGLE_CONNECTOR||(env.GOOGLE_CLIENT_ID&&env.GOOGLE_CLIENT_SECRET&&env.GOOGLE_REFRESH_TOKEN));
 const quoteSheet=title=>`'${String(title).replaceAll("'","''")}'`;
 const ackStable=id=>`gwack-${createHash('sha256').update(String(id)).digest('hex').slice(0,32)}`;
+
+const writerSignature=(secret,id)=>createHmac('sha256',String(secret)).update('nexo-writer:'+String(id)).digest('hex');
+async function triggerAtlasWriter(req,env,id){
+  const secret=String(env.NEXO_INBOX_TOKEN||'').trim();
+  if(!secret)return {status:'NOT_CONFIGURED'};
+  const host=String(req?.headers?.['x-forwarded-host']||req?.headers?.host||'nexo-one-two.vercel.app').split(',')[0].trim();
+  const proto=String(req?.headers?.['x-forwarded-proto']||'https').split(',')[0].trim()==='http'?'http':'https';
+  const response=await fetch(`${proto}://${host}/api/nexo-writer`,{
+    method:'POST',
+    headers:{
+      'Content-Type':'application/json',
+      'X-Nexo-Writer-Id':String(id),
+      'X-Nexo-Writer-Signature':writerSignature(secret,id),
+    },
+    body:'{}',
+  });
+  const body=await response.json().catch(()=>({}));
+  if(!response.ok)throw new Error(`WRITER_${response.status}: ${String(body?.error||body?.status||'failed').slice(0,100)}`);
+  return {status:String(body?.status||'OK'),applied:Number(body?.applied||0),rejected:Number(body?.rejected||0),readback:body?.readback||null};
+}
+
 
 async function sheetJson(token,url,options={}) {
   const response=await fetch(url,{
@@ -94,7 +115,7 @@ function spoolHasStable(spool,stableId) {
     && String(row?.[spool.columns.envelope]||'').trim());
 }
 
-async function sheetInboxDrop(url,env) {
+async function sheetInboxDrop(url,env,req) {
   const id=String(url.searchParams.get('id')||'').toLowerCase();
   const i=Number(url.searchParams.get('i')||1),n=Number(url.searchParams.get('n')||1);
   const chunk=String(url.searchParams.get('d')||'');
@@ -104,7 +125,7 @@ async function sheetInboxDrop(url,env) {
   }
 
   let spool=await readSpool(env);
-  if(spoolHasStable(spool,id))return [{ok:true,id,complete:true,saved:`sheet:${id}`,readback:'PASS',reused:true},200];
+  if(spoolHasStable(spool,id)){const writer=await triggerAtlasWriter(req,env,id).catch(error=>({status:'DEFERRED',error:String(error?.message||error).slice(0,100)}));return [{ok:true,id,complete:true,saved:`sheet:${id}`,readback:'PASS',reused:true,writer},200];}
 
   const p=spool.partBase;
   const samePart=spool.rows.some(row=>row?.[p]==='GW_PART'&&row?.[p+1]===id&&Number(row?.[p+2])===i&&Number(row?.[p+3])===n&&row?.[p+4]===chunk);
@@ -140,7 +161,8 @@ async function sheetInboxDrop(url,env) {
   const check=await readSpool(env);
   if(!spoolHasStable(check,id))return [{ok:false,id,error:'READBACK_FAILED'},502];
   await clearSpoolRows(check,partRows).catch(()=>null);
-  return [{ok:true,id,complete:true,saved:`sheet:${id}`,readback:'PASS',transport:'SHEET_SPOOL'},201];
+  const writer=await triggerAtlasWriter(req,env,id).catch(error=>({status:'DEFERRED',error:String(error?.message||error).slice(0,100)}));
+  return [{ok:true,id,complete:true,saved:`sheet:${id}`,readback:'PASS',transport:'SHEET_SPOOL',writer},201];
 }
 
 async function appendGatewayAck(env,id) {
@@ -218,10 +240,10 @@ async function githubInboxDrop(url, env) {
 }
 
 
-export async function inboxDrop(url,env) {
+export async function inboxDrop(url,env,req) {
   let sheetError=null;
   if(googleConfigured(env)){
-    try{return await sheetInboxDrop(url,env);}
+    try{return await sheetInboxDrop(url,env,req);}
     catch(error){sheetError=error;}
   }
   if(env.NEXO_INBOX_TOKEN){

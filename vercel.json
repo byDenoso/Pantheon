@@ -6,6 +6,10 @@
   "outputDirectory": "nexo-one/dist",
   "rewrites": [
     {
+      "source": "/api/nexo-writer",
+      "destination": "/api/nexo-writer.py"
+    },
+    {
       "source": "/api/:route",
       "destination": "/api/index?route=:route"
     },
@@ -17,5 +21,13 @@
       "source": "/((?!api/).*)",
       "destination": "/index.html"
     }
-  ]
+  ],
+  "functions": {
+    "api/index.js": {
+      "maxDuration": 300
+    },
+    "api/nexo-writer.py": {
+      "maxDuration": 300
+    }
+  }
 }
