@@ -62,7 +62,7 @@ export function EvolutionPanel({ evolution }: { evolution: EvolutionStatus }) {
           <h3>Resultados sob refutação</h3>
           <p className="evolution-big">{reviews.CONFIRMED ?? 0}<span> confirmados</span></p>
           <p className="evolution-muted">
-            {underReview} em revisão · {reviews.REFUTED ?? 0} refutados · 2 árbitros de modelos diferentes
+            {underReview} em revisão · {reviews.REFUTED ?? 0} refutados · só confirma quem sobrevive a 2 contestações
           </p>
         </article>
 
