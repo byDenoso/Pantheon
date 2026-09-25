@@ -1,4 +1,4 @@
-name: NEXO Calendar Bridge Canary
+name: NEXO Sheet Spool Canary
 
 on:
   push:
@@ -17,33 +17,25 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - name: Enable and probe Calendar API
+      - name: Export scheduled spool Sheet with writer service account
         env:
           GOOGLE_SERVICE_ACCOUNT_JSON: ${{ secrets.NEXO_DRIVE_WRITER_JSON }}
+          SPOOL_ID: 1M2maKkuEjxumZRa145dzei7dEPFi2yKsKlUf7_scC-E
         run: |
           test -n "$GOOGLE_SERVICE_ACCOUNT_JSON" || { echo "writer secret missing"; exit 2; }
           pip install --quiet google-auth requests
           python - <<'PY'
-          import json, os, time
+          import json, os
           from google.oauth2 import service_account
           from google.auth.transport.requests import AuthorizedSession
           info=json.loads(os.environ["GOOGLE_SERVICE_ACCOUNT_JSON"])
-          project=info["project_id"]
-          email=info["client_email"]
-          print("service_account_email", email)
           creds=service_account.Credentials.from_service_account_info(
-              info, scopes=["https://www.googleapis.com/auth/cloud-platform",
-                            "https://www.googleapis.com/auth/calendar.readonly"])
+              info, scopes=["https://www.googleapis.com/auth/drive.readonly"])
           s=AuthorizedSession(creds)
-          enable=f"https://serviceusage.googleapis.com/v1/projects/{project}/services/calendar-json.googleapis.com:enable"
-          r=s.post(enable,timeout=30)
-          print("enable_probe", r.status_code, r.text[:500].replace("\n"," "))
-          if r.ok:
-              time.sleep(5)
-          for url in [
-              "https://www.googleapis.com/calendar/v3/users/me/calendarList?maxResults=10",
-              "https://www.googleapis.com/calendar/v3/calendars/primary",
-          ]:
-              r=s.get(url,timeout=30)
-              print("calendar_probe", r.status_code, r.text[:500].replace("\n"," "))
+          url=f"https://www.googleapis.com/drive/v3/files/{os.environ['SPOOL_ID']}/export"
+          r=s.get(url,params={"mimeType":"text/csv"},timeout=30)
+          print("sheet_export_probe",r.status_code)
+          print(r.text[:1000] if r.ok else r.text[:500])
+          r.raise_for_status()
+          assert "sheet-canary-001" in r.text
           PY
