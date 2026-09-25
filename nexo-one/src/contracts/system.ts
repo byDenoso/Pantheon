@@ -413,7 +413,7 @@ export interface EvolutionRoadmapProgress {
 }
 export interface EvolutionThought { id: string; at: string; kind: string; text: string; refs: string[] }
 export interface EvolutionStatus {
-  gate: { charters_waiting: { roadmap_id: string; question?: string | null }[];
+  gate: { charters_waiting: { roadmap_id: string; question?: string | null; objectives?: string[] | null; renewable?: boolean }[];
           canaries_waiting: { gene: string; canary: unknown; since?: string | null }[] };
   review_queue: { referee_1: string[]; referee_2: string[] };
   roadmaps: EvolutionRoadmapProgress[];

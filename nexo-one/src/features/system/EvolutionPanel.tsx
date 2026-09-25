@@ -48,7 +48,10 @@ export function EvolutionPanel({ evolution }: { evolution: EvolutionStatus }) {
           <h3>Portão do Dener</h3>
           {gate === 0 && <p className="evolution-muted">Nada esperando decisão.</p>}
           {evolution.gate.charters_waiting.map(charter => (
-            <p key={charter.roadmap_id}><strong>Carta</strong> {charter.question ?? short(charter.roadmap_id)}</p>
+            <div key={charter.roadmap_id} className="evolution-charter">
+              <p><strong>{charter.renewable ? 'Campanha permanente' : 'Carta'}</strong> {charter.question ?? short(charter.roadmap_id)}</p>
+              {charter.objectives?.length ? <ul>{charter.objectives.map(o => <li key={o}>{o}</li>)}</ul> : null}
+            </div>
           ))}
           {evolution.gate.canaries_waiting.map(canary => (
             <p key={canary.gene}><strong>Canonizar</strong> {canary.gene} → {JSON.stringify(canary.canary)}</p>
