@@ -29,5 +29,11 @@
     "api/nexo-writer.py": {
       "maxDuration": 300
     }
-  }
+  },
+  "crons": [
+    {
+      "path": "/api/nexo-writer",
+      "schedule": "*/15 * * * *"
+    }
+  ]
 }

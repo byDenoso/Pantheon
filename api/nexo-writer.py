@@ -498,6 +498,14 @@ class handler(BaseHTTPRequestHandler):
         self.wfile.write(body)
 
     def do_GET(self):
+        user_agent = str(self.headers.get("User-Agent") or "")
+        if user_agent == "vercel-cron/1.0" and os.environ.get("VERCEL_ENV") == "production":
+            try:
+                result = run_writer()
+                return self._send({"ok": True, **result}, 200)
+            except Exception as exc:
+                safe = str(exc).splitlines()[-1][:180]
+                return self._send({"ok": False, "status": "FAILED", "error": safe}, 502)
         self._send({"ok": True, "status": "READY", "writer": "ATLAS_VERCEL_CANONICAL"}, 200)
 
     def do_POST(self):
