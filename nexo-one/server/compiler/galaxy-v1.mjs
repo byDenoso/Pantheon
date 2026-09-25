@@ -408,17 +408,19 @@ export function compileGalaxySnapshot({projection,manifestFile=null,interdomain=
   const snapshot_id=`galaxy-${text(manifest.tower_commit).slice(0,12)||'unknown'}-${fingerprint.slice(7,19)}`;
   const changes=deriveChanges(previousSnapshot,{entities:publicEntities},generated_at);
   const events=astroEvents({entities:publicEntities,subdomains,needs_you,changes});
-  // Dener's closed-loop gate (charters/canaries waiting) is "needs you now": one supernova each.
+  // Dener's closed-loop gate: one supernova per waiting decision, on the arm of the area it decides
+  // (cosmology charters on SCIENCE, NEXO/engineering on ENGINEERING); several on one arm are spaced along it.
   const gate=projection.evolution?.gate||{};
-  [...(gate.charters_waiting||[]).map(c=>({id:c.roadmap_id,label:'Carta: '+(c.question||c.roadmap_id)})),
-   ...(gate.canaries_waiting||[]).map(c=>({id:c.gene,label:'Canonizar: '+c.gene}))].forEach((item,index)=>{
-    // Spread over the arm of the charter's area (science roadmaps on SCIENCE, NEXO ones on ENGINEERING),
-    // at a hash-stable position: they never stack.
-    let hash=0;for(const ch of String(item.id))hash=(hash*31+ch.charCodeAt(0))>>>0;
-    const domain=/NEXO|ENGINEERING/i.test(item.id)?'ENGINEERING':/^RM-/.test(item.id)?'SCIENCE':'NEXO';
-    const p=armPoint(domain,.18+.64*((hash%1000)/1000));
-    events.push({id:`supernova:gate:${item.id}`,kind:'SUPERNOVA',domain,entity:null,label:item.label,reason:'HUMAN_GATE',x:round(p.x),y:round(p.y),z:0,intensity:1});
-  });
+  const gateItems=[...(gate.charters_waiting||[]).map(c=>({id:c.roadmap_id,label:'Carta: '+(c.question||c.roadmap_id)})),
+    ...(gate.canaries_waiting||[]).map(c=>({id:c.gene,label:'Canonizar: '+c.gene,domain:'ENGINEERING'}))]
+    .map(item=>({...item,domain:item.domain||(/NEXO|ENGINEERING|GPT/i.test(item.id)?'ENGINEERING':/OLY/i.test(item.id)?'OLYMPUS':'SCIENCE')}));
+  const perArm={};for(const item of gateItems)(perArm[item.domain]||(perArm[item.domain]=[])).push(item);
+  for(const [domain,items] of Object.entries(perArm)){
+    items.forEach((item,k)=>{
+      const p=armPoint(domain,.22+.6*(k+.5)/items.length);
+      events.push({id:`supernova:gate:${item.id}`,kind:'SUPERNOVA',domain,entity:null,label:item.label,reason:'HUMAN_GATE',x:round(p.x),y:round(p.y),z:0,intensity:1});
+    });
+  }
   const byKind=Object.fromEntries(['WORK','TEST','CAPABILITY','HYPOTHESIS','AUTOMATION','RESULT','OTHER'].map(kind=>[kind,publicEntities.filter(entity=>entity.kind===kind).length]));
   const byDomain=Object.fromEntries(GALAXY_DOMAINS.map(domain=>[domain,publicEntities.filter(entity=>entity.visual_domain===domain).length]));
 

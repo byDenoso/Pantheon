@@ -824,7 +824,8 @@ jobs:
           const expectedWaiting=projectedWork.filter(item=>String(item.operational_status||item.status||'').toUpperCase()==='WAIT_DEPENDENCY').length;
           const actualWaiting=publishedWork.filter(node=>String(node.operational_status||node.state||'').toUpperCase()==='WAIT_DEPENDENCY').length;
           if(actualWaiting!==expectedWaiting)throw new Error(`WORK_WAITING_COUNT_DRIFT projection=${expectedWaiting} system=${actualWaiting}`);
-          if((system.inbox||[]).length!==humanIds.size)throw new Error(`WORK_HUMAN_COUNT_DRIFT projection=${humanIds.size} inbox=${(system.inbox||[]).length}`);
+          const gateCount=((projection.evolution?.gate?.charters_waiting)||[]).length+((projection.evolution?.gate?.canaries_waiting)||[]).length;
+          if((system.inbox||[]).length!==humanIds.size+gateCount)throw new Error(`WORK_HUMAN_COUNT_DRIFT projection=${humanIds.size}+gate=${gateCount} inbox=${(system.inbox||[]).length}`);
           const inboxByWork=new Map((system.inbox||[]).map(item=>[String(item.id||'').replace(/^needs-dener:/,''),item]));
           for(const id of humanIds){
             const inbox=inboxByWork.get(id);
