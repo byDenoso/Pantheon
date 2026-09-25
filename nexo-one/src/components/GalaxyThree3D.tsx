@@ -868,14 +868,15 @@ export const GalaxyThree3D = forwardRef<CanvasGraph25DHandle, Props>(function Ga
 
     try {
       renderer = new WebGLRenderer({
-        antialias: !isMobile,
+        antialias: true,
         alpha: true,
         powerPreference: 'high-performance',
       });
       renderer.outputColorSpace = SRGBColorSpace;
       renderer.toneMapping = ACESFilmicToneMapping;
       renderer.toneMappingExposure = themeName === 'light' ? 0.92 : (isMobile ? 0.96 : 1.0);
-      renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, isMobile ? 1.45 : 1.9));
+      // Phones are 3x screens: a 1.45 cap rendered the galaxy at half resolution (blurry, dull points).
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, isMobile ? 2.5 : 2));
       renderer.setSize(size.width, size.height, false);
       renderer.domElement.className = 'galaxy-three-canvas';
       renderer.domElement.setAttribute('aria-label', ariaLabel);
