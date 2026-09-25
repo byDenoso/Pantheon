@@ -81,7 +81,8 @@ jobs:
           with urllib.request.urlopen(req,timeout=60) as response:
               comparison=json.load(response)
 
-          head=str((comparison.get("head_commit") or {}).get("sha") or "").strip()
+          commits=comparison.get("commits") or []
+          head=str((commits[-1] if commits else {}).get("sha") or base).strip()
           if not head:
               raise SystemExit("public inbox compare missing head sha")
 
