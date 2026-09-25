@@ -28,8 +28,11 @@ async function api(token, method, url, body) {
   return response.json();
 }
 
-async function sheetAccess(env) {
+async function sheetAccess(env, req) {
   if (!env.NEXO_SHEET_ID) throw new Error('GATEWAY_NOT_CONFIGURED');
+  // Vercel hands the OIDC token to functions per request (header), not always as an env var.
+  const oidc = env.VERCEL_OIDC_TOKEN || req?.headers?.['x-vercel-oidc-token'];
+  env = { ...env, VERCEL_OIDC_TOKEN: oidc };
   const token = await googleToken(env, undefined, { scopes: GOOGLE_WRITE_SCOPES.sheets });
   const base = `${SHEETS}/${encodeURIComponent(env.NEXO_SHEET_ID)}`;
   const meta = await api(token, 'GET', `${base}?fields=sheets.properties.title`);
@@ -67,7 +70,7 @@ function assemble(all) {
   return out;
 }
 
-export async function inboxDrop(url, env) {
+export async function inboxDrop(url, env, req) {
   const id = String(url.searchParams.get('id') || '').toLowerCase();
   const i = Number(url.searchParams.get('i') || 1), n = Number(url.searchParams.get('n') || 1);
   const chunk = String(url.searchParams.get('d') || '');
@@ -76,7 +79,7 @@ export async function inboxDrop(url, env) {
     return [{ ok: false, error: 'BAD_REQUEST', expected: 'id=[a-z0-9-], i<=n<=40, d=base64url(<=6000)' }, 400];
   }
   let access;
-  try { access = await sheetAccess(env); } catch (error) { return [{ ok: false, error: String(error.message || error) }, 503]; }
+  try { access = await sheetAccess(env, req); } catch (error) { return [{ ok: false, error: String(error.message || error) }, 503]; }
   const before = await rows(access);
   if (!before.some(r => r.id === id && r.i === i)) {
     await api(access.token, 'POST', `${access.base}/values/${TAB}!A:F:append?valueInputOption=RAW&insertDataOption=INSERT_ROWS`,
@@ -116,7 +119,7 @@ async function isRobot(req) {
 
 export async function inboxRobot(route, url, req, env) {
   if (!(await isRobot(req).catch(() => false))) return [{ ok: false, error: 'ROBOT_ONLY' }, 403];
-  const access = await sheetAccess(env);
+  const access = await sheetAccess(env, req);
   const all = await rows(access);
   if (route === 'inbox-list') return [{ ok: true, items: assemble(all) }, 200];
   const ids = new Set(String(url.searchParams.get('ids') || '').split(',').filter(Boolean));
