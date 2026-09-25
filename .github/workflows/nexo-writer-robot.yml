@@ -127,15 +127,52 @@ jobs:
       - name: Signal the ATLAS (tower-head)
         if: steps.robot.outputs.tower_revision != ''
         env:
+          GH_TOKEN: ${{ github.token }}
           REV: ${{ steps.robot.outputs.tower_revision }}
         run: |
-          printf '{\n  "tower_revision": "%s",\n  "signalled_at": "%s"\n}\n' "$REV" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > nexo-one/tower-head.json
-          git config user.name "nexo-writer-robot"
-          git config user.email "nexo-writer-robot@users.noreply.github.com"
-          git add nexo-one/tower-head.json
-          git commit -m "NEXO writer robot: tower head $REV" || exit 0
-          for i in 1 2 3; do git pull --rebase -q && git push -q && exit 0; sleep 5; done
-          exit 1
+          # Update tower-head with GitHub Contents API CAS instead of a local
+          # commit/rebase. Other workflows also write main, so rebasing this
+          # one-file signal can conflict even after the Tower write succeeded.
+          python - <<'PY'
+          import base64, datetime, json, os, subprocess, time
+
+          repo = os.environ["GITHUB_REPOSITORY"]
+          rev = os.environ["REV"]
+          path = "nexo-one/tower-head.json"
+          body = json.dumps({
+              "tower_revision": rev,
+              "signalled_at": datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+          }, indent=2) + "\n"
+          encoded = base64.b64encode(body.encode()).decode()
+
+          for attempt in range(1, 6):
+              get = subprocess.run(
+                  ["gh", "api", f"repos/{repo}/contents/{path}?ref=main"],
+                  text=True, capture_output=True
+              )
+              if get.returncode != 0:
+                  print(f"tower-head read failed on attempt {attempt}")
+                  time.sleep(2)
+                  continue
+              sha = json.loads(get.stdout)["sha"]
+              payload = json.dumps({
+                  "message": f"NEXO writer robot: tower head {rev}",
+                  "content": encoded,
+                  "sha": sha,
+                  "branch": "main",
+              })
+              put = subprocess.run(
+                  ["gh", "api", "--method", "PUT", f"repos/{repo}/contents/{path}", "--input", "-"],
+                  input=payload, text=True, capture_output=True
+              )
+              if put.returncode == 0:
+                  print("tower-head CAS PASS")
+                  raise SystemExit(0)
+              print(f"tower-head CAS conflict/retry {attempt}")
+              time.sleep(2)
+
+          raise SystemExit("tower-head CAS failed after 5 retries")
+          PY
 
       - name: Rebuild the ATLAS now
         if: steps.robot.outputs.tower_revision != ''
