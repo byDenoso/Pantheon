@@ -14,11 +14,12 @@ const TYPE: Record<string, GraphNodeType> = {
 };
 const RADIUS: Partial<Record<GraphNodeType, number>> = { TEST: 1.4, ACTION: 1.2, CAPABILITY: 1.0 };
 const GLOW_LEVELS = [
-  { id: 'soft', label: 'Suave', value: 0.15 },
-  { id: 'medium', label: 'Médio', value: 0.21 },
-  { id: 'strong', label: 'Forte', value: 0.28 },
+  // Dener 2026-09-25: the 0.15–0.28 presets read as a dull, broken render; back to a visible glow.
+  { id: 'soft', label: 'Suave', value: 0.32 },
+  { id: 'medium', label: 'Médio', value: 0.48 },
+  { id: 'strong', label: 'Forte', value: 0.66 },
 ] as const;
-const GLOW_KEY = 'nexo.galaxy.glow.v1';
+const GLOW_KEY = 'nexo.galaxy.glow.v2'; // v2: old stored choice was tied to the dim presets
 const EVENTS_KEY = 'nexo.galaxy.events-off.v1';
 
 function readHiddenEvents(): string[] {
