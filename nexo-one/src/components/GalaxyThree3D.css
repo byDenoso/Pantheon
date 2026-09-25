@@ -318,17 +318,27 @@
 .galaxy-event-panel .ev-glyph .ev-cloud{fill:var(--ev);opacity:.3}
 .galaxy-event-panel .ev-glyph .ev-dash{stroke-dasharray:3 3}
 .galaxy-event-panel .ev-glyph .ev-broken{stroke-dasharray:14 6}
+.galaxy-event-panel .ev-context{display:flex;flex-wrap:wrap;gap:4px;color:#8f9bad;font:500 9px/1.4 "IBM Plex Mono",monospace;letter-spacing:.04em}
+.galaxy-event-panel .ev-context span{display:inline-flex;align-items:center;gap:4px}
+.galaxy-event-panel .ev-context i{font-style:normal;color:var(--ev)}
 .galaxy-event-panel .ev-label{margin:0;font-size:14px;color:#f4f7fa}
-.galaxy-event-panel .ev-reason{margin:0;padding:8px 10px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.03)}
-.galaxy-event-panel .ev-reason b{display:block;font:500 9px/1.4 "IBM Plex Mono",monospace;letter-spacing:.2em;text-transform:uppercase;color:#7a889c}
+.galaxy-event-panel .ev-summary{margin:0;color:#aab6c6}
+.galaxy-event-panel .ev-action{padding:9px 10px;border-left:2px solid var(--ev);background:rgba(255,255,255,.035)}
+.galaxy-event-panel .ev-action b{display:block;margin-bottom:3px;font:600 9px/1.4 "IBM Plex Mono",monospace;letter-spacing:.14em;text-transform:uppercase;color:var(--ev)}
+.galaxy-event-panel .ev-action p{margin:0;color:#edf3f8}
 .galaxy-event-panel dl{margin:0;display:grid;gap:10px}
 .galaxy-event-panel dt,.galaxy-event-panel h3{margin:0 !important;font-family:"IBM Plex Mono",monospace !important;font:500 9px/1.4 "IBM Plex Mono",monospace;letter-spacing:.2em;text-transform:uppercase;color:#7a889c}
 .galaxy-event-panel dd{margin:2px 0 0}
 .galaxy-event-panel meter{width:120px;height:6px;vertical-align:middle;accent-color:var(--ev)}
 .galaxy-event-panel ul{list-style:none;margin:6px 0 0;padding:0;display:grid;gap:2px}
 .galaxy-event-panel li{display:flex;justify-content:space-between;gap:8px;padding:6px 8px;border-left:1px solid rgba(255,255,255,.1)}
+.galaxy-event-panel li>div{min-width:0;display:grid;gap:2px}
 .galaxy-event-panel li span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .galaxy-event-panel li small{flex:none;font:500 9.5px/1.6 "IBM Plex Mono",monospace;color:#7a889c}
+.galaxy-event-panel details>summary{cursor:pointer;color:#aab6c6;font:500 10px/1.4 "IBM Plex Mono",monospace}
+.galaxy-event-panel .ev-more{margin-top:7px}
+.galaxy-event-panel .ev-technical{padding-top:9px;border-top:1px solid rgba(255,255,255,.08)}
+.galaxy-event-panel .ev-technical[open] summary{margin-bottom:9px;color:var(--ev)}
 @keyframes ev-panel-in{from{opacity:0;transform:translateX(-12px)}to{opacity:1;transform:none}}
 
 /* Legend short tag only on phones. */

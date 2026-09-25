@@ -70,14 +70,18 @@ async function loadSystemState(force: boolean): Promise<SystemState> {
     const endpointPath = SYSTEM_ENDPOINT.split('?', 1)[0] ?? SYSTEM_ENDPOINT;
     const staticProjection = endpointPath.endsWith('.json');
     const separator = SYSTEM_ENDPOINT.includes('?') ? '&' : '?';
-    const refresh = force && !staticProjection ? `${separator}refresh=1` : '';
+    const refresh = force
+      ? staticProjection
+        ? `${separator}readback=${Date.now()}`
+        : `${separator}refresh=1`
+      : '';
     const requestUrl = `${SYSTEM_ENDPOINT}${refresh}`;
 
     // No per-caller signal here: the request is shared; callers abort their own wait.
     const response = await fetch(requestUrl, {
-      // Static Pages assets keep a stable URL so the browser/CDN can revalidate
-      // with ETag/Last-Modified instead of downloading a timestamp-busted copy.
-      cache: staticProjection ? (force ? 'reload' : 'no-cache') : 'no-store',
+      // Passive reads may revalidate a stable static URL. A forced read is an
+      // exact publication readback and must bypass browser/CDN cache ambiguity.
+      cache: staticProjection ? (force ? 'no-store' : 'no-cache') : 'no-store',
     });
 
     if (response.status === 404) {

@@ -79,16 +79,28 @@ export function EvolutionPanel({ evolution }: { evolution: EvolutionStatus }) {
             const target = roadmap.success_target ?? 0;
             const pct = target ? Math.min(100, Math.round((roadmap.confirmed / target) * 100)) : 0;
             const used = roadmap.max_tests ? Math.min(100, Math.round((roadmap.tests_used / roadmap.max_tests) * 100)) : 0;
+            const remaining = target ? Math.max(0, target - roadmap.confirmed) : null;
             const question = evolution.charters?.find(c => c.roadmap_id === roadmap.roadmap_id)?.question;
             return (
               <li key={roadmap.roadmap_id}>
-                <span className="evolution-rm">{short(roadmap.roadmap_id)}</span>
-                <span className="evolution-bar" aria-hidden="true"><b style={{ width: `${used}%` }} /><i style={{ width: `${pct}%` }} /></span>
+                <div className="evolution-rm-head">
+                  <span className="evolution-rm">{short(roadmap.roadmap_id)}</span>
+                  <span className="evolution-rm-next">
+                    {remaining === null ? 'meta sem alvo numérico' : remaining === 0 ? 'meta atingida' : `faltam ${remaining} confirmaç${remaining === 1 ? 'ão' : 'ões'}`}
+                  </span>
+                </div>
                 {question && <span className="evolution-rm-question">{question}</span>}
-                <span className="evolution-rm-meta">
-                  {roadmap.confirmed}/{target || '?'} confirmados · {roadmap.tests_used}/{roadmap.max_tests ?? '?'} testes
-                  {roadmap.stop_reached ? ` · parada: ${STOP_PT[roadmap.stop_reached] ?? roadmap.stop_reached}` : ''}
-                </span>
+                <div className="evolution-progress">
+                  <div>
+                    <span><b>Confirmações</b><em>{roadmap.confirmed}/{target || '?'}</em></span>
+                    <span className="evolution-bar confirmations" aria-hidden="true"><i style={{ width: `${pct}%` }} /></span>
+                  </div>
+                  <div>
+                    <span><b>Testes usados</b><em>{roadmap.tests_used}/{roadmap.max_tests ?? '?'}</em></span>
+                    <span className="evolution-bar tests" aria-hidden="true"><i style={{ width: `${used}%` }} /></span>
+                  </div>
+                </div>
+                {roadmap.stop_reached && <span className="evolution-rm-meta">parada: {STOP_PT[roadmap.stop_reached] ?? roadmap.stop_reached}</span>}
               </li>
             );
           })}

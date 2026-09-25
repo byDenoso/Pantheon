@@ -237,6 +237,8 @@ function makeEntity(kind,id,item,collection,consensus,manifest){
     domain:resolved.domain,
     visual_domain:resolved.visual_domain,
     subdomain:explicitSubdomain(item),
+    campaign_id:text(item?.campaign_id)||null,
+    test_group_id:text(item?.test_group_id)||null,
     status:statusOf(item),
     title:titleOf(id,item),
     // Plain-language reading for the event panel (what it is about / what came out).
@@ -300,6 +302,7 @@ function cleanEntity(entity){
 function semanticEntity(entity){
   return {
     id:entity.id,kind:entity.kind,domain:entity.domain,visual_domain:entity.visual_domain,subdomain:entity.subdomain,
+    campaign_id:entity.campaign_id,test_group_id:entity.test_group_id,
     status:entity.status,title:entity.title,importance:entity.importance,priority:entity.priority,cluster_id:entity.cluster_id,
     source:{collection:entity.source?.collection,canonical_id:entity.source?.canonical_id,source_domain:entity.source?.source_domain,derivation:entity.source?.derivation},
   };

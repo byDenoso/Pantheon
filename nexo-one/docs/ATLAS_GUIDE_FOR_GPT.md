@@ -10,13 +10,14 @@ Tower (Drive, privada) → projeção pública (TCC `runtime/nexo_agent_api/publ
 - `scripts/build-pages-system.mjs` → `dist/system.json` (SystemState: inbox, lanes, graph, guardian, **evolution**).
 - `scripts/build-galaxy-snapshot.mjs` + `server/compiler/galaxy-v1.mjs` → `dist/galaxy/latest.json` (entidades, braços, eventos).
 O front só lê `system.json` e `galaxy/latest.json`. Mudou regra de dado → mude a projeção (TCC) ou os builders, não o React.
+Enquanto o ATLAS fica aberto, `useSystem.ts` consulta o `build-meta.json` leve a cada 20 s e só relê o `system.json` quando o fingerprint publicado muda. A Galáxia acompanha esse mesmo fingerprint e relê `galaxy/latest.json` com readback sem cache e retry curto até os dois artefatos pertencerem à mesma publicação.
 
 ## 2. Telas e componentes que importam
 | Tela | Arquivo | O que mostra |
 |---|---|---|
 | Início | `src/app/App.tsx` (hero `StarfieldCanvas`) + `src/features/system/Overview.tsx` | céu com os domínios (sem GPT_PERFORMANCE: é Engenharia), faixa do Guardião, **EvolutionPanel** |
-| Ciclo fechado | `src/features/system/EvolutionPanel.tsx` | diário da Pítia (sem preâmbulo, 1ª pessoa, com refs), Portão do Dener (cartas/canaries, objetivos, “Campanha permanente”), Resultados sob refutação (“só confirma quem sobrevive a 2 contestações”), Iscas (plantadas/detectadas), roadmaps (pergunta da carta, barra de confirmados + trilha de testes usados) |
-| Galáxia | `src/atlas3d/GalaxyView.tsx`, `src/components/GalaxyThree3D.tsx/.css` | espiral por domínio; eventos astrofísicos |
+| Ciclo fechado | `src/features/system/EvolutionPanel.tsx` | diário da Pítia (sem preâmbulo, 1ª pessoa, com refs), Portão do Dener (cartas/canaries, objetivos, “Campanha permanente”), Resultados sob refutação (“só confirma quem sobrevive a 2 contestações”), Iscas (plantadas/detectadas), roadmaps com pergunta, quantas confirmações faltam e trilhas separadas de confirmações/testes usados |
+| Galáxia | `src/atlas3d/GalaxyView.tsx`, `src/components/GalaxyThree3D.tsx/.css` | espiral por domínio; eventos astrofísicos; painel com breadcrumb semântico, pergunta/resultado primeiro, ação e detalhes técnicos recolhíveis |
 | Ciência | `src/features/ScienceWorkspace.tsx(.css)` | campanhas/testes/hipóteses; no celular vira cartões e esconde campos vazios (`data-blank`) |
 | Operação | `src/features/system/Operations.tsx` | fila antiga de WORK (herança); “Exigem você” conta human gates |
 

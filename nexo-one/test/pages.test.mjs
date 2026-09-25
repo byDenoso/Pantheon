@@ -19,7 +19,8 @@ test('GitHub Pages build uses repository base and configurable SystemState endpo
   assert.match(remote, /resolveSystemEndpoint/);
   assert.match(remote, /configuredEndpoint\.replace/);
   assert.match(remote, /\/api\/system/);
-  assert.match(remote, /staticProjection \? \(force \? 'reload' : 'no-cache'\) : 'no-store'/);
+  assert.match(remote, /staticProjection \? \(force \? 'no-store' : 'no-cache'\) : 'no-store'/);
+  assert.match(remote, /readback=\$\{Date\.now\(\)\}/);
   assert.match(remote, /endsWith\('\.json'\)/);
   const sync = await text('src/data/projectionSync.ts');
   const hook = await text('src/data/useSystem.ts');
@@ -38,6 +39,14 @@ test('GitHub Pages build uses repository base and configurable SystemState endpo
   assert.match(hook, /Sem alterações · projeção pública validada diretamente/);
   assert.match(hook, /dispatchProjectionSync/);
   assert.match(hook, /waitForProjectionSync/);
+  assert.match(hook, /build-meta\.json/);
+  assert.match(hook, /projection_fingerprint/);
+  assert.match(hook, /HEARTBEAT_MS = 20_000/);
+  const galaxy = await text('src/atlas3d/GalaxyView.tsx');
+  assert.match(galaxy, /useNexoStore/);
+  assert.match(galaxy, /projectionFingerprint/);
+  assert.match(galaxy, /cache: 'no-store'/);
+  assert.match(galaxy, /GALAXY_EDGE_NOT_CONVERGED/);
   assert.match(app, /onSync=\{system\.sync\}/);
   assert.match(app, /VITE_PUBLIC_NEXO_BASE/);
   assert.match(app, /goSystem\(\)/);

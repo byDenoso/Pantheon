@@ -6,6 +6,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { EVENT_TAG, EventGlyph, GalaxyThree3D, type GalaxyEvent, type GalaxyMorphology } from '../components/GalaxyThree3D.tsx';
 import type { GraphNode, GraphNodeType } from '../contracts/system.ts';
 import type { PlacedNode3D } from '../viewmodels/graph3d.ts';
+import { useNexoStore } from '../data/NexoStore.tsx';
 
 const SCALE = 0.36; // matches G_SCALE in GalaxyThree3D (half size)
 const ENDPOINT = import.meta.env?.VITE_GALAXY_ENDPOINT?.trim() || './galaxy/latest.json';
@@ -46,7 +47,8 @@ const RUNNING = new Set(['RUNNING', 'IN_PROGRESS', 'CHECKPOINTED', 'EXECUTING', 
 
 interface RawEntity {
   id: string; canonical_id?: string; kind?: string; title?: string; status?: string | null; cluster_id?: string;
-  visual_domain?: string; layout?: { x?: number; y?: number; z?: number };
+  visual_domain?: string; subdomain?: string | null; campaign_id?: string | null; test_group_id?: string | null;
+  plain?: string | null; meaning?: string | null; layout?: { x?: number; y?: number; z?: number };
 }
 
 interface Metrics {
@@ -97,6 +99,8 @@ const signed = (value: number | null | undefined, digits = 2) =>
 
 // Overview only: clicking the galaxy never navigates away to the graphs.
 export function GalaxyView({ selectedId }: { selectedId: string | null; onSelect?: (id: string) => void }) {
+  const { system } = useNexoStore();
+  const projectionFingerprint = system.state?.bus.fingerprint ?? '';
   const [entities, setEntities] = useState<RawEntity[] | null>(null);
   const [morphology, setMorphology] = useState<(GalaxyMorphology & { metrics?: Metrics; metrics_delta?: MetricsDelta | null }) | null>(null);
   const [failed, setFailed] = useState(false);
@@ -125,16 +129,38 @@ export function GalaxyView({ selectedId }: { selectedId: string | null; onSelect
 
   useEffect(() => {
     const controller = new AbortController();
-    fetch(ENDPOINT, { signal: controller.signal, cache: 'no-cache' })
-      .then(response => (response.ok ? response.json() : Promise.reject(new Error(String(response.status)))))
-      .then(snapshot => {
-        setEntities(Array.isArray(snapshot?.entities) ? snapshot.entities : []);
-        setMorphology(snapshot?.morphology && typeof snapshot.morphology === 'object' ? snapshot.morphology : null);
-        setRawEvents(Array.isArray(snapshot?.events) ? snapshot.events : []);
-      })
-      .catch(error => { if (error?.name !== 'AbortError') setFailed(true); });
+    const delays = [0, 800, 2400];
+
+    const load = async () => {
+      setFailed(false);
+      for (let attempt = 0; attempt < delays.length; attempt += 1) {
+        const delay = delays[attempt] ?? 0;
+        if (delay) await new Promise(resolve => window.setTimeout(resolve, delay));
+        if (controller.signal.aborted) return;
+        try {
+          const url = new URL(ENDPOINT, window.location.href);
+          if (projectionFingerprint) url.searchParams.set('projection', projectionFingerprint);
+          url.searchParams.set('readback', String(Date.now()));
+          const response = await fetch(url, { signal: controller.signal, cache: 'no-store' });
+          if (!response.ok) throw new Error(String(response.status));
+          const snapshot = await response.json();
+          const snapshotFingerprint = String(snapshot?.provenance?.source_fingerprint || '');
+          if (projectionFingerprint && snapshotFingerprint && snapshotFingerprint !== projectionFingerprint) {
+            throw new Error('GALAXY_EDGE_NOT_CONVERGED');
+          }
+          setEntities(Array.isArray(snapshot?.entities) ? snapshot.entities : []);
+          setMorphology(snapshot?.morphology && typeof snapshot.morphology === 'object' ? snapshot.morphology : null);
+          setRawEvents(Array.isArray(snapshot?.events) ? snapshot.events : []);
+          return;
+        } catch (error) {
+          if (controller.signal.aborted || (error as Error)?.name === 'AbortError') return;
+          if (attempt === delays.length - 1) setFailed(true);
+        }
+      }
+    };
+    void load();
     return () => controller.abort();
-  }, []);
+  }, [projectionFingerprint]);
 
   const chooseGlow = (level: (typeof GLOW_LEVELS)[number]) => {
     setGlow(level.value);
@@ -157,6 +183,19 @@ export function GalaxyView({ selectedId }: { selectedId: string | null; onSelect
     return list.filter(e => e.id === focused.entity || e.canonical_id === focused.entity);
   }, [focused, entities]);
   const delta = morphology?.metrics_delta ?? null;
+  const primaryRelated = related[0] as RawEntity | undefined;
+  const contextParts = useMemo(() => {
+    if (!focused) return [];
+    const raw = [
+      focused.domain || 'NEXO',
+      primaryRelated?.subdomain,
+      primaryRelated?.campaign_id,
+      related.length === 1 ? primaryRelated?.title : focused.label,
+    ].filter((value): value is string => Boolean(value && String(value).trim()));
+    return raw.filter((value, index) => raw.indexOf(value) === index);
+  }, [focused, primaryRelated, related.length]);
+  const visibleRelated = related.slice(0, 3);
+  const moreRelated = related.slice(3, 30);
 
   if (failed) return <div className="nexo-graph-fallback" role="status">Galáxia indisponível neste instante. Use 2D ou 3D.</div>;
   if (!entities) return <div className="nexo-graph-fallback" role="status">Compilando a galáxia…</div>;
@@ -182,29 +221,40 @@ export function GalaxyView({ selectedId }: { selectedId: string | null; onSelect
             <div><small>{focused.domain || 'NEXO'}</small><h2>{EVENT_INFO[focused.kind].title}</h2></div>
             <button type="button" onClick={() => setFocus(null)} aria-label="Fechar">×</button>
           </header>
+          {contextParts.length > 0 && (
+            <nav className="ev-context" aria-label="Contexto do evento">
+              {contextParts.map((part, index) => <span key={part}>{index > 0 && <i aria-hidden="true">›</i>}{part}</span>)}
+            </nav>
+          )}
           <p className="ev-label">{focused.label}</p>
-          {related.length === 1 && (related[0] as { plain?: string | null }).plain && (
-            <p className="ev-plain">{(related[0] as { plain?: string | null }).plain}</p>
-          )}
-          {related.length === 1 && (related[0] as { meaning?: string | null }).meaning && (
-            <p className="ev-plain"><b>Resultado</b> {(related[0] as { meaning?: string | null }).meaning}</p>
-          )}
-          {focused.reason && <p className="ev-reason"><b>Motivo</b>{focused.reason}</p>}
-          <dl>
-            <div><dt>O que é</dt><dd>{EVENT_INFO[focused.kind].meaning}</dd></div>
-            <div><dt>O que fazer</dt><dd>{EVENT_INFO[focused.kind].action}</dd></div>
-            <div><dt>Intensidade</dt><dd><meter min={0} max={1} value={focused.intensity} /> {Math.round(focused.intensity * 100)}%</dd></div>
-          </dl>
+          {related.length === 1 && primaryRelated?.plain && <p className="ev-plain"><b>Pergunta</b>{primaryRelated.plain}</p>}
+          {related.length === 1 && primaryRelated?.meaning && <p className="ev-plain"><b>Resultado</b>{primaryRelated.meaning}</p>}
+          {related.length > 1 && <p className="ev-summary">{related.length} itens ligados a este fenômeno.</p>}
+          <section className="ev-action"><b>O que fazer</b><p>{EVENT_INFO[focused.kind].action}</p></section>
           {related.length > 0 && (
             <section>
-              <h3>{related.length === 1 ? 'Item' : `Itens (${related.length})`}</h3>
+              <h3>{related.length === 1 ? 'Item' : `Itens principais (${Math.min(3, related.length)}/${related.length})`}</h3>
               <ul>
-                {related.slice(0, 30).map(e => (
-                  <li key={e.id}><span>{e.title || e.canonical_id || e.id}</span>{(e as { plain?: string | null }).plain && <em>{(e as { plain?: string | null }).plain}</em>}{e.status && <small>{e.status}</small>}</li>
+                {visibleRelated.map(e => (
+                  <li key={e.id}><div><span>{e.title || e.canonical_id || e.id}</span>{e.plain && <em>{e.plain}</em>}</div>{e.status && <small>{e.status}</small>}</li>
                 ))}
               </ul>
+              {moreRelated.length > 0 && (
+                <details className="ev-more">
+                  <summary>Ver mais {moreRelated.length} itens</summary>
+                  <ul>{moreRelated.map(e => <li key={e.id}><div><span>{e.title || e.canonical_id || e.id}</span>{e.plain && <em>{e.plain}</em>}</div>{e.status && <small>{e.status}</small>}</li>)}</ul>
+                </details>
+              )}
             </section>
           )}
+          <details className="ev-technical">
+            <summary>Detalhes técnicos</summary>
+            <dl>
+              <div><dt>O que é</dt><dd>{EVENT_INFO[focused.kind].meaning}</dd></div>
+              {focused.reason && <div><dt>Motivo</dt><dd>{focused.reason}</dd></div>}
+              <div><dt>Intensidade</dt><dd><meter min={0} max={1} value={focused.intensity} /> {Math.round(focused.intensity * 100)}%</dd></div>
+            </dl>
+          </details>
         </aside>
       )}
       <div className="galaxy-hud">

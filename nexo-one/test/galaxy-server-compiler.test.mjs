@@ -66,6 +66,15 @@ test('maps Tower domain aliases conservatively and preserves source_domain',()=>
   assert.equal(ai.source.source_domain,'AI');
 });
 
+test('publishes semantic context ids used by the Galaxy breadcrumb',()=>{
+  const out=compileGalaxySnapshot({projection:fixture()});
+  const testEntity=out.entities.find(item=>item.canonical_id==='TEST-1');
+  assert.equal(testEntity.campaign_id,'CAMP-COSMO');
+  assert.equal(testEntity.test_group_id,'TG-1');
+  const workEntity=out.entities.find(item=>item.canonical_id==='WORK::SCI-1');
+  assert.equal(workEntity.campaign_id,'CAMP-SCI');
+});
+
 test('uses campaign consensus only as visual placement, never as canonical domain',()=>{
   const out=compileGalaxySnapshot({projection:fixture()});
   const entity=out.entities.find(item=>item.canonical_id==='WORK::NO-DOMAIN');

@@ -53,6 +53,8 @@ export function useSystem(initialScenario = DEFAULT_SCENARIO_ID): SystemStore {
   const [lastSuccessfulReadAt, setLastSuccessfulReadAt] = useState<string | null>(null);
   const controller = useRef<AbortController | null>(null);
   const syncController = useRef<AbortController | null>(null);
+  const heartbeatController = useRef<AbortController | null>(null);
+  const heartbeatReloadFingerprint = useRef<string | null>(null);
   const stateRef = useRef<SystemState | null>(null);
   const forceNextRead = useRef(false);
   const lastReadAt = useRef(0);
@@ -70,22 +72,57 @@ export function useSystem(initialScenario = DEFAULT_SCENARIO_ID): SystemStore {
   useEffect(() => {
     if (typeof window === 'undefined' || activeSource.kind !== 'remote') return;
 
-    const poll = window.setInterval(() => {
-      if (document.visibilityState === 'visible' && !syncController.current) reload();
-    }, 60_000);
+    const HEARTBEAT_MS = 20_000;
+    const STALE_FALLBACK_MS = 5 * 60_000;
 
-    // Returning to the tab only re-reads when the last read is stale; phones
-    // flip visibility constantly and each re-read downloads the whole state.
-    const onVisibility = () => {
-      if (document.visibilityState !== 'visible' || syncController.current) return;
-      if (Date.now() - lastReadAt.current < 60_000) return;
-      reload();
+    const checkPublication = async () => {
+      if (document.visibilityState !== 'visible' || syncController.current || heartbeatController.current) return;
+      const ctrl = new AbortController();
+      heartbeatController.current = ctrl;
+      try {
+        const base = new URL(import.meta.env.BASE_URL || '/', window.location.origin);
+        const url = new URL('build-meta.json', base);
+        url.searchParams.set('freshness', String(Date.now()));
+        const response = await fetch(url, {
+          cache: 'no-store',
+          signal: ctrl.signal,
+          headers: { Accept: 'application/json' },
+        });
+        if (!response.ok) throw new Error('BUILD_META_' + response.status);
+        const meta = await response.json() as { projection_fingerprint?: string };
+        const published = String(meta.projection_fingerprint || '');
+        const current = String(stateRef.current?.bus.fingerprint || '');
+        if (published && current && published !== current) {
+          if (heartbeatReloadFingerprint.current !== published) {
+            heartbeatReloadFingerprint.current = published;
+            reload();
+          }
+        } else if (published && published === current) {
+          heartbeatReloadFingerprint.current = null;
+        }
+      } catch (failure) {
+        if (ctrl.signal.aborted || (failure as Error)?.name === 'AbortError') return;
+        if (Date.now() - lastReadAt.current >= STALE_FALLBACK_MS) reload();
+      } finally {
+        if (heartbeatController.current === ctrl) heartbeatController.current = null;
+      }
     };
-    document.addEventListener('visibilitychange', onVisibility);
+
+    const poll = window.setInterval(() => { void checkPublication(); }, HEARTBEAT_MS);
+    const onResume = () => {
+      if (document.visibilityState !== 'visible' || syncController.current) return;
+      if (Date.now() - lastReadAt.current < HEARTBEAT_MS) return;
+      void checkPublication();
+    };
+    window.addEventListener('focus', onResume);
+    document.addEventListener('visibilitychange', onResume);
 
     return () => {
+      heartbeatController.current?.abort();
+      heartbeatController.current = null;
       window.clearInterval(poll);
-      document.removeEventListener('visibilitychange', onVisibility);
+      window.removeEventListener('focus', onResume);
+      document.removeEventListener('visibilitychange', onResume);
     };
   }, [reload]);
 
