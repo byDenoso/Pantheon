@@ -1,7 +1,6 @@
 name: NEXO Writer robot
 
-# The only unattended Tower writer: ChatGPT tasks create small proposals in Drive NEXO_INBOX
-# (or TCC nexo-inbox); this job applies them with the canonical writer bundle and signals the ATLAS.
+# The only unattended Tower writer: ChatGPT tasks persist proposal envelopes to an append-only Google Sheet spool or recovery inbox transports; this job applies them with the canonical writer bundle and signals the ATLAS.
 # Runs in this public repository (no Actions minutes quota). No proposal content is ever printed.
 on:
   schedule:
@@ -69,14 +68,16 @@ jobs:
           python -c "import json;d=json.load(open('/tmp/gateway.json'));print('gateway items',len(d.get('items') or []), d.get('error',''))"
           echo "$TOKEN" > /tmp/oidc.txt
 
-      - name: Collect proposals from Gmail spool
+      - name: Collect proposals from scheduled Sheet spool
         if: steps.cred.outputs.ok == 'true'
         env:
-          NEXO_GMAIL_IMAP_JSON: ${{ secrets.NEXO_GMAIL_IMAP_JSON }}
+          GOOGLE_SERVICE_ACCOUNT_JSON: ${{ secrets.NEXO_DRIVE_WRITER_JSON }}
+          SPOOL_ID: 1M2maKkuEjxumZRa145dzei7dEPFi2yKsKlUf7_scC-E
         run: |
           python - <<'PY'
-          import base64, email, imaplib, json, os, re
-          from email.header import decode_header
+          import base64, csv, io, json, os
+          from google.oauth2 import service_account
+          from google.auth.transport.requests import AuthorizedSession
 
           path="/tmp/gateway.json"
           try:
@@ -84,54 +85,39 @@ jobs:
           except Exception:
               gateway={"items":[]}
           gateway.setdefault("items",[])
-          cfg_raw=os.environ.get("NEXO_GMAIL_IMAP_JSON","").strip()
-          if not cfg_raw:
-              json.dump([],open("/tmp/gmail-spool-map.json","w"))
-              print("gmail spool not configured")
-              raise SystemExit(0)
-          cfg=json.loads(cfg_raw)
-          user=str(cfg["user"]).strip()
-          password=str(cfg["app_password"]).replace(" ","").strip()
-          M=imaplib.IMAP4_SSL("imap.gmail.com",993)
-          M.login(user,password)
-          M.select("INBOX")
-          typ,data=M.uid("search",None,'UNSEEN SUBJECT "[NEXO_INBOX]"')
-          uids=(data[0].decode().split() if typ=="OK" and data and data[0] else [])
+
+          ack_path="nexo-one/scheduled-spool-ack.json"
+          try:
+              ack=json.load(open(ack_path,encoding="utf-8")).get("acked",{})
+          except Exception:
+              ack={}
+
+          info=json.loads(os.environ["GOOGLE_SERVICE_ACCOUNT_JSON"])
+          creds=service_account.Credentials.from_service_account_info(
+              info, scopes=["https://www.googleapis.com/auth/drive.readonly"])
+          s=AuthorizedSession(creds)
+          url=f"https://www.googleapis.com/drive/v3/files/{os.environ['SPOOL_ID']}/export"
+          r=s.get(url,params={"mimeType":"text/csv"},timeout=60)
+          r.raise_for_status()
+
+          reader=csv.DictReader(io.StringIO(r.text))
           mapping=[]
-          for uid in uids[-100:]:
-              typ,msgdata=M.uid("fetch",uid,"(RFC822)")
-              if typ!="OK" or not msgdata or not msgdata[0]:
+          for row in reader:
+              stable=(row.get("stable_id") or "").strip().lower()
+              raw=(row.get("envelope_b64url") or "").strip()
+              if not stable or not raw or stable in ack:
                   continue
-              msg=email.message_from_bytes(msgdata[0][1])
-              subject=str(msg.get("Subject") or "")
-              m=re.search(r"\[NEXO_INBOX\]\s+([a-z0-9-]{4,60})",subject,re.I)
-              if not m:
-                  continue
-              stable=m.group(1).lower()
-              parts=[]
-              if msg.is_multipart():
-                  for p in msg.walk():
-                      if p.get_content_type()=="text/plain" and not str(p.get("Content-Disposition") or "").lower().startswith("attachment"):
-                          parts.append((p.get_payload(decode=True) or b"").decode(p.get_content_charset() or "utf-8","replace"))
-              else:
-                  parts.append((msg.get_payload(decode=True) or b"").decode(msg.get_content_charset() or "utf-8","replace"))
-              body="\n".join(parts)
-              mm=re.search(r"NEXO_ENVELOPE_B64URL\s*\n([A-Za-z0-9_-]+)\s*\nEND_NEXO_ENVELOPE_B64URL",body,re.S)
-              if not mm:
-                  continue
-              raw=mm.group(1)
-              raw += "="*((4-len(raw)%4)%4)
               try:
-                  envelope=json.loads(base64.urlsafe_b64decode(raw.encode()).decode("utf-8"))
+                  padded=raw+"="*((4-len(raw)%4)%4)
+                  envelope=json.loads(base64.urlsafe_b64decode(padded.encode()).decode("utf-8"))
               except Exception:
                   continue
-              item_id=f"gmail-{uid}-{stable}"
+              item_id=f"sheet-{stable}"
               gateway["items"].append({"id":item_id,"envelope":envelope})
-              mapping.append({"id":item_id,"uid":uid})
+              mapping.append({"id":item_id,"stable_id":stable})
           json.dump(gateway,open(path,"w",encoding="utf-8"),ensure_ascii=False)
-          json.dump(mapping,open("/tmp/gmail-spool-map.json","w"),ensure_ascii=False)
-          M.logout()
-          print("gmail spool items",len(mapping))
+          json.dump(mapping,open("/tmp/sheet-spool-map.json","w",encoding="utf-8"),ensure_ascii=False)
+          print("sheet spool items",len(mapping))
           PY
 
       - name: Collect finished test batteries
@@ -193,31 +179,62 @@ jobs:
         run: |
           curl -sS -H "Authorization: Bearer $(cat /tmp/oidc.txt)" "https://nexo-one-two.vercel.app/api/inbox-ack?ids=${{ steps.robot.outputs.gateway_applied }}"
 
-      - name: Acknowledge applied Gmail spool proposals
+      - name: Acknowledge applied scheduled Sheet spool proposals
         if: steps.robot.outputs.gateway_applied != ''
         env:
-          NEXO_GMAIL_IMAP_JSON: ${{ secrets.NEXO_GMAIL_IMAP_JSON }}
+          GH_TOKEN: ${{ github.token }}
           APPLIED: ${{ steps.robot.outputs.gateway_applied }}
         run: |
           python - <<'PY'
-          import imaplib, json, os
-          cfg_raw=os.environ.get("NEXO_GMAIL_IMAP_JSON","").strip()
-          if not cfg_raw or not os.path.exists("/tmp/gmail-spool-map.json"):
+          import base64, datetime, json, os, subprocess, time
+
+          map_path="/tmp/sheet-spool-map.json"
+          if not os.path.exists(map_path):
               raise SystemExit(0)
-          cfg=json.loads(cfg_raw)
+
           applied=set(x for x in os.environ.get("APPLIED","").split(",") if x)
-          mapping=json.load(open("/tmp/gmail-spool-map.json"))
-          uids=[str(x["uid"]) for x in mapping if x.get("id") in applied]
-          if not uids:
-              print("gmail spool ack 0")
+          mapping=json.load(open(map_path,encoding="utf-8"))
+          stable=[x["stable_id"] for x in mapping if x.get("id") in applied]
+          if not stable:
+              print("sheet spool ack 0")
               raise SystemExit(0)
-          M=imaplib.IMAP4_SSL("imap.gmail.com",993)
-          M.login(str(cfg["user"]).strip(),str(cfg["app_password"]).replace(" ","").strip())
-          M.select("INBOX")
-          for uid in uids:
-              M.uid("store",uid,"+FLAGS","(\\Seen)")
-          M.logout()
-          print("gmail spool ack",len(uids))
+
+          repo=os.environ["GITHUB_REPOSITORY"]
+          path="nexo-one/scheduled-spool-ack.json"
+          now=datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+          for attempt in range(1,6):
+              get=subprocess.run(
+                  ["gh","api",f"repos/{repo}/contents/{path}?ref=main"],
+                  text=True,capture_output=True
+              )
+              if get.returncode!=0:
+                  print("sheet ack ledger read retry",attempt)
+                  time.sleep(2); continue
+              meta=json.loads(get.stdout)
+              current=json.loads(base64.b64decode(meta["content"]).decode())
+              current.setdefault("version",1)
+              acked=current.setdefault("acked",{})
+              for sid in stable:
+                  acked[sid]=now
+              body=json.dumps(current,indent=2,sort_keys=True)+"\n"
+              payload=json.dumps({
+                  "message":f"NEXO writer robot: ack {len(stable)} scheduled spool item(s)",
+                  "content":base64.b64encode(body.encode()).decode(),
+                  "sha":meta["sha"],
+                  "branch":"main",
+              })
+              put=subprocess.run(
+                  ["gh","api","--method","PUT",f"repos/{repo}/contents/{path}","--input","-"],
+                  input=payload,text=True,capture_output=True
+              )
+              if put.returncode==0:
+                  print("sheet spool ack",len(stable))
+                  raise SystemExit(0)
+              print("sheet ack ledger CAS retry",attempt)
+              time.sleep(2)
+
+          raise SystemExit("sheet spool ack failed after retries")
           PY
 
       - name: Signal the ATLAS (tower-head)
