@@ -1,0 +1,46 @@
+name: NEXO Sheet Spool Canary
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/nexo-sheet-spool-canary.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  canary:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Read scheduled spool with writer credential
+        env:
+          GOOGLE_SERVICE_ACCOUNT_JSON: ${{ secrets.NEXO_DRIVE_WRITER_JSON }}
+          SPOOL_ID: "1M2maKkuEjxumZRa145dzei7dEPFi2yKsKlUf7_scC-E"
+        run: |
+          test -n "$GOOGLE_SERVICE_ACCOUNT_JSON" || { echo "writer secret missing"; exit 2; }
+          pip install --quiet google-auth requests
+          python - <<'PY'
+          import csv, io, json, os
+          from google.oauth2 import service_account
+          from google.auth.transport.requests import AuthorizedSession
+          info=json.loads(os.environ["GOOGLE_SERVICE_ACCOUNT_JSON"])
+          creds=service_account.Credentials.from_service_account_info(
+              info, scopes=["https://www.googleapis.com/auth/drive.readonly"])
+          s=AuthorizedSession(creds)
+          fid=os.environ["SPOOL_ID"]
+          url=f"https://www.googleapis.com/drive/v3/files/{fid}/export"
+          r=s.get(url,params={"mimeType":"text/csv"},timeout=30)
+          print("export_status",r.status_code)
+          print("export_preview",r.text[:800].replace("\n"," | "))
+          r.raise_for_status()
+          rows=list(csv.reader(io.StringIO(r.text)))
+          ids=[row[0] for row in rows[1:] if row]
+          print("canary_present", "sheet-spool-canary-001" in ids)
+          if "sheet-spool-canary-001" not in ids:
+              raise SystemExit(3)
+          PY
