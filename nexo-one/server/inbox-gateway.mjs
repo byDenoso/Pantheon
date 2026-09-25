@@ -25,7 +25,10 @@ async function gh(token, method, path, body) {
     body: body ? JSON.stringify({ branch: BRANCH, ...body }) : undefined,
   });
   if (response.status === 404) return null;
-  if (!response.ok) throw new Error(`GITHUB_${response.status}`);
+  if (!response.ok) {
+    const detail = await response.json().catch(() => ({}));
+    throw new Error(`GITHUB_${response.status} ${method} ${path.split('/')[0]}: ${String(detail.message || '').slice(0, 90)}`);
+  }
   return response.json();
 }
 
