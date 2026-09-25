@@ -1,0 +1,76 @@
+name: NEXO Writer robot
+
+# The only unattended Tower writer: ChatGPT tasks create small proposals in Drive NEXO_INBOX
+# (or TCC nexo-inbox); this job applies them with the canonical writer bundle and signals the ATLAS.
+# Runs in this public repository (no Actions minutes quota). No proposal content is ever printed.
+on:
+  schedule:
+    - cron: '7,22,37,52 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: nexo-writer-robot
+  cancel-in-progress: false
+
+jobs:
+  write:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Require writer credential
+        id: cred
+        env:
+          WRITER: ${{ secrets.NEXO_DRIVE_WRITER_JSON }}
+        run: |
+          if [ -z "$WRITER" ]; then echo "NEXO_DRIVE_WRITER_JSON not set; nothing to do."; echo "ok=false" >> "$GITHUB_OUTPUT"; else echo "ok=true" >> "$GITHUB_OUTPUT"; fi
+
+      - uses: actions/checkout@v4
+        if: steps.cred.outputs.ok == 'true'
+
+      - uses: actions/setup-python@v5
+        if: steps.cred.outputs.ok == 'true'
+        with:
+          python-version: '3.12'
+
+      - name: Fetch canonical writer bundle from Drive
+        if: steps.cred.outputs.ok == 'true'
+        env:
+          GOOGLE_SERVICE_ACCOUNT_JSON: ${{ secrets.NEXO_DRIVE_WRITER_JSON }}
+        run: |
+          pip install --quiet google-auth requests
+          python - <<'EOF'
+          import json, os
+          from google.oauth2 import service_account
+          from google.auth.transport.requests import AuthorizedSession
+          info = json.loads(os.environ["GOOGLE_SERVICE_ACCOUNT_JSON"])
+          creds = service_account.Credentials.from_service_account_info(info, scopes=["https://www.googleapis.com/auth/drive"])
+          r = AuthorizedSession(creds).get("https://www.googleapis.com/drive/v3/files/1DBw9H1wUHjZkasE2BI-aEafCzNnjKOjV",
+                                           params={"alt": "media", "supportsAllDrives": "true"}, timeout=120)
+          r.raise_for_status()
+          open("/tmp/nexo_gpt_writer.py", "wb").write(r.content)
+          print("bundle bytes", len(r.content))
+          EOF
+
+      - name: Apply inbox to the Tower
+        id: robot
+        if: steps.cred.outputs.ok == 'true'
+        env:
+          GOOGLE_SERVICE_ACCOUNT_JSON: ${{ secrets.NEXO_DRIVE_WRITER_JSON }}
+          NEXO_INBOX_GITHUB_TOKEN: ${{ secrets.NEXO_INBOX_TOKEN }}
+        run: python /tmp/nexo_gpt_writer.py robot
+
+      - name: Signal the ATLAS (tower-head)
+        if: steps.robot.outputs.tower_revision != ''
+        env:
+          REV: ${{ steps.robot.outputs.tower_revision }}
+        run: |
+          printf '{\n  "tower_revision": "%s",\n  "signalled_at": "%s"\n}\n' "$REV" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > nexo-one/tower-head.json
+          git config user.name "nexo-writer-robot"
+          git config user.email "nexo-writer-robot@users.noreply.github.com"
+          git add nexo-one/tower-head.json
+          git commit -m "NEXO writer robot: tower head $REV" || exit 0
+          for i in 1 2 3; do git pull --rebase -q && git push -q && exit 0; sleep 5; done
+          exit 1
