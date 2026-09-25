@@ -1,6 +1,6 @@
 name: NEXO Writer robot
 
-# The only unattended Tower writer: ChatGPT tasks persist proposal envelopes to an append-only Google Sheet spool or recovery inbox transports; this job applies them with the canonical writer bundle and signals the ATLAS.
+# The only unattended Tower writer: proposals may remain append-only in the public TCC inbox; this job reads only the delta since its Pantheon cursor, applies it with the canonical writer bundle, and signals the ATLAS.
 # Runs in this public repository (no Actions minutes quota). No proposal content is ever printed.
 on:
   schedule:
@@ -59,14 +59,65 @@ jobs:
           print("bundle bytes", len(r.content))
           EOF
 
-      - name: Collect proposals from the inbox gateway (OIDC, no secret)
+      - name: Collect proposals from public TCC inbox
         if: steps.cred.outputs.ok == 'true'
+        env:
+          TCC_REPO: byDenoso/TCC
+          TCC_BRANCH: nexo-inbox
         run: |
-          TOKEN=$(curl -sS -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=nexo-inbox" | python -c "import sys,json;print(json.load(sys.stdin)['value'])")
-          echo "::add-mask::$TOKEN"
-          curl -sS -H "Authorization: Bearer $TOKEN" https://nexo-one-two.vercel.app/api/inbox-list -o /tmp/gateway.json || echo '{"items":[]}' > /tmp/gateway.json
-          python -c "import json;d=json.load(open('/tmp/gateway.json'));print('gateway items',len(d.get('items') or []), d.get('error',''))"
-          echo "$TOKEN" > /tmp/oidc.txt
+          python - <<'PY'
+          import hashlib, json, os, urllib.parse, urllib.request
+
+          cursor_path="nexo-one/tcc-public-inbox-ack.json"
+          cursor=json.load(open(cursor_path,encoding="utf-8"))
+          base=str(cursor.get("base_commit") or "").strip()
+          if not base:
+              raise SystemExit("public inbox cursor missing base_commit")
+
+          repo=os.environ["TCC_REPO"]
+          branch=os.environ["TCC_BRANCH"]
+          api=f"https://api.github.com/repos/{repo}/compare/{base}...{branch}"
+          req=urllib.request.Request(api,headers={"Accept":"application/vnd.github+json","User-Agent":"nexo-writer-robot"})
+          with urllib.request.urlopen(req,timeout=60) as response:
+              comparison=json.load(response)
+
+          head=str((comparison.get("head_commit") or {}).get("sha") or "").strip()
+          if not head:
+              raise SystemExit("public inbox compare missing head sha")
+
+          acked=cursor.get("acked") or {}
+          candidates=[]
+          for item in comparison.get("files") or []:
+              path=str(item.get("filename") or "")
+              if not path.startswith("inbox/") or not path.endswith(".json"):
+                  continue
+              if str(item.get("status") or "")=="removed":
+                  continue
+              raw_url="https://raw.githubusercontent.com/"+repo+"/"+branch+"/"+urllib.parse.quote(path,safe="/")
+              raw=urllib.request.urlopen(
+                  urllib.request.Request(raw_url,headers={"User-Agent":"nexo-writer-robot"}),
+                  timeout=60,
+              ).read()
+              fingerprint=hashlib.sha256(raw).hexdigest()
+              if acked.get(path)==fingerprint:
+                  continue
+              try:
+                  envelope=json.loads(raw.decode("utf-8-sig"))
+              except Exception:
+                  print("skip invalid json",path)
+                  continue
+              stable=hashlib.sha256((path+"\\0"+fingerprint).encode()).hexdigest()[:32]
+              candidates.append({"id":"tcc-"+stable,"path":path,"fingerprint":fingerprint,"envelope":envelope})
+
+          gateway={"items":[{"id":item["id"],"envelope":item["envelope"]} for item in candidates]}
+          json.dump(gateway,open("/tmp/gateway.json","w",encoding="utf-8"),ensure_ascii=False)
+          json.dump(
+              {"head_sha":head,"items":[{k:v for k,v in item.items() if k!="envelope"} for item in candidates]},
+              open("/tmp/tcc-public-map.json","w",encoding="utf-8"),
+              ensure_ascii=False,
+          )
+          print("public TCC inbox items",len(candidates))
+          PY
 
       - name: Collect proposals from scheduled Sheet spool
         if: steps.cred.outputs.ok == 'true'
@@ -152,7 +203,6 @@ jobs:
         if: steps.cred.outputs.ok == 'true'
         env:
           GOOGLE_SERVICE_ACCOUNT_JSON: ${{ secrets.NEXO_DRIVE_WRITER_JSON }}
-          NEXO_INBOX_GITHUB_TOKEN: ${{ secrets.NEXO_INBOX_TOKEN }}
           NEXO_GATEWAY_ITEMS: /tmp/gateway.json
           NEXO_BATTERY_UPDATES: /tmp/bat/updates.json
           NEXO_BATTERY_DIR: /tmp/dispatch
@@ -174,10 +224,59 @@ jobs:
           cd /tmp/bb && git -c user.name=nexo-writer-robot -c user.email=nexo-writer-robot@users.noreply.github.com add batteries && git -c user.name=nexo-writer-robot -c user.email=nexo-writer-robot@users.noreply.github.com commit -qm "batteries: dispatch $(ls batteries | wc -l)" && git push -q origin nexo-batteries
           for f in "${specs[@]}"; do id=$(basename "$f" .json); gh workflow run nexo-test-battery.yml --repo "$GITHUB_REPOSITORY" --ref main -f battery_id="$id"; echo "dispatched $id"; done
 
-      - name: Acknowledge applied gateway proposals
+      - name: Acknowledge applied public TCC proposals
         if: steps.robot.outputs.gateway_applied != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+          APPLIED: ${{ steps.robot.outputs.gateway_applied }}
         run: |
-          curl -sS -H "Authorization: Bearer $(cat /tmp/oidc.txt)" "https://nexo-one-two.vercel.app/api/inbox-ack?ids=${{ steps.robot.outputs.gateway_applied }}"
+          python - <<'PY'
+          import base64, json, os, subprocess, time
+
+          map_path="/tmp/tcc-public-map.json"
+          if not os.path.exists(map_path):
+              raise SystemExit(0)
+
+          applied={value for value in os.environ.get("APPLIED","").split(",") if value}
+          mapping=json.load(open(map_path,encoding="utf-8"))
+          path="nexo-one/tcc-public-inbox-ack.json"
+          repo=os.environ["GITHUB_REPOSITORY"]
+
+          for attempt in range(1,6):
+              get=subprocess.run(["gh","api",f"repos/{repo}/contents/{path}?ref=main"],text=True,capture_output=True)
+              if get.returncode!=0:
+                  print("public inbox cursor read retry",attempt); time.sleep(2); continue
+              meta=json.loads(get.stdout)
+              cursor=json.loads(base64.b64decode(meta["content"]).decode())
+              acked=cursor.setdefault("acked",{})
+
+              for item in mapping.get("items") or []:
+                  if item.get("id") in applied:
+                      acked[item["path"]]=item["fingerprint"]
+
+              all_current=all(acked.get(item["path"])==item["fingerprint"] for item in (mapping.get("items") or []))
+              if all_current:
+                  cursor["base_commit"]=mapping.get("head_sha") or cursor.get("base_commit")
+                  cursor["acked"]={}
+
+              body=json.dumps(cursor,indent=2,sort_keys=True)+"\\n"
+              payload=json.dumps({
+                  "message":"NEXO writer robot: advance public TCC inbox cursor",
+                  "content":base64.b64encode(body.encode()).decode(),
+                  "sha":meta["sha"],
+                  "branch":"main",
+              })
+              put=subprocess.run(
+                  ["gh","api","--method","PUT",f"repos/{repo}/contents/{path}","--input","-"],
+                  input=payload,text=True,capture_output=True
+              )
+              if put.returncode==0:
+                  print("public TCC inbox cursor PASS")
+                  raise SystemExit(0)
+              print("public inbox cursor CAS retry",attempt); time.sleep(2)
+
+          raise SystemExit("public TCC inbox cursor update failed after retries")
+          PY
 
       - name: Acknowledge applied scheduled Sheet spool proposals
         if: steps.robot.outputs.gateway_applied != ''
