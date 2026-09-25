@@ -370,3 +370,12 @@
 .galaxy-event[data-kind=SUPERNOVA] .galaxy-event-tag,.galaxy-event[data-kind=AGN] .galaxy-event-tag{opacity:0;transition:opacity .2s}
 .galaxy-event[data-kind=SUPERNOVA]:hover .galaxy-event-tag,.galaxy-event[data-kind=SUPERNOVA].focused .galaxy-event-tag,
 .galaxy-event[data-kind=AGN]:hover .galaxy-event-tag,.galaxy-event[data-kind=AGN].focused .galaxy-event-tag{opacity:1}
+/* Photographic look: white-hot light added to the sky (screen blend), small and sharp like a real transient. */
+.galaxy-event[data-kind=SUPERNOVA]{--ev:#fff1d6;--ev-soft:rgba(255,236,200,.55);--s:.9;mix-blend-mode:screen}
+.galaxy-event[data-kind=AGN]{--ev:#cfe6ff;--ev-soft:rgba(190,220,255,.45);--s:.85;mix-blend-mode:screen}
+.galaxy-event[data-kind=SUPERNOVA] .ev-halo{fill:url(#ev-sn-glow);filter:blur(4px);opacity:.9}
+.galaxy-event[data-kind=SUPERNOVA] .ev-diffraction{fill:#fff;opacity:.7;filter:blur(.3px) drop-shadow(0 0 1.5px #fff6e0)}
+.galaxy-event[data-kind=SUPERNOVA] .ev-diffraction-2{opacity:.18}
+.galaxy-event[data-kind=SUPERNOVA] .ev-bloom{filter:blur(3px);opacity:1}
+.galaxy-event[data-kind=AGN] .ev-jet{opacity:.35}
+.galaxy-event[data-kind=AGN] .ev-disk{opacity:.35}

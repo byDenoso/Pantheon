@@ -103,6 +103,14 @@ export function EventGlyph({ kind }: { kind: GalaxyEvent['kind'] }) {
       // soft halo and long telescope diffraction spikes — no rings, no badge.
       return (
         <svg viewBox="-40 -40 80 80" aria-hidden="true">
+          <defs>
+            <radialGradient id="ev-sn-glow">
+              <stop offset="0" stopColor="#fffaf0" stopOpacity="1" />
+              <stop offset=".25" stopColor="#ffe7b8" stopOpacity=".55" />
+              <stop offset=".6" stopColor="#9fc2ff" stopOpacity=".12" />
+              <stop offset="1" stopColor="#9fc2ff" stopOpacity="0" />
+            </radialGradient>
+          </defs>
           <circle className="ev-halo" r="16" />
           <path className="ev-diffraction" d="M0-38L.7-.7 38 0 .7.7 0 38-.7.7-38 0-.7-.7Z" />
           <path className="ev-diffraction ev-diffraction-2" d="M-14-14L0-.9 14-14 .9 0 14 14 0 .9-14 14-.9 0Z" />
