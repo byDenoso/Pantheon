@@ -76,7 +76,8 @@ jobs:
 
       - name: Acknowledge applied gateway proposals
         if: steps.robot.outputs.gateway_applied != ''
-        run: curl -sS -H "Authorization: Bearer $(cat /tmp/oidc.txt)" "https://nexo-one-two.vercel.app/api/inbox-ack?ids=${{ steps.robot.outputs.gateway_applied }}"
+        run: |
+          curl -sS -H "Authorization: Bearer $(cat /tmp/oidc.txt)" "https://nexo-one-two.vercel.app/api/inbox-ack?ids=${{ steps.robot.outputs.gateway_applied }}"
 
       - name: Signal the ATLAS (tower-head)
         if: steps.robot.outputs.tower_revision != ''
