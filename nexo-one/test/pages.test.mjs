@@ -365,12 +365,14 @@ test('published Pages auto-syncs Tower snapshots without a new infrastructure se
   assert.match(workflow, /METALEARNING_CURRENT\.json/);
   assert.match(workflow, /PEER_DETECTION_BATTERY_V1\.json/);
   assert.match(hook, /setInterval/);
-  assert.match(hook, /60_000/);
+  assert.match(hook, /HEARTBEAT_MS = 20_000/);
+  assert.match(hook, /build-meta\.json/);
+  assert.match(hook, /projection_fingerprint/);
   assert.match(hook, /visibilitychange/);
   assert.match(remote, /VITE_SYSTEM_ENDPOINT/);
   assert.match(remote, /staticProjection/);
   assert.match(remote, /'no-cache'/);
-  assert.match(hook, /!syncController\.current/);
+  assert.match(hook, /syncController\.current/);
 });
 
 test('explicit Tower human gates become Needs Dener inbox items', async () => {
