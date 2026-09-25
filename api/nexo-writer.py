@@ -6,6 +6,7 @@ import hmac
 import json
 import os
 import subprocess
+import sys
 import tempfile
 import urllib.error
 import urllib.parse
@@ -243,15 +244,63 @@ def _gh_json(token: str, path: str):
         return json.loads(response.read())
 
 
-def _github_pending(acked: set[str]):
+def _github_recent_paths(token: str, since: str) -> set[str]:
+    headers = {
+        "Authorization": "Bearer " + token,
+        "Accept": "application/vnd.github+json",
+        "User-Agent": "nexo-atlas-writer",
+        "X-GitHub-Api-Version": "2022-11-28",
+    }
+    url = (
+        "https://api.github.com/repos/" + GH_REPO + "/commits?"
+        + urllib.parse.urlencode({"sha": GH_BRANCH, "path": "inbox", "since": since, "per_page": 100})
+    )
+    request = urllib.request.Request(url, headers=headers)
+    try:
+        with urllib.request.urlopen(request, timeout=45) as response:
+            commits = json.loads(response.read())
+    except Exception:
+        return set()
+
+    def changed(commit):
+        request = urllib.request.Request(
+            "https://api.github.com/repos/" + GH_REPO + "/commits/" + str(commit.get("sha") or ""),
+            headers=headers,
+        )
+        with urllib.request.urlopen(request, timeout=45) as response:
+            detail = json.loads(response.read())
+        return {
+            str(file.get("filename") or "")
+            for file in detail.get("files") or []
+            if str(file.get("filename") or "").startswith("inbox/") and str(file.get("status") or "") != "removed"
+        }
+
+    paths: set[str] = set()
+    with ThreadPoolExecutor(max_workers=8) as pool:
+        futures = [pool.submit(changed, commit) for commit in commits if commit.get("sha")]
+        for future in as_completed(futures):
+            try:
+                paths.update(future.result())
+            except Exception:
+                pass
+    return paths
+
+
+def _github_pending(acked: set[str], since: str):
     token = os.environ.get("NEXO_INBOX_TOKEN", "").strip()
     if not token:
         return []
     try:
         listing = _gh_json(token, "inbox")
+        recent_paths = _github_recent_paths(token, since)
     except Exception:
         return []
-    files = [item for item in listing if item.get("type") == "file" and str(item.get("name", "")).endswith(".json")]
+    files = [
+        item for item in listing
+        if item.get("type") == "file"
+        and str(item.get("name", "")).endswith(".json")
+        and str(item.get("path") or "") in recent_paths
+    ]
     def fetch(item):
         stable_id = str(item["name"])[:-5]
         if _marker("gwack-", stable_id) in acked:
@@ -300,6 +349,13 @@ def _canonical(value) -> bytes:
     return json.dumps(value, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode("utf-8")
 
 
+def _source_label(source: dict) -> str:
+    stable_id = str(source["id"])
+    if source["source"] == "sheet":
+        return "gw-sheet-" + stable_id
+    return stable_id + ".json"
+
+
 def _dedupe(entries: list[dict]) -> tuple[list[dict], dict[str, list[dict]]]:
     groups: dict[str, list[dict]] = {}
     for entry in entries:
@@ -307,9 +363,10 @@ def _dedupe(entries: list[dict]) -> tuple[list[dict], dict[str, list[dict]]]:
         groups.setdefault(digest, []).append(entry)
     items = []
     by_label = {}
-    for index, (digest, sources) in enumerate(sorted(groups.items())):
-        label = f"atlas-{index:04d}-{digest[:12]}"
-        envelope = dict(sources[0]["envelope"])
+    for _, sources in sorted(groups.items()):
+        primary = next((source for source in sources if source["source"] == "sheet"), sources[0])
+        label = _source_label(primary)
+        envelope = dict(primary["envelope"])
         envelope["_inbox_name"] = label
         items.append(envelope)
         by_label[label] = sources
@@ -358,10 +415,11 @@ def _apply_once(drive_token: str, sheet_token: str) -> dict:
     title, rows, columns, acked, sheet_entries = _sheet_pending(sheet_token)
     legacy_acked = _legacy_sheet_ack_ids()
     sheet_entries = [entry for entry in sheet_entries if entry["id"] not in legacy_acked]
-    github_entries = _github_pending(acked)
+    tower = _drive_meta(drive_token, TOWER_ID)
+    cutoff = str(tower.get("modifiedTime") or "1970-01-01T00:00:00Z")
+    github_entries = _github_pending(acked, cutoff)
     all_entries = sheet_entries + github_entries
     if not all_entries:
-        tower = _drive_meta(drive_token, TOWER_ID)
         return {"status": "NO_OP", "pending": 0, "applied": 0, "rejected": 0, "readback": "PASS",
                 "tower_modified_time": tower.get("modifiedTime")}
 
@@ -380,7 +438,7 @@ def _apply_once(drive_token: str, sheet_token: str) -> dict:
         tower.write_bytes(tower_raw)
         proposals.write_text(json.dumps(items, ensure_ascii=False), encoding="utf-8")
         run = subprocess.run(
-            ["python3", str(writer), "apply", str(tower), str(proposals), str(out)],
+            [sys.executable, str(writer), "apply", str(tower), str(proposals), str(out)],
             capture_output=True, text=True, timeout=210,
         )
         if run.returncode != 0:
@@ -397,10 +455,6 @@ def _apply_once(drive_token: str, sheet_token: str) -> dict:
             _drive_upload(drive_token, TOWER_ID, payload)
             readback = _drive_download(drive_token, TOWER_ID)
             actual = str(json.loads(readback.decode("utf-8")).get("state_fingerprint") or "")
-            verify = subprocess.run(
-                ["python3", str(writer), "verify", str(root / "readback.json"), expected],
-                capture_output=True, text=True, timeout=60,
-            ) if False else None
             if not expected or actual != expected:
                 raise RuntimeError(f"TOWER_READBACK_MISMATCH expected={expected[:24]} actual={actual[:24]}")
         else:
