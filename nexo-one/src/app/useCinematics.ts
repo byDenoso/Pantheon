@@ -56,7 +56,7 @@ export function useCinematics(routeKey:string,enabled=true){
       scan();
       // Safety net: nothing stays invisible, whatever the observer does.
       const failsafe=window.setInterval(()=>root.querySelectorAll<HTMLElement>('[data-reveal=wait]').forEach(el=>{
-        const r=el.getBoundingClientRect();if(r.top<innerHeight&&r.bottom>0)el.dataset.reveal='in';}),700);
+        const r=el.getBoundingClientRect();if(r.top<innerHeight)el.dataset.reveal='in';}),700);
       cleanups.push(()=>clearInterval(failsafe));
       let pending=0;
       const mutations=new MutationObserver(()=>{cancelAnimationFrame(pending);pending=requestAnimationFrame(scan);});

@@ -453,5 +453,5 @@
 
 /* Entrada em cena. Só existe com JS e movimento permitido (classe .cinematic). */
 :root.cinematic [data-reveal]{opacity:0;transform:translateY(18px);transition:opacity .7s var(--obs-ease) var(--reveal-delay,0ms),transform .7s var(--obs-ease) var(--reveal-delay,0ms)}
-:root.cinematic [data-reveal=in]{opacity:1;transform:none}
+:root.cinematic [data-reveal=in],:root.cinematic .is-visible[data-reveal]{opacity:1;transform:none}
 @media(prefers-reduced-motion:reduce){:root.cinematic [data-reveal]{opacity:1;transform:none;transition:none}}
