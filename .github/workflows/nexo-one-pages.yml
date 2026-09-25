@@ -466,6 +466,7 @@ jobs:
         uses: actions/upload-pages-artifact@v4
         with:
           path: nexo-one/dist
+          retention-days: 1
 
   deploy:
     needs: build
@@ -940,4 +941,4 @@ jobs:
             /tmp/cockpit-actions-dom.html
             /tmp/system.json
           if-no-files-found: warn
-          retention-days: 7
+          retention-days: 1

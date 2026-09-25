@@ -65,6 +65,33 @@ jobs:
           python -c "import json;d=json.load(open('/tmp/gateway.json'));print('gateway items',len(d.get('items') or []), d.get('error',''))"
           echo "$TOKEN" > /tmp/oidc.txt
 
+      - name: Collect finished test batteries
+        if: steps.cred.outputs.ok == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p /tmp/bat /tmp/dispatch
+          gh run list --repo "$GITHUB_REPOSITORY" --workflow nexo-test-battery.yml --status completed --limit 20 --json databaseId,displayTitle > /tmp/bat/runs.json || echo '[]' > /tmp/bat/runs.json
+          python3 - <<'PY'
+          import json, subprocess, os, pathlib
+          runs = json.load(open("/tmp/bat/runs.json"))
+          updates = []
+          for run in runs:
+              bid = str(run.get("displayTitle", "")).replace("battery ", "").strip()
+              if not bid:
+                  continue
+              d = pathlib.Path(f"/tmp/bat/{run['databaseId']}")
+              r = subprocess.run(["gh", "run", "download", str(run["databaseId"]), "--repo", os.environ["GITHUB_REPOSITORY"], "-n", "battery-results", "-D", str(d)], capture_output=True)
+              f = d / "battery-results.json"
+              if r.returncode != 0 or not f.is_file():
+                  continue
+              results = json.load(open(f, encoding="utf-8")).get("results", [])
+              updates.append({"kind": "BATTERY_STATUS", "source": "WRITER_ROBOT",
+                              "payload": {"battery_id": bid, "status": "DONE", "run_ref": f"actions/runs/{run['databaseId']}", "results": results}})
+          json.dump(updates, open("/tmp/bat/updates.json", "w", encoding="utf-8"), ensure_ascii=False)
+          print("battery runs seen", len(runs), "collected", len(updates))
+          PY
+
       - name: Apply inbox to the Tower
         id: robot
         if: steps.cred.outputs.ok == 'true'
@@ -72,7 +99,25 @@ jobs:
           GOOGLE_SERVICE_ACCOUNT_JSON: ${{ secrets.NEXO_DRIVE_WRITER_JSON }}
           NEXO_INBOX_GITHUB_TOKEN: ${{ secrets.NEXO_INBOX_TOKEN }}
           NEXO_GATEWAY_ITEMS: /tmp/gateway.json
+          NEXO_BATTERY_UPDATES: /tmp/bat/updates.json
+          NEXO_BATTERY_DIR: /tmp/dispatch
         run: python /tmp/nexo_gpt_writer.py robot
+
+      - name: Dispatch queued test batteries
+        if: steps.robot.outputs.tower_revision != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          shopt -s nullglob
+          specs=(/tmp/dispatch/*.json)
+          [ ${#specs[@]} -eq 0 ] && { echo "no batteries"; exit 0; }
+          git config user.name "nexo-writer-robot"; git config user.email "nexo-writer-robot@users.noreply.github.com"
+          rm -rf /tmp/bb && git clone -q --depth 1 --branch nexo-batteries "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" /tmp/bb 2>/dev/null || {
+            mkdir -p /tmp/bb && cd /tmp/bb && git init -q && git checkout -q -b nexo-batteries && git remote add origin "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"; cd - >/dev/null; }
+          mkdir -p /tmp/bb/batteries
+          for f in "${specs[@]}"; do cp "$f" /tmp/bb/batteries/; done
+          cd /tmp/bb && git -c user.name=nexo-writer-robot -c user.email=nexo-writer-robot@users.noreply.github.com add batteries && git -c user.name=nexo-writer-robot -c user.email=nexo-writer-robot@users.noreply.github.com commit -qm "batteries: dispatch $(ls batteries | wc -l)" && git push -q origin nexo-batteries
+          for f in "${specs[@]}"; do id=$(basename "$f" .json); gh workflow run nexo-test-battery.yml --repo "$GITHUB_REPOSITORY" --ref main -f battery_id="$id"; echo "dispatched $id"; done
 
       - name: Acknowledge applied gateway proposals
         if: steps.robot.outputs.gateway_applied != ''
