@@ -216,6 +216,8 @@ function DenseTable({heads,rows,empty}:{heads:string[];rows:ReactNode[];empty:st
     const bodyRows=[...table.querySelectorAll('tbody tr')].filter(tr=>!tr.querySelector('.science-empty'));
     bodyRows.forEach(tr=>[...tr.children].forEach((td,i)=>{
       if(heads[i])(td as HTMLElement).dataset.label=heads[i];
+      // On phones each row is a card: a single blank field is hidden there too.
+      (td as HTMLElement).toggleAttribute('data-blank',/^[\s—-]*$/.test(td.textContent||''));
       // The id line under the title is noise when it repeats the title.
       const strong=td.querySelector('strong'),small=td.querySelector('small');
       if(strong&&small)(small as HTMLElement).hidden=strong.textContent?.trim()===small.textContent?.trim();

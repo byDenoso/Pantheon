@@ -12,6 +12,7 @@
   .science-table td{display:grid;grid-template-columns:92px 1fr;gap:8px;padding:6px 0;border:0;text-align:left;height:auto;max-height:none;overflow:visible;white-space:normal}
   .science-table td>*{min-width:0;overflow-wrap:anywhere}
   .science-table td:first-child small{display:none}
+  .science-table td[data-blank]{display:none}
   .science-table td::before{content:attr(data-label);font:500 9.5px/1.5 var(--obs-mono,monospace);letter-spacing:.1em;text-transform:uppercase;color:var(--obs-dim,var(--muted))}
   .science-table td:first-child{grid-template-columns:1fr;padding-bottom:8px}
   .science-table td:first-child::before{display:none}
