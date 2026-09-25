@@ -78,10 +78,13 @@ export function EvolutionPanel({ evolution }: { evolution: EvolutionStatus }) {
           {evolution.roadmaps.map(roadmap => {
             const target = roadmap.success_target ?? 0;
             const pct = target ? Math.min(100, Math.round((roadmap.confirmed / target) * 100)) : 0;
+            const used = roadmap.max_tests ? Math.min(100, Math.round((roadmap.tests_used / roadmap.max_tests) * 100)) : 0;
+            const question = evolution.charters?.find(c => c.roadmap_id === roadmap.roadmap_id)?.question;
             return (
               <li key={roadmap.roadmap_id}>
                 <span className="evolution-rm">{short(roadmap.roadmap_id)}</span>
-                <span className="evolution-bar" aria-hidden="true"><i style={{ width: `${pct}%` }} /></span>
+                <span className="evolution-bar" aria-hidden="true"><b style={{ width: `${used}%` }} /><i style={{ width: `${pct}%` }} /></span>
+                {question && <span className="evolution-rm-question">{question}</span>}
                 <span className="evolution-rm-meta">
                   {roadmap.confirmed}/{target || '?'} confirmados · {roadmap.tests_used}/{roadmap.max_tests ?? '?'} testes
                   {roadmap.stop_reached ? ` · parada: ${STOP_PT[roadmap.stop_reached] ?? roadmap.stop_reached}` : ''}

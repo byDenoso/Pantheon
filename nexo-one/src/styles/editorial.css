@@ -189,3 +189,7 @@
     radial-gradient(1px 1px,rgba(30,40,60,.16) 50%,transparent 51%) 0 0/150px 150px,
     radial-gradient(1px 1px,rgba(30,40,60,.10) 50%,transparent 51%) 75px 95px/230px 230px}
 :root[data-theme] .unified-shell{background:transparent}
+.evolution-bar{position:relative}
+.evolution-bar b{position:absolute;inset:0 auto 0 0;background:color-mix(in srgb,#9DB4FF 35%,transparent);border-radius:3px}
+.evolution-bar i{position:relative}
+.evolution-rm-question{grid-column:1/-1;font-size:13px;line-height:1.45;color:var(--obs-bright,#E8ECF2);opacity:.85}
