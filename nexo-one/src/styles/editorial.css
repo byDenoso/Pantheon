@@ -161,3 +161,31 @@
 @keyframes evolution-in{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
 @media (prefers-reduced-motion:reduce){.evolution-thoughts li{animation:none}}
 .evolution-charter ul{margin:2px 0 8px;padding-left:18px;font-size:13px;color:var(--obs-dim,#7A889C)}
+
+/* Deep-field backdrop across the whole page (Dener 2026-09-25).
+   Dark: faint nebulae + scattered stars, fixed behind content. Light: the same sky as a printed star chart —
+   pastel washes and fine ink dots on paper, so text keeps full contrast. */
+:root[data-theme] body::before{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none}
+:root[data-theme=dark] body::before{
+  background:
+    radial-gradient(1.2px 1.2px at 12% 18%,rgba(255,255,255,.55),transparent 60%),
+    radial-gradient(1px 1px at 72% 12%,rgba(255,255,255,.45),transparent 60%),
+    radial-gradient(1.4px 1.4px at 38% 64%,rgba(210,225,255,.5),transparent 60%),
+    radial-gradient(1px 1px at 88% 72%,rgba(255,255,255,.4),transparent 60%),
+    radial-gradient(1px 1px at 55% 88%,rgba(255,240,220,.4),transparent 60%),
+    radial-gradient(1.2px 1.2px at 22% 82%,rgba(255,255,255,.35),transparent 60%),
+    radial-gradient(38vw 30vh at 18% 28%,rgba(214,150,60,.10),transparent 70%),
+    radial-gradient(42vw 34vh at 52% 40%,rgba(60,120,200,.10),transparent 70%),
+    radial-gradient(34vw 30vh at 70% 22%,rgba(60,170,120,.07),transparent 70%),
+    radial-gradient(40vw 36vh at 84% 62%,rgba(200,70,130,.08),transparent 70%),
+    radial-gradient(1px 1px,rgba(255,255,255,.18) 50%,transparent 51%) 0 0/140px 140px,
+    radial-gradient(1px 1px,rgba(190,210,255,.12) 50%,transparent 51%) 70px 90px/210px 210px}
+:root[data-theme=light] body::before{
+  background:
+    radial-gradient(40vw 32vh at 18% 26%,rgba(244,170,90,.10),transparent 70%),
+    radial-gradient(44vw 34vh at 52% 42%,rgba(90,140,220,.08),transparent 70%),
+    radial-gradient(34vw 30vh at 72% 20%,rgba(80,180,140,.07),transparent 70%),
+    radial-gradient(40vw 36vh at 86% 64%,rgba(220,110,160,.07),transparent 70%),
+    radial-gradient(1px 1px,rgba(30,40,60,.16) 50%,transparent 51%) 0 0/150px 150px,
+    radial-gradient(1px 1px,rgba(30,40,60,.10) 50%,transparent 51%) 75px 95px/230px 230px}
+:root[data-theme] .unified-shell{background:transparent}

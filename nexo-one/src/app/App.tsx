@@ -163,7 +163,8 @@ export default function App() {
   // Um aglomerado por domínio no céu do Início, dimensionado pelos blockers publicados.
   const heroClusters = useMemo(() => {
     if (!system.state) return [];
-    return globalSummary(system.state).domains.map(domain => ({
+    // GPT performance is part of Engineering (Dener, 2026-09-25): not a cluster of its own.
+    return globalSummary(system.state).domains.filter(domain => String(domain.domain) !== 'GPT_PERFORMANCE').map(domain => ({
       id: domain.domain,
       label: domain.domain,
       color: domainHex(domain.domain, 'dark'),
