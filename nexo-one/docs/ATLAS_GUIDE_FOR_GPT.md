@@ -41,5 +41,6 @@ Se mudar o que entra no inbox, atualize essa conferência junto.
 3. Nada de segredo no front; a Vercel guarda `NEXO_INBOX_TOKEN` (portão `/api/inbox-drop`), só servidor usa.
 
 ## 6. Portão e robô (back-end que o front reflete)
-- `/api/inbox-drop` (Vercel): tarefa abre link → proposta vai para `byDenoso/TCC@nexo-inbox`.
-- Writer robô (`.github/workflows/nexo-writer-robot.yml`, 15 min): aplica inbox (Drive NEXO_INBOX + portão) na Tower, fecha roadmaps no critério de parada, despacha **baterias** (`nexo-test-battery.yml`, até 20 testes em paralelo, sem segredos) e dispara o build do site.
+- `/api/inbox-drop` (Vercel): tarefa abre link → o ATLAS monta os chunks e grava o envelope no **Sheet spool** já consumido pelo Writer. Não depende de `Contents: write` no token do GitHub. GitHub Contents fica só como fallback de compatibilidade.
+- O token `NEXO_INBOX_TOKEN` pode ser **read-only** para drenar arquivos legados de `byDenoso/TCC@nexo-inbox`: depois que o Writer aplica um item, o ATLAS registra o ACK no Sheet. Se o token não puder mover/apagar o arquivo, ele fica fisicamente no branch, mas não volta para a fila.
+- Writer robô (`.github/workflows/nexo-writer-robot.yml`, 15 min): aplica Sheet spool + inbox legado na Tower, fecha roadmaps no critério de parada, despacha **baterias** (`nexo-test-battery.yml`, até 20 testes em paralelo, sem segredos) e dispara o build do site.
