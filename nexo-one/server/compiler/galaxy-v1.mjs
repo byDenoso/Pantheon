@@ -239,6 +239,9 @@ function makeEntity(kind,id,item,collection,consensus,manifest){
     subdomain:explicitSubdomain(item),
     status:statusOf(item),
     title:titleOf(id,item),
+    // Plain-language reading for the event panel (what it is about / what came out).
+    plain:text(item?.semantic?.question_plain||item?.question||item?.statement||item?.semantic?.why_it_matters)||null,
+    meaning:text(item?.semantic?.result_meaning||item?.result_summary)||null,
     importance:importanceOf(item),
     priority:text(item?.priority)||null,
     cluster_id:cluster.id,

@@ -183,6 +183,12 @@ export function GalaxyView({ selectedId }: { selectedId: string | null; onSelect
             <button type="button" onClick={() => setFocus(null)} aria-label="Fechar">×</button>
           </header>
           <p className="ev-label">{focused.label}</p>
+          {related.length === 1 && (related[0] as { plain?: string | null }).plain && (
+            <p className="ev-plain">{(related[0] as { plain?: string | null }).plain}</p>
+          )}
+          {related.length === 1 && (related[0] as { meaning?: string | null }).meaning && (
+            <p className="ev-plain"><b>Resultado</b> {(related[0] as { meaning?: string | null }).meaning}</p>
+          )}
           {focused.reason && <p className="ev-reason"><b>Motivo</b>{focused.reason}</p>}
           <dl>
             <div><dt>O que é</dt><dd>{EVENT_INFO[focused.kind].meaning}</dd></div>
@@ -194,7 +200,7 @@ export function GalaxyView({ selectedId }: { selectedId: string | null; onSelect
               <h3>{related.length === 1 ? 'Item' : `Itens (${related.length})`}</h3>
               <ul>
                 {related.slice(0, 30).map(e => (
-                  <li key={e.id}><span>{e.title || e.canonical_id || e.id}</span>{e.status && <small>{e.status}</small>}</li>
+                  <li key={e.id}><span>{e.title || e.canonical_id || e.id}</span>{(e as { plain?: string | null }).plain && <em>{(e as { plain?: string | null }).plain}</em>}{e.status && <small>{e.status}</small>}</li>
                 ))}
               </ul>
             </section>
