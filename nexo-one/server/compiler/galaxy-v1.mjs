@@ -408,6 +408,13 @@ export function compileGalaxySnapshot({projection,manifestFile=null,interdomain=
   const snapshot_id=`galaxy-${text(manifest.tower_commit).slice(0,12)||'unknown'}-${fingerprint.slice(7,19)}`;
   const changes=deriveChanges(previousSnapshot,{entities:publicEntities},generated_at);
   const events=astroEvents({entities:publicEntities,subdomains,needs_you,changes});
+  // Dener's closed-loop gate (charters/canaries waiting) is "needs you now": one supernova each.
+  const gate=projection.evolution?.gate||{};
+  [...(gate.charters_waiting||[]).map(c=>({id:c.roadmap_id,label:'Carta: '+(c.question||c.roadmap_id)})),
+   ...(gate.canaries_waiting||[]).map(c=>({id:c.gene,label:'Canonizar: '+c.gene}))].forEach((item,index)=>{
+    const p=armPoint('NEXO',.25+.07*index);
+    events.push({id:`supernova:gate:${item.id}`,kind:'SUPERNOVA',domain:'NEXO',entity:null,label:item.label,reason:'HUMAN_GATE',x:round(p.x),y:round(p.y),z:0,intensity:1});
+  });
   const byKind=Object.fromEntries(['WORK','TEST','CAPABILITY','HYPOTHESIS','AUTOMATION','RESULT','OTHER'].map(kind=>[kind,publicEntities.filter(entity=>entity.kind===kind).length]));
   const byDomain=Object.fromEntries(GALAXY_DOMAINS.map(domain=>[domain,publicEntities.filter(entity=>entity.visual_domain===domain).length]));
 
