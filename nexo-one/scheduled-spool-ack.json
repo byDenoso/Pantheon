@@ -1,4 +1,6 @@
 {
-  "version": 1,
-  "acked": {}
+  "acked": {
+    "sheet-spool-canary-001": "2026-09-25T16:15:02Z"
+  },
+  "version": 1
 }
