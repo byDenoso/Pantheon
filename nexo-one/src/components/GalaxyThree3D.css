@@ -356,3 +356,17 @@
   .galaxy-event-panel header button{width:36px;height:36px}
 }
 @keyframes ev-sheet-in{from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:none}}
+
+/* Realistic supernova / AGN (Dener 2026-09-25): light, not UI. */
+.galaxy-event .ev-halo{fill:var(--ev-soft);filter:blur(6px);opacity:.75;transform-box:fill-box;transform-origin:center;animation:ev-breathe 4.8s ease-in-out infinite}
+.galaxy-event .ev-bloom{fill:#fff;filter:blur(2.2px);opacity:.9}
+.galaxy-event .ev-diffraction{fill:#fff;opacity:.85;filter:drop-shadow(0 0 2px var(--ev))}
+.galaxy-event .ev-diffraction-2{opacity:.35}
+.galaxy-event .ev-disk{fill:none;stroke:var(--ev);stroke-width:.9;opacity:.55;filter:blur(.4px)}
+.galaxy-event[data-kind=AGN] .ev-jet{fill:var(--ev);opacity:.55;filter:blur(.6px) drop-shadow(0 0 3px var(--ev))}
+.galaxy-event[data-kind=SUPERNOVA] svg,.galaxy-event[data-kind=AGN] svg{overflow:visible}
+.galaxy-event[data-kind=SUPERNOVA] .ev-core{animation:ev-pulse 3.2s ease-in-out infinite}
+/* No badge on light phenomena: the name appears on hover / focus only. */
+.galaxy-event[data-kind=SUPERNOVA] .galaxy-event-tag,.galaxy-event[data-kind=AGN] .galaxy-event-tag{opacity:0;transition:opacity .2s}
+.galaxy-event[data-kind=SUPERNOVA]:hover .galaxy-event-tag,.galaxy-event[data-kind=SUPERNOVA].focused .galaxy-event-tag,
+.galaxy-event[data-kind=AGN]:hover .galaxy-event-tag,.galaxy-event[data-kind=AGN].focused .galaxy-event-tag{opacity:1}

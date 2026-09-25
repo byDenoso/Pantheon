@@ -412,8 +412,12 @@ export function compileGalaxySnapshot({projection,manifestFile=null,interdomain=
   const gate=projection.evolution?.gate||{};
   [...(gate.charters_waiting||[]).map(c=>({id:c.roadmap_id,label:'Carta: '+(c.question||c.roadmap_id)})),
    ...(gate.canaries_waiting||[]).map(c=>({id:c.gene,label:'Canonizar: '+c.gene}))].forEach((item,index)=>{
-    const p=armPoint('NEXO',.25+.07*index);
-    events.push({id:`supernova:gate:${item.id}`,kind:'SUPERNOVA',domain:'NEXO',entity:null,label:item.label,reason:'HUMAN_GATE',x:round(p.x),y:round(p.y),z:0,intensity:1});
+    // Spread over the arm of the charter's area (science roadmaps on SCIENCE, NEXO ones on ENGINEERING),
+    // at a hash-stable position: they never stack.
+    let hash=0;for(const ch of String(item.id))hash=(hash*31+ch.charCodeAt(0))>>>0;
+    const domain=/NEXO|ENGINEERING/i.test(item.id)?'ENGINEERING':/^RM-/.test(item.id)?'SCIENCE':'NEXO';
+    const p=armPoint(domain,.18+.64*((hash%1000)/1000));
+    events.push({id:`supernova:gate:${item.id}`,kind:'SUPERNOVA',domain,entity:null,label:item.label,reason:'HUMAN_GATE',x:round(p.x),y:round(p.y),z:0,intensity:1});
   });
   const byKind=Object.fromEntries(['WORK','TEST','CAPABILITY','HYPOTHESIS','AUTOMATION','RESULT','OTHER'].map(kind=>[kind,publicEntities.filter(entity=>entity.kind===kind).length]));
   const byDomain=Object.fromEntries(GALAXY_DOMAINS.map(domain=>[domain,publicEntities.filter(entity=>entity.visual_domain===domain).length]));

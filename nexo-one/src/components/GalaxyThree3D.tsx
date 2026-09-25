@@ -99,12 +99,15 @@ export const EVENT_TAG: Record<GalaxyEvent['kind'], string> = {
 export function EventGlyph({ kind }: { kind: GalaxyEvent['kind'] }) {
   switch (kind) {
     case 'SUPERNOVA':
+      // A real supernova reads as a star suddenly outshining its galaxy: saturated core,
+      // soft halo and long telescope diffraction spikes — no rings, no badge.
       return (
-        <svg viewBox="-24 -24 48 48" aria-hidden="true">
-          <circle className="ev-shell" r="10" />
-          <circle className="ev-shell ev-shell-2" r="10" />
-          <path className="ev-spike" d="M0-21L2.2-2.2 21 0 2.2 2.2 0 21-2.2 2.2-21 0-2.2-2.2Z" />
-          <circle className="ev-core" r="3.2" />
+        <svg viewBox="-40 -40 80 80" aria-hidden="true">
+          <circle className="ev-halo" r="16" />
+          <path className="ev-diffraction" d="M0-38L.7-.7 38 0 .7.7 0 38-.7.7-38 0-.7-.7Z" />
+          <path className="ev-diffraction ev-diffraction-2" d="M-14-14L0-.9 14-14 .9 0 14 14 0 .9-14 14-.9 0Z" />
+          <circle className="ev-bloom" r="5.5" />
+          <circle className="ev-core" r="2.6" />
         </svg>
       );
     case 'NOVA':
@@ -116,11 +119,14 @@ export function EventGlyph({ kind }: { kind: GalaxyEvent['kind'] }) {
         </svg>
       );
     case 'AGN':
+      // Active nucleus: blinding compact core, faint tilted accretion disk and two thin relativistic jets.
       return (
-        <svg viewBox="-26 -26 52 52" aria-hidden="true">
-          <path className="ev-jet" d="M0-4L-2.4-24h4.8ZM0 4L-2.4 24h4.8Z" />
-          <ellipse className="ev-ring" rx="11" ry="4.5" />
-          <circle className="ev-core" r="3.4" />
+        <svg viewBox="-40 -40 80 80" aria-hidden="true">
+          <circle className="ev-halo" r="13" />
+          <path className="ev-jet" d="M0-2.5L-1.1-36h2.2ZM0 2.5L-1.1 36h2.2Z" />
+          <ellipse className="ev-disk" rx="9" ry="2.4" transform="rotate(-18)" />
+          <circle className="ev-bloom" r="4.2" />
+          <circle className="ev-core" r="2.2" />
         </svg>
       );
     case 'HII':
