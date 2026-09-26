@@ -10,7 +10,7 @@ on:
     types: [nexo-public-projection-updated]
   workflow_dispatch:
   schedule:
-    - cron: '*/15 * * * *'
+    - cron: '0 * * * *'
 
 permissions:
   contents: read
