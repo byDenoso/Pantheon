@@ -152,14 +152,17 @@ export function Overview(
 }
 
 const AREA_PT: Record<string, string> = {
-  tower: 'Tower', site: 'site', inbox: 'fila de propostas', tasks: 'automações', science: 'ciência',
+  tower: 'Tower', site: 'site', inbox: 'fila de propostas', writer: 'aplicação automática', recovery: 'recuperação',
+  tasks: 'automações', science: 'ciência',
   cycle: 'ciclo de aprendizado', contract: 'contrato', semantic: 'leituras simples',
 };
 
 function GuardianStrip({ guardian }: { guardian: NonNullable<SystemState['guardian']> }) {
   // The Guardião's last audit in one line: green / attention / problem, and where.
   const label = guardian.status === 'GREEN' ? 'Sistema íntegro'
-    : guardian.status === 'YELLOW' ? `Atenção em ${guardian.checks_failing} de ${guardian.checks_total} verificações`
+    : guardian.status === 'YELLOW' ? guardian.checks_failing > 0
+      ? `Atenção em ${guardian.checks_failing} de ${guardian.checks_total} verificações`
+      : 'Atenção registrada'
     : `Problema em ${guardian.checks_failing} verificações`;
   const areas = [...new Set(guardian.failing_areas.map(area => AREA_PT[area.split('.')[0]] ?? area.split('.')[0]))];
   const minutes = Math.max(0, Math.round((Date.now() - Date.parse(guardian.checked_at)) / 60000));
@@ -169,7 +172,8 @@ function GuardianStrip({ guardian }: { guardian: NonNullable<SystemState['guardi
       <span className="guardian-dot" aria-hidden="true" />
       <strong>{label}</strong>
       {areas.length > 0 && <span> · {areas.join(', ')}</span>}
-      {ago && <span className="guardian-ago"> · Guardião {ago}</span>}
+      {ago && <span className="guardian-ago"> · Último relatório de integridade {ago}</span>}
     </p>
   );
 }
+

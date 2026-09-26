@@ -356,12 +356,19 @@ test('Peer Detection battery is projected by canonical semantic groups, not raw 
 
 test('published Pages auto-syncs Tower snapshots without a new infrastructure service', async () => {
   const workflow = await text('../.github/workflows/nexo-one-pages.yml');
+  const writer = await text('../.github/workflows/nexo-writer-robot.yml');
+  const guide = await text('docs/ATLAS_GUIDE_FOR_GPT.md');
   const hook = await text('src/data/useSystem.ts');
   const remote = await text('src/data/adapters/remote.ts');
 
   assert.match(workflow, /repository_dispatch:/);
   assert.match(workflow, /nexo-public-projection-updated/);
   assert.match(workflow, /cron:\s*'0 \* \* \* \*'/);
+  assert.match(writer, /cron:\s*'\*\/5 \* \* \* \*'/);
+  assert.match(writer, /nexo-wake\/\*\.json/);
+  assert.match(guide, /agendamento horário é apenas recuperação/);
+  assert.match(guide, /Writer robô .*a cada 5 min/);
+  assert.match(guide, /nexo\.ingest_request.*REQUEST_INGRESS_V1/);
   assert.match(workflow, /METALEARNING_CURRENT\.json/);
   assert.match(workflow, /PEER_DETECTION_BATTERY_V1\.json/);
   assert.match(hook, /setInterval/);
@@ -708,3 +715,4 @@ test('galaxy desktop observatory pass keeps density bounded', async () => {
   assert.match(css, /ATLAS Galaxy desktop observatory pass/);
   assert.match(css, /grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/);
 });
+
