@@ -260,7 +260,7 @@ jobs:
                   cursor["base_commit"]=mapping.get("head_sha") or cursor.get("base_commit")
                   cursor["acked"]={}
 
-              body=json.dumps(cursor,indent=2,sort_keys=True)+"\\n"
+              body=json.dumps(cursor,indent=2,sort_keys=True)+"\n"
               payload=json.dumps({
                   "message":"NEXO writer robot: advance public TCC inbox cursor",
                   "content":base64.b64encode(body.encode()).decode(),
