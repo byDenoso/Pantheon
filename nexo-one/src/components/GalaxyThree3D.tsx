@@ -1,3 +1,585 @@
+import {
+  forwardRef,
+  useEffect,
+  useImperativeHandle,
+  useMemo,
+  useRef,
+  useState,
+  type CSSProperties,
+} from 'react';
+import {
+  Group,
+  ACESFilmicToneMapping,
+  AdditiveBlending,
+  NormalBlending,
+  BufferGeometry,
+  Color,
+  Float32BufferAttribute,
+  GridHelper,
+  LineBasicMaterial,
+  LineDashedMaterial,
+  LineSegments,
+  PerspectiveCamera,
+  Points,
+  QuadraticBezierCurve3,
+  Scene,
+  ShaderMaterial,
+  SRGBColorSpace,
+  Vector2,
+  Vector3,
+  WebGLRenderer,
+} from 'three';
+import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
+import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
+import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
+import type { GraphEdge } from '../contracts/system.ts';
+import type { PlacedNode3D } from '../viewmodels/graph3d.ts';
+import type { Canvas25DViewState, CanvasGraph25DHandle } from './CanvasGraph25D.tsx';
+import { domainHex } from '../viewmodels/domainPalette.ts';
+// @ts-ignore -- shared plain-JS geometry module (server + browser)
+import { armPoint as morphArmPoint, barEnd, morphologyFrom } from '../viewmodels/galaxy-morphology.mjs';
+import './GalaxyThree3D.css';
+
+const TAU = Math.PI * 2;
+const DEFAULT_CAMERA = new Vector3(0, 16, 286);
+const GALAXY_DETAIL_CAMERA = new Vector3(0, 10, 214);
+const MACRO_CAMERA = new Vector3(0, 12, 360);
+const MOBILE_MACRO_CAMERA = new Vector3(0, 2, 236);
+// Narrow portrait screens: closer, so the disk fills the width.
+const MOBILE_CAMERA = new Vector3(0, 10, 236);
+const DEFAULT_TARGET = new Vector3(0, 0, 0);
+
+function paletteForTheme(theme: 'dark' | 'light') {
+  return theme === 'light'
+    ? { accent: new Color('#f47a20'), strong: new Color('#a94808') }
+    : { accent: new Color('#7fddba'), strong: new Color('#eefcf7') };
+}
+
+
+function domainColor(domain: PlacedNode3D['domain'], theme: 'dark' | 'light'): Color {
+  return new Color(domainHex(domain, theme));
+}
+
+function stateClass(value: unknown): string {
+  return String(value ?? 'UNKNOWN').toLowerCase().replace(/[^a-z0-9]+/g, '-');
+}
+
+type Props = {
+  nodes: PlacedNode3D[];
+  edges: GraphEdge[];
+  selectedId: string | null;
+  onSelect: (id: string | null) => void;
+  onFailure?: () => void;
+  className?: string;
+  ariaLabel?: string;
+  viewMode?: 'macro' | 'detail';
+  /** Data-driven galaxy shape from the published snapshot. */
+  morphology?: GalaxyMorphology | null;
+  /** Glow multiplier (0.5 soft … 1.2 strong). */
+  glow?: number;
+  /** Astrophysical events (world coordinates, already scaled like the nodes). */
+  events?: GalaxyEvent[];
+  /** Fly the camera to an event; bump `nonce` to repeat the same id. */
+  focusEvent?: { id: string; nonce: number } | null;
+  /** A marker was clicked. */
+  onEventSelect?: (id: string) => void;
+};
+
+const NO_EVENTS: GalaxyEvent[] = [];
+
+export const EVENT_TAG: Record<GalaxyEvent['kind'], string> = {
+  SUPERNOVA: 'SN', NOVA: 'NOVA', AGN: 'AGN', HII: 'H II', REMNANT: 'SNR', FLARE: 'FLARE',
+};
+
+/**
+ * One silhouette per event kind, so they read by shape (not only colour)
+ * against the particle field: spikes = needs you, jets = campaign,
+ * dashed cloud = new tests, broken ring = resolved, cross = new.
+ */
+export function EventGlyph({ kind }: { kind: GalaxyEvent['kind'] }) {
+  switch (kind) {
+    case 'SUPERNOVA':
+      // A real supernova reads as a star suddenly outshining its galaxy: saturated core,
+      // soft halo and long telescope diffraction spikes — no rings, no badge.
+      return (
+        <svg viewBox="-40 -40 80 80" aria-hidden="true">
+          <defs>
+            <radialGradient id="ev-sn-glow">
+              <stop offset="0" stopColor="#fffaf0" stopOpacity="1" />
+              <stop offset=".25" stopColor="#ffe7b8" stopOpacity=".55" />
+              <stop offset=".6" stopColor="#9fc2ff" stopOpacity=".12" />
+              <stop offset="1" stopColor="#9fc2ff" stopOpacity="0" />
+            </radialGradient>
+          </defs>
+          <circle className="ev-halo" r="16" />
+          <path className="ev-diffraction" d="M0-38L.7-.7 38 0 .7.7 0 38-.7.7-38 0-.7-.7Z" />
+          <path className="ev-diffraction ev-diffraction-2" d="M-14-14L0-.9 14-14 .9 0 14 14 0 .9-14 14-.9 0Z" />
+          <circle className="ev-bloom" r="5.5" />
+          <circle className="ev-core" r="2.6" />
+        </svg>
+      );
+    case 'NOVA':
+      return (
+        <svg viewBox="-16 -16 32 32" aria-hidden="true">
+          <circle className="ev-ring" r="9" />
+          <path className="ev-spike" d="M0-13L1.6-1.6 13 0 1.6 1.6 0 13-1.6 1.6-13 0-1.6-1.6Z" />
+          <circle className="ev-core" r="2.2" />
+        </svg>
+      );
+    case 'AGN':
+      // Active nucleus: blinding compact core, faint tilted accretion disk and two thin relativistic jets.
+      return (
+        <svg viewBox="-40 -40 80 80" aria-hidden="true">
+          <circle className="ev-halo" r="13" />
+          <path className="ev-jet" d="M0-2.5L-1.1-36h2.2ZM0 2.5L-1.1 36h2.2Z" />
+          <ellipse className="ev-disk" rx="9" ry="2.4" transform="rotate(-18)" />
+          <circle className="ev-bloom" r="4.2" />
+          <circle className="ev-core" r="2.2" />
+        </svg>
+      );
+    case 'HII':
+      return (
+        <svg viewBox="-20 -20 40 40" aria-hidden="true">
+          <circle className="ev-cloud" r="14" />
+          <circle className="ev-ring ev-dash" r="14" />
+          <circle className="ev-dot" cx="-4" cy="-3" r="1.6" />
+          <circle className="ev-dot" cx="4" cy="1" r="1.3" />
+          <circle className="ev-dot" cx="-1" cy="5" r="1.1" />
+        </svg>
+      );
+    case 'REMNANT':
+      return (
+        <svg viewBox="-18 -18 36 36" aria-hidden="true">
+          <circle className="ev-ring ev-broken" r="12" />
+          <circle className="ev-ring ev-broken ev-inner" r="7" />
+        </svg>
+      );
+    default:
+      return (
+        <svg viewBox="-12 -12 24 24" aria-hidden="true">
+          <path className="ev-spike" d="M0-10L1-1 10 0 1 1 0 10-1 1-10 0-1-1Z" />
+          <circle className="ev-core" r="1.6" />
+        </svg>
+      );
+  }
+}
+const Z_AXIS = new Vector3(0, 0, 1);
+
+export type GalaxyEvent = {
+  id: string;
+  kind: 'SUPERNOVA' | 'NOVA' | 'AGN' | 'HII' | 'REMNANT' | 'FLARE';
+  label: string;
+  domain?: string;
+  entity?: string;
+  reason?: string;
+  x: number; y: number; z: number;
+  intensity: number;
+};
+
+type Tween = {
+  startAt: number;
+  duration: number;
+  fromPosition: Vector3;
+  toPosition: Vector3;
+  fromTarget: Vector3;
+  toTarget: Vector3;
+};
+
+function hash32(value: string): number {
+  let hash = 2166136261;
+  for (let i = 0; i < value.length; i += 1) {
+    hash ^= value.charCodeAt(i);
+    hash = Math.imul(hash, 16777619);
+  }
+  return hash >>> 0;
+}
+
+function rng(seed: number): () => number {
+  let value = seed >>> 0;
+  return () => {
+    value += 0x6D2B79F5;
+    let t = value;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+function gaussian(random: () => number): number {
+  const u = Math.max(1e-6, random());
+  const v = Math.max(1e-6, random());
+  return Math.sqrt(-2 * Math.log(u)) * Math.cos(TAU * v);
+}
+
+function writeParticle(
+  positions: Float32Array, sizes: Float32Array, brightness: Float32Array, colors: Float32Array, index: number,
+  x: number, y: number, z: number, size: number, light: number, color: Color,
+) {
+  const p = index * 3;
+  positions[p] = x; positions[p + 1] = y; positions[p + 2] = z;
+  sizes[index] = size; brightness[index] = light;
+  color.toArray(colors, p);
+}
+
+function buildFieldGeometry(
+  nodes: PlacedNode3D[], count: number, isMacro: boolean, theme: 'dark' | 'light',
+): BufferGeometry {
+  const positions = new Float32Array(count * 3);
+  const sizes = new Float32Array(count);
+  const brightness = new Float32Array(count);
+  const colors = new Float32Array(count * 3);
+  const domains = nodes.filter(node => node.type === 'DOMAIN');
+  const clusters = nodes.filter(node => node.id.startsWith('atlas.cluster.'));
+  const detailCenters = nodes.filter(node => node.type !== 'FILAMENT').slice(0, Math.min(nodes.length, 24));
+  const centers = isMacro
+    ? domains
+    : clusters.length > 0
+      ? [...domains, ...clusters]
+      : detailCenters.length > 0
+        ? detailCenters
+        : domains;
+  const ambient = new Color(theme === 'light' ? '#a7a19a' : '#35404a');
+
+  for (let index = 0; index < count; index += 1) {
+    const random = rng(hash32('nexo-field:' + index));
+    if (!centers.length || random() < (isMacro ? 0.08 : 0.05)) {
+      const angle = random() * TAU;
+      const radius = 66 + Math.sqrt(random()) * (isMacro ? 116 : 82);
+      writeParticle(
+        positions, sizes, brightness, colors, index,
+        Math.cos(angle) * radius, Math.sin(angle) * radius * 0.56,
+        (random() - 0.5) * (isMacro ? 10 : 8),
+        0.42 + random() * 0.54, 0.06 + random() * 0.10, ambient,
+      );
+      continue;
+    }
+
+    const center = centers[index % centers.length]!;
+    const angle = random() * TAU;
+    const radial = 4.5 + Math.sqrt(random()) * (isMacro ? 16 : 10.5);
+    const x = center.x + Math.cos(angle) * radial + gaussian(random) * 0.72;
+    const y = center.y + Math.sin(angle) * radial * 0.64 + gaussian(random) * 0.62;
+    const z = center.z + gaussian(random) * (isMacro ? 2.4 : 1.9);
+    writeParticle(
+      positions, sizes, brightness, colors, index, x, y, z,
+      0.72 + random() * 1.10, 0.20 + random() * 0.48, domainColor(center.domain, theme),
+    );
+  }
+
+  const geometry = new BufferGeometry();
+  geometry.setAttribute('position', new Float32BufferAttribute(positions, 3));
+  geometry.setAttribute('aSize', new Float32BufferAttribute(sizes, 1));
+  geometry.setAttribute('aBrightness', new Float32BufferAttribute(brightness, 1));
+  geometry.setAttribute('aColor', new Float32BufferAttribute(colors, 3));
+  geometry.computeBoundingSphere();
+  return geometry;
+}
+function buildFieldRingSegments(nodes: PlacedNode3D[], isMacro: boolean): BufferGeometry {
+  const vertices: number[] = [];
+  for (const node of nodes.filter(candidate => candidate.type === 'DOMAIN')) {
+    const radii = node.domain === 'NEXO' ? [isMacro ? 30 : 24] : [isMacro ? 16 : 13];
+    for (const radius of radii) {
+      const segments = 64;
+      for (let i = 0; i < segments; i += 1) {
+        const a0 = (i / segments) * TAU;
+        const a1 = ((i + 1) / segments) * TAU;
+        vertices.push(node.x + Math.cos(a0) * radius, node.y + Math.sin(a0) * radius * 0.62, node.z - 1.5, node.x + Math.cos(a1) * radius, node.y + Math.sin(a1) * radius * 0.62, node.z - 1.5);
+      }
+    }
+  }
+  const geometry = new BufferGeometry();
+  geometry.setAttribute('position', new Float32BufferAttribute(vertices, 3));
+  return geometry;
+}
+const galaxyVertexShader = `
+attribute float aSize;
+attribute float aBrightness;
+attribute vec3 aColor;
+uniform float uTime;
+uniform float uPixelRatio;
+varying float vBrightness;
+varying vec3 vColor;
+
+void main() {
+  vec4 mv = modelViewMatrix * vec4(position, 1.0);
+  float twinkle = 0.985 + 0.015 * sin(uTime * 0.45 + position.x * 0.055 + position.y * 0.037);
+  float perspective = 250.0 / max(22.0, -mv.z);
+  gl_PointSize = clamp(aSize * uPixelRatio * perspective * twinkle, 0.7, 10.0);
+  gl_Position = projectionMatrix * mv;
+  vBrightness = aBrightness;
+  vColor = aColor;
+}
+`;
+
+const galaxyFragmentShader = `
+uniform vec3 uColorA;
+uniform vec3 uColorB;
+uniform float uOpacity;
+varying float vBrightness;
+varying vec3 vColor;
+
+void main() {
+  vec2 uv = gl_PointCoord - vec2(0.5);
+  float d = length(uv);
+  if (d > 0.5) discard;
+  float core = smoothstep(0.5, 0.0, d);
+  float halo = smoothstep(0.5, 0.18, d);
+  vec3 color = mix(vColor, uColorB, clamp(vBrightness * 0.16, 0.0, 0.16));
+  float alpha = (halo * 0.36 + core * 0.60) * (0.18 + vBrightness * 0.64) * uOpacity;
+  gl_FragColor = vec4(color, alpha);
+}
+`;
+
+// ── Procedural spiral galaxy (decoration only) ─────────────────────────────
+// Same barred-spiral geometry as the server galaxy compiler (galaxy-v1.mjs),
+// scaled like layoutFromGalaxy, so data nodes sit inside the arms they belong to.
+// Half the original footprint: the galaxy reads small and whole.
+const G_SCALE = 0.36;
+
+export type GalaxyMorphology = {
+  stage?: number; stage_label?: string;
+  bulge: { radius: number; bar: number; bar_strength?: number; tint: string };
+  arms: Record<string, { phase: number; turns: number; pitch: number; width: number; mass: number; segments: number; tint: string; parent?: string; branch_at?: number; mode?: 'branch' | 'bridge' | 'satellite'; bridge_to?: string; orbit_phase?: number; satellite_radius?: number }>;
+};
+// Used only until the published snapshot arrives; same rules, typical counts.
+const DEFAULT_MORPHOLOGY = morphologyFrom({
+  counts: { SCIENCE: { entities: 120, subdomains: 12 }, OLYMPUS: { entities: 20, subdomains: 2 }, ENGINEERING: { entities: 10, subdomains: 2 } },
+  core: 45,
+}) as unknown as GalaxyMorphology;
+
+function spiralPoint(morph: GalaxyMorphology, arm: string, t: number) {
+  const p = morphArmPoint(morph, arm, t) as { x: number; y: number };
+  return { x: p.x * G_SCALE, y: p.y * G_SCALE };
+}
+
+/**
+ * Spatial colour field: every point's tone is a distance-weighted mix of all arms
+ * (plus the nucleus), so colour flows continuously across arm junctions and from
+ * the bulge into the arm roots instead of switching by membership.
+ */
+function colorField(morph: GalaxyMorphology) {
+  const arms = Object.keys(morph.arms);
+  const samples = arms.map(arm => {
+    const sigma = Math.max(5, morph.arms[arm]!.width * G_SCALE * 0.9);
+    const pts: Array<{ x: number; y: number }> = [];
+    for (let t = 0; t <= 1.05; t += 0.025) pts.push(spiralPoint(morph, arm, t));
+    return { arm, pts, inv: 1 / (2 * sigma * sigma) };
+  });
+  const coreR = Math.max(4, morph.bulge.radius * G_SCALE * 1.8);
+  return (x: number, y: number, palette: Record<string, Color>, core: Color, out: Color): Color => {
+    let total = 2.4 * Math.exp(-(x * x + y * y) / (coreR * coreR));
+    let r = core.r * total; let g = core.g * total; let b = core.b * total;
+    for (const { arm, pts, inv } of samples) {
+      let best = Infinity;
+      for (const p of pts) { const d = (p.x - x) ** 2 + (p.y - y) ** 2; if (d < best) best = d; }
+      const w = Math.exp(-best * inv);
+      const c = palette[arm]; if (!c) continue;
+      r += c.r * w; g += c.g * w; b += c.b * w; total += w;
+    }
+    if (total < 1e-6) return out.copy(core);
+    return out.setRGB(r / total, g / total, b / total);
+  };
+}
+
+// Muted, analogous star palette (slate · periwinkle · lavender · ivory): the
+// disk blends into one calm body so the saturated event glyphs carry the contrast.
+const STAR_WHITE = new Color('#c9d2e3');
+const STAR_BLUE = new Color('#8e9fc4');
+const STAR_WARM = new Color('#d6c8b0');
+const STAR_CORE = new Color('#e6dcc8');
+const HII_PINK = new Color('#a898c4');
+const DUST_RED = new Color('#8c8196');
+
+function buildSpiralGalaxy(count: number, morph: GalaxyMorphology): BufferGeometry {
+  const positions = new Float32Array(count * 3);
+  const sizes = new Float32Array(count);
+  const brightness = new Float32Array(count);
+  const colors = new Float32Array(count * 3);
+  const arms = Object.keys(morph.arms);
+  // Star budget per arm follows mass, but a main arm never gets less than
+  // 77% of the heaviest one, so arms read as a balanced pair.
+  const heaviest = Math.max(0.3, ...arms.map(key => morph.arms[key].mass));
+  const armWeight = (key: string) => Math.max(morph.arms[key].mode || morph.arms[key].parent ? 0.3 : heaviest / 1.3, morph.arms[key].mass);
+  // No bar before the mature stage: a round, bright nucleus.
+  const barStrength = Math.max(0, Math.min(1, Number(morph.bulge.bar_strength ?? 1)));
+  const totalMass = arms.reduce((sum, key) => sum + armWeight(key), 0) || 1;
+  const tints = Object.fromEntries(arms.map(key => [key, new Color(morph.arms[key].tint)]));
+  const coreTint = new Color(morph.bulge.tint);
+  // Arm colour as seen at the arm root: the muted star tone leaning to the domain.
+  const armBlend = Object.fromEntries(arms.map(key => [key, STAR_WHITE.clone().lerp(tints[key]!, 0.35)]));
+  const field = colorField(morph);
+  const fieldTint = new Color();
+  const coreBlend = STAR_CORE.clone().lerp(coreTint, 0.12);
+  const bulgeRadius = morph.bulge.radius * G_SCALE * 1.6;
+  const tmp = new Color();
+  for (let i = 0; i < count; i += 1) {
+    const r = rng(hash32('nexo-spiral:' + i));
+    const kind = r();
+    let x: number; let y: number; let z: number; let size: number; let light: number;
+    if (kind < 0.16) {
+      // Bulge + bar: dense warm core stretched along the bar axis.
+      const rad = Math.abs(gaussian(r)) * bulgeRadius;
+      const a = r() * TAU;
+      const haze = r() < 0.12;
+      if (r() < 0.6 * barStrength) {
+        // The bar (stage 5 only): bright, straight, running exactly to the arm roots.
+        const half = barEnd(morph) * G_SCALE;
+        const along = (r() * 2 - 1) * half;
+        x = along; y = gaussian(r) * bulgeRadius * 0.32 * (1 - 0.45 * Math.abs(along) / half); z = gaussian(r) * 1.4;
+      } else {
+        x = Math.cos(a) * rad * (1.1 - 0.1 * (1 - barStrength)); y = Math.sin(a) * rad * (0.8 + 0.15 * (1 - barStrength)); z = gaussian(r) * 2.2;
+      }
+      // Soft haze makes the bar read as one glowing body, like NGC 1300.
+      size = haze ? 5 + r() * 5 : 0.5 + r() * 0.9; light = haze ? 0.02 + r() * 0.025 : 0.4 + r() * 0.4;
+      tmp.copy(STAR_CORE).lerp(STAR_WARM, r() * 0.5).lerp(coreTint, 0.12);
+      // Outer bulge cools towards the arm palette: no hard edge at the arm roots.
+      const edge = Math.min(1, Math.hypot(x, y) / Math.max(1, bulgeRadius * 1.4));
+      tmp.lerp(field(x, y, armBlend, coreBlend, fieldTint), edge * edge * 0.6);
+    } else if (kind < 0.80) {
+      // Arm stars, star-forming knots and dust lanes.
+      let pick = r() * totalMass; let arm = arms[0] ?? 'SCIENCE';
+      for (const key of arms) { pick -= armWeight(key); if (pick <= 0) { arm = key; break; } }
+      const spec = morph.arms[arm];
+      // Fragmentation: stars clump around one knot per subdomain.
+      // Half the stars fill the arm continuously from the nucleus outward, so
+      // there are no gaps; the rest clump around one knot per subdomain.
+      const segment = Math.floor(r() * Math.max(1, spec.segments));
+      let t = r() < 0.5 ? r() * 1.02 : (segment + 0.5 + gaussian(r) * 0.35) / Math.max(1, spec.segments);
+      // Resample instead of clamping: clamped stars pile up on one line (streaks).
+      if (t < 0 || t > 1.04) t = r() * 1.04;
+      const p = spiralPoint(morph, arm, Math.max(0, t));
+      const q = spiralPoint(morph, arm, Math.max(0, t) + 0.01);
+      const tx = q.x - p.x; const ty = q.y - p.y; const len = Math.hypot(tx, ty) || 1;
+      const width = spec.width * G_SCALE * (0.35 + t * 0.9);
+      const across = gaussian(r) * width * 0.3;
+      x = p.x + (-ty / len) * across; y = p.y + (tx / len) * across; z = gaussian(r) * (1 + t * 1.6);
+      const knot = r() < 0.07;
+      const haze = !knot && r() < 0.06;
+      size = knot ? 1.4 + r() * 1.6 : haze ? 5 + r() * 5 : 0.35 + r() * 0.8;
+      light = knot ? 0.9 : haze ? 0.025 + r() * 0.03 : 0.25 + r() * 0.55;
+      const c = r();
+      // Natural star mix with only a hint of the domain's tone: arms stay
+      // distinguishable without the galaxy turning into a colour gradient.
+      tmp.copy(c < 0.66 ? STAR_WHITE : c < 0.9 ? STAR_BLUE : c < 0.96 ? HII_PINK : DUST_RED).lerp(field(x, y, tints, coreTint, fieldTint), 0.16);
+      if (knot && r() < 0.5) tmp.copy(HII_PINK).lerp(STAR_WHITE, 0.45);
+      // Arm roots inherit the nucleus' warmth and fade into the arm tone.
+      const root = Math.max(0, 1 - t / 0.28);
+      if (root > 0) tmp.lerp(STAR_CORE, root * root * 0.6);
+    } else if (kind < 0.95) {
+      // Inter-arm disk: faint exponential glow.
+      const rad = -Math.log(Math.max(1e-6, r())) * 17;
+      const a = r() * TAU;
+      x = Math.cos(a) * rad; y = Math.sin(a) * rad; z = gaussian(r) * 3;
+      size = 0.35 + r() * 0.6; light = 0.12 + r() * 0.22;
+      tmp.copy(STAR_WHITE).lerp(STAR_WARM, r() * 0.5);
+    } else {
+      // Field stars far outside the disk.
+      const a = r() * TAU; const b = Math.acos(2 * r() - 1); const rad = 220 + r() * 260;
+      x = Math.sin(b) * Math.cos(a) * rad; y = Math.sin(b) * Math.sin(a) * rad; z = Math.cos(b) * rad;
+      size = 0.5 + r() * 1.1; light = 0.2 + r() * 0.5;
+      tmp.copy(r() < 0.8 ? STAR_WHITE : STAR_WARM);
+    }
+    writeParticle(positions, sizes, brightness, colors, i, x, y, z, size, light, tmp);
+  }
+  const geometry = new BufferGeometry();
+  geometry.setAttribute('position', new Float32BufferAttribute(positions, 3));
+  geometry.setAttribute('aSize', new Float32BufferAttribute(sizes, 1));
+  geometry.setAttribute('aBrightness', new Float32BufferAttribute(brightness, 1));
+  geometry.setAttribute('aColor', new Float32BufferAttribute(colors, 3));
+  geometry.computeBoundingSphere();
+  return geometry;
+}
+
+/**
+ * Deep field: a few hundred faint, distant galaxies (tiny tilted ellipses and
+ * specks) on a far shell. Static, never rotates with the disk, never picked.
+ */
+function buildDeepField(count: number): BufferGeometry {
+  const positions = new Float32Array(count * 3);
+  const sizes = new Float32Array(count);
+  const colors = new Float32Array(count * 3);
+  const shape = new Float32Array(count * 2); // angle, aspect
+  const tints = [new Color('#b9c4dc'), new Color('#d9c7a8'), new Color('#c3b3d6'), new Color('#9fb3d1'), new Color('#e0b9a4')];
+  const tmp = new Color();
+  for (let i = 0; i < count; i += 1) {
+    const r = rng(hash32('nexo-deep-field:' + i));
+    const a = r() * TAU; const b = Math.acos(2 * r() - 1); const rad = 520 + r() * 260;
+    positions[i * 3] = Math.sin(b) * Math.cos(a) * rad;
+    positions[i * 3 + 1] = Math.sin(b) * Math.sin(a) * rad;
+    positions[i * 3 + 2] = Math.cos(b) * rad;
+    const big = r() < 0.12;
+    sizes[i] = big ? 12 + r() * 12 : 4 + r() * 5;
+    tmp.copy(tints[Math.floor(r() * tints.length)]!);
+    colors[i * 3] = tmp.r; colors[i * 3 + 1] = tmp.g; colors[i * 3 + 2] = tmp.b;
+    shape[i * 2] = r() * Math.PI;
+    shape[i * 2 + 1] = r() < 0.25 ? 1 : 0.2 + r() * 0.5;
+  }
+  const geometry = new BufferGeometry();
+  geometry.setAttribute('position', new Float32BufferAttribute(positions, 3));
+  geometry.setAttribute('aSize', new Float32BufferAttribute(sizes, 1));
+  geometry.setAttribute('aColor', new Float32BufferAttribute(colors, 3));
+  geometry.setAttribute('aShape', new Float32BufferAttribute(shape, 2));
+  return geometry;
+}
+
+const deepFieldVertexShader = `
+attribute float aSize;
+attribute vec3 aColor;
+attribute vec2 aShape;
+uniform float uPixelRatio;
+varying vec3 vColor;
+varying vec2 vShape;
+void main() {
+  vec4 mv = modelViewMatrix * vec4(position, 1.0);
+  gl_PointSize = clamp(aSize * uPixelRatio * (620.0 / max(60.0, -mv.z)), 1.2, 26.0);
+  gl_Position = projectionMatrix * mv;
+  vColor = aColor;
+  vShape = aShape;
+}
+`;
+
+const deepFieldFragmentShader = `
+uniform float uOpacity;
+varying vec3 vColor;
+varying vec2 vShape;
+void main() {
+  vec2 uv = gl_PointCoord - vec2(0.5);
+  float c = cos(vShape.x); float s = sin(vShape.x);
+  vec2 p = vec2(c * uv.x - s * uv.y, s * uv.x + c * uv.y);
+  p.y /= max(0.18, vShape.y);
+  float d = length(p) * 2.0;
+  if (d > 1.0) discard;
+  float core = exp(-d * d * 14.0);
+  float disk = exp(-d * d * 3.5) * 0.45;
+  gl_FragColor = vec4(vColor, (core + disk) * uOpacity);
+}
+`;
+
+const spiralVertexShader = `
+attribute float aSize;
+attribute float aBrightness;
+attribute vec3 aColor;
+uniform float uTime;
+uniform float uPixelRatio;
+uniform float uNucleusRadius;
+varying float vBrightness;
+varying vec3 vColor;
+varying float vNucleusFade;
+void main() {
+  vec4 mv = modelViewMatrix * vec4(position, 1.0);
+  float twinkle = 0.9 + 0.1 * sin(uTime * 1.3 + position.x * 0.31 + position.y * 0.17);
+  float perspective = 720.0 / max(18.0, -mv.z);
+  float nucleusDistance = clamp(length(position.xy) / max(1.0, uNucleusRadius), 0.0, 1.0);
+  float nucleusSize = 0.58 + 0.42 * nucleusDistance * nucleusDistance;
+  gl_PointSize = clamp(aSize * uPixelRatio * perspective * (aBrightness > 0.85 ? twinkle : 1.0) * nucleusSize, 0.9, 30.0);
+  gl_Position = projectionMatrix * mv;
+  vBrightness = aBrightness;
+  vColor = aColor;
+  vNucleusFade = 0.12 + 0.88 * nucleusDistance * nucleusDistance;
+}
+`;
+
 const spiralFragmentShader = `
 uniform float uOpacity;
 varying float vBrightness;
