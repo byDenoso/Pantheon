@@ -43,6 +43,7 @@ import './GalaxyThree3D.css';
 
 const TAU = Math.PI * 2;
 const DEFAULT_CAMERA = new Vector3(0, 16, 286);
+const GALAXY_DETAIL_CAMERA = new Vector3(0, 10, 214);
 const MACRO_CAMERA = new Vector3(0, 12, 360);
 const MOBILE_MACRO_CAMERA = new Vector3(0, 2, 236);
 // Narrow portrait screens: closer, so the disk fills the width.
@@ -795,11 +796,10 @@ export const GalaxyThree3D = forwardRef<CanvasGraph25DHandle, Props>(function Ga
     }
     return nodes
       .filter(node => isMajor(node, selectedId) || local.has(node.id))
-      .slice(0, isMobile ? 8 : 42);
+      .slice(0, isMobile ? 8 : morphology ? 14 : 42);
   }, [edges, isMobile, nodes, selectedId]);
 
   const visibleEventTagIds = useMemo(() => {
-    if (!isMobile) return new Set(events.map(event => event.id));
     const keep = new Set<string>();
     if (focusEvent?.id) keep.add(focusEvent.id);
     const seenKinds = new Set<GalaxyEvent['kind']>();
@@ -809,7 +809,13 @@ export const GalaxyThree3D = forwardRef<CanvasGraph25DHandle, Props>(function Ga
       keep.add(event.id);
     }
     return keep;
-  }, [events, focusEvent?.id, isMobile]);
+  }, [events, focusEvent?.id]);
+
+  const homeCamera = isMacro
+    ? (isMobile ? MOBILE_MACRO_CAMERA : MACRO_CAMERA)
+    : morphology
+      ? (isMobile ? MOBILE_CAMERA : GALAXY_DETAIL_CAMERA)
+      : (isMobile ? MOBILE_CAMERA : DEFAULT_CAMERA);
 
   const flyToPoint = (point: { x: number; y: number; z: number }, distance: number, duration = 720) => {
     const camera = cameraRef.current;
@@ -843,7 +849,6 @@ export const GalaxyThree3D = forwardRef<CanvasGraph25DHandle, Props>(function Ga
     const camera = cameraRef.current;
     const controls = controlsRef.current;
     if (!camera || !controls) return;
-    const homeCamera = isMacro ? (isMobile ? MOBILE_MACRO_CAMERA : MACRO_CAMERA) : (isMobile ? MOBILE_CAMERA : DEFAULT_CAMERA);
     tweenRef.current = {
       startAt: performance.now(),
       duration: reducedMotion ? 0 : 760,
@@ -869,7 +874,7 @@ export const GalaxyThree3D = forwardRef<CanvasGraph25DHandle, Props>(function Ga
       }
       return compatibleView(camera, controls.target);
     },
-  }), [isMacro, isMobile, nodeMap, reducedMotion]);
+  }), [homeCamera, isMacro, isMobile, nodeMap, reducedMotion]);
 
   useEffect(() => {
     const host = hostRef.current;
@@ -915,7 +920,7 @@ export const GalaxyThree3D = forwardRef<CanvasGraph25DHandle, Props>(function Ga
       sceneRef.current = scene;
 
       const camera = new PerspectiveCamera(isMobile ? 35 : 40, size.width / size.height, 0.1, 1200);
-      camera.position.copy(isMacro ? (isMobile ? MOBILE_MACRO_CAMERA : MACRO_CAMERA) : (isMobile ? MOBILE_CAMERA : DEFAULT_CAMERA));
+      camera.position.copy(homeCamera);
       cameraRef.current = camera;
 
       const controls = new OrbitControls(camera, renderer.domElement);
