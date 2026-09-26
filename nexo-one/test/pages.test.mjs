@@ -686,3 +686,14 @@ test('public system state projects capability registry with conservative evidenc
     ['cap.active', 'cap.proven', 'cap.retired', 'cap.validated', 'github.actions.alias'].sort(),
   );
 });
+
+
+test('galaxy mobile presentation limits in-scene event labels', async () => {
+  const view = await text('src/components/GalaxyThree3D.tsx');
+  const css = await text('src/components/GalaxyThree3D.css');
+  assert.match(view, /slice\(0, isMobile \? 8 : 42\)/);
+  assert.match(view, /visibleEventTagIds/);
+  assert.match(view, /data-tag-visible/);
+  assert.match(css, /data-tag-visible="false"/);
+  assert.match(css, /max-height:min\(38dvh,330px\)/);
+});

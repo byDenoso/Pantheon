@@ -393,3 +393,84 @@
 .galaxy-event-panel .ev-plain{margin:8px 0;font-size:13px;line-height:1.55;color:#dfe6ef}
 .galaxy-event-panel .ev-plain b{display:block;font:600 10px/1.4 "IBM Plex Mono",monospace;letter-spacing:.12em;text-transform:uppercase;color:var(--ev);margin-bottom:2px}
 .galaxy-event-panel li em{display:block;font-style:normal;font-size:12px;color:#aab6c6;line-height:1.45;margin-top:2px}
+
+
+/* ATLAS Galaxy mobile clarity pass · 2026-09-25
+   One visual focus, one in-scene tag per phenomenon kind, compact observatory HUD. */
+@media(max-width:760px){
+  .atlas-galaxy-view .galaxy-three-vignette{
+    background:radial-gradient(circle at 50% 48%,transparent 0 54%,rgba(0,0,0,.12) 78%,rgba(0,0,0,.36) 100%);
+  }
+
+  .atlas-galaxy-view .galaxy-hud{
+    top:6px;left:8px;right:8px;gap:8px;align-items:stretch;
+  }
+  .atlas-galaxy-view .galaxy-event-legend{order:1}
+  .atlas-galaxy-view .galaxy-glow{
+    order:2;align-self:center;width:min(330px,calc(100vw - 32px));display:grid;grid-template-columns:repeat(3,1fr);
+    padding:3px;border-radius:999px;background:rgba(4,7,12,.72);border-color:rgba(255,255,255,.12);
+  }
+  .atlas-galaxy-view .galaxy-glow button{
+    min-height:34px;padding:0 10px;border-radius:999px;font-size:9.5px;letter-spacing:.11em;
+  }
+  .atlas-galaxy-view .galaxy-glow button.active{
+    background:rgba(233,179,91,.07);
+    box-shadow:inset 0 0 0 1px rgba(233,179,91,.72);
+    border-color:transparent;
+  }
+
+  .atlas-galaxy-view .galaxy-event-legend{
+    gap:8px;padding:0 2px 2px;
+  }
+  .atlas-galaxy-view .galaxy-event-legend li{
+    min-width:84px;border-color:rgba(255,255,255,.14);background:rgba(4,7,12,.76);
+  }
+  .atlas-galaxy-view .galaxy-event-legend button{
+    min-height:40px;padding:4px 13px 4px 9px;gap:7px;
+  }
+  .atlas-galaxy-view .galaxy-event-legend .ev-glyph{width:20px;height:20px}
+  .atlas-galaxy-view .galaxy-event-legend .ev-short{font-size:10px}
+  .atlas-galaxy-view .galaxy-event-legend b{font-size:12px}
+
+  .atlas-galaxy-view .galaxy-event{--s:.66}
+  .atlas-galaxy-view .galaxy-event[data-kind=AGN],
+  .atlas-galaxy-view .galaxy-event[data-kind=SUPERNOVA]{--s:.80}
+  .atlas-galaxy-view .galaxy-event[data-kind=HII]{--s:.54}
+  .atlas-galaxy-view .galaxy-event:not(.focused) .galaxy-event-hit{opacity:.72}
+  .atlas-galaxy-view .galaxy-event.focused .galaxy-event-hit{opacity:1}
+  .atlas-galaxy-view .galaxy-event[data-tag-visible="false"] .galaxy-event-tag{display:none!important}
+  .atlas-galaxy-view .galaxy-event-tag{
+    left:calc(18px * var(--s));top:calc(-16px * var(--s) + var(--tag-shift,0px));
+    padding:2px 7px;background:rgba(4,7,12,.88);box-shadow:0 3px 14px rgba(0,0,0,.28);
+  }
+  .atlas-galaxy-view .galaxy-events.dimmed .galaxy-event:not(.focused){opacity:.22!important}
+
+  .atlas-galaxy-view .galaxy-event-panel{
+    left:10px;right:10px;bottom:calc(76px + env(safe-area-inset-bottom));width:auto;
+    max-height:min(38dvh,330px);padding:12px 14px 14px;border:1px solid rgba(255,255,255,.12);
+    border-top:2px solid var(--ev);border-radius:18px;
+    background:linear-gradient(180deg,rgba(8,13,23,.94),rgba(4,8,15,.97));
+    box-shadow:0 18px 50px rgba(0,0,0,.42);backdrop-filter:blur(16px);
+  }
+  .atlas-galaxy-view .galaxy-event-panel::before{
+    width:34px;height:3px;margin:-5px auto 0;background:rgba(255,255,255,.22);
+  }
+  .atlas-galaxy-view .galaxy-event-panel header{gap:8px}
+  .atlas-galaxy-view .galaxy-event-panel .ev-glyph{width:28px;height:28px}
+  .atlas-galaxy-view .galaxy-event-panel .ev-label{font-size:13px}
+  .atlas-galaxy-view .galaxy-event-panel .ev-action{padding:8px 9px}
+  .atlas-galaxy-view .galaxy-event-panel .ev-context{
+    flex-wrap:nowrap;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;
+  }
+  .atlas-galaxy-view .galaxy-event-panel .ev-technical{margin-top:2px}
+}
+
+@media(max-width:430px){
+  .atlas-galaxy-view .galaxy-hud{left:6px;right:6px}
+  .atlas-galaxy-view .galaxy-event-legend li{min-width:78px}
+  .atlas-galaxy-view .galaxy-event-legend button{padding-right:11px}
+  .atlas-galaxy-view .galaxy-glow{width:min(310px,calc(100vw - 24px))}
+  .atlas-galaxy-view .galaxy-event-panel{
+    left:8px;right:8px;bottom:calc(72px + env(safe-area-inset-bottom));max-height:min(40dvh,310px);
+  }
+}

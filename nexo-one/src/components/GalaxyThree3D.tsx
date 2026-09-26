@@ -795,8 +795,21 @@ export const GalaxyThree3D = forwardRef<CanvasGraph25DHandle, Props>(function Ga
     }
     return nodes
       .filter(node => isMajor(node, selectedId) || local.has(node.id))
-      .slice(0, isMobile ? 18 : 42);
+      .slice(0, isMobile ? 8 : 42);
   }, [edges, isMobile, nodes, selectedId]);
+
+  const visibleEventTagIds = useMemo(() => {
+    if (!isMobile) return new Set(events.map(event => event.id));
+    const keep = new Set<string>();
+    if (focusEvent?.id) keep.add(focusEvent.id);
+    const seenKinds = new Set<GalaxyEvent['kind']>();
+    for (const event of [...events].sort((a, b) => b.intensity - a.intensity)) {
+      if (seenKinds.has(event.kind)) continue;
+      seenKinds.add(event.kind);
+      keep.add(event.id);
+    }
+    return keep;
+  }, [events, focusEvent?.id, isMobile]);
 
   const flyToPoint = (point: { x: number; y: number; z: number }, distance: number, duration = 720) => {
     const camera = cameraRef.current;
@@ -933,7 +946,7 @@ export const GalaxyThree3D = forwardRef<CanvasGraph25DHandle, Props>(function Ga
           uPixelRatio: { value: renderer.getPixelRatio() },
           uColorA: { value: palette.accent },
           uColorB: { value: palette.strong },
-          uOpacity: { value: spiral ? (isMobile ? 1.6 : 0.95) * glow : isMacro ? (themeName === 'light' ? 0.20 : 0.24) : (themeName === 'light' ? 0.38 : 0.52) },
+          uOpacity: { value: spiral ? (isMobile ? 1.18 : 0.95) * glow : isMacro ? (themeName === 'light' ? 0.20 : 0.24) : (themeName === 'light' ? 0.38 : 0.52) },
         },
         vertexShader: spiral ? spiralVertexShader : galaxyVertexShader,
         fragmentShader: spiral ? spiralFragmentShader : galaxyFragmentShader,
@@ -948,7 +961,7 @@ export const GalaxyThree3D = forwardRef<CanvasGraph25DHandle, Props>(function Ga
       scene.add(disk);
       const deepFieldGeometry = spiral ? buildDeepField(isMobile ? 220 : 560) : null;
       const deepFieldMaterial = spiral ? new ShaderMaterial({
-        uniforms: { uPixelRatio: { value: renderer.getPixelRatio() }, uOpacity: { value: 0.75 } },
+        uniforms: { uPixelRatio: { value: renderer.getPixelRatio() }, uOpacity: { value: isMobile ? 0.52 : 0.75 } },
         vertexShader: deepFieldVertexShader,
         fragmentShader: deepFieldFragmentShader,
         transparent: true,
@@ -1246,6 +1259,7 @@ export const GalaxyThree3D = forwardRef<CanvasGraph25DHandle, Props>(function Ga
             ref={element => { if (element) eventsRef.current.set(event.id, element); else eventsRef.current.delete(event.id); }}
             className={`galaxy-event${focusEvent?.id === event.id ? ' focused' : ''}`}
             data-kind={event.kind}
+            data-tag-visible={visibleEventTagIds.has(event.id) ? 'true' : 'false'}
             title={event.label}
             style={{ '--event-intensity': event.intensity } as CSSProperties}
           >
