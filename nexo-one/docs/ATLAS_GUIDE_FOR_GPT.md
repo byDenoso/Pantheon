@@ -6,7 +6,7 @@ Stack: React + TypeScript + Vite; Three.js na galáxia; Node ESM no servidor (`n
 
 ## 1. De onde vêm os dados (nunca editar dado à mão no site)
 Tower (Drive, privada) → projeção pública (TCC `runtime/nexo_agent_api/public_projection.py`, inclui `evolution`)
-→ build do Pages (`.github/workflows/nexo-one-pages.yml`, a cada 15 min e a cada push em `nexo-one/**`):
+→ build do Pages (`.github/workflows/nexo-one-pages.yml`, a cada push em `nexo-one/**`, por `repository_dispatch` da projeção e por `workflow_dispatch`; o agendamento horário é apenas recuperação):
 - `scripts/build-pages-system.mjs` → `dist/system.json` (SystemState: inbox, lanes, graph, guardian, **evolution**).
 - `scripts/build-galaxy-snapshot.mjs` + `server/compiler/galaxy-v1.mjs` → `dist/galaxy/latest.json` (entidades, braços, eventos).
 O front só lê `system.json` e `galaxy/latest.json`. Mudou regra de dado → mude a projeção (TCC) ou os builders, não o React.
@@ -41,7 +41,9 @@ Se mudar o que entra no inbox, atualize essa conferência junto.
 2. Push → Pages reconstrói (5 min). Confira o site no celular e no desktop, tema claro e escuro.
 3. Nada de segredo no front; a Vercel guarda `NEXO_INBOX_TOKEN` (portão `/api/inbox-drop`), só servidor usa.
 
-## 6. Portão e robô (back-end que o front reflete)
+## 6. Conversas, portão e robô (back-end que o front reflete)
+- Intenção acionável que nasce numa conversa entra no registro canônico por `nexo.ingest_request` (`REQUEST_INGRESS_V1`), com `thread_id` da conversa e `correlation_id`; a Tower guarda fingerprint, referências de origem e um resumo compacto. Isso incorpora a decisão/trabalho ao sistema sem fingir que a transcrição inteira foi importada. Não contorne o gate humano: decisões de aprovação continuam nascidas numa conversa com o Dener.
 - `/api/inbox-drop` (Vercel): tarefa abre link → o ATLAS monta os chunks e grava o envelope no **Sheet spool** já consumido pelo Writer. Não depende de `Contents: write` no token do GitHub. GitHub Contents fica só como fallback de compatibilidade.
 - O token `NEXO_INBOX_TOKEN` pode ser **read-only** para drenar arquivos legados de `byDenoso/TCC@nexo-inbox`: depois que o Writer aplica um item, o ATLAS registra o ACK no Sheet. Se o token não puder mover/apagar o arquivo, ele fica fisicamente no branch, mas não volta para a fila.
-- Writer robô (`.github/workflows/nexo-writer-robot.yml`, 15 min): aplica Sheet spool + inbox legado na Tower, fecha roadmaps no critério de parada, despacha **baterias** (`nexo-test-battery.yml`, até 20 testes em paralelo, sem segredos) e dispara o build do site.
+- Writer robô (`.github/workflows/nexo-writer-robot.yml`, a cada 5 min e quando `nexo-wake/*.json` muda): aplica Sheet spool + inbox legado na Tower, fecha roadmaps no critério de parada, despacha **baterias** (`nexo-test-battery.yml`, até 20 testes em paralelo, sem segredos) e chama o build do site. O workflow do Pages também tem um agendamento horário de recuperação; esse cron não substitui o disparo explícito do Writer nem prova que um papel concluiu seu trabalho.
+
