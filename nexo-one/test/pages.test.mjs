@@ -361,7 +361,7 @@ test('published Pages auto-syncs Tower snapshots without a new infrastructure se
 
   assert.match(workflow, /repository_dispatch:/);
   assert.match(workflow, /nexo-public-projection-updated/);
-  assert.match(workflow, /cron:\s*'\*\/15 \* \* \* \*'/);
+  assert.match(workflow, /cron:\s*'0 \* \* \* \*'/);
   assert.match(workflow, /METALEARNING_CURRENT\.json/);
   assert.match(workflow, /PEER_DETECTION_BATTERY_V1\.json/);
   assert.match(hook, /setInterval/);
