@@ -11,7 +11,8 @@
     "inbox/scheduled-pitia-batch-87f7b2c4b89ee9d3.json": "2a59d1e3e73401a15943f06456c4c5384453fabc41b09c325c9c1727fead4253",
     "inbox/scheduled-refutador-batch-26735cf22947447d.json": "102f215e38928ea667534e374fe4aee93af7f4f8c31fc65d78298c020dde7d32",
     "inbox/scheduled-refutador-batch-71e7757da5d9a9c5.json": "36306ee47f83bb708dcf22ff71133b37949a2cd5564f83341a52447d29eafccb",
-    "inbox/scheduled-refutador-batch-ea7558b91a000adb.json": "56923209d9cd860d1118cc242c76359157e9d7ef254b4fe54343c72e23d69bc7"
+    "inbox/scheduled-refutador-batch-ea7558b91a000adb.json": "56923209d9cd860d1118cc242c76359157e9d7ef254b4fe54343c72e23d69bc7",
+    "inbox/scheduled-refutador-batch-f640fe53d0954ad0.json": "d691b36141348b8f1324ea6a88dc7f03ec71ca1514dec98afd88801c17b1fd99"
   },
   "base_commit": "c17db97927d4a49b72172c1963a50164dfb4b9be",
   "source": "byDenoso/TCC@nexo-inbox",
