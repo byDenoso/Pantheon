@@ -31,7 +31,7 @@ export function Overview(
   const groups = inboxGroups(state);
   const urgent = groups.flatMap(group => group.items).slice(0, 3);
   const resolvable = resolvableActions(state);
-  // The autonomous queue that actually runs is the test frontier (Executor, hourly).
+  // The autonomous queue that actually runs is the test frontier; cadence is configured outside this view.
   const frontier = state.graph.nodes.filter(node => node.type === 'TEST' && (phaseOf(node) === 'READY' || phaseOf(node) === 'RUNNING'));
   const lanes = laneViews(state);
   const unavailableProviders = state.providers.filter(provider =>
@@ -122,9 +122,9 @@ export function Overview(
             </div>
           : frontier.length
             ? <EmptyState title={`${frontier.length} testes na fronteira do Executor.`}
-                description={`O Executor científico roda sozinho a cada hora. Próximos: ${frontier.slice(0, 3).map(node => node.question_plain || node.label).join(' · ')}.`} />
+                description={`O Executor científico retoma os testes na próxima execução agendada. Próximos: ${frontier.slice(0, 3).map(node => node.question_plain || node.label).join(' · ')}.`} />
             : <EmptyState title="Fronteira vazia."
-                description="Nenhum teste pronto agora; o Learner levanta novas hipóteses a cada 2 horas." />}
+                description="Nenhum teste pronto agora; o Learner propõe novas hipóteses na próxima execução agendada." />}
       </section>
 
       <section aria-labelledby="lanes-title" data-order="lanes">
