@@ -965,8 +965,8 @@ function lanesFromProjection(projection, observedAt) {
       domain,
       current_state: tests.length + ' testes · ' + done.length + ' concluídos · ' + running.length + ' em andamento · ' + ready.length + ' prontos',
       next_action: next
-        ? (running.includes(next) ? 'Continuar ' : 'Executar ') + testLabel(next) + ' (Executor científico, próxima hora).'
-        : 'Sem teste pronto: o Learner levanta novas hipóteses a cada 2 h.',
+        ? (running.includes(next) ? 'Continuar ' : 'Executar ') + testLabel(next) + ' (Executor científico, próxima execução agendada).'
+        : 'Sem teste pronto: o Learner propõe novas hipóteses na próxima execução agendada.',
       last_effect: latest ? testLabel(latest) + ': ' + (testMeaning(latest) || 'concluído, leitura simples pendente.') : null,
       blockers: blocked.map(item => String(item.id) + ': ' + String(item.status || item.operational_status || 'BLOCKED')),
       side_quests: [],
