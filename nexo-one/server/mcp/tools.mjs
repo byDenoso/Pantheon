@@ -24,7 +24,7 @@ function scienceModelFor(snapshot){
     scienceModelCache.set(key,cached);
     return {...cached,generatedAt:text(snapshot?.generatedAt)};
   }
-  const model=scienceModelFor(snapshot);
+  const model=buildScienceReadModelV2(snapshot);
   scienceModelCache.set(key,model);
   while(scienceModelCache.size>SCIENCE_MODEL_CACHE_LIMIT)scienceModelCache.delete(scienceModelCache.keys().next().value);
   return model;
@@ -64,7 +64,7 @@ function findEntity(model,id){
 
 export async function executeMcpTool(snapshot,name,args={}){
   if(!MCP_TOOL_NAMES.includes(name))throw new Error(`UNKNOWN_MCP_TOOL:${name}`);
-  const model=buildScienceReadModelV2(snapshot);
+  const model=scienceModelFor(snapshot);
   switch(name){
     case 'get_science_state': return model;
     case 'get_changes': return buildScienceChanges(snapshot,model);
