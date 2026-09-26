@@ -61,10 +61,16 @@ test('unknown MCP tool fails closed',async()=>{
 
 test('science model cache keys on semantic fingerprint without freezing generatedAt',async()=>{
   const fingerprint='sha256:'+'a'.repeat(64);
-  const first=await executeMcpTool({...snapshot,fingerprint,generatedAt:'2026-09-12T12:01:00Z'},'get_science_state',{});
-  const second=await executeMcpTool({...snapshot,fingerprint,generatedAt:'2026-09-12T12:02:00Z'},'get_science_state',{});
+  let projectionReads=0;
+  const cachedSnapshot={...snapshot,fingerprint,generatedAt:'2026-09-12T12:01:00Z'};
+  Object.defineProperty(cachedSnapshot,'projections',{get(){projectionReads+=1;return snapshot.projections;}});
+  const first=await executeMcpTool(cachedSnapshot,'get_science_state',{});
+  const readsAfterBuild=projectionReads;
+  cachedSnapshot.generatedAt='2026-09-12T12:02:00Z';
+  const second=await executeMcpTool(cachedSnapshot,'get_science_state',{});
   assert.equal(first.fingerprint,second.fingerprint);
   assert.equal(second.generatedAt,'2026-09-12T12:02:00Z');
+  assert.equal(projectionReads,readsAfterBuild);
   const changes=await executeMcpTool({...snapshot,fingerprint,generatedAt:'2026-09-12T12:03:00Z'},'get_changes',{});
   assert.equal(changes.contract,'NEXO_ACTIVITY_LEDGER_V1');
 });
