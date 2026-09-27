@@ -237,6 +237,32 @@ Corrigido em `fix/cockpit-canonical-telemetry`, verificado contra o artefacto ao
 
 ---
 
+## AUT-011 — Executor híbrido em GitHub Actions
+
+**Severidade: alta para throughput. Infraestrutura implantada; primeiro ciclo canônico de produção ainda precisa ser observado.**
+
+O Executor deixa de gastar a ronda com compute determinístico que um runner normal executa melhor.
+O papel passa a ser: resolver a definição científica, congelar a prediction, validar inputs/proveniência,
+preparar uma `TEST_BATTERY`, fiscalizar o retorno e corrigir falhas de runtime. O compute público
+determinístico corre em `NEXO test battery`; Writer/Tower continuam a ser as únicas autoridades de estado.
+
+Implementado e provado antes do cutover:
+- runtime base em `ubuntu-latest` + Python 3.12;
+- NumPy, SciPy, pandas e requests instalados fail-closed, com `pip check`;
+- rede pública, filesystem, git/curl/tar/timeout e tar+zstd verificados;
+- 45/45 testes atuais do runtime TCC passaram no runner hospedado;
+- canário real do workflow de bateria passou `plan → preflight → run → collect`;
+- matriz suporta até 20 shards independentes; qualquer limite menor do gene continua a mandar;
+- PR canary nunca entra no estado canônico; o coletor do Writer aceita apenas execuções `workflow_dispatch`;
+- runner público tem `contents: read`, sem credenciais Tower/Drive e sem dados Olympus/privados.
+
+**Fluxo:** `TEST_BATTERY → Writer → GitHub Actions → battery-results → BATTERY_STATUS → Writer → Tower`.
+
+**Verificação final:** observar pelo menos uma bateria canônica de produção ir de READY a resultado/retorno
+de runtime pela cadeia completa, sem execução científica duplicada no ChatGPT e sem dados privados nos logs.
+
+---
+
 ## Ordem de ataque
 
 Por `impacto × recorrência ÷ risco`:
@@ -246,7 +272,8 @@ Por `impacto × recorrência ÷ risco`:
 3. **AUT-002 + AUT-003** — cadeia de fallback e escrita durável. Acaba com a perda de resultados.
 4. **AUT-004** — elegibilidade real. É o que faz o rendimento subir.
 5. **AUT-009** — decisão sobre a Vercel.
-6. **AUT-005, AUT-006, AUT-007** — observabilidade e triagem.
+6. **AUT-011** — primeira bateria canônica pelo runner já provado; medir throughput e falhas reais.
+7. **AUT-005, AUT-006, AUT-007** — observabilidade e triagem.
 
 ## Como medir que ficou autónomo
 
