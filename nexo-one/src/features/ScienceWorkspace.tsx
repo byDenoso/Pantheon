@@ -61,6 +61,13 @@ function textOf(value:unknown):string{
 function shortId(id:string):string{
   return id.length>34?id.slice(0,31)+'…':id;
 }
+function testDisplayName(item:ScienceProjectionRecord):string{
+  const question=String(valueOf(item,'question_plain')??'').trim();
+  return question||'Teste sem descrição simples';
+}
+function shortLabel(value:string,max=38):string{
+  return value.length>max?value.slice(0,max-1)+'…':value;
+}
 function csvEscape(value:unknown):string{
   const text=textOf(value).replaceAll('"','""');
   return `"${text}"`;
@@ -139,7 +146,7 @@ function scienceGraphModel(projection:ScienceProjectionV1,generatedAt:string):At
     const campaign=String(valueOf(item,'campaign_id')||'');
     const parent=campaign&&campaignIds.has(campaign)?campaignId(campaign):rootId;
     base.push({
-      id:testId(item.id),sourceId:item.id,name:item.id,domain:'SCIENCE',parentId:parent,entityType:'TEST',
+      id:testId(item.id),sourceId:item.id,name:testDisplayName(item),domain:'SCIENCE',parentId:parent,entityType:'TEST',
       status:textOf(valueOf(item,'verdict')),summary:textOf(valueOf(item,'method')),depth:parent===rootId?1:2,
       childCount:0,descendantCount:0,relationCount:0,mix:50,updatedAt:generatedAt,sourceRevision:projection.source.tower_commit,
       fingerprint:item.fingerprint,authorityClass:'TOWER_V06',sourceRef:item.source_ref,sourceLinks:[],temporal:[],synthetic:false,
@@ -290,7 +297,7 @@ export default function ScienceWorkspace({state}:{state:SystemState}){
     const value=nested(test,'result','value')?.value;
     if(typeof value!=='number')return[];
     const lo=nested(test,'result','err_lo')?.value,hi=nested(test,'result','err_hi')?.value;
-    return [{id:test.id,parameter:textOf(nested(test,'result','parameter')?.value),value,
+    return [{id:test.id,title:testDisplayName(test),parameter:textOf(nested(test,'result','parameter')?.value),value,
       lo:typeof lo==='number'?lo:null,hi:typeof hi==='number'?hi:null,unit:textOf(nested(test,'result','unit')?.value),
       verdict:textOf(valueOf(test,'verdict'))}];
   })??[];
@@ -318,7 +325,7 @@ export default function ScienceWorkspace({state}:{state:SystemState}){
     </div>}
 
     {projection&&tab==='testes'&&<DenseTable heads={['Teste','Campanha','Estado','Hipótese','Método','Datasets','Veredito','Claim','σ LEE',...(tests.some(item=>valueOf(item,'publication_status')!==null)?['Publicação']:[])]} empty="Nenhum teste corresponde ao filtro." rows={tests.map(item=><tr key={item.id} className="science-row-open" tabIndex={0} onClick={()=>setOpenRecord({kind:'Teste',record:item})} onKeyDown={event=>{if(event.key==='Enter')setOpenRecord({kind:'Teste',record:item});}}>
-      <td><strong>{shortId(item.id)}</strong><small>{item.id}</small></td><td><StateText value={valueOf(item,'campaign_id')}/></td><td><StateText value={valueOf(item,'status')}/></td><td><StateText value={valueOf(item,'hypothesis_id')}/></td>
+      <td><strong>{testDisplayName(item)}</strong><small>{item.id}</small></td><td><StateText value={valueOf(item,'campaign_id')}/></td><td><StateText value={valueOf(item,'status')}/></td><td><StateText value={valueOf(item,'hypothesis_id')}/></td>
       <td><StateText value={valueOf(item,'method')}/></td><td><StateText value={valueOf(item,'datasets')}/></td><td><StateText value={valueOf(item,'verdict')}/></td>
       <td><StateText value={valueOf(item,'claim_level')}/></td><td><StateText value={nested(item,'statistics','sigma_lee')?.value}/></td>
       {tests.some(candidate=>valueOf(candidate,'publication_status')!==null)&&<td><PublicationStatus value={valueOf(item,'publication_status')}/></td>}
@@ -338,20 +345,20 @@ export default function ScienceWorkspace({state}:{state:SystemState}){
       <div className="science-graphics-toolbar">
         <div role="group" aria-label="Conteúdo gráfico"><button type="button" className={graphMode==='evidencia'?'active':''} onClick={()=>setGraphSurface('evidencia')}>Evidência</button><button type="button" className={graphMode==='relacoes'?'active':''} onClick={()=>setGraphSurface('relacoes')}>Relações</button></div>
         {graphMode==='evidencia'&&<><div role="group" aria-label="Gráfico ou tabela"><button type="button" className={plotMode==='grafico'?'active':''} onClick={()=>setPlotMode('grafico')}>Gráfico</button><button type="button" className={plotMode==='tabela'?'active':''} onClick={()=>setPlotMode('tabela')}>Tabela</button></div>
-        <button type="button" onClick={()=>downloadCsv('ciencia-evidencia.csv',['Teste','Parâmetro','Valor','Erro -','Erro +','Unidade','Veredito'],quantitative.map(row=>[row.id,row.parameter,row.value,row.lo,row.hi,row.unit,row.verdict]))}>CSV</button>
+        <button type="button" onClick={()=>downloadCsv('ciencia-evidencia.csv',['Teste','ID técnico','Parâmetro','Valor','Erro -','Erro +','Unidade','Veredito'],quantitative.map(row=>[row.title,row.id,row.parameter,row.value,row.lo,row.hi,row.unit,row.verdict]))}>CSV</button>
         <button type="button" disabled={!quantitative.length||plotMode!=='grafico'} onClick={()=>downloadPlotPng(svgRef.current)}>PNG</button></>}
       </div>
       {graphMode==='evidencia'&&(quantitative.length===0?<div className="science-projection-missing">Nenhum resultado quantitativo disponível na projeção.</div>:plotMode==='tabela'
-        ?<DenseTable heads={['Teste','Parâmetro','Valor','Erro −','Erro +','Unidade','Veredito']} empty="Nenhum resultado quantitativo disponível." rows={quantitative.map(row=><tr key={row.id}><td>{row.id}</td><td>{row.parameter}</td><td className="science-num">{row.value}</td><td className="science-num">{row.lo??'—'}</td><td className="science-num">{row.hi??'—'}</td><td>{row.unit}</td><td>{row.verdict}</td></tr>)}/>
+        ?<DenseTable heads={['Teste','Parâmetro','Valor','Erro −','Erro +','Unidade','Veredito']} empty="Nenhum resultado quantitativo disponível." rows={quantitative.map(row=><tr key={row.id}><td><strong>{row.title}</strong><small>{row.id}</small></td><td>{row.parameter}</td><td className="science-num">{row.value}</td><td className="science-num">{row.lo??'—'}</td><td className="science-num">{row.hi??'—'}</td><td>{row.unit}</td><td>{row.verdict}</td></tr>)}/>
         :<EvidencePlot svgRef={svgRef} rows={quantitative}/>)}
       {graphMode==='relacoes'&&graphModel&&<NexoGraph model={graphModel} expanded={graphExpanded} selectedId={selectedId} view={graphView} theme={(document.documentElement.dataset.theme==='light'?'light':'dark')} onSelect={setSelectedId} onViewChange={setView}/>}
       <p className="science-chart-source">Fonte: projeção científica do NEXO · campos ausentes são exibidos como “—”.</p>
     </div>}
-    {openRecord&&<DetailDrawer kicker={`${openRecord.kind} · Ciência`} title={openRecord.kind==='Campanha'?(textOf(valueOf(openRecord.record,'title'))!=='—'?textOf(valueOf(openRecord.record,'title')):'Campanha científica'):openRecord.record.id} code={openRecord.record.id} fields={recordFields(openRecord.record)} onClose={closeRecord}/>}
+    {openRecord&&<DetailDrawer kicker={`${openRecord.kind} · Ciência`} title={openRecord.kind==='Campanha'?(textOf(valueOf(openRecord.record,'title'))!=='—'?textOf(valueOf(openRecord.record,'title')):'Campanha científica'):openRecord.kind==='Teste'?testDisplayName(openRecord.record):openRecord.record.id} code={openRecord.record.id} fields={recordFields(openRecord.record)} onClose={closeRecord}/>}
   </section>;
 }
 
-function EvidencePlot({rows,svgRef}:{rows:Array<{id:string;parameter:string;value:number;lo:number|null;hi:number|null;unit:string;verdict:string}>;svgRef:RefObject<SVGSVGElement|null>}){
+function EvidencePlot({rows,svgRef}:{rows:Array<{id:string;title:string;parameter:string;value:number;lo:number|null;hi:number|null;unit:string;verdict:string}>;svgRef:RefObject<SVGSVGElement|null>}){
   const lows=rows.map(row=>row.value-(row.lo??0)),highs=rows.map(row=>row.value+(row.hi??0));
   let min=Math.min(...lows),max=Math.max(...highs);if(min===max){min-=1;max+=1;}
   const x=(value:number)=>220+((value-min)/(max-min))*1040;
@@ -359,7 +366,7 @@ function EvidencePlot({rows,svgRef}:{rows:Array<{id:string;parameter:string;valu
   return <div className="science-plot-wrap"><svg ref={svgRef} viewBox={`0 0 1400 ${height}`} role="img" aria-label="Estimativas quantitativas publicadas">
     <rect width="1400" height={height} className="science-plot-bg"/>
     {rows.map((row,index)=>{const y=62+index*42;const left=x(row.value-(row.lo??0)),right=x(row.value+(row.hi??0));return <g key={row.id}>
-      <text x="16" y={y+4} className="science-plot-label">{shortId(row.id)}</text>
+      <text x="16" y={y+4} className="science-plot-label">{shortLabel(row.title,28)}</text>
       <line x1={left} x2={right} y1={y} y2={y} className="science-plot-error"/>
       <circle cx={x(row.value)} cy={y} r="5" className="science-plot-dot"/>
       <text x={1285} y={y+4} className="science-plot-value">{row.value} {row.unit==='não publicado'?'':row.unit}</text>
