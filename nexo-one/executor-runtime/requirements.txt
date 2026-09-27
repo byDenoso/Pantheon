@@ -1,0 +1,6 @@
+# Base científico do Executor em GitHub Actions.
+# Dependências específicas continuam declaradas por teste na bateria.
+numpy>=2.0,<3
+scipy>=1.13,<2
+pandas>=2.2,<4
+requests>=2.32,<3

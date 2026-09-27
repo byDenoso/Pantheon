@@ -1,49 +1,89 @@
 name: NEXO test battery
-run-name: battery ${{ inputs.battery_id }}
+run-name: battery ${{ inputs.battery_id || 'bat-runner-canary-1' }}
 
-# Heavy/parallel NEXO tests dispatched by the Executor through the Writer robot.
-# Isolation by design: NO secrets, read-only token, no access to the Tower or Drive.
-# The spec (frozen scripts) lives in this public repo at branch nexo-batteries, batteries/<id>.json.
+# Public scientific compute only. The Writer robot dispatches production batteries.
+# Pull requests run the fixed canary so this exact runner is proven before changes merge.
+# No secrets, no Tower/Drive access, read-only repository token, checkout credentials removed.
 on:
   workflow_dispatch:
     inputs:
       battery_id:
         description: battery id (file batteries/<id>.json on branch nexo-batteries)
         required: true
+  pull_request:
+    paths:
+      - '.github/workflows/nexo-test-battery.yml'
+      - 'nexo-one/executor-runtime/**'
 
 permissions:
   contents: read
 
 concurrency:
-  group: nexo-battery-${{ inputs.battery_id }}
+  group: nexo-battery-${{ inputs.battery_id || format('pr-{0}', github.event.pull_request.number) }}
   cancel-in-progress: false
 
+env:
+  NEXO_BATTERY_ID: ${{ inputs.battery_id || 'bat-runner-canary-1' }}
+
 jobs:
+  preflight:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - name: Checkout runtime definition
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: nexo-one/executor-runtime/requirements.txt
+      - name: Install base scientific runtime
+        run: |
+          set -euo pipefail
+          python -m pip install --disable-pip-version-check -r nexo-one/executor-runtime/requirements.txt
+          python -m pip check
+      - name: Verify runner capabilities
+        run: python nexo-one/executor-runtime/smoke.py
+
   plan:
     runs-on: ubuntu-latest
     outputs:
       matrix: ${{ steps.m.outputs.matrix }}
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout frozen battery specs
+        uses: actions/checkout@v4
         with:
           ref: nexo-batteries
+          path: battery-specs
           sparse-checkout: batteries
+          persist-credentials: false
       - id: m
         env:
-          BID: ${{ inputs.battery_id }}
+          BID: ${{ env.NEXO_BATTERY_ID }}
         run: |
           python3 - <<'PY'
           import json, os, re
           bid = os.environ["BID"]
           assert re.fullmatch(r"[a-z0-9-]{3,48}", bid), "bad battery id"
-          spec = json.load(open(f"batteries/{bid}.json", encoding="utf-8"))
-          tests = [{"test_id": t["test_id"], "index": i} for i, t in enumerate(spec["tests"][:20])]
-          with open(os.environ["GITHUB_OUTPUT"], "a") as out:
-              out.write("matrix=" + json.dumps({"include": tests}) + "\n")
+          spec = json.load(open(f"battery-specs/batteries/{bid}.json", encoding="utf-8"))
+          tests = list(spec.get("tests") or [])
+          assert tests, "battery has no tests"
+          assert len(tests) <= 20, "battery exceeds 20-test limit"
+          include, seen = [], set()
+          for i, test in enumerate(tests):
+              test_id = str(test.get("test_id") or "")
+              assert test_id and test_id not in seen, "missing or duplicate test_id"
+              seen.add(test_id)
+              include.append({"test_id": test_id, "index": i})
+          with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as out:
+              out.write("matrix=" + json.dumps({"include": include}, separators=(",", ":")) + "\n")
           PY
 
   run:
-    needs: plan
+    needs: [preflight, plan]
     runs-on: ubuntu-latest
     timeout-minutes: 350
     strategy:
@@ -51,55 +91,152 @@ jobs:
       max-parallel: 20
       matrix: ${{ fromJson(needs.plan.outputs.matrix) }}
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout runtime definition
+        uses: actions/checkout@v4
+        with:
+          path: runtime-base
+          persist-credentials: false
+      - name: Checkout frozen battery specs
+        uses: actions/checkout@v4
         with:
           ref: nexo-batteries
+          path: battery-specs
           sparse-checkout: batteries
-      - uses: actions/setup-python@v5
+          persist-credentials: false
+      - name: Setup Python
+        uses: actions/setup-python@v5
         with:
           python-version: '3.12'
           cache: pip
-          cache-dependency-path: batteries/${{ inputs.battery_id }}.json
-      - name: Run frozen test script
+          cache-dependency-path: runtime-base/nexo-one/executor-runtime/requirements.txt
+      - name: Prepare frozen test
+        id: prepare
+        continue-on-error: true
         env:
-          BID: ${{ inputs.battery_id }}
+          BID: ${{ env.NEXO_BATTERY_ID }}
           IDX: ${{ matrix.index }}
+          MATRIX_TEST_ID: ${{ matrix.test_id }}
         run: |
+          mkdir -p /tmp/job
           python3 - <<'PY'
           import json, os
-          spec = json.load(open(f"batteries/{os.environ['BID']}.json", encoding="utf-8"))
-          test = spec["tests"][int(os.environ["IDX"])]
-          os.makedirs("/tmp/job", exist_ok=True)
-          open("/tmp/job/test.py", "w", encoding="utf-8").write(test["script"])
-          open("/tmp/job/requirements.txt", "w").write("\n".join(["numpy", "scipy", "pandas", "requests"] + test.get("requirements", [])))
-          open("/tmp/job/meta.json", "w").write(json.dumps({"test_id": test["test_id"], "timeout_min": test.get("timeout_min", 30)}))
+          bid, idx, expected_id = os.environ["BID"], int(os.environ["IDX"]), os.environ["MATRIX_TEST_ID"]
+          spec = json.load(open(f"battery-specs/batteries/{bid}.json", encoding="utf-8"))
+          test = spec["tests"][idx]
+          test_id = str(test.get("test_id") or "")
+          meta = {"battery_id": bid, "test_id": test_id or expected_id,
+                  "timeout_min": max(1, min(int(test.get("timeout_min", 30)), 340))}
+          json.dump(meta, open("/tmp/job/meta.json", "w", encoding="utf-8"), ensure_ascii=False)
+          if test_id != expected_id:
+              raise SystemExit("matrix/spec test_id mismatch")
+          script = str(test.get("script") or "")
+          if not script.strip():
+              raise SystemExit("empty test script")
+          requirements = test.get("requirements") or []
+          if not isinstance(requirements, list) or len(requirements) > 20:
+              raise SystemExit("invalid requirements list")
+          cleaned = []
+          for value in requirements:
+              value = str(value).strip()
+              if not value or value.startswith("-") or "://" in value or "@" in value or "\n" in value or "\r" in value:
+                  raise SystemExit(f"unsafe requirement: {value!r}")
+              cleaned.append(value)
+          open("/tmp/job/test.py", "w", encoding="utf-8").write(script)
+          open("/tmp/job/requirements-extra.txt", "w", encoding="utf-8").write("\n".join(cleaned) + ("\n" if cleaned else ""))
           PY
-          pip install -q -r /tmp/job/requirements.txt || true
-          T=$(python3 -c "import json;print(json.load(open('/tmp/job/meta.json'))['timeout_min'])")
-          cd /tmp/job
+      - name: Install deterministic runtime dependencies
+        id: deps
+        if: steps.prepare.outcome == 'success'
+        continue-on-error: true
+        run: |
+          set -euo pipefail
+          python -m pip install --disable-pip-version-check -r runtime-base/nexo-one/executor-runtime/requirements.txt 2>&1 | tee /tmp/job/deps.log
+          if [ -s /tmp/job/requirements-extra.txt ]; then
+            python -m pip install --disable-pip-version-check -r /tmp/job/requirements-extra.txt 2>&1 | tee -a /tmp/job/deps.log
+          fi
+          python -m pip check 2>&1 | tee -a /tmp/job/deps.log
+      - name: Run frozen scientific script
+        id: execute
+        if: steps.prepare.outcome == 'success' && steps.deps.outcome == 'success'
+        env:
+          RESULT_PATH: /tmp/job/result.json
+        run: |
           set +e
-          RESULT_PATH=/tmp/job/result.json timeout "${T}m" python3 test.py > log.txt 2>&1
-          echo "exit=$?" >> log.txt
-          set -e
+          T=$(python3 -c "import json; print(json.load(open('/tmp/job/meta.json'))['timeout_min'])")
+          cd /tmp/job
+          timeout "${T}m" python3 test.py > run.log 2>&1
+          printf '%s\n' "$?" > exit-code.txt
+          exit 0
+      - name: Build shard receipt
+        if: always()
+        env:
+          PREP_OUTCOME: ${{ steps.prepare.outcome }}
+          DEPS_OUTCOME: ${{ steps.deps.outcome }}
+          EXEC_OUTCOME: ${{ steps.execute.outcome }}
+          MATRIX_TEST_ID: ${{ matrix.test_id }}
+        run: |
+          mkdir -p /tmp/job
           python3 - <<'PY'
-          import json
-          meta = json.load(open("/tmp/job/meta.json"))
-          log = open("/tmp/job/log.txt", encoding="utf-8", errors="replace").read()
+          import json, os
+          from pathlib import Path
+          root = Path("/tmp/job")
+          meta = {"test_id": os.environ["MATRIX_TEST_ID"]}
           try:
-              result = json.load(open("/tmp/job/result.json", encoding="utf-8"))
-              ok = isinstance(result, dict) and bool(result.get("verdict"))
+              meta.update(json.load(open(root / "meta.json", encoding="utf-8")))
           except Exception:
-              result, ok = None, False
-          out = {"test_id": meta["test_id"], "ok": ok, "result": (result or {}).get("result", result) if ok else None,
-                 "semantic": (result or {}).get("semantic") if ok else None, "log_tail": log[-4000:]}
-          json.dump(out, open("/tmp/job/out.json", "w", encoding="utf-8"), ensure_ascii=False)
-          print("test", meta["test_id"], "ok" if ok else "FAILED")
+              pass
+          prep, deps, execute = os.environ.get("PREP_OUTCOME", ""), os.environ.get("DEPS_OUTCOME", ""), os.environ.get("EXEC_OUTCOME", "")
+          result = semantic = failure_stage = None
+          ok = False
+          if prep != "success":
+              failure_stage = "PREPARE"
+          elif deps != "success":
+              failure_stage = "DEPENDENCIES"
+          elif execute != "success":
+              failure_stage = "EXECUTOR_STEP"
+          else:
+              try:
+                  exit_code = int((root / "exit-code.txt").read_text().strip())
+              except Exception:
+                  exit_code = 999
+              try:
+                  payload = json.load(open(root / "result.json", encoding="utf-8"))
+                  valid = isinstance(payload, dict) and bool(payload.get("verdict"))
+              except Exception:
+                  payload, valid = None, False
+              ok = exit_code == 0 and valid
+              if valid:
+                  result = payload.get("result", payload)
+                  semantic = payload.get("semantic")
+              if not ok:
+                  failure_stage = "SCIENTIFIC_SCRIPT"
+          logs = []
+          for name in ("deps.log", "run.log"):
+              path = root / name
+              if path.is_file():
+                  logs.append(path.read_text(encoding="utf-8", errors="replace"))
+          receipt = {"test_id": meta["test_id"], "ok": ok, "result": result if ok else None,
+                     "semantic": semantic if ok else None, "failure_stage": failure_stage,
+                     "log_tail": "\n".join(logs)[-4000:]}
+          json.dump(receipt, open(root / "out.json", "w", encoding="utf-8"), ensure_ascii=False)
+          print("test", meta["test_id"], "ok" if ok else f"FAILED:{failure_stage}")
           PY
-      - uses: actions/upload-artifact@v4
+      - name: Upload shard receipt
+        if: always()
+        uses: actions/upload-artifact@v4
         with:
           name: part-${{ matrix.index }}
           path: /tmp/job/out.json
           retention-days: 3
+      - name: Fail closed on runtime failure
+        if: always()
+        run: |
+          python3 - <<'PY'
+          import json
+          value = json.load(open("/tmp/job/out.json", encoding="utf-8"))
+          if not value.get("ok"):
+              raise SystemExit(f"runtime shard failed closed: {value.get('failure_stage')}")
+          PY
 
   collect:
     needs: run
@@ -110,12 +247,16 @@ jobs:
         with:
           pattern: part-*
           path: parts
-      - run: |
+      - name: Aggregate receipts
+        run: |
           python3 - <<'PY'
-          import json, glob
-          results = [json.load(open(p, encoding="utf-8")) for p in sorted(glob.glob("parts/*/out.json"))]
+          import glob, json
+          paths = sorted(glob.glob("parts/*/out.json"))
+          if not paths:
+              raise SystemExit("no shard receipts")
+          results = [json.load(open(path, encoding="utf-8")) for path in paths]
           json.dump({"results": results}, open("battery-results.json", "w", encoding="utf-8"), ensure_ascii=False)
-          print("collected", len(results), "ok", sum(1 for r in results if r["ok"]))
+          print("collected", len(results), "ok", sum(1 for item in results if item.get("ok")), "failed", sum(1 for item in results if not item.get("ok")))
           PY
       - uses: actions/upload-artifact@v4
         with:

@@ -179,12 +179,14 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           mkdir -p /tmp/bat /tmp/dispatch
-          gh run list --repo "$GITHUB_REPOSITORY" --workflow nexo-test-battery.yml --status completed --limit 20 --json databaseId,displayTitle > /tmp/bat/runs.json || echo '[]' > /tmp/bat/runs.json
+          gh run list --repo "$GITHUB_REPOSITORY" --workflow nexo-test-battery.yml --status completed --limit 20 --json databaseId,displayTitle,event > /tmp/bat/runs.json || echo '[]' > /tmp/bat/runs.json
           python3 - <<'PY'
           import json, subprocess, os, pathlib
           runs = json.load(open("/tmp/bat/runs.json"))
           updates = []
           for run in runs:
+              if str(run.get("event") or "") != "workflow_dispatch":
+                  continue  # PR canaries prove the runner but never enter canonical state
               bid = str(run.get("displayTitle", "")).replace("battery ", "").strip()
               if not bid:
                   continue
