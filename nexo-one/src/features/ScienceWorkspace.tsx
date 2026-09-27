@@ -261,6 +261,8 @@ export default function ScienceWorkspace({state}:{state:SystemState}){
     campanhas:projection?.campaigns.length??0,testes:projection?.tests.length??0,hipoteses:projection?.hypotheses.length??0,
     aprendizado:state.filaments.length,graficos:projection?.tests.filter(test=>typeof nested(test,'result','value')?.value==='number').length??0,
   };
+  const unlinkedCampaigns=projection?.tests.filter(test=>valueOf(test,'campaign_id')===null).length??0;
+  const unlinkedHypotheses=projection?.tests.filter(test=>valueOf(test,'hypothesis_id')===null).length??0;
   const setScienceTab=(next:ScienceTab)=>{
     setTab(next);setQuery('');
     const params=routeParams();params.set('tab',next);if(params.get('view')==='learning')params.delete('view');
@@ -312,6 +314,9 @@ export default function ScienceWorkspace({state}:{state:SystemState}){
     </div>
 
     {!projection&&tab!=='aprendizado'&&<div className="science-projection-missing">Projeção científica indisponível neste snapshot.</div>}
+    {projection&&(unlinkedCampaigns>0||unlinkedHypotheses>0)&&<div className="science-projection-missing" role="status">
+      Vínculos incompletos na projeção: {unlinkedCampaigns} testes sem campanha · {unlinkedHypotheses} sem hipótese. O Atlas mantém esses testes visíveis sem inventar parentesco.
+    </div>}
 
     {projection&&tab==='campanhas'&&<DenseTable heads={['Campanha','Pergunta','Estado','Hipóteses','Início','Pré-registro']} empty="Nenhuma campanha corresponde ao filtro." rows={campaigns.map(item=><tr key={item.id} className="science-row-open" tabIndex={0} onClick={()=>setOpenRecord({kind:'Campanha',record:item})} onKeyDown={event=>{if(event.key==='Enter')setOpenRecord({kind:'Campanha',record:item});}}>
       <td><strong>{textOf(valueOf(item,'title'))!=='—'?textOf(valueOf(item,'title')):'Campanha científica'}</strong></td><td><StateText value={valueOf(item,'question_plain')||'Leitura simples ainda não publicada'}/></td><td><StateText value={valueOf(item,'status')}/></td>
