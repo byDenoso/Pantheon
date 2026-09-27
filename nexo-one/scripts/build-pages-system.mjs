@@ -655,7 +655,7 @@ function graphFromProjection(projection, observedAt, filaments = [], peerDetecti
 
   for (const item of projection.tests) {
     const rawId = String(item.id || '');
-    if (!rawId) continue;
+    if (!rawId || peerMembership.testIds.has(rawId)) continue;
     const domain = domainOf(item.domain || 'SCIENCE');
     const id = 'test:' + rawId;
     addNode({
