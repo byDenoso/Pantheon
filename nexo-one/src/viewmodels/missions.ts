@@ -148,9 +148,39 @@ export function recentResults(state: SystemState, limit = 6): MissionResult[] {
   return picked.map(({ hasMeaning: _ignored, ...result }) => result);
 }
 
+/**
+ * Canonical test phases, mirroring lanesFromProjection in scripts/build-pages-system.mjs.
+ * The render graph only carries DONE/READY/BLOCKED status_group buckets, so counting it
+ * makes EM EXECUCAO structurally always zero. Headline counters read the canonical
+ * projection instead, and fall back to the graph only when it is absent.
+ */
+const CANONICAL_PHASE: [RegExp, Phase][] = [
+  [/RUNNING|CHECKPOINT/, 'RUNNING'],
+  [/READY/, 'READY'],
+  [/DONE|COMPLETE|VERIFIED|PROMOTED|REJECTED|INCONCLUSIVE/, 'DONE'],
+  [/BLOCKED|CONFLICT/, 'BLOCKED'],
+];
+
+/** Canonical fields are provenance-wrapped ({ value, source_ref, ... }); accept both shapes. */
+export function canonicalTestPhase(status: unknown): Phase | null {
+  const raw = status && typeof status === 'object' && 'value' in (status as Record<string, unknown>)
+    ? (status as Record<string, unknown>).value
+    : status;
+  const text = String(raw ?? '').toUpperCase();
+  if (!text) return null;
+  for (const [pattern, phase] of CANONICAL_PHASE) if (pattern.test(text)) return phase;
+  return null;
+}
+
 export function telemetryOf(state: SystemState, missions: Mission[]): MissionTelemetry {
-  const tests = state.graph.nodes.filter(node => node.type === 'TEST');
-  const count = (phase: Phase) => tests.filter(node => phaseOf(node) === phase).length;
+  const canonical = state.science_projection_v1?.tests ?? [];
+  const canonicalPhases = canonical.map(test => canonicalTestPhase((test as { status?: unknown }).status));
+  const useCanonical = canonicalPhases.some(phase => phase !== null);
+  const graphTests = state.graph.nodes.filter(node => node.type === 'TEST');
+  const tests = useCanonical ? canonical : graphTests;
+  const count = (phase: Phase) => useCanonical
+    ? canonicalPhases.filter(value => value === phase).length
+    : graphTests.filter(node => phaseOf(node) === phase).length;
   return {
     towerRevision: String(state.bus.fingerprint || '').replace(/^sha256:/, '').slice(0, 12) || '—',
     generatedAt: state.generated_at,
