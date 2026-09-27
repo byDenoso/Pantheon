@@ -172,6 +172,19 @@
 @keyframes evolution-in{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
 @media (prefers-reduced-motion:reduce){.evolution-thoughts li{animation:none}}
 .evolution-charter ul{margin:2px 0 8px;padding-left:18px;font-size:13px;color:var(--obs-dim,#7A889C)}
+.evolution-signals{display:grid;gap:12px;padding:14px;border:1px solid color-mix(in srgb,#9DB4FF 36%,var(--obs-dim,#7A889C));border-radius:10px}
+.evolution-signals>header{display:flex;align-items:flex-start;justify-content:space-between;gap:16px}
+.evolution-signals>header h3{margin:0 0 5px;font-size:15px;color:var(--obs-bright,#E8ECF2)}
+.evolution-signals>header p{max-width:72ch;margin:0;line-height:1.45}
+.evolution-signals>header .evolution-tag{white-space:nowrap}
+.evolution-signals>ul{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,250px),1fr));gap:10px;list-style:none;margin:0;padding:0}
+.evolution-signals>ul>li{display:grid;gap:7px;min-width:0;padding:12px;border:1px solid color-mix(in srgb,var(--obs-dim,#7A889C) 24%,transparent);border-radius:8px}
+.evolution-signal-head{display:flex;align-items:baseline;justify-content:space-between;gap:10px}
+.evolution-signal-head strong{color:var(--obs-bright,#E8ECF2);font-size:13px}
+.evolution-signal-head span{flex:none;color:#9DB4FF;font:11px/1.4 "IBM Plex Mono",ui-monospace,monospace}
+.evolution-signals code{overflow-wrap:anywhere;color:var(--obs-dim,#7A889C);font:11px/1.4 "IBM Plex Mono",ui-monospace,monospace}
+.evolution-signals li small{color:var(--obs-dim,#7A889C);font:11px/1.5 "IBM Plex Mono",ui-monospace,monospace}
+@media(max-width:640px){.evolution-signals>header{flex-direction:column;gap:8px}.evolution-signal-head{align-items:flex-start;flex-direction:column;gap:3px}}
 
 /* Deep-field backdrop across the whole page (Dener 2026-09-25).
    Dark: faint nebulae + scattered stars, fixed behind content. Light: the same sky as a printed star chart —

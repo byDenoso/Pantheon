@@ -412,6 +412,10 @@ export interface EvolutionRoadmapProgress {
   max_tests?: number | null; refuted_streak: number; kill_streak?: number | null; stop_reached?: string | null;
 }
 export interface EvolutionThought { id: string; at: string; kind: string; text: string; refs: string[] }
+export interface EvolutionSignalCluster {
+  cluster_id: string; code: string; occurrences: number; sources: string[];
+  topic_ids: string[]; test_ids: string[]; first_seen?: string | null; last_seen?: string | null;
+}
 export interface EvolutionStatus {
   gate: { charters_waiting: { roadmap_id: string; question?: string | null; objectives?: string[] | null; renewable?: boolean }[];
           canaries_waiting: { gene: string; canary: unknown; since?: string | null }[] };
@@ -422,6 +426,7 @@ export interface EvolutionStatus {
   decoys: { planted: number; revealed: number; caught: number };
   charters?: { roadmap_id: string; status: string; question?: string | null; chartered_at?: string | null }[];
   thoughts?: EvolutionThought[];
+  signal_clusters?: EvolutionSignalCluster[];
   reviews?: Record<string, number>;
 }
 
