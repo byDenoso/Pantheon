@@ -1,0 +1,37 @@
+name: NEXO Sentinel
+
+# Deterministic health check of the machine. No LLM, no writes, no secrets beyond
+# the default read-only token. It reads only public sources, because the logs of a
+# public repository are public: it must never touch the private Vault.
+#
+# A FAIL fails the job, and a failed scheduled workflow notifies the repository
+# owner. That notification is the alert.
+
+on:
+  schedule:
+    - cron: '41 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: nexo-sentinel
+  cancel-in-progress: true
+
+jobs:
+  sentinel:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: nexo-one/scripts/nexo-sentinel.mjs
+          sparse-checkout-cone-mode: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Inspect
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: node nexo-one/scripts/nexo-sentinel.mjs
