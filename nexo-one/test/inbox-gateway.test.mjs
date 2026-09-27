@@ -90,3 +90,40 @@ test('gateway check recognises a processed GitHub id without resubmitting it',as
     assert.equal(status,200);assert.equal(value.complete,true);assert.equal(value.readback,'PASS');assert.equal(value.saved,path);
   });
 });
+
+
+test('inbox-drop uses the per-request Vercel OIDC token when the env token is absent',async()=>{
+  const fx=sheetFixture();
+  let connectAuthorization=null;
+  const wrapped=async(url,options={})=>{
+    if(String(url).includes('/v1/connect/token/')) connectAuthorization=options.headers?.Authorization;
+    return fx.fetch(url,options);
+  };
+  const req={headers:{'x-vercel-oidc-token':'oidc-from-request'}};
+  const localEnv={GOOGLE_CONNECTOR:'google/nexo-google',NEXO_SPOOL_ID:'spool-fixture'};
+  await withFetch(wrapped,async()=>{
+    const [saved,status]=await inboxDrop(new URL('https://atlas.example/api/inbox-drop?id=run-oidc-1&i=1&n=1&d='+encoded),localEnv,req);
+    assert.equal(status,201);
+    assert.equal(saved.readback,'PASS');
+  });
+  assert.equal(connectAuthorization,'Bearer oidc-from-request');
+});
+
+test('read-only GitHub token is not used as a write fallback when the Sheet spool fails',async()=>{
+  const seen=[];
+  const fetch=async(url,options={})=>{
+    const u=String(url);seen.push({u,method:options.method||'GET'});
+    if(u.includes('/v1/connect/token/'))return new Response(JSON.stringify({error:'denied'}),{status:403,headers:{'Content-Type':'application/json'}});
+    if(u.includes('api.github.com'))assert.fail('read-only GitHub token must not be used for gateway writes');
+    return new Response('{}',{status:500,headers:{'Content-Type':'application/json'}});
+  };
+  const localEnv={GOOGLE_CONNECTOR:'google/nexo-google',NEXO_INBOX_TOKEN:'read-only-token',NEXO_SPOOL_ID:'spool-fixture'};
+  const req={headers:{'x-vercel-oidc-token':'oidc-from-request'}};
+  await withFetch(fetch,async()=>{
+    const [value,status]=await inboxDrop(new URL('https://atlas.example/api/inbox-drop?id=run-fail-1&i=1&n=1&d='+encoded),localEnv,req);
+    assert.equal(status,502);
+    assert.equal(value.error,'SHEET_SPOOL_WRITE_FAILED');
+    assert.equal(value.github_token_role,'READ_ONLY_COMPATIBILITY');
+  });
+  assert.equal(seen.some(entry=>entry.u.includes('api.github.com')),false);
+});
