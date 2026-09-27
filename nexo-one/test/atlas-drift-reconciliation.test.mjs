@@ -123,3 +123,14 @@ test('execution and integrity views refuse contradictory empty/green copy', asyn
   assert.doesNotMatch(science, /sourceId:item\.id,name:item\.id/);
   assert.doesNotMatch(science, /<strong>\{shortId\(item\.id\)\}<\/strong><small>\{item\.id\}<\/small><\/td><td><StateText value=\{valueOf\(item,'campaign_id'\)\}/);
 });
+
+
+test('Atlas rejects a projection whose declared TEST count differs from tests[]', async () => {
+  const { buildPagesProjection } = await import('../scripts/build-pages-system.mjs');
+  const p = projection();
+  p.counts.tests = p.tests.length + 1;
+  assert.throws(
+    () => buildPagesProjection({ projection: p, manifestFile: p.manifest }),
+    /projection test count differs from tests\[\] length/,
+  );
+});
