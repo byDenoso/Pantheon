@@ -42,6 +42,7 @@ function ProgressRing({ value, done, total }: { value: number; done: number; tot
 
 function MissionCard({ mission, index, onOpen }: { mission: Mission; index: number; onOpen: () => void }) {
   const phases = (['RUNNING', 'READY', 'BLOCKED', 'DONE'] as Phase[]).filter(phase => mission.counts[phase] > 0);
+  const nextStep = mission.next?.question ?? mission.next?.title;
   return (
     <button className="mc-mission" data-domain={mission.domain} onClick={onOpen}
       style={{ ['--mc-i' as string]: String(index) }}
@@ -65,8 +66,8 @@ function MissionCard({ mission, index, onOpen }: { mission: Mission; index: numb
       <p className="mc-phase-legend">
         {phases.map(phase => `${mission.counts[phase]} ${PHASE_LABEL[phase]}`).join(' · ') || 'sem testes publicados'}
       </p>
-      {mission.next && (
-        <p className="mc-next"><span>PRÓXIMA ETAPA</span>{plainText(mission.next.question ?? mission.next.title, 'Etapa seguinte registrada; descrição simples indisponível.')}</p>
+      {mission.next && nextStep && !isTechnicalText(nextStep) && (
+        <p className="mc-next"><span>PRÓXIMA ETAPA</span>{plainText(nextStep, '')}</p>
       )}
     </button>
   );

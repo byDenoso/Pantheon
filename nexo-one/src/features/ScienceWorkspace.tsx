@@ -301,7 +301,7 @@ export default function ScienceWorkspace({state}:{state:SystemState}){
     <nav className="science-tabs" aria-label="Seções de Ciência">{TABS.map(([id,label])=><button type="button" key={id} className={tab===id?'active':''} aria-current={tab===id?'page':undefined} onClick={()=>setScienceTab(id)}>{label}<span>{counts[id]}</span></button>)}</nav>
     <div className="science-filterbar">
       <label><span>Buscar</span><input value={query} onChange={event=>setQuery(event.target.value)} placeholder="ID, pergunta, método ou estado"/></label>
-      <span className="science-source">Fonte: {projection?'TOWER_V06 · contrato científico':'Projeção científica indisponível'}</span>
+      <span className="science-source">Fonte: {projection?'registro central do NEXO · contrato científico':'Projeção científica indisponível'}</span>
     </div>
 
     {!projection&&tab!=='aprendizado'&&<div className="science-projection-missing">Projeção científica indisponível neste snapshot.</div>}
@@ -345,7 +345,7 @@ export default function ScienceWorkspace({state}:{state:SystemState}){
         ?<DenseTable heads={['Teste','Parâmetro','Valor','Erro −','Erro +','Unidade','Veredito']} empty="Nenhum resultado quantitativo disponível." rows={quantitative.map(row=><tr key={row.id}><td>{row.id}</td><td>{row.parameter}</td><td className="science-num">{row.value}</td><td className="science-num">{row.lo??'—'}</td><td className="science-num">{row.hi??'—'}</td><td>{row.unit}</td><td>{row.verdict}</td></tr>)}/>
         :<EvidencePlot svgRef={svgRef} rows={quantitative}/>)}
       {graphMode==='relacoes'&&graphModel&&<NexoGraph model={graphModel} expanded={graphExpanded} selectedId={selectedId} view={graphView} theme={(document.documentElement.dataset.theme==='light'?'light':'dark')} onSelect={setSelectedId} onViewChange={setView}/>}
-      <p className="science-chart-source">Fonte: NEXO_SCIENCE_PROJECTION_V1 · TOWER_V06 · campos ausentes são exibidos como “—”.</p>
+      <p className="science-chart-source">Fonte: projeção científica do NEXO · campos ausentes são exibidos como “—”.</p>
     </div>}
     {openRecord&&<DetailDrawer kicker={`${openRecord.kind} · Ciência`} title={textOf(valueOf(openRecord.record,'question'))!=='—'&&openRecord.kind==='Campanha'?textOf(valueOf(openRecord.record,'question')):openRecord.record.id} code={openRecord.record.id} fields={recordFields(openRecord.record)} onClose={closeRecord}/>}
   </section>;
