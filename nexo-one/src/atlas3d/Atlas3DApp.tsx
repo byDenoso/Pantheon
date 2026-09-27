@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 import { useSystem } from '../data/useSystem.ts';
 import { atlasRouteParams } from './route-params.ts';
 import type { SystemStore } from '../data/useSystem.ts';
+import type { EvolutionIncidentSummary } from '../contracts/system.ts';
 import {
   ATLAS_GRAPH_LAYERS,
   atlasPathTo,
@@ -15,9 +16,76 @@ import {
 import { GraphViewSwitch, NexoGraph } from '../components/NexoGraph.tsx';
 import { ATLAS_LENSES, atlasModelForLens, normalizeAtlasLens, type AtlasLens } from './atlasLenses.ts';
 import { domainHex } from '../viewmodels/domainPalette.ts';
+import { domainLabel, label } from '../viewmodels/tokens.ts';
 
 type ViewMode = '2d' | '3d' | 'galaxy';
 type AtlasTheme = 'dark' | 'light';
+
+const INCIDENT_STATE_PT: Record<string, { label: string; explanation: string }> = {
+  OBSERVED: { label: 'Em observação', explanation: 'O padrão foi registrado e está sendo acompanhado.' },
+  PREREGISTERED: { label: 'Teste definido', explanation: 'A verificação foi planejada antes de avaliar o resultado.' },
+  REVIEWING: { label: 'Em revisão', explanation: 'As evidências ainda estão sendo avaliadas.' },
+  CONFIRMED: { label: 'Hipótese apoiada', explanation: 'As verificações disponíveis apoiam a explicação proposta.' },
+  REFUTED: { label: 'Hipótese refutada', explanation: 'As verificações não apoiaram a explicação proposta.' },
+  CANARY: { label: 'Mudança em teste isolado', explanation: 'Uma alteração está sendo observada separadamente antes de qualquer adoção.' },
+  ROLLED_BACK: { label: 'Mudança desfeita', explanation: 'A alteração foi retirada e o sistema voltou à versão anterior.' },
+  WAIT_HUMAN: { label: 'Aguardando sua decisão', explanation: 'A próxima etapa exige uma escolha humana.' },
+  CLOSED: { label: 'Acompanhamento encerrado', explanation: 'Este registro foi concluído e permanece no histórico.' },
+};
+const INCIDENT_OWNER_PT: Record<string, string> = {
+  EXECUTOR: 'A automação vai executar a próxima verificação.',
+  LEARNER: 'A automação de aprendizagem vai registrar o que foi aprendido.',
+  REFUTADOR: 'A revisão vai tentar encontrar evidências contra a hipótese.',
+  PITIA: 'A Pítia vai organizar os sinais para a próxima avaliação.',
+  GUARDIAO: 'O Guardião vai conferir a integridade do registro.',
+  DENER: 'O próximo passo depende da sua decisão.',
+  NONE: 'Nenhuma etapa está pendente.',
+};
+
+function IncidentQueue({ incidents }: { incidents: EvolutionIncidentSummary[] }) {
+  return (
+    <section className="atlas-incident-queue" aria-labelledby="atlas-incidents-title">
+      <header>
+        <strong id="atlas-incidents-title">Incidentes em acompanhamento</strong>
+        <span>{incidents.length} registros</span>
+      </header>
+      <p className="atlas-incident-intro">Padrões repetidos viram registros para acompanhar as evidências, as verificações e o próximo responsável.</p>
+      {incidents.length ? (
+        <ul>
+          {incidents.slice(0, 5).map(incident => {
+            const incidentId = /^[A-Za-z0-9._-]{1,96}$/.test(incident.incident_id) ? incident.incident_id : 'ID indisponível';
+            const publicIds = [
+              ...(incident.public_ids?.tests ?? []).map(id => `Teste ${id}`),
+              ...(incident.public_ids?.hypotheses ?? []).map(id => `Hipótese ${id}`),
+              ...(incident.public_ids?.lessons ?? []).map(id => `Lição ${id}`),
+            ].filter(id => /^(Teste|Hipótese|Lição) [A-Za-z0-9._:-]{1,120}$/.test(id)).slice(0, 3);
+            const state = INCIDENT_STATE_PT[incident.state] ?? {
+              label: 'Etapa ainda sem explicação',
+              explanation: 'O registro permanece disponível enquanto o estado é esclarecido.',
+            };
+            const summary = incident.summary_plain?.trim() || incident.summary_pt?.trim()
+              || 'Sinais operacionais recorrentes foram reunidos para uma investigação controlada.';
+            return (
+              <li key={incident.incident_id}>
+                <div className="atlas-incident-id"><strong>{state.label}</strong></div>
+                <p className="atlas-incident-summary">{summary}</p>
+                <p>{state.explanation} {INCIDENT_OWNER_PT[incident.next_owner] ?? 'O próximo passo será definido pela automação responsável.'}</p>
+                <details className="atlas-incident-details">
+                  <summary>Ver evidências e identificadores</summary>
+                  <p>{Math.max(0, Math.trunc(incident.evidence_count) || 0)} registros de evidência reunidos.</p>
+                  {publicIds.length > 0 && <small>Referências de teste e aprendizagem: {publicIds.join(' · ')}</small>}
+                  <small>Identificador técnico: {incidentId}</small>
+                </details>
+              </li>
+            );
+          })}
+        </ul>
+      ) : (
+        <p className="atlas-incident-empty">Nenhum padrão atingiu o critério de acompanhamento. São necessários sinais independentes sobre o mesmo assunto.</p>
+      )}
+    </section>
+  );
+}
 
 const THEME_STORAGE_KEY = 'nexo.atlas.theme.v1';
 
@@ -42,6 +110,11 @@ function statusTone(status: string): string {
   if (/CONFLICT|FAILED|BLOCKED|REJECTED|MISSING/.test(value)) return 'bad';
   if (/WATCH|AGING|STALE|DEGRADED|UNKNOWN|UNVERIFIED|INCONCLUSIVE/.test(value)) return 'warn';
   return 'good';
+}
+
+function readableToken(value: string, fallback: string): string {
+  const translated = label(value);
+  return translated !== value ? translated : /^[A-Z][A-Z0-9_]*$/.test(value) ? fallback : translated;
 }
 
 function formatDate(value: string | null): string {
@@ -98,52 +171,55 @@ function DetailPanel({
         </button>
       )}
       <div className="atlas-domain-pill" style={{ color, borderColor: `${color}55`, background: `${color}12` }}>
-        <span style={{ background: color }} />{node.domain}
+        <span style={{ background: color }} />{domainLabel(node.domain)}
       </div>
       <h1>{node.name}</h1>
-      <p className="atlas-summary">{node.summary}</p>
+      <p className="atlas-summary">{node.summary || 'Ainda não há uma explicação publicada para este item.'}</p>
 
       <div className="atlas-meta-grid">
-        <div><span>Tipo</span><strong>{node.entityType}</strong></div>
-        <div><span>Estado</span><strong className={`tone-${statusTone(node.status)}`}>{node.status}</strong></div>
-        <div><span>Filhos</span><strong>{node.childCount}</strong></div>
-        <div><span>Relações</span><strong>{node.relationCount}</strong></div>
-        <div><span>Nível na hierarquia</span><strong>{node.depth === 0 ? 'raiz' : node.depth}</strong></div>
+        <div><span>O que é</span><strong>{readableToken(node.entityType, 'Registro do sistema')}</strong></div>
+        <div><span>Situação</span><strong className={`tone-${statusTone(node.status)}`}>{readableToken(node.status, 'Estado ainda não descrito')}</strong></div>
+        <div><span>Partes menores</span><strong>{node.childCount}</strong></div>
+        <div><span>Ligações</span><strong>{node.relationCount}</strong></div>
+        <div><span>Nível no mapa</span><strong>{node.depth === 0 ? 'principal' : node.depth}</strong></div>
         <div><span>Atualizado</span><strong>{formatDate(node.updatedAt)}</strong></div>
       </div>
 
       <section className="atlas-detail-section">
-        <header><strong>Subestações</strong><span>{children.length}</span></header>
+        <header><strong>Partes menores</strong><span>{children.length}</span></header>
+        <p>Itens que pertencem a este assunto e podem ser consultados separadamente.</p>
         <div className="atlas-chips">
           {children.length
             ? children.map(child => (
               <button className="atlas-chip" key={child.id} onClick={() => onSelectNode(child.id)}>{child.name}</button>
             ))
-            : <span className="atlas-chip">folha</span>}
+            : <span className="atlas-chip">Sem partes menores</span>}
         </div>
       </section>
 
       <section className="atlas-detail-section">
-        <header><strong>Pontes</strong><span>{related.length}</span></header>
+        <header><strong>Ligações com outras áreas</strong><span>{related.length}</span></header>
+        <p>Estas ligações mostram onde este item se conecta a outras partes do NEXO.</p>
         <div className="atlas-chips">
           {related.length
             ? related.slice(0, 18).map(item => (
               <button className="atlas-chip" key={item.id} onClick={() => onSelectNode(item.id)}>{item.name}</button>
             ))
-            : <span className="atlas-chip">sem relação transversal visível</span>}
+            : <span className="atlas-chip">Nenhuma ligação publicada</span>}
         </div>
       </section>
 
       <section className="atlas-detail-section atlas-learning-detail">
-        <header><strong>Aprendizado</strong><span>{learning.length} rotas</span></header>
+        <header><strong>Aprendizados conectados</strong><span>{learning.length}</span></header>
+        <p>Relações de aprendizagem publicadas entre este item e outros assuntos.</p>
         <div className="atlas-learning-list">
           {learning.length ? learning.slice(0, 12).map(item => (
             <button key={item.id} className="atlas-learning-route" onClick={() => onSelectNode(item.otherId)}>
-              <span data-kind={item.kind || 'LEARNING'}>{item.kind === 'SCIENTIFIC_LEARNING_PIPELINE' ? 'Científico' : item.kind === 'PROCEDURAL' ? 'Procedural' : 'Semântico'}</span>
+              <span data-kind={item.kind || 'LEARNING'}>{item.kind === 'SCIENTIFIC_LEARNING_PIPELINE' ? 'Pesquisa' : item.kind === 'PROCEDURAL' ? 'Como fazer' : 'Conceitos'}</span>
               <strong>{item.theme}</strong>
               <small>{item.direction} · {item.otherName}{item.records > 1 ? ` · ${item.records} registros` : ''}</small>
             </button>
-          )) : <span className="atlas-chip">sem aprendizado direto nesta estação</span>}
+          )) : <span className="atlas-chip">Nenhum aprendizado ligado diretamente a este item.</span>}
           {learning.length > 12 && <small className="atlas-learning-more">+{learning.length - 12} rotas adicionais</small>}
         </div>
       </section>
@@ -169,27 +245,29 @@ function DetailPanel({
       )}
 
       <section className="atlas-detail-section">
-        <header><strong>Temporal</strong><span>{node.temporal.length}</span></header>
+        <header><strong>Histórico</strong><span>{node.temporal.length}</span></header>
+        <p>Datas ajudam a entender quando o dado foi observado e quando esta visão foi montada.</p>
         <div className="atlas-timeline">
           {node.temporal.length ? node.temporal.map(point => (
             <div key={`${point.label}:${point.at}`}>
-              <span>{point.label}</span><strong>{formatDate(point.at)}</strong>
+              <span>{{ observed: 'Observado', checked: 'Conferido', projection: 'Visão publicada' }[point.label]}</span><strong>{formatDate(point.at)}</strong>
             </div>
-          )) : <p>Não há série histórica publicada para esta entidade.</p>}
-          <div><span>projeção atual</span><strong>{formatDate(generatedAt)}</strong></div>
+          )) : <p>Nenhuma data anterior foi publicada para este item.</p>}
+          <div><span>Dados publicados em</span><strong>{formatDate(generatedAt)}</strong></div>
         </div>
       </section>
 
-      <section className="atlas-detail-section atlas-provenance">
-        <header><strong>Proveniência</strong><span>{node.synthetic ? 'derivada' : 'canônica'}</span></header>
+      <details className="atlas-detail-section atlas-provenance">
+        <summary>Origem e dados técnicos</summary>
+        <p>Use estas referências para conferir de qual registro os dados foram compilados.</p>
         <dl>
-          <dt>ID</dt><dd>{node.id}</dd>
-          <dt>source_ref</dt><dd>{node.sourceRef || '—'}</dd>
-          <dt>source_revision</dt><dd>{node.sourceRevision || '—'}</dd>
-          <dt>fingerprint</dt><dd>{node.fingerprint || '—'}</dd>
-          <dt>authority</dt><dd>{node.authorityClass || '—'}</dd>
+          <dt>Identificador</dt><dd>{node.id}</dd>
+          <dt>Referência da fonte</dt><dd>{node.sourceRef || '—'}</dd>
+          <dt>Revisão da fonte</dt><dd>{node.sourceRevision || '—'}</dd>
+          <dt>Impressão digital</dt><dd>{node.fingerprint || '—'}</dd>
+          <dt>Autoridade</dt><dd>{node.synthetic ? 'Derivada de outros registros' : 'Registro original'}</dd>
         </dl>
-      </section>
+      </details>
     </div>
   );
 }
@@ -382,6 +460,7 @@ export function Atlas3DContent({system,themeOverride}:{system:SystemStore;themeO
   };
 
   const learningLinks = model.crossLinks.filter(link => link.isLearning);
+  const incidents = system.state.evolution?.incidents ?? [];
   const learningLinkCount = learningLinks.length;
   const learningRecordCount = new Set(
     learningLinks.map(link => link.learningRef || link.id),
@@ -476,7 +555,7 @@ export function Atlas3DContent({system,themeOverride}:{system:SystemStore;themeO
       const otherId = outgoing ? link.target : link.source;
       const other = model.nodeMap.get(otherId);
       if (!other) continue;
-      const theme = link.learningTheme || link.learningGroup || link.label.replace(/^Learning ·\s*/i, '');
+      const theme = link.learningTheme || link.learningGroup || link.label.replace(/^(?:Learning|Aprendizado) ·\s*/i, '');
       const key = [outgoing ? 'out' : 'in', otherId, link.learningKind || 'LEARNING', theme].join('|');
       const current = grouped.get(key);
       if (current) {
@@ -604,7 +683,7 @@ export function Atlas3DContent({system,themeOverride}:{system:SystemStore;themeO
                 {allExpanded ? 'Contrair tudo' : 'Expandir tudo'}
               </button>
               <label className="atlas-toggle"><input type="checkbox" checked={showBeams} onChange={event => setShowBeams(event.target.checked)} />Relações</label>
-              <button className="atlas-button atlas-mobile-details-toggle" aria-expanded={mobileDetailsOpen} aria-controls="atlas-details-panel" onClick={() => setMobileDetailsOpen(value => !value)}>Detalhes</button>
+              <button className="atlas-button atlas-mobile-details-toggle" aria-expanded={mobileDetailsOpen} aria-controls="atlas-details-panel" onClick={() => setMobileDetailsOpen(value => !value)}>{incidents.length ? `Incidentes ${incidents.length} · detalhes` : 'Incidentes · detalhes'}</button>
             </div>
           }
         />
@@ -695,6 +774,7 @@ export function Atlas3DContent({system,themeOverride}:{system:SystemStore;themeO
             ×
           </button>
         </div>
+        <IncidentQueue incidents={incidents} />
         <DetailPanel
           node={selected}
           children={children}

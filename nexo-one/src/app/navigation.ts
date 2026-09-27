@@ -71,38 +71,38 @@ export interface NavGroup { id: string; label: string; entries: NavEntry[] }
 
 export const NAV_GROUPS: NavGroup[] = [
   {
-    id: 'command', label: 'COMANDO', entries: [
-      { id: 'OVERVIEW', label: 'Overview', glyph: '◎', hint: 'Estado atual, atenção e lanes' },
-      { id: 'INBOX', label: 'Needs Dener', glyph: '⌾', hint: 'Somente gates canônicos que exigem ação humana explícita' },
+    id: 'command', label: 'INÍCIO', entries: [
+      { id: 'OVERVIEW', label: 'Resumo', glyph: '◎', hint: 'Estado atual, decisões pendentes e próximas etapas' },
+      { id: 'INBOX', label: 'Decisões', glyph: '⌾', hint: 'Escolhas que precisam de autorização humana' },
     ],
   },
   {
-    id: 'pipeline', label: 'PIPELINE', entries: [
-      { id: 'ACTIONS', label: 'Actions', glyph: '→', hint: 'Ações, elegibilidade e blockers' },
-      { id: 'EXECUTION', label: 'Execution', glyph: '⟐', hint: 'Action → Capability → Runtime → Effect → Readback' },
+    id: 'pipeline', label: 'OPERAÇÃO', entries: [
+      { id: 'ACTIONS', label: 'Tarefas', glyph: '→', hint: 'O que está pronto, em andamento ou impedido' },
+      { id: 'EXECUTION', label: 'Execução', glyph: '⟐', hint: 'O que foi tentado, o que mudou e como foi confirmado' },
     ],
   },
   {
     id: 'proof', label: 'PROVA', entries: [
-      { id: 'TRUTHGRAPH', label: 'TruthGraph', glyph: '⊹', hint: 'Autoridade e posse da verdade' },
+      { id: 'TRUTHGRAPH', label: 'Fontes oficiais', glyph: '⊹', hint: 'Compare as fontes reconhecidas e veja onde divergem' },
       { id: 'CAPABILITIES', label: 'Capacidades', glyph: '⬡', hint: 'O que pode ser feito, e com qual prova' },
-      { id: 'SOURCES', label: 'Sources', glyph: '⊞', hint: 'Providers e Universal Projection Bus' },
-      { id: 'INTEGRITY', label: 'Integrity', glyph: '⚖', hint: 'Tudo que a interface não consegue provar' },
+      { id: 'SOURCES', label: 'Fontes', glyph: '⊞', hint: 'Quais fontes responderam e quando foram atualizadas' },
+      { id: 'INTEGRITY', label: 'Integridade', glyph: '⚖', hint: 'O que ainda não tem comprovação e por que isso importa' },
     ],
   },
   {
     id: 'atlas', label: 'ATLAS', entries: [
       { id: 'ATLAS', label: 'Atlas', glyph: '✧', hint: 'Grafo estrutural e exploração' },
-      { id: 'LEARNING', label: 'Learning', glyph: '≋', hint: 'Memória semântica, procedural e filamentos' },
+      { id: 'LEARNING', label: 'Aprendizado', glyph: '≋', hint: 'Estudos, hipóteses, testes e resultados relacionados' },
     ],
   },
   {
     id: 'personal', label: 'PESSOAL', entries: [
       { id: 'NOW', label: 'Now', glyph: '◈', hint: 'Atenção pessoal, fontes reais' },
-      { id: 'LOOPS', label: 'Loops', glyph: '∞', hint: 'Compromissos em movimento' },
-      { id: 'DAY', label: 'Day', glyph: '◷', hint: 'Agenda do dia' },
-      { id: 'CONTEXT', label: 'Context', glyph: '◇', hint: 'Contextos pessoais' },
-      { id: 'RECALL', label: 'Recall', glyph: '⌕', hint: 'Busca nas fontes conectadas' },
+      { id: 'LOOPS', label: 'Compromissos', glyph: '∞', hint: 'Compromissos em andamento e próximas atualizações' },
+      { id: 'DAY', label: 'Agenda', glyph: '◷', hint: 'Eventos das agendas conectadas' },
+      { id: 'CONTEXT', label: 'Contextos', glyph: '◇', hint: 'Objetivos e informações das fontes conectadas' },
+      { id: 'RECALL', label: 'Busca', glyph: '⌕', hint: 'Pesquise nas fontes conectadas e veja a origem' },
     ],
   },
 ];
@@ -111,18 +111,18 @@ export const NAV_GROUPS: NavGroup[] = [
 export const MOBILE_PRIMARY: ViewId[] = ['INBOX', 'OVERVIEW', 'ACTIONS', 'ATLAS'];
 
 export const VIEW_TITLES: Record<ViewId, { title: string; lead: string }> = {
-  OVERVIEW: { title: 'Início', lead: 'Gates, próxima ação do sistema e mudanças da última sincronização.' },
-  INBOX: { title: 'Precisa de você', lead: 'Aprovações humanas que aguardam decisão.' },
-  ACTIONS: { title: 'Fila operacional', lead: 'Trabalho por estado, domínio, campanha e dependência.' },
-  EXECUTION: { title: 'Execução', lead: 'Rastro ACTION → CAPABILITY → RUNTIME → EFFECT → READBACK.' },
-  TRUTHGRAPH: { title: 'Autoridade', lead: 'Fontes esperadas, fontes observadas e divergências.' },
-  CAPABILITIES: { title: 'Capacidades', lead: 'Capacidades registradas e evidências publicadas.' },
-  SOURCES: { title: 'Fontes', lead: 'Disponibilidade e atualização das fontes conectadas.' },
-  INTEGRITY: { title: 'Integridade', lead: 'Lacunas de prova, invariantes e leituras pendentes.' },
-  ATLAS: { title: 'Mapa', lead: 'Entidades e relações da projeção atual.' },
-  LEARNING: { title: 'Ciência', lead: 'Campanhas, testes, hipóteses, aprendizado e evidência publicada.' },
+  OVERVIEW: { title: 'Início', lead: 'Decisões pendentes, tarefas em andamento e mudanças recentes.' },
+  INBOX: { title: 'Decisões', lead: 'Escolhas que precisam de sua decisão ou autorização.' },
+  ACTIONS: { title: 'Tarefas', lead: 'O que está pronto, em andamento, impedido ou autorizado a seguir.' },
+  EXECUTION: { title: 'Execução', lead: 'O que a automação tentou, o que mudou e como a fonte confirmou o resultado.' },
+  TRUTHGRAPH: { title: 'Fontes oficiais', lead: 'Compare as fontes reconhecidas e veja onde suas informações divergem.' },
+  CAPABILITIES: { title: 'Recursos disponíveis', lead: 'O que o sistema pode fazer e qual comprovação respalda cada recurso.' },
+  SOURCES: { title: 'Fontes', lead: 'Quais fontes responderam, quando foram atualizadas e o que informaram.' },
+  INTEGRITY: { title: 'Integridade', lead: 'O que ainda não tem comprovação e como isso limita as próximas ações.' },
+  ATLAS: { title: 'Mapa', lead: 'Assuntos do sistema e ligações entre eles.' },
+  LEARNING: { title: 'Ciência', lead: 'Estudos, hipóteses, testes e resultados com suas evidências.' },
   NOW: { title: 'Agora', lead: 'Pendências pessoais vindas das fontes conectadas.' },
-  LOOPS: { title: 'Loops', lead: 'Compromissos abertos e atualização observada.' },
+  LOOPS: { title: 'Compromissos', lead: 'Compromissos em andamento e próximas atualizações.' },
   DAY: { title: 'Agenda', lead: 'Eventos da agenda conectada.' },
   CONTEXT: { title: 'Contextos', lead: 'Objetivos, registros e integrações disponíveis.' },
   RECALL: { title: 'Busca', lead: 'Resultados das fontes conectadas com origem preservada.' },

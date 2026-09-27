@@ -40,11 +40,11 @@ export function atlasSubdomainHint(
   const token = String(signal || '').toUpperCase();
 
   if (domain === 'OLYMPUS') {
-    if (/MIQUEIAS|OLYCAUSE/.test(token)) return 'Cause/Nulls';
+    if (/MIQUEIAS|OLYCAUSE/.test(token)) return 'Causas e hipóteses nulas';
     if (/COMPPHYS|OLYPHYS|BODY\s*COMPOSITION|COMPOSI[CÇ][AÃ]O\s*CORPORAL/.test(token)) {
       return 'Composição corporal · Física computacional';
     }
-    if (/PIVOT|OLYPIVOT|NULL\s*CROSS/.test(token)) return 'Pivot & Null cross-checks';
+    if (/PIVOT|OLYPIVOT|NULL\s*CROSS/.test(token)) return 'Conferência de pontos de virada e hipóteses nulas';
     return null;
   }
 
@@ -53,7 +53,7 @@ export function atlasSubdomainHint(
       return 'Expansão do Universo · H0';
     }
     if (/PEER[.\-\s]DETECTION|PEER\.DETECTION|A_LENS|EDE/.test(token)) {
-      return 'Consistência cosmológica · Peer Detection';
+      return 'Consistência cosmológica · detecção de padrões associados';
     }
     // A campaign is routed by its scientific object, not by incidental words in
     // its description. This keeps DDE×LSS campaigns inside Dark Energy even
@@ -69,16 +69,16 @@ export function atlasSubdomainHint(
     }
     if (/MEGASTRUCTURE|T-MEGA|GIANT[ -]?ARC|BIG[ -]?RING/.test(token)) return 'Megaestruturas cosmológicas';
     if (/GROWTH-LSS|GZSB|EROSITA|S8|LARGE[ -]?SCALE|LSS/.test(token)) {
-      return 'Estrutura em larga escala · Growth/LSS';
+      return 'Crescimento da estrutura em larga escala';
     }
     if (/BLINDSPOT-LIGHT|BLIND26|PROPAGA[CÇ][AÃ]O.*LUZ/.test(token)) {
-      return 'Propagação da luz · Blindspots';
+      return 'Propagação da luz · limitações conhecidas';
     }
     if (/GALAXY-REDSHIFT|GALAXY-3D|GZ-01|GZ01|REDSHIFT\s*3D/.test(token)) {
       return 'Galáxias · Redshift 3D';
     }
     if (/AVERAGING-PROBLEM|AVERAGING\s+PROBLEM/.test(token)) {
-      return 'Transferência metodológica · Averaging';
+      return 'Transferência metodológica · cálculo de médias';
     }
     if (entityType === 'CAPABILITY' && /SCI|COSMO|CAMB|CLASS/.test(token)) return 'Capacidades científicas';
     return null;
@@ -88,7 +88,7 @@ export function atlasSubdomainHint(
     return 'Engenharia, infraestrutura & segurança';
   }
   if (entityType === 'CAPABILITY' || /RUNTIME|MCP|EXECUTOR|PRODUCER|ADAPTER|CANARY/.test(token)) {
-    return 'Runtime, MCP & execução';
+    return 'Serviços executores e ferramentas conectadas';
   }
   if (/T-LEARN|LEARN|NEXO\s+EXECUTION|METALEARNING|PROCEDURAL/.test(token)) return 'Operações NEXO';
   return null;
@@ -103,10 +103,10 @@ const SEMANTIC_STATIONS: Record<string, string> = {
   'science.cosmology.h0': 'Expansão do Universo · H0',
   'science.cosmology.dark_energy': 'Energia escura',
   'science.cosmology.dark_matter': 'Matéria escura',
-  'science.cosmology.lss_growth': 'Estrutura em larga escala · Growth/LSS',
+  'science.cosmology.lss_growth': 'Crescimento da estrutura em larga escala',
   'science.cosmology.lss_growth.galaxy_distribution': 'Galáxias · Redshift 3D',
   'science.cosmology.lss_growth.megastructures': 'Megaestruturas cosmológicas',
-  'science.methods.inference': 'Inferência estatística · Nulls & calibração',
+  'science.methods.inference': 'Inferência estatística · hipóteses nulas e calibração',
   'science.methods.robustness': 'Reprodutibilidade científica · Robustez',
   'engineering.nexo_runtime': 'Operações NEXO',
   'engineering.ai_agents': 'Agentes de IA',
@@ -142,13 +142,13 @@ export function atlasSubdomainOf(node: GraphNode): string {
   const hinted = atlasSubdomainHint(top, token, node.type);
   if (hinted) return hinted;
 
-  if (top === 'OLYMPUS') return 'Olympus · Outros ativos';
+  if (top === 'OLYMPUS') return 'Olympus · outros itens';
   if (top === 'SCIENCE') {
     if (node.type === 'CAPABILITY') return 'Capacidades científicas';
-    return 'Science · Outros ativos';
+    return 'Ciência · outros itens';
   }
   if (node.domain === 'ENGINEERING') return 'Engenharia, infraestrutura & segurança';
-  if (node.type === 'CAPABILITY') return 'Runtime, MCP & execução';
+  if (node.type === 'CAPABILITY') return 'Serviços executores e ferramentas conectadas';
   return 'Operações NEXO';
 }
 

@@ -43,17 +43,18 @@ export function InstrumentHeader({
         <ProductIcon name={id}/><span>{label}</span>
       </button>)}
     </nav>
-    <div className="instrument-provenance" title={fingerprint||'Aguardando fingerprint da projeção'}>
+    <div className="instrument-provenance" title={fingerprint||'Aguardando a leitura mais recente'}>
       <span className="instrument-live-dot"/>
-      <strong>TOWER G6</strong><code>{fingerprint?fingerprint.slice(0,14):'fp pendente'}</code>
-      <span>sync {freshness}</span><span className="instrument-schedulers">Science :20 · Exec :05 · drift 0</span>
+      <strong>Dados do NEXO</strong>
+      <span>Última leitura: {freshness}</span>
+      {fingerprint&&<details><summary>Ver assinatura desta versão</summary><code>{fingerprint}</code></details>}
     </div>
     <form className="instrument-search" onSubmit={onCommandSubmit}>
       <ProductIcon name="RECALL"/><input ref={commandRef} value={command} onChange={e=>onCommandChange(e.target.value)} placeholder="Ir para…" aria-label="Buscar e navegar"/>
       <kbd>⌘K</kbd>
     </form>
-    <button className="instrument-sync" type="button" onClick={onSync} disabled={busy} aria-label={busy?'Sincronizando':'Sincronizar Tower'} title={busy?'Buscar → validar → comparar fingerprint':'Sincronizar Tower'}>
-      <span className={busy?'spinning':''} aria-hidden="true">↻</span><span>{busy?'Verificando':'Sync'}</span>
+    <button className="instrument-sync" type="button" onClick={onSync} disabled={busy} aria-label={busy?'Atualizando os dados':'Buscar dados atualizados'} title={busy?'Buscando e conferindo a versão mais recente':'Buscar dados atualizados'}>
+      <span className={busy?'spinning':''} aria-hidden="true">↻</span><span>{busy?'Verificando':'Atualizar'}</span>
     </button>
     <button className="instrument-theme" type="button" onClick={onThemeToggle} aria-label={theme==='dark'?'Ativar tema claro':'Ativar tema escuro'} title="Alternar tema">{theme==='dark'?'☼':'☾'}</button>
     {toast&&<div className={`instrument-sync-toast tone-${syncStatus.toLowerCase()}`} role="status" aria-live="polite" onClick={()=>setToast('')}>

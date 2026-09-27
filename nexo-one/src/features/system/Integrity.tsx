@@ -60,6 +60,7 @@ export function TruthGraphView({ state, theme = 'dark' }: { state: SystemState; 
                 </div>
               </div>
             )}
+            <p className="rule-note">Esta lista reúne divergências entre fontes sobre quem pode fornecer dados confiáveis para cada área.</p>
             <div className="truth-grid-outer">
               {findings.map(finding => (
                 <TruthGraphCard key={finding.id} finding={finding} capability={capabilityById(state, finding.capability)} />
@@ -79,7 +80,7 @@ export function CapabilitiesView({ state }: { state: SystemState }) {
   const counts = capabilityCounts(state);
   return (
     <>
-      <div className="capability-counters" role="group" aria-label="Filtrar capabilities por estado">
+      <div className="capability-counters" role="group" aria-label="Filtrar recursos por situação">
         {(['PASS', 'UNVERIFIED', 'UNKNOWN', 'RETIRED_RUNTIME', 'BLOCKED'] as const).map(status => (
           <button type="button" key={status} disabled={counts[status] === 0}
             className={`capability-counter tone-${toneOf(status)}${statusFilter === status ? ' active' : ''}${statusFilter && statusFilter !== status ? ' dimmed' : ''}`}
@@ -97,19 +98,20 @@ export function CapabilitiesView({ state }: { state: SystemState }) {
         ))}
       </div>
       <p className="rule-note">
-        <strong>Sem prova não é funcionalidade parcial.</strong> Significa que a operação nunca foi exercida com
-        readback. Nenhum indicador desta tela representa esse estado como meio funcionando.
+        <strong>Sem comprovação não significa funcionamento parcial.</strong> Significa que a operação ainda não foi executada com
+        uma confirmação registrada da fonte. Nenhum indicador desta tela representa esse estado como meio funcionando.
         {statusFilter && <button type="button" className="capability-filter-clear" onClick={() => setStatusFilter(null)}>Limpar filtro ×</button>}
       </p>
+      <p className="rule-note">A tabela compara o que cada serviço consegue fazer e mostra se há confirmação de uso. Clique em um recurso para entender o que ele permite.</p>
       <CapabilityMatrix runtimes={runtimes} cells={cells} onSelect={setSelected} />
       {selected && (
-        <DetailDrawer kicker={`Capability · ${domainLabel(selected.domain)}`} title={selected.label} code={selected.capability_id} onClose={close}
+        <DetailDrawer kicker={`Recurso · ${domainLabel(selected.domain)}`} title={selected.label} code={selected.capability_id} onClose={close}
           fields={[
-            ['Estado', <CapabilityBadge status={selected.status} id={selected.capability_id} />],
-            ['Runtime', label(selected.runtime)],
+            ['Situação', <CapabilityBadge status={selected.status} id={selected.capability_id} />],
+            ['Serviço executor', label(selected.runtime)],
             ['Operação', selected.operation ? label(selected.operation) : 'não publicada'],
             ['Risco', selected.risk ? label(selected.risk) : 'não publicado'],
-            ['Provider', <code>{selected.provider}</code>],
+            ['Sistema responsável', <code>{selected.provider}</code>],
             ['Última verificação', selected.last_verified_at ? dateTime(selected.last_verified_at) : 'nunca'],
             ['Evidência', selected.evidence_ref ? <SourceRef value={selected.evidence_ref} /> : 'nenhuma'],
           ]}>
@@ -125,9 +127,10 @@ export function SourcesView({ state }: { state: SystemState }) {
     <>
       <ProjectionHealth bus={state.bus} />
       <div className="section-head">
-        <h2>Providers</h2>
-        <span className="eyebrow">ESPERADO x OBSERVADO</span>
+        <h2>De onde vêm os dados</h2>
+        <span className="eyebrow">FONTES E ATUALIZAÇÃO</span>
       </div>
+      <p className="rule-note">Esta lista mostra de onde vêm os dados, quais áreas cada fonte atende e quando foi verificada.</p>
       <div className="provider-grid">
         {state.providers.map(provider => (
           <article key={provider.id} className={`provider-card tone-${toneOf(provider.state)}`}>
@@ -137,35 +140,39 @@ export function SourcesView({ state }: { state: SystemState }) {
             </header>
             <p>{provider.explanation}</p>
             <dl className="meta-row">
-              <div><dt>domínios</dt><dd>{provider.expected_for.map(d => <DomainBadge key={d} domain={d} muted />)}</dd></div>
-              <div><dt>última leitura</dt><dd>{provider.last_success_at ? dateTime(provider.last_success_at) : <em>nenhuma</em>}</dd></div>
-              <div><dt>verificado em</dt><dd>{dateTime(provider.checked_at)}</dd></div>
+              <div><dt>áreas atendidas</dt><dd>{provider.expected_for.map(d => <DomainBadge key={d} domain={d} muted />)}</dd></div>
+              <div><dt>última leitura bem-sucedida</dt><dd>{provider.last_success_at ? dateTime(provider.last_success_at) : <em>nenhuma</em>}</dd></div>
+              <div><dt>última verificação</dt><dd>{dateTime(provider.checked_at)}</dd></div>
             </dl>
-            <ul className="provider-capabilities">
-              {provider.capabilities.map(id => {
-                const capability = capabilityById(state, id);
-                return (
-                  <li key={id}>
-                    <code>{id}</code>
-                    {capability && <CapabilityBadge status={capability.status} id={id} />}
-                  </li>
-                );
-              })}
-            </ul>
+            <details>
+              <summary>Verificações técnicas desta fonte</summary>
+              <ul className="provider-capabilities">
+                {provider.capabilities.map(id => {
+                  const capability = capabilityById(state, id);
+                  return (
+                    <li key={id}>
+                      <code>{id}</code>
+                      {capability && <CapabilityBadge status={capability.status} id={id} />}
+                    </li>
+                  );
+                })}
+              </ul>
+            </details>
           </article>
         ))}
       </div>
       <div className="section-head">
-        <h2>Envelopes do bus</h2>
-        <span className="eyebrow">{state.envelopes.length} PROJEÇÕES</span>
+        <h2>Informações compartilhadas</h2>
+        <span className="eyebrow">{state.envelopes.length} ITENS CONFERÍVEIS</span>
       </div>
+      <p className="rule-note">Cada linha permite conferir qual área usa o dado, de onde ele veio e quando foi atualizado. Identificadores e assinaturas ajudam a investigar diferenças entre versões.</p>
       <div className="envelope-table-scroll">
         <table className="envelope-table">
           <thead>
             <tr>
-              <th scope="col">entity_id</th><th scope="col">domínio</th><th scope="col">estado</th>
-              <th scope="col">authority</th><th scope="col">freshness</th>
-              <th scope="col">derivation_rule</th><th scope="col">fingerprint</th><th scope="col">origem</th>
+              <th scope="col">Item e identificador</th><th scope="col">Área</th><th scope="col">Situação</th>
+              <th scope="col">Fonte responsável</th><th scope="col">Atualidade</th>
+              <th scope="col">Como foi formado</th><th scope="col">Assinatura técnica</th><th scope="col">Rastreabilidade</th>
             </tr>
           </thead>
           <tbody>
@@ -204,8 +211,8 @@ export function IntegrityView({ state }: { state: SystemState }) {
   return (
     <>
       <p className="rule-note">
-        Esta tela lista o que a interface <strong>não</strong> consegue provar. Cada item representa uma lacuna de evidência
-        declarada explicitamente, sem classificação automática como alarme.
+        Esta lista reúne o que a interface <strong>ainda não consegue comprovar</strong>. Cada item aponta uma lacuna de evidência
+        registrada e não é classificado automaticamente como alarme.
       </p>
       <ul className="integrity-list">
         {issues.map(issue => (

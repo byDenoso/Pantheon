@@ -285,7 +285,7 @@ export default function App() {
 
             {/* Only modes with real sub-sections get a tab row (Mapa and Início have none). */}
             {['operacao','prova','pessoal'].includes(currentMode)&&<nav className="section-tabs" aria-label={`Seções de ${currentMode}`}>
-              {(currentMode==='operacao' ? [['ACTIONS','Fila'],['INBOX','Gates'],['EXECUTION','Execução']] : currentMode==='prova' ? [['CAPABILITIES','Capacidades'],['INTEGRITY','Integridade'],['SOURCES','Fontes'],['TRUTHGRAPH','Autoridade']] : [['NOW','Agora'],['LOOPS','Loops'],['DAY','Agenda'],['CONTEXT','Contextos'],['RECALL','Busca']])
+              {(currentMode==='operacao' ? [['ACTIONS','Fila'],['INBOX','Decisões'],['EXECUTION','Execução']] : currentMode==='prova' ? [['CAPABILITIES','Recursos'],['INTEGRITY','Integridade'],['SOURCES','Fontes'],['TRUTHGRAPH','Fontes oficiais']] : [['NOW','Agora'],['LOOPS','Compromissos'],['DAY','Agenda'],['CONTEXT','Contextos'],['RECALL','Busca']])
                 .map(([id,label])=><button type="button" key={id} className={view===id?'active':''} aria-current={view===id?'page':undefined} onClick={()=>go(id as ViewId)}>{label}</button>)}
             </nav>}
 

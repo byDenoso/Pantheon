@@ -43,11 +43,11 @@ import './GalaxyThree3D.css';
 
 const TAU = Math.PI * 2;
 const DEFAULT_CAMERA = new Vector3(0, 16, 286);
-const GALAXY_DETAIL_CAMERA = new Vector3(0, 10, 214);
+const GALAXY_DETAIL_CAMERA = new Vector3(0, 38, 114);
 const MACRO_CAMERA = new Vector3(0, 12, 360);
 const MOBILE_MACRO_CAMERA = new Vector3(0, 2, 236);
 // Narrow portrait screens: closer, so the disk fills the width.
-const MOBILE_CAMERA = new Vector3(0, 10, 236);
+const MOBILE_CAMERA = new Vector3(0, 48, 220);
 const DEFAULT_TARGET = new Vector3(0, 0, 0);
 
 function paletteForTheme(theme: 'dark' | 'light') {
@@ -382,14 +382,14 @@ function colorField(morph: GalaxyMorphology) {
   };
 }
 
-// Muted, analogous star palette (slate · periwinkle · lavender · ivory): the
-// disk blends into one calm body so the saturated event glyphs carry the contrast.
-const STAR_WHITE = new Color('#c9d2e3');
-const STAR_BLUE = new Color('#8e9fc4');
-const STAR_WARM = new Color('#d6c8b0');
-const STAR_CORE = new Color('#e6dcc8');
-const HII_PINK = new Color('#a898c4');
-const DUST_RED = new Color('#8c8196');
+// Stellar populations separate naturally: older gold stars gather in the core,
+// hot blue stars trace the arms, and young pink clusters mark star-forming regions.
+const STAR_WHITE = new Color('#d9e5f5');
+const STAR_BLUE = new Color('#8cb8f1');
+const STAR_WARM = new Color('#ffd3a2');
+const STAR_CORE = new Color('#fff0d3');
+const HII_PINK = new Color('#ee9bc9');
+const DUST_RED = new Color('#aa91a7');
 
 function buildSpiralGalaxy(count: number, morph: GalaxyMorphology): BufferGeometry {
   const positions = new Float32Array(count * 3);
@@ -445,7 +445,7 @@ function buildSpiralGalaxy(count: number, morph: GalaxyMorphology): BufferGeomet
       // Half the stars fill the arm continuously from the nucleus outward, so
       // there are no gaps; the rest clump around one knot per subdomain.
       const segment = Math.floor(r() * Math.max(1, spec.segments));
-      let t = r() < 0.5 ? r() * 1.02 : (segment + 0.5 + gaussian(r) * 0.35) / Math.max(1, spec.segments);
+      let t = r() < 0.44 ? r() * 1.02 : (segment + 0.5 + gaussian(r) * 0.35) / Math.max(1, spec.segments);
       // Resample instead of clamping: clamped stars pile up on one line (streaks).
       if (t < 0 || t > 1.04) t = r() * 1.04;
       const p = spiralPoint(morph, arm, Math.max(0, t));
@@ -454,15 +454,15 @@ function buildSpiralGalaxy(count: number, morph: GalaxyMorphology): BufferGeomet
       const width = spec.width * G_SCALE * (0.35 + t * 0.9);
       const across = gaussian(r) * width * 0.3;
       x = p.x + (-ty / len) * across; y = p.y + (tx / len) * across; z = gaussian(r) * (1 + t * 1.6);
-      const knot = r() < 0.07;
-      const haze = !knot && r() < 0.06;
-      size = knot ? 1.4 + r() * 1.6 : haze ? 5 + r() * 5 : 0.35 + r() * 0.8;
-      light = knot ? 0.9 : haze ? 0.025 + r() * 0.03 : 0.25 + r() * 0.55;
+      const knot = r() < 0.1;
+      const haze = !knot && r() < 0.075;
+      size = knot ? 1.6 + r() * 2.0 : haze ? 5 + r() * 5 : 0.35 + r() * 0.8;
+      light = knot ? 0.96 : haze ? 0.035 + r() * 0.035 : 0.25 + r() * 0.55;
       const c = r();
       // Natural star mix with only a hint of the domain's tone: arms stay
       // distinguishable without the galaxy turning into a colour gradient.
-      tmp.copy(c < 0.66 ? STAR_WHITE : c < 0.9 ? STAR_BLUE : c < 0.96 ? HII_PINK : DUST_RED).lerp(field(x, y, tints, coreTint, fieldTint), 0.16);
-      if (knot && r() < 0.5) tmp.copy(HII_PINK).lerp(STAR_WHITE, 0.45);
+      tmp.copy(c < 0.56 ? STAR_WHITE : c < 0.86 ? STAR_BLUE : c < 0.95 ? HII_PINK : DUST_RED).lerp(field(x, y, tints, coreTint, fieldTint), 0.16);
+      if (knot && r() < 0.62) tmp.copy(HII_PINK).lerp(STAR_WHITE, 0.28);
       // Arm roots inherit the nucleus' warmth and fade into the arm tone.
       const root = Math.max(0, 1 - t / 0.28);
       if (root > 0) tmp.lerp(STAR_CORE, root * root * 0.6);

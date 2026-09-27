@@ -416,6 +416,18 @@ export interface EvolutionSignalCluster {
   cluster_id: string; code: string; occurrences: number; sources: string[];
   topic_ids: string[]; test_ids: string[]; first_seen?: string | null; last_seen?: string | null;
 }
+/** Public-safe incident summary; private causes and evidence references stay in the Tower. */
+export interface EvolutionIncidentSummary {
+  incident_id: string;
+  /** Vetted, public Portuguese explanation; private cause and raw signal code stay in the Tower. */
+  summary_plain?: string;
+  /** Current backend projection name for the same reviewed Portuguese summary. */
+  summary_pt?: string;
+  state: string;
+  evidence_count: number;
+  public_ids: { tests: string[]; hypotheses: string[]; lessons: string[] };
+  next_owner: string;
+}
 export interface EvolutionStatus {
   gate: { charters_waiting: { roadmap_id: string; question?: string | null; objectives?: string[] | null; renewable?: boolean }[];
           canaries_waiting: { gene: string; canary: unknown; since?: string | null }[] };
@@ -427,6 +439,7 @@ export interface EvolutionStatus {
   charters?: { roadmap_id: string; status: string; question?: string | null; chartered_at?: string | null }[];
   thoughts?: EvolutionThought[];
   signal_clusters?: EvolutionSignalCluster[];
+  incidents?: EvolutionIncidentSummary[];
   reviews?: Record<string, number>;
 }
 

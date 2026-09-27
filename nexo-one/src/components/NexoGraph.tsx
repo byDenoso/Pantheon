@@ -3,10 +3,16 @@ import {MetroAtlasRenderer} from '../atlas3d/MetroAtlasRenderer.tsx';
 import {GalaxyView} from '../atlas3d/GalaxyView.tsx';
 import {ensureAtlasG6} from '../atlas3d/g6-loader.ts';
 import {visibleAtlasIds,type AtlasGraphLayer,type AtlasMetroModel} from '../atlas3d/atlasAdapter.ts';
+import {domainLabel,label} from '../viewmodels/tokens.ts';
 import './NexoGraph.css';
 
 export type NexoGraphView='2d'|'3d'|'galaxy';
 const ALL_GRAPH_LAYERS=new Set<AtlasGraphLayer>(['knowledge','execution','capability']);
+const NODE_TYPE_COPY:Record<string,string>={hub:'Área principal',subdomain:'Assunto',ROOT:'Sistema',LAYER:'Camada',TRANSPORT:'Canal',TOOL:'Ferramenta',FAMILY:'Família de ferramentas',RUNTIME:'Serviço executor',ROLE:'Equipe de automação'};
+const displayCode=(value:string,fallback:string)=>{
+  const translated=label(value);
+  return translated!==value?translated:/^[A-Z][A-Z0-9_]*$/.test(value)?fallback:translated;
+};
 
 export function GraphViewSwitch({view,onChange}:{view:NexoGraphView;onChange:(view:NexoGraphView)=>void}){
   return <div className="nexo-graph-view-switch" role="group" aria-label="Visualização do grafo">
@@ -61,7 +67,7 @@ export function NexoGraph({
     else void node.requestFullscreen?.();
   };
 
-  const count=<div className="nexo-graph-count"><strong>{visible.length}</strong> visíveis · <span>{model.nodes.length} total</span> · <span>{relationCount} relações</span></div>;
+  const count=<div className="nexo-graph-count" title="Os números acompanham os itens abertos na visualização atual"><strong>{visible.length}</strong> itens mostrados · <span>{model.nodes.length} no mapa</span> · <span>{relationCount} conexões</span></div>;
   const spotlightActive=spotlight&&Boolean(selectedId);
   const spotlightToggle=!tableMode&&<button type="button" className="nexo-spotlight-toggle" aria-label={spotlightActive?"Desativar foco visual no nó selecionado":"Ativar foco visual no nó selecionado"} aria-pressed={spotlightActive} disabled={!selectedId} title={selectedId?(spotlightActive?"Mostrar todo o grafo com o mesmo peso":"Destacar o nó selecionado e sua vizinhança"):"Selecione um nó para ativar o foco"} onClick={()=>setSpotlight(value=>!value)}>{spotlightActive?'Foco ativo':'Focar seleção'}</button>;
   const illuminationToggle=!tableMode&&<button type="button" className="nexo-illumination-toggle" aria-label={illuminated?"Desativar iluminação global":"Iluminar todos os nós e relações"} aria-pressed={illuminated} title={illuminated?"Desativar iluminação global":"Iluminar todos os nós e relações"} onClick={()=>setIlluminated(value=>!value)}>{illuminated?'Apagar luz':'Iluminar tudo'}</button>;
@@ -89,7 +95,7 @@ export function NexoGraph({
       </div>}
     </div>
     {tableMode
-      ? <div className="nexo-graph-table-wrap"><table className="nexo-graph-table"><thead><tr><th>Entidade</th><th>Tipo</th><th>Domínio</th><th>Estado</th><th>Relações</th></tr></thead><tbody>{rows.map(node=><tr key={node!.id} className={node!.id===selectedId?'selected':''} onClick={()=>onSelect(node!.id)}><td><strong>{node!.name}</strong><small>{node!.id}</small></td><td>{node!.entityType}</td><td>{node!.domain}</td><td>{node!.status}</td><td>{node!.relationCount}</td></tr>)}</tbody></table></div>
+      ? <div className="nexo-graph-table-wrap"><table className="nexo-graph-table"><caption>Esta lista mostra os itens abertos no mapa atual. Selecione uma linha para ver o contexto e as ligações.</caption><thead><tr><th>Item</th><th>O que é</th><th>Área</th><th>Situação</th><th>Conexões</th></tr></thead><tbody>{rows.map(node=><tr key={node!.id} className={node!.id===selectedId?'selected':''} onClick={()=>onSelect(node!.id)}><td><strong>{node!.name}</strong><details onClick={event=>event.stopPropagation()}><summary>Ver referência técnica</summary><code>{node!.id}</code></details></td><td>{NODE_TYPE_COPY[String(node!.entityType)]??displayCode(String(node!.entityType),'Registro')}</td><td>{domainLabel(node!.domain)}</td><td title="O valor técnico fica disponível nos detalhes do item">{displayCode(node!.status,'Estado sem descrição')}</td><td>{node!.relationCount}</td></tr>)}</tbody></table></div>
       : view==='galaxy'
         ? <GalaxyView selectedId={selectedId} onSelect={onSelect}/>
       : view==='2d'&&!g6Ready

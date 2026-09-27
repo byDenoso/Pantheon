@@ -31,31 +31,35 @@ export const toneOf = (
   state: EntityState | ActionStatus | RunStatus | StepStatus | ReadbackStatus | FilamentStatus | FreshnessState,
 ): Tone => STATE_TONE[state] ?? 'unknown';
 
-/** Rótulos em português. O estado técnico continua visível ao lado, nunca substituído. */
+/** Rótulos legíveis para os valores que a interface mostra como situação. */
 export const STATE_LABEL: Record<string, string> = {
   LIVE: 'Ao vivo', SNAPSHOT: 'Instantâneo', STALE: 'Leitura anterior',
-  STALE_DECLARATION: 'Declaração vencida', DEGRADED: 'Degradado', BLOCKED: 'Bloqueado',
+  STALE_DECLARATION: 'Declaração vencida', DEGRADED: 'Com limitações', BLOCKED: 'Bloqueado', AGING: 'Dados antigos', MISSING: 'Indisponível',
   CONFLICT: 'Conflito', MISSING_PROVIDER: 'Fonte ausente',
-  PASS: 'Verificada', UNVERIFIED: 'Sem prova', UNKNOWN: 'Desconhecido', RETIRED_RUNTIME: 'Runtime retirado',
-  SUCCEEDED: 'Concluída', NO_OP: 'Sem efeito', RUNNING: 'Em execução', FAILED: 'Falhou',
+  PASS: 'Verificada', UNVERIFIED: 'Sem confirmação', UNKNOWN: 'Ainda não verificado', RETIRED_RUNTIME: 'Serviço desativado',
+  SUCCEEDED: 'Concluída', NO_OP: 'Nenhuma alteração necessária', RUNNING: 'Em execução', FAILED: 'Falhou',
   OK: 'OK', WARN: 'Ressalva', FAIL: 'Falha', SKIPPED: 'Ignorada', PENDING: 'Pendente',
   CONFIRMED: 'Confirmado', NOT_APPLICABLE: 'Não se aplica',
   PROPOSED: 'Proposta', ELIGIBLE: 'Elegível', AWAITING_HUMAN: 'Aguarda você',
-  APPLIED: 'Aplicada', NO_OP_ALREADY_APPLIED: 'Já aplicada', WAITING_SIDE_QUEST: 'Aguarda side quest',
+  APPLIED: 'Aplicada', NO_OP_ALREADY_APPLIED: 'Já aplicada', WAITING_SIDE_QUEST: 'Aguarda tarefa auxiliar',
   ESTABLISHED: 'Estabelecido', PROVISIONAL: 'Provisório', CONTESTED: 'Contestado', RETIRED: 'Retirado',
-  RECENT: 'Recente', AGING: 'Envelhecendo',
-  P0: 'P0', P1: 'P1', P2: 'P2', INFO: 'Info',
+  REFUTED: 'Refutada', REVIEWING: 'Em revisão', PREREGISTERED: 'Teste definido antes da execução',
+  OBSERVED: 'Em observação', CANARY: 'Em teste isolado', ROLLED_BACK: 'Alteração desfeita', WAIT_HUMAN: 'Aguarda decisão humana',
+  RECENT: 'Recente',
+  P0: 'Crítica', P1: 'Alta', P2: 'Moderada', INFO: 'Informativa',
   LOW: 'Baixo', MEDIUM: 'Médio', HIGH: 'Alto',
   DECIDIR: 'Decidir', APROVAR: 'Aprovar', RESPONDER: 'Responder',
   ESCOLHER: 'Escolher', FORNECER_DADO: 'Fornecer dado', CONFIGURAR_ACESSO: 'Autorizar / configurar',
-  TRUTH_OWNER: 'Truth Owner', DELEGATED: 'Delegada', DERIVED: 'Derivada',
+  TRUTH_OWNER: 'Responsável pela fonte', DELEGATED: 'Delegada', DERIVED: 'Derivada',
   NON_AUTHORITATIVE: 'Não autoritativa',
-  READ: 'Leitura', WRITE: 'Escrita', SCHEDULE: 'Agendamento', DEPLOY: 'Deploy', NOTIFY: 'Notificação',
+  READ: 'Leitura', WRITE: 'Escrita', SCHEDULE: 'Agendamento', DEPLOY: 'Publicação', NOTIFY: 'Notificação',
   LOCAL: 'Local', GITHUB_ACTIONS: 'GitHub Actions', VERCEL: 'Vercel',
-  NEXO_KERNEL: 'NEXO Kernel', HUMAN: 'Humano',
-  DOMAIN: 'Domínio', CAMPAIGN: 'Campanha', ACTION: 'Ação', EFFECT: 'Efeito', CLAIM: 'Claim', TEST: 'Teste',
-  MEMORY: 'Memória', CAPABILITY: 'Capability', PROVIDER: 'Provider', PROJECTION: 'Projeção',
-  SIDE_QUEST: 'Side quest', FILAMENT: 'Filamento',
+  NEXO_KERNEL: 'Automação central', HUMAN: 'Pessoa',
+  DOMAIN: 'Área principal', SUBDOMAIN: 'Assunto', CAMPAIGN: 'Pesquisa', ACTION: 'Ação', EFFECT: 'Resultado', CLAIM: 'Conclusão', TEST: 'Teste',
+  MEMORY: 'Aprendizado', CAPABILITY: 'Recurso disponível', PROVIDER: 'Serviço conectado', PROJECTION: 'Visão publicada',
+  SIDE_QUEST: 'Tarefa auxiliar', FILAMENT: 'Relação de aprendizagem',
+  hub: 'Área principal', subdomain: 'Assunto', ROOT: 'Sistema', LAYER: 'Camada', TRANSPORT: 'Canal',
+  TOOL: 'Ferramenta', FAMILY: 'Família de ferramentas', RUNTIME: 'Serviço executor', ROLE: 'Equipe de automação',
   OWNS: 'possui', PRODUCES: 'produz', VERIFIES: 'verifica', DEPENDS_ON: 'depende de',
   PROJECTS: 'projeta', CONTRADICTS: 'contradiz', SUPPORTS: 'sustenta',
   ROUTES_TO: 'roteia para', BLOCKS: 'bloqueia', DERIVES_FROM: 'deriva de',
@@ -72,10 +76,97 @@ export const DOMAIN_LABEL: Record<string, string> = {
   NEXO: 'Nexo', SCIENCE: 'Ciência', ENGINEERING: 'Engenharia', OLYMPUS: 'Olympus', GPT_PERFORMANCE: 'Desempenho GPT',
 };
 export const domainLabel = (value: string | null | undefined): string =>
-  value ? DOMAIN_LABEL[value.toUpperCase()] ?? value : '—';
+  value ? DOMAIN_LABEL[value.toUpperCase()] ?? (/^[A-Z][A-Z0-9_]*$/.test(value) ? 'Outra área' : value) : '—';
 
 export const label = (value: string | null | undefined): string =>
-  value ? STATE_LABEL[value] ?? value : '—';
+  value ? STATE_LABEL[value] ?? (/^[A-Z][A-Z0-9_]*$/.test(value) ? 'Descrição ainda não publicada' : value) : '—';
+
+/**
+ * Makes projected prose easier to read without changing the published value
+ * used by the system. Technical identifiers remain available in disclosures.
+ */
+export const humanizeText = (value: string | null | undefined): string => {
+  if (!value) return '';
+  let text = value;
+  const replace = (pattern: RegExp, replacement: string) => {
+    text = text.replace(pattern, match => match[0] === match[0].toUpperCase()
+      ? replacement[0].toUpperCase() + replacement.slice(1)
+      : replacement);
+  };
+
+  replace(/runner artifact executor unavailable/gi, 'serviço que executa arquivos indisponível');
+  text = text.replace(/\bcap\.([a-z0-9_.-]+)\s+(?:(?:is|está)\s+)?BLOCKED\b/gi, (_match, capability: string) =>
+    capability.toLowerCase().includes('deploy') ? 'publicação está bloqueada'
+      : capability.toLowerCase().includes('read') ? 'leitura está bloqueada'
+        : 'recurso do sistema está bloqueado');
+  text = text.replace(/\bconflito(?: de autoridade)? P0\b/gi, match => {
+    const replacement = match.toLowerCase().includes('autoridade') ? 'conflito de autoridade crítico' : 'conflito crítico';
+    return match[0] === match[0].toUpperCase() ? replacement[0].toUpperCase() + replacement.slice(1) : replacement;
+  });
+  replace(/\b(?:receipt|action):\/\/[^\s,;]+/gi, 'registro técnico');
+  text = text.replace(/\b(cap|effect|act|action|receipt|sq|campaign|filament)\.[a-z0-9_.-]+\b/gi, (_match, kind: string) => ({
+    cap: 'recurso do sistema', effect: 'resultado', act: 'ação', action: 'ação', receipt: 'comprovante',
+    sq: 'tarefa auxiliar', campaign: 'campanha', filament: 'aprendizado',
+  }[kind.toLowerCase()] ?? 'registro'));
+  replace(/\bnexo_ssot\b/gi, 'registro central do NEXO');
+  replace(/\baction_register\b/gi, 'registro de ações');
+  replace(/\bexecution_runs\b/gi, 'histórico de execuções');
+  replace(/\bTruth Owner\b/gi, 'fonte oficial');
+  replace(/\bsem capability provada\b/gi, 'sem comprovação de permissão');
+  text = text.replace(/\bside quests?\b/gi, match => match.toLowerCase().endsWith('s') ? 'tarefas auxiliares' : 'tarefa auxiliar');
+  replace(/\breferee report\b/gi, 'relatório de avaliação');
+  replace(/\binput_fingerprint\b/gi, 'assinatura dos dados de entrada');
+  replace(/\beffect_key\b/gi, 'identificador do resultado');
+  replace(/\bfingerprint\b/gi, 'assinatura dos dados');
+  replace(/\bao assinatura dos dados de entrada\b/gi, 'à assinatura dos dados de entrada');
+  replace(/\bcom o assinatura dos dados de entrada\b/gi, 'com a assinatura dos dados de entrada');
+  replace(/\breadback\b/gi, 'confirmação da fonte');
+  replace(/\bcapability\b/gi, 'recurso');
+  replace(/\bdo provider\b/gi, 'da fonte');
+  replace(/\bno provider\b/gi, 'na fonte');
+  replace(/\bprovider\b/gi, 'fonte');
+  replace(/\bruntime\b/gi, 'serviço executor');
+  replace(/\bcredencial de deploy\b/gi, 'credencial de publicação');
+  replace(/\bdeploy\b/gi, 'publicação');
+  replace(/\bworkflow\b/gi, 'rotina automática');
+  replace(/\bverificação de recurso\b/gi, 'verificação da permissão');
+  replace(/\bfinding\b/gi, 'registro');
+  replace(/\bletter\b/gi, 'carta');
+  replace(/\bNEXO SSoT\b/gi, 'registro central do NEXO');
+  replace(/\bIntegrity monitor\b/gi, 'monitor de integridade');
+  replace(/\bBLOCKED\b/gi, 'bloqueado');
+  replace(/\bUNVERIFIED\b/gi, 'sem confirmação');
+  replace(/\bSTALE\b/gi, 'antigo');
+  replace(/\bCONTESTED\b/gi, 'em disputa');
+  replace(/\bP0\b/g, 'prioridade crítica');
+  replace(/\bP1\b/g, 'prioridade alta');
+  replace(/\bGENOME_MUTATION\b/gi, 'mudança permanente no sistema');
+  replace(/\bPENDING_REVIEW\b/gi, 'aguardando revisão');
+  replace(/\bCONFIRMED\b/gi, 'confirmada');
+  replace(/\bREFUTED\b/gi, 'refutada');
+  replace(/\bPROMOTED\b/gi, 'promovida');
+  replace(/\bROC AUC\b/gi, 'área sob a curva ROC, uma medida de ordenação');
+  replace(/\bAUC\b/gi, 'medida de ordenação');
+  replace(/ΛCDM/g, 'modelo cosmológico padrão');
+  replace(/\bno anisotropy evidence\b/gi, 'não há evidências de variação conforme a direção observada');
+  replace(/\btechnical verdict registered\b/gi, 'resultado técnico registrado');
+  replace(/\bexplanatory reach\b/gi, 'capacidade de explicar');
+  replace(/\bDDE\b/gi, 'energia escura dinâmica');
+  replace(/\bdark energy\b/gi, 'energia escura');
+  replace(/\bdark matter\b/gi, 'matéria escura');
+  replace(/\bmegastructures\b/gi, 'megaestruturas');
+  replace(/\bmegastructure\b/gi, 'megaestrutura');
+  replace(/\bdraft\b/gi, 'rascunho');
+  replace(/\bpelo confirmação\b/gi, 'pela confirmação');
+  replace(/\bqual fonte é fonte oficial\b/gi, 'qual origem será considerada oficial');
+  replace(/\bo Fonte oficial\b/gi, 'a fonte oficial');
+  replace(/\ba recurso\b/gi, 'o recurso');
+  replace(/\bestá bloqueado\b/gi, 'está bloqueado');
+  replace(/\bestá bloqueada\b/gi, 'está bloqueada');
+  replace(/confirmar o índice pela confirmação da fonte do Drive/gi, 'verificar no Drive se o índice foi gravado');
+  text = text.replace(/\bno\s+confirmation da fonte\b/gi, 'sem confirmação da fonte');
+  return text;
+};
 
 export const SEVERITY_TONE: Record<Severity, Tone> = {
   P0: 'conflict', P1: 'degraded', P2: 'snapshot', INFO: 'live',

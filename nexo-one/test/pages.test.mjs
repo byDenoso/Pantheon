@@ -709,7 +709,7 @@ test('galaxy mobile presentation limits in-scene event labels', async () => {
 test('galaxy desktop observatory pass keeps density bounded', async () => {
   const view = await text('src/components/GalaxyThree3D.tsx');
   const css = await text('src/components/GalaxyThree3D.css');
-  assert.match(view, /GALAXY_DETAIL_CAMERA = new Vector3\(0, 10, 214\)/);
+  assert.match(view, /GALAXY_DETAIL_CAMERA = new Vector3\(0, 38, 114\)/);
   assert.match(view, /isMobile \? 8 : morphology \? 14 : 42/);
   assert.doesNotMatch(view, /if \(!isMobile\) return new Set\(events\.map/);
   assert.match(css, /ATLAS Galaxy desktop observatory pass/);

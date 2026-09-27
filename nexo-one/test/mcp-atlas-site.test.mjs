@@ -46,7 +46,7 @@ test('MCP Atlas is a routed surface in the unified SPA with canonical Tower sour
   assert.match(workflow,/MCP_TOPOLOGY_FRESHNESS_FINGERPRINT_MISMATCH/);
   assert.match(site,/systemGraphModel/);
   assert.doesNotMatch(site,/system-graph-views/);
-  assert.match(site,/\['roles','Roles'\]/);
+  assert.match(site,/\['roles','Equipes de automação'\]/);
   assert.match(builder, /tower_file_id/);
   assert.match(builder, /tower_revision/);
   assert.match(builder,/projection_fingerprint/);

@@ -94,7 +94,7 @@ export const ATLAS_METRO_ROOTS = ATLAS_TOP_DOMAINS.map(domain => ROOT_IDS[domain
 
 const ROOT_LABEL: Record<AtlasTopDomain, string> = {
   NEXO: 'Nexo',
-  SCIENCE: 'Science',
+  SCIENCE: 'Ciência',
   OLYMPUS: 'Olympus',
 };
 
@@ -115,7 +115,18 @@ function temporalPoints(node: GraphNode, state: SystemState): AtlasTemporalPoint
 }
 
 function entitySummary(node: GraphNode): string {
-  return node.summary || `${node.type} · ${node.label}`;
+  const summary = node.summary?.trim();
+  if (summary && !/^status\s+[A-Z][A-Z0-9_]*$/.test(summary)) return summary;
+  const kind: Record<GraphNode['type'], string> = {
+    DOMAIN: 'Área principal', SUBDOMAIN: 'Assunto', CAMPAIGN: 'Pesquisa', ACTION: 'Ação',
+    EFFECT: 'Resultado', CLAIM: 'Conclusão', TEST: 'Teste', MEMORY: 'Aprendizado',
+    CAPABILITY: 'Permissão de ação', PROVIDER: 'Serviço conectado', PROJECTION: 'Visão publicada',
+    SIDE_QUEST: 'Tarefa auxiliar', FILAMENT: 'Relação de aprendizagem',
+  };
+  const technical = /^[A-Z0-9][A-Z0-9._:-]{9,}$/.test(node.label);
+  return technical
+    ? `${kind[node.type]}: ainda não há uma explicação em linguagem simples.`
+    : `${kind[node.type]} relacionado a “${node.label}”.`;
 }
 
 function aggregateStatus(nodes: GraphNode[]): string {
@@ -602,7 +613,7 @@ export function buildAtlasMetroModel(state: SystemState): AtlasMetroModel {
       source,
       target,
       label: learningFilament
-        ? `Learning · ${learningFilament.label}`
+        ? `Aprendizado · ${learningFilament.label}`
         : edge.explanation || edge.kind,
       kind: edge.kind,
       weight: edge.weight,
@@ -654,7 +665,7 @@ export function buildAtlasMetroModel(state: SystemState): AtlasMetroModel {
       id: `filament:${filament.id}`,
       source,
       target,
-      label: `Learning · ${filament.label}`,
+      label: `Aprendizado · ${filament.label}`,
       kind: 'LEARNING_FILAMENT',
       weight: filament.weight,
       aggregated: false,

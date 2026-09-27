@@ -81,7 +81,7 @@ test('capability counters name their different semantics explicitly', async () =
   const [overview, mcp] = await Promise.all([
     read('../src/features/system/Overview.tsx'), read('../src/mcp/McpAtlasApp.tsx'),
   ]);
-  assert.match(overview, /Capabilities fora de PASS/);
+  assert.match(overview, /Recursos sem confirmação/);
   assert.match(mcp, /topology\.stats\.capabilities/);
 });
 
@@ -96,7 +96,8 @@ test('app navigation uses seven primary tabs and removes duplicate rail navigati
   assert.match(app, /window\.location\.hash\.split\('\?', 2\)\[1\]/);
   assert.match(app, /routeTheme === 'light' \|\| routeTheme === 'dark'/);
   assert.match(app, /<EmbeddedMcp theme=\{theme\}/);
-  assert.match(header, /Science :20 · Exec :05 · drift 0/);
+  assert.match(header, /<strong>Dados do NEXO<\/strong>/);
+  assert.match(header, /Última leitura:/);
   assert.match(header, /aria-label="Modo do produto"/);
   for (const label of ['Início','Ciência','Operação','Prova','Sistema','Mapa','Pessoal']) assert.match(header, new RegExp(label));
   assert.match(app, /className="section-tabs"/);
