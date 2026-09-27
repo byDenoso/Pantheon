@@ -215,7 +215,33 @@ export const humanizeText = (value: string | null | undefined): string => {
   replace(/\bestá bloqueada\b/gi, 'está bloqueada');
   replace(/confirmar o índice pela confirmação da fonte do Drive/gi, 'verificar no Drive se o índice foi gravado');
   text = text.replace(/\bno\s+confirmation da fonte\b/gi, 'sem confirmação da fonte');
+  replace(/\bTOWER_V06\b/gi, 'registro central do NEXO');
+  replace(/\bNEXO_SCIENCE_PROJECTION_V1\b/gi, 'projeção científica do NEXO');
+  replace(/\bSANCTIONED PUBLIC PROJECTION\b/gi, 'visão pública aprovada');
+  replace(/\bveredito técnico registrado:\s*rascunho\b[.]?/gi, 'resultado ainda em rascunho.');
+  replace(/\bveredito técnico registrado:\s*/gi, 'resultado do teste: ');
+  text = text.replace(/\b(?:T|HYP|CAMP|REQ|EVT|WORK|ACTION|META|CONTEST|RM)-[A-Z0-9]+(?:-[A-Z0-9]+)+(?:\s*:\s*)?/gi, ' ');
+  text = text.replace(/[-:;·]\s+(?=[([{])/g, ' ')
+    .replace(/^\s*[:;·]\s*/, '').replace(/\s+:/g, ':').replace(/\s{2,}/g, ' ').trim();
   return text;
+};
+
+/** Explica uma ação programada sem expor o identificador interno que a escolheu. */
+export const humanizeActionText = (value: string | null | undefined, domain: string): string => {
+  if (!value) return '';
+  const hasMachineReference = /(?:^|\b)(?:T|HYP|CAMP|REQ|EVT|WORK|ACTION|META|CONTEST|RM)-[A-Z0-9]+(?:-[A-Z0-9]+)+(?=[:\s.,;)]|$)/i.test(value);
+  if (hasMachineReference && /próxima execução agendada/i.test(value)) {
+    if (domain === 'SCIENCE') return 'A automação científica retomará o teste pendente na próxima execução programada.';
+    if (domain === 'ENGINEERING') return 'A automação de engenharia executará a próxima verificação programada.';
+    if (domain === 'OLYMPUS') return 'O ciclo de aprendizagem avaliará novas hipóteses na próxima execução programada.';
+    return 'A automação desta área retomará a tarefa na próxima execução programada.';
+  }
+  return humanizeText(value)
+    .replace(/\bExecutor científico\b/gi, 'automação científica')
+    .replace(/\bLearner\b/gi, 'ciclo de aprendizagem')
+    .replace(/próxima execução agendada/gi, 'próxima execução programada')
+    .replace(/(teste de contestação)(?:-teste de contestação)+/gi, '$1')
+    .replace(/[\s-]+$/g, '');
 };
 
 export const SEVERITY_TONE: Record<Severity, Tone> = {

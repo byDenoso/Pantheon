@@ -5,7 +5,7 @@ import type {
 import { EXECUTION_STAGES } from '../contracts/system.ts';
 import type { CapabilityCell } from '../viewmodels/system.ts';
 import { provenanceOf } from '../viewmodels/system.ts';
-import { dateTime, humanizeText, label, shortTime, toneOf } from '../viewmodels/tokens.ts';
+import { dateTime, humanizeActionText, humanizeText, label, shortTime, toneOf } from '../viewmodels/tokens.ts';
 import {
   AuthorityBadge, CapabilityBadge, DomainBadge, Fingerprint, FreshnessIndicator,
   ReadbackBadge, SeverityBadge, SourceRef, StatusBadge,
@@ -304,9 +304,9 @@ export function LaneState(
       <p className="lane-current">{humanizeText(lane.current_state)}</p>
       <div className="lane-next">
         <span className="eyebrow">PRÓXIMA AÇÃO</span>
-        <p>{humanizeText(lane.next_action)}</p>
+        <p>{humanizeActionText(lane.next_action, lane.domain)}</p>
         {next && onSelectAction && (
-          <button className="text-button" onClick={() => onSelectAction(next)}>{next.title} ↗</button>
+          <button className="text-button" onClick={() => onSelectAction(next)}>Ver detalhes da ação ↗</button>
         )}
       </div>
       <dl className="lane-meta">
@@ -406,7 +406,7 @@ export function ActionCard(
         <span className="runtime-chip">{label(action.runtime)}</span>
         <span className={`risk-chip risk-${action.risk.toLowerCase()}`}>risco {label(action.risk).toLowerCase()}</span>
       </header>
-      <h3>{humanizeText(action.title)}</h3>
+      <h3>{humanizeActionText(action.title, action.lane)}</h3>
       <p className="action-eligibility">{humanizeText(action.eligibility)}</p>
       <dl className="action-meta">
         <div>
@@ -421,7 +421,7 @@ export function ActionCard(
         </div>
       </dl>
       {action.blocker && <p className="action-blocker" role="alert"><strong>O que impede a execução:</strong> {humanizeText(action.blocker)}</p>}
-      <p className="action-next"><span className="eyebrow">PRÓXIMO PASSO</span>{humanizeText(action.next_action)}</p>
+      <p className="action-next"><span className="eyebrow">PRÓXIMO PASSO</span>{humanizeActionText(action.next_action, action.lane)}</p>
       <footer>
         <ProvenanceButton title={action.title} provenance={provenanceOf({
           source_ref: action.source_ref, fingerprint: action.fingerprint, checked_at: action.checked_at,
