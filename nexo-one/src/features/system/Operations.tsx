@@ -13,6 +13,7 @@ import { ProvenanceButton } from '../../components/provenance.tsx';
 import {
   actionById, blockedActions, capabilityById, humanActions, inboxGroups, provenanceOf, resolvableActions,
 } from '../../viewmodels/system.ts';
+import { canonicalTestPhase } from '../../viewmodels/missions.ts';
 import { dateTime, domainLabel, humanizeText, label, toneOf } from '../../viewmodels/tokens.ts';
 
 export function InboxView(
@@ -282,11 +283,55 @@ export function ExecutionView(
 ) {
   const runs = [...state.runs].sort((a, b) => b.started_at.localeCompare(a.started_at));
   const selected: ExecutionRun | null = runs.find(r => r.run_id === selectedRunId) ?? runs[0] ?? null;
+  const graphTestTitles = new Map(
+    state.graph.nodes
+      .filter(node => node.type === 'TEST')
+      .map(node => [node.id.replace(/^test:/, ''), node.label]),
+  );
+  const projectedRunning = (state.science_projection_v1?.tests ?? [])
+    .filter(test => canonicalTestPhase(test.status) === 'RUNNING');
+
+  if (!selected && projectedRunning.length > 0) {
+    return <>
+      <section className="run-detail" aria-labelledby="projected-running-title">
+        <div className="section-head">
+          <h2 id="projected-running-title">{projectedRunning.length} testes em andamento</h2>
+          <StatusBadge state="RUNNING" title="Em andamento" />
+        </div>
+        <p className="rule-note">
+          A Tower publica estes testes como RUNNING/CHECKPOINTED. O artefato público não trouxe recibos de execução de baixo nível,
+          então esta tela mostra o estado científico canônico sem inventar run_id, horário de início ou readback.
+        </p>
+        <div className="work-queue" role="list" aria-label="Testes científicos em andamento">
+          {projectedRunning.map(test => (
+            <article key={test.id} className="work-row tone-running" role="listitem">
+              <div className="work-row-main">
+                <h3>{graphTestTitles.get(test.id) || 'Teste em andamento'}</h3>
+                <header>
+                  <DomainBadge domain="SCIENCE" muted />
+                  <StatusBadge state="RUNNING" compact title="Em andamento" />
+                </header>
+                <details className="run-technical">
+                  <summary>Identificador e fonte</summary>
+                  <p><code>{test.id}</code></p>
+                  <SourceRef value={test.source_ref} />
+                </details>
+              </div>
+            </article>
+          ))}
+        </div>
+      </section>
+      <p className="rule-note">
+        <strong>Como confirmamos uma alteração:</strong> ação solicitada → recurso autorizado → serviço executor → alteração produzida → confirmação da fonte. Só consideramos a alteração aplicada quando a fonte confirma.
+      </p>
+    </>;
+  }
+
   if (!selected) {
     return <>
       <EmptyState title="Nenhuma execução registrada."
-        description="Não há detalhes de execução nesta atualização. Isso não confirma sucesso nem indica que o sistema esteja parado."
-        hint="Quando houver uma execução registrada, seus detalhes aparecerão aqui." />
+        description="A Tower não publica testes em andamento nem recibos de execução nesta atualização."
+        hint="Quando um teste entrar em RUNNING/CHECKPOINTED ou houver um recibo de execução, ele aparecerá aqui." />
       <p className="rule-note">
         <strong>Como confirmamos uma alteração:</strong> ação solicitada → recurso autorizado → serviço executor → alteração produzida → confirmação da fonte. Só consideramos a alteração aplicada quando a fonte confirma.
       </p>
