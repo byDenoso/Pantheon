@@ -1,3 +1,4 @@
+import {classifyExecutorQueue,findCapability} from './tower-eligibility.mjs';
 const ROLES=new Set(['DAILY','ADVISOR','EXECUTOR','LEARNER','EMERGENT']);
 const PRIORITY={P0:-1,CRITICAL:0,HIGH:1,MEDIUM_HIGH:2,MEDIUM:3,NORMAL:4,LOW:5};
 const STATUS={VERIFIED:0,READY:1,RUNNING:2,CHECKPOINTED:3,WAIT_DEPENDENCY:4};
@@ -7,13 +8,11 @@ const ACTIVE_CAPS=new Set(['ACTIVE','PROVEN','VALIDATED_CURRENT']);
 
 const rank=(map,value,fallback=9)=>Object.hasOwn(map,String(value||''))?map[String(value||'')]:fallback;
 const capabilityRunnable=(item,capabilities)=>{
-  const task=String(item.task_id||'');
-  if(task){
-    for(const [id,cap] of Object.entries(capabilities||{})){
-      if(!cap||typeof cap!=='object'||!ACTIVE_CAPS.has(String(cap.status||'ACTIVE').toUpperCase()))continue;
-      if(id===task||String(cap.task_id||'')===task)return Boolean(cap.backend||cap.executable||cap.task_id);
-    }
-    return false;
+  const task=String(item.task_id||''),capabilityId=String(item.capability_id||'');
+  if(task||capabilityId){
+    // Tower work entities bind by capability_id (e.g. peer.detection.d05_v1); legacy rows by task_id.
+    const cap=findCapability(capabilities,{capabilityId:capabilityId||null,taskId:task||null});
+    return Boolean(cap&&ACTIVE_CAPS.has(String(cap.status||'ACTIVE').toUpperCase())&&(cap.backend||cap.executable||cap.task_id));
   }
   const frozen=item.frozen_test;
   return Boolean(frozen&&frozen.id&&frozen.method&&frozen.decision_rule&&frozen.outputs&&frozen.claim_boundary);
@@ -40,13 +39,23 @@ function queueCard(item,role){
  const keys=common.concat(role==='EXECUTOR'?executor:role==='LEARNER'?learner:[]);
  return Object.fromEntries(keys.filter(k=>item[k]!==undefined&&item[k]!==null).map(k=>[k,item[k]]));
 }
-export function deriveRoleView({role,control={},activeWork={},capabilities={}}){
+export function deriveRoleView({role,control={},activeWork={},capabilities={},entities=null,frozenTests={},resolveRef=null}){
   const normalized=String(role||'').toUpperCase();
   if(!ROLES.has(normalized))throw new Error('ROLE_NOT_SUPPORTED');
-  const items=Array.isArray(activeWork?.work)?activeWork.work:[];
+  const indexItems=Array.isArray(activeWork?.work)?activeWork.work:[];
+  // AUT-004: with hydrated entities, the executor selects only RUNNABLE work; READY-but-not-runnable
+  // goes to blocked_input here instead of being discovered after hydration inside the round.
+  let selection=null,items=indexItems;
+  if(normalized==='EXECUTOR'&&entities){
+    const lookup=entities instanceof Map?id=>entities.get(id):id=>entities[id];
+    const {rows,stats}=classifyExecutorQueue(indexItems,entities,{capabilities,frozenTests,resolveRef});
+    const runnable=new Set(rows.filter(row=>row.selection==='RUNNABLE').map(row=>row.id));
+    items=indexItems.filter(item=>runnable.has(item.id)).map(item=>({...item,...lookup(item.id)}));
+    selection={stats,blocked_input:rows.filter(row=>row.selection==='BLOCKED_INPUT').map(({id,reasons})=>({id,status:'BLOCKED_INPUT',reasons})),stale_index:rows.filter(row=>row.selection==='STALE_INDEX').map(({id,reasons})=>({id,reasons}))};
+  }
   const queue=items.filter(item=>item&&eligible(item,normalized,capabilities)).map(item=>queueCard(item,normalized)).sort((a,b)=>{
     const parkedA=String(a.status)==='WAIT_DEPENDENCY'?1:0,parkedB=String(b.status)==='WAIT_DEPENDENCY'?1:0;
     return parkedA-parkedB+(String(a.owner_role||'')===normalized?0:1)-(String(b.owner_role||'')===normalized?0:1)+rank(PRIORITY,a.priority)-rank(PRIORITY,b.priority)+rank(STATUS,a.status)-rank(STATUS,b.status)+String(a.id||'').localeCompare(String(b.id||''));
   }).slice(0,Number(control.role_queue_limit||5));
-  return {role:normalized,control,event_cursor:control.event_cursor||null,queue,queue_count:queue.length,queue_limit:Number(control.role_queue_limit||5),view_model:'DERIVED_LIVE_FROM_ACTIVE_WORK'};
+  return {role:normalized,control,event_cursor:control.event_cursor||null,queue,queue_count:queue.length,queue_limit:Number(control.role_queue_limit||5),view_model:selection?'DERIVED_LIVE_FROM_HYDRATED_ENTITIES':'DERIVED_LIVE_FROM_ACTIVE_WORK',...(selection?{selection_stats:selection.stats,blocked_input:selection.blocked_input,stale_index:selection.stale_index}:{})};
 }

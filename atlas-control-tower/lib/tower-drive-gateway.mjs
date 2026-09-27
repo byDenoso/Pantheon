@@ -97,7 +97,16 @@ export function createTowerDriveGateway({env=process.env,fetchImpl=globalThis.fe
     readControl:()=>requireJson('CONTROL.json'),
     readEntity,
     readActiveWorkIndex:()=>requireJson('indexes/active-work.json'),
-    async readRoleView(role){const [control,activeWork,manifest]=await Promise.all([requireJson('CONTROL.json'),requireJson('indexes/active-work.json'),requireJson('manifests/capabilities.json')]);return deriveRoleView({role,control:{...control,event_cursor:(await requireJson('snapshot/latest.json')).event_cursor},activeWork,capabilities:manifest?.capabilities||{}});},
+    async readRoleView(role){const [control,activeWork,manifest]=await Promise.all([requireJson('CONTROL.json'),requireJson('indexes/active-work.json'),requireJson('manifests/capabilities.json')]);
+      // AUT-004: the executor selects from hydrated entities, so READY-but-not-runnable never reaches a round.
+      let entities=null,frozenTests={};
+      if(String(role||'').toUpperCase()==='EXECUTOR'){
+        const rows=(activeWork?.work||[]).filter(item=>String(item?.owner_role||'').toUpperCase()==='EXECUTOR');
+        entities=new Map(await Promise.all(rows.map(async item=>[item.id,await readEntity('work',item.id).catch(()=>null)])));
+        const refs=[...new Set([...entities.values()].map(entity=>entity&&(entity.frozen_test_ref||entity.source_test_ref)).filter(Boolean))];
+        frozenTests=Object.fromEntries(await Promise.all(refs.map(async ref=>[ref,await readJson(String(ref)).catch(()=>null)])));
+      }
+      return deriveRoleView({role,control:{...control,event_cursor:(await requireJson('snapshot/latest.json')).event_cursor},activeWork,capabilities:manifest?.capabilities||{},entities,frozenTests});},
     readReceipt,
     readCapabilityManifest:()=>requireJson('manifests/capabilities.json'),
     readRuntimeReport:runId=>readJson('runtime/reports/'+runId+'.json'),
