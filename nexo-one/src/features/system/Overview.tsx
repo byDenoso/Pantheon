@@ -162,22 +162,28 @@ const AREA_PT: Record<string, string> = {
 };
 
 function GuardianStrip({ guardian }: { guardian: NonNullable<SystemState['guardian']> }) {
-  // The Guardião's last audit in one line: green / attention / problem, and where.
-  const label = guardian.status === 'GREEN' ? 'Sistema íntegro'
-    : guardian.status === 'YELLOW' ? guardian.checks_failing > 0
-      ? `Atenção em ${guardian.checks_failing} de ${guardian.checks_total} verificações`
-      : 'Atenção registrada'
-    : `Problema em ${guardian.checks_failing} verificações`;
+  // Freshness is part of integrity. A stale GREEN report must never render as
+  // "Sistema íntegro": it only proves the system was green when that old audit ran.
+  const minutes = Math.max(0, Math.round((Date.now() - Date.parse(guardian.checked_at)) / 60000));
+  const stale = Number.isFinite(minutes) && minutes > 120;
+  const visualStatus = stale ? 'YELLOW' : guardian.status;
+  const label = stale
+    ? `Relatório de integridade atrasado há ${Math.max(2, Math.round(minutes / 60))} h`
+    : guardian.status === 'GREEN' ? 'Sistema íntegro'
+      : guardian.status === 'YELLOW' ? guardian.checks_failing > 0
+        ? `Atenção em ${guardian.checks_failing} de ${guardian.checks_total} verificações`
+        : 'Atenção registrada'
+      : `Problema em ${guardian.checks_failing} verificações`;
   const areas = [...new Set(guardian.failing_areas.map(area => {
     const value = area.split('.')[0] || '';
     return AREA_PT[value] ?? (/^[A-Z0-9_]+$/.test(value) ? 'outra parte do sistema' : value);
   }))];
-  const minutes = Math.max(0, Math.round((Date.now() - Date.parse(guardian.checked_at)) / 60000));
   const ago = !Number.isFinite(minutes) ? '' : minutes < 60 ? `há ${minutes} min` : `há ${Math.round(minutes / 60)} h`;
   return (
-    <p className={`guardian-strip guardian-${guardian.status.toLowerCase()}`} role="status">
+    <p className={`guardian-strip guardian-${visualStatus.toLowerCase()}`} role="status">
       <span className="guardian-dot" aria-hidden="true" />
       <strong>{label}</strong>
+      {stale && <span> · a publicação ainda não recebeu um heartbeat recente</span>}
       {areas.length > 0 && <span> · {areas.join(', ')}</span>}
       {ago && <span className="guardian-ago"> · Último relatório de integridade {ago}</span>}
     </p>
