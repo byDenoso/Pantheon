@@ -34,12 +34,13 @@ test('private access UI is a numeric PIN flow with ephemeral input',async()=>{
   assert.match(session,/PIN inválido\./);
 });
 
-test('avatar opens the local session modal and never replaces the current cockpit',async()=>{
+test('account control opens the local session modal and preserves the current cockpit',async()=>{
   const app=await text('src/app/App.tsx');
-  const openSession=app.match(/const openSession = \(\) => \{([\s\S]*?)\n  \};/)?.[1]||'';
-  assert.match(openSession,/setLoginOpen\(true\)/);
-  assert.doesNotMatch(openSession,/window\.location\.(?:assign|replace)/);
-  assert.match(app,/Abrir conta e sessão/);
+  const header=await text('src/shell/InstrumentHeader.tsx');
+  assert.match(app,/onAccountClick=\{\(\)=>setLoginOpen\(true\)\}/);
+  assert.match(app,/\{loginOpen && \(/);
+  assert.doesNotMatch(app,/onAccountClick=\{\(\)=>window\.location\.(?:assign|replace)/);
+  assert.match(header,/aria-label="Abrir conta e sessão"/);
   assert.match(app,/window\.open\(target\.toString\(\), '_blank', 'noopener,noreferrer'\)/);
   assert.match(app,/Abrir cockpit privado em nova aba/);
   assert.match(app,/Runtime:/);

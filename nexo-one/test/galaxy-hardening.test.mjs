@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 
 const root=new URL('../',import.meta.url);
-const text=path=>readFile(new URL(path,root),'utf8');
+const text=async path=>(await readFile(new URL(path,root),'utf8')).replace(/\r\n/g,'\n');
 
 test('canvas failure degrades to a keyboard-operable textual entity list',async()=>{
   const [canvas,styles]=await Promise.all([

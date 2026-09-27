@@ -178,6 +178,19 @@ async function gh(token, method, path, body) {
   return response.json();
 }
 
+async function githubInboxRecord(token,id) {
+  const expected=name=>name===`scheduled-${id}.json`||name===`${id}.json`||name.endsWith(`-gw-${id}.json`);
+  for(const folder of ['inbox','processed']){
+    const files=(await gh(token,'GET',folder))||[];
+    const saved=files.find(file=>file.type==='file'&&expected(file.name));
+    if(saved){
+      const record=await gh(token,'GET',saved.path);
+      if(record)return {path:saved.path,record};
+    }
+  }
+  return null;
+}
+
 function refusesGate(envelope) {
   const items = envelope?.kind === 'BATCH' ? envelope?.payload?.items || [] : [envelope];
   return items.some(item => String(item?.kind || '').toUpperCase() === 'OPERATOR_INTENT'
@@ -195,6 +208,12 @@ async function githubInboxDrop(url, env) {
   if (!/^[a-z0-9-]{4,60}$/.test(id) || !(n >= 1 && n <= MAX_PARTS) || !(i >= 1 && i <= n)
       || !chunk || chunk.length > MAX_CHUNK || !/^[A-Za-z0-9_-]+=*$/.test(chunk)) {
     return [{ ok: false, error: 'BAD_REQUEST', expected: 'id=[a-z0-9-], i<=n<=40, d=base64url(<=6000)' }, 400];
+  }
+  if (i === 1) {
+    const saved=await githubInboxRecord(token,id);
+    if (saved) {
+      return [{ ok: true, id, complete: true, saved: saved.path, readback: 'PASS', reused: true }, 200];
+    }
   }
   const pad = v => String(v).padStart(2, '0');
   const partPath = `inbox/_parts/${id}/${pad(i)}-of-${pad(n)}.b64`;
@@ -218,8 +237,34 @@ async function githubInboxDrop(url, env) {
   return [{ ok: true, id, complete: true, saved: target, readback: 'PASS' }, 201];
 }
 
+async function inboxDropCheck(url,env) {
+  const id=String(url.searchParams.get('id')||'').toLowerCase();
+  if(!/^[a-z0-9-]{4,60}$/.test(id))return [{ok:false,error:'BAD_REQUEST',expected:'id=[a-z0-9-]{4,60}'},400];
+
+  let sheetError=null;
+  if(googleConfigured(env)){
+    try{
+      const spool=await readSpool(env);
+      if(spoolHasStable(spool,id))return [{ok:true,id,complete:true,found:true,saved:`sheet:${id}`,readback:'PASS',transport:'SHEET_SPOOL'},200];
+    }catch(error){sheetError=error;}
+  }
+
+  const token=env.NEXO_INBOX_TOKEN;
+  if(token){
+    try{
+      const saved=await githubInboxRecord(token,id);
+      if(saved)return [{ok:true,id,complete:true,found:true,saved:saved.path,readback:'PASS',transport:'GITHUB_CONTENTS'},200];
+      return [{ok:true,id,complete:false,found:false},200];
+    }catch(error){return [{ok:false,id,error:'INBOX_CHECK_FAILED',detail:String(error?.message||error).slice(0,120)},502];}
+  }
+  if(sheetError)return [{ok:false,id,error:'INBOX_CHECK_FAILED',detail:String(sheetError?.message||sheetError).slice(0,120)},502];
+  if(googleConfigured(env))return [{ok:true,id,complete:false,found:false,transport:'SHEET_SPOOL'},200];
+  return [{ok:false,id,error:'GATEWAY_NOT_CONFIGURED'},503];
+}
+
 
 export async function inboxDrop(url,env) {
+  if(url.searchParams.get('check')==='1')return inboxDropCheck(url,env);
   let sheetError=null;
   if(googleConfigured(env)){
     try{return await sheetInboxDrop(url,env);}

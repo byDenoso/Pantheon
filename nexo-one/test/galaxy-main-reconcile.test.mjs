@@ -96,12 +96,12 @@ test('main production builder keeps the Tower-native compiler and creates bounde
   }
 });
 
-test('Pages pipeline uses Tower projection authority, two-hour cadence, history hydration and production readback',async()=>{
+test('Pages pipeline uses Tower projection authority, hourly recovery cadence, history hydration and production readback',async()=>{
   const [workflow,builder]=await Promise.all([
     read('../../.github/workflows/nexo-one-pages.yml'),
     read('../scripts/build-galaxy-snapshot.mjs'),
   ]);
-  assert.match(workflow,/cron: '17 \*\/2 \* \* \*'/);
+  assert.match(workflow,/cron: '0 \* \* \* \*'/);
   assert.match(workflow,/VITE_GALAXY_ENDPOINT: \.\/galaxy\/latest\.json/);
   assert.match(workflow,/Hydrate previous valid galaxy history/);
   assert.match(workflow,/NEXO_GALAXY_RETENTION: '168'/);

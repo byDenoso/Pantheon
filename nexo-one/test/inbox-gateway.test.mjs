@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {inboxDrop} from '../server/inbox-gateway.mjs';
+import {submit} from '../scripts/nexo-submit.mjs';
 
 const env={GOOGLE_CONNECTOR:'google/nexo-google',VERCEL_OIDC_TOKEN:'oidc-fixture',NEXO_SPOOL_ID:'spool-fixture'};
 const envelope={kind:'LEARNING_SIGNAL',source:'TEST',payload:{evidence_kind:'INTEGRITY',evidence:'sheet ingress'}};
@@ -47,4 +48,45 @@ test('inbox-drop persists chunked envelopes through the Sheet spool without GitH
   const savedRow=fx.rows.find(row=>row?.[stable]==='run-1234');
   assert.ok(savedRow);assert.deepEqual(JSON.parse(Buffer.from(savedRow[raw],'base64url').toString('utf8')),{...envelope,_via:'INBOX_GATEWAY_SHEET'});
   assert.equal(fx.seen.some(entry=>entry.u.includes('api.github.com')),false);
+  await withFetch(fx.fetch,async()=>{
+    const [found,foundStatus]=await inboxDrop(new URL('https://atlas.example/api/inbox-drop?id=run-1234&check=1'),env);
+    assert.equal(foundStatus,200);assert.equal(found.complete,true);assert.equal(found.readback,'PASS');assert.equal(found.saved,'sheet:run-1234');
+    const [absent,absentStatus]=await inboxDrop(new URL('https://atlas.example/api/inbox-drop?id=run-5678&check=1'),env);
+    assert.equal(absentStatus,200);assert.equal(absent.complete,false);assert.equal(absent.found,false);
+  });
+});
+
+test('Executor client durably submits through inbox-drop and receives readback in the same run',async()=>{
+  const fx=sheetFixture(),payload={stable_id:'executor-batch-20260927',kind:'NEXO_THOUGHT',source:'EXECUTOR',payload:{entries:[{kind:'QUESTION',text:'Resultado de teste'}]}};
+  await withFetch(fx.fetch,async()=>{
+    const fetchImpl=async url=>{
+      const request=new URL(url);
+      if(request.pathname==='/api/inbox-drop'){
+        const [value,status]=await inboxDrop(request,env);
+        return new Response(JSON.stringify(value),{status,headers:{'Content-Type':'application/json'}});
+      }
+      return fx.fetch(url);
+    };
+    const result=await submit(payload.stable_id,JSON.stringify(payload),{base:'https://atlas.example',fetchImpl});
+    assert.equal(result.ok,true);assert.equal(result.gateway.readback,'PASS');assert.equal(result.gateway.saved,`sheet:${payload.stable_id}`);
+  });
+  const stable=fx.rows[0].indexOf('stable_id'),raw=fx.rows[0].indexOf('envelope_b64url');
+  const row=fx.rows.find(candidate=>candidate?.[stable]===payload.stable_id);
+  assert.ok(row);assert.deepEqual(JSON.parse(Buffer.from(row[raw],'base64url').toString('utf8')),{...payload,_via:'INBOX_GATEWAY_SHEET'});
+  assert.equal(fx.seen.some(entry=>entry.u.includes('api.github.com')),false);
+});
+
+test('gateway check recognises a processed GitHub id without resubmitting it',async()=>{
+  const id='batch-processed',file=`20260927-NEXO_THOUGHT-gw-${id}.json`,path=`processed/${file}`;
+  const fetch=async url=>{
+    const value=String(url);
+    if(value.endsWith('/contents/inbox?ref=nexo-inbox'))return new Response('[]',{status:200});
+    if(value.endsWith('/contents/processed?ref=nexo-inbox'))return new Response(JSON.stringify([{name:file,path,type:'file'}]),{status:200});
+    if(value.endsWith(`/contents/${path}?ref=nexo-inbox`))return new Response(JSON.stringify({name:file,path,content:Buffer.from('{}').toString('base64')}),{status:200});
+    assert.fail(`Unexpected request ${value}`);
+  };
+  await withFetch(fetch,async()=>{
+    const [value,status]=await inboxDrop(new URL(`https://atlas.example/api/inbox-drop?id=${id}&check=1`),{NEXO_INBOX_TOKEN:'fixture-read-token'});
+    assert.equal(status,200);assert.equal(value.complete,true);assert.equal(value.readback,'PASS');assert.equal(value.saved,path);
+  });
 });
