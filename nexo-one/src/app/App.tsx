@@ -1,6 +1,7 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useReveal } from './useReveal.ts';
 const GalaxyView = lazy(() => import('../atlas3d/GalaxyView.tsx').then(module => ({ default: module.GalaxyView })));
+const ConnectomeView = lazy(() => import('../atlas3d/ConnectomeView.tsx').then(module => ({ default: module.ConnectomeView })));
 
 const isGalaxyRoute = (hash: string) => /^#\/galaxia(?:[/?]|$)/.test(hash);
 import type { ActionRecord, InboxItem } from '../contracts/system.ts';
@@ -77,6 +78,7 @@ export default function App() {
 
   const commandRef = useRef<HTMLInputElement>(null);
   const {system} = useNexoStore();
+  const [galaxyLens, setGalaxyLens] = useState<'conectoma'|'espiral'>('conectoma');
   const world = useWorld();
   const refreshWorld = world.refresh;
   const session = useSession(useCallback(() => refreshWorld(true), [refreshWorld]));
@@ -208,7 +210,11 @@ export default function App() {
   if (galaxyRoute) return <ProvenanceProvider><div className={`cockpit unified-shell galaxy-route${isMobile?' mobile':''}`} data-view="GALAXY" data-access={session.session.authenticated?'PRIVATE':'PUBLIC'}>
     <a className="skip-link" href="#workspace">Ir ao conteúdo</a>{header}<div className="cockpit-body">
       <main id="workspace" tabIndex={-1} className="workspace galaxy-workspace"><Suspense fallback={<LoadingState label="Abrindo a galáxia…" />}>
-        <GalaxyView selectedId={null}/>
+        <div className="galaxy-lens" role="group" aria-label="Vista">
+          <button type="button" aria-pressed={galaxyLens==='conectoma'} onClick={()=>setGalaxyLens('conectoma')}>Conectoma</button>
+          <button type="button" aria-pressed={galaxyLens==='espiral'} onClick={()=>setGalaxyLens('espiral')}>Espiral</button>
+        </div>
+        {galaxyLens==='conectoma' ? <ConnectomeView/> : <GalaxyView selectedId={null}/>}
       </Suspense></main>
     </div></div></ProvenanceProvider>;
   if (systemRoute) return <ProvenanceProvider><div className={`cockpit unified-shell system-route${isMobile?' mobile':''}`} data-view="SYSTEM" data-access={session.session.authenticated?'PRIVATE':'PUBLIC'}>
