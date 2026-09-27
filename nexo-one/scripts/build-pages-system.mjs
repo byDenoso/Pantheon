@@ -41,6 +41,9 @@ export function validateSanctionedProjection(projection, manifestFile = null) {
   if (!/^sha256:[0-9a-f]{64}$/i.test(String(manifest.projection_fingerprint || ''))) fail('projection_fingerprint invalid');
   if (projection.event_cursor !== manifest.event_cursor) fail('projection event_cursor differs from manifest');
   if (!Array.isArray(projection.work) || !Array.isArray(projection.tests)) fail('work/tests arrays missing');
+  if (Number.isInteger(projection?.counts?.tests) && projection.counts.tests !== projection.tests.length) {
+    fail('projection test count differs from tests[] length');
+  }
   if (projection.campaigns !== undefined && !Array.isArray(projection.campaigns)) fail('campaigns must be an array when present');
   if (projection.human_gates && (!Array.isArray(projection.human_gates.work_ids) || !Number.isInteger(projection.human_gates.count))) fail('human_gates invalid');
   if (!projection.capabilities || typeof projection.capabilities !== 'object' || Array.isArray(projection.capabilities)) {
@@ -1159,6 +1162,10 @@ export function buildPagesProjection({
     .map(item => projectedWorkNode(item, manifest, observedAt, humanWorkIds))
     .filter(Boolean);
   const lanes = lanesFromProjection(projection, observedAt);
+  const graphTestCount = graph.nodes.filter(node => node.type === 'TEST').length;
+  if (graphTestCount !== projection.tests.length) {
+    throw new Error('ATLAS_TEST_COUNT_DRIFT:projection=' + projection.tests.length + ':graph=' + graphTestCount);
+  }
   const inbox = humanInboxFromProjection(projection, observedAt, humanGateDetails);
   // Closed-loop gate: charters and canaries waiting for Dener are real "needs you" items.
   const gate = projection.evolution?.gate || {};
