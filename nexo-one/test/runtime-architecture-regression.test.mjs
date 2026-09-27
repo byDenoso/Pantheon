@@ -94,7 +94,7 @@ test('RETIRED_RUNTIME remains explicit in the compiled capability state', () => 
   });
   assert.equal(state.capabilities[0].status, 'RETIRED_RUNTIME');
   assert.equal(capabilityToneOf('RETIRED_RUNTIME'), 'stale');
-  assert.equal(label('RETIRED_RUNTIME'), 'Runtime retirado');
+  assert.equal(label('RETIRED_RUNTIME'), 'Serviço desativado');
 });
 
 test('remote footer labels the remote state instead of a fixture scenario', async () => {

@@ -21,7 +21,7 @@ test('static Pages sends private access to the private cockpit instead of a dead
   const workflow = await text('../.github/workflows/nexo-one-pages.yml');
 
   assert.match(app, /VITE_PRIVATE_COCKPIT_URL/);
-  assert.match(workflow, /VITE_PRIVATE_COCKPIT_URL:\s*https:\/\/nexo-one-two\.vercel\.app/);
+  assert.match(workflow, /VITE_PRIVATE_COCKPIT_URL:\s*\$\{\{ vars\.VITE_PRIVATE_COCKPIT_URL \}\}/);
 });
 
 test('mobile keeps the private session control visible', async () => {
@@ -48,13 +48,13 @@ test('overview makes source coverage explicit so zero counters cannot masquerade
   assert.match(overview, /MISSING_PROVIDER/);
 });
 
-test('Actions shows projected Tower WORK when executable ActionRecords are intentionally absent', async () => {
+test('Actions preserves published work as read-only tasks when executable actions are absent', async () => {
   const operations = await text('src/features/system/Operations.tsx');
   const styles = await text('src/styles/system.css');
   assert.match(operations, /node\.type === 'ACTION'/);
-  assert.match(operations, /WORK na projeção da Tower/);
-  assert.match(operations, /Nenhuma autonomia comprovada/);
-  assert.match(operations, /ActionRecord → capability → runtime/);
+  assert.match(operations, /tarefas publicadas pela fonte oficial/);
+  assert.match(operations, /Esta fila é somente para consulta/);
+  assert.match(operations, /autorização, serviço executor e confirmação da alteração/);
   assert.match(operations, /PROJECTED_WORK_PAGE = 40/);
   assert.match(styles, /\.work-projection-note/);
   assert.match(styles, /\.work-queue/);
@@ -63,5 +63,5 @@ test('Actions shows projected Tower WORK when executable ActionRecords are inten
 
 test('empty Execution state explains the next operational path', async () => {
   const operations = await text('src/features/system/Operations.tsx');
-  assert.match(operations, /ACTION → CAPABILITY → RUNTIME → EFFECT → READBACK/);
+  assert.match(operations, /ação solicitada → recurso autorizado → serviço executor → alteração produzida → confirmação da fonte/);
 });

@@ -66,7 +66,7 @@ export function Overview(
             <StatusBadge state={summary.state} />
             <span className="quiet-note">última leitura {dateTime(summary.lastRead)}</span>
             <span className="quiet-note">
-              {representedProviders} de {state.providers.length} fontes lidas · {unavailableProviders} sem resposta
+              Cobertura: {representedProviders} de {state.providers.length} fontes lidas · {unavailableProviders} sem resposta
             </span>
           </div>
         </div>

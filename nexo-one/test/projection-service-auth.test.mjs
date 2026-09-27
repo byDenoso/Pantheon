@@ -52,7 +52,8 @@ test('service identity remains projection-scoped while human private sessions ca
   const projectionBlock=handler.split("if(route==='projections')")[1].split("if(route==='system')")[0];
   assert.match(projectionBlock,/verifyProjectionService\(req,\{now\}\)/);
   assert.match(projectionBlock,/projectionAccess=serviceAccess\?'PRIVATE':'PUBLIC'/);
-  const afterProjection=handler.split("if(route==='system')")[1];
-  assert.match(afterProjection,/const options=\{now,access:'PUBLIC',env,force\}/);
-  assert.match(afterProjection,/compile\(results,\{now,access:'PUBLIC'\}\)/);
+  const systemRoute=handler.split("if(route==='system')")[1].split('const q=')[0];
+  assert.match(systemRoute,/readPublishedTowerSystem\(\{env,signal:req\.signal,now,force\}\)/);
+  assert.match(systemRoute,/SANCTIONED_PUBLIC_PROJECTION_UNAVAILABLE/);
+  assert.doesNotMatch(systemRoute,/privateAccess/);
 });

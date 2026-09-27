@@ -25,7 +25,7 @@ function loadFiles(){
   }
   if(dir){
     const files={};
-    const walk=d=>{for(const name of readdirSync(d)){const full=join(d,name);if(statSync(full).isDirectory())walk(full);else if(name.endsWith('.json')){try{files[relative(dir,full)]=JSON.parse(readFileSync(full,'utf8'));}catch{files[relative(dir,full)]=Symbol.for('INVALID_JSON');}}}};
+    const walk=d=>{for(const name of readdirSync(d)){const full=join(d,name);if(statSync(full).isDirectory())walk(full);else if(name.endsWith('.json')){const key=relative(dir,full).replaceAll('\\','/');try{files[key]=JSON.parse(readFileSync(full,'utf8'));}catch{files[key]=Symbol.for('INVALID_JSON');}}}};
     walk(dir);
     return {files,meta:{source:'dir',path:dir}};
   }

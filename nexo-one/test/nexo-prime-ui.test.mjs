@@ -46,16 +46,19 @@ test('mobile Atlas keeps readable type and gesture-first camera controls',async(
   assert.doesNotMatch(css,/font-size:(?:6(?:\.\d+)?|7(?:\.\d+)?|8(?:\.\d+)?)px/);
 });
 
-test('galaxy uses restrained exposure, macro framing and theme-aware rendering',async()=>{
+test('galaxy keeps macro framing, theme-aware rendering and bounded adjustable bloom',async()=>{
   const galaxy=await text('src/components/GalaxyThree3D.tsx');
+  const view=await text('src/atlas3d/GalaxyView.tsx');
+  const compiler=await text('src/viewmodels/galaxyCompiler.ts');
   assert.match(galaxy,/DEFAULT_CAMERA = new Vector3\(0, 16, 286\)/);
   assert.match(galaxy,/MACRO_CAMERA = new Vector3\(0, 12, 360\)/);
   assert.match(galaxy,/toneMappingExposure = themeName === 'light' \? 0\.92/);
-  assert.match(galaxy,/bloom\.threshold = 0\.30/);
-  assert.match(galaxy,/bloom\.strength = 0\.34/);
-  assert.match(galaxy,/bloom\.radius = 0\.32/);
+  assert.match(galaxy,/bloom\.threshold = 0\.2/);
+  assert.match(galaxy,/bloom\.strength = 0\.55 \* glow/);
+  assert.match(galaxy,/bloom\.radius = 0\.5/);
+  assert.match(view,/value: 0\.66/);
   assert.match(galaxy,/NormalBlending/);
-  assert.match(galaxy,/node\.domain === 'NEXO' \? 'CORE'/);
+  assert.match(compiler,/node\.domain === 'NEXO' \? 'CORE'/);
 });
 
 
@@ -83,14 +86,15 @@ test('manual sync preserves the last valid snapshot and reports readback state',
   assert.match(app,/syncMessage/);
 });
 
-test('heavy Atlas module is lazy-loaded outside the initial cockpit bundle',async()=>{
+test('heavy galaxy and Atlas modules are lazy-loaded outside the initial cockpit bundle',async()=>{
   const app=await text('src/app/App.tsx');
-  assert.match(app,/lazy\(\(\) => import\('\.\.\/features\/system\/Atlas\.tsx'\)/);
-  assert.doesNotMatch(app,/import \{ AtlasView, LearningView \} from '\.\.\/features\/system\/Atlas\.tsx'/);
+  assert.match(app,/lazy\(\(\) => import\('\.\.\/atlas3d\/GalaxyView\.tsx'\)/);
+  assert.match(app,/lazy\(\(\) => import\('\.\.\/atlas3d\/EmbeddedAtlas3D\.tsx'\)/);
+  assert.doesNotMatch(app,/import .* from '\.\.\/atlas3d\/(?:GalaxyView|EmbeddedAtlas3D)\.tsx'/);
 });
 
-test('overview exposes the human decision queue consistently as Needs Dener',async()=>{
+test('overview names the human decision queue in clear Portuguese',async()=>{
   const overview=await text('src/features/system/Overview.tsx');
-  assert.match(overview,/Needs Dener/);
+  assert.match(overview,/Decisões que esperam por você/);
   assert.doesNotMatch(overview,/>Gates<\/span>/);
 });
