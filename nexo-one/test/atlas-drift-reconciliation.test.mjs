@@ -99,16 +99,18 @@ test('dangling hypothesis references fail closed in the public science projectio
   const p = projection();
   const { system } = buildPagesProjection({ projection: p, manifestFile: p.manifest });
   const testRecord = system.science_projection_v1.tests.find(item => item.id === 'T-SCI-RUN');
+  assert.equal(testRecord.question_plain.value, 'A medição científica continua em andamento?');
   assert.equal(testRecord.hypothesis_id.value, null);
   assert.match(testRecord.hypothesis_id.unavailable_reason, /H-MISSING/);
   assert.match(testRecord.hypothesis_id.unavailable_reason, /absent from this public projection/);
 });
 
 test('execution and integrity views refuse contradictory empty/green copy', async () => {
-  const [operations, overview, evolution] = await Promise.all([
+  const [operations, overview, evolution, science] = await Promise.all([
     text('src/features/system/Operations.tsx'),
     text('src/features/system/Overview.tsx'),
     text('src/features/system/EvolutionPanel.tsx'),
+    text('src/features/ScienceWorkspace.tsx'),
   ]);
   assert.match(operations, /projectedRunning/);
   assert.match(operations, /testes em andamento/);
@@ -117,4 +119,7 @@ test('execution and integrity views refuse contradictory empty/green copy', asyn
   assert.match(overview, /publicação ainda não recebeu um heartbeat recente/);
   assert.match(evolution, /thoughtAgeMinutes > 360/);
   assert.match(evolution, /Diário da Pítia sem nova entrada/);
+  assert.match(science, /testDisplayName/);
+  assert.doesNotMatch(science, /sourceId:item\.id,name:item\.id/);
+  assert.doesNotMatch(science, /<strong>\{shortId\(item\.id\)\}<\/strong><small>\{item\.id\}<\/small><\/td><td><StateText value=\{valueOf\(item,'campaign_id'\)\}/);
 });
