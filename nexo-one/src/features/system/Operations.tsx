@@ -283,10 +283,10 @@ export function ExecutionView(
 ) {
   const runs = [...state.runs].sort((a, b) => b.started_at.localeCompare(a.started_at));
   const selected: ExecutionRun | null = runs.find(r => r.run_id === selectedRunId) ?? runs[0] ?? null;
-  const graphTestTitles = new Map(
+  const graphTestsById = new Map(
     state.graph.nodes
       .filter(node => node.type === 'TEST')
-      .map(node => [node.id.replace(/^test:/, ''), node.label]),
+      .map(node => [node.id.replace(/^test:/, ''), node]),
   );
   const projectedRunning = (state.science_projection_v1?.tests ?? [])
     .filter(test => canonicalTestPhase(test.status) === 'RUNNING');
@@ -306,9 +306,9 @@ export function ExecutionView(
           {projectedRunning.map(test => (
             <article key={test.id} className="work-row tone-running" role="listitem">
               <div className="work-row-main">
-                <h3>{graphTestTitles.get(test.id) || 'Teste em andamento'}</h3>
+                <h3>{graphTestsById.get(test.id)?.label || 'Teste em andamento'}</h3>
                 <header>
-                  <DomainBadge domain="SCIENCE" muted />
+                  <DomainBadge domain={graphTestsById.get(test.id)?.domain || 'SCIENCE'} muted />
                   <StatusBadge state="RUNNING" compact title="Em andamento" />
                 </header>
                 <details className="run-technical">
