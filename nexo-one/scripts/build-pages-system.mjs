@@ -535,11 +535,29 @@ function graphFromProjection(projection, observedAt, filaments = [], peerDetecti
   const campaigns = campaignRecordsFromProjection(projection);
   const labels = semanticLabels(projection);
   const campaignById = new Map(campaigns.map(item => [String(item.campaign_id), item]));
+  const campaignByRoadmap = new Map(
+    campaigns
+      .filter(item => item?.roadmap_id && item?.campaign_id)
+      .map(item => [String(item.roadmap_id), String(item.campaign_id)])
+  );
+  const ownershipCampaignIds = item => {
+    const ids = [];
+    const direct = String(item?.campaign_id || '').trim();
+    if (direct && campaignById.has(direct)) ids.push(direct);
+    const roadmapCampaign = campaignByRoadmap.get(String(item?.roadmap_id || ''));
+    if (roadmapCampaign && !ids.includes(roadmapCampaign)) ids.push(roadmapCampaign);
+    const rawId = String(item?.id || '');
+    if (peerMembership.testIds.has(rawId) && campaignById.has('CAMP-PEER-DETECTION-V1')
+        && !ids.includes('CAMP-PEER-DETECTION-V1')) {
+      ids.push('CAMP-PEER-DETECTION-V1');
+    }
+    return ids;
+  };
   const campaignMemberCounts = new Map();
   for (const item of [...(projection.work || []), ...(projection.tests || [])]) {
-    const campaignId = String(item?.campaign_id || '').trim();
-    if (!campaignId) continue;
-    campaignMemberCounts.set(campaignId, (campaignMemberCounts.get(campaignId) || 0) + 1);
+    for (const campaignId of ownershipCampaignIds(item)) {
+      campaignMemberCounts.set(campaignId, (campaignMemberCounts.get(campaignId) || 0) + 1);
+    }
   }
 
   const addNode = node => {
@@ -627,14 +645,17 @@ function graphFromProjection(projection, observedAt, filaments = [], peerDetecti
     const node = projectedWorkNode(item, manifest, observedAt, humanWorkIds);
     if (!node) continue;
     addNode(node);
-    const campaignId = String(item.campaign_id || '').trim();
-    const campaignNodeId = campaignId && campaignById.has(campaignId) ? 'campaign:' + campaignId : null;
-    addEdge(campaignNodeId || ('domain:' + node.domain), node.id);
+    const owners = ownershipCampaignIds(item);
+    if (owners.length) {
+      for (const campaignId of owners) addEdge('campaign:' + campaignId, node.id);
+    } else {
+      addEdge('domain:' + node.domain, node.id);
+    }
   }
 
   for (const item of projection.tests) {
     const rawId = String(item.id || '');
-    if (!rawId || peerMembership.testIds.has(rawId)) continue;
+    if (!rawId) continue;
     const domain = domainOf(item.domain || 'SCIENCE');
     const id = 'test:' + rawId;
     addNode({
@@ -657,9 +678,12 @@ function graphFromProjection(projection, observedAt, filaments = [], peerDetecti
         : true,
       ...semanticFields(item, labels),
     });
-    const campaignId = String(item.campaign_id || '').trim();
-    const campaignNodeId = campaignId && campaignById.has(campaignId) ? 'campaign:' + campaignId : null;
-    addEdge(campaignNodeId || ('domain:' + domain), id);
+    const owners = ownershipCampaignIds(item);
+    if (owners.length) {
+      for (const campaignId of owners) addEdge('campaign:' + campaignId, id);
+    } else {
+      addEdge('domain:' + domain, id);
+    }
   }
 
   for (const [capabilityId, definition] of Object.entries(projection.capabilities)) {
@@ -949,6 +973,22 @@ function domainFindings(projection, source, manifest, observedAt) {
     };
   }).filter(Boolean);
 }
+function runsFromProjection(projection, observedAt) {
+  const source = sourceRef(projection.manifest);
+  return (projection.tests || [])
+    .filter(item => String(item.status || item.state || '').trim().toUpperCase() === 'RUNNING')
+    .map(item => ({
+      id: 'run:' + String(item.id),
+      test_id: String(item.id),
+      domain: domainOf(item.domain || 'SCIENCE'),
+      status: 'RUNNING',
+      title: testLabel(item),
+      source_ref: sourcePathRef(projection.manifest, 'entities/test/' + String(item.id) + '.json'),
+      checked_at: observedAt,
+      freshness: { state: 'RECENT', observed_at: observedAt, ttl_seconds: null },
+    }));
+}
+
 function lanesFromProjection(projection, observedAt) {
   const source = sourceRef(projection.manifest);
   return projectionDomains(projection).filter(domain => domain !== 'NEXO').map(domain => {
@@ -956,16 +996,20 @@ function lanesFromProjection(projection, observedAt) {
     const tests = projection.tests.filter(item => domainOf(item.domain || 'SCIENCE') === domain);
     const blocked = work.filter(item => projectionState(item.status || item.operational_status) === 'BLOCKED');
     const phase = item => String(item.status || item.state || '').toUpperCase();
-    const running = tests.filter(item => /RUNNING|CHECKPOINT/.test(phase(item)));
+    const running = tests.filter(item => /^RUNNING$/.test(phase(item)));
+    const checkpointed = tests.filter(item => /CHECKPOINT/.test(phase(item)));
     const ready = tests.filter(item => /READY/.test(phase(item)));
-    const done = tests.filter(item => /DONE|COMPLETE|VERIFIED|PROMOTED|REJECTED|INCONCLUSIVE/.test(phase(item)));
-    const next = running[0] || ready[0];
+    const done = tests.filter(item =>
+      String(item.status_group || '').toUpperCase() === 'DONE'
+      || (!item.status_group && /DONE|RESULT|COMPLETE|VERIFIED|PROMOTED|REJECTED|INCONCLUSIVE/.test(phase(item)))
+    );
+    const next = running[0] || ready[0] || checkpointed[0];
     const latest = [...done].reverse().find(item => testMeaning(item)) || done[done.length - 1];
     return {
       domain,
-      current_state: tests.length + ' testes · ' + done.length + ' concluídos · ' + running.length + ' em andamento · ' + ready.length + ' prontos',
+      current_state: tests.length + ' testes · ' + done.length + ' concluídos · ' + running.length + ' em execução · ' + checkpointed.length + ' em checkpoint · ' + ready.length + ' prontos',
       next_action: next
-        ? (running.includes(next) ? 'Continuar ' : 'Executar ') + testLabel(next) + ' (Executor científico, próxima execução agendada).'
+        ? (running.includes(next) ? 'Continuar ' : checkpointed.includes(next) ? 'Retomar ' : 'Executar ') + testLabel(next) + ' (Executor científico, próxima execução agendada).'
         : 'Sem teste pronto: o Learner propõe novas hipóteses na próxima execução agendada.',
       last_effect: latest ? testLabel(latest) + ': ' + (testMeaning(latest) || 'concluído, leitura simples pendente.') : null,
       blockers: blocked.map(item => String(item.id) + ': ' + String(item.status || item.operational_status || 'BLOCKED')),
@@ -1208,7 +1252,7 @@ export function buildPagesProjection({
     actions: [],
     inbox,
     capabilities,
-    runs: [],
+    runs: runsFromProjection(projection, observedAt),
     lanes,
     projected_work: projectedWork,
     guardian: projection.integrity || null,
