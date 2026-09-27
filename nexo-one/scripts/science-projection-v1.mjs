@@ -248,6 +248,22 @@ export function buildScienceProjectionV1({ projection, manifest } = {}) {
     hypotheses: mapRecords(projection?.hypotheses, 'hypothesis', manifest, hypothesisFields),
     tests: (Array.isArray(projection?.tests) ? projection.tests : []).map(item => testRecord(item, manifest)).filter(Boolean),
   };
+  // Fail closed on dangling hypothesis references. The raw Tower field remains
+  // provenance-addressable via source_ref, but Atlas must not publish a link to
+  // an entity that is absent from the same sanctioned projection.
+  const hypothesisIds = new Set(base.hypotheses.map(item => item.id));
+  for (const test of base.tests) {
+    const ref = test.hypothesis_id;
+    if (ref?.value !== null && ref?.value !== undefined && !hypothesisIds.has(String(ref.value))) {
+      const missing = String(ref.value);
+      test.hypothesis_id = {
+        ...ref,
+        value: null,
+        unavailable_reason: 'Tower references hypothesis ' + missing + ', but that hypothesis is absent from this public projection.',
+      };
+    }
+  }
+
   const output = { ...base, fingerprint: sha256(base) };
   validateScienceProjectionV1(output);
   return output;
