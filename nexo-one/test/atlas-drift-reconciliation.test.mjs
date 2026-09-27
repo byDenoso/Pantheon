@@ -120,6 +120,8 @@ test('execution and integrity views refuse contradictory empty/green copy', asyn
   assert.match(evolution, /thoughtAgeMinutes > 360/);
   assert.match(evolution, /Diário da Pítia sem nova entrada/);
   assert.match(science, /testDisplayName/);
+  assert.match(science, /Vínculos incompletos na projeção/);
+  assert.match(science, /sem inventar parentesco/);
   assert.doesNotMatch(science, /sourceId:item\.id,name:item\.id/);
   assert.doesNotMatch(science, /<strong>\{shortId\(item\.id\)\}<\/strong><small>\{item\.id\}<\/small><\/td><td><StateText value=\{valueOf\(item,'campaign_id'\)\}/);
 });
