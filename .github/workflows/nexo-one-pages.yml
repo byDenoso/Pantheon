@@ -632,9 +632,9 @@ jobs:
           grep -Fq 'data-mcp-graph-view="2d"' /tmp/mcp-readback-dom.html
           grep -Fq 'data-mcp-renderer="metro-2d"' /tmp/mcp-readback-dom.html
           grep -Fq 'class="nexo-graph"' /tmp/mcp-readback-dom.html
-          grep -Fq '>Capabilities<' /tmp/mcp-readback-dom.html
-          grep -Fq '>Runtimes<' /tmp/mcp-readback-dom.html
-          grep -Fq '>Roles<' /tmp/mcp-readback-dom.html
+          grep -Fq 'Recursos disponíveis' /tmp/mcp-readback-dom.html
+          grep -Fq 'Serviços executores' /tmp/mcp-readback-dom.html
+          grep -Fq 'Equipes de automação' /tmp/mcp-readback-dom.html
           mcp_nodes="$(sed -n 's/.*data-mcp-node-count="\([0-9][0-9]*\)".*/\1/p' /tmp/mcp-readback-dom.html | head -1)"
           mcp_links="$(sed -n 's/.*data-mcp-link-count="\([0-9][0-9]*\)".*/\1/p' /tmp/mcp-readback-dom.html | head -1)"
           mcp_visible_nodes="$(sed -n 's/.*data-mcp-visible-nodes="\([0-9][0-9]*\)".*/\1/p' /tmp/mcp-readback-dom.html | head -1)"

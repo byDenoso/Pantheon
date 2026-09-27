@@ -94,6 +94,17 @@ export const humanizeText = (value: string | null | undefined): string => {
       : replacement);
   };
 
+  replace(/DDE explanatory reach across ΛCDM anomalies and megastructures/gi,
+    'energia escura dinâmica: ela explica as anomalias do modelo padrão e os sinais de megaestruturas?');
+  replace(/nature of dark matter/gi, 'natureza da matéria escura');
+  replace(/DESI DR1 selection-aware Galaxy Map/gi, 'mapa de galáxias do DESI DR1 com correção da seleção');
+  replace(/H0 LCDM origin/gi, 'origem da tensão na expansão do universo');
+  replace(/H0 homogeneity LSS/gi, 'uniformidade da expansão do universo em grandes escalas');
+  replace(/selective abstention risk-coverage validation/gi,
+    'equilíbrio entre cobertura e risco quando o sistema pode se abster');
+  replace(/blindspot light/gi, 'limitações conhecidas da propagação da luz');
+  text = text.replace(/\b(energia escura dinâmica)\s*\(DDE\)/gi, '$1');
+
   replace(/runner artifact executor unavailable/gi, 'serviço que executa arquivos indisponível');
   text = text.replace(/\bcap\.([a-z0-9_.-]+)\s+(?:(?:is|está)\s+)?BLOCKED\b/gi, (_match, capability: string) =>
     capability.toLowerCase().includes('deploy') ? 'publicação está bloqueada'
@@ -156,6 +167,10 @@ export const humanizeText = (value: string | null | undefined): string => {
   replace(/\bdark matter\b/gi, 'matéria escura');
   replace(/\bmegastructures\b/gi, 'megaestruturas');
   replace(/\bmegastructure\b/gi, 'megaestrutura');
+  replace(/\banomalies\b/gi, 'anomalias');
+  replace(/\bacross\b/gi, 'em');
+  replace(/\bselection-aware\b/gi, 'com correção da seleção');
+  replace(/\bGalaxy Map\b/gi, 'mapa de galáxias');
   replace(/\bdraft\b/gi, 'rascunho');
   replace(/\bpelo confirmação\b/gi, 'pela confirmação');
   replace(/\bqual fonte é fonte oficial\b/gi, 'qual origem será considerada oficial');
