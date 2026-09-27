@@ -7,7 +7,7 @@
 //  ack   GET /api/inbox-ack?ids=a,b -> moves those files to processed/        (robot only)
 //        "Robot only" = a GitHub Actions OIDC token from byDenoso/Pantheon's NEXO Writer robot workflow,
 //        verified against GitHub's public keys: the robot holds no GitHub secret at all.
-// The GitHub credential lives only here (Vercel env NEXO_INBOX_TOKEN, Contents RW on byDenoso/TCC).
+// NEXO_INBOX_TOKEN is read-only compatibility for legacy inbox draining. Gateway writes use the Sheet spool.
 // Gate actions (APPROVE_CHARTER, CANONIZE, ...) are refused: they are born only in a conversation with Dener.
 import { createHash, createPublicKey, createVerify } from 'node:crypto';
 import { googleToken } from './adapters/google.mjs';
@@ -41,8 +41,10 @@ async function sheetJson(token,url,options={}) {
   return response.json();
 }
 
-async function readSpool(env) {
-  const token=await googleToken(env,undefined,{scopes:GOOGLE_WRITE_SCOPES.sheets});
+async function readSpool(env,req) {
+  const requestOidc=req?.headers?.['x-vercel-oidc-token'];
+  const scopedEnv=requestOidc&&!env.VERCEL_OIDC_TOKEN?{...env,VERCEL_OIDC_TOKEN:requestOidc}:env;
+  const token=await googleToken(scopedEnv,undefined,{scopes:GOOGLE_WRITE_SCOPES.sheets});
   const spreadsheetId=String(env.NEXO_SPOOL_ID||SPOOL_ID_DEFAULT).trim();
   const meta=await sheetJson(token,`${SHEETS_API}/${encodeURIComponent(spreadsheetId)}?fields=sheets.properties(title,index)`);
   const first=[...(meta.sheets||[])].sort((a,b)=>(a.properties?.index||0)-(b.properties?.index||0))[0];
@@ -95,7 +97,7 @@ function spoolHasStable(spool,stableId) {
     && String(row?.[spool.columns.envelope]||'').trim());
 }
 
-async function sheetInboxDrop(url,env) {
+async function sheetInboxDrop(url,env,req) {
   const id=String(url.searchParams.get('id')||'').toLowerCase();
   const i=Number(url.searchParams.get('i')||1),n=Number(url.searchParams.get('n')||1);
   const chunk=String(url.searchParams.get('d')||'');
@@ -104,7 +106,7 @@ async function sheetInboxDrop(url,env) {
     return [{ok:false,error:'BAD_REQUEST',expected:'id=[a-z0-9-], i<=n<=40, d=base64url(<=6000)'},400];
   }
 
-  let spool=await readSpool(env);
+  let spool=await readSpool(env,req);
   if(spoolHasStable(spool,id))return [{ok:true,id,complete:true,saved:`sheet:${id}`,readback:'PASS',reused:true},200];
 
   const p=spool.partBase;
@@ -115,7 +117,7 @@ async function sheetInboxDrop(url,env) {
     await appendSpoolRow(spool,row);
   }
 
-  spool=await readSpool(env);
+  spool=await readSpool(env,req);
   const parts=new Map();
   const partRows=[];
   for(let index=0;index<spool.rows.length;index+=1){
@@ -138,14 +140,14 @@ async function sheetInboxDrop(url,env) {
 
   const stored={...envelope,_via:'INBOX_GATEWAY_SHEET'};
   await appendSpoolRow(spool,fullSpoolRow(spool,{stableId:id,envelope:stored,role:envelope?.source||'ATLAS_GATEWAY'}));
-  const check=await readSpool(env);
+  const check=await readSpool(env,req);
   if(!spoolHasStable(check,id))return [{ok:false,id,error:'READBACK_FAILED'},502];
   await clearSpoolRows(check,partRows).catch(()=>null);
   return [{ok:true,id,complete:true,saved:`sheet:${id}`,readback:'PASS',transport:'SHEET_SPOOL'},201];
 }
 
-async function appendGatewayAck(env,id) {
-  const spool=await readSpool(env),stableId=ackStable(id);
+async function appendGatewayAck(env,id,req) {
+  const spool=await readSpool(env,req),stableId=ackStable(id);
   const exists=spool.rows.some(row=>String(row?.[spool.columns.stable]||'').trim()===stableId);
   if(exists)return true;
   const row=Array(Math.max(spool.partBase,spool.columns.envelope+1)).fill('');
@@ -153,13 +155,13 @@ async function appendGatewayAck(env,id) {
   if(spool.columns.created>=0)row[spool.columns.created]=new Date().toISOString();
   if(spool.columns.role>=0)row[spool.columns.role]='GATEWAY_ACK';
   await appendSpoolRow(spool,row);
-  const check=await readSpool(env);
+  const check=await readSpool(env,req);
   return check.rows.some(candidate=>String(candidate?.[check.columns.stable]||'').trim()===stableId);
 }
 
-async function gatewayAckSet(env) {
+async function gatewayAckSet(env,req) {
   if(!googleConfigured(env))return new Set();
-  const spool=await readSpool(env);
+  const spool=await readSpool(env,req);
   return new Set(spool.rows.map(row=>String(row?.[spool.columns.stable]||'').trim()).filter(value=>value.startsWith('gwack-')));
 }
 
@@ -237,14 +239,14 @@ async function githubInboxDrop(url, env) {
   return [{ ok: true, id, complete: true, saved: target, readback: 'PASS' }, 201];
 }
 
-async function inboxDropCheck(url,env) {
+async function inboxDropCheck(url,env,req) {
   const id=String(url.searchParams.get('id')||'').toLowerCase();
   if(!/^[a-z0-9-]{4,60}$/.test(id))return [{ok:false,error:'BAD_REQUEST',expected:'id=[a-z0-9-]{4,60}'},400];
 
   let sheetError=null;
   if(googleConfigured(env)){
     try{
-      const spool=await readSpool(env);
+      const spool=await readSpool(env,req);
       if(spoolHasStable(spool,id))return [{ok:true,id,complete:true,found:true,saved:`sheet:${id}`,readback:'PASS',transport:'SHEET_SPOOL'},200];
     }catch(error){sheetError=error;}
   }
@@ -263,22 +265,18 @@ async function inboxDropCheck(url,env) {
 }
 
 
-export async function inboxDrop(url,env) {
-  if(url.searchParams.get('check')==='1')return inboxDropCheck(url,env);
+export async function inboxDrop(url,env,req) {
+  if(url.searchParams.get('check')==='1')return inboxDropCheck(url,env,req);
   let sheetError=null;
   if(googleConfigured(env)){
-    try{return await sheetInboxDrop(url,env);}
+    try{return await sheetInboxDrop(url,env,req);}
     catch(error){sheetError=error;}
   }
-  if(env.NEXO_INBOX_TOKEN){
-    try{return await githubInboxDrop(url,env);}
-    catch(error){
-      const fallbackDetail=String(error?.message||error).slice(0,120);
-      const primaryDetail=String(sheetError?.message||sheetError||'SHEET_SPOOL_NOT_ATTEMPTED').slice(0,120);
-      return [{ok:false,error:'GATEWAY_WRITE_FAILED',primary:'SHEET_SPOOL',primary_detail:primaryDetail,fallback:'GITHUB_CONTENTS',fallback_detail:fallbackDetail},502];
-    }
+  if(sheetError){
+    const detail=String(sheetError?.message||sheetError).slice(0,120);
+    return [{ok:false,error:'SHEET_SPOOL_WRITE_FAILED',primary:'SHEET_SPOOL',detail,github_token_role:'READ_ONLY_COMPATIBILITY'},502];
   }
-  return [{ok:false,error:'GATEWAY_NOT_CONFIGURED',hint:sheetError?'Google Sheets write failed and GitHub fallback is absent.':'Configure the ATLAS Google connector for Sheets write.'},503];
+  return [{ok:false,error:'GATEWAY_NOT_CONFIGURED',hint:'Configure the ATLAS Google connector for Sheets write.'},503];
 }
 
 // ── GitHub Actions OIDC (robot identity, no shared secret) ──────────────────
@@ -311,7 +309,7 @@ export async function inboxRobot(route, url, req, env) {
   const files = token ? (((await gh(token, 'GET', 'inbox')) || []).filter(f => f.type === 'file' && f.name.endsWith('.json'))) : [];
   if (route === 'inbox-list') {
     let acked=new Set();
-    try{acked=await gatewayAckSet(env);}catch{/* compatibility: a Sheets outage must not hide GitHub proposals */}
+    try{acked=await gatewayAckSet(env,req);}catch{/* compatibility: a Sheets outage must not hide GitHub proposals */}
     const items = [];
     for (const f of files.sort((a, b) => a.name.localeCompare(b.name))) {
       const id=f.name.replace(/\.json$/, '');
@@ -332,7 +330,7 @@ export async function inboxRobot(route, url, req, env) {
     const id=f.name.replace(/\.json$/,'');
     let sheetAck=false;
     if(googleConfigured(env)){
-      try{sheetAck=await appendGatewayAck(env,id);}catch{/* GitHub cleanup may still succeed */}
+      try{sheetAck=await appendGatewayAck(env,id,req);}catch{/* GitHub cleanup may still succeed */}
     }
     if(sheetAck)acknowledged.push(id);
     if(!token){if(sheetAck)retained.push(f.name);continue;}
