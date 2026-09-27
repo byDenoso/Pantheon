@@ -3,7 +3,9 @@
 .detail-drawer header{display:flex;align-items:flex-start;gap:12px;justify-content:space-between;padding-bottom:14px;border-bottom:1px solid var(--line,#26313d)}
 .detail-drawer-kicker{display:block;margin-bottom:6px;color:var(--accent,#f0b35a);font:600 10px/1 var(--font-mono,monospace);letter-spacing:.12em;text-transform:uppercase}
 .detail-drawer h2{margin:0;font-size:18px;line-height:1.25;font-weight:650;letter-spacing:0;text-transform:none}
-.detail-drawer header code{display:block;margin-top:6px;color:var(--quiet,#6b7a8c);font-size:10.5px;word-break:break-all}
+.detail-drawer-code{margin-top:6px;color:var(--quiet,#6b7a8c);font-size:10px}
+.detail-drawer-code summary{cursor:pointer}
+.detail-drawer-code code{display:block;margin-top:6px;color:var(--quiet,#6b7a8c);font-size:10.5px;word-break:break-all}
 .detail-drawer header button{flex:none;width:30px;height:30px;border:1px solid var(--line,#26313d);border-radius:8px;background:transparent;color:var(--muted,#8b98a5);font-size:18px;line-height:1;cursor:pointer}
 .detail-drawer header button:hover{color:var(--ink,#fff)}
 .detail-drawer dl{display:grid;gap:0;margin:8px 0 0}

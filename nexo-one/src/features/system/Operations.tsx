@@ -1,4 +1,4 @@
-// Human Inbox, Actions e Execution trace.
+// Intervenções, tarefas e histórico de execução.
 import { useCallback, useState } from 'react';
 import type { ActionRecord, ExecutionRun, GraphNode, InboxItem, InboxKind, SystemState } from '../../contracts/system.ts';
 import { INBOX_KINDS } from '../../contracts/system.ts';
@@ -13,7 +13,7 @@ import { ProvenanceButton } from '../../components/provenance.tsx';
 import {
   actionById, blockedActions, capabilityById, humanActions, inboxGroups, provenanceOf, resolvableActions,
 } from '../../viewmodels/system.ts';
-import { dateTime, domainLabel, label, toneOf } from '../../viewmodels/tokens.ts';
+import { dateTime, domainLabel, humanizeText, label, toneOf } from '../../viewmodels/tokens.ts';
 
 export function InboxView(
   { state, onOpenInbox }: { state: SystemState; onOpenInbox: (item: InboxItem) => void },
@@ -25,7 +25,7 @@ export function InboxView(
     <>
       <div className="filter-row" role="group" aria-label="Filtrar por tipo de intervenção">
         <button className={kind === 'ALL' ? 'filter active' : 'filter'} aria-pressed={kind === 'ALL'}
-          onClick={() => setKind('ALL')}>Needs Dener <b>{state.inbox.length}</b></button>
+        onClick={() => setKind('ALL')}>Exigem sua análise <b>{state.inbox.length}</b></button>
         {INBOX_KINDS.map(value => {
           const count = state.inbox.filter(i => i.kind === value).length;
           return (
@@ -37,8 +37,8 @@ export function InboxView(
         })}
       </div>
       {total === 0
-        ? <EmptyState title="Nenhum Needs Dener pendente neste filtro."
-            description="Esta superfície mostra apenas gates com requisito humano explícito vindo da Tower. Ações autônomas continuam em Actions." />
+        ? <EmptyState title="Nenhuma decisão sua é necessária neste filtro."
+            description="Aqui aparecem apenas itens que aguardam uma decisão ou informação sua. Tarefas que podem seguir sozinhas ficam na seção de tarefas." />
         : groups.map(group => (
             <section key={group.kind}>
               <div className="section-head">
@@ -77,37 +77,40 @@ function daysSince(iso: string): number {
 }
 
 function AutomationChip({ node }: { node: ProjectedWorkNode }) {
-  if (node.human_gate) return <span className="work-auto-chip manual" title="Human gate na Tower">Exige você</span>;
-  if (node.automation_eligible === true) return <span className="work-auto-chip auto" title={node.automation_reason || 'Tower declara elegível para automação'}>NEXO resolve</span>;
-  if (node.automation_eligible === false) return <span className="work-auto-chip manual" title={node.automation_reason || 'Tower declara não elegível para automação'}>Manual</span>;
-  return <span className="work-auto-chip unknown" title="A Tower ainda não publica elegibilidade de automação para este WORK" aria-label="Automação não avaliada">⚙ ?</span>;
+  if (node.human_gate) return <span className="work-auto-chip manual" title="Esta tarefa precisa de uma decisão sua">Exige você</span>;
+  if (node.automation_eligible === true) return <span className="work-auto-chip auto" title={humanizeText(node.automation_reason) || 'A tarefa está marcada como possível de automatizar'}>Pode seguir sozinha</span>;
+  if (node.automation_eligible === false) return <span className="work-auto-chip manual" title={humanizeText(node.automation_reason) || 'A tarefa está marcada como não automatizável'}>Ação manual</span>;
+  return <span className="work-auto-chip unknown" title="Ainda não há informação para dizer se esta tarefa pode ser automatizada" aria-label="Automação não avaliada">Automação não avaliada</span>;
 }
 
 const workIdOf = (node: ProjectedWorkNode) => node.id.replace(/^work:/, '').replace(/^WORK::/, '');
 const workTitleOf = (node: ProjectedWorkNode) => {
   const title = node.label.replace(/^WORK::/, '');
-  return title === workIdOf(node) ? title.replace(/[-_]+/g, ' ') : title;
+  return title === workIdOf(node) ? 'Tarefa sem título' : humanizeText(title);
 };
+const priorityLabel = (value?: string) => ({
+  P0: 'Urgente', CRITICAL: 'Urgente', P1: 'Alta', HIGH: 'Alta', P2: 'Normal', MEDIUM: 'Média', LOW: 'Baixa',
+}[String(value || '').toUpperCase()] ?? label(value));
 
 function stallText(node: ProjectedWorkNode) {
-  const verb = node.operational_status === 'BLOCKED' ? 'Bloqueado' : 'Aguardando';
-  return node.blocked_since ? `${verb} desde ${dateTime(node.blocked_since)} · há ${daysSince(node.blocked_since)} d` : `${verb} · data não publicada pela Tower`;
+  const verb = node.operational_status === 'BLOCKED' ? 'Impedida de avançar' : 'Aguardando outra tarefa';
+  return node.blocked_since ? `${verb} desde ${dateTime(node.blocked_since)} · há ${daysSince(node.blocked_since)} dias` : `${verb} · data de início não informada`;
 }
 
 function WorkDetail({ node, onClose }: { node: ProjectedWorkNode; onClose: () => void }) {
   return (
-    <DetailDrawer kicker={`WORK · ${domainLabel(node.domain)}`} title={workTitleOf(node)} code={workIdOf(node)} onClose={onClose}
+    <DetailDrawer kicker={`Fila de trabalho · ${domainLabel(node.domain)}`} title={workTitleOf(node)} code={workIdOf(node)} onClose={onClose}
       fields={[
-        ['Estado', <StatusBadge state={node.operational_status || node.state} tone={toneOf(node.state)} compact />],
-        ['Prioridade', node.priority],
-        ['Automação', node.human_gate ? 'Exige você' : node.automation_eligible === true ? 'NEXO resolve' : node.automation_eligible === false ? 'Manual' : 'Não avaliada pela Tower'],
-        ['Motivo', node.automation_reason],
-        ['Parado', isStalled(node) ? stallText(node) : null],
-        ['Bloqueio', node.blocker],
-        ['Gate humano', node.human_gate ? 'Sim — exige você' : null],
-        ['Campanha', node.campaign_id],
-        ['Responsável', node.owner_role],
-        ['Dependência', node.dependency_class],
+        ['Situação', <StatusBadge state={node.operational_status || node.state} tone={toneOf(node.state)} compact title={label(node.operational_status || node.state)} />],
+        ['Prioridade', priorityLabel(node.priority)],
+        ['Como pode avançar', node.human_gate ? 'Precisa de uma decisão sua' : node.automation_eligible === true ? 'Pode seguir automaticamente' : node.automation_eligible === false ? 'Precisa de ação manual' : 'Ainda não informado'],
+        ['Por que está assim', humanizeText(node.automation_reason)],
+        ['Espera ou impedimento', isStalled(node) ? stallText(node) : null],
+        ['O que falta', humanizeText(node.blocker)],
+        ['Precisa de você', node.human_gate ? 'Sim' : null],
+        ['Identificador da campanha', node.campaign_id ? <code>{node.campaign_id}</code> : null],
+        ['Equipe responsável', label(node.owner_role)],
+        ['Tarefa necessária antes', label(node.dependency_class)],
       ]} />
   );
 }
@@ -120,28 +123,24 @@ function ProjectedWorkQueue({ rows, visible, onMore }:
   const open = openId ? rows.find(node => node.id === openId) ?? null : null;
   return (
     <>
-      <div className="work-queue" role="list" aria-label="WORK projetado pela Tower">
+      <div className="work-queue" role="list" aria-label="Fila de trabalho publicada pela fonte oficial">
         {shown.map(node => (
           <article key={node.id} className={'work-row tone-' + toneOf(node.state) + (openId === node.id ? ' is-open' : '')} data-domain={node.domain} role="listitem">
             <button type="button" className="work-row-main" onClick={() => setOpenId(node.id)} aria-haspopup="dialog">
               <h3>{workTitleOf(node)}</h3>
               <header>
                 <DomainBadge domain={node.domain} muted />
-                <StatusBadge state={node.operational_status || node.state} tone={toneOf(node.state)} compact />
+                <StatusBadge state={node.operational_status || node.state} tone={toneOf(node.state)} compact title={label(node.operational_status || node.state)} />
                 {node.human_gate && <span className="work-human-chip">Exige você</span>}
-                {node.priority && <span className="work-priority">{node.priority}</span>}
+                {node.priority && <span className="work-priority">{priorityLabel(node.priority)}</span>}
                 <AutomationChip node={node} />
               </header>
               {isStalled(node) && (
                 <p className="work-blocker">
                   <b>{stallText(node)}</b>
-                  {node.blocker && <span>{node.blocker}</span>}
+                  {node.blocker && <span>{humanizeText(node.blocker)}</span>}
                 </p>
               )}
-              <div className="work-row-meta">
-                <code>{workIdOf(node)}</code>
-                {node.campaign_id && <span>{node.campaign_id}</span>}
-              </div>
             </button>
           </article>
         ))}
@@ -204,16 +203,16 @@ export function ActionsView(
 
   const emptyForProjectedWork = filter === 'AUTONOMOUS'
     ? {
-        title: 'Nenhuma autonomia comprovada.',
+        title: 'Nenhuma tarefa pode seguir automaticamente neste filtro.',
         description: projectedWork.some(node => typeof node.automation_eligible === 'boolean')
-          ? 'A Tower marcou os ' + projectedWork.length + ' WORK projetados, e nenhum está elegível para automação sem você.'
-          : 'A Tower ainda não publica automation_eligible por WORK, nem o binding ActionRecord → capability → runtime.',
-        hint: 'O NEXO não presume elegibilidade: só conta o que a Tower declara.',
+          ? 'A fonte oficial informou o estado de automação de ' + projectedWork.length + ' tarefas. Nenhuma delas pode seguir sozinha neste filtro.'
+          : 'Ainda não há informação suficiente para dizer quais tarefas podem ser automatizadas.',
+        hint: 'A lista mostra apenas o que a fonte oficial declarou; o sistema não presume automação.',
       }
     : {
-        title: 'Nenhum WORK neste filtro.',
-        description: 'A Tower não projetou nenhum item que corresponda a este recorte.',
-        hint: 'Isso é um vazio do filtro atual, não uma afirmação sobre outras fontes.',
+        title: 'Nenhuma tarefa neste filtro.',
+        description: 'A fonte oficial não publicou tarefas que correspondam a este filtro.',
+        hint: 'Este resultado vale apenas para o filtro atual.',
       };
 
   return (
@@ -238,8 +237,8 @@ export function ActionsView(
           data-waiting-count={projectedBuckets.WAITING.length}
           data-blocked-count={projectedBuckets.BLOCKED.length}>
           <div>
-            <strong>{projectedWork.length} WORK na projeção da Tower.</strong>
-            <span>Fila canônica visível; execução autônoma só é afirmada quando existir ActionRecord com capability e runtime vinculados.</span>
+          <strong>{projectedWork.length} tarefas publicadas pela fonte oficial.</strong>
+            <span>Esta fila é somente para consulta. Uma tarefa só aparece como automática quando há autorização, serviço executor e confirmação da alteração.</span>
           </div>
           <span className="work-projection-mode">Somente leitura</span>
         </div>
@@ -254,20 +253,20 @@ export function ActionsView(
               ))}
             </div>
           : <EmptyState title="Nenhuma ação neste filtro."
-              description="Não há ActionRecord que corresponda a este recorte."
-              hint="A contagem reflete o registro executável, não todo WORK existente na Tower." />
+              description="Não há ações registradas que correspondam a este filtro."
+              hint="A contagem inclui ações prontas para execução; pode haver outras tarefas ainda sem esse registro." />
         : projectedWork.length
           ? workRows.length
             ? <ProjectedWorkQueue rows={workRows} visible={visibleWork}
                 onMore={() => setVisibleWork(value => value + PROJECTED_WORK_PAGE)} />
             : <EmptyState {...emptyForProjectedWork} />
-          : <EmptyState title="Nenhuma ação projetada."
-              description="Não há ActionRecord nem WORK da Tower nesta compilação."
-              hint="Nesse caso, Sources e Integrity determinam se o vazio é real ou se faltou cobertura." />}
+          : <EmptyState title="Nenhuma tarefa publicada."
+              description="A fonte oficial não publicou tarefas nem ações nesta atualização."
+              hint="Consulte Fontes e Integridade para saber se a leitura está completa." />}
 
       <p className="write-disabled standalone">
-        Esta visão é read-only. WORK representa a fila canônica projetada; ActionRecord representa trabalho com contrato
-        executável. A interface não promove um WORK a ação autônoma sem capability, runtime e readback explícitos.
+        Esta tela é somente para consulta. As tarefas mostram a fila publicada pela fonte oficial; uma ação só aparece
+        como automática quando há autorização, serviço executor e confirmação explícitos da alteração.
       </p>
     </>
   );
@@ -282,10 +281,10 @@ export function ExecutionView(
   if (!selected) {
     return <>
       <EmptyState title="Nenhuma execução registrada."
-        description="Não existe ExecutionRun nesta compilação. A ausência do trace não deve ser interpretada como execução bem-sucedida nem como sistema ocioso."
-        hint="Quando houver execução, ela aparece abaixo segundo o contrato auditável completo." />
+        description="Não há detalhes de execução nesta atualização. Isso não confirma sucesso nem indica que o sistema esteja parado."
+        hint="Quando houver uma execução registrada, seus detalhes aparecerão aqui." />
       <p className="rule-note">
-        <strong>Fluxo esperado:</strong> ACTION → CAPABILITY → RUNTIME → EFFECT → READBACK. Um efeito só conta como aplicado depois de readback confirmado.
+        <strong>Como confirmamos uma alteração:</strong> ação solicitada → recurso autorizado → serviço executor → alteração produzida → confirmação da fonte. Só consideramos a alteração aplicada quando a fonte confirma.
       </p>
     </>;
   }
@@ -297,42 +296,46 @@ export function ExecutionView(
             onClick={() => onSelectRun(run.run_id)} aria-current={run.run_id === selected.run_id ? 'true' : undefined}>
             <span className="run-head">
               <DomainBadge domain={run.lane} muted />
-              <StatusBadge state={run.status} compact />
+              <StatusBadge state={run.status} compact title={label(run.status)} />
             </span>
-            <strong>{run.title}</strong>
+            <strong>{humanizeText(run.title)}</strong>
             <span className="run-meta">
-              <code>{run.run_id}</code>
               <time>{dateTime(run.started_at)}</time>
-              {run.retries > 0 && <em>{run.retries} retries</em>}
+              {run.retries > 0 && <em>{run.retries} novas tentativas</em>}
             </span>
           </button>
         ))}
       </aside>
       <section className="run-detail">
         <div className="section-head">
-          <h2>{selected.title}</h2>
-          <StatusBadge state={selected.status} />
+          <h2>{humanizeText(selected.title)}</h2>
+          <StatusBadge state={selected.status} title={label(selected.status)} />
         </div>
         <dl className="meta-row">
-          <div><dt>action_id</dt><dd><code>{selected.action_id}</code></dd></div>
-          <div><dt>capability</dt><dd>{selected.capability_id ? <code>{selected.capability_id}</code> : <em>nenhuma</em>}</dd></div>
-          <div><dt>runtime</dt><dd>{label(selected.runtime)}</dd></div>
-          <div><dt>effect_key</dt><dd>{selected.effect_key ? <code>{selected.effect_key}</code> : <em>sem efeito</em>}</dd></div>
-          <div><dt>início</dt><dd>{dateTime(selected.started_at)}</dd></div>
-          <div><dt>fim</dt><dd>{selected.ended_at ? dateTime(selected.ended_at) : <em>em aberto</em>}</dd></div>
-          <div><dt>retries</dt><dd>{selected.retries}</dd></div>
-          <div><dt>receipt</dt><dd>{selected.receipt_ref ? <SourceRef value={selected.receipt_ref} /> : <em>sem recibo</em>}</dd></div>
+          <div><dt>Serviço executor</dt><dd>{label(selected.runtime)}</dd></div>
+          <div><dt>Início</dt><dd>{dateTime(selected.started_at)}</dd></div>
+          <div><dt>Fim</dt><dd>{selected.ended_at ? dateTime(selected.ended_at) : <em>em aberto</em>}</dd></div>
+          <div><dt>Novas tentativas</dt><dd>{selected.retries}</dd></div>
         </dl>
+        <details className="run-technical"><summary>Identificadores e comprovante</summary>
+          <dl className="meta-row">
+            <div><dt>Execução</dt><dd><code>{selected.run_id}</code></dd></div>
+            <div><dt>Ação</dt><dd><code>{selected.action_id}</code></dd></div>
+            <div><dt>Recurso autorizado</dt><dd>{selected.capability_id ? <code>{selected.capability_id}</code> : <em>nenhum</em>}</dd></div>
+            <div><dt>Resultado produzido</dt><dd>{selected.effect_key ? <code>{selected.effect_key}</code> : <em>sem alteração registrada</em>}</dd></div>
+            <div><dt>Comprovante</dt><dd>{selected.receipt_ref ? <SourceRef value={selected.receipt_ref} /> : <em>não disponível</em>}</dd></div>
+          </dl>
+        </details>
         <ExecutionTrace run={selected} />
         <div className={`readback-panel tone-${toneOf(selected.readback.status)}`}>
           <div className="readback-head">
             <ReadbackBadge readback={selected.readback} />
-            <Fingerprint value={selected.readback.observed_fingerprint} />
           </div>
-          <p>{selected.readback.explanation}</p>
+          <p>{humanizeText(selected.readback.explanation)}</p>
+          <details className="run-technical"><summary>Assinatura conferida na fonte</summary><Fingerprint value={selected.readback.observed_fingerprint} /></details>
           {selected.readback.status === 'FAILED' && (
             <p className="readback-rule" role="alert">
-              Um efeito sem readback confirmado não conta como aplicado. Reexecutar só depois de reconciliar a fonte.
+              Uma alteração sem confirmação da fonte não conta como aplicada. Tente novamente só depois de conferir a fonte.
             </p>
           )}
         </div>

@@ -7,6 +7,7 @@ import { EVENT_TAG, EventGlyph, GalaxyThree3D, type GalaxyEvent, type GalaxyMorp
 import type { GraphNode, GraphNodeType } from '../contracts/system.ts';
 import type { PlacedNode3D } from '../viewmodels/graph3d.ts';
 import { useNexoStore } from '../data/NexoStore.tsx';
+import { domainLabel } from '../viewmodels/tokens.ts';
 
 const SCALE = 0.36; // matches G_SCALE in GalaxyThree3D (half size)
 const ENDPOINT = import.meta.env?.VITE_GALAXY_ENDPOINT?.trim() || './galaxy/latest.json';
@@ -27,23 +28,34 @@ function readHiddenEvents(): string[] {
   try { const v = JSON.parse(window.localStorage.getItem(EVENTS_KEY) || '[]'); return Array.isArray(v) ? v.map(String) : []; } catch { return []; }
 }
 const EVENT_LEGEND = [
-  { kind: 'SUPERNOVA', label: 'Supernova · precisa de você agora' },
-  { kind: 'NOVA', label: 'Nova · atenção' },
-  { kind: 'AGN', label: 'AGN · campanha em andamento' },
-  { kind: 'HII', label: 'Região H II · muitos testes novos' },
-  { kind: 'REMNANT', label: 'Remanescente · resolvido' },
-  { kind: 'FLARE', label: 'Flare · novidade' },
+  { kind: 'SUPERNOVA', label: 'Decisão importante · Supernova' },
+  { kind: 'NOVA', label: 'Atenção · Nova' },
+  { kind: 'AGN', label: 'Pesquisa em curso · Núcleo ativo' },
+  { kind: 'HII', label: 'Vários testes prontos · Região H II' },
+  { kind: 'REMNANT', label: 'Atividade encerrada · Remanescente' },
+  { kind: 'FLARE', label: 'Atividade recente · Flare' },
 ] as const;
 
-const EVENT_INFO: Record<GalaxyEvent['kind'], { title: string; meaning: string; action: string }> = {
-  SUPERNOVA: { title: 'Supernova', meaning: 'Item com human gate ou importância ≥ 0.9: a Tower está esperando uma decisão sua.', action: 'Resolva o gate ou delegue. Enquanto isso, o item não avança.' },
-  NOVA: { title: 'Nova', meaning: 'Item que pede sua atenção, com urgência menor que uma supernova.', action: 'Revise quando puder. Não bloqueia o fluxo agora.' },
-  AGN: { title: 'AGN · núcleo ativo', meaning: 'Campanha científica rodando no domínio: testes em RUNNING, IN_PROGRESS ou CHECKPOINTED.', action: 'Nada a fazer. Acompanhe os resultados à medida que saem.' },
-  HII: { title: 'Região H II', meaning: 'Subdomínio com 3 ou mais testes novos em READY: área de formação de hipóteses.', action: 'Candidato a próxima campanha: priorize ou agrupe os testes.' },
-  REMNANT: { title: 'Remanescente', meaning: 'Item concluído desde o último snapshot (DONE, VERIFIED, REJECTED…).', action: 'Confira se os efeitos e artefatos já foram absorvidos.' },
-  FLARE: { title: 'Flare', meaning: 'Item adicionado desde o último snapshot.', action: 'Classifique e priorize se ainda não foi feito.' },
+const EVENT_INFO: Record<GalaxyEvent['kind'], { title: string; explanation: string; action: string; rule: string }> = {
+  SUPERNOVA: { title: 'Supernova', explanation: 'Um assunto prioritário está parado à espera de uma decisão humana.', action: 'Revise a decisão pendente. As etapas que dependem dela só continuam depois disso.', rule: 'Marca itens com decisão humana pendente ou prioridade muito alta.' },
+  NOVA: { title: 'Nova', explanation: 'Há uma atividade que merece revisão, mas ela não está bloqueando o restante do trabalho.', action: 'Leia o contexto e escolha quando agir; o restante do fluxo pode continuar.', rule: 'Marca itens que pedem atenção sem interromper o fluxo.' },
+  AGN: { title: 'Núcleo ativo', explanation: 'Uma pesquisa ou sequência de testes está em andamento neste campo.', action: 'Acompanhe os resultados; não é necessária uma ação imediata.', rule: 'Agrupa testes que estão sendo executados ou aguardam uma etapa de execução.' },
+  HII: { title: 'Região de novos testes', explanation: 'Vários testes novos se concentram no mesmo assunto e podem formar uma linha de investigação.', action: 'Compare as perguntas e reúna os testes que ajudam a distinguir explicações concorrentes.', rule: 'Marca uma área com três ou mais testes prontos para começar.' },
+  REMNANT: { title: 'Remanescente', explanation: 'Uma atividade chegou recentemente a um estado final e deixou um resultado para consultar.', action: 'Confira se o resultado e seus efeitos foram registrados na etapa seguinte.', rule: 'Agrupa itens que terminaram desde a última atualização da galáxia.' },
+  FLARE: { title: 'Nova atividade', explanation: 'Um item novo apareceu desde a atualização anterior.', action: 'Leia a descrição e encaminhe o item para a próxima etapa adequada.', rule: 'Marca itens adicionados desde a última atualização da galáxia.' },
 };
 const RUNNING = new Set(['RUNNING', 'IN_PROGRESS', 'CHECKPOINTED', 'EXECUTING', 'CLAIMED']);
+const STATUS_COPY: Record<string, string> = {
+  READY: 'Pronto para começar', RUNNING: 'Em execução', IN_PROGRESS: 'Em andamento',
+  CHECKPOINTED: 'Aguardando a próxima etapa', EXECUTING: 'Em execução', CLAIMED: 'Assumido por uma automação',
+  DONE: 'Concluído', VERIFIED: 'Verificado', REJECTED: 'Encerrado após revisão', FAILED: 'Falhou',
+  BLOCKED: 'Bloqueado', PENDING: 'Aguardando', OPEN: 'Aberto', CLOSED: 'Encerrado',
+};
+const humanStatus = (value?: string | null) => value ? STATUS_COPY[value.toUpperCase()] ?? 'Estado em atualização' : '';
+const isTechnicalLabel = (value?: string | null) => Boolean(value && (/^[A-Z0-9][A-Z0-9_.:-]{7,}$/.test(value) || /^[0-9a-f]{8}-[0-9a-f-]{27,}$/i.test(value)));
+const humanTitle = (entity: RawEntity) => [entity.title, entity.plain, entity.meaning]
+  .find(value => Boolean(value?.trim()) && !isTechnicalLabel(value) && value !== entity.id && value !== entity.canonical_id)
+  || 'Item relacionado a este assunto';
 
 interface RawEntity {
   id: string; canonical_id?: string; kind?: string; title?: string; status?: string | null; cluster_id?: string;
@@ -187,12 +199,11 @@ export function GalaxyView({ selectedId }: { selectedId: string | null; onSelect
   const contextParts = useMemo(() => {
     if (!focused) return [];
     const raw = [
-      focused.domain || 'NEXO',
+      domainLabel(focused.domain || 'NEXO'),
       primaryRelated?.subdomain,
-      primaryRelated?.campaign_id,
-      related.length === 1 ? primaryRelated?.title : focused.label,
+      related.length === 1 ? primaryRelated?.title : null,
     ].filter((value): value is string => Boolean(value && String(value).trim()));
-    return raw.filter((value, index) => raw.indexOf(value) === index);
+    return raw.filter((value, index) => !isTechnicalLabel(value) && raw.indexOf(value) === index);
   }, [focused, primaryRelated, related.length]);
   const visibleRelated = related.slice(0, 3);
   const moreRelated = related.slice(3, 30);
@@ -218,7 +229,7 @@ export function GalaxyView({ selectedId }: { selectedId: string | null; onSelect
         <aside className="galaxy-event-panel" data-kind={focused.kind} aria-label="Detalhes do evento">
           <header>
             <span className="ev-glyph"><EventGlyph kind={focused.kind} /></span>
-            <div><small>{focused.domain || 'NEXO'}</small><h2>{EVENT_INFO[focused.kind].title}</h2></div>
+            <div><small>{domainLabel(focused.domain)}</small><h2>{EVENT_INFO[focused.kind].title}</h2></div>
             <button type="button" onClick={() => setFocus(null)} aria-label="Fechar">×</button>
           </header>
           {contextParts.length > 0 && (
@@ -226,23 +237,30 @@ export function GalaxyView({ selectedId }: { selectedId: string | null; onSelect
               {contextParts.map((part, index) => <span key={part}>{index > 0 && <i aria-hidden="true">›</i>}{part}</span>)}
             </nav>
           )}
-          <p className="ev-label">{focused.label}</p>
+          <p className="ev-label">{EVENT_INFO[focused.kind].explanation}</p>
           {related.length === 1 && primaryRelated?.plain && <p className="ev-plain"><b>Pergunta</b>{primaryRelated.plain}</p>}
           {related.length === 1 && primaryRelated?.meaning && <p className="ev-plain"><b>Resultado</b>{primaryRelated.meaning}</p>}
-          {related.length > 1 && <p className="ev-summary">{related.length} itens ligados a este fenômeno.</p>}
+          {related.length > 1 && <p className="ev-summary">{related.length} itens estão ligados a este assunto e aparecem na lista abaixo.</p>}
           <section className="ev-action"><b>O que fazer</b><p>{EVENT_INFO[focused.kind].action}</p></section>
           {related.length > 0 && (
             <section>
               <h3>{related.length === 1 ? 'Item' : `Itens principais (${Math.min(3, related.length)}/${related.length})`}</h3>
               <ul>
                 {visibleRelated.map(e => (
-                  <li key={e.id}><div><span>{e.title || e.canonical_id || e.id}</span>{e.plain && <em>{e.plain}</em>}</div>{e.status && <small>{e.status}</small>}</li>
+                  <li key={e.id}><div><span>{humanTitle(e)}</span>{e.plain && <em>{e.plain}</em>}</div>{e.status && <small title="O código do estado fica nos detalhes técnicos">{humanStatus(e.status)}</small>}</li>
                 ))}
               </ul>
               {moreRelated.length > 0 && (
                 <details className="ev-more">
                   <summary>Ver mais {moreRelated.length} itens</summary>
-                  <ul>{moreRelated.map(e => <li key={e.id}><div><span>{e.title || e.canonical_id || e.id}</span>{e.plain && <em>{e.plain}</em>}</div>{e.status && <small>{e.status}</small>}</li>)}</ul>
+                  <ul>
+                    {moreRelated.map(e => (
+                      <li key={e.id}>
+                        <div><span>{humanTitle(e)}</span>{e.plain && <em>{e.plain}</em>}</div>
+                        {e.status && <small>{humanStatus(e.status)}</small>}
+                      </li>
+                    ))}
+                  </ul>
                 </details>
               )}
             </section>
@@ -250,7 +268,7 @@ export function GalaxyView({ selectedId }: { selectedId: string | null; onSelect
           <details className="ev-technical">
             <summary>Detalhes técnicos</summary>
             <dl>
-              <div><dt>O que é</dt><dd>{EVENT_INFO[focused.kind].meaning}</dd></div>
+              <div><dt>Como este sinal é identificado</dt><dd>{EVENT_INFO[focused.kind].rule}</dd></div>
               {focused.reason && <div><dt>Motivo</dt><dd>{focused.reason}</dd></div>}
               <div><dt>Intensidade</dt><dd><meter min={0} max={1} value={focused.intensity} /> {Math.round(focused.intensity * 100)}%</dd></div>
             </dl>
@@ -275,7 +293,7 @@ export function GalaxyView({ selectedId }: { selectedId: string | null; onSelect
               const on = !hiddenEvents.includes(item.kind);
               return (
                 <li key={item.kind} data-kind={item.kind} className={on ? 'on' : 'off'}>
-                  <button type="button" className="ev-go" onClick={() => focusKind(item.kind)} title="Ir até o evento">
+                  <button type="button" className="ev-go" onClick={() => focusKind(item.kind)} title="Ir até o evento" aria-label={`${item.label}: ${eventCounts[item.kind]} ${eventCounts[item.kind] === 1 ? 'item' : 'itens'}`}>
                     <span className="ev-glyph"><EventGlyph kind={item.kind} /></span><span className="ev-name">{item.label}</span><span className="ev-short">{EVENT_TAG[item.kind]}</span> <b>{eventCounts[item.kind]}</b>
                   </button>
                   <button type="button" className="ev-eye" aria-pressed={on} onClick={() => { toggleEvent(item.kind); if (on && focus && rawEvents.find(e => e.id === focus.id)?.kind === item.kind) setFocus(null); }} title={on ? 'Ocultar' : 'Mostrar'}>
@@ -287,18 +305,21 @@ export function GalaxyView({ selectedId }: { selectedId: string | null; onSelect
           </ul>
         )}
         {metrics && (
-          <dl className="galaxy-metrics" aria-label="Métricas da forma da galáxia">
-            <div><dt>Assimetria</dt><dd>{metrics.asymmetry.toFixed(2)}{signed(delta?.asymmetry)}</dd></div>
-            <div><dt>Entropia</dt><dd>{metrics.domain_entropy_bits.toFixed(2)} bits{signed(delta?.domain_entropy_bits)}</dd></div>
-            <div><dt>Razão radial</dt><dd>{metrics.radial_ratio.toFixed(2)}{signed(delta?.radial_ratio)}</dd></div>
-            <div><dt>Pontes</dt><dd>{metrics.cross_link_density.toFixed(3)}{signed(delta?.cross_link_density, 3)}</dd></div>
-            <div className="galaxy-mass">
-              <dt>Massa</dt>
-              <dd>{Object.entries(metrics.entities_by_domain).sort((a, b) => b[1] - a[1]).map(([domain, count]) => (
-                <span key={domain} data-domain={domain}>{domain} {count}</span>
-              ))}</dd>
-            </div>
-          </dl>
+          <section className="galaxy-metrics-card" aria-label="Como interpretar a forma da galáxia">
+            <p>A espiral resume como os itens e as relações se distribuem. Ela descreve a organização do sistema; não prova, por si só, avanço científico. Entre parênteses, aparece a variação desde a atualização anterior.</p>
+            <dl className="galaxy-metrics">
+              <div><dt>Diferença entre os lados</dt><dd>{metrics.asymmetry.toFixed(2)}{signed(delta?.asymmetry)}</dd></div>
+              <div><dt>Diversidade de áreas</dt><dd>{metrics.domain_entropy_bits.toFixed(2)}{signed(delta?.domain_entropy_bits)}</dd></div>
+              <div><dt>Distribuição do centro às bordas</dt><dd>{metrics.radial_ratio.toFixed(2)}{signed(delta?.radial_ratio)}</dd></div>
+              <div><dt>Ligações entre áreas</dt><dd>{metrics.cross_link_density.toFixed(3)}{signed(delta?.cross_link_density, 3)}</dd></div>
+              <div className="galaxy-mass">
+                <dt>Itens por área</dt>
+                <dd>{Object.entries(metrics.entities_by_domain).sort((a, b) => b[1] - a[1]).map(([domain, count]) => (
+                  <span key={domain} data-domain={domain}>{domainLabel(domain)} {count}</span>
+                ))}</dd>
+              </div>
+            </dl>
+          </section>
         )}
       </div>
     </div>

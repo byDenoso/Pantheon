@@ -1,16 +1,21 @@
 // Componentes compostos. Recebem contrato, nunca fixtures.
 import type {
-  ActionRecord, Capability, ExecutionRun, InboxItem, LaneSnapshot, ProjectionBus, TruthFinding,
+  ActionRecord, Capability, ExecutionRun, ExecutionStage, InboxItem, LaneSnapshot, ProjectionBus, TruthFinding,
 } from '../contracts/system.ts';
 import { EXECUTION_STAGES } from '../contracts/system.ts';
 import type { CapabilityCell } from '../viewmodels/system.ts';
 import { provenanceOf } from '../viewmodels/system.ts';
-import { dateTime, label, shortTime, toneOf } from '../viewmodels/tokens.ts';
+import { dateTime, humanizeText, label, shortTime, toneOf } from '../viewmodels/tokens.ts';
 import {
   AuthorityBadge, CapabilityBadge, DomainBadge, Fingerprint, FreshnessIndicator,
   ReadbackBadge, SeverityBadge, SourceRef, StatusBadge,
 } from './primitives.tsx';
 import { ProvenanceButton } from './provenance.tsx';
+
+const EXECUTION_STAGE_LABEL: Record<ExecutionStage, string> = {
+  ACTION: 'Ação solicitada', CAPABILITY: 'Permissão conferida', RUNTIME: 'Serviço acionado',
+  EFFECT: 'Resultado registrado', READBACK: 'Resultado confirmado na fonte',
+};
 
 export function ExecutionTrace({ run, compact }: { run: ExecutionRun; compact?: boolean }) {
   return (
@@ -21,17 +26,15 @@ export function ExecutionTrace({ run, compact }: { run: ExecutionRun; compact?: 
           const tone = step ? toneOf(step.status) : 'unknown';
           return (
             <li key={stage} className={`trace-step tone-${tone}`}>
-              <span className="trace-stage">{stage}</span>
+              <span className="trace-stage">{EXECUTION_STAGE_LABEL[stage]}</span>
               <span className="trace-node" aria-hidden="true"><i /></span>
-              <span className="trace-label">{step?.label ?? 'sem registro'}</span>
+              <span className="trace-label">{humanizeText(step?.label) || 'sem registro'}</span>
               <span className="trace-status">{label(step?.status ?? 'UNKNOWN')}</span>
               {!compact && (
                 <>
-                  <span className="trace-detail">{step?.detail ?? 'Nenhum evento registrado nesta etapa.'}</span>
-                  <span className="trace-meta">
-                    <time>{step?.at ? shortTime(step.at) : '—'}</time>
-                    <Fingerprint value={step?.fingerprint ?? null} />
-                  </span>
+                  <span className="trace-detail">{humanizeText(step?.detail) || 'Nenhum evento registrado nesta etapa.'}</span>
+                  <span className="trace-meta"><time>{step?.at ? shortTime(step.at) : 'sem horário registrado'}</time></span>
+                  {step?.fingerprint && <details className="trace-technical"><summary>Dados técnicos</summary><Fingerprint value={step.fingerprint} /></details>}
                 </>
               )}
             </li>
@@ -59,48 +62,47 @@ export function TruthGraphCard({ finding, capability }: { finding: TruthFinding;
       )}
       <dl className="truth-grid">
         <div>
-          <dt>Truth Owner</dt>
+          <dt>Responsável pela fonte confiável</dt>
           <dd>{finding.authority.owner} <AuthorityBadge authority={finding.authority.class} /></dd>
         </div>
         <div>
-          <dt>Provider esperado</dt>
-          <dd>{finding.provider.expected ? <code>{finding.provider.expected}</code> : <em>nenhum</em>}</dd>
+          <dt>Fonte esperada</dt>
+          <dd>{finding.provider.expected ? label(finding.provider.expected) : <em>nenhuma</em>}</dd>
         </div>
         <div className={mismatch ? 'mismatch' : undefined}>
-          <dt>Provider observado</dt>
-          <dd>{finding.provider.observed ? <code>{finding.provider.observed}</code> : <em>nenhum</em>}
+          <dt>Fonte que respondeu</dt>
+          <dd>{finding.provider.observed ? label(finding.provider.observed) : <em>nenhuma</em>}
             {mismatch && <span className="mismatch-flag">divergente</span>}</dd>
         </div>
         <div>
-          <dt>Capability</dt>
+          <dt>Permissão de ação</dt>
           <dd>{finding.capability_state && finding.capability_state !== 'N/A'
               ? <span className={`capability-summary capability-${finding.capability_state.toLowerCase()}`}>
-                {finding.capability_state} · {finding.capability_summary}
+                {label(finding.capability_state)} · {finding.capability_summary}
               </span>
               : capability ? <CapabilityBadge status={capability.status} id={capability.capability_id} />
               : '— nenhuma'}</dd>
         </div>
         <div>
-          <dt>Freshness</dt>
+          <dt>Atualidade dos dados</dt>
           <dd>
             <FreshnessIndicator freshness={finding.freshness} />
             {finding.source_observed_at && <small className="freshness-detail">Fonte: {dateTime(finding.source_observed_at)} · verificado: {dateTime(finding.checked_at)}</small>}
           </dd>
         </div>
-        <div>
-          <dt>Fingerprint</dt>
-          <dd><Fingerprint value={finding.fingerprint} /></dd>
-        </div>
       </dl>
-      <p className="truth-explanation">{finding.explanation}</p>
+      <p className="truth-explanation">{humanizeText(finding.explanation)}</p>
       <footer>
-        <SourceRef value={finding.source_ref} dim />
-        <ProvenanceButton title={`${finding.domain} · TruthGraph`} provenance={provenanceOf({
+        <ProvenanceButton title={`${finding.domain} · conferência de fontes`} provenance={provenanceOf({
           source_ref: finding.source_ref, fingerprint: finding.fingerprint,
           authority_class: finding.authority.class, checked_at: finding.checked_at,
           freshness: finding.freshness, derivation_rule: 'truth_findings(domain)', projection_role: 'INTEGRITY',
         })} />
       </footer>
+      <details className="truth-technical">
+        <summary>Identificadores e origem técnica</summary>
+        <SourceRef value={finding.source_ref} dim /><Fingerprint value={finding.fingerprint} />
+      </details>
     </article>
   );
 }
@@ -157,7 +159,7 @@ export function CapabilityMatrix(
               <th scope="row"><DomainBadge domain={domain} /></th>
               {runtimes.map(runtime => {
                 const cell = cells.find(c => c.domain === domain && c.runtime === runtime);
-                if (!cell) return <td key={runtime} className="matrix-cell empty"><span className="no-capability">sem capability</span></td>;
+                if (!cell) return <td key={runtime} className="matrix-cell empty"><span className="no-capability">nenhum recurso publicado</span></td>;
                 return (
                   <td key={runtime} className={`matrix-cell tone-${toneOf(cell.status)}`}>
                     <span className="cell-status"><CapabilityBadge status={cell.status} /></span>
@@ -208,19 +210,18 @@ export function HumanInboxItem(
         <SeverityBadge severity={item.severity} />
         {item.due_at && <time className="inbox-due">prazo {dateTime(item.due_at)}</time>}
       </header>
-      <h3>{item.title}</h3>
-      <p className="inbox-question">{item.question}</p>
-      <p className="inbox-why"><span className="eyebrow">POR QUE VOCÊ</span>{item.why}</p>
+      <h3>{humanizeText(item.title)}</h3>
+      <p className="inbox-question">{humanizeText(item.question)}</p>
+      <p className="inbox-why"><span className="eyebrow">POR QUE ISSO IMPORTA</span>{humanizeText(item.why)}</p>
       {(item.human_requirements?.length ?? 0) > 0 && (
         <div className="inbox-requirements">
           <span className="eyebrow">{humanHeading}</span>
           <ul className="inbox-options">
             {item.human_requirements!.map(requirement => (
               <li key={requirement.id}>
-                <strong>{requirement.label}</strong>
-                <span>{requirement.detail}</span>
-                {requirement.state && <small>estado: {requirement.state}</small>}
-                <code>{requirement.id}</code>
+                <strong>{humanizeText(requirement.label)}</strong>
+                <span>{humanizeText(requirement.detail)}</span>
+                {requirement.state && <small>situação: {label(requirement.state)}</small>}
               </li>
             ))}
           </ul>
@@ -230,15 +231,15 @@ export function HumanInboxItem(
         <ul className="inbox-options">
           {item.options.map(option => (
             <li key={option.id}>
-              <strong>{option.label}</strong>
-              <span>{option.consequence}</span>
+              <strong>{humanizeText(option.label)}</strong>
+              <span>{humanizeText(option.consequence)}</span>
             </li>
           ))}
         </ul>
       )}
       {item.action_location && (
         <p className="inbox-why inbox-location">
-          <span className="eyebrow">ONDE FAZER</span>{item.action_location}
+          <span className="eyebrow">ONDE RESOLVER</span>{humanizeText(item.action_location)}
         </p>
       )}
       {(item.automatic_requirements?.length ?? 0) > 0 && (
@@ -247,10 +248,9 @@ export function HumanInboxItem(
           <ul className="inbox-options">
             {item.automatic_requirements!.map(requirement => (
               <li key={requirement.id}>
-                <strong>{requirement.label}{requirement.retryable ? ' · retry automático' : ''}</strong>
-                <span>{requirement.detail}</span>
-                {requirement.state && <small>estado: {requirement.state}</small>}
-                <code>{requirement.id}</code>
+                <strong>{humanizeText(requirement.label)}{requirement.retryable ? ' · nova tentativa automática' : ''}</strong>
+                <span>{humanizeText(requirement.detail)}</span>
+                {requirement.state && <small>situação: {label(requirement.state)}</small>}
               </li>
             ))}
           </ul>
@@ -258,18 +258,22 @@ export function HumanInboxItem(
       )}
       {item.system_next && (
         <p className="inbox-why inbox-system-next">
-          <span className="eyebrow">DEPOIS DISSO</span>{item.system_next}
+          <span className="eyebrow">DEPOIS DISSO</span>{humanizeText(item.system_next)}
         </p>
       )}
       {(item.readback_criteria?.length ?? 0) > 0 && (
         <div className="inbox-readback">
-          <span className="eyebrow">READBACK QUE FECHA O GATE</span>
+          <span className="eyebrow">O QUE PRECISA SER CONFIRMADO</span>
           <ul>
-            {item.readback_criteria!.map((criterion, index) => <li key={index}>{criterion}</li>)}
+            {item.readback_criteria!.map((criterion, index) => <li key={index}>{humanizeText(criterion)}</li>)}
           </ul>
         </div>
       )}
       <footer>
+        {onOpen && <button className="text-button" onClick={() => onOpen(item)}>Abrir contexto ↗</button>}
+      </footer>
+      <details className="inbox-technical">
+        <summary>Rastreabilidade técnica</summary>
         {action && <span className="inbox-action-ref">ação {action.action_id}</span>}
         <SourceRef value={item.source_ref} dim />
         <ProvenanceButton title={item.title} provenance={provenanceOf({
@@ -277,8 +281,7 @@ export function HumanInboxItem(
           freshness: item.freshness, derivation_rule: 'human_gates(open=true)', projection_role: 'COCKPIT',
           authority_class: 'DERIVED',
         })} />
-        {onOpen && <button className="text-button" onClick={() => onOpen(item)}>Abrir contexto ↗</button>}
-      </footer>
+      </details>
       <p className="write-disabled">
         Decisões são registradas fora desta interface. O frontend não executa escrita.
       </p>
@@ -298,45 +301,45 @@ export function LaneState(
         <StatusBadge state={lane.state} />
         <FreshnessIndicator freshness={lane.freshness} showTime={false} />
       </header>
-      <p className="lane-current">{lane.current_state}</p>
+      <p className="lane-current">{humanizeText(lane.current_state)}</p>
       <div className="lane-next">
         <span className="eyebrow">PRÓXIMA AÇÃO</span>
-        <p>{lane.next_action}</p>
+        <p>{humanizeText(lane.next_action)}</p>
         {next && onSelectAction && (
           <button className="text-button" onClick={() => onSelectAction(next)}>{next.title} ↗</button>
         )}
       </div>
       <dl className="lane-meta">
         <div>
-          <dt>Último efeito</dt>
+          <dt>Último resultado registrado</dt>
           <dd>{typeof lane.last_effect === 'string'
-            ? <span>{lane.last_effect}</span>
+            ? <span>{humanizeText(lane.last_effect)}</span>
             : lane.last_effect
-            ? <><code>{lane.last_effect.effect_key}</code> <StatusBadge state={lane.last_effect.status} compact /> <time>{dateTime(lane.last_effect.at)}</time></>
+            ? <><StatusBadge state={lane.last_effect.status} compact /> <time>{dateTime(lane.last_effect.at)}</time></>
             : <em>nenhum efeito registrado</em>}</dd>
         </div>
         <div>
-          <dt>Blockers</dt>
+          <dt>O que está impedindo</dt>
           <dd>{lane.blockers.length
-            ? <ul className="blocker-list">{lane.blockers.map(b => <li key={b}>{b}</li>)}</ul>
+            ? <ul className="blocker-list">{lane.blockers.map(b => <li key={b}>{humanizeText(b)}</li>)}</ul>
             : <em>nenhum</em>}</dd>
         </div>
         <div>
-          <dt>Side quests</dt>
+          <dt>Tarefas de apoio</dt>
           <dd>{lane.side_quests.length
             ? <ul className="quest-list">{lane.side_quests.map(q => (
-                <li key={q.id}><StatusBadge state={q.status} compact /> {q.title}</li>))}</ul>
+                <li key={q.id}><StatusBadge state={q.status} compact /> {humanizeText(q.title)}</li>))}</ul>
             : <em>nenhuma</em>}</dd>
         </div>
       </dl>
       <footer>
-        <SourceRef value={lane.source_ref} dim />
         <ProvenanceButton title={`Lane ${lane.domain}`} provenance={provenanceOf({
           source_ref: lane.source_ref, fingerprint: lane.fingerprint, checked_at: lane.checked_at,
           freshness: lane.freshness, derivation_rule: `lane_snapshot(domain=${lane.domain})`,
           projection_role: 'COCKPIT', authority_class: 'DERIVED',
         })} />
       </footer>
+      {lane.last_effect && typeof lane.last_effect !== 'string' && <details className="lane-technical"><summary>Identificador do resultado</summary><code>{lane.last_effect.effect_key}</code></details>}
     </article>
   );
 }
@@ -346,25 +349,24 @@ export function ProjectionHealth({ bus }: { bus: ProjectionBus }) {
     <section className={`projection-health tone-${toneOf(bus.state)}`}>
       <header>
         <div>
-          <span className="eyebrow">UNIVERSAL PROJECTION BUS</span>
-          <h3>{bus.envelope_count} envelopes · {bus.sources.length} fontes</h3>
+          <span className="eyebrow">ATUALIZAÇÃO COMPARTILHADA</span>
+          <h3>{bus.envelope_count} registros publicados · {bus.sources.length} fontes</h3>
         </div>
         <div className="bus-state">
           <StatusBadge state={bus.state} />
-          <Fingerprint value={bus.fingerprint} />
         </div>
       </header>
+      <p className="quiet-note">Este painel mostra se as telas estão recebendo a mesma versão das informações e quais fontes contribuíram para ela.</p>
       <div className="bus-grid">
         <div>
           <span className="eyebrow">FONTES</span>
           <ul className="bus-list">
             {bus.sources.map(source => (
               <li key={source.id} className={`tone-${toneOf(source.state)}`}>
-                <span className="bus-name">{source.label}</span>
+                <span className="bus-name">{humanizeText(source.label)}</span>
                 <StatusBadge state={source.state} compact />
-                <code className="fingerprint-chip">{source.source_revision ?? 'sem revisão'}</code>
                 <FreshnessIndicator freshness={source.freshness} showTime={false} />
-                <span className="bus-count">{source.envelopes} env.</span>
+                <span className="bus-count">{source.envelopes} registros</span>
               </li>
             ))}
           </ul>
@@ -374,7 +376,7 @@ export function ProjectionHealth({ bus }: { bus: ProjectionBus }) {
           <ul className="bus-list">
             {bus.consumers.map(consumer => (
               <li key={consumer.id} className={`tone-${toneOf(consumer.state)}`}>
-                <span className="bus-name">{consumer.label}</span>
+                <span className="bus-name">{humanizeText(consumer.label)}</span>
                 <StatusBadge state={consumer.state} compact />
                 <time>{dateTime(consumer.last_pull_at)}</time>
               </li>
@@ -386,6 +388,7 @@ export function ProjectionHealth({ bus }: { bus: ProjectionBus }) {
         NEXO ONE e Atlas consomem o mesmo estado. Divergência entre consumidores indica projeção parcial,
         não duas verdades.
       </p>
+      <details className="bus-technical"><summary>Versão e assinatura da publicação</summary><Fingerprint value={bus.fingerprint} /></details>
     </section>
   );
 }
@@ -403,32 +406,23 @@ export function ActionCard(
         <span className="runtime-chip">{label(action.runtime)}</span>
         <span className={`risk-chip risk-${action.risk.toLowerCase()}`}>risco {label(action.risk).toLowerCase()}</span>
       </header>
-      <h3>{action.title}</h3>
-      <p className="action-eligibility">{action.eligibility}</p>
+      <h3>{humanizeText(action.title)}</h3>
+      <p className="action-eligibility">{humanizeText(action.eligibility)}</p>
       <dl className="action-meta">
         <div>
-          <dt>Capability</dt>
+          <dt>Permissão de ação</dt>
           <dd>{capability
             ? <CapabilityBadge status={capability.status} id={capability.capability_id} />
             : <em>nenhuma declarada</em>}</dd>
         </div>
         <div>
-          <dt>Readback</dt>
+          <dt>Confirmação depois da execução</dt>
           <dd><ReadbackBadge readback={action.readback} /></dd>
         </div>
-        <div>
-          <dt>effect_key</dt>
-          <dd>{action.effect_key ? <code>{action.effect_key}</code> : <em>sem efeito emitido</em>}</dd>
-        </div>
-        <div>
-          <dt>input_fingerprint</dt>
-          <dd><Fingerprint value={action.input_fingerprint} /></dd>
-        </div>
       </dl>
-      {action.blocker && <p className="action-blocker" role="alert"><strong>Blocker.</strong> {action.blocker}</p>}
-      <p className="action-next"><span className="eyebrow">PRÓXIMO PASSO</span>{action.next_action}</p>
+      {action.blocker && <p className="action-blocker" role="alert"><strong>O que impede a execução:</strong> {humanizeText(action.blocker)}</p>}
+      <p className="action-next"><span className="eyebrow">PRÓXIMO PASSO</span>{humanizeText(action.next_action)}</p>
       <footer>
-        {action.receipt_ref ? <SourceRef value={action.receipt_ref} dim /> : <SourceRef value={action.source_ref} dim />}
         <ProvenanceButton title={action.title} provenance={provenanceOf({
           source_ref: action.source_ref, fingerprint: action.fingerprint, checked_at: action.checked_at,
           freshness: action.freshness, derivation_rule: 'action_register(open=true)',
@@ -436,6 +430,14 @@ export function ActionCard(
         })} />
         {onOpen && <button className="text-button" onClick={() => onOpen(action)}>Ver execução ↗</button>}
       </footer>
+      <details className="action-technical">
+        <summary>Identificadores e confirmação técnica</summary>
+        <SourceRef value={action.receipt_ref ?? action.source_ref} dim />
+        <dl className="action-meta">
+          <div><dt>Chave do resultado</dt><dd>{action.effect_key ? <code>{action.effect_key}</code> : <em>sem efeito emitido</em>}</dd></div>
+          <div><dt>Assinatura dos dados de entrada</dt><dd><Fingerprint value={action.input_fingerprint} /></dd></div>
+        </dl>
+      </details>
     </article>
   );
 }

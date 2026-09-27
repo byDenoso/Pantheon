@@ -6,6 +6,7 @@ import { stateLabel, dateTime } from '../app/model.ts';
 import { Workspace } from './Workspace.tsx';
 import { FocusDrawer } from '../shell/FocusDrawer.tsx';
 import { EmptyState } from '../components/states.tsx';
+import { humanizeText, label as explainState } from '../viewmodels/tokens.ts';
 
 export function PersonalCockpit(
   { view, world, loading, error, refresh, authenticated, query, setQuery, context, setContext }:
@@ -61,10 +62,10 @@ export function PersonalCockpit(
               {providers.map(provider => (
                 <article key={provider.id} className="provider-card">
                   <header>
-                    <strong>{provider.label}</strong>
-                    <span className="eyebrow">{stateLabel[provider.status] ?? provider.status}</span>
+                    <strong>{humanizeText(provider.label)}</strong>
+                    <span className="eyebrow">{stateLabel[provider.status] ?? explainState(provider.status)}</span>
                   </header>
-                  <p>{provider.message || 'Sem mensagem adicional da fonte.'}</p>
+                  <p>{humanizeText(provider.message) || 'Sem mensagem adicional da fonte.'}</p>
                   <dl className="meta-row">
                     <div><dt>último sucesso</dt><dd>{provider.lastSuccessAt ? dateTime(provider.lastSuccessAt) : <em>nenhum</em>}</dd></div>
                     <div><dt>verificado em</dt><dd>{dateTime(provider.checkedAt)}</dd></div>
@@ -84,7 +85,7 @@ export function PersonalCockpit(
         : <Workspace tab={view} world={world} onSelect={setSelected} context={context} setContext={setContext}
             query={query} onQuery={setQuery} loading={loading} />}
       <p className="quiet-note">
-        Cobertura desta leitura: {providers.map(p => `${p.label} ${stateLabel[p.status] ?? p.status}`).join(' · ') || 'aguardando fontes'}.
+        Cobertura desta leitura: {providers.map(p => `${humanizeText(p.label)} ${stateLabel[p.status] ?? explainState(p.status)}`).join(' · ') || 'aguardando fontes'}.
         Última compilação: {dateTime(world?.generatedAt)}.
       </p>
       {selected && <FocusDrawer item={selected} onClose={() => setSelected(null)} />}

@@ -2,7 +2,7 @@
 import type {
   AuthorityClass, CapabilityStatus, Domain, EntityState, Freshness, Readback, Severity,
 } from '../contracts/system.ts';
-import { STATE_LABEL, capabilityToneOf, dateTime, domainLabel, label, toneOf, type Tone } from '../viewmodels/tokens.ts';
+import { STATE_LABEL, capabilityToneOf, dateTime, domainLabel, humanizeText, label, toneOf, type Tone } from '../viewmodels/tokens.ts';
 
 export function StatusBadge(
   { state, tone, title, compact }: { state: string; tone?: Tone; title?: string; compact?: boolean },
@@ -23,13 +23,16 @@ const FRESHNESS_NOTE: Record<string, string> = {
   STALE: 'Leitura anterior. O conteúdo pode não refletir a fonte agora.',
   UNKNOWN: 'Sem leitura válida. O estado é desconhecido, não vazio.',
 };
+const FRESHNESS_LABEL: Record<string, string> = {
+  LIVE: 'Em dia', RECENT: 'Recente', AGING: 'Atrasando', STALE: 'Antiga', UNKNOWN: 'Sem leitura',
+};
 
 export function FreshnessIndicator({ freshness, showTime = true }: { freshness: Freshness; showTime?: boolean }) {
   const tone = toneOf(freshness.state);
   return (
     <span className={`freshness tone-${tone}`} title={FRESHNESS_NOTE[freshness.state]}>
       <i aria-hidden="true" className={`spark spark-${freshness.state.toLowerCase()}`} />
-      <span>{label(freshness.state)}</span>
+      <span>{FRESHNESS_LABEL[freshness.state] ?? label(freshness.state)}</span>
       {showTime && <small>{freshness.observed_at ? dateTime(freshness.observed_at) : 'sem leitura'}</small>}
     </span>
   );
@@ -79,9 +82,10 @@ export function CapabilityBadge({ status, id }: { status: CapabilityStatus; id?:
 }
 
 export function SeverityBadge({ severity }: { severity: Severity }) {
-  if (severity === 'INFO') return <span className="badge outline tone-live compact">INFO</span>;
+  if (severity === 'INFO') return <span className="badge outline tone-live compact" title="Informativa">Informativa</span>;
   const tone: Tone = severity === 'P0' ? 'conflict' : severity === 'P1' ? 'degraded' : 'snapshot';
-  return <span className={`badge severity tone-${tone} compact`} title={`Severidade ${severity}`}>{severity}</span>;
+  const text = severity === 'P0' ? 'Crítica' : severity === 'P1' ? 'Alta' : 'Média';
+  return <span className={`badge severity tone-${tone} compact`} title={`Prioridade ${text} (${severity})`}>{text}</span>;
 }
 
 const DOMAIN_GLYPH: Partial<Record<Domain, string>> = { NEXO: '⌘', SCIENCE: '✧', ENGINEERING: '⌥', OLYMPUS: '△', ARTIFACT: '▣' };
@@ -96,9 +100,9 @@ export function DomainBadge({ domain, muted }: { domain: Domain; muted?: boolean
 
 export function ReadbackBadge({ readback }: { readback: Readback }) {
   return (
-    <span className={`badge tone-${toneOf(readback.status)}`} title={readback.explanation}>
+    <span className={`badge tone-${toneOf(readback.status)}`} title={humanizeText(readback.explanation)}>
       <i aria-hidden="true" className={`glyph glyph-${toneOf(readback.status)}`} />
-      Readback {label(readback.status)}
+      Confirmação da fonte: {label(readback.status)}
     </span>
   );
 }

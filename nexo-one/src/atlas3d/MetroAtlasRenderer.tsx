@@ -18,6 +18,7 @@ import {
   metroNodeSize,
 } from './metro2dLayout.ts';
 import { domainHex } from '../viewmodels/domainPalette.ts';
+import { domainLabel, label } from '../viewmodels/tokens.ts';
 
 type ViewMode = '2d' | '3d';
 type AtlasTheme = 'dark' | 'light';
@@ -245,6 +246,11 @@ function escapeHtml(value: unknown): string {
     .replaceAll('"', '&quot;').replaceAll("'", '&#039;');
 }
 
+function readableToken(value: string, fallback: string): string {
+  const translated = label(value);
+  return translated !== value ? translated : /^[A-Z][A-Z0-9_]*$/.test(value) ? fallback : translated;
+}
+
 function tooltipHtml(
   node: AtlasMetroNode | undefined,
   expanded: ReadonlySet<string>,
@@ -254,8 +260,8 @@ function tooltipHtml(
   const domain = domainColor(node.domain, theme);
   const status = statusColor(node.status);
   const expandable = node.childCount > 0
-    ? `${node.childCount} filhos · ${expanded.has(node.id) ? 'expandido' : 'fechado'}`
-    : 'folha';
+    ? `${node.childCount} partes menores · ${expanded.has(node.id) ? 'mostradas' : 'recolhidas'}`
+    : 'sem partes menores';
   const surface = theme === 'light' ? '#ffffff' : '#09111f';
   const border = theme === 'light' ? '#cbd5e1' : '#24324a';
   const text = theme === 'light' ? '#0f172a' : '#dbe7f5';
@@ -269,8 +275,9 @@ function tooltipHtml(
       </div>
       <div style="color:${muted};margin-bottom:7px">${escapeHtml(node.summary)}</div>
       <div style="display:flex;gap:9px;color:${quiet};font-size:10px">
-        <span>${escapeHtml(node.entityType)}</span>
-        <span style="color:${status}">${escapeHtml(node.status)}</span>
+        <span>${escapeHtml(domainLabel(node.domain))}</span>
+        <span>${escapeHtml(readableToken(node.entityType, 'Registro'))}</span>
+        <span style="color:${status}">${escapeHtml(readableToken(node.status, 'Estado em atualização'))}</span>
         <span>${expandable}</span>
       </div>
     </div>`;

@@ -184,6 +184,11 @@
 .evolution-signal-head span{flex:none;color:#9DB4FF;font:11px/1.4 "IBM Plex Mono",ui-monospace,monospace}
 .evolution-signals code{overflow-wrap:anywhere;color:var(--obs-dim,#7A889C);font:11px/1.4 "IBM Plex Mono",ui-monospace,monospace}
 .evolution-signals li small{color:var(--obs-dim,#7A889C);font:11px/1.5 "IBM Plex Mono",ui-monospace,monospace}
+.evolution-technical{font-size:11px;color:var(--obs-dim,#7A889C)}
+.evolution-technical summary{cursor:pointer;color:var(--obs-dim,#7A889C)}
+.evolution-technical p{display:grid;gap:3px;margin:7px 0 0}
+.evolution-technical p span{font:10px/1.4 "IBM Plex Mono",ui-monospace,monospace}
+.evolution-technical code{display:block;max-height:120px;overflow:auto;margin-top:6px;white-space:pre-wrap;overflow-wrap:anywhere}
 @media(max-width:640px){.evolution-signals>header{flex-direction:column;gap:8px}.evolution-signal-head{align-items:flex-start;flex-direction:column;gap:3px}}
 
 /* Deep-field backdrop across the whole page (Dener 2026-09-25).

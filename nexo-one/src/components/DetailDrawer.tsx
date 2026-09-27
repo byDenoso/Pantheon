@@ -26,7 +26,7 @@ export function DetailDrawer(
           <div>
             {kicker && <span className="detail-drawer-kicker">{kicker}</span>}
             <h2>{title}</h2>
-            {code && code !== title && <code>{code}</code>}
+            {code && code !== title && <details className="detail-drawer-code"><summary>Identificador técnico</summary><code>{code}</code></details>}
           </div>
           <button ref={closeRef} type="button" onClick={onClose} aria-label="Fechar detalhe">×</button>
         </header>
