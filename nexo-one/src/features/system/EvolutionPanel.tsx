@@ -36,6 +36,13 @@ export function EvolutionPanel({ evolution }: { evolution: EvolutionStatus }) {
   const underReview = (reviews.PENDING_REVIEW ?? 0) + (reviews.CONTESTED ?? 0) + (reviews.REFEREE1_PASSED ?? 0);
   const { decoys } = evolution;
   const signalClusters = evolution.signal_clusters ?? [];
+  const latestThoughtAt = (evolution.thoughts ?? [])
+    .map(thought => thought.at)
+    .filter(value => Number.isFinite(Date.parse(value)))
+    .sort()
+    .at(-1) ?? null;
+  const thoughtAgeMinutes = latestThoughtAt ? Math.max(0, Math.round((Date.now() - Date.parse(latestThoughtAt)) / 60000)) : null;
+  const thoughtStreamStale = thoughtAgeMinutes !== null && thoughtAgeMinutes > 360;
 
   return (
     <section className="evolution" aria-labelledby="evolution-title" data-order="evolution">
@@ -44,6 +51,12 @@ export function EvolutionPanel({ evolution }: { evolution: EvolutionStatus }) {
         <h2 id="evolution-title">O que o NEXO está aprendendo</h2>
         <p className="evolution-muted">Acompanhe o que foi observado, o que ainda está em avaliação e quais decisões precisam de você.</p>
       </header>
+
+      {thoughtStreamStale && latestThoughtAt && (
+        <p className="evolution-muted" role="status">
+          Diário da Pítia sem nova entrada {ago(latestThoughtAt)}. O limite operacional publicado é 6 h; trate as entradas abaixo como histórico até chegar uma atualização mais recente.
+        </p>
+      )}
 
       {thoughts.length > 0 && (
         <ol className="evolution-thoughts">
