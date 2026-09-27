@@ -273,8 +273,9 @@ export async function inboxDrop(url,env) {
   if(env.NEXO_INBOX_TOKEN){
     try{return await githubInboxDrop(url,env);}
     catch(error){
-      const detail=String(error?.message||error).slice(0,120);
-      return [{ok:false,error:'GATEWAY_WRITE_FAILED',primary:'SHEET_SPOOL',fallback:'GITHUB_CONTENTS',detail},502];
+      const fallbackDetail=String(error?.message||error).slice(0,120);
+      const primaryDetail=String(sheetError?.message||sheetError||'SHEET_SPOOL_NOT_ATTEMPTED').slice(0,120);
+      return [{ok:false,error:'GATEWAY_WRITE_FAILED',primary:'SHEET_SPOOL',primary_detail:primaryDetail,fallback:'GITHUB_CONTENTS',fallback_detail:fallbackDetail},502];
     }
   }
   return [{ok:false,error:'GATEWAY_NOT_CONFIGURED',hint:sheetError?'Google Sheets write failed and GitHub fallback is absent.':'Configure the ATLAS Google connector for Sheets write.'},503];
