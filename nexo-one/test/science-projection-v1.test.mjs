@@ -17,7 +17,7 @@ test('science projection v1 keeps published Tower fields and marks missing field
     projection: {
       campaigns: [{ campaign_id: 'CAMP-1', title: 'Nature of dark energy', scientific_question: 'Does model X fit?', semantic: { question_plain: 'Does the recent expansion need more than a constant?', why_it_matters: 'This distinguishes a constant from explanations that change over time.' }, status: 'ACTIVE', test_ids: ['T-1'] }],
       hypotheses: [{ hypothesis_id: 'HYP-1', proposition: 'Model X fits', kill_criteria: ['criterion'], model_boundary: 'X vs Y' }],
-      tests: [{ id: 'T-1', campaign_id: 'CAMP-1', hypothesis_ref: 'HYP-1', status: 'VERIFIED', verdict: 'SUPPORTS', scientific_result: { parameter: 'H0', value: 71.2, err_lo: 1.1, err_hi: 1.3, unit: 'km/s/Mpc', statistics: { p_value: 0.03 } }, artifacts: [{ ref: 'TOWER_V06/runtime/artifacts/result.json', sha256: 'c'.repeat(64) }] }],
+      tests: [{ id: 'T-1', campaign_id: 'CAMP-1', hypothesis_ref: 'HYP-1', status: 'VERIFIED', verdict: 'SUPPORTS', semantic: { question_plain: 'O valor de H0 muda sob este teste?' }, scientific_result: { parameter: 'H0', value: 71.2, err_lo: 1.1, err_hi: 1.3, unit: 'km/s/Mpc', statistics: { p_value: 0.03 } }, artifacts: [{ ref: 'TOWER_V06/runtime/artifacts/result.json', sha256: 'c'.repeat(64) }] }],
     },
     manifest,
   });
@@ -38,7 +38,8 @@ test('science projection v1 keeps published Tower fields and marks missing field
   assert.equal(scienceTest.statistics.delta_bic.value, null);
   assert.match(scienceTest.statistics.delta_bic.unavailable_reason, /absent from the source/i);
   assert.equal(scienceTest.verdict.value, 'SUPPORTS');
-  for (const field of [campaign.question, campaign.question_plain, campaign.why_it_matters, scienceTest.result.value, scienceTest.statistics.p_value]) {
+  assert.equal(scienceTest.question_plain.value, 'O valor de H0 muda sob este teste?');
+  for (const field of [campaign.question, campaign.question_plain, campaign.why_it_matters, scienceTest.question_plain, scienceTest.result.value, scienceTest.statistics.p_value]) {
     assert.match(field.source_ref, /^tower:\/\//);
     assert.match(field.fingerprint, /^sha256:[0-9a-f]{64}$/);
   }
