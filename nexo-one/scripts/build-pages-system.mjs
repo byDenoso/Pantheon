@@ -536,10 +536,19 @@ function graphFromProjection(projection, observedAt, filaments = [], peerDetecti
   const labels = semanticLabels(projection);
   const campaignById = new Map(campaigns.map(item => [String(item.campaign_id), item]));
   const campaignMemberCounts = new Map();
-  for (const item of [...(projection.work || []), ...(projection.tests || [])]) {
+  const campaignTestCounts = new Map();
+  const campaignWorkCounts = new Map();
+  for (const item of projection.work || []) {
     const campaignId = String(item?.campaign_id || '').trim();
     if (!campaignId) continue;
     campaignMemberCounts.set(campaignId, (campaignMemberCounts.get(campaignId) || 0) + 1);
+    campaignWorkCounts.set(campaignId, (campaignWorkCounts.get(campaignId) || 0) + 1);
+  }
+  for (const item of projection.tests || []) {
+    const campaignId = String(item?.campaign_id || '').trim();
+    if (!campaignId) continue;
+    campaignMemberCounts.set(campaignId, (campaignMemberCounts.get(campaignId) || 0) + 1);
+    campaignTestCounts.set(campaignId, (campaignTestCounts.get(campaignId) || 0) + 1);
   }
 
   const addNode = node => {
@@ -599,6 +608,8 @@ function graphFromProjection(projection, observedAt, filaments = [], peerDetecti
       summary: String(campaign.semantic_description || campaign.question || campaign.title || campaignId),
       campaign_id: campaignId,
       member_count: campaignMemberCounts.get(campaignId) || 0,
+      test_count: campaignTestCounts.get(campaignId) || 0,
+      work_count: campaignWorkCounts.get(campaignId) || 0,
       semantic_description: campaign.semantic_description ? String(campaign.semantic_description) : undefined,
       semantic_state: campaign.semantic_state ? String(campaign.semantic_state) : undefined,
       parent_subdomain: atlas.parent_subdomain
@@ -634,13 +645,14 @@ function graphFromProjection(projection, observedAt, filaments = [], peerDetecti
 
   for (const item of projection.tests) {
     const rawId = String(item.id || '');
-    if (!rawId || peerMembership.testIds.has(rawId)) continue;
+    if (!rawId) continue;
+    const peerHidden = peerMembership.testIds.has(rawId);
     const domain = domainOf(item.domain || 'SCIENCE');
     const id = 'test:' + rawId;
     addNode({
       id,
       type: 'TEST',
-      label: String(item.title || rawId),
+      label: testLabel(item),
       domain,
       state: projectionState(item.status),
       authority_class: 'NON_AUTHORITATIVE',
@@ -652,10 +664,13 @@ function graphFromProjection(projection, observedAt, filaments = [], peerDetecti
       summary: String((item.semantic || {}).question_plain || item.title || (item.semantic || {}).result_meaning || ('Teste · ' + statusPt(item.status))),
       campaign_id: item.campaign_id ? String(item.campaign_id) : undefined,
       test_group_id: item.test_group_id ? String(item.test_group_id) : undefined,
-      atlas_visible: item.campaign_id
+      atlas_visible: peerHidden ? false : item.campaign_id
         ? (campaignById.get(String(item.campaign_id))?.atlas_projection?.show_tests === true)
         : true,
       ...semanticFields(item, labels),
+      // One phase classifier feeds lanes, graph and cockpit counters. The raw
+      // projection status_group is presentation metadata and may lag the canonical status.
+      status_group: canonicalTestPhase(item.status || item.state) || undefined,
     });
     const campaignId = String(item.campaign_id || '').trim();
     const campaignNodeId = campaignId && campaignById.has(campaignId) ? 'campaign:' + campaignId : null;
@@ -921,9 +936,26 @@ function statusPt(value) {
 }
 const DOMAIN_PT = { NEXO: 'NEXO', SCIENCE: 'Ciência', ENGINEERING: 'Engenharia', OLYMPUS: 'Olympus', GPT_PERFORMANCE: 'Desempenho do GPT' };
 function domainLabelPt(domain) { return DOMAIN_PT[domain] || String(domain); }
+function technicalIdentifier(value) {
+  const text = String(value || '').trim();
+  return /^(?:CONTEST-|TEST-|T-|META-|[A-Z0-9]+(?:[_:-][A-Z0-9]+){2,})/.test(text);
+}
 function testLabel(item) {
   const semantic = item.semantic || {};
-  return String(semantic.question_plain || item.title || item.id);
+  const plain = String(semantic.question_plain || item.question_plain || item.question || '').trim();
+  if (plain) return plain;
+  const title = String(item.title || '').trim();
+  if (title && !technicalIdentifier(title)) return title;
+  return 'Teste sem descrição simples';
+}
+function canonicalTestPhase(value) {
+  const raw = value && typeof value === 'object' && Object.hasOwn(value, 'value') ? value.value : value;
+  const text = String(raw || '').toUpperCase();
+  if (/RUNNING|CHECKPOINT/.test(text)) return 'RUNNING';
+  if (/READY/.test(text)) return 'READY';
+  if (/DONE|COMPLETE|VERIFIED|PROMOTED|REJECTED|INCONCLUSIVE/.test(text)) return 'DONE';
+  if (/BLOCKED|CONFLICT/.test(text)) return 'BLOCKED';
+  return null;
 }
 function testMeaning(item) {
   const text = (item.semantic || {}).result_meaning;
@@ -955,10 +987,9 @@ function lanesFromProjection(projection, observedAt) {
     const work = projection.work.filter(item => domainOf(item.domain) === domain);
     const tests = projection.tests.filter(item => domainOf(item.domain || 'SCIENCE') === domain);
     const blocked = work.filter(item => projectionState(item.status || item.operational_status) === 'BLOCKED');
-    const phase = item => String(item.status || item.state || '').toUpperCase();
-    const running = tests.filter(item => /RUNNING|CHECKPOINT/.test(phase(item)));
-    const ready = tests.filter(item => /READY/.test(phase(item)));
-    const done = tests.filter(item => /DONE|COMPLETE|VERIFIED|PROMOTED|REJECTED|INCONCLUSIVE/.test(phase(item)));
+    const running = tests.filter(item => canonicalTestPhase(item.status || item.state) === 'RUNNING');
+    const ready = tests.filter(item => canonicalTestPhase(item.status || item.state) === 'READY');
+    const done = tests.filter(item => canonicalTestPhase(item.status || item.state) === 'DONE');
     const next = running[0] || ready[0];
     const latest = [...done].reverse().find(item => testMeaning(item)) || done[done.length - 1];
     return {
