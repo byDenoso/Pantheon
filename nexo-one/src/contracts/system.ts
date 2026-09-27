@@ -291,6 +291,10 @@ export interface GraphNode {
   automation_eligible?: boolean;
   automation_reason?: string;
   member_count?: number;
+  /** Exact canonical TEST membership; unlike member_count, excludes WORK. */
+  test_count?: number;
+  /** Exact canonical WORK membership; kept separate so UI never calls WORK a test. */
+  work_count?: number;
   semantic_description?: string;
   semantic_state?: string;
   /** Presentation-only Atlas visibility. Hidden nodes remain in system.json for audit/relations. */
