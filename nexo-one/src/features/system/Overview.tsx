@@ -33,6 +33,7 @@ export function Overview(
   const resolvable = resolvableActions(state);
   // The autonomous queue that actually runs is the test frontier; cadence is configured outside this view.
   const frontier = state.graph.nodes.filter(node => node.type === 'TEST' && (phaseOf(node) === 'READY' || phaseOf(node) === 'RUNNING'));
+  const nextQuestions = frontier.slice(0, 3).map(node => node.question_plain?.trim()).filter(Boolean);
   const lanes = laneViews(state);
   const unavailableProviders = state.providers.filter(provider =>
     provider.state === 'MISSING_PROVIDER' || provider.state === 'BLOCKED').length;
@@ -122,7 +123,9 @@ export function Overview(
             </div>
           : frontier.length
             ? <EmptyState title={`${frontier.length} testes estão prontos ou em andamento.`}
-                description={`A automação científica retoma os testes na próxima execução programada. Na sequência estão: ${frontier.slice(0, 3).map(node => node.question_plain || 'pergunta ainda não publicada').join(' · ')}.`} />
+                description={nextQuestions.length
+                  ? `A automação científica retoma os testes na próxima execução programada. Próximas perguntas: ${nextQuestions.join(' · ')}.`
+                  : 'A automação científica retoma os testes na próxima execução programada. As perguntas serão mostradas aqui quando a Tower publicar uma explicação simples.'} />
             : <EmptyState title="Nenhuma ação automática pronta agora."
                 description="Ainda não há testes prontos para a próxima execução. A automação de aprendizagem pode sugerir novas perguntas quando voltar a rodar." />}
       </section>

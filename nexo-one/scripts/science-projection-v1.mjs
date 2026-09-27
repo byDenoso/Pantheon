@@ -44,11 +44,11 @@ function firstOwn(object, names) {
   return { present: false, value: null, name: names[0] };
 }
 
-function field(object, names, reason, manifest, path) {
+function field(object, names, reason, manifest, path, fieldName) {
   const found = firstOwn(object, names);
   const hasValue = found.present && found.value !== null && found.value !== undefined;
   return envelope(hasValue ? found.value : null, hasValue, found.present ? 'Tower explicitly provided null for this field.' : reason,
-    manifest, path, found.name);
+    manifest, path, fieldName || found.name);
 }
 
 function normalizedStatus(object, names, reason, manifest, path) {
@@ -89,16 +89,20 @@ function makeRecord(record, kind, manifest, mapping) {
   const id = String(identityFields.map(key => record?.[key]).find(value => value !== null && value !== undefined && String(value).trim()) || '').trim();
   if (!id) return null;
   const path = sourcePath(kind, id);
-  return Object.fromEntries([...Object.entries(mapping).map(([key, config]) => [
-    key,
-    config.special === 'verdict'
-      ? normalizedVerdict(record, manifest, path)
-      : config.special === 'claim_level'
-        ? normalizedClaimLevel(record, manifest, path)
-        : config.special === 'status'
-          ? normalizedStatus(record, config.names, config.reason, manifest, path)
-          : field(record, config.names, config.reason, manifest, path),
-  ]), ['id', id], ['source_ref', `tower://${manifest.tower_repository || 'byDenoso/NEXO-Obsidian-Vault'}@${manifest.tower_commit}/${path}`], ['fingerprint', sha256({ source_fingerprint: manifest.projection_fingerprint, path })]]);
+  return Object.fromEntries([...Object.entries(mapping).map(([key, config]) => {
+    const source = config.parent ? record?.[config.parent] : record;
+    const fieldName = config.parent ? `${config.parent}.${config.names[0]}` : undefined;
+    return [
+      key,
+      config.special === 'verdict'
+        ? normalizedVerdict(record, manifest, path)
+        : config.special === 'claim_level'
+          ? normalizedClaimLevel(record, manifest, path)
+          : config.special === 'status'
+            ? normalizedStatus(record, config.names, config.reason, manifest, path)
+            : field(source, config.names, config.reason, manifest, path, fieldName),
+    ];
+  }), ['id', id], ['source_ref', `tower://${manifest.tower_repository || 'byDenoso/NEXO-Obsidian-Vault'}@${manifest.tower_commit}/${path}`], ['fingerprint', sha256({ source_fingerprint: manifest.projection_fingerprint, path })]]);
 }
 
 function mapRecords(records, kind, manifest, mapping) {
@@ -106,7 +110,10 @@ function mapRecords(records, kind, manifest, mapping) {
 }
 
 const campaignFields = {
+  title: { names: ['title'], reason: 'Campaign title is absent from the source record.' },
   question: { names: ['question', 'scientific_question'], reason: 'Campaign question is absent from the source record.' },
+  question_plain: { parent: 'semantic', names: ['question_plain'], reason: 'Campaign question in plain language is absent from the source record.' },
+  why_it_matters: { parent: 'semantic', names: ['why_it_matters'], reason: 'Campaign explanation of its importance is absent from the source record.' },
   hypothesis_ids: { names: ['hypothesis_ids', 'hypothesis_refs', 'hypothesis_ref'], reason: 'Campaign hypothesis references are absent from the source record.' },
   status: { names: ['status', 'state'], reason: 'Campaign status is absent from the source record.', special: 'status' },
   prereg_ref: { names: ['prereg_ref', 'preregistration_ref'], reason: 'Campaign preregistration reference is absent from the source record.' },
@@ -265,7 +272,7 @@ export function validateScienceProjectionV1(output) {
   for (const collection of ['campaigns', 'hypotheses', 'tests']) {
     if (!Array.isArray(output[collection])) reject(`${collection} must be an array`);
     const allowedFields = {
-      campaigns: ['question', 'hypothesis_ids', 'status', 'prereg_ref', 'started_at', 'members'],
+      campaigns: ['title', 'question', 'question_plain', 'why_it_matters', 'hypothesis_ids', 'status', 'prereg_ref', 'started_at', 'members'],
       hypotheses: ['statement', 'model', 'baseline', 'falsification_criterion'],
       tests: ['campaign_id', 'hypothesis_id', 'status', 'method', 'datasets', 'preregistered_metric', 'threshold', 'verdict', 'claim_level', 'publication_status', 'result', 'statistics', 'robustness_checks', 'artifacts', 'reproducibility', 'audit'],
     }[collection];

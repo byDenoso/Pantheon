@@ -80,13 +80,14 @@ function AutomationChip({ node }: { node: ProjectedWorkNode }) {
   if (node.human_gate) return <span className="work-auto-chip manual" title="Esta tarefa precisa de uma decisão sua">Exige você</span>;
   if (node.automation_eligible === true) return <span className="work-auto-chip auto" title={humanizeText(node.automation_reason) || 'A tarefa está marcada como possível de automatizar'}>Pode seguir sozinha</span>;
   if (node.automation_eligible === false) return <span className="work-auto-chip manual" title={humanizeText(node.automation_reason) || 'A tarefa está marcada como não automatizável'}>Ação manual</span>;
-  return <span className="work-auto-chip unknown" title="Ainda não há informação para dizer se esta tarefa pode ser automatizada" aria-label="Automação não avaliada">Automação não avaliada</span>;
+  return <span className="work-auto-chip unknown" title="Ainda não há informação para dizer se esta tarefa pode ser automatizada" aria-label="Ainda sem informação sobre automação">Ainda sem informação sobre automação</span>;
 }
 
 const workIdOf = (node: ProjectedWorkNode) => node.id.replace(/^work:/, '').replace(/^WORK::/, '');
+const technicalWorkTitle = (title: string) => /^(?:[A-Z]\d{1,3}(?:[-_: ]|$)|[A-Z0-9]+(?:[_-][A-Z0-9]+)+|[A-Z0-9][A-Z0-9 _:-]{5,})/.test(title.trim());
 const workTitleOf = (node: ProjectedWorkNode) => {
   const title = node.label.replace(/^WORK::/, '');
-  return title === workIdOf(node) ? 'Tarefa sem título' : humanizeText(title);
+  return title === workIdOf(node) || technicalWorkTitle(title) ? 'Etapa sem descrição simples' : humanizeText(title);
 };
 const priorityLabel = (value?: string) => ({
   P0: 'Urgente', CRITICAL: 'Urgente', P1: 'Alta', HIGH: 'Alta', P2: 'Normal', MEDIUM: 'Média', LOW: 'Baixa',
@@ -98,10 +99,13 @@ function stallText(node: ProjectedWorkNode) {
 }
 
 function WorkDetail({ node, onClose }: { node: ProjectedWorkNode; onClose: () => void }) {
+  const originalTitle = node.label.replace(/^WORK::/, '');
+  const showOriginalTitle = originalTitle === workIdOf(node) || technicalWorkTitle(originalTitle);
   return (
     <DetailDrawer kicker={`Fila de trabalho · ${domainLabel(node.domain)}`} title={workTitleOf(node)} code={workIdOf(node)} onClose={onClose}
       fields={[
         ['Situação', <StatusBadge state={node.operational_status || node.state} tone={toneOf(node.state)} compact title={label(node.operational_status || node.state)} />],
+        ['Título original da tarefa', showOriginalTitle ? <code>{originalTitle}</code> : null],
         ['Prioridade', priorityLabel(node.priority)],
         ['Como pode avançar', node.human_gate ? 'Precisa de uma decisão sua' : node.automation_eligible === true ? 'Pode seguir automaticamente' : node.automation_eligible === false ? 'Precisa de ação manual' : 'Ainda não informado'],
         ['Por que está assim', humanizeText(node.automation_reason)],

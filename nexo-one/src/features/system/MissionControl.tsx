@@ -21,6 +21,10 @@ const isTechnicalText = (value?: string | null) => {
 };
 const plainText = (value: string | null | undefined, fallback: string) =>
   !value || isTechnicalText(value) ? fallback : humanizeText(value);
+const resultMeaning = (value: string | null | undefined) =>
+  /^resultado do teste:\s*survived\.$/i.test(String(value ?? '').trim())
+    ? 'A hipótese resistiu à contestação.'
+    : plainText(value, 'Resultado registrado; explicação simples indisponível.');
 
 const focusDomain = (domain: string | null) =>
   window.dispatchEvent(new CustomEvent('nexo:domain-focus', { detail: domain }));
@@ -150,7 +154,7 @@ export function MissionControl(
                 <button onClick={onOpenScience}>
                   <span className="mc-kicker">{plainText(result.station, 'Área de estudo')}</span>
                   <strong>{plainText(result.title, 'Resultado registrado')}</strong>
-                  <p>{plainText(result.meaning, 'Resultado registrado; explicação simples indisponível.')}</p>
+                  <p>{resultMeaning(result.meaning)}</p>
                   {result.missionTitle && <span className="mc-mission-ref">{plainText(result.missionTitle, 'Estudo relacionado')} →</span>}
                 </button>
                 {(isTechnicalText(result.title) || isTechnicalText(result.station) || isTechnicalText(result.meaning) || isTechnicalText(result.missionTitle) || result.id) && (
