@@ -183,7 +183,7 @@ function PublicationStatus({value}:{value:unknown}){
   return label?<span>{label}</span>:<StateText value={value}/>;
 }
 
-const FIELD_LABEL:Record<string,string>={question:'Pergunta',status:'Estado',hypothesis_ids:'Hipóteses',hypothesis_id:'Hipótese',campaign_id:'Campanha',started_at:'Início',prereg_ref:'Pré-registro',method:'Método',datasets:'Datasets',verdict:'Veredito',claim_level:'Nível de claim',publication_status:'Publicação',statement:'Enunciado',result:'Resultado',statistics:'Estatística',parameter:'Parâmetro',value:'Valor',err_lo:'Erro −',err_hi:'Erro +',unit:'Unidade',sigma_lee:'σ LEE',source_ref:'Fonte'};
+const FIELD_LABEL:Record<string,string>={title:'Nome da campanha',question:'Pergunta científica original',question_plain:'Pergunta em linguagem simples',why_it_matters:'Por que isso importa',status:'Estado',hypothesis_ids:'Hipóteses',hypothesis_id:'Hipótese',campaign_id:'Campanha',started_at:'Início',prereg_ref:'Pré-registro',method:'Método',datasets:'Datasets',verdict:'Veredito',claim_level:'Nível de claim',publication_status:'Publicação',statement:'Enunciado',result:'Resultado',statistics:'Estatística',parameter:'Parâmetro',value:'Valor',err_lo:'Erro −',err_hi:'Erro +',unit:'Unidade',sigma_lee:'σ LEE',source_ref:'Fonte'};
 const fieldLabel=(key:string)=>FIELD_LABEL[key]||key.replace(/_/g,' ').replace(/^./,c=>c.toUpperCase());
 function recordFields(record:ScienceProjectionRecord):DetailField[]{
   const fields:DetailField[]=[];
@@ -307,7 +307,7 @@ export default function ScienceWorkspace({state}:{state:SystemState}){
     {!projection&&tab!=='aprendizado'&&<div className="science-projection-missing">Projeção científica indisponível neste snapshot.</div>}
 
     {projection&&tab==='campanhas'&&<DenseTable heads={['Campanha','Pergunta','Estado','Hipóteses','Início','Pré-registro']} empty="Nenhuma campanha corresponde ao filtro." rows={campaigns.map(item=><tr key={item.id} className="science-row-open" tabIndex={0} onClick={()=>setOpenRecord({kind:'Campanha',record:item})} onKeyDown={event=>{if(event.key==='Enter')setOpenRecord({kind:'Campanha',record:item});}}>
-      <td><strong>{shortId(item.id)}</strong><small>{item.id}</small></td><td><StateText value={valueOf(item,'question')}/></td><td><StateText value={valueOf(item,'status')}/></td>
+      <td><strong>{textOf(valueOf(item,'title'))!=='—'?textOf(valueOf(item,'title')):'Campanha científica'}</strong></td><td><StateText value={valueOf(item,'question_plain')||'Leitura simples ainda não publicada'}/></td><td><StateText value={valueOf(item,'status')}/></td>
       <td><StateText value={valueOf(item,'hypothesis_ids')}/></td><td><StateText value={valueOf(item,'started_at')}/></td><td><StateText value={valueOf(item,'prereg_ref')}/></td>
     </tr>)}/>}
 
@@ -347,7 +347,7 @@ export default function ScienceWorkspace({state}:{state:SystemState}){
       {graphMode==='relacoes'&&graphModel&&<NexoGraph model={graphModel} expanded={graphExpanded} selectedId={selectedId} view={graphView} theme={(document.documentElement.dataset.theme==='light'?'light':'dark')} onSelect={setSelectedId} onViewChange={setView}/>}
       <p className="science-chart-source">Fonte: projeção científica do NEXO · campos ausentes são exibidos como “—”.</p>
     </div>}
-    {openRecord&&<DetailDrawer kicker={`${openRecord.kind} · Ciência`} title={textOf(valueOf(openRecord.record,'question'))!=='—'&&openRecord.kind==='Campanha'?textOf(valueOf(openRecord.record,'question')):openRecord.record.id} code={openRecord.record.id} fields={recordFields(openRecord.record)} onClose={closeRecord}/>}
+    {openRecord&&<DetailDrawer kicker={`${openRecord.kind} · Ciência`} title={openRecord.kind==='Campanha'?(textOf(valueOf(openRecord.record,'title'))!=='—'?textOf(valueOf(openRecord.record,'title')):'Campanha científica'):openRecord.record.id} code={openRecord.record.id} fields={recordFields(openRecord.record)} onClose={closeRecord}/>}
   </section>;
 }
 
