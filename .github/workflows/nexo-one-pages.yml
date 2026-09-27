@@ -349,7 +349,6 @@ jobs:
           VITE_SYSTEM_ENDPOINT: ${{ steps.pages.outputs.base_path }}/system.json
           VITE_WORLD_ENDPOINT: ./world-public.ndjson
           VITE_GALAXY_ENDPOINT: ./galaxy/latest.json
-          VITE_PRIVATE_COCKPIT_URL: https://nexo-one-two.vercel.app
           VITE_NEXO_AUTH_BRIDGE_URL: ${{ vars.VITE_NEXO_AUTH_BRIDGE_URL }}
           VITE_NEXO_SYNC_ENDPOINT: https://nexo-one-two.vercel.app/api/projection-sync
           VITE_NEXO_FORCE_SYNC_URL: ${{ github.server_url }}/${{ github.repository }}/actions/workflows/nexo-one-pages.yml
