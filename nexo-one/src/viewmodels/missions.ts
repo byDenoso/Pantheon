@@ -98,7 +98,7 @@ export function missionsOf(state: SystemState): Mission[] {
         .sort((a, b) => PHASE_ORDER[a.phase] - PHASE_ORDER[b.phase]);
       const counts = Object.fromEntries(PHASES.map(phase => [phase, 0])) as Record<Phase, number>;
       for (const test of tests) counts[test.phase] += 1;
-      const total = tests.length || node.member_count || 0;
+      const total = tests.length || node.test_count || 0;
       return {
         id: node.id,
         title: missionTitle(node.label),
