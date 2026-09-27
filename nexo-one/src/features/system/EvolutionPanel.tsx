@@ -6,6 +6,11 @@ const KIND_PT: Record<string, string> = {
   CRISIS: 'Crise', SENTINEL: 'Sentinela',
 };
 const STOP_PT: Record<string, string> = { SUCCESS: 'meta atingida', KILL: 'refutações demais', BUDGET: 'orçamento esgotado' };
+const SIGNAL_LABEL_PT: Record<string, string> = {
+  READY_INPUTS_NOT_MATERIALIZED: 'Entradas prontas sem materialização',
+  EMPTY_FRONTIER_ACTIVE_ROADMAP: 'Roteiro ativo sem próxima tarefa',
+};
+const SOURCE_PT: Record<string, string> = { AUTOMATION: 'automações', CONVERSATION: 'conversas' };
 
 const short = (id: string) => id.replace(/^RM-/, '').replace(/-20\d{6}-V\d+$/, '').replace(/-V\d+$/, '').replace(/-/g, ' ');
 const ago = (iso: string) => {
@@ -20,6 +25,7 @@ export function EvolutionPanel({ evolution }: { evolution: EvolutionStatus }) {
   const reviews = evolution.reviews ?? {};
   const underReview = (reviews.PENDING_REVIEW ?? 0) + (reviews.CONTESTED ?? 0) + (reviews.REFEREE1_PASSED ?? 0);
   const { decoys } = evolution;
+  const signalClusters = evolution.signal_clusters ?? [];
 
   return (
     <section className="evolution" aria-labelledby="evolution-title" data-order="evolution">
@@ -41,6 +47,39 @@ export function EvolutionPanel({ evolution }: { evolution: EvolutionStatus }) {
             </li>
           ))}
         </ol>
+      )}
+
+      {signalClusters.length > 0 && (
+        <div className="evolution-signals" aria-labelledby="evolution-signals-title">
+          <header>
+            <div>
+              <h3 id="evolution-signals-title">Padrões emergentes</h3>
+              <p className="evolution-muted">Sinais recorrentes reunidos para revisão. Cada hipótese e causa mantém seu registro próprio.</p>
+            </div>
+            <span className="evolution-tag">modo sombra</span>
+          </header>
+          <ul>
+            {signalClusters.map(cluster => {
+              const tests = cluster.test_ids ?? [];
+              const sources = cluster.sources.map(source => SOURCE_PT[source] ?? source.toLowerCase()).join(' · ');
+              const lastSeen = cluster.last_seen ? ago(cluster.last_seen) : '';
+              return (
+                <li key={cluster.cluster_id}>
+                  <div className="evolution-signal-head">
+                    <strong>{SIGNAL_LABEL_PT[cluster.code] ?? cluster.code.toLowerCase().replace(/_/g, ' ')}</strong>
+                    <span>{cluster.occurrences} ocorrências</span>
+                  </div>
+                  <code>{cluster.code}</code>
+                  <small>
+                    {sources || 'fonte não identificada'}
+                    {tests.length ? ` · testes: ${tests.slice(0, 3).map(short).join(', ')}${tests.length > 3 ? ` +${tests.length - 3}` : ''}` : ''}
+                    {lastSeen ? ` · última ocorrência ${lastSeen}` : ''}
+                  </small>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
       )}
 
       <div className="evolution-grid">

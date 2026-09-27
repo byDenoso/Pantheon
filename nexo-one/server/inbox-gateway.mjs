@@ -25,6 +25,7 @@ const SHEETS_API='https://sheets.googleapis.com/v4/spreadsheets';
 const SPOOL_SCAN='A:K';
 const googleConfigured=env=>Boolean(env.GOOGLE_CONNECTOR||(env.GOOGLE_CLIENT_ID&&env.GOOGLE_CLIENT_SECRET&&env.GOOGLE_REFRESH_TOKEN));
 const quoteSheet=title=>`'${String(title).replaceAll("'","''")}'`;
+const encodeSheetRange=range=>encodeURIComponent(range).replaceAll("'",'%27');
 const ackStable=id=>`gwack-${createHash('sha256').update(String(id)).digest('hex').slice(0,32)}`;
 
 async function sheetJson(token,url,options={}) {
@@ -48,7 +49,7 @@ async function readSpool(env) {
   const title=String(first?.properties?.title||'').trim();
   if(!title)throw new Error('SHEETS_SPOOL_TAB_MISSING');
   const range=`${quoteSheet(title)}!${SPOOL_SCAN}`;
-  const data=await sheetJson(token,`${SHEETS_API}/${encodeURIComponent(spreadsheetId)}/values/${encodeURIComponent(range)}?majorDimension=ROWS`);
+  const data=await sheetJson(token,`${SHEETS_API}/${encodeURIComponent(spreadsheetId)}/values/${encodeSheetRange(range)}?majorDimension=ROWS`);
   const rows=Array.isArray(data.values)?data.values:[];
   const headerIndex=rows.findIndex(row=>Array.isArray(row)&&row.includes('stable_id')&&row.includes('envelope_b64url'));
   if(headerIndex<0)throw new Error('SHEETS_SPOOL_HEADER_MISSING');
@@ -65,7 +66,7 @@ async function readSpool(env) {
 
 async function appendSpoolRow(spool,row) {
   const range=`${quoteSheet(spool.title)}!${SPOOL_SCAN}`;
-  return sheetJson(spool.token,`${SHEETS_API}/${encodeURIComponent(spool.spreadsheetId)}/values/${encodeURIComponent(range)}:append?valueInputOption=RAW&insertDataOption=INSERT_ROWS`,{
+  return sheetJson(spool.token,`${SHEETS_API}/${encodeURIComponent(spool.spreadsheetId)}/values/${encodeSheetRange(range)}:append?valueInputOption=RAW&insertDataOption=INSERT_ROWS`,{
     method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({majorDimension:'ROWS',values:[row]}),
   });
 }
