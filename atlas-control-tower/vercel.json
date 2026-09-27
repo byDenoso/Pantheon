@@ -59,6 +59,10 @@
       "config": {
         "maxDuration": 60
       }
+    },
+    {
+      "src": "api/tower-compat.js",
+      "use": "@vercel/node"
     }
   ],
   "routes": [
@@ -182,6 +186,22 @@
     {
       "src": "/api/private/drive-bootstrap",
       "dest": "/api/private/index.mjs?route=drive-bootstrap"
+    },
+    {
+      "src": "/api/atlas",
+      "dest": "/api/tower-compat.js?route=atlas"
+    },
+    {
+      "src": "/api/runtime",
+      "dest": "/api/tower-compat.js?route=runtime"
+    },
+    {
+      "src": "/api/science",
+      "dest": "/api/tower-compat.js?route=science"
+    },
+    {
+      "src": "/live/status",
+      "dest": "/api/tower-compat.js?route=status"
     },
     {
       "handle": "filesystem"
