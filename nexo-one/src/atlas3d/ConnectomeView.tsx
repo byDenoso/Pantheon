@@ -23,7 +23,7 @@ function paint(ctx: CanvasRenderingContext2D, W: number, H: number, model: Conne
   let minx = Infinity, maxx = -Infinity, miny = Infinity, maxy = -Infinity;
   const proj = nodes.map(n => { const x = n.x, y = n.y * 0.55 + n.z * 0.62;
     if (x < minx) minx = x; if (x > maxx) maxx = x; if (y < miny) miny = y; if (y > maxy) maxy = y; return [x, y]; });
-  const pad = Math.min(W, H) * 0.12;
+  const pad = Math.max(24, Math.min(W, H) * 0.055);
   const s = Math.min((W - pad * 2) / ((maxx - minx) || 1), (H - pad * 2) / ((maxy - miny) || 1));
   const ox = W / 2 - ((minx + maxx) / 2) * s, oy = H / 2 - ((miny + maxy) / 2) * s;
   const P = (i: number): [number, number] => [proj[i][0] * s + ox, proj[i][1] * s + oy];
@@ -118,6 +118,29 @@ function paint(ctx: CanvasRenderingContext2D, W: number, H: number, model: Conne
   };
   for (const d of CONNECTOME_DOMAINS) { const i = model.somata[d]; if (i !== undefined) tree(i, 0, null, CONNECTOME_RGB[d], new Set()); }
 
+  // Resolve label collisions from the actual projected soma positions. This keeps
+  // the layout data-driven while preventing close domains from printing on top of
+  // each other as the graph changes.
+  const labelAnchors = new Map<ConnectomeDomain, [number, number]>();
+  for (const d of CONNECTOME_DOMAINS) {
+    const i = model.somata[d]; if (i === undefined) continue;
+    const p = P(i);
+    const r = 7 + Math.min(15, Math.sqrt(nodes[i].mass) * 1.15);
+    labelAnchors.set(d, [p[0], p[1] + r * 2 + 6]);
+  }
+  const anchors = [...labelAnchors.entries()];
+  for (let pass = 0; pass < 4; pass++) {
+    for (let a = 0; a < anchors.length; a++) for (let b = a + 1; b < anchors.length; b++) {
+      const pa = anchors[a][1], pb = anchors[b][1];
+      const dx = pb[0] - pa[0], dy = pb[1] - pa[1];
+      if (Math.abs(dx) >= 104 || Math.abs(dy) >= 28) continue;
+      const sign = dx === 0 ? (a % 2 ? -1 : 1) : Math.sign(dx);
+      const push = (104 - Math.abs(dx)) * 0.5 + 4;
+      pa[0] = Math.max(58, Math.min(W - 58, pa[0] - sign * push));
+      pb[0] = Math.max(58, Math.min(W - 58, pb[0] + sign * push));
+    }
+  }
+
   for (const d of CONNECTOME_DOMAINS) {
     const i = model.somata[d]; if (i === undefined) continue;
     const p = P(i), c = CONNECTOME_RGB[d], q = model.lanes[d];
@@ -131,11 +154,12 @@ function paint(ctx: CanvasRenderingContext2D, W: number, H: number, model: Conne
     ctx.fillStyle = g; ctx.beginPath(); ctx.arc(p[0], p[1], r * 3.4, 0, 6.2832); ctx.fill();
     ctx.fillStyle = rgba(c, 0.88); ctx.beginPath(); ctx.arc(p[0], p[1], r * 0.55, 0, 6.2832); ctx.fill();
     ctx.font = '600 12px "IBM Plex Sans",system-ui,sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    const ly = p[1] + r * 2 + 6;
-    ctx.fillStyle = 'rgba(5,7,11,.8)'; ctx.fillText(NAME[d], p[0] + 1, ly + 1);
-    ctx.fillStyle = rgba(c, 1); ctx.fillText(NAME[d], p[0], ly);
+    const anchor = labelAnchors.get(d) ?? [p[0], p[1] + r * 2 + 6];
+    const lx = anchor[0], ly = anchor[1];
+    ctx.fillStyle = 'rgba(5,7,11,.8)'; ctx.fillText(NAME[d], lx + 1, ly + 1);
+    ctx.fillStyle = rgba(c, 1); ctx.fillText(NAME[d], lx, ly);
     ctx.font = '400 10px "IBM Plex Mono",monospace'; ctx.fillStyle = 'rgba(150,168,192,.65)';
-    ctx.fillText(q ? `${q.done} de ${q.tests} mielinizados` : 'sem axónios próprios', p[0], ly + 14);
+    ctx.fillText(q ? `${q.done} de ${q.tests} mielinizados` : 'sem axónios próprios', lx, ly + 14);
   }
 }
 
