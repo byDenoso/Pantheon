@@ -102,7 +102,7 @@ export const humanizeText = (value: string | null | undefined): string => {
     'A energia escura dinâmica explica melhor as anomalias do modelo padrão e os sinais de megaestruturas?');
   replace(/RASCUNHO para o Dener editar: o que os dados públicos atuais realmente dizem além do (?:ΛCDM|modelo cosmológico padrão)\?/gi,
     'Estudo proposto: o que os dados públicos atuais mostram além do modelo padrão?');
-  replace(/Um Mapa 3D De Galáxias Do DESI DR1 Corrigido Por Seleção Revela Estrutura Não Prevista Pelo Modelo Cosmológico Padrão\?/gi,
+  replace(/Um Mapa 3D De Galáxias Do DESI DR1 Corrigido Por Seleção Revela Estrutura Não Prevista Pelo (?:ΛCDM|Modelo Cosmológico Padrão)\?/gi,
     'Um mapa 3D do DESI DR1, corrigido pelos efeitos de seleção, revela alguma estrutura que o modelo padrão não prevê?');
   replace(/A Tensão De H0 É Sistemática De Medida Ou Física Nova\?/gi,
     'A tensão na expansão do universo vem de erros de medição ou de uma física ainda desconhecida?');
@@ -112,21 +112,25 @@ export const humanizeText = (value: string | null | undefined): string => {
     'Que mudanças deixariam o NEXO mais confiável, econômico e rigoroso?');
   replace(/DDE explanatory reach across ΛCDM anomalies and megastructures/gi,
     'energia escura dinâmica: ela explica as anomalias do modelo padrão e os sinais de megaestruturas?');
-  replace(/O holdout temporal do rank_score/gi,
-    'A avaliação da pontuação de ordenação com dados de períodos posteriores');
-  replace(/do holdout temporal/gi, 'da validação com dados posteriores');
-  replace(/holdout temporal/gi, 'validação com dados posteriores');
+  replace(/O holdout temporal do rank_score não pôde ser identificado sem reutilizar a amostra de calibração/gi,
+    'Não foi possível separar dados de um período posterior sem reaproveitar os dados já usados na calibração');
+  replace(/um holdout temporal independente preserva o poder de ordenação/gi,
+    'um teste com dados posteriores independentes mantém a capacidade de ordenar casos');
+  replace(/do holdout temporal/gi, 'do teste com dados posteriores');
+  replace(/holdout temporal/gi, 'teste com dados posteriores');
   replace(/do rank_score/gi, 'da pontuação de ordenação');
   replace(/rank_score/gi, 'pontuação de ordenação');
   replace(/o ROC AUC observado/gi, 'a capacidade observada de ordenar os casos');
   replace(/amostra META pequena/gi, 'amostra pequena de testes de autoaperfeiçoamento');
   replace(/a mesma coorte posterior de 10 stable_id/gi, 'os mesmos 10 casos de avaliação');
+  replace(/pares stage→inbox semanticamente idênticos/gi,
+    'pares de mensagens com o mesmo significado, do início da coleta até a fila de análise');
   replace(/stage→inbox/gi, 'coleta até a fila de análise');
   replace(/relay/gi, 'canal de repasse');
   replace(/\bcontests\b/gi, 'testes de contestação');
   replace(/\bcontest\b/gi, 'teste de contestação');
   replace(/autoengenharia/gi, 'autoaperfeiçoamento');
-  replace(/rubrica/gi, 'critério de pontuação');
+  replace(/rubrica/gi, 'regra de avaliação');
   replace(/nature of dark matter/gi, 'natureza da matéria escura');
   replace(/DESI DR1 selection-aware Galaxy Map/gi, 'mapa de galáxias do DESI DR1 com correção da seleção');
   replace(/H0 LCDM origin/gi, 'origem da tensão na expansão do universo');
