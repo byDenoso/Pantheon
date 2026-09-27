@@ -1,6 +1,7 @@
 import {useEffect,useMemo,useRef,useState,type ReactNode} from 'react';
 import {MetroAtlasRenderer} from '../atlas3d/MetroAtlasRenderer.tsx';
 import {GalaxyView} from '../atlas3d/GalaxyView.tsx';
+import {ConnectomeThree3D} from '../atlas3d/ConnectomeThree3D.tsx';
 import {ensureAtlasG6} from '../atlas3d/g6-loader.ts';
 import {visibleAtlasIds,type AtlasGraphLayer,type AtlasMetroModel} from '../atlas3d/atlasAdapter.ts';
 import {domainLabel,label} from '../viewmodels/tokens.ts';
@@ -98,8 +99,10 @@ export function NexoGraph({
       ? <div className="nexo-graph-table-wrap"><table className="nexo-graph-table"><caption>Esta lista mostra os itens abertos no mapa atual. Selecione uma linha para ver o contexto e as ligações.</caption><thead><tr><th>Item</th><th>O que é</th><th>Área</th><th>Situação</th><th>Conexões</th></tr></thead><tbody>{rows.map(node=><tr key={node!.id} className={node!.id===selectedId?'selected':''} onClick={()=>onSelect(node!.id)}><td><strong>{node!.name}</strong><details onClick={event=>event.stopPropagation()}><summary>Ver referência técnica</summary><code>{node!.id}</code></details></td><td>{NODE_TYPE_COPY[String(node!.entityType)]??displayCode(String(node!.entityType),'Registro')}</td><td>{domainLabel(node!.domain)}</td><td title="O valor técnico fica disponível nos detalhes do item">{displayCode(node!.status,'Estado sem descrição')}</td><td>{node!.relationCount}</td></tr>)}</tbody></table></div>
       : view==='galaxy'
         ? <GalaxyView selectedId={selectedId} onSelect={onSelect}/>
+      : view==='3d'
+        ? <ConnectomeThree3D model={model} expanded={expanded} visibleLayers={visibleLayers} selectedId={spotlightActive?selectedId:null} showRelations={showRelations} fitNonce={fitNonce} onActivate={onSelect} onReady={onReady}/>
       : view==='2d'&&!g6Ready
         ? <div className="nexo-graph-fallback" role="status">2D indisponível neste instante. Os dados continuam acessíveis em tabela.</div>
-        : <MetroAtlasRenderer model={model} expanded={expanded} visibleLayers={visibleLayers} selectedId={spotlightActive?selectedId:null} showBeams={showRelations} viewMode={view} theme={theme} fitNonce={fitNonce} allIlluminated={illuminated} onActivate={onSelect} onReady={onReady}/>}
+        : <MetroAtlasRenderer model={model} expanded={expanded} visibleLayers={visibleLayers} selectedId={spotlightActive?selectedId:null} showBeams={showRelations} viewMode="2d" theme={theme} fitNonce={fitNonce} allIlluminated={illuminated} onActivate={onSelect} onReady={onReady}/>}
   </section>;
 }
