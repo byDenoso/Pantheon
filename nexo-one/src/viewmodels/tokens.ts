@@ -94,8 +94,39 @@ export const humanizeText = (value: string | null | undefined): string => {
       : replacement);
   };
 
+  replace(/Qual É A Natureza Da Energia Escura: Constante, Dinâmica Ou Artefato\?/gi,
+    'Qual é a natureza da energia escura: constante, dinâmica ou outro fenômeno?');
+  replace(/Qual É A Natureza Da Matéria Escura Sugerida Pelos Dados Públicos\?/gi,
+    'Qual é a natureza da matéria escura indicada pelos dados públicos?');
+  replace(/A Energia Escura Dinâmica(?:\s*\(DDE\))?\s+Explica Anomalias Do (?:ΛCDM|Modelo Cosmológico Padrão) E Assinaturas De Megaestruturas Melhor Que O (?:ΛCDM|Modelo Cosmológico Padrão)\?/gi,
+    'A energia escura dinâmica explica melhor as anomalias do modelo padrão e os sinais de megaestruturas?');
+  replace(/RASCUNHO para o Dener editar: o que os dados públicos atuais realmente dizem além do (?:ΛCDM|modelo cosmológico padrão)\?/gi,
+    'Estudo proposto: o que os dados públicos atuais mostram além do modelo padrão?');
+  replace(/Um Mapa 3D De Galáxias Do DESI DR1 Corrigido Por Seleção Revela Estrutura Não Prevista Pelo Modelo Cosmológico Padrão\?/gi,
+    'Um mapa 3D do DESI DR1, corrigido pelos efeitos de seleção, revela alguma estrutura que o modelo padrão não prevê?');
+  replace(/A Tensão De H0 É Sistemática De Medida Ou Física Nova\?/gi,
+    'A tensão na expansão do universo vem de erros de medição ou de uma física ainda desconhecida?');
+  replace(/A Baixa Qualidade Preditiva Recente Da Autoengenharia Decorre Principalmente De Cobertura Observacional Insuficiente, E Não Da Lógica Dos Ataques\?/gi,
+    'A baixa qualidade das previsões do autoaperfeiçoamento vem da falta de observações, e não da lógica dos ataques?');
+  replace(/Que Mudanças Tornam O NEXO Mais Confiável, Barato E Rigoroso\?/gi,
+    'Que mudanças deixariam o NEXO mais confiável, econômico e rigoroso?');
   replace(/DDE explanatory reach across ΛCDM anomalies and megastructures/gi,
     'energia escura dinâmica: ela explica as anomalias do modelo padrão e os sinais de megaestruturas?');
+  replace(/O holdout temporal do rank_score/gi,
+    'A avaliação da pontuação de ordenação com dados de períodos posteriores');
+  replace(/do holdout temporal/gi, 'da validação com dados posteriores');
+  replace(/holdout temporal/gi, 'validação com dados posteriores');
+  replace(/do rank_score/gi, 'da pontuação de ordenação');
+  replace(/rank_score/gi, 'pontuação de ordenação');
+  replace(/o ROC AUC observado/gi, 'a capacidade observada de ordenar os casos');
+  replace(/amostra META pequena/gi, 'amostra pequena de testes de autoaperfeiçoamento');
+  replace(/a mesma coorte posterior de 10 stable_id/gi, 'os mesmos 10 casos de avaliação');
+  replace(/stage→inbox/gi, 'coleta até a fila de análise');
+  replace(/relay/gi, 'canal de repasse');
+  replace(/\bcontests\b/gi, 'testes de contestação');
+  replace(/\bcontest\b/gi, 'teste de contestação');
+  replace(/autoengenharia/gi, 'autoaperfeiçoamento');
+  replace(/rubrica/gi, 'critério de pontuação');
   replace(/nature of dark matter/gi, 'natureza da matéria escura');
   replace(/DESI DR1 selection-aware Galaxy Map/gi, 'mapa de galáxias do DESI DR1 com correção da seleção');
   replace(/H0 LCDM origin/gi, 'origem da tensão na expansão do universo');
