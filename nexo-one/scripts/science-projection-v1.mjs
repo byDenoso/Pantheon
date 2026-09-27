@@ -145,6 +145,7 @@ function testRecord(raw, manifest) {
     campaign_id: { names: ['campaign_id'], reason: 'Test campaign reference is absent from the source record.' },
     hypothesis_id: { names: ['hypothesis_id', 'hypothesis_ref'], reason: 'Test hypothesis reference is absent from the source record.' },
     status: { names: ['status'], reason: 'Test status is absent from the source record.', special: 'status' },
+    question_plain: { parent: 'semantic', names: ['question_plain'], reason: 'Test question in plain language is absent from the source record.' },
     method: { names: ['method', 'methodology', 'mechanism'], reason: 'Test method is absent from the source record.' },
     datasets: { names: [], reason: '' },
     preregistered_metric: { names: [], reason: '' },
@@ -290,7 +291,7 @@ export function validateScienceProjectionV1(output) {
     const allowedFields = {
       campaigns: ['title', 'question', 'question_plain', 'why_it_matters', 'hypothesis_ids', 'status', 'prereg_ref', 'started_at', 'members'],
       hypotheses: ['statement', 'model', 'baseline', 'falsification_criterion'],
-      tests: ['campaign_id', 'hypothesis_id', 'status', 'method', 'datasets', 'preregistered_metric', 'threshold', 'verdict', 'claim_level', 'publication_status', 'result', 'statistics', 'robustness_checks', 'artifacts', 'reproducibility', 'audit'],
+      tests: ['campaign_id', 'hypothesis_id', 'status', 'question_plain', 'method', 'datasets', 'preregistered_metric', 'threshold', 'verdict', 'claim_level', 'publication_status', 'result', 'statistics', 'robustness_checks', 'artifacts', 'reproducibility', 'audit'],
     }[collection];
     for (const record of output[collection]) {
       if (!record || typeof record.id !== 'string') reject(`${collection} record identity missing`);
