@@ -145,7 +145,8 @@ function paint(ctx: CanvasRenderingContext2D, W: number, H: number, model: Conne
     const i = model.somata[d]; if (i === undefined) continue;
     const p = P(i), c = CONNECTOME_RGB[d], q = model.lanes[d];
     const r = 7 + Math.min(15, Math.sqrt(nodes[i].mass) * 1.15);
-    /* a soma waiting for a decision fires in bursts and keeps firing */
+    /* a soma under operational attention fires in bursts: integrity failure,
+       or a lane with work but no completed/ready path. This is not a human gate. */
     const burst = model.attention[d] ? 0.55 + 0.45 * Math.sin(clock * 5.2) * Math.max(0, Math.sin(clock * 1.25)) : 0;
     const g = ctx.createRadialGradient(p[0], p[1], 0, p[0], p[1], r * 3.4);
     g.addColorStop(0, rgba([255, 255, 255], 0.3 + 0.45 * burst));
@@ -207,10 +208,10 @@ export function ConnectomeView() {
           <div><dt>Cone</dt><dd>teste pronto. Ponta que ainda procura ligação.</dd></div>
           <div><dt>Podada</dt><dd>bloqueado: fica visível, deixa de conduzir.</dd></div>
           <div><dt>Axónio</dt><dd>filamento entre domínios. O tráfego é o peso medido.</dd></div>
-          <div><dt>Disparo</dt><dd>soma em rajada: <em>espera decisão tua.</em> Não para sozinha.</dd></div>
+          <div><dt>Disparo</dt><dd>soma em rajada: <em>atenção operacional.</em> Há falha de integridade ou trabalho sem caminho pronto.</dd></div>
         </dl>
         <p className="note">O Learning Loop é plasticidade sináptica: uma relação estabelecida conduz, uma provisória conduz pouco, uma em teste quase não conduz.</p>
-        <p className="meta">{model.nodes.length} nós · {model.axons.length} axónios · {model.supports.length} sinapses colaterais{model.selfLoops ? ` · ${model.selfLoops} filamentos internos` : ''}</p>
+        <p className="meta">{model.nodes.length} nós · {model.axons.length} axónios · {model.supports.length} sinapses colaterais{model.selfLoops ? ` · ${model.selfLoops} aprendizados internos (não são axónios)` : ''}</p>
       </section>
     </div>
   );
