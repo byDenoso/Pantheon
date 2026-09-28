@@ -12,3 +12,5 @@ O Executor não manda código na proposta (o filtro do ChatGPT bloqueia). Em `TE
 Use `w0wa_bao_sn` para: leave-one-tracer-out do BAO, leave-one-band-out das SNe, e "a preferência por w0-wa sobrevive a …". Sem CMB alguns cortes ficam degenerados; a receita devolve INCONCLUSIVE (`DEGENERATE_FIT`) em vez de julgar — congele um prior em `priors` se o teste precisar decidir.
 
 Receita nova: peça numa conversa ("NEXO: preciso de uma receita para …"); ela entra aqui por commit revisado.
+
+| `w0wa_bao_sn_multi` | robustez w0-wa em Pantheon+ e DES-SN5YR com DESI DR2 BAO; jackknife por faixa de redshift ou família BAO | `mode`, `compilations[]`, `priors{}`, e `bands[[zmin,zmax]]` ou `tracer_groups[{label,z[]}]` |
