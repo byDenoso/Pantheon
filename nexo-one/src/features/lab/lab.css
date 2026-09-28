@@ -651,3 +651,21 @@ details.tech .versus{margin-bottom:18px}
   .tele-note{padding:9px 11px;border-radius:10px;background:rgba(var(--o-accent-rgb),.08);border:1px solid rgba(var(--o-accent-rgb),.28)}
 }
 @keyframes tele-pulse{50%{opacity:.35}}
+
+/* ===== ATLAS v2: teia navegável ===== */
+.obs-scene-labels button[data-domain]{position:absolute;left:0;top:0;margin:-34px 0 0 14px;pointer-events:auto;cursor:pointer;background:none;border:0;padding:2px 6px;border-radius:6px;
+  font:600 12.5px var(--sig-sans);color:var(--o-ink);text-shadow:0 0 12px var(--o-void);white-space:nowrap;transition:opacity .4s,background .2s}
+.obs-scene-labels button[data-domain]:hover,.obs-scene-labels button[data-domain].on{background:rgba(var(--o-accent-rgb),.16);color:var(--o-accent)}
+.obs-crumb{position:absolute;z-index:3;top:14px;right:18px;display:flex;align-items:baseline;gap:8px;padding:6px 12px;border-radius:999px;
+  background:var(--o-panel);border:1px solid var(--o-line);font:500 13px var(--sig-sans);color:var(--o-dim);pointer-events:auto}
+.obs-crumb button{background:none;border:0;padding:0;font:inherit;color:var(--o-accent);cursor:pointer}
+.obs-crumb span{color:var(--o-ink);font-weight:600}.obs-crumb em{font-style:normal;color:var(--o-quiet);font-size:12px}
+.obs-tip{position:absolute;left:0;top:0;z-index:4;pointer-events:none;opacity:0;transition:opacity .15s;max-width:280px;padding:8px 11px;border-radius:10px;
+  background:var(--o-panel);border:1px solid var(--o-line);box-shadow:0 10px 30px rgba(0,0,0,.35);display:flex;flex-direction:column;gap:2px}
+.obs-tip b{font:500 14px/1.35 var(--sig-sans);color:var(--o-ink)}
+.obs-tip i{font:500 12px var(--sig-sans);font-style:normal;color:var(--o-quiet)}
+.obs-tip i[data-v=confirmed]{color:var(--v-confirmed)}.obs-tip i[data-v=refuted]{color:var(--v-refuted)}.obs-tip i[data-v=review]{color:var(--v-review)}.obs-tip i[data-v=ready]{color:var(--v-ready)}
+.obs-near{position:absolute;inset:0;pointer-events:none;z-index:2}
+.obs-near span{position:absolute;left:0;top:0;opacity:0;transition:opacity .5s;font:500 12px var(--sig-sans);color:var(--o-dim);text-shadow:0 0 10px var(--o-void);white-space:nowrap}
+@media (max-width:760px){.obs-crumb{top:10px;right:auto;left:10px}.obs-near{display:none}}
+@media (min-width:1280px){.observatory .obs-crumb{right:18px}}

@@ -3,7 +3,7 @@
 // cada teste é uma estrela no filamento que liga sua hipótese ao domínio.
 // Cor/pulso = veredito (confirmado queima estável, em revisão pulsa, bloqueado apaga, refutado vermelho).
 // A câmera muda de enquadramento por página; clicar numa estrela abre o teste.
-import { useEffect, useMemo, useRef } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   AdditiveBlending, BufferAttribute, BufferGeometry, Color, LineBasicMaterial, LineSegments,
   PerspectiveCamera, Points, Raycaster, Scene, ShaderMaterial, Vector2, Vector3, WebGLRenderer,
@@ -52,6 +52,7 @@ const VERDICT_RGB: Record<Verdict, [number, number, number]> = {
   CONFIRMED: [0.62, 0.86, 0.7], REFUTED: [0.9, 0.46, 0.4], REVIEW: [0.92, 0.76, 0.48], PROVISIONAL: [0.7, 0.75, 0.86],
   READY: [0.74, 0.71, 0.8], BLOCKED: [0.36, 0.35, 0.4], DISCARDED: [0.25, 0.24, 0.28],
 };
+const VERDICT_TXT: Record<Verdict, string> = { CONFIRMED: 'confirmado', REFUTED: 'refutado', REVIEW: 'em revisão', PROVISIONAL: 'resultado provisório', READY: 'na fila', BLOCKED: 'bloqueado', DISCARDED: 'descartado' };
 const VERDICT_SIZE: Record<Verdict, number> = { CONFIRMED: 34, REFUTED: 24, REVIEW: 26, PROVISIONAL: 17, READY: 12, BLOCKED: 11, DISCARDED: 7 };
 const VERDICT_PULSE: Record<Verdict, number> = { CONFIRMED: 0.12, REFUTED: 0, REVIEW: 1, PROVISIONAL: 0.25, READY: 0.45, BLOCKED: 0, DISCARDED: 0 };
 
@@ -185,7 +186,12 @@ export function ObservatoryScene({ tests, page, focusIds, onPick, theme, events,
 }) {
   const host = useRef<HTMLDivElement>(null);
   const labels = useRef<HTMLDivElement>(null);
-  const api = useRef<{ shot: (p: ScenePage) => void; focus: (ids: string[]) => void; heat: (ids: string[]) => void } | null>(null);
+  const api = useRef<{ shot: (p: ScenePage) => void; focus: (ids: string[]) => void; heat: (ids: string[]) => void; goDomain: (i: number | null) => void } | null>(null);
+  const [sel, setSel] = useState<number | null>(null);
+  const tip = useRef<HTMLDivElement>(null);
+  const near = useRef<HTMLDivElement>(null);
+  const pageRef = useRef(page);
+  pageRef.current = page;
   const pickRef = useRef(onPick);
   pickRef.current = onPick;
   const exploreRef = useRef(explore);
@@ -353,7 +359,14 @@ export function ObservatoryScene({ tests, page, focusIds, onPick, theme, events,
       ids.forEach((id, i) => pulses.setX(i, set.has(id) && !reduced ? 1.8 : basePulse[i]!));
       pulses.needsUpdate = true;
     };
-    api.current = { shot, focus, heat };
+    // Navegação: NEXO (visão geral) -> domínio (câmera vai até ele e aproxima).
+    const goDomain = (i: number | null) => {
+      zoom = 1; pan.set(0, 0, 0);
+      if (i === null || !domainPos[i]) { shot(pageRef.current); return; }
+      target.look.copy(domainPos[i]!).multiplyScalar(scene.scale.x);
+      target.dist = 13; target.elev = 0.32;
+    };
+    api.current = { shot, focus, heat, goDomain };
 
     const resize = () => {
       const w = el.clientWidth || window.innerWidth, h = el.clientHeight || window.innerHeight;
@@ -450,6 +463,28 @@ export function ObservatoryScene({ tests, page, focusIds, onPick, theme, events,
       const hit = ray.intersectObject(starPoints)[0];
       if (hit?.index !== undefined && ids[hit.index]) pickRef.current(ids[hit.index]!);
     };
+    const byId = new Map(tests.map(t => [t.id, t]));
+    let hoverAt = 0;
+    const hover = (ev: PointerEvent) => {
+      const tipEl = tip.current;
+      if (!tipEl || drag || pinch || ev.pointerType === 'touch') { if (tipEl) tipEl.style.opacity = '0'; return; }
+      const now = performance.now(); if (now - hoverAt < 50) return; hoverAt = now;
+      const rect = canvas.getBoundingClientRect();
+      ndc.set(((ev.clientX - rect.left) / rect.width) * 2 - 1, -((ev.clientY - rect.top) / rect.height) * 2 + 1);
+      ray.setFromCamera(ndc, camera);
+      const hit = ray.intersectObject(starPoints)[0];
+      const t = hit?.index !== undefined ? byId.get(ids[hit.index] ?? '') : undefined;
+      if (!t) { tipEl.style.opacity = '0'; canvas.style.cursor = ''; return; }
+      tipEl.innerHTML = '';
+      const b = document.createElement('b'); b.textContent = t.name;
+      const i = document.createElement('i'); i.textContent = VERDICT_TXT[t.verdict]; i.dataset.v = t.verdict.toLowerCase();
+      tipEl.append(b, i);
+      tipEl.style.transform = `translate(${ev.clientX - rect.left + 14}px, ${ev.clientY - rect.top + 12}px)`;
+      tipEl.style.opacity = '1'; canvas.style.cursor = 'pointer';
+    };
+    canvas.addEventListener('pointermove', hover);
+    const leave = () => { if (tip.current) tip.current.style.opacity = '0'; };
+    canvas.addEventListener('pointerleave', leave);
     const wheel = (ev: WheelEvent) => {
       if (!exploreRef.current && !ev.ctrlKey) return; // rolando a página
       ev.preventDefault();
@@ -471,7 +506,7 @@ export function ObservatoryScene({ tests, page, focusIds, onPick, theme, events,
     const eventEls = [...(labels.current?.querySelectorAll('[data-event]') ?? [])] as HTMLElement[];
     const proj = new Vector3();
 
-    let raf = 0, last = performance.now(), visible = true, expansion = 1;
+    let raf = 0, last = performance.now(), visible = true, expansion = 1, lodTick = 0;
     const vis = () => { visible = document.visibilityState === 'visible'; };
     document.addEventListener('visibilitychange', vis);
     const frame = (now: number) => {
@@ -509,8 +544,30 @@ export function ObservatoryScene({ tests, page, focusIds, onPick, theme, events,
         proj.copy(domainPos[i]!).multiplyScalar(expansion).project(camera);
         const off = proj.z > 1 || Math.abs(proj.x) > 1.1 || Math.abs(proj.y) > 1.1 || (!exploreRef.current && w > 900 && (proj.x * 0.5 + 0.5) * w < Math.min(820, w * 0.6));
         node.style.opacity = off ? '0' : '1';
+        node.style.pointerEvents = off ? 'none' : 'auto';
         if (!off) place(node, (proj.x * 0.5 + 0.5) * w, (-proj.y * 0.5 + 0.5) * h);
       });
+      // Detalhe por distância: perto de um domínio, os testes mais próximos mostram o nome.
+      const nearEls = near.current ? [...near.current.children] as HTMLElement[] : [];
+      if (nearEls.length && ++lodTick % 8 === 0) {
+        const close = cam.dist < 17;
+        const cand: Array<[number, number, number, string]> = [];
+        if (close) for (let i = 0; i < ids.length; i += 1) {
+          proj.set(stars.pos[i * 3]!, stars.pos[i * 3 + 1]!, stars.pos[i * 3 + 2]!).multiplyScalar(expansion).project(camera);
+          if (proj.z > 1 || Math.abs(proj.x) > 0.9 || Math.abs(proj.y) > 0.9) continue;
+          const sx = (proj.x * 0.5 + 0.5) * w, sy = (-proj.y * 0.5 + 0.5) * h;
+          if (w > 900 && !exploreRef.current && sx < Math.min(640, w * 0.45)) continue;
+          cand.push([Math.hypot(proj.x, proj.y), sx, sy, byId.get(ids[i]!)?.name ?? '']);
+        }
+        cand.sort((a, b) => a[0] - b[0]);
+        nearEls.forEach((node, k) => {
+          const c = cand[k];
+          if (!c || !c[3]) { node.style.opacity = '0'; return; }
+          node.textContent = c[3].length > 42 ? c[3].slice(0, 40) + '…' : c[3];
+          node.style.opacity = '1';
+          node.style.transform = `translate(${c[1] + 10}px, ${c[2] - 8}px)`;
+        });
+      }
       eventEls.forEach((node, i) => {
         const a = anchors[i]; if (!a) return;
         proj.copy(a).multiplyScalar(expansion).project(camera);
@@ -529,6 +586,8 @@ export function ObservatoryScene({ tests, page, focusIds, onPick, theme, events,
       window.removeEventListener('pointerup', up);
       window.removeEventListener('pointercancel', up);
       canvas.removeEventListener('wheel', wheel);
+      canvas.removeEventListener('pointermove', hover);
+      canvas.removeEventListener('pointerleave', leave);
       canvas.removeEventListener('dblclick', dbl);
       canvas.removeEventListener('contextmenu', noMenu);
       composer?.dispose(); webGeo.dispose(); starGeo.dispose(); qsoGeo.dispose(); qsoMat.dispose(); jetGeo.dispose(); jetMat.dispose(); boxGeo.dispose(); boxMat.dispose(); mat.dispose(); renderer.dispose();
@@ -540,9 +599,19 @@ export function ObservatoryScene({ tests, page, focusIds, onPick, theme, events,
   useEffect(() => { api.current?.focus(focusIds ?? []); }, [focusIds, tests, theme]);
   useEffect(() => { api.current?.heat(hot ?? []); }, [hot, tests, theme, events]);
 
+  const go = (i: number | null) => { setSel(i); api.current?.goDomain(i); };
+  useEffect(() => { setSel(null); }, [page]);
   return <div ref={host} className={`obs-scene obs-scene--${theme}`}>
+    <nav className="obs-crumb" aria-label="Onde você está na teia">
+      <button type="button" onClick={() => go(null)} aria-current={sel === null ? 'location' : undefined}>NEXO</button>
+      {sel !== null && domains[sel] && <><i aria-hidden="true">›</i><span aria-current="location">{domains[sel]!.label}</span>
+        <em>{tests.filter(t => normDomain(t.domain) === domains[sel]!.id).length} testes</em></>}
+    </nav>
+    <div ref={tip} className="obs-tip" role="tooltip" />
+    <div ref={near} className="obs-near" aria-hidden="true">{Array.from({ length: 7 }, (_, k) => <span key={k} />)}</div>
     <div ref={labels} className="obs-scene-labels">
-      {domains.map(d => <span key={d.id} data-domain={d.id}>{d.label}</span>)}
+      {domains.map((d, i) => <button type="button" key={d.id} data-domain={d.id} className={sel === i ? 'on' : undefined}
+        onClick={() => go(sel === i ? null : i)} title={`Ir até ${d.label}`}>{d.label}</button>)}
       {[...(events?.quasars ?? []).map(e => ['qso', e] as const), ...(events?.grbs ?? []).map(e => ['grb', e] as const), ...(events?.agn ?? []).map(e => ['agn', e] as const)]
         .map(([kind, e], i) => <a key={i} data-event={kind} href={e.href} className={`obs-ev obs-ev--${kind}`}>{e.label}</a>)}
     </div>

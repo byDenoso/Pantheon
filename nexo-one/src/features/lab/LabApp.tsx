@@ -134,7 +134,6 @@ export default function LabApp({ state, route, theme }: { state: SystemState; ro
       <button type="button" aria-pressed={sound} onClick={() => setSound(x => !x)} title="Som ambiente" aria-label="Som ambiente"><Icon n={sound ? 'sound' : 'mute'} /><span className="bt">{sound ? 'Som ligado' : 'Som'}</span></button>
     </div>
     {searching && <Search lab={lab} onClose={() => setSearching(false)} />}
-    {legend && route.page === 'agora' && <Legend onClose={closeLegend} />}
     {explore && <p className="explore-hint" role="status">Arraste para girar · roda ou pinça para zoom · botão direito, Shift ou 2 dedos para mover · duplo clique recentra · Esc sai</p>}
     <Suspense fallback={<div className="obs-scene obs-scene--loading" />}>
       <ObservatoryScene explore={explore || replay !== null} hot={hot} tests={tests} events={events} page={route.page} focusIds={focus} theme={theme}
