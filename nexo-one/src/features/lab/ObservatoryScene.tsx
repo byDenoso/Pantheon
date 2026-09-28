@@ -45,8 +45,8 @@ export function layoutDomains(ids: string[]): DomainSpot[] {
 }
 
 const VERDICT_RGB: Record<Verdict, [number, number, number]> = {
-  CONFIRMED: [0.5, 1, 0.75], REFUTED: [1, 0.3, 0.26], REVIEW: [1, 0.78, 0.35], PROVISIONAL: [0.72, 0.8, 1],
-  READY: [0.85, 0.72, 0.95], BLOCKED: [0.4, 0.38, 0.48], DISCARDED: [0.28, 0.26, 0.32],
+  CONFIRMED: [0.62, 0.86, 0.7], REFUTED: [0.9, 0.46, 0.4], REVIEW: [0.92, 0.76, 0.48], PROVISIONAL: [0.7, 0.75, 0.86],
+  READY: [0.74, 0.71, 0.8], BLOCKED: [0.36, 0.35, 0.4], DISCARDED: [0.25, 0.24, 0.28],
 };
 const VERDICT_SIZE: Record<Verdict, number> = { CONFIRMED: 34, REFUTED: 24, REVIEW: 26, PROVISIONAL: 17, READY: 12, BLOCKED: 11, DISCARDED: 7 };
 const VERDICT_PULSE: Record<Verdict, number> = { CONFIRMED: 0.12, REFUTED: 0, REVIEW: 1, PROVISIONAL: 0.25, READY: 0.45, BLOCKED: 0, DISCARDED: 0 };
@@ -103,7 +103,7 @@ varying float vFade;
 void main(){
   vec2 c = gl_PointCoord - 0.5; float d = length(c);
   float a = exp(-d*d*20.0) * vFade; if (a < 0.01) discard;
-  gl_FragColor = vec4(vec3(0.75,0.9,1.0)*(0.6+vFade*0.6), a);
+  gl_FragColor = vec4(vec3(0.95,0.9,0.82)*(0.6+vFade*0.6), a);
 }`;
 
 const rnd = (text: string): number => {
@@ -117,7 +117,7 @@ const jitter = (seed: string, s: number): [number, number, number] =>
   [(rnd(seed + 'x') - 0.5) * s, (rnd(seed + 'y') - 0.5) * s, (rnd(seed + 'z') - 0.5) * s];
 
 // Paleta "inferno" da teia: violeta profundo -> magenta -> laranja -> branco-quente.
-const INFERNO = ['#04121e', '#0a3452', '#15699a', '#2fa6d8', '#86dcf5', '#e8fbff'].map(c => new Color(c));
+const INFERNO = ['#05060b', '#141827', '#2a3048', '#56607e', '#a3a9bd', '#f4ecdd'].map(c => new Color(c));
 const inferno = (t: number) => {
   const x = Math.max(0, Math.min(0.999, t)) * (INFERNO.length - 1), i = Math.floor(x), f = x - i;
   return INFERNO[i]!.clone().lerp(INFERNO[i + 1]!, f);
@@ -149,7 +149,7 @@ function filament(b: Buf, a: Vector3, c: Vector3, density: number, heat: number,
     const spread = 0.03 + 0.09 * Math.sin(Math.PI * t);
     const edge = Math.min(t, u);
     push(b, [p.x + (Math.random() - 0.5) * spread, p.y + (Math.random() - 0.5) * spread, p.z + (Math.random() - 0.5) * spread],
-      inferno(heat * (0.6 + 0.4 * (1 - edge * 2)) * (0.7 + Math.random() * 0.3)).multiplyScalar(1.2), 1.8 + Math.random() * 2.6);
+      inferno(heat * (0.6 + 0.4 * (1 - edge * 2)) * (0.7 + Math.random() * 0.3)).multiplyScalar(1.6), 1.9 + Math.random() * 2.8);
   }
   return mid;
 }
@@ -208,7 +208,7 @@ export function ObservatoryScene({ tests, page, focusIds, onPick, theme, events,
         const r = Math.pow(Math.random(), 2.2) * 2.4, th = Math.random() * Math.PI * 2, ph = Math.acos(2 * Math.random() - 1);
         push(web, [d.x + r * Math.sin(ph) * Math.cos(th), d.y + r * Math.cos(ph), d.z + r * Math.sin(ph) * Math.sin(th)], inferno(0.95 - r * 0.2), 3 + Math.random() * 4);
       }
-      push(web, [d.x, d.y, d.z], new Color('#eafcff'), 180, 0.08);
+      push(web, [d.x, d.y, d.z], new Color('#f7eedd'), 180, 0.08);
     });
 
     // Hipóteses: nós ao redor do seu domínio; testes ao longo do filamento hipótese->domínio.
@@ -231,7 +231,7 @@ export function ObservatoryScene({ tests, page, focusIds, onPick, theme, events,
         const r = Math.pow(Math.random(), 0.8) * (0.8 + ready * 0.08);
         const th = Math.random() * Math.PI * 2, ph = Math.acos(2 * Math.random() - 1);
         push(web, [node.x + r * Math.sin(ph) * Math.cos(th), node.y + r * Math.cos(ph) * 0.6, node.z + r * Math.sin(ph) * Math.sin(th)],
-          [0.28, 0.5 + Math.random() * 0.2, 0.62], 8 + Math.random() * 10, 0.2);
+          [0.42 + Math.random() * 0.1, 0.36, 0.46], 8 + Math.random() * 10, 0.2);
       }
       list.forEach(t => {
         const s = 0.15 + rnd(t.id) * 0.85;
@@ -252,7 +252,7 @@ export function ObservatoryScene({ tests, page, focusIds, onPick, theme, events,
     const corners = [-B, B];
     for (const x of corners) for (const y of corners) { e.push(x, y, -B, x, y, B); e.push(x, -B, y, x, B, y); e.push(-B, x, y, B, x, y); }
     const boxGeo = new BufferGeometry(); boxGeo.setAttribute('position', new BufferAttribute(new Float32Array(e), 3));
-    const boxMat = new LineBasicMaterial({ color: theme === 'dark' ? 0x3f6f8c : 0x5a86a0, transparent: true, opacity: 0.22 });
+    const boxMat = new LineBasicMaterial({ color: theme === 'dark' ? 0x3a3d4c : 0x55586a, transparent: true, opacity: 0.22 });
     scene.add(new LineSegments(boxGeo, boxMat));
 
     // --- Fenômenos ---
@@ -266,7 +266,7 @@ export function ObservatoryScene({ tests, page, focusIds, onPick, theme, events,
     });
     ev.grbs.forEach((e, k) => {
       const at = domainPos[domainIndex(e.domain)]!.clone().add(new Vector3(...jitter(`g${k}`, 2.5)));
-      push(qso, [at.x, at.y, at.z], [0.7, 0.95, 1], 70, reduced ? 0 : 1, rnd(`g${k}`));
+      push(qso, [at.x, at.y, at.z], [0.98, 0.92, 0.8], 70, reduced ? 0 : 1, rnd(`g${k}`));
       anchors.push(at);
     });
     const qsoMat = new ShaderMaterial({ uniforms, vertexShader: VERT, fragmentShader: QSO_FRAG, transparent: true, depthWrite: false, blending: AdditiveBlending });
