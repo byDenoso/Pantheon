@@ -3,17 +3,17 @@
 // quando falta dado, o campo fica null e a página diz o que falta.
 import type { GraphNode, ScienceProjectionRecord, SystemState } from '../../contracts/system.ts';
 
-export type Verdict = 'CONFIRMED' | 'REFUTED' | 'REVIEW' | 'PROVISIONAL' | 'READY' | 'BLOCKED' | 'DISCARDED';
+export type Verdict = 'CONFIRMED' | 'REFUTED' | 'REVIEW' | 'PROVISIONAL' | 'READY' | 'RUNNING' | 'CHECKPOINTED' | 'BLOCKED' | 'DISCARDED';
 
 export const VERDICT_PT: Record<Verdict, string> = {
   CONFIRMED: 'Confirmado', REFUTED: 'Refutado', REVIEW: 'Em revisão', PROVISIONAL: 'Resultado provisório',
-  READY: 'Na fila', BLOCKED: 'Bloqueado', DISCARDED: 'Descartado',
+  READY: 'Na fila', RUNNING: 'Em processamento', CHECKPOINTED: 'Execução salva', BLOCKED: 'Bloqueado', DISCARDED: 'Descartado',
 };
 /** Forma além da cor: o estado nunca depende só do matiz. */
 export const VERDICT_GLYPH: Record<Verdict, string> = {
-  CONFIRMED: '✓', REFUTED: '✕', REVIEW: '◐', PROVISIONAL: '●', READY: '○', BLOCKED: '▨', DISCARDED: '–',
+  CONFIRMED: '✓', REFUTED: '✕', REVIEW: '◐', PROVISIONAL: '●', READY: '○', RUNNING: '▶', CHECKPOINTED: '◫', BLOCKED: '▨', DISCARDED: '–',
 };
-export const VERDICT_ORDER: Verdict[] = ['CONFIRMED', 'REFUTED', 'REVIEW', 'PROVISIONAL', 'READY', 'BLOCKED', 'DISCARDED'];
+export const VERDICT_ORDER: Verdict[] = ['CONFIRMED', 'REFUTED', 'REVIEW', 'PROVISIONAL', 'READY', 'RUNNING', 'CHECKPOINTED', 'BLOCKED', 'DISCARDED'];
 
 export interface TestEntity {
   id: string;
@@ -30,6 +30,9 @@ export interface TestEntity {
   campaignId: string | null;
   roadmapId: string | null;
   domain: string;
+  subdomainId: string | null;
+  topicId: string | null;
+  subdomain: string | null;
   topic: string | null;
   blocker: string | null;
   contestOf: string | null;
@@ -114,10 +117,12 @@ function verdictOf(status: string | null, review: string | null, graphBlocked: b
   const s = (status || '').toUpperCase();
   if (graphBlocked || s.startsWith('BLOCKED')) return 'BLOCKED';
   if (s === 'REJECTED' || s === 'ARCHIVED' || s === 'RETIRED' || s === 'SUPERSEDED' || s === 'CANCELLED') return 'DISCARDED';
-  // Checkpoint é etapa operacional (execução pausada/salva), não resultado científico.
-  if (s === 'READY' || s === 'QUEUED' || s === 'RUNNING' || s === 'DISPATCHED' || s === 'CHECKPOINTED') return 'READY';
+  // Estado operacional não é fila: só READY é elegível para a bateria do Executor.
+  if (s === 'READY') return 'READY';
+  if (s === 'QUEUED' || s === 'RUNNING' || s === 'DISPATCHED') return 'RUNNING';
+  if (s === 'CHECKPOINTED') return 'CHECKPOINTED';
   if (s) return 'PROVISIONAL';
-  return 'READY';
+  return 'PROVISIONAL';
 }
 
 export function buildLab(state: SystemState): Lab {
@@ -159,7 +164,10 @@ export function buildLab(state: SystemState): Lab {
       campaignId,
       roadmapId: str(any.roadmap_id) ?? (campaignId ? campaignToRoadmap.get(campaignId) ?? null : null),
       domain: n?.semantic_domain ?? str(any.domain) ?? n?.domain ?? 'SCIENCE',
-      topic: n?.semantic_subdomain ?? null,
+      subdomainId: n?.semantic_subdomain_id ?? null,
+      topicId: n?.semantic_topic_id ?? null,
+      subdomain: n?.semantic_subdomain ?? null,
+      topic: n?.semantic_topic ?? null,
       blocker: n?.blocker ?? str(any.blocker) ?? (n?.state === 'BLOCKED' ? n.summary : null),
       contestOf: contestTarget(id),
       contests: [],
@@ -294,7 +302,7 @@ function aggregate(verdicts: Verdict[]): Verdict | null {
   if (!verdicts.length) return null;
   // Filhos confirmados E refutados: a hipótese está em disputa, nunca "confirmada" por precedência.
   if (verdicts.includes('CONFIRMED') && verdicts.includes('REFUTED')) return 'REVIEW';
-  for (const v of ['CONFIRMED', 'REFUTED', 'REVIEW', 'PROVISIONAL', 'READY', 'BLOCKED'] as Verdict[]) if (verdicts.includes(v)) return v;
+  for (const v of ['CONFIRMED', 'REFUTED', 'REVIEW', 'PROVISIONAL', 'RUNNING', 'CHECKPOINTED', 'READY', 'BLOCKED'] as Verdict[]) if (verdicts.includes(v)) return v;
   return 'DISCARDED';
 }
 
