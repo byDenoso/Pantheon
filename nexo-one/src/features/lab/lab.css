@@ -523,3 +523,31 @@ details.tech .versus{margin-bottom:18px}
 .board-head b{font-weight:500;color:#4fa3a0}.board-head span{color:#d4bf95}.board-head i{font-style:normal;opacity:.6}
 .board-head time{margin-left:auto;font-size:11.5px}
 .board-text{margin:0!important;color:#efe9dd!important;font-size:15px;line-height:1.55}
+
+/* ===== Celular, passada 2: menos coisa sobre o céu, abas legíveis, céu mais baixo ===== */
+.obs-tools button,.explore-toggle{display:inline-flex;align-items:center;gap:8px}
+.explore-toggle i{font-style:normal}
+@media (max-width:760px){
+  .observatory{--sky:34vh}
+  .observatory:not(.exploring) .obs-scene{height:var(--sky)}
+  .observatory:not(.exploring) .hud{top:calc(48px + var(--sky))}
+  /* ferramentas viram ícones discretos no canto do céu */
+  .observatory .obs-tools{top:56px!important;right:10px;gap:6px}
+  .observatory .obs-tools .bt,.observatory:not(.exploring) .explore-toggle .bt{display:none}
+  .observatory .obs-tools button{width:36px;height:36px;padding:0;justify-content:center;border-radius:50%;background:rgba(5,6,10,.55)}
+  .observatory:not(.exploring) .explore-toggle{top:calc(48px + var(--sky) - 46px)!important;right:10px;width:36px;height:36px;min-height:0;padding:0;justify-content:center;border-radius:50%;font-size:15px}
+  /* o recado do quasar fica ancorado no canto do céu, inteiro e legível */
+  .observatory:not(.exploring) .obs-ev--qso{transform:none!important;left:10px;right:56px;top:auto;bottom:10px;margin:0;max-width:none;
+    overflow:hidden;text-overflow:ellipsis;font-size:10px;padding:5px 9px;text-align:left}
+  .observatory:not(.exploring) .obs-scene-labels{overflow:hidden}
+  .obs-scene-labels span{font-size:9.5px;letter-spacing:.16em}
+  /* conteúdo */
+  .observatory .hud h1{font-size:34px!important}
+  .mono-now{font-size:15px!important;line-height:1.55!important}
+  .observatory .hud h2{font-size:11.5px!important}
+}
+
+@media (max-width:760px){
+  .observatory .hud-status{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 8px;font-size:11px!important;line-height:1.4}
+  .observatory .hud-status span{white-space:nowrap}
+}

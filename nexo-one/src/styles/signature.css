@@ -51,3 +51,12 @@
 
 @media (prefers-reduced-motion:reduce){.sig-cursor,.sig-prompt::after{animation:none}}
 @media (max-width:760px){.sig-acoustic svg{width:120px}.observatory::before{opacity:.05}}
+
+/* Celular: cabeçalho enxuto e abas que cabem (5 ou 7, sempre divididas por igual) */
+@media (max-width:760px){
+  :root[data-theme] .instrument-search{display:none!important}
+  :root[data-theme] .instrument-modes{display:flex!important;justify-content:stretch}
+  :root[data-theme] .instrument-modes button{flex:1 1 0;min-width:0;font-size:8.5px!important;letter-spacing:.02em!important}
+  :root[data-theme] .instrument-modes button span{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  :root[data-theme] .instrument-brand strong{letter-spacing:.24em}
+}

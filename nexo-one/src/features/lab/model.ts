@@ -326,7 +326,11 @@ export const GUARDIAN_AREA_PT: Record<string, string> = {
   inbox: 'há propostas não aplicadas', writer: 'o robô escritor falhou', batteries: 'baterias travadas',
   camb_runtime_policy: 'o programa de cosmologia (CAMB) está fora da política de execução', guardian_freshness: 'minha auditoria está atrasada',
   public_projection: 'o site público ficou atrás da Tower', olympus: 'a área Olympus tem inconsistência', site_projection: 'o site ficou atrás da Tower',
+  automations: 'alguma automação não rodou no horário', incident_reconciliation: 'há incidentes esperando reconciliação',
+  recovery: 'uma recuperação ficou incompleta', relay: 'o relay de gravação atrasou', tower_integrity: 'a Tower tem inconsistência',
 };
+/** Área do Guardião em português; área nova sem tradução vira frase neutra (nunca o código cru). */
+export const guardianArea = (a: string) => GUARDIAN_AREA_PT[a] ?? `problema em ${a.replace(/_/g, ' ')}`;
 
 /** Pergunta vira nome curto: sem "?" final, até ~8 palavras. */
 function shortName(q: string | null): string | null {

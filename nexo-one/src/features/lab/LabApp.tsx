@@ -3,7 +3,7 @@
 import { lazy, Suspense, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import type { SystemState } from '../../contracts/system.ts';
 import {
-  ago, buildLab, GUARDIAN_AREA_PT, humanId, readBaseline, VERDICT_GLYPH, VERDICT_ORDER, VERDICT_PT,
+  ago, buildLab, guardianArea, humanId, readBaseline, VERDICT_GLYPH, VERDICT_ORDER, VERDICT_PT,
   type Lab, type TestEntity, type Verdict,
 } from './model.ts';
 import type { ScenePage, SceneEvents } from './ObservatoryScene.tsx';
@@ -128,10 +128,10 @@ export default function LabApp({ state, route, theme }: { state: SystemState; ro
       <button type="button" onClick={() => { setReplay(null); setFocus([]); }}>✕ parar</button>
     </div>}
     <button type="button" className="explore-toggle" aria-pressed={explore} onClick={() => setExplore(x => !x)}>
-      {explore ? '✕ Voltar ao painel' : '⤢ Explorar a teia'}</button>
+      {explore ? <><i aria-hidden="true">✕</i><span className="bt">Voltar ao painel</span></> : <><i aria-hidden="true">⤢</i><span className="bt">Explorar a teia</span></>}</button>
     <div className="obs-tools">
-      <button type="button" onClick={() => setSearching(true)} title="Procurar (Ctrl K)"><Icon n="target" /> Procurar</button>
-      <button type="button" aria-pressed={sound} onClick={() => setSound(x => !x)} title="Som ambiente">{sound ? 'Som ligado' : 'Som'}</button>
+      <button type="button" onClick={() => setSearching(true)} title="Procurar (Ctrl K)" aria-label="Procurar"><Icon n="target" /><span className="bt">Procurar</span></button>
+      <button type="button" aria-pressed={sound} onClick={() => setSound(x => !x)} title="Som ambiente" aria-label="Som ambiente"><Icon n={sound ? 'sound' : 'mute'} /><span className="bt">{sound ? 'Som ligado' : 'Som'}</span></button>
     </div>
     {searching && <Search lab={lab} onClose={() => setSearching(false)} />}
     {legend && route.page === 'agora' && <Legend onClose={closeLegend} />}
@@ -171,7 +171,7 @@ function Now({ lab, state, onReplay, replayCount }: { lab: Lab; state: SystemSta
       </p>
       <span className="sig-prompt" aria-hidden="true"><b>nexo@atlas</b>:<i>~</i>$ observe --agora</span>
       <h1>O NEXO <em>agora</em></h1>
-      {g && g.failing_areas.length > 0 && <p className="hud-lead">{g.failing_areas.map(a => GUARDIAN_AREA_PT[a] ?? a).join(' · ')}.</p>}
+      {g && g.failing_areas.length > 0 && <p className="hud-lead">{g.failing_areas.map(a => guardianArea(a)).join(' · ')}.</p>}
     </header>
 
     <GatePanel state={state} />
@@ -627,7 +627,7 @@ function Health({ state, lab }: { state: SystemState; lab: Lab }) {
       </li>)}</ul>
     </Section>}
     {g && g.failing_areas.length > 0 && <Section title="O que está falhando" id="he-fail">
-      <ul className="hud-list">{g.failing_areas.map(a => <li key={a}><b>{a}</b> — {GUARDIAN_AREA_PT[a] ?? 'ver relatório do Guardião'}</li>)}</ul>
+      <ul className="hud-list">{g.failing_areas.map(a => <li key={a}><b>{a}</b> — {guardianArea(a)}</li>)}</ul>
     </Section>}
     {(ev?.incidents?.length ?? 0) > 0 && <Section title="Incidentes" kicker={`${ev!.incidents!.length} abertos`} id="he-inc">
       <ul className="incidents">{ev!.incidents!.map(i => {
@@ -931,6 +931,8 @@ const ICON: Record<string, string> = {
   eye: 'M1.8 8S4.2 3.8 8 3.8 14.2 8 14.2 8 11.8 12.2 8 12.2 1.8 8 1.8 8Zm6.2-2a2 2 0 1 0 0 4 2 2 0 0 0 0-4Z',
   eyeoff: 'M1.8 8S4.2 3.8 8 3.8 14.2 8 14.2 8 11.8 12.2 8 12.2 1.8 8 1.8 8ZM2.5 2.5l11 11',
   trap: 'M2.5 12.5h11M4 12.5 8 4l4 8.5M6 9h4',
+  sound: 'M2.5 6h2.5L8.5 3v10L5 10H2.5zM11 5.5a3.5 3.5 0 0 1 0 5M12.8 3.5a6 6 0 0 1 0 9',
+  mute: 'M2.5 6h2.5L8.5 3v10L5 10H2.5zM11 6l3.5 4M14.5 6 11 10',
   hand: 'M5.5 8V3.8a1 1 0 0 1 2 0V7.5M7.5 7V3a1 1 0 0 1 2 0v4M9.5 7.2V4a1 1 0 0 1 2 0v5.5a4.5 4.5 0 0 1-8.3 2.4L2.5 10a1 1 0 0 1 1.6-1.2l1.4 1.4',
 };
 function Icon({ n }: { n: string }) {
