@@ -4,7 +4,7 @@ name: NEXO Writer robot
 # Runs in this public repository (no Actions minutes quota). No proposal content is ever printed.
 on:
   schedule:
-    - cron: '*/5 * * * *'
+    - cron: '7,37 * * * *'   # off-peak minutes: GitHub drops */5 schedules under load; proposals still wake it instantly
   workflow_dispatch:
   push:
     branches: [main]
