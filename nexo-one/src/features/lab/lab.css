@@ -596,3 +596,18 @@ details.tech .versus{margin-bottom:18px}
 }
 .obs-scene{background:var(--o-void)!important}
 :root[data-theme="light"] .obs-scene::after{background:radial-gradient(130% 100% at 65% 45%,transparent 50%,rgba(255,255,255,.55) 100%)}
+
+/* ===== ATLAS v2: rótulos em caixa normal, fonte de leitura (mono só para números e código) ===== */
+.observatory .hud h2,.observatory .hud-kicker,.observatory .hud-status,.observatory .stat span,.observatory .health-cell span,
+.observatory .ev-meta em,.observatory .crew-hats,.observatory .board-head,.observatory .field dt,.observatory .versus dt,.observatory .ev-table th,
+.observatory .obs-scene-labels span,.observatory .obs-ev,.observatory .explore-toggle{
+  font-family:var(--sig-sans,"IBM Plex Sans",system-ui,sans-serif)!important;text-transform:none!important;letter-spacing:.01em!important}
+.observatory .hud h2{font-size:14.5px!important;font-weight:600!important;color:var(--o-dim)!important}
+.observatory .hud-kicker{font-size:13.5px!important;font-weight:600!important}
+.observatory .hud-status{font-size:14px!important;font-weight:600!important}
+.observatory .obs-scene-labels span{font-size:12.5px!important;font-weight:600!important}
+.observatory .obs-ev{font-size:12px!important;font-weight:500!important}
+.observatory .hud-status.s-warn i{background:var(--v-review)!important;box-shadow:0 0 10px var(--v-review)}
+.observatory .hud-status.s-crit i{background:var(--v-refuted)!important;box-shadow:0 0 10px var(--v-refuted)}
+.observatory .hud-status.s-ok i{background:var(--v-confirmed)!important;box-shadow:0 0 10px var(--v-confirmed)}
+.observatory .num,.observatory .stat strong,.observatory time{font-variant-numeric:tabular-nums}

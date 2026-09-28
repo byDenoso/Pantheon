@@ -160,13 +160,16 @@ function Now({ lab, state, onReplay, replayCount }: { lab: Lab; state: SystemSta
   const blocked = [...lab.tests.values()].filter(t => t.verdict === 'BLOCKED');
   const discovery = [...lab.tests.values()].find(t => t.verdict === 'CONFIRMED') ?? [...lab.tests.values()].find(t => t.meaning && t.verdict === 'PROVISIONAL');
   const next = [...lab.tests.values()].filter(t => t.verdict === 'READY' && t.question).slice(0, 3);
-  const health = !g ? 'unknown' : g.status === 'GREEN' ? 'ok' : g.status === 'YELLOW' ? 'warn' : 'crit';
+  // Gravidade real: vermelho só quando algo trava o ciclo; o resto é atenção.
+  const CRITICAL = ['writer', 'tower_integrity', 'relay', 'inbox', 'batteries', 'executor'];
+  const blocking = (g?.failing_areas ?? []).filter(a => CRITICAL.includes(a));
+  const health = !g ? 'unknown' : g.status === 'GREEN' ? 'ok' : blocking.length ? 'crit' : 'warn';
 
   return <>
     <header className="hud-hero">
       <p className={`hud-status s-${stale ? 'warn' : health}`}>
         <i aria-hidden="true" />
-        {g ? { GREEN: 'Sistema saudável', YELLOW: 'Sistema com alertas', RED: 'Sistema com falhas' }[g.status] : 'Saúde desconhecida'}
+        {{ ok: 'Operando', warn: 'Operando com atenção', crit: 'Com falhas: o ciclo está travado', unknown: 'Saúde desconhecida' }[health]}
         <span> · dados {ago(state.generated_at)}{stale ? ' — atrasados' : ''}</span>
       </p>
       <span className="sig-prompt" aria-hidden="true"><b>nexo@atlas</b>:<i>~</i>$ observe --agora</span>
@@ -666,8 +669,8 @@ const domainOfId = (id: string, lab: Lab): string => {
 function sceneEvents(state: SystemState, lab: Lab): SceneEvents {
   const ev = state.evolution;
   const quasars = [
-    ...(ev?.gate.charters_waiting ?? []).map(c => ({ domain: domainOfId(c.roadmap_id, lab), label: `Quasar · decisão sua: ${humanId(c.roadmap_id)}`, href: '#/ciclo' })),
-    ...(ev?.gate.canaries_waiting ?? []).map(c => ({ domain: 'ENGINEERING', label: `Quasar · canonizar ${c.gene}`, href: '#/ciclo' })),
+    ...(ev?.gate.charters_waiting ?? []).map(c => ({ domain: domainOfId(c.roadmap_id, lab), label: 'Decisão sua', href: '#/ciclo' })),
+    ...(ev?.gate.canaries_waiting ?? []).map(c => ({ domain: 'ENGINEERING', label: 'Decisão sua: nova regra', href: '#/ciclo' })),
   ];
   const running = Number((ev as unknown as { batteries?: Record<string, number> })?.batteries?.DISPATCHED ?? 0);
   const perDomain = new Map<string, number>();
@@ -678,10 +681,10 @@ function sceneEvents(state: SystemState, lab: Lab): SceneEvents {
   }
   const agn = [...perDomain].map(([domain, n]) => ({
     domain, count: n, href: '#/evidencia?v=READY',
-    label: `AGN · ${n} ${n === 1 ? "teste" : "testes"} ${running ? 'rodando/na fila' : 'na fila'}`,
+    label: `${n} ${n === 1 ? 'teste' : 'testes'} ${running ? 'rodando ou na fila' : 'na fila'}`,
   }));
   const grbs = (ev?.thoughts ?? []).filter(t => Date.now() - Date.parse(t.at) < 2 * 3600e3).slice(-2)
-    .map(t => ({ domain: domainOfId(t.refs[0] ?? '', lab), label: 'GRB · a Pítia pensou', href: '#/ciclo' }));
+    .map(t => ({ domain: domainOfId(t.refs[0] ?? '', lab), label: 'Pensamento novo', href: '#/ciclo' }));
   return { quasars, agn, grbs };
 }
 
