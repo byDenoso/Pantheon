@@ -377,79 +377,73 @@ function EntityPage({ lab, id }: { lab: Lab; id: string }) {
   const pred = (t.prereg.prediction ?? {}) as { expected_effect?: string; p_promoted?: number };
   const contests = [...new Set([...t.contests, ...t.reviews.map(r => r.contest_test_id ?? r.ref).filter(Boolean) as string[]])];
   const lim = Array.isArray(t.limitations) ? (t.limitations as string[]) : t.limitations ? [String(t.limitations)] : [];
+  const story = testStory(t, lab);
   return <>
     <header className="hud-hero">
       <p className="hud-kicker"><a href="#/evidencia">Evidência</a>
-        {t.roadmapId && <> · <a href={labHref('roadmap', t.roadmapId)}>{lab.roadmaps.get(t.roadmapId)?.title ?? humanId(t.roadmapId)}</a></>}
-        {parent && <> · contesta <E id={parent.id} /></>}</p>
+        {t.roadmapId && <> · <a href={labHref('roadmap', t.roadmapId)}>{lab.roadmaps.get(t.roadmapId)?.title ?? humanId(t.roadmapId)}</a></>}</p>
       <h1 className="h1-entity">{t.question ?? humanId(t.id)}</h1>
-      <p className="hud-lead"><VerdictChip v={t.verdict} />
-        {t.verdictRaw && <span className="hud-muted"> · veredito do teste: {t.verdictRaw.toLowerCase()}</span>}</p>
-      <p className="hud-meta"><code>{t.id}</code>
-        {t.createdAt && <> · {t.createdSource === 'EVENT_FIRST_OBSERVED' ? 'visto pela 1ª vez' : 'criado'} {ago(t.createdAt)}</>}
-        {t.executedAt && <> · executado {ago(t.executedAt)}</>}
-        {t.execution?.battery_id && <> · bateria <code>{t.execution.battery_id}</code></>}</p>
+      <p className="hud-lead"><VerdictChip v={t.verdict} />{t.createdAt && <span className="hud-muted"> · começou {ago(t.createdAt)}</span>}</p>
     </header>
 
-    {t.meaning && <Section title="O que o resultado significa" id="en-mean"><p className="hud-big">{t.meaning}</p></Section>}
+    <Section title="A história deste teste" kicker="Contada por mim" id="en-story">
+      <ol className="story">{story.map((b, i) => <li key={i} className={`beat beat-${b.tone}`}>
+        <i aria-hidden="true">{b.icon}</i><p>{b.text}{b.link && <> <E id={b.link.id}>{b.link.label}</E></>}</p>
+      </li>)}</ol>
+    </Section>
 
-    <div className="versus" role="group" aria-label="Prometido antes versus observado depois">
-      <section className="versus-col sealed" aria-labelledby="vs-pre">
-        <h2 id="vs-pre"><i aria-hidden="true">◆</i> Prometido antes</h2>
-        <dl>
-          <dt>Previsão</dt><dd>{pred.expected_effect ?? text(t.prereg.prediction) ?? <span className="hud-muted">não publicado</span>}
-            {typeof pred.p_promoted === 'number' && <em className="prob"> · chance estimada de passar: {Math.round(pred.p_promoted * 100)}%</em>}</dd>
-          <dt>Hipótese nula</dt><dd>{text(t.prereg.null_model) ?? <span className="hud-muted">não publicado</span>}</dd>
-          <dt>Rival</dt><dd>{text(t.prereg.rival) ?? <span className="hud-muted">não publicado</span>}</dd>
-          <dt>Passa se</dt><dd><List items={t.prereg.success} /></dd>
-          <dt>Morre se</dt><dd><List items={t.prereg.kill} /></dd>
-          {Boolean(t.prereg.metric || t.prereg.threshold) && <><dt>Métrica / limiar</dt><dd>{[text(t.prereg.metric), text(t.prereg.threshold)].filter(Boolean).join(' · ')}</dd></>}
-        </dl>
-        <p className="seal">{t.prereg.hash ? <>Selo <code>{String(t.prereg.hash).slice(0, 23)}…</code></> : 'Sem selo publicado'}
-          {Boolean(t.prereg.at) && <> · congelado {ago(String(t.prereg.at))}</>}</p>
-      </section>
-      <section className="versus-col" aria-labelledby="vs-obs">
-        <h2 id="vs-obs"><i aria-hidden="true">●</i> Observado depois</h2>
-        <dl>
-          <dt>Resultado</dt><dd>{text(t.result) ?? t.summary ?? <span className="hud-muted">não publicado</span>}</dd>
-          <dt>Estatística</dt><dd>{text(t.statistics) ?? <span className="hud-muted">não publicado</span>}</dd>
-          <dt>Método</dt><dd>{t.method ?? <span className="hud-muted">não publicado</span>}</dd>
-          <dt>Dados</dt><dd>{text(t.datasets) ?? <span className="hud-muted">não publicado</span>}</dd>
-        </dl>
-      </section>
-    </div>
+    {(t.meaning || Boolean(t.claimBoundary)) && <Section title="No que acredito agora" id="en-mean">
+      {t.meaning && <p className="hud-big">{t.meaning}</p>}
+      {Boolean(t.claimBoundary) && <p className="boundary"><b>O que isto não prova:</b> {text(t.claimBoundary)}</p>}
+    </Section>}
 
-    <Section title="Tentativas de derrubar" kicker={`${contests.length} contestações · só confirma quem sobrevive a 2 independentes`} id="en-rev">
-      {t.reviews.length > 0 ? <ol className="timeline">{t.reviews.map((r, i) => {
+    <details className="tech">
+      <summary>Detalhes técnicos</summary>
+      <div className="versus" role="group" aria-label="Prometido antes versus observado depois">
+        <section className="versus-col sealed" aria-labelledby="vs-pre">
+          <h2 id="vs-pre"><i aria-hidden="true">◆</i> Prometido antes</h2>
+          <dl>
+            <dt>Previsão</dt><dd>{pred.expected_effect ?? text(t.prereg.prediction) ?? <span className="hud-muted">não publicado</span>}
+              {typeof pred.p_promoted === 'number' && <em className="prob"> · chance estimada de passar: {Math.round(pred.p_promoted * 100)}%</em>}</dd>
+            <dt>Hipótese nula</dt><dd>{text(t.prereg.null_model) ?? <span className="hud-muted">não publicado</span>}</dd>
+            <dt>Rival</dt><dd>{text(t.prereg.rival) ?? <span className="hud-muted">não publicado</span>}</dd>
+            <dt>Passa se</dt><dd><List items={t.prereg.success} /></dd>
+            <dt>Morre se</dt><dd><List items={t.prereg.kill} /></dd>
+            {Boolean(t.prereg.metric || t.prereg.threshold) && <><dt>Métrica / limiar</dt><dd>{[text(t.prereg.metric), text(t.prereg.threshold)].filter(Boolean).join(' · ')}</dd></>}
+          </dl>
+          <p className="seal">{t.prereg.hash ? <>Selo <code>{String(t.prereg.hash).slice(0, 23)}…</code></> : 'Sem selo publicado'}
+            {Boolean(t.prereg.at) && <> · congelado {ago(String(t.prereg.at))}</>}</p>
+        </section>
+        <section className="versus-col" aria-labelledby="vs-obs">
+          <h2 id="vs-obs"><i aria-hidden="true">●</i> Observado depois</h2>
+          <dl>
+            <dt>Resultado</dt><dd>{text(t.result) ?? t.summary ?? <span className="hud-muted">não publicado</span>}</dd>
+            <dt>Estatística</dt><dd>{text(t.statistics) ?? <span className="hud-muted">não publicado</span>}</dd>
+            <dt>Método</dt><dd>{t.method ?? <span className="hud-muted">não publicado</span>}</dd>
+            <dt>Dados</dt><dd>{text(t.datasets) ?? <span className="hud-muted">não publicado</span>}</dd>
+          </dl>
+        </section>
+      </div>
+      {t.reviews.length > 0 && <ol className="timeline">{t.reviews.map((r, i) => {
         const ref = r.contest_test_id ?? r.ref;
         return <li key={i} className={`o-${(r.outcome ?? 'pending').toLowerCase()}`}>
           <time>{r.at ? ago(r.at) : '—'}</time>
           <div><b>{REVIEW_PT[r.kind] ?? r.kind}</b>{r.axis && <span className="axis">eixo: {r.axis}</span>}
             <span className="outcome">{OUTCOME_PT[(r.outcome ?? 'PENDING').toUpperCase()] ?? r.outcome}</span>
-            {r.by && <span className="hud-muted"> · {r.by}</span>}
             {ref && <> · <E id={ref}>ver contestação</E></>}</div>
         </li>;
-      })}</ol> : contests.length ? <ul className="hud-list">{contests.map(c => <li key={c}>
-          {lab.tests.get(c) && <VerdictChip v={lab.tests.get(c)!.verdict} small />}<E id={c}>{lab.tests.get(c)?.question ?? humanId(c)}</E></li>)}</ul>
-        : <p className="hud-muted">Ainda não foi contestado.</p>}
-    </Section>
-
-    <Section title="Limites da conclusão" id="en-lim">
-      {lim.length > 0 && <ul className="crit">{lim.map(l => <li key={l}>{l}</li>)}</ul>}
-      {lim.length === 0 && !t.claimBoundary && <p className="hud-muted">Limitações não publicadas.</p>}
-      {lim.length ? <ul className="crit">{lim.map(l => <li key={l}>{l}</li>)}</ul> : !t.claimBoundary && <p className="hud-muted">Limitações não publicadas.</p>}
-    </Section>
-
-    <Section title="Linhagem" id="en-lin">
-      <div className="lineage">
-        <div><span>Veio de</span>{hyp && <E id={hyp.id}>{hyp.statement ?? humanId(hyp.id)}</E>}{t.parents.filter(x => x !== hyp?.id).map(x => <E key={x} id={x} />)}
-          {!hyp && !t.parents.length && <em className="hud-muted">origem não publicada</em>}</div>
-        <b aria-hidden="true">→</b>
-        <div><span>Este teste</span><VerdictChip v={t.verdict} small /></div>
-        <b aria-hidden="true">→</b>
-        <div><span>Gerou</span>{t.children.length ? t.children.map(x => <E key={x} id={x} />) : <em className="hud-muted">nada ainda</em>}</div>
-      </div>
-    </Section>
+      })}</ol>}
+      {lim.length > 0 && <><h3>Limitações</h3><ul className="crit">{lim.map(l => <li key={l}>{l}</li>)}</ul></>}
+      <p className="hud-meta">
+        <code>{t.id}</code>{t.verdictRaw && <> · veredito bruto {t.verdictRaw}</>}
+        {t.execution?.battery_id && <> · bateria <code>{t.execution.battery_id}</code></>}
+        {t.createdSource === 'EVENT_FIRST_OBSERVED' && <> · data deduzida do histórico</>}
+        {t.parents.length > 0 && <> · pais: {t.parents.map(x => <E key={x} id={x} />)}</>}
+        {t.children.length > 0 && <> · filhos: {t.children.map(x => <E key={x} id={x} />)}</>}
+      </p>
+      {contests.length > 0 && t.reviews.length === 0 && <ul className="hud-list">{contests.map(c => <li key={c}>
+        {lab.tests.get(c) && <VerdictChip v={lab.tests.get(c)!.verdict} small />}<E id={c}>{lab.tests.get(c)?.question ?? humanId(c)}</E></li>)}</ul>}
+    </details>
   </>;
 }
 
@@ -597,7 +591,15 @@ function starOf(lab: Lab, id: string): string | null {
   return t ? t.id : null;
 }
 function narrate(e: { event_type: string; entity_id?: string }, lab: Lab): string {
-  const tpl = NARRATION[e.event_type] ?? `Registrei ${e.event_type.toLowerCase().replace(/_/g, ' ')}: %q`;
+  let tpl = NARRATION[e.event_type] ?? `Registrei ${e.event_type.toLowerCase().replace(/_/g, ' ')}: %q`;
+  const te = e.entity_id ? lab.tests.get(e.entity_id) : undefined;
+  if (te && e.event_type === 'TEST_RESULT_RECORDED') {
+    const p = (te.prereg.prediction as { p_promoted?: number } | null)?.p_promoted;
+    const o = outcomeOf(te);
+    if (typeof p === 'number' && o !== null && Math.abs(p - o) >= 0.5) tpl = o ? 'Me surpreendi: apostei contra e deu certo. %q' : 'Me surpreendi: estava confiante e falhou. %q';
+    else if (te.contestOf) tpl = o === 0 ? 'Meu ataque achou um problema no que eu tinha concluído: %q' : 'Ataquei um resultado meu e ele resistiu: %q';
+  }
+  if (te && e.event_type === 'RESULT_REFUTED' && outcomeOf(te) === 1) tpl = 'Mudei de ideia: parecia certo, mas eu mesmo derrubei. %q';
   const t = e.entity_id ? lab.tests.get(e.entity_id) : undefined;
   const q = t?.question ?? (e.entity_id ? (lab.hypotheses.get(e.entity_id)?.statement ?? humanId(e.entity_id)) : '');
   const text = tpl.includes('%q') ? tpl.replace('%q', q ? `“${q.length > 140 ? q.slice(0, 137) + '…' : q}”` : '').replace(/: $/, '.') : tpl;
@@ -668,4 +670,54 @@ function Calibration({ lab }: { lab: Lab }) {
     </div>
     <p className="hud-note">Barra = quantos passaram de verdade; traço = o que eu tinha previsto. Quanto mais perto, mais honesto sou comigo mesmo. Erro médio (Brier): {brier.toFixed(2)}.</p>
   </section>;
+}
+
+// ---------- tradução semântica: a história de cada teste em 1ª pessoa ----------
+type Beat = { icon: string; text: string; tone: 'why' | 'bet' | 'fact' | 'surprise' | 'doubt' | 'belief' | 'change' | 'block'; link?: { id: string; label: string } };
+const AXIS_PT: Record<string, string> = { dados: 'com outros dados', data: 'com outros dados', 'método': 'com outro método', metodo: 'com outro método', method: 'com outro método',
+  coorte: 'com outra amostra', cohort: 'com outra amostra', 'critério': 'com uma regra mais dura', criterio: 'com uma regra mais dura', criterion: 'com uma regra mais dura' };
+export function outcomeOf(t: TestEntity): 1 | 0 | null {
+  const v = (t.verdictRaw ?? '').toUpperCase();
+  if (/PROMOT|SUPPORT|CONFIRM|PASS|SURVIV/.test(v)) return 1;
+  if (/REJECT|REFUT|FAIL|KILL|CONTRADICT/.test(v)) return 0;
+  return null;
+}
+function pct(p: number) { return `${Math.round(p * 100)}%`; }
+function testStory(t: TestEntity, lab: Lab): Beat[] {
+  const beats: Beat[] = [];
+  const parent = t.contestOf ? lab.tests.get(t.contestOf) : undefined;
+  const hyp = t.hypothesisId ? lab.hypotheses.get(t.hypothesisId) : undefined;
+  const rm = t.roadmapId ? lab.roadmaps.get(t.roadmapId) : undefined;
+  if (parent) beats.push({ icon: '⚔', tone: 'doubt', text: 'Este é um ataque meu contra algo que eu mesmo tinha concluído:', link: { id: parent.id, label: parent.question ?? humanId(parent.id) } });
+  else if (hyp?.statement) beats.push({ icon: '💡', tone: 'why', text: `Tive esta ideia: ${hyp.statement}` });
+  if (rm && !parent) beats.push({ icon: '🧭', tone: 'why', text: `Faz parte da minha investigação sobre ${rm.title.toLowerCase()}.` });
+  const pred = (t.prereg.prediction ?? {}) as { p_promoted?: number };
+  const p = typeof pred.p_promoted === 'number' ? Math.min(1, Math.max(0, pred.p_promoted)) : null;
+  if (p !== null) beats.push({ icon: '🎲', tone: 'bet', text: `Antes de olhar os dados, apostei ${pct(p)} de chance de dar certo.` });
+  if (t.prereg.success.length || t.prereg.kill.length) beats.push({ icon: '🔒', tone: 'bet', text: 'Combinei comigo mesmo, antes de rodar, em que caso eu desistiria da ideia. Não dá para mudar depois.' });
+  const o = outcomeOf(t);
+  if (t.verdict === 'READY') beats.push({ icon: '⏳', tone: 'fact', text: 'Ainda vou rodar este teste.' });
+  else if (t.verdict === 'BLOCKED') beats.push({ icon: '⛔', tone: 'block', text: `Travei aqui${t.blocker ? `: ${t.blocker}` : ': falta algo para eu conseguir testar.'}` });
+  else if (o === 1) beats.push({ icon: '✓', tone: 'fact', text: parent ? 'O resultado atacado resistiu a este ataque.' : 'Deu certo: a ideia passou no critério que eu tinha combinado.' });
+  else if (o === 0) beats.push({ icon: '✕', tone: 'fact', text: parent ? 'Este ataque encontrou um problema no resultado anterior.' : 'Não deu certo: a ideia falhou no critério que eu tinha combinado.' });
+  else if (t.verdictRaw) beats.push({ icon: '≈', tone: 'fact', text: 'Os dados não decidiram. Fica no meio do caminho.' });
+  if (p !== null && o !== null) {
+    const err = Math.abs(p - o);
+    if (err >= 0.5) beats.push({ icon: '⚡', tone: 'surprise', text: `Isso me surpreendeu: eu esperava ${o ? 'que falhasse' : 'que desse certo'}.` });
+    else if (err <= 0.3) beats.push({ icon: '◎', tone: 'surprise', text: 'Era o que eu esperava.' });
+  }
+  const axes = [...new Set(t.reviews.map(r => AXIS_PT[String(r.axis ?? '').toLowerCase().trim()]).filter(Boolean))];
+  if (t.contests.length || t.reviews.length) {
+    const n = Math.max(t.contests.length, t.reviews.filter(r => r.kind === 'CONTEST').length);
+    beats.push({ icon: '🛡', tone: 'doubt', text: `Não confiei no resultado e tentei derrubá-lo ${n === 1 ? 'uma vez' : `${n} vezes`}${axes.length ? ` (${axes.join(', ')})` : ''}.` });
+  }
+  const belief: Record<string, Beat> = {
+    CONFIRMED: { icon: '★', tone: 'belief', text: 'Agora eu acredito nisso: sobreviveu a dois ataques independentes.' },
+    REFUTED: { icon: '↺', tone: 'change', text: o === 1 ? 'Mudei de ideia: parecia certo, mas meu próprio ataque derrubou.' : 'Descartei essa ideia.' },
+    REVIEW: { icon: '◐', tone: 'belief', text: 'Ainda não acredito totalmente: está sob ataque.' },
+    PROVISIONAL: { icon: '●', tone: 'belief', text: 'É provisório: ninguém tentou derrubar ainda.' },
+    DISCARDED: { icon: '–', tone: 'belief', text: 'Deixei de lado: o teste não servia como estava.' },
+  };
+  if (belief[t.verdict]) beats.push(belief[t.verdict]!);
+  return beats;
 }

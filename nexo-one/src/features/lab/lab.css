@@ -347,3 +347,20 @@
 .calib b{color:#f3ede2}
 @media (max-width:760px){.mono-log li{grid-template-columns:52px 1fr}.mono-log li b{display:none}.replay-caption{grid-template-columns:auto 1fr}.replay-caption button{grid-column:1/-1;justify-self:end}}
 @media (prefers-reduced-motion:reduce){.pulse-dot.live,.caret{animation:none}}
+
+/* História do teste: tradução semântica, sem jargão. */
+.story{list-style:none;margin:0;padding:0;display:grid;gap:12px;position:relative}
+.story::before{content:"";position:absolute;left:13px;top:6px;bottom:6px;width:1px;background:var(--o-line)}
+.beat{display:grid;grid-template-columns:28px 1fr;gap:12px;align-items:start;position:relative}
+.beat i{font-style:normal;display:grid;place-items:center;width:28px;height:28px;border-radius:50%;background:var(--o-raise);border:1px solid var(--o-line);font-size:13px;z-index:1}
+.beat p{margin:3px 0 0!important;color:var(--o-ink)!important;font-size:15px;line-height:1.55}
+.beat-surprise i{border-color:var(--v-review);color:var(--v-review)}
+.beat-surprise p{color:#f1ddb0!important}
+.beat-change i,.beat-block i{border-color:var(--v-refuted);color:var(--v-refuted)}
+.beat-belief i{border-color:var(--o-accent);color:var(--o-accent)}
+.beat-doubt i{border-color:var(--o-accent-2)}
+details.tech{margin:8px 0 40px;border-radius:var(--r-l);border:1px solid var(--o-line);background:var(--o-panel);padding:0 18px}
+details.tech > summary{cursor:pointer;padding:14px 0;font:500 11px var(--f-mono);letter-spacing:.14em;text-transform:uppercase;color:var(--o-quiet)}
+details.tech[open]{padding-bottom:18px}
+details.tech h3{font:500 11px var(--f-mono);letter-spacing:.14em;text-transform:uppercase;color:var(--o-quiet);margin:18px 0 8px}
+details.tech .versus{margin-bottom:18px}
