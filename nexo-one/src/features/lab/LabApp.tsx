@@ -6,7 +6,7 @@ import {
   ago, buildLab, GUARDIAN_AREA_PT, humanId, readBaseline, VERDICT_GLYPH, VERDICT_ORDER, VERDICT_PT,
   type Lab, type TestEntity, type Verdict,
 } from './model.ts';
-import type { ScenePage } from './ObservatoryScene.tsx';
+import type { ScenePage, SceneEvents } from './ObservatoryScene.tsx';
 import './lab.css';
 
 const ObservatoryScene = lazy(() => import('./ObservatoryScene.tsx').then(m => ({ default: m.ObservatoryScene })));
@@ -47,6 +47,7 @@ export default function LabApp({ state, route, theme }: { state: SystemState; ro
   const lab = useMemo(() => buildLab(state), [state]);
   const tests = useMemo(() => [...lab.tests.values()].filter(t => !t.contestOf), [lab]);
   const [focus, setFocus] = useState<string[]>([]);
+  const events = useMemo<SceneEvents>(() => sceneEvents(state, lab), [state, lab]);
   useEffect(() => {
     if (route.page === 'entidade' && route.id) setFocus([route.id]);
     else if (route.page === 'roadmap' && route.id) setFocus(lab.roadmaps.get(route.id)?.tests ?? []);
@@ -69,7 +70,7 @@ export default function LabApp({ state, route, theme }: { state: SystemState; ro
 
   return <div className="observatory" data-page={route.page}>
     <Suspense fallback={<div className="obs-scene obs-scene--loading" />}>
-      <ObservatoryScene tests={tests} page={route.page} focusIds={focus} theme={theme}
+      <ObservatoryScene tests={tests} events={events} page={route.page} focusIds={focus} theme={theme}
         onPick={id => { window.location.hash = labHref('entidade', id); }} />
     </Suspense>
     <div className="hud" key={`${route.page}:${route.id ?? ''}`}>{page}</div>
@@ -399,8 +400,39 @@ function Health({ state, lab }: { state: SystemState; lab: Lab }) {
       <p>{lab.missingContract.map(m => <code key={m} className="tag">{m}</code>)}</p>
     </Section>}
     <details className="hud-legacy"><summary>Detalhes técnicos</summary>
-      <p><a href="#/cockpit/prova?tab=integridade">Integridade</a> · <a href="#/cockpit/prova?tab=capabilities">Recursos</a> · <a href="#/cockpit/prova?tab=fontes">Fontes</a> · <a href="#/cockpit/pipeline">Fila de trabalho</a> · <a href="#/atlas?lente=operacao&view=2d">Mapa operacional</a> · <a href="#/galaxia">Galáxia clássica</a></p>
+      <p><a href="#/cockpit/prova?tab=integridade">Integridade</a> · <a href="#/cockpit/prova?tab=capabilities">Recursos</a> · <a href="#/cockpit/prova?tab=fontes">Fontes</a> · <a href="#/cockpit/pipeline">Fila de trabalho</a> · <a href="#/atlas?lente=operacao&view=2d">Mapa operacional</a></p>
       <p className="hud-muted">Assinatura: <code>{state.bus.fingerprint}</code></p>
     </details>
   </>;
+}
+
+// ---------- fenômenos da teia ----------
+const domainOfId = (id: string, lab: Lab): string => {
+  const rm = lab.roadmaps.get(id);
+  const first = rm?.tests.map(t => lab.tests.get(t)).find(Boolean);
+  if (first) return first.domain;
+  const t = lab.tests.get(id);
+  if (t) return t.domain;
+  return /NEXO|ENGINEER|GPT|SELF|OBSERV|META/i.test(id) ? 'ENGINEERING' : /OLY/i.test(id) ? 'OLYMPUS' : 'SCIENCE';
+};
+function sceneEvents(state: SystemState, lab: Lab): SceneEvents {
+  const ev = state.evolution;
+  const quasars = [
+    ...(ev?.gate.charters_waiting ?? []).map(c => ({ domain: domainOfId(c.roadmap_id, lab), label: `Quasar · decisão sua: ${humanId(c.roadmap_id)}`, href: '#/ciclo' })),
+    ...(ev?.gate.canaries_waiting ?? []).map(c => ({ domain: 'ENGINEERING', label: `Quasar · canonizar ${c.gene}`, href: '#/ciclo' })),
+  ];
+  const running = Number((ev as unknown as { batteries?: Record<string, number> })?.batteries?.DISPATCHED ?? 0);
+  const perDomain = new Map<string, number>();
+  for (const t of lab.tests.values()) {
+    if (t.verdict !== 'READY' || t.contestOf) continue;
+    const d = t.domain === 'NEXO' || t.domain === 'ARTIFACT' ? 'ENGINEERING' : t.domain;
+    perDomain.set(d, (perDomain.get(d) ?? 0) + 1);
+  }
+  const agn = [...perDomain].map(([domain, n]) => ({
+    domain, count: n, href: '#/evidencia?v=READY',
+    label: `AGN · ${n} ${n === 1 ? "teste" : "testes"} ${running ? 'rodando/na fila' : 'na fila'}`,
+  }));
+  const grbs = (ev?.thoughts ?? []).filter(t => Date.now() - Date.parse(t.at) < 2 * 3600e3).slice(-2)
+    .map(t => ({ domain: domainOfId(t.refs[0] ?? '', lab), label: 'GRB · a Pítia pensou', href: '#/ciclo' }));
+  return { quasars, agn, grbs };
 }

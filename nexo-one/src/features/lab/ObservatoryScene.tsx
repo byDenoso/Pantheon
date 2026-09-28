@@ -10,6 +10,14 @@ import {
 } from 'three';
 import type { TestEntity, Verdict } from './model.ts';
 
+/** Fenômenos da teia: o que o NEXO faz agora, na escala certa (galáxias ativas, não estrelas).
+ *  Quasar = decisão sua · AGN com jatos = testes rodando/na fila · GRB = pensamento novo. */
+export interface SceneEvents {
+  quasars: Array<{ domain: string; label: string; href: string }>;
+  agn: Array<{ domain: string; count: number; label: string; href: string }>;
+  grbs: Array<{ domain: string; label: string; href: string }>;
+}
+
 export type ScenePage = 'agora' | 'ciclo' | 'roadmaps' | 'roadmap' | 'evidencia' | 'entidade' | 'saude';
 
 const DOMAINS: Array<{ id: string; label: string; at: [number, number, number] }> = [
@@ -49,6 +57,36 @@ void main(){
   float glow = exp(-d*d*20.0); float core = smoothstep(0.12, 0.0, d);
   float a = (glow + core) * vAlpha; if (a < 0.01) discard;
   gl_FragColor = vec4(vTint * (0.55 + glow*0.8) + core*0.6, a);
+}`;
+
+// Quasar: núcleo branco-quente + raios de difração, pulso lento.
+const QSO_FRAG = `
+varying vec3 vTint; varying float vAlpha;
+void main(){
+  vec2 c = gl_PointCoord - 0.5; float d = length(c);
+  float glow = exp(-d*d*14.0); float core = smoothstep(0.08, 0.0, d);
+  float spikes = exp(-abs(c.x)*90.0)*exp(-abs(c.y)*5.0) + exp(-abs(c.y)*90.0)*exp(-abs(c.x)*5.0);
+  float a = (glow*0.9 + core + spikes*0.9) * vAlpha; if (a < 0.01) discard;
+  gl_FragColor = vec4(vTint*(0.7+glow) + core, a);
+}`;
+// Jatos do AGN: partículas que correm ao longo do eixo e somem na ponta.
+const JET_VERT = `
+attribute vec3 dir; attribute float phase; attribute float speed;
+uniform float time; uniform float pixelRatio; varying float vFade;
+void main(){
+  float f = fract(time*speed + phase);
+  vec3 p = position + dir * f;
+  vec4 mv = modelViewMatrix * vec4(p,1.0);
+  gl_PointSize = (7.0 - 4.0*f) * pixelRatio * (18.0 / -mv.z);
+  vFade = 1.0 - f;
+  gl_Position = projectionMatrix * mv;
+}`;
+const JET_FRAG = `
+varying float vFade;
+void main(){
+  vec2 c = gl_PointCoord - 0.5; float d = length(c);
+  float a = exp(-d*d*20.0) * vFade; if (a < 0.01) discard;
+  gl_FragColor = vec4(vec3(0.75,0.9,1.0)*(0.6+vFade*0.6), a);
 }`;
 
 const rnd = (text: string): number => {
@@ -99,8 +137,8 @@ function filament(b: Buf, a: Vector3, c: Vector3, density: number, heat: number,
   return mid;
 }
 
-export function ObservatoryScene({ tests, page, focusIds, onPick, theme }: {
-  tests: TestEntity[]; page: ScenePage; focusIds?: string[]; onPick: (id: string) => void; theme: 'dark' | 'light';
+export function ObservatoryScene({ tests, page, focusIds, onPick, theme, events }: {
+  events?: SceneEvents; tests: TestEntity[]; page: ScenePage; focusIds?: string[]; onPick: (id: string) => void; theme: 'dark' | 'light';
 }) {
   const host = useRef<HTMLDivElement>(null);
   const labels = useRef<HTMLDivElement>(null);
@@ -164,6 +202,14 @@ export function ObservatoryScene({ tests, page, focusIds, onPick, theme }: {
       const node = d.clone().add(new Vector3(...jitter(key, 9)));
       filament(web, d, node, mobile ? 16 : 30, 0.7, key);
       push(web, [node.x, node.y, node.z], inferno(0.8), 22 + Math.min(40, list.length * 4), 0.05);
+      // Nuvem de formação: hipótese com muitos testes prontos.
+      const ready = list.filter(t => t.verdict === 'READY').length;
+      if (ready >= 3) for (let q = 0; q < 60 + ready * 20; q += 1) {
+        const r = Math.pow(Math.random(), 0.8) * (0.8 + ready * 0.08);
+        const th = Math.random() * Math.PI * 2, ph = Math.acos(2 * Math.random() - 1);
+        push(web, [node.x + r * Math.sin(ph) * Math.cos(th), node.y + r * Math.cos(ph) * 0.6, node.z + r * Math.sin(ph) * Math.sin(th)],
+          [0.28, 0.5 + Math.random() * 0.2, 0.62], 8 + Math.random() * 10, 0.2);
+      }
       list.forEach(t => {
         const s = 0.15 + rnd(t.id) * 0.85;
         const p = node.clone().lerp(d, s * 0.8).add(new Vector3(...jitter(t.id, 0.9)));
@@ -185,6 +231,44 @@ export function ObservatoryScene({ tests, page, focusIds, onPick, theme }: {
     const boxGeo = new BufferGeometry(); boxGeo.setAttribute('position', new BufferAttribute(new Float32Array(e), 3));
     const boxMat = new LineBasicMaterial({ color: theme === 'dark' ? 0x3f6f8c : 0x5a86a0, transparent: true, opacity: 0.22 });
     scene.add(new LineSegments(boxGeo, boxMat));
+
+    // --- Fenômenos ---
+    const ev = events ?? { quasars: [], agn: [], grbs: [] };
+    const anchors: Vector3[] = [];
+    const qso = buf();
+    ev.quasars.forEach((e, k) => {
+      const at = domainPos[domainIndex(e.domain)]!.clone().add(new Vector3(...jitter(`q${k}${e.label}`, 5)));
+      push(qso, [at.x, at.y, at.z], [1, 0.93, 0.82], 150, reduced ? 0 : 0.35, rnd(e.label));
+      anchors.push(at);
+    });
+    ev.grbs.forEach((e, k) => {
+      const at = domainPos[domainIndex(e.domain)]!.clone().add(new Vector3(...jitter(`g${k}`, 2.5)));
+      push(qso, [at.x, at.y, at.z], [0.7, 0.95, 1], 70, reduced ? 0 : 1, rnd(`g${k}`));
+      anchors.push(at);
+    });
+    const qsoMat = new ShaderMaterial({ uniforms, vertexShader: VERT, fragmentShader: QSO_FRAG, transparent: true, depthWrite: false, blending: AdditiveBlending });
+    const qsoGeo = geom(qso);
+    scene.add(new Points(qsoGeo, qsoMat));
+    const jp: number[] = [], jd: number[] = [], jph: number[] = [], jsp: number[] = [];
+    ev.agn.forEach((e, k) => {
+      const d = domainPos[domainIndex(e.domain)]!;
+      const axis = new Vector3(...jitter(`agn${k}`, 1)).add(new Vector3(0, 1.4, 0)).normalize();
+      const len = 4 + Math.min(8, e.count * 0.4);
+      const n = 90 + Math.min(260, e.count * 12);
+      for (let i = 0; i < n; i += 1) for (const sgn of [1, -1]) {
+        jp.push(d.x + (Math.random() - 0.5) * 0.12, d.y + (Math.random() - 0.5) * 0.12, d.z + (Math.random() - 0.5) * 0.12);
+        jd.push(axis.x * len * sgn, axis.y * len * sgn, axis.z * len * sgn);
+        jph.push(Math.random()); jsp.push(reduced ? 0 : 0.18 + Math.random() * 0.12);
+      }
+      anchors.push(d.clone().add(axis.clone().multiplyScalar(len * 0.6)));
+    });
+    const jetGeo = new BufferGeometry();
+    jetGeo.setAttribute('position', new BufferAttribute(new Float32Array(jp), 3));
+    jetGeo.setAttribute('dir', new BufferAttribute(new Float32Array(jd), 3));
+    jetGeo.setAttribute('phase', new BufferAttribute(new Float32Array(jph), 1));
+    jetGeo.setAttribute('speed', new BufferAttribute(new Float32Array(jsp), 1));
+    const jetMat = new ShaderMaterial({ uniforms, vertexShader: JET_VERT, fragmentShader: JET_FRAG, transparent: true, depthWrite: false, blending: AdditiveBlending });
+    scene.add(new Points(jetGeo, jetMat));
 
     // --- Câmera ---
     const cam = { dist: 40, elev: 0.5, az: 0.3 };
@@ -244,7 +328,8 @@ export function ObservatoryScene({ tests, page, focusIds, onPick, theme }: {
     window.addEventListener('pointerup', up);
 
     // Rótulos dos domínios projetados em HTML (nítidos, legíveis, sem textura).
-    const labelEls = [...(labels.current?.children ?? [])] as HTMLElement[];
+    const labelEls = [...(labels.current?.querySelectorAll('[data-domain]') ?? [])] as HTMLElement[];
+    const eventEls = [...(labels.current?.querySelectorAll('[data-event]') ?? [])] as HTMLElement[];
     const proj = new Vector3();
 
     let raf = 0, last = performance.now(), visible = true;
@@ -266,6 +351,13 @@ export function ObservatoryScene({ tests, page, focusIds, onPick, theme }: {
       camera.lookAt(look);
       renderer.render(scene, camera);
       const w = canvas.clientWidth, h = canvas.clientHeight;
+      eventEls.forEach((node, i) => {
+        const a = anchors[i]; if (!a) return;
+        proj.copy(a).project(camera);
+        const off = proj.z > 1 || Math.abs(proj.x) > 1.05 || Math.abs(proj.y) > 1.05;
+        node.style.opacity = off ? '0' : '1';
+        node.style.transform = `translate(${(proj.x * 0.5 + 0.5) * w}px, ${(-proj.y * 0.5 + 0.5) * h}px)`;
+      });
       labelEls.forEach((node, i) => {
         proj.copy(domainPos[i]!).project(camera);
         const off = proj.z > 1 || Math.abs(proj.x) > 1.1 || Math.abs(proj.y) > 1.1;
@@ -281,17 +373,19 @@ export function ObservatoryScene({ tests, page, focusIds, onPick, theme }: {
       canvas.removeEventListener('pointerdown', down);
       window.removeEventListener('pointermove', move);
       window.removeEventListener('pointerup', up);
-      webGeo.dispose(); starGeo.dispose(); boxGeo.dispose(); boxMat.dispose(); mat.dispose(); renderer.dispose();
+      webGeo.dispose(); starGeo.dispose(); qsoGeo.dispose(); qsoMat.dispose(); jetGeo.dispose(); jetMat.dispose(); boxGeo.dispose(); boxMat.dispose(); mat.dispose(); renderer.dispose();
       canvas.remove(); api.current = null;
     };
-  }, [tests, theme]);
+  }, [tests, theme, events]);
 
   useEffect(() => { api.current?.shot(page); }, [page, tests, theme]);
   useEffect(() => { api.current?.focus(focusIds ?? []); }, [focusIds, tests, theme]);
 
   return <div ref={host} className={`obs-scene obs-scene--${theme}`}>
-    <div ref={labels} className="obs-scene-labels" aria-hidden="true">
+    <div ref={labels} className="obs-scene-labels">
       {DOMAINS.map(d => <span key={d.id} data-domain={d.id}>{d.label}</span>)}
+      {[...(events?.quasars ?? []).map(e => ['qso', e] as const), ...(events?.grbs ?? []).map(e => ['grb', e] as const), ...(events?.agn ?? []).map(e => ['agn', e] as const)]
+        .map(([kind, e], i) => <a key={i} data-event={kind} href={e.href} className={`obs-ev obs-ev--${kind}`}>{e.label}</a>)}
     </div>
   </div>;
 }

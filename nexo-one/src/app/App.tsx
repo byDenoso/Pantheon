@@ -2,7 +2,8 @@ import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } fro
 import { useReveal } from './useReveal.ts';
 const GalaxyView = lazy(() => import('../atlas3d/GalaxyView.tsx').then(module => ({ default: module.GalaxyView })));
 
-const isGalaxyRoute = (hash: string) => /^#\/galaxia(?:[/?]|$)/.test(hash);
+// A teia cósmica do Observatório substituiu a galáxia: #/galaxia abre #/agora.
+const isGalaxyRoute = (_hash: string) => false;
 import type { ActionRecord, InboxItem } from '../contracts/system.ts';
 import { useWorld } from './useWorld.ts';
 import { useNexoStore } from '../data/NexoStore.tsx';

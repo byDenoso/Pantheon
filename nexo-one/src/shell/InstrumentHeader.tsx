@@ -23,7 +23,7 @@ export function InstrumentHeader({
   onThemeToggle:()=>void;onSync:()=>void;onNavigate:(mode:ProductMode)=>void;onAccountClick?:()=>void;privateSession?:boolean;syncMessage?:string;watching?:boolean;onForceSync?:()=>void;
 }){
   const freshness=readAt?formatAge(readAt):'sem leitura';
-  const modes:Array<[ProductMode,string]>=[['agora','Agora'],['ciclo','Ciclo'],['roadmaps','Roadmaps'],['evidencia','Evidência'],['galaxia','Galáxia'],['saude','Saúde'],...(privateSession?[['pessoal','Pessoal'],['sistema','Sistema']] as Array<[ProductMode,string]>:[])];
+  const modes:Array<[ProductMode,string]>=[['agora','Agora'],['ciclo','Ciclo'],['roadmaps','Roadmaps'],['evidencia','Evidência'],['saude','Saúde'],...(privateSession?[['pessoal','Pessoal'],['sistema','Sistema']] as Array<[ProductMode,string]>:[])];
   const busy=syncStatus==='SYNCING';
   // Feedback visível em qualquer viewport: o botão sozinho não diz o que aconteceu.
   const [toast,setToast]=useState('');
