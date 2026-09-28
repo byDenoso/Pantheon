@@ -617,6 +617,13 @@ function Health({ state, lab }: { state: SystemState; lab: Lab }) {
       <div className="health-cell"><span>Baterias</span><strong>{ev?.batteries ? `${ev.batteries.DISPATCHED ?? 0} rodando` : '—'}</strong><em>{ev?.batteries ? `${ev.batteries.DONE ?? 0} concluídas · ${ev.batteries.QUEUED ?? 0} na fila` : ''}</em></div>
       <div className={`health-cell s-${providersDown.length ? 'warn' : 'ok'}`}><span>Provedores</span><strong>{state.providers.length - providersDown.length}/{state.providers.length}</strong><em>disponíveis</em></div>
     </div>
+    {(ev?.watchdog?.quiet?.length ?? 0) > 0 && <Section title="Quem está quieto" kicker={`vigia do robô · ${ago(ev!.watchdog!.checked_at ?? state.generated_at)}`} id="he-quiet">
+      <ul className="quiet-list">{ev!.watchdog!.quiet!.map(q => <li key={q.role}>
+        <b>{ROLE_PT[q.role.toUpperCase()] ?? q.role}</b>
+        <span>{q.hours == null ? 'nunca produziu' : `parado há ${q.hours < 48 ? `${Math.round(q.hours)} h` : `${Math.round(q.hours / 24)} dias`}`}</span>
+        <em>{q.loops.map(l => LOOP_PT[l] ?? l).join(' · ')}</em>
+      </li>)}</ul>
+    </Section>}
     {g && g.failing_areas.length > 0 && <Section title="O que está falhando" id="he-fail">
       <ul className="hud-list">{g.failing_areas.map(a => <li key={a}><b>{a}</b> — {GUARDIAN_AREA_PT[a] ?? 'ver relatório do Guardião'}</li>)}</ul>
     </Section>}
@@ -983,3 +990,8 @@ function Trail({ tests, frontier, target }: { tests: TestEntity[]; frontier: str
     <figcaption><span>{walked.length} andados</span><span className="tf">{ahead.length} na fronteira</span><span className="tg">meta: {confirmed}/{target ?? '?'} confirmados</span></figcaption>
   </figure>;
 }
+
+const LOOP_PT: Record<string, string> = {
+  thought: 'pensamentos', dream: 'sonhos', genome_mutation: 'mutações do genoma', fitness: 'medição de aptidão',
+  new_hypothesis: 'hipóteses novas', result: 'resultados', contest: 'ataques', decoy: 'iscas',
+};

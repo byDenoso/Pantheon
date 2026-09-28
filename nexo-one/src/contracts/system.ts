@@ -441,6 +441,8 @@ export interface EvolutionStatus {
   signal_clusters?: EvolutionSignalCluster[];
   incidents?: EvolutionIncidentSummary[];
   reviews?: Record<string, number>;
+  /** Robot watchdog: roles that own a quiet loop and for how long. */
+  watchdog?: { checked_at?: string | null; quiet?: { role: string; hours: number | null; loops: string[] }[] | null };
 }
 
 export interface SystemState {
