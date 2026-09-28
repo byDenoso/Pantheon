@@ -58,3 +58,18 @@ Se mudar o que entra no inbox, atualize essa conferência junto.
 - O token `NEXO_INBOX_TOKEN` pode ser **read-only** para drenar arquivos legados de `byDenoso/TCC@nexo-inbox`: depois que o Writer aplica um item, o ATLAS registra o ACK no Sheet. Se o token não puder mover/apagar o arquivo, ele fica fisicamente no branch, mas não volta para a fila.
 - Writer robô (`.github/workflows/nexo-writer-robot.yml`, a cada 5 min e quando `nexo-wake/*.json` muda): aplica Sheet spool + inbox legado na Tower, fecha roadmaps no critério de parada, despacha **baterias** (`nexo-test-battery.yml`, até 20 testes em paralelo, sem segredos) e chama o build do site. O workflow do Pages também tem um agendamento horário de recuperação; esse cron não substitui o disparo explícito do Writer nem prova que um papel concluiu seu trabalho.
 
+
+## 7. Quem roda os papéis (produtor ativo) e fallback em shadow
+- `nexo-control/producers.json` (Pantheon): `"active": "GPT"` hoje; `"shadow": "CLAUDE"`.
+- O Writer robô lê esse arquivo e passa `NEXO_ACTIVE_PRODUCER` ao `robot` (TCC `gpt_writer.split_by_producer`).
+- Propostas com `producer` diferente do ativo são registradas e **nunca aplicadas**. Arquivos `scheduled-*` sem campo contam como GPT.
+  Sem `producer` (Dener, conversas, robô) sempre passa. Nunca há dois escritores nem duas verdades.
+- Trocar para o Claude: mudar `active` para `CLAUDE` e ativar as tarefas do Claude. Pendente: publicar o writer novo no Drive
+  (`TCC/scripts/build_gpt_writer_bundle.py --upload`) e criar as 5 tarefas do Claude desligadas, reaproveitando `TCC/gpt/TASKS_CLOSED_LOOP.md`
+  com `"producer": "CLAUDE"`.
+
+## 8. Unificação (plano acordado Claude × GPT)
+`TCC/docs/UNIFICATION_PLAN.md`: 1 autoridade, 1 formato de proposta, 1 escritor, 1 compilador de leitura (Python). O site só desenha.
+Ordem: invariantes → contrato → inbox → projeção em shadow → site → limpeza → repositório único público.
+Auditoria 2026-09-28: TCC já é público; código e histórico sem segredos; nomes reais do Olympus só na Tower privada, site usa sigla de 3 letras.
+Automações do GPT rodam por relay agendado (não dependem da cota do Work); o `activity[]` público pode atrasar quando a projeção pública está indisponível.
