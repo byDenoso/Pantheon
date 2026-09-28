@@ -2,7 +2,7 @@
    Λ (constante cosmológica) + cursor de terminal. Cores de linhas espectrais reais:
    Hα 656 nm (ferrugem), [O III] 501 nm (verde-mar), Hβ 486 nm (azul-aço). Serifa fina = o paper; mono = o terminal. */
 :root{
-  --sig-halpha:#c8553d;--sig-oiii:#4fa3a0;--sig-hbeta:#6d86b8;--sig-gold:#d4bf95;
+  --sig-halpha:var(--v-refuted);--sig-oiii:var(--o-accent);--sig-hbeta:#6d86b8;--sig-gold:var(--o-accent);
   --sig-serif:"Fraunces",Georgia,"Times New Roman",serif;
   --sig-mono:"IBM Plex Mono",Consolas,monospace;
   --sig-sans:"IBM Plex Sans",system-ui,sans-serif;
@@ -15,7 +15,7 @@
   font:300 24px/1 var(--sig-serif);color:var(--sig-gold)}
 .sig-cursor{display:inline-block;width:9px;height:3px;margin-bottom:3px;background:var(--sig-oiii);animation:sig-blink 1.1s steps(1) infinite}
 @keyframes sig-blink{50%{opacity:0}}
-:root[data-theme] .instrument-brand strong{font:500 13px/1 var(--sig-mono);letter-spacing:.34em;color:#e8e2d4}
+:root[data-theme] .instrument-brand strong{font:500 13px/1 var(--sig-mono);letter-spacing:.34em;color:var(--o-ink)}
 .instrument-header{border-bottom:0!important;box-shadow:none!important}
 .instrument-header::after{content:"";position:absolute;left:0;right:0;bottom:0;height:1px;background:var(--sig-spectrum);opacity:.55;pointer-events:none}
 
@@ -25,7 +25,7 @@
 .observatory .hud h1 em{font-style:italic;color:var(--sig-gold)}
 .observatory .hud h2{font-family:var(--sig-mono)!important}
 .observatory .hud h2::before{content:"›";color:var(--sig-oiii);margin-right:.6em;letter-spacing:0}
-.sig-prompt{display:block;font:400 12.5px/1.4 var(--sig-mono);color:#8f9aa6;margin:0 0 10px;letter-spacing:.02em}
+.sig-prompt{display:block;font:400 12.5px/1.4 var(--sig-mono);color:var(--o-quiet);margin:0 0 10px;letter-spacing:.02em}
 .sig-prompt b{font-weight:400;color:var(--sig-oiii)}
 .sig-prompt i{font-style:normal;color:var(--sig-gold)}
 .sig-prompt::after{content:"";display:inline-block;width:.55em;height:1.05em;vertical-align:-.15em;margin-left:.25em;background:var(--sig-gold);opacity:.7;animation:sig-blink 1.1s steps(1) infinite}
@@ -44,7 +44,7 @@
   -webkit-mask-image:radial-gradient(ellipse at center,#000 30%,transparent 78%);mask-image:radial-gradient(ellipse at center,#000 30%,transparent 78%)}
 
 /* assinatura: espectro de potência acústico do CMB */
-.sig-acoustic{display:flex;align-items:center;gap:14px;margin:40px 0 8px;color:#7d8794;font:400 11.5px/1.4 var(--sig-mono)}
+.sig-acoustic{display:flex;align-items:center;gap:14px;margin:40px 0 8px;color:var(--o-quiet);font:400 11.5px/1.4 var(--sig-mono)}
 .sig-acoustic svg{flex:0 0 auto;width:180px;height:40px;overflow:visible}
 .sig-acoustic path{fill:none;stroke:url(#sig-spec);stroke-width:1.3;stroke-linecap:round}
 .sig-acoustic em{font-style:normal;color:var(--sig-gold)}
@@ -60,3 +60,7 @@
   :root[data-theme] .instrument-modes button span{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   :root[data-theme] .instrument-brand strong{letter-spacing:.24em}
 }
+
+/* tokens do observatório também fora dele (cabeçalho/trilho) */
+:root{--o-accent-rgb:63,208,224;--o-accent:#3fd0e0;--o-ink:#f1f5f7;--o-dim:#c5d0d6;--o-quiet:#98a6ad;--o-void:#000;--o-on-accent:#001417;--v-refuted:#e0664f}
+:root[data-theme="light"]{--o-accent-rgb:8,145,168;--o-accent:#0891a8;--o-ink:#0b1417;--o-dim:#34454c;--o-quiet:#55676e;--o-void:#fff;--o-on-accent:#fff;--v-refuted:#c2410c}

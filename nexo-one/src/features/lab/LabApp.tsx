@@ -975,7 +975,7 @@ const ACOUSTIC = (() => {
 function Acoustic() {
   return <p className="sig-acoustic" aria-hidden="true">
     <svg viewBox="0 0 180 40"><defs><linearGradient id="sig-spec" x1="0" x2="1">
-      <stop offset="0" stopColor="#6d86b8" /><stop offset=".45" stopColor="#4fa3a0" /><stop offset=".7" stopColor="#d4bf95" /><stop offset="1" stopColor="#c8553d" />
+      <stop offset="0" stopColor="#6d9be0" /><stop offset=".45" stopColor="#3fd0e0" /><stop offset=".75" stopColor="#8ff0fa" /><stop offset="1" stopColor="#e9fbfd" />
     </linearGradient></defs><path d={ACOUSTIC} /></svg>
     <span><em>Λ</em>_ observatório NEXO · ℓ(ℓ+1)C<sub>ℓ</sub></span>
   </p>;
@@ -983,7 +983,7 @@ function Acoustic() {
 
 // ---------- Trilha do roadmap: o caminho andado (cor = veredito), a fronteira acesa e a meta ----------
 const TRAIL_COLOR: Record<Verdict, string> = {
-  CONFIRMED: '#7fae8a', REFUTED: '#c8553d', REVIEW: '#d4bf95', PROVISIONAL: '#9aa7c7', READY: '#4fa3a0', BLOCKED: '#6b6f7a', DISCARDED: '#3d414a',
+  CONFIRMED: '#5fd0a0', REFUTED: '#e0664f', REVIEW: '#e0b24f', PROVISIONAL: '#9fb4d8', READY: '#3fd0e0', BLOCKED: '#6b6f7a', DISCARDED: '#3d414a',
 };
 function Trail({ tests, frontier, target }: { tests: TestEntity[]; frontier: string[]; target: number | null }) {
   const walked = tests.filter(t => !frontier.includes(t.id) && t.verdict !== 'READY')
@@ -998,7 +998,7 @@ function Trail({ tests, frontier, target }: { tests: TestEntity[]; frontier: str
   const confirmed = tests.filter(t => t.verdict === 'CONFIRMED').length;
   return <figure className="trail" aria-label={`Trilha: ${walked.length} testes andados, ${ahead.length} na fronteira`}>
     <svg viewBox={`0 0 ${W} 92`} style={{ maxHeight: 140 }}>
-      <defs><linearGradient id="trail-walk" x1="0" x2="1"><stop offset="0" stopColor="#6d86b8" stopOpacity=".2" /><stop offset="1" stopColor="#d4bf95" /></linearGradient></defs>
+      <defs><linearGradient id="trail-walk" x1="0" x2="1"><stop offset="0" stopColor="#6d9be0" stopOpacity=".2" /><stop offset="1" stopColor="#3fd0e0" /></linearGradient></defs>
       <path d={pathD} className="trail-ahead" />
       <path d={pathD} className="trail-walk" style={{ clipPath: `inset(0 ${W - walkedEnd}px 0 0)` }} />
       {walked.map((t, i) => <a key={t.id} href={labHref('entidade', t.id)}><circle cx={x(i)} cy={y(i)} r={t.verdict === 'CONFIRMED' ? 6 : 4} fill={TRAIL_COLOR[t.verdict]}><title>{t.name}</title></circle></a>)}
