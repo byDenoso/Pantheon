@@ -36,6 +36,6 @@ test('production workflow retains last deployed site when a scheduled build fail
   const upload=workflow.indexOf('actions/upload-pages-artifact@v4');
   assert.ok(build>=0&&deploy>build&&upload>build&&upload<deploy);
   assert.match(workflow,/deploy:\n    needs: build/);
-  assert.match(workflow,/cancel-in-progress: true/);
+  assert.match(workflow,/cancel-in-progress: false/);
 });
 

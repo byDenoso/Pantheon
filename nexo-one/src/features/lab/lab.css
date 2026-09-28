@@ -311,3 +311,39 @@
 .explore-toggle{background:rgba(8,9,14,.8)!important;color:#e9dcc2!important}
 :root[data-theme] .lab-route .instrument-header{background:rgba(6,6,10,.78)!important;border-bottom-color:rgba(212,191,149,.12)!important}
 :root[data-theme] .lab-route .instrument-header .instrument-mark,:root[data-theme] .lab-route .instrument-modes button.active{color:#d4bf95!important}
+
+/* Monólogo interno: a voz do sistema, em tempo real. */
+.monologue{border-color:rgba(212,191,149,.22)!important}
+.pulse-dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--o-quiet);margin-right:8px;vertical-align:middle}
+.pulse-dot.live{background:var(--v-confirmed);animation:alive 1.6s ease-in-out infinite}
+@keyframes alive{0%,100%{box-shadow:0 0 0 0 rgba(156,203,171,.5)}50%{box-shadow:0 0 0 6px rgba(156,203,171,0)}}
+.mono-now{font:400 18px/1.55 var(--f-mono);color:#f3ede2!important;min-height:3.2em;margin:4px 0 16px!important}
+.mono-now b{color:var(--o-accent);font-weight:500;margin-right:6px}
+.caret{font-style:normal;color:var(--o-accent);animation:blinkc 1s steps(1) infinite}
+@keyframes blinkc{50%{opacity:0}}
+.mono-log{list-style:none;margin:0 0 14px;padding:0;display:grid;gap:8px;border-left:1px solid var(--o-line);padding-left:12px}
+.mono-log li{display:grid;grid-template-columns:64px 76px 1fr;gap:8px;font-size:13px;line-height:1.45;color:var(--o-dim)}
+.mono-log time{font:11px var(--f-mono);color:var(--o-quiet)}
+.mono-log b{font:500 11px var(--f-mono);text-transform:uppercase;letter-spacing:.06em;color:var(--o-accent-2)}
+.mono-log a{color:var(--o-dim)!important;border:0!important}
+.mono-log a:hover{color:var(--o-ink)!important}
+.replay-btn{padding:10px 16px;border-radius:999px;border:1px solid rgba(212,191,149,.4);background:rgba(212,191,149,.08);color:#e9dcc2;font:500 12px var(--f-mono);letter-spacing:.06em;cursor:pointer;min-height:44px}
+.replay-btn:hover{background:rgba(212,191,149,.16)}
+/* Legenda do replay: cinema. */
+.replay-caption{position:fixed;z-index:6;left:50%;bottom:clamp(24px,6vh,64px);transform:translateX(-50%);width:min(760px,calc(100% - 32px));padding:14px 18px 12px;border-radius:12px;background:rgba(6,6,10,.78);backdrop-filter:blur(10px);border:1px solid rgba(212,191,149,.18);display:grid;grid-template-columns:auto 1fr auto;gap:6px 14px;align-items:center;animation:hud-in .4s}
+.replay-caption p{margin:0!important;color:#f3ede2!important;font-size:15px;line-height:1.45}
+.replay-caption b{color:var(--o-accent);font-weight:500;margin-right:6px}
+.replay-clock{font:600 20px var(--f-display);color:#e9dcc2}
+.replay-caption button{background:none;border:0;color:var(--o-dim);font:12px var(--f-mono);cursor:pointer;min-height:36px}
+.replay-bar{grid-column:1/-1;height:2px;background:var(--o-line);border-radius:1px;overflow:hidden}
+.replay-bar i{display:block;height:100%;background:var(--o-accent);transition:width .4s}
+/* Calibração. */
+.calib-chart{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;height:120px;margin:10px 0 8px;align-items:end}
+.calib-chart span{position:relative;height:100%;display:flex;align-items:flex-end;justify-content:center;border-bottom:1px solid var(--o-line)}
+.calib-chart b{display:block;width:60%;background:linear-gradient(180deg,#f4ecdd,#8c96b3);border-radius:3px 3px 0 0;opacity:.85}
+.calib-chart i{position:absolute;left:10%;right:10%;height:2px;background:var(--v-review)}
+.calib-chart em{position:absolute;bottom:-20px;font:10px var(--f-mono);font-style:normal;color:var(--o-quiet)}
+.calib .hud-note{margin-top:26px!important}
+.calib b{color:#f3ede2}
+@media (max-width:760px){.mono-log li{grid-template-columns:52px 1fr}.mono-log li b{display:none}.replay-caption{grid-template-columns:auto 1fr}.replay-caption button{grid-column:1/-1;justify-self:end}}
+@media (prefers-reduced-motion:reduce){.pulse-dot.live,.caret{animation:none}}

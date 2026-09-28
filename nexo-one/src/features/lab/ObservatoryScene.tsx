@@ -154,12 +154,12 @@ function filament(b: Buf, a: Vector3, c: Vector3, density: number, heat: number,
   return mid;
 }
 
-export function ObservatoryScene({ tests, page, focusIds, onPick, theme, events, explore = false }: {
-  explore?: boolean; events?: SceneEvents; tests: TestEntity[]; page: ScenePage; focusIds?: string[]; onPick: (id: string) => void; theme: 'dark' | 'light';
+export function ObservatoryScene({ tests, page, focusIds, onPick, theme, events, explore = false, hot }: {
+  hot?: string[]; explore?: boolean; events?: SceneEvents; tests: TestEntity[]; page: ScenePage; focusIds?: string[]; onPick: (id: string) => void; theme: 'dark' | 'light';
 }) {
   const host = useRef<HTMLDivElement>(null);
   const labels = useRef<HTMLDivElement>(null);
-  const api = useRef<{ shot: (p: ScenePage) => void; focus: (ids: string[]) => void } | null>(null);
+  const api = useRef<{ shot: (p: ScenePage) => void; focus: (ids: string[]) => void; heat: (ids: string[]) => void } | null>(null);
   const pickRef = useRef(onPick);
   pickRef.current = onPick;
   const exploreRef = useRef(explore);
@@ -316,7 +316,14 @@ export function ObservatoryScene({ tests, page, focusIds, onPick, theme, events,
         if (i >= 0) target.look.set(stars.pos[i * 3]!, stars.pos[i * 3 + 1]!, stars.pos[i * 3 + 2]!);
       }
     };
-    api.current = { shot, focus };
+    const basePulse = Float32Array.from(stars.pulse);
+    const heat = (list: string[]) => {
+      const set = new Set(list);
+      const pulses = starGeo.getAttribute('pulse') as BufferAttribute;
+      ids.forEach((id, i) => pulses.setX(i, set.has(id) && !reduced ? 1.8 : basePulse[i]!));
+      pulses.needsUpdate = true;
+    };
+    api.current = { shot, focus, heat };
 
     const resize = () => {
       const w = el.clientWidth || window.innerWidth, h = el.clientHeight || window.innerHeight;
@@ -453,6 +460,7 @@ export function ObservatoryScene({ tests, page, focusIds, onPick, theme, events,
 
   useEffect(() => { api.current?.shot(page); }, [page, tests, theme]);
   useEffect(() => { api.current?.focus(focusIds ?? []); }, [focusIds, tests, theme]);
+  useEffect(() => { api.current?.heat(hot ?? []); }, [hot, tests, theme, events]);
 
   return <div ref={host} className={`obs-scene obs-scene--${theme}`}>
     <div ref={labels} className="obs-scene-labels">

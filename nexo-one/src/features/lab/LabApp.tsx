@@ -66,6 +66,25 @@ export default function LabApp({ state, route, theme }: { state: SystemState; ro
     window.addEventListener('keydown', esc); return () => window.removeEventListener('keydown', esc);
   }, []);
   const events = useMemo<SceneEvents>(() => sceneEvents(state, lab), [state, lab]);
+  // Estrelas "acordadas": entidades com evento nas últimas 2 h pulsam mais forte na teia.
+  const hot = useMemo(() => [...new Set(lab.activity.filter(e => e.entity_id && Date.now() - Date.parse(e.at) < 2 * 3600e3)
+    .map(e => starOf(lab, e.entity_id!)).filter(Boolean) as string[])], [lab]);
+  // Replay: a câmera percorre as últimas 24 h de eventos reais, na ordem em que aconteceram.
+  const [replay, setReplay] = useState<number | null>(null);
+  const reel = useMemo(() => lab.activity.filter(e => Date.now() - Date.parse(e.at) < 24 * 3600e3), [lab]);
+  useEffect(() => {
+    if (replay === null) return;
+    if (replay >= reel.length) { setReplay(null); setFocus([]); return; }
+    const e = reel[replay]!;
+    const star = e.entity_id ? starOf(lab, e.entity_id) : null;
+    setFocus(star ? [star] : []);
+    const t = window.setTimeout(() => setReplay(r => (r === null ? null : r + 1)), star ? 2600 : 1200);
+    return () => window.clearTimeout(t);
+  }, [replay, reel, lab]);
+  useEffect(() => {
+    const esc = (e: KeyboardEvent) => { if (e.key === 'Escape') { setReplay(null); setFocus([]); } };
+    window.addEventListener('keydown', esc); return () => window.removeEventListener('keydown', esc);
+  }, []);
   useEffect(() => {
     if (route.page === 'entidade' && route.id) setFocus([route.id]);
     else if (route.page === 'roadmap' && route.id) setFocus(lab.roadmaps.get(route.id)?.tests ?? []);
@@ -82,16 +101,23 @@ export default function LabApp({ state, route, theme }: { state: SystemState; ro
       case 'evidencia': return <Evidence lab={lab} filter={route.q as Verdict | undefined} />;
       case 'entidade': return <EntityPage lab={lab} id={route.id!} />;
       case 'saude': return <Health state={state} lab={lab} />;
-      default: return <Now lab={lab} state={state} />;
+      default: return <Now lab={lab} state={state} onReplay={() => { setExplore(false); setReplay(0); }} replayCount={reel.length} />;
     }
   })();
 
-  return <div className={`observatory${explore ? ' exploring' : ''}`} data-page={route.page}>
+  const cur = replay !== null ? reel[replay] : null;
+  return <div className={`observatory${explore || replay !== null ? ' exploring' : ''}`} data-page={route.page}>
+    {cur && <div className="replay-caption" role="status" aria-live="polite">
+      <span className="replay-clock">{new Date(cur.at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</span>
+      <p><b>{ROLE_PT[cur.role.toUpperCase()] ?? cur.role}</b> {narrate(cur, lab)}</p>
+      <span className="replay-bar"><i style={{ width: `${((replay! + 1) / reel.length) * 100}%` }} /></span>
+      <button type="button" onClick={() => { setReplay(null); setFocus([]); }}>✕ parar</button>
+    </div>}
     <button type="button" className="explore-toggle" aria-pressed={explore} onClick={() => setExplore(x => !x)}>
       {explore ? '✕ Voltar ao painel' : '⤢ Explorar a teia'}</button>
     {explore && <p className="explore-hint" role="status">Arraste para girar · roda ou pinça para zoom · botão direito, Shift ou 2 dedos para mover · duplo clique recentra · Esc sai</p>}
     <Suspense fallback={<div className="obs-scene obs-scene--loading" />}>
-      <ObservatoryScene explore={explore} tests={tests} events={events} page={route.page} focusIds={focus} theme={theme}
+      <ObservatoryScene explore={explore || replay !== null} hot={hot} tests={tests} events={events} page={route.page} focusIds={focus} theme={theme}
         onPick={id => { window.location.hash = labHref('entidade', id); }} />
     </Suspense>
     <div className="hud" key={`${route.page}:${route.id ?? ''}`}>{page}</div>
@@ -99,7 +125,7 @@ export default function LabApp({ state, route, theme }: { state: SystemState; ro
 }
 
 // ---------- Agora ----------
-function Now({ lab, state }: { lab: Lab; state: SystemState }) {
+function Now({ lab, state, onReplay, replayCount }: { lab: Lab; state: SystemState; onReplay: () => void; replayCount: number }) {
   const ev = state.evolution;
   const g = state.guardian;
   const age = Math.round((Date.now() - Date.parse(state.generated_at)) / 60000);
@@ -143,6 +169,10 @@ function Now({ lab, state }: { lab: Lab; state: SystemState }) {
         {resolved + review ? ` (${Math.round(100 * resolved / (resolved + review))}%)` : ''}.
       </p>
     </Section>
+
+    <Monologue lab={lab} onReplay={onReplay} replayCount={replayCount} />
+
+    <Calibration lab={lab} />
 
     {thought && <Section title="O que o NEXO está pensando" kicker={`Pítia · ${ago(thought.at)}`} id="now-thought">
       <blockquote className="hud-thought">{thought.text}</blockquote>
@@ -541,4 +571,101 @@ function Swimlanes({ events }: { events: Array<{ event_type: string; role: strin
       ? <>{LANES[lane(h.role)]![1]} {EVENT_PT[h.event_type] ?? h.event_type.toLowerCase().replace(/_/g, ' ')} · {ago(h.at)}{h.entity_id && <> · <E id={h.entity_id} /></>}</>
       : `${recent.length} eventos em 48 h. Passe o dedo ou o mouse num ponto; clique para abrir a entidade.`}</p>
   </div>;
+}
+
+// ---------- "vivo": monólogo, calibração, replay ----------
+const ROLE_PT: Record<string, string> = { PITIA: 'Pítia', LEARNER: 'Learner', EXECUTOR: 'Executor', REFUTADOR: 'Refutador', GUARDIAO: 'Guardião', DENER: 'Dener' };
+const NARRATION: Record<string, string> = {
+  TEST_RESULT_RECORDED: 'Terminei um teste: %q',
+  ROADMAP_TEST_FROZEN: 'Congelei as regras antes de olhar os dados: %q',
+  RESULT_CONTESTED: 'Não confiei no meu próprio resultado e abri um ataque contra ele: %q',
+  RESULT_REFEREE1_PASSED: 'O resultado sobreviveu ao primeiro ataque: %q',
+  RESULT_REFUTED: 'Derrubei uma conclusão minha: %q',
+  RESULT_CONFIRMED: 'Confirmado depois de dois ataques independentes: %q',
+  HYPOTHESIS_UPSERTED: 'Tive uma ideia nova para testar: %q',
+  INTEGRITY_REPORT_RECORDED: 'Auditei a mim mesmo para ver se nada está corrompido.',
+  NEXO_THOUGHT_RECORDED: 'Parei para pensar sobre o que estou vendo.',
+  NEXO_THOUGHT_NOOP_RECORDED: 'Olhei tudo de novo e não vi nada que mereça atenção.',
+  TEST_BATTERY_DISPATCHED: 'Mandei uma bateria de testes rodar em paralelo.',
+  GENOME_MUTATION_PROPOSED: 'Propus mudar uma regra de como eu mesmo funciono.',
+  ROADMAP_CHARTERED: 'Recebi uma nova pergunta para investigar.',
+};
+/** Estrela que representa a entidade na teia (contestações apontam para o resultado atacado). */
+function starOf(lab: Lab, id: string): string | null {
+  let t = lab.tests.get(id);
+  for (let i = 0; t?.contestOf && i < 8; i += 1) t = lab.tests.get(t.contestOf) ?? undefined;
+  return t ? t.id : null;
+}
+function narrate(e: { event_type: string; entity_id?: string }, lab: Lab): string {
+  const tpl = NARRATION[e.event_type] ?? `Registrei ${e.event_type.toLowerCase().replace(/_/g, ' ')}: %q`;
+  const t = e.entity_id ? lab.tests.get(e.entity_id) : undefined;
+  const q = t?.question ?? (e.entity_id ? (lab.hypotheses.get(e.entity_id)?.statement ?? humanId(e.entity_id)) : '');
+  const text = tpl.includes('%q') ? tpl.replace('%q', q ? `“${q.length > 140 ? q.slice(0, 137) + '…' : q}”` : '').replace(/: $/, '.') : tpl;
+  return text;
+}
+
+function Typewriter({ text }: { text: string }) {
+  const reduced = typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const [n, setN] = useState(reduced ? text.length : 0);
+  useEffect(() => {
+    if (reduced) { setN(text.length); return; }
+    setN(0);
+    const t = window.setInterval(() => setN(k => { if (k >= text.length) { window.clearInterval(t); return k; } return k + 2; }), 18);
+    return () => window.clearInterval(t);
+  }, [text, reduced]);
+  return <>{text.slice(0, n)}{n < text.length && <i className="caret" aria-hidden="true">▍</i>}</>;
+}
+
+function Monologue({ lab, onReplay, replayCount }: { lab: Lab; onReplay: () => void; replayCount: number }) {
+  const recent = [...lab.activity].reverse().slice(0, 7);
+  const [, tick] = useState(0);
+  useEffect(() => { const t = window.setInterval(() => tick(x => x + 1), 30000); return () => window.clearInterval(t); }, []);
+  if (!recent.length) return null;
+  const last = recent[0]!;
+  const quiet = Math.round((Date.now() - Date.parse(last.at)) / 60000);
+  return <section className="hud-section monologue" aria-labelledby="mono-title">
+    <p className="hud-kicker"><i className={`pulse-dot${quiet < 30 ? ' live' : ''}`} aria-hidden="true" />
+      {quiet < 30 ? 'Ativo agora' : `Última ação ${ago(last.at)}`} · {lab.activity.filter(e => Date.now() - Date.parse(e.at) < 864e5).length} ações em 24 h</p>
+    <h2 id="mono-title">Monólogo interno</h2>
+    <p className="mono-now"><b>{ROLE_PT[last.role.toUpperCase()] ?? last.role}</b> <Typewriter text={narrate(last, lab)} /></p>
+    <ol className="mono-log">{recent.slice(1).map((e, i) => <li key={i}>
+      <time>{ago(e.at)}</time><b>{ROLE_PT[e.role.toUpperCase()] ?? e.role}</b>
+      <span>{e.entity_id ? <a href={labHref('entidade', e.entity_id)}>{narrate(e, lab)}</a> : narrate(e, lab)}</span>
+    </li>)}</ol>
+    {replayCount > 0 && <button type="button" className="replay-btn" onClick={onReplay}>▶ Rever as últimas 24 h ({replayCount} ações)</button>}
+  </section>;
+}
+
+/** Quanto o NEXO acerta das próprias previsões (congeladas antes de rodar). */
+function Calibration({ lab }: { lab: Lab }) {
+  const pts: Array<{ p: number; hit: number }> = [];
+  for (const t of lab.tests.values()) {
+    const p = (t.prereg.prediction as { p_promoted?: number } | null)?.p_promoted;
+    const v = (t.verdictRaw ?? '').toUpperCase();
+    if (typeof p !== 'number' || !v) continue;
+    const pass = /PROMOT|SUPPORT|CONFIRM|PASS|SURVIV/.test(v) ? 1 : /REJECT|REFUT|FAIL|KILL|CONTRADICT/.test(v) ? 0 : -1;
+    if (pass < 0) continue;
+    pts.push({ p: Math.min(1, Math.max(0, p)), hit: pass });
+  }
+  if (pts.length < 5) return null;
+  const brier = pts.reduce((a, x) => a + (x.p - x.hit) ** 2, 0) / pts.length;
+  const right = pts.filter(x => (x.p >= 0.5 ? 1 : 0) === x.hit).length;
+  const confident = pts.filter(x => x.p >= 0.7);
+  const confHit = confident.filter(x => x.hit === 1).length;
+  const bins = [0, 1, 2, 3, 4].map(b => {
+    const inBin = pts.filter(x => Math.min(4, Math.floor(x.p * 5)) === b);
+    return { b, n: inBin.length, rate: inBin.length ? inBin.filter(x => x.hit).length / inBin.length : 0 };
+  });
+  return <section className="hud-section calib" aria-labelledby="calib-title">
+    <p className="hud-kicker">Autoconhecimento · {pts.length} previsões congeladas antes do teste</p>
+    <h2 id="calib-title">Quanto eu acerto</h2>
+    <p className="hud-big">Acertei <b>{Math.round(100 * right / pts.length)}%</b> das minhas previsões
+      {confident.length >= 3 && <> · quando tive ≥70% de certeza, acertei <b>{Math.round(100 * confHit / confident.length)}%</b></>}.</p>
+    <div className="calib-chart" role="img" aria-label={bins.map(x => `${x.b * 20}-${x.b * 20 + 20}%: ${x.n ? Math.round(x.rate * 100) + '% passaram' : 'sem dados'}`).join('; ')}>
+      {bins.map(x => <span key={x.b} title={`${x.n} testes`}>
+        <b style={{ height: `${x.n ? Math.max(4, x.rate * 100) : 0}%` }} /><i style={{ bottom: `${x.b * 20 + 10}%` }} />
+        <em>{x.b * 20}–{x.b * 20 + 20}%</em></span>)}
+    </div>
+    <p className="hud-note">Barra = quantos passaram de verdade; traço = o que eu tinha previsto. Quanto mais perto, mais honesto sou comigo mesmo. Erro médio (Brier): {brier.toFixed(2)}.</p>
+  </section>;
 }
