@@ -764,10 +764,10 @@ const ROLE_PT: Record<string, string> = {
 };
 /** Três tarefas agendadas vestem os seis papéis; o papel continua sendo quem assina cada ação. */
 const TASKS: Array<{ id: string; name: string; hats: string[]; rhythm: string; does: string }> = [
-  { id: 'cientista', name: 'Cientista', hats: ['LEARNER', 'PITIA', 'SENTINEL'], rhythm: 'a cada 2 horas', does: 'propõe hipóteses, nomeia testes, pensa e vigia a literatura' },
-  { id: 'operador', name: 'Operador', hats: ['EXECUTOR'], rhythm: 'a cada hora', does: 'monta as baterias, pede e escreve receitas, liga dados' },
-  { id: 'engenheiro', name: 'Engenheiro', hats: ['ENGINEER'], rhythm: 'a cada 3 horas', does: 'escreve e conserta receitas, vigia o robô e a bateria' },
-  { id: 'critico', name: 'Crítico', hats: ['REFUTADOR', 'REFEREE_1', 'GUARDIAO'], rhythm: 'a cada 2 horas', does: 'ataca resultados, julga, audita a saúde e escreve o bom-dia' },
+  { id: 'cientista', name: 'Cientista', hats: ['LEARNER', 'PITIA', 'SENTINEL'], rhythm: 'toda hora · :05', does: 'propõe hipóteses, nomeia testes, pensa e vigia a literatura' },
+  { id: 'operador', name: 'Operador', hats: ['EXECUTOR'], rhythm: 'toda hora · :20', does: 'monta as baterias, pede e escreve receitas, liga dados' },
+  { id: 'engenheiro', name: 'Engenheiro', hats: ['ENGINEER'], rhythm: 'a cada 2 horas · :50', does: 'escreve e conserta receitas, vigia o robô e a bateria' },
+  { id: 'critico', name: 'Crítico', hats: ['REFUTADOR', 'REFEREE_1', 'GUARDIAO'], rhythm: 'toda hora · :35', does: 'ataca resultados, julga, audita a saúde e escreve o bom-dia' },
 ];
 const taskOf = (role: string) => TASKS.find(t => t.hats.includes(role.toUpperCase()));
 const roleLabel = (role: string) => { const t = taskOf(role); const r = ROLE_PT[role.toUpperCase()] ?? role; return t ? `${t.name} · ${r}` : r; };
