@@ -44,7 +44,7 @@ def _fetch_text(url: str) -> str:
 def _read_text(binding: str | None, default_url: str) -> str:
     if binding:
         p = Path(binding)
-        if p.exists():
+        if p.exists() and os.environ.get("NEXO_RECIPE_SELF_CHECK") == "1":
             return p.read_text(encoding="utf-8")
         if binding.startswith("https://"):
             return _fetch_text(binding)
@@ -341,7 +341,7 @@ def main():
     mode = str(params.get("mode") or "")
     try:
         if mode == "bao_tracer_jackknife":
-            if params.get("self_check") and params.get("data_overrides"):
+            if os.environ.get("NEXO_RECIPE_SELF_CHECK") == "1" and params.get("data_overrides"):
                 return bao_tracer_jackknife(params)
             return delegate_existing_multi(params, "bao_tracer_jackknife")
         if mode == "sn_redshift_jackknife":
