@@ -71,8 +71,8 @@ attribute float size; attribute vec3 tint; attribute float pulse; attribute floa
 uniform float time; uniform float pixelRatio; uniform float evo; varying vec3 vTint; varying float vAlpha; varying float vSize;
 void main(){
   vec3 toNode = node - position; float dn = length(toNode);
-  vec3 q = position + toNode * (0.22 * evo);                                   // clustering
-  q += normalize(position + vec3(1e-4)) * (0.55 * evo) * smoothstep(0.6, 3.2, dn); // vazios crescem mais
+  vec3 q = position + toNode * (0.30 * evo);                                   // clustering
+  q += normalize(position + vec3(1e-4)) * (0.75 * evo) * smoothstep(0.6, 3.2, dn); // vazios crescem mais
   q += toNode * 0.015 * sin(time * 0.07 + seed * 6.28);                      // respiração lenta
   vec4 mv = modelViewMatrix * vec4(q,1.0);
   float p = 1.0 + pulse * 0.4 * sin(time*2.4 + seed*6.28);
@@ -539,10 +539,10 @@ export function ObservatoryScene({ tests, page, focusIds, onPick, theme, events,
       if (!visible) return;
       const dt = Math.min(0.05, (now - last) / 1000); last = now;
       uniforms.time.value += dt;
-      { const s = uniforms.time.value / 40; uniforms.evo.value = reduced ? 0.6 : s / (s + 1); }
+      { const s = uniforms.time.value / 16; uniforms.evo.value = reduced ? 0.6 : s / (s + 1); }
       // Expansão do universo, bem lenta: ~6% em 15 min, desacelerando (a(t) monotônico, nunca volta).
       const el = uniforms.time.value;
-      expansion = reduced ? 1 : 1 + 0.12 * (el / (el + 900));
+      expansion = reduced ? 1 : 1 + 0.12 * (el / (el + 300));
       scene.scale.setScalar(expansion);
       if (!reduced && !drag && !exploreRef.current) target.az += dt * 0.025;
       const k = reduced ? 1 : 1 - Math.pow(0.03, dt);
