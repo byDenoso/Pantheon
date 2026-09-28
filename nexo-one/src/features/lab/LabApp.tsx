@@ -244,7 +244,7 @@ function Now({ lab, state, onReplay, replayCount }: { lab: Lab; state: SystemSta
     </Section>}
 
     <Monologue lab={lab} state={state} onReplay={onReplay} replayCount={replayCount} />
-    <Board state={state} />
+    <Board state={state} lab={lab} />
     <Calibration lab={lab} />
 
     <div className="hud-pair">
@@ -1053,7 +1053,25 @@ const LOOP_PT: Record<string, string> = {
 };
 
 // ---------- Mural: os agentes conversando entre si ----------
-function Board({ state }: { state: SystemState }) {
+// Recados dos agentes citam IDs técnicos; no site viram nomes em português.
+const RECIPE_PT: Record<string, string> = {
+  w0wa_bao_sn_multi: 'a receita de energia escura com duas compilações de supernovas',
+  w0wa_bao_sn: 'a receita de energia escura (BAO + supernovas)', seed_bounds: 'a receita de limites', runner_readback_canary: 'a receita de teste do executor',
+};
+function nameIds(text: string, lab: Lab): string {
+  return text
+    .replace(/[A-Za-z][A-Za-z0-9]*(?:[-_][A-Za-z0-9]+){2,}/g, tok => {
+      const t = lab.tests.get(tok); if (t) return `“${t.name}”`;
+      const h = lab.hypotheses.get(tok); if (h) return `“${clip(h.statement ?? 'uma hipótese', 60)}”`;
+      if (RECIPE_PT[tok]) return RECIPE_PT[tok]!;
+      if (/^(HYP|H-|HYP-)/i.test(tok)) return 'uma hipótese';
+      if (/[A-Z]/.test(tok) && tok.includes('-')) return 'um teste';
+      return tok.replace(/_/g, ' ');
+    })
+    .replace(/(um teste)(,? e um teste)+/g, 'alguns testes');
+}
+
+function Board({ state, lab }: { state: SystemState; lab: Lab }) {
   const now = Date.now();
   const posts = (state.evolution?.board ?? []).filter(p => !p.resolved_at && (!p.expires_at || Date.parse(p.expires_at) > now)).slice(-8).reverse();
   if (!posts.length) return null;
@@ -1061,7 +1079,7 @@ function Board({ state }: { state: SystemState }) {
   return <Section title="Conversa entre os agentes" kicker={`${posts.length} ${posts.length === 1 ? 'recado aberto' : 'recados abertos'}`} id="now-board">
     <ol className="board">{posts.map(p => <li key={p.id}>
       <p className="board-head"><b>{who(p.from)}</b><i aria-hidden="true">→</i><span>{who(p.to)}</span><time>{ago(p.at)}</time></p>
-      <p className="board-text">{clip(humanize(p.text), 220)}</p>
+      <p className="board-text">{clip(humanize(nameIds(p.text, lab)), 220)}</p>
       {(p.refs?.length ?? 0) > 0 && <p className="hud-refs">{p.refs!.slice(0, 3).map(r => <E key={r} id={r} />)}</p>}
     </li>)}</ol>
   </Section>;
