@@ -8,6 +8,10 @@ import {
   AdditiveBlending, BufferAttribute, BufferGeometry, Color, LineBasicMaterial, LineSegments,
   PerspectiveCamera, Points, Raycaster, Scene, ShaderMaterial, Vector2, Vector3, WebGLRenderer,
 } from 'three';
+import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
+import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
+import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
 import type { TestEntity, Verdict } from './model.ts';
 import { normDomain } from './domains.ts';
 
@@ -116,12 +120,34 @@ const rnd = (text: string): number => {
 const jitter = (seed: string, s: number): [number, number, number] =>
   [(rnd(seed + 'x') - 0.5) * s, (rnd(seed + 'y') - 0.5) * s, (rnd(seed + 'z') - 0.5) * s];
 
-// Paleta "inferno" da teia: violeta profundo -> magenta -> laranja -> branco-quente.
-const INFERNO = ['#05060b', '#141827', '#2a3048', '#56607e', '#a3a9bd', '#f4ecdd'].map(c => new Color(c));
+// Paleta da teia (assinatura preto + ciano): gás frio -> filamento ciano -> nó branco-azulado.
+const INFERNO = ['#020405', '#06141a', '#0c2e38', '#1d6574', '#62cbd8', '#effcff'].map(c => new Color(c));
 const inferno = (t: number) => {
   const x = Math.max(0, Math.min(0.999, t)) * (INFERNO.length - 1), i = Math.floor(x), f = x - i;
   return INFERNO[i]!.clone().lerp(INFERNO[i + 1]!, f);
 };
+
+/** Qualidade gráfica: alta (GPU dedicada / Apple M), média (Intel Iris / UHD / integradas), baixa (celular ou fraca).
+ *  Pode ser forçada com localStorage 'nexo.quality' = high | medium | low. */
+export type Quality = 'high' | 'medium' | 'low';
+export function detectQuality(): Quality {
+  try {
+    const forced = localStorage.getItem('nexo.quality');
+    if (forced === 'high' || forced === 'medium' || forced === 'low') return forced;
+  } catch { /* sem armazenamento */ }
+  if (window.matchMedia('(max-width: 760px)').matches || (navigator.hardwareConcurrency || 8) < 4) return 'low';
+  let gpu = '';
+  try {
+    const gl = document.createElement('canvas').getContext('webgl');
+    const ext = gl?.getExtension('WEBGL_debug_renderer_info');
+    gpu = String((ext && gl?.getParameter(ext.UNMASKED_RENDERER_WEBGL)) || '');
+  } catch { /* sem WebGL de diagnóstico */ }
+  if (/RTX|GTX|Radeon RX|Radeon Pro|Apple M\d|Arc A|Quadro/i.test(gpu)) return 'high';
+  if (/SwiftShader|llvmpipe|Software/i.test(gpu)) return 'low';
+  return 'medium';
+}
+const DENSITY: Record<Quality, number> = { high: 1.7, medium: 1.05, low: 0.55 };
+const gauss = () => { let u = 0, v = 0; while (!u) u = Math.random(); while (!v) v = Math.random(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(6.2832 * v); };
 
 interface Buf { pos: number[]; tint: number[]; size: number[]; pulse: number[]; seed: number[] }
 const buf = (): Buf => ({ pos: [], tint: [], size: [], pulse: [], seed: [] });
@@ -146,10 +172,10 @@ function filament(b: Buf, a: Vector3, c: Vector3, density: number, heat: number,
   for (let i = 0; i < n; i += 1) {
     const t = Math.random(), u = 1 - t;
     p.set(u * u * a.x + 2 * u * t * mid.x + t * t * c.x, u * u * a.y + 2 * u * t * mid.y + t * t * c.y, u * u * a.z + 2 * u * t * mid.z + t * t * c.z);
-    const spread = 0.03 + 0.09 * Math.sin(Math.PI * t);
     const edge = Math.min(t, u);
-    push(b, [p.x + (Math.random() - 0.5) * spread, p.y + (Math.random() - 0.5) * spread, p.z + (Math.random() - 0.5) * spread],
-      inferno(heat * (0.6 + 0.4 * (1 - edge * 2)) * (0.7 + Math.random() * 0.3)).multiplyScalar(1.6), 1.9 + Math.random() * 2.8);
+    const spread = 0.022 + 0.05 * (1 - 2 * edge); // fino no meio, mais grosso perto dos nós
+    push(b, [p.x + gauss() * spread, p.y + gauss() * spread, p.z + gauss() * spread],
+      inferno(heat * (0.62 + 0.38 * (1 - edge * 2)) * (0.72 + Math.random() * 0.28)).multiplyScalar(1.5), 1.5 + Math.random() * 2.2);
   }
   return mid;
 }
@@ -175,8 +201,12 @@ export function ObservatoryScene({ tests, page, focusIds, onPick, theme, events,
     catch { el.dataset.fallback = 'true'; return; }
     const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     const mobile = window.matchMedia('(max-width: 760px)').matches;
-    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    let quality: Quality = detectQuality();
+    const dens = DENSITY[quality];
+    const dprFor = (q: Quality) => Math.min(window.devicePixelRatio || 1, q === 'high' ? 2 : q === 'medium' ? 1.5 : 1.25);
+    let dpr = dprFor(quality);
     renderer.setPixelRatio(dpr);
+    el.dataset.quality = quality;
     renderer.domElement.setAttribute('aria-hidden', 'true');
     el.appendChild(renderer.domElement);
     const scene = new Scene();
@@ -190,25 +220,25 @@ export function ObservatoryScene({ tests, page, focusIds, onPick, theme, events,
     const indexOf = new Map(domains.map((d, i) => [d.id, i]));
     const domainIndex = (d: string) => indexOf.get(normDomain(d)) ?? 0;
     // Filamentos entre domínios (a teia maior) + ramos cegos para dar textura de rede.
-    for (let i = 0; i < domainPos.length; i += 1) for (let j = i + 1; j < domainPos.length; j += 1) filament(web, domainPos[i]!, domainPos[j]!, mobile ? 70 : 120, 0.85, `d${i}${j}`);
+    for (let i = 0; i < domainPos.length; i += 1) for (let j = i + 1; j < domainPos.length; j += 1) filament(web, domainPos[i]!, domainPos[j]!, 120 * dens, 0.85, `d${i}${j}`);
     const scale = 13;
     const voids: Vector3[] = [];
-    for (let k = 0; k < (mobile ? 40 : 70); k += 1) voids.push(new Vector3(...jitter(`v${k}`, scale * 2)));
+    for (let k = 0; k < Math.round(70 * Math.min(1.25, dens)); k += 1) voids.push(new Vector3(...jitter(`v${k}`, scale * 2)));
     voids.forEach((v, k) => {
       const nearest = [...voids].sort((a, b) => a.distanceTo(v) - b.distanceTo(v)).slice(1, 4);
-      nearest.forEach((w, m) => filament(web, v, w, mobile ? 30 : 50, 0.78, `w${k}${m}`));
-      push(web, [v.x, v.y, v.z], inferno(0.85), 26 + rnd(`vn${k}`) * 40, 0.1);
-      for (let q = 0; q < 40; q += 1) { const r = Math.pow(Math.random(), 2) * 0.9; push(web, [v.x + (Math.random() - 0.5) * r * 2, v.y + (Math.random() - 0.5) * r * 2, v.z + (Math.random() - 0.5) * r * 2], inferno(0.75 + Math.random() * 0.2), 2 + Math.random() * 3); }
+      nearest.forEach((w, m) => filament(web, v, w, 50 * dens, 0.78, `w${k}${m}`));
+      push(web, [v.x, v.y, v.z], inferno(0.88), 12 + rnd(`vn${k}`) * 18, 0.1);
+      for (let q = 0; q < Math.round(40 * dens); q += 1) { const r = Math.pow(Math.random(), 2.4) * 0.8; push(web, [v.x + (Math.random() - 0.5) * r * 2, v.y + (Math.random() - 0.5) * r * 2, v.z + (Math.random() - 0.5) * r * 2], inferno(0.75 + Math.random() * 0.2), 2 + Math.random() * 3); }
     });
     domainPos.forEach((d, i) => {
       const nearest = [...voids].sort((a, b) => a.distanceTo(d) - b.distanceTo(d)).slice(0, 3);
-      nearest.forEach((w, m) => filament(web, d, w, mobile ? 26 : 46, 0.85, `dv${i}${m}`));
+      nearest.forEach((w, m) => filament(web, d, w, 46 * dens, 0.85, `dv${i}${m}`));
       // Halo do domínio: aglomerado quente.
-      for (let k = 0; k < (mobile ? 260 : 480); k += 1) {
+      for (let k = 0; k < Math.round(480 * dens); k += 1) {
         const r = Math.pow(Math.random(), 2.2) * 2.4, th = Math.random() * Math.PI * 2, ph = Math.acos(2 * Math.random() - 1);
         push(web, [d.x + r * Math.sin(ph) * Math.cos(th), d.y + r * Math.cos(ph), d.z + r * Math.sin(ph) * Math.sin(th)], inferno(0.95 - r * 0.2), 3 + Math.random() * 4);
       }
-      push(web, [d.x, d.y, d.z], new Color('#f7eedd'), 180, 0.08);
+      push(web, [d.x, d.y, d.z], new Color('#effcff'), 95, 0.08);
     });
 
     // Hipóteses: nós ao redor do seu domínio; testes ao longo do filamento hipótese->domínio.
@@ -223,7 +253,7 @@ export function ObservatoryScene({ tests, page, focusIds, onPick, theme, events,
       const [di] = key.split('|');
       const d = domainPos[Number(di)]!;
       const node = d.clone().add(new Vector3(...jitter(key, 9)));
-      filament(web, d, node, mobile ? 16 : 30, 0.7, key);
+      filament(web, d, node, 30 * dens, 0.7, key);
       push(web, [node.x, node.y, node.z], inferno(0.8), 22 + Math.min(40, list.length * 4), 0.05);
       // Nuvem de formação: hipótese com muitos testes prontos.
       const ready = list.filter(t => t.verdict === 'READY').length;
@@ -332,8 +362,40 @@ export function ObservatoryScene({ tests, page, focusIds, onPick, theme, events,
       if (w > 900) camera.setViewOffset(w, h, -w * 0.2, 0, w, h); else camera.clearViewOffset();
       camera.updateProjectionMatrix();
     };
-    resize();
-    const ro = new ResizeObserver(resize); ro.observe(el);
+    // Bloom: brilho físico dos aglomerados e filamentos (alta = resolução cheia, média = meia, baixa = sem).
+    let composer: EffectComposer | null = null;
+    let bloom: UnrealBloomPass | null = null;
+    const buildComposer = () => {
+      composer?.dispose(); composer = null; bloom = null;
+      if (quality === 'low' || theme === 'light') { renderer.setClearColor(0x000000, 0); return; }
+      renderer.setClearColor(0x000000, 1); // o bloom precisa de fundo opaco
+      composer = new EffectComposer(renderer);
+      composer.setPixelRatio(dpr);
+      composer.addPass(new RenderPass(scene, camera));
+      bloom = new UnrealBloomPass(new Vector2(1, 1), quality === 'high' ? 0.95 : 0.8, quality === 'high' ? 0.55 : 0.45, 0.18);
+      composer.addPass(bloom);
+      composer.addPass(new OutputPass());
+    };
+    buildComposer();
+    const resizeComposer = () => {
+      if (!composer || !bloom) return;
+      const w = el.clientWidth || window.innerWidth, h = el.clientHeight || window.innerHeight;
+      composer.setSize(w, h);
+      const f = quality === 'high' ? 1 : 0.5; // média: bloom em meia resolução
+      bloom.setSize(Math.max(1, Math.round(w * dpr * f)), Math.max(1, Math.round(h * dpr * f)));
+    };
+    const resizeAll = () => { resize(); resizeComposer(); };
+    resizeAll();
+    const ro = new ResizeObserver(resizeAll); ro.observe(el);
+    // Guarda de fluidez: média de quadros ruim por ~3 s desce um nível (resolução e bloom), nunca sobe sozinho.
+    let slowAcc = 0, slowN = 0;
+    const degrade = () => {
+      if (quality === 'low') return;
+      quality = quality === 'high' ? 'medium' : 'low';
+      dpr = dprFor(quality); renderer.setPixelRatio(dpr); uniforms.pixelRatio.value = dpr;
+      el.dataset.quality = quality;
+      buildComposer(); resizeAll();
+    };
 
     // Controles (como nos grafos): arrastar gira · roda/pinça dá zoom · botão direito, Shift ou 2 dedos movem · duplo clique recentra.
     // Fora do modo Explorar, a roda e o toque vertical continuam rolando a página.
@@ -429,7 +491,11 @@ export function ObservatoryScene({ tests, page, focusIds, onPick, theme, events,
         look.x + Math.cos(cam.az) * Math.cos(cam.elev) * cam.dist, look.y + Math.sin(cam.elev) * cam.dist,
         look.z + Math.sin(cam.az) * Math.cos(cam.elev) * cam.dist);
       camera.lookAt(look);
-      renderer.render(scene, camera);
+      if (composer) composer.render(dt); else renderer.render(scene, camera);
+      if (!reduced) {
+        slowAcc += dt; slowN += 1;
+        if (slowAcc > 3) { if (slowAcc / slowN > 1 / 42) degrade(); slowAcc = 0; slowN = 0; }
+      }
       const w = canvas.clientWidth, h = canvas.clientHeight;
       const placed: Array<[number, number, number]> = [];
       const place = (node: HTMLElement, x: number, y: number) => {
@@ -464,7 +530,7 @@ export function ObservatoryScene({ tests, page, focusIds, onPick, theme, events,
       canvas.removeEventListener('wheel', wheel);
       canvas.removeEventListener('dblclick', dbl);
       canvas.removeEventListener('contextmenu', noMenu);
-      webGeo.dispose(); starGeo.dispose(); qsoGeo.dispose(); qsoMat.dispose(); jetGeo.dispose(); jetMat.dispose(); boxGeo.dispose(); boxMat.dispose(); mat.dispose(); renderer.dispose();
+      composer?.dispose(); webGeo.dispose(); starGeo.dispose(); qsoGeo.dispose(); qsoMat.dispose(); jetGeo.dispose(); jetMat.dispose(); boxGeo.dispose(); boxMat.dispose(); mat.dispose(); renderer.dispose();
       canvas.remove(); api.current = null;
     };
   }, [tests, theme, events, domains]);
