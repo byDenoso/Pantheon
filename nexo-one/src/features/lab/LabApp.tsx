@@ -152,10 +152,11 @@ export default function LabApp({ state, route, theme }: { state: SystemState; ro
 // ---------- Ciência x autoengenharia ----------
 const isScience = (t: TestEntity) => normDomain(t.domain) === 'SCIENCE' && !/^(META-|T-LEARN|HYP-GW-SCHEDULED)/.test(t.id);
 const isSelf = (t: TestEntity) => !isScience(t) && normDomain(t.domain) !== 'OLYMPUS';
+const isReady = (t: TestEntity) => (t.status ?? '').toUpperCase() === 'READY';
 function tally(list: TestEntity[]) {
   const by = (r: string) => list.filter(t => t.review === r).length;
   return { confirmed: by('CONFIRMED'), refuted: by('REFUTED'), review: by('PENDING_REVIEW') + by('CONTESTED') + by('REFEREE1_PASSED'),
-    blocked: list.filter(t => t.verdict === 'BLOCKED').length, ready: list.filter(t => t.verdict === 'READY').length, total: list.length };
+    blocked: list.filter(t => t.verdict === 'BLOCKED').length, ready: list.filter(isReady).length, total: list.length };
 }
 /** Números científicos publicados de um teste (Δχ², p, σ, ΔBIC, ln B, w0, wa…), ignorando campos ausentes. */
 function numbersOf(t: TestEntity): Record<string, number> {
@@ -187,7 +188,7 @@ function Now({ lab, state, onReplay, replayCount }: { lab: Lab; state: SystemSta
   const resolved = (lab.reviews.CONFIRMED ?? 0) + (lab.reviews.REFUTED ?? 0);
   const blocked = [...lab.tests.values()].filter(t => t.verdict === 'BLOCKED');
   const discovery = [...lab.tests.values()].find(t => t.verdict === 'CONFIRMED') ?? [...lab.tests.values()].find(t => t.meaning && t.verdict === 'PROVISIONAL');
-  const next = [...lab.tests.values()].filter(t => t.verdict === 'READY' && t.question).slice(0, 3);
+  const next = [...lab.tests.values()].filter(t => isReady(t) && t.question).slice(0, 3);
   // Gravidade real: vermelho só quando algo trava o ciclo; o resto é atenção.
   const CRITICAL = ['writer', 'tower_integrity', 'relay', 'inbox', 'batteries', 'executor'];
   const blocking = (g?.failing_areas ?? []).filter(a => CRITICAL.includes(a));
@@ -465,7 +466,7 @@ function RoadmapPage({ lab, id }: { lab: Lab; id: string }) {
   tests.forEach(t => { const k = t.hypothesisId ?? '—'; (hyps.get(k) ?? hyps.set(k, []).get(k)!).push(t); });
   const pct = (n: number, d: number | null) => (d ? Math.min(100, Math.round(100 * n / d)) : 0);
   const confirmed = tests.filter(t => t.verdict === 'CONFIRMED');
-  const nextUp = (r.frontierIds?.length ? r.frontierIds.map(id => lab.tests.get(id)!).filter(Boolean) : tests.filter(t => t.verdict === 'READY')).slice(0, 6);
+  const nextUp = (r.frontierIds?.length ? r.frontierIds.map(id => lab.tests.get(id)!).filter(Boolean) : tests.filter(isReady)).slice(0, 6);
   const blocked = tests.filter(t => t.verdict === 'BLOCKED');
   return <>
     <header className="hud-hero">
@@ -704,7 +705,7 @@ function sceneEvents(state: SystemState, lab: Lab): SceneEvents {
   const running = Number((ev as unknown as { batteries?: Record<string, number> })?.batteries?.DISPATCHED ?? 0);
   const perDomain = new Map<string, number>();
   for (const t of lab.tests.values()) {
-    if (t.verdict !== 'READY' || t.contestOf) continue;
+    if (!isReady(t) || t.contestOf) continue;
     const d = normDomain(t.domain);
     perDomain.set(d, (perDomain.get(d) ?? 0) + 1);
   }
@@ -909,7 +910,7 @@ function testStory(t: TestEntity, lab: Lab): Beat[] {
   if (p !== null) beats.push({ icon: 'bet', tone: 'bet', text: `Antes de olhar os dados, apostei ${pct(p)} de chance de dar certo.` });
   if (t.prereg.success.length || t.prereg.kill.length) beats.push({ icon: 'lock', tone: 'bet', text: 'Combinei comigo mesmo, antes de rodar, em que caso eu desistiria da ideia. Não dá para mudar depois.' });
   const o = outcomeOf(t);
-  if (t.verdict === 'READY') beats.push({ icon: 'wait', tone: 'fact', text: 'Ainda vou rodar este teste.' });
+  if (isReady(t)) beats.push({ icon: 'wait', tone: 'fact', text: 'Ainda vou rodar este teste.' });
   else if (t.verdict === 'BLOCKED') beats.push({ icon: 'block', tone: 'block', text: `Travei aqui${t.blocker ? `: ${t.blocker}` : ': falta algo para eu conseguir testar.'}` });
   else if (o === 1) beats.push({ icon: 'check', tone: 'fact', text: parent ? 'O resultado atacado resistiu a este ataque.' : 'Deu certo: a ideia passou no critério que eu tinha combinado.' });
   else if (o === 0) beats.push({ icon: 'cross', tone: 'fact', text: parent ? 'Este ataque encontrou um problema no resultado anterior.' : 'Não deu certo: a ideia falhou no critério que eu tinha combinado.' });
@@ -1026,9 +1027,9 @@ const TRAIL_COLOR: Record<Verdict, string> = {
   RUNNING: '#9fb4d8', CHECKPOINTED: '#7f8ca3', BLOCKED: '#6b6f7a', DISCARDED: '#3d414a',
 };
 function Trail({ tests, frontier, target }: { tests: TestEntity[]; frontier: string[]; target: number | null }) {
-  const walked = tests.filter(t => !frontier.includes(t.id) && t.verdict !== 'READY')
+  const walked = tests.filter(t => !frontier.includes(t.id) && !isReady(t))
     .sort((a, b) => String(a.executedAt ?? a.createdAt ?? '').localeCompare(String(b.executedAt ?? b.createdAt ?? '')));
-  const ahead = tests.filter(t => frontier.includes(t.id) || t.verdict === 'READY').slice(0, 8);
+  const ahead = tests.filter(t => frontier.includes(t.id) || isReady(t)).slice(0, 8);
   if (!walked.length && !ahead.length) return null;
   const n = walked.length + ahead.length + 1, step = 40, W = Math.max(320, 48 + (n - 1) * step);
   const x = (i: number) => 24 + i * step;
