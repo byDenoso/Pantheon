@@ -1,6 +1,6 @@
 // NEXO Observatório: páginas em HUD sobre a teia cósmica.
 // Rotas: #/agora #/ciclo #/roadmaps #/roadmap/<id> #/evidencia[?v=] #/e/<id> #/saude
-import { lazy, Suspense, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { lazy, Suspense, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import type { SystemState } from '../../contracts/system.ts';
 import {
   ago, buildLab, GUARDIAN_AREA_PT, humanId, readBaseline, VERDICT_GLYPH, VERDICT_ORDER, VERDICT_PT,
@@ -68,6 +68,18 @@ export default function LabApp({ state, route, theme }: { state: SystemState; ro
     window.addEventListener('keydown', esc); return () => window.removeEventListener('keydown', esc);
   }, []);
   const events = useMemo<SceneEvents>(() => sceneEvents(state, lab), [state, lab]);
+  const [searching, setSearching] = useState(false);
+  const [legend, setLegend] = useState(() => { try { return !localStorage.getItem('nexo.legend.seen'); } catch { return false; } });
+  const closeLegend = () => { setLegend(false); try { localStorage.setItem('nexo.legend.seen', '1'); } catch { /* sem armazenamento */ } };
+  const [sound, setSound] = useState(false);
+  useAmbience(sound, events.grbs[0]?.href ?? null);
+  useEffect(() => {
+    const k = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); setSearching(s => !s); }
+      else if (e.key === 'Escape') setSearching(false);
+    };
+    window.addEventListener('keydown', k); return () => window.removeEventListener('keydown', k);
+  }, []);
   // Estrelas "acordadas": entidades com evento nas últimas 2 h pulsam mais forte na teia.
   const hot = useMemo(() => [...new Set(lab.activity.filter(e => e.entity_id && Date.now() - Date.parse(e.at) < 2 * 3600e3)
     .map(e => starOf(lab, e.entity_id!)).filter(Boolean) as string[])], [lab]);
@@ -117,6 +129,12 @@ export default function LabApp({ state, route, theme }: { state: SystemState; ro
     </div>}
     <button type="button" className="explore-toggle" aria-pressed={explore} onClick={() => setExplore(x => !x)}>
       {explore ? '✕ Voltar ao painel' : '⤢ Explorar a teia'}</button>
+    <div className="obs-tools">
+      <button type="button" onClick={() => setSearching(true)} title="Procurar (Ctrl K)"><Icon n="target" /> Procurar</button>
+      <button type="button" aria-pressed={sound} onClick={() => setSound(x => !x)} title="Som ambiente">{sound ? 'Som ligado' : 'Som'}</button>
+    </div>
+    {searching && <Search lab={lab} onClose={() => setSearching(false)} />}
+    {legend && route.page === 'agora' && <Legend onClose={closeLegend} />}
     {explore && <p className="explore-hint" role="status">Arraste para girar · roda ou pinça para zoom · botão direito, Shift ou 2 dedos para mover · duplo clique recentra · Esc sai</p>}
     <Suspense fallback={<div className="obs-scene obs-scene--loading" />}>
       <ObservatoryScene explore={explore || replay !== null} hot={hot} tests={tests} events={events} page={route.page} focusIds={focus} theme={theme}
@@ -155,9 +173,12 @@ function Now({ lab, state, onReplay, replayCount }: { lab: Lab; state: SystemSta
       {g && g.failing_areas.length > 0 && <p className="hud-lead">{g.failing_areas.map(a => GUARDIAN_AREA_PT[a] ?? a).join(' · ')}.</p>}
     </header>
 
-    {gate > 0 && <a className="hud-gate" href="#/ciclo">
+    <GatePanel state={state} />
+    {gate > 0 && !state.inbox?.some(i => i.kind === 'APROVAR') && <a className="hud-gate" href="#/ciclo">
       <strong>{gate}</strong><span>{gate === 1 ? 'decisão espera por você' : 'decisões esperam por você'}</span><em>abrir o portão →</em>
     </a>}
+
+    {base && <AwaySummary lab={lab} since={base.at} />}
 
     <Section title={base ? `Desde ${ago(base.at)}` : 'Placar da ciência'} kicker="Progresso, não atividade" id="now-since">
       <div className="stats">
@@ -198,6 +219,111 @@ function Now({ lab, state, onReplay, replayCount }: { lab: Lab; state: SystemSta
         : <p className="hud-muted">Fila vazia: o Learner precisa gerar hipóteses.</p>}
     </Section>
   </>;
+}
+
+// ---------- Portão: decidir daqui. O site é só leitura; a decisão vira uma frase pronta para o GPT gravar. ----------
+function GatePanel({ state }: { state: SystemState }) {
+  const items = (state.inbox ?? []).filter(i => i.kind === 'APROVAR');
+  const [copied, setCopied] = useState<string | null>(null);
+  if (!items.length) return null;
+  const copy = async (text: string) => {
+    try { await navigator.clipboard.writeText(text); setCopied(text); } catch { window.prompt('Copie e cole no GPT:', text); }
+  };
+  return <section className="gate-panel" aria-label="Decisões que esperam por você">
+    <h2><Icon n="hand" /> {items.length === 1 ? 'Uma decisão espera por você' : `${items.length} decisões esperam por você`}</h2>
+    {items.map(i => {
+      const say = /"([^"]+)"/.exec(i.question ?? '')?.[1] ?? null;
+      const no = say ? say.replace(/^aprovo/i, 'recuso') : null;
+      return <article key={i.id} className="gate-item">
+        <p className="gate-title">{(i.title ?? '').replace(/^Carta de roadmap:\s*/i, 'Abrir a investigação: ')}</p>
+        {i.why && <p className="gate-why">{i.why}</p>}
+        {say && no && <div className="gate-actions">
+          <button type="button" className="gate-yes" onClick={() => copy(say)}><Icon n="check" /> Aprovar</button>
+          <button type="button" className="gate-no" onClick={() => copy(no)}><Icon n="cross" /> Recusar</button>
+          <a href="https://chatgpt.com/" target="_blank" rel="noreferrer">abrir o GPT →</a>
+        </div>}
+        {copied && (copied === say || copied === no) && <p className="gate-copied" role="status">Copiado. Cole no GPT: “{copied}”.</p>}
+      </article>;
+    })}
+  </section>;
+}
+
+// ---------- "Enquanto você esteve fora" ----------
+function AwaySummary({ lab, since }: { lab: Lab; since: string }) {
+  const evs = lab.activity.filter(e => e.at > since);
+  if (!evs.length) return null;
+  const n = (re: RegExp) => evs.filter(e => re.test(e.event_type)).length;
+  const results = n(/RESULT/), created = n(/CREATED|PROPOSED|ENQUEUED/), verdicts = n(/VERDICT|REVIEW|CONFIRM|REFUT/), thoughts = n(/THOUGHT/);
+  const parts = [
+    results && `${results} ${results === 1 ? 'resultado chegou' : 'resultados chegaram'}`,
+    created && `${created} ${created === 1 ? 'teste novo nasceu' : 'testes novos nasceram'}`,
+    verdicts && `${verdicts} ${verdicts === 1 ? 'julgamento' : 'julgamentos'}`,
+    thoughts && `${thoughts} ${thoughts === 1 ? 'pensamento' : 'pensamentos'}`,
+  ].filter(Boolean) as string[];
+  return <p className="away">
+    <b>Enquanto você esteve fora</b> ({ago(since)}): {parts.length ? parts.join(', ') : `${evs.length} movimentos`}.
+  </p>;
+}
+
+// ---------- Busca (Ctrl/⌘ K) ----------
+function Search({ lab, onClose }: { lab: Lab; onClose: () => void }) {
+  const [q, setQ] = useState('');
+  const all = useMemo(() => [
+    ...[...lab.tests.values()].map(t => ({ id: t.id, label: t.name, sub: t.question ?? '', kind: 'teste', href: labHref('entidade', t.id) })),
+    ...[...lab.hypotheses.values()].map(h => ({ id: h.id, label: h.statement ?? humanId(h.id), sub: '', kind: 'hipótese', href: labHref('entidade', h.id) })),
+    ...[...lab.roadmaps.values()].map(r => ({ id: r.id, label: r.title ?? humanId(r.id), sub: '', kind: 'investigação', href: labHref('roadmap', r.id) })),
+  ], [lab]);
+  const norm = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+  const hits = q.trim().length < 2 ? [] : all.filter(x => norm(`${x.label} ${x.sub}`).includes(norm(q.trim()))).slice(0, 12);
+  return <div className="search-veil" role="dialog" aria-label="Procurar" onClick={onClose}>
+    <div className="search-box" onClick={e => e.stopPropagation()}>
+      <input autoFocus value={q} onChange={e => setQ(e.target.value)} placeholder="Procurar teste, hipótese ou investigação…"
+        onKeyDown={e => { if (e.key === 'Enter' && hits[0]) { window.location.hash = hits[0].href; onClose(); } }} />
+      <ul>{hits.map(h => <li key={h.kind + h.id}><a href={h.href} onClick={onClose}><em>{h.kind}</em>{h.label}</a></li>)}</ul>
+      {q.trim().length >= 2 && !hits.length && <p className="hud-muted">Nada com esse nome.</p>}
+    </div>
+  </div>;
+}
+
+// ---------- Primeira visita: o que é cada fenômeno ----------
+function Legend({ onClose }: { onClose: () => void }) {
+  return <aside className="legend" role="note">
+    <p><b>Como ler o céu</b></p>
+    <ul>
+      <li><i className="lg lg-star" />cada estrela é um teste; a cor é o veredito</li>
+      <li><i className="lg lg-qso" />quasar: uma decisão espera por você</li>
+      <li><i className="lg lg-agn" />jato: testes rodando agora</li>
+      <li><i className="lg lg-grb" />clarão: acabou de nascer um pensamento</li>
+      <li><i className="lg lg-cloud" />nuvem: muitos testes prontos para rodar</li>
+    </ul>
+    <button type="button" onClick={onClose}>Entendi</button>
+  </aside>;
+}
+
+// ---------- Som opcional: zumbido baixo + sinal quando nasce um pensamento ----------
+function useAmbience(on: boolean, pulse: string | null) {
+  const ctx = useRef<AudioContext | null>(null);
+  const hum = useRef<GainNode | null>(null);
+  useEffect(() => {
+    if (!on) { hum.current?.gain.setTargetAtTime(0, ctx.current!.currentTime, 0.4); return; }
+    const c = ctx.current ?? (ctx.current = new AudioContext());
+    void c.resume();
+    if (!hum.current) {
+      const g = c.createGain(); g.gain.value = 0; g.connect(c.destination);
+      const f = c.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = 180; f.connect(g);
+      for (const hz of [55, 82.4, 110.3]) { const o = c.createOscillator(); o.frequency.value = hz; o.connect(f); o.start(); }
+      hum.current = g;
+    }
+    hum.current.gain.setTargetAtTime(0.035, c.currentTime, 1.2);
+  }, [on]);
+  useEffect(() => {
+    const c = ctx.current;
+    if (!on || !pulse || !c) return;
+    const o = c.createOscillator(), g = c.createGain();
+    o.type = 'sine'; o.frequency.setValueAtTime(880, c.currentTime); o.frequency.exponentialRampToValueAtTime(1320, c.currentTime + 0.25);
+    g.gain.setValueAtTime(0.0001, c.currentTime); g.gain.exponentialRampToValueAtTime(0.06, c.currentTime + 0.02); g.gain.exponentialRampToValueAtTime(0.0001, c.currentTime + 1.6);
+    o.connect(g).connect(c.destination); o.start(); o.stop(c.currentTime + 1.7);
+  }, [on, pulse]);
 }
 
 // ---------- Ciclo ----------

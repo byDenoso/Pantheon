@@ -420,3 +420,41 @@ details.tech .versus{margin-bottom:18px}
 .incident.s-ok .incident-state{color:var(--v-confirmed)}.incident.s-crit .incident-state{color:var(--v-refuted)}
 .incident-text{margin:0!important;color:var(--o-ink)!important}
 .incident-links{margin:6px 0 0!important;display:flex;flex-wrap:wrap;gap:10px;font-size:13px!important}
+
+/* ===== Portão, busca, legenda, ferramentas ===== */
+.gate-panel{border:1px solid rgba(212,191,149,.45);background:linear-gradient(180deg,rgba(212,191,149,.10),rgba(10,10,14,.72));border-radius:14px;padding:18px 20px;margin-bottom:24px;backdrop-filter:blur(10px)}
+.gate-panel h2{display:flex;gap:8px;align-items:center;color:var(--o-accent,#d4bf95)!important;margin:0 0 12px!important}
+.gate-item+.gate-item{border-top:1px solid rgba(255,255,255,.08);margin-top:14px;padding-top:14px}
+.gate-title{font-size:17px!important;color:var(--o-ink,#efe9dd);margin:0 0 4px}
+.gate-why{color:var(--o-dim,#bdb6c6);margin:0 0 12px}
+.gate-actions{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.gate-actions button{display:inline-flex;gap:6px;align-items:center;font:inherit;font-size:14px;padding:9px 16px;border-radius:999px;cursor:pointer;border:1px solid}
+.gate-yes{background:#d4bf95;color:#141217;border-color:#d4bf95}
+.gate-no{background:transparent;color:var(--o-ink,#efe9dd);border-color:rgba(255,255,255,.3)}
+.gate-actions a{font-size:13.5px;color:var(--o-dim,#bdb6c6)}
+.gate-copied{margin:10px 0 0;font-size:13.5px!important;color:#b8d4a8}
+.away{font-size:15px;color:var(--o-dim,#bdb6c6);margin:0 0 22px;padding-left:12px;border-left:2px solid var(--o-accent,#d4bf95)}
+.away b{color:var(--o-ink,#efe9dd);font-weight:600}
+.obs-tools{position:fixed;right:16px;bottom:16px;z-index:30;display:flex;gap:8px}
+.obs-tools button{display:inline-flex;gap:6px;align-items:center;font:inherit;font-size:13px;color:var(--o-ink,#efe9dd);background:rgba(12,12,16,.72);border:1px solid rgba(255,255,255,.16);border-radius:999px;padding:8px 14px;cursor:pointer;backdrop-filter:blur(8px)}
+.obs-tools button[aria-pressed=true]{border-color:var(--o-accent,#d4bf95);color:var(--o-accent,#d4bf95)}
+.search-veil{position:fixed;inset:0;z-index:60;background:rgba(4,4,8,.88)!important;backdrop-filter:blur(4px);display:grid;place-items:start center;padding:12vh 16px 16px}
+.search-box{width:min(620px,100%);background:#121116;border:1px solid rgba(255,255,255,.14);border-radius:14px;padding:10px;box-shadow:0 30px 80px rgba(0,0,0,.6)}
+.search-box input{width:100%;box-sizing:border-box;font:inherit;font-size:17px;background:#121116!important;color:#efe9dd!important;border:0;border-bottom:1px solid rgba(255,255,255,.1);color:#efe9dd;padding:12px 10px;outline:none}
+.search-box ul{list-style:none;margin:6px 0 0;padding:0;max-height:52vh;overflow:auto}
+.search-box li a{display:block;padding:10px;border-radius:8px;color:#efe9dd;text-decoration:none;font-size:15px}
+.search-box li a:hover,.search-box li a:focus{background:rgba(212,191,149,.12)}
+.search-box em{font-style:normal;font-size:11.5px;letter-spacing:.08em;text-transform:uppercase;color:#958fa1;margin-right:10px}
+.search-box .hud-muted{padding:10px}
+.legend{position:fixed;left:16px;bottom:16px;z-index:30;max-width:320px;background:rgba(12,12,16,.85);border:1px solid rgba(255,255,255,.14);border-radius:14px;padding:14px 16px;backdrop-filter:blur(10px);font-size:14px;color:#efe9dd}
+.legend p{margin:0 0 8px}
+.legend ul{list-style:none;margin:0 0 12px;padding:0;display:grid;gap:7px;color:#bdb6c6}
+.legend li{display:flex;gap:10px;align-items:center}
+.legend button{font:inherit;font-size:13px;background:#d4bf95;color:#141217;border:0;border-radius:999px;padding:7px 14px;cursor:pointer}
+.lg{flex:none;width:12px;height:12px;border-radius:50%;display:inline-block}
+.lg-star{background:#e8e2d4;box-shadow:0 0 6px #e8e2d4}
+.lg-qso{background:#fff;box-shadow:0 0 0 3px rgba(212,191,149,.5),0 0 12px #d4bf95}
+.lg-agn{width:4px;height:16px;border-radius:2px;background:linear-gradient(#8c96b3,transparent)}
+.lg-grb{background:#fff;box-shadow:0 0 14px 4px rgba(255,255,255,.7)}
+.lg-cloud{width:16px;background:radial-gradient(rgba(140,150,179,.8),transparent 70%)}
+@media (max-width:760px){.obs-tools{bottom:auto;top:64px;right:12px}.legend{left:12px;right:12px;bottom:auto;top:108px;max-width:none}}
