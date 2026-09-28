@@ -364,7 +364,7 @@ test('published Pages auto-syncs Tower snapshots without a new infrastructure se
   assert.match(workflow, /repository_dispatch:/);
   assert.match(workflow, /nexo-public-projection-updated/);
   assert.match(workflow, /cron:\s*'0 \* \* \* \*'/);
-  assert.match(writer, /cron:\s*'7,37 \* \* \* \*'/);
+  assert.match(writer, /cron:\s*'7,22,37,52 \* \* \* \*'/);
   assert.match(writer, /nexo-wake\/\*\.json/);
   assert.match(guide, /agendamento horário é apenas recuperação/);
   assert.match(guide, /Writer robô .*a cada 30 min/);
