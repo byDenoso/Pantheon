@@ -492,3 +492,18 @@ details.tech .versus{margin-bottom:18px}
   .observatory:not(.exploring) .obs-tools{top:58px}
   .observatory:not(.exploring)::before{display:none}
 }
+
+/* ===== Trilha do roadmap ===== */
+.trail{margin:8px 0 26px;padding:14px 16px 10px;border-radius:14px;background:rgba(8,12,20,.6);border:1px solid rgba(255,255,255,.06);pointer-events:auto}
+.trail svg{width:100%;height:auto;display:block;overflow:visible}
+.trail-ahead{fill:none;stroke:rgba(159,179,200,.25);stroke-width:1.2;stroke-dasharray:3 5}
+.trail-walk{fill:none;stroke:url(#trail-walk);stroke-width:2}
+.trail circle{transition:r .2s}
+.trail a:hover circle{r:8}
+.trail-front{fill:#05060a;stroke:#4fa3a0;stroke-width:1.6;animation:trail-pulse 2.4s ease-in-out infinite}
+@keyframes trail-pulse{50%{stroke-opacity:.35}}
+.trail-goal circle{fill:none;stroke:#d4bf95;stroke-width:1.2}
+.trail-goal path{stroke:#d4bf95;stroke-width:1.2}
+.trail figcaption{display:flex;gap:16px;flex-wrap:wrap;font:400 11.5px var(--sig-mono,monospace);color:#8f9aa6;letter-spacing:.04em;margin-top:4px}
+.trail figcaption .tf{color:#4fa3a0}.trail figcaption .tg{color:#d4bf95;margin-left:auto}
+@media (prefers-reduced-motion:reduce){.trail-front{animation:none}}

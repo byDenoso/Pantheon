@@ -432,6 +432,7 @@ function RoadmapPage({ lab, id }: { lab: Lab; id: string }) {
       {r.question && <p className="hud-lead">{r.question}</p>}
       {r.objectives?.length ? <ul className="crit objectives">{r.objectives.map(o => <li key={o}>{o}</li>)}</ul> : null}
     </header>
+    <Trail tests={tests} frontier={nextUp.map(t => t.id)} target={r.target} />
     <div className="stop-rules">
       <div><span>Meta</span><strong>{r.confirmed}/{r.target ?? '?'}</strong><i style={{ width: `${pct(r.confirmed, r.target)}%` }} className="ok" /><em>confirmações para encerrar com sucesso</em></div>
       <div><span>Refutações seguidas</span><strong>{r.refutedStreak}/{r.killStreak ?? '?'}</strong><i style={{ width: `${pct(r.refutedStreak, r.killStreak)}%` }} className="crit" /><em>encerra por refutação</em></div>
@@ -441,7 +442,7 @@ function RoadmapPage({ lab, id }: { lab: Lab; id: string }) {
       {tests.length === 0 ? <Missing what="tests[].roadmap_id (roadmap sem campanha ligada)" /> :
         <div className="tree">{[...hyps].map(([h, ts]) => <details key={h} open={hyps.size < 6}>
           <summary><span>{h === '—' ? 'Sem hipótese declarada' : (lab.hypotheses.get(h)?.statement ?? humanId(h))}</span><Bar parts={roadmapParts(lab, ts.map(t => t.id))} total={ts.length} /></summary>
-          <ul>{ts.map(t => <li key={t.id}><VerdictChip v={t.verdict} small /><E id={t.id}>{t.question ?? humanId(t.id)}</E></li>)}</ul>
+          <ul>{ts.map(t => <li key={t.id}><VerdictChip v={t.verdict} small /><E id={t.id}>{t.name}</E></li>)}</ul>
         </details>)}</div>}
     </Section>
     <div className="hud-pair">
@@ -449,7 +450,7 @@ function RoadmapPage({ lab, id }: { lab: Lab; id: string }) {
         {confirmed.length ? <ul className="hud-list">{confirmed.map(t => <li key={t.id}><E id={t.id}>{t.meaning ?? t.question}</E></li>)}</ul> : <p className="hud-muted">Nada confirmado ainda.</p>}
       </Section>
       <Section title="Próximos testes" kicker={`${r.frontier} na fronteira`} id="rm-next">
-        {nextUp.length ? <ul className="hud-list">{nextUp.map(t => <li key={t.id}><E id={t.id}>{t.question ?? humanId(t.id)}</E></li>)}</ul> : <p className="hud-muted">Sem testes prontos.</p>}
+        {nextUp.length ? <ul className="hud-list">{nextUp.map(t => <li key={t.id}><E id={t.id}>{t.name}</E></li>)}</ul> : <p className="hud-muted">Sem testes prontos.</p>}
         {blocked.length > 0 && <p className="hud-note">{blocked.length} bloqueados: <E id={blocked[0]!.id}>{blocked[0]!.blocker ?? 'ver motivo'}</E></p>}
       </Section>
     </div>
@@ -952,4 +953,33 @@ function Acoustic() {
     </linearGradient></defs><path d={ACOUSTIC} /></svg>
     <span><em>Λ</em>_ observatório NEXO · ℓ(ℓ+1)C<sub>ℓ</sub></span>
   </p>;
+}
+
+// ---------- Trilha do roadmap: o caminho andado (cor = veredito), a fronteira acesa e a meta ----------
+const TRAIL_COLOR: Record<Verdict, string> = {
+  CONFIRMED: '#7fae8a', REFUTED: '#c8553d', REVIEW: '#d4bf95', PROVISIONAL: '#9aa7c7', READY: '#4fa3a0', BLOCKED: '#6b6f7a', DISCARDED: '#3d414a',
+};
+function Trail({ tests, frontier, target }: { tests: TestEntity[]; frontier: string[]; target: number | null }) {
+  const walked = tests.filter(t => !frontier.includes(t.id) && t.verdict !== 'READY')
+    .sort((a, b) => String(a.executedAt ?? a.createdAt ?? '').localeCompare(String(b.executedAt ?? b.createdAt ?? '')));
+  const ahead = tests.filter(t => frontier.includes(t.id) || t.verdict === 'READY').slice(0, 8);
+  if (!walked.length && !ahead.length) return null;
+  const n = walked.length + ahead.length + 1, step = 40, W = Math.max(320, 48 + (n - 1) * step);
+  const x = (i: number) => 24 + i * step;
+  const y = (i: number) => 46 + Math.sin(i * 0.55) * 14;
+  const pathD = Array.from({ length: n }, (_, i) => `${i ? 'L' : 'M'}${x(i).toFixed(1)},${y(i).toFixed(1)}`).join(' ');
+  const walkedEnd = walked.length ? x(walked.length - 1) : 24;
+  const confirmed = tests.filter(t => t.verdict === 'CONFIRMED').length;
+  return <figure className="trail" aria-label={`Trilha: ${walked.length} testes andados, ${ahead.length} na fronteira`}>
+    <svg viewBox={`0 0 ${W} 92`} style={{ maxHeight: 140 }}>
+      <defs><linearGradient id="trail-walk" x1="0" x2="1"><stop offset="0" stopColor="#6d86b8" stopOpacity=".2" /><stop offset="1" stopColor="#d4bf95" /></linearGradient></defs>
+      <path d={pathD} className="trail-ahead" />
+      <path d={pathD} className="trail-walk" style={{ clipPath: `inset(0 ${W - walkedEnd}px 0 0)` }} />
+      {walked.map((t, i) => <a key={t.id} href={labHref('entidade', t.id)}><circle cx={x(i)} cy={y(i)} r={t.verdict === 'CONFIRMED' ? 6 : 4} fill={TRAIL_COLOR[t.verdict]}><title>{t.name}</title></circle></a>)}
+      {ahead.map((t, k) => { const i = walked.length + k; return <a key={t.id} href={labHref('entidade', t.id)}>
+        <circle cx={x(i)} cy={y(i)} r={4} className="trail-front"><title>{`Próximo: ${t.name}`}</title></circle></a>; })}
+      <g transform={`translate(${x(n - 1)},${y(n - 1)})`} className="trail-goal"><circle r={9} /><path d="M-4 0h8M0-4v8" /></g>
+    </svg>
+    <figcaption><span>{walked.length} andados</span><span className="tf">{ahead.length} na fronteira</span><span className="tg">meta: {confirmed}/{target ?? '?'} confirmados</span></figcaption>
+  </figure>;
 }
