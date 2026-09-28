@@ -770,6 +770,7 @@ const taskOf = (role: string) => TASKS.find(t => t.hats.includes(role.toUpperCas
 const roleLabel = (role: string) => { const t = taskOf(role); const r = ROLE_PT[role.toUpperCase()] ?? role; return t ? `${t.name} · ${r}` : r; };
 const NARRATION: Record<string, string> = {
   SEMANTIC_BACKFILLED: 'Dei nome e leitura simples a %q',
+  TEST_ENRICHED: 'Completei a ficha de %q',
   LEARNING_SIGNAL_RECORDED: 'Anotei uma lacuna para resolver (receita ou dado que falta).',
   TEST_DISPATCHED: 'Mandei para a bateria de testes: %q',
   TEST_RESULT_RECORDED: 'Terminei um teste: %q',
@@ -1060,7 +1061,7 @@ function Board({ state }: { state: SystemState }) {
   return <Section title="Conversa entre os agentes" kicker={`${posts.length} ${posts.length === 1 ? 'recado aberto' : 'recados abertos'}`} id="now-board">
     <ol className="board">{posts.map(p => <li key={p.id}>
       <p className="board-head"><b>{who(p.from)}</b><i aria-hidden="true">→</i><span>{who(p.to)}</span><time>{ago(p.at)}</time></p>
-      <p className="board-text">{p.text}</p>
+      <p className="board-text">{clip(humanize(p.text), 220)}</p>
       {(p.refs?.length ?? 0) > 0 && <p className="hud-refs">{p.refs!.slice(0, 3).map(r => <E key={r} id={r} />)}</p>}
     </li>)}</ol>
   </Section>;
@@ -1094,6 +1095,7 @@ function Telemetry({ lab, state }: { lab: Lab; state: SystemState }) {
   // Ações iguais e seguidas do mesmo papel (ex.: 46 nomes preenchidos) viram uma linha só.
   const GROUP_PT: Record<string, (n: number) => string> = {
     SEMANTIC_BACKFILLED: n => `Dei nome e leitura simples a ${n} testes.`,
+    TEST_ENRICHED: n => `Completei a ficha de ${n} testes antigos.`,
     LEARNING_SIGNAL_RECORDED: n => `Anotei ${n} lacunas para resolver (receitas ou dados que faltam).`,
     TEST_DISPATCHED: n => `Mandei ${n} testes para a bateria.`,
     ROADMAP_TEST_FROZEN: n => `Congelei as regras de ${n} testes antes de olhar os dados.`,
@@ -1257,6 +1259,9 @@ function clip(text: string, n: number) {
   return cut.replace(/[,;:.\s]+$/, '') + '…';
 }
 const JARGON: Array<[RegExp, string]> = [
+  [/SEMANTIC_BACKFILL[^.;)]*/g, 'ficha dos testes'], [/hypothesis_id/g, 'hipótese'], [/display_name/g, 'nome'], [/topic_id/g, 'tópico'],
+  [/question\/null\/rival/g, 'pergunta, nula e rival'], [/result_meaning\/verdict_plain\/confidence_plain/g, 'leitura do resultado'],
+  [/HYPOTHESIS/g, 'hipótese'], [/ENGINEERING/g, 'Engenharia'], [/SCIENCE/g, 'Ciência'], [/runtime_revision/g, 'versão do motor'],
   [/\bTEST_BATTERY\b/g, 'baterias de teste'], [/\bREADY\b/g, 'prontos'], [/\bCONFIRMED\b/g, 'confirmados'], [/\bREFUTED\b/g, 'refutados'],
   [/\bBLOCKED_INPUT\b/g, 'bloqueados por falta de dado'], [/\bscript inline\b/gi, 'código solto'], [/\bnão-Olympus\b/g, 'fora do Olympus'],
   [/\bRECIPE_REQUEST\b/g, 'pedido de receita'], [/\bstale\b/gi, 'desatualizada'], [/\bbootstraps?\b/gi, 'arranques'],
