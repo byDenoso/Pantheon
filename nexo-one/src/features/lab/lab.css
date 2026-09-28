@@ -611,3 +611,43 @@ details.tech .versus{margin-bottom:18px}
 .observatory .hud-status.s-crit i{background:var(--v-refuted)!important;box-shadow:0 0 10px var(--v-refuted)}
 .observatory .hud-status.s-ok i{background:var(--v-confirmed)!important;box-shadow:0 0 10px var(--v-confirmed)}
 .observatory .num,.observatory .stat strong,.observatory time{font-variant-numeric:tabular-nums}
+
+/* ===== ATLAS v2: moldura desktop — trilho à esquerda, teia no meio, telemetria à direita ===== */
+.telemetry{display:none}
+@media (min-width:1280px){
+  .lab-route .instrument-header{position:fixed!important;left:0;top:0;bottom:0;width:84px;height:auto!important;z-index:40;
+    flex-direction:column!important;align-items:center!important;justify-content:flex-start!important;gap:6px!important;padding:16px 0!important;
+    border-right:1px solid var(--obs-line);border-bottom:0!important;background:var(--obs-void)!important}
+  .lab-route .instrument-header::after{display:none}
+  .lab-route .instrument-brand{flex-direction:column;gap:0!important;margin-bottom:18px}
+  .lab-route .instrument-brand strong{display:none}
+  .lab-route .instrument-modes{flex-direction:column!important;align-items:stretch;gap:4px!important;width:72px;position:static!important;height:auto!important;background:none!important;border:0!important}
+  .lab-route .instrument-modes button{flex-direction:column!important;height:auto!important;padding:9px 0!important;gap:5px!important;border:0!important;border-radius:10px!important;font:500 11.5px var(--sig-sans)!important;letter-spacing:0!important;text-transform:none!important}
+  .lab-route .instrument-modes button svg{display:block!important;width:20px;height:20px}
+  .lab-route .instrument-modes button.active{background:rgba(var(--o-accent-rgb),.1)!important;color:var(--obs-bright)!important}
+  .lab-route .instrument-modes button.active svg{color:var(--o-accent)}
+  .lab-route .instrument-provenance,.lab-route .instrument-search{display:none!important}
+  .lab-route .instrument-sync{margin-top:auto!important;width:44px!important;padding:0!important;justify-content:center}
+  .lab-route .instrument-sync>span:last-child{display:none}
+  .lab-route .cockpit-body,.lab-route .workspace{padding-left:84px!important;padding-top:0!important}
+  .lab-route .observatory{min-height:100vh}
+  .observatory .obs-scene{left:84px;right:340px}
+  .observatory:not(.exploring) .hud{max-width:600px!important;padding-left:40px!important;padding-right:24px!important}
+  .observatory .hud{margin-left:0}
+  .observatory .explore-toggle{right:356px}
+  .observatory .obs-tools{right:356px}
+  .telemetry{display:flex;flex-direction:column;position:fixed;top:0;right:0;bottom:0;width:380px;z-index:6;
+    background:var(--obs-void);border-left:1px solid var(--obs-line);color:var(--o-ink)}
+  .telemetry{width:340px}
+  .telemetry header{padding:18px 20px 12px;border-bottom:1px solid var(--obs-line)}
+  .telemetry header p{margin:0;display:flex;align-items:center;gap:8px;font:600 14px var(--sig-sans)}
+  .telemetry header p i{width:7px;height:7px;border-radius:50%;background:var(--o-accent);box-shadow:0 0 8px var(--o-accent);animation:tele-pulse 2s infinite}
+  .telemetry header small{display:block;margin-top:4px;font-size:13px;color:var(--o-quiet)}
+  .tele-feed{list-style:none;margin:0;padding:14px 20px 24px;overflow-y:auto;display:flex;flex-direction:column;gap:14px}
+  .tele-feed li p{margin:0}
+  .tele-h{display:flex;gap:6px;align-items:baseline;font:500 12.5px var(--sig-mono);color:var(--o-quiet)}
+  .tele-h b{font-weight:500;color:var(--o-accent)}.tele-h span{color:var(--o-dim)}.tele-h time{margin-left:auto}
+  .tele-t{font:400 14.5px/1.5 var(--sig-sans);color:var(--o-ink);margin-top:2px!important}
+  .tele-note{padding:9px 11px;border-radius:10px;background:rgba(var(--o-accent-rgb),.08);border:1px solid rgba(var(--o-accent-rgb),.28)}
+}
+@keyframes tele-pulse{50%{opacity:.35}}

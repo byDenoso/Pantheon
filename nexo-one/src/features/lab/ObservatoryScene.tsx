@@ -359,7 +359,8 @@ export function ObservatoryScene({ tests, page, focusIds, onPick, theme, events,
       const w = el.clientWidth || window.innerWidth, h = el.clientHeight || window.innerHeight;
       renderer.setSize(w, h, false); camera.aspect = w / h;
       // Desktop: a teia vive à direita, a coluna de leitura à esquerda.
-      if (w > 900) camera.setViewOffset(w, h, -w * 0.2, 0, w, h); else camera.clearViewOffset();
+      // Desktop: a coluna de leitura ocupa ~600px à esquerda; a teia se desloca para a área livre.
+      if (w > 900) camera.setViewOffset(w, h, -Math.min(w * 0.3, 300), 0, w, h); else camera.clearViewOffset();
       camera.updateProjectionMatrix();
     };
     // Bloom: brilho físico dos aglomerados e filamentos (alta = resolução cheia, média = meia, baixa = sem).

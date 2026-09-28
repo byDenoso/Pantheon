@@ -141,6 +141,7 @@ export default function LabApp({ state, route, theme }: { state: SystemState; ro
         onPick={id => { window.location.hash = labHref('entidade', id); }} />
     </Suspense>
     <div className="hud" key={`${route.page}:${route.id ?? ''}`}>{page}<Acoustic /></div>
+    <Telemetry lab={lab} state={state} />
   </div>;
 }
 
@@ -1050,4 +1051,21 @@ function Crew({ lab }: { lab: Lab }) {
       </article>;
     })}
   </section>;
+}
+
+// ---------- Telemetria ao vivo (desktop largo): recados entre agentes + ações, em ordem de tempo ----------
+function Telemetry({ lab, state }: { lab: Lab; state: SystemState }) {
+  const now = Date.now();
+  const notes = (state.evolution?.board ?? []).filter(p => !p.resolved_at && (!p.expires_at || Date.parse(p.expires_at) > now))
+    .map(p => ({ kind: 'note' as const, at: p.at, who: roleLabel(p.from), to: p.to === 'ALL' ? 'todos' : roleLabel(p.to), text: p.text, id: p.id }));
+  const acts = lab.activity.slice(-60).map((e, i) => ({ kind: 'act' as const, at: e.at, who: roleLabel(String(e.role)), to: '', text: narrate(e, lab), id: `${e.at}-${i}` }));
+  const feed = [...notes, ...acts].sort((a, b) => b.at.localeCompare(a.at)).slice(0, 50);
+  const day = lab.activity.filter(e => now - Date.parse(e.at) < 864e5).length;
+  return <aside className="telemetry" aria-label="Telemetria ao vivo">
+    <header><p><i aria-hidden="true" />Telemetria ao vivo</p><small>agentes conversando e agindo · {day} ações em 24 h</small></header>
+    <ol className="tele-feed">{feed.map(f => <li key={f.id} className={f.kind === 'note' ? 'tele-note' : undefined}>
+      <p className="tele-h"><b>{f.who}</b>{f.to && <><i aria-hidden="true">→</i><span>{f.to}</span></>}<time>{ago(f.at)}</time></p>
+      <p className="tele-t">{f.text}</p>
+    </li>)}</ol>
+  </aside>;
 }
