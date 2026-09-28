@@ -212,7 +212,7 @@ function Now({ lab, state, onReplay, replayCount }: { lab: Lab; state: SystemSta
       <span className="sig-prompt" aria-hidden="true"><b>nexo@atlas</b>:<i>~</i>$ observe --agora</span>
       <h1>O NEXO <em>agora</em></h1>
       {latest
-        ? <p className="thesis">Último achado científico: <E id={latest.id}>{latest.name}</E>. <span>{latest.meaning}</span></p>
+        ? <p className="thesis">Último achado científico: <E id={latest.id}>{latest.name}</E>. <span>{humanize(latest.meaning ?? "")}</span></p>
         : <p className="thesis">Ainda sem achado científico publicado; {S.ready} testes esperam para rodar.</p>}
     </header>
 
@@ -237,7 +237,7 @@ function Now({ lab, state, onReplay, replayCount }: { lab: Lab; state: SystemSta
 
     <Frontiers lab={lab} />
 
-    {thought && <Section title="O que o NEXO está pensando" kicker={`Pítia · ${ago(thought.at)}`} id="now-thought">
+    {thought && <Section title={Date.now() - Date.parse(thought.at) > 6 * 3600e3 ? 'Último pensamento registrado' : 'O que o NEXO está pensando'} kicker={`Pítia · ${ago(thought.at)}${Date.now() - Date.parse(thought.at) > 6 * 3600e3 ? ' · Pítia quieta desde então' : ''}`} id="now-thought">
       <blockquote className="hud-thought">{thought.text}</blockquote>
       {thought.refs.some(r => lab.tests.has(r) || lab.hypotheses.has(r)) &&
         <p className="hud-refs">{thought.refs.filter(r => lab.tests.has(r) || lab.hypotheses.has(r)).slice(0, 3).map(r => <E key={r} id={r} />)}</p>}
@@ -488,7 +488,7 @@ function RoadmapPage({ lab, id }: { lab: Lab; id: string }) {
     </Section>
     <div className="hud-pair">
       <Section title="Evidência acumulada" kicker={`${confirmed.length} confirmados`} id="rm-ev">
-        {confirmed.length ? <ul className="hud-list">{confirmed.map(t => <li key={t.id}><E id={t.id}>{t.meaning ?? t.question}</E></li>)}</ul> : <p className="hud-muted">Nada confirmado ainda.</p>}
+        {confirmed.length ? <ul className="hud-list">{confirmed.map(t => <li key={t.id}><E id={t.id}>{humanize(t.meaning ?? t.question ?? '')}</E></li>)}</ul> : <p className="hud-muted">Nada confirmado ainda.</p>}
       </Section>
       <Section title="Próximos testes" kicker={`${r.frontier} na fronteira`} id="rm-next">
         {nextUp.length ? <ul className="hud-list">{nextUp.map(t => <li key={t.id}><E id={t.id}>{t.name}</E></li>)}</ul> : <p className="hud-muted">Sem testes prontos.</p>}
@@ -520,7 +520,7 @@ function Evidence({ lab, filter }: { lab: Lab; filter?: Verdict }) {
           <a className="ev-card" href={labHref('entidade', t.id)}>
             <strong>{t.name}</strong>
             {t.question && t.question !== t.name && <span className="ev-q">{t.question}</span>}
-            {t.meaning && <span className="ev-m">{t.meaning}</span>}
+            {t.meaning && <span className="ev-m">{humanize(t.meaning)}</span>}
             <span className="ev-meta"><em>{normDomain(t.domain)}</em>{t.contests.length > 0 && <em>{t.contests.length} {t.contests.length === 1 ? 'ataque' : 'ataques'}</em>}</span>
           </a></li>)}</ul>
         {!filter && group.length > 24 && <a className="ev-more" href={`#/evidencia?v=${v}`}>ver os {group.length} →</a>}
@@ -569,7 +569,7 @@ function EntityPage({ lab, id }: { lab: Lab; id: string }) {
     </Section>
 
     {(t.meaning || Boolean(t.claimBoundary)) && <Section title="No que acredito agora" id="en-mean">
-      {t.meaning && <p className="hud-big">{t.meaning}</p>}
+      {t.meaning && <p className="hud-big">{humanize(t.meaning)}</p>}
       {Boolean(t.claimBoundary) && <p className="boundary"><b>O que isto não prova:</b> {text(t.claimBoundary)}</p>}
     </Section>}
 
@@ -669,7 +669,7 @@ function Health({ state, lab }: { state: SystemState; lab: Lab }) {
         return <li key={i.incident_id} className={`incident s-${st.tone}`}>
           <p className="incident-head"><span className="incident-state">{st.label}</span>
             <span className="hud-muted">visto {i.evidence_count} {i.evidence_count === 1 ? 'vez' : 'vezes'} · quem investiga: {ROLE_PT[i.next_owner.toUpperCase()] ?? i.next_owner}</span></p>
-          <p className="incident-text">{i.summary_plain ?? i.summary_pt ?? 'Problema registrado sem descrição pública.'}</p>
+          <p className="incident-text">{humanize((i.summary_plain ?? i.summary_pt ?? 'Problema registrado sem descrição pública.').replace(/(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):\d{2}Z/g, (_m: string, y: string, mo: string, d: string, h: string, mi: string) => `${d}/${mo} às ${h}:${mi} UTC`).replace(/Falta duas/g, 'Faltam duas'))}</p>
           {links.length > 0 && <p className="incident-links">{links.slice(0, 4).map(l => <E key={l} id={l} />)}</p>}
         </li>;
       })}</ul>
@@ -758,13 +758,14 @@ function Swimlanes({ events }: { events: Array<{ event_type: string; role: strin
 // ---------- "vivo": monólogo, calibração, replay ----------
 const ROLE_PT: Record<string, string> = {
   PITIA: 'Pítia', LEARNER: 'Learner', EXECUTOR: 'Executor', REFUTADOR: 'Refutador', REFEREE_1: 'Refutador', GUARDIAO: 'Guardião',
-  DENER: 'Dener', CONVERSA: 'Conversa', WRITER_ROBOT: 'Robô escritor', SENTINEL: 'Pítia',
+  DENER: 'Dener', CONVERSA: 'Conversa', WRITER_ROBOT: 'Robô escritor', SENTINEL: 'Pítia', ENGINEER: 'Engenheiro', CLAUDE: 'Claude', CHATGPT_CONVERSATION: 'Conversa',
 };
 /** Três tarefas agendadas vestem os seis papéis; o papel continua sendo quem assina cada ação. */
 const TASKS: Array<{ id: string; name: string; hats: string[]; rhythm: string; does: string }> = [
-  { id: 'cientista', name: 'Cientista', hats: ['LEARNER', 'PITIA', 'SENTINEL'], rhythm: 'a cada hora', does: 'propõe hipóteses, nomeia testes, pensa e vigia a literatura' },
+  { id: 'cientista', name: 'Cientista', hats: ['LEARNER', 'PITIA', 'SENTINEL'], rhythm: 'a cada 2 horas', does: 'propõe hipóteses, nomeia testes, pensa e vigia a literatura' },
   { id: 'operador', name: 'Operador', hats: ['EXECUTOR'], rhythm: 'a cada hora', does: 'monta as baterias, pede e escreve receitas, liga dados' },
-  { id: 'critico', name: 'Crítico', hats: ['REFUTADOR', 'REFEREE_1', 'GUARDIAO'], rhythm: 'a cada hora', does: 'ataca resultados, julga, audita a saúde e escreve o bom-dia' },
+  { id: 'engenheiro', name: 'Engenheiro', hats: ['ENGINEER'], rhythm: 'a cada 3 horas', does: 'escreve e conserta receitas, vigia o robô e a bateria' },
+  { id: 'critico', name: 'Crítico', hats: ['REFUTADOR', 'REFEREE_1', 'GUARDIAO'], rhythm: 'a cada 2 horas', does: 'ataca resultados, julga, audita a saúde e escreve o bom-dia' },
 ];
 const taskOf = (role: string) => TASKS.find(t => t.hats.includes(role.toUpperCase()));
 const roleLabel = (role: string) => { const t = taskOf(role); const r = ROLE_PT[role.toUpperCase()] ?? role; return t ? `${t.name} · ${r}` : r; };
@@ -1060,7 +1061,7 @@ const RECIPE_PT: Record<string, string> = {
 };
 function nameIds(text: string, lab: Lab): string {
   return text
-    .replace(/[A-Za-z][A-Za-z0-9]*(?:[-_][A-Za-z0-9]+){2,}/g, tok => {
+    .replace(/[A-Za-z][A-Za-z0-9]*(?:[-_][A-Za-z0-9]+){1,}/g, tok => {
       const t = lab.tests.get(tok); if (t) return `“${t.name}”`;
       const h = lab.hypotheses.get(tok); if (h) return `“${clip(h.statement ?? 'uma hipótese', 60)}”`;
       if (RECIPE_PT[tok]) return RECIPE_PT[tok]!;
@@ -1080,7 +1081,7 @@ function Board({ state, lab }: { state: SystemState; lab: Lab }) {
     <ol className="board">{posts.map(p => <li key={p.id}>
       <p className="board-head"><b>{who(p.from)}</b><i aria-hidden="true">→</i><span>{who(p.to)}</span><time>{ago(p.at)}</time></p>
       <p className="board-text">{clip(humanize(nameIds(p.text, lab)), 220)}</p>
-      {(p.refs?.length ?? 0) > 0 && <p className="hud-refs">{p.refs!.slice(0, 3).map(r => <E key={r} id={r} />)}</p>}
+      {(p.refs?.length ?? 0) > 0 && <p className="hud-refs">{p.refs!.filter(r => lab.tests.has(r) || lab.hypotheses.has(r)).slice(0, 3).map(r => <E key={r} id={r} />)}</p>}
     </li>)}</ol>
   </Section>;
 }
@@ -1177,7 +1178,7 @@ function ResultCard({ t }: { t: TestEntity }) {
   return <section className="hud-section result-card" aria-label="Resultado em foco">
     <h2>Resultado em foco</h2>
     <p className="rc-name"><E id={t.id}>{t.name}</E> <VerdictChip v={t.verdict} small /></p>
-    {t.meaning && <p className="rc-meaning">{t.meaning}</p>}
+    {t.meaning && <p className="rc-meaning">{humanize(t.meaning)}</p>}
     {rows.length > 0 && <dl className="rc-stats">{rows.map(([a, b]) => <div key={a}><dt>{a}</dt><dd>{b}</dd></div>)}</dl>}
     {sigma !== undefined && <div className="rc-gauge" aria-label={`Significância ${sigma.toFixed(1)} sigma`}>
       <svg viewBox="0 0 300 34"><line x1="10" x2="290" y1="18" y2="18" className="g-axis" />
@@ -1215,7 +1216,7 @@ function Frontiers({ lab }: { lab: Lab }) {
     <ul className="fronts">{rows.map(r => { const T = tally(r.list); return <li key={r.name}>
       <p className="fr-top"><b>{r.name}</b><span className={`fr-grade g-${r.grade === 'sólido' ? 'solid' : r.grade === 'tensão' ? 'tension' : 'open'}`}>{r.grade}</span></p>
       <p className="fr-note">{r.note}</p>
-      <p className="fr-nexo">{T.total ? <>NEXO: <b>{T.total}</b> testes · {T.confirmed} confirmados · {T.refuted} refutados · {T.ready} na fila</> : 'NEXO ainda não testou esta frente'}</p>
+      <p className="fr-nexo">{T.total ? <>NEXO: <b>{T.total}</b> testes · {T.confirmed} {T.confirmed === 1 ? 'confirmado' : 'confirmados'} · {T.refuted} {T.refuted === 1 ? 'refutado' : 'refutados'} · {T.ready} na fila</> : 'NEXO ainda não testou esta frente'}</p>
     </li>; })}</ul>
   </Section>;
 }
@@ -1277,6 +1278,10 @@ function clip(text: string, n: number) {
   return cut.replace(/[,;:.\s]+$/, '') + '…';
 }
 const JARGON: Array<[RegExp, string]> = [
+  [/numbers sem statistics/g, 'números sem o bloco de estatísticas'], [/statistics/g, 'estatísticas'], [/artifact/g, 'artefato'],
+  [/campaign_objective/g, 'objetivo da campanha'], [/created_at/g, 'data de criação'], [/event_id/g, 'identificador do evento'],
+  [/schema/g, 'formato'], [/runtime/g, 'motor de execução'], [/preflight/gi, 'checagem prévia'], [/checkpoints?/g, 'pontos salvos'],
+  [/staging/g, 'área de preparo'], [/stageada/g, 'preparada'], [/read-back/g, 'releitura'], [/PROMOTED/g, 'promovidos'],
   [/SEMANTIC_BACKFILL[^.;)]*/g, 'ficha dos testes'], [/hypothesis_id/g, 'hipótese'], [/display_name/g, 'nome'], [/topic_id/g, 'tópico'],
   [/question\/null\/rival/g, 'pergunta, nula e rival'], [/result_meaning\/verdict_plain\/confidence_plain/g, 'leitura do resultado'],
   [/HYPOTHESIS/g, 'hipótese'], [/ENGINEERING/g, 'Engenharia'], [/SCIENCE/g, 'Ciência'], [/runtime_revision/g, 'versão do motor'],
