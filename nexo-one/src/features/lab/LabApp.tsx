@@ -731,9 +731,9 @@ const ROLE_PT: Record<string, string> = {
 };
 /** Três tarefas agendadas vestem os seis papéis; o papel continua sendo quem assina cada ação. */
 const TASKS: Array<{ id: string; name: string; hats: string[]; rhythm: string; does: string }> = [
-  { id: 'cientista', name: 'Cientista', hats: ['LEARNER', 'PITIA', 'SENTINEL'], rhythm: 'a cada 2 h', does: 'propõe hipóteses, nomeia testes, pensa e vigia a literatura' },
+  { id: 'cientista', name: 'Cientista', hats: ['LEARNER', 'PITIA', 'SENTINEL'], rhythm: 'a cada hora', does: 'propõe hipóteses, nomeia testes, pensa e vigia a literatura' },
   { id: 'operador', name: 'Operador', hats: ['EXECUTOR'], rhythm: 'a cada hora', does: 'monta as baterias, pede e escreve receitas, liga dados' },
-  { id: 'critico', name: 'Crítico', hats: ['REFUTADOR', 'REFEREE_1', 'GUARDIAO'], rhythm: 'a cada 2 h', does: 'ataca resultados, julga, audita a saúde e escreve o bom-dia' },
+  { id: 'critico', name: 'Crítico', hats: ['REFUTADOR', 'REFEREE_1', 'GUARDIAO'], rhythm: 'a cada hora', does: 'ataca resultados, julga, audita a saúde e escreve o bom-dia' },
 ];
 const taskOf = (role: string) => TASKS.find(t => t.hats.includes(role.toUpperCase()));
 const roleLabel = (role: string) => { const t = taskOf(role); const r = ROLE_PT[role.toUpperCase()] ?? role; return t ? `${t.name} · ${r}` : r; };
@@ -1038,7 +1038,7 @@ function Crew({ lab }: { lab: Lab }) {
       const mine = lab.activity.filter(e => t.hats.includes(String(e.role).toUpperCase()));
       const last = mine.at(-1);
       const day = mine.filter(e => now - Date.parse(e.at) < 24 * 3600e3).length;
-      const quiet = !last || now - Date.parse(last.at) > (t.id === 'operador' ? 3 : 5) * 3600e3;
+      const quiet = !last || now - Date.parse(last.at) > 3 * 3600e3;
       return <article key={t.id} className={`crew-card${quiet ? ' quiet' : ''}`}>
         <p className="crew-top"><b>{t.name}</b><span>{t.rhythm}</span></p>
         <p className="crew-hats">{[...new Set(t.hats.map(h => ROLE_PT[h] ?? h))].join(' + ')}</p>
