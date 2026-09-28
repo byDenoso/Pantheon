@@ -51,11 +51,19 @@ export function layoutDomains(ids: string[]): DomainSpot[] {
 
 const VERDICT_RGB: Record<Verdict, [number, number, number]> = {
   CONFIRMED: [0.62, 0.86, 0.7], REFUTED: [0.9, 0.46, 0.4], REVIEW: [0.92, 0.76, 0.48], PROVISIONAL: [0.7, 0.75, 0.86],
-  READY: [0.74, 0.71, 0.8], BLOCKED: [0.36, 0.35, 0.4], DISCARDED: [0.25, 0.24, 0.28],
+  READY: [0.74, 0.71, 0.8], RUNNING: [0.68, 0.76, 0.88], CHECKPOINTED: [0.52, 0.57, 0.68],
+  BLOCKED: [0.36, 0.35, 0.4], DISCARDED: [0.25, 0.24, 0.28],
 };
-const VERDICT_TXT: Record<Verdict, string> = { CONFIRMED: 'confirmado', REFUTED: 'refutado', REVIEW: 'em revisão', PROVISIONAL: 'resultado provisório', READY: 'na fila', BLOCKED: 'bloqueado', DISCARDED: 'descartado' };
-const VERDICT_SIZE: Record<Verdict, number> = { CONFIRMED: 34, REFUTED: 24, REVIEW: 26, PROVISIONAL: 17, READY: 12, BLOCKED: 11, DISCARDED: 7 };
-const VERDICT_PULSE: Record<Verdict, number> = { CONFIRMED: 0.12, REFUTED: 0, REVIEW: 1, PROVISIONAL: 0.25, READY: 0.45, BLOCKED: 0, DISCARDED: 0 };
+const VERDICT_TXT: Record<Verdict, string> = {
+  CONFIRMED: 'confirmado', REFUTED: 'refutado', REVIEW: 'em revisão', PROVISIONAL: 'resultado provisório',
+  READY: 'na fila', RUNNING: 'em processamento', CHECKPOINTED: 'execução salva', BLOCKED: 'bloqueado', DISCARDED: 'descartado',
+};
+const VERDICT_SIZE: Record<Verdict, number> = {
+  CONFIRMED: 34, REFUTED: 24, REVIEW: 26, PROVISIONAL: 17, READY: 12, RUNNING: 15, CHECKPOINTED: 12, BLOCKED: 11, DISCARDED: 7,
+};
+const VERDICT_PULSE: Record<Verdict, number> = {
+  CONFIRMED: 0.12, REFUTED: 0, REVIEW: 1, PROVISIONAL: 0.25, READY: 0.45, RUNNING: 0.8, CHECKPOINTED: 0.12, BLOCKED: 0, DISCARDED: 0,
+};
 
 // [distância, elevação, azimute, alvo(domínio índice ou -1 = centro)]
 const SHOTS: Record<ScenePage, [number, number, number, number]> = {
