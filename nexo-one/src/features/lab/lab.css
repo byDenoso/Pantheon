@@ -731,3 +731,15 @@ details.tech .versus{margin-bottom:18px}
   background:var(--o-glass)!important;border-color:var(--o-glass-line)!important;
   backdrop-filter:blur(16px) saturate(1.25);-webkit-backdrop-filter:blur(16px) saturate(1.25)}
 .observatory .gate-panel{background:linear-gradient(180deg,rgba(var(--o-accent-rgb),.12),var(--o-glass))!important}
+
+/* ===== Barra da teia: uma fileira só (Explorar + Procurar + Qualidade + Som) ===== */
+@media (min-width:761px){
+  .observatory .obs-tools{bottom:16px!important;top:auto!important;display:flex;align-items:center;gap:8px}
+  .observatory .obs-tools .explore-toggle{position:static!important;right:auto!important;bottom:auto!important;min-height:0;padding:8px 14px}
+}
+@media (min-width:1280px){.observatory .obs-tools{right:356px!important}}
+.observatory{--o-glass:rgba(6,10,13,.32)!important}
+:root[data-theme="light"] .observatory{--o-glass:rgba(244,248,250,.38)!important}
+.observatory .hud-section,.observatory .gate-panel,.observatory .crew-card,.observatory .ev-card,.observatory .trail,.observatory .stats,
+.observatory .health-grid,.observatory .board li,.observatory .cycle,.observatory .stop-rules>div,.observatory .quiet-list li{
+  backdrop-filter:blur(20px) saturate(1.3)!important;-webkit-backdrop-filter:blur(20px) saturate(1.3)!important}

@@ -127,10 +127,12 @@ export default function LabApp({ state, route, theme }: { state: SystemState; ro
       <span className="replay-bar"><i style={{ width: `${((replay! + 1) / reel.length) * 100}%` }} /></span>
       <button type="button" onClick={() => { setReplay(null); setFocus([]); }}>✕ parar</button>
     </div>}
-    <button type="button" className="explore-toggle" aria-pressed={explore} onClick={() => setExplore(x => !x)}>
-      {explore ? <><i aria-hidden="true">✕</i><span className="bt">Voltar ao painel</span></> : <><i aria-hidden="true">⤢</i><span className="bt">Explorar a teia</span></>}</button>
+
     <div className="obs-tools">
+  <button type="button" className="explore-toggle" aria-pressed={explore} onClick={() => setExplore(x => !x)}>
+      {explore ? <><i aria-hidden="true">✕</i><span className="bt">Voltar ao painel</span></> : <><i aria-hidden="true">⤢</i><span className="bt">Explorar a teia</span></>}</button>
       <button type="button" onClick={() => setSearching(true)} title="Procurar (Ctrl K)" aria-label="Procurar"><Icon n="target" /><span className="bt">Procurar</span></button>
+      <QualityButton />
       <button type="button" aria-pressed={sound} onClick={() => setSound(x => !x)} title="Som ambiente" aria-label="Som ambiente"><Icon n={sound ? 'sound' : 'mute'} /><span className="bt">{sound ? 'Som ligado' : 'Som'}</span></button>
     </div>
     {searching && <Search lab={lab} onClose={() => setSearching(false)} />}
@@ -1067,4 +1069,18 @@ function Telemetry({ lab, state }: { lab: Lab; state: SystemState }) {
       <p className="tele-t">{f.text}</p>
     </li>)}</ol>
   </aside>;
+}
+
+// ---------- Qualidade gráfica escolhida pelo usuário (auto por padrão) ----------
+const Q_LABEL: Record<string, string> = { auto: 'Auto', high: 'Alta', medium: 'Média', low: 'Baixa' };
+function QualityButton() {
+  const [q, setQ] = useState(() => { try { return localStorage.getItem('nexo.quality') ?? 'auto'; } catch { return 'auto'; } });
+  const next = () => {
+    const order = ['auto', 'high', 'medium', 'low'];
+    const n = order[(order.indexOf(q) + 1) % order.length]!;
+    try { if (n === 'auto') localStorage.removeItem('nexo.quality'); else localStorage.setItem('nexo.quality', n); } catch { /* sem armazenamento */ }
+    setQ(n); window.location.reload();
+  };
+  return <button type="button" onClick={next} title="Qualidade gráfica da teia (clique para trocar)" aria-label={`Qualidade gráfica: ${Q_LABEL[q]}`}>
+    <Icon n="spark" /><span className="bt">Qualidade: {Q_LABEL[q]}</span></button>;
 }

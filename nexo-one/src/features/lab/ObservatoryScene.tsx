@@ -12,6 +12,7 @@ import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer
 import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
+import { AfterimagePass } from 'three/examples/jsm/postprocessing/AfterimagePass.js';
 import type { TestEntity, Verdict } from './model.ts';
 import { normDomain } from './domains.ts';
 
@@ -67,7 +68,7 @@ const SHOTS: Record<ScenePage, [number, number, number, number]> = {
 // visível em segundos, quase parado em horas.
 const VERT = `
 attribute float size; attribute vec3 tint; attribute float pulse; attribute float seed; attribute vec3 node;
-uniform float time; uniform float pixelRatio; uniform float evo; varying vec3 vTint; varying float vAlpha;
+uniform float time; uniform float pixelRatio; uniform float evo; varying vec3 vTint; varying float vAlpha; varying float vSize;
 void main(){
   vec3 toNode = node - position; float dn = length(toNode);
   vec3 q = position + toNode * (0.22 * evo);                                   // clustering
@@ -76,17 +77,20 @@ void main(){
   vec4 mv = modelViewMatrix * vec4(q,1.0);
   float p = 1.0 + pulse * 0.4 * sin(time*2.4 + seed*6.28);
   float px = size * p * pixelRatio * (18.0 / -mv.z);
-  gl_PointSize = max(px, 1.25 * pixelRatio);                                  // nada menor que ~1px: sem cintilar
-  vTint = tint; vAlpha = clamp(0.5 + 0.5*p, 0.0, 1.0) * clamp(px / (1.8 * pixelRatio), 0.22, 1.0);
+  gl_PointSize = max(px, 2.0 * pixelRatio);                                   // nada menor que 2px: sem cintilar
+  vSize = gl_PointSize / pixelRatio;
+  vTint = tint; vAlpha = clamp(0.5 + 0.5*p, 0.0, 1.0) * clamp(px / (2.6 * pixelRatio), 0.18, 1.0);
   gl_Position = projectionMatrix * mv;
 }`;
 const FRAG = `
 uniform float ink;
-varying vec3 vTint; varying float vAlpha;
+varying vec3 vTint; varying float vAlpha; varying float vSize;
 void main(){
   vec2 c = gl_PointCoord - 0.5; float d = length(c);
-  float glow = exp(-d*d*42.0); float core = 1.0 - smoothstep(0.035, 0.065, d);
-  float a = (glow*0.85 + core) * vAlpha; if (a < 0.01) discard;
+  float glow = exp(-d*d*42.0);
+  // Núcleo nítido só em pontos grandes: em pontos de poucos pixels ele vira sub-pixel e cintila.
+  float core = (1.0 - smoothstep(0.035, 0.09, d)) * smoothstep(7.0, 16.0, vSize);
+  float a = (glow*0.85 + core) * vAlpha * (1.0 - smoothstep(0.42, 0.5, d)); if (a < 0.004) discard;
   vec3 lit = vTint * (0.55 + glow*0.8) + core*0.6;
   // Tema claro: tinta ciano-escura sobre papel (mesma matiz, sem brilho aditivo).
   vec3 inked = mix(vec3(0.02,0.24,0.29), vTint*0.45, 0.35);
@@ -405,8 +409,10 @@ export function ObservatoryScene({ tests, page, focusIds, onPick, theme, events,
       composer.setPixelRatio(dpr);
       composer.addPass(new RenderPass(scene, camera));
       // Bloom contido: só os núcleos mais brilhantes vazam luz; o preto do fundo continua preto.
-      bloom = new UnrealBloomPass(new Vector2(1, 1), quality === 'high' ? 0.42 : 0.36, 0.32, 0.62);
+      bloom = new UnrealBloomPass(new Vector2(1, 1), quality === 'high' ? 0.4 : 0.34, 0.32, 0.82);
       composer.addPass(bloom);
+      // Suavização temporal leve: mistura 45% do quadro anterior e mata o 'sparkle' sem rastro visível na rotação lenta.
+      composer.addPass(new AfterimagePass(0.45));
       composer.addPass(new OutputPass());
     };
     buildComposer();
