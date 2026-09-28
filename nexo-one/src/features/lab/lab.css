@@ -370,3 +370,44 @@ details.tech .versus{margin-bottom:18px}
 .mono-self i{font-style:normal;color:var(--o-accent)}
 .mono-self a{color:var(--o-ink)!important;border-bottom:1px dotted var(--o-line)!important}
 .calib-weak{color:#f1ddb0!important;font-size:14px}
+
+/* ===== Legibilidade (passada final: tamanhos mínimos, contraste, ritmo) ===== */
+.observatory{--o-ink:#efe9dd;--o-dim:#bdb6c6;--o-quiet:#958fa1;font-size:15px}
+.hud{max-width:780px}
+.hud p,.hud li,.hud dd{font-size:15px;line-height:1.65}
+.hud-kicker{font-size:12px!important;letter-spacing:.1em!important}
+.hud h2{font-size:12.5px!important;letter-spacing:.12em!important;color:#c9c1d4!important;margin-bottom:16px!important}
+.hud-lead{font-size:18px;line-height:1.55;max-width:62ch}
+.hud-big{font-size:19px!important;line-height:1.5!important;max-width:62ch}
+.hud-section{margin-bottom:28px}
+.hud-section:not(:has(> .stats,> .cycle,> .health-grid,> .versus)){padding:22px 24px!important}
+.stat span,.health-cell em,.stop-rules em,.rm-meta,.field dt,.versus dt,.ev-table th,.health-cell span,.stop-rules span{font-size:12px!important}
+.stat strong{font-size:44px}
+.vchip{font-size:12.5px}
+.vchip.small{font-size:12px}
+.mono-now{font-size:17px;line-height:1.6}
+.mono-log li{font-size:14px;line-height:1.55;grid-template-columns:72px 84px 1fr}
+.mono-log time,.stream time,.timeline time{font-size:12px}
+.mono-self li{font-size:15px;line-height:1.5;align-items:center}
+.mono-self i,.beat i{display:grid;place-items:center}
+.mono-self i{color:var(--o-accent);width:22px;height:22px}
+.beat{grid-template-columns:32px 1fr;gap:14px}
+.beat i{width:32px;height:32px;color:var(--o-dim)}
+.beat p{font-size:16px!important;line-height:1.6!important}
+.story{gap:14px}
+.story::before{left:15px}
+.rm-q,.ev-table td{font-size:14.5px;line-height:1.55}
+.ev-table small{font-size:13px}
+.rm-title{font-size:22px}
+.chain-q{font-size:15px}
+.hud-note,.lane-caption,.calib-weak{font-size:14px!important;line-height:1.6!important}
+.tree li,.hud-list li{font-size:15px}
+.hud a:focus-visible{outline-offset:4px}
+@media (max-width:760px){
+  .observatory{font-size:15px}
+  .hud h1{font-size:30px}
+  .h1-entity{font-size:24px!important}
+  .hud-section:not(:has(> .stats,> .cycle,> .health-grid,> .versus)){padding:18px 16px!important}
+  .mono-log li{grid-template-columns:58px 1fr}
+  .beat p{font-size:15.5px!important}
+}

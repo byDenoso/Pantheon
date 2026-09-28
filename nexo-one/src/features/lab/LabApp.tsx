@@ -388,7 +388,7 @@ function EntityPage({ lab, id }: { lab: Lab; id: string }) {
 
     <Section title="A história deste teste" id="en-story">
       <ol className="story">{story.map((b, i) => <li key={i} className={`beat beat-${b.tone}`}>
-        <i aria-hidden="true">{b.icon}</i><p>{b.text}{b.link && <> <E id={b.link.id}>{b.link.label}</E></>}</p>
+        <i aria-hidden="true"><Icon n={b.icon} /></i><p>{b.text}{b.link && <> <E id={b.link.id}>{b.link.label}</E></>}</p>
       </li>)}</ol>
     </Section>
 
@@ -630,7 +630,7 @@ function Monologue({ lab, state, onReplay, replayCount }: { lab: Lab; state: Sys
       {quiet < 30 ? 'Ativo agora' : `Última ação ${ago(last.at)}`} · {lab.activity.filter(e => Date.now() - Date.parse(e.at) < 864e5).length} ações em 24 h</p>
     <h2 id="mono-title">Monólogo interno</h2>
     <p className="mono-now"><b>{ROLE_PT[last.role.toUpperCase()] ?? last.role}</b> <Typewriter text={narrate(last, lab)} /></p>
-    <ul className="mono-self">{selfLines(lab, state).map((l, i) => <li key={i}><i aria-hidden="true">{l.icon}</i>{l.link ? <a href={l.link}>{l.text}</a> : l.text}</li>)}</ul>
+    <ul className="mono-self">{selfLines(lab, state).map((l, i) => <li key={i}><i aria-hidden="true"><Icon n={l.icon} /></i>{l.link ? <a href={l.link}>{l.text}</a> : l.text}</li>)}</ul>
     <ol className="mono-log">{recent.slice(1).map((e, i) => <li key={i}>
       <time>{ago(e.at)}</time><b>{ROLE_PT[e.role.toUpperCase()] ?? e.role}</b>
       <span>{e.entity_id ? <a href={labHref('entidade', e.entity_id)}>{narrate(e, lab)}</a> : narrate(e, lab)}</span>
@@ -694,35 +694,35 @@ function testStory(t: TestEntity, lab: Lab): Beat[] {
   const parent = t.contestOf ? lab.tests.get(t.contestOf) : undefined;
   const hyp = t.hypothesisId ? lab.hypotheses.get(t.hypothesisId) : undefined;
   const rm = t.roadmapId ? lab.roadmaps.get(t.roadmapId) : undefined;
-  if (parent) beats.push({ icon: '⚔', tone: 'doubt', text: 'Este é um ataque meu contra algo que eu mesmo tinha concluído:', link: { id: parent.id, label: parent.question ?? humanId(parent.id) } });
-  else if (hyp?.statement) beats.push({ icon: '💡', tone: 'why', text: `Tive esta ideia: ${hyp.statement}` });
-  if (rm && !parent) beats.push({ icon: '🧭', tone: 'why', text: `Faz parte da minha investigação sobre ${rm.title.toLowerCase()}.` });
+  if (parent) beats.push({ icon: 'attack', tone: 'doubt', text: 'Este é um ataque meu contra algo que eu mesmo tinha concluído:', link: { id: parent.id, label: parent.question ?? humanId(parent.id) } });
+  else if (hyp?.statement) beats.push({ icon: 'idea', tone: 'why', text: `Tive esta ideia: ${hyp.statement}` });
+  if (rm && !parent) beats.push({ icon: 'compass', tone: 'why', text: `Faz parte da minha investigação sobre ${rm.title.toLowerCase()}.` });
   const pred = (t.prereg.prediction ?? {}) as { p_promoted?: number };
   const p = typeof pred.p_promoted === 'number' ? Math.min(1, Math.max(0, pred.p_promoted)) : null;
-  if (p !== null) beats.push({ icon: '🎲', tone: 'bet', text: `Antes de olhar os dados, apostei ${pct(p)} de chance de dar certo.` });
-  if (t.prereg.success.length || t.prereg.kill.length) beats.push({ icon: '🔒', tone: 'bet', text: 'Combinei comigo mesmo, antes de rodar, em que caso eu desistiria da ideia. Não dá para mudar depois.' });
+  if (p !== null) beats.push({ icon: 'bet', tone: 'bet', text: `Antes de olhar os dados, apostei ${pct(p)} de chance de dar certo.` });
+  if (t.prereg.success.length || t.prereg.kill.length) beats.push({ icon: 'lock', tone: 'bet', text: 'Combinei comigo mesmo, antes de rodar, em que caso eu desistiria da ideia. Não dá para mudar depois.' });
   const o = outcomeOf(t);
-  if (t.verdict === 'READY') beats.push({ icon: '⏳', tone: 'fact', text: 'Ainda vou rodar este teste.' });
-  else if (t.verdict === 'BLOCKED') beats.push({ icon: '⛔', tone: 'block', text: `Travei aqui${t.blocker ? `: ${t.blocker}` : ': falta algo para eu conseguir testar.'}` });
-  else if (o === 1) beats.push({ icon: '✓', tone: 'fact', text: parent ? 'O resultado atacado resistiu a este ataque.' : 'Deu certo: a ideia passou no critério que eu tinha combinado.' });
-  else if (o === 0) beats.push({ icon: '✕', tone: 'fact', text: parent ? 'Este ataque encontrou um problema no resultado anterior.' : 'Não deu certo: a ideia falhou no critério que eu tinha combinado.' });
-  else if (t.verdictRaw) beats.push({ icon: '≈', tone: 'fact', text: 'Os dados não decidiram. Fica no meio do caminho.' });
+  if (t.verdict === 'READY') beats.push({ icon: 'wait', tone: 'fact', text: 'Ainda vou rodar este teste.' });
+  else if (t.verdict === 'BLOCKED') beats.push({ icon: 'block', tone: 'block', text: `Travei aqui${t.blocker ? `: ${t.blocker}` : ': falta algo para eu conseguir testar.'}` });
+  else if (o === 1) beats.push({ icon: 'check', tone: 'fact', text: parent ? 'O resultado atacado resistiu a este ataque.' : 'Deu certo: a ideia passou no critério que eu tinha combinado.' });
+  else if (o === 0) beats.push({ icon: 'cross', tone: 'fact', text: parent ? 'Este ataque encontrou um problema no resultado anterior.' : 'Não deu certo: a ideia falhou no critério que eu tinha combinado.' });
+  else if (t.verdictRaw) beats.push({ icon: 'even', tone: 'fact', text: 'Os dados não decidiram. Fica no meio do caminho.' });
   if (p !== null && o !== null) {
     const err = Math.abs(p - o);
-    if (err >= 0.5) beats.push({ icon: '⚡', tone: 'surprise', text: `Isso me surpreendeu: eu esperava ${o ? 'que falhasse' : 'que desse certo'}.` });
-    else if (err <= 0.3) beats.push({ icon: '◎', tone: 'surprise', text: 'Era o que eu esperava.' });
+    if (err >= 0.5) beats.push({ icon: 'spark', tone: 'surprise', text: `Isso me surpreendeu: eu esperava ${o ? 'que falhasse' : 'que desse certo'}.` });
+    else if (err <= 0.3) beats.push({ icon: 'target', tone: 'surprise', text: 'Era o que eu esperava.' });
   }
   const axes = [...new Set(t.reviews.map(r => AXIS_PT[String(r.axis ?? '').toLowerCase().trim()]).filter(Boolean))];
   if (t.contests.length || t.reviews.length) {
     const n = Math.max(t.contests.length, t.reviews.filter(r => r.kind === 'CONTEST').length);
-    beats.push({ icon: '🛡', tone: 'doubt', text: `Não confiei no resultado e tentei derrubá-lo ${n === 1 ? 'uma vez' : `${n} vezes`}${axes.length ? ` (${axes.join(', ')})` : ''}.` });
+    beats.push({ icon: 'shield', tone: 'doubt', text: `Não confiei no resultado e tentei derrubá-lo ${n === 1 ? 'uma vez' : `${n} vezes`}${axes.length ? ` (${axes.join(', ')})` : ''}.` });
   }
   const belief: Record<string, Beat> = {
-    CONFIRMED: { icon: '★', tone: 'belief', text: 'Agora eu acredito nisso: sobreviveu a dois ataques independentes.' },
-    REFUTED: { icon: '↺', tone: 'change', text: o === 1 ? 'Mudei de ideia: parecia certo, mas meu próprio ataque derrubou.' : 'Descartei essa ideia.' },
-    REVIEW: { icon: '◐', tone: 'belief', text: 'Ainda não acredito totalmente: está sob ataque.' },
-    PROVISIONAL: { icon: '●', tone: 'belief', text: 'É provisório: ninguém tentou derrubar ainda.' },
-    DISCARDED: { icon: '–', tone: 'belief', text: 'Deixei de lado: o teste não servia como estava.' },
+    CONFIRMED: { icon: 'star', tone: 'belief', text: 'Agora eu acredito nisso: sobreviveu a dois ataques independentes.' },
+    REFUTED: { icon: 'undo', tone: 'change', text: o === 1 ? 'Mudei de ideia: parecia certo, mas meu próprio ataque derrubou.' : 'Descartei essa ideia.' },
+    REVIEW: { icon: 'half', tone: 'belief', text: 'Ainda não acredito totalmente: está sob ataque.' },
+    PROVISIONAL: { icon: 'dot', tone: 'belief', text: 'É provisório: ninguém tentou derrubar ainda.' },
+    DISCARDED: { icon: 'dash', tone: 'belief', text: 'Deixei de lado: o teste não servia como estava.' },
   };
   if (belief[t.verdict]) beats.push(belief[t.verdict]!);
   return beats;
@@ -743,14 +743,43 @@ function selfLines(lab: Lab, state: SystemState): Array<{ icon: string; text: st
   const focus = [...touched].sort((a, b) => b[1] - a[1])[0];
   if (focus) {
     const r = lab.roadmaps.get(focus[0]);
-    if (r) out.push({ icon: '◉', text: `Minha atenção está em ${r.title.toLowerCase()}: ${focus[1]} ações nas últimas 24 h.`, link: labHref('roadmap', r.id) });
+    if (r) out.push({ icon: 'eye', text: `Minha atenção está em ${r.title.toLowerCase()}: ${focus[1]} ações nas últimas 24 h.`, link: labHref('roadmap', r.id) });
   }
   const ignored = active.filter(r => !touched.has(r.id) && r.frontier > 0).sort((a, b) => b.frontier - a.frontier)[0];
-  if (ignored) out.push({ icon: '○', text: `Estou deixando de lado ${ignored.title.toLowerCase()}, com ${ignored.frontier} testes esperando.`, link: labHref('roadmap', ignored.id) });
+  if (ignored) out.push({ icon: 'eyeoff', text: `Estou deixando de lado ${ignored.title.toLowerCase()}, com ${ignored.frontier} testes esperando.`, link: labHref('roadmap', ignored.id) });
   const d = state.evolution?.decoys;
-  if (d && d.revealed > 0) out.push({ icon: '🪤', text: `Plantei iscas contra mim mesmo: me peguei em ${d.caught} de ${d.revealed}.` });
-  else if (d && d.planted > 0) out.push({ icon: '🪤', text: `Há ${d.planted === 1 ? 'uma isca plantada' : `${d.planted} iscas plantadas`} contra mim mesmo. Ainda não sei ${d.planted === 1 ? 'qual é' : 'quais são'}.` });
+  if (d && d.revealed > 0) out.push({ icon: 'trap', text: `Plantei iscas contra mim mesmo: me peguei em ${d.caught} de ${d.revealed}.` });
+  else if (d && d.planted > 0) out.push({ icon: 'trap', text: `Há ${d.planted === 1 ? 'uma isca plantada' : `${d.planted} iscas plantadas`} contra mim mesmo. Ainda não sei ${d.planted === 1 ? 'qual é' : 'quais são'}.` });
   const gate = (state.evolution?.gate.charters_waiting.length ?? 0) + (state.evolution?.gate.canaries_waiting.length ?? 0);
-  if (gate) out.push({ icon: '🙋', text: `Estou esperando o Dener decidir ${gate === 1 ? 'uma coisa' : `${gate} coisas`} que eu não posso decidir sozinho.`, link: '#/ciclo' });
+  if (gate) out.push({ icon: 'hand', text: `Estou esperando o Dener decidir ${gate === 1 ? 'uma coisa' : `${gate} coisas`} que eu não posso decidir sozinho.`, link: '#/ciclo' });
   return out;
+}
+
+// ---------- ícones de traço fino (um só estilo; nada de emoji) ----------
+const ICON: Record<string, string> = {
+  idea: 'M8 2.5a4 4 0 0 0-2.3 7.3V11h4.6V9.8A4 4 0 0 0 8 2.5ZM6.2 13h3.6',
+  compass: 'M8 1.8a6.2 6.2 0 1 0 0 12.4A6.2 6.2 0 0 0 8 1.8Zm2.4 3.8-1.4 3.4-3.4 1.4 1.4-3.4 3.4-1.4Z',
+  bet: 'M3 3h10v10H3zM6 6h.01M10 6h.01M8 8h.01M6 10h.01M10 10h.01',
+  lock: 'M4.5 7.5h7v6h-7zM6 7.5V5.5a2 2 0 0 1 4 0v2',
+  wait: 'M8 2a6 6 0 1 0 0 12A6 6 0 0 0 8 2Zm0 3v3.2l2 1.3',
+  block: 'M8 2a6 6 0 1 0 0 12A6 6 0 0 0 8 2ZM3.8 3.8l8.4 8.4',
+  check: 'M3 8.5 6.5 12 13 4.5',
+  cross: 'M4 4l8 8M12 4l-8 8',
+  even: 'M3 6.5h10M3 9.5h10',
+  spark: 'M9 1.5 3.5 9H8l-1 5.5L12.5 7H8z',
+  target: 'M8 2a6 6 0 1 0 0 12A6 6 0 0 0 8 2Zm0 3a3 3 0 1 0 0 6 3 3 0 0 0 0-6Zm0 2.4a.6.6 0 1 0 0 1.2.6.6 0 0 0 0-1.2Z',
+  shield: 'M8 1.8 13 3.8v3.7c0 3.1-2.1 5.3-5 6.7-2.9-1.4-5-3.6-5-6.7V3.8z',
+  attack: 'M3 13 11 5M9 3h4v4M5.5 10.5l-2-2',
+  star: 'M8 2l1.8 3.8 4.2.5-3.1 2.9.8 4.2L8 11.3 4.3 13.4l.8-4.2L2 6.3l4.2-.5z',
+  undo: 'M4 6h6a3.5 3.5 0 0 1 0 7H6M4 6l2.5-2.5M4 6l2.5 2.5',
+  half: 'M8 2a6 6 0 1 0 0 12A6 6 0 0 0 8 2Zm0 0v12',
+  dot: 'M8 5.5a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5Z',
+  dash: 'M4 8h8',
+  eye: 'M1.8 8S4.2 3.8 8 3.8 14.2 8 14.2 8 11.8 12.2 8 12.2 1.8 8 1.8 8Zm6.2-2a2 2 0 1 0 0 4 2 2 0 0 0 0-4Z',
+  eyeoff: 'M1.8 8S4.2 3.8 8 3.8 14.2 8 14.2 8 11.8 12.2 8 12.2 1.8 8 1.8 8ZM2.5 2.5l11 11',
+  trap: 'M2.5 12.5h11M4 12.5 8 4l4 8.5M6 9h4',
+  hand: 'M5.5 8V3.8a1 1 0 0 1 2 0V7.5M7.5 7V3a1 1 0 0 1 2 0v4M9.5 7.2V4a1 1 0 0 1 2 0v5.5a4.5 4.5 0 0 1-8.3 2.4L2.5 10a1 1 0 0 1 1.6-1.2l1.4 1.4',
+};
+function Icon({ n }: { n: string }) {
+  return <svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={ICON[n] ?? ICON.dot} /></svg>;
 }

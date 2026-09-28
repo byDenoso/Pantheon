@@ -71,8 +71,8 @@ const FRAG = `
 varying vec3 vTint; varying float vAlpha;
 void main(){
   vec2 c = gl_PointCoord - 0.5; float d = length(c);
-  float glow = exp(-d*d*34.0); float core = smoothstep(0.09, 0.0, d);
-  float a = (glow + core) * vAlpha; if (a < 0.01) discard;
+  float glow = exp(-d*d*42.0); float core = 1.0 - smoothstep(0.035, 0.065, d);
+  float a = (glow*0.85 + core) * vAlpha; if (a < 0.01) discard;
   gl_FragColor = vec4(vTint * (0.55 + glow*0.8) + core*0.6, a);
 }`;
 
@@ -175,7 +175,7 @@ export function ObservatoryScene({ tests, page, focusIds, onPick, theme, events,
     catch { el.dataset.fallback = 'true'; return; }
     const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     const mobile = window.matchMedia('(max-width: 760px)').matches;
-    const dpr = Math.min(window.devicePixelRatio || 1, mobile ? 2 : 1.75);
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
     renderer.setPixelRatio(dpr);
     renderer.domElement.setAttribute('aria-hidden', 'true');
     el.appendChild(renderer.domElement);
@@ -313,7 +313,7 @@ export function ObservatoryScene({ tests, page, focusIds, onPick, theme, events,
       sizes.needsUpdate = true;
       if (set.size === 1) {
         const i = ids.indexOf(list[0]!);
-        if (i >= 0) target.look.set(stars.pos[i * 3]!, stars.pos[i * 3 + 1]!, stars.pos[i * 3 + 2]!);
+        if (i >= 0) target.look.set(stars.pos[i * 3]!, stars.pos[i * 3 + 1]!, stars.pos[i * 3 + 2]!).multiplyScalar(scene.scale.x);
       }
     };
     const basePulse = Float32Array.from(stars.pulse);
@@ -408,7 +408,7 @@ export function ObservatoryScene({ tests, page, focusIds, onPick, theme, events,
     const eventEls = [...(labels.current?.querySelectorAll('[data-event]') ?? [])] as HTMLElement[];
     const proj = new Vector3();
 
-    let raf = 0, last = performance.now(), visible = true;
+    let raf = 0, last = performance.now(), visible = true, expansion = 1;
     const vis = () => { visible = document.visibilityState === 'visible'; };
     document.addEventListener('visibilitychange', vis);
     const frame = (now: number) => {
@@ -416,6 +416,10 @@ export function ObservatoryScene({ tests, page, focusIds, onPick, theme, events,
       if (!visible) return;
       const dt = Math.min(0.05, (now - last) / 1000); last = now;
       uniforms.time.value += dt;
+      // Expansão do universo, bem lenta: ~6% em 15 min, desacelerando (a(t) monotônico, nunca volta).
+      const el = uniforms.time.value;
+      expansion = reduced ? 1 : 1 + 0.12 * (el / (el + 900));
+      scene.scale.setScalar(expansion);
       if (!reduced && !drag && !exploreRef.current) target.az += dt * 0.025;
       const k = reduced ? 1 : 1 - Math.pow(0.03, dt);
       const fit = camera.aspect < 1 ? 1 / Math.max(0.55, camera.aspect) : 1;
@@ -427,18 +431,25 @@ export function ObservatoryScene({ tests, page, focusIds, onPick, theme, events,
       camera.lookAt(look);
       renderer.render(scene, camera);
       const w = canvas.clientWidth, h = canvas.clientHeight;
-      eventEls.forEach((node, i) => {
-        const a = anchors[i]; if (!a) return;
-        proj.copy(a).project(camera);
-        const off = proj.z > 1 || Math.abs(proj.x) > 1.05 || Math.abs(proj.y) > 1.05 || (!exploreRef.current && w > 900 && (proj.x * 0.5 + 0.5) * w < Math.min(820, w * 0.6));
-        node.style.opacity = off ? '0' : '1';
-        node.style.transform = `translate(${(proj.x * 0.5 + 0.5) * w}px, ${(-proj.y * 0.5 + 0.5) * h}px)`;
-      });
+      const placed: Array<[number, number, number]> = [];
+      const place = (node: HTMLElement, x: number, y: number) => {
+        const wd = node.offsetWidth || 120;
+        for (let tries = 0; tries < 6 && placed.some(([px, py, pw]) => Math.abs(py - y) < 22 && x < px + pw + 8 && px < x + wd + 8); tries += 1) y += 22;
+        placed.push([x, y, wd]);
+        node.style.transform = `translate(${x}px, ${y}px)`;
+      };
       labelEls.forEach((node, i) => {
-        proj.copy(domainPos[i]!).project(camera);
+        proj.copy(domainPos[i]!).multiplyScalar(expansion).project(camera);
         const off = proj.z > 1 || Math.abs(proj.x) > 1.1 || Math.abs(proj.y) > 1.1 || (!exploreRef.current && w > 900 && (proj.x * 0.5 + 0.5) * w < Math.min(820, w * 0.6));
         node.style.opacity = off ? '0' : '1';
-        node.style.transform = `translate(${(proj.x * 0.5 + 0.5) * w}px, ${(-proj.y * 0.5 + 0.5) * h}px)`;
+        if (!off) place(node, (proj.x * 0.5 + 0.5) * w, (-proj.y * 0.5 + 0.5) * h);
+      });
+      eventEls.forEach((node, i) => {
+        const a = anchors[i]; if (!a) return;
+        proj.copy(a).multiplyScalar(expansion).project(camera);
+        const off = proj.z > 1 || Math.abs(proj.x) > 1.05 || Math.abs(proj.y) > 1.05 || (!exploreRef.current && w > 900 && (proj.x * 0.5 + 0.5) * w < Math.min(820, w * 0.6));
+        node.style.opacity = off ? '0' : '1';
+        if (!off) place(node, (proj.x * 0.5 + 0.5) * w, (-proj.y * 0.5 + 0.5) * h);
       });
     };
     raf = requestAnimationFrame(frame);
