@@ -551,7 +551,7 @@ test('GitHub Pages personal plane reads the locally compiled public WorldState',
 
 test('Pages runtime avoids redundant scheduled deploys and hydrates history concurrently', async () => {
   const workflow = await text('../.github/workflows/nexo-one-pages.yml');
-  assert.match(workflow, /cancel-in-progress:\s*true/);
+  assert.match(workflow, /cancel-in-progress:\s*false/);
   assert.match(workflow, /id:\s*deploy_needed/);
   assert.match(workflow, /PAGES_NO_OP projection, live semantic inputs and Pantheon commit already published/);
   assert.match(workflow, /build-meta\.json/);
