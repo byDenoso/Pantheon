@@ -292,8 +292,9 @@ function GatePanel({ state }: { state: SystemState }) {
 function AwaySummary({ lab, since }: { lab: Lab; since: string }) {
   const evs = lab.activity.filter(e => e.at > since);
   if (!evs.length) return null;
-  const n = (re: RegExp) => evs.filter(e => re.test(e.event_type)).length;
-  const results = n(/RESULT/), created = n(/CREATED|PROPOSED|ENQUEUED/), verdicts = n(/VERDICT|REVIEW|CONFIRM|REFUT/), thoughts = n(/THOUGHT/);
+  // Soma a contagem dos itens agrupados; "resultado" é só resultado novo de teste (falha de execução não conta).
+  const n = (re: RegExp) => evs.filter(e => re.test(e.event_type)).reduce((k, e) => k + Number((e as { count?: number }).count ?? 1), 0);
+  const results = n(/^TEST_RESULT_RECORDED$/), created = n(/CREATED|PROPOSED|ENQUEUED/), verdicts = n(/VERDICT|REVIEW|CONFIRMED|REFUTED/), thoughts = n(/THOUGHT_RECORDED/);
   const parts = [
     results && `${results} ${results === 1 ? 'resultado chegou' : 'resultados chegaram'}`,
     created && `${created} ${created === 1 ? 'teste novo nasceu' : 'testes novos nasceram'}`,
