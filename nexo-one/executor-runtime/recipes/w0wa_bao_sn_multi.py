@@ -143,7 +143,22 @@ else:
     elif not any(v>=2 for v in over50.values()) and cos_ok: verdict,decision="PROMOTED","TRACER_ROBUST"
     else: verdict,decision="INCONCLUSIVE","MIXED_TRACER_ROBUSTNESS"
 
-payload={"verdict":verdict,"decision":decision,"summary":f"{mode}: {decision} em {len(out)} compilações públicas.","statistics":{"mode":mode,"compilations":out,"priors":priors},"semantic":{"result_meaning":"Comparação matched w0-wa em Pantheon+ e DES-SN5YR com DESI DR2 BAO e prior CMB comprimido congelado.","verdict_plain":verdict}}
+# Leitura em português simples, escrita a partir da decisão (o critério congelado não muda).
+def worst(key):
+    return max(((h[key] or 0, h["label"]) for r in out for h in r["holds"] if h.get(key) is not None), default=(0, "-"))
+MEANING={
+ "INSUFFICIENT_COMPILATIONS":"Só uma coleção de supernovas pôde ser usada; o teste exige duas para comparar, então não decide.",
+ "SAME_BAND_DOMINATES":"A preferência por energia escura variável depende quase toda de uma única faixa de distância nas duas coleções de supernovas: tirando essa faixa, ela praticamente some.",
+ "DISTRIBUTED_REDSHIFT_LEVERAGE":"A preferência por energia escura variável não depende de uma faixa só: continua de pé quando se tira qualquer faixa de distância, nas duas coleções de supernovas.",
+ "MIXED_REDSHIFT_LEVERAGE":"Resultado misto: uma faixa de distância pesa bastante, mas não o suficiente para dizer que a preferência por energia escura variável depende só dela.",
+ "SAME_TRACER_DOMINATES":"A preferência por energia escura variável vem quase toda de um único tipo de galáxia no mapa do DESI.",
+ "TRACER_ROBUST":"A preferência por energia escura variável aparece com todos os tipos de galáxia do DESI; nenhum sozinho a sustenta.",
+ "MIXED_TRACER_ROBUSTNESS":"Resultado misto: um tipo de galáxia do DESI pesa bastante, mas não o suficiente para concluir que a preferência depende só dele.",
+}
+frac,band=worst("fraction_removed")
+detail=f" A faixa que mais pesa ({band}) responde por {frac*100:.0f}% da preferência." if mode=="redshift_jackknife" and out else ""
+VERDICT_PT={"PROMOTED":"Passou no critério","REJECTED":"Não passou no critério","INCONCLUSIVE":"Inconclusivo"}
+payload={"verdict":verdict,"decision":decision,"summary":f"{mode}: {decision} em {len(out)} compilações públicas.","statistics":{"mode":mode,"compilations":out,"priors":priors},"semantic":{"result_meaning":MEANING[decision]+detail,"verdict_plain":VERDICT_PT[verdict]}}
 raw=json.dumps(payload,ensure_ascii=False,sort_keys=True,separators=(",",":"))
 open(os.environ["RESULT_PATH"],"w",encoding="utf-8").write(raw)
 print(payload["summary"])
