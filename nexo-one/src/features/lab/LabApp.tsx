@@ -767,6 +767,9 @@ const TASKS: Array<{ id: string; name: string; hats: string[]; rhythm: string; d
 const taskOf = (role: string) => TASKS.find(t => t.hats.includes(role.toUpperCase()));
 const roleLabel = (role: string) => { const t = taskOf(role); const r = ROLE_PT[role.toUpperCase()] ?? role; return t ? `${t.name} · ${r}` : r; };
 const NARRATION: Record<string, string> = {
+  SEMANTIC_BACKFILLED: 'Dei nome e leitura simples a %q',
+  LEARNING_SIGNAL_RECORDED: 'Anotei uma lacuna para resolver (receita ou dado que falta).',
+  TEST_DISPATCHED: 'Mandei para a bateria de testes: %q',
   TEST_RESULT_RECORDED: 'Terminei um teste: %q',
   ROADMAP_TEST_FROZEN: 'Congelei as regras antes de olhar os dados: %q',
   RESULT_CONTESTED: 'Não confiei no meu próprio resultado e abri um ataque contra ele: %q',
@@ -1086,7 +1089,23 @@ function Telemetry({ lab, state }: { lab: Lab; state: SystemState }) {
   const notes = (state.evolution?.board ?? []).filter(p => !p.resolved_at && (!p.expires_at || Date.parse(p.expires_at) > now))
     .map(p => ({ kind: 'note' as const, at: p.at, who: roleLabel(p.from), to: p.to === p.from ? '' : p.to === 'ALL' ? 'todos' : roleLabel(p.to),
       self: p.to === p.from, text: humanize(p.text), id: p.id }));
-  const acts = lab.activity.slice(-60).map((e, i) => ({ kind: 'act' as const, at: e.at, who: roleLabel(String(e.role)), to: '', text: narrate(e, lab), id: `${e.at}-${i}` }));
+  // Ações iguais e seguidas do mesmo papel (ex.: 46 nomes preenchidos) viram uma linha só.
+  const GROUP_PT: Record<string, (n: number) => string> = {
+    SEMANTIC_BACKFILLED: n => `Dei nome e leitura simples a ${n} testes.`,
+    LEARNING_SIGNAL_RECORDED: n => `Anotei ${n} lacunas para resolver (receitas ou dados que faltam).`,
+    TEST_DISPATCHED: n => `Mandei ${n} testes para a bateria.`,
+    ROADMAP_TEST_FROZEN: n => `Congelei as regras de ${n} testes antes de olhar os dados.`,
+  };
+  const raw = lab.activity.slice(-160);
+  const grouped: Array<{ e: (typeof raw)[number]; n: number }> = [];
+  for (const e of raw) {
+    const last = grouped.at(-1);
+    if (last && last.e.event_type === e.event_type && last.e.role === e.role && GROUP_PT[e.event_type]
+        && Math.abs(Date.parse(e.at) - Date.parse(last.e.at)) < 20 * 60e3) { last.n += 1; last.e = e; }
+    else grouped.push({ e, n: 1 });
+  }
+  const acts = grouped.slice(-60).map(({ e, n }, i) => ({ kind: 'act' as const, at: e.at, who: roleLabel(String(e.role)), to: '',
+    text: n > 1 ? GROUP_PT[e.event_type]!(n) : narrate(e, lab), id: `${e.at}-${i}` }));
   const feed = [...notes, ...acts].sort((a, b) => b.at.localeCompare(a.at)).slice(0, 50);
   const day = lab.activity.filter(e => now - Date.parse(e.at) < 864e5).length;
   return <aside className="telemetry" aria-label="Telemetria ao vivo">
