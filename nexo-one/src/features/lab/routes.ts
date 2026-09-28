@@ -13,6 +13,14 @@ export function parseLabRoute(hash: string): LabRoute | null {
   const q = new URLSearchParams(query).get('v') ?? undefined;
   switch (head) {
     case 'galaxia': return { page: 'agora' };
+    // Endereços antigos (favoritos) caem nas páginas novas.
+    case 'inicio': case 'observatorio': return { page: 'agora' };
+    case 'cockpit': {
+      const sub = (rest[0] ?? '').toLowerCase();
+      if (sub === '' || sub === 'comando') return { page: 'agora' };
+      if (sub === 'ciencia') return { page: 'evidencia' };
+      return null;
+    }
     case 'agora': case 'ciclo': case 'roadmaps': case 'evidencia': case 'saude': return { page: head, q };
     case 'roadmap': return id ? { page: 'roadmap', id } : { page: 'roadmaps' };
     case 'e': return id ? { page: 'entidade', id } : { page: 'evidencia' };
