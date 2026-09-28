@@ -196,6 +196,8 @@ function Now({ lab, state, onReplay, replayCount }: { lab: Lab; state: SystemSta
 
     <Monologue lab={lab} state={state} onReplay={onReplay} replayCount={replayCount} />
 
+    <Board state={state} />
+
     <Calibration lab={lab} />
 
     {thought && <Section title="O que o NEXO está pensando" kicker={`Pítia · ${ago(thought.at)}`} id="now-thought">
@@ -995,3 +997,18 @@ const LOOP_PT: Record<string, string> = {
   thought: 'pensamentos', dream: 'sonhos', genome_mutation: 'mutações do genoma', fitness: 'medição de aptidão',
   new_hypothesis: 'hipóteses novas', result: 'resultados', contest: 'ataques', decoy: 'iscas',
 };
+
+// ---------- Mural: os agentes conversando entre si ----------
+function Board({ state }: { state: SystemState }) {
+  const now = Date.now();
+  const posts = (state.evolution?.board ?? []).filter(p => !p.resolved_at && (!p.expires_at || Date.parse(p.expires_at) > now)).slice(-8).reverse();
+  if (!posts.length) return null;
+  const who = (r: string) => (r === 'ALL' ? 'todos' : ROLE_PT[r.toUpperCase()] ?? r.toLowerCase());
+  return <Section title="Conversa entre os agentes" kicker={`${posts.length} ${posts.length === 1 ? 'recado aberto' : 'recados abertos'}`} id="now-board">
+    <ol className="board">{posts.map(p => <li key={p.id}>
+      <p className="board-head"><b>{who(p.from)}</b><i aria-hidden="true">→</i><span>{who(p.to)}</span><time>{ago(p.at)}</time></p>
+      <p className="board-text">{p.text}</p>
+      {(p.refs?.length ?? 0) > 0 && <p className="hud-refs">{p.refs!.slice(0, 3).map(r => <E key={r} id={r} />)}</p>}
+    </li>)}</ol>
+  </Section>;
+}

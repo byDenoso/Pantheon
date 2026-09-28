@@ -443,6 +443,9 @@ export interface EvolutionStatus {
   reviews?: Record<string, number>;
   /** Robot watchdog: roles that own a quiet loop and for how long. */
   watchdog?: { checked_at?: string | null; quiet?: { role: string; hours: number | null; loops: string[] }[] | null };
+  /** Shared board: short notes between roles (coordination, never evidence). */
+  board?: { id: string; at: string; from: string; to: string; text: string; refs?: string[]; reply_to?: string | null;
+            expires_at?: string | null; resolved_at?: string | null }[];
 }
 
 export interface SystemState {
