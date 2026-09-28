@@ -130,6 +130,13 @@ jobs:
           if test_id != expected_id:
               raise SystemExit("matrix/spec test_id mismatch")
           script = str(test.get("script") or "")
+          recipe = str(test.get("recipe") or "")
+          if not script.strip() and recipe:
+              import re
+              if not re.fullmatch(r"[a-z0-9_]{2,40}", recipe):
+                  raise SystemExit(f"invalid recipe name {recipe!r}")
+              script = open(f"runtime-base/nexo-one/executor-runtime/recipes/{recipe}.py", encoding="utf-8").read()
+          json.dump(test.get("params") or {}, open("/tmp/job/params.json", "w", encoding="utf-8"), ensure_ascii=False)
           if not script.strip():
               raise SystemExit("empty test script")
           requirements = test.get("requirements") or []
@@ -160,6 +167,7 @@ jobs:
         if: steps.prepare.outcome == 'success' && steps.deps.outcome == 'success'
         env:
           RESULT_PATH: /tmp/job/result.json
+          PARAMS_PATH: /tmp/job/params.json
         run: |
           set +e
           T=$(python3 -c "import json; print(json.load(open('/tmp/job/meta.json'))['timeout_min'])")
