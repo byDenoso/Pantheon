@@ -275,19 +275,31 @@ export function ObservatoryScene({ tests, page, focusIds, onPick, theme, events,
     }
     const stars = buf();
     const ids: string[] = [];
+    const clouds: Array<{ at: Vector3; ready: number; label: string }> = [];
     for (const [key, list] of byHyp) {
       const [di] = key.split('|');
       const d = domainPos[Number(di)]!;
       const node = d.clone().add(new Vector3(...jitter(key, 9)));
       filament(web, d, node, 30 * dens, 0.7, key);
       push(web, [node.x, node.y, node.z], inferno(0.8), 22 + Math.min(40, list.length * 4), 0.05);
-      // Nuvem de formação: hipótese com muitos testes prontos.
+      // Nuvem de formação (nuvem molecular): hipótese com testes prontos esperando. Poeira quente difusa,
+      // quase sem pontos nítidos; encolhe sozinha quando os testes rodam (o tamanho vem da fila).
       const ready = list.filter(t => t.verdict === 'READY').length;
-      if (ready >= 3) for (let q = 0; q < 60 + ready * 20; q += 1) {
-        const r = Math.pow(Math.random(), 0.8) * (0.8 + ready * 0.08);
-        const th = Math.random() * Math.PI * 2, ph = Math.acos(2 * Math.random() - 1);
-        push(web, [node.x + r * Math.sin(ph) * Math.cos(th), node.y + r * Math.cos(ph) * 0.6, node.z + r * Math.sin(ph) * Math.sin(th)],
-          [0.42 + Math.random() * 0.1, 0.36, 0.46], 8 + Math.random() * 10, 0.2);
+      if (ready >= 3) {
+        const R = 0.9 + ready * 0.07;
+        for (let q = 0; q < 26 + ready * 7; q += 1) {           // véu de poeira: pontos grandes e muito tênues
+          const r = Math.pow(Math.random(), 0.6) * R;
+          const th = Math.random() * Math.PI * 2, ph = Math.acos(2 * Math.random() - 1);
+          push(web, [node.x + r * Math.sin(ph) * Math.cos(th), node.y + r * Math.cos(ph) * 0.55, node.z + r * Math.sin(ph) * Math.sin(th)],
+            [0.2 + Math.random() * 0.06, 0.11, 0.05], 38 + Math.random() * 46, 0.05);
+        }
+        for (let q = 0; q < ready * 2; q += 1) {                // proto-estrelas: poucas, pequenas, quentes
+          const r = Math.pow(Math.random(), 1.4) * R * 0.7;
+          const th = Math.random() * Math.PI * 2, ph = Math.acos(2 * Math.random() - 1);
+          push(web, [node.x + r * Math.sin(ph) * Math.cos(th), node.y + r * Math.cos(ph) * 0.55, node.z + r * Math.sin(ph) * Math.sin(th)],
+            [0.85, 0.62, 0.42], 5 + Math.random() * 4, 0.35);
+        }
+        clouds.push({ at: node.clone(), ready, label: list[0]?.name ?? '' });
       }
       list.forEach(t => {
         const s = 0.15 + rnd(t.id) * 0.85;
@@ -499,7 +511,23 @@ export function ObservatoryScene({ tests, page, focusIds, onPick, theme, events,
       ray.setFromCamera(ndc, camera);
       const hit = ray.intersectObject(starPoints)[0];
       const t = hit?.index !== undefined ? byId.get(ids[hit.index] ?? '') : undefined;
-      if (!t) { tipEl.style.opacity = '0'; canvas.style.cursor = ''; return; }
+      if (!t) {
+        // Perto de uma nuvem de formação? explica o que é.
+        const mx = ev.clientX - rect.left, my = ev.clientY - rect.top;
+        const hitCloud = clouds.find(c => {
+          proj.copy(c.at).multiplyScalar(scene.scale.x).project(camera);
+          const sx = (proj.x * 0.5 + 0.5) * rect.width, sy = (-proj.y * 0.5 + 0.5) * rect.height;
+          return proj.z < 1 && Math.hypot(sx - mx, sy - my) < 46;
+        });
+        if (!hitCloud) { tipEl.style.opacity = '0'; canvas.style.cursor = ''; return; }
+        tipEl.innerHTML = '';
+        const b = document.createElement('b'); b.textContent = `Nuvem de formação: ${hitCloud.ready} testes prontos esperando para rodar`;
+        const i = document.createElement('i'); i.textContent = 'quando rodarem, a nuvem se desfaz e eles viram estrelas no filamento';
+        tipEl.append(b, i);
+        tipEl.style.transform = `translate(${mx + 14}px, ${my + 12}px)`;
+        tipEl.style.opacity = '1'; canvas.style.cursor = 'pointer';
+        return;
+      }
       tipEl.innerHTML = '';
       const b = document.createElement('b'); b.textContent = t.name;
       const i = document.createElement('i'); i.textContent = VERDICT_TXT[t.verdict]; i.dataset.v = t.verdict.toLowerCase();
