@@ -9,6 +9,34 @@ const SYSTEM_CONTRACT = '1';
 const WORLD_CONTRACT = '1';
 const CORE_DOMAINS = ['NEXO', 'SCIENCE', 'ENGINEERING', 'OLYMPUS'];
 
+// Read model do TCC#96 (prereg, review, linhagem, roadmaps, activity) repassado ao Observatório.
+// Só entidades públicas; campos ausentes ficam ausentes (o front mostra "não publicado").
+const RM_TEST_KEYS = ['question', 'question_plain', 'result_meaning', 'status', 'review_state', 'verdict', 'domain', 'hypothesis_id',
+  'roadmap_id', 'campaign_id', 'prereg', 'review', 'limitations', 'claim_boundary', 'created_at', 'executed_at', 'created_at_effective',
+  'created_at_source', 'execution', 'parents', 'children', 'depends_on', 'blocker'];
+const RM_HYP_KEYS = ['statement', 'claim_boundary', 'test_ids', 'roadmap_ids', 'parents', 'children', 'created_at', 'created_at_effective', 'origin'];
+function pickKeys(entity, keys) {
+  const out = {};
+  for (const key of keys) if (entity[key] !== undefined && entity[key] !== null && entity[key] !== '') out[key] = entity[key];
+  return out;
+}
+function publicReadModel(projection) {
+  const tests = {};
+  for (const test of projection.tests || []) {
+    if (!test || test.private || !test.id) continue;
+    const picked = pickKeys(test, RM_TEST_KEYS);
+    if (Object.keys(picked).length) tests[String(test.id)] = picked;
+  }
+  const hypotheses = {};
+  for (const hyp of projection.hypotheses || []) {
+    if (!hyp || hyp.private || !hyp.id) continue;
+    hypotheses[String(hyp.id)] = pickKeys(hyp, RM_HYP_KEYS);
+  }
+  const roadmaps = (projection.roadmaps || []).filter(r => r && !r.private);
+  const activity = (projection.activity || []).filter(a => a && a.at).slice(-600);
+  return { version: 1, tests, hypotheses, roadmaps, activity };
+}
+
 function canonical(value) {
   if (Array.isArray(value)) return value.map(canonical);
   if (value && typeof value === 'object') {
@@ -1257,6 +1285,7 @@ export function buildPagesProjection({
     projected_work: projectedWork,
     guardian: projection.integrity || null,
     evolution: projection.evolution || null,
+    read_model: publicReadModel(projection),
     graph,
     filaments,
     providers: [{

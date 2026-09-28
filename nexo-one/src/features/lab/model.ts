@@ -33,7 +33,13 @@ export interface TestEntity {
   contestOf: string | null;
   contests: string[];
   createdAt: string | null;
-  prereg: { metric: unknown; threshold: unknown; prediction: unknown; null_model: unknown; rival: unknown; hash: unknown; at: unknown };
+  prereg: { metric: unknown; threshold: unknown; prediction: unknown; null_model: unknown; rival: unknown; hash: unknown; at: unknown; success: string[]; kill: string[]; ref: unknown };
+  createdSource: string | null;
+  executedAt: string | null;
+  execution: { at?: string; battery_id?: string; run_ref?: string; runner?: string } | null;
+  parents: string[];
+  children: string[];
+  verdictRaw: string | null;
   result: unknown;
   statistics: unknown;
   robustness: unknown;
@@ -44,7 +50,15 @@ export interface TestEntity {
   claimLevel: unknown;
   reviews: ReviewStep[];
 }
-export interface ReviewStep { kind: string; by?: string; axis?: string; outcome?: string; at?: string; ref?: string }
+export interface ReviewStep { kind: string; by?: string; axis?: string; outcome?: string; at?: string; ref?: string; contest_test_id?: string }
+export interface ActivityEvent { event_type: string; role: string; at: string; entity_id?: string; entity_kind?: string }
+/** Read model público do TCC#96 repassado pelo build do Pages (system.read_model). */
+export interface ReadModel {
+  tests?: Record<string, Record<string, unknown>>;
+  hypotheses?: Record<string, Record<string, unknown>>;
+  roadmaps?: Array<Record<string, unknown>>;
+  activity?: ActivityEvent[];
+}
 
 export interface HypothesisEntity {
   id: string; statement: string | null; model: unknown; baseline: unknown; falsification: unknown;
@@ -56,6 +70,7 @@ export interface RoadmapEntity {
   confirmed: number; target: number | null; used: number; maxTests: number | null; maxDays: number | null;
   refutedStreak: number; killStreak: number | null; stop: string | null; renewable: boolean; charteredAt: string | null;
   tests: string[]; hypotheses: string[]; frontier: number;
+  frontierIds?: string[]; objectives?: string[]; progress?: Record<string, number>;
 }
 
 export interface Lab {
@@ -67,6 +82,8 @@ export interface Lab {
   reviews: Record<string, number>;
   generatedAt: string;
   missingContract: string[];
+  activity: ActivityEvent[];
+  hasReadModel: boolean;
 }
 
 const val = (field: unknown): unknown => {
@@ -107,55 +124,67 @@ export function buildLab(state: SystemState): Lab {
   const records = new Map<string, ScienceProjectionRecord>();
   for (const rec of sp?.tests ?? []) records.set(bare(String(rec.id)), rec);
 
+  const rmodel = ((state as unknown as { read_model?: ReadModel }).read_model) ?? null;
+  const rmTests = rmodel?.tests ?? {};
   const roadmapsRaw = (state.evolution?.roadmaps ?? []) as unknown as Array<Record<string, unknown>>;
   const campaignToRoadmap = new Map<string, string>();
   for (const rm of roadmapsRaw) if (rm.campaign_id) campaignToRoadmap.set(String(rm.campaign_id), String(rm.roadmap_id));
 
   const tests = new Map<string, TestEntity>();
-  for (const id of new Set([...nodes.keys(), ...records.keys()])) {
+  for (const id of new Set([...nodes.keys(), ...records.keys(), ...Object.keys(rmTests)])) {
     const n = nodes.get(id);
     const r = (records.get(id) ?? {}) as Record<string, unknown>;
-    const any = r as Record<string, unknown> & { prereg?: Record<string, unknown> };
-    const status = str(r.status) ?? n?.status_group ?? null;
+    // O read model (TCC#96) tem prioridade: é o dado mais rico e já sanitizado.
+    const any = { ...r, ...(rmTests[id] ?? {}) } as Record<string, unknown> & { prereg?: Record<string, unknown> };
+    const status = str(any.status) ?? n?.status_group ?? null;
     const review = str(any.review_state) ?? str((n as unknown as Record<string, unknown>)?.review_state);
-    const campaignId = str(r.campaign_id) ?? n?.campaign_id?.replace(/^campaign:/, '') ?? null;
+    const campaignId = str(any.campaign_id) ?? n?.campaign_id?.replace(/^campaign:/, '') ?? null;
     const pre = (val(any.prereg) as Record<string, unknown> | null) ?? {};
+    const crit = (pre.criterion as { success?: string[]; kill?: string[] } | undefined) ?? {};
+    const lineage = (k: string) => (Array.isArray(any[k]) ? (any[k] as unknown[]).map(String) : []);
     tests.set(id, {
       id,
-      question: n?.question_plain ?? str(any.question_plain) ?? str(any.question),
+      question: str(any.question_plain) ?? n?.question_plain ?? str(any.question),
       meaning: n?.result_meaning ?? str(any.result_meaning),
       summary: n?.summary ?? null,
       method: str(r.method),
       status,
       review,
       verdict: verdictOf(status, review, n?.state === 'BLOCKED'),
-      hypothesisId: str(r.hypothesis_id),
+      hypothesisId: str(any.hypothesis_id),
       campaignId,
       roadmapId: str(any.roadmap_id) ?? (campaignId ? campaignToRoadmap.get(campaignId) ?? null : null),
-      domain: n?.semantic_domain ?? n?.domain ?? 'SCIENCE',
+      domain: n?.semantic_domain ?? str(any.domain) ?? n?.domain ?? 'SCIENCE',
       topic: n?.semantic_subdomain ?? null,
       blocker: n?.blocker ?? str(any.blocker) ?? (n?.state === 'BLOCKED' ? n.summary : null),
       contestOf: contestTarget(id),
       contests: [],
-      createdAt: str(any.created_at),
+      createdAt: str(any.created_at_effective) ?? str(any.created_at),
+      createdSource: str(any.created_at_source),
+      executedAt: str(any.executed_at),
+      execution: (any.execution as TestEntity['execution']) ?? null,
+      parents: lineage('parents'),
+      children: lineage('children'),
+      verdictRaw: str(any.verdict),
       prereg: {
         metric: val(r.preregistered_metric) ?? pre.metric ?? null,
-        threshold: val(r.threshold) ?? pre.threshold ?? pre.criterion ?? null,
+        threshold: val(r.threshold) ?? pre.threshold ?? null,
+        success: crit.success ?? [], kill: crit.kill ?? [], ref: pre.ref ?? null,
         prediction: pre.prediction ?? null, null_model: pre.null ?? pre.null_model ?? null,
         rival: pre.rival ?? null, hash: pre.hash ?? val(any.prereg_hash) ?? null, at: pre.at ?? null,
       },
       result: val(r.result), statistics: val(r.statistics), robustness: val(r.robustness_checks),
       datasets: val(r.datasets), artifacts: val(r.artifacts),
       limitations: val(any.limitations), claimBoundary: val(any.claim_boundary), claimLevel: val(r.claim_level),
-      reviews: Array.isArray(val(any.reviews)) ? (val(any.reviews) as ReviewStep[]) : [],
+      reviews: (Array.isArray(any.review) ? any.review : Array.isArray(val(any.reviews)) ? val(any.reviews) : []) as ReviewStep[],
     });
   }
   for (const t of tests.values()) if (t.contestOf && tests.has(t.contestOf)) tests.get(t.contestOf)!.contests.push(t.id);
 
   const hypotheses = new Map<string, HypothesisEntity>();
   for (const rec of sp?.hypotheses ?? []) {
-    const r = rec as Record<string, unknown>;
     const id = bare(String(rec.id));
+    const r = { ...(rec as Record<string, unknown>), ...(rmodel?.hypotheses?.[id] ?? {}) };
     hypotheses.set(id, {
       id, statement: str(r.statement), model: val(r.model), baseline: val(r.baseline),
       falsification: val(r.falsification_criterion), origin: str(r.origin) ?? str(r.proposed_by), tests: [], verdict: null,
@@ -184,39 +213,53 @@ export function buildLab(state: SystemState): Lab {
 
   const charters = new Map((state.evolution?.charters ?? []).map(c => [c.roadmap_id, c as Record<string, unknown>]));
   const roadmaps = new Map<string, RoadmapEntity>();
-  for (const rm of roadmapsRaw) {
-    const id = String(rm.roadmap_id);
-    const charter = charters.get(id) ?? {};
-    const campaignId = rm.campaign_id ? String(rm.campaign_id) : null;
+  const rmRoadmaps = new Map((rmodel?.roadmaps ?? []).map(r => [String(r.roadmap_id ?? r.id), r]));
+  for (const [rid, r] of rmRoadmaps) {
+    for (const tid of (r.test_ids as string[] | undefined) ?? []) { const t = tests.get(tid); if (t && !t.roadmapId) t.roadmapId = rid; }
+  }
+  for (const id of new Set([...roadmapsRaw.map(r => String(r.roadmap_id)), ...rmRoadmaps.keys()])) {
+    const rm = roadmapsRaw.find(r => String(r.roadmap_id) === id) ?? {};
+    const full = rmRoadmaps.get(id);
+    const ch = (full?.charter as Record<string, unknown> | undefined) ?? {};
+    const budget = (ch.budget as Record<string, number> | undefined) ?? {};
+    const stop = (ch.stop as Record<string, number> | undefined) ?? {};
+    const prog = (full?.progress as Record<string, number> | undefined) ?? {};
+    const charter = { ...(charters.get(id) ?? {}), ...ch } as Record<string, unknown>;
+    const campRaw = rm.campaign_id ?? full?.campaign_id;
+    const campaignId = campRaw ? String(campRaw) : null;
     const camp = campaignId ? campaigns.get(campaignId) : undefined;
-    const rmTests = [...tests.values()].filter(t => t.roadmapId === id).map(t => t.id);
+    const listed = ((full?.test_ids as string[] | undefined) ?? []).filter(t => tests.has(t));
+    const rmTestIds = listed.length ? listed : [...tests.values()].filter(t => t.roadmapId === id).map(t => t.id);
     roadmaps.set(id, {
-      id, title: camp?.title ?? humanId(id), question: (charter.question as string) ?? camp?.question ?? null, campaignId,
-      state: String(rm.state ?? charter.status ?? 'ACTIVE'),
-      confirmed: Number(rm.confirmed ?? 0), target: (rm.success_target as number) ?? null,
-      used: Number(rm.tests_used ?? 0), maxTests: (rm.max_tests as number) ?? null, maxDays: (rm.max_days as number) ?? null,
-      refutedStreak: Number(rm.refuted_streak ?? 0), killStreak: (rm.kill_streak as number) ?? null,
-      stop: (rm.stop_reached as string) ?? null, renewable: Boolean(rm.renewable),
-      charteredAt: (charter.chartered_at as string) ?? null, tests: rmTests,
-      hypotheses: [...new Set(rmTests.map(t => tests.get(t)!.hypothesisId).filter(Boolean) as string[])],
-      frontier: Number(rm.frontier_count ?? 0),
+      id, title: str(full?.title) ?? camp?.title ?? humanId(id),
+      question: str(full?.question) ?? (charter.question as string) ?? camp?.question ?? null, campaignId,
+      state: String(full?.state ?? rm.state ?? charter.status ?? 'ACTIVE'),
+      confirmed: Number(prog.confirmed ?? rm.confirmed ?? 0),
+      target: (stop.success_confirmed ?? rm.success_target ?? null) as number | null,
+      used: Number(rm.tests_used ?? prog.total ?? 0), maxTests: (budget.max_tests ?? rm.max_tests ?? null) as number | null,
+      maxDays: (budget.max_days ?? rm.max_days ?? null) as number | null,
+      refutedStreak: Number(rm.refuted_streak ?? 0),
+      killStreak: (stop.kill_consecutive_refuted ?? rm.kill_streak ?? null) as number | null,
+      stop: (rm.stop_reached as string) ?? null, renewable: Boolean(ch.renewable ?? rm.renewable),
+      charteredAt: (charter.chartered_at as string) ?? null, tests: rmTestIds,
+      hypotheses: (full?.hypothesis_ids as string[] | undefined)
+        ?? [...new Set(rmTestIds.map(t => tests.get(t)!.hypothesisId).filter(Boolean) as string[])],
+      frontier: Number(prog.frontier ?? rm.frontier_count ?? 0),
+      frontierIds: ((full?.frontier_test_ids as string[] | undefined) ?? []).filter(t => tests.has(t)),
+      objectives: Array.isArray(ch.objectives) ? (ch.objectives as string[]) : [],
+      progress: prog,
     });
   }
 
   const counts = Object.fromEntries(VERDICT_ORDER.map(v => [v, 0])) as Record<Verdict, number>;
   for (const t of tests.values()) counts[t.verdict] += 1;
 
-  const missingContract: string[] = [];
-  const sample = sp?.tests?.[0] as Record<string, unknown> | undefined;
-  if (sample && !('review_state' in sample)) missingContract.push('tests[].review_state');
-  if (sample && !('created_at' in sample)) missingContract.push('tests[].created_at');
-  if (sample && !('prereg' in sample)) missingContract.push('tests[].prereg');
-  if (sample && !('reviews' in sample)) missingContract.push('tests[].reviews');
-  if (!(state.evolution as Record<string, unknown> | undefined)?.events) missingContract.push('evolution.events');
+  const missingContract: string[] = rmodel ? [] : ['read_model (TCC#96 ainda não publicado)'];
 
   return {
     tests, hypotheses, campaigns, roadmaps, counts, reviews: state.evolution?.reviews ?? {},
     generatedAt: state.generated_at, missingContract,
+    activity: [...(rmodel?.activity ?? [])].filter(e => e.at).sort((a, b) => a.at.localeCompare(b.at)), hasReadModel: Boolean(rmodel),
   };
 }
 

@@ -34,7 +34,18 @@ function Section({ title, kicker, children, id }: { title: string; kicker?: stri
   </section>;
 }
 const Missing = ({ what }: { what: string }) => <p className="hud-missing">Aguardando dado da projeção: <code>{what}</code></p>;
-const text = (v: unknown): string | null => v === null || v === undefined || v === '' ? null : typeof v === 'string' ? v : JSON.stringify(v, null, 1);
+// Texto legível: desembrulha envelopes {value, unavailable_reason, source_ref}, some com nulos, vira "chave: valor".
+const unwrap = (v: unknown): unknown => (v && typeof v === 'object' && !Array.isArray(v) && 'value' in (v as object) && 'source_ref' in (v as object)) ? (v as { value: unknown }).value : v;
+const fmt = (v: unknown): string => typeof v === 'number' ? (Math.abs(v) >= 1e4 || (Math.abs(v) < 1e-3 && v !== 0) ? v.toExponential(3) : String(Math.round(v * 1e4) / 1e4)) : String(v);
+const text = (raw: unknown): string | null => {
+  const v = unwrap(raw);
+  if (v === null || v === undefined || v === '') return null;
+  if (typeof v !== 'object') return fmt(v);
+  if (Array.isArray(v)) { const parts = v.map(text).filter(Boolean); return parts.length ? parts.join(' · ') : null; }
+  const lines = Object.entries(v as Record<string, unknown>).filter(([k]) => !/^(source_ref|fingerprint|unavailable_reason)$/.test(k))
+    .map(([k, x]) => { const t = text(x); return t ? `${k.replace(/_/g, ' ')}: ${t}` : null; }).filter(Boolean);
+  return lines.length ? lines.join('\n') : null;
+};
 
 function Bar({ parts, total }: { parts: Array<[Verdict, number]>; total: number }) {
   return <span className="vbar" role="img" aria-label={parts.map(([v, n]) => `${n} ${VERDICT_PT[v]}`).join(', ')}>
@@ -165,7 +176,6 @@ function Cycle({ lab, state }: { lab: Lab; state: SystemState }) {
   const values = STAGES.map(s => s.get(lab, state));
   const max = Math.max(1, ...values);
   const chains = [...lab.tests.values()].filter(t => t.contests.length).sort((a, b) => b.contests.length - a.contests.length).slice(0, 8);
-  const events = (ev as unknown as { events?: Array<{ at: string; actor: string; kind: string; ref?: string; text?: string }> })?.events;
   return <>
     <header className="hud-hero">
       <p className="hud-kicker">Geração {ev?.genome.generation ?? 0} · {ev?.decoys.planted ?? 0} iscas em campo</p>
@@ -201,13 +211,10 @@ function Cycle({ lab, state }: { lab: Lab; state: SystemState }) {
       </li>)}</ul> : <p className="hud-muted">Nenhum resultado foi contestado ainda.</p>}
     </Section>
 
-    <Section title="Diário" kicker="Últimos pensamentos da Pítia" id="cy-diary">
-      {events?.length ? <ol className="stream">{events.slice(-24).reverse().map((e, i) => <li key={i}>
-        <time>{ago(e.at)}</time><b>{e.actor}</b><span>{e.text ?? e.kind}</span>{e.ref && <E id={e.ref} />}
-      </li>)}</ol> : <ol className="stream">{[...(ev?.thoughts ?? [])].reverse().slice(0, 8).map(t => <li key={t.id}>
-        <time>{ago(t.at)}</time><b>Pítia</b><span>{t.text}</span>
-      </li>)}</ol>}
-      {!events && <Missing what="evolution.events[] {at, actor, kind, ref, text}" />}
+    <Section title="Quem fez o quê" kicker="Últimas 48 h · cada ponto é um evento" id="cy-lanes">
+      {lab.activity.length ? <Swimlanes events={lab.activity} /> : <>
+        <ol className="stream">{[...(ev?.thoughts ?? [])].reverse().slice(0, 8).map(t => <li key={t.id}><time>{ago(t.at)}</time><b>Pítia</b><span>{t.text}</span></li>)}</ol>
+        <Missing what="read_model.activity (TCC#96)" /></>}
     </Section>
   </>;
 }
@@ -240,13 +247,14 @@ function RoadmapPage({ lab, id }: { lab: Lab; id: string }) {
   tests.forEach(t => { const k = t.hypothesisId ?? '—'; (hyps.get(k) ?? hyps.set(k, []).get(k)!).push(t); });
   const pct = (n: number, d: number | null) => (d ? Math.min(100, Math.round(100 * n / d)) : 0);
   const confirmed = tests.filter(t => t.verdict === 'CONFIRMED');
-  const nextUp = tests.filter(t => t.verdict === 'READY').slice(0, 5);
+  const nextUp = (r.frontierIds?.length ? r.frontierIds.map(id => lab.tests.get(id)!).filter(Boolean) : tests.filter(t => t.verdict === 'READY')).slice(0, 6);
   const blocked = tests.filter(t => t.verdict === 'BLOCKED');
   return <>
     <header className="hud-hero">
       <p className="hud-kicker"><a href="#/roadmaps">Roadmaps</a> · {r.state === 'ACTIVE' ? 'ativo' : r.state.toLowerCase()}{r.renewable ? ' · campanha permanente' : ''}</p>
       <h1>{r.title}</h1>
       {r.question && <p className="hud-lead">{r.question}</p>}
+      {r.objectives?.length ? <ul className="crit objectives">{r.objectives.map(o => <li key={o}>{o}</li>)}</ul> : null}
     </header>
     <div className="stop-rules">
       <div><span>Meta</span><strong>{r.confirmed}/{r.target ?? '?'}</strong><i style={{ width: `${pct(r.confirmed, r.target)}%` }} className="ok" /><em>confirmações para encerrar com sucesso</em></div>
@@ -304,54 +312,97 @@ function Field({ label, value, sealed }: { label: string; value: unknown; sealed
   const t = text(value);
   return <div className={`field${sealed ? ' sealed' : ''}${t ? '' : ' empty'}`}><dt>{label}</dt><dd>{t ?? 'não publicado'}</dd></div>;
 }
+const List = ({ items, empty }: { items: string[]; empty?: string }) =>
+  items.length ? <ul className="crit">{items.map(i => <li key={i}>{i}</li>)}</ul> : <span className="hud-muted">{empty ?? 'não publicado'}</span>;
+const REVIEW_PT: Record<string, string> = { CONTEST: 'Contestação', VERDICT_REVIEW: 'Revisão do veredito' };
+const OUTCOME_PT: Record<string, string> = { PENDING: 'pendente', SURVIVED: 'sobreviveu', PASSED: 'passou', REFUTED: 'derrubou', FAILED: 'falhou', CONFIRMED: 'confirmou' };
+
 function EntityPage({ lab, id }: { lab: Lab; id: string }) {
   const t = lab.tests.get(id);
   const h = lab.hypotheses.get(id);
   if (!t && h) return <HypothesisView lab={lab} id={id} />;
   if (!t) {
-    const rm = lab.roadmaps.get(id);
-    if (rm) { window.location.hash = labHref('roadmap', id); return null; }
+    if (lab.roadmaps.has(id)) { window.location.hash = labHref('roadmap', id); return null; }
     return <NotFound id={id} />;
   }
   const parent = t.contestOf ? lab.tests.get(t.contestOf) : null;
   const hyp = t.hypothesisId ? lab.hypotheses.get(t.hypothesisId) : null;
+  const pred = (t.prereg.prediction ?? {}) as { expected_effect?: string; p_promoted?: number };
+  const contests = [...new Set([...t.contests, ...t.reviews.map(r => r.contest_test_id ?? r.ref).filter(Boolean) as string[]])];
+  const lim = Array.isArray(t.limitations) ? (t.limitations as string[]) : t.limitations ? [String(t.limitations)] : [];
   return <>
     <header className="hud-hero">
-      <p className="hud-kicker"><a href="#/evidencia">Evidência</a>{t.roadmapId && <> · <a href={labHref('roadmap', t.roadmapId)}>{lab.roadmaps.get(t.roadmapId)?.title ?? humanId(t.roadmapId)}</a></>}{parent && <> · contesta <E id={parent.id} /></>}</p>
-      <h1>{t.question ?? humanId(t.id)}</h1>
-      <p className="hud-lead"><VerdictChip v={t.verdict} />{t.review && <span className="hud-muted"> · revisão: {t.review.toLowerCase().replace(/_/g, ' ')}</span>}</p>
-      <code className="hud-id">{t.id}</code>
+      <p className="hud-kicker"><a href="#/evidencia">Evidência</a>
+        {t.roadmapId && <> · <a href={labHref('roadmap', t.roadmapId)}>{lab.roadmaps.get(t.roadmapId)?.title ?? humanId(t.roadmapId)}</a></>}
+        {parent && <> · contesta <E id={parent.id} /></>}</p>
+      <h1 className="h1-entity">{t.question ?? humanId(t.id)}</h1>
+      <p className="hud-lead"><VerdictChip v={t.verdict} />
+        {t.verdictRaw && <span className="hud-muted"> · veredito do teste: {t.verdictRaw.toLowerCase()}</span>}</p>
+      <p className="hud-meta"><code>{t.id}</code>
+        {t.createdAt && <> · {t.createdSource === 'EVENT_FIRST_OBSERVED' ? 'visto pela 1ª vez' : 'criado'} {ago(t.createdAt)}</>}
+        {t.executedAt && <> · executado {ago(t.executedAt)}</>}
+        {t.execution?.battery_id && <> · bateria <code>{t.execution.battery_id}</code></>}</p>
     </header>
 
     {t.meaning && <Section title="O que o resultado significa" id="en-mean"><p className="hud-big">{t.meaning}</p></Section>}
 
-    <Section title="Congelado antes do teste" kicker="Pré-registro — não pode mudar depois do resultado" id="en-pre">
-      <dl className="fields">
-        <Field label="Métrica" value={t.prereg.metric} sealed /><Field label="Critério / limiar" value={t.prereg.threshold} sealed />
-        <Field label="Previsão" value={t.prereg.prediction} sealed /><Field label="Hipótese nula" value={t.prereg.null_model} sealed />
-        <Field label="Rival" value={t.prereg.rival} sealed /><Field label="Selo (hash)" value={t.prereg.hash} sealed />
-      </dl>
-    </Section>
+    <div className="versus" role="group" aria-label="Prometido antes versus observado depois">
+      <section className="versus-col sealed" aria-labelledby="vs-pre">
+        <h2 id="vs-pre"><i aria-hidden="true">◆</i> Prometido antes</h2>
+        <dl>
+          <dt>Previsão</dt><dd>{pred.expected_effect ?? text(t.prereg.prediction) ?? <span className="hud-muted">não publicado</span>}
+            {typeof pred.p_promoted === 'number' && <em className="prob"> · chance estimada de passar: {Math.round(pred.p_promoted * 100)}%</em>}</dd>
+          <dt>Hipótese nula</dt><dd>{text(t.prereg.null_model) ?? <span className="hud-muted">não publicado</span>}</dd>
+          <dt>Rival</dt><dd>{text(t.prereg.rival) ?? <span className="hud-muted">não publicado</span>}</dd>
+          <dt>Passa se</dt><dd><List items={t.prereg.success} /></dd>
+          <dt>Morre se</dt><dd><List items={t.prereg.kill} /></dd>
+          {Boolean(t.prereg.metric || t.prereg.threshold) && <><dt>Métrica / limiar</dt><dd>{[text(t.prereg.metric), text(t.prereg.threshold)].filter(Boolean).join(' · ')}</dd></>}
+        </dl>
+        <p className="seal">{t.prereg.hash ? <>Selo <code>{String(t.prereg.hash).slice(0, 23)}…</code></> : 'Sem selo publicado'}
+          {Boolean(t.prereg.at) && <> · congelado {ago(String(t.prereg.at))}</>}</p>
+      </section>
+      <section className="versus-col" aria-labelledby="vs-obs">
+        <h2 id="vs-obs"><i aria-hidden="true">●</i> Observado depois</h2>
+        <dl>
+          <dt>Resultado</dt><dd>{text(t.result) ?? t.summary ?? <span className="hud-muted">não publicado</span>}</dd>
+          <dt>Estatística</dt><dd>{text(t.statistics) ?? <span className="hud-muted">não publicado</span>}</dd>
+          <dt>Método</dt><dd>{t.method ?? <span className="hud-muted">não publicado</span>}</dd>
+          <dt>Dados</dt><dd>{text(t.datasets) ?? <span className="hud-muted">não publicado</span>}</dd>
+        </dl>
+      </section>
+    </div>
 
-    <Section title="Como foi feito" id="en-method">
-      <dl className="fields"><Field label="Método" value={t.method} /><Field label="Dados" value={t.datasets} /><Field label="Artefatos" value={t.artifacts} /></dl>
-    </Section>
-
-    <Section title="Resultado" id="en-res">
-      <dl className="fields"><Field label="Valor" value={t.result} /><Field label="Estatística" value={t.statistics} /><Field label="Robustez" value={t.robustness} /></dl>
-    </Section>
-
-    <Section title="Tentativas de derrubar" kicker={`${t.contests.length} contestações`} id="en-rev">
-      {t.reviews.length > 0 && <ol className="stream">{t.reviews.map((r, i) => <li key={i}><time>{ago(r.at)}</time><b>{r.kind}</b><span>{[r.axis, r.outcome].filter(Boolean).join(' · ')}</span>{r.ref && <E id={r.ref} />}</li>)}</ol>}
-      {t.contests.length > 0 ? <ul className="hud-list">{t.contests.map(c => <li key={c}><VerdictChip v={lab.tests.get(c)!.verdict} small /><E id={c}>{lab.tests.get(c)!.question ?? humanId(c)}</E></li>)}</ul>
-        : <p className="hud-muted">Ainda não foi contestado. Só vira confirmado depois de sobreviver a duas contestações independentes.</p>}
+    <Section title="Tentativas de derrubar" kicker={`${contests.length} contestações · só confirma quem sobrevive a 2 independentes`} id="en-rev">
+      {t.reviews.length > 0 ? <ol className="timeline">{t.reviews.map((r, i) => {
+        const ref = r.contest_test_id ?? r.ref;
+        return <li key={i} className={`o-${(r.outcome ?? 'pending').toLowerCase()}`}>
+          <time>{r.at ? ago(r.at) : '—'}</time>
+          <div><b>{REVIEW_PT[r.kind] ?? r.kind}</b>{r.axis && <span className="axis">eixo: {r.axis}</span>}
+            <span className="outcome">{OUTCOME_PT[(r.outcome ?? 'PENDING').toUpperCase()] ?? r.outcome}</span>
+            {r.by && <span className="hud-muted"> · {r.by}</span>}
+            {ref && <> · <E id={ref}>ver contestação</E></>}</div>
+        </li>;
+      })}</ol> : contests.length ? <ul className="hud-list">{contests.map(c => <li key={c}>
+          {lab.tests.get(c) && <VerdictChip v={lab.tests.get(c)!.verdict} small />}<E id={c}>{lab.tests.get(c)?.question ?? humanId(c)}</E></li>)}</ul>
+        : <p className="hud-muted">Ainda não foi contestado.</p>}
     </Section>
 
     <Section title="Limites da conclusão" id="en-lim">
-      <dl className="fields"><Field label="Limitações" value={t.limitations} /><Field label="O que isto NÃO mostra" value={t.claimBoundary} /><Field label="Nível da afirmação" value={t.claimLevel} /></dl>
+      {lim.length > 0 && <ul className="crit">{lim.map(l => <li key={l}>{l}</li>)}</ul>}
+      {lim.length === 0 && !t.claimBoundary && <p className="hud-muted">Limitações não publicadas.</p>}
+      {lim.length ? <ul className="crit">{lim.map(l => <li key={l}>{l}</li>)}</ul> : !t.claimBoundary && <p className="hud-muted">Limitações não publicadas.</p>}
     </Section>
 
-    {hyp && <Section title="De onde veio" kicker="Hipótese" id="en-hyp"><p className="hud-big"><E id={hyp.id}>{hyp.statement ?? humanId(hyp.id)}</E></p></Section>}
+    <Section title="Linhagem" id="en-lin">
+      <div className="lineage">
+        <div><span>Veio de</span>{hyp && <E id={hyp.id}>{hyp.statement ?? humanId(hyp.id)}</E>}{t.parents.filter(x => x !== hyp?.id).map(x => <E key={x} id={x} />)}
+          {!hyp && !t.parents.length && <em className="hud-muted">origem não publicada</em>}</div>
+        <b aria-hidden="true">→</b>
+        <div><span>Este teste</span><VerdictChip v={t.verdict} small /></div>
+        <b aria-hidden="true">→</b>
+        <div><span>Gerou</span>{t.children.length ? t.children.map(x => <E key={x} id={x} />) : <em className="hud-muted">nada ainda</em>}</div>
+      </div>
+    </Section>
   </>;
 }
 
@@ -436,4 +487,39 @@ function sceneEvents(state: SystemState, lab: Lab): SceneEvents {
   const grbs = (ev?.thoughts ?? []).filter(t => Date.now() - Date.parse(t.at) < 2 * 3600e3).slice(-2)
     .map(t => ({ domain: domainOfId(t.refs[0] ?? '', lab), label: 'GRB · a Pítia pensou', href: '#/ciclo' }));
   return { quasars, agn, grbs };
+}
+
+// ---------- raias do ciclo ----------
+const LANES: Array<[string, string]> = [['PITIA', 'Pítia'], ['LEARNER', 'Learner'], ['EXECUTOR', 'Executor'], ['REFUTADOR', 'Refutador'], ['GUARDIAO', 'Guardião'], ['DENER', 'Dener']];
+const EVENT_PT: Record<string, string> = {
+  THOUGHT: 'pensou', NEXO_THOUGHT: 'pensou', HYPOTHESIS: 'propôs hipótese', TEST_PROPOSED: 'propôs teste', TEST_BATTERY: 'despachou bateria',
+  BATTERY_STATUS: 'recebeu bateria', RESULT: 'registrou resultado', TEST_RESULT: 'registrou resultado', CONTEST: 'contestou',
+  VERDICT_REVIEW: 'revisou veredito', INTEGRITY_REPORT: 'auditou', ROADMAP_CHARTER: 'aprovou carta', GENOME_MUTATION: 'propôs mutação',
+};
+function Swimlanes({ events }: { events: Array<{ event_type: string; role: string; at: string; entity_id?: string }> }) {
+  const now = Date.now(), span = 48 * 3600e3;
+  const recent = events.filter(e => now - Date.parse(e.at) <= span);
+  const [hover, setHover] = useState<number | null>(null);
+  const W = 1000, rowH = 34, left = 92, H = LANES.length * rowH + 26;
+  const x = (at: string) => left + ((Date.parse(at) - (now - span)) / span) * (W - left - 8);
+  const lane = (role: string) => Math.max(0, LANES.findIndex(([k]) => k === role.toUpperCase()));
+  const counts = LANES.map(([k]) => recent.filter(e => e.role.toUpperCase() === k).length);
+  const h = hover !== null ? recent[hover] : null;
+  return <div className="lanes">
+    <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label={LANES.map(([, l], i) => `${l}: ${counts[i]} eventos`).join('; ')}>
+      {LANES.map(([k, l], i) => <g key={k}>
+        <line x1={left} x2={W - 8} y1={i * rowH + rowH / 2} y2={i * rowH + rowH / 2} className="lane-line" />
+        <text x={0} y={i * rowH + rowH / 2 + 4} className="lane-label">{l}</text>
+        <text x={left - 10} y={i * rowH + rowH / 2 + 4} textAnchor="end" className="lane-count">{counts[i]}</text>
+      </g>)}
+      {[0, 12, 24, 36, 48].map(hh => <text key={hh} x={left + ((48 - hh) / 48) * (W - left - 8)} y={H - 4} textAnchor="middle" className="lane-tick">{hh ? `-${hh}h` : 'agora'}</text>)}
+      {recent.map((e, i) => <circle key={i} cx={x(e.at)} cy={lane(e.role) * rowH + rowH / 2} r={hover === i ? 7 : 4.5}
+        className={`lane-dot r-${e.role.toLowerCase()}`} tabIndex={0}
+        onMouseEnter={() => setHover(i)} onFocus={() => setHover(i)} onMouseLeave={() => setHover(null)}
+        onClick={() => { if (e.entity_id) window.location.hash = labHref('entidade', e.entity_id); }} />)}
+    </svg>
+    <p className="lane-caption" aria-live="polite">{h
+      ? <>{LANES[lane(h.role)]![1]} {EVENT_PT[h.event_type] ?? h.event_type.toLowerCase().replace(/_/g, ' ')} · {ago(h.at)}{h.entity_id && <> · <E id={h.entity_id} /></>}</>
+      : `${recent.length} eventos em 48 h. Passe o dedo ou o mouse num ponto; clique para abrir a entidade.`}</p>
+  </div>;
 }

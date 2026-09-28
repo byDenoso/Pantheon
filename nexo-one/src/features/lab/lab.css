@@ -213,3 +213,52 @@
 .obs-ev--grb{color:#d8f6ff;border:1px dashed rgba(160,230,255,.4);background:rgba(2,14,26,.4)}
 .obs-ev:hover{filter:brightness(1.3)}
 @media (max-width:760px){.obs-ev--agn,.obs-ev--grb{display:none}}
+
+/* Teste: prometido x observado. */
+.h1-entity{font-size:clamp(26px,3.4vw,40px)!important;text-transform:none!important;letter-spacing:0!important;line-height:1.15!important}
+.hud-meta{font:12px var(--f-mono);color:var(--o-quiet)!important}
+.versus{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--o-line);border-radius:var(--r-l);overflow:hidden;margin:0 0 40px}
+.versus-col{background:var(--o-panel);padding:18px;backdrop-filter:blur(6px)}
+.versus-col.sealed{background:linear-gradient(160deg,rgba(74,168,255,.12),transparent 55%),var(--o-panel)}
+.versus-col h2{margin-bottom:12px}
+.versus-col h2 i{font-style:normal;color:var(--o-accent)}
+.versus dl{margin:0;display:grid;gap:10px}
+.versus dt{font:500 10px var(--f-mono);letter-spacing:.14em;text-transform:uppercase;color:var(--o-quiet)}
+.versus dd{margin:0;color:var(--o-ink);font-size:13px;line-height:1.55;white-space:pre-wrap;word-break:break-word}
+.prob{font-style:normal;color:var(--o-accent)}
+.seal{margin:14px 0 0!important;font:11px var(--f-mono);color:var(--o-quiet)!important}
+.crit{margin:0;padding-left:18px;display:grid;gap:4px}
+.crit li{color:var(--o-ink);font-size:13px;line-height:1.5}
+.boundary{border-left:2px solid var(--v-review);padding-left:12px;color:var(--o-ink)!important}
+.timeline{list-style:none;margin:0;padding:0 0 0 14px;border-left:1px solid var(--o-line);display:grid;gap:14px}
+.timeline li{display:grid;grid-template-columns:72px 1fr;gap:10px;position:relative}
+.timeline li::before{content:"";position:absolute;left:-19px;top:5px;width:9px;height:9px;border-radius:50%;background:var(--v-review)}
+.timeline li.o-refuted::before,.timeline li.o-failed::before{background:var(--v-refuted)}
+.timeline li.o-survived::before,.timeline li.o-passed::before,.timeline li.o-confirmed::before{background:var(--v-confirmed)}
+.timeline time{font:11px var(--f-mono);color:var(--o-quiet)}
+.timeline b{color:var(--o-ink);margin-right:8px}
+.timeline .axis{font:11px var(--f-mono);color:var(--o-accent);margin-right:8px}
+.timeline .outcome{font:11px var(--f-mono);text-transform:uppercase;letter-spacing:.08em}
+.lineage{display:grid;grid-template-columns:1fr auto auto auto 1fr;gap:12px;align-items:center}
+.lineage > div{display:grid;gap:6px;padding:12px;border-radius:var(--r-l);background:var(--o-panel);border:1px solid var(--o-line)}
+.lineage > div > span{font:500 10px var(--f-mono);letter-spacing:.14em;text-transform:uppercase;color:var(--o-quiet)}
+.lineage > b{color:var(--o-quiet)}
+/* Raias do ciclo. */
+.lanes{border-radius:var(--r-l);background:var(--o-panel);border:1px solid var(--o-line);padding:14px;backdrop-filter:blur(6px)}
+.lanes svg{width:100%;height:auto;display:block}
+.lane-line{stroke:var(--o-line)}
+.lane-label{fill:var(--o-ink);font:500 12px var(--f-body)}
+.lane-count{fill:var(--o-quiet);font:11px var(--f-mono)}
+.lane-tick{fill:var(--o-quiet);font:10px var(--f-mono)}
+.lane-dot{fill:var(--o-accent);opacity:.85;cursor:pointer;transition:r .15s}
+.lane-dot:focus{outline:none;stroke:#fff;stroke-width:2}
+.r-pitia{fill:#b98cff}.r-learner{fill:#7fe0ff}.r-executor{fill:#4aa8ff}.r-refutador{fill:var(--v-refuted)}.r-guardiao{fill:var(--v-review)}.r-dener{fill:#fff1d6}
+.lane-caption{margin:10px 0 0!important;font-size:13px;color:var(--o-ink)!important;min-height:1.6em}
+@media (max-width:760px){
+  .versus{grid-template-columns:1fr}
+  .lineage{grid-template-columns:1fr}
+  .lineage > b{transform:rotate(90deg);justify-self:center}
+  .lanes{padding:8px;overflow-x:auto}
+  .lanes svg{min-width:640px}
+  .timeline li{grid-template-columns:1fr}
+}
