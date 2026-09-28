@@ -1103,8 +1103,8 @@ function Telemetry({ lab, state }: { lab: Lab; state: SystemState }) {
   for (const e of raw) {
     const last = grouped.at(-1);
     if (last && last.e.event_type === e.event_type && last.e.role === e.role && GROUP_PT[e.event_type]
-        && Math.abs(Date.parse(e.at) - Date.parse(last.e.at)) < 20 * 60e3) { last.n += 1; last.e = e; }
-    else grouped.push({ e, n: 1 });
+        && Math.abs(Date.parse(e.at) - Date.parse(last.e.at)) < 20 * 60e3) { last.n += Number((e as { count?: number }).count ?? 1); last.e = e; }
+    else grouped.push({ e, n: Number((e as { count?: number }).count ?? 1) });
   }
   const acts = grouped.slice(-60).map(({ e, n }, i) => ({ kind: 'act' as const, at: e.at, who: roleLabel(String(e.role)), to: '',
     text: n > 1 ? GROUP_PT[e.event_type]!(n) : narrate(e, lab), id: `${e.at}-${i}` }));

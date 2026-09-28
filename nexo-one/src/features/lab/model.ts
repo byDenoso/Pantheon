@@ -113,7 +113,7 @@ function verdictOf(status: string | null, review: string | null, graphBlocked: b
   if (r === 'PENDING_REVIEW' || r === 'CONTESTED' || r === 'REFEREE1_PASSED') return 'REVIEW';
   const s = (status || '').toUpperCase();
   if (graphBlocked || s.startsWith('BLOCKED')) return 'BLOCKED';
-  if (s === 'REJECTED') return 'DISCARDED';
+  if (s === 'REJECTED' || s === 'ARCHIVED' || s === 'RETIRED' || s === 'SUPERSEDED' || s === 'CANCELLED') return 'DISCARDED';
   if (s === 'READY' || s === 'QUEUED' || s === 'RUNNING' || s === 'DISPATCHED') return 'READY';
   if (s) return 'PROVISIONAL';
   return 'READY';
