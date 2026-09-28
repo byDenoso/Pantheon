@@ -331,12 +331,12 @@ function useAmbience(on: boolean, pulse: string | null) {
 
 // ---------- Ciclo ----------
 const STAGES: Array<{ key: string; label: string; who: string; get: (lab: Lab, s: SystemState) => number }> = [
-  { key: 'thought', label: 'Pensamento', who: 'Pítia', get: (_l, s) => s.evolution?.thoughts?.length ?? 0 },
-  { key: 'hyp', label: 'Hipóteses', who: 'Learner', get: l => l.hypotheses.size },
-  { key: 'ready', label: 'Na fila', who: 'Executor', get: l => l.counts.READY },
-  { key: 'result', label: 'Resultado', who: 'Runner', get: l => l.counts.PROVISIONAL },
-  { key: 'review', label: 'Contestação', who: 'Refutador', get: l => (l.reviews.PENDING_REVIEW ?? 0) + (l.reviews.CONTESTED ?? 0) },
-  { key: 'ref1', label: 'Referee 1', who: 'Refutador', get: l => l.reviews.REFEREE1_PASSED ?? 0 },
+  { key: 'thought', label: 'Pensamento', who: 'Cientista · Pítia', get: (_l, s) => s.evolution?.thoughts?.length ?? 0 },
+  { key: 'hyp', label: 'Hipóteses', who: 'Cientista · Learner', get: l => l.hypotheses.size },
+  { key: 'ready', label: 'Na fila', who: 'Operador', get: l => l.counts.READY },
+  { key: 'result', label: 'Resultado', who: 'Runner público', get: l => l.counts.PROVISIONAL },
+  { key: 'review', label: 'Contestação', who: 'Crítico · Refutador', get: l => (l.reviews.PENDING_REVIEW ?? 0) + (l.reviews.CONTESTED ?? 0) },
+  { key: 'ref1', label: 'Referee 1', who: 'Crítico · Refutador', get: l => l.reviews.REFEREE1_PASSED ?? 0 },
   { key: 'final', label: 'Veredito', who: 'Tower', get: l => (l.reviews.CONFIRMED ?? 0) + (l.reviews.REFUTED ?? 0) },
   { key: 'gen', label: 'Nova geração', who: 'Genoma', get: (_l, s) => s.evolution?.genome.generation ?? 0 },
 ];
@@ -352,6 +352,8 @@ function Cycle({ lab, state }: { lab: Lab; state: SystemState }) {
       <h1>O ciclo fechado</h1>
       <p className="hud-lead">Onde o trabalho está acumulando: a altura mostra quantos itens estão em cada etapa.</p>
     </header>
+
+    <Crew lab={lab} />
 
     <div className="cycle" role="list" aria-label="Etapas do ciclo">
       {STAGES.map((s, i) => <div className="cycle-stage" role="listitem" key={s.key} style={{ ['--h' as string]: `${Math.max(6, (values[i]! / max) * 100)}%` }}>
@@ -621,7 +623,7 @@ function Health({ state, lab }: { state: SystemState; lab: Lab }) {
     </div>
     {(ev?.watchdog?.quiet?.length ?? 0) > 0 && <Section title="Quem está quieto" kicker={`vigia do robô · ${ago(ev!.watchdog!.checked_at ?? state.generated_at)}`} id="he-quiet">
       <ul className="quiet-list">{ev!.watchdog!.quiet!.map(q => <li key={q.role}>
-        <b>{ROLE_PT[q.role.toUpperCase()] ?? q.role}</b>
+        <b>{roleLabel(q.role)}</b>
         <span>{q.hours == null ? 'nunca produziu' : `parado há ${q.hours < 48 ? `${Math.round(q.hours)} h` : `${Math.round(q.hours / 24)} dias`}`}</span>
         <em>{q.loops.map(l => LOOP_PT[l] ?? l).join(' · ')}</em>
       </li>)}</ul>
@@ -685,6 +687,8 @@ function sceneEvents(state: SystemState, lab: Lab): SceneEvents {
 
 // ---------- raias do ciclo ----------
 const LANES: Array<[string, string]> = [['PITIA', 'Pítia'], ['LEARNER', 'Learner'], ['EXECUTOR', 'Executor'], ['REFUTADOR', 'Refutador'], ['GUARDIAO', 'Guardião'], ['DENER', 'Dener']];
+const LANE_ALIAS: Record<string, string> = { REFEREE_1: 'REFUTADOR', SENTINEL: 'PITIA' };
+const laneKey = (role: string) => LANE_ALIAS[role.toUpperCase()] ?? role.toUpperCase();
 const EVENT_PT: Record<string, string> = {
   TEST_RESULT_RECORDED: 'registrou resultado', ROADMAP_TEST_FROZEN: 'congelou um teste (pré-registro)',
   RESULT_CONTESTED: 'contestou um resultado', RESULT_REFEREE1_PASSED: 'aprovou no Referee 1', RESULT_REFUTED: 'refutou um resultado',
@@ -698,8 +702,8 @@ function Swimlanes({ events }: { events: Array<{ event_type: string; role: strin
   const [hover, setHover] = useState<number | null>(null);
   const W = 1000, rowH = 34, left = 92, H = LANES.length * rowH + 26;
   const x = (at: string) => left + ((Date.parse(at) - (now - span)) / span) * (W - left - 8);
-  const lane = (role: string) => Math.max(0, LANES.findIndex(([k]) => k === role.toUpperCase()));
-  const counts = LANES.map(([k]) => recent.filter(e => e.role.toUpperCase() === k).length);
+  const lane = (role: string) => Math.max(0, LANES.findIndex(([k]) => k === laneKey(role)));
+  const counts = LANES.map(([k]) => recent.filter(e => laneKey(e.role) === k).length);
   const h = hover !== null ? recent[hover] : null;
   return <div className="lanes">
     <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label={LANES.map(([, l], i) => `${l}: ${counts[i]} eventos`).join('; ')}>
@@ -721,7 +725,18 @@ function Swimlanes({ events }: { events: Array<{ event_type: string; role: strin
 }
 
 // ---------- "vivo": monólogo, calibração, replay ----------
-const ROLE_PT: Record<string, string> = { PITIA: 'Pítia', LEARNER: 'Learner', EXECUTOR: 'Executor', REFUTADOR: 'Refutador', GUARDIAO: 'Guardião', DENER: 'Dener' };
+const ROLE_PT: Record<string, string> = {
+  PITIA: 'Pítia', LEARNER: 'Learner', EXECUTOR: 'Executor', REFUTADOR: 'Refutador', REFEREE_1: 'Refutador', GUARDIAO: 'Guardião',
+  DENER: 'Dener', CONVERSA: 'Conversa', WRITER_ROBOT: 'Robô escritor', SENTINEL: 'Pítia',
+};
+/** Três tarefas agendadas vestem os seis papéis; o papel continua sendo quem assina cada ação. */
+const TASKS: Array<{ id: string; name: string; hats: string[]; rhythm: string; does: string }> = [
+  { id: 'cientista', name: 'Cientista', hats: ['LEARNER', 'PITIA', 'SENTINEL'], rhythm: 'a cada 2 h', does: 'propõe hipóteses, nomeia testes, pensa e vigia a literatura' },
+  { id: 'operador', name: 'Operador', hats: ['EXECUTOR'], rhythm: 'a cada hora', does: 'monta as baterias, pede e escreve receitas, liga dados' },
+  { id: 'critico', name: 'Crítico', hats: ['REFUTADOR', 'REFEREE_1', 'GUARDIAO'], rhythm: 'a cada 2 h', does: 'ataca resultados, julga, audita a saúde e escreve o bom-dia' },
+];
+const taskOf = (role: string) => TASKS.find(t => t.hats.includes(role.toUpperCase()));
+const roleLabel = (role: string) => { const t = taskOf(role); const r = ROLE_PT[role.toUpperCase()] ?? role; return t ? `${t.name} · ${r}` : r; };
 const NARRATION: Record<string, string> = {
   TEST_RESULT_RECORDED: 'Terminei um teste: %q',
   ROADMAP_TEST_FROZEN: 'Congelei as regras antes de olhar os dados: %q',
@@ -1005,7 +1020,7 @@ function Board({ state }: { state: SystemState }) {
   const now = Date.now();
   const posts = (state.evolution?.board ?? []).filter(p => !p.resolved_at && (!p.expires_at || Date.parse(p.expires_at) > now)).slice(-8).reverse();
   if (!posts.length) return null;
-  const who = (r: string) => (r === 'ALL' ? 'todos' : ROLE_PT[r.toUpperCase()] ?? r.toLowerCase());
+  const who = (r: string) => (r === 'ALL' ? 'todos' : roleLabel(r));
   return <Section title="Conversa entre os agentes" kicker={`${posts.length} ${posts.length === 1 ? 'recado aberto' : 'recados abertos'}`} id="now-board">
     <ol className="board">{posts.map(p => <li key={p.id}>
       <p className="board-head"><b>{who(p.from)}</b><i aria-hidden="true">→</i><span>{who(p.to)}</span><time>{ago(p.at)}</time></p>
@@ -1013,4 +1028,23 @@ function Board({ state }: { state: SystemState }) {
       {(p.refs?.length ?? 0) > 0 && <p className="hud-refs">{p.refs!.slice(0, 3).map(r => <E key={r} id={r} />)}</p>}
     </li>)}</ol>
   </Section>;
+}
+
+// ---------- Quem trabalha: as três tarefas e o último sinal de vida de cada uma ----------
+function Crew({ lab }: { lab: Lab }) {
+  const now = Date.now();
+  return <section className="crew" aria-label="Quem trabalha">
+    {TASKS.map(t => {
+      const mine = lab.activity.filter(e => t.hats.includes(String(e.role).toUpperCase()));
+      const last = mine.at(-1);
+      const day = mine.filter(e => now - Date.parse(e.at) < 24 * 3600e3).length;
+      const quiet = !last || now - Date.parse(last.at) > (t.id === 'operador' ? 3 : 5) * 3600e3;
+      return <article key={t.id} className={`crew-card${quiet ? ' quiet' : ''}`}>
+        <p className="crew-top"><b>{t.name}</b><span>{t.rhythm}</span></p>
+        <p className="crew-hats">{[...new Set(t.hats.map(h => ROLE_PT[h] ?? h))].join(' + ')}</p>
+        <p className="crew-does">{t.does}</p>
+        <p className="crew-pulse"><i aria-hidden="true" />{last ? `último sinal ${ago(last.at)} · ${day} ações em 24 h` : 'ainda sem ações registradas'}</p>
+      </article>;
+    })}
+  </section>;
 }

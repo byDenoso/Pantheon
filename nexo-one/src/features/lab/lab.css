@@ -551,3 +551,18 @@ details.tech .versus{margin-bottom:18px}
   .observatory .hud-status{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 8px;font-size:11px!important;line-height:1.4}
   .observatory .hud-status span{white-space:nowrap}
 }
+
+/* ===== Quem trabalha (três tarefas) ===== */
+.crew{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:4px 0 26px;pointer-events:auto}
+.crew-card{padding:14px 16px;border-radius:12px;background:rgba(8,12,20,.72);border:1px solid rgba(255,255,255,.07);backdrop-filter:blur(8px)}
+.crew-card p{margin:0!important}
+.crew-top{display:flex;align-items:baseline;justify-content:space-between;gap:8px}
+.crew-top b{font:300 22px/1.1 var(--sig-serif,serif);color:#efe9dd}
+.crew-top span{font:400 11.5px var(--sig-mono,monospace);color:#8f9aa6}
+.crew-hats{font:400 12px var(--sig-mono,monospace);color:#d4bf95;margin-top:4px!important;letter-spacing:.04em}
+.crew-does{font-size:13.5px;line-height:1.5;color:#aeb4bf!important;margin:8px 0!important}
+.crew-pulse{display:flex;align-items:center;gap:8px;font:400 12px var(--sig-mono,monospace);color:#8f9aa6!important}
+.crew-pulse i{width:7px;height:7px;border-radius:50%;background:#4fa3a0;box-shadow:0 0 8px #4fa3a0}
+.crew-card.quiet{border-color:rgba(200,85,61,.35)}
+.crew-card.quiet .crew-pulse i{background:#c8553d;box-shadow:0 0 8px #c8553d}
+@media (max-width:760px){.crew{grid-template-columns:1fr}}
