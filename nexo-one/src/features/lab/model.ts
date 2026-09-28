@@ -100,7 +100,7 @@ const str = (field: unknown): string | null => {
 };
 const bare = (id: string) => id.replace(/^(test|hypothesis|campaign|roadmap):/, '');
 
-/** CONTEST-<alvo>-<n> contesta <alvo>. Uma camada por vez (contestação de contestação existe). */
+/** CONTEST-<alvo>-<n> contesta <alvo>. Profundidade máxima 1: ataque não é atacado (cadeias antigas ficam só no histórico). */
 export const contestTarget = (id: string): string | null => {
   const m = /^CONTEST-(.+)-\d+$/.exec(id);
   return m ? m[1]! : null;
@@ -114,7 +114,8 @@ function verdictOf(status: string | null, review: string | null, graphBlocked: b
   const s = (status || '').toUpperCase();
   if (graphBlocked || s.startsWith('BLOCKED')) return 'BLOCKED';
   if (s === 'REJECTED' || s === 'ARCHIVED' || s === 'RETIRED' || s === 'SUPERSEDED' || s === 'CANCELLED') return 'DISCARDED';
-  if (s === 'READY' || s === 'QUEUED' || s === 'RUNNING' || s === 'DISPATCHED') return 'READY';
+  // Checkpoint é etapa operacional (execução pausada/salva), não resultado científico.
+  if (s === 'READY' || s === 'QUEUED' || s === 'RUNNING' || s === 'DISPATCHED' || s === 'CHECKPOINTED') return 'READY';
   if (s) return 'PROVISIONAL';
   return 'READY';
 }
@@ -182,7 +183,7 @@ export function buildLab(state: SystemState): Lab {
       reviews: (Array.isArray(any.review) ? any.review : Array.isArray(val(any.reviews)) ? val(any.reviews) : []) as ReviewStep[],
     });
   }
-  for (const t of tests.values()) if (t.contestOf && tests.has(t.contestOf)) tests.get(t.contestOf)!.contests.push(t.id);
+  for (const t of tests.values()) if (t.contestOf && tests.has(t.contestOf) && !tests.get(t.contestOf)!.contestOf) tests.get(t.contestOf)!.contests.push(t.id);
   // Nomes: o do backend quando existe; senão contestação = "Ataque N · <atacado>", teste = pergunta curta.
   const own = (id: string) => {
     const any = { ...((records.get(id) ?? {}) as Record<string, unknown>), ...(rmTests[id] ?? {}) } as Record<string, unknown>;
@@ -291,6 +292,8 @@ export function buildLab(state: SystemState): Lab {
 
 function aggregate(verdicts: Verdict[]): Verdict | null {
   if (!verdicts.length) return null;
+  // Filhos confirmados E refutados: a hipótese está em disputa, nunca "confirmada" por precedência.
+  if (verdicts.includes('CONFIRMED') && verdicts.includes('REFUTED')) return 'REVIEW';
   for (const v of ['CONFIRMED', 'REFUTED', 'REVIEW', 'PROVISIONAL', 'READY', 'BLOCKED'] as Verdict[]) if (verdicts.includes(v)) return v;
   return 'DISCARDED';
 }

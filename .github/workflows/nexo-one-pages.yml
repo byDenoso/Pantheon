@@ -75,6 +75,8 @@ jobs:
             exit 0
           fi
           git clone -q --depth 1 https://github.com/byDenoso/TCC.git _tcc_reader
+          # The revision that GENERATES the projection is the one that must verify it.
+          echo "generator=$(git -C _tcc_reader rev-parse HEAD)" >> "$GITHUB_OUTPUT"
           python3 -m pip install -q google-auth requests
           python3 _tcc_reader/scripts/nexo_tower.py download --out /tmp/NEXO_TOWER_LIVE.json
           rm -rf _vault/TOWER_V06
@@ -114,6 +116,11 @@ jobs:
             echo "::error::export runtime_revision must pin a full 40-hex TCC SHA, got ${sha}"
             exit 1
           }
+          generator="${{ steps.live_tower.outputs.generator }}"
+          if [ -n "${generator}" ] && [ "${generator}" != "${sha}" ]; then
+            echo "::warning::CONTROL.runtime_revision ${sha} is behind the generator ${generator}; verifying with the generator"
+            sha="${generator}"
+          fi
           echo "sha=${sha}" >> "$GITHUB_OUTPUT"
 
       - name: Checkout projection verifier
@@ -132,7 +139,7 @@ jobs:
           expected="${{ steps.runtime.outputs.sha }}"
           actual="$(git -C _tcc rev-parse HEAD)"
           [ "${actual}" = "${expected}" ] || {
-            echo "::error::TCC verifier checkout ${actual} differs from CONTROL.runtime_revision ${expected}"
+            echo "::error::TCC verifier checkout ${actual} differs from the generator revision ${expected}"
             exit 1
           }
 
