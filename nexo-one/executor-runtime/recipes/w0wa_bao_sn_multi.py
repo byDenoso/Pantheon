@@ -33,7 +33,8 @@ def load_pantheon():
     cal=data[:,col["IS_CALIBRATOR"]].astype(int)
     raw=fetch_text(PPLUS_BASE+"Pantheon%2BSH0ES_STAT%2BSYS.cov").split(); n=int(raw[0]); cov=np.array(raw[1:],float).reshape(n,n)
     k=np.where((z>0.01)&(cal==0))[0]
-    return {"name":"Pantheon+","z":z[k],"zhel":zh[k],"mu":mu[k],"cov":cov[np.ix_(k,k)]}
+    sub=cov[np.ix_(k,k)]
+    return {"name":"Pantheon+","z":z[k],"zhel":zh[k],"mu":mu[k],"cov":sub,"prec":np.linalg.inv(sub)}
 
 def load_des():
     rows=list(csv.DictReader(io.StringIO(fetch_text(DES_BASE+"DES-Dovekie_HD.csv"))))
@@ -41,7 +42,7 @@ def load_des():
     d=np.load(io.BytesIO(fetch_bytes(DES_BASE+"STAT+SYS.npz")))
     n=int(d[d.files[0]][0]); inv=np.zeros((n,n)); inv[np.triu_indices(n)]=d[d.files[1]]
     lo=np.tril_indices(n,-1); inv[lo]=inv.T[lo]
-    return {"name":"DES-SN5YR","z":z,"zhel":zh,"mu":mu,"cov":np.linalg.inv(inv)}
+    return {"name":"DES-SN5YR","z":z,"zhel":zh,"mu":mu,"cov":None,"prec":inv}
 
 def comoving(om,w0,wa):
     a=1/(1+ZGRID); de=(1-om)*a**(-3*(1+w0+wa))*np.exp(-3*wa*(1-a)); e=np.sqrt(om*(1+ZGRID)**3+de)
@@ -59,7 +60,7 @@ def chi2(theta,bao,sn,priors):
     pred=np.array([{"DM_over_rs":dm[i],"DH_over_rs":dh[i],"DV_over_rs":dv[i]}[q] for i,q in enumerate(bq)])
     r=bv-pred; total=float(r@np.linalg.inv(bc)@r)
     chi,_=comoving(om,w0,wa); dl=(1+sn["zhel"])*np.interp(sn["z"],ZGRID,chi); theo=5*np.log10(dl)
-    d=sn["mu"]-theo; inv=np.linalg.inv(sn["cov"]); one=np.ones(len(d)); A=d@inv@d; B=d@inv@one; C=one@inv@one
+    d=sn["mu"]-theo; inv=sn["prec"]; one=np.ones(len(d)); A=d@inv@d; B=d@inv@one; C=one@inv@one
     total+=float(A-B*B/C+np.log(C/(2*np.pi)))
     for name,idx in (("omega_m",0),("w0",1),("wa",2),("a_rd",3)):
         if name in priors:
@@ -78,7 +79,11 @@ def fit(bao,sn,priors,lcdm=False):
 def sub_sn(sn,band):
     if band is None:return sn
     a,b=band; k=np.where(~((sn["z"]>=a)&(sn["z"]<b)))[0]
-    return {**sn,"z":sn["z"][k],"zhel":sn["zhel"][k],"mu":sn["mu"][k],"cov":sn["cov"][np.ix_(k,k)]}
+    if sn["cov"] is None:
+        cov=np.linalg.inv(sn["prec"])[np.ix_(k,k)]
+    else:
+        cov=sn["cov"][np.ix_(k,k)]
+    return {**sn,"z":sn["z"][k],"zhel":sn["zhel"][k],"mu":sn["mu"][k],"cov":cov,"prec":np.linalg.inv(cov)}
 
 def sub_bao(bao,drop):
     z,v,q,c=bao; k=np.array([i for i,zz in enumerate(z) if not any(abs(float(zz)-float(d))<1e-3 for d in drop)],int)
