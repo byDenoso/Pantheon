@@ -501,9 +501,11 @@ function sceneEvents(state: SystemState, lab: Lab): SceneEvents {
 // ---------- raias do ciclo ----------
 const LANES: Array<[string, string]> = [['PITIA', 'Pítia'], ['LEARNER', 'Learner'], ['EXECUTOR', 'Executor'], ['REFUTADOR', 'Refutador'], ['GUARDIAO', 'Guardião'], ['DENER', 'Dener']];
 const EVENT_PT: Record<string, string> = {
-  THOUGHT: 'pensou', NEXO_THOUGHT: 'pensou', HYPOTHESIS: 'propôs hipótese', TEST_PROPOSED: 'propôs teste', TEST_BATTERY: 'despachou bateria',
-  BATTERY_STATUS: 'recebeu bateria', RESULT: 'registrou resultado', TEST_RESULT: 'registrou resultado', CONTEST: 'contestou',
-  VERDICT_REVIEW: 'revisou veredito', INTEGRITY_REPORT: 'auditou', ROADMAP_CHARTER: 'aprovou carta', GENOME_MUTATION: 'propôs mutação',
+  TEST_RESULT_RECORDED: 'registrou resultado', ROADMAP_TEST_FROZEN: 'congelou um teste (pré-registro)',
+  RESULT_CONTESTED: 'contestou um resultado', RESULT_REFEREE1_PASSED: 'aprovou no Referee 1', RESULT_REFUTED: 'refutou um resultado',
+  RESULT_CONFIRMED: 'confirmou um resultado', INTEGRITY_REPORT_RECORDED: 'auditou o sistema', HYPOTHESIS_UPSERTED: 'propôs/atualizou hipótese',
+  NEXO_THOUGHT_NOOP_RECORDED: 'pensou (sem novidade)', NEXO_THOUGHT_RECORDED: 'pensou', TEST_BATTERY_DISPATCHED: 'despachou bateria',
+  ROADMAP_CHARTERED: 'aprovou carta', GENOME_MUTATION_PROPOSED: 'propôs mutação',
 };
 function Swimlanes({ events }: { events: Array<{ event_type: string; role: string; at: string; entity_id?: string }> }) {
   const now = Date.now(), span = 48 * 3600e3;
