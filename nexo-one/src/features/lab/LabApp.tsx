@@ -656,13 +656,7 @@ function Health({ state, lab }: { state: SystemState; lab: Lab }) {
       <div className="health-cell"><span>Baterias</span><strong>{ev?.batteries ? `${ev.batteries.DISPATCHED ?? 0} rodando` : '—'}</strong><em>{ev?.batteries ? `${ev.batteries.DONE ?? 0} concluídas · ${ev.batteries.QUEUED ?? 0} na fila` : ''}</em></div>
       <div className={`health-cell s-${providersDown.length ? 'warn' : 'ok'}`}><span>Provedores</span><strong>{state.providers.length - providersDown.length}/{state.providers.length}</strong><em>disponíveis</em></div>
     </div>
-    {(ev?.watchdog?.quiet?.length ?? 0) > 0 && <Section title="Quem está quieto" kicker={`vigia do robô · ${ago(ev!.watchdog!.checked_at ?? state.generated_at)}`} id="he-quiet">
-      <ul className="quiet-list">{ev!.watchdog!.quiet!.map(q => <li key={q.role}>
-        <b>{roleLabel(q.role)}</b>
-        <span>{q.hours == null ? 'nunca produziu' : `parado há ${q.hours < 48 ? `${Math.round(q.hours)} h` : `${Math.round(q.hours / 24)} dias`}`}</span>
-        <em>{q.loops.map(l => LOOP_PT[l] ?? l).join(' · ')}</em>
-      </li>)}</ul>
-    </Section>}
+    {(ev?.watchdog?.quiet?.length ?? 0) > 0 && <QuietLoops lab={lab} quiet={ev!.watchdog!.quiet!} at={ev!.watchdog!.checked_at ?? state.generated_at} />}
     {g && g.failing_areas.length > 0 && <Section title="O que está falhando" id="he-fail">
       <ul className="hud-list">{g.failing_areas.map(a => <li key={a}>{guardianArea(a).replace(/^./, c => c.toUpperCase())}</li>)}</ul>
     </Section>}
@@ -1208,4 +1202,25 @@ function Intro() {
     <p className="intro-line">um laboratório que pensa sozinho</p>
     <p className="intro-sub">cada estrela é um teste · cada filamento, uma hipótese</p>
   </div>;
+}
+
+// ---------- Laços parados (por laço, não por papel): o papel pode estar vivo e só um laço dele parado ----------
+function QuietLoops({ lab, quiet, at }: { lab: Lab; quiet: Array<{ role: string; hours: number | null; loops: string[] }>; at: string }) {
+  const loops = new Map<string, { hours: number | null; roles: Set<string> }>();
+  for (const q of quiet) for (const l of q.loops) {
+    const cur = loops.get(l) ?? { hours: q.hours, roles: new Set<string>() };
+    cur.roles.add(q.role.toUpperCase()); loops.set(l, cur);
+  }
+  const lastOf = (role: string) => { const t = taskOf(role); const hats = t?.hats ?? [role];
+    return lab.activity.filter(e => hats.includes(String(e.role).toUpperCase())).at(-1)?.at; };
+  const dur = (h: number | null) => h == null ? 'nunca aconteceu' : `parado há ${h < 48 ? `${Math.round(h)} h` : `${Math.round(h / 24)} dias`}`;
+  return <Section title="Laços parados" kicker={`vigia do robô · ${ago(at)}`} id="he-quiet">
+    <ul className="quiet-list">{[...loops].map(([loop, v]) => { const role = [...v.roles][0]!; const t = taskOf(role); const last = lastOf(role);
+      return <li key={loop}>
+        <b>{(LOOP_PT[loop] ?? loop).replace(/^./, c => c.toUpperCase())}</b>
+        <span>{dur(v.hours)}</span>
+        <em>dono: {t ? t.name : roleLabel(role)}{last ? ` · o papel agiu ${ago(last)}` : ' · sem sinal do papel'}</em>
+      </li>; })}</ul>
+    <p className="hud-note">Um laço parado não quer dizer que o agente parou: mutação do genoma, por exemplo, é rara por natureza.</p>
+  </Section>;
 }
