@@ -129,28 +129,40 @@ jobs:
           json.dump(meta, open("/tmp/job/meta.json", "w", encoding="utf-8"), ensure_ascii=False)
           if test_id != expected_id:
               raise SystemExit("matrix/spec test_id mismatch")
-          script = str(test.get("script") or "")
+          import re
+          if str(test.get("script") or "").strip():
+              raise SystemExit("inline scientific scripts are forbidden; use recipe+params")
           recipe = str(test.get("recipe") or "")
-          if not script.strip() and recipe:
-              import re
-              if not re.fullmatch(r"[a-z0-9_]{2,40}", recipe):
-                  raise SystemExit(f"invalid recipe name {recipe!r}")
-              script = open(f"runtime-base/nexo-one/executor-runtime/recipes/{recipe}.py", encoding="utf-8").read()
-          json.dump(test.get("params") or {}, open("/tmp/job/params.json", "w", encoding="utf-8"), ensure_ascii=False)
-          if not script.strip():
-              raise SystemExit("empty test script")
-          requirements = test.get("requirements") or []
-          if not isinstance(requirements, list) or len(requirements) > 20:
-              raise SystemExit("invalid requirements list")
-          cleaned = []
-          for value in requirements:
-              value = str(value).strip()
-              if not value or value.startswith("-") or "://" in value or "@" in value or "\n" in value or "\r" in value:
-                  raise SystemExit(f"unsafe requirement: {value!r}")
-              cleaned.append(value)
+          if not re.fullmatch(r"[a-z0-9_]{2,40}", recipe):
+              raise SystemExit(f"invalid or missing recipe name {recipe!r}")
+          script_path = f"runtime-base/nexo-one/executor-runtime/recipes/{recipe}.py"
+          script = open(script_path, encoding="utf-8").read()
+          params = test.get("params") or {}
+          if not isinstance(params, dict):
+              raise SystemExit("params must be an object")
+          requires_camb = bool(params.get("requires_camb"))
+          camb_commit = str(params.get("camb_commit") or "")
+          if requires_camb:
+              if not re.fullmatch(r"[0-9a-f]{40}", camb_commit):
+                  raise SystemExit("CAMB recipe requires a frozen 40-char TCC commit")
+              if "NEXO_PORTABLE_CAMB_ROOT" not in script:
+                  raise SystemExit("CAMB recipe must invoke the versioned portable CAMB runtime")
+          json.dump(params, open("/tmp/job/params.json", "w", encoding="utf-8"), ensure_ascii=False)
           open("/tmp/job/test.py", "w", encoding="utf-8").write(script)
-          open("/tmp/job/requirements-extra.txt", "w", encoding="utf-8").write("\n".join(cleaned) + ("\n" if cleaned else ""))
+          open("/tmp/job/requirements-extra.txt", "w", encoding="utf-8").write("")
+          with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as out:
+              out.write(f"requires_camb={'true' if requires_camb else 'false'}\n")
+              out.write(f"camb_commit={camb_commit}\n")
           PY
+      - name: Checkout frozen portable CAMB runtime
+        if: steps.prepare.outcome == 'success' && steps.prepare.outputs.requires_camb == 'true'
+        uses: actions/checkout@v4
+        with:
+          repository: byDenoso/TCC
+          ref: ${{ steps.prepare.outputs.camb_commit }}
+          path: tcc-runtime
+          sparse-checkout: runtime/portable_camb
+          persist-credentials: false
       - name: Install deterministic runtime dependencies
         id: deps
         if: steps.prepare.outcome == 'success'
@@ -168,6 +180,8 @@ jobs:
         env:
           RESULT_PATH: /tmp/job/result.json
           PARAMS_PATH: /tmp/job/params.json
+          NEXO_PORTABLE_CAMB_ROOT: ${{ github.workspace }}/tcc-runtime/runtime/portable_camb
+          NEXO_PORTABLE_CAMB_COMMIT: ${{ steps.prepare.outputs.camb_commit }}
         run: |
           set +e
           T=$(python3 -c "import json; print(json.load(open('/tmp/job/meta.json'))['timeout_min'])")
