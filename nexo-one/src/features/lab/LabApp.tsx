@@ -798,9 +798,11 @@ function narrate(e: { event_type: string; entity_id?: string }, lab: Lab): strin
   }
   if (te && e.event_type === 'RESULT_REFUTED' && outcomeOf(te) === 1) tpl = 'Mudei de ideia: parecia certo, mas eu mesmo derrubei. %q';
   const t = e.entity_id ? lab.tests.get(e.entity_id) : undefined;
-  const q = t?.name ?? (e.entity_id ? (lab.hypotheses.get(e.entity_id)?.statement ?? humanId(e.entity_id)) : '');
-  const text = tpl.includes('%q') ? tpl.replace('%q', q ? `“${q.length > 140 ? q.slice(0, 137) + '…' : q}”` : '').replace(/: $/, '.') : tpl;
-  return text;
+  // Hipótese: prefira o nome curto de um teste dela ao enunciado inteiro.
+  const viaTest = !t && e.entity_id ? [...lab.tests.values()].find(x => x.hypothesisId === e.entity_id)?.name : undefined;
+  const q = t?.name ?? viaTest ?? (e.entity_id ? (lab.hypotheses.get(e.entity_id)?.statement ?? humanId(e.entity_id)) : '');
+  const text = tpl.includes('%q') ? tpl.replace('%q', q ? `“${clip(q, 110)}”` : '').replace(/: $/, '.') : tpl;
+  return humanize(text);
 }
 
 function Typewriter({ text }: { text: string }) {
@@ -1082,14 +1084,15 @@ function Crew({ lab }: { lab: Lab }) {
 function Telemetry({ lab, state }: { lab: Lab; state: SystemState }) {
   const now = Date.now();
   const notes = (state.evolution?.board ?? []).filter(p => !p.resolved_at && (!p.expires_at || Date.parse(p.expires_at) > now))
-    .map(p => ({ kind: 'note' as const, at: p.at, who: roleLabel(p.from), to: p.to === 'ALL' ? 'todos' : roleLabel(p.to), text: p.text, id: p.id }));
+    .map(p => ({ kind: 'note' as const, at: p.at, who: roleLabel(p.from), to: p.to === p.from ? '' : p.to === 'ALL' ? 'todos' : roleLabel(p.to),
+      self: p.to === p.from, text: humanize(p.text), id: p.id }));
   const acts = lab.activity.slice(-60).map((e, i) => ({ kind: 'act' as const, at: e.at, who: roleLabel(String(e.role)), to: '', text: narrate(e, lab), id: `${e.at}-${i}` }));
   const feed = [...notes, ...acts].sort((a, b) => b.at.localeCompare(a.at)).slice(0, 50);
   const day = lab.activity.filter(e => now - Date.parse(e.at) < 864e5).length;
   return <aside className="telemetry" aria-label="Telemetria ao vivo">
     <header><p><i aria-hidden="true" />Telemetria ao vivo</p><small>agentes conversando e agindo · {day} ações em 24 h</small></header>
     <ol className="tele-feed">{feed.map(f => <li key={f.id} className={f.kind === 'note' ? 'tele-note' : undefined}>
-      <p className="tele-h"><b>{f.who}</b>{f.to && <><i aria-hidden="true">→</i><span>{f.to}</span></>}<time>{ago(f.at)}</time></p>
+      <p className="tele-h"><b>{f.who}</b>{'self' in f && f.self ? <span>anotou</span> : f.to && <><i aria-hidden="true">→</i><span>{f.to}</span></>}<time>{ago(f.at)}</time></p>
       <p className="tele-t">{f.text}</p>
     </li>)}</ol>
   </aside>;
@@ -1224,3 +1227,18 @@ function QuietLoops({ lab, quiet, at }: { lab: Lab; quiet: Array<{ role: string;
     <p className="hud-note">Um laço parado não quer dizer que o agente parou: mutação do genoma, por exemplo, é rara por natureza.</p>
   </Section>;
 }
+
+// ---------- Semântica: corte em palavra inteira e jargão traduzido ----------
+function clip(text: string, n: number) {
+  const t = text.trim();
+  if (t.length <= n) return t;
+  const cut = t.slice(0, n).replace(/\s+\S*$/, '');
+  return cut.replace(/[,;:.\s]+$/, '') + '…';
+}
+const JARGON: Array<[RegExp, string]> = [
+  [/\bTEST_BATTERY\b/g, 'baterias de teste'], [/\bREADY\b/g, 'prontos'], [/\bCONFIRMED\b/g, 'confirmados'], [/\bREFUTED\b/g, 'refutados'],
+  [/\bBLOCKED_INPUT\b/g, 'bloqueados por falta de dado'], [/\bscript inline\b/gi, 'código solto'], [/\bnão-Olympus\b/g, 'fora do Olympus'],
+  [/\bRECIPE_REQUEST\b/g, 'pedido de receita'], [/\bstale\b/gi, 'desatualizada'], [/\bbootstraps?\b/gi, 'arranques'],
+  [/\bread-back\b/gi, 'conferência'], [/\bstaging\b/gi, 'área de espera'], [/\bfull-shape\b/gi, 'completa'],
+];
+function humanize(text: string) { return JARGON.reduce((acc, [re, to]) => acc.replace(re, to), text); }

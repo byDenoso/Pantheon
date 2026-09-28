@@ -335,6 +335,12 @@ export const guardianArea = (a: string) => GUARDIAN_AREA_PT[a] ?? `problema em $
 /** Pergunta vira nome curto: sem "?" final, até ~8 palavras. */
 function shortName(q: string | null): string | null {
   if (!q) return null;
-  const words = q.replace(/[?¿]+$/, '').trim().split(/\s+/);
-  return words.length <= 9 ? words.join(' ') : words.slice(0, 8).join(' ') + '…';
+  const clean = q.replace(/[?¿]+$/, '').trim();
+  // Primeiro tenta uma oração inteira (até vírgula/dois-pontos); senão, 8 palavras sem terminar em artigo/preposição.
+  const clause = clean.split(/[,;:—]/)[0]!.trim();
+  const words = (clause.split(/\s+/).length <= 10 ? clause : clean).split(/\s+/);
+  if (words.length <= 10) return words.join(' ');
+  let cut = words.slice(0, 8);
+  while (cut.length > 4 && /^(a|o|as|os|de|da|do|das|dos|e|em|no|na|nos|nas|um|uma|que|com|por|para|sem|ao|à)$/i.test(cut.at(-1)!)) cut = cut.slice(0, -1);
+  return cut.join(' ') + '…';
 }
