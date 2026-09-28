@@ -242,6 +242,9 @@ jobs:
     needs: run
     if: always()
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: write
     steps:
       - uses: actions/download-artifact@v4
         with:
@@ -263,3 +266,10 @@ jobs:
           name: battery-results
           path: battery-results.json
           retention-days: 7
+
+      - name: Wake the Writer robot to record the results now
+        # Otherwise results wait for GitHub's throttled */5 schedule (hours) before reaching the Tower.
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run nexo-writer-robot.yml --repo "$GITHUB_REPOSITORY" --ref main && echo "writer robot dispatched"
