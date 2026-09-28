@@ -801,3 +801,16 @@ details.tech .versus{margin-bottom:18px}
 .observatory .hud-section,.observatory .gate-panel,.observatory .crew-card,.observatory .ev-card,.observatory .trail,.observatory .stats,
 .observatory .health-grid,.observatory .board li,.observatory .cycle,.observatory .stop-rules>div,.observatory .quiet-list li,.observatory .result-card,.observatory .fronts li{
   box-shadow:inset 0 1px 0 rgba(255,255,255,.06),0 10px 30px rgba(0,0,0,.18)}
+
+/* texto da "surpresa" legível nos dois temas (o destaque fica no ícone) */
+.beat-surprise p{color:var(--o-ink)!important;font-weight:500}
+
+/* ===== Desktop: a teia numa janela própria na coluna do meio (como no layout estreito) ===== */
+@media (min-width:1280px){
+  .observatory .obs-scene{left:calc(84px + 640px)!important;right:340px!important;top:0;bottom:0;
+    border-left:1px solid rgba(var(--o-accent-rgb),.14)}
+  .observatory:not(.exploring)::after{display:none}
+  .observatory:not(.exploring) .hud{max-width:640px!important;min-height:100vh;background:var(--o-void)}
+  .observatory.exploring .obs-scene{left:84px!important;right:0!important}
+  .observatory .obs-tools{right:356px!important}
+}

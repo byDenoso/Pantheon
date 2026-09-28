@@ -394,7 +394,7 @@ export function ObservatoryScene({ tests, page, focusIds, onPick, theme, events,
       // Desktop: a teia vive à direita, a coluna de leitura à esquerda.
       // Desktop: a coluna de leitura ocupa ~600px à esquerda; a teia se desloca para a área livre.
       // ≥1280: leitura (~600px) à esquerda e telemetria (340px) à direita; a teia centra no espaço entre as duas.
-      if (window.innerWidth >= 1280) camera.setViewOffset(w, h, -130, 0, w, h);
+      if (window.innerWidth >= 1280) camera.clearViewOffset(); // a teia tem a própria janela no meio: centralizada
       else if (w > 900) camera.setViewOffset(w, h, -Math.min(w * 0.3, 300), 0, w, h); else camera.clearViewOffset();
       camera.updateProjectionMatrix();
     };
@@ -568,7 +568,7 @@ export function ObservatoryScene({ tests, page, focusIds, onPick, theme, events,
       };
       labelEls.forEach((node, i) => {
         proj.copy(domainPos[i]!).multiplyScalar(expansion).project(camera);
-        const off = proj.z > 1 || Math.abs(proj.x) > 1.1 || Math.abs(proj.y) > 1.1 || (!exploreRef.current && w > 900 && (proj.x * 0.5 + 0.5) * w < Math.min(820, w * 0.6));
+        const off = proj.z > 1 || Math.abs(proj.x) > 1.1 || Math.abs(proj.y) > 1.1 || (!exploreRef.current && w > 900 && window.innerWidth < 1280 && (proj.x * 0.5 + 0.5) * w < Math.min(820, w * 0.6));
         node.style.opacity = off ? '0' : '1';
         node.style.pointerEvents = off ? 'none' : 'auto';
         if (!off) place(node, (proj.x * 0.5 + 0.5) * w, (-proj.y * 0.5 + 0.5) * h);
@@ -582,7 +582,7 @@ export function ObservatoryScene({ tests, page, focusIds, onPick, theme, events,
           proj.set(stars.pos[i * 3]!, stars.pos[i * 3 + 1]!, stars.pos[i * 3 + 2]!).multiplyScalar(expansion).project(camera);
           if (proj.z > 1 || Math.abs(proj.x) > 0.9 || Math.abs(proj.y) > 0.9) continue;
           const sx = (proj.x * 0.5 + 0.5) * w, sy = (-proj.y * 0.5 + 0.5) * h;
-          if (w > 900 && !exploreRef.current && sx < Math.min(640, w * 0.45)) continue;
+          if (w > 900 && window.innerWidth < 1280 && !exploreRef.current && sx < Math.min(640, w * 0.45)) continue;
           cand.push([Math.hypot(proj.x, proj.y), sx, sy, byId.get(ids[i]!)?.name ?? '']);
         }
         cand.sort((a, b) => a[0] - b[0]);
@@ -597,7 +597,7 @@ export function ObservatoryScene({ tests, page, focusIds, onPick, theme, events,
       eventEls.forEach((node, i) => {
         const a = anchors[i]; if (!a) return;
         proj.copy(a).multiplyScalar(expansion).project(camera);
-        const off = proj.z > 1 || Math.abs(proj.x) > 1.05 || Math.abs(proj.y) > 1.05 || (!exploreRef.current && w > 900 && (proj.x * 0.5 + 0.5) * w < Math.min(820, w * 0.6));
+        const off = proj.z > 1 || Math.abs(proj.x) > 1.05 || Math.abs(proj.y) > 1.05 || (!exploreRef.current && w > 900 && window.innerWidth < 1280 && (proj.x * 0.5 + 0.5) * w < Math.min(820, w * 0.6));
         node.style.opacity = off ? '0' : '1';
         if (!off) place(node, (proj.x * 0.5 + 0.5) * w, (-proj.y * 0.5 + 0.5) * h);
       });
