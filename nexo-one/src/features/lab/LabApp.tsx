@@ -386,7 +386,7 @@ function EntityPage({ lab, id }: { lab: Lab; id: string }) {
       <p className="hud-lead"><VerdictChip v={t.verdict} />{t.createdAt && <span className="hud-muted"> · começou {ago(t.createdAt)}</span>}</p>
     </header>
 
-    <Section title="A história deste teste" kicker="Contada por mim" id="en-story">
+    <Section title="A história deste teste" id="en-story">
       <ol className="story">{story.map((b, i) => <li key={i} className={`beat beat-${b.tone}`}>
         <i aria-hidden="true">{b.icon}</i><p>{b.text}{b.link && <> <E id={b.link.id}>{b.link.label}</E></>}</p>
       </li>)}</ol>
@@ -659,7 +659,7 @@ function Calibration({ lab }: { lab: Lab }) {
     return { b, n: inBin.length, rate: inBin.length ? inBin.filter(x => x.hit).length / inBin.length : 0 };
   });
   return <section className="hud-section calib" aria-labelledby="calib-title">
-    <p className="hud-kicker">Autoconhecimento · {pts.length} previsões congeladas antes do teste</p>
+    <p className="hud-kicker">{pts.length} previsões feitas antes de cada teste</p>
     <h2 id="calib-title">Quanto eu acerto</h2>
     <p className="hud-big">Acertei <b>{Math.round(100 * right / pts.length)}%</b> das minhas previsões
       {confident.length >= 3 && <> · quando tive ≥70% de certeza, acertei <b>{Math.round(100 * confHit / confident.length)}%</b></>}.</p>
