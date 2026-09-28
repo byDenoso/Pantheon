@@ -99,7 +99,7 @@ void main(){
   float f = fract(time*speed + phase);
   vec3 p = position + dir * f;
   vec4 mv = modelViewMatrix * vec4(p,1.0);
-  gl_PointSize = (7.0 - 4.0*f) * pixelRatio * (18.0 / -mv.z);
+  gl_PointSize = (4.0 - 2.5*f) * pixelRatio * (18.0 / -mv.z);
   vFade = 1.0 - f;
   gl_Position = projectionMatrix * mv;
 }`;
@@ -176,7 +176,7 @@ function filament(b: Buf, a: Vector3, c: Vector3, density: number, heat: number,
     const edge = Math.min(t, u);
     const spread = 0.022 + 0.05 * (1 - 2 * edge); // fino no meio, mais grosso perto dos nós
     push(b, [p.x + gauss() * spread, p.y + gauss() * spread, p.z + gauss() * spread],
-      inferno(heat * (0.62 + 0.38 * (1 - edge * 2)) * (0.72 + Math.random() * 0.28)).multiplyScalar(1.5), 1.5 + Math.random() * 2.2);
+      inferno(heat * (0.62 + 0.38 * (1 - edge * 2)) * (0.72 + Math.random() * 0.28)).multiplyScalar(1.05), 1.4 + Math.random() * 2);
   }
   return mid;
 }
@@ -313,8 +313,8 @@ export function ObservatoryScene({ tests, page, focusIds, onPick, theme, events,
       // Perto do domínio, não no núcleo: uma galáxia ativa vizinha.
       const d = domainPos[domainIndex(e.domain)]!.clone().add(new Vector3(...jitter(`agnpos${e.domain}`, 7)));
       const axis = new Vector3(...jitter(`agn${k}`, 1)).add(new Vector3(0, 1.4, 0)).normalize();
-      const len = 4 + Math.min(8, e.count * 0.4);
-      const n = 90 + Math.min(260, e.count * 12);
+      const len = 2 + Math.min(3.5, e.count * 0.15);
+      const n = 60 + Math.min(120, e.count * 5);
       for (let i = 0; i < n; i += 1) for (const sgn of [1, -1]) {
         jp.push(d.x + (Math.random() - 0.5) * 0.12, d.y + (Math.random() - 0.5) * 0.12, d.z + (Math.random() - 0.5) * 0.12);
         jd.push(axis.x * len * sgn, axis.y * len * sgn, axis.z * len * sgn);
@@ -373,7 +373,9 @@ export function ObservatoryScene({ tests, page, focusIds, onPick, theme, events,
       renderer.setSize(w, h, false); camera.aspect = w / h;
       // Desktop: a teia vive à direita, a coluna de leitura à esquerda.
       // Desktop: a coluna de leitura ocupa ~600px à esquerda; a teia se desloca para a área livre.
-      if (w > 900) camera.setViewOffset(w, h, -Math.min(w * 0.3, 300), 0, w, h); else camera.clearViewOffset();
+      // ≥1280: leitura (~600px) à esquerda e telemetria (340px) à direita; a teia centra no espaço entre as duas.
+      if (window.innerWidth >= 1280) camera.setViewOffset(w, h, -130, 0, w, h);
+      else if (w > 900) camera.setViewOffset(w, h, -Math.min(w * 0.3, 300), 0, w, h); else camera.clearViewOffset();
       camera.updateProjectionMatrix();
     };
     // Bloom: brilho físico dos aglomerados e filamentos (alta = resolução cheia, média = meia, baixa = sem).
@@ -386,7 +388,8 @@ export function ObservatoryScene({ tests, page, focusIds, onPick, theme, events,
       composer = new EffectComposer(renderer);
       composer.setPixelRatio(dpr);
       composer.addPass(new RenderPass(scene, camera));
-      bloom = new UnrealBloomPass(new Vector2(1, 1), quality === 'high' ? 0.95 : 0.8, quality === 'high' ? 0.55 : 0.45, 0.18);
+      // Bloom contido: só os núcleos mais brilhantes vazam luz; o preto do fundo continua preto.
+      bloom = new UnrealBloomPass(new Vector2(1, 1), quality === 'high' ? 0.42 : 0.36, 0.32, 0.62);
       composer.addPass(bloom);
       composer.addPass(new OutputPass());
     };

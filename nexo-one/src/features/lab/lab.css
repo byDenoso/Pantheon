@@ -669,3 +669,31 @@ details.tech .versus{margin-bottom:18px}
 .obs-near span{position:absolute;left:0;top:0;opacity:0;transition:opacity .5s;font:500 12px var(--sig-sans);color:var(--o-dim);text-shadow:0 0 10px var(--o-void);white-space:nowrap}
 @media (max-width:760px){.obs-crumb{top:10px;right:auto;left:10px}.obs-near{display:none}}
 @media (min-width:1280px){.observatory .obs-crumb{right:18px}}
+
+/* ===== ATLAS v2: leitura protegida, cartões sólidos ===== */
+@media (min-width:761px){
+  .observatory:not(.exploring)::after{content:"";position:fixed;top:0;bottom:0;left:0;width:min(760px,62vw);z-index:1;pointer-events:none;
+    background:linear-gradient(90deg,var(--o-void) 0%,color-mix(in srgb,var(--o-void) 88%,transparent) 55%,transparent 100%)}
+}
+@media (min-width:1280px){.observatory:not(.exploring)::after{left:84px;width:min(700px,50vw)}}
+.observatory .hud{position:relative;z-index:2}
+.observatory{--o-panel:rgba(4,7,9,.94)}
+:root[data-theme="light"] .observatory{--o-panel:rgba(255,255,255,.96)}
+.crew{grid-template-columns:1fr!important}
+.crew-card{background:var(--o-panel)!important;backdrop-filter:none!important;display:grid;grid-template-columns:auto 1fr;gap:4px 16px;align-items:baseline}
+.crew-card .crew-top{grid-column:1;display:block}.crew-card .crew-top span{display:block;margin-top:2px}
+.crew-card .crew-hats,.crew-card .crew-does,.crew-card .crew-pulse{grid-column:2}
+.crew-card .crew-hats{margin-top:0!important}
+.crew-pulse{font-family:var(--sig-sans)!important;font-size:13px!important}
+@media (max-width:760px){.crew-card{grid-template-columns:1fr}.crew-card .crew-hats,.crew-card .crew-does,.crew-card .crew-pulse{grid-column:1}}
+
+/* ===== Telemetria translúcida: a teia passa por trás (vidro fosco) ===== */
+@media (min-width:1280px){
+  .observatory .obs-scene{right:0!important}
+  .telemetry{background:color-mix(in srgb,var(--obs-void) 58%,transparent)!important;backdrop-filter:blur(14px) saturate(1.1);-webkit-backdrop-filter:blur(14px) saturate(1.1);
+    border-left:1px solid rgba(var(--o-accent-rgb),.14)!important}
+  .telemetry header{background:transparent}
+  .tele-note{background:rgba(var(--o-accent-rgb),.1)!important}
+  .tele-h{flex-wrap:wrap;row-gap:0}
+  .tele-h time{order:-1;flex-basis:100%;margin-left:0!important;font-size:11.5px}
+}
