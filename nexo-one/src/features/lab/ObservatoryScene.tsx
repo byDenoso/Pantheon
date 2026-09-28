@@ -62,7 +62,7 @@ const jitter = (seed: string, s: number): [number, number, number] =>
   [(rnd(seed + 'x') - 0.5) * s, (rnd(seed + 'y') - 0.5) * s, (rnd(seed + 'z') - 0.5) * s];
 
 // Paleta "inferno" da teia: violeta profundo -> magenta -> laranja -> branco-quente.
-const INFERNO = ['#2a0f4a', '#6a1a7a', '#b0327a', '#e0605a', '#f8a24a', '#ffe6a8'].map(c => new Color(c));
+const INFERNO = ['#04121e', '#0a3452', '#15699a', '#2fa6d8', '#86dcf5', '#e8fbff'].map(c => new Color(c));
 const inferno = (t: number) => {
   const x = Math.max(0, Math.min(0.999, t)) * (INFERNO.length - 1), i = Math.floor(x), f = x - i;
   return INFERNO[i]!.clone().lerp(INFERNO[i + 1]!, f);
@@ -147,7 +147,7 @@ export function ObservatoryScene({ tests, page, focusIds, onPick, theme }: {
         const r = Math.pow(Math.random(), 2.2) * 2.4, th = Math.random() * Math.PI * 2, ph = Math.acos(2 * Math.random() - 1);
         push(web, [d.x + r * Math.sin(ph) * Math.cos(th), d.y + r * Math.cos(ph), d.z + r * Math.sin(ph) * Math.sin(th)], inferno(0.95 - r * 0.2), 3 + Math.random() * 4);
       }
-      push(web, [d.x, d.y, d.z], new Color('#fff1cf'), 180, 0.08);
+      push(web, [d.x, d.y, d.z], new Color('#eafcff'), 180, 0.08);
     });
 
     // Hipóteses: nós ao redor do seu domínio; testes ao longo do filamento hipótese->domínio.
@@ -183,7 +183,7 @@ export function ObservatoryScene({ tests, page, focusIds, onPick, theme }: {
     const corners = [-B, B];
     for (const x of corners) for (const y of corners) { e.push(x, y, -B, x, y, B); e.push(x, -B, y, x, B, y); e.push(-B, x, y, B, x, y); }
     const boxGeo = new BufferGeometry(); boxGeo.setAttribute('position', new BufferAttribute(new Float32Array(e), 3));
-    const boxMat = new LineBasicMaterial({ color: theme === 'dark' ? 0x6d5a8a : 0x8a7aa8, transparent: true, opacity: 0.22 });
+    const boxMat = new LineBasicMaterial({ color: theme === 'dark' ? 0x3f6f8c : 0x5a86a0, transparent: true, opacity: 0.22 });
     scene.add(new LineSegments(boxGeo, boxMat));
 
     // --- Câmera ---
