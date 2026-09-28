@@ -228,8 +228,8 @@ export function buildLab(state: SystemState): Lab {
     const id = bare(String(rec.id));
     const hyps = val(r.hypothesis_ids);
     campaigns.set(id, {
-      id, title: str(r.title), question: str(r.question_plain) ?? str(r.question), why: str(r.why_it_matters),
-      questionPlain: str(r.question_plain) ?? str((r.semantic as Record<string, unknown> | undefined)?.question_plain),
+      id, title: str(val(r.title)) ?? str(r.title), question: str(val(r.question_plain)) ?? str(val(r.question)) ?? str(r.question), why: str(val(r.why_it_matters)),
+      questionPlain: str(val(r.question_plain)) ?? str((r.semantic as Record<string, unknown> | undefined)?.question_plain),
       hypothesisIds: Array.isArray(hyps) ? hyps.map(String) : [], tests: [],
     });
   }
