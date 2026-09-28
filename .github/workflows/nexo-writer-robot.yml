@@ -210,7 +210,11 @@ jobs:
           NEXO_GATEWAY_ITEMS: /tmp/gateway.json
           NEXO_BATTERY_UPDATES: /tmp/bat/updates.json
           NEXO_BATTERY_DIR: /tmp/dispatch
-        run: python /tmp/nexo_gpt_writer.py robot
+        # Who runs the scheduled roles: nexo-control/producers.json (GPT | CLAUDE). The other producer is shadow-only.
+        run: |
+          export NEXO_ACTIVE_PRODUCER=$(python -c "import json;print(json.load(open('nexo-control/producers.json')).get('active','GPT'))" 2>/dev/null || echo GPT)
+          echo "active producer: $NEXO_ACTIVE_PRODUCER"
+          python /tmp/nexo_gpt_writer.py robot
 
       - name: Dispatch queued test batteries
         if: steps.robot.outputs.tower_revision != ''
