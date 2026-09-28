@@ -423,13 +423,13 @@ export function ObservatoryScene({ tests, page, focusIds, onPick, theme, events,
       eventEls.forEach((node, i) => {
         const a = anchors[i]; if (!a) return;
         proj.copy(a).project(camera);
-        const off = proj.z > 1 || Math.abs(proj.x) > 1.05 || Math.abs(proj.y) > 1.05;
+        const off = proj.z > 1 || Math.abs(proj.x) > 1.05 || Math.abs(proj.y) > 1.05 || (!exploreRef.current && w > 900 && (proj.x * 0.5 + 0.5) * w < Math.min(820, w * 0.6));
         node.style.opacity = off ? '0' : '1';
         node.style.transform = `translate(${(proj.x * 0.5 + 0.5) * w}px, ${(-proj.y * 0.5 + 0.5) * h}px)`;
       });
       labelEls.forEach((node, i) => {
         proj.copy(domainPos[i]!).project(camera);
-        const off = proj.z > 1 || Math.abs(proj.x) > 1.1 || Math.abs(proj.y) > 1.1;
+        const off = proj.z > 1 || Math.abs(proj.x) > 1.1 || Math.abs(proj.y) > 1.1 || (!exploreRef.current && w > 900 && (proj.x * 0.5 + 0.5) * w < Math.min(820, w * 0.6));
         node.style.opacity = off ? '0' : '1';
         node.style.transform = `translate(${(proj.x * 0.5 + 0.5) * w}px, ${(-proj.y * 0.5 + 0.5) * h}px)`;
       });

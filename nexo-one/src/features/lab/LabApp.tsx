@@ -211,13 +211,21 @@ function Cycle({ lab, state }: { lab: Lab; state: SystemState }) {
     </Section>}
 
     <Section title="Linhagens sob ataque" kicker="Resultado → contestações" id="cy-chains">
-      {chains.length ? <ul className="chains">{chains.map(t => <li key={t.id}>
-        <E id={t.id}>{t.question ?? humanId(t.id)}</E>
-        <span className="chain-track">
-          <VerdictChip v={t.verdict} small />
-          {t.contests.map(c => <span key={c} className="chain-link"><i aria-hidden="true">→</i><a href={labHref('entidade', c)}><VerdictChip v={lab.tests.get(c)!.verdict} small /></a></span>)}
-        </span>
-      </li>)}</ul> : <p className="hud-muted">Nenhum resultado foi contestado ainda.</p>}
+      {chains.length ? <ul className="chains">{chains.map(t => {
+        const cs = t.contests.map(c => lab.tests.get(c)!);
+        const survived = cs.filter(c => c.verdict === 'CONFIRMED' || c.verdict === 'PROVISIONAL').length;
+        return <li key={t.id} className={`chain v-edge-${t.verdict.toLowerCase()}`}>
+          <a className="chain-q" href={labHref('entidade', t.id)}>{t.question ?? humanId(t.id)}</a>
+          <div className="chain-row">
+            <span className={`chain-node v-${t.verdict.toLowerCase()}`} title={VERDICT_PT[t.verdict]}>
+              <i aria-hidden="true">{VERDICT_GLYPH[t.verdict]}</i>{VERDICT_PT[t.verdict]}</span>
+            <span className="chain-wire" aria-hidden="true" />
+            {cs.map(c => <a key={c.id} href={labHref('entidade', c.id)} className={`chain-dot v-${c.verdict.toLowerCase()}`}
+              title={`Contestação: ${VERDICT_PT[c.verdict]}`} aria-label={`Contestação: ${VERDICT_PT[c.verdict]}`}>{VERDICT_GLYPH[c.verdict]}</a>)}
+            <span className="chain-sum">{cs.length} {cs.length === 1 ? 'contestação' : 'contestações'}{survived ? ` · ${survived} com resultado` : ''}</span>
+          </div>
+        </li>;
+      })}</ul> : <p className="hud-muted">Nenhum resultado foi contestado ainda.</p>}
     </Section>
 
     <Section title="Quem fez o quê" kicker="Últimas 48 h · cada ponto é um evento" id="cy-lanes">

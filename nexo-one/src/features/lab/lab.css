@@ -276,3 +276,29 @@
   .explore-toggle{bottom:84px;right:16px}
   .explore-hint{white-space:normal;width:calc(100% - 32px);text-align:center;border-radius:12px;top:64px}
 }
+
+/* Legibilidade: todo bloco de conteúdo tem painel próprio; a teia nunca passa atrás de texto sem fundo. */
+.observatory{--o-panel:rgba(3,10,19,.82)}
+.hud-section:not(:has(> .stats,> .cycle,> .health-grid,> .versus)){background:var(--o-panel);border:1px solid var(--o-line);border-radius:var(--r-l);padding:18px 20px;backdrop-filter:blur(14px) saturate(1.1);-webkit-backdrop-filter:blur(14px)}
+.hud-hero{background:linear-gradient(180deg,rgba(2,6,12,0),rgba(2,6,12,.55));border-radius:var(--r-l)}
+.hud .elink,.hud a.elink,.hud .hud-list a,.hud .ev-table a{color:#eaf6fb!important;border-bottom:1px solid rgba(150,215,255,.25)}
+.hud .elink:hover,.hud .hud-list a:hover,.hud .ev-table a:hover{color:#7fe0ff!important}
+@media (max-width:1280px) and (min-width:761px){
+  .observatory::before{background:linear-gradient(90deg,rgba(2,6,12,.94) 0%,rgba(2,6,12,.86) 60%,rgba(2,6,12,.35) 100%)}
+}
+/* Cadeias de contestação: cartão + trilha compacta. */
+.chains{gap:10px}
+.chain{padding:12px 14px 12px 16px;border-radius:var(--r-s);background:rgba(255,255,255,.025);border-left:3px solid currentColor}
+.chain.v-edge-review{border-left-color:var(--v-review)}.chain.v-edge-confirmed{border-left-color:var(--v-confirmed)}
+.chain.v-edge-refuted{border-left-color:var(--v-refuted)}.chain.v-edge-provisional{border-left-color:var(--v-provisional)}
+.chain.v-edge-ready,.chain.v-edge-blocked,.chain.v-edge-discarded{border-left-color:var(--v-blocked)}
+.chain-q{display:block;color:#eaf6fb!important;font-size:14px;line-height:1.45;margin-bottom:10px;border:0!important}
+.chain-q:hover{color:#7fe0ff!important}
+.chain-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.chain-node{display:inline-flex;align-items:center;gap:6px;font:500 11px var(--f-mono);text-transform:uppercase;letter-spacing:.06em}
+.chain-node i{font-style:normal}
+.chain-wire{width:22px;height:1px;background:var(--o-line)}
+.chain-dot{display:inline-grid;place-items:center;width:24px;height:24px;border-radius:50%;border:1px solid currentColor;font:12px/1 var(--f-mono);background:color-mix(in srgb,currentColor 12%,transparent);text-decoration:none!important}
+.chain-dot:hover{background:color-mix(in srgb,currentColor 28%,transparent)}
+.chain-sum{margin-left:auto;font:11px var(--f-mono);color:var(--o-quiet)}
+@media (max-width:760px){.chain-sum{margin-left:0;width:100%}.chain-dot{width:30px;height:30px}}
