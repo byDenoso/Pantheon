@@ -23,7 +23,7 @@ let nameOf: (id: string) => string = humanId;
 const E = ({ id, children }: { id: string; children?: ReactNode }) => <a className="elink" href={labHref('entidade', id)}>{children ?? nameOf(id)}</a>;
 function Stat({ n, label, delta, tone, lowerIsBetter }: { n: number | string; label: string; delta?: number | null; tone?: string; lowerIsBetter?: boolean }) {
   return <div className={`stat${tone ? ` tone-${tone}` : ''}`}>
-    <strong>{n}</strong><span>{label}</span>
+    <strong>{typeof n === 'number' ? <CountUp to={n} /> : n}</strong><span>{label}</span>
     {delta ? <em className={(delta > 0) !== Boolean(lowerIsBetter) ? 'good' : 'bad'}>{delta > 0 ? '+' : ''}{delta}</em> : null}
   </div>;
 }
@@ -121,6 +121,7 @@ export default function LabApp({ state, route, theme }: { state: SystemState; ro
 
   const cur = replay !== null ? reel[replay] : null;
   return <div className={`observatory${explore || replay !== null ? ' exploring' : ''}`} data-page={route.page}>
+    <Intro />
     {cur && <div className="replay-caption" role="status" aria-live="polite">
       <span className="replay-clock">{new Date(cur.at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</span>
       <p><b>{ROLE_PT[cur.role.toUpperCase()] ?? cur.role}</b> {narrate(cur, lab)}</p>
@@ -146,6 +147,29 @@ export default function LabApp({ state, route, theme }: { state: SystemState; ro
   </div>;
 }
 
+// ---------- Ciência x autoengenharia ----------
+const isScience = (t: TestEntity) => normDomain(t.domain) === 'SCIENCE' && !/^(META-|T-LEARN|HYP-GW-SCHEDULED)/.test(t.id);
+const isSelf = (t: TestEntity) => !isScience(t) && normDomain(t.domain) !== 'OLYMPUS';
+function tally(list: TestEntity[]) {
+  const by = (r: string) => list.filter(t => t.review === r).length;
+  return { confirmed: by('CONFIRMED'), refuted: by('REFUTED'), review: by('PENDING_REVIEW') + by('CONTESTED') + by('REFEREE1_PASSED'),
+    blocked: list.filter(t => t.verdict === 'BLOCKED').length, ready: list.filter(t => t.verdict === 'READY').length, total: list.length };
+}
+/** Números científicos publicados de um teste (Δχ², p, σ, ΔBIC, ln B, w0, wa…), ignorando campos ausentes. */
+function numbersOf(t: TestEntity): Record<string, number> {
+  const out: Record<string, number> = {};
+  const scan = (o: unknown) => {
+    if (!o || typeof o !== 'object') return;
+    for (const [k, v] of Object.entries(o as Record<string, unknown>)) {
+      const n = typeof v === 'number' ? v : (v && typeof v === 'object' && typeof (v as { value?: unknown }).value === 'number') ? (v as { value: number }).value : null;
+      if (n !== null && Number.isFinite(n)) out[k] = n;
+    }
+  };
+  scan(t.statistics); scan((t.result as { statistics?: unknown } | null)?.statistics); scan(t.result);
+  return out;
+}
+const hasNumbers = (t: TestEntity) => Object.keys(numbersOf(t)).some(k => /chi2|p_value|sigma|bic|bayes|w0|wa|shift/.test(k));
+
 // ---------- Agora ----------
 function Now({ lab, state, onReplay, replayCount }: { lab: Lab; state: SystemState; onReplay: () => void; replayCount: number }) {
   const ev = state.evolution;
@@ -167,16 +191,27 @@ function Now({ lab, state, onReplay, replayCount }: { lab: Lab; state: SystemSta
   const blocking = (g?.failing_areas ?? []).filter(a => CRITICAL.includes(a));
   const health = !g ? 'unknown' : g.status === 'GREEN' ? 'ok' : blocking.length ? 'crit' : 'warn';
 
+  const all = [...lab.tests.values()].filter(t => !t.contestOf);
+  const sci = all.filter(isScience), self = all.filter(isSelf);
+  const S = tally(sci), E2 = tally(self);
+  const byTime = (a: TestEntity, b: TestEntity) => String(b.executedAt ?? b.createdAt ?? '').localeCompare(String(a.executedAt ?? a.createdAt ?? ''));
+  const latest = sci.filter(t => t.meaning && t.verdict !== 'READY' && t.verdict !== 'BLOCKED').sort(byTime)[0];
+  const focus = sci.filter(hasNumbers).sort(byTime)[0] ?? latest;
+  const warnings = g?.failing_areas.length ?? 0;
+  void d; void review; void resolved; void discovery;
   return <>
     <header className="hud-hero">
       <p className={`hud-status s-${stale ? 'warn' : health}`}>
         <i aria-hidden="true" />
         {{ ok: 'Operando', warn: 'Operando com atenção', crit: 'Com falhas: o ciclo está travado', unknown: 'Saúde desconhecida' }[health]}
         <span> · dados {ago(state.generated_at)}{stale ? ' — atrasados' : ''}</span>
+        {warnings > 0 && <a className="ops-link" href="#/saude">{warnings} {warnings === 1 ? 'aviso' : 'avisos'} de operação →</a>}
       </p>
       <span className="sig-prompt" aria-hidden="true"><b>nexo@atlas</b>:<i>~</i>$ observe --agora</span>
       <h1>O NEXO <em>agora</em></h1>
-      {g && g.failing_areas.length > 0 && <p className="hud-lead">{g.failing_areas.map(a => guardianArea(a)).join(' · ')}.</p>}
+      {latest
+        ? <p className="thesis">Último achado científico: <E id={latest.id}>{latest.name}</E>. <span>{latest.meaning}</span></p>
+        : <p className="thesis">Ainda sem achado científico publicado; {S.ready} testes esperam para rodar.</p>}
     </header>
 
     <GatePanel state={state} />
@@ -186,46 +221,41 @@ function Now({ lab, state, onReplay, replayCount }: { lab: Lab; state: SystemSta
 
     {base && <AwaySummary lab={lab} since={base.at} />}
 
-    <Section title={base ? `Desde ${ago(base.at)}` : 'Placar da ciência'} kicker="Progresso, não atividade" id="now-since">
+    <Section title="Ciência" kicker={`${S.total} testes de cosmologia e física`} id="now-sci">
       <div className="stats">
-        <Stat n={lab.reviews.CONFIRMED ?? 0} label="confirmados" delta={d('confirmed')} tone="ok" />
-        <Stat n={lab.reviews.REFUTED ?? 0} label="refutados" delta={d('refuted')} tone="crit" />
-        <Stat n={review} label="em revisão" tone="warn" />
-        <Stat n={lab.counts.BLOCKED} label="bloqueados" delta={d('BLOCKED')} tone="mute" lowerIsBetter />
+        <Stat n={S.confirmed} label="confirmados" tone="ok" />
+        <Stat n={S.refuted} label="refutados" tone="crit" />
+        <Stat n={S.review} label="em revisão" tone="warn" />
+        <Stat n={S.ready} label="na fila" tone="mute" />
       </div>
-      <p className="hud-note">
-        Conversão: <b>{resolved}</b> de <b>{resolved + review}</b> resultados que entraram em revisão já têm veredito final
-        {resolved + review ? ` (${Math.round(100 * resolved / (resolved + review))}%)` : ''}.
-      </p>
+      <p className="hud-note self-line">Autoengenharia (o NEXO estudando a si mesmo): <b>{E2.confirmed}</b> confirmados · <b>{E2.refuted}</b> refutados · <b>{E2.review}</b> em revisão.</p>
     </Section>
 
-    <Monologue lab={lab} state={state} onReplay={onReplay} replayCount={replayCount} />
+    {focus && <ResultCard t={focus} />}
 
-    <Board state={state} />
-
-    <Calibration lab={lab} />
+    <Frontiers lab={lab} />
 
     {thought && <Section title="O que o NEXO está pensando" kicker={`Pítia · ${ago(thought.at)}`} id="now-thought">
       <blockquote className="hud-thought">{thought.text}</blockquote>
-      <p className="hud-refs">{thought.refs.slice(0, 4).map(r => <E key={r} id={r} />)}</p>
+      {thought.refs.some(r => lab.tests.has(r) || lab.hypotheses.has(r)) &&
+        <p className="hud-refs">{thought.refs.filter(r => lab.tests.has(r) || lab.hypotheses.has(r)).slice(0, 3).map(r => <E key={r} id={r} />)}</p>}
     </Section>}
 
+    <Monologue lab={lab} state={state} onReplay={onReplay} replayCount={replayCount} />
+    <Board state={state} />
+    <Calibration lab={lab} />
+
     <div className="hud-pair">
-      {discovery && <Section title="Descoberta em foco" kicker={VERDICT_PT[discovery.verdict]} id="now-disc">
-        <p className="hud-big">{discovery.meaning ?? discovery.question ?? humanId(discovery.id)}</p>
-        <E id={discovery.id}>ver a evidência →</E>
-      </Section>}
       <Section title="Problema principal" kicker={blocked.length ? `${blocked.length} testes parados` : 'Nenhum bloqueio'} id="now-problem">
         {blocked.length
           ? <><p className="hud-big">{blocked[0]!.blocker ?? blocked[0]!.summary ?? 'Motivo não publicado'}</p><E id={blocked[0]!.id}>investigar →</E></>
           : <p className="hud-muted">Nada impedindo a fila agora.</p>}
       </Section>
+      <Section title="Próximo movimento" kicker="Fila do Operador" id="now-next">
+        {next.length ? <ol className="hud-list">{next.map(t => <li key={t.id}><E id={t.id}>{t.name}</E></li>)}</ol>
+          : <p className="hud-muted">Fila vazia: o Cientista precisa gerar hipóteses.</p>}
+      </Section>
     </div>
-
-    <Section title="Próximo movimento" kicker="Fila do Executor" id="now-next">
-      {next.length ? <ol className="hud-list">{next.map(t => <li key={t.id}><E id={t.id}>{t.question}</E></li>)}</ol>
-        : <p className="hud-muted">Fila vazia: o Learner precisa gerar hipóteses.</p>}
-    </Section>
   </>;
 }
 
@@ -1083,4 +1113,99 @@ function QualityButton() {
   };
   return <button type="button" onClick={next} title="Qualidade gráfica da teia (clique para trocar)" aria-label={`Qualidade gráfica: ${Q_LABEL[q]}`}>
     <Icon n="spark" /><span className="bt">Qualidade: {Q_LABEL[q]}</span></button>;
+}
+
+// ---------- Cartão de resultado: números com leitura (e elipse w0–wa quando houver) ----------
+const STAT_PT: Record<string, (v: number) => [string, string]> = {
+  delta_chi2: v => [`Δχ² = ${v.toFixed(1)}`, v < -4 ? 'o modelo novo ajusta claramente melhor que o de referência' : v < 0 ? 'o modelo novo ajusta um pouco melhor' : 'o modelo de referência ajusta melhor'],
+  delta_chi2_lcdm_minus_w0wa: v => [`Δχ²(ΛCDM − w0wa) = ${v.toFixed(1)}`, v >= 4 ? 'dados preferem energia escura que muda' : 'preferência fraca'],
+  p_value: v => [`p = ${v < 0.001 ? v.toExponential(1) : v.toFixed(3)}`, v < 0.003 ? 'muito improvável por acaso' : v < 0.05 ? 'improvável por acaso' : 'compatível com acaso'],
+  sigma_raw: v => [`${v.toFixed(1)}σ`, 'significância bruta'],
+  sigma_lee: v => [`${v.toFixed(1)}σ`, 'significância corrigida por olhar em muitos lugares'],
+  delta_bic: v => [`ΔBIC = ${v.toFixed(1)}`, Math.abs(v) > 10 ? 'evidência forte' : Math.abs(v) > 6 ? 'evidência positiva' : 'evidência fraca'],
+  ln_bayes_factor: v => [`ln B = ${v.toFixed(2)}`, Math.abs(v) > 5 ? 'evidência forte (Jeffreys)' : Math.abs(v) > 2.5 ? 'evidência moderada' : 'evidência fraca'],
+  shift_sigma: v => [`deslocamento ${v.toFixed(1)}σ`, v < 1 ? 'o resultado quase não se move' : 'o resultado se move'],
+};
+const zFromP = (p: number) => { // bicaudal, aproximação suficiente para exibição
+  const q = Math.max(1e-12, Math.min(1, p)) / 2, t = Math.sqrt(-2 * Math.log(q));
+  return t - (2.515517 + 0.802853 * t + 0.010328 * t * t) / (1 + 1.432788 * t + 0.189269 * t * t + 0.001308 * t * t * t);
+};
+function ResultCard({ t }: { t: TestEntity }) {
+  const n = numbersOf(t);
+  const rows = Object.entries(n).filter(([k]) => STAT_PT[k]).map(([k, v]) => STAT_PT[k]!(v));
+  const sigma = n.sigma_lee ?? n.sigma_raw ?? (n.p_value !== undefined ? zFromP(n.p_value) : undefined);
+  const full = (t.result as { statistics?: { full?: Record<string, number>; subset?: Record<string, number> } } | null)?.statistics;
+  const pt = full?.subset ?? full?.full;
+  return <section className="hud-section result-card" aria-label="Resultado em foco">
+    <h2>Resultado em foco</h2>
+    <p className="rc-name"><E id={t.id}>{t.name}</E> <VerdictChip v={t.verdict} small /></p>
+    {t.meaning && <p className="rc-meaning">{t.meaning}</p>}
+    {rows.length > 0 && <dl className="rc-stats">{rows.map(([a, b]) => <div key={a}><dt>{a}</dt><dd>{b}</dd></div>)}</dl>}
+    {sigma !== undefined && <div className="rc-gauge" aria-label={`Significância ${sigma.toFixed(1)} sigma`}>
+      <svg viewBox="0 0 300 34"><line x1="10" x2="290" y1="18" y2="18" className="g-axis" />
+        {[0, 1, 2, 3, 4, 5].map(k => <g key={k}><line x1={10 + k * 56} x2={10 + k * 56} y1="13" y2="23" className="g-tick" /><text x={10 + k * 56} y="33" className="g-lab">{k}σ</text></g>)}
+        <line x1={10 + 3 * 56} x2={10 + 5 * 56} y1="18" y2="18" className="g-disc" />
+        <circle cx={10 + Math.min(5, Math.max(0, sigma)) * 56} cy="18" r="6" className="g-dot" /></svg>
+      <span>{sigma >= 5 ? 'nível de descoberta' : sigma >= 3 ? 'indício' : 'abaixo de indício'}</span></div>}
+    {pt && typeof pt.w0 === 'number' && typeof pt.wa === 'number' && <W0WaPlot w0={pt.w0} wa={pt.wa} />}
+    {rows.length === 0 && sigma === undefined && <p className="hud-muted">Este teste ainda não publicou números; a leitura acima é qualitativa.</p>}
+  </section>;
+}
+function W0WaPlot({ w0, wa }: { w0: number; wa: number }) {
+  const X = (v: number) => 20 + (v + 1.6) / 1.4 * 240, Y = (v: number) => 110 - (v + 2.5) / 3.5 * 100;
+  return <svg className="rc-plane" viewBox="0 0 280 124" aria-label={`w0 ${w0.toFixed(2)}, wa ${wa.toFixed(2)}`}>
+    <line x1="20" x2="260" y1={Y(0)} y2={Y(0)} className="g-axis" /><line x1={X(-1)} x2={X(-1)} y1="10" y2="110" className="g-axis" />
+    <text x="262" y={Y(0) + 4} className="g-lab">wa=0</text><text x={X(-1) + 4} y="18" className="g-lab">w0=−1</text>
+    <circle cx={X(-1)} cy={Y(0)} r="3.5" className="g-lcdm" /><text x={X(-1) + 6} y={Y(0) - 6} className="g-lab">ΛCDM</text>
+    <ellipse cx={X(w0)} cy={Y(wa)} rx="14" ry="22" className="g-ell" transform={`rotate(-28 ${X(w0)} ${Y(wa)})`} />
+    <circle cx={X(w0)} cy={Y(wa)} r="3" className="g-dot" />
+  </svg>;
+}
+
+// ---------- Frentes da cosmologia: estado da literatura x o que o NEXO testou ----------
+const FRONTS: Array<{ name: string; grade: 'sólido' | 'tensão' | 'aberto'; note: string; match: RegExp }> = [
+  { name: 'Energia escura', grade: 'tensão', note: 'DESI DR2 + SNe preferem w0-wa em 2,8–4,2σ', match: /DE26|DDE|W0-?WA|ENERGY|UDS/i },
+  { name: 'Expansão local (H0)', grade: 'tensão', note: 'Cefeidas ~5σ acima do CMB; TRGB no meio', match: /H0/i },
+  { name: 'Aglomeração (S8)', grade: 'tensão', note: 'lentes fracas abaixo do CMB; diferença encolhendo', match: /S8|GZSB|GROWTH|LSS|KIDS|EROSITA/i },
+  { name: 'Matéria escura', grade: 'aberto', note: 'existência sólida; natureza em aberto', match: /DM26|DMN26|DARK-?MATTER|SIDM|WDM/i },
+  { name: 'Estrutura em grande escala', grade: 'sólido', note: 'ΛCDM descreve bem; anomalias pontuais', match: /GZ01|MEGA|DESI/i },
+];
+function Frontiers({ lab }: { lab: Lab }) {
+  const sci = [...lab.tests.values()].filter(t => !t.contestOf && isScience(t));
+  const rows = FRONTS.map(f => ({ ...f, list: sci.filter(t => f.match.test(`${t.id} ${t.roadmapId ?? ''}`)) }));
+  return <Section title="Frentes da cosmologia" kicker="literatura × NEXO" id="now-fronts">
+    <ul className="fronts">{rows.map(r => { const T = tally(r.list); return <li key={r.name}>
+      <p className="fr-top"><b>{r.name}</b><span className={`fr-grade g-${r.grade === 'sólido' ? 'solid' : r.grade === 'tensão' ? 'tension' : 'open'}`}>{r.grade}</span></p>
+      <p className="fr-note">{r.note}</p>
+      <p className="fr-nexo">{T.total ? <>NEXO: <b>{T.total}</b> testes · {T.confirmed} confirmados · {T.refuted} refutados · {T.ready} na fila</> : 'NEXO ainda não testou esta frente'}</p>
+    </li>; })}</ul>
+  </Section>;
+}
+
+// ---------- Números que contam até o valor (uma vez; respeita "reduzir movimento") ----------
+function CountUp({ to }: { to: number }) {
+  const [v, setV] = useState(to);
+  useEffect(() => {
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches || to === 0) { setV(to); return; }
+    let raf = 0; const t0 = performance.now(), dur = 900;
+    const step = (now: number) => { const k = Math.min(1, (now - t0) / dur); setV(Math.round(to * (1 - Math.pow(1 - k, 3)))); if (k < 1) raf = requestAnimationFrame(step); };
+    raf = requestAnimationFrame(step); return () => cancelAnimationFrame(raf);
+  }, [to]);
+  return <>{v}</>;
+}
+
+// ---------- Abertura (só na primeira visita): a teia se forma, uma frase, e sai ----------
+function Intro() {
+  const [on, setOn] = useState(() => { try { return !localStorage.getItem('nexo.intro.seen'); } catch { return false; } });
+  useEffect(() => {
+    if (!on) return;
+    try { localStorage.setItem('nexo.intro.seen', '1'); } catch { /* sem armazenamento */ }
+    const t = window.setTimeout(() => setOn(false), 3400); return () => window.clearTimeout(t);
+  }, [on]);
+  if (!on) return null;
+  return <div className="intro" role="presentation" onClick={() => setOn(false)}>
+    <p className="intro-mark">Λ<i /></p>
+    <p className="intro-line">um laboratório que pensa sozinho</p>
+    <p className="intro-sub">cada estrela é um teste · cada filamento, uma hipótese</p>
+  </div>;
 }

@@ -743,3 +743,46 @@ details.tech .versus{margin-bottom:18px}
 .observatory .hud-section,.observatory .gate-panel,.observatory .crew-card,.observatory .ev-card,.observatory .trail,.observatory .stats,
 .observatory .health-grid,.observatory .board li,.observatory .cycle,.observatory .stop-rules>div,.observatory .quiet-list li{
   backdrop-filter:blur(20px) saturate(1.3)!important;-webkit-backdrop-filter:blur(20px) saturate(1.3)!important}
+
+/* ===== Agora científica ===== */
+.thesis{font:400 16px/1.55 var(--sig-sans)!important;color:var(--o-ink)!important;max-width:58ch;margin:4px 0 0!important}
+.thesis span{color:var(--o-dim)}
+.ops-link{margin-left:10px;font-weight:500;color:var(--o-quiet)!important;text-decoration:none;border-bottom:1px dotted currentColor}
+.self-line{margin-top:10px!important;color:var(--o-quiet)!important;font-size:13.5px!important}
+.result-card .rc-name{display:flex;align-items:center;gap:10px;flex-wrap:wrap;font-size:16px!important;margin-bottom:6px!important}
+.rc-meaning{color:var(--o-dim)!important}
+.rc-stats{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:8px;margin:12px 0}
+.rc-stats div{padding:9px 11px;border-radius:10px;background:rgba(var(--o-accent-rgb),.06);border:1px solid rgba(var(--o-accent-rgb),.16)}
+.rc-stats dt{font:500 16px var(--sig-serif);font-variant-numeric:tabular-nums;color:var(--o-ink)}
+.rc-stats dd{margin:2px 0 0;font-size:13px;color:var(--o-dim)}
+.rc-gauge{display:flex;align-items:center;gap:12px;margin-top:6px}
+.rc-gauge svg{width:300px;max-width:100%;height:auto}.rc-gauge span{font-size:13px;color:var(--o-dim)}
+.g-axis{stroke:var(--o-quiet);stroke-width:1;opacity:.6}.g-tick{stroke:var(--o-quiet);opacity:.6}.g-lab{font:500 10px var(--sig-mono);fill:var(--o-quiet)}
+.g-disc{stroke:var(--o-accent);stroke-width:3;opacity:.35}.g-dot{fill:var(--o-accent)}
+.g-lcdm{fill:none;stroke:var(--o-ink);stroke-width:1.4}.g-ell{fill:rgba(var(--o-accent-rgb),.18);stroke:var(--o-accent);stroke-width:1.2}
+.rc-plane{width:280px;max-width:100%;margin-top:10px}
+.fronts{list-style:none;margin:0;padding:0;display:grid;gap:8px}
+.fronts li{padding:10px 12px;border-radius:10px;border:1px solid var(--o-glass-line,rgba(var(--o-accent-rgb),.16));background:rgba(var(--o-accent-rgb),.04)}
+.fronts p{margin:0!important}
+.fr-top{display:flex;align-items:baseline;justify-content:space-between;gap:10px}.fr-top b{font-weight:600;color:var(--o-ink)}
+.fr-grade{font:600 12px var(--sig-sans);padding:2px 8px;border-radius:999px}
+.fr-grade.g-solid{color:var(--v-confirmed);background:rgba(95,208,160,.12)}.fr-grade.g-tension{color:var(--v-review);background:rgba(224,178,79,.14)}
+.fr-grade.g-open{color:var(--o-accent);background:rgba(var(--o-accent-rgb),.12)}
+.fr-note{font-size:13.5px!important;color:var(--o-dim)!important;margin-top:2px!important}
+.fr-nexo{font-size:13px!important;color:var(--o-quiet)!important;margin-top:4px!important}.fr-nexo b{color:var(--o-ink)}
+/* monólogo: na tela larga a telemetria já mostra as ações — sem repetição */
+@media (min-width:1280px){.observatory .mono-log{display:none}}
+
+/* ===== Abertura e estado sem WebGL ===== */
+.intro{position:fixed;inset:0;z-index:100;display:grid;place-content:center;justify-items:center;gap:10px;cursor:pointer;
+  background:radial-gradient(60% 60% at 50% 50%,transparent,var(--o-void) 75%);animation:intro-out .8s ease 2.6s forwards}
+.intro-mark{font:300 72px/1 var(--sig-serif);color:var(--o-accent);display:flex;align-items:flex-end;gap:4px;margin:0;animation:intro-in 1s ease both}
+.intro-mark i{width:22px;height:6px;background:var(--o-accent);margin-bottom:12px;animation:sig-blink 1.1s steps(1) infinite}
+.intro-line{font:300 26px var(--sig-serif);color:var(--o-ink);margin:0;animation:intro-in 1s ease .4s both}
+.intro-sub{font:400 14px var(--sig-sans);color:var(--o-dim);margin:0;animation:intro-in 1s ease .9s both}
+@keyframes intro-in{from{opacity:0;transform:translateY(8px);filter:blur(4px)}}
+@keyframes intro-out{to{opacity:0;visibility:hidden}}
+@media (prefers-reduced-motion:reduce){.intro{display:none}}
+.obs-scene[data-fallback="true"]::before{content:"A teia 3D precisa de aceleração gráfica (WebGL). O resto do observatório funciona normalmente.";
+  position:absolute;right:24px;bottom:24px;max-width:320px;padding:12px 14px;border-radius:12px;font:400 13.5px/1.5 var(--sig-sans);
+  color:var(--o-dim);background:var(--o-glass,rgba(6,10,13,.4));border:1px solid rgba(var(--o-accent-rgb),.2)}
