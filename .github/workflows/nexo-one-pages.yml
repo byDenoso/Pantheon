@@ -19,7 +19,8 @@ permissions:
 
 concurrency:
   group: nexo-one-github-pages
-  cancel-in-progress: true
+  # Never kill a publish in flight; GitHub keeps only the newest pending run, so the latest Tower revision still wins.
+  cancel-in-progress: false
 
 jobs:
   build:
@@ -492,6 +493,7 @@ jobs:
           EXPECTED_TOWER_FILE_ID: ${{ needs.build.outputs.tower_file_id }}
           EXPECTED_EVENT_CURSOR: ${{ needs.build.outputs.event_cursor }}
           EXPECTED_PANTHEON_COMMIT: ${{ github.sha }}
+          FULL_VISUAL: ${{ github.event_name == 'push' && '1' || '0' }}
         run: |
           set -euo pipefail
           base="${PAGE_URL%/}"
@@ -507,6 +509,9 @@ jobs:
           grep -Fq 'location.replace(destination.toString())' /tmp/atlas3d.html
           grep -Fq 'destination.hash = `/atlas?' /tmp/atlas3d.html
 
+          # Visual matrix (headless Chrome, ~3.5 min) only when site CODE changes (push). Data-only publishes
+          # (Writer dispatch, schedule) keep the fingerprint/atomic read-back below, which is what proves the Tower reached the site.
+          if [ "${FULL_VISUAL}" = "1" ]; then
           chrome_bin="$(command -v google-chrome || command -v chromium || command -v chromium-browser || true)"
           [ -n "${chrome_bin}" ] || {
             echo "::error::A headless Chromium/Chrome binary is required for Atlas visual readback"
@@ -750,6 +755,7 @@ jobs:
             --screenshot=/tmp/proof-3d.png "${proof_3d_url}" >/dev/null 2>&1
           test -s /tmp/proof-3d.png
           echo "PAGES_PROOF_3D_READBACK_OK"
+          fi  # FULL_VISUAL
           curl -fsSL "${base}/world-public.ndjson" -o /tmp/world.ndjson
           curl -fsSL "${base}/science-projection-v1.json" -o /tmp/science-projection-v1.json
           curl -fsSL "${base}/contracts/science-projection-v1.schema.json" -o /tmp/science-projection-v1.schema.json
