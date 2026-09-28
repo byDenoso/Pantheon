@@ -18,7 +18,6 @@ export function parseLabRoute(hash: string): LabRoute | null {
     case 'cockpit': {
       const sub = (rest[0] ?? '').toLowerCase();
       if (sub === '' || sub === 'comando') return { page: 'agora' };
-      if (sub === 'ciencia') return { page: 'evidencia' };
       return null;
     }
     case 'agora': case 'ciclo': case 'roadmaps': case 'evidencia': case 'saude': return { page: head, q };
