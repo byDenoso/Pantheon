@@ -5,7 +5,7 @@
 // A câmera muda de enquadramento por página; clicar numa estrela abre o teste.
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
-  AdditiveBlending, NormalBlending, BufferAttribute, BufferGeometry, Color, LineBasicMaterial, LineSegments,
+  AdditiveBlending, NormalBlending, HalfFloatType, WebGLRenderTarget, BufferAttribute, BufferGeometry, Color, LineBasicMaterial, LineSegments,
   PerspectiveCamera, Points, Raycaster, Scene, ShaderMaterial, Vector2, Vector3, WebGLRenderer,
 } from 'three';
 import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
@@ -62,14 +62,22 @@ const SHOTS: Record<ScenePage, [number, number, number, number]> = {
   evidencia: [24, 0.9, 3.9, -1], entidade: [10, 0.3, 4.4, 0], saude: [38, 0.12, 5.3, -1],
 };
 
+// Física de brinquedo (fiel à ideia): aglomeração da matéria escura puxa o gás dos filamentos para o nó
+// mais próximo; nos vazios a expansão é mais rápida que nas paredes (backreaction). 'evo' satura:
+// visível em segundos, quase parado em horas.
 const VERT = `
-attribute float size; attribute vec3 tint; attribute float pulse; attribute float seed;
-uniform float time; uniform float pixelRatio; varying vec3 vTint; varying float vAlpha;
+attribute float size; attribute vec3 tint; attribute float pulse; attribute float seed; attribute vec3 node;
+uniform float time; uniform float pixelRatio; uniform float evo; varying vec3 vTint; varying float vAlpha;
 void main(){
-  vec4 mv = modelViewMatrix * vec4(position,1.0);
+  vec3 toNode = node - position; float dn = length(toNode);
+  vec3 q = position + toNode * (0.22 * evo);                                   // clustering
+  q += normalize(position + vec3(1e-4)) * (0.55 * evo) * smoothstep(0.6, 3.2, dn); // vazios crescem mais
+  q += toNode * 0.015 * sin(time * 0.07 + seed * 6.28);                      // respiração lenta
+  vec4 mv = modelViewMatrix * vec4(q,1.0);
   float p = 1.0 + pulse * 0.4 * sin(time*2.4 + seed*6.28);
-  gl_PointSize = size * p * pixelRatio * (18.0 / -mv.z);
-  vTint = tint; vAlpha = clamp(0.5 + 0.5*p, 0.0, 1.0);
+  float px = size * p * pixelRatio * (18.0 / -mv.z);
+  gl_PointSize = max(px, 1.25 * pixelRatio);                                  // nada menor que ~1px: sem cintilar
+  vTint = tint; vAlpha = clamp(0.5 + 0.5*p, 0.0, 1.0) * clamp(px / (1.8 * pixelRatio), 0.22, 1.0);
   gl_Position = projectionMatrix * mv;
 }`;
 const FRAG = `
@@ -154,10 +162,11 @@ export function detectQuality(): Quality {
 const DENSITY: Record<Quality, number> = { high: 1.7, medium: 1.05, low: 0.55 };
 const gauss = () => { let u = 0, v = 0; while (!u) u = Math.random(); while (!v) v = Math.random(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(6.2832 * v); };
 
-interface Buf { pos: number[]; tint: number[]; size: number[]; pulse: number[]; seed: number[] }
-const buf = (): Buf => ({ pos: [], tint: [], size: [], pulse: [], seed: [] });
-const push = (b: Buf, p: number[], c: Color | number[], s: number, pu = 0, sd = Math.random()) => {
+interface Buf { pos: number[]; tint: number[]; size: number[]; pulse: number[]; seed: number[]; node: number[] }
+const buf = (): Buf => ({ pos: [], tint: [], size: [], pulse: [], seed: [], node: [] });
+const push = (b: Buf, p: number[], c: Color | number[], s: number, pu = 0, sd = Math.random(), node?: number[]) => {
   b.pos.push(...p); b.tint.push(...(c instanceof Color ? [c.r, c.g, c.b] : c)); b.size.push(s); b.pulse.push(pu); b.seed.push(sd);
+  b.node.push(...(node ?? p));
 };
 const geom = (b: Buf) => {
   const g = new BufferGeometry();
@@ -166,6 +175,7 @@ const geom = (b: Buf) => {
   g.setAttribute('size', new BufferAttribute(new Float32Array(b.size), 1));
   g.setAttribute('pulse', new BufferAttribute(new Float32Array(b.pulse), 1));
   g.setAttribute('seed', new BufferAttribute(new Float32Array(b.seed), 1));
+  g.setAttribute('node', new BufferAttribute(new Float32Array(b.node), 3));
   return g;
 };
 
@@ -179,8 +189,9 @@ function filament(b: Buf, a: Vector3, c: Vector3, density: number, heat: number,
     p.set(u * u * a.x + 2 * u * t * mid.x + t * t * c.x, u * u * a.y + 2 * u * t * mid.y + t * t * c.y, u * u * a.z + 2 * u * t * mid.z + t * t * c.z);
     const edge = Math.min(t, u);
     const spread = 0.022 + 0.05 * (1 - 2 * edge); // fino no meio, mais grosso perto dos nós
+    const end = t < 0.5 ? a : c;
     push(b, [p.x + gauss() * spread, p.y + gauss() * spread, p.z + gauss() * spread],
-      inferno(heat * (0.62 + 0.38 * (1 - edge * 2)) * (0.72 + Math.random() * 0.28)).multiplyScalar(1.05), 1.4 + Math.random() * 2);
+      inferno(heat * (0.62 + 0.38 * (1 - edge * 2)) * (0.72 + Math.random() * 0.28)).multiplyScalar(1.05), 1.4 + Math.random() * 2, 0, Math.random(), [end.x, end.y, end.z]);
   }
   return mid;
 }
@@ -221,7 +232,7 @@ export function ObservatoryScene({ tests, page, focusIds, onPick, theme, events,
     el.appendChild(renderer.domElement);
     const scene = new Scene();
     const camera = new PerspectiveCamera(48, 1, 0.1, 300);
-    const uniforms = { time: { value: 0 }, pixelRatio: { value: dpr } };
+    const uniforms = { time: { value: 0 }, pixelRatio: { value: dpr }, evo: { value: 0 } };
     const light = theme === 'light';
     const mat = new ShaderMaterial({ uniforms: { ...uniforms, ink: { value: light ? 1 : 0 } }, vertexShader: VERT, fragmentShader: FRAG, transparent: true, depthWrite: false, blending: light ? NormalBlending : AdditiveBlending });
 
@@ -390,7 +401,7 @@ export function ObservatoryScene({ tests, page, focusIds, onPick, theme, events,
       composer?.dispose(); composer = null; bloom = null;
       if (quality === 'low' || theme === 'light') { renderer.setClearColor(0x000000, 0); return; }
       renderer.setClearColor(0x000000, 1); // o bloom precisa de fundo opaco
-      composer = new EffectComposer(renderer);
+      composer = new EffectComposer(renderer, new WebGLRenderTarget(1, 1, { samples: quality === 'high' ? 4 : 2, type: HalfFloatType }));
       composer.setPixelRatio(dpr);
       composer.addPass(new RenderPass(scene, camera));
       // Bloom contido: só os núcleos mais brilhantes vazam luz; o preto do fundo continua preto.
@@ -522,6 +533,7 @@ export function ObservatoryScene({ tests, page, focusIds, onPick, theme, events,
       if (!visible) return;
       const dt = Math.min(0.05, (now - last) / 1000); last = now;
       uniforms.time.value += dt;
+      { const s = uniforms.time.value / 40; uniforms.evo.value = reduced ? 0.6 : s / (s + 1); }
       // Expansão do universo, bem lenta: ~6% em 15 min, desacelerando (a(t) monotônico, nunca volta).
       const el = uniforms.time.value;
       expansion = reduced ? 1 : 1 + 0.12 * (el / (el + 900));

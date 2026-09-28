@@ -721,3 +721,13 @@ details.tech .versus{margin-bottom:18px}
 :root[data-theme="light"] .telemetry{background:color-mix(in srgb,#e8eef1 70%,transparent)!important}
 :root[data-theme="light"] body,:root[data-theme="light"] .unified-shell{background:#e8eef1}
 .quiet-list span{color:var(--v-refuted)!important;font-weight:500}
+
+/* ===== Painéis de vidro: transparentes com desfoque do fundo ===== */
+.observatory{--o-glass:rgba(6,10,13,.52);--o-glass-line:rgba(var(--o-accent-rgb),.16)}
+:root[data-theme="light"] .observatory{--o-glass:rgba(244,248,250,.58);--o-glass-line:rgba(var(--o-accent-rgb),.22)}
+.observatory .hud-section,.observatory .gate-panel,.observatory .crew-card,.observatory .ev-card,.observatory .trail,
+.observatory .stats,.observatory .health-grid,.observatory .board li,.observatory .obs-crumb,.observatory .obs-tip,
+.observatory .cycle,.observatory .stop-rules>div,.observatory .quiet-list li{
+  background:var(--o-glass)!important;border-color:var(--o-glass-line)!important;
+  backdrop-filter:blur(16px) saturate(1.25);-webkit-backdrop-filter:blur(16px) saturate(1.25)}
+.observatory .gate-panel{background:linear-gradient(180deg,rgba(var(--o-accent-rgb),.12),var(--o-glass))!important}
