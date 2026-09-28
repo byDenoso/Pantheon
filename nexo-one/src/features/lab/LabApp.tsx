@@ -170,7 +170,7 @@ function Now({ lab, state, onReplay, replayCount }: { lab: Lab; state: SystemSta
       </p>
     </Section>
 
-    <Monologue lab={lab} onReplay={onReplay} replayCount={replayCount} />
+    <Monologue lab={lab} state={state} onReplay={onReplay} replayCount={replayCount} />
 
     <Calibration lab={lab} />
 
@@ -618,7 +618,7 @@ function Typewriter({ text }: { text: string }) {
   return <>{text.slice(0, n)}{n < text.length && <i className="caret" aria-hidden="true">▍</i>}</>;
 }
 
-function Monologue({ lab, onReplay, replayCount }: { lab: Lab; onReplay: () => void; replayCount: number }) {
+function Monologue({ lab, state, onReplay, replayCount }: { lab: Lab; state: SystemState; onReplay: () => void; replayCount: number }) {
   const recent = [...lab.activity].reverse().slice(0, 7);
   const [, tick] = useState(0);
   useEffect(() => { const t = window.setInterval(() => tick(x => x + 1), 30000); return () => window.clearInterval(t); }, []);
@@ -630,6 +630,7 @@ function Monologue({ lab, onReplay, replayCount }: { lab: Lab; onReplay: () => v
       {quiet < 30 ? 'Ativo agora' : `Última ação ${ago(last.at)}`} · {lab.activity.filter(e => Date.now() - Date.parse(e.at) < 864e5).length} ações em 24 h</p>
     <h2 id="mono-title">Monólogo interno</h2>
     <p className="mono-now"><b>{ROLE_PT[last.role.toUpperCase()] ?? last.role}</b> <Typewriter text={narrate(last, lab)} /></p>
+    <ul className="mono-self">{selfLines(lab, state).map((l, i) => <li key={i}><i aria-hidden="true">{l.icon}</i>{l.link ? <a href={l.link}>{l.text}</a> : l.text}</li>)}</ul>
     <ol className="mono-log">{recent.slice(1).map((e, i) => <li key={i}>
       <time>{ago(e.at)}</time><b>{ROLE_PT[e.role.toUpperCase()] ?? e.role}</b>
       <span>{e.entity_id ? <a href={labHref('entidade', e.entity_id)}>{narrate(e, lab)}</a> : narrate(e, lab)}</span>
@@ -640,19 +641,23 @@ function Monologue({ lab, onReplay, replayCount }: { lab: Lab; onReplay: () => v
 
 /** Quanto o NEXO acerta das próprias previsões (congeladas antes de rodar). */
 function Calibration({ lab }: { lab: Lab }) {
-  const pts: Array<{ p: number; hit: number }> = [];
+  const pts: Array<{ p: number; hit: number; area: string }> = [];
   for (const t of lab.tests.values()) {
     const p = (t.prereg.prediction as { p_promoted?: number } | null)?.p_promoted;
     const v = (t.verdictRaw ?? '').toUpperCase();
     if (typeof p !== 'number' || !v) continue;
     const pass = /PROMOT|SUPPORT|CONFIRM|PASS|SURVIV/.test(v) ? 1 : /REJECT|REFUT|FAIL|KILL|CONTRADICT/.test(v) ? 0 : -1;
     if (pass < 0) continue;
-    pts.push({ p: Math.min(1, Math.max(0, p)), hit: pass });
+    pts.push({ p: Math.min(1, Math.max(0, p)), hit: pass, area: t.topic ?? AREA_PT[normArea(t.domain)] ?? t.domain });
   }
   if (pts.length < 5) return null;
   const brier = pts.reduce((a, x) => a + (x.p - x.hit) ** 2, 0) / pts.length;
   const right = pts.filter(x => (x.p >= 0.5 ? 1 : 0) === x.hit).length;
   const confident = pts.filter(x => x.p >= 0.7);
+  const acc = (xs: typeof pts) => xs.filter(x => (x.p >= 0.5 ? 1 : 0) === x.hit).length / xs.length;
+  const overall = acc(pts);
+  const weak = [...new Set(pts.map(x => x.area))].map(a => ({ a, xs: pts.filter(x => x.area === a) }))
+    .filter(g => g.xs.length >= 5).map(g => ({ a: g.a, n: g.xs.length, r: acc(g.xs) })).sort((x, y) => x.r - y.r)[0];
   const confHit = confident.filter(x => x.hit === 1).length;
   const bins = [0, 1, 2, 3, 4].map(b => {
     const inBin = pts.filter(x => Math.min(4, Math.floor(x.p * 5)) === b);
@@ -663,6 +668,7 @@ function Calibration({ lab }: { lab: Lab }) {
     <h2 id="calib-title">Quanto eu acerto</h2>
     <p className="hud-big">Acertei <b>{Math.round(100 * right / pts.length)}%</b> das minhas previsões
       {confident.length >= 3 && <> · quando tive ≥70% de certeza, acertei <b>{Math.round(100 * confHit / confident.length)}%</b></>}.</p>
+    {weak && overall - weak.r >= 0.1 && <p className="calib-weak">Sei que sou mais fraco em <b>{weak.a.toLowerCase()}</b>: lá acerto {Math.round(weak.r * 100)}%, contra {Math.round(overall * 100)}% no geral. Vou desconfiar mais de mim nessa área.</p>}
     <div className="calib-chart" role="img" aria-label={bins.map(x => `${x.b * 20}-${x.b * 20 + 20}%: ${x.n ? Math.round(x.rate * 100) + '% passaram' : 'sem dados'}`).join('; ')}>
       {bins.map(x => <span key={x.b} title={`${x.n} testes`}>
         <b style={{ height: `${x.n ? Math.max(4, x.rate * 100) : 0}%` }} /><i style={{ bottom: `${x.b * 20 + 10}%` }} />
@@ -720,4 +726,31 @@ function testStory(t: TestEntity, lab: Lab): Beat[] {
   };
   if (belief[t.verdict]) beats.push(belief[t.verdict]!);
   return beats;
+}
+
+const AREA_PT: Record<string, string> = { SCIENCE: 'Ciência', ENGINEERING: 'Engenharia do NEXO', OLYMPUS: 'Olympus' };
+const normArea = (d: string) => { const u = (d || '').toUpperCase(); return u === 'NEXO' || u === 'ARTIFACT' ? 'ENGINEERING' : u; };
+/** Estados internos que mudam devagar: onde está minha atenção, o que estou ignorando, se me peguei numa isca. */
+function selfLines(lab: Lab, state: SystemState): Array<{ icon: string; text: string; link?: string }> {
+  const out: Array<{ icon: string; text: string; link?: string }> = [];
+  const day = lab.activity.filter(e => Date.now() - Date.parse(e.at) < 864e5);
+  const touched = new Map<string, number>();
+  for (const e of day) {
+    const rid = e.entity_id ? lab.tests.get(e.entity_id)?.roadmapId : null;
+    if (rid) touched.set(rid, (touched.get(rid) ?? 0) + 1);
+  }
+  const active = [...lab.roadmaps.values()].filter(r => r.state === 'ACTIVE' || r.state === 'CHARTERED');
+  const focus = [...touched].sort((a, b) => b[1] - a[1])[0];
+  if (focus) {
+    const r = lab.roadmaps.get(focus[0]);
+    if (r) out.push({ icon: '◉', text: `Minha atenção está em ${r.title.toLowerCase()}: ${focus[1]} ações nas últimas 24 h.`, link: labHref('roadmap', r.id) });
+  }
+  const ignored = active.filter(r => !touched.has(r.id) && r.frontier > 0).sort((a, b) => b.frontier - a.frontier)[0];
+  if (ignored) out.push({ icon: '○', text: `Estou deixando de lado ${ignored.title.toLowerCase()}, com ${ignored.frontier} testes esperando.`, link: labHref('roadmap', ignored.id) });
+  const d = state.evolution?.decoys;
+  if (d && d.revealed > 0) out.push({ icon: '🪤', text: `Plantei iscas contra mim mesmo: me peguei em ${d.caught} de ${d.revealed}.` });
+  else if (d && d.planted > 0) out.push({ icon: '🪤', text: `Há ${d.planted === 1 ? 'uma isca plantada' : `${d.planted} iscas plantadas`} contra mim mesmo. Ainda não sei ${d.planted === 1 ? 'qual é' : 'quais são'}.` });
+  const gate = (state.evolution?.gate.charters_waiting.length ?? 0) + (state.evolution?.gate.canaries_waiting.length ?? 0);
+  if (gate) out.push({ icon: '🙋', text: `Estou esperando o Dener decidir ${gate === 1 ? 'uma coisa' : `${gate} coisas`} que eu não posso decidir sozinho.`, link: '#/ciclo' });
+  return out;
 }

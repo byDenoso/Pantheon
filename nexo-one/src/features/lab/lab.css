@@ -364,3 +364,9 @@ details.tech > summary{cursor:pointer;padding:14px 0;font:500 11px var(--f-mono)
 details.tech[open]{padding-bottom:18px}
 details.tech h3{font:500 11px var(--f-mono);letter-spacing:.14em;text-transform:uppercase;color:var(--o-quiet);margin:18px 0 8px}
 details.tech .versus{margin-bottom:18px}
+
+.mono-self{list-style:none;margin:0 0 16px;padding:0;display:grid;gap:6px}
+.mono-self li{display:grid;grid-template-columns:22px 1fr;gap:6px;font-size:14px;color:var(--o-ink)}
+.mono-self i{font-style:normal;color:var(--o-accent)}
+.mono-self a{color:var(--o-ink)!important;border-bottom:1px dotted var(--o-line)!important}
+.calib-weak{color:#f1ddb0!important;font-size:14px}
