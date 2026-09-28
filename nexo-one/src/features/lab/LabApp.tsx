@@ -1022,7 +1022,8 @@ function Acoustic() {
 
 // ---------- Trilha do roadmap: o caminho andado (cor = veredito), a fronteira acesa e a meta ----------
 const TRAIL_COLOR: Record<Verdict, string> = {
-  CONFIRMED: '#5fd0a0', REFUTED: '#e0664f', REVIEW: '#e0b24f', PROVISIONAL: '#9fb4d8', READY: '#d4bf95', BLOCKED: '#6b6f7a', DISCARDED: '#3d414a',
+  CONFIRMED: '#5fd0a0', REFUTED: '#e0664f', REVIEW: '#e0b24f', PROVISIONAL: '#9fb4d8', READY: '#d4bf95',
+  RUNNING: '#9fb4d8', CHECKPOINTED: '#7f8ca3', BLOCKED: '#6b6f7a', DISCARDED: '#3d414a',
 };
 function Trail({ tests, frontier, target }: { tests: TestEntity[]; frontier: string[]; target: number | null }) {
   const walked = tests.filter(t => !frontier.includes(t.id) && t.verdict !== 'READY')
@@ -1203,16 +1204,33 @@ function W0WaPlot({ w0, wa }: { w0: number; wa: number }) {
 }
 
 // ---------- Frentes da cosmologia: estado da literatura x o que o NEXO testou ----------
-const FRONTS: Array<{ name: string; grade: 'sólido' | 'tensão' | 'aberto'; note: string; match: RegExp }> = [
-  { name: 'Energia escura', grade: 'tensão', note: 'DESI DR2 + SNe preferem w0-wa em 2,8–4,2σ', match: /DE26|DDE|W0-?WA|ENERGY|UDS/i },
-  { name: 'Expansão local (H0)', grade: 'tensão', note: 'Cefeidas ~5σ acima do CMB; TRGB no meio', match: /H0/i },
-  { name: 'Aglomeração (S8)', grade: 'tensão', note: 'lentes fracas abaixo do CMB; diferença encolhendo', match: /S8|GZSB|GROWTH|LSS|KIDS|EROSITA/i },
-  { name: 'Matéria escura', grade: 'aberto', note: 'existência sólida; natureza em aberto', match: /DM26|DMN26|DARK-?MATTER|SIDM|WDM/i },
-  { name: 'Estrutura em grande escala', grade: 'sólido', note: 'ΛCDM descreve bem; anomalias pontuais', match: /GZ01|MEGA|DESI/i },
+// O agrupamento segue a taxonomia canônica projetada pela Tower. IDs/nomes de teste nunca decidem a frente.
+const isSubdomain = (t: TestEntity, id: string, label: string) =>
+  t.subdomainId ? t.subdomainId === id : t.subdomain === label;
+const isTopic = (t: TestEntity, id: string, label: string) =>
+  t.topicId ? t.topicId === id : t.topic === label;
+
+const LSS_STRUCTURE_TOPICS = new Set([
+  'science.cosmology.lss_growth.galaxy_distribution',
+  'science.cosmology.lss_growth.megastructures',
+]);
+const FRONTS: Array<{ name: string; grade: 'sólido' | 'tensão' | 'aberto'; note: string; match: (t: TestEntity) => boolean }> = [
+  { name: 'Energia escura', grade: 'tensão', note: 'DESI DR2 + SNe preferem w0-wa em 2,8–4,2σ',
+    match: t => isSubdomain(t, 'science.cosmology.dark_energy', 'Energia escura') },
+  { name: 'Expansão local (H0)', grade: 'tensão', note: 'Cefeidas ~5σ acima do CMB; TRGB no meio',
+    match: t => isSubdomain(t, 'science.cosmology.h0', 'Expansão do Universo · H0') },
+  { name: 'Aglomeração (S8)', grade: 'tensão', note: 'lentes fracas abaixo do CMB; diferença encolhendo',
+    match: t => isSubdomain(t, 'science.cosmology.lss_growth', 'Crescimento da estrutura em larga escala')
+      && !(t.topicId && LSS_STRUCTURE_TOPICS.has(t.topicId)) },
+  { name: 'Matéria escura', grade: 'aberto', note: 'existência sólida; natureza em aberto',
+    match: t => isSubdomain(t, 'science.cosmology.dark_matter', 'Matéria escura') },
+  { name: 'Estrutura em grande escala', grade: 'sólido', note: 'ΛCDM descreve bem; anomalias pontuais',
+    match: t => isTopic(t, 'science.cosmology.lss_growth.galaxy_distribution', 'Galáxias · Redshift 3D')
+      || isTopic(t, 'science.cosmology.lss_growth.megastructures', 'Megaestruturas cosmológicas') },
 ];
 function Frontiers({ lab }: { lab: Lab }) {
   const sci = [...lab.tests.values()].filter(t => !t.contestOf && isScience(t));
-  const rows = FRONTS.map(f => ({ ...f, list: sci.filter(t => f.match.test(`${t.id} ${t.roadmapId ?? ''}`)) }));
+  const rows = FRONTS.map(f => ({ ...f, list: sci.filter(f.match) }));
   return <Section title="Frentes da cosmologia" kicker="literatura × NEXO" id="now-fronts">
     <ul className="fronts">{rows.map(r => { const T = tally(r.list); return <li key={r.name}>
       <p className="fr-top"><b>{r.name}</b><span className={`fr-grade g-${r.grade === 'sólido' ? 'solid' : r.grade === 'tensão' ? 'tension' : 'open'}`}>{r.grade}</span></p>
