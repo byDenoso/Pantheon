@@ -5,7 +5,7 @@
 // A câmera muda de enquadramento por página; clicar numa estrela abre o teste.
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
-  AdditiveBlending, BufferAttribute, BufferGeometry, Color, LineBasicMaterial, LineSegments,
+  AdditiveBlending, NormalBlending, BufferAttribute, BufferGeometry, Color, LineBasicMaterial, LineSegments,
   PerspectiveCamera, Points, Raycaster, Scene, ShaderMaterial, Vector2, Vector3, WebGLRenderer,
 } from 'three';
 import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
@@ -73,12 +73,16 @@ void main(){
   gl_Position = projectionMatrix * mv;
 }`;
 const FRAG = `
+uniform float ink;
 varying vec3 vTint; varying float vAlpha;
 void main(){
   vec2 c = gl_PointCoord - 0.5; float d = length(c);
   float glow = exp(-d*d*42.0); float core = 1.0 - smoothstep(0.035, 0.065, d);
   float a = (glow*0.85 + core) * vAlpha; if (a < 0.01) discard;
-  gl_FragColor = vec4(vTint * (0.55 + glow*0.8) + core*0.6, a);
+  vec3 lit = vTint * (0.55 + glow*0.8) + core*0.6;
+  // Tema claro: tinta ciano-escura sobre papel (mesma matiz, sem brilho aditivo).
+  vec3 inked = mix(vec3(0.02,0.24,0.29), vTint*0.45, 0.35);
+  gl_FragColor = vec4(mix(lit, inked, ink), ink > 0.5 ? a*0.55 : a);
 }`;
 
 // Quasar: núcleo branco-quente + raios de difração, pulso lento.
@@ -218,7 +222,8 @@ export function ObservatoryScene({ tests, page, focusIds, onPick, theme, events,
     const scene = new Scene();
     const camera = new PerspectiveCamera(48, 1, 0.1, 300);
     const uniforms = { time: { value: 0 }, pixelRatio: { value: dpr } };
-    const mat = new ShaderMaterial({ uniforms, vertexShader: VERT, fragmentShader: FRAG, transparent: true, depthWrite: false, blending: AdditiveBlending });
+    const light = theme === 'light';
+    const mat = new ShaderMaterial({ uniforms: { ...uniforms, ink: { value: light ? 1 : 0 } }, vertexShader: VERT, fragmentShader: FRAG, transparent: true, depthWrite: false, blending: light ? NormalBlending : AdditiveBlending });
 
     // --- Estrutura: domínios, hipóteses, filamentos ---
     const web = buf();

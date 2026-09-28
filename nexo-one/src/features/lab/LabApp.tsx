@@ -632,7 +632,7 @@ function Health({ state, lab }: { state: SystemState; lab: Lab }) {
       </li>)}</ul>
     </Section>}
     {g && g.failing_areas.length > 0 && <Section title="O que está falhando" id="he-fail">
-      <ul className="hud-list">{g.failing_areas.map(a => <li key={a}><b>{a}</b> — {guardianArea(a)}</li>)}</ul>
+      <ul className="hud-list">{g.failing_areas.map(a => <li key={a}>{guardianArea(a).replace(/^./, c => c.toUpperCase())}</li>)}</ul>
     </Section>}
     {(ev?.incidents?.length ?? 0) > 0 && <Section title="Incidentes" kicker={`${ev!.incidents!.length} abertos`} id="he-inc">
       <ul className="incidents">{ev!.incidents!.map(i => {
