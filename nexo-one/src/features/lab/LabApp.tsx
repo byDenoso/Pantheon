@@ -59,6 +59,12 @@ export default function LabApp({ state, route, theme }: { state: SystemState; ro
   const lab = useMemo(() => buildLab(state), [state]);
   const tests = useMemo(() => [...lab.tests.values()].filter(t => !t.contestOf), [lab]);
   const [focus, setFocus] = useState<string[]>([]);
+  const [explore, setExplore] = useState(false);
+  useEffect(() => { setExplore(false); }, [route.page, route.id]);
+  useEffect(() => {
+    const esc = (e: KeyboardEvent) => { if (e.key === 'Escape') setExplore(false); };
+    window.addEventListener('keydown', esc); return () => window.removeEventListener('keydown', esc);
+  }, []);
   const events = useMemo<SceneEvents>(() => sceneEvents(state, lab), [state, lab]);
   useEffect(() => {
     if (route.page === 'entidade' && route.id) setFocus([route.id]);
@@ -80,9 +86,12 @@ export default function LabApp({ state, route, theme }: { state: SystemState; ro
     }
   })();
 
-  return <div className="observatory" data-page={route.page}>
+  return <div className={`observatory${explore ? ' exploring' : ''}`} data-page={route.page}>
+    <button type="button" className="explore-toggle" aria-pressed={explore} onClick={() => setExplore(x => !x)}>
+      {explore ? '✕ Voltar ao painel' : '⤢ Explorar a teia'}</button>
+    {explore && <p className="explore-hint" role="status">Arraste para girar · roda ou pinça para zoom · botão direito, Shift ou 2 dedos para mover · duplo clique recentra · Esc sai</p>}
     <Suspense fallback={<div className="obs-scene obs-scene--loading" />}>
-      <ObservatoryScene tests={tests} events={events} page={route.page} focusIds={focus} theme={theme}
+      <ObservatoryScene explore={explore} tests={tests} events={events} page={route.page} focusIds={focus} theme={theme}
         onPick={id => { window.location.hash = labHref('entidade', id); }} />
     </Suspense>
     <div className="hud" key={`${route.page}:${route.id ?? ''}`}>{page}</div>

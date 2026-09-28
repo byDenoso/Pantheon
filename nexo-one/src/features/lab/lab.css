@@ -262,3 +262,17 @@
   .lanes svg{min-width:640px}
   .timeline li{grid-template-columns:1fr}
 }
+
+/* Modo Explorar: painel some, a teia ganha a tela e todos os gestos. */
+.explore-toggle{position:fixed;z-index:5;right:clamp(16px,3vw,32px);bottom:clamp(20px,4vh,40px);padding:10px 16px;border-radius:999px;border:1px solid rgba(150,215,255,.4);background:rgba(3,10,20,.72);backdrop-filter:blur(10px);color:#cdf5ff;font:500 12px var(--f-mono);letter-spacing:.08em;min-height:44px;cursor:pointer}
+.explore-toggle:hover{background:rgba(10,30,50,.85)}
+.explore-toggle:focus-visible{outline:2px solid var(--o-accent);outline-offset:3px}
+.explore-hint{position:fixed;z-index:5;left:50%;transform:translateX(-50%);top:72px;margin:0;padding:8px 14px;border-radius:999px;background:rgba(3,10,20,.7);color:#9fc4d8;font:11px var(--f-mono);white-space:nowrap;pointer-events:none}
+.observatory.exploring .hud{opacity:0;pointer-events:none!important;transform:translateY(8px);transition:opacity .35s,transform .35s}
+.observatory.exploring .hud > *{pointer-events:none!important}
+.observatory.exploring::before{opacity:0;transition:opacity .35s}
+.observatory.exploring .obs-scene canvas{touch-action:none}
+@media (max-width:760px){
+  .explore-toggle{bottom:84px;right:16px}
+  .explore-hint{white-space:normal;width:calc(100% - 32px);text-align:center;border-radius:12px;top:64px}
+}

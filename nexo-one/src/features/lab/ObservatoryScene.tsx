@@ -71,7 +71,7 @@ const FRAG = `
 varying vec3 vTint; varying float vAlpha;
 void main(){
   vec2 c = gl_PointCoord - 0.5; float d = length(c);
-  float glow = exp(-d*d*20.0); float core = smoothstep(0.12, 0.0, d);
+  float glow = exp(-d*d*34.0); float core = smoothstep(0.09, 0.0, d);
   float a = (glow + core) * vAlpha; if (a < 0.01) discard;
   gl_FragColor = vec4(vTint * (0.55 + glow*0.8) + core*0.6, a);
 }`;
@@ -141,27 +141,30 @@ const geom = (b: Buf) => {
 /** Filamento: partículas ao longo de uma curva levemente arqueada entre dois nós. */
 function filament(b: Buf, a: Vector3, c: Vector3, density: number, heat: number, seed: string) {
   const mid = a.clone().add(c).multiplyScalar(0.5).add(new Vector3(...jitter(seed, a.distanceTo(c) * 0.35)));
-  const n = Math.max(6, Math.round(a.distanceTo(c) * density));
+  const n = Math.max(6, Math.round(a.distanceTo(c) * density * 1.35));
   const p = new Vector3();
   for (let i = 0; i < n; i += 1) {
     const t = Math.random(), u = 1 - t;
     p.set(u * u * a.x + 2 * u * t * mid.x + t * t * c.x, u * u * a.y + 2 * u * t * mid.y + t * t * c.y, u * u * a.z + 2 * u * t * mid.z + t * t * c.z);
-    const spread = 0.12 + 0.25 * Math.sin(Math.PI * t);
+    const spread = 0.03 + 0.09 * Math.sin(Math.PI * t);
     const edge = Math.min(t, u);
     push(b, [p.x + (Math.random() - 0.5) * spread, p.y + (Math.random() - 0.5) * spread, p.z + (Math.random() - 0.5) * spread],
-      inferno(heat * (0.6 + 0.4 * (1 - edge * 2)) * (0.7 + Math.random() * 0.3)).multiplyScalar(1.15), 3 + Math.random() * 4.5);
+      inferno(heat * (0.6 + 0.4 * (1 - edge * 2)) * (0.7 + Math.random() * 0.3)).multiplyScalar(1.2), 1.8 + Math.random() * 2.6);
   }
   return mid;
 }
 
-export function ObservatoryScene({ tests, page, focusIds, onPick, theme, events }: {
-  events?: SceneEvents; tests: TestEntity[]; page: ScenePage; focusIds?: string[]; onPick: (id: string) => void; theme: 'dark' | 'light';
+export function ObservatoryScene({ tests, page, focusIds, onPick, theme, events, explore = false }: {
+  explore?: boolean; events?: SceneEvents; tests: TestEntity[]; page: ScenePage; focusIds?: string[]; onPick: (id: string) => void; theme: 'dark' | 'light';
 }) {
   const host = useRef<HTMLDivElement>(null);
   const labels = useRef<HTMLDivElement>(null);
   const api = useRef<{ shot: (p: ScenePage) => void; focus: (ids: string[]) => void } | null>(null);
   const pickRef = useRef(onPick);
   pickRef.current = onPick;
+  const exploreRef = useRef(explore);
+  exploreRef.current = explore;
+  const resetView = useRef<() => void>(() => {});
   const domains = useMemo(() => layoutDomains([...tests.map(t => t.domain), ...(events?.quasars ?? []).map(e => e.domain), ...(events?.agn ?? []).map(e => e.domain)]), [tests, events]);
 
   useEffect(() => {
@@ -293,8 +296,11 @@ export function ObservatoryScene({ tests, page, focusIds, onPick, theme, events 
 
     // --- Câmera ---
     const cam = { dist: 40, elev: 0.5, az: 0.3 };
+    let zoom = 1;
+    const pan = new Vector3();
     const target = { dist: 30, elev: 0.42, az: 0.7, look: new Vector3() };
     const look = new Vector3();
+    const lookGoal = new Vector3();
     const shot = (p: ScenePage) => {
       const [dist, elev, az, t] = SHOTS[p];
       Object.assign(target, { dist, elev, az: az + Math.round((cam.az - az) / (Math.PI * 2)) * Math.PI * 2 });
@@ -322,31 +328,73 @@ export function ObservatoryScene({ tests, page, focusIds, onPick, theme, events 
     resize();
     const ro = new ResizeObserver(resize); ro.observe(el);
 
-    // Arrastar gira a teia; clicar numa estrela abre o teste.
+    // Controles (como nos grafos): arrastar gira · roda/pinça dá zoom · botão direito, Shift ou 2 dedos movem · duplo clique recentra.
+    // Fora do modo Explorar, a roda e o toque vertical continuam rolando a página.
     const ray = new Raycaster(); ray.params.Points = { threshold: 0.35 };
     const ndc = new Vector2();
-    let drag: { x: number; y: number; moved: boolean } | null = null;
     const canvas = renderer.domElement;
-    const down = (ev: PointerEvent) => { drag = { x: ev.clientX, y: ev.clientY, moved: false }; };
+    const pointers = new Map<number, { x: number; y: number }>();
+    let drag: { x: number; y: number; moved: boolean; pan: boolean } | null = null;
+    let pinch: { d: number; cx: number; cy: number } | null = null;
+    const right = new Vector3(), upv = new Vector3();
+    const panBy = (dx: number, dy: number) => {
+      camera.matrixWorld.extractBasis(right, upv, new Vector3());
+      const scale = cam.dist * 0.0016;
+      pan.addScaledVector(right, -dx * scale).addScaledVector(upv, dy * scale);
+    };
+    const zoomBy = (factor: number) => { zoom = Math.max(0.12, Math.min(2.6, zoom * factor)); };
+    const down = (ev: PointerEvent) => {
+      pointers.set(ev.pointerId, { x: ev.clientX, y: ev.clientY });
+      if (pointers.size === 2) {
+        const [p1, p2] = [...pointers.values()];
+        pinch = { d: Math.hypot(p1!.x - p2!.x, p1!.y - p2!.y), cx: (p1!.x + p2!.x) / 2, cy: (p1!.y + p2!.y) / 2 };
+        drag = null; return;
+      }
+      drag = { x: ev.clientX, y: ev.clientY, moved: false, pan: ev.button === 2 || ev.shiftKey };
+      if (exploreRef.current) canvas.setPointerCapture?.(ev.pointerId);
+    };
     const move = (ev: PointerEvent) => {
+      if (pointers.has(ev.pointerId)) pointers.set(ev.pointerId, { x: ev.clientX, y: ev.clientY });
+      if (pinch && pointers.size === 2) {
+        const [p1, p2] = [...pointers.values()];
+        const d = Math.hypot(p1!.x - p2!.x, p1!.y - p2!.y), cx = (p1!.x + p2!.x) / 2, cy = (p1!.y + p2!.y) / 2;
+        if (pinch.d > 0) zoomBy(pinch.d / d);
+        panBy(cx - pinch.cx, cy - pinch.cy);
+        pinch = { d, cx, cy }; return;
+      }
       if (!drag) return;
       const dx = ev.clientX - drag.x, dy = ev.clientY - drag.y;
       if (Math.abs(dx) + Math.abs(dy) > 4) drag.moved = true;
-      target.az += dx * 0.005; target.elev = Math.max(-1.2, Math.min(1.35, target.elev + dy * 0.004));
+      if (drag.pan) panBy(dx, dy);
+      else { target.az += dx * 0.005; target.elev = Math.max(-1.35, Math.min(1.4, target.elev + dy * 0.004)); }
       drag.x = ev.clientX; drag.y = ev.clientY;
     };
     const up = (ev: PointerEvent) => {
+      pointers.delete(ev.pointerId);
+      if (pointers.size < 2) pinch = null;
       const was = drag; drag = null;
-      if (!was || was.moved) return;
+      if (!was || was.moved || ev.target !== canvas) return;
       const rect = canvas.getBoundingClientRect();
       ndc.set(((ev.clientX - rect.left) / rect.width) * 2 - 1, -((ev.clientY - rect.top) / rect.height) * 2 + 1);
       ray.setFromCamera(ndc, camera);
       const hit = ray.intersectObject(starPoints)[0];
       if (hit?.index !== undefined && ids[hit.index]) pickRef.current(ids[hit.index]!);
     };
+    const wheel = (ev: WheelEvent) => {
+      if (!exploreRef.current && !ev.ctrlKey) return; // rolando a página
+      ev.preventDefault();
+      zoomBy(Math.exp(ev.deltaY * 0.0012));
+    };
+    const dbl = () => { zoom = 1; pan.set(0, 0, 0); };
+    const noMenu = (ev: Event) => { if (exploreRef.current) ev.preventDefault(); };
     canvas.addEventListener('pointerdown', down);
     window.addEventListener('pointermove', move);
     window.addEventListener('pointerup', up);
+    window.addEventListener('pointercancel', up);
+    canvas.addEventListener('wheel', wheel, { passive: false });
+    canvas.addEventListener('dblclick', dbl);
+    canvas.addEventListener('contextmenu', noMenu);
+    resetView.current = dbl;
 
     // Rótulos dos domínios projetados em HTML (nítidos, legíveis, sem textura).
     const labelEls = [...(labels.current?.querySelectorAll('[data-domain]') ?? [])] as HTMLElement[];
@@ -361,11 +409,11 @@ export function ObservatoryScene({ tests, page, focusIds, onPick, theme, events 
       if (!visible) return;
       const dt = Math.min(0.05, (now - last) / 1000); last = now;
       uniforms.time.value += dt;
-      if (!reduced && !drag) target.az += dt * 0.025;
+      if (!reduced && !drag && !exploreRef.current) target.az += dt * 0.025;
       const k = reduced ? 1 : 1 - Math.pow(0.03, dt);
       const fit = camera.aspect < 1 ? 1 / Math.max(0.55, camera.aspect) : 1;
-      cam.dist += (target.dist * fit - cam.dist) * k; cam.elev += (target.elev - cam.elev) * k; cam.az += (target.az - cam.az) * k;
-      look.lerp(target.look, k);
+      cam.dist += (target.dist * fit * zoom - cam.dist) * k; cam.elev += (target.elev - cam.elev) * k; cam.az += (target.az - cam.az) * k;
+      look.lerp(lookGoal.copy(target.look).add(pan), k);
       camera.position.set(
         look.x + Math.cos(cam.az) * Math.cos(cam.elev) * cam.dist, look.y + Math.sin(cam.elev) * cam.dist,
         look.z + Math.sin(cam.az) * Math.cos(cam.elev) * cam.dist);
@@ -394,6 +442,10 @@ export function ObservatoryScene({ tests, page, focusIds, onPick, theme, events 
       canvas.removeEventListener('pointerdown', down);
       window.removeEventListener('pointermove', move);
       window.removeEventListener('pointerup', up);
+      window.removeEventListener('pointercancel', up);
+      canvas.removeEventListener('wheel', wheel);
+      canvas.removeEventListener('dblclick', dbl);
+      canvas.removeEventListener('contextmenu', noMenu);
       webGeo.dispose(); starGeo.dispose(); qsoGeo.dispose(); qsoMat.dispose(); jetGeo.dispose(); jetMat.dispose(); boxGeo.dispose(); boxMat.dispose(); mat.dispose(); renderer.dispose();
       canvas.remove(); api.current = null;
     };
