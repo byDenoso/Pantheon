@@ -479,3 +479,16 @@ details.tech .versus{margin-bottom:18px}
 @media (max-width:760px){.ev-cards{grid-template-columns:1fr}}
 .observatory .hud-search{background:rgba(8,12,20,.8)!important;color:#efe9dd!important;border:1px solid rgba(255,255,255,.12)!important;border-radius:10px;font:400 14px var(--sig-sans,system-ui);padding:11px 14px;pointer-events:auto}
 .observatory .hud-search::placeholder{color:#7d8794}
+
+/* ===== Celular: a teia é uma janela no topo; o conteúdo rola abaixo, sem cobrir as estrelas ===== */
+@media (max-width:760px){
+  .observatory:not(.exploring) .obs-scene{position:fixed;inset:48px 0 auto 0;height:42vh;border-bottom:1px solid rgba(255,255,255,.06)}
+  .observatory:not(.exploring) .obs-scene::before{content:"";position:absolute;left:0;right:0;bottom:0;height:1px;background:var(--sig-spectrum);opacity:.6;z-index:2}
+  .observatory:not(.exploring) .hud{position:fixed;left:0;right:0;top:calc(48px + 42vh);bottom:56px;margin:0;max-width:none;
+    overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;padding:20px 16px 40px;
+    background:#05060a;z-index:2;pointer-events:auto}
+  .observatory:not(.exploring) .hud-section,.observatory:not(.exploring) .gate-panel{backdrop-filter:none}
+  .observatory:not(.exploring) .explore-toggle{top:calc(48px + 42vh - 56px);bottom:auto;right:12px;min-height:38px;padding:8px 12px;font-size:11px}
+  .observatory:not(.exploring) .obs-tools{top:58px}
+  .observatory:not(.exploring)::before{display:none}
+}
