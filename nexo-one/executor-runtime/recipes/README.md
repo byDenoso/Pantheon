@@ -13,4 +13,4 @@ Use `w0wa_bao_sn` para: leave-one-tracer-out do BAO, leave-one-band-out das SNe,
 
 Receita nova: peça numa conversa ("NEXO: preciso de uma receita para …"); ela entra aqui por commit revisado.
 
-| `w0wa_bao_sn_multi` | robustez w0-wa em Pantheon+ e DES-SN5YR com DESI DR2 BAO; jackknife por faixa de redshift ou família BAO | `mode`, `compilations[]`, `priors{}`, e `bands[[zmin,zmax]]` ou `tracer_groups[{label,z[]}]` |
+| `w0wa_bao_sn_multi` | robustez w0-wa em Pantheon+ e DES-SN5YR com DESI DR2 BAO; jackknife por faixa de redshift ou família BAO | `mode`, `compilations[]`, `priors{}`, e `bands[[zmin,zmax]]` ou `tracer_groups[{label,z[]}]` |\n| `late_time_joint_probe_stress` | família aprovada de stress tardio: jackknife SN/BAO, respostas de covariância/velocidade e fator comum de calibração; bindings faltantes ficam INCONCLUSIVE, sem substituição silenciosa | `mode`; jackknifes: `compilations[]`, `priors{}`, `bands[]`/`tracer_groups[]`; respostas: `response_sets` ou `response_sets_url`, `criterion`, `permutations` |\n
