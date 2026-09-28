@@ -36,8 +36,19 @@ def load_pantheon():
     sub=cov[np.ix_(k,k)]
     return {"name":"Pantheon+","z":z[k],"zhel":zh[k],"mu":mu[k],"cov":sub,"prec":np.linalg.inv(sub)}
 
+def snana_rows(text):
+    """DES HD files are SNANA tables: '# ...' comments, one 'VARNAMES:' header, 'SN:' rows split on whitespace."""
+    names=None; rows=[]
+    for line in text.splitlines():
+        parts=line.split()
+        if not parts or parts[0].startswith("#"): continue
+        if parts[0]=="VARNAMES:": names=parts[1:]
+        elif parts[0]=="SN:" and names: rows.append(dict(zip(names,parts[1:])))
+    if not rows: raise RuntimeError("DES HD: no SN rows parsed")
+    return rows
+
 def load_des():
-    rows=list(csv.DictReader(io.StringIO(fetch_text(DES_BASE+"DES-Dovekie_HD.csv"))))
+    rows=snana_rows(fetch_text(DES_BASE+"DES-Dovekie_HD.csv"))
     z=np.array([float(r["zHD"]) for r in rows]); zh=np.array([float(r["zHEL"]) for r in rows]); mu=np.array([float(r["MU"]) for r in rows])
     d=np.load(io.BytesIO(fetch_bytes(DES_BASE+"STAT+SYS.npz")))
     n=int(d[d.files[0]][0]); inv=np.zeros((n,n)); inv[np.triu_indices(n)]=d[d.files[1]]
