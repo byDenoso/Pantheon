@@ -12,6 +12,15 @@ Tower (Drive, privada) → projeção pública (TCC `runtime/nexo_agent_api/publ
 O front só lê `system.json` e `galaxy/latest.json`. Mudou regra de dado → mude a projeção (TCC) ou os builders, não o React.
 Enquanto o ATLAS fica aberto, `useSystem.ts` consulta o `build-meta.json` leve a cada 20 s e só relê o `system.json` quando o fingerprint publicado muda. A Galáxia acompanha esse mesmo fingerprint e relê `galaxy/latest.json` com readback sem cache e retry curto até os dois artefatos pertencerem à mesma publicação.
 
+## 2a. Observatório (padrão desde 2026-09-28)
+Rotas `#/agora #/ciclo #/roadmaps #/roadmap/<id> #/evidencia[?v=VEREDITO] #/e/<id> #/saude` (`src/features/lab/`).
+- `ObservatoryScene.tsx`: teia cósmica WebGL (Three.js) fixa atrás de todas as páginas. Domínio = região/halo; hipótese = nó; teste = estrela no filamento, cor+pulso pelo veredito; clicar abre `#/e/<id>`; câmera muda por página.
+- `model.ts`: índice único de entidades (testes, hipóteses, campanhas, roadmaps) a partir do `system.json`. Contestações ligadas pelo id `CONTEST-<alvo>-<n>`.
+- `LabApp.tsx`: páginas em HUD (coluna de leitura à esquerda, teia à direita; no celular teia em cima).
+- Veredito sempre com glifo + palavra (✓ ✕ ◐ ● ○ ▨ –), nunca só cor.
+- Campos que faltam na projeção: `docs/FRONTEND_DATA_CONTRACT_V2.md`.
+As telas antigas (Início/Operação/Prova/Mapa) seguem acessíveis em Saúde → Detalhes técnicos.
+
 ## 2. Telas e componentes que importam
 | Tela | Arquivo | O que mostra |
 |---|---|---|

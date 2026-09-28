@@ -85,7 +85,7 @@ test('capability counters name their different semantics explicitly', async () =
   assert.match(mcp, /topology\.stats\.capabilities/);
 });
 
-test('app navigation uses seven primary tabs and removes duplicate rail navigation', async () => {
+test('app navigation uses observatory primary tabs and removes duplicate rail navigation', async () => {
   const [app, header, foundation, shell, mcp] = await Promise.all([
     read('../src/app/App.tsx'), read('../src/shell/InstrumentHeader.tsx'),
     read('../src/styles/tokens.css'), read('../src/styles/product-shell.css'),
@@ -99,7 +99,7 @@ test('app navigation uses seven primary tabs and removes duplicate rail navigati
   assert.match(header, /<strong>Dados do NEXO<\/strong>/);
   assert.match(header, /Última leitura:/);
   assert.match(header, /aria-label="Modo do produto"/);
-  for (const label of ['Início','Ciência','Operação','Prova','Sistema','Mapa','Pessoal']) assert.match(header, new RegExp(label));
+  for (const label of ['Agora','Ciclo','Roadmaps','Evidência','Galáxia','Saúde','Pessoal','Sistema']) assert.match(header, new RegExp(label));
   assert.match(app, /className="section-tabs"/);
   assert.match(shell, /\.unified-shell \.cockpit-body\{display:block!important/);
   assert.match(shell, /\.unified-shell \.nav-rail,\.unified-shell \.bottom-nav\{display:none!important\}/);
