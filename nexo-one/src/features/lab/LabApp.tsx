@@ -7,6 +7,7 @@ import {
   type Lab, type TestEntity, type Verdict,
 } from './model.ts';
 import type { ScenePage, SceneEvents } from './ObservatoryScene.tsx';
+import { normDomain } from './domains.ts';
 import './lab.css';
 
 const ObservatoryScene = lazy(() => import('./ObservatoryScene.tsx').then(m => ({ default: m.ObservatoryScene })));
@@ -425,7 +426,7 @@ function sceneEvents(state: SystemState, lab: Lab): SceneEvents {
   const perDomain = new Map<string, number>();
   for (const t of lab.tests.values()) {
     if (t.verdict !== 'READY' || t.contestOf) continue;
-    const d = t.domain === 'NEXO' || t.domain === 'ARTIFACT' ? 'ENGINEERING' : t.domain;
+    const d = normDomain(t.domain);
     perDomain.set(d, (perDomain.get(d) ?? 0) + 1);
   }
   const agn = [...perDomain].map(([domain, n]) => ({

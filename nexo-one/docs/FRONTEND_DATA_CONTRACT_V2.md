@@ -25,3 +25,9 @@ Alimenta o diário do ciclo e a linha do tempo. `kind` ex.: THOUGHT, HYPOTHESIS,
 
 ## Idade do funil — `evolution.stage_age_hours` (opcional)
 `{PENDING_REVIEW: mediana_h, CONTESTED: mediana_h, REFEREE1_PASSED: mediana_h, READY: mediana_h}` → mostra onde o loop emperra.
+
+## Domínio novo (ex.: Filosofia)
+O site cria a região na teia sozinho: basta testes/hipóteses chegarem com `semantic_domain: "PHILOSOPHY"` (nó TEST do grafo)
+ou `domain` equivalente. No backend: adicionar o domínio à SEMANTIC_TAXONOMY_V1 (`public_projection.py`) para ele não cair em SCIENCE.
+Rótulo em português já mapeado para PHILOSOPHY, MATHEMATICS, BIOLOGY, PHYSICS, ECONOMICS, HISTORY, PSYCHOLOGY, LINGUISTICS, MEDICINE;
+outros aparecem com o próprio nome. Posição na teia é estável (derivada do nome).

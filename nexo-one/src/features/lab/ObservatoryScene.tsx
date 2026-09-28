@@ -3,12 +3,13 @@
 // cada teste é uma estrela no filamento que liga sua hipótese ao domínio.
 // Cor/pulso = veredito (confirmado queima estável, em revisão pulsa, bloqueado apaga, refutado vermelho).
 // A câmera muda de enquadramento por página; clicar numa estrela abre o teste.
-import { useEffect, useRef } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import {
   AdditiveBlending, BufferAttribute, BufferGeometry, Color, LineBasicMaterial, LineSegments,
   PerspectiveCamera, Points, Raycaster, Scene, ShaderMaterial, Vector2, Vector3, WebGLRenderer,
 } from 'three';
 import type { TestEntity, Verdict } from './model.ts';
+import { normDomain } from './domains.ts';
 
 /** Fenômenos da teia: o que o NEXO faz agora, na escala certa (galáxias ativas, não estrelas).
  *  Quasar = decisão sua · AGN com jatos = testes rodando/na fila · GRB = pensamento novo. */
@@ -20,12 +21,28 @@ export interface SceneEvents {
 
 export type ScenePage = 'agora' | 'ciclo' | 'roadmaps' | 'roadmap' | 'evidencia' | 'entidade' | 'saude';
 
-const DOMAINS: Array<{ id: string; label: string; at: [number, number, number] }> = [
+// Domínios vêm dos dados: um domínio novo (ex.: PHILOSOPHY) ganha sua região da teia sozinho.
+// Os três fundadores têm posição fixa; os novos são postos numa esfera, em posição estável pelo nome.
+export interface DomainSpot { id: string; label: string; at: [number, number, number] }
+const BASE: DomainSpot[] = [
   { id: 'SCIENCE', label: 'Ciência', at: [-6.5, 1.5, -2] },
   { id: 'ENGINEERING', label: 'Engenharia', at: [6, -1, 3] },
   { id: 'OLYMPUS', label: 'Olympus', at: [1.5, 5, 7] },
 ];
-const domainIndex = (d: string) => (d === 'ENGINEERING' || d === 'NEXO' || d === 'ARTIFACT' ? 1 : d === 'OLYMPUS' ? 2 : 0);
+const LABEL_PT: Record<string, string> = {
+  PHILOSOPHY: 'Filosofia', FILOSOFIA: 'Filosofia', MATHEMATICS: 'Matemática', BIOLOGY: 'Biologia', PHYSICS: 'Física',
+  ECONOMICS: 'Economia', HISTORY: 'História', PSYCHOLOGY: 'Psicologia', LINGUISTICS: 'Linguística', MEDICINE: 'Medicina',
+};
+export function layoutDomains(ids: string[]): DomainSpot[] {
+  const extra = [...new Set(ids.map(normDomain))].filter(id => !BASE.some(b => b.id === id)).sort();
+  return [...BASE, ...extra.map(id => {
+    const h = rnd(id), g = rnd(id + '#');
+    const th = h * Math.PI * 2, ph = Math.acos(0.6 * (2 * g - 1));
+    const r = 9.5;
+    const label = LABEL_PT[id] ?? id.charAt(0) + id.slice(1).toLowerCase().replace(/_/g, ' ');
+    return { id, label, at: [r * Math.sin(ph) * Math.cos(th), r * Math.cos(ph), r * Math.sin(ph) * Math.sin(th)] as [number, number, number] };
+  })];
+}
 
 const VERDICT_RGB: Record<Verdict, [number, number, number]> = {
   CONFIRMED: [0.5, 1, 0.75], REFUTED: [1, 0.3, 0.26], REVIEW: [1, 0.78, 0.35], PROVISIONAL: [0.72, 0.8, 1],
@@ -145,6 +162,7 @@ export function ObservatoryScene({ tests, page, focusIds, onPick, theme, events 
   const api = useRef<{ shot: (p: ScenePage) => void; focus: (ids: string[]) => void } | null>(null);
   const pickRef = useRef(onPick);
   pickRef.current = onPick;
+  const domains = useMemo(() => layoutDomains([...tests.map(t => t.domain), ...(events?.quasars ?? []).map(e => e.domain), ...(events?.agn ?? []).map(e => e.domain)]), [tests, events]);
 
   useEffect(() => {
     const el = host.current;
@@ -165,9 +183,11 @@ export function ObservatoryScene({ tests, page, focusIds, onPick, theme, events 
 
     // --- Estrutura: domínios, hipóteses, filamentos ---
     const web = buf();
-    const domainPos = DOMAINS.map(d => new Vector3(...d.at));
+    const domainPos = domains.map(d => new Vector3(...d.at));
+    const indexOf = new Map(domains.map((d, i) => [d.id, i]));
+    const domainIndex = (d: string) => indexOf.get(normDomain(d)) ?? 0;
     // Filamentos entre domínios (a teia maior) + ramos cegos para dar textura de rede.
-    for (let i = 0; i < 3; i += 1) for (let j = i + 1; j < 3; j += 1) filament(web, domainPos[i]!, domainPos[j]!, mobile ? 70 : 120, 0.85, `d${i}${j}`);
+    for (let i = 0; i < domainPos.length; i += 1) for (let j = i + 1; j < domainPos.length; j += 1) filament(web, domainPos[i]!, domainPos[j]!, mobile ? 70 : 120, 0.85, `d${i}${j}`);
     const scale = 13;
     const voids: Vector3[] = [];
     for (let k = 0; k < (mobile ? 40 : 70); k += 1) voids.push(new Vector3(...jitter(`v${k}`, scale * 2)));
@@ -251,7 +271,8 @@ export function ObservatoryScene({ tests, page, focusIds, onPick, theme, events 
     scene.add(new Points(qsoGeo, qsoMat));
     const jp: number[] = [], jd: number[] = [], jph: number[] = [], jsp: number[] = [];
     ev.agn.forEach((e, k) => {
-      const d = domainPos[domainIndex(e.domain)]!;
+      // Perto do domínio, não no núcleo: uma galáxia ativa vizinha.
+      const d = domainPos[domainIndex(e.domain)]!.clone().add(new Vector3(...jitter(`agnpos${e.domain}`, 7)));
       const axis = new Vector3(...jitter(`agn${k}`, 1)).add(new Vector3(0, 1.4, 0)).normalize();
       const len = 4 + Math.min(8, e.count * 0.4);
       const n = 90 + Math.min(260, e.count * 12);
@@ -376,14 +397,14 @@ export function ObservatoryScene({ tests, page, focusIds, onPick, theme, events 
       webGeo.dispose(); starGeo.dispose(); qsoGeo.dispose(); qsoMat.dispose(); jetGeo.dispose(); jetMat.dispose(); boxGeo.dispose(); boxMat.dispose(); mat.dispose(); renderer.dispose();
       canvas.remove(); api.current = null;
     };
-  }, [tests, theme, events]);
+  }, [tests, theme, events, domains]);
 
   useEffect(() => { api.current?.shot(page); }, [page, tests, theme]);
   useEffect(() => { api.current?.focus(focusIds ?? []); }, [focusIds, tests, theme]);
 
   return <div ref={host} className={`obs-scene obs-scene--${theme}`}>
     <div ref={labels} className="obs-scene-labels">
-      {DOMAINS.map(d => <span key={d.id} data-domain={d.id}>{d.label}</span>)}
+      {domains.map(d => <span key={d.id} data-domain={d.id}>{d.label}</span>)}
       {[...(events?.quasars ?? []).map(e => ['qso', e] as const), ...(events?.grbs ?? []).map(e => ['grb', e] as const), ...(events?.agn ?? []).map(e => ['agn', e] as const)]
         .map(([kind, e], i) => <a key={i} data-event={kind} href={e.href} className={`obs-ev obs-ev--${kind}`}>{e.label}</a>)}
     </div>
