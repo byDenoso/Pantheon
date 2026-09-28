@@ -560,6 +560,9 @@ export function ObservatoryScene({ tests, page, focusIds, onPick, theme, events,
     const proj = new Vector3();
 
     let raf = 0, last = performance.now(), visible = true, expansion = 1, lodTick = 0;
+    const FORM_S = 180; let cosmic = 0;
+    const replay = () => { cosmic = 0; };
+    window.addEventListener('nexo:replay-formation', replay);
     const vis = () => { visible = document.visibilityState === 'visible'; };
     document.addEventListener('visibilitychange', vis);
     const frame = (now: number) => {
@@ -567,10 +570,13 @@ export function ObservatoryScene({ tests, page, focusIds, onPick, theme, events,
       if (!visible) return;
       const dt = Math.min(0.05, (now - last) / 1000); last = now;
       uniforms.time.value += dt;
-      { const s = uniforms.time.value / 16; uniforms.evo.value = reduced ? 0.6 : s / (s + 1); }
-      // Expansão do universo, bem lenta: ~6% em 15 min, desacelerando (a(t) monotônico, nunca volta).
-      const el = uniforms.time.value;
-      expansion = reduced ? 1 : 1 + 0.12 * (el / (el + 300));
+      // Relógio cósmico: a formação é visível — ~3 min do quase-uniforme até a teia madura
+      // (aglomeração nos nós, vazios crescendo), depois segue bem devagar. "Rever formação" zera o relógio.
+      cosmic += dt;
+      { const u = Math.min(1, cosmic / FORM_S); const e = u * u * (3 - 2 * u); const tail = cosmic > FORM_S ? (cosmic - FORM_S) / (cosmic - FORM_S + 600) : 0;
+        uniforms.evo.value = reduced ? 0.6 : 0.08 + 0.8 * e + 0.12 * tail; }
+      // Expansão do universo: acompanha a formação, desacelerando (a(t) monotônico).
+      expansion = reduced ? 1 : 1 + 0.14 * (cosmic / (cosmic + 90));
       scene.scale.setScalar(expansion);
       if (!reduced && !drag && !exploreRef.current) target.az += dt * 0.025;
       const k = reduced ? 1 : 1 - Math.pow(0.03, dt);
@@ -634,7 +640,7 @@ export function ObservatoryScene({ tests, page, focusIds, onPick, theme, events,
 
     return () => {
       cancelAnimationFrame(raf); ro.disconnect();
-      document.removeEventListener('visibilitychange', vis);
+      window.removeEventListener('nexo:replay-formation', replay); document.removeEventListener('visibilitychange', vis);
       canvas.removeEventListener('pointerdown', down);
       window.removeEventListener('pointermove', move);
       window.removeEventListener('pointerup', up);

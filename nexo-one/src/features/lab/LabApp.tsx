@@ -133,6 +133,8 @@ export default function LabApp({ state, route, theme }: { state: SystemState; ro
   <button type="button" className="explore-toggle" aria-pressed={explore} onClick={() => setExplore(x => !x)}>
       {explore ? <><i aria-hidden="true">✕</i><span className="bt">Voltar ao painel</span></> : <><i aria-hidden="true">⤢</i><span className="bt">Explorar a teia</span></>}</button>
       <button type="button" onClick={() => setSearching(true)} title="Procurar (Ctrl K)" aria-label="Procurar"><Icon n="target" /><span className="bt">Procurar</span></button>
+      <button type="button" onClick={() => window.dispatchEvent(new Event('nexo:replay-formation'))} title="Volta a teia ao quase-uniforme e mostra, em ~3 minutos, os nós aglomerando e os vazios se expandindo" aria-label="Rever a formação da teia">
+        <Icon n="spark" /><span className="bt">Rever formação</span></button>
       <QualityButton />
       <button type="button" aria-pressed={sound} onClick={() => setSound(x => !x)} title="Som ambiente" aria-label="Som ambiente"><Icon n={sound ? 'sound' : 'mute'} /><span className="bt">{sound ? 'Som ligado' : 'Som'}</span></button>
     </div>
