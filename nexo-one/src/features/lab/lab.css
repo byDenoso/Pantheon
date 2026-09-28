@@ -458,3 +458,24 @@ details.tech .versus{margin-bottom:18px}
 .lg-grb{background:#fff;box-shadow:0 0 14px 4px rgba(255,255,255,.7)}
 .lg-cloud{width:16px;background:radial-gradient(rgba(140,150,179,.8),transparent 70%)}
 @media (max-width:760px){.obs-tools{bottom:auto;top:64px;right:12px}.legend{left:12px;right:12px;bottom:auto;top:108px;max-width:none}}
+
+/* ===== Evidência em cartões, agrupada por veredito ===== */
+.observatory .hud:has(.ev-group){max-width:1080px}
+.ev-group{margin:0 0 30px}
+.ev-group h2{display:flex;align-items:center;gap:10px}
+.ev-group h2 span{font:400 12px var(--sig-mono,monospace);color:#8f9aa6;letter-spacing:.06em}
+.ev-cards{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:10px}
+.ev-card{display:flex;flex-direction:column;gap:6px;height:100%;box-sizing:border-box;padding:14px 16px;border-radius:12px;
+  background:rgba(8,12,20,.72);border:1px solid rgba(255,255,255,.07);backdrop-filter:blur(8px);text-decoration:none!important;
+  transition:border-color .2s,transform .2s,background .2s;pointer-events:auto}
+.ev-card:hover{border-color:rgba(212,191,149,.45);transform:translateY(-2px);background:rgba(14,18,28,.85)}
+.ev-card strong{font:500 15px/1.35 var(--sig-sans,system-ui);color:#efe9dd}
+.ev-q{font-size:13px;line-height:1.5;color:#aeb4bf;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.ev-m{font-size:13px;line-height:1.5;color:#d4bf95;border-left:2px solid rgba(212,191,149,.4);padding-left:8px}
+.ev-meta{margin-top:auto;display:flex;gap:8px;flex-wrap:wrap}
+.ev-meta em{font:400 11px var(--sig-mono,monospace);font-style:normal;color:#8f9aa6;letter-spacing:.06em;text-transform:uppercase}
+.ev-more{display:inline-block;margin-top:10px;font:400 13px var(--sig-mono,monospace);color:#4fa3a0!important;pointer-events:auto}
+.v-confirmed .ev-card{border-left:2px solid #7fae8a}.v-refuted .ev-card{border-left:2px solid #c8553d}
+@media (max-width:760px){.ev-cards{grid-template-columns:1fr}}
+.observatory .hud-search{background:rgba(8,12,20,.8)!important;color:#efe9dd!important;border:1px solid rgba(255,255,255,.12)!important;border-radius:10px;font:400 14px var(--sig-sans,system-ui);padding:11px 14px;pointer-events:auto}
+.observatory .hud-search::placeholder{color:#7d8794}

@@ -460,7 +460,7 @@ function RoadmapPage({ lab, id }: { lab: Lab; id: string }) {
 function Evidence({ lab, filter }: { lab: Lab; filter?: Verdict }) {
   const [q, setQ] = useState('');
   const all = [...lab.tests.values()].filter(t => !t.contestOf);
-  const list = all.filter(t => (!filter || t.verdict === filter) && (!q || `${t.id} ${t.question ?? ''} ${t.meaning ?? ''}`.toLowerCase().includes(q.toLowerCase())));
+  const list = all.filter(t => (!filter || t.verdict === filter) && (!q || `${t.name} ${t.question ?? ''} ${t.meaning ?? ''}`.toLowerCase().includes(q.toLowerCase())));
   return <>
     <header className="hud-hero"><p className="hud-kicker">{all.length} testes publicados</p><h1>Evidência</h1>
       <p className="hud-lead">Todo teste, do pré-registro ao veredito. Filtre pelo estado; clique para ver o que foi prometido antes e o que aconteceu.</p></header>
@@ -469,17 +469,22 @@ function Evidence({ lab, filter }: { lab: Lab; filter?: Verdict }) {
       {VERDICT_ORDER.map(v => <a key={v} href={`#/evidencia?v=${v}`} aria-current={filter === v ? 'page' : undefined} className={`v-${v.toLowerCase()}`}>
         <i aria-hidden="true">{VERDICT_GLYPH[v]}</i>{VERDICT_PT[v]} <b>{all.filter(t => t.verdict === v).length}</b></a>)}
     </nav>
-    <input className="hud-search" type="search" placeholder="Buscar pergunta, resultado ou id…" value={q} onChange={e => setQ(e.target.value)} aria-label="Buscar testes" />
-    <table className="ev-table">
-      <thead><tr><th scope="col">Estado</th><th scope="col">Pergunta / resultado</th><th scope="col">Contestações</th><th scope="col">Domínio</th></tr></thead>
-      <tbody>{list.slice(0, 200).map(t => <tr key={t.id}>
-        <td><VerdictChip v={t.verdict} small /></td>
-        <td><E id={t.id}>{t.question ?? humanId(t.id)}</E>{t.meaning && <small>{t.meaning}</small>}</td>
-        <td>{t.contests.length || ''}</td>
-        <td>{t.topic ?? t.domain.toLowerCase()}</td>
-      </tr>)}</tbody>
-    </table>
-    {list.length > 200 && <p className="hud-muted">Mostrando 200 de {list.length}. Use a busca.</p>}
+    <input className="hud-search" type="search" placeholder="Buscar por nome, pergunta ou resultado…" value={q} onChange={e => setQ(e.target.value)} aria-label="Buscar testes" />
+    {VERDICT_ORDER.filter(v => list.some(t => t.verdict === v)).map(v => {
+      const group = list.filter(t => t.verdict === v);
+      return <section key={v} className={`ev-group v-${v.toLowerCase()}`} aria-label={VERDICT_PT[v]}>
+        <h2><VerdictChip v={v} small /> <span>{group.length}</span></h2>
+        <ul className="ev-cards">{group.slice(0, filter ? 200 : 24).map(t => <li key={t.id}>
+          <a className="ev-card" href={labHref('entidade', t.id)}>
+            <strong>{t.name}</strong>
+            {t.question && t.question !== t.name && <span className="ev-q">{t.question}</span>}
+            {t.meaning && <span className="ev-m">{t.meaning}</span>}
+            <span className="ev-meta"><em>{normDomain(t.domain)}</em>{t.contests.length > 0 && <em>{t.contests.length} {t.contests.length === 1 ? 'ataque' : 'ataques'}</em>}</span>
+          </a></li>)}</ul>
+        {!filter && group.length > 24 && <a className="ev-more" href={`#/evidencia?v=${v}`}>ver os {group.length} →</a>}
+      </section>;
+    })}
+    {filter && list.length > 200 && <p className="hud-muted">Mostrando 200 de {list.length}. Use a busca.</p>}
   </>;
 }
 
