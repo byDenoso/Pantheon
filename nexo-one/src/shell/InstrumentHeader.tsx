@@ -37,7 +37,7 @@ export function InstrumentHeader({
   const canForce=Boolean(onForceSync&&FORCE_SYNC_URL)&&!busy&&!watching&&(syncStatus==='UNCHANGED'||syncStatus==='FAILED');
   return <header className="instrument-header">
     <a href="#/agora" className="instrument-brand" onClick={e=>{e.preventDefault();onNavigate('agora')}} aria-label="NEXO ONE — Início">
-      <span className="instrument-mark">N</span><strong>NEXO <em>ONE</em></strong>
+      <span className="instrument-mark" aria-hidden="true">Λ<i className="sig-cursor" /></span><strong>NEXO</strong>
     </a>
     <nav className="instrument-modes" aria-label="Modo do produto">
       {modes.map(([id,label])=><button type="button" key={id} className={mode===id?'active':''} aria-current={mode===id?'page':undefined} onClick={()=>onNavigate(id)} title={label}>

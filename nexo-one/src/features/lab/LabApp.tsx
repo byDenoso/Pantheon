@@ -140,7 +140,7 @@ export default function LabApp({ state, route, theme }: { state: SystemState; ro
       <ObservatoryScene explore={explore || replay !== null} hot={hot} tests={tests} events={events} page={route.page} focusIds={focus} theme={theme}
         onPick={id => { window.location.hash = labHref('entidade', id); }} />
     </Suspense>
-    <div className="hud" key={`${route.page}:${route.id ?? ''}`}>{page}</div>
+    <div className="hud" key={`${route.page}:${route.id ?? ''}`}>{page}<Acoustic /></div>
   </div>;
 }
 
@@ -169,7 +169,8 @@ function Now({ lab, state, onReplay, replayCount }: { lab: Lab; state: SystemSta
         {g ? { GREEN: 'Sistema saudável', YELLOW: 'Sistema com alertas', RED: 'Sistema com falhas' }[g.status] : 'Saúde desconhecida'}
         <span> · dados {ago(state.generated_at)}{stale ? ' — atrasados' : ''}</span>
       </p>
-      <h1>O NEXO agora</h1>
+      <span className="sig-prompt" aria-hidden="true"><b>nexo@atlas</b>:<i>~</i>$ observe --agora</span>
+      <h1>O NEXO <em>agora</em></h1>
       {g && g.failing_areas.length > 0 && <p className="hud-lead">{g.failing_areas.map(a => GUARDIAN_AREA_PT[a] ?? a).join(' · ')}.</p>}
     </header>
 
@@ -926,3 +927,24 @@ const INCIDENT_STATE: Record<string, { label: string; tone: 'ok' | 'warn' | 'cri
   MITIGATED: { label: 'Contornado', tone: 'ok' }, RESOLVED: { label: 'Resolvido', tone: 'ok' }, CLOSED: { label: 'Resolvido', tone: 'ok' },
   ESCALATED: { label: 'Precisa do Dener', tone: 'crit' }, BLOCKED: { label: 'Travado', tone: 'crit' },
 };
+
+// ---------- assinatura: picos acústicos do CMB (forma ilustrativa de D_ℓ) ----------
+const ACOUSTIC = (() => {
+  const pts: string[] = [];
+  for (let i = 0; i <= 120; i++) {
+    const l = 2 + (i / 120) * 2500;
+    const rise = 1 - Math.exp(-l / 180);
+    const d = rise * (0.55 + 0.45 * Math.cos(Math.PI * (l - 220) / 300) ** 2 * (1 + 0.35 * Math.cos(Math.PI * (l - 220) / 600)))
+      * Math.exp(-((l / 1650) ** 2));
+    pts.push(`${(i * 1.5).toFixed(1)},${(38 - d * 34).toFixed(1)}`);
+  }
+  return `M${pts.join(' L')}`;
+})();
+function Acoustic() {
+  return <p className="sig-acoustic" aria-hidden="true">
+    <svg viewBox="0 0 180 40"><defs><linearGradient id="sig-spec" x1="0" x2="1">
+      <stop offset="0" stopColor="#6d86b8" /><stop offset=".45" stopColor="#4fa3a0" /><stop offset=".7" stopColor="#d4bf95" /><stop offset="1" stopColor="#c8553d" />
+    </linearGradient></defs><path d={ACOUSTIC} /></svg>
+    <span><em>Λ</em>_ observatório NEXO · ℓ(ℓ+1)C<sub>ℓ</sub></span>
+  </p>;
+}

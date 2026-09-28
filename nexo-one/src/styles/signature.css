@@ -1,0 +1,53 @@
+/* ===== Assinatura Λ_ — cosmologia × terminal =====
+   Λ (constante cosmológica) + cursor de terminal. Cores de linhas espectrais reais:
+   Hα 656 nm (ferrugem), [O III] 501 nm (verde-mar), Hβ 486 nm (azul-aço). Serifa fina = o paper; mono = o terminal. */
+:root{
+  --sig-halpha:#c8553d;--sig-oiii:#4fa3a0;--sig-hbeta:#6d86b8;--sig-gold:#d4bf95;
+  --sig-serif:"Fraunces",Georgia,"Times New Roman",serif;
+  --sig-mono:"IBM Plex Mono",Consolas,monospace;
+  --sig-sans:"IBM Plex Sans",system-ui,sans-serif;
+  --sig-spectrum:linear-gradient(90deg,transparent,var(--sig-hbeta) 18%,var(--sig-oiii) 42%,var(--sig-gold) 64%,var(--sig-halpha) 86%,transparent);
+  --obs-display:var(--sig-serif);--obs-body:var(--sig-sans);--obs-mono:var(--sig-mono);
+}
+
+/* marca: Λ + cursor piscando */
+:root[data-theme] .instrument-mark{position:relative;width:auto;padding:0 2px;border:0;display:inline-flex;align-items:flex-end;gap:2px;
+  font:300 24px/1 var(--sig-serif);color:var(--sig-gold)}
+.sig-cursor{display:inline-block;width:9px;height:3px;margin-bottom:3px;background:var(--sig-oiii);animation:sig-blink 1.1s steps(1) infinite}
+@keyframes sig-blink{50%{opacity:0}}
+:root[data-theme] .instrument-brand strong{font:500 13px/1 var(--sig-mono);letter-spacing:.34em;color:#e8e2d4}
+.instrument-header{border-bottom:0!important;box-shadow:none!important}
+.instrument-header::after{content:"";position:absolute;left:0;right:0;bottom:0;height:1px;background:var(--sig-spectrum);opacity:.55;pointer-events:none}
+
+/* títulos: serifa fina de paper; rótulos: terminal */
+.observatory .hud h1{font:300 clamp(36px,5.2vw,60px)/1.02 var(--sig-serif)!important;letter-spacing:-.01em!important;text-transform:none!important;
+  font-variation-settings:"opsz" 144}
+.observatory .hud h1 em{font-style:italic;color:var(--sig-gold)}
+.observatory .hud h2{font-family:var(--sig-mono)!important}
+.observatory .hud h2::before{content:"›";color:var(--sig-oiii);margin-right:.6em;letter-spacing:0}
+.sig-prompt{display:block;font:400 12.5px/1.4 var(--sig-mono);color:#8f9aa6;margin:0 0 10px;letter-spacing:.02em}
+.sig-prompt b{font-weight:400;color:var(--sig-oiii)}
+.sig-prompt i{font-style:normal;color:var(--sig-gold)}
+.sig-prompt::after{content:"";display:inline-block;width:.55em;height:1.05em;vertical-align:-.15em;margin-left:.25em;background:var(--sig-gold);opacity:.7;animation:sig-blink 1.1s steps(1) infinite}
+
+/* divisores: filete espectral */
+.observatory .hud-section{position:relative}
+.observatory .hud-section::before{content:"";position:absolute;left:0;top:0;width:min(220px,40%);height:1px;background:var(--sig-spectrum);opacity:.6}
+
+/* retícula celeste por trás da teia */
+.observatory::before{content:"";position:fixed;inset:0;z-index:1;pointer-events:none;opacity:.07;
+  background:
+    radial-gradient(ellipse 140% 90% at 50% 120%,transparent 59.6%,#9fb3c8 59.8%,transparent 60%),
+    radial-gradient(ellipse 140% 90% at 50% 120%,transparent 69.6%,#9fb3c8 69.8%,transparent 70%),
+    radial-gradient(ellipse 140% 90% at 50% 120%,transparent 79.6%,#9fb3c8 79.8%,transparent 80%),
+    repeating-linear-gradient(90deg,transparent 0 calc(12.5vw - 1px),rgba(159,179,200,.5) calc(12.5vw - 1px) 12.5vw);
+  -webkit-mask-image:radial-gradient(ellipse at center,#000 30%,transparent 78%);mask-image:radial-gradient(ellipse at center,#000 30%,transparent 78%)}
+
+/* assinatura: espectro de potência acústico do CMB */
+.sig-acoustic{display:flex;align-items:center;gap:14px;margin:40px 0 8px;color:#7d8794;font:400 11.5px/1.4 var(--sig-mono)}
+.sig-acoustic svg{flex:0 0 auto;width:180px;height:40px;overflow:visible}
+.sig-acoustic path{fill:none;stroke:url(#sig-spec);stroke-width:1.3;stroke-linecap:round}
+.sig-acoustic em{font-style:normal;color:var(--sig-gold)}
+
+@media (prefers-reduced-motion:reduce){.sig-cursor,.sig-prompt::after{animation:none}}
+@media (max-width:760px){.sig-acoustic svg{width:120px}.observatory::before{opacity:.05}}

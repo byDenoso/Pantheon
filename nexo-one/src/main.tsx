@@ -18,6 +18,7 @@ import '@fontsource/ibm-plex-sans/500';
 import '@fontsource/ibm-plex-mono/400';
 import '@fontsource/ibm-plex-mono/500';
 import './styles/observatory.css';
+import './styles/signature.css';
 import './styles/mission-control.css';
 import './styles/editorial.css';
 import './styles/deco.css';
