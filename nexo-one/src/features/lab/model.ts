@@ -66,7 +66,7 @@ export interface HypothesisEntity {
   id: string; statement: string | null; model: unknown; baseline: unknown; falsification: unknown;
   origin: string | null; tests: string[]; verdict: Verdict | null;
 }
-export interface CampaignEntity { id: string; title: string | null; question: string | null; why: string | null; hypothesisIds: string[]; tests: string[] }
+export interface CampaignEntity { id: string; title: string | null; question: string | null; questionPlain?: string | null; why: string | null; hypothesisIds: string[]; tests: string[] }
 export interface RoadmapEntity {
   id: string; title: string; question: string | null; campaignId: string | null; state: string;
   confirmed: number; target: number | null; used: number; maxTests: number | null; maxDays: number | null;
@@ -229,6 +229,7 @@ export function buildLab(state: SystemState): Lab {
     const hyps = val(r.hypothesis_ids);
     campaigns.set(id, {
       id, title: str(r.title), question: str(r.question_plain) ?? str(r.question), why: str(r.why_it_matters),
+      questionPlain: str(r.question_plain) ?? str((r.semantic as Record<string, unknown> | undefined)?.question_plain),
       hypothesisIds: Array.isArray(hyps) ? hyps.map(String) : [], tests: [],
     });
   }
@@ -255,7 +256,9 @@ export function buildLab(state: SystemState): Lab {
     const rmTestIds = listed.length ? listed : [...tests.values()].filter(t => t.roadmapId === id).map(t => t.id);
     roadmaps.set(id, {
       id, title: str(full?.title) ?? camp?.title ?? humanId(id),
-      question: str(full?.question) ?? (charter.question as string) ?? camp?.question ?? null, campaignId,
+      // Leitura simples em português primeiro; a pergunta original (às vezes em inglês) só se não houver.
+      question: str(full?.question_plain) ?? str((full?.semantic as Record<string, unknown> | undefined)?.question_plain) ?? camp?.questionPlain
+        ?? str(full?.question) ?? (charter.question as string) ?? camp?.question ?? null, campaignId,
       state: String(full?.state ?? rm.state ?? charter.status ?? 'ACTIVE'),
       confirmed: Number(prog.confirmed ?? rm.confirmed ?? 0),
       target: (stop.success_confirmed ?? rm.success_target ?? null) as number | null,
