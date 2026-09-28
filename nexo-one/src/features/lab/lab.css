@@ -786,3 +786,18 @@ details.tech .versus{margin-bottom:18px}
 .obs-scene[data-fallback="true"]::before{content:"A teia 3D precisa de aceleração gráfica (WebGL). O resto do observatório funciona normalmente.";
   position:absolute;right:24px;bottom:24px;max-width:320px;padding:12px 14px;border-radius:12px;font:400 13.5px/1.5 var(--sig-sans);
   color:var(--o-dim);background:var(--o-glass,rgba(6,10,13,.4));border:1px solid rgba(var(--o-accent-rgb),.2)}
+
+/* ===== Paleta dourada (Dener) com vidro, nos dois temas ===== */
+:root{--o-accent-rgb:212,191,149;--o-accent:#d4bf95;--o-on-accent:#15110a;--sig-oiii:#d4bf95;--sig-gold:#d4bf95;
+  --sig-spectrum:linear-gradient(90deg,transparent,#8a7a5c 18%,#d4bf95 50%,#fff2d6 78%,transparent);--obs-sodium:#d4bf95;--obs-sodium-ink:#d4bf95}
+:root[data-theme="light"]{--o-accent-rgb:138,106,31;--o-accent:#8a6a1f;--o-on-accent:#fff;--sig-oiii:#8a6a1f;--sig-gold:#8a6a1f;
+  --sig-spectrum:linear-gradient(90deg,transparent,#b89b5e 18%,#8a6a1f 50%,#5c4512 78%,transparent);--obs-sodium:#8a6a1f;--obs-sodium-ink:#6e5418;
+  --obs-void:#efebe3;--obs-deep:#e7e2d8;--obs-raise:#f6f3ee;--obs-line:#ddd5c6}
+.observatory{--o-accent:#d4bf95;--o-on-accent:#15110a;--v-ready:#d4bf95;--o-glass:rgba(12,10,7,.34)!important;--o-glass-line:rgba(212,191,149,.2)}
+:root[data-theme="light"] .observatory{--o-accent:#8a6a1f;--o-on-accent:#fff;--v-ready:#8a6a1f;--o-void:#efebe3;
+  --o-glass:rgba(250,246,238,.42)!important;--o-glass-line:rgba(138,106,31,.24);--o-panel:rgba(248,244,236,.95)}
+:root[data-theme="light"] .telemetry{background:color-mix(in srgb,#efebe3 62%,transparent)!important}
+:root[data-theme="light"] body,:root[data-theme="light"] .unified-shell{background:#efebe3}
+.observatory .hud-section,.observatory .gate-panel,.observatory .crew-card,.observatory .ev-card,.observatory .trail,.observatory .stats,
+.observatory .health-grid,.observatory .board li,.observatory .cycle,.observatory .stop-rules>div,.observatory .quiet-list li,.observatory .result-card,.observatory .fronts li{
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.06),0 10px 30px rgba(0,0,0,.18)}

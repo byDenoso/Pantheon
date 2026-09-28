@@ -93,7 +93,7 @@ void main(){
   float a = (glow*0.85 + core) * vAlpha * (1.0 - smoothstep(0.42, 0.5, d)); if (a < 0.004) discard;
   vec3 lit = vTint * (0.55 + glow*0.8) + core*0.6;
   // Tema claro: tinta ciano-escura sobre papel (mesma matiz, sem brilho aditivo).
-  vec3 inked = mix(vec3(0.02,0.24,0.29), vTint*0.45, 0.35);
+  vec3 inked = mix(vec3(0.30,0.22,0.08), vTint*0.42, 0.3);
   gl_FragColor = vec4(mix(lit, inked, ink), ink > 0.5 ? a*0.55 : a);
 }`;
 
@@ -137,8 +137,8 @@ const rnd = (text: string): number => {
 const jitter = (seed: string, s: number): [number, number, number] =>
   [(rnd(seed + 'x') - 0.5) * s, (rnd(seed + 'y') - 0.5) * s, (rnd(seed + 'z') - 0.5) * s];
 
-// Paleta da teia (assinatura preto + ciano): gás frio -> filamento ciano -> nó branco-azulado.
-const INFERNO = ['#020405', '#06141a', '#0c2e38', '#1d6574', '#62cbd8', '#effcff'].map(c => new Color(c));
+// Paleta da teia (dourado sobre preto): gás escuro -> filamento dourado-queimado -> nó branco quente.
+const INFERNO = ['#030302', '#130f08', '#35291a', '#7a5f35', '#d4bf95', '#fff6e4'].map(c => new Color(c));
 const inferno = (t: number) => {
   const x = Math.max(0, Math.min(0.999, t)) * (INFERNO.length - 1), i = Math.floor(x), f = x - i;
   return INFERNO[i]!.clone().lerp(INFERNO[i + 1]!, f);
@@ -264,7 +264,7 @@ export function ObservatoryScene({ tests, page, focusIds, onPick, theme, events,
         const r = Math.pow(Math.random(), 2.2) * 2.4, th = Math.random() * Math.PI * 2, ph = Math.acos(2 * Math.random() - 1);
         push(web, [d.x + r * Math.sin(ph) * Math.cos(th), d.y + r * Math.cos(ph), d.z + r * Math.sin(ph) * Math.sin(th)], inferno(0.95 - r * 0.2), 3 + Math.random() * 4);
       }
-      push(web, [d.x, d.y, d.z], new Color('#effcff'), 95, 0.08);
+      push(web, [d.x, d.y, d.z], new Color('#fff4df'), 95, 0.08);
     });
 
     // Hipóteses: nós ao redor do seu domínio; testes ao longo do filamento hipótese->domínio.
