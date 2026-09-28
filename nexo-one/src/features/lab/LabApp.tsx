@@ -19,7 +19,8 @@ export { labHref, parseLabRoute, LAB_PAGES, type LabRoute } from './routes.ts';
 export function VerdictChip({ v, small }: { v: Verdict; small?: boolean }) {
   return <span className={`vchip v-${v.toLowerCase()}${small ? ' small' : ''}`}><i aria-hidden="true">{VERDICT_GLYPH[v]}</i>{VERDICT_PT[v]}</span>;
 }
-const E = ({ id, children }: { id: string; children?: ReactNode }) => <a className="elink" href={labHref('entidade', id)}>{children ?? humanId(id)}</a>;
+let nameOf: (id: string) => string = humanId;
+const E = ({ id, children }: { id: string; children?: ReactNode }) => <a className="elink" href={labHref('entidade', id)}>{children ?? nameOf(id)}</a>;
 function Stat({ n, label, delta, tone, lowerIsBetter }: { n: number | string; label: string; delta?: number | null; tone?: string; lowerIsBetter?: boolean }) {
   return <div className={`stat${tone ? ` tone-${tone}` : ''}`}>
     <strong>{n}</strong><span>{label}</span>
@@ -57,6 +58,7 @@ function Bar({ parts, total }: { parts: Array<[Verdict, number]>; total: number 
 // ---------- app ----------
 export default function LabApp({ state, route, theme }: { state: SystemState; route: LabRoute; theme: 'dark' | 'light' }) {
   const lab = useMemo(() => buildLab(state), [state]);
+  nameOf = (id: string) => lab.tests.get(id)?.name ?? lab.hypotheses.get(id)?.statement ?? lab.roadmaps.get(id)?.title ?? humanId(id);
   const tests = useMemo(() => [...lab.tests.values()].filter(t => !t.contestOf), [lab]);
   const [focus, setFocus] = useState<string[]>([]);
   const [explore, setExplore] = useState(false);
@@ -442,7 +444,7 @@ function EntityPage({ lab, id }: { lab: Lab; id: string }) {
         {t.children.length > 0 && <> · filhos: {t.children.map(x => <E key={x} id={x} />)}</>}
       </p>
       {contests.length > 0 && t.reviews.length === 0 && <ul className="hud-list">{contests.map(c => <li key={c}>
-        {lab.tests.get(c) && <VerdictChip v={lab.tests.get(c)!.verdict} small />}<E id={c}>{lab.tests.get(c)?.question ?? humanId(c)}</E></li>)}</ul>}
+        {lab.tests.get(c) && <VerdictChip v={lab.tests.get(c)!.verdict} small />}<E id={c}>{lab.tests.get(c)?.name ?? humanId(c)}</E></li>)}</ul>}
     </details>
   </>;
 }
@@ -485,8 +487,17 @@ function Health({ state, lab }: { state: SystemState; lab: Lab }) {
     {g && g.failing_areas.length > 0 && <Section title="O que está falhando" id="he-fail">
       <ul className="hud-list">{g.failing_areas.map(a => <li key={a}><b>{a}</b> — {GUARDIAN_AREA_PT[a] ?? 'ver relatório do Guardião'}</li>)}</ul>
     </Section>}
-    {(ev?.incidents?.length ?? 0) > 0 && <Section title="Incidentes" id="he-inc">
-      <ul className="hud-list">{ev!.incidents!.map(i => <li key={i.incident_id}><b>{i.state}</b> {i.summary_plain ?? i.summary_pt ?? i.incident_id} <span className="hud-muted">· próximo: {i.next_owner}</span></li>)}</ul>
+    {(ev?.incidents?.length ?? 0) > 0 && <Section title="Incidentes" kicker={`${ev!.incidents!.length} abertos`} id="he-inc">
+      <ul className="incidents">{ev!.incidents!.map(i => {
+        const st = INCIDENT_STATE[i.state.toUpperCase()] ?? { label: i.state.toLowerCase(), tone: 'warn' };
+        const links = [...i.public_ids.tests, ...i.public_ids.hypotheses];
+        return <li key={i.incident_id} className={`incident s-${st.tone}`}>
+          <p className="incident-head"><span className="incident-state">{st.label}</span>
+            <span className="hud-muted">visto {i.evidence_count} {i.evidence_count === 1 ? 'vez' : 'vezes'} · quem investiga: {ROLE_PT[i.next_owner.toUpperCase()] ?? i.next_owner}</span></p>
+          <p className="incident-text">{i.summary_plain ?? i.summary_pt ?? 'Problema registrado sem descrição pública.'}</p>
+          {links.length > 0 && <p className="incident-links">{links.slice(0, 4).map(l => <E key={l} id={l} />)}</p>}
+        </li>;
+      })}</ul>
     </Section>}
     {lab.missingContract.length > 0 && <Section title="Dados que o site ainda não recebe" kicker="Contrato da projeção" id="he-contract">
       <p className="hud-muted">Estes campos destravam linha do tempo, pré-registro e revisão completos:</p>
@@ -601,7 +612,7 @@ function narrate(e: { event_type: string; entity_id?: string }, lab: Lab): strin
   }
   if (te && e.event_type === 'RESULT_REFUTED' && outcomeOf(te) === 1) tpl = 'Mudei de ideia: parecia certo, mas eu mesmo derrubei. %q';
   const t = e.entity_id ? lab.tests.get(e.entity_id) : undefined;
-  const q = t?.question ?? (e.entity_id ? (lab.hypotheses.get(e.entity_id)?.statement ?? humanId(e.entity_id)) : '');
+  const q = t?.name ?? (e.entity_id ? (lab.hypotheses.get(e.entity_id)?.statement ?? humanId(e.entity_id)) : '');
   const text = tpl.includes('%q') ? tpl.replace('%q', q ? `“${q.length > 140 ? q.slice(0, 137) + '…' : q}”` : '').replace(/: $/, '.') : tpl;
   return text;
 }
@@ -694,7 +705,7 @@ function testStory(t: TestEntity, lab: Lab): Beat[] {
   const parent = t.contestOf ? lab.tests.get(t.contestOf) : undefined;
   const hyp = t.hypothesisId ? lab.hypotheses.get(t.hypothesisId) : undefined;
   const rm = t.roadmapId ? lab.roadmaps.get(t.roadmapId) : undefined;
-  if (parent) beats.push({ icon: 'attack', tone: 'doubt', text: 'Este é um ataque meu contra algo que eu mesmo tinha concluído:', link: { id: parent.id, label: parent.question ?? humanId(parent.id) } });
+  if (parent) beats.push({ icon: 'attack', tone: 'doubt', text: 'Este é um ataque meu contra algo que eu mesmo tinha concluído:', link: { id: parent.id, label: parent.name } });
   else if (hyp?.statement) beats.push({ icon: 'idea', tone: 'why', text: `Tive esta ideia: ${hyp.statement}` });
   if (rm && !parent) beats.push({ icon: 'compass', tone: 'why', text: `Faz parte da minha investigação sobre ${rm.title.toLowerCase()}.` });
   const pred = (t.prereg.prediction ?? {}) as { p_promoted?: number };
@@ -783,3 +794,9 @@ const ICON: Record<string, string> = {
 function Icon({ n }: { n: string }) {
   return <svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={ICON[n] ?? ICON.dot} /></svg>;
 }
+
+const INCIDENT_STATE: Record<string, { label: string; tone: 'ok' | 'warn' | 'crit' }> = {
+  OBSERVED: { label: 'Percebido', tone: 'warn' }, OPEN: { label: 'Aberto', tone: 'warn' }, INVESTIGATING: { label: 'Investigando', tone: 'warn' },
+  MITIGATED: { label: 'Contornado', tone: 'ok' }, RESOLVED: { label: 'Resolvido', tone: 'ok' }, CLOSED: { label: 'Resolvido', tone: 'ok' },
+  ESCALATED: { label: 'Precisa do Dener', tone: 'crit' }, BLOCKED: { label: 'Travado', tone: 'crit' },
+};

@@ -411,3 +411,12 @@ details.tech .versus{margin-bottom:18px}
   .mono-log li{grid-template-columns:58px 1fr}
   .beat p{font-size:15.5px!important}
 }
+
+.incidents{list-style:none;margin:0;padding:0;display:grid;gap:10px}
+.incident{padding:12px 14px;border-radius:var(--r-s);background:rgba(255,255,255,.025);border-left:3px solid var(--v-review)}
+.incident.s-ok{border-left-color:var(--v-confirmed)}.incident.s-crit{border-left-color:var(--v-refuted)}
+.incident-head{display:flex;flex-wrap:wrap;gap:10px;align-items:baseline;margin:0 0 4px!important;font-size:13px!important}
+.incident-state{font:500 12px var(--f-mono);letter-spacing:.08em;text-transform:uppercase;color:var(--v-review)}
+.incident.s-ok .incident-state{color:var(--v-confirmed)}.incident.s-crit .incident-state{color:var(--v-refuted)}
+.incident-text{margin:0!important;color:var(--o-ink)!important}
+.incident-links{margin:6px 0 0!important;display:flex;flex-wrap:wrap;gap:10px;font-size:13px!important}

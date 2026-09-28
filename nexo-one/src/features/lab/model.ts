@@ -17,6 +17,8 @@ export const VERDICT_ORDER: Verdict[] = ['CONFIRMED', 'REFUTED', 'REVIEW', 'PROV
 
 export interface TestEntity {
   id: string;
+  /** Nome curto em português (semantic.display_name); contestações herdam do atacado. */
+  name: string;
   question: string | null;
   meaning: string | null;
   summary: string | null;
@@ -144,7 +146,8 @@ export function buildLab(state: SystemState): Lab {
     const lineage = (k: string) => (Array.isArray(any[k]) ? (any[k] as unknown[]).map(String) : []);
     tests.set(id, {
       id,
-      question: str(any.question_plain) ?? n?.question_plain ?? str(any.question),
+      name: '',
+      question: str((any.semantic as Record<string, unknown> | undefined)?.question_plain) ?? str(any.question_plain) ?? n?.question_plain ?? str(any.question),
       meaning: n?.result_meaning ?? str(any.result_meaning),
       summary: n?.summary ?? null,
       method: str(r.method),
@@ -180,6 +183,26 @@ export function buildLab(state: SystemState): Lab {
     });
   }
   for (const t of tests.values()) if (t.contestOf && tests.has(t.contestOf)) tests.get(t.contestOf)!.contests.push(t.id);
+  // Nomes: o do backend quando existe; senão contestação = "Ataque N · <atacado>", teste = pergunta curta.
+  const own = (id: string) => {
+    const any = { ...((records.get(id) ?? {}) as Record<string, unknown>), ...(rmTests[id] ?? {}) } as Record<string, unknown>;
+    const sem = (any.semantic ?? {}) as Record<string, unknown>;
+    return str(sem.display_name) ?? str(any.display_name);
+  };
+  const naming = (t: TestEntity, depth = 0): string => {
+    if (t.name) return t.name;
+    const declared = own(t.id);
+    if (declared) return (t.name = declared);
+    if (t.contestOf && tests.has(t.contestOf) && depth < 12) {
+      const parent = tests.get(t.contestOf)!;
+      const idx = Math.max(1, parent.contests.indexOf(t.id) + 1);
+      const base = naming(parent, depth + 1).replace(/^Ataque \d+ · /, '');
+      let chain = 1; for (let p = parent; p.contestOf && tests.has(p.contestOf); p = tests.get(p.contestOf)!) chain += 1;
+      return (t.name = `Ataque ${chain > 1 ? chain : idx} · ${base}`);
+    }
+    return (t.name = shortName(t.question) ?? humanId(t.id));
+  };
+  for (const t of tests.values()) naming(t);
 
   const hypotheses = new Map<string, HypothesisEntity>();
   for (const rec of sp?.hypotheses ?? []) {
@@ -301,4 +324,13 @@ export const GUARDIAN_AREA_PT: Record<string, string> = {
   site: 'o site está atrás da Tower', learner: 'o Learner produziu pouco', olympus_projection: 'a projeção do Olympus diverge',
   executor: 'o Executor está parado', refutador: 'o Refutador está parado', pitia: 'a Pítia está parada',
   inbox: 'há propostas não aplicadas', writer: 'o robô escritor falhou', batteries: 'baterias travadas',
+  camb_runtime_policy: 'o programa de cosmologia (CAMB) está fora da política de execução', guardian_freshness: 'minha auditoria está atrasada',
+  public_projection: 'o site público ficou atrás da Tower', olympus: 'a área Olympus tem inconsistência', site_projection: 'o site ficou atrás da Tower',
 };
+
+/** Pergunta vira nome curto: sem "?" final, até ~8 palavras. */
+function shortName(q: string | null): string | null {
+  if (!q) return null;
+  const words = q.replace(/[?¿]+$/, '').trim().split(/\s+/);
+  return words.length <= 9 ? words.join(' ') : words.slice(0, 8).join(' ') + '…';
+}

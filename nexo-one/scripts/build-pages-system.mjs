@@ -11,7 +11,7 @@ const CORE_DOMAINS = ['NEXO', 'SCIENCE', 'ENGINEERING', 'OLYMPUS'];
 
 // Read model do TCC#96 (prereg, review, linhagem, roadmaps, activity) repassado ao Observatório.
 // Só entidades públicas; campos ausentes ficam ausentes (o front mostra "não publicado").
-const RM_TEST_KEYS = ['question', 'question_plain', 'result_meaning', 'status', 'review_state', 'verdict', 'domain', 'hypothesis_id',
+const RM_TEST_KEYS = ['display_name', 'title', 'semantic', 'question', 'question_plain', 'result_meaning', 'status', 'review_state', 'verdict', 'domain', 'hypothesis_id',
   'roadmap_id', 'campaign_id', 'prereg', 'review', 'limitations', 'claim_boundary', 'created_at', 'executed_at', 'created_at_effective',
   'created_at_source', 'execution', 'parents', 'children', 'depends_on', 'blocker'];
 const RM_HYP_KEYS = ['statement', 'claim_boundary', 'test_ids', 'roadmap_ids', 'parents', 'children', 'created_at', 'created_at_effective', 'origin'];
