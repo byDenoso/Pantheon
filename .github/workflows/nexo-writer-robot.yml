@@ -16,6 +16,7 @@ permissions:
   contents: write
   actions: write
   id-token: write
+  issues: write
 
 concurrency:
   group: nexo-writer-robot
@@ -59,6 +60,23 @@ jobs:
           open("/tmp/nexo_gpt_writer.py", "wb").write(r.content)
           print("bundle bytes", len(r.content))
           EOF
+
+      - name: Check the Drive bundle against TCC main
+        id: bundle
+        if: steps.cred.outputs.ok == 'true'
+        # The robot runs whatever sits in Drive; TCC main is where the writer is reviewed and tested.
+        # Upload is manual (build_gpt_writer_bundle.py --upload), so a merged fix can silently never run.
+        run: |
+          drive=$(sha256sum /tmp/nexo_gpt_writer.py | cut -d' ' -f1)
+          main=$(curl -fsSL "https://raw.githubusercontent.com/byDenoso/TCC/main/gpt/nexo_gpt_writer.py" | sha256sum | cut -d' ' -f1 || true)
+          echo "drive=$drive" >> "$GITHUB_OUTPUT"; echo "main=$main" >> "$GITHUB_OUTPUT"
+          if [ -n "$main" ] && [ "$drive" != "$main" ]; then
+            echo "drift=true" >> "$GITHUB_OUTPUT"
+            echo "::warning::Drive writer bundle ${drive:0:12} differs from TCC main ${main:0:12}"
+          else
+            echo "drift=false" >> "$GITHUB_OUTPUT"
+          fi
+          echo "bundle drive=${drive:0:12} tcc_main=${main:0:12}"
 
       - name: Collect proposals from public TCC inbox
         if: steps.cred.outputs.ok == 'true'
@@ -407,3 +425,21 @@ jobs:
         run: |
           last=$(gh api "repos/${GITHUB_REPOSITORY}/actions/workflows/nexo-alert.yml/runs?per_page=1" --jq '.workflow_runs[0].created_at // "1970-01-01T00:00:00Z"')
           if [ $(( $(date -u +%s) - $(date -u -d "$last" +%s) )) -ge 3000 ]; then gh workflow run nexo-alert.yml --ref main && echo "alarm dispatched"; else echo "alarm ran recently"; fi
+
+      - name: Report writer bundle drift (one issue, closes itself)
+        if: always() && steps.bundle.outputs.drift != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          DRIFT: ${{ steps.bundle.outputs.drift }}
+          DRIVE: ${{ steps.bundle.outputs.drive }}
+          MAIN: ${{ steps.bundle.outputs.main }}
+          TITLE: "NEXO: robô rodando bundle diferente do TCC main"
+        run: |
+          n=$(gh issue list --state open --search "$TITLE in:title" --json number --jq '.[0].number // empty')
+          if [ "$DRIFT" = "true" ]; then
+            body=$(printf 'O robô baixou do Drive o bundle `%s`, mas o `gpt/nexo_gpt_writer.py` do TCC main é `%s`.\n\nCorreções já mergeadas no TCC não estão rodando.\n\nPara alinhar: no TCC, `python scripts/build_gpt_writer_bundle.py --upload` (credencial do Drive).' "${DRIVE:0:12}" "${MAIN:0:12}")
+            if [ -z "$n" ]; then gh issue create --title "$TITLE" --body "$body"; fi
+          elif [ -n "$n" ]; then
+            gh issue close "$n" --comment "Bundle do Drive igual ao TCC main (${MAIN:0:12})."
+          fi
