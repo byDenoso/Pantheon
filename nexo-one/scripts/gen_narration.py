@@ -66,6 +66,8 @@ E.update({
                          "Algum resultado meu pode ser isca: {n} plantada(s)"], ["."]),
  "SELF_GATE": (["Estou esperando o Dener decidir {n} coisa(s) que não posso decidir sozinho", "{n} decisão(ões) aguarda(m) o Dener", "Parei em {n} portão(ões) que só o Dener abre",
                 "Tem {n} escolha(s) na mesa do Dener"], ["."]),
+ "AWAY_OPEN": (["Enquanto você esteve fora", "Desde a sua última visita", "Nesse meio-tempo", "Da última vez para cá", "Enquanto você cuidava da vida",
+                "Nas horas em que você não olhou", "Sem você por perto", "Desde que você saiu", "No intervalo", "Enquanto isso"], [""]),
  "GROUP_SEMANTIC_BACKFILLED": (["Dei nome e leitura simples a {n} testes", "Traduzi {n} fichas para português", "Arrumei o nome de {n} testes"], ["."]),
  "GROUP_TEST_ENRICHED": (["Completei a ficha de {n} testes", "Preenchi o que faltava em {n} testes", "Deixei {n} testes prontos para rodar"], ["."]),
  "GROUP_LEARNING_SIGNAL_RECORDED": (["Anotei {n} lacunas para resolver", "Registrei {n} pedidos de receita ou dado", "Marquei {n} buracos no caminho"], ["."]),
@@ -83,11 +85,11 @@ def lower_first(t):
 random.seed(20260929)
 out = {}
 for ev, (cores, own_tails) in E.items():
-    openers = [] if ev.startswith("SELF_") else OPENERS  # estado do sistema não combina com "por conta própria"
+    openers = [] if ev.startswith(("SELF_", "AWAY_")) else OPENERS  # estado do sistema não combina com "por conta própria"
     heads = cores + [f"{o} {lower_first(c)}" for o in openers for c in cores]
     random.shuffle(heads)
     heads = cores + [h for h in heads if h not in cores][:45 - len(cores)]
-    tails = own_tails + [t for t in GENERIC_TAILS if t not in own_tails]
+    tails = own_tails if ev.startswith("AWAY_") else own_tails + [t for t in GENERIC_TAILS if t not in own_tails]
     out[ev] = {"heads": heads[:45], "tails": tails[:45]}
 
 NL = chr(10)

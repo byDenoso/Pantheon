@@ -311,7 +311,7 @@ function AwaySummary({ lab, since }: { lab: Lab; since: string }) {
     thoughts && `${thoughts} ${thoughts === 1 ? 'pensamento' : 'pensamentos'}`,
   ].filter(Boolean) as string[];
   return <p className="away">
-    <b>Enquanto você esteve fora</b> ({ago(since)}): {parts.length ? parts.join(', ') : `${evs.length} movimentos`}.
+    <b>{say('AWAY_OPEN', since) ?? 'Enquanto você esteve fora'}</b> ({ago(since)}): {parts.length ? parts.join(', ') : `${evs.length} movimentos`}.
   </p>;
 }
 
