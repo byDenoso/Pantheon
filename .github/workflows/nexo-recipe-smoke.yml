@@ -1,0 +1,51 @@
+name: NEXO recipe smoke
+
+# Every recipe with a smoke file runs once on REAL public data. A recipe that crashes or returns the wrong shape
+# is caught here, before the Operador dispatches it (the DES parser bug only showed up in a real battery).
+on:
+  push:
+    branches: [main]
+    paths:
+      - "nexo-one/executor-runtime/recipes/**"
+  workflow_dispatch:
+  schedule:
+    - cron: '31 6 * * *'   # daily: public data formats drift too
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -q -r nexo-one/executor-runtime/requirements.txt
+      - name: Run each recipe with its smoke params
+        run: |
+          fail=0
+          for p in nexo-one/executor-runtime/recipes/smoke/*.json; do
+            r=$(basename "$p" .json)
+            if ! PARAMS_PATH="$p" RESULT_PATH="/tmp/$r.out.json" timeout 1500 python "nexo-one/executor-runtime/recipes/$r.py" > "/tmp/$r.log" 2>&1; then
+              echo "::error::$r crashed"; tail -15 "/tmp/$r.log"; echo "$r crashed" >> /tmp/smoke_failures; fail=1; continue
+            fi
+            python - "$r" <<'PY' || { echo "$r wrong output shape" >> /tmp/smoke_failures; fail=1; }
+          import json, sys
+          d = json.load(open(f"/tmp/{sys.argv[1]}.out.json", encoding="utf-8"))
+          missing = {"verdict", "decision", "summary", "statistics", "semantic"} - set(d)
+          assert not missing, (sys.argv[1], missing)
+          PY
+          done
+          exit $fail
+      - name: Open or update an issue when a recipe breaks
+        if: failure()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          body="$(printf 'Receita com falha no teste de fumaça (dado público real):\n\n%s\n\nRodada: %s/%s/actions/runs/%s' "$(cat /tmp/smoke_failures 2>/dev/null)" "$GITHUB_SERVER_URL" "$GITHUB_REPOSITORY" "$GITHUB_RUN_ID")"
+          n=$(gh issue list --state open --search "NEXO: receita quebrou" --json number --jq '.[0].number // empty')
+          if [ -n "$n" ]; then gh issue comment "$n" --body "$body"; else gh issue create --title "NEXO: receita quebrou no teste de fumaça" --body "$body"; fi
