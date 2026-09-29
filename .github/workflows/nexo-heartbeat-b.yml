@@ -1,0 +1,60 @@
+name: NEXO heartbeat B
+
+# Keeps the Writer robot on a 15-minute cadence without trusting GitHub's cron.
+# 2026-09-29: of the last 40 robot runs only 1 came from its own schedule; the rest were
+# manual or chained dispatches, with gaps of ~2 h. This job stays alive for ~5h30m, checks
+# every 5 minutes and dispatches the robot when it has not started in 15 minutes, then hands
+# over to its own successor. The cron below only re-seeds the chain if it ever breaks.
+# Redundant twin of nexo-heartbeat.yml: own chain, own concurrency group, cron offset by 1h30
+# and checks offset by 150 s, so either chain alone keeps the robot on cadence. The robot's
+# own concurrency group queues any overlapping dispatch instead of running it in parallel.
+# Public repository: Actions minutes are free.
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '41 1-23/2 * * *'
+
+permissions:
+  actions: write
+  contents: read
+
+concurrency:
+  group: nexo-heartbeat-b
+  cancel-in-progress: false
+
+jobs:
+  pulse:
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      CADENCE_S: 900
+      CHECK_EVERY_S: 300
+      LIFETIME_S: 19800   # 5h30 + one last sleep stays well under the 350-min job timeout
+    steps:
+      - name: Keep the robot on cadence
+        run: |
+          set -u
+          sleep 150   # interleave with heartbeat A
+          start=$(date -u +%s)
+          while [ $(( $(date -u +%s) - start )) -lt "$LIFETIME_S" ]; do
+            busy=$(gh run list --workflow nexo-writer-robot.yml --limit 5 --json status --jq '[.[] | select(.status != "completed")] | length' || echo 1)
+            last=$(gh run list --workflow nexo-writer-robot.yml --limit 1 --json createdAt --jq '.[0].createdAt // "1970-01-01T00:00:00Z"' || echo "")
+            if [ -n "$last" ] && [ "$busy" = "0" ]; then
+              age=$(( $(date -u +%s) - $(date -u -d "$last" +%s) ))
+              if [ "$age" -ge "$CADENCE_S" ]; then
+                gh workflow run nexo-writer-robot.yml --ref main && echo "$(date -u +%H:%M) robot dispatched (last start ${age}s ago)"
+              else
+                echo "$(date -u +%H:%M) robot started ${age}s ago"
+              fi
+            else
+              echo "$(date -u +%H:%M) robot busy or status unavailable; skipping"
+            fi
+            sleep "$CHECK_EVERY_S"
+          done
+
+      - name: Hand over to the next heartbeat
+        # Not on cancellation: cancelling (or disabling) this workflow is how a person stops the chain.
+        if: success() || failure()
+        run: gh workflow run nexo-heartbeat-b.yml --ref main && echo "successor dispatched"
