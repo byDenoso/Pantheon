@@ -45,7 +45,7 @@ jobs:
               [ "$h" -ge 6 ] && echo "- Nenhum teste executado há ${h}h: famílias e fila pronta vazias ou baterias paradas." >> /tmp/problems
             fi
             pend=$(echo "$proj" | jq -r '[.tests[] | select((.verdict // "" | ascii_upcase) == "PROMOTED" and ((.review_state // "PENDING_REVIEW") == "PENDING_REVIEW"))] | length')
-            [ "$pend" -gt 5 ] && echo "- ${pend} resultados promovidos sem contestação (o Crítico ou o robô deveriam contestar)." >> /tmp/problems
+            [ "$pend" -gt 10 ] && echo "- ${pend} resultados promovidos sem contestação (o Crítico ou o robô deveriam contestar)." >> /tmp/problems
             open=$(echo "$proj" | jq -r '[.evolution.recipe_health // {} | to_entries[] | .key] | join(", ")')
             [ -n "$open" ] && echo "- Receita com circuito aberto: $open." >> /tmp/problems
           fi
