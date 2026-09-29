@@ -45,6 +45,7 @@ jobs:
         if: failure()
         env:
           GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
         run: |
           body="$(printf 'Receita com falha no teste de fumaça (dado público real):\n\n%s\n\nRodada: %s/%s/actions/runs/%s' "$(cat /tmp/smoke_failures 2>/dev/null)" "$GITHUB_SERVER_URL" "$GITHUB_REPOSITORY" "$GITHUB_RUN_ID")"
           n=$(gh issue list --state open --search "NEXO: receita quebrou" --json number --jq '.[0].number // empty')
