@@ -41,14 +41,57 @@ E = {
                       [".", "; coordenação, não evidência.", " com o que falta.", ", para ninguém ficar parado.", "; o dono já sabe.", " em uma linha.", ", com o teste citado.", "; bola passada."]),
 }
 
+OPENERS = ["Nesta rodada,", "Agora há pouco,", "Sem alarde,", "Como combinado,", "Mais uma vez,", "Sem esperar ninguém,",
+           "Enquanto o resto rodava,", "Antes de seguir,", "Na mesma rodada,", "Com calma,", "No meu turno,", "Seguindo a fila,",
+           "Como sempre,", "Para não perder o fio,", "Sem pular etapa,", "Ainda agora,", "No ritmo de sempre,",
+           "Entre uma bateria e outra,", "Por conta própria,", "Sem ninguém pedir,"]
+GENERIC_TAILS = [". Sigo.", ". Próximo.", ". Registrado.", ". Está no histórico.", ". O robô leva daqui.", ". Leio de volta e sigo.",
+                 ". Um passo a mais.", ". Sem cerimônia.", ". Faz parte do ciclo.", ". Anotado com hora.", ". Está na ficha para conferir.",
+                 ". Trabalho feito.", ". Uma coisa a menos na fila.", ". De volta à fila.", ". Deixo rastro de tudo.",
+                 ". Continua no próximo turno.", ". Checado.", ". Nenhum atalho.", ". Assim anda.", ". Segue o jogo.", ". Fica o registro.",
+                 ". Conferido duas vezes.", ". E vamos adiante.", ". O resto é com os números.", ". Tudo auditável.", ". Mais um ciclo.",
+                 ". Método antes de opinião.", ". A fila anda.", ". Ninguém precisou apertar botão.", ". Sem pressa, sem parar.",
+                 ". Anoto e sigo.", ". O próximo turno pega daqui.", ". Nada fica solto.", ". Vale para o mapa.", ". Tudo lido de volta.",
+                 ". Pronto por ora.", ". Com hora e dono.", ". Sem ruído.", ". Deixo o caminho limpo.", ". Registro feito.", ". Sem enrolação.", ". O dia segue.", ". Vou atrás.", ". Fica anotado.", ". Tudo na conta."]
+
+# Outros monólogos: {title}, {n}, {m} são trocados em tempo de execução.
+E.update({
+ "SELF_FOCUS": (["Minha atenção está em {title}: {n} ações em 24 h", "Estou mergulhado em {title}: {n} ações em 24 h", "Quase tudo que fiz hoje foi em {title}: {n} ações",
+                 "{title} ocupou meu dia: {n} ações", "Foco em {title}, com {n} ações em 24 h", "O centro do meu trabalho é {title}: {n} ações"], ["."]),
+ "SELF_IGNORED": (["Estou deixando de lado {title}, com {n} testes esperando", "{title} ficou para trás: {n} testes na fila", "Não toquei em {title} hoje, e há {n} testes esperando",
+                   "{title} espera minha vez: {n} testes", "Devo uma rodada a {title}: {n} testes parados"], ["."]),
+ "SELF_DECOY_CAUGHT": (["Plantei iscas contra mim mesmo: peguei {n} de {m}", "Das {m} iscas reveladas, desconfiei de {n}", "Me testei com iscas: {n} de {m} pegas",
+                        "Acertei {n} das {m} armadilhas que eu mesmo plantei"], ["."]),
+ "SELF_DECOY_PLANTED": (["Há {n} isca(s) plantada(s) contra mim; ainda não sei qual", "Existe(m) {n} armadilha(s) escondida(s) no meu próprio histórico", "Tenho {n} isca(s) para achar entre meus resultados",
+                         "Algum resultado meu pode ser isca: {n} plantada(s)"], ["."]),
+ "SELF_GATE": (["Estou esperando o Dener decidir {n} coisa(s) que não posso decidir sozinho", "{n} decisão(ões) aguarda(m) o Dener", "Parei em {n} portão(ões) que só o Dener abre",
+                "Tem {n} escolha(s) na mesa do Dener"], ["."]),
+ "GROUP_SEMANTIC_BACKFILLED": (["Dei nome e leitura simples a {n} testes", "Traduzi {n} fichas para português", "Arrumei o nome de {n} testes"], ["."]),
+ "GROUP_TEST_ENRICHED": (["Completei a ficha de {n} testes", "Preenchi o que faltava em {n} testes", "Deixei {n} testes prontos para rodar"], ["."]),
+ "GROUP_LEARNING_SIGNAL_RECORDED": (["Anotei {n} lacunas para resolver", "Registrei {n} pedidos de receita ou dado", "Marquei {n} buracos no caminho"], ["."]),
+ "GROUP_TEST_DISPATCHED": (["Mandei {n} testes para a bateria", "Coloquei {n} testes para rodar", "Soltei {n} testes no runner"], ["."]),
+ "GROUP_ROADMAP_TEST_FROZEN": (["Congelei as regras de {n} testes antes de olhar os dados", "Travei o critério de {n} testes", "Pré-registrei {n} testes"], ["."]),
+ "GROUP_INTEGRITY_REPORT_RECORDED": (["Fiz {n} auditorias seguidas; nada quebrou entre elas", "{n} rondas de saúde sem incidente", "Conferi o sistema {n} vezes"], ["."]),
+ "GROUP_NEXO_THOUGHT_NOOP_RECORDED": (["{n} passadas pelos resultados sem nada fora do previsto", "Olhei {n} vezes e nada pediu atenção", "{n} varreduras quietas"], ["."]),
+})
+
+
+def lower_first(t):
+    return t if t.startswith(("%q", "{")) else t[0].lower() + t[1:]
+
+
 random.seed(20260929)
 out = {}
-for ev, (heads, tails) in E.items():
-    combos = [h + t for h, t in itertools.product(heads, tails)]
-    random.shuffle(combos)
-    out[ev] = combos[:45]
+for ev, (cores, own_tails) in E.items():
+    openers = [] if ev.startswith("SELF_") else OPENERS  # estado do sistema não combina com "por conta própria"
+    heads = cores + [f"{o} {lower_first(c)}" for o in openers for c in cores]
+    random.shuffle(heads)
+    heads = cores + [h for h in heads if h not in cores][:45 - len(cores)]
+    tails = own_tails + [t for t in GENERIC_TAILS if t not in own_tails]
+    out[ev] = {"heads": heads[:45], "tails": tails[:45]}
 
-ts = "// Gerado por nexo-one/scripts/gen_narration.py (NEXO): até 45 falas por evento, sorteadas a cada linha.\n"
-ts += "export const NARRATION: Record<string, string[]> = " + json.dumps(out, ensure_ascii=False, indent=1) + ";\n"
-open(r"C:\Users\Dener\Documents\Pantheon-main\nexo-one\src\features\lab\narration.ts", "w", encoding="utf-8", newline="\n").write(ts)
-print({k: len(v) for k, v in out.items()})
+NL = chr(10)
+ts = "// Gerado por nexo-one/scripts/gen_narration.py (NEXO): matriz cabeça x cauda por evento, sorteada a cada linha." + NL
+ts += "export const NARRATION: Record<string, { heads: string[]; tails: string[] }> = " + json.dumps(out, ensure_ascii=False, indent=1) + ";" + NL
+open(__import__("pathlib").Path(__file__).resolve().parents[1] / "src/features/lab/narration.ts", "w", encoding="utf-8", newline=NL).write(ts)
+print({k: (len(v["heads"]), len(v["tails"])) for k, v in out.items()})

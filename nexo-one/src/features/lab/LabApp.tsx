@@ -785,6 +785,13 @@ const roleLabel = (role: string) => { const t = taskOf(role); const r = ROLE_PT[
 // Sorteio probabilístico: cada carga da página sorteia de novo; dentro da visita a mesma linha não pisca.
 const NARRATION_SALT = Math.random().toString(36).slice(2);
 const pick = (pool: string[], seed: string) => { let h = 0; const k = seed + NARRATION_SALT; for (let i = 0; i < k.length; i += 1) h = (h * 31 + k.charCodeAt(i)) | 0; return pool[Math.abs(h) % pool.length]!; };
+/** Matriz 45x45: cabeça e cauda sorteadas separadamente (até 2025 falas por evento). */
+const say = (key: string, seed: string, vars: Record<string, string | number> = {}): string | null => {
+  const m = NARRATION[key];
+  if (!m) return null;
+  const text = pick(m.heads, `h${seed}`) + pick(m.tails, `t${seed}`);
+  return text.replace(/\{(\w+)\}/g, (_, k: string) => String(vars[k] ?? ''));
+};
 /** Estrela que representa a entidade na teia (contestações apontam para o resultado atacado). */
 function starOf(lab: Lab, id: string): string | null {
   let t = lab.tests.get(id);
@@ -798,8 +805,7 @@ function narrate(e: { event_type: string; entity_id?: string; at?: string }, lab
     const th = (state.evolution?.thoughts ?? []).find(x => Math.abs(Date.parse(x.at) - t0) < 15 * 60e3);
     if (th?.text) return humanize(clip(th.text, 180));
   }
-  const pool = NARRATION[e.event_type];
-  let tpl = pool ? pick(pool, `${e.at ?? ''}${e.entity_id ?? ''}`) : `Registrei ${e.event_type.toLowerCase().replace(/_/g, ' ')}: %q`;
+  let tpl = say(e.event_type, `${e.at ?? ''}${e.entity_id ?? ''}`) ?? `Registrei ${e.event_type.toLowerCase().replace(/_/g, ' ')}: %q`;
   const te = e.entity_id ? lab.tests.get(e.entity_id) : undefined;
   if (te && e.event_type === 'TEST_RESULT_RECORDED') {
     const p = (te.prereg.prediction as { p_promoted?: number } | null)?.p_promoted;
@@ -1002,15 +1008,15 @@ function selfLines(lab: Lab, state: SystemState): Array<{ icon: string; text: st
   const focus = [...touched].sort((a, b) => b[1] - a[1])[0];
   if (focus) {
     const r = lab.roadmaps.get(focus[0]);
-    if (r) out.push({ icon: 'eye', text: `Minha atenção está em ${r.title.toLowerCase()}: ${focus[1]} ações nas últimas 24 h.`, link: labHref('roadmap', r.id) });
+    if (r) out.push({ icon: 'eye', text: say('SELF_FOCUS', r.id + new Date().toDateString(), { title: r.title.toLowerCase(), n: focus[1] })!, link: labHref('roadmap', r.id) });
   }
   const ignored = active.filter(r => !touched.has(r.id) && r.frontier > 0).sort((a, b) => b.frontier - a.frontier)[0];
-  if (ignored) out.push({ icon: 'eyeoff', text: `Estou deixando de lado ${ignored.title.toLowerCase()}, com ${ignored.frontier} testes esperando.`, link: labHref('roadmap', ignored.id) });
+  if (ignored) out.push({ icon: 'eyeoff', text: say('SELF_IGNORED', ignored.id + new Date().toDateString(), { title: ignored.title.toLowerCase(), n: ignored.frontier })!, link: labHref('roadmap', ignored.id) });
   const d = state.evolution?.decoys;
-  if (d && d.revealed > 0) out.push({ icon: 'trap', text: `Plantei iscas contra mim mesmo: me peguei em ${d.caught} de ${d.revealed}.` });
-  else if (d && d.planted > 0) out.push({ icon: 'trap', text: `Há ${d.planted === 1 ? 'uma isca plantada' : `${d.planted} iscas plantadas`} contra mim mesmo. Ainda não sei ${d.planted === 1 ? 'qual é' : 'quais são'}.` });
+  if (d && d.revealed > 0) out.push({ icon: 'trap', text: say('SELF_DECOY_CAUGHT', new Date().toDateString(), { n: d.caught, m: d.revealed })! });
+  else if (d && d.planted > 0) out.push({ icon: 'trap', text: say('SELF_DECOY_PLANTED', new Date().toDateString(), { n: d.planted })! });
   const gate = (state.evolution?.gate.charters_waiting.length ?? 0) + (state.evolution?.gate.canaries_waiting.length ?? 0);
-  if (gate) out.push({ icon: 'hand', text: `Estou esperando o Dener decidir ${gate === 1 ? 'uma coisa' : `${gate} coisas`} que eu não posso decidir sozinho.`, link: '#/ciclo' });
+  if (gate) out.push({ icon: 'hand', text: say('SELF_GATE', new Date().toDateString(), { n: gate })!, link: '#/ciclo' });
   return out;
 }
 
@@ -1195,7 +1201,7 @@ function Telemetry({ lab, state }: { lab: Lab; state: SystemState }) {
     else grouped.push({ e, n: Number((e as { count?: number }).count ?? 1) });
   }
   const acts = grouped.slice(-60).map(({ e, n }, i) => ({ kind: 'act' as const, at: e.at, who: roleLabel(String(e.role)), to: '',
-    text: n > 1 ? GROUP_PT[e.event_type]!(n) : narrate(e, lab, state), id: `${e.at}-${i}` }));
+    text: n > 1 ? (say(`GROUP_${e.event_type}`, e.at, { n }) ?? GROUP_PT[e.event_type]!(n)) : narrate(e, lab, state), id: `${e.at}-${i}` }));
   const feed = [...notes, ...acts].sort((a, b) => b.at.localeCompare(a.at)).slice(0, 50);
   const day = lab.activity.filter(e => now - Date.parse(e.at) < 864e5).length;
   return <aside className="telemetry" aria-label="Telemetria ao vivo">
