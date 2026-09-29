@@ -772,7 +772,8 @@ const TASKS: Array<{ id: string; name: string; hats: string[]; rhythm: string; d
   { id: 'cientista', name: 'Cientista', hats: ['LEARNER', 'PITIA', 'SENTINEL'], rhythm: 'toda hora · :05', does: 'propõe hipóteses, nomeia testes, pensa e vigia a literatura' },
   { id: 'operador', name: 'Operador', hats: ['EXECUTOR'], rhythm: 'toda hora · :20', does: 'monta as baterias, pede e escreve receitas, liga dados' },
   { id: 'engenheiro', name: 'Engenheiro', hats: ['ENGINEER'], rhythm: 'a cada 2 horas · :50', does: 'escreve e conserta receitas, vigia o robô e a bateria' },
-  { id: 'critico', name: 'Crítico', hats: ['REFUTADOR', 'REFEREE_1', 'GUARDIAO'], rhythm: 'toda hora · :35', does: 'ataca resultados, julga, audita a saúde e escreve o bom-dia' },
+  { id: 'critico', name: 'Crítico', hats: ['REFUTADOR', 'REFEREE_1'], rhythm: 'toda hora · :35', does: 'ataca resultados, julga os vereditos e escreve o bom-dia' },
+  { id: 'guardiao', name: 'Guardião', hats: ['GUARDIAO'], rhythm: 'toda hora · :57', does: 'audita a saúde, revisa receitas, fecha roadmaps e lista os bloqueios' },
 ];
 const taskOf = (role: string) => TASKS.find(t => t.hats.includes(role.toUpperCase()));
 const roleLabel = (role: string) => { const t = taskOf(role); const r = ROLE_PT[role.toUpperCase()] ?? role; return t ? `${t.name} · ${r}` : r; };
