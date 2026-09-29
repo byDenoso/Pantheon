@@ -1,0 +1,8 @@
+{
+  "mode": "sn_crosscheck",
+  "z_minima": [0.01, 0.023],
+  "z_max": 0.05,
+  "smoothing_mpc": 40,
+  "min_unique_sn": 30,
+  "min_effective_groups": 30
+}
