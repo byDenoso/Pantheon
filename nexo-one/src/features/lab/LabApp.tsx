@@ -251,6 +251,7 @@ function Now({ lab, state, onReplay, replayCount }: { lab: Lab; state: SystemSta
 
     <Monologue lab={lab} state={state} onReplay={onReplay} replayCount={replayCount} />
     <Board state={state} lab={lab} />
+    <Families state={state} />
     <Calibration lab={lab} />
 
     <div className="hud-pair">
@@ -854,6 +855,22 @@ function Monologue({ lab, state, onReplay, replayCount }: { lab: Lab; state: Sys
 }
 
 /** Quanto o NEXO acerta das próprias previsões (congeladas antes de rodar). */
+// ---------- Famílias: grades de testes que o robô roda sozinho
+const CLOSE_PT: Record<string, string> = { SUCCESS: 'sustentada (2 promovidos)', KILL: 'derrubada (2 rejeitados)', ROADMAP_CLOSED: 'roteiro fechado' };
+function Families({ state }: { state: SystemState }) {
+  const fams = state.evolution?.families ?? [];
+  const open = Object.keys(state.evolution?.recipe_health ?? {});
+  if (!fams.length && !open.length) return null;
+  const active = fams.filter(f => f.state === 'ACTIVE').length;
+  return <Section title="Famílias de testes" kicker={`${active} ${active === 1 ? 'ativa' : 'ativas'} · o robô cria, roda e fecha sozinho`} id="now-families">
+    <ul className="fam-list">{fams.map(f => <li key={f.family_id}>
+      <b>{f.display_name || f.family_id}</b>
+      <span>{f.state === 'ACTIVE' ? 'ativa' : `fechada: ${CLOSE_PT[f.close_reason ?? ''] ?? 'encerrada'}`} · {f.done} de {f.cells} feitos · {f.promoted} passaram, {f.rejected} caíram, {f.inconclusive} mistos</span>
+    </li>)}</ul>
+    {open.length > 0 && <p className="fam-open">Receita parada por falhas repetidas: {open.join(', ')}. O Engenheiro conserta; o robô testa uma vez antes de voltar ao ritmo.</p>}
+  </Section>;
+}
+
 function Calibration({ lab }: { lab: Lab }) {
   const pts: Array<{ p: number; hit: number; area: string }> = [];
   for (const t of lab.tests.values()) {

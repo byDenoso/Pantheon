@@ -446,6 +446,11 @@ export interface EvolutionStatus {
   /** Shared board: short notes between roles (coordination, never evidence). */
   board?: { id: string; at: string; from: string; to: string; text: string; refs?: string[]; reply_to?: string | null;
             expires_at?: string | null; resolved_at?: string | null }[];
+  /** Pre-registered test families the robot runs by itself. */
+  families?: { family_id: string; state: string; close_reason?: string | null; recipe: string; display_name?: string | null;
+               cells: number; tests: number; done: number; promoted: number; rejected: number; inconclusive: number }[];
+  /** Recipes whose circuit is open after repeated crashes. */
+  recipe_health?: Record<string, { state: string; consecutive_bugs?: number; last_test?: string }>;
 }
 
 export interface SystemState {
