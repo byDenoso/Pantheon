@@ -10,6 +10,14 @@
 //
 //   node scripts/nexo-submit.mjs --file batch.json [--id <stable-id>] [--base <url>] [--dry-run]
 //   node scripts/nexo-submit.mjs --check <stable-id>
+//   node scripts/nexo-submit.mjs --enqueue --file batch.json [--id <stable-id>] [--dir <spool>]
+//   node scripts/nexo-submit.mjs --drain [--dir <spool>] [--dry-run]
+//
+// Durable spool (AUT-002/003): --enqueue writes <spool>/pending/<stable_id>.json create-only
+// and appends to <spool>/journal.jsonl BEFORE any staging attempt, so a refused connector can
+// no longer leave the envelope only in conversation text. --drain runs at the start of every
+// round: an id already in nexo-inbox (inbox/ or processed/) or still in flight on the
+// dispatch-runtime staging ref is never resubmitted; everything else goes through the gateway.
 //
 // Idempotency: the canonical inbox is keyed by stable_id. --check (and the default
 // preflight) asks the connector-free gateway whether the id already landed, so a retry
@@ -18,6 +26,9 @@
 export const GATEWAY_BASE = 'https://nexo-one-two.vercel.app';
 export const MAX_PARTS = 40;
 export const MAX_CHUNK = 6000;
+export const DEFAULT_SPOOL = '.nexo-spool';
+/** Staging written by the scheduled agents and relayed to nexo-inbox in ~8 s (public, read-only). */
+export const STAGING_BASE = 'https://raw.githubusercontent.com/byDenoso/TCC/nexo/dispatch-runtime/nexo_persist/requests';
 
 export const b64url = buffer => Buffer.from(buffer).toString('base64')
   .replaceAll('+', '-').replaceAll('/', '_').replace(/=+$/, '');
@@ -83,6 +94,72 @@ export async function submit(stableId, json, { base = GATEWAY_BASE, fetchImpl = 
   return { ok: true, status: 'SUBMITTED', parts: plan.length, gateway: last, complete: true, readback: 'PASS' };
 }
 
+/** In flight on the relay: staged on dispatch-runtime but not yet visible in nexo-inbox. */
+export async function stagedInRelay(stableId, fetchImpl = fetch, stagingBase = STAGING_BASE) {
+  const response = await fetchImpl(`${String(stagingBase).replace(/\/+$/, '')}/${encodeURIComponent(stableId)}.json`);
+  if (response.status === 404) return false;
+  if (!response.ok) throw new Error(`STAGING_CHECK_FAILED_HTTP_${response.status}`);
+  return true;
+}
+
+/** Append-only journal: one JSON line per event, never rewritten. */
+export async function appendJournal(dir, record, fs) {
+  await fs.mkdir(dir, { recursive: true });
+  await fs.appendFile(`${dir}/journal.jsonl`, JSON.stringify({ at: new Date().toISOString(), ...record }) + '\n');
+}
+
+/** Create-only durable write keyed by stable_id; an existing id is kept, never overwritten. */
+export async function enqueue(dir, stableId, json, fs) {
+  const id = normaliseId(stableId);
+  if (id.length < 4) throw new Error('SUBMIT_ID_INVALID: need an id with 4-60 characters from [a-z0-9-]');
+  JSON.parse(json); // refuse to spool something that is not JSON
+  await fs.mkdir(`${dir}/pending`, { recursive: true });
+  try {
+    await fs.writeFile(`${dir}/pending/${id}.json`, json, { flag: 'wx' });
+  } catch (error) {
+    if (error?.code !== 'EEXIST') throw error;
+    const existing = await fs.readFile(`${dir}/pending/${id}.json`, 'utf8');
+    if (existing !== json) throw new Error(`SPOOL_CONFLICT: ${id} is already spooled with a different envelope`);
+    return { id, status: 'ALREADY_SPOOLED' };
+  }
+  await appendJournal(dir, { stable_id: id, event: 'ENQUEUED', bytes: Buffer.byteLength(json) }, fs);
+  return { id, status: 'ENQUEUED' };
+}
+
+/**
+ * Drain the spool at the start of a round. Order per id: landed in nexo-inbox → done;
+ * staged on dispatch-runtime → leave for the relay; otherwise submit through the gateway.
+ */
+export async function drain(dir, { fs, fetchImpl = fetch, base = GATEWAY_BASE, stagingBase = STAGING_BASE, dryRun = false, log = () => {} } = {}) {
+  const names = await fs.readdir(`${dir}/pending`).catch(error => { if (error?.code === 'ENOENT') return []; throw error; });
+  const summary = { landed: 0, inRelay: 0, submitted: 0, failed: 0, ids: {} };
+  for (const name of names.filter(entry => entry.endsWith('.json')).sort()) {
+    const id = name.slice(0, -5);
+    const json = await fs.readFile(`${dir}/pending/${name}`, 'utf8');
+    let outcome;
+    const landed = await alreadyLanded(id, fetchImpl, base).catch(() => null);
+    if (landed) outcome = 'LANDED';
+    else if (await stagedInRelay(id, fetchImpl, stagingBase).catch(() => false)) outcome = 'IN_RELAY';
+    else if (dryRun) outcome = 'WOULD_SUBMIT';
+    else {
+      const result = await submit(id, json, { base, fetchImpl, log });
+      outcome = result.ok ? 'SUBMITTED' : `FAILED_${result.status}`;
+    }
+    summary.ids[id] = outcome;
+    if (outcome === 'LANDED') summary.landed += 1;
+    else if (outcome === 'IN_RELAY') summary.inRelay += 1;
+    else if (outcome === 'SUBMITTED') summary.submitted += 1;
+    else if (outcome.startsWith('FAILED')) summary.failed += 1;
+    if (dryRun) continue;
+    await appendJournal(dir, { stable_id: id, event: outcome }, fs);
+    if (outcome === 'LANDED' || outcome === 'SUBMITTED') {
+      await fs.mkdir(`${dir}/done`, { recursive: true });
+      await fs.rename(`${dir}/pending/${name}`, `${dir}/done/${name}`);
+    }
+  }
+  return summary;
+}
+
 const isMain = String(process.argv[1] || '').endsWith('nexo-submit.mjs');
 
 async function main(argv) {
@@ -99,10 +176,29 @@ async function main(argv) {
     return landed ? 0 : 1;
   }
 
+  const dir = flag('--dir') || DEFAULT_SPOOL;
+  if (argv.includes('--drain')) {
+    const fs = await import('node:fs/promises');
+    const summary = await drain(dir, { fs, base: flag('--base') || GATEWAY_BASE, dryRun: argv.includes('--dry-run'), log: line => console.log(line) });
+    console.log(JSON.stringify(summary, null, 1));
+    return summary.failed ? 1 : 0;
+  }
+
   const file = flag('--file');
+  if (file && argv.includes('--enqueue')) {
+    const fs = await import('node:fs/promises');
+    const json = await fs.readFile(file, 'utf8');
+    let id = normaliseId(flag('--id') || '');
+    if (!id) { try { id = normaliseId(JSON.parse(json).stable_id || ''); } catch { id = ''; } }
+    const result = await enqueue(dir, id, json, fs);
+    console.log(JSON.stringify(result));
+    return 0;
+  }
   if (!file) {
     console.error('usage: nexo-submit.mjs --file <envelope.json> [--id <stable-id>] [--base <url>] [--dry-run]');
     console.error('       nexo-submit.mjs --check <stable-id>');
+    console.error('       nexo-submit.mjs --enqueue --file <envelope.json> [--id <stable-id>] [--dir <spool>]');
+    console.error('       nexo-submit.mjs --drain [--dir <spool>] [--dry-run]');
     return 2;
   }
 
