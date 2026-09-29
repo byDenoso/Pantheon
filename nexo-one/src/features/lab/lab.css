@@ -833,3 +833,9 @@ details.tech .versus{margin-bottom:18px}
   .obs-tools button .bt{display:none}
   .obs-tools button{padding:9px 11px;min-width:40px;justify-content:center}
 }
+
+.board-more,.board-all{font:inherit;color:var(--o-accent);background:none;border:0;padding:0;cursor:pointer;pointer-events:auto;text-decoration:underline;text-underline-offset:3px}
+.board-all{display:block;margin:12px 0 0;padding:10px 0;font-size:14px;min-height:44px}
+@media (max-width:760px){
+  .observatory.flat .hud{top:104px;padding-top:16px}
+}

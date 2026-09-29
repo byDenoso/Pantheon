@@ -776,7 +776,7 @@ const TASKS: Array<{ id: string; name: string; hats: string[]; rhythm: string; d
   { id: 'guardiao', name: 'Guardião', hats: ['GUARDIAO'], rhythm: 'toda hora · :57', does: 'audita a saúde, revisa receitas, fecha roadmaps e lista os bloqueios' },
 ];
 const taskOf = (role: string) => TASKS.find(t => t.hats.includes(role.toUpperCase()));
-const roleLabel = (role: string) => { const t = taskOf(role); const r = ROLE_PT[role.toUpperCase()] ?? role; return t ? `${t.name} · ${r}` : r; };
+const roleLabel = (role: string) => { const t = taskOf(role); const r = ROLE_PT[role.toUpperCase()] ?? role; return t ? (t.name === r ? r : `${t.name} · ${r}`) : r; };
 const NARRATION: Record<string, string> = {
   SEMANTIC_BACKFILLED: 'Dei nome e leitura simples a %q',
   TEST_ENRICHED: 'Completei a ficha de %q',
@@ -1086,19 +1086,26 @@ function nameIds(text: string, lab: Lab): string {
 
 function Board({ state, lab }: { state: SystemState; lab: Lab }) {
   const now = Date.now();
-  const posts = (state.evolution?.board ?? []).filter(p => !p.resolved_at && (!p.expires_at || Date.parse(p.expires_at) > now)).slice(-8).reverse();
-  if (!posts.length) return null;
+  const [all, setAll] = useState(false);
+  const [openIds, setOpenIds] = useState<Set<string>>(new Set());
+  const every = (state.evolution?.board ?? []).filter(p => !p.resolved_at && (!p.expires_at || Date.parse(p.expires_at) > now)).slice().reverse();
+  if (!every.length) return null;
+  const posts = all ? every : every.slice(0, 8);
   const who = (r: string) => (r === 'ALL' ? 'todos' : roleLabel(r));
-  return <Section title="Conversa entre os agentes" kicker={`${posts.length} ${posts.length === 1 ? 'recado aberto' : 'recados abertos'}`} id="now-board">
-    <ol className="board">{posts.map(p => <li key={p.id}>
+  const toggle = (id: string) => setOpenIds(prev => { const n = new Set(prev); if (n.has(id)) n.delete(id); else n.add(id); return n; });
+  return <Section title="Conversa entre os agentes" kicker={`${every.length} ${every.length === 1 ? 'recado aberto' : 'recados abertos'}`} id="now-board">
+    <ol className="board">{posts.map(p => {
+      const full = humanize(nameIds(p.text, lab)); const short = clip(full, 220); const isOpen = openIds.has(p.id); const long = short !== full;
+      return <li key={p.id}>
       <p className="board-head"><b>{who(p.from)}</b><i aria-hidden="true">→</i><span>{who(p.to)}</span><time>{ago(p.at)}</time></p>
-      <p className="board-text">{clip(humanize(nameIds(p.text, lab)), 220)}</p>
+      <p className="board-text">{isOpen ? full : short}{long && <button type="button" className="board-more" onClick={() => toggle(p.id)}>{isOpen ? ' ver menos' : ' ler tudo'}</button>}</p>
       {(p.refs?.length ?? 0) > 0 && <p className="hud-refs">{p.refs!.filter(r => lab.tests.has(r) || lab.hypotheses.has(r)).slice(0, 3).map(r => <E key={r} id={r} />)}</p>}
-    </li>)}</ol>
+    </li>;})}</ol>
+    {every.length > 8 && <button type="button" className="board-all" onClick={() => setAll(x => !x)}>{all ? 'Mostrar só os 8 mais recentes' : `Ver todos os ${every.length} recados`}</button>}
   </Section>;
 }
 
-// ---------- Quem trabalha: as três tarefas e o último sinal de vida de cada uma ----------
+// ---------- Quem trabalha: as tarefas e o último sinal de vida de cada uma ----------
 function Crew({ lab }: { lab: Lab }) {
   const now = Date.now();
   return <section className="crew" aria-label="Quem trabalha">
