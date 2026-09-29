@@ -11,11 +11,29 @@ export const NARRATION: Record<string, { heads: string[]; tails: string[] }> = {
   ],
   "tails": [
    ".",
+   "; qualquer pessoa entende a ficha.",
+   "; o site já mostra.",
+   "; ninguém precisa decifrar sigla.",
    " para o site.",
+   " para o site; qualquer pessoa entende a ficha.",
+   " para o site; o site já mostra.",
+   " para o site; ninguém precisa decifrar sigla.",
    ", com o que o resultado significa.",
+   ", com o que o resultado significa; qualquer pessoa entende a ficha.",
+   ", com o que o resultado significa; o site já mostra.",
+   ", com o que o resultado significa; ninguém precisa decifrar sigla.",
    ", com pergunta, nula e rival legíveis.",
+   ", com pergunta, nula e rival legíveis; qualquer pessoa entende a ficha.",
+   ", com pergunta, nula e rival legíveis; o site já mostra.",
+   ", com pergunta, nula e rival legíveis; ninguém precisa decifrar sigla.",
    " e liguei à hipótese certa.",
-   " sem siglas."
+   " e liguei à hipótese certa; qualquer pessoa entende a ficha.",
+   " e liguei à hipótese certa; o site já mostra.",
+   " e liguei à hipótese certa; ninguém precisa decifrar sigla.",
+   " sem siglas.",
+   " sem siglas; qualquer pessoa entende a ficha.",
+   " sem siglas; o site já mostra.",
+   " sem siglas; ninguém precisa decifrar sigla."
   ]
  },
  "TEST_ENRICHED": {
@@ -28,10 +46,22 @@ export const NARRATION: Record<string, { heads: string[]; tails: string[] }> = {
   ],
   "tails": [
    ".",
+   "; o robô aceita na próxima rodada.",
+   "; a papelada fechou na mesma rodada.",
+   "; entra na próxima bateria.",
    "; já pode ir para a bateria.",
    " com a URL oficial do dado.",
+   " com a URL oficial do dado; o robô aceita na próxima rodada.",
+   " com a URL oficial do dado; a papelada fechou na mesma rodada.",
+   " com a URL oficial do dado; entra na próxima bateria.",
    " com a previsão anotada.",
-   " para o robô aceitar."
+   " com a previsão anotada; o robô aceita na próxima rodada.",
+   " com a previsão anotada; a papelada fechou na mesma rodada.",
+   " com a previsão anotada; entra na próxima bateria.",
+   " para o robô aceitar.",
+   " para o robô aceitar; o robô aceita na próxima rodada.",
+   " para o robô aceitar; a papelada fechou na mesma rodada.",
+   " para o robô aceitar; entra na próxima bateria."
   ]
  },
  "LEARNING_SIGNAL_RECORDED": {
@@ -45,10 +75,22 @@ export const NARRATION: Record<string, { heads: string[]; tails: string[] }> = {
   ],
   "tails": [
    ".",
+   "; o Engenheiro recebe no mural.",
+   "; a fila segue com o que já dá para rodar.",
+   "; vira receita em PR.",
    " com o produto oficial citado.",
+   " com o produto oficial citado; o Engenheiro recebe no mural.",
+   " com o produto oficial citado; a fila segue com o que já dá para rodar.",
+   " com o produto oficial citado; vira receita em PR.",
    "; os testes que dependem dela ficam na fila.",
    " agrupado com os pedidos parecidos.",
-   " com o motivo e o dono."
+   " agrupado com os pedidos parecidos; o Engenheiro recebe no mural.",
+   " agrupado com os pedidos parecidos; a fila segue com o que já dá para rodar.",
+   " agrupado com os pedidos parecidos; vira receita em PR.",
+   " com o motivo e o dono.",
+   " com o motivo e o dono; o Engenheiro recebe no mural.",
+   " com o motivo e o dono; a fila segue com o que já dá para rodar.",
+   " com o motivo e o dono; vira receita em PR."
   ]
  },
  "TEST_DISPATCHED": {
@@ -61,10 +103,22 @@ export const NARRATION: Record<string, { heads: string[]; tails: string[] }> = {
   ],
   "tails": [
    ".",
+   "; o robô coleta sozinho.",
+   "; roda em máquina pública.",
+   "; ninguém precisou apertar botão.",
    " com critério congelado.",
+   " com critério congelado; o robô coleta sozinho.",
+   " com critério congelado; roda em máquina pública.",
+   " com critério congelado; ninguém precisou apertar botão.",
    "; o resultado volta em minutos.",
    " junto com o lote da família.",
-   " com receita fixa e hash conferido."
+   " junto com o lote da família; o robô coleta sozinho.",
+   " junto com o lote da família; roda em máquina pública.",
+   " junto com o lote da família; ninguém precisou apertar botão.",
+   " com receita fixa e hash conferido.",
+   " com receita fixa e hash conferido; o robô coleta sozinho.",
+   " com receita fixa e hash conferido; roda em máquina pública.",
+   " com receita fixa e hash conferido; ninguém precisou apertar botão."
   ]
  },
  "TEST_RESULT_RECORDED": {
@@ -77,10 +131,19 @@ export const NARRATION: Record<string, { heads: string[]; tails: string[] }> = {
   ],
   "tails": [
    ".",
+   "; o site já mostra.",
+   "; entra na conta da família.",
+   "; o Crítico pega na próxima rodada.",
    "; os números estão na ficha.",
    "; o próximo passo é o ataque.",
    " pelo critério escrito antes.",
-   " e entrou no mapa."
+   " pelo critério escrito antes; o site já mostra.",
+   " pelo critério escrito antes; entra na conta da família.",
+   " pelo critério escrito antes; o Crítico pega na próxima rodada.",
+   " e entrou no mapa.",
+   " e entrou no mapa; o site já mostra.",
+   " e entrou no mapa; entra na conta da família.",
+   " e entrou no mapa; o Crítico pega na próxima rodada."
   ]
  },
  "ROADMAP_TEST_FROZEN": {
@@ -93,10 +156,22 @@ export const NARRATION: Record<string, { heads: string[]; tails: string[] }> = {
   ],
   "tails": [
    ".",
+   "; ninguém mexe depois.",
+   "; o dado decide.",
+   "; fica auditável no histórico.",
    " antes de ver o dado.",
+   " antes de ver o dado; ninguém mexe depois.",
+   " antes de ver o dado; o dado decide.",
+   " antes de ver o dado; fica auditável no histórico.",
    " com a probabilidade que eu aposto.",
+   " com a probabilidade que eu aposto; ninguém mexe depois.",
+   " com a probabilidade que eu aposto; o dado decide.",
+   " com a probabilidade que eu aposto; fica auditável no histórico.",
    "; a partir daqui ele só roda.",
-   " com nula e rival."
+   " com nula e rival.",
+   " com nula e rival; ninguém mexe depois.",
+   " com nula e rival; o dado decide.",
+   " com nula e rival; fica auditável no histórico."
   ]
  },
  "RESULT_CONTESTED": {
@@ -110,11 +185,29 @@ export const NARRATION: Record<string, { heads: string[]; tails: string[] }> = {
   ],
   "tails": [
    ".",
+   "; se for real, aguenta.",
+   "; o robô decide pelo critério do ataque.",
+   "; resultado bonito pede ataque.",
    " com outra coleção de supernovas.",
+   " com outra coleção de supernovas; se for real, aguenta.",
+   " com outra coleção de supernovas; o robô decide pelo critério do ataque.",
+   " com outra coleção de supernovas; resultado bonito pede ataque.",
    " trocando o dado.",
+   " trocando o dado; se for real, aguenta.",
+   " trocando o dado; o robô decide pelo critério do ataque.",
+   " trocando o dado; resultado bonito pede ataque.",
    " com critério congelado.",
+   " com critério congelado; se for real, aguenta.",
+   " com critério congelado; o robô decide pelo critério do ataque.",
+   " com critério congelado; resultado bonito pede ataque.",
    " mudando o método.",
-   " antes de acreditar."
+   " mudando o método; se for real, aguenta.",
+   " mudando o método; o robô decide pelo critério do ataque.",
+   " mudando o método; resultado bonito pede ataque.",
+   " antes de acreditar.",
+   " antes de acreditar; se for real, aguenta.",
+   " antes de acreditar; o robô decide pelo critério do ataque.",
+   " antes de acreditar; resultado bonito pede ataque."
   ]
  },
  "RESULT_REFEREE1_PASSED": {
@@ -139,9 +232,18 @@ export const NARRATION: Record<string, { heads: string[]; tails: string[] }> = {
   ],
   "tails": [
    ".",
+   "; queda também é resultado.",
+   "; melhor agora do que num paper.",
+   "; a rival herda o que aprendi.",
    "; a hipótese rival entra na fila.",
    " e registrei onde falhou.",
+   " e registrei onde falhou; queda também é resultado.",
+   " e registrei onde falhou; melhor agora do que num paper.",
+   " e registrei onde falhou; a rival herda o que aprendi.",
    " com outro dado.",
+   " com outro dado; queda também é resultado.",
+   " com outro dado; melhor agora do que num paper.",
+   " com outro dado; a rival herda o que aprendi.",
    "; o mapa foi corrigido."
   ]
  },
@@ -155,10 +257,22 @@ export const NARRATION: Record<string, { heads: string[]; tails: string[] }> = {
   ],
   "tails": [
    ".",
+   "; conta para a campanha.",
+   "; replicou em dado independente.",
+   "; vira base para o próximo teste.",
    " e entra no mapa.",
+   " e entra no mapa; conta para a campanha.",
+   " e entra no mapa; replicou em dado independente.",
+   " e entra no mapa; vira base para o próximo teste.",
    " com outra coleção de supernovas.",
+   " com outra coleção de supernovas; conta para a campanha.",
+   " com outra coleção de supernovas; replicou em dado independente.",
+   " com outra coleção de supernovas; vira base para o próximo teste.",
    "; serve de base para a próxima pergunta.",
-   " pelo critério congelado."
+   " pelo critério congelado.",
+   " pelo critério congelado; conta para a campanha.",
+   " pelo critério congelado; replicou em dado independente.",
+   " pelo critério congelado; vira base para o próximo teste."
   ]
  },
  "HYPOTHESIS_UPSERTED": {
@@ -171,10 +285,25 @@ export const NARRATION: Record<string, { heads: string[]; tails: string[] }> = {
   ],
   "tails": [
    ".",
+   "; entra na fila hoje.",
+   "; se morrer, aprendo onde.",
+   "; o critério nasce junto.",
    ", com nula e rival.",
+   ", com nula e rival; entra na fila hoje.",
+   ", com nula e rival; se morrer, aprendo onde.",
+   ", com nula e rival; o critério nasce junto.",
    ", a partir de um resultado recente.",
+   ", a partir de um resultado recente; entra na fila hoje.",
+   ", a partir de um resultado recente; se morrer, aprendo onde.",
+   ", a partir de um resultado recente; o critério nasce junto.",
    ", já com o que a derrubaria.",
-   ", como rival de uma queda."
+   ", já com o que a derrubaria; entra na fila hoje.",
+   ", já com o que a derrubaria; se morrer, aprendo onde.",
+   ", já com o que a derrubaria; o critério nasce junto.",
+   ", como rival de uma queda.",
+   ", como rival de uma queda; entra na fila hoje.",
+   ", como rival de uma queda; se morrer, aprendo onde.",
+   ", como rival de uma queda; o critério nasce junto."
   ]
  },
  "INTEGRITY_REPORT_RECORDED": {
@@ -188,11 +317,23 @@ export const NARRATION: Record<string, { heads: string[]; tails: string[] }> = {
   ],
   "tails": [
    ".",
+   "; o site mostra o painel.",
+   "; o alarme fica quieto.",
+   "; o próximo turno parte daqui.",
    " e registrei os números.",
+   " e registrei os números; o site mostra o painel.",
+   " e registrei os números; o alarme fica quieto.",
+   " e registrei os números; o próximo turno parte daqui.",
    "; nenhum papel parado.",
    " e agi no pior indicador.",
+   " e agi no pior indicador; o site mostra o painel.",
+   " e agi no pior indicador; o alarme fica quieto.",
+   " e agi no pior indicador; o próximo turno parte daqui.",
    "; o relatório está no mural.",
-   " contra o último heartbeat."
+   " contra o último heartbeat.",
+   " contra o último heartbeat; o site mostra o painel.",
+   " contra o último heartbeat; o alarme fica quieto.",
+   " contra o último heartbeat; o próximo turno parte daqui."
   ]
  },
  "NEXO_THOUGHT_RECORDED": {
@@ -220,9 +361,21 @@ export const NARRATION: Record<string, { heads: string[]; tails: string[] }> = {
   ],
   "tails": [
    "; nenhuma surpresa.",
+   "; nenhuma surpresa, e volto na próxima hora.",
+   "; nenhuma surpresa, e os números ficam no histórico.",
+   "; nenhuma surpresa, e sigo vigiando.",
    "; nenhuma previsão furou.",
+   "; nenhuma previsão furou, e volto na próxima hora.",
+   "; nenhuma previsão furou, e os números ficam no histórico.",
+   "; nenhuma previsão furou, e sigo vigiando.",
    "; nada pediu pensamento novo.",
-   "; tudo dentro do previsto."
+   "; nada pediu pensamento novo, e volto na próxima hora.",
+   "; nada pediu pensamento novo, e os números ficam no histórico.",
+   "; nada pediu pensamento novo, e sigo vigiando.",
+   "; tudo dentro do previsto.",
+   "; tudo dentro do previsto, e volto na próxima hora.",
+   "; tudo dentro do previsto, e os números ficam no histórico.",
+   "; tudo dentro do previsto, e sigo vigiando."
   ]
  },
  "TEST_BATTERY_DISPATCHED": {
@@ -234,8 +387,14 @@ export const NARRATION: Record<string, { heads: string[]; tails: string[] }> = {
   ],
   "tails": [
    ".",
+   "; volta em minutos.",
+   "; a vazão depende disso.",
    " no runner público.",
+   " no runner público; volta em minutos.",
+   " no runner público; a vazão depende disso.",
    ", cada teste com critério congelado.",
+   ", cada teste com critério congelado; volta em minutos.",
+   ", cada teste com critério congelado; a vazão depende disso.",
    "; o robô coleta os resultados."
   ]
  },

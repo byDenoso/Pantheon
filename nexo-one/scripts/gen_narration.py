@@ -81,10 +81,29 @@ E = {
  "GROUP_NEXO_THOUGHT_NOOP_RECORDED": (["{n} revisões sem surpresa", "Revisei os resultados {n} vezes; nada novo"], [""]),
 }
 
+# Meio-termo: uma terceira peça (consequência) combinada com as caudas, só nos eventos de ação.
+# Cada peça continua concreta; a combinação multiplica sem enchimento.
+ENDS = {
+ "SEMANTIC_BACKFILLED": ["; qualquer pessoa entende a ficha", "; o site já mostra", "; ninguém precisa decifrar sigla"],
+ "TEST_ENRICHED": ["; o robô aceita na próxima rodada", "; a papelada fechou na mesma rodada", "; entra na próxima bateria"],
+ "LEARNING_SIGNAL_RECORDED": ["; o Engenheiro recebe no mural", "; a fila segue com o que já dá para rodar", "; vira receita em PR"],
+ "TEST_DISPATCHED": ["; o robô coleta sozinho", "; roda em máquina pública", "; ninguém precisou apertar botão"],
+ "TEST_RESULT_RECORDED": ["; o site já mostra", "; entra na conta da família", "; o Crítico pega na próxima rodada"],
+ "ROADMAP_TEST_FROZEN": ["; ninguém mexe depois", "; o dado decide", "; fica auditável no histórico"],
+ "RESULT_CONTESTED": ["; se for real, aguenta", "; o robô decide pelo critério do ataque", "; resultado bonito pede ataque"],
+ "RESULT_REFUTED": ["; queda também é resultado", "; melhor agora do que num paper", "; a rival herda o que aprendi"],
+ "RESULT_CONFIRMED": ["; conta para a campanha", "; replicou em dado independente", "; vira base para o próximo teste"],
+ "HYPOTHESIS_UPSERTED": ["; entra na fila hoje", "; se morrer, aprendo onde", "; o critério nasce junto"],
+ "INTEGRITY_REPORT_RECORDED": ["; o site mostra o painel", "; o alarme fica quieto", "; o próximo turno parte daqui"],
+ "NEXO_THOUGHT_NOOP_RECORDED": [", e volto na próxima hora", ", e os números ficam no histórico", ", e sigo vigiando"],
+ "TEST_BATTERY_DISPATCHED": ["; volta em minutos", "; a vazão depende disso"],
+}
+
 out = {}
 for ev, (heads, tails) in E.items():
     # A pontuação final entra aqui, uma vez, para toda combinação terminar com ponto.
-    out[ev] = {"heads": heads, "tails": [t + "." for t in tails]}
+    ends = [""] + ENDS.get(ev, [])
+    out[ev] = {"heads": heads, "tails": [t + e + "." for t in tails for e in ends if not (t.startswith(";") and e.startswith(";"))]}
 
 NL = chr(10)
 ts = "// Gerado por nexo-one/scripts/gen_narration.py (NEXO): matriz cabeça x cauda por evento, sorteada a cada linha." + NL
