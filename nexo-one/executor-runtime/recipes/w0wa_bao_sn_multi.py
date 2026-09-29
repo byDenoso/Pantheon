@@ -1,4 +1,4 @@
-"""Receita congelada: robustez w0-wa em duas compilações de SNe com DESI DR2 BAO.
+"""Receita congelada: robustez w0-wa em compilações de SNe (Pantheon+, DES-SN5YR, Union3) com DESI DR2 BAO.
 
 Modos:
   redshift_jackknife: leave-one-band-out nas SNe.
@@ -55,6 +55,16 @@ def load_des():
     lo=np.tril_indices(n,-1); inv[lo]=inv.T[lo]
     return {"name":"DES-SN5YR","z":z,"zhel":zh,"mu":mu,"cov":None,"prec":inv}
 
+UNION3_URL="https://raw.githubusercontent.com/rubind/union3_release/main/mu_mat_union3_cosmo=2_mu.fits"
+
+def load_union3():
+    """Union3 binned: FITS 23x23 float64, row 0 = z nodes, column 0 = mu, the rest = inverse covariance."""
+    b=fetch_bytes(UNION3_URL); h=b[:2880].decode()
+    kv={h[i:i+8].strip():h[i+10:i+30].strip() for i in range(0,2880,80) if h[i+8:i+10]=="= "}
+    n1,n2=int(kv["NAXIS1"]),int(kv["NAXIS2"]); a=np.frombuffer(b[2880:2880+8*n1*n2],">f8").reshape(n2,n1).astype(float)
+    z=a[0,1:]; prec=a[1:,1:]
+    return {"name":"Union3","z":z,"zhel":z,"mu":a[1:,0],"cov":np.linalg.inv(prec),"prec":prec}
+
 def comoving(om,w0,wa):
     a=1/(1+ZGRID); de=(1-om)*a**(-3*(1+w0+wa))*np.exp(-3*wa*(1-a)); e=np.sqrt(om*(1+ZGRID)**3+de)
     return cumulative_trapezoid(1/e,ZGRID,initial=0),e
@@ -110,7 +120,7 @@ def cosine(p,q):
 
 params=json.load(open(os.environ["PARAMS_PATH"],encoding="utf-8"))
 mode=params["mode"]; priors=params.get("priors") or {}; comps=params.get("compilations") or ["pantheon_plus","des_sn5yr"]
-loaders={"pantheon_plus":load_pantheon,"des_sn5yr":load_des}; bao=load_bao(); out=[]
+loaders={"pantheon_plus":load_pantheon,"des_sn5yr":load_des,"union3":load_union3}; bao=load_bao(); out=[]
 for cname in comps:
     sn=loaders[cname](); p0,d0=dchi(bao,sn,priors); row={"compilation":sn["name"],"full":{"params":p0,"delta_chi2":d0},"holds":[]}
     if mode=="redshift_jackknife":
