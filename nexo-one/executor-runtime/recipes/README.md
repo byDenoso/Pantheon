@@ -1,5 +1,7 @@
 # Receitas de teste (código revisado e congelado)
 
+O runner tem `camb==1.6.6` (pip, recombinação Recfast): `import camb` em qualquer receita. O CAMB exato do paper (CosmoRec, `runtime/portable_camb`) ainda não está no runner. Dados: URL oficial do release + hash; o Drive do Dener é só cópia de conferência.
+
 O Executor não manda código na proposta (o filtro do ChatGPT bloqueia). Em `TEST_BATTERY`, cada teste pode trazer
 `"recipe": "<nome>"` + `"params": {...}`; `script` inline é rejeitado. O runner roda `recipes/<nome>.py` com `PARAMS_PATH` e grava em `RESULT_PATH`.
 

@@ -29,6 +29,11 @@ def main() -> int:
     if not np.allclose(solution, np.array([2.0, 3.0]), atol=1e-10):
         raise RuntimeError("scipy_numeric_check_failed")
 
+    import camb  # pip CAMB (Recfast); the exact CosmoRec build is runtime/portable_camb
+    res = camb.get_results(camb.set_params(H0=67.4, ombh2=0.0224, omch2=0.12, As=2.1e-9, ns=0.965))
+    if abs(res.get_derived_params()["thetastar"] - 1.0412) > 0.001:
+        raise RuntimeError("camb_thetastar_check_failed")
+
     frame = pd.DataFrame({"x": np.arange(5, dtype=float)})
     if float(frame["x"].mean()) != 2.0:
         raise RuntimeError("pandas_check_failed")

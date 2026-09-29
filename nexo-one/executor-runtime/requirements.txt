@@ -4,3 +4,4 @@ numpy>=2.0,<3
 scipy>=1.13,<2
 pandas>=2.2,<4
 requests>=2.32,<3
+camb==1.6.6
