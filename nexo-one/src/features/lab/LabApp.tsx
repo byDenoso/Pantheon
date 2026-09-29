@@ -251,6 +251,7 @@ function Now({ lab, state, onReplay, replayCount }: { lab: Lab; state: SystemSta
 
     <Monologue lab={lab} state={state} onReplay={onReplay} replayCount={replayCount} />
     <Board state={state} lab={lab} />
+    <Autonomy state={state} />
     <Families state={state} />
     <Calibration lab={lab} />
 
@@ -855,6 +856,31 @@ function Monologue({ lab, state, onReplay, replayCount }: { lab: Lab; state: Sys
 }
 
 /** Quanto o NEXO acerta das próprias previsões (congeladas antes de rodar). */
+// ---------- Autonomia: o que o ciclo fecha sem operador (métricas do livro, cap. 11)
+const pctOf = (v: number | null | undefined) => (v == null ? '—' : `${Math.round(v * 100)}%`);
+const FEATURE_PT: Record<string, string> = { units: 'número de faixas ou grupos', n_compilations: 'número de coleções de supernovas', has_union3: 'usa Union3', mode: 'modo da análise', recipe: 'receita' };
+function Autonomy({ state }: { state: SystemState }) {
+  const a = state.evolution?.autonomy;
+  if (!a || !a.results) return null;
+  const rules = (state.evolution?.learning?.rules ?? []).filter(r => r.state === 'ACTIVE');
+  const cells: [string, string, string][] = [
+    [pctOf(a.robot_share), 'feito só pelo robô', 'resultados das últimas 24h sem agente nem pessoa'],
+    [a.median_hours_to_result == null ? '—' : `${a.median_hours_to_result} h`, 'da ideia ao resultado', 'mediana'],
+    [pctOf(a.decisive_rate), 'testes que decidem', 'os outros terminam inconclusivos'],
+    [pctOf(a.contest_closure), 'positivos com veredito', 'confirmados ou derrubados por contestação'],
+    [pctOf(a.false_block_share), 'bloqueados', 'parte da fila parada por falta de dado ou receita'],
+  ];
+  return <Section title="O quanto o NEXO fecha sozinho" kicker={`${a.results} resultados nas últimas ${a.window_hours}h`} id="now-autonomy">
+    <dl className="aut-grid">{cells.map(([v, t, d]) => <div key={t}><dt>{v}</dt><dd><b>{t}</b><span>{d}</span></dd></div>)}</dl>
+    {rules.length > 0 && <>
+      <p className="hud-kicker" style={{ marginTop: 14 }}>Regras que o NEXO aprendeu sobre como pesquisar</p>
+      <ul className="fam-list">{rules.map(r => <li key={`${r.feature}=${r.value}`}>
+        <b>{FEATURE_PT[r.feature] ?? r.feature}: {r.value}</b>
+        <span>termina inconclusivo em {pctOf(r.inconclusive_rate)} das vezes · previsão certa em {pctOf(r.holdout_accuracy)} contra {pctOf(r.baseline)} sem a regra · esses testes passam para o fim da fila</span>
+      </li>)}</ul></>}
+  </Section>;
+}
+
 // ---------- Famílias: grades de testes que o robô roda sozinho
 const CLOSE_PT: Record<string, string> = { EXHAUSTED: 'grade completa sem decisão', SUCCESS: 'sustentada (2 promovidos)', KILL: 'derrubada (2 rejeitados)', ROADMAP_CLOSED: 'roteiro fechado' };
 function Families({ state }: { state: SystemState }) {

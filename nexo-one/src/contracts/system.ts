@@ -449,6 +449,15 @@ export interface EvolutionStatus {
   /** Pre-registered test families the robot runs by itself. */
   families?: { family_id: string; state: string; close_reason?: string | null; recipe: string; display_name?: string | null;
                cells: number; tests: number; done: number; promoted: number; rejected: number; inconclusive: number }[];
+  /** Procedural learning: strategy rules the robot promoted after beating a baseline on a temporal holdout. */
+  learning?: { rules: { feature: string; value: string; state: string; inconclusive_rate?: number; holdout_accuracy?: number;
+                        baseline?: number; gain?: number; op?: string }[];
+               evaluated?: { cases?: number; holdout?: number; baseline?: number; note?: string } | null };
+  /** Look-elsewhere register: comparisons opened per roadmap/family. */
+  search_space?: Record<string, { comparisons: number; positives: number; chance_any_positive: number; expected_by_chance: number; excess_positives: number }>;
+  /** Autonomy vector: what the loop closes without an operator. */
+  autonomy?: { window_hours: number; results: number; robot_share: number | null; decisive_rate: number | null; median_hours_to_result: number | null;
+               contest_closure: number | null; recovery_rate: number | null; false_block_share: number | null };
   /** Recipes whose circuit is open after repeated crashes. */
   recipe_health?: Record<string, { state: string; consecutive_bugs?: number; last_test?: string }>;
 }
