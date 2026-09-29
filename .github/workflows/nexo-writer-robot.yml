@@ -399,3 +399,11 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: gh workflow run nexo-one-pages.yml --ref main
+
+      - name: Run the health alarm (hourly; GitHub drops the alarm's own schedule)
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          last=$(gh api "repos/${GITHUB_REPOSITORY}/actions/workflows/nexo-alert.yml/runs?per_page=1" --jq '.workflow_runs[0].created_at // "1970-01-01T00:00:00Z"')
+          if [ $(( $(date -u +%s) - $(date -u -d "$last" +%s) )) -ge 3000 ]; then gh workflow run nexo-alert.yml --ref main && echo "alarm dispatched"; else echo "alarm ran recently"; fi
