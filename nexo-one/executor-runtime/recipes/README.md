@@ -17,3 +17,6 @@ Receita nova: peça numa conversa ("NEXO: preciso de uma receita para …"); ela
 
 | `w0wa_bao_sn_multi` | robustez w0-wa em Pantheon+, DES-SN5YR e Union3 (`union3`) com DESI DR2 BAO; jackknife por faixa de redshift ou família BAO | `mode`, `compilations[]`, `priors{}`, e `bands[[zmin,zmax]]` ou `tracer_groups[{label,z[]}]` |\n| `late_time_joint_probe_stress` | família aprovada de stress tardio: jackknife SN/BAO, respostas de covariância/velocidade e fator comum de calibração; bindings faltantes ficam INCONCLUSIVE, sem substituição silenciosa | `mode`; jackknifes: `compilations[]`, `priors{}`, `bands[]`/`tracer_groups[]`; respostas: `response_sets` ou `response_sets_url`, `criterion`, `permutations` |
 | `tower_native` | testes META sobre o histórico do NEXO, lidos da projeção pública (só agregados, sem acesso à Tower): `mode` = `prediction_calibration`, `readiness_yield` ou `event_clock`; `min_per_stratum`, `min_cases`, `min_hypotheses`; amostra pequena = INCONCLUSIVE | `mode` |\n
+| `standard_sirens` | posteriores reais GWTC-3, combinações de eventos e duas escolhas de host K/BJ; mínimo de cinco combinações para decidir | `host_choices[]`, `combinations[][]`, `intervals{inverse,local}`, `shift_reference_h0{inverse,local}` |
+
+Sirenes: fontes, priors, limites e comandos em [docs/standard_sirens.md](docs/standard_sirens.md).
