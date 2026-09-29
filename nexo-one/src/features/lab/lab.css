@@ -850,3 +850,4 @@ details.tech .versus{margin-bottom:18px}
 .aut-grid dt{font:600 26px/1 var(--f-mono);color:var(--o-accent)}
 .aut-grid dd{margin:0;display:grid;gap:2px;font-size:13px}
 .aut-grid dd span{color:var(--o-dim);font-size:12px}
+.mono-times{font-style:normal;color:var(--o-dim)}

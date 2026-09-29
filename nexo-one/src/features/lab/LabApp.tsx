@@ -127,7 +127,7 @@ export default function LabApp({ state, route, theme }: { state: SystemState; ro
     <Intro />
     {cur && <div className="replay-caption" role="status" aria-live="polite">
       <span className="replay-clock">{new Date(cur.at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</span>
-      <p><b>{ROLE_PT[cur.role.toUpperCase()] ?? cur.role}</b> {narrate(cur, lab)}</p>
+      <p><b>{ROLE_PT[cur.role.toUpperCase()] ?? cur.role}</b> {narrate(cur, lab, state)}</p>
       <span className="replay-bar"><i style={{ width: `${((replay! + 1) / reel.length) * 100}%` }} /></span>
       <button type="button" onClick={() => { setReplay(null); setFocus([]); }}>✕ parar</button>
     </div>}
@@ -769,43 +769,55 @@ const ROLE_PT: Record<string, string> = {
   PITIA: 'Pítia', LEARNER: 'Learner', EXECUTOR: 'Executor', REFUTADOR: 'Refutador', REFEREE_1: 'Refutador', GUARDIAO: 'Guardião',
   DENER: 'Dener', CONVERSA: 'Conversa', WRITER_ROBOT: 'Robô escritor', SENTINEL: 'Pítia', ENGINEER: 'Engenheiro', CLAUDE: 'Claude', CHATGPT_CONVERSATION: 'Conversa',
 };
-/** Três tarefas agendadas vestem os seis papéis; o papel continua sendo quem assina cada ação. */
+/** Dez tarefas agendadas no ChatGPT Business; o papel continua sendo quem assina cada ação. */
 const TASKS: Array<{ id: string; name: string; hats: string[]; rhythm: string; does: string }> = [
-  { id: 'cientista', name: 'Cientista', hats: ['LEARNER', 'PITIA', 'SENTINEL'], rhythm: 'toda hora · :05', does: 'propõe hipóteses, nomeia testes, pensa e vigia a literatura' },
-  { id: 'operador', name: 'Operador', hats: ['EXECUTOR'], rhythm: 'toda hora · :20', does: 'monta as baterias, pede e escreve receitas, liga dados' },
-  { id: 'engenheiro', name: 'Engenheiro', hats: ['ENGINEER'], rhythm: 'a cada 2 horas · :50', does: 'escreve e conserta receitas, vigia o robô e a bateria' },
-  { id: 'critico', name: 'Crítico', hats: ['REFUTADOR', 'REFEREE_1'], rhythm: 'toda hora · :35', does: 'ataca resultados, julga os vereditos e escreve o bom-dia' },
-  { id: 'guardiao', name: 'Guardião', hats: ['GUARDIAO'], rhythm: 'toda hora · :57', does: 'audita a saúde, revisa receitas, fecha roadmaps e lista os bloqueios' },
+  { id: 'cientista', name: 'Cientista', hats: ['LEARNER'], rhythm: 'toda hora · :05', does: 'propõe hipóteses e famílias de testes, transfere métodos entre áreas' },
+  { id: 'pitia', name: 'Pítia', hats: ['PITIA'], rhythm: 'toda hora · :12', does: 'pensa, se surpreende, sonha e declara crise' },
+  { id: 'operador', name: 'Operador', hats: ['EXECUTOR'], rhythm: 'toda hora · :20 e :50', does: 'liga receitas e dados, manda testes para a bateria' },
+  { id: 'critico', name: 'Crítico', hats: ['REFUTADOR', 'REFEREE_1'], rhythm: 'toda hora · :35', does: 'ataca os resultados positivos' },
+  { id: 'engenheiro', name: 'Engenheiro', hats: ['ENGINEER'], rhythm: 'a cada 2 horas · :45', does: 'escreve e conserta receitas' },
+  { id: 'guardiao', name: 'Guardião', hats: ['GUARDIAO'], rhythm: 'toda hora · :57', does: 'audita a saúde, revisa receitas, planta iscas' },
+  { id: 'sentinela', name: 'Sentinela', hats: ['SENTINEL'], rhythm: 'todo dia · 07:30', does: 'lê o arXiv e ataca o que ficou velho' },
 ];
 const taskOf = (role: string) => TASKS.find(t => t.hats.includes(role.toUpperCase()));
 const roleLabel = (role: string) => { const t = taskOf(role); const r = ROLE_PT[role.toUpperCase()] ?? role; return t ? (t.name === r ? r : `${t.name} · ${r}`) : r; };
-const NARRATION: Record<string, string> = {
-  SEMANTIC_BACKFILLED: 'Dei nome e leitura simples a %q',
-  TEST_ENRICHED: 'Completei a ficha de %q',
-  LEARNING_SIGNAL_RECORDED: 'Anotei uma lacuna para resolver (receita ou dado que falta).',
-  TEST_DISPATCHED: 'Mandei para a bateria de testes: %q',
-  TEST_RESULT_RECORDED: 'Terminei um teste: %q',
-  ROADMAP_TEST_FROZEN: 'Congelei as regras antes de olhar os dados: %q',
-  RESULT_CONTESTED: 'Não confiei no meu próprio resultado e abri um ataque contra ele: %q',
-  RESULT_REFEREE1_PASSED: 'O resultado sobreviveu ao primeiro ataque: %q',
-  RESULT_REFUTED: 'Derrubei uma conclusão minha: %q',
-  RESULT_CONFIRMED: 'Confirmado depois de dois ataques independentes: %q',
-  HYPOTHESIS_UPSERTED: 'Tive uma ideia nova para testar: %q',
-  INTEGRITY_REPORT_RECORDED: 'Auditei a mim mesmo para ver se nada está corrompido.',
-  NEXO_THOUGHT_RECORDED: 'Parei para pensar sobre o que estou vendo.',
-  NEXO_THOUGHT_NOOP_RECORDED: 'Olhei tudo de novo e não vi nada que mereça atenção.',
-  TEST_BATTERY_DISPATCHED: 'Mandei uma bateria de testes rodar em paralelo.',
-  GENOME_MUTATION_PROPOSED: 'Propus mudar uma regra de como eu mesmo funciono.',
-  ROADMAP_CHARTERED: 'Recebi uma nova pergunta para investigar.',
+// Várias falas por evento: a escolha é estável por evento (hash), então a mesma linha não muda a cada render.
+const NARRATION: Record<string, string[]> = {
+  SEMANTIC_BACKFILLED: ['Dei nome e leitura simples a %q', 'Traduzi para português o que %q quer dizer', 'Arrumei a ficha de %q para qualquer pessoa entender'],
+  TEST_ENRICHED: ['Completei a ficha de %q', 'Preenchi o que faltava em %q', 'Deixei %q pronto para rodar'],
+  LEARNING_SIGNAL_RECORDED: ['Anotei uma lacuna: falta receita ou dado.', 'Achei um buraco no caminho e deixei registrado para o dono.', 'Pedi uma ferramenta que ainda não existe.', 'Marquei o que está segurando a fila.'],
+  TEST_DISPATCHED: ['Mandei para a bateria: %q', 'Coloquei %q para rodar', '%q saiu da fila e está calculando', 'Liguei a máquina em %q'],
+  TEST_RESULT_RECORDED: ['Terminei um teste: %q', 'Chegou o resultado de %q', '%q voltou da bateria', 'Fechei a conta de %q'],
+  ROADMAP_TEST_FROZEN: ['Congelei as regras antes de olhar os dados: %q', 'Travei o critério de %q antes de ver o resultado', 'Escrevi o que derrubaria %q antes de rodar'],
+  RESULT_CONTESTED: ['Não confiei no resultado e abri um ataque: %q', 'Fui atrás do ponto fraco de %q', 'Coloquei %q à prova com outro dado', 'Duvidei de %q e montei o contra-teste'],
+  RESULT_REFEREE1_PASSED: ['O resultado sobreviveu ao primeiro ataque: %q', '%q aguentou o primeiro golpe'],
+  RESULT_REFUTED: ['Derrubei uma conclusão minha: %q', '%q caiu no ataque', 'Errei em %q e agora sei onde'],
+  RESULT_CONFIRMED: ['Confirmado depois do ataque independente: %q', '%q resistiu e virou resultado firme', 'Outro dado, mesma resposta: %q'],
+  HYPOTHESIS_UPSERTED: ['Tive uma ideia nova para testar: %q', 'Nova pergunta na mesa: %q', 'E se %q?', 'Abri uma frente nova: %q'],
+  INTEGRITY_REPORT_RECORDED: ['Auditei a mim mesmo.', 'Conferi a saúde do sistema.', 'Passei o pente-fino: filas, papéis e robô.', 'Medi o quanto estou funcionando sozinho.', 'Chequei se algum agente parou.'],
+  NEXO_THOUGHT_RECORDED: ['Parei para pensar sobre o que estou vendo.', 'Uma coisa me chamou atenção.', 'Anotei uma ideia solta.'],
+  NEXO_THOUGHT_NOOP_RECORDED: ['Olhei tudo de novo; nada novo por agora.', 'Revisei os resultados recentes: sem surpresa.', 'Quieto por enquanto, nada fora do previsto.', 'Varri as últimas horas e nada pediu atenção.'],
+  TEST_BATTERY_DISPATCHED: ['Mandei uma bateria rodar em paralelo.', 'Soltei um lote de testes de uma vez.', 'Bateria no ar.'],
+  GENOME_MUTATION_PROPOSED: ['Propus mudar uma regra de como eu mesmo funciono.', 'Sugeri ajustar meu próprio procedimento.'],
+  ROADMAP_CHARTERED: ['Recebi uma nova pergunta para investigar.', 'Uma frente nova de pesquisa foi aberta.'],
+  BOARD_POSTED: ['Deixei um recado no mural.', 'Chamei outro agente no mural.'],
 };
+const pick = (pool: string[], seed: string) => { let h = 0; for (let i = 0; i < seed.length; i += 1) h = (h * 31 + seed.charCodeAt(i)) | 0; return pool[Math.abs(h) % pool.length]!; };
 /** Estrela que representa a entidade na teia (contestações apontam para o resultado atacado). */
 function starOf(lab: Lab, id: string): string | null {
   let t = lab.tests.get(id);
   for (let i = 0; t?.contestOf && i < 8; i += 1) t = lab.tests.get(t.contestOf) ?? undefined;
   return t ? t.id : null;
 }
-function narrate(e: { event_type: string; entity_id?: string }, lab: Lab): string {
-  let tpl = NARRATION[e.event_type] ?? `Registrei ${e.event_type.toLowerCase().replace(/_/g, ' ')}: %q`;
+function narrate(e: { event_type: string; entity_id?: string; at?: string }, lab: Lab, state?: SystemState): string {
+  // Texto real do agente quando existe: o pensamento da Pítia gravado no mesmo minuto.
+  if (e.event_type === 'NEXO_THOUGHT_RECORDED' && e.at && state) {
+    const t0 = Date.parse(e.at);
+    const th = (state.evolution?.thoughts ?? []).find(x => Math.abs(Date.parse(x.at) - t0) < 15 * 60e3);
+    if (th?.text) return humanize(clip(th.text, 180));
+  }
+  const pool = NARRATION[e.event_type];
+  let tpl = pool ? pick(pool, `${e.at ?? ''}${e.entity_id ?? ''}`) : `Registrei ${e.event_type.toLowerCase().replace(/_/g, ' ')}: %q`;
   const te = e.entity_id ? lab.tests.get(e.entity_id) : undefined;
   if (te && e.event_type === 'TEST_RESULT_RECORDED') {
     const p = (te.prereg.prediction as { p_promoted?: number } | null)?.p_promoted;
@@ -834,8 +846,16 @@ function Typewriter({ text }: { text: string }) {
   return <>{text.slice(0, n)}{n < text.length && <i className="caret" aria-hidden="true">▍</i>}</>;
 }
 
+type ActivityRow = { at: string; role: string; event_type: string; entity_id?: string; times?: number };
 function Monologue({ lab, state, onReplay, replayCount }: { lab: Lab; state: SystemState; onReplay: () => void; replayCount: number }) {
-  const recent = [...lab.activity].reverse().slice(0, 7);
+  // Rotina repetida (auditoria, NO-OP) vira uma linha só com a contagem.
+  const recent: Array<ActivityRow> = [];
+  for (const e of [...lab.activity].reverse()) {
+    const prev = recent[recent.length - 1];
+    if (prev && !e.entity_id && !prev.entity_id && prev.role === e.role && prev.event_type === e.event_type) { prev.times = (prev.times ?? 1) + 1; continue; }
+    recent.push({ ...e, times: 1 });
+    if (recent.length >= 8) break;
+  }
   const [, tick] = useState(0);
   useEffect(() => { const t = window.setInterval(() => tick(x => x + 1), 30000); return () => window.clearInterval(t); }, []);
   if (!recent.length) return null;
@@ -845,11 +865,11 @@ function Monologue({ lab, state, onReplay, replayCount }: { lab: Lab; state: Sys
     <p className="hud-kicker"><i className={`pulse-dot${quiet < 30 ? ' live' : ''}`} aria-hidden="true" />
       {quiet < 30 ? 'Ativo agora' : `Última ação ${ago(last.at)}`} · {lab.activity.filter(e => Date.now() - Date.parse(e.at) < 864e5).length} ações em 24 h</p>
     <h2 id="mono-title">Monólogo interno</h2>
-    <p className="mono-now"><b>{ROLE_PT[last.role.toUpperCase()] ?? last.role}</b> <Typewriter text={narrate(last, lab)} /></p>
+    <p className="mono-now"><b>{ROLE_PT[last.role.toUpperCase()] ?? last.role}</b> <Typewriter text={narrate(last, lab, state)} /></p>
     <ul className="mono-self">{selfLines(lab, state).map((l, i) => <li key={i}><i aria-hidden="true"><Icon n={l.icon} /></i>{l.link ? <a href={l.link}>{l.text}</a> : l.text}</li>)}</ul>
     <ol className="mono-log">{recent.slice(1).map((e, i) => <li key={i}>
       <time>{ago(e.at)}</time><b>{ROLE_PT[e.role.toUpperCase()] ?? e.role}</b>
-      <span>{e.entity_id ? <a href={labHref('entidade', e.entity_id)}>{narrate(e, lab)}</a> : narrate(e, lab)}</span>
+      <span>{e.entity_id ? <a href={labHref('entidade', e.entity_id)}>{narrate(e, lab, state)}</a> : narrate(e, lab, state)}{(e.times ?? 1) > 1 && <em className="mono-times"> · {e.times}×</em>}</span>
     </li>)}</ol>
     {replayCount > 0 && <button type="button" className="replay-btn" onClick={onReplay}>▶ Rever as últimas 24 h ({replayCount} ações)</button>}
   </section>;
@@ -1180,17 +1200,20 @@ function Telemetry({ lab, state }: { lab: Lab; state: SystemState }) {
     LEARNING_SIGNAL_RECORDED: n => `Anotei ${n} lacunas para resolver (receitas ou dados que faltam).`,
     TEST_DISPATCHED: n => `Mandei ${n} testes para a bateria.`,
     ROADMAP_TEST_FROZEN: n => `Congelei as regras de ${n} testes antes de olhar os dados.`,
+    INTEGRITY_REPORT_RECORDED: n => `Fiz ${n} auditorias seguidas; nada quebrou entre elas.`,
+    NEXO_THOUGHT_NOOP_RECORDED: n => `${n} passadas pelos resultados sem nada fora do previsto.`,
   };
+  const WINDOW: Record<string, number> = { INTEGRITY_REPORT_RECORDED: 12 * 3600e3, NEXO_THOUGHT_NOOP_RECORDED: 12 * 3600e3 };
   const raw = lab.activity.slice(-160);
   const grouped: Array<{ e: (typeof raw)[number]; n: number }> = [];
   for (const e of raw) {
     const last = grouped.at(-1);
     if (last && last.e.event_type === e.event_type && last.e.role === e.role && GROUP_PT[e.event_type]
-        && Math.abs(Date.parse(e.at) - Date.parse(last.e.at)) < 20 * 60e3) { last.n += Number((e as { count?: number }).count ?? 1); last.e = e; }
+        && Math.abs(Date.parse(e.at) - Date.parse(last.e.at)) < (WINDOW[e.event_type] ?? 20 * 60e3)) { last.n += Number((e as { count?: number }).count ?? 1); last.e = e; }
     else grouped.push({ e, n: Number((e as { count?: number }).count ?? 1) });
   }
   const acts = grouped.slice(-60).map(({ e, n }, i) => ({ kind: 'act' as const, at: e.at, who: roleLabel(String(e.role)), to: '',
-    text: n > 1 ? GROUP_PT[e.event_type]!(n) : narrate(e, lab), id: `${e.at}-${i}` }));
+    text: n > 1 ? GROUP_PT[e.event_type]!(n) : narrate(e, lab, state), id: `${e.at}-${i}` }));
   const feed = [...notes, ...acts].sort((a, b) => b.at.localeCompare(a.at)).slice(0, 50);
   const day = lab.activity.filter(e => now - Date.parse(e.at) < 864e5).length;
   return <aside className="telemetry" aria-label="Telemetria ao vivo">
