@@ -55,11 +55,16 @@ def load_des():
     lo=np.tril_indices(n,-1); inv[lo]=inv.T[lo]
     return {"name":"DES-SN5YR","z":z,"zhel":zh,"mu":mu,"cov":None,"prec":inv}
 
-UNION3_URL="https://raw.githubusercontent.com/rubind/union3_release/main/mu_mat_union3_cosmo=2_mu.fits"
+# Union3 (Rubin et al. 2023), release commit and file hash frozen.
+UNION3_URL="https://raw.githubusercontent.com/rubind/union3_release/f5c387349b68f3535fdabf0fbc4f45cd407f9084/mu_mat_union3_cosmo=2_mu.fits"
+UNION3_SHA256="ef98b7dde1025ee7134f3242aaea3f1f0ed3f2b29a718458c550a8e4e24d0349"
 
 def load_union3():
     """Union3 binned: FITS 23x23 float64, row 0 = z nodes, column 0 = mu, the rest = inverse covariance."""
-    b=fetch_bytes(UNION3_URL); h=b[:2880].decode()
+    import hashlib
+    b=fetch_bytes(UNION3_URL)
+    if hashlib.sha256(b).hexdigest()!=UNION3_SHA256: raise RuntimeError("Union3 file hash mismatch")
+    h=b[:2880].decode()
     kv={h[i:i+8].strip():h[i+10:i+30].strip() for i in range(0,2880,80) if h[i+8:i+10]=="= "}
     n1,n2=int(kv["NAXIS1"]),int(kv["NAXIS2"]); a=np.frombuffer(b[2880:2880+8*n1*n2],">f8").reshape(n2,n1).astype(float)
     z=a[0,1:]; prec=a[1:,1:]
