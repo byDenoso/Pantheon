@@ -1,0 +1,10 @@
+{
+  "mode": "tracer",
+  "bins": ["LRG_z0"],
+  "cases": {
+    "null": {
+      "cosmology": {"H0": 67.36, "omega_b": 0.02237, "omega_cdm": 0.12, "A_s": 2.0989e-9, "n_s": 0.9649, "m_ncdm": 0.06, "N_eff": 3.044, "tau_reio": 0.0544},
+      "geometry": {"w0_fld": -1.0, "wa_fld": 0.0}
+    }
+  }
+}

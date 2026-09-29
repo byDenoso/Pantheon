@@ -5,3 +5,10 @@ scipy>=1.13,<2
 pandas>=2.2,<4
 requests>=2.32,<3
 camb==1.6.6
+# DESI DR1 official one-loop REPT full-shape likelihood (no workflow changes).
+cobaya==3.6.2
+h5py==3.15.1
+pyfftw==0.15.1
+cosmoprimo @ git+https://github.com/cosmodesi/cosmoprimo@701f498eb936a172b91e0ccbd6f52f1770f7154c
+lsstypes @ git+https://github.com/adematti/lsstypes@db4842db0fd2084f5372015cfeb338fb1b04bda4
+velocileptors @ git+https://github.com/sfschen/velocileptors@02a06746dcc7ca7ba854118e7f31087dd1d9e509
