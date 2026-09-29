@@ -856,7 +856,7 @@ function Monologue({ lab, state, onReplay, replayCount }: { lab: Lab; state: Sys
 
 /** Quanto o NEXO acerta das próprias previsões (congeladas antes de rodar). */
 // ---------- Famílias: grades de testes que o robô roda sozinho
-const CLOSE_PT: Record<string, string> = { SUCCESS: 'sustentada (2 promovidos)', KILL: 'derrubada (2 rejeitados)', ROADMAP_CLOSED: 'roteiro fechado' };
+const CLOSE_PT: Record<string, string> = { EXHAUSTED: 'grade completa sem decisão', SUCCESS: 'sustentada (2 promovidos)', KILL: 'derrubada (2 rejeitados)', ROADMAP_CLOSED: 'roteiro fechado' };
 function Families({ state }: { state: SystemState }) {
   const fams = state.evolution?.families ?? [];
   const open = Object.keys(state.evolution?.recipe_health ?? {});
