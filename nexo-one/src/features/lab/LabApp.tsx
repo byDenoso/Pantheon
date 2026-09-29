@@ -1,5 +1,6 @@
 // NEXO Observatório: páginas em HUD sobre a teia cósmica.
 // Rotas: #/agora #/ciclo #/roadmaps #/roadmap/<id> #/evidencia[?v=] #/e/<id> #/saude
+import { NARRATION } from './narration';
 import { lazy, Suspense, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import type { SystemState } from '../../contracts/system.ts';
 import {
@@ -781,28 +782,9 @@ const TASKS: Array<{ id: string; name: string; hats: string[]; rhythm: string; d
 ];
 const taskOf = (role: string) => TASKS.find(t => t.hats.includes(role.toUpperCase()));
 const roleLabel = (role: string) => { const t = taskOf(role); const r = ROLE_PT[role.toUpperCase()] ?? role; return t ? (t.name === r ? r : `${t.name} · ${r}`) : r; };
-// Várias falas por evento: a escolha é estável por evento (hash), então a mesma linha não muda a cada render.
-const NARRATION: Record<string, string[]> = {
-  SEMANTIC_BACKFILLED: ['Dei nome e leitura simples a %q', 'Traduzi para português o que %q quer dizer', 'Arrumei a ficha de %q para qualquer pessoa entender'],
-  TEST_ENRICHED: ['Completei a ficha de %q', 'Preenchi o que faltava em %q', 'Deixei %q pronto para rodar'],
-  LEARNING_SIGNAL_RECORDED: ['Anotei uma lacuna: falta receita ou dado.', 'Achei um buraco no caminho e deixei registrado para o dono.', 'Pedi uma ferramenta que ainda não existe.', 'Marquei o que está segurando a fila.'],
-  TEST_DISPATCHED: ['Mandei para a bateria: %q', 'Coloquei %q para rodar', '%q saiu da fila e está calculando', 'Liguei a máquina em %q'],
-  TEST_RESULT_RECORDED: ['Terminei um teste: %q', 'Chegou o resultado de %q', '%q voltou da bateria', 'Fechei a conta de %q'],
-  ROADMAP_TEST_FROZEN: ['Congelei as regras antes de olhar os dados: %q', 'Travei o critério de %q antes de ver o resultado', 'Escrevi o que derrubaria %q antes de rodar'],
-  RESULT_CONTESTED: ['Não confiei no resultado e abri um ataque: %q', 'Fui atrás do ponto fraco de %q', 'Coloquei %q à prova com outro dado', 'Duvidei de %q e montei o contra-teste'],
-  RESULT_REFEREE1_PASSED: ['O resultado sobreviveu ao primeiro ataque: %q', '%q aguentou o primeiro golpe'],
-  RESULT_REFUTED: ['Derrubei uma conclusão minha: %q', '%q caiu no ataque', 'Errei em %q e agora sei onde'],
-  RESULT_CONFIRMED: ['Confirmado depois do ataque independente: %q', '%q resistiu e virou resultado firme', 'Outro dado, mesma resposta: %q'],
-  HYPOTHESIS_UPSERTED: ['Tive uma ideia nova para testar: %q', 'Nova pergunta na mesa: %q', 'E se %q?', 'Abri uma frente nova: %q'],
-  INTEGRITY_REPORT_RECORDED: ['Auditei a mim mesmo.', 'Conferi a saúde do sistema.', 'Passei o pente-fino: filas, papéis e robô.', 'Medi o quanto estou funcionando sozinho.', 'Chequei se algum agente parou.'],
-  NEXO_THOUGHT_RECORDED: ['Parei para pensar sobre o que estou vendo.', 'Uma coisa me chamou atenção.', 'Anotei uma ideia solta.'],
-  NEXO_THOUGHT_NOOP_RECORDED: ['Olhei tudo de novo; nada novo por agora.', 'Revisei os resultados recentes: sem surpresa.', 'Quieto por enquanto, nada fora do previsto.', 'Varri as últimas horas e nada pediu atenção.'],
-  TEST_BATTERY_DISPATCHED: ['Mandei uma bateria rodar em paralelo.', 'Soltei um lote de testes de uma vez.', 'Bateria no ar.'],
-  GENOME_MUTATION_PROPOSED: ['Propus mudar uma regra de como eu mesmo funciono.', 'Sugeri ajustar meu próprio procedimento.'],
-  ROADMAP_CHARTERED: ['Recebi uma nova pergunta para investigar.', 'Uma frente nova de pesquisa foi aberta.'],
-  BOARD_POSTED: ['Deixei um recado no mural.', 'Chamei outro agente no mural.'],
-};
-const pick = (pool: string[], seed: string) => { let h = 0; for (let i = 0; i < seed.length; i += 1) h = (h * 31 + seed.charCodeAt(i)) | 0; return pool[Math.abs(h) % pool.length]!; };
+// Sorteio probabilístico: cada carga da página sorteia de novo; dentro da visita a mesma linha não pisca.
+const NARRATION_SALT = Math.random().toString(36).slice(2);
+const pick = (pool: string[], seed: string) => { let h = 0; const k = seed + NARRATION_SALT; for (let i = 0; i < k.length; i += 1) h = (h * 31 + k.charCodeAt(i)) | 0; return pool[Math.abs(h) % pool.length]!; };
 /** Estrela que representa a entidade na teia (contestações apontam para o resultado atacado). */
 function starOf(lab: Lab, id: string): string | null {
   let t = lab.tests.get(id);
