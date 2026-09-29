@@ -90,3 +90,17 @@ test('science projection rejects records without source identity or a matching f
     contract: 'NEXO_SCIENCE_PROJECTION_V1', version: 1, source: {}, campaigns: [], hypotheses: [], tests: [], fingerprint: 'sha256:' + '0'.repeat(64),
   }), /source identity invalid/i);
 });
+
+test('live Tower data is cited by its Drive file and state revision, never by the stale vault commit', async () => {
+  // 2026-09-29: 8179 refs cited vault commit d955385 (2026-09-23) for data read from the live Drive Tower.
+  const { buildScienceProjectionV1, validateScienceProjectionV1, towerSourceRef } = await import('../scripts/science-projection-v1.mjs');
+  const live = { ...manifest, tower_file_id: 'FILE123', tower_revision: 'sha256:' + 'd'.repeat(64), source_storage: 'GOOGLE_DRIVE_PRIVATE' };
+  const output = buildScienceProjectionV1({ projection: { tests: [{ id: 'T-1', status: 'DONE', verdict: 'SUPPORTS' }] }, manifest: live });
+  validateScienceProjectionV1(output);
+  const refs = [];
+  JSON.stringify(output, (key, value) => { if (key === 'source_ref' || key === 'projection_ref') refs.push(value); return value; });
+  assert.ok(refs.length > 3);
+  for (const ref of refs) assert.match(ref, /^tower-live:\/\/FILE123@sha256:d{64}#TOWER_V06\//);
+  assert.equal(output.source.tower_commit, 'a'.repeat(40), 'legacy commit stays for the Pages readback gate');
+  assert.match(towerSourceRef(manifest, 'x.json'), /^tower:\/\/byDenoso\/NEXO-Obsidian-Vault@a{40}\/x\.json$/, 'legacy manifests keep the vault citation');
+});

@@ -27,8 +27,24 @@ function sourcePath(kind, id) {
   return `TOWER_V06/projections/public/projection.json#${safeKind}/${safeId}`;
 }
 
+/**
+ * Where a value really came from. A live Tower (Drive file + state revision) is cited as
+ * tower-live://<file_id>@<revision>#<path>; tower_commit is only a legacy vault pointer and
+ * citing it for live data claimed a 2026-09-23 vault commit for every field published later.
+ */
+/** Canonical Tower identities: a legacy vault commit or the live Drive file + revision. */
+export const isTowerRef = value => /^tower(-live)?:\/\//.test(String(value || ''));
+
+export function towerSourceRef(manifest, path) {
+  const cleanPath = String(path || '').replace(/^\/+/, '');
+  if (manifest?.tower_file_id && /^sha256:[0-9a-f]{64}$/i.test(String(manifest.tower_revision || ''))) {
+    return `tower-live://${manifest.tower_file_id}@${manifest.tower_revision}#${cleanPath}`;
+  }
+  return `tower://${manifest.tower_repository || 'byDenoso/NEXO-Obsidian-Vault'}@${manifest.tower_commit}/${cleanPath}`;
+}
+
 function envelope(value, present, unavailableReason, manifest, path, field) {
-  const sourceRef = `tower://${manifest.tower_repository || 'byDenoso/NEXO-Obsidian-Vault'}@${manifest.tower_commit}/${path}`;
+  const sourceRef = towerSourceRef(manifest, path);
   return {
     value: present ? value : null,
     unavailable_reason: present ? null : unavailableReason,
@@ -102,7 +118,7 @@ function makeRecord(record, kind, manifest, mapping) {
             ? normalizedStatus(record, config.names, config.reason, manifest, path)
             : field(source, config.names, config.reason, manifest, path, fieldName),
     ];
-  }), ['id', id], ['source_ref', `tower://${manifest.tower_repository || 'byDenoso/NEXO-Obsidian-Vault'}@${manifest.tower_commit}/${path}`], ['fingerprint', sha256({ source_fingerprint: manifest.projection_fingerprint, path })]]);
+  }), ['id', id], ['source_ref', towerSourceRef(manifest, path)], ['fingerprint', sha256({ source_fingerprint: manifest.projection_fingerprint, path })]]);
 }
 
 function mapRecords(records, kind, manifest, mapping) {
@@ -241,7 +257,7 @@ export function buildScienceProjectionV1({ projection, manifest } = {}) {
       tower_repository: manifest.tower_repository || 'byDenoso/NEXO-Obsidian-Vault',
       tower_commit: manifest.tower_commit,
       projection_fingerprint: manifest.projection_fingerprint,
-      projection_ref: `tower://${manifest.tower_repository || 'byDenoso/NEXO-Obsidian-Vault'}@${manifest.tower_commit}/TOWER_V06/projections/public/projection.json`,
+      projection_ref: towerSourceRef(manifest, 'TOWER_V06/projections/public/projection.json'),
       writeback: 'FORBIDDEN',
     },
     campaigns: mapRecords(projection?.campaigns, 'campaign', manifest, campaignFields),
@@ -257,7 +273,7 @@ function assertEnvelope(value, path) {
   if (!value || typeof value !== 'object' || Array.isArray(value) || !Object.hasOwn(value, 'value') || !Object.hasOwn(value, 'unavailable_reason')) {
     reject(`${path} must be a value/reason envelope`);
   }
-  if (typeof value.source_ref !== 'string' || !value.source_ref.startsWith('tower://')) reject(`${path} source_ref missing`);
+  if (typeof value.source_ref !== 'string' || !isTowerRef(value.source_ref)) reject(`${path} source_ref missing`);
   if (!/^sha256:[0-9a-f]{64}$/i.test(String(value.fingerprint || ''))) reject(`${path} fingerprint invalid`);
   if (value.value === null && (typeof value.unavailable_reason !== 'string' || !value.unavailable_reason.trim())) reject(`${path} null value requires an unavailable reason`);
   if (value.value !== null && value.unavailable_reason !== null) reject(`${path} published value cannot have an unavailable reason`);
@@ -268,7 +284,7 @@ export function validateScienceProjectionV1(output) {
   if (output.source?.authority !== 'TOWER_V06' || output.source?.writeback !== 'FORBIDDEN'
     || !/^sha256:[0-9a-f]{64}$/i.test(String(output.source?.projection_fingerprint || ''))
     || !String(output.source?.tower_commit || '').match(/^[0-9a-f]{40}$/i)
-    || !String(output.source?.projection_ref || '').startsWith('tower://')) reject('source identity invalid');
+    || !isTowerRef(output.source?.projection_ref)) reject('source identity invalid');
   for (const collection of ['campaigns', 'hypotheses', 'tests']) {
     if (!Array.isArray(output[collection])) reject(`${collection} must be an array`);
     const allowedFields = {
@@ -278,7 +294,7 @@ export function validateScienceProjectionV1(output) {
     }[collection];
     for (const record of output[collection]) {
       if (!record || typeof record.id !== 'string') reject(`${collection} record identity missing`);
-      if (!String(record.source_ref || '').startsWith('tower://')) reject(`${collection}.${record.id} source_ref missing`);
+      if (!isTowerRef(record.source_ref)) reject(`${collection}.${record.id} source_ref missing`);
       if (!/^sha256:[0-9a-f]{64}$/i.test(String(record.fingerprint || ''))) reject(`${collection}.${record.id} fingerprint invalid`);
       const unknownFields = Object.keys(record).filter(key => !['id', 'source_ref', 'fingerprint', ...allowedFields].includes(key));
       if (unknownFields.length) reject(`${collection}.${record.id} contains uncontracted fields: ${unknownFields.join(',')}`);
