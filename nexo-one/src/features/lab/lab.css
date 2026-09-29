@@ -814,3 +814,22 @@ details.tech .versus{margin-bottom:18px}
   .observatory.exploring .obs-scene{left:84px!important;right:0!important}
   .observatory .obs-tools{right:356px!important}
 }
+
+
+/* ===== "Só a página": sem a teia atrás; o painel ocupa a tela ===== */
+.observatory.flat{background:var(--o-void)}
+.observatory.flat .obs-scene,.observatory.flat .explore-toggle{display:none!important}
+.observatory.flat .hud{pointer-events:auto}
+@media (min-width:761px){.observatory.flat .hud{margin:0 auto;max-width:860px;padding-top:72px}}
+@media (max-width:760px){
+  .observatory.flat .hud{position:fixed;left:0;right:0;top:48px;bottom:56px;margin:0;max-width:none;overflow-y:auto;overscroll-behavior:contain;
+    -webkit-overflow-scrolling:touch;padding:56px 16px calc(40px + env(safe-area-inset-bottom));background:var(--o-void);z-index:2;pointer-events:auto}
+  .observatory.flat .obs-tools{top:58px}
+  /* celular com a teia: janela menor, mais espaço para ler */
+  .observatory:not(.exploring):not(.flat) .obs-scene{height:34vh}
+  .observatory:not(.exploring):not(.flat) .hud{top:calc(48px + 34vh);padding-bottom:calc(40px + env(safe-area-inset-bottom))}
+  .observatory:not(.exploring):not(.flat) .explore-toggle{top:calc(48px + 34vh - 52px)}
+  .obs-tools{gap:6px}
+  .obs-tools button .bt{display:none}
+  .obs-tools button{padding:9px 11px;min-width:40px;justify-content:center}
+}

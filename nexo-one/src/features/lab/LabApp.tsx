@@ -62,6 +62,9 @@ export default function LabApp({ state, route, theme }: { state: SystemState; ro
   const tests = useMemo(() => [...lab.tests.values()].filter(t => !t.contestOf), [lab]);
   const [focus, setFocus] = useState<string[]>([]);
   const [explore, setExplore] = useState(false);
+  // "Só a página": sem a teia atrás (mais leve no celular e mais legível); lembrado neste aparelho.
+  const [flat, setFlat] = useState(() => { try { return localStorage.getItem('nexo.flat') === '1'; } catch { return false; } });
+  const toggleFlat = () => setFlat(x => { const n = !x; try { localStorage.setItem('nexo.flat', n ? '1' : '0'); } catch { /* sem armazenamento */ } if (n) setExplore(false); return n; });
   useEffect(() => { setExplore(false); }, [route.page, route.id]);
   useEffect(() => {
     const esc = (e: KeyboardEvent) => { if (e.key === 'Escape') setExplore(false); };
@@ -120,7 +123,7 @@ export default function LabApp({ state, route, theme }: { state: SystemState; ro
   })();
 
   const cur = replay !== null ? reel[replay] : null;
-  return <div className={`observatory${explore || replay !== null ? ' exploring' : ''}`} data-page={route.page}>
+  return <div className={`observatory${explore || replay !== null ? ' exploring' : ''}${flat ? ' flat' : ''}`} data-page={route.page}>
     <Intro />
     {cur && <div className="replay-caption" role="status" aria-live="polite">
       <span className="replay-clock">{new Date(cur.at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</span>
@@ -130,20 +133,22 @@ export default function LabApp({ state, route, theme }: { state: SystemState; ro
     </div>}
 
     <div className="obs-tools">
-  <button type="button" className="explore-toggle" aria-pressed={explore} onClick={() => setExplore(x => !x)}>
-      {explore ? <><i aria-hidden="true">✕</i><span className="bt">Voltar ao painel</span></> : <><i aria-hidden="true">⤢</i><span className="bt">Explorar a teia</span></>}</button>
+  {!flat && <button type="button" className="explore-toggle" aria-pressed={explore} onClick={() => setExplore(x => !x)}>
+      {explore ? <><i aria-hidden="true">✕</i><span className="bt">Voltar ao painel</span></> : <><i aria-hidden="true">⤢</i><span className="bt">Explorar a teia</span></>}</button>}
+      <button type="button" aria-pressed={flat} onClick={toggleFlat} title={flat ? 'Mostrar a teia atrás do painel' : 'Mostrar só a página, sem a teia'} aria-label={flat ? 'Mostrar a teia' : 'Mostrar só a página'}>
+        <Icon n="page" /><span className="bt">{flat ? 'Com a teia' : 'Só a página'}</span></button>
       <button type="button" onClick={() => setSearching(true)} title="Procurar (Ctrl K)" aria-label="Procurar"><Icon n="target" /><span className="bt">Procurar</span></button>
-      <button type="button" onClick={() => window.dispatchEvent(new Event('nexo:replay-formation'))} title="Volta a teia ao quase-uniforme e mostra, em ~3 minutos, os nós aglomerando e os vazios se expandindo" aria-label="Rever a formação da teia">
-        <Icon n="spark" /><span className="bt">Rever formação</span></button>
-      <QualityButton />
+      {!flat && <button type="button" onClick={() => window.dispatchEvent(new Event('nexo:replay-formation'))} title="Volta a teia ao quase-uniforme e mostra, em ~3 minutos, os nós aglomerando e os vazios se expandindo" aria-label="Rever a formação da teia">
+        <Icon n="replay" /><span className="bt">Rever formação</span></button>}
+      {!flat && <QualityButton />}
       <button type="button" aria-pressed={sound} onClick={() => setSound(x => !x)} title="Som ambiente" aria-label="Som ambiente"><Icon n={sound ? 'sound' : 'mute'} /><span className="bt">{sound ? 'Som ligado' : 'Som'}</span></button>
     </div>
     {searching && <Search lab={lab} onClose={() => setSearching(false)} />}
     {explore && <p className="explore-hint" role="status">Arraste para girar · roda ou pinça para zoom · botão direito, Shift ou 2 dedos para mover · duplo clique recentra · Esc sai</p>}
-    <Suspense fallback={<div className="obs-scene obs-scene--loading" />}>
+    {!flat && <Suspense fallback={<div className="obs-scene obs-scene--loading" />}>
       <ObservatoryScene explore={explore || replay !== null} hot={hot} tests={tests} events={events} page={route.page} focusIds={focus} theme={theme}
         onPick={id => { window.location.hash = labHref('entidade', id); }} />
-    </Suspense>
+    </Suspense>}
     <div className="hud" key={`${route.page}:${route.id ?? ''}`}>{page}<Acoustic /></div>
     <Telemetry lab={lab} state={state} />
   </div>;
@@ -975,6 +980,9 @@ const ICON: Record<string, string> = {
   cross: 'M4 4l8 8M12 4l-8 8',
   even: 'M3 6.5h10M3 9.5h10',
   spark: 'M9 1.5 3.5 9H8l-1 5.5L12.5 7H8z',
+  gear: 'M8 5.5a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5ZM8 1.8v1.6M8 12.6v1.6M1.8 8h1.6M12.6 8h1.6M3.6 3.6l1.1 1.1M11.3 11.3l1.1 1.1M3.6 12.4l1.1-1.1M11.3 4.7l1.1-1.1',
+  replay: 'M3 8a5 5 0 1 0 1.6-3.7M3 2.5v2.8h2.8',
+  page: 'M4 2.5h6l2 2v9H4zM6 7h4M6 9.5h4',
   target: 'M8 2a6 6 0 1 0 0 12A6 6 0 0 0 8 2Zm0 3a3 3 0 1 0 0 6 3 3 0 0 0 0-6Zm0 2.4a.6.6 0 1 0 0 1.2.6.6 0 0 0 0-1.2Z',
   shield: 'M8 1.8 13 3.8v3.7c0 3.1-2.1 5.3-5 6.7-2.9-1.4-5-3.6-5-6.7V3.8z',
   attack: 'M3 13 11 5M9 3h4v4M5.5 10.5l-2-2',
@@ -1154,7 +1162,7 @@ function QualityButton() {
     setQ(n); window.location.reload();
   };
   return <button type="button" onClick={next} title="Qualidade gráfica da teia (clique para trocar)" aria-label={`Qualidade gráfica: ${Q_LABEL[q]}`}>
-    <Icon n="spark" /><span className="bt">Qualidade: {Q_LABEL[q]}</span></button>;
+    <Icon n="gear" /><span className="bt">Qualidade: {Q_LABEL[q]}</span></button>;
 }
 
 // ---------- Cartão de resultado: números com leitura (e elipse w0–wa quando houver) ----------
