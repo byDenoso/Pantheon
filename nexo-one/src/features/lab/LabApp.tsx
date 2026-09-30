@@ -12,6 +12,7 @@ import { normDomain } from './domains.ts';
 import './lab.css';
 import '../../styles/atlas-cinematic.css';
 import { currentVerdictText, matchesSearch, boardMeta, readinessLabel, hasPublishedValue } from './presentation.ts';
+import { selectScienceFocus, scientificStatRows } from './science-presentation.ts';
 import { DependencyFlow } from './DependencyFlow.tsx';
 import { LiveNowPanel } from './LiveNowPanel.tsx';
 import { captureReading, publishedChanges, latestDelivery, eventLabel, focusEntities, type PublishedChange } from './live-state.ts';
@@ -195,21 +196,6 @@ function tally(list: TestEntity[]) {
   return { confirmed: by('CONFIRMED'), refuted: by('REFUTED'), review: by('PENDING_REVIEW') + by('CONTESTED') + by('REFEREE1_PASSED'),
     blocked: list.filter(t => t.verdict === 'BLOCKED').length, ready: list.filter(isReady).length, total: list.length };
 }
-/** Números científicos publicados de um teste (Δχ², p, σ, ΔBIC, ln B, w0, wa…), ignorando campos ausentes. */
-function numbersOf(t: TestEntity): Record<string, number> {
-  const out: Record<string, number> = {};
-  const scan = (o: unknown) => {
-    if (!o || typeof o !== 'object') return;
-    for (const [k, v] of Object.entries(o as Record<string, unknown>)) {
-      const n = typeof v === 'number' ? v : (v && typeof v === 'object' && typeof (v as { value?: unknown }).value === 'number') ? (v as { value: number }).value : null;
-      if (n !== null && Number.isFinite(n)) out[k] = n;
-    }
-  };
-  scan(t.statistics); scan((t.result as { statistics?: unknown } | null)?.statistics); scan(t.result);
-  return out;
-}
-const hasNumbers = (t: TestEntity) => Object.keys(numbersOf(t)).some(k => /chi2|p_value|sigma|bic|bayes|w0|wa|shift/.test(k));
-
 // ---------- Agora ----------
 function Now({ lab, state, onReplay, replayCount }: { lab: Lab; state: SystemState; onReplay: () => void; replayCount: number }) {
   const ev = state.evolution;
@@ -234,9 +220,7 @@ function Now({ lab, state, onReplay, replayCount }: { lab: Lab; state: SystemSta
   const all = [...lab.tests.values()].filter(t => !t.contestOf);
   const sci = all.filter(isScience), self = all.filter(isSelf);
   const S = tally(sci), E2 = tally(self);
-  const byTime = (a: TestEntity, b: TestEntity) => String(b.executedAt ?? b.createdAt ?? '').localeCompare(String(a.executedAt ?? a.createdAt ?? ''));
-  const latest = sci.filter(t => t.meaning && t.verdict !== 'READY' && t.verdict !== 'BLOCKED').sort(byTime)[0];
-  const focus = sci.filter(hasNumbers).sort(byTime)[0] ?? latest;
+  const focus = selectScienceFocus(sci);
   const warnings = g?.failing_areas.length ?? 0;
   void d; void review; void resolved; void discovery;
   return <>
@@ -249,9 +233,9 @@ function Now({ lab, state, onReplay, replayCount }: { lab: Lab; state: SystemSta
       </p>
       <span className="sig-prompt" aria-hidden="true"><b>nexo@atlas</b>:<i>~</i>$ observe --agora</span>
       <h1>O NEXO <em>agora</em></h1>
-      {latest
-        ? <p className="thesis">Último achado científico: <E id={latest.id}>{latest.name}</E>. <span>{humanize(latest.meaning ?? "")}</span></p>
-        : <p className="thesis">Ainda sem achado científico publicado; {S.ready} testes esperam para rodar.</p>}
+      {focus
+        ? <p className="thesis">Resultado científico em destaque: <E id={focus.test.id}>{focus.test.name}</E>. <span>{currentVerdictText(focus.test)}</span></p>
+        : <p className="thesis">Ainda sem resultado científico disponível para destaque; {S.ready} testes esperam para rodar.</p>}
     </header>
 
     <LiveNowPanel lab={lab} />
@@ -284,7 +268,7 @@ function Now({ lab, state, onReplay, replayCount }: { lab: Lab; state: SystemSta
       <p className="hud-note self-line">Autoengenharia (o NEXO estudando a si mesmo): <b>{E2.confirmed}</b> confirmados · <b>{E2.refuted}</b> refutados · <b>{E2.review}</b> em revisão.</p>
     </Section>
 
-    {focus && <ResultCard t={focus} />}
+    {focus && <ResultCard t={focus.test} selectionReason={focus.reason} />}
 
     <Frontiers lab={lab} />
 
@@ -1330,40 +1314,27 @@ function QualityButton() {
     <Icon n="gear" /><span className="bt">Qualidade: {Q_LABEL[q]}</span></button>;
 }
 
-// ---------- Cartão de resultado: números com leitura (e elipse w0–wa quando houver) ----------
-const STAT_PT: Record<string, (v: number) => [string, string]> = {
-  delta_chi2: v => [`Δχ² = ${v.toFixed(1)}`, v < -4 ? 'o modelo novo ajusta claramente melhor que o de referência' : v < 0 ? 'o modelo novo ajusta um pouco melhor' : 'o modelo de referência ajusta melhor'],
-  delta_chi2_lcdm_minus_w0wa: v => [`Δχ²(ΛCDM − w0wa) = ${v.toFixed(1)}`, v >= 4 ? 'dados preferem energia escura que muda' : 'preferência fraca'],
-  p_value: v => [`p = ${v < 0.001 ? v.toExponential(1) : v.toFixed(3)}`, v < 0.003 ? 'muito improvável por acaso' : v < 0.05 ? 'improvável por acaso' : 'compatível com acaso'],
-  sigma_raw: v => [`${v.toFixed(1)}σ`, 'significância bruta'],
-  sigma_lee: v => [`${v.toFixed(1)}σ`, 'significância corrigida por olhar em muitos lugares'],
-  delta_bic: v => [`ΔBIC = ${v.toFixed(1)}`, Math.abs(v) > 10 ? 'evidência forte' : Math.abs(v) > 6 ? 'evidência positiva' : 'evidência fraca'],
-  ln_bayes_factor: v => [`ln B = ${v.toFixed(2)}`, Math.abs(v) > 5 ? 'evidência forte (Jeffreys)' : Math.abs(v) > 2.5 ? 'evidência moderada' : 'evidência fraca'],
-  shift_sigma: v => [`deslocamento ${v.toFixed(1)}σ`, v < 1 ? 'o resultado quase não se move' : 'o resultado se move'],
-};
-const zFromP = (p: number) => { // bicaudal, aproximação suficiente para exibição
-  const q = Math.max(1e-12, Math.min(1, p)) / 2, t = Math.sqrt(-2 * Math.log(q));
-  return t - (2.515517 + 0.802853 * t + 0.010328 * t * t) / (1 + 1.432788 * t + 0.189269 * t * t + 0.001308 * t * t * t);
-};
-function ResultCard({ t }: { t: TestEntity }) {
-  const n = numbersOf(t);
-  const rows = Object.entries(n).filter(([k]) => STAT_PT[k]).map(([k, v]) => STAT_PT[k]!(v));
-  const sigma = n.sigma_lee ?? n.sigma_raw ?? (n.p_value !== undefined ? zFromP(n.p_value) : undefined);
+// ---------- Cartão de resultado: seleção editorial, revisão e números publicados ----------
+function ResultCard({ t, selectionReason }: { t: TestEntity; selectionReason: string }) {
+  const rows = scientificStatRows(t);
   const full = (t.result as { statistics?: { full?: Record<string, number>; subset?: Record<string, number> } } | null)?.statistics;
   const pt = full?.subset ?? full?.full;
   return <section className="hud-section result-card" aria-label="Resultado em foco">
     <h2>Resultado em foco</h2>
     <p className="rc-name"><E id={t.id}>{t.name}</E> <VerdictChip v={t.verdict} small /></p>
-    {t.meaning && <p className="rc-meaning">{humanize(t.meaning)}</p>}
-    {rows.length > 0 && <dl className="rc-stats">{rows.map(([a, b]) => <div key={a}><dt>{a}</dt><dd>{b}</dd></div>)}</dl>}
-    {sigma !== undefined && <div className="rc-gauge" aria-label={`Significância ${sigma.toFixed(1)} sigma`}>
-      <svg viewBox="0 0 300 34"><line x1="10" x2="290" y1="18" y2="18" className="g-axis" />
-        {[0, 1, 2, 3, 4, 5].map(k => <g key={k}><line x1={10 + k * 56} x2={10 + k * 56} y1="13" y2="23" className="g-tick" /><text x={10 + k * 56} y="33" className="g-lab">{k}σ</text></g>)}
-        <line x1={10 + 3 * 56} x2={10 + 5 * 56} y1="18" y2="18" className="g-disc" />
-        <circle cx={10 + Math.min(5, Math.max(0, sigma)) * 56} cy="18" r="6" className="g-dot" /></svg>
-      <span>{sigma >= 5 ? 'nível de descoberta' : sigma >= 3 ? 'indício' : 'abaixo de indício'}</span></div>}
-    {pt && typeof pt.w0 === 'number' && typeof pt.wa === 'number' && <W0WaPlot w0={pt.w0} wa={pt.wa} />}
-    {rows.length === 0 && sigma === undefined && <p className="hud-muted">Este teste ainda não publicou números; a leitura acima é qualitativa.</p>}
+    <p className="hud-note"><b>Por que este destaque:</b> {selectionReason}</p>
+    <p className="rc-meaning"><b>Veredito atual:</b> {currentVerdictText(t)}</p>
+    <p className="hud-note">Revisão publicada: {t.review ?? 'não publicada'} · Resultado bruto: {t.verdictRaw ?? 'não publicado'}</p>
+    {t.meaning && <p className="hud-note"><b>Interpretação registrada na execução:</b> {humanize(t.meaning)}</p>}
+    {hasPublishedValue(t.claimBoundary) && <p className="boundary"><b>Limite publicado da conclusão:</b> {text(t.claimBoundary)}</p>}
+    {hasPublishedValue(t.limitations) && <p className="hud-note"><b>Limitações publicadas:</b> {text(t.limitations)}</p>}
+    {rows.length > 0 && <dl className="rc-stats">{rows.map(([label, explanation]) => <div key={label}><dt>{label}</dt><dd>{explanation}</dd></div>)}</dl>}
+    {pt && typeof pt.w0 === 'number' && Number.isFinite(pt.w0) && typeof pt.wa === 'number' && Number.isFinite(pt.wa) && <>
+      <W0WaPlot w0={pt.w0} wa={pt.wa} />
+      <p className="hud-note">Ponto estimado publicado; incerteza e covariância não representadas.</p>
+    </>}
+    {rows.length === 0 && <p className="hud-muted">Nenhuma estatística resumida disponível neste cartão. Consulte o registro completo.</p>}
+    <E id={t.id}>abrir resultado, revisão e evidências →</E>
   </section>;
 }
 function W0WaPlot({ w0, wa }: { w0: number; wa: number }) {
@@ -1372,7 +1343,6 @@ function W0WaPlot({ w0, wa }: { w0: number; wa: number }) {
     <line x1="20" x2="260" y1={Y(0)} y2={Y(0)} className="g-axis" /><line x1={X(-1)} x2={X(-1)} y1="10" y2="110" className="g-axis" />
     <text x="262" y={Y(0) + 4} className="g-lab">wa=0</text><text x={X(-1) + 4} y="18" className="g-lab">w0=−1</text>
     <circle cx={X(-1)} cy={Y(0)} r="3.5" className="g-lcdm" /><text x={X(-1) + 6} y={Y(0) - 6} className="g-lab">ΛCDM</text>
-    <ellipse cx={X(w0)} cy={Y(wa)} rx="14" ry="22" className="g-ell" transform={`rotate(-28 ${X(w0)} ${Y(wa)})`} />
     <circle cx={X(w0)} cy={Y(wa)} r="3" className="g-dot" />
   </svg>;
 }

@@ -23,7 +23,7 @@ export function currentVerdictText(test: Pick<TestEntity, 'verdict' | 'verdictRa
     case 'RUNNING': return 'O teste está em processamento; ainda não há conclusão publicada desta execução.';
     case 'CHECKPOINTED': return 'A execução foi salva em um checkpoint; isso não equivale a um resultado concluído.';
     case 'DISCARDED': return 'O teste foi descartado no registro atual. Consulte os detalhes do contrato e da execução.';
-    default: return test.verdictRaw || test.meaning || hasPublishedValue(test.result) ? 'O resultado é provisório; ainda não está confirmado pela revisão publicada.' : 'O teste está registrado, mas o resultado científico ainda não foi publicado nesta leitura.';
+    default: return test.verdictRaw?.toUpperCase() === 'INCONCLUSIVE' ? 'A execução registrou um resultado inconclusivo. Ainda não há confirmação pela revisão publicada.' : test.verdictRaw || test.meaning || hasPublishedValue(test.result) ? 'O resultado é provisório; ainda não está confirmado pela revisão publicada.' : 'O teste está registrado, mas o resultado científico ainda não foi publicado nesta leitura.';
   }
 }
 
