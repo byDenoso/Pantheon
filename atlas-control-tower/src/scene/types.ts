@@ -58,7 +58,7 @@ function hashSigned(value: string) {
 
 const HIERARCHY_EDGE_TYPES = new Set([
   'CONTAINS', 'PARENT_OF', 'HAS_CHILD', 'TESTS', 'PRODUCES', 'EXECUTED_AS',
-  'DERIVED_FROM', 'IMPLEMENTS', 'REPORTS_ON'
+  'DERIVED_FROM', 'IMPLEMENTS', 'REPORTS_ON', 'CONTEXT'
 ]);
 
 function legacyOrbitalPosition(node: AtlasNode, index: number, count: number, presentationMode:PresentationMode): [number, number, number] {
