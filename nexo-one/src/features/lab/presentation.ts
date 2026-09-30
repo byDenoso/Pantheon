@@ -24,15 +24,15 @@ export function matchesSearch(query: string, ...fields: Array<string | null | un
 export interface BoardRecord {
   id: string; at: string; from: string; to: string; text: string;
   expires_at?: string | null; resolved_at?: string | null;
-  priority?: string | null; next_action?: string | null; owner?: string | null;
+  priority?: string | null; next_action?: string | null; owner?: string | null; status?: string | null; reply_to?: string | null;
 }
-export function boardMeta(post: BoardRecord, now: number) {
+export function boardMeta(post: BoardRecord, now: number, posts: BoardRecord[] = []) {
   const declaredAction = post.text.match(/(?:Próxim[oa] (?:aç[ãa]o|passo)|Aç[ãa]o esperada|Next action)\s*:\s*([^\n]+)/i)?.[1]?.trim();
   const declaredPriority = post.text.match(/(?:Prioridade|Priority)\s*:\s*([A-Za-z0-9_-]+)/i)?.[1];
   return {
     owner: post.owner || post.to,
     priority: post.priority || declaredPriority || 'Não informada',
-    status: post.resolved_at ? 'Resolvido' : post.expires_at && Date.parse(post.expires_at) <= now ? 'Expirado' : 'Aberto',
+    status: post.resolved_at ? 'Resolvido' : post.expires_at && Date.parse(post.expires_at) <= now ? 'Expirado' : posts.some(reply => reply.reply_to === post.id) ? 'Respondido' : /^(ACCEPTED|ACKNOWLEDGED)$/.test(post.status ?? '') ? 'Aceito' : 'Aberto',
     nextAction: post.next_action || declaredAction || null,
   };
 }

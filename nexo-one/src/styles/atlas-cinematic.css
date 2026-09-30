@@ -60,3 +60,25 @@
 @media(prefers-reduced-motion:reduce){
  .observatory *, .observatory *::before,.observatory *::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}
 }
+
+/* Published activity: motion is reserved for real source changes and RUNNING. */
+.observatory .live-now{border-color:rgba(212,191,149,.35)}
+.observatory .live-presence{display:flex;align-items:center;gap:10px;color:var(--o-ink)!important;font-size:17px!important}
+.observatory .live-presence i{width:7px;height:7px;border-radius:50%;flex:none;background:var(--o-quiet)}
+.observatory .live-presence .is-running{background:var(--v-confirmed);box-shadow:0 0 12px rgba(156,203,171,.35)}
+.observatory .live-work{list-style:none;padding:0;margin:12px 0;display:grid;gap:12px}
+.observatory .live-work li{display:grid;gap:4px}.observatory .live-work li span{font:12px/1.5 var(--f-mono);color:var(--o-dim)}
+.observatory .live-delivery{padding:12px 0;border-top:1px solid var(--o-line)}
+.observatory .live-delivery>span{font:11px/1.5 var(--f-mono);color:var(--o-accent)}
+.observatory .live-delivery p{margin:6px 0!important}
+.observatory .live-cadence{margin-top:14px!important;font-size:12px!important;color:var(--o-quiet)!important}
+.observatory .live-now summary{cursor:pointer;min-height:44px;padding:10px 0;color:var(--o-ink)}
+.observatory .published-changes{position:relative;border:1px solid var(--o-line);border-left:2px solid var(--o-accent);border-radius:10px;background:var(--o-panel);padding:14px 18px;margin:0 0 22px;animation:source-arrival .4s ease-out}
+.observatory .published-changes p{color:var(--o-ink);font-size:13px}.observatory .published-changes summary{color:var(--o-accent);cursor:pointer;padding:6px 0}
+.observatory .published-changes ul{list-style:none;padding:0;display:grid;gap:10px}.observatory .published-changes li{display:grid;gap:3px}.observatory .published-changes li span{font-size:12px;color:var(--o-dim)}
+.observatory .published-changes button{background:none;color:var(--o-dim);border:0;cursor:pointer;min-height:44px;padding:10px 0}
+.observatory .crew-continuity{display:grid;gap:10px;margin:12px 0;padding-top:10px;border-top:1px solid var(--o-line)}
+.observatory .crew-continuity p{font-size:12px!important;line-height:1.55!important;color:var(--o-dim)}
+.observatory .crew-continuity b{display:block;font:11px/1.5 var(--f-mono);color:var(--o-accent);margin-bottom:3px}
+@keyframes source-arrival{from{opacity:.6;transform:translateY(4px)}to{opacity:1;transform:none}}
+@media(prefers-reduced-motion:reduce){.observatory .published-changes{animation:none!important}}

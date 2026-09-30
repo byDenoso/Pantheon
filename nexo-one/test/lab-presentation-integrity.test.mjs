@@ -84,3 +84,19 @@ test('UI keeps current review and raw interpretation in separately labelled sect
   assert.match(ui, /sceneAvailable === true && <QualityButton/);
   assert.match(ui, /scrollPositions\.current\.get\(routeKey\)/);
 });
+
+test('accepted and replied board states require an explicit record', () => {
+  const now = Date.parse('2026-09-30T12:00:00Z');
+  const post = { id: 'P', at: '2026-09-30', from: 'PITIA', to: 'EXECUTOR', text: 'Verificar dados.' };
+  assert.equal(boardMeta(post, now).status, 'Aberto');
+  assert.equal(boardMeta({ ...post, status: 'ACCEPTED' }, now).status, 'Aceito');
+  assert.equal(boardMeta(post, now, [{ ...post, id: 'R', reply_to: 'P' }]).status, 'Respondido');
+  assert.equal(boardMeta({ ...post, resolved_at: '2026-09-30' }, now, [{ ...post, id: 'R', reply_to: 'P' }]).status, 'Resolvido');
+});
+
+test('Atlas filter groups cannot shrink into each other and footer overlays have separate lanes', async () => {
+  const css = await readFile(new URL('../src/atlas3d/atlas3d.css', import.meta.url), 'utf8');
+  assert.match(css, /\.atlas-graph-filters\{flex:none;width:max-content;min-width:max-content/);
+  assert.match(css, /\.atlas-layer-switch\) > button\{flex-shrink:0\}/);
+  assert.match(css, /\.atlas-interaction-hint\{left:16px;right:196px;bottom:72px/);
+});

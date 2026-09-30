@@ -12,6 +12,9 @@ import { normDomain } from './domains.ts';
 import './lab.css';
 import '../../styles/atlas-cinematic.css';
 import { currentVerdictText, matchesSearch, boardMeta, readinessLabel } from './presentation.ts';
+import { DependencyFlow } from './DependencyFlow.tsx';
+import { LiveNowPanel } from './LiveNowPanel.tsx';
+import { captureReading, publishedChanges, latestDelivery, eventLabel, focusEntities, type PublishedChange } from './live-state.ts';
 import { UniversePage, UniverseFrontierPage } from './UniversePage.tsx';
 
 const ObservatoryScene = lazy(() => import('./ObservatoryScene.tsx').then(m => ({ default: m.ObservatoryScene })));
@@ -64,6 +67,14 @@ export default function LabApp({ state, route, theme }: { state: SystemState; ro
   const lab = useMemo(() => buildLab(state), [state]);
   nameOf = (id: string) => lab.tests.get(id)?.name ?? lab.hypotheses.get(id)?.statement ?? lab.roadmaps.get(id)?.title ?? humanId(id);
   const tests = useMemo(() => [...lab.tests.values()].filter(t => !t.contestOf), [lab]);
+  const previousReading = useRef(captureReading(lab));
+  const [changes, setChanges] = useState<PublishedChange[]>([]);
+  const [changedAt, setChangedAt] = useState<string | null>(null);
+  useEffect(() => {
+    const next = publishedChanges(previousReading.current, lab);
+    previousReading.current = captureReading(lab);
+    if (next.length) { setChanges(next); setChangedAt(lab.generatedAt); }
+  }, [lab]);
   const [focus, setFocus] = useState<string[]>([]);
   const [explore, setExplore] = useState(false);
   const [sceneAvailable, setSceneAvailable] = useState<boolean | null>(null);
@@ -121,7 +132,7 @@ export default function LabApp({ state, route, theme }: { state: SystemState; ro
     window.addEventListener('keydown', esc); return () => window.removeEventListener('keydown', esc);
   }, []);
   useEffect(() => {
-    if (route.page === 'entidade' && route.id) setFocus([route.id]);
+    if (route.page === 'entidade' && route.id) setFocus(focusEntities(lab, route.id));
     else if (route.page === 'roadmap' && route.id) setFocus(lab.roadmaps.get(route.id)?.tests ?? []);
     else if (route.page === 'evidencia' && route.q) setFocus(tests.filter(t => t.verdict === route.q).map(t => t.id));
     else setFocus([]);
@@ -134,7 +145,7 @@ export default function LabApp({ state, route, theme }: { state: SystemState; ro
       case 'roadmaps': return <Roadmaps lab={lab} />;
       case 'roadmap': return <RoadmapPage lab={lab} id={route.id!} />;
       case 'evidencia': return <Evidence lab={lab} state={state} filter={route.q as Verdict | undefined} search={route.search} />;
-      case 'entidade': return <EntityPage lab={lab} id={route.id!} />;
+      case 'entidade': return <EntityPage lab={lab} state={state} id={route.id!} />;
       case 'saude': return <Health state={state} lab={lab} />;
       default: return <Now lab={lab} state={state} onReplay={() => { setExplore(false); setReplay(0); }} replayCount={reel.length} />;
     }
@@ -167,7 +178,7 @@ export default function LabApp({ state, route, theme }: { state: SystemState; ro
       <ObservatoryScene explore={explore || replay !== null} hot={hot} tests={tests} events={events} page={route.page} focusIds={focus} theme={theme}
         onAvailability={setSceneAvailable} onPick={id => { window.location.hash = labHref('entidade', id); }} />
     </Suspense>}
-    <div ref={hudRef} className="hud" key={`${route.page}:${route.id ?? ''}`} >{sceneAvailable === false && !flat && <p className="scene-fallback-note">Visualização leve · a teia 3D requer WebGL. Todas as páginas e evidências continuam disponíveis.</p>}{page}<Acoustic /></div>
+    <div ref={hudRef} className="hud" key={`${route.page}:${route.id ?? ''}`} >{changes.length > 0 && <aside className="published-changes" aria-label="Mudanças recebidas nesta visita"><p role="status">{changes.length} mudanças recebidas · fonte {ago(changedAt)}</p><details><summary>Ver o que mudou sem sair da página</summary><ul>{changes.slice(0, 12).map(change => <li key={change.id}><E id={change.id}>{change.name}</E><span>{change.kind === 'review' ? `${VERDICT_PT[change.before as Verdict] ?? change.before} → ${VERDICT_PT[change.after as Verdict] ?? change.after}` : change.kind === 'added' ? 'Novo teste publicado' : change.before ? `${change.before} → ${change.after}` : change.after}</span></li>)}</ul>{changes.length > 12 && <p>Mostrando 12 de {changes.length}. Consulte a Evidência para o estado completo.</p>}</details><button type="button" onClick={() => setChanges([])}>Dispensar aviso</button></aside>}{sceneAvailable === false && !flat && <p className="scene-fallback-note">Visualização leve · a teia 3D requer WebGL. Todas as páginas e evidências continuam disponíveis.</p>}{page}<Acoustic /></div>
     <Telemetry lab={lab} state={state} />
   </div>;
 }
@@ -240,6 +251,7 @@ function Now({ lab, state, onReplay, replayCount }: { lab: Lab; state: SystemSta
         : <p className="thesis">Ainda sem achado científico publicado; {S.ready} testes esperam para rodar.</p>}
     </header>
 
+    <LiveNowPanel lab={lab} />
     <GatePanel state={state} />
     {gate > 0 && !state.inbox?.some(i => i.kind === 'APROVAR') && <a className="hud-gate" href="#/ciclo">
       <strong>{gate}</strong><span>{gate === 1 ? 'decisão espera por você' : 'decisões esperam por você'}</span><em>abrir o portão →</em>
@@ -336,6 +348,8 @@ function AwaySummary({ lab, since }: { lab: Lab; since: string }) {
 
 // ---------- Busca (Ctrl/⌘ K) ----------
 function Search({ lab, state, onClose }: { lab: Lab; state: SystemState; onClose: () => void }) {
+  const previousFocus = useRef(document.activeElement as HTMLElement | null);
+  useEffect(() => () => { if (previousFocus.current?.isConnected) previousFocus.current.focus(); }, []);
   const [q, setQ] = useState('');
   const all = useMemo(() => [
     ...(state.cosmology_state?.frontiers ?? []).map(f => ({ id: f.id, label: f.title, sub: f.summary, kind: 'frente cosmológica', href: labHref('universo', f.id) })),
@@ -427,7 +441,7 @@ function Cycle({ lab, state }: { lab: Lab; state: SystemState }) {
       <p className="hud-note">A atividade é registrada por papel. Operadores A/B/C compartilham EXECUTOR; Guardião e Revisor de PR compartilham GUARDIAO. Os sinais abaixo não comprovam uma execução individual de cada automação.</p>
     </header>
 
-    <Crew lab={lab} />
+    <Crew lab={lab} state={state} />
 
     <div className="cycle" role="list" aria-label="Etapas do ciclo">
       {STAGES.map((s, i) => <div className="cycle-stage" role="listitem" key={s.key} style={{ ['--h' as string]: `${Math.max(6, (values[i]! / max) * 100)}%` }}>
@@ -596,7 +610,7 @@ const List = ({ items, empty }: { items: string[]; empty?: string }) =>
 const REVIEW_PT: Record<string, string> = { CONTEST: 'Contestação', VERDICT_REVIEW: 'Revisão do veredito' };
 const OUTCOME_PT: Record<string, string> = { PENDING: 'pendente', SURVIVED: 'sobreviveu', PASSED: 'passou', REFUTED: 'derrubou', FAILED: 'falhou', CONFIRMED: 'confirmou' };
 
-function EntityPage({ lab, id }: { lab: Lab; id: string }) {
+function EntityPage({ lab, state, id }: { lab: Lab; state: SystemState; id: string }) {
   const t = lab.tests.get(id) ?? lab.historicalTests?.get(id);
   const h = lab.hypotheses.get(id);
   if (!t && h) return <HypothesisView lab={lab} id={id} />;
@@ -642,6 +656,7 @@ function EntityPage({ lab, id }: { lab: Lab; id: string }) {
       {Boolean(t.claimBoundary) && <p className="boundary"><b>Limite da conclusão:</b> {text(t.claimBoundary)}</p>}
     </Section>}
 
+    <DependencyFlow test={t} lab={lab} state={state} />
     <details className="tech">
       <summary>Detalhes técnicos</summary>
       <div className="versus" role="group" aria-label="Prometido antes versus observado depois">
@@ -702,6 +717,7 @@ function HypothesisView({ lab, id }: { lab: Lab; id: string }) {
     <Section title="Formulação" id="hy-f"><dl className="fields">
       <Field label="Modelo" value={h.model} /><Field label="Linha de base" value={h.baseline} /><Field label="Como refutar" value={h.falsification} sealed /><Field label="Origem" value={h.origin} />
     </dl></Section>
+    <Section title="Relações desta hipótese" id="hy-rel"><p>{ts.length} testes vinculados · {ts.reduce((n, test) => n + test.contests.length, 0)} contestações registradas. A seleção destaca os testes vinculados na teia quando o 3D está disponível.</p><ul className="hud-list">{ts.filter(test => test.contests.length).map(test => <li key={test.id}><div><E id={test.id} /><p className="hud-refs">{test.contests.map(cid => <E key={cid} id={cid}>Ver ataque →</E>)}</p></div></li>)}</ul></Section>
     <Section title="Testes" kicker={`${ts.length}`} id="hy-t">
       <Bar parts={roadmapParts(lab, ts.map(t => t.id))} total={ts.length} />
       <ul className="hud-list">{ts.map(t => <li key={t.id}><VerdictChip v={t.verdict} small /><E id={t.id}>{t.question ?? humanId(t.id)}</E></li>)}</ul>
@@ -788,9 +804,9 @@ function sceneEvents(state: SystemState, lab: Lab): SceneEvents {
 }
 
 // ---------- raias do ciclo ----------
-const LANES: Array<[string, string]> = [['PITIA', 'Pítia'], ['LEARNER', 'Learner'], ['EXECUTOR', 'Executor'], ['REFUTADOR', 'Refutador'], ['GUARDIAO', 'Guardião'], ['DENER', 'Dener']];
-const LANE_ALIAS: Record<string, string> = { REFEREE_1: 'REFUTADOR', SENTINEL: 'PITIA' };
-const laneKey = (role: string) => LANE_ALIAS[role.toUpperCase()] ?? role.toUpperCase();
+const LANES: Array<[string, string]> = [['PITIA', 'Pítia'], ['LEARNER', 'Learner'], ['EXECUTOR', 'Executor'], ['REFUTADOR', 'Refutador'], ['GUARDIAO', 'Guardião'], ['ENGINEER', 'Engenheiro'], ['SENTINEL', 'Sentinela'], ['WRITER_ROBOT', 'Robô escritor'], ['DENER', 'Dener'], ['OTHER', 'Outros papéis']];
+const LANE_ALIAS: Record<string, string> = { REFEREE_1: 'REFUTADOR' };
+const laneKey = (role: string) => { const key = LANE_ALIAS[role.toUpperCase()] ?? role.toUpperCase(); return LANES.some(([id]) => id === key) ? key : 'OTHER'; };
 const EVENT_PT: Record<string, string> = {
   TEST_RESULT_RECORDED: 'registrou resultado', ROADMAP_TEST_FROZEN: 'congelou um teste (pré-registro)',
   RESULT_CONTESTED: 'contestou um resultado', RESULT_REFEREE1_PASSED: 'aprovou no Referee 1', RESULT_REFUTED: 'refutou um resultado',
@@ -1208,11 +1224,12 @@ function Board({ state, lab }: { state: SystemState; lab: Lab }) {
   const [all, setAll] = useState(false);
   const [owner, setOwner] = useState('');
   const [priority, setPriority] = useState('');
-  const [status, setStatus] = useState('Aberto');
+  const [status, setStatus] = useState('Pendentes');
   const [openIds, setOpenIds] = useState<Set<string>>(new Set());
-  const every = (state.evolution?.board ?? []).slice().reverse().map(post => ({ ...post, meta: boardMeta(post, now) }));
+  const raw = state.evolution?.board ?? [];
+  const every = raw.slice().reverse().map(post => ({ ...post, meta: boardMeta(post, now, raw) }));
   if (!every.length) return null;
-  const filtered = every.filter(p => (!owner || p.meta.owner === owner) && (!priority || p.meta.priority === priority) && (!status || p.meta.status === status));
+  const filtered = every.filter(p => (!owner || p.meta.owner === owner) && (!priority || p.meta.priority === priority) && (!status || (status === 'Pendentes' ? !['Resolvido', 'Expirado'].includes(p.meta.status) : p.meta.status === status)));
   const posts = all ? filtered : filtered.slice(0, 8);
   const who = (r: string) => (r === 'ALL' ? 'todos' : roleLabel(r));
   const toggle = (id: string) => setOpenIds(prev => { const n = new Set(prev); if (n.has(id)) n.delete(id); else n.add(id); return n; });
@@ -1220,7 +1237,7 @@ function Board({ state, lab }: { state: SystemState; lab: Lab }) {
     <div className="board-filters" role="group" aria-label="Filtrar mural">
       <label>Destino / responsável<select value={owner} onChange={e => { setOwner(e.target.value); setAll(false); }}><option value="">Todos</option>{[...new Set(every.map(p => p.meta.owner))].map(x => <option key={x} value={x}>{who(x)}</option>)}</select></label>
       <label>Prioridade<select value={priority} onChange={e => { setPriority(e.target.value); setAll(false); }}><option value="">Todas</option>{[...new Set(every.map(p => p.meta.priority))].map(x => <option key={x}>{x}</option>)}</select></label>
-      <label>Status<select value={status} onChange={e => { setStatus(e.target.value); setAll(false); }}><option value="">Todos</option>{['Aberto', 'Resolvido', 'Expirado'].map(x => <option key={x}>{x}</option>)}</select></label>
+      <label>Status<select value={status} onChange={e => { setStatus(e.target.value); setAll(false); }}><option value="">Todos</option>{['Pendentes', 'Aberto', 'Aceito', 'Respondido', 'Resolvido', 'Expirado'].map(x => <option key={x}>{x}</option>)}</select></label>
     </div>
     <p className="hud-note">O destino do recado só representa um responsável quando isso foi declarado. Prioridade e próxima ação vêm do registro ou de campos nomeados no texto.</p>
     {!posts.length && <p role="status">Nenhum recado com estes filtros.</p>}
@@ -1238,7 +1255,7 @@ function Board({ state, lab }: { state: SystemState; lab: Lab }) {
 }
 
 // ---------- Quem trabalha: as tarefas e o último sinal de vida de cada uma ----------
-function Crew({ lab }: { lab: Lab }) {
+function Crew({ lab, state }: { lab: Lab; state: SystemState }) {
   const now = Date.now();
   return <section className="crew" aria-label="Quem trabalha">
     {TASKS.map(t => {
@@ -1246,11 +1263,15 @@ function Crew({ lab }: { lab: Lab }) {
       const last = mine.at(-1);
       const day = mine.filter(e => now - Date.parse(e.at) < 24 * 3600e3).length;
       const quiet = !last || now - Date.parse(last.at) > 3 * 3600e3;
+      const delivery = latestDelivery(lab, t.hats);
+      const request = [...(state.evolution?.board ?? [])].reverse().find(p => t.hats.includes(p.to) && !p.resolved_at && (!p.expires_at || Date.parse(p.expires_at) > now));
+      const action = request ? boardMeta(request, now).nextAction : null;
       const sharedRole = TASKS.some(other => other.id !== t.id && other.hats.some(h => t.hats.includes(h)));
       return <article key={t.id} className={`crew-card${quiet ? ' quiet' : ''}`}>
         <p className="crew-top"><b>{t.name}</b><span>{t.rhythm}</span></p>
         <p className="crew-hats">{[...new Set(t.hats.map(h => ROLE_PT[h] ?? h))].join(' + ')}</p>
         <p className="crew-does">{t.does}</p>
+        <div className="crew-continuity"><p><b>Última entrega do papel</b>{delivery ? <>{eventLabel(delivery)} · {ago(delivery.at)}{delivery.entity_id && lab.tests.has(delivery.entity_id) && <> · <E id={delivery.entity_id} /></>}</> : 'Não publicada no histórico recebido'}</p><p><b>Pedido direcionado ao papel</b>{request ? <>{clip(humanize(nameIds(request.text, lab)), 170)}<a href="#/agora"> Ver mural →</a></> : 'Nenhum pedido aberto direcionado neste snapshot'}</p><p><b>Próxima ação declarada</b>{action ? humanize(nameIds(action, lab)) : 'Não publicada'}</p></div>
         <p className="crew-pulse"><i aria-hidden="true" />{last ? `${sharedRole ? 'telemetria do papel · ' : ''}último sinal ${ago(last.at)} · ${day} ações em 24 h` : 'ainda sem ações registradas'}</p>
       </article>;
     })}
