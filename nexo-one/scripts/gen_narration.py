@@ -99,14 +99,71 @@ ENDS = {
  "TEST_BATTERY_DISPATCHED": ["; volta em minutos", "; a vazão depende disso"],
 }
 
+MATRIX_SIZE = 90
+
+# A matriz permanece factual: os eixos extras só acrescentam contexto de registro,
+# nunca novos resultados, números, dados ou decisões científicas.
+HEAD_MOMENTS = [
+    "", "Nesta rodada,", "No meu turno,", "Neste ciclo,", "Nesta passagem,",
+    "Na atividade registrada,", "Ao fechar esta etapa,", "Na sequência do trabalho,",
+    "Durante esta etapa,", "No histórico desta ação,"
+]
+HEAD_CONTEXTS = [
+    "", "com o evento identificado,", "com hora registrada,", "com o contexto preservado,",
+    "com a origem vinculada,", "com o registro disponível,", "com a atividade rastreável,",
+    "com o item identificado,", "com a sequência preservada,", "com o estado documentado,"
+]
+TAIL_TRACES = [
+    "", "; ficou registrado", "; entrou no histórico", "; a ficha preserva a ação",
+    "; o evento ficou rastreável", "; o registro pode ser conferido", "; a origem ficou vinculada",
+    "; a hora ficou preservada", "; o estado ficou documentado", "; a sequência ficou registrada"
+]
+TAIL_CONTEXTS = [
+    "", "; com o item identificado", "; com o contexto preservado", "; com a origem disponível",
+    "; com o vínculo mantido", "; com o registro da rodada", "; com a atividade identificada",
+    "; com o estado disponível", "; com a sequência auditável", "; com o evento preservado"
+]
+
+
+def lower_first(text):
+    return text if text.startswith(("%q", "{")) else text[:1].lower() + text[1:]
+
+
+def unique(values):
+    return list(dict.fromkeys(values))
+
+
+def matrix_heads(cores):
+    values = []
+    for moment, context in itertools.product(HEAD_MOMENTS, HEAD_CONTEXTS):
+        prefix = " ".join(part for part in (moment, context) if part).strip()
+        if prefix:
+            prefix = prefix[:1].upper() + prefix[1:]
+        for core in cores:
+            values.append(f"{prefix} {lower_first(core)}".strip() if prefix else core)
+    return unique(values)[:MATRIX_SIZE]
+
+
+def matrix_tails(semantic_tails):
+    values = []
+    for trace, context in itertools.product(TAIL_TRACES, TAIL_CONTEXTS):
+        for tail in semantic_tails:
+            values.append(f"{tail}{trace}{context}.")
+    return unique(values)[:MATRIX_SIZE]
+
+
 out = {}
 for ev, (heads, tails) in E.items():
-    # A pontuação final entra aqui, uma vez, para toda combinação terminar com ponto.
     ends = [""] + ENDS.get(ev, [])
-    out[ev] = {"heads": heads, "tails": [t + e + "." for t in tails for e in ends if not (t.startswith(";") and e.startswith(";"))]}
+    semantic_tails = [t + e for t in tails for e in ends if not (t.startswith(";") and e.startswith(";"))]
+    matrix = {"heads": matrix_heads(heads), "tails": matrix_tails(semantic_tails)}
+    if len(matrix["heads"]) != MATRIX_SIZE or len(matrix["tails"]) != MATRIX_SIZE:
+        raise RuntimeError(f"{ev}: matriz incompleta {len(matrix['heads'])}x{len(matrix['tails'])}")
+    out[ev] = matrix
 
 NL = chr(10)
-ts = "// Gerado por nexo-one/scripts/gen_narration.py (NEXO): matriz cabeça x cauda por evento, sorteada a cada linha." + NL
+ts = "// Gerado por nexo-one/scripts/gen_narration.py (NEXO): matriz 90x90 por evento, sorteada a cada linha." + NL
+ts += f"export const NARRATION_MATRIX_SIZE = {MATRIX_SIZE};" + NL
 ts += "export const NARRATION: Record<string, { heads: string[]; tails: string[] }> = " + json.dumps(out, ensure_ascii=False, indent=1) + ";" + NL
 open(pathlib.Path(__file__).resolve().parents[1] / "src/features/lab/narration.ts", "w", encoding="utf-8", newline=NL).write(ts)
-print(sum(len(v["heads"]) * len(v["tails"]) for v in out.values()), "falas")
+print(sum(len(v["heads"]) * len(v["tails"]) for v in out.values()), "combinações")
