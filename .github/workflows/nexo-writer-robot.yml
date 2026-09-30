@@ -11,6 +11,7 @@ on:
     paths:
       - ".github/workflows/nexo-writer-robot.yml"
       - "nexo-wake/*.json"
+      - "nexo-control/execution-assessment-approvals.json"
 
 permissions:
   contents: write
@@ -316,6 +317,7 @@ jobs:
           json.dump(updates, open("/tmp/bat/updates.json", "w", encoding="utf-8"), ensure_ascii=False)
           print("battery runs seen", len(runs), "observations", len(updates))
           PY
+          python scripts/collect_execution_assessments.py --approvals nexo-control/execution-assessment-approvals.json --updates /tmp/bat/updates.json
 
       - name: Apply inbox to the Tower
         id: robot

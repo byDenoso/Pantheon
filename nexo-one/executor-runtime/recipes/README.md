@@ -18,3 +18,15 @@ Receita nova: peça numa conversa ("NEXO: preciso de uma receita para …"); ela
 | `w0wa_bao_sn_multi` | robustez w0-wa em Pantheon+, DES-SN5YR e Union3 (`union3`) com DESI DR1 ou DR2 BAO; jackknife por faixa de redshift ou família BAO | `mode`, `bao_release` (`dr1`/`dr2`), `compilations[]`, `priors{}`, e `bands[[zmin,zmax]]` ou `tracer_groups[{label,z[]}]` |\n| `late_time_joint_probe_stress` | família aprovada de stress tardio: jackknife SN/BAO, respostas de covariância/velocidade e fator comum de calibração; bindings faltantes ficam INCONCLUSIVE, sem substituição silenciosa | `mode`; jackknifes: `compilations[]`, `priors{}`, `bands[]`/`tracer_groups[]`; respostas: `response_sets` ou `response_sets_url`, `criterion`, `permutations` |
 | `tower_native` | testes META sobre o histórico do NEXO, lidos da projeção pública (só agregados, sem acesso à Tower): `mode` = `prediction_calibration`, `readiness_yield` ou `event_clock`; `min_per_stratum`, `min_cases`, `min_hypotheses`; amostra pequena = INCONCLUSIVE | `mode` |\n
 BAO DR1/DR2: versões, hashes, redshifts dos holdouts, limites e comandos em [docs/w0wa_bao_sn_multi.md](docs/w0wa_bao_sn_multi.md).
+
+
+### Audited historical execution assessments
+
+The Writer may attach the public `EXECUTION_OBSERVATION_ASSESSMENT_V1` overlay
+only after verifying an explicitly approved original runner artifact against the
+unchanged canonical observation. The raw historical verdict remains visible.
+`tower_native` excludes only a valid `OPERATIONAL_FAILURE_RECORDED_AS_RESULT`
+overlay with `scientific_result_eligible=false` from prediction calibration and
+readiness yield, reporting `excluded_operational_assessments`. Genuine scientific
+INCONCLUSIVE results and unknown/malformed overlays keep their existing treatment.
+No threshold, prediction timestamp or frozen test definition is changed.
