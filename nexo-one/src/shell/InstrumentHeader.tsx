@@ -16,9 +16,9 @@ const PATHS:Record<string,string>={
 export function ProductIcon({name,size=16}:{name:string;size?:number}){return <svg aria-hidden="true" width={size} height={size} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d={PATHS[name]||PATHS.cockpit}/></svg>}
 
 export function InstrumentHeader({
-  mode,view,theme,syncStatus,readAt,fingerprint,command,commandRef,onCommandChange,onCommandSubmit,onThemeToggle,onSync,onNavigate,onAccountClick,privateSession,syncMessage,watching,onForceSync,
+  mode,view,theme,syncStatus,readAt,generatedAt,fingerprint,command,commandRef,onCommandChange,onCommandSubmit,onThemeToggle,onSync,onNavigate,onAccountClick,privateSession,syncMessage,watching,onForceSync,
 }:{
-  mode:ProductMode;view:ViewId;theme:string;syncStatus:SyncStatus;readAt:string|null;fingerprint:string;command:string;
+  mode:ProductMode;view:ViewId;theme:string;syncStatus:SyncStatus;readAt:string|null;generatedAt?:string;fingerprint:string;command:string;
   commandRef:RefObject<HTMLInputElement|null>;onCommandChange:(value:string)=>void;onCommandSubmit:(event:FormEvent)=>void;
   onThemeToggle:()=>void;onSync:()=>void;onNavigate:(mode:ProductMode)=>void;onAccountClick?:()=>void;privateSession?:boolean;syncMessage?:string;watching?:boolean;onForceSync?:()=>void;
 }){
@@ -47,7 +47,7 @@ export function InstrumentHeader({
     <div className="instrument-provenance" title={fingerprint||'Aguardando a leitura mais recente'}>
       <span className="instrument-live-dot"/>
       <strong>Dados do NEXO</strong>
-      <span>Última leitura: {freshness}</span>
+      <span>Última leitura: {freshness}{generatedAt && <> · fonte {formatAge(generatedAt)}</>}</span>
       {fingerprint&&<details><summary>Ver assinatura desta versão</summary><code>{fingerprint}</code></details>}
     </div>
     <form className="instrument-search" onSubmit={onCommandSubmit}>

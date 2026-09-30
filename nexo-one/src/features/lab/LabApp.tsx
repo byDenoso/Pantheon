@@ -1,7 +1,7 @@
 // NEXO Observatório: páginas em HUD sobre a teia cósmica.
 // Rotas: #/agora #/ciclo #/roadmaps #/roadmap/<id> #/evidencia[?v=] #/e/<id> #/saude
 import { NARRATION } from './narration';
-import { lazy, Suspense, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { lazy, Suspense, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import type { SystemState } from '../../contracts/system.ts';
 import {
   ago, buildLab, guardianArea, humanId, readBaseline, VERDICT_GLYPH, VERDICT_ORDER, VERDICT_PT,
@@ -10,6 +10,8 @@ import {
 import type { ScenePage, SceneEvents } from './ObservatoryScene.tsx';
 import { normDomain } from './domains.ts';
 import './lab.css';
+import '../../styles/atlas-cinematic.css';
+import { currentVerdictText, matchesSearch, boardMeta, readinessLabel } from './presentation.ts';
 import { UniversePage, UniverseFrontierPage } from './UniversePage.tsx';
 
 const ObservatoryScene = lazy(() => import('./ObservatoryScene.tsx').then(m => ({ default: m.ObservatoryScene })));
@@ -64,6 +66,20 @@ export default function LabApp({ state, route, theme }: { state: SystemState; ro
   const tests = useMemo(() => [...lab.tests.values()].filter(t => !t.contestOf), [lab]);
   const [focus, setFocus] = useState<string[]>([]);
   const [explore, setExplore] = useState(false);
+  const [sceneAvailable, setSceneAvailable] = useState<boolean | null>(null);
+  const hudRef = useRef<HTMLDivElement>(null);
+  const scrollPositions = useRef(new Map<string, { page: number; hud: number }>());
+  const routeKey = `${route.page}:${route.id ?? ''}:${route.q ?? ''}:${route.search ?? ''}`;
+  useLayoutEffect(() => {
+    const hud = hudRef.current;
+    const saved = scrollPositions.current.get(routeKey);
+    window.scrollTo({ top: saved?.page ?? 0, behavior: 'instant' });
+    if (hud) hud.scrollTop = saved?.hud ?? 0;
+    const save = () => scrollPositions.current.set(routeKey, { page: window.scrollY, hud: hud?.scrollTop ?? 0 });
+    window.addEventListener('scroll', save, { passive: true });
+    hud?.addEventListener('scroll', save, { passive: true });
+    return () => { window.removeEventListener('scroll', save); hud?.removeEventListener('scroll', save); };
+  }, [routeKey]);
   // "Só a página": sem a teia atrás (mais leve no celular e mais legível); lembrado neste aparelho.
   const [flat, setFlat] = useState(() => { try { return localStorage.getItem('nexo.flat') === '1'; } catch { return false; } });
   const toggleFlat = () => setFlat(x => { const n = !x; try { localStorage.setItem('nexo.flat', n ? '1' : '0'); } catch { /* sem armazenamento */ } if (n) setExplore(false); return n; });
@@ -109,7 +125,6 @@ export default function LabApp({ state, route, theme }: { state: SystemState; ro
     else if (route.page === 'roadmap' && route.id) setFocus(lab.roadmaps.get(route.id)?.tests ?? []);
     else if (route.page === 'evidencia' && route.q) setFocus(tests.filter(t => t.verdict === route.q).map(t => t.id));
     else setFocus([]);
-    window.scrollTo({ top: 0 });
   }, [route.page, route.id, route.q, lab, tests]);
 
   const page = (() => {
@@ -118,7 +133,7 @@ export default function LabApp({ state, route, theme }: { state: SystemState; ro
       case 'ciclo': return <Cycle lab={lab} state={state} />;
       case 'roadmaps': return <Roadmaps lab={lab} />;
       case 'roadmap': return <RoadmapPage lab={lab} id={route.id!} />;
-      case 'evidencia': return <Evidence lab={lab} filter={route.q as Verdict | undefined} />;
+      case 'evidencia': return <Evidence lab={lab} state={state} filter={route.q as Verdict | undefined} search={route.search} />;
       case 'entidade': return <EntityPage lab={lab} id={route.id!} />;
       case 'saude': return <Health state={state} lab={lab} />;
       default: return <Now lab={lab} state={state} onReplay={() => { setExplore(false); setReplay(0); }} replayCount={reel.length} />;
@@ -126,7 +141,7 @@ export default function LabApp({ state, route, theme }: { state: SystemState; ro
   })();
 
   const cur = replay !== null ? reel[replay] : null;
-  return <div className={`observatory${explore || replay !== null ? ' exploring' : ''}${flat ? ' flat' : ''}`} data-page={route.page}>
+  return <div className={`observatory${sceneAvailable !== false && (explore || replay !== null) ? ' exploring' : ''}${flat ? ' flat' : ''}${sceneAvailable === false ? ' scene-unavailable' : ''}`} data-page={route.page}>
     <Intro />
     {cur && <div className="replay-caption" role="status" aria-live="polite">
       <span className="replay-clock">{new Date(cur.at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</span>
@@ -136,23 +151,23 @@ export default function LabApp({ state, route, theme }: { state: SystemState; ro
     </div>}
 
     <div className="obs-tools">
-  {!flat && <button type="button" className="explore-toggle" aria-pressed={explore} onClick={() => setExplore(x => !x)}>
+  {!flat && sceneAvailable === true && <button type="button" className="explore-toggle" aria-pressed={explore} onClick={() => setExplore(x => !x)}>
       {explore ? <><i aria-hidden="true">✕</i><span className="bt">Voltar ao painel</span></> : <><i aria-hidden="true">⤢</i><span className="bt">Explorar a teia</span></>}</button>}
-      <button type="button" aria-pressed={flat} onClick={toggleFlat} title={flat ? 'Mostrar a teia atrás do painel' : 'Mostrar só a página, sem a teia'} aria-label={flat ? 'Mostrar a teia' : 'Mostrar só a página'}>
-        <Icon n="page" /><span className="bt">{flat ? 'Com a teia' : 'Só a página'}</span></button>
+      {sceneAvailable !== false && <button type="button" aria-pressed={flat} onClick={toggleFlat} title={flat ? 'Mostrar a teia atrás do painel' : 'Mostrar só a página, sem a teia'} aria-label={flat ? 'Mostrar a teia' : 'Mostrar só a página'}>
+        <Icon n="page" /><span className="bt">{flat ? 'Com a teia' : 'Só a página'}</span></button>}
       <button type="button" onClick={() => setSearching(true)} title="Procurar (Ctrl K)" aria-label="Procurar"><Icon n="target" /><span className="bt">Procurar</span></button>
-      {!flat && <button type="button" onClick={() => window.dispatchEvent(new Event('nexo:replay-formation'))} title="Volta a teia ao quase-uniforme e mostra, em ~3 minutos, os nós aglomerando e os vazios se expandindo" aria-label="Rever a formação da teia">
+      {!flat && sceneAvailable === true && <button type="button" onClick={() => window.dispatchEvent(new Event('nexo:replay-formation'))} title="Volta a teia ao quase-uniforme e mostra, em ~3 minutos, os nós aglomerando e os vazios se expandindo" aria-label="Rever a formação da teia">
         <Icon n="replay" /><span className="bt">Rever formação</span></button>}
-      {!flat && <QualityButton />}
+      {!flat && sceneAvailable === true && <QualityButton />}
       <button type="button" aria-pressed={sound} onClick={() => setSound(x => !x)} title="Som ambiente" aria-label="Som ambiente"><Icon n={sound ? 'sound' : 'mute'} /><span className="bt">{sound ? 'Som ligado' : 'Som'}</span></button>
     </div>
-    {searching && <Search lab={lab} onClose={() => setSearching(false)} />}
+    {searching && <Search lab={lab} state={state} onClose={() => setSearching(false)} />}
     {explore && <p className="explore-hint" role="status">Arraste para girar · roda ou pinça para zoom · botão direito, Shift ou 2 dedos para mover · duplo clique recentra · Esc sai</p>}
     {!flat && <Suspense fallback={<div className="obs-scene obs-scene--loading" />}>
       <ObservatoryScene explore={explore || replay !== null} hot={hot} tests={tests} events={events} page={route.page} focusIds={focus} theme={theme}
-        onPick={id => { window.location.hash = labHref('entidade', id); }} />
+        onAvailability={setSceneAvailable} onPick={id => { window.location.hash = labHref('entidade', id); }} />
     </Suspense>}
-    <div className="hud" key={`${route.page}:${route.id ?? ''}`}>{page}<Acoustic /></div>
+    <div ref={hudRef} className="hud" key={`${route.page}:${route.id ?? ''}`} >{sceneAvailable === false && !flat && <p className="scene-fallback-note">Visualização leve · a teia 3D requer WebGL. Todas as páginas e evidências continuam disponíveis.</p>}{page}<Acoustic /></div>
     <Telemetry lab={lab} state={state} />
   </div>;
 }
@@ -230,6 +245,18 @@ function Now({ lab, state, onReplay, replayCount }: { lab: Lab; state: SystemSta
       <strong>{gate}</strong><span>{gate === 1 ? 'decisão espera por você' : 'decisões esperam por você'}</span><em>abrir o portão →</em>
     </a>}
 
+    <div className="hud-pair now-priorities">
+      <Section title="Problema principal" kicker={blocked.length ? `${blocked.length} testes parados` : 'Nenhum bloqueio'} id="now-problem">
+        {blocked.length
+          ? <><p className="hud-big">{blocked[0]!.blocker ?? blocked[0]!.summary ?? 'Motivo não publicado'}</p><E id={blocked[0]!.id}>investigar →</E></>
+          : <p className="hud-muted">Nada impedindo a fila agora.</p>}
+      </Section>
+      <Section title="Próximo movimento" kicker="Candidatos na fila · status READY" id="now-next">
+        {next.length ? <ol className="hud-list">{next.map(t => <li key={t.id}><div><E id={t.id}>{t.name}</E><small className="readiness-note">{readinessLabel(t)}</small></div></li>)}</ol>
+          : <p className="hud-muted">Nenhum candidato READY publicado nesta leitura.</p>}
+      </Section>
+    </div>
+
     {base && <AwaySummary lab={lab} since={base.at} />}
 
     <Section title="Ciência" kicker={`${S.total} testes de cosmologia e física`} id="now-sci">
@@ -258,17 +285,7 @@ function Now({ lab, state, onReplay, replayCount }: { lab: Lab; state: SystemSta
     <Families state={state} />
     <Calibration lab={lab} />
 
-    <div className="hud-pair">
-      <Section title="Problema principal" kicker={blocked.length ? `${blocked.length} testes parados` : 'Nenhum bloqueio'} id="now-problem">
-        {blocked.length
-          ? <><p className="hud-big">{blocked[0]!.blocker ?? blocked[0]!.summary ?? 'Motivo não publicado'}</p><E id={blocked[0]!.id}>investigar →</E></>
-          : <p className="hud-muted">Nada impedindo a fila agora.</p>}
-      </Section>
-      <Section title="Próximo movimento" kicker="Fila do Operador" id="now-next">
-        {next.length ? <ol className="hud-list">{next.map(t => <li key={t.id}><E id={t.id}>{t.name}</E></li>)}</ol>
-          : <p className="hud-muted">Fila vazia: o Cientista precisa gerar hipóteses.</p>}
-      </Section>
-    </div>
+
   </>;
 }
 
@@ -318,21 +335,28 @@ function AwaySummary({ lab, since }: { lab: Lab; since: string }) {
 }
 
 // ---------- Busca (Ctrl/⌘ K) ----------
-function Search({ lab, onClose }: { lab: Lab; onClose: () => void }) {
+function Search({ lab, state, onClose }: { lab: Lab; state: SystemState; onClose: () => void }) {
   const [q, setQ] = useState('');
   const all = useMemo(() => [
+    ...(state.cosmology_state?.frontiers ?? []).map(f => ({ id: f.id, label: f.title, sub: f.summary, kind: 'frente cosmológica', href: labHref('universo', f.id) })),
     ...[...lab.tests.values()].map(t => ({ id: t.id, label: t.name, sub: t.question ?? '', kind: 'teste', href: labHref('entidade', t.id) })),
     ...[...lab.hypotheses.values()].map(h => ({ id: h.id, label: h.statement ?? humanId(h.id), sub: '', kind: 'hipótese', href: labHref('entidade', h.id) })),
     ...[...lab.roadmaps.values()].map(r => ({ id: r.id, label: r.title ?? humanId(r.id), sub: '', kind: 'investigação', href: labHref('roadmap', r.id) })),
-  ], [lab]);
-  const norm = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
-  const hits = q.trim().length < 2 ? [] : all.filter(x => norm(`${x.label} ${x.sub}`).includes(norm(q.trim()))).slice(0, 12);
-  return <div className="search-veil" role="dialog" aria-label="Procurar" onClick={onClose}>
-    <div className="search-box" onClick={e => e.stopPropagation()}>
+  ], [lab, state.cosmology_state]);
+  const hits = q.trim().length < 2 ? [] : all.filter(x => matchesSearch(q, x.id, x.label, x.sub)).slice(0, 12);
+  return <div className="search-veil" role="dialog" aria-modal="true" aria-label="Procurar" onClick={onClose}>
+    <div className="search-box" onClick={e => e.stopPropagation()} onKeyDown={e => {
+      if (e.key !== 'Tab') return;
+      const items = Array.from(e.currentTarget.querySelectorAll<HTMLElement>('button, input, a[href]'));
+      const first = items[0], last = items.at(-1);
+      if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last?.focus(); }
+      else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first?.focus(); }
+    }}>
+      <button type="button" className="search-close" onClick={onClose}>Fechar busca</button>
       <input autoFocus value={q} onChange={e => setQ(e.target.value)} placeholder="Procurar teste, hipótese ou investigação…"
         onKeyDown={e => { if (e.key === 'Enter' && hits[0]) { window.location.hash = hits[0].href; onClose(); } }} />
       <ul>{hits.map(h => <li key={h.kind + h.id}><a href={h.href} onClick={onClose}><em>{h.kind}</em>{h.label}</a></li>)}</ul>
-      {q.trim().length >= 2 && !hits.length && <p className="hud-muted">Nada com esse nome.</p>}
+      {q.trim().length >= 2 && !hits.length && <p className="hud-muted">Nenhum resultado nesta projeção. Tente o nome da frente, parte da pergunta ou o ID.</p>}
     </div>
   </div>;
 }
@@ -400,6 +424,7 @@ function Cycle({ lab, state }: { lab: Lab; state: SystemState }) {
       <p className="hud-kicker">Geração {ev?.genome.generation ?? 0} · {ev?.decoys.planted ?? 0} iscas em campo</p>
       <h1>O ciclo fechado</h1>
       <p className="hud-lead">Onde o trabalho está acumulando: a altura mostra quantos itens estão em cada etapa.</p>
+      <p className="hud-note">A atividade é registrada por papel. Operadores A/B/C compartilham EXECUTOR; Guardião e Revisor de PR compartilham GUARDIAO. Os sinais abaixo não comprovam uma execução individual de cada automação.</p>
     </header>
 
     <Crew lab={lab} />
@@ -463,7 +488,7 @@ function Roadmaps({ lab }: { lab: Lab }) {
       <span className="rm-title">{r.title}{r.renewable && <em> · permanente</em>}</span>
       <span className="rm-q">{r.question}</span>
       <Bar parts={roadmapParts(lab, r.tests)} total={r.tests.length} />
-      <span className="rm-meta"><b>{r.confirmed}</b>/{r.target ?? '?'} confirmados · {r.used}/{r.maxTests ?? '?'} testes{r.stop ? ` · parado: ${r.stop}` : ''}</span>
+      <span className="rm-meta"><b>{r.confirmed}</b>/{r.target ?? '?'} confirmados · {r.tests.length} vinculados · orçamento {r.used ?? '—'}/{r.maxTests ?? '?'}{r.stop ? ` · parado: ${r.stop}` : ''}</span>
     </a></li>)}</ul>
   </>;
 }
@@ -476,7 +501,9 @@ function RoadmapPage({ lab, id }: { lab: Lab; id: string }) {
   tests.forEach(t => { const k = t.hypothesisId ?? '—'; (hyps.get(k) ?? hyps.set(k, []).get(k)!).push(t); });
   const pct = (n: number, d: number | null) => (d ? Math.min(100, Math.round(100 * n / d)) : 0);
   const confirmed = tests.filter(t => t.verdict === 'CONFIRMED');
-  const nextUp = (r.frontierIds?.length ? r.frontierIds.map(id => lab.tests.get(id)!).filter(Boolean) : tests.filter(isReady)).slice(0, 6);
+  const frontierTests = r.frontierIds?.length ? r.frontierIds.map(id => lab.tests.get(id)!).filter(Boolean) : tests.filter(isReady);
+  const nextUp = frontierTests.slice(0, 6);
+  const unresolved = (r.frontierIds?.length ?? 0) - (r.frontierIds?.length ? frontierTests.length : 0);
   const blocked = tests.filter(t => t.verdict === 'BLOCKED');
   return <>
     <header className="hud-hero">
@@ -489,9 +516,10 @@ function RoadmapPage({ lab, id }: { lab: Lab; id: string }) {
     <div className="stop-rules">
       <div><span>Meta</span><strong>{r.confirmed}/{r.target ?? '?'}</strong><i style={{ width: `${pct(r.confirmed, r.target)}%` }} className="ok" /><em>confirmações para encerrar com sucesso</em></div>
       <div><span>Refutações seguidas</span><strong>{r.refutedStreak}/{r.killStreak ?? '?'}</strong><i style={{ width: `${pct(r.refutedStreak, r.killStreak)}%` }} className="crit" /><em>encerra por refutação</em></div>
-      <div><span>Orçamento</span><strong>{r.used}/{r.maxTests ?? '?'}</strong><i style={{ width: `${pct(r.used, r.maxTests)}%` }} className="warn" /><em>testes usados{r.maxDays ? ` · ${r.maxDays} dias` : ''}</em></div>
+      <div><span>Orçamento</span><strong>{r.used ?? '—'}/{r.maxTests ?? '?'}</strong><i style={{ width: `${pct(r.used ?? 0, r.maxTests)}%` }} className="warn" /><em>uso declarado pela Tower{r.maxDays ? ` · ${r.maxDays} dias` : ''}</em></div>
     </div>
-    <Section title="Árvore de hipóteses" kicker={`${hyps.size} hipóteses · ${tests.length} testes`} id="rm-tree">
+    <p className="hud-note count-source">Contagem desta página: {tests.length} testes principais + {r.tests.length - tests.length} contestações vinculadas. Orçamento: evolution.roadmaps.tests_used; vínculos: {r.testsSource}. São medidas distintas.{r.used === null && ' Uso do orçamento não publicado.'}</p>
+    <Section title="Árvore de hipóteses" kicker={`${hyps.size} hipóteses · ${tests.length} testes principais`} id="rm-tree">
       {tests.length === 0 ? <Missing what="tests[].roadmap_id (roadmap sem campanha ligada)" /> :
         <div className="tree">{[...hyps].map(([h, ts]) => <details key={h} open={hyps.size < 6}>
           <summary><span>{h === '—' ? 'Sem hipótese declarada' : (lab.hypotheses.get(h)?.statement ?? humanId(h))}</span><Bar parts={roadmapParts(lab, ts.map(t => t.id))} total={ts.length} /></summary>
@@ -502,8 +530,11 @@ function RoadmapPage({ lab, id }: { lab: Lab; id: string }) {
       <Section title="Evidência acumulada" kicker={`${confirmed.length} confirmados`} id="rm-ev">
         {confirmed.length ? <ul className="hud-list">{confirmed.map(t => <li key={t.id}><E id={t.id}>{humanize(t.meaning ?? t.question ?? '')}</E></li>)}</ul> : <p className="hud-muted">Nada confirmado ainda.</p>}
       </Section>
-      <Section title="Próximos testes" kicker={`${r.frontier} na fronteira`} id="rm-next">
-        {nextUp.length ? <ul className="hud-list">{nextUp.map(t => <li key={t.id}><E id={t.id}>{t.name}</E></li>)}</ul> : <p className="hud-muted">Sem testes prontos.</p>}
+      <Section title="Próximos testes" kicker={`${r.frontier} na fronteira declarada · ${nextUp.length} de ${frontierTests.length} vínculos exibidos`} id="rm-next">
+        {nextUp.length ? <ul className="hud-list">{nextUp.map(t => <li key={t.id}><E id={t.id}>{t.name}</E></li>)}</ul> : <p className="hud-muted">Nenhum vínculo de fronteira disponível nesta leitura.</p>}
+        {frontierTests.length > 6 && <details><summary>Ver os {frontierTests.length - 6} restantes</summary><ul className="hud-list">{frontierTests.slice(6).map(t => <li key={t.id}><E id={t.id} /></li>)}</ul></details>}
+        {unresolved > 0 && <p className="hud-note">{unresolved} referências da fronteira ainda não estão disponíveis nesta projeção.</p>}
+        <p className="hud-note">Fronteira: {r.frontierSource}. Vínculos: frontier_test_ids; quando ausentes, candidatos READY. READY não comprova elegibilidade de execução.</p>
         {blocked.length > 0 && <p className="hud-note">{blocked.length} bloqueados: <E id={blocked[0]!.id}>{blocked[0]!.blocker ?? 'ver motivo'}</E></p>}
       </Section>
     </div>
@@ -511,31 +542,44 @@ function RoadmapPage({ lab, id }: { lab: Lab; id: string }) {
 }
 
 // ---------- Evidência ----------
-function Evidence({ lab, filter }: { lab: Lab; filter?: Verdict }) {
-  const [q, setQ] = useState('');
+function Evidence({ lab, state, filter, search }: { lab: Lab; state: SystemState; filter?: Verdict; search?: string }) {
+  const [q, setQ] = useState(search ?? '');
+  useEffect(() => setQ(search ?? ''), [search]);
+  const updateQuery = (value: string) => {
+    setQ(value);
+    const params = new URLSearchParams();
+    if (filter) params.set('v', filter);
+    if (value) params.set('q', value);
+    window.history.replaceState(null, '', `#/evidencia${params.size ? '?' + params : ''}`);
+  };
+  const related = q.trim() ? (state.cosmology_state?.frontiers ?? []).filter(f => matchesSearch(q, f.title, f.summary)) : [];
   const all = [...lab.tests.values()].filter(t => !t.contestOf);
-  const list = all.filter(t => (!filter || t.verdict === filter) && (!q || `${t.name} ${t.question ?? ''} ${t.meaning ?? ''}`.toLowerCase().includes(q.toLowerCase())));
+  const list = all.filter(t => (!filter || t.verdict === filter) && matchesSearch(q, t.id, t.name, t.question, t.meaning, t.topic, t.subdomain));
   return <>
     <header className="hud-hero"><p className="hud-kicker">{all.length} testes publicados</p><h1>Evidência</h1>
       <p className="hud-lead">Todo teste, do pré-registro ao veredito. Filtre pelo estado; clique para ver o que foi prometido antes e o que aconteceu.</p></header>
     <nav className="filters" aria-label="Filtrar por veredito">
-      <a href="#/evidencia" aria-current={!filter ? 'page' : undefined}>Todos <b>{all.length}</b></a>
-      {VERDICT_ORDER.map(v => <a key={v} href={`#/evidencia?v=${v}`} aria-current={filter === v ? 'page' : undefined} className={`v-${v.toLowerCase()}`}>
+      <a href={`#/evidencia${q ? '?q=' + encodeURIComponent(q) : ''}`} aria-current={!filter ? 'page' : undefined}>Todos <b>{all.length}</b></a>
+      {VERDICT_ORDER.map(v => <a key={v} href={`#/evidencia?v=${v}${q ? '&q=' + encodeURIComponent(q) : ''}`} aria-current={filter === v ? 'page' : undefined} className={`v-${v.toLowerCase()}`}>
         <i aria-hidden="true">{VERDICT_GLYPH[v]}</i>{VERDICT_PT[v]} <b>{all.filter(t => t.verdict === v).length}</b></a>)}
     </nav>
-    <input className="hud-search" type="search" placeholder="Buscar por nome, pergunta ou resultado…" value={q} onChange={e => setQ(e.target.value)} aria-label="Buscar testes" />
+    <input className="hud-search" type="search" placeholder="Buscar por nome, pergunta ou resultado…" value={q} onChange={e => updateQuery(e.target.value)} aria-label="Buscar testes" />
+    {q && <p role="status">{list.length} testes encontrados para “{q}”{related.length ? ` · ${related.length} frentes relacionadas` : ''}.</p>}
+    {related.length > 0 && <nav className="search-related" aria-label="Frentes relacionadas">{related.map(f => <a key={f.id} href={labHref('universo', f.id)}>{f.title} →</a>)}</nav>}
+    {filter === 'READY' && <p className="hud-note">READY é o estado registrado da fila. A elegibilidade só é exibida quando a verificação individual foi publicada; isso não garante despacho.</p>}
+    {q && !list.length && !related.length && <p className="hud-muted">Nenhum resultado nesta projeção. A consulta foi preservada; tente parte do nome ou o ID.</p>}
     {VERDICT_ORDER.filter(v => list.some(t => t.verdict === v)).map(v => {
       const group = list.filter(t => t.verdict === v);
       return <section key={v} className={`ev-group v-${v.toLowerCase()}`} aria-label={VERDICT_PT[v]}>
         <h2><VerdictChip v={v} small /> <span>{group.length}</span></h2>
-        <ul className="ev-cards">{group.slice(0, filter ? 200 : 24).map(t => <li key={t.id}>
+        <ul className="ev-cards">{group.slice(0, filter || q ? 200 : 24).map(t => <li key={t.id}>
           <a className="ev-card" href={labHref('entidade', t.id)}>
             <strong>{t.name}</strong>
             {t.question && t.question !== t.name && <span className="ev-q">{t.question}</span>}
-            {t.meaning && <span className="ev-m">{humanize(t.meaning)}</span>}
-            <span className="ev-meta"><em>{normDomain(t.domain)}</em>{t.contests.length > 0 && <em>{t.contests.length} {t.contests.length === 1 ? 'ataque' : 'ataques'}</em>}</span>
+            {t.meaning && <span className="ev-m">{t.verdict === 'REFUTED' && 'Resultado bruto, depois refutado: '}{humanize(t.meaning)}</span>}
+            <span className="ev-meta"><em>{normDomain(t.domain)}</em>{isReady(t) && <em>{readinessLabel(t)}</em>}{t.contests.length > 0 && <em>{t.contests.length} {t.contests.length === 1 ? 'ataque' : 'ataques'}</em>}</span>
           </a></li>)}</ul>
-        {!filter && group.length > 24 && <a className="ev-more" href={`#/evidencia?v=${v}`}>ver os {group.length} →</a>}
+        {!filter && !q && group.length > 24 && <a className="ev-more" href={`#/evidencia?v=${v}${q ? '&q=' + encodeURIComponent(q) : ''}`}>ver os {group.length} →</a>}
       </section>;
     })}
     {filter && list.length > 200 && <p className="hud-muted">Mostrando 200 de {list.length}. Use a busca.</p>}
@@ -585,9 +629,17 @@ function EntityPage({ lab, id }: { lab: Lab; id: string }) {
     </Section>
 
     {t.historical && <Section title="Origem histórica"><p>Resultado auditado da Tower antiga; não reativa filas ou campanhas.</p>{t.sourceUrl && <p><a href={t.sourceUrl} target="_blank" rel="noreferrer">Abrir artefato original ↗</a></p>}<details><summary>Proveniência para auditoria</summary><pre className="universe-provenance">{JSON.stringify(t.provenance, null, 2)}</pre></details></Section>}
-    {(t.meaning || Boolean(t.claimBoundary)) && <Section title="No que acredito agora" id="en-mean">
-      {t.meaning && <p className="hud-big">{humanize(t.meaning)}</p>}
-      {Boolean(t.claimBoundary) && <p className="boundary"><b>O que isto não prova:</b> {text(t.claimBoundary)}</p>}
+    <Section title="Veredito atual" id="en-mean">
+      <p className="hud-big">{currentVerdictText(t)}</p>
+      {t.readiness?.reasons?.length ? <p className="hud-note">Prontidão: {t.readiness.reasons.join(' · ')}</p> : null}
+      <p className="hud-note">Fonte: estado de revisão publicado{t.review ? ` (${t.review})` : ' e estado operacional do teste'}.</p>
+      {contests.filter(c => lab.tests.has(c)).length > 0 && <p className="hud-refs">{contests.filter(c => lab.tests.has(c)).map(c => <E key={c} id={c}>Ver contestação →</E>)}</p>}
+    </Section>
+    {(t.meaning || Boolean(t.claimBoundary)) && <Section title="Resultado bruto da execução" id="en-raw">
+      {t.verdictRaw && <p className="hud-kicker">Registro original: {t.verdictRaw}</p>}
+      {t.meaning && <p>{humanize(t.meaning)}</p>}
+      <p className="hud-note">Interpretação registrada na execução, preservada mesmo quando a revisão muda o veredito.</p>
+      {Boolean(t.claimBoundary) && <p className="boundary"><b>Limite da conclusão:</b> {text(t.claimBoundary)}</p>}
     </Section>}
 
     <details className="tech">
@@ -678,6 +730,8 @@ function Health({ state, lab }: { state: SystemState; lab: Lab }) {
     {(ev?.watchdog?.quiet?.length ?? 0) > 0 && <QuietLoops lab={lab} quiet={ev!.watchdog!.quiet!} at={ev!.watchdog!.checked_at ?? state.generated_at} />}
     {g && g.failing_areas.length > 0 && <Section title="O que está falhando" id="he-fail">
       <ul className="hud-list">{g.failing_areas.map(a => <li key={a}>{guardianArea(a).replace(/^./, c => c.toUpperCase())}</li>)}</ul>
+      <p className="hud-note">Fonte: auditoria do Guardião, {ago(g.checked_at)}. A projeção publica os avisos por área; impacto detalhado, responsável e próxima ação por aviso não foram publicados.</p>
+      {!!ev?.incidents?.length && <p><a href="#he-inc" onClick={e => { e.preventDefault(); document.getElementById('he-inc')?.scrollIntoView({ block: 'start' }); }}>Consultar incidentes com responsável e evidências abaixo ↓</a></p>}
     </Section>}
     {(ev?.incidents?.length ?? 0) > 0 && <Section title="Incidentes" kicker={`${ev!.incidents!.length} abertos`} id="he-inc">
       <ul className="incidents">{ev!.incidents!.map(i => {
@@ -1152,21 +1206,34 @@ function nameIds(text: string, lab: Lab): string {
 function Board({ state, lab }: { state: SystemState; lab: Lab }) {
   const now = Date.now();
   const [all, setAll] = useState(false);
+  const [owner, setOwner] = useState('');
+  const [priority, setPriority] = useState('');
+  const [status, setStatus] = useState('Aberto');
   const [openIds, setOpenIds] = useState<Set<string>>(new Set());
-  const every = (state.evolution?.board ?? []).filter(p => !p.resolved_at && (!p.expires_at || Date.parse(p.expires_at) > now)).slice().reverse();
+  const every = (state.evolution?.board ?? []).slice().reverse().map(post => ({ ...post, meta: boardMeta(post, now) }));
   if (!every.length) return null;
-  const posts = all ? every : every.slice(0, 8);
+  const filtered = every.filter(p => (!owner || p.meta.owner === owner) && (!priority || p.meta.priority === priority) && (!status || p.meta.status === status));
+  const posts = all ? filtered : filtered.slice(0, 8);
   const who = (r: string) => (r === 'ALL' ? 'todos' : roleLabel(r));
   const toggle = (id: string) => setOpenIds(prev => { const n = new Set(prev); if (n.has(id)) n.delete(id); else n.add(id); return n; });
-  return <Section title="Conversa entre os agentes" kicker={`${every.length} ${every.length === 1 ? 'recado aberto' : 'recados abertos'}`} id="now-board">
+  return <Section title="Conversa entre os agentes" kicker={`${filtered.length} de ${every.length} recados publicados`} id="now-board">
+    <div className="board-filters" role="group" aria-label="Filtrar mural">
+      <label>Destino / responsável<select value={owner} onChange={e => { setOwner(e.target.value); setAll(false); }}><option value="">Todos</option>{[...new Set(every.map(p => p.meta.owner))].map(x => <option key={x} value={x}>{who(x)}</option>)}</select></label>
+      <label>Prioridade<select value={priority} onChange={e => { setPriority(e.target.value); setAll(false); }}><option value="">Todas</option>{[...new Set(every.map(p => p.meta.priority))].map(x => <option key={x}>{x}</option>)}</select></label>
+      <label>Status<select value={status} onChange={e => { setStatus(e.target.value); setAll(false); }}><option value="">Todos</option>{['Aberto', 'Resolvido', 'Expirado'].map(x => <option key={x}>{x}</option>)}</select></label>
+    </div>
+    <p className="hud-note">O destino do recado só representa um responsável quando isso foi declarado. Prioridade e próxima ação vêm do registro ou de campos nomeados no texto.</p>
+    {!posts.length && <p role="status">Nenhum recado com estes filtros.</p>}
     <ol className="board">{posts.map(p => {
       const full = humanize(nameIds(p.text, lab)); const short = clip(full, 220); const isOpen = openIds.has(p.id); const long = short !== full;
       return <li key={p.id}>
       <p className="board-head"><b>{who(p.from)}</b><i aria-hidden="true">→</i><span>{who(p.to)}</span><time>{ago(p.at)}</time></p>
-      <p className="board-text">{isOpen ? full : short}{long && <button type="button" className="board-more" onClick={() => toggle(p.id)}>{isOpen ? ' ver menos' : ' ler tudo'}</button>}</p>
+      <p className="board-state">{p.meta.status} · prioridade: {p.meta.priority}</p>
+      <p className="board-text">{isOpen ? full : short}{long && <button type="button" aria-expanded={isOpen} className="board-more" onClick={() => toggle(p.id)}>{isOpen ? ' ver menos' : ' ler tudo'}</button>}</p>
+      <p className="board-next"><b>Próxima ação:</b> {p.meta.nextAction ? humanize(nameIds(p.meta.nextAction, lab)) : 'não declarada em campo próprio'}</p>
       {(p.refs?.length ?? 0) > 0 && <p className="hud-refs">{p.refs!.filter(r => lab.tests.has(r) || lab.hypotheses.has(r)).slice(0, 3).map(r => <E key={r} id={r} />)}</p>}
     </li>;})}</ol>
-    {every.length > 8 && <button type="button" className="board-all" onClick={() => setAll(x => !x)}>{all ? 'Mostrar só os 8 mais recentes' : `Ver todos os ${every.length} recados`}</button>}
+    {filtered.length > 8 && <button type="button" className="board-all" onClick={() => setAll(x => !x)}>{all ? 'Mostrar só os 8 mais recentes' : `Ver todos os ${filtered.length} recados`}</button>}
   </Section>;
 }
 

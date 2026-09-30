@@ -208,8 +208,8 @@ function filament(b: Buf, a: Vector3, c: Vector3, density: number, heat: number,
   return mid;
 }
 
-export function ObservatoryScene({ tests, page, focusIds, onPick, theme, events, explore = false, hot }: {
-  hot?: string[]; explore?: boolean; events?: SceneEvents; tests: TestEntity[]; page: ScenePage; focusIds?: string[]; onPick: (id: string) => void; theme: 'dark' | 'light';
+export function ObservatoryScene({ tests, page, focusIds, onPick, onAvailability, theme, events, explore = false, hot }: {
+  hot?: string[]; explore?: boolean; events?: SceneEvents; tests: TestEntity[]; page: ScenePage; focusIds?: string[]; onPick: (id: string) => void; onAvailability?: (available: boolean) => void; theme: 'dark' | 'light';
 }) {
   const host = useRef<HTMLDivElement>(null);
   const labels = useRef<HTMLDivElement>(null);
@@ -231,7 +231,8 @@ export function ObservatoryScene({ tests, page, focusIds, onPick, theme, events,
     if (!el) return;
     let renderer: WebGLRenderer;
     try { renderer = new WebGLRenderer({ antialias: true, alpha: true, powerPreference: 'high-performance' }); }
-    catch { el.dataset.fallback = 'true'; return; }
+    catch { el.dataset.fallback = 'true'; onAvailability?.(false); return; }
+    delete el.dataset.fallback; onAvailability?.(true);
     const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     const mobile = window.matchMedia('(max-width: 760px)').matches;
     let quality: Quality = detectQuality();
@@ -575,7 +576,10 @@ export function ObservatoryScene({ tests, page, focusIds, onPick, theme, events,
     document.addEventListener('visibilitychange', vis);
     const frame = (now: number) => {
       raf = requestAnimationFrame(frame);
-      if (!visible) return;
+      if (!visible) { last = now; return; }
+      // A reading surface does not need 60 WebGL frames per second.
+      const frameBudget = 1000 / (reduced ? 15 : mobile || !exploreRef.current ? 30 : 60);
+      if (now - last < frameBudget) return;
       const dt = Math.min(0.05, (now - last) / 1000); last = now;
       uniforms.time.value += dt;
       // Relógio cósmico: a formação é visível — ~3 min do quase-uniforme até a teia madura
@@ -598,7 +602,7 @@ export function ObservatoryScene({ tests, page, focusIds, onPick, theme, events,
       if (composer) composer.render(dt); else renderer.render(scene, camera);
       if (!reduced) {
         slowAcc += dt; slowN += 1;
-        if (slowAcc > 3) { if (slowAcc / slowN > 1 / 42) degrade(); slowAcc = 0; slowN = 0; }
+        if (slowAcc > 3) { if (slowAcc / slowN > Math.max(1 / 42, frameBudget / 1000 * 1.35)) degrade(); slowAcc = 0; slowN = 0; }
       }
       const w = canvas.clientWidth, h = canvas.clientHeight;
       const placed: Array<[number, number, number]> = [];

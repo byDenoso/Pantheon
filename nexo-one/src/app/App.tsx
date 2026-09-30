@@ -156,11 +156,12 @@ export default function App() {
     event.preventDefault();
     if (!command.trim()) return;
     const result = parseCommand(command);
-    go(result.view);
     if (result.kind === 'FIND' && result.query) {
-      const query = result.query;
-      setFilters(current => ({ ...current, search: query }));
+      window.location.hash = `#/evidencia?q=${encodeURIComponent(result.query)}`;
+      setCommand('');
+      return;
     }
+    go(result.view);
     if (result.message) setNotice(result.message);
     setCommand('');
   };
@@ -202,7 +203,7 @@ export default function App() {
   useReveal([currentMode, view, system.load]);
   const navigateMode = (mode:string) => {
     if(mode==='galaxia'){goGalaxy();return;}
-    if(['agora','universo','ciclo','roadmaps','evidencia','saude','inicio'].includes(mode)){const h=`#/${mode==='inicio'?'agora':mode}`;setGalaxyRoute(false);setSystemRoute(false);setLabRoute(parseLabRoute(h));if(window.location.hash!==h)window.history.pushState(null,'',h);window.scrollTo({top:0});return;}
+    if(['agora','universo','ciclo','roadmaps','evidencia','saude','inicio'].includes(mode)){const h=`#/${mode==='inicio'?'agora':mode}`;setGalaxyRoute(false);setSystemRoute(false);setLabRoute(parseLabRoute(h));if(window.location.hash!==h)window.history.pushState(null,'',h);return;}
     setGalaxyRoute(false);
     if(mode==='ciencia'){go('LEARNING');return;}
     if(mode==='operacao'){go('ACTIONS');return;}
@@ -212,7 +213,7 @@ export default function App() {
     if(mode==='sistema'){goSystem();return;}
   };
   const header = <InstrumentHeader mode={currentMode} view={view} theme={theme} syncStatus={system.syncing?'SYNCING':system.syncStatus} syncMessage={system.syncMessage} watching={system.watching} onForceSync={system.watchForPublication}
-    readAt={system.lastSuccessfulReadAt} fingerprint={system.state?.bus.fingerprint||''} command={command} commandRef={commandRef}
+    generatedAt={system.state?.generated_at} readAt={system.lastSuccessfulReadAt} fingerprint={system.state?.bus.fingerprint||''} command={command} commandRef={commandRef}
     onCommandChange={setCommand} onCommandSubmit={submitCommand} onThemeToggle={()=>setTheme(theme==='dark'?'light':'dark')}
     onSync={system.sync} onNavigate={navigateMode} onAccountClick={()=>setLoginOpen(true)} privateSession={session.session.authenticated}/>;
   if (labRoute && !galaxyRoute && !systemRoute) return <ProvenanceProvider><div className={`cockpit unified-shell lab-route${isMobile?' mobile':''}`} data-view="LAB" data-access={session.session.authenticated?'PRIVATE':'PUBLIC'}>

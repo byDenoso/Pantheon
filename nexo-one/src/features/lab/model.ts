@@ -48,6 +48,7 @@ export interface TestEntity {
   parents: string[];
   children: string[];
   verdictRaw: string | null;
+  readiness?: { eligible: boolean; reasons: string[]; policy?: string } | null;
   result: unknown;
   statistics: unknown;
   robustness: unknown;
@@ -76,9 +77,10 @@ export interface HypothesisEntity {
 export interface CampaignEntity { id: string; title: string | null; question: string | null; questionPlain?: string | null; why: string | null; hypothesisIds: string[]; tests: string[] }
 export interface RoadmapEntity {
   id: string; title: string; question: string | null; campaignId: string | null; state: string;
-  confirmed: number; target: number | null; used: number; maxTests: number | null; maxDays: number | null;
+  confirmed: number; target: number | null; used: number | null; maxTests: number | null; maxDays: number | null;
   refutedStreak: number; killStreak: number | null; stop: string | null; renewable: boolean; charteredAt: string | null;
   tests: string[]; hypotheses: string[]; frontier: number;
+  testsSource?: string; frontierSource?: string;
   frontierIds?: string[]; objectives?: string[]; progress?: Record<string, number>;
 }
 
@@ -184,6 +186,10 @@ export function buildLab(state: SystemState): Lab {
       parents: lineage('parents'),
       children: lineage('children'),
       verdictRaw: str(any.verdict),
+      readiness: any.readiness && typeof any.readiness === 'object' && typeof (any.readiness as { eligible?: unknown }).eligible === 'boolean'
+        ? { eligible: (any.readiness as { eligible: boolean }).eligible,
+            reasons: Array.isArray((any.readiness as { reasons?: unknown }).reasons) ? (any.readiness as { reasons: unknown[] }).reasons.map(String) : [],
+            policy: str((any.readiness as { policy?: unknown }).policy) ?? undefined } : null,
       prereg: {
         metric: val(r.preregistered_metric) ?? pre.metric ?? null,
         threshold: val(r.threshold) ?? pre.threshold ?? null,
@@ -279,7 +285,7 @@ export function buildLab(state: SystemState): Lab {
       state: String(full?.state ?? rm.state ?? charter.status ?? 'ACTIVE'),
       confirmed: Number(prog.confirmed ?? rm.confirmed ?? 0),
       target: (stop.success_confirmed ?? rm.success_target ?? null) as number | null,
-      used: Number(rm.tests_used ?? prog.total ?? 0), maxTests: (budget.max_tests ?? rm.max_tests ?? null) as number | null,
+      used: typeof rm.tests_used === 'number' ? rm.tests_used : null, maxTests: (budget.max_tests ?? rm.max_tests ?? null) as number | null,
       maxDays: (budget.max_days ?? rm.max_days ?? null) as number | null,
       refutedStreak: Number(rm.refuted_streak ?? 0),
       killStreak: (stop.kill_consecutive_refuted ?? rm.kill_streak ?? null) as number | null,
@@ -287,8 +293,10 @@ export function buildLab(state: SystemState): Lab {
       charteredAt: (charter.chartered_at as string) ?? null, tests: rmTestIds,
       hypotheses: (full?.hypothesis_ids as string[] | undefined)
         ?? [...new Set(rmTestIds.map(t => tests.get(t)!.hypothesisId).filter(Boolean) as string[])],
+      testsSource: listed.length ? 'read_model.roadmaps.test_ids' : 'tests[].roadmap_id',
+      frontierSource: typeof prog.frontier === 'number' ? 'read_model.roadmaps.progress.frontier' : 'evolution.roadmaps.frontier_count',
       frontier: Number(prog.frontier ?? rm.frontier_count ?? 0),
-      frontierIds: ((full?.frontier_test_ids as string[] | undefined) ?? []).filter(t => tests.has(t)),
+      frontierIds: (full?.frontier_test_ids as string[] | undefined) ?? [],
       objectives: Array.isArray(ch.objectives) ? (ch.objectives as string[]) : [],
       progress: prog,
     });
