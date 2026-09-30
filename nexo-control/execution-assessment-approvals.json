@@ -1,0 +1,30 @@
+{
+  "contract": "EXECUTION_ASSESSMENT_APPROVALS_V1",
+  "enabled": false,
+  "cases": [
+    {
+      "test_id": "CONTEST-FAM-DE-SN-TRIO-TRACERS-P-TRES-PP-U3-OM315-1",
+      "battery_id": "bat-fam-a5ad217c776268e2f5a65a7d5c2baf84",
+      "run_ref": "actions/runs/36777174466",
+      "artifact_id": 11125859846,
+      "archive_sha256": "801de3c1acf41d64aa3cdaad083369d8134d506208d334b25fe34cf8887122b5",
+      "member_sha256": "595f9c2f7412262edbf7aaba53242db2a48c8b7646033e5dea7e590185d9840f",
+      "attempt_id": "attempt-6d31aa058cf181c4b63ee56d5191e3c1",
+      "recipe_sha256": "2d740e73963dc4c973fe717f835f8819a14c3975f3864bfca285e069181139b4",
+      "expected_observation_hash": "fc6c1e189eeaf237cdc6d1c285c86769eb5b6ecf607cdf873858689bbdf56b1e",
+      "expected_version": 9
+    },
+    {
+      "test_id": "CONTEST-FAM-DE-SN-TRIO-TRACERS-P-TRES-DES-U3-OM330-1",
+      "battery_id": "bat-fam-59785abd29506a0db4f415e26c420ccb",
+      "run_ref": "actions/runs/36779436467",
+      "artifact_id": 11126398108,
+      "archive_sha256": "07ffd11591e8ba838909d2d3b55452f40ec9da9e22c2d60ff1d7a02552e65f1c",
+      "member_sha256": "0ee96994bbda25485e210c77f21bd1c0dd1b3f4e5875b259320fb3bb96ccb1f5",
+      "attempt_id": "attempt-d506fec18ddd660f69d76c373a4bc48a",
+      "recipe_sha256": "2d740e73963dc4c973fe717f835f8819a14c3975f3864bfca285e069181139b4",
+      "expected_observation_hash": "7cb468c669c18360a8f01c4e0adac1b8bdc04faacc56733ca11835c076696186",
+      "expected_version": 9
+    }
+  ]
+}

@@ -29,13 +29,13 @@ def projection():
 
 
 class FrozenInputsTests(unittest.TestCase):
-    def run_recipe(self, body=None, *, binding=None, raw=None, missing=False):
+    def run_recipe(self, body=None, *, binding=None, raw=None, missing=False, mode="prediction_calibration"):
         raw = raw if raw is not None else json.dumps(body or projection()).encode()
         default = {'name': 'public_projection', 'url': FROZEN_URL,
                    'version': '2026-09-02', 'sha256': hashlib.sha256(raw).hexdigest()}
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
-            (root / 'params.json').write_text(json.dumps({'mode': 'prediction_calibration', 'min_per_stratum': 1}))
+            (root / 'params.json').write_text(json.dumps({'mode': mode, 'min_per_stratum': 1, 'min_cases': 100}))
             (root / 'inputs.json').write_text(json.dumps([default if binding is None else binding]))
             env = {'PARAMS_PATH': str(root / 'params.json'), 'RESULT_PATH': str(root / 'result.json'),
                    'NEXO_REQUIRE_FROZEN_INPUTS': '1'}
@@ -121,6 +121,32 @@ class FrozenInputsTests(unittest.TestCase):
         exec(compile(ast.Module(body=[node], type_ignores=[]), str(RECIPE), 'exec'), scope)
         with self.assertRaisesRegex(ValueError, 'redirects are forbidden'):
             scope['NoProjectionRedirect']().redirect_request(None, None, 302, 'Found', {}, 'https://example.org')
+
+    def test_only_validated_operational_overlays_are_excluded(self):
+        import copy
+        marker = {"contract": "EXECUTION_OBSERVATION_ASSESSMENT_V1",
+                  "classification": "OPERATIONAL_FAILURE_RECORDED_AS_RESULT",
+                  "scientific_result_eligible": False, "reason_code": "INPUT_OR_FIT_UNAVAILABLE",
+                  "recorded_at": "2026-09-30T22:00:00Z"}
+        body = projection()
+        for i in range(2):
+            body['tests'].append({'id': 'operational-' + str(i), 'verdict': 'INCONCLUSIVE',
+                                  'execution_assessment': copy.deepcopy(marker)})
+        # A legitimate inconclusive stays in readiness yield, without retuning its criterion.
+        body['tests'].append({'id': 'legitimate', 'verdict': 'INCONCLUSIVE'})
+        result, _ = self.run_recipe(body, mode='readiness_yield')
+        self.assertEqual(result['statistics']['cases'], 5)
+        self.assertEqual(result['statistics']['excluded_operational_assessments'], 2)
+        result, _ = self.run_recipe(body)
+        self.assertEqual(result['statistics']['cases'], 4)
+        self.assertEqual(result['statistics']['excluded_operational_assessments'], 2)
+        for field, invalid in [('contract', 'unknown'), ('scientific_result_eligible', 0),
+                               ('reason_code', 'SAMPLE_TOO_SMALL'), ('recorded_at', '2026-09-30')]:
+            candidate = copy.deepcopy(body)
+            candidate['tests'][4]['execution_assessment'][field] = invalid
+            result, _ = self.run_recipe(candidate, mode='readiness_yield')
+            self.assertEqual(result['statistics']['cases'], 6)
+            self.assertEqual(result['statistics']['excluded_operational_assessments'], 1)
 
     def test_workflow_transmits_inputs_separately(self):
         workflow = (ROOT.parents[1] / '.github/workflows/nexo-test-battery.yml').read_text()

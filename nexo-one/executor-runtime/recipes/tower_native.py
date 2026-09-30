@@ -85,6 +85,34 @@ def load_projection():
 proj, input_provenance = load_projection()
 tests, acts = proj["tests"], proj["activity"]
 
+def operational_assessment(t):
+    """Trust only the Writer-validated public overlay from the verified projection.
+
+    The raw historical verdict stays visible. Unknown or malformed labels never
+    remove a case from scientific learning.
+    """
+    value = t.get("execution_assessment")
+    fields = {"contract", "classification", "scientific_result_eligible", "reason_code", "recorded_at"}
+    if (not isinstance(value, dict) or set(value) != fields
+            or value.get("contract") != "EXECUTION_OBSERVATION_ASSESSMENT_V1"
+            or value.get("classification") != "OPERATIONAL_FAILURE_RECORDED_AS_RESULT"
+            or value.get("scientific_result_eligible") is not False
+            or value.get("reason_code") != "INPUT_OR_FIT_UNAVAILABLE"
+            or str(t.get("verdict") or "").upper() not in {"INCONCLUSIVE", "INCONCLUSIVO"}):
+        return False
+    try:
+        return datetime.fromisoformat(str(value["recorded_at"]).replace("Z", "+00:00")).tzinfo is not None
+    except (ValueError, TypeError):
+        return False
+
+
+excluded_operational_assessments = 0
+if mode in {"prediction_calibration", "readiness_yield"}:
+    eligible_tests = [t for t in tests if not operational_assessment(t)]
+    excluded_operational_assessments = len(tests) - len(eligible_tests)
+    tests = eligible_tests
+
+
 GOOD = {"PROMOTED", "PROMOVIDO", "CONFIRMED", "SUPPORTED", "SURVIVED"}
 BAD = {"REJECTED", "REJEITADO", "REFUTED"}
 INCONC = {"INCONCLUSIVE", "INCONCLUSIVO"}
@@ -117,6 +145,8 @@ def brier(rows):
 
 
 def out(verdict, decision, summary, stats, meaning):
+    if mode in {"prediction_calibration", "readiness_yield"}:
+        stats = {**stats, "excluded_operational_assessments": excluded_operational_assessments}
     with open(os.environ["RESULT_PATH"], "w", encoding="utf-8") as handle:
         json.dump({"verdict": verdict, "decision": decision, "summary": summary,
                    "statistics": {**stats, "input_provenance": input_provenance},
