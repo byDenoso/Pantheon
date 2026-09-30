@@ -515,6 +515,8 @@ function Evidence({ lab, filter }: { lab: Lab; filter?: Verdict }) {
   const [q, setQ] = useState('');
   const all = [...lab.tests.values()].filter(t => !t.contestOf);
   const list = all.filter(t => (!filter || t.verdict === filter) && (!q || `${t.name} ${t.question ?? ''} ${t.meaning ?? ''}`.toLowerCase().includes(q.toLowerCase())));
+  const latestEventByTest = new Map<string, (typeof lab.activity)[number]>();
+  for (const event of lab.activity) if (event.entity_id && lab.tests.has(event.entity_id)) latestEventByTest.set(event.entity_id, event);
   return <>
     <header className="hud-hero"><p className="hud-kicker">{all.length} testes publicados</p><h1>Evidência</h1>
       <p className="hud-lead">Todo teste, do pré-registro ao veredito. Filtre pelo estado; clique para ver o que foi prometido antes e o que aconteceu.</p></header>
@@ -533,6 +535,7 @@ function Evidence({ lab, filter }: { lab: Lab; filter?: Verdict }) {
             <strong>{t.name}</strong>
             {t.question && t.question !== t.name && <span className="ev-q">{t.question}</span>}
             {t.meaning && <span className="ev-m">{humanize(t.meaning)}</span>}
+            {latestEventByTest.get(t.id) && <span className="ev-m">{narrate(latestEventByTest.get(t.id)!, lab)}</span>}
             <span className="ev-meta"><em>{normDomain(t.domain)}</em>{t.contests.length > 0 && <em>{t.contests.length} {t.contests.length === 1 ? 'ataque' : 'ataques'}</em>}</span>
           </a></li>)}</ul>
         {!filter && group.length > 24 && <a className="ev-more" href={`#/evidencia?v=${v}`}>ver os {group.length} →</a>}
@@ -798,9 +801,66 @@ const roleLabel = (role: string) => { const t = taskOf(role); const r = ROLE_PT[
 // Sorteio probabilístico: cada carga da página sorteia de novo; dentro da visita a mesma linha não pisca.
 const NARRATION_SALT = Math.random().toString(36).slice(2);
 const pick = (pool: string[], seed: string) => { let h = 0; const k = seed + NARRATION_SALT; for (let i = 0; i < k.length; i += 1) h = (h * 31 + k.charCodeAt(i)) | 0; return pool[Math.abs(h) % pool.length]!; };
-/** Matriz 45x45: cabeça e cauda sorteadas separadamente (até 2025 falas por evento). */
+
+const NARRATION_MATRIX_SIZE = 90;
+const NARRATION_HEAD_FRAMES = [
+  'Registrei no histórico', 'Anotei no histórico', 'Deixei registrado', 'Marquei na linha do tempo', 'Atualizei meu registro',
+  'Incluí na atividade', 'Publiquei no Atlas', 'Deixei no meu histórico', 'Guardei no registro', 'Registrei na atividade',
+  'Anotei na linha do tempo', 'Atualizei a linha do tempo', 'Deixei no rastro', 'Marquei no histórico', 'Registrei no Atlas',
+] as const;
+const NARRATION_HEAD_LINKS = [': ', ' — ', '. ', '; ', ': agora, ', ': nesta rodada, '] as const;
+const NARRATION_TRACE_PHRASES = [
+  'ficou no histórico', 'pode ser relido', 'ficou auditável', 'entrou na linha do tempo', 'ficou registrado',
+  'pode ser conferido depois', 'continua rastreável', 'ficou visível no Atlas', 'a atualização ficou preservada',
+  'o evento ficou preservado', 'o rastro ficou disponível', 'o registro manteve a origem', 'a atividade ficou no histórico',
+  'o evento ficou datado', 'o registro ficou disponível aos outros papéis',
+] as const;
+const NARRATION_TRACE_LINKS = ['; ', '. ', '; com isso, ', '. No registro, ', '; e ', '. Na linha do tempo, '] as const;
+
+const lowerFirstNarration = (text: string) => text && !text.startsWith(('%q')) && !text.startsWith('{') ? text[0]!.toLowerCase() + text.slice(1) : text;
+const upperFirstNarration = (text: string) => text ? text[0]!.toUpperCase() + text.slice(1) : text;
+function narrationHeads(pool: string[]): string[] {
+  const out = [...new Set(pool)];
+  for (const frame of NARRATION_HEAD_FRAMES) for (const link of NARRATION_HEAD_LINKS) for (const head of pool) {
+    const body = link === '. ' ? upperFirstNarration(head) : lowerFirstNarration(head);
+    out.push(`${frame}${link}${body}`);
+    if (new Set(out).size >= NARRATION_MATRIX_SIZE) return [...new Set(out)].slice(0, NARRATION_MATRIX_SIZE);
+  }
+  return [...new Set(out)].slice(0, NARRATION_MATRIX_SIZE);
+}
+function narrationTailVariant(tail: string, link: string, trace: string): string {
+  const stem = tail.trim().replace(/\.+$/, '');
+  if (!stem) {
+    if (link === '. ') return `Registro: ${trace}.`;
+    if (link === '; com isso, ') return `Com isso, ${trace}.`;
+    if (link === '. No registro, ') return `No registro, ${trace}.`;
+    if (link === '; e ') return `Também ${trace}.`;
+    if (link === '. Na linha do tempo, ') return `Na linha do tempo, ${trace}.`;
+    return `${upperFirstNarration(trace)}.`;
+  }
+  const body = link.startsWith('.') ? upperFirstNarration(trace) : trace;
+  return `${stem}${link}${body}.`;
+}
+function narrationTails(pool: string[]): string[] {
+  const out = [...new Set(pool)];
+  for (const tail of pool) for (const trace of NARRATION_TRACE_PHRASES) for (const link of NARRATION_TRACE_LINKS) {
+    out.push(narrationTailVariant(tail, link, trace));
+    if (new Set(out).size >= NARRATION_MATRIX_SIZE) return [...new Set(out)].slice(0, NARRATION_MATRIX_SIZE);
+  }
+  return [...new Set(out)].slice(0, NARRATION_MATRIX_SIZE);
+}
+const narrationMatrix = new Map<string, { heads: string[]; tails: string[] }>();
+const matrixFor = (key: string) => {
+  if (narrationMatrix.has(key)) return narrationMatrix.get(key)!;
+  const base = NARRATION[key];
+  if (!base) return null;
+  const matrix = { heads: narrationHeads(base.heads), tails: narrationTails(base.tails) };
+  narrationMatrix.set(key, matrix);
+  return matrix;
+};
+/** Matriz 90x90: cabeça e cauda sorteadas separadamente (até 8100 falas por evento). */
 const say = (key: string, seed: string, vars: Record<string, string | number> = {}): string | null => {
-  const m = NARRATION[key];
+  const m = matrixFor(key);
   if (!m) return null;
   const text = pick(m.heads, `h${seed}`) + pick(m.tails, `t${seed}`);
   return text.replace(/\{(\w+)\}/g, (_, k: string) => String(vars[k] ?? ''));
@@ -1149,6 +1209,13 @@ function nameIds(text: string, lab: Lab): string {
     .replace(/(um teste)(,? e um teste)+/g, 'alguns testes');
 }
 
+function boardNarration(text: string, id: string, to: string): string {
+  const spoken = `“${text}”`;
+  const tpl = say('BOARD_POSTED', id, { to });
+  if (!tpl) return text;
+  return humanize(tpl.includes('%q') ? tpl.replace('%q', spoken) : `${tpl.replace(/\.$/, '')}: ${spoken}`);
+}
+
 function Board({ state, lab }: { state: SystemState; lab: Lab }) {
   const now = Date.now();
   const [all, setAll] = useState(false);
@@ -1160,7 +1227,7 @@ function Board({ state, lab }: { state: SystemState; lab: Lab }) {
   const toggle = (id: string) => setOpenIds(prev => { const n = new Set(prev); if (n.has(id)) n.delete(id); else n.add(id); return n; });
   return <Section title="Conversa entre os agentes" kicker={`${every.length} ${every.length === 1 ? 'recado aberto' : 'recados abertos'}`} id="now-board">
     <ol className="board">{posts.map(p => {
-      const full = humanize(nameIds(p.text, lab)); const short = clip(full, 220); const isOpen = openIds.has(p.id); const long = short !== full;
+      const raw = humanize(nameIds(p.text, lab)); const full = boardNarration(raw, p.id, who(p.to)); const short = clip(full, 220); const isOpen = openIds.has(p.id); const long = short !== full;
       return <li key={p.id}>
       <p className="board-head"><b>{who(p.from)}</b><i aria-hidden="true">→</i><span>{who(p.to)}</span><time>{ago(p.at)}</time></p>
       <p className="board-text">{isOpen ? full : short}{long && <button type="button" className="board-more" onClick={() => toggle(p.id)}>{isOpen ? ' ver menos' : ' ler tudo'}</button>}</p>
