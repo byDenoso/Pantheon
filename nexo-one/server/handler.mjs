@@ -3,8 +3,6 @@ import {toNodeHandler} from '@modelcontextprotocol/node';
 import {PROVIDERS} from '../src/contracts/validate.mjs';
 import {compile} from './compiler/world-state.mjs';
 import {buildProjectionBus} from './compiler/projection-bus.mjs';
-import {buildSystemState} from './compiler/system-state.mjs';
-import {normalizePublicSystemState} from './compiler/public-system-state.mjs';
 import {readProvider,pending} from './adapters/registry.mjs';
 import {readAtlasSsot} from './adapters/atlas-ssot.mjs';
 import {buildPublicAtlasSsot} from './compiler/atlas-public-ssot.mjs';
@@ -15,15 +13,12 @@ import {sessionAccess,sessionRoute} from './auth/session-route.mjs';
 import {buildPersonalSnapshot,executePersonalAction} from './personal/service.mjs';
 import {createNexoMcpWebHandler} from './mcp/server.mjs';
 import {summarizeConnectionHealth} from './health/connection-state.mjs';
-import {readSystemInput} from './adapters/system-input.mjs';
-import {readPublicSystemInput} from './compiler/public-system-input.mjs';
 const ATLAS_ORIGINS=new Set(['https://bydenoso.github.io','https://nexo-one-two.vercel.app','https://nexo-atlas-control-tower.vercel.app','https://nexo-atlas-cockpit.vercel.app']);
-const PUBLIC_SYSTEM_PROVIDERS=['github','nexo','drive'];
-const isCorsRoute=route=>route==='mcp'||route==='projection-sync'||route==='atlas-public-ssot'||route==='world'||RESEARCH_ROUTES.has(route);
+const isCorsRoute=route=>route==='mcp'||route==='projection-sync'||route==='atlas-public-ssot'||route==='atlas-graph'||route==='atlas/graph'||route==='world'||RESEARCH_ROUTES.has(route);
 const mcpWebHandler=createNexoMcpWebHandler({readSnapshot:()=>readAtlasSsot({env:process.env,now:Date.now()})});
 const mcpNodeHandler=toNodeHandler(mcpWebHandler);
 const DEFAULT_PUBLIC_SYSTEM_URL='https://bydenoso.github.io/Pantheon/system.json';
-const DEFAULT_PUBLIC_MANIFEST_URL='https://bydenoso.github.io/Pantheon/tower-projection/manifest.json';
+const DEFAULT_PUBLIC_PUBLICATION_URL='https://bydenoso.github.io/Pantheon/tower-projection/publication.json';
 const PUBLIC_SYSTEM_CACHE_TTL_MS=15000;
 let publishedSystemCache={key:'',expiresAt:0,value:null,inflight:null};
 let lastProjectionDispatch={at:0,requestId:''};
@@ -66,19 +61,25 @@ async function dispatchProjectionSync({env=process.env,currentFingerprint='' }={
   return {ok:true,status:202,outcome:'DISPATCHED',request_id:requestId,deduplicated:false};
 }
 
-async function fetchPublishedTowerSystem({systemUrl,manifestUrl,signal}){
+async function fetchPublishedTowerSystem({systemUrl,publicationUrl,signal}){
   const options={signal,cache:'no-store',headers:{Accept:'application/json','Cache-Control':'no-cache'}};
-  const [systemResponse,manifestResponse]=await Promise.all([
+  const [systemResponse,publicationResponse]=await Promise.all([
     fetch(systemUrl,options),
-    fetch(manifestUrl,options),
+    fetch(publicationUrl,options),
   ]);
-  if(!systemResponse.ok||!manifestResponse.ok)throw new Error('SANCTIONED_PUBLIC_PROJECTION_UNAVAILABLE');
-  const [system,manifest]=await Promise.all([systemResponse.json(),manifestResponse.json()]);
+  if(!systemResponse.ok||!publicationResponse.ok)throw new Error('SANCTIONED_PUBLIC_PROJECTION_UNAVAILABLE');
+  const [system,publication]=await Promise.all([systemResponse.json(),publicationResponse.json()]);
+  const manifest=publication?.manifest||{};
+  const buildMeta=publication?.build_meta||{};
   if(system?.contract_version!=='1')throw new Error('SANCTIONED_SYSTEM_CONTRACT_INVALID');
+  if(publication?.contract!=='NEXO_PUBLIC_PROJECTION_PUBLICATION_V1')
+    throw new Error('SANCTIONED_PUBLICATION_CONTRACT_INVALID');
   if(manifest?.authority!=='TOWER_V06'||manifest?.projection_only!==true||manifest?.writeback!=='FORBIDDEN')
     throw new Error('SANCTIONED_MANIFEST_INVALID');
   if(!/^sha256:[0-9a-f]{64}$/i.test(String(manifest?.projection_fingerprint||'')))
     throw new Error('SANCTIONED_FINGERPRINT_INVALID');
+  if(buildMeta?.contract!=='NEXO_ONE_BUILD_META_V1'||buildMeta?.projection_fingerprint!==manifest.projection_fingerprint)
+    throw new Error('SANCTIONED_BUILD_META_MISMATCH');
   if(system?.bus?.fingerprint!==manifest.projection_fingerprint)
     throw new Error('SANCTIONED_SYSTEM_FINGERPRINT_MISMATCH');
   return system;
@@ -86,10 +87,10 @@ async function fetchPublishedTowerSystem({systemUrl,manifestUrl,signal}){
 
 async function readPublishedTowerSystem({env=process.env,signal,now=Date.now(),force=false}={}){
   const systemUrl=String(env.NEXO_PUBLIC_SYSTEM_URL||DEFAULT_PUBLIC_SYSTEM_URL).trim();
-  const manifestUrl=String(env.NEXO_PUBLIC_MANIFEST_URL||DEFAULT_PUBLIC_MANIFEST_URL).trim();
-  const key=`${systemUrl}\n${manifestUrl}`;
+  const publicationUrl=String(env.NEXO_PUBLIC_PUBLICATION_URL||DEFAULT_PUBLIC_PUBLICATION_URL).trim();
+  const key=`${systemUrl}\n${publicationUrl}`;
   if(force){
-    const value=await fetchPublishedTowerSystem({systemUrl,manifestUrl,signal});
+    const value=await fetchPublishedTowerSystem({systemUrl,publicationUrl,signal});
     publishedSystemCache={key,expiresAt:Date.now()+PUBLIC_SYSTEM_CACHE_TTL_MS,value,inflight:null};
     return value;
   }
@@ -97,7 +98,7 @@ async function readPublishedTowerSystem({env=process.env,signal,now=Date.now(),f
     return publishedSystemCache.value;
   if(publishedSystemCache.key===key&&publishedSystemCache.inflight)return publishedSystemCache.inflight;
 
-  const inflight=fetchPublishedTowerSystem({systemUrl,manifestUrl})
+  const inflight=fetchPublishedTowerSystem({systemUrl,publicationUrl})
     .then(value=>{
       publishedSystemCache={key,expiresAt:Date.now()+PUBLIC_SYSTEM_CACHE_TTL_MS,value,inflight:null};
       return value;
@@ -193,32 +194,28 @@ export default async function handler(req,res) {
       if(!serviceAccess)return send({error:'ATLAS_SERVICE_REQUIRED'},403);
       return send(await readAtlasSsot({env,now,signal:req.signal}));
     }
-    if(!['world','health','now','loops','day','context','recall','projections','system'].includes(route))return send({error:'NOT_FOUND'},404);
     const force=url.searchParams.get('refresh')==='1';
+    if(route==='atlas-graph'||route==='atlas/graph'){
+      try{
+        const state=await readPublishedTowerSystem({env,signal:req.signal,now,force});
+        return send({
+          contract_version:'1',
+          generated_at:state.generated_at,
+          bus_fingerprint:state.bus?.fingerprint||null,
+          state:state.global_state,
+          graph:state.graph,
+          filaments:state.filaments,
+        });
+      }catch(error){
+        console.warn('[nexo-one] sanctioned Atlas graph unavailable; failing closed',String(error?.message||error));
+        return send({error:'SANCTIONED_PUBLIC_PROJECTION_UNAVAILABLE',authority:'TOWER_V06',projection_only:true,writeback:'FORBIDDEN'},503);
+      }
+    }
+    if(!['world','health','now','loops','day','context','recall','projections','system'].includes(route))return send({error:'NOT_FOUND'},404);
     if(route==='projections'){
       const serviceAccess=await verifyProjectionService(req,{now});
       const projectionAccess=serviceAccess?'PRIVATE':'PUBLIC';
       return send(await buildProjectionBus({env,now,access:projectionAccess,force}));
-    }
-    if(route==='atlas-graph'||route==='atlas/graph'){
-      const options={now,access:'PUBLIC',env,force};
-      const results=await Promise.all(PUBLIC_SYSTEM_PROVIDERS.map(id=>readProvider(id,options)));
-      const compiled=compile(results,{now,access:'PUBLIC'}),byId=new Map(results.map(result=>[result.provider.id,result]));
-      const truthGraphInput=byId.get('nexo')?.truthGraphInput;
-      const systemInput=privateAccess
-        ? await readSystemInput({env,signal:req.signal})
-        : await readPublicSystemInput();
-      if(!systemInput.capabilities?.length&&truthGraphInput?.capabilityRows)systemInput.capabilities=truthGraphInput.capabilityRows;
-      const bus=await buildProjectionBus({env,now,access:'PUBLIC',force,reader:async id=>byId.get(id)||readProvider(id,options)});
-      const state=normalizePublicSystemState(buildSystemState({world:compiled,bus,systemInput,now:new Date(now).toISOString()}),compiled);
-      return send({
-        contract_version:'1',
-        generated_at:state.generated_at,
-        bus_fingerprint:state.bus?.fingerprint||null,
-        state:state.global_state,
-        graph:state.graph,
-        filaments:state.filaments,
-      });
     }
     if(route==='system'){
       // SystemState is always the sanctioned read-only Tower projection, even
