@@ -1,5 +1,5 @@
 {
-  "ignoreCommand": "prev=\"${VERCEL_GIT_PREVIOUS_SHA:-}\"; [ -n \"$prev\" ] || exit 1; git cat-file -e \"$prev^{commit}\" 2>/dev/null || exit 1; git diff --quiet \"$prev\" HEAD -- nexo-one vercel.json",
+  "ignoreCommand": "prev=\"${VERCEL_GIT_PREVIOUS_SHA:-}\"; [ -n \"$prev\" ] || exit 1; git cat-file -e \"$prev^{commit}\" 2>/dev/null || exit 1; git diff --quiet \"$prev\" HEAD -- nexo-one vercel.json ':(exclude)nexo-one/tower-head.json' ':(exclude)nexo-one/tcc-public-inbox-ack.json'",
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "installCommand": "cd nexo-one && npm ci --no-audit --no-fund --ignore-scripts",
   "buildCommand": "cd nexo-one && npm run build",
