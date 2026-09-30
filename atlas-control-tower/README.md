@@ -4,41 +4,37 @@ ATLAS is the read-only visualization and inspection surface for NEXO.
 
 ## Authority
 
-Operational truth is owned exclusively by:
+Operational truth is owned exclusively by the live Tower in Google Drive:
 
-`byDenoso/NEXO-Obsidian-Vault@main:TOWER_V06`
+`TOWER_V06@GOOGLE_DRIVE_PRIVATE`
 
-The canonical write model is `GITHUB_CAS_ENTITY_EVENT`. ATLAS does not own operational state and cannot write back into TOWER.
+The live object keeps the stable file identity `1m97cFmEkw19yiqD_6FWPG4j1lDCAYM4z` under contract `NEXO_TOWER_LIVE_V1`. The canonical write model is `IN_PLACE_FILE_REVISION_CAS_READBACK`. Git is code/provenance only after the Drive-primary cutover. ATLAS does not own operational state and cannot write back into TOWER.
 
-The locator contract is `nexo-one/data/canonical.json` (`NEXO_ATLAS_AUTHORITY_V2`). It points at `TOWER_V06/CONTROL.json` and separately identifies sanitized projection artifacts used by the public UI.
-
-Google Drive is legacy projection/provenance only. Neon and old Data API surfaces are legacy compatibility code, not current NEXO truth owners. A projection, cache, deployment runtime, or fallback can never override TOWER_V06.
+The locator contract is `nexo-one/data/canonical.json` (`NEXO_ATLAS_AUTHORITY_V2`) and the public projection is derived from the live Tower. Neon, Git state mirrors, deployment runtimes and caches are compatibility or derived surfaces only. None can override TOWER_V06.
 
 ## Hosted NEXO MCP
 
-The canonical hosted NEXO MCP front door is:
+The current Business-facing MCP is the thin read-only NEXO ONE surface:
 
-`https://nexo-atlas-control-tower.vercel.app/api/mcp`
+`https://nexo-one-two.vercel.app/api/mcp`
 
-It is a semantic transport over the existing Tower/GitHub/runtime contracts, not a state authority. The endpoint exposes public capability/bootstrap discovery and authenticated semantic operations for canonical work, campaigns, runtime dispatch/readback, evidence and health incident lifecycle.
+Health/discovery can be checked at `https://nexo-one-two.vercel.app/api/mcp/status`. This surface reads the sanitized Tower-derived projection and exposes science, activity, public-safe operations and provenance. It does not mutate canonical state.
 
-Public discovery never grants mutation authority. Private semantic reads and mutations require bearer authentication, and Tower writes fail closed when an authorized server-side GitHub credential is absent. Canonical mutations continue through `TOWER_V06/mutations/inbox` -> receipt -> exact entity readback; runtime execution continues through canonical launch requests and SingleRuntime.
+The former Atlas Control Tower semantic endpoint at `https://nexo-atlas-control-tower.vercel.app/api/mcp` is a retired compatibility surface after the Drive-primary cutover. It must not be configured as the Business app or treated as a canonical write path.
 
-`byDenoso/NEXO-Obsidian-Vault/services/nexo-api` remains useful as runtime/reference/test code, but its separate Railway-oriented host is not required for the normal hosted MCP path after this consolidation.
-
-No MCP-local database, queue, scheduler or second writer exists. If the MCP disagrees with Tower, **TOWER_V06 wins**.
+Canonical mutations keep the existing path `proposal -> relay -> Writer -> live Tower CAS/readback`. GitHub and Google Drive connectors remain the operational fallback when the Business MCP is absent. No MCP-local database, queue, scheduler or second writer exists. If any MCP or projection disagrees with Tower, **TOWER_V06 wins**.
 
 ## Read path
 
 ```text
-TOWER_V06
-   |
-   +-- canonical state / provenance
-   |
-   +--> sanitized projection
-              |
-              v
-           ATLAS
+Drive: NEXO_TOWER_LIVE.json
+          |
+          v
+       TOWER_V06
+          |
+          +--> sanitized projection --> ATLAS
+          |
+          +--> NEXO ONE MCP (read-only)
 ```
 
 Public state, graph and entity routes are served through the Tower-aware projection runtime. Existing GitHub/Drive-named modules may remain as compatibility adapters, but their names do not grant authority.
