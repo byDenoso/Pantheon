@@ -202,7 +202,7 @@ export default function App() {
   useReveal([currentMode, view, system.load]);
   const navigateMode = (mode:string) => {
     if(mode==='galaxia'){goGalaxy();return;}
-    if(['agora','ciclo','roadmaps','evidencia','saude','inicio'].includes(mode)){const h=`#/${mode==='inicio'?'agora':mode}`;setGalaxyRoute(false);setSystemRoute(false);setLabRoute(parseLabRoute(h));if(window.location.hash!==h)window.history.pushState(null,'',h);window.scrollTo({top:0});return;}
+    if(['agora','universo','ciclo','roadmaps','evidencia','saude','inicio'].includes(mode)){const h=`#/${mode==='inicio'?'agora':mode}`;setGalaxyRoute(false);setSystemRoute(false);setLabRoute(parseLabRoute(h));if(window.location.hash!==h)window.history.pushState(null,'',h);window.scrollTo({top:0});return;}
     setGalaxyRoute(false);
     if(mode==='ciencia'){go('LEARNING');return;}
     if(mode==='operacao'){go('ACTIONS');return;}
@@ -432,3 +432,4 @@ export default function App() {
     </ProvenanceProvider>
   );
 }
+

@@ -360,12 +360,13 @@ jobs:
           VITE_NEXO_AUTH_BRIDGE_URL: ${{ vars.VITE_NEXO_AUTH_BRIDGE_URL }}
           VITE_PRIVATE_COCKPIT_URL: ${{ vars.VITE_PRIVATE_COCKPIT_URL }}
           VITE_NEXO_SYNC_ENDPOINT: https://nexo-one-two.vercel.app/api/projection-sync
+          VITE_MCP_ENDPOINT: https://nexo-one-two.vercel.app/api/mcp
           VITE_NEXO_FORCE_SYNC_URL: ${{ github.server_url }}/${{ github.repository }}/actions/workflows/nexo-one-pages.yml
           VITE_PUBLIC_NEXO_BASE: https://bydenoso.github.io/Pantheon/
         run: |
           set -euo pipefail
           npm run typecheck
-          node --test test/atlas3d-metro-production.test.mjs test/pages.test.mjs test/science-projection-v1.test.mjs test/science-workspace.test.mjs test/mcp-atlas-site.test.mjs test/projection-sync-resilience.test.mjs test/github-origin-resilience.test.mjs
+          node --test test/universe.test.mjs test/atlas3d-metro-production.test.mjs test/pages.test.mjs test/science-projection-v1.test.mjs test/science-workspace.test.mjs test/mcp-atlas-site.test.mjs test/mcp-control.test.mjs test/mcp-http.test.mjs test/mcp-tools.test.mjs test/mcp-route.test.mjs test/projection-sync-resilience.test.mjs test/github-origin-resilience.test.mjs
           mkdir -p public/vendor
           curl -fsSL --retry 3 --connect-timeout 8 https://cdn.jsdelivr.net/npm/@antv/g6@5/dist/g6.min.js -o public/vendor/g6.min.js
           test -s public/vendor/g6.min.js
@@ -541,6 +542,30 @@ jobs:
             done
             return 1
           }
+          for presentation in desktop-dark desktop-light mobile-dark mobile-light; do
+            width=1440; height=1000
+            case "${presentation}" in mobile-*) width=390; height=844 ;; esac
+            theme="${presentation##*-}"
+            universe_url="${base}/#/universo?theme=${theme}"
+            dump_until_ready 'class="universe-cards"' "/tmp/universe-${presentation}.html" \
+              --headless=new --no-sandbox --disable-dev-shm-usage --hide-scrollbars \
+              --window-size="${width},${height}" --force-device-scale-factor=1 --virtual-time-budget=9000 --dump-dom "${universe_url}"
+            grep -Fq 'Estado cosmológico atual' "/tmp/universe-${presentation}.html"
+            test "$(grep -o 'class="hud-card universe-card"' "/tmp/universe-${presentation}.html" | wc -l)" -ge 8
+            "${chrome_bin}" --headless=new --no-sandbox --disable-dev-shm-usage --hide-scrollbars \
+              --window-size="${width},${height}" --force-device-scale-factor=1 --virtual-time-budget=9000 \
+              --screenshot="/tmp/universe-${presentation}.png" "${universe_url}" >/dev/null 2>&1
+            test -s "/tmp/universe-${presentation}.png"
+          done
+          for frontier in energia-escura h0 crescimento-s8; do
+            dump_until_ready 'class="universe-detail"' "/tmp/universe-${frontier}.html" \
+              --headless=new --no-sandbox --disable-dev-shm-usage --hide-scrollbars \
+              --window-size=390,844 --virtual-time-budget=9000 --dump-dom "${base}/#/universo/${frontier}"
+            grep -Fq 'O que a Tower antiga ensinou' "/tmp/universe-${frontier}.html"
+            grep -Fq 'class="universe-evidence"' "/tmp/universe-${frontier}.html"
+          done
+          echo "PAGES_UNIVERSO_DESKTOP_MOBILE_DARK_LIGHT_READBACK_OK"
+
           expected_work="$(jq '[.work[]] | length' /tmp/projection.json)"
           expected_human="$(jq '[.human_gates.work_ids[]?] | length' /tmp/projection.json)"
           expected_waiting="$(jq '[.work[] | select(((.operational_status // .status // "") | ascii_upcase) == "WAIT_DEPENDENCY")] | length' /tmp/projection.json)"
@@ -866,6 +891,13 @@ jobs:
           if(buildMeta.projection_fingerprint!==manifest.projection_fingerprint)throw new Error('BUILD_META_FINGERPRINT_MISMATCH');
           if(buildMeta.presentation_input_fingerprint!==process.env.EXPECTED_PRESENTATION_FINGERPRINT)throw new Error('BUILD_META_PRESENTATION_INPUT_FINGERPRINT_MISMATCH');
 
+          if(system.cosmology_state?.model!=='COSMOLOGY_STATE_V1')throw new Error('COSMOLOGY_STATE_MISSING');
+          if(JSON.stringify(system.cosmology_state)!==JSON.stringify(projection.cosmology_state))throw new Error('COSMOLOGY_STATE_TRANSPORT_MISMATCH');
+          if(system.cosmology_state.frontiers.length<8)throw new Error('COSMOLOGY_FRONTIERS_MISSING');
+          const currentIds=new Set(projection.tests.map(t=>t.id));
+          const historicalIds=new Set(system.cosmology_state.historical_tests.map(t=>t.id));
+          for(const frontier of system.cosmology_state.frontiers)for(const evidence of frontier.key_evidence){if(!currentIds.has(evidence.id)&&!historicalIds.has(evidence.id))throw new Error('COSMOLOGY_EVIDENCE_LINK_MISSING');}
+          for(const node of system.graph.nodes){if(historicalIds.has(String(node.id).replace(/^test:/,''))&&!currentIds.has(String(node.id).replace(/^test:/,'')))throw new Error('HISTORICAL_RESERVOIR_IMPORTED_INTO_GRAPH');}
           const raw=JSON.stringify({system,world,projection});
           if(/truthgraph-projection|nexo-drive-projection/i.test(raw))throw new Error('LEGACY_OPERATIONAL_SOURCE_PRESENT');
 
@@ -907,6 +939,8 @@ jobs:
         with:
           name: atlas3d-production-readback
           path: |
+            /tmp/universe-*.html
+            /tmp/universe-*.png
             /tmp/atlas-*.html
             /tmp/shell-*.html
             /tmp/shell-*.png
@@ -956,3 +990,4 @@ jobs:
             /tmp/system.json
           if-no-files-found: warn
           retention-days: 1
+

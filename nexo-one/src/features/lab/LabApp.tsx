@@ -10,6 +10,7 @@ import {
 import type { ScenePage, SceneEvents } from './ObservatoryScene.tsx';
 import { normDomain } from './domains.ts';
 import './lab.css';
+import { UniversePage, UniverseFrontierPage } from './UniversePage.tsx';
 
 const ObservatoryScene = lazy(() => import('./ObservatoryScene.tsx').then(m => ({ default: m.ObservatoryScene })));
 
@@ -113,6 +114,7 @@ export default function LabApp({ state, route, theme }: { state: SystemState; ro
 
   const page = (() => {
     switch (route.page) {
+      case 'universo': return route.id ? <UniverseFrontierPage cosmology={state.cosmology_state} lab={lab} id={route.id} /> : <UniversePage cosmology={state.cosmology_state} />;
       case 'ciclo': return <Cycle lab={lab} state={state} />;
       case 'roadmaps': return <Roadmaps lab={lab} />;
       case 'roadmap': return <RoadmapPage lab={lab} id={route.id!} />;
@@ -551,9 +553,13 @@ const REVIEW_PT: Record<string, string> = { CONTEST: 'Contestação', VERDICT_RE
 const OUTCOME_PT: Record<string, string> = { PENDING: 'pendente', SURVIVED: 'sobreviveu', PASSED: 'passou', REFUTED: 'derrubou', FAILED: 'falhou', CONFIRMED: 'confirmou' };
 
 function EntityPage({ lab, id }: { lab: Lab; id: string }) {
-  const t = lab.tests.get(id);
+  const t = lab.tests.get(id) ?? lab.historicalTests?.get(id);
   const h = lab.hypotheses.get(id);
   if (!t && h) return <HypothesisView lab={lab} id={id} />;
+  if (!t && lab.campaigns.has(id)) {
+    const campaign = lab.campaigns.get(id)!;
+    return <><header className="hud-hero"><p className="hud-kicker">Campanha atual · <a href="#/universo">Universo</a></p><h1>{campaign.title ?? campaign.questionPlain ?? 'Campanha científica'}</h1><p className="hud-lead">{campaign.questionPlain ?? campaign.question}</p></header><Section title="O que estamos tentando descobrir"><p>{campaign.why ?? 'Objetivo não publicado.'}</p></Section><Section title="Testes da campanha"><ul className="hud-list">{campaign.tests.map(tid => <li key={tid}><E id={tid}/></li>)}</ul></Section></>;
+  }
   if (!t) {
     if (lab.roadmaps.has(id)) { window.location.hash = labHref('roadmap', id); return null; }
     return <NotFound id={id} />;
@@ -568,7 +574,7 @@ function EntityPage({ lab, id }: { lab: Lab; id: string }) {
     <header className="hud-hero">
       <p className="hud-kicker"><a href="#/evidencia">Evidência</a>
         {t.roadmapId && <> · <a href={labHref('roadmap', t.roadmapId)}>{lab.roadmaps.get(t.roadmapId)?.title ?? humanId(t.roadmapId)}</a></>}</p>
-      <h1 className="h1-entity">{t.question ?? humanId(t.id)}</h1>
+      <h1 className="h1-entity">{t.historical ? t.name : t.question ?? humanId(t.id)}</h1>
       <p className="hud-lead"><VerdictChip v={t.verdict} />{t.createdAt && <span className="hud-muted"> · começou {ago(t.createdAt)}</span>}</p>
     </header>
 
@@ -578,6 +584,7 @@ function EntityPage({ lab, id }: { lab: Lab; id: string }) {
       </li>)}</ol>
     </Section>
 
+    {t.historical && <Section title="Origem histórica"><p>Resultado auditado da Tower antiga; não reativa filas ou campanhas.</p>{t.sourceUrl && <p><a href={t.sourceUrl} target="_blank" rel="noreferrer">Abrir artefato original ↗</a></p>}<details><summary>Proveniência para auditoria</summary><pre className="universe-provenance">{JSON.stringify(t.provenance, null, 2)}</pre></details></Section>}
     {(t.meaning || Boolean(t.claimBoundary)) && <Section title="No que acredito agora" id="en-mean">
       {t.meaning && <p className="hud-big">{humanize(t.meaning)}</p>}
       {Boolean(t.claimBoundary) && <p className="boundary"><b>O que isto não prova:</b> {text(t.claimBoundary)}</p>}
@@ -768,24 +775,30 @@ function Swimlanes({ events }: { events: Array<{ event_type: string; role: strin
 // ---------- "vivo": monólogo, calibração, replay ----------
 const ROLE_PT: Record<string, string> = {
   PITIA: 'Pítia', LEARNER: 'Learner', EXECUTOR: 'Executor', REFUTADOR: 'Refutador', REFEREE_1: 'Refutador', GUARDIAO: 'Guardião',
-  DENER: 'Dener', CONVERSA: 'Conversa', WRITER_ROBOT: 'Robô escritor', SENTINEL: 'Pítia', ENGINEER: 'Engenheiro', CLAUDE: 'Claude', CHATGPT_CONVERSATION: 'Conversa',
+  DENER: 'Dener', CONVERSA: 'Conversa', WRITER_ROBOT: 'Robô escritor', SENTINEL: 'Sentinela', ENGINEER: 'Engenheiro', CLAUDE: 'Claude', CHATGPT_CONVERSATION: 'Conversa',
 };
-/** Dez tarefas agendadas no ChatGPT Business; o papel continua sendo quem assina cada ação. */
+/** Dez automações ativas no ChatGPT Business; o papel continua sendo quem assina cada ação. */
 const TASKS: Array<{ id: string; name: string; hats: string[]; rhythm: string; does: string }> = [
-  { id: 'cientista', name: 'Cientista', hats: ['LEARNER'], rhythm: 'toda hora · :05', does: 'propõe hipóteses e famílias de testes, transfere métodos entre áreas' },
-  { id: 'pitia', name: 'Pítia', hats: ['PITIA'], rhythm: 'toda hora · :12', does: 'pensa, se surpreende, sonha e declara crise' },
-  { id: 'operador', name: 'Operador', hats: ['EXECUTOR'], rhythm: 'toda hora · :20 e :50', does: 'liga receitas e dados, manda testes para a bateria' },
-  { id: 'critico', name: 'Crítico', hats: ['REFUTADOR', 'REFEREE_1'], rhythm: 'toda hora · :35', does: 'ataca os resultados positivos' },
-  { id: 'engenheiro', name: 'Engenheiro', hats: ['ENGINEER'], rhythm: 'a cada 2 horas · :45', does: 'escreve e conserta receitas' },
-  { id: 'guardiao', name: 'Guardião', hats: ['GUARDIAO'], rhythm: 'toda hora · :57', does: 'audita a saúde, revisa receitas, planta iscas' },
-  { id: 'sentinela', name: 'Sentinela', hats: ['SENTINEL'], rhythm: 'todo dia · 07:30', does: 'lê o arXiv e ataca o que ficou velho' },
+  { id: 'operador-c', name: 'Operador C', hats: ['EXECUTOR'], rhythm: 'toda hora · :00', does: 'fecha o READY residual após A/B e resolve bindings' },
+  { id: 'engenheiro', name: 'Engenheiro', hats: ['ENGINEER'], rhythm: 'toda hora · :05', does: 'escreve e conserta receitas' },
+  { id: 'guardiao', name: 'Guardião', hats: ['GUARDIAO'], rhythm: 'toda hora · :07', does: 'audita a saúde, revisa receitas, planta iscas e acompanha o Writer' },
+  { id: 'critico', name: 'Crítico', hats: ['REFUTADOR', 'REFEREE_1'], rhythm: 'toda hora · :09', does: 'ataca os resultados positivos' },
+  { id: 'cientista', name: 'Cientista', hats: ['LEARNER'], rhythm: 'toda hora · :12', does: 'propõe hipóteses e famílias de testes, transfere métodos entre áreas' },
+  { id: 'pitia', name: 'Pítia', hats: ['PITIA'], rhythm: 'toda hora · :15', does: 'pensa, se surpreende, sonha e declara crise' },
+  { id: 'operador-a', name: 'Operador A', hats: ['EXECUTOR'], rhythm: 'toda hora · :30', does: 'pega o primeiro segmento READY elegível e manda testes para a bateria' },
+  { id: 'operador-b', name: 'Operador B', hats: ['EXECUTOR'], rhythm: 'toda hora · :45', does: 'pega o segmento READY elegível restante e manda testes para a bateria' },
+  { id: 'sentinela', name: 'Sentinela', hats: ['SENTINEL'], rhythm: 'todo dia · 06:40', does: 'lê literatura e releases, abrindo contestação, dado ou sinal' },
+  { id: 'revisor-pr', name: 'Revisor de PR', hats: ['GUARDIAO'], rhythm: 'evento de PR', does: 'revisa diffs de receita e publica o sinal da revisão' },
 ];
-const taskOf = (role: string) => TASKS.find(t => t.hats.includes(role.toUpperCase()));
+const taskOf = (role: string) => {
+  const matches = TASKS.filter(t => t.hats.includes(role.toUpperCase()));
+  return matches.length === 1 ? matches[0] : undefined;
+};
 const roleLabel = (role: string) => { const t = taskOf(role); const r = ROLE_PT[role.toUpperCase()] ?? role; return t ? (t.name === r ? r : `${t.name} · ${r}`) : r; };
 // Sorteio probabilístico: cada carga da página sorteia de novo; dentro da visita a mesma linha não pisca.
 const NARRATION_SALT = Math.random().toString(36).slice(2);
 const pick = (pool: string[], seed: string) => { let h = 0; const k = seed + NARRATION_SALT; for (let i = 0; i < k.length; i += 1) h = (h * 31 + k.charCodeAt(i)) | 0; return pool[Math.abs(h) % pool.length]!; };
-/** Matriz 45x45: cabeça e cauda sorteadas separadamente (até 2025 falas por evento). */
+/** Matriz 90x90: cabeça e cauda sorteadas separadamente (até 8.100 falas por evento). */
 const say = (key: string, seed: string, vars: Record<string, string | number> = {}): string | null => {
   const m = NARRATION[key];
   if (!m) return null;
@@ -955,6 +968,7 @@ export function outcomeOf(t: TestEntity): 1 | 0 | null {
 }
 function pct(p: number) { return `${Math.round(p * 100)}%`; }
 function testStory(t: TestEntity, lab: Lab): Beat[] {
+  if (t.historical) return [{ icon: t.verdict === 'REFUTED' ? 'cross' : 'check', tone: 'fact', text: 'Resultado terminal auditado da Tower antiga, no escopo do contrato original. A revisão histórica não equivale à escada de contestações da Tower atual.' }];
   const beats: Beat[] = [];
   const parent = t.contestOf ? lab.tests.get(t.contestOf) : undefined;
   const hyp = t.hypothesisId ? lab.hypotheses.get(t.hypothesisId) : undefined;
@@ -1165,11 +1179,12 @@ function Crew({ lab }: { lab: Lab }) {
       const last = mine.at(-1);
       const day = mine.filter(e => now - Date.parse(e.at) < 24 * 3600e3).length;
       const quiet = !last || now - Date.parse(last.at) > 3 * 3600e3;
+      const sharedRole = TASKS.some(other => other.id !== t.id && other.hats.some(h => t.hats.includes(h)));
       return <article key={t.id} className={`crew-card${quiet ? ' quiet' : ''}`}>
         <p className="crew-top"><b>{t.name}</b><span>{t.rhythm}</span></p>
         <p className="crew-hats">{[...new Set(t.hats.map(h => ROLE_PT[h] ?? h))].join(' + ')}</p>
         <p className="crew-does">{t.does}</p>
-        <p className="crew-pulse"><i aria-hidden="true" />{last ? `último sinal ${ago(last.at)} · ${day} ações em 24 h` : 'ainda sem ações registradas'}</p>
+        <p className="crew-pulse"><i aria-hidden="true" />{last ? `${sharedRole ? 'telemetria do papel · ' : ''}último sinal ${ago(last.at)} · ${day} ações em 24 h` : 'ainda sem ações registradas'}</p>
       </article>;
     })}
   </section>;
@@ -1339,7 +1354,7 @@ function Intro() {
   </div>;
 }
 
-// ---------- Laços parados (por laço, não por papel): o papel pode estar vivo e só um laço dele parado ----------
+// ---------- Laços quietos: ausência de evento científico não é falha da automação ----------
 function QuietLoops({ lab, quiet, at }: { lab: Lab; quiet: Array<{ role: string; hours: number | null; loops: string[] }>; at: string }) {
   const loops = new Map<string, { hours: number | null; roles: Set<string> }>();
   for (const q of quiet) for (const l of q.loops) {
@@ -1348,15 +1363,15 @@ function QuietLoops({ lab, quiet, at }: { lab: Lab; quiet: Array<{ role: string;
   }
   const lastOf = (role: string) => { const t = taskOf(role); const hats = t?.hats ?? [role];
     return lab.activity.filter(e => hats.includes(String(e.role).toUpperCase())).at(-1)?.at; };
-  const dur = (h: number | null) => h == null ? 'nunca aconteceu' : `parado há ${h < 48 ? `${Math.round(h)} h` : `${Math.round(h / 24)} dias`}`;
-  return <Section title="Laços parados" kicker={`vigia do robô · ${ago(at)}`} id="he-quiet">
+  const dur = (h: number | null) => h == null ? 'sem evento registrado' : `sem evento há ${h < 48 ? `${Math.round(h)} h` : `${Math.round(h / 24)} dias`}`;
+  return <Section title="Laços quietos" kicker={`vigia do robô · ${ago(at)}`} id="he-quiet">
     <ul className="quiet-list">{[...loops].map(([loop, v]) => { const role = [...v.roles][0]!; const t = taskOf(role); const last = lastOf(role);
       return <li key={loop}>
         <b>{(LOOP_PT[loop] ?? loop).replace(/^./, c => c.toUpperCase())}</b>
         <span>{dur(v.hours)}</span>
-        <em>dono: {t ? t.name : roleLabel(role)}{last ? ` · o papel agiu ${ago(last)}` : ' · sem sinal do papel'}</em>
+        <em>responsável: {t ? t.name : roleLabel(role)}{last ? ` · último evento do papel ${ago(last)}` : ' · sem evento do papel'}</em>
       </li>; })}</ul>
-    <p className="hud-note">Um laço parado não quer dizer que o agente parou: mutação do genoma, por exemplo, é rara por natureza.</p>
+    <p className="hud-note">Quietude mede ausência de evento científico no laço; não indica que a automação parou.</p>
   </Section>;
 }
 
@@ -1381,3 +1396,4 @@ const JARGON: Array<[RegExp, string]> = [
   [/\bread-back\b/gi, 'conferência'], [/\bstaging\b/gi, 'área de espera'], [/\bfull-shape\b/gi, 'completa'],
 ];
 function humanize(text: string) { return JARGON.reduce((acc, [re, to]) => acc.replace(re, to), text); }
+

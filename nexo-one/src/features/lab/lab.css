@@ -510,9 +510,9 @@ details.tech .versus{margin-bottom:18px}
 
 /* ===== Vigia: quem está quieto ===== */
 .quiet-list{list-style:none;margin:0;padding:0;display:grid;gap:8px}
-.quiet-list li{display:grid;grid-template-columns:minmax(90px,auto) auto 1fr;gap:6px 14px;align-items:baseline;padding:10px 12px;border-radius:10px;background:rgba(200,85,61,.07);border-left:2px solid var(--v-refuted)}
+.quiet-list li{display:grid;grid-template-columns:minmax(90px,auto) auto 1fr;gap:6px 14px;align-items:baseline;padding:10px 12px;border-radius:10px;background:rgba(var(--o-accent-rgb),.06);border-left:2px solid rgba(var(--o-accent-rgb),.55)}
 .quiet-list b{color:var(--o-ink);font-weight:500}
-.quiet-list span{font:400 12.5px var(--sig-mono,monospace);color:#e0a38f}
+.quiet-list span{font:400 12.5px var(--sig-mono,monospace);color:var(--o-accent)}
 .quiet-list em{font-style:normal;font-size:13px;color:var(--o-dim)}
 @media (max-width:760px){.quiet-list li{grid-template-columns:1fr}}
 
@@ -720,7 +720,7 @@ details.tech .versus{margin-bottom:18px}
 :root[data-theme="light"] .observatory{--o-void:#e8eef1;--o-panel:rgba(242,246,248,.95);--o-raise:rgba(246,249,250,.97)}
 :root[data-theme="light"] .telemetry{background:color-mix(in srgb,#e8eef1 70%,transparent)!important}
 :root[data-theme="light"] body,:root[data-theme="light"] .unified-shell{background:#e8eef1}
-.quiet-list span{color:var(--v-refuted)!important;font-weight:500}
+.quiet-list span{color:var(--o-accent)!important;font-weight:500}
 
 /* ===== Painéis de vidro: transparentes com desfoque do fundo ===== */
 .observatory{--o-glass:rgba(6,10,13,.52);--o-glass-line:rgba(var(--o-accent-rgb),.16)}
@@ -851,3 +851,33 @@ details.tech .versus{margin-bottom:18px}
 .aut-grid dd{margin:0;display:grid;gap:2px;font-size:13px}
 .aut-grid dd span{color:var(--o-dim);font-size:12px}
 .mono-times{font-style:normal;color:var(--o-dim)}
+
+
+/* Universo: a síntese ocupa a mesma superfície e os mesmos tokens do Observatório. */
+.observatory[data-page="universo"] .hud{max-width:1440px;padding-top:48px}
+.universe-intro{display:grid;grid-template-columns:minmax(260px,1fr) minmax(460px,1.2fr);gap:32px;align-items:center;margin-bottom:32px}
+.universe-intro .hud-hero{margin:0;padding:24px 0}
+.universe-legend{display:flex;flex-wrap:wrap;gap:16px;color:var(--o-ink);font:13px var(--f-mono);margin-top:24px}
+.universe-map{position:relative;aspect-ratio:1;max-height:600px;background:radial-gradient(ellipse at center,rgba(var(--o-accent-rgb),.09),transparent 65%);border-radius:50%}
+.universe-map svg{width:100%;height:100%;fill:none;stroke:var(--o-line);stroke-width:.22}
+.universe-map-core{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);text-align:center;display:grid;gap:6px;color:var(--o-ink)}
+.universe-map-core span,.universe-map-core small{font:11px var(--f-mono);letter-spacing:.15em;color:var(--o-dim)}
+.universe-map-core strong{font:600 28px var(--f-display)}
+.universe-star{position:absolute;left:var(--star-x);top:var(--star-y);transform:translate(-50%,-50%);display:grid;gap:4px;text-align:center;width:110px;padding:10px 6px;background:var(--o-panel);border:1px solid var(--o-line);border-radius:var(--r-l);backdrop-filter:blur(12px)}
+.universe-star i{font-style:normal;font-size:24px}.universe-star span{font-size:12px;line-height:1.25}.universe-star small{font-size:11px;color:var(--o-dim)}
+.universe-state{display:inline-flex;align-items:baseline;flex-wrap:wrap;gap:8px;font:500 15px var(--f-mono);margin-bottom:16px}
+.universe-state i{font-style:normal;font-size:22px}.universe-state small{font:12px var(--f-body);color:var(--o-dim)}
+.state-solid i{color:var(--v-confirmed)}.state-tension i{color:var(--v-review)}.state-open i{color:var(--o-accent-2)}
+.universe-cards{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px}
+.universe-card{display:flex;flex-direction:column;padding:24px;margin:0;backdrop-filter:blur(16px)}
+.hud .universe-card h2{font:600 25px var(--f-display);letter-spacing:0;text-transform:none;color:var(--o-ink)!important}
+.universe-card h3,.universe-detail h3{font:500 12px var(--f-mono);color:var(--o-dim);margin:20px 0 10px}
+.universe-card-link{display:block}.universe-more{margin-top:auto;padding-top:18px;color:var(--o-accent)!important}
+.universe-detail{max-width:800px}.universe-detail .hud-section{margin-bottom:24px}
+.universe-evidence{padding:12px 0 18px;border-bottom:1px solid var(--o-line)}
+.universe-evidence p{margin-top:8px}.universe-evidence small{color:var(--o-quiet);font-size:12px}
+.universe-claim{margin-bottom:20px}.universe-questions{padding-left:20px;color:var(--o-dim)}
+.universe-provenance{white-space:pre-wrap;overflow-wrap:anywhere;font:12px/1.6 var(--f-mono);max-height:400px;overflow:auto}
+.universe-detail summary,.universe-evidence summary{cursor:pointer;color:var(--o-ink);padding:12px 0}
+@media(max-width:1000px){.universe-intro{grid-template-columns:1fr}.universe-map{width:min(100%,580px);margin:auto}.universe-intro .hud-hero{max-width:650px}}
+@media(max-width:600px){.observatory[data-page="universo"] .hud{padding:48px 16px 110px}.universe-intro{gap:8px}.universe-cards{grid-template-columns:1fr}.universe-map{aspect-ratio:1;min-height:360px}.universe-star{width:94px;padding:6px 3px}.universe-star span{font-size:10px}.universe-star small{font-size:10px}.universe-star i{font-size:18px}.universe-map-core strong{font-size:23px}.universe-map-core small{font-size:9px}.universe-card{padding:20px}.universe-card-link,.universe-more{min-height:44px}.universe-detail .hud-section{padding:18px 16px}}

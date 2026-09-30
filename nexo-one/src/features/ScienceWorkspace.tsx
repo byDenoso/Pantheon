@@ -208,7 +208,7 @@ function recordFields(record:ScienceProjectionRecord):DetailField[]{
   return fields;
 }
 
-function DenseTable({heads,rows,empty}:{heads:string[];rows:ReactNode[];empty:string}){
+export function DenseTable({heads,rows,empty}:{heads:string[];rows:ReactNode[];empty:string}){
   // Each cell carries its column name so phones can render rows as labelled cards.
   const tableRef=useRef<HTMLTableElement>(null);
   useEffect(()=>{
@@ -351,7 +351,7 @@ export default function ScienceWorkspace({state}:{state:SystemState}){
   </section>;
 }
 
-function EvidencePlot({rows,svgRef}:{rows:Array<{id:string;parameter:string;value:number;lo:number|null;hi:number|null;unit:string;verdict:string}>;svgRef:RefObject<SVGSVGElement|null>}){
+export function EvidencePlot({rows,svgRef}:{rows:Array<{id:string;parameter:string;value:number;lo:number|null;hi:number|null;unit:string;verdict:string}>;svgRef:RefObject<SVGSVGElement|null>}){
   const lows=rows.map(row=>row.value-(row.lo??0)),highs=rows.map(row=>row.value+(row.hi??0));
   let min=Math.min(...lows),max=Math.max(...highs);if(min===max){min-=1;max+=1;}
   const x=(value:number)=>220+((value-min)/(max-min))*1040;

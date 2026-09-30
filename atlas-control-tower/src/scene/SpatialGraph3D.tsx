@@ -1,8 +1,8 @@
 import {useMemo} from 'react';
 import {Canvas} from '@react-three/fiber';
 import {Html,Stars} from '@react-three/drei';
-import type {AtlasGraph,AtlasNode,PositionedNode} from './types';
-import {buildOrbitalNodes} from './types';
+import type {AtlasGraph,AtlasNode,HierarchyVisualRole,PositionedNode} from './types';
+import {buildOrbitalNodes,hierarchyRingRadius,hierarchyVisualRoles} from './types';
 import {selectSemanticLOD} from './semantic-lod';
 import {graphRenderBudget} from './neural-visuals.mjs';
 import {InstancedNodes} from './InstancedNodes';
@@ -24,47 +24,81 @@ type Props={
   className?:string;
 };
 
-function nodeRadius(node:PositionedNode,selectedId?:string|null,focusId?:string|null){
-  if(node.id===focusId)return .7;
-  if(node.id===selectedId)return .38;
+function nodeRadius(node:PositionedNode,role:HierarchyVisualRole,selectedId?:string|null){
+  if(role==='root')return .9;
+  if(node.id===selectedId)return .44;
+  if(role==='domain')return .34;
+  if(role==='folder')return .19;
   const type=String(node.type||'').toUpperCase();
-  if(type==='SYSTEM')return .31;
-  if(type==='DOMAIN')return .24;
-  if(type==='CAMPAIGN')return .19;
-  return .13;
+  if(type==='SYSTEM'||type==='ROOT')return .4;
+  if(type==='CAMPAIGN')return .17;
+  return .12;
 }
 
-function labelPriority(node:PositionedNode,focusId:string,selectedId?:string|null){
-  if(node.id===focusId)return 10000;
+function labelPriority(node:PositionedNode,role:HierarchyVisualRole,selectedId?:string|null){
+  if(role==='root')return 10000;
   if(node.id===selectedId)return 9000;
+  if(role==='domain')return 7000;
+  if(role==='folder')return 5200;
   const type=String(node.type||'').toUpperCase();
-  if(type==='SYSTEM')return 7000;
-  if(type==='DOMAIN')return 6500;
   if(type==='CAMPAIGN')return 4000;
   return Number(node.priority||0);
 }
 
+function semanticType(node:PositionedNode,role:HierarchyVisualRole){
+  if(role==='root')return'RAIZ';
+  if(role==='domain')return'DOMÍNIO';
+  if(role==='folder')return'PASTA';
+  return String(node.type||'').toUpperCase().replaceAll('_',' ');
+}
+
 function GraphLabels({nodes,focusId,selectedId,compact}:{nodes:PositionedNode[];focusId:string;selectedId?:string|null;compact:boolean}){
+  const roles=useMemo(()=>hierarchyVisualRoles(nodes,focusId),[focusId,nodes]);
+  const childCounts=useMemo(()=>{
+    const counts=new Map<string,number>();
+    for(const node of nodes){
+      const parent=typeof node.parentId==='string'?node.parentId:'';
+      if(parent)counts.set(parent,(counts.get(parent)||0)+1);
+    }
+    return counts;
+  },[nodes]);
+
   const labels=useMemo(()=>{
-    const ordered=[...nodes].sort((a,b)=>labelPriority(b,focusId,selectedId)-labelPriority(a,focusId,selectedId));
-    const budget=compact?5:14;
+    const ordered=[...nodes].sort((a,b)=>labelPriority(b,roles.get(b.id)||'entity',selectedId)-labelPriority(a,roles.get(a.id)||'entity',selectedId));
+    const budget=compact?6:16;
     return ordered.filter(node=>{
-      if(node.id===focusId||node.id===selectedId)return true;
-      const type=String(node.type||'').toUpperCase();
-      return compact?type==='SYSTEM'||type==='DOMAIN':true;
+      if(node.id===selectedId)return true;
+      const role=roles.get(node.id)||'entity';
+      return compact?role==='root'||role==='domain':true;
     }).slice(0,budget);
-  },[compact,focusId,nodes,selectedId]);
+  },[compact,nodes,roles,selectedId]);
 
   return <>{labels.map(node=>{
     const [x,y,z]=node.position;
-    const radius=nodeRadius(node,selectedId,focusId);
-    return <Html key={node.id} position={[x,y+radius*1.7,z]} center distanceFactor={compact?18:15} zIndexRange={[20,0]} style={{pointerEvents:'none'}}>
-      <div className={`atlas3d-label ${node.id===focusId?'is-focus':''} ${node.id===selectedId?'is-selected':''}`}>
+    const role=roles.get(node.id)||'entity';
+    const radius=nodeRadius(node,role,selectedId);
+    const metrics=node.metrics as Record<string,unknown>|undefined;
+    const declared=typeof metrics?.subgraphs==='number'?metrics.subgraphs:0;
+    const children=Math.max(childCounts.get(node.id)||0,declared);
+    const kind=semanticType(node,role);
+    const meta=kind==='DOMÍNIO'&&children>0?`${kind} · ${children} ${children===1?'PASTA':'PASTAS'}`:kind;
+    return <Html key={node.id} position={[x,y+radius*1.72,z]} center distanceFactor={compact?18:15} zIndexRange={[20,0]} style={{pointerEvents:'none'}}>
+      <div className={`atlas3d-label is-${role} ${node.id===focusId?'is-focus':''} ${node.id===selectedId?'is-selected':''}`}>
         <strong>{String(node.label||node.id)}</strong>
-        {!compact&&<span>{String(node.type||'ENTITY').replaceAll('_',' ')}</span>}
+        {!compact&&<span>{meta}</span>}
       </div>
     </Html>;
   })}</>;
+}
+
+function HierarchyGuide({nodes,focusId}:{nodes:PositionedNode[];focusId:string}){
+  const directChildren=nodes.filter(node=>typeof node.parentId==='string'&&node.parentId===focusId).length;
+  if(directChildren<2)return null;
+  const radius=hierarchyRingRadius(directChildren,'spatial');
+  return <mesh position={[0,0,-.04]} renderOrder={-2}>
+    <torusGeometry args={[radius,.008,6,160]}/>
+    <meshBasicMaterial color="#68cfff" transparent opacity={.11} depthWrite={false}/>
+  </mesh>;
 }
 
 export function SpatialGraph3D({graph,focusId,selectedId,onSelect,onOpen,reducedMotion,compact=false,hero=false,className=''}:Props){
@@ -97,7 +131,8 @@ export function SpatialGraph3D({graph,focusId,selectedId,onSelect,onOpen,reduced
       gl={{antialias:true,alpha:true,powerPreference:'high-performance'}}
       onCreated={({gl})=>{gl.setClearColor(0x000000,0)}}
     >
-      <Stars radius={38} depth={26} count={compact?260:520} factor={1.25} saturation={0} fade speed={reducedMotion?0:.2}/>
+      <Stars radius={38} depth={26} count={compact?220:420} factor={1.1} saturation={0} fade speed={reducedMotion?0:.16}/>
+      <HierarchyGuide nodes={nodes} focusId={focusId}/>
       <InstancedFilaments edges={edges} nodes={nodes} focusId={focusId} selectedId={selectedId} theme="dark"/>
       <InstancedNodes nodes={nodes} focusId={focusId} selectedId={selectedId} aura theme="dark" shape="sphere"/>
       <InstancedNodes

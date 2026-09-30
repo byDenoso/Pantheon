@@ -7,7 +7,7 @@ const FORCE_SYNC_URL=String(import.meta.env.VITE_NEXO_FORCE_SYNC_URL||'');
 
 type ProductMode=string;
 const PATHS:Record<string,string>={
-  agora:'M8 2a6 6 0 1 0 0 12A6 6 0 0 0 8 2m0 3v3l2 2', ciclo:'M13 8a5 5 0 1 1-2-4m2-2v3h-3', roadmaps:'M2 13 6 3l4 7 4-5', evidencia:'M3 2h7l3 3v9H3zM6 8l1.5 1.5L10 7', saude:'M1 8h3l2-4 3 8 2-4h4',
+  universo:'M8 1a7 7 0 1 0 0 14 7 7 0 0 0 0-14M1 8h14M8 1c-4 4-4 10 0 14M8 1c4 4 4 10 0 14', agora:'M8 2a6 6 0 1 0 0 12A6 6 0 0 0 8 2m0 3v3l2 2', ciclo:'M13 8a5 5 0 1 1-2-4m2-2v3h-3', roadmaps:'M2 13 6 3l4 7 4-5', evidencia:'M3 2h7l3 3v9H3zM6 8l1.5 1.5L10 7', saude:'M1 8h3l2-4 3 8 2-4h4',
   inicio:'M2 8 8 2l6 6v6H9v-4H7v4H2z', ciencia:'M8 2v4m0 0a4 4 0 1 0 0 8 4 4 0 0 0 0-8m0 0 3-3',
   operacao:'M2 3h12M2 8h12M2 13h12', prova:'M3 2h10v12H3zM5 5h6m-6 3h6m-6 3h3',
   mapa:'M8 1.5 14 5v6l-6 3.5L2 11V5zM2 5l6 3.5L14 5M8 8.5v6', galaxia:'M8 8m-1.2 0a1.2 1.2 0 1 0 2.4 0a1.2 1.2 0 1 0-2.4 0M8 2.5c3.4 0 5.5 2.3 5.5 4.6M8 13.5c-3.4 0-5.5-2.3-5.5-4.6M13.5 7.1c0 2.9-2.3 4.3-4.6 4.3M2.5 8.9c0-2.9 2.3-4.3 4.6-4.3', sistema:'M3 3h4v4H3zM9 9h4v4H9zM7 5h2a2 2 0 0 1 2 2v2M1 11h2m10-8h2', pessoal:'M8 8a3 3 0 1 0 0-6 3 3 0 0 0 0 6m-6 6a6 6 0 0 1 12 0',
@@ -23,7 +23,7 @@ export function InstrumentHeader({
   onThemeToggle:()=>void;onSync:()=>void;onNavigate:(mode:ProductMode)=>void;onAccountClick?:()=>void;privateSession?:boolean;syncMessage?:string;watching?:boolean;onForceSync?:()=>void;
 }){
   const freshness=readAt?formatAge(readAt):'sem leitura';
-  const modes:Array<[ProductMode,string]>=[['agora','Agora'],['ciclo','Ciclo'],['roadmaps','Roadmaps'],['evidencia','Evidência'],['saude','Saúde'],...(privateSession?[['pessoal','Pessoal'],['sistema','Sistema']] as Array<[ProductMode,string]>:[])];
+  const modes:Array<[ProductMode,string]>=[['agora','Agora'],['universo','Universo'],['ciclo','Ciclo'],['roadmaps','Roadmaps'],['evidencia','Evidência'],['saude','Saúde'],...(privateSession?[['pessoal','Pessoal'],['sistema','Sistema']] as Array<[ProductMode,string]>:[])];
   const busy=syncStatus==='SYNCING';
   // Feedback visível em qualquer viewport: o botão sozinho não diz o que aconteceu.
   const [toast,setToast]=useState('');
@@ -71,3 +71,4 @@ function formatAge(value:string){
   const millis=Date.now()-Date.parse(value);if(!Number.isFinite(millis)||millis<0)return 'agora';
   const minutes=Math.floor(millis/60000);return minutes<1?'agora':minutes<60?`há ${minutes} min`:`há ${Math.floor(minutes/60)} h`;
 }
+

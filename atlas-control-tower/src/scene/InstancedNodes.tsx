@@ -4,7 +4,7 @@ import { useFrame, useThree } from '@react-three/fiber';
 import { Color, InstancedMesh, Matrix4, MeshBasicMaterial, Object3D, Vector3 } from 'three';
 import { createNodeAuraMaterial, createNodeMaterial } from './materials';
 import { encodePickId } from './gpu-picking';
-import type { PositionedNode } from './types';
+import {hierarchyVisualRoles,type HierarchyVisualRole,type PositionedNode} from './types';
 import { nodeVisualRole } from './neural-visuals.mjs';
 
 const STATUS_COLOR: Record<string,string> = {
@@ -27,21 +27,22 @@ const LIGHT_TYPE_COLOR: Record<string,string> = {
   TEST:'#087f68', RUN:'#3e6396', RESULT:'#526b83', ACTION:'#a23b55'
 };
 
-function nodeRadius(node: PositionedNode, selectedId?: string | null, focusId?: string | null) {
-  if (node.id === focusId) return 0.7;
-  if (node.id === selectedId) return 0.38;
+function nodeRadius(node: PositionedNode, hierarchyRole:HierarchyVisualRole, selectedId?: string | null) {
+  if (hierarchyRole==='root') return 0.9;
+  if (node.id === selectedId) return 0.44;
+  if(hierarchyRole==='domain') return 0.34;
+  if(hierarchyRole==='folder') return 0.19;
   const type=String(node.type||'').toUpperCase();
-  if(type==='SYSTEM') return 0.31;
-  if(type==='DOMAIN') return 0.24;
-  if(type==='CAMPAIGN') return 0.19;
-  return 0.13;
+  if(type==='SYSTEM'||type==='ROOT') return 0.4;
+  if(type==='CAMPAIGN') return 0.17;
+  return 0.12;
 }
 
-function visualColor(node: PositionedNode, theme:'dark'|'light') {
-  const role=nodeVisualRole(node);
+function visualColor(node: PositionedNode, theme:'dark'|'light', hierarchyRole:HierarchyVisualRole) {
+  const role=hierarchyRole==='root'?'core':hierarchyRole==='domain'?'hub':hierarchyRole==='folder'?'folder':nodeVisualRole(node);
   const roleColors=theme==='light'
-    ? {core:'#145b91',hub:'#1f6fae',automation:'#a26700',evidence:'#087f68',attention:'#a23b55',signal:'#176fae',entity:'#4c6d88'}
-    : {core:'#b9ecff',hub:'#74b9ff',automation:'#ffc86d',evidence:'#69deb0',attention:'#ff7188',signal:'#6bceff',entity:'#8ca8c4'};
+    ? {core:'#145b91',hub:'#1f6fae',folder:'#0a8f82',automation:'#a26700',evidence:'#087f68',attention:'#a23b55',signal:'#176fae',entity:'#4c6d88'}
+    : {core:'#e5f8ff',hub:'#67b8ff',folder:'#62d6c9',automation:'#ffc86d',evidence:'#69deb0',attention:'#ff7188',signal:'#6bceff',entity:'#8ca8c4'};
   if(roleColors[role])return new Color(roleColors[role]);
   const status=String(node.status||'').toUpperCase();
   const type=String(node.type||'').toUpperCase();
@@ -67,6 +68,7 @@ export function InstancedNodes({nodes,selectedId,focusId,pickMode=false,aura=fal
   const mesh=useRef<InstancedMesh>(null);
   const object=useMemo(()=>new Object3D(),[]);
   const {camera}=useThree();
+  const hierarchyRoles=useMemo(()=>hierarchyVisualRoles(nodes,focusId||''),[focusId,nodes]);
   // No vertexColors here -- see the comment on createNodeMaterial in materials.ts
   // for why that flag (not per-instance color itself) was the real black-node bug.
   const material=useMemo(()=>pickMode
@@ -80,12 +82,12 @@ export function InstancedNodes({nodes,selectedId,focusId,pickMode=false,aura=fal
       if(pickMode){
         const [r,g,b]=encodePickId(node.pickId);
         target.setColorAt(index,new Color(r/255,g/255,b/255));
-      }else target.setColorAt(index,visualColor(node,theme));
+      }else target.setColorAt(index,visualColor(node,theme,hierarchyRoles.get(node.id)||'entity'));
     });
     // setColorAt only writes the CPU-side buffer; without this flag the instance
     // color never uploads to the GPU.
     if(target.instanceColor)target.instanceColor.needsUpdate=true;
-  },[nodes,pickMode,theme]);
+  },[hierarchyRoles,nodes,pickMode,theme]);
 
   useFrame(()=>{
     const target=mesh.current;if(!target)return;
@@ -99,8 +101,9 @@ export function InstancedNodes({nodes,selectedId,focusId,pickMode=false,aura=fal
       object.position.copy(position);
       if(shape==='disc') object.quaternion.copy(camera.quaternion);
       else object.quaternion.identity();
-      const radius=nodeRadius(node,selectedId,focusId);
-      object.scale.setScalar(aura ? radius * (node.id === focusId ? 1.72 : 1.54) : radius);
+      const role=hierarchyRoles.get(node.id)||'entity';
+      const radius=nodeRadius(node,role,selectedId);
+      object.scale.setScalar(aura ? radius * (node.id === focusId ? 1.92 : 1.62) : radius);
       object.updateMatrix();matrix.copy(object.matrix);target.setMatrixAt(index,matrix);
     });
     target.instanceMatrix.needsUpdate=true;

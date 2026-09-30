@@ -1,4 +1,4 @@
-import {buildScienceChanges,buildScienceReadModelV2} from './science-read-model-v2.mjs';
+import {buildScienceChanges,scienceModelFor} from './science-read-model-v2.mjs';
 
 export const RESEARCH_API_CONTRACT='NEXO_ATLAS_RESEARCH_API_V1';
 export const RESEARCH_ROUTES=new Set([
@@ -14,12 +14,12 @@ const upper=v=>text(v).toUpperCase().replace(/[\s-]+/g,'_');
 const safeArray=v=>Array.isArray(v)?v:[];
 
 function provenance(snapshot){
-  return [{authority:'GOOGLE_DRIVE',source:'NEXO_SSOT',projectionAuthority:'DERIVED_FROM_SSOT',modifiedAt:text(snapshot?.sourceModifiedAt),generatedAt:text(snapshot?.generatedAt)}];
+  return [{authority:snapshot?.authority||'GOOGLE_DRIVE',source:snapshot?.projection?'TOWER_V06':'NEXO_SSOT',projectionAuthority:snapshot?.projectionAuthority||'DERIVED_FROM_SSOT',modifiedAt:text(snapshot?.sourceModifiedAt),generatedAt:text(snapshot?.generatedAt)}];
 }
 function envelope(snapshot,data,status='OK'){
-  return {contract:RESEARCH_API_CONTRACT,status,freshness:snapshot?.generatedAt?'SNAPSHOT':'DEGRADED',generatedAt:text(snapshot?.generatedAt),sourceModifiedAt:text(snapshot?.sourceModifiedAt),authority:'GOOGLE_DRIVE',projectionAuthority:'DERIVED_FROM_SSOT',access:'PUBLIC_SANITIZED',privacyGate:'OLYMPUS_EXCLUDED',data,provenance:provenance(snapshot)};
+  return {contract:RESEARCH_API_CONTRACT,status,freshness:snapshot?.generatedAt?'SNAPSHOT':'DEGRADED',generatedAt:text(snapshot?.generatedAt),sourceModifiedAt:text(snapshot?.sourceModifiedAt),authority:snapshot?.authority||'GOOGLE_DRIVE',projectionAuthority:snapshot?.projectionAuthority||'DERIVED_FROM_SSOT',access:'PUBLIC_SANITIZED',privacyGate:'OLYMPUS_EXCLUDED',data,provenance:provenance(snapshot)};
 }
-function scienceProjection(snapshot){return safeArray(snapshot?.projections?.Science);}
+function scienceProjection(snapshot){if(snapshot?.projection){const m=scienceModelFor(snapshot);return [...m.structure.programs,...m.structure.campaigns].map(row=>({...row,record_id:row.id,record_type:row.type,title:row.label}));}return safeArray(snapshot?.projections?.Science);}
 function engineeringProjection(snapshot){return safeArray(snapshot?.projections?.Engineering);}
 function scienceWork(snapshot){return safeArray(snapshot?.sections?.WORK).filter(row=>text(row?.thread_id)==='THR::SCIENCE::ROOT');}
 
@@ -35,7 +35,7 @@ function graphView(snapshot){
   for(const row of engineeringProjection(snapshot)){const id=text(row.record_id||row.id),type=upper(row.record_type||row.type),label=text(row.title)||id;if(!id||!type)continue;nodes.push({id,type,label,status:text(row.status)||'UNKNOWN',summary:text(row.summary),hasSourceRef:Boolean(text(row.source_ref))});edges.push({source:'system:ENGINEERING',target:id,relation:'CONTAINS'});}
   return {nodes,edges,counts:{nodes:nodes.length,edges:edges.length}};
 }
-function labItems(snapshot,kinds){const wanted=new Set(kinds.map(upper));return scienceWork(snapshot).filter(row=>wanted.has(upper(row.kind))).map(row=>({id:text(row.work_id),type:upper(row.kind),title:text(row.question)||text(row.work_id),status:text(row.status)||'UNKNOWN',priority:text(row.priority),updatedAt:text(row.updated_at),hasResult:Boolean(text(row.result_ref))})).filter(item=>item.id);}
+function labItems(snapshot,kinds){if(snapshot?.projection){const m=scienceModelFor(snapshot);return Object.values(m.investigation).flat().filter(row=>kinds.includes(row.type)).map(row=>({...row,title:row.label}));}const wanted=new Set(kinds.map(upper));return scienceWork(snapshot).filter(row=>wanted.has(upper(row.kind))).map(row=>({id:text(row.work_id),type:upper(row.kind),title:text(row.question)||text(row.work_id),status:text(row.status)||'UNKNOWN',priority:text(row.priority),updatedAt:text(row.updated_at),hasResult:Boolean(text(row.result_ref))})).filter(item=>item.id);}
 function structuralCoverage(snapshot){const science=scienceProjection(snapshot),engineering=engineeringProjection(snapshot),domains=new Set(science.map(row=>text(row.domain)).filter(Boolean));return {programs:[...science,...engineering].filter(row=>upper(row.record_type)==='PROGRAM').length,campaigns:science.filter(row=>upper(row.record_type)==='CAMPAIGN').length,domains:domains.size,tests:labItems(snapshot,['TEST']).length};}
 const emptyScientific=(snapshot,kind)=>envelope(snapshot,{items:[],reason:`No structured canonical ${kind} records are available in the current SSOT.`},'EMPTY');
 const srmStatus=model=>model.state==='READY'?'OK':model.state==='PARTIAL'?'PARTIAL':model.state==='EMPTY'?'EMPTY':'PARTIAL';
@@ -43,15 +43,15 @@ const srmStatus=model=>model.state==='READY'?'OK':model.state==='PARTIAL'?'PARTI
 export function buildAtlasResearchView(snapshot,route){
   if(!RESEARCH_ROUTES.has(route))throw new Error(`UNKNOWN_RESEARCH_ROUTE:${route}`);
   if(route==='science-read-model'){
-    const model=buildScienceReadModelV2(snapshot);
+    const model=scienceModelFor(snapshot);
     return envelope(snapshot,model,srmStatus(model));
   }
   if(route==='science-changes'){
-    const changes=buildScienceChanges(snapshot);
+    const changes=buildScienceChanges(snapshot,scienceModelFor(snapshot));
     return envelope(snapshot,changes,changes.items.length?'OK':snapshot?'EMPTY':'PARTIAL');
   }
   if(route==='science-observations'||route==='science-comparisons'||route==='science-syntheses'){
-    const model=buildScienceReadModelV2(snapshot);
+    const model=scienceModelFor(snapshot);
     const items=route==='science-observations'?model.observations:route==='science-comparisons'?model.comparisons:model.syntheses;
     return envelope(snapshot,{contract:model.contract,state:model.state,sourceVersion:model.sourceVersion,fingerprint:model.fingerprint,items,provenance:model.provenance},items.length?'OK':snapshot?'EMPTY':'PARTIAL');
   }

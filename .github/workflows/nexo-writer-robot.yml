@@ -61,22 +61,76 @@ jobs:
           print("bundle bytes", len(r.content))
           EOF
 
-      - name: Check the Drive bundle against TCC main
+      - name: Reconcile Writer bundle with tested TCC main
         id: bundle
         if: steps.cred.outputs.ok == 'true'
-        # The robot runs whatever sits in Drive; TCC main is where the writer is reviewed and tested.
-        # Upload is manual (build_gpt_writer_bundle.py --upload), so a merged fix can silently never run.
+        env:
+          GOOGLE_SERVICE_ACCOUNT_JSON: ${{ secrets.NEXO_DRIVE_WRITER_JSON }}
+          GH_TOKEN: ${{ github.token }}
+          WRITER_BUNDLE_ID: 1DBw9H1wUHjZkasE2BI-aEafCzNnjKOjV
         run: |
+          set -euo pipefail
           drive=$(sha256sum /tmp/nexo_gpt_writer.py | cut -d' ' -f1)
-          main=$(curl -fsSL "https://raw.githubusercontent.com/byDenoso/TCC/main/gpt/nexo_gpt_writer.py" | sha256sum | cut -d' ' -f1 || true)
-          echo "drive=$drive" >> "$GITHUB_OUTPUT"; echo "main=$main" >> "$GITHUB_OUTPUT"
-          if [ -n "$main" ] && [ "$drive" != "$main" ]; then
-            echo "drift=true" >> "$GITHUB_OUTPUT"
-            echo "::warning::Drive writer bundle ${drive:0:12} differs from TCC main ${main:0:12}"
+          tested_sha=$(gh api "repos/byDenoso/TCC/actions/workflows/nexo-runtime-reconciler-ci.yml/runs?branch=main&event=push&status=success&per_page=20" --jq '.workflow_runs[0].head_sha // empty' || true)
+          if [ -z "$tested_sha" ]; then
+            echo "drive=$drive" >> "$GITHUB_OUTPUT"
+            echo "main=" >> "$GITHUB_OUTPUT"
+            echo "drift=unknown" >> "$GITHUB_OUTPUT"
+            echo "reconciled=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::No tested TCC Writer revision is currently available; retaining the Drive bundle."
+            exit 0
+          fi
+
+          main_file=/tmp/nexo_gpt_writer.tcc.py
+          rm -rf /tmp/tcc-tested
+          git clone -q --filter=blob:none --no-checkout https://github.com/byDenoso/TCC.git /tmp/tcc-tested
+          git -C /tmp/tcc-tested checkout -q "$tested_sha"
+          (cd /tmp/tcc-tested && python scripts/build_gpt_writer_bundle.py >/tmp/tcc-writer-build.log)
+          cp /tmp/tcc-tested/gpt/nexo_gpt_writer.py "$main_file"
+          python -m py_compile "$main_file"
+          main=$(sha256sum "$main_file" | cut -d' ' -f1)
+          echo "drive=$drive" >> "$GITHUB_OUTPUT"
+          echo "main=$main" >> "$GITHUB_OUTPUT"
+
+          if [ "$drive" != "$main" ]; then
+            cp "$main_file" /tmp/nexo_gpt_writer.py
+            python - <<'PY'
+          import hashlib, json, os
+          from google.oauth2 import service_account
+          from google.auth.transport.requests import AuthorizedSession
+
+          info = json.loads(os.environ["GOOGLE_SERVICE_ACCOUNT_JSON"])
+          creds = service_account.Credentials.from_service_account_info(
+              info, scopes=["https://www.googleapis.com/auth/drive"])
+          session = AuthorizedSession(creds)
+          file_id = os.environ["WRITER_BUNDLE_ID"]
+          local = open("/tmp/nexo_gpt_writer.py", "rb").read()
+          response = session.patch(
+              f"https://www.googleapis.com/upload/drive/v3/files/{file_id}",
+              params={"uploadType": "media", "supportsAllDrives": "true"},
+              data=local,
+              headers={"Content-Type": "text/x-python"},
+              timeout=120,
+          )
+          response.raise_for_status()
+          readback = session.get(
+              f"https://www.googleapis.com/drive/v3/files/{file_id}",
+              params={"alt": "media", "supportsAllDrives": "true"},
+              timeout=120,
+          )
+          readback.raise_for_status()
+          if hashlib.sha256(readback.content).digest() != hashlib.sha256(local).digest():
+              raise SystemExit("Drive Writer bundle readback hash mismatch")
+          print("Drive Writer bundle reconciled and read back")
+          PY
+            echo "drift=false" >> "$GITHUB_OUTPUT"
+            echo "reconciled=true" >> "$GITHUB_OUTPUT"
+            echo "bundle reconciled drive=${drive:0:12} -> tested_tcc=${main:0:12} @ ${tested_sha:0:12}"
           else
             echo "drift=false" >> "$GITHUB_OUTPUT"
+            echo "reconciled=false" >> "$GITHUB_OUTPUT"
+            echo "bundle aligned drive=${drive:0:12} tested_tcc=${main:0:12} @ ${tested_sha:0:12}"
           fi
-          echo "bundle drive=${drive:0:12} tcc_main=${main:0:12}"
 
       - name: Collect proposals from public TCC inbox
         if: steps.cred.outputs.ok == 'true'
@@ -197,9 +251,19 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           mkdir -p /tmp/bat /tmp/dispatch
-          gh run list --repo "$GITHUB_REPOSITORY" --workflow nexo-test-battery.yml --status completed --limit 20 --json databaseId,displayTitle,event > /tmp/bat/runs.json || echo '[]' > /tmp/bat/runs.json
+          gh run list --repo "$GITHUB_REPOSITORY" --workflow nexo-test-battery.yml --status completed --limit 20 --json databaseId,displayTitle,event,conclusion,startedAt,updatedAt > /tmp/bat/runs.json || echo '[]' > /tmp/bat/runs.json
           python3 - <<'PY'
           import json, subprocess, os, pathlib
+          from datetime import datetime, timezone
+
+          def parsed(value):
+              if not value:
+                  return None
+              try:
+                  return datetime.fromisoformat(str(value).replace("Z", "+00:00")).astimezone(timezone.utc)
+              except ValueError:
+                  return None
+
           runs = json.load(open("/tmp/bat/runs.json"))
           updates = []
           for run in runs:
@@ -208,16 +272,38 @@ jobs:
               bid = str(run.get("displayTitle", "")).replace("battery ", "").strip()
               if not bid:
                   continue
+              run_ref = f"actions/runs/{run['databaseId']}"
               d = pathlib.Path(f"/tmp/bat/{run['databaseId']}")
-              r = subprocess.run(["gh", "run", "download", str(run["databaseId"]), "--repo", os.environ["GITHUB_REPOSITORY"], "-n", "battery-results", "-D", str(d)], capture_output=True)
-              f = d / "battery-results.json"
-              if r.returncode != 0 or not f.is_file():
+              dl = subprocess.run(["gh", "run", "download", str(run["databaseId"]), "--repo",
+                                   os.environ["GITHUB_REPOSITORY"], "-n", "battery-results", "-D", str(d)],
+                                  capture_output=True)
+              result_file = d / "battery-results.json"
+              if dl.returncode != 0 or not result_file.is_file():
+                  conclusion = str(run.get("conclusion") or "startup_failure")
+                  if conclusion not in {"failure", "cancelled", "timed_out", "startup_failure"}:
+                      conclusion = "startup_failure"
+                  updates.append({"kind": "BATTERY_STATUS", "source": "WRITER_ROBOT",
+                                  "payload": {"battery_id": bid, "status": "DONE", "run_ref": run_ref,
+                                              "completed_at": run.get("updatedAt"), "conclusion": conclusion,
+                                              "results_missing": True, "results": []}})
                   continue
-              results = json.load(open(f, encoding="utf-8")).get("results", [])
+
+              results = json.load(open(result_file, encoding="utf-8")).get("results", [])
+              started = {str(row.get("test_id")): row.get("started_at") for row in results
+                         if isinstance(row, dict) and row.get("test_id") and parsed(row.get("started_at"))}
+              if started:
+                  updates.append({"kind": "BATTERY_STATUS", "source": "WRITER_ROBOT",
+                                  "payload": {"battery_id": bid, "status": "RUNNING", "run_ref": run_ref,
+                                              "started_tests": started}})
+              completion_times = [parsed(row.get("executed_at")) for row in results if isinstance(row, dict)]
+              completion_times = [stamp for stamp in completion_times if stamp is not None]
+              completed = max(completion_times).isoformat().replace("+00:00", "Z") if completion_times else run.get("updatedAt")
               updates.append({"kind": "BATTERY_STATUS", "source": "WRITER_ROBOT",
-                              "payload": {"battery_id": bid, "status": "DONE", "run_ref": f"actions/runs/{run['databaseId']}", "results": results}})
+                              "payload": {"battery_id": bid, "status": "DONE", "run_ref": run_ref,
+                                          "completed_at": completed, "conclusion": run.get("conclusion"),
+                                          "results": results}})
           json.dump(updates, open("/tmp/bat/updates.json", "w", encoding="utf-8"), ensure_ascii=False)
-          print("battery runs seen", len(runs), "collected", len(updates))
+          print("battery runs seen", len(runs), "observations", len(updates))
           PY
 
       - name: Apply inbox to the Tower
@@ -228,6 +314,7 @@ jobs:
           NEXO_GATEWAY_ITEMS: /tmp/gateway.json
           NEXO_BATTERY_UPDATES: /tmp/bat/updates.json
           NEXO_BATTERY_DIR: /tmp/dispatch
+          NEXO_RECIPE_REVISION: ${{ github.sha }}
         # Who runs the scheduled roles: nexo-control/producers.json (GPT | CLAUDE). The other producer is shadow-only.
         run: |
           export NEXO_ACTIVE_PRODUCER=$(python -c "import json;print(json.load(open('nexo-control/producers.json')).get('active','GPT'))" 2>/dev/null || echo GPT)
@@ -440,6 +527,6 @@ jobs:
           if [ "$DRIFT" = "true" ]; then
             body=$(printf 'O robô baixou do Drive o bundle `%s`, mas o `gpt/nexo_gpt_writer.py` do TCC main é `%s`.\n\nCorreções já mergeadas no TCC não estão rodando.\n\nPara alinhar: no TCC, `python scripts/build_gpt_writer_bundle.py --upload` (credencial do Drive).' "${DRIVE:0:12}" "${MAIN:0:12}")
             if [ -z "$n" ]; then gh issue create --title "$TITLE" --body "$body"; fi
-          elif [ -n "$n" ]; then
-            gh issue close "$n" --comment "Bundle do Drive igual ao TCC main (${MAIN:0:12})."
+          elif [ "$DRIFT" = "false" ] && [ -n "$n" ]; then
+            gh issue close "$n" --comment "Bundle do Drive alinhado ao último Writer testado no TCC (${MAIN:0:12})."
           fi

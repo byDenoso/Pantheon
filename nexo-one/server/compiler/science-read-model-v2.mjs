@@ -1,4 +1,5 @@
 import {createHash} from 'node:crypto';
+import {buildScienceProjectionV1,towerSourceRef} from '../../scripts/science-projection-v1.mjs';
 
 export const SCIENCE_READ_MODEL_V2_CONTRACT='NEXO_SCIENCE_READ_MODEL_V2';
 export const ACTIVITY_LEDGER_CONTRACT='NEXO_ACTIVITY_LEDGER_V1';
@@ -11,10 +12,33 @@ const strings=value=>arr(value).map(text).filter(Boolean);
 const stable=value=>Array.isArray(value)?value.map(stable):value&&typeof value==='object'?Object.fromEntries(Object.keys(value).sort().map(key=>[key,stable(value[key])])):value;
 const fingerprint=value=>`sha256:${createHash('sha256').update(JSON.stringify(stable(value))).digest('hex')}`;
 
-function scienceProjection(snapshot){return arr(snapshot?.projections?.Science);}
+export const isPublicResearchRecord=row=>Boolean(row)&&row.private!==true&&row.visibility!=='PRIVATE'&&!/(OLYMPUS|CLIENT|PERSON|PRIVATE)/i.test([row.thread_id,row.domain,row.semantic?.domain_id].map(text).join(' '));
+
+function towerRows(snapshot){
+  const p=snapshot.projection,m=snapshot.manifest;
+  const clean={...p,campaigns:arr(p.campaigns).filter(isPublicResearchRecord),hypotheses:arr(p.hypotheses).filter(isPublicResearchRecord),tests:arr(p.tests).filter(isPublicResearchRecord)};
+  const v1=buildScienceProjectionV1({projection:clean,manifest:m});
+  const originals=new Map([...clean.tests,...clean.hypotheses].map(row=>[row.id,row]));
+  const work=[];
+  for(const [kind,records] of [['HYPOTHESIS',v1.hypotheses],['TEST',v1.tests]])for(const row of records){
+    work.push({work_id:row.id,kind,thread_id:'THR::SCIENCE::ROOT',title:originals.get(row.id)?.title||row.title?.value||row.id,question:row.question?.value||row.statement?.value,status:row.status?.value,primary_campaign:row.campaign_id?.value,source_ref:row.source_ref});
+  }
+  for(const row of arr(p.work).filter(isPublicResearchRecord)){
+    if(['RUN','RESULT','EVIDENCE','CLAIM','DECISION','KNOWLEDGE','PIPELINE'].includes(upper(row.kind)))work.push({...row,work_id:row.id,thread_id:'THR::SCIENCE::ROOT',primary_campaign:row.campaign_id,source_ref:towerSourceRef(m,`TOWER_V06/projections/public/projection.json#work/${encodeURIComponent(row.id)}`)});
+  }
+  return {
+    work,rows:[
+      ...arr(p.programs).filter(isPublicResearchRecord).map(row=>({...row,record_type:'program',record_id:row.program_id||row.id})),
+      ...v1.campaigns.map(row=>({record_type:'campaign',record_id:row.id,title:row.title.value,question:row.question.value,status:row.status.value,source_ref:row.source_ref})),
+      ...arr(p.observations).filter(isPublicResearchRecord)
+    ],v1
+  };
+}
+
+function scienceProjection(snapshot){return arr(snapshot?.projections?.Science).filter(isPublicResearchRecord);}
 function scienceWork(snapshot){return arr(snapshot?.sections?.WORK).filter(row=>text(row?.thread_id)==='THR::SCIENCE::ROOT');}
 function provenance(snapshot,sourceRef=''){
-  return [{authority:'GOOGLE_DRIVE',source:'NEXO_SSOT',projectionAuthority:'DERIVED_FROM_SSOT',sourceRef:text(sourceRef)||undefined,modifiedAt:text(snapshot?.sourceModifiedAt)||undefined}];
+  return [{authority:snapshot?.authority||'GOOGLE_DRIVE',source:snapshot?.projection?'TOWER_V06':'NEXO_SSOT',projectionAuthority:snapshot?.projection?'DERIVED_FROM_TOWER':'DERIVED_FROM_SSOT',sourceRef:text(sourceRef)||(snapshot?.manifest?towerSourceRef(snapshot.manifest,'TOWER_V06/projections/public/projection.json'):undefined),modifiedAt:text(snapshot?.sourceModifiedAt)||undefined,sourceVersion:snapshot?.sourceVersion||undefined,projectionFingerprint:snapshot?.projection?snapshot.fingerprint:undefined}];
 }
 function publicRecord(row,fallbackType){
   const id=text(row?.work_id||row?.record_id||row?.id);
@@ -25,6 +49,7 @@ function publicRecord(row,fallbackType){
     label:text(row?.title||row?.question)||id,
     status:text(row?.status)||undefined,
     primaryCampaign:text(row?.primary_campaign||row?.primaryCampaign)||undefined,
+    testId:text(row?.test_id||row?.testId)||undefined,
     domains:strings(row?.domains).length?strings(row?.domains):text(row?.domain)?[text(row.domain)]:[],
     summary:text(row?.summary||row?.question)||undefined,
     keyMetrics:text(row?.key_metrics||row?.keyMetrics)||undefined,
@@ -54,7 +79,8 @@ function explicitObservation(row,snapshot){
 }
 
 export function buildScienceReadModelV2(snapshot){
-  const rows=scienceProjection(snapshot),work=scienceWork(snapshot);
+  const tower=snapshot?.projection?towerRows(snapshot):null;
+  const rows=tower?.rows||scienceProjection(snapshot),work=tower?.work||scienceWork(snapshot);
   const programs=rows.filter(row=>upper(row?.record_type||row?.type)==='PROGRAM').map(row=>({
     id:text(row.record_id||row.id),type:'PROGRAM',label:text(row.title)||text(row.record_id||row.id),status:text(row.status)||undefined,domain:text(row.domain)||undefined,summary:text(row.summary)||undefined
   })).filter(row=>row.id);
@@ -75,16 +101,25 @@ export function buildScienceReadModelV2(snapshot){
   const observations=rows.map(row=>explicitObservation(row,snapshot)).filter(Boolean);
   const comparisons=[];
   const syntheses=[];
-  const activity={contract:ACTIVITY_LEDGER_CONTRACT,state:snapshot?'READY':'DATA_UNAVAILABLE',items:[]};
+  const activity={contract:ACTIVITY_LEDGER_CONTRACT,state:snapshot?'READY':'DATA_UNAVAILABLE',items:snapshot?.projection?arr(snapshot.projection.activity).filter(isPublicResearchRecord).map(row=>({at:text(row.at),eventType:text(row.event_type),role:text(row.role)})):[]};
   const core={
-    contract:SCIENCE_READ_MODEL_V2_CONTRACT,state:snapshot?'READY':'DATA_UNAVAILABLE',sourceVersion:text(snapshot?.sourceModifiedAt),freshness:snapshot?.generatedAt?'SNAPSHOT':'DEGRADED',
+    contract:SCIENCE_READ_MODEL_V2_CONTRACT,state:snapshot?'READY':'DATA_UNAVAILABLE',sourceVersion:text(snapshot?.sourceVersion||snapshot?.sourceModifiedAt),freshness:snapshot?.generatedAt?'SNAPSHOT':'DEGRADED',
     structure:{programs,campaigns,facets,edges},observations,comparisons,syntheses,
     investigation:{hypotheses:lane('HYPOTHESIS'),claims:lane('CLAIM'),tests:lane('TEST'),runs:lane('RUN'),results:lane('RESULT'),evidence:lane('EVIDENCE'),decisions:lane('DECISION'),knowledge:lane('KNOWLEDGE'),pipelines:lane('PIPELINE')},
     activity:activity.items,shards:[],provenance:provenance(snapshot)
   };
-  return {...core,generatedAt:text(snapshot?.generatedAt),fingerprint:fingerprint(core)};
+  return {...core,generatedAt:text(snapshot?.generatedAt),fingerprint:fingerprint(core),authority:snapshot?.authority||'GOOGLE_DRIVE',projectionFingerprint:snapshot?.projection?snapshot.fingerprint:undefined,scienceProjection:tower?.v1};
 }
 
 export function buildScienceChanges(snapshot,model=buildScienceReadModelV2(snapshot)){
-  return {contract:ACTIVITY_LEDGER_CONTRACT,state:model.state,sourceVersion:model.sourceVersion,fingerprint:fingerprint({contract:ACTIVITY_LEDGER_CONTRACT,items:model.activity}),items:model.activity,provenance:model.provenance};
+  return {contract:ACTIVITY_LEDGER_CONTRACT,state:model.state,sourceVersion:model.sourceVersion,fingerprint:fingerprint({contract:ACTIVITY_LEDGER_CONTRACT,items:model.activity}),scienceFingerprint:model.fingerprint,projectionFingerprint:model.projectionFingerprint,freshness:model.freshness,authority:model.authority,generatedAt:model.generatedAt,items:model.activity,provenance:model.provenance};
+}
+
+const modelCache=new Map();
+export function scienceModelFor(snapshot,{onCache}={}){
+  const key=snapshot?.fingerprint?`${snapshot.authority||''}|${snapshot.sourceVersion||snapshot.sourceModifiedAt||''}|${snapshot.fingerprint}`:'';
+  if(!key){onCache?.('MISS');return buildScienceReadModelV2(snapshot);}
+  let model=modelCache.get(key);onCache?.(model?'HIT':'MISS');
+  if(!model){model=buildScienceReadModelV2(snapshot);modelCache.set(key,model);while(modelCache.size>4)modelCache.delete(modelCache.keys().next().value);}
+  return {...model,generatedAt:text(snapshot?.generatedAt)};
 }

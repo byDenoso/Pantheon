@@ -1,5 +1,5 @@
 {
-  "ignoreCommand": "prev=\"${VERCEL_GIT_PREVIOUS_SHA:-}\"; [ -n \"$prev\" ] || exit 1; git cat-file -e \"$prev^{commit}\" 2>/dev/null || exit 1; git diff --quiet \"$prev\" HEAD -- .",
+  "ignoreCommand": "prev=\"${VERCEL_GIT_PREVIOUS_SHA:-}\"; [ -n \"$prev\" ] || exit 1; git cat-file -e \"$prev^{commit}\" 2>/dev/null || exit 1; git diff --quiet \"$prev\" HEAD -- . ':(exclude)tower-head.json' ':(exclude)tcc-public-inbox-ack.json'",
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
   "framework": "vite",
@@ -9,6 +9,10 @@
     }
   },
   "rewrites": [
+    {
+      "source": "/api/mcp/status",
+      "destination": "/api/index?route=mcp/status"
+    },
     {
       "source": "/api/atlas/graph",
       "destination": "/api/index?route=atlas-graph"
