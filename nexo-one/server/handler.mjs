@@ -15,7 +15,7 @@ import {buildPersonalSnapshot,executePersonalAction} from './personal/service.mj
 import {createNexoMcpWebHandler} from './mcp/server.mjs';
 import {summarizeConnectionHealth} from './health/connection-state.mjs';
 const ATLAS_ORIGINS=new Set(['https://bydenoso.github.io','https://nexo-one-two.vercel.app','https://nexo-atlas-control-tower.vercel.app','https://nexo-atlas-cockpit.vercel.app']);
-const isCorsRoute=route=>route==='mcp'||route==='projection-sync'||route==='atlas-public-ssot'||route==='world'||RESEARCH_ROUTES.has(route);
+const isCorsRoute=route=>route==='mcp'||route==='projection-sync'||route==='atlas-public-ssot'||route==='atlas-graph'||route==='atlas/graph'||route==='world'||RESEARCH_ROUTES.has(route);
 const mcpWebHandler=createNexoMcpWebHandler({readSnapshot:()=>readAtlasSsot({env:process.env,now:Date.now()})});
 const mcpNodeHandler=toNodeHandler(mcpWebHandler);
 const DEFAULT_PUBLIC_SYSTEM_URL='https://bydenoso.github.io/Pantheon/system.json';
