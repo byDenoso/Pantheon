@@ -10,6 +10,10 @@
   },
   "rewrites": [
     {
+      "source": "/api/mcp/status",
+      "destination": "/api/index?route=mcp/status"
+    },
+    {
       "source": "/api/atlas/graph",
       "destination": "/api/index?route=atlas-graph"
     },

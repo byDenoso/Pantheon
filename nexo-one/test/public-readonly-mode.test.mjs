@@ -9,14 +9,14 @@ test('NEXO ONE exposes SystemState in public read-only mode without a private-se
   const handler = await read('../server/handler.mjs');
   assert.doesNotMatch(handler, /if\(!privateAccess\)return send\(\{error:'AUTH_REQUIRED'\},401\)[\s\S]{0,600}route==='system'/);
   assert.match(handler, /route==='system'/);
-  assert.match(handler, /access:'PUBLIC'/);
+  assert.match(handler, /readPublishedTowerSystem/);
   assert.match(handler, /req\.method!=='GET'\)return send\(\{error:'WRITES_DISABLED'\},405\)/);
 });
 
 test('public SystemState never reads private ACTION_REGISTER surfaces directly', async () => {
   const handler = await read('../server/handler.mjs');
   assert.doesNotMatch(handler, /route==='system'[\s\S]{0,1200}readSystemInput\(\{env\}\)/);
-  assert.match(handler, /truthGraphInput\?\.capabilityRows/);
+  assert.match(handler, /SANCTIONED_PUBLIC_PROJECTION_UNAVAILABLE/);
 });
 
 test('release acceptance is public and does not require a QA session cookie', async () => {
@@ -41,7 +41,8 @@ test('private session support is bounded to session state while public SystemSta
   const example = await read('../.env.example');
   assert.match(handler, /sessionAccess\(req,env,now\)/);
   assert.match(handler, /route==='session'/);
-  assert.match(handler, /const options=\{now,access:'PUBLIC',env,force\}/);
+  assert.match(handler, /if\(route==='system'\)[\s\S]*readPublishedTowerSystem/);
+  assert.match(handler, /const options=\{now,access,env,force\}/);
   assert.match(example, /NEXO_PASSWORD_HASH/);
   assert.match(example, /NEXO_SESSION_SECRET/);
 });
