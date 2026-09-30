@@ -1,0 +1,10 @@
+{
+  "source_url": "https://bydenoso.github.io/Pantheon/tower-projection/projection.json",
+  "retrieved_at": "2026-09-30T19:52:28Z",
+  "generated_at": "2026-09-30T19:47:20Z",
+  "sha256": "8b4c0da9ddb63b07f1043c53a1dab3cfd7d88cf3ec6c372ee63d00a2b1888b8b",
+  "uncompressed_sha256": "b9e701f0af911878ffee5631435fe623926530b6be7e226516a545b2c19feb40",
+  "format": "json.gz",
+  "version": "sha256:d4090f469df7eafe9a776b04c8ea363c22b7fa65d13ebf7181464389a65abf05",
+  "note": "Exact public response compressed deterministically with gzip mtime=0. No Tower contents or additional private fields were added."
+}

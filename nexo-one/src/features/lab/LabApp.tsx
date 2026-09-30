@@ -13,6 +13,7 @@ import './lab.css';
 import '../../styles/atlas-cinematic.css';
 import { currentVerdictText, matchesSearch, boardMeta, readinessLabel, hasPublishedValue } from './presentation.ts';
 import { selectScienceFocus, scientificStatRows } from './science-presentation.ts';
+import { autonomyPresentation } from './autonomy-presentation.ts';
 import { DependencyFlow } from './DependencyFlow.tsx';
 import { LiveNowPanel } from './LiveNowPanel.tsx';
 import { captureReading, publishedChanges, latestDelivery, eventLabel, focusEntities, type PublishedChange } from './live-state.ts';
@@ -936,17 +937,18 @@ const pctOf = (v: number | null | undefined) => (v == null ? '—' : `${Math.rou
 const FEATURE_PT: Record<string, string> = { units: 'número de faixas ou grupos', n_compilations: 'número de coleções de supernovas', has_union3: 'usa Union3', mode: 'modo da análise', recipe: 'receita' };
 function Autonomy({ state }: { state: SystemState }) {
   const a = state.evolution?.autonomy;
-  if (!a || !a.results) return null;
+  if (!a) return null;
   const rules = (state.evolution?.learning?.rules ?? []).filter(r => r.state === 'ACTIVE');
-  const cells: [string, string, string][] = [
-    [pctOf(a.robot_share), 'feito só pelo robô', 'resultados das últimas 24h sem agente nem pessoa'],
-    [a.median_hours_to_result == null ? '—' : `${a.median_hours_to_result} h`, 'da ideia ao resultado', 'mediana'],
-    [pctOf(a.decisive_rate), 'testes que decidem', 'os outros terminam inconclusivos'],
-    [pctOf(a.contest_closure), 'positivos com veredito', 'confirmados ou derrubados por contestação'],
-    [pctOf(a.false_block_share), 'bloqueados', 'parte da fila parada por falta de dado ou receita'],
-  ];
-  return <Section title="O quanto o NEXO fecha sozinho" kicker={`${a.results} resultados nas últimas ${a.window_hours}h`} id="now-autonomy">
-    <dl className="aut-grid">{cells.map(([v, t, d]) => <div key={t}><dt>{v}</dt><dd><b>{t}</b><span>{d}</span></dd></div>)}</dl>
+  const view = autonomyPresentation(a);
+  return <Section title="Resultados, revisão e fila" kicker={`${a.results} registros com veredito na janela publicada de ${a.window_hours}h`} id="now-autonomy">
+    {view.legacy
+      ? <p className="hud-note">Agregado legado: definições versionadas, bases numéricas e cobertura não publicadas. Os percentuais abaixo não comprovam autonomia sem supervisão.</p>
+      : <p className="hud-note">Calculado em {a.computed_at ?? 'data não publicada'}. Janela: {a.window_start ?? 'início não publicado'} a {a.window_end ?? 'fim não publicado'}.</p>}
+    <h3>Resultados na janela · testes principais</h3>
+    {view.outcomes.length > 0 && <p className="hud-note">Vereditos registrados: {view.outcomes.map(([verdict, total]) => `${total} ${verdict}`).join(' · ')}.</p>}
+    <dl className="aut-grid">{view.recent.map(cell => <div key={cell.label}><dt>{cell.value}</dt><dd><b>{cell.label}</b><span>{cell.base}</span><span>{cell.description}</span></dd></div>)}</dl>
+    <h3>Estoque na leitura · sem recorte temporal</h3>
+    <dl className="aut-grid">{view.inventory.map(cell => <div key={cell.label}><dt>{cell.value}</dt><dd><b>{cell.label}</b><span>{cell.base}</span><span>{cell.description}</span></dd></div>)}</dl>
     {rules.length > 0 && <>
       <p className="hud-kicker" style={{ marginTop: 14 }}>Regras que o NEXO aprendeu sobre como pesquisar</p>
       <ul className="fam-list">{rules.map(r => <li key={`${r.feature}=${r.value}`}>
@@ -1454,4 +1456,3 @@ const JARGON: Array<[RegExp, string]> = [
   [/\bread-back\b/gi, 'conferência'], [/\bstaging\b/gi, 'área de espera'], [/\bfull-shape\b/gi, 'completa'],
 ];
 function humanize(text: string) { return JARGON.reduce((acc, [re, to]) => acc.replace(re, to), text); }
-

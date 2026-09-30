@@ -456,11 +456,37 @@ export interface EvolutionStatus {
                evaluated?: { cases?: number; holdout?: number; baseline?: number; note?: string } | null };
   /** Look-elsewhere register: comparisons opened per roadmap/family. */
   search_space?: Record<string, { comparisons: number; positives: number; chance_any_positive: number; expected_by_chance: number; excess_positives: number }>;
-  /** Autonomy vector: what the loop closes without an operator. */
-  autonomy?: { window_hours: number; results: number; robot_share: number | null; decisive_rate: number | null; median_hours_to_result: number | null;
-               contest_closure: number | null; recovery_rate: number | null; false_block_share: number | null };
+  /** Published outcome/queue metrics. Execution metadata is a proxy, never proof of unsupervised autonomy. */
+  autonomy?: AutonomyMetrics;
   /** Recipes whose circuit is open after repeated crashes. */
   recipe_health?: Record<string, { state: string; consecutive_bugs?: number; last_test?: string }>;
+}
+
+export interface PublishedAutonomyMetric {
+  value: number | null;
+  numerator: number | null;
+  denominator: number | null;
+  scope: string;
+  definition: string;
+  unit: string;
+  sample_count?: number;
+  coverage?: { value: number | null; numerator: number; denominator: number };
+}
+export interface AutonomyMetrics {
+  window_hours: number;
+  results: number;
+  robot_share: number | null;
+  decisive_rate: number | null;
+  median_hours_to_result: number | null;
+  contest_closure: number | null;
+  recovery_rate: number | null;
+  false_block_share: number | null;
+  schema_version?: string;
+  computed_at?: string;
+  window_start?: string;
+  window_end?: string;
+  metrics?: Record<string, PublishedAutonomyMetric>;
+  buckets?: { result_verdicts?: Record<string, number>; result_categories?: { decisive: number; inconclusive: number; other: number }; queue_statuses?: { ready: number; blocked: number; other: number } };
 }
 
 export interface SystemState {
@@ -493,4 +519,3 @@ export interface SystemState {
 
 /** Estado de carregamento de qualquer superfície. Erro nunca vira skeleton eterno. */
 export type LoadState = 'LOADING' | 'READY' | 'PARTIAL' | 'ERROR' | 'UNAUTHORIZED' | 'EMPTY';
-

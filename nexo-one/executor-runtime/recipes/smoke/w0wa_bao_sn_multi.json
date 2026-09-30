@@ -1,1 +1,7 @@
-{"mode":"bao_tracer_jackknife","compilations":["des_sn5yr"],"tracer_groups":[{"label":"lya","z":[2.33]}]}
+{
+  "mode": "bao_tracer_jackknife",
+  "bao_release": "dr1",
+  "compilations": ["union3"],
+  "priors": {"omega_m": [0.315, 0.02]},
+  "tracer_groups": [{"label": "lya", "z": [2.33]}]
+}

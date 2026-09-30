@@ -71,7 +71,7 @@ jobs:
         run: |
           set -euo pipefail
           drive=$(sha256sum /tmp/nexo_gpt_writer.py | cut -d' ' -f1)
-          tested_sha=$(gh api "repos/byDenoso/TCC/actions/workflows/nexo-runtime-reconciler-ci.yml/runs?branch=main&event=push&status=success&per_page=20" --jq '.workflow_runs[0].head_sha // empty' || true)
+          tested_sha=$(python scripts/select_tested_tcc_main.py)
           if [ -z "$tested_sha" ]; then
             echo "drive=$drive" >> "$GITHUB_OUTPUT"
             echo "main=" >> "$GITHUB_OUTPUT"
@@ -89,6 +89,17 @@ jobs:
           cp /tmp/tcc-tested/gpt/nexo_gpt_writer.py "$main_file"
           python -m py_compile "$main_file"
           main=$(sha256sum "$main_file" | cut -d' ' -f1)
+          # Recheck after clone/build as well: never publish a revision that is no
+          # longer the tested current main. Keep the already active Drive bytes.
+          verified_sha=$(python scripts/select_tested_tcc_main.py)
+          if [ "$verified_sha" != "$tested_sha" ]; then
+            echo "drive=$drive" >> "$GITHUB_OUTPUT"
+            echo "main=" >> "$GITHUB_OUTPUT"
+            echo "drift=unknown" >> "$GITHUB_OUTPUT"
+            echo "reconciled=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::TCC main changed or lost matching CI; retaining the Drive bundle."
+            exit 0
+          fi
           echo "drive=$drive" >> "$GITHUB_OUTPUT"
           echo "main=$main" >> "$GITHUB_OUTPUT"
 
