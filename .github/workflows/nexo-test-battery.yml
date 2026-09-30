@@ -46,6 +46,8 @@ jobs:
           python -m pip install --disable-pip-version-check -r nexo-one/executor-runtime/requirements.txt
           python -m pip check
       - name: Verify runner capabilities
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: python nexo-one/executor-runtime/smoke.py
 
   plan:
@@ -53,6 +55,12 @@ jobs:
     outputs:
       matrix: ${{ steps.m.outputs.matrix }}
     steps:
+      - name: Checkout versioned CI fixture
+        if: github.event_name == 'pull_request'
+        uses: actions/checkout@v4
+        with:
+          path: runtime-base
+          persist-credentials: false
       - name: Checkout frozen battery specs
         uses: actions/checkout@v4
         with:
@@ -63,12 +71,15 @@ jobs:
       - id: m
         env:
           BID: ${{ env.NEXO_BATTERY_ID }}
+          NEXO_CI_FIXTURE: ${{ github.event_name == 'pull_request' }}
         run: |
           python3 - <<'PY'
           import json, os, re
           bid = os.environ["BID"]
           assert re.fullmatch(r"[a-z0-9-]{3,48}", bid), "bad battery id"
-          spec = json.load(open(f"battery-specs/batteries/{bid}.json", encoding="utf-8"))
+          spec_path = (f"runtime-base/nexo-one/executor-runtime/fixtures/{bid}.json"
+                       if os.environ["NEXO_CI_FIXTURE"] == "true" else f"battery-specs/batteries/{bid}.json")
+          spec = json.load(open(spec_path, encoding="utf-8"))
           tests = list(spec.get("tests") or [])
           assert tests, "battery has no tests"
           assert len(tests) <= 20, "battery exceeds 20-test limit"
@@ -116,12 +127,15 @@ jobs:
           BID: ${{ env.NEXO_BATTERY_ID }}
           IDX: ${{ matrix.index }}
           MATRIX_TEST_ID: ${{ matrix.test_id }}
+          NEXO_CI_FIXTURE: ${{ github.event_name == 'pull_request' }}
         run: |
           mkdir -p /tmp/job
           python3 - <<'PY'
           import json, os
           bid, idx, expected_id = os.environ["BID"], int(os.environ["IDX"]), os.environ["MATRIX_TEST_ID"]
-          spec = json.load(open(f"battery-specs/batteries/{bid}.json", encoding="utf-8"))
+          spec_path = (f"runtime-base/nexo-one/executor-runtime/fixtures/{bid}.json"
+                       if os.environ["NEXO_CI_FIXTURE"] == "true" else f"battery-specs/batteries/{bid}.json")
+          spec = json.load(open(spec_path, encoding="utf-8"))
           test = spec["tests"][idx]
           test_id = str(test.get("test_id") or "")
           meta = {"battery_id": bid, "test_id": test_id or expected_id,
@@ -149,7 +163,9 @@ jobs:
                   raise SystemExit("CAMB recipe must invoke the versioned portable CAMB runtime")
           json.dump(params, open("/tmp/job/params.json", "w", encoding="utf-8"), ensure_ascii=False)
           open("/tmp/job/test.py", "w", encoding="utf-8").write(script)
-          open("/tmp/job/requirements-extra.txt", "w", encoding="utf-8").write("")
+          # Versioned dependency for the CI dependency canary; never supplied by a client.
+          extras = {"astropy_dependency_canary": "astropy>=7,<8\n"}
+          open("/tmp/job/requirements-extra.txt", "w", encoding="utf-8").write(extras.get(recipe, ""))
           with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as out:
               out.write(f"requires_camb={'true' if requires_camb else 'false'}\n")
               out.write(f"camb_commit={camb_commit}\n")
