@@ -61,22 +61,71 @@ jobs:
           print("bundle bytes", len(r.content))
           EOF
 
-      - name: Check the Drive bundle against TCC main
+      - name: Reconcile Writer bundle with tested TCC main
         id: bundle
         if: steps.cred.outputs.ok == 'true'
-        # The robot runs whatever sits in Drive; TCC main is where the writer is reviewed and tested.
-        # Upload is manual (build_gpt_writer_bundle.py --upload), so a merged fix can silently never run.
+        env:
+          GOOGLE_SERVICE_ACCOUNT_JSON: ${{ secrets.NEXO_DRIVE_WRITER_JSON }}
+          GH_TOKEN: ${{ github.token }}
+          WRITER_BUNDLE_ID: 1DBw9H1wUHjZkasE2BI-aEafCzNnjKOjV
         run: |
+          set -euo pipefail
           drive=$(sha256sum /tmp/nexo_gpt_writer.py | cut -d' ' -f1)
-          main=$(curl -fsSL "https://raw.githubusercontent.com/byDenoso/TCC/main/gpt/nexo_gpt_writer.py" | sha256sum | cut -d' ' -f1 || true)
-          echo "drive=$drive" >> "$GITHUB_OUTPUT"; echo "main=$main" >> "$GITHUB_OUTPUT"
-          if [ -n "$main" ] && [ "$drive" != "$main" ]; then
-            echo "drift=true" >> "$GITHUB_OUTPUT"
-            echo "::warning::Drive writer bundle ${drive:0:12} differs from TCC main ${main:0:12}"
+          tested_sha=$(gh api "repos/byDenoso/TCC/actions/workflows/nexo-runtime-reconciler-ci.yml/runs?branch=main&event=push&status=success&per_page=20" --jq '.workflow_runs[0].head_sha // empty' || true)
+          if [ -z "$tested_sha" ]; then
+            echo "drive=$drive" >> "$GITHUB_OUTPUT"
+            echo "main=" >> "$GITHUB_OUTPUT"
+            echo "drift=unknown" >> "$GITHUB_OUTPUT"
+            echo "reconciled=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::No tested TCC Writer revision is currently available; retaining the Drive bundle."
+            exit 0
+          fi
+
+          main_file=/tmp/nexo_gpt_writer.tcc.py
+          curl -fsSL "https://raw.githubusercontent.com/byDenoso/TCC/${tested_sha}/gpt/nexo_gpt_writer.py" -o "$main_file"
+          main=$(sha256sum "$main_file" | cut -d' ' -f1)
+          echo "drive=$drive" >> "$GITHUB_OUTPUT"
+          echo "main=$main" >> "$GITHUB_OUTPUT"
+
+          if [ "$drive" != "$main" ]; then
+            cp "$main_file" /tmp/nexo_gpt_writer.py
+            python - <<'PY'
+          import hashlib, json, os
+          from google.oauth2 import service_account
+          from google.auth.transport.requests import AuthorizedSession
+
+          info = json.loads(os.environ["GOOGLE_SERVICE_ACCOUNT_JSON"])
+          creds = service_account.Credentials.from_service_account_info(
+              info, scopes=["https://www.googleapis.com/auth/drive"])
+          session = AuthorizedSession(creds)
+          file_id = os.environ["WRITER_BUNDLE_ID"]
+          local = open("/tmp/nexo_gpt_writer.py", "rb").read()
+          response = session.patch(
+              f"https://www.googleapis.com/upload/drive/v3/files/{file_id}",
+              params={"uploadType": "media", "supportsAllDrives": "true"},
+              data=local,
+              headers={"Content-Type": "text/x-python"},
+              timeout=120,
+          )
+          response.raise_for_status()
+          readback = session.get(
+              f"https://www.googleapis.com/drive/v3/files/{file_id}",
+              params={"alt": "media", "supportsAllDrives": "true"},
+              timeout=120,
+          )
+          readback.raise_for_status()
+          if hashlib.sha256(readback.content).digest() != hashlib.sha256(local).digest():
+              raise SystemExit("Drive Writer bundle readback hash mismatch")
+          print("Drive Writer bundle reconciled and read back")
+          PY
+            echo "drift=false" >> "$GITHUB_OUTPUT"
+            echo "reconciled=true" >> "$GITHUB_OUTPUT"
+            echo "bundle reconciled drive=${drive:0:12} -> tested_tcc=${main:0:12} @ ${tested_sha:0:12}"
           else
             echo "drift=false" >> "$GITHUB_OUTPUT"
+            echo "reconciled=false" >> "$GITHUB_OUTPUT"
+            echo "bundle aligned drive=${drive:0:12} tested_tcc=${main:0:12} @ ${tested_sha:0:12}"
           fi
-          echo "bundle drive=${drive:0:12} tcc_main=${main:0:12}"
 
       - name: Collect proposals from public TCC inbox
         if: steps.cred.outputs.ok == 'true'
@@ -440,6 +489,6 @@ jobs:
           if [ "$DRIFT" = "true" ]; then
             body=$(printf 'O robô baixou do Drive o bundle `%s`, mas o `gpt/nexo_gpt_writer.py` do TCC main é `%s`.\n\nCorreções já mergeadas no TCC não estão rodando.\n\nPara alinhar: no TCC, `python scripts/build_gpt_writer_bundle.py --upload` (credencial do Drive).' "${DRIVE:0:12}" "${MAIN:0:12}")
             if [ -z "$n" ]; then gh issue create --title "$TITLE" --body "$body"; fi
-          elif [ -n "$n" ]; then
-            gh issue close "$n" --comment "Bundle do Drive igual ao TCC main (${MAIN:0:12})."
+          elif [ "$DRIFT" = "false" ] && [ -n "$n" ]; then
+            gh issue close "$n" --comment "Bundle do Drive alinhado ao último Writer testado no TCC (${MAIN:0:12})."
           fi
