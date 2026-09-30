@@ -510,9 +510,9 @@ details.tech .versus{margin-bottom:18px}
 
 /* ===== Vigia: quem está quieto ===== */
 .quiet-list{list-style:none;margin:0;padding:0;display:grid;gap:8px}
-.quiet-list li{display:grid;grid-template-columns:minmax(90px,auto) auto 1fr;gap:6px 14px;align-items:baseline;padding:10px 12px;border-radius:10px;background:rgba(200,85,61,.07);border-left:2px solid var(--v-refuted)}
+.quiet-list li{display:grid;grid-template-columns:minmax(90px,auto) auto 1fr;gap:6px 14px;align-items:baseline;padding:10px 12px;border-radius:10px;background:rgba(var(--o-accent-rgb),.06);border-left:2px solid rgba(var(--o-accent-rgb),.55)}
 .quiet-list b{color:var(--o-ink);font-weight:500}
-.quiet-list span{font:400 12.5px var(--sig-mono,monospace);color:#e0a38f}
+.quiet-list span{font:400 12.5px var(--sig-mono,monospace);color:var(--o-accent)}
 .quiet-list em{font-style:normal;font-size:13px;color:var(--o-dim)}
 @media (max-width:760px){.quiet-list li{grid-template-columns:1fr}}
 
@@ -720,7 +720,7 @@ details.tech .versus{margin-bottom:18px}
 :root[data-theme="light"] .observatory{--o-void:#e8eef1;--o-panel:rgba(242,246,248,.95);--o-raise:rgba(246,249,250,.97)}
 :root[data-theme="light"] .telemetry{background:color-mix(in srgb,#e8eef1 70%,transparent)!important}
 :root[data-theme="light"] body,:root[data-theme="light"] .unified-shell{background:#e8eef1}
-.quiet-list span{color:var(--v-refuted)!important;font-weight:500}
+.quiet-list span{color:var(--o-accent)!important;font-weight:500}
 
 /* ===== Painéis de vidro: transparentes com desfoque do fundo ===== */
 .observatory{--o-glass:rgba(6,10,13,.52);--o-glass-line:rgba(var(--o-accent-rgb),.16)}
