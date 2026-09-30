@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 import shutil
 import subprocess
 import sys
@@ -38,9 +39,13 @@ def main() -> int:
     if float(frame["x"].mean()) != 2.0:
         raise RuntimeError("pandas_check_failed")
 
+    headers = {"User-Agent": "nexo-actions-runtime-smoke"}
+    token = os.environ.get("GH_TOKEN", "").strip()
+    if token:
+        headers["Authorization"] = "Bearer " + token
     response = requests.get(
         "https://api.github.com/repos/byDenoso/TCC",
-        headers={"User-Agent": "nexo-actions-runtime-smoke"},
+        headers=headers,
         timeout=20,
     )
     response.raise_for_status()
