@@ -40,3 +40,26 @@ test('a hypothesis selection highlights its actual tests and attack selects its 
   assert.deepEqual(focusEntities(input, 'H'), ['A', 'B']);
   assert.equal(focusEntities(input, 'CONTEST-A-1')[0], 'A');
 });
+
+
+test('3D focus never includes hidden contest nodes and preserves single-target centering', () => {
+  const input = lab({ A: { status: 'DONE' }, 'CONTEST-A-1': { status: 'DONE', hypothesis_id: 'H-ATTACK' }, 'CONTEST-A-2': { status: 'READY', hypothesis_id: 'H-ATTACK' } });
+  assert.deepEqual(focusEntities(input, 'A'), ['A']);
+  assert.deepEqual(focusEntities(input, 'H-ATTACK'), ['A']);
+  assert.deepEqual(focusEntities(input, 'MISSING'), []);
+});
+
+test('a known row returning after a partial read is not announced as new', () => {
+  const full = lab({ A: { status: 'READY' }, B: { status: 'DONE' } });
+  const first = captureReading(full);
+  const partial = captureReading(lab({ A: { status: 'READY' } }), first);
+  assert.deepEqual(publishedChanges(partial, full), []);
+});
+
+test('review milestones and explicit readiness are changes, missing review is not', () => {
+  const before = lab({ A: { status: 'DONE', review_state: 'PENDING_REVIEW' }, B: { status: 'DONE', review_state: 'CONFIRMED' }, C: { status: 'READY' } });
+  const after = lab({ A: { status: 'DONE', review_state: 'REFEREE1_PASSED' }, B: { status: 'DONE' }, C: { status: 'READY', readiness: { eligible: false, reasons: [] } } });
+  assert.deepEqual(publishedChanges(captureReading(before), after).map(c => [c.id, c.kind]), [['A', 'review'], ['C', 'readiness']]);
+  const merged = captureReading(after, captureReading(before));
+  assert.equal(merged.get('B').review, 'CONFIRMED');
+});

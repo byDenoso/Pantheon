@@ -1,6 +1,6 @@
 import type { ScenePage } from './ObservatoryScene.tsx';
 
-export interface LabRoute { page: ScenePage; id?: string; q?: string; search?: string }
+export interface LabRoute { page: ScenePage; id?: string; q?: string; search?: string; preserveScroll?: boolean }
 export const LAB_PAGES: Array<[ScenePage, string]> = [
   ['agora', 'Agora'], ['universo', 'Universo'], ['ciclo', 'Ciclo'], ['roadmaps', 'Roadmaps'], ['evidencia', 'Evidência'], ['saude', 'Saúde'],
 ];
@@ -33,3 +33,12 @@ export const labHref = (page: ScenePage, id?: string) =>
   page === 'universo' && id ? `#/universo/${encodeURIComponent(id)}` : page === 'roadmap' ? `#/roadmap/${encodeURIComponent(id!)}` : page === 'entidade' ? `#/e/${encodeURIComponent(id!)}` : `#/${page}`;
 
 
+
+/** replaceState does not notify the router. Search edits preserve scroll; native Back restores its saved position. */
+export function replaceEvidenceSearch(search: string, verdict?: string, target: Pick<Window, 'history' | 'dispatchEvent'> = window): void {
+  const params = new URLSearchParams();
+  if (verdict) params.set('v', verdict);
+  if (search) params.set('q', search);
+  target.history.replaceState(null, '', `#/evidencia${params.size ? '?' + params : ''}`);
+  target.dispatchEvent(new Event('nexo:searchchange'));
+}

@@ -2,8 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { buildLab } from '../src/features/lab/model.ts';
-import { parseLabRoute } from '../src/features/lab/routes.ts';
-import { currentVerdictText, matchesSearch, boardMeta, readinessLabel } from '../src/features/lab/presentation.ts';
+import { parseLabRoute, replaceEvidenceSearch } from '../src/features/lab/routes.ts';
+import { currentVerdictText, matchesSearch, boardMeta, readinessLabel, hasPublishedValue } from '../src/features/lab/presentation.ts';
 
 const snapshot = (tests = {}, roadmaps = [], progress = []) => ({
   generated_at: '2026-09-30T12:00:00Z', graph: { nodes: [], edges: [] },
@@ -99,4 +99,68 @@ test('Atlas filter groups cannot shrink into each other and footer overlays have
   assert.match(css, /\.atlas-graph-filters\{flex:none;width:max-content;min-width:max-content/);
   assert.match(css, /\.atlas-layer-switch\) > button\{flex-shrink:0\}/);
   assert.match(css, /\.atlas-interaction-hint\{left:16px;right:196px;bottom:72px/);
+});
+
+
+test('replacing a search query immediately updates the route used for scroll history', () => {
+  let hash = '#/evidencia';
+  let route = parseLabRoute(hash);
+  const events = new EventTarget();
+  events.addEventListener('nexo:searchchange', () => { route = { ...parseLabRoute(hash), preserveScroll: true }; });
+  const target = { history: { replaceState: (_state, _unused, url) => { hash = url; } }, dispatchEvent: event => events.dispatchEvent(event) };
+  replaceEvidenceSearch('matéria escura', 'READY', target);
+  assert.equal(route.search, 'matéria escura');
+  assert.equal(route.preserveScroll, true);
+  assert.equal(route.q, 'READY');
+  assert.equal(hash, '#/evidencia?v=READY&q=mat%C3%A9ria+escura');
+  const positions = new Map([[`${route.page}:${route.id ?? ''}:${route.q ?? ''}:${route.search ?? ''}`, 640]]);
+  route = parseLabRoute('#/e/RESULT');
+  route = parseLabRoute(hash);
+  assert.equal(positions.get(`${route.page}:${route.id ?? ''}:${route.q ?? ''}:${route.search ?? ''}`), 640);
+});
+
+test('missing status and missing result are described as absent, never provisional evidence', () => {
+  const unknown = buildLab(snapshot({ A: {}, B: { status: 'DONE' } })).tests;
+  assert.match(currentVerdictText(unknown.get('A')), /Estado e resultado não publicados/);
+  assert.match(currentVerdictText(unknown.get('B')), /resultado científico ainda não foi publicado/);
+});
+
+test('missing frontier stays unavailable rather than becoming a declared zero', () => {
+  const rm = buildLab(snapshot({}, [{ roadmap_id: 'DM' }])).roadmaps.get('DM');
+  assert.equal(rm.frontier, null);
+  assert.equal(rm.frontierSource, undefined);
+});
+
+test('board priority preserves Portuguese accents', () => {
+  assert.equal(boardMeta({ id: 'P', from: 'PITIA', to: 'ALL', at: '', text: 'Prioridade: média\nPróxima ação: verificar.' }, Date.now()).priority, 'média');
+});
+
+test('the public projection forwards only readiness facts already exported, without runtime details', async () => {
+  const { buildPagesProjection } = await import('../scripts/build-pages-system.mjs');
+  const manifest = { authority: 'TOWER_V06', projection_only: true, writeback: 'FORBIDDEN', tower_commit: '6'.repeat(40), event_cursor: '20260930T120000000000Z-readiness', projection_fingerprint: 'sha256:' + '7'.repeat(64), generated_at: '2026-09-30T12:00:00Z' };
+  const projection = { contract: 'NEXO_PUBLIC_PROJECTION_V1', manifest, event_cursor: manifest.event_cursor, work: [], capabilities: {}, counts: { active_work: 0, tests: 2, capabilities: 0 }, tests: [
+    { id: 'A', status: 'READY', readiness: { eligible: false, policy: 'SCIENTIFIC_INTEGRITY_V1', reasons: ['INPUT_NOT_BOUND', '/private/path'], recipe_sha256: 'private-hash', binding: 'private-binding' } },
+    { id: 'B', status: 'READY' }, { id: 'PRIVATE', private: true, status: 'READY', readiness: { eligible: true } },
+  ] };
+  const { system } = buildPagesProjection({ projection, manifestFile: manifest });
+  assert.deepEqual(system.read_model.tests.A.readiness, { eligible: false, policy: 'SCIENTIFIC_INTEGRITY_V1', reasons: ['INPUT_NOT_BOUND'] });
+  assert.equal(system.read_model.tests.B.readiness, undefined);
+  assert.equal(system.read_model.tests.PRIVATE, undefined);
+  assert.equal(readinessLabel(buildLab(system).tests.get('A')), 'Inelegível na verificação publicada');
+});
+
+
+test('unavailable result envelopes do not become provisional scientific evidence', () => {
+  const absent = { value: { value: null, unavailable_reason: 'NOT_PUBLISHED', source_ref: 'public-source' }, source_ref: 'outer-source' };
+  assert.equal(hasPublishedValue(absent), false);
+  assert.equal(hasPublishedValue({ value: 0 }), true);
+  assert.equal(hasPublishedValue({ statistics: { p_value: 0.04 } }), true);
+  assert.match(currentVerdictText({ verdict: 'PROVISIONAL', status: null, review: null, verdictRaw: null, meaning: null, result: absent }), /Estado e resultado não publicados/);
+});
+
+test('all Evidence verdict filters use one stable population including contests', async () => {
+  const source = await readFile(new URL('../src/features/lab/LabApp.tsx', import.meta.url), 'utf8');
+  const evidence = source.slice(source.indexOf('function Evidence('), source.indexOf('// ---------- Entidade'));
+  assert.match(evidence, /const all = \[\.\.\.lab.tests.values\(\)\];/);
+  assert.doesNotMatch(evidence, /filter\(t => .*contestOf/);
 });

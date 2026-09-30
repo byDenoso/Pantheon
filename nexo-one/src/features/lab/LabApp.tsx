@@ -11,7 +11,7 @@ import type { ScenePage, SceneEvents } from './ObservatoryScene.tsx';
 import { normDomain } from './domains.ts';
 import './lab.css';
 import '../../styles/atlas-cinematic.css';
-import { currentVerdictText, matchesSearch, boardMeta, readinessLabel } from './presentation.ts';
+import { currentVerdictText, matchesSearch, boardMeta, readinessLabel, hasPublishedValue } from './presentation.ts';
 import { DependencyFlow } from './DependencyFlow.tsx';
 import { LiveNowPanel } from './LiveNowPanel.tsx';
 import { captureReading, publishedChanges, latestDelivery, eventLabel, focusEntities, type PublishedChange } from './live-state.ts';
@@ -19,7 +19,7 @@ import { UniversePage, UniverseFrontierPage } from './UniversePage.tsx';
 
 const ObservatoryScene = lazy(() => import('./ObservatoryScene.tsx').then(m => ({ default: m.ObservatoryScene })));
 
-import { labHref, type LabRoute } from './routes.ts';
+import { labHref, replaceEvidenceSearch, type LabRoute } from './routes.ts';
 export { labHref, parseLabRoute, LAB_PAGES, type LabRoute } from './routes.ts';
 
 // ---------- peças base ----------
@@ -72,7 +72,7 @@ export default function LabApp({ state, route, theme }: { state: SystemState; ro
   const [changedAt, setChangedAt] = useState<string | null>(null);
   useEffect(() => {
     const next = publishedChanges(previousReading.current, lab);
-    previousReading.current = captureReading(lab);
+    previousReading.current = captureReading(lab, previousReading.current);
     if (next.length) { setChanges(next); setChangedAt(lab.generatedAt); }
   }, [lab]);
   const [focus, setFocus] = useState<string[]>([]);
@@ -84,9 +84,12 @@ export default function LabApp({ state, route, theme }: { state: SystemState; ro
   useLayoutEffect(() => {
     const hud = hudRef.current;
     const saved = scrollPositions.current.get(routeKey);
-    window.scrollTo({ top: saved?.page ?? 0, behavior: 'instant' });
-    if (hud) hud.scrollTop = saved?.hud ?? 0;
+    if (!route.preserveScroll) {
+      window.scrollTo({ top: saved?.page ?? 0, behavior: 'instant' });
+      if (hud) hud.scrollTop = saved?.hud ?? 0;
+    }
     const save = () => scrollPositions.current.set(routeKey, { page: window.scrollY, hud: hud?.scrollTop ?? 0 });
+    if (route.preserveScroll) save();
     window.addEventListener('scroll', save, { passive: true });
     hud?.addEventListener('scroll', save, { passive: true });
     return () => { window.removeEventListener('scroll', save); hud?.removeEventListener('scroll', save); };
@@ -178,7 +181,7 @@ export default function LabApp({ state, route, theme }: { state: SystemState; ro
       <ObservatoryScene explore={explore || replay !== null} hot={hot} tests={tests} events={events} page={route.page} focusIds={focus} theme={theme}
         onAvailability={setSceneAvailable} onPick={id => { window.location.hash = labHref('entidade', id); }} />
     </Suspense>}
-    <div ref={hudRef} className="hud" key={`${route.page}:${route.id ?? ''}`} >{changes.length > 0 && <aside className="published-changes" aria-label="Mudanças recebidas nesta visita"><p role="status">{changes.length} mudanças recebidas · fonte {ago(changedAt)}</p><details><summary>Ver o que mudou sem sair da página</summary><ul>{changes.slice(0, 12).map(change => <li key={change.id}><E id={change.id}>{change.name}</E><span>{change.kind === 'review' ? `${VERDICT_PT[change.before as Verdict] ?? change.before} → ${VERDICT_PT[change.after as Verdict] ?? change.after}` : change.kind === 'added' ? 'Novo teste publicado' : change.before ? `${change.before} → ${change.after}` : change.after}</span></li>)}</ul>{changes.length > 12 && <p>Mostrando 12 de {changes.length}. Consulte a Evidência para o estado completo.</p>}</details><button type="button" onClick={() => setChanges([])}>Dispensar aviso</button></aside>}{sceneAvailable === false && !flat && <p className="scene-fallback-note">Visualização leve · a teia 3D requer WebGL. Todas as páginas e evidências continuam disponíveis.</p>}{page}<Acoustic /></div>
+    <div ref={hudRef} className="hud" key={`${route.page}:${route.id ?? ''}`} >{changes.length > 0 && <aside className="published-changes" aria-label="Mudanças recebidas nesta visita"><p role="status">{changes.length} mudanças recebidas · fonte {ago(changedAt)}</p><details><summary>Ver o que mudou sem sair da página</summary><ul>{changes.slice(0, 12).map(change => <li key={change.id}><E id={change.id}>{change.name}</E><span>{change.kind === 'review' ? `${VERDICT_PT[change.before as Verdict] ?? change.before} → ${VERDICT_PT[change.after as Verdict] ?? change.after}` : change.kind === 'added' ? 'Teste passou a constar nesta leitura' : change.before ? `${change.before} → ${change.after}` : change.after}</span></li>)}</ul>{changes.length > 12 && <p>Mostrando 12 de {changes.length}. Consulte a Evidência para o estado completo.</p>}</details><button type="button" onClick={() => setChanges([])}>Dispensar aviso</button></aside>}{sceneAvailable === false && !flat && <p className="scene-fallback-note">Visualização leve · a teia 3D requer WebGL. Todas as páginas e evidências continuam disponíveis.</p>}{page}<Acoustic /></div>
     <Telemetry lab={lab} state={state} />
   </div>;
 }
@@ -271,7 +274,7 @@ function Now({ lab, state, onReplay, replayCount }: { lab: Lab; state: SystemSta
 
     {base && <AwaySummary lab={lab} since={base.at} />}
 
-    <Section title="Ciência" kicker={`${S.total} testes de cosmologia e física`} id="now-sci">
+    <Section title="Ciência" kicker={`${S.total} testes principais de cosmologia e física`} id="now-sci">
       <div className="stats">
         <Stat n={S.confirmed} label="confirmados" tone="ok" />
         <Stat n={S.refuted} label="refutados" tone="crit" />
@@ -544,11 +547,11 @@ function RoadmapPage({ lab, id }: { lab: Lab; id: string }) {
       <Section title="Evidência acumulada" kicker={`${confirmed.length} confirmados`} id="rm-ev">
         {confirmed.length ? <ul className="hud-list">{confirmed.map(t => <li key={t.id}><E id={t.id}>{humanize(t.meaning ?? t.question ?? '')}</E></li>)}</ul> : <p className="hud-muted">Nada confirmado ainda.</p>}
       </Section>
-      <Section title="Próximos testes" kicker={`${r.frontier} na fronteira declarada · ${nextUp.length} de ${frontierTests.length} vínculos exibidos`} id="rm-next">
+      <Section title="Próximos testes" kicker={`${r.frontier === null ? 'Fronteira não publicada' : `${r.frontier} na fronteira declarada`} · ${nextUp.length} de ${frontierTests.length} vínculos exibidos`} id="rm-next">
         {nextUp.length ? <ul className="hud-list">{nextUp.map(t => <li key={t.id}><E id={t.id}>{t.name}</E></li>)}</ul> : <p className="hud-muted">Nenhum vínculo de fronteira disponível nesta leitura.</p>}
         {frontierTests.length > 6 && <details><summary>Ver os {frontierTests.length - 6} restantes</summary><ul className="hud-list">{frontierTests.slice(6).map(t => <li key={t.id}><E id={t.id} /></li>)}</ul></details>}
         {unresolved > 0 && <p className="hud-note">{unresolved} referências da fronteira ainda não estão disponíveis nesta projeção.</p>}
-        <p className="hud-note">Fronteira: {r.frontierSource}. Vínculos: frontier_test_ids; quando ausentes, candidatos READY. READY não comprova elegibilidade de execução.</p>
+        <p className="hud-note">Fronteira: {r.frontierSource ?? 'fonte não publicada'}. Vínculos: frontier_test_ids; quando ausentes, candidatos READY. READY não comprova elegibilidade de execução.</p>
         {blocked.length > 0 && <p className="hud-note">{blocked.length} bloqueados: <E id={blocked[0]!.id}>{blocked[0]!.blocker ?? 'ver motivo'}</E></p>}
       </Section>
     </div>
@@ -561,16 +564,13 @@ function Evidence({ lab, state, filter, search }: { lab: Lab; state: SystemState
   useEffect(() => setQ(search ?? ''), [search]);
   const updateQuery = (value: string) => {
     setQ(value);
-    const params = new URLSearchParams();
-    if (filter) params.set('v', filter);
-    if (value) params.set('q', value);
-    window.history.replaceState(null, '', `#/evidencia${params.size ? '?' + params : ''}`);
+    replaceEvidenceSearch(value, filter);
   };
   const related = q.trim() ? (state.cosmology_state?.frontiers ?? []).filter(f => matchesSearch(q, f.title, f.summary)) : [];
-  const all = [...lab.tests.values()].filter(t => !t.contestOf);
+  const all = [...lab.tests.values()];
   const list = all.filter(t => (!filter || t.verdict === filter) && matchesSearch(q, t.id, t.name, t.question, t.meaning, t.topic, t.subdomain));
   return <>
-    <header className="hud-hero"><p className="hud-kicker">{all.length} testes publicados</p><h1>Evidência</h1>
+    <header className="hud-hero"><p className="hud-kicker">{all.length} testes e contestações publicados</p><h1>Evidência</h1>
       <p className="hud-lead">Todo teste, do pré-registro ao veredito. Filtre pelo estado; clique para ver o que foi prometido antes e o que aconteceu.</p></header>
     <nav className="filters" aria-label="Filtrar por veredito">
       <a href={`#/evidencia${q ? '?q=' + encodeURIComponent(q) : ''}`} aria-current={!filter ? 'page' : undefined}>Todos <b>{all.length}</b></a>
@@ -580,7 +580,7 @@ function Evidence({ lab, state, filter, search }: { lab: Lab; state: SystemState
     <input className="hud-search" type="search" placeholder="Buscar por nome, pergunta ou resultado…" value={q} onChange={e => updateQuery(e.target.value)} aria-label="Buscar testes" />
     {q && <p role="status">{list.length} testes encontrados para “{q}”{related.length ? ` · ${related.length} frentes relacionadas` : ''}.</p>}
     {related.length > 0 && <nav className="search-related" aria-label="Frentes relacionadas">{related.map(f => <a key={f.id} href={labHref('universo', f.id)}>{f.title} →</a>)}</nav>}
-    {filter === 'READY' && <p className="hud-note">READY é o estado registrado da fila. A elegibilidade só é exibida quando a verificação individual foi publicada; isso não garante despacho.</p>}
+    {filter === 'READY' && <p className="hud-note">Esta fila inclui testes principais e contestações. READY é o estado registrado. A elegibilidade só é exibida quando a verificação individual foi publicada; isso não garante despacho.</p>}
     {q && !list.length && !related.length && <p className="hud-muted">Nenhum resultado nesta projeção. A consulta foi preservada; tente parte do nome ou o ID.</p>}
     {VERDICT_ORDER.filter(v => list.some(t => t.verdict === v)).map(v => {
       const group = list.filter(t => t.verdict === v);
@@ -633,7 +633,7 @@ function EntityPage({ lab, state, id }: { lab: Lab; state: SystemState; id: stri
       <p className="hud-kicker"><a href="#/evidencia">Evidência</a>
         {t.roadmapId && <> · <a href={labHref('roadmap', t.roadmapId)}>{lab.roadmaps.get(t.roadmapId)?.title ?? humanId(t.roadmapId)}</a></>}</p>
       <h1 className="h1-entity">{t.historical ? t.name : t.question ?? humanId(t.id)}</h1>
-      <p className="hud-lead"><VerdictChip v={t.verdict} />{t.createdAt && <span className="hud-muted"> · começou {ago(t.createdAt)}</span>}</p>
+      <p className="hud-lead">{t.verdict === 'PROVISIONAL' && !t.verdictRaw && !t.meaning && !hasPublishedValue(t.result) ? <span className="hud-muted">Resultado não publicado</span> : <VerdictChip v={t.verdict} />}{t.createdAt && <span className="hud-muted"> · começou {ago(t.createdAt)}</span>}</p>
     </header>
 
     <Section title="A história deste teste" id="en-story">
@@ -646,7 +646,7 @@ function EntityPage({ lab, state, id }: { lab: Lab; state: SystemState; id: stri
     <Section title="Veredito atual" id="en-mean">
       <p className="hud-big">{currentVerdictText(t)}</p>
       {t.readiness?.reasons?.length ? <p className="hud-note">Prontidão: {t.readiness.reasons.join(' · ')}</p> : null}
-      <p className="hud-note">Fonte: estado de revisão publicado{t.review ? ` (${t.review})` : ' e estado operacional do teste'}.</p>
+      <p className="hud-note">{t.review ? `Fonte: estado de revisão publicado (${t.review}).` : t.status ? `Fonte: estado operacional publicado (${t.status}); revisão não publicada.` : 'Estado de revisão e estado operacional não publicados.'}</p>
       {contests.filter(c => lab.tests.has(c)).length > 0 && <p className="hud-refs">{contests.filter(c => lab.tests.has(c)).map(c => <E key={c} id={c}>Ver contestação →</E>)}</p>}
     </Section>
     {(t.meaning || Boolean(t.claimBoundary)) && <Section title="Resultado bruto da execução" id="en-raw">
@@ -1094,8 +1094,8 @@ function selfLines(lab: Lab, state: SystemState): Array<{ icon: string; text: st
     const r = lab.roadmaps.get(focus[0]);
     if (r) out.push({ icon: 'eye', text: say('SELF_FOCUS', r.id + new Date().toDateString(), { title: r.title.toLowerCase(), n: focus[1] })!, link: labHref('roadmap', r.id) });
   }
-  const ignored = active.filter(r => !touched.has(r.id) && r.frontier > 0).sort((a, b) => b.frontier - a.frontier)[0];
-  if (ignored) out.push({ icon: 'eyeoff', text: say('SELF_IGNORED', ignored.id + new Date().toDateString(), { title: ignored.title.toLowerCase(), n: ignored.frontier })!, link: labHref('roadmap', ignored.id) });
+  const ignored = active.filter(r => !touched.has(r.id) && (r.frontier ?? 0) > 0).sort((a, b) => (b.frontier ?? 0) - (a.frontier ?? 0))[0];
+  if (ignored) out.push({ icon: 'eyeoff', text: say('SELF_IGNORED', ignored.id + new Date().toDateString(), { title: ignored.title.toLowerCase(), n: ignored.frontier ?? 0 })!, link: labHref('roadmap', ignored.id) });
   const d = state.evolution?.decoys;
   if (d && d.revealed > 0) out.push({ icon: 'trap', text: say('SELF_DECOY_CAUGHT', new Date().toDateString(), { n: d.caught, m: d.revealed })! });
   else if (d && d.planted > 0) out.push({ icon: 'trap', text: say('SELF_DECOY_PLANTED', new Date().toDateString(), { n: d.planted })! });

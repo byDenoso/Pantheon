@@ -1,18 +1,33 @@
-import type { ActivityEvent, Lab, TestEntity, Verdict } from './model.ts';
+import type { ActivityEvent, Lab, TestEntity } from './model.ts';
 
-export interface TestReading { status: string | null; verdict: Verdict; blocker: string | null; meaning: string | null }
-export interface PublishedChange { id: string; name: string; kind: 'added' | 'review' | 'execution' | 'dependency' | 'evidence'; before?: string; after: string }
-export const captureReading = (lab: Lab) => new Map([...lab.tests.values()].map(t => [t.id, { status: t.status, verdict: t.verdict, blocker: t.blocker, meaning: t.meaning }]));
-/** Compare only public facts. Missing rows never become invented deletion events. */
+export interface TestReading {
+  status: string | null; review: string | null; verdictRaw: string | null; blocker: string | null;
+  meaning: string | null; eligible: boolean | null;
+}
+export interface PublishedChange { id: string; name: string; kind: 'added' | 'review' | 'execution' | 'dependency' | 'evidence' | 'readiness'; before?: string; after: string }
+/** Keep previously seen records/fields across partial reads; absence is not an event. */
+export function captureReading(lab: Lab, previous: Map<string, TestReading> = new Map()): Map<string, TestReading> {
+  const reading = new Map(previous);
+  for (const t of lab.tests.values()) {
+    const before = previous.get(t.id);
+    reading.set(t.id, { status: t.status ?? before?.status ?? null, review: t.review ?? before?.review ?? null,
+      verdictRaw: t.verdictRaw ?? before?.verdictRaw ?? null, blocker: t.blocker ?? before?.blocker ?? null,
+      meaning: t.meaning ?? before?.meaning ?? null, eligible: t.readiness?.eligible ?? before?.eligible ?? null });
+  }
+  return reading;
+}
+/** Compare explicit public fields rather than fallbacks derived from missing data. */
 export function publishedChanges(previous: Map<string, TestReading>, lab: Lab): PublishedChange[] {
   const changes: PublishedChange[] = [];
   for (const t of lab.tests.values()) {
     const before = previous.get(t.id);
     if (!before) changes.push({ id: t.id, name: t.name, kind: 'added', after: t.verdict });
-    else if (before.verdict !== t.verdict) changes.push({ id: t.id, name: t.name, kind: 'review', before: before.verdict, after: t.verdict });
-    else if (before.status !== t.status) changes.push({ id: t.id, name: t.name, kind: 'execution', before: before.status ?? 'não publicado', after: t.status ?? 'não publicado' });
-    else if (before.blocker !== t.blocker) changes.push({ id: t.id, name: t.name, kind: 'dependency', before: before.blocker ?? undefined, after: t.blocker ?? 'Bloqueio deixou de constar nesta leitura' });
-    else if (before.meaning !== t.meaning) changes.push({ id: t.id, name: t.name, kind: 'evidence', after: 'Interpretação publicada atualizada' });
+    else if (t.review !== null && before.review !== t.review) changes.push({ id: t.id, name: t.name, kind: 'review', before: before.review ?? 'não publicado', after: t.review });
+    else if (t.status !== null && before.status !== t.status) changes.push({ id: t.id, name: t.name, kind: 'execution', before: before.status ?? 'não publicado', after: t.status });
+    else if (t.readiness && before.eligible !== t.readiness.eligible) changes.push({ id: t.id, name: t.name, kind: 'readiness', after: t.readiness.eligible ? 'Elegível na verificação publicada' : 'Inelegível na verificação publicada' });
+    else if (t.blocker !== null && before.blocker !== t.blocker) changes.push({ id: t.id, name: t.name, kind: 'dependency', before: before.blocker ?? undefined, after: t.blocker });
+    else if (t.verdictRaw !== null && before.verdictRaw !== t.verdictRaw) changes.push({ id: t.id, name: t.name, kind: 'evidence', after: `Resultado bruto publicado: ${t.verdictRaw}` });
+    else if (t.meaning !== null && before.meaning !== t.meaning) changes.push({ id: t.id, name: t.name, kind: 'evidence', after: 'Interpretação publicada atualizada' });
   }
   return changes;
 }
@@ -39,9 +54,14 @@ export const latestDelivery = (lab: Lab, roles?: string[]): ActivityEvent | unde
 
 /** Highlight real test members when a hypothesis is selected, including its reviewed targets. */
 export function focusEntities(lab: Lab, id: string): string[] {
-  const test = lab.tests.get(id);
-  if (test) return [test.contestOf ?? test.id, ...test.contests];
-  return lab.hypotheses.get(id)?.tests ?? lab.campaigns.get(id)?.tests ?? [id];
+  const candidates = lab.tests.has(id) ? [id] : lab.hypotheses.get(id)?.tests ?? lab.campaigns.get(id)?.tests ?? [];
+  const visible = candidates.flatMap(candidate => {
+    let test = lab.tests.get(candidate);
+    const visited = new Set<string>();
+    while (test?.contestOf && !visited.has(test.id)) { visited.add(test.id); test = lab.tests.get(test.contestOf); }
+    return test && !test.contestOf ? [test.id] : [];
+  });
+  return [...new Set(visible)];
 }
 
 export const executionStart = (test: TestEntity): string | null => test.execution?.at ?? null;

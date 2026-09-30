@@ -92,21 +92,24 @@ export default function App() {
     if (!viewFromHash(h) && !parseLabRoute(h) && !isGalaxyRoute(h) && !isSystemRoute(h)) window.history.replaceState(null, '', '#/agora');
   }, []);
   useEffect(() => {
-    const restore = () => {
+    const restore = (event?: Event) => {
       const hash = window.location.hash;
       const isSystem = isSystemRoute(hash);
       setSystemRoute(isSystem);
       setGalaxyRoute(isGalaxyRoute(hash));
-      setLabRoute(parseLabRoute(hash));
+      const parsedLabRoute = parseLabRoute(hash);
+      setLabRoute(parsedLabRoute ? { ...parsedLabRoute, preserveScroll: event?.type === 'nexo:searchchange' } : null);
       const routeTheme = new URLSearchParams(hash.split('?', 2)[1] || '').get('theme');
       if (routeTheme === 'light' || routeTheme === 'dark') setTheme(routeTheme);
       const next = viewFromHash(hash);
       if (next) { setView(next); setNotice(''); }
     };
     window.addEventListener('hashchange', restore);
+    window.addEventListener('nexo:searchchange', restore);
     window.addEventListener('popstate', restore);
     return () => {
       window.removeEventListener('hashchange', restore);
+      window.removeEventListener('nexo:searchchange', restore);
       window.removeEventListener('popstate', restore);
     };
   }, []);

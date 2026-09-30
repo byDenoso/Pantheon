@@ -79,7 +79,7 @@ export interface RoadmapEntity {
   id: string; title: string; question: string | null; campaignId: string | null; state: string;
   confirmed: number; target: number | null; used: number | null; maxTests: number | null; maxDays: number | null;
   refutedStreak: number; killStreak: number | null; stop: string | null; renewable: boolean; charteredAt: string | null;
-  tests: string[]; hypotheses: string[]; frontier: number;
+  tests: string[]; hypotheses: string[]; frontier: number | null;
   testsSource?: string; frontierSource?: string;
   frontierIds?: string[]; objectives?: string[]; progress?: Record<string, number>;
 }
@@ -294,8 +294,8 @@ export function buildLab(state: SystemState): Lab {
       hypotheses: (full?.hypothesis_ids as string[] | undefined)
         ?? [...new Set(rmTestIds.map(t => tests.get(t)!.hypothesisId).filter(Boolean) as string[])],
       testsSource: listed.length ? 'read_model.roadmaps.test_ids' : 'tests[].roadmap_id',
-      frontierSource: typeof prog.frontier === 'number' ? 'read_model.roadmaps.progress.frontier' : 'evolution.roadmaps.frontier_count',
-      frontier: Number(prog.frontier ?? rm.frontier_count ?? 0),
+      frontierSource: typeof prog.frontier === 'number' ? 'read_model.roadmaps.progress.frontier' : typeof rm.frontier_count === 'number' ? 'evolution.roadmaps.frontier_count' : undefined,
+      frontier: typeof prog.frontier === 'number' ? prog.frontier : typeof rm.frontier_count === 'number' ? rm.frontier_count : null,
       frontierIds: (full?.frontier_test_ids as string[] | undefined) ?? [],
       objectives: Array.isArray(ch.objectives) ? (ch.objectives as string[]) : [],
       progress: prog,
