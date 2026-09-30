@@ -798,7 +798,7 @@ const roleLabel = (role: string) => { const t = taskOf(role); const r = ROLE_PT[
 // Sorteio probabilístico: cada carga da página sorteia de novo; dentro da visita a mesma linha não pisca.
 const NARRATION_SALT = Math.random().toString(36).slice(2);
 const pick = (pool: string[], seed: string) => { let h = 0; const k = seed + NARRATION_SALT; for (let i = 0; i < k.length; i += 1) h = (h * 31 + k.charCodeAt(i)) | 0; return pool[Math.abs(h) % pool.length]!; };
-/** Matriz 45x45: cabeça e cauda sorteadas separadamente (até 2025 falas por evento). */
+/** Matriz 90x90: cabeça e cauda sorteadas separadamente (até 8.100 falas por evento). */
 const say = (key: string, seed: string, vars: Record<string, string | number> = {}): string | null => {
   const m = NARRATION[key];
   if (!m) return null;
