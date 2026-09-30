@@ -76,8 +76,10 @@ export const MCP_SERVER_INFO=Object.freeze({name:'nexo-science',version:'1.3.0',
 const category=name=>name.includes('policy')||name==='validate_style_text'?'policy':name==='get_operations'?'operations':name==='get_provenance'?'provenance':'science';
 export const MCP_TOOL_REGISTRY=Object.freeze(Object.fromEntries(NEXO_MCP_TOOL_NAMES.map(name=>[name,Object.freeze({
   name,...TOOL_DEFINITIONS[name],inputSchema:TOOL_DEFINITIONS[name].inputSchema.strict(),
-  category:category(name),access:'PUBLIC',annotations:READ_ONLY_ANNOTATIONS
+  category:TOOL_DEFINITIONS[name].category||category(name),access:TOOL_DEFINITIONS[name].access||'PUBLIC',annotations:TOOL_DEFINITIONS[name].annotations||READ_ONLY_ANNOTATIONS
 })])));
+export const isPublicReadOnlyMcpTool=definition=>definition?.access==='PUBLIC'&&definition?.annotations?.readOnlyHint===true;
+const publicTools=()=>Object.values(MCP_TOOL_REGISTRY).filter(isPublicReadOnlyMcpTool);
 const calls=[];
 let total=0,errors=0;
 export function mcpTelemetry(){return {scope:'process-local',total,errors,calls:calls.map(call=>({...call}))};}
@@ -91,8 +93,8 @@ export async function readNexoMcpStatus({readSnapshot}){
     generated_at:model?.generatedAt||null,last_read_at:snapshot?.lastReadAt||null,
     fingerprint:model?.fingerprint||null,projectionFingerprint:model?.projectionFingerprint||null,
     sourceVersion:model?.sourceVersion||null,authority:model?.authority||null,freshness:model?.freshness||'UNAVAILABLE',
-    provenance:model?.provenance||[],tool_count:NEXO_MCP_TOOL_NAMES.length,
-    tools:Object.values(MCP_TOOL_REGISTRY).map(({inputSchema,...definition})=>({
+    provenance:model?.provenance||[],tool_count:publicTools().length,
+    tools:publicTools().map(({inputSchema,...definition})=>({
       ...definition,inputSchema:z.toJSONSchema(inputSchema),
       availability:definition.category==='policy'||model?.state==='READY'?'AVAILABLE':'UNAVAILABLE'
     })),telemetry:mcpTelemetry(),access_levels:['PUBLIC','AUTHENTICATED','OPERATIONAL']
@@ -105,6 +107,7 @@ function toolResult(payload){
 export async function executeNexoMcpTool({readSnapshot},name,args={}){
   const definition=Object.hasOwn(MCP_TOOL_REGISTRY,name)?MCP_TOOL_REGISTRY[name]:null;
   if(!definition)throw Object.assign(new Error('UNKNOWN_MCP_TOOL'),{code:'UNKNOWN_MCP_TOOL'});
+  if(!isPublicReadOnlyMcpTool(definition))throw Object.assign(new Error('UNKNOWN_MCP_TOOL'),{code:'UNKNOWN_MCP_TOOL'});
   const parsed=definition.inputSchema.safeParse(args);
   if(!parsed.success)throw Object.assign(new Error('MCP_INVALID_INPUT'),{code:'MCP_INVALID_INPUT'});
   args=parsed.data;
@@ -130,7 +133,7 @@ export async function executeNexoMcpTool({readSnapshot},name,args={}){
 export function createNexoMcpServer({readSnapshot}){
   if(typeof readSnapshot!=='function')throw new TypeError('MCP_READ_SNAPSHOT_REQUIRED');
   const server=new McpServer({name:MCP_SERVER_INFO.name,version:MCP_SERVER_INFO.version});
-  for(const definition of Object.values(MCP_TOOL_REGISTRY)){
+  for(const definition of publicTools()){
     const {name,description,inputSchema,annotations}=definition;
     server.registerTool(name,{description,inputSchema,annotations},async args=>{
       try{return toolResult(await executeNexoMcpTool({readSnapshot},name,args));}

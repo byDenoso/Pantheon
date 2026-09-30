@@ -4,11 +4,17 @@ import http from 'node:http';
 import {Client,StreamableHTTPClientTransport} from '@modelcontextprotocol/client';
 import {publication} from './fixtures/mcp-publication.mjs';
 import {readResearchSnapshot,researchSnapshotFromPublication} from '../server/adapters/research-snapshot.mjs';
-import {MCP_TOOL_REGISTRY,createNexoMcpWebHandler,executeNexoMcpTool,readNexoMcpStatus} from '../server/mcp/server.mjs';
+import {MCP_TOOL_REGISTRY,isPublicReadOnlyMcpTool,createNexoMcpWebHandler,executeNexoMcpTool,readNexoMcpStatus} from '../server/mcp/server.mjs';
 import {buildAtlasResearchView} from '../server/compiler/atlas-research-api.mjs';
 import handler from '../server/handler.mjs';
 
 const snapshot=()=>researchSnapshotFromPublication(publication());
+test('public MCP access boundary rejects authenticated and operational definitions',()=>{
+  assert.equal(isPublicReadOnlyMcpTool({access:'PUBLIC',annotations:{readOnlyHint:true}}),true);
+  for(const access of ['AUTHENTICATED','OPERATIONAL',undefined])assert.equal(isPublicReadOnlyMcpTool({access,annotations:{readOnlyHint:true}}),false);
+  assert.equal(isPublicReadOnlyMcpTool({access:'PUBLIC',annotations:{readOnlyHint:false}}),false);
+  assert.equal(isPublicReadOnlyMcpTool({access:'PUBLIC'}),false);
+});
 test('status is derived from the canonical tool registry and the shared Tower generation',async()=>{
   const s=snapshot(),status=await readNexoMcpStatus({readSnapshot:async()=>s});
   assert.equal(status.status,'READY');assert.equal(status.authority,'TOWER_V06');
