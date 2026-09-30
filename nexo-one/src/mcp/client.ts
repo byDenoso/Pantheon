@@ -3,7 +3,7 @@ import {fetchSharedJson} from '../data/shared-json.ts';
 export type ToolSchema={type?:string;properties?:Record<string,{type?:string;enum?:unknown[];minimum?:number;maximum?:number;maxLength?:number}>;required?:string[]};
 export type McpTool={name:string;description:string;category:string;access:string;availability:string;inputSchema:ToolSchema;annotations:{readOnlyHint:boolean|null;destructiveHint:boolean|null;idempotentHint:boolean|null;openWorldHint:boolean|null}};
 export type McpCall={tool:string;duration_ms:number;status:string;timestamp:string;fingerprint:string|null;cache:string;error:string|null};
-export type McpStatus={contract:string;server:{name:string;version:string;endpoint:string;transport:string;mode:string;access:string};status:string;generated_at:string|null;last_read_at:string|null;fingerprint:string|null;projectionFingerprint:string|null;sourceVersion:string|null;authority:string|null;freshness:string;provenance:unknown[];tools:McpTool[];tool_count:number;telemetry:{scope:string;total:number;errors:number;calls:McpCall[]}|null};
+export type McpStatus={contract:string;server:{name:string;version:string;endpoint:string;transport:string;mode:string;access:string};status:string;generated_at:string|null;last_read_at:string|null;fingerprint:string|null;projectionFingerprint:string|null;sourceVersion:string|null;authority:string|null;freshness:string;provenance:unknown[]|null;tools:McpTool[];tool_count:number;telemetry:{scope:string;total:number;errors:number;calls:McpCall[]}|null};
 export const MCP_ENDPOINT=import.meta.env.VITE_MCP_ENDPOINT?.trim()||'/api/mcp';
 export async function readMcpStatus(signal?:AbortSignal):Promise<McpStatus>{
   try{
@@ -17,7 +17,7 @@ export async function readMcpStatus(signal?:AbortSignal):Promise<McpStatus>{
       const hello=await initialize(signal);
       const discovery=await rpc('tools/list',{},hello.protocolVersion,signal);
       const tools:McpTool[]=discovery.tools.map((tool:McpTool)=>({...tool,annotations:{readOnlyHint:tool.annotations?.readOnlyHint??null,destructiveHint:tool.annotations?.destructiveHint??null,idempotentHint:tool.annotations?.idempotentHint??null,openWorldHint:tool.annotations?.openWorldHint??null},category:'Indisponível',access:'PUBLIC',availability:'DISCOVERED'}));
-      return {contract:'NEXO_MCP_STATUS_V1',server:{name:hello.serverInfo.name,version:hello.serverInfo.version,endpoint:MCP_ENDPOINT,transport:'streamable-http',mode:tools.length>0&&tools.every(tool=>tool.annotations?.readOnlyHint===true)?'read-only':'Indisponível',access:'PUBLIC'},status:'PROTOCOL_ONLY',generated_at:null,last_read_at:null,fingerprint:null,projectionFingerprint:null,sourceVersion:null,authority:null,freshness:'UNAVAILABLE',provenance:[],tools,tool_count:tools.length,telemetry:null};
+      return {contract:'NEXO_MCP_STATUS_V1',server:{name:hello.serverInfo.name,version:hello.serverInfo.version,endpoint:MCP_ENDPOINT,transport:'streamable-http',mode:tools.length>0&&tools.every(tool=>tool.annotations?.readOnlyHint===true)?'read-only':'Indisponível',access:'PUBLIC'},status:'PROTOCOL_ONLY',generated_at:null,last_read_at:null,fingerprint:null,projectionFingerprint:null,sourceVersion:null,authority:null,freshness:'UNAVAILABLE',provenance:null,tools,tool_count:tools.length,telemetry:null};
     }catch{
       if(signal?.aborted)throw signal.reason;
       throw new Error('Servidor MCP indisponível. Não foi possível obter os metadados nem descobrir ferramentas pelo protocolo.');
