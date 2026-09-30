@@ -1,1 +1,1 @@
-{"reason":"activate_failed_reservation_recovery","tcc_sha":"04eb732301f4da1a1a1ee3b5860a56021c704e61","ci_run_id":36784616135,"expected_bundle_sha256":"9fb2200e32bd9c61ad4c8b2f9c0dbc29ba82309eda1d4af5dfc0e17574cf7bd3","phase":"writer-reconcile-and-readback"}
+{"reason":"activate_audited_execution_assessment_contract","tcc_sha":"1f30082ed8fbe980fcbf906f4e62f710609017a7","ci_run_id":36789806880,"expected_bundle_sha256":"d94b5e1f3a9a9ec74a1a7ee4542c8ea428a8badbb73146e259b49028a3ffdff7","phase":"writer-reconcile-and-readback-collection-disabled"}
