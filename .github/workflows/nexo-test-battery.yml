@@ -167,6 +167,30 @@ jobs:
           params = test.get("params") or {}
           if not isinstance(params, dict):
               raise SystemExit("params must be an object")
+          # Parameter semantics are checked with the same versioned, pure catalog validator
+          # used by Writer admission. No data download or scientific fit occurs here.
+          from pathlib import Path
+          import sys
+          recipe_root = Path("runtime-base/nexo-one/executor-runtime/recipes").resolve()
+          frozen_preflight = test.get("param_preflight")
+          if recipe == "w0wa_bao_sn_multi" or frozen_preflight is not None:
+              sys.path.insert(0, str(recipe_root))
+              from recipe_param_preflight import validate_params
+              actual = validate_params(recipe, params, test.get("inputs"), recipe_root)
+              meta["param_preflight"] = actual
+              reason = (actual.get("reasons") or [None])[0]
+              if not reason and (not isinstance(frozen_preflight, dict)
+                                 or frozen_preflight.get("eligible") is not True):
+                  reason = "PREFLIGHT_RECEIPT_REQUIRED"
+              if not reason and any(frozen_preflight.get(key) != actual.get(key)
+                                    for key in ("contract", "manifest_sha256", "validator_sha256")):
+                  reason = "PREFLIGHT_IDENTITY_MISMATCH"
+              if reason:
+                  meta["preflight_failure_reason"] = reason
+                  meta["preflight_failure_detail"] = "; ".join(actual.get("details") or [reason])
+              json.dump(meta, open("/tmp/job/meta.json", "w", encoding="utf-8"), ensure_ascii=False)
+              if reason:
+                  raise SystemExit("parameter preflight failed: " + reason)
           requires_camb = bool(params.get("requires_camb"))
           camb_commit = str(params.get("camb_commit") or "")
           if requires_camb:
@@ -242,10 +266,13 @@ jobs:
           except Exception:
               pass
           prep, deps, execute = os.environ.get("PREP_OUTCOME", ""), os.environ.get("DEPS_OUTCOME", ""), os.environ.get("EXEC_OUTCOME", "")
-          result = semantic = failure_stage = None
+          result = semantic = failure_stage = operational_error = None
           ok = False
           if prep != "success":
-              failure_stage = "PREPARE"
+              failure_stage = "PARAM_PREFLIGHT" if meta.get("preflight_failure_reason") else "PREPARE"
+              if meta.get("preflight_failure_reason"):
+                  operational_error = {"code": meta["preflight_failure_reason"],
+                                       "detail": meta.get("preflight_failure_detail")}
           elif deps != "success":
               failure_stage = "DEPENDENCIES"
           elif execute != "success":
@@ -257,15 +284,15 @@ jobs:
                   exit_code = 999
               try:
                   payload = json.load(open(root / "result.json", encoding="utf-8"))
-                  valid = isinstance(payload, dict) and bool(payload.get("verdict"))
               except Exception:
-                  payload, valid = None, False
-              ok = exit_code == 0 and valid
-              if valid:
+                  payload = None
+              import sys
+              sys.path.insert(0, str(Path("runtime-base/nexo-one/executor-runtime").resolve()))
+              from receipt_validation import classify_payload
+              ok, failure_stage, operational_error = classify_payload(exit_code, payload)
+              if ok:
                   result = payload.get("result", payload)
                   semantic = payload.get("semantic")
-              if not ok:
-                  failure_stage = "SCIENTIFIC_SCRIPT"
           logs = []
           for name in ("deps.log", "run.log"):
               path = root / name
@@ -278,6 +305,10 @@ jobs:
                      "semantic": semantic if ok else None, "failure_stage": failure_stage,
                      "attempt_id": meta.get("attempt_id") or None,
                      "recipe_sha256": meta.get("recipe_sha256") or None,
+                     "param_preflight": meta.get("param_preflight"),
+                     "operational_status": "INPUT_UNAVAILABLE" if operational_error else None,
+                     "operational_reason": operational_error.get("code") if operational_error else None,
+                     "operational_detail": operational_error.get("detail") if operational_error else None,
                      "started_at": stamp("started-at.txt"), "executed_at": stamp("executed-at.txt"),
                      "log_tail": "\n".join(logs)[-4000:]}
           json.dump(receipt, open(root / "out.json", "w", encoding="utf-8"), ensure_ascii=False)

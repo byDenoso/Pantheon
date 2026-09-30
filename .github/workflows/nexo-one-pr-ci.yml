@@ -81,6 +81,9 @@ jobs:
         working-directory: nexo-one/executor-runtime/recipes
         run: OPENBLAS_NUM_THREADS=1 python -m unittest test_w0wa_bao_sn_multi -v
 
+      - name: Verify parameter preflight and operational failure receipts
+        run: python -m unittest discover -s nexo-one/executor-runtime/tests -p test_recipe_param_preflight.py -v
+
       - name: Verify runner, scientific stack and network
         env:
           GH_TOKEN: ${{ github.token }}
