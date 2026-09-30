@@ -1,1 +1,1 @@
-{"reason":"activate_automatic_battery_identity_repair","tcc_sha":"24b307fe332bc57eb00593e7f1658071aaecd05d","ci_run_id":36776862501,"expected_bundle_sha256":"ec7089f4ede9d1c82dab4972354eaab72321322fe6d04a0e8639e5c93654c2ca","phase":"writer-reconcile-and-readback"}
+{"reason":"activate_failed_reservation_recovery","tcc_sha":"04eb732301f4da1a1a1ee3b5860a56021c704e61","ci_run_id":36784616135,"expected_bundle_sha256":"9fb2200e32bd9c61ad4c8b2f9c0dbc29ba82309eda1d4af5dfc0e17574cf7bd3","phase":"writer-reconcile-and-readback"}
