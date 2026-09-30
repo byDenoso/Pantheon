@@ -1,6 +1,6 @@
 import type { ScenePage } from './ObservatoryScene.tsx';
 
-export interface LabRoute { page: ScenePage; id?: string; q?: string }
+export interface LabRoute { page: ScenePage; id?: string; q?: string; search?: string; preserveScroll?: boolean }
 export const LAB_PAGES: Array<[ScenePage, string]> = [
   ['agora', 'Agora'], ['universo', 'Universo'], ['ciclo', 'Ciclo'], ['roadmaps', 'Roadmaps'], ['evidencia', 'Evidência'], ['saude', 'Saúde'],
 ];
@@ -10,7 +10,9 @@ export function parseLabRoute(hash: string): LabRoute | null {
   const [path = '', query = ''] = raw.split('?', 2);
   const [head, ...rest] = path.split('/');
   const id = rest.length ? decodeURIComponent(rest.join('/')) : undefined;
-  const q = new URLSearchParams(query).get('v') ?? undefined;
+  const params = new URLSearchParams(query);
+  const q = params.get('v') ?? undefined;
+  const search = params.get('q') ?? undefined;
   switch (head) {
     case 'galaxia': return { page: 'agora' };
     // Endereços antigos (favoritos) caem nas páginas novas.
@@ -20,7 +22,7 @@ export function parseLabRoute(hash: string): LabRoute | null {
       if (sub === '' || sub === 'comando') return { page: 'agora' };
       return null;
     }
-    case 'agora': case 'ciclo': case 'roadmaps': case 'evidencia': case 'saude': return { page: head, q };
+    case 'agora': case 'ciclo': case 'roadmaps': case 'evidencia': case 'saude': return { page: head, q, search };
     case 'universo': return { page: 'universo', id };
     case 'roadmap': return id ? { page: 'roadmap', id } : { page: 'roadmaps' };
     case 'e': return id ? { page: 'entidade', id } : { page: 'evidencia' };
@@ -31,3 +33,12 @@ export const labHref = (page: ScenePage, id?: string) =>
   page === 'universo' && id ? `#/universo/${encodeURIComponent(id)}` : page === 'roadmap' ? `#/roadmap/${encodeURIComponent(id!)}` : page === 'entidade' ? `#/e/${encodeURIComponent(id!)}` : `#/${page}`;
 
 
+
+/** replaceState does not notify the router. Search edits preserve scroll; native Back restores its saved position. */
+export function replaceEvidenceSearch(search: string, verdict?: string, target: Pick<Window, 'history' | 'dispatchEvent'> = window): void {
+  const params = new URLSearchParams();
+  if (verdict) params.set('v', verdict);
+  if (search) params.set('q', search);
+  target.history.replaceState(null, '', `#/evidencia${params.size ? '?' + params : ''}`);
+  target.dispatchEvent(new Event('nexo:searchchange'));
+}

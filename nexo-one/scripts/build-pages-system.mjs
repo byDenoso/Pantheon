@@ -25,6 +25,15 @@ function publicReadModel(projection) {
   for (const test of projection.tests || []) {
     if (!test || test.private || !test.id) continue;
     const picked = pickKeys(test, RM_TEST_KEYS);
+    // Forward only public readiness facts already present in the sanctioned export.
+    // Never republish recipe hashes, bindings, paths, or additional runtime metadata.
+    if (test.readiness && typeof test.readiness.eligible === 'boolean') {
+      picked.readiness = {
+        eligible: test.readiness.eligible,
+        reasons: Array.isArray(test.readiness.reasons) ? test.readiness.reasons.filter(value => typeof value === 'string' && /^[A-Z][A-Z0-9_]{0,80}$/.test(value)) : [],
+        ...(/^[A-Z][A-Z0-9_]{0,80}$/.test(test.readiness.policy || '') ? { policy: test.readiness.policy } : {}),
+      };
+    }
     if (Object.keys(picked).length) tests[String(test.id)] = picked;
   }
   const historical_tests = {};
