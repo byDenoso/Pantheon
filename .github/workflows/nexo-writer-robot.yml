@@ -149,9 +149,12 @@ jobs:
         env:
           TCC_REPO: byDenoso/TCC
           TCC_BRANCH: nexo-inbox
+          GH_TOKEN: ${{ github.token }}
         run: |
           python - <<'PY'
-          import hashlib, json, os, urllib.parse, urllib.request
+          import hashlib, json, os, sys, urllib.parse, urllib.request
+          sys.path.insert(0, "scripts")
+          from github_api_read import read_api_json
 
           cursor_path="nexo-one/tcc-public-inbox-ack.json"
           cursor=json.load(open(cursor_path,encoding="utf-8"))
@@ -162,9 +165,7 @@ jobs:
           repo=os.environ["TCC_REPO"]
           branch=os.environ["TCC_BRANCH"]
           api=f"https://api.github.com/repos/{repo}/compare/{base}...{branch}"
-          req=urllib.request.Request(api,headers={"Accept":"application/vnd.github+json","User-Agent":"nexo-writer-robot"})
-          with urllib.request.urlopen(req,timeout=60) as response:
-              comparison=json.load(response)
+          comparison=read_api_json(api)
 
           commits=comparison.get("commits") or []
           head=str((commits[-1] if commits else {}).get("sha") or base).strip()
