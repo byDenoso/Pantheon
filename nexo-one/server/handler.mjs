@@ -14,7 +14,7 @@ import {buildPersonalSnapshot,executePersonalAction} from './personal/service.mj
 import {createNexoMcpWebHandler} from './mcp/server.mjs';
 import {summarizeConnectionHealth} from './health/connection-state.mjs';
 const ATLAS_ORIGINS=new Set(['https://bydenoso.github.io','https://nexo-one-two.vercel.app','https://nexo-atlas-control-tower.vercel.app','https://nexo-atlas-cockpit.vercel.app']);
-const isCorsRoute=route=>route==='mcp'||route==='projection-sync'||route==='atlas-public-ssot'||route==='atlas-graph'||route==='atlas/graph'||route==='world'||RESEARCH_ROUTES.has(route);
+const isCorsRoute=route=>route==='mcp'||route==='projection-sync'||route==='atlas-public-ssot'||route==='world'||RESEARCH_ROUTES.has(route);
 const mcpWebHandler=createNexoMcpWebHandler({readSnapshot:()=>readAtlasSsot({env:process.env,now:Date.now()})});
 const mcpNodeHandler=toNodeHandler(mcpWebHandler);
 const DEFAULT_PUBLIC_SYSTEM_URL='https://bydenoso.github.io/Pantheon/system.json';
@@ -195,22 +195,6 @@ export default async function handler(req,res) {
       return send(await readAtlasSsot({env,now,signal:req.signal}));
     }
     const force=url.searchParams.get('refresh')==='1';
-    if(route==='atlas-graph'||route==='atlas/graph'){
-      try{
-        const state=await readPublishedTowerSystem({env,signal:req.signal,now,force});
-        return send({
-          contract_version:'1',
-          generated_at:state.generated_at,
-          bus_fingerprint:state.bus?.fingerprint||null,
-          state:state.global_state,
-          graph:state.graph,
-          filaments:state.filaments,
-        });
-      }catch(error){
-        console.warn('[nexo-one] sanctioned Atlas graph unavailable; failing closed',String(error?.message||error));
-        return send({error:'SANCTIONED_PUBLIC_PROJECTION_UNAVAILABLE',authority:'TOWER_V06',projection_only:true,writeback:'FORBIDDEN'},503);
-      }
-    }
     if(!['world','health','now','loops','day','context','recall','projections','system'].includes(route))return send({error:'NOT_FOUND'},404);
     if(route==='projections'){
       const serviceAccess=await verifyProjectionService(req,{now});

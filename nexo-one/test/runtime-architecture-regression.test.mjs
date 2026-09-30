@@ -156,16 +156,16 @@ test('public TruthGraph snapshot carries Neon retirement state', async () => {
   assert.equal(neon?.status, 'RETIRED_RUNTIME');
 });
 
-test('public Atlas graph and /api/system share the sanctioned Pages SystemState', async () => {
+test('research Atlas graph has one route owner while /api/system stays on the sanctioned Tower projection', async () => {
   const handler = await readFile(fileURLToPath(new URL('../server/handler.mjs', import.meta.url)), 'utf8');
   assert.doesNotMatch(handler, /normalizePublicSystemState/);
   assert.doesNotMatch(handler, /readPublicSystemInput/);
-  assert.match(handler, /route==='atlas-graph'\|\|route==='atlas\/graph'/);
-  assert.match(handler, /isCorsRoute=.*route==='atlas-graph'.*route==='atlas\/graph'/);
-  assert.match(handler, /const state=await readPublishedTowerSystem\(\{env,signal:req\.signal,now,force\}\)/);
-  const graphRoute = handler.indexOf("route==='atlas-graph'||route==='atlas/graph'");
+  assert.doesNotMatch(handler, /route==='atlas-graph'\|\|route==='atlas\/graph'/);
+  assert.match(handler, /isCorsRoute=.*RESEARCH_ROUTES\.has\(route\)/);
+  const researchRoute = handler.indexOf('if(RESEARCH_ROUTES.has(route)){');
   const notFoundGuard = handler.indexOf("if(!['world','health','now','loops','day','context','recall','projections','system'].includes(route))");
-  assert.ok(graphRoute >= 0 && notFoundGuard > graphRoute, 'Atlas graph route must be reachable before the generic NOT_FOUND guard');
+  assert.ok(researchRoute >= 0 && notFoundGuard > researchRoute, 'Research routes must be reachable before the generic NOT_FOUND guard');
+  assert.match(handler, /if\(route==='system'\)[\s\S]{0,700}readPublishedTowerSystem\(\{env,signal:req\.signal,now,force\}\)/);
 });
 
 
