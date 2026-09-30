@@ -131,7 +131,7 @@ jobs:
         run: |
           mkdir -p /tmp/job
           python3 - <<'PY'
-          import json, os
+          import hashlib, json, os
           bid, idx, expected_id = os.environ["BID"], int(os.environ["IDX"]), os.environ["MATRIX_TEST_ID"]
           spec_path = (f"runtime-base/nexo-one/executor-runtime/fixtures/{bid}.json"
                        if os.environ["NEXO_CI_FIXTURE"] == "true" else f"battery-specs/batteries/{bid}.json")
@@ -139,8 +139,8 @@ jobs:
           test = spec["tests"][idx]
           test_id = str(test.get("test_id") or "")
           meta = {"battery_id": bid, "test_id": test_id or expected_id,
-                  "timeout_min": max(1, min(int(test.get("timeout_min", 30)), 340))}
-          json.dump(meta, open("/tmp/job/meta.json", "w", encoding="utf-8"), ensure_ascii=False)
+                  "timeout_min": max(1, min(int(test.get("timeout_min", 30)), 340)),
+                  "attempt_id": str(test.get("attempt_id") or "")}
           if test_id != expected_id:
               raise SystemExit("matrix/spec test_id mismatch")
           import re
@@ -150,7 +150,20 @@ jobs:
           if not re.fullmatch(r"[a-z0-9_]{2,40}", recipe):
               raise SystemExit(f"invalid or missing recipe name {recipe!r}")
           script_path = f"runtime-base/nexo-one/executor-runtime/recipes/{recipe}.py"
-          script = open(script_path, encoding="utf-8").read()
+          raw_script = open(script_path, "rb").read()
+          actual_recipe_sha = hashlib.sha256(raw_script).hexdigest()
+          expected_recipe_sha = str(test.get("recipe_sha256") or "")
+          if expected_recipe_sha and expected_recipe_sha != actual_recipe_sha:
+              raise SystemExit("recipe_sha256 mismatch between frozen battery and checked-out runtime")
+          if os.environ["NEXO_CI_FIXTURE"] != "true":
+              if not re.fullmatch(r"attempt-[0-9a-f]{32}", meta["attempt_id"]):
+                  raise SystemExit("production battery requires immutable attempt_id")
+              if not re.fullmatch(r"[0-9a-f]{64}", expected_recipe_sha):
+                  raise SystemExit("production battery requires recipe_sha256")
+          meta["recipe_sha256"] = actual_recipe_sha
+          meta["recipe"] = recipe
+          json.dump(meta, open("/tmp/job/meta.json", "w", encoding="utf-8"), ensure_ascii=False)
+          script = raw_script.decode("utf-8")
           params = test.get("params") or {}
           if not isinstance(params, dict):
               raise SystemExit("params must be an object")
@@ -202,8 +215,10 @@ jobs:
           set +e
           T=$(python3 -c "import json; print(json.load(open('/tmp/job/meta.json'))['timeout_min'])")
           cd /tmp/job
+          date -u +"%Y-%m-%dT%H:%M:%SZ" > started-at.txt
           timeout "${T}m" python3 test.py > run.log 2>&1
           printf '%s\n' "$?" > exit-code.txt
+          date -u +"%Y-%m-%dT%H:%M:%SZ" > executed-at.txt
           exit 0
       - name: Build shard receipt
         if: always()
@@ -253,8 +268,14 @@ jobs:
               path = root / name
               if path.is_file():
                   logs.append(path.read_text(encoding="utf-8", errors="replace"))
+          def stamp(name):
+              path = root / name
+              return path.read_text(encoding="utf-8").strip() if path.is_file() else None
           receipt = {"test_id": meta["test_id"], "ok": ok, "result": result if ok else None,
                      "semantic": semantic if ok else None, "failure_stage": failure_stage,
+                     "attempt_id": meta.get("attempt_id") or None,
+                     "recipe_sha256": meta.get("recipe_sha256") or None,
+                     "started_at": stamp("started-at.txt"), "executed_at": stamp("executed-at.txt"),
                      "log_tail": "\n".join(logs)[-4000:]}
           json.dump(receipt, open(root / "out.json", "w", encoding="utf-8"), ensure_ascii=False)
           print("test", meta["test_id"], "ok" if ok else f"FAILED:{failure_stage}")
