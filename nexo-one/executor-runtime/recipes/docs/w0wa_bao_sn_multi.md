@@ -52,3 +52,20 @@ OPENBLAS_NUM_THREADS=1 PARAMS_PATH=smoke/w0wa_bao_sn_multi.json \
 O smoke versionado usa DR1 e Union3, prior Ωm=0,315±0,02, retirada Lyα.
 A mesma configuração foi conferida também com DES-SN5YR e Union3 separadamente.
 O CI existente descobre o mesmo smoke; nenhum workflow foi alterado.
+
+### Parameter preflight (V1)
+
+`preflight/w0wa_bao_sn_multi.json` records the supported DR1/DR2 observation
+redshifts and immutable input identities. `recipe_param_preflight.validate_params`
+uses only the Python standard library, without network or fitting. It checks
+release selectors, modes, compilation names, priors, holdout shape and exact
+input-manifest membership. It never translates DR2 selectors into DR1 selectors.
+The Writer reserves covered recipes only after this check; the battery runner
+repeats it and compares the frozen manifest and validator SHA256 values.
+
+Coverage is this recipe only. The check does not prove that remote inputs are
+available or a fit will converge, nor does it change preregistered scientific
+criteria. Other recipes keep their existing scope unless explicitly enrolled.
+Input or fit errors exit nonzero with `execution_status=INPUT_OR_FIT_UNAVAILABLE`
+and no scientific verdict. Receipts report `ok=false`, `result=null` and typed
+operational reasons; a genuine completed `INCONCLUSIVE` result remains valid.

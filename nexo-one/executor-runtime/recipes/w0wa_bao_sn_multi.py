@@ -4,7 +4,7 @@ Modos:
   redshift_jackknife: leave-one-band-out nas SNe.
   bao_tracer_jackknife: leave-one-tracer-family-out no BAO.
 """
-import csv, hashlib, io, json, math, os, urllib.request
+import csv, hashlib, io, json, math, os, sys, urllib.request
 from functools import lru_cache
 import numpy as np
 from scipy.integrate import cumulative_trapezoid
@@ -231,12 +231,14 @@ def run(params):
     return payload
 
 if __name__ == "__main__":
+    exit_code = 0
     try:
         payload = run(json.load(open(os.environ["PARAMS_PATH"],encoding="utf-8")))
     except (OSError, ValueError, KeyError, RuntimeError, np.linalg.LinAlgError) as error:
-        payload = {"verdict":"INCONCLUSIVE", "decision":"INPUT_OR_FIT_UNAVAILABLE",
-                   "summary":str(error), "statistics":{"data_sources":PROVENANCE},
-                   "semantic":{"result_meaning":"O cálculo não pôde ser concluído com os dados e parâmetros congelados: " + str(error)}}
+        exit_code = 1
+        payload = {"execution_status":"INPUT_OR_FIT_UNAVAILABLE", "error":str(error),
+                   "statistics":{"data_sources":PROVENANCE}}
     with open(os.environ["RESULT_PATH"],"w",encoding="utf-8") as result:
         json.dump(payload,result,ensure_ascii=False,allow_nan=False)
-    print(payload["summary"])
+    print(payload.get("summary") or payload.get("error"))
+    sys.exit(exit_code)
