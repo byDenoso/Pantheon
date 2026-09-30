@@ -149,12 +149,10 @@ jobs:
         env:
           TCC_REPO: byDenoso/TCC
           TCC_BRANCH: nexo-inbox
-          GH_TOKEN: ${{ github.token }}
+          EVENT_NAME: ${{ github.event_name }}
         run: |
           python - <<'PY'
-          import hashlib, json, os, sys, urllib.parse, urllib.request
-          sys.path.insert(0, "scripts")
-          from github_api_read import read_api_json
+          import hashlib, json, os, urllib.parse, urllib.request
 
           cursor_path="nexo-one/tcc-public-inbox-ack.json"
           cursor=json.load(open(cursor_path,encoding="utf-8"))
@@ -164,17 +162,44 @@ jobs:
 
           repo=os.environ["TCC_REPO"]
           branch=os.environ["TCC_BRANCH"]
-          api=f"https://api.github.com/repos/{repo}/compare/{base}...{branch}"
-          comparison=read_api_json(api)
+          event=os.environ.get("EVENT_NAME","")
+          headers={"Accept":"application/vnd.github+json","User-Agent":"nexo-writer-robot"}
 
-          commits=comparison.get("commits") or []
-          head=str((commits[-1] if commits else {}).get("sha") or base).strip()
-          if not head:
-              raise SystemExit("public inbox compare missing head sha")
+          if event=="workflow_dispatch":
+              ref_api=f"https://api.github.com/repos/{repo}/git/ref/heads/{branch}"
+              with urllib.request.urlopen(urllib.request.Request(ref_api,headers=headers),timeout=60) as response:
+                  ref=json.load(response)
+              head=str((ref.get("object") or {}).get("sha") or "").strip()
+              if not head:
+                  raise SystemExit("public inbox ref missing head sha")
+              tree_api=f"https://api.github.com/repos/{repo}/git/trees/{head}?recursive=1"
+              with urllib.request.urlopen(urllib.request.Request(tree_api,headers=headers),timeout=60) as response:
+                  tree=json.load(response)
+              source_files=[
+                  {"filename":str(item.get("path") or ""),"status":"modified"}
+                  for item in (tree.get("tree") or [])
+                  if item.get("type")=="blob"
+                  and str(item.get("path") or "").startswith("inbox/")
+                  and str(item.get("path") or "").endswith(".json")
+              ]
+          else:
+              api=f"https://api.github.com/repos/{repo}/compare/{base}...{branch}"
+              with urllib.request.urlopen(urllib.request.Request(api,headers=headers),timeout=60) as response:
+                  comparison=json.load(response)
+              commits=comparison.get("commits") or []
+              head=str((commits[-1] if commits else {}).get("sha") or base).strip()
+              if not head:
+                  raise SystemExit("public inbox compare missing head sha")
+              source_files=comparison.get("files") or []
 
           acked=cursor.get("acked") or {}
+          receipts=cursor.get("receipts") or {}
+          def receipt_fingerprint(path):
+              value=receipts.get(path)
+              return value.get("fingerprint") if isinstance(value,dict) else value
+
           candidates=[]
-          for item in comparison.get("files") or []:
+          for item in source_files:
               path=str(item.get("filename") or "")
               if not path.startswith("inbox/") or not path.endswith(".json"):
                   continue
@@ -186,14 +211,14 @@ jobs:
                   timeout=60,
               ).read()
               fingerprint=hashlib.sha256(raw).hexdigest()
-              if acked.get(path)==fingerprint:
+              if acked.get(path)==fingerprint or receipt_fingerprint(path)==fingerprint:
                   continue
               try:
                   envelope=json.loads(raw.decode("utf-8-sig"))
               except Exception:
                   print("skip invalid json",path)
                   continue
-              stable=hashlib.sha256((path+"\\0"+fingerprint).encode()).hexdigest()[:32]
+              stable=hashlib.sha256((path+"\0"+fingerprint).encode()).hexdigest()[:32]
               candidates.append({"id":"tcc-"+stable,"path":path,"fingerprint":fingerprint,"envelope":envelope})
 
           gateway={"items":[{"id":item["id"],"envelope":item["envelope"]} for item in candidates]}
@@ -203,7 +228,7 @@ jobs:
               open("/tmp/tcc-public-map.json","w",encoding="utf-8"),
               ensure_ascii=False,
           )
-          print("public TCC inbox items",len(candidates))
+          print("public TCC inbox items",len(candidates),"mode",("full-scan" if event=="workflow_dispatch" else "delta"))
           PY
 
       - name: Collect proposals from scheduled Sheet spool
@@ -356,9 +381,10 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           APPLIED: ${{ steps.robot.outputs.gateway_applied }}
+          REV: ${{ steps.robot.outputs.tower_revision }}
         run: |
           python - <<'PY'
-          import base64, json, os, subprocess, time
+          import base64, datetime, json, os, subprocess, time
 
           map_path="/tmp/tcc-public-map.json"
           if not os.path.exists(map_path):
@@ -368,6 +394,8 @@ jobs:
           mapping=json.load(open(map_path,encoding="utf-8"))
           path="nexo-one/tcc-public-inbox-ack.json"
           repo=os.environ["GITHUB_REPOSITORY"]
+          now=datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+          rev=os.environ.get("REV","")
 
           for attempt in range(1,6):
               get=subprocess.run(["gh","api",f"repos/{repo}/contents/{path}?ref=main"],text=True,capture_output=True)
@@ -376,10 +404,19 @@ jobs:
               meta=json.loads(get.stdout)
               cursor=json.loads(base64.b64decode(meta["content"]).decode())
               acked=cursor.setdefault("acked",{})
+              receipts=cursor.setdefault("receipts",{})
+
+              for old_path, old_fp in list(acked.items()):
+                  receipts.setdefault(old_path,{"fingerprint":old_fp,"source":"legacy-acked"})
 
               for item in mapping.get("items") or []:
                   if item.get("id") in applied:
                       acked[item["path"]]=item["fingerprint"]
+                      receipts[item["path"]]={
+                          "fingerprint":item["fingerprint"],
+                          "applied_at":now,
+                          "tower_revision":rev,
+                      }
 
               all_current=all(acked.get(item["path"])==item["fingerprint"] for item in (mapping.get("items") or []))
               if all_current:
@@ -398,7 +435,7 @@ jobs:
                   input=payload,text=True,capture_output=True
               )
               if put.returncode==0:
-                  print("public TCC inbox cursor PASS")
+                  print("public TCC inbox cursor PASS receipts",len(receipts))
                   raise SystemExit(0)
               print("public inbox cursor CAS retry",attempt); time.sleep(2)
 
