@@ -39,6 +39,7 @@
     "inbox/conversa-roadmaps-ptbr-20260928.json": "03b78827875b267d4657c2ed9eb2ac3006da4926fd1486c438c5b7501776d126",
     "inbox/scheduled-20260928-scientist-batch-1406-bdt.json": "0bbabe793811a0a3b48fff75428ea5d835002e3e1d212ca2aade1e7c59a0695c",
     "inbox/scheduled-20260928-scientist-desy6-semantic-1506.json": "1f06b9744244d8c73f0eece9fb4178833b88fa1fe2b752e0fb98c0702f0a581a",
+    "inbox/scheduled-business-migration-readback-20260929.json": "30aaca0d078fd33a4aa5d2077eb34af6f88b36d9402482212bf0251f8a4ae2c3",
     "inbox/scheduled-claude-bind-de26-007-growth-geometry-split.json": "c26c061e5cb83f37532d5b53fd56e876ee5bead0364ae0d15b02ee904ef6bb54",
     "inbox/scheduled-claude-bind-h0x26-010-anchor-velocity-field-orthogonality.json": "6213e52c0dc34f7d173185f4cee5422a3f4e420aaa353fa0be636d3a1baea049",
     "inbox/scheduled-claude-bind-xarea26-005-late-time-model-triage.json": "a9882985d69b22dfa4f82390e47ff09cbdcaf16455c574387c87befaa2652c42",
@@ -106,6 +107,7 @@
     "inbox/scheduled-guardian-20260929t205825z-heartbeat.json": "d1ef81f2b9a101049353376686321b20c9c4e059161ed959b30d25fd4485dfaf",
     "inbox/scheduled-guardian-20260929t230012z-integrity.json": "10045402703114810b44319b76fbb7c1be10d49bce6e2bd0f9a3b8ce87052714",
     "inbox/scheduled-guardian-20260929t230012z-review.json": "81be0598f2d398d74957079d7bf508644e9a0cfdb35c876d6f230fb92fa5b28a",
+    "inbox/scheduled-guardian-20260929t2357-business-integrity-closure.json": "01b8f8befde51754889ca7c811a0ee0b5ce3855ddabd52095600363187bdbb84",
     "inbox/scheduled-guardiao-batch-15710782ed60897b.json": "15710782ed60897b5ba0f016b2ee290f7f52d2e97d0927eeb56340ae7d5a385c",
     "inbox/scheduled-guardiao-batch-2632aa1d7f93ee99.json": "2632aa1d7f93ee997200002df5aaf91ee3cbc3f20b9d26302f026573015f2466",
     "inbox/scheduled-guardiao-batch-3ce5e5f35929f4d4.json": "d28cd8eceab681b16034c79e5fbd82116b874df00302872a1d34be570f57c196",
@@ -199,7 +201,9 @@
     "inbox/scheduled-scientist-20260929t0601z-dream-transfer.json": "77fc4eddc48f511196b76dff91cb9fab3fe1ccc812e7035481c1e328b31583da",
     "inbox/scheduled-scientist-20260929t1504z-noop.json": "d0b46485a6ce8dfe9f0b5e953979392182757d985558bd95eeac7a2f34e24289",
     "inbox/scheduled-scientist-20260929t2055z-pitia-noop.json": "7b2d07a38660d6cb95572d90399d6c5f77c3b5707632e6931967e152956a115d",
-    "inbox/scheduled-scientist-20260929t230223z-pitia.json": "0f225ece543cc990b946de6ac04fe156c16843267eeb618dd157f0a2caa88f2d"
+    "inbox/scheduled-scientist-20260929t230223z-pitia.json": "0f225ece543cc990b946de6ac04fe156c16843267eeb618dd157f0a2caa88f2d",
+    "inbox/scheduled-scientist-20260930t0001z-event-clock-draft.json": "9caf2ed1e93054a7aaec5c55b2a871a6b0a0ba94aa649c46a5a03ad63ce334f8",
+    "inbox/scheduled-scientist-20260930t0008z-three-families-contract.json": "6837e3ebdbf193ca733bf42c076f5b664108ce4094e882bb943393d56daf03f7"
   },
   "base_commit": "c17db97927d4a49b72172c1963a50164dfb4b9be",
   "source": "byDenoso/TCC@nexo-inbox",
