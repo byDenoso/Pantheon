@@ -26,9 +26,9 @@ jobs:
           from google.auth.transport.requests import AuthorizedSession
 
           FILE_ID = "1m97cFmEkw19yiqD_6FWPG4j1lDCAYM4z"
-          TARGET_REVISION = "0B9ZwoXbzaIA-V1h4TUlMcWtYa2JKVXBiYzNSdmtoOHNLVnRVPQ"
-          EXPECT_CURRENT = "sha256:b0bef938979382ebe4361e3a087021466c100f831531d0fdbdeb134bfdc85490"
-          EXPECT_TARGET = "sha256:9aee53d95cf61da98c0ed5144719056c8dbe867c506b9d3d90af5b5f186bcbb8"
+          SOURCE_FILE_ID = "11z8FEvkyaslkCKfF94DOW56Kx9NuoLdj"
+          EXPECT_CURRENT = "sha256:38947729f7d81008f9c6b5b3770a9aaea6c792707b578c7d72a2f37d27a06876"
+          EXPECT_TARGET = "sha256:742c2145714be7a7a0637d0e5befc125f883131dd386f3e345aaddb3f17f1e32"
 
           info = json.loads(os.environ["GOOGLE_SERVICE_ACCOUNT_JSON"])
           creds = service_account.Credentials.from_service_account_info(
@@ -47,14 +47,14 @@ jobs:
           if fingerprint != EXPECT_CURRENT:
               raise SystemExit(f"refusing rollback: current fingerprint {fingerprint}")
 
-          revision_response = session.get(
-              f"https://www.googleapis.com/drive/v3/files/{FILE_ID}/revisions/{TARGET_REVISION}",
-              params={"alt":"media"}, timeout=120)
-          revision_response.raise_for_status()
-          target_raw = revision_response.content
+          source_response = session.get(
+              f"https://www.googleapis.com/drive/v3/files/{SOURCE_FILE_ID}",
+              params={"alt":"media","supportsAllDrives":"true"}, timeout=120)
+          source_response.raise_for_status()
+          target_raw = source_response.content
           target = json.loads(target_raw)
-          if target.get("state_fingerprint") != EXPECT_TARGET:
-              raise SystemExit("target revision fingerprint mismatch")
+          if target.get("stable_file_id") != FILE_ID or target.get("state_fingerprint") != EXPECT_TARGET:
+              raise SystemExit("corrected Tower source fingerprint/file-id mismatch")
 
           write = session.patch(
               f"https://www.googleapis.com/upload/drive/v3/files/{FILE_ID}",
