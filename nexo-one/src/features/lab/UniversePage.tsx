@@ -28,7 +28,7 @@ export function UniversePage({ cosmology }: { cosmology?: CosmologyState | null 
   return <div className="universe-page">
     <div className="universe-intro"><header className="hud-hero"><p className="hud-kicker">Universo · síntese da Tower</p><h1>Estado cosmológico atual</h1><p className="hud-lead">Síntese do que permanece sólido, do que está em tensão e do que continua aberto.</p><p>Literatura, evidência NEXO e síntese atual, com o caminho até cada resultado.</p><div className="universe-legend"><span>✓ Sólido</span><span>◐ Tensão</span><span>○ Aberto</span></div></header><Constellation frontiers={cosmology.frontiers}/></div>
     <div className="universe-cards">{cosmology.frontiers.map(f => <article className="hud-card universe-card" key={f.id}>
-      <a className="universe-card-link" href={labHref('universo', f.id)}><h2>{f.title}</h2><State frontier={f}/><p>{f.summary}</p></a>
+      <a className="universe-card-link" href={labHref('universo', f.id)}><h2>{f.title}</h2><State frontier={f}/><p>{f.short_summary ?? f.summary}</p></a>
       <p className="hud-meta">{f.key_evidence.length} evidências relevantes · {f.evidence_counts.confirmed} confirmadas · {f.evidence_counts.refuted} refutadas · {f.evidence_counts.review} em disputa</p>
       <h3>Principal questão aberta</h3><p>{f.open_questions[0] ?? 'Não publicada.'}</p><h3>Próximo discriminante</h3><p>{f.next_discriminants[0] ?? 'Não publicado.'}</p><a className="universe-more" href={labHref('universo', f.id)}>Explorar frente →</a>
     </article>)}</div>

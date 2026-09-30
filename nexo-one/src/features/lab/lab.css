@@ -863,7 +863,7 @@ details.tech .versus{margin-bottom:18px}
 .universe-map-core{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);text-align:center;display:grid;gap:6px;color:var(--o-ink)}
 .universe-map-core span,.universe-map-core small{font:11px var(--f-mono);letter-spacing:.15em;color:var(--o-dim)}
 .universe-map-core strong{font:600 28px var(--f-display)}
-.universe-star{position:absolute;left:var(--star-x);top:var(--star-y);transform:translate(-50%,-50%);display:grid;gap:4px;text-align:center;width:132px;padding:10px 6px;background:var(--o-panel);border:1px solid var(--o-line);border-radius:var(--r-l);backdrop-filter:blur(12px)}
+.universe-star{position:absolute;left:var(--star-x);top:var(--star-y);transform:translate(-50%,-50%);display:grid;gap:4px;text-align:center;width:110px;padding:10px 6px;background:var(--o-panel);border:1px solid var(--o-line);border-radius:var(--r-l);backdrop-filter:blur(12px)}
 .universe-star i{font-style:normal;font-size:24px}.universe-star span{font-size:12px;line-height:1.25}.universe-star small{font-size:11px;color:var(--o-dim)}
 .universe-state{display:inline-flex;align-items:baseline;flex-wrap:wrap;gap:8px;font:500 15px var(--f-mono);margin-bottom:16px}
 .universe-state i{font-style:normal;font-size:22px}.universe-state small{font:12px var(--f-body);color:var(--o-dim)}

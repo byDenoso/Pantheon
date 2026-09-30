@@ -19,6 +19,7 @@ export interface CosmologyFrontier {
   state_label: string;
   qualification?: string;
   summary: string;
+  short_summary?: string;
   why: string;
   confidence: string;
   literature_baseline: string;
