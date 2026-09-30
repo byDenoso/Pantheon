@@ -206,6 +206,8 @@
     "inbox/scheduled-operator-a-20260930t0118z-first-five-dr1-bindings.json": "7f06f7c56bb6a17acb69cfea3e1896b560f00bc92aedbccdbdf0135734af8138",
     "inbox/scheduled-operator-a-20260930t0825z-writer-stall.json": "278da51a534ea6fbcb726686f8215968a81777a2a249431ea104371c0f0ef1ff",
     "inbox/scheduled-operator-a-dispatch-collision-20260930t1955z.json": "acc2402d5ccb6b864cd255246b485fc1397e5482d892f153704d38cb7043818c",
+    "inbox/scheduled-operator-a-dr1-data-groups-des-u3-v1.json": "3d469db2281e238497e5d4929eb4dafc5d18b447e4d8ee2346513847c3b8d952",
+    "inbox/scheduled-operator-a-dr1-recipe-groups-des-u3-v1.json": "8fdc593c777848850f4e7f3535009c72a44d22a4eeb291ad21f765e4ce7f0ea0",
     "inbox/scheduled-operator-a-ready-drift-board-20260930t1947z.json": "6b0870179b8c347829a255950f30bc73b7318f4e558d6f952872d498dd3f6586",
     "inbox/scheduled-operator-a-tower-native-schema-board-20260930t1947z.json": "cdb91ed7f4286641d9b4deb226406bd0f708a4465c26c581ded3a3ed6ec9fa01",
     "inbox/scheduled-operator-b-20260930t0056z-tail-bindings.json": "08e1fd553d97ff858b5f28cc35b4a868d870a7960af1bd1480c33a853466a9f5",
