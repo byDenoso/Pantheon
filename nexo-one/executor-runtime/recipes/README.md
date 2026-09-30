@@ -8,8 +8,10 @@ O Executor não manda código na proposta (o filtro do ChatGPT bloqueia). Em `TE
 | Receita | Para quê | Parâmetros |
 |---|---|---|
 | `seed_bounds` | replicação por sementes de amostra normal; limites de média e desvio | `seeds[]`, `n` (int ou lista), `max_abs_mean`, `max_abs_sd_minus_1` |
+| `astropy_dependency_canary` | canário da biblioteca Astropy; calcula a idade cosmológica em z=1 | nenhum |
 | `runner_readback_canary` | replica o canário numérico e registra identidade pública/read-back do runner | `seed`, `n`, `max_abs_mean`, `max_abs_sd_minus_1` |
 | `runner_numeric_canary` | canário numérico do runner; fixa a semente e verifica média e desvio de uma amostra normal | nenhum |
+| `camb_dependency_canary` | canário do CAMB 1.6.6; verifica o background de uma cosmologia fixa | nenhum |
 | `w0wa_bao_sn` | ajuste w0-wa (CPL plano) com DESI DR2 BAO + Pantheon+, retirando traçadores ou faixas de redshift; compara com o conjunto completo | `drop_bao_z[]` (0.295 BGS, 0.51/0.706 LRG, 0.934 LRG+ELG, 1.321 ELG, 1.484 QSO, 2.33 Ly-α), `drop_sn_zbands[[zmin,zmax]]`, `use_sn`, `priors{omega_m,w0,wa:[média,σ]}`, `criterion` (`delta_chi2_ge` ou `shift_lt`), `threshold` |
 
 Use `w0wa_bao_sn` para: leave-one-tracer-out do BAO, leave-one-band-out das SNe, e "a preferência por w0-wa sobrevive a …". Sem CMB alguns cortes ficam degenerados; a receita devolve INCONCLUSIVE (`DEGENERATE_FIT`) em vez de julgar — congele um prior em `priors` se o teste precisar decidir.
