@@ -7,15 +7,62 @@ Parâmetros (params.json):
   min_cases: mínimo de casos (readiness_yield; padrão 20)
   min_hypotheses: mínimo de hipóteses (event_clock; padrão 10)
 """
+import gzip
+import hashlib
 import json
+import math
+import re
+from datetime import datetime
 import os
 import statistics
 import urllib.request
 
-params = json.load(open(os.environ["PARAMS_PATH"], encoding="utf-8"))
+with open(os.environ["PARAMS_PATH"], encoding="utf-8") as handle:
+    params = json.load(handle)
 mode = params["mode"]
 url = params.get("projection_url", "https://bydenoso.github.io/Pantheon/tower-projection/projection.json")
-proj = json.load(urllib.request.urlopen(url, timeout=60))
+# Frozen inputs travel separately from scientific params: binding recovery must
+# not rewrite a test's preregistered execution parameters.
+def load_projection():
+    input_path = os.environ.get("INPUTS_PATH")
+    required = os.environ.get("NEXO_REQUIRE_FROZEN_INPUTS") == "1"
+    if input_path:
+        with open(input_path, encoding="utf-8") as handle:
+            inputs = json.load(handle)
+        if not isinstance(inputs, list) or len(inputs) != 1:
+            raise ValueError("tower_native requires exactly one frozen public projection")
+        binding = inputs[0]
+        if not isinstance(binding, dict):
+            raise ValueError("invalid frozen input")
+        source = str(binding.get("url") or "")
+        version = str(binding.get("version") or "").strip()
+        expected = str(binding.get("sha256") or "").removeprefix("sha256:")
+        if not source.startswith("https://") or not version or not re.fullmatch(r"[0-9a-f]{64}", expected):
+            raise ValueError("frozen projection requires HTTPS, version and SHA256")
+        with urllib.request.urlopen(source, timeout=60) as response:
+            raw = response.read()
+        actual = hashlib.sha256(raw).hexdigest()
+        if actual != expected:
+            raise ValueError("frozen projection SHA256 mismatch")
+        decoded = gzip.decompress(raw) if binding.get("format") == "json.gz" else raw
+        projection = json.loads(decoded)
+        provenance = {"url": source, "version": version, "sha256": actual,
+                      "scope": "FROZEN_INPUT_BYTES_VERIFIED"}
+    elif required:
+        raise ValueError("production tower_native requires INPUTS_PATH; live fallback forbidden")
+    else:
+        # The existing daily recipe smoke probes the live public endpoint. Its
+        # result is operational only and is never a production battery result.
+        with urllib.request.urlopen(url, timeout=60) as response:
+            raw = response.read()
+        projection = json.loads(raw)
+        provenance = {"url": url, "sha256": hashlib.sha256(raw).hexdigest(),
+                      "scope": "LIVE_SMOKE_ONLY"}
+    if not isinstance(projection, dict) or not isinstance(projection.get("tests"), list) or not isinstance(projection.get("activity"), list):
+        raise ValueError("invalid public projection structure")
+    return projection, provenance
+
+proj, input_provenance = load_projection()
 tests, acts = proj["tests"], proj["activity"]
 
 GOOD = {"PROMOTED", "PROMOVIDO", "CONFIRMED", "SUPPORTED", "SURVIVED"}
@@ -50,22 +97,40 @@ def brier(rows):
 
 
 def out(verdict, decision, summary, stats, meaning):
-    json.dump({"verdict": verdict, "decision": decision, "summary": summary, "statistics": stats,
-               "semantic": {"result_meaning": meaning}}, open(os.environ["RESULT_PATH"], "w", encoding="utf-8"), ensure_ascii=False)
+    with open(os.environ["RESULT_PATH"], "w", encoding="utf-8") as handle:
+        json.dump({"verdict": verdict, "decision": decision, "summary": summary,
+                   "statistics": {**stats, "input_provenance": input_provenance},
+                   "semantic": {"result_meaning": meaning}}, handle, ensure_ascii=False)
     raise SystemExit(0)
 
 
 if mode == "prediction_calibration":
     need = int(params.get("min_per_stratum", 10))
-    rows = []
+    rows, unverified = [], 0
     for t in tests:
-        y, p = outcome(t), (pre(t).get("prediction") or {}).get("p_promoted")
-        if y is not None and p is not None and when(t):
-            rows.append({"y": y, "p": float(p), "obs": observability(t), "at": when(t)})
+        prediction = pre(t).get("prediction") or {}
+        y, p = outcome(t), prediction.get("p_promoted")
+        if y is None or p is None or not when(t):
+            continue
+        # prereg.at / created_at timestamp the design, not the prediction.
+        # The design hash also excludes prediction; neither proves prospective p.
+        at = prediction.get("recorded_at")
+        try:
+            recorded = datetime.fromisoformat(str(at).replace("Z", "+00:00"))
+            executed = datetime.fromisoformat(when(t).replace("Z", "+00:00"))
+            valid = (recorded.tzinfo is not None and executed.tzinfo is not None
+                     and recorded < executed and not isinstance(p, bool)
+                     and math.isfinite(float(p)) and 0 <= float(p) <= 1)
+        except (ValueError, TypeError):
+            valid = False
+        if not valid:
+            unverified += 1
+            continue
+        rows.append({"y": y, "p": float(p), "obs": observability(t), "at": when(t)})
     rows.sort(key=lambda r: r["at"])
     cut = statistics.median(r["obs"] for r in rows) if rows else 0
     windows = [rows[: len(rows) // 2], rows[len(rows) // 2:]]
-    stats, worse, ok = {"cases": len(rows), "obs_cut": cut, "windows": []}, [], True
+    stats, worse, ok = {"cases": len(rows), "excluded_unverified_predictions": unverified, "obs_cut": cut, "windows": []}, [], True
     for w in windows:
         hi, lo = [r for r in w if r["obs"] > cut], [r for r in w if r["obs"] <= cut]
         bh, bl = brier(hi), brier(lo)

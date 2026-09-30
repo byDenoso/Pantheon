@@ -74,6 +74,9 @@ jobs:
       - name: Install Executor runtime dependencies
         run: python -m pip install --disable-pip-version-check -r nexo-one/executor-runtime/requirements.txt
 
+      - name: Verify frozen-input and prospective-selection regression tests
+        run: python -m unittest discover -s nexo-one/executor-runtime/tests -p test_tower_native_frozen_inputs.py -v
+
       - name: Verify runner, scientific stack and network
         env:
           GH_TOKEN: ${{ github.token }}
