@@ -5,6 +5,8 @@ on:
       - '.github/workflows/nexo-writer-robot.yml'
       - '.github/workflows/nexo-writer-selection-ci.yml'
       - 'scripts/select_tested_tcc_main.py'
+      - 'scripts/github_api_read.py'
+      - 'scripts/tests/test_github_api_read.py'
       - 'scripts/tests/test_select_tested_tcc_main.py'
       - 'scripts/collect_execution_assessments.py'
       - 'scripts/tests/test_collect_execution_assessments.py'
@@ -15,6 +17,8 @@ on:
       - '.github/workflows/nexo-writer-robot.yml'
       - '.github/workflows/nexo-writer-selection-ci.yml'
       - 'scripts/select_tested_tcc_main.py'
+      - 'scripts/github_api_read.py'
+      - 'scripts/tests/test_github_api_read.py'
       - 'scripts/tests/test_select_tested_tcc_main.py'
       - 'scripts/collect_execution_assessments.py'
       - 'scripts/tests/test_collect_execution_assessments.py'
@@ -33,3 +37,4 @@ jobs:
           python-version: '3.12'
       - run: python -m unittest discover -s scripts/tests -p test_select_tested_tcc_main.py -v
       - run: python -m unittest discover -s scripts/tests -p test_collect_execution_assessments.py -v
+      - run: python -m unittest discover -s scripts/tests -p test_github_api_read.py -v
