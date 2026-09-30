@@ -1,4 +1,4 @@
 {
-  "field_scale": "3/2",
-  "mass_scale": "2"
+  "angular_scale": "3/2",
+  "radial_mu2": "5/3"
 }
