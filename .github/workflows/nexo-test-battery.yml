@@ -175,6 +175,7 @@ jobs:
               if "NEXO_PORTABLE_CAMB_ROOT" not in script:
                   raise SystemExit("CAMB recipe must invoke the versioned portable CAMB runtime")
           json.dump(params, open("/tmp/job/params.json", "w", encoding="utf-8"), ensure_ascii=False)
+          json.dump(test.get("inputs") or [], open("/tmp/job/inputs.json", "w", encoding="utf-8"), ensure_ascii=False)
           open("/tmp/job/test.py", "w", encoding="utf-8").write(script)
           # Versioned dependency for the CI dependency canary; never supplied by a client.
           extras = {"astropy_dependency_canary": "astropy>=7,<8\n"}
@@ -209,6 +210,8 @@ jobs:
         env:
           RESULT_PATH: /tmp/job/result.json
           PARAMS_PATH: /tmp/job/params.json
+          INPUTS_PATH: /tmp/job/inputs.json
+          NEXO_REQUIRE_FROZEN_INPUTS: "1"
           NEXO_PORTABLE_CAMB_ROOT: ${{ github.workspace }}/tcc-runtime/runtime/portable_camb
           NEXO_PORTABLE_CAMB_COMMIT: ${{ steps.prepare.outputs.camb_commit }}
         run: |
