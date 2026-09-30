@@ -1,0 +1,72 @@
+name: NEXO one-off Tower rollback 2026-09-30
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/nexo-tower-rollback-20260930.yml"
+
+concurrency:
+  group: nexo-writer-robot
+  cancel-in-progress: false
+
+jobs:
+  restore:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Restore exact pre-backfill Tower revision
+        env:
+          GOOGLE_SERVICE_ACCOUNT_JSON: ${{ secrets.NEXO_DRIVE_WRITER_JSON }}
+        run: |
+          set -euo pipefail
+          pip install --quiet google-auth requests
+          python - <<'PY'
+          import json, os
+          from google.oauth2 import service_account
+          from google.auth.transport.requests import AuthorizedSession
+
+          FILE_ID = "1m97cFmEkw19yiqD_6FWPG4j1lDCAYM4z"
+          TARGET_REVISION = "0B9ZwoXbzaIA-V1h4TUlMcWtYa2JKVXBiYzNSdmtoOHNLVnRVPQ"
+          EXPECT_CURRENT = "sha256:b0bef938979382ebe4361e3a087021466c100f831531d0fdbdeb134bfdc85490"
+          EXPECT_TARGET = "sha256:9aee53d95cf61da98c0ed5144719056c8dbe867c506b9d3d90af5b5f186bcbb8"
+
+          info = json.loads(os.environ["GOOGLE_SERVICE_ACCOUNT_JSON"])
+          creds = service_account.Credentials.from_service_account_info(
+              info, scopes=["https://www.googleapis.com/auth/drive"])
+          session = AuthorizedSession(creds)
+
+          media = f"https://www.googleapis.com/drive/v3/files/{FILE_ID}"
+          current_response = session.get(
+              media, params={"alt":"media","supportsAllDrives":"true"}, timeout=120)
+          current_response.raise_for_status()
+          current = json.loads(current_response.content)
+          fingerprint = current.get("state_fingerprint")
+          if fingerprint == EXPECT_TARGET:
+              print("Tower already restored", fingerprint)
+              raise SystemExit(0)
+          if fingerprint != EXPECT_CURRENT:
+              raise SystemExit(f"refusing rollback: current fingerprint {fingerprint}")
+
+          revision_response = session.get(
+              f"https://www.googleapis.com/drive/v3/files/{FILE_ID}/revisions/{TARGET_REVISION}",
+              params={"alt":"media"}, timeout=120)
+          revision_response.raise_for_status()
+          target_raw = revision_response.content
+          target = json.loads(target_raw)
+          if target.get("state_fingerprint") != EXPECT_TARGET:
+              raise SystemExit("target revision fingerprint mismatch")
+
+          write = session.patch(
+              f"https://www.googleapis.com/upload/drive/v3/files/{FILE_ID}",
+              params={"uploadType":"media","supportsAllDrives":"true"},
+              data=target_raw, headers={"Content-Type":"application/json"}, timeout=180)
+          write.raise_for_status()
+
+          readback = session.get(
+              media, params={"alt":"media","supportsAllDrives":"true"}, timeout=120)
+          readback.raise_for_status()
+          restored = json.loads(readback.content)
+          if restored.get("state_fingerprint") != EXPECT_TARGET:
+              raise SystemExit("rollback readback fingerprint mismatch")
+          print("Tower rollback PASS", EXPECT_TARGET)
+          PY
