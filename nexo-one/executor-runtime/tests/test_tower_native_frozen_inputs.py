@@ -11,6 +11,8 @@ from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parents[1]
 RECIPE = ROOT / 'recipes/tower_native.py'
+FROZEN_URL = ('https://raw.githubusercontent.com/byDenoso/Pantheon/' + 'a' * 40 +
+              '/nexo-one/executor-runtime/snapshots/public-projection-20260930-194720.json')
 
 
 def projection():
@@ -29,7 +31,7 @@ def projection():
 class FrozenInputsTests(unittest.TestCase):
     def run_recipe(self, body=None, *, binding=None, raw=None, missing=False):
         raw = raw if raw is not None else json.dumps(body or projection()).encode()
-        default = {'name': 'public_projection', 'url': 'https://example.org/frozen.json',
+        default = {'name': 'public_projection', 'url': FROZEN_URL,
                    'version': '2026-09-02', 'sha256': hashlib.sha256(raw).hexdigest()}
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
@@ -39,7 +41,7 @@ class FrozenInputsTests(unittest.TestCase):
                    'NEXO_REQUIRE_FROZEN_INPUTS': '1'}
             if not missing:
                 env['INPUTS_PATH'] = str(root / 'inputs.json')
-            with patch.dict(os.environ, env, clear=True), patch('urllib.request.urlopen', return_value=io.BytesIO(raw)) as fetch:
+            with patch.dict(os.environ, env, clear=True), patch('urllib.request.OpenerDirector.open', return_value=io.BytesIO(raw)) as fetch:
                 try:
                     runpy.run_path(str(RECIPE), run_name='__main__')
                 except SystemExit as exc:
@@ -51,18 +53,18 @@ class FrozenInputsTests(unittest.TestCase):
         self.assertEqual(result['decision'], 'LOW_OBS_WORSE')
         self.assertEqual(result['statistics']['cases'], 4)
         self.assertEqual(result['statistics']['input_provenance']['scope'], 'FROZEN_INPUT_BYTES_VERIFIED')
-        self.assertEqual(calls[0].args[0], 'https://example.org/frozen.json')
+        self.assertEqual(calls[0].args[0], FROZEN_URL)
 
     def test_gzip_snapshot_hashes_transport_bytes(self):
         raw = gzip.compress(json.dumps(projection()).encode(), mtime=0)
         result, _ = self.run_recipe(raw=raw, binding={
-            'name': 'projection', 'url': 'https://example.org/frozen.json.gz', 'version': 'v1',
+            'name': 'projection', 'url': FROZEN_URL + '.gz', 'version': 'v1',
             'sha256': hashlib.sha256(raw).hexdigest(), 'format': 'json.gz'})
         self.assertEqual(result['statistics']['input_provenance']['sha256'], hashlib.sha256(raw).hexdigest())
 
     def test_hash_mismatch_stops_before_computation(self):
         with self.assertRaisesRegex(ValueError, 'SHA256 mismatch'):
-            self.run_recipe(binding={'url': 'https://example.org/frozen.json', 'version': 'v1', 'sha256': '0' * 64})
+            self.run_recipe(binding={'url': FROZEN_URL, 'version': 'v1', 'sha256': '0' * 64})
 
     def test_unversioned_input_fails(self):
         with self.assertRaisesRegex(ValueError, 'HTTPS, version and SHA256'):
@@ -101,6 +103,24 @@ class FrozenInputsTests(unittest.TestCase):
         result, _ = self.run_recipe(body)
         self.assertEqual(result['decision'], 'SAMPLE_TOO_SMALL')
         self.assertTrue(all(w['high_n'] == 0 for w in result['statistics']['windows']))
+
+    def test_unofficial_and_unpinned_urls_rejected_before_fetch(self):
+        invalid = ["https://example.org/frozen.json", FROZEN_URL.replace("Pantheon", "other"),
+                   FROZEN_URL.replace("a" * 40, "main"), FROZEN_URL + "?redirect=1",
+                   FROZEN_URL.replace("raw.githubusercontent.com", "raw.githubusercontent.com.evil.example")]
+        for url in invalid:
+            with self.subTest(url=url), self.assertRaisesRegex(ValueError, 'official commit-pinned'):
+                self.run_recipe(binding={'url': url, 'version': 'v1', 'sha256': '0' * 64})
+
+    def test_redirect_handler_fails_closed(self):
+        import ast
+        import urllib.request
+        module = ast.parse(RECIPE.read_text())
+        node = next(n for n in module.body if isinstance(n, ast.ClassDef) and n.name == 'NoProjectionRedirect')
+        scope = {'urllib': __import__('urllib')}
+        exec(compile(ast.Module(body=[node], type_ignores=[]), str(RECIPE), 'exec'), scope)
+        with self.assertRaisesRegex(ValueError, 'redirects are forbidden'):
+            scope['NoProjectionRedirect']().redirect_request(None, None, 302, 'Found', {}, 'https://example.org')
 
     def test_workflow_transmits_inputs_separately(self):
         workflow = (ROOT.parents[1] / '.github/workflows/nexo-test-battery.yml').read_text()

@@ -4,8 +4,11 @@ Baterias de produção passam `tests[].inputs` em `INPUTS_PATH`, separado de
 `PARAMS_PATH`. Isso preserva os parâmetros e critérios científicos existentes.
 A receita exige exatamente um snapshot da projeção pública com URL HTTPS,
 versão e SHA256 dos bytes transportados; aceita JSON e `format: "json.gz"`.
-Prefira URL pública imutável fixada por commit. Mesmo se uma URL mudar, a
-verificação do hash impede o uso de novos bytes silenciosamente.
+A origem aceita é somente o snapshot oficial publicado em
+`https://raw.githubusercontent.com/byDenoso/Pantheon/<commit de 40 caracteres>/nexo-one/executor-runtime/snapshots/public-projection-<AAAAMMDD>-<HHMMSS>.json[.gz]`.
+Branches mutáveis, outros repositórios/domínios, query strings e redirects são
+recusados antes de consumir dados. O smoke ao vivo aceita somente a URL exata
+oficial da projeção do NEXO. A verificação do hash continua obrigatória.
 
 O resultado inclui `statistics.input_provenance` com URL, versão e hash
 realmente consumidos. Entrada ausente, hash divergente ou estrutura inválida
