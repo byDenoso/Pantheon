@@ -1,1 +1,1 @@
-{"reason":"rebuild_writer_after_integrity_hotfix","tcc_sha":"789bcc1cc171c6f9234645a056c3e41e7600ee9b"}
+{"reason":"post_reconcile_integrity_readback","tcc_sha":"789bcc1cc171c6f9234645a056c3e41e7600ee9b","writer_bundle_sha256":"66381fc681f2","phase":"validate-live-writer"}
