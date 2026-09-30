@@ -1,4 +1,4 @@
-import {buildScienceChanges,buildScienceReadModelV2} from '../compiler/science-read-model-v2.mjs';
+import {buildScienceChanges,scienceModelFor,isPublicResearchRecord} from '../compiler/science-read-model-v2.mjs';
 
 export const MCP_TOOL_NAMES=Object.freeze([
   'get_science_state','get_changes','search_atlas','get_program','get_campaign','get_observations','get_h0_stacks','get_evidence_chain','get_operations','get_activity','get_provenance'
@@ -13,23 +13,7 @@ const publicThread=row=>!/(OLYMPUS|CLIENT|PERSON|PRIVATE)/i.test(text(row?.threa
 const safeOperation=row=>({
   id:text(row?.work_id||row?.id),kind:text(row?.kind),title:text(row?.question||row?.title)||text(row?.work_id||row?.id),status:text(row?.status),priority:text(row?.priority),updatedAt:text(row?.updated_at||row?.updatedAt),threadId:text(row?.thread_id),resultRef:text(row?.result_ref)||undefined
 });
-const SCIENCE_MODEL_CACHE_LIMIT=4;
-const scienceModelCache=new Map();
-function scienceModelFor(snapshot){
-  const key=text(snapshot?.fingerprint);
-  if(!key)return buildScienceReadModelV2(snapshot);
-  const cached=scienceModelCache.get(key);
-  if(cached){
-    scienceModelCache.delete(key);
-    scienceModelCache.set(key,cached);
-    return {...cached,generatedAt:text(snapshot?.generatedAt)};
-  }
-  const model=buildScienceReadModelV2(snapshot);
-  scienceModelCache.set(key,model);
-  while(scienceModelCache.size>SCIENCE_MODEL_CACHE_LIMIT)scienceModelCache.delete(scienceModelCache.keys().next().value);
-  return model;
-}
-const withMeta=(model,data)=>({sourceVersion:model.sourceVersion,fingerprint:model.fingerprint,freshness:model.freshness,provenance:model.provenance,...data});
+const withMeta=(model,data)=>({sourceVersion:model.sourceVersion,fingerprint:model.fingerprint,freshness:model.freshness,provenance:model.provenance,authority:model.authority,projectionFingerprint:model.projectionFingerprint,generatedAt:model.generatedAt,...data});
 
 function allInvestigation(model){return Object.values(model.investigation).flatMap(arr);}
 function searchable(model){
@@ -51,9 +35,9 @@ function matches(item,needle){
 function linkedToCampaign(item,campaignId){return text(item.primaryCampaign)===campaignId||text(item.campaignId)===campaignId;}
 function evidenceChain(model,args){
   const campaignId=text(args?.campaignId||args?.campaign_id),testId=text(args?.testId||args?.test_id),sourceRef=text(args?.sourceRef||args?.source_ref);
-  const evidence=model.investigation.evidence.filter(item=>(!campaignId||linkedToCampaign(item,campaignId))&&(!sourceRef||text(item.sourceRef)===sourceRef));
+  const evidence=model.investigation.evidence.filter(item=>(!campaignId||linkedToCampaign(item,campaignId))&&(!testId||text(item.testId)===testId)&&(!sourceRef||text(item.sourceRef)===sourceRef));
   const tests=model.investigation.tests.filter(item=>(!campaignId||linkedToCampaign(item,campaignId))&&(!testId||item.id===testId));
-  const results=model.investigation.results.filter(item=>(!campaignId||linkedToCampaign(item,campaignId))&&(!sourceRef||text(item.sourceRef)===sourceRef));
+  const results=model.investigation.results.filter(item=>(!campaignId||linkedToCampaign(item,campaignId))&&(!testId||text(item.testId)===testId)&&(!sourceRef||text(item.sourceRef)===sourceRef));
   const observations=model.observations.filter(item=>(!campaignId||text(item.campaignId)===campaignId)&&(!testId||text(item.testId)===testId)&&(!sourceRef||text(item.sourceRef)===sourceRef));
   const provenance=[...tests,...results,...evidence,...observations].flatMap(item=>arr(item.provenance));
   return {campaignId:campaignId||undefined,testId:testId||undefined,sourceRef:sourceRef||undefined,tests,results,evidence,observations,provenance};
@@ -62,9 +46,9 @@ function findEntity(model,id){
   return searchable(model).find(item=>text(item.id)===id)||null;
 }
 
-export async function executeMcpTool(snapshot,name,args={}){
+export async function executeMcpTool(snapshot,name,args={},options={}){
   if(!MCP_TOOL_NAMES.includes(name))throw new Error(`UNKNOWN_MCP_TOOL:${name}`);
-  const model=scienceModelFor(snapshot);
+  const model=scienceModelFor(snapshot,options);
   switch(name){
     case 'get_science_state': return model;
     case 'get_changes': return buildScienceChanges(snapshot,model);
@@ -100,7 +84,7 @@ export async function executeMcpTool(snapshot,name,args={}){
     case 'get_evidence_chain': return withMeta(model,evidenceChain(model,args));
     case 'get_operations': {
       const limit=bounded(args.limit,100,500);
-      const items=arr(snapshot?.sections?.WORK).filter(publicThread).map(safeOperation).filter(item=>item.id).slice(0,limit);
+      const items=arr(snapshot?.projection?.work||snapshot?.sections?.WORK).filter(row=>publicThread(row)&&isPublicResearchRecord(row)).map(safeOperation).filter(item=>item.id).slice(0,limit);
       return withMeta(model,{items,total:items.length});
     }
     case 'get_activity': {

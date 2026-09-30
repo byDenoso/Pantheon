@@ -5,17 +5,18 @@ import {compile} from './compiler/world-state.mjs';
 import {buildProjectionBus} from './compiler/projection-bus.mjs';
 import {readProvider,pending} from './adapters/registry.mjs';
 import {readAtlasSsot} from './adapters/atlas-ssot.mjs';
+import {readResearchSnapshot} from './adapters/research-snapshot.mjs';
 import {buildPublicAtlasSsot} from './compiler/atlas-public-ssot.mjs';
 import {buildAtlasResearchView,RESEARCH_ROUTES} from './compiler/atlas-research-api.mjs';
 import {verifyProjectionService} from './auth/vercel-oidc.mjs';
 import {sameOrigin} from './auth/session.mjs';
 import {sessionAccess,sessionRoute} from './auth/session-route.mjs';
 import {buildPersonalSnapshot,executePersonalAction} from './personal/service.mjs';
-import {createNexoMcpWebHandler} from './mcp/server.mjs';
+import {createNexoMcpWebHandler,readNexoMcpStatus} from './mcp/server.mjs';
 import {summarizeConnectionHealth} from './health/connection-state.mjs';
 const ATLAS_ORIGINS=new Set(['https://bydenoso.github.io','https://nexo-one-two.vercel.app','https://nexo-atlas-control-tower.vercel.app','https://nexo-atlas-cockpit.vercel.app']);
-const isCorsRoute=route=>route==='mcp'||route==='projection-sync'||route==='atlas-public-ssot'||route==='world'||RESEARCH_ROUTES.has(route);
-const mcpWebHandler=createNexoMcpWebHandler({readSnapshot:()=>readAtlasSsot({env:process.env,now:Date.now()})});
+const isCorsRoute=route=>(route==='mcp'||route==='mcp/status')||route==='projection-sync'||route==='atlas-public-ssot'||route==='world'||RESEARCH_ROUTES.has(route);
+const mcpWebHandler=createNexoMcpWebHandler({readSnapshot:()=>readResearchSnapshot({env:process.env,now:Date.now()})});
 const mcpNodeHandler=toNodeHandler(mcpWebHandler);
 const DEFAULT_PUBLIC_SYSTEM_URL='https://bydenoso.github.io/Pantheon/system.json';
 const DEFAULT_PUBLIC_PUBLICATION_URL='https://bydenoso.github.io/Pantheon/tower-projection/publication.json';
@@ -129,22 +130,29 @@ export default async function handler(req,res) {
   const env=process.env,now=Date.now();
   res.setHeader('Content-Type','application/json; charset=utf-8');res.setHeader('Cache-Control','private, no-store');res.setHeader('X-Content-Type-Options','nosniff');res.setHeader('Vary','Authorization, Origin, Cookie');
   const send=(value,status=200)=>{res.statusCode=status;res.end(JSON.stringify(value));};
-  const url=new URL(req.url,'http://local'),path=url.pathname.replace(/\/+$/,''),route=url.searchParams.get('route')||(path.endsWith('/personal/action')?'personal-action':path.split('/').pop());
+  const url=new URL(req.url,'http://local'),path=url.pathname.replace(/\/+$/,''),route=url.searchParams.get('route')||(path.endsWith('/mcp/status')?'mcp/status':path.endsWith('/personal/action')?'personal-action':path.split('/').pop());
   const privateAccess=sessionAccess(req,env,now),access=privateAccess?'PRIVATE':'PUBLIC';
   const origin=String(req.headers.origin||'');
-  if(ATLAS_ORIGINS.has(origin)&&isCorsRoute(route)){
+  const mcpOriginAllowed=!origin||ATLAS_ORIGINS.has(origin)||sameOrigin(req);
+  if((ATLAS_ORIGINS.has(origin)||sameOrigin(req))&&isCorsRoute(route)){
     res.setHeader('Access-Control-Allow-Origin',origin);
     res.setHeader('Access-Control-Allow-Methods','GET,OPTIONS');
     if(route==='mcp'||route==='projection-sync')res.setHeader('Access-Control-Allow-Methods','POST,OPTIONS');
     res.setHeader('Access-Control-Allow-Headers','Accept,Content-Type,Mcp-Protocol-Version');
   }
-  if(req.method==='OPTIONS'&&ATLAS_ORIGINS.has(origin)&&isCorsRoute(route)){res.statusCode=204;return res.end();}
+  if(req.method==='OPTIONS'&&(ATLAS_ORIGINS.has(origin)||sameOrigin(req))&&isCorsRoute(route)){res.statusCode=204;return res.end();}
   try{
     if(route==='inbox-drop'){try{const [value,status]=await inboxDrop(url,env,req);return send(value,status);}catch(error){return send({ok:false,error:String(error?.message||error).slice(0,120)},502);}}
     if(route==='inbox-list'||route==='inbox-ack'){const [value,status]=await inboxRobot(route,url,req,env);return send(value,status);}
+    if(route==='mcp/status'){
+      if(!mcpOriginAllowed)return send({error:'ORIGIN_NOT_ALLOWED'},403);
+      if(req.method!=='GET')return send({error:'METHOD_NOT_ALLOWED'},405);
+      return send(await readNexoMcpStatus({readSnapshot:()=>readResearchSnapshot({env,now,signal:req.signal})}));
+    }
     if(route==='mcp'){
-      if(origin&&!ATLAS_ORIGINS.has(origin))return send({error:'ORIGIN_NOT_ALLOWED'},403);
-      return mcpNodeHandler(req,res);
+      if(Number(req.headers['content-length'])>262144)return send({error:'REQUEST_BODY_TOO_LARGE'},413);
+      if(!mcpOriginAllowed)return send({error:'ORIGIN_NOT_ALLOWED'},403);
+      return mcpNodeHandler(req,res,req.body);
     }
     if(route==='session'){
       const decision=sessionRoute(req,env,now,await requestBody(req));
@@ -182,10 +190,10 @@ export default async function handler(req,res) {
     if(route==='atlas-public-ssot')return send(buildPublicAtlasSsot(await readAtlasSsot({env,now,signal:req.signal})));
     if(RESEARCH_ROUTES.has(route)){
       let snapshot=null;
-      try{snapshot=await readAtlasSsot({env,now,signal:req.signal});}
+      try{snapshot=await readResearchSnapshot({env,now,signal:req.signal});}
       catch(error){
         const code=String(error?.code||error?.name||error?.message||'');
-        if(!['AUTH_REQUIRED','RATE_LIMITED','UNAVAILABLE','TIMEOUT','AbortError','ABORT_ERR'].includes(code))throw error;
+        if(!['AUTH_REQUIRED','RATE_LIMITED','UNAVAILABLE','TIMEOUT','AbortError','ABORT_ERR','PUBLICATION_UNAVAILABLE'].includes(code))throw error;
       }
       return send(buildAtlasResearchView(snapshot,route));
     }
