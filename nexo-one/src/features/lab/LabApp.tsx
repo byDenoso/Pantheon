@@ -1210,10 +1210,13 @@ function nameIds(text: string, lab: Lab): string {
 }
 
 function boardNarration(text: string, id: string, to: string): string {
-  const spoken = `“${text}”`;
-  const tpl = say('BOARD_POSTED', id, { to });
-  if (!tpl) return text;
-  return humanize(tpl.includes('%q') ? tpl.replace('%q', spoken) : `${tpl.replace(/\.$/, '')}: ${spoken}`);
+  const matrix = matrixFor('BOARD_POSTED');
+  if (!matrix) return text;
+  const vars = { to };
+  const fill = (value: string) => value.replace(/\{(\w+)\}/g, (_, key: string) => String(vars[key as keyof typeof vars] ?? ''));
+  const head = fill(pick(matrix.heads, `board-head:${id}`));
+  const tail = fill(pick(matrix.tails, `board-tail:${id}`));
+  return humanize(`${head}: “${text}”${tail}`);
 }
 
 function Board({ state, lab }: { state: SystemState; lab: Lab }) {
