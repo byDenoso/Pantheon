@@ -38,6 +38,29 @@ export const CANVAS_DEPTH_SCALE = 0.82;
 
 type PresentationMode='spatial'|'canvas';
 
+export type HierarchyVisualRole='root'|'domain'|'folder'|'entity';
+
+export function hierarchyVisualRoles(nodes:AtlasNode[],focusId:string){
+  const byId=new Map(nodes.map(node=>[node.id,node]));
+  const roles=new Map<string,HierarchyVisualRole>();
+  const focus=byId.get(focusId);
+  const driveHierarchy=/one\s*drive/i.test(String(focus?.label||focus?.id||''));
+
+  for(const node of nodes){
+    if(node.id===focusId){roles.set(node.id,'root');continue;}
+    const parentId=typeof node.parentId==='string'?node.parentId:'';
+    const parent=parentId?byId.get(parentId):undefined;
+    const type=String(node.type||'').toUpperCase();
+
+    if(driveHierarchy&&parentId===focusId){roles.set(node.id,'domain');continue;}
+    if(driveHierarchy&&parent?.parentId===focusId){roles.set(node.id,'folder');continue;}
+    if(type==='DOMAIN'||type==='PROGRAM'){roles.set(node.id,'domain');continue;}
+    if(type==='SUBGRAPH'||type==='FOLDER'){roles.set(node.id,'folder');continue;}
+    roles.set(node.id,'entity');
+  }
+  return roles;
+}
+
 export function hierarchyRingRadius(count:number,presentationMode:PresentationMode='spatial'){
   const base=count<=1?4.4:count<=4?4.9:count<=8?5.55:6.15;
   return base*(presentationMode==='canvas'?CANVAS_LAYOUT_SPREAD:1);
