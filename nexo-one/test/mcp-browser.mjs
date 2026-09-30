@@ -9,6 +9,7 @@ import {MCP_TOOL_REGISTRY} from '../server/mcp/server.mjs';
 
 const nativeFetch=globalThis.fetch;
 let sourceUnavailable=false;
+let statusUnavailable=false;
 const published=publication();
 globalThis.fetch=async(url,init)=>{
   if(String(url)==='https://bydenoso.github.io/Pantheon/tower-projection/publication.json'){
@@ -20,6 +21,7 @@ globalThis.fetch=async(url,init)=>{
 const mime={'.html':'text/html','.js':'text/javascript','.css':'text/css','.json':'application/json','.svg':'image/svg+xml'};
 const root=path.resolve('dist');
 const server=http.createServer(async(req,res)=>{
+  if(statusUnavailable&&req.url==='/api/mcp/status'){res.writeHead(404);return res.end('Not found');}
   if(req.url.startsWith('/api/'))return handler(req,res);
   const pathname=new URL(req.url,'http://local').pathname;
   if(pathname.endsWith('/tower-projection/publication.json')){res.setHeader('Content-Type','application/json');return res.end(JSON.stringify(published));}
@@ -54,6 +56,17 @@ try{
     sourceUnavailable=true;await execute.click();await page.getByRole('alert').filter({hasText:'MCP_SOURCE_UNAVAILABLE'}).waitFor();await page.getByText('Fonte científica indisponível. As políticas continuam disponíveis.').waitFor();
     await select.selectOption('get_style_policy');await execute.click();await page.getByRole('heading',{name:'Política',exact:true}).waitFor();
     sourceUnavailable=false;await page.getByRole('button',{name:'Atualizar servidor'}).click();
+    statusUnavailable=true;await page.getByRole('button',{name:'Atualizar servidor'}).click();
+    await page.getByText('Servidor conectado pelo protocolo MCP.',{exact:false}).waitFor();
+    assert.equal(await page.locator('.mcp-tool-grid article').count(),Object.keys(MCP_TOOL_REGISTRY).length);
+    await page.getByText('Telemetria indisponível nesta versão do servidor.',{exact:false}).waitFor();
+    await select.selectOption('get_style_policy');await execute.click();await page.getByRole('heading',{name:'Política',exact:true}).waitFor();
+    await noOverflow(page,`${width}/${theme}/legacy-protocol`);
+    await page.route('**/api/mcp',route=>route.abort('failed'));
+    await page.getByRole('button',{name:'Atualizar servidor'}).click();
+    await page.getByRole('alert').filter({hasText:'Servidor MCP indisponível.'}).waitFor();
+    await page.unroute('**/api/mcp');
+    statusUnavailable=false;
     assert.deepEqual(errors,[],`${width}/${theme}: runtime errors`);
     console.log(`MCP_BROWSER_${width}_${theme.toUpperCase()}_OK`);await context.close();
   }
