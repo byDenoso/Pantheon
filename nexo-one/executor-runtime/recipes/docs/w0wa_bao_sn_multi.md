@@ -30,8 +30,11 @@ DR1 QSO mede DV/rd; DR2 QSO mede DM/rd e DH/rd. A seleção usa o vetor e a
 submatriz de covariância de cada release. Redshift ausente retorna INCONCLUSIVE
 com motivo, em vez de executar uma retirada vazia. Compilações repetidas,
 ganho CPL nulo, erro de rede/hash, falha de convergência ou amostra pequena
-também ficam inconclusivos. Uma compilação continua insuficiente para os
-critérios destas famílias.
+também ficam inconclusivos. O contrato canônico existente de `bao_tracer_jackknife` com somente Union3
+preserva seu ramo específico: fração máxima <0,5 promove, >=0,7 rejeita.
+Os demais contratos exigem duas compilações. No modo de traçadores, pelo
+menos duas precisam satisfazer integralmente todos os holdouts e cossenos;
+falhas em grupos diferentes entre compilações não contam como sucesso.
 
 Limite: o prior de Ωm desta análise leve não é uma likelihood CMB completa.
 Um contrato que exija CMB ou outra contribuição ainda precisa desse binding;
@@ -46,5 +49,6 @@ OPENBLAS_NUM_THREADS=1 PARAMS_PATH=smoke/w0wa_bao_sn_multi.json \
   RESULT_PATH=/tmp/w0wa.out.json python w0wa_bao_sn_multi.py
 ```
 
-O smoke usa DR1, DES-SN5YR e Union3, prior Ωm=0,315±0,02, retirada Lyα.
+O smoke versionado usa DR1 e Union3, prior Ωm=0,315±0,02, retirada Lyα.
+A mesma configuração foi conferida também com DES-SN5YR e Union3 separadamente.
 O CI existente descobre o mesmo smoke; nenhum workflow foi alterado.

@@ -154,6 +154,37 @@ def cosine(p,q):
     a=np.array([p["w0"]+1,p["wa"]]); b=np.array([q["w0"]+1,q["wa"]]); den=np.linalg.norm(a)*np.linalg.norm(b)
     return None if den==0 else float(a@b/den)
 
+def decision_from_holds(mode, comps, out):
+    labels=[h["label"] for h in out[0]["holds"]] if out else []
+    if len(out)<2 and not (mode=="bao_tracer_jackknife" and comps==["union3"]):
+        verdict,decision="INCONCLUSIVE","INSUFFICIENT_COMPILATIONS"
+    elif mode=="bao_tracer_jackknife" and comps==["union3"]:
+        # Preserve the existing single-Union3 charter, including exact boundaries.
+        fracs=[h["fraction_removed"] for h in out[0]["holds"] if h["fraction_removed"] is not None]
+        max_removed=max(fracs) if fracs else None
+        if max_removed is None: verdict,decision="INCONCLUSIVE","MIXED_TRACER_ROBUSTNESS"
+        elif max_removed>=0.7: verdict,decision="REJECTED","SAME_TRACER_DOMINATES"
+        elif max_removed<0.5: verdict,decision="PROMOTED","TRACER_ROBUST"
+        else: verdict,decision="INCONCLUSIVE","MIXED_TRACER_ROBUSTNESS"
+    elif mode=="redshift_jackknife":
+        over50={lab:sum(1 for r in out for h in r["holds"] if h["label"]==lab and h["fraction_removed"] is not None and h["fraction_removed"]>0.5) for lab in labels}
+        over70={lab:sum(1 for r in out for h in r["holds"] if h["label"]==lab and h["fraction_removed"] is not None and h["fraction_removed"]>=0.7) for lab in labels}
+        residual_ok=all(all(h["residual_sigma"]>=2 for h in r["holds"]) for r in out)
+        if any(v>=2 for v in over70.values()) or any(sum(h["residual_sigma"]<1 for r in out for h in r["holds"] if h["label"]==lab)>=2 for lab in labels): verdict,decision="REJECTED","SAME_BAND_DOMINATES"
+        elif not any(v>=2 for v in over50.values()) and residual_ok: verdict,decision="PROMOTED","DISTRIBUTED_REDSHIFT_LEVERAGE"
+        else: verdict,decision="INCONCLUSIVE","MIXED_REDSHIFT_LEVERAGE"
+    else:
+        over50={lab:sum(1 for r in out for h in r["holds"] if h["label"]==lab and h["fraction_removed"] is not None and h["fraction_removed"]>0.5) for lab in labels}
+        over70={lab:sum(1 for r in out for h in r["holds"] if h["label"]==lab and h["fraction_removed"] is not None and h["fraction_removed"]>0.7) for lab in labels}
+        successful_compilations=sum(all(h["fraction_removed"] is not None and h["fraction_removed"]<=0.5
+                                         and h["cosine"] is not None and h["cosine"]>=0.8
+                                         for h in r["holds"]) for r in out)
+        if any(v>=2 for v in over70.values()): verdict,decision="REJECTED","SAME_TRACER_DOMINATES"
+        elif successful_compilations>=2: verdict,decision="PROMOTED","TRACER_ROBUST"
+        else: verdict,decision="INCONCLUSIVE","MIXED_TRACER_ROBUSTNESS"
+
+    return verdict, decision
+
 def run(params):
     mode=params["mode"]; release=params.get("bao_release", "dr2"); priors=params.get("priors") or {}; comps=params.get("compilations") or ["pantheon_plus","des_sn5yr"]
     if len(comps)!=len(set(comps)): raise ValueError("Compilações repetidas não são replicações independentes.")
@@ -179,23 +210,7 @@ def run(params):
 
     if any(r["full"]["delta_chi2"]<=1e-6 for r in out):
         raise RuntimeError("Ganho CPL nulo: fração removida não é identificável.")
-    labels=[h["label"] for h in out[0]["holds"]] if out else []
-    if len(out)<2:
-        verdict,decision="INCONCLUSIVE","INSUFFICIENT_COMPILATIONS"
-    elif mode=="redshift_jackknife":
-        over50={lab:sum(1 for r in out for h in r["holds"] if h["label"]==lab and h["fraction_removed"] is not None and h["fraction_removed"]>0.5) for lab in labels}
-        over70={lab:sum(1 for r in out for h in r["holds"] if h["label"]==lab and h["fraction_removed"] is not None and h["fraction_removed"]>=0.7) for lab in labels}
-        residual_ok=all(all(h["residual_sigma"]>=2 for h in r["holds"]) for r in out)
-        if any(v>=2 for v in over70.values()) or any(sum(h["residual_sigma"]<1 for r in out for h in r["holds"] if h["label"]==lab)>=2 for lab in labels): verdict,decision="REJECTED","SAME_BAND_DOMINATES"
-        elif not any(v>=2 for v in over50.values()) and residual_ok: verdict,decision="PROMOTED","DISTRIBUTED_REDSHIFT_LEVERAGE"
-        else: verdict,decision="INCONCLUSIVE","MIXED_REDSHIFT_LEVERAGE"
-    else:
-        over50={lab:sum(1 for r in out for h in r["holds"] if h["label"]==lab and h["fraction_removed"] is not None and h["fraction_removed"]>0.5) for lab in labels}
-        over70={lab:sum(1 for r in out for h in r["holds"] if h["label"]==lab and h["fraction_removed"] is not None and h["fraction_removed"]>0.7) for lab in labels}
-        cos_ok=all(all(h["cosine"] is not None and h["cosine"]>=0.8 for h in r["holds"]) for r in out)
-        if any(v>=2 for v in over70.values()): verdict,decision="REJECTED","SAME_TRACER_DOMINATES"
-        elif not any(v>=2 for v in over50.values()) and cos_ok: verdict,decision="PROMOTED","TRACER_ROBUST"
-        else: verdict,decision="INCONCLUSIVE","MIXED_TRACER_ROBUSTNESS"
+    verdict,decision = decision_from_holds(mode, comps, out)
 
     # Leitura em português simples, escrita a partir da decisão (o critério congelado não muda).
     def worst(key):

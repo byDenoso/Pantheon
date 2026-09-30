@@ -35,6 +35,23 @@ class ScientificChecks(unittest.TestCase):
             recipe.sub_bao(bao, [.295, .51, .706, .93])
         self.assertEqual(len(recipe.sub_bao(bao, [1.491])[0]), 6)
 
+    def test_single_union3_charter_boundaries_preserved(self):
+        for removed, expected in ((.49, "PROMOTED"), (.5, "INCONCLUSIVE"), (.7, "REJECTED")):
+            rows=[{"holds":[{"label":"lya", "fraction_removed":removed, "cosine":.9}]}]
+            self.assertEqual(recipe.decision_from_holds("bao_tracer_jackknife", ["union3"], rows)[0], expected)
+
+    def test_success_requires_two_complete_compilations(self):
+        def row(a,b):
+            return {"holds":[{"label":label,"fraction_removed":value,"cosine":.9}
+                             for label,value in (("LRG",a),("ELG",b))]}
+        # Different failed holdouts do not provide two successful compilations.
+        self.assertEqual(recipe.decision_from_holds("bao_tracer_jackknife", ["des_sn5yr","union3"],
+                                                   [row(.6,.1),row(.1,.6)])[0], "INCONCLUSIVE")
+        self.assertEqual(recipe.decision_from_holds("bao_tracer_jackknife", ["des_sn5yr","union3"],
+                                                   [row(.5,.1),row(.1,.5)])[0], "PROMOTED")
+        self.assertEqual(recipe.decision_from_holds("bao_tracer_jackknife", ["des_sn5yr","union3"],
+                                                   [row(.71,.1),row(.71,.1)])[0], "REJECTED")
+
     def test_duplicate_compilations_and_changed_hash_fail(self):
         with self.assertRaisesRegex(ValueError, "repetidas"):
             recipe.run({"mode": "bao_tracer_jackknife", "compilations": ["union3", "union3"]})
