@@ -20,7 +20,25 @@ import urllib.request
 with open(os.environ["PARAMS_PATH"], encoding="utf-8") as handle:
     params = json.load(handle)
 mode = params["mode"]
-url = params.get("projection_url", "https://bydenoso.github.io/Pantheon/tower-projection/projection.json")
+OFFICIAL_LIVE_URL = "https://bydenoso.github.io/Pantheon/tower-projection/projection.json"
+OFFICIAL_SNAPSHOT = re.compile(
+    r"https://raw[.]githubusercontent[.]com/byDenoso/Pantheon/[0-9a-f]{40}/"
+    r"nexo-one/executor-runtime/snapshots/public-projection-[0-9]{8}-[0-9]{6}[.]json(?:[.]gz)?"
+)
+url = params.get("projection_url", OFFICIAL_LIVE_URL)
+
+
+class NoProjectionRedirect(urllib.request.HTTPRedirectHandler):
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        raise ValueError("public projection redirects are forbidden")
+
+
+def projection_bytes(source):
+    # An allowed initial URL must not redirect into an untrusted data source.
+    opener = urllib.request.build_opener(NoProjectionRedirect())
+    with opener.open(source, timeout=60) as response:
+        return response.read()
+
 # Frozen inputs travel separately from scientific params: binding recovery must
 # not rewrite a test's preregistered execution parameters.
 def load_projection():
@@ -39,8 +57,9 @@ def load_projection():
         expected = str(binding.get("sha256") or "").removeprefix("sha256:")
         if not source.startswith("https://") or not version or not re.fullmatch(r"[0-9a-f]{64}", expected):
             raise ValueError("frozen projection requires HTTPS, version and SHA256")
-        with urllib.request.urlopen(source, timeout=60) as response:
-            raw = response.read()
+        if not OFFICIAL_SNAPSHOT.fullmatch(source):
+            raise ValueError("frozen projection source is not an official commit-pinned snapshot")
+        raw = projection_bytes(source)
         actual = hashlib.sha256(raw).hexdigest()
         if actual != expected:
             raise ValueError("frozen projection SHA256 mismatch")
@@ -53,8 +72,9 @@ def load_projection():
     else:
         # The existing daily recipe smoke probes the live public endpoint. Its
         # result is operational only and is never a production battery result.
-        with urllib.request.urlopen(url, timeout=60) as response:
-            raw = response.read()
+        if url != OFFICIAL_LIVE_URL:
+            raise ValueError("live smoke must use the official public projection")
+        raw = projection_bytes(url)
         projection = json.loads(raw)
         provenance = {"url": url, "sha256": hashlib.sha256(raw).hexdigest(),
                       "scope": "LIVE_SMOKE_ONLY"}
