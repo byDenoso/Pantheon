@@ -1354,7 +1354,7 @@ function Intro() {
   </div>;
 }
 
-// ---------- Laços parados (por laço, não por papel): o papel pode estar vivo e só um laço dele parado ----------
+// ---------- Laços quietos: ausência de evento científico não é falha da automação ----------
 function QuietLoops({ lab, quiet, at }: { lab: Lab; quiet: Array<{ role: string; hours: number | null; loops: string[] }>; at: string }) {
   const loops = new Map<string, { hours: number | null; roles: Set<string> }>();
   for (const q of quiet) for (const l of q.loops) {
@@ -1363,15 +1363,15 @@ function QuietLoops({ lab, quiet, at }: { lab: Lab; quiet: Array<{ role: string;
   }
   const lastOf = (role: string) => { const t = taskOf(role); const hats = t?.hats ?? [role];
     return lab.activity.filter(e => hats.includes(String(e.role).toUpperCase())).at(-1)?.at; };
-  const dur = (h: number | null) => h == null ? 'nunca aconteceu' : `parado há ${h < 48 ? `${Math.round(h)} h` : `${Math.round(h / 24)} dias`}`;
-  return <Section title="Laços parados" kicker={`vigia do robô · ${ago(at)}`} id="he-quiet">
+  const dur = (h: number | null) => h == null ? 'sem evento registrado' : `sem evento há ${h < 48 ? `${Math.round(h)} h` : `${Math.round(h / 24)} dias`}`;
+  return <Section title="Laços quietos" kicker={`vigia do robô · ${ago(at)}`} id="he-quiet">
     <ul className="quiet-list">{[...loops].map(([loop, v]) => { const role = [...v.roles][0]!; const t = taskOf(role); const last = lastOf(role);
       return <li key={loop}>
         <b>{(LOOP_PT[loop] ?? loop).replace(/^./, c => c.toUpperCase())}</b>
         <span>{dur(v.hours)}</span>
-        <em>dono: {t ? t.name : roleLabel(role)}{last ? ` · o papel agiu ${ago(last)}` : ' · sem sinal do papel'}</em>
+        <em>responsável: {t ? t.name : roleLabel(role)}{last ? ` · último evento do papel ${ago(last)}` : ' · sem evento do papel'}</em>
       </li>; })}</ul>
-    <p className="hud-note">Um laço parado não quer dizer que o agente parou: mutação do genoma, por exemplo, é rara por natureza.</p>
+    <p className="hud-note">Quietude mede ausência de evento científico no laço; não indica que a automação parou.</p>
   </Section>;
 }
 
