@@ -8,10 +8,7 @@ READY de troca de release podem usar DR1 preservando as compilações, priors,
 agrupamentos e critérios de seus testes-alvo. Esta receita não liga testes nem
 grava resultados na Tower.
 
-Os dados BAO são a likelihood gaussiana oficial distribuída pelo Cobaya
-([descrição do release DESI 2024](https://github.com/CobayaSampler/cobaya/blob/master/cobaya/likelihoods/bao/desi_2024_bao_all.py)).
-BAO, Pantheon+, DES-Dovekie e Union3 têm commit e SHA256 fixados no código;
-`statistics.data_sources` informa as URLs e hashes realmente utilizados.
+Para DR1, a documentação oficial do DESI em `data.desi.lbl.gov` declara que as likelihoods usadas nos resultados BAO são publicadas no repositório `CobayaSampler/bao_data`, nos arquivos `desi_2024_*`: https://data.desi.lbl.gov/doc/releases/dr1/vac/bao-cosmo-params/ . A receita fixa o commit exato desse repositório e o SHA256 dos vetores/covariâncias usados. `statistics.official_provenance` registra a página oficial DESI e o repositório declarado por ela; `statistics.data_sources` registra as URLs e hashes dos bytes realmente consumidos.
 Não há URL configurável, troca automática de release ou substituição de SNe.
 DES e Pantheon+ compartilham objetos de baixo redshift: as compilações são
 ajustadas separadamente, nunca multiplicadas como likelihoods independentes.
