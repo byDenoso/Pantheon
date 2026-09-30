@@ -1,6 +1,7 @@
 // Ciclo fechado do NEXO: o que ele está pensando, o que espera do Dener, e o quanto cada roadmap anda até parar.
 import type { EvolutionStatus } from '../../contracts/system.ts';
 import { humanizeText } from '../../viewmodels/tokens.ts';
+import { ExecutionIntegrityPanel } from './ExecutionIntegrityPanel.tsx';
 
 const KIND_PT: Record<string, string> = {
   SURPRISE: 'Surpresa', QUESTION: 'Pergunta', DREAM: 'Sonho', SELF_PREDICTION: 'Autoprevisão',
@@ -29,7 +30,7 @@ const ago = (iso: string) => {
   return minutes < 60 ? `há ${minutes} min` : minutes < 1440 ? `há ${Math.round(minutes / 60)} h` : `há ${Math.round(minutes / 1440)} d`;
 };
 
-export function EvolutionPanel({ evolution }: { evolution: EvolutionStatus }) {
+export function EvolutionPanel({ evolution }: { evolution: EvolutionStatus & { execution_integrity?: unknown } }) {
   const thoughts = [...(evolution.thoughts ?? [])].reverse().slice(0, 4);
   const gate = evolution.gate.charters_waiting.length + evolution.gate.canaries_waiting.length;
   const reviews = evolution.reviews ?? {};
@@ -44,6 +45,8 @@ export function EvolutionPanel({ evolution }: { evolution: EvolutionStatus }) {
         <h2 id="evolution-title">O que o NEXO está aprendendo</h2>
         <p className="evolution-muted">Acompanhe o que foi observado, o que ainda está em avaliação e quais decisões precisam de você.</p>
       </header>
+
+      <ExecutionIntegrityPanel source={evolution.execution_integrity} />
 
       {thoughts.length > 0 && (
         <ol className="evolution-thoughts">
@@ -122,7 +125,7 @@ export function EvolutionPanel({ evolution }: { evolution: EvolutionStatus }) {
 
         <article className="evolution-card">
           <h3>Avaliação das conclusões</h3>
-          <p className="evolution-muted">Uma conclusão só é considerada confirmada depois de resistir às tentativas de refutação.</p>
+          <p className="evolution-muted">Confirmações registradas na Tower. A cobertura da verificação de proveniência aparece no painel de integridade.</p>
           <p className="evolution-big">{reviews.CONFIRMED ?? 0}<span> confirmadas</span></p>
           <p className="evolution-muted">
             {underReview} em revisão · {reviews.REFUTED ?? 0} refutadas
