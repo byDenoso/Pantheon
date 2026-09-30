@@ -19,6 +19,9 @@ export interface TestEntity {
   id: string;
   /** Nome curto em português (semantic.display_name); contestações herdam do atacado. */
   name: string;
+  historical?: boolean;
+  sourceUrl?: string | null;
+  provenance?: unknown;
   question: string | null;
   meaning: string | null;
   summary: string | null;
@@ -59,6 +62,7 @@ export interface ReviewStep { kind: string; by?: string; axis?: string; outcome?
 export interface ActivityEvent { event_type: string; role: string; at: string; entity_id?: string; entity_kind?: string }
 /** Read model público do TCC#96 repassado pelo build do Pages (system.read_model). */
 export interface ReadModel {
+  historical_tests?: Record<string, Record<string, unknown>>;
   tests?: Record<string, Record<string, unknown>>;
   hypotheses?: Record<string, Record<string, unknown>>;
   roadmaps?: Array<Record<string, unknown>>;
@@ -79,6 +83,7 @@ export interface RoadmapEntity {
 }
 
 export interface Lab {
+  historicalTests?: Map<string, TestEntity>;
   tests: Map<string, TestEntity>;
   hypotheses: Map<string, HypothesisEntity>;
   campaigns: Map<string, CampaignEntity>;
@@ -133,7 +138,7 @@ export function buildLab(state: SystemState): Lab {
   for (const rec of sp?.tests ?? []) records.set(bare(String(rec.id)), rec);
 
   const rmodel = ((state as unknown as { read_model?: ReadModel }).read_model) ?? null;
-  const rmTests = rmodel?.tests ?? {};
+  const rmTests = { ...(rmodel?.historical_tests ?? {}), ...(rmodel?.tests ?? {}) };
   const roadmapsRaw = (state.evolution?.roadmaps ?? []) as unknown as Array<Record<string, unknown>>;
   const campaignToRoadmap = new Map<string, string>();
   for (const rm of roadmapsRaw) if (rm.campaign_id) campaignToRoadmap.set(String(rm.campaign_id), String(rm.roadmap_id));
@@ -153,6 +158,7 @@ export function buildLab(state: SystemState): Lab {
     tests.set(id, {
       id,
       name: '',
+      historical: any.historical === true, sourceUrl: str(any.source_url), provenance: any.provenance,
       question: str((any.semantic as Record<string, unknown> | undefined)?.question_plain) ?? str(any.question_plain) ?? n?.question_plain ?? str(any.question),
       meaning: n?.result_meaning ?? str(any.result_meaning),
       summary: n?.summary ?? null,
@@ -212,6 +218,8 @@ export function buildLab(state: SystemState): Lab {
     return (t.name = shortName(t.question) ?? humanId(t.id));
   };
   for (const t of tests.values()) naming(t);
+  const historicalTests = new Map<string, TestEntity>();
+  for (const [id, test] of tests) if (test.historical) { historicalTests.set(id, test); tests.delete(id); }
 
   const hypotheses = new Map<string, HypothesisEntity>();
   for (const rec of sp?.hypotheses ?? []) {
@@ -292,7 +300,7 @@ export function buildLab(state: SystemState): Lab {
   const missingContract: string[] = rmodel ? [] : ['read_model (TCC#96 ainda não publicado)'];
 
   return {
-    tests, hypotheses, campaigns, roadmaps, counts, reviews: state.evolution?.reviews ?? {},
+    tests, historicalTests, hypotheses, campaigns, roadmaps, counts, reviews: state.evolution?.reviews ?? {},
     generatedAt: state.generated_at, missingContract,
     activity: [...(rmodel?.activity ?? [])].filter(e => e.at).sort((a, b) => a.at.localeCompare(b.at)), hasReadModel: Boolean(rmodel),
   };
@@ -358,3 +366,4 @@ function shortName(q: string | null): string | null {
   while (cut.length > 4 && /^(a|o|as|os|de|da|do|das|dos|e|em|no|na|nos|nas|um|uma|que|com|por|para|sem|ao|à)$/i.test(cut.at(-1)!)) cut = cut.slice(0, -1);
   return cut.join(' ') + '…';
 }
+

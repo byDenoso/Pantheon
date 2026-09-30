@@ -27,6 +27,11 @@ function publicReadModel(projection) {
     const picked = pickKeys(test, RM_TEST_KEYS);
     if (Object.keys(picked).length) tests[String(test.id)] = picked;
   }
+  const historical_tests = {};
+  for (const test of projection.cosmology_state?.historical_tests || []) {
+    if (!test?.id || test.private || tests[test.id]) continue;
+    historical_tests[test.id] = { ...pickKeys(test, RM_TEST_KEYS), historical: true, source_url: test.source_url, provenance: test.provenance };
+  }
   const hypotheses = {};
   for (const hyp of projection.hypotheses || []) {
     if (!hyp || hyp.private || !hyp.id) continue;
@@ -34,7 +39,7 @@ function publicReadModel(projection) {
   }
   const roadmaps = (projection.roadmaps || []).filter(r => r && !r.private);
   const activity = (projection.activity || []).filter(a => a && a.at).slice(-600);
-  return { version: 1, tests, hypotheses, roadmaps, activity };
+  return { version: 1, tests, historical_tests, hypotheses, roadmaps, activity };
 }
 
 function canonical(value) {
@@ -69,6 +74,15 @@ export function validateSanctionedProjection(projection, manifestFile = null) {
   if (!/^sha256:[0-9a-f]{64}$/i.test(String(manifest.projection_fingerprint || ''))) fail('projection_fingerprint invalid');
   if (projection.event_cursor !== manifest.event_cursor) fail('projection event_cursor differs from manifest');
   if (!Array.isArray(projection.work) || !Array.isArray(projection.tests)) fail('work/tests arrays missing');
+  if (projection.cosmology_state != null) {
+    const cosmology = projection.cosmology_state;
+    if (cosmology.model !== 'COSMOLOGY_STATE_V1' || cosmology.authority !== 'TOWER' || cosmology.projection_only !== true || !Array.isArray(cosmology.frontiers) || !Array.isArray(cosmology.historical_tests)) fail('cosmology_state contract invalid');
+    const ids = new Set([...(projection.tests || []), ...cosmology.historical_tests].filter(t => t && !t.private).map(t => String(t.id)));
+    for (const frontier of cosmology.frontiers) {
+      if (!frontier.id || !['SOLID', 'TENSION', 'OPEN'].includes(frontier.state)) fail('cosmology_state frontier invalid');
+      for (const evidence of frontier.key_evidence || []) if (!ids.has(String(evidence.id))) fail('cosmology_state evidence reference missing: ' + evidence.id);
+    }
+  }
   if (projection.campaigns !== undefined && !Array.isArray(projection.campaigns)) fail('campaigns must be an array when present');
   if (projection.human_gates && (!Array.isArray(projection.human_gates.work_ids) || !Number.isInteger(projection.human_gates.count))) fail('human_gates invalid');
   if (!projection.capabilities || typeof projection.capabilities !== 'object' || Array.isArray(projection.capabilities)) {
@@ -1285,6 +1299,7 @@ export function buildPagesProjection({
     projected_work: projectedWork,
     guardian: projection.integrity || null,
     evolution: projection.evolution || null,
+    cosmology_state: projection.cosmology_state ?? null,
     read_model: publicReadModel(projection),
     graph,
     filaments,
@@ -1445,3 +1460,4 @@ if (import.meta.url === invokedPath) {
   const scienceReadback = await readJson(resolve(dist, 'science-projection-v1.json'));
   validateScienceProjectionV1(scienceReadback);
 }
+

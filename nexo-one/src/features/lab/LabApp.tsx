@@ -10,6 +10,7 @@ import {
 import type { ScenePage, SceneEvents } from './ObservatoryScene.tsx';
 import { normDomain } from './domains.ts';
 import './lab.css';
+import { UniversePage, UniverseFrontierPage } from './UniversePage.tsx';
 
 const ObservatoryScene = lazy(() => import('./ObservatoryScene.tsx').then(m => ({ default: m.ObservatoryScene })));
 
@@ -113,6 +114,7 @@ export default function LabApp({ state, route, theme }: { state: SystemState; ro
 
   const page = (() => {
     switch (route.page) {
+      case 'universo': return route.id ? <UniverseFrontierPage cosmology={state.cosmology_state} lab={lab} id={route.id} /> : <UniversePage cosmology={state.cosmology_state} />;
       case 'ciclo': return <Cycle lab={lab} state={state} />;
       case 'roadmaps': return <Roadmaps lab={lab} />;
       case 'roadmap': return <RoadmapPage lab={lab} id={route.id!} />;
@@ -551,9 +553,13 @@ const REVIEW_PT: Record<string, string> = { CONTEST: 'Contestação', VERDICT_RE
 const OUTCOME_PT: Record<string, string> = { PENDING: 'pendente', SURVIVED: 'sobreviveu', PASSED: 'passou', REFUTED: 'derrubou', FAILED: 'falhou', CONFIRMED: 'confirmou' };
 
 function EntityPage({ lab, id }: { lab: Lab; id: string }) {
-  const t = lab.tests.get(id);
+  const t = lab.tests.get(id) ?? lab.historicalTests?.get(id);
   const h = lab.hypotheses.get(id);
   if (!t && h) return <HypothesisView lab={lab} id={id} />;
+  if (!t && lab.campaigns.has(id)) {
+    const campaign = lab.campaigns.get(id)!;
+    return <><header className="hud-hero"><p className="hud-kicker">Campanha atual · <a href="#/universo">Universo</a></p><h1>{campaign.title ?? campaign.questionPlain ?? 'Campanha científica'}</h1><p className="hud-lead">{campaign.questionPlain ?? campaign.question}</p></header><Section title="O que estamos tentando descobrir"><p>{campaign.why ?? 'Objetivo não publicado.'}</p></Section><Section title="Testes da campanha"><ul className="hud-list">{campaign.tests.map(tid => <li key={tid}><E id={tid}/></li>)}</ul></Section></>;
+  }
   if (!t) {
     if (lab.roadmaps.has(id)) { window.location.hash = labHref('roadmap', id); return null; }
     return <NotFound id={id} />;
@@ -568,7 +574,7 @@ function EntityPage({ lab, id }: { lab: Lab; id: string }) {
     <header className="hud-hero">
       <p className="hud-kicker"><a href="#/evidencia">Evidência</a>
         {t.roadmapId && <> · <a href={labHref('roadmap', t.roadmapId)}>{lab.roadmaps.get(t.roadmapId)?.title ?? humanId(t.roadmapId)}</a></>}</p>
-      <h1 className="h1-entity">{t.question ?? humanId(t.id)}</h1>
+      <h1 className="h1-entity">{t.historical ? t.name : t.question ?? humanId(t.id)}</h1>
       <p className="hud-lead"><VerdictChip v={t.verdict} />{t.createdAt && <span className="hud-muted"> · começou {ago(t.createdAt)}</span>}</p>
     </header>
 
@@ -578,6 +584,7 @@ function EntityPage({ lab, id }: { lab: Lab; id: string }) {
       </li>)}</ol>
     </Section>
 
+    {t.historical && <Section title="Origem histórica"><p>Resultado auditado da Tower antiga; não reativa filas ou campanhas.</p>{t.sourceUrl && <p><a href={t.sourceUrl} target="_blank" rel="noreferrer">Abrir artefato original ↗</a></p>}<details><summary>Proveniência para auditoria</summary><pre className="universe-provenance">{JSON.stringify(t.provenance, null, 2)}</pre></details></Section>}
     {(t.meaning || Boolean(t.claimBoundary)) && <Section title="No que acredito agora" id="en-mean">
       {t.meaning && <p className="hud-big">{humanize(t.meaning)}</p>}
       {Boolean(t.claimBoundary) && <p className="boundary"><b>O que isto não prova:</b> {text(t.claimBoundary)}</p>}
@@ -955,6 +962,7 @@ export function outcomeOf(t: TestEntity): 1 | 0 | null {
 }
 function pct(p: number) { return `${Math.round(p * 100)}%`; }
 function testStory(t: TestEntity, lab: Lab): Beat[] {
+  if (t.historical) return [{ icon: t.verdict === 'REFUTED' ? 'cross' : 'check', tone: 'fact', text: 'Resultado terminal auditado da Tower antiga, no escopo do contrato original. A revisão histórica não equivale à escada de contestações da Tower atual.' }];
   const beats: Beat[] = [];
   const parent = t.contestOf ? lab.tests.get(t.contestOf) : undefined;
   const hyp = t.hypothesisId ? lab.hypotheses.get(t.hypothesisId) : undefined;
@@ -1381,3 +1389,4 @@ const JARGON: Array<[RegExp, string]> = [
   [/\bread-back\b/gi, 'conferência'], [/\bstaging\b/gi, 'área de espera'], [/\bfull-shape\b/gi, 'completa'],
 ];
 function humanize(text: string) { return JARGON.reduce((acc, [re, to]) => acc.replace(re, to), text); }
+

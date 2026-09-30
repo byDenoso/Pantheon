@@ -1,3 +1,4 @@
+import type { CosmologyState } from './cosmology.ts';
 // Contratos consumidos pela UI do NEXO ONE e do Atlas.
 // O frontend nunca é Truth Owner: tudo aqui é projeção não autoritativa.
 // TRUTH -> Authority/Capability -> Action -> Effect/Readback -> Projection -> Interfaces
@@ -463,6 +464,7 @@ export interface EvolutionStatus {
 }
 
 export interface SystemState {
+  cosmology_state?: CosmologyState | null;
   contract_version: '1';
   /** Ciclo fechado do NEXO; ausente até o primeiro bootstrap. */
   evolution?: EvolutionStatus | null;
@@ -491,3 +493,4 @@ export interface SystemState {
 
 /** Estado de carregamento de qualquer superfície. Erro nunca vira skeleton eterno. */
 export type LoadState = 'LOADING' | 'READY' | 'PARTIAL' | 'ERROR' | 'UNAUTHORIZED' | 'EMPTY';
+

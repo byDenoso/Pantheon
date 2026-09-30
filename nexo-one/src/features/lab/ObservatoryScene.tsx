@@ -24,7 +24,7 @@ export interface SceneEvents {
   grbs: Array<{ domain: string; label: string; href: string }>;
 }
 
-export type ScenePage = 'agora' | 'ciclo' | 'roadmaps' | 'roadmap' | 'evidencia' | 'entidade' | 'saude';
+export type ScenePage = 'agora' | 'universo' | 'ciclo' | 'roadmaps' | 'roadmap' | 'evidencia' | 'entidade' | 'saude';
 
 // Domínios vêm dos dados: um domínio novo (ex.: PHILOSOPHY) ganha sua região da teia sozinho.
 // Os três fundadores têm posição fixa; os novos são postos numa esfera, em posição estável pelo nome.
@@ -67,7 +67,7 @@ const VERDICT_PULSE: Record<Verdict, number> = {
 
 // [distância, elevação, azimute, alvo(domínio índice ou -1 = centro)]
 const SHOTS: Record<ScenePage, [number, number, number, number]> = {
-  agora: [30, 0.42, 0.7, -1], ciclo: [21, 0.2, 1.8, -1], roadmaps: [17, 0.55, 2.6, 0], roadmap: [12, 0.4, 3.1, 0],
+  universo: [32, 0.6, 1.2, -1], agora: [30, 0.42, 0.7, -1], ciclo: [21, 0.2, 1.8, -1], roadmaps: [17, 0.55, 2.6, 0], roadmap: [12, 0.4, 3.1, 0],
   evidencia: [24, 0.9, 3.9, -1], entidade: [10, 0.3, 4.4, 0], saude: [38, 0.12, 5.3, -1],
 };
 
@@ -685,3 +685,4 @@ export function ObservatoryScene({ tests, page, focusIds, onPick, theme, events,
     </div>
   </div>;
 }
+
