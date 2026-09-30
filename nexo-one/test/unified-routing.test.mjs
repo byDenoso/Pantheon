@@ -53,8 +53,9 @@ test('MCP topology reads from the Pantheon base and uses the shared JSON request
   const store = await read('../src/data/NexoStore.tsx');
   assert.match(app, /loadPublishedContext<Topology>/);
   assert.match(store, /\$\{base\}mcp\/topology\.json/);
-  assert.match(store, /\$\{base\}build-meta\.json/);
-  assert.match(store, /\$\{base\}tower-projection\/manifest\.json/);
+  assert.match(store, /\$\{base\}tower-projection\/publication\.json/);
+  assert.match(store, /NEXO_PUBLIC_PROJECTION_PUBLICATION_V1/);
+  assert.match(store, /NEXO_PUBLISHED_CONTEXT_FINGERPRINT_MISMATCH/);
   assert.doesNotMatch(app, /new URL\('\.\/topology\.json',\s*window\.location\.href\)/);
 });
 
@@ -73,6 +74,53 @@ test('shared JSON cache deduplicates concurrent route reads', async () => {
     assert.deepEqual(second, {ready: true});
     clearSharedJson(url);
   } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test('shared JSON cache revalidates completed reads instead of pinning a publication forever', async () => {
+  const originalFetch = globalThis.fetch;
+  let calls = 0;
+  globalThis.fetch = async () => {
+    calls += 1;
+    return {ok: true, json: async () => ({generation: calls})};
+  };
+  try {
+    const url = 'https://example.test/revalidated.json';
+    const first = await fetchSharedJson(url);
+    const second = await fetchSharedJson(url);
+    assert.equal(calls, 2);
+    assert.deepEqual(first, {generation: 1});
+    assert.deepEqual(second, {generation: 2});
+  } finally {
+    clearSharedJson();
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test('aborting one consumer does not cancel another consumer of the same in-flight JSON read', async () => {
+  const originalFetch = globalThis.fetch;
+  let calls = 0;
+  let release;
+  globalThis.fetch = () => {
+    calls += 1;
+    return new Promise(resolve => {
+      release = () => resolve({ok: true, json: async () => ({ready: true})});
+    });
+  };
+  try {
+    const url = 'https://example.test/shared-abort.json';
+    const firstController = new AbortController();
+    const secondController = new AbortController();
+    const first = fetchSharedJson(url, {signal: firstController.signal});
+    const second = fetchSharedJson(url, {signal: secondController.signal});
+    firstController.abort();
+    await assert.rejects(first, error => error?.name === 'AbortError');
+    release();
+    assert.deepEqual(await second, {ready: true});
+    assert.equal(calls, 1);
+  } finally {
+    clearSharedJson();
     globalThis.fetch = originalFetch;
   }
 });
