@@ -3,7 +3,6 @@ import {toNodeHandler} from '@modelcontextprotocol/node';
 import {PROVIDERS} from '../src/contracts/validate.mjs';
 import {compile} from './compiler/world-state.mjs';
 import {buildProjectionBus} from './compiler/projection-bus.mjs';
-import {buildSystemState} from './compiler/system-state.mjs';
 import {readProvider,pending} from './adapters/registry.mjs';
 import {readAtlasSsot} from './adapters/atlas-ssot.mjs';
 import {buildPublicAtlasSsot} from './compiler/atlas-public-ssot.mjs';
