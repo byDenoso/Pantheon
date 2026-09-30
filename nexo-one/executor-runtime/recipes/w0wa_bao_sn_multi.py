@@ -141,8 +141,15 @@ for cname in comps:
     out.append(row)
 
 labels=[h["label"] for h in out[0]["holds"]] if out else []
-if len(out)<2:
+if len(out)<2 and not (mode=="bao_tracer_jackknife" and comps==["union3"]):
     verdict,decision="INCONCLUSIVE","INSUFFICIENT_COMPILATIONS"
+elif mode=="bao_tracer_jackknife" and comps==["union3"]:
+    fracs=[h["fraction_removed"] for h in out[0]["holds"] if h["fraction_removed"] is not None]
+    max_removed=max(fracs) if fracs else None
+    if max_removed is None: verdict,decision="INCONCLUSIVE","MIXED_TRACER_ROBUSTNESS"
+    elif max_removed>=0.7: verdict,decision="REJECTED","SAME_TRACER_DOMINATES"
+    elif max_removed<0.5: verdict,decision="PROMOTED","TRACER_ROBUST"
+    else: verdict,decision="INCONCLUSIVE","MIXED_TRACER_ROBUSTNESS"
 elif mode=="redshift_jackknife":
     over50={lab:sum(1 for r in out for h in r["holds"] if h["label"]==lab and h["fraction_removed"] is not None and h["fraction_removed"]>0.5) for lab in labels}
     over70={lab:sum(1 for r in out for h in r["holds"] if h["label"]==lab and h["fraction_removed"] is not None and h["fraction_removed"]>=0.7) for lab in labels}
