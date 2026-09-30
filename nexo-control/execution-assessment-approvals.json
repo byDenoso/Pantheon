@@ -1,6 +1,6 @@
 {
   "contract": "EXECUTION_ASSESSMENT_APPROVALS_V1",
-  "enabled": true,
+  "enabled": false,
   "cases": [
     {
       "test_id": "CONTEST-FAM-DE-SN-TRIO-TRACERS-P-TRES-PP-U3-OM315-1",
