@@ -775,19 +775,25 @@ function Swimlanes({ events }: { events: Array<{ event_type: string; role: strin
 // ---------- "vivo": monólogo, calibração, replay ----------
 const ROLE_PT: Record<string, string> = {
   PITIA: 'Pítia', LEARNER: 'Learner', EXECUTOR: 'Executor', REFUTADOR: 'Refutador', REFEREE_1: 'Refutador', GUARDIAO: 'Guardião',
-  DENER: 'Dener', CONVERSA: 'Conversa', WRITER_ROBOT: 'Robô escritor', SENTINEL: 'Pítia', ENGINEER: 'Engenheiro', CLAUDE: 'Claude', CHATGPT_CONVERSATION: 'Conversa',
+  DENER: 'Dener', CONVERSA: 'Conversa', WRITER_ROBOT: 'Robô escritor', SENTINEL: 'Sentinela', ENGINEER: 'Engenheiro', CLAUDE: 'Claude', CHATGPT_CONVERSATION: 'Conversa',
 };
-/** Dez tarefas agendadas no ChatGPT Business; o papel continua sendo quem assina cada ação. */
+/** Dez automações ativas no ChatGPT Business; o papel continua sendo quem assina cada ação. */
 const TASKS: Array<{ id: string; name: string; hats: string[]; rhythm: string; does: string }> = [
-  { id: 'cientista', name: 'Cientista', hats: ['LEARNER'], rhythm: 'toda hora · :05', does: 'propõe hipóteses e famílias de testes, transfere métodos entre áreas' },
-  { id: 'pitia', name: 'Pítia', hats: ['PITIA'], rhythm: 'toda hora · :12', does: 'pensa, se surpreende, sonha e declara crise' },
-  { id: 'operador', name: 'Operador', hats: ['EXECUTOR'], rhythm: 'toda hora · :20 e :50', does: 'liga receitas e dados, manda testes para a bateria' },
-  { id: 'critico', name: 'Crítico', hats: ['REFUTADOR', 'REFEREE_1'], rhythm: 'toda hora · :35', does: 'ataca os resultados positivos' },
-  { id: 'engenheiro', name: 'Engenheiro', hats: ['ENGINEER'], rhythm: 'a cada 2 horas · :45', does: 'escreve e conserta receitas' },
-  { id: 'guardiao', name: 'Guardião', hats: ['GUARDIAO'], rhythm: 'toda hora · :57', does: 'audita a saúde, revisa receitas, planta iscas' },
-  { id: 'sentinela', name: 'Sentinela', hats: ['SENTINEL'], rhythm: 'todo dia · 07:30', does: 'lê o arXiv e ataca o que ficou velho' },
+  { id: 'operador-c', name: 'Operador C', hats: ['EXECUTOR'], rhythm: 'toda hora · :00', does: 'fecha o READY residual após A/B e resolve bindings' },
+  { id: 'engenheiro', name: 'Engenheiro', hats: ['ENGINEER'], rhythm: 'toda hora · :05', does: 'escreve e conserta receitas' },
+  { id: 'guardiao', name: 'Guardião', hats: ['GUARDIAO'], rhythm: 'toda hora · :07', does: 'audita a saúde, revisa receitas, planta iscas e acompanha o Writer' },
+  { id: 'critico', name: 'Crítico', hats: ['REFUTADOR', 'REFEREE_1'], rhythm: 'toda hora · :09', does: 'ataca os resultados positivos' },
+  { id: 'cientista', name: 'Cientista', hats: ['LEARNER'], rhythm: 'toda hora · :12', does: 'propõe hipóteses e famílias de testes, transfere métodos entre áreas' },
+  { id: 'pitia', name: 'Pítia', hats: ['PITIA'], rhythm: 'toda hora · :15', does: 'pensa, se surpreende, sonha e declara crise' },
+  { id: 'operador-a', name: 'Operador A', hats: ['EXECUTOR'], rhythm: 'toda hora · :30', does: 'pega o primeiro segmento READY elegível e manda testes para a bateria' },
+  { id: 'operador-b', name: 'Operador B', hats: ['EXECUTOR'], rhythm: 'toda hora · :45', does: 'pega o segmento READY elegível restante e manda testes para a bateria' },
+  { id: 'sentinela', name: 'Sentinela', hats: ['SENTINEL'], rhythm: 'todo dia · 06:40', does: 'lê literatura e releases, abrindo contestação, dado ou sinal' },
+  { id: 'revisor-pr', name: 'Revisor de PR', hats: ['GUARDIAO'], rhythm: 'evento de PR', does: 'revisa diffs de receita e publica o sinal da revisão' },
 ];
-const taskOf = (role: string) => TASKS.find(t => t.hats.includes(role.toUpperCase()));
+const taskOf = (role: string) => {
+  const matches = TASKS.filter(t => t.hats.includes(role.toUpperCase()));
+  return matches.length === 1 ? matches[0] : undefined;
+};
 const roleLabel = (role: string) => { const t = taskOf(role); const r = ROLE_PT[role.toUpperCase()] ?? role; return t ? (t.name === r ? r : `${t.name} · ${r}`) : r; };
 // Sorteio probabilístico: cada carga da página sorteia de novo; dentro da visita a mesma linha não pisca.
 const NARRATION_SALT = Math.random().toString(36).slice(2);
@@ -1173,11 +1179,12 @@ function Crew({ lab }: { lab: Lab }) {
       const last = mine.at(-1);
       const day = mine.filter(e => now - Date.parse(e.at) < 24 * 3600e3).length;
       const quiet = !last || now - Date.parse(last.at) > 3 * 3600e3;
+      const sharedRole = TASKS.some(other => other.id !== t.id && other.hats.some(h => t.hats.includes(h)));
       return <article key={t.id} className={`crew-card${quiet ? ' quiet' : ''}`}>
         <p className="crew-top"><b>{t.name}</b><span>{t.rhythm}</span></p>
         <p className="crew-hats">{[...new Set(t.hats.map(h => ROLE_PT[h] ?? h))].join(' + ')}</p>
         <p className="crew-does">{t.does}</p>
-        <p className="crew-pulse"><i aria-hidden="true" />{last ? `último sinal ${ago(last.at)} · ${day} ações em 24 h` : 'ainda sem ações registradas'}</p>
+        <p className="crew-pulse"><i aria-hidden="true" />{last ? `${sharedRole ? 'telemetria do papel · ' : ''}último sinal ${ago(last.at)} · ${day} ações em 24 h` : 'ainda sem ações registradas'}</p>
       </article>;
     })}
   </section>;
