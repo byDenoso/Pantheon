@@ -187,6 +187,7 @@
     "inbox/scheduled-operator-a-20260930t0025z-frontier-data-bindings.json": "0d4b68a5632850d6d4b6d504f8af40278b1fe1ed5f6e5b548854882ae9a8a243",
     "inbox/scheduled-operator-a-20260930t0118z-first-five-dr1-bindings.json": "7f06f7c56bb6a17acb69cfea3e1896b560f00bc92aedbccdbdf0135734af8138",
     "inbox/scheduled-operator-a-20260930t0825z-writer-stall.json": "278da51a534ea6fbcb726686f8215968a81777a2a249431ea104371c0f0ef1ff",
+    "inbox/scheduled-operator-a-dispatch-collision-20260930t1955z.json": "acc2402d5ccb6b864cd255246b485fc1397e5482d892f153704d38cb7043818c",
     "inbox/scheduled-operator-a-ready-drift-board-20260930t1947z.json": "6b0870179b8c347829a255950f30bc73b7318f4e558d6f952872d498dd3f6586",
     "inbox/scheduled-operator-a-tower-native-schema-board-20260930t1947z.json": "cdb91ed7f4286641d9b4deb226406bd0f708a4465c26c581ded3a3ed6ec9fa01",
     "inbox/scheduled-operator-b-20260930t0056z-tail-bindings.json": "08e1fd553d97ff858b5f28cc35b4a868d870a7960af1bd1480c33a853466a9f5",
