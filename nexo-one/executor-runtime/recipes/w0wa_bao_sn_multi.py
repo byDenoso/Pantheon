@@ -10,6 +10,8 @@ import numpy as np
 from scipy.integrate import cumulative_trapezoid
 from scipy.optimize import minimize
 
+DESI_DR1_OFFICIAL_PAGE="https://data.desi.lbl.gov/doc/releases/dr1/vac/bao-cosmo-params/"
+DESI_DR1_LIKELIHOOD_REPO="https://github.com/CobayaSampler/bao_data"
 BAO_BASES={"dr1": "https://raw.githubusercontent.com/CobayaSampler/bao_data/bb0c1c9009dc76d1391300e169e8df38fd1096db/desi_2024_gaussian_bao_ALL_GCcomb_", "dr2": "https://raw.githubusercontent.com/CobayaSampler/bao_data/bb0c1c9009dc76d1391300e169e8df38fd1096db/desi_bao_dr2/desi_gaussian_bao_ALL_GCcomb_"}
 PPLUS_BASE="https://raw.githubusercontent.com/PantheonPlusSH0ES/DataRelease/c447f0fea703fcd0fff57de5000947b5ca81286b/Pantheon%2B_Data/4_DISTANCES_AND_COVAR/"
 DES_BASE="https://raw.githubusercontent.com/des-science/DES-SN5YR/c9a4fcafc4cbd19bd750dee47fc76194a45c181f/4_DISTANCES_COVMAT/"
@@ -153,11 +155,11 @@ def cosine(p,q):
     return None if den==0 else float(a@b/den)
 
 def run(params):
-    mode=params["mode"]; priors=params.get("priors") or {}; comps=params.get("compilations") or ["pantheon_plus","des_sn5yr"]
+    mode=params["mode"]; release=params.get("bao_release", "dr2"); priors=params.get("priors") or {}; comps=params.get("compilations") or ["pantheon_plus","des_sn5yr"]
     if len(comps)!=len(set(comps)): raise ValueError("Compilações repetidas não são replicações independentes.")
     if any(len(v)!=2 or not np.isfinite(v).all() or float(v[1])<=0 for v in priors.values()):
         raise ValueError("Prior exige média e desvio positivo finitos.")
-    loaders={"pantheon_plus":load_pantheon,"des_sn5yr":load_des,"union3":load_union3}; bao=load_bao(params.get("bao_release", "dr2")); out=[]
+    loaders={"pantheon_plus":load_pantheon,"des_sn5yr":load_des,"union3":load_union3}; bao=load_bao(release); out=[]
     for cname in comps:
         sn=loaders[cname]()
         if len(sn["z"])<10: raise ValueError("Amostra de supernovas com menos de dez pontos.")
@@ -210,7 +212,7 @@ def run(params):
     frac,band=worst("fraction_removed")
     detail=f" A faixa que mais pesa ({band}) responde por {frac*100:.0f}% da preferência." if mode=="redshift_jackknife" and out else ""
     VERDICT_PT={"PROMOTED":"Passou no critério","REJECTED":"Não passou no critério","INCONCLUSIVE":"Inconclusivo"}
-    payload={"verdict":verdict,"decision":decision,"summary":f"{mode}: {decision} em {len(out)} compilações públicas.","statistics":{"bao_release":params.get("bao_release", "dr2"),"data_sources":PROVENANCE,"mode":mode,"compilations":out,"priors":priors},"semantic":{"result_meaning":MEANING[decision]+detail,"verdict_plain":VERDICT_PT[verdict]}}
+    payload={"verdict":verdict,"decision":decision,"summary":f"{mode}: {decision} em {len(out)} compilações públicas.","statistics":{"bao_release":release,"data_sources":PROVENANCE,"official_provenance":([{"url":DESI_DR1_OFFICIAL_PAGE,"likelihood_repository":DESI_DR1_LIKELIHOOD_REPO,"role":"DESI DR1 official documentation for the published desi_2024 likelihood files"}] if release=="dr1" else []),"mode":mode,"compilations":out,"priors":priors},"semantic":{"result_meaning":MEANING[decision]+detail,"verdict_plain":VERDICT_PT[verdict]}}
     return payload
 
 if __name__ == "__main__":
