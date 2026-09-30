@@ -156,10 +156,15 @@ test('public TruthGraph snapshot carries Neon retirement state', async () => {
   assert.equal(neon?.status, 'RETIRED_RUNTIME');
 });
 
-test('public /api/system applies the same projection normalization used by Pages', async () => {
+test('public Atlas graph and /api/system share the sanctioned Pages SystemState', async () => {
   const handler = await readFile(fileURLToPath(new URL('../server/handler.mjs', import.meta.url)), 'utf8');
-  assert.match(handler, /import\s+\{normalizePublicSystemState\}\s+from\s+['"]\.\/compiler\/public-system-state\.mjs['"]/);
-  assert.match(handler, /normalizePublicSystemState\(buildSystemState\(\{world:compiled,bus,systemInput,now:new Date\(now\)\.toISOString\(\)\}\),compiled\)/);
+  assert.doesNotMatch(handler, /normalizePublicSystemState/);
+  assert.doesNotMatch(handler, /readPublicSystemInput/);
+  assert.match(handler, /route==='atlas-graph'\|\|route==='atlas\/graph'/);
+  assert.match(handler, /const state=await readPublishedTowerSystem\(\{env,signal:req\.signal,now,force\}\)/);
+  const graphRoute = handler.indexOf("route==='atlas-graph'||route==='atlas/graph'");
+  const notFoundGuard = handler.indexOf("if(!['world','health','now','loops','day','context','recall','projections','system'].includes(route))");
+  assert.ok(graphRoute >= 0 && notFoundGuard > graphRoute, 'Atlas graph route must be reachable before the generic NOT_FOUND guard');
 });
 
 
@@ -177,6 +182,9 @@ test('runtime reuses sanctioned projection reads without weakening explicit refr
   assert.match(handler, /readPublishedTowerSystem\(\{env,signal:req\.signal,now,force\}\)/);
   assert.match(handler, /if\(force\)\{/);
   assert.match(handler, /Cache-Control':'no-cache'/);
+  assert.match(handler, /tower-projection\/publication\.json/);
+  assert.match(handler, /NEXO_PUBLIC_PROJECTION_PUBLICATION_V1/);
+  assert.match(handler, /SANCTIONED_BUILD_META_MISMATCH/);
 });
 
 test('retired force-graph runtime is absent and Node runtime is pinned to major 24', async () => {
