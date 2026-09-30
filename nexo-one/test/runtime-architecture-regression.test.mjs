@@ -161,6 +161,7 @@ test('public Atlas graph and /api/system share the sanctioned Pages SystemState'
   assert.doesNotMatch(handler, /normalizePublicSystemState/);
   assert.doesNotMatch(handler, /readPublicSystemInput/);
   assert.match(handler, /route==='atlas-graph'\|\|route==='atlas\/graph'/);
+  assert.match(handler, /isCorsRoute=.*route==='atlas-graph'.*route==='atlas\/graph'/);
   assert.match(handler, /const state=await readPublishedTowerSystem\(\{env,signal:req\.signal,now,force\}\)/);
   const graphRoute = handler.indexOf("route==='atlas-graph'||route==='atlas/graph'");
   const notFoundGuard = handler.indexOf("if(!['world','health','now','loops','day','context','recall','projections','system'].includes(route))");
