@@ -1,4 +1,4 @@
 production deploy trigger
-requested: 2026-09-21T06:31:00-03:00
-reason: refresh production runtime after NEXO_PASSWORD_HASH rotation
+requested: 2026-09-30T14:18:00-03:00
+reason: publish ATLAS 90x90 narration matrix for mural and test lifecycle
 scope: nexo-one
