@@ -28,20 +28,21 @@ const LIGHT_TYPE_COLOR: Record<string,string> = {
 };
 
 function nodeRadius(node: PositionedNode, selectedId?: string | null, focusId?: string | null) {
-  if (node.id === focusId) return 0.7;
-  if (node.id === selectedId) return 0.38;
+  if (node.id === focusId) return 0.9;
+  if (node.id === selectedId) return 0.44;
   const type=String(node.type||'').toUpperCase();
-  if(type==='SYSTEM') return 0.31;
-  if(type==='DOMAIN') return 0.24;
-  if(type==='CAMPAIGN') return 0.19;
-  return 0.13;
+  if(type==='SYSTEM'||type==='ROOT') return 0.4;
+  if(type==='DOMAIN'||type==='PROGRAM') return 0.34;
+  if(type==='SUBGRAPH'||type==='FOLDER') return 0.19;
+  if(type==='CAMPAIGN') return 0.17;
+  return 0.12;
 }
 
 function visualColor(node: PositionedNode, theme:'dark'|'light') {
   const role=nodeVisualRole(node);
   const roleColors=theme==='light'
-    ? {core:'#145b91',hub:'#1f6fae',automation:'#a26700',evidence:'#087f68',attention:'#a23b55',signal:'#176fae',entity:'#4c6d88'}
-    : {core:'#b9ecff',hub:'#74b9ff',automation:'#ffc86d',evidence:'#69deb0',attention:'#ff7188',signal:'#6bceff',entity:'#8ca8c4'};
+    ? {core:'#145b91',hub:'#1f6fae',folder:'#0a8f82',automation:'#a26700',evidence:'#087f68',attention:'#a23b55',signal:'#176fae',entity:'#4c6d88'}
+    : {core:'#e5f8ff',hub:'#67b8ff',folder:'#62d6c9',automation:'#ffc86d',evidence:'#69deb0',attention:'#ff7188',signal:'#6bceff',entity:'#8ca8c4'};
   if(roleColors[role])return new Color(roleColors[role]);
   const status=String(node.status||'').toUpperCase();
   const type=String(node.type||'').toUpperCase();
@@ -100,7 +101,7 @@ export function InstancedNodes({nodes,selectedId,focusId,pickMode=false,aura=fal
       if(shape==='disc') object.quaternion.copy(camera.quaternion);
       else object.quaternion.identity();
       const radius=nodeRadius(node,selectedId,focusId);
-      object.scale.setScalar(aura ? radius * (node.id === focusId ? 1.72 : 1.54) : radius);
+      object.scale.setScalar(aura ? radius * (node.id === focusId ? 1.92 : 1.62) : radius);
       object.updateMatrix();matrix.copy(object.matrix);target.setMatrixAt(index,matrix);
     });
     target.instanceMatrix.needsUpdate=true;

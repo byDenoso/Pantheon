@@ -38,6 +38,11 @@ export const CANVAS_DEPTH_SCALE = 0.82;
 
 type PresentationMode='spatial'|'canvas';
 
+export function hierarchyRingRadius(count:number,presentationMode:PresentationMode='spatial'){
+  const base=count<=1?4.4:count<=4?4.9:count<=8?5.55:6.15;
+  return base*(presentationMode==='canvas'?CANVAS_LAYOUT_SPREAD:1);
+}
+
 function hash01(value: string) {
   let hash = 2166136261;
   for (let i = 0; i < value.length; i++) {
@@ -53,7 +58,7 @@ function hashSigned(value: string) {
 
 const HIERARCHY_EDGE_TYPES = new Set([
   'CONTAINS', 'PARENT_OF', 'HAS_CHILD', 'TESTS', 'PRODUCES', 'EXECUTED_AS',
-  'DERIVED_FROM', 'IMPLEMENTS', 'REPORTS_ON'
+  'DERIVED_FROM', 'IMPLEMENTS', 'REPORTS_ON', 'CONTEXT'
 ]);
 
 function legacyOrbitalPosition(node: AtlasNode, index: number, count: number, presentationMode:PresentationMode): [number, number, number] {
@@ -90,10 +95,7 @@ function hierarchyPositions(nodes: AtlasNode[], focusId: string, edges: AtlasEdg
     if (edge.target !== focusId && !parentByChild.has(edge.target)) parentByChild.set(edge.target, edge.source);
   }
 
-  const directChildren = nodes
-    .filter(node => node.id !== focusId && parentByChild.get(node.id) === focusId)
-    .sort((a, b) => a.id.localeCompare(b.id));
-
+  const directChildren = nodes.filter(node => node.id !== focusId && parentByChild.get(node.id) === focusId);
   if (directChildren.length === 0) return null;
 
   const rootFor = (id: string) => {
@@ -119,30 +121,34 @@ function hierarchyPositions(nodes: AtlasNode[], focusId: string, edges: AtlasEdg
   }
 
   const positions = new Map<string, [number, number, number]>([[focusId, [0, 0, 0]]]);
-  const spread = presentationMode==='canvas'?CANVAS_LAYOUT_SPREAD:1;
   const clusterSpread = presentationMode==='canvas'?CANVAS_CLUSTER_SPREAD:1;
   const depthScale = presentationMode==='canvas'?CANVAS_DEPTH_SCALE:1;
-  const baseRingRadius = directChildren.length === 1 ? 4.7 : directChildren.length < 5 ? 5.35 : 5.8;
-  const ringRadius = baseRingRadius * spread;
-  const golden = Math.PI * (3 - Math.sqrt(5));
-  const phase = hash01(`${focusId}:phase`) * Math.PI * 2;
+  const ringRadius = hierarchyRingRadius(directChildren.length,presentationMode);
+  const phase = -Math.PI/2 + hashSigned(`${focusId}:phase`) * 0.05;
 
   directChildren.forEach((child, index) => {
-    const angle = phase + index * golden;
+    const angle = phase + (index / directChildren.length) * Math.PI * 2;
     const center: [number, number, number] = [
       Math.cos(angle) * ringRadius,
-      Math.sin(angle) * ringRadius * 0.66,
-      hashSigned(`${child.id}:hub-depth`) * 4.2 * depthScale
+      Math.sin(angle) * ringRadius * 0.78,
+      Math.sin(angle * 1.7) * 0.72 * depthScale
     ];
     positions.set(child.id, center);
+
     const cluster = members.get(child.id) || [];
+    const perBand = Math.min(8, Math.max(4, Math.ceil(Math.sqrt(Math.max(1, cluster.length)) * 2.2)));
     cluster.forEach((node, memberIndex) => {
-      const memberAngle = hash01(`${node.id}:angle`) * Math.PI * 2 + memberIndex * golden;
-      const memberRadius = (0.92 + Math.sqrt((memberIndex + 0.5) / Math.max(1, cluster.length)) * 1.65) * clusterSpread;
+      const band = Math.floor(memberIndex / perBand);
+      const local = memberIndex % perBand;
+      const count = Math.min(perBand, cluster.length - band * perBand);
+      const t = count <= 1 ? 0 : local / (count - 1) - 0.5;
+      const arc = t * (count <= 4 ? 0.78 : 1.08);
+      const memberAngle = angle + arc;
+      const memberRadius = (1.45 + band * 0.72 + Math.abs(t) * 0.12) * clusterSpread;
       positions.set(node.id, [
         center[0] + Math.cos(memberAngle) * memberRadius,
-        center[1] + Math.sin(memberAngle) * memberRadius * 0.72,
-        center[2] + hashSigned(`${node.id}:depth`) * (2.4 + memberRadius * 0.85) * depthScale
+        center[1] + Math.sin(memberAngle) * memberRadius * 0.78,
+        center[2] + hashSigned(`${node.id}:depth`) * 0.62 * depthScale + band * 0.1
       ]);
     });
   });
