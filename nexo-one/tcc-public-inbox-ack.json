@@ -158,6 +158,8 @@
     "inbox/scheduled-executor-recipe-stable-id-idempotency-20260928-v2.json": "a1b603dc526e299c1151df65f543d1db34b96f25969a13980823c72a79a6a487",
     "inbox/scheduled-executor-w0wa-ready-dispatch-20260928t160500z.json": "99144056e7b511d02606432e14afc4478e80cbfca69bf7f1c0e389266411a8a2",
     "inbox/scheduled-fix-stale-bound-blockers-20261001-v1.json": "68a3bb0b71a8e7e961ae94e531c613055ee5aa3d4faf04e3444b18315b1315e8",
+    "inbox/scheduled-fractal-horizon-dark-energy-hypothesis.json": "1b8c0581a0a3e181b847459276f19eb859a12225925e1996292cd4b4534523da",
+    "inbox/scheduled-fractal-horizon-dark-energy-recipe-request.json": "43a73dd8721631a5bbfbda28df70053c11eb5383dd2dc74a1748db9ba2ec5b09",
     "inbox/scheduled-guardian-20260929-035900-restaged.json": "ede4e408e5487baaf723c4b641d4d3caa8217cf06c7d9398230ef8f45afd184c",
     "inbox/scheduled-guardian-20260929t035900z-restaged.json": "ede4e408e5487baaf723c4b641d4d3caa8217cf06c7d9398230ef8f45afd184c",
     "inbox/scheduled-guardian-20260929t045339z-round1.json": "7786276def1ca1a7a55b6a3a40dbcd145318620a009f0d2ba877151dddcb7813",
@@ -1158,6 +1160,16 @@
       "applied_at": "2026-10-01T13:55:04Z",
       "fingerprint": "68a3bb0b71a8e7e961ae94e531c613055ee5aa3d4faf04e3444b18315b1315e8",
       "tower_revision": "sha256:1b389a0bdf77f7a9d0f667e7c67e1a7a2de8122455fb631d1258d658123e1cc5"
+    },
+    "inbox/scheduled-fractal-horizon-dark-energy-hypothesis.json": {
+      "applied_at": "2026-10-01T20:32:03Z",
+      "fingerprint": "1b8c0581a0a3e181b847459276f19eb859a12225925e1996292cd4b4534523da",
+      "tower_revision": "sha256:1ab4af6841d563afc08a74f0497aba4c815ba3c908a9ba3a5ec3095ce9a61eec"
+    },
+    "inbox/scheduled-fractal-horizon-dark-energy-recipe-request.json": {
+      "applied_at": "2026-10-01T20:32:03Z",
+      "fingerprint": "43a73dd8721631a5bbfbda28df70053c11eb5383dd2dc74a1748db9ba2ec5b09",
+      "tower_revision": "sha256:1ab4af6841d563afc08a74f0497aba4c815ba3c908a9ba3a5ec3095ce9a61eec"
     },
     "inbox/scheduled-guardian-20260929-035900-restaged.json": {
       "fingerprint": "ede4e408e5487baaf723c4b641d4d3caa8217cf06c7d9398230ef8f45afd184c",
