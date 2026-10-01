@@ -407,6 +407,8 @@
     "inbox/scheduled-referee1-20261001-a1-dr1-10.json": "7a15542af63dadab87fd413f28e52b5c14a947c5c680c8fbe721a5512f2b6a77",
     "inbox/scheduled-referee1-20261001-a1-dr1-11.json": "9f09a7c330d6f23e0dc58e235e3453fa94b0966a77a70d7d2b1028fdfa2255e1",
     "inbox/scheduled-referee1-20261001-a1-dr1-12.json": "b666e24bdd1b93980e8e8e031fa5b56b0fc230c3b35187d7d122a65d7fb596e8",
+    "inbox/scheduled-referee1-20261001-a1-dr1-14.json": "e92f557d3e59cf8362be566bd02887f5aa31d1107b9d8b468c48dde020780750",
+    "inbox/scheduled-referee1-20261001-a1-dr1-15.json": "e52a6a47499f6f19f9486dc27cd515a9389bfd3d52bd0e88e20f68f9f0a8e163",
     "inbox/scheduled-referee1-20261001-a1-dr1-17.json": "2085953ac880a22fd2d6ae1fab685d0e14d7dace5f996186ea09c8bc50f78559",
     "inbox/scheduled-referee1-20261001-a1-dr1-18.json": "690744740232827e5494a237f143f3adb0e9e291666fc2522378a04cc3abaa32",
     "inbox/scheduled-referee1-20261001-a1-dr1-19.json": "44243a21caffa5512dc0aefeec25ac6f567b6eaf47a6a8b536209f536919fe01",
@@ -1407,9 +1409,9 @@
       "tower_revision": "sha256:c8725b8eacd6dd33c25a5419d84860009b59016478fd5648755f20da78e554d5"
     },
     "inbox/scheduled-guardiao-integrity-20261001t1904z.json": {
-      "applied_at": "2026-10-01T19:17:07Z",
+      "applied_at": "2026-10-01T19:20:17Z",
       "fingerprint": "7728975d2ff4521e18db5954710ea9d238f746f525d058e59914e4290d83d8af",
-      "tower_revision": "sha256:7ad2447ee728f0c398a4961cbb7a7de3a6410b47257f5a17af2cb833ca582c98"
+      "tower_revision": "sha256:7de52eaab8490e4edf7d27361095841d5d24073cdae947df213285a56e6c902e"
     },
     "inbox/scheduled-guardiao-integrity-256956b433317ea8.json": {
       "applied_at": "2026-09-30T23:44:02Z",
@@ -2240,6 +2242,16 @@
       "applied_at": "2026-10-01T18:19:35Z",
       "fingerprint": "b666e24bdd1b93980e8e8e031fa5b56b0fc230c3b35187d7d122a65d7fb596e8",
       "tower_revision": "sha256:3e820f9c27c86428ec56a2947cf7102a116e5d0411d0f52fc27f72eb19e667cb"
+    },
+    "inbox/scheduled-referee1-20261001-a1-dr1-14.json": {
+      "applied_at": "2026-10-01T19:20:17Z",
+      "fingerprint": "e92f557d3e59cf8362be566bd02887f5aa31d1107b9d8b468c48dde020780750",
+      "tower_revision": "sha256:7de52eaab8490e4edf7d27361095841d5d24073cdae947df213285a56e6c902e"
+    },
+    "inbox/scheduled-referee1-20261001-a1-dr1-15.json": {
+      "applied_at": "2026-10-01T19:20:17Z",
+      "fingerprint": "e52a6a47499f6f19f9486dc27cd515a9389bfd3d52bd0e88e20f68f9f0a8e163",
+      "tower_revision": "sha256:7de52eaab8490e4edf7d27361095841d5d24073cdae947df213285a56e6c902e"
     },
     "inbox/scheduled-referee1-20261001-a1-dr1-17.json": {
       "applied_at": "2026-10-01T17:25:05Z",
