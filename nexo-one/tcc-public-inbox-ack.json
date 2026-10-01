@@ -172,6 +172,7 @@
     "inbox/scheduled-guardiao-batch-5decebe80b1f94b4.json": "f85a8fc691a8d8eaa3928e291e8302f50e309352dece4a86aebab2257007477b",
     "inbox/scheduled-guardiao-batch-e4cb67cb5d938b99.json": "acd0fc821efe52d0518f5ece0d846695ca83c0912e8c0219457a51332dc91ada",
     "inbox/scheduled-guardiao-board-write-failure-20261001t0113z.json": "4330b178ad6b5d6ca71e3d49d5cfae811a791e764f9d4c9cb1e6d9c093dc4a47",
+    "inbox/scheduled-guardiao-board-write-failure-20261001t0312z.json": "f9160e2d2f0d5a4d8dfffc028309af1fa4aeb09f516227f2f9008f249f74a9f3",
     "inbox/scheduled-guardiao-fitness-190341.json": "d1b8b7d9f4152f3e903a5f95d67b9195a5cb4f50e28ac0231fc491d33365b337",
     "inbox/scheduled-guardiao-fitness-20260930t2109z.json": "a83dd89d8af54379bca56efa3ce99cd43ac1d8e59aef1a36eeefb52b032d3d48",
     "inbox/scheduled-guardiao-heartbeat-20260927t200631z.json": "c3284ba4adb20aeb318160e02374fda047333c969b6828145ac907cd6d4fde40",
@@ -215,6 +216,8 @@
     "inbox/scheduled-learner-20261001t0112z-sntrio315-contest-data.json": "7ea8724c7451a1991f79860f290ace6e20dea85964c3835b764e395c2e97ea71",
     "inbox/scheduled-learner-261001-0309-r1-cut-desu3-rec.json": "d5247da1fe24b0fae0d3131878499bf55b9459a736e157792b6773f071dfa60d",
     "inbox/scheduled-learner-261001-0309-r1-lq-ppu3-rec.json": "d25256d416dbb6ca56587c6be37301b3a6b742680a79fbcda7b6fb93ad803dec",
+    "inbox/scheduled-learner-261001-0310-r1-cut-desu3-data.json": "1118f2f05fdd78cf30a6ad44e682429f8d1620f18f4f9b7a2b34547c2a048160",
+    "inbox/scheduled-learner-261001-0310-r1-t3-ppu3-330-data.json": "9c18b3ecc2476df21d6eb7c3fc48d2c427ee75796bd89099cf095aba3734b62d",
     "inbox/scheduled-learner-batch-0fdb23a7dd22b3cb.json": "d2a35434c20858e3ea3a35614d383db4f7e3582e583e5ec02c24831590094f92",
     "inbox/scheduled-learner-batch-3f96f9983068e169.json": "420ba9a37197b6d948e8083b55789f62caf0b613f74ef0894561afe3c99564da",
     "inbox/scheduled-learner-batch-8a02ccb55404288f.json": "e1a31e3384ff6771d4073c6c31948a50a200d4bb9d82b0c85d9291520ed021cd",
@@ -1107,6 +1110,11 @@
       "fingerprint": "4330b178ad6b5d6ca71e3d49d5cfae811a791e764f9d4c9cb1e6d9c093dc4a47",
       "tower_revision": "sha256:0f93dc6d43584184c9e1a3531e18e2db33f4ad9a2eab52f19d1277730b301269"
     },
+    "inbox/scheduled-guardiao-board-write-failure-20261001t0312z.json": {
+      "applied_at": "2026-10-01T03:21:44Z",
+      "fingerprint": "f9160e2d2f0d5a4d8dfffc028309af1fa4aeb09f516227f2f9008f249f74a9f3",
+      "tower_revision": "sha256:bf5316389ae5ed6c602188e709b3f8b433004237a5f92c25a8540978e3ed1f5f"
+    },
     "inbox/scheduled-guardiao-fitness-190341.json": {
       "fingerprint": "d1b8b7d9f4152f3e903a5f95d67b9195a5cb4f50e28ac0231fc491d33365b337",
       "source": "legacy-acked"
@@ -1279,14 +1287,24 @@
       "tower_revision": "sha256:2b2c8727b56005c76f8b4f76dd4ac6712a1c617c5e5e80d221e9ec613dc63e2a"
     },
     "inbox/scheduled-learner-261001-0309-r1-cut-desu3-rec.json": {
-      "applied_at": "2026-10-01T03:18:11Z",
+      "applied_at": "2026-10-01T03:21:44Z",
       "fingerprint": "d5247da1fe24b0fae0d3131878499bf55b9459a736e157792b6773f071dfa60d",
-      "tower_revision": "sha256:b2ce2f466e58e60421f824260a9b8c625322f7e682c1782cb57e7c398a2b6a42"
+      "tower_revision": "sha256:bf5316389ae5ed6c602188e709b3f8b433004237a5f92c25a8540978e3ed1f5f"
     },
     "inbox/scheduled-learner-261001-0309-r1-lq-ppu3-rec.json": {
-      "applied_at": "2026-10-01T03:18:11Z",
+      "applied_at": "2026-10-01T03:21:44Z",
       "fingerprint": "d25256d416dbb6ca56587c6be37301b3a6b742680a79fbcda7b6fb93ad803dec",
-      "tower_revision": "sha256:b2ce2f466e58e60421f824260a9b8c625322f7e682c1782cb57e7c398a2b6a42"
+      "tower_revision": "sha256:bf5316389ae5ed6c602188e709b3f8b433004237a5f92c25a8540978e3ed1f5f"
+    },
+    "inbox/scheduled-learner-261001-0310-r1-cut-desu3-data.json": {
+      "applied_at": "2026-10-01T03:21:44Z",
+      "fingerprint": "1118f2f05fdd78cf30a6ad44e682429f8d1620f18f4f9b7a2b34547c2a048160",
+      "tower_revision": "sha256:bf5316389ae5ed6c602188e709b3f8b433004237a5f92c25a8540978e3ed1f5f"
+    },
+    "inbox/scheduled-learner-261001-0310-r1-t3-ppu3-330-data.json": {
+      "applied_at": "2026-10-01T03:21:44Z",
+      "fingerprint": "9c18b3ecc2476df21d6eb7c3fc48d2c427ee75796bd89099cf095aba3734b62d",
+      "tower_revision": "sha256:bf5316389ae5ed6c602188e709b3f8b433004237a5f92c25a8540978e3ed1f5f"
     },
     "inbox/scheduled-learner-batch-0fdb23a7dd22b3cb.json": {
       "applied_at": "2026-09-30T23:44:02Z",
