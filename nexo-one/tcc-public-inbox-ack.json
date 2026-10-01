@@ -213,6 +213,8 @@
     "inbox/scheduled-learner-20260930t2116z-rdcal-b330pd.json": "05edf457ffa08e10ed3efc951a24bbe474717689f60b75f0b9b86c760e165849",
     "inbox/scheduled-learner-20260930t2116z-rdcal-b330pu.json": "c7e3a6636134f5bf540271063ec314172e86538be80549aeed28608201615ee3",
     "inbox/scheduled-learner-20261001t0112z-sntrio315-contest-data.json": "7ea8724c7451a1991f79860f290ace6e20dea85964c3835b764e395c2e97ea71",
+    "inbox/scheduled-learner-261001-0309-r1-cut-desu3-rec.json": "d5247da1fe24b0fae0d3131878499bf55b9459a736e157792b6773f071dfa60d",
+    "inbox/scheduled-learner-261001-0309-r1-lq-ppu3-rec.json": "d25256d416dbb6ca56587c6be37301b3a6b742680a79fbcda7b6fb93ad803dec",
     "inbox/scheduled-learner-batch-0fdb23a7dd22b3cb.json": "d2a35434c20858e3ea3a35614d383db4f7e3582e583e5ec02c24831590094f92",
     "inbox/scheduled-learner-batch-3f96f9983068e169.json": "420ba9a37197b6d948e8083b55789f62caf0b613f74ef0894561afe3c99564da",
     "inbox/scheduled-learner-batch-8a02ccb55404288f.json": "e1a31e3384ff6771d4073c6c31948a50a200d4bb9d82b0c85d9291520ed021cd",
@@ -1275,6 +1277,16 @@
       "applied_at": "2026-10-01T02:20:04Z",
       "fingerprint": "7ea8724c7451a1991f79860f290ace6e20dea85964c3835b764e395c2e97ea71",
       "tower_revision": "sha256:2b2c8727b56005c76f8b4f76dd4ac6712a1c617c5e5e80d221e9ec613dc63e2a"
+    },
+    "inbox/scheduled-learner-261001-0309-r1-cut-desu3-rec.json": {
+      "applied_at": "2026-10-01T03:18:11Z",
+      "fingerprint": "d5247da1fe24b0fae0d3131878499bf55b9459a736e157792b6773f071dfa60d",
+      "tower_revision": "sha256:b2ce2f466e58e60421f824260a9b8c625322f7e682c1782cb57e7c398a2b6a42"
+    },
+    "inbox/scheduled-learner-261001-0309-r1-lq-ppu3-rec.json": {
+      "applied_at": "2026-10-01T03:18:11Z",
+      "fingerprint": "d25256d416dbb6ca56587c6be37301b3a6b742680a79fbcda7b6fb93ad803dec",
+      "tower_revision": "sha256:b2ce2f466e58e60421f824260a9b8c625322f7e682c1782cb57e7c398a2b6a42"
     },
     "inbox/scheduled-learner-batch-0fdb23a7dd22b3cb.json": {
       "applied_at": "2026-09-30T23:44:02Z",
