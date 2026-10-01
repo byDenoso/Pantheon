@@ -95,6 +95,7 @@
     "inbox/scheduled-critical-20260929t063508z-promoted9-3.json": "389e3ec90e9b0a40d0276648ceb1ec0505d7dd6341aa111c5dbc2f9d985fa505",
     "inbox/scheduled-dener-approve-charter-rm-nexo-refutation-calibration-rival-v.json": "73229ec8f86946a56e3261faab8521027d513faa137a2838438e433328fdf0cd",
     "inbox/scheduled-dener-approve-charter-rm-nexo-refutation-calibration-rival-v1.json": "45bed9f6f4f8886b50daae49cce4d3939bbf9f28440660cf72402572bde9ca9a",
+    "inbox/scheduled-dener-fractal-horizon-de-20261001-v1.json": "8bb5e3bba5c3eeae4193b23e39669209293198add38b99a1a443ea3718a6fbbd",
     "inbox/scheduled-dener-union3-attack1-bind-20260929.json": "4651ea556bcd0160d908e5cce8f4c9a5f24e58f07ebfcd78bc2807a6cd01415e",
     "inbox/scheduled-dener-union3-review-approved-20260929.json": "a82a5f081943819884ea37a931a23c9314b916ec77d386cff636c08e03f6ba20",
     "inbox/scheduled-engineer-board-open-recipes-20260930t0146z.json": "5f5ff31641fbf6ea66b8f1c1b0ea265d954671ae8b14bccfa587610bdfdc7488",
@@ -889,6 +890,11 @@
     "inbox/scheduled-dener-approve-charter-rm-nexo-refutation-calibration-rival-v1.json": {
       "fingerprint": "45bed9f6f4f8886b50daae49cce4d3939bbf9f28440660cf72402572bde9ca9a",
       "source": "legacy-acked"
+    },
+    "inbox/scheduled-dener-fractal-horizon-de-20261001-v1.json": {
+      "applied_at": "2026-10-01T20:16:34Z",
+      "fingerprint": "8bb5e3bba5c3eeae4193b23e39669209293198add38b99a1a443ea3718a6fbbd",
+      "tower_revision": "sha256:ab2625725ed86cd1778215635deb9d321193c794d44f781e490dfbd785f62284"
     },
     "inbox/scheduled-dener-union3-attack1-bind-20260929.json": {
       "fingerprint": "4651ea556bcd0160d908e5cce8f4c9a5f24e58f07ebfcd78bc2807a6cd01415e",
