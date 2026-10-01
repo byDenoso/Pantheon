@@ -17,7 +17,7 @@ function provenance(snapshot){
   return [{authority:snapshot?.authority||'GOOGLE_DRIVE',source:snapshot?.projection?'TOWER_V06':'NEXO_SSOT',projectionAuthority:snapshot?.projectionAuthority||'DERIVED_FROM_SSOT',modifiedAt:text(snapshot?.sourceModifiedAt),generatedAt:text(snapshot?.generatedAt)}];
 }
 function envelope(snapshot,data,status='OK'){
-  return {contract:RESEARCH_API_CONTRACT,status,freshness:snapshot?.generatedAt?'SNAPSHOT':'DEGRADED',generatedAt:text(snapshot?.generatedAt),sourceModifiedAt:text(snapshot?.sourceModifiedAt),authority:snapshot?.authority||'GOOGLE_DRIVE',projectionAuthority:snapshot?.projectionAuthority||'DERIVED_FROM_SSOT',access:'PUBLIC_SANITIZED',privacyGate:'OLYMPUS_EXCLUDED',data,provenance:provenance(snapshot)};
+  return {contract:RESEARCH_API_CONTRACT,status,freshness:snapshot?.generatedAt?'SNAPSHOT':'DEGRADED',generatedAt:text(snapshot?.generatedAt),lastReadAt:text(snapshot?.lastReadAt),sourceModifiedAt:text(snapshot?.sourceModifiedAt),authority:snapshot?.authority||'GOOGLE_DRIVE',projectionAuthority:snapshot?.projectionAuthority||'DERIVED_FROM_SSOT',access:'PUBLIC_SANITIZED',privacyGate:'OLYMPUS_EXCLUDED',data,provenance:provenance(snapshot)};
 }
 function scienceProjection(snapshot){if(snapshot?.projection){const m=scienceModelFor(snapshot);return [...m.structure.programs,...m.structure.campaigns].map(row=>({...row,record_id:row.id,record_type:row.type,title:row.label}));}return safeArray(snapshot?.projections?.Science);}
 function engineeringProjection(snapshot){return safeArray(snapshot?.projections?.Engineering);}

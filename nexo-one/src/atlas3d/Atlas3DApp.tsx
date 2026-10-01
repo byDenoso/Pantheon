@@ -1,3 +1,5 @@
+import { IncidentResponsibility } from '../components/IncidentResponsibility.tsx';
+import { incidentView } from '../viewmodels/incidents.ts';
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { useSystem } from '../data/useSystem.ts';
 import { atlasRouteParams } from './route-params.ts';
@@ -21,27 +23,6 @@ import { domainLabel, label } from '../viewmodels/tokens.ts';
 type ViewMode = '2d' | '3d' | 'galaxy';
 type AtlasTheme = 'dark' | 'light';
 
-const INCIDENT_STATE_PT: Record<string, { label: string; explanation: string }> = {
-  OBSERVED: { label: 'Em observação', explanation: 'O padrão foi registrado e está sendo acompanhado.' },
-  PREREGISTERED: { label: 'Teste definido', explanation: 'A verificação foi planejada antes de avaliar o resultado.' },
-  REVIEWING: { label: 'Em revisão', explanation: 'As evidências ainda estão sendo avaliadas.' },
-  CONFIRMED: { label: 'Hipótese apoiada', explanation: 'As verificações disponíveis apoiam a explicação proposta.' },
-  REFUTED: { label: 'Hipótese refutada', explanation: 'As verificações não apoiaram a explicação proposta.' },
-  CANARY: { label: 'Mudança em teste isolado', explanation: 'Uma alteração está sendo observada separadamente antes de qualquer adoção.' },
-  ROLLED_BACK: { label: 'Mudança desfeita', explanation: 'A alteração foi retirada e o sistema voltou à versão anterior.' },
-  WAIT_HUMAN: { label: 'Aguardando sua decisão', explanation: 'A próxima etapa exige uma escolha humana.' },
-  CLOSED: { label: 'Acompanhamento encerrado', explanation: 'Este registro foi concluído e permanece no histórico.' },
-};
-const INCIDENT_OWNER_PT: Record<string, string> = {
-  EXECUTOR: 'A automação vai executar a próxima verificação.',
-  LEARNER: 'A automação de aprendizagem vai registrar o que foi aprendido.',
-  REFUTADOR: 'A revisão vai tentar encontrar evidências contra a hipótese.',
-  PITIA: 'A Pítia vai organizar os sinais para a próxima avaliação.',
-  GUARDIAO: 'O Guardião vai conferir a integridade do registro.',
-  DENER: 'O próximo passo depende da sua decisão.',
-  NONE: 'Nenhuma etapa está pendente.',
-};
-
 function IncidentQueue({ incidents }: { incidents: EvolutionIncidentSummary[] }) {
   return (
     <section className="atlas-incident-queue" aria-labelledby="atlas-incidents-title">
@@ -49,7 +30,7 @@ function IncidentQueue({ incidents }: { incidents: EvolutionIncidentSummary[] })
         <strong id="atlas-incidents-title">Incidentes em acompanhamento</strong>
         <span>{incidents.length} registros</span>
       </header>
-      <p className="atlas-incident-intro">Padrões repetidos viram registros para acompanhar as evidências, as verificações e o próximo responsável.</p>
+      <p className="atlas-incident-intro">Acompanhe a recuperação operacional e a aprendizagem separadamente.</p>
       {incidents.length ? (
         <ul>
           {incidents.slice(0, 5).map(incident => {
@@ -59,17 +40,14 @@ function IncidentQueue({ incidents }: { incidents: EvolutionIncidentSummary[] })
               ...(incident.public_ids?.hypotheses ?? []).map(id => `Hipótese ${id}`),
               ...(incident.public_ids?.lessons ?? []).map(id => `Lição ${id}`),
             ].filter(id => /^(Teste|Hipótese|Lição) [A-Za-z0-9._:-]{1,120}$/.test(id)).slice(0, 3);
-            const state = INCIDENT_STATE_PT[incident.state] ?? {
-              label: 'Etapa ainda sem explicação',
-              explanation: 'O registro permanece disponível enquanto o estado é esclarecido.',
-            };
+            const state = incidentView(incident);
             const summary = incident.summary_plain?.trim() || incident.summary_pt?.trim()
               || 'Sinais operacionais recorrentes foram reunidos para uma investigação controlada.';
             return (
               <li key={incident.incident_id}>
                 <div className="atlas-incident-id"><strong>{state.label}</strong></div>
                 <p className="atlas-incident-summary">{summary}</p>
-                <p>{state.explanation} {INCIDENT_OWNER_PT[incident.next_owner] ?? 'O próximo passo será definido pela automação responsável.'}</p>
+                <IncidentResponsibility incident={incident} />
                 <details className="atlas-incident-details">
                   <summary>Ver evidências e identificadores</summary>
                   <p>{Math.max(0, Math.trunc(incident.evidence_count) || 0)} registros de evidência reunidos.</p>

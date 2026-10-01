@@ -104,3 +104,15 @@ test('live Tower data is cited by its Drive file and state revision, never by th
   assert.equal(output.source.tower_commit, 'a'.repeat(40), 'legacy commit stays for the Pages readback gate');
   assert.match(towerSourceRef(manifest, 'x.json'), /^tower:\/\/byDenoso\/NEXO-Obsidian-Vault@a{40}\/x\.json$/, 'legacy manifests keep the vault citation');
 });
+
+test('live-only Tower identity needs no legacy Git commit and preserves state revision',async()=>{
+ const {buildScienceProjectionV1,validateScienceProjectionV1}=await import('../scripts/science-projection-v1.mjs');
+ const live={...manifest,tower_commit:null,tower_file_id:'LIVE_FILE',tower_revision:'sha256:'+'d'.repeat(64)};
+ const out=buildScienceProjectionV1({projection:{tests:[],campaigns:[],hypotheses:[]},manifest:live});
+ assert.equal(out.source.tower_commit,null);assert.equal(out.source.tower_revision,live.tower_revision);assert.equal(out.source.tower_file_id,'LIVE_FILE');
+ const absent=buildScienceProjectionV1({projection:{tests:[]},manifest:{...live,tower_commit:undefined}});assert.equal(absent.source.tower_commit,null);validateScienceProjectionV1(absent);
+ assert.match(out.source.projection_ref,/^tower-live:\/\/LIVE_FILE@sha256:/);validateScienceProjectionV1(out);
+ for(const broken of [{tower_file_id:''},{tower_revision:'sha256:invalid'},{tower_file_id:undefined,tower_revision:undefined},{projection_fingerprint:'invalid'},{tower_commit:'invalid'},{tower_file_id:{id:'bad'}}]){
+  assert.throws(()=>buildScienceProjectionV1({projection:{tests:[]},manifest:{...live,...broken}}),/source identity/);
+ }
+});

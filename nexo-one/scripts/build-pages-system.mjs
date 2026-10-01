@@ -1,3 +1,4 @@
+import { publicIncidentSummaries } from '../server/compiler/incident-operations.mjs';
 import { createHash } from 'node:crypto';
 import { copyFile, mkdir, readFile, writeFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
@@ -1298,7 +1299,7 @@ export function buildPagesProjection({
     lanes,
     projected_work: projectedWork,
     guardian: projection.integrity || null,
-    evolution: projection.evolution || null,
+    evolution: projection.evolution ? { ...projection.evolution, ...(Array.isArray(projection.evolution.incidents) ? { incidents: publicIncidentSummaries(projection.evolution) } : {}) } : null,
     cosmology_state: projection.cosmology_state ?? null,
     read_model: publicReadModel(projection),
     graph,
