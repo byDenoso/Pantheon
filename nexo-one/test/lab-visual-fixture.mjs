@@ -39,7 +39,7 @@ export function labVisualFixture(now = Date.now()) {
     evolution: { gate: { charters_waiting: [], canaries_waiting: [] }, review_queue: { referee_1: [], referee_2: [] }, reviews: { CONFIRMED: 1, PENDING_REVIEW: 1 },
       roadmaps: [{ roadmap_id: roadmapId, state: 'ACTIVE', tests_used: 0, confirmed: 0, max_tests: 40, success_target: 3, frontier_count: 22 }],
       genome: { generation: 1, genes: [] }, decoys: { planted: 0, revealed: 0, caught: 0 }, thoughts: [], families: [], learning: { rules: [] },
-      board: [{ id: 'VISUAL-BOARD', at: at(.5), from: 'EXECUTOR', to: 'ENGINEER', text: 'Fixture: pedido de revisão de um vínculo. Próxima ação: conferir o registro publicado.', refs: [h0Ids[8]], priority: 'P1' }],
+      board: [{ id: 'VISUAL-BOARD', at: at(.5), from: 'EXECUTOR', to: 'ENGINEER', text: 'Fixture: revisar VISUAL-H0-09 antes de READY. Próxima ação: conferir o registro publicado.', refs: [h0Ids[8]], priority: 'P1' }],
       autonomy: { schema_version: 'AUTONOMY_METRICS_V2', computed_at: at(0), window_start: at(24), window_end: at(0), window_hours: 24, results: 33,
         robot_share: .909, decisive_rate: .545, median_hours_to_result: null, contest_closure: .358, recovery_rate: 1, false_block_share: 1,
         metrics: { execution_record_share: ratio(.909, 30, 33), decisive_rate: ratio(.515, 17, 33), positive_review_closure: ratio(.358, 24, 67, 'all_tests'), blocked_share: ratio(1, 53, 53, 'all_tests'),

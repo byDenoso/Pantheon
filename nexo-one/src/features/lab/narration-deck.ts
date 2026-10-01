@@ -29,7 +29,8 @@ export function createNarrationDeck(salt: string, initial: Record<string, number
       if (!matrix) return null;
       const heads = matrix.heads.filter(head => supported(head, vars));
       if (!heads.length) return null;
-      const eligible = matrix.tails.map((tail, i) => supported(tail, vars) ? i : -1).filter(i => i >= 0);
+      const countedInHead = heads.every(head => head.includes('{n}'));
+      const eligible = matrix.tails.map((tail, i) => supported(tail, vars) && !(countedInHead && tail.includes('{n}')) ? i : -1).filter(i => i >= 0);
       const tails = eligible.length ? eligible.map(i => matrix.tails[i]!) : [''];
       const cacheKey = `${key}\u0000${receipt}\u0000${eligible.join(',')}`;
       let template = cache.get(cacheKey);
@@ -47,7 +48,7 @@ export function createNarrationDeck(salt: string, initial: Record<string, number
         cache.set(cacheKey, template);
         advance?.(counters);
       }
-      return template.replace(/\{(\w+)\}/g, (_match, name: string) => String(vars[name] ?? ''));
+      return template.replace(/\{(\w+)\}/g, (_match, name: string) => String(vars[name] ?? '')).replace(/([.!?…])\.+$/u, '$1');
     },
   };
 }

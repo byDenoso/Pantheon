@@ -170,7 +170,7 @@ export default function LabApp({ state, route, theme }: { state: SystemState; ro
     <Intro />
     {cur && <div className="replay-caption" role="status" aria-live="polite">
       <span className="replay-clock">{new Date(cur.at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</span>
-      <p><b>{ROLE_PT[cur.role.toUpperCase()] ?? cur.role}</b> {narrate(cur, lab, state)}</p>
+      <p><small className="feed-kind">Evento narrado · interface</small><b>{ROLE_PT[cur.role.toUpperCase()] ?? cur.role}</b> {narrate(cur, lab, state)}</p>
       <span className="replay-bar"><i style={{ width: `${((replay! + 1) / reel.length) * 100}%` }} /></span>
       <button type="button" onClick={() => { setReplay(null); setFocus([]); }}>✕ parar</button>
     </div>}
@@ -187,7 +187,7 @@ export default function LabApp({ state, route, theme }: { state: SystemState; ro
       <button type="button" aria-pressed={sound} onClick={() => setSound(x => !x)} title="Som ambiente" aria-label="Som ambiente"><Icon n={sound ? 'sound' : 'mute'} /><span className="bt">{sound ? 'Som ligado' : 'Som'}</span></button>
     </div>
     {searching && <Search lab={lab} state={state} onClose={() => setSearching(false)} />}
-    {explore && <p className="explore-hint" role="status">Arraste para girar · roda ou pinça para zoom · botão direito, Shift ou 2 dedos para mover · duplo clique recentra · Esc sai</p>}
+    {explore && <p className="explore-hint" role="status">Arraste: girar · pinça ou roda: zoom · Shift ou 2 dedos: mover · duplo clique: centro · Esc: sair</p>}
     {!flat && <Suspense fallback={<div className="obs-scene obs-scene--loading" />}>
       <ObservatoryScene explore={explore || replay !== null} hot={hot} tests={tests} sourceCurrent={sourceCurrent} events={events} page={route.page} focusIds={focus} theme={theme}
         onAvailability={setSceneAvailable} onPick={id => { window.location.hash = labHref('entidade', id); }} />
@@ -892,7 +892,7 @@ function narrate(e: { event_type: string; entity_id?: string; at?: string }, lab
   const t = e.entity_id ? lab.tests.get(e.entity_id) : undefined;
   const post = e.event_type === 'BOARD_POSTED' && state && e.at
     ? state.evolution?.board?.find(p => p.at === e.at && (!e.entity_id || p.id === e.entity_id)) : undefined;
-  if (post?.text) return humanize(clip(post.text, 180));
+  if (post?.text) return `Texto do mural: “${clip(post.text, 180)}”`;
   const extra = {
     roadmap: t?.roadmapId ? lab.roadmaps.get(t.roadmapId)?.title : undefined,
     by: t && state?.graph.nodes.find(n => n.id === t.id)?.owner_role,
@@ -939,6 +939,7 @@ function Monologue({ lab, state, onReplay, replayCount }: { lab: Lab; state: Sys
     <p className="hud-kicker"><i className={`pulse-dot${quiet < 30 ? ' live' : ''}`} aria-hidden="true" />
       {quiet < 30 ? 'Evento recente publicado' : `Última ação ${ago(last.at)}`} · {activityWindow(lab.activity, 24).label}</p>
     <h2 id="mono-title">Diário dos papéis</h2>
+    <p className="feed-kind">Eventos narrados · interface</p>
     <details className="reading-details"><summary>Fonte e variação das falas</summary><p className="hud-note">Fonte recebida {ago(lab.generatedAt)}. As falas resumem o recorte recebido, com o papel original; não indicam uma ação em curso. Os campos da ficha podem refletir um estado posterior ao evento.</p><p className="hud-note">{narrationDeck.persistence === 'local' ? 'Cursor salvo neste navegador, inclusive entre recargas' : 'Variação limitada à memória desta visita; armazenamento local indisponível'}. Só campos publicados habilitam variações; sem sincronização entre aparelhos.</p></details>
     <p className="mono-now"><b>{ROLE_PT[last.role.toUpperCase()] ?? last.role}</b> <Typewriter text={narrate(last, lab, state)} /></p>
     <ul className="mono-self">{selfLines(lab, state).map((l, i) => <li key={i}><i aria-hidden="true"><Icon n={l.icon} /></i>{l.link ? <a href={l.link}>{l.text}</a> : l.text}</li>)}</ul>
@@ -1240,7 +1241,7 @@ function Board({ state, lab }: { state: SystemState; lab: Lab }) {
   const posts = all ? filtered : filtered.slice(0, 8);
   const who = (r: string) => (r === 'ALL' ? 'todos' : roleLabel(r));
   const toggle = (id: string) => setOpenIds(prev => { const n = new Set(prev); if (n.has(id)) n.delete(id); else n.add(id); return n; });
-  return <Section title="Conversa entre os agentes" kicker={`${filtered.length} de ${every.length} recados publicados`} id="now-board">
+  return <Section title="Conversa entre os agentes" kicker={`${filtered.length} de ${every.length} recados · mural original`} id="now-board">
     <div className="board-filters" role="group" aria-label="Filtrar mural">
       <label>Destino / responsável<select value={owner} onChange={e => { setOwner(e.target.value); setAll(false); }}><option value="">Todos</option>{[...new Set(every.map(p => p.meta.owner))].map(x => <option key={x} value={x}>{who(x)}</option>)}</select></label>
       <label>Prioridade<select value={priority} onChange={e => { setPriority(e.target.value); setAll(false); }}><option value="">Todas</option>{[...new Set(every.map(p => p.meta.priority))].map(x => <option key={x}>{x}</option>)}</select></label>
@@ -1249,12 +1250,12 @@ function Board({ state, lab }: { state: SystemState; lab: Lab }) {
     <p className="hud-note">O destino do recado só representa um responsável quando isso foi declarado. Prioridade e próxima ação vêm do registro ou de campos nomeados no texto.</p>
     {!posts.length && <p role="status">Nenhum recado com estes filtros.</p>}
     <ol className="board">{posts.map(p => {
-      const full = humanize(nameIds(p.text, lab)); const short = clip(full, 220); const isOpen = openIds.has(p.id); const long = short !== full;
+      const full = p.text; const short = clip(full, 220); const isOpen = openIds.has(p.id); const long = short !== full;
       return <li key={p.id}>
       <p className="board-head"><b>{who(p.from)}</b><i aria-hidden="true">→</i><span>{who(p.to)}</span><time>{ago(p.at)}</time></p>
       <p className="board-state">{p.meta.status} · prioridade: {p.meta.priority}</p>
       <p className="board-text">{isOpen ? full : short}{long && <button type="button" aria-expanded={isOpen} className="board-more" onClick={() => toggle(p.id)}>{isOpen ? ' ver menos' : ' ler tudo'}</button>}</p>
-      <p className="board-next"><b>Próxima ação:</b> {p.meta.nextAction ? humanize(nameIds(p.meta.nextAction, lab)) : 'não declarada em campo próprio'}</p>
+      <p className="board-next"><b>Próxima ação:</b> {p.meta.nextAction ?? 'não declarada em campo próprio'}</p>
       {(p.refs?.length ?? 0) > 0 && <p className="hud-refs">{p.refs!.filter(r => lab.tests.has(r) || lab.hypotheses.has(r)).slice(0, 3).map(r => <E key={r} id={r} />)}</p>}
     </li>;})}</ol>
     {filtered.length > 8 && <button type="button" className="board-all" onClick={() => setAll(x => !x)}>{all ? 'Mostrar só os 8 mais recentes' : `Ver todos os ${filtered.length} recados`}</button>}
@@ -1278,7 +1279,7 @@ function Crew({ lab, state }: { lab: Lab; state: SystemState }) {
         <p className="crew-top"><b>{t.name}</b><span>{t.rhythm}</span></p>
         <p className="crew-hats">{[...new Set(t.hats.map(h => ROLE_PT[h] ?? h))].join(' + ')}</p>
         <p className="crew-does">{t.does}</p>
-        <div className="crew-continuity"><p><b>Última entrega do papel</b>{delivery ? <>{eventLabel(delivery)} · {ago(delivery.at)}{delivery.entity_id && lab.tests.has(delivery.entity_id) && <> · <E id={delivery.entity_id} /></>}</> : 'Não publicada no histórico recebido'}</p><p><b>Pedido direcionado ao papel</b>{request ? <>{clip(humanize(nameIds(request.text, lab)), 170)}<a href="#/agora"> Ver mural →</a></> : 'Nenhum pedido aberto direcionado neste snapshot'}</p><p><b>Próxima ação declarada</b>{action ? humanize(nameIds(action, lab)) : 'Não publicada'}</p></div>
+        <div className="crew-continuity"><p><b>Última entrega do papel</b>{delivery ? <>{eventLabel(delivery)} · {ago(delivery.at)}{delivery.entity_id && lab.tests.has(delivery.entity_id) && <> · <E id={delivery.entity_id} /></>}</> : 'Não publicada no histórico recebido'}</p><p><b>Pedido original · mural</b>{request ? <>{roleLabel(request.from)}: {clip(request.text, 170)}<a href="#/agora"> Ver mural →</a></> : 'Nenhum pedido aberto direcionado neste snapshot'}</p><p><b>Próxima ação declarada</b>{action ?? 'Não publicada'}</p></div>
         <p className="crew-pulse"><i aria-hidden="true" />{last ? `${sharedRole ? 'telemetria do papel · ' : ''}último sinal recebido ${ago(last.at)} · ${day} eventos no recorte de até 24 h` : 'Nenhum evento deste papel no recorte recebido; cobertura parcial'}</p>
       </article>;
     })}
@@ -1290,7 +1291,7 @@ function Telemetry({ lab, state }: { lab: Lab; state: SystemState }) {
   const now = Date.now();
   const notes = (state.evolution?.board ?? []).filter(p => !p.resolved_at && (!p.expires_at || Date.parse(p.expires_at) > now))
     .map(p => ({ kind: 'note' as const, at: p.at, who: roleLabel(p.from), to: p.to === p.from ? '' : p.to === 'ALL' ? 'todos' : roleLabel(p.to),
-      self: p.to === p.from, text: humanize(p.text), id: p.id }));
+      self: p.to === p.from, text: p.text, id: p.id }));
   // Ações iguais e seguidas do mesmo papel (ex.: 46 nomes preenchidos) viram uma linha só.
   const GROUP_PT: Record<string, (n: number) => string> = {
     SEMANTIC_BACKFILLED: n => `Dei nome e leitura simples a ${n} testes.`,
@@ -1317,8 +1318,9 @@ function Telemetry({ lab, state }: { lab: Lab; state: SystemState }) {
   const feed = [...notes, ...acts].sort((a, b) => b.at.localeCompare(a.at)).slice(0, 50);
   const day = activityWindow(lab.activity, 24, now).count;
   return <aside className="telemetry" aria-label="Telemetria publicada">
-    <header><p><i aria-hidden="true" />Telemetria publicada</p><small>recados e eventos publicados · {day} no recorte de até 24 h · parcial</small></header>
+    <header><p><i aria-hidden="true" />Telemetria publicada</p><small>Fonte {ago(lab.generatedAt)} · {day} eventos até 24 h · recorte parcial</small></header>
     <ol className="tele-feed">{feed.map(f => <li key={f.id} className={f.kind === 'note' ? 'tele-note' : undefined}>
+      <span className="feed-kind">{f.kind === 'note' ? 'Mural · original' : 'Evento narrado · interface'}</span>
       <p className="tele-h"><b>{f.who}</b>{'self' in f && f.self ? <span>anotou</span> : f.to && <><i aria-hidden="true">→</i><span>{f.to}</span></>}<time>{ago(f.at)}</time></p>
       <p className="tele-t">{f.text}</p>
     </li>)}</ol>

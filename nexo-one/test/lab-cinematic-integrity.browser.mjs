@@ -76,6 +76,13 @@ try {
     assert.match(await page.locator('#now-autonomy').locator('..').innerText(), /30 \/ 33.*9\.4 h.*17 \/ 33.*53 \/ 53/s);
     assert.match(await page.locator('#now-autonomy').locator('..').innerText(), new RegExp(`normalizados contêm ${blocked} BLOCKED`));
     assert.match(await page.locator('.monologue').innerText(), /cobertura parcial/);
+    assert.equal(await page.locator('.monologue > .feed-kind').innerText(), 'Eventos narrados · interface');
+    if (!input) assert.equal(await page.locator('.board-text').first().innerText(), system.evolution.board[0].text);
+    if (viewport.width >= 1280) {
+      assert.equal(await page.locator('.tele-note .feed-kind').first().innerText(), 'Mural · original');
+      if (!input) assert.equal(await page.locator('.tele-note .tele-t').first().innerText(), system.evolution.board[0].text);
+      assert.ok((await page.locator('.tele-feed > li:not(.tele-note) > .feed-kind').allTextContents()).every(text => text === 'Evento narrado · interface'));
+    }
     await noOverflow(page, name + ':home');
     if (fallback) assert.equal(await page.locator('.observatory.scene-unavailable').count(), 1);
     else {
@@ -126,6 +133,11 @@ try {
       await writeFile(output + '/' + name + '-camera-diagnostics.json', JSON.stringify(diagnostics, null, 2));
       await page.getByRole('button', { name: 'Explorar a teia' }).click();
       const controls = page.getByRole('group', { name: /Câmera da teia/ });
+      if (viewport.width < 760) {
+        const bounds = await controls.boundingBox();
+        const nav = await page.locator('.instrument-modes').boundingBox();
+        assert.ok(bounds && nav && bounds.y + bounds.height < nav.y, 'camera controls above mobile navigation');
+      }
       await controls.focus();
       await page.keyboard.press('ArrowRight');
       await page.keyboard.press('+');

@@ -58,6 +58,8 @@
  :root[data-theme="light"] .observatory:not(.exploring):not(.flat):not(.scene-unavailable) .hud{background:rgba(239,235,227,.95)!important}
 }
 @media(max-width:760px){
+ .observatory .obs-camera-controls{bottom:calc(84px + env(safe-area-inset-bottom))}
+ .observatory .explore-hint{top:112px}
  .observatory.scene-unavailable .hud{position:relative!important;top:auto!important;bottom:auto!important;max-height:none;overflow:visible;padding-top:24px!important;padding-bottom:120px!important}
  .observatory.scene-unavailable .obs-tools{top:auto!important;bottom:calc(70px + env(safe-area-inset-bottom))!important;right:14px!important}
  .observatory .board-filters{grid-template-columns:1fr}
@@ -84,6 +86,8 @@
 .observatory .live-queue dt{font:500 21px/1.2 var(--f-mono);color:var(--o-accent)}
 .observatory .live-queue dd{margin:4px 0 0;font:11px/1.5 var(--f-mono);color:var(--o-dim)}
 .observatory .reading-details>summary{cursor:pointer;min-height:44px;padding:12px 0;color:var(--o-dim);font:12px/1.5 var(--f-mono)}
+.observatory .feed-kind{display:block;color:var(--o-quiet);font:10px/1.5 var(--f-mono);margin:0 0 6px}
+.observatory :is(.board-text,.tele-note .tele-t){white-space:pre-wrap;overflow-wrap:anywhere}
 .observatory .explore-hint{width:min(720px,calc(100% - 32px));white-space:normal;text-align:center;line-height:1.6;border-radius:12px;box-sizing:border-box}
 @media(min-width:1280px){.observatory .explore-hint{left:100px;right:356px;width:auto;max-width:720px;transform:none;top:16px}}
 .observatory .live-delivery{padding:12px 0;border-top:1px solid var(--o-line)}

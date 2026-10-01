@@ -49,3 +49,23 @@ test('received fields preserve raw execution vs review and do not revive an old 
   assert.deepEqual(narrationEvidence(lab.tests.get('C')), {});
   assert.deepEqual(narrationEvidence(undefined, { by: '', request: undefined }), {});
 });
+
+test('group narration states the received count once and does not pad it with a second count', () => {
+  const deck = createNarrationDeck('compact-group');
+  for (let i = 0; i < 120; i++) {
+    const line = deck.say('GROUP_TEST_RESULT_RECORDED', String(i), { n: 17 });
+    assert.equal(line.match(/\b17\b/g)?.length, 1);
+    assert.doesNotMatch(line, /;|Lote recebido|a contagem é/i);
+  }
+});
+
+test('generated narration normalizes its own ending without changing the supplied text', () => {
+  const source = 'A execução preserva o valor 0.5 e termina aqui.';
+  const deck = createNarrationDeck('punctuation');
+  for (let i = 0; i < 120; i++) {
+    const line = deck.say('TEST_RESULT_RECORDED', String(i), { meaning: source });
+    assert.doesNotMatch(line, /\.\.$/);
+    assert.match(line, /valor 0\.5/);
+  }
+  assert.equal(source, 'A execução preserva o valor 0.5 e termina aqui.');
+});
