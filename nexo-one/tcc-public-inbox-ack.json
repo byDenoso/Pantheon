@@ -168,6 +168,7 @@
     "inbox/scheduled-guardiao-batch-58514712ece5d8e0.json": "2e340a74e69a3a11aee3ebe5b6a73b2dc3c9f82b8b096e8d58252d6112f50dd5",
     "inbox/scheduled-guardiao-batch-5decebe80b1f94b4.json": "f85a8fc691a8d8eaa3928e291e8302f50e309352dece4a86aebab2257007477b",
     "inbox/scheduled-guardiao-batch-e4cb67cb5d938b99.json": "acd0fc821efe52d0518f5ece0d846695ca83c0912e8c0219457a51332dc91ada",
+    "inbox/scheduled-guardiao-board-write-failure-20261001t0113z.json": "4330b178ad6b5d6ca71e3d49d5cfae811a791e764f9d4c9cb1e6d9c093dc4a47",
     "inbox/scheduled-guardiao-fitness-190341.json": "d1b8b7d9f4152f3e903a5f95d67b9195a5cb4f50e28ac0231fc491d33365b337",
     "inbox/scheduled-guardiao-fitness-20260930t2109z.json": "a83dd89d8af54379bca56efa3ce99cd43ac1d8e59aef1a36eeefb52b032d3d48",
     "inbox/scheduled-guardiao-heartbeat-20260927t200631z.json": "c3284ba4adb20aeb318160e02374fda047333c969b6828145ac907cd6d4fde40",
@@ -1078,6 +1079,11 @@
       "fingerprint": "acd0fc821efe52d0518f5ece0d846695ca83c0912e8c0219457a51332dc91ada",
       "tower_revision": "sha256:5af5b07a20f685a774c32e415577f2c25370e1718bacfb88e74b2a273534098f"
     },
+    "inbox/scheduled-guardiao-board-write-failure-20261001t0113z.json": {
+      "applied_at": "2026-10-01T01:22:11Z",
+      "fingerprint": "4330b178ad6b5d6ca71e3d49d5cfae811a791e764f9d4c9cb1e6d9c093dc4a47",
+      "tower_revision": "sha256:f812212a40720711f5d315fe17f1ce61b570b9687313c72a826dc2c5779bc4aa"
+    },
     "inbox/scheduled-guardiao-fitness-190341.json": {
       "fingerprint": "d1b8b7d9f4152f3e903a5f95d67b9195a5cb4f50e28ac0231fc491d33365b337",
       "source": "legacy-acked"
@@ -1179,9 +1185,9 @@
       "source": "legacy-acked"
     },
     "inbox/scheduled-learner-20260930t2026z-prior-des-u3-recipe.json": {
-      "applied_at": "2026-10-01T01:18:59Z",
+      "applied_at": "2026-10-01T01:22:11Z",
       "fingerprint": "9d98122a1d7cd0f50b83425ac89182b5de3128d9bd56930dbe672573ba023e12",
-      "tower_revision": "sha256:1e31e606403f256c890ab90b005d67596a33f9d7710e098d9ba2ff784cb8d88a"
+      "tower_revision": "sha256:f812212a40720711f5d315fe17f1ce61b570b9687313c72a826dc2c5779bc4aa"
     },
     "inbox/scheduled-learner-20260930t2026z-prior-pp-u3-data.json": {
       "fingerprint": "846ea1f4d924399cad80676cac1a6a1b97396f0b7bdefaf7a2bc169fb5cd8cd1",
