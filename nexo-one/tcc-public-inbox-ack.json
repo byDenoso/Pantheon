@@ -192,6 +192,7 @@
     "inbox/scheduled-learner-20260930t1717z-ddemega-input-audit-v1.json": "fb050c2ce97d6638670277b3d3bf990805c5b7e7548e6aa654e03e66a7156f01",
     "inbox/scheduled-learner-20260930t2012z-input-blockers-board-v1.json": "3e8f1c8241566cd11b6c7706ab002210187fccbcc2cb3130f8fc1b623c7ff0f1",
     "inbox/scheduled-learner-20260930t2026z-prior-des-u3-data.json": "656e195d9a90e191b38b3fd78e19707eb2a5f06ce42de082299b225b33a737d1",
+    "inbox/scheduled-learner-20260930t2026z-prior-des-u3-recipe.json": "9d98122a1d7cd0f50b83425ac89182b5de3128d9bd56930dbe672573ba023e12",
     "inbox/scheduled-learner-20260930t2026z-prior-pp-u3-data.json": "846ea1f4d924399cad80676cac1a6a1b97396f0b7bdefaf7a2bc169fb5cd8cd1",
     "inbox/scheduled-learner-20260930t2026z-prior-pp-u3-recipe.json": "160075692fb7795cb7b55cdf7e3f4a994cd4e2f4f5eaa97a6ab7ac0029571e50",
     "inbox/scheduled-learner-20260930t2026z-tracer-des-u3-om315-data.json": "b9ac945ccac192387a303dbf8d749ffb7e5becd229205de4b3336b95f5e21965",
@@ -1176,6 +1177,11 @@
     "inbox/scheduled-learner-20260930t2026z-prior-des-u3-data.json": {
       "fingerprint": "656e195d9a90e191b38b3fd78e19707eb2a5f06ce42de082299b225b33a737d1",
       "source": "legacy-acked"
+    },
+    "inbox/scheduled-learner-20260930t2026z-prior-des-u3-recipe.json": {
+      "applied_at": "2026-10-01T01:18:59Z",
+      "fingerprint": "9d98122a1d7cd0f50b83425ac89182b5de3128d9bd56930dbe672573ba023e12",
+      "tower_revision": "sha256:1e31e606403f256c890ab90b005d67596a33f9d7710e098d9ba2ff784cb8d88a"
     },
     "inbox/scheduled-learner-20260930t2026z-prior-pp-u3-data.json": {
       "fingerprint": "846ea1f4d924399cad80676cac1a6a1b97396f0b7bdefaf7a2bc169fb5cd8cd1",
