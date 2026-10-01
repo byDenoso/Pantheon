@@ -90,7 +90,13 @@ try {
       await page.goBack(); await focus.waitFor(); await ready(page);
     }
     await focus.getByRole('button', { name: 'Ver todos os recados' }).click();
-    await page.waitForFunction(() => document.activeElement?.id === 'now-board');
+    const waitForOpenBoard = () => page.waitForFunction(total => {
+      const heading = document.getElementById('now-board');
+      const section = heading?.parentElement;
+      return document.activeElement === heading && section?.querySelectorAll('.board > li').length === total
+        && [...section.querySelectorAll('.board-filters select')].every(select => select.value === '');
+    }, system.evolution.board.length);
+    await waitForOpenBoard();
     const board = page.locator('#now-board').locator('..');
     assert.equal(await board.locator('.board > li').count(), system.evolution.board.length);
     assert.equal(await board.getByLabel('Status', { exact: true }).inputValue(), '');
@@ -100,8 +106,10 @@ try {
     await board.getByLabel('Destino / responsável', { exact: true }).selectOption(owner);
     await board.getByLabel('Status', { exact: true }).selectOption('Pendentes');
     const expected = system.evolution.board.filter(post => { const meta = boardMeta(post, now, system.evolution.board); return meta.owner === owner && !['Resolvido', 'Expirado'].includes(meta.status); });
+    await page.waitForFunction(total => document.getElementById('now-board')?.parentElement?.querySelectorAll('.board > li').length === total, Math.min(8, expected.length));
     assert.equal(await board.locator('.board > li').count(), Math.min(8, expected.length), 'selected filters are respected');
     await focus.getByRole('button', { name: 'Ver todos os recados' }).click();
+    await waitForOpenBoard();
     assert.equal(await board.getByLabel('Destino / responsável', { exact: true }).inputValue(), '');
     assert.equal(await board.getByLabel('Status', { exact: true }).inputValue(), '');
     const motions = await focus.evaluate(el => el.getAnimations({ subtree: true }).filter(animation => animation.playState === 'running').length);
