@@ -81,6 +81,7 @@
     "inbox/scheduled-conversa-calibracao-binding-20261001-1.json": "36999bb86ece2645cc77cbb0a6456eb1c915379c039cc6d4a2bc5fe68ac91676",
     "inbox/scheduled-conversa-calibracao-binding-20261001-2.json": "c56289804752c2c5224af35a2b1511e99a7c66eed4359cab7771c85d3e050695",
     "inbox/scheduled-conversa-calibracao-binding-20261001-3.json": "8c815e6bfbcb12e4b6228a3da95da06d39ecf318afb2d8109ce05d2fe0d8c3c2",
+    "inbox/scheduled-conversa-recover-dr1-om315-pp-des-u3-v1.json": "35ef2208da37e65b47515a248d7435dd1edb8652843b25d67d7a21f9dbd6ab63",
     "inbox/scheduled-conversation-h0hom26-010-science-contract-gaps-v1.json": "7e2ec472e38d64e578be3fdca9e0c0dd6f8cf73be84664c0275b8086681ffcff",
     "inbox/scheduled-critic-20260929t033725z-min.json": "b713015632de38e360e6547a6443076f711688234fce9835496457b5818be9fc",
     "inbox/scheduled-critical-20260928t1315z.json": "9684fbe7754b84ac7b94554e91fb2908775696c861b4b8bd2edef9a2fa071633",
@@ -780,6 +781,11 @@
       "applied_at": "2026-10-01T03:10:59Z",
       "fingerprint": "8c815e6bfbcb12e4b6228a3da95da06d39ecf318afb2d8109ce05d2fe0d8c3c2",
       "tower_revision": "sha256:b4c2ab996970be4e312b6210c4e5aac423266bb58a6aa90775992425b36a17f8"
+    },
+    "inbox/scheduled-conversa-recover-dr1-om315-pp-des-u3-v1.json": {
+      "applied_at": "2026-10-01T10:44:36Z",
+      "fingerprint": "35ef2208da37e65b47515a248d7435dd1edb8652843b25d67d7a21f9dbd6ab63",
+      "tower_revision": "sha256:185199abc71ff0f6fd83dc4a7dcfb80cea35654b32631cf8c1028308de508179"
     },
     "inbox/scheduled-conversation-h0hom26-010-science-contract-gaps-v1.json": {
       "applied_at": "2026-10-01T10:27:37Z",
