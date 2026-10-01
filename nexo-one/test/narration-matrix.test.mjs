@@ -16,21 +16,21 @@ const TEST_AND_BOARD_EVENTS = [
   'TEST_BATTERY_DISPATCHED',
 ];
 
-test('narration exposes a real 90x90 matrix for every event', () => {
-  assert.equal(NARRATION_MATRIX_SIZE, 90);
+test('narration exposes a real 120x120 matrix for every event', () => {
+  assert.equal(NARRATION_MATRIX_SIZE, 120);
   for (const [event, matrix] of Object.entries(NARRATION)) {
-    assert.equal(matrix.heads.length, 90, event + ' heads');
-    assert.equal(matrix.tails.length, 90, event + ' tails');
-    assert.equal(new Set(matrix.heads).size, 90, event + ' unique heads');
-    assert.equal(new Set(matrix.tails).size, 90, event + ' unique tails');
-    assert.equal(matrix.heads.length * matrix.tails.length, 8100, event + ' combinations');
+    assert.equal(matrix.heads.length, 120, event + ' heads');
+    assert.equal(matrix.tails.length, 120, event + ' tails');
+    assert.equal(new Set(matrix.heads).size, 120, event + ' unique heads');
+    assert.equal(new Set(matrix.tails).size, 120, event + ' unique tails');
+    assert.equal(matrix.heads.length * matrix.tails.length, 14400, event + ' combinations');
   }
 });
 
-test('mural and test lifecycle events are covered by the 90x90 matrix', () => {
+test('mural and test lifecycle events are covered by the 120x120 matrix', () => {
   for (const event of TEST_AND_BOARD_EVENTS) {
     assert.ok(NARRATION[event], event + ' missing');
-    assert.equal(NARRATION[event].heads.length * NARRATION[event].tails.length, 8100, event);
+    assert.equal(NARRATION[event].heads.length * NARRATION[event].tails.length, 14400, event);
   }
 });
 

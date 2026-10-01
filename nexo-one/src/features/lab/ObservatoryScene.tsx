@@ -52,17 +52,17 @@ export function layoutDomains(ids: string[]): DomainSpot[] {
 const VERDICT_RGB: Record<Verdict, [number, number, number]> = {
   CONFIRMED: [0.62, 0.86, 0.7], REFUTED: [0.9, 0.46, 0.4], REVIEW: [0.92, 0.76, 0.48], PROVISIONAL: [0.7, 0.75, 0.86],
   READY: [0.74, 0.71, 0.8], RUNNING: [0.68, 0.76, 0.88], CHECKPOINTED: [0.52, 0.57, 0.68],
-  BLOCKED: [0.36, 0.35, 0.4], DISCARDED: [0.25, 0.24, 0.28],
+  BLOCKED: [0.36, 0.35, 0.4], REJECTED: [0.82, 0.64, 0.47], DISCARDED: [0.25, 0.24, 0.28],
 };
 const VERDICT_TXT: Record<Verdict, string> = {
   CONFIRMED: 'confirmado', REFUTED: 'refutado', REVIEW: 'em revisão', PROVISIONAL: 'resultado provisório',
-  READY: 'na fila', RUNNING: 'em processamento', CHECKPOINTED: 'execução salva', BLOCKED: 'bloqueado', DISCARDED: 'descartado',
+  READY: 'na fila', RUNNING: 'em processamento', CHECKPOINTED: 'execução salva', BLOCKED: 'bloqueado', REJECTED: 'rejeitado pelo critério', DISCARDED: 'descartado',
 };
 const VERDICT_SIZE: Record<Verdict, number> = {
-  CONFIRMED: 34, REFUTED: 24, REVIEW: 26, PROVISIONAL: 17, READY: 12, RUNNING: 15, CHECKPOINTED: 12, BLOCKED: 11, DISCARDED: 7,
+  CONFIRMED: 34, REFUTED: 24, REVIEW: 26, PROVISIONAL: 17, READY: 12, RUNNING: 15, CHECKPOINTED: 12, BLOCKED: 11, REJECTED: 17, DISCARDED: 7,
 };
 const VERDICT_PULSE: Record<Verdict, number> = {
-  CONFIRMED: 0.12, REFUTED: 0, REVIEW: 1, PROVISIONAL: 0.25, READY: 0.45, RUNNING: 0.8, CHECKPOINTED: 0.12, BLOCKED: 0, DISCARDED: 0,
+  CONFIRMED: 0.12, REFUTED: 0, REVIEW: 1, PROVISIONAL: 0.25, READY: 0.45, RUNNING: 0.8, CHECKPOINTED: 0.12, BLOCKED: 0, REJECTED: 0, DISCARDED: 0,
 };
 
 // [distância, elevação, azimute, alvo(domínio índice ou -1 = centro)]
@@ -208,12 +208,12 @@ function filament(b: Buf, a: Vector3, c: Vector3, density: number, heat: number,
   return mid;
 }
 
-export function ObservatoryScene({ tests, page, focusIds, onPick, theme, events, explore = false, hot }: {
-  hot?: string[]; explore?: boolean; events?: SceneEvents; tests: TestEntity[]; page: ScenePage; focusIds?: string[]; onPick: (id: string) => void; theme: 'dark' | 'light';
+export function ObservatoryScene({ tests, page, focusIds, onPick, onAvailability, theme, events, explore = false, hot, sourceCurrent = false }: {
+  sourceCurrent?: boolean; hot?: string[]; explore?: boolean; events?: SceneEvents; tests: TestEntity[]; page: ScenePage; focusIds?: string[]; onPick: (id: string) => void; onAvailability?: (available: boolean) => void; theme: 'dark' | 'light';
 }) {
   const host = useRef<HTMLDivElement>(null);
   const labels = useRef<HTMLDivElement>(null);
-  const api = useRef<{ shot: (p: ScenePage) => void; focus: (ids: string[]) => void; heat: (ids: string[]) => void; goDomain: (i: number | null) => void } | null>(null);
+  const api = useRef<{ shot: (p: ScenePage) => void; focus: (ids: string[]) => void; heat: (ids: string[]) => void; goDomain: (i: number | null) => void; zoom: (factor: number) => void; orbit: (az: number, elev: number) => void } | null>(null);
   const [sel, setSel] = useState<number | null>(null);
   const tip = useRef<HTMLDivElement>(null);
   const near = useRef<HTMLDivElement>(null);
@@ -231,7 +231,8 @@ export function ObservatoryScene({ tests, page, focusIds, onPick, theme, events,
     if (!el) return;
     let renderer: WebGLRenderer;
     try { renderer = new WebGLRenderer({ antialias: true, alpha: true, powerPreference: 'high-performance' }); }
-    catch { el.dataset.fallback = 'true'; return; }
+    catch { el.dataset.fallback = 'true'; onAvailability?.(false); return; }
+    delete el.dataset.fallback; onAvailability?.(true);
     const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     const mobile = window.matchMedia('(max-width: 760px)').matches;
     let quality: Quality = detectQuality();
@@ -312,7 +313,7 @@ export function ObservatoryScene({ tests, page, focusIds, onPick, theme, events,
       list.forEach(t => {
         const s = 0.15 + rnd(t.id) * 0.85;
         const p = node.clone().lerp(d, s * 0.8).add(new Vector3(...jitter(t.id, 0.9)));
-        push(stars, [p.x, p.y, p.z], VERDICT_RGB[t.verdict], VERDICT_SIZE[t.verdict], reduced ? 0 : VERDICT_PULSE[t.verdict], rnd(t.id));
+        push(stars, [p.x, p.y, p.z], VERDICT_RGB[t.verdict], VERDICT_SIZE[t.verdict], reduced || !sourceCurrent ? 0 : VERDICT_PULSE[t.verdict], rnd(t.id));
         ids.push(t.id);
       });
     }
@@ -406,7 +407,7 @@ export function ObservatoryScene({ tests, page, focusIds, onPick, theme, events,
       target.look.copy(domainPos[i]!).multiplyScalar(scene.scale.x);
       target.dist = 13; target.elev = 0.32;
     };
-    api.current = { shot, focus, heat, goDomain };
+    api.current = { shot, focus, heat, goDomain, zoom: factor => { zoom = Math.max(0.12, Math.min(2.6, zoom * factor)); }, orbit: (az, elev) => { target.az += az; target.elev = Math.max(-1.35, Math.min(1.4, target.elev + elev)); } };
 
     const resize = () => {
       const w = el.clientWidth || window.innerWidth, h = el.clientHeight || window.innerHeight;
@@ -529,8 +530,8 @@ export function ObservatoryScene({ tests, page, focusIds, onPick, theme, events,
         });
         if (!hitCloud) { tipEl.style.opacity = '0'; canvas.style.cursor = ''; return; }
         tipEl.innerHTML = '';
-        const b = document.createElement('b'); b.textContent = `Nuvem de formação: ${hitCloud.ready} testes prontos esperando para rodar`;
-        const i = document.createElement('i'); i.textContent = 'quando rodarem, a nuvem se desfaz e eles viram estrelas no filamento';
+        const b = document.createElement('b'); b.textContent = `Nuvem de formação: ${hitCloud.ready} candidatos marcados READY na leitura`;
+        const i = document.createElement('i'); i.textContent = 'A elegibilidade e o despacho dependem da verificação publicada; consulte a fila.';
         tipEl.append(b, i);
         tipEl.style.transform = `translate(${mx + 14}px, ${my + 12}px)`;
         tipEl.style.opacity = '1'; canvas.style.cursor = 'pointer';
@@ -568,6 +569,10 @@ export function ObservatoryScene({ tests, page, focusIds, onPick, theme, events,
     const proj = new Vector3();
 
     let raf = 0, last = performance.now(), visible = true, expansion = 1, lodTick = 0;
+    let contextLost = false;
+    const lost = (event: Event) => { event.preventDefault(); contextLost = true; onAvailability?.(false); };
+    const restored = () => { contextLost = false; last = performance.now(); onAvailability?.(true); };
+    canvas.addEventListener('webglcontextlost', lost); canvas.addEventListener('webglcontextrestored', restored);
     const FORM_S = 180; let cosmic = 0;
     const replay = () => { cosmic = 0; };
     window.addEventListener('nexo:replay-formation', replay);
@@ -575,9 +580,12 @@ export function ObservatoryScene({ tests, page, focusIds, onPick, theme, events,
     document.addEventListener('visibilitychange', vis);
     const frame = (now: number) => {
       raf = requestAnimationFrame(frame);
-      if (!visible) return;
+      if (!visible || contextLost) { last = now; return; }
+      // A reading surface does not need 60 WebGL frames per second.
+      const frameBudget = 1000 / (reduced ? 15 : mobile || !exploreRef.current ? 30 : 60);
+      if (now - last < frameBudget) return;
       const dt = Math.min(0.05, (now - last) / 1000); last = now;
-      uniforms.time.value += dt;
+      if (!reduced) uniforms.time.value += dt;
       // Relógio cósmico: a formação é visível — ~3 min do quase-uniforme até a teia madura
       // (aglomeração nos nós, vazios crescendo), depois segue bem devagar. "Rever formação" zera o relógio.
       cosmic += dt;
@@ -598,7 +606,7 @@ export function ObservatoryScene({ tests, page, focusIds, onPick, theme, events,
       if (composer) composer.render(dt); else renderer.render(scene, camera);
       if (!reduced) {
         slowAcc += dt; slowN += 1;
-        if (slowAcc > 3) { if (slowAcc / slowN > 1 / 42) degrade(); slowAcc = 0; slowN = 0; }
+        if (slowAcc > 3) { if (slowAcc / slowN > Math.max(1 / 42, frameBudget / 1000 * 1.35)) degrade(); slowAcc = 0; slowN = 0; }
       }
       const w = canvas.clientWidth, h = canvas.clientHeight;
       const placed: Array<[number, number, number]> = [];
@@ -658,10 +666,11 @@ export function ObservatoryScene({ tests, page, focusIds, onPick, theme, events,
       canvas.removeEventListener('pointerleave', leave);
       canvas.removeEventListener('dblclick', dbl);
       canvas.removeEventListener('contextmenu', noMenu);
+      canvas.removeEventListener('webglcontextlost', lost); canvas.removeEventListener('webglcontextrestored', restored);
       composer?.dispose(); webGeo.dispose(); starGeo.dispose(); qsoGeo.dispose(); qsoMat.dispose(); jetGeo.dispose(); jetMat.dispose(); boxGeo.dispose(); boxMat.dispose(); mat.dispose(); renderer.dispose();
       canvas.remove(); api.current = null;
     };
-  }, [tests, theme, events, domains]);
+  }, [tests, theme, events, domains, sourceCurrent]);
 
   useEffect(() => { api.current?.shot(page); }, [page, tests, theme]);
   useEffect(() => { api.current?.focus(focusIds ?? []); }, [focusIds, tests, theme]);
@@ -675,6 +684,15 @@ export function ObservatoryScene({ tests, page, focusIds, onPick, theme, events,
       {sel !== null && domains[sel] && <><i aria-hidden="true">›</i><span aria-current="location">{domains[sel]!.label}</span>
         <em>{tests.filter(t => normDomain(t.domain) === domains[sel]!.id).length} testes</em></>}
     </nav>
+    <div className="obs-camera-controls" role="group" aria-label="Câmera da teia; setas giram, mais e menos aproximam" tabIndex={0}
+      onKeyDown={event => {
+        const commands: Record<string, () => void> = { ArrowLeft: () => api.current?.orbit(-0.12, 0), ArrowRight: () => api.current?.orbit(0.12, 0), ArrowUp: () => api.current?.orbit(0, -0.1), ArrowDown: () => api.current?.orbit(0, 0.1), '+': () => api.current?.zoom(0.8), '=': () => api.current?.zoom(0.8), '-': () => api.current?.zoom(1.25), Home: () => resetView.current() };
+        if (commands[event.key]) { event.preventDefault(); commands[event.key]!(); }
+      }}>
+      <button type="button" aria-label="Aproximar câmera" onClick={() => api.current?.zoom(0.8)}>+</button>
+      <button type="button" aria-label="Afastar câmera" onClick={() => api.current?.zoom(1.25)}>−</button>
+      <button type="button" aria-label="Recentrar câmera" onClick={() => resetView.current()}>Centro</button>
+    </div>
     <div ref={tip} className="obs-tip" role="tooltip" />
     <div ref={near} className="obs-near" aria-hidden="true">{Array.from({ length: 7 }, (_, k) => <span key={k} />)}</div>
     <div ref={labels} className="obs-scene-labels">

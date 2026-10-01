@@ -1,4 +1,11 @@
 /** Tower → public projection → Pages. No scientific inference in the client. */
+export interface CosmologyLiteratureSource {
+  name: string;
+  url: string;
+  version?: string;
+  updated_at?: string;
+  role?: string;
+}
 export interface CosmologyEvidence {
   id: string;
   kind: 'TEST';
@@ -23,7 +30,7 @@ export interface CosmologyFrontier {
   why: string;
   confidence: string;
   literature_baseline: string;
-  literature_source?: { name: string; url: string; version?: string };
+  literature_source?: CosmologyLiteratureSource;
   synthesis_basis: string;
   synthesis_evidence_ids: string[];
   nexo_interpretation: Array<{ text: string; evidence_ids: string[] }>;
@@ -41,6 +48,7 @@ export interface CosmologyState {
   authority: 'TOWER';
   projection_only: true;
   generated_at?: string;
+  literature_source?: CosmologyLiteratureSource;
   frontiers: CosmologyFrontier[];
   historical_tests: Array<Record<string, unknown> & { id: string }>;
 }

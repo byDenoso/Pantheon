@@ -1,19 +1,20 @@
 // Caderno de laboratório: um índice único de entidades (teste, hipótese, campanha, roadmap)
 // montado a partir do system.json. O front não inventa estado: tudo vem da projeção;
 // quando falta dado, o campo fica null e a página diz o que falta.
+import { formatPublishedAge } from '../../viewmodels/published-time.ts';
 import type { GraphNode, ScienceProjectionRecord, SystemState } from '../../contracts/system.ts';
 
-export type Verdict = 'CONFIRMED' | 'REFUTED' | 'REVIEW' | 'PROVISIONAL' | 'READY' | 'RUNNING' | 'CHECKPOINTED' | 'BLOCKED' | 'DISCARDED';
+export type Verdict = 'CONFIRMED' | 'REFUTED' | 'REVIEW' | 'PROVISIONAL' | 'READY' | 'RUNNING' | 'CHECKPOINTED' | 'BLOCKED' | 'REJECTED' | 'DISCARDED';
 
 export const VERDICT_PT: Record<Verdict, string> = {
   CONFIRMED: 'Confirmado', REFUTED: 'Refutado', REVIEW: 'Em revisão', PROVISIONAL: 'Resultado provisório',
-  READY: 'Na fila', RUNNING: 'Em processamento', CHECKPOINTED: 'Execução salva', BLOCKED: 'Bloqueado', DISCARDED: 'Descartado',
+  READY: 'Na fila', RUNNING: 'Em processamento', CHECKPOINTED: 'Execução salva', BLOCKED: 'Bloqueado', REJECTED: 'Rejeitado pelo critério', DISCARDED: 'Descartado',
 };
 /** Forma além da cor: o estado nunca depende só do matiz. */
 export const VERDICT_GLYPH: Record<Verdict, string> = {
-  CONFIRMED: '✓', REFUTED: '✕', REVIEW: '◐', PROVISIONAL: '●', READY: '○', RUNNING: '▶', CHECKPOINTED: '◫', BLOCKED: '▨', DISCARDED: '–',
+  CONFIRMED: '✓', REFUTED: '✕', REVIEW: '◐', PROVISIONAL: '●', READY: '○', RUNNING: '▶', CHECKPOINTED: '◫', BLOCKED: '▨', REJECTED: '⊘', DISCARDED: '–',
 };
-export const VERDICT_ORDER: Verdict[] = ['CONFIRMED', 'REFUTED', 'REVIEW', 'PROVISIONAL', 'READY', 'RUNNING', 'CHECKPOINTED', 'BLOCKED', 'DISCARDED'];
+export const VERDICT_ORDER: Verdict[] = ['CONFIRMED', 'REFUTED', 'REVIEW', 'PROVISIONAL', 'READY', 'RUNNING', 'CHECKPOINTED', 'BLOCKED', 'REJECTED', 'DISCARDED'];
 
 export interface TestEntity {
   id: string;
@@ -48,6 +49,7 @@ export interface TestEntity {
   parents: string[];
   children: string[];
   verdictRaw: string | null;
+  readiness?: { eligible: boolean; reasons: string[]; policy?: string } | null;
   result: unknown;
   statistics: unknown;
   robustness: unknown;
@@ -76,10 +78,11 @@ export interface HypothesisEntity {
 export interface CampaignEntity { id: string; title: string | null; question: string | null; questionPlain?: string | null; why: string | null; hypothesisIds: string[]; tests: string[] }
 export interface RoadmapEntity {
   id: string; title: string; question: string | null; campaignId: string | null; state: string;
-  confirmed: number; target: number | null; used: number; maxTests: number | null; maxDays: number | null;
+  confirmed: number; target: number | null; used: number | null; maxTests: number | null; maxDays: number | null;
   refutedStreak: number; killStreak: number | null; stop: string | null; renewable: boolean; charteredAt: string | null;
-  tests: string[]; hypotheses: string[]; frontier: number;
-  frontierIds?: string[]; objectives?: string[]; progress?: Record<string, number>;
+  tests: string[]; hypotheses: string[]; frontier: number | null;
+  testsSource?: string; frontierSource?: string;
+  frontierIds?: string[]; frontierIdsPublished?: boolean; objectives?: string[]; progress?: Record<string, number>;
 }
 
 export interface Lab {
@@ -114,15 +117,17 @@ export const contestTarget = (id: string): string | null => {
   return m ? m[1]! : null;
 };
 
-function verdictOf(status: string | null, review: string | null, graphBlocked: boolean): Verdict {
+function verdictOf(status: string | null, review: string | null, graphBlocked: boolean, rawVerdict: string | null): Verdict {
   const r = (review || '').toUpperCase();
   if (r === 'CONFIRMED') return 'CONFIRMED';
   if (r === 'REFUTED') return 'REFUTED';
   if (r === 'PENDING_REVIEW' || r === 'CONTESTED' || r === 'REFEREE1_PASSED') return 'REVIEW';
   const s = (status || '').toUpperCase();
-  if (graphBlocked || s.startsWith('BLOCKED')) return 'BLOCKED';
-  if (s === 'REJECTED' || s === 'ARCHIVED' || s === 'RETIRED' || s === 'SUPERSEDED' || s === 'CANCELLED') return 'DISCARDED';
+  if (s === 'REJECTED' || s === 'REJEITADO') return 'REJECTED';
+  if (s === 'ARCHIVED' || s === 'RETIRED' || s === 'SUPERSEDED' || s === 'CANCELLED') return 'DISCARDED';
+  if (s.startsWith('BLOCKED') || /^(FAIL(?:ED)?|ERROR)(_|$)/.test(s) || (!s && graphBlocked)) return 'BLOCKED';
   // Estado operacional não é fila: só READY é elegível para a bateria do Executor.
+  if (['DONE', 'RESULT', 'VERIFIED', 'COMPLETE'].includes(s) && ['REJECTED', 'REJEITADO'].includes((rawVerdict ?? '').toUpperCase())) return 'REJECTED';
   if (s === 'READY') return 'READY';
   if (s === 'QUEUED' || s === 'RUNNING' || s === 'DISPATCHED') return 'RUNNING';
   if (s === 'CHECKPOINTED') return 'CHECKPOINTED';
@@ -149,7 +154,7 @@ export function buildLab(state: SystemState): Lab {
     const r = (records.get(id) ?? {}) as Record<string, unknown>;
     // O read model (TCC#96) tem prioridade: é o dado mais rico e já sanitizado.
     const any = { ...r, ...(rmTests[id] ?? {}) } as Record<string, unknown> & { prereg?: Record<string, unknown> };
-    const status = str(any.status) ?? n?.status_group ?? null;
+    const status = str(any.status) ?? str(any.state) ?? n?.status_group ?? null;
     const review = str(any.review_state) ?? str((n as unknown as Record<string, unknown>)?.review_state);
     const campaignId = str(any.campaign_id) ?? n?.campaign_id?.replace(/^campaign:/, '') ?? null;
     const pre = (val(any.prereg) as Record<string, unknown> | null) ?? {};
@@ -165,7 +170,7 @@ export function buildLab(state: SystemState): Lab {
       method: str(r.method),
       status,
       review,
-      verdict: verdictOf(status, review, n?.state === 'BLOCKED'),
+      verdict: verdictOf(status, review, n?.state === 'BLOCKED', str(any.verdict)),
       hypothesisId: str(any.hypothesis_id),
       campaignId,
       roadmapId: str(any.roadmap_id) ?? (campaignId ? campaignToRoadmap.get(campaignId) ?? null : null),
@@ -184,6 +189,10 @@ export function buildLab(state: SystemState): Lab {
       parents: lineage('parents'),
       children: lineage('children'),
       verdictRaw: str(any.verdict),
+      readiness: any.readiness && typeof any.readiness === 'object' && typeof (any.readiness as { eligible?: unknown }).eligible === 'boolean'
+        ? { eligible: (any.readiness as { eligible: boolean }).eligible,
+            reasons: Array.isArray((any.readiness as { reasons?: unknown }).reasons) ? (any.readiness as { reasons: unknown[] }).reasons.map(String) : [],
+            policy: str((any.readiness as { policy?: unknown }).policy) ?? undefined } : null,
       prereg: {
         metric: val(r.preregistered_metric) ?? pre.metric ?? null,
         threshold: val(r.threshold) ?? pre.threshold ?? null,
@@ -276,10 +285,10 @@ export function buildLab(state: SystemState): Lab {
       // Leitura simples em português primeiro; a pergunta original (às vezes em inglês) só se não houver.
       question: str(full?.question_plain) ?? str((full?.semantic as Record<string, unknown> | undefined)?.question_plain) ?? camp?.questionPlain
         ?? str(full?.question) ?? (charter.question as string) ?? camp?.question ?? null, campaignId,
-      state: String(full?.state ?? rm.state ?? charter.status ?? 'ACTIVE'),
+      state: String(full?.state ?? rm.state ?? charter.status ?? 'UNPUBLISHED'),
       confirmed: Number(prog.confirmed ?? rm.confirmed ?? 0),
       target: (stop.success_confirmed ?? rm.success_target ?? null) as number | null,
-      used: Number(rm.tests_used ?? prog.total ?? 0), maxTests: (budget.max_tests ?? rm.max_tests ?? null) as number | null,
+      used: typeof rm.tests_used === 'number' ? rm.tests_used : null, maxTests: (budget.max_tests ?? rm.max_tests ?? null) as number | null,
       maxDays: (budget.max_days ?? rm.max_days ?? null) as number | null,
       refutedStreak: Number(rm.refuted_streak ?? 0),
       killStreak: (stop.kill_consecutive_refuted ?? rm.kill_streak ?? null) as number | null,
@@ -287,8 +296,11 @@ export function buildLab(state: SystemState): Lab {
       charteredAt: (charter.chartered_at as string) ?? null, tests: rmTestIds,
       hypotheses: (full?.hypothesis_ids as string[] | undefined)
         ?? [...new Set(rmTestIds.map(t => tests.get(t)!.hypothesisId).filter(Boolean) as string[])],
-      frontier: Number(prog.frontier ?? rm.frontier_count ?? 0),
-      frontierIds: ((full?.frontier_test_ids as string[] | undefined) ?? []).filter(t => tests.has(t)),
+      testsSource: listed.length ? 'read_model.roadmaps.test_ids' : 'tests[].roadmap_id',
+      frontierSource: typeof prog.frontier === 'number' ? 'read_model.roadmaps.progress.frontier' : typeof rm.frontier_count === 'number' ? 'evolution.roadmaps.frontier_count' : undefined,
+      frontier: typeof prog.frontier === 'number' ? prog.frontier : typeof rm.frontier_count === 'number' ? rm.frontier_count : null,
+      frontierIds: (full?.frontier_test_ids as string[] | undefined) ?? [],
+      frontierIdsPublished: Array.isArray(full?.frontier_test_ids),
       objectives: Array.isArray(ch.objectives) ? (ch.objectives as string[]) : [],
       progress: prog,
     });
@@ -310,7 +322,7 @@ function aggregate(verdicts: Verdict[]): Verdict | null {
   if (!verdicts.length) return null;
   // Filhos confirmados E refutados: a hipótese está em disputa, nunca "confirmada" por precedência.
   if (verdicts.includes('CONFIRMED') && verdicts.includes('REFUTED')) return 'REVIEW';
-  for (const v of ['CONFIRMED', 'REFUTED', 'REVIEW', 'PROVISIONAL', 'RUNNING', 'CHECKPOINTED', 'READY', 'BLOCKED'] as Verdict[]) if (verdicts.includes(v)) return v;
+  for (const v of ['CONFIRMED', 'REFUTED', 'REVIEW', 'PROVISIONAL', 'RUNNING', 'CHECKPOINTED', 'READY', 'BLOCKED', 'REJECTED'] as Verdict[]) if (verdicts.includes(v)) return v;
   return 'DISCARDED';
 }
 
@@ -318,15 +330,7 @@ export const humanId = (id: string) => id
   .replace(/^(RM|CAMP|HYP|META)-/, '').replace(/-20\d{6}(-V\d+)?$/, '').replace(/-V\d+$/, '')
   .replace(/-/g, ' ').toLowerCase().replace(/^./, c => c.toUpperCase());
 
-export const ago = (iso?: string | null): string => {
-  if (!iso) return '';
-  const minutes = Math.round((Date.now() - Date.parse(iso)) / 60000);
-  if (!Number.isFinite(minutes)) return '';
-  if (minutes < 1) return 'agora';
-  if (minutes < 60) return `há ${minutes} min`;
-  if (minutes < 1440) return `há ${Math.round(minutes / 60)} h`;
-  return `há ${Math.round(minutes / 1440)} d`;
-};
+export const ago = (iso?: string | null): string => iso ? formatPublishedAge(iso) : '';
 
 /** Linha de base por visitante: "o que mudou desde a sua última visita" sem inventar histórico no servidor. */
 export interface Baseline { at: string; counts: Record<string, number> }
