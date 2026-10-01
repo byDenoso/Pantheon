@@ -1,3 +1,4 @@
+import {publicIncidentSummaries} from './incident-operations.mjs';
 import {createHash} from 'node:crypto';
 import {buildScienceProjectionV1,towerSourceRef} from '../../scripts/science-projection-v1.mjs';
 
@@ -106,13 +107,14 @@ export function buildScienceReadModelV2(snapshot){
     contract:SCIENCE_READ_MODEL_V2_CONTRACT,state:snapshot?'READY':'DATA_UNAVAILABLE',sourceVersion:text(snapshot?.sourceVersion||snapshot?.sourceModifiedAt),freshness:snapshot?.generatedAt?'SNAPSHOT':'DEGRADED',
     structure:{programs,campaigns,facets,edges},observations,comparisons,syntheses,
     investigation:{hypotheses:lane('HYPOTHESIS'),claims:lane('CLAIM'),tests:lane('TEST'),runs:lane('RUN'),results:lane('RESULT'),evidence:lane('EVIDENCE'),decisions:lane('DECISION'),knowledge:lane('KNOWLEDGE'),pipelines:lane('PIPELINE')},
-    activity:activity.items,shards:[],provenance:provenance(snapshot)
+    activity:activity.items,shards:[],provenance:provenance(snapshot),
+    ...(Array.isArray(snapshot?.projection?.evolution?.incidents)?{evolution:{incidents:publicIncidentSummaries(snapshot.projection.evolution)}}:{})
   };
-  return {...core,generatedAt:text(snapshot?.generatedAt),fingerprint:fingerprint(core),authority:snapshot?.authority||'GOOGLE_DRIVE',projectionFingerprint:snapshot?.projection?snapshot.fingerprint:undefined,scienceProjection:tower?.v1};
+  return {...core,lastReadAt:text(snapshot?.lastReadAt),generatedAt:text(snapshot?.generatedAt),fingerprint:fingerprint(core),authority:snapshot?.authority||'GOOGLE_DRIVE',projectionFingerprint:snapshot?.projection?snapshot.fingerprint:undefined,scienceProjection:tower?.v1};
 }
 
 export function buildScienceChanges(snapshot,model=buildScienceReadModelV2(snapshot)){
-  return {contract:ACTIVITY_LEDGER_CONTRACT,state:model.state,sourceVersion:model.sourceVersion,fingerprint:fingerprint({contract:ACTIVITY_LEDGER_CONTRACT,items:model.activity}),scienceFingerprint:model.fingerprint,projectionFingerprint:model.projectionFingerprint,freshness:model.freshness,authority:model.authority,generatedAt:model.generatedAt,items:model.activity,provenance:model.provenance};
+  return {contract:ACTIVITY_LEDGER_CONTRACT,state:model.state,sourceVersion:model.sourceVersion,fingerprint:fingerprint({contract:ACTIVITY_LEDGER_CONTRACT,items:model.activity}),scienceFingerprint:model.fingerprint,projectionFingerprint:model.projectionFingerprint,freshness:model.freshness,authority:model.authority,generatedAt:model.generatedAt,lastReadAt:model.lastReadAt,items:model.activity,provenance:model.provenance};
 }
 
 const modelCache=new Map();
@@ -121,5 +123,5 @@ export function scienceModelFor(snapshot,{onCache}={}){
   if(!key){onCache?.('MISS');return buildScienceReadModelV2(snapshot);}
   let model=modelCache.get(key);onCache?.(model?'HIT':'MISS');
   if(!model){model=buildScienceReadModelV2(snapshot);modelCache.set(key,model);while(modelCache.size>4)modelCache.delete(modelCache.keys().next().value);}
-  return {...model,generatedAt:text(snapshot?.generatedAt)};
+  return {...model,lastReadAt:text(snapshot?.lastReadAt),generatedAt:text(snapshot?.generatedAt)};
 }

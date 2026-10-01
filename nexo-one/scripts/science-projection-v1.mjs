@@ -37,7 +37,7 @@ export const isTowerRef = value => /^tower(-live)?:\/\//.test(String(value || ''
 
 export function towerSourceRef(manifest, path) {
   const cleanPath = String(path || '').replace(/^\/+/, '');
-  if (manifest?.tower_file_id && /^sha256:[0-9a-f]{64}$/i.test(String(manifest.tower_revision || ''))) {
+  if (liveIdentity(manifest)) {
     return `tower-live://${manifest.tower_file_id}@${manifest.tower_revision}#${cleanPath}`;
   }
   return `tower://${manifest.tower_repository || 'byDenoso/NEXO-Obsidian-Vault'}@${manifest.tower_commit}/${cleanPath}`;
@@ -242,12 +242,16 @@ function testRecord(raw, manifest) {
   return base;
 }
 
+const liveIdentity = source => typeof source?.tower_file_id === 'string' && Boolean(source.tower_file_id.trim()) && typeof source?.tower_revision === 'string' && /^sha256:[0-9a-f]{64}$/i.test(source.tower_revision);
+const legacyIdentity = source => typeof source?.tower_commit === 'string' && /^[0-9a-f]{40}$/i.test(source.tower_commit);
+const towerIdentity = source => (source?.tower_commit == null || legacyIdentity(source)) && (liveIdentity(source) || legacyIdentity(source));
+
 export function buildScienceProjectionV1({ projection, manifest } = {}) {
   if (!manifest || manifest.authority !== 'TOWER_V06' || manifest.projection_only !== true || manifest.writeback !== 'FORBIDDEN') {
     reject('source identity must be a read-only TOWER_V06 public projection');
   }
-  if (!/^[0-9a-f]{40}$/i.test(String(manifest.tower_commit || '')) || !/^sha256:[0-9a-f]{64}$/i.test(String(manifest.projection_fingerprint || ''))) {
-    reject('source identity requires Tower commit and projection fingerprint');
+  if (!towerIdentity(manifest) || !/^sha256:[0-9a-f]{64}$/i.test(String(manifest.projection_fingerprint || ''))) {
+    reject('source identity requires live Tower file/revision or legacy commit, and projection fingerprint');
   }
   const base = {
     contract: SCIENCE_PROJECTION_CONTRACT,
@@ -255,7 +259,8 @@ export function buildScienceProjectionV1({ projection, manifest } = {}) {
     source: {
       authority: 'TOWER_V06',
       tower_repository: manifest.tower_repository || 'byDenoso/NEXO-Obsidian-Vault',
-      tower_commit: manifest.tower_commit,
+      tower_commit: manifest.tower_commit || null,
+      ...(liveIdentity(manifest) ? { tower_file_id: manifest.tower_file_id, tower_revision: manifest.tower_revision } : {}),
       projection_fingerprint: manifest.projection_fingerprint,
       projection_ref: towerSourceRef(manifest, 'TOWER_V06/projections/public/projection.json'),
       writeback: 'FORBIDDEN',
@@ -283,7 +288,8 @@ export function validateScienceProjectionV1(output) {
   if (!output || output.contract !== SCIENCE_PROJECTION_CONTRACT || output.version !== 1) reject('contract/version invalid');
   if (output.source?.authority !== 'TOWER_V06' || output.source?.writeback !== 'FORBIDDEN'
     || !/^sha256:[0-9a-f]{64}$/i.test(String(output.source?.projection_fingerprint || ''))
-    || !String(output.source?.tower_commit || '').match(/^[0-9a-f]{40}$/i)
+    || !towerIdentity(output.source)
+    || ((output.source?.tower_file_id != null || output.source?.tower_revision != null) && !liveIdentity(output.source))
     || !isTowerRef(output.source?.projection_ref)) reject('source identity invalid');
   for (const collection of ['campaigns', 'hypotheses', 'tests']) {
     if (!Array.isArray(output[collection])) reject(`${collection} must be an array`);

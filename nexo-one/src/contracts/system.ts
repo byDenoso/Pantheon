@@ -387,7 +387,9 @@ export interface ScienceProjectionV1 {
   source: {
     authority: 'TOWER_V06';
     tower_repository: string;
-    tower_commit: string;
+    tower_commit: string | null;
+    tower_file_id?: string;
+    tower_revision?: string;
     projection_fingerprint: string;
     projection_ref: string;
     writeback: 'FORBIDDEN';
@@ -418,6 +420,26 @@ export interface EvolutionSignalCluster {
   topic_ids: string[]; test_ids: string[]; first_seen?: string | null; last_seen?: string | null;
 }
 /** Public-safe incident summary; private causes and evidence references stay in the Tower. */
+export interface IncidentOperationalItem {
+  work_id: string;
+  test_id: string | null;
+  current_owner: string | null;
+  assigned_to: string | null;
+  ownership_state: 'ACCEPTED' | 'ASSIGNED_UNACCEPTED' | 'UNRECORDED';
+  accepted: boolean;
+  validation_state: 'PENDING' | 'EVIDENCE_REQUIRED' | 'REVALIDATION_REQUIRED' | 'PREREQUISITES_VALIDATED';
+}
+export interface IncidentOperationalStatus {
+  policy: 'INCIDENT_OPERATIONS_V1';
+  state: 'UNLINKED' | 'OPEN' | 'RESOLVED';
+  work_ids: string[];
+  items: IncidentOperationalItem[];
+  suggested_owner: string | null;
+  reason_code: string;
+  next_action_code: 'LINK_EXISTING_WORK' | 'COMPLETE_RECOVERY' | 'VERIFY_INCIDENT_CRITERION' | 'RESOLVED';
+  resolution_scope: 'EXECUTION_PREREQUISITES' | null;
+  scientific_effect: 'NONE';
+}
 export interface EvolutionIncidentSummary {
   incident_id: string;
   /** Vetted, public Portuguese explanation; private cause and raw signal code stay in the Tower. */
@@ -427,7 +449,11 @@ export interface EvolutionIncidentSummary {
   state: string;
   evidence_count: number;
   public_ids: { tests: string[]; hypotheses: string[]; lessons: string[] };
+  /** Legacy learning owner, never operational ownership. */
   next_owner: string;
+  learning_state?: string;
+  learning_next_owner?: string;
+  operational?: IncidentOperationalStatus;
 }
 export interface EvolutionStatus {
   gate: { charters_waiting: { roadmap_id: string; question?: string | null; objectives?: string[] | null; renewable?: boolean }[];

@@ -119,7 +119,7 @@ function scienceGraphModel(projection:ScienceProjectionV1,generatedAt:string):At
   const base:AtlasMetroNode[]=[{
     id:rootId,sourceId:null,name:'Ciência',domain:'SCIENCE',parentId:null,entityType:'hub',status:'LIVE',
     summary:'Campanhas, hipóteses e testes presentes no contrato científico.',depth:0,childCount:0,descendantCount:0,
-    relationCount:0,mix:50,updatedAt:generatedAt,sourceRevision:projection.source.tower_commit,
+    relationCount:0,mix:50,updatedAt:generatedAt,sourceRevision:projection.source.tower_revision || projection.source.tower_commit || '',
     fingerprint:projection.fingerprint,authorityClass:'TOWER_V06',sourceRef:projection.source.projection_ref,
     sourceLinks:[],temporal:[],synthetic:true,
   }];
@@ -127,13 +127,13 @@ function scienceGraphModel(projection:ScienceProjectionV1,generatedAt:string):At
     id:campaignId(item.id),sourceId:item.id,name:textOf(valueOf(item,'question'))==='—'?item.id:textOf(valueOf(item,'question')),
     domain:'SCIENCE',parentId:rootId,entityType:'CAMPAIGN',status:textOf(valueOf(item,'status')),summary:textOf(valueOf(item,'question')),
     depth:1,childCount:0,descendantCount:0,relationCount:0,mix:50,updatedAt:textOf(valueOf(item,'started_at'))==='—'?generatedAt:textOf(valueOf(item,'started_at')),
-    sourceRevision:projection.source.tower_commit,fingerprint:item.fingerprint,authorityClass:'TOWER_V06',sourceRef:item.source_ref,sourceLinks:[],temporal:[],synthetic:false,
+    sourceRevision:projection.source.tower_revision || projection.source.tower_commit || '',fingerprint:item.fingerprint,authorityClass:'TOWER_V06',sourceRef:item.source_ref,sourceLinks:[],temporal:[],synthetic:false,
   });
   for(const item of projection.hypotheses)base.push({
     id:hypothesisId(item.id),sourceId:item.id,name:textOf(valueOf(item,'statement'))==='—'?item.id:textOf(valueOf(item,'statement')),
     domain:'SCIENCE',parentId:parentForHypothesis.get(item.id)||rootId,entityType:'CLAIM',status:'PUBLISHED',summary:textOf(valueOf(item,'statement')),
     depth:parentForHypothesis.has(item.id)?2:1,childCount:0,descendantCount:0,relationCount:0,mix:50,updatedAt:generatedAt,
-    sourceRevision:projection.source.tower_commit,fingerprint:item.fingerprint,authorityClass:'TOWER_V06',sourceRef:item.source_ref,sourceLinks:[],temporal:[],synthetic:false,
+    sourceRevision:projection.source.tower_revision || projection.source.tower_commit || '',fingerprint:item.fingerprint,authorityClass:'TOWER_V06',sourceRef:item.source_ref,sourceLinks:[],temporal:[],synthetic:false,
   });
   for(const item of projection.tests){
     const campaign=String(valueOf(item,'campaign_id')||'');
@@ -141,7 +141,7 @@ function scienceGraphModel(projection:ScienceProjectionV1,generatedAt:string):At
     base.push({
       id:testId(item.id),sourceId:item.id,name:item.id,domain:'SCIENCE',parentId:parent,entityType:'TEST',
       status:textOf(valueOf(item,'verdict')),summary:textOf(valueOf(item,'method')),depth:parent===rootId?1:2,
-      childCount:0,descendantCount:0,relationCount:0,mix:50,updatedAt:generatedAt,sourceRevision:projection.source.tower_commit,
+      childCount:0,descendantCount:0,relationCount:0,mix:50,updatedAt:generatedAt,sourceRevision:projection.source.tower_revision || projection.source.tower_commit || '',
       fingerprint:item.fingerprint,authorityClass:'TOWER_V06',sourceRef:item.source_ref,sourceLinks:[],temporal:[],synthetic:false,
     });
   }

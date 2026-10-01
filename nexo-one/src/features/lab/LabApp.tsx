@@ -1,3 +1,5 @@
+import { IncidentResponsibility } from '../../components/IncidentResponsibility.tsx';
+import { incidentView, guardianAuditTime } from '../../viewmodels/incidents.ts';
 // NEXO Observatório: páginas em HUD sobre a teia cósmica.
 // Rotas: #/agora #/ciclo #/roadmaps #/roadmap/<id> #/evidencia[?v=] #/e/<id> #/saude
 import { NARRATION } from './narration';
@@ -676,17 +678,19 @@ function Health({ state, lab }: { state: SystemState; lab: Lab }) {
       <div className={`health-cell s-${providersDown.length ? 'warn' : 'ok'}`}><span>Provedores</span><strong>{state.providers.length - providersDown.length}/{state.providers.length}</strong><em>disponíveis</em></div>
     </div>
     {(ev?.watchdog?.quiet?.length ?? 0) > 0 && <QuietLoops lab={lab} quiet={ev!.watchdog!.quiet!} at={ev!.watchdog!.checked_at ?? state.generated_at} />}
-    {g && g.failing_areas.length > 0 && <Section title="O que está falhando" id="he-fail">
+    {g && g.failing_areas.length > 0 && <Section title="Achados da última auditoria" kicker={guardianAuditTime(g.checked_at)} id="he-fail">
+      <p className="hud-muted">Relatório do Guardião nesse horário. A sincronização atual exige uma nova leitura; este histórico não confirma divergência atual.</p>
       <ul className="hud-list">{g.failing_areas.map(a => <li key={a}>{guardianArea(a).replace(/^./, c => c.toUpperCase())}</li>)}</ul>
     </Section>}
-    {(ev?.incidents?.length ?? 0) > 0 && <Section title="Incidentes" kicker={`${ev!.incidents!.length} abertos`} id="he-inc">
+    {(ev?.incidents?.length ?? 0) > 0 && <Section title="Incidentes" kicker={`${ev!.incidents!.length} registros`} id="he-inc">
       <ul className="incidents">{ev!.incidents!.map(i => {
-        const st = INCIDENT_STATE[i.state.toUpperCase()] ?? { label: i.state.toLowerCase(), tone: 'warn' };
+        const st = incidentView(i);
         const links = [...i.public_ids.tests, ...i.public_ids.hypotheses];
         return <li key={i.incident_id} className={`incident s-${st.tone}`}>
           <p className="incident-head"><span className="incident-state">{st.label}</span>
-            <span className="hud-muted">visto {i.evidence_count} {i.evidence_count === 1 ? 'vez' : 'vezes'} · quem investiga: {ROLE_PT[i.next_owner.toUpperCase()] ?? i.next_owner}</span></p>
+            <span className="hud-muted">visto {i.evidence_count} {i.evidence_count === 1 ? 'vez' : 'vezes'}</span></p>
           <p className="incident-text">{humanize((i.summary_plain ?? i.summary_pt ?? 'Problema registrado sem descrição pública.').replace(/(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):\d{2}Z/g, (_m: string, y: string, mo: string, d: string, h: string, mi: string) => `${d}/${mo} às ${h}:${mi} UTC`).replace(/Falta duas/g, 'Faltam duas'))}</p>
+          <IncidentResponsibility incident={i} />
           {links.length > 0 && <p className="incident-links">{links.slice(0, 4).map(l => <E key={l} id={l} />)}</p>}
         </li>;
       })}</ul>
@@ -1067,12 +1071,6 @@ const ICON: Record<string, string> = {
 function Icon({ n }: { n: string }) {
   return <svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={ICON[n] ?? ICON.dot} /></svg>;
 }
-
-const INCIDENT_STATE: Record<string, { label: string; tone: 'ok' | 'warn' | 'crit' }> = {
-  OBSERVED: { label: 'Percebido', tone: 'warn' }, OPEN: { label: 'Aberto', tone: 'warn' }, INVESTIGATING: { label: 'Investigando', tone: 'warn' },
-  MITIGATED: { label: 'Contornado', tone: 'ok' }, RESOLVED: { label: 'Resolvido', tone: 'ok' }, CLOSED: { label: 'Resolvido', tone: 'ok' },
-  ESCALATED: { label: 'Precisa do Dener', tone: 'crit' }, BLOCKED: { label: 'Travado', tone: 'crit' },
-};
 
 // ---------- assinatura: picos acústicos do CMB (forma ilustrativa de D_ℓ) ----------
 const ACOUSTIC = (() => {

@@ -13,7 +13,7 @@ const publicThread=row=>!/(OLYMPUS|CLIENT|PERSON|PRIVATE)/i.test(text(row?.threa
 const safeOperation=row=>({
   id:text(row?.work_id||row?.id),kind:text(row?.kind),title:text(row?.question||row?.title)||text(row?.work_id||row?.id),status:text(row?.status),priority:text(row?.priority),updatedAt:text(row?.updated_at||row?.updatedAt),threadId:text(row?.thread_id),resultRef:text(row?.result_ref)||undefined
 });
-const withMeta=(model,data)=>({sourceVersion:model.sourceVersion,fingerprint:model.fingerprint,freshness:model.freshness,provenance:model.provenance,authority:model.authority,projectionFingerprint:model.projectionFingerprint,generatedAt:model.generatedAt,...data});
+const withMeta=(model,data)=>({sourceVersion:model.sourceVersion,fingerprint:model.fingerprint,freshness:model.freshness,provenance:model.provenance,authority:model.authority,projectionFingerprint:model.projectionFingerprint,generatedAt:model.generatedAt,lastReadAt:model.lastReadAt,...data});
 
 function allInvestigation(model){return Object.values(model.investigation).flatMap(arr);}
 function searchable(model){
@@ -85,7 +85,7 @@ export async function executeMcpTool(snapshot,name,args={},options={}){
     case 'get_operations': {
       const limit=bounded(args.limit,100,500);
       const items=arr(snapshot?.projection?.work||snapshot?.sections?.WORK).filter(row=>publicThread(row)&&isPublicResearchRecord(row)).map(safeOperation).filter(item=>item.id).slice(0,limit);
-      return withMeta(model,{items,total:items.length});
+      return withMeta(model,{items,total:items.length,...(model.evolution?{incidents:model.evolution.incidents}:{})});
     }
     case 'get_activity': {
       const changes=buildScienceChanges(snapshot,model);

@@ -87,7 +87,7 @@ const workIdOf = (node: ProjectedWorkNode) => node.id.replace(/^work:/, '').repl
 const technicalWorkTitle = (title: string) => /^(?:[A-Z]\d{1,3}(?:[-_: ]|$)|[A-Z0-9]+(?:[_-][A-Z0-9]+)+|[A-Z0-9][A-Z0-9 _:-]{5,})/.test(title.trim());
 const workTitleOf = (node: ProjectedWorkNode) => {
   const title = node.label.replace(/^WORK::/, '');
-  return title === workIdOf(node) || technicalWorkTitle(title) ? 'Etapa sem descrição simples' : humanizeText(title);
+  return title === workIdOf(node) || technicalWorkTitle(title) ? `Tarefa ${workIdOf(node)} · descrição pública não informada` : humanizeText(title);
 };
 const priorityLabel = (value?: string) => ({
   P0: 'Urgente', CRITICAL: 'Urgente', P1: 'Alta', HIGH: 'Alta', P2: 'Normal', MEDIUM: 'Média', LOW: 'Baixa',
