@@ -2,16 +2,18 @@
 import assert from 'node:assert/strict';
 import { readFile, mkdir, writeFile } from 'node:fs/promises';
 import { chromium } from 'playwright';
+import { labVisualFixture } from './lab-visual-fixture.mjs';
+import { buildLab } from '../src/features/lab/model.ts';
 import { buildPagesProjection } from '../scripts/build-pages-system.mjs';
 
 const input = process.env.NEXO_PUBLIC_PROJECTION_INPUT;
-assert.ok(input, 'Set NEXO_PUBLIC_PROJECTION_INPUT to the sanctioned public audit projection');
-const projection = JSON.parse(await readFile(input, 'utf8'));
+const projection = input ? JSON.parse(await readFile(input, 'utf8')) : labVisualFixture();
 const { system } = buildPagesProjection({ projection, manifestFile: projection.manifest });
+const blocked = buildLab(system).counts.BLOCKED;
 const base = process.env.NEXO_BASE_URL || 'http://127.0.0.1:4178';
 const output = 'test-output/cinematic';
 await mkdir(output, { recursive: true });
-const browser = await chromium.launch({ headless: true, executablePath: process.env.CHROMIUM_EXECUTABLE || '/usr/bin/chromium', args: ['--no-sandbox', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'] });
+const browser = await chromium.launch({ headless: true, ...(process.env.CHROMIUM_EXECUTABLE ? { executablePath: process.env.CHROMIUM_EXECUTABLE } : {}), args: ['--no-sandbox', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'] });
 const reports = [];
 const noOverflow = async (page, route) => {
   const size = await page.evaluate(() => ({ width: innerWidth, scroll: document.documentElement.scrollWidth }));
@@ -45,12 +47,12 @@ try {
     await page.goto(base + '/#/agora');
     await page.locator('#now-problem').waitFor();
     await page.waitForTimeout(500);
-    assert.match(await page.locator('.now-priorities').innerText(), /54 testes parados/);
-    assert.match(await page.locator('#now-next').locator('..').innerText(), /recuperar os 54 bloqueios/);
+    assert.match(await page.locator('.now-priorities').innerText(), new RegExp(`${blocked} testes parados`));
+    assert.match(await page.locator('#now-next').locator('..').innerText(), new RegExp(`recuperar os ${blocked} bloqueios`));
     assert.equal(await page.locator('#now-fronts').locator('..').locator('.fronts>li').count(), 8);
     assert.match(await page.locator('#now-fronts').locator('..').innerText(), /1\.0\.0.*2026-09-28/s);
     assert.match(await page.locator('#now-autonomy').locator('..').innerText(), /30 \/ 33.*9\.4 h.*17 \/ 33.*53 \/ 53/s);
-    assert.match(await page.locator('#now-autonomy').locator('..').innerText(), /normalizados contêm 54 BLOCKED/);
+    assert.match(await page.locator('#now-autonomy').locator('..').innerText(), new RegExp(`normalizados contêm ${blocked} BLOCKED`));
     assert.match(await page.locator('.monologue').innerText(), /cobertura parcial/);
     await noOverflow(page, name + ':home');
     if (fallback) assert.equal(await page.locator('.observatory.scene-unavailable').count(), 1);
@@ -58,6 +60,7 @@ try {
       assert.equal(await page.locator('.obs-scene canvas').count(), 1);
       if (theme === 'dark') assert.equal(await page.locator('.observatory').evaluate(el => getComputedStyle(el).getPropertyValue('--o-accent').trim()), '#d4bf95');
     }
+    if (!input) await page.addStyleTag({ content: 'body::after{content:"FIXTURE VISUAL · DADOS SINTÉTICOS · SOMENTE TESTE";position:fixed;left:12px;bottom:6px;z-index:9999;padding:4px 8px;background:#15120c;color:#f4e4bd;font:11px system-ui;pointer-events:none}' });
     await page.screenshot({ path: output + '/' + name + '-home.png' });
     await page.evaluate(() => { location.hash = '#/e/FAM-DE-FS-GEOGROWTH-ELG-DESI-PP'; });
     await page.locator('.h1-entity').locator('..').waitFor();
