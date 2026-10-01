@@ -1272,9 +1272,9 @@
       "source": "legacy-acked"
     },
     "inbox/scheduled-guardiao-fitness-20261001t1608z.json": {
-      "applied_at": "2026-10-01T16:23:08Z",
+      "applied_at": "2026-10-01T16:25:59Z",
       "fingerprint": "d8dceebebd03a61fcd68e443618dd533d3f95d8e107279250c6efa7a1c727600",
-      "tower_revision": "sha256:b71cd2200e91000939435cd636019fd6f6795ee594d579ce8747186e6c487568"
+      "tower_revision": "sha256:a52d6bf2a1a05e2cda63f3802541eabae86c0df45643555b40ac20c95a6414cb"
     },
     "inbox/scheduled-guardiao-heartbeat-20260927t200631z.json": {
       "fingerprint": "c3284ba4adb20aeb318160e02374fda047333c969b6828145ac907cd6d4fde40",
@@ -1380,9 +1380,9 @@
       "source": "legacy-acked"
     },
     "inbox/scheduled-guardiao-recipe-review-pr395-c90f8752.json": {
-      "applied_at": "2026-10-01T16:23:08Z",
+      "applied_at": "2026-10-01T16:25:59Z",
       "fingerprint": "3a0655a473f1c6b836564da168044651416e8e50dc723eef361870ced17f9a28",
-      "tower_revision": "sha256:b71cd2200e91000939435cd636019fd6f6795ee594d579ce8747186e6c487568"
+      "tower_revision": "sha256:a52d6bf2a1a05e2cda63f3802541eabae86c0df45643555b40ac20c95a6414cb"
     },
     "inbox/scheduled-interactive-20260929-router040-ready-binds-v1.json": {
       "fingerprint": "9c2ae392c4fa126a5541d50e0360e2036a3c6d6d280edc058003c19ec6d9f22c",
