@@ -17,7 +17,8 @@ import type { ScenePage, SceneEvents } from './ObservatoryScene.tsx';
 import { normDomain } from './domains.ts';
 import './lab.css';
 import '../../styles/atlas-cinematic.css';
-import { currentVerdictText, matchesSearch, boardMeta, readinessLabel, hasPublishedValue, roadmapTrail } from './presentation.ts';
+import { currentVerdictText, matchesSearch, boardMeta, readinessLabel, hasPublishedValue, roadmapTrail, latestBoardRecord } from './presentation.ts';
+import { BoardMessage } from './BoardMessage.tsx';
 import { selectScienceFocus, scientificStatRows } from './science-presentation.ts';
 import { autonomyPresentation, publishedQueueGap } from './autonomy-presentation.ts';
 import { DependencyFlow } from './DependencyFlow.tsx';
@@ -208,6 +209,7 @@ function tally(list: TestEntity[]) {
 }
 // ---------- Agora ----------
 function Now({ lab, state, onReplay, replayCount }: { lab: Lab; state: SystemState; onReplay: () => void; replayCount: number }) {
+  const [boardVisit, setBoardVisit] = useState(0);
   const ev = state.evolution;
   const g = state.guardian;
   const stale = !isPublishedFresh(state.generated_at);
@@ -249,6 +251,7 @@ function Now({ lab, state, onReplay, replayCount }: { lab: Lab; state: SystemSta
         : <p className="thesis">Ainda sem resultado científico disponível para destaque; {S.ready} testes marcados READY na leitura científica.</p>}
     </header>
 
+    <BoardFocus state={state} lab={lab} onOpenBoard={() => setBoardVisit(value => value + 1)} />
     <LiveNowPanel lab={lab} />
     <GatePanel state={state} />
     {gate > 0 && !state.inbox?.some(i => i.kind === 'APROVAR') && <a className="hud-gate" href="#/ciclo">
@@ -294,7 +297,7 @@ function Now({ lab, state, onReplay, replayCount }: { lab: Lab; state: SystemSta
     </Section>}
 
     <Monologue lab={lab} state={state} onReplay={onReplay} replayCount={replayCount} />
-    <Board state={state} lab={lab} />
+    <Board state={state} lab={lab} visit={boardVisit} />
     <Autonomy state={state} />
     <Families state={state} />
     <Calibration lab={lab} />
@@ -1227,37 +1230,49 @@ function nameIds(text: string, lab: Lab): string {
     .replace(/(um teste)(,? e um teste)+/g, 'alguns testes');
 }
 
-function Board({ state, lab }: { state: SystemState; lab: Lab }) {
+const boardRole = (role: string) => role === 'ALL' ? 'todos os papéis' : roleLabel(role);
+function BoardFocus({ state, lab, onOpenBoard }: { state: SystemState; lab: Lab; onOpenBoard: () => void }) {
+  const records = state.evolution?.board ?? [];
+  const post = latestBoardRecord(records);
+  if (!post) return null;
+  return <section className="hud-section board-focus" aria-labelledby="board-focus-title">
+    <p className="hud-kicker">Último recado no recorte recebido</p>
+    <h2 id="board-focus-title">O papo no mural</h2>
+    <p className="board-caption"><span>Narração · interface</span>{boardRole(post.from)} deixou um recado para {boardRole(post.to)}.</p>
+    <BoardMessage key={post.id} post={post} lab={lab} from={boardRole(post.from)} to={boardRole(post.to)} records={records} focus />
+    <button type="button" className="board-open" onClick={onOpenBoard}>Ver todos os recados <span aria-hidden="true">→</span></button>
+  </section>;
+}
+
+function Board({ state, lab, visit = 0 }: { state: SystemState; lab: Lab; visit?: number }) {
   const now = Date.now();
   const [all, setAll] = useState(false);
   const [owner, setOwner] = useState('');
   const [priority, setPriority] = useState('');
   const [status, setStatus] = useState('Pendentes');
-  const [openIds, setOpenIds] = useState<Set<string>>(new Set());
+  useEffect(() => {
+    if (!visit) return;
+    setOwner(''); setPriority(''); setStatus(''); setAll(true);
+    const heading = document.getElementById('now-board');
+    heading?.setAttribute('tabindex', '-1');
+    heading?.focus({ preventScroll: true });
+    heading?.scrollIntoView({ behavior: 'instant', block: 'start' });
+  }, [visit]);
   const raw = state.evolution?.board ?? [];
   const every = raw.slice().reverse().map(post => ({ ...post, meta: boardMeta(post, now, raw) }));
   if (!every.length) return null;
   const filtered = every.filter(p => (!owner || p.meta.owner === owner) && (!priority || p.meta.priority === priority) && (!status || (status === 'Pendentes' ? !['Resolvido', 'Expirado'].includes(p.meta.status) : p.meta.status === status)));
   const posts = all ? filtered : filtered.slice(0, 8);
-  const who = (r: string) => (r === 'ALL' ? 'todos' : roleLabel(r));
-  const toggle = (id: string) => setOpenIds(prev => { const n = new Set(prev); if (n.has(id)) n.delete(id); else n.add(id); return n; });
+  const who = boardRole;
   return <Section title="Conversa entre os agentes" kicker={`${filtered.length} de ${every.length} recados · mural original`} id="now-board">
     <div className="board-filters" role="group" aria-label="Filtrar mural">
       <label>Destino / responsável<select value={owner} onChange={e => { setOwner(e.target.value); setAll(false); }}><option value="">Todos</option>{[...new Set(every.map(p => p.meta.owner))].map(x => <option key={x} value={x}>{who(x)}</option>)}</select></label>
       <label>Prioridade<select value={priority} onChange={e => { setPriority(e.target.value); setAll(false); }}><option value="">Todas</option>{[...new Set(every.map(p => p.meta.priority))].map(x => <option key={x}>{x}</option>)}</select></label>
       <label>Status<select value={status} onChange={e => { setStatus(e.target.value); setAll(false); }}><option value="">Todos</option>{['Pendentes', 'Aberto', 'Aceito', 'Respondido', 'Resolvido', 'Expirado'].map(x => <option key={x}>{x}</option>)}</select></label>
     </div>
-    <p className="hud-note">O destino do recado só representa um responsável quando isso foi declarado. Prioridade e próxima ação vêm do registro ou de campos nomeados no texto.</p>
+    <p className="hud-note">Aqui está o que cada papel escreveu. Autor e destino vêm do mural; prioridade e próxima ação aparecem quando foram declaradas.</p>
     {!posts.length && <p role="status">Nenhum recado com estes filtros.</p>}
-    <ol className="board">{posts.map(p => {
-      const full = p.text; const short = clip(full, 220); const isOpen = openIds.has(p.id); const long = short !== full;
-      return <li key={p.id}>
-      <p className="board-head"><b>{who(p.from)}</b><i aria-hidden="true">→</i><span>{who(p.to)}</span><time>{ago(p.at)}</time></p>
-      <p className="board-state">{p.meta.status} · prioridade: {p.meta.priority}</p>
-      <p className="board-text">{isOpen ? full : short}{long && <button type="button" aria-expanded={isOpen} className="board-more" onClick={() => toggle(p.id)}>{isOpen ? ' ver menos' : ' ler tudo'}</button>}</p>
-      <p className="board-next"><b>Próxima ação:</b> {p.meta.nextAction ?? 'não declarada em campo próprio'}</p>
-      {(p.refs?.length ?? 0) > 0 && <p className="hud-refs">{p.refs!.filter(r => lab.tests.has(r) || lab.hypotheses.has(r)).slice(0, 3).map(r => <E key={r} id={r} />)}</p>}
-    </li>;})}</ol>
+    <ol className="board">{posts.map(p => <li key={p.id}><BoardMessage post={p} lab={lab} from={who(p.from)} to={who(p.to)} records={raw} /></li>)}</ol>
     {filtered.length > 8 && <button type="button" className="board-all" onClick={() => setAll(x => !x)}>{all ? 'Mostrar só os 8 mais recentes' : `Ver todos os ${filtered.length} recados`}</button>}
   </Section>;
 }

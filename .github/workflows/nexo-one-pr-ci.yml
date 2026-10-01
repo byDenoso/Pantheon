@@ -58,13 +58,16 @@ jobs:
             sleep 1
           done
           NEXO_BASE_URL=http://127.0.0.1:4178 node test/lab-cinematic-integrity.browser.mjs
+          NEXO_BASE_URL=http://127.0.0.1:4178 node test/board-message.browser.mjs
 
       - name: Upload Atlas visual QA evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: atlas-cinematic-visual-${{ github.event.pull_request.head.sha }}
-          path: nexo-one/test-output/cinematic/
+          path: |
+            nexo-one/test-output/cinematic/
+            nexo-one/test-output/board-message/
           if-no-files-found: warn
           retention-days: 7
 

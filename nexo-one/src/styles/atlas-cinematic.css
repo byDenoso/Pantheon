@@ -90,6 +90,61 @@
 .observatory .reading-details>summary{cursor:pointer;min-height:44px;padding:12px 0;color:var(--o-dim);font:12px/1.5 var(--f-mono)}
 .observatory .feed-kind{display:block;color:var(--o-quiet);font:10px/1.5 var(--f-mono);margin:0 0 6px}
 .observatory :is(.board-text,.tele-note .tele-t){white-space:pre-wrap;overflow-wrap:anywhere}
+
+/* A published message takes the foreground. The route line is decorative, never an activity pulse. */
+.observatory .board-focus{position:relative;overflow:hidden;border-color:rgba(var(--o-accent-rgb),.38);border-left:3px solid var(--o-accent);padding:20px!important}
+.observatory .board-focus::before{content:"";position:absolute;top:0;right:0;width:180px;height:140px;pointer-events:none;background:radial-gradient(ellipse at top right,rgba(var(--o-accent-rgb),.1),transparent 70%)}
+.observatory .board-focus>h2{margin-bottom:10px}
+.observatory .board-focus>.hud-kicker{font-size:10px!important}
+.observatory .board-focus .board-caption{font-size:13px!important;color:var(--o-dim)!important;margin:0 0 18px!important}
+.observatory .board-caption>span{display:block;font:10px/1.5 var(--f-mono);color:var(--o-quiet);margin-bottom:3px}
+.observatory .board-message{--board-lines:5;position:relative;min-width:0}
+.observatory .board-message-focus{--board-lines:4}
+.observatory .board-route{display:grid;grid-template-columns:minmax(0,1fr) 28px minmax(0,1fr);gap:10px;align-items:center;margin:0 0 14px!important}
+.observatory .board-route>span{display:grid;gap:3px;min-width:0}
+.observatory .board-route small{color:var(--o-quiet);font:10px/1.4 var(--f-mono);text-transform:uppercase;letter-spacing:.12em}
+.observatory .board-route b{color:var(--o-accent);font:500 15px/1.3 var(--f-body);overflow-wrap:anywhere}
+.observatory .board-route>i{font-style:normal;color:var(--o-accent);text-align:center;border-top:1px solid var(--o-line);border-bottom:1px solid var(--o-line);font-size:16px;line-height:26px}
+.observatory .board-receipt{display:flex;align-items:baseline;gap:12px;justify-content:space-between;margin:0 0 6px}
+.observatory .board-receipt .feed-kind{margin:0;color:var(--o-quiet)}
+.observatory .board-receipt time{font:11px/1.5 var(--f-mono);color:var(--o-quiet);flex-shrink:0}
+.observatory .board-message .board-text{font:400 15.5px/1.6 var(--f-body);font-size:15.5px!important;margin:0!important}
+.observatory .board-text[data-collapsed="true"]{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:var(--board-lines);overflow:hidden}
+.observatory .board-expand,.observatory .board-open{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:44px;padding:10px 0;background:none;border:0;color:var(--o-accent);font:500 13px/1.5 var(--f-body);cursor:pointer;text-align:left}
+.observatory .board-open{width:100%;border-top:1px solid var(--o-line);margin-top:12px;padding-bottom:0}
+.observatory .board-message .board-state{font:11px/1.5 var(--f-mono);font-size:11px!important;margin:12px 0 0!important}
+.observatory .board-message .board-next{font-size:12px!important;margin:12px 0 0!important;overflow-wrap:anywhere}
+.observatory .board-evidence{margin:12px 0 0;border-top:1px solid var(--o-line);padding-top:10px}
+.observatory .board-evidence>span{color:var(--o-quiet);font:10px/1.5 var(--f-mono)}
+.observatory .board-evidence ul{list-style:none;margin:3px 0 0;padding:0;display:grid;gap:2px}
+.observatory .board-evidence li{padding:0!important;background:none!important;border:0!important;min-width:0;box-shadow:none}
+.observatory .board-evidence :is(a,li>span){display:block;font:13px/1.5 var(--f-body);overflow-wrap:anywhere}
+.observatory .board-evidence a{color:var(--o-accent);min-height:44px;padding:10px 0;box-sizing:border-box;text-decoration:underline;text-underline-offset:3px}
+.observatory .board-evidence li>span{color:var(--o-quiet);padding:8px 0}
+.observatory .board-provenance{margin-top:8px;color:var(--o-quiet);font:11px/1.5 var(--f-mono)}
+.observatory .board-provenance summary{min-height:44px;box-sizing:border-box;padding:12px 0;cursor:pointer}
+.observatory .board-provenance dl{display:grid;gap:8px;margin:2px 0 8px}
+.observatory .board-provenance dl>div{display:grid;gap:2px}
+.observatory .board-provenance dt{color:var(--o-quiet)}
+.observatory .board-provenance dd{margin:0;color:var(--o-dim);overflow-wrap:anywhere}
+.observatory .board-message .board-provenance p{font:11px/1.5 var(--f-mono);font-size:11px!important;margin:6px 0!important}
+.observatory .board>li{padding:16px;border-left:2px solid rgba(var(--o-accent-rgb),.5)}
+.observatory .board>li:nth-child(even){background:rgba(var(--o-accent-rgb),.025)}
+.observatory #now-board{scroll-margin-top:20px}
+.observatory .tele-note{border-left:2px solid var(--o-accent);padding:12px 14px}
+.observatory .tele-note .feed-kind{letter-spacing:.025em;color:var(--o-accent)}
+.observatory .tele-note .tele-t{margin-top:8px!important}
+@media(max-width:760px){
+ .observatory[data-page="agora"]:has(.board-focus):not(.exploring):not(.flat):not(.scene-unavailable) .obs-scene{height:22vh}
+ .observatory[data-page="agora"]:has(.board-focus):not(.exploring):not(.flat):not(.scene-unavailable) .hud{top:calc(48px + 22vh)}
+ .observatory[data-page="agora"]:has(.board-focus):not(.exploring):not(.flat):not(.scene-unavailable) .explore-toggle{top:calc(48px + 22vh - 52px)}
+ .observatory .board-focus{padding:16px!important}
+ .observatory .board-route{grid-template-columns:minmax(0,1fr) 24px minmax(0,1fr);gap:8px}
+ .observatory .board-route b{font-size:14px}
+ .observatory .board-message .board-text{font-size:15px!important}
+ .observatory .board>li{padding:14px}
+ .observatory .board-focus .board-caption{margin-bottom:14px!important}
+}
 .observatory .explore-hint{width:min(720px,calc(100% - 32px));white-space:normal;text-align:center;line-height:1.6;border-radius:12px;box-sizing:border-box}
 @media(min-width:1280px){
  .observatory .explore-hint{left:100px;right:356px;width:auto;max-width:720px;transform:none;top:16px}
