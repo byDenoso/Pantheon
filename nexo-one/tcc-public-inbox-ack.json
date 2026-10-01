@@ -1793,14 +1793,14 @@
       "tower_revision": "sha256:25f8894f333b5703be60f3e7b7b8f5b009422c30a9eeb2d3ccd83a390b7e7eb3"
     },
     "inbox/scheduled-learner-20261001t2051z-rdcal-grid-medium330-bound.json": {
-      "applied_at": "2026-10-01T20:57:52Z",
+      "applied_at": "2026-10-01T21:00:26Z",
       "fingerprint": "0fc03178a48c2be94c75fe94e99fbacf6b15405dfd66e93cea4ff9bdd95046d2",
-      "tower_revision": "sha256:25f8894f333b5703be60f3e7b7b8f5b009422c30a9eeb2d3ccd83a390b7e7eb3"
+      "tower_revision": "sha256:f75e185f32463a701712089af0fdc4cb9605e3352de5eab6bb7471de5eda2818"
     },
     "inbox/scheduled-learner-20261001t2051z-rdcal-grid-narrow330-bound.json": {
-      "applied_at": "2026-10-01T20:57:52Z",
+      "applied_at": "2026-10-01T21:00:26Z",
       "fingerprint": "c22480be6d8d172477bb659c36223182cc8f2f3b23337effb4b2b3f071dbada8",
-      "tower_revision": "sha256:25f8894f333b5703be60f3e7b7b8f5b009422c30a9eeb2d3ccd83a390b7e7eb3"
+      "tower_revision": "sha256:f75e185f32463a701712089af0fdc4cb9605e3352de5eab6bb7471de5eda2818"
     },
     "inbox/scheduled-learner-261001-0309-r1-cut-desu3-rec.json": {
       "applied_at": "2026-10-01T03:21:44Z",
