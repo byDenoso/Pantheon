@@ -52,13 +52,28 @@ jobs:
           mkdir -p test-output/cinematic
           PORT=4178 VITE_SYSTEM_SOURCE=remote npm run dev > test-output/cinematic/dev-server.log 2>&1 &
           server_pid=$!
-          trap 'kill "$server_pid" 2>/dev/null || true' EXIT
+          baseline_pid=""
+          trap 'kill "$server_pid" ${baseline_pid:+"$baseline_pid"} 2>/dev/null || true' EXIT
           for attempt in $(seq 1 30); do
             if curl --silent --fail http://127.0.0.1:4178/ > /dev/null; then break; fi
             sleep 1
           done
           NEXO_BASE_URL=http://127.0.0.1:4178 node test/lab-cinematic-integrity.browser.mjs
           NEXO_BASE_URL=http://127.0.0.1:4178 node test/board-message.browser.mjs
+          baseline_dir="$RUNNER_TEMP/atlas-crew-baseline"
+          git fetch --no-tags --depth=1 origin 052fd7e3c1051b3542fd0dcf1be6fc54619e6f67
+          git worktree add --detach "$baseline_dir" FETCH_HEAD
+          ln -s "$PWD/node_modules" "$baseline_dir/nexo-one/node_modules"
+          baseline_log="$PWD/test-output/crew-layout-baseline/dev-server.log"
+          mkdir -p test-output/crew-layout-baseline
+          (cd "$baseline_dir/nexo-one"; PORT=4179 VITE_SYSTEM_SOURCE=remote npm run dev > "$baseline_log" 2>&1) &
+          baseline_pid=$!
+          for attempt in $(seq 1 30); do
+            if curl --silent --fail http://127.0.0.1:4179/ > /dev/null; then break; fi
+            sleep 1
+          done
+          NEXO_BASE_URL=http://127.0.0.1:4179 NEXO_CREW_EXPECT_BASELINE_BUG=1 node test/crew-layout.browser.mjs
+          NEXO_BASE_URL=http://127.0.0.1:4178 node test/crew-layout.browser.mjs
 
       - name: Upload Atlas visual QA evidence
         if: always()
@@ -68,6 +83,8 @@ jobs:
           path: |
             nexo-one/test-output/cinematic/
             nexo-one/test-output/board-message/
+            nexo-one/test-output/crew-layout/
+            nexo-one/test-output/crew-layout-baseline/
           if-no-files-found: warn
           retention-days: 7
 

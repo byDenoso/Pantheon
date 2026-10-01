@@ -167,6 +167,13 @@
 .observatory .crew-continuity{display:grid;gap:10px;margin:12px 0;padding-top:10px;border-top:1px solid var(--o-line)}
 .observatory .crew-continuity p{font-size:12px!important;line-height:1.55!important;color:var(--o-dim)}
 .observatory .crew-continuity b{display:block;font:11px/1.5 var(--f-mono);color:var(--o-accent);margin-bottom:3px}
+.observatory .crew-card{grid-template-columns:minmax(0,1fr);align-items:start;gap:8px;min-width:0}
+.observatory .crew-card>:is(.crew-top,.crew-hats,.crew-does,.crew-continuity,.crew-pulse){grid-column:1/-1;min-width:0;overflow-wrap:anywhere}
+.observatory .crew-card .crew-top{display:flex;flex-wrap:wrap;align-items:baseline;gap:6px 16px;justify-content:space-between}
+.observatory .crew-card .crew-top b{min-width:0;overflow-wrap:anywhere}
+.observatory .crew-card .crew-top span{display:block;max-width:100%;margin:0;white-space:normal;overflow-wrap:anywhere}
+.observatory .crew-card .crew-pulse{align-items:flex-start}
+.observatory .crew-card .crew-pulse i{flex:none;margin-top:7px}
 @keyframes source-arrival{from{opacity:.6;transform:translateY(4px)}to{opacity:1;transform:none}}
 @media(prefers-reduced-motion:reduce){.observatory .published-changes{animation:none!important}}
 
