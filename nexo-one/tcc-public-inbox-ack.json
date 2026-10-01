@@ -102,6 +102,7 @@
     "inbox/scheduled-engineer-delivery-recovered-20260930t1421z.json": "e93db28f0a0a8fa9dd857cc14c7d9f1a98168377883974fc43aa683120c5e709",
     "inbox/scheduled-engineer-growth-geometry-block-20260930t1703z.json": "1fbb6bd366889bd1f62fcc7cbe659704d43a644f849bd495b77e7cb63856b265",
     "inbox/scheduled-engineer-persistence-block-20261001t0004z.json": "de146df57885a037ff5d5cbd213fecee65be4c2dcf515d6059ce34e46227a6e5",
+    "inbox/scheduled-engineer-persistence-retry-block-20261001t1813z.json": "11dd64f6a1d6fbcb2c9084a1790a8ba2095ac3f843868cb9bee11fa2b978fb17",
     "inbox/scheduled-engineer-pr378-readme-block-20260930t1703z.json": "cbaa98efd509898429c05dfcb09bacdd4b17ed0d3e58a1d6b58b51d936d9b67b",
     "inbox/scheduled-engineer-pr395-open-20261001t1459z.json": "2b17c157dc19a36e10476c4dab92e025f5bea9c7d23bebf325b08344d1ee5c50",
     "inbox/scheduled-engineer-recipe-late-time-joint-probe-stress-20260928.json": "05fc3a57bc2cc703d9dd8277b1fb09723e4d9a4d0abd923b56f56d7d8223cb5f",
@@ -912,6 +913,11 @@
       "applied_at": "2026-10-01T07:13:17Z",
       "fingerprint": "de146df57885a037ff5d5cbd213fecee65be4c2dcf515d6059ce34e46227a6e5",
       "tower_revision": "sha256:fc47cfc137dd73829089aed68a0b1f01358e90a9d4388cc7e595d0224682820f"
+    },
+    "inbox/scheduled-engineer-persistence-retry-block-20261001t1813z.json": {
+      "applied_at": "2026-10-01T18:16:25Z",
+      "fingerprint": "11dd64f6a1d6fbcb2c9084a1790a8ba2095ac3f843868cb9bee11fa2b978fb17",
+      "tower_revision": "sha256:54c451864fb169b31c4cb96c00216b00da882647b7799edf0ea867de04d18bf1"
     },
     "inbox/scheduled-engineer-pr378-readme-block-20260930t1703z.json": {
       "fingerprint": "cbaa98efd509898429c05dfcb09bacdd4b17ed0d3e58a1d6b58b51d936d9b67b",
