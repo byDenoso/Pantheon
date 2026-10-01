@@ -22,6 +22,8 @@ const visualReady = async (page, name, exploring = false) => {
   await page.waitForFunction(expected => {
     const hud = document.querySelector('.hud');
     if (!hud || document.fonts.status !== 'loaded') return false;
+    const observatory = document.querySelector('.observatory');
+    if (!observatory || (!observatory.classList.contains('flat') && !observatory.classList.contains('scene-unavailable') && !observatory.querySelector('.obs-scene canvas'))) return false;
     const style = getComputedStyle(hud);
     if (Math.abs(Number(style.opacity) - expected) > .001) return false;
     const finite = hud.getAnimations({ subtree: true }).filter(animation => {
@@ -34,6 +36,8 @@ const visualReady = async (page, name, exploring = false) => {
   const state = await page.evaluate(() => ({
     fonts: document.fonts.status, hudOpacity: Number(getComputedStyle(document.querySelector('.hud')).opacity),
     exploring: !!document.querySelector('.observatory.exploring'),
+    sceneCanvasCount: document.querySelectorAll('.obs-scene canvas').length,
+    sceneUnavailable: !!document.querySelector('.observatory.scene-unavailable'),
   }));
   readiness.push({ name, ...state });
 };
