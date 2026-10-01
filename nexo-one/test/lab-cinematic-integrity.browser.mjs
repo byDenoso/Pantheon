@@ -142,6 +142,13 @@ try {
       await page.keyboard.press('ArrowRight');
       await page.keyboard.press('+');
       await page.getByRole('button', { name: 'Recentrar câmera' }).click();
+      const crumb = page.getByRole('navigation', { name: 'Onde você está na teia' });
+      if (viewport.width < 760) {
+        const bounds = await crumb.boundingBox();
+        const header = await page.locator('.instrument-header').boundingBox();
+        assert.ok(bounds && header && bounds.y >= header.y + header.height, 'scene breadcrumb below mobile header');
+      }
+      await crumb.getByRole('button', { name: 'NEXO', exact: true }).click();
       await visualReady(page, name + ':explore', true);
       const hint = await page.locator('.explore-hint').boundingBox();
       assert.ok(hint && hint.x >= 0 && hint.x + hint.width <= viewport.width, 'explore hint within viewport');

@@ -59,6 +59,8 @@
 }
 @media(max-width:760px){
  .observatory .obs-camera-controls{bottom:calc(84px + env(safe-area-inset-bottom))}
+ .observatory.exploring .obs-crumb{top:auto;bottom:calc(148px + env(safe-area-inset-bottom));left:16px;max-width:calc(100% - 32px);box-sizing:border-box}
+ .observatory.exploring .obs-crumb>button{min-width:44px;min-height:44px}
  .observatory .explore-hint{top:112px}
  .observatory.scene-unavailable .hud{position:relative!important;top:auto!important;bottom:auto!important;max-height:none;overflow:visible;padding-top:24px!important;padding-bottom:120px!important}
  .observatory.scene-unavailable .obs-tools{top:auto!important;bottom:calc(70px + env(safe-area-inset-bottom))!important;right:14px!important}
