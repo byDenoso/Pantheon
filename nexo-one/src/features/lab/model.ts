@@ -179,7 +179,7 @@ export function buildLab(state: SystemState): Lab {
       topicId: n?.semantic_topic_id ?? null,
       subdomain: n?.semantic_subdomain ?? null,
       topic: n?.semantic_topic ?? null,
-      blocker: n?.blocker ?? str(any.blocker) ?? (n?.state === 'BLOCKED' ? n.summary : null),
+      blocker: str(n?.blocker) ?? str(any.blocker),
       contestOf: contestTarget(id),
       contests: [],
       createdAt: str(any.created_at_effective) ?? str(any.created_at),

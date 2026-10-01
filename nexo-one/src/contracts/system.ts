@@ -404,6 +404,10 @@ export interface ScienceProjectionV1 {
 export interface GuardianStatus {
   status: 'GREEN' | 'YELLOW' | 'RED';
   checked_at: string;
+  /** Report time is distinct from a later integrity/projection recomputation. */
+  report_checked_at?: string | null;
+  live_checked_at?: string | null;
+  live_areas?: string[];
   checks_total: number;
   checks_failing: number;
   failing_areas: string[];

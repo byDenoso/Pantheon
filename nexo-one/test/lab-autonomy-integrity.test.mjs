@@ -40,8 +40,8 @@ test('versioned metrics show producer numerators and correct decisive cohort wit
 
 test('100 percent blocked is the ready-plus-blocked cohort, not all TEST or WORK', () => {
   const blocked = autonomyPresentation(v2()).inventory[1];
-  assert.equal(blocked.value, '100%');
-  assert.equal(blocked.base, '61 / 61 registros');
+  assert.equal(blocked.value, '61 / 61');
+  assert.equal(blocked.base, '61 / 61 registros · 100% nessa base publicada');
   assert.match(blocked.label, /entre READY e BLOCKED/);
   assert.match(blocked.description, /Exclui os outros estados de TEST e a fila de WORK/);
   assert.match(blocked.description, /Não mede bloqueios falsos/);
@@ -85,7 +85,8 @@ test('zero ratio needs a non-empty cohort and zero latency needs a measured samp
   assert.equal(view.inventory[1].value, '—');
   assert.equal(view.recent[1].value, '—');
   source.metrics.blocked_share = metric(0, 0, 5, 'all_tests');
-  assert.equal(autonomyPresentation(source).inventory[1].value, '0%');
+  assert.equal(autonomyPresentation(source).inventory[1].value, '0 / 5');
+  assert.match(autonomyPresentation(source).inventory[1].base, /0% nessa base publicada/);
 });
 
 test('V2 percentages require the documented scope, unit, definition and valid counts', () => {
@@ -122,7 +123,8 @@ test('a status/state normalization mismatch is disclosed without changing the pu
   const records = Object.fromEntries(Array.from({ length: 53 }, (_, i) => [String(i), { status: 'BLOCKED_INPUT' }]));
   records.contract = { state: 'BLOCKED_SCIENTIFIC_CONTRACT' };
   assert.deepEqual(publishedQueueGap(source, records), { blocked: 54, ready: 0, publishedBlocked: 53, publishedBase: 53 });
-  assert.equal(autonomyPresentation(source).inventory[1].base, '53 / 53 registros');
+  assert.equal(autonomyPresentation(source).inventory[1].value, '53 / 53');
+  assert.equal(autonomyPresentation(source).inventory[1].base, '53 / 53 registros · 100% nessa base publicada');
   delete records.contract;
   assert.equal(publishedQueueGap(source, records), null);
 });

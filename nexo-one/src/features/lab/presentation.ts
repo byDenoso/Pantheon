@@ -36,8 +36,15 @@ export function matchesSearch(query: string, ...fields: Array<string | null | un
 
 export interface BoardRecord {
   id: string; at: string; from: string; to: string; text: string;
+  refs?: string[];
   expires_at?: string | null; resolved_at?: string | null;
   priority?: string | null; next_action?: string | null; owner?: string | null; status?: string | null; reply_to?: string | null;
+}
+
+/** A focus card is a receipt, not a new exchange or a claim of current activity. */
+export function latestBoardRecord(posts: BoardRecord[], now = Date.now()): BoardRecord | null {
+  return posts.filter(post => typeof post.text === 'string' && post.text.trim() && typeof post.from === 'string' && post.from.trim() && typeof post.to === 'string' && post.to.trim() && Number.isFinite(Date.parse(post.at)) && Date.parse(post.at) <= now)
+    .sort((a, b) => Date.parse(b.at) - Date.parse(a.at))[0] ?? null;
 }
 export function boardMeta(post: BoardRecord, now: number, posts: BoardRecord[] = []) {
   const declaredAction = post.text.match(/(?:Próxim[oa] (?:aç[ãa]o|passo)|Aç[ãa]o esperada|Next action)\s*:\s*([^\n]+)/i)?.[1]?.trim();
