@@ -183,6 +183,7 @@
     "inbox/scheduled-guardiao-batch-58514712ece5d8e0.json": "2e340a74e69a3a11aee3ebe5b6a73b2dc3c9f82b8b096e8d58252d6112f50dd5",
     "inbox/scheduled-guardiao-batch-5decebe80b1f94b4.json": "f85a8fc691a8d8eaa3928e291e8302f50e309352dece4a86aebab2257007477b",
     "inbox/scheduled-guardiao-batch-e4cb67cb5d938b99.json": "acd0fc821efe52d0518f5ece0d846695ca83c0912e8c0219457a51332dc91ada",
+    "inbox/scheduled-guardiao-board-20261001t1608z.json": "8ecc04f1df7ef768a0f63bb61fc7e387b5cdbf8794eb43f79145ab4c06601b6b",
     "inbox/scheduled-guardiao-board-work-drift-20261001t0607z.json": "6a75ae2f461710636b0f85d6add2dfbb302f831273a2246f0e1e320a6062541f",
     "inbox/scheduled-guardiao-board-write-failure-20261001t0113z.json": "4330b178ad6b5d6ca71e3d49d5cfae811a791e764f9d4c9cb1e6d9c093dc4a47",
     "inbox/scheduled-guardiao-board-write-failure-20261001t0312z.json": "f9160e2d2f0d5a4d8dfffc028309af1fa4aeb09f516227f2f9008f249f74a9f3",
@@ -1234,6 +1235,11 @@
       "applied_at": "2026-09-30T23:44:02Z",
       "fingerprint": "acd0fc821efe52d0518f5ece0d846695ca83c0912e8c0219457a51332dc91ada",
       "tower_revision": "sha256:5af5b07a20f685a774c32e415577f2c25370e1718bacfb88e74b2a273534098f"
+    },
+    "inbox/scheduled-guardiao-board-20261001t1608z.json": {
+      "applied_at": "2026-10-01T17:12:48Z",
+      "fingerprint": "8ecc04f1df7ef768a0f63bb61fc7e387b5cdbf8794eb43f79145ab4c06601b6b",
+      "tower_revision": "sha256:4c018a2a5b83722f607e4baed5ac357dae3dc094d324e14586f8e1ab276ba09d"
     },
     "inbox/scheduled-guardiao-board-work-drift-20261001t0607z.json": {
       "applied_at": "2026-10-01T06:25:43Z",
