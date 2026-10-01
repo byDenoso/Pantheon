@@ -325,6 +325,7 @@
     "inbox/scheduled-operator-c-dr1-pp-u3-om315-battery.json": "e0d6900bfb34d8ff5b0e27fa6c4ca400cc285a8e9068d4b95a4233cb134c6200",
     "inbox/scheduled-operator-c-dr1-pp-u3-om315-recipe.json": "4dc646d0cfec205457904393630fddbfc661e7f65384dd48e30bba30fddda7ff",
     "inbox/scheduled-operator-c-dr1-recipe-six-20260930.json": "0862c9054d1059ec242aa940cfea36717837d118a5eaaadd4e0e8b797c62fd65",
+    "inbox/scheduled-operator-c-policy-block-20261001t0959z.json": "d6ce2ab8cd67c4370767bd12669666b821028c082c946a804589281cf6a033b3",
     "inbox/scheduled-operator-c-pr384-merged-with-changes-20260930t2007z.json": "06b8831fddd82ebb84ecb37a158d0405fa4d54782f608574cfb775331fb210a2",
     "inbox/scheduled-operator-c-ready-lifecycle-change-20260930t1213z.json": "02bc75b032716e88dbefcca6a6702e56bf4f300c051bc9441ab8d650158ff4f4",
     "inbox/scheduled-operator-ready-campaign-20260928-v3100-01.json": "74617db85b99ecdf5847dc2dd367d0f571b8d72d83d5e1de5c16269748929190",
@@ -1824,6 +1825,11 @@
     "inbox/scheduled-operator-c-dr1-recipe-six-20260930.json": {
       "fingerprint": "0862c9054d1059ec242aa940cfea36717837d118a5eaaadd4e0e8b797c62fd65",
       "source": "legacy-acked"
+    },
+    "inbox/scheduled-operator-c-policy-block-20261001t0959z.json": {
+      "applied_at": "2026-10-01T11:10:01Z",
+      "fingerprint": "d6ce2ab8cd67c4370767bd12669666b821028c082c946a804589281cf6a033b3",
+      "tower_revision": "sha256:b7b3d929f40f8ea42e3b7e02c6cbe1d650135ce78cb87c13faeeaf2489fc5625"
     },
     "inbox/scheduled-operator-c-pr384-merged-with-changes-20260930t2007z.json": {
       "fingerprint": "06b8831fddd82ebb84ecb37a158d0405fa4d54782f608574cfb775331fb210a2",
