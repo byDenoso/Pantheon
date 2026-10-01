@@ -183,6 +183,7 @@
     "inbox/scheduled-guardiao-integrity-20260930t2209z.json": "1bb2215b565cddd601da8ef2a3348d6251537e579f79a6e1b60654d10690a82b",
     "inbox/scheduled-guardiao-integrity-20260930t2310z.json": "8717994e1471821068cde90f256450beede90c35f98c6685def65a6b2b061653",
     "inbox/scheduled-guardiao-integrity-20261001t0006z.json": "916ee4f3255d04c4590a27735f3df7af5a6c3cca7edc661f2986a2403b5586c1",
+    "inbox/scheduled-guardiao-integrity-20261001t0205z-min.json": "8d6242ab3b148fa5733bce906724d8f600983e769eefeef9d7dd874a5c8fa4c7",
     "inbox/scheduled-guardiao-integrity-256956b433317ea8.json": "da73edbdb43a397cac4244eac89204363b8db3724890b273f95e0d7948273fed",
     "inbox/scheduled-guardiao-integrity-4eca6a809262f332.json": "d55e8cdac1b1b34239a374cd8dee447107385cf7523dda7a8534484d567f25b4",
     "inbox/scheduled-guardiao-integrity-843309583b848e26.json": "ef33415a5ff000ed8ed1b9f21e17f7d8e27c5608d5fcd8ff768aba6e64bd3bab",
@@ -1141,6 +1142,11 @@
       "applied_at": "2026-10-01T01:16:12Z",
       "fingerprint": "916ee4f3255d04c4590a27735f3df7af5a6c3cca7edc661f2986a2403b5586c1",
       "tower_revision": "sha256:f0d23012d3d2e93b19ca8479831a523a918d73a78815a7e2a8e61ce47323ff85"
+    },
+    "inbox/scheduled-guardiao-integrity-20261001t0205z-min.json": {
+      "applied_at": "2026-10-01T02:16:50Z",
+      "fingerprint": "8d6242ab3b148fa5733bce906724d8f600983e769eefeef9d7dd874a5c8fa4c7",
+      "tower_revision": "sha256:8ae4f4d739438206fb3e664072fd819fb7deea7ababd57031209d3ed6d60c421"
     },
     "inbox/scheduled-guardiao-integrity-256956b433317ea8.json": {
       "applied_at": "2026-09-30T23:44:02Z",
