@@ -77,6 +77,8 @@
     "inbox/scheduled-claude-bind-xarea26-007-sn-velocity-density-crosscheck.json": "9af0a18e60566d9367e2baf898398c33c87800a9583f679b0a6e48ad59f36d64",
     "inbox/scheduled-claude-board-operador-pendentes-20260929.json": "b7f78e287cde1c7298eaafa24a11d123eab843afac845c720692409dea16b3c8",
     "inbox/scheduled-conversa-20260930t1658z-sne-cmb-q0-age.json": "bb416618d2df66d34d0ceff5098371670577556ac7bf5f88d854218a119f1e34",
+    "inbox/scheduled-conversa-calibracao-binding-20261001-1.json": "36999bb86ece2645cc77cbb0a6456eb1c915379c039cc6d4a2bc5fe68ac91676",
+    "inbox/scheduled-conversa-calibracao-binding-20261001-2.json": "c56289804752c2c5224af35a2b1511e99a7c66eed4359cab7771c85d3e050695",
     "inbox/scheduled-critic-20260929t033725z-min.json": "b713015632de38e360e6547a6443076f711688234fce9835496457b5818be9fc",
     "inbox/scheduled-critical-20260928t1315z.json": "9684fbe7754b84ac7b94554e91fb2908775696c861b4b8bd2edef9a2fa071633",
     "inbox/scheduled-critical-20260928t1905z-min.json": "34e0e23907ea935336d67673f8a75a3c4dd39466b77ebefe08f20bef77d66aaf",
@@ -709,6 +711,16 @@
     "inbox/scheduled-conversa-20260930t1658z-sne-cmb-q0-age.json": {
       "fingerprint": "bb416618d2df66d34d0ceff5098371670577556ac7bf5f88d854218a119f1e34",
       "source": "legacy-acked"
+    },
+    "inbox/scheduled-conversa-calibracao-binding-20261001-1.json": {
+      "applied_at": "2026-10-01T03:02:43Z",
+      "fingerprint": "36999bb86ece2645cc77cbb0a6456eb1c915379c039cc6d4a2bc5fe68ac91676",
+      "tower_revision": "sha256:5588a5bec1342f8b70f44a221bff42d3c9f341e5de3e682df60c7316e6e97e21"
+    },
+    "inbox/scheduled-conversa-calibracao-binding-20261001-2.json": {
+      "applied_at": "2026-10-01T03:02:43Z",
+      "fingerprint": "c56289804752c2c5224af35a2b1511e99a7c66eed4359cab7771c85d3e050695",
+      "tower_revision": "sha256:5588a5bec1342f8b70f44a221bff42d3c9f341e5de3e682df60c7316e6e97e21"
     },
     "inbox/scheduled-critic-20260929t033725z-min.json": {
       "fingerprint": "b713015632de38e360e6547a6443076f711688234fce9835496457b5818be9fc",
