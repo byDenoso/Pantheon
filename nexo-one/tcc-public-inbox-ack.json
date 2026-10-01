@@ -225,6 +225,7 @@
     "inbox/scheduled-learner-20261001t0408z-snppdesu3-om330-recipe-v1.json": "79da0fc89d4ab5f12bb517094b70fa480317242a82a90bf89d05bb512120c658",
     "inbox/scheduled-learner-20261001t0408z-snppu3-om330-recipe-v1.json": "2abfaf0f61210fbb5683c52eaa0feab6ccd88fcd676c03e8f89034198cbcf16e",
     "inbox/scheduled-learner-20261001t0412-lya-ppdesu-recipe.json": "aa4263fb1148cb4595422faad11763bf4104c8f2dc05eef9244338c16cedf3b4",
+    "inbox/scheduled-learner-20261001t0412-six-ppu3-recipe.json": "ad47aeac78d83c292efa14df0fb5e90855358f842106fdcf9c979cb513a71291",
     "inbox/scheduled-learner-20261001t0618z-h0hom010-engineer.json": "fbf5872ac0f7065deeb6d42e5cf6684c4d8ca38967d9d2e4fc95f79e6360b51e",
     "inbox/scheduled-learner-261001-0309-r1-cut-desu3-rec.json": "d5247da1fe24b0fae0d3131878499bf55b9459a736e157792b6773f071dfa60d",
     "inbox/scheduled-learner-261001-0309-r1-lq-ppu3-rec.json": "d25256d416dbb6ca56587c6be37301b3a6b742680a79fbcda7b6fb93ad803dec",
@@ -325,6 +326,7 @@
     "inbox/scheduled-pitia-20260930t2312z-rd-calibration-surprise.json": "1a581878e149b2b7b07cfe7c6635779b361c49851672312be77a517d00039cfa",
     "inbox/scheduled-pitia-20261001t0114z-de-crisis.json": "7a3f8e3b2852bed9285582967aecbd8001745d6f33931d328049abc7ac214bf2",
     "inbox/scheduled-pitia-20261001t0114z-de-rival-charter.json": "660f81e241b5e4dde8adc4a816367e08fd19003704d22df1ebadb1902f26bad7",
+    "inbox/scheduled-pitia-20261001t0719z-write-failure-board.json": "9b147860d7310afec8753a9e02beba39162b3c28a8385aafe04f5b49921d509f",
     "inbox/scheduled-pitia-batch-2181033f17a4f562.json": "abef2a371fff9849bc92f9e214ee0e4708a02420d236fb946c0825e787cd5636",
     "inbox/scheduled-pitia-batch-392ca9d8c0a7749a.json": "cfc104cf89931e65e44ca8b588a01848b592ea233fe39afc8271250b47131629",
     "inbox/scheduled-pitia-batch-3d6c1a02b9805eb8.json": "e36ef115a6cbce8e7d949cdec5de247eba084d3d9bba02986457c3f13a4e1a47",
@@ -1358,9 +1360,14 @@
       "tower_revision": "sha256:04552a94d104730bf0e721840b4112fb3f000b5b6f68b516fa585dbdb48080e0"
     },
     "inbox/scheduled-learner-20261001t0412-lya-ppdesu-recipe.json": {
-      "applied_at": "2026-10-01T07:26:16Z",
+      "applied_at": "2026-10-01T07:29:44Z",
       "fingerprint": "aa4263fb1148cb4595422faad11763bf4104c8f2dc05eef9244338c16cedf3b4",
-      "tower_revision": "sha256:56eb1197fd69568651447823e22aa29892eaba2e49951c453fa295d2ee1de307"
+      "tower_revision": "sha256:7cb53063a51f3ec3597455f61c9873ff1564fe80d98b502ee6248b82111fdb2e"
+    },
+    "inbox/scheduled-learner-20261001t0412-six-ppu3-recipe.json": {
+      "applied_at": "2026-10-01T07:29:44Z",
+      "fingerprint": "ad47aeac78d83c292efa14df0fb5e90855358f842106fdcf9c979cb513a71291",
+      "tower_revision": "sha256:7cb53063a51f3ec3597455f61c9873ff1564fe80d98b502ee6248b82111fdb2e"
     },
     "inbox/scheduled-learner-20261001t0618z-h0hom010-engineer.json": {
       "applied_at": "2026-10-01T06:25:43Z",
@@ -1776,14 +1783,19 @@
       "tower_revision": "sha256:dcb088a87e7889723ec85750e78a9446c43fe8e59a14add693d4a8f049d220c1"
     },
     "inbox/scheduled-pitia-20261001t0114z-de-crisis.json": {
-      "applied_at": "2026-10-01T07:26:16Z",
+      "applied_at": "2026-10-01T07:29:44Z",
       "fingerprint": "7a3f8e3b2852bed9285582967aecbd8001745d6f33931d328049abc7ac214bf2",
-      "tower_revision": "sha256:56eb1197fd69568651447823e22aa29892eaba2e49951c453fa295d2ee1de307"
+      "tower_revision": "sha256:7cb53063a51f3ec3597455f61c9873ff1564fe80d98b502ee6248b82111fdb2e"
     },
     "inbox/scheduled-pitia-20261001t0114z-de-rival-charter.json": {
       "applied_at": "2026-10-01T01:25:54Z",
       "fingerprint": "660f81e241b5e4dde8adc4a816367e08fd19003704d22df1ebadb1902f26bad7",
       "tower_revision": "sha256:0f93dc6d43584184c9e1a3531e18e2db33f4ad9a2eab52f19d1277730b301269"
+    },
+    "inbox/scheduled-pitia-20261001t0719z-write-failure-board.json": {
+      "applied_at": "2026-10-01T07:29:44Z",
+      "fingerprint": "9b147860d7310afec8753a9e02beba39162b3c28a8385aafe04f5b49921d509f",
+      "tower_revision": "sha256:7cb53063a51f3ec3597455f61c9873ff1564fe80d98b502ee6248b82111fdb2e"
     },
     "inbox/scheduled-pitia-batch-2181033f17a4f562.json": {
       "fingerprint": "abef2a371fff9849bc92f9e214ee0e4708a02420d236fb946c0825e787cd5636",
