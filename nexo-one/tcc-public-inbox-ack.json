@@ -259,7 +259,9 @@
     "inbox/scheduled-nexo-scientist-board-20260929t2156.json": "3d4f9c3341a8823f29b40ad9a0699f35bbb5436b502a1329c77f0a0236085ad4",
     "inbox/scheduled-opa-dr1-data-groups-pp-des-u3-v1.json": "7b5d136f3c950f1b526c626981657ba88b7dd4ecf3a501a4daf492895f5fdd4b",
     "inbox/scheduled-opa-dr1-data-groups-pp-u3-v1.json": "003ce0eb9d05a097f775d6fa2fc74ca1665fc19f2e265f905b4b4fdaf90c2954",
+    "inbox/scheduled-opa-dr1-data-lya-low-des-u3-v1.json": "adb023015d06f941f66f83e14292c1b5cf1472dd27efc3268d6ddac90a8516dd",
     "inbox/scheduled-opa-dr1-recipe-groups-pp-des-u3-v1.json": "054df68531705646f163c1d26f1c853cdf2c14ffe392cdd20c09c229d16cb34c",
+    "inbox/scheduled-opa-dr1-recipe-groups-pp-u3-v1.json": "ab3e912a175bb97f3f02d593a90cc9463c7f20f0956ac1eee5135cc3fce9add6",
     "inbox/scheduled-operator-20260928-ready29-recipe-gaps-v1.json": "14ce73bcb4f1c664cf6f248c3eff53c63b279d0cfc06e1875e05112205344698",
     "inbox/scheduled-operator-20260929t0417z-blockers-v1.json": "64fbf5338c728cb47d193e46e23de91ce1a76549932508632a6bfdbcf5080a04",
     "inbox/scheduled-operator-20260929t0720z-bind-a.json": "8a335b9a48c978e2c343aa2cce408c1462f75d808d4d5852f894da8df36c5eaf",
@@ -274,6 +276,7 @@
     "inbox/scheduled-operator-a-ready-drift-board-20260930t1947z.json": "6b0870179b8c347829a255950f30bc73b7318f4e558d6f952872d498dd3f6586",
     "inbox/scheduled-operator-a-tower-native-schema-board-20260930t1947z.json": "cdb91ed7f4286641d9b4deb226406bd0f708a4465c26c581ded3a3ed6ec9fa01",
     "inbox/scheduled-operator-a-tower-native-schema-recipe-20260930t1947z.json": "d8ad621fa416407a30f7ecc3ce2a5c7a5b96f92b4062f2b4b235d042637c80c2",
+    "inbox/scheduled-operator-a-write-blocked-20261001t0332z.json": "db511f5fe1a702cafeb54659ce21e0e276dca6b8a66bb89b551bf372f7176c37",
     "inbox/scheduled-operator-b-20260930t0056z-tail-bindings.json": "08e1fd553d97ff858b5f28cc35b4a868d870a7960af1bd1480c33a853466a9f5",
     "inbox/scheduled-operator-b-20260930t0154z-pr364-check-blocker.json": "42ef1a1914b692368a9ccf5242ea4b0e253063a45eae611e516fbd4cfc2ff1cc",
     "inbox/scheduled-operator-b-20260930t0950z-backpressure-cleared.json": "c645854f140d9d27af4d3490ced37ae6a95a2b612539a8ac8a4b27083b924dca",
@@ -1478,13 +1481,23 @@
       "tower_revision": "sha256:da42fd95eb65f2a8cef4aac955a4fdd42e7ca66a72edbd7b0efb4c39869656ed"
     },
     "inbox/scheduled-opa-dr1-data-groups-pp-u3-v1.json": {
-      "applied_at": "2026-10-01T03:37:23Z",
+      "applied_at": "2026-10-01T03:40:32Z",
       "fingerprint": "003ce0eb9d05a097f775d6fa2fc74ca1665fc19f2e265f905b4b4fdaf90c2954",
-      "tower_revision": "sha256:8f66d8d1d2032954ce03eb9a01af5dcd1d15f9f81cf80da76f21089ff179b09d"
+      "tower_revision": "sha256:8b2014717ec6d8719e2d4f35e01fcfc78709f538c92e7e1de556b4bc96c947e5"
+    },
+    "inbox/scheduled-opa-dr1-data-lya-low-des-u3-v1.json": {
+      "applied_at": "2026-10-01T03:40:32Z",
+      "fingerprint": "adb023015d06f941f66f83e14292c1b5cf1472dd27efc3268d6ddac90a8516dd",
+      "tower_revision": "sha256:8b2014717ec6d8719e2d4f35e01fcfc78709f538c92e7e1de556b4bc96c947e5"
     },
     "inbox/scheduled-opa-dr1-recipe-groups-pp-des-u3-v1.json": {
       "fingerprint": "054df68531705646f163c1d26f1c853cdf2c14ffe392cdd20c09c229d16cb34c",
       "source": "legacy-acked"
+    },
+    "inbox/scheduled-opa-dr1-recipe-groups-pp-u3-v1.json": {
+      "applied_at": "2026-10-01T03:40:32Z",
+      "fingerprint": "ab3e912a175bb97f3f02d593a90cc9463c7f20f0956ac1eee5135cc3fce9add6",
+      "tower_revision": "sha256:8b2014717ec6d8719e2d4f35e01fcfc78709f538c92e7e1de556b4bc96c947e5"
     },
     "inbox/scheduled-operator-20260928-ready29-recipe-gaps-v1.json": {
       "fingerprint": "14ce73bcb4f1c664cf6f248c3eff53c63b279d0cfc06e1875e05112205344698",
@@ -1541,6 +1554,11 @@
     "inbox/scheduled-operator-a-tower-native-schema-recipe-20260930t1947z.json": {
       "fingerprint": "d8ad621fa416407a30f7ecc3ce2a5c7a5b96f92b4062f2b4b235d042637c80c2",
       "source": "legacy-acked"
+    },
+    "inbox/scheduled-operator-a-write-blocked-20261001t0332z.json": {
+      "applied_at": "2026-10-01T03:40:32Z",
+      "fingerprint": "db511f5fe1a702cafeb54659ce21e0e276dca6b8a66bb89b551bf372f7176c37",
+      "tower_revision": "sha256:8b2014717ec6d8719e2d4f35e01fcfc78709f538c92e7e1de556b4bc96c947e5"
     },
     "inbox/scheduled-operator-b-20260930t0056z-tail-bindings.json": {
       "fingerprint": "08e1fd553d97ff858b5f28cc35b4a868d870a7960af1bd1480c33a853466a9f5",
