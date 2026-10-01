@@ -439,6 +439,7 @@
     "inbox/scheduled-referee1-dr1-08-20260930t2309z.json": "dc5851f4ff195bb773109f9749e05ee0ce199a195bda8dc63bf8db98eb09b216",
     "inbox/scheduled-referee1-dr1-09-20260930t2309z.json": "b1031f1b79c211f9df7a862b35b85f0228c04262950e9e3516d819760bdc8f7f",
     "inbox/scheduled-referee1-meta-permutation-20260930t220501z.json": "3d7ac8d97ac7b32cc37f8606707178323b1bc457d21b7f291f05365c98f8b81d",
+    "inbox/scheduled-referee1-recovery-state-20261001t201629z.json": "7820078a88d8421c76585ec96dac9fe63b6729597a08991844a10e8b858513f7",
     "inbox/scheduled-referee1-recovery-update-20261001t1457z.json": "1e44b584baab7dba07200ccb7c641379860516e8fdb476462cad07c74153f2a1",
     "inbox/scheduled-referee1-release-check-a-20260929t1045z.json": "1f5ccbff1389c283f41a4c94e9ac77809a2c1c34027d57f5f3c63be5fb293fe1",
     "inbox/scheduled-referee1-t-deh26-003-contest-1.json": "14b52379d5921a227042f53127ede4efe069d65874df30ce6c03b43fac867c9d",
@@ -2251,9 +2252,9 @@
       "tower_revision": "sha256:3e820f9c27c86428ec56a2947cf7102a116e5d0411d0f52fc27f72eb19e667cb"
     },
     "inbox/scheduled-referee1-20261001-a1-dr1-13.json": {
-      "applied_at": "2026-10-01T20:19:37Z",
+      "applied_at": "2026-10-01T20:22:25Z",
       "fingerprint": "aa4188dcc0679a6544ab1bbcc2fa2cd65e27e394a3827dc0556a543d9952d645",
-      "tower_revision": "sha256:011be7dfcaf4c87c9aafa4092433f1fab10a1f7202d22f6e41cff2afdd6fbe33"
+      "tower_revision": "sha256:a27c0b1210e339334f1355340c1bd65d193a8f84f914dd637575aee75074ae1f"
     },
     "inbox/scheduled-referee1-20261001-a1-dr1-14.json": {
       "applied_at": "2026-10-01T19:20:17Z",
@@ -2389,6 +2390,11 @@
       "applied_at": "2026-10-01T05:16:13Z",
       "fingerprint": "3d7ac8d97ac7b32cc37f8606707178323b1bc457d21b7f291f05365c98f8b81d",
       "tower_revision": "sha256:264f93bb6c97e2d22bf0ea067aa27f2df9b6a0ebb65708a1f81de477b3cb88dc"
+    },
+    "inbox/scheduled-referee1-recovery-state-20261001t201629z.json": {
+      "applied_at": "2026-10-01T20:22:25Z",
+      "fingerprint": "7820078a88d8421c76585ec96dac9fe63b6729597a08991844a10e8b858513f7",
+      "tower_revision": "sha256:a27c0b1210e339334f1355340c1bd65d193a8f84f914dd637575aee75074ae1f"
     },
     "inbox/scheduled-referee1-recovery-update-20261001t1457z.json": {
       "applied_at": "2026-10-01T15:08:34Z",
