@@ -380,6 +380,7 @@
     "inbox/scheduled-recipe-review-pr385-80c0cc1-approved.json": "7be1c1eb8d0013389c3be5d5927d819df8cfb1763ceba65997f464ff44316e1f",
     "inbox/scheduled-recipe-review-pr386-8f11a25-approved.json": "4c2f29f2f8a6a46e77ef1e3862208be69314366f3744912a544ce6911c389bc2",
     "inbox/scheduled-recipe-review-pr388-f9385dc-approved.json": "a2d38526d12e20286f8c22a1597ff6f4c0ac679e1eff3474d1088178db05c462",
+    "inbox/scheduled-referee1-20261001-a2-base-dr1.json": "b8b5a6f03b591c8ffecc3964362abae89f7c0416c1c49ac0c8db99262f2e5225",
     "inbox/scheduled-referee1-20261001-a2-rank-loo.json": "2f3777bf88af399f2582c8e768aee9926434f114a78a8ff2bf76f5f6852f7e81",
     "inbox/scheduled-referee1-6638057a1f2d-a2-point-v1.json": "57f0c3df05a1b588cf39a25301804e8d47107ad3f0e9feb385a5e3daa07a0e8a",
     "inbox/scheduled-referee1-board-persist-20261001t081347z.json": "b7a2f5a322897bdbd357abd3fb64471b26da1e86796f8d7bfd2380a10d54d224",
@@ -2068,6 +2069,11 @@
     "inbox/scheduled-recipe-review-pr388-f9385dc-approved.json": {
       "fingerprint": "a2d38526d12e20286f8c22a1597ff6f4c0ac679e1eff3474d1088178db05c462",
       "source": "legacy-acked"
+    },
+    "inbox/scheduled-referee1-20261001-a2-base-dr1.json": {
+      "applied_at": "2026-10-01T15:01:14Z",
+      "fingerprint": "b8b5a6f03b591c8ffecc3964362abae89f7c0416c1c49ac0c8db99262f2e5225",
+      "tower_revision": "sha256:7181001110900ddae28aa7b91cf99e0aa62af14c995866fff0adca5ddc641476"
     },
     "inbox/scheduled-referee1-20261001-a2-rank-loo.json": {
       "applied_at": "2026-10-01T08:37:42Z",
