@@ -319,6 +319,7 @@
     "inbox/scheduled-pitia-20260930t2011z-resolve-observability-board.json": "4f3c96d84f3475a134d3b4671a7166773022ec8bf2e792fdb2f5225ab6405f9c",
     "inbox/scheduled-pitia-20260930t2110z-noop.json": "9b97e18ce6badcc36f1f504a35e1c324b4cb150f7187c5f982331a252bf32450",
     "inbox/scheduled-pitia-20260930t2217z-noop.json": "32afdce815494a6e01ee74ab8e06d4028fe41c77666164b30b27dd3254f13aa9",
+    "inbox/scheduled-pitia-20260930t2312z-rd-calibration-surprise.json": "1a581878e149b2b7b07cfe7c6635779b361c49851672312be77a517d00039cfa",
     "inbox/scheduled-pitia-20261001t0114z-de-rival-charter.json": "660f81e241b5e4dde8adc4a816367e08fd19003704d22df1ebadb1902f26bad7",
     "inbox/scheduled-pitia-batch-2181033f17a4f562.json": "abef2a371fff9849bc92f9e214ee0e4708a02420d236fb946c0825e787cd5636",
     "inbox/scheduled-pitia-batch-392ca9d8c0a7749a.json": "cfc104cf89931e65e44ca8b588a01848b592ea233fe39afc8271250b47131629",
@@ -1122,9 +1123,9 @@
       "tower_revision": "sha256:5af5b07a20f685a774c32e415577f2c25370e1718bacfb88e74b2a273534098f"
     },
     "inbox/scheduled-guardiao-board-work-drift-20261001t0607z.json": {
-      "applied_at": "2026-10-01T06:22:01Z",
+      "applied_at": "2026-10-01T06:25:43Z",
       "fingerprint": "6a75ae2f461710636b0f85d6add2dfbb302f831273a2246f0e1e320a6062541f",
-      "tower_revision": "sha256:e011c4dcc3dbf65b55e7de047967dbdea6d7e17acac987b43bdee042eabb605b"
+      "tower_revision": "sha256:dcb088a87e7889723ec85750e78a9446c43fe8e59a14add693d4a8f049d220c1"
     },
     "inbox/scheduled-guardiao-board-write-failure-20261001t0113z.json": {
       "applied_at": "2026-10-01T01:25:54Z",
@@ -1137,9 +1138,9 @@
       "tower_revision": "sha256:bf5316389ae5ed6c602188e709b3f8b433004237a5f92c25a8540978e3ed1f5f"
     },
     "inbox/scheduled-guardiao-board-write-failure-20261001t0607z.json": {
-      "applied_at": "2026-10-01T06:22:01Z",
+      "applied_at": "2026-10-01T06:25:43Z",
       "fingerprint": "c31115bb7f8365bd508d722836cc20cd33007eff1162a98eafde92c977a61717",
-      "tower_revision": "sha256:e011c4dcc3dbf65b55e7de047967dbdea6d7e17acac987b43bdee042eabb605b"
+      "tower_revision": "sha256:dcb088a87e7889723ec85750e78a9446c43fe8e59a14add693d4a8f049d220c1"
     },
     "inbox/scheduled-guardiao-fitness-190341.json": {
       "fingerprint": "d1b8b7d9f4152f3e903a5f95d67b9195a5cb4f50e28ac0231fc491d33365b337",
@@ -1343,9 +1344,9 @@
       "tower_revision": "sha256:04552a94d104730bf0e721840b4112fb3f000b5b6f68b516fa585dbdb48080e0"
     },
     "inbox/scheduled-learner-20261001t0618z-h0hom010-engineer.json": {
-      "applied_at": "2026-10-01T06:22:01Z",
+      "applied_at": "2026-10-01T06:25:43Z",
       "fingerprint": "fbf5872ac0f7065deeb6d42e5cf6684c4d8ca38967d9d2e4fc95f79e6360b51e",
-      "tower_revision": "sha256:e011c4dcc3dbf65b55e7de047967dbdea6d7e17acac987b43bdee042eabb605b"
+      "tower_revision": "sha256:dcb088a87e7889723ec85750e78a9446c43fe8e59a14add693d4a8f049d220c1"
     },
     "inbox/scheduled-learner-261001-0309-r1-cut-desu3-rec.json": {
       "applied_at": "2026-10-01T03:21:44Z",
@@ -1749,6 +1750,11 @@
       "applied_at": "2026-10-01T06:22:01Z",
       "fingerprint": "32afdce815494a6e01ee74ab8e06d4028fe41c77666164b30b27dd3254f13aa9",
       "tower_revision": "sha256:e011c4dcc3dbf65b55e7de047967dbdea6d7e17acac987b43bdee042eabb605b"
+    },
+    "inbox/scheduled-pitia-20260930t2312z-rd-calibration-surprise.json": {
+      "applied_at": "2026-10-01T06:25:43Z",
+      "fingerprint": "1a581878e149b2b7b07cfe7c6635779b361c49851672312be77a517d00039cfa",
+      "tower_revision": "sha256:dcb088a87e7889723ec85750e78a9446c43fe8e59a14add693d4a8f049d220c1"
     },
     "inbox/scheduled-pitia-20261001t0114z-de-rival-charter.json": {
       "applied_at": "2026-10-01T01:25:54Z",
