@@ -219,6 +219,7 @@
     "inbox/scheduled-guardiao-integrity-4eca6a809262f332.json": "d55e8cdac1b1b34239a374cd8dee447107385cf7523dda7a8534484d567f25b4",
     "inbox/scheduled-guardiao-integrity-843309583b848e26.json": "ef33415a5ff000ed8ed1b9f21e17f7d8e27c5608d5fcd8ff768aba6e64bd3bab",
     "inbox/scheduled-guardiao-integrity-88536298f7a69178.json": "ee47fdef6fe6f76e3bafe04d0f936e8a25cfaa50ce2d50fb01c02be674fc30d5",
+    "inbox/scheduled-guardiao-recipe-review-pr395-4271a90a.json": "d84b51167ba69b45d8172fd5e8c106ea355a349e5f464c0bda3228c6a23d7f4c",
     "inbox/scheduled-guardiao-recipe-review-pr395-c90f8752.json": "3a0655a473f1c6b836564da168044651416e8e50dc723eef361870ced17f9a28",
     "inbox/scheduled-interactive-20260929-router040-ready-binds-v1.json": "9c2ae392c4fa126a5541d50e0360e2036a3c6d6d280edc058003c19ec6d9f22c",
     "inbox/scheduled-interactive-names-hyp-test-fix-20260928-1603.json": "0ca61d7d6e663b89b12d2ba8381d7817cfaeb088cee76457bd13dc5b5589305c",
@@ -925,9 +926,9 @@
       "source": "legacy-acked"
     },
     "inbox/scheduled-engineer-staging-policy-block-20261001t1718z.json": {
-      "applied_at": "2026-10-01T17:22:25Z",
+      "applied_at": "2026-10-01T17:25:05Z",
       "fingerprint": "d172e96b7c25225a4d87e12b96e6145665df190c0376431f1fb0431505e12eaf",
-      "tower_revision": "sha256:c8725b8eacd6dd33c25a5419d84860009b59016478fd5648755f20da78e554d5"
+      "tower_revision": "sha256:c9db54a520f28184a3f909aa6c2ecac9dd68dfcbecaea76e173e782e635053ae"
     },
     "inbox/scheduled-executor-20260928-recipe-review-late-time-v1.json": {
       "fingerprint": "4c7ee0900b164f86373d8453403486c4f1e6649967367fce1428070bce72e222",
@@ -1413,6 +1414,11 @@
     "inbox/scheduled-guardiao-integrity-88536298f7a69178.json": {
       "fingerprint": "ee47fdef6fe6f76e3bafe04d0f936e8a25cfaa50ce2d50fb01c02be674fc30d5",
       "source": "legacy-acked"
+    },
+    "inbox/scheduled-guardiao-recipe-review-pr395-4271a90a.json": {
+      "applied_at": "2026-10-01T17:25:05Z",
+      "fingerprint": "d84b51167ba69b45d8172fd5e8c106ea355a349e5f464c0bda3228c6a23d7f4c",
+      "tower_revision": "sha256:c9db54a520f28184a3f909aa6c2ecac9dd68dfcbecaea76e173e782e635053ae"
     },
     "inbox/scheduled-guardiao-recipe-review-pr395-c90f8752.json": {
       "applied_at": "2026-10-01T16:25:59Z",
@@ -2196,39 +2202,39 @@
       "tower_revision": "sha256:c8725b8eacd6dd33c25a5419d84860009b59016478fd5648755f20da78e554d5"
     },
     "inbox/scheduled-referee1-20261001-a1-dr1-10.json": {
-      "applied_at": "2026-10-01T17:22:25Z",
+      "applied_at": "2026-10-01T17:25:05Z",
       "fingerprint": "7a15542af63dadab87fd413f28e52b5c14a947c5c680c8fbe721a5512f2b6a77",
-      "tower_revision": "sha256:c8725b8eacd6dd33c25a5419d84860009b59016478fd5648755f20da78e554d5"
+      "tower_revision": "sha256:c9db54a520f28184a3f909aa6c2ecac9dd68dfcbecaea76e173e782e635053ae"
     },
     "inbox/scheduled-referee1-20261001-a1-dr1-11.json": {
-      "applied_at": "2026-10-01T17:22:25Z",
+      "applied_at": "2026-10-01T17:25:05Z",
       "fingerprint": "9f09a7c330d6f23e0dc58e235e3453fa94b0966a77a70d7d2b1028fdfa2255e1",
-      "tower_revision": "sha256:c8725b8eacd6dd33c25a5419d84860009b59016478fd5648755f20da78e554d5"
+      "tower_revision": "sha256:c9db54a520f28184a3f909aa6c2ecac9dd68dfcbecaea76e173e782e635053ae"
     },
     "inbox/scheduled-referee1-20261001-a1-dr1-17.json": {
-      "applied_at": "2026-10-01T17:22:25Z",
+      "applied_at": "2026-10-01T17:25:05Z",
       "fingerprint": "2085953ac880a22fd2d6ae1fab685d0e14d7dace5f996186ea09c8bc50f78559",
-      "tower_revision": "sha256:c8725b8eacd6dd33c25a5419d84860009b59016478fd5648755f20da78e554d5"
+      "tower_revision": "sha256:c9db54a520f28184a3f909aa6c2ecac9dd68dfcbecaea76e173e782e635053ae"
     },
     "inbox/scheduled-referee1-20261001-a1-dr1-18.json": {
-      "applied_at": "2026-10-01T17:22:25Z",
+      "applied_at": "2026-10-01T17:25:05Z",
       "fingerprint": "690744740232827e5494a237f143f3adb0e9e291666fc2522378a04cc3abaa32",
-      "tower_revision": "sha256:c8725b8eacd6dd33c25a5419d84860009b59016478fd5648755f20da78e554d5"
+      "tower_revision": "sha256:c9db54a520f28184a3f909aa6c2ecac9dd68dfcbecaea76e173e782e635053ae"
     },
     "inbox/scheduled-referee1-20261001-a1-dr1-19.json": {
-      "applied_at": "2026-10-01T17:22:25Z",
+      "applied_at": "2026-10-01T17:25:05Z",
       "fingerprint": "44243a21caffa5512dc0aefeec25ac6f567b6eaf47a6a8b536209f536919fe01",
-      "tower_revision": "sha256:c8725b8eacd6dd33c25a5419d84860009b59016478fd5648755f20da78e554d5"
+      "tower_revision": "sha256:c9db54a520f28184a3f909aa6c2ecac9dd68dfcbecaea76e173e782e635053ae"
     },
     "inbox/scheduled-referee1-20261001-a1-dr1-20.json": {
-      "applied_at": "2026-10-01T17:22:25Z",
+      "applied_at": "2026-10-01T17:25:05Z",
       "fingerprint": "a822bb24ce64f8c6ba7a95d8cca88b4e6e74285bd59f6c7d22be0950a3b5fe39",
-      "tower_revision": "sha256:c8725b8eacd6dd33c25a5419d84860009b59016478fd5648755f20da78e554d5"
+      "tower_revision": "sha256:c9db54a520f28184a3f909aa6c2ecac9dd68dfcbecaea76e173e782e635053ae"
     },
     "inbox/scheduled-referee1-20261001-a1-dr1-21.json": {
-      "applied_at": "2026-10-01T17:22:25Z",
+      "applied_at": "2026-10-01T17:25:05Z",
       "fingerprint": "246c1f4685b14279aeb36486b0982d4b3cdc9d36ab84ded2e8bf56a8f12ce5be",
-      "tower_revision": "sha256:c8725b8eacd6dd33c25a5419d84860009b59016478fd5648755f20da78e554d5"
+      "tower_revision": "sha256:c9db54a520f28184a3f909aa6c2ecac9dd68dfcbecaea76e173e782e635053ae"
     },
     "inbox/scheduled-referee1-20261001-a2-base-dr1.json": {
       "applied_at": "2026-10-01T15:01:14Z",
