@@ -184,6 +184,7 @@
     "inbox/scheduled-guardiao-board-write-failure-20261001t0312z.json": "f9160e2d2f0d5a4d8dfffc028309af1fa4aeb09f516227f2f9008f249f74a9f3",
     "inbox/scheduled-guardiao-board-write-failure-20261001t0607z.json": "c31115bb7f8365bd508d722836cc20cd33007eff1162a98eafde92c977a61717",
     "inbox/scheduled-guardiao-board-write-failure-20261001t1006z.json": "b2eede91c898c8779dc85c4783c0930bfef30a9a13c7a0d6bf7e1c1521c26eea",
+    "inbox/scheduled-guardiao-board-write-failure-20261001t1303z.json": "01579a517dd9f8892fb1d8e35edd5e1990d2c594528deb0e1dc7080255f5e732",
     "inbox/scheduled-guardiao-fitness-190341.json": "d1b8b7d9f4152f3e903a5f95d67b9195a5cb4f50e28ac0231fc491d33365b337",
     "inbox/scheduled-guardiao-fitness-20260930t2109z.json": "a83dd89d8af54379bca56efa3ce99cd43ac1d8e59aef1a36eeefb52b032d3d48",
     "inbox/scheduled-guardiao-heartbeat-20260927t200631z.json": "c3284ba4adb20aeb318160e02374fda047333c969b6828145ac907cd6d4fde40",
@@ -1218,6 +1219,11 @@
       "fingerprint": "b2eede91c898c8779dc85c4783c0930bfef30a9a13c7a0d6bf7e1c1521c26eea",
       "tower_revision": "sha256:a55ff4b2e99aea254e5e3d7cc885a11976683a598e72322a9283569f93074624"
     },
+    "inbox/scheduled-guardiao-board-write-failure-20261001t1303z.json": {
+      "applied_at": "2026-10-01T13:26:41Z",
+      "fingerprint": "01579a517dd9f8892fb1d8e35edd5e1990d2c594528deb0e1dc7080255f5e732",
+      "tower_revision": "sha256:d8959ca1ab42a9fb516264b03ea056c4ba7a6e9283bd603fe9582338eab342eb"
+    },
     "inbox/scheduled-guardiao-fitness-190341.json": {
       "fingerprint": "d1b8b7d9f4152f3e903a5f95d67b9195a5cb4f50e28ac0231fc491d33365b337",
       "source": "legacy-acked"
@@ -1301,9 +1307,9 @@
       "tower_revision": "sha256:7406cb4af12fae4f990e5e35074874fc133d481b8ebe81ca0cd99f15ee16a906"
     },
     "inbox/scheduled-guardiao-integrity-20261001t1303z-min.json": {
-      "applied_at": "2026-10-01T13:24:16Z",
+      "applied_at": "2026-10-01T13:26:41Z",
       "fingerprint": "5bfa101efcd629ccc7ef41f47edd5451ddd551bd6432a3df03dcb18582561655",
-      "tower_revision": "sha256:7e27d0e2cf1c1a81fdbb6c90de67e911e7f9a4dac87598b00e0ea7a0f690133d"
+      "tower_revision": "sha256:d8959ca1ab42a9fb516264b03ea056c4ba7a6e9283bd603fe9582338eab342eb"
     },
     "inbox/scheduled-guardiao-integrity-256956b433317ea8.json": {
       "applied_at": "2026-09-30T23:44:02Z",
