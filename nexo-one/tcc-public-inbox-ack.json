@@ -214,6 +214,8 @@
     "inbox/scheduled-learner-20260930t2116z-rdcal-b330pd.json": "05edf457ffa08e10ed3efc951a24bbe474717689f60b75f0b9b86c760e165849",
     "inbox/scheduled-learner-20260930t2116z-rdcal-b330pu.json": "c7e3a6636134f5bf540271063ec314172e86538be80549aeed28608201615ee3",
     "inbox/scheduled-learner-20261001t0112z-sntrio315-contest-data.json": "7ea8724c7451a1991f79860f290ace6e20dea85964c3835b764e395c2e97ea71",
+    "inbox/scheduled-learner-20261001t0408z-lya-desu3-recipe-v1.json": "5c0c5968a85a8b3cc700232445d1afd45975f0645bd2d1aeb3848bace0bd151e",
+    "inbox/scheduled-learner-20261001t0408z-snppdesu3-om315-recipe-v1.json": "b5db35aecf5428423bf33b47f8c87a6d4ae781d51ad04149098c1e972e3116d8",
     "inbox/scheduled-learner-261001-0309-r1-cut-desu3-rec.json": "d5247da1fe24b0fae0d3131878499bf55b9459a736e157792b6773f071dfa60d",
     "inbox/scheduled-learner-261001-0309-r1-lq-ppu3-rec.json": "d25256d416dbb6ca56587c6be37301b3a6b742680a79fbcda7b6fb93ad803dec",
     "inbox/scheduled-learner-261001-0310-r1-cut-desu3-data.json": "1118f2f05fdd78cf30a6ad44e682429f8d1620f18f4f9b7a2b34547c2a048160",
@@ -1289,6 +1291,16 @@
       "applied_at": "2026-10-01T02:20:04Z",
       "fingerprint": "7ea8724c7451a1991f79860f290ace6e20dea85964c3835b764e395c2e97ea71",
       "tower_revision": "sha256:2b2c8727b56005c76f8b4f76dd4ac6712a1c617c5e5e80d221e9ec613dc63e2a"
+    },
+    "inbox/scheduled-learner-20261001t0408z-lya-desu3-recipe-v1.json": {
+      "applied_at": "2026-10-01T04:14:58Z",
+      "fingerprint": "5c0c5968a85a8b3cc700232445d1afd45975f0645bd2d1aeb3848bace0bd151e",
+      "tower_revision": "sha256:d0b9d6bfefbb43466a3e240536b7f87da961b7926f832f1c52864b1d7303aa68"
+    },
+    "inbox/scheduled-learner-20261001t0408z-snppdesu3-om315-recipe-v1.json": {
+      "applied_at": "2026-10-01T04:14:58Z",
+      "fingerprint": "b5db35aecf5428423bf33b47f8c87a6d4ae781d51ad04149098c1e972e3116d8",
+      "tower_revision": "sha256:d0b9d6bfefbb43466a3e240536b7f87da961b7926f832f1c52864b1d7303aa68"
     },
     "inbox/scheduled-learner-261001-0309-r1-cut-desu3-rec.json": {
       "applied_at": "2026-10-01T03:21:44Z",
