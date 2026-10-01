@@ -6,6 +6,7 @@ import { incidentView, guardianAuditTime } from '../../viewmodels/incidents.ts';
 // Rotas: #/agora #/ciclo #/roadmaps #/roadmap/<id> #/evidencia[?v=] #/e/<id> #/saude
 import { activityRange, activityWindow, observedActivity } from './activity-presentation.ts';
 import { browserNarrationDeck } from './narration-deck.ts';
+import { narrationEvidence } from './narration-evidence.ts';
 import { lazy, Suspense, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import type { SystemState } from '../../contracts/system.ts';
 import {
@@ -175,7 +176,7 @@ export default function LabApp({ state, route, theme }: { state: SystemState; ro
     </div>}
 
     <div className="obs-tools">
-  {!flat && sceneAvailable === true && <button type="button" className="explore-toggle" aria-pressed={explore} onClick={() => setExplore(x => !x)}>
+  {!flat && sceneAvailable === true && <button type="button" className="explore-toggle" aria-label={explore ? 'Voltar ao painel' : 'Explorar a teia'} aria-pressed={explore} onClick={() => setExplore(x => !x)}>
       {explore ? <><i aria-hidden="true">✕</i><span className="bt">Voltar ao painel</span></> : <><i aria-hidden="true">⤢</i><span className="bt">Explorar a teia</span></>}</button>}
       {sceneAvailable !== false && <button type="button" aria-pressed={flat} onClick={toggleFlat} title={flat ? 'Mostrar a teia atrás do painel' : 'Mostrar só a página, sem a teia'} aria-label={flat ? 'Mostrar a teia' : 'Mostrar só a página'}>
         <Icon n="page" /><span className="bt">{flat ? 'Com a teia' : 'Só a página'}</span></button>}
@@ -867,10 +868,14 @@ const taskOf = (role: string) => {
   return matches.length === 1 ? matches[0] : undefined;
 };
 const roleLabel = (role: string) => { const t = taskOf(role); const r = ROLE_PT[role.toUpperCase()] ?? role; return t ? (t.name === r ? r : `${t.name} · ${r}`) : r; };
-// 120x120 por família: uma permutação completa com cursor local evita repetir pares entre recargas.
+// 120x120 por família; só campos recebidos habilitam caudas. Cursor local preservado entre recargas.
 // A escolha de palavras descreve um evento recebido; ela nunca cria uma ação nova.
 const narrationDeck = browserNarrationDeck();
 const say = (key: string, seed: string, vars: Record<string, string | number> = {}) => narrationDeck.say(key, seed, vars);
+const NARRATION_TERMS: Record<string, string> = {
+  PROMOTED: 'positivo na execução', REJECTED: 'rejeitado pelo critério', INCONCLUSIVE: 'inconclusivo', CONTESTED: 'contestado',
+  PENDING_REVIEW: 'aguardando revisão', REFEREE1_PASSED: 'primeira revisão aprovada', CONFIRMED: 'confirmado na revisão', REFUTED: 'refutado na revisão',
+};
 /** Estrela que representa a entidade na teia (contestações apontam para o resultado atacado). */
 function starOf(lab: Lab, id: string): string | null {
   let t = lab.tests.get(id);
@@ -884,12 +889,20 @@ function narrate(e: { event_type: string; entity_id?: string; at?: string }, lab
     const th = (state.evolution?.thoughts ?? []).find(x => Date.parse(x.at) === t0);
     if (th?.text) return humanize(clip(th.text, 180));
   }
-  let tpl = say(e.event_type, `${e.at ?? ''}${e.entity_id ?? ''}`) ?? `Registrei ${e.event_type.toLowerCase().replace(/_/g, ' ')}: %q`;
   const t = e.entity_id ? lab.tests.get(e.entity_id) : undefined;
+  const post = e.event_type === 'BOARD_POSTED' && state && e.at
+    ? state.evolution?.board?.find(p => p.at === e.at && (!e.entity_id || p.id === e.entity_id)) : undefined;
+  if (post?.text) return humanize(clip(post.text, 180));
+  const extra = {
+    roadmap: t?.roadmapId ? lab.roadmaps.get(t.roadmapId)?.title : undefined,
+    by: t && state?.graph.nodes.find(n => n.id === t.id)?.owner_role,
+  };
+  const fields = Object.fromEntries(Object.entries(narrationEvidence(t, extra)).map(([key, value]) => [key, clip(humanize((key === 'result' || key === 'review') ? NARRATION_TERMS[value] ?? value : value), 85)]));
+  const tpl = say(e.event_type, `${e.at ?? ''}${e.entity_id ?? ''}`, fields) ?? `Registrei ${e.event_type.toLowerCase().replace(/_/g, ' ')}: %q`;
   // Hipótese: prefira o nome curto de um teste dela ao enunciado inteiro.
   const viaTest = !t && e.entity_id ? [...lab.tests.values()].find(x => x.hypothesisId === e.entity_id)?.name : undefined;
   const q = t?.name ?? viaTest ?? (e.entity_id ? (lab.hypotheses.get(e.entity_id)?.statement ?? humanId(e.entity_id)) : '');
-  const text = tpl.includes('%q') ? tpl.replace('%q', q ? `“${clip(q, 110)}”` : 'uma entidade sem identificação publicada').replace(/: $/, '.') : tpl;
+  const text = tpl.includes('%q') ? tpl.replaceAll('%q', q ? `“${clip(q, 65)}”` : 'uma entidade sem identificação publicada').replace(/: $/, '.') : tpl;
   return humanize(text);
 }
 
@@ -902,7 +915,7 @@ function Typewriter({ text }: { text: string }) {
     const t = window.setInterval(() => setN(k => { if (k >= text.length) { window.clearInterval(t); return k; } return k + 2; }), 18);
     return () => window.clearInterval(t);
   }, [text, reduced]);
-  return <>{text.slice(0, n)}{n < text.length && <i className="caret" aria-hidden="true">▍</i>}</>;
+  return <span className="mono-typewriter" data-writing={n < text.length ? 'true' : 'false'}>{text.slice(0, n)}{n < text.length && <i className="caret" aria-hidden="true">▍</i>}</span>;
 }
 
 type ActivityRow = { at: string; role: string; event_type: string; entity_id?: string; times?: number };
@@ -911,7 +924,8 @@ function Monologue({ lab, state, onReplay, replayCount }: { lab: Lab; state: Sys
   const recent: Array<ActivityRow> = [];
   for (const e of observedActivity(lab.activity).reverse()) {
     const prev = recent[recent.length - 1];
-    if (prev && !e.entity_id && !prev.entity_id && prev.role === e.role && prev.event_type === e.event_type) { prev.times = (prev.times ?? 1) + 1; continue; }
+    if (prev && prev.role === e.role && prev.event_type === e.event_type
+        && ((!e.entity_id && !prev.entity_id) || (e.event_type === 'TEST_RESULT_RECORDED' && prev.entity_id === e.entity_id))) { prev.times = (prev.times ?? 1) + 1; continue; }
     recent.push({ ...e, times: 1 });
     if (recent.length >= 8) break;
   }
@@ -925,8 +939,7 @@ function Monologue({ lab, state, onReplay, replayCount }: { lab: Lab; state: Sys
     <p className="hud-kicker"><i className={`pulse-dot${quiet < 30 ? ' live' : ''}`} aria-hidden="true" />
       {quiet < 30 ? 'Evento recente publicado' : `Última ação ${ago(last.at)}`} · {activityWindow(lab.activity, 24).label}</p>
     <h2 id="mono-title">Diário dos papéis</h2>
-    <p className="hud-note">As falas resumem eventos recebidos e mantêm o papel que os assinou. Elas descrevem o snapshot publicado, inclusive quando está desatualizado; a cobertura do histórico é parcial.</p>
-    <p className="hud-note">Variação de falas: {narrationDeck.persistence === 'local' ? 'cursor salvo neste navegador, inclusive entre recargas' : 'memória desta visita; armazenamento local não utilizável nesta visita'}. Sem sincronização entre aparelhos.</p>
+    <details className="reading-details"><summary>Fonte e variação das falas</summary><p className="hud-note">Fonte recebida {ago(lab.generatedAt)}. As falas resumem o recorte recebido, com o papel original; não indicam uma ação em curso. Os campos da ficha podem refletir um estado posterior ao evento.</p><p className="hud-note">{narrationDeck.persistence === 'local' ? 'Cursor salvo neste navegador, inclusive entre recargas' : 'Variação limitada à memória desta visita; armazenamento local indisponível'}. Só campos publicados habilitam variações; sem sincronização entre aparelhos.</p></details>
     <p className="mono-now"><b>{ROLE_PT[last.role.toUpperCase()] ?? last.role}</b> <Typewriter text={narrate(last, lab, state)} /></p>
     <ul className="mono-self">{selfLines(lab, state).map((l, i) => <li key={i}><i aria-hidden="true"><Icon n={l.icon} /></i>{l.link ? <a href={l.link}>{l.text}</a> : l.text}</li>)}</ul>
     <ol className="mono-log">{recent.slice(1).map((e, i) => <li key={i}>
@@ -1088,12 +1101,15 @@ function selfLines(lab: Lab, state: SystemState): Array<{ icon: string; text: st
   const focus = [...touched].sort((a, b) => b[1] - a[1])[0];
   if (focus) {
     const r = lab.roadmaps.get(focus[0]);
-    if (r) out.push({ icon: 'eye', text: say('SELF_FOCUS', r.id + new Date().toDateString(), { title: r.title.toLowerCase(), n: focus[1] })!, link: labHref('roadmap', r.id) });
+    if (r) out.push({ icon: 'eye', text: say('SELF_FOCUS', r.id + new Date().toDateString(), { title: clip(r.title.toLowerCase(), 62), n: focus[1] })!, link: labHref('roadmap', r.id) });
   }
   const ignored = active.filter(r => !touched.has(r.id) && (r.frontier ?? 0) > 0).sort((a, b) => (b.frontier ?? 0) - (a.frontier ?? 0))[0];
-  if (ignored) out.push({ icon: 'eyeoff', text: say('SELF_IGNORED', ignored.id + new Date().toDateString(), { title: ignored.title.toLowerCase(), n: ignored.frontier ?? 0 })!, link: labHref('roadmap', ignored.id) });
+  if (ignored) out.push({ icon: 'eyeoff', text: say('SELF_IGNORED', ignored.id + new Date().toDateString(), { title: clip(ignored.title.toLowerCase(), 62), n: ignored.frontier ?? 0 })!, link: labHref('roadmap', ignored.id) });
   const blockedRoadmap = active.map(r => ({ r, tests: r.tests.map(id => lab.tests.get(id)).filter(t => t?.verdict === 'BLOCKED') })).sort((a, b) => b.tests.length - a.tests.length)[0];
-  if (blockedRoadmap?.tests.length) out.push({ icon: 'block', text: say('SELF_BLOCKED', blockedRoadmap.r.id + lab.generatedAt, { title: blockedRoadmap.r.title, n: blockedRoadmap.tests.length })!, link: labHref('roadmap', blockedRoadmap.r.id) });
+  if (blockedRoadmap?.tests.length) {
+    const blocker = blockedRoadmap.tests[0]?.blocker;
+    out.push({ icon: 'block', text: say('SELF_BLOCKED', blockedRoadmap.r.id + lab.generatedAt, { title: clip(blockedRoadmap.r.title, 62), n: blockedRoadmap.tests.length, ...(blocker ? { blocker: clip(humanize(blocker), 85) } : {}) })!, link: labHref('roadmap', blockedRoadmap.r.id) });
+  }
   const d = state.evolution?.decoys;
   if (d && d.revealed > 0) out.push({ icon: 'trap', text: say('SELF_DECOY_CAUGHT', new Date().toDateString(), { n: d.caught, m: d.revealed })! });
   else if (d && d.planted > 0) out.push({ icon: 'trap', text: say('SELF_DECOY_PLANTED', new Date().toDateString(), { n: d.planted })! });
@@ -1284,6 +1300,7 @@ function Telemetry({ lab, state }: { lab: Lab; state: SystemState }) {
     ROADMAP_TEST_FROZEN: n => `Congelei as regras de ${n} testes antes de olhar os dados.`,
     INTEGRITY_REPORT_RECORDED: n => `Registrei ${n} auditorias no recorte publicado.`,
     NEXO_THOUGHT_NOOP_RECORDED: n => `${n} registros de revisão sem pensamento novo publicado.`,
+    TEST_RESULT_RECORDED: n => `Recebi ${n} registros de resultado do mesmo teste.`,
   };
   const WINDOW: Record<string, number> = { INTEGRITY_REPORT_RECORDED: 12 * 3600e3, NEXO_THOUGHT_NOOP_RECORDED: 12 * 3600e3 };
   const raw = observedActivity(lab.activity, now).slice(-160);
@@ -1291,6 +1308,7 @@ function Telemetry({ lab, state }: { lab: Lab; state: SystemState }) {
   for (const e of raw) {
     const last = grouped.at(-1);
     if (last && last.e.event_type === e.event_type && last.e.role === e.role && GROUP_PT[e.event_type]
+        && (e.event_type !== 'TEST_RESULT_RECORDED' || last.e.entity_id === e.entity_id)
         && Math.abs(Date.parse(e.at) - Date.parse(last.e.at)) < (WINDOW[e.event_type] ?? 20 * 60e3)) { last.n += Number((e as { count?: number }).count ?? 1); last.e = e; }
     else grouped.push({ e, n: Number((e as { count?: number }).count ?? 1) });
   }
@@ -1393,7 +1411,7 @@ function CountUp({ to }: { to: number }) {
     const step = (now: number) => { const k = Math.min(1, (now - t0) / dur); setV(Math.round(to * (1 - Math.pow(1 - k, 3)))); if (k < 1) raf = requestAnimationFrame(step); };
     raf = requestAnimationFrame(step); return () => cancelAnimationFrame(raf);
   }, [to]);
-  return <>{v}</>;
+  return <span data-counting={v !== to ? 'true' : 'false'}>{v}</span>;
 }
 
 // ---------- Abertura (só na primeira visita): a teia se forma, uma frase, e sai ----------

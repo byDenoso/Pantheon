@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { NARRATION } from '../src/features/lab/narration.ts';
 import { createPersistentNarrationDeck, NARRATION_STORAGE_KEY, NARRATION_CURSOR_VERSION } from '../src/features/lab/narration-deck.ts';
 const storage = () => { const entries = new Map(); return { entries, getItem: key => entries.get(key) ?? null, setItem: (key, value) => entries.set(key, value) }; };
+const publishedFields = Object.fromEntries(['status', 'review', 'result', 'blocker', 'question', 'roadmap', 'meaning', 'limit', 'method', 'by', 'request', 'n'].map(field => [field, 'published ' + field]));
 
 test('reload keeps the permutation cursor and avoids repeating phrases for the same receipt', () => {
   const local = storage();
@@ -23,7 +24,7 @@ test('the full 14400-pair family cycle remains unique across simulated reloads',
   for (let reload = 0; reload < 120; reload++) {
     const deck = createPersistentNarrationDeck(local, () => 'stable');
     for (let receipt = 0; receipt < 120; receipt++) {
-      const line = deck.say('BOARD_POSTED', 'receipt:' + receipt);
+      const line = deck.say('BOARD_POSTED', 'receipt:' + receipt, publishedFields);
       assert.ok(!seen.has(line), 'repeat at reload ' + reload);
       seen.add(line);
     }
@@ -33,28 +34,28 @@ test('the full 14400-pair family cycle remains unique across simulated reloads',
 
 test('storage is versioned, bounded and contains no receipt, actor, claim or text', () => {
   const local = storage(); const deck = createPersistentNarrationDeck(local, () => 'safeSeed1');
-  for (const family of Object.keys(NARRATION)) deck.say(family, 'private-receipt', { title: 'private scientific claim', n: 99 });
+  for (const family of Object.keys(NARRATION)) deck.say(family, 'private-receipt', { title: 'private scientific claim', n: 99, m: 99 });
   const raw = local.getItem(NARRATION_STORAGE_KEY);
   const saved = JSON.parse(raw);
   assert.equal(saved.version, NARRATION_CURSOR_VERSION);
   assert.equal(saved.matrixSize, 120);
   assert.deepEqual(Object.keys(saved).sort(), ['cursors', 'matrixSize', 'seed', 'version']);
-  assert.equal(Object.keys(saved.cursors).length, 32);
+  assert.equal(Object.keys(saved.cursors).length, Object.keys(NARRATION).length);
   assert.ok(raw.length < 3000);
   assert.doesNotMatch(raw, /private-receipt|private scientific claim|Registrei|EXECUTOR/);
   assert.equal(deck.say('constructor', 'receipt'), null);
 });
 
 test('wrong version, matrix or invalid cursors reset to a safe current state', () => {
-  for (const patch of [{ version: 0 }, { matrixSize: 90 }, { seed: 'bad token with spaces' }, { cursors: { BOARD_POSTED: -1 } }, { cursors: { BOARD_POSTED: 14400 } }, { cursors: { UNKNOWN_FAMILY: 1 } }]) {
+  for (const patch of [{ version: 0 }, { version: 1 }, { matrixSize: 90 }, { seed: 'bad token with spaces' }, { cursors: { BOARD_POSTED: -1 } }, { cursors: { BOARD_POSTED: 14400 } }, { cursors: { UNKNOWN_FAMILY: 1 } }]) {
     const local = storage();
-    local.setItem(NARRATION_STORAGE_KEY, JSON.stringify({ version: 1, matrixSize: 120, seed: 'oldseed', cursors: { BOARD_POSTED: 11 }, ...patch }));
+    local.setItem(NARRATION_STORAGE_KEY, JSON.stringify({ version: NARRATION_CURSOR_VERSION, matrixSize: 120, seed: 'oldseed', cursors: { BOARD_POSTED: 11 }, ...patch }));
     const deck = createPersistentNarrationDeck(local, () => 'resetseed');
     assert.equal(deck.persistence, 'local');
     assert.equal(deck.counters.BOARD_POSTED, undefined);
     const saved = JSON.parse(local.getItem(NARRATION_STORAGE_KEY));
     assert.equal(saved.seed, 'resetseed');
-    assert.equal(saved.version, 1);
+    assert.equal(saved.version, NARRATION_CURSOR_VERSION);
     assert.deepEqual(saved.cursors, {});
   }
 });

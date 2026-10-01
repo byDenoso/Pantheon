@@ -75,11 +75,12 @@ test('narration uses every pair once per family cycle and keeps the same receipt
   const deck = createNarrationDeck('test-session');
   const count = NARRATION.BOARD_POSTED.heads.length * NARRATION.BOARD_POSTED.tails.length;
   const seen = new Set();
+  const fields = Object.fromEntries(['status', 'review', 'result', 'blocker', 'question', 'roadmap', 'meaning', 'limit', 'method', 'by', 'request', 'n'].map(field => [field, 'published ' + field]));
   for (let i = 0; i < count; i++) {
-    const line = deck.say('BOARD_POSTED', 'receipt:' + i);
+    const line = deck.say('BOARD_POSTED', 'receipt:' + i, fields);
     assert.ok(!seen.has(line), 'repeat at pair ' + i);
     seen.add(line);
-    assert.equal(deck.say('BOARD_POSTED', 'receipt:' + i), line);
+    assert.equal(deck.say('BOARD_POSTED', 'receipt:' + i, fields), line);
   }
   assert.equal(seen.size, 14400);
   assert.equal(deck.say('NOT_RECEIVED', 'receipt'), null);
@@ -137,4 +138,12 @@ test('since-last-visit summary does not turn a bounded export into a full-period
   assert.match(summary, /Recorte de cobertura parcial/);
   assert.match(summary, /não atestam o total do período/);
   assert.doesNotMatch(summary, /resultados chegaram|testes novos nasceram/);
+});
+
+
+test('compact mobile exploration keeps its accessible name when the visible text is hidden', async () => {
+  const source = await readFile(new URL('../src/features/lab/LabApp.tsx', import.meta.url), 'utf8');
+  const css = await readFile(new URL('../src/styles/atlas-cinematic.css', import.meta.url), 'utf8');
+  assert.match(source, /className="explore-toggle" aria-label=\{explore \? 'Voltar ao painel' : 'Explorar a teia'\}/);
+  assert.match(css, /\.observatory \.obs-tools>button\{min-width:44px;min-height:44px\}/);
 });

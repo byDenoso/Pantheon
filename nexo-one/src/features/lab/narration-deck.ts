@@ -1,7 +1,7 @@
 import { NARRATION, NARRATION_MATRIX_SIZE } from './narration.ts';
 
 export const NARRATION_STORAGE_KEY = 'nexo.narration.cursor.v1';
-export const NARRATION_CURSOR_VERSION = 1;
+export const NARRATION_CURSOR_VERSION = 2;
 type CursorStorage = Pick<Storage, 'getItem' | 'setItem'>;
 const families = Object.keys(NARRATION);
 
@@ -12,7 +12,13 @@ const hash = (value: string): number => {
 };
 const gcd = (a: number, b: number): number => b ? gcd(b, a % b) : a;
 
-/** A full-cycle permutation per event family. The same receipt stays stable in a visit. */
+const supported = (template: string, vars: Record<string, string | number>) =>
+  [...template.matchAll(/\{(\w+)\}/g)].every(([, name]) => {
+    const value = vars[name!];
+    return typeof value === 'string' ? value.trim().length > 0 : typeof value === 'number' && Number.isFinite(value);
+  });
+
+/** Permute only factual, supported pairs. The same receipt and field coverage stay stable in a visit. */
 export function createNarrationDeck(salt: string, initial: Record<string, number> = {}, advance?: (cursors: Record<string, number>) => void) {
   const counters = { ...initial };
   const cache = new Map<string, string>();
@@ -21,16 +27,23 @@ export function createNarrationDeck(salt: string, initial: Record<string, number
     say(key: string, receipt: string, vars: Record<string, string | number> = {}): string | null {
       const matrix = Object.hasOwn(NARRATION, key) ? NARRATION[key] : undefined;
       if (!matrix) return null;
-      const cacheKey = `${key}\u0000${receipt}`;
+      const heads = matrix.heads.filter(head => supported(head, vars));
+      if (!heads.length) return null;
+      const eligible = matrix.tails.map((tail, i) => supported(tail, vars) ? i : -1).filter(i => i >= 0);
+      const tails = eligible.length ? eligible.map(i => matrix.tails[i]!) : [''];
+      const cacheKey = `${key}\u0000${receipt}\u0000${eligible.join(',')}`;
       let template = cache.get(cacheKey);
       if (!template) {
-        const size = matrix.heads.length * matrix.tails.length;
+        const size = heads.length * tails.length;
         let stride = 137;
         while (gcd(stride, size) !== 1) stride += 2;
         const used = Math.max(0, Math.floor(counters[key] ?? 0));
         const index = (hash(`${salt}:${key}`) % size + used * stride) % size;
-        template = matrix.heads[Math.floor(index / matrix.tails.length)]! + matrix.tails[index % matrix.tails.length]!;
-        counters[key] = (used + 1) % size;
+        template = heads[Math.floor(index / tails.length)]! + tails[index % tails.length]!;
+        if (!eligible.length) template += '.';
+        counters[key] = (used + 1) % (NARRATION_MATRIX_SIZE ** 2);
+        // Receipt IDs/text are never persisted. Bound even this visit-only stability cache.
+        if (cache.size >= 512) cache.delete(cache.keys().next().value!);
         cache.set(cacheKey, template);
         advance?.(counters);
       }

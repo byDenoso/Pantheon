@@ -15,6 +15,28 @@ const output = 'test-output/cinematic';
 await mkdir(output, { recursive: true });
 const browser = await chromium.launch({ headless: true, ...(process.env.CHROMIUM_EXECUTABLE ? { executablePath: process.env.CHROMIUM_EXECUTABLE } : {}), args: ['--no-sandbox', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'] });
 const reports = [];
+const readiness = [];
+// Route content existing is not visual readiness: hud-in and text/count animations must finish.
+const visualReady = async (page, name, exploring = false) => {
+  await page.evaluate(() => document.fonts.ready);
+  await page.waitForFunction(expected => {
+    const hud = document.querySelector('.hud');
+    if (!hud || document.fonts.status !== 'loaded') return false;
+    const style = getComputedStyle(hud);
+    if (Math.abs(Number(style.opacity) - expected) > .001) return false;
+    const finite = hud.getAnimations({ subtree: true }).filter(animation => {
+      const effect = animation.effect?.getComputedTiming();
+      return effect && Number.isFinite(effect.endTime);
+    });
+    return finite.every(animation => ['finished', 'idle'].includes(animation.playState))
+      && !hud.querySelector('[data-writing="true"], [data-counting="true"]');
+  }, exploring ? 0 : 1, { timeout: 15_000 });
+  const state = await page.evaluate(() => ({
+    fonts: document.fonts.status, hudOpacity: Number(getComputedStyle(document.querySelector('.hud')).opacity),
+    exploring: !!document.querySelector('.observatory.exploring'),
+  }));
+  readiness.push({ name, ...state });
+};
 const noOverflow = async (page, route) => {
   const size = await page.evaluate(() => ({ width: innerWidth, scroll: document.documentElement.scrollWidth }));
   assert.ok(size.scroll <= size.width + 1, route + ': horizontal overflow ' + JSON.stringify(size));
@@ -46,7 +68,7 @@ try {
     await page.route('**/build-meta.json*', route => route.fulfill({ json: { projection_fingerprint: projection.manifest.projection_fingerprint } }));
     await page.goto(base + '/#/agora');
     await page.locator('#now-problem').waitFor();
-    await page.waitForTimeout(500);
+    await visualReady(page, name + ':home');
     assert.match(await page.locator('.now-priorities').innerText(), new RegExp(`${blocked} testes parados`));
     assert.match(await page.locator('#now-next').locator('..').innerText(), new RegExp(`recuperar os ${blocked} bloqueios`));
     assert.equal(await page.locator('#now-fronts').locator('..').locator('.fronts>li').count(), 8);
@@ -67,18 +89,21 @@ try {
     assert.match(await page.locator('.h1-entity').locator('..').innerText(), /Rejeitado pelo critério/);
     assert.doesNotMatch(await page.locator('.story').innerText().catch(() => ''), /Travei aqui/);
     await noOverflow(page, name + ':rejected');
+    await visualReady(page, name + ':rejected');
     await page.screenshot({ path: output + '/' + name + '-rejected.png' });
     await page.evaluate(() => { location.hash = '#/roadmap/RM-H0-SYSTEMATICS-VS-PHYSICS-20260923-V1'; });
     await page.locator('.trail').waitFor();
     assert.match(await page.locator('.trail').innerText(), /0 resultados fora da fronteira.*22 na fronteira/s);
     assert.doesNotMatch(await page.locator('.trail').innerText(), /16 andados|6 na fronteira/);
     await noOverflow(page, name + ':roadmap');
+    await visualReady(page, name + ':roadmap');
     await page.screenshot({ path: output + '/' + name + '-roadmap.png' });
     await page.evaluate(() => { location.hash = '#/ciclo'; });
     await page.locator('.lanes').waitFor();
     assert.match(await page.locator('.lanes').innerText(), /240 eventos recebidos.*cobertura parcial/s);
     assert.doesNotMatch(await page.locator('.crew').innerText(), /ainda sem ações registradas|0 ações em 24 h/);
     await noOverflow(page, name + ':cycle');
+    await visualReady(page, name + ':cycle');
     await page.screenshot({ path: output + '/' + name + '-cycle.png' });
     await page.evaluate(() => { location.hash = '#/agora'; });
     await page.locator('#now-problem').waitFor();
@@ -86,25 +111,50 @@ try {
     await page.getByRole('dialog').waitFor();
     await page.keyboard.press('Escape');
     assert.equal(await page.getByRole('dialog').count(), 0);
+    await visualReady(page, name + ':camera-ready');
     if (!fallback) {
+      await page.screenshot({ path: output + '/' + name + '-camera-ready.png' });
+      const diagnostics = await page.evaluate(() => ({
+        url: location.href,
+        sceneUnavailable: !!document.querySelector('.scene-unavailable'),
+        canvasCount: document.querySelectorAll('.obs-scene canvas').length,
+        buttons: [...document.querySelectorAll('.obs-tools button')].map(button => ({
+          label: button.getAttribute('aria-label'), text: button.textContent,
+          width: button.getBoundingClientRect().width, height: button.getBoundingClientRect().height,
+        })),
+      }));
+      await writeFile(output + '/' + name + '-camera-diagnostics.json', JSON.stringify(diagnostics, null, 2));
       await page.getByRole('button', { name: 'Explorar a teia' }).click();
       const controls = page.getByRole('group', { name: /Câmera da teia/ });
       await controls.focus();
       await page.keyboard.press('ArrowRight');
       await page.keyboard.press('+');
       await page.getByRole('button', { name: 'Recentrar câmera' }).click();
+      await visualReady(page, name + ':explore', true);
+      const hint = await page.locator('.explore-hint').boundingBox();
+      assert.ok(hint && hint.x >= 0 && hint.x + hint.width <= viewport.width, 'explore hint within viewport');
+      if (viewport.width >= 1280) {
+        const sidebar = await page.locator('.telemetry').boundingBox();
+        assert.ok(hint.x + hint.width < sidebar.x, 'explore hint must not be clipped by telemetry');
+      }
       await page.screenshot({ path: output + '/' + name + '-explore.png' });
       await page.keyboard.press('Escape');
       assert.equal(await page.locator('.observatory.exploring').count(), 0);
     }
-    await page.getByRole('button', { name: /Mostrar só a página/ }).click();
-    assert.equal(await page.locator('.observatory.flat').count(), 1);
-    await page.getByRole('button', { name: /Mostrar a teia/ }).click();
-    assert.equal(await page.locator('.observatory.flat').count(), 0);
+    if (fallback) {
+      assert.equal(await page.getByRole('button', { name: 'Explorar a teia' }).count(), 0);
+      assert.equal(await page.getByRole('button', { name: /Mostrar só a página/ }).count(), 0);
+    } else {
+      await page.getByRole('button', { name: /Mostrar só a página/ }).click();
+      assert.equal(await page.locator('.observatory.flat').count(), 1);
+      await page.getByRole('button', { name: /Mostrar a teia/ }).click();
+      assert.equal(await page.locator('.observatory.flat').count(), 0);
+    }
     assert.deepEqual(errors, [], name + ': page errors');
-    reports.push({ name, routes: ['agora', 'rejected', 'roadmap', 'ciclo'], noOverflow: true, searchEscape: true, cameraKeyboard: !fallback, reducedMotion: reduced, forcedWebGLFallback: fallback, errors });
+    reports.push({ name, routes: ['agora', 'rejected', 'roadmap', 'ciclo'], noOverflow: true, searchEscape: true, cameraKeyboard: !fallback, flatToggle: !fallback, reducedMotion: reduced, forcedWebGLFallback: fallback, errors });
     await context.close();
   }
 } finally { await browser.close(); }
 await writeFile(output + '/report.json', JSON.stringify(reports, null, 2));
+await writeFile(output + '/readiness.json', JSON.stringify(readiness, null, 2));
 console.log(JSON.stringify(reports));

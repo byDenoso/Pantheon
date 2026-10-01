@@ -80,6 +80,12 @@
 .observatory .live-presence .is-running{background:var(--v-confirmed);box-shadow:0 0 12px rgba(156,203,171,.35)}
 .observatory .live-work{list-style:none;padding:0;margin:12px 0;display:grid;gap:12px}
 .observatory .live-work li{display:grid;gap:4px}.observatory .live-work li span{font:12px/1.5 var(--f-mono);color:var(--o-dim)}
+.observatory .live-queue{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:18px 0}
+.observatory .live-queue dt{font:500 21px/1.2 var(--f-mono);color:var(--o-accent)}
+.observatory .live-queue dd{margin:4px 0 0;font:11px/1.5 var(--f-mono);color:var(--o-dim)}
+.observatory .reading-details>summary{cursor:pointer;min-height:44px;padding:12px 0;color:var(--o-dim);font:12px/1.5 var(--f-mono)}
+.observatory .explore-hint{width:min(720px,calc(100% - 32px));white-space:normal;text-align:center;line-height:1.6;border-radius:12px;box-sizing:border-box}
+@media(min-width:1280px){.observatory .explore-hint{left:100px;right:356px;width:auto;max-width:720px;transform:none;top:16px}}
 .observatory .live-delivery{padding:12px 0;border-top:1px solid var(--o-line)}
 .observatory .live-delivery>span{font:11px/1.5 var(--f-mono);color:var(--o-accent)}
 .observatory .live-delivery p{margin:6px 0!important}
@@ -98,3 +104,6 @@
 /* No event in a bounded export is not a failure or a refutation. */
 .observatory .crew-card.quiet{border-color:var(--o-line)}
 .observatory .crew-card.quiet .crew-pulse i{background:var(--o-quiet);box-shadow:none}
+
+/* Compact visual labels keep an accessible name and a touch-sized control. */
+.observatory .obs-tools>button{min-width:44px;min-height:44px}
