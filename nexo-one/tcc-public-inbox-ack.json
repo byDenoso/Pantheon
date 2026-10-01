@@ -220,6 +220,7 @@
     "inbox/scheduled-guardiao-integrity-4eca6a809262f332.json": "d55e8cdac1b1b34239a374cd8dee447107385cf7523dda7a8534484d567f25b4",
     "inbox/scheduled-guardiao-integrity-843309583b848e26.json": "ef33415a5ff000ed8ed1b9f21e17f7d8e27c5608d5fcd8ff768aba6e64bd3bab",
     "inbox/scheduled-guardiao-integrity-88536298f7a69178.json": "ee47fdef6fe6f76e3bafe04d0f936e8a25cfaa50ce2d50fb01c02be674fc30d5",
+    "inbox/scheduled-guardiao-recipe-review-pr395-1cd39cd5.json": "c20496a95230e5983ee035b6c7c6fc40847966c3f049b5c276ef5236f02bf73a",
     "inbox/scheduled-guardiao-recipe-review-pr395-4271a90a.json": "d84b51167ba69b45d8172fd5e8c106ea355a349e5f464c0bda3228c6a23d7f4c",
     "inbox/scheduled-guardiao-recipe-review-pr395-c90f8752.json": "3a0655a473f1c6b836564da168044651416e8e50dc723eef361870ced17f9a28",
     "inbox/scheduled-interactive-20260929-router040-ready-binds-v1.json": "9c2ae392c4fa126a5541d50e0360e2036a3c6d6d280edc058003c19ec6d9f22c",
@@ -1422,6 +1423,11 @@
     "inbox/scheduled-guardiao-integrity-88536298f7a69178.json": {
       "fingerprint": "ee47fdef6fe6f76e3bafe04d0f936e8a25cfaa50ce2d50fb01c02be674fc30d5",
       "source": "legacy-acked"
+    },
+    "inbox/scheduled-guardiao-recipe-review-pr395-1cd39cd5.json": {
+      "applied_at": "2026-10-01T19:14:30Z",
+      "fingerprint": "c20496a95230e5983ee035b6c7c6fc40847966c3f049b5c276ef5236f02bf73a",
+      "tower_revision": "sha256:bc7098163b00df0c2efd5f47f60f2616bf569cddeb0ea2143032ba003b689ee0"
     },
     "inbox/scheduled-guardiao-recipe-review-pr395-4271a90a.json": {
       "applied_at": "2026-10-01T17:25:05Z",
