@@ -258,6 +258,7 @@
     "inbox/scheduled-nexo-scientist-20260929t2156.json": "0862d96dfbf6e68bd77c9b36aba0c767098945c701ba219a98f9a3d18c45573e",
     "inbox/scheduled-nexo-scientist-board-20260929t2156.json": "3d4f9c3341a8823f29b40ad9a0699f35bbb5436b502a1329c77f0a0236085ad4",
     "inbox/scheduled-opa-dr1-data-groups-pp-des-u3-v1.json": "7b5d136f3c950f1b526c626981657ba88b7dd4ecf3a501a4daf492895f5fdd4b",
+    "inbox/scheduled-opa-dr1-data-groups-pp-u3-v1.json": "003ce0eb9d05a097f775d6fa2fc74ca1665fc19f2e265f905b4b4fdaf90c2954",
     "inbox/scheduled-opa-dr1-recipe-groups-pp-des-u3-v1.json": "054df68531705646f163c1d26f1c853cdf2c14ffe392cdd20c09c229d16cb34c",
     "inbox/scheduled-operator-20260928-ready29-recipe-gaps-v1.json": "14ce73bcb4f1c664cf6f248c3eff53c63b279d0cfc06e1875e05112205344698",
     "inbox/scheduled-operator-20260929t0417z-blockers-v1.json": "64fbf5338c728cb47d193e46e23de91ce1a76549932508632a6bfdbcf5080a04",
@@ -1475,6 +1476,11 @@
       "applied_at": "2026-10-01T00:35:33Z",
       "fingerprint": "7b5d136f3c950f1b526c626981657ba88b7dd4ecf3a501a4daf492895f5fdd4b",
       "tower_revision": "sha256:da42fd95eb65f2a8cef4aac955a4fdd42e7ca66a72edbd7b0efb4c39869656ed"
+    },
+    "inbox/scheduled-opa-dr1-data-groups-pp-u3-v1.json": {
+      "applied_at": "2026-10-01T03:37:23Z",
+      "fingerprint": "003ce0eb9d05a097f775d6fa2fc74ca1665fc19f2e265f905b4b4fdaf90c2954",
+      "tower_revision": "sha256:8f66d8d1d2032954ce03eb9a01af5dcd1d15f9f81cf80da76f21089ff179b09d"
     },
     "inbox/scheduled-opa-dr1-recipe-groups-pp-des-u3-v1.json": {
       "fingerprint": "054df68531705646f163c1d26f1c853cdf2c14ffe392cdd20c09c229d16cb34c",
