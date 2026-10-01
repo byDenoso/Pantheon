@@ -147,6 +147,9 @@
  .observatory .board>li{padding:14px}
  .observatory .board-focus .board-caption{margin-bottom:14px!important}
 }
+@media(max-width:360px){
+ .observatory .board-focus .board-caption{margin-bottom:4px!important}
+}
 .observatory .explore-hint{width:min(720px,calc(100% - 32px));white-space:normal;text-align:center;line-height:1.6;border-radius:12px;box-sizing:border-box}
 @media(min-width:1280px){
  .observatory .explore-hint{left:100px;right:356px;width:auto;max-width:720px;transform:none;top:16px}
