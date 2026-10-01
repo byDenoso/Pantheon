@@ -85,6 +85,7 @@
     "inbox/scheduled-conversa-calibracao-binding-20261001-3.json": "8c815e6bfbcb12e4b6228a3da95da06d39ecf318afb2d8109ce05d2fe0d8c3c2",
     "inbox/scheduled-conversa-cientista-h0-prontidao-20261001-v1.json": "ff1081e89190974679972fc28955058d5efc498fec1dee98754b62efaceb1af7",
     "inbox/scheduled-conversa-recover-dr1-om315-pp-des-u3-v1.json": "35ef2208da37e65b47515a248d7435dd1edb8652843b25d67d7a21f9dbd6ab63",
+    "inbox/scheduled-conversa-recover-rd-broad-om330-des-u3-dr1-v1.json": "a0f64ec8e7e62201cc814b0358393b3876c054b6524f07ccf3ce077117321d6e",
     "inbox/scheduled-conversation-h0hom26-010-science-contract-gaps-v1.json": "7e2ec472e38d64e578be3fdca9e0c0dd6f8cf73be84664c0275b8086681ffcff",
     "inbox/scheduled-critic-20260929t033725z-min.json": "b713015632de38e360e6547a6443076f711688234fce9835496457b5818be9fc",
     "inbox/scheduled-critical-20260928t1315z.json": "9684fbe7754b84ac7b94554e91fb2908775696c861b4b8bd2edef9a2fa071633",
@@ -881,6 +882,11 @@
       "applied_at": "2026-10-01T10:44:36Z",
       "fingerprint": "35ef2208da37e65b47515a248d7435dd1edb8652843b25d67d7a21f9dbd6ab63",
       "tower_revision": "sha256:185199abc71ff0f6fd83dc4a7dcfb80cea35654b32631cf8c1028308de508179"
+    },
+    "inbox/scheduled-conversa-recover-rd-broad-om330-des-u3-dr1-v1.json": {
+      "applied_at": "2026-10-01T22:22:37Z",
+      "fingerprint": "a0f64ec8e7e62201cc814b0358393b3876c054b6524f07ccf3ce077117321d6e",
+      "tower_revision": "sha256:66c7f616c5ad0a956cd17855f2d3895b38f22d4bc5a14e86a85fbedacf3d4c1a"
     },
     "inbox/scheduled-conversation-h0hom26-010-science-contract-gaps-v1.json": {
       "applied_at": "2026-10-01T10:27:37Z",
