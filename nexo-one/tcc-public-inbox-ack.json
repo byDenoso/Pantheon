@@ -341,6 +341,7 @@
     "inbox/scheduled-recipe-review-pr385-80c0cc1-approved.json": "7be1c1eb8d0013389c3be5d5927d819df8cfb1763ceba65997f464ff44316e1f",
     "inbox/scheduled-recipe-review-pr386-8f11a25-approved.json": "4c2f29f2f8a6a46e77ef1e3862208be69314366f3744912a544ce6911c389bc2",
     "inbox/scheduled-recipe-review-pr388-f9385dc-approved.json": "a2d38526d12e20286f8c22a1597ff6f4c0ac679e1eff3474d1088178db05c462",
+    "inbox/scheduled-referee1-6638057a1f2d-a2-point-v1.json": "57f0c3df05a1b588cf39a25301804e8d47107ad3f0e9feb385a5e3daa07a0e8a",
     "inbox/scheduled-referee1-contest-de-1-20260929.json": "1be30ba40520823873302a78649e4e29df27d40848225c0610b56e0490881f57",
     "inbox/scheduled-referee1-contest-de-2-20260929.json": "c05f150b6771989351e215f2fe37e2118223370235c3de0b1dfdc48b283a2ca9",
     "inbox/scheduled-referee1-contest-de-3-20260929.json": "6439ae84e271056ee3a27210811768e4360861f09f065c2a3572768b496d362f",
@@ -1831,6 +1832,11 @@
     "inbox/scheduled-recipe-review-pr388-f9385dc-approved.json": {
       "fingerprint": "a2d38526d12e20286f8c22a1597ff6f4c0ac679e1eff3474d1088178db05c462",
       "source": "legacy-acked"
+    },
+    "inbox/scheduled-referee1-6638057a1f2d-a2-point-v1.json": {
+      "applied_at": "2026-10-01T05:25:09Z",
+      "fingerprint": "57f0c3df05a1b588cf39a25301804e8d47107ad3f0e9feb385a5e3daa07a0e8a",
+      "tower_revision": "sha256:fb005f977e75501784b2636ddeb4d3731bab2901b459e16d83be01ed9f3baca7"
     },
     "inbox/scheduled-referee1-contest-de-1-20260929.json": {
       "fingerprint": "1be30ba40520823873302a78649e4e29df27d40848225c0610b56e0490881f57",
