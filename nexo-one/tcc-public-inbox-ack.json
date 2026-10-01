@@ -1305,14 +1305,14 @@
       "tower_revision": "sha256:2bcc5aa330d19ca023a91fe0bd2475833a450eba9fae8f9a2e5012d1187cbb36"
     },
     "inbox/scheduled-learner-20261001t0408z-snppdesu3-om330-recipe-v1.json": {
-      "applied_at": "2026-10-01T04:18:28Z",
+      "applied_at": "2026-10-01T04:22:05Z",
       "fingerprint": "79da0fc89d4ab5f12bb517094b70fa480317242a82a90bf89d05bb512120c658",
-      "tower_revision": "sha256:2bcc5aa330d19ca023a91fe0bd2475833a450eba9fae8f9a2e5012d1187cbb36"
+      "tower_revision": "sha256:04552a94d104730bf0e721840b4112fb3f000b5b6f68b516fa585dbdb48080e0"
     },
     "inbox/scheduled-learner-20261001t0408z-snppu3-om330-recipe-v1.json": {
-      "applied_at": "2026-10-01T04:18:28Z",
+      "applied_at": "2026-10-01T04:22:05Z",
       "fingerprint": "2abfaf0f61210fbb5683c52eaa0feab6ccd88fcd676c03e8f89034198cbcf16e",
-      "tower_revision": "sha256:2bcc5aa330d19ca023a91fe0bd2475833a450eba9fae8f9a2e5012d1187cbb36"
+      "tower_revision": "sha256:04552a94d104730bf0e721840b4112fb3f000b5b6f68b516fa585dbdb48080e0"
     },
     "inbox/scheduled-learner-261001-0309-r1-cut-desu3-rec.json": {
       "applied_at": "2026-10-01T03:21:44Z",
