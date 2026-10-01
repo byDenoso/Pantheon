@@ -273,6 +273,8 @@
     "inbox/scheduled-learner-20261001t2026z-predcal05-snapshot-bind.json": "8a451a6e6fe165f5d373259acc683caf276c8825cae7b4c90192b6b7abcf66ab",
     "inbox/scheduled-learner-20261001t2026z-predcal10-snapshot-bind.json": "244d927c4fa4786224aeac75c8f3784a7a208aeb6009dca572ad692e36dfce1f",
     "inbox/scheduled-learner-20261001t2026z-predcal15-snapshot-bind.json": "14e0386eea119128722d7298961869310b88a83682db022a7d4515405ab3eaf7",
+    "inbox/scheduled-learner-20261001t2034z-h0hom012-exec-bind-v3.json": "620d73f850d59124e1457300387ae9a636119fb99880f857effe576e8d05d3e6",
+    "inbox/scheduled-learner-20261001t2035z-h0-meta-ready-board.json": "bd14d40d31a35de88ba1fe84595924e7303d7af63f04671e6d2113f75af9645e",
     "inbox/scheduled-learner-261001-0309-r1-cut-desu3-rec.json": "d5247da1fe24b0fae0d3131878499bf55b9459a736e157792b6773f071dfa60d",
     "inbox/scheduled-learner-261001-0309-r1-lq-ppu3-rec.json": "d25256d416dbb6ca56587c6be37301b3a6b742680a79fbcda7b6fb93ad803dec",
     "inbox/scheduled-learner-261001-0310-r1-cut-desu3-data.json": "1118f2f05fdd78cf30a6ad44e682429f8d1620f18f4f9b7a2b34547c2a048160",
@@ -1666,19 +1668,29 @@
       "tower_revision": "sha256:443e96b919937f610d84b50b41d999d0f5321465fd757335db9be9a035245430"
     },
     "inbox/scheduled-learner-20261001t2026z-predcal05-snapshot-bind.json": {
-      "applied_at": "2026-10-01T20:37:44Z",
+      "applied_at": "2026-10-01T20:40:31Z",
       "fingerprint": "8a451a6e6fe165f5d373259acc683caf276c8825cae7b4c90192b6b7abcf66ab",
-      "tower_revision": "sha256:fc23d034b3f92ee6d64b46240b550277ce58a63ad74d0d1ddc945d6b87ed4c11"
+      "tower_revision": "sha256:48d39e8844d6e80a86f0874e842a98de3043d17bdaa0c3c3679e80e9f452d12a"
     },
     "inbox/scheduled-learner-20261001t2026z-predcal10-snapshot-bind.json": {
-      "applied_at": "2026-10-01T20:37:44Z",
+      "applied_at": "2026-10-01T20:40:31Z",
       "fingerprint": "244d927c4fa4786224aeac75c8f3784a7a208aeb6009dca572ad692e36dfce1f",
-      "tower_revision": "sha256:fc23d034b3f92ee6d64b46240b550277ce58a63ad74d0d1ddc945d6b87ed4c11"
+      "tower_revision": "sha256:48d39e8844d6e80a86f0874e842a98de3043d17bdaa0c3c3679e80e9f452d12a"
     },
     "inbox/scheduled-learner-20261001t2026z-predcal15-snapshot-bind.json": {
-      "applied_at": "2026-10-01T20:37:44Z",
+      "applied_at": "2026-10-01T20:40:31Z",
       "fingerprint": "14e0386eea119128722d7298961869310b88a83682db022a7d4515405ab3eaf7",
-      "tower_revision": "sha256:fc23d034b3f92ee6d64b46240b550277ce58a63ad74d0d1ddc945d6b87ed4c11"
+      "tower_revision": "sha256:48d39e8844d6e80a86f0874e842a98de3043d17bdaa0c3c3679e80e9f452d12a"
+    },
+    "inbox/scheduled-learner-20261001t2034z-h0hom012-exec-bind-v3.json": {
+      "applied_at": "2026-10-01T20:40:31Z",
+      "fingerprint": "620d73f850d59124e1457300387ae9a636119fb99880f857effe576e8d05d3e6",
+      "tower_revision": "sha256:48d39e8844d6e80a86f0874e842a98de3043d17bdaa0c3c3679e80e9f452d12a"
+    },
+    "inbox/scheduled-learner-20261001t2035z-h0-meta-ready-board.json": {
+      "applied_at": "2026-10-01T20:40:31Z",
+      "fingerprint": "bd14d40d31a35de88ba1fe84595924e7303d7af63f04671e6d2113f75af9645e",
+      "tower_revision": "sha256:48d39e8844d6e80a86f0874e842a98de3043d17bdaa0c3c3679e80e9f452d12a"
     },
     "inbox/scheduled-learner-261001-0309-r1-cut-desu3-rec.json": {
       "applied_at": "2026-10-01T03:21:44Z",
