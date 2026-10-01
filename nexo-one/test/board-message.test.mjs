@@ -55,5 +55,15 @@ test('literal message, original routing and linked references stay separate from
   assert.match(component, /lab\.roadmaps\.get\(id\)/);
   assert.match(component, /aria-controls=\{textId\}/);
   assert.match(app, /Narração · interface<\/span>/);
+  for (const label of ['Destino / responsável', 'Prioridade', 'Status']) assert.ok(app.includes(`aria-label="${label}"`), 'stable filter accessible name: ' + label);
   assert.ok(app.indexOf('<BoardFocus state=') < app.indexOf('<LiveNowPanel lab='), 'focus is visible before long dashboard sections');
+});
+
+test('compact message sky shares its height with the reading panel and the exploration control', async () => {
+  const css = await readFile(new URL('../src/styles/atlas-cinematic.css', import.meta.url), 'utf8');
+  const base = await readFile(new URL('../src/features/lab/lab.css', import.meta.url), 'utf8');
+  assert.match(css, /:has\(\.board-focus\):not\(\.exploring\):not\(\.flat\):not\(\.scene-unavailable\)\{--sky:22vh\}/);
+  assert.match(css, /:has\(\.board-focus\)[^\n]+\.obs-scene\{height:var\(--sky\)\}/);
+  assert.match(css, /:has\(\.board-focus\)[^\n]+\.hud\{top:calc\(48px \+ var\(--sky\)\)\}/);
+  assert.match(base, /\.explore-toggle\{top:calc\(48px \+ var\(--sky\) - 46px\)!important/);
 });

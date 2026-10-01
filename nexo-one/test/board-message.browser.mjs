@@ -64,6 +64,22 @@ try {
     const originalBounds = await focus.locator('.board-text').boundingBox();
     const hudBounds = await page.locator('.hud').boundingBox();
     assert.ok(originalBounds.y < Math.min(height - 60, hudBounds.y + hudBounds.height) - 20, 'original message starts in the opening viewport');
+    if (width < 760 && !fallback) {
+      await page.getByRole('button', { name: 'Explorar a teia' }).waitFor();
+      const diagnostics = await page.evaluate(() => {
+        const bounds = selector => {
+          const element = document.querySelector(selector), rect = element.getBoundingClientRect();
+          return { x: rect.x, y: rect.y, width: rect.width, height: rect.height, bottom: rect.bottom, topStyle: getComputedStyle(element).top };
+        };
+        return { sky: getComputedStyle(document.querySelector('.observatory')).getPropertyValue('--sky').trim(),
+          scene: bounds('.obs-scene'), hud: bounds('.hud'), hero: bounds('.hud-hero'), toggle: bounds('.explore-toggle') };
+      });
+      await writeFile(output + '/' + name + '-opening-bounds.json', JSON.stringify(diagnostics, null, 2));
+      assert.ok(diagnostics.toggle.width >= 44 && diagnostics.toggle.height >= 44, 'mobile exploration target is at least 44px');
+      assert.ok(diagnostics.toggle.y >= diagnostics.scene.y && diagnostics.toggle.bottom <= diagnostics.scene.bottom + 1, 'exploration control stays inside the sky');
+      assert.ok(diagnostics.toggle.bottom <= diagnostics.hero.y, 'exploration control stays outside the hero');
+      assert.ok(diagnostics.scene.bottom <= diagnostics.hud.y + 1, 'reading panel starts below the sky');
+    }
     if (!input) {
       await page.addStyleTag({ content: 'body::after{content:"FIXTURE · DADOS SINTÉTICOS · SOMENTE TESTE";position:fixed;left:8px;bottom:3px;z-index:9999;background:#15120c;color:#f4e4bd;padding:3px 6px;font:10px system-ui;pointer-events:none}' });
       assert.match(await focus.locator('.board-state').innerText(), /^Aberto/);
@@ -115,7 +131,7 @@ try {
     const motions = await focus.evaluate(el => el.getAnimations({ subtree: true }).filter(animation => animation.playState === 'running').length);
     assert.equal(motions, 0, 'no message activity animation');
     assert.deepEqual(errors, [], name + ': page errors');
-    reports.push({ name, input: input ? 'public-projection' : 'synthetic-test-only', focusY: bounds.y, originalY: originalBounds.y, literal: true, keyboardFocus: true, repeatedOpen: true, filters: true, reducedMotion: reduced, webglFallback: fallback, errors });
+    reports.push({ name, input: input ? 'public-projection' : 'synthetic-test-only', focusY: bounds.y, originalY: originalBounds.y, literal: true, keyboardFocus: true, repeatedOpen: true, filters: true, mobileControlBounds: width < 760 && !fallback, reducedMotion: reduced, webglFallback: fallback, errors });
     await context.close();
   }
 } finally { await browser.close(); }

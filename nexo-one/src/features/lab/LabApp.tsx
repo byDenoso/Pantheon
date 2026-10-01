@@ -1266,9 +1266,9 @@ function Board({ state, lab, visit = 0 }: { state: SystemState; lab: Lab; visit?
   const who = boardRole;
   return <Section title="Conversa entre os agentes" kicker={`${filtered.length} de ${every.length} recados · mural original`} id="now-board">
     <div className="board-filters" role="group" aria-label="Filtrar mural">
-      <label>Destino / responsável<select value={owner} onChange={e => { setOwner(e.target.value); setAll(false); }}><option value="">Todos</option>{[...new Set(every.map(p => p.meta.owner))].map(x => <option key={x} value={x}>{who(x)}</option>)}</select></label>
-      <label>Prioridade<select value={priority} onChange={e => { setPriority(e.target.value); setAll(false); }}><option value="">Todas</option>{[...new Set(every.map(p => p.meta.priority))].map(x => <option key={x}>{x}</option>)}</select></label>
-      <label>Status<select value={status} onChange={e => { setStatus(e.target.value); setAll(false); }}><option value="">Todos</option>{['Pendentes', 'Aberto', 'Aceito', 'Respondido', 'Resolvido', 'Expirado'].map(x => <option key={x}>{x}</option>)}</select></label>
+      <label>Destino / responsável<select aria-label="Destino / responsável" value={owner} onChange={e => { setOwner(e.target.value); setAll(false); }}><option value="">Todos</option>{[...new Set(every.map(p => p.meta.owner))].map(x => <option key={x} value={x}>{who(x)}</option>)}</select></label>
+      <label>Prioridade<select aria-label="Prioridade" value={priority} onChange={e => { setPriority(e.target.value); setAll(false); }}><option value="">Todas</option>{[...new Set(every.map(p => p.meta.priority))].map(x => <option key={x}>{x}</option>)}</select></label>
+      <label>Status<select aria-label="Status" value={status} onChange={e => { setStatus(e.target.value); setAll(false); }}><option value="">Todos</option>{['Pendentes', 'Aberto', 'Aceito', 'Respondido', 'Resolvido', 'Expirado'].map(x => <option key={x}>{x}</option>)}</select></label>
     </div>
     <p className="hud-note">Aqui está o que cada papel escreveu. Autor e destino vêm do mural; prioridade e próxima ação aparecem quando foram declaradas.</p>
     {!posts.length && <p role="status">Nenhum recado com estes filtros.</p>}
