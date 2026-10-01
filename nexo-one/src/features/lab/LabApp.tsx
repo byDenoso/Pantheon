@@ -221,6 +221,7 @@ function Now({ lab, state, onReplay, replayCount }: { lab: Lab; state: SystemSta
   const review = (lab.reviews.PENDING_REVIEW ?? 0) + (lab.reviews.CONTESTED ?? 0) + (lab.reviews.REFEREE1_PASSED ?? 0);
   const resolved = (lab.reviews.CONFIRMED ?? 0) + (lab.reviews.REFUTED ?? 0);
   const blocked = [...lab.tests.values()].filter(t => t.verdict === 'BLOCKED');
+  const closedBlocked = blocked.filter(t => t.roadmapId && lab.roadmaps.get(t.roadmapId)?.state === 'CLOSED').length;
   const discovery = [...lab.tests.values()].find(t => t.verdict === 'CONFIRMED') ?? [...lab.tests.values()].find(t => t.meaning && t.verdict === 'PROVISIONAL');
   const activeRoadmaps = new Set([...lab.roadmaps.values()].filter(r => ['ACTIVE', 'CHARTERED'].includes(r.state)).map(r => r.id));
   const next = [...lab.tests.values()].filter(t => isReady(t) && t.question && t.roadmapId && activeRoadmaps.has(t.roadmapId)).slice(0, 3);
@@ -262,15 +263,16 @@ function Now({ lab, state, onReplay, replayCount }: { lab: Lab; state: SystemSta
     </a>}
 
     <div className="hud-pair now-priorities">
-      <Section title="Problema principal" kicker={blocked.length ? `${blocked.length} testes parados` : 'Nenhum bloqueio'} id="now-problem">
+      <Section title="Bloqueios publicados" kicker={blocked.length ? `${blocked.length} testes parados` : 'Nenhum bloqueio de TEST publicado'} id="now-problem">
         {blocked.length
-          ? <><p className="hud-big">{blocked[0]!.blocker ?? blocked[0]!.summary ?? 'Motivo não publicado'}</p><E id={blocked[0]!.id}>investigar →</E></>
-          : <p className="hud-muted">Nada impedindo a fila agora.</p>}
+          ? <><p className="hud-big">{blocked[0]!.blocker ?? 'Motivo do bloqueio não publicado.'}</p><E id={blocked[0]!.id}>{blocked[0]!.name} →</E>
+            {closedBlocked > 0 && <p className="hud-note">Inclui {closedBlocked} testes vinculados a roadmaps encerrados.</p>}</>
+          : <p className="hud-muted">Nenhum teste em BLOCKED nesta leitura.</p>}
       </Section>
       <Section title="Próximo movimento" kicker="Roadmaps ativos · candidatos READY" id="now-next">
         {next.length ? <ol className="hud-list">{next.map(t => <li key={t.id}><div><E id={t.id}>{t.name}</E><small className="readiness-note">{readinessLabel(t)}</small></div></li>)}</ol>
           : <><p className="hud-muted">{lab.counts.READY ? 'Nenhum candidato READY com pergunta publicada e vínculo a um roadmap ativo.' : 'Nenhum teste pronto nesta leitura.'}</p>
-            {blocked.length ? <p>Próximo passo: recuperar os {blocked.length} bloqueios publicados. <a href="#/evidencia?v=BLOCKED">Consultar bloqueios →</a></p>
+            {blocked.length ? <p>Conferir requisitos dos {blocked.length} bloqueios publicados. <a href="#/evidencia?v=BLOCKED">Consultar bloqueios →</a></p>
               : checkpoints.length ? <p>Há {checkpoints.length} execuções salvas; conferir os requisitos de retomada. <a href="#/evidencia?v=CHECKPOINTED">Consultar checkpoints →</a></p>
               : review ? <p>Há {review} resultados em revisão. <a href="#/evidencia?v=REVIEW">Consultar revisão →</a></p>
               : <p className="hud-note">A próxima ação científica do roadmap ativo não foi declarada na projeção. Novas frentes dependem de carta aprovada.</p>}</>}
@@ -301,7 +303,7 @@ function Now({ lab, state, onReplay, replayCount }: { lab: Lab; state: SystemSta
 
     <Monologue lab={lab} state={state} onReplay={onReplay} replayCount={replayCount} />
     <Board state={state} lab={lab} visit={boardVisit} />
-    <Autonomy state={state} />
+    <Autonomy state={state} lab={lab} />
     <Families state={state} />
     <Calibration lab={lab} />
 
@@ -736,10 +738,14 @@ const NotFound = ({ id }: { id: string }) => <header className="hud-hero"><h1>N�
 // ---------- Saúde ----------
 function Health({ state, lab }: { state: SystemState; lab: Lab }) {
   const g = state.guardian;
+  const reportAt = g?.report_checked_at;
+  const liveAreas = new Set(g?.live_areas ?? []);
+  const reportAreas = (g?.failing_areas ?? []).filter(area => !liveAreas.has(area));
+  const liveFailures = (g?.failing_areas ?? []).filter(area => liveAreas.has(area));
   const ev = state.evolution as (SystemState['evolution'] & { batteries?: Record<string, number> }) | undefined;
   const providersDown = state.providers.filter(p => p.state === 'MISSING_PROVIDER' || p.state === 'BLOCKED');
   return <>
-    <header className="hud-hero"><p className="hud-kicker">Guardião · {g ? ago(g.checked_at) : 'sem relatório'}</p><h1>Saúde</h1>
+    <header className="hud-hero"><p className="hud-kicker">Guardião · publicação {ago(state.generated_at)}</p><h1>Saúde</h1>
       <p className="hud-lead">A infraestrutura só aparece aqui. Se algo abaixo estiver vermelho, os números das outras páginas podem estar atrasados.</p></header>
     <div className="health-grid">
       <div className={`health-cell s-${!g ? 'unknown' : g.status === 'GREEN' ? 'ok' : g.status === 'YELLOW' ? 'warn' : 'crit'}`}>
@@ -750,11 +756,15 @@ function Health({ state, lab }: { state: SystemState; lab: Lab }) {
       <div className={`health-cell s-${providersDown.length ? 'warn' : 'ok'}`}><span>Provedores</span><strong>{state.providers.length - providersDown.length}/{state.providers.length}</strong><em>disponíveis</em></div>
     </div>
     {(ev?.watchdog?.quiet?.length ?? 0) > 0 && <QuietLoops lab={lab} quiet={ev!.watchdog!.quiet!} at={ev!.watchdog!.checked_at ?? state.generated_at} />}
-    {g && g.failing_areas.length > 0 && <Section title="Achados da última auditoria" kicker={guardianAuditTime(g.checked_at)} id="he-fail">
+    {g && reportAreas.length > 0 && <Section title="Achados da última auditoria" kicker={guardianAuditTime(reportAt)} id="he-fail">
       <p className="hud-muted">Relatório do Guardião nesse horário. A sincronização atual exige uma nova leitura; este histórico não confirma divergência atual.</p>
-      <ul className="hud-list">{g.failing_areas.map(a => <li key={a}>{guardianArea(a).replace(/^./, c => c.toUpperCase())}</li>)}</ul>
-      <p className="hud-note">Fonte: auditoria do Guardião, {ago(g.checked_at)}. A projeção publica os avisos por área; impacto detalhado, responsável e próxima ação por aviso não foram publicados.</p>
+      <ul className="hud-list">{reportAreas.map(a => <li key={a}>{guardianArea(a).replace(/^./, c => c.toUpperCase())}</li>)}</ul>
+      <p className="hud-note">Fonte: auditoria do Guardião, {ago(reportAt)}. A projeção publica os avisos por área; impacto detalhado, responsável e próxima ação por aviso não foram publicados.</p>
       {!!ev?.incidents?.length && <p><a href="#he-inc" onClick={e => { e.preventDefault(); document.getElementById('he-inc')?.scrollIntoView({ block: 'start' }); }}>Consultar incidentes com responsável e evidências abaixo ↓</a></p>}
+    </Section>}
+    {g && liveFailures.length > 0 && <Section title="Avisos derivados da publicação" kicker={guardianAuditTime(g.live_checked_at)} id="he-live">
+      <ul className="hud-list">{liveFailures.map(a => <li key={a}>{guardianArea(a).replace(/^./, c => c.toUpperCase())}</li>)}</ul>
+      <p className="hud-note">Checagens derivadas do recorte publicado. Ausência de evento no recorte não comprova tarefa pausada.</p>
     </Section>}
     {(ev?.incidents?.length ?? 0) > 0 && <Section title="Incidentes" kicker={`${ev!.incidents!.length} registros`} id="he-inc">
       <ul className="incidents">{ev!.incidents!.map(i => {
@@ -961,7 +971,7 @@ function Monologue({ lab, state, onReplay, replayCount }: { lab: Lab; state: Sys
 // ---------- Autonomia: o que o ciclo fecha sem operador (métricas do livro, cap. 11)
 const pctOf = (v: number | null | undefined) => (v == null ? '—' : `${Math.round(v * 100)}%`);
 const FEATURE_PT: Record<string, string> = { units: 'número de faixas ou grupos', n_compilations: 'número de coleções de supernovas', has_union3: 'usa Union3', mode: 'modo da análise', recipe: 'receita' };
-function Autonomy({ state }: { state: SystemState }) {
+function Autonomy({ state, lab }: { state: SystemState; lab: Lab }) {
   const a = state.evolution?.autonomy;
   if (!a) return null;
   const rules = (state.evolution?.learning?.rules ?? []).filter(r => r.state === 'ACTIVE');
@@ -976,6 +986,7 @@ function Autonomy({ state }: { state: SystemState }) {
     {view.outcomes.length > 0 && <p className="hud-note">Vereditos registrados: {view.outcomes.map(([verdict, total]) => `${total} ${verdict}`).join(' · ')}.</p>}
     <dl className="aut-grid">{view.recent.map(cell => <div key={cell.label}><dt>{cell.value}</dt><dd><b>{cell.label}</b><span>{cell.base}</span><span>{cell.description}</span></dd></div>)}</dl>
     <h3>Estoque na leitura · sem recorte temporal</h3>
+    <p className="hud-note">Nesta leitura: <b>{lab.counts.BLOCKED} bloqueados entre {lab.tests.size} testes recebidos</b>. WORK fica fora desta contagem.</p>
     <dl className="aut-grid">{view.inventory.map(cell => <div key={cell.label}><dt>{cell.value}</dt><dd><b>{cell.label}</b><span>{cell.base}</span><span>{cell.description}</span></dd></div>)}</dl>
     {queueGap && <p className="hud-note metric-discrepancy">Contagens divergentes entre as leituras: o agregado declara {queueGap.publishedBlocked}/{queueGap.publishedBase}; os estados públicos normalizados contêm {queueGap.blocked} BLOCKED* e {queueGap.ready} READY. O percentual acima preserva o agregado publicado; o escopo e a normalização precisam ser conferidos na origem.</p>}
     {rules.length > 0 && <>

@@ -27,6 +27,8 @@ export function autonomyPresentation(a: AutonomyMetrics): { legacy: boolean; rec
     return consistent ? ratio(item.numerator! / item.denominator!) : '—';
   };
   const latencyMetric = metric('median_hours_to_result');
+  const queueMetric = metric('blocked_share');
+  const queuePercentage = ratioValue('blocked_share', a.false_block_share);
   const coverage = latencyMetric?.coverage;
   const coverageValid = coverage && count(coverage.numerator) && count(coverage.denominator) && coverage.numerator <= coverage.denominator;
   const latency = legacy ? a.median_hours_to_result : coverageValid && coverage.numerator > 0 && latencyMetric?.sample_count === coverage.numerator ? latencyMetric.value : null;
@@ -58,8 +60,9 @@ export function autonomyPresentation(a: AutonomyMetrics): { legacy: boolean; rec
     inventory: [
       { value: ratioValue('positive_review_closure', a.contest_closure), label: 'Positivos com revisão encerrada',
         description: 'Entre os resultados PROMOTED/PROMOVIDO/SUPPORTED, revisão CONFIRMED ou REFUTED. Inclui positivos posteriormente refutados.', base: base(metric('positive_review_closure')) },
-      { value: ratioValue('blocked_share', a.false_block_share), label: 'Bloqueados entre READY e BLOCKED',
-        description: 'BLOCKED* dividido por READY + BLOCKED*. Exclui os outros estados de TEST e a fila de WORK. Não mede bloqueios falsos nem a fração de todos os testes.', base: base(metric('blocked_share')) },
+      { value: !legacy && queueMetric && queuePercentage !== '—' ? `${queueMetric.numerator} / ${queueMetric.denominator}` : queuePercentage, label: 'Bloqueados entre READY e BLOCKED',
+        description: 'BLOCKED* dividido por READY + BLOCKED*. Exclui os outros estados de TEST e a fila de WORK. Não mede bloqueios falsos nem a fração de todos os testes.',
+        base: base(queueMetric) + (!legacy && queuePercentage !== '—' ? ` · ${queuePercentage} nessa base publicada` : '') },
     ],
   };
 }

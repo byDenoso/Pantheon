@@ -17,7 +17,7 @@ try {
   const render = (route, state = system) => renderToString(createElement(LabApp, { state, route, theme: 'dark' })).replace(/<!--.*?-->/gs, '');
   const home = render({ page: 'agora' });
   assert.match(home, /54 testes parados/);
-  assert.match(home, /recuperar os 54/);
+  assert.match(home, /Conferir requisitos dos 54/);
   assert.match(home, /1\.0\.0.*2026-09-28/s);
   assert.match(home, /17 \/ 33 registros/);
   assert.match(home, /9\.4 h/);

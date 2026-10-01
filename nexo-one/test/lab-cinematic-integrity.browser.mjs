@@ -49,6 +49,8 @@ try {
   for (const [name, viewport, theme, reduced, fallback] of [
     ['desktop', { width: 1440, height: 1000 }, 'dark', false, false],
     ['mobile', { width: 390, height: 844 }, 'dark', false, false],
+    ['medium', { width: 646, height: 900 }, 'dark', true, false],
+    ['narrow', { width: 320, height: 700 }, 'dark', true, false],
     ['mobile-reduced', { width: 390, height: 844 }, 'dark', true, false],
     ['mobile-light-fallback', { width: 390, height: 844 }, 'light', true, true],
   ]) {
@@ -74,10 +76,12 @@ try {
     await page.locator('#now-problem').waitFor();
     await visualReady(page, name + ':home');
     assert.match(await page.locator('.now-priorities').innerText(), new RegExp(`${blocked} testes parados`));
-    assert.match(await page.locator('#now-next').locator('..').innerText(), new RegExp(`recuperar os ${blocked} bloqueios`));
+    assert.match(await page.locator('#now-next').locator('..').innerText(), new RegExp(`Conferir requisitos dos ${blocked} bloqueios`));
     assert.equal(await page.locator('#now-fronts').locator('..').locator('.fronts>li').count(), 8);
     assert.match(await page.locator('#now-fronts').locator('..').innerText(), /1\.0\.0.*2026-09-28/s);
     assert.match(await page.locator('#now-autonomy').locator('..').innerText(), /30 \/ 33.*9\.4 h.*17 \/ 33.*53 \/ 53/s);
+    assert.equal(await page.locator('#now-autonomy').locator('..').locator('.aut-grid').last().locator('dt').last().innerText(), '53 / 53');
+    assert.match(await page.locator('#now-autonomy').locator('..').innerText(), new RegExp(`${blocked} bloqueados entre ${buildLab(system).tests.size} testes recebidos`));
     assert.match(await page.locator('#now-autonomy').locator('..').innerText(), new RegExp(`normalizados contêm ${blocked} BLOCKED`));
     assert.match(await page.locator('.monologue').innerText(), /cobertura parcial/);
     assert.equal(await page.locator('.monologue > .feed-kind').innerText(), 'Eventos narrados · interface');
@@ -176,6 +180,42 @@ try {
       assert.equal(await page.locator('.observatory.flat').count(), 1);
       await page.getByRole('button', { name: /Mostrar a teia/ }).click();
       assert.equal(await page.locator('.observatory.flat').count(), 0);
+    }
+    if (!input) {
+      const audit = structuredClone(system);
+      for (const record of Object.values(audit.read_model.tests)) delete record.blocker;
+      for (const node of audit.graph.nodes) delete node.blocker;
+      const reportAt = new Date(Date.parse(projection.manifest.generated_at) - 2 * 3600e3).toISOString();
+      audit.guardian = { status: 'YELLOW', checked_at: projection.manifest.generated_at, live_checked_at: projection.manifest.generated_at, report_checked_at: reportAt, checks_total: 5, checks_failing: 2, failing_areas: ['science', 'automations'], live_areas: ['automations', 'cycle'] };
+      await page.unroute('**/api/system*');
+      await page.route('**/api/system*', route => route.fulfill({ json: audit }));
+      await page.reload();
+      await page.locator('#now-problem').waitFor();
+      await visualReady(page, name + ':blocker-semantics');
+      await page.addStyleTag({ content: 'body::after{content:"FIXTURE VISUAL · DADOS SINTÉTICOS · SOMENTE TESTE";position:fixed;left:12px;bottom:6px;z-index:9999;padding:4px 8px;background:#15120c;color:#f4e4bd;font:11px system-ui;pointer-events:none}' });
+      const problem = page.locator('#now-problem').locator('..');
+      await problem.screenshot({ path: output + '/' + name + '-blockers.png' });
+      const metrics = page.locator('#now-autonomy').locator('..');
+      await metrics.screenshot({ path: output + '/' + name + '-counting-bases.png' });
+      const bounds = await metrics.locator('.aut-grid>div').evaluateAll(cells => cells.map(cell => {
+        const number = cell.querySelector('dt').getBoundingClientRect(), box = cell.getBoundingClientRect();
+        return { number: { x: number.x, width: number.width }, cell: { x: box.x, width: box.width }, scrollWidth: cell.scrollWidth, clientWidth: cell.clientWidth };
+      }));
+      await writeFile(output + '/' + name + '-metric-bounds.json', JSON.stringify(bounds, null, 2));
+      assert.equal(await problem.locator('.hud-big').innerText(), 'Motivo do bloqueio não publicado.');
+      assert.equal(await problem.locator('.elink').count(), 1);
+      for (const box of bounds) assert.ok(box.scrollWidth <= box.clientWidth + 1 && box.number.x >= box.cell.x - 1 && box.number.x + box.number.width <= box.cell.x + box.cell.width + 1, name + ': metric fits its card ' + JSON.stringify(box));
+      await noOverflow(page, name + ':counting-bases');
+      await page.evaluate(() => { location.hash = '#/saude'; });
+      await page.locator('#he-live').waitFor();
+      await visualReady(page, name + ':health-sources');
+      await page.locator('#he-fail').locator('..').screenshot({ path: output + '/' + name + '-report-time.png' });
+      await page.locator('#he-live').locator('..').screenshot({ path: output + '/' + name + '-publication-time.png' });
+      const utc = value => new Date(value).toISOString().replace('T', ' ').replace(/\.\d{3}Z$/, ' UTC');
+      assert.ok((await page.locator('#he-fail').locator('..').innerText()).includes(utc(reportAt)));
+      assert.ok((await page.locator('#he-live').locator('..').innerText()).includes(utc(projection.manifest.generated_at)));
+      assert.match(await page.locator('#he-live').locator('..').innerText(), /não comprova tarefa pausada/);
+      await noOverflow(page, name + ':health-sources');
     }
     assert.deepEqual(errors, [], name + ': page errors');
     reports.push({ name, routes: ['agora', 'rejected', 'roadmap', 'ciclo'], noOverflow: true, searchEscape: true, cameraKeyboard: !fallback, flatToggle: !fallback, reducedMotion: reduced, forcedWebGLFallback: fallback, errors });
