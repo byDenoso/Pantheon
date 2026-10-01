@@ -1398,9 +1398,9 @@
       "tower_revision": "sha256:8f4707d847bc9e27e38b8db7b0181d1ee71e3b386198e7d8664233c8f0f94c73"
     },
     "inbox/scheduled-learner-20261001t0815z-lyaqso3-data.json": {
-      "applied_at": "2026-10-01T08:33:18Z",
+      "applied_at": "2026-10-01T08:37:42Z",
       "fingerprint": "2621a09656cfd38260de1898eaeca1d1bcb2cb69392e162ab7338ad58a8d070f",
-      "tower_revision": "sha256:a316aa767ab2a6e90a658ed0948efc493579fa9edd7765011cfc9690bc454f1b"
+      "tower_revision": "sha256:dba0f38e14b5786999bd10da7180881d8d55eda0b4d5d87f2c756e3a87912d2b"
     },
     "inbox/scheduled-learner-20261001t0815z-lyaqso3-recipe.json": {
       "applied_at": "2026-10-01T08:29:37Z",
@@ -1413,9 +1413,9 @@
       "tower_revision": "sha256:a316aa767ab2a6e90a658ed0948efc493579fa9edd7765011cfc9690bc454f1b"
     },
     "inbox/scheduled-learner-20261001t0815z-priorbands-recipe.json": {
-      "applied_at": "2026-10-01T08:33:18Z",
+      "applied_at": "2026-10-01T08:37:42Z",
       "fingerprint": "dfa64035288e165b67d6c2d6d251dd92aa1aac6c6ffe626a252297754f6d7b2c",
-      "tower_revision": "sha256:a316aa767ab2a6e90a658ed0948efc493579fa9edd7765011cfc9690bc454f1b"
+      "tower_revision": "sha256:dba0f38e14b5786999bd10da7180881d8d55eda0b4d5d87f2c756e3a87912d2b"
     },
     "inbox/scheduled-learner-20261001t0815z-sixtracer-data.json": {
       "applied_at": "2026-10-01T08:33:18Z",
@@ -1433,14 +1433,14 @@
       "tower_revision": "sha256:a316aa767ab2a6e90a658ed0948efc493579fa9edd7765011cfc9690bc454f1b"
     },
     "inbox/scheduled-learner-20261001t0815z-sntrio330-data.json": {
-      "applied_at": "2026-10-01T08:33:18Z",
+      "applied_at": "2026-10-01T08:37:42Z",
       "fingerprint": "932599baad4c7166f22dbb88f8989d23a54d5268be8cc960f8d9f71b12e519f4",
-      "tower_revision": "sha256:a316aa767ab2a6e90a658ed0948efc493579fa9edd7765011cfc9690bc454f1b"
+      "tower_revision": "sha256:dba0f38e14b5786999bd10da7180881d8d55eda0b4d5d87f2c756e3a87912d2b"
     },
     "inbox/scheduled-learner-20261001t0815z-sntrio330-recipe.json": {
-      "applied_at": "2026-10-01T08:33:18Z",
+      "applied_at": "2026-10-01T08:37:42Z",
       "fingerprint": "663a09391a85f2d4edb66e2109d13c1ade6a05396b64c9d12d5d7b705fac991b",
-      "tower_revision": "sha256:a316aa767ab2a6e90a658ed0948efc493579fa9edd7765011cfc9690bc454f1b"
+      "tower_revision": "sha256:dba0f38e14b5786999bd10da7180881d8d55eda0b4d5d87f2c756e3a87912d2b"
     },
     "inbox/scheduled-learner-261001-0309-r1-cut-desu3-rec.json": {
       "applied_at": "2026-10-01T03:21:44Z",
@@ -1974,9 +1974,9 @@
       "source": "legacy-acked"
     },
     "inbox/scheduled-referee1-20261001-a2-rank-loo.json": {
-      "applied_at": "2026-10-01T08:33:18Z",
+      "applied_at": "2026-10-01T08:37:42Z",
       "fingerprint": "2f3777bf88af399f2582c8e768aee9926434f114a78a8ff2bf76f5f6852f7e81",
-      "tower_revision": "sha256:a316aa767ab2a6e90a658ed0948efc493579fa9edd7765011cfc9690bc454f1b"
+      "tower_revision": "sha256:dba0f38e14b5786999bd10da7180881d8d55eda0b4d5d87f2c756e3a87912d2b"
     },
     "inbox/scheduled-referee1-6638057a1f2d-a2-point-v1.json": {
       "applied_at": "2026-10-01T05:25:09Z",
@@ -1984,9 +1984,9 @@
       "tower_revision": "sha256:fb005f977e75501784b2636ddeb4d3731bab2901b459e16d83be01ed9f3baca7"
     },
     "inbox/scheduled-referee1-board-persist-20261001t081347z.json": {
-      "applied_at": "2026-10-01T08:33:18Z",
+      "applied_at": "2026-10-01T08:37:42Z",
       "fingerprint": "b7a2f5a322897bdbd357abd3fb64471b26da1e86796f8d7bfd2380a10d54d224",
-      "tower_revision": "sha256:a316aa767ab2a6e90a658ed0948efc493579fa9edd7765011cfc9690bc454f1b"
+      "tower_revision": "sha256:dba0f38e14b5786999bd10da7180881d8d55eda0b4d5d87f2c756e3a87912d2b"
     },
     "inbox/scheduled-referee1-contest-de-1-20260929.json": {
       "fingerprint": "1be30ba40520823873302a78649e4e29df27d40848225c0610b56e0490881f57",
