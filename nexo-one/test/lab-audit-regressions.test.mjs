@@ -94,7 +94,7 @@ test('factual narration never promises execution, fabricates quiet roles or asse
 
 test('home prioritizes recovery and roadmap membership; literature consumes versioned Tower synthesis', async () => {
   const ui = await readFile(new URL('../src/features/lab/LabApp.tsx', import.meta.url), 'utf8');
-  assert.match(ui, /recuperar os \{blocked.length\} bloqueios publicados/);
+  assert.match(ui, /Conferir requisitos dos \{blocked.length\} bloqueios publicados/);
   assert.match(ui, /activeRoadmaps\.has\(t.roadmapId\)/);
   assert.match(ui, /Novas frentes dependem de carta aprovada/);
   assert.match(ui, /frontier=\{frontierDeclared \? r\.frontierIds/);

@@ -55,7 +55,8 @@ test('both public incident surfaces use the shared ownership UI and retain disti
  assert.doesNotMatch(health, /quem investiga/); assert.match(component, /Responsável operacional não informado/);
  assert.match(component, /responsável atual:/); assert.match(component, /destinatário:/); assert.match(component, /Aprendizagem:/);
  assert.match(component, /não altera o resultado científico/);
- assert.match(health, /Achados da última auditoria/); assert.match(health, /guardianAuditTime\(g.checked_at\)/);
+ assert.match(health, /Achados da última auditoria/); assert.match(health, /guardianAuditTime\(reportAt\)/);
+ assert.match(health, /const reportAt = g\?\.report_checked_at/);
  assert.doesNotMatch(health, /incidents!\.length\} abertos/);
 });
 

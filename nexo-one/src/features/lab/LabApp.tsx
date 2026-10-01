@@ -17,7 +17,8 @@ import type { ScenePage, SceneEvents } from './ObservatoryScene.tsx';
 import { normDomain } from './domains.ts';
 import './lab.css';
 import '../../styles/atlas-cinematic.css';
-import { currentVerdictText, matchesSearch, boardMeta, readinessLabel, hasPublishedValue, roadmapTrail } from './presentation.ts';
+import { currentVerdictText, matchesSearch, boardMeta, readinessLabel, hasPublishedValue, roadmapTrail, latestBoardRecord } from './presentation.ts';
+import { BoardMessage } from './BoardMessage.tsx';
 import { selectScienceFocus, scientificStatRows } from './science-presentation.ts';
 import { autonomyPresentation, publishedQueueGap } from './autonomy-presentation.ts';
 import { DependencyFlow } from './DependencyFlow.tsx';
@@ -208,6 +209,7 @@ function tally(list: TestEntity[]) {
 }
 // ---------- Agora ----------
 function Now({ lab, state, onReplay, replayCount }: { lab: Lab; state: SystemState; onReplay: () => void; replayCount: number }) {
+  const [boardVisit, setBoardVisit] = useState(0);
   const ev = state.evolution;
   const g = state.guardian;
   const stale = !isPublishedFresh(state.generated_at);
@@ -219,6 +221,7 @@ function Now({ lab, state, onReplay, replayCount }: { lab: Lab; state: SystemSta
   const review = (lab.reviews.PENDING_REVIEW ?? 0) + (lab.reviews.CONTESTED ?? 0) + (lab.reviews.REFEREE1_PASSED ?? 0);
   const resolved = (lab.reviews.CONFIRMED ?? 0) + (lab.reviews.REFUTED ?? 0);
   const blocked = [...lab.tests.values()].filter(t => t.verdict === 'BLOCKED');
+  const closedBlocked = blocked.filter(t => t.roadmapId && lab.roadmaps.get(t.roadmapId)?.state === 'CLOSED').length;
   const discovery = [...lab.tests.values()].find(t => t.verdict === 'CONFIRMED') ?? [...lab.tests.values()].find(t => t.meaning && t.verdict === 'PROVISIONAL');
   const activeRoadmaps = new Set([...lab.roadmaps.values()].filter(r => ['ACTIVE', 'CHARTERED'].includes(r.state)).map(r => r.id));
   const next = [...lab.tests.values()].filter(t => isReady(t) && t.question && t.roadmapId && activeRoadmaps.has(t.roadmapId)).slice(0, 3);
@@ -232,6 +235,10 @@ function Now({ lab, state, onReplay, replayCount }: { lab: Lab; state: SystemSta
   const sci = all.filter(isScience), self = all.filter(isSelf);
   const S = tally(sci), E2 = tally(self);
   const focus = selectScienceFocus(sci);
+  const boardPost = latestBoardRecord(ev?.board ?? []);
+  const scientificIntro = focus
+    ? <p className="thesis">Resultado científico em destaque: <E id={focus.test.id}>{focus.test.name}</E>. <span>{currentVerdictText(focus.test)}</span></p>
+    : <p className="thesis">Ainda sem resultado científico disponível para destaque; {S.ready} testes marcados READY na leitura científica.</p>;
   const warnings = g?.failing_areas.length ?? 0;
   void d; void review; void resolved; void discovery;
   return <>
@@ -244,11 +251,11 @@ function Now({ lab, state, onReplay, replayCount }: { lab: Lab; state: SystemSta
       </p>
       <span className="sig-prompt" aria-hidden="true"><b>nexo@atlas</b>:<i>~</i>$ observe --agora</span>
       <h1>O NEXO <em>agora</em></h1>
-      {focus
-        ? <p className="thesis">Resultado científico em destaque: <E id={focus.test.id}>{focus.test.name}</E>. <span>{currentVerdictText(focus.test)}</span></p>
-        : <p className="thesis">Ainda sem resultado científico disponível para destaque; {S.ready} testes marcados READY na leitura científica.</p>}
+      {!boardPost && scientificIntro}
     </header>
 
+    <BoardFocus state={state} lab={lab} post={boardPost} onOpenBoard={() => setBoardVisit(value => value + 1)} />
+    {boardPost && <div className="hud-science-intro">{scientificIntro}</div>}
     <LiveNowPanel lab={lab} />
     <GatePanel state={state} />
     {gate > 0 && !state.inbox?.some(i => i.kind === 'APROVAR') && <a className="hud-gate" href="#/ciclo">
@@ -256,15 +263,16 @@ function Now({ lab, state, onReplay, replayCount }: { lab: Lab; state: SystemSta
     </a>}
 
     <div className="hud-pair now-priorities">
-      <Section title="Problema principal" kicker={blocked.length ? `${blocked.length} testes parados` : 'Nenhum bloqueio'} id="now-problem">
+      <Section title="Bloqueios publicados" kicker={blocked.length ? `${blocked.length} testes parados` : 'Nenhum bloqueio de TEST publicado'} id="now-problem">
         {blocked.length
-          ? <><p className="hud-big">{blocked[0]!.blocker ?? blocked[0]!.summary ?? 'Motivo não publicado'}</p><E id={blocked[0]!.id}>investigar →</E></>
-          : <p className="hud-muted">Nada impedindo a fila agora.</p>}
+          ? <><p className="hud-big">{blocked[0]!.blocker ?? 'Motivo do bloqueio não publicado.'}</p><E id={blocked[0]!.id}>{blocked[0]!.name} →</E>
+            {closedBlocked > 0 && <p className="hud-note">Inclui {closedBlocked} testes vinculados a roadmaps encerrados.</p>}</>
+          : <p className="hud-muted">Nenhum teste em BLOCKED nesta leitura.</p>}
       </Section>
       <Section title="Próximo movimento" kicker="Roadmaps ativos · candidatos READY" id="now-next">
         {next.length ? <ol className="hud-list">{next.map(t => <li key={t.id}><div><E id={t.id}>{t.name}</E><small className="readiness-note">{readinessLabel(t)}</small></div></li>)}</ol>
           : <><p className="hud-muted">{lab.counts.READY ? 'Nenhum candidato READY com pergunta publicada e vínculo a um roadmap ativo.' : 'Nenhum teste pronto nesta leitura.'}</p>
-            {blocked.length ? <p>Próximo passo: recuperar os {blocked.length} bloqueios publicados. <a href="#/evidencia?v=BLOCKED">Consultar bloqueios →</a></p>
+            {blocked.length ? <p>Conferir requisitos dos {blocked.length} bloqueios publicados. <a href="#/evidencia?v=BLOCKED">Consultar bloqueios →</a></p>
               : checkpoints.length ? <p>Há {checkpoints.length} execuções salvas; conferir os requisitos de retomada. <a href="#/evidencia?v=CHECKPOINTED">Consultar checkpoints →</a></p>
               : review ? <p>Há {review} resultados em revisão. <a href="#/evidencia?v=REVIEW">Consultar revisão →</a></p>
               : <p className="hud-note">A próxima ação científica do roadmap ativo não foi declarada na projeção. Novas frentes dependem de carta aprovada.</p>}</>}
@@ -294,8 +302,8 @@ function Now({ lab, state, onReplay, replayCount }: { lab: Lab; state: SystemSta
     </Section>}
 
     <Monologue lab={lab} state={state} onReplay={onReplay} replayCount={replayCount} />
-    <Board state={state} lab={lab} />
-    <Autonomy state={state} />
+    <Board state={state} lab={lab} visit={boardVisit} />
+    <Autonomy state={state} lab={lab} />
     <Families state={state} />
     <Calibration lab={lab} />
 
@@ -730,10 +738,14 @@ const NotFound = ({ id }: { id: string }) => <header className="hud-hero"><h1>N�
 // ---------- Saúde ----------
 function Health({ state, lab }: { state: SystemState; lab: Lab }) {
   const g = state.guardian;
+  const reportAt = g?.report_checked_at;
+  const liveAreas = new Set(g?.live_areas ?? []);
+  const reportAreas = (g?.failing_areas ?? []).filter(area => !liveAreas.has(area));
+  const liveFailures = (g?.failing_areas ?? []).filter(area => liveAreas.has(area));
   const ev = state.evolution as (SystemState['evolution'] & { batteries?: Record<string, number> }) | undefined;
   const providersDown = state.providers.filter(p => p.state === 'MISSING_PROVIDER' || p.state === 'BLOCKED');
   return <>
-    <header className="hud-hero"><p className="hud-kicker">Guardião · {g ? ago(g.checked_at) : 'sem relatório'}</p><h1>Saúde</h1>
+    <header className="hud-hero"><p className="hud-kicker">Guardião · publicação {ago(state.generated_at)}</p><h1>Saúde</h1>
       <p className="hud-lead">A infraestrutura só aparece aqui. Se algo abaixo estiver vermelho, os números das outras páginas podem estar atrasados.</p></header>
     <div className="health-grid">
       <div className={`health-cell s-${!g ? 'unknown' : g.status === 'GREEN' ? 'ok' : g.status === 'YELLOW' ? 'warn' : 'crit'}`}>
@@ -744,11 +756,15 @@ function Health({ state, lab }: { state: SystemState; lab: Lab }) {
       <div className={`health-cell s-${providersDown.length ? 'warn' : 'ok'}`}><span>Provedores</span><strong>{state.providers.length - providersDown.length}/{state.providers.length}</strong><em>disponíveis</em></div>
     </div>
     {(ev?.watchdog?.quiet?.length ?? 0) > 0 && <QuietLoops lab={lab} quiet={ev!.watchdog!.quiet!} at={ev!.watchdog!.checked_at ?? state.generated_at} />}
-    {g && g.failing_areas.length > 0 && <Section title="Achados da última auditoria" kicker={guardianAuditTime(g.checked_at)} id="he-fail">
+    {g && reportAreas.length > 0 && <Section title="Achados da última auditoria" kicker={guardianAuditTime(reportAt)} id="he-fail">
       <p className="hud-muted">Relatório do Guardião nesse horário. A sincronização atual exige uma nova leitura; este histórico não confirma divergência atual.</p>
-      <ul className="hud-list">{g.failing_areas.map(a => <li key={a}>{guardianArea(a).replace(/^./, c => c.toUpperCase())}</li>)}</ul>
-      <p className="hud-note">Fonte: auditoria do Guardião, {ago(g.checked_at)}. A projeção publica os avisos por área; impacto detalhado, responsável e próxima ação por aviso não foram publicados.</p>
+      <ul className="hud-list">{reportAreas.map(a => <li key={a}>{guardianArea(a).replace(/^./, c => c.toUpperCase())}</li>)}</ul>
+      <p className="hud-note">Fonte: auditoria do Guardião, {ago(reportAt)}. A projeção publica os avisos por área; impacto detalhado, responsável e próxima ação por aviso não foram publicados.</p>
       {!!ev?.incidents?.length && <p><a href="#he-inc" onClick={e => { e.preventDefault(); document.getElementById('he-inc')?.scrollIntoView({ block: 'start' }); }}>Consultar incidentes com responsável e evidências abaixo ↓</a></p>}
+    </Section>}
+    {g && liveFailures.length > 0 && <Section title="Avisos derivados da publicação" kicker={guardianAuditTime(g.live_checked_at)} id="he-live">
+      <ul className="hud-list">{liveFailures.map(a => <li key={a}>{a === 'automations' ? 'Algum papel sem evento recente no recorte publicado' : guardianArea(a).replace(/^./, c => c.toUpperCase())}</li>)}</ul>
+      <p className="hud-note">Checagens derivadas do recorte publicado. Ausência de evento no recorte não comprova tarefa pausada.</p>
     </Section>}
     {(ev?.incidents?.length ?? 0) > 0 && <Section title="Incidentes" kicker={`${ev!.incidents!.length} registros`} id="he-inc">
       <ul className="incidents">{ev!.incidents!.map(i => {
@@ -955,7 +971,7 @@ function Monologue({ lab, state, onReplay, replayCount }: { lab: Lab; state: Sys
 // ---------- Autonomia: o que o ciclo fecha sem operador (métricas do livro, cap. 11)
 const pctOf = (v: number | null | undefined) => (v == null ? '—' : `${Math.round(v * 100)}%`);
 const FEATURE_PT: Record<string, string> = { units: 'número de faixas ou grupos', n_compilations: 'número de coleções de supernovas', has_union3: 'usa Union3', mode: 'modo da análise', recipe: 'receita' };
-function Autonomy({ state }: { state: SystemState }) {
+function Autonomy({ state, lab }: { state: SystemState; lab: Lab }) {
   const a = state.evolution?.autonomy;
   if (!a) return null;
   const rules = (state.evolution?.learning?.rules ?? []).filter(r => r.state === 'ACTIVE');
@@ -970,6 +986,7 @@ function Autonomy({ state }: { state: SystemState }) {
     {view.outcomes.length > 0 && <p className="hud-note">Vereditos registrados: {view.outcomes.map(([verdict, total]) => `${total} ${verdict}`).join(' · ')}.</p>}
     <dl className="aut-grid">{view.recent.map(cell => <div key={cell.label}><dt>{cell.value}</dt><dd><b>{cell.label}</b><span>{cell.base}</span><span>{cell.description}</span></dd></div>)}</dl>
     <h3>Estoque na leitura · sem recorte temporal</h3>
+    <p className="hud-note">Nesta leitura: <b>{lab.counts.BLOCKED} bloqueados entre {lab.tests.size} testes recebidos</b>. WORK fica fora desta contagem.</p>
     <dl className="aut-grid">{view.inventory.map(cell => <div key={cell.label}><dt>{cell.value}</dt><dd><b>{cell.label}</b><span>{cell.base}</span><span>{cell.description}</span></dd></div>)}</dl>
     {queueGap && <p className="hud-note metric-discrepancy">Contagens divergentes entre as leituras: o agregado declara {queueGap.publishedBlocked}/{queueGap.publishedBase}; os estados públicos normalizados contêm {queueGap.blocked} BLOCKED* e {queueGap.ready} READY. O percentual acima preserva o agregado publicado; o escopo e a normalização precisam ser conferidos na origem.</p>}
     {rules.length > 0 && <>
@@ -1227,37 +1244,48 @@ function nameIds(text: string, lab: Lab): string {
     .replace(/(um teste)(,? e um teste)+/g, 'alguns testes');
 }
 
-function Board({ state, lab }: { state: SystemState; lab: Lab }) {
+const boardRole = (role: string) => role === 'ALL' ? 'todos os papéis' : roleLabel(role);
+function BoardFocus({ state, lab, post, onOpenBoard }: { state: SystemState; lab: Lab; post: ReturnType<typeof latestBoardRecord>; onOpenBoard: () => void }) {
+  const records = state.evolution?.board ?? [];
+  if (!post) return null;
+  return <section className="hud-section board-focus" aria-labelledby="board-focus-title">
+    <p className="hud-kicker">Último recado no recorte recebido</p>
+    <h2 id="board-focus-title">O papo no mural</h2>
+    <p className="board-caption"><span>Narração · interface</span>{boardRole(post.from)} deixou um recado para {boardRole(post.to)}.</p>
+    <BoardMessage key={post.id} post={post} lab={lab} from={boardRole(post.from)} to={boardRole(post.to)} records={records} focus />
+    <button type="button" className="board-open" onClick={onOpenBoard}>Ver todos os recados <span aria-hidden="true">→</span></button>
+  </section>;
+}
+
+function Board({ state, lab, visit = 0 }: { state: SystemState; lab: Lab; visit?: number }) {
   const now = Date.now();
   const [all, setAll] = useState(false);
   const [owner, setOwner] = useState('');
   const [priority, setPriority] = useState('');
   const [status, setStatus] = useState('Pendentes');
-  const [openIds, setOpenIds] = useState<Set<string>>(new Set());
+  useEffect(() => {
+    if (!visit) return;
+    setOwner(''); setPriority(''); setStatus(''); setAll(true);
+    const heading = document.getElementById('now-board');
+    heading?.setAttribute('tabindex', '-1');
+    heading?.focus({ preventScroll: true });
+    heading?.scrollIntoView({ behavior: 'instant', block: 'start' });
+  }, [visit]);
   const raw = state.evolution?.board ?? [];
   const every = raw.slice().reverse().map(post => ({ ...post, meta: boardMeta(post, now, raw) }));
   if (!every.length) return null;
   const filtered = every.filter(p => (!owner || p.meta.owner === owner) && (!priority || p.meta.priority === priority) && (!status || (status === 'Pendentes' ? !['Resolvido', 'Expirado'].includes(p.meta.status) : p.meta.status === status)));
   const posts = all ? filtered : filtered.slice(0, 8);
-  const who = (r: string) => (r === 'ALL' ? 'todos' : roleLabel(r));
-  const toggle = (id: string) => setOpenIds(prev => { const n = new Set(prev); if (n.has(id)) n.delete(id); else n.add(id); return n; });
+  const who = boardRole;
   return <Section title="Conversa entre os agentes" kicker={`${filtered.length} de ${every.length} recados · mural original`} id="now-board">
     <div className="board-filters" role="group" aria-label="Filtrar mural">
-      <label>Destino / responsável<select value={owner} onChange={e => { setOwner(e.target.value); setAll(false); }}><option value="">Todos</option>{[...new Set(every.map(p => p.meta.owner))].map(x => <option key={x} value={x}>{who(x)}</option>)}</select></label>
-      <label>Prioridade<select value={priority} onChange={e => { setPriority(e.target.value); setAll(false); }}><option value="">Todas</option>{[...new Set(every.map(p => p.meta.priority))].map(x => <option key={x}>{x}</option>)}</select></label>
-      <label>Status<select value={status} onChange={e => { setStatus(e.target.value); setAll(false); }}><option value="">Todos</option>{['Pendentes', 'Aberto', 'Aceito', 'Respondido', 'Resolvido', 'Expirado'].map(x => <option key={x}>{x}</option>)}</select></label>
+      <label>Destino / responsável<select aria-label="Destino / responsável" value={owner} onChange={e => { setOwner(e.target.value); setAll(false); }}><option value="">Todos</option>{[...new Set(every.map(p => p.meta.owner))].map(x => <option key={x} value={x}>{who(x)}</option>)}</select></label>
+      <label>Prioridade<select aria-label="Prioridade" value={priority} onChange={e => { setPriority(e.target.value); setAll(false); }}><option value="">Todas</option>{[...new Set(every.map(p => p.meta.priority))].map(x => <option key={x}>{x}</option>)}</select></label>
+      <label>Status<select aria-label="Status" value={status} onChange={e => { setStatus(e.target.value); setAll(false); }}><option value="">Todos</option>{['Pendentes', 'Aberto', 'Aceito', 'Respondido', 'Resolvido', 'Expirado'].map(x => <option key={x}>{x}</option>)}</select></label>
     </div>
-    <p className="hud-note">O destino do recado só representa um responsável quando isso foi declarado. Prioridade e próxima ação vêm do registro ou de campos nomeados no texto.</p>
+    <p className="hud-note">Aqui está o que cada papel escreveu. Autor e destino vêm do mural; prioridade e próxima ação aparecem quando foram declaradas.</p>
     {!posts.length && <p role="status">Nenhum recado com estes filtros.</p>}
-    <ol className="board">{posts.map(p => {
-      const full = p.text; const short = clip(full, 220); const isOpen = openIds.has(p.id); const long = short !== full;
-      return <li key={p.id}>
-      <p className="board-head"><b>{who(p.from)}</b><i aria-hidden="true">→</i><span>{who(p.to)}</span><time>{ago(p.at)}</time></p>
-      <p className="board-state">{p.meta.status} · prioridade: {p.meta.priority}</p>
-      <p className="board-text">{isOpen ? full : short}{long && <button type="button" aria-expanded={isOpen} className="board-more" onClick={() => toggle(p.id)}>{isOpen ? ' ver menos' : ' ler tudo'}</button>}</p>
-      <p className="board-next"><b>Próxima ação:</b> {p.meta.nextAction ?? 'não declarada em campo próprio'}</p>
-      {(p.refs?.length ?? 0) > 0 && <p className="hud-refs">{p.refs!.filter(r => lab.tests.has(r) || lab.hypotheses.has(r)).slice(0, 3).map(r => <E key={r} id={r} />)}</p>}
-    </li>;})}</ol>
+    <ol className="board">{posts.map(p => <li key={p.id}><BoardMessage post={p} lab={lab} from={who(p.from)} to={who(p.to)} records={raw} /></li>)}</ol>
     {filtered.length > 8 && <button type="button" className="board-all" onClick={() => setAll(x => !x)}>{all ? 'Mostrar só os 8 mais recentes' : `Ver todos os ${filtered.length} recados`}</button>}
   </Section>;
 }
