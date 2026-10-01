@@ -338,6 +338,7 @@
     "inbox/scheduled-pitia-20261001t0114z-de-crisis.json": "7a3f8e3b2852bed9285582967aecbd8001745d6f33931d328049abc7ac214bf2",
     "inbox/scheduled-pitia-20261001t0114z-de-rival-charter.json": "660f81e241b5e4dde8adc4a816367e08fd19003704d22df1ebadb1902f26bad7",
     "inbox/scheduled-pitia-20261001t0719z-write-failure-board.json": "9b147860d7310afec8753a9e02beba39162b3c28a8385aafe04f5b49921d509f",
+    "inbox/scheduled-pitia-20261001t0816z-rd-calibration-surprise.json": "ec306cf05a802b69e8cd5d05ba7efec06d3368e0980512df9d614c39c29fcf7a",
     "inbox/scheduled-pitia-batch-2181033f17a4f562.json": "abef2a371fff9849bc92f9e214ee0e4708a02420d236fb946c0825e787cd5636",
     "inbox/scheduled-pitia-batch-392ca9d8c0a7749a.json": "cfc104cf89931e65e44ca8b588a01848b592ea233fe39afc8271250b47131629",
     "inbox/scheduled-pitia-batch-3d6c1a02b9805eb8.json": "e36ef115a6cbce8e7d949cdec5de247eba084d3d9bba02986457c3f13a4e1a47",
@@ -1864,6 +1865,11 @@
       "applied_at": "2026-10-01T07:29:44Z",
       "fingerprint": "9b147860d7310afec8753a9e02beba39162b3c28a8385aafe04f5b49921d509f",
       "tower_revision": "sha256:7cb53063a51f3ec3597455f61c9873ff1564fe80d98b502ee6248b82111fdb2e"
+    },
+    "inbox/scheduled-pitia-20261001t0816z-rd-calibration-surprise.json": {
+      "applied_at": "2026-10-01T09:45:56Z",
+      "fingerprint": "ec306cf05a802b69e8cd5d05ba7efec06d3368e0980512df9d614c39c29fcf7a",
+      "tower_revision": "sha256:2187bfcaab53f35c25c2d6b5d36d5637e5894e5826f21a48ee299a81a1c46261"
     },
     "inbox/scheduled-pitia-batch-2181033f17a4f562.json": {
       "fingerprint": "abef2a371fff9849bc92f9e214ee0e4708a02420d236fb946c0825e787cd5636",
