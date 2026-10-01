@@ -364,6 +364,7 @@
     "inbox/scheduled-pitia-20261001t0114z-de-rival-charter.json": "660f81e241b5e4dde8adc4a816367e08fd19003704d22df1ebadb1902f26bad7",
     "inbox/scheduled-pitia-20261001t0719z-write-failure-board.json": "9b147860d7310afec8753a9e02beba39162b3c28a8385aafe04f5b49921d509f",
     "inbox/scheduled-pitia-20261001t0816z-rd-calibration-surprise.json": "ec306cf05a802b69e8cd5d05ba7efec06d3368e0980512df9d614c39c29fcf7a",
+    "inbox/scheduled-pitia-20261001t1115z-dream-analysis-invariance.json": "4d8a4404562d1787763707a44fb16e113e2c78769436cff8edfc46d671802b92",
     "inbox/scheduled-pitia-batch-2181033f17a4f562.json": "abef2a371fff9849bc92f9e214ee0e4708a02420d236fb946c0825e787cd5636",
     "inbox/scheduled-pitia-batch-392ca9d8c0a7749a.json": "cfc104cf89931e65e44ca8b588a01848b592ea233fe39afc8271250b47131629",
     "inbox/scheduled-pitia-batch-3d6c1a02b9805eb8.json": "e36ef115a6cbce8e7d949cdec5de247eba084d3d9bba02986457c3f13a4e1a47",
@@ -1237,9 +1238,9 @@
       "tower_revision": "sha256:5af5b07a20f685a774c32e415577f2c25370e1718bacfb88e74b2a273534098f"
     },
     "inbox/scheduled-guardiao-board-20261001t1608z.json": {
-      "applied_at": "2026-10-01T17:12:48Z",
+      "applied_at": "2026-10-01T17:15:01Z",
       "fingerprint": "8ecc04f1df7ef768a0f63bb61fc7e387b5cdbf8794eb43f79145ab4c06601b6b",
-      "tower_revision": "sha256:4c018a2a5b83722f607e4baed5ac357dae3dc094d324e14586f8e1ab276ba09d"
+      "tower_revision": "sha256:600b68fdc74ad1ea777d4c2f5420d058007264d22ec21e121dafc5bf14fb6dc0"
     },
     "inbox/scheduled-guardiao-board-work-drift-20261001t0607z.json": {
       "applied_at": "2026-10-01T06:25:43Z",
@@ -2029,6 +2030,11 @@
       "applied_at": "2026-10-01T09:45:56Z",
       "fingerprint": "ec306cf05a802b69e8cd5d05ba7efec06d3368e0980512df9d614c39c29fcf7a",
       "tower_revision": "sha256:2187bfcaab53f35c25c2d6b5d36d5637e5894e5826f21a48ee299a81a1c46261"
+    },
+    "inbox/scheduled-pitia-20261001t1115z-dream-analysis-invariance.json": {
+      "applied_at": "2026-10-01T17:15:01Z",
+      "fingerprint": "4d8a4404562d1787763707a44fb16e113e2c78769436cff8edfc46d671802b92",
+      "tower_revision": "sha256:600b68fdc74ad1ea777d4c2f5420d058007264d22ec21e121dafc5bf14fb6dc0"
     },
     "inbox/scheduled-pitia-batch-2181033f17a4f562.json": {
       "fingerprint": "abef2a371fff9849bc92f9e214ee0e4708a02420d236fb946c0825e787cd5636",
