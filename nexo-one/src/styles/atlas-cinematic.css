@@ -95,6 +95,7 @@
 .observatory .board-focus{position:relative;overflow:hidden;border-color:rgba(var(--o-accent-rgb),.38);border-left:3px solid var(--o-accent);padding:20px!important}
 .observatory .board-focus::before{content:"";position:absolute;top:0;right:0;width:180px;height:140px;pointer-events:none;background:radial-gradient(ellipse at top right,rgba(var(--o-accent-rgb),.1),transparent 70%)}
 .observatory .board-focus>h2{margin-bottom:10px}
+.observatory .hud-science-intro{margin:0 0 28px}
 .observatory .board-focus>.hud-kicker{font-size:10px!important}
 .observatory .board-focus .board-caption{font-size:13px!important;color:var(--o-dim)!important;margin:0 0 18px!important}
 .observatory .board-caption>span{display:block;font:10px/1.5 var(--f-mono);color:var(--o-quiet);margin-bottom:3px}

@@ -6,6 +6,8 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { createServer } from 'vite';
 import { buildLab } from '../src/features/lab/model.ts';
 import { latestBoardRecord } from '../src/features/lab/presentation.ts';
+import { buildPagesProjection } from '../scripts/build-pages-system.mjs';
+import { labVisualFixture } from './lab-visual-fixture.mjs';
 
 const now = Date.parse('2026-10-01T10:00:00Z');
 const post = (id, at, extra = {}) => ({ id, at, from: 'EXECUTOR', to: 'ENGINEER', text: '  Original: TEST-A\n& <texto literal>  ', ...extra });
@@ -66,4 +68,26 @@ test('compact message sky shares its height with the reading panel and the explo
   assert.match(css, /:has\(\.board-focus\)[^\n]+\.obs-scene\{height:var\(--sky\)\}/);
   assert.match(css, /:has\(\.board-focus\)[^\n]+\.hud\{top:calc\(48px \+ var\(--sky\)\)\}/);
   assert.match(base, /\.explore-toggle\{top:calc\(48px \+ var\(--sky\) - 46px\)!important/);
+});
+
+test('message priority moves the intact scientific introduction once and preserves the no-message flow', async () => {
+  const server = await createServer({ server: { middlewareMode: true, hmr: false, watch: null }, appType: 'custom' });
+  try {
+    const { default: LabApp } = await server.ssrLoadModule('/src/features/lab/LabApp.tsx');
+    const projection = labVisualFixture(Date.now() - 60_000);
+    const { system } = buildPagesProjection({ projection, manifestFile: projection.manifest });
+    const render = state => renderToStaticMarkup(createElement(LabApp, { state, route: { page: 'agora' }, theme: 'dark' }));
+    const withMessage = render(system);
+    const without = structuredClone(system); without.evolution.board = [];
+    const noMessage = render(without);
+    const intro = html => html.match(/<p class="thesis">[\s\S]*?<\/p>/)?.[0];
+    const hero = html => html.slice(html.indexOf('<header class="hud-hero"'), html.indexOf('</header>'));
+    assert.equal(intro(withMessage), intro(noMessage), 'selection, entity link and current verdict are identical');
+    assert.equal((withMessage.match(/class="thesis"/g) ?? []).length, 1);
+    assert.equal((noMessage.match(/class="thesis"/g) ?? []).length, 1);
+    assert.doesNotMatch(hero(withMessage), /class="thesis"/);
+    assert.ok(withMessage.indexOf('id="board-focus-title"') < withMessage.indexOf('class="hud-science-intro"'));
+    assert.match(hero(noMessage), /class="thesis"/);
+    assert.doesNotMatch(noMessage, /class="hud-science-intro"|id="board-focus-title"/);
+  } finally { await server.close(); }
 });

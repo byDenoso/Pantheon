@@ -234,6 +234,10 @@ function Now({ lab, state, onReplay, replayCount }: { lab: Lab; state: SystemSta
   const sci = all.filter(isScience), self = all.filter(isSelf);
   const S = tally(sci), E2 = tally(self);
   const focus = selectScienceFocus(sci);
+  const boardPost = latestBoardRecord(ev?.board ?? []);
+  const scientificIntro = focus
+    ? <p className="thesis">Resultado científico em destaque: <E id={focus.test.id}>{focus.test.name}</E>. <span>{currentVerdictText(focus.test)}</span></p>
+    : <p className="thesis">Ainda sem resultado científico disponível para destaque; {S.ready} testes marcados READY na leitura científica.</p>;
   const warnings = g?.failing_areas.length ?? 0;
   void d; void review; void resolved; void discovery;
   return <>
@@ -246,12 +250,11 @@ function Now({ lab, state, onReplay, replayCount }: { lab: Lab; state: SystemSta
       </p>
       <span className="sig-prompt" aria-hidden="true"><b>nexo@atlas</b>:<i>~</i>$ observe --agora</span>
       <h1>O NEXO <em>agora</em></h1>
-      {focus
-        ? <p className="thesis">Resultado científico em destaque: <E id={focus.test.id}>{focus.test.name}</E>. <span>{currentVerdictText(focus.test)}</span></p>
-        : <p className="thesis">Ainda sem resultado científico disponível para destaque; {S.ready} testes marcados READY na leitura científica.</p>}
+      {!boardPost && scientificIntro}
     </header>
 
-    <BoardFocus state={state} lab={lab} onOpenBoard={() => setBoardVisit(value => value + 1)} />
+    <BoardFocus state={state} lab={lab} post={boardPost} onOpenBoard={() => setBoardVisit(value => value + 1)} />
+    {boardPost && <div className="hud-science-intro">{scientificIntro}</div>}
     <LiveNowPanel lab={lab} />
     <GatePanel state={state} />
     {gate > 0 && !state.inbox?.some(i => i.kind === 'APROVAR') && <a className="hud-gate" href="#/ciclo">
@@ -1231,9 +1234,8 @@ function nameIds(text: string, lab: Lab): string {
 }
 
 const boardRole = (role: string) => role === 'ALL' ? 'todos os papéis' : roleLabel(role);
-function BoardFocus({ state, lab, onOpenBoard }: { state: SystemState; lab: Lab; onOpenBoard: () => void }) {
+function BoardFocus({ state, lab, post, onOpenBoard }: { state: SystemState; lab: Lab; post: ReturnType<typeof latestBoardRecord>; onOpenBoard: () => void }) {
   const records = state.evolution?.board ?? [];
-  const post = latestBoardRecord(records);
   if (!post) return null;
   return <section className="hud-section board-focus" aria-labelledby="board-focus-title">
     <p className="hud-kicker">Último recado no recorte recebido</p>

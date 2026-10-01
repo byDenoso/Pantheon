@@ -63,7 +63,10 @@ try {
     assert.ok(bounds.y < height - 50, 'focus starts in the opening viewport');
     const originalBounds = await focus.locator('.board-text').boundingBox();
     const hudBounds = await page.locator('.hud').boundingBox();
-    assert.ok(originalBounds.y < Math.min(height - 60, hudBounds.y + hudBounds.height) - 20, 'original message starts in the opening viewport');
+    await writeFile(output + '/' + name + '-opening-layout.json', JSON.stringify({ name, width, height, focus: bounds, original: originalBounds, hud: hudBounds }, null, 2));
+    if (!input) await page.addStyleTag({ content: 'body::after{content:"FIXTURE · DADOS SINTÉTICOS · SOMENTE TESTE";position:fixed;left:8px;bottom:3px;z-index:9999;background:#15120c;color:#f4e4bd;padding:3px 6px;font:10px system-ui;pointer-events:none}' });
+    await page.screenshot({ path: output + '/' + name + '-opening.png' });
+    assert.ok(originalBounds.y < Math.min(height - 60, hudBounds.y + hudBounds.height) - 20, name + ': original message starts in the opening viewport; ' + JSON.stringify({ originalY: originalBounds.y, hud: hudBounds }));
     if (width < 760 && !fallback) {
       await page.getByRole('button', { name: 'Explorar a teia' }).waitFor();
       const diagnostics = await page.evaluate(() => {
@@ -81,10 +84,8 @@ try {
       assert.ok(diagnostics.scene.bottom <= diagnostics.hud.y + 1, 'reading panel starts below the sky');
     }
     if (!input) {
-      await page.addStyleTag({ content: 'body::after{content:"FIXTURE · DADOS SINTÉTICOS · SOMENTE TESTE";position:fixed;left:8px;bottom:3px;z-index:9999;background:#15120c;color:#f4e4bd;padding:3px 6px;font:10px system-ui;pointer-events:none}' });
       assert.match(await focus.locator('.board-state').innerText(), /^Aberto/);
     }
-    await page.screenshot({ path: output + '/' + name + '-opening.png' });
     const more = focus.getByRole('button', { name: 'Ler recado inteiro' });
     if (await more.count()) {
       await more.click();
