@@ -47,6 +47,8 @@
 .observatory .v-running{color:var(--v-running)}.observatory .v-checkpointed{color:var(--v-checkpointed)}
 .observatory .fr-source{font:11px/1.6 var(--f-mono);color:var(--o-dim);overflow-wrap:anywhere}
 .observatory .metric-discrepancy{border-left:2px solid var(--v-review);padding-left:12px}
+.observatory .aut-grid>div{min-width:0;grid-template-columns:minmax(0,1fr)}
+.observatory .aut-grid :is(dt,dd){min-width:0;overflow-wrap:anywhere}
 .observatory .obs-camera-controls{display:flex;gap:6px;position:absolute;left:16px;bottom:18px;z-index:3}
 .observatory .obs-camera-controls button{min-width:44px;min-height:44px;border:1px solid var(--o-line);border-radius:8px;background:var(--o-panel);color:var(--o-ink);cursor:pointer}
 .observatory:not(.exploring) .obs-camera-controls{display:none}

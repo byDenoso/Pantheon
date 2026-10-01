@@ -194,12 +194,16 @@ try {
       await visualReady(page, name + ':blocker-semantics');
       await page.addStyleTag({ content: 'body::after{content:"FIXTURE VISUAL · DADOS SINTÉTICOS · SOMENTE TESTE";position:fixed;left:12px;bottom:6px;z-index:9999;padding:4px 8px;background:#15120c;color:#f4e4bd;font:11px system-ui;pointer-events:none}' });
       const problem = page.locator('#now-problem').locator('..');
-      await problem.screenshot({ path: output + '/' + name + '-blockers.png' });
+      await problem.scrollIntoViewIfNeeded();
+      await page.screenshot({ path: output + '/' + name + '-blockers.png' });
       const metrics = page.locator('#now-autonomy').locator('..');
-      await metrics.screenshot({ path: output + '/' + name + '-counting-bases.png' });
+      await metrics.locator('.aut-grid').first().scrollIntoViewIfNeeded();
+      await page.screenshot({ path: output + '/' + name + '-recent-metrics.png' });
+      await metrics.locator('.aut-grid').last().locator('dt').last().scrollIntoViewIfNeeded();
+      await page.screenshot({ path: output + '/' + name + '-counting-bases.png' });
       const bounds = await metrics.locator('.aut-grid>div').evaluateAll(cells => cells.map(cell => {
         const number = cell.querySelector('dt').getBoundingClientRect(), box = cell.getBoundingClientRect();
-        return { number: { x: number.x, width: number.width }, cell: { x: box.x, width: box.width }, scrollWidth: cell.scrollWidth, clientWidth: cell.clientWidth };
+        return { value: cell.querySelector('dt').textContent, fontSize: getComputedStyle(cell.querySelector('dt')).fontSize, tracks: getComputedStyle(cell).gridTemplateColumns, number: { x: number.x, width: number.width }, cell: { x: box.x, width: box.width }, scrollWidth: cell.scrollWidth, clientWidth: cell.clientWidth };
       }));
       await writeFile(output + '/' + name + '-metric-bounds.json', JSON.stringify(bounds, null, 2));
       assert.equal(await problem.locator('.hud-big').innerText(), 'Motivo do bloqueio não publicado.');
@@ -209,8 +213,10 @@ try {
       await page.evaluate(() => { location.hash = '#/saude'; });
       await page.locator('#he-live').waitFor();
       await visualReady(page, name + ':health-sources');
-      await page.locator('#he-fail').locator('..').screenshot({ path: output + '/' + name + '-report-time.png' });
-      await page.locator('#he-live').locator('..').screenshot({ path: output + '/' + name + '-publication-time.png' });
+      await page.locator('#he-fail').locator('..').scrollIntoViewIfNeeded();
+      await page.screenshot({ path: output + '/' + name + '-report-time.png' });
+      await page.locator('#he-live').locator('..').scrollIntoViewIfNeeded();
+      await page.screenshot({ path: output + '/' + name + '-publication-time.png' });
       const utc = value => new Date(value).toISOString().replace('T', ' ').replace(/\.\d{3}Z$/, ' UTC');
       assert.ok((await page.locator('#he-fail').locator('..').innerText()).includes(utc(reportAt)));
       assert.ok((await page.locator('#he-live').locator('..').innerText()).includes(utc(projection.manifest.generated_at)));
