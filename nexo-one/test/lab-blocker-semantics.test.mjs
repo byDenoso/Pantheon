@@ -84,5 +84,7 @@ test('report findings and publication checks retain separate sources, times and 
   assert.doesNotMatch(report, /2026-10-01 15:09:07 UTC|Problema em automations/);
   assert.match(publication, /2026-10-01 15:09:07 UTC/);
   assert.doesNotMatch(publication, /2026-10-01 13:03:47 UTC|Problema em science/);
+  assert.match(publication, /sem evento recente no recorte publicado/);
+  assert.doesNotMatch(publication, /automação não rodou|tarefa parada|automação parada/);
   assert.match(publication, /não comprova tarefa pausada/);
 });

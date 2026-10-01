@@ -221,6 +221,8 @@ try {
       assert.ok((await page.locator('#he-fail').locator('..').innerText()).includes(utc(reportAt)));
       assert.ok((await page.locator('#he-live').locator('..').innerText()).includes(utc(projection.manifest.generated_at)));
       assert.match(await page.locator('#he-live').locator('..').innerText(), /não comprova tarefa pausada/);
+      assert.match(await page.locator('#he-live').locator('..').innerText(), /sem evento recente no recorte publicado/);
+      assert.doesNotMatch(await page.locator('#he-live').locator('..').innerText(), /automação não rodou|automação parada/);
       await noOverflow(page, name + ':health-sources');
     }
     assert.deepEqual(errors, [], name + ': page errors');

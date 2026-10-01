@@ -763,7 +763,7 @@ function Health({ state, lab }: { state: SystemState; lab: Lab }) {
       {!!ev?.incidents?.length && <p><a href="#he-inc" onClick={e => { e.preventDefault(); document.getElementById('he-inc')?.scrollIntoView({ block: 'start' }); }}>Consultar incidentes com responsável e evidências abaixo ↓</a></p>}
     </Section>}
     {g && liveFailures.length > 0 && <Section title="Avisos derivados da publicação" kicker={guardianAuditTime(g.live_checked_at)} id="he-live">
-      <ul className="hud-list">{liveFailures.map(a => <li key={a}>{guardianArea(a).replace(/^./, c => c.toUpperCase())}</li>)}</ul>
+      <ul className="hud-list">{liveFailures.map(a => <li key={a}>{a === 'automations' ? 'Algum papel sem evento recente no recorte publicado' : guardianArea(a).replace(/^./, c => c.toUpperCase())}</li>)}</ul>
       <p className="hud-note">Checagens derivadas do recorte publicado. Ausência de evento no recorte não comprova tarefa pausada.</p>
     </Section>}
     {(ev?.incidents?.length ?? 0) > 0 && <Section title="Incidentes" kicker={`${ev!.incidents!.length} registros`} id="he-inc">
