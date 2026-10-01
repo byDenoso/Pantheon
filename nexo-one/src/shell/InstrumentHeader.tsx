@@ -1,3 +1,5 @@
+import { usePublishedClock } from '../hooks/usePublishedClock.ts';
+import { formatPublishedAge } from '../viewmodels/published-time.ts';
 import {useEffect,useState,type FormEvent,type RefObject} from 'react';
 import type {SyncStatus} from '../data/useSystem.ts';
 import type {ViewId} from '../app/navigation.ts';
@@ -16,9 +18,9 @@ const PATHS:Record<string,string>={
 export function ProductIcon({name,size=16}:{name:string;size?:number}){return <svg aria-hidden="true" width={size} height={size} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d={PATHS[name]||PATHS.cockpit}/></svg>}
 
 export function InstrumentHeader({
-  mode,view,theme,syncStatus,readAt,fingerprint,command,commandRef,onCommandChange,onCommandSubmit,onThemeToggle,onSync,onNavigate,onAccountClick,privateSession,syncMessage,watching,onForceSync,
+  mode,view,theme,syncStatus,readAt,generatedAt,fingerprint,command,commandRef,onCommandChange,onCommandSubmit,onThemeToggle,onSync,onNavigate,onAccountClick,privateSession,syncMessage,watching,onForceSync,
 }:{
-  mode:ProductMode;view:ViewId;theme:string;syncStatus:SyncStatus;readAt:string|null;fingerprint:string;command:string;
+  mode:ProductMode;view:ViewId;theme:string;syncStatus:SyncStatus;readAt:string|null;generatedAt?:string;fingerprint:string;command:string;
   commandRef:RefObject<HTMLInputElement|null>;onCommandChange:(value:string)=>void;onCommandSubmit:(event:FormEvent)=>void;
   onThemeToggle:()=>void;onSync:()=>void;onNavigate:(mode:ProductMode)=>void;onAccountClick?:()=>void;privateSession?:boolean;syncMessage?:string;watching?:boolean;onForceSync?:()=>void;
 }){
@@ -35,6 +37,7 @@ export function InstrumentHeader({
     return()=>window.clearTimeout(timer);
   },[syncMessage,busy,watching]);
   const canForce=Boolean(onForceSync&&FORCE_SYNC_URL)&&!busy&&!watching&&(syncStatus==='UNCHANGED'||syncStatus==='FAILED');
+  const publishedNow = usePublishedClock();
   return <header className="instrument-header">
     <a href="#/agora" className="instrument-brand" onClick={e=>{e.preventDefault();onNavigate('agora')}} aria-label="NEXO ONE — Início">
       <span className="instrument-mark" aria-hidden="true">Λ<i className="sig-cursor" /></span><strong>NEXO</strong>
@@ -47,7 +50,7 @@ export function InstrumentHeader({
     <div className="instrument-provenance" title={fingerprint||'Aguardando a leitura mais recente'}>
       <span className="instrument-live-dot"/>
       <strong>Dados do NEXO</strong>
-      <span>Última leitura: {freshness}</span>
+      <span>Última leitura: {freshness}{generatedAt && <> · fonte {formatAge(generatedAt, publishedNow)}</>}</span>
       {fingerprint&&<details><summary>Ver assinatura desta versão</summary><code>{fingerprint}</code></details>}
     </div>
     <form className="instrument-search" onSubmit={onCommandSubmit}>
@@ -67,8 +70,4 @@ export function InstrumentHeader({
     {onAccountClick&&<button className="instrument-account" type="button" onClick={onAccountClick} aria-label="Abrir conta e sessão">{privateSession?'P':'D'}</button>}
   </header>;
 }
-function formatAge(value:string){
-  const millis=Date.now()-Date.parse(value);if(!Number.isFinite(millis)||millis<0)return 'agora';
-  const minutes=Math.floor(millis/60000);return minutes<1?'agora':minutes<60?`há ${minutes} min`:`há ${Math.floor(minutes/60)} h`;
-}
-
+function formatAge(value:string, now = Date.now()){ return formatPublishedAge(value, now); }

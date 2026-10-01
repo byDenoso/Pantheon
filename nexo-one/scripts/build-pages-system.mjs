@@ -12,7 +12,7 @@ const CORE_DOMAINS = ['NEXO', 'SCIENCE', 'ENGINEERING', 'OLYMPUS'];
 
 // Read model do TCC#96 (prereg, review, linhagem, roadmaps, activity) repassado ao Observatório.
 // Só entidades públicas; campos ausentes ficam ausentes (o front mostra "não publicado").
-const RM_TEST_KEYS = ['display_name', 'title', 'semantic', 'question', 'question_plain', 'result_meaning', 'status', 'review_state', 'verdict', 'domain', 'hypothesis_id',
+const RM_TEST_KEYS = ['display_name', 'title', 'semantic', 'question', 'question_plain', 'result_meaning', 'status', 'state', 'review_state', 'verdict', 'domain', 'hypothesis_id',
   'roadmap_id', 'campaign_id', 'prereg', 'review', 'limitations', 'claim_boundary', 'created_at', 'executed_at', 'created_at_effective',
   'created_at_source', 'execution', 'parents', 'children', 'depends_on', 'blocker'];
 const RM_HYP_KEYS = ['statement', 'claim_boundary', 'test_ids', 'roadmap_ids', 'parents', 'children', 'created_at', 'created_at_effective', 'origin'];
@@ -26,6 +26,15 @@ function publicReadModel(projection) {
   for (const test of projection.tests || []) {
     if (!test || test.private || !test.id) continue;
     const picked = pickKeys(test, RM_TEST_KEYS);
+    // Forward only public readiness facts already present in the sanctioned export.
+    // Never republish recipe hashes, bindings, paths, or additional runtime metadata.
+    if (test.readiness && typeof test.readiness.eligible === 'boolean') {
+      picked.readiness = {
+        eligible: test.readiness.eligible,
+        reasons: Array.isArray(test.readiness.reasons) ? test.readiness.reasons.filter(value => typeof value === 'string' && /^[A-Z][A-Z0-9_]{0,80}$/.test(value)) : [],
+        ...(/^[A-Z][A-Z0-9_]{0,80}$/.test(test.readiness.policy || '') ? { policy: test.readiness.policy } : {}),
+      };
+    }
     if (Object.keys(picked).length) tests[String(test.id)] = picked;
   }
   const historical_tests = {};
@@ -214,7 +223,8 @@ function domainsOf(value) {
 
 function projectionState(value) {
   const state = String(value || '').trim().toUpperCase();
-  return /BLOCK|FAIL|ERROR|REJECT/.test(state) ? 'BLOCKED' : 'SNAPSHOT';
+  // Scientific rejection is a completed negative result, not an operational failure.
+  return /^(?:BLOCKED(?:_|$)|FAILED(?:_|$)|FAIL(?:_|$)|ERROR(?:_|$))/.test(state) ? 'BLOCKED' : 'SNAPSHOT';
 }
 
 function sourceRevision(manifest) {
@@ -706,7 +716,7 @@ function graphFromProjection(projection, observedAt, filaments = [], peerDetecti
       type: 'TEST',
       label: String(item.title || rawId),
       domain,
-      state: projectionState(item.status),
+      state: projectionState(item.status || item.state),
       authority_class: 'NON_AUTHORITATIVE',
       source_ref: source,
       source_revision: sourceRevision(manifest),

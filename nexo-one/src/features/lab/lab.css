@@ -78,7 +78,7 @@
 .vchip i{font-style:normal}
 .vchip.small{font-size:11px;padding:1px 7px 1px 5px}
 .v-confirmed{color:var(--v-confirmed)}.v-refuted{color:var(--v-refuted)}.v-review{color:var(--v-review)}.v-provisional{color:var(--v-provisional)}
-.v-ready{color:var(--v-ready)}.v-blocked{color:var(--v-blocked)}.v-discarded{color:var(--v-discarded)}
+.v-rejected{color:var(--v-rejected,#cca47d)}.v-ready{color:var(--v-ready)}.v-blocked{color:var(--v-blocked)}.v-discarded{color:var(--v-discarded)}
 
 .vbar{display:flex;height:6px;border-radius:3px;overflow:hidden;background:var(--o-line);gap:1px;min-width:120px}
 .vbar b{display:block;background:currentColor;height:100%}

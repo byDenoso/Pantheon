@@ -1,9 +1,12 @@
+import { usePublishedClock } from '../../hooks/usePublishedClock.ts';
+import { isPublishedFresh, publishedAgeMs } from '../../viewmodels/published-time.ts';
 import { IncidentResponsibility } from '../../components/IncidentResponsibility.tsx';
 import { incidentView, guardianAuditTime } from '../../viewmodels/incidents.ts';
 // NEXO Observatório: páginas em HUD sobre a teia cósmica.
 // Rotas: #/agora #/ciclo #/roadmaps #/roadmap/<id> #/evidencia[?v=] #/e/<id> #/saude
-import { NARRATION } from './narration';
-import { lazy, Suspense, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { activityRange, activityWindow, observedActivity } from './activity-presentation.ts';
+import { browserNarrationDeck } from './narration-deck.ts';
+import { lazy, Suspense, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import type { SystemState } from '../../contracts/system.ts';
 import {
   ago, buildLab, guardianArea, humanId, readBaseline, VERDICT_GLYPH, VERDICT_ORDER, VERDICT_PT,
@@ -12,11 +15,18 @@ import {
 import type { ScenePage, SceneEvents } from './ObservatoryScene.tsx';
 import { normDomain } from './domains.ts';
 import './lab.css';
+import '../../styles/atlas-cinematic.css';
+import { currentVerdictText, matchesSearch, boardMeta, readinessLabel, hasPublishedValue, roadmapTrail } from './presentation.ts';
+import { selectScienceFocus, scientificStatRows } from './science-presentation.ts';
+import { autonomyPresentation, publishedQueueGap } from './autonomy-presentation.ts';
+import { DependencyFlow } from './DependencyFlow.tsx';
+import { LiveNowPanel } from './LiveNowPanel.tsx';
+import { captureReading, publishedChanges, latestDelivery, eventLabel, focusEntities, type PublishedChange } from './live-state.ts';
 import { UniversePage, UniverseFrontierPage } from './UniversePage.tsx';
 
 const ObservatoryScene = lazy(() => import('./ObservatoryScene.tsx').then(m => ({ default: m.ObservatoryScene })));
 
-import { labHref, type LabRoute } from './routes.ts';
+import { labHref, replaceEvidenceSearch, type LabRoute } from './routes.ts';
 export { labHref, parseLabRoute, LAB_PAGES, type LabRoute } from './routes.ts';
 
 // ---------- peças base ----------
@@ -61,11 +71,38 @@ function Bar({ parts, total }: { parts: Array<[Verdict, number]>; total: number 
 
 // ---------- app ----------
 export default function LabApp({ state, route, theme }: { state: SystemState; route: LabRoute; theme: 'dark' | 'light' }) {
+  const publishedNow = usePublishedClock();
+  const sourceCurrent = isPublishedFresh(state.generated_at, undefined, publishedNow);
   const lab = useMemo(() => buildLab(state), [state]);
   nameOf = (id: string) => lab.tests.get(id)?.name ?? lab.hypotheses.get(id)?.statement ?? lab.roadmaps.get(id)?.title ?? humanId(id);
   const tests = useMemo(() => [...lab.tests.values()].filter(t => !t.contestOf), [lab]);
+  const previousReading = useRef(captureReading(lab));
+  const [changes, setChanges] = useState<PublishedChange[]>([]);
+  const [changedAt, setChangedAt] = useState<string | null>(null);
+  useEffect(() => {
+    const next = publishedChanges(previousReading.current, lab);
+    previousReading.current = captureReading(lab, previousReading.current);
+    if (next.length) { setChanges(next); setChangedAt(lab.generatedAt); }
+  }, [lab]);
   const [focus, setFocus] = useState<string[]>([]);
   const [explore, setExplore] = useState(false);
+  const [sceneAvailable, setSceneAvailable] = useState<boolean | null>(null);
+  const hudRef = useRef<HTMLDivElement>(null);
+  const scrollPositions = useRef(new Map<string, { page: number; hud: number }>());
+  const routeKey = `${route.page}:${route.id ?? ''}:${route.q ?? ''}:${route.search ?? ''}`;
+  useLayoutEffect(() => {
+    const hud = hudRef.current;
+    const saved = scrollPositions.current.get(routeKey);
+    if (!route.preserveScroll) {
+      window.scrollTo({ top: saved?.page ?? 0, behavior: 'instant' });
+      if (hud) hud.scrollTop = saved?.hud ?? 0;
+    }
+    const save = () => scrollPositions.current.set(routeKey, { page: window.scrollY, hud: hud?.scrollTop ?? 0 });
+    if (route.preserveScroll) save();
+    window.addEventListener('scroll', save, { passive: true });
+    hud?.addEventListener('scroll', save, { passive: true });
+    return () => { window.removeEventListener('scroll', save); hud?.removeEventListener('scroll', save); };
+  }, [routeKey]);
   // "Só a página": sem a teia atrás (mais leve no celular e mais legível); lembrado neste aparelho.
   const [flat, setFlat] = useState(() => { try { return localStorage.getItem('nexo.flat') === '1'; } catch { return false; } });
   const toggleFlat = () => setFlat(x => { const n = !x; try { localStorage.setItem('nexo.flat', n ? '1' : '0'); } catch { /* sem armazenamento */ } if (n) setExplore(false); return n; });
@@ -74,7 +111,8 @@ export default function LabApp({ state, route, theme }: { state: SystemState; ro
     const esc = (e: KeyboardEvent) => { if (e.key === 'Escape') setExplore(false); };
     window.addEventListener('keydown', esc); return () => window.removeEventListener('keydown', esc);
   }, []);
-  const events = useMemo<SceneEvents>(() => sceneEvents(state, lab), [state, lab]);
+  const thoughtKey = JSON.stringify((state.evolution?.thoughts ?? []).filter(thought => sourceCurrent && isPublishedFresh(thought.at, 2 * 3600e3, publishedNow)).slice(-2).map(thought => thought.id));
+  const events = useMemo<SceneEvents>(() => sceneEvents(state, lab, sourceCurrent, JSON.parse(thoughtKey) as string[]), [state, lab, sourceCurrent, thoughtKey]);
   const [searching, setSearching] = useState(false);
   const [legend, setLegend] = useState(() => { try { return !localStorage.getItem('nexo.legend.seen'); } catch { return false; } });
   const closeLegend = () => { setLegend(false); try { localStorage.setItem('nexo.legend.seen', '1'); } catch { /* sem armazenamento */ } };
@@ -88,11 +126,11 @@ export default function LabApp({ state, route, theme }: { state: SystemState; ro
     window.addEventListener('keydown', k); return () => window.removeEventListener('keydown', k);
   }, []);
   // Estrelas "acordadas": entidades com evento nas últimas 2 h pulsam mais forte na teia.
-  const hot = useMemo(() => [...new Set(lab.activity.filter(e => e.entity_id && Date.now() - Date.parse(e.at) < 2 * 3600e3)
-    .map(e => starOf(lab, e.entity_id!)).filter(Boolean) as string[])], [lab]);
+  const hot = useMemo(() => [...new Set((sourceCurrent ? activityWindow(lab.activity, 2, publishedNow).recent : []).filter(e => e.entity_id)
+    .map(e => starOf(lab, e.entity_id!)).filter(Boolean) as string[])], [lab, sourceCurrent, publishedNow]);
   // Replay: a câmera percorre as últimas 24 h de eventos reais, na ordem em que aconteceram.
   const [replay, setReplay] = useState<number | null>(null);
-  const reel = useMemo(() => lab.activity.filter(e => Date.now() - Date.parse(e.at) < 24 * 3600e3), [lab]);
+  const reel = useMemo(() => activityWindow(lab.activity, 24).recent, [lab]);
   useEffect(() => {
     if (replay === null) return;
     if (replay >= reel.length) { setReplay(null); setFocus([]); return; }
@@ -107,11 +145,10 @@ export default function LabApp({ state, route, theme }: { state: SystemState; ro
     window.addEventListener('keydown', esc); return () => window.removeEventListener('keydown', esc);
   }, []);
   useEffect(() => {
-    if (route.page === 'entidade' && route.id) setFocus([route.id]);
+    if (route.page === 'entidade' && route.id) setFocus(focusEntities(lab, route.id));
     else if (route.page === 'roadmap' && route.id) setFocus(lab.roadmaps.get(route.id)?.tests ?? []);
     else if (route.page === 'evidencia' && route.q) setFocus(tests.filter(t => t.verdict === route.q).map(t => t.id));
     else setFocus([]);
-    window.scrollTo({ top: 0 });
   }, [route.page, route.id, route.q, lab, tests]);
 
   const page = (() => {
@@ -120,15 +157,15 @@ export default function LabApp({ state, route, theme }: { state: SystemState; ro
       case 'ciclo': return <Cycle lab={lab} state={state} />;
       case 'roadmaps': return <Roadmaps lab={lab} />;
       case 'roadmap': return <RoadmapPage lab={lab} id={route.id!} />;
-      case 'evidencia': return <Evidence lab={lab} filter={route.q as Verdict | undefined} />;
-      case 'entidade': return <EntityPage lab={lab} id={route.id!} />;
+      case 'evidencia': return <Evidence lab={lab} state={state} filter={route.q as Verdict | undefined} search={route.search} />;
+      case 'entidade': return <EntityPage lab={lab} state={state} id={route.id!} />;
       case 'saude': return <Health state={state} lab={lab} />;
       default: return <Now lab={lab} state={state} onReplay={() => { setExplore(false); setReplay(0); }} replayCount={reel.length} />;
     }
   })();
 
   const cur = replay !== null ? reel[replay] : null;
-  return <div className={`observatory${explore || replay !== null ? ' exploring' : ''}${flat ? ' flat' : ''}`} data-page={route.page}>
+  return <div className={`observatory${sceneAvailable !== false && (explore || replay !== null) ? ' exploring' : ''}${flat ? ' flat' : ''}${sceneAvailable === false ? ' scene-unavailable' : ''}`} data-page={route.page}>
     <Intro />
     {cur && <div className="replay-caption" role="status" aria-live="polite">
       <span className="replay-clock">{new Date(cur.at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</span>
@@ -138,23 +175,23 @@ export default function LabApp({ state, route, theme }: { state: SystemState; ro
     </div>}
 
     <div className="obs-tools">
-  {!flat && <button type="button" className="explore-toggle" aria-pressed={explore} onClick={() => setExplore(x => !x)}>
+  {!flat && sceneAvailable === true && <button type="button" className="explore-toggle" aria-pressed={explore} onClick={() => setExplore(x => !x)}>
       {explore ? <><i aria-hidden="true">✕</i><span className="bt">Voltar ao painel</span></> : <><i aria-hidden="true">⤢</i><span className="bt">Explorar a teia</span></>}</button>}
-      <button type="button" aria-pressed={flat} onClick={toggleFlat} title={flat ? 'Mostrar a teia atrás do painel' : 'Mostrar só a página, sem a teia'} aria-label={flat ? 'Mostrar a teia' : 'Mostrar só a página'}>
-        <Icon n="page" /><span className="bt">{flat ? 'Com a teia' : 'Só a página'}</span></button>
+      {sceneAvailable !== false && <button type="button" aria-pressed={flat} onClick={toggleFlat} title={flat ? 'Mostrar a teia atrás do painel' : 'Mostrar só a página, sem a teia'} aria-label={flat ? 'Mostrar a teia' : 'Mostrar só a página'}>
+        <Icon n="page" /><span className="bt">{flat ? 'Com a teia' : 'Só a página'}</span></button>}
       <button type="button" onClick={() => setSearching(true)} title="Procurar (Ctrl K)" aria-label="Procurar"><Icon n="target" /><span className="bt">Procurar</span></button>
-      {!flat && <button type="button" onClick={() => window.dispatchEvent(new Event('nexo:replay-formation'))} title="Volta a teia ao quase-uniforme e mostra, em ~3 minutos, os nós aglomerando e os vazios se expandindo" aria-label="Rever a formação da teia">
+      {!flat && sceneAvailable === true && <button type="button" onClick={() => window.dispatchEvent(new Event('nexo:replay-formation'))} title="Volta a teia ao quase-uniforme e mostra, em ~3 minutos, os nós aglomerando e os vazios se expandindo" aria-label="Rever a formação da teia">
         <Icon n="replay" /><span className="bt">Rever formação</span></button>}
-      {!flat && <QualityButton />}
+      {!flat && sceneAvailable === true && <QualityButton />}
       <button type="button" aria-pressed={sound} onClick={() => setSound(x => !x)} title="Som ambiente" aria-label="Som ambiente"><Icon n={sound ? 'sound' : 'mute'} /><span className="bt">{sound ? 'Som ligado' : 'Som'}</span></button>
     </div>
-    {searching && <Search lab={lab} onClose={() => setSearching(false)} />}
+    {searching && <Search lab={lab} state={state} onClose={() => setSearching(false)} />}
     {explore && <p className="explore-hint" role="status">Arraste para girar · roda ou pinça para zoom · botão direito, Shift ou 2 dedos para mover · duplo clique recentra · Esc sai</p>}
     {!flat && <Suspense fallback={<div className="obs-scene obs-scene--loading" />}>
-      <ObservatoryScene explore={explore || replay !== null} hot={hot} tests={tests} events={events} page={route.page} focusIds={focus} theme={theme}
-        onPick={id => { window.location.hash = labHref('entidade', id); }} />
+      <ObservatoryScene explore={explore || replay !== null} hot={hot} tests={tests} sourceCurrent={sourceCurrent} events={events} page={route.page} focusIds={focus} theme={theme}
+        onAvailability={setSceneAvailable} onPick={id => { window.location.hash = labHref('entidade', id); }} />
     </Suspense>}
-    <div className="hud" key={`${route.page}:${route.id ?? ''}`}>{page}<Acoustic /></div>
+    <div ref={hudRef} className="hud" key={`${route.page}:${route.id ?? ''}`} >{changes.length > 0 && <aside className="published-changes" aria-label="Mudanças recebidas nesta visita"><p role="status">{changes.length} mudanças recebidas · fonte {ago(changedAt)}</p><details><summary>Ver o que mudou sem sair da página</summary><ul>{changes.slice(0, 12).map(change => <li key={change.id}><E id={change.id}>{change.name}</E><span>{change.kind === 'review' ? `${VERDICT_PT[change.before as Verdict] ?? change.before} → ${VERDICT_PT[change.after as Verdict] ?? change.after}` : change.kind === 'added' ? 'Teste passou a constar nesta leitura' : change.before ? `${change.before} → ${change.after}` : change.after}</span></li>)}</ul>{changes.length > 12 && <p>Mostrando 12 de {changes.length}. Consulte a Evidência para o estado completo.</p>}</details><button type="button" onClick={() => setChanges([])}>Dispensar aviso</button></aside>}{sceneAvailable === false && !flat && <p className="scene-fallback-note">Visualização leve · a teia 3D requer WebGL. Todas as páginas e evidências continuam disponíveis.</p>}{page}<Acoustic /></div>
     <Telemetry lab={lab} state={state} />
   </div>;
 }
@@ -168,27 +205,11 @@ function tally(list: TestEntity[]) {
   return { confirmed: by('CONFIRMED'), refuted: by('REFUTED'), review: by('PENDING_REVIEW') + by('CONTESTED') + by('REFEREE1_PASSED'),
     blocked: list.filter(t => t.verdict === 'BLOCKED').length, ready: list.filter(isReady).length, total: list.length };
 }
-/** Números científicos publicados de um teste (Δχ², p, σ, ΔBIC, ln B, w0, wa…), ignorando campos ausentes. */
-function numbersOf(t: TestEntity): Record<string, number> {
-  const out: Record<string, number> = {};
-  const scan = (o: unknown) => {
-    if (!o || typeof o !== 'object') return;
-    for (const [k, v] of Object.entries(o as Record<string, unknown>)) {
-      const n = typeof v === 'number' ? v : (v && typeof v === 'object' && typeof (v as { value?: unknown }).value === 'number') ? (v as { value: number }).value : null;
-      if (n !== null && Number.isFinite(n)) out[k] = n;
-    }
-  };
-  scan(t.statistics); scan((t.result as { statistics?: unknown } | null)?.statistics); scan(t.result);
-  return out;
-}
-const hasNumbers = (t: TestEntity) => Object.keys(numbersOf(t)).some(k => /chi2|p_value|sigma|bic|bayes|w0|wa|shift/.test(k));
-
 // ---------- Agora ----------
 function Now({ lab, state, onReplay, replayCount }: { lab: Lab; state: SystemState; onReplay: () => void; replayCount: number }) {
   const ev = state.evolution;
   const g = state.guardian;
-  const age = Math.round((Date.now() - Date.parse(state.generated_at)) / 60000);
-  const stale = age > 45;
+  const stale = !isPublishedFresh(state.generated_at);
   const current = { ...lab.counts, confirmed: lab.reviews.CONFIRMED ?? 0, refuted: lab.reviews.REFUTED ?? 0 } as Record<string, number>;
   const [base] = useState(() => readBaseline(current));
   const d = (k: string) => (base ? (current[k] ?? 0) - (base.counts[k] ?? 0) : null);
@@ -198,7 +219,9 @@ function Now({ lab, state, onReplay, replayCount }: { lab: Lab; state: SystemSta
   const resolved = (lab.reviews.CONFIRMED ?? 0) + (lab.reviews.REFUTED ?? 0);
   const blocked = [...lab.tests.values()].filter(t => t.verdict === 'BLOCKED');
   const discovery = [...lab.tests.values()].find(t => t.verdict === 'CONFIRMED') ?? [...lab.tests.values()].find(t => t.meaning && t.verdict === 'PROVISIONAL');
-  const next = [...lab.tests.values()].filter(t => isReady(t) && t.question).slice(0, 3);
+  const activeRoadmaps = new Set([...lab.roadmaps.values()].filter(r => ['ACTIVE', 'CHARTERED'].includes(r.state)).map(r => r.id));
+  const next = [...lab.tests.values()].filter(t => isReady(t) && t.question && t.roadmapId && activeRoadmaps.has(t.roadmapId)).slice(0, 3);
+  const checkpoints = [...lab.tests.values()].filter(t => t.verdict === 'CHECKPOINTED');
   // Gravidade real: vermelho só quando algo trava o ciclo; o resto é atenção.
   const CRITICAL = ['writer', 'tower_integrity', 'relay', 'inbox', 'batteries', 'executor'];
   const blocking = (g?.failing_areas ?? []).filter(a => CRITICAL.includes(a));
@@ -207,9 +230,7 @@ function Now({ lab, state, onReplay, replayCount }: { lab: Lab; state: SystemSta
   const all = [...lab.tests.values()].filter(t => !t.contestOf);
   const sci = all.filter(isScience), self = all.filter(isSelf);
   const S = tally(sci), E2 = tally(self);
-  const byTime = (a: TestEntity, b: TestEntity) => String(b.executedAt ?? b.createdAt ?? '').localeCompare(String(a.executedAt ?? a.createdAt ?? ''));
-  const latest = sci.filter(t => t.meaning && t.verdict !== 'READY' && t.verdict !== 'BLOCKED').sort(byTime)[0];
-  const focus = sci.filter(hasNumbers).sort(byTime)[0] ?? latest;
+  const focus = selectScienceFocus(sci);
   const warnings = g?.failing_areas.length ?? 0;
   void d; void review; void resolved; void discovery;
   return <>
@@ -217,24 +238,41 @@ function Now({ lab, state, onReplay, replayCount }: { lab: Lab; state: SystemSta
       <p className={`hud-status s-${stale ? 'warn' : health}`}>
         <i aria-hidden="true" />
         {{ ok: 'Operando', warn: 'Operando com atenção', crit: 'Com falhas: o ciclo está travado', unknown: 'Saúde desconhecida' }[health]}
-        <span> · dados {ago(state.generated_at)}{stale ? ' — atrasados' : ''}</span>
+        <span> · dados {ago(state.generated_at)}{stale ? ' — frescor não validado' : ''}</span>
         {warnings > 0 && <a className="ops-link" href="#/saude">{warnings} {warnings === 1 ? 'aviso' : 'avisos'} de operação →</a>}
       </p>
       <span className="sig-prompt" aria-hidden="true"><b>nexo@atlas</b>:<i>~</i>$ observe --agora</span>
       <h1>O NEXO <em>agora</em></h1>
-      {latest
-        ? <p className="thesis">Último achado científico: <E id={latest.id}>{latest.name}</E>. <span>{humanize(latest.meaning ?? "")}</span></p>
-        : <p className="thesis">Ainda sem achado científico publicado; {S.ready} testes esperam para rodar.</p>}
+      {focus
+        ? <p className="thesis">Resultado científico em destaque: <E id={focus.test.id}>{focus.test.name}</E>. <span>{currentVerdictText(focus.test)}</span></p>
+        : <p className="thesis">Ainda sem resultado científico disponível para destaque; {S.ready} testes marcados READY na leitura científica.</p>}
     </header>
 
+    <LiveNowPanel lab={lab} />
     <GatePanel state={state} />
     {gate > 0 && !state.inbox?.some(i => i.kind === 'APROVAR') && <a className="hud-gate" href="#/ciclo">
       <strong>{gate}</strong><span>{gate === 1 ? 'decisão espera por você' : 'decisões esperam por você'}</span><em>abrir o portão →</em>
     </a>}
 
+    <div className="hud-pair now-priorities">
+      <Section title="Problema principal" kicker={blocked.length ? `${blocked.length} testes parados` : 'Nenhum bloqueio'} id="now-problem">
+        {blocked.length
+          ? <><p className="hud-big">{blocked[0]!.blocker ?? blocked[0]!.summary ?? 'Motivo não publicado'}</p><E id={blocked[0]!.id}>investigar →</E></>
+          : <p className="hud-muted">Nada impedindo a fila agora.</p>}
+      </Section>
+      <Section title="Próximo movimento" kicker="Roadmaps ativos · candidatos READY" id="now-next">
+        {next.length ? <ol className="hud-list">{next.map(t => <li key={t.id}><div><E id={t.id}>{t.name}</E><small className="readiness-note">{readinessLabel(t)}</small></div></li>)}</ol>
+          : <><p className="hud-muted">{lab.counts.READY ? 'Nenhum candidato READY com pergunta publicada e vínculo a um roadmap ativo.' : 'Nenhum teste pronto nesta leitura.'}</p>
+            {blocked.length ? <p>Próximo passo: recuperar os {blocked.length} bloqueios publicados. <a href="#/evidencia?v=BLOCKED">Consultar bloqueios →</a></p>
+              : checkpoints.length ? <p>Há {checkpoints.length} execuções salvas; conferir os requisitos de retomada. <a href="#/evidencia?v=CHECKPOINTED">Consultar checkpoints →</a></p>
+              : review ? <p>Há {review} resultados em revisão. <a href="#/evidencia?v=REVIEW">Consultar revisão →</a></p>
+              : <p className="hud-note">A próxima ação científica do roadmap ativo não foi declarada na projeção. Novas frentes dependem de carta aprovada.</p>}</>}
+      </Section>
+    </div>
+
     {base && <AwaySummary lab={lab} since={base.at} />}
 
-    <Section title="Ciência" kicker={`${S.total} testes de cosmologia e física`} id="now-sci">
+    <Section title="Ciência" kicker={`${S.total} testes principais de cosmologia e física`} id="now-sci">
       <div className="stats">
         <Stat n={S.confirmed} label="confirmados" tone="ok" />
         <Stat n={S.refuted} label="refutados" tone="crit" />
@@ -244,11 +282,11 @@ function Now({ lab, state, onReplay, replayCount }: { lab: Lab; state: SystemSta
       <p className="hud-note self-line">Autoengenharia (o NEXO estudando a si mesmo): <b>{E2.confirmed}</b> confirmados · <b>{E2.refuted}</b> refutados · <b>{E2.review}</b> em revisão.</p>
     </Section>
 
-    {focus && <ResultCard t={focus} />}
+    {focus && <ResultCard t={focus.test} selectionReason={focus.reason} />}
 
-    <Frontiers lab={lab} />
+    <Frontiers state={state} />
 
-    {thought && <Section title={Date.now() - Date.parse(thought.at) > 6 * 3600e3 ? 'Último pensamento registrado' : 'O que o NEXO está pensando'} kicker={`Pítia · ${ago(thought.at)}${Date.now() - Date.parse(thought.at) > 6 * 3600e3 ? ' · Pítia quieta desde então' : ''}`} id="now-thought">
+    {thought && <Section title={!isPublishedFresh(thought.at, 6 * 3600e3) ? 'Último pensamento registrado' : 'O que o NEXO está pensando'} kicker={`Pítia · ${ago(thought.at)}${!isPublishedFresh(thought.at, 6 * 3600e3) ? ' · idade deste pensamento' : ''}`} id="now-thought">
       <blockquote className="hud-thought">{thought.text}</blockquote>
       {thought.refs.some(r => lab.tests.has(r) || lab.hypotheses.has(r)) &&
         <p className="hud-refs">{thought.refs.filter(r => lab.tests.has(r) || lab.hypotheses.has(r)).slice(0, 3).map(r => <E key={r} id={r} />)}</p>}
@@ -260,17 +298,7 @@ function Now({ lab, state, onReplay, replayCount }: { lab: Lab; state: SystemSta
     <Families state={state} />
     <Calibration lab={lab} />
 
-    <div className="hud-pair">
-      <Section title="Problema principal" kicker={blocked.length ? `${blocked.length} testes parados` : 'Nenhum bloqueio'} id="now-problem">
-        {blocked.length
-          ? <><p className="hud-big">{blocked[0]!.blocker ?? blocked[0]!.summary ?? 'Motivo não publicado'}</p><E id={blocked[0]!.id}>investigar →</E></>
-          : <p className="hud-muted">Nada impedindo a fila agora.</p>}
-      </Section>
-      <Section title="Próximo movimento" kicker="Fila do Operador" id="now-next">
-        {next.length ? <ol className="hud-list">{next.map(t => <li key={t.id}><E id={t.id}>{t.name}</E></li>)}</ol>
-          : <p className="hud-muted">Fila vazia: o Cientista precisa gerar hipóteses.</p>}
-      </Section>
-    </div>
+
   </>;
 }
 
@@ -303,38 +331,47 @@ function GatePanel({ state }: { state: SystemState }) {
 
 // ---------- "Enquanto você esteve fora" ----------
 function AwaySummary({ lab, since }: { lab: Lab; since: string }) {
-  const evs = lab.activity.filter(e => e.at > since);
+  const evs = observedActivity(lab.activity).filter(e => e.at > since);
   if (!evs.length) return null;
   // Soma a contagem dos itens agrupados; "resultado" é só resultado novo de teste (falha de execução não conta).
   const n = (re: RegExp) => evs.filter(e => re.test(e.event_type)).reduce((k, e) => k + Number((e as { count?: number }).count ?? 1), 0);
   const results = n(/^TEST_RESULT_RECORDED$/), created = n(/CREATED|PROPOSED|ENQUEUED/), verdicts = n(/VERDICT|REVIEW|CONFIRMED|REFUTED/), thoughts = n(/THOUGHT_RECORDED/);
   const parts = [
-    results && `${results} ${results === 1 ? 'resultado chegou' : 'resultados chegaram'}`,
-    created && `${created} ${created === 1 ? 'teste novo nasceu' : 'testes novos nasceram'}`,
-    verdicts && `${verdicts} ${verdicts === 1 ? 'julgamento' : 'julgamentos'}`,
-    thoughts && `${thoughts} ${thoughts === 1 ? 'pensamento' : 'pensamentos'}`,
+    results && `${results} ${results === 1 ? 'evento de resultado recebido' : 'eventos de resultado recebidos'}`,
+    created && `${created} ${created === 1 ? 'evento de criação recebido' : 'eventos de criação recebidos'}`,
+    verdicts && `${verdicts} ${verdicts === 1 ? 'evento de revisão recebido' : 'eventos de revisão recebidos'}`,
+    thoughts && `${thoughts} ${thoughts === 1 ? 'evento de pensamento recebido' : 'eventos de pensamento recebidos'}`,
   ].filter(Boolean) as string[];
   return <p className="away">
-    <b>{say('AWAY_OPEN', since) ?? 'Enquanto você esteve fora'}</b> ({ago(since)}): {parts.length ? parts.join(', ') : `${evs.length} movimentos`}.
+    <b>{say('AWAY_OPEN', since) ?? 'Enquanto você esteve fora'}</b> ({ago(since)}): {parts.length ? parts.join(', ') : `${evs.length} eventos recebidos`}. Recorte de cobertura parcial; estas contagens não atestam o total do período desde a visita anterior.
   </p>;
 }
 
 // ---------- Busca (Ctrl/⌘ K) ----------
-function Search({ lab, onClose }: { lab: Lab; onClose: () => void }) {
+function Search({ lab, state, onClose }: { lab: Lab; state: SystemState; onClose: () => void }) {
+  const previousFocus = useRef(document.activeElement as HTMLElement | null);
+  useEffect(() => () => { if (previousFocus.current?.isConnected) previousFocus.current.focus(); }, []);
   const [q, setQ] = useState('');
   const all = useMemo(() => [
+    ...(state.cosmology_state?.frontiers ?? []).map(f => ({ id: f.id, label: f.title, sub: f.summary, kind: 'frente cosmológica', href: labHref('universo', f.id) })),
     ...[...lab.tests.values()].map(t => ({ id: t.id, label: t.name, sub: t.question ?? '', kind: 'teste', href: labHref('entidade', t.id) })),
     ...[...lab.hypotheses.values()].map(h => ({ id: h.id, label: h.statement ?? humanId(h.id), sub: '', kind: 'hipótese', href: labHref('entidade', h.id) })),
     ...[...lab.roadmaps.values()].map(r => ({ id: r.id, label: r.title ?? humanId(r.id), sub: '', kind: 'investigação', href: labHref('roadmap', r.id) })),
-  ], [lab]);
-  const norm = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
-  const hits = q.trim().length < 2 ? [] : all.filter(x => norm(`${x.label} ${x.sub}`).includes(norm(q.trim()))).slice(0, 12);
-  return <div className="search-veil" role="dialog" aria-label="Procurar" onClick={onClose}>
-    <div className="search-box" onClick={e => e.stopPropagation()}>
+  ], [lab, state.cosmology_state]);
+  const hits = q.trim().length < 2 ? [] : all.filter(x => matchesSearch(q, x.id, x.label, x.sub)).slice(0, 12);
+  return <div className="search-veil" role="dialog" aria-modal="true" aria-label="Procurar" onClick={onClose}>
+    <div className="search-box" onClick={e => e.stopPropagation()} onKeyDown={e => {
+      if (e.key !== 'Tab') return;
+      const items = Array.from(e.currentTarget.querySelectorAll<HTMLElement>('button, input, a[href]'));
+      const first = items[0], last = items.at(-1);
+      if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last?.focus(); }
+      else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first?.focus(); }
+    }}>
+      <button type="button" className="search-close" onClick={onClose}>Fechar busca</button>
       <input autoFocus value={q} onChange={e => setQ(e.target.value)} placeholder="Procurar teste, hipótese ou investigação…"
         onKeyDown={e => { if (e.key === 'Enter' && hits[0]) { window.location.hash = hits[0].href; onClose(); } }} />
       <ul>{hits.map(h => <li key={h.kind + h.id}><a href={h.href} onClick={onClose}><em>{h.kind}</em>{h.label}</a></li>)}</ul>
-      {q.trim().length >= 2 && !hits.length && <p className="hud-muted">Nada com esse nome.</p>}
+      {q.trim().length >= 2 && !hits.length && <p className="hud-muted">Nenhum resultado nesta projeção. Tente o nome da frente, parte da pergunta ou o ID.</p>}
     </div>
   </div>;
 }
@@ -346,9 +383,9 @@ function Legend({ onClose }: { onClose: () => void }) {
     <ul>
       <li><i className="lg lg-star" />cada estrela é um teste; a cor é o veredito</li>
       <li><i className="lg lg-qso" />quasar: uma decisão espera por você</li>
-      <li><i className="lg lg-agn" />jato: testes rodando agora</li>
-      <li><i className="lg lg-grb" />clarão: acabou de nascer um pensamento</li>
-      <li><i className="lg lg-cloud" />nuvem: muitos testes prontos para rodar</li>
+      <li><i className="lg lg-agn" />jato: testes marcados RUNNING na leitura</li>
+      <li><i className="lg lg-grb" />clarão: pensamento publicado no recorte recente</li>
+      <li><i className="lg lg-cloud" />nuvem: candidatos marcados READY na leitura</li>
     </ul>
     <button type="button" onClick={onClose}>Entendi</button>
   </aside>;
@@ -402,9 +439,10 @@ function Cycle({ lab, state }: { lab: Lab; state: SystemState }) {
       <p className="hud-kicker">Geração {ev?.genome.generation ?? 0} · {ev?.decoys.planted ?? 0} iscas em campo</p>
       <h1>O ciclo fechado</h1>
       <p className="hud-lead">Onde o trabalho está acumulando: a altura mostra quantos itens estão em cada etapa.</p>
+      <p className="hud-note">A atividade é registrada por papel. Operadores A/B/C compartilham EXECUTOR; Guardião e Revisor de PR compartilham GUARDIAO. Os sinais abaixo não comprovam uma execução individual de cada automação.</p>
     </header>
 
-    <Crew lab={lab} />
+    <Crew lab={lab} state={state} />
 
     <div className="cycle" role="list" aria-label="Etapas do ciclo">
       {STAGES.map((s, i) => <div className="cycle-stage" role="listitem" key={s.key} style={{ ['--h' as string]: `${Math.max(6, (values[i]! / max) * 100)}%` }}>
@@ -465,7 +503,7 @@ function Roadmaps({ lab }: { lab: Lab }) {
       <span className="rm-title">{r.title}{r.renewable && <em> · permanente</em>}</span>
       <span className="rm-q">{r.question}</span>
       <Bar parts={roadmapParts(lab, r.tests)} total={r.tests.length} />
-      <span className="rm-meta"><b>{r.confirmed}</b>/{r.target ?? '?'} confirmados · {r.used}/{r.maxTests ?? '?'} testes{r.stop ? ` · parado: ${r.stop}` : ''}</span>
+      <span className="rm-meta"><b>{r.confirmed}</b>/{r.target ?? '?'} confirmados · {r.tests.length} vinculados · orçamento {r.used ?? '—'}/{r.maxTests ?? '?'}{r.stop ? ` · parado: ${r.stop}` : ''}</span>
     </a></li>)}</ul>
   </>;
 }
@@ -478,7 +516,10 @@ function RoadmapPage({ lab, id }: { lab: Lab; id: string }) {
   tests.forEach(t => { const k = t.hypothesisId ?? '—'; (hyps.get(k) ?? hyps.set(k, []).get(k)!).push(t); });
   const pct = (n: number, d: number | null) => (d ? Math.min(100, Math.round(100 * n / d)) : 0);
   const confirmed = tests.filter(t => t.verdict === 'CONFIRMED');
-  const nextUp = (r.frontierIds?.length ? r.frontierIds.map(id => lab.tests.get(id)!).filter(Boolean) : tests.filter(isReady)).slice(0, 6);
+  const frontierDeclared = r.frontierIdsPublished ?? Boolean(r.frontierIds?.length);
+  const frontierTests = frontierDeclared ? (r.frontierIds ?? []).map(id => lab.tests.get(id)!).filter(Boolean) : tests.filter(isReady);
+  const nextUp = frontierTests.slice(0, 6);
+  const unresolved = (r.frontierIds?.length ?? 0) - (r.frontierIds?.length ? frontierTests.length : 0);
   const blocked = tests.filter(t => t.verdict === 'BLOCKED');
   return <>
     <header className="hud-hero">
@@ -487,13 +528,14 @@ function RoadmapPage({ lab, id }: { lab: Lab; id: string }) {
       {r.question && <p className="hud-lead">{r.question}</p>}
       {r.objectives?.length ? <ul className="crit objectives">{r.objectives.map(o => <li key={o}>{o}</li>)}</ul> : null}
     </header>
-    <Trail tests={tests} frontier={nextUp.map(t => t.id)} target={r.target} />
+    <Trail tests={tests} frontier={frontierDeclared ? r.frontierIds ?? [] : null} target={r.target} />
     <div className="stop-rules">
       <div><span>Meta</span><strong>{r.confirmed}/{r.target ?? '?'}</strong><i style={{ width: `${pct(r.confirmed, r.target)}%` }} className="ok" /><em>confirmações para encerrar com sucesso</em></div>
       <div><span>Refutações seguidas</span><strong>{r.refutedStreak}/{r.killStreak ?? '?'}</strong><i style={{ width: `${pct(r.refutedStreak, r.killStreak)}%` }} className="crit" /><em>encerra por refutação</em></div>
-      <div><span>Orçamento</span><strong>{r.used}/{r.maxTests ?? '?'}</strong><i style={{ width: `${pct(r.used, r.maxTests)}%` }} className="warn" /><em>testes usados{r.maxDays ? ` · ${r.maxDays} dias` : ''}</em></div>
+      <div><span>Orçamento</span><strong>{r.used ?? '—'}/{r.maxTests ?? '?'}</strong><i style={{ width: `${pct(r.used ?? 0, r.maxTests)}%` }} className="warn" /><em>uso declarado pela Tower{r.maxDays ? ` · ${r.maxDays} dias` : ''}</em></div>
     </div>
-    <Section title="Árvore de hipóteses" kicker={`${hyps.size} hipóteses · ${tests.length} testes`} id="rm-tree">
+    <p className="hud-note count-source">Contagem desta página: {tests.length} testes principais + {r.tests.length - tests.length} contestações vinculadas. Orçamento: evolution.roadmaps.tests_used; vínculos: {r.testsSource}. São medidas distintas.{r.used === null && ' Uso do orçamento não publicado.'}</p>
+    <Section title="Árvore de hipóteses" kicker={`${hyps.size} hipóteses · ${tests.length} testes principais`} id="rm-tree">
       {tests.length === 0 ? <Missing what="tests[].roadmap_id (roadmap sem campanha ligada)" /> :
         <div className="tree">{[...hyps].map(([h, ts]) => <details key={h} open={hyps.size < 6}>
           <summary><span>{h === '—' ? 'Sem hipótese declarada' : (lab.hypotheses.get(h)?.statement ?? humanId(h))}</span><Bar parts={roadmapParts(lab, ts.map(t => t.id))} total={ts.length} /></summary>
@@ -504,8 +546,11 @@ function RoadmapPage({ lab, id }: { lab: Lab; id: string }) {
       <Section title="Evidência acumulada" kicker={`${confirmed.length} confirmados`} id="rm-ev">
         {confirmed.length ? <ul className="hud-list">{confirmed.map(t => <li key={t.id}><E id={t.id}>{humanize(t.meaning ?? t.question ?? '')}</E></li>)}</ul> : <p className="hud-muted">Nada confirmado ainda.</p>}
       </Section>
-      <Section title="Próximos testes" kicker={`${r.frontier} na fronteira`} id="rm-next">
-        {nextUp.length ? <ul className="hud-list">{nextUp.map(t => <li key={t.id}><E id={t.id}>{t.name}</E></li>)}</ul> : <p className="hud-muted">Sem testes prontos.</p>}
+      <Section title="Próximos testes" kicker={`${r.frontier === null ? 'Fronteira não publicada' : `${r.frontier} na fronteira declarada`} · ${nextUp.length} de ${frontierTests.length} vínculos exibidos`} id="rm-next">
+        {nextUp.length ? <ul className="hud-list">{nextUp.map(t => <li key={t.id}><E id={t.id}>{t.name}</E></li>)}</ul> : <p className="hud-muted">Nenhum vínculo de fronteira disponível nesta leitura.</p>}
+        {frontierTests.length > 6 && <details><summary>Ver os {frontierTests.length - 6} restantes</summary><ul className="hud-list">{frontierTests.slice(6).map(t => <li key={t.id}><E id={t.id} /></li>)}</ul></details>}
+        {unresolved > 0 && <p className="hud-note">{unresolved} referências da fronteira ainda não estão disponíveis nesta projeção.</p>}
+        <p className="hud-note">Fronteira: {r.frontierSource ?? 'fonte não publicada'}. Vínculos: frontier_test_ids; quando ausentes, candidatos READY. READY não comprova elegibilidade de execução.</p>
         {blocked.length > 0 && <p className="hud-note">{blocked.length} bloqueados: <E id={blocked[0]!.id}>{blocked[0]!.blocker ?? 'ver motivo'}</E></p>}
       </Section>
     </div>
@@ -513,31 +558,41 @@ function RoadmapPage({ lab, id }: { lab: Lab; id: string }) {
 }
 
 // ---------- Evidência ----------
-function Evidence({ lab, filter }: { lab: Lab; filter?: Verdict }) {
-  const [q, setQ] = useState('');
-  const all = [...lab.tests.values()].filter(t => !t.contestOf);
-  const list = all.filter(t => (!filter || t.verdict === filter) && (!q || `${t.name} ${t.question ?? ''} ${t.meaning ?? ''}`.toLowerCase().includes(q.toLowerCase())));
+function Evidence({ lab, state, filter, search }: { lab: Lab; state: SystemState; filter?: Verdict; search?: string }) {
+  const [q, setQ] = useState(search ?? '');
+  useEffect(() => setQ(search ?? ''), [search]);
+  const updateQuery = (value: string) => {
+    setQ(value);
+    replaceEvidenceSearch(value, filter);
+  };
+  const related = q.trim() ? (state.cosmology_state?.frontiers ?? []).filter(f => matchesSearch(q, f.title, f.summary)) : [];
+  const all = [...lab.tests.values()];
+  const list = all.filter(t => (!filter || t.verdict === filter) && matchesSearch(q, t.id, t.name, t.question, t.meaning, t.topic, t.subdomain));
   return <>
-    <header className="hud-hero"><p className="hud-kicker">{all.length} testes publicados</p><h1>Evidência</h1>
+    <header className="hud-hero"><p className="hud-kicker">{all.length} testes e contestações publicados</p><h1>Evidência</h1>
       <p className="hud-lead">Todo teste, do pré-registro ao veredito. Filtre pelo estado; clique para ver o que foi prometido antes e o que aconteceu.</p></header>
     <nav className="filters" aria-label="Filtrar por veredito">
-      <a href="#/evidencia" aria-current={!filter ? 'page' : undefined}>Todos <b>{all.length}</b></a>
-      {VERDICT_ORDER.map(v => <a key={v} href={`#/evidencia?v=${v}`} aria-current={filter === v ? 'page' : undefined} className={`v-${v.toLowerCase()}`}>
+      <a href={`#/evidencia${q ? '?q=' + encodeURIComponent(q) : ''}`} aria-current={!filter ? 'page' : undefined}>Todos <b>{all.length}</b></a>
+      {VERDICT_ORDER.map(v => <a key={v} href={`#/evidencia?v=${v}${q ? '&q=' + encodeURIComponent(q) : ''}`} aria-current={filter === v ? 'page' : undefined} className={`v-${v.toLowerCase()}`}>
         <i aria-hidden="true">{VERDICT_GLYPH[v]}</i>{VERDICT_PT[v]} <b>{all.filter(t => t.verdict === v).length}</b></a>)}
     </nav>
-    <input className="hud-search" type="search" placeholder="Buscar por nome, pergunta ou resultado…" value={q} onChange={e => setQ(e.target.value)} aria-label="Buscar testes" />
+    <input className="hud-search" type="search" placeholder="Buscar por nome, pergunta ou resultado…" value={q} onChange={e => updateQuery(e.target.value)} aria-label="Buscar testes" />
+    {q && <p role="status">{list.length} testes encontrados para “{q}”{related.length ? ` · ${related.length} frentes relacionadas` : ''}.</p>}
+    {related.length > 0 && <nav className="search-related" aria-label="Frentes relacionadas">{related.map(f => <a key={f.id} href={labHref('universo', f.id)}>{f.title} →</a>)}</nav>}
+    {filter === 'READY' && <p className="hud-note">Esta fila inclui testes principais e contestações. READY é o estado registrado. A elegibilidade só é exibida quando a verificação individual foi publicada; isso não garante despacho.</p>}
+    {q && !list.length && !related.length && <p className="hud-muted">Nenhum resultado nesta projeção. A consulta foi preservada; tente parte do nome ou o ID.</p>}
     {VERDICT_ORDER.filter(v => list.some(t => t.verdict === v)).map(v => {
       const group = list.filter(t => t.verdict === v);
       return <section key={v} className={`ev-group v-${v.toLowerCase()}`} aria-label={VERDICT_PT[v]}>
         <h2><VerdictChip v={v} small /> <span>{group.length}</span></h2>
-        <ul className="ev-cards">{group.slice(0, filter ? 200 : 24).map(t => <li key={t.id}>
+        <ul className="ev-cards">{group.slice(0, filter || q ? 200 : 24).map(t => <li key={t.id}>
           <a className="ev-card" href={labHref('entidade', t.id)}>
             <strong>{t.name}</strong>
             {t.question && t.question !== t.name && <span className="ev-q">{t.question}</span>}
-            {t.meaning && <span className="ev-m">{humanize(t.meaning)}</span>}
-            <span className="ev-meta"><em>{normDomain(t.domain)}</em>{t.contests.length > 0 && <em>{t.contests.length} {t.contests.length === 1 ? 'ataque' : 'ataques'}</em>}</span>
+            {t.meaning && <span className="ev-m">{t.verdict === 'REFUTED' && 'Resultado bruto, depois refutado: '}{humanize(t.meaning)}</span>}
+            <span className="ev-meta"><em>{normDomain(t.domain)}</em>{isReady(t) && <em>{readinessLabel(t)}</em>}{t.contests.length > 0 && <em>{t.contests.length} {t.contests.length === 1 ? 'ataque' : 'ataques'}</em>}</span>
           </a></li>)}</ul>
-        {!filter && group.length > 24 && <a className="ev-more" href={`#/evidencia?v=${v}`}>ver os {group.length} →</a>}
+        {!filter && !q && group.length > 24 && <a className="ev-more" href={`#/evidencia?v=${v}${q ? '&q=' + encodeURIComponent(q) : ''}`}>ver os {group.length} →</a>}
       </section>;
     })}
     {filter && list.length > 200 && <p className="hud-muted">Mostrando 200 de {list.length}. Use a busca.</p>}
@@ -554,7 +609,7 @@ const List = ({ items, empty }: { items: string[]; empty?: string }) =>
 const REVIEW_PT: Record<string, string> = { CONTEST: 'Contestação', VERDICT_REVIEW: 'Revisão do veredito' };
 const OUTCOME_PT: Record<string, string> = { PENDING: 'pendente', SURVIVED: 'sobreviveu', PASSED: 'passou', REFUTED: 'derrubou', FAILED: 'falhou', CONFIRMED: 'confirmou' };
 
-function EntityPage({ lab, id }: { lab: Lab; id: string }) {
+function EntityPage({ lab, state, id }: { lab: Lab; state: SystemState; id: string }) {
   const t = lab.tests.get(id) ?? lab.historicalTests?.get(id);
   const h = lab.hypotheses.get(id);
   if (!t && h) return <HypothesisView lab={lab} id={id} />;
@@ -577,7 +632,7 @@ function EntityPage({ lab, id }: { lab: Lab; id: string }) {
       <p className="hud-kicker"><a href="#/evidencia">Evidência</a>
         {t.roadmapId && <> · <a href={labHref('roadmap', t.roadmapId)}>{lab.roadmaps.get(t.roadmapId)?.title ?? humanId(t.roadmapId)}</a></>}</p>
       <h1 className="h1-entity">{t.historical ? t.name : t.question ?? humanId(t.id)}</h1>
-      <p className="hud-lead"><VerdictChip v={t.verdict} />{t.createdAt && <span className="hud-muted"> · começou {ago(t.createdAt)}</span>}</p>
+      <p className="hud-lead">{t.verdict === 'PROVISIONAL' && !t.verdictRaw && !t.meaning && !hasPublishedValue(t.result) ? <span className="hud-muted">Resultado não publicado</span> : <VerdictChip v={t.verdict} />}{t.createdAt && <span className="hud-muted"> · começou {ago(t.createdAt)}</span>}</p>
     </header>
 
     <Section title="A história deste teste" id="en-story">
@@ -587,11 +642,20 @@ function EntityPage({ lab, id }: { lab: Lab; id: string }) {
     </Section>
 
     {t.historical && <Section title="Origem histórica"><p>Resultado auditado da Tower antiga; não reativa filas ou campanhas.</p>{t.sourceUrl && <p><a href={t.sourceUrl} target="_blank" rel="noreferrer">Abrir artefato original ↗</a></p>}<details><summary>Proveniência para auditoria</summary><pre className="universe-provenance">{JSON.stringify(t.provenance, null, 2)}</pre></details></Section>}
-    {(t.meaning || Boolean(t.claimBoundary)) && <Section title="No que acredito agora" id="en-mean">
-      {t.meaning && <p className="hud-big">{humanize(t.meaning)}</p>}
-      {Boolean(t.claimBoundary) && <p className="boundary"><b>O que isto não prova:</b> {text(t.claimBoundary)}</p>}
+    <Section title="Veredito atual" id="en-mean">
+      <p className="hud-big">{currentVerdictText(t)}</p>
+      {t.readiness?.reasons?.length ? <p className="hud-note">Prontidão: {t.readiness.reasons.join(' · ')}</p> : null}
+      <p className="hud-note">{t.review ? `Fonte: estado de revisão publicado (${t.review}).` : t.status ? `Fonte: estado operacional publicado (${t.status}); revisão não publicada.` : 'Estado de revisão e estado operacional não publicados.'}</p>
+      {contests.filter(c => lab.tests.has(c)).length > 0 && <p className="hud-refs">{contests.filter(c => lab.tests.has(c)).map(c => <E key={c} id={c}>Ver contestação →</E>)}</p>}
+    </Section>
+    {(t.meaning || Boolean(t.claimBoundary)) && <Section title="Resultado bruto da execução" id="en-raw">
+      {t.verdictRaw && <p className="hud-kicker">Registro original: {t.verdictRaw}</p>}
+      {t.meaning && <p>{humanize(t.meaning)}</p>}
+      <p className="hud-note">Interpretação registrada na execução, preservada mesmo quando a revisão muda o veredito.</p>
+      {Boolean(t.claimBoundary) && <p className="boundary"><b>Limite da conclusão:</b> {text(t.claimBoundary)}</p>}
     </Section>}
 
+    <DependencyFlow test={t} lab={lab} state={state} />
     <details className="tech">
       <summary>Detalhes técnicos</summary>
       <div className="versus" role="group" aria-label="Prometido antes versus observado depois">
@@ -652,6 +716,7 @@ function HypothesisView({ lab, id }: { lab: Lab; id: string }) {
     <Section title="Formulação" id="hy-f"><dl className="fields">
       <Field label="Modelo" value={h.model} /><Field label="Linha de base" value={h.baseline} /><Field label="Como refutar" value={h.falsification} sealed /><Field label="Origem" value={h.origin} />
     </dl></Section>
+    <Section title="Relações desta hipótese" id="hy-rel"><p>{ts.length} testes vinculados · {ts.reduce((n, test) => n + test.contests.length, 0)} contestações registradas. A seleção destaca os testes vinculados na teia quando o 3D está disponível.</p><ul className="hud-list">{ts.filter(test => test.contests.length).map(test => <li key={test.id}><div><E id={test.id} /><p className="hud-refs">{test.contests.map(cid => <E key={cid} id={cid}>Ver ataque →</E>)}</p></div></li>)}</ul></Section>
     <Section title="Testes" kicker={`${ts.length}`} id="hy-t">
       <Bar parts={roadmapParts(lab, ts.map(t => t.id))} total={ts.length} />
       <ul className="hud-list">{ts.map(t => <li key={t.id}><VerdictChip v={t.verdict} small /><E id={t.id}>{t.question ?? humanId(t.id)}</E></li>)}</ul>
@@ -672,7 +737,7 @@ function Health({ state, lab }: { state: SystemState; lab: Lab }) {
     <div className="health-grid">
       <div className={`health-cell s-${!g ? 'unknown' : g.status === 'GREEN' ? 'ok' : g.status === 'YELLOW' ? 'warn' : 'crit'}`}>
         <span>Guardião</span><strong>{g ? `${g.checks_total - g.checks_failing}/${g.checks_total}` : '—'}</strong><em>verificações passando</em></div>
-      <div className={`health-cell s-${Date.now() - Date.parse(state.generated_at) > 45 * 60e3 ? 'warn' : 'ok'}`}>
+      <div className={`health-cell s-${!isPublishedFresh(state.generated_at) ? 'warn' : 'ok'}`}>
         <span>Projeção pública</span><strong>{ago(state.generated_at)}</strong><em>última atualização do site</em></div>
       <div className="health-cell"><span>Baterias</span><strong>{ev?.batteries ? `${ev.batteries.DISPATCHED ?? 0} rodando` : '—'}</strong><em>{ev?.batteries ? `${ev.batteries.DONE ?? 0} concluídas · ${ev.batteries.QUEUED ?? 0} na fila` : ''}</em></div>
       <div className={`health-cell s-${providersDown.length ? 'warn' : 'ok'}`}><span>Provedores</span><strong>{state.providers.length - providersDown.length}/{state.providers.length}</strong><em>disponíveis</em></div>
@@ -681,6 +746,8 @@ function Health({ state, lab }: { state: SystemState; lab: Lab }) {
     {g && g.failing_areas.length > 0 && <Section title="Achados da última auditoria" kicker={guardianAuditTime(g.checked_at)} id="he-fail">
       <p className="hud-muted">Relatório do Guardião nesse horário. A sincronização atual exige uma nova leitura; este histórico não confirma divergência atual.</p>
       <ul className="hud-list">{g.failing_areas.map(a => <li key={a}>{guardianArea(a).replace(/^./, c => c.toUpperCase())}</li>)}</ul>
+      <p className="hud-note">Fonte: auditoria do Guardião, {ago(g.checked_at)}. A projeção publica os avisos por área; impacto detalhado, responsável e próxima ação por aviso não foram publicados.</p>
+      {!!ev?.incidents?.length && <p><a href="#he-inc" onClick={e => { e.preventDefault(); document.getElementById('he-inc')?.scrollIntoView({ block: 'start' }); }}>Consultar incidentes com responsável e evidências abaixo ↓</a></p>}
     </Section>}
     {(ev?.incidents?.length ?? 0) > 0 && <Section title="Incidentes" kicker={`${ev!.incidents!.length} registros`} id="he-inc">
       <ul className="incidents">{ev!.incidents!.map(i => {
@@ -715,32 +782,31 @@ const domainOfId = (id: string, lab: Lab): string => {
   if (t) return t.domain;
   return /NEXO|ENGINEER|GPT|SELF|OBSERV|META/i.test(id) ? 'ENGINEERING' : /OLY/i.test(id) ? 'OLYMPUS' : 'SCIENCE';
 };
-function sceneEvents(state: SystemState, lab: Lab): SceneEvents {
+function sceneEvents(state: SystemState, lab: Lab, current: boolean, recentThoughtIds: string[]): SceneEvents {
   const ev = state.evolution;
   const quasars = [
     ...(ev?.gate.charters_waiting ?? []).map(c => ({ domain: domainOfId(c.roadmap_id, lab), label: 'Decisão sua', href: '#/ciclo' })),
     ...(ev?.gate.canaries_waiting ?? []).map(c => ({ domain: 'ENGINEERING', label: 'Decisão sua: nova regra', href: '#/ciclo' })),
   ];
-  const running = Number((ev as unknown as { batteries?: Record<string, number> })?.batteries?.DISPATCHED ?? 0);
   const perDomain = new Map<string, number>();
   for (const t of lab.tests.values()) {
-    if (!isReady(t) || t.contestOf) continue;
+    if (!current || t.status?.toUpperCase() !== 'RUNNING' || t.contestOf) continue;
     const d = normDomain(t.domain);
     perDomain.set(d, (perDomain.get(d) ?? 0) + 1);
   }
   const agn = [...perDomain].map(([domain, n]) => ({
-    domain, count: n, href: '#/evidencia?v=READY',
-    label: `${n} ${n === 1 ? 'teste' : 'testes'} ${running ? 'rodando ou na fila' : 'na fila'}`,
+    domain, count: n, href: '#/evidencia?v=RUNNING',
+    label: `${n} ${n === 1 ? 'teste marcado' : 'testes marcados'} RUNNING`,
   }));
-  const grbs = (ev?.thoughts ?? []).filter(t => Date.now() - Date.parse(t.at) < 2 * 3600e3).slice(-2)
-    .map(t => ({ domain: domainOfId(t.refs[0] ?? '', lab), label: 'Pensamento novo', href: '#/ciclo' }));
+  const grbs = (ev?.thoughts ?? []).filter(t => current && recentThoughtIds.includes(t.id)).slice(-2)
+    .map(t => ({ domain: domainOfId(t.refs[0] ?? '', lab), label: 'Pensamento registrado', href: '#/ciclo' }));
   return { quasars, agn, grbs };
 }
 
 // ---------- raias do ciclo ----------
-const LANES: Array<[string, string]> = [['PITIA', 'Pítia'], ['LEARNER', 'Learner'], ['EXECUTOR', 'Executor'], ['REFUTADOR', 'Refutador'], ['GUARDIAO', 'Guardião'], ['DENER', 'Dener']];
-const LANE_ALIAS: Record<string, string> = { REFEREE_1: 'REFUTADOR', SENTINEL: 'PITIA' };
-const laneKey = (role: string) => LANE_ALIAS[role.toUpperCase()] ?? role.toUpperCase();
+const LANES: Array<[string, string]> = [['PITIA', 'Pítia'], ['LEARNER', 'Learner'], ['EXECUTOR', 'Executor'], ['REFUTADOR', 'Refutador'], ['GUARDIAO', 'Guardião'], ['ENGINEER', 'Engenheiro'], ['SENTINEL', 'Sentinela'], ['WRITER_ROBOT', 'Robô escritor'], ['DENER', 'Dener'], ['OTHER', 'Outros papéis']];
+const LANE_ALIAS: Record<string, string> = { REFEREE_1: 'REFUTADOR' };
+const laneKey = (role: string) => { const key = LANE_ALIAS[role.toUpperCase()] ?? role.toUpperCase(); return LANES.some(([id]) => id === key) ? key : 'OTHER'; };
 const EVENT_PT: Record<string, string> = {
   TEST_RESULT_RECORDED: 'registrou resultado', ROADMAP_TEST_FROZEN: 'congelou um teste (pré-registro)',
   RESULT_CONTESTED: 'contestou um resultado', RESULT_REFEREE1_PASSED: 'aprovou no Referee 1', RESULT_REFUTED: 'refutou um resultado',
@@ -750,7 +816,8 @@ const EVENT_PT: Record<string, string> = {
 };
 function Swimlanes({ events }: { events: Array<{ event_type: string; role: string; at: string; entity_id?: string }> }) {
   const now = Date.now(), span = 48 * 3600e3;
-  const recent = events.filter(e => now - Date.parse(e.at) <= span);
+  const coverage = activityWindow(events, 48, now);
+  const recent = coverage.recent;
   const [hover, setHover] = useState<number | null>(null);
   const W = 1000, rowH = 34, left = 92, H = LANES.length * rowH + 26;
   const x = (at: string) => left + ((Date.parse(at) - (now - span)) / span) * (W - left - 8);
@@ -758,7 +825,7 @@ function Swimlanes({ events }: { events: Array<{ event_type: string; role: strin
   const counts = LANES.map(([k]) => recent.filter(e => laneKey(e.role) === k).length);
   const h = hover !== null ? recent[hover] : null;
   return <div className="lanes">
-    <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label={LANES.map(([, l], i) => `${l}: ${counts[i]} eventos`).join('; ')}>
+    <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label={LANES.map(([, l], i) => `${l}: ${counts[i]} eventos recebidos no recorte parcial`).join('; ')}>
       {LANES.map(([k, l], i) => <g key={k}>
         <line x1={left} x2={W - 8} y1={i * rowH + rowH / 2} y2={i * rowH + rowH / 2} className="lane-line" />
         <text x={0} y={i * rowH + rowH / 2 + 4} className="lane-label">{l}</text>
@@ -766,13 +833,14 @@ function Swimlanes({ events }: { events: Array<{ event_type: string; role: strin
       </g>)}
       {[0, 12, 24, 36, 48].map(hh => <text key={hh} x={left + ((48 - hh) / 48) * (W - left - 8)} y={H - 4} textAnchor="middle" className="lane-tick">{hh ? `-${hh}h` : 'agora'}</text>)}
       {recent.map((e, i) => <circle key={i} cx={x(e.at)} cy={lane(e.role) * rowH + rowH / 2} r={hover === i ? 7 : 4.5}
-        className={`lane-dot r-${e.role.toLowerCase()}`} tabIndex={0}
+        className={`lane-dot r-${e.role.toLowerCase()}`} tabIndex={0} role="button" aria-label={`${ROLE_PT[e.role.toUpperCase()] ?? e.role}: ${e.event_type}, ${e.at}`} onKeyDown={key => { if ((key.key === 'Enter' || key.key === ' ') && e.entity_id) { key.preventDefault(); window.location.hash = labHref('entidade', e.entity_id); } }}
         onMouseEnter={() => setHover(i)} onFocus={() => setHover(i)} onMouseLeave={() => setHover(null)}
         onClick={() => { if (e.entity_id) window.location.hash = labHref('entidade', e.entity_id); }} />)}
     </svg>
     <p className="lane-caption" aria-live="polite">{h
       ? <>{LANES[lane(h.role)]![1]} {EVENT_PT[h.event_type] ?? h.event_type.toLowerCase().replace(/_/g, ' ')} · {ago(h.at)}{h.entity_id && <> · <E id={h.entity_id} /></>}</>
-      : `${recent.length} eventos em 48 h. Passe o dedo ou o mouse num ponto; clique para abrir a entidade.`}</p>
+      : `${coverage.label}. Passe o dedo ou o mouse num ponto; clique para abrir a entidade.`}</p>
+    <p className="hud-note">{activityRange(coverage)}</p>
   </div>;
 }
 
@@ -781,7 +849,7 @@ const ROLE_PT: Record<string, string> = {
   PITIA: 'Pítia', LEARNER: 'Learner', EXECUTOR: 'Executor', REFUTADOR: 'Refutador', REFEREE_1: 'Refutador', GUARDIAO: 'Guardião',
   DENER: 'Dener', CONVERSA: 'Conversa', WRITER_ROBOT: 'Robô escritor', SENTINEL: 'Sentinela', ENGINEER: 'Engenheiro', CLAUDE: 'Claude', CHATGPT_CONVERSATION: 'Conversa',
 };
-/** Dez automações ativas no ChatGPT Business; o papel continua sendo quem assina cada ação. */
+/** Catálogo de papéis. A cadência nominal não atesta execução nem disponibilidade atual. */
 const TASKS: Array<{ id: string; name: string; hats: string[]; rhythm: string; does: string }> = [
   { id: 'operador-c', name: 'Operador C', hats: ['EXECUTOR'], rhythm: 'toda hora · :00', does: 'fecha o READY residual após A/B e resolve bindings' },
   { id: 'engenheiro', name: 'Engenheiro', hats: ['ENGINEER'], rhythm: 'toda hora · :05', does: 'escreve e conserta receitas' },
@@ -799,16 +867,10 @@ const taskOf = (role: string) => {
   return matches.length === 1 ? matches[0] : undefined;
 };
 const roleLabel = (role: string) => { const t = taskOf(role); const r = ROLE_PT[role.toUpperCase()] ?? role; return t ? (t.name === r ? r : `${t.name} · ${r}`) : r; };
-// Sorteio probabilístico: cada carga da página sorteia de novo; dentro da visita a mesma linha não pisca.
-const NARRATION_SALT = Math.random().toString(36).slice(2);
-const pick = (pool: string[], seed: string) => { let h = 0; const k = seed + NARRATION_SALT; for (let i = 0; i < k.length; i += 1) h = (h * 31 + k.charCodeAt(i)) | 0; return pool[Math.abs(h) % pool.length]!; };
-/** Matriz 90x90: cabeça e cauda sorteadas separadamente (até 8.100 falas por evento). */
-const say = (key: string, seed: string, vars: Record<string, string | number> = {}): string | null => {
-  const m = NARRATION[key];
-  if (!m) return null;
-  const text = pick(m.heads, `h${seed}`) + pick(m.tails, `t${seed}`);
-  return text.replace(/\{(\w+)\}/g, (_, k: string) => String(vars[k] ?? ''));
-};
+// 120x120 por família: uma permutação completa com cursor local evita repetir pares entre recargas.
+// A escolha de palavras descreve um evento recebido; ela nunca cria uma ação nova.
+const narrationDeck = browserNarrationDeck();
+const say = (key: string, seed: string, vars: Record<string, string | number> = {}) => narrationDeck.say(key, seed, vars);
 /** Estrela que representa a entidade na teia (contestações apontam para o resultado atacado). */
 function starOf(lab: Lab, id: string): string | null {
   let t = lab.tests.get(id);
@@ -816,26 +878,18 @@ function starOf(lab: Lab, id: string): string | null {
   return t ? t.id : null;
 }
 function narrate(e: { event_type: string; entity_id?: string; at?: string }, lab: Lab, state?: SystemState): string {
-  // Texto real do agente quando existe: o pensamento da Pítia gravado no mesmo minuto.
+  // The original thought is used only for an exact published timestamp match.
   if (e.event_type === 'NEXO_THOUGHT_RECORDED' && e.at && state) {
     const t0 = Date.parse(e.at);
-    const th = (state.evolution?.thoughts ?? []).find(x => Math.abs(Date.parse(x.at) - t0) < 15 * 60e3);
+    const th = (state.evolution?.thoughts ?? []).find(x => Date.parse(x.at) === t0);
     if (th?.text) return humanize(clip(th.text, 180));
   }
   let tpl = say(e.event_type, `${e.at ?? ''}${e.entity_id ?? ''}`) ?? `Registrei ${e.event_type.toLowerCase().replace(/_/g, ' ')}: %q`;
-  const te = e.entity_id ? lab.tests.get(e.entity_id) : undefined;
-  if (te && e.event_type === 'TEST_RESULT_RECORDED') {
-    const p = (te.prereg.prediction as { p_promoted?: number } | null)?.p_promoted;
-    const o = outcomeOf(te);
-    if (typeof p === 'number' && o !== null && Math.abs(p - o) >= 0.5) tpl = o ? 'Me surpreendi: apostei contra e deu certo. %q' : 'Me surpreendi: estava confiante e falhou. %q';
-    else if (te.contestOf) tpl = o === 0 ? 'Meu ataque achou um problema no que eu tinha concluído: %q' : 'Ataquei um resultado meu e ele resistiu: %q';
-  }
-  if (te && e.event_type === 'RESULT_REFUTED' && outcomeOf(te) === 1) tpl = 'Mudei de ideia: parecia certo, mas eu mesmo derrubei. %q';
   const t = e.entity_id ? lab.tests.get(e.entity_id) : undefined;
   // Hipótese: prefira o nome curto de um teste dela ao enunciado inteiro.
   const viaTest = !t && e.entity_id ? [...lab.tests.values()].find(x => x.hypothesisId === e.entity_id)?.name : undefined;
   const q = t?.name ?? viaTest ?? (e.entity_id ? (lab.hypotheses.get(e.entity_id)?.statement ?? humanId(e.entity_id)) : '');
-  const text = tpl.includes('%q') ? tpl.replace('%q', q ? `“${clip(q, 110)}”` : '').replace(/: $/, '.') : tpl;
+  const text = tpl.includes('%q') ? tpl.replace('%q', q ? `“${clip(q, 110)}”` : 'uma entidade sem identificação publicada').replace(/: $/, '.') : tpl;
   return humanize(text);
 }
 
@@ -855,7 +909,7 @@ type ActivityRow = { at: string; role: string; event_type: string; entity_id?: s
 function Monologue({ lab, state, onReplay, replayCount }: { lab: Lab; state: SystemState; onReplay: () => void; replayCount: number }) {
   // Rotina repetida (auditoria, NO-OP) vira uma linha só com a contagem.
   const recent: Array<ActivityRow> = [];
-  for (const e of [...lab.activity].reverse()) {
+  for (const e of observedActivity(lab.activity).reverse()) {
     const prev = recent[recent.length - 1];
     if (prev && !e.entity_id && !prev.entity_id && prev.role === e.role && prev.event_type === e.event_type) { prev.times = (prev.times ?? 1) + 1; continue; }
     recent.push({ ...e, times: 1 });
@@ -865,18 +919,21 @@ function Monologue({ lab, state, onReplay, replayCount }: { lab: Lab; state: Sys
   useEffect(() => { const t = window.setInterval(() => tick(x => x + 1), 30000); return () => window.clearInterval(t); }, []);
   if (!recent.length) return null;
   const last = recent[0]!;
-  const quiet = Math.round((Date.now() - Date.parse(last.at)) / 60000);
+  const eventAge = publishedAgeMs(last.at);
+  const quiet = eventAge === null ? Infinity : Math.round(eventAge / 60000);
   return <section className="hud-section monologue" aria-labelledby="mono-title">
     <p className="hud-kicker"><i className={`pulse-dot${quiet < 30 ? ' live' : ''}`} aria-hidden="true" />
-      {quiet < 30 ? 'Ativo agora' : `Última ação ${ago(last.at)}`} · {lab.activity.filter(e => Date.now() - Date.parse(e.at) < 864e5).length} ações em 24 h</p>
-    <h2 id="mono-title">Monólogo interno</h2>
+      {quiet < 30 ? 'Evento recente publicado' : `Última ação ${ago(last.at)}`} · {activityWindow(lab.activity, 24).label}</p>
+    <h2 id="mono-title">Diário dos papéis</h2>
+    <p className="hud-note">As falas resumem eventos recebidos e mantêm o papel que os assinou. Elas descrevem o snapshot publicado, inclusive quando está desatualizado; a cobertura do histórico é parcial.</p>
+    <p className="hud-note">Variação de falas: {narrationDeck.persistence === 'local' ? 'cursor salvo neste navegador, inclusive entre recargas' : 'memória desta visita; armazenamento local não utilizável nesta visita'}. Sem sincronização entre aparelhos.</p>
     <p className="mono-now"><b>{ROLE_PT[last.role.toUpperCase()] ?? last.role}</b> <Typewriter text={narrate(last, lab, state)} /></p>
     <ul className="mono-self">{selfLines(lab, state).map((l, i) => <li key={i}><i aria-hidden="true"><Icon n={l.icon} /></i>{l.link ? <a href={l.link}>{l.text}</a> : l.text}</li>)}</ul>
     <ol className="mono-log">{recent.slice(1).map((e, i) => <li key={i}>
       <time>{ago(e.at)}</time><b>{ROLE_PT[e.role.toUpperCase()] ?? e.role}</b>
       <span>{e.entity_id ? <a href={labHref('entidade', e.entity_id)}>{narrate(e, lab, state)}</a> : narrate(e, lab, state)}{(e.times ?? 1) > 1 && <em className="mono-times"> · {e.times}×</em>}</span>
     </li>)}</ol>
-    {replayCount > 0 && <button type="button" className="replay-btn" onClick={onReplay}>▶ Rever as últimas 24 h ({replayCount} ações)</button>}
+    {replayCount > 0 && <button type="button" className="replay-btn" onClick={onReplay}>▶ Rever o recorte de até 24 h ({replayCount} eventos)</button>}
   </section>;
 }
 
@@ -886,17 +943,21 @@ const pctOf = (v: number | null | undefined) => (v == null ? '—' : `${Math.rou
 const FEATURE_PT: Record<string, string> = { units: 'número de faixas ou grupos', n_compilations: 'número de coleções de supernovas', has_union3: 'usa Union3', mode: 'modo da análise', recipe: 'receita' };
 function Autonomy({ state }: { state: SystemState }) {
   const a = state.evolution?.autonomy;
-  if (!a || !a.results) return null;
+  if (!a) return null;
   const rules = (state.evolution?.learning?.rules ?? []).filter(r => r.state === 'ACTIVE');
-  const cells: [string, string, string][] = [
-    [pctOf(a.robot_share), 'feito só pelo robô', 'resultados das últimas 24h sem agente nem pessoa'],
-    [a.median_hours_to_result == null ? '—' : `${a.median_hours_to_result} h`, 'da ideia ao resultado', 'mediana'],
-    [pctOf(a.decisive_rate), 'testes que decidem', 'os outros terminam inconclusivos'],
-    [pctOf(a.contest_closure), 'positivos com veredito', 'confirmados ou derrubados por contestação'],
-    [pctOf(a.false_block_share), 'bloqueados', 'parte da fila parada por falta de dado ou receita'],
-  ];
-  return <Section title="O quanto o NEXO fecha sozinho" kicker={`${a.results} resultados nas últimas ${a.window_hours}h`} id="now-autonomy">
-    <dl className="aut-grid">{cells.map(([v, t, d]) => <div key={t}><dt>{v}</dt><dd><b>{t}</b><span>{d}</span></dd></div>)}</dl>
+  const view = autonomyPresentation(a);
+  const queueGap = publishedQueueGap(a, ((state as unknown as { read_model?: { tests?: Record<string, Record<string, unknown>> } }).read_model?.tests ?? {}));
+  return <Section title="Resultados, revisão e fila" kicker={`${view.results ?? '—'} registros com veredito na janela publicada${view.legacy ? ` · período legado declarado: ${a.window_hours}h` : ''}`} id="now-autonomy">
+    {view.legacy
+      ? <p className="hud-note">Agregado legado: definições versionadas, bases numéricas e cobertura não publicadas. Os percentuais abaixo não comprovam autonomia sem supervisão.</p>
+      : <p className="hud-note">Calculado em {a.computed_at ?? 'data não publicada'}. Janela: {a.window_start ?? 'início não publicado'} a {a.window_end ?? 'fim não publicado'}.</p>}
+    {view.resultDiscrepancy && <p className="hud-note metric-discrepancy">{view.resultDiscrepancy}</p>}
+    <h3>Resultados na janela · testes principais</h3>
+    {view.outcomes.length > 0 && <p className="hud-note">Vereditos registrados: {view.outcomes.map(([verdict, total]) => `${total} ${verdict}`).join(' · ')}.</p>}
+    <dl className="aut-grid">{view.recent.map(cell => <div key={cell.label}><dt>{cell.value}</dt><dd><b>{cell.label}</b><span>{cell.base}</span><span>{cell.description}</span></dd></div>)}</dl>
+    <h3>Estoque na leitura · sem recorte temporal</h3>
+    <dl className="aut-grid">{view.inventory.map(cell => <div key={cell.label}><dt>{cell.value}</dt><dd><b>{cell.label}</b><span>{cell.base}</span><span>{cell.description}</span></dd></div>)}</dl>
+    {queueGap && <p className="hud-note metric-discrepancy">Contagens divergentes entre as leituras: o agregado declara {queueGap.publishedBlocked}/{queueGap.publishedBase}; os estados públicos normalizados contêm {queueGap.blocked} BLOCKED* e {queueGap.ready} READY. O percentual acima preserva o agregado publicado; o escopo e a normalização precisam ser conferidos na origem.</p>}
     {rules.length > 0 && <>
       <p className="hud-kicker" style={{ marginTop: 14 }}>Regras que o NEXO aprendeu sobre como pesquisar</p>
       <ul className="fam-list">{rules.map(r => <li key={`${r.feature}=${r.value}`}>
@@ -913,7 +974,7 @@ function Families({ state }: { state: SystemState }) {
   const open = Object.keys(state.evolution?.recipe_health ?? {});
   if (!fams.length && !open.length) return null;
   const active = fams.filter(f => f.state === 'ACTIVE').length;
-  return <Section title="Famílias de testes" kicker={`${active} ${active === 1 ? 'ativa' : 'ativas'} · o robô cria, roda e fecha sozinho`} id="now-families">
+  return <Section title="Famílias de testes" kicker={`${active} ${active === 1 ? 'ativa' : 'ativas'} · estados declarados das famílias`} id="now-families">
     <ul className="fam-list">{fams.map(f => <li key={f.family_id}>
       <b>{f.display_name || f.family_id}</b>
       <span>{f.state === 'ACTIVE' ? 'ativa' : `fechada: ${CLOSE_PT[f.close_reason ?? ''] ?? 'encerrada'}`} · {f.done} de {f.cells} feitos · {f.promoted} passaram, {f.rejected} caíram, {f.inconclusive} mistos</span>
@@ -947,16 +1008,16 @@ function Calibration({ lab }: { lab: Lab }) {
   });
   return <section className="hud-section calib" aria-labelledby="calib-title">
     <p className="hud-kicker">{pts.length} previsões feitas antes de cada teste</p>
-    <h2 id="calib-title">Quanto eu acerto</h2>
-    <p className="hud-big">Acertei <b>{Math.round(100 * right / pts.length)}%</b> das minhas previsões
-      {confident.length >= 3 && <> · quando tive ≥70% de certeza, acertei <b>{Math.round(100 * confHit / confident.length)}%</b></>}.</p>
-    {weak && overall - weak.r >= 0.1 && <p className="calib-weak">Sei que sou mais fraco em <b>{weak.a.toLowerCase()}</b>: lá acerto {Math.round(weak.r * 100)}%, contra {Math.round(overall * 100)}% no geral. Vou desconfiar mais de mim nessa área.</p>}
+    <h2 id="calib-title">Calibração das previsões</h2>
+    <p className="hud-big">Previsões compatíveis com o desfecho bruto: <b>{Math.round(100 * right / pts.length)}%</b> dos registros medidos
+      {confident.length >= 3 && <> · entre probabilidades declaradas ≥70%, foram compatíveis <b>{Math.round(100 * confHit / confident.length)}%</b></>}.</p>
+    {weak && overall - weak.r >= 0.1 && <p className="calib-weak">Taxa menor na amostra de <b>{weak.a.toLowerCase()}</b>: lá acerto {Math.round(weak.r * 100)}%, contra {Math.round(overall * 100)}% no geral. A amostra descreve desempenho passado.</p>}
     <div className="calib-chart" role="img" aria-label={bins.map(x => `${x.b * 20}-${x.b * 20 + 20}%: ${x.n ? Math.round(x.rate * 100) + '% passaram' : 'sem dados'}`).join('; ')}>
       {bins.map(x => <span key={x.b} title={`${x.n} testes`}>
         <b style={{ height: `${x.n ? Math.max(4, x.rate * 100) : 0}%` }} /><i style={{ bottom: `${x.b * 20 + 10}%` }} />
         <em>{x.b * 20}–{x.b * 20 + 20}%</em></span>)}
     </div>
-    <p className="hud-note">Barra = quantos passaram de verdade; traço = o que eu tinha previsto. Quanto mais perto, mais honesto sou comigo mesmo. Erro médio (Brier): {brier.toFixed(2)}.</p>
+    <p className="hud-note">Barra = fração de desfechos brutos positivos; traço = faixa de probabilidade declarada. A calibração não estabelece confirmação científica. Erro médio (Brier): {brier.toFixed(2)}.</p>
   </section>;
 }
 
@@ -977,35 +1038,36 @@ function testStory(t: TestEntity, lab: Lab): Beat[] {
   const parent = t.contestOf ? lab.tests.get(t.contestOf) : undefined;
   const hyp = t.hypothesisId ? lab.hypotheses.get(t.hypothesisId) : undefined;
   const rm = t.roadmapId ? lab.roadmaps.get(t.roadmapId) : undefined;
-  if (parent) beats.push({ icon: 'attack', tone: 'doubt', text: 'Este é um ataque meu contra algo que eu mesmo tinha concluído:', link: { id: parent.id, label: parent.name } });
-  else if (hyp?.statement) beats.push({ icon: 'idea', tone: 'why', text: `Tive esta ideia: ${hyp.statement}` });
-  if (rm && !parent) beats.push({ icon: 'compass', tone: 'why', text: `Faz parte da minha investigação sobre ${rm.title.toLowerCase()}.` });
+  if (parent) beats.push({ icon: 'attack', tone: 'doubt', text: 'Contestação vinculada ao resultado:', link: { id: parent.id, label: parent.name } });
+  else if (hyp?.statement) beats.push({ icon: 'idea', tone: 'why', text: `Hipótese publicada: ${hyp.statement}` });
+  if (rm && !parent) beats.push({ icon: 'compass', tone: 'why', text: `Roadmap publicado: ${rm.title}.` });
   const pred = (t.prereg.prediction ?? {}) as { p_promoted?: number };
   const p = typeof pred.p_promoted === 'number' ? Math.min(1, Math.max(0, pred.p_promoted)) : null;
-  if (p !== null) beats.push({ icon: 'bet', tone: 'bet', text: `Antes de olhar os dados, apostei ${pct(p)} de chance de dar certo.` });
-  if (t.prereg.success.length || t.prereg.kill.length) beats.push({ icon: 'lock', tone: 'bet', text: 'Combinei comigo mesmo, antes de rodar, em que caso eu desistiria da ideia. Não dá para mudar depois.' });
+  if (p !== null) beats.push({ icon: 'bet', tone: 'bet', text: `Probabilidade de promoção declarada no pré-registro: ${pct(p)}.` });
+  if (t.prereg.success.length || t.prereg.kill.length) beats.push({ icon: 'lock', tone: 'bet', text: 'Critérios de sucesso e encerramento publicados no pré-registro.' });
   const o = outcomeOf(t);
-  if (isReady(t)) beats.push({ icon: 'wait', tone: 'fact', text: 'Ainda vou rodar este teste.' });
-  else if (t.verdict === 'BLOCKED') beats.push({ icon: 'block', tone: 'block', text: `Travei aqui${t.blocker ? `: ${t.blocker}` : ': falta algo para eu conseguir testar.'}` });
-  else if (o === 1) beats.push({ icon: 'check', tone: 'fact', text: parent ? 'O resultado atacado resistiu a este ataque.' : 'Deu certo: a ideia passou no critério que eu tinha combinado.' });
-  else if (o === 0) beats.push({ icon: 'cross', tone: 'fact', text: parent ? 'Este ataque encontrou um problema no resultado anterior.' : 'Não deu certo: a ideia falhou no critério que eu tinha combinado.' });
-  else if (t.verdictRaw) beats.push({ icon: 'even', tone: 'fact', text: 'Os dados não decidiram. Fica no meio do caminho.' });
+  if (isReady(t)) beats.push({ icon: 'wait', tone: 'fact', text: 'O teste está marcado READY; o despacho depende de elegibilidade e da bateria.' });
+  else if (t.verdict === 'BLOCKED') beats.push({ icon: 'block', tone: 'block', text: `Bloqueio operacional publicado${t.blocker ? `: ${t.blocker}` : ': motivo não publicado.'}` });
+  else if (o === 1) beats.push({ icon: 'check', tone: 'fact', text: parent ? 'O resultado bruto da contestação foi positivo; consulte o eixo e o contrato.' : 'A execução registrou um resultado positivo; a conclusão atual depende da revisão.' });
+  else if (o === 0) beats.push({ icon: 'cross', tone: 'fact', text: parent ? 'A contestação registrou um resultado negativo; consulte sua interpretação publicada.' : 'A execução registrou um resultado negativo pelo critério do teste.' });
+  else if (t.verdictRaw) beats.push({ icon: 'even', tone: 'fact', text: 'O rótulo bruto publicado não foi classificado como positivo ou negativo nesta apresentação.' });
   if (p !== null && o !== null) {
     const err = Math.abs(p - o);
-    if (err >= 0.5) beats.push({ icon: 'spark', tone: 'surprise', text: `Isso me surpreendeu: eu esperava ${o ? 'que falhasse' : 'que desse certo'}.` });
-    else if (err <= 0.3) beats.push({ icon: 'target', tone: 'surprise', text: 'Era o que eu esperava.' });
+    if (err >= 0.5) beats.push({ icon: 'spark', tone: 'surprise', text: `O desfecho divergiu da probabilidade declarada no pré-registro.` });
+    else if (err <= 0.3) beats.push({ icon: 'target', tone: 'surprise', text: 'O desfecho é compatível com a probabilidade declarada no pré-registro.' });
   }
   const axes = [...new Set(t.reviews.map(r => AXIS_PT[String(r.axis ?? '').toLowerCase().trim()]).filter(Boolean))];
   if (t.contests.length || t.reviews.length) {
     const n = Math.max(t.contests.length, t.reviews.filter(r => r.kind === 'CONTEST').length);
-    beats.push({ icon: 'shield', tone: 'doubt', text: `Não confiei no resultado e tentei derrubá-lo ${n === 1 ? 'uma vez' : `${n} vezes`}${axes.length ? ` (${axes.join(', ')})` : ''}.` });
+    beats.push({ icon: 'shield', tone: 'doubt', text: `Foram publicados ${n} vínculos de contestação${axes.length ? ` (${axes.join(', ')})` : ''}.` });
   }
   const belief: Record<string, Beat> = {
-    CONFIRMED: { icon: 'star', tone: 'belief', text: 'Agora eu acredito nisso: sobreviveu a dois ataques independentes.' },
-    REFUTED: { icon: 'undo', tone: 'change', text: o === 1 ? 'Mudei de ideia: parecia certo, mas meu próprio ataque derrubou.' : 'Descartei essa ideia.' },
-    REVIEW: { icon: 'half', tone: 'belief', text: 'Ainda não acredito totalmente: está sob ataque.' },
-    PROVISIONAL: { icon: 'dot', tone: 'belief', text: 'É provisório: ninguém tentou derrubar ainda.' },
-    DISCARDED: { icon: 'dash', tone: 'belief', text: 'Deixei de lado: o teste não servia como estava.' },
+    CONFIRMED: { icon: 'star', tone: 'belief', text: 'A revisão publicada confirmou o resultado no escopo do teste.' },
+    REFUTED: { icon: 'undo', tone: 'change', text: o === 1 ? 'O resultado positivo da execução foi posteriormente refutado pela revisão.' : 'A revisão publicada refutou o resultado.' },
+    REVIEW: { icon: 'half', tone: 'belief', text: 'O resultado está em revisão.' },
+    PROVISIONAL: { icon: 'dot', tone: 'belief', text: 'O resultado é provisório na revisão publicada.' },
+    REJECTED: { icon: 'dash', tone: 'belief', text: 'A execução rejeitou a hipótese pelo critério registrado.' },
+    DISCARDED: { icon: 'dash', tone: 'belief', text: 'O teste foi arquivado, retirado ou descartado no registro publicado.' },
   };
   if (belief[t.verdict]) beats.push(belief[t.verdict]!);
   return beats;
@@ -1016,7 +1078,7 @@ const normArea = (d: string) => { const u = (d || '').toUpperCase(); return u ==
 /** Estados internos que mudam devagar: onde está minha atenção, o que estou ignorando, se me peguei numa isca. */
 function selfLines(lab: Lab, state: SystemState): Array<{ icon: string; text: string; link?: string }> {
   const out: Array<{ icon: string; text: string; link?: string }> = [];
-  const day = lab.activity.filter(e => Date.now() - Date.parse(e.at) < 864e5);
+  const day = activityWindow(lab.activity, 24).recent;
   const touched = new Map<string, number>();
   for (const e of day) {
     const rid = e.entity_id ? lab.tests.get(e.entity_id)?.roadmapId : null;
@@ -1028,8 +1090,10 @@ function selfLines(lab: Lab, state: SystemState): Array<{ icon: string; text: st
     const r = lab.roadmaps.get(focus[0]);
     if (r) out.push({ icon: 'eye', text: say('SELF_FOCUS', r.id + new Date().toDateString(), { title: r.title.toLowerCase(), n: focus[1] })!, link: labHref('roadmap', r.id) });
   }
-  const ignored = active.filter(r => !touched.has(r.id) && r.frontier > 0).sort((a, b) => b.frontier - a.frontier)[0];
-  if (ignored) out.push({ icon: 'eyeoff', text: say('SELF_IGNORED', ignored.id + new Date().toDateString(), { title: ignored.title.toLowerCase(), n: ignored.frontier })!, link: labHref('roadmap', ignored.id) });
+  const ignored = active.filter(r => !touched.has(r.id) && (r.frontier ?? 0) > 0).sort((a, b) => (b.frontier ?? 0) - (a.frontier ?? 0))[0];
+  if (ignored) out.push({ icon: 'eyeoff', text: say('SELF_IGNORED', ignored.id + new Date().toDateString(), { title: ignored.title.toLowerCase(), n: ignored.frontier ?? 0 })!, link: labHref('roadmap', ignored.id) });
+  const blockedRoadmap = active.map(r => ({ r, tests: r.tests.map(id => lab.tests.get(id)).filter(t => t?.verdict === 'BLOCKED') })).sort((a, b) => b.tests.length - a.tests.length)[0];
+  if (blockedRoadmap?.tests.length) out.push({ icon: 'block', text: say('SELF_BLOCKED', blockedRoadmap.r.id + lab.generatedAt, { title: blockedRoadmap.r.title, n: blockedRoadmap.tests.length })!, link: labHref('roadmap', blockedRoadmap.r.id) });
   const d = state.evolution?.decoys;
   if (d && d.revealed > 0) out.push({ icon: 'trap', text: say('SELF_DECOY_CAUGHT', new Date().toDateString(), { n: d.caught, m: d.revealed })! });
   else if (d && d.planted > 0) out.push({ icon: 'trap', text: say('SELF_DECOY_PLANTED', new Date().toDateString(), { n: d.planted })! });
@@ -1096,12 +1160,11 @@ function Acoustic() {
 // ---------- Trilha do roadmap: o caminho andado (cor = veredito), a fronteira acesa e a meta ----------
 const TRAIL_COLOR: Record<Verdict, string> = {
   CONFIRMED: '#5fd0a0', REFUTED: '#e0664f', REVIEW: '#e0b24f', PROVISIONAL: '#9fb4d8', READY: '#d4bf95',
-  RUNNING: '#9fb4d8', CHECKPOINTED: '#7f8ca3', BLOCKED: '#6b6f7a', DISCARDED: '#3d414a',
+  RUNNING: '#9fb4d8', CHECKPOINTED: '#7f8ca3', BLOCKED: '#6b6f7a', REJECTED: '#cca47d', DISCARDED: '#3d414a',
 };
-function Trail({ tests, frontier, target }: { tests: TestEntity[]; frontier: string[]; target: number | null }) {
-  const walked = tests.filter(t => !frontier.includes(t.id) && !isReady(t))
-    .sort((a, b) => String(a.executedAt ?? a.createdAt ?? '').localeCompare(String(b.executedAt ?? b.createdAt ?? '')));
-  const ahead = tests.filter(t => frontier.includes(t.id) || isReady(t)).slice(0, 8);
+function Trail({ tests, frontier, target }: { tests: TestEntity[]; frontier: string[] | null; target: number | null }) {
+  const { walked, ahead, other } = roadmapTrail(tests, frontier);
+  const frontierLabel = frontier === null ? 'candidatos READY; fronteira não publicada' : 'na fronteira';
   if (!walked.length && !ahead.length) return null;
   const n = walked.length + ahead.length + 1, step = 40, W = Math.max(320, 48 + (n - 1) * step);
   const x = (i: number) => 24 + i * step;
@@ -1109,7 +1172,7 @@ function Trail({ tests, frontier, target }: { tests: TestEntity[]; frontier: str
   const pathD = Array.from({ length: n }, (_, i) => `${i ? 'L' : 'M'}${x(i).toFixed(1)},${y(i).toFixed(1)}`).join(' ');
   const walkedEnd = walked.length ? x(walked.length - 1) : 24;
   const confirmed = tests.filter(t => t.verdict === 'CONFIRMED').length;
-  return <figure className="trail" aria-label={`Trilha: ${walked.length} testes andados, ${ahead.length} na fronteira`}>
+  return <figure className="trail" aria-label={`Trilha: ${walked.length} resultados fora da fronteira, ${ahead.length} ${frontierLabel}, ${other.length} outros registros`}>
     <svg viewBox={`0 0 ${W} 92`} style={{ maxHeight: 140 }}>
       <defs><linearGradient id="trail-walk" x1="0" x2="1"><stop offset="0" stopColor="#8a7a5c" stopOpacity=".2" /><stop offset="1" stopColor="#d4bf95" /></linearGradient></defs>
       <path d={pathD} className="trail-ahead" />
@@ -1119,7 +1182,7 @@ function Trail({ tests, frontier, target }: { tests: TestEntity[]; frontier: str
         <circle cx={x(i)} cy={y(i)} r={4} className="trail-front"><title>{`Próximo: ${t.name}`}</title></circle></a>; })}
       <g transform={`translate(${x(n - 1)},${y(n - 1)})`} className="trail-goal"><circle r={9} /><path d="M-4 0h8M0-4v8" /></g>
     </svg>
-    <figcaption><span>{walked.length} andados</span><span className="tf">{ahead.length} na fronteira</span><span className="tg">meta: {confirmed}/{target ?? '?'} confirmados</span></figcaption>
+    <figcaption><span>{walked.length} resultados fora da fronteira</span><span className="tf">{ahead.length} {frontierLabel}{other.length > 0 && ` · ${other.length} outros registros`}</span><span className="tg">meta: {confirmed}/{target ?? '?'} confirmados</span></figcaption>
   </figure>;
 }
 
@@ -1150,45 +1213,63 @@ function nameIds(text: string, lab: Lab): string {
 function Board({ state, lab }: { state: SystemState; lab: Lab }) {
   const now = Date.now();
   const [all, setAll] = useState(false);
+  const [owner, setOwner] = useState('');
+  const [priority, setPriority] = useState('');
+  const [status, setStatus] = useState('Pendentes');
   const [openIds, setOpenIds] = useState<Set<string>>(new Set());
-  const every = (state.evolution?.board ?? []).filter(p => !p.resolved_at && (!p.expires_at || Date.parse(p.expires_at) > now)).slice().reverse();
+  const raw = state.evolution?.board ?? [];
+  const every = raw.slice().reverse().map(post => ({ ...post, meta: boardMeta(post, now, raw) }));
   if (!every.length) return null;
-  const posts = all ? every : every.slice(0, 8);
+  const filtered = every.filter(p => (!owner || p.meta.owner === owner) && (!priority || p.meta.priority === priority) && (!status || (status === 'Pendentes' ? !['Resolvido', 'Expirado'].includes(p.meta.status) : p.meta.status === status)));
+  const posts = all ? filtered : filtered.slice(0, 8);
   const who = (r: string) => (r === 'ALL' ? 'todos' : roleLabel(r));
   const toggle = (id: string) => setOpenIds(prev => { const n = new Set(prev); if (n.has(id)) n.delete(id); else n.add(id); return n; });
-  return <Section title="Conversa entre os agentes" kicker={`${every.length} ${every.length === 1 ? 'recado aberto' : 'recados abertos'}`} id="now-board">
+  return <Section title="Conversa entre os agentes" kicker={`${filtered.length} de ${every.length} recados publicados`} id="now-board">
+    <div className="board-filters" role="group" aria-label="Filtrar mural">
+      <label>Destino / responsável<select value={owner} onChange={e => { setOwner(e.target.value); setAll(false); }}><option value="">Todos</option>{[...new Set(every.map(p => p.meta.owner))].map(x => <option key={x} value={x}>{who(x)}</option>)}</select></label>
+      <label>Prioridade<select value={priority} onChange={e => { setPriority(e.target.value); setAll(false); }}><option value="">Todas</option>{[...new Set(every.map(p => p.meta.priority))].map(x => <option key={x}>{x}</option>)}</select></label>
+      <label>Status<select value={status} onChange={e => { setStatus(e.target.value); setAll(false); }}><option value="">Todos</option>{['Pendentes', 'Aberto', 'Aceito', 'Respondido', 'Resolvido', 'Expirado'].map(x => <option key={x}>{x}</option>)}</select></label>
+    </div>
+    <p className="hud-note">O destino do recado só representa um responsável quando isso foi declarado. Prioridade e próxima ação vêm do registro ou de campos nomeados no texto.</p>
+    {!posts.length && <p role="status">Nenhum recado com estes filtros.</p>}
     <ol className="board">{posts.map(p => {
       const full = humanize(nameIds(p.text, lab)); const short = clip(full, 220); const isOpen = openIds.has(p.id); const long = short !== full;
       return <li key={p.id}>
       <p className="board-head"><b>{who(p.from)}</b><i aria-hidden="true">→</i><span>{who(p.to)}</span><time>{ago(p.at)}</time></p>
-      <p className="board-text">{isOpen ? full : short}{long && <button type="button" className="board-more" onClick={() => toggle(p.id)}>{isOpen ? ' ver menos' : ' ler tudo'}</button>}</p>
+      <p className="board-state">{p.meta.status} · prioridade: {p.meta.priority}</p>
+      <p className="board-text">{isOpen ? full : short}{long && <button type="button" aria-expanded={isOpen} className="board-more" onClick={() => toggle(p.id)}>{isOpen ? ' ver menos' : ' ler tudo'}</button>}</p>
+      <p className="board-next"><b>Próxima ação:</b> {p.meta.nextAction ? humanize(nameIds(p.meta.nextAction, lab)) : 'não declarada em campo próprio'}</p>
       {(p.refs?.length ?? 0) > 0 && <p className="hud-refs">{p.refs!.filter(r => lab.tests.has(r) || lab.hypotheses.has(r)).slice(0, 3).map(r => <E key={r} id={r} />)}</p>}
     </li>;})}</ol>
-    {every.length > 8 && <button type="button" className="board-all" onClick={() => setAll(x => !x)}>{all ? 'Mostrar só os 8 mais recentes' : `Ver todos os ${every.length} recados`}</button>}
+    {filtered.length > 8 && <button type="button" className="board-all" onClick={() => setAll(x => !x)}>{all ? 'Mostrar só os 8 mais recentes' : `Ver todos os ${filtered.length} recados`}</button>}
   </Section>;
 }
 
 // ---------- Quem trabalha: as tarefas e o último sinal de vida de cada uma ----------
-function Crew({ lab }: { lab: Lab }) {
+function Crew({ lab, state }: { lab: Lab; state: SystemState }) {
   const now = Date.now();
   return <section className="crew" aria-label="Quem trabalha">
     {TASKS.map(t => {
-      const mine = lab.activity.filter(e => t.hats.includes(String(e.role).toUpperCase()));
+      const mine = observedActivity(lab.activity, now).filter(e => t.hats.includes(String(e.role).toUpperCase()));
       const last = mine.at(-1);
-      const day = mine.filter(e => now - Date.parse(e.at) < 24 * 3600e3).length;
-      const quiet = !last || now - Date.parse(last.at) > 3 * 3600e3;
+      const day = activityWindow(mine, 24, now).count;
+      const quiet = !last || !isPublishedFresh(last.at, 3 * 3600e3, now);
+      const delivery = latestDelivery(lab, t.hats);
+      const request = [...(state.evolution?.board ?? [])].reverse().find(p => t.hats.includes(p.to) && !p.resolved_at && (!p.expires_at || Date.parse(p.expires_at) > now));
+      const action = request ? boardMeta(request, now).nextAction : null;
       const sharedRole = TASKS.some(other => other.id !== t.id && other.hats.some(h => t.hats.includes(h)));
       return <article key={t.id} className={`crew-card${quiet ? ' quiet' : ''}`}>
         <p className="crew-top"><b>{t.name}</b><span>{t.rhythm}</span></p>
         <p className="crew-hats">{[...new Set(t.hats.map(h => ROLE_PT[h] ?? h))].join(' + ')}</p>
         <p className="crew-does">{t.does}</p>
-        <p className="crew-pulse"><i aria-hidden="true" />{last ? `${sharedRole ? 'telemetria do papel · ' : ''}último sinal ${ago(last.at)} · ${day} ações em 24 h` : 'ainda sem ações registradas'}</p>
+        <div className="crew-continuity"><p><b>Última entrega do papel</b>{delivery ? <>{eventLabel(delivery)} · {ago(delivery.at)}{delivery.entity_id && lab.tests.has(delivery.entity_id) && <> · <E id={delivery.entity_id} /></>}</> : 'Não publicada no histórico recebido'}</p><p><b>Pedido direcionado ao papel</b>{request ? <>{clip(humanize(nameIds(request.text, lab)), 170)}<a href="#/agora"> Ver mural →</a></> : 'Nenhum pedido aberto direcionado neste snapshot'}</p><p><b>Próxima ação declarada</b>{action ? humanize(nameIds(action, lab)) : 'Não publicada'}</p></div>
+        <p className="crew-pulse"><i aria-hidden="true" />{last ? `${sharedRole ? 'telemetria do papel · ' : ''}último sinal recebido ${ago(last.at)} · ${day} eventos no recorte de até 24 h` : 'Nenhum evento deste papel no recorte recebido; cobertura parcial'}</p>
       </article>;
     })}
   </section>;
 }
 
-// ---------- Telemetria ao vivo (desktop largo): recados entre agentes + ações, em ordem de tempo ----------
+// ---------- Telemetria publicada (desktop largo): recados entre agentes + ações, em ordem de tempo ----------
 function Telemetry({ lab, state }: { lab: Lab; state: SystemState }) {
   const now = Date.now();
   const notes = (state.evolution?.board ?? []).filter(p => !p.resolved_at && (!p.expires_at || Date.parse(p.expires_at) > now))
@@ -1201,11 +1282,11 @@ function Telemetry({ lab, state }: { lab: Lab; state: SystemState }) {
     LEARNING_SIGNAL_RECORDED: n => `Anotei ${n} lacunas para resolver (receitas ou dados que faltam).`,
     TEST_DISPATCHED: n => `Mandei ${n} testes para a bateria.`,
     ROADMAP_TEST_FROZEN: n => `Congelei as regras de ${n} testes antes de olhar os dados.`,
-    INTEGRITY_REPORT_RECORDED: n => `Fiz ${n} auditorias seguidas; nada quebrou entre elas.`,
-    NEXO_THOUGHT_NOOP_RECORDED: n => `${n} passadas pelos resultados sem nada fora do previsto.`,
+    INTEGRITY_REPORT_RECORDED: n => `Registrei ${n} auditorias no recorte publicado.`,
+    NEXO_THOUGHT_NOOP_RECORDED: n => `${n} registros de revisão sem pensamento novo publicado.`,
   };
   const WINDOW: Record<string, number> = { INTEGRITY_REPORT_RECORDED: 12 * 3600e3, NEXO_THOUGHT_NOOP_RECORDED: 12 * 3600e3 };
-  const raw = lab.activity.slice(-160);
+  const raw = observedActivity(lab.activity, now).slice(-160);
   const grouped: Array<{ e: (typeof raw)[number]; n: number }> = [];
   for (const e of raw) {
     const last = grouped.at(-1);
@@ -1216,9 +1297,9 @@ function Telemetry({ lab, state }: { lab: Lab; state: SystemState }) {
   const acts = grouped.slice(-60).map(({ e, n }, i) => ({ kind: 'act' as const, at: e.at, who: roleLabel(String(e.role)), to: '',
     text: n > 1 ? (say(`GROUP_${e.event_type}`, e.at, { n }) ?? GROUP_PT[e.event_type]!(n)) : narrate(e, lab, state), id: `${e.at}-${i}` }));
   const feed = [...notes, ...acts].sort((a, b) => b.at.localeCompare(a.at)).slice(0, 50);
-  const day = lab.activity.filter(e => now - Date.parse(e.at) < 864e5).length;
-  return <aside className="telemetry" aria-label="Telemetria ao vivo">
-    <header><p><i aria-hidden="true" />Telemetria ao vivo</p><small>agentes conversando e agindo · {day} ações em 24 h</small></header>
+  const day = activityWindow(lab.activity, 24, now).count;
+  return <aside className="telemetry" aria-label="Telemetria publicada">
+    <header><p><i aria-hidden="true" />Telemetria publicada</p><small>recados e eventos publicados · {day} no recorte de até 24 h · parcial</small></header>
     <ol className="tele-feed">{feed.map(f => <li key={f.id} className={f.kind === 'note' ? 'tele-note' : undefined}>
       <p className="tele-h"><b>{f.who}</b>{'self' in f && f.self ? <span>anotou</span> : f.to && <><i aria-hidden="true">→</i><span>{f.to}</span></>}<time>{ago(f.at)}</time></p>
       <p className="tele-t">{f.text}</p>
@@ -1240,40 +1321,27 @@ function QualityButton() {
     <Icon n="gear" /><span className="bt">Qualidade: {Q_LABEL[q]}</span></button>;
 }
 
-// ---------- Cartão de resultado: números com leitura (e elipse w0–wa quando houver) ----------
-const STAT_PT: Record<string, (v: number) => [string, string]> = {
-  delta_chi2: v => [`Δχ² = ${v.toFixed(1)}`, v < -4 ? 'o modelo novo ajusta claramente melhor que o de referência' : v < 0 ? 'o modelo novo ajusta um pouco melhor' : 'o modelo de referência ajusta melhor'],
-  delta_chi2_lcdm_minus_w0wa: v => [`Δχ²(ΛCDM − w0wa) = ${v.toFixed(1)}`, v >= 4 ? 'dados preferem energia escura que muda' : 'preferência fraca'],
-  p_value: v => [`p = ${v < 0.001 ? v.toExponential(1) : v.toFixed(3)}`, v < 0.003 ? 'muito improvável por acaso' : v < 0.05 ? 'improvável por acaso' : 'compatível com acaso'],
-  sigma_raw: v => [`${v.toFixed(1)}σ`, 'significância bruta'],
-  sigma_lee: v => [`${v.toFixed(1)}σ`, 'significância corrigida por olhar em muitos lugares'],
-  delta_bic: v => [`ΔBIC = ${v.toFixed(1)}`, Math.abs(v) > 10 ? 'evidência forte' : Math.abs(v) > 6 ? 'evidência positiva' : 'evidência fraca'],
-  ln_bayes_factor: v => [`ln B = ${v.toFixed(2)}`, Math.abs(v) > 5 ? 'evidência forte (Jeffreys)' : Math.abs(v) > 2.5 ? 'evidência moderada' : 'evidência fraca'],
-  shift_sigma: v => [`deslocamento ${v.toFixed(1)}σ`, v < 1 ? 'o resultado quase não se move' : 'o resultado se move'],
-};
-const zFromP = (p: number) => { // bicaudal, aproximação suficiente para exibição
-  const q = Math.max(1e-12, Math.min(1, p)) / 2, t = Math.sqrt(-2 * Math.log(q));
-  return t - (2.515517 + 0.802853 * t + 0.010328 * t * t) / (1 + 1.432788 * t + 0.189269 * t * t + 0.001308 * t * t * t);
-};
-function ResultCard({ t }: { t: TestEntity }) {
-  const n = numbersOf(t);
-  const rows = Object.entries(n).filter(([k]) => STAT_PT[k]).map(([k, v]) => STAT_PT[k]!(v));
-  const sigma = n.sigma_lee ?? n.sigma_raw ?? (n.p_value !== undefined ? zFromP(n.p_value) : undefined);
+// ---------- Cartão de resultado: seleção editorial, revisão e números publicados ----------
+function ResultCard({ t, selectionReason }: { t: TestEntity; selectionReason: string }) {
+  const rows = scientificStatRows(t);
   const full = (t.result as { statistics?: { full?: Record<string, number>; subset?: Record<string, number> } } | null)?.statistics;
   const pt = full?.subset ?? full?.full;
   return <section className="hud-section result-card" aria-label="Resultado em foco">
     <h2>Resultado em foco</h2>
     <p className="rc-name"><E id={t.id}>{t.name}</E> <VerdictChip v={t.verdict} small /></p>
-    {t.meaning && <p className="rc-meaning">{humanize(t.meaning)}</p>}
-    {rows.length > 0 && <dl className="rc-stats">{rows.map(([a, b]) => <div key={a}><dt>{a}</dt><dd>{b}</dd></div>)}</dl>}
-    {sigma !== undefined && <div className="rc-gauge" aria-label={`Significância ${sigma.toFixed(1)} sigma`}>
-      <svg viewBox="0 0 300 34"><line x1="10" x2="290" y1="18" y2="18" className="g-axis" />
-        {[0, 1, 2, 3, 4, 5].map(k => <g key={k}><line x1={10 + k * 56} x2={10 + k * 56} y1="13" y2="23" className="g-tick" /><text x={10 + k * 56} y="33" className="g-lab">{k}σ</text></g>)}
-        <line x1={10 + 3 * 56} x2={10 + 5 * 56} y1="18" y2="18" className="g-disc" />
-        <circle cx={10 + Math.min(5, Math.max(0, sigma)) * 56} cy="18" r="6" className="g-dot" /></svg>
-      <span>{sigma >= 5 ? 'nível de descoberta' : sigma >= 3 ? 'indício' : 'abaixo de indício'}</span></div>}
-    {pt && typeof pt.w0 === 'number' && typeof pt.wa === 'number' && <W0WaPlot w0={pt.w0} wa={pt.wa} />}
-    {rows.length === 0 && sigma === undefined && <p className="hud-muted">Este teste ainda não publicou números; a leitura acima é qualitativa.</p>}
+    <p className="hud-note"><b>Por que este destaque:</b> {selectionReason}</p>
+    <p className="rc-meaning"><b>Veredito atual:</b> {currentVerdictText(t)}</p>
+    <p className="hud-note">Revisão publicada: {t.review ?? 'não publicada'} · Resultado bruto: {t.verdictRaw ?? 'não publicado'}</p>
+    {t.meaning && <p className="hud-note"><b>Interpretação registrada na execução:</b> {humanize(t.meaning)}</p>}
+    {hasPublishedValue(t.claimBoundary) && <p className="boundary"><b>Limite publicado da conclusão:</b> {text(t.claimBoundary)}</p>}
+    {hasPublishedValue(t.limitations) && <p className="hud-note"><b>Limitações publicadas:</b> {text(t.limitations)}</p>}
+    {rows.length > 0 && <dl className="rc-stats">{rows.map(([label, explanation]) => <div key={label}><dt>{label}</dt><dd>{explanation}</dd></div>)}</dl>}
+    {pt && typeof pt.w0 === 'number' && Number.isFinite(pt.w0) && typeof pt.wa === 'number' && Number.isFinite(pt.wa) && <>
+      <W0WaPlot w0={pt.w0} wa={pt.wa} />
+      <p className="hud-note">Ponto estimado publicado; incerteza e covariância não representadas.</p>
+    </>}
+    {rows.length === 0 && <p className="hud-muted">Nenhuma estatística resumida disponível neste cartão. Consulte o registro completo.</p>}
+    <E id={t.id}>abrir resultado, revisão e evidências →</E>
   </section>;
 }
 function W0WaPlot({ w0, wa }: { w0: number; wa: number }) {
@@ -1282,7 +1350,6 @@ function W0WaPlot({ w0, wa }: { w0: number; wa: number }) {
     <line x1="20" x2="260" y1={Y(0)} y2={Y(0)} className="g-axis" /><line x1={X(-1)} x2={X(-1)} y1="10" y2="110" className="g-axis" />
     <text x="262" y={Y(0) + 4} className="g-lab">wa=0</text><text x={X(-1) + 4} y="18" className="g-lab">w0=−1</text>
     <circle cx={X(-1)} cy={Y(0)} r="3.5" className="g-lcdm" /><text x={X(-1) + 6} y={Y(0) - 6} className="g-lab">ΛCDM</text>
-    <ellipse cx={X(w0)} cy={Y(wa)} rx="14" ry="22" className="g-ell" transform={`rotate(-28 ${X(w0)} ${Y(wa)})`} />
     <circle cx={X(w0)} cy={Y(wa)} r="3" className="g-dot" />
   </svg>;
 }
@@ -1298,29 +1365,22 @@ const LSS_STRUCTURE_TOPICS = new Set([
   'science.cosmology.lss_growth.galaxy_distribution',
   'science.cosmology.lss_growth.megastructures',
 ]);
-const FRONTS: Array<{ name: string; grade: 'sólido' | 'tensão' | 'aberto'; note: string; match: (t: TestEntity) => boolean }> = [
-  { name: 'Energia escura', grade: 'tensão', note: 'DESI DR2 + SNe preferem w0-wa em 2,8–4,2σ',
-    match: t => isSubdomain(t, 'science.cosmology.dark_energy', 'Energia escura') },
-  { name: 'Expansão local (H0)', grade: 'tensão', note: 'Cefeidas ~5σ acima do CMB; TRGB no meio',
-    match: t => isSubdomain(t, 'science.cosmology.h0', 'Expansão do Universo · H0') },
-  { name: 'Aglomeração (S8)', grade: 'tensão', note: 'lentes fracas abaixo do CMB; diferença encolhendo',
-    match: t => isSubdomain(t, 'science.cosmology.lss_growth', 'Crescimento da estrutura em larga escala')
-      && !(t.topicId && LSS_STRUCTURE_TOPICS.has(t.topicId)) },
-  { name: 'Matéria escura', grade: 'aberto', note: 'existência sólida; natureza em aberto',
-    match: t => isSubdomain(t, 'science.cosmology.dark_matter', 'Matéria escura') },
-  { name: 'Estrutura em grande escala', grade: 'sólido', note: 'ΛCDM descreve bem; anomalias pontuais',
-    match: t => isTopic(t, 'science.cosmology.lss_growth.galaxy_distribution', 'Galáxias · Redshift 3D')
-      || isTopic(t, 'science.cosmology.lss_growth.megastructures', 'Megaestruturas cosmológicas') },
-];
-function Frontiers({ lab }: { lab: Lab }) {
-  const sci = [...lab.tests.values()].filter(t => !t.contestOf && isScience(t));
-  const rows = FRONTS.map(f => ({ ...f, list: sci.filter(f.match) }));
-  return <Section title="Frentes da cosmologia" kicker="literatura × NEXO" id="now-fronts">
-    <ul className="fronts">{rows.map(r => { const T = tally(r.list); return <li key={r.name}>
-      <p className="fr-top"><b>{r.name}</b><span className={`fr-grade g-${r.grade === 'sólido' ? 'solid' : r.grade === 'tensão' ? 'tension' : 'open'}`}>{r.grade}</span></p>
-      <p className="fr-note">{r.note}</p>
-      <p className="fr-nexo">{T.total ? <>NEXO: <b>{T.total}</b> testes · {T.confirmed} {T.confirmed === 1 ? 'confirmado' : 'confirmados'} · {T.refuted} {T.refuted === 1 ? 'refutado' : 'refutados'} · {T.ready} na fila</> : 'NEXO ainda não testou esta frente'}</p>
-    </li>; })}</ul>
+function Frontiers({ state }: { state: SystemState }) {
+  const cosmology = state.cosmology_state;
+  if (!cosmology?.frontiers.length) return <Section title="Frentes da cosmologia" id="now-fronts"><p className="hud-muted">Síntese versionada não publicada nesta leitura.</p></Section>;
+  return <Section title="Frentes da cosmologia" kicker="Síntese publicada pela Tower" id="now-fronts">
+    <p className="hud-note">Modelo {cosmology.model}. A data da literatura é a declarada na fonte; a atualização da projeção não representa uma nova revisão bibliográfica.</p>
+    <ul className="fronts">{cosmology.frontiers.map(frontier => {
+      const source = frontier.literature_source ?? cosmology.literature_source;
+      const counts = frontier.evidence_counts;
+      return <li key={frontier.id}>
+        <p className="fr-top"><a href={labHref('universo', frontier.id)}><b>{frontier.title}</b></a><span className={`fr-grade g-${frontier.state === 'SOLID' ? 'solid' : frontier.state === 'TENSION' ? 'tension' : 'open'}`}>{frontier.state_label}</span></p>
+        <p className="fr-note">{frontier.short_summary ?? frontier.summary}</p>
+        <p className="fr-source">{source ? <><a href={source.url} target="_blank" rel="noreferrer">{source.name} ↗</a> · versão {source.version ?? 'não publicada'} · literatura {source.updated_at ?? 'sem data publicada'}</> : 'Fonte e data da literatura não publicadas'}</p>
+        <p className="fr-nexo">Evidência na síntese: {counts.confirmed} confirmados · {counts.refuted} refutados · {counts.review} em revisão · {counts.open} abertos</p>
+      </li>;
+    })}</ul>
+    <a className="elink" href="#/universo">Consultar síntese, literatura e fontes →</a>
   </Section>;
 }
 
@@ -1360,7 +1420,7 @@ function QuietLoops({ lab, quiet, at }: { lab: Lab; quiet: Array<{ role: string;
     cur.roles.add(q.role.toUpperCase()); loops.set(l, cur);
   }
   const lastOf = (role: string) => { const t = taskOf(role); const hats = t?.hats ?? [role];
-    return lab.activity.filter(e => hats.includes(String(e.role).toUpperCase())).at(-1)?.at; };
+    return observedActivity(lab.activity).filter(e => hats.includes(String(e.role).toUpperCase())).at(-1)?.at; };
   const dur = (h: number | null) => h == null ? 'sem evento registrado' : `sem evento há ${h < 48 ? `${Math.round(h)} h` : `${Math.round(h / 24)} dias`}`;
   return <Section title="Laços quietos" kicker={`vigia do robô · ${ago(at)}`} id="he-quiet">
     <ul className="quiet-list">{[...loops].map(([loop, v]) => { const role = [...v.roles][0]!; const t = taskOf(role); const last = lastOf(role);
@@ -1394,4 +1454,3 @@ const JARGON: Array<[RegExp, string]> = [
   [/\bread-back\b/gi, 'conferência'], [/\bstaging\b/gi, 'área de espera'], [/\bfull-shape\b/gi, 'completa'],
 ];
 function humanize(text: string) { return JARGON.reduce((acc, [re, to]) => acc.replace(re, to), text); }
-
