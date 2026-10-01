@@ -213,6 +213,7 @@
     "inbox/scheduled-guardiao-integrity-20261001t1105z-min.json": "43551d91bdb98e1ca01c507d40551984e129764adbc9e9d6d51bce7ae91ab9ad",
     "inbox/scheduled-guardiao-integrity-20261001t1303z-min.json": "5bfa101efcd629ccc7ef41f47edd5451ddd551bd6432a3df03dcb18582561655",
     "inbox/scheduled-guardiao-integrity-20261001t1509z.json": "fc6f92a3197a68647b79d971d8b04769b57937fe7aa7d40ccd8de8c0f69c76ea",
+    "inbox/scheduled-guardiao-integrity-20261001t1703z.json": "01c25678f66895519550c8f3de2194fc48bb824e39c303dc302f75405de6194c",
     "inbox/scheduled-guardiao-integrity-256956b433317ea8.json": "da73edbdb43a397cac4244eac89204363b8db3724890b273f95e0d7948273fed",
     "inbox/scheduled-guardiao-integrity-4eca6a809262f332.json": "d55e8cdac1b1b34239a374cd8dee447107385cf7523dda7a8534484d567f25b4",
     "inbox/scheduled-guardiao-integrity-843309583b848e26.json": "ef33415a5ff000ed8ed1b9f21e17f7d8e27c5608d5fcd8ff768aba6e64bd3bab",
@@ -396,10 +397,12 @@
     "inbox/scheduled-referee1-20261001-a1-dr1-06.json": "abb7d49688008aa7ad02b63189f6d6f8990db133f2984968534d5d6f036493b8",
     "inbox/scheduled-referee1-20261001-a1-dr1-07.json": "34f8d646869e6866f0fbfcbd8d045363c3982c2e6269236e4567f1bfed330927",
     "inbox/scheduled-referee1-20261001-a1-dr1-08.json": "b1bdf278857bae0a35e2a4f6cb26a77e461d3b9ab97cda6087a78764e8419d19",
+    "inbox/scheduled-referee1-20261001-a1-dr1-09.json": "1c52fde16b84ba3f4527b7babc643c54cb69629b788b9f42b162e66104bb2f84",
     "inbox/scheduled-referee1-20261001-a2-base-dr1.json": "b8b5a6f03b591c8ffecc3964362abae89f7c0416c1c49ac0c8db99262f2e5225",
     "inbox/scheduled-referee1-20261001-a2-binjack-3.json": "306705f43665d48194e232f1412611633b978698720a690886f70dcd86af2f34",
     "inbox/scheduled-referee1-20261001-a2-binjack-4.json": "69c2cee3100deeaa50144654e3ec175613a832990cba261b3db669805fe13068",
     "inbox/scheduled-referee1-20261001-a2-rank-loo.json": "2f3777bf88af399f2582c8e768aee9926434f114a78a8ff2bf76f5f6852f7e81",
+    "inbox/scheduled-referee1-20261001-a2-seis-binjack.json": "f2f5e7213cf9712561777f582bbfce4b2ecba9beffa928a7293e86dae757bdf9",
     "inbox/scheduled-referee1-6638057a1f2d-a2-point-v1.json": "57f0c3df05a1b588cf39a25301804e8d47107ad3f0e9feb385a5e3daa07a0e8a",
     "inbox/scheduled-referee1-board-persist-20261001t081347z.json": "b7a2f5a322897bdbd357abd3fb64471b26da1e86796f8d7bfd2380a10d54d224",
     "inbox/scheduled-referee1-contest-de-1-20260929.json": "1be30ba40520823873302a78649e4e29df27d40848225c0610b56e0490881f57",
@@ -1374,6 +1377,11 @@
       "fingerprint": "fc6f92a3197a68647b79d971d8b04769b57937fe7aa7d40ccd8de8c0f69c76ea",
       "tower_revision": "sha256:15cdc9d87e63a303027fbfb052eb5124174ba20f293e2161019bb53460d4239c"
     },
+    "inbox/scheduled-guardiao-integrity-20261001t1703z.json": {
+      "applied_at": "2026-10-01T17:18:15Z",
+      "fingerprint": "01c25678f66895519550c8f3de2194fc48bb824e39c303dc302f75405de6194c",
+      "tower_revision": "sha256:9d55ae38721dc9c54e12774edb9949bdbc248d6206f9320a1c49302439098531"
+    },
     "inbox/scheduled-guardiao-integrity-256956b433317ea8.json": {
       "applied_at": "2026-09-30T23:44:02Z",
       "fingerprint": "da73edbdb43a397cac4244eac89204363b8db3724890b273f95e0d7948273fed",
@@ -2032,9 +2040,9 @@
       "tower_revision": "sha256:2187bfcaab53f35c25c2d6b5d36d5637e5894e5826f21a48ee299a81a1c46261"
     },
     "inbox/scheduled-pitia-20261001t1115z-dream-analysis-invariance.json": {
-      "applied_at": "2026-10-01T17:15:01Z",
+      "applied_at": "2026-10-01T17:18:15Z",
       "fingerprint": "4d8a4404562d1787763707a44fb16e113e2c78769436cff8edfc46d671802b92",
-      "tower_revision": "sha256:600b68fdc74ad1ea777d4c2f5420d058007264d22ec21e121dafc5bf14fb6dc0"
+      "tower_revision": "sha256:9d55ae38721dc9c54e12774edb9949bdbc248d6206f9320a1c49302439098531"
     },
     "inbox/scheduled-pitia-batch-2181033f17a4f562.json": {
       "fingerprint": "abef2a371fff9849bc92f9e214ee0e4708a02420d236fb946c0825e787cd5636",
@@ -2169,6 +2177,11 @@
       "fingerprint": "b1bdf278857bae0a35e2a4f6cb26a77e461d3b9ab97cda6087a78764e8419d19",
       "tower_revision": "sha256:3ce470920041bf50e51eab8542221fccc1e3577b6cee29de9830bac7896fb6f0"
     },
+    "inbox/scheduled-referee1-20261001-a1-dr1-09.json": {
+      "applied_at": "2026-10-01T17:18:15Z",
+      "fingerprint": "1c52fde16b84ba3f4527b7babc643c54cb69629b788b9f42b162e66104bb2f84",
+      "tower_revision": "sha256:9d55ae38721dc9c54e12774edb9949bdbc248d6206f9320a1c49302439098531"
+    },
     "inbox/scheduled-referee1-20261001-a2-base-dr1.json": {
       "applied_at": "2026-10-01T15:01:14Z",
       "fingerprint": "b8b5a6f03b591c8ffecc3964362abae89f7c0416c1c49ac0c8db99262f2e5225",
@@ -2188,6 +2201,11 @@
       "applied_at": "2026-10-01T08:37:42Z",
       "fingerprint": "2f3777bf88af399f2582c8e768aee9926434f114a78a8ff2bf76f5f6852f7e81",
       "tower_revision": "sha256:dba0f38e14b5786999bd10da7180881d8d55eda0b4d5d87f2c756e3a87912d2b"
+    },
+    "inbox/scheduled-referee1-20261001-a2-seis-binjack.json": {
+      "applied_at": "2026-10-01T17:18:15Z",
+      "fingerprint": "f2f5e7213cf9712561777f582bbfce4b2ecba9beffa928a7293e86dae757bdf9",
+      "tower_revision": "sha256:9d55ae38721dc9c54e12774edb9949bdbc248d6206f9320a1c49302439098531"
     },
     "inbox/scheduled-referee1-6638057a1f2d-a2-point-v1.json": {
       "applied_at": "2026-10-01T05:25:09Z",
