@@ -138,6 +138,7 @@
  .observatory[data-page="agora"]:has(.board-focus):not(.exploring):not(.flat):not(.scene-unavailable){--sky:22vh}
  .observatory[data-page="agora"]:has(.board-focus):not(.exploring):not(.flat):not(.scene-unavailable) .obs-scene{height:var(--sky)}
  .observatory[data-page="agora"]:has(.board-focus):not(.exploring):not(.flat):not(.scene-unavailable) .hud{top:calc(48px + var(--sky))}
+ .observatory:not(.exploring) .obs-tools>.explore-toggle{min-width:44px;min-height:44px}
  .observatory .board-focus{padding:16px!important}
  .observatory .board-route{grid-template-columns:minmax(0,1fr) 24px minmax(0,1fr);gap:8px}
  .observatory .board-route b{font-size:14px}
