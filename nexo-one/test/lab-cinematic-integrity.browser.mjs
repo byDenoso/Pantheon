@@ -147,6 +147,10 @@ try {
         const bounds = await crumb.boundingBox();
         const header = await page.locator('.instrument-header').boundingBox();
         assert.ok(bounds && header && bounds.y >= header.y + header.height, 'scene breadcrumb below mobile header');
+      } else if (viewport.width >= 1280) {
+        const bounds = await crumb.boundingBox();
+        const sidebar = await page.locator('.telemetry').boundingBox();
+        assert.ok(bounds && sidebar && bounds.x + bounds.width < sidebar.x, 'scene breadcrumb left of desktop telemetry');
       }
       await crumb.getByRole('button', { name: 'NEXO', exact: true }).click();
       await visualReady(page, name + ':explore', true);

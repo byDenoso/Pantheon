@@ -91,7 +91,10 @@
 .observatory .feed-kind{display:block;color:var(--o-quiet);font:10px/1.5 var(--f-mono);margin:0 0 6px}
 .observatory :is(.board-text,.tele-note .tele-t){white-space:pre-wrap;overflow-wrap:anywhere}
 .observatory .explore-hint{width:min(720px,calc(100% - 32px));white-space:normal;text-align:center;line-height:1.6;border-radius:12px;box-sizing:border-box}
-@media(min-width:1280px){.observatory .explore-hint{left:100px;right:356px;width:auto;max-width:720px;transform:none;top:16px}}
+@media(min-width:1280px){
+ .observatory .explore-hint{left:100px;right:356px;width:auto;max-width:720px;transform:none;top:16px}
+ .observatory.exploring .obs-crumb{right:356px;top:auto;bottom:84px}
+}
 .observatory .live-delivery{padding:12px 0;border-top:1px solid var(--o-line)}
 .observatory .live-delivery>span{font:11px/1.5 var(--f-mono);color:var(--o-accent)}
 .observatory .live-delivery p{margin:6px 0!important}
