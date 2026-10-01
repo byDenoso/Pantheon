@@ -291,6 +291,8 @@
     "inbox/scheduled-learner-20261001t2048z-rdcal-grid-narrow315-bound.json": "6cdbacfdef93ad9f84835276603045509457d59857fd0c895a4648a9a6d3d6cf",
     "inbox/scheduled-learner-20261001t2049z-meta-readback-correction-v1.json": "9e8a55d15bc24ba88fd356cd6c39302f4568ee8d03652ccbd7620d883a4a4199",
     "inbox/scheduled-learner-20261001t2051z-rdcal-grid-broad330-bound.json": "9faeb0e410be4e6a36d7b66a96941d08382d14f677ba8eb23bb6a166ffe1009a",
+    "inbox/scheduled-learner-20261001t2051z-rdcal-grid-medium330-bound.json": "0fc03178a48c2be94c75fe94e99fbacf6b15405dfd66e93cea4ff9bdd95046d2",
+    "inbox/scheduled-learner-20261001t2051z-rdcal-grid-narrow330-bound.json": "c22480be6d8d172477bb659c36223182cc8f2f3b23337effb4b2b3f071dbada8",
     "inbox/scheduled-learner-261001-0309-r1-cut-desu3-rec.json": "d5247da1fe24b0fae0d3131878499bf55b9459a736e157792b6773f071dfa60d",
     "inbox/scheduled-learner-261001-0309-r1-lq-ppu3-rec.json": "d25256d416dbb6ca56587c6be37301b3a6b742680a79fbcda7b6fb93ad803dec",
     "inbox/scheduled-learner-261001-0310-r1-cut-desu3-data.json": "1118f2f05fdd78cf30a6ad44e682429f8d1620f18f4f9b7a2b34547c2a048160",
@@ -1756,39 +1758,49 @@
       "tower_revision": "sha256:0e9dee97284c5892ec8f67d965abd68fec3430548f223363f1eb00806690a1fd"
     },
     "inbox/scheduled-learner-20261001t2047z-predcal10-bound-final-v1.json": {
-      "applied_at": "2026-10-01T20:54:00Z",
+      "applied_at": "2026-10-01T20:57:52Z",
       "fingerprint": "4087420b360e2d19ec0f50e6591172d2140c93424a10070e2ec29bc3cf798fd0",
-      "tower_revision": "sha256:0e9dee97284c5892ec8f67d965abd68fec3430548f223363f1eb00806690a1fd"
+      "tower_revision": "sha256:25f8894f333b5703be60f3e7b7b8f5b009422c30a9eeb2d3ccd83a390b7e7eb3"
     },
     "inbox/scheduled-learner-20261001t2047z-predcal15-bound-final-v1.json": {
-      "applied_at": "2026-10-01T20:54:00Z",
+      "applied_at": "2026-10-01T20:57:52Z",
       "fingerprint": "0ee44a6abdf7792110a9c8b336d58d52d11f27c50e5a6e811f8a304faf09f2c6",
-      "tower_revision": "sha256:0e9dee97284c5892ec8f67d965abd68fec3430548f223363f1eb00806690a1fd"
+      "tower_revision": "sha256:25f8894f333b5703be60f3e7b7b8f5b009422c30a9eeb2d3ccd83a390b7e7eb3"
     },
     "inbox/scheduled-learner-20261001t2048z-rdcal-grid-broad315-bound.json": {
-      "applied_at": "2026-10-01T20:54:00Z",
+      "applied_at": "2026-10-01T20:57:52Z",
       "fingerprint": "f9429c02edbb7d241e0d59abcb805cd5cf4d37b3e4582a0aff9f5b8702b0e984",
-      "tower_revision": "sha256:0e9dee97284c5892ec8f67d965abd68fec3430548f223363f1eb00806690a1fd"
+      "tower_revision": "sha256:25f8894f333b5703be60f3e7b7b8f5b009422c30a9eeb2d3ccd83a390b7e7eb3"
     },
     "inbox/scheduled-learner-20261001t2048z-rdcal-grid-medium315-bound.json": {
-      "applied_at": "2026-10-01T20:54:00Z",
+      "applied_at": "2026-10-01T20:57:52Z",
       "fingerprint": "d7861f6916ad30189a3b99c745b0b44aa6a347dcbff6c503d8e85b587767d839",
-      "tower_revision": "sha256:0e9dee97284c5892ec8f67d965abd68fec3430548f223363f1eb00806690a1fd"
+      "tower_revision": "sha256:25f8894f333b5703be60f3e7b7b8f5b009422c30a9eeb2d3ccd83a390b7e7eb3"
     },
     "inbox/scheduled-learner-20261001t2048z-rdcal-grid-narrow315-bound.json": {
-      "applied_at": "2026-10-01T20:54:00Z",
+      "applied_at": "2026-10-01T20:57:52Z",
       "fingerprint": "6cdbacfdef93ad9f84835276603045509457d59857fd0c895a4648a9a6d3d6cf",
-      "tower_revision": "sha256:0e9dee97284c5892ec8f67d965abd68fec3430548f223363f1eb00806690a1fd"
+      "tower_revision": "sha256:25f8894f333b5703be60f3e7b7b8f5b009422c30a9eeb2d3ccd83a390b7e7eb3"
     },
     "inbox/scheduled-learner-20261001t2049z-meta-readback-correction-v1.json": {
-      "applied_at": "2026-10-01T20:54:00Z",
+      "applied_at": "2026-10-01T20:57:52Z",
       "fingerprint": "9e8a55d15bc24ba88fd356cd6c39302f4568ee8d03652ccbd7620d883a4a4199",
-      "tower_revision": "sha256:0e9dee97284c5892ec8f67d965abd68fec3430548f223363f1eb00806690a1fd"
+      "tower_revision": "sha256:25f8894f333b5703be60f3e7b7b8f5b009422c30a9eeb2d3ccd83a390b7e7eb3"
     },
     "inbox/scheduled-learner-20261001t2051z-rdcal-grid-broad330-bound.json": {
-      "applied_at": "2026-10-01T20:54:00Z",
+      "applied_at": "2026-10-01T20:57:52Z",
       "fingerprint": "9faeb0e410be4e6a36d7b66a96941d08382d14f677ba8eb23bb6a166ffe1009a",
-      "tower_revision": "sha256:0e9dee97284c5892ec8f67d965abd68fec3430548f223363f1eb00806690a1fd"
+      "tower_revision": "sha256:25f8894f333b5703be60f3e7b7b8f5b009422c30a9eeb2d3ccd83a390b7e7eb3"
+    },
+    "inbox/scheduled-learner-20261001t2051z-rdcal-grid-medium330-bound.json": {
+      "applied_at": "2026-10-01T20:57:52Z",
+      "fingerprint": "0fc03178a48c2be94c75fe94e99fbacf6b15405dfd66e93cea4ff9bdd95046d2",
+      "tower_revision": "sha256:25f8894f333b5703be60f3e7b7b8f5b009422c30a9eeb2d3ccd83a390b7e7eb3"
+    },
+    "inbox/scheduled-learner-20261001t2051z-rdcal-grid-narrow330-bound.json": {
+      "applied_at": "2026-10-01T20:57:52Z",
+      "fingerprint": "c22480be6d8d172477bb659c36223182cc8f2f3b23337effb4b2b3f071dbada8",
+      "tower_revision": "sha256:25f8894f333b5703be60f3e7b7b8f5b009422c30a9eeb2d3ccd83a390b7e7eb3"
     },
     "inbox/scheduled-learner-261001-0309-r1-cut-desu3-rec.json": {
       "applied_at": "2026-10-01T03:21:44Z",
@@ -2086,9 +2098,9 @@
       "source": "legacy-acked"
     },
     "inbox/scheduled-operator-b-prior-bands-blocked-20261001t1901z.json": {
-      "applied_at": "2026-10-01T20:54:00Z",
+      "applied_at": "2026-10-01T20:57:52Z",
       "fingerprint": "ec617a6fa1698c8285188be8240859f2ce00561f59af864078506ed9d7b42569",
-      "tower_revision": "sha256:0e9dee97284c5892ec8f67d965abd68fec3430548f223363f1eb00806690a1fd"
+      "tower_revision": "sha256:25f8894f333b5703be60f3e7b7b8f5b009422c30a9eeb2d3ccd83a390b7e7eb3"
     },
     "inbox/scheduled-operator-b-private-handoff-write-block-20261001t1755z.json": {
       "applied_at": "2026-10-01T17:59:35Z",
@@ -2096,9 +2108,9 @@
       "tower_revision": "sha256:225cedf02f219ff9f351d0d1fd71a9a1bb42d49ddaaa243b1f12bc8a9d581bc8"
     },
     "inbox/scheduled-operator-b-private-move-block-20261001t2047z.json": {
-      "applied_at": "2026-10-01T20:54:00Z",
+      "applied_at": "2026-10-01T20:57:52Z",
       "fingerprint": "ab2b30c8a058d459787ac424d68da5a608ffa203e3fa9990d1f3dc9ae8b2d3cf",
-      "tower_revision": "sha256:0e9dee97284c5892ec8f67d965abd68fec3430548f223363f1eb00806690a1fd"
+      "tower_revision": "sha256:25f8894f333b5703be60f3e7b7b8f5b009422c30a9eeb2d3ccd83a390b7e7eb3"
     },
     "inbox/scheduled-operator-b-ready-terminal-drift-20260930t1949z.json": {
       "fingerprint": "a5b1a7a1a04d452ef6f3d936499e2d8a0596639fe3442e0682b3692c12acaad3",
