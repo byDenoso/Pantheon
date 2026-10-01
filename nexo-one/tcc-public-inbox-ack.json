@@ -400,6 +400,7 @@
     "inbox/scheduled-pitia-20261001t0719z-write-failure-board.json": "9b147860d7310afec8753a9e02beba39162b3c28a8385aafe04f5b49921d509f",
     "inbox/scheduled-pitia-20261001t0816z-rd-calibration-surprise.json": "ec306cf05a802b69e8cd5d05ba7efec06d3368e0980512df9d614c39c29fcf7a",
     "inbox/scheduled-pitia-20261001t1115z-dream-analysis-invariance.json": "4d8a4404562d1787763707a44fb16e113e2c78769436cff8edfc46d671802b92",
+    "inbox/scheduled-pitia-20261001t1618z-live-rival-gate.json": "eae4adc946727053c765b3f2dade3e5b800c04d8a8d034f567ccd084cb781193",
     "inbox/scheduled-pitia-batch-2181033f17a4f562.json": "abef2a371fff9849bc92f9e214ee0e4708a02420d236fb946c0825e787cd5636",
     "inbox/scheduled-pitia-batch-392ca9d8c0a7749a.json": "cfc104cf89931e65e44ca8b588a01848b592ea233fe39afc8271250b47131629",
     "inbox/scheduled-pitia-batch-3d6c1a02b9805eb8.json": "e36ef115a6cbce8e7d949cdec5de247eba084d3d9bba02986457c3f13a4e1a47",
@@ -2259,6 +2260,11 @@
       "applied_at": "2026-10-01T17:18:15Z",
       "fingerprint": "4d8a4404562d1787763707a44fb16e113e2c78769436cff8edfc46d671802b92",
       "tower_revision": "sha256:9d55ae38721dc9c54e12774edb9949bdbc248d6206f9320a1c49302439098531"
+    },
+    "inbox/scheduled-pitia-20261001t1618z-live-rival-gate.json": {
+      "applied_at": "2026-10-01T21:15:57Z",
+      "fingerprint": "eae4adc946727053c765b3f2dade3e5b800c04d8a8d034f567ccd084cb781193",
+      "tower_revision": "sha256:393416b1883e1d138973b4fce7c69afc277dc8991e8d264cabfaa58abec90dff"
     },
     "inbox/scheduled-pitia-batch-2181033f17a4f562.json": {
       "fingerprint": "abef2a371fff9849bc92f9e214ee0e4708a02420d236fb946c0825e787cd5636",
