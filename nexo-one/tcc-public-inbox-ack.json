@@ -254,6 +254,7 @@
     "inbox/scheduled-learner-20261001t0815z-sntrio315-recipe.json": "55b05e02eaccb4cc937e2c11acd578d7877774d20083c3e302ba8024aca44dab",
     "inbox/scheduled-learner-20261001t0815z-sntrio330-data.json": "932599baad4c7166f22dbb88f8989d23a54d5268be8cc960f8d9f71b12e519f4",
     "inbox/scheduled-learner-20261001t0815z-sntrio330-recipe.json": "663a09391a85f2d4edb66e2109d13c1ade6a05396b64c9d12d5d7b705fac991b",
+    "inbox/scheduled-learner-20261001t1505z-h0hom012-prereg-v2.json": "37d529200c6c03688147fa0396277080955931b5e6251cea81e4b260b9cc7324",
     "inbox/scheduled-learner-261001-0309-r1-cut-desu3-rec.json": "d5247da1fe24b0fae0d3131878499bf55b9459a736e157792b6773f071dfa60d",
     "inbox/scheduled-learner-261001-0309-r1-lq-ppu3-rec.json": "d25256d416dbb6ca56587c6be37301b3a6b742680a79fbcda7b6fb93ad803dec",
     "inbox/scheduled-learner-261001-0310-r1-cut-desu3-data.json": "1118f2f05fdd78cf30a6ad44e682429f8d1620f18f4f9b7a2b34547c2a048160",
@@ -1549,6 +1550,11 @@
       "applied_at": "2026-10-01T08:37:42Z",
       "fingerprint": "663a09391a85f2d4edb66e2109d13c1ade6a05396b64c9d12d5d7b705fac991b",
       "tower_revision": "sha256:dba0f38e14b5786999bd10da7180881d8d55eda0b4d5d87f2c756e3a87912d2b"
+    },
+    "inbox/scheduled-learner-20261001t1505z-h0hom012-prereg-v2.json": {
+      "applied_at": "2026-10-01T15:32:31Z",
+      "fingerprint": "37d529200c6c03688147fa0396277080955931b5e6251cea81e4b260b9cc7324",
+      "tower_revision": "sha256:5100043170ad691e8e541789ca44e074957e4db6232bf54edfd4b2a13961cd2a"
     },
     "inbox/scheduled-learner-261001-0309-r1-cut-desu3-rec.json": {
       "applied_at": "2026-10-01T03:21:44Z",
