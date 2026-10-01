@@ -60,6 +60,7 @@
     "inbox/scheduled-20260928-scientist-desy6-semantic-1506.json": "1f06b9744244d8c73f0eece9fb4178833b88fa1fe2b752e0fb98c0702f0a581a",
     "inbox/scheduled-atlas-cosmology-legacy-reconciliation-20260930.json": "a12d3dbb04d2b08fd9e1e31eb5e18e11b4fffdd318c6d284b6c785cacf5989a3",
     "inbox/scheduled-battery-roadmap-dr1-20260930-01.json": "cfffc51ad7773e834b704e8e3f4709ba4e61e2a919f2b83a3c7b4fd3c56934ee",
+    "inbox/scheduled-bind-pointwise-bao-contest-20261001-v1.json": "915205e9c91c5e7e92ed0531b3d07e7c7d142541f194430b68b9058df68ad21a",
     "inbox/scheduled-board-guardiao-pr388-writer-receipt-pending-run36790483167.json": "dbb92e78bcd6d246a42ae27b3f54f768bf8dc623bd29c93f2381a6d5c22767c8",
     "inbox/scheduled-board-pr364-union3-regression-62105d4.json": "8501c7b44b4cb1c9541bff3af3081bc969b5e251bcd4c923b91f68042284a738",
     "inbox/scheduled-board-pr384-merged-under-changes-4d29cb1.json": "4a07ba233d7fae982382c48bf1d44c8c6659b5c5799cb8d10a8a7630d4bb12be",
@@ -151,6 +152,7 @@
     "inbox/scheduled-executor-ready-display-names-pt-20260928.json": "1e71602f7df0a9a4bf1904840b7dfba6fd0af93eb744764ab2aa14f105806167",
     "inbox/scheduled-executor-recipe-stable-id-idempotency-20260928-v2.json": "a1b603dc526e299c1151df65f543d1db34b96f25969a13980823c72a79a6a487",
     "inbox/scheduled-executor-w0wa-ready-dispatch-20260928t160500z.json": "99144056e7b511d02606432e14afc4478e80cbfca69bf7f1c0e389266411a8a2",
+    "inbox/scheduled-fix-stale-bound-blockers-20261001-v1.json": "68a3bb0b71a8e7e961ae94e531c613055ee5aa3d4faf04e3444b18315b1315e8",
     "inbox/scheduled-guardian-20260929-035900-restaged.json": "ede4e408e5487baaf723c4b641d4d3caa8217cf06c7d9398230ef8f45afd184c",
     "inbox/scheduled-guardian-20260929t035900z-restaged.json": "ede4e408e5487baaf723c4b641d4d3caa8217cf06c7d9398230ef8f45afd184c",
     "inbox/scheduled-guardian-20260929t045339z-round1.json": "7786276def1ca1a7a55b6a3a40dbcd145318620a009f0d2ba877151dddcb7813",
@@ -699,6 +701,11 @@
       "fingerprint": "cfffc51ad7773e834b704e8e3f4709ba4e61e2a919f2b83a3c7b4fd3c56934ee",
       "source": "legacy-acked"
     },
+    "inbox/scheduled-bind-pointwise-bao-contest-20261001-v1.json": {
+      "applied_at": "2026-10-01T13:55:04Z",
+      "fingerprint": "915205e9c91c5e7e92ed0531b3d07e7c7d142541f194430b68b9058df68ad21a",
+      "tower_revision": "sha256:1b389a0bdf77f7a9d0f667e7c67e1a7a2de8122455fb631d1258d658123e1cc5"
+    },
     "inbox/scheduled-board-guardiao-pr388-writer-receipt-pending-run36790483167.json": {
       "fingerprint": "dbb92e78bcd6d246a42ae27b3f54f768bf8dc623bd29c93f2381a6d5c22767c8",
       "source": "legacy-acked"
@@ -1078,6 +1085,11 @@
     "inbox/scheduled-executor-w0wa-ready-dispatch-20260928t160500z.json": {
       "fingerprint": "99144056e7b511d02606432e14afc4478e80cbfca69bf7f1c0e389266411a8a2",
       "source": "legacy-acked"
+    },
+    "inbox/scheduled-fix-stale-bound-blockers-20261001-v1.json": {
+      "applied_at": "2026-10-01T13:55:04Z",
+      "fingerprint": "68a3bb0b71a8e7e961ae94e531c613055ee5aa3d4faf04e3444b18315b1315e8",
+      "tower_revision": "sha256:1b389a0bdf77f7a9d0f667e7c67e1a7a2de8122455fb631d1258d658123e1cc5"
     },
     "inbox/scheduled-guardian-20260929-035900-restaged.json": {
       "fingerprint": "ede4e408e5487baaf723c4b641d4d3caa8217cf06c7d9398230ef8f45afd184c",
