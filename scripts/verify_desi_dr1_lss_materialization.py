@@ -16,14 +16,24 @@ import os
 from pathlib import Path
 import re
 import shutil
+import stat
 import sys
 
 
 RECEIPT_SCHEMA = "NEXO_DESI_LSS_SELECTION_MATERIALIZATION_RECEIPT_V1"
+PLAN_SCHEMA = "NEXO_DESI_LSS_SELECTION_MATERIALIZATION_PLAN_V1"
+FAILURE_SCHEMA = "NEXO_DESI_LSS_SELECTION_MATERIALIZATION_FAILURE_V1"
 MANIFEST_SCHEMA = "NEXO_DESI_LSS_SELECTION_MANIFEST_V1"
+MANIFEST_SHA256 = "6ce284a355085679eb528517746b247fa2c48902c6158ca556ae9c197b34c65a"
+EXPECTED_FILE_COUNT = 160
+EXPECTED_TOTAL_BYTES = 139_526_840_064
 CAMPAIGN_ID = "RM-GZ01-GALAXY-3D-MAP-LIVE-V1"
+WORK_ID = "WORK::GZ-01-B03-GALAXY-3D-MAP"
 TEST_ID = "GZ01-B03-T03-WINDOW-ROTATION-NULL"
+RECOVERY_WORK_ID = "WORK::RECOVERY-9ec8d79f540e5103bc62321946a2c4c8"
 SELECTION_ORIGIN = "GZ01-B03-T01-SOURCE-AND-SELECTION"
+RECIPE_FAMILY = "desi_lss_selection_binding_family"
+T03_STATUS = "PREPARED_PARTIAL_NOT_READY"
 BASE_URL = "https://data.desi.lbl.gov/public/dr1/survey/catalogs/dr1/LSS/iron/LSScats/v1.5/"
 INDEX_SHA256 = "8957d496d448a3fa585aa43399ffeace6b9f90ba7624514fe37c917d1fce406b"
 CHECKSUM_NAME = "dr1_survey_catalogs_dr1_LSS_iron_LSScats_v1.5.sha256sum"
@@ -46,12 +56,34 @@ def _sha256_bytes(raw: bytes) -> str:
     return hashlib.sha256(raw).hexdigest()
 
 
-def _sha256_file(path: Path) -> str:
-    digest = hashlib.sha256()
-    with path.open("rb") as stream:
-        for chunk in iter(lambda: stream.read(8 * 1024 * 1024), b""):
-            digest.update(chunk)
-    return digest.hexdigest()
+def _stat_identity(value: os.stat_result) -> tuple[int, int, int, int]:
+    return (value.st_dev, value.st_ino, value.st_size, value.st_mtime_ns)
+
+
+def _is_reparse_or_symlink(path: Path) -> bool:
+    info = path.stat(follow_symlinks=False)
+    attributes = getattr(info, "st_file_attributes", 0)
+    reparse_flag = getattr(stat, "FILE_ATTRIBUTE_REPARSE_POINT", 0)
+    return stat.S_ISLNK(info.st_mode) or bool(attributes & reparse_flag)
+
+
+def _sha256_open_file(path: Path, expected_lstat: os.stat_result) -> tuple[str, os.stat_result]:
+    flags = os.O_RDONLY | getattr(os, "O_BINARY", 0) | getattr(os, "O_NOFOLLOW", 0)
+    descriptor = os.open(path, flags)
+    try:
+        opened = os.fstat(descriptor)
+        if not stat.S_ISREG(opened.st_mode) or not os.path.samestat(expected_lstat, opened):
+            raise StagingError(f"staged input identity changed before hashing: {path.name}")
+        digest = hashlib.sha256()
+        with os.fdopen(descriptor, "rb", closefd=False) as stream:
+            for chunk in iter(lambda: stream.read(8 * 1024 * 1024), b""):
+                digest.update(chunk)
+            after_open = os.fstat(stream.fileno())
+        if _stat_identity(opened) != _stat_identity(after_open):
+            raise StagingError(f"staged input changed while hashing: {path.name}")
+        return digest.hexdigest(), after_open
+    finally:
+        os.close(descriptor)
 
 
 def _expected_files() -> dict[str, dict]:
@@ -73,6 +105,12 @@ def _expected_files() -> dict[str, dict]:
 
 
 def validate_manifest_bytes(raw: bytes) -> tuple[dict, str]:
+    manifest_sha256 = _sha256_bytes(raw)
+    if manifest_sha256 != MANIFEST_SHA256:
+        raise StagingError(
+            f"selection-manifest SHA256 mismatch: expected {MANIFEST_SHA256}, "
+            f"observed {manifest_sha256}"
+        )
     try:
         manifest = json.loads(raw.decode("utf-8"))
     except (UnicodeDecodeError, json.JSONDecodeError) as error:
@@ -112,7 +150,7 @@ def validate_manifest_bytes(raw: bytes) -> tuple[dict, str]:
 
     expected = _expected_files()
     files = manifest.get("files")
-    if not isinstance(files, list) or len(files) != len(expected):
+    if not isinstance(files, list) or len(files) != len(expected) or len(expected) != EXPECTED_FILE_COUNT:
         raise StagingError("manifest must contain exactly 160 selected files")
     seen: set[str] = set()
     role_counts = {"catalog": 0, "random": 0, "n_z": 0}
@@ -143,6 +181,8 @@ def validate_manifest_bytes(raw: bytes) -> tuple[dict, str]:
     if seen != set(expected):
         raise StagingError("manifest does not contain the exact frozen filename set")
     total_bytes = sum(role_bytes.values())
+    if total_bytes != EXPECTED_TOTAL_BYTES:
+        raise StagingError("manifest total bytes differ from the frozen selection")
     summary = manifest.get("summary")
     if summary != {
         "file_count": 160,
@@ -151,19 +191,20 @@ def validate_manifest_bytes(raw: bytes) -> tuple[dict, str]:
         "total_bytes": total_bytes,
     }:
         raise StagingError("manifest summary differs from its file records")
-    return manifest, _sha256_bytes(raw)
+    return manifest, manifest_sha256
 
 
 def _storage_anchor(staging_root: Path) -> Path:
     if staging_root.exists():
-        if staging_root.is_symlink() or not staging_root.is_dir():
-            raise StagingError("staging root must be a real directory, not a symlink")
+        if _is_reparse_or_symlink(staging_root) or not staging_root.is_dir():
+            raise StagingError("staging root must be a real directory, not a symlink or reparse point")
         return staging_root
     anchor = staging_root.parent
     while not anchor.exists() and anchor.parent != anchor:
         anchor = anchor.parent
-    if not anchor.exists() or not anchor.is_dir():
-        raise StagingError("no existing parent is available for the staging root")
+    if (not anchor.exists() or not anchor.is_dir()
+            or _is_reparse_or_symlink(anchor)):
+        raise StagingError("no real existing parent is available for the staging root")
     return anchor
 
 
@@ -184,8 +225,10 @@ def build_plan(manifest: dict, manifest_sha256: str, staging_root: Path,
     required = int((Decimal(total_bytes) * multiplier).to_integral_value(rounding=ROUND_CEILING))
     storage_ok = free_bytes >= required
     return {
-        "schema": RECEIPT_SCHEMA,
+        "schema": PLAN_SCHEMA,
         "campaign_id": CAMPAIGN_ID,
+        "work_id": WORK_ID,
+        "recovery_work_id": RECOVERY_WORK_ID,
         "test_id": TEST_ID,
         "mode": "plan",
         "operator_state": "STORAGE_PREFLIGHT_OK" if storage_ok else "STORAGE_PREFLIGHT_BLOCKED",
@@ -216,11 +259,16 @@ def _files_index_sha256(records: list[dict]) -> str:
 
 
 def verify_files(staging_root: Path, records: list[dict]) -> dict:
-    if not staging_root.exists() or staging_root.is_symlink() or not staging_root.is_dir():
+    if (not staging_root.exists() or not staging_root.is_dir()
+            or _is_reparse_or_symlink(staging_root)):
         raise StagingError("staging root must be an existing real directory")
     expected = {item["name"]: item for item in records}
     children = list(staging_root.iterdir())
-    actual_names = {path.name for path in children}
+    initial = {
+        path.name: _stat_identity(path.stat(follow_symlinks=False))
+        for path in children
+    }
+    actual_names = set(initial)
     missing = sorted(set(expected) - actual_names)
     extra = sorted(actual_names - set(expected))
     if missing or extra:
@@ -230,55 +278,92 @@ def verify_files(staging_root: Path, records: list[dict]) -> dict:
         ))
     resolved_root = staging_root.resolve(strict=True)
     verified_bytes = 0
+    verified_records: list[dict] = []
     for name in sorted(expected):
         path = staging_root / name
-        if path.is_symlink() or not path.is_file():
+        before = path.stat(follow_symlinks=False)
+        if (_is_reparse_or_symlink(path) or not stat.S_ISREG(before.st_mode)
+                or path.resolve(strict=True).parent != resolved_root):
             raise StagingError(f"staged input must be a regular non-symlink file: {name}")
-        if path.resolve(strict=True).parent != resolved_root:
-            raise StagingError(f"staged input escapes the staging root: {name}")
-        before = path.stat()
         item = expected[name]
         if before.st_size != item["size_bytes"]:
             raise StagingError(
                 f"size mismatch for {name}: expected {item['size_bytes']}, observed {before.st_size}"
             )
-        actual_sha256 = _sha256_file(path)
-        after = path.stat()
-        identity_before = (before.st_dev, before.st_ino, before.st_size, before.st_mtime_ns)
-        identity_after = (after.st_dev, after.st_ino, after.st_size, after.st_mtime_ns)
-        if identity_before != identity_after:
+        actual_sha256, after_open = _sha256_open_file(path, before)
+        after = path.stat(follow_symlinks=False)
+        if (not os.path.samestat(before, after)
+                or _stat_identity(before) != _stat_identity(after_open)
+                or _stat_identity(before) != _stat_identity(after)):
             raise StagingError(f"staged input changed while hashing: {name}")
         if actual_sha256 != item["sha256"]:
             raise StagingError(f"SHA256 mismatch for staged input: {name}")
         verified_bytes += after.st_size
+        verified_records.append({
+            "name": name,
+            "size_bytes": after.st_size,
+            "sha256": actual_sha256,
+        })
+    final_children = list(staging_root.iterdir())
+    final = {
+        path.name: _stat_identity(path.stat(follow_symlinks=False))
+        for path in final_children
+    }
+    if final != initial:
+        raise StagingError("staging directory changed during verification")
     return {
         "file_count": len(expected),
         "total_bytes": verified_bytes,
         "files_index_sha256": _files_index_sha256(records),
+        "files": verified_records,
     }
 
 
 def build_verified_receipt(manifest: dict, manifest_sha256: str,
-                           staging_root: Path, verified: dict) -> dict:
+                           _staging_root: Path, verified: dict) -> dict:
     if (verified.get("file_count") != manifest["summary"]["file_count"]
             or verified.get("total_bytes") != manifest["summary"]["total_bytes"]):
         raise StagingError("verified byte totals differ from the frozen manifest")
     return {
         "schema": RECEIPT_SCHEMA,
-        "campaign_id": CAMPAIGN_ID,
+        "execution_status": "MATERIALIZATION_VERIFIED",
+        "scope": "SOURCE_MATERIALIZATION_ONLY",
+        "roadmap_id": CAMPAIGN_ID,
+        "work_id": WORK_ID,
         "test_id": TEST_ID,
-        "mode": "verify",
-        "operator_state": "LOCAL_SELECTION_BYTES_VERIFIED",
-        "manifest_sha256": manifest_sha256,
-        "staging_root": str(staging_root),
-        "selection": manifest["selection"],
-        "file_count": verified["file_count"],
-        "verified_bytes": verified["total_bytes"],
-        "files_index_sha256": verified["files_index_sha256"],
+        "recovery_work_id": RECOVERY_WORK_ID,
+        "recipe_family": RECIPE_FAMILY,
+        "selection_manifest": {
+            "schema": MANIFEST_SCHEMA,
+            "sha256": manifest_sha256,
+            "file_count": verified["file_count"],
+            "total_bytes": verified["total_bytes"],
+        },
+        "verification": {
+            "hash_algorithm": "sha256",
+            "exact_filename_set": True,
+            "regular_files_only": True,
+            "symlinks_and_reparse_points_rejected": True,
+            "extra_entries_rejected": True,
+            "all_local_bytes_verified": True,
+            "file_count": verified["file_count"],
+            "total_bytes": verified["total_bytes"],
+            "files_index_sha256": verified["files_index_sha256"],
+        },
+        "files": verified["files"],
         "local_bytes_verified": True,
         "work_ready": False,
         "test_ready": False,
         "scientific_result_eligible": False,
+        "scientific_status": {
+            "status": T03_STATUS,
+            "scientific_result_eligible": False,
+            "t03_dispatch_ready": False,
+            "reason": (
+                "This receipt verifies frozen DESI source materialization only; "
+                "it is not a scientific result and does not satisfy remaining T03 gates."
+            ),
+        },
         "next_gate": (
             "build and bind NEXO_DESI_LSS_3D_PRODUCT_V1 with frozen cosmology, "
             "voxelization, statistic and complete provenance roles"
@@ -287,7 +372,11 @@ def build_verified_receipt(manifest: dict, manifest_sha256: str,
 
 
 def _canonical_json_bytes(payload: dict) -> bytes:
-    return (json.dumps(payload, ensure_ascii=False, sort_keys=True, indent=2) + "\n").encode("utf-8")
+    return (
+        json.dumps(
+            payload, ensure_ascii=False, allow_nan=False, sort_keys=True, indent=2
+        ) + "\n"
+    ).encode("utf-8")
 
 
 def _ensure_output_outside_staging(output: Path, staging_root: Path) -> None:
@@ -299,26 +388,38 @@ def _ensure_output_outside_staging(output: Path, staging_root: Path) -> None:
 
 def _write_json(path: Path, payload: dict, staging_root: Path) -> None:
     _ensure_output_outside_staging(path, staging_root)
+    raw = _canonical_json_bytes(payload)
+    if path.exists():
+        if not path.is_file() or path.read_bytes() != raw:
+            raise StagingError("refusing to overwrite a different receipt")
+        return
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_bytes(_canonical_json_bytes(payload))
+    path.write_bytes(raw)
 
 
 def _write_url_list(path: Path, records: list[dict], staging_root: Path) -> str:
     _ensure_output_outside_staging(path, staging_root)
-    path.parent.mkdir(parents=True, exist_ok=True)
     raw = "".join(item["url"] + "\n" for item in records).encode("utf-8")
+    if path.exists():
+        if not path.is_file() or path.read_bytes() != raw:
+            raise StagingError("refusing to overwrite a different URL list")
+        return _sha256_bytes(raw)
+    path.parent.mkdir(parents=True, exist_ok=True)
     path.write_bytes(raw)
     return _sha256_bytes(raw)
 
 
 def _failure_payload(error: Exception) -> dict:
     return {
-        "schema": RECEIPT_SCHEMA,
-        "campaign_id": CAMPAIGN_ID,
-        "test_id": TEST_ID,
-        "mode": "operational_failure",
-        "operator_state": "STAGING_PREFLIGHT_FAILED",
+        "schema": FAILURE_SCHEMA,
+        "execution_status": "MATERIALIZATION_PREFLIGHT_FAILED",
+        "error_code": "STAGING_CONTRACT_FAILURE",
         "error": str(error),
+        "roadmap_id": CAMPAIGN_ID,
+        "work_id": WORK_ID,
+        "test_id": TEST_ID,
+        "recovery_work_id": RECOVERY_WORK_ID,
+        "t03_status": T03_STATUS,
         "local_bytes_verified": False,
         "work_ready": False,
         "test_ready": False,
@@ -350,7 +451,7 @@ def main(argv: list[str] | None = None) -> int:
                 shutil.disk_usage(anchor).free,
                 url_digest,
             )
-            exit_code = 0 if payload["storage_ok"] else 2
+            exit_code = 0 if payload["storage_ok"] else 3
         else:
             if args.url_list:
                 raise StagingError("--url-list is only valid in plan mode")
