@@ -423,6 +423,7 @@
     "inbox/scheduled-pitia-20261001t1618z-live-rival-gate.json": "eae4adc946727053c765b3f2dade3e5b800c04d8a8d034f567ccd084cb781193",
     "inbox/scheduled-pitia-20261002t0215z-observability-crisis.json": "05cc2b5a0d8e6c0cac1ef6d66e3ddd7d2e73acb4a38d0ebe047d417cabd65169",
     "inbox/scheduled-pitia-20261002t0215z-prediction-sample-rival.json": "f86762a1f7070e53db3f9590d921df3cf61d587e13681696b73fc70c759d05d4",
+    "inbox/scheduled-pitia-20261002t0816z-live-sample-gate.json": "83ba13013583cbba1d188f5ce3e3ecc5951ef3f3c04b8ba17ebca36981fb66eb",
     "inbox/scheduled-pitia-batch-2181033f17a4f562.json": "abef2a371fff9849bc92f9e214ee0e4708a02420d236fb946c0825e787cd5636",
     "inbox/scheduled-pitia-batch-392ca9d8c0a7749a.json": "cfc104cf89931e65e44ca8b588a01848b592ea233fe39afc8271250b47131629",
     "inbox/scheduled-pitia-batch-3d6c1a02b9805eb8.json": "e36ef115a6cbce8e7d949cdec5de247eba084d3d9bba02986457c3f13a4e1a47",
@@ -2650,6 +2651,34 @@
       "applied_at": "2026-10-02T02:29:45Z",
       "fingerprint": "f86762a1f7070e53db3f9590d921df3cf61d587e13681696b73fc70c759d05d4",
       "tower_revision": "sha256:64f723470edc6c50cd1bb1974ec9ea481e5703b559a7f15f00c6defb224f8a2a"
+    },
+    "inbox/scheduled-pitia-20261002t0816z-live-sample-gate.json": {
+      "fingerprint": "83ba13013583cbba1d188f5ce3e3ecc5951ef3f3c04b8ba17ebca36981fb66eb",
+      "observed_at": "2026-10-02T09:18:33Z",
+      "outcome": "APPLIED",
+      "receipt_ids": [
+        "OR-1a897936adeb99f1ff9321412ab82fab"
+      ],
+      "receipts": [
+        {
+          "contract": "OPERATION_RECEIPT_V1",
+          "effect_id": "envelope-8c5dd4e7891b8a3eb59b80f64ef7aa7d",
+          "intent_id": "gateway:tcc-30e769d3bd8eb3ae4ef03ccd287e9557",
+          "observed_at": "2026-10-02T09:18:10.225540Z",
+          "occurred_at": "2026-10-02T09:18:10.225523Z",
+          "outcome": "APPLIED",
+          "payload_sha256": "sha256:5cffeaf556e20822935555888e78be08ed80701ef5c47cdf010e4b444cbc274a",
+          "reason_code": null,
+          "receipt_id": "OR-1a897936adeb99f1ff9321412ab82fab",
+          "result_revision": "sha256:252f3875a718d0e923528968b1ff66bcabfe4b9485f26ef60a0b4421651c0d46",
+          "retry_condition": null,
+          "source_revision": "sha256:047749f8066138500457090d8103f4b255d2690ea8f4b5a20f9d5e4fa5b31edb",
+          "stage": "APPLIED",
+          "supersedes": null,
+          "visibility": "PUBLIC"
+        }
+      ],
+      "tower_revision": "sha256:9e57b961f4c2d4caf567210471e3d367e4b4183bb3e3e749176d0e6d5817cc57"
     },
     "inbox/scheduled-pitia-batch-2181033f17a4f562.json": {
       "fingerprint": "abef2a371fff9849bc92f9e214ee0e4708a02420d236fb946c0825e787cd5636",
