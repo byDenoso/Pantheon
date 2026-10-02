@@ -1,0 +1,66 @@
+{
+  "contract": "RECIPE_PARAM_PREFLIGHT_V1",
+  "recipe": "desi_lss_selection_binding_family",
+  "validator": "desi_lss_selection_binding_family_v1",
+  "identity": {
+    "test_id": "GZ01-B03-T03-WINDOW-ROTATION-NULL",
+    "prereg_hash": "sha256:21d38d27b2ef12f17940fb9a01448c0ad3fe73950cb7e0352b1b0c11803b6069",
+    "mode": "window_rotation_null",
+    "null_method": "selection_stratified_permutation",
+    "criterion": {
+      "promote_p_emp_lte": 0.01,
+      "bh_q": 0.1,
+      "reject_all_p_emp_gte": 0.1
+    },
+    "selection_manifest_sha256": "6ce284a355085679eb528517746b247fa2c48902c6158ca556ae9c197b34c65a",
+    "null_count": 199,
+    "statistics": [
+      {
+        "name": "max_abs_gaussian_smoothed_delta",
+        "sigma_cells": 0.32
+      }
+    ]
+  },
+  "limits": {
+    "seed_min": 0,
+    "seed_max_exclusive": 9223372036854775808
+  },
+  "statistics": {
+    "max_abs_gaussian_smoothed_delta": {
+      "fields": [
+        "name",
+        "sigma_cells"
+      ],
+      "sigma_cells_gt": 0,
+      "sigma_cells_lte": 20
+    },
+    "largest_abs_excursion_component": {
+      "fields": [
+        "name",
+        "abs_delta_gte",
+        "connectivity"
+      ],
+      "abs_delta_gte_gt": 0,
+      "connectivity": [
+        1,
+        2,
+        3
+      ]
+    }
+  },
+  "inputs": {
+    "required_names": [
+      "desi_dr1_lss_selection_manifest",
+      "desi_dr1_lss_3d_map_product"
+    ],
+    "selection_manifest": {
+      "name": "desi_dr1_lss_selection_manifest",
+      "sha256": "6ce284a355085679eb528517746b247fa2c48902c6158ca556ae9c197b34c65a",
+      "schema": "NEXO_DESI_LSS_SELECTION_MANIFEST_V1"
+    },
+    "product": {
+      "name": "desi_dr1_lss_3d_map_product",
+      "schema": "NEXO_DESI_LSS_3D_PRODUCT_V1"
+    }
+  }
+}
