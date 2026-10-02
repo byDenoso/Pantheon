@@ -207,6 +207,10 @@
 
 /* Mapa · Galáxia: the Atlas shell owns controls and legend. */
 .atlas-galaxy-view .galaxy-three-controls,.atlas-galaxy-view .galaxy-three-status{display:none}
+.atlas-galaxy-view>.galaxy-observation-status{position:absolute;z-index:6;right:12px;bottom:10px;display:flex;flex-wrap:wrap;align-items:center;gap:7px;max-width:calc(100% - 24px);padding:7px 9px;border:1px solid rgba(170,210,240,.16);border-radius:3px;background:rgba(5,9,15,.7);color:#9cb0c3;font:8px/1.25 "IBM Plex Mono",ui-monospace,monospace;letter-spacing:.055em;backdrop-filter:blur(12px);pointer-events:none}
+.atlas-galaxy-view>.galaxy-observation-status time{color:#72879b}
+.atlas-galaxy-view>.galaxy-observation-status[data-state=stale],.atlas-galaxy-view>.galaxy-observation-status[data-state=partial],.atlas-galaxy-view>.galaxy-observation-status[data-state=unavailable]{border-color:rgba(179,207,232,.32);color:#d2dfeb}
+@media(max-width:760px){.atlas-galaxy-view>.galaxy-observation-status{right:8px;bottom:8px;left:8px;justify-content:flex-start;font-size:7px}}
 
 /* Mapa · Galáxia HUD: glow control + shape metrics */
 .atlas-galaxy-view{position:relative}

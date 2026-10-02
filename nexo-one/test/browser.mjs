@@ -59,6 +59,26 @@ const SCENARIO_SHOTS = [
   ['human-decision', 'INBOX'],
 ];
 
+const VIEW_ROUTES = {
+  OVERVIEW: '#/OVERVIEW',
+  'Precisa de você': '#/INBOX',
+  Actions: '#/ACTIONS',
+  Execution: '#/EXECUTION',
+  TruthGraph: '#/TRUTHGRAPH',
+  Capabilities: '#/CAPABILITIES',
+  Sources: '#/SOURCES',
+  Integrity: '#/INTEGRITY',
+  Atlas: '#/ATLAS',
+  Learning: '#/LEARNING',
+  Now: '#/NOW',
+  INBOX: '#/INBOX',
+  TRUTHGRAPH: '#/TRUTHGRAPH',
+  CAPABILITIES: '#/CAPABILITIES',
+  SOURCES: '#/SOURCES',
+  EXECUTION: '#/EXECUTION',
+  ACTIONS: '#/ACTIONS',
+};
+
 const browser = await chromium.launch({ headless: true });
 const reports = [];
 
@@ -66,7 +86,7 @@ const newPage = async (width, height, theme, view = 'OVERVIEW') => {
   const context = await browser.newContext({ viewport: { width, height }, timezoneId: 'America/Sao_Paulo', locale: 'pt-BR' });
   const page = await context.newPage();
   const errors = [];
-  page.on('pageerror', error => errors.push(error.message));
+  page.on('pageerror', error => errors.push(error.stack || error.message));
   await page.clock.install({ time: now });
   await page.addInitScript(([theme, view]) => {
     localStorage.setItem('nexo-theme', theme);
@@ -96,11 +116,11 @@ try {
   for (const [name, width, height, theme] of VIEWPORTS) {
     const { context, page, errors } = await newPage(width, height, theme);
     const mobile = width < 860;
-    await page.goto(baseUrl);
+    await page.goto(`${baseUrl}${VIEW_ROUTES.OVERVIEW}`);
 
-    // 1. Overview carrega com estado global e os quatro domínios.
+    // 1. O cockpit de sistema atual carrega o estado e os quatro domínios.
     await page.getByRole('heading', { level: 1 }).waitFor();
-    await page.getByRole('heading', { name: 'Estado atual' }).waitFor();
+    await page.getByRole('heading', { name: 'Estado do sistema' }).waitFor();
     assert.equal(await page.locator('.domain-tile').count(), 4, 'quatro domínios no estado atual');
     assert.equal(await page.getByTestId('projection-bus').count(), 0,
       'overlay legado do Projection Bus não pode competir com o SystemState');
@@ -109,13 +129,19 @@ try {
 
     // 2. Navegação: percorre as visões preservando um H1 por tela.
     const navigate = async view => {
-      if (mobile) {
-        await page.getByRole('button', { name: 'Mais' }).click();
-        await page.getByRole('dialog', { name: 'TODAS AS VISÕES' }).waitFor();
-        await page.getByRole('dialog').getByRole('button', { name: new RegExp(view, 'i') }).first().click();
-      } else {
-        await page.getByRole('navigation', { name: 'Navegação principal' })
-          .getByRole('button', { name: new RegExp(view, 'i') }).first().click();
+      const route = VIEW_ROUTES[view];
+      assert.ok(route, `rota canônica ausente para ${view}`);
+      await page.evaluate(path => { window.location.hash = path; }, route.slice(1));
+      if (view === 'Atlas' && mobile) {
+        // On mobile, the details H1 lives inside the intentionally closed side sheet.
+        await page.locator('.atlas3d-page[data-atlas-renderer="metro-cluster"]').waitFor();
+        return;
+      }
+      try {
+        await page.getByRole('heading', { level: 1 }).waitFor({ timeout: 8000 });
+      } catch (error) {
+        const hash = await page.evaluate(() => window.location.hash);
+        throw new Error(`No H1 after navigating ${view} (${hash}) at ${name}`, { cause: error });
       }
       assert.equal(await page.getByRole('heading', { level: 1 }).count(), 1, `${view} sem H1 único`);
     };
@@ -133,7 +159,7 @@ try {
 
     // 4. UNVERIFIED nunca é apresentado como parcialmente funcional.
     await navigate('Capabilities');
-    assert.match(await page.locator('.rule-note').first().innerText(), /UNVERIFIED não é funcionalidade parcial/);
+    assert.match(await page.locator('.rule-note').first().innerText(), /Sem comprovação não significa funcionamento parcial/);
 
     // 5. Proveniência acessível a partir de qualquer estado importante.
     await navigate('Sources');
@@ -148,87 +174,123 @@ try {
     await page.keyboard.press('Escape');
     assert.equal(await page.getByRole('dialog').count(), 0);
 
-    // 6. Atlas 3D: canvas real, navegação espacial e seleção pelo caminho acessível.
+    // 6. Atlas actual: Metro/G6 renders public source entities and supports accessible selection.
     await navigate('Atlas');
-    const canvas = page.getByTestId('atlas-3d-canvas');
+    const atlas = page.locator('.atlas3d-page[data-atlas-renderer="metro-cluster"]');
+    await atlas.waitFor();
+    const canvas = page.getByTestId('atlas-metro-2d');
     await canvas.waitFor();
-    assert.equal(await page.locator('.atlas3d-fallback').count(), 0, 'Babylon caiu no fallback');
-    const graphNodes = page.locator('.atlas3d-a11y-list button');
-    assert.equal(await graphNodes.count(), 1, 'Atlas deve iniciar somente no hub NEXO');
-    assert.equal(await graphNodes.first().innerText(), 'NEXO');
+    const g6 = page.locator('#atlas-metro-g6');
+    await page.waitForFunction(() => document.querySelector('#atlas-metro-g6')?.dataset.g6Ready === 'true');
+    assert.ok(await g6.locator('canvas').count() > 0, 'o renderer Metro/G6 não materializou seu canvas');
+    assert.equal(await page.locator('.atlas-render-error').count(), 0, 'o renderer Metro/G6 reportou falha');
+    const graphNodes = page.locator('.atlas-a11y-stations button');
+    const initialNodeCount = await graphNodes.count();
+    assert.ok(initialNodeCount >= Number(await atlas.getAttribute('data-atlas-root-count')),
+      'a lista acessível deve expor ao menos todos os hubs publicados');
+    assert.equal(initialNodeCount, Number(await atlas.getAttribute('data-atlas-visible-count')),
+      'a lista acessível deve acompanhar o total de nós atualmente visíveis');
+    const detailsToggle = page.locator('.atlas-mobile-details-toggle');
+    if (mobile) await detailsToggle.click();
+    const firstStation = await graphNodes.first().innerText();
     await graphNodes.first().focus();
     await page.keyboard.press('Enter');
-    await page.getByRole('button', { name: 'SCIENCE' }).waitFor();
-    assert.ok(await graphNodes.count() >= 4, 'NEXO não expandiu os domínios derivados');
-    const box = await canvas.boundingBox();
-    if (box) {
-      await page.mouse.move(box.x + box.width * 0.58, box.y + box.height * 0.48);
-      await page.mouse.down();
-      await page.mouse.move(box.x + box.width * 0.68, box.y + box.height * 0.42, { steps: 5 });
-      await page.mouse.up();
-      await page.mouse.wheel(0, -180);
-    }
+    await page.locator('.atlas-detail h1').waitFor();
+    assert.equal((await page.locator('.atlas-detail h1').innerText()).trim().toLocaleLowerCase(), firstStation.trim().toLocaleLowerCase(),
+      'selecionar uma estação acessível deve abrir seus detalhes');
+    // A capability-only group used to fall through to LIVE without a live
+    // observation. Check its accessible label from the corrected Atlas model.
+    const capabilityStation = page.locator('.atlas-a11y-stations button[data-domain="SCIENCE"][data-depth="1"]')
+      .filter({ hasText: 'Capacidades científicas' });
+    await capabilityStation.waitFor();
+    assert.equal(await capabilityStation.count(), 1, 'the deterministic Atlas fixture must expose its capability group');
+    assert.equal(await capabilityStation.getAttribute('aria-label'), 'Capacidades científicas: Ainda não verificado',
+      'a group without an explicit LIVE member and freshness proof must not render as “Ao vivo”');
+    if (name === 'desktop-dark') await page.screenshot({ path: `${output}/atlas-aggregate-status.png`, fullPage: true });
+    if (name === 'mobile-dark') await page.screenshot({ path: `${output}/atlas-aggregate-status-mobile.png`, fullPage: true });
+
+    if (mobile) await page.locator('.atlas-mobile-sidebar-close').click();
+
+    // Lenses filter the published graph, and the table exposes the same visible nodes.
+    const lensGroup = page.getByRole('group', { name: 'Lente do mapa' });
+    await lensGroup.getByRole('button', { name: 'Tudo' }).click();
+    await page.waitForFunction(() => document.querySelector('.atlas3d-page')?.dataset.atlasLens === 'tudo');
+    const allLensCount = await graphNodes.count();
+    await lensGroup.getByRole('button', { name: 'Ciência' }).click();
+    await page.waitForFunction(() => document.querySelector('.atlas3d-page')?.dataset.atlasLens === 'ciencia');
+    const scienceLensCount = await graphNodes.count();
+    assert.ok(scienceLensCount > 0 && scienceLensCount < allLensCount,
+      'a lente de Ciência deve restringir o conjunto completo sem o esvaziar');
+    if (name === 'desktop-dark') await page.screenshot({ path: `${output}/atlas-${name}.png`, fullPage: true });
+    await lensGroup.getByRole('button', { name: 'Tudo' }).click();
+    await page.waitForFunction(() => document.querySelector('.atlas3d-page')?.dataset.atlasLens === 'tudo');
+    const expandAll = page.getByRole('button', { name: 'Expandir tudo' });
+    await expandAll.click();
+    await page.waitForFunction(() => document.querySelector('.atlas3d-page')?.dataset.atlasExpansion === 'all');
+    assert.ok(await graphNodes.count() > allLensCount, 'expandir tudo deve materializar nós descendentes');
+    await page.getByRole('button', { name: 'Contrair tudo' }).click();
+    await page.waitForFunction(() => document.querySelector('.atlas3d-page')?.dataset.atlasExpansion === 'context');
+    assert.equal(await graphNodes.count(), allLensCount, 'contrair tudo deve restaurar a contagem inicial da lente');
+
+    const tableButton = page.getByRole('button', { name: 'Ver como tabela' });
+    await tableButton.click();
+    const graphTable = page.locator('.nexo-graph-table');
+    await graphTable.waitFor();
+    assert.equal(await graphTable.locator('tbody tr').count(), await graphNodes.count(),
+      'a tabela deve apresentar os mesmos nós abertos que o mapa');
+    await page.getByRole('button', { name: 'Ver grafo' }).click();
+    await canvas.waitFor();
+
+    if (mobile) await detailsToggle.click();
+    const scienceStations = page.locator('.atlas-a11y-stations button[data-domain="SCIENCE"]');
+    const scienceStationCount = await scienceStations.count();
+    assert.ok(scienceStationCount > 0, 'a fixture do Atlas deve expor estações de Ciência para testar seleção e proveniência');
+    const firstScienceStation = scienceStations.first();
+    const scienceStationLabel = (await firstScienceStation.innerText()).trim();
+    await firstScienceStation.focus();
+    await page.keyboard.press('Enter');
+    const selectedScience = page.locator('.atlas-detail');
+    await selectedScience.waitFor();
+    const selectedId = await selectedScience.getAttribute('data-selected-node');
+    assert.ok(selectedId, 'a seleção atual deve identificar a entidade no painel de detalhes');
+    assert.equal((await selectedScience.locator('h1').innerText()).trim().toLocaleLowerCase(), scienceStationLabel.toLocaleLowerCase(),
+      'selecionar a estação de Ciência deve abrir exatamente seus detalhes');
+    const details = selectedScience.locator('.atlas-provenance');
+    assert.equal(await details.count(), 1, 'a estação selecionada deve expor a origem e os dados técnicos');
+    await details.locator('summary').click();
+    const stationProvenance = (await details.innerText()).toLowerCase();
+    assert.match(stationProvenance, /identificador/);
+    assert.match(stationProvenance, /impressão digital/);
+    assert.match(stationProvenance, /revisão da fonte/);
+    await noOverflow(page, `${name}/Atlas`);
+    if (name === 'desktop-dark') await page.screenshot({ path: `${output}/atlas-${name}-selected.png`, fullPage: true });
     if (mobile) {
-      const touchNavigation = page.locator('.atlas3d-mobile-nav:visible').first();
-      for (const control of ['Girar mapa para a esquerda', 'Girar mapa para a direita', 'Aproximar mapa', 'Afastar mapa']) {
-        const button = touchNavigation.getByRole('button', { name: control });
-        await button.click({ force: true });
-      }
+      assert.equal(await detailsToggle.getAttribute('aria-expanded'), 'true');
+      await page.locator('.atlas-mobile-sidebar-close').click();
+      assert.equal(await detailsToggle.getAttribute('aria-expanded'), 'false');
     }
-    await page.getByRole('button', { name: 'SCIENCE' }).focus();
-    await page.keyboard.press('Enter');
-    const scienceClusters = page.locator('.atlas3d-a11y-list button');
-    await scienceClusters.filter({ hasText: 'CLAIM' }).first().focus();
-    await page.keyboard.press('Enter');
-    const scienceClaims = page.locator('.atlas3d-a11y-list button');
-    assert.ok(await scienceClaims.count() >= 2, 'domínio não abriu a subtree de entidades');
-    await scienceClaims.first().focus();
-    await page.keyboard.press('Enter');
-    await page.locator('.entity-inspector').waitFor();
-    const inspector = (await page.locator('.entity-inspector').innerText()).toLowerCase();
-    for (const field of ['upstream', 'downstream', 'fingerprint', 'source_revision', 'checked_at']) {
-      assert.ok(inspector.includes(field), `inspector sem ${field}`);
-    }
-    await page.screenshot({ path: `${output}/atlas-${name}.png`, fullPage: true });
+
+    // 9. Command Bar navigates and refuses writes where the responsive header exposes it.
+    const commandInput = page.locator('.instrument-search input[aria-label="Buscar e navegar"]');
     if (mobile) {
-      await page.getByRole('button', { name: 'Fechar inspector' }).click();
-      await page.locator('.atlas-sheet').waitFor({ state: 'detached' });
+      assert.equal(await commandInput.count(), 1, 'the command input remains present in the mobile header markup');
+      assert.equal(await commandInput.isVisible(), false, 'the mobile design hides the command input');
+      const productNavigation = page.getByRole('navigation', { name: 'Modo do produto' });
+      assert.equal(await productNavigation.isVisible(), true, 'a navegação responsiva deve continuar visível no mobile');
+      const nowMode = productNavigation.getByRole('button', { name: 'Agora', exact: true });
+      assert.equal(await nowMode.count(), 1, 'o modo Agora deve estar disponível na navegação mobile');
+      await nowMode.click();
+      await page.waitForFunction(() => location.hash === '#/agora');
+      await page.locator('.lab-route[data-view="LAB"]').waitFor();
+    } else {
+      const commandBar = page.getByRole('textbox', { name: 'Buscar e navegar' });
+      await commandBar.fill('truthgraph');
+      await commandBar.press('Enter');
+      await page.locator('.p0-banner').waitFor();
+      await commandBar.fill('deploy produção');
+      await commandBar.press('Enter');
+      assert.match(await page.locator('.notice-box').first().innerText(), /não executa escrita/);
     }
-    await page.getByRole('button', { name: 'Voltar um nível no grafo' }).click();
-    await page.getByRole('button', { name: 'Expandir gráficos' }).click();
-    assert.ok(await graphNodes.count() > 4, 'expandir gráficos não materializou o grafo completo');
-    await page.getByRole('button', { name: 'Voltar à tela inicial dos gráficos' }).click();
-    assert.equal(await graphNodes.count(), 1, 'voltar ao início não restaurou o hub NEXO');
-    await page.getByRole('button', { name: 'Expandir gráficos' }).click();
-
-    // 7. Filtros do Atlas reduzem os nós renderizados e podem ser limpos.
-    const countNodes = () => page.locator('.atlas3d-a11y-list button').count();
-    const before = await countNodes();
-    await page.getByRole('button', { name: /Filtros/ }).click();
-    await page.locator('.atlas-filters').waitFor();
-    await page.locator('.chip-group', { hasText: 'DOMÍNIO' }).getByRole('button', { name: 'OLYMPUS' }).click();
-    assert.ok(await countNodes() < before, 'o filtro de domínio não reduziu o grafo 3D');
-    if (name === 'desktop-dark') await page.screenshot({ path: `${output}/atlas-filtered.png`, fullPage: true });
-    await page.getByRole('button', { name: 'Limpar' }).click();
-    assert.equal(await countNodes(), before, 'limpar filtros não restaurou o grafo 3D');
-
-    // 8. Contexto preservado: o filtro de busca sobrevive à ida e volta entre visões.
-    await page.getByRole('textbox', { name: 'Buscar no grafo' }).fill('olympus');
-    await navigate('Integrity');
-    await navigate('Atlas');
-    assert.equal(await page.getByRole('textbox', { name: 'Buscar no grafo' }).inputValue(), 'olympus',
-      'a busca do Atlas não sobreviveu à navegação');
-    assert.equal(await countNodes(), 0, 'a raiz NEXO deve ocultar entidades fora do nível atual');
-    await page.getByRole('textbox', { name: 'Buscar no grafo' }).fill('');
-
-    // 9. Command Bar: navega e recusa escrita explicitamente.
-    const commandBar = page.getByRole('textbox', { name: 'Comando global' });
-    await commandBar.fill('truthgraph');
-    await commandBar.press('Enter');
-    await page.locator('.p0-banner').waitFor();
-    await commandBar.fill('deploy produção');
-    await commandBar.press('Enter');
-    assert.match(await page.locator('.notice-box').first().innerText(), /não executa escrita/);
 
     // 10. Execution trace com as cinco etapas e readback explícito.
     await navigate('Execution');
@@ -246,8 +308,10 @@ try {
     if (name === 'mobile-dark') await page.screenshot({ path: `${output}/personal-mobile.png`, fullPage: true });
 
     // 12. Navegação por teclado alcança a Command Bar e o tema alterna.
-    await page.keyboard.press('Control+k');
-    assert.equal(await page.evaluate(() => document.activeElement?.getAttribute('aria-label')), 'Comando global');
+    if (!mobile) {
+      await page.keyboard.press('Control+k');
+      assert.equal(await page.evaluate(() => document.activeElement?.getAttribute('aria-label')), 'Buscar e navegar');
+    }
     await page.getByRole('button', { name: theme === 'dark' ? 'Ativar tema claro' : 'Ativar tema escuro' }).click();
     assert.equal(await page.locator('html').getAttribute('data-theme'), theme === 'dark' ? 'light' : 'dark');
 
@@ -260,7 +324,7 @@ try {
   // Passagem visual por cenário: cada estado crítico ganha uma captura própria.
   for (const [scenarioId, view] of SCENARIO_SHOTS) {
     const { context, page, errors } = await newPage(1440, 1000, 'dark', view);
-    await page.goto(baseUrl);
+    await page.goto(`${baseUrl}${VIEW_ROUTES[view] || VIEW_ROUTES.OVERVIEW}`);
     await page.getByRole('heading', { level: 1 }).waitFor();
     await page.getByLabel('Cenário de fixture').selectOption(scenarioId);
     await page.waitForFunction(id => document.querySelector('.fixture-strip select')?.value === id, scenarioId);
@@ -278,4 +342,3 @@ try {
 await writeFile(`${output}/browser-report.json`,
   JSON.stringify({ status: 'pass', scenarios: reports, visualBaseline: 'pending-initial-review' }, null, 2));
 console.log(JSON.stringify(reports.map(r => r.name)));
-

@@ -720,6 +720,7 @@ export function Atlas3DContent({system,themeOverride}:{system:SystemStore;themeO
                 data-domain={node.domain}
                 data-depth={node.depth}
                 data-visible={visibleSet.has(id) ? 'true' : 'false'}
+                aria-label={`${node.name}: ${readableToken(node.status, 'Estado ainda não descrito')}`}
                 onClick={() => activate(id)}
               >
                 {node.name}
