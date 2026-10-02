@@ -100,6 +100,7 @@
     "inbox/scheduled-dener-union3-attack1-bind-20260929.json": "4651ea556bcd0160d908e5cce8f4c9a5f24e58f07ebfcd78bc2807a6cd01415e",
     "inbox/scheduled-dener-union3-review-approved-20260929.json": "a82a5f081943819884ea37a931a23c9314b916ec77d386cff636c08e03f6ba20",
     "inbox/scheduled-engineer-20261002-rankscore-bindings-v2.json": "eb7e5970fc2d25a98d0fbaac0af45eb2c1af855681bcb27951afcaecd57f9df8",
+    "inbox/scheduled-engineer-20261002-rankscore-bindings-v3.json": "c506880956039c6d4ae075b7e6ccb0e94f362bb9f407d40b7ace283c20579070",
     "inbox/scheduled-engineer-board-open-recipes-20260930t0146z.json": "5f5ff31641fbf6ea66b8f1c1b0ea265d954671ae8b14bccfa587610bdfdc7488",
     "inbox/scheduled-engineer-board-peer-escalation-20260930t0145z.json": "891fa05431af5e86f72195a0dce0eaac1f227a9d477d074e72f47c511b5239ed",
     "inbox/scheduled-engineer-delivery-recovered-20260930t1421z.json": "e93db28f0a0a8fa9dd857cc14c7d9f1a98168377883974fc43aa683120c5e709",
@@ -1022,6 +1023,52 @@
         }
       ],
       "tower_revision": "sha256:1bdba5d3c9bef7c914fb8bbba774d7a953d5eae33aa9a99c077030dc474b0cf3"
+    },
+    "inbox/scheduled-engineer-20261002-rankscore-bindings-v3.json": {
+      "fingerprint": "c506880956039c6d4ae075b7e6ccb0e94f362bb9f407d40b7ace283c20579070",
+      "observed_at": "2026-10-02T10:35:41Z",
+      "outcome": "REJECTED_TERMINAL",
+      "receipt_ids": [
+        "OR-2cd215fe8275226a68e136d22a8571d1",
+        "OR-e7d2e53b1a5fac25971b905d3319beba"
+      ],
+      "receipts": [
+        {
+          "contract": "OPERATION_RECEIPT_V1",
+          "effect_id": "envelope-c6b3abb01e017777b62038d0252d3e3f",
+          "intent_id": "gateway:tcc-0fc14e6beebdd15113e5abf9050cd06a",
+          "observed_at": "2026-10-02T10:35:13.937420Z",
+          "occurred_at": "2026-10-02T10:35:13.937403Z",
+          "outcome": "APPLIED",
+          "payload_sha256": "sha256:f8cc02b33506b8a17e15414742965e2dfdbdfdfc38b2dcdcfa27c049b7a7383a",
+          "reason_code": null,
+          "receipt_id": "OR-2cd215fe8275226a68e136d22a8571d1",
+          "result_revision": "sha256:a0ac7ab17b14e451831b89df3e80edf99658d523da9432efc95ebdcf22350d6a",
+          "retry_condition": null,
+          "source_revision": "sha256:ced2f07874a7e3d04630e0f1d883414ec7c9eeaea4e995443500bf682d4777d5",
+          "stage": "APPLIED",
+          "supersedes": null,
+          "visibility": "PUBLIC"
+        },
+        {
+          "contract": "OPERATION_RECEIPT_V1",
+          "effect_id": "envelope-c6b3abb01e017777b62038d0252d3e3f",
+          "intent_id": "gateway:tcc-0fc14e6beebdd15113e5abf9050cd06a",
+          "observed_at": "2026-10-02T10:35:13.975691Z",
+          "occurred_at": "2026-10-02T10:35:13.975681Z",
+          "outcome": "REJECTED_TERMINAL",
+          "payload_sha256": "sha256:2ac02fa16c7b03a5d64f2e0e2ce33785f64efcbd6ef14d679b71dd74e7291cc0",
+          "reason_code": null,
+          "receipt_id": "OR-e7d2e53b1a5fac25971b905d3319beba",
+          "result_revision": "sha256:f8ea62f7d676fa00151be42ba7e081d3fe79d054d0a47879bec978e4088683ab",
+          "retry_condition": null,
+          "source_revision": "sha256:f8ea62f7d676fa00151be42ba7e081d3fe79d054d0a47879bec978e4088683ab",
+          "stage": "DELIVERED",
+          "supersedes": "OR-2cd215fe8275226a68e136d22a8571d1",
+          "visibility": "PUBLIC"
+        }
+      ],
+      "tower_revision": "sha256:2189ac4934c4229e6491e774a042355857fd9ac010aee03fb374a127a89e69cc"
     },
     "inbox/scheduled-engineer-board-open-recipes-20260930t0146z.json": {
       "fingerprint": "5f5ff31641fbf6ea66b8f1c1b0ea265d954671ae8b14bccfa587610bdfdc7488",
