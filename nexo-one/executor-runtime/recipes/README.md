@@ -25,6 +25,12 @@ Sirenes: fontes, priors, limites e comandos em [docs/standard_sirens.md](docs/st
 BAO DR1/DR2: versões, hashes, redshifts dos holdouts, limites e comandos em [docs/w0wa_bao_sn_multi.md](docs/w0wa_bao_sn_multi.md).
 
 
+| `desi_lss_selection_binding_family` | selection-preserving 3D nulls for `GZ01-B03-T03-WINDOW-ROTATION-NULL`; requires frozen manifest and 3D product with complete provenance roles | `mode=window_rotation_null`, recorded T03 identity/prereg, `null_method=selection_stratified_permutation`, `null_count>=100`, `seed`, `statistics[]`, recorded criterion |
+
+DESI 3D map/T03: product format, official 160-file manifest, immutable
+thresholds and remaining blockers are documented in
+[docs/desi_lss_selection_binding_family.md](docs/desi_lss_selection_binding_family.md).
+
 ### Audited historical execution assessments
 
 The Writer may attach the public `EXECUTION_OBSERVATION_ASSESSMENT_V1` overlay
