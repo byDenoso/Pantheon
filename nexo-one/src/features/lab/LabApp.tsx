@@ -1377,14 +1377,21 @@ function Telemetry({ lab, state }: { lab: Lab; state: SystemState }) {
 const Q_LABEL: Record<string, string> = { auto: 'Auto', high: 'Alta', medium: 'Média', low: 'Baixa' };
 function QualityButton() {
   const [q, setQ] = useState(() => { try { return localStorage.getItem('nexo.quality') ?? 'auto'; } catch { return 'auto'; } });
+  const [effective, setEffective] = useState<string | null>(null);
+  useEffect(() => {
+    const update = () => setEffective(document.querySelector<HTMLElement>('.obs-scene')?.dataset.quality ?? null);
+    update(); window.addEventListener('nexo:scene-quality', update);
+    return () => window.removeEventListener('nexo:scene-quality', update);
+  }, []);
+  const label = q === 'auto' && effective ? `Auto · ${Q_LABEL[effective] ?? effective}` : Q_LABEL[q];
   const next = () => {
     const order = ['auto', 'high', 'medium', 'low'];
     const n = order[(order.indexOf(q) + 1) % order.length]!;
     try { if (n === 'auto') localStorage.removeItem('nexo.quality'); else localStorage.setItem('nexo.quality', n); } catch { /* sem armazenamento */ }
     setQ(n); window.location.reload();
   };
-  return <button type="button" onClick={next} title="Qualidade gráfica da teia (clique para trocar)" aria-label={`Qualidade gráfica: ${Q_LABEL[q]}`}>
-    <Icon n="gear" /><span className="bt">Qualidade: {Q_LABEL[q]}</span></button>;
+  return <button type="button" onClick={next} title="Qualidade gráfica da teia (clique para trocar)" aria-label={`Qualidade gráfica: ${label}`}>
+    <Icon n="gear" /><span className="bt">Qualidade: {label}</span></button>;
 }
 
 // ---------- Cartão de resultado: seleção editorial, revisão e números publicados ----------
