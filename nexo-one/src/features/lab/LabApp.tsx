@@ -88,6 +88,7 @@ export default function LabApp({ state, route, theme }: { state: SystemState; ro
   }, [lab]);
   const [focus, setFocus] = useState<string[]>([]);
   const [explore, setExplore] = useState(false);
+  const toolsRef = useRef<HTMLDetailsElement>(null);
   const [sceneAvailable, setSceneAvailable] = useState<boolean | null>(null);
   const hudRef = useRef<HTMLDivElement>(null);
   const scrollPositions = useRef(new Map<string, { page: number; hud: number }>());
@@ -108,9 +109,17 @@ export default function LabApp({ state, route, theme }: { state: SystemState; ro
   // "Só a página": sem a teia atrás (mais leve no celular e mais legível); lembrado neste aparelho.
   const [flat, setFlat] = useState(() => { try { return localStorage.getItem('nexo.flat') === '1'; } catch { return false; } });
   const toggleFlat = () => setFlat(x => { const n = !x; try { localStorage.setItem('nexo.flat', n ? '1' : '0'); } catch { /* sem armazenamento */ } if (n) setExplore(false); return n; });
-  useEffect(() => { setExplore(false); }, [route.page, route.id]);
+  useEffect(() => { setExplore(false); toolsRef.current?.removeAttribute('open'); }, [route.page, route.id]);
   useEffect(() => {
-    const esc = (e: KeyboardEvent) => { if (e.key === 'Escape') setExplore(false); };
+    const esc = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return;
+      setExplore(false);
+      const tools = toolsRef.current;
+      if (tools?.querySelector('.obs-tools-panel')?.contains(document.activeElement)) {
+        tools.querySelector<HTMLElement>('summary')?.focus({ preventScroll: true });
+      }
+      tools?.removeAttribute('open');
+    };
     window.addEventListener('keydown', esc); return () => window.removeEventListener('keydown', esc);
   }, []);
   const thoughtKey = JSON.stringify((state.evolution?.thoughts ?? []).filter(thought => sourceCurrent && isPublishedFresh(thought.at, 2 * 3600e3, publishedNow)).slice(-2).map(thought => thought.id));
@@ -176,24 +185,29 @@ export default function LabApp({ state, route, theme }: { state: SystemState; ro
       <button type="button" onClick={() => { setReplay(null); setFocus([]); }}>✕ parar</button>
     </div>}
 
-    <div className="obs-tools">
-  {!flat && sceneAvailable === true && <button type="button" className="explore-toggle" aria-label={explore ? 'Voltar ao painel' : 'Explorar a teia'} aria-pressed={explore} onClick={() => setExplore(x => !x)}>
+    <div className="obs-tools obs-tools-compact">
+      {!flat && sceneAvailable === true && <button type="button" className="explore-toggle" aria-label={explore ? 'Voltar ao painel' : 'Explorar a teia'} aria-pressed={explore} onClick={() => setExplore(x => !x)}>
       {explore ? <><i aria-hidden="true">✕</i><span className="bt">Voltar ao painel</span></> : <><i aria-hidden="true">⤢</i><span className="bt">Explorar a teia</span></>}</button>}
-      {sceneAvailable !== false && <button type="button" aria-pressed={flat} onClick={toggleFlat} title={flat ? 'Mostrar a teia atrás do painel' : 'Mostrar só a página, sem a teia'} aria-label={flat ? 'Mostrar a teia' : 'Mostrar só a página'}>
-        <Icon n="page" /><span className="bt">{flat ? 'Com a teia' : 'Só a página'}</span></button>}
       <button type="button" onClick={() => setSearching(true)} title="Procurar (Ctrl K)" aria-label="Procurar"><Icon n="target" /><span className="bt">Procurar</span></button>
-      {!flat && sceneAvailable === true && <button type="button" onClick={() => window.dispatchEvent(new Event('nexo:replay-formation'))} title="Volta a teia ao quase-uniforme e mostra, em ~3 minutos, os nós aglomerando e os vazios se expandindo" aria-label="Rever a formação da teia">
+      <details ref={toolsRef} className="obs-tools-more">
+        <summary aria-label="Controles da visualização"><Icon n="gear" /><span className="bt">Controles</span></summary>
+        <div className="obs-tools-panel">
+          {sceneAvailable !== false && <button type="button" aria-pressed={flat} onClick={toggleFlat} title={flat ? 'Mostrar a teia atrás do painel' : 'Mostrar só a página, sem a teia'} aria-label={flat ? 'Mostrar a teia' : 'Mostrar só a página'}>
+        <Icon n="page" /><span className="bt">{flat ? 'Com a teia' : 'Só a página'}</span></button>}
+          {!flat && sceneAvailable === true && <button type="button" onClick={() => window.dispatchEvent(new Event('nexo:replay-formation'))} title="Volta a teia ao quase-uniforme e mostra, em ~3 minutos, os nós aglomerando e os vazios se expandindo" aria-label="Rever a formação da teia">
         <Icon n="replay" /><span className="bt">Rever formação</span></button>}
-      {!flat && sceneAvailable === true && <QualityButton />}
-      <button type="button" aria-pressed={sound} onClick={() => setSound(x => !x)} title="Som ambiente" aria-label="Som ambiente"><Icon n={sound ? 'sound' : 'mute'} /><span className="bt">{sound ? 'Som ligado' : 'Som'}</span></button>
+          {!flat && sceneAvailable === true && <QualityButton />}
+          <button type="button" aria-pressed={sound} onClick={() => setSound(x => !x)} title="Som ambiente" aria-label="Som ambiente"><Icon n={sound ? 'sound' : 'mute'} /><span className="bt">{sound ? 'Som ligado' : 'Som'}</span></button>
+          {explore && <p className="obs-tools-guide" role="status">Arraste: girar · pinça ou roda: zoom · Shift ou 2 dedos: mover · duplo clique: centro · Esc: sair</p>}
+        </div>
+      </details>
     </div>
     {searching && <Search lab={lab} state={state} onClose={() => setSearching(false)} />}
-    {explore && <p className="explore-hint" role="status">Arraste: girar · pinça ou roda: zoom · Shift ou 2 dedos: mover · duplo clique: centro · Esc: sair</p>}
     {!flat && <Suspense fallback={<div className="obs-scene obs-scene--loading" />}>
       <ObservatoryScene explore={explore || replay !== null} hot={hot} tests={tests} sourceCurrent={sourceCurrent} events={events} page={route.page} focusIds={focus} theme={theme}
         onAvailability={setSceneAvailable} onPick={id => { window.location.hash = labHref('entidade', id); }} />
     </Suspense>}
-    <div ref={hudRef} className="hud" key={`${route.page}:${route.id ?? ''}`} >{changes.length > 0 && <aside className="published-changes" aria-label="Mudanças recebidas nesta visita"><p role="status">{changes.length} mudanças recebidas · fonte {ago(changedAt)}</p><details><summary>Ver o que mudou sem sair da página</summary><ul>{changes.slice(0, 12).map(change => <li key={change.id}><E id={change.id}>{change.name}</E><span>{change.kind === 'review' ? `${VERDICT_PT[change.before as Verdict] ?? change.before} → ${VERDICT_PT[change.after as Verdict] ?? change.after}` : change.kind === 'added' ? 'Teste passou a constar nesta leitura' : change.before ? `${change.before} → ${change.after}` : change.after}</span></li>)}</ul>{changes.length > 12 && <p>Mostrando 12 de {changes.length}. Consulte a Evidência para o estado completo.</p>}</details><button type="button" onClick={() => setChanges([])}>Dispensar aviso</button></aside>}{sceneAvailable === false && !flat && <p className="scene-fallback-note">Visualização leve · a teia 3D requer WebGL. Todas as páginas e evidências continuam disponíveis.</p>}{page}<Acoustic /></div>
+    <div ref={hudRef} className="hud" inert={sceneAvailable !== false && (explore || replay !== null)} key={`${route.page}:${route.id ?? ''}`} >{changes.length > 0 && <aside className="published-changes" aria-label="Mudanças recebidas nesta visita"><p role="status">{changes.length} mudanças recebidas · fonte {ago(changedAt)}</p><details><summary>Ver o que mudou sem sair da página</summary><ul>{changes.slice(0, 12).map(change => <li key={change.id}><E id={change.id}>{change.name}</E><span>{change.kind === 'review' ? `${VERDICT_PT[change.before as Verdict] ?? change.before} → ${VERDICT_PT[change.after as Verdict] ?? change.after}` : change.kind === 'added' ? 'Teste passou a constar nesta leitura' : change.before ? `${change.before} → ${change.after}` : change.after}</span></li>)}</ul>{changes.length > 12 && <p>Mostrando 12 de {changes.length}. Consulte a Evidência para o estado completo.</p>}</details><button type="button" onClick={() => setChanges([])}>Dispensar aviso</button></aside>}{sceneAvailable === false && !flat && <p className="scene-fallback-note">Visualização leve · a teia 3D requer WebGL. Todas as páginas e evidências continuam disponíveis.</p>}{page}<Acoustic /></div>
     <Telemetry lab={lab} state={state} />
   </div>;
 }

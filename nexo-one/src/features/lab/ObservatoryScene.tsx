@@ -101,7 +101,7 @@ void main(){
   float a = (glow*0.85 + core) * vAlpha * (1.0 - smoothstep(0.42, 0.5, d)); if (a < 0.004) discard;
   vec3 lit = vTint * (0.55 + glow*0.8) + core*0.6;
   // Tema claro: tinta ciano-escura sobre papel (mesma matiz, sem brilho aditivo).
-  vec3 inked = mix(vec3(0.30,0.22,0.08), vTint*0.42, 0.3);
+  vec3 inked = mix(vec3(0.092607,0.254668,0.347275), vTint*0.42, 0.3);
   gl_FragColor = vec4(mix(lit, inked, ink), ink > 0.5 ? a*0.55 : a);
 }`;
 
@@ -132,7 +132,7 @@ varying float vFade;
 void main(){
   vec2 c = gl_PointCoord - 0.5; float d = length(c);
   float a = exp(-d*d*20.0) * vFade; if (a < 0.01) discard;
-  gl_FragColor = vec4(vec3(0.95,0.9,0.82)*(0.6+vFade*0.6), a);
+  gl_FragColor = vec4(vec3(0.836881,0.918528,0.969557)*(0.6+vFade*0.6), a);
 }`;
 
 const rnd = (text: string): number => {
@@ -145,8 +145,8 @@ const rnd = (text: string): number => {
 const jitter = (seed: string, s: number): [number, number, number] =>
   [(rnd(seed + 'x') - 0.5) * s, (rnd(seed + 'y') - 0.5) * s, (rnd(seed + 'z') - 0.5) * s];
 
-// Paleta da teia (dourado sobre preto): gás escuro -> filamento dourado-queimado -> nó branco quente.
-const INFERNO = ['#030302', '#130f08', '#35291a', '#7a5f35', '#d4bf95', '#fff6e4'].map(c => new Color(c));
+// Paleta da teia (azul sobre preto): gás escuro -> filamento azul -> nó branco frio.
+const INFERNO = ['#020305', '#09101a', '#1a2d3c', '#3b688a', '#9ac6ec', '#edf9ff'].map(c => new Color(c));
 const inferno = (t: number) => {
   const x = Math.max(0, Math.min(0.999, t)) * (INFERNO.length - 1), i = Math.floor(x), f = x - i;
   return INFERNO[i]!.clone().lerp(INFERNO[i + 1]!, f);
@@ -273,7 +273,7 @@ export function ObservatoryScene({ tests, page, focusIds, onPick, onAvailability
         const r = Math.pow(Math.random(), 2.2) * 2.4, th = Math.random() * Math.PI * 2, ph = Math.acos(2 * Math.random() - 1);
         push(web, [d.x + r * Math.sin(ph) * Math.cos(th), d.y + r * Math.cos(ph), d.z + r * Math.sin(ph) * Math.sin(th)], inferno(0.95 - r * 0.2), 3 + Math.random() * 4);
       }
-      push(web, [d.x, d.y, d.z], new Color('#fff4df'), 95, 0.08);
+      push(web, [d.x, d.y, d.z], new Color('#eef6ff'), 95, 0.08);
     });
 
     // Hipóteses: nós ao redor do seu domínio; testes ao longo do filamento hipótese->domínio.
@@ -300,13 +300,13 @@ export function ObservatoryScene({ tests, page, focusIds, onPick, onAvailability
           const r = Math.pow(Math.random(), 0.6) * R;
           const th = Math.random() * Math.PI * 2, ph = Math.acos(2 * Math.random() - 1);
           push(web, [node.x + r * Math.sin(ph) * Math.cos(th), node.y + r * Math.cos(ph) * 0.55, node.z + r * Math.sin(ph) * Math.sin(th)],
-            [0.2 + Math.random() * 0.06, 0.11, 0.05], 38 + Math.random() * 46, 0.05);
+            [0.05, 0.139446, 0.2 + Math.random() * 0.176676], 38 + Math.random() * 46, 0.05);
         }
         for (let q = 0; q < ready * 2; q += 1) {                // proto-estrelas: poucas, pequenas, quentes
           const r = Math.pow(Math.random(), 1.4) * R * 0.7;
           const th = Math.random() * Math.PI * 2, ph = Math.acos(2 * Math.random() - 1);
           push(web, [node.x + r * Math.sin(ph) * Math.cos(th), node.y + r * Math.cos(ph) * 0.55, node.z + r * Math.sin(ph) * Math.sin(th)],
-            [0.85, 0.62, 0.42], 5 + Math.random() * 4, 0.35);
+            [0.462681, 0.683005, 0.936378], 5 + Math.random() * 4, 0.35);
         }
         clouds.push({ at: node.clone(), ready, label: list[0]?.name ?? '' });
       }
@@ -338,12 +338,12 @@ export function ObservatoryScene({ tests, page, focusIds, onPick, onAvailability
     const qso = buf();
     ev.quasars.forEach((e, k) => {
       const at = domainPos[domainIndex(e.domain)]!.clone().add(new Vector3(...jitter(`q${k}${e.label}`, 5)));
-      push(qso, [at.x, at.y, at.z], [1, 0.93, 0.82], 150, reduced ? 0 : 0.35, rnd(e.label));
+      push(qso, [at.x, at.y, at.z], [0.844686, 0.957997, 1], 150, reduced ? 0 : 0.35, rnd(e.label));
       anchors.push(at);
     });
     ev.grbs.forEach((e, k) => {
       const at = domainPos[domainIndex(e.domain)]!.clone().add(new Vector3(...jitter(`g${k}`, 2.5)));
-      push(qso, [at.x, at.y, at.z], [0.98, 0.92, 0.8], 70, reduced ? 0 : 1, rnd(`g${k}`));
+      push(qso, [at.x, at.y, at.z], [0.823020, 0.946474, 1], 70, reduced ? 0 : 1, rnd(`g${k}`));
       anchors.push(at);
     });
     const qsoMat = new ShaderMaterial({ uniforms, vertexShader: VERT, fragmentShader: QSO_FRAG, transparent: true, depthWrite: false, blending: AdditiveBlending });
