@@ -315,3 +315,5 @@
 :root[data-theme="light"] .lab-route .observatory{--v-confirmed:#0c6345}
 
 :root[data-theme] .lab-route .fr-grade.g-tension{background:rgba(var(--atlas-cyan-rgb),.12)}
+
+:root[data-theme="light"] .lab-route .observatory{--v-running:#0d518a;--v-checkpointed:#0d518a}
