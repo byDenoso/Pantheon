@@ -465,6 +465,7 @@
     "inbox/scheduled-referee1-20261001-a2-binjack-4.json": "69c2cee3100deeaa50144654e3ec175613a832990cba261b3db669805fe13068",
     "inbox/scheduled-referee1-20261001-a2-rank-loo.json": "2f3777bf88af399f2582c8e768aee9926434f114a78a8ff2bf76f5f6852f7e81",
     "inbox/scheduled-referee1-20261001-a2-rd-broad-om315-des-u3-binjack.json": "7e55df3b8b66564aca9e7b56848edf77225d3546c7b6d921414f089bb0879fd7",
+    "inbox/scheduled-referee1-20261001-a2-rd-broad-om315-pp-u3-binjack.json": "1accae3b886f10e41ef321aed9986a5721f64208de0a86b7fce81c5116498a8e",
     "inbox/scheduled-referee1-20261001-a2-rd-broad-om330-binjack.json": "e6b98c2e73f44c2e364bb8ba714ab8ff38279c1de03a1651d7fe3769bc9e020a",
     "inbox/scheduled-referee1-20261001-a2-seis-binjack.json": "f2f5e7213cf9712561777f582bbfce4b2ecba9beffa928a7293e86dae757bdf9",
     "inbox/scheduled-referee1-20261001-a2-trio-om315-binjack.json": "9812aad731450970a65d392021f5305f72acef073ccea842ea6a77c8bf8fd50a",
@@ -1510,9 +1511,9 @@
       "tower_revision": "sha256:7de52eaab8490e4edf7d27361095841d5d24073cdae947df213285a56e6c902e"
     },
     "inbox/scheduled-guardiao-integrity-20261002t0513z.json": {
-      "applied_at": "2026-10-02T05:18:49Z",
+      "applied_at": "2026-10-02T05:22:36Z",
       "fingerprint": "4f2bf5a8ff5d69738e4d1261934d6170ecc65438843a8d96a1d83e9dc3bf9046",
-      "tower_revision": "sha256:a3d2357f179685e0d11b81530aa1068959f8c250bb1acf8fe88a36da1cac3632"
+      "tower_revision": "sha256:b04c5baceef7e3e00c7b3471a20d25d1cf7838d920f8fd8a7eb48cc15750de0a"
     },
     "inbox/scheduled-guardiao-integrity-256956b433317ea8.json": {
       "applied_at": "2026-09-30T23:44:02Z",
@@ -1559,9 +1560,9 @@
       "tower_revision": "sha256:5e27bf068536be861b2b47fa390a2e07b13da1224ef1c3d972088e34caaf3c3f"
     },
     "inbox/scheduled-guardiao-recipe-review-pr398-3c858ccc.json": {
-      "applied_at": "2026-10-02T05:18:49Z",
+      "applied_at": "2026-10-02T05:22:36Z",
       "fingerprint": "d82e947da2e825592c3e696eca930dc278197d9443b73e1d5de4c12a8006a679",
-      "tower_revision": "sha256:a3d2357f179685e0d11b81530aa1068959f8c250bb1acf8fe88a36da1cac3632"
+      "tower_revision": "sha256:b04c5baceef7e3e00c7b3471a20d25d1cf7838d920f8fd8a7eb48cc15750de0a"
     },
     "inbox/scheduled-guardiao-recipe-review-pr399-966b87af.json": {
       "applied_at": "2026-10-02T02:41:17Z",
@@ -2583,6 +2584,11 @@
       "applied_at": "2026-10-02T02:29:45Z",
       "fingerprint": "7e55df3b8b66564aca9e7b56848edf77225d3546c7b6d921414f089bb0879fd7",
       "tower_revision": "sha256:64f723470edc6c50cd1bb1974ec9ea481e5703b559a7f15f00c6defb224f8a2a"
+    },
+    "inbox/scheduled-referee1-20261001-a2-rd-broad-om315-pp-u3-binjack.json": {
+      "applied_at": "2026-10-02T05:22:36Z",
+      "fingerprint": "1accae3b886f10e41ef321aed9986a5721f64208de0a86b7fce81c5116498a8e",
+      "tower_revision": "sha256:b04c5baceef7e3e00c7b3471a20d25d1cf7838d920f8fd8a7eb48cc15750de0a"
     },
     "inbox/scheduled-referee1-20261001-a2-rd-broad-om330-binjack.json": {
       "applied_at": "2026-10-02T03:22:27Z",
