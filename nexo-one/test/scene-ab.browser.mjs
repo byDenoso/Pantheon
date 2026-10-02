@@ -181,11 +181,13 @@ try {
         probe.observer.observe({ type: 'longtask' });
       }, { quality: profile.quality, seed: report.protocol.seed });
       await page.route('**/api/session', route => route.fulfill({ json: { configured: false, authenticated: false } }));
-      await page.route('**/api/system*', route => route.fulfill({ json: system }));
+      let inputReads = 0;
+      await page.route('**/api/system*', route => { inputReads++; return route.fulfill({ json: system }); });
       await page.route('**/build-meta.json*', route => route.fulfill({ json: { projection_fingerprint: projection.manifest.projection_fingerprint } }));
       await page.goto('http://127.0.0.1:' + (variant === 'baseline' ? 4181 : 4182) + '/#/agora');
       await page.locator('.obs-scene canvas').waitFor();
       await page.evaluate(() => document.fonts.ready);
+      assert.ok(inputReads > 0, 'compiled source must consume the shared controlled System input');
       await page.waitForFunction(() => window.__sceneAB.totalFrames >= 2, null, { timeout: 60_000 });
       await page.waitForTimeout(1000);
       const geometry = await page.evaluate(async () => {
@@ -247,7 +249,7 @@ try {
         phases.push(summary);
         console.log('SCENE_AB ' + JSON.stringify({ profile: profile.name, repeat, variant, geometryHash, ...summary, rawFrames: undefined, inputTrace: undefined }));
       }
-      records.push({ profile, repeat, variant, order: variants.join(' -> '), geometryHash, geometryBufferCount: geometry.length, phases, errors });
+      records.push({ profile, repeat, variant, order: variants.join(' -> '), geometryHash, geometryBufferCount: geometry.length, inputReads, phases, errors });
       assert.deepEqual(errors, [], 'no page errors');
       await context.close();
     }

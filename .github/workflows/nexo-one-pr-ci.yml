@@ -87,7 +87,8 @@ jobs:
           git fetch --no-tags --depth=1 origin "$NEXO_AB_BASELINE_SHA"
           git worktree add --detach "$baseline_dir" FETCH_HEAD
           ln -s "$PWD/node_modules" "$baseline_dir/nexo-one/node_modules"
-          (cd "$baseline_dir/nexo-one"; npm run build)
+          VITE_SYSTEM_SOURCE=remote npm run build
+          (cd "$baseline_dir/nexo-one"; VITE_SYSTEM_SOURCE=remote npm run build)
           NEXO_AB_BASELINE_DIR="$baseline_dir/nexo-one" node test/scene-ab.browser.mjs
 
       - name: Upload Atlas visual QA evidence
