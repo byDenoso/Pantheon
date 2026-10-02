@@ -24,6 +24,7 @@ RECOVERY_WORK_ID = "WORK::RECOVERY-9ec8d79f540e5103bc62321946a2c4c8"
 RECIPE_FAMILY = "desi_lss_selection_binding_family"
 EXPECTED_FILE_COUNT = 160
 EXPECTED_TOTAL_BYTES = 139_526_840_064
+EXPECTED_FILES_INDEX_SHA256 = "6329997ffa7078ffbebd99c1a27c76a0273262e7ec21ac119b384d8a1bbf9f60"
 EXPECTED_TRACERS = ("BGS_ANY", "LRG", "ELG_LOPnotqso", "QSO")
 EXPECTED_REGIONS = ("NGC", "SGC")
 MAX_RECEIPT_BYTES = 2 * 1024 * 1024
@@ -137,9 +138,9 @@ def validate_receipt_bytes(raw: bytes, expected_sha256: str) -> dict:
         raise MaterializationReceiptError(
             "materialization receipt verification summary is invalid"
         )
-    if not _valid_sha256(verification.get("files_index_sha256")):
+    if verification.get("files_index_sha256") != EXPECTED_FILES_INDEX_SHA256:
         raise MaterializationReceiptError(
-            "materialization receipt lacks a valid files-index SHA256"
+            "materialization receipt files-index differs from the frozen T01 manifest"
         )
     files = receipt.get("files")
     if not isinstance(files, list) or len(files) != EXPECTED_FILE_COUNT:
@@ -186,7 +187,8 @@ def validate_receipt_bytes(raw: bytes, expected_sha256: str) -> dict:
     files_index_sha256 = hashlib.sha256(
         "".join(sorted(lines, key=lambda line: line.split("  ")[1])).encode("utf-8")
     ).hexdigest()
-    if files_index_sha256 != verification["files_index_sha256"]:
+    if (files_index_sha256 != verification["files_index_sha256"]
+            or files_index_sha256 != EXPECTED_FILES_INDEX_SHA256):
         raise MaterializationReceiptError(
             "materialization receipt files-index SHA256 is inconsistent"
         )
