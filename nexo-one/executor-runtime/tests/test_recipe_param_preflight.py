@@ -1,5 +1,6 @@
 import ast
 import copy
+from concurrent.futures import ThreadPoolExecutor
 import hashlib
 import json
 import os
@@ -7,6 +8,7 @@ from pathlib import Path
 import subprocess
 import sys
 import tempfile
+import threading
 import textwrap
 import unittest
 from unittest.mock import patch
@@ -344,22 +346,57 @@ class DesiSelectionMaterializationPreflight(unittest.TestCase):
                 digest,
             )
 
-    def test_receipt_write_is_idempotent_and_refuses_overwrite(self):
+    def test_receipt_publish_is_atomic_idempotent_and_refuses_overwrite(self):
         with tempfile.TemporaryDirectory() as temp:
             base = Path(temp)
             staging = base / 'staging'
             receipt = base / 'receipt.json'
             payload = {'schema': 'synthetic', 'value': 1}
-            self.module['_write_json'](receipt, payload, staging)
+            with ThreadPoolExecutor(max_workers=8) as pool:
+                futures = [
+                    pool.submit(self.module['_write_json'], receipt, payload, staging)
+                    for _ in range(16)
+                ]
+                for future in futures:
+                    self.assertIsNone(future.result())
             first = receipt.read_bytes()
             self.module['_write_json'](receipt, payload, staging)
             self.assertEqual(receipt.read_bytes(), first)
+            self.assertFalse(any('.publish-' in item.name for item in base.iterdir()))
             with self.assertRaisesRegex(
                 self.module['StagingError'], 'refusing to overwrite'
             ):
                 self.module['_write_json'](
                     receipt, {'schema': 'synthetic', 'value': 2}, staging
                 )
+
+    def test_concurrent_different_url_lists_never_overwrite_winner(self):
+        with tempfile.TemporaryDirectory() as temp:
+            base = Path(temp)
+            staging = base / 'staging'
+            output = base / 'urls.txt'
+            barrier = threading.Barrier(2)
+            records = [
+                [{'url': 'https://example.org/a'}],
+                [{'url': 'https://example.org/b'}],
+            ]
+
+            def publish(value):
+                barrier.wait()
+                try:
+                    self.module['_write_url_list'](output, value, staging)
+                    return 'published'
+                except self.module['StagingError']:
+                    return 'refused'
+
+            with ThreadPoolExecutor(max_workers=2) as pool:
+                outcomes = list(pool.map(publish, records))
+            self.assertEqual(sorted(outcomes), ['published', 'refused'])
+            self.assertIn(
+                output.read_bytes(),
+                (b'https://example.org/a\n', b'https://example.org/b\n'),
+            )
+            self.assertFalse(any('.publish-' in item.name for item in base.iterdir()))
 
     def test_failure_payload_is_operational_and_never_scientific(self):
         payload = self.module['_failure_payload'](
