@@ -34,11 +34,14 @@ def _validate_desi(manifest, params, inputs, reject):
             'reject_all_p_emp_gte': 0.1,
         },
         'selection_manifest_sha256': '6ce284a355085679eb528517746b247fa2c48902c6158ca556ae9c197b34c65a',
+        'null_count': 199,
+        'statistics': [
+            {'name': 'max_abs_gaussian_smoothed_delta', 'sigma_cells': 0.32},
+        ],
     }
     if identity != expected_identity:
         raise ValueError('DESI preflight identity differs from the recorded T03 contract')
     if limits != {
-            'null_count_min': 100,
             'seed_min': 0,
             'seed_max_exclusive': 2**63,
     }:
@@ -91,10 +94,8 @@ def _validate_desi(manifest, params, inputs, reject):
         reject('TEST_CONTRACT_MISMATCH', 'test_id/prereg_hash differ from T03')
     if params.get('null_method') != identity['null_method']:
         reject('UNSUPPORTED_NULL_METHOD', str(params.get('null_method')))
-    null_count = params.get('null_count')
-    if (isinstance(null_count, bool) or not isinstance(null_count, int)
-            or null_count < limits['null_count_min']):
-        reject('NULL_COUNT_INVALID', 'null_count must be an integer >=100')
+    if params.get('null_count') != identity['null_count']:
+        reject('FROZEN_NULL_COUNT_MISMATCH', 'null_count must equal the applied RECIPE_BIND value')
     seed = params.get('seed')
     if (isinstance(seed, bool) or not isinstance(seed, int)
             or not limits['seed_min'] <= seed < limits['seed_max_exclusive']):
@@ -103,33 +104,14 @@ def _validate_desi(manifest, params, inputs, reject):
         reject('FROZEN_CRITERION_MISMATCH', 'criterion differs from the recorded thresholds')
 
     statistics = params.get('statistics')
-    if not isinstance(statistics, list) or not statistics:
-        reject('FROZEN_STATISTICS_REQUIRED', 'at least one extreme statistic must be frozen')
-    else:
-        names = []
-        for spec in statistics:
-            if not isinstance(spec, dict) or not isinstance(spec.get('name'), str):
-                reject('FROZEN_STATISTIC_INVALID', repr(spec))
-                continue
-            name = spec['name']
-            names.append(name)
-            contract = statistic_contracts.get(name)
-            if contract is None or set(spec) != set(contract['fields']):
-                reject('FROZEN_STATISTIC_INVALID', name)
-            elif name == 'max_abs_gaussian_smoothed_delta':
-                value = spec.get('sigma_cells')
-                if (not finite(value) or not contract['sigma_cells_gt'] < value
-                        or value > contract['sigma_cells_lte']):
-                    reject('FROZEN_STATISTIC_INVALID', name)
-            else:
-                threshold = spec.get('abs_delta_gte')
-                connectivity = spec.get('connectivity')
-                if (not finite(threshold) or not threshold > contract['abs_delta_gte_gt']
-                        or isinstance(connectivity, bool)
-                        or connectivity not in contract['connectivity']):
-                    reject('FROZEN_STATISTIC_INVALID', name)
-        if len(names) != len(set(names)):
-            reject('FROZEN_STATISTIC_INVALID', 'statistic names must be unique')
+    if statistics != identity['statistics']:
+        reject(
+            'FROZEN_STATISTICS_MISMATCH',
+            'statistics must equal the applied max_abs_gaussian_smoothed_delta/sigma_cells binding',
+        )
+    elif (not isinstance(statistics, list) or len(statistics) != 1
+            or not finite(statistics[0].get('sigma_cells'))):
+        reject('FROZEN_STATISTIC_INVALID', 'applied statistic is malformed')
 
     required_names = set(input_contract['required_names'])
     actual = {}
