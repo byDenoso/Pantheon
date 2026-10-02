@@ -24,6 +24,8 @@ RECOVERY_WORK_ID = "WORK::RECOVERY-9ec8d79f540e5103bc62321946a2c4c8"
 RECIPE_FAMILY = "desi_lss_selection_binding_family"
 EXPECTED_FILE_COUNT = 160
 EXPECTED_TOTAL_BYTES = 139_526_840_064
+EXPECTED_TRACERS = ("BGS_ANY", "LRG", "ELG_LOPnotqso", "QSO")
+EXPECTED_REGIONS = ("NGC", "SGC")
 MAX_RECEIPT_BYTES = 2 * 1024 * 1024
 
 
@@ -163,6 +165,19 @@ def validate_receipt_bytes(raw: bytes, expected_sha256: str) -> dict:
         total_bytes += item["size_bytes"]
         lines.append(
             f"{item['sha256']}  {item['name']}  {item['size_bytes']}\n"
+        )
+    expected_names = set()
+    for tracer in EXPECTED_TRACERS:
+        for region in EXPECTED_REGIONS:
+            expected_names.add(f"{tracer}_{region}_clustering.dat.fits")
+            expected_names.add(f"{tracer}_{region}_nz.txt")
+            expected_names.update(
+                f"{tracer}_{region}_{index}_clustering.ran.fits"
+                for index in range(18)
+            )
+    if names != expected_names:
+        raise MaterializationReceiptError(
+            "materialization receipt does not contain the exact T01 filename set"
         )
     if total_bytes != EXPECTED_TOTAL_BYTES:
         raise MaterializationReceiptError(
