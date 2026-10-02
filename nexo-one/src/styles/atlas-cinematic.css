@@ -44,6 +44,13 @@
 :root[data-theme="light"] .observatory{--o-glass:rgba(252,249,243,.94)!important;--o-dim:#484b51;--o-quiet:#61636b;--v-blocked:#675d71;--v-discarded:#69636c}
 :root[data-theme="light"] .observatory{--o-accent:#795a20;--o-accent-rgb:121,90,32;--sig-gold:#795a20;--sig-oiii:#795a20;--v-rejected:#86502c;--v-running:#475f8a;--v-checkpointed:#6a597d}
 :root[data-theme="dark"] .lab-route{--accent:#9fc9ff;--obs-sodium:#9fc9ff;--obs-sodium-ink:#9fc9ff;--obs-void:#070a10;--sig-gold:#9fc9ff;--sig-spectrum:linear-gradient(90deg,transparent,#58789e 18%,#9fc9ff 60%,#edf6ff 84%,transparent)}
+/* Brand and navigation selection use their own accent, outside the scene palette. */
+:root[data-theme="dark"] .lab-route .instrument-header{
+  --o-accent:#3fd0e0;--o-accent-rgb:63,208,224;--obs-sodium:#3fd0e0;--obs-bright:#3fd0e0;--sig-gold:#3fd0e0;--sig-oiii:#3fd0e0;
+}
+:root[data-theme="light"] .lab-route .instrument-header{
+  --o-accent:#145b94;--o-accent-rgb:20,91,148;--obs-sodium:#145b94;--obs-bright:#145b94;--sig-gold:#145b94;--sig-oiii:#145b94;
+}
 .observatory .v-running{color:var(--v-running)}.observatory .v-checkpointed{color:var(--v-checkpointed)}
 .observatory .fr-source{font:11px/1.6 var(--f-mono);color:var(--o-dim);overflow-wrap:anywhere}
 .observatory .metric-discrepancy{border-left:2px solid var(--v-review);padding-left:12px}
@@ -237,3 +244,27 @@
 
 /* Published QSO labels inherit the local interface accent. */
 .observatory .obs-ev--qso{border-color:rgba(var(--o-accent-rgb),.6);box-shadow:0 0 18px rgba(var(--o-accent-rgb),.35)}
+
+/* The header keeps its height when the feed is long, and names can wrap. */
+.observatory .telemetry>header{flex:0 0 auto}
+.observatory .tele-feed{min-height:0}
+.observatory .tele-h{flex-wrap:wrap;overflow-wrap:anywhere}
+.observatory .tele-h time{white-space:nowrap}
+.observatory .board-replies{margin:12px 0;color:var(--o-dim)}
+.observatory .board-replies summary{cursor:pointer;min-height:44px;display:flex;align-items:center;color:var(--o-accent)}
+.observatory .board-replies blockquote{margin:8px 0;padding:10px 14px;border-left:2px solid var(--o-line);overflow-wrap:anywhere}
+
+@media(min-width:761px){
+ .observatory[data-page="universo"] .universe-intro{align-items:start;gap:24px;margin-bottom:24px}
+ .observatory[data-page="universo"] .universe-map{width:min(100%,440px);max-height:440px;justify-self:center}
+ .observatory[data-page="universo"]:not(.exploring) .obs-tools{position:absolute;top:8px!important;bottom:auto!important}
+ .observatory[data-page="universo"]:not(.exploring) .obs-tools-panel{top:calc(100% + 8px);bottom:auto}
+}
+@media(min-width:761px) and (max-width:1100px){
+ :root[data-theme] .lab-route .instrument-header{gap:6px;padding-inline:10px}
+ :root[data-theme] .lab-route .instrument-brand strong{display:none}
+ :root[data-theme] .lab-route .instrument-modes button{padding-inline:7px;letter-spacing:.06em}
+ :root[data-theme] .lab-route .instrument-sync{width:32px;padding:0;justify-content:center}
+ .lab-route .instrument-sync>span:last-child{display:none}
+ .observatory[data-page="universo"] .hud{padding-top:80px}
+}

@@ -568,10 +568,10 @@ export function ObservatoryScene({ tests, page, focusIds, onPick, onAvailability
     const eventEls = [...(labels.current?.querySelectorAll('[data-event]') ?? [])] as HTMLElement[];
     const proj = new Vector3();
 
-    let raf = 0, last = performance.now(), visible = true, expansion = 1, lodTick = 0;
+    let raf = 0, last = performance.now(), pacedAt = last, previousBudget = 0, visible = true, expansion = 1, lodTick = 0;
     let contextLost = false;
     const lost = (event: Event) => { event.preventDefault(); contextLost = true; onAvailability?.(false); };
-    const restored = () => { contextLost = false; last = performance.now(); onAvailability?.(true); };
+    const restored = () => { contextLost = false; pacedAt = last = performance.now(); slowAcc = 0; slowN = 0; onAvailability?.(true); };
     canvas.addEventListener('webglcontextlost', lost); canvas.addEventListener('webglcontextrestored', restored);
     const FORM_S = 180; let cosmic = 0;
     const replay = () => { cosmic = 0; };
@@ -580,10 +580,15 @@ export function ObservatoryScene({ tests, page, focusIds, onPick, onAvailability
     document.addEventListener('visibilitychange', vis);
     const frame = (now: number) => {
       raf = requestAnimationFrame(frame);
-      if (!visible || contextLost) { last = now; return; }
+      if (!visible || contextLost) { pacedAt = last = now; slowAcc = 0; slowN = 0; return; }
       // A reading surface does not need 60 WebGL frames per second.
       const frameBudget = 1000 / (reduced ? 15 : mobile || !exploreRef.current ? 30 : 60);
-      if (now - last < frameBudget) return;
+      // Reading and orbiting have different targets; their quality samples cannot mix.
+      if (frameBudget !== previousBudget) { previousBudget = frameBudget; pacedAt = last = now; slowAcc = 0; slowN = 0; }
+      const elapsed = now - pacedAt;
+      if (elapsed < frameBudget - 0.1) return;
+      // Keep the fractional interval so refresh rates above the target do not lose frames.
+      pacedAt += Math.max(1, Math.floor((elapsed + 0.1) / frameBudget)) * frameBudget;
       const dt = Math.min(0.05, (now - last) / 1000); last = now;
       if (!reduced) uniforms.time.value += dt;
       // Relógio cósmico: a formação é visível — ~3 min do quase-uniforme até a teia madura
@@ -703,4 +708,3 @@ export function ObservatoryScene({ tests, page, focusIds, onPick, onAvailability
     </div>
   </div>;
 }
-
