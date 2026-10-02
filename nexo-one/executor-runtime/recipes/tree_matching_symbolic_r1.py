@@ -14,6 +14,8 @@ class Monomial:
         other = other if isinstance(other, Monomial) else Monomial(other)
         return Monomial(self.coefficient * other.coefficient, self.f + other.f, self.mu2 + other.mu2)
 
+    __rmul__ = __mul__
+
     def __truediv__(self, other):
         other = other if isinstance(other, Monomial) else Monomial(other)
         if other.coefficient == 0:
