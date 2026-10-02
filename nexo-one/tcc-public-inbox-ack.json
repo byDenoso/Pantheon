@@ -381,6 +381,7 @@
     "inbox/scheduled-operator-b-private-path-recovered-20261001t2205z.json": "64fe3c454569c93158deebf79ffaffd6ac22bdd6c493c8b4a57f52cc83a23790",
     "inbox/scheduled-operator-b-rdcal-terminal-drift-20261001t2149z.json": "b9de369ee4497ef1141bca1a65ed56277e35d6ff2008bae2e8e01ce49b4c3422",
     "inbox/scheduled-operator-b-ready-terminal-drift-20260930t1949z.json": "a5b1a7a1a04d452ef6f3d936499e2d8a0596639fe3442e0682b3692c12acaad3",
+    "inbox/scheduled-operator-b-role-routing-mismatch-20261002t0555z.json": "acd09c93610943edf35d3e3ba06aee33cf4c19d3f1717643efb15d75bf01cd96",
     "inbox/scheduled-operator-bind-de26-007-growth-geometry-min.json": "4b6210230ef536eae3bcbc276f1fa6f73c50fe44be852d81e93e74c879f20abd",
     "inbox/scheduled-operator-bind-h0x26-010-cf4-min.json": "85c8557c3fca1a297de230d3042fb908963c5abe81defbbbd74e4b43c4b1e242",
     "inbox/scheduled-operator-bind-hyp-growth-shape-desi-dr1-min.json": "535904e95e7b07fe23315fdd4ac1ef72178363652c3e3f3e9f6fd83335a9e7c4",
@@ -2213,6 +2214,11 @@
     "inbox/scheduled-operator-b-ready-terminal-drift-20260930t1949z.json": {
       "fingerprint": "a5b1a7a1a04d452ef6f3d936499e2d8a0596639fe3442e0682b3692c12acaad3",
       "source": "legacy-acked"
+    },
+    "inbox/scheduled-operator-b-role-routing-mismatch-20261002t0555z.json": {
+      "applied_at": "2026-10-02T05:56:30Z",
+      "fingerprint": "acd09c93610943edf35d3e3ba06aee33cf4c19d3f1717643efb15d75bf01cd96",
+      "tower_revision": "sha256:a36531e6795e40b0219c9dd6c5e4d9abe7661189ec1700cc19e733a3dfcb2571"
     },
     "inbox/scheduled-operator-bind-de26-007-growth-geometry-min.json": {
       "fingerprint": "4b6210230ef536eae3bcbc276f1fa6f73c50fe44be852d81e93e74c879f20abd",
