@@ -50,9 +50,9 @@ export function layoutDomains(ids: string[]): DomainSpot[] {
 }
 
 const VERDICT_RGB: Record<Verdict, [number, number, number]> = {
-  CONFIRMED: [0.62, 0.86, 0.7], REFUTED: [0.9, 0.46, 0.4], REVIEW: [0.92, 0.76, 0.48], PROVISIONAL: [0.7, 0.75, 0.86],
+  CONFIRMED: [0.62, 0.86, 0.7], REFUTED: [0.16, 0.58, 0.95], REVIEW: [0.60, 0.82, 1], PROVISIONAL: [0.7, 0.75, 0.86],
   READY: [0.74, 0.71, 0.8], RUNNING: [0.68, 0.76, 0.88], CHECKPOINTED: [0.52, 0.57, 0.68],
-  BLOCKED: [0.36, 0.35, 0.4], REJECTED: [0.82, 0.64, 0.47], DISCARDED: [0.25, 0.24, 0.28],
+  BLOCKED: [0.36, 0.35, 0.4], REJECTED: [0.38, 0.72, 1], DISCARDED: [0.25, 0.24, 0.28],
 };
 const VERDICT_TXT: Record<Verdict, string> = {
   CONFIRMED: 'confirmado', REFUTED: 'refutado', REVIEW: 'em revisão', PROVISIONAL: 'resultado provisório',

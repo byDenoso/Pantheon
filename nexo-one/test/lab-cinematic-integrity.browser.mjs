@@ -97,7 +97,7 @@ try {
     if (fallback) assert.equal(await page.locator('.observatory.scene-unavailable').count(), 1);
     else {
       assert.equal(await page.locator('.obs-scene canvas').count(), 1);
-      if (theme === 'dark') assert.equal(await page.locator('.observatory').evaluate(el => getComputedStyle(el).getPropertyValue('--o-accent').trim()), '#9fc9ff');
+      if (theme === 'dark') assert.equal(await page.locator('.observatory').evaluate(el => getComputedStyle(el).getPropertyValue('--o-accent').trim()), '#98d2ff');
     }
     if (!input) await page.addStyleTag({ content: 'body::after{content:"FIXTURE VISUAL · DADOS SINTÉTICOS · SOMENTE TESTE";position:fixed;left:12px;bottom:6px;z-index:9999;padding:4px 8px;background:#15120c;color:#f4e4bd;font:11px system-ui;pointer-events:none}' });
     await page.screenshot({ path: output + '/' + name + '-home.png' });

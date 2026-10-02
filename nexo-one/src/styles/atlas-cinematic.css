@@ -268,3 +268,48 @@
  .lab-route .instrument-sync>span:last-child{display:none}
  .observatory[data-page="universo"] .hud{padding-top:80px}
 }
+
+
+/* Reference sampled independently from libfile_a4c0843affe08191bc6c5c6e996eb2d1.
+   Raster samples guide the accents; text uses a darker related ink for contrast. */
+:root[data-theme="dark"] .lab-route{
+  --atlas-cyan:#98d2ff;--atlas-cyan-ink:#98d2ff;--atlas-cyan-rgb:152,210,255;
+  --atlas-cyan-soft:#b7edff;--atlas-surface:#070a10;--atlas-text:#f1f7ff;
+  --atlas-dim:#c4d4e5;--atlas-on-accent:#08111c;--atlas-glass:rgba(16,20,28,.94);
+}
+:root[data-theme="light"] .lab-route{
+  --atlas-cyan:#2794f3;--atlas-cyan-ink:#1265a8;--atlas-cyan-rgb:39,148,243;
+  --atlas-cyan-soft:#b7edff;--atlas-surface:#fbfcf9;--atlas-text:#172c3d;
+  --atlas-dim:#5a5b58;--atlas-on-accent:#fff;--atlas-glass:rgba(251,252,249,.96);
+}
+:root[data-theme] .lab-route,:root[data-theme] .lab-route :is(.observatory,.instrument-header,.cockpit){
+  --o-accent:var(--atlas-cyan-ink);--o-accent-rgb:var(--atlas-cyan-rgb);--o-on-accent:var(--atlas-on-accent);
+  --o-void:var(--atlas-surface);--o-panel:var(--atlas-surface);--o-glass:var(--atlas-glass)!important;
+  --o-ink:var(--atlas-text);--o-dim:var(--atlas-dim);--o-quiet:var(--atlas-dim);
+  --o-line:rgba(var(--atlas-cyan-rgb),.24);--o-glass-line:rgba(var(--atlas-cyan-rgb),.24);
+  --obs-sodium:var(--atlas-cyan);--obs-sodium-ink:var(--atlas-cyan-ink);--obs-bright:var(--atlas-cyan-ink);
+  --obs-void:var(--atlas-surface);--obs-deep:var(--atlas-surface);--obs-raise:var(--atlas-surface);
+  --accent:var(--atlas-cyan-ink);--amber:var(--atlas-cyan-ink);--attention:var(--atlas-cyan-ink);
+  --degraded:var(--atlas-cyan-ink);--degraded-bg:rgba(var(--atlas-cyan-rgb),.1);
+  --sig-gold:var(--atlas-cyan);--sig-oiii:var(--atlas-cyan);--sig-halpha:var(--atlas-cyan);
+  --sig-spectrum:linear-gradient(90deg,transparent,var(--atlas-cyan) 30%,var(--atlas-cyan-soft) 70%,transparent);
+  --v-review:var(--atlas-cyan-ink);--v-refuted:var(--atlas-cyan-ink);--v-rejected:var(--atlas-cyan-ink);
+  --v-ready:var(--atlas-cyan-ink);--v-running:var(--atlas-cyan-ink);
+  --deco-line:transparent;--deco-ring:transparent;--deco-glow:var(--atlas-cyan-rgb);--deco-glow-a:0;
+  --deco-caption:var(--atlas-cyan-ink);
+}
+:root[data-theme] .lab-route{background:var(--atlas-surface)}
+:root[data-theme="light"]:has(.lab-route) body{background:#fbfcf9}
+:root[data-theme="light"] .lab-route .observatory .hud{background:#fbfcf9!important}
+:root[data-theme] .lab-route .instrument-modes button svg{color:var(--atlas-cyan)}
+:root[data-theme] .lab-route .instrument-modes button.active{
+  color:var(--atlas-cyan-ink);border-color:var(--atlas-cyan);background:rgba(var(--atlas-cyan-rgb),.08);
+}
+:root[data-theme] .lab-route .instrument-modes button.active svg{color:var(--atlas-cyan-ink)}
+:root[data-theme] .lab-route :is(.calib-weak,.hud-gate strong){color:var(--atlas-text)!important}
+:root[data-theme] .lab-route :is(button,a,summary,select,input):focus-visible{
+  outline:2px solid var(--atlas-cyan-ink);outline-offset:3px;
+}
+:root[data-theme] .lab-route ::selection{background:var(--atlas-cyan-soft);color:#172c3d}
+
+:root[data-theme="light"] .lab-route .observatory{--v-confirmed:#0f7653}
