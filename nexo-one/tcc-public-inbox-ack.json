@@ -462,6 +462,7 @@
     "inbox/scheduled-referee1-20261001-a2-binjack-4.json": "69c2cee3100deeaa50144654e3ec175613a832990cba261b3db669805fe13068",
     "inbox/scheduled-referee1-20261001-a2-rank-loo.json": "2f3777bf88af399f2582c8e768aee9926434f114a78a8ff2bf76f5f6852f7e81",
     "inbox/scheduled-referee1-20261001-a2-rd-broad-om315-des-u3-binjack.json": "7e55df3b8b66564aca9e7b56848edf77225d3546c7b6d921414f089bb0879fd7",
+    "inbox/scheduled-referee1-20261001-a2-rd-broad-om330-binjack.json": "e6b98c2e73f44c2e364bb8ba714ab8ff38279c1de03a1651d7fe3769bc9e020a",
     "inbox/scheduled-referee1-20261001-a2-seis-binjack.json": "f2f5e7213cf9712561777f582bbfce4b2ecba9beffa928a7293e86dae757bdf9",
     "inbox/scheduled-referee1-20261001-a2-trio-om315-binjack.json": "9812aad731450970a65d392021f5305f72acef073ccea842ea6a77c8bf8fd50a",
     "inbox/scheduled-referee1-20261002-a2-rd-broad-om330-des-u3-binjack.json": "a2ba40fc4c2ad9dfa7eaaf1b55f61d83a5e3e0f26ac01b8f2c68097e04a7390f",
@@ -2565,15 +2566,20 @@
       "fingerprint": "7e55df3b8b66564aca9e7b56848edf77225d3546c7b6d921414f089bb0879fd7",
       "tower_revision": "sha256:64f723470edc6c50cd1bb1974ec9ea481e5703b559a7f15f00c6defb224f8a2a"
     },
+    "inbox/scheduled-referee1-20261001-a2-rd-broad-om330-binjack.json": {
+      "applied_at": "2026-10-02T03:22:27Z",
+      "fingerprint": "e6b98c2e73f44c2e364bb8ba714ab8ff38279c1de03a1651d7fe3769bc9e020a",
+      "tower_revision": "sha256:6edb6cbf57922477315d0f4c1a94b08a310b50ca2631aadd0982724182719651"
+    },
     "inbox/scheduled-referee1-20261001-a2-seis-binjack.json": {
       "applied_at": "2026-10-01T17:22:25Z",
       "fingerprint": "f2f5e7213cf9712561777f582bbfce4b2ecba9beffa928a7293e86dae757bdf9",
       "tower_revision": "sha256:c8725b8eacd6dd33c25a5419d84860009b59016478fd5648755f20da78e554d5"
     },
     "inbox/scheduled-referee1-20261001-a2-trio-om315-binjack.json": {
-      "applied_at": "2026-10-02T03:19:16Z",
+      "applied_at": "2026-10-02T03:22:27Z",
       "fingerprint": "9812aad731450970a65d392021f5305f72acef073ccea842ea6a77c8bf8fd50a",
-      "tower_revision": "sha256:ca409b7177977b78cdc606757e03aad94f2cc41a3caec21925c6985a3f499960"
+      "tower_revision": "sha256:6edb6cbf57922477315d0f4c1a94b08a310b50ca2631aadd0982724182719651"
     },
     "inbox/scheduled-referee1-20261002-a2-rd-broad-om330-des-u3-binjack.json": {
       "applied_at": "2026-10-02T02:29:45Z",
