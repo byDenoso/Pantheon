@@ -359,6 +359,12 @@ jobs:
           NEXO_BATTERY_UPDATES: /tmp/bat/updates.json
           NEXO_BATTERY_DIR: /tmp/dispatch
           NEXO_RECIPE_REVISION: ${{ github.sha }}
+          # Read the existing approval registry from this checked-out revision.
+          # Missing or mismatched admin-managed pins leave C01 fail-closed/OFF.
+          NEXO_C01_APPROVAL_REGISTRY_PATH: ${{ github.workspace }}/nexo-control/execution-assessment-approvals.json
+          NEXO_C01_APPROVAL_REGISTRY_SHA256: ${{ vars.NEXO_C01_APPROVAL_REGISTRY_SHA256 }}
+          NEXO_C01_APPROVAL_REF: ${{ vars.NEXO_C01_APPROVAL_REF }}
+          NEXO_C01_APPROVED_AT: ${{ vars.NEXO_C01_APPROVED_AT }}
         # Who runs the scheduled roles: nexo-control/producers.json (GPT | CLAUDE). The other producer is shadow-only.
         run: |
           export NEXO_ACTIVE_PRODUCER=$(python -c "import json;print(json.load(open('nexo-control/producers.json')).get('active','GPT'))" 2>/dev/null || echo GPT)
