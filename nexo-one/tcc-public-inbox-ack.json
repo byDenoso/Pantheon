@@ -241,6 +241,7 @@
     "inbox/scheduled-guardiao-recipe-review-pr396-0a917b56.json": "1299371eb113e2a2cff27dbb54a953b4f00d829b1a5266fc3d9095929fbdb405",
     "inbox/scheduled-guardiao-recipe-review-pr397-b5c451c2.json": "1686d7d206089211bfe826807277afe502b597d8157e874e972a755133e5f0ad",
     "inbox/scheduled-guardiao-recipe-review-pr398-3c858ccc.json": "d82e947da2e825592c3e696eca930dc278197d9443b73e1d5de4c12a8006a679",
+    "inbox/scheduled-guardiao-recipe-review-pr399-8511d06d.json": "b55576b41bd320766b7ffb97b0583ec7c0c40fe03370a542ea92f515f1c6658b",
     "inbox/scheduled-guardiao-recipe-review-pr399-966b87af.json": "610bf636e0ab943427f653a4413d347e33eb27404310f27f83f0f831e9b1b287",
     "inbox/scheduled-guardiao-recipe-review-pr400-834c652a.json": "c31a08194c95778bcc6658c066af26ef3a9e8f48edabcbcc53ea05a28583ce93",
     "inbox/scheduled-guardiao-write-failure-20261002t0611z.json": "b12bceb4a3d3f11801f747ad69397cc07e31517909c0b1978b52db4358509ea8",
@@ -1666,8 +1667,8 @@
     },
     "inbox/scheduled-guardiao-cover-referee1-20261002t1004z.json": {
       "fingerprint": "70cd96e9c1634118643e2ea5d8cc0650510d1d7702ade0e627f0e07bd7c20152",
-      "observed_at": "2026-10-02T10:13:46Z",
-      "outcome": "APPLIED",
+      "observed_at": "2026-10-02T10:15:35Z",
+      "outcome": "ALREADY_APPLIED",
       "receipt_ids": [
         "OR-820e59f24b331a3080ca975c5b3fee3b"
       ],
@@ -1676,9 +1677,9 @@
           "contract": "OPERATION_RECEIPT_V1",
           "effect_id": "envelope-3d8e9249b3ef1d2209ad85877c437de2",
           "intent_id": "gateway:tcc-f6921067d28bb81887075e2634685503",
-          "observed_at": "2026-10-02T10:13:23.922400Z",
+          "observed_at": "2026-10-02T10:15:05.275606Z",
           "occurred_at": "2026-10-02T10:13:23.922383Z",
-          "outcome": "APPLIED",
+          "outcome": "ALREADY_APPLIED",
           "payload_sha256": "sha256:765616ad4fbd1dcfb987cd07ba67d01ae1086a32f5de3f80966ed0e6641a06cd",
           "reason_code": null,
           "receipt_id": "OR-820e59f24b331a3080ca975c5b3fee3b",
@@ -1690,7 +1691,7 @@
           "visibility": "PUBLIC"
         }
       ],
-      "tower_revision": "sha256:0a5e557e085cfe8f054f31de86162de7c6cba5e72bc077833b56cf4a5ee6e5bb"
+      "tower_revision": "sha256:8223f5d4432dab7a76e8f190687779dab7b5884ad38c26bb0591afe30d5f8b8b"
     },
     "inbox/scheduled-guardiao-fitness-190341.json": {
       "fingerprint": "d1b8b7d9f4152f3e903a5f95d67b9195a5cb4f50e28ac0231fc491d33365b337",
@@ -1862,6 +1863,34 @@
       "applied_at": "2026-10-02T05:22:36Z",
       "fingerprint": "d82e947da2e825592c3e696eca930dc278197d9443b73e1d5de4c12a8006a679",
       "tower_revision": "sha256:b04c5baceef7e3e00c7b3471a20d25d1cf7838d920f8fd8a7eb48cc15750de0a"
+    },
+    "inbox/scheduled-guardiao-recipe-review-pr399-8511d06d.json": {
+      "fingerprint": "b55576b41bd320766b7ffb97b0583ec7c0c40fe03370a542ea92f515f1c6658b",
+      "observed_at": "2026-10-02T10:15:35Z",
+      "outcome": "APPLIED",
+      "receipt_ids": [
+        "OR-b4aef9cc7d69fe8bb5c5b2034d8d95ad"
+      ],
+      "receipts": [
+        {
+          "contract": "OPERATION_RECEIPT_V1",
+          "effect_id": "envelope-7cc8e2963353e9d4ce0845163537f191",
+          "intent_id": "gateway:tcc-1e850aa998a9dd6eaaf1b86d4cfe6570",
+          "observed_at": "2026-10-02T10:15:11.276732Z",
+          "occurred_at": "2026-10-02T10:15:11.276715Z",
+          "outcome": "APPLIED",
+          "payload_sha256": "sha256:f8f1020a53ff2d21ca7eb411e17366b531cef22b9d413aa9b913b143b8702311",
+          "reason_code": null,
+          "receipt_id": "OR-b4aef9cc7d69fe8bb5c5b2034d8d95ad",
+          "result_revision": "sha256:58c344a0d56b8b93f06e01964a7a6729b2aa42b0a211730314b664c6da580d1d",
+          "retry_condition": null,
+          "source_revision": "sha256:047749f8066138500457090d8103f4b255d2690ea8f4b5a20f9d5e4fa5b31edb",
+          "stage": "APPLIED",
+          "supersedes": null,
+          "visibility": "PUBLIC"
+        }
+      ],
+      "tower_revision": "sha256:8223f5d4432dab7a76e8f190687779dab7b5884ad38c26bb0591afe30d5f8b8b"
     },
     "inbox/scheduled-guardiao-recipe-review-pr399-966b87af.json": {
       "applied_at": "2026-10-02T02:41:17Z",
