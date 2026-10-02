@@ -244,6 +244,9 @@ class DesiParamPreflightContract(unittest.TestCase):
         changed_inputs = desi_inputs_fixture()
         changed_inputs[1]['url'] += '?mutable=true'
         mutations.append((DESI_PARAMS_FIXTURE, changed_inputs, 'INPUT_RECIPE_MANIFEST_MISMATCH'))
+        changed_inputs = desi_inputs_fixture()
+        changed_inputs[1]['url'] = 'https://[malformed'
+        mutations.append((DESI_PARAMS_FIXTURE, changed_inputs, 'INPUT_RECIPE_MANIFEST_MISMATCH'))
         for params, inputs, reason in mutations:
             with self.subTest(reason=reason, params=params, inputs=inputs):
                 value = desi_check(params=params, inputs=inputs)
