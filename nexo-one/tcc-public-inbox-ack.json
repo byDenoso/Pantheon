@@ -108,6 +108,8 @@
     "inbox/scheduled-engineer-pr378-readme-block-20260930t1703z.json": "cbaa98efd509898429c05dfcb09bacdd4b17ed0d3e58a1d6b58b51d936d9b67b",
     "inbox/scheduled-engineer-pr395-open-20261001t1459z.json": "2b17c157dc19a36e10476c4dab92e025f5bea9c7d23bebf325b08344d1ee5c50",
     "inbox/scheduled-engineer-recipe-late-time-joint-probe-stress-20260928.json": "05fc3a57bc2cc703d9dd8277b1fb09723e4d9a4d0abd923b56f56d7d8223cb5f",
+    "inbox/scheduled-engineer-recovery-w0wa-public-inputs-v1-1.json": "81ab7d6c191363d2017f35f09bb79fb9c0cdf99648973bf83428688a0924ddb7",
+    "inbox/scheduled-engineer-recovery-w0wa-public-inputs-v1-2.json": "4c63dad4fb1d65e48e3f821b75e25a988492d425cd752c184b248a68ea6ae53a",
     "inbox/scheduled-engineer-staging-policy-block-20261001t1718z.json": "d172e96b7c25225a4d87e12b96e6145665df190c0376431f1fb0431505e12eaf",
     "inbox/scheduled-executor-20260928-recipe-review-late-time-v1.json": "4c7ee0900b164f86373d8453403486c4f1e6649967367fce1428070bce72e222",
     "inbox/scheduled-executor-20260929t062447z-bindings-5.json": "d1b03ba3ca63ee14a299ac967db48c30545c830d05bb1c00a63258020fed371f",
@@ -404,6 +406,7 @@
     "inbox/scheduled-pitia-20261001t0816z-rd-calibration-surprise.json": "ec306cf05a802b69e8cd5d05ba7efec06d3368e0980512df9d614c39c29fcf7a",
     "inbox/scheduled-pitia-20261001t1115z-dream-analysis-invariance.json": "4d8a4404562d1787763707a44fb16e113e2c78769436cff8edfc46d671802b92",
     "inbox/scheduled-pitia-20261001t1618z-live-rival-gate.json": "eae4adc946727053c765b3f2dade3e5b800c04d8a8d034f567ccd084cb781193",
+    "inbox/scheduled-pitia-20261002t0215z-prediction-sample-rival.json": "f86762a1f7070e53db3f9590d921df3cf61d587e13681696b73fc70c759d05d4",
     "inbox/scheduled-pitia-batch-2181033f17a4f562.json": "abef2a371fff9849bc92f9e214ee0e4708a02420d236fb946c0825e787cd5636",
     "inbox/scheduled-pitia-batch-392ca9d8c0a7749a.json": "cfc104cf89931e65e44ca8b588a01848b592ea233fe39afc8271250b47131629",
     "inbox/scheduled-pitia-batch-3d6c1a02b9805eb8.json": "e36ef115a6cbce8e7d949cdec5de247eba084d3d9bba02986457c3f13a4e1a47",
@@ -451,7 +454,9 @@
     "inbox/scheduled-referee1-20261001-a2-binjack-3.json": "306705f43665d48194e232f1412611633b978698720a690886f70dcd86af2f34",
     "inbox/scheduled-referee1-20261001-a2-binjack-4.json": "69c2cee3100deeaa50144654e3ec175613a832990cba261b3db669805fe13068",
     "inbox/scheduled-referee1-20261001-a2-rank-loo.json": "2f3777bf88af399f2582c8e768aee9926434f114a78a8ff2bf76f5f6852f7e81",
+    "inbox/scheduled-referee1-20261001-a2-rd-broad-om315-des-u3-binjack.json": "7e55df3b8b66564aca9e7b56848edf77225d3546c7b6d921414f089bb0879fd7",
     "inbox/scheduled-referee1-20261001-a2-seis-binjack.json": "f2f5e7213cf9712561777f582bbfce4b2ecba9beffa928a7293e86dae757bdf9",
+    "inbox/scheduled-referee1-20261002-a2-rd-broad-om330-des-u3-binjack.json": "a2ba40fc4c2ad9dfa7eaaf1b55f61d83a5e3e0f26ac01b8f2c68097e04a7390f",
     "inbox/scheduled-referee1-6638057a1f2d-a2-point-v1.json": "57f0c3df05a1b588cf39a25301804e8d47107ad3f0e9feb385a5e3daa07a0e8a",
     "inbox/scheduled-referee1-board-persist-20261001t081347z.json": "b7a2f5a322897bdbd357abd3fb64471b26da1e86796f8d7bfd2380a10d54d224",
     "inbox/scheduled-referee1-contest-de-1-20260929.json": "1be30ba40520823873302a78649e4e29df27d40848225c0610b56e0490881f57",
@@ -980,6 +985,16 @@
     "inbox/scheduled-engineer-recipe-late-time-joint-probe-stress-20260928.json": {
       "fingerprint": "05fc3a57bc2cc703d9dd8277b1fb09723e4d9a4d0abd923b56f56d7d8223cb5f",
       "source": "legacy-acked"
+    },
+    "inbox/scheduled-engineer-recovery-w0wa-public-inputs-v1-1.json": {
+      "applied_at": "2026-10-02T02:25:46Z",
+      "fingerprint": "81ab7d6c191363d2017f35f09bb79fb9c0cdf99648973bf83428688a0924ddb7",
+      "tower_revision": "sha256:16ecdec6f3db4c142067ed0f18f7f8bf8dc3b888b1f97942e590a1fd4f95a7ad"
+    },
+    "inbox/scheduled-engineer-recovery-w0wa-public-inputs-v1-2.json": {
+      "applied_at": "2026-10-02T02:25:46Z",
+      "fingerprint": "4c63dad4fb1d65e48e3f821b75e25a988492d425cd752c184b248a68ea6ae53a",
+      "tower_revision": "sha256:16ecdec6f3db4c142067ed0f18f7f8bf8dc3b888b1f97942e590a1fd4f95a7ad"
     },
     "inbox/scheduled-engineer-staging-policy-block-20261001t1718z.json": {
       "applied_at": "2026-10-01T17:25:05Z",
@@ -2284,6 +2299,11 @@
       "fingerprint": "eae4adc946727053c765b3f2dade3e5b800c04d8a8d034f567ccd084cb781193",
       "tower_revision": "sha256:393416b1883e1d138973b4fce7c69afc277dc8991e8d264cabfaa58abec90dff"
     },
+    "inbox/scheduled-pitia-20261002t0215z-prediction-sample-rival.json": {
+      "applied_at": "2026-10-02T02:25:46Z",
+      "fingerprint": "f86762a1f7070e53db3f9590d921df3cf61d587e13681696b73fc70c759d05d4",
+      "tower_revision": "sha256:16ecdec6f3db4c142067ed0f18f7f8bf8dc3b888b1f97942e590a1fd4f95a7ad"
+    },
     "inbox/scheduled-pitia-batch-2181033f17a4f562.json": {
       "fingerprint": "abef2a371fff9849bc92f9e214ee0e4708a02420d236fb946c0825e787cd5636",
       "source": "legacy-acked"
@@ -2497,10 +2517,20 @@
       "fingerprint": "2f3777bf88af399f2582c8e768aee9926434f114a78a8ff2bf76f5f6852f7e81",
       "tower_revision": "sha256:dba0f38e14b5786999bd10da7180881d8d55eda0b4d5d87f2c756e3a87912d2b"
     },
+    "inbox/scheduled-referee1-20261001-a2-rd-broad-om315-des-u3-binjack.json": {
+      "applied_at": "2026-10-02T02:25:46Z",
+      "fingerprint": "7e55df3b8b66564aca9e7b56848edf77225d3546c7b6d921414f089bb0879fd7",
+      "tower_revision": "sha256:16ecdec6f3db4c142067ed0f18f7f8bf8dc3b888b1f97942e590a1fd4f95a7ad"
+    },
     "inbox/scheduled-referee1-20261001-a2-seis-binjack.json": {
       "applied_at": "2026-10-01T17:22:25Z",
       "fingerprint": "f2f5e7213cf9712561777f582bbfce4b2ecba9beffa928a7293e86dae757bdf9",
       "tower_revision": "sha256:c8725b8eacd6dd33c25a5419d84860009b59016478fd5648755f20da78e554d5"
+    },
+    "inbox/scheduled-referee1-20261002-a2-rd-broad-om330-des-u3-binjack.json": {
+      "applied_at": "2026-10-02T02:25:46Z",
+      "fingerprint": "a2ba40fc4c2ad9dfa7eaaf1b55f61d83a5e3e0f26ac01b8f2c68097e04a7390f",
+      "tower_revision": "sha256:16ecdec6f3db4c142067ed0f18f7f8bf8dc3b888b1f97942e590a1fd4f95a7ad"
     },
     "inbox/scheduled-referee1-6638057a1f2d-a2-point-v1.json": {
       "applied_at": "2026-10-01T05:25:09Z",
