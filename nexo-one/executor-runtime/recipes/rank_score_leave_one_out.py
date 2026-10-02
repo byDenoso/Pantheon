@@ -33,9 +33,14 @@ def walk_dicts(value):
             yield from walk_dicts(child)
 
 
-def load_projection(url: str, expected_sha256: str) -> dict:
-    if not url.startswith("https://"):
-        raise ValueError("projection_url deve ser HTTPS.")
+SNAPSHOT_PATH = "nexo-one/executor-runtime/snapshots/public-projection-20260930-194720.json.gz"
+
+def load_projection(url: str, version: str, expected_sha256: str) -> dict:
+    if not isinstance(version, str) or len(version) != 40 or any(c not in "0123456789abcdef" for c in version):
+        raise ValueError("projection_version deve ser commit Git de 40 hex.")
+    expected_url = f"https://raw.githubusercontent.com/byDenoso/Pantheon/{version}/{SNAPSHOT_PATH}"
+    if url != expected_url:
+        raise ValueError("projection_url deve apontar para o snapshot oficial commit-pinned.")
     expected = expected_sha256.removeprefix("sha256:")
     if len(expected) != 64:
         raise ValueError("projection_sha256 invalido.")
@@ -55,7 +60,8 @@ def extract_cohort(projection: dict, cohort_ids: list[str]) -> list[dict]:
     found = {}
     for row in walk_dicts(projection):
         entity_id = row.get("id")
-        if entity_id in wanted and "rank_score" in row and "verdict" in row:
+        if (entity_id in wanted and str(row.get("status") or "").upper() == "DONE"
+                and "rank_score" in row and "verdict" in row):
             prior = found.get(entity_id)
             if prior is None or len(row) > len(prior):
                 found[entity_id] = row
@@ -139,7 +145,7 @@ def main() -> None:
     with open(os.environ["PARAMS_PATH"], encoding="utf-8") as source:
         params = json.load(source)
     try:
-        projection = load_projection(params["projection_url"], params["projection_sha256"])
+        projection = load_projection(params["projection_url"], params["projection_version"], params["projection_sha256"])
         result = run(params, projection)
     except (OSError, ValueError, KeyError, TypeError, json.JSONDecodeError) as error:
         meaning = "O input congelado nao pode ser reproduzido: " + str(error)
