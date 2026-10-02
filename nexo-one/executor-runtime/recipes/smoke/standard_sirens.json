@@ -1,0 +1,5 @@
+{
+  "host_choices": ["K", "bJ"],
+  "combinations": [["GW150914", "GW170814", "GW190814"]],
+  "intervals": {"inverse": [66, 69], "local": [71, 74]}
+}
