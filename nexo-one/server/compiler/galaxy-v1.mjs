@@ -163,7 +163,7 @@ function round(value){return Math.round(value*1000)/1000;}
  *   REMNANT    something just resolved (since last snapshot)    FLARE something just added
  * Derived only from the snapshot; positions are the entities'/subdomains' own layout.
  */
-const RUNNING_STATES=new Set(['RUNNING','IN_PROGRESS','CHECKPOINTED','EXECUTING','CLAIMED']);
+const RUNNING_STATES=new Set(['RUNNING','IN_PROGRESS','EXECUTING']);
 const DONE_STATES=new Set(['DONE','RESULT','VERIFIED','PROVEN','REJECTED','CLOSED','COMPLETED']);
 function astroEvents({entities,subdomains,needs_you,changes}){
   const byId=new Map(entities.map(entity=>[entity.id,entity]));
@@ -175,7 +175,7 @@ function astroEvents({entities,subdomains,needs_you,changes}){
     events.push({id:`${urgent?'supernova':'nova'}:${item.entity}`,kind:urgent?'SUPERNOVA':'NOVA',domain:entity.visual_domain,entity:item.entity,label:entity.title||item.entity,reason:item.reason,...pos,intensity:urgent?1:.6});
   }
   const running={};
-  for(const entity of entities)if(entity.kind==='TEST'&&RUNNING_STATES.has(String(entity.status||'').toUpperCase())&&entity.visual_domain!=='NEXO')(running[entity.visual_domain]||(running[entity.visual_domain]=[])).push(entity);
+  for(const entity of entities)if(entity.kind==='TEST'&&RUNNING_STATES.has(String(entity.attempt_state||'').toUpperCase())&&entity.visual_domain!=='NEXO')(running[entity.visual_domain]||(running[entity.visual_domain]=[])).push(entity);
   for(const [domain,tests] of Object.entries(running)){
     const p=armPoint(domain,.08);
     events.push({id:`agn:${domain}`,kind:'AGN',domain,label:`${tests.length} testes em andamento`,x:round(p.x),y:round(p.y),z:0,intensity:round(1-Math.exp(-tests.length/10))});
@@ -240,6 +240,9 @@ function makeEntity(kind,id,item,collection,consensus,manifest){
     campaign_id:text(item?.campaign_id)||null,
     test_group_id:text(item?.test_group_id)||null,
     status:statusOf(item),
+    scientific_state:kind==='TEST'?(text(item?.scientific_state)||'UNKNOWN'):text(item?.scientific_state)||null,
+    attempt_state:text(item?.attempt_state)||text(item?.execution_phase)||null,
+    review_state:text(item?.review_state)||null,
     title:titleOf(id,item),
     // Plain-language reading for the event panel (what it is about / what came out).
     plain:text(item?.semantic?.question_plain||item?.question||item?.statement||item?.semantic?.why_it_matters)||null,

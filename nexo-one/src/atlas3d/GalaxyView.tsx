@@ -2,9 +2,10 @@
 // compiler derives arm mass/length/thickness/fragmentation, bridges and core
 // from Tower semantics (galaxy-morphology.mjs) and publishes it with shape
 // metrics in the snapshot. This view renders it and never reinterprets it.
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { EVENT_TAG, EventGlyph, GalaxyThree3D, type GalaxyEvent, type GalaxyMorphology } from '../components/GalaxyThree3D.tsx';
 import type { GraphNode, GraphNodeType } from '../contracts/system.ts';
+import type { AtlasObservedEntity } from '../contracts/atlasObservation.ts';
 import type { PlacedNode3D } from '../viewmodels/graph3d.ts';
 import { useNexoStore } from '../data/NexoStore.tsx';
 import { domainLabel } from '../viewmodels/tokens.ts';
@@ -33,18 +34,18 @@ const EVENT_LEGEND = [
   { kind: 'AGN', label: 'Pesquisa em curso · Núcleo ativo' },
   { kind: 'HII', label: 'Vários testes prontos · Região H II' },
   { kind: 'REMNANT', label: 'Atividade encerrada · Remanescente' },
-  { kind: 'FLARE', label: 'Atividade recente · Flare' },
+  { kind: 'FLARE', label: 'Item adicionado · Flare' },
 ] as const;
 
 const EVENT_INFO: Record<GalaxyEvent['kind'], { title: string; explanation: string; action: string; rule: string }> = {
   SUPERNOVA: { title: 'Supernova', explanation: 'Um assunto prioritário está parado à espera de uma decisão humana.', action: 'Revise a decisão pendente. As etapas que dependem dela só continuam depois disso.', rule: 'Marca itens com decisão humana pendente ou prioridade muito alta.' },
   NOVA: { title: 'Nova', explanation: 'Há uma atividade que merece revisão, mas ela não está bloqueando o restante do trabalho.', action: 'Leia o contexto e escolha quando agir; o restante do fluxo pode continuar.', rule: 'Marca itens que pedem atenção sem interromper o fluxo.' },
-  AGN: { title: 'Núcleo ativo', explanation: 'Uma pesquisa ou sequência de testes está em andamento neste campo.', action: 'Acompanhe os resultados; não é necessária uma ação imediata.', rule: 'Agrupa testes que estão sendo executados ou aguardam uma etapa de execução.' },
+  AGN: { title: 'Núcleo ativo', explanation: 'O snapshot registra uma concentração de testes neste campo.', action: 'Consulte o estado de cada teste e sua evidência antes de concluir se há execução em curso.', rule: 'Agrupa itens conforme o tipo de evento publicado; o estado de execução aparece em cada item.' },
   HII: { title: 'Região de novos testes', explanation: 'Vários testes novos se concentram no mesmo assunto e podem formar uma linha de investigação.', action: 'Compare as perguntas e reúna os testes que ajudam a distinguir explicações concorrentes.', rule: 'Marca uma área com três ou mais testes prontos para começar.' },
-  REMNANT: { title: 'Remanescente', explanation: 'Uma atividade chegou recentemente a um estado final e deixou um resultado para consultar.', action: 'Confira se o resultado e seus efeitos foram registrados na etapa seguinte.', rule: 'Agrupa itens que terminaram desde a última atualização da galáxia.' },
-  FLARE: { title: 'Nova atividade', explanation: 'Um item novo apareceu desde a atualização anterior.', action: 'Leia a descrição e encaminhe o item para a próxima etapa adequada.', rule: 'Marca itens adicionados desde a última atualização da galáxia.' },
+  REMNANT: { title: 'Remanescente', explanation: 'O snapshot registra uma atividade em estado final.', action: 'Confira se o resultado e seus efeitos foram registrados na etapa seguinte.', rule: 'Agrupa itens com estado final no snapshot publicado.' },
+  FLARE: { title: 'Nova atividade', explanation: 'O snapshot registra uma atividade para acompanhamento.', action: 'Leia a descrição e encaminhe o item para a próxima etapa adequada.', rule: 'Marca atividade incluída no snapshot publicado.' },
 };
-const RUNNING = new Set(['RUNNING', 'IN_PROGRESS', 'CHECKPOINTED', 'EXECUTING', 'CLAIMED']);
+const RUNNING = new Set(['RUNNING', 'IN_PROGRESS', 'EXECUTING']);
 const STATUS_COPY: Record<string, string> = {
   READY: 'Pronto para começar', RUNNING: 'Em execução', IN_PROGRESS: 'Em andamento',
   CHECKPOINTED: 'Aguardando a próxima etapa', EXECUTING: 'Em execução', CLAIMED: 'Assumido por uma automação',
@@ -53,15 +54,11 @@ const STATUS_COPY: Record<string, string> = {
 };
 const humanStatus = (value?: string | null) => value ? STATUS_COPY[value.toUpperCase()] ?? 'Estado em atualização' : '';
 const isTechnicalLabel = (value?: string | null) => Boolean(value && (/^[A-Z0-9][A-Z0-9_.:-]{7,}$/.test(value) || /^[0-9a-f]{8}-[0-9a-f-]{27,}$/i.test(value)));
-const humanTitle = (entity: RawEntity) => [entity.title, entity.plain, entity.meaning]
+const humanTitle = (entity: AtlasObservedEntity) => [entity.title, entity.plain, entity.meaning]
   .find(value => Boolean(value?.trim()) && !isTechnicalLabel(value) && value !== entity.id && value !== entity.canonical_id)
   || 'Item relacionado a este assunto';
 
-interface RawEntity {
-  id: string; canonical_id?: string; kind?: string; title?: string; status?: string | null; cluster_id?: string;
-  visual_domain?: string; subdomain?: string | null; campaign_id?: string | null; test_group_id?: string | null;
-  plain?: string | null; meaning?: string | null; layout?: { x?: number; y?: number; z?: number };
-}
+type RawEntity = AtlasObservedEntity;
 
 interface Metrics {
   center_of_mass: { x: number; y: number };
@@ -73,22 +70,34 @@ interface Metrics {
 }
 type MetricsDelta = Partial<Record<'asymmetry' | 'domain_entropy_bits' | 'radial_ratio' | 'cross_link_density', number | null>>;
 
-function toNode(entity: RawEntity): PlacedNode3D {
+function toNode(entity: RawEntity, stale: boolean): PlacedNode3D {
   const type = TYPE[String(entity.kind || '').toUpperCase()] ?? 'ACTION';
-  const domain = (entity.visual_domain || 'NEXO') as GraphNode['domain'];
+  const domain = (entity.visual_domain || entity.domain || 'NEXO') as GraphNode['domain'];
+  const sourceRef = entity.source?.repository
+    || entity.source?.collection
+    || entity.source?.authority
+    || 'TOWER_V06';
+  const observation = entity.observation;
   return {
     id: entity.canonical_id || entity.id,
     type,
     label: entity.title || entity.canonical_id || entity.id,
     domain,
-    state: 'LIVE',
+    // This is a published point-in-time projection, not a live execution signal.
+    state: 'SNAPSHOT',
     authority_class: 'DERIVED',
-    source_ref: 'galaxy://published/latest',
-    source_revision: '',
-    fingerprint: '',
-    freshness: { state: 'RECENT', observed_at: null, ttl_seconds: null },
-    checked_at: '',
-    summary: entity.status ? `status ${entity.status}` : '',
+    source_ref: sourceRef,
+    source_revision: observation.source_revision,
+    fingerprint: observation.projection_fingerprint,
+    freshness: { state: stale ? 'STALE' : 'UNKNOWN', observed_at: observation.observed_at, ttl_seconds: null },
+    checked_at: observation.observed_at,
+    summary: entity.meaning || entity.plain || '',
+    operational_status: entity.status || 'UNKNOWN',
+    scientific_state: observation.scientific_state,
+    attempt_state: observation.attempt_state,
+    review_state: observation.review_state,
+    decision_required: observation.decision_required,
+    human_gate: observation.decision_required,
     x: (entity.layout?.x ?? 0) * SCALE,
     y: (entity.layout?.y ?? 0) * SCALE,
     z: (entity.layout?.z ?? 0) * SCALE,
@@ -110,24 +119,31 @@ const signed = (value: number | null | undefined, digits = 2) =>
   typeof value === 'number' && value !== 0 ? ` (${value > 0 ? '+' : ''}${value.toFixed(digits)})` : '';
 
 // Overview only: clicking the galaxy never navigates away to the graphs.
-export function GalaxyView({ selectedId }: { selectedId: string | null; onSelect?: (id: string) => void }) {
-  const { system } = useNexoStore();
+export function GalaxyView({ selectedId, onSelect }: { selectedId: string | null; onSelect?: (id: string) => void }) {
+  const { system, atlasObservation, loadAtlasSnapshot } = useNexoStore();
   const projectionFingerprint = system.state?.bus.fingerprint ?? '';
-  const [entities, setEntities] = useState<RawEntity[] | null>(null);
-  const [morphology, setMorphology] = useState<(GalaxyMorphology & { metrics?: Metrics; metrics_delta?: MetricsDelta | null }) | null>(null);
-  const [failed, setFailed] = useState(false);
-  const [rawEvents, setRawEvents] = useState<GalaxyEvent[]>([]);
+  const snapshot = atlasObservation.snapshot;
+  const entities = snapshot?.entities ?? null;
+  const rawEvents = snapshot?.events ?? [];
+  const morphology = (snapshot?.morphology as (GalaxyMorphology & { metrics?: Metrics; metrics_delta?: MetricsDelta | null }) | null | undefined) ?? null;
+  const [rendererFailed, setRendererFailed] = useState(false);
   const [hiddenEvents, setHiddenEvents] = useState<string[]>(readHiddenEvents);
+  const [localSelectedId, setLocalSelectedId] = useState<string | null>(null);
   const toggleEvent = (kind: string) => setHiddenEvents(current => {
     const next = current.includes(kind) ? current.filter(k => k !== kind) : [...current, kind];
     try { window.localStorage.setItem(EVENTS_KEY, JSON.stringify(next)); } catch { /* per-viewer convenience only */ }
     return next;
   });
   const [glow, setGlow] = useState<number>(readGlow);
-  // Stable callbacks: they are scene deps, and a new identity rebuilds the whole
-  // WebGL scene (and resets the camera) on every re-render.
-  const handleSelect = useCallback((_id: string | null) => {}, []);
-  const handleFailure = useCallback(() => setFailed(true), []);
+  // Stable callbacks avoid rebuilding the WebGL scene when parent callbacks change.
+  const onSelectRef = useRef(onSelect);
+  onSelectRef.current = onSelect;
+  const handleSelect = useCallback((id: string | null) => {
+    if (!id) return;
+    setLocalSelectedId(id);
+    onSelectRef.current?.(id);
+  }, []);
+  const handleFailure = useCallback(() => setRendererFailed(true), []);
   const handleEventSelect = useCallback((id: string) => setFocus(current => current?.id === id ? null : { id, nonce: Date.now() }), []);
   // Legend click cycles through the events of that kind, most intense first.
   const [focus, setFocus] = useState<{ id: string; nonce: number } | null>(null);
@@ -140,39 +156,17 @@ export function GalaxyView({ selectedId }: { selectedId: string | null; onSelect
   };
 
   useEffect(() => {
+    if (!projectionFingerprint) return;
     const controller = new AbortController();
-    const delays = [0, 800, 2400];
-
-    const load = async () => {
-      setFailed(false);
-      for (let attempt = 0; attempt < delays.length; attempt += 1) {
-        const delay = delays[attempt] ?? 0;
-        if (delay) await new Promise(resolve => window.setTimeout(resolve, delay));
-        if (controller.signal.aborted) return;
-        try {
-          const url = new URL(ENDPOINT, window.location.href);
-          if (projectionFingerprint) url.searchParams.set('projection', projectionFingerprint);
-          url.searchParams.set('readback', String(Date.now()));
-          const response = await fetch(url, { signal: controller.signal, cache: 'no-store' });
-          if (!response.ok) throw new Error(String(response.status));
-          const snapshot = await response.json();
-          const snapshotFingerprint = String(snapshot?.provenance?.source_fingerprint || '');
-          if (projectionFingerprint && snapshotFingerprint && snapshotFingerprint !== projectionFingerprint) {
-            throw new Error('GALAXY_EDGE_NOT_CONVERGED');
-          }
-          setEntities(Array.isArray(snapshot?.entities) ? snapshot.entities : []);
-          setMorphology(snapshot?.morphology && typeof snapshot.morphology === 'object' ? snapshot.morphology : null);
-          setRawEvents(Array.isArray(snapshot?.events) ? snapshot.events : []);
-          return;
-        } catch (error) {
-          if (controller.signal.aborted || (error as Error)?.name === 'AbortError') return;
-          if (attempt === delays.length - 1) setFailed(true);
-        }
-      }
-    };
-    void load();
+    void loadAtlasSnapshot(ENDPOINT, projectionFingerprint, controller.signal);
     return () => controller.abort();
-  }, [projectionFingerprint]);
+  }, [loadAtlasSnapshot, projectionFingerprint]);
+
+  useEffect(() => {
+    if (!snapshot || !focus) return;
+    const eventIds = new Set(snapshot.events.map(event => event.id));
+    if (!eventIds.has(focus.id)) setFocus(null);
+  }, [focus, snapshot]);
 
   const chooseGlow = (level: (typeof GLOW_LEVELS)[number]) => {
     setGlow(level.value);
@@ -181,16 +175,28 @@ export function GalaxyView({ selectedId }: { selectedId: string | null; onSelect
 
   // The galaxy always shows every published entity: it reads best as the whole
   // system. Lenses (Operação, Ciência, Sistema, Aprendizado, Tudo) drive 2D/3D.
-  const nodes = useMemo(() => (entities ?? []).map(toNode), [entities]);
+  const isStale = atlasObservation.status === 'STALE' || atlasObservation.status === 'PARTIAL' || atlasObservation.status === 'UNAVAILABLE'
+    || Boolean(snapshot && atlasObservation.requested_fingerprint
+      && atlasObservation.requested_fingerprint.toLowerCase() !== snapshot.provenance.source_fingerprint.toLowerCase());
+  const nodes = useMemo(() => (entities ?? []).map(entity => toNode(entity, isStale)), [entities, isStale]);
+  // Tower gives each observation an entity id and may also publish a
+  // canonical id shared with Atlas/SystemState. The scene selects by canonical
+  // id, so accept either key when reconciling the controlled selection.
+  const entityIds = useMemo(() => new Set((entities ?? []).flatMap(entity => [entity.id, entity.canonical_id].filter((id): id is string => Boolean(id)))), [entities]);
+  const galaxySelectedId = selectedId && entityIds.has(selectedId)
+    ? selectedId
+    : localSelectedId && entityIds.has(localSelectedId) ? localSelectedId : null;
   // Events share the nodes' world scale so they sit exactly on their domain.
-  const events = useMemo(() => rawEvents.filter(event => !hiddenEvents.includes(event.kind)).map(event => ({ ...event, x: event.x * SCALE, y: event.y * SCALE, z: (event.z || 0) * SCALE })), [rawEvents, hiddenEvents]);
+  const events = useMemo(() => rawEvents.filter(event => !hiddenEvents.includes(event.kind)).map(event => ({ ...event, entity: event.entity || undefined, x: event.x * SCALE, y: event.y * SCALE, z: (event.z || 0) * SCALE })), [rawEvents, hiddenEvents]);
   const eventCounts = useMemo(() => rawEvents.reduce<Record<string, number>>((acc, e) => { acc[e.kind] = (acc[e.kind] || 0) + 1; return acc; }, {}), [rawEvents]);
   const metrics = morphology?.metrics;
   const focused = focus ? rawEvents.find(e => e.id === focus.id) ?? null : null;
   const related = useMemo(() => {
     if (!focused || !entities) return [];
     const list = entities ?? [];
-    if (focused.kind === 'AGN') return list.filter(e => e.kind === 'TEST' && e.visual_domain === focused.domain && RUNNING.has(String(e.status || '').toUpperCase()));
+    if (focused.kind === 'AGN') return list.filter(e => e.kind === 'TEST'
+      && e.visual_domain === focused.domain
+      && RUNNING.has(e.observation.attempt_state.toUpperCase()));
     if (focused.kind === 'HII') { const sub = focused.id.replace(/^hii:/, ''); return list.filter(e => e.kind === 'TEST' && e.cluster_id === sub && String(e.status || '').toUpperCase() === 'READY'); }
     return list.filter(e => e.id === focused.entity || e.canonical_id === focused.entity);
   }, [focused, entities]);
@@ -208,14 +214,17 @@ export function GalaxyView({ selectedId }: { selectedId: string | null; onSelect
   const visibleRelated = related.slice(0, 3);
   const moreRelated = related.slice(3, 30);
 
-  if (failed) return <div className="nexo-graph-fallback" role="status">Galáxia indisponível neste instante. Use 2D ou 3D.</div>;
-  if (!entities) return <div className="nexo-graph-fallback" role="status">Compilando a galáxia…</div>;
+  if (!snapshot) return <div className="nexo-graph-fallback" role="status">
+    {atlasObservation.status === 'UNAVAILABLE'
+      ? 'A projeção pública da galáxia não pôde ser validada.'
+      : projectionFingerprint ? 'Compilando a galáxia.' : 'Aguardando uma revisão validada da projeção.'}
+  </div>;
   return (
-    <div className="atlas3d-shell atlas-three-field-shell atlas-galaxy-view" data-renderer="galaxy-spiral">
+    <div className="atlas3d-shell atlas-three-field-shell atlas-galaxy-view" data-renderer="galaxy-spiral" data-observation-state={atlasObservation.status.toLowerCase()} data-projection-fingerprint={snapshot.provenance.source_fingerprint}>
       <GalaxyThree3D
         nodes={nodes}
         edges={[]}
-        selectedId={selectedId}
+        selectedId={galaxySelectedId}
         onSelect={handleSelect}
         onFailure={handleFailure}
         viewMode="detail"
@@ -225,6 +234,12 @@ export function GalaxyView({ selectedId }: { selectedId: string | null; onSelect
         focusEvent={focus}
         onEventSelect={handleEventSelect}
       />
+      <div className="galaxy-observation-status" role="status" aria-live="polite" data-state={atlasObservation.status.toLowerCase()}>
+        <span>{atlasObservation.status === 'AVAILABLE' ? 'Snapshot público validado' : atlasObservation.status === 'LOADING' ? 'Revalidando projeção; último snapshot preservado' : 'Último snapshot validado preservado'}</span>
+        <time dateTime={snapshot.generated_at}>Gerado {new Date(snapshot.generated_at).toLocaleString()}</time>
+        {atlasObservation.error_code && <span>Leitura: {atlasObservation.error_code}</span>}
+        {rendererFailed && <span>Renderização 3D indisponível; os dados observados continuam disponíveis.</span>}
+      </div>
       {focused && (
         <aside className="galaxy-event-panel" data-kind={focused.kind} aria-label="Detalhes do evento">
           <header>

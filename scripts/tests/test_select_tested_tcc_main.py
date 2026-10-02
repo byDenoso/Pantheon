@@ -58,4 +58,23 @@ class Selection(unittest.TestCase):
         self.assertIn('if [ "$verified_sha" != "$tested_sha" ]; then', text)
         self.assertIn('retaining the Drive bundle',text)
 
+    def test_public_inbox_reads_are_pinned_to_captured_ref_sha(self):
+        text=(Path(__file__).parents[2]/'.github/workflows/nexo-writer-robot.yml').read_text()
+        capture=text.index('ref_api=f"https://api.github.com/repos/{repo}/git/ref/heads/{branch}"')
+        compare=text.index('compare/{base}...{head}')
+        tree=text.index('trees/{head}?recursive=1')
+        raw=text.index('raw.githubusercontent.com/"+repo+"/"+head+"/')
+        self.assertLess(capture,compare)
+        self.assertLess(capture,tree)
+        self.assertLess(capture,raw)
+        self.assertNotIn('raw.githubusercontent.com/"+repo+"/"+branch+"/',text)
+
+    def test_public_cursor_consumes_only_final_receipt_outcomes(self):
+        text=(Path(__file__).parents[2]/'.github/workflows/nexo-writer-robot.yml').read_text()
+        self.assertIn('gateway_reported',text)
+        self.assertIn('gateway_resolved',text)
+        self.assertIn('{"APPLIED","ALREADY_APPLIED","REJECTED_TERMINAL"}',text)
+        self.assertIn('cursor_resolved(path,fingerprint)',text)
+        self.assertNotIn('gateway_applied',text)
+
 if __name__=='__main__':unittest.main()

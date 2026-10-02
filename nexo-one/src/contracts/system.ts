@@ -281,6 +281,14 @@ export interface GraphNode {
   test_group_id?: string;
   /** Canonical WORK metadata copied verbatim for read-only operational views. */
   operational_status?: string;
+  /** Independent scientific dimension; UNKNOWN when the public projection omits it. */
+  scientific_state?: string;
+  /** Independent execution-attempt dimension; task status is never substituted. */
+  attempt_state?: string;
+  /** Independent review dimension; a result does not imply a review verdict. */
+  review_state?: string;
+  /** Set only from an explicit public human-gate/needs-you record. */
+  decision_required?: boolean;
   priority?: string;
   dependency_class?: string;
   owner_role?: string;
