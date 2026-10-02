@@ -257,6 +257,7 @@
     "inbox/scheduled-guardiao-recipe-review-pr403-598be99e.json": "174699f289005731f79520a5840929a68b8e11c6d935209f234333190a59f33a",
     "inbox/scheduled-guardiao-recipe-review-pr403-7388173f.json": "29704606dc6a7c5a37b31fd1e2d95b8bc9f9e41992672c30fe0247e429c1788d",
     "inbox/scheduled-guardiao-recipe-review-pr403-bd171925.json": "cd002b35e201c791d28ae2842e54e64afd8e1118b87f72eac6901a18cb54a189",
+    "inbox/scheduled-guardiao-recipe-review-pr406-20261002t1620z.json": "92074e371ea97164d2f934506625cab5beca9e38ae0e7650f4b300898c724685",
     "inbox/scheduled-guardiao-recipe-review-pr406-3ae1f154.json": "0664d97f1ea72818614b95c4e0cea460a8460bf727076c35859f5cdd1a7cd154",
     "inbox/scheduled-guardiao-recipe-review-pr406-d145ab19.json": "7a837409c035a5f78f8ded033ae5d47844649c29661c60e9a60e26d38aa5d5a5",
     "inbox/scheduled-guardiao-write-failure-20261002t0611z.json": "b12bceb4a3d3f11801f747ad69397cc07e31517909c0b1978b52db4358509ea8",
@@ -1918,8 +1919,8 @@
     },
     "inbox/scheduled-guardiao-board-resolve-pr406-3ae1f154.json": {
       "fingerprint": "ceaf86cbe84db10c9bd6aa01aa07b7b7e0523f817c716ae7f1e2abfd7d3b8bce",
-      "observed_at": "2026-10-02T16:22:51Z",
-      "outcome": "APPLIED",
+      "observed_at": "2026-10-02T16:25:09Z",
+      "outcome": "ALREADY_APPLIED",
       "receipt_ids": [
         "OR-23d0c34641356873b46f9e61588500cc"
       ],
@@ -1928,9 +1929,9 @@
           "contract": "OPERATION_RECEIPT_V1",
           "effect_id": "envelope-4734ee204bab0c40e74a4582a03d7896",
           "intent_id": "gateway:tcc-98e16d39380aec7bc2b80011afe9a61b",
-          "observed_at": "2026-10-02T16:22:33.325898Z",
+          "observed_at": "2026-10-02T16:24:40.768845Z",
           "occurred_at": "2026-10-02T16:22:33.325880Z",
-          "outcome": "APPLIED",
+          "outcome": "ALREADY_APPLIED",
           "payload_sha256": "sha256:5fae4461b979d90c4908d0fd01d5a74f5dd9ef0127e04948e2bd163eec661282",
           "reason_code": null,
           "receipt_id": "OR-23d0c34641356873b46f9e61588500cc",
@@ -1942,7 +1943,7 @@
           "visibility": "PUBLIC"
         }
       ],
-      "tower_revision": "sha256:5b8c56bb7408856e8a553f51de43956d02b86863907d0816c17f4cd6fc8734f2"
+      "tower_revision": "sha256:d574caaef823fcbeb3323f7ca0532a0b5cddd7b36a9838766d631707e94f0b88"
     },
     "inbox/scheduled-guardiao-board-work-drift-20261001t0607z.json": {
       "applied_at": "2026-10-01T06:25:43Z",
@@ -2378,6 +2379,34 @@
         }
       ],
       "tower_revision": "sha256:55108581ac9ee4b54dc0b730fc8194a36ec1bc289a77a7b529383d71fbec58a9"
+    },
+    "inbox/scheduled-guardiao-recipe-review-pr406-20261002t1620z.json": {
+      "fingerprint": "92074e371ea97164d2f934506625cab5beca9e38ae0e7650f4b300898c724685",
+      "observed_at": "2026-10-02T16:25:09Z",
+      "outcome": "APPLIED",
+      "receipt_ids": [
+        "OR-6fd98114732e28676cbf203a4f58a2d4"
+      ],
+      "receipts": [
+        {
+          "contract": "OPERATION_RECEIPT_V1",
+          "effect_id": "envelope-fe93466ab9ae80dc57e6a503d2359d0e",
+          "intent_id": "gateway:tcc-eecbf0bffe37c1d247bd10527b6fc4ad",
+          "observed_at": "2026-10-02T16:24:46.826446Z",
+          "occurred_at": "2026-10-02T16:24:46.826429Z",
+          "outcome": "APPLIED",
+          "payload_sha256": "sha256:5bd9999ffd8813a546e78833ff29b4c9f312a5945d30b85b44fd51e1a2854f8e",
+          "reason_code": null,
+          "receipt_id": "OR-6fd98114732e28676cbf203a4f58a2d4",
+          "result_revision": "sha256:ea3d9e79b989a8662a1e8cbaec86a855df133856433da2eedbe148c02f05c822",
+          "retry_condition": null,
+          "source_revision": "sha256:047749f8066138500457090d8103f4b255d2690ea8f4b5a20f9d5e4fa5b31edb",
+          "stage": "APPLIED",
+          "supersedes": null,
+          "visibility": "PUBLIC"
+        }
+      ],
+      "tower_revision": "sha256:d574caaef823fcbeb3323f7ca0532a0b5cddd7b36a9838766d631707e94f0b88"
     },
     "inbox/scheduled-guardiao-recipe-review-pr406-3ae1f154.json": {
       "fingerprint": "0664d97f1ea72818614b95c4e0cea460a8460bf727076c35859f5cdd1a7cd154",
