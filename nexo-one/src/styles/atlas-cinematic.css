@@ -313,3 +313,5 @@
 :root[data-theme] .lab-route ::selection{background:var(--atlas-cyan-soft);color:#172c3d}
 
 :root[data-theme="light"] .lab-route .observatory{--v-confirmed:#0f7653}
+
+:root[data-theme] .lab-route .fr-grade.g-tension{background:rgba(var(--atlas-cyan-rgb),.12)}

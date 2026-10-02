@@ -55,8 +55,8 @@ try {
           let h = high === r ? (g-b)/delta + (g<b?6:0) : high === g ? (b-r)/delta+2 : (r-g)/delta+4;
           h *= 60; return h >= 5 && h <= 70;
         };
-        const warmColors = [...document.querySelectorAll('.lab-route button,.lab-route .vchip,.lab-route .incident,.lab-route .incident-state,.lab-route .trail,.lab-route .vbar>*')]
-          .filter(visible).flatMap(element => ['color','backgroundColor','borderLeftColor','borderTopColor'].filter(property => warm(rgb(getComputedStyle(element)[property]))).map(property => ({ selector: element.className, property, value: getComputedStyle(element)[property] })));
+        const warmColors = [...document.querySelectorAll('.lab-route button,.lab-route .vchip,.lab-route .incident,.lab-route .incident-state,.lab-route .trail,.lab-route .vbar>*,.lab-route svg *')]
+          .filter(visible).flatMap(element => ['color','backgroundColor','borderLeftColor','borderTopColor','fill','stroke','stopColor'].filter(property => warm(rgb(getComputedStyle(element)[property]))).map(property => ({ selector: element.className, property, value: getComputedStyle(element)[property] })));
         const shell = document.querySelector('.lab-route'), obs = document.querySelector('.observatory');
         return { contrasts, warmColors, accent: getComputedStyle(shell).getPropertyValue('--atlas-cyan').trim(),
           surface: getComputedStyle(obs).getPropertyValue('--o-void').trim(),

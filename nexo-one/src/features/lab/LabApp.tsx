@@ -1200,7 +1200,7 @@ const ACOUSTIC = (() => {
 function Acoustic() {
   return <p className="sig-acoustic" aria-hidden="true">
     <svg viewBox="0 0 180 40"><defs><linearGradient id="sig-spec" x1="0" x2="1">
-      <stop offset="0" stopColor="#8a7a5c" /><stop offset=".45" stopColor="#d4bf95" /><stop offset=".75" stopColor="#f0dfbd" /><stop offset="1" stopColor="#fff6e4" />
+      <stop offset="0" stopColor="var(--atlas-cyan)" /><stop offset=".45" stopColor="var(--atlas-cyan-soft)" /><stop offset=".75" stopColor="#f0dfbd" /><stop offset="1" stopColor="#fff6e4" />
     </linearGradient></defs><path d={ACOUSTIC} /></svg>
     <span><em>Λ</em>_ observatório NEXO · ℓ(ℓ+1)C<sub>ℓ</sub></span>
   </p>;
@@ -1208,8 +1208,8 @@ function Acoustic() {
 
 // ---------- Trilha do roadmap: o caminho andado (cor = veredito), a fronteira acesa e a meta ----------
 const TRAIL_COLOR: Record<Verdict, string> = {
-  CONFIRMED: '#5fd0a0', REFUTED: '#e0664f', REVIEW: '#e0b24f', PROVISIONAL: '#9fb4d8', READY: '#d4bf95',
-  RUNNING: '#9fb4d8', CHECKPOINTED: '#7f8ca3', BLOCKED: '#6b6f7a', REJECTED: '#cca47d', DISCARDED: '#3d414a',
+  CONFIRMED: 'var(--v-confirmed)', REFUTED: 'var(--atlas-cyan)', REVIEW: 'var(--atlas-cyan-soft)', PROVISIONAL: '#9fb4d8', READY: 'var(--atlas-cyan)',
+  RUNNING: '#9fb4d8', CHECKPOINTED: '#7f8ca3', BLOCKED: '#6b6f7a', REJECTED: 'var(--atlas-cyan)', DISCARDED: '#3d414a',
 };
 function Trail({ tests, frontier, target }: { tests: TestEntity[]; frontier: string[] | null; target: number | null }) {
   const { walked, ahead, other } = roadmapTrail(tests, frontier);
