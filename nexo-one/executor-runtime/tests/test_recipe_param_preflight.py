@@ -400,11 +400,23 @@ class WorkflowIntegration(unittest.TestCase):
 
 class DesiMaterializationReceiptGate(unittest.TestCase):
     def receipt_fixture(self):
+        names = []
+        for tracer in ('BGS_ANY', 'LRG', 'ELG_LOPnotqso', 'QSO'):
+            for region in ('NGC', 'SGC'):
+                names.extend([
+                    f'{tracer}_{region}_clustering.dat.fits',
+                    f'{tracer}_{region}_nz.txt',
+                ])
+                names.extend(
+                    f'{tracer}_{region}_{index}_clustering.ran.fits'
+                    for index in range(18)
+                )
+        names.sort()
         files = []
-        for index in range(160):
+        for index, name in enumerate(names):
             size = 1 if index < 159 else 139_526_840_064 - 159
             files.append({
-                'name': f'file-{index:03}.bin',
+                'name': name,
                 'size_bytes': size,
                 'sha256': f'{index:064x}',
             })
