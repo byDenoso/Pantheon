@@ -62,6 +62,12 @@ def desi_inputs_fixture():
             'version': 'validator-fixture-only',
             'sha256': '1' * 64,
         },
+        {
+            'name': 'desi_dr1_lss_selection_materialization_receipt',
+            'url': 'https://example.org/validator-only/materialization-receipt.json',
+            'version': 'NEXO_DESI_LSS_SELECTION_MATERIALIZATION_RECEIPT_V1',
+            'sha256': '2' * 64,
+        },
     ]
 
 
@@ -198,6 +204,27 @@ class DesiParamPreflightContract(unittest.TestCase):
         )
         self.assertEqual(set(manifest['inputs']['product']), {'name', 'schema'})
         self.assertEqual(
+            manifest['implementation'],
+            {
+                'commit': '5472cc7986929f33ca4bd19faeb227b3eb85280d',
+                'blob_sha1': '8ba7e8411bb752e34eea5dcb361727cf58df5547',
+                'sha256': hashlib.sha256(
+                    (ROOT / 'desi_lss_selection_binding_family.py').read_bytes()
+                ).hexdigest(),
+            },
+        )
+        self.assertEqual(
+            manifest['inputs']['materialization_receipt']['schema'],
+            'NEXO_DESI_LSS_SELECTION_MATERIALIZATION_RECEIPT_V1',
+        )
+        self.assertEqual(
+            manifest['inputs']['materialization_receipt']['file_count'], 160
+        )
+        self.assertEqual(
+            manifest['inputs']['materialization_receipt']['total_bytes'],
+            139_526_840_064,
+        )
+        self.assertEqual(
             manifest['source_receipts']['recipe_bind']['receipt_id'],
             'OR-8c76795538f2dea31468fa5c4a818ad6',
         )
@@ -221,6 +248,24 @@ class DesiParamPreflightContract(unittest.TestCase):
         self.assertFalse(value['eligible'])
         self.assertIn('PREFLIGHT_CONTRACT_INVALID', value['reasons'])
 
+
+    def test_applied_implementation_pin_rejects_recipe_drift(self):
+        manifest_path = ROOT / 'preflight/desi_lss_selection_binding_family.json'
+        recipe_path = ROOT / 'desi_lss_selection_binding_family.py'
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            (root / 'preflight').mkdir()
+            (root / 'preflight/desi_lss_selection_binding_family.json').write_bytes(
+                manifest_path.read_bytes()
+            )
+            (root / 'desi_lss_selection_binding_family.py').write_bytes(
+                recipe_path.read_bytes() + b'\\n# drift\\n'
+            )
+            value = desi_check(root=root)
+        self.assertFalse(value['eligible'])
+        self.assertIn('PREFLIGHT_CONTRACT_INVALID', value['reasons'])
+        self.assertIn('implementation pin', value['details'][0])
+
     def test_missing_seed_statistic_or_product_stays_ineligible(self):
         value = desi_check(params={}, inputs=[])
         self.assertFalse(value['eligible'])
@@ -239,7 +284,18 @@ class DesiParamPreflightContract(unittest.TestCase):
         changed_inputs = desi_inputs_fixture()
         changed_inputs[0]['sha256'] = '0' * 64
         mutations.append((DESI_PARAMS_FIXTURE, changed_inputs, 'INPUT_RECIPE_MANIFEST_MISMATCH'))
-        changed_inputs = desi_inputs_fixture()[:-1]
+        changed_inputs = [
+            item for item in desi_inputs_fixture()
+            if item['name'] != 'desi_dr1_lss_3d_map_product'
+        ]
+        mutations.append((DESI_PARAMS_FIXTURE, changed_inputs, 'INPUT_RECIPE_MANIFEST_MISMATCH'))
+        changed_inputs = [
+            item for item in desi_inputs_fixture()
+            if item['name'] != 'desi_dr1_lss_selection_materialization_receipt'
+        ]
+        mutations.append((DESI_PARAMS_FIXTURE, changed_inputs, 'INPUT_RECIPE_MANIFEST_MISMATCH'))
+        changed_inputs = desi_inputs_fixture()
+        changed_inputs[2]['version'] = 'validator-fixture-only'
         mutations.append((DESI_PARAMS_FIXTURE, changed_inputs, 'INPUT_RECIPE_MANIFEST_MISMATCH'))
         changed_inputs = desi_inputs_fixture()
         changed_inputs[1]['url'] += '?mutable=true'
