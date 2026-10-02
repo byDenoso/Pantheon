@@ -1,0 +1,6 @@
+{
+  "smoke_request_urls": [
+    "https://raw.githubusercontent.com/byDenoso/TCC/b1eecb9706d5fe0927b5e0445faeb0674a5ccc75/nexo_persist/requests/executor-batch-0374adfa45fc24f7.json",
+    "https://raw.githubusercontent.com/byDenoso/TCC/b1eecb9706d5fe0927b5e0445faeb0674a5ccc75/nexo_persist/requests/guardiao-integrity-4eca6a809262f332.json"
+  ]
+}
