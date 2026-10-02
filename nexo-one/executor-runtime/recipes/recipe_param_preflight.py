@@ -23,6 +23,25 @@ def _validate_desi(manifest, params, inputs, reject):
     limits = manifest.get('limits')
     statistic_contracts = manifest.get('statistics')
     input_contract = manifest.get('inputs')
+    source_receipts = manifest.get('source_receipts')
+    expected_receipts = {
+        'recipe_bind': {
+            'receipt_id': 'OR-8c76795538f2dea31468fa5c4a818ad6',
+            'outcome': 'APPLIED',
+            'occurred_at': '2026-10-02T19:28:53.411699Z',
+            'payload_sha256': 'sha256:50f9b12787adfbffd1fe10e16ea98f7a792a8711dbf97413c6a41a42dccb92ff',
+            'result_revision': 'sha256:9a3f391e1980c170e5bf23c2357ad5d10927595dc778444ca89f6c5728d955a5',
+        },
+        'data_binding': {
+            'receipt_id': 'OR-4f4e64f3d1e3ef631e003e6ffa6cc5a2',
+            'outcome': 'APPLIED',
+            'occurred_at': '2026-10-02T19:32:10.000657Z',
+            'payload_sha256': 'sha256:182d94e8c7e7d0593b7e63145ecf30a745cb1bff9bb9a1e55700920b8c3101a1',
+            'result_revision': 'sha256:c177cfbfed129c0b9515d4a92cd640d2da6119f94006b687f50f644e41e3a7f8',
+        },
+    }
+    if source_receipts != expected_receipts:
+        raise ValueError('DESI public receipt provenance is invalid')
     expected_identity = {
         'test_id': 'GZ01-B03-T03-WINDOW-ROTATION-NULL',
         'prereg_hash': 'sha256:21d38d27b2ef12f17940fb9a01448c0ad3fe73950cb7e0352b1b0c11803b6069',
