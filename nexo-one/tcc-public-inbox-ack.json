@@ -240,6 +240,7 @@
     "inbox/scheduled-guardiao-recipe-review-pr398-3c858ccc.json": "d82e947da2e825592c3e696eca930dc278197d9443b73e1d5de4c12a8006a679",
     "inbox/scheduled-guardiao-recipe-review-pr399-966b87af.json": "610bf636e0ab943427f653a4413d347e33eb27404310f27f83f0f831e9b1b287",
     "inbox/scheduled-guardiao-recipe-review-pr400-834c652a.json": "c31a08194c95778bcc6658c066af26ef3a9e8f48edabcbcc53ea05a28583ce93",
+    "inbox/scheduled-guardiao-write-failure-20261002t0611z.json": "b12bceb4a3d3f11801f747ad69397cc07e31517909c0b1978b52db4358509ea8",
     "inbox/scheduled-interactive-20260929-router040-ready-binds-v1.json": "9c2ae392c4fa126a5541d50e0360e2036a3c6d6d280edc058003c19ec6d9f22c",
     "inbox/scheduled-interactive-names-hyp-test-fix-20260928-1603.json": "0ca61d7d6e663b89b12d2ba8381d7817cfaeb088cee76457bd13dc5b5589305c",
     "inbox/scheduled-interactive-names-recipes-20260928-1550.json": "a5aa29651f2d54ce6c45b746122a7f73ccf9e3f5fa1e7b6f75f7f615b9f524dd",
@@ -1416,9 +1417,9 @@
       "tower_revision": "sha256:a52d6bf2a1a05e2cda63f3802541eabae86c0df45643555b40ac20c95a6414cb"
     },
     "inbox/scheduled-guardiao-fitness-20261002t0611z.json": {
-      "applied_at": "2026-10-02T06:23:06Z",
+      "applied_at": "2026-10-02T06:25:17Z",
       "fingerprint": "045461fdcefc3a557a5d6d2e871a043c1c6b28a855f822cb402731b238cffee1",
-      "tower_revision": "sha256:cf188878299f6a9718facfd3d0abd76b7b996369dc8aa135feebc57368e4f7ce"
+      "tower_revision": "sha256:2287194664a9194ae0fa8f5560807ad7b13fc82b0fb25d904be5c7f2c62b3553"
     },
     "inbox/scheduled-guardiao-fitness-cover-20261001t161714z.json": {
       "applied_at": "2026-10-01T16:28:40Z",
@@ -1582,6 +1583,11 @@
       "applied_at": "2026-10-02T02:41:17Z",
       "fingerprint": "c31a08194c95778bcc6658c066af26ef3a9e8f48edabcbcc53ea05a28583ce93",
       "tower_revision": "sha256:a461b4d050604d1cbb776012660d96552c147a9e990e6a68064ca32c196e0d17"
+    },
+    "inbox/scheduled-guardiao-write-failure-20261002t0611z.json": {
+      "applied_at": "2026-10-02T06:25:17Z",
+      "fingerprint": "b12bceb4a3d3f11801f747ad69397cc07e31517909c0b1978b52db4358509ea8",
+      "tower_revision": "sha256:2287194664a9194ae0fa8f5560807ad7b13fc82b0fb25d904be5c7f2c62b3553"
     },
     "inbox/scheduled-interactive-20260929-router040-ready-binds-v1.json": {
       "fingerprint": "9c2ae392c4fa126a5541d50e0360e2036a3c6d6d280edc058003c19ec6d9f22c",
