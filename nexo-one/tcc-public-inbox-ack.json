@@ -517,6 +517,7 @@
     "inbox/scheduled-referee1-dr1-07-20260930t180702z.json": "6a1ffb51aa6061f5b88194fbd30f9d692493a122b0496fa682fa6c148d27d19b",
     "inbox/scheduled-referee1-dr1-08-20260930t2309z.json": "dc5851f4ff195bb773109f9749e05ee0ce199a195bda8dc63bf8db98eb09b216",
     "inbox/scheduled-referee1-dr1-09-20260930t2309z.json": "b1031f1b79c211f9df7a862b35b85f0228c04262950e9e3516d819760bdc8f7f",
+    "inbox/scheduled-referee1-h0v2-ack-20261001t201629z.json": "656df005a07fd6d83047be4f7247f2580ae159240c97e1c18694613260adb05c",
     "inbox/scheduled-referee1-meta-permutation-20260930t220501z.json": "3d7ac8d97ac7b32cc37f8606707178323b1bc457d21b7f291f05365c98f8b81d",
     "inbox/scheduled-referee1-recovery-state-20261001t201629z.json": "7820078a88d8421c76585ec96dac9fe63b6729597a08991844a10e8b858513f7",
     "inbox/scheduled-referee1-recovery-update-20261001t1457z.json": "1e44b584baab7dba07200ccb7c641379860516e8fdb476462cad07c74153f2a1",
@@ -3505,8 +3506,8 @@
     },
     "inbox/scheduled-referee1-20261001-a2-rd-medium-om315-binjack.json": {
       "fingerprint": "244aa30156dfece0e66053dbe5597d570a6d8a5278d7ddbe0836a897326ab354",
-      "observed_at": "2026-10-02T15:20:58Z",
-      "outcome": "APPLIED",
+      "observed_at": "2026-10-02T15:23:45Z",
+      "outcome": "ALREADY_APPLIED",
       "receipt_ids": [
         "OR-0df2b78b1458bc336c5d9bd519525f3c"
       ],
@@ -3515,9 +3516,9 @@
           "contract": "OPERATION_RECEIPT_V1",
           "effect_id": "envelope-f84660e0a06f65fcb73cefcc5c53539d",
           "intent_id": "gateway:tcc-70cc456d9138e9bd8f3162ca39ea84d2",
-          "observed_at": "2026-10-02T15:20:33.613968Z",
+          "observed_at": "2026-10-02T15:23:19.283832Z",
           "occurred_at": "2026-10-02T15:20:33.613949Z",
-          "outcome": "APPLIED",
+          "outcome": "ALREADY_APPLIED",
           "payload_sha256": "sha256:3e97190d2d6c8a602be60d3dddd509f3706ae62da7f5f68da8115f5b7c33a75a",
           "reason_code": null,
           "receipt_id": "OR-0df2b78b1458bc336c5d9bd519525f3c",
@@ -3529,7 +3530,7 @@
           "visibility": "PUBLIC"
         }
       ],
-      "tower_revision": "sha256:ed387e0693846afc1fd33718e668a194768cd0c832d0bd022677ba260c00431d"
+      "tower_revision": "sha256:3af55ce5301e56ae4c9ad66af5ef008f719cfd8b1e354a3dc261e097b2ddf1b5"
     },
     "inbox/scheduled-referee1-20261001-a2-rd-medium-om330-binjack.json": {
       "applied_at": "2026-10-02T07:21:49Z",
@@ -3653,6 +3654,34 @@
     "inbox/scheduled-referee1-dr1-09-20260930t2309z.json": {
       "fingerprint": "b1031f1b79c211f9df7a862b35b85f0228c04262950e9e3516d819760bdc8f7f",
       "source": "legacy-acked"
+    },
+    "inbox/scheduled-referee1-h0v2-ack-20261001t201629z.json": {
+      "fingerprint": "656df005a07fd6d83047be4f7247f2580ae159240c97e1c18694613260adb05c",
+      "observed_at": "2026-10-02T15:23:45Z",
+      "outcome": "APPLIED",
+      "receipt_ids": [
+        "OR-1cbdb7da420b195fa7fa91c336622bde"
+      ],
+      "receipts": [
+        {
+          "contract": "OPERATION_RECEIPT_V1",
+          "effect_id": "envelope-f1d150461beaab10baeb46091849b887",
+          "intent_id": "gateway:tcc-73a57d132843d66c948db2a2a9b0d374",
+          "observed_at": "2026-10-02T15:23:22.506709Z",
+          "occurred_at": "2026-10-02T15:23:22.506692Z",
+          "outcome": "APPLIED",
+          "payload_sha256": "sha256:6f031e902758a204945b97f67fd50f7ebacbb6cd09448b97536aaa028d098383",
+          "reason_code": null,
+          "receipt_id": "OR-1cbdb7da420b195fa7fa91c336622bde",
+          "result_revision": "sha256:0fe0dd773bc7e7c2dce729e93b6738586ce198080a8447f9ff959480ee7fe4d8",
+          "retry_condition": null,
+          "source_revision": "sha256:047749f8066138500457090d8103f4b255d2690ea8f4b5a20f9d5e4fa5b31edb",
+          "stage": "APPLIED",
+          "supersedes": null,
+          "visibility": "PUBLIC"
+        }
+      ],
+      "tower_revision": "sha256:3af55ce5301e56ae4c9ad66af5ef008f719cfd8b1e354a3dc261e097b2ddf1b5"
     },
     "inbox/scheduled-referee1-meta-permutation-20260930t220501z.json": {
       "applied_at": "2026-10-01T05:16:13Z",
