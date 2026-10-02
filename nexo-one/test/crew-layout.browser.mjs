@@ -72,7 +72,13 @@ try {
         assert.ok(m.card.height < (width >= 646 ? 500 : 720), name + ': bounded fixture card height ' + m.name);
       }
       assert.match(await page.locator('.crew').innerText(), /Última entrega do papel.*Pedido original · mural.*Próxima ação declarada/s);
-      assert.match(await page.locator('.crew').innerText(), /telemetria do papel.*recorte de até 24 h/s);
+      const pulses = await page.locator('.crew-pulse').allInnerTexts();
+      assert.equal(pulses.length, metrics.length, name + ': every role card exposes its coverage');
+      assert.ok(pulses.some(text => /^último sinal do papel /.test(text)), name + ': fixture exercises a role with observed events');
+      for (const pulse of pulses) {
+        assert.match(pulse, /^(?:último sinal do papel .+ · \d+ eventos deste papel em até 24 h(?: · compartilhado entre operadores)? · recorte parcial|Nenhum evento deste papel no recorte recebido; cobertura parcial)$/, name + ': role scope, time window and partial coverage stay explicit');
+      }
+      assert.ok(pulses.some(text => text.includes('compartilhado entre operadores')), name + ': shared operator role is not presented as an individual event count');
       assert.deepEqual(errors, [], name + ': page errors');
       reports.push({ name, width, cards: metrics.length, fullWidth: true, noOverflow: true, reducedMotion: reduced, webglFallback: fallback, maxHeight: Math.max(...metrics.map(m => m.card.height)), errors });
     }

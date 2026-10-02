@@ -90,7 +90,7 @@ test('accepted and replied board states require an explicit record', () => {
   const post = { id: 'P', at: '2026-09-30', from: 'PITIA', to: 'EXECUTOR', text: 'Verificar dados.' };
   assert.equal(boardMeta(post, now).status, 'Aberto');
   assert.equal(boardMeta({ ...post, status: 'ACCEPTED' }, now).status, 'Aceito');
-  assert.equal(boardMeta(post, now, [{ ...post, id: 'R', reply_to: 'P' }]).status, 'Respondido');
+  assert.equal(boardMeta(post, now, [{ ...post, id: 'R', from: 'EXECUTOR', to: 'PITIA', reply_to: 'P' }]).status, 'Respondido');
   assert.equal(boardMeta({ ...post, resolved_at: '2026-09-30' }, now, [{ ...post, id: 'R', reply_to: 'P' }]).status, 'Resolvido');
 });
 

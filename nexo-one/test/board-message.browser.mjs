@@ -4,7 +4,7 @@ import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { chromium } from 'playwright';
 import { labVisualFixture } from './lab-visual-fixture.mjs';
 import { buildPagesProjection } from '../scripts/build-pages-system.mjs';
-import { latestBoardRecord, boardMeta } from '../src/features/lab/presentation.ts';
+import { latestBoardRecord, boardConversation, boardThreads } from '../src/features/lab/presentation.ts';
 
 const input = process.env.NEXO_PUBLIC_PROJECTION_INPUT;
 const projection = input ? JSON.parse(await readFile(input, 'utf8')) : labVisualFixture();
@@ -20,8 +20,16 @@ if (!input) {
       ...(i === 1 ? { resolved_at: new Date(now - 60_000).toISOString() } : {}), ...(i === 2 ? { expires_at: new Date(now - 60_000).toISOString() } : {}),
     })),
   ];
+  system.evolution.board.push({ ...raw, id: 'VISUAL-SELF-NOTE', from: 'ENGINEER', to: 'ENGINEER',
+    at: new Date(now - 30_000).toISOString(), text: 'Fixture de teste — anotação própria preservada.' });
+  const answered = system.evolution.board.find(post => post.id === 'VISUAL-BOARD-0');
+  system.evolution.board.push({ ...answered, id: 'VISUAL-REPLY', reply_to: answered.id,
+    from: answered.to, to: answered.from, at: new Date(now - 120_000).toISOString(),
+    text: 'Fixture de teste — resposta vinculada do destinatário; problema ainda em investigação.' });
 }
-const latest = latestBoardRecord(system.evolution.board, now);
+const roots = boardThreads(system.evolution.board, now);
+const pending = roots.filter(post => boardConversation(post, system.evolution.board, now).awaiting);
+const latest = latestBoardRecord(pending, now);
 assert.ok(latest, 'published board input required for this focused QA');
 const base = process.env.NEXO_BASE_URL || 'http://127.0.0.1:4187';
 const output = process.env.NEXO_QA_OUTPUT || 'test-output/board-message';
@@ -84,7 +92,7 @@ try {
       assert.ok(diagnostics.scene.bottom <= diagnostics.hud.y + 1, 'reading panel starts below the sky');
     }
     if (!input) {
-      assert.match(await focus.locator('.board-state').innerText(), /^Aberto/);
+      assert.equal(await focus.locator('.board-state').innerText(), 'Aguardando resposta');
     }
     const more = focus.getByRole('button', { name: 'Ler recado inteiro' });
     if (await more.count()) {
@@ -111,24 +119,43 @@ try {
       const heading = document.getElementById('now-board');
       const section = heading?.parentElement;
       return document.activeElement === heading && section?.querySelectorAll('.board > li').length === total
-        && [...section.querySelectorAll('.board-filters select')].every(select => select.value === '');
-    }, system.evolution.board.length);
+        && section.querySelector('[aria-label="Para"]').value === ''
+        && section.querySelector('[aria-label="Tipo"]').value === ''
+        && section.querySelector('[aria-label="Mostrar"]').value === 'Aguardando resposta';
+    }, pending.length);
     await waitForOpenBoard();
     const board = page.locator('#now-board').locator('..');
-    assert.equal(await board.locator('.board > li').count(), system.evolution.board.length);
-    assert.equal(await board.getByLabel('Status', { exact: true }).inputValue(), '');
+    assert.equal(await board.locator('.board > li').count(), pending.length);
+    assert.equal(await board.getByLabel('Mostrar', { exact: true }).inputValue(), 'Aguardando resposta');
     await noOverflow(page);
     await page.screenshot({ path: output + '/' + name + '-mural.png' });
-    const owner = await board.getByLabel('Destino / responsável', { exact: true }).locator('option').nth(1).getAttribute('value');
-    await board.getByLabel('Destino / responsável', { exact: true }).selectOption(owner);
-    await board.getByLabel('Status', { exact: true }).selectOption('Pendentes');
-    const expected = system.evolution.board.filter(post => { const meta = boardMeta(post, now, system.evolution.board); return meta.owner === owner && !['Resolvido', 'Expirado'].includes(meta.status); });
+    const owner = await board.getByLabel('Para', { exact: true }).locator('option').nth(1).getAttribute('value');
+    await board.getByLabel('Para', { exact: true }).selectOption(owner);
+    await board.getByLabel('Mostrar', { exact: true }).selectOption('Aguardando resposta');
+    const expected = pending.filter(post => post.to === owner);
     await page.waitForFunction(total => document.getElementById('now-board')?.parentElement?.querySelectorAll('.board > li').length === total, Math.min(8, expected.length));
     assert.equal(await board.locator('.board > li').count(), Math.min(8, expected.length), 'selected filters are respected');
     await focus.getByRole('button', { name: 'Ver todos os recados' }).click();
     await waitForOpenBoard();
-    assert.equal(await board.getByLabel('Destino / responsável', { exact: true }).inputValue(), '');
-    assert.equal(await board.getByLabel('Status', { exact: true }).inputValue(), '');
+    assert.equal(await board.getByLabel('Para', { exact: true }).inputValue(), '');
+    assert.equal(await board.getByLabel('Mostrar', { exact: true }).inputValue(), 'Aguardando resposta');
+    if (!input) {
+      assert.equal(await board.locator('.board > li').filter({ hasText: 'recado 0' }).count(), 0, 'answered conversation leaves pending');
+      assert.equal(await board.locator('.board > li').filter({ hasText: 'anotação própria preservada' }).count(), 0, 'self note has no response obligation');
+      await board.getByLabel('Mostrar', { exact: true }).selectOption('Histórico');
+      const note = board.locator('.board > li').filter({ hasText: 'anotação própria preservada' });
+      await note.waitFor();
+      assert.equal(await note.locator('.board-state').innerText(), 'Anotação própria');
+      assert.equal(await note.locator('.board-replies').count(), 0, 'note has no fabricated reply');
+      const answered = board.locator('.board > li').filter({ hasText: 'recado 0' });
+      await answered.waitFor();
+      assert.equal(await answered.locator('.board-state').innerText(), 'Respondido');
+      await answered.locator('.board-replies summary').click();
+      assert.match(await answered.locator('.board-replies').innerText(), /resposta vinculada do destinatário; problema ainda em investigação/);
+      assert.match(await answered.locator('.board-text').innerText(), /recado 0/);
+      await focus.getByRole('button', { name: 'Ver todos os recados' }).click();
+      await waitForOpenBoard();
+    }
     const motions = await focus.evaluate(el => el.getAnimations({ subtree: true }).filter(animation => animation.playState === 'running').length);
     assert.equal(motions, 0, 'no message activity animation');
     assert.deepEqual(errors, [], name + ': page errors');

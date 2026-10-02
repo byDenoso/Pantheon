@@ -35,7 +35,10 @@ test('projection service auth accepts only the exact signed Atlas production ide
   assert.equal(await verifyProjectionServiceToken(tokenFor(claims({environment:'preview'})),{fetcher,now}),false);
   assert.equal(await verifyProjectionServiceToken(tokenFor(claims({exp:nowSeconds-120})),{fetcher,now}),false);
   const valid=tokenFor(claims());
-  assert.equal(await verifyProjectionServiceToken(`${valid.slice(0,-2)}aa`,{fetcher,now}),false);
+  const [head,body,signature]=valid.split('.');
+  const corrupted=Buffer.from(signature,'base64url');
+  corrupted[0]^=1; // Always alter signed bytes; replacing a suffix can leave them unchanged.
+  assert.equal(await verifyProjectionServiceToken(`${head}.${body}.${corrupted.toString('base64url')}`,{fetcher,now}),false);
 });
 
 test('projection bearer is bounded and explicit',()=>{
