@@ -18,6 +18,11 @@ ROOT = RUNTIME / 'recipes'
 sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(RUNTIME))
 from recipe_param_preflight import validate_params
+from desi_materialization_gate import (
+    MaterializationReceiptError,
+    validate_receipt_binding,
+    validate_receipt_bytes,
+)
 from receipt_validation import classify_payload
 
 MANIFEST = json.loads((ROOT / 'preflight/w0wa_bao_sn_multi.json').read_text())
@@ -390,6 +395,95 @@ class WorkflowIntegration(unittest.TestCase):
                     self.assertEqual(meta['preflight_failure_reason'], 'PREFLIGHT_RECEIPT_REQUIRED')
                 else:
                     self.assertTrue(meta['param_preflight']['eligible'])
+
+
+
+class DesiMaterializationReceiptGate(unittest.TestCase):
+    def receipt_fixture(self):
+        files = []
+        for index in range(160):
+            size = 1 if index < 159 else 139_526_840_064 - 159
+            files.append({
+                'name': f'file-{index:03}.bin',
+                'size_bytes': size,
+                'sha256': f'{index:064x}',
+            })
+        lines = [
+            f"{item['sha256']}  {item['name']}  {item['size_bytes']}\n"
+            for item in sorted(files, key=lambda item: item['name'])
+        ]
+        return {
+            'schema': 'NEXO_DESI_LSS_SELECTION_MATERIALIZATION_RECEIPT_V1',
+            'execution_status': 'MATERIALIZATION_VERIFIED',
+            'scope': 'SOURCE_MATERIALIZATION_ONLY',
+            'roadmap_id': 'RM-GZ01-GALAXY-3D-MAP-LIVE-V1',
+            'work_id': 'WORK::GZ-01-B03-GALAXY-3D-MAP',
+            'test_id': 'GZ01-B03-T03-WINDOW-ROTATION-NULL',
+            'recovery_work_id': 'WORK::RECOVERY-9ec8d79f540e5103bc62321946a2c4c8',
+            'recipe_family': 'desi_lss_selection_binding_family',
+            'selection_manifest': {
+                'schema': 'NEXO_DESI_LSS_SELECTION_MANIFEST_V1',
+                'sha256': DESI_MANIFEST_SHA256,
+                'file_count': 160,
+                'total_bytes': 139_526_840_064,
+            },
+            'verification': {
+                'hash_algorithm': 'sha256',
+                'exact_filename_set': True,
+                'regular_files_only': True,
+                'symlinks_and_reparse_points_rejected': True,
+                'extra_entries_rejected': True,
+                'all_local_bytes_verified': True,
+                'file_count': 160,
+                'total_bytes': 139_526_840_064,
+                'files_index_sha256': hashlib.sha256(
+                    ''.join(lines).encode('utf-8')
+                ).hexdigest(),
+            },
+            'files': files,
+            'local_bytes_verified': True,
+            'work_ready': False,
+            'test_ready': False,
+            'scientific_result_eligible': False,
+            'scientific_status': {
+                'status': 'PREPARED_PARTIAL_NOT_READY',
+                'scientific_result_eligible': False,
+                't03_dispatch_ready': False,
+            },
+        }
+
+    def test_hash_bound_receipt_schema_and_all_160_records_are_validated(self):
+        receipt = self.receipt_fixture()
+        raw = json.dumps(receipt, sort_keys=True).encode('utf-8')
+        validated = validate_receipt_bytes(raw, hashlib.sha256(raw).hexdigest())
+        self.assertEqual(validated['verification']['file_count'], 160)
+        self.assertTrue(validated['verification']['all_local_bytes_verified'])
+        self.assertFalse(validated['scientific_status']['t03_dispatch_ready'])
+
+    def test_receipt_tampering_and_missing_binding_fail_closed(self):
+        receipt = self.receipt_fixture()
+        receipt['verification']['all_local_bytes_verified'] = False
+        raw = json.dumps(receipt, sort_keys=True).encode('utf-8')
+        with self.assertRaisesRegex(MaterializationReceiptError, 'summary'):
+            validate_receipt_bytes(raw, hashlib.sha256(raw).hexdigest())
+        with self.assertRaisesRegex(MaterializationReceiptError, 'exactly one'):
+            validate_receipt_binding(desi_inputs_fixture()[:2])
+        wrong_version = desi_inputs_fixture()
+        wrong_version[2]['version'] = 'unbound'
+        with self.assertRaisesRegex(MaterializationReceiptError, 'canonical schema'):
+            validate_receipt_binding(wrong_version)
+
+    def test_workflow_gates_dependencies_on_materialization_receipt(self):
+        workflow = (
+            RUNTIME.parents[1] / '.github/workflows/nexo-test-battery.yml'
+        ).read_text()
+        self.assertIn('id: desi_materialization', workflow)
+        self.assertIn(
+            "if: steps.prepare.outcome == 'success' && "
+            "steps.desi_materialization.outcome == 'success'",
+            workflow,
+        )
+        self.assertIn('MATERIALIZATION_PREFLIGHT', workflow)
 
 
 class DesiSelectionMaterializationPreflight(unittest.TestCase):
