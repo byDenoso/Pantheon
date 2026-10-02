@@ -108,6 +108,7 @@
     "inbox/scheduled-engineer-pr378-readme-block-20260930t1703z.json": "cbaa98efd509898429c05dfcb09bacdd4b17ed0d3e58a1d6b58b51d936d9b67b",
     "inbox/scheduled-engineer-pr395-open-20261001t1459z.json": "2b17c157dc19a36e10476c4dab92e025f5bea9c7d23bebf325b08344d1ee5c50",
     "inbox/scheduled-engineer-recipe-late-time-joint-probe-stress-20260928.json": "05fc3a57bc2cc703d9dd8277b1fb09723e4d9a4d0abd923b56f56d7d8223cb5f",
+    "inbox/scheduled-engineer-recovery-rankscore-public-snapshot-v1.json": "5df37425126ef3589e0e85dbc5b0bc4a12dd088fb619e5e0e5906c77b5d1da1a",
     "inbox/scheduled-engineer-recovery-w0wa-public-inputs-v1-1.json": "81ab7d6c191363d2017f35f09bb79fb9c0cdf99648973bf83428688a0924ddb7",
     "inbox/scheduled-engineer-recovery-w0wa-public-inputs-v1-2.json": "4c63dad4fb1d65e48e3f821b75e25a988492d425cd752c184b248a68ea6ae53a",
     "inbox/scheduled-engineer-staging-policy-block-20261001t1718z.json": "d172e96b7c25225a4d87e12b96e6145665df190c0376431f1fb0431505e12eaf",
@@ -988,6 +989,11 @@
       "fingerprint": "05fc3a57bc2cc703d9dd8277b1fb09723e4d9a4d0abd923b56f56d7d8223cb5f",
       "source": "legacy-acked"
     },
+    "inbox/scheduled-engineer-recovery-rankscore-public-snapshot-v1.json": {
+      "applied_at": "2026-10-02T02:35:01Z",
+      "fingerprint": "5df37425126ef3589e0e85dbc5b0bc4a12dd088fb619e5e0e5906c77b5d1da1a",
+      "tower_revision": "sha256:5e27bf068536be861b2b47fa390a2e07b13da1224ef1c3d972088e34caaf3c3f"
+    },
     "inbox/scheduled-engineer-recovery-w0wa-public-inputs-v1-1.json": {
       "applied_at": "2026-10-02T02:29:45Z",
       "fingerprint": "81ab7d6c191363d2017f35f09bb79fb9c0cdf99648973bf83428688a0924ddb7",
@@ -1519,14 +1525,14 @@
       "tower_revision": "sha256:a52d6bf2a1a05e2cda63f3802541eabae86c0df45643555b40ac20c95a6414cb"
     },
     "inbox/scheduled-guardiao-recipe-review-pr396-0a917b56.json": {
-      "applied_at": "2026-10-02T02:29:45Z",
+      "applied_at": "2026-10-02T02:35:01Z",
       "fingerprint": "1299371eb113e2a2cff27dbb54a953b4f00d829b1a5266fc3d9095929fbdb405",
-      "tower_revision": "sha256:64f723470edc6c50cd1bb1974ec9ea481e5703b559a7f15f00c6defb224f8a2a"
+      "tower_revision": "sha256:5e27bf068536be861b2b47fa390a2e07b13da1224ef1c3d972088e34caaf3c3f"
     },
     "inbox/scheduled-guardiao-recipe-review-pr397-b5c451c2.json": {
-      "applied_at": "2026-10-02T02:29:45Z",
+      "applied_at": "2026-10-02T02:35:01Z",
       "fingerprint": "1686d7d206089211bfe826807277afe502b597d8157e874e972a755133e5f0ad",
-      "tower_revision": "sha256:64f723470edc6c50cd1bb1974ec9ea481e5703b559a7f15f00c6defb224f8a2a"
+      "tower_revision": "sha256:5e27bf068536be861b2b47fa390a2e07b13da1224ef1c3d972088e34caaf3c3f"
     },
     "inbox/scheduled-interactive-20260929-router040-ready-binds-v1.json": {
       "fingerprint": "9c2ae392c4fa126a5541d50e0360e2036a3c6d6d280edc058003c19ec6d9f22c",
