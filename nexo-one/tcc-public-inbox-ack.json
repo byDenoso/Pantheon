@@ -418,6 +418,7 @@
     "inbox/scheduled-operator-bind-hyp-growth-shape-desi-dr1-min.json": "535904e95e7b07fe23315fdd4ac1ef72178363652c3e3f3e9f6fd83335a9e7c4",
     "inbox/scheduled-operator-bind-xarea26-005-late-model-min.json": "3fd7f6ce5d810d187420bda687b3bfd6f6d99d15aeeb11edddf463ffc8e24a69",
     "inbox/scheduled-operator-bind-xarea26-007-cf4-min.json": "41b405c1c46d2f1d61b0a7345ae2a8780489f6ecd0aa0b5a5b87225e9059ca1c",
+    "inbox/scheduled-operator-c-calibration-terminal-20261002.json": "d6585c0558803fe15f54ccebe98f645c585efee650e068108f3eb28db5dac2fb",
     "inbox/scheduled-operator-c-dr1-board-20260930.json": "061c92ce1134ed41e1be7f75165076b8ddd47fd0a1b211b2574fd68ec8e15801",
     "inbox/scheduled-operator-c-dr1-data-sn-trio-20260930.json": "149833e7f01d340275a15cc1c2acbdfee81e6f7e2bfbb9307695cee4462156d5",
     "inbox/scheduled-operator-c-dr1-pp-u3-om315-battery.json": "e0d6900bfb34d8ff5b0e27fa6c4ca400cc285a8e9068d4b95a4233cb134c6200",
@@ -3392,6 +3393,34 @@
     "inbox/scheduled-operator-bind-xarea26-007-cf4-min.json": {
       "fingerprint": "41b405c1c46d2f1d61b0a7345ae2a8780489f6ecd0aa0b5a5b87225e9059ca1c",
       "source": "legacy-acked"
+    },
+    "inbox/scheduled-operator-c-calibration-terminal-20261002.json": {
+      "fingerprint": "d6585c0558803fe15f54ccebe98f645c585efee650e068108f3eb28db5dac2fb",
+      "observed_at": "2026-10-02T20:13:27Z",
+      "outcome": "APPLIED",
+      "receipt_ids": [
+        "OR-b578feacee83a1f74badd3cf1a036be0"
+      ],
+      "receipts": [
+        {
+          "contract": "OPERATION_RECEIPT_V1",
+          "effect_id": "envelope-1a001de8c8947a5f7a18b982cfc879ec",
+          "intent_id": "gateway:tcc-267a69c51b6dee7ab75b46671825bc19",
+          "observed_at": "2026-10-02T20:13:03.580054Z",
+          "occurred_at": "2026-10-02T20:13:03.580037Z",
+          "outcome": "APPLIED",
+          "payload_sha256": "sha256:9974414ecd7d646dddef00c6fe0153b3417a4e4c03742325c986a9b3d800ab29",
+          "reason_code": null,
+          "receipt_id": "OR-b578feacee83a1f74badd3cf1a036be0",
+          "result_revision": "sha256:b0f048cd2a9c320fe12be4d1b9709683f2f120cbe2beda5968da5a6adbfc046c",
+          "retry_condition": null,
+          "source_revision": "sha256:047749f8066138500457090d8103f4b255d2690ea8f4b5a20f9d5e4fa5b31edb",
+          "stage": "APPLIED",
+          "supersedes": null,
+          "visibility": "PUBLIC"
+        }
+      ],
+      "tower_revision": "sha256:4b2fcc0334b8718878101189b203fd069b2115b5c8c662da3bab2a407a932166"
     },
     "inbox/scheduled-operator-c-dr1-board-20260930.json": {
       "fingerprint": "061c92ce1134ed41e1be7f75165076b8ddd47fd0a1b211b2574fd68ec8e15801",
