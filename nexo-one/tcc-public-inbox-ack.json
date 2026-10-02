@@ -212,6 +212,7 @@
     "inbox/scheduled-guardiao-board-write-failure-20261001t1006z.json": "b2eede91c898c8779dc85c4783c0930bfef30a9a13c7a0d6bf7e1c1521c26eea",
     "inbox/scheduled-guardiao-board-write-failure-20261001t1303z.json": "01579a517dd9f8892fb1d8e35edd5e1990d2c594528deb0e1dc7080255f5e732",
     "inbox/scheduled-guardiao-cover-referee1-20261002t1004z.json": "70cd96e9c1634118643e2ea5d8cc0650510d1d7702ade0e627f0e07bd7c20152",
+    "inbox/scheduled-guardiao-cover-referee1-20261002t2013z.json": "385592150a730f44207f7eec05c321e433d321212fca9466e253971770a075f8",
     "inbox/scheduled-guardiao-fitness-190341.json": "d1b8b7d9f4152f3e903a5f95d67b9195a5cb4f50e28ac0231fc491d33365b337",
     "inbox/scheduled-guardiao-fitness-20260930t2109z.json": "a83dd89d8af54379bca56efa3ce99cd43ac1d8e59aef1a36eeefb52b032d3d48",
     "inbox/scheduled-guardiao-fitness-20261001t1608z.json": "d8dceebebd03a61fcd68e443618dd533d3f95d8e107279250c6efa7a1c727600",
@@ -2040,6 +2041,34 @@
         }
       ],
       "tower_revision": "sha256:8223f5d4432dab7a76e8f190687779dab7b5884ad38c26bb0591afe30d5f8b8b"
+    },
+    "inbox/scheduled-guardiao-cover-referee1-20261002t2013z.json": {
+      "fingerprint": "385592150a730f44207f7eec05c321e433d321212fca9466e253971770a075f8",
+      "observed_at": "2026-10-02T20:18:19Z",
+      "outcome": "APPLIED",
+      "receipt_ids": [
+        "OR-fc4226f09280fdb67a427076bfea4342"
+      ],
+      "receipts": [
+        {
+          "contract": "OPERATION_RECEIPT_V1",
+          "effect_id": "envelope-dbb3c91e51f1650f0c5d7c017d64b82e",
+          "intent_id": "gateway:tcc-66c2ed3df1db28112abdffce7eabac87",
+          "observed_at": "2026-10-02T20:17:54.899718Z",
+          "occurred_at": "2026-10-02T20:17:54.899701Z",
+          "outcome": "APPLIED",
+          "payload_sha256": "sha256:bb2b325c957ccb03bf426d405a74e455ae2ee07b70ba3abaf88458c183e89848",
+          "reason_code": null,
+          "receipt_id": "OR-fc4226f09280fdb67a427076bfea4342",
+          "result_revision": "sha256:1daa9897afce27b5dc9dfd4f30f58de7f1de7255331a08709ddf8f376a5c795d",
+          "retry_condition": null,
+          "source_revision": "sha256:047749f8066138500457090d8103f4b255d2690ea8f4b5a20f9d5e4fa5b31edb",
+          "stage": "APPLIED",
+          "supersedes": null,
+          "visibility": "PUBLIC"
+        }
+      ],
+      "tower_revision": "sha256:b0952a937fac8a67dbed138a69858c0a53accce9b30ddc3e530f236798f889c3"
     },
     "inbox/scheduled-guardiao-fitness-190341.json": {
       "fingerprint": "d1b8b7d9f4152f3e903a5f95d67b9195a5cb4f50e28ac0231fc491d33365b337",
@@ -3914,8 +3943,8 @@
     },
     "inbox/scheduled-referee1-20261001-a2-rd-broad-om330-pp-u3-binjack.json": {
       "fingerprint": "0a596b054be43e1a6ca6f22bdfa194cd3225c3c0b72499dd665db7e0865f5931",
-      "observed_at": "2026-10-02T20:16:11Z",
-      "outcome": "APPLIED",
+      "observed_at": "2026-10-02T20:18:19Z",
+      "outcome": "ALREADY_APPLIED",
       "receipt_ids": [
         "OR-8cbf5911ccf16c7e45d24255dfee4ba9"
       ],
@@ -3924,9 +3953,9 @@
           "contract": "OPERATION_RECEIPT_V1",
           "effect_id": "envelope-ec0e4cb97c046f5bd3a7fd175ffbcc69",
           "intent_id": "gateway:tcc-09eb886aee02aec52da17a0613178d34",
-          "observed_at": "2026-10-02T20:15:37.733857Z",
+          "observed_at": "2026-10-02T20:17:54.923046Z",
           "occurred_at": "2026-10-02T20:15:37.733840Z",
-          "outcome": "APPLIED",
+          "outcome": "ALREADY_APPLIED",
           "payload_sha256": "sha256:b31cf2cd639729d01466fb073a4edfc75c11a09de2de616f9de9695a05cab56a",
           "reason_code": null,
           "receipt_id": "OR-8cbf5911ccf16c7e45d24255dfee4ba9",
@@ -3938,7 +3967,7 @@
           "visibility": "PUBLIC"
         }
       ],
-      "tower_revision": "sha256:e8061b7eab95d36c289d8de796edb369019d91d0e272529c6aafc99b60094f86"
+      "tower_revision": "sha256:b0952a937fac8a67dbed138a69858c0a53accce9b30ddc3e530f236798f889c3"
     },
     "inbox/scheduled-referee1-20261001-a2-rd-medium-om315-binjack.json": {
       "fingerprint": "244aa30156dfece0e66053dbe5597d570a6d8a5278d7ddbe0836a897326ab354",
