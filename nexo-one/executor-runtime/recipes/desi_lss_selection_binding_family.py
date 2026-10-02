@@ -72,6 +72,8 @@ def _validate_https_url(value: object) -> str:
 def validate_binding(binding: object, *, expected_name: str | None = None) -> dict:
     if not isinstance(binding, dict):
         raise InputUnavailable("each frozen input binding must be an object")
+    if not isinstance(binding.get("name"), str) or not binding["name"].strip():
+        raise InputUnavailable("every frozen input needs a non-empty name")
     if expected_name is not None and binding.get("name") != expected_name:
         raise InputUnavailable(f"missing frozen input binding: {expected_name}")
     _validate_https_url(binding.get("url"))
@@ -146,12 +148,32 @@ def validate_source_manifest(raw: bytes) -> dict:
     files = manifest.get("files")
     if not isinstance(files, list) or len(files) != 160:
         raise InputUnavailable("selection manifest must contain exactly 160 files")
+    expected_files = {}
+    for tracer in EXPECTED_TRACERS:
+        for region in EXPECTED_REGIONS:
+            catalog = f"{tracer}_{region}_clustering.dat.fits"
+            n_z = f"{tracer}_{region}_nz.txt"
+            expected_files[catalog] = {"role": "catalog", "tracer": tracer, "region": region}
+            expected_files[n_z] = {"role": "n_z", "tracer": tracer, "region": region}
+            for random_index in range(18):
+                random = f"{tracer}_{region}_{random_index}_clustering.ran.fits"
+                expected_files[random] = {"role": "random", "tracer": tracer, "region": region,
+                                          "random_index": random_index}
     counts = {role: 0 for role in ("catalog", "random", "n_z")}
     lanes: dict[tuple[str, str], set[int]] = {}
+    names = set()
     for item in files:
         if not isinstance(item, dict) or item.get("role") not in counts:
             raise InputUnavailable("selection manifest contains an invalid file record")
-        _validate_https_url(item.get("url"))
+        name = item.get("name")
+        if not isinstance(name, str) or name in names or name not in expected_files:
+            raise InputUnavailable("selection manifest contains an unexpected or duplicate filename")
+        names.add(name)
+        expected = expected_files[name]
+        if any(item.get(key) != value for key, value in expected.items()):
+            raise InputUnavailable(f"selection manifest metadata differs from the filename contract: {name}")
+        if item.get("url") != DESI_BASE + name:
+            raise InputUnavailable(f"selection manifest file is not bound to the official DESI release URL: {name}")
         if not _valid_sha256(item.get("sha256")) or not isinstance(item.get("size_bytes"), int) or item["size_bytes"] <= 0:
             raise InputUnavailable("selection manifest file lacks size or SHA256")
         if item.get("version") != "DESI DR1/iron/LSScats v1.5":
@@ -164,6 +186,8 @@ def validate_source_manifest(raw: bytes) -> dict:
             if not isinstance(index, int):
                 raise InputUnavailable("random record lacks an integer random_index")
             lanes.setdefault((item["tracer"], item["region"]), set()).add(index)
+    if names != set(expected_files):
+        raise InputUnavailable("selection manifest does not contain the exact T01 filename set")
     if counts != {"catalog": 8, "random": 144, "n_z": 8}:
         raise InputUnavailable(f"selection manifest has unexpected role counts: {counts}")
     if any(lanes.get((tracer, region)) != set(range(18)) for tracer in EXPECTED_TRACERS for region in EXPECTED_REGIONS):
@@ -196,11 +220,22 @@ def validate_product(raw: bytes, manifest_sha256: str) -> tuple[np.ndarray, np.n
             required = {"delta", "valid_mask", "selection_stratum", "radial_bin", "angular_selection_bin", "metadata_json"}
             if required - set(archive.files):
                 raise InputUnavailable(f"3D product lacks arrays: {sorted(required - set(archive.files))}")
-            delta = np.asarray(archive["delta"], dtype=np.float64)
-            valid = np.asarray(archive["valid_mask"], dtype=bool)
-            strata = np.asarray(archive["selection_stratum"], dtype=np.int64)
-            radial_bins = np.asarray(archive["radial_bin"], dtype=np.int64)
-            angular_bins = np.asarray(archive["angular_selection_bin"], dtype=np.int64)
+            raw_delta = np.asarray(archive["delta"])
+            raw_valid = np.asarray(archive["valid_mask"])
+            raw_strata = np.asarray(archive["selection_stratum"])
+            raw_radial = np.asarray(archive["radial_bin"])
+            raw_angular = np.asarray(archive["angular_selection_bin"])
+            if raw_delta.dtype.kind not in "fiu":
+                raise InputUnavailable("delta must have a real numeric dtype")
+            if raw_valid.dtype.kind != "b":
+                raise InputUnavailable("valid_mask must have boolean dtype; implicit conversion is forbidden")
+            if any(array.dtype.kind not in "iu" for array in (raw_strata, raw_radial, raw_angular)):
+                raise InputUnavailable("selection_stratum/radial_bin/angular_selection_bin must have integer dtype")
+            delta = raw_delta.astype(np.float64, copy=False)
+            valid = raw_valid.astype(bool, copy=False)
+            strata = raw_strata.astype(np.int64, copy=False)
+            radial_bins = raw_radial.astype(np.int64, copy=False)
+            angular_bins = raw_angular.astype(np.int64, copy=False)
             metadata = json.loads(_metadata_text(archive["metadata_json"]))
     except InputUnavailable:
         raise
@@ -219,6 +254,8 @@ def validate_product(raw: bytes, manifest_sha256: str) -> tuple[np.ndarray, np.n
         inside = valid & (strata == stratum)
         if len(np.unique(radial_bins[inside])) != 1 or len(np.unique(angular_bins[inside])) != 1:
             raise InputUnavailable("each selection stratum must be contained within one radial and one angular-selection bin")
+        if np.count_nonzero(inside) < 2:
+            raise InputUnavailable("each selection stratum needs at least two cells for a valid permutation null")
     if not isinstance(metadata, dict) or metadata.get("schema") != PRODUCT_SCHEMA:
         raise InputUnavailable("unexpected 3D product schema")
     if metadata.get("source_manifest_sha256") != manifest_sha256:
@@ -232,8 +269,23 @@ def validate_product(raw: bytes, manifest_sha256: str) -> tuple[np.ndarray, np.n
     preservation = set((metadata.get("null_strata") or {}).get("preserves") or [])
     if not {"n_z", "footprint", "selection"}.issubset(preservation):
         raise InputUnavailable("selection_stratum must explicitly preserve n_z, footprint and selection")
-    if not isinstance(metadata.get("coordinate_frame"), dict) or not metadata["coordinate_frame"].get("cosmology"):
-        raise InputUnavailable("3D product must freeze coordinate frame and distance cosmology")
+    coordinate = metadata.get("coordinate_frame")
+    if (not isinstance(coordinate, dict) or not isinstance(coordinate.get("name"), str)
+            or not coordinate["name"].strip() or not isinstance(coordinate.get("distance_unit"), str)
+            or not coordinate["distance_unit"].strip() or not isinstance(coordinate.get("cosmology"), dict)
+            or not coordinate["cosmology"]):
+        raise InputUnavailable("3D product must freeze coordinate-frame name, distance unit and cosmology")
+    voxelization = metadata.get("voxelization")
+    if not isinstance(voxelization, dict) or not isinstance(voxelization.get("assignment"), str) or not voxelization["assignment"].strip():
+        raise InputUnavailable("3D product must freeze its voxel assignment")
+    origin = voxelization.get("origin")
+    cell_size = voxelization.get("cell_size")
+    if (not isinstance(origin, list) or len(origin) != 3
+            or not all(isinstance(value, (int, float)) and not isinstance(value, bool) and np.isfinite(value) for value in origin)
+            or not isinstance(cell_size, list) or len(cell_size) != 3
+            or not all(isinstance(value, (int, float)) and not isinstance(value, bool)
+                       and np.isfinite(value) and value > 0 for value in cell_size)):
+        raise InputUnavailable("3D product must freeze finite origin[3] and positive cell_size[3]")
     role_bindings = metadata.get("provenance_bindings")
     if not isinstance(role_bindings, dict) or set(role_bindings) != REQUIRED_PROVENANCE_ROLES:
         raise InputUnavailable("3D product must bind catalog/covariance/randoms/selection/weights/window roles")
@@ -283,7 +335,7 @@ def validate_params(params: object) -> dict:
                 raise ValueError("largest_abs_excursion_component requires abs_delta_gte and connectivity")
             if not isinstance(spec["abs_delta_gte"], (int, float)) or isinstance(spec["abs_delta_gte"], bool) or not float(spec["abs_delta_gte"]) > 0:
                 raise ValueError("abs_delta_gte must be positive")
-            if spec["connectivity"] not in (1, 2, 3):
+            if isinstance(spec["connectivity"], bool) or spec["connectivity"] not in (1, 2, 3):
                 raise ValueError("connectivity must be 1, 2 or 3")
         else:
             raise ValueError(f"unsupported extreme statistic: {name}")

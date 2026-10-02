@@ -59,7 +59,10 @@ def product_bytes(manifest_sha256: str) -> bytes:
                       "randoms_per_tracer_region": 18, "includes_official_n_z": True},
         "null_strata": {"preserves": ["n_z", "footprint", "selection"],
                         "definition": "radial shell x angular completeness bin"},
-        "coordinate_frame": {"name": "ICRS Cartesian", "cosmology": {"name": "frozen-test"}},
+        "coordinate_frame": {"name": "ICRS Cartesian", "distance_unit": "Mpc/h",
+                             "cosmology": {"name": "frozen-test"}},
+        "voxelization": {"origin": [0.0, 0.0, 0.0], "cell_size": [10.0, 10.0, 10.0],
+                         "assignment": "cloud-in-cell"},
         "provenance_bindings": role_bindings,
     }
     stream = BytesIO()
@@ -94,6 +97,16 @@ class DesiSelectionNullContract(unittest.TestCase):
         with self.assertRaisesRegex(recipe.InputUnavailable, "source receipt"):
             recipe.validate_source_manifest(json.dumps(manifest).encode())
 
+    def test_manifest_requires_exact_official_filenames_and_urls(self):
+        manifest = json.loads(self.manifest_raw)
+        manifest["files"][0]["url"] = "https://example.org/substitute.fits"
+        with self.assertRaisesRegex(recipe.InputUnavailable, "official DESI release URL"):
+            recipe.validate_source_manifest(json.dumps(manifest).encode())
+        manifest = json.loads(self.manifest_raw)
+        manifest["files"][-1]["name"] = manifest["files"][0]["name"]
+        with self.assertRaisesRegex(recipe.InputUnavailable, "duplicate filename"):
+            recipe.validate_source_manifest(json.dumps(manifest).encode())
+
     def test_params_preserve_recorded_identity_and_thresholds(self):
         self.assertEqual(recipe.validate_params(frozen_params())["prereg_hash"], recipe.PREREG_HASH)
         changed = frozen_params()
@@ -103,6 +116,10 @@ class DesiSelectionNullContract(unittest.TestCase):
         changed = frozen_params()
         changed["null_count"] = 99
         with self.assertRaisesRegex(ValueError, ">=100"):
+            recipe.validate_params(changed)
+        changed = frozen_params()
+        changed["statistics"][0]["connectivity"] = True
+        with self.assertRaisesRegex(ValueError, "connectivity"):
             recipe.validate_params(changed)
 
     def test_permutation_preserves_each_selection_stratum_and_footprint(self):
@@ -152,6 +169,27 @@ class DesiSelectionNullContract(unittest.TestCase):
                      radial_bin=archive["radial_bin"], angular_selection_bin=archive["angular_selection_bin"],
                      metadata_json=archive["metadata_json"])
         with self.assertRaisesRegex(recipe.InputUnavailable, "one radial"):
+            recipe.validate_product(stream.getvalue(), self.manifest_sha256)
+
+    def test_product_dtypes_and_voxelization_fail_closed(self):
+        raw = product_bytes(self.manifest_sha256)
+        with np.load(BytesIO(raw), allow_pickle=False) as archive:
+            stream = BytesIO()
+            np.savez(stream, delta=archive["delta"], valid_mask=archive["valid_mask"].astype(np.int8),
+                     selection_stratum=archive["selection_stratum"], radial_bin=archive["radial_bin"],
+                     angular_selection_bin=archive["angular_selection_bin"], metadata_json=archive["metadata_json"])
+        with self.assertRaisesRegex(recipe.InputUnavailable, "boolean dtype"):
+            recipe.validate_product(stream.getvalue(), self.manifest_sha256)
+
+        with np.load(BytesIO(raw), allow_pickle=False) as archive:
+            metadata = json.loads(archive["metadata_json"].item())
+            del metadata["voxelization"]
+            stream = BytesIO()
+            np.savez(stream, delta=archive["delta"], valid_mask=archive["valid_mask"],
+                     selection_stratum=archive["selection_stratum"], radial_bin=archive["radial_bin"],
+                     angular_selection_bin=archive["angular_selection_bin"],
+                     metadata_json=np.array(json.dumps(metadata)))
+        with self.assertRaisesRegex(recipe.InputUnavailable, "voxel assignment"):
             recipe.validate_product(stream.getvalue(), self.manifest_sha256)
 
     def test_production_core_runs_only_with_two_frozen_inputs(self):

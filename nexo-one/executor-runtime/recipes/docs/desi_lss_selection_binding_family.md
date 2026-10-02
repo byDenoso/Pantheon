@@ -52,7 +52,11 @@ source-manifest hash, grid shape, coordinate frame and distance cosmology, the
 unchanged T01 selection, and concrete versioned HTTPS/SHA-256 provenance for
 all six roles requested in review: `catalog`, `covariance`, `randoms`,
 `selection`, `weights`, and `window`. Its strata must explicitly preserve
-`n_z`, `footprint`, and `selection`.
+`n_z`, `footprint`, and `selection`. The metadata must also freeze a named
+coordinate frame, distance unit and non-empty cosmology, plus voxel `origin`,
+positive three-axis `cell_size`, and assignment method. Masks must be boolean;
+strata and radial/angular bins must be integer arrays. Implicit dtype conversion
+is rejected, and every selection stratum needs at least two cells.
 
 The recipe currently supports two candidate extreme statistics:
 
