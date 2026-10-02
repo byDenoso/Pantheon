@@ -586,7 +586,10 @@ export function ObservatoryScene({ tests, page, focusIds, onPick, onAvailability
     const FORM_S = 180; let cosmic = 0;
     const replay = () => { cosmic = 0; };
     window.addEventListener('nexo:replay-formation', replay);
-    const vis = () => { visible = document.visibilityState === 'visible'; };
+    const vis = () => {
+      visible = document.visibilityState === 'visible';
+      pacedAt = last = performance.now(); slowAcc = 0; slowN = 0;
+    };
     document.addEventListener('visibilitychange', vis);
     // Opt-in browser measurement: real rendered frames, never an FPS estimate.
     // CPU submission time is not GPU completion time; the probe states that boundary.
