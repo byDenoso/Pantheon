@@ -27,6 +27,52 @@ PARAMS = {'bao_release': 'dr1', 'mode': 'bao_tracer_jackknife',
                             {'label': 'ELG', 'z': [.93, 1.317]},
                             {'label': 'QSO+Lya', 'z': [1.491, 2.33]}]}
 
+# Validator-only fixture: seed/input URLs are deliberately synthetic and never
+# become a production battery, binding or scientific result.
+DESI_PARAMS_FIXTURE = {
+    'mode': 'window_rotation_null',
+    'test_id': 'GZ01-B03-T03-WINDOW-ROTATION-NULL',
+    'prereg_hash': 'sha256:21d38d27b2ef12f17940fb9a01448c0ad3fe73950cb7e0352b1b0c11803b6069',
+    'null_method': 'selection_stratified_permutation',
+    'null_count': 199,
+    'seed': 0,
+    'statistics': [
+        {'name': 'max_abs_gaussian_smoothed_delta', 'sigma_cells': 0.32},
+    ],
+    'criterion': {
+        'promote_p_emp_lte': 0.01,
+        'bh_q': 0.1,
+        'reject_all_p_emp_gte': 0.1,
+    },
+}
+DESI_MANIFEST_SHA256 = '6ce284a355085679eb528517746b247fa2c48902c6158ca556ae9c197b34c65a'
+
+
+def desi_inputs_fixture():
+    return [
+        {
+            'name': 'desi_dr1_lss_selection_manifest',
+            'url': 'https://example.org/validator-only/selection.json',
+            'version': 'validator-fixture-only',
+            'sha256': DESI_MANIFEST_SHA256,
+        },
+        {
+            'name': 'desi_dr1_lss_3d_map_product',
+            'url': 'https://example.org/validator-only/product.npz',
+            'version': 'validator-fixture-only',
+            'sha256': '1' * 64,
+        },
+    ]
+
+
+def desi_check(params=None, inputs=None, root=ROOT):
+    return validate_params(
+        'desi_lss_selection_binding_family',
+        copy.deepcopy(DESI_PARAMS_FIXTURE if params is None else params),
+        copy.deepcopy(desi_inputs_fixture() if inputs is None else inputs),
+        root,
+    )
+
 
 def inputs_for(params):
     values = list(MANIFEST['releases'][params.get('bao_release', 'dr2')]['inputs'])
@@ -131,6 +177,57 @@ class Preflight(unittest.TestCase):
                 self.assertEqual(recipe.SOURCES[item['url']],item['sha256'])
 
 
+class DesiParamPreflightContract(unittest.TestCase):
+    def test_applied_recipe_binding_is_pinned_without_inventing_product(self):
+        value = desi_check()
+        self.assertTrue(value['eligible'], value)
+        self.assertEqual(value['contract'], 'RECIPE_PARAM_PREFLIGHT_V1')
+        self.assertEqual(len(value['manifest_sha256']), 64)
+        self.assertEqual(len(value['validator_sha256']), 64)
+        manifest = json.loads(
+            (ROOT / 'preflight/desi_lss_selection_binding_family.json').read_text()
+        )
+        self.assertEqual(manifest['identity']['null_count'], 199)
+        self.assertEqual(
+            manifest['identity']['statistics'],
+            [{'name': 'max_abs_gaussian_smoothed_delta', 'sigma_cells': 0.32}],
+        )
+        self.assertEqual(
+            manifest['identity']['selection_manifest_sha256'],
+            DESI_MANIFEST_SHA256,
+        )
+        self.assertEqual(set(manifest['inputs']['product']), {'name', 'schema'})
+
+    def test_missing_seed_statistic_or_product_stays_ineligible(self):
+        value = desi_check(params={}, inputs=[])
+        self.assertFalse(value['eligible'])
+        self.assertIn('FROZEN_SEED_REQUIRED', value['reasons'])
+        self.assertIn('FROZEN_STATISTICS_MISMATCH', value['reasons'])
+        self.assertIn('INPUT_RECIPE_MANIFEST_MISMATCH', value['reasons'])
+
+    def test_applied_null_count_statistic_and_manifest_cannot_drift(self):
+        mutations = []
+        changed = copy.deepcopy(DESI_PARAMS_FIXTURE)
+        changed['null_count'] = 100
+        mutations.append((changed, desi_inputs_fixture(), 'FROZEN_NULL_COUNT_MISMATCH'))
+        changed = copy.deepcopy(DESI_PARAMS_FIXTURE)
+        changed['statistics'][0]['sigma_cells'] = 0.5
+        mutations.append((changed, desi_inputs_fixture(), 'FROZEN_STATISTICS_MISMATCH'))
+        changed_inputs = desi_inputs_fixture()
+        changed_inputs[0]['sha256'] = '0' * 64
+        mutations.append((DESI_PARAMS_FIXTURE, changed_inputs, 'INPUT_RECIPE_MANIFEST_MISMATCH'))
+        changed_inputs = desi_inputs_fixture()[:-1]
+        mutations.append((DESI_PARAMS_FIXTURE, changed_inputs, 'INPUT_RECIPE_MANIFEST_MISMATCH'))
+        changed_inputs = desi_inputs_fixture()
+        changed_inputs[1]['url'] += '?mutable=true'
+        mutations.append((DESI_PARAMS_FIXTURE, changed_inputs, 'INPUT_RECIPE_MANIFEST_MISMATCH'))
+        for params, inputs, reason in mutations:
+            with self.subTest(reason=reason, params=params, inputs=inputs):
+                value = desi_check(params=params, inputs=inputs)
+                self.assertFalse(value['eligible'])
+                self.assertIn(reason, value['reasons'])
+
+
 class WorkflowIntegration(unittest.TestCase):
     def test_real_prepare_and_receipt_blocks_invalid_params_before_dependencies(self):
         workflow=(RUNTIME.parents[1]/'.github/workflows/nexo-test-battery.yml').read_text()
@@ -164,6 +261,53 @@ class WorkflowIntegration(unittest.TestCase):
                     self.assertEqual(r['operational_reason'], 'DATA_RELEASE_PARAM_MISMATCH' if invalid is True else
                                      'PREFLIGHT_RECEIPT_REQUIRED' if invalid == 'missing' else 'PREFLIGHT_IDENTITY_MISMATCH')
                     self.assertEqual(r['failure_stage'],'PARAM_PREFLIGHT')
+
+    def test_desi_prepare_requires_matching_frozen_preflight_receipt(self):
+        workflow=(RUNTIME.parents[1]/'.github/workflows/nexo-test-battery.yml').read_text()
+        section=workflow.split('- name: Prepare frozen test',1)[1]
+        prepare=textwrap.dedent(
+            section.split("python3 - <<'PY'\n",1)[1].split('\n          PY',1)[0]
+        )
+        for missing_receipt in (False, True):
+            with self.subTest(missing_receipt=missing_receipt), tempfile.TemporaryDirectory() as temp:
+                base=Path(temp)
+                (base/'runtime-base').symlink_to(RUNTIME.parents[1],target_is_directory=True)
+                fixtures=base/'battery-specs/batteries'
+                fixtures.mkdir(parents=True)
+                job=base/'job'
+                job.mkdir()
+                test={
+                    'test_id':'gz01-preflight-fixture',
+                    'recipe':'desi_lss_selection_binding_family',
+                    'params':copy.deepcopy(DESI_PARAMS_FIXTURE),
+                    'inputs':desi_inputs_fixture(),
+                    'attempt_id':'attempt-'+'b'*32,
+                    'recipe_sha256':hashlib.sha256(
+                        (ROOT/'desi_lss_selection_binding_family.py').read_bytes()
+                    ).hexdigest(),
+                }
+                if not missing_receipt:
+                    test['param_preflight']=desi_check()
+                (fixtures/'bat-desi.json').write_text(json.dumps({'tests':[test]}))
+                env={
+                    **os.environ,
+                    'BID':'bat-desi',
+                    'IDX':'0',
+                    'MATRIX_TEST_ID':'gz01-preflight-fixture',
+                    'NEXO_CI_FIXTURE':'false',
+                    'GITHUB_OUTPUT':str(base/'out'),
+                }
+                process=subprocess.run(
+                    [sys.executable,'-c',prepare.replace('/tmp/job',str(job))],
+                    cwd=base,env=env,capture_output=True,text=True,
+                )
+                self.assertEqual(process.returncode, 1 if missing_receipt else 0, process.stderr)
+                self.assertEqual((job/'test.py').exists(), not missing_receipt)
+                meta=json.loads((job/'meta.json').read_text())
+                if missing_receipt:
+                    self.assertEqual(meta['preflight_failure_reason'], 'PREFLIGHT_RECEIPT_REQUIRED')
+                else:
+                    self.assertTrue(meta['param_preflight']['eligible'])
 
 
 class DesiSelectionMaterializationPreflight(unittest.TestCase):
