@@ -173,7 +173,7 @@ jobs:
           import sys
           recipe_root = Path("runtime-base/nexo-one/executor-runtime/recipes").resolve()
           frozen_preflight = test.get("param_preflight")
-          if recipe == "w0wa_bao_sn_multi" or frozen_preflight is not None:
+          if recipe in ("w0wa_bao_sn_multi", "desi_lss_selection_binding_family") or frozen_preflight is not None:
               sys.path.insert(0, str(recipe_root))
               from recipe_param_preflight import validate_params
               actual = validate_params(recipe, params, test.get("inputs"), recipe_root)
