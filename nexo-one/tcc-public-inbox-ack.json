@@ -62,6 +62,7 @@
     "inbox/scheduled-battery-roadmap-dr1-20260930-01.json": "cfffc51ad7773e834b704e8e3f4709ba4e61e2a919f2b83a3c7b4fd3c56934ee",
     "inbox/scheduled-bind-pointwise-bao-contest-20261001-v1.json": "915205e9c91c5e7e92ed0531b3d07e7c7d142541f194430b68b9058df68ad21a",
     "inbox/scheduled-bind-tower-native-strata-20261001-v1.json": "c01b3415bf86321f262f2779ec344f05c53953c9ab0897f274b544623e2ff55d",
+    "inbox/scheduled-board-dener-desi-dr1-map-priority-20261002.json": "bcb5749ab344c135c18b1b21ded68e6965b350e74f10d91d34491ff8545d6a81",
     "inbox/scheduled-board-guardiao-pr388-writer-receipt-pending-run36790483167.json": "dbb92e78bcd6d246a42ae27b3f54f768bf8dc623bd29c93f2381a6d5c22767c8",
     "inbox/scheduled-board-pr364-union3-regression-62105d4.json": "8501c7b44b4cb1c9541bff3af3081bc969b5e251bcd4c923b91f68042284a738",
     "inbox/scheduled-board-pr384-merged-under-changes-4d29cb1.json": "4a07ba233d7fae982382c48bf1d44c8c6659b5c5799cb8d10a8a7630d4bb12be",
@@ -827,6 +828,34 @@
       "applied_at": "2026-10-01T13:59:24Z",
       "fingerprint": "c01b3415bf86321f262f2779ec344f05c53953c9ab0897f274b544623e2ff55d",
       "tower_revision": "sha256:21ad356f9ddee4128c5334d648846fc75f534f17bfbd68542a3d63a6c6334a5e"
+    },
+    "inbox/scheduled-board-dener-desi-dr1-map-priority-20261002.json": {
+      "fingerprint": "bcb5749ab344c135c18b1b21ded68e6965b350e74f10d91d34491ff8545d6a81",
+      "observed_at": "2026-10-02T13:05:19Z",
+      "outcome": "APPLIED",
+      "receipt_ids": [
+        "OR-0fcaac4c2f4e961f023c74a1e4c210bc"
+      ],
+      "receipts": [
+        {
+          "contract": "OPERATION_RECEIPT_V1",
+          "effect_id": "envelope-589250ec95b9788546b4b4e963b08087",
+          "intent_id": "gateway:tcc-a3f4b67362da5f77c61e05187dc9e329",
+          "observed_at": "2026-10-02T13:04:56.268891Z",
+          "occurred_at": "2026-10-02T13:04:56.268874Z",
+          "outcome": "APPLIED",
+          "payload_sha256": "sha256:74a98a8c40ab82b04b61775713e874605c829a66336fdb36aa8bdea0c0eb2fb9",
+          "reason_code": null,
+          "receipt_id": "OR-0fcaac4c2f4e961f023c74a1e4c210bc",
+          "result_revision": "sha256:5830f1c7eedc6e84f784ea334926fa75cf4ea86556ba54500a164288e8d893e2",
+          "retry_condition": null,
+          "source_revision": "sha256:047749f8066138500457090d8103f4b255d2690ea8f4b5a20f9d5e4fa5b31edb",
+          "stage": "APPLIED",
+          "supersedes": null,
+          "visibility": "PUBLIC"
+        }
+      ],
+      "tower_revision": "sha256:fb4779a4d6a576d471e4ec7cd4751b2ec63c4596853ea18fe7f9abbe69c8f8a8"
     },
     "inbox/scheduled-board-guardiao-pr388-writer-receipt-pending-run36790483167.json": {
       "fingerprint": "dbb92e78bcd6d246a42ae27b3f54f768bf8dc623bd29c93f2381a6d5c22767c8",
