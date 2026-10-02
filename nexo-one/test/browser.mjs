@@ -198,6 +198,17 @@ try {
     await page.locator('.atlas-detail h1').waitFor();
     assert.equal((await page.locator('.atlas-detail h1').innerText()).trim().toLocaleLowerCase(), firstStation.trim().toLocaleLowerCase(),
       'selecionar uma estação acessível deve abrir seus detalhes');
+    // A capability-only group used to fall through to LIVE without a live
+    // observation. Check its accessible label from the corrected Atlas model.
+    const capabilityStation = page.locator('.atlas-a11y-stations button[data-domain="SCIENCE"][data-depth="1"]')
+      .filter({ hasText: 'Capacidades científicas' });
+    await capabilityStation.waitFor();
+    assert.equal(await capabilityStation.count(), 1, 'the deterministic Atlas fixture must expose its capability group');
+    assert.equal(await capabilityStation.getAttribute('aria-label'), 'Capacidades científicas: Ainda não verificado',
+      'a group without an explicit LIVE member and freshness proof must not render as “Ao vivo”');
+    if (name === 'desktop-dark') await page.screenshot({ path: `${output}/atlas-aggregate-status.png`, fullPage: true });
+    if (name === 'mobile-dark') await page.screenshot({ path: `${output}/atlas-aggregate-status-mobile.png`, fullPage: true });
+
     if (mobile) await page.locator('.atlas-mobile-sidebar-close').click();
 
     // Lenses filter the published graph, and the table exposes the same visible nodes.

@@ -49,6 +49,82 @@ test('production Metro adapter materializes Nexo, Science and Olympus simultaneo
   assert.ok(visible.some(id => model.nodeMap.get(id)?.depth === 1), 'initial view must expose named subdomains');
 });
 
+test('Atlas aggregate and entity statuses require explicit freshness evidence for LIVE', () => {
+  const template = state().graph.nodes.find(node => node.type !== 'DOMAIN' && node.type !== 'FILAMENT');
+  assert.ok(template);
+  const makeNode = (id, status, freshness) => ({
+    ...structuredClone(template),
+    id: `test:atlas-status-${id}`,
+    type: 'TEST',
+    label: `Status fixture ${id}`,
+    domain: 'NEXO',
+    state: status,
+    freshness,
+    scientific_state: 'CONFIRMED',
+  });
+  const buildWith = nodes => {
+    const source = state();
+    source.graph.nodes = nodes;
+    source.graph.edges = [];
+    source.filaments = [];
+    return buildAtlasMetroModel(source, Date.parse(source.generated_at));
+  };
+  const rootStatus = model => model.nodeMap.get(ATLAS_METRO_ROOTS[0]).status;
+  const subdomainStatus = model => model.nodes.find(node => node.domain === 'NEXO' && node.depth === 1)?.status;
+  const explicitLive = { state: 'LIVE', observed_at: state().generated_at, ttl_seconds: 900 };
+
+  const empty = buildWith([]);
+  assert.equal(rootStatus(empty), 'UNKNOWN', 'an empty domain has no freshness evidence');
+
+  const snapshots = buildWith([
+    makeNode('snapshot-1', 'SNAPSHOT', { state: 'UNKNOWN', observed_at: null, ttl_seconds: null }),
+    makeNode('snapshot-2', 'SNAPSHOT', { state: 'UNKNOWN', observed_at: null, ttl_seconds: null }),
+  ]);
+  assert.equal(rootStatus(snapshots), 'SNAPSHOT');
+  assert.equal(subdomainStatus(snapshots), 'SNAPSHOT');
+
+  const mixed = buildWith([
+    makeNode('live', 'LIVE', explicitLive),
+    makeNode('snapshot', 'SNAPSHOT', { state: 'UNKNOWN', observed_at: null, ttl_seconds: null }),
+  ]);
+  assert.equal(rootStatus(mixed), 'UNKNOWN', 'a mixed snapshot cannot be labeled entirely live');
+  assert.equal(subdomainStatus(mixed), 'UNKNOWN');
+  assert.equal(mixed.nodeMap.get('test:atlas-status-live').status, 'LIVE');
+  assert.equal(mixed.nodeMap.get('test:atlas-status-snapshot').status, 'SNAPSHOT');
+
+  for (const [status, aggregate] of [['DEGRADED', 'AGING'], ['FAILED', 'WATCH']]) {
+    const model = buildWith([makeNode(status.toLowerCase(), status, null)]);
+    assert.equal(rootStatus(model), aggregate);
+    assert.equal(subdomainStatus(model), aggregate);
+  }
+
+  const noFreshness = makeNode('missing-freshness', 'LIVE', null);
+  delete noFreshness.freshness;
+  const unknownFreshness = makeNode('unknown-freshness', 'LIVE', {
+    state: 'UNKNOWN', observed_at: null, ttl_seconds: null,
+  });
+  const expiredFreshness = makeNode('expired-freshness', 'LIVE', {
+    state: 'LIVE', observed_at: '2026-09-10T08:30:00.000Z', ttl_seconds: 900,
+  });
+  const futureFreshness = makeNode('future-freshness', 'LIVE', {
+    state: 'LIVE', observed_at: '2026-09-10T09:01:00.000Z', ttl_seconds: 900,
+  });
+  const missingTtl = makeNode('missing-ttl', 'LIVE', {
+    state: 'LIVE', observed_at: state().generated_at, ttl_seconds: null,
+  });
+  const direct = buildWith([
+    noFreshness, unknownFreshness, expiredFreshness, futureFreshness, missingTtl,
+    makeNode('proven-live', 'LIVE', explicitLive),
+  ]);
+  assert.equal(direct.nodeMap.get('test:atlas-status-missing-freshness').status, 'UNKNOWN');
+  assert.equal(direct.nodeMap.get('test:atlas-status-unknown-freshness').status, 'UNKNOWN');
+  assert.equal(direct.nodeMap.get('test:atlas-status-expired-freshness').status, 'STALE');
+  assert.equal(direct.nodeMap.get('test:atlas-status-future-freshness').status, 'UNKNOWN');
+  assert.equal(direct.nodeMap.get('test:atlas-status-missing-ttl').status, 'UNKNOWN');
+  assert.equal(direct.nodeMap.get('test:atlas-status-proven-live').status, 'LIVE');
+  assert.equal(noFreshness.scientific_state, 'CONFIRMED', 'freshness normalization must not rewrite scientific state');
+});
+
 test('Atlas overview keeps hub scale restrained and reveals labels by zoom or focus', () => {
   const model = buildAtlasMetroModel(state());
   const visible = visibleAtlasIds(model, new Set(model.roots));
