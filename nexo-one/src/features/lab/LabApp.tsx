@@ -8,7 +8,7 @@ import { activityRange, activityWindow, observedActivity } from './activity-pres
 import { browserNarrationDeck } from './narration-deck.ts';
 import { narrationEvidence } from './narration-evidence.ts';
 import { lazy, Suspense, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import type { SystemState } from '../../contracts/system.ts';
+import type { EvolutionIncidentSummary, SystemState } from '../../contracts/system.ts';
 import {
   ago, buildLab, guardianArea, humanId, readBaseline, VERDICT_GLYPH, VERDICT_ORDER, VERDICT_PT,
   type Lab, type TestEntity, type Verdict,
@@ -17,7 +17,7 @@ import type { ScenePage, SceneEvents } from './ObservatoryScene.tsx';
 import { normDomain } from './domains.ts';
 import './lab.css';
 import '../../styles/atlas-cinematic.css';
-import { currentVerdictText, matchesSearch, boardMeta, boardConversation, boardThreads, readinessLabel, hasPublishedValue, roadmapTrail, latestBoardRecord } from './presentation.ts';
+import { currentVerdictText, matchesSearch, boardMeta, boardConversation, boardThreads, readinessLabel, hasPublishedValue, roadmapTrail, latestBoardRecord, compactTitle, hasPublishedTestCollection } from './presentation.ts';
 import { BoardMessage } from './BoardMessage.tsx';
 import { selectScienceFocus, scientificStatRows } from './science-presentation.ts';
 import { autonomyPresentation, publishedQueueGap } from './autonomy-presentation.ts';
@@ -251,6 +251,17 @@ function Now({ lab, state, onReplay, replayCount }: { lab: Lab; state: SystemSta
   const focus = selectScienceFocus(sci);
   const boardRecords = ev?.board ?? [];
   const boardPost = latestBoardRecord(boardThreads(boardRecords).filter(post => boardConversation(post, boardRecords).awaiting));
+  const overview = stale
+    ? { text: 'Esta leitura pode estar desatualizada.', href: '#/saude', action: 'Conferir a leitura' }
+    : blocking.length
+      ? { text: 'Há falhas registradas para conferir.', href: '#/saude', action: 'Ver os impedimentos' }
+      : next.length
+        ? { text: 'Há candidatos na fila para conferir.', href: '#/evidencia?v=READY', action: 'Ver a fila' }
+        : blocked.length
+          ? { text: 'Há testes aguardando pré-requisitos.', href: '#/evidencia?v=BLOCKED', action: 'Ver o que falta' }
+          : review
+            ? { text: 'Há resultados aguardando revisão.', href: '#/evidencia?v=REVIEW', action: 'Ver a revisão' }
+            : { text: 'Acompanhe o que consta nesta leitura.', href: '#/evidencia', action: 'Ver os testes' };
   const scientificIntro = focus
     ? <p className="thesis">Resultado científico em destaque: <E id={focus.test.id}>{focus.test.name}</E>. <span>{currentVerdictText(focus.test)}</span></p>
     : <p className="thesis">Ainda sem resultado científico disponível para destaque; {S.ready} testes marcados READY na leitura científica.</p>;
@@ -266,11 +277,12 @@ function Now({ lab, state, onReplay, replayCount }: { lab: Lab; state: SystemSta
       </p>
       <span className="sig-prompt" aria-hidden="true"><b>nexo@atlas</b>:<i>~</i>$ observe --agora</span>
       <h1>O NEXO <em>agora</em></h1>
+      <p className="now-overview"><strong>{overview.text}</strong> <a href={overview.href}>{overview.action} →</a></p>
       {!boardPost && scientificIntro}
     </header>
 
     <BoardFocus state={state} lab={lab} post={boardPost} onOpenBoard={() => setBoardVisit(value => value + 1)} />
-    {boardPost && <div className="hud-science-intro">{scientificIntro}</div>}
+    {boardPost && <details className="hud-science-intro"><summary>Ciência nesta leitura</summary>{scientificIntro}</details>}
     <LiveNowPanel lab={lab} />
     <GatePanel state={state} />
     {gate > 0 && !state.inbox?.some(i => i.kind === 'APROVAR') && <a className="hud-gate" href="#/ciclo">
@@ -457,15 +469,32 @@ function Cycle({ lab, state }: { lab: Lab; state: SystemState }) {
   const ev = state.evolution;
   const values = STAGES.map(s => s.get(lab, state));
   const max = Math.max(1, ...values);
+  const tests = [...lab.tests.values()];
+  const preparationBlocked = tests.some(t => t.readiness?.eligible === false);
+  const blockWithoutStage = tests.some(t => t.verdict === 'BLOCKED' && t.readiness?.eligible !== false);
+  const current = isPublishedFresh(state.generated_at);
+  const flow = [
+    { label: 'PREPARO', text: preparationBlocked ? 'Pré-requisitos pendentes' : 'Entradas e receita', href: '#/evidencia?v=' + (preparationBlocked ? 'BLOCKED' : 'READY'), blocked: preparationBlocked },
+    { label: 'EXECUÇÃO', text: tests.some(t => t.status?.toUpperCase() === 'RUNNING') ? (current ? 'Execução registrada nesta leitura' : 'Execução registrada; leitura defasada') : 'Tentativa e artefatos verificáveis', href: '#/evidencia', blocked: false },
+    { label: 'CONTESTAÇÃO', text: tests.some(t => t.verdict === 'REVIEW') ? 'Há resultados em revisão' : 'Revisão independente e controles', href: '#/evidencia?v=REVIEW', blocked: false },
+    { label: 'CONSOLIDAÇÃO', text: 'Resultado, revisão e próximo passo', href: '#/evidencia', blocked: false },
+  ];
   const chains = [...lab.tests.values()].filter(t => t.contests.length).sort((a, b) => b.contests.length - a.contests.length).slice(0, 8);
   return <>
     <header className="hud-hero">
       <p className="hud-kicker">Geração {ev?.genome.generation ?? 0} · {ev?.decoys.planted ?? 0} iscas em campo</p>
       <h1>O ciclo fechado</h1>
-      <p className="hud-lead">Onde o trabalho está acumulando: a altura mostra quantos itens estão em cada etapa.</p>
-      <p className="hud-note">A atividade é registrada por papel. Operadores A/B/C compartilham EXECUTOR; Guardião e Revisor de PR compartilham GUARDIAO. Os sinais abaixo não comprovam uma execução individual de cada automação.</p>
+      <p className="hud-lead">Da preparação ao resultado revisado. Cada etapa depende de evidência da anterior.</p>
     </header>
 
+    <ol className="cycle-flow" aria-label="Fluxo do ciclo">
+      {flow.map(stage => <li key={stage.label} className={stage.blocked ? 'is-blocked' : ''}><a href={stage.href}>
+        <strong>{stage.label}</strong><span>{stage.text}</span>{stage.blocked && <b>Bloqueio publicado no preparo</b>}
+      </a></li>)}
+    </ol>
+    {blockWithoutStage && <p className="hud-note">Há testes bloqueados, mas a etapa do bloqueio não foi publicada. <a href="#/evidencia?v=BLOCKED">Ver motivos</a></p>}
+    <details className="cycle-role-details"><summary>Papéis, atividade e distribuição dos itens</summary>
+    <p className="hud-note">A atividade é registrada por papel. Operadores A/B/C compartilham EXECUTOR; Guardião e Revisor de PR compartilham GUARDIAO. Os sinais abaixo não comprovam uma execução individual de cada automação.</p>
     <Crew lab={lab} state={state} />
 
     <div className="cycle" role="list" aria-label="Etapas do ciclo">
@@ -474,6 +503,8 @@ function Cycle({ lab, state }: { lab: Lab; state: SystemState }) {
         <strong>{values[i]}</strong><span>{s.label}</span><em>{s.who}</em>
       </div>)}
     </div>
+
+    </details>
 
     {((ev?.gate.charters_waiting.length ?? 0) + (ev?.gate.canaries_waiting.length ?? 0)) > 0 && <Section title="Portão do Dener" kicker="Só você abre" id="cy-gate">
       {ev!.gate.charters_waiting.map(c => <div key={c.roadmap_id} className="hud-card attention">
@@ -591,29 +622,35 @@ function Evidence({ lab, state, filter, search }: { lab: Lab; state: SystemState
   };
   const related = q.trim() ? (state.cosmology_state?.frontiers ?? []).filter(f => matchesSearch(q, f.title, f.summary)) : [];
   const all = [...lab.tests.values()];
+  const hasTestReading = hasPublishedTestCollection(state);
   const list = all.filter(t => (!filter || t.verdict === filter) && matchesSearch(q, t.id, t.name, t.question, t.meaning, t.topic, t.subdomain));
   return <>
-    <header className="hud-hero"><p className="hud-kicker">{all.length} testes e contestações publicados</p><h1>Evidência</h1>
+    <header className="hud-hero"><p className="hud-kicker">{hasTestReading ? `${all.length} testes e contestações publicados` : 'Testes recebidos no recorte publicado'}</p><h1>Evidência</h1>
       <p className="hud-lead">Todo teste, do pré-registro ao veredito. Filtre pelo estado; clique para ver o que foi prometido antes e o que aconteceu.</p></header>
     <nav className="filters" aria-label="Filtrar por veredito">
-      <a href={`#/evidencia${q ? '?q=' + encodeURIComponent(q) : ''}`} aria-current={!filter ? 'page' : undefined}>Todos <b>{all.length}</b></a>
+      <a href={`#/evidencia${q ? '?q=' + encodeURIComponent(q) : ''}`} aria-current={!filter ? 'page' : undefined}>Todos <b>{hasTestReading || all.length ? all.length : '—'}</b></a>
       {VERDICT_ORDER.map(v => <a key={v} href={`#/evidencia?v=${v}${q ? '&q=' + encodeURIComponent(q) : ''}`} aria-current={filter === v ? 'page' : undefined} className={`v-${v.toLowerCase()}`}>
-        <i aria-hidden="true">{VERDICT_GLYPH[v]}</i>{VERDICT_PT[v]} <b>{all.filter(t => t.verdict === v).length}</b></a>)}
+        <i aria-hidden="true">{VERDICT_GLYPH[v]}</i>{VERDICT_PT[v]} <b>{hasTestReading || all.some(t => t.verdict === v) ? all.filter(t => t.verdict === v).length : '—'}</b></a>)}
     </nav>
     <input className="hud-search" type="search" placeholder="Buscar por nome, pergunta ou resultado…" value={q} onChange={e => updateQuery(e.target.value)} aria-label="Buscar testes" />
     {q && <p role="status">{list.length} testes encontrados para “{q}”{related.length ? ` · ${related.length} frentes relacionadas` : ''}.</p>}
     {related.length > 0 && <nav className="search-related" aria-label="Frentes relacionadas">{related.map(f => <a key={f.id} href={labHref('universo', f.id)}>{f.title} →</a>)}</nav>}
-    {filter === 'READY' && <p className="hud-note">Esta fila inclui testes principais e contestações. READY é o estado registrado. A elegibilidade só é exibida quando a verificação individual foi publicada; isso não garante despacho.</p>}
-    {q && !list.length && !related.length && <p className="hud-muted">Nenhum resultado nesta projeção. A consulta foi preservada; tente parte do nome ou o ID.</p>}
+    {filter === 'READY' && !list.length && <div className="queue-empty" role="status">
+      <strong>{!hasTestReading ? 'Não foi possível confirmar a fila nesta leitura.' : all.some(t => t.verdict === 'READY') ? 'Nenhum teste pronto corresponde a estes filtros.' : 'Nenhum teste pronto nesta leitura'}</strong>
+      {!hasTestReading && <p>Faltam os registros necessários; isso não significa fila vazia.</p>}
+      <p>{q && <button type="button" onClick={() => updateQuery('')}>Limpar busca</button>} <a href="#/evidencia">Ver todos os testes</a>{lab.counts.BLOCKED > 0 && <> · <a href="#/evidencia?v=BLOCKED">Ver bloqueados</a></>}</p>
+    </div>}
+    {filter === 'READY' && <details className="queue-explainer"><summary>O que entra nesta fila</summary><p className="hud-note">Esta fila inclui testes principais e contestações. READY é o estado registrado. A elegibilidade só é exibida quando a verificação individual foi publicada; isso não garante despacho.</p></details>}
+    {q && filter !== 'READY' && !list.length && !related.length && <p className="hud-muted">Nenhum resultado nesta projeção. A consulta foi preservada; tente parte do nome ou o ID.</p>}
     {VERDICT_ORDER.filter(v => list.some(t => t.verdict === v)).map(v => {
       const group = list.filter(t => t.verdict === v);
       return <section key={v} className={`ev-group v-${v.toLowerCase()}`} aria-label={VERDICT_PT[v]}>
         <h2><VerdictChip v={v} small /> <span>{group.length}</span></h2>
         <ul className="ev-cards">{group.slice(0, filter || q ? 200 : 24).map(t => <li key={t.id}>
           <a className="ev-card" href={labHref('entidade', t.id)}>
-            <strong>{t.name}</strong>
-            {t.question && t.question !== t.name && <span className="ev-q">{t.question}</span>}
-            {t.meaning && <span className="ev-m">{t.verdict === 'REFUTED' && 'Resultado bruto, depois refutado: '}{humanize(t.meaning)}</span>}
+            <strong>{compactTitle(t.name)}</strong>
+
+            <span className="ev-m">{compactTitle(currentVerdictText(t), 140)}</span>
             <span className="ev-meta"><em>{normDomain(t.domain)}</em>{isReady(t) && <em>{readinessLabel(t)}</em>}{t.contests.length > 0 && <em>{t.contests.length} {t.contests.length === 1 ? 'ataque' : 'ataques'}</em>}</span>
           </a></li>)}</ul>
         {!filter && !q && group.length > 24 && <a className="ev-more" href={`#/evidencia?v=${v}${q ? '&q=' + encodeURIComponent(q) : ''}`}>ver os {group.length} →</a>}
@@ -655,23 +692,27 @@ function EntityPage({ lab, state, id }: { lab: Lab; state: SystemState; id: stri
     <header className="hud-hero">
       <p className="hud-kicker"><a href="#/evidencia">Evidência</a>
         {t.roadmapId && <> · <a href={labHref('roadmap', t.roadmapId)}>{lab.roadmaps.get(t.roadmapId)?.title ?? humanId(t.roadmapId)}</a></>}</p>
-      <h1 className="h1-entity">{t.historical ? t.name : t.question ?? humanId(t.id)}</h1>
+      <h1 className="h1-entity">{compactTitle(t.name || t.question || humanId(t.id))}</h1>
       <p className="hud-lead">{t.verdict === 'PROVISIONAL' && !t.verdictRaw && !t.meaning && !hasPublishedValue(t.result) ? <span className="hud-muted">Resultado não publicado</span> : <VerdictChip v={t.verdict} />}{t.createdAt && <span className="hud-muted"> · começou {ago(t.createdAt)}</span>}</p>
     </header>
 
-    <Section title="A história deste teste" id="en-story">
-      <ol className="story">{story.map((b, i) => <li key={i} className={`beat beat-${b.tone}`}>
-        <i aria-hidden="true"><Icon n={b.icon} /></i><p>{b.text}{b.link && <> <E id={b.link.id}>{b.link.label}</E></>}</p>
-      </li>)}</ol>
-    </Section>
-
-    {t.historical && <Section title="Origem histórica"><p>Resultado auditado da Tower antiga; não reativa filas ou campanhas.</p>{t.sourceUrl && <p><a href={t.sourceUrl} target="_blank" rel="noreferrer">Abrir artefato original ↗</a></p>}<details><summary>Proveniência para auditoria</summary><pre className="universe-provenance">{JSON.stringify(t.provenance, null, 2)}</pre></details></Section>}
     <Section title="Veredito atual" id="en-mean">
       <p className="hud-big">{currentVerdictText(t)}</p>
       {t.readiness?.reasons?.length ? <p className="hud-note">Prontidão: {t.readiness.reasons.join(' · ')}</p> : null}
       <p className="hud-note">{t.review ? `Fonte: estado de revisão publicado (${t.review}).` : t.status ? `Fonte: estado operacional publicado (${t.status}); revisão não publicada.` : 'Estado de revisão e estado operacional não publicados.'}</p>
       {contests.filter(c => lab.tests.has(c)).length > 0 && <p className="hud-refs">{contests.filter(c => lab.tests.has(c)).map(c => <E key={c} id={c}>Ver contestação →</E>)}</p>}
     </Section>
+    <details className="entity-story"><summary>Pergunta e história do teste</summary>
+      <p className="original-test-title">{t.name}</p>
+      {t.question && <p className="original-test-question">{t.question}</p>}
+    <Section title="A história deste teste" id="en-story">
+      <ol className="story">{story.map((b, i) => <li key={i} className={`beat beat-${b.tone}`}>
+        <i aria-hidden="true"><Icon n={b.icon} /></i><p>{b.text}{b.link && <> <E id={b.link.id}>{b.link.label}</E></>}</p>
+      </li>)}</ol>
+    </Section></details>
+
+    {t.historical && <Section title="Origem histórica"><p>Resultado auditado da Tower antiga; não reativa filas ou campanhas.</p>{t.sourceUrl && <p><a href={t.sourceUrl} target="_blank" rel="noreferrer">Abrir artefato original ↗</a></p>}<details><summary>Proveniência para auditoria</summary><pre className="universe-provenance">{JSON.stringify(t.provenance, null, 2)}</pre></details></Section>}
+
     {(t.meaning || Boolean(t.claimBoundary)) && <Section title="Resultado bruto da execução" id="en-raw">
       {t.verdictRaw && <p className="hud-kicker">Registro original: {t.verdictRaw}</p>}
       {t.meaning && <p>{humanize(t.meaning)}</p>}
@@ -751,6 +792,22 @@ function HypothesisView({ lab, id }: { lab: Lab; id: string }) {
 const NotFound = ({ id }: { id: string }) => <header className="hud-hero"><h1>Não encontrado</h1><p className="hud-lead"><code>{id}</code> não está na projeção pública (pode ser privado ou ainda não aplicado).</p></header>;
 
 // ---------- Saúde ----------
+function IncidentCard({ incident }: { incident: EvolutionIncidentSummary }) {
+  const view = incidentView(incident);
+  const description = incident.summary_plain ?? incident.summary_pt ?? 'Problema registrado sem descrição pública.';
+  const links = [...incident.public_ids.tests, ...incident.public_ids.hypotheses];
+  return <li className={`incident s-${view.tone}`}>
+    <p className="incident-text">{compactTitle(description, 132)}</p>
+    <p className="incident-head"><span className="incident-state">{view.label}</span></p>
+    <IncidentResponsibility incident={incident} />
+    <details className="incident-evidence"><summary>Descrição e evidências</summary>
+      <p className="incident-original">{description}</p>
+      <p className="hud-muted">Visto {incident.evidence_count} {incident.evidence_count === 1 ? 'vez' : 'vezes'} nesta publicação.</p>
+      {links.length > 0 ? <p className="incident-links">{links.map(id => <E key={id} id={id} />)}</p> : <p className="hud-muted">Sem ficha de evidência vinculada neste recorte.</p>}
+    </details>
+  </li>;
+}
+
 function Health({ state, lab }: { state: SystemState; lab: Lab }) {
   const g = state.guardian;
   const reportAt = g?.report_checked_at;
@@ -781,18 +838,13 @@ function Health({ state, lab }: { state: SystemState; lab: Lab }) {
       <ul className="hud-list">{liveFailures.map(a => <li key={a}>{a === 'automations' ? 'Algum papel sem evento recente no recorte publicado' : guardianArea(a).replace(/^./, c => c.toUpperCase())}</li>)}</ul>
       <p className="hud-note">Checagens derivadas do recorte publicado. Ausência de evento no recorte não comprova tarefa pausada.</p>
     </Section>}
-    {(ev?.incidents?.length ?? 0) > 0 && <Section title="Incidentes" kicker={`${ev!.incidents!.length} registros`} id="he-inc">
-      <ul className="incidents">{ev!.incidents!.map(i => {
-        const st = incidentView(i);
-        const links = [...i.public_ids.tests, ...i.public_ids.hypotheses];
-        return <li key={i.incident_id} className={`incident s-${st.tone}`}>
-          <p className="incident-head"><span className="incident-state">{st.label}</span>
-            <span className="hud-muted">visto {i.evidence_count} {i.evidence_count === 1 ? 'vez' : 'vezes'}</span></p>
-          <p className="incident-text">{humanize((i.summary_plain ?? i.summary_pt ?? 'Problema registrado sem descrição pública.').replace(/(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):\d{2}Z/g, (_m: string, y: string, mo: string, d: string, h: string, mi: string) => `${d}/${mo} às ${h}:${mi} UTC`).replace(/Falta duas/g, 'Faltam duas'))}</p>
-          <IncidentResponsibility incident={i} />
-          {links.length > 0 && <p className="incident-links">{links.slice(0, 4).map(l => <E key={l} id={l} />)}</p>}
-        </li>;
-      })}</ul>
+    {(ev?.incidents?.length ?? 0) > 0 && <Section title="Incidentes pendentes" id="he-inc">
+      {ev!.incidents!.some(i => incidentView(i).state !== 'RESOLVED')
+        ? <ul className="incidents">{ev!.incidents!.filter(i => incidentView(i).state !== 'RESOLVED').map(i => <IncidentCard key={i.incident_id} incident={i} />)}</ul>
+        : <p className="hud-muted">Nenhum incidente pendente nesta leitura.</p>}
+      {ev!.incidents!.some(i => incidentView(i).state === 'RESOLVED') && <details className="incident-history"><summary>Histórico de resoluções publicadas</summary>
+        <ul className="incidents">{ev!.incidents!.filter(i => incidentView(i).state === 'RESOLVED').map(i => <IncidentCard key={i.incident_id} incident={i} />)}</ul>
+      </details>}
     </Section>}
     {lab.missingContract.length > 0 && <Section title="Dados que o site ainda não recebe" kicker="Contrato da projeção" id="he-contract">
       <p className="hud-muted">Estes campos destravam linha do tempo, pré-registro e revisão completos:</p>
@@ -1264,9 +1316,7 @@ function BoardFocus({ state, lab, post, onOpenBoard }: { state: SystemState; lab
   const records = state.evolution?.board ?? [];
   if (!post) return null;
   return <section className="hud-section board-focus" aria-labelledby="board-focus-title">
-    <p className="hud-kicker">Recado aguardando resposta</p>
-    <h2 id="board-focus-title">O papo no mural</h2>
-    <p className="board-caption"><span>Narração · interface</span>{boardRole(post.from)} deixou um recado para {boardRole(post.to)}.</p>
+    <h2 id="board-focus-title">Mural · recado pendente</h2>
     <BoardMessage key={post.id} post={post} lab={lab} from={boardRole(post.from)} to={boardRole(post.to)} records={records} focus />
     <button type="button" className="board-open" onClick={onOpenBoard}>Ver todos os recados <span aria-hidden="true">→</span></button>
   </section>;
@@ -1294,12 +1344,14 @@ function Board({ state, lab, visit = 0 }: { state: SystemState; lab: Lab; visit?
   const posts = all ? filtered : filtered.slice(0, 8);
   const who = boardRole;
   return <Section title="Conversa entre os agentes" kicker={`${filtered.length} conversas ${status === 'Aguardando resposta' ? 'aguardando resposta' : status === 'Histórico' ? 'no histórico' : 'nos filtros'} · mostrando ${posts.length}`} id="now-board">
-    <div className="board-filters" role="group" aria-label="Filtrar mural">
+    <div className="board-tabs" role="group" aria-label="Conversas do mural">
+      {[['Aguardando resposta', 'Pendentes'], ['Histórico', 'Histórico'], ['', 'Todos']].map(([value, label]) => <button type="button" key={label} aria-pressed={status === value} onClick={() => { setStatus(value!); setAll(false); }}>{label}</button>)}
+    </div>
+    <div className="board-filters board-filters-compact" role="group" aria-label="Filtrar mural">
       <label>Para<select aria-label="Para" value={owner} onChange={e => { setOwner(e.target.value); setAll(false); }}><option value="">Todos</option>{[...new Set(every.map(p => p.to))].map(x => <option key={x} value={x}>{who(x)}</option>)}</select></label>
       <label>Tipo<select aria-label="Tipo" value={kind} onChange={e => { setKind(e.target.value); setAll(false); }}><option value="">Todos</option><option>Conteúdo</option><option>Reclamação</option></select></label>
-      <label>Mostrar<select aria-label="Mostrar" value={status} onChange={e => { setStatus(e.target.value); setAll(false); }}><option>Aguardando resposta</option><option>Histórico</option><option value="">Todos</option></select></label>
     </div>
-    <p className="hud-note">Respostas ficam ligadas à conversa no histórico. Responder não significa resolver o problema. Reclamação aparece apenas quando o autor declara esse tipo.</p>
+    <details className="board-help"><summary>Como ler o histórico</summary><p className="hud-note">Respostas ficam ligadas à conversa no histórico. Responder não significa resolver o problema. Reclamação aparece apenas quando o autor declara esse tipo.</p></details>
     {!posts.length && <p role="status">Nenhum recado com estes filtros.</p>}
     <ol className="board">{posts.map(p => <li key={p.id}><BoardMessage post={p} lab={lab} from={who(p.from)} to={who(p.to)} records={raw} /></li>)}</ol>
     {filtered.length > 8 && <button type="button" className="board-all" onClick={() => setAll(x => !x)}>{all ? 'Mostrar só os 8 mais recentes' : `Ver todos os ${filtered.length} recados`}</button>}

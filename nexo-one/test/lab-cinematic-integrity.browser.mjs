@@ -104,6 +104,7 @@ try {
     await page.evaluate(() => { location.hash = '#/e/FAM-DE-FS-GEOGROWTH-ELG-DESI-PP'; });
     await page.locator('.h1-entity').locator('..').waitFor();
     assert.match(await page.locator('.h1-entity').locator('..').innerText(), /Rejeitado pelo critério/);
+    await page.locator('.entity-story > summary').click();
     assert.doesNotMatch(await page.locator('.story').innerText().catch(() => ''), /Travei aqui/);
     await noOverflow(page, name + ':rejected');
     await visualReady(page, name + ':rejected');
@@ -118,6 +119,7 @@ try {
     await page.evaluate(() => { location.hash = '#/ciclo'; });
     await page.locator('.lanes').waitFor();
     assert.match(await page.locator('.lanes').innerText(), /240 eventos recebidos.*cobertura parcial/s);
+    await page.locator('.cycle-role-details > summary').click();
     assert.doesNotMatch(await page.locator('.crew').innerText(), /ainda sem ações registradas|0 ações em 24 h/);
     await noOverflow(page, name + ':cycle');
     await visualReady(page, name + ':cycle');

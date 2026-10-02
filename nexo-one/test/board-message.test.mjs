@@ -56,10 +56,11 @@ test('literal message, original routing and linked references stay separate from
   assert.match(component, /\{post.from\} → \{post.to\}/);
   assert.match(component, /lab\.roadmaps\.get\(id\)/);
   assert.match(component, /aria-controls=\{textId\}/);
-  assert.match(app, /Narração · interface<\/span>/);
-  for (const label of ['Para', 'Tipo', 'Mostrar']) assert.ok(app.includes(`aria-label="${label}"`), 'filter accessible name: ' + label);
+  assert.match(app, /Mural · recado pendente/);
+  for (const label of ['Para', 'Tipo', 'Conversas do mural']) assert.ok(app.includes(`aria-label="${label}"`), 'filter accessible name: ' + label);
   assert.match(app, /useState\('Aguardando resposta'\)/);
-  assert.match(app, /<option>Histórico<\/option>/);
+  assert.match(app, /aria-pressed=\{status === value\}/);
+  assert.match(app, /\['Histórico', 'Histórico'\]/);
   assert.ok(app.indexOf('<BoardFocus state=') < app.indexOf('<LiveNowPanel lab='), 'focus is visible before long dashboard sections');
 });
 
