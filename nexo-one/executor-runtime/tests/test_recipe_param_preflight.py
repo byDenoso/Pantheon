@@ -1,3 +1,4 @@
+import ast
 import copy
 import hashlib
 import json
@@ -178,7 +179,18 @@ class DesiSelectionMaterializationPreflight(unittest.TestCase):
 
     def test_real_manifest_and_conservative_storage_plan_are_offline(self):
         from decimal import Decimal
-        self.assertNotIn('urllib', self.script_path.read_text(encoding='utf-8'))
+        source = self.script_path.read_text(encoding='utf-8')
+        tree = ast.parse(source)
+        imported = {
+            alias.name.split('.')[0]
+            for node in ast.walk(tree)
+            if isinstance(node, (ast.Import, ast.ImportFrom))
+            for alias in (node.names if isinstance(node, ast.Import) else
+                          [ast.alias(name=node.module or '')])
+        }
+        self.assertTrue(
+            {'urllib', 'requests', 'socket', 'subprocess'}.isdisjoint(imported)
+        )
         plan = self.module['build_plan'](
             self.manifest,
             self.manifest_sha256,
@@ -195,6 +207,34 @@ class DesiSelectionMaterializationPreflight(unittest.TestCase):
         self.assertFalse(plan['work_ready'])
         self.assertFalse(plan['test_ready'])
         self.assertFalse(plan['scientific_result_eligible'])
+
+    def test_storage_plan_boundary_and_missing_target_are_fail_closed(self):
+        from decimal import Decimal
+        required = 153_479_524_071
+        exact = self.module['build_plan'](
+            self.manifest, self.manifest_sha256, Path('/staging/desi'),
+            Decimal('1.10'), required,
+        )
+        one_short = self.module['build_plan'](
+            self.manifest, self.manifest_sha256, Path('/staging/desi'),
+            Decimal('1.10'), required - 1,
+        )
+        self.assertTrue(exact['storage_ok'])
+        self.assertFalse(one_short['storage_ok'])
+        with tempfile.TemporaryDirectory() as temp:
+            base = Path(temp)
+            target = base / 'not-created' / 'staging'
+            self.assertEqual(self.module['_storage_anchor'](target), base)
+            self.assertFalse(target.exists())
+            if os.name != 'nt':
+                real = base / 'real'
+                real.mkdir()
+                link = base / 'link'
+                link.symlink_to(real, target_is_directory=True)
+                with self.assertRaisesRegex(
+                    self.module['StagingError'], 'symlink|reparse'
+                ):
+                    self.module['_storage_anchor'](link)
 
     def test_manifest_bytes_are_pinned_not_only_semantically_validated(self):
         raw = self.manifest_path.read_bytes()
@@ -303,6 +343,23 @@ class DesiSelectionMaterializationPreflight(unittest.TestCase):
                 ),
                 digest,
             )
+
+    def test_receipt_write_is_idempotent_and_refuses_overwrite(self):
+        with tempfile.TemporaryDirectory() as temp:
+            base = Path(temp)
+            staging = base / 'staging'
+            receipt = base / 'receipt.json'
+            payload = {'schema': 'synthetic', 'value': 1}
+            self.module['_write_json'](receipt, payload, staging)
+            first = receipt.read_bytes()
+            self.module['_write_json'](receipt, payload, staging)
+            self.assertEqual(receipt.read_bytes(), first)
+            with self.assertRaisesRegex(
+                self.module['StagingError'], 'refusing to overwrite'
+            ):
+                self.module['_write_json'](
+                    receipt, {'schema': 'synthetic', 'value': 2}, staging
+                )
 
     def test_failure_payload_is_operational_and_never_scientific(self):
         payload = self.module['_failure_payload'](
