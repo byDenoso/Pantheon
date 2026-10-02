@@ -202,6 +202,7 @@
     "inbox/scheduled-guardiao-batch-e4cb67cb5d938b99.json": "acd0fc821efe52d0518f5ece0d846695ca83c0912e8c0219457a51332dc91ada",
     "inbox/scheduled-guardiao-board-20261001t1608z.json": "8ecc04f1df7ef768a0f63bb61fc7e387b5cdbf8794eb43f79145ab4c06601b6b",
     "inbox/scheduled-guardiao-board-20261002t1415z.json": "9ec835dcb0e7fdc35942b450691ffcb119d1eb557da93587c2bd6ca030b9030a",
+    "inbox/scheduled-guardiao-board-pr406-d145ab19.json": "f9eb067b775c163986755e1ad70af6f56ca6e327b7a7606f5bd71a00fcf40b6d",
     "inbox/scheduled-guardiao-board-work-drift-20261001t0607z.json": "6a75ae2f461710636b0f85d6add2dfbb302f831273a2246f0e1e320a6062541f",
     "inbox/scheduled-guardiao-board-write-failure-20261001t0113z.json": "4330b178ad6b5d6ca71e3d49d5cfae811a791e764f9d4c9cb1e6d9c093dc4a47",
     "inbox/scheduled-guardiao-board-write-failure-20261001t0312z.json": "f9160e2d2f0d5a4d8dfffc028309af1fa4aeb09f516227f2f9008f249f74a9f3",
@@ -1884,6 +1885,34 @@
       ],
       "tower_revision": "sha256:4dd7ce2e87c829529ecfe66ad0fc1565f28f9a644e2b637b7785063f4ba6ebfe"
     },
+    "inbox/scheduled-guardiao-board-pr406-d145ab19.json": {
+      "fingerprint": "f9eb067b775c163986755e1ad70af6f56ca6e327b7a7606f5bd71a00fcf40b6d",
+      "observed_at": "2026-10-02T15:29:07Z",
+      "outcome": "APPLIED",
+      "receipt_ids": [
+        "OR-e9f5a8ede87f6ef4c76e75572d1699d5"
+      ],
+      "receipts": [
+        {
+          "contract": "OPERATION_RECEIPT_V1",
+          "effect_id": "envelope-e38e988b16821b89174896360e212119",
+          "intent_id": "gateway:tcc-6e53302ba2cb23261bcb9c3167ed5137",
+          "observed_at": "2026-10-02T15:28:41.494579Z",
+          "occurred_at": "2026-10-02T15:28:41.494563Z",
+          "outcome": "APPLIED",
+          "payload_sha256": "sha256:c1e8f6afdbdc3e42b55670002e028e35966649d4a8073a6553c88b350866d367",
+          "reason_code": null,
+          "receipt_id": "OR-e9f5a8ede87f6ef4c76e75572d1699d5",
+          "result_revision": "sha256:99058e7cc81a17ea11ae98843dd060601825052e9eca8b09a0fd419acbdbfb63",
+          "retry_condition": null,
+          "source_revision": "sha256:047749f8066138500457090d8103f4b255d2690ea8f4b5a20f9d5e4fa5b31edb",
+          "stage": "APPLIED",
+          "supersedes": null,
+          "visibility": "PUBLIC"
+        }
+      ],
+      "tower_revision": "sha256:1805709f23cdc79feacc4d383eb9d4a347ac46501d482a823416fa322706fda1"
+    },
     "inbox/scheduled-guardiao-board-work-drift-20261001t0607z.json": {
       "applied_at": "2026-10-01T06:25:43Z",
       "fingerprint": "6a75ae2f461710636b0f85d6add2dfbb302f831273a2246f0e1e320a6062541f",
@@ -2321,8 +2350,8 @@
     },
     "inbox/scheduled-guardiao-recipe-review-pr406-d145ab19.json": {
       "fingerprint": "7a837409c035a5f78f8ded033ae5d47844649c29661c60e9a60e26d38aa5d5a5",
-      "observed_at": "2026-10-02T15:26:16Z",
-      "outcome": "APPLIED",
+      "observed_at": "2026-10-02T15:29:07Z",
+      "outcome": "ALREADY_APPLIED",
       "receipt_ids": [
         "OR-e9814b7aed8f2d0c6085bc3e0e181529"
       ],
@@ -2331,9 +2360,9 @@
           "contract": "OPERATION_RECEIPT_V1",
           "effect_id": "envelope-3666dc16a327e1e42ae599234aedd87e",
           "intent_id": "gateway:tcc-830e505d21b441670db234525a2fbcc6",
-          "observed_at": "2026-10-02T15:25:54.288408Z",
+          "observed_at": "2026-10-02T15:28:41.515555Z",
           "occurred_at": "2026-10-02T15:25:54.288391Z",
-          "outcome": "APPLIED",
+          "outcome": "ALREADY_APPLIED",
           "payload_sha256": "sha256:c41319593b65d256e2b37da74e866a7a004aa6f09392d27c1cc30ab3327bf03b",
           "reason_code": null,
           "receipt_id": "OR-e9814b7aed8f2d0c6085bc3e0e181529",
@@ -2345,7 +2374,7 @@
           "visibility": "PUBLIC"
         }
       ],
-      "tower_revision": "sha256:7d37fd4b8eb4bc6553a85e89bbea0f2855a3432afb9c04cf99b5a362d6f540ae"
+      "tower_revision": "sha256:1805709f23cdc79feacc4d383eb9d4a347ac46501d482a823416fa322706fda1"
     },
     "inbox/scheduled-guardiao-write-failure-20261002t0611z.json": {
       "applied_at": "2026-10-02T06:25:17Z",
