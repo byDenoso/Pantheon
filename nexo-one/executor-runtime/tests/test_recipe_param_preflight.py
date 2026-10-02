@@ -400,26 +400,17 @@ class WorkflowIntegration(unittest.TestCase):
 
 class DesiMaterializationReceiptGate(unittest.TestCase):
     def receipt_fixture(self):
-        names = []
-        for tracer in ('BGS_ANY', 'LRG', 'ELG_LOPnotqso', 'QSO'):
-            for region in ('NGC', 'SGC'):
-                names.extend([
-                    f'{tracer}_{region}_clustering.dat.fits',
-                    f'{tracer}_{region}_nz.txt',
-                ])
-                names.extend(
-                    f'{tracer}_{region}_{index}_clustering.ran.fits'
-                    for index in range(18)
-                )
-        names.sort()
-        files = []
-        for index, name in enumerate(names):
-            size = 1 if index < 159 else 139_526_840_064 - 159
-            files.append({
-                'name': name,
-                'size_bytes': size,
-                'sha256': f'{index:064x}',
-            })
+        manifest = json.loads((
+            ROOT / 'manifests/desi_dr1_lss_iron_lsscats_v1.5_t01_selection.json'
+        ).read_text())
+        files = [
+            {
+                'name': item['name'],
+                'size_bytes': item['size_bytes'],
+                'sha256': item['sha256'],
+            }
+            for item in manifest['files']
+        ]
         lines = [
             f"{item['sha256']}  {item['name']}  {item['size_bytes']}\n"
             for item in sorted(files, key=lambda item: item['name'])
@@ -471,6 +462,33 @@ class DesiMaterializationReceiptGate(unittest.TestCase):
         self.assertEqual(validated['verification']['file_count'], 160)
         self.assertTrue(validated['verification']['all_local_bytes_verified'])
         self.assertFalse(validated['scientific_status']['t03_dispatch_ready'])
+
+    def test_hash_or_size_drift_fails_even_with_self_consistent_index(self):
+        for mutation in ('hash', 'size'):
+            with self.subTest(mutation=mutation):
+                receipt = self.receipt_fixture()
+                if mutation == 'hash':
+                    original = receipt['files'][0]['sha256']
+                    receipt['files'][0]['sha256'] = (
+                        'f' * 64 if original != 'f' * 64 else 'e' * 64
+                    )
+                else:
+                    receipt['files'][0]['size_bytes'] += 1
+                    receipt['files'][1]['size_bytes'] -= 1
+                lines = [
+                    f"{item['sha256']}  {item['name']}  {item['size_bytes']}\n"
+                    for item in sorted(
+                        receipt['files'], key=lambda item: item['name']
+                    )
+                ]
+                receipt['verification']['files_index_sha256'] = hashlib.sha256(
+                    ''.join(lines).encode('utf-8')
+                ).hexdigest()
+                raw = json.dumps(receipt, sort_keys=True).encode('utf-8')
+                with self.assertRaisesRegex(
+                    MaterializationReceiptError, 'frozen T01 manifest'
+                ):
+                    validate_receipt_bytes(raw, hashlib.sha256(raw).hexdigest())
 
     def test_receipt_tampering_and_missing_binding_fail_closed(self):
         receipt = self.receipt_fixture()
