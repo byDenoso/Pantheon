@@ -1,3 +1,4 @@
+import ast
 import copy
 import hashlib
 import json
@@ -161,5 +162,216 @@ class WorkflowIntegration(unittest.TestCase):
                     self.assertEqual(r['operational_reason'], 'DATA_RELEASE_PARAM_MISMATCH' if invalid is True else
                                      'PREFLIGHT_RECEIPT_REQUIRED' if invalid == 'missing' else 'PREFLIGHT_IDENTITY_MISMATCH')
                     self.assertEqual(r['failure_stage'],'PARAM_PREFLIGHT')
+
+
+class DesiSelectionMaterializationPreflight(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        import runpy
+        cls.script_path = RUNTIME.parents[1] / 'scripts/verify_desi_dr1_lss_materialization.py'
+        cls.module = runpy.run_path(str(cls.script_path))
+        cls.manifest_path = (
+            ROOT / 'manifests/desi_dr1_lss_iron_lsscats_v1.5_t01_selection.json'
+        )
+        cls.manifest, cls.manifest_sha256 = cls.module['validate_manifest_bytes'](
+            cls.manifest_path.read_bytes()
+        )
+
+    def test_real_manifest_and_conservative_storage_plan_are_offline(self):
+        from decimal import Decimal
+        source = self.script_path.read_text(encoding='utf-8')
+        tree = ast.parse(source)
+        imported = {
+            alias.name.split('.')[0]
+            for node in ast.walk(tree)
+            if isinstance(node, (ast.Import, ast.ImportFrom))
+            for alias in (node.names if isinstance(node, ast.Import) else
+                          [ast.alias(name=node.module or '')])
+        }
+        self.assertTrue(
+            {'urllib', 'requests', 'socket', 'subprocess'}.isdisjoint(imported)
+        )
+        plan = self.module['build_plan'](
+            self.manifest,
+            self.manifest_sha256,
+            Path('/staging/desi-dr1-v1.5'),
+            Decimal('1.10'),
+            200_000_000_000,
+        )
+        self.assertEqual(self.manifest_sha256, self.module['MANIFEST_SHA256'])
+        self.assertEqual(plan['file_count'], 160)
+        self.assertEqual(plan['source_bytes'], 139_526_840_064)
+        self.assertEqual(plan['required_free_bytes'], 153_479_524_071)
+        self.assertTrue(plan['storage_ok'])
+        self.assertFalse(plan['local_bytes_verified'])
+        self.assertFalse(plan['work_ready'])
+        self.assertFalse(plan['test_ready'])
+        self.assertFalse(plan['scientific_result_eligible'])
+
+    def test_storage_plan_boundary_and_missing_target_are_fail_closed(self):
+        from decimal import Decimal
+        required = 153_479_524_071
+        exact = self.module['build_plan'](
+            self.manifest, self.manifest_sha256, Path('/staging/desi'),
+            Decimal('1.10'), required,
+        )
+        one_short = self.module['build_plan'](
+            self.manifest, self.manifest_sha256, Path('/staging/desi'),
+            Decimal('1.10'), required - 1,
+        )
+        self.assertTrue(exact['storage_ok'])
+        self.assertFalse(one_short['storage_ok'])
+        with tempfile.TemporaryDirectory() as temp:
+            base = Path(temp)
+            target = base / 'not-created' / 'staging'
+            self.assertEqual(self.module['_storage_anchor'](target), base)
+            self.assertFalse(target.exists())
+            if os.name != 'nt':
+                real = base / 'real'
+                real.mkdir()
+                link = base / 'link'
+                link.symlink_to(real, target_is_directory=True)
+                with self.assertRaisesRegex(
+                    self.module['StagingError'], 'symlink|reparse'
+                ):
+                    self.module['_storage_anchor'](link)
+
+    def test_manifest_bytes_are_pinned_not_only_semantically_validated(self):
+        raw = self.manifest_path.read_bytes()
+        with self.assertRaisesRegex(
+            self.module['StagingError'], 'selection-manifest SHA256 mismatch'
+        ):
+            self.module['validate_manifest_bytes'](raw + b' ')
+
+    def test_verify_small_fixture_is_deterministic_and_non_scientific(self):
+        records = []
+        contents = {'a.bin': b'abc', 'b.bin': b'defgh'}
+        for name, raw in contents.items():
+            records.append({
+                'name': name,
+                'size_bytes': len(raw),
+                'sha256': hashlib.sha256(raw).hexdigest(),
+            })
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            for name, raw in contents.items():
+                (root / name).write_bytes(raw)
+            verified = self.module['verify_files'](root, records)
+            synthetic_manifest = {
+                'summary': {'file_count': 2, 'total_bytes': 8},
+                'selection': self.manifest['selection'],
+            }
+            first = self.module['build_verified_receipt'](
+                synthetic_manifest, 'a' * 64, root, verified
+            )
+            second = self.module['build_verified_receipt'](
+                synthetic_manifest, 'a' * 64, root, verified
+            )
+            self.assertEqual(
+                self.module['_canonical_json_bytes'](first),
+                self.module['_canonical_json_bytes'](second),
+            )
+            self.assertEqual(first['execution_status'], 'MATERIALIZATION_VERIFIED')
+            self.assertEqual(first['scope'], 'SOURCE_MATERIALIZATION_ONLY')
+            self.assertEqual(first['roadmap_id'], self.module['CAMPAIGN_ID'])
+            self.assertEqual(first['work_id'], self.module['WORK_ID'])
+            self.assertEqual(first['recovery_work_id'], self.module['RECOVERY_WORK_ID'])
+            self.assertEqual([item['name'] for item in first['files']], ['a.bin', 'b.bin'])
+            self.assertNotIn('staging_root', first)
+            self.assertTrue(first['local_bytes_verified'])
+            self.assertFalse(first['work_ready'])
+            self.assertFalse(first['test_ready'])
+            self.assertFalse(first['scientific_result_eligible'])
+            serialized = self.module['_canonical_json_bytes'](first).decode('utf-8')
+            self.assertNotIn('verdict', serialized)
+            self.assertNotIn('INCONCLUSIVE', serialized)
+
+    def test_verify_rejects_missing_extra_size_hash_and_symlink(self):
+        good = b'abc'
+        record = [{
+            'name': 'a.bin',
+            'size_bytes': len(good),
+            'sha256': hashlib.sha256(good).hexdigest(),
+        }]
+        error = self.module['StagingError']
+        with tempfile.TemporaryDirectory() as temp:
+            base = Path(temp)
+            root = base / 'staging'
+            root.mkdir()
+            with self.assertRaisesRegex(error, 'EXACT_FILE_SET_MISMATCH'):
+                self.module['verify_files'](root, record)
+            (root / 'a.bin').write_bytes(good)
+            (root / 'extra.bin').write_bytes(b'x')
+            with self.assertRaisesRegex(error, 'EXACT_FILE_SET_MISMATCH'):
+                self.module['verify_files'](root, record)
+            (root / 'extra.bin').unlink()
+            (root / 'a.bin').write_bytes(b'abcd')
+            with self.assertRaisesRegex(error, 'size mismatch'):
+                self.module['verify_files'](root, record)
+            (root / 'a.bin').write_bytes(b'xyz')
+            with self.assertRaisesRegex(error, 'SHA256 mismatch'):
+                self.module['verify_files'](root, record)
+            if os.name != 'nt':
+                target = base / 'target.bin'
+                target.write_bytes(good)
+                (root / 'a.bin').unlink()
+                (root / 'a.bin').symlink_to(target)
+                with self.assertRaisesRegex(error, 'non-symlink'):
+                    self.module['verify_files'](root, record)
+
+    def test_plan_writes_only_public_official_urls_outside_staging(self):
+        with tempfile.TemporaryDirectory() as temp:
+            base = Path(temp)
+            staging = base / 'staging'
+            output = base / 'plans' / 'desi-dr1-v1.5.urls'
+            digest = self.module['_write_url_list'](
+                output, self.manifest['files'], staging
+            )
+            lines = output.read_text(encoding='utf-8').splitlines()
+            self.assertEqual(len(lines), 160)
+            self.assertTrue(all(url.startswith(self.module['BASE_URL']) for url in lines))
+            self.assertEqual(hashlib.sha256(output.read_bytes()).hexdigest(), digest)
+            with self.assertRaisesRegex(
+                self.module['StagingError'], 'outside the exact staging directory'
+            ):
+                self.module['_write_url_list'](
+                    staging / 'download.urls', self.manifest['files'], staging
+                )
+            self.assertEqual(
+                self.module['_write_url_list'](
+                    output, self.manifest['files'], staging
+                ),
+                digest,
+            )
+
+    def test_receipt_write_is_idempotent_and_refuses_overwrite(self):
+        with tempfile.TemporaryDirectory() as temp:
+            base = Path(temp)
+            staging = base / 'staging'
+            receipt = base / 'receipt.json'
+            payload = {'schema': 'synthetic', 'value': 1}
+            self.module['_write_json'](receipt, payload, staging)
+            first = receipt.read_bytes()
+            self.module['_write_json'](receipt, payload, staging)
+            self.assertEqual(receipt.read_bytes(), first)
+            with self.assertRaisesRegex(
+                self.module['StagingError'], 'refusing to overwrite'
+            ):
+                self.module['_write_json'](
+                    receipt, {'schema': 'synthetic', 'value': 2}, staging
+                )
+
+    def test_failure_payload_is_operational_and_never_scientific(self):
+        payload = self.module['_failure_payload'](
+            self.module['StagingError']('synthetic failure')
+        )
+        serialized = self.module['_canonical_json_bytes'](payload).decode('utf-8')
+        self.assertEqual(
+            payload['schema'],
+            'NEXO_DESI_LSS_SELECTION_MATERIALIZATION_FAILURE_V1',
+        )
+        self.assertFalse(payload['scientific_result_eligible'])
+        self.assertNotIn('verdict', serialized)
+        self.assertNotIn('INCONCLUSIVE', serialized)
 
 if __name__=='__main__':unittest.main()

@@ -84,3 +84,55 @@ failure (`INPUT_OR_FIT_UNAVAILABLE`), never a scientific INCONCLUSIVE.
 `mode=provenance_smoke` verifies the official checksum list and one official
 n(z) file. It is forbidden when `NEXO_REQUIRE_FROZEN_INPUTS=1`, returns
 `PROVENANCE_SMOKE_ONLY`, and is not eligible as a T03 result.
+
+
+## Preflight de staging para o Operador
+
+O utilitário `scripts/verify_desi_dr1_lss_materialization.py` trabalha somente
+com arquivos locais. Ele não abre rede, não baixa os 139.526.840.064 bytes e
+não emite veredito científico.
+
+Antes de qualquer download, gere o plano conservador de espaço e a lista
+determinística das 160 URLs oficiais. O recibo e a lista precisam ficar fora
+do diretório exato de staging:
+
+```text
+python scripts/verify_desi_dr1_lss_materialization.py plan \
+  --manifest nexo-one/executor-runtime/recipes/manifests/desi_dr1_lss_iron_lsscats_v1.5_t01_selection.json \
+  --staging-root <STAGING_ROOT>/desi-dr1-iron-lsscats-v1.5 \
+  --receipt <OPERATOR_RECEIPTS>/desi-dr1-staging-plan.json \
+  --url-list <OPERATOR_PLANS>/desi-dr1-v1.5.urls \
+  --free-space-multiplier 1.10
+```
+
+`plan` exige por padrão espaço livre equivalente a 110% do volume integral
+(153.479.524.071 bytes), sem dar crédito a arquivos ainda não verificados.
+Código de saída 3 significa armazenamento insuficiente; código 1 significa
+falha operacional de contrato; código 2 permanece reservado para uso inválido
+da CLI.
+
+Depois que o Operador materializar os bytes por sua capacidade aprovada, faça
+a releitura completa:
+
+```text
+python scripts/verify_desi_dr1_lss_materialization.py verify \
+  --manifest nexo-one/executor-runtime/recipes/manifests/desi_dr1_lss_iron_lsscats_v1.5_t01_selection.json \
+  --staging-root <STAGING_ROOT>/desi-dr1-iron-lsscats-v1.5 \
+  --receipt <OPERATOR_RECEIPTS>/desi-dr1-staging-verified.json
+```
+
+`verify` fixa também o SHA-256 integral do manifesto em
+`6ce284a355085679eb528517746b247fa2c48902c6158ca556ae9c197b34c65a`,
+exige o conjunto exato de 160 nomes, recusa links simbólicos/reparse points e
+arquivos extras, confere tamanho e SHA-256 por streaming com proteção contra
+troca de arquivo e repete a enumeração ao final. A leitura integral dos
+139,5 GB pode demorar; o staging deve permanecer imutável até o consumo ou ser
+revalidado. O recibo determinístico omite caminho, host e horário para que duas
+árvores equivalentes produzam os mesmos bytes. O recibo
+`NEXO_DESI_LSS_SELECTION_MATERIALIZATION_RECEIPT_V1` mantém
+`work_ready=false`, `test_ready=false` e
+`scientific_result_eligible=false`: ele prova somente os bytes locais e resolve
+apenas `FULL_SELECTION_NOT_MATERIALIZED`. Quota de filesystem remoto pode
+divergir de `disk_usage`. O próximo consumidor é o construtor canônico de
+`NEXO_DESI_LSS_3D_PRODUCT_V1`, ainda dependente de parâmetros prospectivos
+congelados e dos seis papéis de proveniência.
