@@ -87,9 +87,13 @@ jobs:
           git fetch --no-tags --depth=1 origin "$NEXO_AB_BASELINE_SHA"
           git worktree add --detach "$baseline_dir" FETCH_HEAD
           ln -s "$PWD/node_modules" "$baseline_dir/nexo-one/node_modules"
-          VITE_SYSTEM_SOURCE=remote npm run build
+          candidate_dir="$RUNNER_TEMP/nexo-scene-ab-candidate"
+          git fetch --no-tags --depth=1 origin "$NEXO_AB_CANDIDATE_SHA"
+          git worktree add --detach "$candidate_dir" FETCH_HEAD
+          ln -s "$PWD/node_modules" "$candidate_dir/nexo-one/node_modules"
           (cd "$baseline_dir/nexo-one"; VITE_SYSTEM_SOURCE=remote npm run build)
-          NEXO_AB_BASELINE_DIR="$baseline_dir/nexo-one" node test/scene-ab.browser.mjs
+          (cd "$candidate_dir/nexo-one"; VITE_SYSTEM_SOURCE=remote npm run build)
+          NEXO_AB_BASELINE_DIR="$baseline_dir/nexo-one" NEXO_AB_CANDIDATE_DIR="$candidate_dir/nexo-one" node test/scene-ab.browser.mjs
 
       - name: Upload Atlas visual QA evidence
         if: always()

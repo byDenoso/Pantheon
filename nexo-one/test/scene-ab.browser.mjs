@@ -5,23 +5,27 @@ import { spawn, execFileSync } from 'node:child_process';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { chromium } from 'playwright';
+import { verifySceneSourcePin } from './scene-source-pin.mjs';
 import { labVisualFixture } from './lab-visual-fixture.mjs';
 import { buildPagesProjection } from '../scripts/build-pages-system.mjs';
 
 const output = 'test-output/scene-ab';
 await mkdir(output, { recursive: true });
 const baselineDir = process.env.NEXO_AB_BASELINE_DIR;
+const candidateDir = process.env.NEXO_AB_CANDIDATE_DIR;
 const baselineSha = process.env.NEXO_AB_BASELINE_SHA;
 const candidateSha = process.env.NEXO_AB_CANDIDATE_SHA;
-assert.ok(baselineDir && /^[a-f0-9]{40}$/.test(baselineSha ?? '') && /^[a-f0-9]{40}$/.test(candidateSha ?? ''), 'explicit source pins required');
-assert.equal(execFileSync('git', ['rev-parse', 'HEAD'], { cwd: baselineDir, encoding: 'utf8' }).trim(), baselineSha);
-assert.deepEqual(await readFile(resolve(baselineDir, 'package-lock.json')), await readFile('package-lock.json'), 'same dependency lock');
+assert.ok(baselineDir && candidateDir, 'isolated source directories required');
+const baselinePin = verifySceneSourcePin(baselineDir, baselineSha, 'baseline');
+const candidatePin = verifySceneSourcePin(candidateDir, candidateSha, 'candidate');
+assert.deepEqual(await readFile(resolve(baselineDir, 'package-lock.json')), await readFile('package-lock.json'), 'same baseline dependency lock');
+assert.deepEqual(await readFile(resolve(candidateDir, 'package-lock.json')), await readFile('package-lock.json'), 'same candidate dependency lock');
 const projection = labVisualFixture();
 // Only synthetic input is used; both variants receive this exact in-memory object.
 const { system } = buildPagesProjection({ projection, manifestFile: projection.manifest });
 const inputHash = createHash('sha256').update(JSON.stringify(system)).digest('hex');
 const baselineScene = await readFile(resolve(baselineDir, 'src/features/lab/ObservatoryScene.tsx'), 'utf8');
-const candidateScene = await readFile('src/features/lab/ObservatoryScene.tsx', 'utf8');
+const candidateScene = await readFile(resolve(candidateDir, 'src/features/lab/ObservatoryScene.tsx'), 'utf8');
 const section = (source, begin, end) => source.slice(source.indexOf(begin), source.indexOf(end, source.indexOf(begin)));
 for (const [begin, end] of [
   ['const SHOTS:', '// Física de brinquedo'], ['const VERT =', '/** Qualidade gráfica'],
@@ -34,6 +38,7 @@ const browserArgs = process.env.CHROMIUM_EXECUTABLE ? [] : ['--use-angle=swiftsh
 let browser;
 const records = [];
 const report = { schema: 'NEXO_SCENE_PAIRED_AB_V1', baselineSha, candidateSha,
+  compiledSources: { baseline: baselinePin, candidate: candidatePin },
   checkoutSha: execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim(),
   baselinePublishedReadbackRun: 37044218190, inputHash, syntheticInput: true,
   build: 'production Vite build, same local host, dependencies and server',
@@ -81,7 +86,8 @@ async function startServer(label, cwd, port) {
 
 try {
   await startServer('baseline', baselineDir, 4181);
-  await startServer('candidate', process.cwd(), 4182);
+  await startServer('candidate', candidateDir, 4182);
+  console.log('SCENE_AB_SOURCE_PINS ' + JSON.stringify({ compiledSources: report.compiledSources, ciMergeCheckoutSha: report.checkoutSha }));
   browser = await chromium.launch({ headless: true, args: browserArgs,
     ...(process.env.CHROMIUM_EXECUTABLE ? { executablePath: process.env.CHROMIUM_EXECUTABLE } : {}) });
   report.browserVersion = browser.version();
@@ -206,6 +212,7 @@ try {
         if (phase === 'rotation') {
           await page.mouse.move(profile.width * .5, profile.height * .66);
           await page.mouse.down();
+          assert.ok(await page.evaluate(() => document.querySelector('.obs-scene canvas').hasPointerCapture(window.__sceneAB.pointerId)), 'rotation must begin on the captured scene pointer');
         }
         const sample = await page.evaluate(async ({ phase, duration }) => {
           const probe = window.__sceneAB, canvas = document.querySelector('.obs-scene canvas');
