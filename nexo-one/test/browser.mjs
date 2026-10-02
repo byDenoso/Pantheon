@@ -232,20 +232,25 @@ try {
 
     if (mobile) await detailsToggle.click();
     const scienceStations = page.locator('.atlas-a11y-stations button[data-domain="SCIENCE"]');
-    if (await scienceStations.count()) {
-      await scienceStations.first().focus();
-      await page.keyboard.press('Enter');
-      const selectedId = await page.locator('.atlas-detail').getAttribute('data-selected-node');
-      assert.ok(selectedId, 'a seleção atual deve identificar a entidade no painel de detalhes');
-      const details = page.locator('.atlas-provenance');
-      if (await details.count()) {
-        await details.locator('summary').click();
-        const provenance = (await details.innerText()).toLowerCase();
-        assert.match(provenance, /identificador/);
-        assert.match(provenance, /impressão digital/);
-        assert.match(provenance, /revisão da fonte/);
-      }
-    }
+    const scienceStationCount = await scienceStations.count();
+    assert.ok(scienceStationCount > 0, 'a fixture do Atlas deve expor estações de Ciência para testar seleção e proveniência');
+    const firstScienceStation = scienceStations.first();
+    const scienceStationLabel = (await firstScienceStation.innerText()).trim();
+    await firstScienceStation.focus();
+    await page.keyboard.press('Enter');
+    const selectedScience = page.locator('.atlas-detail');
+    await selectedScience.waitFor();
+    const selectedId = await selectedScience.getAttribute('data-selected-node');
+    assert.ok(selectedId, 'a seleção atual deve identificar a entidade no painel de detalhes');
+    assert.equal((await selectedScience.locator('h1').innerText()).trim().toLocaleLowerCase(), scienceStationLabel.toLocaleLowerCase(),
+      'selecionar a estação de Ciência deve abrir exatamente seus detalhes');
+    const details = selectedScience.locator('.atlas-provenance');
+    assert.equal(await details.count(), 1, 'a estação selecionada deve expor a origem e os dados técnicos');
+    await details.locator('summary').click();
+    const stationProvenance = (await details.innerText()).toLowerCase();
+    assert.match(stationProvenance, /identificador/);
+    assert.match(stationProvenance, /impressão digital/);
+    assert.match(stationProvenance, /revisão da fonte/);
     await noOverflow(page, `${name}/Atlas`);
     if (name === 'desktop-dark') await page.screenshot({ path: `${output}/atlas-${name}-selected.png`, fullPage: true });
     if (mobile) {
@@ -254,8 +259,19 @@ try {
       assert.equal(await detailsToggle.getAttribute('aria-expanded'), 'false');
     }
 
-    // 9. Command Bar: navega e recusa escrita explicitamente where the header exposes it.
-    if (!mobile) {
+    // 9. Command Bar navigates and refuses writes where the responsive header exposes it.
+    const commandInput = page.locator('.instrument-search input[aria-label="Buscar e navegar"]');
+    if (mobile) {
+      assert.equal(await commandInput.count(), 1, 'the command input remains present in the mobile header markup');
+      assert.equal(await commandInput.isVisible(), false, 'the mobile design hides the command input');
+      const productNavigation = page.getByRole('navigation', { name: 'Modo do produto' });
+      assert.equal(await productNavigation.isVisible(), true, 'a navegação responsiva deve continuar visível no mobile');
+      const nowMode = productNavigation.getByRole('button', { name: 'Agora', exact: true });
+      assert.equal(await nowMode.count(), 1, 'o modo Agora deve estar disponível na navegação mobile');
+      await nowMode.click();
+      await page.waitForFunction(() => location.hash === '#/agora');
+      await page.locator('.lab-route[data-view="LAB"]').waitFor();
+    } else {
       const commandBar = page.getByRole('textbox', { name: 'Buscar e navegar' });
       await commandBar.fill('truthgraph');
       await commandBar.press('Enter');

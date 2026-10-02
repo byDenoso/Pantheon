@@ -150,9 +150,11 @@ jobs:
           TCC_REPO: byDenoso/TCC
           TCC_BRANCH: nexo-inbox
           EVENT_NAME: ${{ github.event_name }}
+          GH_TOKEN: ${{ github.token }}
         run: |
           python - <<'PY'
           import hashlib, json, os, urllib.parse, urllib.request
+          from scripts.github_api_read import read_api_json
 
           cursor_path="nexo-one/tcc-public-inbox-ack.json"
           cursor=json.load(open(cursor_path,encoding="utf-8"))
@@ -165,16 +167,14 @@ jobs:
           event=os.environ.get("EVENT_NAME","")
           headers={"Accept":"application/vnd.github+json","User-Agent":"nexo-writer-robot"}
           ref_api=f"https://api.github.com/repos/{repo}/git/ref/heads/{branch}"
-          with urllib.request.urlopen(urllib.request.Request(ref_api,headers=headers),timeout=60) as response:
-              ref=json.load(response)
+          ref=read_api_json(ref_api)
           head=str((ref.get("object") or {}).get("sha") or "").strip()
           if not head:
               raise SystemExit("public inbox ref missing head sha")
 
           if event=="workflow_dispatch":
               tree_api=f"https://api.github.com/repos/{repo}/git/trees/{head}?recursive=1"
-              with urllib.request.urlopen(urllib.request.Request(tree_api,headers=headers),timeout=60) as response:
-                  tree=json.load(response)
+              tree=read_api_json(tree_api)
               source_files=[
                   {"filename":str(item.get("path") or ""),"status":"modified"}
                   for item in (tree.get("tree") or [])
@@ -184,8 +184,7 @@ jobs:
               ]
           else:
               api=f"https://api.github.com/repos/{repo}/compare/{base}...{head}"
-              with urllib.request.urlopen(urllib.request.Request(api,headers=headers),timeout=60) as response:
-                  comparison=json.load(response)
+              comparison=read_api_json(api)
               source_files=comparison.get("files") or []
 
           acked=cursor.get("acked") or {}
