@@ -64,7 +64,7 @@ try {
   const history = page.locator('.incident-history');
   assert.equal(await history.getAttribute('open'),null);
   await history.locator(':scope > summary').click();
-  assert.match(await history.innerText(), /Resolvido operacionalmente/);
+  assert.equal(await history.locator('.incident-state').textContent(), 'Resolvido operacionalmente');
   await go('ciclo');
   await page.locator('.cycle-flow').waitFor();
   assert.deepEqual(await page.locator('.cycle-flow strong').allTextContents(), ['PREPARO','EXECUÇÃO','CONTESTAÇÃO','CONSOLIDAÇÃO']);
@@ -88,7 +88,7 @@ try {
   assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1),false);
   assert.deepEqual(errors,[]);
   await page.screenshot({ path:output + '/' + theme + '-' + width + '.png' });
-  reports.push({ theme,width,originalPreserved:true,ownership:true,history:true,keyboard:true,readyEmpty:true,lastGood:true,errors });
+  reports.push({ input:'synthetic-test-only',theme,width,originalPreserved:true,ownership:true,history:true,keyboard:true,readyEmpty:true,lastGood:true,errors });
   await context.close();
  }
 } finally { await browser.close(); }
