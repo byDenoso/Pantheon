@@ -78,12 +78,12 @@ def load_projection():
         projection = json.loads(raw)
         provenance = {"url": url, "sha256": hashlib.sha256(raw).hexdigest(),
                       "scope": "LIVE_SMOKE_ONLY"}
-    if not isinstance(projection, dict) or not isinstance(projection.get("tests"), list) or not isinstance(projection.get("activity"), list):
+    if not isinstance(projection, dict) or not isinstance(projection.get("tests"), list):
         raise ValueError("invalid public projection structure")
     return projection, provenance
 
 proj, input_provenance = load_projection()
-tests, acts = proj["tests"], proj["activity"]
+tests, acts = proj["tests"], proj.get("activity")
 
 def operational_assessment(t):
     """Trust only the Writer-validated public overlay from the verified projection.
@@ -227,6 +227,12 @@ if mode == "readiness_yield":
         "O escore de prontidão não melhorou sobre o chute básico.")
 
 if mode == "event_clock":
+    if not isinstance(acts, list) or not isinstance(proj.get("hypotheses"), list):
+        out("INCONCLUSIVE", "PUBLIC_FIELDS_UNAVAILABLE",
+            "A projeção pública congelada não expõe activity/hypotheses necessários ao relógio de eventos.",
+            {"has_activity": isinstance(acts, list),
+             "has_hypotheses": isinstance(proj.get("hypotheses"), list)},
+            "O relógio de eventos não pode ser avaliado sem activity e hypotheses na projeção pública congelada.")
     need = int(params.get("min_hypotheses", 10))
     ev = {}
     for a in acts:
