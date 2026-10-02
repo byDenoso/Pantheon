@@ -68,6 +68,17 @@ def _stat_identity(value: os.stat_result) -> tuple[int, int, int, int, int, int]
     )
 
 
+def _content_identity(value: os.stat_result) -> tuple[int, int, int, int, int]:
+    """Stable content identity; ctime may change when the publish temp link is removed."""
+    return (
+        value.st_dev,
+        value.st_ino,
+        value.st_mode,
+        value.st_size,
+        value.st_mtime_ns,
+    )
+
+
 def _is_reparse_or_symlink(path: Path) -> bool:
     info = path.stat(follow_symlinks=False)
     attributes = getattr(info, "st_file_attributes", 0)
@@ -413,9 +424,9 @@ def _read_existing_output(path: Path, label: str) -> bytes:
             after_open = os.fstat(stream.fileno())
         after = path.stat(follow_symlinks=False)
         if (not os.path.samestat(before, after)
-                or _stat_identity(before) != _stat_identity(opened)
-                or _stat_identity(before) != _stat_identity(after_open)
-                or _stat_identity(before) != _stat_identity(after)):
+                or _content_identity(before) != _content_identity(opened)
+                or _content_identity(before) != _content_identity(after_open)
+                or _content_identity(before) != _content_identity(after)):
             raise StagingError(f"existing {label} changed during readback")
         return raw
     finally:
