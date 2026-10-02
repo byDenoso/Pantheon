@@ -79,6 +79,32 @@ At least 100 nulls are required. The recorded decision contract is unchanged:
 Missing, unversioned or hash-mismatched inputs cause a nonzero operational
 failure (`INPUT_OR_FIT_UNAVAILABLE`), never a scientific INCONCLUSIVE.
 
+## Preflight canônico de parâmetros
+
+O catálogo `preflight/desi_lss_selection_binding_family.json` adere a
+`RECIPE_PARAM_PREFLIGHT_V1` e fixa os campos públicos do `RECIPE_BIND`
+aplicado sob o recibo `OR-8c76795538f2dea31468fa5c4a818ad6`:
+
+- `null_count=199`;
+- `null_method=selection_stratified_permutation`;
+- `max_abs_gaussian_smoothed_delta` com `sigma_cells=0.32`;
+- os critérios já registrados `p_emp<=0.01`, BH `q=0.1` e
+  rejeição quando todos `p_emp>=0.1`;
+- manifesto de seleção
+  `sha256:6ce284a355085679eb528517746b247fa2c48902c6158ca556ae9c197b34c65a`.
+
+O Executor exige recibo de preflight correspondente antes de preparar esta
+receita. O validador também exige seed inteira congelada e exatamente dois
+bindings HTTPS versionados: o manifesto com o hash acima e o produto
+`NEXO_DESI_LSS_3D_PRODUCT_V1`. Ele não escolhe uma seed nem inventa URL,
+versão ou SHA-256 do produto. Esses valores precisam vir do TEST/binding
+canônico pelo fluxo existente `WORK -> handoff privado -> NEXO_INBOX -> Writer`.
+
+O `DATA_BINDING` público aplicado sob
+`OR-4f4e64f3d1e3ef631e003e6ffa6cc5a2` continua parcial: até existir produto
+3D real e o recibo de materialização dos 160 arquivos, o preflight permanece
+inelegível para despacho científico e não torna T03 READY.
+
 ## Smoke scope
 
 `mode=provenance_smoke` verifies the official checksum list and one official
@@ -128,7 +154,10 @@ arquivos extras, confere tamanho e SHA-256 por streaming com proteção contra
 troca de arquivo e repete a enumeração ao final. A leitura integral dos
 139,5 GB pode demorar; o staging deve permanecer imutável até o consumo ou ser
 revalidado. O recibo determinístico omite caminho, host e horário para que duas
-árvores equivalentes produzam os mesmos bytes. O recibo
+árvores equivalentes produzam os mesmos bytes. Recibo e lista de URLs são
+publicados a partir de temporário completo por hard-link atômico exclusivo:
+concorrentes idênticos convergem e conteúdo diferente nunca sobrescreve o
+vencedor. Filesystem sem suporte a hard-link falha fechado. O recibo
 `NEXO_DESI_LSS_SELECTION_MATERIALIZATION_RECEIPT_V1` mantém
 `work_ready=false`, `test_ready=false` e
 `scientific_result_eligible=false`: ele prova somente os bytes locais e resolve
