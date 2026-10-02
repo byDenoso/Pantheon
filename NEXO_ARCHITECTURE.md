@@ -24,14 +24,19 @@ Canonical mutation loop:
 
 No dual-write to Git is permitted.
 
-## Writer, readers and sync (2026-09-23)
+## Writer, readers and sync (2026-10-02)
 
-- **Single writer:** `byDenoso/TCC:scripts/nexo_tower.py apply` (local lock -> download -> mutate -> head re-read -> write same file id -> readback -> `repository_dispatch` to Pages). It runs on the operator's machine under the Claude automations (`TCC/automations/`). Credential: an Editor service account on the Tower file only.
+- **Single unattended writer:** `.github/workflows/nexo-writer-robot.yml` uses the canonical Drive bundle reconciled against tested TCC main. Its existing concurrency group serializes that job. Schedule remains `7,22,37,52 * * * *`; the existing dispatch path can wake it.
+- **Public proposals:** `TCC@nexo/dispatch-runtime:nexo_persist/requests/<stable_id>.json` -> pinned relay -> `TCC@nexo-inbox` -> Writer. Staging, delivery and application are different stages confirmed by compatible receipts and exact hashes.
+- **Write concurrency:** the same stable Drive file is read, compared, PATCHed and read back. `IN_PLACE_FILE_REVISION_CAS_READBACK` is the legacy contract label; the HTTP transport has no demonstrated atomic conditional write. A local lock does not serialize independent machines. Do not start another canonical writer.
 - **ChatGPT** reads the Tower through its Drive connector and never writes it. Proposals, hypotheses and learning signals go to the create-only Drive folder `NEXO_INBOX`; the writer applies them.
 - **ATLAS (Pages)** reads the Tower from Drive with a Reader-only secret (`NEXO_DRIVE_READER_JSON`) and builds the public projection inside the job. The vault export mirror is a fallback only while that secret is absent. The scheduled cron is a slow reconciler (GitHub runs it every few hours); the writer's dispatch is the sync path.
 - **Drift check:** `nexo_tower.py status` compares the Tower `state_fingerprint` with the published `tower-projection/manifest.json` and reports `CURRENT` or `OUTDATED`.
 - **Meaning:** `TCC/runtime/nexo_agent_api/contracts/SEMANTIC_TAXONOMY_V1.json` (Git contract). Every projected test/campaign carries a resolved `semantic` block; the ATLAS renders domains/stations from it.
-- **MCP:** optional and currently not hosted. No consumer needs it: ChatGPT reads the Tower through its Drive connector and proposes via `NEXO_INBOX`; Claude automations use `nexo_tower.py`; ATLAS reads Drive in the Pages build. The Railway service is retired (trial). If a hosted MCP is ever needed, revive the free Vercel `nexo-atlas-control-tower` endpoint as a read-only view of the live Tower; mutations still go only through the writer.
+- **MCP:** hosted read-only scientific views. No mutation capability is implied; a read does not stage, deliver or apply a proposal. Pages remains the presentation pipeline and existing Vercel endpoints provide compatibility routes.
+- **Projection:** producer allowlist; preserve the last valid observation after failure or an incompatible read. Scientific state, attempt, review, decision, revision and freshness remain separate. Polling never refreshes the time of a historical result.
+- **C01:** only the explicitly approved readiness-cache adapter on the corrected baseline, with immutable context and verified mandate. Deterministic 10% assignment, maximum 100 candidate evaluations/day for 7–28 days (maximum 2800). Quality counts at least 600 unique units actually evaluated by the candidate with justified independence/strata; controls are excluded. Insufficient sample, monitor loss or failed readback never promotes. Global scientific gates and CAMB/MCMC remain unchanged.
+- **Automations:** ChatGPT task configuration is external to this Work. Versioned instructions do not prove changes to prompts, models, schedules or states.
 
 Current Atlas V3 design: `docs/superpowers/specs/2026-09-14-atlas-neural-v3.md`.
 
@@ -45,4 +50,3 @@ Nothing in the UI or compilers lists domains by hand.
 2. **Entities:** create TEST/CAMPAIGN/HYPOTHESIS/LESSON through `nexo_tower.py apply` with a `semantic` block using the new ids. Roadmaps and indexes are documents and use `{"document": "roadmaps/X.json", "merge": {...}}` in the same apply.
 3. **ATLAS:** the projection carries the taxonomy tree and resolved `semantic`; the galaxy compiler gives every visual domain an arm whose mass, length, thickness, fragmentation and bridges come from the data (fixed constants, comparable snapshots). No front-end change is needed.
 4. **Automations:** playbooks live in `TCC/automations/`; new inbox kinds are ignored with a log until a playbook handles them. The frontier (`nexo_tower.py frontier`) reads V1 (inline tests) and V2 (`frontier_refs`) roadmaps and reports invalid ones instead of failing.
-

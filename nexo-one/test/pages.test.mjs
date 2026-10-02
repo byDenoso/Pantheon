@@ -43,10 +43,16 @@ test('GitHub Pages build uses repository base and configurable SystemState endpo
   assert.match(hook, /projection_fingerprint/);
   assert.match(hook, /HEARTBEAT_MS = 20_000/);
   const galaxy = await text('src/atlas3d/GalaxyView.tsx');
+  const atlasStore = await text('src/data/NexoStore.tsx');
+  const atlasObservation = await text('src/data/atlasObservation.ts');
   assert.match(galaxy, /useNexoStore/);
   assert.match(galaxy, /projectionFingerprint/);
-  assert.match(galaxy, /cache: 'no-store'/);
-  assert.match(galaxy, /GALAXY_EDGE_NOT_CONVERGED/);
+  assert.match(galaxy, /loadAtlasSnapshot\(ENDPOINT, projectionFingerprint/);
+  assert.match(galaxy, /data-observation-state/);
+  assert.match(atlasStore, /cache:'no-store'/);
+  assert.match(atlasStore, /loadAtlasSnapshot/);
+  assert.match(atlasObservation, /FINGERPRINT_MISMATCH/);
+  assert.match(atlasObservation, /OUT_OF_ORDER_SNAPSHOT/);
   assert.match(app, /onSync=\{system\.sync\}/);
   assert.match(app, /VITE_PUBLIC_NEXO_BASE/);
   assert.match(app, /goSystem\(\)/);
@@ -715,4 +721,3 @@ test('galaxy desktop observatory pass keeps density bounded', async () => {
   assert.match(css, /ATLAS Galaxy desktop observatory pass/);
   assert.match(css, /grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/);
 });
-

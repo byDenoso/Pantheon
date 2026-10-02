@@ -134,6 +134,34 @@ test('queued, normal dependency and blocked-like states do not become Needs You 
   assert.equal(compileGalaxySnapshot({projection:p}).needs_you.length,0);
 });
 
+test('only explicit attempt dimensions generate running events; task state stays separate',()=>{
+  const out=compileGalaxySnapshot({projection:fixture({
+    work:[],
+    tests:[
+      {id:'TEST-RUNNING',domain:'SCIENCE',status:'RUNNING'},
+      {id:'TEST-EXECUTION-PHASE',domain:'SCIENCE',status:'CHECKPOINTED',scientific_state:'INCONCLUSIVE',execution_phase:'RUNNING',review_state:'PENDING'},
+      {id:'TEST-ATTEMPT-STATE',domain:'SCIENCE',status:'CLAIMED',attempt_state:'EXECUTING'},
+      {id:'TEST-CHECKPOINTED',domain:'SCIENCE',status:'CHECKPOINTED'},
+      {id:'TEST-CLAIMED',domain:'SCIENCE',status:'CLAIMED'},
+    ],
+    capabilities:{},
+  })});
+  const active=out.events.find(event=>event.id==='agn:SCIENCE');
+  assert.ok(active);
+  assert.match(active.label,/2 testes em andamento/);
+  const taskRunning=out.entities.find(entity=>entity.canonical_id==='TEST-RUNNING');
+  const phaseRunning=out.entities.find(entity=>entity.canonical_id==='TEST-EXECUTION-PHASE');
+  const attemptRunning=out.entities.find(entity=>entity.canonical_id==='TEST-ATTEMPT-STATE');
+  assert.equal(taskRunning.scientific_state,'UNKNOWN');
+  assert.equal(taskRunning.attempt_state,null);
+  assert.equal(phaseRunning.status,'CHECKPOINTED');
+  assert.equal(phaseRunning.scientific_state,'INCONCLUSIVE');
+  assert.equal(phaseRunning.attempt_state,'RUNNING');
+  assert.equal(phaseRunning.review_state,'PENDING');
+  assert.equal(attemptRunning.status,'CLAIMED');
+  assert.equal(attemptRunning.attempt_state,'EXECUTING');
+});
+
 test('explicit interdomain records become semantic relations without inventing scientific edges',()=>{
   const out=compileGalaxySnapshot({projection:fixture(),interdomain});
   const relation=out.relations.find(item=>item.id==='relation:interdomain:META::INTERDOMAIN::1');

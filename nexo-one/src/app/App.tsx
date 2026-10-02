@@ -230,7 +230,7 @@ export default function App() {
   if (galaxyRoute) return <ProvenanceProvider><div className={`cockpit unified-shell galaxy-route${isMobile?' mobile':''}`} data-view="GALAXY" data-access={session.session.authenticated?'PRIVATE':'PUBLIC'}>
     <a className="skip-link" href="#workspace">Ir ao conteúdo</a>{header}<div className="cockpit-body">
       <main id="workspace" tabIndex={-1} className="workspace galaxy-workspace"><Suspense fallback={<LoadingState label="Abrindo a galáxia…" />}>
-        <GalaxyView selectedId={null}/>
+        <GalaxyView selectedId={selectedNode} onSelect={setSelectedNode}/>
       </Suspense></main>
     </div></div></ProvenanceProvider>;
   if (systemRoute) return <ProvenanceProvider><div className={`cockpit unified-shell system-route${isMobile?' mobile':''}`} data-view="SYSTEM" data-access={session.session.authenticated?'PRIVATE':'PUBLIC'}>

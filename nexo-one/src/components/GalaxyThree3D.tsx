@@ -756,6 +756,7 @@ export const GalaxyThree3D = forwardRef<CanvasGraph25DHandle, Props>(function Ga
   const rendererRef = useRef<WebGLRenderer | null>(null);
   const cameraRef = useRef<PerspectiveCamera | null>(null);
   const controlsRef = useRef<OrbitControls | null>(null);
+  const cameraStateRef = useRef<{ position: Vector3; target: Vector3; isMobile: boolean; isMacro: boolean } | null>(null);
   const sceneRef = useRef<Scene | null>(null);
   const nodePointsRef = useRef<Points | null>(null);
   const labelsRef = useRef(new Map<string, HTMLSpanElement>());
@@ -926,11 +927,13 @@ export const GalaxyThree3D = forwardRef<CanvasGraph25DHandle, Props>(function Ga
       sceneRef.current = scene;
 
       const camera = new PerspectiveCamera(isMobile ? 35 : 40, size.width / size.height, 0.1, 1200);
-      camera.position.copy(homeCamera);
+      const savedCamera = cameraStateRef.current;
+      const canRestoreCamera = savedCamera?.isMobile === isMobile && savedCamera?.isMacro === isMacro;
+      camera.position.copy(canRestoreCamera && savedCamera ? savedCamera.position : homeCamera);
       cameraRef.current = camera;
 
       const controls = new OrbitControls(camera, renderer.domElement);
-      controls.target.copy(DEFAULT_TARGET);
+      controls.target.copy(canRestoreCamera && savedCamera ? savedCamera.target : DEFAULT_TARGET);
       controls.enableDamping = true;
       controls.dampingFactor = 0.065;
       controls.enablePan = true;
@@ -1192,6 +1195,12 @@ export const GalaxyThree3D = forwardRef<CanvasGraph25DHandle, Props>(function Ga
       return () => {
         disposed = true;
         cancelAnimationFrame(frame);
+        cameraStateRef.current = {
+          position: camera.position.clone(),
+          target: controls.target.clone(),
+          isMobile,
+          isMacro,
+        };
         renderer?.domElement.removeEventListener('pointerdown', onPointerDown);
         renderer?.domElement.removeEventListener('pointerup', onPointerUp);
         renderer?.domElement.removeEventListener('pointercancel', onPointerCancel);
