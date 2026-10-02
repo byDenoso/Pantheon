@@ -162,4 +162,121 @@ class WorkflowIntegration(unittest.TestCase):
                                      'PREFLIGHT_RECEIPT_REQUIRED' if invalid == 'missing' else 'PREFLIGHT_IDENTITY_MISMATCH')
                     self.assertEqual(r['failure_stage'],'PARAM_PREFLIGHT')
 
+
+class DesiSelectionMaterializationPreflight(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        import runpy
+        cls.script_path = RUNTIME.parents[1] / 'scripts/verify_desi_dr1_lss_materialization.py'
+        cls.module = runpy.run_path(str(cls.script_path))
+        cls.manifest_path = (
+            ROOT / 'manifests/desi_dr1_lss_iron_lsscats_v1.5_t01_selection.json'
+        )
+        cls.manifest, cls.manifest_sha256 = cls.module['validate_manifest_bytes'](
+            cls.manifest_path.read_bytes()
+        )
+
+    def test_real_manifest_and_conservative_storage_plan_are_offline(self):
+        from decimal import Decimal
+        self.assertNotIn('urllib', self.script_path.read_text(encoding='utf-8'))
+        plan = self.module['build_plan'](
+            self.manifest,
+            self.manifest_sha256,
+            Path('/staging/desi-dr1-v1.5'),
+            Decimal('1.10'),
+            200_000_000_000,
+        )
+        self.assertEqual(plan['file_count'], 160)
+        self.assertEqual(plan['source_bytes'], 139_526_840_064)
+        self.assertEqual(plan['required_free_bytes'], 153_479_524_071)
+        self.assertTrue(plan['storage_ok'])
+        self.assertFalse(plan['local_bytes_verified'])
+        self.assertFalse(plan['work_ready'])
+        self.assertFalse(plan['test_ready'])
+        self.assertFalse(plan['scientific_result_eligible'])
+
+    def test_verify_small_fixture_is_deterministic_and_non_scientific(self):
+        records = []
+        contents = {'a.bin': b'abc', 'b.bin': b'defgh'}
+        for name, raw in contents.items():
+            records.append({
+                'name': name,
+                'size_bytes': len(raw),
+                'sha256': hashlib.sha256(raw).hexdigest(),
+            })
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            for name, raw in contents.items():
+                (root / name).write_bytes(raw)
+            verified = self.module['verify_files'](root, records)
+            synthetic_manifest = {
+                'summary': {'file_count': 2, 'total_bytes': 8},
+                'selection': self.manifest['selection'],
+            }
+            first = self.module['build_verified_receipt'](
+                synthetic_manifest, 'a' * 64, root, verified
+            )
+            second = self.module['build_verified_receipt'](
+                synthetic_manifest, 'a' * 64, root, verified
+            )
+            self.assertEqual(
+                self.module['_canonical_json_bytes'](first),
+                self.module['_canonical_json_bytes'](second),
+            )
+            self.assertEqual(first['operator_state'], 'LOCAL_SELECTION_BYTES_VERIFIED')
+            self.assertTrue(first['local_bytes_verified'])
+            self.assertFalse(first['work_ready'])
+            self.assertFalse(first['test_ready'])
+            self.assertFalse(first['scientific_result_eligible'])
+            self.assertNotIn('verdict', first)
+
+    def test_verify_rejects_missing_extra_size_hash_and_symlink(self):
+        good = b'abc'
+        record = [{
+            'name': 'a.bin',
+            'size_bytes': len(good),
+            'sha256': hashlib.sha256(good).hexdigest(),
+        }]
+        error = self.module['StagingError']
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            with self.assertRaisesRegex(error, 'EXACT_FILE_SET_MISMATCH'):
+                self.module['verify_files'](root, record)
+            (root / 'a.bin').write_bytes(good)
+            (root / 'extra.bin').write_bytes(b'x')
+            with self.assertRaisesRegex(error, 'EXACT_FILE_SET_MISMATCH'):
+                self.module['verify_files'](root, record)
+            (root / 'extra.bin').unlink()
+            (root / 'a.bin').write_bytes(b'abcd')
+            with self.assertRaisesRegex(error, 'size mismatch'):
+                self.module['verify_files'](root, record)
+            (root / 'a.bin').write_bytes(b'xyz')
+            with self.assertRaisesRegex(error, 'SHA256 mismatch'):
+                self.module['verify_files'](root, record)
+            if os.name != 'nt':
+                (root / 'target.bin').write_bytes(good)
+                (root / 'a.bin').unlink()
+                (root / 'a.bin').symlink_to(root / 'target.bin')
+                with self.assertRaisesRegex(error, 'EXACT_FILE_SET_MISMATCH|non-symlink'):
+                    self.module['verify_files'](root, record)
+
+    def test_plan_writes_only_public_official_urls_outside_staging(self):
+        with tempfile.TemporaryDirectory() as temp:
+            base = Path(temp)
+            staging = base / 'staging'
+            output = base / 'plans' / 'desi-dr1-v1.5.urls'
+            digest = self.module['_write_url_list'](
+                output, self.manifest['files'], staging
+            )
+            lines = output.read_text(encoding='utf-8').splitlines()
+            self.assertEqual(len(lines), 160)
+            self.assertTrue(all(url.startswith(self.module['BASE_URL']) for url in lines))
+            self.assertEqual(hashlib.sha256(output.read_bytes()).hexdigest(), digest)
+            with self.assertRaisesRegex(
+                self.module['StagingError'], 'outside the exact staging directory'
+            ):
+                self.module['_write_url_list'](
+                    staging / 'download.urls', self.manifest['files'], staging
+                )
+
 if __name__=='__main__':unittest.main()
