@@ -92,10 +92,12 @@ try {
       assert.ok((await page.locator('.tele-feed > li:not(.tele-note) > .feed-kind').allTextContents()).every(text => text === 'Evento narrado · interface'));
     }
     await noOverflow(page, name + ':home');
+    const tools = page.locator('.obs-tools-more');
+    assert.equal(await tools.getAttribute('open'), null, 'secondary visual controls start closed');
     if (fallback) assert.equal(await page.locator('.observatory.scene-unavailable').count(), 1);
     else {
       assert.equal(await page.locator('.obs-scene canvas').count(), 1);
-      if (theme === 'dark') assert.equal(await page.locator('.observatory').evaluate(el => getComputedStyle(el).getPropertyValue('--o-accent').trim()), '#d4bf95');
+      if (theme === 'dark') assert.equal(await page.locator('.observatory').evaluate(el => getComputedStyle(el).getPropertyValue('--o-accent').trim()), '#9fc9ff');
     }
     if (!input) await page.addStyleTag({ content: 'body::after{content:"FIXTURE VISUAL · DADOS SINTÉTICOS · SOMENTE TESTE";position:fixed;left:12px;bottom:6px;z-index:9999;padding:4px 8px;background:#15120c;color:#f4e4bd;font:11px system-ui;pointer-events:none}' });
     await page.screenshot({ path: output + '/' + name + '-home.png' });
@@ -162,7 +164,9 @@ try {
       }
       await crumb.getByRole('button', { name: 'NEXO', exact: true }).click();
       await visualReady(page, name + ':explore', true);
-      const hint = await page.locator('.explore-hint').boundingBox();
+      await tools.locator('summary').click();
+      assert.notEqual(await tools.getAttribute('open'), null, 'visual controls open for the exploration guide');
+      const hint = await page.locator('.obs-tools-guide').boundingBox();
       assert.ok(hint && hint.x >= 0 && hint.x + hint.width <= viewport.width, 'explore hint within viewport');
       if (viewport.width >= 1280) {
         const sidebar = await page.locator('.telemetry').boundingBox();
@@ -171,13 +175,16 @@ try {
       await page.screenshot({ path: output + '/' + name + '-explore.png' });
       await page.keyboard.press('Escape');
       assert.equal(await page.locator('.observatory.exploring').count(), 0);
+      assert.equal(await tools.getAttribute('open'), null, 'Escape closes secondary visual controls');
     }
     if (fallback) {
       assert.equal(await page.getByRole('button', { name: 'Explorar a teia' }).count(), 0);
       assert.equal(await page.getByRole('button', { name: /Mostrar só a página/ }).count(), 0);
     } else {
+      if (!(await tools.evaluate(el => el.open))) await tools.locator('summary').click();
       await page.getByRole('button', { name: /Mostrar só a página/ }).click();
       assert.equal(await page.locator('.observatory.flat').count(), 1);
+      if (!(await tools.evaluate(el => el.open))) await tools.locator('summary').click();
       await page.getByRole('button', { name: /Mostrar a teia/ }).click();
       assert.equal(await page.locator('.observatory.flat').count(), 0);
     }
