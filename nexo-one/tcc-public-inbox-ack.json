@@ -447,6 +447,7 @@
     "inbox/scheduled-pitia-20261002t0816z-live-sample-gate.json": "83ba13013583cbba1d188f5ce3e3ecc5951ef3f3c04b8ba17ebca36981fb66eb",
     "inbox/scheduled-pitia-20261002t1118z-dream-cross-gates.json": "97bea7ba62317b357faa633c8c157adf0b5440d1527260b1e52193419447e39d",
     "inbox/scheduled-pitia-20261002t1224z-self-fitness.json": "758de248d9e3e6110461c47568155cdb915cf2ff35a50b969fecf4a8ea776bd9",
+    "inbox/scheduled-pitia-20261002t1718z-live-gz01-window-gate.json": "7c8189f9703545002f2e488407194a08475ed4cea704f419df65f94e38dbc69f",
     "inbox/scheduled-pitia-batch-2181033f17a4f562.json": "abef2a371fff9849bc92f9e214ee0e4708a02420d236fb946c0825e787cd5636",
     "inbox/scheduled-pitia-batch-392ca9d8c0a7749a.json": "cfc104cf89931e65e44ca8b588a01848b592ea233fe39afc8271250b47131629",
     "inbox/scheduled-pitia-batch-3d6c1a02b9805eb8.json": "e36ef115a6cbce8e7d949cdec5de247eba084d3d9bba02986457c3f13a4e1a47",
@@ -3440,6 +3441,34 @@
         }
       ],
       "tower_revision": "sha256:d6201a2c26dc3d31c457fc11d1d2375b592763d2a78d69e4b153bbe65b124aaa"
+    },
+    "inbox/scheduled-pitia-20261002t1718z-live-gz01-window-gate.json": {
+      "fingerprint": "7c8189f9703545002f2e488407194a08475ed4cea704f419df65f94e38dbc69f",
+      "observed_at": "2026-10-02T18:19:26Z",
+      "outcome": "APPLIED",
+      "receipt_ids": [
+        "OR-0f42fe7995439a34df3d6ef617befc92"
+      ],
+      "receipts": [
+        {
+          "contract": "OPERATION_RECEIPT_V1",
+          "effect_id": "envelope-f7eb9e1f93eff4ac48aca34d72312d75",
+          "intent_id": "gateway:tcc-62b6e263b8ca2176ee06f6f74dc4436c",
+          "observed_at": "2026-10-02T18:19:02.787691Z",
+          "occurred_at": "2026-10-02T18:19:02.787672Z",
+          "outcome": "APPLIED",
+          "payload_sha256": "sha256:fe693cfb60069807cd887eda4009063e0b365a4bd3f3c9f8d5f973fcb190d03e",
+          "reason_code": null,
+          "receipt_id": "OR-0f42fe7995439a34df3d6ef617befc92",
+          "result_revision": "sha256:6c9d7baf6aeaa203754f5a41bbed258ff9a7ca499230e6eb7608c0ed01d12f96",
+          "retry_condition": null,
+          "source_revision": "sha256:047749f8066138500457090d8103f4b255d2690ea8f4b5a20f9d5e4fa5b31edb",
+          "stage": "APPLIED",
+          "supersedes": null,
+          "visibility": "PUBLIC"
+        }
+      ],
+      "tower_revision": "sha256:2ba350dec8385312fd08a51bf687d6a29af7b5f3a2684db08f16c8e61d7f1052"
     },
     "inbox/scheduled-pitia-batch-2181033f17a4f562.json": {
       "fingerprint": "abef2a371fff9849bc92f9e214ee0e4708a02420d236fb946c0825e787cd5636",
