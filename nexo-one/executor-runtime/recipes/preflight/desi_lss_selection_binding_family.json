@@ -23,7 +23,7 @@
   },
   "limits": {
     "seed_min": 0,
-    "seed_max_exclusive": 9223372036854776000
+    "seed_max_exclusive": 9223372036854775808
   },
   "statistics": {
     "max_abs_gaussian_smoothed_delta": {
