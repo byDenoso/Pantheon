@@ -197,6 +197,29 @@ class DesiParamPreflightContract(unittest.TestCase):
             DESI_MANIFEST_SHA256,
         )
         self.assertEqual(set(manifest['inputs']['product']), {'name', 'schema'})
+        self.assertEqual(
+            manifest['source_receipts']['recipe_bind']['receipt_id'],
+            'OR-8c76795538f2dea31468fa5c4a818ad6',
+        )
+        self.assertEqual(
+            manifest['source_receipts']['data_binding']['receipt_id'],
+            'OR-4f4e64f3d1e3ef631e003e6ffa6cc5a2',
+        )
+
+    def test_public_receipt_provenance_is_part_of_validator_identity(self):
+        manifest = json.loads(
+            (ROOT / 'preflight/desi_lss_selection_binding_family.json').read_text()
+        )
+        manifest['source_receipts']['recipe_bind']['outcome'] = 'ALTERED'
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            (root / 'preflight').mkdir()
+            (root / 'preflight/desi_lss_selection_binding_family.json').write_text(
+                json.dumps(manifest)
+            )
+            value = desi_check(root=root)
+        self.assertFalse(value['eligible'])
+        self.assertIn('PREFLIGHT_CONTRACT_INVALID', value['reasons'])
 
     def test_missing_seed_statistic_or_product_stays_ineligible(self):
         value = desi_check(params={}, inputs=[])
