@@ -469,6 +469,7 @@
     "inbox/scheduled-referee1-20261001-a2-binjack-3.json": "306705f43665d48194e232f1412611633b978698720a690886f70dcd86af2f34",
     "inbox/scheduled-referee1-20261001-a2-binjack-4.json": "69c2cee3100deeaa50144654e3ec175613a832990cba261b3db669805fe13068",
     "inbox/scheduled-referee1-20261001-a2-rank-loo.json": "2f3777bf88af399f2582c8e768aee9926434f114a78a8ff2bf76f5f6852f7e81",
+    "inbox/scheduled-referee1-20261001-a2-rd-broad-om315-binjack.json": "962c49b8b712e4c13b33be0b3a656055d8c56750407e2f18931e1236699d2568",
     "inbox/scheduled-referee1-20261001-a2-rd-broad-om315-des-u3-binjack.json": "7e55df3b8b66564aca9e7b56848edf77225d3546c7b6d921414f089bb0879fd7",
     "inbox/scheduled-referee1-20261001-a2-rd-broad-om315-pp-u3-binjack.json": "1accae3b886f10e41ef321aed9986a5721f64208de0a86b7fce81c5116498a8e",
     "inbox/scheduled-referee1-20261001-a2-rd-broad-om330-binjack.json": "e6b98c2e73f44c2e364bb8ba714ab8ff38279c1de03a1651d7fe3769bc9e020a",
@@ -2611,6 +2612,11 @@
       "applied_at": "2026-10-01T08:37:42Z",
       "fingerprint": "2f3777bf88af399f2582c8e768aee9926434f114a78a8ff2bf76f5f6852f7e81",
       "tower_revision": "sha256:dba0f38e14b5786999bd10da7180881d8d55eda0b4d5d87f2c756e3a87912d2b"
+    },
+    "inbox/scheduled-referee1-20261001-a2-rd-broad-om315-binjack.json": {
+      "applied_at": "2026-10-02T08:16:07Z",
+      "fingerprint": "962c49b8b712e4c13b33be0b3a656055d8c56750407e2f18931e1236699d2568",
+      "tower_revision": "sha256:68106bae5a6d1bc109fdf33cb161a563855550a8a5096f4d2c42f82bbfd7afd9"
     },
     "inbox/scheduled-referee1-20261001-a2-rd-broad-om315-des-u3-binjack.json": {
       "applied_at": "2026-10-02T02:29:45Z",
