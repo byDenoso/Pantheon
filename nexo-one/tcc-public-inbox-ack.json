@@ -2614,9 +2614,9 @@
       "tower_revision": "sha256:dba0f38e14b5786999bd10da7180881d8d55eda0b4d5d87f2c756e3a87912d2b"
     },
     "inbox/scheduled-referee1-20261001-a2-rd-broad-om315-binjack.json": {
-      "applied_at": "2026-10-02T08:16:07Z",
+      "applied_at": "2026-10-02T08:18:33Z",
       "fingerprint": "962c49b8b712e4c13b33be0b3a656055d8c56750407e2f18931e1236699d2568",
-      "tower_revision": "sha256:68106bae5a6d1bc109fdf33cb161a563855550a8a5096f4d2c42f82bbfd7afd9"
+      "tower_revision": "sha256:b5839ba4ec7c914b7e399da9c3ff0166d53664800e11b59f981ee10fab3e2995"
     },
     "inbox/scheduled-referee1-20261001-a2-rd-broad-om315-des-u3-binjack.json": {
       "applied_at": "2026-10-02T02:29:45Z",
