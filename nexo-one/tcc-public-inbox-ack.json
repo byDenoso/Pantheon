@@ -87,6 +87,7 @@
     "inbox/scheduled-conversa-cientista-h0-prontidao-20261001-v1.json": "ff1081e89190974679972fc28955058d5efc498fec1dee98754b62efaceb1af7",
     "inbox/scheduled-conversa-recover-dr1-om315-pp-des-u3-v1.json": "35ef2208da37e65b47515a248d7435dd1edb8652843b25d67d7a21f9dbd6ab63",
     "inbox/scheduled-conversa-recover-rd-broad-om330-des-u3-dr1-v1.json": "a0f64ec8e7e62201cc814b0358393b3876c054b6524f07ccf3ce077117321d6e",
+    "inbox/scheduled-conversation-20261002t1919z-write-canary-v1.json": "047139b5679c6c54a7a79d55eea12f0d9dc56597e9104ba491ffe576cf26ef80",
     "inbox/scheduled-conversation-h0hom26-010-science-contract-gaps-v1.json": "7e2ec472e38d64e578be3fdca9e0c0dd6f8cf73be84664c0275b8086681ffcff",
     "inbox/scheduled-critic-20260929t033725z-min.json": "b713015632de38e360e6547a6443076f711688234fce9835496457b5818be9fc",
     "inbox/scheduled-critical-20260928t1315z.json": "9684fbe7754b84ac7b94554e91fb2908775696c861b4b8bd2edef9a2fa071633",
@@ -973,6 +974,34 @@
       "applied_at": "2026-10-01T22:22:37Z",
       "fingerprint": "a0f64ec8e7e62201cc814b0358393b3876c054b6524f07ccf3ce077117321d6e",
       "tower_revision": "sha256:66c7f616c5ad0a956cd17855f2d3895b38f22d4bc5a14e86a85fbedacf3d4c1a"
+    },
+    "inbox/scheduled-conversation-20261002t1919z-write-canary-v1.json": {
+      "fingerprint": "047139b5679c6c54a7a79d55eea12f0d9dc56597e9104ba491ffe576cf26ef80",
+      "observed_at": "2026-10-02T19:24:11Z",
+      "outcome": "APPLIED",
+      "receipt_ids": [
+        "OR-64f8384d0a186c5ed39b87e3a3af9c28"
+      ],
+      "receipts": [
+        {
+          "contract": "OPERATION_RECEIPT_V1",
+          "effect_id": "envelope-c2a898bfbbd2fea833fd2e66bff0e705",
+          "intent_id": "gateway:tcc-e36efed7b66a0e4780e85516b87bd56d",
+          "observed_at": "2026-10-02T19:23:54.719673Z",
+          "occurred_at": "2026-10-02T19:23:54.719655Z",
+          "outcome": "APPLIED",
+          "payload_sha256": "sha256:64a49f3a11ad695e4ca1ac4f0af6463c1084f510197a4a6afd2480cc6a0010fa",
+          "reason_code": null,
+          "receipt_id": "OR-64f8384d0a186c5ed39b87e3a3af9c28",
+          "result_revision": "sha256:bb0d0481407bedb8cf399acb13745a6abbb910903a9a60d7f35ad595702c5e55",
+          "retry_condition": null,
+          "source_revision": "sha256:047749f8066138500457090d8103f4b255d2690ea8f4b5a20f9d5e4fa5b31edb",
+          "stage": "APPLIED",
+          "supersedes": null,
+          "visibility": "PUBLIC"
+        }
+      ],
+      "tower_revision": "sha256:95d49968fc0a2b7ffb0c0240c9d0d617982883cfae34cd924116a462da8cb2cd"
     },
     "inbox/scheduled-conversation-h0hom26-010-science-contract-gaps-v1.json": {
       "applied_at": "2026-10-01T10:27:37Z",
