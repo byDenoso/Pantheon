@@ -28,7 +28,7 @@ class TestRankScoreLeaveOneOut(unittest.TestCase):
         }
 
     def projection(self):
-        return {"tests": [{"id": i, "rank_score": s, "verdict": v} for i, s, v in COHORT]}
+        return {"tests": [{"id": i, "status": "DONE", "rank_score": s, "verdict": v} for i, s, v in COHORT]}
 
     def test_reproduces_original_auc_and_is_stable(self):
         result = recipe.run(self.params(), self.projection())
@@ -41,6 +41,18 @@ class TestRankScoreLeaveOneOut(unittest.TestCase):
         projection["tests"].pop()
         with self.assertRaises(ValueError):
             recipe.run(self.params(), projection)
+
+    def test_non_done_member_fails_closed(self):
+        projection = self.projection()
+        projection["tests"][0]["status"] = "BLOCKED_INPUT"
+        with self.assertRaises(ValueError):
+            recipe.run(self.params(), projection)
+
+    def test_snapshot_source_is_commit_pinned(self):
+        version = "4f7fe6980476a4c1cd00c205a85336269153b35a"
+        url = f"https://raw.githubusercontent.com/byDenoso/Pantheon/{version}/{recipe.SNAPSHOT_PATH}"
+        with self.assertRaises(ValueError):
+            recipe.load_projection(url.replace(version, "main"), version, "0" * 64)
 
 
 if __name__ == "__main__":
