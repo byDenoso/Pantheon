@@ -76,6 +76,20 @@ jobs:
           NEXO_BASE_URL=http://127.0.0.1:4179 NEXO_CREW_EXPECT_BASELINE_BUG=1 node test/crew-layout.browser.mjs
           NEXO_BASE_URL=http://127.0.0.1:4178 node test/crew-layout.browser.mjs
 
+      - name: Compare published scene and candidate production builds
+        working-directory: nexo-one
+        env:
+          NEXO_AB_BASELINE_SHA: 3b8155d5f93902ed2c8146eba35e9fa566e32150
+          NEXO_AB_CANDIDATE_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+          baseline_dir="$RUNNER_TEMP/nexo-scene-ab-baseline"
+          git fetch --no-tags --depth=1 origin "$NEXO_AB_BASELINE_SHA"
+          git worktree add --detach "$baseline_dir" FETCH_HEAD
+          ln -s "$PWD/node_modules" "$baseline_dir/nexo-one/node_modules"
+          (cd "$baseline_dir/nexo-one"; npm run build)
+          NEXO_AB_BASELINE_DIR="$baseline_dir/nexo-one" node test/scene-ab.browser.mjs
+
       - name: Upload Atlas visual QA evidence
         if: always()
         uses: actions/upload-artifact@v4
@@ -84,6 +98,7 @@ jobs:
           path: |
             nexo-one/test-output/cinematic/
             nexo-one/test-output/scene-performance/
+            nexo-one/test-output/scene-ab/
             nexo-one/test-output/board-message/
             nexo-one/test-output/crew-layout/
             nexo-one/test-output/crew-layout-baseline/
