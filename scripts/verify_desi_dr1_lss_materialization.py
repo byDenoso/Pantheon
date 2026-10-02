@@ -56,8 +56,15 @@ def _sha256_bytes(raw: bytes) -> str:
     return hashlib.sha256(raw).hexdigest()
 
 
-def _stat_identity(value: os.stat_result) -> tuple[int, int, int, int]:
-    return (value.st_dev, value.st_ino, value.st_size, value.st_mtime_ns)
+def _stat_identity(value: os.stat_result) -> tuple[int, int, int, int, int, int]:
+    return (
+        value.st_dev,
+        value.st_ino,
+        value.st_mode,
+        value.st_size,
+        value.st_mtime_ns,
+        value.st_ctime_ns,
+    )
 
 
 def _is_reparse_or_symlink(path: Path) -> bool:
@@ -262,6 +269,7 @@ def verify_files(staging_root: Path, records: list[dict]) -> dict:
     if (not staging_root.exists() or not staging_root.is_dir()
             or _is_reparse_or_symlink(staging_root)):
         raise StagingError("staging root must be an existing real directory")
+    root_before = staging_root.stat(follow_symlinks=False)
     expected = {item["name"]: item for item in records}
     children = list(staging_root.iterdir())
     initial = {
@@ -305,11 +313,14 @@ def verify_files(staging_root: Path, records: list[dict]) -> dict:
             "sha256": actual_sha256,
         })
     final_children = list(staging_root.iterdir())
+    root_after = staging_root.stat(follow_symlinks=False)
     final = {
         path.name: _stat_identity(path.stat(follow_symlinks=False))
         for path in final_children
     }
-    if final != initial:
+    if (not os.path.samestat(root_before, root_after)
+            or _stat_identity(root_before) != _stat_identity(root_after)
+            or final != initial):
         raise StagingError("staging directory changed during verification")
     return {
         "file_count": len(expected),
@@ -436,7 +447,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--url-list", type=Path)
     parser.add_argument("--free-space-multiplier", default="1.10")
     args = parser.parse_args(argv)
-    staging_root = args.staging_root.resolve(strict=False)
+    staging_root = Path(os.path.abspath(args.staging_root))
     try:
         manifest, manifest_sha256 = validate_manifest_bytes(args.manifest.read_bytes())
         if args.mode == "plan":
