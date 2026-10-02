@@ -377,8 +377,8 @@ def build_verified_receipt(manifest: dict, manifest_sha256: str,
             ),
         },
         "next_gate": (
-            "build and bind NEXO_DESI_LSS_3D_PRODUCT_V1 with frozen cosmology, "
-            "voxelization, statistic and complete provenance roles"
+            "build and bind NEXO_DESI_LSS_3D_PRODUCT_V1 using the applied statistic, "
+            "with frozen seed/product cosmology/voxelization and complete provenance roles"
         ),
     }
 
