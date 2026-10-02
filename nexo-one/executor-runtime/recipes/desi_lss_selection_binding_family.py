@@ -38,6 +38,11 @@ FROZEN_CRITERION = {
     "bh_q": 0.1,
     "reject_all_p_emp_gte": 0.1,
 }
+VERDICT_PLAIN = {
+    "PROMOTED": "Passou no critério",
+    "REJECTED": "Não passou no critério",
+    "INCONCLUSIVE": "Inconclusivo",
+}
 
 DESI_BASE = "https://data.desi.lbl.gov/public/dr1/survey/catalogs/dr1/LSS/iron/LSScats/v1.5/"
 CHECKSUM_NAME = "dr1_survey_catalogs_dr1_LSS_iron_LSScats_v1.5.sha256sum"
@@ -381,10 +386,10 @@ def bh_rejections(p_values: dict[str, float], q: float) -> list[str]:
 def frozen_decision(p_values: dict[str, float]) -> tuple[str, str, str, list[str]]:
     rejected = bh_rejections(p_values, FROZEN_CRITERION["bh_q"])
     if any(value <= FROZEN_CRITERION["promote_p_emp_lte"] and name in rejected for name, value in p_values.items()):
-        return "PROMOTED", "EXTREME_SURVIVES_SELECTION_NULL", "At least one frozen extreme has p_emp<=0.01 and survives BH q=0.1.", rejected
+        return "PROMOTED", "EXTREME_SURVIVES_SELECTION_NULL", "Pelo menos uma estatística extrema congelada teve p_emp<=0,01 e passou pela correção BH com q=0,1. O extremo não foi reproduzido pelos nulos que preservam a seleção.", rejected
     if all(value >= FROZEN_CRITERION["reject_all_p_emp_gte"] for value in p_values.values()):
-        return "REJECTED", "EXTREMES_REPRODUCED_BY_SELECTION_NULL", "All frozen extremes have p_emp>=0.1.", rejected
-    return "INCONCLUSIVE", "INTERMEDIATE_SELECTION_NULL", "Frozen p-values are between the recorded success and kill rules.", rejected
+        return "REJECTED", "EXTREMES_REPRODUCED_BY_SELECTION_NULL", "Todas as estatísticas congeladas tiveram p_emp>=0,1. Os extremos foram reproduzidos pelos nulos que preservam a seleção.", rejected
+    return "INCONCLUSIVE", "INTERMEDIATE_SELECTION_NULL", "Os valores p congelados ficaram entre os critérios de sucesso e descarte. O teste não decide entre estrutura real e efeito da seleção.", rejected
 
 
 def production_run(params: dict) -> dict:
@@ -434,9 +439,9 @@ def production_run(params: dict) -> dict:
     return {
         "verdict": verdict,
         "decision": decision,
-        "summary": f"DESI DR1 selection-preserving 3D null: {decision} with {params['null_count']} nulls.",
+        "summary": f"Nulo 3D do DESI DR1 com seleção preservada: {VERDICT_PLAIN[verdict]}, usando {params['null_count']} realizações.",
         "statistics": statistics,
-        "semantic": {"result_meaning": meaning},
+        "semantic": {"result_meaning": meaning, "verdict_plain": VERDICT_PLAIN[verdict]},
     }
 
 
@@ -457,7 +462,7 @@ def provenance_smoke() -> dict:
     return {
         "verdict": "INCONCLUSIVE",
         "decision": "PROVENANCE_SMOKE_ONLY",
-        "summary": "Official DESI DR1 v1.5 checksum list and one n(z) file passed byte verification; no T03 science was run.",
+        "summary": "A lista oficial de hashes do DESI DR1 v1.5 e um arquivo n(z) passaram na verificação de bytes; nenhuma execução científica foi feita.",
         "statistics": {
             "recipe_family": RECIPE_FAMILY,
             "test_id": TEST_ID,
@@ -465,7 +470,7 @@ def provenance_smoke() -> dict:
             "binding_status": "INPUT_PENDING_MATERIALIZATION",
             "verified_inputs": [checksum_binding, nz_binding],
         },
-        "semantic": {"result_meaning": "Preparation smoke only; this is not a scientific verdict and does not make T03 READY."},
+        "semantic": {"result_meaning": "A lista oficial de hashes e um arquivo n(z) passaram na verificação de bytes. Foi apenas um teste de preparação; não houve resultado científico e o teste continua bloqueado.", "verdict_plain": "Inconclusivo"},
     }
 
 

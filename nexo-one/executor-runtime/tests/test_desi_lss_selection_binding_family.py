@@ -137,10 +137,13 @@ class DesiSelectionNullContract(unittest.TestCase):
     def test_recorded_decision_rules_are_exact(self):
         promoted = recipe.frozen_decision({"a": 1 / 101, "b": 0.7})
         self.assertEqual(promoted[:2], ("PROMOTED", "EXTREME_SURVIVES_SELECTION_NULL"))
+        self.assertEqual(promoted[2], "Pelo menos uma estatística extrema congelada teve p_emp<=0,01 e passou pela correção BH com q=0,1. O extremo não foi reproduzido pelos nulos que preservam a seleção.")
         rejected = recipe.frozen_decision({"a": 0.1, "b": 0.8})
         self.assertEqual(rejected[:2], ("REJECTED", "EXTREMES_REPRODUCED_BY_SELECTION_NULL"))
+        self.assertEqual(rejected[2], "Todas as estatísticas congeladas tiveram p_emp>=0,1. Os extremos foram reproduzidos pelos nulos que preservam a seleção.")
         intermediate = recipe.frozen_decision({"a": 0.05, "b": 0.8})
         self.assertEqual(intermediate[:2], ("INCONCLUSIVE", "INTERMEDIATE_SELECTION_NULL"))
+        self.assertEqual(intermediate[2], "Os valores p congelados ficaram entre os critérios de sucesso e descarte. O teste não decide entre estrutura real e efeito da seleção.")
 
     def test_product_requires_all_reviewed_provenance_roles(self):
         raw = product_bytes(self.manifest_sha256)
@@ -205,6 +208,8 @@ class DesiSelectionNullContract(unittest.TestCase):
         self.assertIn(result["verdict"], {"PROMOTED", "REJECTED", "INCONCLUSIVE"})
         self.assertEqual(result["statistics"]["null_count"], 100)
         self.assertEqual(result["statistics"]["input_provenance"]["scope"], "FROZEN_INPUT_BYTES_VERIFIED")
+        self.assertIn(result["semantic"]["verdict_plain"], recipe.VERDICT_PLAIN.values())
+        self.assertGreaterEqual(result["semantic"]["result_meaning"].count("."), 2)
 
     def test_missing_inputs_are_an_operational_failure_not_inconclusive(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -219,6 +224,19 @@ class DesiSelectionNullContract(unittest.TestCase):
             payload = json.loads(result_path.read_text(encoding="utf-8"))
             self.assertEqual(payload["execution_status"], "INPUT_OR_FIT_UNAVAILABLE")
             self.assertNotIn("verdict", payload)
+
+    def test_smoke_semantics_are_simple_portuguese_and_non_scientific(self):
+        checksum = f"{recipe.SMOKE_NZ_SHA256}  {recipe.SMOKE_NZ_NAME}\n".encode()
+        with patch.dict(os.environ, {}, clear=True), patch.object(
+                recipe, "verified_bytes", side_effect=[checksum, b"# z n(z)\n0.1 1.0\n"]):
+            result = recipe.provenance_smoke()
+        self.assertEqual(result["semantic"]["verdict_plain"], "Inconclusivo")
+        self.assertEqual(
+            result["semantic"]["result_meaning"],
+            "A lista oficial de hashes e um arquivo n(z) passaram na verificação de bytes. "
+            "Foi apenas um teste de preparação; não houve resultado científico e o teste continua bloqueado.")
+        self.assertFalse(result["statistics"]["scientific_result_eligible"])
+        self.assertTrue(result["summary"].startswith("A lista oficial de hashes"))
 
     def test_smoke_cannot_run_in_production(self):
         with patch.dict(os.environ, {"NEXO_REQUIRE_FROZEN_INPUTS": "1"}, clear=True):
