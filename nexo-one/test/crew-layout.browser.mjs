@@ -39,7 +39,7 @@ try {
     await page.route('**/build-meta.json*', route => route.fulfill({ json: { projection_fingerprint: projection.manifest.projection_fingerprint } }));
     await page.goto(base + '/#/ciclo');
     const roleDetails = page.locator('.cycle-role-details > summary');
-    if (await roleDetails.count()) await roleDetails.click();
+    if (!baseline) await roleDetails.click(); // Auto-wait for the candidate disclosure; count() raced React hydration.
     await page.locator('.crew').waitFor(); await page.evaluate(() => document.fonts.ready);
     await page.waitForFunction(() => {
       const hud = document.querySelector('.hud'), obs = document.querySelector('.observatory');
