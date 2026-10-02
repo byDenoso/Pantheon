@@ -1,0 +1,154 @@
+"""Robustez leave-one-out da coorte historica congelada de rank_score.
+
+A receita consome uma projecao publica imutavel, valida SHA256 e seleciona
+somente os IDs explicitamente congelados em params. Nenhum caso novo entra.
+"""
+from __future__ import annotations
+
+import gzip
+import hashlib
+import json
+import math
+import os
+import urllib.request
+from statistics import median
+
+
+def roc_auc(scores: list[float], labels: list[int]) -> float:
+    pos = [s for s, y in zip(scores, labels) if y == 1]
+    neg = [s for s, y in zip(scores, labels) if y == 0]
+    if not pos or not neg:
+        raise ValueError("ROC AUC exige as duas classes.")
+    wins = sum((p > n) + 0.5 * (p == n) for p in pos for n in neg)
+    return wins / (len(pos) * len(neg))
+
+
+def walk_dicts(value):
+    if isinstance(value, dict):
+        yield value
+        for child in value.values():
+            yield from walk_dicts(child)
+    elif isinstance(value, list):
+        for child in value:
+            yield from walk_dicts(child)
+
+
+def load_projection(url: str, expected_sha256: str) -> dict:
+    if not url.startswith("https://"):
+        raise ValueError("projection_url deve ser HTTPS.")
+    expected = expected_sha256.removeprefix("sha256:")
+    if len(expected) != 64:
+        raise ValueError("projection_sha256 invalido.")
+    with urllib.request.urlopen(url, timeout=180) as response:
+        raw = response.read()
+    if hashlib.sha256(raw).hexdigest() != expected:
+        raise ValueError("SHA256 da projecao publica divergiu.")
+    if url.endswith(".gz"):
+        raw = gzip.decompress(raw)
+    return json.loads(raw)
+
+
+def extract_cohort(projection: dict, cohort_ids: list[str]) -> list[dict]:
+    if not cohort_ids or len(cohort_ids) != len(set(cohort_ids)):
+        raise ValueError("cohort_ids deve conter IDs unicos e nao vazios.")
+    wanted = set(cohort_ids)
+    found = {}
+    for row in walk_dicts(projection):
+        entity_id = row.get("id")
+        if entity_id in wanted and "rank_score" in row and "verdict" in row:
+            prior = found.get(entity_id)
+            if prior is None or len(row) > len(prior):
+                found[entity_id] = row
+    missing = [entity_id for entity_id in cohort_ids if entity_id not in found]
+    if missing:
+        raise ValueError("coorte ausente na projecao: " + ",".join(missing))
+    cohort = []
+    for entity_id in cohort_ids:
+        row = found[entity_id]
+        score = float(row["rank_score"])
+        if not math.isfinite(score):
+            raise ValueError(f"rank_score invalido: {entity_id}")
+        verdict = str(row.get("verdict") or "").upper()
+        if not verdict:
+            raise ValueError(f"veredito ausente: {entity_id}")
+        cohort.append({"id": entity_id, "rank_score": score,
+                       "verdict": verdict, "label": 1 if verdict == "PROMOTED" else 0})
+    return cohort
+
+
+def run(params: dict, projection: dict) -> dict:
+    cohort = extract_cohort(projection, params["cohort_ids"])
+    scores = [row["rank_score"] for row in cohort]
+    labels = [row["label"] for row in cohort]
+    baseline = roc_auc(scores, labels)
+
+    expected_n = int(params["expected_n"])
+    expected_promoted = int(params["expected_promoted"])
+    expected_non_promoted = int(params["expected_non_promoted"])
+    expected_auc = float(params["expected_auc"])
+    if len(cohort) != expected_n:
+        raise ValueError("N da coorte nao reproduz o resultado original.")
+    if sum(labels) != expected_promoted or len(labels) - sum(labels) != expected_non_promoted:
+        raise ValueError("Contagem das classes nao reproduz o resultado original.")
+    if abs(baseline - expected_auc) > 5e-5:
+        raise ValueError("AUC-base nao reproduz o resultado original.")
+
+    rows = []
+    for i, removed in enumerate(cohort):
+        kept_scores = scores[:i] + scores[i + 1:]
+        kept_labels = labels[:i] + labels[i + 1:]
+        rows.append({"removed_id": removed["id"], "auc": roc_auc(kept_scores, kept_labels)})
+    aucs = [row["auc"] for row in rows]
+    med = float(median(aucs))
+    minimum = float(min(aucs))
+    low_threshold = float(params["kill_auc_le"])
+    low_fraction = sum(value <= low_threshold for value in aucs) / len(aucs)
+
+    success = med >= float(params["success_median_ge"]) and minimum >= float(params["success_min_ge"])
+    killed = low_fraction >= float(params["kill_fraction_ge"]) or med <= float(params["kill_median_le"])
+    if success:
+        verdict, decision = "PROMOTED", "LEAVE_ONE_OUT_STABLE"
+        meaning = "A AUC permanece acima dos limiares congelados em todas as remocoes e na mediana."
+    elif killed:
+        verdict, decision = "REJECTED", "LEAVE_ONE_OUT_FRAGILE"
+        meaning = "A estabilidade leave-one-out falha pelo criterio congelado."
+    else:
+        verdict, decision = "INCONCLUSIVE", "LEAVE_ONE_OUT_INTERMEDIATE"
+        meaning = "A robustez leave-one-out fica entre os criterios congelados de sucesso e kill."
+
+    return {
+        "verdict": verdict,
+        "decision": decision,
+        "summary": meaning,
+        "statistics": {
+            "n": len(cohort),
+            "promoted": sum(labels),
+            "non_promoted": len(labels) - sum(labels),
+            "baseline_auc": baseline,
+            "leave_one_out_auc_median": med,
+            "leave_one_out_auc_min": minimum,
+            "fraction_auc_le_kill": low_fraction,
+            "rows": rows,
+            "cohort_ids": [row["id"] for row in cohort],
+        },
+        "semantic": {"result_meaning": meaning},
+    }
+
+
+def main() -> None:
+    with open(os.environ["PARAMS_PATH"], encoding="utf-8") as source:
+        params = json.load(source)
+    try:
+        projection = load_projection(params["projection_url"], params["projection_sha256"])
+        result = run(params, projection)
+    except (OSError, ValueError, KeyError, TypeError, json.JSONDecodeError) as error:
+        meaning = "O input congelado nao pode ser reproduzido: " + str(error)
+        result = {"verdict": "INCONCLUSIVE", "decision": "INPUT_UNAVAILABLE", "summary": meaning,
+                  "statistics": {}, "semantic": {"result_meaning": meaning}}
+    with open(os.environ["RESULT_PATH"], "w", encoding="utf-8") as target:
+        json.dump(result, target, ensure_ascii=False, allow_nan=False)
+    print(result["summary"])
+
+
+if __name__ == "__main__":
+    main()
