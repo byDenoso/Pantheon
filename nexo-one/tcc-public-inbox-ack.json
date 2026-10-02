@@ -387,6 +387,7 @@
     "inbox/scheduled-operator-b-pr364-open-20260930t1645z.json": "b4e59c3a826c0369cbd6a3ee85e8da85d69bd3a85723a988b0c2b8df6022fa60",
     "inbox/scheduled-operator-b-pr379-approved-20260930t1644z.json": "ea766a89dc4706d9519912dc902e78414156f5cc8f361f4ee0bee02ae6c292c8",
     "inbox/scheduled-operator-b-prior-bands-blocked-20261001t1901z.json": "ec617a6fa1698c8285188be8240859f2ce00561f59af864078506ed9d7b42569",
+    "inbox/scheduled-operator-b-private-ack-partial-20261002t1051z.json": "fdcb03acba6f1ce9d484c1e29fc1ff44fe8d330f1223dd17391dc855f854ca23",
     "inbox/scheduled-operator-b-private-handoff-write-block-20261001t1755z.json": "86100d231468b38a1eb74dc54e55291d25dd6b7f4e2af2685e645dc6f313d8a7",
     "inbox/scheduled-operator-b-private-move-block-20261001t2047z.json": "ab2b30c8a058d459787ac424d68da5a608ffa203e3fa9990d1f3dc9ae8b2d3cf",
     "inbox/scheduled-operator-b-private-move-regression-20261002t0246z.json": "5e354e410fb872efa9ddcb1d4ca1395f5cac2f0c0e4df76935fb96b3b7394125",
@@ -2781,6 +2782,34 @@
       "applied_at": "2026-10-01T20:57:52Z",
       "fingerprint": "ec617a6fa1698c8285188be8240859f2ce00561f59af864078506ed9d7b42569",
       "tower_revision": "sha256:25f8894f333b5703be60f3e7b7b8f5b009422c30a9eeb2d3ccd83a390b7e7eb3"
+    },
+    "inbox/scheduled-operator-b-private-ack-partial-20261002t1051z.json": {
+      "fingerprint": "fdcb03acba6f1ce9d484c1e29fc1ff44fe8d330f1223dd17391dc855f854ca23",
+      "observed_at": "2026-10-02T10:54:42Z",
+      "outcome": "APPLIED",
+      "receipt_ids": [
+        "OR-ddcd0bbc0238f55857a9117d42099eaa"
+      ],
+      "receipts": [
+        {
+          "contract": "OPERATION_RECEIPT_V1",
+          "effect_id": "envelope-f5feb5a17b5b5518bf784bdb6f228d4e",
+          "intent_id": "gateway:tcc-104356439767c8c50ef666bb3cfe664c",
+          "observed_at": "2026-10-02T10:54:08.585282Z",
+          "occurred_at": "2026-10-02T10:54:08.585266Z",
+          "outcome": "APPLIED",
+          "payload_sha256": "sha256:923059a4d283c2913103de00526481beae0d7dd4be896022467d559c93a585d0",
+          "reason_code": null,
+          "receipt_id": "OR-ddcd0bbc0238f55857a9117d42099eaa",
+          "result_revision": "sha256:74917b7fa34cff39b42a08dfe563b7f8e77a9a24ea656688a4742753711f59fa",
+          "retry_condition": null,
+          "source_revision": "sha256:047749f8066138500457090d8103f4b255d2690ea8f4b5a20f9d5e4fa5b31edb",
+          "stage": "APPLIED",
+          "supersedes": null,
+          "visibility": "PUBLIC"
+        }
+      ],
+      "tower_revision": "sha256:dbacdfda9a8eef9f858c2ed6902bba5b4d7743bb5ca38ff4a5ecb3e9bd8ddd8a"
     },
     "inbox/scheduled-operator-b-private-handoff-write-block-20261001t1755z.json": {
       "applied_at": "2026-10-01T17:59:35Z",
