@@ -248,6 +248,8 @@ function Now({ lab, state, onReplay, replayCount }: { lab: Lab; state: SystemSta
   const all = [...lab.tests.values()].filter(t => !t.contestOf);
   const sci = all.filter(isScience), self = all.filter(isSelf);
   const S = tally(sci), E2 = tally(self);
+  const hasTestReading = hasPublishedTestCollection(state);
+  const observedCount = (value: number): number | string => hasTestReading || value > 0 ? value : '—';
   const focus = selectScienceFocus(sci);
   const boardRecords = ev?.board ?? [];
   const boardPost = latestBoardRecord(boardThreads(boardRecords).filter(post => boardConversation(post, boardRecords).awaiting));
@@ -264,7 +266,7 @@ function Now({ lab, state, onReplay, replayCount }: { lab: Lab; state: SystemSta
             : { text: 'Acompanhe o que consta nesta leitura.', href: '#/evidencia', action: 'Ver os testes' };
   const scientificIntro = focus
     ? <p className="thesis">Resultado científico em destaque: <E id={focus.test.id}>{focus.test.name}</E>. <span>{currentVerdictText(focus.test)}</span></p>
-    : <p className="thesis">Ainda sem resultado científico disponível para destaque; {S.ready} testes marcados READY na leitura científica.</p>;
+    : <p className="thesis">Ainda sem resultado científico disponível para destaque; {hasTestReading ? <>{S.ready} testes marcados READY na leitura científica.</> : 'não foi possível confirmar a fila científica nesta leitura.'}</p>;
   const warnings = g?.failing_areas.length ?? 0;
   void d; void review; void resolved; void discovery;
   return <>
@@ -290,15 +292,15 @@ function Now({ lab, state, onReplay, replayCount }: { lab: Lab; state: SystemSta
     </a>}
 
     <div className="hud-pair now-priorities">
-      <Section title="Bloqueios publicados" kicker={blocked.length ? `${blocked.length} testes parados` : 'Nenhum bloqueio de TEST publicado'} id="now-problem">
+      <Section title="Bloqueios publicados" kicker={blocked.length ? `${blocked.length} testes parados` : hasTestReading ? 'Nenhum bloqueio de TEST publicado' : 'Bloqueios de TEST não confirmados nesta leitura'} id="now-problem">
         {blocked.length
           ? <><p className="hud-big">{blocked[0]!.blocker ?? 'Motivo do bloqueio não publicado.'}</p><E id={blocked[0]!.id}>{blocked[0]!.name} →</E>
             {closedBlocked > 0 && <p className="hud-note">Inclui {closedBlocked} testes vinculados a roadmaps encerrados.</p>}</>
-          : <p className="hud-muted">Nenhum teste em BLOCKED nesta leitura.</p>}
+          : <p className="hud-muted">{hasTestReading ? 'Nenhum teste em BLOCKED nesta leitura.' : 'Os registros de testes estão indisponíveis; não é possível confirmar os bloqueios.'}</p>}
       </Section>
       <Section title="Próximo movimento" kicker="Roadmaps ativos · candidatos READY" id="now-next">
         {next.length ? <ol className="hud-list">{next.map(t => <li key={t.id}><div><E id={t.id}>{t.name}</E><small className="readiness-note">{readinessLabel(t)}</small></div></li>)}</ol>
-          : <><p className="hud-muted">{lab.counts.READY ? 'Nenhum candidato READY com pergunta publicada e vínculo a um roadmap ativo.' : 'Nenhum teste pronto nesta leitura.'}</p>
+          : <><p className="hud-muted">{!hasTestReading ? 'Não foi possível confirmar a fila nesta leitura.' : lab.counts.READY ? 'Nenhum candidato READY com pergunta publicada e vínculo a um roadmap ativo.' : 'Nenhum teste pronto nesta leitura.'}</p>
             {blocked.length ? <p>Conferir requisitos dos {blocked.length} bloqueios publicados. <a href="#/evidencia?v=BLOCKED">Consultar bloqueios →</a></p>
               : checkpoints.length ? <p>Há {checkpoints.length} execuções salvas; conferir os requisitos de retomada. <a href="#/evidencia?v=CHECKPOINTED">Consultar checkpoints →</a></p>
               : review ? <p>Há {review} resultados em revisão. <a href="#/evidencia?v=REVIEW">Consultar revisão →</a></p>
@@ -308,14 +310,14 @@ function Now({ lab, state, onReplay, replayCount }: { lab: Lab; state: SystemSta
 
     {base && <AwaySummary lab={lab} since={base.at} />}
 
-    <Section title="Ciência" kicker={`${S.total} testes principais de cosmologia e física`} id="now-sci">
+    <Section title="Ciência" kicker={hasTestReading ? `${S.total} testes principais de cosmologia e física` : 'Testes recebidos na leitura científica'} id="now-sci">
       <div className="stats">
-        <Stat n={S.confirmed} label="confirmados" tone="ok" />
-        <Stat n={S.refuted} label="refutados" tone="crit" />
-        <Stat n={S.review} label="em revisão" tone="warn" />
-        <Stat n={S.ready} label="na fila" tone="mute" />
+        <Stat n={observedCount(S.confirmed)} label="confirmados" tone="ok" />
+        <Stat n={observedCount(S.refuted)} label="refutados" tone="crit" />
+        <Stat n={observedCount(S.review)} label="em revisão" tone="warn" />
+        <Stat n={observedCount(S.ready)} label="na fila" tone="mute" />
       </div>
-      <p className="hud-note self-line">Autoengenharia (o NEXO estudando a si mesmo): <b>{E2.confirmed}</b> confirmados · <b>{E2.refuted}</b> refutados · <b>{E2.review}</b> em revisão.</p>
+      <p className="hud-note self-line">Autoengenharia (o NEXO estudando a si mesmo): <b>{observedCount(E2.confirmed)}</b> confirmados · <b>{observedCount(E2.refuted)}</b> refutados · <b>{observedCount(E2.review)}</b> em revisão.</p>
     </Section>
 
     {focus && <ResultCard t={focus.test} selectionReason={focus.reason} />}
@@ -838,10 +840,10 @@ function Health({ state, lab }: { state: SystemState; lab: Lab }) {
       <ul className="hud-list">{liveFailures.map(a => <li key={a}>{a === 'automations' ? 'Algum papel sem evento recente no recorte publicado' : guardianArea(a).replace(/^./, c => c.toUpperCase())}</li>)}</ul>
       <p className="hud-note">Checagens derivadas do recorte publicado. Ausência de evento no recorte não comprova tarefa pausada.</p>
     </Section>}
-    {(ev?.incidents?.length ?? 0) > 0 && <Section title="Incidentes pendentes" id="he-inc">
+    {(ev?.incidents?.length ?? 0) > 0 && <Section title="Incidentes" id="he-inc">
       {ev!.incidents!.some(i => incidentView(i).state !== 'RESOLVED')
         ? <ul className="incidents">{ev!.incidents!.filter(i => incidentView(i).state !== 'RESOLVED').map(i => <IncidentCard key={i.incident_id} incident={i} />)}</ul>
-        : <p className="hud-muted">Nenhum incidente pendente nesta leitura.</p>}
+        : <p className="hud-muted">Todos os incidentes deste recorte têm resolução operacional publicada.</p>}
       {ev!.incidents!.some(i => incidentView(i).state === 'RESOLVED') && <details className="incident-history"><summary>Histórico de resoluções publicadas</summary>
         <ul className="incidents">{ev!.incidents!.filter(i => incidentView(i).state === 'RESOLVED').map(i => <IncidentCard key={i.incident_id} incident={i} />)}</ul>
       </details>}
@@ -1252,7 +1254,7 @@ const ACOUSTIC = (() => {
 function Acoustic() {
   return <p className="sig-acoustic" aria-hidden="true">
     <svg viewBox="0 0 180 40"><defs><linearGradient id="sig-spec" x1="0" x2="1">
-      <stop offset="0" stopColor="var(--atlas-cyan)" /><stop offset=".45" stopColor="var(--atlas-cyan-soft)" /><stop offset=".75" stopColor="#f0dfbd" /><stop offset="1" stopColor="#fff6e4" />
+      <stop offset="0" stopColor="var(--atlas-cyan)" /><stop offset=".45" stopColor="var(--atlas-cyan-soft)" /><stop offset=".75" stopColor="var(--atlas-cyan)" /><stop offset="1" stopColor="var(--atlas-cyan-soft)" />
     </linearGradient></defs><path d={ACOUSTIC} /></svg>
     <span><em>Λ</em>_ observatório NEXO · ℓ(ℓ+1)C<sub>ℓ</sub></span>
   </p>;

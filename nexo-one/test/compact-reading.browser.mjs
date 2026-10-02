@@ -15,7 +15,9 @@ projection.tests.find(t => t.id === 'VISUAL-BLOCKED-0').readiness = { eligible: 
 const { system } = buildPagesProjection({ projection, manifestFile: projection.manifest });
 const op = { policy: 'INCIDENT_OPERATIONS_V1', state: 'OPEN', work_ids: ['WORK-UX'], items: [{ work_id: 'WORK-UX', test_id: null, current_owner: 'GUARDIAO', assigned_to: 'EXECUTOR', ownership_state: 'ASSIGNED_UNACCEPTED', accepted: false, validation_state: 'EVIDENCE_REQUIRED' }], suggested_owner: 'EXECUTOR', reason_code: 'READY_INPUTS_NOT_MATERIALIZED', next_action_code: 'COMPLETE_RECOVERY', resolution_scope: null, scientific_effect: 'NONE' };
 const incident = { incident_id: 'INC-UX-OPEN', summary_plain: 'Entradas da fixture ainda não materializadas; preservar a descrição original e todas as evidências publicadas.', state: 'CONFIRMED', next_owner: 'LEARNER', evidence_count: 3, public_ids: { tests: ['VISUAL-BLOCKED-0'], hypotheses: [], lessons: [] }, operational: op };
-system.evolution.incidents = [incident, { ...incident, incident_id: 'INC-UX-RESOLVED', summary_plain: 'Recuperação concluída na fixture.', operational: { ...op, state: 'RESOLVED', resolution_scope: 'EXECUTION_PREREQUISITES' } }];
+system.evolution.incidents = [incident, { ...incident, incident_id: 'INC-UX-RESOLVED', summary_plain: 'Recuperação concluída na fixture.', operational: { ...op, state: 'RESOLVED', resolution_scope: 'EXECUTION_PREREQUISITES' } }, { ...incident, incident_id:'INC-UX-UNKNOWN', summary_plain:'Fixture: estado operacional não publicado.', operational:undefined }];
+const emptyProjection = structuredClone(projection); emptyProjection.tests = []; emptyProjection.evolution.board = [];
+const { system: emptySystem } = buildPagesProjection({ projection:emptyProjection, manifestFile:emptyProjection.manifest });
 const browser = await chromium.launch({ headless: true, args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader'] });
 const reports = [];
 try {
@@ -25,9 +27,9 @@ try {
   page.on('pageerror', e => errors.push(e.message));
   await page.clock.install({ time: Date.parse(projection.manifest.generated_at) + 60_000 });
   await page.addInitScript(theme => { localStorage.setItem('nexo-theme', theme); localStorage.setItem('nexo.intro.seen','1'); localStorage.setItem('nexo.legend.seen','1'); localStorage.setItem('nexo.quality','low'); }, theme);
-  let fail = false, fingerprint = system.bus.fingerprint;
+  let fail = false, source = system, fingerprint = system.bus.fingerprint;
   await page.route('**/api/session', r => r.fulfill({ json: { configured:false, authenticated:false } }));
-  await page.route('**/api/system*', r => fail ? r.fulfill({ status:503, json:{ error:'FIXTURE_UNAVAILABLE' } }) : r.fulfill({ json:system }));
+  await page.route('**/api/system*', r => fail ? r.fulfill({ status:503, json:{ error:'FIXTURE_UNAVAILABLE' } }) : r.fulfill({ json:source }));
   await page.route('**/build-meta.json*', r => r.fulfill({ json:{ projection_fingerprint:fingerprint } }));
   const go = async route => { await page.evaluate(route => { location.hash = '#/' + route; }, route); await page.locator('.observatory .hud').waitFor(); };
   await page.goto(base + '/#/evidencia?v=READY');
@@ -52,7 +54,13 @@ try {
   assert.equal(await story.getAttribute('open'), null);
   await go('saude');
   await page.locator('.incident-owner').first().waitFor();
-  const pending = page.locator('#he-inc').locator('..').locator(':scope > .incidents > .incident');
+  assert.equal(await page.locator('#he-inc').textContent(),'Incidentes');
+  const current = page.locator('#he-inc').locator('..').locator(':scope > .incidents > .incident');
+  assert.equal(await current.count(),2);
+  const unknown = current.filter({ hasText:'Estado operacional não informado' });
+  assert.equal(await unknown.count(),1, 'missing operational policy is displayed as unknown');
+  assert.doesNotMatch(await unknown.textContent(),/Resolvido operacionalmente/);
+  const pending = current.filter({ hasText:incident.summary_plain });
   assert.equal(await pending.count(),1, 'learning confirmation does not resolve an open operation');
   assert.match(await pending.locator('.incident-owner').innerText(), /aceite ainda não registrado/);
   assert.doesNotMatch(await pending.locator('.incident-owner').innerText(), /com aceite registrado:/);
@@ -88,7 +96,22 @@ try {
   assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1),false);
   assert.deepEqual(errors,[]);
   await page.screenshot({ path:output + '/' + theme + '-' + width + '.png' });
-  reports.push({ input:'synthetic-test-only',theme,width,originalPreserved:true,ownership:true,history:true,keyboard:true,readyEmpty:true,lastGood:true,errors });
+  // Remove only read_model.tests, leaving the rest of the valid source intact.
+  fail = false; source = structuredClone(emptySystem); delete source.read_model.tests; fingerprint = source.bus.fingerprint;
+  await go('agora'); await page.reload();
+  await page.locator('.thesis').waitFor();
+  assert.match(await page.locator('.thesis').textContent(),/não foi possível confirmar a fila científica nesta leitura/);
+  assert.doesNotMatch(await page.locator('.thesis').textContent(),/0 testes marcados READY/);
+  const queueCount = page.locator('#now-sci').locator('..').locator('.stat').filter({hasText:'na fila'}).locator('strong');
+  assert.equal(await queueCount.textContent(),'—');
+  await go('evidencia?v=READY');
+  await page.locator('.queue-empty').waitFor();
+  assert.match(await page.locator('.queue-empty').textContent(),/Não foi possível confirmar a fila nesta leitura/);
+  source = emptySystem; fingerprint = source.bus.fingerprint;
+  await go('agora'); await page.reload(); await page.locator('.thesis').waitFor();
+  assert.match(await page.locator('.thesis').textContent(),/0 testes marcados READY/);
+  assert.equal(await page.locator('#now-sci').locator('..').locator('.stat').filter({hasText:'na fila'}).locator('strong').textContent(),'0');
+  reports.push({ input:'synthetic-test-only',theme,width,originalPreserved:true,ownership:true,unknownIncident:true,history:true,keyboard:true,readyEmpty:true,missingSource:true,knownEmpty:true,lastGood:true,errors });
   await context.close();
  }
 } finally { await browser.close(); }

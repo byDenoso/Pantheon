@@ -57,13 +57,19 @@ try {
         };
         const warmColors = [...document.querySelectorAll('.lab-route button,.lab-route .vchip,.lab-route .incident,.lab-route .incident-state,.lab-route .trail,.lab-route .vbar>*,.lab-route svg *')]
           .filter(visible).flatMap(element => ['color','backgroundColor','borderLeftColor','borderTopColor','fill','stroke','stopColor'].filter(property => warm(rgb(getComputedStyle(element)[property]))).map(property => ({ selector: element.className, property, value: getComputedStyle(element)[property] })));
+        // Pale cream and gradient definitions can evade saturation/visibility heuristics.
+        const acousticStops = [...document.querySelectorAll('.sig-acoustic stop')].map(stop => getComputedStyle(stop).stopColor);
         const shell = document.querySelector('.lab-route'), obs = document.querySelector('.observatory');
-        return { contrasts, warmColors, accent: getComputedStyle(shell).getPropertyValue('--atlas-cyan').trim(),
+        return { contrasts, warmColors, acousticStops, accent: getComputedStyle(shell).getPropertyValue('--atlas-cyan').trim(),
           surface: getComputedStyle(obs).getPropertyValue('--o-void').trim(),
           decoGlow: getComputedStyle(shell).getPropertyValue('--deco-glow-a').trim(),
           overflow: document.documentElement.scrollWidth > innerWidth + 1,
           verdicts: [...document.querySelectorAll('.vchip')].map(x => ({ label: x.textContent.trim(), glyph: x.querySelector('i')?.textContent.trim() })) };
       });
+      assert.deepEqual(result.acousticStops, theme === 'light'
+        ? ['rgb(39, 148, 243)','rgb(183, 237, 255)','rgb(39, 148, 243)','rgb(183, 237, 255)']
+        : ['rgb(152, 210, 255)','rgb(183, 237, 255)','rgb(152, 210, 255)','rgb(183, 237, 255)'],
+        theme + '/' + width + '/' + route + ': acoustic gradient uses the cyan palette, including pale stops');
       assert.equal(result.accent, theme === 'light' ? '#2794f3' : '#98d2ff');
       assert.equal(result.surface, theme === 'light' ? '#fbfcf9' : '#070a10');
       assert.equal(result.decoGlow, '0');
