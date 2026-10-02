@@ -208,8 +208,48 @@ jobs:
               out.write(f"requires_camb={'true' if requires_camb else 'false'}\n")
               out.write(f"camb_commit={camb_commit}\n")
           PY
+      - name: Verify frozen DESI materialization receipt
+        id: desi_materialization
+        if: steps.prepare.outcome == 'success'
+        continue-on-error: true
+        run: |
+          python3 - <<'PY'
+          import json, sys
+          from pathlib import Path
+          root = Path("/tmp/job")
+          meta_path = root / "meta.json"
+          meta = json.loads(meta_path.read_text(encoding="utf-8"))
+          if meta.get("recipe") != "desi_lss_selection_binding_family":
+              raise SystemExit(0)
+          recipe_root = Path("runtime-base/nexo-one/executor-runtime/recipes").resolve()
+          sys.path.insert(0, str(recipe_root))
+          from desi_materialization_gate import (
+              MaterializationReceiptError,
+              fetch_and_validate_receipt,
+          )
+          try:
+              inputs = json.loads((root / "inputs.json").read_text(encoding="utf-8"))
+              binding, receipt = fetch_and_validate_receipt(inputs)
+              meta["materialization_preflight"] = {
+                  "schema": receipt["schema"],
+                  "binding_sha256": binding["sha256"],
+                  "selection_manifest_sha256": receipt["selection_manifest"]["sha256"],
+                  "file_count": receipt["verification"]["file_count"],
+                  "total_bytes": receipt["verification"]["total_bytes"],
+                  "all_local_bytes_verified": receipt["verification"]["all_local_bytes_verified"],
+                  "t03_dispatch_ready": receipt["scientific_status"]["t03_dispatch_ready"],
+              }
+          except (MaterializationReceiptError, OSError, ValueError, KeyError) as error:
+              meta["materialization_failure_reason"] = "DESI_MATERIALIZATION_RECEIPT_INVALID"
+              meta["materialization_failure_detail"] = str(error)
+              meta_path.write_text(
+                  json.dumps(meta, ensure_ascii=False), encoding="utf-8"
+              )
+              raise SystemExit("DESI materialization receipt gate failed: " + str(error))
+          meta_path.write_text(json.dumps(meta, ensure_ascii=False), encoding="utf-8")
+          PY
       - name: Checkout frozen portable CAMB runtime
-        if: steps.prepare.outcome == 'success' && steps.prepare.outputs.requires_camb == 'true'
+        if: steps.prepare.outcome == 'success' && steps.desi_materialization.outcome == 'success' && steps.prepare.outputs.requires_camb == 'true'
         uses: actions/checkout@v4
         with:
           repository: byDenoso/TCC
@@ -219,7 +259,7 @@ jobs:
           persist-credentials: false
       - name: Install deterministic runtime dependencies
         id: deps
-        if: steps.prepare.outcome == 'success'
+        if: steps.prepare.outcome == 'success' && steps.desi_materialization.outcome == 'success'
         continue-on-error: true
         run: |
           set -euo pipefail
@@ -251,6 +291,7 @@ jobs:
         if: always()
         env:
           PREP_OUTCOME: ${{ steps.prepare.outcome }}
+          MATERIALIZATION_OUTCOME: ${{ steps.desi_materialization.outcome }}
           DEPS_OUTCOME: ${{ steps.deps.outcome }}
           EXEC_OUTCOME: ${{ steps.execute.outcome }}
           MATRIX_TEST_ID: ${{ matrix.test_id }}
@@ -265,7 +306,9 @@ jobs:
               meta.update(json.load(open(root / "meta.json", encoding="utf-8")))
           except Exception:
               pass
-          prep, deps, execute = os.environ.get("PREP_OUTCOME", ""), os.environ.get("DEPS_OUTCOME", ""), os.environ.get("EXEC_OUTCOME", "")
+          prep = os.environ.get("PREP_OUTCOME", "")
+          materialization = os.environ.get("MATERIALIZATION_OUTCOME", "")
+          deps, execute = os.environ.get("DEPS_OUTCOME", ""), os.environ.get("EXEC_OUTCOME", "")
           result = semantic = failure_stage = operational_error = None
           ok = False
           if prep != "success":
@@ -273,6 +316,12 @@ jobs:
               if meta.get("preflight_failure_reason"):
                   operational_error = {"code": meta["preflight_failure_reason"],
                                        "detail": meta.get("preflight_failure_detail")}
+          elif materialization != "success":
+              failure_stage = "MATERIALIZATION_PREFLIGHT"
+              operational_error = {
+                  "code": meta.get("materialization_failure_reason") or "DESI_MATERIALIZATION_RECEIPT_INVALID",
+                  "detail": meta.get("materialization_failure_detail"),
+              }
           elif deps != "success":
               failure_stage = "DEPENDENCIES"
           elif execute != "success":
@@ -306,6 +355,7 @@ jobs:
                      "attempt_id": meta.get("attempt_id") or None,
                      "recipe_sha256": meta.get("recipe_sha256") or None,
                      "param_preflight": meta.get("param_preflight"),
+                     "materialization_preflight": meta.get("materialization_preflight"),
                      "operational_status": "INPUT_UNAVAILABLE" if operational_error else None,
                      "operational_reason": operational_error.get("code") if operational_error else None,
                      "operational_detail": operational_error.get("detail") if operational_error else None,
