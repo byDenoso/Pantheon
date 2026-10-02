@@ -18,12 +18,27 @@ def finite(value):
     return isinstance(value, (int, float)) and not isinstance(value, bool) and math.isfinite(value)
 
 
-def _validate_desi(manifest, params, inputs, reject):
+def _validate_desi(manifest, params, inputs, reject, recipe_root):
     identity = manifest.get('identity')
     limits = manifest.get('limits')
     statistic_contracts = manifest.get('statistics')
     input_contract = manifest.get('inputs')
     source_receipts = manifest.get('source_receipts')
+    implementation = manifest.get('implementation')
+    expected_implementation = {
+        'commit': '5472cc7986929f33ca4bd19faeb227b3eb85280d',
+        'blob_sha1': '8ba7e8411bb752e34eea5dcb361727cf58df5547',
+        'sha256': '67920bbfe64c3dc38fa6211e6b3201091ac673d7e5234a97d13873ab2498f3fe',
+    }
+    if implementation != expected_implementation:
+        raise ValueError('DESI applied recipe implementation pin is invalid')
+    recipe_path = Path(recipe_root) / 'desi_lss_selection_binding_family.py'
+    try:
+        actual_recipe_sha256 = hashlib.sha256(recipe_path.read_bytes()).hexdigest()
+    except OSError as error:
+        raise ValueError(f'cannot verify DESI applied recipe implementation: {error}') from error
+    if actual_recipe_sha256 != expected_implementation['sha256']:
+        raise ValueError('DESI recipe bytes differ from the applied implementation pin')
     expected_receipts = {
         'recipe_bind': {
             'receipt_id': 'OR-8c76795538f2dea31468fa5c4a818ad6',
@@ -83,6 +98,7 @@ def _validate_desi(manifest, params, inputs, reject):
         'required_names': [
             'desi_dr1_lss_selection_manifest',
             'desi_dr1_lss_3d_map_product',
+            'desi_dr1_lss_selection_materialization_receipt',
         ],
         'selection_manifest': {
             'name': 'desi_dr1_lss_selection_manifest',
@@ -92,6 +108,14 @@ def _validate_desi(manifest, params, inputs, reject):
         'product': {
             'name': 'desi_dr1_lss_3d_map_product',
             'schema': 'NEXO_DESI_LSS_3D_PRODUCT_V1',
+        },
+        'materialization_receipt': {
+            'name': 'desi_dr1_lss_selection_materialization_receipt',
+            'schema': 'NEXO_DESI_LSS_SELECTION_MATERIALIZATION_RECEIPT_V1',
+            'selection_manifest_sha256': expected_identity['selection_manifest_sha256'],
+            'file_count': 160,
+            'total_bytes': 139526840064,
+            'all_local_bytes_verified': True,
         },
     }
     if input_contract != expected_inputs:
@@ -160,10 +184,17 @@ def _validate_desi(manifest, params, inputs, reject):
     else:
         reject('INPUT_RECIPE_MANIFEST_MISMATCH', 'input bindings must be a list')
     if len(actual) != len(required_names) or set(actual) != required_names:
-        reject('INPUT_RECIPE_MANIFEST_MISMATCH', 'exactly the two DESI production bindings are required')
+        reject('INPUT_RECIPE_MANIFEST_MISMATCH', 'exactly the three DESI production bindings are required')
     selection = actual.get(input_contract['selection_manifest']['name'])
     if selection is not None and selection.get('sha256') != identity['selection_manifest_sha256']:
         reject('INPUT_RECIPE_MANIFEST_MISMATCH', 'selection-manifest SHA256 differs from the frozen bytes')
+    receipt_contract = input_contract['materialization_receipt']
+    receipt = actual.get(receipt_contract['name'])
+    if receipt is not None and receipt.get('version') != receipt_contract['schema']:
+        reject(
+            'INPUT_RECIPE_MANIFEST_MISMATCH',
+            'materialization receipt must bind the canonical receipt schema as its version',
+        )
 
 
 def validate_params(recipe, params, inputs, recipe_root):
@@ -192,7 +223,7 @@ def validate_params(recipe, params, inputs, recipe_root):
             if (manifest['contract'] != CONTRACT or manifest['recipe'] != recipe
                     or manifest['validator'] != 'desi_lss_selection_binding_family_v1'):
                 raise ValueError('unsupported DESI manifest contract or validator')
-            _validate_desi(manifest, params, inputs, reject)
+            _validate_desi(manifest, params, inputs, reject, recipe_root)
             result['reasons'] = sorted(set(result['reasons']))
             result['eligible'] = not result['reasons']
             return result
