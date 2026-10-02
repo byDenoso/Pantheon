@@ -186,6 +186,7 @@ class DesiSelectionMaterializationPreflight(unittest.TestCase):
             Decimal('1.10'),
             200_000_000_000,
         )
+        self.assertEqual(self.manifest_sha256, self.module['MANIFEST_SHA256'])
         self.assertEqual(plan['file_count'], 160)
         self.assertEqual(plan['source_bytes'], 139_526_840_064)
         self.assertEqual(plan['required_free_bytes'], 153_479_524_071)
@@ -194,6 +195,13 @@ class DesiSelectionMaterializationPreflight(unittest.TestCase):
         self.assertFalse(plan['work_ready'])
         self.assertFalse(plan['test_ready'])
         self.assertFalse(plan['scientific_result_eligible'])
+
+    def test_manifest_bytes_are_pinned_not_only_semantically_validated(self):
+        raw = self.manifest_path.read_bytes()
+        with self.assertRaisesRegex(
+            self.module['StagingError'], 'selection-manifest SHA256 mismatch'
+        ):
+            self.module['validate_manifest_bytes'](raw + b' ')
 
     def test_verify_small_fixture_is_deterministic_and_non_scientific(self):
         records = []
@@ -223,12 +231,20 @@ class DesiSelectionMaterializationPreflight(unittest.TestCase):
                 self.module['_canonical_json_bytes'](first),
                 self.module['_canonical_json_bytes'](second),
             )
-            self.assertEqual(first['operator_state'], 'LOCAL_SELECTION_BYTES_VERIFIED')
+            self.assertEqual(first['execution_status'], 'MATERIALIZATION_VERIFIED')
+            self.assertEqual(first['scope'], 'SOURCE_MATERIALIZATION_ONLY')
+            self.assertEqual(first['roadmap_id'], self.module['CAMPAIGN_ID'])
+            self.assertEqual(first['work_id'], self.module['WORK_ID'])
+            self.assertEqual(first['recovery_work_id'], self.module['RECOVERY_WORK_ID'])
+            self.assertEqual([item['name'] for item in first['files']], ['a.bin', 'b.bin'])
+            self.assertNotIn('staging_root', first)
             self.assertTrue(first['local_bytes_verified'])
             self.assertFalse(first['work_ready'])
             self.assertFalse(first['test_ready'])
             self.assertFalse(first['scientific_result_eligible'])
-            self.assertNotIn('verdict', first)
+            serialized = self.module['_canonical_json_bytes'](first).decode('utf-8')
+            self.assertNotIn('verdict', serialized)
+            self.assertNotIn('INCONCLUSIVE', serialized)
 
     def test_verify_rejects_missing_extra_size_hash_and_symlink(self):
         good = b'abc'
@@ -239,7 +255,9 @@ class DesiSelectionMaterializationPreflight(unittest.TestCase):
         }]
         error = self.module['StagingError']
         with tempfile.TemporaryDirectory() as temp:
-            root = Path(temp)
+            base = Path(temp)
+            root = base / 'staging'
+            root.mkdir()
             with self.assertRaisesRegex(error, 'EXACT_FILE_SET_MISMATCH'):
                 self.module['verify_files'](root, record)
             (root / 'a.bin').write_bytes(good)
@@ -254,10 +272,11 @@ class DesiSelectionMaterializationPreflight(unittest.TestCase):
             with self.assertRaisesRegex(error, 'SHA256 mismatch'):
                 self.module['verify_files'](root, record)
             if os.name != 'nt':
-                (root / 'target.bin').write_bytes(good)
+                target = base / 'target.bin'
+                target.write_bytes(good)
                 (root / 'a.bin').unlink()
-                (root / 'a.bin').symlink_to(root / 'target.bin')
-                with self.assertRaisesRegex(error, 'EXACT_FILE_SET_MISMATCH|non-symlink'):
+                (root / 'a.bin').symlink_to(target)
+                with self.assertRaisesRegex(error, 'non-symlink'):
                     self.module['verify_files'](root, record)
 
     def test_plan_writes_only_public_official_urls_outside_staging(self):
@@ -278,5 +297,24 @@ class DesiSelectionMaterializationPreflight(unittest.TestCase):
                 self.module['_write_url_list'](
                     staging / 'download.urls', self.manifest['files'], staging
                 )
+            self.assertEqual(
+                self.module['_write_url_list'](
+                    output, self.manifest['files'], staging
+                ),
+                digest,
+            )
+
+    def test_failure_payload_is_operational_and_never_scientific(self):
+        payload = self.module['_failure_payload'](
+            self.module['StagingError']('synthetic failure')
+        )
+        serialized = self.module['_canonical_json_bytes'](payload).decode('utf-8')
+        self.assertEqual(
+            payload['schema'],
+            'NEXO_DESI_LSS_SELECTION_MATERIALIZATION_FAILURE_V1',
+        )
+        self.assertFalse(payload['scientific_result_eligible'])
+        self.assertNotIn('verdict', serialized)
+        self.assertNotIn('INCONCLUSIVE', serialized)
 
 if __name__=='__main__':unittest.main()
