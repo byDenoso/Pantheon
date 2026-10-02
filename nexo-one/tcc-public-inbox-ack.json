@@ -429,6 +429,7 @@
     "inbox/scheduled-operator-c-policy-block-20261001t0959z.json": "d6ce2ab8cd67c4370767bd12669666b821028c082c946a804589281cf6a033b3",
     "inbox/scheduled-operator-c-pr384-merged-with-changes-20260930t2007z.json": "06b8831fddd82ebb84ecb37a158d0405fa4d54782f608574cfb775331fb210a2",
     "inbox/scheduled-operator-c-ready-lifecycle-change-20260930t1213z.json": "02bc75b032716e88dbefcca6a6702e56bf4f300c051bc9441ab8d650158ff4f4",
+    "inbox/scheduled-operator-c-tower-native-merged-20261002.json": "1c882e1270cc9354db95bb78598d8bfe6b45858db04cce7f6fadb039836f948b",
     "inbox/scheduled-operator-ready-campaign-20260928-v3100-01.json": "74617db85b99ecdf5847dc2dd367d0f571b8d72d83d5e1de5c16269748929190",
     "inbox/scheduled-operator-recipe-request-desi-planck-cf4-five-tests.json": "80e0799e631e4e2426d0214d2737e12cb8007acb8b667afb7fe8cfd148f7d186",
     "inbox/scheduled-pitia-20260930t0014z-redshift-confirmed-surprise.json": "90487c5582783a25712ac980a586fc14ad08bbcfb2bc67a522fb281dad4f381e",
@@ -3514,6 +3515,34 @@
     "inbox/scheduled-operator-c-ready-lifecycle-change-20260930t1213z.json": {
       "fingerprint": "02bc75b032716e88dbefcca6a6702e56bf4f300c051bc9441ab8d650158ff4f4",
       "source": "legacy-acked"
+    },
+    "inbox/scheduled-operator-c-tower-native-merged-20261002.json": {
+      "fingerprint": "1c882e1270cc9354db95bb78598d8bfe6b45858db04cce7f6fadb039836f948b",
+      "observed_at": "2026-10-02T22:09:22Z",
+      "outcome": "APPLIED",
+      "receipt_ids": [
+        "OR-5c3078c74eb6b9715c58a7e6af18657b"
+      ],
+      "receipts": [
+        {
+          "contract": "OPERATION_RECEIPT_V1",
+          "effect_id": "envelope-08a7d866471ce47c2f152a03b88d502d",
+          "intent_id": "gateway:tcc-c86da93edde3ff451115d0db0036abd8",
+          "observed_at": "2026-10-02T22:09:04.219014Z",
+          "occurred_at": "2026-10-02T22:09:04.218998Z",
+          "outcome": "APPLIED",
+          "payload_sha256": "sha256:e151bf5d56be594d24701efbd3f9d34e9fcbad81bc03485f7d77904f41a250cd",
+          "reason_code": null,
+          "receipt_id": "OR-5c3078c74eb6b9715c58a7e6af18657b",
+          "result_revision": "sha256:51fe5cbd67588e5b85f45b7ddd4c735726b9dca5a8081ccbb35ad133de86db14",
+          "retry_condition": null,
+          "source_revision": "sha256:047749f8066138500457090d8103f4b255d2690ea8f4b5a20f9d5e4fa5b31edb",
+          "stage": "APPLIED",
+          "supersedes": null,
+          "visibility": "PUBLIC"
+        }
+      ],
+      "tower_revision": "sha256:1e2f8606055a3a25fbea16f82cc79a89411c58cbfed5a93e96ba2437fd943ff0"
     },
     "inbox/scheduled-operator-ready-campaign-20260928-v3100-01.json": {
       "fingerprint": "74617db85b99ecdf5847dc2dd367d0f571b8d72d83d5e1de5c16269748929190",
