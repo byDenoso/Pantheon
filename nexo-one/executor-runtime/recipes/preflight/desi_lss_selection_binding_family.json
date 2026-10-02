@@ -23,7 +23,7 @@
   },
   "limits": {
     "seed_min": 0,
-    "seed_max_exclusive": 9223372036854775808
+    "seed_max_exclusive": 9223372036854776000
   },
   "statistics": {
     "max_abs_gaussian_smoothed_delta": {
@@ -51,7 +51,8 @@
   "inputs": {
     "required_names": [
       "desi_dr1_lss_selection_manifest",
-      "desi_dr1_lss_3d_map_product"
+      "desi_dr1_lss_3d_map_product",
+      "desi_dr1_lss_selection_materialization_receipt"
     ],
     "selection_manifest": {
       "name": "desi_dr1_lss_selection_manifest",
@@ -61,6 +62,14 @@
     "product": {
       "name": "desi_dr1_lss_3d_map_product",
       "schema": "NEXO_DESI_LSS_3D_PRODUCT_V1"
+    },
+    "materialization_receipt": {
+      "name": "desi_dr1_lss_selection_materialization_receipt",
+      "schema": "NEXO_DESI_LSS_SELECTION_MATERIALIZATION_RECEIPT_V1",
+      "selection_manifest_sha256": "6ce284a355085679eb528517746b247fa2c48902c6158ca556ae9c197b34c65a",
+      "file_count": 160,
+      "total_bytes": 139526840064,
+      "all_local_bytes_verified": true
     }
   },
   "source_receipts": {
@@ -78,5 +87,10 @@
       "payload_sha256": "sha256:182d94e8c7e7d0593b7e63145ecf30a745cb1bff9bb9a1e55700920b8c3101a1",
       "result_revision": "sha256:c177cfbfed129c0b9515d4a92cd640d2da6119f94006b687f50f644e41e3a7f8"
     }
+  },
+  "implementation": {
+    "commit": "5472cc7986929f33ca4bd19faeb227b3eb85280d",
+    "blob_sha1": "8ba7e8411bb752e34eea5dcb361727cf58df5547",
+    "sha256": "67920bbfe64c3dc38fa6211e6b3201091ac673d7e5234a97d13873ab2498f3fe"
   }
 }
