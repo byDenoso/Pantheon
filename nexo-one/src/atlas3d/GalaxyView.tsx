@@ -3,7 +3,7 @@
 // from Tower semantics (galaxy-morphology.mjs) and publishes it with shape
 // metrics in the snapshot. This view renders it and never reinterprets it.
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { EVENT_TAG, EventGlyph, GalaxyThree3D, type GalaxyEvent, type GalaxyMorphology } from '../components/GalaxyThree3D.tsx';
+import { EVENT_TAG, EventGlyph, GalaxyThree3D, type GalaxyEvent, type GalaxyMorphology, type GalaxyWebFilament, type GalaxyWebGroup } from '../components/GalaxyThree3D.tsx';
 import type { GraphNode, GraphNodeType } from '../contracts/system.ts';
 import type { AtlasObservedEntity } from '../contracts/atlasObservation.ts';
 import type { PlacedNode3D } from '../viewmodels/graph3d.ts';
@@ -179,6 +179,44 @@ export function GalaxyView({ selectedId, onSelect }: { selectedId: string | null
     || Boolean(snapshot && atlasObservation.requested_fingerprint
       && atlasObservation.requested_fingerprint.toLowerCase() !== snapshot.provenance.source_fingerprint.toLowerCase());
   const nodes = useMemo(() => (entities ?? []).map(entity => toNode(entity, isStale)), [entities, isStale]);
+  // Endpoints and membership come exclusively from the validated projection.
+  // A CONTAINS curve is presentation hierarchy, never an inferred dependency.
+  const publicWeb = useMemo(() => {
+    const anchors = new Map<string, { x: number; y: number; z: number }>();
+    const canonical = new Map<string, string>();
+    const groups: GalaxyWebGroup[] = [];
+    for (const entity of entities ?? []) {
+      const point = { x: (entity.layout?.x ?? 0) * SCALE, y: (entity.layout?.y ?? 0) * SCALE, z: (entity.layout?.z ?? 0) * SCALE };
+      anchors.set(entity.id, point);
+      canonical.set(entity.id, entity.canonical_id || entity.id);
+      if (entity.canonical_id) anchors.set(entity.canonical_id, point);
+    }
+    for (const collection of [snapshot?.domains, snapshot?.subdomains]) {
+      if (!Array.isArray(collection)) continue;
+      for (const raw of collection) {
+        if (!raw || typeof raw !== 'object' || typeof raw.id !== 'string') continue;
+        const layout = raw.layout;
+        if (!layout || ![layout.x, layout.y, layout.z ?? 0].every(Number.isFinite)) continue;
+        const point = { x: layout.x * SCALE, y: layout.y * SCALE, z: (layout.z ?? 0) * SCALE };
+        anchors.set(raw.id, point);
+        if (collection === snapshot?.subdomains) groups.push({ id: raw.id, ...point,
+          count: (entities ?? []).filter(entity => entity.cluster_id === raw.id).length });
+      }
+    }
+    const filaments: GalaxyWebFilament[] = [];
+    for (const raw of snapshot?.relations ?? []) {
+      if (!raw || typeof raw !== 'object') continue;
+      const relation = raw as Record<string, unknown>;
+      if (typeof relation.from !== 'string' || typeof relation.to !== 'string' || typeof relation.id !== 'string') continue;
+      const from = anchors.get(relation.from);
+      const to = anchors.get(relation.to);
+      if (!from || !to) continue;
+      filaments.push({ id: relation.id, kind: String(relation.kind || 'RELATION'), from, to,
+        semantic: relation.semantic === true, derived: relation.derived === true,
+        entityIds: [canonical.get(relation.from) || relation.from, canonical.get(relation.to) || relation.to] });
+    }
+    return { groups, filaments };
+  }, [entities, snapshot]);
   // Tower gives each observation an entity id and may also publish a
   // canonical id shared with Atlas/SystemState. The scene selects by canonical
   // id, so accept either key when reconciling the controlled selection.
@@ -220,7 +258,7 @@ export function GalaxyView({ selectedId, onSelect }: { selectedId: string | null
       : projectionFingerprint ? 'Compilando a galáxia.' : 'Aguardando uma revisão validada da projeção.'}
   </div>;
   return (
-    <div className="atlas3d-shell atlas-three-field-shell atlas-galaxy-view" data-renderer="galaxy-spiral" data-observation-state={atlasObservation.status.toLowerCase()} data-projection-fingerprint={snapshot.provenance.source_fingerprint}>
+    <div className="atlas3d-shell atlas-three-field-shell atlas-galaxy-view" data-renderer="galaxy-spiral" data-web-palette={publicWeb.filaments.length ? 'cold' : 'default'} data-observation-state={atlasObservation.status.toLowerCase()} data-projection-fingerprint={snapshot.provenance.source_fingerprint}>
       <GalaxyThree3D
         nodes={nodes}
         edges={[]}
@@ -229,6 +267,8 @@ export function GalaxyView({ selectedId, onSelect }: { selectedId: string | null
         onFailure={handleFailure}
         viewMode="detail"
         morphology={morphology}
+        webFilaments={publicWeb.filaments}
+        webGroups={publicWeb.groups}
         glow={glow}
         events={events}
         focusEvent={focus}
@@ -321,7 +361,7 @@ export function GalaxyView({ selectedId, onSelect }: { selectedId: string | null
         )}
         {metrics && (
           <section className="galaxy-metrics-card" aria-label="Como interpretar a forma da galáxia">
-            <p>A espiral resume como os itens e as relações se distribuem. Ela descreve a organização do sistema; não prova, por si só, avanço científico. Entre parênteses, aparece a variação desde a atualização anterior.</p>
+            <p>As galáxias mostram os grupos publicados; os filamentos mostram suas relações. Ligações de agrupamento não indicam dependência causal. Ela descreve a organização do sistema; não prova, por si só, avanço científico. Entre parênteses, aparece a variação desde a atualização anterior.</p>
             <dl className="galaxy-metrics">
               <div><dt>Diferença entre os lados</dt><dd>{metrics.asymmetry.toFixed(2)}{signed(delta?.asymmetry)}</dd></div>
               <div><dt>Diversidade de áreas</dt><dd>{metrics.domain_entropy_bits.toFixed(2)}{signed(delta?.domain_entropy_bits)}</dd></div>

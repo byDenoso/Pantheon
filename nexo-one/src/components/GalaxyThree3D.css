@@ -552,3 +552,74 @@
     max-width:180px;background:rgba(5,8,12,.70);
   }
 }
+
+
+/* Atlas entry: keep the galaxy discoverable alongside the 2D map. */
+.nexo-atlas-entry{--atlas-entry-accent:#80b8ff;display:flex;align-items:center;gap:4px;flex:none}
+.nexo-atlas-entry .nexo-atlas-galaxy-link{display:inline-flex;align-items:center;justify-content:center;min-height:32px;padding:0 12px;border:1px solid var(--atlas-entry-accent);border-radius:6px;background:color-mix(in srgb,var(--atlas-entry-accent) 12%,var(--panel,#101823));color:var(--ink,#edf5ff);font-size:11px;font-weight:650;white-space:nowrap;text-decoration:none}
+.nexo-atlas-entry .nexo-atlas-galaxy-link:hover,.nexo-atlas-entry .nexo-atlas-galaxy-link[aria-current=page]{background:color-mix(in srgb,var(--atlas-entry-accent) 22%,var(--panel,#101823))}
+.nexo-atlas-entry .nexo-atlas-galaxy-link:focus-visible{outline:2px solid var(--atlas-entry-accent);outline-offset:2px}
+.nexo-atlas-entry button[aria-pressed=true]{color:var(--ink,#edf5ff);border-color:var(--atlas-entry-accent)}
+@media(max-width:640px){
+  .nexo-graph[data-atlas-entry=true] .nexo-graph-toolbar-primary{flex-wrap:wrap}
+  .nexo-graph[data-atlas-entry=true] .nexo-graph-toolbar-context{flex-basis:100%}
+  .nexo-graph[data-atlas-entry=true] .nexo-graph-toolbar-primary .nexo-graph-actions{width:100%;justify-content:space-between;gap:4px}
+  .nexo-graph[data-atlas-entry=true] .nexo-atlas-entry .nexo-atlas-galaxy-link{min-height:40px;padding:0 10px;font-size:12px}
+  .nexo-graph[data-atlas-entry=true] .nexo-atlas-entry button{height:40px;min-width:40px;font-size:12px}
+  .nexo-graph[data-atlas-entry=true] .nexo-graph-actions .nexo-graph-icon-btn{width:40px;height:40px}
+  .nexo-graph[data-atlas-entry=true][data-toolbar-rows="2"] .nexo-graph-table-wrap{padding-top:152px}
+  .nexo-graph[data-atlas-entry=true][data-toolbar-rows="2"] .nexo-graph-table th{top:152px}
+}
+
+/* Cold web palette: white typography, blue accents, restrained night-sky HUD. */
+[data-web-palette=cold] .galaxy-three-root{--field-accent:#99c7ff}
+[data-web-palette=cold] .galaxy-three-label{--node-accent:#a6ceff;color:#edf5ff;text-shadow:none}
+[data-web-palette=cold] .galaxy-three-label .node-status{background:var(--node-accent);box-shadow:0 0 7px rgba(166,206,255,.3)}
+[data-web-palette=cold] .galaxy-three-label .node-label-copy small{color:#a0b7cf}
+[data-web-palette=cold] .galaxy-three-label.domain .node-label-copy strong{color:#f2f7ff}
+[data-web-palette=cold] .galaxy-three-label.domain .node-label-copy small{color:#a6c5e8}
+[data-web-palette=cold] .galaxy-glow,[data-web-palette=cold] .galaxy-metrics-card,[data-web-palette=cold] .galaxy-event-legend li{background:rgba(7,15,27,.86);border-color:rgba(165,200,239,.22)}
+[data-web-palette=cold] .galaxy-glow button{color:#bdcee2}
+[data-web-palette=cold] .galaxy-glow button.active{color:#eef6ff;background:rgba(134,185,255,.12);border-color:transparent;box-shadow:inset 0 0 0 1px rgba(153,199,255,.7)}
+[data-web-palette=cold] .galaxy-glow span,[data-web-palette=cold] .galaxy-metrics dt,[data-web-palette=cold] .galaxy-stage{color:#a0b7cf}
+[data-web-palette=cold] .galaxy-stage strong,[data-web-palette=cold] .galaxy-metrics{color:#edf5ff}
+[data-web-palette=cold] .galaxy-metrics .galaxy-mass span{color:#b8d7ff}
+[data-web-palette=cold] .galaxy-metrics-card>p{color:#c0d0e2;font-size:11px;line-height:1.5}
+[data-web-palette=cold] .galaxy-event-legend{color:#d4e4f5}
+[data-web-palette=cold] :is(.galaxy-event,.galaxy-event-legend li,.galaxy-event-panel){--ev-soft:color-mix(in srgb,var(--ev) 30%,transparent)}
+[data-web-palette=cold] :is(.galaxy-event,.galaxy-event-legend li,.galaxy-event-panel)[data-kind=SUPERNOVA]{--ev:#eef6ff}
+[data-web-palette=cold] :is(.galaxy-event,.galaxy-event-legend li,.galaxy-event-panel)[data-kind=NOVA]{--ev:#aaccff}
+[data-web-palette=cold] :is(.galaxy-event,.galaxy-event-legend li,.galaxy-event-panel)[data-kind=AGN]{--ev:#79b6ff}
+[data-web-palette=cold] :is(.galaxy-event,.galaxy-event-legend li,.galaxy-event-panel)[data-kind=HII]{--ev:#98d6f0}
+[data-web-palette=cold] :is(.galaxy-event,.galaxy-event-legend li,.galaxy-event-panel)[data-kind=REMNANT]{--ev:#bad6ed}
+[data-web-palette=cold] :is(.galaxy-event,.galaxy-event-legend li,.galaxy-event-panel)[data-kind=FLARE]{--ev:#fff}
+[data-web-palette=cold] .galaxy-event[data-kind=SUPERNOVA] .ev-halo{fill:var(--ev-soft)}
+[data-web-palette=cold] .galaxy-event[data-kind=SUPERNOVA] .ev-diffraction{filter:blur(.3px) drop-shadow(0 0 1.5px #e5f1ff)}
+[data-web-palette=cold] .galaxy-event-tag{background:rgba(7,15,27,.92);letter-spacing:.08em}
+[data-web-palette=cold] .galaxy-event-panel{background:linear-gradient(180deg,rgba(12,23,39,.96),rgba(6,14,25,.98));border-color:rgba(165,200,239,.24);border-left-color:var(--ev);color:#dce9f8}
+[data-web-palette=cold] .galaxy-event-panel .ev-summary,[data-web-palette=cold] .galaxy-event-panel li em{color:#c0d0e2}
+[data-web-palette=cold] .galaxy-event-panel :is(dt,h3,header small),[data-web-palette=cold] .galaxy-event-panel li small,[data-web-palette=cold] .galaxy-event-panel .ev-context{color:#a0b7cf}
+[data-web-palette=cold] .galaxy-event-panel header button{color:#d6e8ff;border-color:rgba(165,200,239,.3)}
+[data-web-palette=cold] .galaxy-glow button:focus-visible,[data-web-palette=cold] .galaxy-event-legend button:focus-visible,[data-web-palette=cold] .galaxy-event-panel button:focus-visible{outline:2px solid #a6ceff;outline-offset:-2px}
+.atlas-galaxy-view[data-web-palette=cold]>.galaxy-observation-status{color:#c1d4eb;border-color:rgba(165,200,239,.24);font-size:9px}
+.atlas-galaxy-view[data-web-palette=cold]>.galaxy-observation-status time{color:#a0b7cf}
+@media(min-width:761px){
+  .atlas-galaxy-view[data-web-palette=cold] .galaxy-glow button{min-height:34px;font-size:10px}
+  .atlas-galaxy-view[data-web-palette=cold] .galaxy-event-legend .ev-short{font-size:10px;letter-spacing:.06em}
+  .atlas-galaxy-view[data-web-palette=cold] .galaxy-metrics{font-size:10px}
+  .atlas-galaxy-view[data-web-palette=cold] .galaxy-metrics dt{font-size:9px;letter-spacing:.1em}
+}
+@media(max-width:760px){
+  .atlas-galaxy-view[data-web-palette=cold] .galaxy-glow button{min-height:40px;font-size:10px}
+  .atlas-galaxy-view[data-web-palette=cold] .galaxy-event-legend button{min-height:44px}
+  .atlas-galaxy-view[data-web-palette=cold] .galaxy-event-panel{border-top-color:var(--ev)}
+  [data-web-palette=cold] .galaxy-event-panel :is(dt,h3,header small){font-size:10px;letter-spacing:.1em}
+}
+
+/* The embedded Atlas toolbar occupies the top of the scene. Keep its
+   separate galaxy controls below it, including the wrapped phone toolbar. */
+.nexo-graph[data-graph-view=galaxy] .galaxy-hud{top:94px}
+.nexo-graph .nexo-atlas-entry .nexo-atlas-galaxy-link{color:#e8f3ff}
+@media(max-width:760px){
+  .nexo-graph[data-graph-view=galaxy] .galaxy-hud{top:160px}
+}

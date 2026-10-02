@@ -9,6 +9,15 @@ import {
 } from 'react';
 import {
   Group,
+  Mesh,
+  MeshBasicMaterial,
+  MeshStandardMaterial,
+  SphereGeometry,
+  TorusGeometry,
+  TubeGeometry,
+  CylinderGeometry,
+  AmbientLight,
+  DirectionalLight,
   ACESFilmicToneMapping,
   AdditiveBlending,
   NormalBlending,
@@ -33,6 +42,7 @@ import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer
 import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
+import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import type { GraphEdge } from '../contracts/system.ts';
 import type { PlacedNode3D } from '../viewmodels/graph3d.ts';
 import type { Canvas25DViewState, CanvasGraph25DHandle } from './CanvasGraph25D.tsx';
@@ -56,6 +66,10 @@ function paletteForTheme(theme: 'dark' | 'light') {
     : { accent: new Color('#7fddba'), strong: new Color('#eefcf7') };
 }
 
+function coldWebPalette() {
+  return { accent: new Color('#83c7ff'), strong: new Color('#f1f8ff') };
+}
+
 
 function domainColor(domain: PlacedNode3D['domain'], theme: 'dark' | 'light'): Color {
   return new Color(domainHex(domain, theme));
@@ -76,6 +90,9 @@ type Props = {
   viewMode?: 'macro' | 'detail';
   /** Data-driven galaxy shape from the published snapshot. */
   morphology?: GalaxyMorphology | null;
+  /** Curved display paths derived only from relations in the validated public snapshot. */
+  webFilaments?: GalaxyWebFilament[];
+  webGroups?: GalaxyWebGroup[];
   /** Glow multiplier (0.5 soft … 1.2 strong). */
   glow?: number;
   /** Astrophysical events (world coordinates, already scaled like the nodes). */
@@ -85,6 +102,21 @@ type Props = {
   /** A marker was clicked. */
   onEventSelect?: (id: string) => void;
 };
+
+export type GalaxyWebGroup = { id: string; x: number; y: number; z: number; count: number };
+const NO_WEB_GROUPS: GalaxyWebGroup[] = [];
+
+export type GalaxyWebFilament = {
+  id: string;
+  kind: string;
+  from: { x: number; y: number; z: number };
+  to: { x: number; y: number; z: number };
+  semantic?: boolean;
+  derived?: boolean;
+  entityIds: string[];
+};
+
+const NO_WEB_FILAMENTS: GalaxyWebFilament[] = [];
 
 const NO_EVENTS: GalaxyEvent[] = [];
 
@@ -390,8 +422,10 @@ const STAR_WARM = new Color('#ffd3a2');
 const STAR_CORE = new Color('#fff0d3');
 const HII_PINK = new Color('#ee9bc9');
 const DUST_RED = new Color('#aa91a7');
+const STAR_ICE = new Color('#edf7ff');
+const STAR_CYAN = new Color('#86caff');
 
-function buildSpiralGalaxy(count: number, morph: GalaxyMorphology): BufferGeometry {
+function buildSpiralGalaxy(count: number, morph: GalaxyMorphology, coldWeb = false): BufferGeometry {
   const positions = new Float32Array(count * 3);
   const sizes = new Float32Array(count);
   const brightness = new Float32Array(count);
@@ -404,8 +438,8 @@ function buildSpiralGalaxy(count: number, morph: GalaxyMorphology): BufferGeomet
   // No bar before the mature stage: a round, bright nucleus.
   const barStrength = Math.max(0, Math.min(1, Number(morph.bulge.bar_strength ?? 1)));
   const totalMass = arms.reduce((sum, key) => sum + armWeight(key), 0) || 1;
-  const tints = Object.fromEntries(arms.map(key => [key, new Color(morph.arms[key].tint)]));
-  const coreTint = new Color(morph.bulge.tint);
+  const tints = Object.fromEntries(arms.map(key => [key, new Color(coldWeb ? '#8fcaff' : morph.arms[key].tint)]));
+  const coreTint = new Color(coldWeb ? '#d9efff' : morph.bulge.tint);
   // Arm colour as seen at the arm root: the muted star tone leaning to the domain.
   const armBlend = Object.fromEntries(arms.map(key => [key, STAR_WHITE.clone().lerp(tints[key]!, 0.35)]));
   const field = colorField(morph);
@@ -432,7 +466,9 @@ function buildSpiralGalaxy(count: number, morph: GalaxyMorphology): BufferGeomet
       }
       // Soft haze makes the bar read as one glowing body, like NGC 1300.
       size = haze ? 5 + r() * 5 : 0.5 + r() * 0.9; light = haze ? 0.02 + r() * 0.025 : 0.4 + r() * 0.4;
-      tmp.copy(STAR_CORE).lerp(STAR_WARM, r() * 0.5).lerp(coreTint, 0.12);
+      tmp.copy(coldWeb ? STAR_ICE : STAR_CORE)
+        .lerp(coldWeb ? STAR_CYAN : STAR_WARM, r() * 0.5)
+        .lerp(coreTint, 0.12);
       // Outer bulge cools towards the arm palette: no hard edge at the arm roots.
       const edge = Math.min(1, Math.hypot(x, y) / Math.max(1, bulgeRadius * 1.4));
       tmp.lerp(field(x, y, armBlend, coreBlend, fieldTint), edge * edge * 0.6);
@@ -461,24 +497,27 @@ function buildSpiralGalaxy(count: number, morph: GalaxyMorphology): BufferGeomet
       const c = r();
       // Natural star mix with only a hint of the domain's tone: arms stay
       // distinguishable without the galaxy turning into a colour gradient.
-      tmp.copy(c < 0.56 ? STAR_WHITE : c < 0.86 ? STAR_BLUE : c < 0.95 ? HII_PINK : DUST_RED).lerp(field(x, y, tints, coreTint, fieldTint), 0.16);
-      if (knot && r() < 0.62) tmp.copy(HII_PINK).lerp(STAR_WHITE, 0.28);
+      tmp.copy(coldWeb
+        ? (c < 0.62 ? STAR_ICE : STAR_CYAN)
+        : (c < 0.56 ? STAR_WHITE : c < 0.86 ? STAR_BLUE : c < 0.95 ? HII_PINK : DUST_RED))
+        .lerp(field(x, y, tints, coreTint, fieldTint), 0.16);
+      if (knot && r() < 0.62) tmp.copy(coldWeb ? STAR_CYAN : HII_PINK).lerp(STAR_WHITE, 0.28);
       // Arm roots inherit the nucleus' warmth and fade into the arm tone.
       const root = Math.max(0, 1 - t / 0.28);
-      if (root > 0) tmp.lerp(STAR_CORE, root * root * 0.6);
+      if (root > 0) tmp.lerp(coldWeb ? STAR_ICE : STAR_CORE, root * root * 0.6);
     } else if (kind < 0.95) {
       // Inter-arm disk: faint exponential glow.
       const rad = -Math.log(Math.max(1e-6, r())) * 17;
       const a = r() * TAU;
       x = Math.cos(a) * rad; y = Math.sin(a) * rad; z = gaussian(r) * 3;
       size = 0.35 + r() * 0.6; light = 0.12 + r() * 0.22;
-      tmp.copy(STAR_WHITE).lerp(STAR_WARM, r() * 0.5);
+      tmp.copy(STAR_WHITE).lerp(coldWeb ? STAR_BLUE : STAR_WARM, r() * 0.5);
     } else {
       // Field stars far outside the disk.
       const a = r() * TAU; const b = Math.acos(2 * r() - 1); const rad = 220 + r() * 260;
       x = Math.sin(b) * Math.cos(a) * rad; y = Math.sin(b) * Math.sin(a) * rad; z = Math.cos(b) * rad;
       size = 0.5 + r() * 1.1; light = 0.2 + r() * 0.5;
-      tmp.copy(r() < 0.8 ? STAR_WHITE : STAR_WARM);
+      tmp.copy(r() < 0.8 ? STAR_WHITE : coldWeb ? STAR_BLUE : STAR_WARM);
     }
     writeParticle(positions, sizes, brightness, colors, i, x, y, z, size, light, tmp);
   }
@@ -495,12 +534,14 @@ function buildSpiralGalaxy(count: number, morph: GalaxyMorphology): BufferGeomet
  * Deep field: a few hundred faint, distant galaxies (tiny tilted ellipses and
  * specks) on a far shell. Static, never rotates with the disk, never picked.
  */
-function buildDeepField(count: number): BufferGeometry {
+function buildDeepField(count: number, coldWeb = false): BufferGeometry {
   const positions = new Float32Array(count * 3);
   const sizes = new Float32Array(count);
   const colors = new Float32Array(count * 3);
   const shape = new Float32Array(count * 2); // angle, aspect
-  const tints = [new Color('#b9c4dc'), new Color('#d9c7a8'), new Color('#c3b3d6'), new Color('#9fb3d1'), new Color('#e0b9a4')];
+  const tints = coldWeb
+    ? [new Color('#91caff'), new Color('#d9efff'), new Color('#b5dcff'), new Color('#eff8ff')]
+    : [new Color('#b9c4dc'), new Color('#d9c7a8'), new Color('#c3b3d6'), new Color('#9fb3d1'), new Color('#e0b9a4')];
   const tmp = new Color();
   for (let i = 0; i < count; i += 1) {
     const r = rng(hash32('nexo-deep-field:' + i));
@@ -619,10 +660,10 @@ function nodeIntensity(node: PlacedNode3D, selectedId: string | null): number {
 }
 
 function buildNodeGeometry(
-  nodes: PlacedNode3D[], selectedId: string | null, theme: 'dark' | 'light', morph: GalaxyMorphology | null = null,
+  nodes: PlacedNode3D[], selectedId: string | null, theme: 'dark' | 'light', morph: GalaxyMorphology | null = null, coldWeb = false,
 ): BufferGeometry {
   const tmp = new Color();
-  const field = morph ? colorField(morph) : null;
+  const field = morph && !coldWeb ? colorField(morph) : null;
   const fieldTint = new Color();
   const palette = morph ? Object.fromEntries(Object.keys(morph.arms).map(arm => [arm, domainColor(arm as PlacedNode3D['domain'], theme)])) : {};
   const coreColor = domainColor('NEXO' as PlacedNode3D['domain'], theme);
@@ -642,7 +683,7 @@ function buildNodeGeometry(
       ? node.domain === selected.domain ? 0.72 : 0.34
       : 1;
     brightness[index] = nodeIntensity(node, selectedId) * focusFactor;
-    tmp.copy(domainColor(node.domain, theme));
+    tmp.copy(coldWeb ? (node.domain === 'NEXO' ? STAR_ICE : STAR_CYAN) : domainColor(node.domain, theme));
     // Nucleus (NEXO) points fade from gold into the colour of the arm they drift towards.
     // Data points take the local field colour (mostly), keeping a hint of their own domain,
     // so they blend across junctions and the bulge edge like the stars around them.
@@ -717,6 +758,141 @@ function buildRelationSegments(
     selected: geometryOf(selected),
   };
 }
+
+// Decorative star volumes use only published group positions and membership.
+// They add no graph edges, execution state or scientific meaning.
+function buildPublicVolumes(groups: GalaxyWebGroup[], events: GalaxyEvent[], mobile: boolean): Group {
+  const root = new Group();
+  root.name = 'Published group galaxies';
+  const positions: number[] = [], sizes: number[] = [], brightness: number[] = [], colors: number[] = [];
+  const blue = new Color('#75bfff'), white = new Color('#eff8ff');
+  for (const group of groups) {
+    const random = rng(hash32(group.id));
+    const radius = 1.3 + Math.min(2.8, Math.sqrt(group.count) * 0.38);
+    const count = mobile ? 320 : 850;
+    const tilt = 0.35 + random() * 1.1, phase = random() * TAU;
+    for (let index = 0; index < count; index += 1) {
+      const r = Math.pow(random(), 0.9) * radius;
+      const angle = (index % 3) * TAU / 3 + r * 1.7 + phase + (random() - 0.5) * 0.55;
+      const x = Math.cos(angle) * r, y = Math.sin(angle) * r;
+      const z = gaussian(random) * (0.08 + r * 0.09);
+      positions.push(group.x + x, group.y + y * Math.cos(tilt) - z * Math.sin(tilt), group.z + y * Math.sin(tilt) + z * Math.cos(tilt));
+      sizes.push(0.35 + random() * 0.7);
+      brightness.push(0.45 + random() * 0.55);
+      const color = white.clone().lerp(blue, r / radius * 0.9);
+      colors.push(color.r, color.g, color.b);
+    }
+    const core = new Mesh(new SphereGeometry(radius * 0.09, 12, 8), new MeshBasicMaterial({ color: '#ddecff', depthTest: true, depthWrite: true }));
+    core.position.set(group.x, group.y, group.z);
+    root.add(core);
+  }
+  const geometry = new BufferGeometry();
+  geometry.setAttribute('position', new Float32BufferAttribute(positions, 3));
+  geometry.setAttribute('aSize', new Float32BufferAttribute(sizes, 1));
+  geometry.setAttribute('aBrightness', new Float32BufferAttribute(brightness, 1));
+  geometry.setAttribute('aColor', new Float32BufferAttribute(colors, 3));
+  const material = new ShaderMaterial({ uniforms: { uTime: { value: 0 }, uPixelRatio: { value: Math.min(window.devicePixelRatio || 1, 2) }, uOpacity: { value: 0.95 }, uColorA: { value: blue }, uColorB: { value: white } },
+    vertexShader: galaxyVertexShader, fragmentShader: galaxyFragmentShader, transparent: true, blending: AdditiveBlending, depthTest: true, depthWrite: false });
+  root.add(new Points(geometry, material));
+  // Only a published AGN can create a quasar. Hiding that event hides its volume.
+  for (const event of events.filter(item => item.kind === 'AGN')) {
+    const quasar = new Group();
+    quasar.name = `Published AGN ${event.id}`;
+    quasar.position.set(event.x, event.y, event.z);
+    quasar.rotation.set(0.35, -0.2, -0.18);
+    const radius = 1.5 + event.intensity * 1.3;
+    const torus = new Mesh(new TorusGeometry(radius, radius * 0.22, 16, mobile ? 48 : 80),
+      new MeshStandardMaterial({ color: '#9ed8ff', emissive: '#23547c', emissiveIntensity: 0.55, roughness: 0.4, metalness: 0.12, depthTest: true, depthWrite: true }));
+    torus.rotation.x = Math.PI / 2;
+    const horizon = new Mesh(new SphereGeometry(radius * 0.53, 24, 16), new MeshBasicMaterial({ color: '#030812', depthTest: true, depthWrite: true }));
+    const core = new Mesh(new SphereGeometry(radius * 0.17, 16, 12), new MeshBasicMaterial({ color: '#f4fbff', depthTest: true, depthWrite: true }));
+    core.position.y = radius * 0.55;
+    quasar.add(torus, horizon, core);
+    for (const side of [-1, 1]) {
+      const jet = new Mesh(new CylinderGeometry(0.035, radius * 0.18, radius * 5, 16, 1, true), new MeshBasicMaterial({ color: '#91d7ff', transparent: true, opacity: 0.58, depthTest: true, depthWrite: false }));
+      jet.position.y = side * radius * 2.65;
+      if (side < 0) jet.rotation.z = Math.PI;
+      quasar.add(jet);
+    }
+    root.add(quasar);
+  }
+  return root;
+}
+
+function webCurve(filament: GalaxyWebFilament): QuadraticBezierCurve3 {
+  const from = new Vector3(filament.from.x, filament.from.y, filament.from.z);
+  const to = new Vector3(filament.to.x, filament.to.y, filament.to.z);
+  const direction = to.clone().sub(from);
+  const distance = direction.length();
+  const normal = new Vector3(-direction.y, direction.x, 0);
+  if (normal.lengthSq() < 1e-6) normal.set(1, 0, 0);
+  else normal.normalize();
+  const seed = hash32(filament.id);
+  const side = seed & 1 ? 1 : -1;
+  const bend = side * (0.35 + Math.min(10, distance * 0.16));
+  const control = from.clone().add(to).multiplyScalar(0.5).addScaledVector(normal, bend);
+  control.z += (((seed >>> 1) % 1000) / 999 - 0.5) * Math.min(8, distance * 0.14);
+  return new QuadraticBezierCurve3(from, control, to);
+}
+
+function buildWebFilamentGeometry(
+  filaments: GalaxyWebFilament[], selectedId: string | null,
+): { lines: BufferGeometry; selected: BufferGeometry; particles: BufferGeometry } {
+  const lineValues: number[] = [];
+  const selectedValues: number[] = [];
+  const positions: number[] = [];
+  const sizes: number[] = [];
+  const brightness: number[] = [];
+  const colors: number[] = [];
+  const iceBlue = new Color('#83c7ff');
+  const white = new Color('#eff8ff');
+  const normal = new Vector3();
+  const steps = 24;
+
+  for (const filament of filaments) {
+    const curve = webCurve(filament);
+    const points = curve.getPoints(steps);
+    const active = Boolean(selectedId && filament.entityIds.includes(selectedId));
+    const lineTarget = active ? selectedValues : lineValues;
+    for (let index = 0; index < points.length - 1; index += 1) {
+      const a = points[index]!;
+      const b = points[index + 1]!;
+      lineTarget.push(a.x, a.y, a.z, b.x, b.y, b.z);
+    }
+
+    const chord = new Vector3(filament.to.x - filament.from.x, filament.to.y - filament.from.y, filament.to.z - filament.from.z);
+    normal.set(-chord.y, chord.x, 0);
+    if (normal.lengthSq() < 1e-6) normal.set(1, 0, 0);
+    else normal.normalize();
+    const tone = filament.semantic === true ? white : iceBlue;
+    for (let sample = 1; sample <= 96; sample += 1) {
+      const t = sample / 97;
+      const point = curve.getPoint(t);
+      const jitter = ((hash32(`${filament.id}:${sample}`) % 1000) / 999 - 0.5) * 0.65;
+      point.addScaledVector(normal, jitter);
+      point.z += ((hash32(`${filament.id}:z:${sample}`) % 1000) / 999 - 0.5) * 0.55;
+      positions.push(point.x, point.y, point.z);
+      sizes.push(active ? 1.15 : 0.45 + (sample % 3) * 0.12);
+      brightness.push(active ? 0.85 : filament.derived === true ? 0.25 : 0.62);
+      colors.push(tone.r, tone.g, tone.b);
+    }
+  }
+
+  const geometryOf = (values: number[]) => {
+    const geometry = new BufferGeometry();
+    geometry.setAttribute('position', new Float32BufferAttribute(values, 3));
+    geometry.computeBoundingSphere();
+    return geometry;
+  };
+  const particles = new BufferGeometry();
+  particles.setAttribute('position', new Float32BufferAttribute(positions, 3));
+  particles.setAttribute('aSize', new Float32BufferAttribute(sizes, 1));
+  particles.setAttribute('aBrightness', new Float32BufferAttribute(brightness, 1));
+  particles.setAttribute('aColor', new Float32BufferAttribute(colors, 3));
+  particles.computeBoundingSphere();
+  return { lines: geometryOf(lineValues), selected: geometryOf(selectedValues), particles };
+}
+
 function isMajor(node: PlacedNode3D, selectedId: string | null): boolean {
   return node.type === 'DOMAIN' || node.type === 'CAMPAIGN' || node.id.startsWith('atlas.cluster.') || node.id === selectedId;
 }
@@ -746,6 +922,8 @@ export const GalaxyThree3D = forwardRef<CanvasGraph25DHandle, Props>(function Ga
   ariaLabel = 'Campo topológico tridimensional do NEXO ONE',
   viewMode = 'detail',
   morphology = null,
+  webFilaments = NO_WEB_FILAMENTS,
+  webGroups = NO_WEB_GROUPS,
   glow = 0.21,
   events = NO_EVENTS,
   focusEvent = null,
@@ -778,9 +956,17 @@ export const GalaxyThree3D = forwardRef<CanvasGraph25DHandle, Props>(function Ga
   const themeName: 'dark' | 'light' = morphology ? 'dark' : pageTheme;
 
   const isMacro = viewMode === 'macro';
+  const hasPublicWeb = webFilaments.length > 0;
   const isMobile = size.width < 760;
-  const reducedMotion = typeof window !== 'undefined'
-    && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+  const [reducedMotion, setReducedMotion] = useState(() => window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+  const [webglState, setWebglState] = useState<'ready' | 'lost'>('ready');
+  const [contextRevision, setContextRevision] = useState(0);
+  useEffect(() => {
+    const query = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const update = () => setReducedMotion(query.matches);
+    query.addEventListener('change', update);
+    return () => query.removeEventListener('change', update);
+  }, []);
 
   useEffect(() => {
     const root = document.documentElement;
@@ -948,12 +1134,12 @@ export const GalaxyThree3D = forwardRef<CanvasGraph25DHandle, Props>(function Ga
       controls.maxPolarAngle = Math.PI - 0.18;
       controlsRef.current = controls;
 
-      const palette = paletteForTheme(themeName);
+      const palette = hasPublicWeb ? coldWebPalette() : paletteForTheme(themeName);
       const spiral = themeName === 'dark';
       const particleCount = spiral
         ? (isMobile ? 7000 : 26000)
         : isMacro ? (isMobile ? 90 : 320) : (isMobile ? 240 : 900);
-      const galaxyGeometry = spiral ? buildSpiralGalaxy(particleCount, morphology ?? DEFAULT_MORPHOLOGY) : buildFieldGeometry(nodes, particleCount, isMacro, themeName);
+      const galaxyGeometry = spiral ? buildSpiralGalaxy(particleCount, morphology ?? DEFAULT_MORPHOLOGY, hasPublicWeb) : buildFieldGeometry(nodes, particleCount, isMacro, themeName);
       const galaxyMaterial = new ShaderMaterial({
         uniforms: {
           uTime: { value: 0 },
@@ -974,7 +1160,7 @@ export const GalaxyThree3D = forwardRef<CanvasGraph25DHandle, Props>(function Ga
       const disk = new Group();
       disk.rotation.z = diskAngleRef.current;
       scene.add(disk);
-      const deepFieldGeometry = spiral ? buildDeepField(isMobile ? 220 : 560) : null;
+      const deepFieldGeometry = spiral ? buildDeepField(isMobile ? 220 : 560, hasPublicWeb) : null;
       const deepFieldMaterial = spiral ? new ShaderMaterial({
         uniforms: { uPixelRatio: { value: renderer.getPixelRatio() }, uOpacity: { value: isMobile ? 0.52 : 0.75 } },
         vertexShader: deepFieldVertexShader,
@@ -985,6 +1171,13 @@ export const GalaxyThree3D = forwardRef<CanvasGraph25DHandle, Props>(function Ga
       }) : null;
       if (deepFieldGeometry && deepFieldMaterial) scene.add(new Points(deepFieldGeometry, deepFieldMaterial));
       disk.add(galaxy);
+      galaxy.visible = !hasPublicWeb;
+      const publicVolumes = buildPublicVolumes(webGroups, events, isMobile);
+      if (hasPublicWeb) disk.add(publicVolumes);
+      scene.add(new AmbientLight(0xa5d3ff, 2));
+      const volumeLight = new DirectionalLight(0xe8f6ff, 3);
+      volumeLight.position.set(-20, 40, 65);
+      scene.add(volumeLight);
 
       const ringGeometry = buildFieldRingSegments(nodes, isMacro);
       const ringMaterial = new LineBasicMaterial({ color: palette.accent, transparent: true, opacity: themeName === 'light' ? 0.05 : (isMacro ? 0.06 : 0.04), blending: NormalBlending, depthWrite: false });
@@ -999,7 +1192,7 @@ export const GalaxyThree3D = forwardRef<CanvasGraph25DHandle, Props>(function Ga
       grid.visible = !isMobile && !spiral;
       scene.add(grid);
 
-      const nodeGeometry = buildNodeGeometry(nodes, selectedId, themeName, spiral ? (morphology ?? DEFAULT_MORPHOLOGY) : null);
+      const nodeGeometry = buildNodeGeometry(nodes, selectedId, themeName, spiral ? (morphology ?? DEFAULT_MORPHOLOGY) : null, hasPublicWeb);
       const nodeMaterial = new ShaderMaterial({
         uniforms: {
           uTime: { value: 0 },
@@ -1019,6 +1212,7 @@ export const GalaxyThree3D = forwardRef<CanvasGraph25DHandle, Props>(function Ga
       disk.add(nodePoints);
 
       const relationSegments = buildRelationSegments(nodes, edges, selectedId);
+      const webGeometry = buildWebFilamentGeometry(webFilaments, selectedId);
       const relationMaterial = new LineBasicMaterial({
         color: themeName === 'light' ? '#7d858d' : '#65727d',
         transparent: true,
@@ -1064,6 +1258,48 @@ export const GalaxyThree3D = forwardRef<CanvasGraph25DHandle, Props>(function Ga
       const blockedRelationLines = new LineSegments(relationSegments.blocked, blockedRelationMaterial);
       const selectedRelationLines = new LineSegments(relationSegments.selected, selectedRelationMaterial);
       disk.add(relationLines, dependencyLines, learningRelationLines, blockedRelationLines, selectedRelationLines);
+
+      const webLineMaterial = new LineBasicMaterial({
+        color: '#82c7ff', transparent: true, opacity: selectedId ? 0.10 : 0.16,
+        blending: AdditiveBlending, depthTest: true, depthWrite: false,
+      });
+      const selectedWebMaterial = new LineBasicMaterial({
+        color: '#f0f8ff', transparent: true, opacity: 0.94,
+        blending: AdditiveBlending, depthTest: true, depthWrite: false,
+      });
+      const webParticleMaterial = new ShaderMaterial({
+        uniforms: {
+          uTime: { value: 0 },
+          uPixelRatio: { value: renderer.getPixelRatio() },
+          uColorA: { value: palette.accent },
+          uColorB: { value: palette.strong },
+          uOpacity: { value: isMobile ? 0.82 : 0.68 },
+        },
+        vertexShader: galaxyVertexShader,
+        fragmentShader: galaxyFragmentShader,
+        transparent: true,
+        depthTest: true,
+        depthWrite: false,
+        blending: AdditiveBlending,
+      });
+      // Give the published hierarchy a continuous volume. Short membership
+      // paths stay delicate; long paths develop a wider blue halo. All tubes
+      // share a single draw call and retain their original endpoints.
+      const tubeParts = webFilaments.map(filament => {
+        const distance = new Vector3(filament.to.x - filament.from.x, filament.to.y - filament.from.y, filament.to.z - filament.from.z).length();
+        const radius = 0.035 + Math.min(0.19, distance * 0.004);
+        return new TubeGeometry(webCurve(filament), isMobile ? 14 : 24, radius, isMobile ? 4 : 6, false);
+      });
+      const webVolumeGeometry = tubeParts.length ? mergeGeometries(tubeParts, false)! : new BufferGeometry();
+      tubeParts.forEach(geometry => geometry.dispose());
+      const webVolumeMaterial = new MeshStandardMaterial({ color: '#70bbef', emissive: '#194767', emissiveIntensity: 0.45,
+        roughness: 0.65, metalness: 0.04, transparent: true, opacity: isMobile ? 0.17 : 0.22, depthTest: true, depthWrite: false });
+      const webVolume = new Mesh(webVolumeGeometry, webVolumeMaterial);
+      disk.add(webVolume);
+      const webLines = new LineSegments(webGeometry.lines, webLineMaterial);
+      const selectedWebLines = new LineSegments(webGeometry.selected, selectedWebMaterial);
+      const webParticles = new Points(webGeometry.particles, webParticleMaterial);
+      disk.add(webLines, webParticles, selectedWebLines);
 
       if (!isMobile && themeName === 'dark') {
         composer = new EffectComposer(renderer);
@@ -1127,6 +1363,10 @@ export const GalaxyThree3D = forwardRef<CanvasGraph25DHandle, Props>(function Ga
       const onDoubleClick = (event: MouseEvent) => {
         pick(event.clientX, event.clientY, true);
       };
+      const onContextLost = (event: Event) => { event.preventDefault(); setWebglState('lost'); };
+      const onContextRestored = () => { setWebglState('ready'); setContextRevision(value => value + 1); };
+      renderer.domElement.addEventListener('webglcontextlost', onContextLost);
+      renderer.domElement.addEventListener('webglcontextrestored', onContextRestored);
       renderer.domElement.addEventListener('pointerdown', onPointerDown);
       renderer.domElement.addEventListener('pointerup', onPointerUp);
       renderer.domElement.addEventListener('pointercancel', onPointerCancel);
@@ -1183,8 +1423,9 @@ export const GalaxyThree3D = forwardRef<CanvasGraph25DHandle, Props>(function Ga
           if (raw >= 1) tweenRef.current = null;
         }
         controls.update();
-        galaxyMaterial.uniforms.uTime!.value = now * 0.001;
-        nodeMaterial.uniforms.uTime!.value = now * 0.001;
+        galaxyMaterial.uniforms.uTime!.value = reducedMotion ? 0 : now * 0.001;
+        nodeMaterial.uniforms.uTime!.value = reducedMotion ? 0 : now * 0.001;
+        webParticleMaterial.uniforms.uTime!.value = reducedMotion ? 0 : now * 0.001;
         updateLabels();
         if (composer) composer.render();
         else renderer!.render(scene, camera);
@@ -1208,6 +1449,15 @@ export const GalaxyThree3D = forwardRef<CanvasGraph25DHandle, Props>(function Ga
         controls.dispose();
         galaxyGeometry.dispose();
         galaxyMaterial.dispose();
+        publicVolumes.traverse(object => {
+          if (object instanceof Mesh || object instanceof Points) {
+            object.geometry.dispose();
+            const materials = Array.isArray(object.material) ? object.material : [object.material];
+            materials.forEach(material => material.dispose());
+          }
+        });
+        renderer?.domElement.removeEventListener('webglcontextlost', onContextLost);
+        renderer?.domElement.removeEventListener('webglcontextrestored', onContextRestored);
         deepFieldGeometry?.dispose();
         deepFieldMaterial?.dispose();
         ringGeometry.dispose();
@@ -1221,11 +1471,19 @@ export const GalaxyThree3D = forwardRef<CanvasGraph25DHandle, Props>(function Ga
         relationSegments.blocked.dispose();
         relationSegments.learning.dispose();
         relationSegments.selected.dispose();
+        webVolumeGeometry.dispose();
+        webVolumeMaterial.dispose();
+        webGeometry.lines.dispose();
+        webGeometry.selected.dispose();
+        webGeometry.particles.dispose();
         relationMaterial.dispose();
         dependencyMaterial.dispose();
         blockedRelationMaterial.dispose();
         learningRelationMaterial.dispose();
         selectedRelationMaterial.dispose();
+        webLineMaterial.dispose();
+        selectedWebMaterial.dispose();
+        webParticleMaterial.dispose();
         composer?.dispose();
         renderer?.dispose();
         rendererRef.current = null;
@@ -1242,7 +1500,7 @@ export const GalaxyThree3D = forwardRef<CanvasGraph25DHandle, Props>(function Ga
       onFailure?.();
       return;
     }
-  }, [ariaLabel, edges, failed, glow, isMacro, isMobile, morphology, nodes, onFailure, onSelect, reducedMotion, selectedId, size.height, size.width, themeName, visibleLabels]);
+  }, [ariaLabel, edges, failed, glow, isMacro, isMobile, morphology, nodes, onFailure, onSelect, reducedMotion, selectedId, size.height, size.width, themeName, visibleLabels, webFilaments, webGroups, contextRevision, events]);
 
   // Phones: the event sheet covers the lower half, so lift the framing while it is open.
   useEffect(() => {
@@ -1269,6 +1527,13 @@ export const GalaxyThree3D = forwardRef<CanvasGraph25DHandle, Props>(function Ga
       data-particle-profile={isMobile ? 'mobile' : 'desktop'}
       data-view-mode={viewMode}
       data-theme={themeName}
+      data-webgl-state={webglState}
+      data-web-group-count={webGroups.length}
+      data-web-quasar-count={events.filter(event => event.kind === 'AGN').length}
+      data-reduced-motion={String(reducedMotion)}
+      data-web-palette={hasPublicWeb ? 'cold' : 'default'}
+      data-web-filament-count={webFilaments.length}
+      data-web-semantic-count={webFilaments.filter(filament => filament.semantic === true).length}
     >
       <div ref={mountRef} className="galaxy-three-mount" />
       <div className="galaxy-three-vignette" aria-hidden="true" />
@@ -1322,7 +1587,7 @@ export const GalaxyThree3D = forwardRef<CanvasGraph25DHandle, Props>(function Ga
       </div>
       <div className="galaxy-three-status" aria-live="polite">
         <i aria-hidden="true" />
-        <span>{nodes.length} nós · {edges.length} relações · FIELD</span>
+        <span>{nodes.length} nós · {hasPublicWeb ? `${webFilaments.length} ligações publicadas` : `${edges.length} relações`} · FIELD</span>
       </div>
       <div className="galaxy-three-controls" role="group" aria-label="Controles do NEXO FIELD">
         <button type="button" onClick={reset}>NEXO</button>

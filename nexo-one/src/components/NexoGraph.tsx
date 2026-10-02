@@ -53,12 +53,12 @@ export function NexoGraph({
       if(target&&/INPUT|TEXTAREA|SELECT/.test(target.tagName))return;
       if(event.key==='2')onViewChange('2d');
       if(event.key==='3')onViewChange('3d');
-      if(event.key==='g')window.location.hash='#/galaxia';
+      if(event.key==='g')window.location.hash=showViewSwitch?'#/galaxia':'#/atlas?view=galaxy';
       if(event.key==='Escape'&&selectedId)hostRef.current?.focus();
     };
     window.addEventListener('keydown',onKey);
     return()=>window.removeEventListener('keydown',onKey);
-  },[onViewChange,selectedId]);
+  },[onViewChange,selectedId,showViewSwitch]);
 
   const fullscreen=()=>{
     const node=hostRef.current;
@@ -71,11 +71,15 @@ export function NexoGraph({
   const spotlightActive=spotlight&&Boolean(selectedId);
   const spotlightToggle=!tableMode&&<button type="button" className="nexo-spotlight-toggle" aria-label={spotlightActive?"Desativar foco visual no nó selecionado":"Ativar foco visual no nó selecionado"} aria-pressed={spotlightActive} disabled={!selectedId} title={selectedId?(spotlightActive?"Mostrar todo o grafo com o mesmo peso":"Destacar o nó selecionado e sua vizinhança"):"Selecione um nó para ativar o foco"} onClick={()=>setSpotlight(value=>!value)}>{spotlightActive?'Foco ativo':'Focar seleção'}</button>;
   const illuminationToggle=!tableMode&&<button type="button" className="nexo-illumination-toggle" aria-label={illuminated?"Desativar iluminação global":"Iluminar todos os nós e relações"} aria-pressed={illuminated} title={illuminated?"Desativar iluminação global":"Iluminar todos os nós e relações"} onClick={()=>setIlluminated(value=>!value)}>{illuminated?'Apagar luz':'Iluminar tudo'}</button>;
-  return <section ref={hostRef} tabIndex={-1} className="nexo-graph" data-graph-view={view} data-graph-illuminated={illuminated} data-graph-visible={visible.length} data-graph-total={model.nodes.length} data-toolbar-rows={toolbarFilters?2:1}>
+  return <section ref={hostRef} tabIndex={-1} className="nexo-graph" data-graph-view={view} data-atlas-entry={!showViewSwitch} data-graph-illuminated={illuminated} data-graph-visible={visible.length} data-graph-total={model.nodes.length} data-toolbar-rows={toolbarFilters?2:1}>
     <div className="nexo-graph-toolbar">
       <div className="nexo-graph-toolbar-row nexo-graph-toolbar-primary">
         <div className="nexo-graph-toolbar-context">{toolbarContext||(!toolbarFilters&&count)}</div>
         <div className="nexo-graph-actions">
+          {!showViewSwitch&&<nav className="nexo-atlas-entry" aria-label="Visualização do Atlas">
+            <a className="nexo-atlas-galaxy-link" href="#/atlas?view=galaxy" onClick={() => onViewChange('galaxy')} aria-current={view==='galaxy'?'page':undefined}>Galáxia 3D</a>
+            <button type="button" aria-pressed={view==='2d'} onClick={()=>onViewChange('2d')}>2D</button>
+          </nav>}
           {showViewSwitch&&<GraphViewSwitch view={view} onChange={onViewChange}/>}
           {!toolbarFilters&&spotlightToggle}
           {!toolbarFilters&&illuminationToggle}
