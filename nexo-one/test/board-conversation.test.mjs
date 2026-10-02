@@ -50,3 +50,25 @@ test('cyclic links stay visible and cannot erase the history',()=>{
 test('an unspecified multi-recipient contract stays pending after one recipient reply',()=>{
  assert.equal(boardConversation({...post,to:'ADVISOR,EXECUTOR'},[reply],now).awaiting,true);
 });
+
+test('self-addressed notes stay in history without a reply obligation or invented closure',()=>{
+ for(const text of ['Observação para consulta futura.','Tipo: Reclamação\nAnotei a falha para mim.']){
+  const note={...post,id:'NOTE',to:post.from,text};
+  const records=[note],before=structuredClone(records),view=boardConversation(note,records,now);
+  assert.equal(view.selfNote,true);assert.equal(view.status,'Anotação própria');
+  assert.equal(view.awaiting,false);assert.equal(view.answered,false);assert.equal(view.archived,false);
+  assert.deepEqual(view.replies,[]);assert.deepEqual(boardThreads(records,now),[note]);
+  assert.deepEqual(records,before);assert.equal(note.resolved_at,undefined);
+ }
+});
+test('a self-addressed linked note cannot answer or close an external complaint',()=>{
+ const complaint={...post,text:'Tipo: Reclamação\nVerificar a falha externa.'};
+ for(const author of [post.from,post.to]){
+  const note={...reply,id:'NOTE',from:author,to:author,reply_to:complaint.id};
+  const records=[complaint,note],before=structuredClone(records);
+  const view=boardConversation(complaint,records,now);
+  assert.equal(view.selfNote,false);assert.equal(view.awaiting,true);
+  assert.equal(view.answered,false);assert.equal(view.archived,false);assert.deepEqual(view.replies,[]);
+  assert.deepEqual(boardThreads(records,now),records);assert.deepEqual(records,before);
+ }
+});

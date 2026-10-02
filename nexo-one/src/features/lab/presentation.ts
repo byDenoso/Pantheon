@@ -44,6 +44,7 @@ export interface BoardRecord {
 
 /** A reply proves conversation only. It never resolves an incident or transfers WORK. */
 export function boardConversation(post: BoardRecord, posts: BoardRecord[], now = Date.now()) {
+  const selfNote = Boolean(post.from.trim()) && post.from !== 'ALL' && post.from === post.to;
   const recipients = post.to === 'ALL' ? null : [post.to];
   const replies = posts.filter(reply => reply.id !== post.id
     && (reply.reply_to || reply.in_reply_to) === post.id
@@ -54,12 +55,13 @@ export function boardConversation(post: BoardRecord, posts: BoardRecord[], now =
     && Date.parse(reply.at) >= Date.parse(post.at) && Date.parse(reply.at) <= now)
     .sort((a, b) => Date.parse(a.at) - Date.parse(b.at));
   // ALL has no published per-role response contract: one reply cannot close it for everyone.
-  const answered = recipients !== null && recipients.every(role => replies.some(reply => reply.from === role));
+  const answered = !selfNote && recipients !== null && recipients.every(role => replies.some(reply => reply.from === role));
   const declaredType = post.text.match(/(?:^|\n)\s*Tipo\s*:\s*(Reclamação|Conteúdo)\s*(?:$|\n)/iu)?.[1];
   const kind = declaredType && normalizeSearch(declaredType) === 'reclamacao' ? 'Reclamação' : 'Conteúdo';
   const archived = Boolean(post.resolved_at) || Boolean(post.expires_at && Date.parse(post.expires_at) <= now);
-  return { replies, answered, archived, awaiting: !answered && !archived,
-    status: answered ? 'Respondido' : 'Aguardando resposta', kind,
+  // A self-addressed record is a note, not a request: retain it in history without inventing closure.
+  return { replies, answered, archived, selfNote, awaiting: !selfNote && !answered && !archived,
+    status: selfNote ? 'Anotação própria' : answered ? 'Respondido' : 'Aguardando resposta', kind,
     typeDeclared: Boolean(declaredType), audienceUnknown: recipients === null };
 }
 

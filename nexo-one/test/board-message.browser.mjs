@@ -20,6 +20,8 @@ if (!input) {
       ...(i === 1 ? { resolved_at: new Date(now - 60_000).toISOString() } : {}), ...(i === 2 ? { expires_at: new Date(now - 60_000).toISOString() } : {}),
     })),
   ];
+  system.evolution.board.push({ ...raw, id: 'VISUAL-SELF-NOTE', from: 'ENGINEER', to: 'ENGINEER',
+    at: new Date(now - 30_000).toISOString(), text: 'Fixture de teste — anotação própria preservada.' });
   const answered = system.evolution.board.find(post => post.id === 'VISUAL-BOARD-0');
   system.evolution.board.push({ ...answered, id: 'VISUAL-REPLY', reply_to: answered.id,
     from: answered.to, to: answered.from, at: new Date(now - 120_000).toISOString(),
@@ -139,7 +141,12 @@ try {
     assert.equal(await board.getByLabel('Mostrar', { exact: true }).inputValue(), 'Aguardando resposta');
     if (!input) {
       assert.equal(await board.locator('.board > li').filter({ hasText: 'recado 0' }).count(), 0, 'answered conversation leaves pending');
+      assert.equal(await board.locator('.board > li').filter({ hasText: 'anotação própria preservada' }).count(), 0, 'self note has no response obligation');
       await board.getByLabel('Mostrar', { exact: true }).selectOption('Histórico');
+      const note = board.locator('.board > li').filter({ hasText: 'anotação própria preservada' });
+      await note.waitFor();
+      assert.equal(await note.locator('.board-state').innerText(), 'Anotação própria');
+      assert.equal(await note.locator('.board-replies').count(), 0, 'note has no fabricated reply');
       const answered = board.locator('.board > li').filter({ hasText: 'recado 0' });
       await answered.waitFor();
       assert.equal(await answered.locator('.board-state').innerText(), 'Respondido');

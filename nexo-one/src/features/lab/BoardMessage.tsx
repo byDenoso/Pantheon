@@ -30,7 +30,7 @@ export function BoardMessage({ post, lab, from, to, records, focus = false }: {
     <div className="board-receipt"><span className="feed-kind" title={conversation.typeDeclared ? 'Tipo declarado na mensagem' : 'Conteúdo; tipo não declarado pelo autor'}>Mural · original · {conversation.kind}</span><time dateTime={post.at} title={post.at}>{ago(post.at)}</time></div>
     <p ref={textRef} id={textId} className="board-text" data-collapsed={!expanded}>{post.text}</p>
     {expandable && <button type="button" className="board-expand" aria-expanded={expanded} aria-controls={textId} onClick={() => setExpanded(value => !value)}>{expanded ? 'Recolher recado' : 'Ler recado inteiro'}<span aria-hidden="true"> {expanded ? '↑' : '↓'}</span></button>}
-    <p className="board-state">{conversation.archived && !conversation.answered ? 'Sem resposta registrada' : conversation.status}{conversation.archived && ` · ${meta.status}`}</p>
+    <p className="board-state">{conversation.archived && !conversation.answered && !conversation.selfNote ? 'Sem resposta registrada' : conversation.status}{conversation.archived && ` · ${meta.status}`}</p>
     {conversation.audienceUnknown && conversation.replies.length > 0 && <p className="hud-note">Há respostas vinculadas. O recado para todos permanece aberto; os destinatários exigidos não foram publicados.</p>}
     {replies.length > 0 && <details className="board-replies"><summary>Ver {replies.length === 1 ? 'resposta' : `${replies.length} respostas`}</summary>{replies.map(reply => <blockquote key={reply.id}>
       <p><b>{reply.from} → {reply.to}</b> · <time dateTime={reply.at}>{ago(reply.at)}</time></p><p>{reply.text}</p>
