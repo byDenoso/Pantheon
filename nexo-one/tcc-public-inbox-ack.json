@@ -518,6 +518,7 @@
     "inbox/scheduled-referee1-20261001-a2-trio-om330-binjack.json": "42effac09963b9a1fb851847e15cb63000ef719eaee03ff30f1643cf5da79040",
     "inbox/scheduled-referee1-20261002-a2-rd-broad-om330-des-u3-binjack.json": "a2ba40fc4c2ad9dfa7eaaf1b55f61d83a5e3e0f26ac01b8f2c68097e04a7390f",
     "inbox/scheduled-referee1-6638057a1f2d-a2-point-v1.json": "57f0c3df05a1b588cf39a25301804e8d47107ad3f0e9feb385a5e3daa07a0e8a",
+    "inbox/scheduled-referee1-board-block-owner-directive-20261002t2014z.json": "60802cd19f4a2d1949b5bb030078ba07228f1df465df46b30c992913b33e71bf",
     "inbox/scheduled-referee1-board-persist-20261001t081347z.json": "b7a2f5a322897bdbd357abd3fb64471b26da1e86796f8d7bfd2380a10d54d224",
     "inbox/scheduled-referee1-contest-de-1-20260929.json": "1be30ba40520823873302a78649e4e29df27d40848225c0610b56e0490881f57",
     "inbox/scheduled-referee1-contest-de-2-20260929.json": "c05f150b6771989351e215f2fe37e2118223370235c3de0b1dfdc48b283a2ca9",
@@ -4083,6 +4084,34 @@
       "applied_at": "2026-10-01T05:25:09Z",
       "fingerprint": "57f0c3df05a1b588cf39a25301804e8d47107ad3f0e9feb385a5e3daa07a0e8a",
       "tower_revision": "sha256:fb005f977e75501784b2636ddeb4d3731bab2901b459e16d83be01ed9f3baca7"
+    },
+    "inbox/scheduled-referee1-board-block-owner-directive-20261002t2014z.json": {
+      "fingerprint": "60802cd19f4a2d1949b5bb030078ba07228f1df465df46b30c992913b33e71bf",
+      "observed_at": "2026-10-02T21:13:27Z",
+      "outcome": "REJECTED_TERMINAL",
+      "receipt_ids": [
+        "OR-65c341799b36f440b77489257137dcfc"
+      ],
+      "receipts": [
+        {
+          "contract": "OPERATION_RECEIPT_V1",
+          "effect_id": "envelope-cbefd54d12364e06c46a191b388f6ce8",
+          "intent_id": "gateway:tcc-0587772291569790e90e30ca59a3142b",
+          "observed_at": "2026-10-02T21:13:05.046857Z",
+          "occurred_at": "2026-10-02T21:13:05.046837Z",
+          "outcome": "REJECTED_TERMINAL",
+          "payload_sha256": "sha256:1d4c5af7854974d07be04730c67efc241eff7e30ecc363627fb24dcce44dff5f",
+          "reason_code": null,
+          "receipt_id": "OR-65c341799b36f440b77489257137dcfc",
+          "result_revision": "sha256:bce6981597a250270c5aa3d5f69865ef2d02d8974909847f064d9af72daa6aa3",
+          "retry_condition": null,
+          "source_revision": "sha256:047749f8066138500457090d8103f4b255d2690ea8f4b5a20f9d5e4fa5b31edb",
+          "stage": "DELIVERED",
+          "supersedes": null,
+          "visibility": "PUBLIC"
+        }
+      ],
+      "tower_revision": "sha256:8daaf504dd8b54072a04c3970e3c3ca5ce995ae99be590e72a8b4b99ebf9c3db"
     },
     "inbox/scheduled-referee1-board-persist-20261001t081347z.json": {
       "applied_at": "2026-10-01T08:37:42Z",
