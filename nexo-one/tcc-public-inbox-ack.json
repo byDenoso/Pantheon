@@ -247,6 +247,7 @@
     "inbox/scheduled-guardiao-recipe-review-pr399-966b87af.json": "610bf636e0ab943427f653a4413d347e33eb27404310f27f83f0f831e9b1b287",
     "inbox/scheduled-guardiao-recipe-review-pr400-834c652a.json": "c31a08194c95778bcc6658c066af26ef3a9e8f48edabcbcc53ea05a28583ce93",
     "inbox/scheduled-guardiao-recipe-review-pr403-598be99e.json": "174699f289005731f79520a5840929a68b8e11c6d935209f234333190a59f33a",
+    "inbox/scheduled-guardiao-recipe-review-pr403-bd171925.json": "cd002b35e201c791d28ae2842e54e64afd8e1118b87f72eac6901a18cb54a189",
     "inbox/scheduled-guardiao-write-failure-20261002t0611z.json": "b12bceb4a3d3f11801f747ad69397cc07e31517909c0b1978b52db4358509ea8",
     "inbox/scheduled-interactive-20260929-router040-ready-binds-v1.json": "9c2ae392c4fa126a5541d50e0360e2036a3c6d6d280edc058003c19ec6d9f22c",
     "inbox/scheduled-interactive-names-hyp-test-fix-20260928-1603.json": "0ca61d7d6e663b89b12d2ba8381d7817cfaeb088cee76457bd13dc5b5589305c",
@@ -2060,6 +2061,34 @@
         }
       ],
       "tower_revision": "sha256:1bdba5d3c9bef7c914fb8bbba774d7a953d5eae33aa9a99c077030dc474b0cf3"
+    },
+    "inbox/scheduled-guardiao-recipe-review-pr403-bd171925.json": {
+      "fingerprint": "cd002b35e201c791d28ae2842e54e64afd8e1118b87f72eac6901a18cb54a189",
+      "observed_at": "2026-10-02T10:33:38Z",
+      "outcome": "APPLIED",
+      "receipt_ids": [
+        "OR-a8cb113c2343ccd2880928c107dbf093"
+      ],
+      "receipts": [
+        {
+          "contract": "OPERATION_RECEIPT_V1",
+          "effect_id": "envelope-5cc546a1f8cbb9aef1c600cdb8554248",
+          "intent_id": "gateway:tcc-95aedbee285bf8ff022e503f753032ef",
+          "observed_at": "2026-10-02T10:33:15.700240Z",
+          "occurred_at": "2026-10-02T10:33:15.700224Z",
+          "outcome": "APPLIED",
+          "payload_sha256": "sha256:f260e2895c8fc52819c04717322c330ccf111ff1abf460a90df3ea448312a524",
+          "reason_code": null,
+          "receipt_id": "OR-a8cb113c2343ccd2880928c107dbf093",
+          "result_revision": "sha256:2351efbc0e9ee64c538ed7d7b6546aa877f6548c52b0950cb881b8ad10ce7411",
+          "retry_condition": null,
+          "source_revision": "sha256:047749f8066138500457090d8103f4b255d2690ea8f4b5a20f9d5e4fa5b31edb",
+          "stage": "APPLIED",
+          "supersedes": null,
+          "visibility": "PUBLIC"
+        }
+      ],
+      "tower_revision": "sha256:55108581ac9ee4b54dc0b730fc8194a36ec1bc289a77a7b529383d71fbec58a9"
     },
     "inbox/scheduled-guardiao-write-failure-20261002t0611z.json": {
       "applied_at": "2026-10-02T06:25:17Z",
