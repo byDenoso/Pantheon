@@ -600,7 +600,8 @@ export function ObservatoryScene({ tests, page, focusIds, onPick, onAvailability
       raf = requestAnimationFrame(frame);
       if (!visible || contextLost) { pacedAt = last = now; slowAcc = 0; slowN = 0; return; }
       // A reading surface does not need 60 WebGL frames per second.
-      const frameBudget = 1000 / (reduced ? 15 : !exploreRef.current ? 30 : 60);
+      const targetFps = reduced ? 15 : !exploreRef.current ? 30 : 60;
+      const frameBudget = 1000 / targetFps;
       // Reading and orbiting have different targets; their quality samples cannot mix.
       if (frameBudget !== previousBudget) { previousBudget = frameBudget; pacedAt = last = now; slowAcc = 0; slowN = 0; }
       const elapsed = now - pacedAt;
@@ -680,7 +681,7 @@ export function ObservatoryScene({ tests, page, focusIds, onPick, onAvailability
         if (!off) place(node, (proj.x * 0.5 + 0.5) * w, (-proj.y * 0.5 + 0.5) * h);
       });
       if (measuring) window.dispatchEvent(new CustomEvent('nexo:frame', { detail: {
-        at: now, intervalMs, targetFps: 1000 / frameBudget,
+        at: now, intervalMs, targetFps,
         cpuSubmitMs: submittedAt - cpuStarted, overlayMs: performance.now() - overlayStarted,
         quality: renderedQuality, qualityMode: automaticQuality ? 'auto' : 'manual', dpr: renderedDpr,
         cpuTotalMs: performance.now() - cpuStarted,
