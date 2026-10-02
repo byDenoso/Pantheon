@@ -226,6 +226,7 @@
     "inbox/scheduled-guardiao-integrity-20261001t1509z.json": "fc6f92a3197a68647b79d971d8b04769b57937fe7aa7d40ccd8de8c0f69c76ea",
     "inbox/scheduled-guardiao-integrity-20261001t1703z.json": "01c25678f66895519550c8f3de2194fc48bb824e39c303dc302f75405de6194c",
     "inbox/scheduled-guardiao-integrity-20261001t1904z.json": "7728975d2ff4521e18db5954710ea9d238f746f525d058e59914e4290d83d8af",
+    "inbox/scheduled-guardiao-integrity-20261002t0513z.json": "4f2bf5a8ff5d69738e4d1261934d6170ecc65438843a8d96a1d83e9dc3bf9046",
     "inbox/scheduled-guardiao-integrity-256956b433317ea8.json": "da73edbdb43a397cac4244eac89204363b8db3724890b273f95e0d7948273fed",
     "inbox/scheduled-guardiao-integrity-4eca6a809262f332.json": "d55e8cdac1b1b34239a374cd8dee447107385cf7523dda7a8534484d567f25b4",
     "inbox/scheduled-guardiao-integrity-843309583b848e26.json": "ef33415a5ff000ed8ed1b9f21e17f7d8e27c5608d5fcd8ff768aba6e64bd3bab",
@@ -235,6 +236,7 @@
     "inbox/scheduled-guardiao-recipe-review-pr395-c90f8752.json": "3a0655a473f1c6b836564da168044651416e8e50dc723eef361870ced17f9a28",
     "inbox/scheduled-guardiao-recipe-review-pr396-0a917b56.json": "1299371eb113e2a2cff27dbb54a953b4f00d829b1a5266fc3d9095929fbdb405",
     "inbox/scheduled-guardiao-recipe-review-pr397-b5c451c2.json": "1686d7d206089211bfe826807277afe502b597d8157e874e972a755133e5f0ad",
+    "inbox/scheduled-guardiao-recipe-review-pr398-3c858ccc.json": "d82e947da2e825592c3e696eca930dc278197d9443b73e1d5de4c12a8006a679",
     "inbox/scheduled-guardiao-recipe-review-pr399-966b87af.json": "610bf636e0ab943427f653a4413d347e33eb27404310f27f83f0f831e9b1b287",
     "inbox/scheduled-guardiao-recipe-review-pr400-834c652a.json": "c31a08194c95778bcc6658c066af26ef3a9e8f48edabcbcc53ea05a28583ce93",
     "inbox/scheduled-interactive-20260929-router040-ready-binds-v1.json": "9c2ae392c4fa126a5541d50e0360e2036a3c6d6d280edc058003c19ec6d9f22c",
@@ -1507,6 +1509,11 @@
       "fingerprint": "7728975d2ff4521e18db5954710ea9d238f746f525d058e59914e4290d83d8af",
       "tower_revision": "sha256:7de52eaab8490e4edf7d27361095841d5d24073cdae947df213285a56e6c902e"
     },
+    "inbox/scheduled-guardiao-integrity-20261002t0513z.json": {
+      "applied_at": "2026-10-02T05:18:49Z",
+      "fingerprint": "4f2bf5a8ff5d69738e4d1261934d6170ecc65438843a8d96a1d83e9dc3bf9046",
+      "tower_revision": "sha256:a3d2357f179685e0d11b81530aa1068959f8c250bb1acf8fe88a36da1cac3632"
+    },
     "inbox/scheduled-guardiao-integrity-256956b433317ea8.json": {
       "applied_at": "2026-09-30T23:44:02Z",
       "fingerprint": "da73edbdb43a397cac4244eac89204363b8db3724890b273f95e0d7948273fed",
@@ -1550,6 +1557,11 @@
       "applied_at": "2026-10-02T02:35:01Z",
       "fingerprint": "1686d7d206089211bfe826807277afe502b597d8157e874e972a755133e5f0ad",
       "tower_revision": "sha256:5e27bf068536be861b2b47fa390a2e07b13da1224ef1c3d972088e34caaf3c3f"
+    },
+    "inbox/scheduled-guardiao-recipe-review-pr398-3c858ccc.json": {
+      "applied_at": "2026-10-02T05:18:49Z",
+      "fingerprint": "d82e947da2e825592c3e696eca930dc278197d9443b73e1d5de4c12a8006a679",
+      "tower_revision": "sha256:a3d2357f179685e0d11b81530aa1068959f8c250bb1acf8fe88a36da1cac3632"
     },
     "inbox/scheduled-guardiao-recipe-review-pr399-966b87af.json": {
       "applied_at": "2026-10-02T02:41:17Z",
