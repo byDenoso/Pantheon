@@ -144,7 +144,10 @@ def _validate_desi(manifest, params, inputs, reject):
                 reject('INPUT_RECIPE_MANIFEST_MISMATCH', 'input names must be unique strings')
                 continue
             url = item.get('url')
-            parsed = urllib.parse.urlsplit(url) if isinstance(url, str) else None
+            try:
+                parsed = urllib.parse.urlsplit(url) if isinstance(url, str) else None
+            except ValueError:
+                parsed = None
             sha256 = item.get('sha256')
             version = item.get('version')
             if (parsed is None or parsed.scheme != 'https' or not parsed.netloc
