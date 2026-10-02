@@ -394,6 +394,7 @@
     "inbox/scheduled-operator-b-rdcal-terminal-drift-20261001t2149z.json": "b9de369ee4497ef1141bca1a65ed56277e35d6ff2008bae2e8e01ce49b4c3422",
     "inbox/scheduled-operator-b-ready-terminal-drift-20260930t1949z.json": "a5b1a7a1a04d452ef6f3d936499e2d8a0596639fe3442e0682b3692c12acaad3",
     "inbox/scheduled-operator-b-role-routing-mismatch-20261002t0555z.json": "acd09c93610943edf35d3e3ba06aee33cf4c19d3f1717643efb15d75bf01cd96",
+    "inbox/scheduled-operator-b-terminal-phase-drift-20261002t1043z.json": "dae44ae0e4ed83cdd54cea73ee0af22bdb542c9635fd63215bab87e4aee59c97",
     "inbox/scheduled-operator-bind-de26-007-growth-geometry-min.json": "4b6210230ef536eae3bcbc276f1fa6f73c50fe44be852d81e93e74c879f20abd",
     "inbox/scheduled-operator-bind-h0x26-010-cf4-min.json": "85c8557c3fca1a297de230d3042fb908963c5abe81defbbbd74e4b43c4b1e242",
     "inbox/scheduled-operator-bind-hyp-growth-shape-desi-dr1-min.json": "535904e95e7b07fe23315fdd4ac1ef72178363652c3e3f3e9f6fd83335a9e7c4",
@@ -2814,6 +2815,34 @@
       "applied_at": "2026-10-02T05:56:30Z",
       "fingerprint": "acd09c93610943edf35d3e3ba06aee33cf4c19d3f1717643efb15d75bf01cd96",
       "tower_revision": "sha256:a36531e6795e40b0219c9dd6c5e4d9abe7661189ec1700cc19e733a3dfcb2571"
+    },
+    "inbox/scheduled-operator-b-terminal-phase-drift-20261002t1043z.json": {
+      "fingerprint": "dae44ae0e4ed83cdd54cea73ee0af22bdb542c9635fd63215bab87e4aee59c97",
+      "observed_at": "2026-10-02T10:48:01Z",
+      "outcome": "APPLIED",
+      "receipt_ids": [
+        "OR-b2b9c38e510292cfba09df090d743feb"
+      ],
+      "receipts": [
+        {
+          "contract": "OPERATION_RECEIPT_V1",
+          "effect_id": "envelope-28655995147e768df3ca66b4919f91d4",
+          "intent_id": "gateway:tcc-b343b6ab5621a85dbd0644af33abfa24",
+          "observed_at": "2026-10-02T10:47:38.111885Z",
+          "occurred_at": "2026-10-02T10:47:38.111867Z",
+          "outcome": "APPLIED",
+          "payload_sha256": "sha256:aa03ab9a9a5a2bc73c5d3a44807dbcffec520522ac2262afa0e99a6b11923447",
+          "reason_code": null,
+          "receipt_id": "OR-b2b9c38e510292cfba09df090d743feb",
+          "result_revision": "sha256:ecd4a7c909fa350f2a2c9dae432e22b113d5c46b488a0f2c0bbc9a1b8f9a17ab",
+          "retry_condition": null,
+          "source_revision": "sha256:047749f8066138500457090d8103f4b255d2690ea8f4b5a20f9d5e4fa5b31edb",
+          "stage": "APPLIED",
+          "supersedes": null,
+          "visibility": "PUBLIC"
+        }
+      ],
+      "tower_revision": "sha256:77ed7c0d1e8dec2f590c40bd255b26143f0e629d1646f59d084de7404481a369"
     },
     "inbox/scheduled-operator-bind-de26-007-growth-geometry-min.json": {
       "fingerprint": "4b6210230ef536eae3bcbc276f1fa6f73c50fe44be852d81e93e74c879f20abd",
