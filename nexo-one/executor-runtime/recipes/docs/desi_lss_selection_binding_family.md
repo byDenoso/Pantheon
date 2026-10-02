@@ -4,10 +4,12 @@
 `GZ01-B03-T03-WINDOW-ROTATION-NULL`, under recovery work
 `WORK::RECOVERY-9ec8d79f540e5103bc62321946a2c4c8`.
 
-It does **not** make the test READY. The recorded preregistration fixes the
-null count and decision thresholds, but it does not materialize the 3D product
-or name the extreme statistic. Production dispatch must supply both without
-retrofitting them after seeing a result.
+It does **not** make the test READY. The public RECIPE_BIND applied at
+2026-10-02T19:28:53Z fixes 199 nulls, the selection-stratified permutation,
+`max_abs_gaussian_smoothed_delta` and `sigma_cells=0.32`, while preserving
+the recorded decision thresholds. It still does not materialize the 3D product
+or publish a production seed. Dispatch must receive those missing bindings
+without retrofitting them after seeing a result.
 
 ## Frozen source selection
 
@@ -58,19 +60,21 @@ positive three-axis `cell_size`, and assignment method. Masks must be boolean;
 strata and radial/angular bins must be integer arrays. Implicit dtype conversion
 is rejected, and every selection stratum needs at least two cells.
 
-The recipe currently supports two candidate extreme statistics:
+The recipe implements two supported extreme-statistic forms:
 
-- `max_abs_gaussian_smoothed_delta`, with frozen `sigma_cells`;
-- `largest_abs_excursion_component`, with frozen `abs_delta_gte` and
+- `max_abs_gaussian_smoothed_delta`, with `sigma_cells`;
+- `largest_abs_excursion_component`, with `abs_delta_gte` and
   3D connectivity.
 
-The binding owner must select and freeze one or more before dispatch. The
-recipe will not select a statistic, seed, smoothing scale, threshold or product
-construction after a result is visible.
+The applied binding selects only
+`max_abs_gaussian_smoothed_delta(sigma_cells=0.32)`; the component statistic
+remains implementation support, not an active T03 choice. The recipe and
+preflight will not select a seed, different statistic, smoothing scale,
+threshold or product construction after a result is visible.
 
 The null method is `selection_stratified_permutation`: values are permuted only
 within the product's frozen selection strata while the footprint remains fixed.
-At least 100 nulls are required. The recorded decision contract is unchanged:
+The applied binding uses exactly 199 nulls. The recorded decision contract is unchanged:
 
 - PROMOTED when at least one `p_emp <= 0.01` also survives BH q=0.1;
 - REJECTED when all empirical p-values are at least 0.1;
@@ -163,5 +167,5 @@ vencedor. Filesystem sem suporte a hard-link falha fechado. O recibo
 `scientific_result_eligible=false`: ele prova somente os bytes locais e resolve
 apenas `FULL_SELECTION_NOT_MATERIALIZED`. Quota de filesystem remoto pode
 divergir de `disk_usage`. O próximo consumidor é o construtor canônico de
-`NEXO_DESI_LSS_3D_PRODUCT_V1`, ainda dependente de parâmetros prospectivos
-congelados e dos seis papéis de proveniência.
+`NEXO_DESI_LSS_3D_PRODUCT_V1`, uma seed de produção oriunda do binding
+canônico, cosmologia/voxelização do produto e os seis papéis de proveniência.
