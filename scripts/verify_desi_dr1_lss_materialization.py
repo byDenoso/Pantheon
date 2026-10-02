@@ -18,6 +18,7 @@ import re
 import shutil
 import stat
 import sys
+import tempfile
 
 
 RECEIPT_SCHEMA = "NEXO_DESI_LSS_SELECTION_MATERIALIZATION_RECEIPT_V1"
@@ -397,26 +398,63 @@ def _ensure_output_outside_staging(output: Path, staging_root: Path) -> None:
         raise StagingError("receipt and URL list must be outside the exact staging directory")
 
 
+def _read_existing_output(path: Path, label: str) -> bytes:
+    before = path.stat(follow_symlinks=False)
+    if _is_reparse_or_symlink(path) or not stat.S_ISREG(before.st_mode):
+        raise StagingError(f"refusing non-regular existing {label}")
+    flags = os.O_RDONLY | getattr(os, "O_BINARY", 0) | getattr(os, "O_NOFOLLOW", 0)
+    descriptor = os.open(path, flags)
+    try:
+        opened = os.fstat(descriptor)
+        if not os.path.samestat(before, opened):
+            raise StagingError(f"existing {label} changed before readback")
+        with os.fdopen(descriptor, "rb", closefd=False) as stream:
+            raw = stream.read()
+            after_open = os.fstat(stream.fileno())
+        after = path.stat(follow_symlinks=False)
+        if (not os.path.samestat(before, after)
+                or _stat_identity(before) != _stat_identity(opened)
+                or _stat_identity(before) != _stat_identity(after_open)
+                or _stat_identity(before) != _stat_identity(after)):
+            raise StagingError(f"existing {label} changed during readback")
+        return raw
+    finally:
+        os.close(descriptor)
+
+
+def _atomic_publish_no_replace(path: Path, raw: bytes, label: str) -> None:
+    """Publish complete bytes atomically; an existing different target is never replaced."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    descriptor, temporary_name = tempfile.mkstemp(
+        prefix=f".{path.name}.publish-", dir=path.parent
+    )
+    temporary = Path(temporary_name)
+    try:
+        with os.fdopen(descriptor, "wb") as stream:
+            stream.write(raw)
+            stream.flush()
+            os.fsync(stream.fileno())
+        try:
+            os.link(temporary, path)
+        except FileExistsError:
+            if _read_existing_output(path, label) != raw:
+                raise StagingError(f"refusing to overwrite a different {label}")
+    finally:
+        try:
+            temporary.unlink()
+        except FileNotFoundError:
+            pass
+
+
 def _write_json(path: Path, payload: dict, staging_root: Path) -> None:
     _ensure_output_outside_staging(path, staging_root)
-    raw = _canonical_json_bytes(payload)
-    if path.exists():
-        if not path.is_file() or path.read_bytes() != raw:
-            raise StagingError("refusing to overwrite a different receipt")
-        return
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_bytes(raw)
+    _atomic_publish_no_replace(path, _canonical_json_bytes(payload), "receipt")
 
 
 def _write_url_list(path: Path, records: list[dict], staging_root: Path) -> str:
     _ensure_output_outside_staging(path, staging_root)
     raw = "".join(item["url"] + "\n" for item in records).encode("utf-8")
-    if path.exists():
-        if not path.is_file() or path.read_bytes() != raw:
-            raise StagingError("refusing to overwrite a different URL list")
-        return _sha256_bytes(raw)
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_bytes(raw)
+    _atomic_publish_no_replace(path, raw, "URL list")
     return _sha256_bytes(raw)
 
 
