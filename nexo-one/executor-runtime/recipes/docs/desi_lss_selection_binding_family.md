@@ -105,9 +105,11 @@ python scripts/verify_desi_dr1_lss_materialization.py plan \
   --free-space-multiplier 1.10
 ```
 
-`plan` exige por padrão espaço livre equivalente a 110% do volume integral,
-sem dar crédito a arquivos ainda não verificados. Código de saída 2 significa
-armazenamento insuficiente; código 1 significa falha operacional de contrato.
+`plan` exige por padrão espaço livre equivalente a 110% do volume integral
+(153.479.524.071 bytes), sem dar crédito a arquivos ainda não verificados.
+Código de saída 3 significa armazenamento insuficiente; código 1 significa
+falha operacional de contrato; código 2 permanece reservado para uso inválido
+da CLI.
 
 Depois que o Operador materializar os bytes por sua capacidade aprovada, faça
 a releitura completa:
@@ -119,12 +121,18 @@ python scripts/verify_desi_dr1_lss_materialization.py verify \
   --receipt <OPERATOR_RECEIPTS>/desi-dr1-staging-verified.json
 ```
 
-`verify` exige o conjunto exato de 160 nomes, recusa links simbólicos e
-arquivos extras, confere tamanho e SHA-256 por streaming e detecta arquivo
-alterado durante o hash. O recibo
+`verify` fixa também o SHA-256 integral do manifesto em
+`6ce284a355085679eb528517746b247fa2c48902c6158ca556ae9c197b34c65a`,
+exige o conjunto exato de 160 nomes, recusa links simbólicos/reparse points e
+arquivos extras, confere tamanho e SHA-256 por streaming com proteção contra
+troca de arquivo e repete a enumeração ao final. A leitura integral dos
+139,5 GB pode demorar; o staging deve permanecer imutável até o consumo ou ser
+revalidado. O recibo determinístico omite caminho, host e horário para que duas
+árvores equivalentes produzam os mesmos bytes. O recibo
 `NEXO_DESI_LSS_SELECTION_MATERIALIZATION_RECEIPT_V1` mantém
 `work_ready=false`, `test_ready=false` e
-`scientific_result_eligible=false`: ele prova somente os bytes locais. O
-próximo consumidor é o construtor canônico de
+`scientific_result_eligible=false`: ele prova somente os bytes locais e resolve
+apenas `FULL_SELECTION_NOT_MATERIALIZED`. Quota de filesystem remoto pode
+divergir de `disk_usage`. O próximo consumidor é o construtor canônico de
 `NEXO_DESI_LSS_3D_PRODUCT_V1`, ainda dependente de parâmetros prospectivos
 congelados e dos seis papéis de proveniência.
