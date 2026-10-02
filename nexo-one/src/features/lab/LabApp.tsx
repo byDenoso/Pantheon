@@ -470,11 +470,11 @@ function Cycle({ lab, state }: { lab: Lab; state: SystemState }) {
   const values = STAGES.map(s => s.get(lab, state));
   const max = Math.max(1, ...values);
   const tests = [...lab.tests.values()];
-  const preparationBlocked = tests.some(t => t.readiness?.eligible === false);
-  const blockWithoutStage = tests.some(t => t.verdict === 'BLOCKED' && t.readiness?.eligible !== false);
+  const ineligiblePublished = tests.some(t => t.readiness?.eligible === false);
+  const blockWithoutStage = ineligiblePublished || tests.some(t => t.verdict === 'BLOCKED');
   const current = isPublishedFresh(state.generated_at);
   const flow = [
-    { label: 'PREPARO', text: preparationBlocked ? 'Pré-requisitos pendentes' : 'Entradas e receita', href: '#/evidencia?v=' + (preparationBlocked ? 'BLOCKED' : 'READY'), blocked: preparationBlocked },
+    { label: 'PREPARO', text: 'Entradas e receita', href: '#/evidencia?v=READY', blocked: false },
     { label: 'EXECUÇÃO', text: tests.some(t => t.status?.toUpperCase() === 'RUNNING') ? (current ? 'Execução registrada nesta leitura' : 'Execução registrada; leitura defasada') : 'Tentativa e artefatos verificáveis', href: '#/evidencia', blocked: false },
     { label: 'CONTESTAÇÃO', text: tests.some(t => t.verdict === 'REVIEW') ? 'Há resultados em revisão' : 'Revisão independente e controles', href: '#/evidencia?v=REVIEW', blocked: false },
     { label: 'CONSOLIDAÇÃO', text: 'Resultado, revisão e próximo passo', href: '#/evidencia', blocked: false },
@@ -489,10 +489,10 @@ function Cycle({ lab, state }: { lab: Lab; state: SystemState }) {
 
     <ol className="cycle-flow" aria-label="Fluxo do ciclo">
       {flow.map(stage => <li key={stage.label} className={stage.blocked ? 'is-blocked' : ''}><a href={stage.href}>
-        <strong>{stage.label}</strong><span>{stage.text}</span>{stage.blocked && <b>Bloqueio publicado no preparo</b>}
+        <strong>{stage.label}</strong><span>{stage.text}</span>
       </a></li>)}
     </ol>
-    {blockWithoutStage && <p className="hud-note">Há testes bloqueados, mas a etapa do bloqueio não foi publicada. <a href="#/evidencia?v=BLOCKED">Ver motivos</a></p>}
+    {blockWithoutStage && <p className="hud-note">Há bloqueios ou inelegibilidade registrados, mas a etapa do bloqueio não foi publicada. <a href="#/evidencia?v=BLOCKED">Ver motivos</a></p>}
     <details className="cycle-role-details"><summary>Papéis, atividade e distribuição dos itens</summary>
     <p className="hud-note">A atividade é registrada por papel. Operadores A/B/C compartilham EXECUTOR; Guardião e Revisor de PR compartilham GUARDIAO. Os sinais abaixo não comprovam uma execução individual de cada automação.</p>
     <Crew lab={lab} state={state} />

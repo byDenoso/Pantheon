@@ -68,8 +68,8 @@ try {
   await go('ciclo');
   await page.locator('.cycle-flow').waitFor();
   assert.deepEqual(await page.locator('.cycle-flow strong').allTextContents(), ['PREPARO','EXECUÇÃO','CONTESTAÇÃO','CONSOLIDAÇÃO']);
-  assert.equal(await page.locator('.cycle-flow .is-blocked').count(),1);
-  assert.match(await page.locator('.cycle-flow .is-blocked').innerText(), /PREPARO/);
+  assert.equal(await page.locator('.cycle-flow .is-blocked').count(),0, 'readiness=false alone does not establish the blocked cycle stage');
+  assert.match(await page.locator('.hud').innerText(), /etapa do bloqueio não foi publicada/);
   assert.equal(await page.locator('.cycle-role-details').getAttribute('open'),null);
   await page.locator('.cycle-role-details > summary').click();
   await page.locator('.crew').waitFor();
