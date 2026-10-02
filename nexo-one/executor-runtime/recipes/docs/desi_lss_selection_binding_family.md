@@ -41,13 +41,17 @@ The generator rejects either source unless its bytes match the pinned hashes.
 
 ## Production bindings
 
-`INPUTS_PATH` must contain two versioned HTTPS/SHA-256 bindings:
+`INPUTS_PATH` must contain exactly three versioned HTTPS/SHA-256 bindings:
 
 1. `desi_dr1_lss_selection_manifest`: the complete JSON manifest;
 2. `desi_dr1_lss_3d_map_product`: an NPZ with `delta`, `valid_mask`,
    `selection_stratum`, `radial_bin`, `angular_selection_bin`, and scalar UTF-8
    `metadata_json`. Every selection stratum must lie inside one radial and one
-   angular-selection bin; the recipe checks this before permutation.
+   angular-selection bin; the recipe checks this before permutation;
+3. `desi_dr1_lss_selection_materialization_receipt`: the small canonical JSON
+   receipt produced only after full local readback of all 160 source files. Its
+   binding `version` must be
+   `NEXO_DESI_LSS_SELECTION_MATERIALIZATION_RECEIPT_V1`.
 
 The product metadata schema is `NEXO_DESI_LSS_3D_PRODUCT_V1`. It must bind the
 source-manifest hash, grid shape, coordinate frame and distance cosmology, the
@@ -98,11 +102,20 @@ aplicado sob o recibo `OR-8c76795538f2dea31468fa5c4a818ad6`:
   `sha256:6ce284a355085679eb528517746b247fa2c48902c6158ca556ae9c197b34c65a`.
 
 O Executor exige recibo de preflight correspondente antes de preparar esta
-receita. O validador também exige seed inteira congelada e exatamente dois
-bindings HTTPS versionados: o manifesto com o hash acima e o produto
-`NEXO_DESI_LSS_3D_PRODUCT_V1`. Ele não escolhe uma seed nem inventa URL,
-versão ou SHA-256 do produto. Esses valores precisam vir do TEST/binding
-canônico pelo fluxo existente `WORK -> handoff privado -> NEXO_INBOX -> Writer`.
+receita. O catálogo também fixa a implementação aplicada em
+`5472cc7986929f33ca4bd19faeb227b3eb85280d`, blob Git
+`8ba7e8411bb752e34eea5dcb361727cf58df5547` e SHA-256
+`67920bbfe64c3dc38fa6211e6b3201091ac673d7e5234a97d13873ab2498f3fe`;
+o validador rejeita bytes diferentes. Ele exige ainda seed inteira congelada e
+exatamente três bindings HTTPS versionados: o manifesto com o hash acima, o
+produto `NEXO_DESI_LSS_3D_PRODUCT_V1` e o recibo de materialização. Antes de
+instalar dependências ou executar a receita, o workflow baixa apenas esse
+recibo pequeno, confere seu SHA-256, schema, identidade, os 160 registros,
+total de 139.526.840.064 bytes, índice de arquivos e flags fail-closed. O gate
+não baixa os dados DESI e preserva `t03_dispatch_ready=false` no próprio
+recibo. Ele não escolhe uma seed nem inventa URL, versão ou SHA-256 do produto
+ou do recibo. Esses valores precisam vir do TEST/binding canônico pelo fluxo
+existente `WORK -> handoff privado -> NEXO_INBOX -> Writer`.
 
 O `DATA_BINDING` público aplicado sob
 `OR-4f4e64f3d1e3ef631e003e6ffa6cc5a2` continua parcial: até existir produto
