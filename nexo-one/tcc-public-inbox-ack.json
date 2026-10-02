@@ -203,6 +203,7 @@
     "inbox/scheduled-guardiao-board-20261001t1608z.json": "8ecc04f1df7ef768a0f63bb61fc7e387b5cdbf8794eb43f79145ab4c06601b6b",
     "inbox/scheduled-guardiao-board-20261002t1415z.json": "9ec835dcb0e7fdc35942b450691ffcb119d1eb557da93587c2bd6ca030b9030a",
     "inbox/scheduled-guardiao-board-pr406-d145ab19.json": "f9eb067b775c163986755e1ad70af6f56ca6e327b7a7606f5bd71a00fcf40b6d",
+    "inbox/scheduled-guardiao-board-resolve-pr406-3ae1f154.json": "ceaf86cbe84db10c9bd6aa01aa07b7b7e0523f817c716ae7f1e2abfd7d3b8bce",
     "inbox/scheduled-guardiao-board-work-drift-20261001t0607z.json": "6a75ae2f461710636b0f85d6add2dfbb302f831273a2246f0e1e320a6062541f",
     "inbox/scheduled-guardiao-board-write-failure-20261001t0113z.json": "4330b178ad6b5d6ca71e3d49d5cfae811a791e764f9d4c9cb1e6d9c093dc4a47",
     "inbox/scheduled-guardiao-board-write-failure-20261001t0312z.json": "f9160e2d2f0d5a4d8dfffc028309af1fa4aeb09f516227f2f9008f249f74a9f3",
@@ -1915,6 +1916,34 @@
       ],
       "tower_revision": "sha256:1805709f23cdc79feacc4d383eb9d4a347ac46501d482a823416fa322706fda1"
     },
+    "inbox/scheduled-guardiao-board-resolve-pr406-3ae1f154.json": {
+      "fingerprint": "ceaf86cbe84db10c9bd6aa01aa07b7b7e0523f817c716ae7f1e2abfd7d3b8bce",
+      "observed_at": "2026-10-02T16:22:51Z",
+      "outcome": "APPLIED",
+      "receipt_ids": [
+        "OR-23d0c34641356873b46f9e61588500cc"
+      ],
+      "receipts": [
+        {
+          "contract": "OPERATION_RECEIPT_V1",
+          "effect_id": "envelope-4734ee204bab0c40e74a4582a03d7896",
+          "intent_id": "gateway:tcc-98e16d39380aec7bc2b80011afe9a61b",
+          "observed_at": "2026-10-02T16:22:33.325898Z",
+          "occurred_at": "2026-10-02T16:22:33.325880Z",
+          "outcome": "APPLIED",
+          "payload_sha256": "sha256:5fae4461b979d90c4908d0fd01d5a74f5dd9ef0127e04948e2bd163eec661282",
+          "reason_code": null,
+          "receipt_id": "OR-23d0c34641356873b46f9e61588500cc",
+          "result_revision": "sha256:0e295481980b130f4f0de26c06667e9559bd40521a4f8086cf80c5b282181e79",
+          "retry_condition": null,
+          "source_revision": "sha256:047749f8066138500457090d8103f4b255d2690ea8f4b5a20f9d5e4fa5b31edb",
+          "stage": "APPLIED",
+          "supersedes": null,
+          "visibility": "PUBLIC"
+        }
+      ],
+      "tower_revision": "sha256:5b8c56bb7408856e8a553f51de43956d02b86863907d0816c17f4cd6fc8734f2"
+    },
     "inbox/scheduled-guardiao-board-work-drift-20261001t0607z.json": {
       "applied_at": "2026-10-01T06:25:43Z",
       "fingerprint": "6a75ae2f461710636b0f85d6add2dfbb302f831273a2246f0e1e320a6062541f",
@@ -2352,8 +2381,8 @@
     },
     "inbox/scheduled-guardiao-recipe-review-pr406-3ae1f154.json": {
       "fingerprint": "0664d97f1ea72818614b95c4e0cea460a8460bf727076c35859f5cdd1a7cd154",
-      "observed_at": "2026-10-02T16:20:59Z",
-      "outcome": "APPLIED",
+      "observed_at": "2026-10-02T16:22:51Z",
+      "outcome": "ALREADY_APPLIED",
       "receipt_ids": [
         "OR-6df9f5169b184882edb36967a83c414a"
       ],
@@ -2362,9 +2391,9 @@
           "contract": "OPERATION_RECEIPT_V1",
           "effect_id": "envelope-9e407bdf9baa6767b2e711bbe0f78642",
           "intent_id": "gateway:tcc-06b71ece00c5fa3d18d9d62fc98a7d72",
-          "observed_at": "2026-10-02T16:20:30.927502Z",
+          "observed_at": "2026-10-02T16:22:33.340860Z",
           "occurred_at": "2026-10-02T16:20:30.927484Z",
-          "outcome": "APPLIED",
+          "outcome": "ALREADY_APPLIED",
           "payload_sha256": "sha256:3355bd9cf4ed4cb9928980b587cfabc593096e4ef0edadc4e12be52a791d6998",
           "reason_code": null,
           "receipt_id": "OR-6df9f5169b184882edb36967a83c414a",
@@ -2376,7 +2405,7 @@
           "visibility": "PUBLIC"
         }
       ],
-      "tower_revision": "sha256:c5c99d81986dd622c32998ef894abac7547a6a101ebdd0d7168eb81df3512fef"
+      "tower_revision": "sha256:5b8c56bb7408856e8a553f51de43956d02b86863907d0816c17f4cd6fc8734f2"
     },
     "inbox/scheduled-guardiao-recipe-review-pr406-d145ab19.json": {
       "fingerprint": "7a837409c035a5f78f8ded033ae5d47844649c29661c60e9a60e26d38aa5d5a5",
@@ -3778,8 +3807,8 @@
     },
     "inbox/scheduled-referee1-persist-20261002t1608z.json": {
       "fingerprint": "d0c0adf207b5cd28bbcea51553c3f077120ed5bd19c0293d58717a5befec4602",
-      "observed_at": "2026-10-02T16:20:59Z",
-      "outcome": "APPLIED",
+      "observed_at": "2026-10-02T16:22:51Z",
+      "outcome": "ALREADY_APPLIED",
       "receipt_ids": [
         "OR-2ada808a8b73ecff414fde933c296938"
       ],
@@ -3788,9 +3817,9 @@
           "contract": "OPERATION_RECEIPT_V1",
           "effect_id": "envelope-b7aef9a78359497e13ad70220f217e8c",
           "intent_id": "gateway:tcc-da4fb7811e9684cabb2a75064a2f16bc",
-          "observed_at": "2026-10-02T16:20:33.865445Z",
+          "observed_at": "2026-10-02T16:22:33.355201Z",
           "occurred_at": "2026-10-02T16:20:33.865427Z",
-          "outcome": "APPLIED",
+          "outcome": "ALREADY_APPLIED",
           "payload_sha256": "sha256:aca7ff249117a7b1edfbe3dfa3eb263ac95a3d0d409c153364230d6fecfbb8f7",
           "reason_code": null,
           "receipt_id": "OR-2ada808a8b73ecff414fde933c296938",
@@ -3802,7 +3831,7 @@
           "visibility": "PUBLIC"
         }
       ],
-      "tower_revision": "sha256:c5c99d81986dd622c32998ef894abac7547a6a101ebdd0d7168eb81df3512fef"
+      "tower_revision": "sha256:5b8c56bb7408856e8a553f51de43956d02b86863907d0816c17f4cd6fc8734f2"
     },
     "inbox/scheduled-referee1-recovery-state-20261001t201629z.json": {
       "applied_at": "2026-10-01T20:22:25Z",
