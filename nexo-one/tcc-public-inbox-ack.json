@@ -567,6 +567,7 @@
     "inbox/scheduled-referee1-dr1-07-20260930t180702z.json": "6a1ffb51aa6061f5b88194fbd30f9d692493a122b0496fa682fa6c148d27d19b",
     "inbox/scheduled-referee1-dr1-08-20260930t2309z.json": "dc5851f4ff195bb773109f9749e05ee0ce199a195bda8dc63bf8db98eb09b216",
     "inbox/scheduled-referee1-dr1-09-20260930t2309z.json": "b1031f1b79c211f9df7a862b35b85f0228c04262950e9e3516d819760bdc8f7f",
+    "inbox/scheduled-referee1-guardiao-cover-20261003t2213z.json": "d972ce4fbccb13748aa9e9d1dba2f58fbf2aeda7a063a3d9b1550696f36af7e5",
     "inbox/scheduled-referee1-h0v2-ack-20261001t201629z.json": "656df005a07fd6d83047be4f7247f2580ae159240c97e1c18694613260adb05c",
     "inbox/scheduled-referee1-meta-permutation-20260930t220501z.json": "3d7ac8d97ac7b32cc37f8606707178323b1bc457d21b7f291f05365c98f8b81d",
     "inbox/scheduled-referee1-persist-20261002t1608z.json": "d0c0adf207b5cd28bbcea51553c3f077120ed5bd19c0293d58717a5befec4602",
@@ -5106,6 +5107,34 @@
     "inbox/scheduled-referee1-dr1-09-20260930t2309z.json": {
       "fingerprint": "b1031f1b79c211f9df7a862b35b85f0228c04262950e9e3516d819760bdc8f7f",
       "source": "legacy-acked"
+    },
+    "inbox/scheduled-referee1-guardiao-cover-20261003t2213z.json": {
+      "fingerprint": "d972ce4fbccb13748aa9e9d1dba2f58fbf2aeda7a063a3d9b1550696f36af7e5",
+      "observed_at": "2026-10-03T22:18:59Z",
+      "outcome": "APPLIED",
+      "receipt_ids": [
+        "OR-5aea5fb5234161d40541363043c888cb"
+      ],
+      "receipts": [
+        {
+          "contract": "OPERATION_RECEIPT_V1",
+          "effect_id": "envelope-ad03c0aa1a3a21bc269b6b7f365143ff",
+          "intent_id": "gateway:tcc-a0f4fdff3bc1ee56efd91da6d0b47451",
+          "observed_at": "2026-10-03T22:18:42.912552Z",
+          "occurred_at": "2026-10-03T22:18:42.912534Z",
+          "outcome": "APPLIED",
+          "payload_sha256": "sha256:21ac7fa57543573492cbd2ccb3b2dd18282cedc6c88b46299bef3e79f6344c01",
+          "reason_code": null,
+          "receipt_id": "OR-5aea5fb5234161d40541363043c888cb",
+          "result_revision": "sha256:8bfb882c69e1ab409c37574cb585bc64d9e07b133a8953fee41ac132b862c277",
+          "retry_condition": null,
+          "source_revision": "sha256:047749f8066138500457090d8103f4b255d2690ea8f4b5a20f9d5e4fa5b31edb",
+          "stage": "APPLIED",
+          "supersedes": null,
+          "visibility": "PUBLIC"
+        }
+      ],
+      "tower_revision": "sha256:b0e29773edfd3074f7f9a1a0f668cc6e6146ebd28e190fe39ea025833a219c21"
     },
     "inbox/scheduled-referee1-h0v2-ack-20261001t201629z.json": {
       "fingerprint": "656df005a07fd6d83047be4f7247f2580ae159240c97e1c18694613260adb05c",
