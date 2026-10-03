@@ -1,6 +1,8 @@
 import {createMcpHandler,McpServer} from '@modelcontextprotocol/server';
 import * as z from 'zod/v4';
 import {executeMcpTool} from './tools.mjs';
+import {registerOperationalTools} from './operational-tools.mjs';
+import {operationalForRequest} from './operational-runtime.mjs';
 import {STYLE_POLICY,buildStyleInstruction,validateStyleText} from '../policy/style-policy.mjs';
 import {getPdfPolicy} from '../policy/pdf-reporting-policy.mjs';
 
@@ -72,7 +74,7 @@ const TOOL_DEFINITIONS=Object.freeze({
 });
 
 export const NEXO_MCP_TOOL_NAMES=Object.freeze(Object.keys(TOOL_DEFINITIONS));
-export const MCP_SERVER_INFO=Object.freeze({name:'nexo-science',version:'1.3.0',transport:'streamable-http',endpoint:'/api/mcp',mode:'read-only',access:'PUBLIC'});
+export const MCP_SERVER_INFO=Object.freeze({name:'nexo-science',version:'1.4.0',transport:'streamable-http',endpoint:'/api/mcp',mode:'read-only',access:'PUBLIC'});
 const category=name=>name.includes('policy')||name==='validate_style_text'?'policy':name==='get_operations'?'operations':name==='get_provenance'?'provenance':'science';
 export const MCP_TOOL_REGISTRY=Object.freeze(Object.fromEntries(NEXO_MCP_TOOL_NAMES.map(name=>[name,Object.freeze({
   name,...TOOL_DEFINITIONS[name],inputSchema:TOOL_DEFINITIONS[name].inputSchema.strict(),
@@ -130,7 +132,7 @@ export async function executeNexoMcpTool({readSnapshot},name,args={}){
   }
 }
 
-export function createNexoMcpServer({readSnapshot}){
+export function createNexoMcpServer({readSnapshot,operational=null}){
   if(typeof readSnapshot!=='function')throw new TypeError('MCP_READ_SNAPSHOT_REQUIRED');
   const server=new McpServer({name:MCP_SERVER_INFO.name,version:MCP_SERVER_INFO.version});
   for(const definition of publicTools()){
@@ -140,6 +142,7 @@ export function createNexoMcpServer({readSnapshot}){
       catch(error){return {...toolResult({error:errorCode(error)}),isError:true};}
     });
   }
+  if(operational)registerOperationalTools(server,{...operational,z});
   return server;
 }
 
@@ -155,6 +158,12 @@ export function createNexoMcpWebHandler({readSnapshot}){
           chunks.push(value);
         }
         request=new Request(request,{body:Buffer.concat(chunks)});
+      }
+      const operational=await operationalForRequest(request);
+      if(operational.principal){
+        const privateHandler=createMcpHandler(()=>createNexoMcpServer({readSnapshot,operational}),{responseMode:'json'});
+        try{return await privateHandler.fetch(request,options);}
+        finally{await privateHandler.close();}
       }
       return handler.fetch(request,options);
     }
