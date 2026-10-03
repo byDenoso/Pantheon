@@ -353,6 +353,7 @@
     "inbox/scheduled-learner-20261002t1925z-gz01-t03-recipe-bind-v2.json": "f5ca70c3106c4e685f9e3c6c6cd9dcd8da56ceb51d63a9f06af8cfa4f564864a",
     "inbox/scheduled-learner-20261002t1932z-gz01-t03-manifest-bind-v1.json": "f03eb5779e42e019130efe633aa083d5fab50867ffcb6b4239c85ecc869b701f",
     "inbox/scheduled-learner-20261002t2217z-resolve-executor-drift-v1.json": "9382288aa6ffaa7b9e01eadf1188719e3112f8a5af7663e92723755e30d12653",
+    "inbox/scheduled-learner-20261003t0212z-h0-board-cleanup-v2.json": "f8eb53b95cb3577ec593859eac2108e83b48723f37607df64260a38976e6fbc7",
     "inbox/scheduled-learner-20261003t0307z-h0lcdm006-source-recovery-v1.json": "2f3a5b19289d9a844b05b0142625114937b4267c2e979562f1605c045d41cca3",
     "inbox/scheduled-learner-261001-0309-r1-cut-desu3-rec.json": "d5247da1fe24b0fae0d3131878499bf55b9459a736e157792b6773f071dfa60d",
     "inbox/scheduled-learner-261001-0309-r1-lq-ppu3-rec.json": "d25256d416dbb6ca56587c6be37301b3a6b742680a79fbcda7b6fb93ad803dec",
@@ -2323,8 +2324,8 @@
     },
     "inbox/scheduled-guardiao-cover-referee1-20261003t0809z.json": {
       "fingerprint": "d872d626e57b1c4cbf45a6666cc7cf387200f910599c01956132d7c87f6d361f",
-      "observed_at": "2026-10-03T08:15:15Z",
-      "outcome": "APPLIED",
+      "observed_at": "2026-10-03T08:17:48Z",
+      "outcome": "ALREADY_APPLIED",
       "receipt_ids": [
         "OR-7f67441afd212989f4679ba6e5b2f79f"
       ],
@@ -2333,9 +2334,9 @@
           "contract": "OPERATION_RECEIPT_V1",
           "effect_id": "envelope-0f3e9c00cea8259af342da28e69509ea",
           "intent_id": "gateway:tcc-60731a0745ddf2ce7e3f70b38372cbbe",
-          "observed_at": "2026-10-03T08:15:01.606900Z",
+          "observed_at": "2026-10-03T08:17:24.047254Z",
           "occurred_at": "2026-10-03T08:15:01.606881Z",
-          "outcome": "APPLIED",
+          "outcome": "ALREADY_APPLIED",
           "payload_sha256": "sha256:cee96ede105623a23e9f37a70d8b31a2a1821750ad177e6dc64a2f6c0fc806d3",
           "reason_code": null,
           "receipt_id": "OR-7f67441afd212989f4679ba6e5b2f79f",
@@ -2347,7 +2348,7 @@
           "visibility": "PUBLIC"
         }
       ],
-      "tower_revision": "sha256:f46a15de2b7714c9eb1204daebe3a0d07b8bb95bcbb3e7513e56a2acc2dd1a5a"
+      "tower_revision": "sha256:3226fbf068128f1af1be7ada077c6bb3abb42a4ecbdc621f2e3548a560470527"
     },
     "inbox/scheduled-guardiao-fitness-190341.json": {
       "fingerprint": "d1b8b7d9f4152f3e903a5f95d67b9195a5cb4f50e28ac0231fc491d33365b337",
@@ -3544,6 +3545,34 @@
         }
       ],
       "tower_revision": "sha256:70d276de3d3eb464234dc2ce0116b1770076ec2665e3b13b5e7597a0edf6cf8e"
+    },
+    "inbox/scheduled-learner-20261003t0212z-h0-board-cleanup-v2.json": {
+      "fingerprint": "f8eb53b95cb3577ec593859eac2108e83b48723f37607df64260a38976e6fbc7",
+      "observed_at": "2026-10-03T08:17:48Z",
+      "outcome": "APPLIED",
+      "receipt_ids": [
+        "OR-76eeb0f63f987278eca4a149f7681eca"
+      ],
+      "receipts": [
+        {
+          "contract": "OPERATION_RECEIPT_V1",
+          "effect_id": "envelope-3224154dd3944af0a289637060ad891d",
+          "intent_id": "gateway:tcc-e0dc1c09363d17fcbf8b29f82d2072de",
+          "observed_at": "2026-10-03T08:17:27.073786Z",
+          "occurred_at": "2026-10-03T08:17:27.073766Z",
+          "outcome": "APPLIED",
+          "payload_sha256": "sha256:d84853cea62cf90e1134832824ea66a30dff2d75e73094f9cffe32be3a461aee",
+          "reason_code": null,
+          "receipt_id": "OR-76eeb0f63f987278eca4a149f7681eca",
+          "result_revision": "sha256:f8011d563623b9de720ba24d1ad1732e6e165929b8b6ba26ace093e20547a18c",
+          "retry_condition": null,
+          "source_revision": "sha256:047749f8066138500457090d8103f4b255d2690ea8f4b5a20f9d5e4fa5b31edb",
+          "stage": "APPLIED",
+          "supersedes": null,
+          "visibility": "PUBLIC"
+        }
+      ],
+      "tower_revision": "sha256:3226fbf068128f1af1be7ada077c6bb3abb42a4ecbdc621f2e3548a560470527"
     },
     "inbox/scheduled-learner-20261003t0307z-h0lcdm006-source-recovery-v1.json": {
       "fingerprint": "2f3a5b19289d9a844b05b0142625114937b4267c2e979562f1605c045d41cca3",
