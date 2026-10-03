@@ -37,9 +37,21 @@ jobs:
       - name: Test installed MCP SDK and existing project
         working-directory: nexo-one
         run: npm run check
-      - name: Commit generated source without a permanent assembly workflow
+      - name: Capture dependency audit and workflow diff for authorized publication
         run: |
-          git rm scripts/assemble_operational_release.py .github/workflows/nexo-operational-release-build.yml
-          git add nexo-one/server/mcp/server.mjs nexo-one/server/inbox-gateway.mjs .github/workflows/nexo-writer-robot.yml
+          mkdir -p release-evidence
+          (cd nexo-one && npm audit --json) > release-evidence/npm-audit.json || test -s release-evidence/npm-audit.json
+          git diff -- .github/workflows/nexo-writer-robot.yml > release-evidence/writer-workflow.patch
+          cp .github/workflows/nexo-writer-robot.yml release-evidence/nexo-writer-robot.yml
+      - uses: actions/upload-artifact@v4
+        with:
+          name: operational-release-evidence
+          path: release-evidence/
+          retention-days: 7
+          if-no-files-found: error
+      - name: Commit application source only with contents permission
+        run: |
+          git restore .github/workflows/nexo-writer-robot.yml
+          git add nexo-one/server/mcp/server.mjs nexo-one/server/inbox-gateway.mjs
           git -c user.name=nexo-release-builder -c user.email=nexo-release-builder@users.noreply.github.com commit -m "feat(nexo): integrate authenticated role runtime after installed SDK checks"
           git push origin HEAD:nexo/operational-mcp-production
