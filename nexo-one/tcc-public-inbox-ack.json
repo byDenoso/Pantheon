@@ -208,6 +208,7 @@
     "inbox/scheduled-guardiao-board-20261002t1415z.json": "9ec835dcb0e7fdc35942b450691ffcb119d1eb557da93587c2bd6ca030b9030a",
     "inbox/scheduled-guardiao-board-20261002t2211z.json": "b90e44af943e632561285a419571a1ef7c00b8c4d0616f673ff699b8a2771f21",
     "inbox/scheduled-guardiao-board-20261002t2225z.json": "07677e0d8981a8155585aed4a1404f267738c0d62848bdbc5e55945b7337fb3a",
+    "inbox/scheduled-guardiao-board-collision-20261003t0013z.json": "86a18690e34b220541a421e14ca51e469d01e051d79842e7e24e19b65d12a4ce",
     "inbox/scheduled-guardiao-board-pr406-d145ab19.json": "f9eb067b775c163986755e1ad70af6f56ca6e327b7a7606f5bd71a00fcf40b6d",
     "inbox/scheduled-guardiao-board-resolve-pr406-3ae1f154.json": "ceaf86cbe84db10c9bd6aa01aa07b7b7e0523f817c716ae7f1e2abfd7d3b8bce",
     "inbox/scheduled-guardiao-board-work-drift-20261001t0607z.json": "6a75ae2f461710636b0f85d6add2dfbb302f831273a2246f0e1e320a6062541f",
@@ -254,6 +255,7 @@
     "inbox/scheduled-guardiao-integrity-20261002t2211z.json": "f4a3496a3a1d810ac7d37b5d87e25a237b687c95a16735fb1ed36829928bc4a4",
     "inbox/scheduled-guardiao-integrity-20261002t2225z.json": "45f0703e8249c47531c241b56d3f20cd7050b88a867c19bd586f9bd2fca2b3c0",
     "inbox/scheduled-guardiao-integrity-20261002t2307z.json": "d2732ca87bfd7a1a8b9006f4e0c672a1c0b0ce9159d9ff882c965ad68acd733b",
+    "inbox/scheduled-guardiao-integrity-20261003t0013z.json": "896507ce91ec8fdb2be42ea24d3702e40a760fd61d33fbddbafe7814ab46d71f",
     "inbox/scheduled-guardiao-integrity-256956b433317ea8.json": "da73edbdb43a397cac4244eac89204363b8db3724890b273f95e0d7948273fed",
     "inbox/scheduled-guardiao-integrity-4eca6a809262f332.json": "d55e8cdac1b1b34239a374cd8dee447107385cf7523dda7a8534484d567f25b4",
     "inbox/scheduled-guardiao-integrity-843309583b848e26.json": "ef33415a5ff000ed8ed1b9f21e17f7d8e27c5608d5fcd8ff768aba6e64bd3bab",
@@ -2083,6 +2085,34 @@
       ],
       "tower_revision": "sha256:76f8b9efd3ca93a04b24fad992a3cff56ceccef328853ba3052fc83380598419"
     },
+    "inbox/scheduled-guardiao-board-collision-20261003t0013z.json": {
+      "fingerprint": "86a18690e34b220541a421e14ca51e469d01e051d79842e7e24e19b65d12a4ce",
+      "observed_at": "2026-10-03T00:15:53Z",
+      "outcome": "APPLIED",
+      "receipt_ids": [
+        "OR-678a2e76eea53fff3628cec20cd55416"
+      ],
+      "receipts": [
+        {
+          "contract": "OPERATION_RECEIPT_V1",
+          "effect_id": "envelope-5069fc913a42aca9c082303234e60f53",
+          "intent_id": "gateway:tcc-b7c27ad4095ce830ed2f10c9a67b6eef",
+          "observed_at": "2026-10-03T00:15:25.562939Z",
+          "occurred_at": "2026-10-03T00:15:25.562916Z",
+          "outcome": "APPLIED",
+          "payload_sha256": "sha256:f88a3b792a9cbc8ecd60e99c831aed7f57ccdd01da948503aa09eb927c87f834",
+          "reason_code": null,
+          "receipt_id": "OR-678a2e76eea53fff3628cec20cd55416",
+          "result_revision": "sha256:6dda58d064c38d5b39ea7d8340f9a56f11d10f3523955959019346bb565896b2",
+          "retry_condition": null,
+          "source_revision": "sha256:047749f8066138500457090d8103f4b255d2690ea8f4b5a20f9d5e4fa5b31edb",
+          "stage": "APPLIED",
+          "supersedes": null,
+          "visibility": "PUBLIC"
+        }
+      ],
+      "tower_revision": "sha256:868393c6ee3bd03e0e702db6986e912e2218474aa71f4609b562bb2723846745"
+    },
     "inbox/scheduled-guardiao-board-pr406-d145ab19.json": {
       "fingerprint": "f9eb067b775c163986755e1ad70af6f56ca6e327b7a7606f5bd71a00fcf40b6d",
       "observed_at": "2026-10-02T15:29:07Z",
@@ -2598,6 +2628,34 @@
         }
       ],
       "tower_revision": "sha256:344ab558460057d3daabd5314c419ef651ef1ff5b02ecd94edf924e04cdb85b3"
+    },
+    "inbox/scheduled-guardiao-integrity-20261003t0013z.json": {
+      "fingerprint": "896507ce91ec8fdb2be42ea24d3702e40a760fd61d33fbddbafe7814ab46d71f",
+      "observed_at": "2026-10-03T00:15:53Z",
+      "outcome": "APPLIED",
+      "receipt_ids": [
+        "OR-daf2c02500310fb13e7a0b9954dcfb8d"
+      ],
+      "receipts": [
+        {
+          "contract": "OPERATION_RECEIPT_V1",
+          "effect_id": "envelope-9fd302d0bc30b3995f6181f47f99ad9c",
+          "intent_id": "gateway:tcc-045ff2e86ed91ff13c46f42bdca6534d",
+          "observed_at": "2026-10-03T00:15:31.509682Z",
+          "occurred_at": "2026-10-03T00:15:31.509668Z",
+          "outcome": "APPLIED",
+          "payload_sha256": "sha256:e778d7922edddb0df65bc9b53951013396db336d44e00e4b6e0faffb69726699",
+          "reason_code": null,
+          "receipt_id": "OR-daf2c02500310fb13e7a0b9954dcfb8d",
+          "result_revision": "sha256:6dd3126f5f7c6295f24000836d6da09bdc2e303c04f7b0657fb8464670a26983",
+          "retry_condition": null,
+          "source_revision": "sha256:047749f8066138500457090d8103f4b255d2690ea8f4b5a20f9d5e4fa5b31edb",
+          "stage": "APPLIED",
+          "supersedes": null,
+          "visibility": "PUBLIC"
+        }
+      ],
+      "tower_revision": "sha256:868393c6ee3bd03e0e702db6986e912e2218474aa71f4609b562bb2723846745"
     },
     "inbox/scheduled-guardiao-integrity-256956b433317ea8.json": {
       "applied_at": "2026-09-30T23:44:02Z",
