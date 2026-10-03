@@ -117,3 +117,19 @@ export function roadmapTrail(tests: TestEntity[], frontier: string[] | null) {
   const accounted = new Set([...ahead, ...walked].map(test => test.id));
   return { ahead, walked, other: tests.filter(test => !accounted.has(test.id)) };
 }
+
+
+/** A shortened heading is a literal excerpt; the complete record stays available. */
+export function compactTitle(value: string, limit = 96): string {
+  const text = value.replace(/\s+/g, ' ').trim();
+  if (text.length <= limit) return text;
+  const prefix = text.slice(0, limit).replace(/\s+\S*$/, '');
+  return (prefix || text.slice(0, limit)) + '…';
+}
+
+/** Missing source data cannot be displayed as an empty READY queue. */
+export function hasPublishedTestCollection(state: unknown): boolean {
+  if (!state || typeof state !== 'object') return false;
+  const model = (state as { read_model?: { tests?: unknown } }).read_model;
+  return Boolean(model && model.tests && typeof model.tests === 'object' && !Array.isArray(model.tests));
+}

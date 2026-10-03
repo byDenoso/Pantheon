@@ -34,6 +34,16 @@ jobs:
         working-directory: nexo-one
         run: npm ci --no-audit --no-fund
 
+      - name: Reproduce Agora missing-source mismatch on reviewed baseline
+        working-directory: nexo-one
+        run: |
+          set -euo pipefail
+          baseline_dir="$RUNNER_TEMP/agora-source-reviewed-baseline"
+          git fetch --no-tags --depth=1 origin 2cabbea718960ad1dc72379fbb30ef1688372f01
+          git worktree add --detach "$baseline_dir" FETCH_HEAD
+          ln -s "$PWD/node_modules" "$baseline_dir/nexo-one/node_modules"
+          NEXO_REPRO_BASELINE_ROOT="$baseline_dir/nexo-one" node test/agora-missing-source-reproduction.mjs
+
       - name: Typecheck, Atlas production tests and build
         working-directory: nexo-one
         run: |
@@ -58,8 +68,10 @@ jobs:
             if curl --silent --fail http://127.0.0.1:4178/ > /dev/null; then break; fi
             sleep 1
           done
+          NEXO_BASE_URL=http://127.0.0.1:4178 node test/compact-reading.browser.mjs
           NEXO_BASE_URL=http://127.0.0.1:4178 node test/lab-cinematic-integrity.browser.mjs
           NEXO_BASE_URL=http://127.0.0.1:4178 node test/board-message.browser.mjs
+          NEXO_BASE_URL=http://127.0.0.1:4178 node test/reference-cyan.browser.mjs
           baseline_dir="$RUNNER_TEMP/atlas-crew-baseline"
           git fetch --no-tags --depth=1 origin 052fd7e3c1051b3542fd0dcf1be6fc54619e6f67
           git worktree add --detach "$baseline_dir" FETCH_HEAD
@@ -82,6 +94,9 @@ jobs:
           name: atlas-cinematic-visual-${{ github.event.pull_request.head.sha }}
           path: |
             nexo-one/test-output/cinematic/
+            nexo-one/test-output/agora-source/
+            nexo-one/test-output/reference-cyan/
+            nexo-one/test-output/compact-reading/
             nexo-one/test-output/board-message/
             nexo-one/test-output/crew-layout/
             nexo-one/test-output/crew-layout-baseline/

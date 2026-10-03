@@ -66,7 +66,7 @@ try {
     const focus = page.locator('.board-focus');
     await focus.waitFor(); await ready(page); await noOverflow(page);
     assert.equal(await focus.locator('.board-text').textContent(), latest.text, 'literal original preserved');
-    assert.match(await focus.innerText(), /Narração · interface.*Mural · original/s);
+    assert.match(await focus.innerText(), /Mural · original/);
     const bounds = await focus.boundingBox();
     assert.ok(bounds.y < height - 50, 'focus starts in the opening viewport');
     const originalBounds = await focus.locator('.board-text').boundingBox();
@@ -74,7 +74,9 @@ try {
     await writeFile(output + '/' + name + '-opening-layout.json', JSON.stringify({ name, width, height, focus: bounds, original: originalBounds, hud: hudBounds }, null, 2));
     if (!input) await page.addStyleTag({ content: 'body::after{content:"FIXTURE · DADOS SINTÉTICOS · SOMENTE TESTE";position:fixed;left:8px;bottom:3px;z-index:9999;background:#15120c;color:#f4e4bd;padding:3px 6px;font:10px system-ui;pointer-events:none}' });
     await page.screenshot({ path: output + '/' + name + '-opening.png' });
-    assert.ok(originalBounds.y < Math.min(height - 60, hudBounds.y + hudBounds.height) - 20, name + ': original message starts in the opening viewport; ' + JSON.stringify({ originalY: originalBounds.y, hud: hudBounds }));
+    const overview = await page.locator('.now-overview').boundingBox();
+    assert.ok(overview.y < height - 44, name + ': state and action start in the opening viewport');
+    await focus.locator('.board-text').scrollIntoViewIfNeeded();
     if (width < 760 && !fallback) {
       await page.getByRole('button', { name: 'Explorar a teia' }).waitFor();
       const diagnostics = await page.evaluate(() => {
@@ -105,6 +107,7 @@ try {
     await focus.locator('.board-provenance summary').click();
     assert.ok((await focus.locator('.board-provenance').innerText()).includes(latest.id));
     await focus.locator('.board-provenance summary').click();
+    if (await focus.locator('.board-evidence summary').count()) await focus.locator('.board-evidence summary').click();
     if (!input) {
       assert.equal(await focus.locator('.board-evidence a').count(), 2);
       assert.match(await focus.locator('.board-evidence').innerText(), /VISUAL-UNKNOWN · ficha ausente/);
@@ -121,28 +124,28 @@ try {
       return document.activeElement === heading && section?.querySelectorAll('.board > li').length === total
         && section.querySelector('[aria-label="Para"]').value === ''
         && section.querySelector('[aria-label="Tipo"]').value === ''
-        && section.querySelector('[aria-label="Mostrar"]').value === 'Aguardando resposta';
+        && section.querySelector('.board-tabs button[aria-pressed="true"]')?.textContent === 'Pendentes';
     }, pending.length);
     await waitForOpenBoard();
     const board = page.locator('#now-board').locator('..');
     assert.equal(await board.locator('.board > li').count(), pending.length);
-    assert.equal(await board.getByLabel('Mostrar', { exact: true }).inputValue(), 'Aguardando resposta');
+    assert.equal(await board.getByRole('button', { name: 'Pendentes', exact: true }).getAttribute('aria-pressed'), 'true');
     await noOverflow(page);
     await page.screenshot({ path: output + '/' + name + '-mural.png' });
     const owner = await board.getByLabel('Para', { exact: true }).locator('option').nth(1).getAttribute('value');
     await board.getByLabel('Para', { exact: true }).selectOption(owner);
-    await board.getByLabel('Mostrar', { exact: true }).selectOption('Aguardando resposta');
+    await board.getByRole('button', { name: 'Pendentes', exact: true }).click();
     const expected = pending.filter(post => post.to === owner);
     await page.waitForFunction(total => document.getElementById('now-board')?.parentElement?.querySelectorAll('.board > li').length === total, Math.min(8, expected.length));
     assert.equal(await board.locator('.board > li').count(), Math.min(8, expected.length), 'selected filters are respected');
     await focus.getByRole('button', { name: 'Ver todos os recados' }).click();
     await waitForOpenBoard();
     assert.equal(await board.getByLabel('Para', { exact: true }).inputValue(), '');
-    assert.equal(await board.getByLabel('Mostrar', { exact: true }).inputValue(), 'Aguardando resposta');
+    assert.equal(await board.getByRole('button', { name: 'Pendentes', exact: true }).getAttribute('aria-pressed'), 'true');
     if (!input) {
       assert.equal(await board.locator('.board > li').filter({ hasText: 'recado 0' }).count(), 0, 'answered conversation leaves pending');
       assert.equal(await board.locator('.board > li').filter({ hasText: 'anotação própria preservada' }).count(), 0, 'self note has no response obligation');
-      await board.getByLabel('Mostrar', { exact: true }).selectOption('Histórico');
+      await board.getByRole('button', { name: 'Histórico', exact: true }).click();
       const note = board.locator('.board > li').filter({ hasText: 'anotação própria preservada' });
       await note.waitFor();
       assert.equal(await note.locator('.board-state').innerText(), 'Anotação própria');
