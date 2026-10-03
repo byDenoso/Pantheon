@@ -221,6 +221,7 @@
     "inbox/scheduled-guardiao-board-write-failure-20261001t1303z.json": "01579a517dd9f8892fb1d8e35edd5e1990d2c594528deb0e1dc7080255f5e732",
     "inbox/scheduled-guardiao-cover-referee1-20261002t1004z.json": "70cd96e9c1634118643e2ea5d8cc0650510d1d7702ade0e627f0e07bd7c20152",
     "inbox/scheduled-guardiao-cover-referee1-20261002t2013z.json": "385592150a730f44207f7eec05c321e433d321212fca9466e253971770a075f8",
+    "inbox/scheduled-guardiao-cover-referee1-20261003t0809z.json": "d872d626e57b1c4cbf45a6666cc7cf387200f910599c01956132d7c87f6d361f",
     "inbox/scheduled-guardiao-fitness-190341.json": "d1b8b7d9f4152f3e903a5f95d67b9195a5cb4f50e28ac0231fc491d33365b337",
     "inbox/scheduled-guardiao-fitness-20260930t2109z.json": "a83dd89d8af54379bca56efa3ce99cd43ac1d8e59aef1a36eeefb52b032d3d48",
     "inbox/scheduled-guardiao-fitness-20261001t1608z.json": "d8dceebebd03a61fcd68e443618dd533d3f95d8e107279250c6efa7a1c727600",
@@ -2319,6 +2320,34 @@
         }
       ],
       "tower_revision": "sha256:b0952a937fac8a67dbed138a69858c0a53accce9b30ddc3e530f236798f889c3"
+    },
+    "inbox/scheduled-guardiao-cover-referee1-20261003t0809z.json": {
+      "fingerprint": "d872d626e57b1c4cbf45a6666cc7cf387200f910599c01956132d7c87f6d361f",
+      "observed_at": "2026-10-03T08:15:15Z",
+      "outcome": "APPLIED",
+      "receipt_ids": [
+        "OR-7f67441afd212989f4679ba6e5b2f79f"
+      ],
+      "receipts": [
+        {
+          "contract": "OPERATION_RECEIPT_V1",
+          "effect_id": "envelope-0f3e9c00cea8259af342da28e69509ea",
+          "intent_id": "gateway:tcc-60731a0745ddf2ce7e3f70b38372cbbe",
+          "observed_at": "2026-10-03T08:15:01.606900Z",
+          "occurred_at": "2026-10-03T08:15:01.606881Z",
+          "outcome": "APPLIED",
+          "payload_sha256": "sha256:cee96ede105623a23e9f37a70d8b31a2a1821750ad177e6dc64a2f6c0fc806d3",
+          "reason_code": null,
+          "receipt_id": "OR-7f67441afd212989f4679ba6e5b2f79f",
+          "result_revision": "sha256:6386b0ee1cefd12a7fd4c56c3f74a3bc5258ab014ed146097233b91877de6eac",
+          "retry_condition": null,
+          "source_revision": "sha256:047749f8066138500457090d8103f4b255d2690ea8f4b5a20f9d5e4fa5b31edb",
+          "stage": "APPLIED",
+          "supersedes": null,
+          "visibility": "PUBLIC"
+        }
+      ],
+      "tower_revision": "sha256:f46a15de2b7714c9eb1204daebe3a0d07b8bb95bcbb3e7513e56a2acc2dd1a5a"
     },
     "inbox/scheduled-guardiao-fitness-190341.json": {
       "fingerprint": "d1b8b7d9f4152f3e903a5f95d67b9195a5cb4f50e28ac0231fc491d33365b337",
