@@ -6,7 +6,7 @@ export async function operationalForRequest(request,env=process.env){
   const headers=Object.fromEntries(request.headers);
   if(!headers.host)headers.host=new URL(request.url).host;
   const nodeRequest={headers,method:request.method};
-  const principal=operationalPrincipal(request,env);
+  const principal=await operationalPrincipal(request,env);
   if(!principal)return {principal:null,service:null};
   const {googleToken}=await import('../adapters/google.mjs');
   const {GOOGLE_READ_SCOPES}=await import('../adapters/connect.mjs');

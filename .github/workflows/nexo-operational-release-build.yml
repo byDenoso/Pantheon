@@ -27,31 +27,33 @@ jobs:
           node-version: '24'
           cache: npm
           cache-dependency-path: nexo-one/package-lock.json
-      - name: Apply exact, reviewed source transformations
+      - name: Apply reviewed source wiring
         run: python scripts/assemble_operational_release.py
       - name: Verify Python entrypoint
         run: python -m py_compile scripts/nexo_operational_package.py
-      - name: Install locked project dependencies
+      - name: Fix compatible development dependency advisories without force
         working-directory: nexo-one
-        run: npm ci
+        run: |
+          npm install --save-dev --save-exact vite@8.3.2
+          npm audit fix --package-lock-only
+          npm ci
       - name: Test installed MCP SDK and existing project
         working-directory: nexo-one
         run: npm run check
-      - name: Capture dependency audit and workflow diff for authorized publication
+      - name: Capture tested source and audit
         run: |
           mkdir -p release-evidence
           (cd nexo-one && npm audit --json) > release-evidence/npm-audit.json || test -s release-evidence/npm-audit.json
-          git diff -- .github/workflows/nexo-writer-robot.yml > release-evidence/writer-workflow.patch
-          cp .github/workflows/nexo-writer-robot.yml release-evidence/nexo-writer-robot.yml
+          cp scripts/nexo_operational_package.py release-evidence/
+          cp nexo-one/server/inbox-gateway.mjs release-evidence/
       - uses: actions/upload-artifact@v4
         with:
-          name: operational-release-evidence
+          name: operational-release-final-evidence
           path: release-evidence/
           retention-days: 7
           if-no-files-found: error
-      - name: Commit application source only with contents permission
+      - name: Commit tested application source only
         run: |
-          git restore .github/workflows/nexo-writer-robot.yml
-          git add nexo-one/server/mcp/server.mjs nexo-one/server/inbox-gateway.mjs
-          git -c user.name=nexo-release-builder -c user.email=nexo-release-builder@users.noreply.github.com commit -m "feat(nexo): integrate authenticated role runtime after installed SDK checks"
+          git add nexo-one/server/inbox-gateway.mjs scripts/nexo_operational_package.py nexo-one/package.json nexo-one/package-lock.json
+          git -c user.name=nexo-release-builder -c user.email=nexo-release-builder@users.noreply.github.com commit -m "feat(nexo): reuse Writer OIDC and canonical operational configuration"
           git push origin HEAD:nexo/operational-mcp-production
