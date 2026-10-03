@@ -407,6 +407,7 @@
     "inbox/scheduled-opa-dr1-data-lya-low-des-u3-v1.json": "adb023015d06f941f66f83e14292c1b5cf1472dd27efc3268d6ddac90a8516dd",
     "inbox/scheduled-opa-dr1-recipe-groups-pp-des-u3-v1.json": "054df68531705646f163c1d26f1c853cdf2c14ffe392cdd20c09c229d16cb34c",
     "inbox/scheduled-opa-dr1-recipe-groups-pp-u3-v1.json": "ab3e912a175bb97f3f02d593a90cc9463c7f20f0956ac1eee5135cc3fce9add6",
+    "inbox/scheduled-opa-sntrio-provenance-20261003t1434z.json": "0b0b79b98911467cbaa26f000895edd39902fbc6c8ca25b0f6cb8f0becc6d9b2",
     "inbox/scheduled-operator-20260928-ready29-recipe-gaps-v1.json": "14ce73bcb4f1c664cf6f248c3eff53c63b279d0cfc06e1875e05112205344698",
     "inbox/scheduled-operator-20260929t0417z-blockers-v1.json": "64fbf5338c728cb47d193e46e23de91ce1a76549932508632a6bfdbcf5080a04",
     "inbox/scheduled-operator-20260929t0720z-bind-a.json": "8a335b9a48c978e2c343aa2cce408c1462f75d808d4d5852f894da8df36c5eaf",
@@ -3926,6 +3927,34 @@
       "applied_at": "2026-10-01T03:40:32Z",
       "fingerprint": "ab3e912a175bb97f3f02d593a90cc9463c7f20f0956ac1eee5135cc3fce9add6",
       "tower_revision": "sha256:8b2014717ec6d8719e2d4f35e01fcfc78709f538c92e7e1de556b4bc96c947e5"
+    },
+    "inbox/scheduled-opa-sntrio-provenance-20261003t1434z.json": {
+      "fingerprint": "0b0b79b98911467cbaa26f000895edd39902fbc6c8ca25b0f6cb8f0becc6d9b2",
+      "observed_at": "2026-10-03T14:42:19Z",
+      "outcome": "APPLIED",
+      "receipt_ids": [
+        "OR-6b9fd5ec7af9bbe07d5dd72522b7db7e"
+      ],
+      "receipts": [
+        {
+          "contract": "OPERATION_RECEIPT_V1",
+          "effect_id": "envelope-50a463a5e59548f25feae30a076a04ca",
+          "intent_id": "gateway:tcc-667d18aec62f3a45a3a3952641d0fec3",
+          "observed_at": "2026-10-03T14:41:56.095648Z",
+          "occurred_at": "2026-10-03T14:41:56.095633Z",
+          "outcome": "APPLIED",
+          "payload_sha256": "sha256:67855e92e4cd4880fbc17d94e22b33d92a0175d9ef75f72450c8f2c4989a1126",
+          "reason_code": null,
+          "receipt_id": "OR-6b9fd5ec7af9bbe07d5dd72522b7db7e",
+          "result_revision": "sha256:0912eb9cb4e43050aa97d74be8f80d6ebbb9a9df4f8404584ccbc4dedb470852",
+          "retry_condition": null,
+          "source_revision": "sha256:047749f8066138500457090d8103f4b255d2690ea8f4b5a20f9d5e4fa5b31edb",
+          "stage": "APPLIED",
+          "supersedes": null,
+          "visibility": "PUBLIC"
+        }
+      ],
+      "tower_revision": "sha256:872f1be68dbbef701d0076a9a8df6de667712840a36dc6485edd5d3737cc667b"
     },
     "inbox/scheduled-operator-20260928-ready29-recipe-gaps-v1.json": {
       "fingerprint": "14ce73bcb4f1c664cf6f248c3eff53c63b279d0cfc06e1875e05112205344698",
