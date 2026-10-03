@@ -103,10 +103,12 @@
     "inbox/scheduled-dener-union3-review-approved-20260929.json": "a82a5f081943819884ea37a931a23c9314b916ec77d386cff636c08e03f6ba20",
     "inbox/scheduled-engineer-20261002-rankscore-bindings-v2.json": "eb7e5970fc2d25a98d0fbaac0af45eb2c1af855681bcb27951afcaecd57f9df8",
     "inbox/scheduled-engineer-20261002-rankscore-bindings-v3.json": "c506880956039c6d4ae075b7e6ccb0e94f362bb9f407d40b7ace283c20579070",
+    "inbox/scheduled-engineer-board-backlog-20261003t0002z.json": "27fa45e5f3ca2906a1d536eb0c67118f9a8078845c59fc6c21695efe948ac99f",
     "inbox/scheduled-engineer-board-open-recipes-20260930t0146z.json": "5f5ff31641fbf6ea66b8f1c1b0ea265d954671ae8b14bccfa587610bdfdc7488",
     "inbox/scheduled-engineer-board-peer-escalation-20260930t0145z.json": "891fa05431af5e86f72195a0dce0eaac1f227a9d477d074e72f47c511b5239ed",
     "inbox/scheduled-engineer-delivery-recovered-20260930t1421z.json": "e93db28f0a0a8fa9dd857cc14c7d9f1a98168377883974fc43aa683120c5e709",
     "inbox/scheduled-engineer-growth-geometry-block-20260930t1703z.json": "1fbb6bd366889bd1f62fcc7cbe659704d43a644f849bd495b77e7cb63856b265",
+    "inbox/scheduled-engineer-guardian-terminal-current-20261003t0002z.json": "1b09e6a147cfd83ffc855d1513b43d9a2c80e3bfd5ca662e541af3d779b1189a",
     "inbox/scheduled-engineer-persistence-block-20261001t0004z.json": "de146df57885a037ff5d5cbd213fecee65be4c2dcf515d6059ce34e46227a6e5",
     "inbox/scheduled-engineer-persistence-retry-block-20261001t1813z.json": "11dd64f6a1d6fbcb2c9084a1790a8ba2095ac3f843868cb9bee11fa2b978fb17",
     "inbox/scheduled-engineer-pr378-readme-block-20260930t1703z.json": "cbaa98efd509898429c05dfcb09bacdd4b17ed0d3e58a1d6b58b51d936d9b67b",
@@ -1169,6 +1171,34 @@
       ],
       "tower_revision": "sha256:2189ac4934c4229e6491e774a042355857fd9ac010aee03fb374a127a89e69cc"
     },
+    "inbox/scheduled-engineer-board-backlog-20261003t0002z.json": {
+      "fingerprint": "27fa45e5f3ca2906a1d536eb0c67118f9a8078845c59fc6c21695efe948ac99f",
+      "observed_at": "2026-10-03T00:09:39Z",
+      "outcome": "APPLIED",
+      "receipt_ids": [
+        "OR-093bd0540896f36c26ab1dbf5ec3cdac"
+      ],
+      "receipts": [
+        {
+          "contract": "OPERATION_RECEIPT_V1",
+          "effect_id": "envelope-e66d3af239688a53e01a23bd9c3d21da",
+          "intent_id": "gateway:tcc-b9299e8706ff9d766790b6bf728c9d49",
+          "observed_at": "2026-10-03T00:09:13.114381Z",
+          "occurred_at": "2026-10-03T00:09:13.114364Z",
+          "outcome": "APPLIED",
+          "payload_sha256": "sha256:7aba4aaf0a29467da04a4e0bc989a2fb5a591b9793592832ce2c54b3a719a6b5",
+          "reason_code": null,
+          "receipt_id": "OR-093bd0540896f36c26ab1dbf5ec3cdac",
+          "result_revision": "sha256:06d85d1d994af065c383a0d526c65a6502db4a824b54faa4636a6c61e2621189",
+          "retry_condition": null,
+          "source_revision": "sha256:047749f8066138500457090d8103f4b255d2690ea8f4b5a20f9d5e4fa5b31edb",
+          "stage": "APPLIED",
+          "supersedes": null,
+          "visibility": "PUBLIC"
+        }
+      ],
+      "tower_revision": "sha256:c1959391b345be32b6f685a8e04958992cd9593fd91496692e58faf5c2233ae4"
+    },
     "inbox/scheduled-engineer-board-open-recipes-20260930t0146z.json": {
       "fingerprint": "5f5ff31641fbf6ea66b8f1c1b0ea265d954671ae8b14bccfa587610bdfdc7488",
       "source": "legacy-acked"
@@ -1184,6 +1214,34 @@
     "inbox/scheduled-engineer-growth-geometry-block-20260930t1703z.json": {
       "fingerprint": "1fbb6bd366889bd1f62fcc7cbe659704d43a644f849bd495b77e7cb63856b265",
       "source": "legacy-acked"
+    },
+    "inbox/scheduled-engineer-guardian-terminal-current-20261003t0002z.json": {
+      "fingerprint": "1b09e6a147cfd83ffc855d1513b43d9a2c80e3bfd5ca662e541af3d779b1189a",
+      "observed_at": "2026-10-03T00:09:39Z",
+      "outcome": "APPLIED",
+      "receipt_ids": [
+        "OR-1df9db44cf97a02632d7129c9e7c19d0"
+      ],
+      "receipts": [
+        {
+          "contract": "OPERATION_RECEIPT_V1",
+          "effect_id": "envelope-c9ca17dc6b0565d742a740a5b24f8762",
+          "intent_id": "gateway:tcc-4c23c48dc579703e2c843e2f46193d3e",
+          "observed_at": "2026-10-03T00:09:16.517999Z",
+          "occurred_at": "2026-10-03T00:09:16.517983Z",
+          "outcome": "APPLIED",
+          "payload_sha256": "sha256:25818150d69aab6b6039a147317c0343674dec22e807d0fb01957867602226a9",
+          "reason_code": null,
+          "receipt_id": "OR-1df9db44cf97a02632d7129c9e7c19d0",
+          "result_revision": "sha256:b00893d9bbba4624f8da949190c2ea01c07b792345c521324b121812079d2f2b",
+          "retry_condition": null,
+          "source_revision": "sha256:047749f8066138500457090d8103f4b255d2690ea8f4b5a20f9d5e4fa5b31edb",
+          "stage": "APPLIED",
+          "supersedes": null,
+          "visibility": "PUBLIC"
+        }
+      ],
+      "tower_revision": "sha256:c1959391b345be32b6f685a8e04958992cd9593fd91496692e58faf5c2233ae4"
     },
     "inbox/scheduled-engineer-persistence-block-20261001t0004z.json": {
       "applied_at": "2026-10-01T07:13:17Z",
@@ -1322,8 +1380,8 @@
     },
     "inbox/scheduled-engineer-terminal-phase-drift-20261002t1512z.json": {
       "fingerprint": "621901f2a14fc7e4afb0bd49ca00c9a1d882e0d696683a398e60230be8739956",
-      "observed_at": "2026-10-03T00:07:18Z",
-      "outcome": "APPLIED",
+      "observed_at": "2026-10-03T00:09:39Z",
+      "outcome": "ALREADY_APPLIED",
       "receipt_ids": [
         "OR-9c57095c7d757820c988273383abc4b0"
       ],
@@ -1332,9 +1390,9 @@
           "contract": "OPERATION_RECEIPT_V1",
           "effect_id": "envelope-ec212d9774dea86251d0da53c2a509c3",
           "intent_id": "gateway:tcc-8c4383a26207560408bfe775729d414f",
-          "observed_at": "2026-10-03T00:07:02.699110Z",
+          "observed_at": "2026-10-03T00:09:16.542824Z",
           "occurred_at": "2026-10-03T00:07:02.699091Z",
-          "outcome": "APPLIED",
+          "outcome": "ALREADY_APPLIED",
           "payload_sha256": "sha256:563910c16a414d3c58115db278b0f67351eb774764403146e6ff40afd0ed65d2",
           "reason_code": null,
           "receipt_id": "OR-9c57095c7d757820c988273383abc4b0",
@@ -1346,7 +1404,7 @@
           "visibility": "PUBLIC"
         }
       ],
-      "tower_revision": "sha256:46026b17ac35810da502055cdbf2bc42883663279c1a83420f45716f2c41f958"
+      "tower_revision": "sha256:c1959391b345be32b6f685a8e04958992cd9593fd91496692e58faf5c2233ae4"
     },
     "inbox/scheduled-executor-20260928-recipe-review-late-time-v1.json": {
       "fingerprint": "4c7ee0900b164f86373d8453403486c4f1e6649967367fce1428070bce72e222",
