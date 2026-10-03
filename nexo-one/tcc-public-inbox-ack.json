@@ -355,6 +355,7 @@
     "inbox/scheduled-learner-20261002t2217z-resolve-executor-drift-v1.json": "9382288aa6ffaa7b9e01eadf1188719e3112f8a5af7663e92723755e30d12653",
     "inbox/scheduled-learner-20261003t0212z-h0-board-cleanup-v2.json": "f8eb53b95cb3577ec593859eac2108e83b48723f37607df64260a38976e6fbc7",
     "inbox/scheduled-learner-20261003t0307z-h0lcdm006-source-recovery-v1.json": "2f3a5b19289d9a844b05b0142625114937b4267c2e979562f1605c045d41cca3",
+    "inbox/scheduled-learner-20261003t0923z-h0hom009-schema-recovery-v1.json": "64d05a6cc7edc968cbca09330e888b868e624fbe5b620a21fed75842fbce9344",
     "inbox/scheduled-learner-261001-0309-r1-cut-desu3-rec.json": "d5247da1fe24b0fae0d3131878499bf55b9459a736e157792b6773f071dfa60d",
     "inbox/scheduled-learner-261001-0309-r1-lq-ppu3-rec.json": "d25256d416dbb6ca56587c6be37301b3a6b742680a79fbcda7b6fb93ad803dec",
     "inbox/scheduled-learner-261001-0310-r1-cut-desu3-data.json": "1118f2f05fdd78cf30a6ad44e682429f8d1620f18f4f9b7a2b34547c2a048160",
@@ -3601,6 +3602,34 @@
         }
       ],
       "tower_revision": "sha256:a06c7887a0a4e1fafb1b3326e25abc2f10d0c6c7d082261f455754f88da550fb"
+    },
+    "inbox/scheduled-learner-20261003t0923z-h0hom009-schema-recovery-v1.json": {
+      "fingerprint": "64d05a6cc7edc968cbca09330e888b868e624fbe5b620a21fed75842fbce9344",
+      "observed_at": "2026-10-03T10:16:15Z",
+      "outcome": "APPLIED",
+      "receipt_ids": [
+        "OR-05f70a87be02170546ac6522c5feaa3b"
+      ],
+      "receipts": [
+        {
+          "contract": "OPERATION_RECEIPT_V1",
+          "effect_id": "envelope-c048240369cc4fc66893ad67c57d0f4f",
+          "intent_id": "gateway:tcc-b285eb2bb87be98d8d456cb3b60b500a",
+          "observed_at": "2026-10-03T10:15:58.269597Z",
+          "occurred_at": "2026-10-03T10:15:58.269579Z",
+          "outcome": "APPLIED",
+          "payload_sha256": "sha256:969f74d69cf9fc53aa48029564bda890dda6d28b8d559f646319af1e74ee2687",
+          "reason_code": null,
+          "receipt_id": "OR-05f70a87be02170546ac6522c5feaa3b",
+          "result_revision": "sha256:c0ce3494c3e01c977f9f8aa0b272be396c00cbc9020f4181854f812d2c6a9d4a",
+          "retry_condition": null,
+          "source_revision": "sha256:047749f8066138500457090d8103f4b255d2690ea8f4b5a20f9d5e4fa5b31edb",
+          "stage": "APPLIED",
+          "supersedes": null,
+          "visibility": "PUBLIC"
+        }
+      ],
+      "tower_revision": "sha256:4715eec3cc077766fd5a117243a174f85ab95b28f247082282c343ad3f50a38d"
     },
     "inbox/scheduled-learner-261001-0309-r1-cut-desu3-rec.json": {
       "applied_at": "2026-10-01T03:21:44Z",
