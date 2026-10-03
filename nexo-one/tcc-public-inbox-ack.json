@@ -2087,8 +2087,8 @@
     },
     "inbox/scheduled-guardiao-board-collision-20261003t0013z.json": {
       "fingerprint": "86a18690e34b220541a421e14ca51e469d01e051d79842e7e24e19b65d12a4ce",
-      "observed_at": "2026-10-03T00:15:53Z",
-      "outcome": "APPLIED",
+      "observed_at": "2026-10-03T00:16:56Z",
+      "outcome": "ALREADY_APPLIED",
       "receipt_ids": [
         "OR-678a2e76eea53fff3628cec20cd55416"
       ],
@@ -2097,9 +2097,9 @@
           "contract": "OPERATION_RECEIPT_V1",
           "effect_id": "envelope-5069fc913a42aca9c082303234e60f53",
           "intent_id": "gateway:tcc-b7c27ad4095ce830ed2f10c9a67b6eef",
-          "observed_at": "2026-10-03T00:15:25.562939Z",
+          "observed_at": "2026-10-03T00:16:40.664254Z",
           "occurred_at": "2026-10-03T00:15:25.562916Z",
-          "outcome": "APPLIED",
+          "outcome": "ALREADY_APPLIED",
           "payload_sha256": "sha256:f88a3b792a9cbc8ecd60e99c831aed7f57ccdd01da948503aa09eb927c87f834",
           "reason_code": null,
           "receipt_id": "OR-678a2e76eea53fff3628cec20cd55416",
@@ -2111,7 +2111,7 @@
           "visibility": "PUBLIC"
         }
       ],
-      "tower_revision": "sha256:868393c6ee3bd03e0e702db6986e912e2218474aa71f4609b562bb2723846745"
+      "tower_revision": null
     },
     "inbox/scheduled-guardiao-board-pr406-d145ab19.json": {
       "fingerprint": "f9eb067b775c163986755e1ad70af6f56ca6e327b7a7606f5bd71a00fcf40b6d",
@@ -2631,8 +2631,8 @@
     },
     "inbox/scheduled-guardiao-integrity-20261003t0013z.json": {
       "fingerprint": "896507ce91ec8fdb2be42ea24d3702e40a760fd61d33fbddbafe7814ab46d71f",
-      "observed_at": "2026-10-03T00:15:53Z",
-      "outcome": "APPLIED",
+      "observed_at": "2026-10-03T00:16:56Z",
+      "outcome": "ALREADY_APPLIED",
       "receipt_ids": [
         "OR-daf2c02500310fb13e7a0b9954dcfb8d"
       ],
@@ -2641,9 +2641,9 @@
           "contract": "OPERATION_RECEIPT_V1",
           "effect_id": "envelope-9fd302d0bc30b3995f6181f47f99ad9c",
           "intent_id": "gateway:tcc-045ff2e86ed91ff13c46f42bdca6534d",
-          "observed_at": "2026-10-03T00:15:31.509682Z",
+          "observed_at": "2026-10-03T00:16:40.683515Z",
           "occurred_at": "2026-10-03T00:15:31.509668Z",
-          "outcome": "APPLIED",
+          "outcome": "ALREADY_APPLIED",
           "payload_sha256": "sha256:e778d7922edddb0df65bc9b53951013396db336d44e00e4b6e0faffb69726699",
           "reason_code": null,
           "receipt_id": "OR-daf2c02500310fb13e7a0b9954dcfb8d",
@@ -2655,7 +2655,7 @@
           "visibility": "PUBLIC"
         }
       ],
-      "tower_revision": "sha256:868393c6ee3bd03e0e702db6986e912e2218474aa71f4609b562bb2723846745"
+      "tower_revision": null
     },
     "inbox/scheduled-guardiao-integrity-256956b433317ea8.json": {
       "applied_at": "2026-09-30T23:44:02Z",
