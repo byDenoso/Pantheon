@@ -426,6 +426,7 @@
     "inbox/scheduled-operator-b-20260930t0056z-tail-bindings.json": "08e1fd553d97ff858b5f28cc35b4a868d870a7960af1bd1480c33a853466a9f5",
     "inbox/scheduled-operator-b-20260930t0154z-pr364-check-blocker.json": "42ef1a1914b692368a9ccf5242ea4b0e253063a45eae611e516fbd4cfc2ff1cc",
     "inbox/scheduled-operator-b-20260930t0950z-backpressure-cleared.json": "c645854f140d9d27af4d3490ced37ae6a95a2b612539a8ac8a4b27083b924dca",
+    "inbox/scheduled-operator-b-board-20261003t1951z.json": "d66262014925ea373ca0fd0f7f6528b9d5cd0ccc9fc7f01eb25ed0144d72012a",
     "inbox/scheduled-operator-b-contest-union3-dup-20260930t2349z.json": "c01185951b9e32b58a91a09d0dcf8b607b9dfc3b6da9e2c8565cc951a4076d84",
     "inbox/scheduled-operator-b-pr364-open-20260930t1645z.json": "b4e59c3a826c0369cbd6a3ee85e8da85d69bd3a85723a988b0c2b8df6022fa60",
     "inbox/scheduled-operator-b-pr379-approved-20260930t1644z.json": "ea766a89dc4706d9519912dc902e78414156f5cc8f361f4ee0bee02ae6c292c8",
@@ -4028,6 +4029,34 @@
     "inbox/scheduled-operator-b-20260930t0950z-backpressure-cleared.json": {
       "fingerprint": "c645854f140d9d27af4d3490ced37ae6a95a2b612539a8ac8a4b27083b924dca",
       "source": "legacy-acked"
+    },
+    "inbox/scheduled-operator-b-board-20261003t1951z.json": {
+      "fingerprint": "d66262014925ea373ca0fd0f7f6528b9d5cd0ccc9fc7f01eb25ed0144d72012a",
+      "observed_at": "2026-10-03T19:54:19Z",
+      "outcome": "APPLIED",
+      "receipt_ids": [
+        "OR-eea95a41f8742cc6178cf0ff00679696"
+      ],
+      "receipts": [
+        {
+          "contract": "OPERATION_RECEIPT_V1",
+          "effect_id": "envelope-fc06499435089616f59f07bd95910330",
+          "intent_id": "gateway:tcc-f74439379ec46b605969529e68201191",
+          "observed_at": "2026-10-03T19:53:50.416612Z",
+          "occurred_at": "2026-10-03T19:53:50.416594Z",
+          "outcome": "APPLIED",
+          "payload_sha256": "sha256:63a79553a3f4ed27d50bc221193a71e719f027f04aa4597e2ddf04461d67f88c",
+          "reason_code": null,
+          "receipt_id": "OR-eea95a41f8742cc6178cf0ff00679696",
+          "result_revision": "sha256:6cdfbf2a732fa73e7c15542400df54fa667a57b9f94bf3a1e812485c5a90edfb",
+          "retry_condition": null,
+          "source_revision": "sha256:047749f8066138500457090d8103f4b255d2690ea8f4b5a20f9d5e4fa5b31edb",
+          "stage": "APPLIED",
+          "supersedes": null,
+          "visibility": "PUBLIC"
+        }
+      ],
+      "tower_revision": "sha256:91d3cc5f65e2fa9af35373439f15818fd158cbb6430fd93f45ea7a7f5ef3df45"
     },
     "inbox/scheduled-operator-b-contest-union3-dup-20260930t2349z.json": {
       "applied_at": "2026-10-01T15:08:34Z",
