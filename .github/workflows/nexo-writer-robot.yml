@@ -353,6 +353,8 @@ jobs:
         id: robot
         if: steps.cred.outputs.ok == 'true'
         env:
+          GH_TOKEN: ${{ github.token }}
+          NEXO_OPERATIONAL_READER_JSON: ${{ secrets.NEXO_DRIVE_READER_JSON }}
           GOOGLE_SERVICE_ACCOUNT_JSON: ${{ secrets.NEXO_DRIVE_WRITER_JSON }}
           NEXO_GATEWAY_ITEMS: /tmp/gateway.json
           NEXO_OPERATION_RECEIPTS_OUT: /tmp/operation-public-receipts.json

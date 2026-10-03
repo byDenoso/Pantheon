@@ -12,6 +12,7 @@
 import { createHash, createPublicKey, createVerify } from 'node:crypto';
 import { googleToken } from './adapters/google.mjs';
 import { GOOGLE_WRITE_SCOPES } from './adapters/connect.mjs';
+import { isOperationalEnvelope } from './mcp/operational-queue.mjs';
 
 const REPO = 'byDenoso/TCC', BRANCH = 'nexo-inbox', API = 'https://api.github.com';
 const GATE = new Set(['APPROVE_CHARTER', 'REJECT_CHARTER', 'CANONIZE', 'REJECT_CANARY']);
@@ -41,7 +42,7 @@ async function sheetJson(token,url,options={}) {
   return response.json();
 }
 
-async function readSpool(env,req) {
+export async function readSpool(env,req) {
   const requestOidc=req?.headers?.['x-vercel-oidc-token'];
   const scopedEnv=requestOidc&&!env.VERCEL_OIDC_TOKEN?{...env,VERCEL_OIDC_TOKEN:requestOidc}:env;
   const token=await googleToken(scopedEnv,undefined,{scopes:GOOGLE_WRITE_SCOPES.sheets});
@@ -66,7 +67,7 @@ async function readSpool(env,req) {
   return {token,spreadsheetId,title,rows,headerIndex,columns,partBase};
 }
 
-async function appendSpoolRow(spool,row) {
+export async function appendSpoolRow(spool,row) {
   const range=`${quoteSheet(spool.title)}!${SPOOL_SCAN}`;
   return sheetJson(spool.token,`${SHEETS_API}/${encodeURIComponent(spool.spreadsheetId)}/values/${encodeSheetRange(range)}:append?valueInputOption=RAW&insertDataOption=INSERT_ROWS`,{
     method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({majorDimension:'ROWS',values:[row]}),
@@ -82,7 +83,7 @@ async function clearSpoolRows(spool,rowNumbers) {
   });
 }
 
-function fullSpoolRow(spool,{stableId,envelope,role='ATLAS_GATEWAY'}) {
+export function fullSpoolRow(spool,{stableId,envelope,role='ATLAS_GATEWAY'}) {
   const width=Math.max(spool.partBase,spool.columns.envelope+1);
   const row=Array(width).fill('');
   row[spool.columns.stable]=stableId;
@@ -194,6 +195,7 @@ async function githubInboxRecord(token,id) {
 }
 
 function refusesGate(envelope) {
+  if(isOperationalEnvelope(envelope))return true;
   const items = envelope?.kind === 'BATCH' ? envelope?.payload?.items || [] : [envelope];
   return items.some(item => String(item?.kind || '').toUpperCase() === 'OPERATOR_INTENT'
     && GATE.has(String(item?.payload?.action || '').toUpperCase()));
@@ -290,7 +292,7 @@ async function githubKey(kid) {
   return jwk ? createPublicKey({ key: jwk, format: 'jwk' }) : null;
 }
 
-async function isRobot(req) {
+export async function isRobot(req) {
   const token = String(req.headers.authorization || '').replace(/^Bearer\s+/i, '');
   const [h, p, s] = token.split('.');
   if (!h || !p || !s) return false;
