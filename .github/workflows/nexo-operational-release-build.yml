@@ -1,0 +1,45 @@
+name: NEXO operational release assembly
+on:
+  push:
+    branches: [nexo/operational-mcp-production]
+    paths:
+      - 'scripts/assemble_operational_release.py'
+      - '.github/workflows/nexo-operational-release-build.yml'
+permissions:
+  contents: write
+concurrency:
+  group: nexo-operational-source-assembly
+  cancel-in-progress: false
+jobs:
+  assemble:
+    if: github.repository == 'byDenoso/Pantheon' && github.ref == 'refs/heads/nexo/operational-mcp-production'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: nexo/operational-mcp-production
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: nexo-one/package-lock.json
+      - name: Apply exact, reviewed source transformations
+        run: python scripts/assemble_operational_release.py
+      - name: Verify Python entrypoint
+        run: python -m py_compile scripts/nexo_operational_package.py
+      - name: Install locked project dependencies
+        working-directory: nexo-one
+        run: npm ci
+      - name: Test installed MCP SDK and existing project
+        working-directory: nexo-one
+        run: npm run check
+      - name: Commit generated source without a permanent assembly workflow
+        run: |
+          git rm scripts/assemble_operational_release.py .github/workflows/nexo-operational-release-build.yml
+          git add nexo-one/server/mcp/server.mjs nexo-one/server/inbox-gateway.mjs .github/workflows/nexo-writer-robot.yml
+          git -c user.name=nexo-release-builder -c user.email=nexo-release-builder@users.noreply.github.com commit -m "feat(nexo): integrate authenticated role runtime after installed SDK checks"
+          git push origin HEAD:nexo/operational-mcp-production
