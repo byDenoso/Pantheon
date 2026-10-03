@@ -155,11 +155,16 @@ const inferno = (t: number) => {
 /** Qualidade gráfica: alta (GPU dedicada / Apple M), média (Intel Iris / UHD / integradas), baixa (celular ou fraca).
  *  Pode ser forçada com localStorage 'nexo.quality' = high | medium | low. */
 export type Quality = 'high' | 'medium' | 'low';
-export function detectQuality(): Quality {
+export function requestedQuality(): Quality | null {
   try {
     const forced = localStorage.getItem('nexo.quality');
     if (forced === 'high' || forced === 'medium' || forced === 'low') return forced;
   } catch { /* sem armazenamento */ }
+  return null;
+}
+export function detectQuality(): Quality {
+  const requested = requestedQuality();
+  if (requested) return requested;
   if (window.matchMedia('(max-width: 760px)').matches || (navigator.hardwareConcurrency || 8) < 4) return 'low';
   let gpu = '';
   try {
@@ -234,13 +239,18 @@ export function ObservatoryScene({ tests, page, focusIds, onPick, onAvailability
     catch { el.dataset.fallback = 'true'; onAvailability?.(false); return; }
     delete el.dataset.fallback; onAvailability?.(true);
     const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    const mobile = window.matchMedia('(max-width: 760px)').matches;
+    const automaticQuality = requestedQuality() === null;
     let quality: Quality = detectQuality();
     const dens = DENSITY[quality];
     const dprFor = (q: Quality) => Math.min(window.devicePixelRatio || 1, q === 'high' ? 2 : q === 'medium' ? 1.5 : 1.25);
     let dpr = dprFor(quality);
     renderer.setPixelRatio(dpr);
-    el.dataset.quality = quality;
+    const publishQuality = () => {
+      el.dataset.quality = quality;
+      el.dataset.qualityMode = automaticQuality ? 'auto' : 'manual';
+      window.dispatchEvent(new Event('nexo:scene-quality'));
+    };
+    publishQuality();
     renderer.domElement.setAttribute('aria-hidden', 'true');
     el.appendChild(renderer.domElement);
     const scene = new Scene();
@@ -450,10 +460,10 @@ export function ObservatoryScene({ tests, page, focusIds, onPick, onAvailability
     // Guarda de fluidez: média de quadros ruim por ~3 s desce um nível (resolução e bloom), nunca sobe sozinho.
     let slowAcc = 0, slowN = 0;
     const degrade = () => {
-      if (quality === 'low') return;
+      if (!automaticQuality || quality === 'low') return;
       quality = quality === 'high' ? 'medium' : 'low';
       dpr = dprFor(quality); renderer.setPixelRatio(dpr); uniforms.pixelRatio.value = dpr;
-      el.dataset.quality = quality;
+      publishQuality();
       buildComposer(); resizeAll();
     };
 
@@ -576,20 +586,32 @@ export function ObservatoryScene({ tests, page, focusIds, onPick, onAvailability
     const FORM_S = 180; let cosmic = 0;
     const replay = () => { cosmic = 0; };
     window.addEventListener('nexo:replay-formation', replay);
-    const vis = () => { visible = document.visibilityState === 'visible'; };
+    const vis = () => {
+      visible = document.visibilityState === 'visible';
+      pacedAt = last = performance.now(); slowAcc = 0; slowN = 0;
+    };
     document.addEventListener('visibilitychange', vis);
+    // Opt-in browser measurement: real rendered frames, never an FPS estimate.
+    // CPU submission time is not GPU completion time; the probe states that boundary.
+    let measuring = false;
+    const measure = (event: Event) => { measuring = (event as CustomEvent).detail === true; };
+    window.addEventListener('nexo:measure-frames', measure);
     const frame = (now: number) => {
       raf = requestAnimationFrame(frame);
       if (!visible || contextLost) { pacedAt = last = now; slowAcc = 0; slowN = 0; return; }
       // A reading surface does not need 60 WebGL frames per second.
-      const frameBudget = 1000 / (reduced ? 15 : mobile || !exploreRef.current ? 30 : 60);
+      const targetFps = reduced ? 15 : !exploreRef.current ? 30 : 60;
+      const frameBudget = 1000 / targetFps;
       // Reading and orbiting have different targets; their quality samples cannot mix.
       if (frameBudget !== previousBudget) { previousBudget = frameBudget; pacedAt = last = now; slowAcc = 0; slowN = 0; }
       const elapsed = now - pacedAt;
       if (elapsed < frameBudget - 0.1) return;
       // Keep the fractional interval so refresh rates above the target do not lose frames.
       pacedAt += Math.max(1, Math.floor((elapsed + 0.1) / frameBudget)) * frameBudget;
-      const dt = Math.min(0.05, (now - last) / 1000); last = now;
+      const intervalMs = now - last;
+      const dt = Math.min(0.05, intervalMs / 1000); last = now;
+      const cpuStarted = measuring ? performance.now() : 0;
+      const renderedQuality = quality, renderedDpr = dpr;
       if (!reduced) uniforms.time.value += dt;
       // Relógio cósmico: a formação é visível — ~3 min do quase-uniforme até a teia madura
       // (aglomeração nos nós, vazios crescendo), depois segue bem devagar. "Rever formação" zera o relógio.
@@ -609,10 +631,12 @@ export function ObservatoryScene({ tests, page, focusIds, onPick, onAvailability
         look.z + Math.sin(cam.az) * Math.cos(cam.elev) * cam.dist);
       camera.lookAt(look);
       if (composer) composer.render(dt); else renderer.render(scene, camera);
+      const submittedAt = measuring ? performance.now() : 0;
       if (!reduced) {
-        slowAcc += dt; slowN += 1;
+        slowAcc += intervalMs / 1000; slowN += 1;
         if (slowAcc > 3) { if (slowAcc / slowN > Math.max(1 / 42, frameBudget / 1000 * 1.35)) degrade(); slowAcc = 0; slowN = 0; }
       }
+      const overlayStarted = measuring ? performance.now() : 0;
       const w = canvas.clientWidth, h = canvas.clientHeight;
       const placed: Array<[number, number, number]> = [];
       const place = (node: HTMLElement, x: number, y: number) => {
@@ -656,11 +680,20 @@ export function ObservatoryScene({ tests, page, focusIds, onPick, onAvailability
         node.style.opacity = off ? '0' : '1';
         if (!off) place(node, (proj.x * 0.5 + 0.5) * w, (-proj.y * 0.5 + 0.5) * h);
       });
+      if (measuring) window.dispatchEvent(new CustomEvent('nexo:frame', { detail: {
+        at: now, intervalMs, targetFps,
+        cpuSubmitMs: submittedAt - cpuStarted, overlayMs: performance.now() - overlayStarted,
+        quality: renderedQuality, qualityMode: automaticQuality ? 'auto' : 'manual', dpr: renderedDpr,
+        cpuTotalMs: performance.now() - cpuStarted,
+        exploring: exploreRef.current, interacting: Boolean(drag || pinch),
+        gpuDurationMs: null,
+      } }));
     };
     raf = requestAnimationFrame(frame);
 
     return () => {
       cancelAnimationFrame(raf); ro.disconnect();
+      window.removeEventListener('nexo:measure-frames', measure);
       window.removeEventListener('nexo:replay-formation', replay); document.removeEventListener('visibilitychange', vis);
       canvas.removeEventListener('pointerdown', down);
       window.removeEventListener('pointermove', move);

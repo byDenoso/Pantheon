@@ -142,6 +142,20 @@ try {
       }));
       await writeFile(output + '/' + name + '-camera-diagnostics.json', JSON.stringify(diagnostics, null, 2));
       await page.getByRole('button', { name: 'Explorar a teia' }).click();
+      // Real render instrumentation remains opt-in; reduced motion keeps its 15 FPS target.
+      await page.evaluate(() => {
+        window.__sceneFrameTargets = [];
+        window.__sceneFrameListener = event => window.__sceneFrameTargets.push(event.detail.targetFps);
+        window.addEventListener('nexo:frame', window.__sceneFrameListener);
+        window.dispatchEvent(new CustomEvent('nexo:measure-frames', { detail: true }));
+      });
+      await page.waitForFunction(() => window.__sceneFrameTargets.length > 1);
+      const targets = await page.evaluate(() => {
+        window.dispatchEvent(new CustomEvent('nexo:measure-frames', { detail: false }));
+        window.removeEventListener('nexo:frame', window.__sceneFrameListener);
+        return window.__sceneFrameTargets;
+      });
+      assert.ok(targets.every(target => target === (reduced ? 15 : 60)), 'explore target respects reduced motion on every viewport');
       const controls = page.getByRole('group', { name: /Câmera da teia/ });
       if (viewport.width < 760) {
         const bounds = await controls.boundingBox();
