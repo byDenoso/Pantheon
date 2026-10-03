@@ -554,6 +554,7 @@
     "inbox/scheduled-referee1-h0v2-ack-20261001t201629z.json": "656df005a07fd6d83047be4f7247f2580ae159240c97e1c18694613260adb05c",
     "inbox/scheduled-referee1-meta-permutation-20260930t220501z.json": "3d7ac8d97ac7b32cc37f8606707178323b1bc457d21b7f291f05365c98f8b81d",
     "inbox/scheduled-referee1-persist-20261002t1608z.json": "d0c0adf207b5cd28bbcea51553c3f077120ed5bd19c0293d58717a5befec4602",
+    "inbox/scheduled-referee1-persist-block-20261003t0011z.json": "022ed587a1a46968d4043dfc478d6d60fb6ba6c2813fa0ac30afae00a169edec",
     "inbox/scheduled-referee1-recovery-state-20261001t201629z.json": "7820078a88d8421c76585ec96dac9fe63b6729597a08991844a10e8b858513f7",
     "inbox/scheduled-referee1-recovery-update-20261001t1457z.json": "1e44b584baab7dba07200ccb7c641379860516e8fdb476462cad07c74153f2a1",
     "inbox/scheduled-referee1-release-check-a-20260929t1045z.json": "1f5ccbff1389c283f41a4c94e9ac77809a2c1c34027d57f5f3c63be5fb293fe1",
@@ -4702,6 +4703,34 @@
         }
       ],
       "tower_revision": "sha256:5b8c56bb7408856e8a553f51de43956d02b86863907d0816c17f4cd6fc8734f2"
+    },
+    "inbox/scheduled-referee1-persist-block-20261003t0011z.json": {
+      "fingerprint": "022ed587a1a46968d4043dfc478d6d60fb6ba6c2813fa0ac30afae00a169edec",
+      "observed_at": "2026-10-03T01:19:47Z",
+      "outcome": "APPLIED",
+      "receipt_ids": [
+        "OR-136ff62f9745473df8faf130b104732a"
+      ],
+      "receipts": [
+        {
+          "contract": "OPERATION_RECEIPT_V1",
+          "effect_id": "envelope-78af36be10885007032661c3a1dbdfb2",
+          "intent_id": "gateway:tcc-2fe7df18198efcc33782256eceaa56d2",
+          "observed_at": "2026-10-03T01:19:33.841495Z",
+          "occurred_at": "2026-10-03T01:19:33.841478Z",
+          "outcome": "APPLIED",
+          "payload_sha256": "sha256:0db940b9108290b388c03944385c27f323fb2f99a45faaf0e6faacfee12f8028",
+          "reason_code": null,
+          "receipt_id": "OR-136ff62f9745473df8faf130b104732a",
+          "result_revision": "sha256:117293e1ebeda7ec7143242a36a07c46fe62e81b09a3eccc61075c98038a8b38",
+          "retry_condition": null,
+          "source_revision": "sha256:047749f8066138500457090d8103f4b255d2690ea8f4b5a20f9d5e4fa5b31edb",
+          "stage": "APPLIED",
+          "supersedes": null,
+          "visibility": "PUBLIC"
+        }
+      ],
+      "tower_revision": "sha256:f844459cb13be493d8181d3cdeff40d57832740308326f3c436ab1ad8da0680d"
     },
     "inbox/scheduled-referee1-recovery-state-20261001t201629z.json": {
       "applied_at": "2026-10-01T20:22:25Z",
