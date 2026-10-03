@@ -1,6 +1,7 @@
 // Painel lateral de detalhe compartilhado (desktop: lateral; mobile: bottom sheet).
 import { useEffect, useRef, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
+import { restoreFocus, type FocusReturnTarget } from './focus-return.ts';
 import './DetailDrawer.css';
 
 export type DetailField = [label: string, value: ReactNode];
@@ -10,12 +11,25 @@ export function DetailDrawer(
   { kicker?: string; title: string; code?: string; fields: DetailField[]; children?: ReactNode; onClose: () => void },
 ) {
   const closeRef = useRef<HTMLButtonElement>(null);
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
   useEffect(() => {
+    const returnTarget = document.activeElement instanceof HTMLElement && document.activeElement !== document.body
+      ? document.activeElement as FocusReturnTarget
+      : null;
     closeRef.current?.focus();
-    const onKey = (event: KeyboardEvent) => { if (event.key === 'Escape') onClose(); };
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape') return;
+      event.preventDefault();
+      event.stopPropagation();
+      onCloseRef.current();
+    };
     window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [onClose]);
+    return () => {
+      window.removeEventListener('keydown', onKey);
+      restoreFocus(returnTarget);
+    };
+  }, []);
   const shown = fields.filter(([, value]) => value !== null && value !== undefined && value !== '' && value !== false);
   // Portal: main.workspace isola o contexto de empilhamento; o painel precisa ficar acima da navegação.
   return createPortal(
