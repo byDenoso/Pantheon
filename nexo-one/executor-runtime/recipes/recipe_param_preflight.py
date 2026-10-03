@@ -9,12 +9,192 @@ import json
 import math
 import re
 from pathlib import Path
+import urllib.parse
 
 CONTRACT = 'RECIPE_PARAM_PREFLIGHT_V1'
 
 
 def finite(value):
     return isinstance(value, (int, float)) and not isinstance(value, bool) and math.isfinite(value)
+
+
+def _validate_desi(manifest, params, inputs, reject, recipe_root):
+    identity = manifest.get('identity')
+    limits = manifest.get('limits')
+    statistic_contracts = manifest.get('statistics')
+    input_contract = manifest.get('inputs')
+    source_receipts = manifest.get('source_receipts')
+    implementation = manifest.get('implementation')
+    expected_implementation = {
+        'commit': '5472cc7986929f33ca4bd19faeb227b3eb85280d',
+        'blob_sha1': '8ba7e8411bb752e34eea5dcb361727cf58df5547',
+        'sha256': '67920bbfe64c3dc38fa6211e6b3201091ac673d7e5234a97d13873ab2498f3fe',
+    }
+    if implementation != expected_implementation:
+        raise ValueError('DESI applied recipe implementation pin is invalid')
+    recipe_path = Path(recipe_root) / 'desi_lss_selection_binding_family.py'
+    try:
+        actual_recipe_sha256 = hashlib.sha256(recipe_path.read_bytes()).hexdigest()
+    except OSError as error:
+        raise ValueError(f'cannot verify DESI applied recipe implementation: {error}') from error
+    if actual_recipe_sha256 != expected_implementation['sha256']:
+        raise ValueError('DESI recipe bytes differ from the applied implementation pin')
+    expected_receipts = {
+        'recipe_bind': {
+            'receipt_id': 'OR-8c76795538f2dea31468fa5c4a818ad6',
+            'outcome': 'APPLIED',
+            'occurred_at': '2026-10-02T19:28:53.411699Z',
+            'payload_sha256': 'sha256:50f9b12787adfbffd1fe10e16ea98f7a792a8711dbf97413c6a41a42dccb92ff',
+            'result_revision': 'sha256:9a3f391e1980c170e5bf23c2357ad5d10927595dc778444ca89f6c5728d955a5',
+        },
+        'data_binding': {
+            'receipt_id': 'OR-4f4e64f3d1e3ef631e003e6ffa6cc5a2',
+            'outcome': 'APPLIED',
+            'occurred_at': '2026-10-02T19:32:10.000657Z',
+            'payload_sha256': 'sha256:182d94e8c7e7d0593b7e63145ecf30a745cb1bff9bb9a1e55700920b8c3101a1',
+            'result_revision': 'sha256:c177cfbfed129c0b9515d4a92cd640d2da6119f94006b687f50f644e41e3a7f8',
+        },
+    }
+    if source_receipts != expected_receipts:
+        raise ValueError('DESI public receipt provenance is invalid')
+    expected_identity = {
+        'test_id': 'GZ01-B03-T03-WINDOW-ROTATION-NULL',
+        'prereg_hash': 'sha256:21d38d27b2ef12f17940fb9a01448c0ad3fe73950cb7e0352b1b0c11803b6069',
+        'mode': 'window_rotation_null',
+        'null_method': 'selection_stratified_permutation',
+        'criterion': {
+            'promote_p_emp_lte': 0.01,
+            'bh_q': 0.1,
+            'reject_all_p_emp_gte': 0.1,
+        },
+        'selection_manifest_sha256': '6ce284a355085679eb528517746b247fa2c48902c6158ca556ae9c197b34c65a',
+        'null_count': 199,
+        'statistics': [
+            {'name': 'max_abs_gaussian_smoothed_delta', 'sigma_cells': 0.32},
+        ],
+    }
+    if identity != expected_identity:
+        raise ValueError('DESI preflight identity differs from the recorded T03 contract')
+    if limits != {
+            'seed_min': 0,
+            'seed_max_exclusive': 2**63,
+    }:
+        raise ValueError('DESI preflight limits are invalid')
+    expected_statistics = {
+        'max_abs_gaussian_smoothed_delta': {
+            'fields': ['name', 'sigma_cells'],
+            'sigma_cells_gt': 0,
+            'sigma_cells_lte': 20,
+        },
+        'largest_abs_excursion_component': {
+            'fields': ['name', 'abs_delta_gte', 'connectivity'],
+            'abs_delta_gte_gt': 0,
+            'connectivity': [1, 2, 3],
+        },
+    }
+    if statistic_contracts != expected_statistics:
+        raise ValueError('DESI preflight statistic catalog is invalid')
+    expected_inputs = {
+        'required_names': [
+            'desi_dr1_lss_selection_manifest',
+            'desi_dr1_lss_3d_map_product',
+            'desi_dr1_lss_selection_materialization_receipt',
+        ],
+        'selection_manifest': {
+            'name': 'desi_dr1_lss_selection_manifest',
+            'sha256': expected_identity['selection_manifest_sha256'],
+            'schema': 'NEXO_DESI_LSS_SELECTION_MANIFEST_V1',
+        },
+        'product': {
+            'name': 'desi_dr1_lss_3d_map_product',
+            'schema': 'NEXO_DESI_LSS_3D_PRODUCT_V1',
+        },
+        'materialization_receipt': {
+            'name': 'desi_dr1_lss_selection_materialization_receipt',
+            'schema': 'NEXO_DESI_LSS_SELECTION_MATERIALIZATION_RECEIPT_V1',
+            'selection_manifest_sha256': expected_identity['selection_manifest_sha256'],
+            'file_count': 160,
+            'total_bytes': 139526840064,
+            'all_local_bytes_verified': True,
+        },
+    }
+    if input_contract != expected_inputs:
+        raise ValueError('DESI preflight input catalog is invalid')
+
+    if not isinstance(params, dict):
+        reject('RECIPE_PARAMS_INVALID', 'params must be an object')
+        return
+    allowed = {
+        'mode', 'test_id', 'prereg_hash', 'null_method', 'null_count',
+        'seed', 'statistics', 'criterion',
+    }
+    if set(params) - allowed:
+        reject('UNSUPPORTED_RECIPE_PARAMS', ', '.join(sorted(set(params) - allowed)))
+    if params.get('mode') != identity['mode']:
+        reject('UNSUPPORTED_RECIPE_MODE', str(params.get('mode')))
+    if (params.get('test_id') != identity['test_id']
+            or params.get('prereg_hash') != identity['prereg_hash']):
+        reject('TEST_CONTRACT_MISMATCH', 'test_id/prereg_hash differ from T03')
+    if params.get('null_method') != identity['null_method']:
+        reject('UNSUPPORTED_NULL_METHOD', str(params.get('null_method')))
+    if params.get('null_count') != identity['null_count']:
+        reject('FROZEN_NULL_COUNT_MISMATCH', 'null_count must equal the applied RECIPE_BIND value')
+    seed = params.get('seed')
+    if (isinstance(seed, bool) or not isinstance(seed, int)
+            or not limits['seed_min'] <= seed < limits['seed_max_exclusive']):
+        reject('FROZEN_SEED_REQUIRED', 'seed must be frozen in [0, 2^63)')
+    if params.get('criterion') != identity['criterion']:
+        reject('FROZEN_CRITERION_MISMATCH', 'criterion differs from the recorded thresholds')
+
+    statistics = params.get('statistics')
+    if statistics != identity['statistics']:
+        reject(
+            'FROZEN_STATISTICS_MISMATCH',
+            'statistics must equal the applied max_abs_gaussian_smoothed_delta/sigma_cells binding',
+        )
+    elif (not isinstance(statistics, list) or len(statistics) != 1
+            or not finite(statistics[0].get('sigma_cells'))):
+        reject('FROZEN_STATISTIC_INVALID', 'applied statistic is malformed')
+
+    required_names = set(input_contract['required_names'])
+    actual = {}
+    if isinstance(inputs, list):
+        for item in inputs:
+            if not isinstance(item, dict):
+                reject('INPUT_RECIPE_MANIFEST_MISMATCH', 'input bindings must be objects')
+                break
+            name = item.get('name')
+            if not isinstance(name, str) or name in actual:
+                reject('INPUT_RECIPE_MANIFEST_MISMATCH', 'input names must be unique strings')
+                continue
+            url = item.get('url')
+            try:
+                parsed = urllib.parse.urlsplit(url) if isinstance(url, str) else None
+            except ValueError:
+                parsed = None
+            sha256 = item.get('sha256')
+            version = item.get('version')
+            if (parsed is None or parsed.scheme != 'https' or not parsed.netloc
+                    or parsed.username or parsed.password or parsed.query or parsed.fragment
+                    or not isinstance(version, str) or not version.strip()
+                    or not isinstance(sha256, str)
+                    or re.fullmatch(r'[0-9a-f]{64}', sha256) is None):
+                reject('INPUT_RECIPE_MANIFEST_MISMATCH', f'invalid frozen binding: {name}')
+            actual[name] = item
+    else:
+        reject('INPUT_RECIPE_MANIFEST_MISMATCH', 'input bindings must be a list')
+    if len(actual) != len(required_names) or set(actual) != required_names:
+        reject('INPUT_RECIPE_MANIFEST_MISMATCH', 'exactly the three DESI production bindings are required')
+    selection = actual.get(input_contract['selection_manifest']['name'])
+    if selection is not None and selection.get('sha256') != identity['selection_manifest_sha256']:
+        reject('INPUT_RECIPE_MANIFEST_MISMATCH', 'selection-manifest SHA256 differs from the frozen bytes')
+    receipt_contract = input_contract['materialization_receipt']
+    receipt = actual.get(receipt_contract['name'])
+    if receipt is not None and receipt.get('version') != receipt_contract['schema']:
+        reject(
+            'INPUT_RECIPE_MANIFEST_MISMATCH',
+            'materialization receipt must bind the canonical receipt schema as its version',
+        )
 
 
 def validate_params(recipe, params, inputs, recipe_root):
@@ -39,6 +219,14 @@ def validate_params(recipe, params, inputs, recipe_root):
     result['manifest_sha256'] = hashlib.sha256(raw).hexdigest()
     try:
         manifest = json.loads(raw)
+        if recipe == 'desi_lss_selection_binding_family':
+            if (manifest['contract'] != CONTRACT or manifest['recipe'] != recipe
+                    or manifest['validator'] != 'desi_lss_selection_binding_family_v1'):
+                raise ValueError('unsupported DESI manifest contract or validator')
+            _validate_desi(manifest, params, inputs, reject, recipe_root)
+            result['reasons'] = sorted(set(result['reasons']))
+            result['eligible'] = not result['reasons']
+            return result
         if (manifest['contract'] != CONTRACT or manifest['recipe'] != recipe
                 or manifest['validator'] != 'w0wa_bao_sn_multi_v1'
                 or recipe != 'w0wa_bao_sn_multi'):

@@ -4,10 +4,12 @@
 `GZ01-B03-T03-WINDOW-ROTATION-NULL`, under recovery work
 `WORK::RECOVERY-9ec8d79f540e5103bc62321946a2c4c8`.
 
-It does **not** make the test READY. The recorded preregistration fixes the
-null count and decision thresholds, but it does not materialize the 3D product
-or name the extreme statistic. Production dispatch must supply both without
-retrofitting them after seeing a result.
+It does **not** make the test READY. The public RECIPE_BIND applied at
+2026-10-02T19:28:53Z fixes 199 nulls, the selection-stratified permutation,
+`max_abs_gaussian_smoothed_delta` and `sigma_cells=0.32`, while preserving
+the recorded decision thresholds. It still does not materialize the 3D product
+or publish a production seed. Dispatch must receive those missing bindings
+without retrofitting them after seeing a result.
 
 ## Frozen source selection
 
@@ -39,13 +41,17 @@ The generator rejects either source unless its bytes match the pinned hashes.
 
 ## Production bindings
 
-`INPUTS_PATH` must contain two versioned HTTPS/SHA-256 bindings:
+`INPUTS_PATH` must contain exactly three versioned HTTPS/SHA-256 bindings:
 
 1. `desi_dr1_lss_selection_manifest`: the complete JSON manifest;
 2. `desi_dr1_lss_3d_map_product`: an NPZ with `delta`, `valid_mask`,
    `selection_stratum`, `radial_bin`, `angular_selection_bin`, and scalar UTF-8
    `metadata_json`. Every selection stratum must lie inside one radial and one
-   angular-selection bin; the recipe checks this before permutation.
+   angular-selection bin; the recipe checks this before permutation;
+3. `desi_dr1_lss_selection_materialization_receipt`: the small canonical JSON
+   receipt produced only after full local readback of all 160 source files. Its
+   binding `version` must be
+   `NEXO_DESI_LSS_SELECTION_MATERIALIZATION_RECEIPT_V1`.
 
 The product metadata schema is `NEXO_DESI_LSS_3D_PRODUCT_V1`. It must bind the
 source-manifest hash, grid shape, coordinate frame and distance cosmology, the
@@ -58,19 +64,21 @@ positive three-axis `cell_size`, and assignment method. Masks must be boolean;
 strata and radial/angular bins must be integer arrays. Implicit dtype conversion
 is rejected, and every selection stratum needs at least two cells.
 
-The recipe currently supports two candidate extreme statistics:
+The recipe implements two supported extreme-statistic forms:
 
-- `max_abs_gaussian_smoothed_delta`, with frozen `sigma_cells`;
-- `largest_abs_excursion_component`, with frozen `abs_delta_gte` and
+- `max_abs_gaussian_smoothed_delta`, with `sigma_cells`;
+- `largest_abs_excursion_component`, with `abs_delta_gte` and
   3D connectivity.
 
-The binding owner must select and freeze one or more before dispatch. The
-recipe will not select a statistic, seed, smoothing scale, threshold or product
-construction after a result is visible.
+The applied binding selects only
+`max_abs_gaussian_smoothed_delta(sigma_cells=0.32)`; the component statistic
+remains implementation support, not an active T03 choice. The recipe and
+preflight will not select a seed, different statistic, smoothing scale,
+threshold or product construction after a result is visible.
 
 The null method is `selection_stratified_permutation`: values are permuted only
 within the product's frozen selection strata while the footprint remains fixed.
-At least 100 nulls are required. The recorded decision contract is unchanged:
+The applied binding uses exactly 199 nulls. The recorded decision contract is unchanged:
 
 - PROMOTED when at least one `p_emp <= 0.01` also survives BH q=0.1;
 - REJECTED when all empirical p-values are at least 0.1;
@@ -79,8 +87,98 @@ At least 100 nulls are required. The recorded decision contract is unchanged:
 Missing, unversioned or hash-mismatched inputs cause a nonzero operational
 failure (`INPUT_OR_FIT_UNAVAILABLE`), never a scientific INCONCLUSIVE.
 
+## Preflight canônico de parâmetros
+
+O catálogo `preflight/desi_lss_selection_binding_family.json` adere a
+`RECIPE_PARAM_PREFLIGHT_V1` e fixa os campos públicos do `RECIPE_BIND`
+aplicado sob o recibo `OR-8c76795538f2dea31468fa5c4a818ad6`:
+
+- `null_count=199`;
+- `null_method=selection_stratified_permutation`;
+- `max_abs_gaussian_smoothed_delta` com `sigma_cells=0.32`;
+- os critérios já registrados `p_emp<=0.01`, BH `q=0.1` e
+  rejeição quando todos `p_emp>=0.1`;
+- manifesto de seleção
+  `sha256:6ce284a355085679eb528517746b247fa2c48902c6158ca556ae9c197b34c65a`.
+
+O Executor exige recibo de preflight correspondente antes de preparar esta
+receita. O catálogo também fixa a implementação aplicada em
+`5472cc7986929f33ca4bd19faeb227b3eb85280d`, blob Git
+`8ba7e8411bb752e34eea5dcb361727cf58df5547` e SHA-256
+`67920bbfe64c3dc38fa6211e6b3201091ac673d7e5234a97d13873ab2498f3fe`;
+o validador rejeita bytes diferentes. Ele exige ainda seed inteira congelada e
+exatamente três bindings HTTPS versionados: o manifesto com o hash acima, o
+produto `NEXO_DESI_LSS_3D_PRODUCT_V1` e o recibo de materialização. Antes de
+instalar dependências ou executar a receita, o workflow baixa apenas esse
+recibo pequeno, confere seu SHA-256, schema, identidade, os 160 registros,
+total de 139.526.840.064 bytes, índice de arquivos e flags fail-closed. O gate
+não baixa os dados DESI e preserva `t03_dispatch_ready=false` no próprio
+recibo. Ele não escolhe uma seed nem inventa URL, versão ou SHA-256 do produto
+ou do recibo. Esses valores precisam vir do TEST/binding canônico pelo fluxo
+existente `WORK -> handoff privado -> NEXO_INBOX -> Writer`.
+
+O `DATA_BINDING` público aplicado sob
+`OR-4f4e64f3d1e3ef631e003e6ffa6cc5a2` continua parcial: até existir produto
+3D real e o recibo de materialização dos 160 arquivos, o preflight permanece
+inelegível para despacho científico e não torna T03 READY.
+
 ## Smoke scope
 
 `mode=provenance_smoke` verifies the official checksum list and one official
 n(z) file. It is forbidden when `NEXO_REQUIRE_FROZEN_INPUTS=1`, returns
 `PROVENANCE_SMOKE_ONLY`, and is not eligible as a T03 result.
+
+
+## Preflight de staging para o Operador
+
+O utilitário `scripts/verify_desi_dr1_lss_materialization.py` trabalha somente
+com arquivos locais. Ele não abre rede, não baixa os 139.526.840.064 bytes e
+não emite veredito científico.
+
+Antes de qualquer download, gere o plano conservador de espaço e a lista
+determinística das 160 URLs oficiais. O recibo e a lista precisam ficar fora
+do diretório exato de staging:
+
+```text
+python scripts/verify_desi_dr1_lss_materialization.py plan \
+  --manifest nexo-one/executor-runtime/recipes/manifests/desi_dr1_lss_iron_lsscats_v1.5_t01_selection.json \
+  --staging-root <STAGING_ROOT>/desi-dr1-iron-lsscats-v1.5 \
+  --receipt <OPERATOR_RECEIPTS>/desi-dr1-staging-plan.json \
+  --url-list <OPERATOR_PLANS>/desi-dr1-v1.5.urls \
+  --free-space-multiplier 1.10
+```
+
+`plan` exige por padrão espaço livre equivalente a 110% do volume integral
+(153.479.524.071 bytes), sem dar crédito a arquivos ainda não verificados.
+Código de saída 3 significa armazenamento insuficiente; código 1 significa
+falha operacional de contrato; código 2 permanece reservado para uso inválido
+da CLI.
+
+Depois que o Operador materializar os bytes por sua capacidade aprovada, faça
+a releitura completa:
+
+```text
+python scripts/verify_desi_dr1_lss_materialization.py verify \
+  --manifest nexo-one/executor-runtime/recipes/manifests/desi_dr1_lss_iron_lsscats_v1.5_t01_selection.json \
+  --staging-root <STAGING_ROOT>/desi-dr1-iron-lsscats-v1.5 \
+  --receipt <OPERATOR_RECEIPTS>/desi-dr1-staging-verified.json
+```
+
+`verify` fixa também o SHA-256 integral do manifesto em
+`6ce284a355085679eb528517746b247fa2c48902c6158ca556ae9c197b34c65a`,
+exige o conjunto exato de 160 nomes, recusa links simbólicos/reparse points e
+arquivos extras, confere tamanho e SHA-256 por streaming com proteção contra
+troca de arquivo e repete a enumeração ao final. A leitura integral dos
+139,5 GB pode demorar; o staging deve permanecer imutável até o consumo ou ser
+revalidado. O recibo determinístico omite caminho, host e horário para que duas
+árvores equivalentes produzam os mesmos bytes. Recibo e lista de URLs são
+publicados a partir de temporário completo por hard-link atômico exclusivo:
+concorrentes idênticos convergem e conteúdo diferente nunca sobrescreve o
+vencedor. Filesystem sem suporte a hard-link falha fechado. O recibo
+`NEXO_DESI_LSS_SELECTION_MATERIALIZATION_RECEIPT_V1` mantém
+`work_ready=false`, `test_ready=false` e
+`scientific_result_eligible=false`: ele prova somente os bytes locais e resolve
+apenas `FULL_SELECTION_NOT_MATERIALIZED`. Quota de filesystem remoto pode
+divergir de `disk_usage`. O próximo consumidor é o construtor canônico de
+`NEXO_DESI_LSS_3D_PRODUCT_V1`, uma seed de produção oriunda do binding
+canônico, cosmologia/voxelização do produto e os seis papéis de proveniência.

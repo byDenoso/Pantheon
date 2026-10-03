@@ -1,0 +1,96 @@
+{
+  "contract": "RECIPE_PARAM_PREFLIGHT_V1",
+  "recipe": "desi_lss_selection_binding_family",
+  "validator": "desi_lss_selection_binding_family_v1",
+  "identity": {
+    "test_id": "GZ01-B03-T03-WINDOW-ROTATION-NULL",
+    "prereg_hash": "sha256:21d38d27b2ef12f17940fb9a01448c0ad3fe73950cb7e0352b1b0c11803b6069",
+    "mode": "window_rotation_null",
+    "null_method": "selection_stratified_permutation",
+    "criterion": {
+      "promote_p_emp_lte": 0.01,
+      "bh_q": 0.1,
+      "reject_all_p_emp_gte": 0.1
+    },
+    "selection_manifest_sha256": "6ce284a355085679eb528517746b247fa2c48902c6158ca556ae9c197b34c65a",
+    "null_count": 199,
+    "statistics": [
+      {
+        "name": "max_abs_gaussian_smoothed_delta",
+        "sigma_cells": 0.32
+      }
+    ]
+  },
+  "limits": {
+    "seed_min": 0,
+    "seed_max_exclusive": 9223372036854775808
+  },
+  "statistics": {
+    "max_abs_gaussian_smoothed_delta": {
+      "fields": [
+        "name",
+        "sigma_cells"
+      ],
+      "sigma_cells_gt": 0,
+      "sigma_cells_lte": 20
+    },
+    "largest_abs_excursion_component": {
+      "fields": [
+        "name",
+        "abs_delta_gte",
+        "connectivity"
+      ],
+      "abs_delta_gte_gt": 0,
+      "connectivity": [
+        1,
+        2,
+        3
+      ]
+    }
+  },
+  "inputs": {
+    "required_names": [
+      "desi_dr1_lss_selection_manifest",
+      "desi_dr1_lss_3d_map_product",
+      "desi_dr1_lss_selection_materialization_receipt"
+    ],
+    "selection_manifest": {
+      "name": "desi_dr1_lss_selection_manifest",
+      "sha256": "6ce284a355085679eb528517746b247fa2c48902c6158ca556ae9c197b34c65a",
+      "schema": "NEXO_DESI_LSS_SELECTION_MANIFEST_V1"
+    },
+    "product": {
+      "name": "desi_dr1_lss_3d_map_product",
+      "schema": "NEXO_DESI_LSS_3D_PRODUCT_V1"
+    },
+    "materialization_receipt": {
+      "name": "desi_dr1_lss_selection_materialization_receipt",
+      "schema": "NEXO_DESI_LSS_SELECTION_MATERIALIZATION_RECEIPT_V1",
+      "selection_manifest_sha256": "6ce284a355085679eb528517746b247fa2c48902c6158ca556ae9c197b34c65a",
+      "file_count": 160,
+      "total_bytes": 139526840064,
+      "all_local_bytes_verified": true
+    }
+  },
+  "source_receipts": {
+    "recipe_bind": {
+      "receipt_id": "OR-8c76795538f2dea31468fa5c4a818ad6",
+      "outcome": "APPLIED",
+      "occurred_at": "2026-10-02T19:28:53.411699Z",
+      "payload_sha256": "sha256:50f9b12787adfbffd1fe10e16ea98f7a792a8711dbf97413c6a41a42dccb92ff",
+      "result_revision": "sha256:9a3f391e1980c170e5bf23c2357ad5d10927595dc778444ca89f6c5728d955a5"
+    },
+    "data_binding": {
+      "receipt_id": "OR-4f4e64f3d1e3ef631e003e6ffa6cc5a2",
+      "outcome": "APPLIED",
+      "occurred_at": "2026-10-02T19:32:10.000657Z",
+      "payload_sha256": "sha256:182d94e8c7e7d0593b7e63145ecf30a745cb1bff9bb9a1e55700920b8c3101a1",
+      "result_revision": "sha256:c177cfbfed129c0b9515d4a92cd640d2da6119f94006b687f50f644e41e3a7f8"
+    }
+  },
+  "implementation": {
+    "commit": "5472cc7986929f33ca4bd19faeb227b3eb85280d",
+    "blob_sha1": "8ba7e8411bb752e34eea5dcb361727cf58df5547",
+    "sha256": "67920bbfe64c3dc38fa6211e6b3201091ac673d7e5234a97d13873ab2498f3fe"
+  }
+}
