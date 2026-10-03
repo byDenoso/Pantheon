@@ -489,6 +489,7 @@
     "inbox/scheduled-pitia-nexo-thought-1f3c29c685126c73.json": "c940d09dbc770582eb2956ec4822b8bbc0cb1eb21564ae577de2166447e324bc",
     "inbox/scheduled-pitia-nexo-thought-48ddf3a6b3c06341.json": "80436503e4ce5cfdb9e9437d2e5070a47a25a908f9e68d619dd73c330cd52802",
     "inbox/scheduled-pitia-thought-8e50447586d48f65.json": "ea284f83229d2727d78080be559173782a30823aae41103b8538a155a3e29894",
+    "inbox/scheduled-pitia-thought-live-20261003t0200z.json": "885b1230e0412237a08af05802ca27b4d9f7ada1fce09cca545ec7d6c99190f1",
     "inbox/scheduled-recipe-review-pr364-62105d4-approved.json": "389fc01e370147f57efcca88354c3a59c9d9564d419fb042ce2a14aceb6fb0cc",
     "inbox/scheduled-recipe-review-pr364-approved.json": "d313e64b147f4324cdcbcc15ed6dd79bc369b4982381c9c32103443bba2e55a7",
     "inbox/scheduled-recipe-review-pr364-cee3927-approved.json": "31a72772e1bb417ee0dcbf89320ff7f23c0ae797905964c8719d9bb831122229",
@@ -4265,6 +4266,34 @@
       "applied_at": "2026-09-30T23:44:02Z",
       "fingerprint": "ea284f83229d2727d78080be559173782a30823aae41103b8538a155a3e29894",
       "tower_revision": "sha256:5af5b07a20f685a774c32e415577f2c25370e1718bacfb88e74b2a273534098f"
+    },
+    "inbox/scheduled-pitia-thought-live-20261003t0200z.json": {
+      "fingerprint": "885b1230e0412237a08af05802ca27b4d9f7ada1fce09cca545ec7d6c99190f1",
+      "observed_at": "2026-10-03T02:17:43Z",
+      "outcome": "APPLIED",
+      "receipt_ids": [
+        "OR-08c1bedbe369674d7305a0ff25e24b92"
+      ],
+      "receipts": [
+        {
+          "contract": "OPERATION_RECEIPT_V1",
+          "effect_id": "envelope-1f2c5dfdb2b45b15b4117852c7e14001",
+          "intent_id": "gateway:tcc-d31f2a8164b5b3a72853c736922378b9",
+          "observed_at": "2026-10-03T02:17:28.932654Z",
+          "occurred_at": "2026-10-03T02:17:28.932634Z",
+          "outcome": "APPLIED",
+          "payload_sha256": "sha256:b2b48e5883a31a1c4d94bbc462cfb1e53ca8955876c1d630a026de051005fe1e",
+          "reason_code": null,
+          "receipt_id": "OR-08c1bedbe369674d7305a0ff25e24b92",
+          "result_revision": "sha256:eaea2018fdbb6a6f1723882a2e6fa831f15782920767ff5f3701de70a6eade4e",
+          "retry_condition": null,
+          "source_revision": "sha256:047749f8066138500457090d8103f4b255d2690ea8f4b5a20f9d5e4fa5b31edb",
+          "stage": "APPLIED",
+          "supersedes": null,
+          "visibility": "PUBLIC"
+        }
+      ],
+      "tower_revision": "sha256:4b04503adf71bf0f30371641499f94e661c94d56a684d023019b877de6414342"
     },
     "inbox/scheduled-recipe-review-pr364-62105d4-approved.json": {
       "fingerprint": "389fc01e370147f57efcca88354c3a59c9d9564d419fb042ce2a14aceb6fb0cc",
