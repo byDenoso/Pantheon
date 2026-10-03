@@ -39,9 +39,39 @@ def validate_params(recipe, params, inputs, recipe_root):
     result['manifest_sha256'] = hashlib.sha256(raw).hexdigest()
     try:
         manifest = json.loads(raw)
-        if (manifest['contract'] != CONTRACT or manifest['recipe'] != recipe
-                or manifest['validator'] != 'w0wa_bao_sn_multi_v1'
-                or recipe != 'w0wa_bao_sn_multi'):
+        if manifest['contract'] != CONTRACT or manifest['recipe'] != recipe:
+            raise ValueError('unsupported manifest contract or validator')
+        if recipe == 'rank_score_leave_one_out':
+            if manifest.get('validator') != 'rank_score_leave_one_out_v1':
+                raise ValueError('unsupported manifest contract or validator')
+            exact_params = False
+            if isinstance(params, dict) and isinstance(manifest.get('params'), dict):
+                try:
+                    exact_params = (
+                        json.dumps(params, sort_keys=True, separators=(',', ':'), allow_nan=False)
+                        == json.dumps(manifest['params'], sort_keys=True, separators=(',', ':'), allow_nan=False)
+                    )
+                except (TypeError, ValueError):
+                    exact_params = False
+            if not exact_params:
+                reject('FROZEN_RECIPE_PARAMS_MISMATCH', 'params must exactly match the frozen manifest')
+            expected_inputs = manifest.get('inputs')
+            if not isinstance(expected_inputs, list) or not expected_inputs:
+                raise ValueError('rank score input manifest missing')
+            required = {(item['name'], item['url'], item['version'], item['sha256']) for item in expected_inputs}
+            actual = set()
+            if isinstance(inputs, list):
+                for item in inputs:
+                    if not isinstance(item, dict):
+                        break
+                    actual.add((item.get('name'), item.get('url'), item.get('version'),
+                                str(item.get('sha256') or '').removeprefix('sha256:')))
+            if not isinstance(inputs, list) or len(inputs) != len(required) or actual != required:
+                reject('INPUT_RECIPE_MANIFEST_MISMATCH', 'binding must match the frozen public projection')
+            result['reasons'] = sorted(set(result['reasons']))
+            result['eligible'] = not result['reasons']
+            return result
+        if manifest.get('validator') != 'w0wa_bao_sn_multi_v1' or recipe != 'w0wa_bao_sn_multi':
             raise ValueError('unsupported manifest contract or validator')
         releases = manifest['releases']
         compilations = manifest['compilations']

@@ -124,6 +124,10 @@ jobs:
         working-directory: nexo-one/executor-runtime/recipes
         run: OPENBLAS_NUM_THREADS=1 python -m unittest test_w0wa_bao_sn_multi -v
 
+      - name: Verify frozen rank-score leave-one-out regression tests
+        working-directory: nexo-one/executor-runtime/recipes
+        run: python -m unittest test_rank_score_leave_one_out -v
+
       - name: Verify parameter preflight and operational failure receipts
         run: python -m unittest discover -s nexo-one/executor-runtime/tests -p test_recipe_param_preflight.py -v
 
