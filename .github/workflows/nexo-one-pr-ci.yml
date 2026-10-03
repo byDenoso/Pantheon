@@ -60,6 +60,7 @@ jobs:
           done
           NEXO_BASE_URL=http://127.0.0.1:4178 node test/lab-cinematic-integrity.browser.mjs
           NEXO_BASE_URL=http://127.0.0.1:4178 node test/board-message.browser.mjs
+          NEXO_BASE_URL=http://127.0.0.1:4178 node test/scene-performance.browser.mjs
           baseline_dir="$RUNNER_TEMP/atlas-crew-baseline"
           git fetch --no-tags --depth=1 origin 052fd7e3c1051b3542fd0dcf1be6fc54619e6f67
           git worktree add --detach "$baseline_dir" FETCH_HEAD
@@ -75,6 +76,25 @@ jobs:
           NEXO_BASE_URL=http://127.0.0.1:4179 NEXO_CREW_EXPECT_BASELINE_BUG=1 node test/crew-layout.browser.mjs
           NEXO_BASE_URL=http://127.0.0.1:4178 node test/crew-layout.browser.mjs
 
+      - name: Compare published scene and candidate production builds
+        working-directory: nexo-one
+        env:
+          NEXO_AB_BASELINE_SHA: 3b8155d5f93902ed2c8146eba35e9fa566e32150
+          NEXO_AB_CANDIDATE_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+          baseline_dir="$RUNNER_TEMP/nexo-scene-ab-baseline"
+          git fetch --no-tags --depth=1 origin "$NEXO_AB_BASELINE_SHA"
+          git worktree add --detach "$baseline_dir" FETCH_HEAD
+          ln -s "$PWD/node_modules" "$baseline_dir/nexo-one/node_modules"
+          candidate_dir="$RUNNER_TEMP/nexo-scene-ab-candidate"
+          git fetch --no-tags --depth=1 origin "$NEXO_AB_CANDIDATE_SHA"
+          git worktree add --detach "$candidate_dir" FETCH_HEAD
+          ln -s "$PWD/node_modules" "$candidate_dir/nexo-one/node_modules"
+          (cd "$baseline_dir/nexo-one"; VITE_SYSTEM_SOURCE=remote npm run build)
+          (cd "$candidate_dir/nexo-one"; VITE_SYSTEM_SOURCE=remote npm run build)
+          NEXO_AB_BASELINE_DIR="$baseline_dir/nexo-one" NEXO_AB_CANDIDATE_DIR="$candidate_dir/nexo-one" node test/scene-ab.browser.mjs
+
       - name: Upload Atlas visual QA evidence
         if: always()
         uses: actions/upload-artifact@v4
@@ -82,6 +102,8 @@ jobs:
           name: atlas-cinematic-visual-${{ github.event.pull_request.head.sha }}
           path: |
             nexo-one/test-output/cinematic/
+            nexo-one/test-output/scene-performance/
+            nexo-one/test-output/scene-ab/
             nexo-one/test-output/board-message/
             nexo-one/test-output/crew-layout/
             nexo-one/test-output/crew-layout-baseline/
