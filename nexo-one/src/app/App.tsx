@@ -222,6 +222,10 @@ export default function App() {
   if (labRoute && !galaxyRoute && !systemRoute) return <ProvenanceProvider><div className={`cockpit unified-shell lab-route${isMobile?' mobile':''}`} data-view="LAB" data-access={session.session.authenticated?'PRIVATE':'PUBLIC'}>
     <a className="skip-link" href="#workspace">Ir ao conteúdo</a>{header}<div className="cockpit-body">
       <main id="workspace" tabIndex={-1} className="workspace lab-workspace">
+        {system.state && system.syncStatus === 'FAILED' && <div className="lab-reading-warning" role="status">
+          <strong>Última leitura válida preservada.</strong> <span>{system.error || system.syncMessage}</span>
+          <button type="button" onClick={system.reload}>Tentar ler novamente</button>
+        </div>}
         {system.state
           ? <Suspense fallback={<LoadingState label="Abrindo o observatório…" />}><LabApp state={system.state} route={labRoute} theme={theme as 'dark'|'light'} /></Suspense>
           : <Surface load={system.load} error={system.error} onRetry={system.reload}>{null}</Surface>}

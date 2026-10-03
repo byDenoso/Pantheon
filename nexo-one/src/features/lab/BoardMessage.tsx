@@ -35,18 +35,17 @@ export function BoardMessage({ post, lab, from, to, records, focus = false }: {
     {replies.length > 0 && <details className="board-replies"><summary>Ver {replies.length === 1 ? 'resposta' : `${replies.length} respostas`}</summary>{replies.map(reply => <blockquote key={reply.id}>
       <p><b>{reply.from} → {reply.to}</b> · <time dateTime={reply.at}>{ago(reply.at)}</time></p><p>{reply.text}</p>
     </blockquote>)}</details>}
-    {meta.nextAction && <p className="board-next"><b>Próxima ação declarada:</b> {meta.nextAction}</p>}
-    {references.length > 0 && <div className="board-evidence"><span>Referências do recado</span><ul>{references.map(id => {
+    {references.length > 0 && <details className="board-evidence"><summary>Referências do recado ({references.length})</summary><ul>{references.map(id => {
       const test = lab.tests.get(id), hypothesis = lab.hypotheses.get(id), roadmap = lab.roadmaps.get(id);
       const label = test?.name ?? hypothesis?.statement ?? roadmap?.title ?? humanId(id);
       return <li key={id}>{test || hypothesis || roadmap
         ? <a href={labHref(roadmap ? 'roadmap' : 'entidade', id)}>{label}<span aria-hidden="true"> ↗</span></a>
         : <span title="Referência publicada, sem ficha neste recorte">{id} · ficha ausente no recorte</span>}</li>;
-    })}</ul></div>}
+    })}</ul></details>}
     <details className="board-provenance"><summary>Ver registro e horário</summary><dl>
       <div><dt>Recado</dt><dd>{post.id}</dd></div><div><dt>Autor → destino</dt><dd>{post.from} → {post.to}</dd></div>
       <div><dt>Horário publicado</dt><dd>{post.at}</dd></div>{post.reply_to && <div><dt>Resposta vinculada a</dt><dd>{post.reply_to}</dd></div>}
       <div><dt>Prioridade declarada</dt><dd>{meta.priority}</dd></div>
-    </dl>{!references.length && <p>Este recado veio sem referências vinculadas.</p>}</details>
+    </dl>{meta.nextAction && !post.text.includes(meta.nextAction) && <p className="board-next"><b>Próxima ação declarada:</b> {meta.nextAction}</p>}{!references.length && <p>Este recado veio sem referências vinculadas.</p>}</details>
   </article>;
 }

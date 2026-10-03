@@ -51,7 +51,7 @@ test('both public incident surfaces use the shared ownership UI and retain disti
  const health = await readFile(new URL('../src/features/lab/LabApp.tsx', import.meta.url), 'utf8');
  const atlas = await readFile(new URL('../src/atlas3d/Atlas3DApp.tsx', import.meta.url), 'utf8');
  const component = await readFile(new URL('../src/components/IncidentResponsibility.tsx', import.meta.url), 'utf8');
- assert.match(health, /<IncidentResponsibility incident=\{i\}/); assert.match(atlas, /<IncidentResponsibility incident=\{incident\}/);
+ assert.match(health, /<IncidentResponsibility incident=\{incident\}/); assert.match(atlas, /<IncidentResponsibility incident=\{incident\}/);
  assert.doesNotMatch(health, /quem investiga/); assert.match(component, /Responsável operacional não informado/);
  assert.match(component, /responsável atual:/); assert.match(component, /destinatário:/); assert.match(component, /Aprendizagem:/);
  assert.match(component, /não altera o resultado científico/);
