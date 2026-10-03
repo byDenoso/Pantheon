@@ -1,15 +1,28 @@
 """Select only CI-proven current TCC main; an older green run is not a fallback."""
 import json
 import re
-import subprocess
 import sys
+import urllib.request
 
 REPO = 'byDenoso/TCC'
 WORKFLOW = 'nexo-runtime-reconciler-ci.yml'
 
 
 def github(endpoint):
-    return json.loads(subprocess.check_output(['gh', 'api', endpoint], text=True))
+    # ``github.token`` is an installation token scoped to this Pantheon repo.
+    # Supplying it while reading the separate public TCC repo can hide otherwise
+    # public Actions runs.  This gate needs no credential: use the public API and
+    # deliberately omit ambient Authorization headers.
+    request = urllib.request.Request(
+        f'https://api.github.com/{endpoint}',
+        headers={
+            'Accept': 'application/vnd.github+json',
+            'User-Agent': 'nexo-writer-robot-tcc-ci-gate',
+            'X-GitHub-Api-Version': '2022-11-28',
+        },
+    )
+    with urllib.request.urlopen(request, timeout=30) as response:
+        return json.load(response)
 
 
 def current_main(api):
@@ -39,7 +52,7 @@ def select_tested_main(api=github):
 def main():
     try:
         selected = select_tested_main()
-    except (OSError, ValueError, TypeError, KeyError, subprocess.CalledProcessError) as error:
+    except (OSError, ValueError, TypeError, KeyError) as error:
         print(f'Current TCC main could not be verified: {error}', file=sys.stderr)
         return
     if selected:
