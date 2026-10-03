@@ -66,7 +66,9 @@ def hydrate(session,env):
         require(re.fullmatch(r'[0-9a-f]{64}' if key=='PACKAGE_SHA256' else r'[0-9a-f]{40}',env.get(key,'')),'INPUT_FORMAT_INVALID')
     tower=json.loads(read_drive(session,TOWER_ID,max_bytes=32*1024*1024))
     require(tower.get('stable_file_id')==TOWER_ID and tower.get('revision')=='sha256:'+sha(tower['files']),'TOWER_FINGERPRINT_INVALID')
-    config=tower['files'].get('contracts/OPERATIONAL_RUNTIME_V1.json',{}).get('value',{})
+    entry=tower['files'].get('entities/artifact/OPERATIONAL-CONTROL-RUNTIME-V1.json',{}).get('value',{})
+    require(not entry or entry.get('kind')=='NEXO_OPERATIONAL_RUNTIME_V1','CANONICAL_CONFIG_IDENTITY_INVALID')
+    config=entry.get('payload') if entry else tower['files'].get('contracts/OPERATIONAL_RUNTIME_V1.json',{}).get('value',{})
     require(config.get('enabled') is True and config.get('publication_authorized') is True and config.get('approval_ref'),'PUBLICATION_SUSPENDED')
     matching=[]
     for entry in tower['files'].values():

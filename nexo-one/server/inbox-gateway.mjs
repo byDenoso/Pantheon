@@ -292,7 +292,7 @@ async function githubKey(kid) {
   return jwk ? createPublicKey({ key: jwk, format: 'jwk' }) : null;
 }
 
-async function isRobot(req) {
+export async function isRobot(req) {
   const token = String(req.headers.authorization || '').replace(/^Bearer\s+/i, '');
   const [h, p, s] = token.split('.');
   if (!h || !p || !s) return false;
