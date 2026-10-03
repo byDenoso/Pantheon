@@ -13,6 +13,25 @@ import os
 import urllib.request
 from statistics import median
 
+AUC_REPRO_TOLERANCE = 5e-5
+
+
+def bounded_float_param(params: dict, key: str) -> float:
+    value = params.get(key)
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        raise ValueError(f"{key} deve ser numero entre 0 e 1.")
+    number = float(value)
+    if not math.isfinite(number) or not 0.0 <= number <= 1.0:
+        raise ValueError(f"{key} deve ser numero finito entre 0 e 1.")
+    return number
+
+
+def positive_int_param(params: dict, key: str) -> int:
+    value = params.get(key)
+    if isinstance(value, bool) or not isinstance(value, int) or value <= 0:
+        raise ValueError(f"{key} deve ser inteiro positivo.")
+    return value
+
 
 def roc_auc(scores: list[float], labels: list[int]) -> float:
     pos = [s for s, y in zip(scores, labels) if y == 1]
@@ -41,8 +60,10 @@ def load_projection(url: str, version: str, expected_sha256: str) -> dict:
     expected_url = f"https://raw.githubusercontent.com/byDenoso/Pantheon/{version}/{SNAPSHOT_PATH}"
     if url != expected_url:
         raise ValueError("projection_url deve apontar para o snapshot oficial commit-pinned.")
+    if not isinstance(expected_sha256, str):
+        raise ValueError("projection_sha256 invalido.")
     expected = expected_sha256.removeprefix("sha256:")
-    if len(expected) != 64:
+    if len(expected) != 64 or any(c not in "0123456789abcdef" for c in expected):
         raise ValueError("projection_sha256 invalido.")
     with urllib.request.urlopen(url, timeout=180) as response:
         raw = response.read()
@@ -54,7 +75,9 @@ def load_projection(url: str, version: str, expected_sha256: str) -> dict:
 
 
 def extract_cohort(projection: dict, cohort_ids: list[str]) -> list[dict]:
-    if not cohort_ids or len(cohort_ids) != len(set(cohort_ids)):
+    if (not isinstance(cohort_ids, list) or not cohort_ids
+            or any(not isinstance(entity_id, str) or not entity_id.strip() for entity_id in cohort_ids)
+            or len(cohort_ids) != len(set(cohort_ids))):
         raise ValueError("cohort_ids deve conter IDs unicos e nao vazios.")
     wanted = set(cohort_ids)
     found = {}
@@ -71,32 +94,49 @@ def extract_cohort(projection: dict, cohort_ids: list[str]) -> list[dict]:
     cohort = []
     for entity_id in cohort_ids:
         row = found[entity_id]
-        score = float(row["rank_score"])
+        raw_score = row["rank_score"]
+        if isinstance(raw_score, bool) or not isinstance(raw_score, (int, float)):
+            raise ValueError(f"rank_score invalido: {entity_id}")
+        score = float(raw_score)
         if not math.isfinite(score):
             raise ValueError(f"rank_score invalido: {entity_id}")
-        verdict = str(row.get("verdict") or "").upper()
-        if not verdict:
+        raw_verdict = row.get("verdict")
+        if not isinstance(raw_verdict, str) or not raw_verdict.strip():
             raise ValueError(f"veredito ausente: {entity_id}")
+        verdict = raw_verdict.strip().upper()
         cohort.append({"id": entity_id, "rank_score": score,
                        "verdict": verdict, "label": 1 if verdict == "PROMOTED" else 0})
     return cohort
 
 
 def run(params: dict, projection: dict) -> dict:
+    if not isinstance(params, dict):
+        raise ValueError("params deve ser objeto JSON.")
     cohort = extract_cohort(projection, params["cohort_ids"])
     scores = [row["rank_score"] for row in cohort]
     labels = [row["label"] for row in cohort]
     baseline = roc_auc(scores, labels)
 
-    expected_n = int(params["expected_n"])
-    expected_promoted = int(params["expected_promoted"])
-    expected_non_promoted = int(params["expected_non_promoted"])
-    expected_auc = float(params["expected_auc"])
+    expected_n = positive_int_param(params, "expected_n")
+    expected_promoted = positive_int_param(params, "expected_promoted")
+    expected_non_promoted = positive_int_param(params, "expected_non_promoted")
+    expected_auc = bounded_float_param(params, "expected_auc")
+    success_median = bounded_float_param(params, "success_median_ge")
+    success_min = bounded_float_param(params, "success_min_ge")
+    kill_auc = bounded_float_param(params, "kill_auc_le")
+    kill_fraction = bounded_float_param(params, "kill_fraction_ge")
+    kill_median = bounded_float_param(params, "kill_median_le")
+    if expected_n != expected_promoted + expected_non_promoted:
+        raise ValueError("Contagens esperadas nao somam expected_n.")
+    if expected_promoted < 2 or expected_non_promoted < 2:
+        raise ValueError("Leave-one-out exige pelo menos dois casos de cada classe.")
+    if kill_auc > success_min or kill_median > success_median:
+        raise ValueError("Limiares kill/success sao inconsistentes.")
     if len(cohort) != expected_n:
         raise ValueError("N da coorte nao reproduz o resultado original.")
     if sum(labels) != expected_promoted or len(labels) - sum(labels) != expected_non_promoted:
         raise ValueError("Contagem das classes nao reproduz o resultado original.")
-    if abs(baseline - expected_auc) > 5e-5:
+    if abs(baseline - expected_auc) > AUC_REPRO_TOLERANCE:
         raise ValueError("AUC-base nao reproduz o resultado original.")
 
     rows = []
@@ -107,11 +147,10 @@ def run(params: dict, projection: dict) -> dict:
     aucs = [row["auc"] for row in rows]
     med = float(median(aucs))
     minimum = float(min(aucs))
-    low_threshold = float(params["kill_auc_le"])
-    low_fraction = sum(value <= low_threshold for value in aucs) / len(aucs)
+    low_fraction = sum(value <= kill_auc for value in aucs) / len(aucs)
 
-    success = med >= float(params["success_median_ge"]) and minimum >= float(params["success_min_ge"])
-    killed = low_fraction >= float(params["kill_fraction_ge"]) or med <= float(params["kill_median_le"])
+    success = med >= success_median and minimum >= success_min
+    killed = low_fraction >= kill_fraction or med <= kill_median
     if success:
         verdict, decision = "PROMOTED", "LEAVE_ONE_OUT_STABLE"
         meaning = "A AUC permanece acima dos limiares congelados em todas as remocoes e na mediana."

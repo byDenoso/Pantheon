@@ -18,6 +18,7 @@ from recipe_param_preflight import validate_params
 from receipt_validation import classify_payload
 
 MANIFEST = json.loads((ROOT / 'preflight/w0wa_bao_sn_multi.json').read_text())
+RANK_MANIFEST = json.loads((ROOT / 'preflight/rank_score_leave_one_out.json').read_text())
 PARAMS = {'bao_release': 'dr1', 'mode': 'bao_tracer_jackknife',
           'compilations': ['des_sn5yr', 'union3'],
           'tracer_groups': [{'label': 'LRG', 'z': [.51, .706, .93]},
@@ -37,6 +38,35 @@ def check(params=PARAMS, inputs=None, root=ROOT):
 
 
 class Preflight(unittest.TestCase):
+    def test_rank_score_frozen_manifest_accepts_only_exact_params_and_input(self):
+        params = copy.deepcopy(RANK_MANIFEST['params'])
+        inputs = copy.deepcopy(RANK_MANIFEST['inputs'])
+        value = validate_params('rank_score_leave_one_out', params, inputs, ROOT)
+        self.assertTrue(value['eligible'], value)
+        self.assertEqual(value['manifest_sha256'], hashlib.sha256(
+            (ROOT/'preflight/rank_score_leave_one_out.json').read_bytes()).hexdigest())
+        for mutation in ('nan', 'cohort', 'extra'):
+            bad = copy.deepcopy(params)
+            if mutation == 'nan':
+                bad['expected_auc'] = float('nan')
+            elif mutation == 'cohort':
+                bad['cohort_ids'] = bad['cohort_ids'][:-1]
+            else:
+                bad['unexpected'] = True
+            result = validate_params('rank_score_leave_one_out', bad, inputs, ROOT)
+            self.assertFalse(result['eligible'])
+            self.assertIn('FROZEN_RECIPE_PARAMS_MISMATCH', result['reasons'])
+        for key in ('expected_n', 'expected_promoted', 'expected_non_promoted'):
+            bad = copy.deepcopy(params)
+            bad[key] = float(bad[key])
+            result = validate_params('rank_score_leave_one_out', bad, inputs, ROOT)
+            self.assertFalse(result['eligible'])
+            self.assertIn('FROZEN_RECIPE_PARAMS_MISMATCH', result['reasons'])
+        for bad_inputs in ([], inputs[:-1], [{**inputs[0], 'sha256': '0'*64}]):
+            result = validate_params('rank_score_leave_one_out', params, bad_inputs, ROOT)
+            self.assertFalse(result['eligible'])
+            self.assertIn('INPUT_RECIPE_MANIFEST_MISMATCH', result['reasons'])
+
     def test_valid_immutable_dr1_selection_without_network_or_fit(self):
         with patch('urllib.request.urlopen', side_effect=AssertionError('network forbidden')):
             value = check()

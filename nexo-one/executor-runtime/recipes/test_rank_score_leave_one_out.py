@@ -1,4 +1,5 @@
 import importlib.util
+import math
 import pathlib
 import unittest
 
@@ -53,6 +54,63 @@ class TestRankScoreLeaveOneOut(unittest.TestCase):
         url = f"https://raw.githubusercontent.com/byDenoso/Pantheon/{version}/{recipe.SNAPSHOT_PATH}"
         with self.assertRaises(ValueError):
             recipe.load_projection(url.replace(version, "main"), version, "0" * 64)
+
+    def test_non_finite_scalars_fail_closed(self):
+        keys = (
+            "expected_auc", "success_median_ge", "success_min_ge",
+            "kill_auc_le", "kill_fraction_ge", "kill_median_le",
+        )
+        for key in keys:
+            for value in (math.nan, math.inf, -math.inf):
+                with self.subTest(key=key, value=value):
+                    params = self.params()
+                    params[key] = value
+                    with self.assertRaises(ValueError):
+                        recipe.run(params, self.projection())
+
+    def test_invalid_scalar_and_count_shapes_fail_closed(self):
+        invalid = (
+            ("expected_auc", "0.7777777777777778"),
+            ("success_min_ge", True),
+            ("kill_fraction_ge", 1.1),
+            ("expected_n", 12.0),
+            ("expected_promoted", True),
+            ("expected_non_promoted", 0),
+        )
+        for key, value in invalid:
+            with self.subTest(key=key, value=value):
+                params = self.params()
+                params[key] = value
+                with self.assertRaises(ValueError):
+                    recipe.run(params, self.projection())
+
+    def test_invalid_cohort_shapes_scores_and_verdicts_fail_closed(self):
+        params = self.params()
+        for cohort_ids in ("HYP-A", ["HYP-A", ""], ["HYP-A", "HYP-A"], [["HYP-A"]]):
+            with self.subTest(cohort_ids=cohort_ids):
+                bad = dict(params, cohort_ids=cohort_ids)
+                with self.assertRaises((TypeError, ValueError)):
+                    recipe.run(bad, self.projection())
+        projection = self.projection()
+        projection["tests"][0]["rank_score"] = "0.91"
+        with self.assertRaises(ValueError):
+            recipe.run(params, projection)
+        projection = self.projection()
+        projection["tests"][0]["rank_score"] = math.nan
+        with self.assertRaises(ValueError):
+            recipe.run(params, projection)
+        projection = self.projection()
+        projection["tests"][0]["verdict"] = {"value": "INCONCLUSIVE"}
+        with self.assertRaises(ValueError):
+            recipe.run(params, projection)
+
+    def test_invalid_hash_shape_fails_closed_before_network(self):
+        version = "4f7fe6980476a4c1cd00c205a85336269153b35a"
+        url = f"https://raw.githubusercontent.com/byDenoso/Pantheon/{version}/{recipe.SNAPSHOT_PATH}"
+        for value in (None, "z" * 64, "sha256:" + "g" * 64):
+            with self.subTest(value=value):
+                with self.assertRaises(ValueError):
+                    recipe.load_projection(url, version, value)
 
 
 if __name__ == "__main__":
