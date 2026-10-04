@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { chromium } from 'playwright';
 import { writeFile } from 'node:fs/promises';
 
+const baseUrl = (process.env.NEXO_BASE_URL || 'http://127.0.0.1:4185').replace(/\/$/, '');
 const browser = await chromium.launch({ channel: 'msedge', headless: true });
 const results = [];
 try {
@@ -9,7 +10,7 @@ try {
   const page = await context.newPage();
   const errors = [];
   page.on('pageerror', error => { errors.push(error.stack || error.message); console.error(error.stack || error.message); });
-  await page.goto('http://127.0.0.1:4185/#/agora');
+  await page.goto(`${baseUrl}/#/agora`);
   const scene = page.locator('svg[data-tower-svg-native="observatory"][data-ready="true"]');
   await scene.waitFor();
   assert.equal(await page.locator('.obs-scene').getAttribute('data-physics-model-status'), 'TOY_MODEL');
@@ -42,11 +43,11 @@ try {
   assert.equal(await page.locator('foreignObject').count(), 0);
   results.push('SVG search opens a published entity and its evidence page');
 
-  await page.goto('http://127.0.0.1:4185/#/atlas?view=galaxy');
+  await page.goto(`${baseUrl}/#/atlas?view=galaxy`);
   await page.locator('svg[data-tower-svg-native="galaxy"][data-ready="true"]').waitFor();
-  await page.goto('http://127.0.0.1:4185/#/atlas?view=2d');
+  await page.goto(`${baseUrl}/#/atlas?view=2d`);
   await page.locator('svg[data-tower-svg-native="metro2d"][data-ready="true"]').waitFor();
-  await page.goto('http://127.0.0.1:4185/#/atlas?view=3d');
+  await page.goto(`${baseUrl}/#/atlas?view=3d`);
   await page.locator('svg[data-tower-svg-native="metro3d"][data-ready="true"]').waitFor();
   results.push('Galaxy / 2D / 3D route changes work without a document reload');
   assert.deepEqual(errors, []);
@@ -54,7 +55,7 @@ try {
 
   const live = await browser.newContext({ viewport: { width: 1440, height: 960 } });
   const livePage = await live.newPage();
-  await livePage.goto('http://127.0.0.1:4185/#/agora');
+  await livePage.goto(`${baseUrl}/#/agora`);
   const liveScene = livePage.locator('svg[data-tower-svg-native="observatory"][data-ready="true"]');
   await liveScene.waitFor();
   const before = await liveScene.locator('path').evaluateAll(nodes => nodes.map(node => node.getAttribute('d')));

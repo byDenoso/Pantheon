@@ -3,6 +3,7 @@ import { chromium } from 'playwright';
 import {mkdir,writeFile} from 'node:fs/promises';
 const output='output/galaxy-performance';
 await mkdir(output,{recursive:true});
+const baseUrl = (process.env.NEXO_BASE_URL || 'http://127.0.0.1:4185').replace(/\/$/, '');
 const browser=await chromium.launch({channel:'msedge',headless:true});
 const report=[];
 try{
@@ -10,14 +11,14 @@ try{
   const context=await browser.newContext({viewport:{width,height},reducedMotion:'reduce'});
   const page=await context.newPage();
   const errors=[];page.on('pageerror',error=>errors.push(error.message));
-  await page.goto('http://127.0.0.1:4185/#/agora');
+  await page.goto(`${baseUrl}/#/agora`);
   await page.getByRole('button',{name:'Explorar a teia',exact:true}).waitFor();
   for(const theme of ['dark','light']){
    const actual=await page.locator('html').getAttribute('data-theme');
    if(actual!==theme)await page.getByRole('button',{name:theme==='light'?'Ativar tema claro':'Ativar tema escuro',exact:true}).click();
    for(const route of ['agora','universo','ciclo','roadmaps','evidencia','saude','atlas?view=galaxy','atlas?view=2d','atlas?view=3d']){
     console.log(profile,theme,route);
-    await page.goto(`http://127.0.0.1:4185/#/${route}`);
+    await page.goto(`${baseUrl}/#/${route}`);
     await page.locator('svg[data-tower-svg-surface][data-ready="true"]').waitFor();
     const native=route.startsWith('atlas')?route.endsWith('galaxy')?'galaxy':route.endsWith('2d')?'metro2d':'metro3d':'observatory';
     await page.locator(`svg[data-tower-svg-native="${native}"][data-ready="true"]`).waitFor();
