@@ -9,7 +9,8 @@ from pathlib import Path
 import runpy
 import tempfile
 import unittest
-from unittest.mock import patch
+import urllib.error
+from unittest.mock import MagicMock, patch
 
 import numpy as np
 
@@ -86,6 +87,38 @@ class DesiSelectionNullContract(unittest.TestCase):
         self.assertEqual(manifest["summary"]["total_bytes"], 139526840064)
         self.assertEqual(manifest["materialization"]["status"], "INPUT_PENDING_MATERIALIZATION")
         self.assertFalse(manifest["materialization"]["all_local_bytes_verified"])
+
+    def test_verified_bytes_retries_transient_network_failure_without_weakening_hash(self):
+        raw = b"frozen bytes"
+        response = MagicMock()
+        response.__enter__.return_value.read.return_value = raw
+        response.__exit__.return_value = False
+        opener = MagicMock()
+        opener.open.side_effect = [urllib.error.URLError("timed out"), response]
+        frozen = binding("retryable", raw)
+        with patch.object(recipe.urllib.request, "build_opener", return_value=opener), patch.object(
+                recipe.time, "sleep") as sleep:
+            self.assertEqual(recipe.verified_bytes(frozen), raw)
+        self.assertEqual(opener.open.call_count, 2)
+        sleep.assert_called_once_with(recipe.NETWORK_RETRY_SECONDS[0])
+
+        frozen["sha256"] = "0" * 64
+        opener.open.side_effect = [response]
+        with patch.object(recipe.urllib.request, "build_opener", return_value=opener):
+            with self.assertRaisesRegex(recipe.InputUnavailable, "SHA256 mismatch"):
+                recipe.verified_bytes(frozen)
+
+    def test_verified_bytes_does_not_retry_terminal_http_error(self):
+        opener = MagicMock()
+        opener.open.side_effect = urllib.error.HTTPError(
+            "https://example.org/missing", 404, "not found", {}, None
+        )
+        with patch.object(recipe.urllib.request, "build_opener", return_value=opener), patch.object(
+                recipe.time, "sleep") as sleep:
+            with self.assertRaisesRegex(recipe.InputUnavailable, "after 1 attempt"):
+                recipe.verified_bytes(binding("missing"))
+        opener.open.assert_called_once()
+        sleep.assert_not_called()
 
     def test_manifest_summary_and_official_source_receipt_fail_closed(self):
         manifest = json.loads(self.manifest_raw)
