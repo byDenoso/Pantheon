@@ -10,8 +10,10 @@ type Paint = {
   style: CSSStyleDeclaration;
   rect: DOMRect;
   clipRects: DOMRect[];
+  movingClipRects: Set<DOMRect>;
   z: number;
   order: number;
+  opacity: number;
 };
 
 const svg = (tag: string, attributes: Record<string, string | number> = {}) => {
@@ -58,9 +60,9 @@ function intersects(a: DOMRect, b: DOMRect) {
   return a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top;
 }
 
-type LabelGroup = { group: SVGGElement; baseOpacity: number };
+type LabelGroup = { group: SVGGElement; baseOpacity: number; movingClips: SVGRectElement[] };
 type DynamicLabel = { position: {x: number; y: number} | null; rect: DOMRect; inlineOpacity: string; groups: LabelGroup[]; lastTransform: string };
-const MOVING_LABEL = '.galaxy-three-label, .galaxy-event, .obs-tip, .obs-scene-labels button';
+const MOVING_LABEL = '.galaxy-three-label, .galaxy-event, .obs-tip, .obs-scene-labels button, .obs-scene-labels a, .obs-near span';
 
 function inlinePosition(element: Element) {
   const matches = [...(element as HTMLElement).style.transform.matchAll(/translate(?:3d)?\(\s*([-+\d.e]+)px\s*,\s*([-+\d.e]+)px/g)];
@@ -68,24 +70,18 @@ function inlinePosition(element: Element) {
   return match ? {x: Number(match[1]), y: Number(match[2])} : null;
 }
 
-function effectiveOpacity(element: Element) {
-  let opacity = 1;
-  for (let current: Element | null = element; current; current = current.parentElement) {
-    const value = Number.parseFloat(getComputedStyle(current).opacity);
-    if (Number.isFinite(value)) opacity *= value;
-  }
-  return Math.max(0, Math.min(1, opacity));
-}
-
 function drawElement(defs: SVGDefsElement, layer: SVGGElement, paint: Paint, index: number, holes: DOMRect[], dynamicLabels: Map<Element, DynamicLabel>) {
   const {node, style, rect} = paint;
   const group = svg('g') as SVGGElement;
-  group.setAttribute('opacity', String(effectiveOpacity(node)));
+  group.setAttribute('opacity', String(paint.opacity));
   let clippedContent: SVGGElement = group;
+  const movingClips: SVGRectElement[] = [];
   for (const clipRect of [...paint.clipRects].reverse()) {
     const clipId = `tower-svg-clip-${index}-${paint.clipRects.indexOf(clipRect)}`;
     const clip = svg('clipPath', { id: clipId, clipPathUnits: 'userSpaceOnUse' });
-    clip.append(svg('rect', { x: clipRect.x, y: clipRect.y, width: clipRect.width, height: clipRect.height }));
+    const clipShape = svg('rect', { x: clipRect.x, y: clipRect.y, width: clipRect.width, height: clipRect.height }) as SVGRectElement;
+    clip.append(clipShape);
+    if (paint.movingClipRects.has(clipRect)) movingClips.push(clipShape);
     defs.append(clip);
     const wrapper = svg('g', { 'clip-path': `url(#${clipId})` }) as SVGGElement;
     wrapper.append(clippedContent);
@@ -96,7 +92,7 @@ function drawElement(defs: SVGDefsElement, layer: SVGGElement, paint: Paint, ind
   if (label) {
     let entry = dynamicLabels.get(label);
     if (!entry) { entry = { position: inlinePosition(label), rect: label.getBoundingClientRect(), inlineOpacity: (label as HTMLElement).style.opacity, groups: [], lastTransform: '' }; dynamicLabels.set(label, entry); }
-    entry.groups.push({ group, baseOpacity: effectiveOpacity(node) });
+    entry.groups.push({ group, baseOpacity: paint.opacity, movingClips });
   }
   const opacity = 1;
   const fill = computedFill(defs, style, rect, `tower-grad-${index}`);
@@ -148,7 +144,7 @@ function drawElement(defs: SVGDefsElement, layer: SVGGElement, paint: Paint, ind
 
   if (SKIP_TAGS.has(node.tagName)) return;
   for (const child of Array.from(node.childNodes)) {
-    if (child.nodeType === Node.TEXT_NODE) drawTextNode(group, child as Text, node, opacity);
+    if (child.nodeType === Node.TEXT_NODE) drawTextNode(group, child as Text, style, opacity);
   }
 }
 
@@ -165,10 +161,9 @@ function appendText(layer: SVGGElement, text: string, x: number, y: number, styl
   layer.append(element);
 }
 
-function drawTextNode(layer: SVGGElement, textNode: Text, parent: Element, parentOpacity: number) {
+function drawTextNode(layer: SVGGElement, textNode: Text, style: CSSStyleDeclaration, parentOpacity: number) {
   const rawText = textNode.textContent || '';
   if (!rawText.trim()) return;
-  const style = getComputedStyle(parent);
   const transform = style.textTransform;
   const range = document.createRange();
   const fontSize = Number.parseFloat(style.fontSize) || 14;
@@ -199,33 +194,54 @@ function drawTextNode(layer: SVGGElement, textNode: Text, parent: Element, paren
 function collectPaints(root: Element, host: Element) {
   const paints: Paint[] = [];
   const holes: DOMRect[] = [];
+  const styles = new WeakMap<Element, CSSStyleDeclaration>();
+  const rects = new WeakMap<Element, DOMRect>();
+  const styleOf = (element: Element) => {
+    let style = styles.get(element);
+    if (!style) { style = getComputedStyle(element); styles.set(element, style); }
+    return style;
+  };
+  const rectOf = (element: Element) => {
+    let rect = rects.get(element);
+    if (!rect) { rect = element.getBoundingClientRect(); rects.set(element, rect); }
+    return rect;
+  };
   let order = 0;
   const walk = (element: Element) => {
     if (element === host || host.contains(element)) return;
     if (element.matches(EXCLUDED)) {
-      const rect = element.getBoundingClientRect();
+      const rect = rectOf(element);
       if (rect.width && rect.height) holes.push(rect);
       return;
     }
     if (SKIP_TAGS.has(element.tagName) && element.tagName !== 'SVG') return;
-    const style = getComputedStyle(element);
-    const rect = element.getBoundingClientRect();
+    const style = styleOf(element);
+    const rect = rectOf(element);
     if (style.display === 'none' || style.visibility === 'hidden' || Number(style.opacity) === 0 || element.closest('.sr-only,.visually-hidden,.atlas-a11y-stations,[data-a11y-only]')) return;
     if (visible(element, style, rect)) {
       const clipRects: DOMRect[] = [];
+      const movingClipRects = new Set<DOMRect>();
+      const movingLabel = element.closest(MOVING_LABEL);
       for (let ancestor: Element | null = element; ancestor && ancestor !== host; ancestor = ancestor.parentElement) {
-        const ancestorStyle = getComputedStyle(ancestor);
+        const ancestorStyle = styleOf(ancestor);
         if (/(hidden|clip|auto|scroll)/.test(`${ancestorStyle.overflowX} ${ancestorStyle.overflowY}`)) {
-          const clipRect = ancestor.getBoundingClientRect();
-          if (clipRect.width && clipRect.height) clipRects.push(clipRect);
+          const clipRect = rectOf(ancestor);
+          if (clipRect.width && clipRect.height) {
+            clipRects.push(clipRect);
+            if (movingLabel?.contains(ancestor)) movingClipRects.add(clipRect);
+          }
         }
       }
       let z = 0;
+      let opacity = 1;
       for (let ancestor: Element | null = element; ancestor && ancestor !== host; ancestor = ancestor.parentElement) {
-        const ancestorZ = Number.parseInt(getComputedStyle(ancestor).zIndex, 10);
+        const ancestorStyle = styleOf(ancestor);
+        const ancestorZ = Number.parseInt(ancestorStyle.zIndex, 10);
         if (Number.isFinite(ancestorZ)) z += ancestorZ;
+        const ancestorOpacity = Number.parseFloat(ancestorStyle.opacity);
+        if (Number.isFinite(ancestorOpacity)) opacity *= ancestorOpacity;
       }
-      paints.push({ node: element, style, rect, clipRects, z, order: order++ });
+      paints.push({ node: element, style, rect, clipRects, movingClipRects, z, order: order++, opacity: Math.max(0, Math.min(1, opacity)) });
     }
     if (element.tagName !== 'SVG') {
       const children = Array.from(element.children);
@@ -257,10 +273,8 @@ export default function TowerSVGSurface() {
       // Temporarily expose the source styles synchronously; no paint occurs until this task yields.
       document.body.classList.remove('tower-svg-active');
       surface.setAttribute('viewBox', `0 0 ${Math.max(1, innerWidth)} ${Math.max(1, innerHeight)}`);
-      surface.replaceChildren();
       const defs = svg('defs') as SVGDefsElement;
       const layer = svg('g', { 'data-tower-svg-content': '' }) as SVGGElement;
-      surface.append(defs, layer);
       const holes: DOMRect[] = [];
       const paints: Paint[] = [];
       const dynamicLabels = new Map<Element, DynamicLabel>();
@@ -274,6 +288,8 @@ export default function TowerSVGSurface() {
       }
       paints.sort((a, b) => a.z - b.z || a.order - b.order);
       for (const paint of paints) drawElement(defs, layer, paint, index++, holes, dynamicLabels);
+      // Build off-document: text measurements must not flush styles after every SVG insertion.
+      surface.replaceChildren(defs, layer);
       document.body.classList.add('tower-svg-active');
       surface.dataset.ready = 'true';
       host.dataset.elementCount = String(index);
@@ -348,7 +364,10 @@ export default function TowerSVGSurface() {
         }
         for (const {entry, transform, opacityRatio} of updates) {
           if (entry.lastTransform !== transform) {
-            for (const item of entry.groups) item.group.setAttribute('transform', transform);
+            for (const item of entry.groups) {
+              item.group.setAttribute('transform', transform);
+              for (const clip of item.movingClips) clip.setAttribute('transform', transform);
+            }
             entry.lastTransform = transform;
           }
           if (opacityRatio !== undefined) for (const item of entry.groups) item.group.setAttribute('opacity', String(Math.max(0, Math.min(1, item.baseOpacity * opacityRatio))));

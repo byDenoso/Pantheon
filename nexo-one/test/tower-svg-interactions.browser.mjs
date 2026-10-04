@@ -21,6 +21,20 @@ try {
   assert.deepEqual(await paths(), frozen, 'reduced motion freezes the actual vector geometry');
   results.push('Illustrative physics identified; reduced motion freezes vector geometry');
 
+  // A label's own overflow box must follow it while the scene viewport stays fixed.
+  await page.locator('.obs-scene-labels button').first().evaluate(node => { node.style.overflow = 'hidden'; });
+  await page.waitForTimeout(400);
+  await page.locator('.obs-scene-labels button').first().evaluate(node => { node.style.transform += ' translate(160px, 0px)'; });
+  await page.waitForTimeout(100);
+  assert.equal(await page.evaluate(() => {
+    const surface = document.querySelector('svg[data-tower-svg-surface]');
+    const label = document.querySelector('.obs-scene-labels button');
+    const entry = surface.__towerLabels.get(label);
+    return entry.groups.some(item => item.movingClips.length > 0) && entry.groups.every(item => item.movingClips.every(clip => clip.getAttribute('transform') === item.group.getAttribute('transform')));
+  }), true, 'moving label retains its own clip at its new position');
+  await page.locator('.obs-scene-labels button').first().evaluate(node => { node.style.overflow = ''; node.style.transform = node.style.transform.replace(' translate(160px, 0px)', ''); });
+  results.push('Moving SVG label keeps its clipping box aligned');
+
   await page.getByRole('button', { name: 'Explorar a teia', exact: true }).click();
   await page.getByRole('button', { name: 'Aproximar câmera', exact: true }).click();
   await page.waitForTimeout(350);
