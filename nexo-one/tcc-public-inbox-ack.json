@@ -1,6 +1,6 @@
 {
   "acked": {},
-  "base_commit": "82c9bdd72ce0ae19f1dbe0794515d7fa217819eb",
+  "base_commit": "83b866e232e3fa714790e9a3305e1d206e604a6f",
   "blob_index_complete": true,
   "blobs": {
     "inbox/20260925T101213Z-BATCH-referee2.json": "bba0461f9a58d6ee6781d525ef62d3bfa5481908",
@@ -470,6 +470,7 @@
     "inbox/scheduled-operator-c-pr384-merged-with-changes-20260930t2007z.json": "aa83d4d1db6ec5550cf39f68b8bda3beeef9c114",
     "inbox/scheduled-operator-c-ready-lifecycle-change-20260930t1213z.json": "881ed2d541c35d9ecacae9e85a7ab7a73ab1f425",
     "inbox/scheduled-operator-c-tower-native-merged-20261002.json": "b16a292676fbf6bf138256cd3d6f4e0d8de617ed",
+    "inbox/scheduled-operator-drive-control-403-20261004t1328z.json": "556d8b96fc621e108074c45b75e8ac82c33b447b",
     "inbox/scheduled-operator-ready-campaign-20260928-v3100-01.json": "0d277b264cca80fdba1c8555052d6be5dbbbc0ab",
     "inbox/scheduled-operator-recipe-request-desi-planck-cf4-five-tests.json": "dbb32b174f1aec5dd24d1148e1f4726d6a528402",
     "inbox/scheduled-pitia-20260930t0014z-redshift-confirmed-surprise.json": "9e0bcfce68a61ccdf3284be5c61d19b16b6ec04c",
@@ -635,13 +636,13 @@
     "inbox/scheduled-executor-batch-646a1ab8f0f2860e.json": {
       "blob_sha": "4ec491f1dbaccce3b010351e7d1ec07910cfdfdd",
       "fingerprint": "6a3fb67521690ac71e34dabaa416d3d166c7fa794ea9a13428d66d8c3ad6f347",
-      "observed_at": "2026-10-04T13:24:28Z",
+      "observed_at": "2026-10-04T13:32:33Z",
       "reason": "NOT_REPORTED"
     },
     "inbox/scheduled-refutador-batch-71ed43b5cf944d50.json": {
       "blob_sha": "a31b0df1cd4b35dad88f8a4bcdf660b535ffe89f",
       "fingerprint": "16245cde098d804253493aae8090e9e53d5677d3fd1a01d5a9b0be1a631c7d04",
-      "observed_at": "2026-10-04T13:24:28Z",
+      "observed_at": "2026-10-04T13:32:33Z",
       "reason": "NOT_REPORTED"
     }
   },
@@ -4611,6 +4612,34 @@
         }
       ],
       "tower_revision": "sha256:1e2f8606055a3a25fbea16f82cc79a89411c58cbfed5a93e96ba2437fd943ff0"
+    },
+    "inbox/scheduled-operator-drive-control-403-20261004t1328z.json": {
+      "fingerprint": "00ea014f135c7c81b9c625e81310e66fee9534f2a1a6b5288730ed5350b4db79",
+      "observed_at": "2026-10-04T13:32:33Z",
+      "outcome": "APPLIED",
+      "receipt_ids": [
+        "OR-d28ff8d5b31ff9fdebb19b5fb5dae079"
+      ],
+      "receipts": [
+        {
+          "contract": "OPERATION_RECEIPT_V1",
+          "effect_id": "envelope-e0edffb767a6cbce9ade59f08bf94706",
+          "intent_id": "gateway:tcc-97efc06af9223bb9748eefa3c528719a",
+          "observed_at": "2026-10-04T13:32:09.361837Z",
+          "occurred_at": "2026-10-04T13:32:09.361819Z",
+          "outcome": "APPLIED",
+          "payload_sha256": "sha256:6fd031c10cf4903aa5d724058340c8f83ad32ca56c417e8db31ca6ec6316f185",
+          "reason_code": null,
+          "receipt_id": "OR-d28ff8d5b31ff9fdebb19b5fb5dae079",
+          "result_revision": "sha256:9b77e2386a2bfb27116cf259eed22f4810ea6a546412f5761412f1781f5efcbe",
+          "retry_condition": null,
+          "source_revision": "sha256:047749f8066138500457090d8103f4b255d2690ea8f4b5a20f9d5e4fa5b31edb",
+          "stage": "APPLIED",
+          "supersedes": null,
+          "visibility": "PUBLIC"
+        }
+      ],
+      "tower_revision": "sha256:69bf6b8166235324c035ff74b83e63dbd235898dca5273608fca010c1b8fe143"
     },
     "inbox/scheduled-operator-ready-campaign-20260928-v3100-01.json": {
       "fingerprint": "74617db85b99ecdf5847dc2dd367d0f571b8d72d83d5e1de5c16269748929190",
