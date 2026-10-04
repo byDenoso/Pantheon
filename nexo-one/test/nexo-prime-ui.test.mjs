@@ -86,11 +86,16 @@ test('manual sync preserves the last valid snapshot and reports readback state',
   assert.match(app,/syncMessage/);
 });
 
-test('heavy galaxy and Atlas modules are lazy-loaded outside the initial cockpit bundle',async()=>{
+test('heavy route-only modules stay outside the initial Atlas bundle',async()=>{
   const app=await text('src/app/App.tsx');
   assert.match(app,/lazy\(\(\) => import\('\.\.\/atlas3d\/GalaxyView\.tsx'\)/);
   assert.match(app,/lazy\(\(\) => import\('\.\.\/atlas3d\/EmbeddedAtlas3D\.tsx'\)/);
+  assert.match(app,/lazy\(\(\) => import\('\.\.\/features\/system\/Overview\.tsx'\)/);
+  assert.match(app,/lazy\(\(\) => import\('\.\.\/features\/system\/Operations\.tsx'\)/);
+  assert.match(app,/lazy\(\(\) => import\('\.\.\/features\/system\/Integrity\.tsx'\)/);
+  assert.match(app,/lazy\(\(\) => import\('\.\.\/features\/PersonalCockpit\.tsx'\)/);
   assert.doesNotMatch(app,/import .* from '\.\.\/atlas3d\/(?:GalaxyView|EmbeddedAtlas3D)\.tsx'/);
+  assert.doesNotMatch(app,/import .* from '\.\.\/features\/(?:system\/(?:Overview|Operations|Integrity)|PersonalCockpit)\.tsx'/);
 });
 
 test('overview names the human decision queue in clear Portuguese',async()=>{
