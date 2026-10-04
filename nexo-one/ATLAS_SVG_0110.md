@@ -76,3 +76,5 @@ A alternancia rapida no modo 2D revelou callbacks de animacao G6 sobre elementos
 Candidato de reversao antes da publicacao: 593eed52d4a4a046529ad9c73402f4729de25554, confirmado no build-meta.json publico. A publicacao usa exclusivamente o workflow existente nexo-one-pages.yml. Os resultados locais sao evidencias de preparacao; o estado publicado sera confirmado por workflow e leitura do build-meta.json em producao.
 
 Permanece a limitacao medida de custo de CPU durante a orbita vetorial, documentada acima. Nao se afirma simulacao fisica completa nem ganho universal frente ao WebGL historico.
+
+A matriz SVG foi repetida apos a integracao: 54/54 combinacoes aprovadas, sem canvas visivel, foreignObject, overflow horizontal ou erros nao tratados. Log: output/deploy-svg-matrix.log. Os marcadores e a camada semantica permanecem vinculados aos dados publicados.
