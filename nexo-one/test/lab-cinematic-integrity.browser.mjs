@@ -17,8 +17,9 @@ await mkdir(output, { recursive: true });
 const browser = await chromium.launch({ headless: true, ...(process.env.CHROMIUM_EXECUTABLE ? { executablePath: process.env.CHROMIUM_EXECUTABLE } : {}), args: ['--no-sandbox'] });
 const reports = [];
 const readiness = [];
+let activePage, activeName = 'published';
 // The current renderer groups projected samples into SVG paths. Measure that
-// real output, not the retired WebGL buffer attributes (which no longer exist).
+// real output, not retired WebGL buffer attributes or the unmounted AtlasPortal.
 const vectorReady = async (page, sampleBudget) => {
   await page.locator(nativeScene).waitFor();
   await page.waitForFunction(selector => !!document.querySelector(selector)?.querySelector('.obs-vector-environment path[d]'), nativeScene);
@@ -28,8 +29,7 @@ const vectorReady = async (page, sampleBudget) => {
     return {
       renderer: 'svg', pathBatches: paths.length,
       drawnSamples: data.reduce((sum, d) => sum + (d.match(/M/g) || []).length, 0),
-      finite: data.every(d => !/NaN|Infinity/.test(d)),
-      frames: Number(svg.dataset.renderCount),
+      finite: data.every(d => !/NaN|Infinity/.test(d)), frames: Number(svg.dataset.renderCount),
       canvases: svg.parentElement.querySelectorAll('canvas').length,
       foreignObjects: svg.querySelectorAll('foreignObject').length,
     };
@@ -42,16 +42,15 @@ const vectorReady = async (page, sampleBudget) => {
   assert.equal(await page.locator('[data-tower-svg-host]').count(), 0, 'normal browsing must not duplicate the entire page');
   return metrics;
 };
-// Route content existing is not visual readiness: hud-in and text/count animations must finish.
+// Route content existing is not visual readiness: HUD and text/count animations must finish.
 const visualReady = async (page, name, exploring = false) => {
   await page.evaluate(() => document.fonts.ready);
   await page.waitForFunction(expected => {
     const hud = document.querySelector('.hud');
     if (!hud || document.fonts.status !== 'loaded') return false;
     const observatory = document.querySelector('.observatory');
-    if (!observatory || (!observatory.classList.contains('flat') && !observatory.classList.contains('scene-unavailable') && !observatory.querySelector('.obs-scene svg[data-tower-svg-native="observatory"][data-ready="true"]'))) return false;
-    const style = getComputedStyle(hud);
-    if (Math.abs(Number(style.opacity) - expected) > .001) return false;
+    if (!observatory || (!observatory.classList.contains('flat') && !observatory.querySelector('.obs-scene svg[data-tower-svg-native="observatory"][data-ready="true"]'))) return false;
+    if (Math.abs(Number(getComputedStyle(hud).opacity) - expected) > .001) return false;
     const finite = hud.getAnimations({ subtree: true }).filter(animation => {
       const effect = animation.effect?.getComputedTiming();
       return effect && Number.isFinite(effect.endTime);
@@ -72,22 +71,19 @@ const noOverflow = async (page, route) => {
   assert.ok(size.scroll <= size.width + 1, route + ': horizontal overflow ' + JSON.stringify(size));
 };
 try {
-  // Replay an actual public read model through this candidate build. The fixed
-  // fixture below tests behavior; this capture reviews the real graph's shape.
   const publishedResponse = await fetch('https://nexo-one-two.vercel.app/api/system', { signal: AbortSignal.timeout(30_000) });
   assert.ok(publishedResponse.ok, 'published public system is readable for visual evidence');
   const publishedSystem = await publishedResponse.json();
   assert.ok(Object.keys(publishedSystem.read_model?.tests || {}).length > 0, 'published capture contains real tests');
   const publishedContext = await browser.newContext({ viewport: { width: 1600, height: 1000 }, locale: 'pt-BR', timezoneId: 'America/Sao_Paulo' });
-  const publishedPage = await publishedContext.newPage();
+  const publishedPage = activePage = await publishedContext.newPage();
   const publishedErrors = [];
   publishedPage.on('pageerror', error => publishedErrors.push(error.message));
-  publishedPage.on('console', message => { if (message.type() === 'error' && /THREE.WebGLProgram|VALIDATE_STATUS|shader error|Error compiling/i.test(message.text())) publishedErrors.push(message.text()); });
-  await publishedPage.addInitScript(() => { localStorage.setItem('nexo-theme','dark'); localStorage.setItem('nexo.quality','medium'); localStorage.setItem('nexo.intro.seen','1'); });
+  await publishedPage.addInitScript(() => { localStorage.setItem('nexo-theme','dark'); localStorage.setItem('nexo.quality','medium'); localStorage.setItem('nexo.intro.seen','1'); localStorage.setItem('nexo.legend.seen','1'); });
   await publishedPage.route('**/api/session', route => route.fulfill({ json: { configured: false, authenticated: false } }));
   await publishedPage.route('**/api/system*', route => route.fulfill({ json: publishedSystem }));
   await publishedPage.goto(base + '/#/agora');
-  await publishedPage.getByRole('navigation', { name: 'Escala do ATLAS' }).waitFor();
+  await publishedPage.locator('#now-problem').waitFor();
   await publishedPage.evaluate(() => document.fonts.ready);
   const publishedDiagnostics = await vectorReady(publishedPage, 42_000);
   await publishedPage.screenshot({ path: output + '/published-atlas-svg.png' });
@@ -102,36 +98,31 @@ try {
     ['mobile-reduced', { width: 390, height: 844 }, 'dark', true, false],
     ['mobile-light-no-webgl', { width: 390, height: 844 }, 'light', true, true],
   ]) {
+    activeName = name;
     const context = await browser.newContext({ viewport, locale: 'pt-BR', timezoneId: 'America/Sao_Paulo', reducedMotion: reduced ? 'reduce' : 'no-preference', isMobile: viewport.width < 760, hasTouch: viewport.width < 760 });
-    const page = await context.newPage();
+    const page = activePage = await context.newPage();
     const errors = [];
     page.on('pageerror', error => errors.push(error.message));
-    page.on('console', message => {
-      if (message.type() === 'error' && /THREE.WebGLProgram|VALIDATE_STATUS|shader error|Error compiling/i.test(message.text())) errors.push(message.text());
-    });
-    // Freeze source freshness only; actual RAF and timers keep interactions live.
     await page.clock.setFixedTime(Date.parse(projection.manifest.generated_at) + 60_000);
-    await page.addInitScript(({ theme, webglDisabled, quality }) => {
+    await page.addInitScript(({ theme, webglDisabled }) => {
       localStorage.setItem('nexo-theme', theme);
       localStorage.setItem('nexo.intro.seen', '1');
       localStorage.setItem('nexo.legend.seen', '1');
-      localStorage.setItem('nexo.quality', quality);
+      localStorage.setItem('nexo.quality', 'low');
       if (webglDisabled) {
         const getContext = HTMLCanvasElement.prototype.getContext;
         HTMLCanvasElement.prototype.getContext = function (kind, ...args) { return /^webgl/.test(kind) ? null : getContext.call(this, kind, ...args); };
       }
-    }, { theme, webglDisabled, quality: 'low' });
+    }, { theme, webglDisabled });
     await page.route('**/api/session', route => route.fulfill({ json: { configured: false, authenticated: false } }));
     await page.route('**/api/system*', route => route.fulfill({ json: system }));
     await page.route('**/build-meta.json*', route => route.fulfill({ json: { projection_fingerprint: projection.manifest.projection_fingerprint } }));
     await page.goto(base + '/#/agora');
-    await page.getByRole('navigation', { name: 'Escala do ATLAS' }).waitFor();
+    await page.locator('#now-problem').waitFor();
     await page.evaluate(() => document.fonts.ready);
     const geometry = await vectorReady(page, 6_000);
     if (!input) await page.addStyleTag({ content: 'body::after{content:"FIXTURE VISUAL · DADOS SINTÉTICOS · SOMENTE TESTE";position:fixed;left:12px;bottom:6px;z-index:9999;padding:4px 8px;background:#15120c;color:#f4e4bd;font:11px system-ui;pointer-events:none}' });
     await page.screenshot({ path: output + '/' + name + '-atlas-entry.png' });
-    await page.getByRole('button', { name: 'Abrir observatório' }).click();
-    await page.locator('#now-problem').waitFor();
     await visualReady(page, name + ':home');
     assert.match(await page.locator('.now-priorities').innerText(), new RegExp(`${blocked} testes parados`));
     assert.match(await page.locator('#now-next').locator('..').innerText(), new RegExp(`Conferir requisitos dos ${blocked} bloqueios`));
@@ -150,12 +141,12 @@ try {
       assert.ok((await page.locator('.tele-feed > li:not(.tele-note) > .feed-kind').allTextContents()).every(text => text === 'Evento narrado · interface'));
     }
     await noOverflow(page, name + ':home');
-    const tools = page.locator('.obs-tools-more');
-    assert.equal(await tools.getAttribute('open'), null, 'secondary visual controls start closed');
+    const tools = page.locator('.obs-tools');
+    await tools.getByRole('button', { name: 'Explorar a teia', exact: true }).waitFor();
+    assert.equal(await tools.getByRole('button', { name: 'Mostrar só a página', exact: true }).getAttribute('aria-pressed'), 'false');
     assert.equal(await page.locator('.observatory.scene-unavailable').count(), 0, 'native SVG remains functional without WebGL');
     assert.equal(await page.locator(nativeScene).count(), 1);
     if (theme === 'dark') assert.equal(await page.locator('.observatory').evaluate(el => getComputedStyle(el).getPropertyValue('--o-accent').trim()), '#9fc9ff');
-    if (!input) await page.addStyleTag({ content: 'body::after{content:"FIXTURE VISUAL · DADOS SINTÉTICOS · SOMENTE TESTE";position:fixed;left:12px;bottom:6px;z-index:9999;padding:4px 8px;background:#15120c;color:#f4e4bd;font:11px system-ui;pointer-events:none}' });
     await page.screenshot({ path: output + '/' + name + '-home.png' });
     await page.evaluate(() => { location.hash = '#/e/FAM-DE-FS-GEOGROWTH-ELG-DESI-PP'; });
     await page.locator('.h1-entity').locator('..').waitFor();
@@ -179,7 +170,6 @@ try {
     await visualReady(page, name + ':cycle');
     await page.screenshot({ path: output + '/' + name + '-cycle.png' });
     await page.evaluate(() => { location.hash = '#/agora'; });
-    await page.getByRole('button', { name: 'Abrir observatório' }).click();
     await page.locator('#now-problem').waitFor();
     await page.getByRole('button', { name: 'Procurar', exact: true }).click();
     await page.getByRole('dialog').waitFor();
@@ -187,18 +177,10 @@ try {
     assert.equal(await page.getByRole('dialog').count(), 0);
     await visualReady(page, name + ':camera-ready');
     await page.screenshot({ path: output + '/' + name + '-camera-ready.png' });
-    const diagnostics = await page.evaluate(() => ({
-      url: location.href,
-      sceneUnavailable: !!document.querySelector('.scene-unavailable'),
-      svgCount: document.querySelectorAll('.obs-scene svg[data-tower-svg-native="observatory"]').length,
-      buttons: [...document.querySelectorAll('.obs-tools button')].map(button => ({
-        label: button.getAttribute('aria-label'), text: button.textContent,
-        width: button.getBoundingClientRect().width, height: button.getBoundingClientRect().height,
-      })),
-    }));
-    await writeFile(output + '/' + name + '-camera-diagnostics.json', JSON.stringify(diagnostics, null, 2));
-    await page.getByRole('button', { name: 'Explorar a teia' }).click();
+    await page.getByRole('button', { name: 'Explorar a teia', exact: true }).click();
+    assert.equal(await tools.getByRole('button', { name: 'Voltar ao painel', exact: true }).getAttribute('aria-pressed'), 'true');
     const controls = page.getByRole('group', { name: /Câmera da teia/ });
+    await controls.waitFor();
     if (viewport.width < 760) {
       const bounds = await controls.boundingBox();
       const nav = await page.locator('.instrument-modes').boundingBox();
@@ -207,21 +189,23 @@ try {
     await controls.focus();
     await page.keyboard.press('ArrowRight');
     await page.keyboard.press('+');
-    await page.getByRole('button', { name: 'Recentrar câmera' }).click();
-    await page.getByRole('navigation', { name: 'Escala do ATLAS' }).waitFor();
-    await page.getByRole('button', { name: /02.*Pesquisa/ }).click();
-    assert.equal(await page.locator('.atlas-portal').getAttribute('data-scale'), 'research');
+    await page.getByRole('button', { name: 'Recentrar câmera', exact: true }).click();
+    // Current scene navigation is the domain breadcrumb, not AtlasPortal scales.
+    const crumb = page.getByRole('navigation', { name: 'Onde você está na teia', exact: true });
+    await crumb.getByRole('button', { name: 'NEXO', exact: true }).click();
+    assert.equal(await crumb.getByRole('button', { name: 'NEXO', exact: true }).getAttribute('aria-current'), 'location');
     await noOverflow(page, name + ':atlas');
     await page.screenshot({ path: output + '/' + name + '-explore.png' });
     await page.keyboard.press('Escape');
     assert.equal(await page.locator('.observatory.exploring').count(), 0);
-    assert.equal(await tools.getAttribute('open'), null, 'Escape closes secondary visual controls');
-    if (!(await tools.evaluate(el => el.open))) await tools.locator('summary').click();
-    await page.getByRole('button', { name: /Mostrar só a página/ }).click();
+    assert.equal(await tools.getByRole('button', { name: 'Explorar a teia', exact: true }).getAttribute('aria-pressed'), 'false');
+    await page.getByRole('button', { name: 'Mostrar só a página', exact: true }).click();
     assert.equal(await page.locator('.observatory.flat').count(), 1);
-    if (!(await tools.evaluate(el => el.open))) await tools.locator('summary').click();
-    await page.getByRole('button', { name: /Mostrar a teia/ }).click();
+    assert.equal(await page.locator(nativeScene).count(), 0, 'flat mode tears down the scene');
+    assert.equal(await tools.getByRole('button', { name: 'Mostrar a teia', exact: true }).getAttribute('aria-pressed'), 'true');
+    await page.getByRole('button', { name: 'Mostrar a teia', exact: true }).click();
     assert.equal(await page.locator('.observatory.flat').count(), 0);
+    await vectorReady(page, 6_000);
     if (!input) {
       const audit = structuredClone(system);
       for (const record of Object.values(audit.read_model.tests)) delete record.blocker;
@@ -231,7 +215,6 @@ try {
       await page.unroute('**/api/system*');
       await page.route('**/api/system*', route => route.fulfill({ json: audit }));
       await page.reload();
-      await page.getByRole('button', { name: 'Abrir observatório' }).click();
       await page.locator('#now-problem').waitFor();
       await visualReady(page, name + ':blocker-semantics');
       await page.addStyleTag({ content: 'body::after{content:"FIXTURE VISUAL · DADOS SINTÉTICOS · SOMENTE TESTE";position:fixed;left:12px;bottom:6px;z-index:9999;padding:4px 8px;background:#15120c;color:#f4e4bd;font:11px system-ui;pointer-events:none}' });
@@ -268,10 +251,20 @@ try {
       await noOverflow(page, name + ':health-sources');
     }
     assert.deepEqual(errors, [], name + ': page errors');
-    reports.push({ name, routes: ['agora', 'rejected', 'roadmap', 'ciclo'], noOverflow: true, searchEscape: true, cameraKeyboard: true, flatToggle: true, reducedMotion: reduced, webglDisabled, geometry, errors });
+    reports.push({ name, routes: ['agora', 'rejected', 'roadmap', 'ciclo'], noOverflow: true, searchEscape: true, cameraKeyboard: true, domainBreadcrumb: true, flatToggle: true, reducedMotion: reduced, webglDisabled, geometry, errors });
+    console.log('PASS observatory profile: ' + name);
     await context.close();
   }
-} finally { await browser.close(); }
-await writeFile(output + '/report.json', JSON.stringify(reports, null, 2));
-await writeFile(output + '/readiness.json', JSON.stringify(readiness, null, 2));
+} catch (error) {
+  if (activePage && !activePage.isClosed()) {
+    await activePage.screenshot({ path: output + '/' + activeName + '-failure.png', timeout: 5000 }).catch(() => {});
+    const diagnostics = await activePage.evaluate(() => ({ url: location.href, text: document.body.innerText.slice(0, 12000), nativeScenes: document.querySelectorAll('[data-tower-svg-native]').length })).catch(() => null);
+    await writeFile(output + '/' + activeName + '-failure.json', JSON.stringify({ error: String(error), diagnostics }, null, 2));
+  }
+  throw error;
+} finally {
+  await writeFile(output + '/report.json', JSON.stringify(reports, null, 2));
+  await writeFile(output + '/readiness.json', JSON.stringify(readiness, null, 2));
+  await browser.close();
+}
 console.log(JSON.stringify(reports));
