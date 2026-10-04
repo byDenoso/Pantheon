@@ -64,11 +64,12 @@ class Reads(unittest.TestCase):
             a.read_api_json(URL,opener=opener,sleep=lambda x:self.fail('permission retry'))
         self.assertEqual(opener.open.call_count,1)
 
-    def test_workflow_auth_is_limited_to_metadata_step(self):
+    def test_workflow_public_inbox_reader_is_unauthenticated(self):
         text=(Path(__file__).parents[2]/'.github/workflows/nexo-writer-robot.yml').read_text()
         section=text.split('- name: Collect proposals from public TCC inbox',1)[1].split('- name: Collect proposals from scheduled Sheet spool',1)[0]
-        self.assertIn('GH_TOKEN: ${{ github.token }}',section)
-        self.assertIn('comparison=read_api_json(api)',section)
+        self.assertNotIn('GH_TOKEN: ${{ github.token }}',section)
+        self.assertIn('urllib.request.urlopen',section)
+        self.assertIn('headers={"Accept":"application/vnd.github+json","User-Agent":"nexo-writer-robot"}',section)
         self.assertIn('headers={"User-Agent":"nexo-writer-robot"}',section)
         self.assertNotIn('Authorization',section)
 
