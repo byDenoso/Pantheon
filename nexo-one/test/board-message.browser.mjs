@@ -63,6 +63,7 @@ try {
     await page.route('**/api/system*', route => route.fulfill({ json: system }));
     await page.route('**/build-meta.json*', route => route.fulfill({ json: { projection_fingerprint: projection.manifest.projection_fingerprint } }));
     await page.goto(base + '/#/cockpit/comando');
+    await page.getByRole('button', { name: 'Abrir observatório' }).click();
     const focus = page.locator('.board-focus');
     await focus.waitFor(); await ready(page); await noOverflow(page);
     assert.equal(await focus.locator('.board-text').textContent(), latest.text, 'literal original preserved');
@@ -112,7 +113,7 @@ try {
     const firstLink = focus.locator('.board-evidence a[href^="#/e/"]').first();
     if (await firstLink.count()) {
       await firstLink.click(); await page.locator('.h1-entity').waitFor();
-      await page.goBack(); await focus.waitFor(); await ready(page);
+      await page.goBack(); await page.getByRole('button', { name: 'Abrir observatório' }).click(); await focus.waitFor(); await ready(page);
     }
     await focus.getByRole('button', { name: 'Ver todos os recados' }).click();
     const waitForOpenBoard = () => page.waitForFunction(total => {

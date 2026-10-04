@@ -147,7 +147,7 @@ test('app navigation uses observatory primary tabs and removes duplicate rail na
   assert.match(header, /<strong>Dados do NEXO<\/strong>/);
   assert.match(header, /Última leitura:/);
   assert.match(header, /aria-label="Modo do produto"/);
-  for (const label of ['Agora','Ciclo','Roadmaps','Evidência','Saúde','Pessoal','Sistema']) assert.match(header, new RegExp(label));
+  for (const label of ['ATLAS','Ciclo','Roadmaps','Evidência','Saúde','Pessoal','Sistema']) assert.match(header, new RegExp(label));
   assert.match(app, /className="section-tabs"/);
   assert.match(shell, /\.unified-shell \.cockpit-body\{display:block!important/);
   assert.match(shell, /\.unified-shell \.nav-rail,\.unified-shell \.bottom-nav\{display:none!important\}/);

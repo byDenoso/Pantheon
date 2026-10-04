@@ -65,11 +65,15 @@ class Reads(unittest.TestCase):
         self.assertEqual(opener.open.call_count,1)
 
     def test_workflow_auth_is_limited_to_metadata_step(self):
-        text=(Path(__file__).parents[2]/'.github/workflows/nexo-writer-robot.yml').read_text()
+        root=Path(__file__).parents[2]
+        text=(root/'.github/workflows/nexo-writer-robot.yml').read_text()
+        helper=(root/'scripts/collect_tcc_inbox.py').read_text()
         section=text.split('- name: Collect proposals from public TCC inbox',1)[1].split('- name: Collect proposals from scheduled Sheet spool',1)[0]
         self.assertIn('GH_TOKEN: ${{ github.token }}',section)
-        self.assertIn('comparison=read_api_json(api)',section)
-        self.assertIn('headers={"User-Agent":"nexo-writer-robot"}',section)
-        self.assertNotIn('Authorization',section)
+        self.assertIn('python scripts/collect_tcc_inbox.py',section)
+        self.assertIn('from scripts.github_api_read import read_api_json',helper)
+        self.assertIn('git/blobs/{blob_sha}',helper)
+        self.assertIn('urllib.parse.quote(path, safe="/")',helper)
+        self.assertNotIn('branch + "/" +',helper)
 
 if __name__=='__main__':unittest.main()

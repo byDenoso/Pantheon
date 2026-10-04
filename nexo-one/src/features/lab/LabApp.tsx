@@ -25,6 +25,7 @@ import { DependencyFlow } from './DependencyFlow.tsx';
 import { LiveNowPanel } from './LiveNowPanel.tsx';
 import { captureReading, publishedChanges, latestDelivery, eventLabel, focusEntities, type PublishedChange } from './live-state.ts';
 import { UniversePage, UniverseFrontierPage } from './UniversePage.tsx';
+import { AtlasPortal, type AtlasScale } from './AtlasPortal.tsx';
 
 const ObservatoryScene = lazy(() => import('./ObservatoryScene.tsx').then(m => ({ default: m.ObservatoryScene })));
 
@@ -78,6 +79,8 @@ export default function LabApp({ state, route, theme }: { state: SystemState; ro
   const lab = useMemo(() => buildLab(state), [state]);
   nameOf = (id: string) => lab.tests.get(id)?.name ?? lab.hypotheses.get(id)?.statement ?? lab.roadmaps.get(id)?.title ?? humanId(id);
   const tests = useMemo(() => [...lab.tests.values()].filter(t => !t.contestOf), [lab]);
+  const sceneProjects = useMemo(() => [...lab.roadmaps.values()].map(r => ({ id: r.id, label: r.title, domain: lab.tests.get(r.tests[0] || '')?.domain || 'SCIENCE', testIds: r.tests })), [lab]);
+  const sceneHypotheses = useMemo(() => [...lab.hypotheses.values()].map(h => ({ id: h.id, label: h.statement || h.id, testIds: h.tests })), [lab]);
   const previousReading = useRef(captureReading(lab));
   const [changes, setChanges] = useState<PublishedChange[]>([]);
   const [changedAt, setChangedAt] = useState<string | null>(null);
@@ -87,7 +90,9 @@ export default function LabApp({ state, route, theme }: { state: SystemState; ro
     if (next.length) { setChanges(next); setChangedAt(lab.generatedAt); }
   }, [lab]);
   const [focus, setFocus] = useState<string[]>([]);
-  const [explore, setExplore] = useState(false);
+  const [explore, setExplore] = useState(route.page === 'agora');
+  const [atlasScale, setAtlasScale] = useState<AtlasScale>('overview');
+  const [atlasRegion, setAtlasRegion] = useState<string | null>(null);
   const toolsRef = useRef<HTMLDetailsElement>(null);
   const [sceneAvailable, setSceneAvailable] = useState<boolean | null>(null);
   const hudRef = useRef<HTMLDivElement>(null);
@@ -109,7 +114,7 @@ export default function LabApp({ state, route, theme }: { state: SystemState; ro
   // "Só a página": sem a teia atrás (mais leve no celular e mais legível); lembrado neste aparelho.
   const [flat, setFlat] = useState(() => { try { return localStorage.getItem('nexo.flat') === '1'; } catch { return false; } });
   const toggleFlat = () => setFlat(x => { const n = !x; try { localStorage.setItem('nexo.flat', n ? '1' : '0'); } catch { /* sem armazenamento */ } if (n) setExplore(false); return n; });
-  useEffect(() => { setExplore(false); toolsRef.current?.removeAttribute('open'); }, [route.page, route.id]);
+  useEffect(() => { setExplore(route.page === 'agora'); toolsRef.current?.removeAttribute('open'); }, [route.page, route.id]);
   useEffect(() => {
     const esc = (e: KeyboardEvent) => {
       if (e.key !== 'Escape') return;
@@ -176,8 +181,10 @@ export default function LabApp({ state, route, theme }: { state: SystemState; ro
   })();
 
   const cur = replay !== null ? reel[replay] : null;
-  return <div className={`observatory${sceneAvailable !== false && (explore || replay !== null) ? ' exploring' : ''}${flat ? ' flat' : ''}${sceneAvailable === false ? ' scene-unavailable' : ''}`} data-page={route.page}>
-    <Intro />
+  const atlasHome = route.page === 'agora' && explore && !flat && replay === null;
+  return <div className={`observatory${atlasHome ? ' atlas-home' : ''}${sceneAvailable !== false && (explore || replay !== null) ? ' exploring' : ''}${flat ? ' flat' : ''}${sceneAvailable === false ? ' scene-unavailable' : ''}`} data-page={route.page}>
+    {!atlasHome && <Intro />}
+    {atlasHome && <AtlasPortal selectedRegion={atlasRegion} onRegionChange={setAtlasRegion} lab={lab} fallback={sceneAvailable === false} sourceCurrent={sourceCurrent} scale={atlasScale} onScale={setAtlasScale} onFocus={setFocus} onPanel={() => setExplore(false)} onSearch={() => setSearching(true)} />}
     {cur && <div className="replay-caption" role="status" aria-live="polite">
       <span className="replay-clock">{new Date(cur.at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</span>
       <p><small className="feed-kind">Evento narrado · interface</small><b>{ROLE_PT[cur.role.toUpperCase()] ?? cur.role}</b> {narrate(cur, lab, state)}</p>
@@ -194,8 +201,6 @@ export default function LabApp({ state, route, theme }: { state: SystemState; ro
         <div className="obs-tools-panel">
           {sceneAvailable !== false && <button type="button" aria-pressed={flat} onClick={toggleFlat} title={flat ? 'Mostrar a teia atrás do painel' : 'Mostrar só a página, sem a teia'} aria-label={flat ? 'Mostrar a teia' : 'Mostrar só a página'}>
         <Icon n="page" /><span className="bt">{flat ? 'Com a teia' : 'Só a página'}</span></button>}
-          {!flat && sceneAvailable === true && <button type="button" onClick={() => window.dispatchEvent(new Event('nexo:replay-formation'))} title="Volta a teia ao quase-uniforme e mostra, em ~3 minutos, os nós aglomerando e os vazios se expandindo" aria-label="Rever a formação da teia">
-        <Icon n="replay" /><span className="bt">Rever formação</span></button>}
           {!flat && sceneAvailable === true && <QualityButton />}
           <button type="button" aria-pressed={sound} onClick={() => setSound(x => !x)} title="Som ambiente" aria-label="Som ambiente"><Icon n={sound ? 'sound' : 'mute'} /><span className="bt">{sound ? 'Som ligado' : 'Som'}</span></button>
           {explore && <p className="obs-tools-guide" role="status">Arraste: girar · pinça ou roda: zoom · Shift ou 2 dedos: mover · duplo clique: centro · Esc: sair</p>}
@@ -204,7 +209,7 @@ export default function LabApp({ state, route, theme }: { state: SystemState; ro
     </div>
     {searching && <Search lab={lab} state={state} onClose={() => setSearching(false)} />}
     {!flat && <Suspense fallback={<div className="obs-scene obs-scene--loading" />}>
-      <ObservatoryScene explore={explore || replay !== null} hot={hot} tests={tests} sourceCurrent={sourceCurrent} events={events} page={route.page} focusIds={focus} theme={theme}
+      <ObservatoryScene onProjectSelect={setAtlasRegion} projects={sceneProjects} hypotheses={sceneHypotheses} scale={atlasScale} onScaleChange={setAtlasScale} explore={explore || replay !== null} hot={hot} tests={tests} sourceCurrent={sourceCurrent} events={events} page={route.page} focusIds={focus} theme={theme}
         onAvailability={setSceneAvailable} onPick={id => { window.location.hash = labHref('entidade', id); }} />
     </Suspense>}
     <div ref={hudRef} className="hud" inert={sceneAvailable !== false && (explore || replay !== null)} key={`${route.page}:${route.id ?? ''}`} >{changes.length > 0 && <aside className="published-changes" aria-label="Mudanças recebidas nesta visita"><p role="status">{changes.length} mudanças recebidas · fonte {ago(changedAt)}</p><details><summary>Ver o que mudou sem sair da página</summary><ul>{changes.slice(0, 12).map(change => <li key={change.id}><E id={change.id}>{change.name}</E><span>{change.kind === 'review' ? `${VERDICT_PT[change.before as Verdict] ?? change.before} → ${VERDICT_PT[change.after as Verdict] ?? change.after}` : change.kind === 'added' ? 'Teste passou a constar nesta leitura' : change.before ? `${change.before} → ${change.after}` : change.after}</span></li>)}</ul>{changes.length > 12 && <p>Mostrando 12 de {changes.length}. Consulte a Evidência para o estado completo.</p>}</details><button type="button" onClick={() => setChanges([])}>Dispensar aviso</button></aside>}{sceneAvailable === false && !flat && <p className="scene-fallback-note">Visualização leve · a teia 3D requer WebGL. Todas as páginas e evidências continuam disponíveis.</p>}{page}<Acoustic /></div>
