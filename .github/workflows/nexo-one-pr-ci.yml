@@ -82,6 +82,7 @@ jobs:
         with:
           name: atlas-cinematic-visual-${{ github.event.pull_request.head.sha }}
           path: |
+            nexo-one/test-output/google-drive-consent/
             nexo-one/test-output/cinematic/
             nexo-one/test-output/board-message/
             nexo-one/test-output/crew-layout/

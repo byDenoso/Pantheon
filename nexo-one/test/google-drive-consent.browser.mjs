@@ -88,7 +88,11 @@ try{
     await page.getByText(/Leitura da Tower verificada/).waitFor();
     assert.match(await page.getByRole('status').innerText(),/piloto de soma ainda requer execução/);
     await page.screenshot({path:`test-output/google-drive-consent/${label}-readback.png`,fullPage:true});
-    assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
+    const overflow=await page.evaluate(()=>({scrollWidth:document.documentElement.scrollWidth,innerWidth,
+      offenders:[...document.querySelectorAll('body *')].filter(el=>el.getBoundingClientRect().right>innerWidth+1)
+        .slice(0,8).map(el=>`${el.tagName.toLowerCase()}#${el.id}.${typeof el.className==='string'?el.className:''}`.slice(0,120))}));
+    assert.ok(overflow.scrollWidth<=overflow.innerWidth+1,
+      `${label} consent page overflows after readback: ${JSON.stringify(overflow)}`);
     assert.deepEqual(errors,[]);await context.close();
   }
   startMode='uncertain';
