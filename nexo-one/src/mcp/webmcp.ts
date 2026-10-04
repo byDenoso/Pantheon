@@ -30,7 +30,8 @@ export async function registerWebMcp(context:ModelContext|undefined,{readStatus=
       if(tool.access!=='PUBLIC'||tool.annotations.readOnlyHint!==true||tool.availability!=='AVAILABLE')continue;
       const name=`nexo_${tool.name}`;
       await context.registerTool({name,description:tool.description,inputSchema:tool.inputSchema,annotations:{readOnlyHint:true},
-        execute:(args,invocation)=>callTool(tool,args,invocation?.signal)}, {signal:controller.signal});
+        execute:(args,invocation)=>callTool(tool,args,invocation?.signal
+          ?AbortSignal.any([controller.signal,invocation.signal]):controller.signal)}, {signal:controller.signal});
       registered.push(name);
     }
     return {state:registered.length?'REGISTERED':'UNAVAILABLE',registered,dispose};

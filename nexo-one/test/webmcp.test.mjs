@@ -20,8 +20,17 @@ test('WebMCP forwards only available public read-only tools and propagates cance
   });
   assert.equal(result.state,'REGISTERED');assert.deepEqual(result.registered,['nexo_search_atlas']);
   const controller=new AbortController();const payload=await tools[0].execute({query:'DESI'},{signal:controller.signal});
-  assert.deepEqual(payload,{items:[]});assert.equal(forwarded.tool,publicTool);assert.deepEqual(forwarded.args,{query:'DESI'});assert.equal(forwarded.signal,controller.signal);
+  assert.deepEqual(payload,{items:[]});assert.equal(forwarded.tool,publicTool);assert.deepEqual(forwarded.args,{query:'DESI'});
+  assert.equal(forwarded.signal.aborted,false);controller.abort();assert.equal(forwarded.signal.aborted,true);
   result.dispose();assert.deepEqual(removed,['nexo_search_atlas']);
+});
+test('page disposal aborts ongoing WebMCP reads even without an invocation signal',async()=>{
+  let tool,signal;
+  const result=await registerWebMcp({registerTool(value){tool=value;}}, {
+    readStatus:async()=>({tools:[publicTool]}),callTool:async(_,args,value)=>{signal=value;return {};}
+  });
+  await tool.execute({query:'DESI'});assert.equal(signal.aborted,false);
+  result.dispose();assert.equal(signal.aborted,true);
 });
 test('registration failure removes partial tools without claiming availability',async()=>{
   const removed=[];let attempts=0;

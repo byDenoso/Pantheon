@@ -24,3 +24,12 @@ test('release config publishes hashed frontend assets explicitly before SPA fall
   const fallback=out.routes.findIndex(x=>x.dest==='/index.html'&&x.src==='/(.*)');
   assert.ok(filesystem>=0&&fallback>filesystem,'filesystem must run before SPA fallback');
 });
+
+test('release config explicitly ships the narrow owner Drive consent page and its CSP-safe assets',()=>{
+  const out=buildReleaseVercelConfig(sourceConfig,[
+    'index.html','google-drive-connect.html','google-drive-connect.js','google-drive-connect.css','unrelated.html'
+  ]);
+  assert.deepEqual(out.builds.map(x=>x.src),[
+    'api/index.js','index.html','google-drive-connect.html','google-drive-connect.js','google-drive-connect.css'
+  ]);
+});

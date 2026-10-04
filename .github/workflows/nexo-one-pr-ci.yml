@@ -44,6 +44,7 @@ jobs:
           npm run build
           npx playwright install --with-deps chromium
           npm run test:mcp-browser
+          node test/google-drive-consent.browser.mjs
 
       - name: Verify Atlas visual regression matrix
         working-directory: nexo-one
@@ -58,9 +59,9 @@ jobs:
             if curl --silent --fail http://127.0.0.1:4178/ > /dev/null; then break; fi
             sleep 1
           done
+          NEXO_BASE_URL=http://127.0.0.1:4178 node test/incident-operations.browser.mjs
           NEXO_BASE_URL=http://127.0.0.1:4178 node test/lab-cinematic-integrity.browser.mjs
           NEXO_BASE_URL=http://127.0.0.1:4178 node test/board-message.browser.mjs
-          NEXO_BASE_URL=http://127.0.0.1:4178 node test/incident-operations.browser.mjs
           baseline_dir="$RUNNER_TEMP/atlas-crew-baseline"
           git fetch --no-tags --depth=1 origin 052fd7e3c1051b3542fd0dcf1be6fc54619e6f67
           git worktree add --detach "$baseline_dir" FETCH_HEAD
@@ -82,6 +83,7 @@ jobs:
         with:
           name: atlas-cinematic-visual-${{ github.event.pull_request.head.sha }}
           path: |
+            nexo-one/test-output/google-drive-consent/
             nexo-one/test-output/cinematic/
             nexo-one/test-output/board-message/
             nexo-one/test-output/crew-layout/

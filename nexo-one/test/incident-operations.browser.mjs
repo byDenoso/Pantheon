@@ -15,7 +15,7 @@ const browser = await chromium.launch({ ...(process.env.CHROMIUM_PATH ? {executa
 try {
  for (const width of [1440, 390]) {
   const page = await browser.newPage({ viewport: { width, height: 960 }, reducedMotion: 'reduce' });
-  const errors = []; page.on('pageerror', error => errors.push(error.message));
+  const errors = []; page.on('pageerror', error => errors.push(error.stack || error.message));
   await page.route('**/api/system**', route => route.fulfill({ json: state }));
   await page.route('**/api/world**', route => route.fulfill({ json: {} }));
   await page.goto(`${baseUrl}/#/atlas?view=2d`);
@@ -47,6 +47,13 @@ try {
    assert.equal(await detailsToggle.evaluate(toggle => document.activeElement === toggle), true,
     'fechar detalhes no iPhone deve devolver o foco ao botão de abertura');
   }
+  // Exercise rapid G6 teardown/recreation while render and fit transitions may
+  // still be active; this surfaced late getData errors in CI.
+  for (let cycle = 0; cycle < 2; cycle += 1) {
+   await page.getByRole('button',{name:'Ver como tabela'}).click();
+   await page.getByRole('button',{name:'Ver grafo'}).click();
+  }
+  await page.locator('#atlas-metro-g6 canvas').waitFor();
   await page.getByRole('button',{name:'Ver como tabela'}).click();
   const table=page.locator('.nexo-graph-table');
   const station=table.locator('tbody tr:not(.selected) .nexo-graph-table-select').first();
