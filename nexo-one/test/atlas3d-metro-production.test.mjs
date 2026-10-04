@@ -715,6 +715,7 @@ test('dedicated Atlas production page uses Metro renderer, G6 and deterministic 
   assert.match(renderer, /Math\.max\(10, Math\.min\(24, Math\.round\(span \/ 14\)\)\)/);
   assert.match(renderer, /SphereGeometry\(Math\.max\(1\.4, radius \* \.18\), compact \? 5 : 7, 4\)/);
   assert.match(renderer, /minimumFrameMs = 1000 \/ \(compact \? 8 : 12\)/);
+  assert.match(renderer, /if \(!isAtlasReadback\(\)\) runtime\.frame = requestAnimationFrame\(animate\)/);
   assert.match(renderer, /threeGeometryBudget = 'svg-low-poly-v1'/);
   assert.match(renderer, /node\.entityType === 'hub'.*node\.entityType === 'subdomain'.*id === selectedId/s);
   assert.match(renderer, /props\.viewMode === '2d' \?/);
