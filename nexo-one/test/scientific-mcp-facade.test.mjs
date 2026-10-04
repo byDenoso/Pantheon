@@ -20,7 +20,7 @@ function liveTower(){
       'entities/test/T-SEMANTIC-OLY.json':{value:{entity_version:1,kind:'TEST',id:'T-SEMANTIC-OLY',domain:'SCIENCE',
         semantic:{domain_id:'olympus'},status:'READY'}},
       'entities/work/WORK::RECOVERY-TEST.json':{value:{entity_version:3,kind:'DEPENDENCY_RECOVERY',id:'WORK::RECOVERY-TEST',domain:'SCIENCE',
-        owner_role:'ADVISOR',target_role:'ADVISOR',status:'WAIT_DEPENDENCY',test_id:'T-DEH26-007-FRACTAL-MICRO-NORMALIZATION',
+        owner_role:'LEARNER',target_role:'LEARNER',status:'WAIT_DEPENDENCY',test_id:'T-DEH26-007-FRACTAL-MICRO-NORMALIZATION',
         roadmap_id:'RM-DARK-ENERGY-NATURE-20260923-V1',priority:'P0',question:'private recovery prose',
         recovery:{validation:{policy:'SCIENTIFIC_INTEGRITY_V1',eligible:false,reasons:['INPUT_PROVENANCE_INCOMPLETE','RECIPE_BINDING_MISSING']}}}},
       'entities/work/WORK::ENGINEERING.json':{value:{entity_version:1,kind:'DEPENDENCY_RECOVERY',id:'WORK::ENGINEERING',domain:'SCIENCE',
@@ -223,10 +223,10 @@ test('scientific queue cursors page all tests and recoveries and bind pages to r
   for(const [index,testId] of testIds.entries()){
     const suffix=String(index).padStart(3,'0'),workId=index<205?`WORK-RECOVERY-${suffix}`:`WORK-${testId.slice(2)}`;
     tower.files[`entities/test/${testId}.json`]={value:{entity_version:1,kind:'TEST',id:testId,domain:'SCIENCE',
-      status:'READY',owner_role:'ADVISOR',recipe:'seed_bounds',recipe_params:{seed:index},prereg_hash:'d'.repeat(64),
+      status:'READY',owner_role:'LEARNER',recipe:'seed_bounds',recipe_params:{seed:index},prereg_hash:'d'.repeat(64),
       readiness:{policy:'SCIENTIFIC_INTEGRITY_V1',eligible:true,reasons:[]}}};
     tower.files[`entities/work/${workId}.json`]={value:{entity_version:1,kind:'DEPENDENCY_RECOVERY',id:workId,domain:'SCIENCE',
-      owner_role:'ADVISOR',target_role:'ADVISOR',status:'WAIT_DEPENDENCY',test_id:testId}};
+      owner_role:'LEARNER',target_role:'LEARNER',status:'WAIT_DEPENDENCY',test_id:testId}};
   }
   const state=operationalStateFromTower(tower,{body_verified:true,file_id:TOWER_ID});
   let currentState=state;
