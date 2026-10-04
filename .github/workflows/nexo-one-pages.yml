@@ -18,7 +18,7 @@ permissions:
   id-token: write
 
 concurrency:
-  group: nexo-one-github-pages
+  group: nexo-one-github-pages-v2
   # Never kill a publish in flight; GitHub keeps only the newest pending run, so the latest Tower revision still wins.
   cancel-in-progress: false
 
@@ -482,6 +482,7 @@ jobs:
     needs: build
     if: needs.build.outputs.deploy_needed == 'true'
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
@@ -525,13 +526,16 @@ jobs:
             echo "::error::A headless Chromium/Chrome binary is required for Atlas visual readback"
             exit 1
           }
+          run_chrome() {
+            timeout --signal=TERM --kill-after=5s 40s "${chrome_bin}" "$@"
+          }
           dump_until_ready() {
             local marker="$1"
             local outfile="$2"
             shift 2
             for attempt in 1 2 3; do
               local chrome_status=0
-              "${chrome_bin}" "$@" > "${outfile}" || chrome_status=$?
+              run_chrome "$@" > "${outfile}" || chrome_status=$?
               if grep -Fq "${marker}" "${outfile}"; then
                 if [ "${chrome_status}" -ne 0 ]; then
                   echo "::warning::Chromium exited ${chrome_status} after writing the expected readback marker ${marker}"
@@ -552,7 +556,7 @@ jobs:
               --window-size="${width},${height}" --force-device-scale-factor=1 --virtual-time-budget=9000 --dump-dom "${universe_url}"
             grep -Fq 'Estado cosmológico atual' "/tmp/universe-${presentation}.html"
             test "$(grep -o 'class="hud-card universe-card"' "/tmp/universe-${presentation}.html" | wc -l)" -ge 8
-            "${chrome_bin}" --headless=new --no-sandbox --disable-dev-shm-usage --hide-scrollbars \
+            run_chrome --headless=new --no-sandbox --disable-dev-shm-usage --hide-scrollbars \
               --window-size="${width},${height}" --force-device-scale-factor=1 --virtual-time-budget=9000 \
               --screenshot="/tmp/universe-${presentation}.png" "${universe_url}" >/dev/null 2>&1
             test -s "/tmp/universe-${presentation}.png"
@@ -578,7 +582,7 @@ jobs:
           grep -Fq "data-human-count=\"${expected_human}\"" /tmp/cockpit-actions-dom.html
           grep -Fq "data-waiting-count=\"${expected_waiting}\"" /tmp/cockpit-actions-dom.html
           grep -Fq "data-blocked-count=\"${expected_blocked}\"" /tmp/cockpit-actions-dom.html
-          "${chrome_bin}" --headless=new --no-sandbox --disable-dev-shm-usage --hide-scrollbars \
+          run_chrome --headless=new --no-sandbox --disable-dev-shm-usage --hide-scrollbars \
             --window-size=1440,1000 --virtual-time-budget=9000 \
             --screenshot=/tmp/cockpit-actions-readback.png "${cockpit_url}" >/dev/null 2>&1
           test -s /tmp/cockpit-actions-readback.png
@@ -636,7 +640,7 @@ jobs:
             total="$(sed -n 's/.*data-atlas-total-count="\([0-9][0-9]*\)".*/\1/p' "${dom}" | head -1)"
             visible="$(sed -n 's/.*data-atlas-visible-count="\([0-9][0-9]*\)".*/\1/p' "${dom}" | head -1)"
             [ -n "${total}" ] && [ -n "${visible}" ] && [ "${visible}" -gt 0 ] || { echo "::error::Atlas lens did not render any station (${name}, ${lens})"; exit 1; }
-            "${chrome_bin}" --headless=new --no-sandbox --disable-dev-shm-usage --hide-scrollbars \
+            run_chrome --headless=new --no-sandbox --disable-dev-shm-usage --hide-scrollbars \
               --use-angle=swiftshader --enable-unsafe-swiftshader --window-size="${width},${height}" \
               --virtual-time-budget=12000 --screenshot="/tmp/atlas-${name}.png" "${url}" >/dev/null 2>&1
             test -s "/tmp/atlas-${name}.png"
@@ -681,7 +685,7 @@ jobs:
           [ -n "${mcp_links}" ] && [ "${mcp_links}" -gt 7 ]
           [ -n "${mcp_visible_nodes}" ] && [ "${mcp_visible_nodes}" -gt 3 ]
           [ -n "${mcp_visible_links}" ] && [ "${mcp_visible_links}" -gt 3 ]
-          "${chrome_bin}" --headless=new --no-sandbox --disable-dev-shm-usage --hide-scrollbars \
+          run_chrome --headless=new --no-sandbox --disable-dev-shm-usage --hide-scrollbars \
             --window-size=1440,900 --virtual-time-budget=9000 \
             --screenshot=/tmp/mcp-readback-dark-2d.png "${mcp_url}" >/dev/null 2>&1
           test -s /tmp/mcp-readback-dark-2d.png
@@ -695,7 +699,7 @@ jobs:
           grep -Fq 'data-mcp-graph-view="2d"' /tmp/mcp-readback-light-2d-dom.html
           grep -Fq 'data-mcp-renderer="metro-2d"' /tmp/mcp-readback-light-2d-dom.html
           grep -Fq 'class="nexo-graph"' /tmp/mcp-readback-light-2d-dom.html
-          "${chrome_bin}" --headless=new --no-sandbox --disable-dev-shm-usage --hide-scrollbars \
+          run_chrome --headless=new --no-sandbox --disable-dev-shm-usage --hide-scrollbars \
             --window-size=1440,900 --virtual-time-budget=9000 \
             --screenshot=/tmp/mcp-readback-light-2d.png "${mcp_light_2d_url}" >/dev/null 2>&1
           test -s /tmp/mcp-readback-light-2d.png
@@ -710,7 +714,7 @@ jobs:
           grep -Fq 'data-mcp-renderer="three-3d"' /tmp/mcp-readback-dark-3d-dom.html
           grep -Fq 'data-testid="atlas-metro-3d"' /tmp/mcp-readback-dark-3d-dom.html
           grep -Fq 'data-three-theme="dark"' /tmp/mcp-readback-dark-3d-dom.html
-          "${chrome_bin}" --headless=new --no-sandbox --disable-dev-shm-usage --hide-scrollbars \
+          run_chrome --headless=new --no-sandbox --disable-dev-shm-usage --hide-scrollbars \
             --window-size=1440,900 --virtual-time-budget=9000 \
             --screenshot=/tmp/mcp-readback-dark-3d.png "${mcp_dark_3d_url}" >/dev/null 2>&1
           test -s /tmp/mcp-readback-dark-3d.png
@@ -725,7 +729,7 @@ jobs:
           grep -Fq 'data-mcp-renderer="three-3d"' /tmp/mcp-readback-light-3d-dom.html
           grep -Fq 'data-testid="atlas-metro-3d"' /tmp/mcp-readback-light-3d-dom.html
           grep -Fq 'data-three-theme="light"' /tmp/mcp-readback-light-3d-dom.html
-          "${chrome_bin}" --headless=new --no-sandbox --disable-dev-shm-usage --hide-scrollbars \
+          run_chrome --headless=new --no-sandbox --disable-dev-shm-usage --hide-scrollbars \
             --window-size=1440,900 --virtual-time-budget=9000 \
             --screenshot=/tmp/mcp-readback-light-3d.png "${mcp_light_3d_url}" >/dev/null 2>&1
           test -s /tmp/mcp-readback-light-3d.png
@@ -739,7 +743,7 @@ jobs:
           grep -Fq 'data-mcp-theme="light"' /tmp/mcp-readback-mobile-light-dom.html
           grep -Fq 'data-mcp-graph-view="2d"' /tmp/mcp-readback-mobile-light-dom.html
           grep -Fq 'data-mcp-renderer="metro-2d"' /tmp/mcp-readback-mobile-light-dom.html
-          "${chrome_bin}" --headless=new --no-sandbox --disable-dev-shm-usage --hide-scrollbars --touch-events=enabled \
+          run_chrome --headless=new --no-sandbox --disable-dev-shm-usage --hide-scrollbars --touch-events=enabled \
             --window-size=390,844 --force-device-scale-factor=1 --user-agent="${mobile_ua}" --virtual-time-budget=9000 \
             --screenshot=/tmp/mcp-readback-mobile-light-2d.png "${mcp_mobile_light_url}" >/dev/null 2>&1
           test -s /tmp/mcp-readback-mobile-light-2d.png
@@ -754,7 +758,7 @@ jobs:
           grep -Fq 'data-mcp-graph-view="3d"' /tmp/mcp-readback-mobile-dark-3d-dom.html
           grep -Fq 'data-mcp-renderer="three-3d"' /tmp/mcp-readback-mobile-dark-3d-dom.html
           grep -Fq 'data-testid="atlas-metro-3d"' /tmp/mcp-readback-mobile-dark-3d-dom.html
-          "${chrome_bin}" --headless=new --no-sandbox --disable-dev-shm-usage --hide-scrollbars --touch-events=enabled \
+          run_chrome --headless=new --no-sandbox --disable-dev-shm-usage --hide-scrollbars --touch-events=enabled \
             --window-size=390,844 --force-device-scale-factor=1 --user-agent="${mobile_ua}" --virtual-time-budget=9000 \
             --screenshot=/tmp/mcp-readback-mobile-dark-3d.png "${mcp_mobile_dark_3d_url}" >/dev/null 2>&1
           test -s /tmp/mcp-readback-mobile-dark-3d.png
@@ -769,7 +773,7 @@ jobs:
           grep -Fq 'class="science-workspace"' /tmp/science-3d-dom.html
           grep -Fq 'data-graph-view="3d"' /tmp/science-3d-dom.html
           grep -Fq 'data-testid="atlas-metro-3d"' /tmp/science-3d-dom.html
-          "${chrome_bin}" --headless=new --no-sandbox --disable-dev-shm-usage --hide-scrollbars \
+          run_chrome --headless=new --no-sandbox --disable-dev-shm-usage --hide-scrollbars \
             --use-angle=swiftshader --enable-unsafe-swiftshader --window-size=1440,900 --virtual-time-budget=10000 \
             --screenshot=/tmp/science-3d.png "${science_3d_url}" >/dev/null 2>&1
           test -s /tmp/science-3d.png
@@ -782,7 +786,7 @@ jobs:
           grep -Fq 'data-proof-graph-ready="true"' /tmp/proof-3d-dom.html
           grep -Fq 'data-graph-view="3d"' /tmp/proof-3d-dom.html
           grep -Fq 'data-testid="atlas-metro-3d"' /tmp/proof-3d-dom.html
-          "${chrome_bin}" --headless=new --no-sandbox --disable-dev-shm-usage --hide-scrollbars \
+          run_chrome --headless=new --no-sandbox --disable-dev-shm-usage --hide-scrollbars \
             --use-angle=swiftshader --enable-unsafe-swiftshader --window-size=1440,900 --virtual-time-budget=10000 \
             --screenshot=/tmp/proof-3d.png "${proof_3d_url}" >/dev/null 2>&1
           test -s /tmp/proof-3d.png
