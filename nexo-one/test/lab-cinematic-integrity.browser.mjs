@@ -110,7 +110,7 @@ try {
       await page.locator('.obs-scene canvas').waitFor();
       await page.waitForFunction(() => Number(document.querySelector('.obs-scene')?.getAttribute('data-cosmic-particles')) > 0);
       const geometry = await page.locator('.obs-scene').evaluate(el => ({ particles: Number(el.dataset.cosmicParticles), filaments: Number(el.dataset.cosmicFilaments) }));
-      assert.ok(geometry.particles <= 20_000 && geometry.filaments > 0 && geometry.filaments <= 2_048, 'cosmic substrate has bounded render buffers');
+      assert.ok(geometry.particles <= 6_000 && geometry.filaments > 0 && geometry.filaments <= 2_048, 'low-quality cosmic substrate has bounded render buffers');
       await page.waitForFunction(() => document.querySelector('.obs-scene')?.getAttribute('data-cosmic-rendered') === 'true');
     }
     if (!input) await page.addStyleTag({ content: 'body::after{content:"FIXTURE VISUAL · DADOS SINTÉTICOS · SOMENTE TESTE";position:fixed;left:12px;bottom:6px;z-index:9999;padding:4px 8px;background:#15120c;color:#f4e4bd;font:11px system-ui;pointer-events:none}' });

@@ -26,7 +26,9 @@ const QUALITY: Record<CosmicQuality, { samples: number; strands: number; lineSte
 const CONNECTION_LIMIT = 2_048;
 const KNOT_LIMIT = 512;
 const DOMAIN_CANDIDATE_LIMIT = 256;
-const PARTICLE_BUDGET: Record<CosmicQuality, number> = { high: 60_000, medium: 42_000, low: 20_000 };
+// Low quality is also used on software GPUs. Keep its overdraw bounded while
+// retaining the same published connections and all selectable entities.
+const PARTICLE_BUDGET: Record<CosmicQuality, number> = { high: 60_000, medium: 42_000, low: 6_000 };
 
 const MEMBERSHIP_COLORS = ['#3979cc', '#578fd9', '#7186d7', '#937cce'].map(hex => new Color(hex));
 const DOMAIN_COLORS = ['#356fba', '#4c78ca', '#529bc9', '#7a69bb'].map(hex => new Color(hex));

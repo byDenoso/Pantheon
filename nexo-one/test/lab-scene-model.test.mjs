@@ -162,7 +162,7 @@ test('cinematic web geometry is deterministic, budgeted, and separates density f
   const positions = low.particles.getAttribute('position').array;
   const repeated = lowAgain.particles.getAttribute('position').array;
   assert.ok(low.particleCount > 0);
-  assert.ok(low.particleCount <= 20_000);
+  assert.ok(low.particleCount <= 6_000);
   assert.deepEqual(Array.from(positions), Array.from(repeated), 'static dust must not change on re-render');
   assert.ok(medium.particleCount > low.particleCount, 'quality tier increases structural detail');
   assert.ok(low.filaments.getAttribute('position').count > 0);
@@ -218,7 +218,7 @@ test('large cosmic layouts honor per-quality particle and connection budgets', (
   const high = buildCosmicWebGeometry(largeLayout, 'high');
   assert.ok(low.connections.length <= 2_048);
   assert.ok(high.connections.length <= 2_048);
-  assert.ok(low.particleCount <= 20_000);
+  assert.ok(low.particleCount <= 6_000);
   assert.ok(high.particleCount <= 60_000);
 });
 

@@ -99,7 +99,7 @@ const POINT_FRAGMENT = `
 
 const COSMIC_MOTE_VERTEX = `
 attribute float size; attribute vec3 tint; attribute float opacity; attribute vec3 axis; attribute float aspect;
-uniform float pixelRatio;
+uniform float pixelRatio; uniform float maxPointSize;
 varying vec3 vTint; varying float vOpacity; varying float vDepth; varying vec2 vAxis; varying float vAspect;
 void main(){
   vec4 mv = modelViewMatrix * vec4(position, 1.0);
@@ -108,7 +108,7 @@ void main(){
   vec2 screenAxis = viewAxis.xy;
   vAxis = length(screenAxis) > 0.0001 ? normalize(screenAxis) : vec2(1.0, 0.0);
   vAspect = max(1.0, aspect);
-  gl_PointSize = clamp(size * vAspect * pixelRatio * (13.0 / max(1.0, depth)), 1.0 * pixelRatio, 44.0 * pixelRatio);
+  gl_PointSize = clamp(size * vAspect * pixelRatio * (13.0 / max(1.0, depth)), 1.0 * pixelRatio, maxPointSize * pixelRatio);
   vTint = tint;
   vOpacity = opacity;
   vDepth = 1.0 - smoothstep(30.0, 105.0, depth) * 0.52;
@@ -117,7 +117,8 @@ void main(){
 const COSMIC_MOTE_FRAGMENT = `
 varying vec3 vTint; varying float vOpacity; varying float vDepth; varying vec2 vAxis; varying float vAspect;
 void main(){
-  vec2 p = gl_PointCoord - 0.5;
+  // Point coordinates grow downward; view-space tangents grow upward.
+  vec2 p = vec2(gl_PointCoord.x - 0.5, 0.5 - gl_PointCoord.y);
   vec2 acrossAxis = vec2(-vAxis.y, vAxis.x);
   float along = dot(p, vAxis) * 2.0;
   float across = dot(p, acrossAxis) * 2.0 * vAspect;
@@ -402,7 +403,7 @@ export function ObservatoryScene({
       blending: AdditiveBlending,
     });
     const cosmicMaterial = new ShaderMaterial({
-      uniforms: { pixelRatio: { value: dpr } },
+      uniforms: { pixelRatio: { value: dpr }, maxPointSize: { value: quality === 'low' ? 24 : 44 } },
       vertexShader: COSMIC_MOTE_VERTEX,
       fragmentShader: COSMIC_MOTE_FRAGMENT,
       transparent: true,
