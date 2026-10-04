@@ -121,10 +121,10 @@ void main(){
   vec2 acrossAxis = vec2(-vAxis.y, vAxis.x);
   float along = dot(p, vAxis) * 2.0;
   float across = dot(p, acrossAxis) * 2.0 * vAspect;
-  float veil = exp(-along * along * 1.7 - across * across * 10.0);
-  float fiber = exp(-along * along * 5.5 - across * across * 40.0);
-  float filamentCore = exp(-along * along * 18.0 - across * across * 110.0);
-  float alpha = (veil * 0.12 + fiber * 0.58 + filamentCore * 0.52) * vOpacity * vDepth;
+  float veil = exp(-along * along * 1.7 - across * across * 2.5);
+  float fiber = exp(-along * along * 5.5 - across * across * 14.0);
+  float filamentCore = exp(-along * along * 18.0 - across * across * 48.0);
+  float alpha = min(1.0, (veil * 0.36 + fiber * 0.68 + filamentCore * 0.6) * vOpacity * vDepth);
   if (alpha < 0.003) discard;
   gl_FragColor = vec4(vTint * (0.82 + filamentCore * 0.78), alpha);
   #include <colorspace_fragment>
@@ -450,7 +450,7 @@ export function ObservatoryScene({
         composer = new EffectComposer(renderer, targetBuffer);
         composer.setPixelRatio(dpr);
         composer.addPass(new RenderPass(scene, camera));
-        composer.addPass(new UnrealBloomPass(new Vector2(1, 1), quality === 'high' ? 0.42 : 0.32, 0.28, 0.76));
+        composer.addPass(new UnrealBloomPass(new Vector2(1, 1), quality === 'high' ? 0.62 : 0.5, 0.35, 0.58));
         composer.addPass(new OutputPass());
       } catch {
         disposeComposer();

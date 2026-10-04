@@ -293,7 +293,7 @@ export function buildCosmicWebGeometry(layout: ObservatoryLayout, quality: Cosmi
         const opacity = connection.relation === 'membership'
           ? 0.2 + unit(seed + ':alpha') * 0.24
           : 0.15 + unit(seed + ':alpha') * 0.2;
-        pushParticle(point, color, 2.1 + unit(seed + ':size') * 2.8, opacity, tangent, 2.1 + unit(seed + ':aspect') * 2.1);
+        pushParticle(point, color, 4.0 + unit(seed + ':size') * 4.0, opacity, tangent, 2.1 + unit(seed + ':aspect') * 2.1);
         particleBudget -= 1;
       }
     }
@@ -328,8 +328,8 @@ export function buildCosmicWebGeometry(layout: ObservatoryLayout, quality: Cosmi
         .addScaledVector(axisA, Math.cos(angle) * crossRadius)
         .addScaledVector(axisB, Math.sin(angle) * crossRadius);
       const color = HAZE_COLORS[Math.floor(unit(seed + ':color') * HAZE_COLORS.length)]!;
-      const opacity = 0.022 + unit(seed + ':alpha') * (entity.kind === 'project' ? 0.045 : 0.035);
-      pushParticle(point, color, 3.6 + unit(seed + ':size') * 7.2, opacity, axis, 1.8 + unit(seed + ':aspect') * 1.2);
+      const opacity = 0.04 + unit(seed + ':alpha') * (entity.kind === 'project' ? 0.07 : 0.05);
+      pushParticle(point, color, 10.0 + unit(seed + ':size') * 16.0, opacity, axis, 1.8 + unit(seed + ':aspect') * 1.2);
       particleBudget -= 1;
     }
     const hubLightCount = degree >= 5 ? Math.min(12, 3 + degree) : degree >= 3 ? 2 : 0;
@@ -339,7 +339,7 @@ export function buildCosmicWebGeometry(layout: ObservatoryLayout, quality: Cosmi
       const radiusOffset = Math.sqrt(unit(seed + ':radius')) * 0.22;
       const point = center.clone().addScaledVector(axisA, Math.cos(angle) * radiusOffset).addScaledVector(axisB, Math.sin(angle) * radiusOffset);
       const color = HUB_COLORS[Math.floor(unit(seed + ':color') * HUB_COLORS.length)]!;
-      pushParticle(point, color, 1.8 + unit(seed + ':size') * 1.8, 0.22 + unit(seed + ':alpha') * 0.2, axis, 2.2);
+      pushParticle(point, color, 8.0 + unit(seed + ':size') * 6.0, 0.5 + unit(seed + ':alpha') * 0.25, axis, 1.4);
       particleBudget -= 1;
     }
   }
