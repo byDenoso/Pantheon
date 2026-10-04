@@ -58,4 +58,34 @@ class Selection(unittest.TestCase):
         self.assertIn('if [ "$verified_sha" != "$tested_sha" ]; then', text)
         self.assertIn('retaining the Drive bundle',text)
 
+    def test_public_inbox_reads_are_pinned_to_captured_ref_sha(self):
+        root=Path(__file__).parents[2]
+        text=(root/'scripts/collect_tcc_inbox.py').read_text()
+        self.assertIn('git/ref/heads/{branch}',text)
+        self.assertIn('compare/{base}...{head}',text)
+        self.assertIn('git/trees/{head}',text)
+        self.assertIn('git/blobs/{blob_sha}',text)
+        self.assertIn('" + repo + "/" + head + "/"',text)
+        self.assertNotIn('" + repo + "/" + branch + "/"',text)
+
+    def test_public_cursor_consumes_only_final_receipt_outcomes(self):
+        root=Path(__file__).parents[2]
+        text=(root/'.github/workflows/nexo-writer-robot.yml').read_text()
+        helper=(root/'scripts/collect_tcc_inbox.py').read_text()
+        self.assertIn('gateway_reported',text)
+        self.assertIn('gateway_resolved',text)
+        self.assertIn("RESOLVED_OUTCOMES = {\"APPLIED\", \"ALREADY_APPLIED\", \"REJECTED_TERMINAL\"}",helper)
+        self.assertIn('cursor_resolved(cursor, path, fingerprint)',helper)
+        self.assertIn('cursor["base_commit"] = mapping.get("head_sha")',helper)
+        self.assertIn('pending[path] = {"fingerprint": fingerprint',helper)
+        self.assertNotIn('gateway_applied',text)
+
+    def test_cursor_update_runs_for_empty_inbox_and_records_blob_recovery(self):
+        text=(Path(__file__).parents[2]/'.github/workflows/nexo-writer-robot.yml').read_text()
+        section=text.split('- name: Record public TCC operation receipts',1)[1].split('- name: Acknowledge applied scheduled Sheet spool proposals',1)[0]
+        self.assertIn("if: steps.cred.outputs.ok == 'true'",section)
+        self.assertNotIn('if: steps.robot.outputs.gateway_reported !=',section)
+        self.assertIn('record_cursor_outcomes(cursor,mapping,reported,resolved,receipt_items,now,rev)',section)
+        self.assertIn('pending.pop(removed, None)',(Path(__file__).parents[1]/'collect_tcc_inbox.py').read_text())
+
 if __name__=='__main__':unittest.main()

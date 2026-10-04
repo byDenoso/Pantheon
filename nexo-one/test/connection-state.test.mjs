@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import test from 'node:test';
 import {summarizeConnectionHealth} from '../server/health/connection-state.mjs';
+import {googleRuntimeEnvironment} from '../server/adapters/connect.mjs';
 
 const provider=(id,status)=>({id,status});
 
@@ -41,6 +42,17 @@ test('marks google authorized only from observed private provider availability',
   assert.equal(result.connections.google.verificationState,'VERIFIED');
 });
 
+test('request OIDC is included in private provider health without changing public scope',()=>{
+  const env={GOOGLE_CONNECTOR:'google/account'};
+  const requestEnv=googleRuntimeEnvironment(env,{'x-vercel-oidc-token':'request-oidc'});
+  const privateResult=summarizeConnectionHealth({env:requestEnv,providers:[provider('gmail','AVAILABLE'),provider('calendar','AVAILABLE'),provider('drive','AVAILABLE')],access:'PRIVATE'});
+  const publicResult=summarizeConnectionHealth({env,providers:[provider('gmail','AUTH_REQUIRED'),provider('calendar','AUTH_REQUIRED'),provider('drive','AUTH_REQUIRED')],access:'PUBLIC'});
+  assert.equal(privateResult.connections.google.configured,true);
+  assert.equal(privateResult.connections.google.authorized,true);
+  assert.equal(publicResult.connections.google.configured,false);
+  assert.equal(publicResult.connections.google.authorized,null);
+});
+
 test('reports atlas and vercel configuration independently',()=>{
   const env={ATLAS_GRAPH_URL:'https://atlas.example/api/graph',ATLAS_SOURCE_TOKEN:'atlas-token',VERCEL_READ_TOKEN:'vercel-token',VERCEL_PROJECT_ID:'prj_test'};
   const result=summarizeConnectionHealth({env,providers:[provider('atlas','AVAILABLE'),provider('vercel','AUTH_REQUIRED')],access:'PRIVATE'});
@@ -52,7 +64,9 @@ test('reports atlas and vercel configuration independently',()=>{
 
 test('health route publishes explicit session and connection readiness while keeping legacy privateConfigured',async()=>{
   const source=await readFile(new URL('../server/handler.mjs',import.meta.url),'utf8');
-  assert.match(source,/summarizeConnectionHealth\(\{env,providers:world\.providers,access\}\)/);
+  assert.match(source,/googleRuntimeEnvironment\(env,req\.headers\)/);
+  assert.match(source,/const options=\{now,access,env:providerEnv,force\}/);
+  assert.match(source,/summarizeConnectionHealth\(\{env:providerEnv,providers:world\.providers,access\}\)/);
   assert.match(source,/sessionConfigured:connectionHealth\.session\.configured/);
   assert.match(source,/privateConfigured:connectionHealth\.session\.configured/);
   assert.match(source,/connections:connectionHealth\.connections/);

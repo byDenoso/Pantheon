@@ -44,6 +44,7 @@ jobs:
           npm run build
           npx playwright install --with-deps chromium
           npm run test:mcp-browser
+          node test/google-drive-consent.browser.mjs
 
       - name: Verify Atlas visual regression matrix
         working-directory: nexo-one
@@ -58,6 +59,7 @@ jobs:
             if curl --silent --fail http://127.0.0.1:4178/ > /dev/null; then break; fi
             sleep 1
           done
+          NEXO_BASE_URL=http://127.0.0.1:4178 node test/incident-operations.browser.mjs
           NEXO_BASE_URL=http://127.0.0.1:4178 node test/lab-cinematic-integrity.browser.mjs
           NEXO_BASE_URL=http://127.0.0.1:4178 node test/board-message.browser.mjs
           baseline_dir="$RUNNER_TEMP/atlas-crew-baseline"
@@ -81,10 +83,12 @@ jobs:
         with:
           name: atlas-cinematic-visual-${{ github.event.pull_request.head.sha }}
           path: |
+            nexo-one/test-output/google-drive-consent/
             nexo-one/test-output/cinematic/
             nexo-one/test-output/board-message/
             nexo-one/test-output/crew-layout/
             nexo-one/test-output/crew-layout-baseline/
+            nexo-one/test-output/incident-operations/
           if-no-files-found: warn
           retention-days: 7
 
@@ -123,6 +127,10 @@ jobs:
       - name: Verify BAO release and frozen decision regression tests
         working-directory: nexo-one/executor-runtime/recipes
         run: OPENBLAS_NUM_THREADS=1 python -m unittest test_w0wa_bao_sn_multi -v
+
+      - name: Verify frozen rank-score leave-one-out regression tests
+        working-directory: nexo-one/executor-runtime/recipes
+        run: python -m unittest test_rank_score_leave_one_out -v
 
       - name: Verify parameter preflight and operational failure receipts
         run: python -m unittest discover -s nexo-one/executor-runtime/tests -p test_recipe_param_preflight.py -v

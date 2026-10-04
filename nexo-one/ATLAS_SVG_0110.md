@@ -64,3 +64,15 @@ Prévia: `http://127.0.0.1:4185/#/agora`. Para explorar, clicar “Explorar a te
 No diretório deste pacote, `npm run preview:atlas-0110` lê os arquivos públicos atuais e inicia a prévia; nenhuma escrita externa. A opção exige rede. As capturas desktop/celular, claro/escuro estão em `output/galaxy-performance/svg-*.png`.
 
 Diff local revisável, sem commit/push/merge/deploy. Reversão: voltar à worktree original, preservada. Antes de publicação: revisão visual humana, reconciliação do backend mais recente e decisão sobre o custo da órbita vetorial.
+
+## Integracao de publicacao - 04/10/2026
+
+A solicitacao "Deploy" autorizou a publicacao desta previa. Antes do envio, a versao historica foi integrada aos contratos atuais de origin/main (a12ae9d), preservando backend, MCP, autenticacao, proveniencia e estado de observacao. A tela conserva o visual de 01/10; mural e telemetria incorporam as correcoes semanticas recentes. Acesso privado autenticado continua sem verificacao com credenciais.
+
+Validacao apos integracao: npm run check, 690/690 testes, tipos, estilo e build aprovados (output/deploy-check.log). A suite de navegador atual passou seus 14 cenarios nos dois temas e no celular (output/deploy-browser.log). As seis verificacoes de interacao SVG passaram (output/deploy-svg-interactions.log). O teste legado da entrega anterior permanece como registro historico; a suite atual cobre a entrada Overview explicita e o renderer SVG.
+
+A alternancia rapida no modo 2D revelou callbacks de animacao G6 sobre elementos substituidos. As animacoes estruturais foram desativadas; selecao, filtros e camara continuam funcionando. A suite de navegador foi repetida e passou sem erros nao tratados.
+
+Candidato de reversao antes da publicacao: 593eed52d4a4a046529ad9c73402f4729de25554, confirmado no build-meta.json publico. A publicacao usa exclusivamente o workflow existente nexo-one-pages.yml. Os resultados locais sao evidencias de preparacao; o estado publicado sera confirmado por workflow e leitura do build-meta.json em producao.
+
+Permanece a limitacao medida de custo de CPU durante a orbita vetorial, documentada acima. Nao se afirma simulacao fisica completa nem ganho universal frente ao WebGL historico.

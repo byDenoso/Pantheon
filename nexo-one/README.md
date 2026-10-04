@@ -1,6 +1,6 @@
 # NEXO ONE
 
-Personal cockpit in `Pantheon/nexo-one`. React 19, TypeScript, Vite, Node 24. No database. Existing Atlas is unchanged.
+Frontend e backend atuais do NEXO Atlas em `Pantheon/nexo-one`, publicados em https://nexo-one-two.vercel.app/. React 19, TypeScript, Vite e Node 24. A Tower/Writer permanece a autoridade operacional; a migração SQLite está em ensaio. `atlas-control-tower/` preserva adapters de compatibilidade, sem um segundo frontend ativo.
 
 ## Current scope
 
@@ -66,3 +66,13 @@ The only project is `nexo-one` (`prj_rFoAEgGt4gFNr8DHEOzxY7keS16W`). `scripts/pa
 A green build or a Git integration deployment is not by itself proof that private PERSONAL_LOOP_V1 is operational. Promotion acceptance requires the checks in `docs/PERSONAL_LOOP_V1.md`, including unauthenticated denial, authenticated private reads, governed L3/L4 behavior and verified provider/canonical readback. Missing credentials must remain a visible degraded/configuration state rather than being treated as success.
 
 Sources used for the integration design: [Google server-side OAuth](https://developers.google.com/identity/protocols/oauth2/web-server), [GitHub Issues REST](https://docs.github.com/en/rest/issues/issues), [Vercel deployment creation](https://vercel.com/docs/rest-api/deployments/create-a-new-deployment), [Vercel staged production promotion](https://vercel.com/docs/deployments/promoting-a-deployment).
+
+## MCP e WebMCP
+
+`/api/mcp` expõe ferramentas públicas de leitura com schemas estritos; `/api/mcp/status` e `get_capabilities` permitem descobrir disponibilidade e proveniência. As ferramentas operacionais adicionais exigem autenticação e papéis autorizados no servidor.
+
+Em navegadores que oferecem WebMCP, o Atlas registra apenas ferramentas públicas, disponíveis e marcadas como somente leitura, usando o catálogo desse mesmo servidor. O registro detecta `document.modelContext` da especificação atual e `navigator.modelContext` de implementações anteriores. Navegadores sem suporte continuam com a UI e o MCP HTTP; nenhum suporte é simulado.
+
+### Dependência do mapa 2D
+
+O loader do Atlas usa G6 5.1.1 com verificação de integridade SHA-384 do bundle oficial do npm. Unpkg e jsDelivr servem a mesma versão; não há uma tentativa de vendor local sem arquivo. Tags que falham são removidas para que uma nova tentativa carregue a dependência novamente.

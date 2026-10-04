@@ -661,7 +661,8 @@ test('dedicated Atlas production page uses Metro renderer, G6 and deterministic 
   assert.match(layout, /node\.entityType === 'subdomain' && !compactViewport && !ultraDenseOverview && zoom >= 1\.05/);
   assert.match(renderer, /atlas-label-leaders/);
   assert.match(renderer, /labelText: ''/);
-  assert.match(renderer, /update: 'translate'/);
+  assert.match(renderer, /animation: false/);
+  assert.doesNotMatch(renderer, /update: 'translate'/, 'SVG replacements must not leave deferred element callbacks');
   assert.match(renderer, /isLearning/);
   assert.match(renderer, /#f59e0b/);
   assert.match(renderer, /threeLearningSynapses/);

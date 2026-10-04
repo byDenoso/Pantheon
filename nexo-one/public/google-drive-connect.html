@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="referrer" content="no-referrer">
+  <title>Conectar Google Drive · NEXO</title>
+  <link rel="stylesheet" href="/google-drive-connect.css">
+  <script src="/google-drive-connect.js" defer></script>
+</head>
+<body>
+<main>
+  <a href="/">Voltar ao Observatório</a>
+  <h1>Conectar Google Drive ao NEXO</h1>
+  <p>O servidor precisa de leitura do Drive para conferir a Tower canônica. A conexão usa o vínculo de proprietário já configurado.</p>
+  <p id="status" role="status" aria-live="polite">Conferindo a sessão…</p>
+  <section id="login-section" hidden>
+    <h2>Acesso privado</h2>
+    <form id="login-form">
+      <label for="password">Senha do NEXO</label>
+      <input id="password" name="password" type="password" autocomplete="current-password" required>
+      <button type="submit">Entrar na sessão privada</button>
+    </form>
+  </section>
+  <section id="consent-section" hidden>
+    <h2>Somente leitura do Drive</h2>
+    <p>A permissão permite ler todos os arquivos acessíveis à conta Google escolhida, incluindo a Tower. A Vercel Connect mantém o acesso renovável. Confira que a tela do Google solicita somente leitura do Drive; interrompa se aparecerem outras permissões.</p>
+    <p>Conector: <strong>google/alizarin-saddle</strong><br>Vínculo: <strong>user/owner</strong></p>
+    <form id="consent-form">
+      <label class="consent"><input id="approve" type="checkbox" required> Autorizo esta conexão persistente somente de leitura do Google Drive</label>
+      <button id="start" type="submit">Preparar confirmação do Google</button>
+    </form>
+    <p><a id="authorization" hidden rel="noreferrer">Abrir confirmação do Google</a></p>
+    <p id="expiry" hidden></p>
+    <button id="verify" type="button" disabled>Conferir leitura da Tower</button>
+    <p>A volta do Google ainda precisa da conferência acima. O teste de soma requer seu próprio resultado e recibo operacional.</p>
+  </section>
+  <section id="sheets-section" hidden>
+    <h2>Drive somente leitura + Sheets para o spool operacional</h2>
+    <p>Este é um perfil separado e opcional. O escopo de Drive continua somente leitura. O escopo <code>https://www.googleapis.com/auth/spreadsheets</code> permite ver, editar, criar e excluir todas as planilhas acessíveis à conta Google escolhida; ele não fica limitado a uma planilha específica. O NEXO usa essa permissão para gravar intenções no spool operacional e, quando você usa os recursos privados de registros NEXO, para acrescentar ou atualizar registros na planilha NEXO configurada.</p>
+    <p>Destino operacional fixo: <a id="spool-link" href="https://docs.google.com/spreadsheets/d/1M2maKkuEjxumZRa145dzei7dEPFi2yKsKlUf7_scC-E/edit" rel="noreferrer">spool do NEXO</a>. A confirmação abaixo primeiro faz somente leituras da Tower e dos metadados/cabeçalho desse spool. Ela não acrescenta linhas e não confirma que uma gravação foi executada.</p>
+    <p>Conector: <strong>google/alizarin-saddle</strong><br>Vínculo: <strong>user/owner</strong><br>Escopos exatos: <code>https://www.googleapis.com/auth/drive.readonly</code> e <code>https://www.googleapis.com/auth/spreadsheets</code></p>
+    <form id="sheets-consent-form">
+      <label class="consent"><input id="sheets-approve" type="checkbox" required> Autorizo o acesso persistente de leitura ao Drive e de leitura/escrita às planilhas da minha conta para uso do spool operacional</label>
+      <button id="sheets-start" type="submit">Preparar confirmação de Drive + Sheets</button>
+    </form>
+    <p><a id="sheets-authorization" hidden rel="noreferrer">Abrir confirmação de Drive + Sheets</a></p>
+    <p id="sheets-expiry" hidden></p>
+    <button id="sheets-verify" type="button" disabled>Conferir Tower e leitura do spool</button>
+    <p>A tela do Google deve mostrar os dois escopos exatos acima. Interrompa se aparecerem outras permissões. A confirmação de leitura não testa append nem grava dados.</p>
+  </section>
+  <p id="error" role="alert" hidden></p>
+</main>
+</body>
+</html>

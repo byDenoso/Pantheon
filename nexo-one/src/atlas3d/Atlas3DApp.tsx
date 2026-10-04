@@ -24,23 +24,43 @@ type ViewMode = '2d' | '3d' | 'galaxy';
 type AtlasTheme = 'dark' | 'light';
 
 function IncidentQueue({ incidents }: { incidents: EvolutionIncidentSummary[] }) {
+  const [showResolved, setShowResolved] = useState(false);
+  const classifiedIncidents = useMemo(
+    () => incidents.map(incident => ({ incident, view: incidentView(incident) })),
+    [incidents],
+  );
+  const resolvedCount = classifiedIncidents.filter(({ view }) => view.state === 'RESOLVED').length;
+  const openIncidents = classifiedIncidents.filter(({ view }) => view.state !== 'RESOLVED');
+  const visibleIncidents = showResolved ? classifiedIncidents : openIncidents;
+
   return (
     <section className="atlas-incident-queue" aria-labelledby="atlas-incidents-title">
       <header>
         <strong id="atlas-incidents-title">Incidentes em acompanhamento</strong>
-        <span>{incidents.length} registros</span>
+        <span aria-live="polite">{openIncidents.length} ativos</span>
       </header>
       <p className="atlas-incident-intro">Acompanhe a recuperação operacional e a aprendizagem separadamente.</p>
-      {incidents.length ? (
-        <ul>
-          {incidents.slice(0, 5).map(incident => {
+      {resolvedCount > 0 && (
+        <button
+          type="button"
+          className="atlas-incident-history-toggle"
+          aria-expanded={showResolved}
+          aria-controls="atlas-incidents-list"
+          onClick={() => setShowResolved(value => !value)}
+        >
+          {showResolved ? 'Ocultar resolvidos' : `Mostrar resolvidos (${resolvedCount})`}
+        </button>
+      )}
+      <div id="atlas-incidents-list">
+        {visibleIncidents.length ? (
+          <ul>
+            {visibleIncidents.slice(0, 5).map(({ incident, view: state }) => {
             const incidentId = /^[A-Za-z0-9._-]{1,96}$/.test(incident.incident_id) ? incident.incident_id : 'ID indisponível';
             const publicIds = [
               ...(incident.public_ids?.tests ?? []).map(id => `Teste ${id}`),
               ...(incident.public_ids?.hypotheses ?? []).map(id => `Hipótese ${id}`),
               ...(incident.public_ids?.lessons ?? []).map(id => `Lição ${id}`),
             ].filter(id => /^(Teste|Hipótese|Lição) [A-Za-z0-9._:-]{1,120}$/.test(id)).slice(0, 3);
-            const state = incidentView(incident);
             const summary = incident.summary_plain?.trim() || incident.summary_pt?.trim()
               || 'Sinais operacionais recorrentes foram reunidos para uma investigação controlada.';
             return (
@@ -56,11 +76,14 @@ function IncidentQueue({ incidents }: { incidents: EvolutionIncidentSummary[] })
                 </details>
               </li>
             );
-          })}
-        </ul>
-      ) : (
-        <p className="atlas-incident-empty">Nenhum padrão atingiu o critério de acompanhamento. São necessários sinais independentes sobre o mesmo assunto.</p>
-      )}
+            })}
+          </ul>
+        ) : resolvedCount > 0 ? (
+          <p className="atlas-incident-empty">Nenhum incidente em aberto. {resolvedCount} resolvidos estão ocultos no histórico.</p>
+        ) : (
+          <p className="atlas-incident-empty">Nenhum padrão atingiu o critério de acompanhamento. São necessários sinais independentes sobre o mesmo assunto.</p>
+        )}
+      </div>
     </section>
   );
 }
@@ -324,6 +347,8 @@ export function Atlas3DContent({system,themeOverride}:{system:SystemStore;themeO
   const [showBeams, setShowBeams] = useState(true);
   const [show3dHint, setShow3dHint] = useState(false);
   const [mobileDetailsOpen, setMobileDetailsOpen] = useState(false);
+  const mobileDetailsToggleRef = useRef<HTMLButtonElement | null>(null);
+  const mobileDetailsCloseRef = useRef<HTMLButtonElement | null>(null);
   const [fitNonce, setFitNonce] = useState(0);
   const [rendererReady, setRendererReady] = useState(false);
   const keyActionsRef = useRef<Record<string, () => void>>({});
@@ -365,12 +390,21 @@ export function Atlas3DContent({system,themeOverride}:{system:SystemStore;themeO
     setMobileDetailsOpen(false);
   }, [model?.revision, initialExpanded, qaExpandedNode?.id]);
 
+  useEffect(() => {
+    if (!mobileDetailsOpen) return;
+    const focusFrame = window.requestAnimationFrame(() => mobileDetailsCloseRef.current?.focus());
+    return () => {
+      window.cancelAnimationFrame(focusFrame);
+      mobileDetailsToggleRef.current?.focus({ preventScroll: true });
+    };
+  }, [mobileDetailsOpen]);
+
   if (!system.state || !model) {
     return (
-      <main className="atlas3d-boot">
+      <main className="atlas3d-boot" aria-busy={!system.error}>
         <strong>NEXO ATLAS</strong>
-        <span>{system.error || 'Carregando projeção…'}</span>
-        {system.error && <button onClick={system.reload}>Tentar novamente</button>}
+        <span role={system.error ? 'alert' : 'status'}>{system.error || 'Carregando projeção…'}</span>
+        {system.error && <button type="button" onClick={system.reload}>Tentar novamente</button>}
       </main>
     );
   }
@@ -448,6 +482,7 @@ export function Atlas3DContent({system,themeOverride}:{system:SystemStore;themeO
 
   const learningLinks = model.crossLinks.filter(link => link.isLearning);
   const incidents = system.state.evolution?.incidents ?? [];
+  const openIncidentCount = incidents.filter(incident => incidentView(incident).state !== 'RESOLVED').length;
   const learningLinkCount = learningLinks.length;
   const learningRecordCount = new Set(
     learningLinks.map(link => link.learningRef || link.id),
@@ -670,7 +705,7 @@ export function Atlas3DContent({system,themeOverride}:{system:SystemStore;themeO
                 {allExpanded ? 'Contrair tudo' : 'Expandir tudo'}
               </button>
               <label className="atlas-toggle"><input type="checkbox" checked={showBeams} onChange={event => setShowBeams(event.target.checked)} />Relações</label>
-              <button className="atlas-button atlas-mobile-details-toggle" aria-expanded={mobileDetailsOpen} aria-controls="atlas-details-panel" onClick={() => setMobileDetailsOpen(value => !value)}>{incidents.length ? `Incidentes ${incidents.length} · detalhes` : 'Incidentes · detalhes'}</button>
+              <button ref={mobileDetailsToggleRef} type="button" className="atlas-button atlas-mobile-details-toggle" aria-expanded={mobileDetailsOpen} aria-controls="atlas-details-panel" onClick={() => setMobileDetailsOpen(value => !value)}>{openIncidentCount ? `Incidentes ${openIncidentCount} · detalhes` : 'Incidentes · detalhes'}</button>
             </div>
           }
         />
@@ -729,6 +764,7 @@ export function Atlas3DContent({system,themeOverride}:{system:SystemStore;themeO
                 data-domain={node.domain}
                 data-depth={node.depth}
                 data-visible={visibleSet.has(id) ? 'true' : 'false'}
+                aria-label={`${node.name}: ${readableToken(node.status, 'Estado ainda não descrito')}`}
                 onClick={() => activate(id)}
               >
                 {node.name}
@@ -754,6 +790,8 @@ export function Atlas3DContent({system,themeOverride}:{system:SystemStore;themeO
           <div><strong>Mapa de conhecimento</strong><small>ATLAS · CONSULTA</small></div>
           <span>{system.state.graph.nodes.length} entidades fonte</span>
           <button
+            ref={mobileDetailsCloseRef}
+            type="button"
             className="atlas-mobile-sidebar-close"
             aria-label="Fechar painel de detalhes"
             onClick={() => setMobileDetailsOpen(false)}

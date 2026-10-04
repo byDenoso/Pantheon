@@ -129,11 +129,41 @@ function entitySummary(node: GraphNode): string {
     : `${kind[node.type]} relacionado a “${node.label}”.`;
 }
 
-function aggregateStatus(nodes: GraphNode[]): string {
-  const states = nodes.map(node => String(node.state || '').toUpperCase());
+function statusWithFreshness(
+  stateValue: unknown,
+  freshness: GraphNode['freshness'] | null | undefined,
+  now = Date.now(),
+): string {
+  const state = String(stateValue || 'UNKNOWN').toUpperCase();
+  if (state !== 'LIVE') return state;
+
+  // `LIVE` describes the projected entity state; it does not prove that the
+  // observation itself is current. Legacy projections often omit freshness.
+  // Only an explicit, timestamped observation inside its TTL can keep this label.
+  const observedAt = freshness?.observed_at ? Date.parse(freshness.observed_at) : NaN;
+  const ttl = freshness?.ttl_seconds;
+  if (!freshness || !Number.isFinite(observedAt) || observedAt > now
+      || typeof ttl !== 'number' || !Number.isFinite(ttl) || ttl <= 0) return 'UNKNOWN';
+  if (now - observedAt > ttl * 1_000) return 'STALE';
+  switch (freshness.state) {
+    case 'LIVE': return 'LIVE';
+    case 'RECENT': return 'RECENT';
+    case 'AGING': return 'AGING';
+    case 'STALE': return 'STALE';
+    default: return 'UNKNOWN';
+  }
+}
+
+function aggregateStatus(nodes: GraphNode[], now = Date.now()): string {
+  if (nodes.length === 0) return 'UNKNOWN';
+  const states = nodes.map(node => statusWithFreshness(node.state, node.freshness, now));
   if (states.some(state => /CONFLICT|FAILED|BLOCKED|MISSING/.test(state))) return 'WATCH';
-  if (states.some(state => /STALE|DEGRADED|UNKNOWN|UNVERIFIED/.test(state))) return 'AGING';
-  return 'LIVE';
+  if (states.some(state => /STALE|DEGRADED|AGING/.test(state))) return 'AGING';
+  if (states.some(state => /UNKNOWN|UNVERIFIED/.test(state))) return 'UNKNOWN';
+  if (states.every(state => state === 'SNAPSHOT')) return 'SNAPSHOT';
+  if (states.every(state => state === 'LIVE')) return 'LIVE';
+  if (states.every(state => state === 'LIVE' || state === 'RECENT')) return 'RECENT';
+  return 'UNKNOWN';
 }
 
 function uniquePairs<T>(values: T[]): T[] {
@@ -349,7 +379,7 @@ function descendantCounts(childrenMap: Map<string, string[]>): Map<string, numbe
   return memo;
 }
 
-export function buildAtlasMetroModel(state: SystemState): AtlasMetroModel {
+export function buildAtlasMetroModel(state: SystemState, now = Date.now()): AtlasMetroModel {
   const semanticAnchorCounts = new Map<string, number>();
   const registerAnchor = (anchor: LearningSemanticAnchor | null | undefined) => {
     if (!anchor) return;
@@ -395,7 +425,7 @@ export function buildAtlasMetroModel(state: SystemState): AtlasMetroModel {
       domain,
       parentId: null,
       entityType: 'hub',
-      status: aggregateStatus(domainMembers),
+      status: aggregateStatus(domainMembers, now),
       summary: `${domainMembers.length} entidades publicadas neste domínio.`,
       depth: 0,
       childCount: 0,
@@ -434,7 +464,7 @@ export function buildAtlasMetroModel(state: SystemState): AtlasMetroModel {
           domain,
           parentId: ROOT_IDS[domain],
           entityType: 'subdomain',
-          status: String(lane.state || 'SNAPSHOT'),
+          status: statusWithFreshness(lane.state, lane.freshness, now),
           summary: [lane.current_state, lane.next_action].filter(Boolean).join(' · '),
           depth: 1,
           childCount: 0,
@@ -466,7 +496,8 @@ export function buildAtlasMetroModel(state: SystemState): AtlasMetroModel {
         domain,
         parentId: ROOT_IDS[domain],
         entityType: 'subdomain',
-        status: 'LIVE',
+        // Semantic anchors are derived grouping nodes, not live observations.
+        status: 'UNKNOWN',
         summary: `${count} filamento${count === 1 ? '' : 's'} Learning ancorado${count === 1 ? '' : 's'} semanticamente neste subdomínio.`,
         depth: 1,
         childCount: 0,
@@ -500,7 +531,7 @@ export function buildAtlasMetroModel(state: SystemState): AtlasMetroModel {
         domain,
         parentId: ROOT_IDS[domain],
         entityType: 'subdomain',
-        status: aggregateStatus(members),
+        status: aggregateStatus(members, now),
         summary: `${members.length} entidades relacionadas neste subdomínio.`,
         depth: 1,
         childCount: 0,
@@ -526,7 +557,7 @@ export function buildAtlasMetroModel(state: SystemState): AtlasMetroModel {
           domain,
           parentId: id,
           entityType: member.type,
-          status: String(member.state || 'UNKNOWN'),
+          status: statusWithFreshness(member.state, member.freshness, now),
           summary: entitySummary(member),
           depth: 2,
           childCount: 0,

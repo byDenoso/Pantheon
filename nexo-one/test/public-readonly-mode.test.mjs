@@ -42,7 +42,8 @@ test('private session support is bounded to session state while public SystemSta
   assert.match(handler, /sessionAccess\(req,env,now\)/);
   assert.match(handler, /route==='session'/);
   assert.match(handler, /if\(route==='system'\)[\s\S]*readPublishedTowerSystem/);
-  assert.match(handler, /const options=\{now,access,env,force\}/);
+  assert.match(handler, /const providerEnv=privateAccess\?googleRuntimeEnvironment\(env,req\.headers\):env/);
+  assert.match(handler, /const options=\{now,access,env:providerEnv,force\}/);
   assert.match(example, /NEXO_PASSWORD_HASH/);
   assert.match(example, /NEXO_SESSION_SECRET/);
 });

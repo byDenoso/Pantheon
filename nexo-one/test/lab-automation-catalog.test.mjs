@@ -27,6 +27,7 @@ test('lab crew mirrors the ten active Business automations', () => {
 
 test('shared role telemetry is not attributed to one automation', () => {
   assert.match(source, /matches\.length === 1 \? matches\[0\] : undefined/);
-  assert.match(source, /sharedRole \? 'telemetria do papel · ' : ''/);
+  assert.match(source, /sharedRole \? ' · compartilhado entre operadores' : ''/);
+  assert.match(source, /eventos deste papel em até 24 h/);
   assert.match(source, /SENTINEL: 'Sentinela'/);
 });

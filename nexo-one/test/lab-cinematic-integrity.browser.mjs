@@ -46,6 +46,30 @@ const noOverflow = async (page, route) => {
   assert.ok(size.scroll <= size.width + 1, route + ': horizontal overflow ' + JSON.stringify(size));
 };
 try {
+  // Replay an actual public read model through this candidate build. The fixed
+  // fixture below tests behavior; this capture reviews the real graph's shape.
+  const publishedResponse = await fetch('https://nexo-one-two.vercel.app/api/system', { signal: AbortSignal.timeout(30_000) });
+  assert.ok(publishedResponse.ok, 'published public system is readable for visual evidence');
+  const publishedSystem = await publishedResponse.json();
+  assert.ok(Object.keys(publishedSystem.read_model?.tests || {}).length > 0, 'published capture contains real tests');
+  const publishedContext = await browser.newContext({ viewport: { width: 1600, height: 1000 }, locale: 'pt-BR', timezoneId: 'America/Sao_Paulo' });
+  const publishedPage = await publishedContext.newPage();
+  const publishedErrors = [];
+  publishedPage.on('pageerror', error => publishedErrors.push(error.message));
+  publishedPage.on('console', message => { if (message.type() === 'error' && /THREE.WebGLProgram|VALIDATE_STATUS|shader error|Error compiling/i.test(message.text())) publishedErrors.push(message.text()); });
+  await publishedPage.addInitScript(() => { localStorage.setItem('nexo-theme','dark'); localStorage.setItem('nexo.quality','medium'); localStorage.setItem('nexo.intro.seen','1'); });
+  await publishedPage.route('**/api/session', route => route.fulfill({ json: { configured: false, authenticated: false } }));
+  await publishedPage.route('**/api/system*', route => route.fulfill({ json: publishedSystem }));
+  await publishedPage.goto(base + '/#/agora');
+  await publishedPage.getByRole('navigation', { name: 'Escala do ATLAS' }).waitFor();
+  await publishedPage.evaluate(() => document.fonts.ready);
+  await publishedPage.waitForFunction(() => document.querySelector('.obs-scene')?.getAttribute('data-cosmic-rendered') === 'true');
+  await publishedPage.screenshot({ path: output + '/published-atlas-webgl.png' });
+  const publishedDiagnostics = await publishedPage.locator('.obs-scene').evaluate(el => ({ particles: Number(el.dataset.cosmicParticles), filaments: Number(el.dataset.cosmicFilaments), rendered: el.dataset.cosmicRendered }));
+  assert.ok(publishedDiagnostics.particles > 0 && publishedDiagnostics.particles <= 42_000 && publishedDiagnostics.filaments > 0 && publishedDiagnostics.filaments <= 2_048, 'published medium-quality graph stays within render budgets');
+  await writeFile(output + '/published-atlas-webgl.json', JSON.stringify({ ...publishedDiagnostics, source: 'PUBLIC_API_SYSTEM_REPLAY', generated_at: publishedSystem.generated_at, errors: publishedErrors }, null, 2));
+  assert.deepEqual(publishedErrors, [], 'published graph shader and page errors');
+  await publishedContext.close();
   for (const [name, viewport, theme, reduced, fallback] of [
     ['desktop', { width: 1440, height: 1000 }, 'dark', false, false],
     ['mobile', { width: 390, height: 844 }, 'dark', false, false],
@@ -58,21 +82,40 @@ try {
     const page = await context.newPage();
     const errors = [];
     page.on('pageerror', error => errors.push(error.message));
-    await page.clock.install({ time: Date.parse(projection.manifest.generated_at) + 60_000 });
-    await page.addInitScript(({ theme, fallback }) => {
+    page.on('console', message => {
+      if (message.type() === 'error' && /THREE.WebGLProgram|VALIDATE_STATUS|shader error|Error compiling/i.test(message.text())) errors.push(message.text());
+    });
+    // Freeze source freshness only; real RAF/timers keep WebGL and locator
+    // actionability running normally in software-rendered CI.
+    await page.clock.setFixedTime(Date.parse(projection.manifest.generated_at) + 60_000);
+    await page.addInitScript(({ theme, fallback, quality }) => {
       localStorage.setItem('nexo-theme', theme);
       localStorage.setItem('nexo.intro.seen', '1');
       localStorage.setItem('nexo.legend.seen', '1');
-      localStorage.setItem('nexo.quality', 'low');
+      localStorage.setItem('nexo.quality', quality);
       if (fallback) {
         const getContext = HTMLCanvasElement.prototype.getContext;
         HTMLCanvasElement.prototype.getContext = function (kind, ...args) { return /^webgl/.test(kind) ? null : getContext.call(this, kind, ...args); };
       }
-    }, { theme, fallback });
+    // The published-data capture above checks medium-quality rendering. Keep
+    // interaction fixtures light enough for CI's software GPU while RUNNING pulses.
+    }, { theme, fallback, quality: 'low' });
     await page.route('**/api/session', route => route.fulfill({ json: { configured: false, authenticated: false } }));
     await page.route('**/api/system*', route => route.fulfill({ json: system }));
     await page.route('**/build-meta.json*', route => route.fulfill({ json: { projection_fingerprint: projection.manifest.projection_fingerprint } }));
     await page.goto(base + '/#/agora');
+    await page.getByRole('navigation', { name: 'Escala do ATLAS' }).waitFor();
+    await page.evaluate(() => document.fonts.ready);
+    if (!fallback) {
+      await page.locator('.obs-scene canvas').waitFor();
+      await page.waitForFunction(() => Number(document.querySelector('.obs-scene')?.getAttribute('data-cosmic-particles')) > 0);
+      const geometry = await page.locator('.obs-scene').evaluate(el => ({ particles: Number(el.dataset.cosmicParticles), filaments: Number(el.dataset.cosmicFilaments) }));
+      assert.ok(geometry.particles <= 6_000 && geometry.filaments > 0 && geometry.filaments <= 2_048, 'low-quality cosmic substrate has bounded render buffers');
+      await page.waitForFunction(() => document.querySelector('.obs-scene')?.getAttribute('data-cosmic-rendered') === 'true');
+    }
+    if (!input) await page.addStyleTag({ content: 'body::after{content:"FIXTURE VISUAL · DADOS SINTÉTICOS · SOMENTE TESTE";position:fixed;left:12px;bottom:6px;z-index:9999;padding:4px 8px;background:#15120c;color:#f4e4bd;font:11px system-ui;pointer-events:none}' });
+    await page.screenshot({ path: output + '/' + name + '-atlas-entry.png' });
+    await page.getByRole('button', { name: 'Abrir observatório' }).click();
     await page.locator('#now-problem').waitFor();
     await visualReady(page, name + ':home');
     assert.match(await page.locator('.now-priorities').innerText(), new RegExp(`${blocked} testes parados`));
@@ -92,10 +135,12 @@ try {
       assert.ok((await page.locator('.tele-feed > li:not(.tele-note) > .feed-kind').allTextContents()).every(text => text === 'Evento narrado · interface'));
     }
     await noOverflow(page, name + ':home');
+    const tools = page.locator('.obs-tools-more');
+    assert.equal(await tools.getAttribute('open'), null, 'secondary visual controls start closed');
     if (fallback) assert.equal(await page.locator('.observatory.scene-unavailable').count(), 1);
     else {
       assert.equal(await page.locator('.obs-scene canvas').count(), 1);
-      if (theme === 'dark') assert.equal(await page.locator('.observatory').evaluate(el => getComputedStyle(el).getPropertyValue('--o-accent').trim()), '#d4bf95');
+      if (theme === 'dark') assert.equal(await page.locator('.observatory').evaluate(el => getComputedStyle(el).getPropertyValue('--o-accent').trim()), '#9fc9ff');
     }
     if (!input) await page.addStyleTag({ content: 'body::after{content:"FIXTURE VISUAL · DADOS SINTÉTICOS · SOMENTE TESTE";position:fixed;left:12px;bottom:6px;z-index:9999;padding:4px 8px;background:#15120c;color:#f4e4bd;font:11px system-ui;pointer-events:none}' });
     await page.screenshot({ path: output + '/' + name + '-home.png' });
@@ -121,6 +166,7 @@ try {
     await visualReady(page, name + ':cycle');
     await page.screenshot({ path: output + '/' + name + '-cycle.png' });
     await page.evaluate(() => { location.hash = '#/agora'; });
+    await page.getByRole('button', { name: 'Abrir observatório' }).click();
     await page.locator('#now-problem').waitFor();
     await page.getByRole('button', { name: 'Procurar', exact: true }).click();
     await page.getByRole('dialog').waitFor();
@@ -150,34 +196,23 @@ try {
       await page.keyboard.press('ArrowRight');
       await page.keyboard.press('+');
       await page.getByRole('button', { name: 'Recentrar câmera' }).click();
-      const crumb = page.getByRole('navigation', { name: 'Onde você está na teia' });
-      if (viewport.width < 760) {
-        const bounds = await crumb.boundingBox();
-        const header = await page.locator('.instrument-header').boundingBox();
-        assert.ok(bounds && header && bounds.y >= header.y + header.height, 'scene breadcrumb below mobile header');
-      } else if (viewport.width >= 1280) {
-        const bounds = await crumb.boundingBox();
-        const sidebar = await page.locator('.telemetry').boundingBox();
-        assert.ok(bounds && sidebar && bounds.x + bounds.width < sidebar.x, 'scene breadcrumb left of desktop telemetry');
-      }
-      await crumb.getByRole('button', { name: 'NEXO', exact: true }).click();
-      await visualReady(page, name + ':explore', true);
-      const hint = await page.locator('.explore-hint').boundingBox();
-      assert.ok(hint && hint.x >= 0 && hint.x + hint.width <= viewport.width, 'explore hint within viewport');
-      if (viewport.width >= 1280) {
-        const sidebar = await page.locator('.telemetry').boundingBox();
-        assert.ok(hint.x + hint.width < sidebar.x, 'explore hint must not be clipped by telemetry');
-      }
+      await page.getByRole('navigation', { name: 'Escala do ATLAS' }).waitFor();
+      await page.getByRole('button', { name: /02.*Pesquisa/ }).click();
+      assert.equal(await page.locator('.atlas-portal').getAttribute('data-scale'), 'research');
+      await noOverflow(page, name + ':atlas');
       await page.screenshot({ path: output + '/' + name + '-explore.png' });
       await page.keyboard.press('Escape');
       assert.equal(await page.locator('.observatory.exploring').count(), 0);
+      assert.equal(await tools.getAttribute('open'), null, 'Escape closes secondary visual controls');
     }
     if (fallback) {
       assert.equal(await page.getByRole('button', { name: 'Explorar a teia' }).count(), 0);
       assert.equal(await page.getByRole('button', { name: /Mostrar só a página/ }).count(), 0);
     } else {
+      if (!(await tools.evaluate(el => el.open))) await tools.locator('summary').click();
       await page.getByRole('button', { name: /Mostrar só a página/ }).click();
       assert.equal(await page.locator('.observatory.flat').count(), 1);
+      if (!(await tools.evaluate(el => el.open))) await tools.locator('summary').click();
       await page.getByRole('button', { name: /Mostrar a teia/ }).click();
       assert.equal(await page.locator('.observatory.flat').count(), 0);
     }
@@ -190,6 +225,7 @@ try {
       await page.unroute('**/api/system*');
       await page.route('**/api/system*', route => route.fulfill({ json: audit }));
       await page.reload();
+      await page.getByRole('button', { name: 'Abrir observatório' }).click();
       await page.locator('#now-problem').waitFor();
       await visualReady(page, name + ':blocker-semantics');
       await page.addStyleTag({ content: 'body::after{content:"FIXTURE VISUAL · DADOS SINTÉTICOS · SOMENTE TESTE";position:fixed;left:12px;bottom:6px;z-index:9999;padding:4px 8px;background:#15120c;color:#f4e4bd;font:11px system-ui;pointer-events:none}' });

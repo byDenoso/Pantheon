@@ -1,0 +1,86 @@
+name: NEXO Drive operational control
+run-name: nexo-op-${{ inputs.correlation }}
+on:
+  workflow_dispatch:
+    inputs:
+      package_file_id:
+        required: true
+        type: string
+      package_version:
+        required: true
+        type: string
+      package_sha256:
+        required: true
+        type: string
+      correlation:
+        required: true
+        type: string
+      expected_commit:
+        required: true
+        type: string
+permissions:
+  contents: read
+concurrency:
+  group: nexo-operational-${{ inputs.correlation }}
+  cancel-in-progress: false
+jobs:
+  hydrate:
+    if: github.repository == 'byDenoso/Pantheon' && github.ref == 'refs/heads/main' && github.sha == inputs.expected_commit
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      capsule_sha256: ${{ steps.freeze.outputs.capsule_sha256 }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install trusted hydration dependencies
+        run: python -m pip install --quiet google-auth requests
+      - name: Read canonical package without executing its recipe
+        id: freeze
+        env:
+          GOOGLE_SERVICE_ACCOUNT_JSON: ${{ secrets.NEXO_DRIVE_WRITER_JSON }}
+          PACKAGE_FILE_ID: ${{ inputs.package_file_id }}
+          PACKAGE_VERSION: ${{ inputs.package_version }}
+          PACKAGE_SHA256: ${{ inputs.package_sha256 }}
+          CORRELATION: ${{ inputs.correlation }}
+          EXPECTED_COMMIT: ${{ inputs.expected_commit }}
+        run: python scripts/nexo_operational_package.py hydrate --output capsule/capsule.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: operational-input-${{ github.run_id }}-${{ github.run_attempt }}
+          path: capsule/capsule.json
+          retention-days: 1
+          if-no-files-found: error
+  execute:
+    needs: hydrate
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/download-artifact@v4
+        with:
+          name: operational-input-${{ github.run_id }}-${{ github.run_attempt }}
+          path: capsule
+      - name: Run frozen recipe in a clean child environment
+        env:
+          CAPSULE_SHA256: ${{ needs.hydrate.outputs.capsule_sha256 }}
+        run: python scripts/nexo_operational_package.py execute --input capsule/capsule.json --sha256 "$CAPSULE_SHA256" --output result/result.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: operational-result-${{ github.run_id }}-${{ github.run_attempt }}
+          path: result/result.json
+          retention-days: 7
+          if-no-files-found: error

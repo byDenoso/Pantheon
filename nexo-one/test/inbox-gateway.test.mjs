@@ -1,7 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {inboxDrop} from '../server/inbox-gateway.mjs';
+import {createHash} from 'node:crypto';
+import {inboxDrop,readSpool,submitScientificGatewayEnvelope} from '../server/inbox-gateway.mjs';
+import {GOOGLE_SHEETS_SPOOL_CONSENT} from '../server/auth/google-drive-consent.mjs';
 import {submit} from '../scripts/nexo-submit.mjs';
+import {SPOOL_ID} from '../server/mcp/operational-queue.mjs';
 
 const env={GOOGLE_CONNECTOR:'google/nexo-google',VERCEL_OIDC_TOKEN:'oidc-fixture',NEXO_SPOOL_ID:'spool-fixture'};
 const envelope={kind:'LEARNING_SIGNAL',source:'TEST',payload:{evidence_kind:'INTEGRITY',evidence:'sheet ingress'}};
@@ -9,13 +12,13 @@ const encoded=Buffer.from(JSON.stringify(envelope),'utf8').toString('base64url')
 
 async function withFetch(handler,fn){const original=globalThis.fetch;globalThis.fetch=handler;try{return await fn();}finally{globalThis.fetch=original;}}
 
-function sheetFixture(){
+function sheetFixture(spreadsheetId='spool-fixture'){
   const rows=[['','stable_id','created_at','role','envelope_b64url']];
   const seen=[];
   const fetch=async(url,options={})=>{
     const u=String(url),method=options.method||'GET';seen.push({u,method});
     if(u.includes('/v1/connect/token/'))return new Response(JSON.stringify({token:'sheets-write-token'}),{status:200,headers:{'Content-Type':'application/json'}});
-    if(u.includes('/v4/spreadsheets/spool-fixture?fields='))return new Response(JSON.stringify({sheets:[{properties:{title:'Spool',index:0}}]}),{status:200,headers:{'Content-Type':'application/json'}});
+    if(u.includes(`/v4/spreadsheets/${spreadsheetId}?fields=`))return new Response(JSON.stringify({sheets:[{properties:{title:'Spool',index:0}}]}),{status:200,headers:{'Content-Type':'application/json'}});
     if(u.includes('/values/%27Spool%27!A%3AK?majorDimension=ROWS'))return new Response(JSON.stringify({values:rows}),{status:200,headers:{'Content-Type':'application/json'}});
     if(u.includes('/values/%27Spool%27!A%3AK:append')){
       assert.equal(method,'POST');assert.equal(options.headers.Authorization,'Bearer sheets-write-token');
@@ -33,6 +36,33 @@ function sheetFixture(){
   };
   return {rows,seen,fetch};
 }
+
+test('scientific MCP ingress writes only the existing Writer spool and replays exact bytes',async()=>{
+  const fx=sheetFixture(SPOOL_ID),localEnv={...env,NEXO_SPOOL_ID:SPOOL_ID};
+  const envelope={kind:'TEST_BATTERY',source:'MCP_EXECUTOR',payload:{battery_id:'mcp-'+'a'.repeat(40),
+    tests:[{test_id:'T-READY-001',recipe:'seed_bounds',params:{seed:17}}]}};
+  const identity=value=>value===null||typeof value!=='object'?JSON.stringify(value):Array.isArray(value)
+    ?'['+value.map(identity).join(',')+']'
+    :'{'+Object.keys(value).sort().map(key=>JSON.stringify(key)+':'+identity(value[key])).join(',')+'}';
+  const hash=value=>createHash('sha256').update(value).digest('hex');
+  const stableId=`science-${hash(identity(envelope)).slice(0,48)}`;
+  await withFetch(fx.fetch,async()=>{
+    const first=await submitScientificGatewayEnvelope(stableId,envelope,localEnv,{});
+    const second=await submitScientificGatewayEnvelope(stableId,envelope,localEnv,{});
+    assert.equal(first.readback,'PASS');assert.equal(first.reused,false);
+    assert.equal(second.readback,'PASS');assert.equal(second.reused,true);
+    assert.equal(first.stable_id,stableId);assert.equal(second.body_sha256,first.body_sha256);
+    assert.match(first.destination,new RegExp(SPOOL_ID));
+  });
+  const stable=fx.rows[0].indexOf('stable_id'),raw=fx.rows[0].indexOf('envelope_b64url');
+  const saved=fx.rows.find(row=>row?.[stable]===stableId);
+  assert.ok(saved);assert.deepEqual(JSON.parse(Buffer.from(saved[raw],'base64url').toString('utf8')),
+    {...envelope,_via:'INBOX_GATEWAY_SHEET'});
+  assert.equal(fx.seen.some(entry=>entry.u.includes('api.github.com')),false);
+  const other=sheetFixture('other-spool');
+  await assert.rejects(()=>withFetch(other.fetch,()=>submitScientificGatewayEnvelope(stableId,envelope,
+    {...localEnv,NEXO_SPOOL_ID:'other-spool'},{})),error=>error.code==='SPOOL_DESTINATION_MISMATCH');
+});
 
 test('inbox-drop persists chunked envelopes through the Sheet spool without GitHub write access',async()=>{
   const fx=sheetFixture();
@@ -126,4 +156,38 @@ test('read-only GitHub token is not used as a write fallback when the Sheet spoo
     assert.equal(value.github_token_role,'READ_ONLY_COMPATIBILITY');
   });
   assert.equal(seen.some(entry=>entry.u.includes('api.github.com')),false);
+});
+
+test('spool requests the same granted profile as owner consent using the current request identity',async()=>{
+  const fx=sheetFixture(),requests=[];
+  const fetch=async(url,options={})=>{
+    if(String(url).includes('/v1/connect/token/')){
+      const body=JSON.parse(options.body);requests.push({body,authorization:options.headers.Authorization});
+      if(JSON.stringify(body.scopes)!==JSON.stringify(GOOGLE_SHEETS_SPOOL_CONSENT.scopes))
+        return Response.json({error:{code:'user_authorization_required'}},{status:403});
+    }
+    return fx.fetch(url,options);
+  };
+  await withFetch(fetch,async()=>{
+    const result=await readSpool({...env,VERCEL_OIDC_TOKEN:'stale-build-identity'},
+      {headers:{'x-vercel-oidc-token':'current-request-identity'}});
+    assert.equal(result.title,'Spool');
+  });
+  assert.equal(requests.length,1);
+  assert.deepEqual(requests[0].body,{subject:GOOGLE_SHEETS_SPOOL_CONSENT.subject,scopes:GOOGLE_SHEETS_SPOOL_CONSENT.scopes});
+  assert.equal(requests[0].authorization,'Bearer current-request-identity');
+  assert.equal(fx.seen.some(item=>item.method!=='GET'&&!item.u.includes('/connect/token/')),false);
+});
+
+test('a denied granted-profile request stops without another scope, identity or transport attempt',async()=>{
+  const calls=[];
+  await withFetch(async(url,options={})=>{
+    calls.push({url:String(url),body:JSON.parse(options.body)});
+    return Response.json({error:{code:'user_authorization_required'}},{status:403});
+  },async()=>{
+    await assert.rejects(readSpool({...env,GOOGLE_REFRESH_TOKEN:'unused',NEXO_INBOX_TOKEN:'unused'},{}),
+      error=>error.code==='AUTH_REQUIRED'&&error.googleDiagnostic==='CONNECT_USER_AUTHORIZATION_REQUIRED');
+  });
+  assert.equal(calls.length,1);
+  assert.deepEqual(calls[0].body,{subject:GOOGLE_SHEETS_SPOOL_CONSENT.subject,scopes:GOOGLE_SHEETS_SPOOL_CONSENT.scopes});
 });

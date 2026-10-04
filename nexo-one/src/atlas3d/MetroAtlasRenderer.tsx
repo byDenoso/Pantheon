@@ -596,18 +596,12 @@ function Metro2DView({
       data: { nodes: [], edges: [] },
       padding: compact ? [142, 22, 50, 22] : [86, 76, 76, 76],
       zoomRange: [0.30, 3.2],
-      animation: {
-        duration: compact ? 160 : 280,
-        easing: 'ease-in-out',
-      },
+      // SVG elements can be replaced during filtering; avoid deferred lifecycle callbacks.
+      animation: false,
       behaviors: ['drag-canvas', 'zoom-canvas'],
       node: {
         type: 'donut',
-        animation: {
-          enter: 'fade',
-          update: 'translate',
-          exit: 'fade',
-        },
+        animation: false,
         style: {
           size: (datum: any) => metroNodeSize(datum.data),
           donuts: (datum: any) => [Math.max(8, Math.min(92, datum.data.mix || 50)), 100 - Math.max(8, Math.min(92, datum.data.mix || 50))],
@@ -651,10 +645,7 @@ function Metro2DView({
         },
       },
       edge: {
-        animation: {
-          enter: 'fade',
-          exit: 'fade',
-        },
+        animation: false,
         state: {
           'edge-active': { opacity: .92, lineWidth: 2.8 },
           'edge-related': { opacity: .32, lineWidth: 1.4 },

@@ -5,6 +5,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { EVENT_TAG, EventGlyph, GalaxyThree3D, type GalaxyEvent, type GalaxyMorphology } from '../components/GalaxyThree3D.tsx';
 import type { GraphNode, GraphNodeType } from '../contracts/system.ts';
+import type { AtlasObservedEntity } from '../contracts/atlasObservation.ts';
 import type { PlacedNode3D } from '../viewmodels/graph3d.ts';
 import { useNexoStore } from '../data/NexoStore.tsx';
 import { domainLabel } from '../viewmodels/tokens.ts';
@@ -58,11 +59,7 @@ const humanTitle = (entity: RawEntity) => [entity.title, entity.plain, entity.me
   .find(value => Boolean(value?.trim()) && !isTechnicalLabel(value) && value !== entity.id && value !== entity.canonical_id)
   || 'Item relacionado a este assunto';
 
-interface RawEntity {
-  id: string; canonical_id?: string; kind?: string; title?: string; status?: string | null; cluster_id?: string;
-  visual_domain?: string; subdomain?: string | null; campaign_id?: string | null; test_group_id?: string | null;
-  plain?: string | null; meaning?: string | null; layout?: { x?: number; y?: number; z?: number };
-}
+type RawEntity = AtlasObservedEntity & { cluster_id?: string };
 
 interface Metrics {
   center_of_mass: { x: number; y: number };
@@ -74,22 +71,30 @@ interface Metrics {
 }
 type MetricsDelta = Partial<Record<'asymmetry' | 'domain_entropy_bits' | 'radial_ratio' | 'cross_link_density', number | null>>;
 
-function toNode(entity: RawEntity): PlacedNode3D {
+function toNode(entity: RawEntity, stale: boolean): PlacedNode3D {
   const type = TYPE[String(entity.kind || '').toUpperCase()] ?? 'ACTION';
-  const domain = (entity.visual_domain || 'NEXO') as GraphNode['domain'];
+  const domain = (entity.visual_domain || entity.domain || 'NEXO') as GraphNode['domain'];
+  const observation = entity.observation;
   return {
     id: entity.canonical_id || entity.id,
     type,
     label: entity.title || entity.canonical_id || entity.id,
     domain,
-    state: 'LIVE',
+    // A published galaxy projection is a point-in-time observation, never a live run signal.
+    state: 'SNAPSHOT',
     authority_class: 'DERIVED',
-    source_ref: 'galaxy://published/latest',
-    source_revision: '',
-    fingerprint: '',
-    freshness: { state: 'RECENT', observed_at: null, ttl_seconds: null },
-    checked_at: '',
-    summary: entity.status ? `status ${entity.status}` : '',
+    source_ref: entity.source?.repository || entity.source?.collection || entity.source?.authority || 'TOWER_V06',
+    source_revision: observation.source_revision,
+    fingerprint: observation.projection_fingerprint,
+    freshness: { state: stale ? 'STALE' : 'UNKNOWN', observed_at: observation.observed_at, ttl_seconds: null },
+    checked_at: observation.observed_at,
+    summary: entity.meaning || entity.plain || '',
+    operational_status: entity.status || 'UNKNOWN',
+    scientific_state: observation.scientific_state,
+    attempt_state: observation.attempt_state,
+    review_state: observation.review_state,
+    decision_required: observation.decision_required,
+    human_gate: observation.decision_required,
     x: (entity.layout?.x ?? 0) * SCALE,
     y: (entity.layout?.y ?? 0) * SCALE,
     z: (entity.layout?.z ?? 0) * SCALE,
@@ -112,12 +117,13 @@ const signed = (value: number | null | undefined, digits = 2) =>
 
 // Overview only: clicking the galaxy never navigates away to the graphs.
 export function GalaxyView({ selectedId }: { selectedId: string | null; onSelect?: (id: string) => void }) {
-  const { system } = useNexoStore();
+  const { system, atlasObservation, loadAtlasSnapshot } = useNexoStore();
   const projectionFingerprint = system.state?.bus.fingerprint ?? '';
-  const [entities, setEntities] = useState<RawEntity[] | null>(null);
-  const [morphology, setMorphology] = useState<(GalaxyMorphology & { metrics?: Metrics; metrics_delta?: MetricsDelta | null }) | null>(null);
-  const [failed, setFailed] = useState(false);
-  const [rawEvents, setRawEvents] = useState<GalaxyEvent[]>([]);
+  const snapshot = atlasObservation.snapshot;
+  const entities = snapshot?.entities ?? null;
+  const morphology = (snapshot?.morphology as (GalaxyMorphology & { metrics?: Metrics; metrics_delta?: MetricsDelta | null }) | null | undefined) ?? null;
+  const rawEvents = (snapshot?.events ?? []) as GalaxyEvent[];
+  const [rendererFailed, setRendererFailed] = useState(false);
   const [hiddenEvents, setHiddenEvents] = useState<string[]>(readHiddenEvents);
   const toggleEvent = (kind: string) => setHiddenEvents(current => {
     const next = current.includes(kind) ? current.filter(k => k !== kind) : [...current, kind];
@@ -128,7 +134,7 @@ export function GalaxyView({ selectedId }: { selectedId: string | null; onSelect
   // Stable callbacks: they are scene deps, and a new identity rebuilds the whole
   // WebGL scene (and resets the camera) on every re-render.
   const handleSelect = useCallback((_id: string | null) => {}, []);
-  const handleFailure = useCallback(() => setFailed(true), []);
+  const handleFailure = useCallback(() => setRendererFailed(true), []);
   const handleEventSelect = useCallback((id: string) => setFocus(current => current?.id === id ? null : { id, nonce: Date.now() }), []);
   // Legend click cycles through the events of that kind, most intense first.
   const [focus, setFocus] = useState<{ id: string; nonce: number } | null>(null);
@@ -141,39 +147,11 @@ export function GalaxyView({ selectedId }: { selectedId: string | null; onSelect
   };
 
   useEffect(() => {
+    if (!projectionFingerprint) return;
     const controller = new AbortController();
-    const delays = [0, 800, 2400];
-
-    const load = async () => {
-      setFailed(false);
-      for (let attempt = 0; attempt < delays.length; attempt += 1) {
-        const delay = delays[attempt] ?? 0;
-        if (delay) await new Promise(resolve => window.setTimeout(resolve, delay));
-        if (controller.signal.aborted) return;
-        try {
-          const url = new URL(ENDPOINT, window.location.href);
-          if (projectionFingerprint) url.searchParams.set('projection', projectionFingerprint);
-          url.searchParams.set('readback', String(Date.now()));
-          const response = await fetch(url, { signal: controller.signal, cache: 'no-store' });
-          if (!response.ok) throw new Error(String(response.status));
-          const snapshot = await response.json();
-          const snapshotFingerprint = String(snapshot?.provenance?.source_fingerprint || '');
-          if (projectionFingerprint && snapshotFingerprint && snapshotFingerprint !== projectionFingerprint) {
-            throw new Error('GALAXY_EDGE_NOT_CONVERGED');
-          }
-          setEntities(Array.isArray(snapshot?.entities) ? snapshot.entities : []);
-          setMorphology(snapshot?.morphology && typeof snapshot.morphology === 'object' ? snapshot.morphology : null);
-          setRawEvents(Array.isArray(snapshot?.events) ? snapshot.events : []);
-          return;
-        } catch (error) {
-          if (controller.signal.aborted || (error as Error)?.name === 'AbortError') return;
-          if (attempt === delays.length - 1) setFailed(true);
-        }
-      }
-    };
-    void load();
+    void loadAtlasSnapshot(ENDPOINT, projectionFingerprint, controller.signal);
     return () => controller.abort();
-  }, [projectionFingerprint]);
+  }, [loadAtlasSnapshot, projectionFingerprint]);
 
   const chooseGlow = (level: (typeof GLOW_LEVELS)[number]) => {
     setGlow(level.value);
@@ -182,7 +160,10 @@ export function GalaxyView({ selectedId }: { selectedId: string | null; onSelect
 
   // The galaxy always shows every published entity: it reads best as the whole
   // system. Lenses (Operação, Ciência, Sistema, Aprendizado, Tudo) drive 2D/3D.
-  const nodes = useMemo(() => (entities ?? []).map(toNode), [entities]);
+  const isStale = atlasObservation.status === 'STALE' || atlasObservation.status === 'PARTIAL' || atlasObservation.status === 'UNAVAILABLE'
+    || Boolean(snapshot && atlasObservation.requested_fingerprint
+      && atlasObservation.requested_fingerprint.toLowerCase() !== snapshot.provenance.source_fingerprint.toLowerCase());
+  const nodes = useMemo(() => (entities ?? []).map(entity => toNode(entity, isStale)), [entities, isStale]);
   // Events share the nodes' world scale so they sit exactly on their domain.
   const events = useMemo(() => rawEvents.filter(event => !hiddenEvents.includes(event.kind)).map(event => ({ ...event, x: event.x * SCALE, y: event.y * SCALE, z: (event.z || 0) * SCALE })), [rawEvents, hiddenEvents]);
   const eventCounts = useMemo(() => rawEvents.reduce<Record<string, number>>((acc, e) => { acc[e.kind] = (acc[e.kind] || 0) + 1; return acc; }, {}), [rawEvents]);
@@ -209,10 +190,14 @@ export function GalaxyView({ selectedId }: { selectedId: string | null; onSelect
   const visibleRelated = related.slice(0, 3);
   const moreRelated = related.slice(3, 30);
 
-  if (failed) return <div className="nexo-graph-fallback" role="status">Galáxia indisponível neste instante. Use 2D ou 3D.</div>;
-  if (!entities) return <div className="nexo-graph-fallback" role="status">Compilando a galáxia…</div>;
+  if (!snapshot) return <div className="nexo-graph-fallback" role="status">
+    {atlasObservation.status === 'UNAVAILABLE'
+      ? 'A projeção pública da galáxia não pôde ser validada.'
+      : projectionFingerprint ? 'Compilando a galáxia…' : 'Aguardando uma revisão validada da projeção.'}
+  </div>;
+  if (rendererFailed) return <div className="nexo-graph-fallback" role="status">Galáxia indisponível neste instante. Use 2D ou 3D.</div>;
   return (
-    <div className="atlas3d-shell atlas-three-field-shell atlas-galaxy-view" data-renderer="galaxy-spiral">
+    <div className="atlas3d-shell atlas-three-field-shell atlas-galaxy-view" data-renderer="galaxy-spiral" data-observation-state={atlasObservation.status.toLowerCase()} data-projection-fingerprint={snapshot.provenance.source_fingerprint}>
       <GalaxyThree3D
         nodes={nodes}
         edges={EMPTY_EDGES}

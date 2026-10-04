@@ -17,7 +17,7 @@ import type { ScenePage, SceneEvents } from './ObservatoryScene.tsx';
 import { normDomain } from './domains.ts';
 import './lab.css';
 import '../../styles/atlas-cinematic.css';
-import { currentVerdictText, matchesSearch, boardMeta, readinessLabel, hasPublishedValue, roadmapTrail, latestBoardRecord } from './presentation.ts';
+import { currentVerdictText, matchesSearch, boardMeta, boardConversation, boardThreads, readinessLabel, hasPublishedValue, roadmapTrail, latestBoardRecord } from './presentation.ts';
 import { BoardMessage } from './BoardMessage.tsx';
 import { selectScienceFocus, scientificStatRows } from './science-presentation.ts';
 import { autonomyPresentation, publishedQueueGap } from './autonomy-presentation.ts';
@@ -235,7 +235,8 @@ function Now({ lab, state, onReplay, replayCount }: { lab: Lab; state: SystemSta
   const sci = all.filter(isScience), self = all.filter(isSelf);
   const S = tally(sci), E2 = tally(self);
   const focus = selectScienceFocus(sci);
-  const boardPost = latestBoardRecord(ev?.board ?? []);
+  const boardRecords = ev?.board ?? [];
+  const boardPost = latestBoardRecord(boardThreads(boardRecords).filter(post => boardConversation(post, boardRecords).awaiting));
   const scientificIntro = focus
     ? <p className="thesis">Resultado científico em destaque: <E id={focus.test.id}>{focus.test.name}</E>. <span>{currentVerdictText(focus.test)}</span></p>
     : <p className="thesis">Ainda sem resultado científico disponível para destaque; {S.ready} testes marcados READY na leitura científica.</p>;
@@ -1249,7 +1250,7 @@ function BoardFocus({ state, lab, post, onOpenBoard }: { state: SystemState; lab
   const records = state.evolution?.board ?? [];
   if (!post) return null;
   return <section className="hud-section board-focus" aria-labelledby="board-focus-title">
-    <p className="hud-kicker">Último recado no recorte recebido</p>
+    <p className="hud-kicker">Recado aguardando resposta</p>
     <h2 id="board-focus-title">O papo no mural</h2>
     <p className="board-caption"><span>Narração · interface</span>{boardRole(post.from)} deixou um recado para {boardRole(post.to)}.</p>
     <BoardMessage key={post.id} post={post} lab={lab} from={boardRole(post.from)} to={boardRole(post.to)} records={records} focus />
@@ -1261,29 +1262,30 @@ function Board({ state, lab, visit = 0 }: { state: SystemState; lab: Lab; visit?
   const now = Date.now();
   const [all, setAll] = useState(false);
   const [owner, setOwner] = useState('');
-  const [priority, setPriority] = useState('');
-  const [status, setStatus] = useState('Pendentes');
+  const [kind, setKind] = useState('');
+  const [status, setStatus] = useState('Aguardando resposta');
   useEffect(() => {
     if (!visit) return;
-    setOwner(''); setPriority(''); setStatus(''); setAll(true);
+    setOwner(''); setKind(''); setStatus('Aguardando resposta'); setAll(true);
     const heading = document.getElementById('now-board');
     heading?.setAttribute('tabindex', '-1');
     heading?.focus({ preventScroll: true });
     heading?.scrollIntoView({ behavior: 'instant', block: 'start' });
   }, [visit]);
   const raw = state.evolution?.board ?? [];
-  const every = raw.slice().reverse().map(post => ({ ...post, meta: boardMeta(post, now, raw) }));
+  const every = boardThreads(raw, now).slice().reverse().map(post => ({ ...post, conversation: boardConversation(post, raw, now) }));
   if (!every.length) return null;
-  const filtered = every.filter(p => (!owner || p.meta.owner === owner) && (!priority || p.meta.priority === priority) && (!status || (status === 'Pendentes' ? !['Resolvido', 'Expirado'].includes(p.meta.status) : p.meta.status === status)));
+  const filtered = every.filter(p => (!owner || p.to === owner) && (!kind || p.conversation.kind === kind)
+    && (!status || (status === 'Aguardando resposta' ? p.conversation.awaiting : !p.conversation.awaiting)));
   const posts = all ? filtered : filtered.slice(0, 8);
   const who = boardRole;
-  return <Section title="Conversa entre os agentes" kicker={`${filtered.length} de ${every.length} recados · mural original`} id="now-board">
+  return <Section title="Conversa entre os agentes" kicker={`${filtered.length} conversas ${status === 'Aguardando resposta' ? 'aguardando resposta' : status === 'Histórico' ? 'no histórico' : 'nos filtros'} · mostrando ${posts.length}`} id="now-board">
     <div className="board-filters" role="group" aria-label="Filtrar mural">
-      <label>Destino / responsável<select aria-label="Destino / responsável" value={owner} onChange={e => { setOwner(e.target.value); setAll(false); }}><option value="">Todos</option>{[...new Set(every.map(p => p.meta.owner))].map(x => <option key={x} value={x}>{who(x)}</option>)}</select></label>
-      <label>Prioridade<select aria-label="Prioridade" value={priority} onChange={e => { setPriority(e.target.value); setAll(false); }}><option value="">Todas</option>{[...new Set(every.map(p => p.meta.priority))].map(x => <option key={x}>{x}</option>)}</select></label>
-      <label>Status<select aria-label="Status" value={status} onChange={e => { setStatus(e.target.value); setAll(false); }}><option value="">Todos</option>{['Pendentes', 'Aberto', 'Aceito', 'Respondido', 'Resolvido', 'Expirado'].map(x => <option key={x}>{x}</option>)}</select></label>
+      <label>Para<select aria-label="Para" value={owner} onChange={e => { setOwner(e.target.value); setAll(false); }}><option value="">Todos</option>{[...new Set(every.map(p => p.to))].map(x => <option key={x} value={x}>{who(x)}</option>)}</select></label>
+      <label>Tipo<select aria-label="Tipo" value={kind} onChange={e => { setKind(e.target.value); setAll(false); }}><option value="">Todos</option><option>Conteúdo</option><option>Reclamação</option></select></label>
+      <label>Mostrar<select aria-label="Mostrar" value={status} onChange={e => { setStatus(e.target.value); setAll(false); }}><option>Aguardando resposta</option><option>Histórico</option><option value="">Todos</option></select></label>
     </div>
-    <p className="hud-note">Aqui está o que cada papel escreveu. Autor e destino vêm do mural; prioridade e próxima ação aparecem quando foram declaradas.</p>
+    <p className="hud-note">Respostas ficam ligadas à conversa no histórico. Responder não significa resolver o problema. Reclamação aparece apenas quando o autor declara esse tipo.</p>
     {!posts.length && <p role="status">Nenhum recado com estes filtros.</p>}
     <ol className="board">{posts.map(p => <li key={p.id}><BoardMessage post={p} lab={lab} from={who(p.from)} to={who(p.to)} records={raw} /></li>)}</ol>
     {filtered.length > 8 && <button type="button" className="board-all" onClick={() => setAll(x => !x)}>{all ? 'Mostrar só os 8 mais recentes' : `Ver todos os ${filtered.length} recados`}</button>}
@@ -1300,7 +1302,8 @@ function Crew({ lab, state }: { lab: Lab; state: SystemState }) {
       const day = activityWindow(mine, 24, now).count;
       const quiet = !last || !isPublishedFresh(last.at, 3 * 3600e3, now);
       const delivery = latestDelivery(lab, t.hats);
-      const request = [...(state.evolution?.board ?? [])].reverse().find(p => t.hats.includes(p.to) && !p.resolved_at && (!p.expires_at || Date.parse(p.expires_at) > now));
+      const board = state.evolution?.board ?? [];
+      const request = boardThreads(board, now).reverse().find(p => t.hats.includes(p.to) && boardConversation(p, board, now).awaiting);
       const action = request ? boardMeta(request, now).nextAction : null;
       const sharedRole = TASKS.some(other => other.id !== t.id && other.hats.some(h => t.hats.includes(h)));
       return <article key={t.id} className={`crew-card${quiet ? ' quiet' : ''}`}>
@@ -1308,7 +1311,7 @@ function Crew({ lab, state }: { lab: Lab; state: SystemState }) {
         <p className="crew-hats">{[...new Set(t.hats.map(h => ROLE_PT[h] ?? h))].join(' + ')}</p>
         <p className="crew-does">{t.does}</p>
         <div className="crew-continuity"><p><b>Última entrega do papel</b>{delivery ? <>{eventLabel(delivery)} · {ago(delivery.at)}{delivery.entity_id && lab.tests.has(delivery.entity_id) && <> · <E id={delivery.entity_id} /></>}</> : 'Não publicada no histórico recebido'}</p><p><b>Pedido original · mural</b>{request ? <>{roleLabel(request.from)}: {clip(request.text, 170)}<a href="#/agora"> Ver mural →</a></> : 'Nenhum pedido aberto direcionado neste snapshot'}</p><p><b>Próxima ação declarada</b>{action ?? 'Não publicada'}</p></div>
-        <p className="crew-pulse"><i aria-hidden="true" />{last ? `${sharedRole ? 'telemetria do papel · ' : ''}último sinal recebido ${ago(last.at)} · ${day} eventos no recorte de até 24 h` : 'Nenhum evento deste papel no recorte recebido; cobertura parcial'}</p>
+        <p className="crew-pulse"><i aria-hidden="true" />{last ? `último sinal do papel ${ago(last.at)} · ${day} eventos deste papel em até 24 h${sharedRole ? ' · compartilhado entre operadores' : ''} · recorte parcial` : 'Nenhum evento deste papel no recorte recebido; cobertura parcial'}</p>
       </article>;
     })}
   </section>;
@@ -1317,7 +1320,8 @@ function Crew({ lab, state }: { lab: Lab; state: SystemState }) {
 // ---------- Telemetria publicada (desktop largo): recados entre agentes + ações, em ordem de tempo ----------
 function Telemetry({ lab, state }: { lab: Lab; state: SystemState }) {
   const now = Date.now();
-  const notes = (state.evolution?.board ?? []).filter(p => !p.resolved_at && (!p.expires_at || Date.parse(p.expires_at) > now))
+  const board = state.evolution?.board ?? [];
+  const notes = boardThreads(board, now).filter(p => boardConversation(p, board, now).awaiting)
     .map(p => ({ kind: 'note' as const, at: p.at, who: roleLabel(p.from), to: p.to === p.from ? '' : p.to === 'ALL' ? 'todos' : roleLabel(p.to),
       self: p.to === p.from, text: p.text, id: p.id }));
   // Ações iguais e seguidas do mesmo papel (ex.: 46 nomes preenchidos) viram uma linha só.
@@ -1346,7 +1350,7 @@ function Telemetry({ lab, state }: { lab: Lab; state: SystemState }) {
   const feed = [...notes, ...acts].sort((a, b) => b.at.localeCompare(a.at)).slice(0, 50);
   const day = activityWindow(lab.activity, 24, now).count;
   return <aside className="telemetry" aria-label="Telemetria publicada">
-    <header><p><i aria-hidden="true" />Telemetria publicada</p><small>Fonte {ago(lab.generatedAt)} · {day} eventos até 24 h · recorte parcial</small></header>
+    <header><p><i aria-hidden="true" />Telemetria publicada</p><small>Snapshot {ago(lab.generatedAt)} · {day} eventos de todos os papéis em até 24 h · recorte parcial</small></header>
     <ol className="tele-feed">{feed.map(f => <li key={f.id} className={f.kind === 'note' ? 'tele-note' : undefined}>
       <span className="feed-kind">{f.kind === 'note' ? 'Mural · original' : 'Evento narrado · interface'}</span>
       <p className="tele-h"><b>{f.who}</b>{'self' in f && f.self ? <span>anotou</span> : f.to && <><i aria-hidden="true">→</i><span>{f.to}</span></>}<time>{ago(f.at)}</time></p>

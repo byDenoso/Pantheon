@@ -31,7 +31,8 @@ export function NexoGraph({
   showViewSwitch?:boolean;
 }){
   const hostRef=useRef<HTMLDivElement|null>(null);
-  const [g6Ready,setG6Ready]=useState(()=>view==='3d'||Boolean((window as any).G6?.Graph));
+  const [g6Status,setG6Status]=useState<'idle'|'loading'|'ready'|'error'>(()=>Boolean((window as any).G6?.Graph)?'ready':'idle');
+  const [g6Retry,setG6Retry]=useState(0);
   const [tableMode,setTableMode]=useState(false);
   const [spotlight,setSpotlight]=useState(true);
   const [illuminated,setIlluminated]=useState(false);
@@ -41,11 +42,15 @@ export function NexoGraph({
   const relationCount=useMemo(()=>model.crossLinks.filter(link=>visibleSet.has(link.source)&&visibleSet.has(link.target)).length,[model.crossLinks,visibleSet]);
 
   useEffect(()=>{
-    if(view!=='2d'){setG6Ready(true);return;}
+    if(view!=='2d')return;
+    if((window as any).G6?.Graph){setG6Status('ready');return;}
     let active=true;
-    void ensureAtlasG6().then(()=>{if(active)setG6Ready(true);}).catch(()=>{if(active)setG6Ready(false);});
+    setG6Status('loading');
+    void ensureAtlasG6().then(()=>{
+      if(active)setG6Status((window as any).G6?.Graph?'ready':'error');
+    }).catch(()=>{if(active)setG6Status('error');});
     return()=>{active=false;};
-  },[view]);
+  },[view,g6Retry]);
 
   useEffect(()=>{
     const onKey=(event:KeyboardEvent)=>{
@@ -53,12 +58,12 @@ export function NexoGraph({
       if(target&&/INPUT|TEXTAREA|SELECT/.test(target.tagName))return;
       if(event.key==='2')onViewChange('2d');
       if(event.key==='3')onViewChange('3d');
-      if(event.key==='g')window.location.hash='#/galaxia';
+      if(event.key==='g')window.location.hash=showViewSwitch?'#/galaxia':'#/atlas?view=galaxy';
       if(event.key==='Escape'&&selectedId)hostRef.current?.focus();
     };
     window.addEventListener('keydown',onKey);
     return()=>window.removeEventListener('keydown',onKey);
-  },[onViewChange,selectedId]);
+  },[onViewChange,selectedId,showViewSwitch]);
 
   const fullscreen=()=>{
     const node=hostRef.current;
@@ -71,11 +76,15 @@ export function NexoGraph({
   const spotlightActive=spotlight&&Boolean(selectedId);
   const spotlightToggle=!tableMode&&<button type="button" className="nexo-spotlight-toggle" aria-label={spotlightActive?"Desativar foco visual no nó selecionado":"Ativar foco visual no nó selecionado"} aria-pressed={spotlightActive} disabled={!selectedId} title={selectedId?(spotlightActive?"Mostrar todo o grafo com o mesmo peso":"Destacar o nó selecionado e sua vizinhança"):"Selecione um nó para ativar o foco"} onClick={()=>setSpotlight(value=>!value)}>{spotlightActive?'Foco ativo':'Focar seleção'}</button>;
   const illuminationToggle=!tableMode&&<button type="button" className="nexo-illumination-toggle" aria-label={illuminated?"Desativar iluminação global":"Iluminar todos os nós e relações"} aria-pressed={illuminated} title={illuminated?"Desativar iluminação global":"Iluminar todos os nós e relações"} onClick={()=>setIlluminated(value=>!value)}>{illuminated?'Apagar luz':'Iluminar tudo'}</button>;
-  return <section ref={hostRef} tabIndex={-1} className="nexo-graph" data-graph-view={view} data-graph-illuminated={illuminated} data-graph-visible={visible.length} data-graph-total={model.nodes.length} data-toolbar-rows={toolbarFilters?2:1}>
+  return <section ref={hostRef} tabIndex={-1} className="nexo-graph" data-graph-view={view} data-atlas-entry={!showViewSwitch} data-graph-illuminated={illuminated} data-graph-visible={visible.length} data-graph-total={model.nodes.length} data-toolbar-rows={toolbarFilters?2:1}>
     <div className="nexo-graph-toolbar">
       <div className="nexo-graph-toolbar-row nexo-graph-toolbar-primary">
         <div className="nexo-graph-toolbar-context">{toolbarContext||(!toolbarFilters&&count)}</div>
         <div className="nexo-graph-actions">
+          {!showViewSwitch&&<nav className="nexo-atlas-entry" aria-label="Visualização do Atlas">
+            <a className="nexo-atlas-galaxy-link" href="#/atlas?view=galaxy" onClick={() => onViewChange('galaxy')} aria-current={view==='galaxy'?'page':undefined}>Galáxia 3D</a>
+            <button type="button" aria-pressed={view==='2d'} onClick={()=>onViewChange('2d')}>2D</button>
+          </nav>}
           {showViewSwitch&&<GraphViewSwitch view={view} onChange={onViewChange}/>}
           {!toolbarFilters&&spotlightToggle}
           {!toolbarFilters&&illuminationToggle}
@@ -95,11 +104,13 @@ export function NexoGraph({
       </div>}
     </div>
     {tableMode
-      ? <div className="nexo-graph-table-wrap"><table className="nexo-graph-table"><caption>Esta lista mostra os itens abertos no mapa atual. Selecione uma linha para ver o contexto e as ligações.</caption><thead><tr><th>Item</th><th>O que é</th><th>Área</th><th>Situação</th><th>Conexões</th></tr></thead><tbody>{rows.map(node=><tr key={node!.id} className={node!.id===selectedId?'selected':''} onClick={()=>onSelect(node!.id)}><td><strong>{node!.name}</strong><details onClick={event=>event.stopPropagation()}><summary>Ver referência técnica</summary><code>{node!.id}</code></details></td><td>{NODE_TYPE_COPY[String(node!.entityType)]??displayCode(String(node!.entityType),'Registro')}</td><td>{domainLabel(node!.domain)}</td><td title="O valor técnico fica disponível nos detalhes do item">{displayCode(node!.status,'Estado sem descrição')}</td><td>{node!.relationCount}</td></tr>)}</tbody></table></div>
+      ? <div className="nexo-graph-table-wrap"><table className="nexo-graph-table"><caption>Esta lista mostra os itens abertos no mapa atual. Selecione uma linha para ver o contexto e as ligações.</caption><thead><tr><th>Item</th><th>O que é</th><th>Área</th><th>Situação</th><th>Conexões</th></tr></thead><tbody>{rows.map(node=><tr key={node!.id} className={node!.id===selectedId?'selected':''}><td><button type="button" className="nexo-graph-table-select" aria-pressed={node!.id===selectedId} onClick={()=>onSelect(node!.id)}><strong>{node!.name}</strong></button><details><summary>Ver referência técnica</summary><code>{node!.id}</code></details></td><td>{NODE_TYPE_COPY[String(node!.entityType)]??displayCode(String(node!.entityType),'Registro')}</td><td>{domainLabel(node!.domain)}</td><td title="O valor técnico fica disponível nos detalhes do item">{displayCode(node!.status,'Estado sem descrição')}</td><td>{node!.relationCount}</td></tr>)}</tbody></table></div>
       : view==='galaxy'
         ? <GalaxyView selectedId={selectedId} onSelect={onSelect}/>
-      : view==='2d'&&!g6Ready
-        ? <div className="nexo-graph-fallback" role="status">2D indisponível neste instante. Os dados continuam acessíveis em tabela.</div>
+      : view==='2d'&&g6Status!=='ready'
+        ? g6Status==='error'
+          ? <div className="nexo-graph-fallback" role="alert"><p>Não foi possível carregar o mapa 2D. Os dados continuam disponíveis na tabela.</p><button type="button" onClick={()=>{setG6Status('loading');setG6Retry(value=>value+1);}}>Tentar carregar novamente</button></div>
+          : <div className="nexo-graph-fallback" role="status" aria-live="polite">Carregando o mapa 2D…</div>
         : <MetroAtlasRenderer model={model} expanded={expanded} visibleLayers={visibleLayers} selectedId={spotlightActive?selectedId:null} showBeams={showRelations} viewMode={view} theme={theme} fitNonce={fitNonce} allIlluminated={illuminated} onActivate={onSelect} onReady={onReady}/>}
   </section>;
 }

@@ -1,6 +1,8 @@
 import {createMcpHandler,McpServer} from '@modelcontextprotocol/server';
 import * as z from 'zod/v4';
 import {executeMcpTool} from './tools.mjs';
+import {registerOperationalTools} from './operational-tools.mjs';
+import {operationalForRequest} from './operational-runtime.mjs';
 import {STYLE_POLICY,buildStyleInstruction,validateStyleText} from '../policy/style-policy.mjs';
 import {getPdfPolicy} from '../policy/pdf-reporting-policy.mjs';
 
@@ -15,6 +17,10 @@ const READ_ONLY_ANNOTATIONS=Object.freeze({
 const TOOL_DEFINITIONS=Object.freeze({
   get_science_state:{
     description:'Read the current public Science Read Model V2 state.',
+    inputSchema:z.object({})
+  },
+  get_capabilities:{
+    description:'Read public MCP tool availability, access scope, and canonical projection health.',
     inputSchema:z.object({})
   },
   get_changes:{
@@ -72,8 +78,8 @@ const TOOL_DEFINITIONS=Object.freeze({
 });
 
 export const NEXO_MCP_TOOL_NAMES=Object.freeze(Object.keys(TOOL_DEFINITIONS));
-export const MCP_SERVER_INFO=Object.freeze({name:'nexo-science',version:'1.3.0',transport:'streamable-http',endpoint:'/api/mcp',mode:'read-only',access:'PUBLIC'});
-const category=name=>name.includes('policy')||name==='validate_style_text'?'policy':name==='get_operations'?'operations':name==='get_provenance'?'provenance':'science';
+export const MCP_SERVER_INFO=Object.freeze({name:'nexo-science',version:'1.4.0',transport:'streamable-http',endpoint:'/api/mcp',mode:'read-only',access:'PUBLIC'});
+const category=name=>name==='get_capabilities'?'capabilities':name.includes('policy')||name==='validate_style_text'?'policy':name==='get_operations'?'operations':name==='get_provenance'?'provenance':'science';
 export const MCP_TOOL_REGISTRY=Object.freeze(Object.fromEntries(NEXO_MCP_TOOL_NAMES.map(name=>[name,Object.freeze({
   name,...TOOL_DEFINITIONS[name],inputSchema:TOOL_DEFINITIONS[name].inputSchema.strict(),
   category:TOOL_DEFINITIONS[name].category||category(name),access:TOOL_DEFINITIONS[name].access||'PUBLIC',annotations:TOOL_DEFINITIONS[name].annotations||READ_ONLY_ANNOTATIONS
@@ -93,11 +99,27 @@ export async function readNexoMcpStatus({readSnapshot}){
     generated_at:model?.generatedAt||null,last_read_at:snapshot?.lastReadAt||null,
     fingerprint:model?.fingerprint||null,projectionFingerprint:model?.projectionFingerprint||null,
     sourceVersion:model?.sourceVersion||null,authority:model?.authority||null,freshness:model?.freshness||'UNAVAILABLE',
+    projectionOnly:snapshot?.projectionOnly===true?true:null,writeback:snapshot?.manifest?.writeback||null,
     provenance:model?.provenance||[],tool_count:publicTools().length,
     tools:publicTools().map(({inputSchema,...definition})=>({
       ...definition,inputSchema:z.toJSONSchema(inputSchema),
-      availability:definition.category==='policy'||model?.state==='READY'?'AVAILABLE':'UNAVAILABLE'
+      availability:['capabilities','policy'].includes(definition.category)||model?.state==='READY'?'AVAILABLE':'UNAVAILABLE'
     })),telemetry:mcpTelemetry(),access_levels:['PUBLIC','AUTHENTICATED','OPERATIONAL']
+  };
+}
+function publicCapabilities(status){
+  const tools=status.tools.map(({name,description,category,access,annotations,availability,inputSchema})=>({
+    name,description,category,access,annotations,availability,inputSchema
+  }));
+  return {
+    contract:'NEXO_MCP_CAPABILITIES_V1',status:status.status,
+    public_surface:{access:'PUBLIC',mode:'READ_ONLY',authority:status.authority,
+      projection_only:status.projectionOnly,writeback:status.writeback,
+      freshness:status.freshness,generated_at:status.generated_at,last_read_at:status.last_read_at,
+      source_version:status.sourceVersion,fingerprint:status.fingerprint,
+      projection_fingerprint:status.projectionFingerprint},
+    tools,tool_count:tools.length,
+    authenticated_surface:{operational_tools_access:'AUTHENTICATED',operational_tools_discoverable:'AUTHENTICATED_ONLY',mutations:'WRITER_MEDIATED'}
   };
 }
 function toolResult(payload){
@@ -117,6 +139,7 @@ export async function executeNexoMcpTool({readSnapshot},name,args={}){
     if(name==='get_style_policy')payload={policy:STYLE_POLICY,instruction:buildStyleInstruction()};
     else if(name==='validate_style_text')payload={policyId:STYLE_POLICY.id,...validateStyleText(args.text)};
     else if(name==='get_pdf_policy')payload=getPdfPolicy(args.preset);
+    else if(name==='get_capabilities')payload=publicCapabilities(await readNexoMcpStatus({readSnapshot}));
     else{
       if(typeof readSnapshot!=='function')throw new TypeError('MCP_READ_SNAPSHOT_REQUIRED');
       payload=await executeMcpTool(await readSnapshot(),name,args,{onCache:value=>{cache=value;}});
@@ -130,7 +153,7 @@ export async function executeNexoMcpTool({readSnapshot},name,args={}){
   }
 }
 
-export function createNexoMcpServer({readSnapshot}){
+export function createNexoMcpServer({readSnapshot,operational=null}){
   if(typeof readSnapshot!=='function')throw new TypeError('MCP_READ_SNAPSHOT_REQUIRED');
   const server=new McpServer({name:MCP_SERVER_INFO.name,version:MCP_SERVER_INFO.version});
   for(const definition of publicTools()){
@@ -140,6 +163,7 @@ export function createNexoMcpServer({readSnapshot}){
       catch(error){return {...toolResult({error:errorCode(error)}),isError:true};}
     });
   }
+  if(operational)registerOperationalTools(server,{...operational,z});
   return server;
 }
 
@@ -155,6 +179,12 @@ export function createNexoMcpWebHandler({readSnapshot}){
           chunks.push(value);
         }
         request=new Request(request,{body:Buffer.concat(chunks)});
+      }
+      const operational=await operationalForRequest(request);
+      if(operational.principal){
+        const privateHandler=createMcpHandler(()=>createNexoMcpServer({readSnapshot,operational}),{responseMode:'json'});
+        try{return await privateHandler.fetch(request,options);}
+        finally{await privateHandler.close();}
       }
       return handler.fetch(request,options);
     }

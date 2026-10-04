@@ -57,7 +57,9 @@ test('literal message, original routing and linked references stay separate from
   assert.match(component, /lab\.roadmaps\.get\(id\)/);
   assert.match(component, /aria-controls=\{textId\}/);
   assert.match(app, /Narração · interface<\/span>/);
-  for (const label of ['Destino / responsável', 'Prioridade', 'Status']) assert.ok(app.includes(`aria-label="${label}"`), 'stable filter accessible name: ' + label);
+  for (const label of ['Para', 'Tipo', 'Mostrar']) assert.ok(app.includes(`aria-label="${label}"`), 'filter accessible name: ' + label);
+  assert.match(app, /useState\('Aguardando resposta'\)/);
+  assert.match(app, /<option>Histórico<\/option>/);
   assert.ok(app.indexOf('<BoardFocus state=') < app.indexOf('<LiveNowPanel lab='), 'focus is visible before long dashboard sections');
 });
 
@@ -81,7 +83,7 @@ test('message priority moves the intact scientific introduction once and preserv
     const without = structuredClone(system); without.evolution.board = [];
     const noMessage = render(without);
     const intro = html => html.match(/<p class="thesis">[\s\S]*?<\/p>/)?.[0];
-    const hero = html => html.slice(html.indexOf('<header class="hud-hero"'), html.indexOf('</header>'));
+    const hero = html => html.match(/<header class="hud-hero"[\s\S]*?<\/header>/)?.[0] || '';
     assert.equal(intro(withMessage), intro(noMessage), 'selection, entity link and current verdict are identical');
     assert.equal((withMessage.match(/class="thesis"/g) ?? []).length, 1);
     assert.equal((noMessage.match(/class="thesis"/g) ?? []).length, 1);

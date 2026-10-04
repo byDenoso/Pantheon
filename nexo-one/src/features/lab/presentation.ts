@@ -39,6 +39,52 @@ export interface BoardRecord {
   refs?: string[];
   expires_at?: string | null; resolved_at?: string | null;
   priority?: string | null; next_action?: string | null; owner?: string | null; status?: string | null; reply_to?: string | null;
+  in_reply_to?: string | null;
+}
+
+/** A reply proves conversation only. It never resolves an incident or transfers WORK. */
+export function boardConversation(post: BoardRecord, posts: BoardRecord[], now = Date.now()) {
+  const selfNote = Boolean(post.from.trim()) && post.from !== 'ALL' && post.from === post.to;
+  const recipients = post.to === 'ALL' ? null : [post.to];
+  const replies = posts.filter(reply => reply.id !== post.id
+    && (reply.reply_to || reply.in_reply_to) === post.id
+    && reply.from !== post.from && reply.from !== 'ALL'
+    && (recipients === null || recipients.includes(reply.from))
+    && (reply.to === post.from || reply.to === 'ALL')
+    && reply.text.trim() && Number.isFinite(Date.parse(reply.at))
+    && Date.parse(reply.at) >= Date.parse(post.at) && Date.parse(reply.at) <= now)
+    .sort((a, b) => Date.parse(a.at) - Date.parse(b.at));
+  // ALL has no published per-role response contract: one reply cannot close it for everyone.
+  const answered = !selfNote && recipients !== null && recipients.every(role => replies.some(reply => reply.from === role));
+  const declaredType = post.text.match(/(?:^|\n)\s*Tipo\s*:\s*(Reclamação|Conteúdo)\s*(?:$|\n)/iu)?.[1];
+  const kind = declaredType && normalizeSearch(declaredType) === 'reclamacao' ? 'Reclamação' : 'Conteúdo';
+  const archived = Boolean(post.resolved_at) || Boolean(post.expires_at && Date.parse(post.expires_at) <= now);
+  // A self-addressed record is a note, not a request: retain it in history without inventing closure.
+  return { replies, answered, archived, selfNote, awaiting: !selfNote && !answered && !archived,
+    status: selfNote ? 'Anotação própria' : answered ? 'Respondido' : 'Aguardando resposta', kind,
+    typeDeclared: Boolean(declaredType), audienceUnknown: recipients === null };
+}
+
+/** Linked answers stay inside their thread; orphaned records remain visible. */
+export function boardThreads(posts: BoardRecord[], now = Date.now()) {
+  const answerIds = new Set(posts.flatMap(post => boardConversation(post, posts, now).replies.map(reply => reply.id)));
+  const roots = posts.filter(post => !answerIds.has(post.id));
+  const visible = new Set(roots.flatMap(post => [post.id, ...boardThreadReplies(post, posts, now).map(reply => reply.id)]));
+  // Malformed cyclic links must never make records disappear from history.
+  return [...roots, ...posts.filter(post => !visible.has(post.id))];
+}
+
+export function boardThreadReplies(post: BoardRecord, posts: BoardRecord[], now = Date.now()): BoardRecord[] {
+  const seen = new Set([post.id]);
+  const collected: BoardRecord[] = [];
+  const visit = (parent: BoardRecord) => {
+    for (const reply of boardConversation(parent, posts, now).replies) {
+      if (seen.has(reply.id)) continue;
+      seen.add(reply.id); collected.push(reply); visit(reply);
+    }
+  };
+  visit(post);
+  return collected;
 }
 
 /** A focus card is a receipt, not a new exchange or a claim of current activity. */
@@ -52,7 +98,7 @@ export function boardMeta(post: BoardRecord, now: number, posts: BoardRecord[] =
   return {
     owner: post.owner || post.to,
     priority: post.priority || declaredPriority || 'Não informada',
-    status: post.resolved_at ? 'Resolvido' : post.expires_at && Date.parse(post.expires_at) <= now ? 'Expirado' : posts.some(reply => reply.reply_to === post.id) ? 'Respondido' : /^(ACCEPTED|ACKNOWLEDGED)$/.test(post.status ?? '') ? 'Aceito' : 'Aberto',
+    status: post.resolved_at ? 'Resolvido' : post.expires_at && Date.parse(post.expires_at) <= now ? 'Expirado' : boardConversation(post, posts, now).answered ? 'Respondido' : /^(ACCEPTED|ACKNOWLEDGED)$/.test(post.status ?? '') ? 'Aceito' : 'Aberto',
     nextAction: post.next_action || declaredAction || null,
   };
 }

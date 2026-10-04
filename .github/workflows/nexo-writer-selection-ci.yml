@@ -3,6 +3,7 @@ on:
   pull_request:
     paths:
       - '.github/workflows/nexo-writer-robot.yml'
+      - '.github/workflows/nexo-test-battery.yml'
       - '.github/workflows/nexo-writer-selection-ci.yml'
       - 'scripts/select_tested_tcc_main.py'
       - 'scripts/github_api_read.py'
@@ -10,11 +11,19 @@ on:
       - 'scripts/tests/test_select_tested_tcc_main.py'
       - 'scripts/collect_execution_assessments.py'
       - 'scripts/tests/test_collect_execution_assessments.py'
+      - 'scripts/collect_tcc_inbox.py'
+      - 'scripts/tests/test_collect_tcc_inbox.py'
+      - 'scripts/collect_battery_runs.py'
+      - 'scripts/tests/test_collect_battery_runs.py'
+      - 'scripts/tests/test_c01_writer_pin_binding.py'
+      - 'nexo-one/server/compiler/automation-health.mjs'
+      - 'nexo-one/test/automation-health-system.test.mjs'
       - 'nexo-control/execution-assessment-approvals.json'
   push:
     branches: [main]
     paths:
       - '.github/workflows/nexo-writer-robot.yml'
+      - '.github/workflows/nexo-test-battery.yml'
       - '.github/workflows/nexo-writer-selection-ci.yml'
       - 'scripts/select_tested_tcc_main.py'
       - 'scripts/github_api_read.py'
@@ -22,6 +31,13 @@ on:
       - 'scripts/tests/test_select_tested_tcc_main.py'
       - 'scripts/collect_execution_assessments.py'
       - 'scripts/tests/test_collect_execution_assessments.py'
+      - 'scripts/collect_tcc_inbox.py'
+      - 'scripts/tests/test_collect_tcc_inbox.py'
+      - 'scripts/collect_battery_runs.py'
+      - 'scripts/tests/test_collect_battery_runs.py'
+      - 'scripts/tests/test_c01_writer_pin_binding.py'
+      - 'nexo-one/server/compiler/automation-health.mjs'
+      - 'nexo-one/test/automation-health-system.test.mjs'
       - 'nexo-control/execution-assessment-approvals.json'
 permissions:
   contents: read
@@ -35,6 +51,13 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
       - run: python -m unittest discover -s scripts/tests -p test_select_tested_tcc_main.py -v
       - run: python -m unittest discover -s scripts/tests -p test_collect_execution_assessments.py -v
       - run: python -m unittest discover -s scripts/tests -p test_github_api_read.py -v
+      - run: python -m unittest discover -s scripts/tests -p test_collect_tcc_inbox.py -v
+      - run: python -m unittest discover -s scripts/tests -p test_collect_battery_runs.py -v
+      - run: python -m unittest discover -s scripts/tests -p test_c01_writer_pin_binding.py -v
+      - run: node --test nexo-one/test/automation-health-system.test.mjs

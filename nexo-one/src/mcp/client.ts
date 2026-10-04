@@ -4,7 +4,7 @@ export type ToolSchema={type?:string;properties?:Record<string,{type?:string;enu
 export type McpTool={name:string;description:string;category:string;access:string;availability:string;inputSchema:ToolSchema;annotations:{readOnlyHint:boolean|null;destructiveHint:boolean|null;idempotentHint:boolean|null;openWorldHint:boolean|null}};
 export type McpCall={tool:string;duration_ms:number;status:string;timestamp:string;fingerprint:string|null;cache:string;error:string|null};
 export type McpStatus={contract:string;server:{name:string;version:string;endpoint:string;transport:string;mode:string;access:string};status:string;generated_at:string|null;last_read_at:string|null;fingerprint:string|null;projectionFingerprint:string|null;sourceVersion:string|null;authority:string|null;freshness:string;provenance:unknown[]|null;tools:McpTool[];tool_count:number;telemetry:{scope:string;total:number;errors:number;calls:McpCall[]}|null};
-export const MCP_ENDPOINT=import.meta.env.VITE_MCP_ENDPOINT?.trim()||'/api/mcp';
+export const MCP_ENDPOINT=import.meta.env?.VITE_MCP_ENDPOINT?.trim()||'/api/mcp';
 export async function readMcpStatus(signal?:AbortSignal):Promise<McpStatus>{
   try{
     const status=await fetchSharedJson<McpStatus>(`${MCP_ENDPOINT}/status`,{cache:'no-store',signal});

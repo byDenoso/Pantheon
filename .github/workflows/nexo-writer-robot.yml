@@ -150,86 +150,9 @@ jobs:
           TCC_REPO: byDenoso/TCC
           TCC_BRANCH: nexo-inbox
           EVENT_NAME: ${{ github.event_name }}
+          GH_TOKEN: ${{ github.token }}
         run: |
-          python - <<'PY'
-          import hashlib, json, os, urllib.parse, urllib.request
-
-          cursor_path="nexo-one/tcc-public-inbox-ack.json"
-          cursor=json.load(open(cursor_path,encoding="utf-8"))
-          base=str(cursor.get("base_commit") or "").strip()
-          if not base:
-              raise SystemExit("public inbox cursor missing base_commit")
-
-          repo=os.environ["TCC_REPO"]
-          branch=os.environ["TCC_BRANCH"]
-          event=os.environ.get("EVENT_NAME","")
-          headers={"Accept":"application/vnd.github+json","User-Agent":"nexo-writer-robot"}
-
-          if event=="workflow_dispatch":
-              ref_api=f"https://api.github.com/repos/{repo}/git/ref/heads/{branch}"
-              with urllib.request.urlopen(urllib.request.Request(ref_api,headers=headers),timeout=60) as response:
-                  ref=json.load(response)
-              head=str((ref.get("object") or {}).get("sha") or "").strip()
-              if not head:
-                  raise SystemExit("public inbox ref missing head sha")
-              tree_api=f"https://api.github.com/repos/{repo}/git/trees/{head}?recursive=1"
-              with urllib.request.urlopen(urllib.request.Request(tree_api,headers=headers),timeout=60) as response:
-                  tree=json.load(response)
-              source_files=[
-                  {"filename":str(item.get("path") or ""),"status":"modified"}
-                  for item in (tree.get("tree") or [])
-                  if item.get("type")=="blob"
-                  and str(item.get("path") or "").startswith("inbox/")
-                  and str(item.get("path") or "").endswith(".json")
-              ]
-          else:
-              api=f"https://api.github.com/repos/{repo}/compare/{base}...{branch}"
-              with urllib.request.urlopen(urllib.request.Request(api,headers=headers),timeout=60) as response:
-                  comparison=json.load(response)
-              commits=comparison.get("commits") or []
-              head=str((commits[-1] if commits else {}).get("sha") or base).strip()
-              if not head:
-                  raise SystemExit("public inbox compare missing head sha")
-              source_files=comparison.get("files") or []
-
-          acked=cursor.get("acked") or {}
-          receipts=cursor.get("receipts") or {}
-          def receipt_fingerprint(path):
-              value=receipts.get(path)
-              return value.get("fingerprint") if isinstance(value,dict) else value
-
-          candidates=[]
-          for item in source_files:
-              path=str(item.get("filename") or "")
-              if not path.startswith("inbox/") or not path.endswith(".json"):
-                  continue
-              if str(item.get("status") or "")=="removed":
-                  continue
-              raw_url="https://raw.githubusercontent.com/"+repo+"/"+branch+"/"+urllib.parse.quote(path,safe="/")
-              raw=urllib.request.urlopen(
-                  urllib.request.Request(raw_url,headers={"User-Agent":"nexo-writer-robot"}),
-                  timeout=60,
-              ).read()
-              fingerprint=hashlib.sha256(raw).hexdigest()
-              if acked.get(path)==fingerprint or receipt_fingerprint(path)==fingerprint:
-                  continue
-              try:
-                  envelope=json.loads(raw.decode("utf-8-sig"))
-              except Exception:
-                  print("skip invalid json",path)
-                  continue
-              stable=hashlib.sha256((path+"\0"+fingerprint).encode()).hexdigest()[:32]
-              candidates.append({"id":"tcc-"+stable,"path":path,"fingerprint":fingerprint,"envelope":envelope})
-
-          gateway={"items":[{"id":item["id"],"envelope":item["envelope"]} for item in candidates]}
-          json.dump(gateway,open("/tmp/gateway.json","w",encoding="utf-8"),ensure_ascii=False)
-          json.dump(
-              {"head_sha":head,"items":[{k:v for k,v in item.items() if k!="envelope"} for item in candidates]},
-              open("/tmp/tcc-public-map.json","w",encoding="utf-8"),
-              ensure_ascii=False,
-          )
-          print("public TCC inbox items",len(candidates),"mode",("full-scan" if event=="workflow_dispatch" else "delta"))
-          PY
+          python scripts/collect_tcc_inbox.py
 
       - name: Collect proposals from scheduled Sheet spool
         if: steps.cred.outputs.ok == 'true'
@@ -289,71 +212,27 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           mkdir -p /tmp/bat /tmp/dispatch
-          gh run list --repo "$GITHUB_REPOSITORY" --workflow nexo-test-battery.yml --status completed --limit 20 --json databaseId,displayTitle,event,conclusion,startedAt,updatedAt > /tmp/bat/runs.json || echo '[]' > /tmp/bat/runs.json
-          python3 - <<'PY'
-          import json, subprocess, os, pathlib
-          from datetime import datetime, timezone
-
-          def parsed(value):
-              if not value:
-                  return None
-              try:
-                  return datetime.fromisoformat(str(value).replace("Z", "+00:00")).astimezone(timezone.utc)
-              except ValueError:
-                  return None
-
-          runs = json.load(open("/tmp/bat/runs.json"))
-          updates = []
-          for run in runs:
-              if str(run.get("event") or "") != "workflow_dispatch":
-                  continue  # PR canaries prove the runner but never enter canonical state
-              bid = str(run.get("displayTitle", "")).replace("battery ", "").strip()
-              if not bid:
-                  continue
-              run_ref = f"actions/runs/{run['databaseId']}"
-              d = pathlib.Path(f"/tmp/bat/{run['databaseId']}")
-              dl = subprocess.run(["gh", "run", "download", str(run["databaseId"]), "--repo",
-                                   os.environ["GITHUB_REPOSITORY"], "-n", "battery-results", "-D", str(d)],
-                                  capture_output=True)
-              result_file = d / "battery-results.json"
-              if dl.returncode != 0 or not result_file.is_file():
-                  conclusion = str(run.get("conclusion") or "startup_failure")
-                  if conclusion not in {"failure", "cancelled", "timed_out", "startup_failure"}:
-                      conclusion = "startup_failure"
-                  updates.append({"kind": "BATTERY_STATUS", "source": "WRITER_ROBOT",
-                                  "payload": {"battery_id": bid, "status": "DONE", "run_ref": run_ref,
-                                              "completed_at": run.get("updatedAt"), "conclusion": conclusion,
-                                              "results_missing": True, "results": []}})
-                  continue
-
-              results = json.load(open(result_file, encoding="utf-8")).get("results", [])
-              started = {str(row.get("test_id")): row.get("started_at") for row in results
-                         if isinstance(row, dict) and row.get("test_id") and parsed(row.get("started_at"))}
-              if started:
-                  updates.append({"kind": "BATTERY_STATUS", "source": "WRITER_ROBOT",
-                                  "payload": {"battery_id": bid, "status": "RUNNING", "run_ref": run_ref,
-                                              "started_tests": started}})
-              completion_times = [parsed(row.get("executed_at")) for row in results if isinstance(row, dict)]
-              completion_times = [stamp for stamp in completion_times if stamp is not None]
-              completed = max(completion_times).isoformat().replace("+00:00", "Z") if completion_times else run.get("updatedAt")
-              updates.append({"kind": "BATTERY_STATUS", "source": "WRITER_ROBOT",
-                              "payload": {"battery_id": bid, "status": "DONE", "run_ref": run_ref,
-                                          "completed_at": completed, "conclusion": run.get("conclusion"),
-                                          "results": results}})
-          json.dump(updates, open("/tmp/bat/updates.json", "w", encoding="utf-8"), ensure_ascii=False)
-          print("battery runs seen", len(runs), "observations", len(updates))
-          PY
+          python scripts/collect_battery_runs.py --repo "$GITHUB_REPOSITORY"
           python scripts/collect_execution_assessments.py --approvals nexo-control/execution-assessment-approvals.json --updates /tmp/bat/updates.json
 
       - name: Apply inbox to the Tower
         id: robot
         if: steps.cred.outputs.ok == 'true'
         env:
+          GH_TOKEN: ${{ github.token }}
+          NEXO_OPERATIONAL_READER_JSON: ${{ secrets.NEXO_DRIVE_READER_JSON }}
           GOOGLE_SERVICE_ACCOUNT_JSON: ${{ secrets.NEXO_DRIVE_WRITER_JSON }}
           NEXO_GATEWAY_ITEMS: /tmp/gateway.json
+          NEXO_OPERATION_RECEIPTS_OUT: /tmp/operation-public-receipts.json
           NEXO_BATTERY_UPDATES: /tmp/bat/updates.json
           NEXO_BATTERY_DIR: /tmp/dispatch
           NEXO_RECIPE_REVISION: ${{ github.sha }}
+          # Read the existing approval registry from this checked-out revision.
+          # Missing or mismatched admin-managed pins leave C01 fail-closed/OFF.
+          NEXO_C01_APPROVAL_REGISTRY_PATH: ${{ github.workspace }}/nexo-control/execution-assessment-approvals.json
+          NEXO_C01_APPROVAL_REGISTRY_SHA256: ${{ vars.NEXO_C01_APPROVAL_REGISTRY_SHA256 }}
+          NEXO_C01_APPROVAL_REF: ${{ vars.NEXO_C01_APPROVAL_REF }}
+          NEXO_C01_APPROVED_AT: ${{ vars.NEXO_C01_APPROVED_AT }}
         # Who runs the scheduled roles: nexo-control/producers.json (GPT | CLAUDE). The other producer is shadow-only.
         run: |
           export NEXO_ACTIVE_PRODUCER=$(python -c "import json;print(json.load(open('nexo-control/producers.json')).get('active','GPT'))" 2>/dev/null || echo GPT)
@@ -376,22 +255,30 @@ jobs:
           cd /tmp/bb && git -c user.name=nexo-writer-robot -c user.email=nexo-writer-robot@users.noreply.github.com add batteries && git -c user.name=nexo-writer-robot -c user.email=nexo-writer-robot@users.noreply.github.com commit -qm "batteries: dispatch $(ls batteries | wc -l)" && git push -q origin nexo-batteries
           for f in "${specs[@]}"; do id=$(basename "$f" .json); gh workflow run nexo-test-battery.yml --repo "$GITHUB_REPOSITORY" --ref main -f battery_id="$id"; echo "dispatched $id"; done
 
-      - name: Acknowledge applied public TCC proposals
-        if: steps.robot.outputs.gateway_applied != ''
+      - name: Record public TCC operation receipts
+        if: steps.cred.outputs.ok == 'true' && steps.robot.outcome == 'success'
         env:
           GH_TOKEN: ${{ github.token }}
-          APPLIED: ${{ steps.robot.outputs.gateway_applied }}
+          GOOGLE_SERVICE_ACCOUNT_JSON: ${{ secrets.NEXO_DRIVE_WRITER_JSON }}
+          REPORTED: ${{ steps.robot.outputs.gateway_reported }}
+          RESOLVED: ${{ steps.robot.outputs.gateway_resolved }}
           REV: ${{ steps.robot.outputs.tower_revision }}
         run: |
           python - <<'PY'
           import base64, datetime, json, os, subprocess, time
+          from google.auth.transport.requests import AuthorizedSession
+          from google.oauth2 import service_account
+          from scripts.collect_battery_runs import record_cursor_outcomes as record_battery_cursor_outcomes
+          from scripts.collect_tcc_inbox import record_cursor_outcomes
 
           map_path="/tmp/tcc-public-map.json"
-          if not os.path.exists(map_path):
-              raise SystemExit(0)
-
-          applied={value for value in os.environ.get("APPLIED","").split(",") if value}
-          mapping=json.load(open(map_path,encoding="utf-8"))
+          reported={value for value in os.environ.get("REPORTED","").split(",") if value}
+          resolved={value for value in os.environ.get("RESOLVED","").split(",") if value}
+          try:
+              receipt_items={item.get("id"):item for item in json.load(open("/tmp/operation-public-receipts.json",encoding="utf-8")).get("items",[])}
+          except Exception:
+              receipt_items={}
+          mapping=json.load(open(map_path,encoding="utf-8")) if os.path.exists(map_path) else []
           path="nexo-one/tcc-public-inbox-ack.json"
           repo=os.environ["GITHUB_REPOSITORY"]
           now=datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
@@ -403,27 +290,30 @@ jobs:
                   print("public inbox cursor read retry",attempt); time.sleep(2); continue
               meta=json.loads(get.stdout)
               cursor=json.loads(base64.b64decode(meta["content"]).decode())
-              acked=cursor.setdefault("acked",{})
-              receipts=cursor.setdefault("receipts",{})
+              if mapping:
+                  record_cursor_outcomes(cursor,mapping,reported,resolved,receipt_items,now,rev)
 
-              for old_path, old_fp in list(acked.items()):
-                  receipts.setdefault(old_path,{"fingerprint":old_fp,"source":"legacy-acked"})
-
-              for item in mapping.get("items") or []:
-                  if item.get("id") in applied:
-                      acked[item["path"]]=item["fingerprint"]
-                      receipts[item["path"]]={
-                          "fingerprint":item["fingerprint"],
-                          "applied_at":now,
-                          "tower_revision":rev,
-                      }
-
-              all_current=all(acked.get(item["path"])==item["fingerprint"] for item in (mapping.get("items") or []))
-              if all_current:
-                  cursor["base_commit"]=mapping.get("head_sha") or cursor.get("base_commit")
-                  cursor["acked"]={}
+              try:
+                  collection=json.load(open("/tmp/bat/collection.json",encoding="utf-8"))
+              except (OSError,ValueError):
+                  collection={}
+              if collection:
+                  info=json.loads(os.environ["GOOGLE_SERVICE_ACCOUNT_JSON"])
+                  credentials=service_account.Credentials.from_service_account_info(
+                      info,scopes=["https://www.googleapis.com/auth/drive.readonly"])
+                  session=AuthorizedSession(credentials)
+                  tower_response=session.get(
+                      "https://www.googleapis.com/drive/v3/files/1m97cFmEkw19yiqD_6FWPG4j1lDCAYM4z",
+                      params={"alt":"media","supportsAllDrives":"true"},timeout=120)
+                  tower_response.raise_for_status()
+                  record_battery_cursor_outcomes(cursor,collection,tower_response.content)
+              pending=cursor.get("pending") or {}
 
               body=json.dumps(cursor,indent=2,sort_keys=True)+"\n"
+              current=json.dumps(json.loads(base64.b64decode(meta["content"]).decode()),indent=2,sort_keys=True)+"\n"
+              if body==current:
+                  print("public TCC inbox cursor unchanged")
+                  raise SystemExit(0)
               payload=json.dumps({
                   "message":"NEXO writer robot: advance public TCC inbox cursor",
                   "content":base64.b64encode(body.encode()).decode(),
@@ -435,7 +325,8 @@ jobs:
                   input=payload,text=True,capture_output=True
               )
               if put.returncode==0:
-                  print("public TCC inbox cursor PASS receipts",len(receipts))
+                  print("public TCC/battery cursors PASS pending",len(pending),
+                        "battery pending",len((cursor.get("battery_runs") or {}).get("pending") or {}))
                   raise SystemExit(0)
               print("public inbox cursor CAS retry",attempt); time.sleep(2)
 
@@ -443,10 +334,10 @@ jobs:
           PY
 
       - name: Acknowledge applied scheduled Sheet spool proposals
-        if: steps.robot.outputs.gateway_applied != ''
+        if: steps.robot.outputs.gateway_resolved != ''
         env:
           GH_TOKEN: ${{ github.token }}
-          APPLIED: ${{ steps.robot.outputs.gateway_applied }}
+          RESOLVED: ${{ steps.robot.outputs.gateway_resolved }}
         run: |
           python - <<'PY'
           import base64, datetime, json, os, subprocess, time
@@ -455,9 +346,9 @@ jobs:
           if not os.path.exists(map_path):
               raise SystemExit(0)
 
-          applied=set(x for x in os.environ.get("APPLIED","").split(",") if x)
+          resolved=set(x for x in os.environ.get("RESOLVED","").split(",") if x)
           mapping=json.load(open(map_path,encoding="utf-8"))
-          stable=[x["stable_id"] for x in mapping if x.get("id") in applied]
+          stable=[x["stable_id"] for x in mapping if x.get("id") in resolved]
           if not stable:
               print("sheet spool ack 0")
               raise SystemExit(0)

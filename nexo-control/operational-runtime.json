@@ -1,0 +1,40 @@
+{
+  "contract": "NEXO_OPERATIONAL_RUNTIME_V1",
+  "enabled": true,
+  "publication_authorized": true,
+  "approval_ref": "byDenoso/Pantheon@f105eb5944b81ac910674700f34d0b4282ecac6d:docs/nexo-operational-runtime.md",
+  "pilot_auto_start": true,
+  "spool_id": "1M2maKkuEjxumZRa145dzei7dEPFi2yKsKlUf7_scC-E",
+  "allowed_folder_ids": ["1yxu9dbbMlNv-Nc_jfZDcunTkMxTjcx9H"],
+  "routine_approval_required": false,
+  "formal_authorization": ["DESTRUCTIVE_OR_IRREVERSIBLE_EFFECT", "CRITICAL_CREDENTIAL_OR_ACCESS_CHANGE"],
+  "scientific_definition_change": "EXPLICIT_DECISION_REQUIRED",
+  "work": [{
+    "id": "OPERATIONAL-CONTROL-DRIVE-SUM-V1",
+    "role": "EXECUTOR",
+    "scope": "ENGINEERING_OPERATIONAL_ONLY",
+    "scientific_result_eligible": false,
+    "description": "Calcular soma e media do fixture operacional congelado e registrar a entrega pelo Writer.",
+    "recipe": {
+      "id": "drive-sum-mean-v1",
+      "sha256": "17f0855b95de6d77ad9bc26ff92a05a38692b14455a022dfc34a810ef6ad96be",
+      "drive": {
+        "file_id": "1zW9zRPtfuoVUTl_6Wa9kSa9bvH7iRDzO",
+        "version": "0B9ZwoXbzaIA-QXhQdEZFVERHc2VnMFpzdWc3dTFka1hRbjNBPQ",
+        "sha256": "17f0855b95de6d77ad9bc26ff92a05a38692b14455a022dfc34a810ef6ad96be",
+        "parent_id": "1yxu9dbbMlNv-Nc_jfZDcunTkMxTjcx9H"
+      }
+    },
+    "input": {
+      "source_storage": "GOOGLE_DRIVE_PRIVATE",
+      "file_id": "1Cr7L6bbVlOqB0HUvYett0xkhRS-NWRWr",
+      "version": "0B9ZwoXbzaIA-dURSU09VT3BkanJvNlBlSDN5RjZUTUFOYnVRPQ",
+      "sha256": "3d87520f2b1bffb5c337e3d13d568ebe63d6aa09ad9cfa7dd2ed1a444d659988"
+    },
+    "known_result": {"count": 3, "sum": 6, "mean": 2},
+    "destinations": {
+      "packages": "1yxu9dbbMlNv-Nc_jfZDcunTkMxTjcx9H",
+      "results": "1yxu9dbbMlNv-Nc_jfZDcunTkMxTjcx9H"
+    }
+  }]
+}

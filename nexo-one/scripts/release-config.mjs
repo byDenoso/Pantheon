@@ -1,7 +1,8 @@
 export function buildReleaseVercelConfig(sourceConfig,staticFiles=[]){
   const securityHeaders=Object.fromEntries((sourceConfig?.headers?.[0]?.headers||[]).map(v=>[v.key,v.value]));
   const explicitStatic=[...new Set(staticFiles)]
-    .filter(src=>src==='index.html'||src.startsWith('assets/'));
+    .filter(src=>src==='index.html'||src.startsWith('assets/')||
+      ['google-drive-connect.html','google-drive-connect.js','google-drive-connect.css'].includes(src));
   return {
     version:2,
     builds:[
