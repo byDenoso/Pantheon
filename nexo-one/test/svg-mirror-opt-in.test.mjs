@@ -32,15 +32,15 @@ function boot(search) {
   return {mirrorMounted: find(tree), loaded};
 }
 
-for (const search of ['', '?svgMirror=0', '?readback=1', '?svgMirror=true']) {
-  test(`normal boot does not mount or synchronously import a full-page mirror: ${search || '(none)'}`, () => {
+for (const search of ['', '?readback=1', '?svgMirror=true', '?svgMirror=1']) {
+  test(`whole Tower SVG mounts lazily: ${search || '(none)'}`, () => {
     const result = boot(search);
-    assert.equal(result.mirrorMounted, false);
+    assert.equal(result.mirrorMounted, true);
     assert.equal(result.loaded.some(name => name.includes('TowerSVGSurface')), false);
   });
 }
-test('explicit svgMirror=1 mounts the diagnostic through a lazy boundary', () => {
-  const result = boot('?svgMirror=1');
-  assert.equal(result.mirrorMounted, true);
+test('explicit svgMirror=0 skips the vector surface for native-only diagnosis', () => {
+  const result = boot('?svgMirror=0');
+  assert.equal(result.mirrorMounted, false);
   assert.equal(result.loaded.some(name => name.includes('TowerSVGSurface')), false);
 });

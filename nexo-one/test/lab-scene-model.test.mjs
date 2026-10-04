@@ -241,7 +241,7 @@ test('historical vector scene labels illustrative motion and gates scientific ex
   assert.match(scene, /reduced \|\| !sourceCurrent \? 0 : VERDICT_PULSE/);
   assert.match(scene, /hidden: document\.visibilityState !== 'visible'/);
   assert.match(scene, /motionPreference\.addEventListener\('change'/);
-  assert.match(scene, /renderVectors\(uniforms\.time\.value\)/);
+  assert.match(scene, /renderVectors\(uniforms\.time\.value(?:,|\))/);
   assert.match(scene, /nexo:replay-formation/);
   assert.doesNotMatch(scene, /new WebGLRenderer|AfterimagePass/);
 });

@@ -23,10 +23,10 @@ import './styles/signature.css';
 import './styles/mission-control.css';
 import './styles/editorial.css';
 import './styles/deco.css';
-// The full-page SVG mirror is an explicit diagnostic, not a second live UI.
-// Native Atlas/Observatory SVG renderers are unchanged.
+// Keep the whole visible Tower vector surface; HTML supplies input and accessibility.
+// A native-only diagnostic remains available without loading the mirror.
 const TowerSVGSurface = lazy(() => import('./components/TowerSVGSurface.tsx'));
-const svgMirrorEnabled = new URLSearchParams(window.location.search).get('svgMirror') === '1';
+const svgMirrorEnabled = new URLSearchParams(window.location.search).get('svgMirror') !== '0';
 class Boundary extends Component<{children:ReactNode},{failed:boolean}>{state={failed:false};static getDerivedStateFromError(){return {failed:true};}render(){return this.state.failed?<main className="fatal-state"><h1>Não foi possível abrir esta visão.</h1><p>Recarregue para consultar novamente suas fontes.</p><button onClick={()=>location.reload()}>Recarregar</button></main>:this.props.children;}}
 createRoot(document.getElementById('root')!).render(<Boundary><NexoStoreProvider><><App/>{svgMirrorEnabled && <Suspense fallback={null}><TowerSVGSurface/></Suspense>}</></NexoStoreProvider></Boundary>);
 startWebMcp();

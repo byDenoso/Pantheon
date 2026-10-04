@@ -1,10 +1,11 @@
 import assert from 'node:assert/strict';
 import { chromium } from 'playwright';
 import {mkdir,writeFile} from 'node:fs/promises';
-const output='output/galaxy-performance';
+const output=process.env.TOWER_SVG_OUTPUT||'output/galaxy-performance';
 await mkdir(output,{recursive:true});
 const baseUrl = (process.env.NEXO_BASE_URL || 'http://127.0.0.1:4185').replace(/\/$/, '');
-const browser=await chromium.launch({headless:true});
+const browser=await chromium.launch({headless:true,...(process.env.PLAYWRIGHT_EXECUTABLE_PATH?{executablePath:process.env.PLAYWRIGHT_EXECUTABLE_PATH}:{})});
+const deadline=setTimeout(()=>{console.error('SVG matrix exceeded six minutes');void browser.close();},360000);
 const report=[];
 try{
  for(const [profile,width,height] of [['desktop',1440,960],['tablet',1080,1130],['mobile',390,844]]){
@@ -14,8 +15,9 @@ try{
   await page.goto(`${baseUrl}/#/agora`);
   await page.getByRole('button',{name:'Explorar a teia',exact:true}).waitFor();
   await page.locator('svg[data-tower-svg-native="observatory"][data-ready="true"]').waitFor();
-  assert.equal(await page.locator('[data-tower-svg-host]').count(),0,'normal UI must not create a duplicate surface');
-  assert.equal(await page.evaluate(()=>document.body.classList.contains('tower-svg-active')),false);
+  await page.locator('svg[data-tower-svg-surface][data-ready="true"]').waitFor();
+  assert.equal(await page.locator('[data-tower-svg-host]').count(),1,'whole visible Tower uses one vector surface');
+  assert.equal(await page.evaluate(()=>document.body.classList.contains('tower-svg-active')),true);
   for(const theme of ['dark','light']){
    const actual=await page.locator('html').getAttribute('data-theme');
    if(actual!==theme)await page.getByRole('button',{name:theme==='light'?'Ativar tema claro':'Ativar tema escuro',exact:true}).click();
@@ -47,6 +49,7 @@ try{
  }
  console.log(`Tower SVG: ${report.length} route/theme/viewport checks passed`);
 }finally{
+ clearTimeout(deadline);
  await writeFile(`${output}/tower-svg-browser.json`,JSON.stringify(report,null,2));
  await browser.close();
 }

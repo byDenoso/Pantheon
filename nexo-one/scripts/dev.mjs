@@ -1,10 +1,14 @@
 import http from 'node:http';
 import {readFile} from 'node:fs/promises';
+import {realpathSync} from 'node:fs';
 import path from 'node:path';
 import handler from '../server/handler.mjs';
 const built=process.argv.includes('--built');
 const vite=built?null:await(await import('vite')).createServer({
-  server:{middlewareMode:true,hmr:{port:24678+Number(process.env.PORT||4173)-4173},watch:{ignored:['**/output/**']}},
+  // Worktrees and fixture servers may share dependencies, but not optimized module identities.
+  cacheDir:path.resolve('.tmp', `vite-${process.env.PORT||4173}`),
+  resolve:{dedupe:['three']},
+  server:{middlewareMode:true,fs:{allow:[path.resolve('.'),realpathSync(path.resolve('node_modules'))]},hmr:{port:24678+Number(process.env.PORT||4173)-4173},watch:{ignored:['**/output/**']}},
   optimizeDeps:{entries:['index.html','atlas3d/index.html','mcp/index.html']},
   appType:'spa',
 });

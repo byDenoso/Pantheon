@@ -559,19 +559,6 @@ export function ObservatoryScene({ tests, page, focusIds, onPick, onAvailability
       }
       return color;
     };
-    const colorsByGeometry = new WeakMap<BufferGeometry, string[]>();
-    const colorsForGeometry = (geo: BufferGeometry) => {
-      let colors = colorsByGeometry.get(geo);
-      if (colors) return colors;
-      const tint = geo.getAttribute('tint').array as Float32Array;
-      colors = new Array<string>(tint.length / 3);
-      for (let i = 0; i < colors.length; i += 1) {
-        const offset = i * 3;
-        colors[i] = rgb(tint[offset]!, tint[offset + 1]!, tint[offset + 2]!);
-      }
-      colorsByGeometry.set(geo, colors);
-      return colors;
-    };
     const updateLayer = (index: number, data: Map<string, string[]>) => {
       const layer = vectorLayers[index]!, cache = pathCaches[index]!, live = new Set<string>();
       for (const [key, parts] of data) {
@@ -583,26 +570,19 @@ export function ObservatoryScene({ tests, page, focusIds, onPick, onAvailability
       for (const [key, path] of cache) if (!live.has(key)) { path.remove(); cache.delete(key); }
     };
     const projectPaths = (geo: BufferGeometry, index: number, deform: boolean, time: number, omit = 1) => {
-      const positionValues = geo.getAttribute('position').array as Float32Array;
-      const sizeValues = geo.getAttribute('size').array as Float32Array;
-      const pulseValues = geo.getAttribute('pulse').array as Float32Array;
-      const seedValues = geo.getAttribute('seed').array as Float32Array;
-      const nodeValues = geo.getAttribute('node').array as Float32Array;
-      const pointColors = colorsForGeometry(geo);
+      const positions = geo.getAttribute('position'), tints = geo.getAttribute('tint'), sizes = geo.getAttribute('size'), pulses = geo.getAttribute('pulse'), seeds = geo.getAttribute('seed'), nodesAttr = geo.getAttribute('node');
       const groups = new Map<string, string[]>();
       const m = clipMatrix.elements, screenWidth = viewportWidth, screenHeight = viewportHeight;
-      for (let i = 0; i < pointColors.length; i += omit) {
-        const offset = i * 3;
-        let x=positionValues[offset]!, y=positionValues[offset + 1]!, z=positionValues[offset + 2]!;
-        const pulse=pulseValues[i]!, seed=seedValues[i]!;
-        if (deform) { const nx=nodeValues[offset]!, ny=nodeValues[offset + 1]!, nz=nodeValues[offset + 2]!, dx=nx-x, dy=ny-y, dz=nz-z, distance=Math.hypot(dx,dy,dz), evo=uniforms.evo.value, outward=Math.min(1,Math.max(0,(distance-.6)/2.6))*.75*evo, norm=Math.hypot(x,y,z)||1, breath=Math.sin(time*.07+seed*6.28)*.015; x+=(dx*.3*evo)+x/norm*outward+dx*breath; y+=(dy*.3*evo)+y/norm*outward+dy*breath; z+=(dz*.3*evo)+z/norm*outward+dz*breath; }
+      for (let i = 0; i < positions.count; i += omit) {
+        let x=positions.getX(i), y=positions.getY(i), z=positions.getZ(i), pulse=pulses.getX(i), seed=seeds.getX(i);
+        if (deform) { const nx=nodesAttr.getX(i), ny=nodesAttr.getY(i), nz=nodesAttr.getZ(i), dx=nx-x, dy=ny-y, dz=nz-z, distance=Math.hypot(dx,dy,dz), evo=uniforms.evo.value, outward=Math.min(1,Math.max(0,(distance-.6)/2.6))*.75*evo, norm=Math.hypot(x,y,z)||1, breath=Math.sin(time*.07+seed*6.28)*.015; x+=(dx*.3*evo)+x/norm*outward+dx*breath; y+=(dy*.3*evo)+y/norm*outward+dy*breath; z+=(dz*.3*evo)+z/norm*outward+dz*breath; }
         const px = x * expansion, py = y * expansion, pz = z * expansion;
         const cx=m[0]!*px+m[4]!*py+m[8]!*pz+m[12]!, cy=m[1]!*px+m[5]!*py+m[9]!*pz+m[13]!, cz=m[2]!*px+m[6]!*py+m[10]!*pz+m[14]!, cw=m[3]!*px+m[7]!*py+m[11]!*pz+m[15]!;
         if (cw <= 0) continue;
         const ndcX=cx/cw, ndcY=cy/cw, ndcZ=cz/cw;
         if(ndcZ < -1 || ndcZ > 1 || Math.abs(ndcX)>1.05 || Math.abs(ndcY)>1.05) continue;
-        const sx=(ndcX*.5+.5)*screenWidth, sy=(-ndcY*.5+.5)*screenHeight, pulseFactor=1+pulse*.32*Math.sin(time*2.4+seed*6.28), radius=Math.max(.45,Math.min(6,sizeValues[i]!*18/Math.max(8,cw)*pulseFactor*.14)), alpha=Math.round(Math.max(.16,Math.min(.95,(.45+.45*pulseFactor)*(light?.62:1)))*4)/4;
-        const color=pointColors[i]!, strokeWidth=Math.max(1,Math.round(radius*2*2)/2), key=`${color}|${alpha}|${strokeWidth}`, d=`M${sx.toFixed(1)},${sy.toFixed(1)}h.01`, list=groups.get(key); if(list) list.push(d); else groups.set(key,[d]);
+        const sx=(ndcX*.5+.5)*screenWidth, sy=(-ndcY*.5+.5)*screenHeight, pulseFactor=1+pulse*.32*Math.sin(time*2.4+seed*6.28), radius=Math.max(.45,Math.min(6,sizes.getX(i)*18/Math.max(8,cw)*pulseFactor*.14)), alpha=Math.round(Math.max(.16,Math.min(.95,(.45+.45*pulseFactor)*(light?.62:1)))*4)/4;
+        const color=rgb(tints.getX(i),tints.getY(i),tints.getZ(i)), strokeWidth=Math.max(1,Math.round(radius*2*2)/2), key=`${color}|${alpha}|${strokeWidth}`, d=`M${sx.toFixed(1)},${sy.toFixed(1)}h.01`, list=groups.get(key); if(list) list.push(d); else groups.set(key,[d]);
       }
       updateLayer(index, groups);
     };
@@ -624,19 +604,27 @@ export function ObservatoryScene({ tests, page, focusIds, onPick, onAvailability
       for(let i=0;i<pos.count;i++){const f=((time*speed.getX(i)+phase.getX(i))%1+1)%1,px=(pos.getX(i)+dir.getX(i)*f)*expansion,py=(pos.getY(i)+dir.getY(i)*f)*expansion,pz=(pos.getZ(i)+dir.getZ(i)*f)*expansion,cx=m[0]!*px+m[4]!*py+m[8]!*pz+m[12]!,cy=m[1]!*px+m[5]!*py+m[9]!*pz+m[13]!,cz=m[2]!*px+m[6]!*py+m[10]!*pz+m[14]!,cw=m[3]!*px+m[7]!*py+m[11]!*pz+m[15]!;if(cw<=0)continue;const nz=cz/cw;if(nz < -1||nz>1)continue;parts.push(`M${((cx/cw*.5+.5)*w).toFixed(1)},${((-.5*cy/cw+.5)*h).toFixed(1)}h.01`);}
       updateLayer(3,new Map([[`${light?'#69471f':'#f2e6d1'}|0.65|1.5`,parts]]));
     };
-    const renderVectors = (time: number) => {
+    const baseEnvironmentStride = environmentStride(webGeo.getAttribute('position').count, quality);
+    const renderVectors = (time: number, interactionStride = 1) => {
+      const startedAt = performance.now();
       updateProjectionMatrix();
       // Bound decorative projection even as the publication gains hypotheses.
       // Every published test and event retains stride 1 and remains selectable.
-      const qualityStep = environmentStride(webGeo.getAttribute('position').count, quality);
-      projectPaths(webGeo,0,true,time,qualityStep); projectPaths(starGeo,1,false,time,1); projectPaths(qsoGeo,2,false,time,1);
+      projectPaths(webGeo,0,true,time,baseEnvironmentStride * interactionStride); projectPaths(starGeo,1,false,time,1); projectPaths(qsoGeo,2,false,time,1);
       renderJets(time);
       const bounds=boxGeo.getAttribute('position'), lines:string[]=[],m=clipMatrix.elements,bw=viewportWidth,bh=viewportHeight;
       for(let i=0;i+1<bounds.count;i+=2){const ax=bounds.getX(i)*expansion,ay=bounds.getY(i)*expansion,az=bounds.getZ(i)*expansion,bx=bounds.getX(i+1)*expansion,by=bounds.getY(i+1)*expansion,bz=bounds.getZ(i+1)*expansion,acx=m[0]!*ax+m[4]!*ay+m[8]!*az+m[12]!,acy=m[1]!*ax+m[5]!*ay+m[9]!*az+m[13]!,acz=m[2]!*ax+m[6]!*ay+m[10]!*az+m[14]!,acw=m[3]!*ax+m[7]!*ay+m[11]!*az+m[15]!,bcx=m[0]!*bx+m[4]!*by+m[8]!*bz+m[12]!,bcy=m[1]!*bx+m[5]!*by+m[9]!*bz+m[13]!,bcz=m[2]!*bx+m[6]!*by+m[10]!*bz+m[14]!,bcw=m[3]!*bx+m[7]!*by+m[11]!*bz+m[15]!;if(acw<=0||bcw<=0)continue;const azN=acz/acw,bzN=bcz/bcw;if(azN>1&&bzN>1)continue;lines.push(`M${((acx/acw*.5+.5)*bw).toFixed(1)},${(-acy/acw*.5+.5)*bh}L${((bcx/bcw*.5+.5)*bw).toFixed(1)},${(-bcy/bcw*.5+.5)*bh}`);}
       updateLayer(4,new Map([['#9a8d75|0.20|0.6',lines]])); el.dataset.renderCount=String(Number(el.dataset.renderCount||0)+1); svg.dataset.ready='true'; svg.dataset.renderCount=el.dataset.renderCount;
+      const renderedStride = baseEnvironmentStride * interactionStride;
+      el.dataset.environmentStride = String(renderedStride);
+      svg.dataset.environmentStride = String(renderedStride);
+      return performance.now() - startedAt;
     };
+    el.dataset.environmentStride = String(baseEnvironmentStride);
+    svg.dataset.environmentStride = String(baseEnvironmentStride);
 
     let raf = 0, last = performance.now(), lastVector = 0, visible = true, expansion = 1;
+    let interactionStride = 1, lastVectorCostMs = 0, previousEnvironmentLod = false;
     const FORM_S = 180; let cosmic = 0;
     const replay = () => { cosmic = 0; dynamics.reset(); expansion = dynamics.state.expansion; };
     window.addEventListener('nexo:replay-formation', replay);
@@ -673,10 +661,32 @@ export function ObservatoryScene({ tests, page, focusIds, onPick, onAvailability
         look.z + Math.sin(cam.az) * Math.cos(cam.elev) * cam.dist);
       camera.lookAt(look);
       camera.updateMatrixWorld();
-      const vectorCadence = exploreRef.current ? 1000 / 30 : 250;
+      const targetDist = target.dist * fit * zoom;
+      const cameraSettling = exploreRef.current && !reduced && (
+        Math.abs(cam.dist - targetDist) > 0.015 ||
+        Math.abs(cam.elev - target.elev) > 0.001 ||
+        Math.abs(cam.az - target.az) > 0.001 ||
+        Math.abs(look.x - lookGoal.x) > 0.015 ||
+        Math.abs(look.y - lookGoal.y) > 0.015 ||
+        Math.abs(look.z - lookGoal.z) > 0.015
+      );
+      const cameraMoving = drag !== null || pinch !== null || cameraSettling;
+      const environmentLodActive = !reduced && cameraMoving;
+      if (!environmentLodActive) {
+        interactionStride = 1;
+        if (previousEnvironmentLod) lastVector = now - 250;
+      }
+      const vectorCadence = cameraMoving ? 1000 / 30 : 250;
       if (now - lastVector >= vectorCadence) {
         lastVector = now;
-        renderVectors(uniforms.time.value);
+        if (environmentLodActive) {
+          if (lastVectorCostMs > 25) {
+            interactionStride = Math.min(8, Math.max(interactionStride + 1, Math.ceil(interactionStride * lastVectorCostMs / 25)));
+          } else if (lastVectorCostMs < 20) {
+            interactionStride = Math.max(1, interactionStride - 1);
+          }
+        }
+        lastVectorCostMs = renderVectors(uniforms.time.value, environmentLodActive ? interactionStride : 1);
 
         // Batch layout reads before any label style writes to avoid forced reflow per label.
         const w = viewportWidth, h = viewportHeight;
@@ -735,6 +745,7 @@ export function ObservatoryScene({ tests, page, focusIds, onPick, onAvailability
           if (!off) place(node, (proj.x * 0.5 + 0.5) * w, (-proj.y * 0.5 + 0.5) * h);
         });
       }
+      previousEnvironmentLod = environmentLodActive;
       if (visible) raf = requestAnimationFrame(frame);
     };
     raf = requestAnimationFrame(frame);
