@@ -238,6 +238,13 @@ try {
     await graphTable.waitFor();
     assert.equal(await graphTable.locator('tbody tr').count(), await graphNodes.count(),
       'a tabela deve apresentar os mesmos nós abertos que o mapa');
+    const keyboardTarget = graphTable.locator('tbody tr:not(.selected) .nexo-graph-table-select').first();
+    assert.ok(await keyboardTarget.count() > 0, 'a lista deve oferecer uma estação selecionável por teclado');
+    const keyboardTargetName = (await keyboardTarget.innerText()).trim();
+    await keyboardTarget.focus();
+    await page.keyboard.press('Enter');
+    assert.equal((await graphTable.locator('tbody tr.selected .nexo-graph-table-select').innerText()).trim(), keyboardTargetName,
+      'Enter em uma estação da tabela deve atualizar a seleção do Atlas');
     await page.getByRole('button', { name: 'Ver grafo' }).click();
     await canvas.waitFor();
 

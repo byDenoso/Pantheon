@@ -18,9 +18,20 @@ test('public MCP access boundary rejects authenticated and operational definitio
 test('status is derived from the canonical tool registry and the shared Tower generation',async()=>{
   const s=snapshot(),status=await readNexoMcpStatus({readSnapshot:async()=>s});
   assert.equal(status.status,'READY');assert.equal(status.authority,'TOWER_V06');
+  assert.equal(status.projectionOnly,true);assert.equal(status.writeback,'FORBIDDEN');
   assert.deepEqual(status.tools.map(t=>t.name),Object.keys(MCP_TOOL_REGISTRY));
   for(const tool of status.tools){assert.equal(tool.access,'PUBLIC');assert.equal(tool.annotations.readOnlyHint,true);assert.equal(tool.annotations.destructiveHint,false);assert.equal(tool.annotations.idempotentHint,true);assert.equal(tool.annotations.openWorldHint,false);assert.equal(tool.inputSchema.type,'object');assert.equal(tool.inputSchema.additionalProperties,false);}
   const science=await executeNexoMcpTool({readSnapshot:async()=>s},'get_science_state');
+  const capabilities=await executeNexoMcpTool({readSnapshot:async()=>s},'get_capabilities');
+  assert.equal(capabilities.contract,'NEXO_MCP_CAPABILITIES_V1');
+  assert.equal(capabilities.status,'READY');
+  assert.equal(capabilities.public_surface.authority,'TOWER_V06');
+  assert.equal(capabilities.public_surface.projection_only,true);
+  assert.equal(capabilities.public_surface.writeback,'FORBIDDEN');
+  assert.equal(capabilities.authenticated_surface.mutations,'WRITER_MEDIATED');
+  assert.deepEqual(capabilities.tools.map(tool=>tool.name),Object.keys(MCP_TOOL_REGISTRY));
+  assert(capabilities.tools.every(tool=>tool.access==='PUBLIC'&&tool.annotations.readOnlyHint===true));
+  assert(!capabilities.tools.some(tool=>['claim_work','request_execution','register_delivery'].includes(tool.name)));
   const httpModel=buildAtlasResearchView(s,'science-read-model').data;
   assert.equal(science.fingerprint,httpModel.fingerprint);assert.equal(status.fingerprint,science.fingerprint);
   assert.equal(science.sourceVersion,s.manifest.tower_revision);assert.equal(status.projectionFingerprint,s.manifest.projection_fingerprint);
@@ -35,6 +46,11 @@ test('schemas fail closed and public execution cannot accept an operational acti
   for(const name of ['unknown','request_research','propose_hypothesis','request_test','request_battery'])await assert.rejects(()=>executeNexoMcpTool({readSnapshot},name,{}),/UNKNOWN_MCP_TOOL/);
   const status=await readNexoMcpStatus({readSnapshot:async()=>{throw Error('secret-canary');}});
   assert.equal(status.status,'DEGRADED');assert.equal(status.fingerprint,null);assert.equal(status.tools.find(t=>t.name==='get_campaign').availability,'UNAVAILABLE');assert.equal(status.tools.find(t=>t.name==='get_style_policy').availability,'AVAILABLE');assert(!JSON.stringify(status).includes('secret-canary'));
+  const capabilities=await executeNexoMcpTool({readSnapshot:async()=>{throw Error('secret-canary');}},'get_capabilities');
+  assert.equal(capabilities.status,'DEGRADED');
+  assert.equal(capabilities.public_surface.projection_fingerprint,null);
+  assert.equal(capabilities.tools.find(t=>t.name==='get_capabilities').availability,'AVAILABLE');
+  assert(!JSON.stringify(capabilities).includes('secret-canary'));
 });
 test('MCP initialize/discovery/call shares schemas and sanitizes source errors',async()=>{
   let unavailable=false;
@@ -44,6 +60,8 @@ test('MCP initialize/discovery/call shares schemas and sanitizes source errors',
     await client.connect(new StreamableHTTPClientTransport(new URL('http://local/mcp'),{fetch:(url,init)=>web.fetch(new Request(url,init))}));
     const tools=await client.listTools();assert.equal(tools.tools.length,Object.keys(MCP_TOOL_REGISTRY).length);
     assert((await client.callTool({name:'get_campaign',arguments:{id:'C1'}})).structuredContent.result.campaign);
+    const capabilities=await client.callTool({name:'get_capabilities',arguments:{}});
+    assert.equal(capabilities.structuredContent.result.contract,'NEXO_MCP_CAPABILITIES_V1');
     assert((await client.callTool({name:'search_atlas',arguments:{limit:-1}})).isError);
     await assert.rejects(()=>client.callTool({name:'nonexistent',arguments:{}}),/not found/);
     unavailable=true;const error=await client.callTool({name:'get_science_state',arguments:{}});assert(error.isError);assert(!JSON.stringify(error).includes('secret-canary'));

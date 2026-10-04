@@ -31,7 +31,8 @@ export function NexoGraph({
   showViewSwitch?:boolean;
 }){
   const hostRef=useRef<HTMLDivElement|null>(null);
-  const [g6Ready,setG6Ready]=useState(()=>view==='3d'||Boolean((window as any).G6?.Graph));
+  const [g6Status,setG6Status]=useState<'idle'|'loading'|'ready'|'error'>(()=>Boolean((window as any).G6?.Graph)?'ready':'idle');
+  const [g6Retry,setG6Retry]=useState(0);
   const [tableMode,setTableMode]=useState(false);
   const [spotlight,setSpotlight]=useState(true);
   const [illuminated,setIlluminated]=useState(false);
@@ -41,11 +42,15 @@ export function NexoGraph({
   const relationCount=useMemo(()=>model.crossLinks.filter(link=>visibleSet.has(link.source)&&visibleSet.has(link.target)).length,[model.crossLinks,visibleSet]);
 
   useEffect(()=>{
-    if(view!=='2d'){setG6Ready(true);return;}
+    if(view!=='2d')return;
+    if((window as any).G6?.Graph){setG6Status('ready');return;}
     let active=true;
-    void ensureAtlasG6().then(()=>{if(active)setG6Ready(true);}).catch(()=>{if(active)setG6Ready(false);});
+    setG6Status('loading');
+    void ensureAtlasG6().then(()=>{
+      if(active)setG6Status((window as any).G6?.Graph?'ready':'error');
+    }).catch(()=>{if(active)setG6Status('error');});
     return()=>{active=false;};
-  },[view]);
+  },[view,g6Retry]);
 
   useEffect(()=>{
     const onKey=(event:KeyboardEvent)=>{
@@ -99,11 +104,13 @@ export function NexoGraph({
       </div>}
     </div>
     {tableMode
-      ? <div className="nexo-graph-table-wrap"><table className="nexo-graph-table"><caption>Esta lista mostra os itens abertos no mapa atual. Selecione uma linha para ver o contexto e as ligações.</caption><thead><tr><th>Item</th><th>O que é</th><th>Área</th><th>Situação</th><th>Conexões</th></tr></thead><tbody>{rows.map(node=><tr key={node!.id} className={node!.id===selectedId?'selected':''} onClick={()=>onSelect(node!.id)}><td><strong>{node!.name}</strong><details onClick={event=>event.stopPropagation()}><summary>Ver referência técnica</summary><code>{node!.id}</code></details></td><td>{NODE_TYPE_COPY[String(node!.entityType)]??displayCode(String(node!.entityType),'Registro')}</td><td>{domainLabel(node!.domain)}</td><td title="O valor técnico fica disponível nos detalhes do item">{displayCode(node!.status,'Estado sem descrição')}</td><td>{node!.relationCount}</td></tr>)}</tbody></table></div>
+      ? <div className="nexo-graph-table-wrap"><table className="nexo-graph-table"><caption>Esta lista mostra os itens abertos no mapa atual. Selecione uma linha para ver o contexto e as ligações.</caption><thead><tr><th>Item</th><th>O que é</th><th>Área</th><th>Situação</th><th>Conexões</th></tr></thead><tbody>{rows.map(node=><tr key={node!.id} className={node!.id===selectedId?'selected':''}><td><button type="button" className="nexo-graph-table-select" aria-pressed={node!.id===selectedId} onClick={()=>onSelect(node!.id)}><strong>{node!.name}</strong></button><details><summary>Ver referência técnica</summary><code>{node!.id}</code></details></td><td>{NODE_TYPE_COPY[String(node!.entityType)]??displayCode(String(node!.entityType),'Registro')}</td><td>{domainLabel(node!.domain)}</td><td title="O valor técnico fica disponível nos detalhes do item">{displayCode(node!.status,'Estado sem descrição')}</td><td>{node!.relationCount}</td></tr>)}</tbody></table></div>
       : view==='galaxy'
         ? <GalaxyView selectedId={selectedId} onSelect={onSelect}/>
-      : view==='2d'&&!g6Ready
-        ? <div className="nexo-graph-fallback" role="status">2D indisponível neste instante. Os dados continuam acessíveis em tabela.</div>
+      : view==='2d'&&g6Status!=='ready'
+        ? g6Status==='error'
+          ? <div className="nexo-graph-fallback" role="alert"><p>Não foi possível carregar o mapa 2D. Os dados continuam disponíveis na tabela.</p><button type="button" onClick={()=>{setG6Status('loading');setG6Retry(value=>value+1);}}>Tentar carregar novamente</button></div>
+          : <div className="nexo-graph-fallback" role="status" aria-live="polite">Carregando o mapa 2D…</div>
         : <MetroAtlasRenderer model={model} expanded={expanded} visibleLayers={visibleLayers} selectedId={spotlightActive?selectedId:null} showBeams={showRelations} viewMode={view} theme={theme} fitNonce={fitNonce} allIlluminated={illuminated} onActivate={onSelect} onReady={onReady}/>}
   </section>;
 }

@@ -59,6 +59,7 @@ jobs:
             if curl --silent --fail http://127.0.0.1:4178/ > /dev/null; then break; fi
             sleep 1
           done
+          NEXO_BASE_URL=http://127.0.0.1:4178 node test/incident-operations.browser.mjs
           NEXO_BASE_URL=http://127.0.0.1:4178 node test/lab-cinematic-integrity.browser.mjs
           NEXO_BASE_URL=http://127.0.0.1:4178 node test/board-message.browser.mjs
           baseline_dir="$RUNNER_TEMP/atlas-crew-baseline"
@@ -87,6 +88,7 @@ jobs:
             nexo-one/test-output/board-message/
             nexo-one/test-output/crew-layout/
             nexo-one/test-output/crew-layout-baseline/
+            nexo-one/test-output/incident-operations/
           if-no-files-found: warn
           retention-days: 7
 

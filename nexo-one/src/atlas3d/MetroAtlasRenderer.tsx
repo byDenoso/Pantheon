@@ -53,7 +53,12 @@ type G6Graph = {
 
 declare global {
   interface Window {
-    G6?: { Graph: new (options: any) => G6Graph };
+    G6?: {
+      Graph: new (options: any) => G6Graph;
+      ExtensionCategory?: { PLUGIN?: string };
+      getExtension?: (category: string, type: string) => unknown;
+      register?: (category: string, type: string, extension: new (...args: any[]) => unknown) => void;
+    };
   }
 }
 
@@ -173,6 +178,51 @@ function createG6Graph(
     );
     return null;
   }
+}
+
+const ATLAS_MINIMAP_PLUGIN_TYPE = 'atlas-lifecycle-safe-minimap';
+
+function registerAtlasMinimap(runtime: NonNullable<Window['G6']>): string | null {
+  if (typeof runtime.getExtension !== 'function' || typeof runtime.register !== 'function') return null;
+  if (runtime.getExtension('plugin', ATLAS_MINIMAP_PLUGIN_TYPE)) return ATLAS_MINIMAP_PLUGIN_TYPE;
+
+  const MinimapBase = runtime.getExtension('plugin', 'minimap') as (new (...args: any[]) => any) | undefined;
+  if (typeof MinimapBase !== 'function') return null;
+
+  class AtlasLifecycleSafeMinimap extends MinimapBase {
+    private atlasDisposed = false;
+
+    constructor(...args: any[]) {
+      super(...args);
+      // G6's debounced AFTER_RENDER callback calls these methods later through
+      // the instance. Guard those entry points so a timer already queued before
+      // destroy cannot read the disposed graph model.
+      for (const methodName of [
+        'renderMinimap', 'renderMask', 'updateMask', 'setCamera',
+        'onMaskDragStart', 'onMaskDrag', 'onMaskDragEnd',
+      ]) {
+        const original = (this as any)[methodName];
+        if (typeof original !== 'function') continue;
+        (this as any)[methodName] = function (...methodArgs: any[]) {
+          if ((this as any).atlasDisposed) return;
+          return original.apply(this, methodArgs);
+        };
+      }
+    }
+
+    destroy(): void {
+      if (this.atlasDisposed) return;
+      this.atlasDisposed = true;
+      const onRender = (this as any).onRender;
+      const onTransform = (this as any).onTransform;
+      onRender?.cancel?.();
+      onTransform?.cancel?.();
+      super.destroy();
+    }
+  }
+
+  runtime.register(runtime.ExtensionCategory?.PLUGIN || 'plugin', ATLAS_MINIMAP_PLUGIN_TYPE, AtlasLifecycleSafeMinimap);
+  return ATLAS_MINIMAP_PLUGIN_TYPE;
 }
 
 function stampG6Metrics(
@@ -410,7 +460,7 @@ function applyG6Selection(
       : !focusId ? [] : Math.max(a, b) <= 1 ? ['edge-active']
         : Math.max(a, b) === 2 ? ['edge-related'] : ['edge-muted'];
   }
-  void graph.setElementState(states, false);
+  return graph.setElementState(states, false);
 }
 
 function countDomLabelCollisions(layer: HTMLElement): number {
@@ -537,6 +587,9 @@ function Metro2DView({
   const onReadyRef = useRef(onReady);
   const renderLabelsRef = useRef<() => void>(() => {});
   const refreshRef = useRef<(fit: boolean) => Promise<void>>(async () => {});
+  const runGraphOperationRef = useRef<(operation: () => unknown) => Promise<unknown>>(
+    () => Promise.resolve(),
+  );
 
   modelRef.current = model;
   expandedRef.current = expanded;
@@ -552,6 +605,7 @@ function Metro2DView({
     const container = containerRef.current;
     const labelLayer = labelLayerRef.current;
     const leaderLayer = leaderLayerRef.current;
+    const G6Runtime = window.G6;
     const Graph = window.G6?.Graph;
     if (!surface || !container || !labelLayer || !leaderLayer || !Graph) {
       if (container) {
@@ -571,6 +625,7 @@ function Metro2DView({
     }
 
     const compact = isCompactRenderer(container);
+    const minimapType = compact ? null : registerAtlasMinimap(G6Runtime!);
     container.dataset.g6Profile = compact ? 'compact-touch' : 'desktop';
     container.dataset.g6Theme = theme;
     const graph = createG6Graph(Graph, {
@@ -690,11 +745,11 @@ function Metro2DView({
           },
           offset: [12, 12],
         },
-        {
+        ...(minimapType ? [{
           key: 'minimap',
-          type: 'minimap',
+          type: minimapType,
           size: [176, 108],
-        },
+        }] : []),
       ],
     });
     if (!graph) return;
@@ -704,6 +759,85 @@ function Metro2DView({
     // Set on unmount/theme change: frames and renders queued before that must
     // not touch the destroyed G6 graph (it throws getData/getViewportByCanvas).
     let disposed = false;
+    let graphDestroyed = false;
+    const pendingGraphOperations = new Set<Promise<unknown>>();
+    const activeGraphRenders = new Set<symbol>();
+    const rendersAwaitingAfterRender: symbol[] = [];
+    const rendersAwaitingFrame = new Set<symbol>();
+
+    const destroyGraphWhenIdle = () => {
+      if (!disposed || graphDestroyed || pendingGraphOperations.size > 0
+        || activeGraphRenders.size > 0 || rendersAwaitingFrame.size > 0) return;
+      graphDestroyed = true;
+      graph.destroy?.();
+    };
+
+    const settleGraphRender = (token: symbol) => {
+      activeGraphRenders.delete(token);
+      rendersAwaitingFrame.delete(token);
+      const index = rendersAwaitingAfterRender.indexOf(token);
+      if (index !== -1) rendersAwaitingAfterRender.splice(index, 1);
+      destroyGraphWhenIdle();
+    };
+
+    const runGraphOperation = <T,>(operation: () => T | PromiseLike<T>): Promise<T> => {
+      let tracked: Promise<T>;
+      tracked = Promise.resolve()
+        .then(() => disposed ? undefined as T : operation())
+        .then(
+          value => {
+            pendingGraphOperations.delete(tracked);
+            destroyGraphWhenIdle();
+            return value;
+          },
+          error => {
+            pendingGraphOperations.delete(tracked);
+            destroyGraphWhenIdle();
+            if (disposed) return undefined as T;
+            setRendererError(
+              container,
+              'G6_OPERATION_FAILED',
+              `Uma operação do renderer 2D falhou. ${error instanceof Error ? error.message : String(error)}`,
+            );
+            throw error;
+          },
+        );
+      pendingGraphOperations.add(tracked);
+      return tracked;
+    };
+
+    const renderGraph = () => {
+      if (disposed) return Promise.resolve();
+      const token = Symbol('g6-render');
+      activeGraphRenders.add(token);
+      rendersAwaitingAfterRender.push(token);
+      try {
+        return Promise.resolve(graph.render()).then(
+          () => settleGraphRender(token),
+          error => {
+            settleGraphRender(token);
+            if (disposed) return;
+            setRendererError(
+              container,
+              'G6_RENDER_FAILED',
+              `O renderer 2D falhou ao desenhar. ${error instanceof Error ? error.message : String(error)}`,
+            );
+            throw error;
+          },
+        );
+      } catch (error) {
+        settleGraphRender(token);
+        if (disposed) return Promise.resolve();
+        setRendererError(
+          container,
+          'G6_RENDER_FAILED',
+          `O renderer 2D falhou ao desenhar. ${error instanceof Error ? error.message : String(error)}`,
+        );
+        return Promise.reject(error);
+      }
+    };
+
+    runGraphOperationRef.current = operation => runGraphOperation(operation);
 
     const scheduleLabels = () => {
       cancelAnimationFrame((scheduleLabels as any).frame || 0);
@@ -726,28 +860,39 @@ function Metro2DView({
     renderLabelsRef.current = scheduleLabels;
 
     graph.on('node:pointerenter', event => {
+      if (disposed) return;
       const id = event.target?.id;
       if (!id) return;
       hoveredRef.current = id;
-      applyG6Selection(graph, modelRef.current, expandedRef.current, selectedRef.current, id, showBeamsRef.current, visibleLayersRef.current, illuminatedRef.current);
+      void runGraphOperation(() => applyG6Selection(graph, modelRef.current, expandedRef.current, selectedRef.current, id, showBeamsRef.current, visibleLayersRef.current, illuminatedRef.current));
       scheduleLabels();
     });
 
     graph.on('node:pointerleave', event => {
+      if (disposed) return;
       const id = event.target?.id;
       if (!id) return;
       hoveredRef.current = null;
-      applyG6Selection(graph, modelRef.current, expandedRef.current, selectedRef.current, null, showBeamsRef.current, visibleLayersRef.current, illuminatedRef.current);
+      void runGraphOperation(() => applyG6Selection(graph, modelRef.current, expandedRef.current, selectedRef.current, null, showBeamsRef.current, visibleLayersRef.current, illuminatedRef.current));
       scheduleLabels();
     });
 
     graph.on('node:click', event => {
+      if (disposed) return;
       const id = event.target?.id;
       if (id && modelRef.current.nodeMap.has(id)) activateRef.current(id);
     });
 
     graph.on('aftertransform', scheduleLabels);
     graph.on('afterrender', () => {
+      const activeRender = rendersAwaitingAfterRender.shift();
+      if (activeRender && activeGraphRenders.has(activeRender)) {
+        rendersAwaitingFrame.add(activeRender);
+        // G6 emits afterrender after its canvas pass. Let that event finish
+        // this frame before destroying a detached graph; some builds leave
+        // render()'s Promise pending after the event.
+        requestAnimationFrame(() => settleGraphRender(activeRender));
+      }
       scheduleLabels();
       // G6 can complete a real canvas render in headless Chromium while the
       // render() promise remains unsettled. Readiness belongs to the renderer
@@ -783,7 +928,7 @@ function Metro2DView({
       container.dataset.g6ViewportHeight = Math.round(rect.height).toString();
 
       try {
-        const renderTask = Promise.resolve(graph.render()).then(() => 'resolved' as const);
+        const renderTask = renderGraph().then(() => 'resolved' as const);
         const renderTimeoutMs = isAtlasReadback() ? 450 : compact ? 900 : 1200;
         const renderOutcome = await Promise.race([
           renderTask,
@@ -799,7 +944,8 @@ function Metro2DView({
         }
         container.dataset.g6Ready = 'true';
 
-        applyG6Selection(graph, modelRef.current, expandedRef.current, selectedRef.current, hoveredRef.current, showBeamsRef.current, visibleLayersRef.current, illuminatedRef.current);
+        await runGraphOperation(() => applyG6Selection(graph, modelRef.current, expandedRef.current, selectedRef.current, hoveredRef.current, showBeamsRef.current, visibleLayersRef.current, illuminatedRef.current));
+        if (disposed || sequence !== refreshSequence) return;
 
         // Renderer readiness is a canvas concern, not an animation concern. A
         // stalled fit transition on touch/Safari must never keep the whole Atlas
@@ -812,18 +958,18 @@ function Metro2DView({
 
         if (fit) {
           const fitDuration = isAtlasReadback() ? 0 : compact ? 180 : 320;
-          const fitTask = Promise.resolve(graph.fitView(
+          const fitTask = runGraphOperation(() => graph.fitView(
             { when: 'always', direction: 'both' },
             { duration: fitDuration, easing: 'ease-out' },
           ));
           const fitTimeout = new Promise<void>(resolve => window.setTimeout(resolve, compact ? 700 : 1000));
           await Promise.race([fitTask, fitTimeout]);
-          if (sequence !== refreshSequence) return;
+          if (disposed || sequence !== refreshSequence) return;
         }
 
         scheduleLabels();
       } catch (error) {
-        if (sequence !== refreshSequence) return;
+        if (disposed || sequence !== refreshSequence) return;
         container.dataset.g6Ready = 'false';
         setRendererError(
           container,
@@ -840,6 +986,7 @@ function Metro2DView({
     const resizeObserver = new ResizeObserver(() => {
       cancelAnimationFrame(frame);
       frame = requestAnimationFrame(() => {
+        if (disposed) return;
         const width = Math.round(surface.clientWidth);
         const height = Math.round(surface.clientHeight);
         if (Math.abs(width - lastWidth) < 4 && Math.abs(height - lastHeight) < 4) return;
@@ -850,7 +997,7 @@ function Metro2DView({
       });
     });
     void refresh(true).then(() => {
-      if (graphRef.current !== graph) return;
+      if (disposed || graphRef.current !== graph) return;
       initializedRef.current = true;
       lastStructureKeyRef.current = [
         modelRef.current.revision,
@@ -868,9 +1015,10 @@ function Metro2DView({
       cancelAnimationFrame((scheduleLabels as any).frame || 0);
       resizeObserver.disconnect();
       refreshRef.current = async () => {};
-      graph.destroy?.();
       graphRef.current = null;
       renderLabelsRef.current = () => {};
+      runGraphOperationRef.current = () => Promise.resolve();
+      destroyGraphWhenIdle();
     };
   }, [theme]);
 
@@ -890,7 +1038,7 @@ function Metro2DView({
     const container = containerRef.current;
     if (!graph || !container || lastFitNonce.current === fitNonce) return;
     lastFitNonce.current = fitNonce;
-    void Promise.resolve(graph.fitView(
+    void runGraphOperationRef.current(() => graph.fitView(
       { when: 'always', direction: 'both' },
       { duration: isCompactRenderer(container) ? 160 : 280, easing: 'ease-in-out' },
     )).then(() => renderLabelsRef.current());
@@ -899,7 +1047,9 @@ function Metro2DView({
   useEffect(() => {
     const container = containerRef.current;
     if (container?.dataset.g6Ready !== 'true') return;
-    applyG6Selection(graphRef.current, model, expanded, selectedId, hoveredRef.current, showBeams, visibleLayers, allIlluminated);
+    const graph = graphRef.current;
+    if (!graph) return;
+    void runGraphOperationRef.current(() => applyG6Selection(graph, model, expanded, selectedId, hoveredRef.current, showBeams, visibleLayers, allIlluminated));
     renderLabelsRef.current();
   }, [selectedId, model.revision, expansionKey, visibleLayers, showBeams, allIlluminated]);
 
@@ -2059,8 +2209,11 @@ function MetroThreeView({
     let lastFrameAt = 0;
     const minimumFrameMs = compact ? 1000 / 36 : 0;
     const animate = (now: number) => {
+      if (document.hidden) {
+        runtime.frame = 0;
+        return;
+      }
       runtime.frame = requestAnimationFrame(animate);
-      if (document.hidden) return;
       if (minimumFrameMs && now - lastFrameAt < minimumFrameMs) return;
       lastFrameAt = now;
       updateSynapsePulses(runtime, now);
@@ -2072,12 +2225,25 @@ function MetroThreeView({
       }
       renderer.render(scene, camera);
     };
-    runtime.frame = requestAnimationFrame(animate);
+    const onVisibilityChange = () => {
+      if (document.hidden) {
+        if (runtime.frame) cancelAnimationFrame(runtime.frame);
+        runtime.frame = 0;
+        return;
+      }
+      if (!runtime.frame) {
+        lastFrameAt = 0;
+        runtime.frame = requestAnimationFrame(animate);
+      }
+    };
+    document.addEventListener('visibilitychange', onVisibilityChange);
+    if (!document.hidden) runtime.frame = requestAnimationFrame(animate);
 
     return () => {
       observer.disconnect();
       cancelAnimationFrame(resizeFrame);
       cancelAnimationFrame(runtime.frame);
+      document.removeEventListener('visibilitychange', onVisibilityChange);
       renderer.domElement.removeEventListener('webglcontextlost', onContextLost);
       renderer.domElement.removeEventListener('webglcontextrestored', onContextRestored);
       renderer.domElement.removeEventListener('pointerdown', onPointerDown);
