@@ -4,7 +4,7 @@ import {mkdir,writeFile} from 'node:fs/promises';
 const output='output/galaxy-performance';
 await mkdir(output,{recursive:true});
 const baseUrl = (process.env.NEXO_BASE_URL || 'http://127.0.0.1:4185').replace(/\/$/, '');
-const browser=await chromium.launch({channel:'msedge',headless:true});
+const browser=await chromium.launch({headless:true});
 const report=[];
 try{
  for(const [profile,width,height] of [['desktop',1440,960],['tablet',1080,1130],['mobile',390,844]]){
@@ -13,12 +13,15 @@ try{
   const errors=[];page.on('pageerror',error=>errors.push(error.message));
   await page.goto(`${baseUrl}/#/agora`);
   await page.getByRole('button',{name:'Explorar a teia',exact:true}).waitFor();
+  await page.locator('svg[data-tower-svg-native="observatory"][data-ready="true"]').waitFor();
+  assert.equal(await page.locator('[data-tower-svg-host]').count(),0,'normal UI must not create a duplicate surface');
+  assert.equal(await page.evaluate(()=>document.body.classList.contains('tower-svg-active')),false);
   for(const theme of ['dark','light']){
    const actual=await page.locator('html').getAttribute('data-theme');
    if(actual!==theme)await page.getByRole('button',{name:theme==='light'?'Ativar tema claro':'Ativar tema escuro',exact:true}).click();
    for(const route of ['agora','universo','ciclo','roadmaps','evidencia','saude','atlas?view=galaxy','atlas?view=2d','atlas?view=3d']){
     console.log(profile,theme,route);
-    await page.goto(`${baseUrl}/#/${route}`);
+    await page.goto(`${baseUrl}/?svgMirror=1#/${route}`);
     await page.locator('svg[data-tower-svg-surface][data-ready="true"]').waitFor();
     const native=route.startsWith('atlas')?route.endsWith('galaxy')?'galaxy':route.endsWith('2d')?'metro2d':'metro3d':'observatory';
     await page.locator(`svg[data-tower-svg-native="${native}"][data-ready="true"]`).waitFor();

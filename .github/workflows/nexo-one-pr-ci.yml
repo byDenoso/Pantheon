@@ -43,6 +43,7 @@ jobs:
           npm run style:lint
           npm run build
           npx playwright install --with-deps chromium
+          node test/atlas-performance.browser.mjs
           npm run test:mcp-browser
           node test/google-drive-consent.browser.mjs
 
@@ -89,6 +90,7 @@ jobs:
             nexo-one/test-output/crew-layout/
             nexo-one/test-output/crew-layout-baseline/
             nexo-one/test-output/incident-operations/
+            nexo-one/test-output/atlas-performance/
           if-no-files-found: warn
           retention-days: 7
 
