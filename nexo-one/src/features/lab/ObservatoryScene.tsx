@@ -3,9 +3,14 @@
 // records that are not explicitly marked as running.
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
-  AdditiveBlending, BufferAttribute, BufferGeometry, Color, LineBasicMaterial, LineSegments, NormalBlending,
+  AdditiveBlending, BufferAttribute, BufferGeometry, Color, HalfFloatType, LineBasicMaterial, LineSegments, NormalBlending,
   PerspectiveCamera, Points, Raycaster, Scene, ShaderMaterial, Vector2, Vector3, WebGLRenderer,
+  WebGLRenderTarget,
 } from 'three';
+import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
+import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
+import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
 import type { TestEntity } from './model.ts';
 import { normDomain } from './domains.ts';
 import {
@@ -13,6 +18,7 @@ import {
   isRecentSceneResult, stableSceneOffset, type ObservatoryLayout, type ObservatoryScale, type SceneEntity,
   type SceneHypothesis, type SceneProject, type ScenePosition,
 } from './sceneModel.ts';
+import { buildCosmicWebGeometry, cosmicWebSignature } from './cosmicWebGeometry.ts';
 
 export type { ObservatoryScale, SceneHypothesis, SceneProject } from './sceneModel.ts';
 
@@ -83,12 +89,47 @@ const POINT_FRAGMENT = `
  varying vec3 vTint; varying float vAlpha; varying float vCore;
  void main(){
    vec2 c = gl_PointCoord - 0.5; float d = length(c);
-   float body = 1.0 - smoothstep(0.16, 0.5, d);
-   float center = 1.0 - smoothstep(0.02, 0.16, d);
-   float a = (body * 0.72 + center * (0.30 + vCore * 0.22)) * vAlpha;
-   if (a < 0.018) discard;
-   gl_FragColor = vec4(vTint * (0.72 + center * 0.42), a);
+   float halo = exp(-d * d * 15.0) * (1.0 - smoothstep(0.33, 0.5, d));
+   float core = 1.0 - smoothstep(0.015, 0.12, d);
+   float a = (halo * 0.56 + core * (0.32 + vCore * 0.28)) * vAlpha;
+   if (a < 0.006) discard;
+   gl_FragColor = vec4(vTint * (0.76 + halo * 0.42 + core * 0.24), a);
+   #include <colorspace_fragment>
  }`;
+
+const COSMIC_MOTE_VERTEX = `
+attribute float size; attribute vec3 tint; attribute float opacity; attribute vec3 axis; attribute float aspect;
+uniform float pixelRatio; uniform float maxPointSize;
+varying vec3 vTint; varying float vOpacity; varying float vDepth; varying vec2 vAxis; varying float vAspect;
+void main(){
+  vec4 mv = modelViewMatrix * vec4(position, 1.0);
+  float depth = max(0.0, -mv.z);
+  vec3 viewAxis = (modelViewMatrix * vec4(axis, 0.0)).xyz;
+  vec2 screenAxis = viewAxis.xy;
+  vAxis = length(screenAxis) > 0.0001 ? normalize(screenAxis) : vec2(1.0, 0.0);
+  vAspect = max(1.0, aspect);
+  gl_PointSize = clamp(size * vAspect * pixelRatio * (13.0 / max(1.0, depth)), 1.0 * pixelRatio, maxPointSize * pixelRatio);
+  vTint = tint;
+  vOpacity = opacity;
+  vDepth = 1.0 - smoothstep(30.0, 105.0, depth) * 0.52;
+  gl_Position = projectionMatrix * mv;
+}`;
+const COSMIC_MOTE_FRAGMENT = `
+varying vec3 vTint; varying float vOpacity; varying float vDepth; varying vec2 vAxis; varying float vAspect;
+void main(){
+  // Point coordinates grow downward; view-space tangents grow upward.
+  vec2 p = vec2(gl_PointCoord.x - 0.5, 0.5 - gl_PointCoord.y);
+  vec2 acrossAxis = vec2(-vAxis.y, vAxis.x);
+  float along = dot(p, vAxis) * 2.0;
+  float across = dot(p, acrossAxis) * 2.0 * vAspect;
+  float veil = exp(-along * along * 1.7 - across * across * 2.5);
+  float fiber = exp(-along * along * 5.5 - across * across * 14.0);
+  float filamentCore = exp(-along * along * 18.0 - across * across * 48.0);
+  float alpha = min(1.0, (veil * 0.36 + fiber * 0.68 + filamentCore * 0.6) * vOpacity * vDepth);
+  if (alpha < 0.003) discard;
+  gl_FragColor = vec4(vTint * (0.82 + filamentCore * 0.78), alpha);
+  #include <colorspace_fragment>
+}`;
 
 interface PointLayer { kind: SceneEntity['kind']; points: Points; entities: SceneEntity[]; geometry: BufferGeometry }
 interface SceneRuntime {
@@ -96,9 +137,13 @@ interface SceneRuntime {
   scene: Scene;
   camera: PerspectiveCamera;
   material: ShaderMaterial;
+  cosmicMaterial: ShaderMaterial;
   layers: PointLayer[];
   dependencyLines: LineSegments | null;
   membershipLines: LineSegments | null;
+  cosmicLines: LineSegments | null;
+  cosmicPoints: Points | null;
+  cosmicSignature: string;
   reducedMotion: boolean;
   frame: number;
   visible: boolean;
@@ -357,8 +402,17 @@ export function ObservatoryScene({
       depthWrite: false,
       blending: AdditiveBlending,
     });
+    const cosmicMaterial = new ShaderMaterial({
+      uniforms: { pixelRatio: { value: dpr }, maxPointSize: { value: quality === 'low' ? 24 : 44 } },
+      vertexShader: COSMIC_MOTE_VERTEX,
+      fragmentShader: COSMIC_MOTE_FRAGMENT,
+      transparent: true,
+      depthWrite: false,
+      blending: dataRef.current.theme === 'dark' ? AdditiveBlending : NormalBlending,
+    });
     const runtime: SceneRuntime = {
-      renderer, scene, camera, material, layers: [], dependencyLines: null, membershipLines: null, reducedMotion: window.matchMedia('(prefers-reduced-motion: reduce)').matches,
+      renderer, scene, camera, material, cosmicMaterial, layers: [], dependencyLines: null, membershipLines: null,
+      cosmicLines: null, cosmicPoints: null, cosmicSignature: '', reducedMotion: window.matchMedia('(prefers-reduced-motion: reduce)').matches,
       frame: 0, visible: document.visibilityState === 'visible', contextLost: false,
       layout, tests: [...tests], scale: scale || defaultScaleForPage(page),
       render: () => {}, schedule: () => {}, setScale: () => {}, focus: () => {}, orbit: () => {}, reset: () => {}, update: () => {}, onHit: () => {},
@@ -379,6 +433,31 @@ export function ObservatoryScene({
     let pinch: { distance: number; x: number; y: number } | null = null;
     let lastFrame = performance.now();
     let resizeObserver: ResizeObserver;
+    let composer: EffectComposer | null = null;
+    let composedTheme: 'dark' | 'light' = dataRef.current.theme;
+    const disposeComposer = () => {
+      if (!composer) return;
+      composer.passes.forEach(pass => pass.dispose?.());
+      composer.dispose();
+      composer = null;
+    };
+    const buildComposer = (nextTheme: 'dark' | 'light') => {
+      disposeComposer();
+      composedTheme = nextTheme;
+      const supportsHalfFloat = renderer.extensions.has('EXT_color_buffer_float') || renderer.extensions.has('EXT_color_buffer_half_float');
+      if (quality === 'low' || nextTheme !== 'dark' || !supportsHalfFloat) return;
+      try {
+        const targetBuffer = new WebGLRenderTarget(1, 1, { type: HalfFloatType });
+        composer = new EffectComposer(renderer, targetBuffer);
+        composer.setPixelRatio(dpr);
+        composer.addPass(new RenderPass(scene, camera));
+        composer.addPass(new UnrealBloomPass(new Vector2(1, 1), quality === 'high' ? 0.62 : 0.5, 0.35, 0.58));
+        composer.addPass(new OutputPass());
+      } catch {
+        disposeComposer();
+      }
+    };
+    buildComposer(dataRef.current.theme);
 
     const activeExecution = () => !runtime.reducedMotion && runtime.tests.some(test => test.status === 'RUNNING') && dataRef.current.sourceCurrent;
     const projectCamera = () => {
@@ -394,7 +473,10 @@ export function ObservatoryScene({
     };
     const render = () => {
       projectCamera();
-      if (!runtime.contextLost) renderer.render(scene, camera);
+      if (!runtime.contextLost) {
+        if (composer) composer.render(); else renderer.render(scene, camera);
+        if (runtime.cosmicPoints) hostElement.dataset.cosmicRendered = 'true';
+      }
     };
     const positionLabels = () => {
       const labelRoot = labels.current;
@@ -508,6 +590,59 @@ export function ObservatoryScene({
       const focused = new Set(focusedIds.map(id => id.replace(/^(?:test:)/i, '')));
       const hot = new Set(hotIds.map(id => id.replace(/^(?:test:)/i, '')));
       const initial = nextLayout.entities;
+      const cosmicBlending = nextTheme === 'dark' ? AdditiveBlending : NormalBlending;
+      if (runtime.cosmicMaterial.blending !== cosmicBlending) {
+        runtime.cosmicMaterial.blending = cosmicBlending;
+        runtime.cosmicMaterial.needsUpdate = true;
+      }
+      if (composedTheme !== nextTheme) {
+        renderer.setClearColor(nextTheme === 'dark' ? 0x03080d : 0xf7fbfc, 0);
+        buildComposer(nextTheme);
+      }
+      if (runtime.cosmicLines) {
+        const lineMaterial = runtime.cosmicLines.material as LineBasicMaterial;
+        lineMaterial.opacity = nextTheme === 'dark' ? 0.26 : 0.18;
+        const lineBlending = nextTheme === 'dark' ? AdditiveBlending : NormalBlending;
+        if (lineMaterial.blending !== lineBlending) {
+          lineMaterial.blending = lineBlending;
+          lineMaterial.needsUpdate = true;
+        }
+      }
+      const nextCosmicSignature = cosmicWebSignature(nextLayout);
+      if (nextCosmicSignature !== runtime.cosmicSignature) {
+        hostElement.dataset.cosmicRendered = 'false';
+        hostElement.dataset.cosmicFilaments = '0';
+        hostElement.dataset.cosmicParticles = '0';
+        if (runtime.cosmicLines) {
+          scene.remove(runtime.cosmicLines);
+          runtime.cosmicLines.geometry.dispose();
+          (runtime.cosmicLines.material as LineBasicMaterial).dispose();
+          runtime.cosmicLines = null;
+        }
+        if (runtime.cosmicPoints) {
+          scene.remove(runtime.cosmicPoints);
+          runtime.cosmicPoints.geometry.dispose();
+          runtime.cosmicPoints = null;
+        }
+        const web = buildCosmicWebGeometry(nextLayout, quality);
+        const lineCount = web.filaments.getAttribute('position')?.count || 0;
+        if (lineCount > 0) {
+          const cosmicLineMaterial = new LineBasicMaterial({ vertexColors: true, transparent: true, opacity: nextTheme === 'dark' ? 0.18 : 0.12, depthWrite: false, blending: nextTheme === 'dark' ? AdditiveBlending : NormalBlending });
+          runtime.cosmicLines = new LineSegments(web.filaments, cosmicLineMaterial);
+          runtime.cosmicLines.name = 'static-cosmic-density';
+          runtime.cosmicLines.renderOrder = -2;
+          scene.add(runtime.cosmicLines);
+        } else web.filaments.dispose();
+        if (web.particleCount > 0) {
+          runtime.cosmicPoints = new Points(web.particles, cosmicMaterial);
+          runtime.cosmicPoints.name = 'static-cosmic-dust';
+          runtime.cosmicPoints.renderOrder = -1;
+          scene.add(runtime.cosmicPoints);
+        } else web.particles.dispose();
+        runtime.cosmicSignature = nextCosmicSignature;
+        hostElement.dataset.cosmicParticles = String(web.particleCount);
+        hostElement.dataset.cosmicFilaments = String(web.connections.length);
+      }
       const entitiesByKind: SceneEntity[][] = [
         initial.filter(entity => entity.kind === 'region'),
         initial.filter(entity => entity.kind === 'project'),
@@ -541,7 +676,7 @@ export function ObservatoryScene({
       }
       const membershipLineGeometry = membershipGeometry(nextLayout, nextScale);
       if ((membershipLineGeometry.getAttribute('position')?.count || 0) > 0) {
-        const membershipLineMaterial = new LineBasicMaterial({ vertexColors: true, transparent: true, opacity: nextTheme === 'dark' ? 0.52 : 0.43, depthWrite: false, blending: nextTheme === 'dark' ? AdditiveBlending : NormalBlending });
+        const membershipLineMaterial = new LineBasicMaterial({ vertexColors: true, transparent: true, opacity: nextTheme === 'dark' ? 0.18 : 0.12, depthWrite: false, blending: nextTheme === 'dark' ? AdditiveBlending : NormalBlending });
         runtime.membershipLines = new LineSegments(membershipLineGeometry, membershipLineMaterial);
         runtime.membershipLines.name = 'published-membership';
         scene.add(runtime.membershipLines);
@@ -608,6 +743,7 @@ export function ObservatoryScene({
       const width = Math.max(1, hostElement.clientWidth || window.innerWidth);
       const height = Math.max(1, hostElement.clientHeight || window.innerHeight);
       renderer.setSize(width, height, false);
+      composer?.setSize(width, height);
       camera.aspect = width / height;
       camera.updateProjectionMatrix();
       schedule();
@@ -709,7 +845,7 @@ export function ObservatoryScene({
     const setScaleFromKey = (next: ObservatoryScale) => setScale(next);
     const doubleClick = () => { pan.set(0, 0, 0); zoom = 1; setScaleFromKey('overview'); target.look.set(0, 0, 0); schedule(); };
     const noMenu = (event: Event) => { if (dataRef.current.explore) event.preventDefault(); };
-    const contextLost = (event: Event) => { event.preventDefault(); runtime.contextLost = true; hostElement.dataset.fallback = 'context-lost'; dataRef.current.onAvailability?.(false); if (runtime.frame) cancelAnimationFrame(runtime.frame); runtime.frame = 0; };
+    const contextLost = (event: Event) => { event.preventDefault(); runtime.contextLost = true; hostElement.dataset.fallback = 'context-lost'; hostElement.dataset.cosmicRendered = 'false'; dataRef.current.onAvailability?.(false); if (runtime.frame) cancelAnimationFrame(runtime.frame); runtime.frame = 0; };
     const contextRestored = () => { runtime.contextLost = false; delete hostElement.dataset.fallback; dataRef.current.onAvailability?.(true); schedule(); };
     const visibility = () => { runtime.visible = document.visibilityState === 'visible'; if (!runtime.visible && runtime.frame) { cancelAnimationFrame(runtime.frame); runtime.frame = 0; } else schedule(); };
     const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
@@ -756,7 +892,12 @@ export function ObservatoryScene({
       (runtime.dependencyLines?.material as LineBasicMaterial | undefined)?.dispose();
       runtime.membershipLines?.geometry.dispose();
       (runtime.membershipLines?.material as LineBasicMaterial | undefined)?.dispose();
+      runtime.cosmicLines?.geometry.dispose();
+      (runtime.cosmicLines?.material as LineBasicMaterial | undefined)?.dispose();
+      runtime.cosmicPoints?.geometry.dispose();
+      disposeComposer();
       material.dispose();
+      cosmicMaterial.dispose();
       renderer.dispose();
       canvas.remove();
       runtimeRef.current = null;
