@@ -268,6 +268,7 @@
     "inbox/scheduled-guardiao-integrity-4eca6a809262f332.json": "d55e8cdac1b1b34239a374cd8dee447107385cf7523dda7a8534484d567f25b4",
     "inbox/scheduled-guardiao-integrity-843309583b848e26.json": "ef33415a5ff000ed8ed1b9f21e17f7d8e27c5608d5fcd8ff768aba6e64bd3bab",
     "inbox/scheduled-guardiao-integrity-88536298f7a69178.json": "ee47fdef6fe6f76e3bafe04d0f936e8a25cfaa50ce2d50fb01c02be674fc30d5",
+    "inbox/scheduled-guardiao-pr419-self-review-b798abfd.json": "1ed077f0626d6abde2594e7a3c337ca9e859d12d02b0a857ccc7e2e1a8e0ba22",
     "inbox/scheduled-guardiao-recipe-review-pr395-1cd39cd5.json": "c20496a95230e5983ee035b6c7c6fc40847966c3f049b5c276ef5236f02bf73a",
     "inbox/scheduled-guardiao-recipe-review-pr395-4271a90a.json": "d84b51167ba69b45d8172fd5e8c106ea355a349e5f464c0bda3228c6a23d7f4c",
     "inbox/scheduled-guardiao-recipe-review-pr395-c90f8752.json": "3a0655a473f1c6b836564da168044651416e8e50dc723eef361870ced17f9a28",
@@ -2922,6 +2923,34 @@
     "inbox/scheduled-guardiao-integrity-88536298f7a69178.json": {
       "fingerprint": "ee47fdef6fe6f76e3bafe04d0f936e8a25cfaa50ce2d50fb01c02be674fc30d5",
       "source": "legacy-acked"
+    },
+    "inbox/scheduled-guardiao-pr419-self-review-b798abfd.json": {
+      "fingerprint": "1ed077f0626d6abde2594e7a3c337ca9e859d12d02b0a857ccc7e2e1a8e0ba22",
+      "observed_at": "2026-10-04T12:58:18Z",
+      "outcome": "APPLIED",
+      "receipt_ids": [
+        "OR-bc9f73777aab35e25bd98327839ffa1c"
+      ],
+      "receipts": [
+        {
+          "contract": "OPERATION_RECEIPT_V1",
+          "effect_id": "envelope-f5284ca8d34f7f94ef9d347a00eecc76",
+          "intent_id": "gateway:tcc-97069050d319fa8234951434cfc33e22",
+          "observed_at": "2026-10-04T12:58:00.457732Z",
+          "occurred_at": "2026-10-04T12:58:00.457714Z",
+          "outcome": "APPLIED",
+          "payload_sha256": "sha256:504c20380214b97f52cc21168992d76ffc8a1ac13a05292afe49b6e22cbe3d2e",
+          "reason_code": null,
+          "receipt_id": "OR-bc9f73777aab35e25bd98327839ffa1c",
+          "result_revision": "sha256:9e9618506489bee255c10a5ea0091a7783e8916b3c4b6963891c0e53c88a921c",
+          "retry_condition": null,
+          "source_revision": "sha256:047749f8066138500457090d8103f4b255d2690ea8f4b5a20f9d5e4fa5b31edb",
+          "stage": "APPLIED",
+          "supersedes": null,
+          "visibility": "PUBLIC"
+        }
+      ],
+      "tower_revision": "sha256:d0838fa351cd3ff5e68c0a5e1b86a624ba728f03e0338bb445d59abe8f98bad3"
     },
     "inbox/scheduled-guardiao-recipe-review-pr395-1cd39cd5.json": {
       "applied_at": "2026-10-01T19:17:07Z",
