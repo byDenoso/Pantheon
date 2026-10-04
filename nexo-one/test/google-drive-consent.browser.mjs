@@ -29,12 +29,14 @@ const server=createServer(async(req,res)=>{
       decision=path==='/api/google-drive-return'?googleDriveConsentReturn(syntheticReq,env):await googleDriveConsentRoute(syntheticReq,env,Date.now(),{
         body,startTimeoutMs:20,
         startAuthorizationImpl:async(connector,params,options)=>{
-          starts++;assert.equal(connector,env.GOOGLE_CONNECTOR);assert.deepEqual(params,{subject:{type:'user',id:'owner'},scopes:['https://www.googleapis.com/auth/drive.readonly']});
+          starts++;assert.equal(connector,env.GOOGLE_CONNECTOR);assert.deepEqual(params.subject,{type:'user',id:'owner'});
+          assert.ok(JSON.stringify(params.scopes)==='["https://www.googleapis.com/auth/drive.readonly"]'||JSON.stringify(params.scopes)==='["https://www.googleapis.com/auth/drive.readonly","https://www.googleapis.com/auth/spreadsheets"]');
           callbackUrl=options.callbackUrl;
           if(startMode==='uncertain')return new Promise(()=>{});
           return {url:'https://connect.vercel.com/authorize/sca_synthetic',verifier:'synthetic-private-verifier'};
-        },tokenImpl:async(_env,signal,params)=>{verifies++;assert.ok(signal instanceof AbortSignal);assert.deepEqual(params.scopes,['https://www.googleapis.com/auth/drive.readonly']);return 'synthetic-only-token';},
-        readTowerImpl:async()=>({readback:'PASS',authority:'TOWER_V06@GOOGLE_DRIVE_PRIVATE',revision:'sha256:'+'c'.repeat(64)})
+        },tokenImpl:async(_env,signal,params)=>{verifies++;assert.ok(signal instanceof AbortSignal);assert.ok(JSON.stringify(params.scopes)==='["https://www.googleapis.com/auth/drive.readonly"]'||JSON.stringify(params.scopes)==='["https://www.googleapis.com/auth/drive.readonly","https://www.googleapis.com/auth/spreadsheets"]');return 'synthetic-only-token';},
+        readTowerImpl:async()=>({readback:'PASS',authority:'TOWER_V06@GOOGLE_DRIVE_PRIVATE',revision:'sha256:'+'c'.repeat(64)}),
+        readSpoolHeaderImpl:async()=>({spreadsheetId:'1M2maKkuEjxumZRa145dzei7dEPFi2yKsKlUf7_scC-E',title:'Spool'})
       });
     }
     if(decision.setCookie)res.setHeader('Set-Cookie',decision.setCookie);
@@ -62,8 +64,8 @@ try{
     page.on('pageerror',e=>errors.push(e.message));
     await page.route('https://connect.vercel.com/**',route=>{
       assert.equal(route.request().url(),'https://connect.vercel.com/authorize/sca_synthetic');
-      const state=new URL(callbackUrl).searchParams.get('state');
-      return route.fulfill({status:302,headers:{Location:baseUrl+'/api/google-drive-return?state='+state},body:''});
+      const callback=new URL(callbackUrl);
+      return route.fulfill({status:302,headers:{Location:baseUrl+'/api/google-drive-return?state='+callback.searchParams.get('state')+'&profile='+callback.searchParams.get('profile')},body:''});
     });
     await page.goto(baseUrl+'/google-drive-connect.html');
     await page.getByRole('button',{name:'Entrar na sessão privada'}).waitFor();
@@ -94,6 +96,23 @@ try{
     assert.ok(overflow.scrollWidth<=overflow.innerWidth+1,
       `${label} consent page overflows after readback: ${JSON.stringify(overflow)}`);
     assert.deepEqual(errors,[]);await context.close();
+  }
+  {
+    const context=await browser.newContext(),page=await context.newPage();
+    await page.goto(baseUrl+'/google-drive-connect.html');await page.getByLabel('Senha do NEXO').fill(password);
+    await page.getByRole('button',{name:'Entrar na sessão privada'}).click();
+    await page.getByText(/não fica limitado a uma planilha específica/).waitFor();
+    assert.equal(await page.getByRole('button',{name:'Preparar confirmação de Drive + Sheets'}).isEnabled(),true);
+    const before=starts;
+    await page.getByRole('button',{name:'Preparar confirmação de Drive + Sheets'}).click();assert.equal(starts,before,'unchecked Sheets consent never reaches start');
+    await page.getByLabel(/Autorizo o acesso persistente de leitura ao Drive/).check();
+    await page.getByRole('button',{name:'Preparar confirmação de Drive + Sheets'}).click();
+    await page.getByRole('link',{name:'Abrir confirmação de Drive + Sheets'}).waitFor();assert.equal(starts,before+1);
+    await page.getByRole('link',{name:'Abrir confirmação de Drive + Sheets'}).click();
+    await page.getByRole('button',{name:'Conferir Tower e leitura do spool'}).waitFor();
+    await page.getByRole('button',{name:'Conferir Tower e leitura do spool'}).click();
+    await page.getByText('Leituras da Tower e do spool verificadas. Nenhuma gravação foi executada; o acesso de escrita não foi testado.').waitFor();
+    await context.close();
   }
   startMode='uncertain';
   const context=await browser.newContext(),page=await context.newPage();

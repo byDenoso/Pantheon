@@ -46,3 +46,12 @@ test('leaving a page during discovery cancels registration even if discovery com
   });
   assert.equal(discoverySignal.aborted,true);assert.equal(registrations,0);assert.equal(result.state,'UNAVAILABLE');
 });
+test('legacy async registration finishing after disposal removes the late tool',async()=>{
+  const lifecycle=new AbortController();const removed=[];
+  const result=await registerWebMcp({
+    async registerTool(){lifecycle.abort();await Promise.resolve();},
+    unregisterTool(name){removed.push(name);}
+  },{signal:lifecycle.signal,readStatus:async()=>({tools:[publicTool]})});
+  assert.equal(result.state,'UNAVAILABLE');assert.deepEqual(result.registered,[]);
+  assert.deepEqual(removed,['nexo_search_atlas']);
+});

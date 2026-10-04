@@ -53,7 +53,12 @@ type G6Graph = {
 
 declare global {
   interface Window {
-    G6?: { Graph: new (options: any) => G6Graph };
+    G6?: {
+      Graph: new (options: any) => G6Graph;
+      ExtensionCategory?: { PLUGIN?: string };
+      getExtension?: (category: string, type: string) => unknown;
+      register?: (category: string, type: string, extension: new (...args: any[]) => unknown) => void;
+    };
   }
 }
 
@@ -173,6 +178,51 @@ function createG6Graph(
     );
     return null;
   }
+}
+
+const ATLAS_MINIMAP_PLUGIN_TYPE = 'atlas-lifecycle-safe-minimap';
+
+function registerAtlasMinimap(runtime: NonNullable<Window['G6']>): string | null {
+  if (typeof runtime.getExtension !== 'function' || typeof runtime.register !== 'function') return null;
+  if (runtime.getExtension('plugin', ATLAS_MINIMAP_PLUGIN_TYPE)) return ATLAS_MINIMAP_PLUGIN_TYPE;
+
+  const MinimapBase = runtime.getExtension('plugin', 'minimap') as (new (...args: any[]) => any) | undefined;
+  if (typeof MinimapBase !== 'function') return null;
+
+  class AtlasLifecycleSafeMinimap extends MinimapBase {
+    private atlasDisposed = false;
+
+    constructor(...args: any[]) {
+      super(...args);
+      // G6's debounced AFTER_RENDER callback calls these methods later through
+      // the instance. Guard those entry points so a timer already queued before
+      // destroy cannot read the disposed graph model.
+      for (const methodName of [
+        'renderMinimap', 'renderMask', 'updateMask', 'setCamera',
+        'onMaskDragStart', 'onMaskDrag', 'onMaskDragEnd',
+      ]) {
+        const original = (this as any)[methodName];
+        if (typeof original !== 'function') continue;
+        (this as any)[methodName] = function (...methodArgs: any[]) {
+          if ((this as any).atlasDisposed) return;
+          return original.apply(this, methodArgs);
+        };
+      }
+    }
+
+    destroy(): void {
+      if (this.atlasDisposed) return;
+      this.atlasDisposed = true;
+      const onRender = (this as any).onRender;
+      const onTransform = (this as any).onTransform;
+      onRender?.cancel?.();
+      onTransform?.cancel?.();
+      super.destroy();
+    }
+  }
+
+  runtime.register(runtime.ExtensionCategory?.PLUGIN || 'plugin', ATLAS_MINIMAP_PLUGIN_TYPE, AtlasLifecycleSafeMinimap);
+  return ATLAS_MINIMAP_PLUGIN_TYPE;
 }
 
 function stampG6Metrics(
@@ -555,6 +605,7 @@ function Metro2DView({
     const container = containerRef.current;
     const labelLayer = labelLayerRef.current;
     const leaderLayer = leaderLayerRef.current;
+    const G6Runtime = window.G6;
     const Graph = window.G6?.Graph;
     if (!surface || !container || !labelLayer || !leaderLayer || !Graph) {
       if (container) {
@@ -574,6 +625,7 @@ function Metro2DView({
     }
 
     const compact = isCompactRenderer(container);
+    const minimapType = compact ? null : registerAtlasMinimap(G6Runtime!);
     container.dataset.g6Profile = compact ? 'compact-touch' : 'desktop';
     container.dataset.g6Theme = theme;
     const graph = createG6Graph(Graph, {
@@ -693,11 +745,11 @@ function Metro2DView({
           },
           offset: [12, 12],
         },
-        {
+        ...(minimapType ? [{
           key: 'minimap',
-          type: 'minimap',
+          type: minimapType,
           size: [176, 108],
-        },
+        }] : []),
       ],
     });
     if (!graph) return;

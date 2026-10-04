@@ -33,6 +33,11 @@ export async function registerWebMcp(context:ModelContext|undefined,{readStatus=
         execute:(args,invocation)=>callTool(tool,args,invocation?.signal
           ?AbortSignal.any([controller.signal,invocation.signal]):controller.signal)}, {signal:controller.signal});
       registered.push(name);
+      if(controller.signal.aborted){
+        // Legacy asynchronous registration can finish after page disposal.
+        try{context.unregisterTool?.(name);}catch{/* Native signals already removed it. */}
+        controller.signal.throwIfAborted();
+      }
     }
     return {state:registered.length?'REGISTERED':'UNAVAILABLE',registered,dispose};
   }catch{

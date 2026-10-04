@@ -72,3 +72,7 @@ Sources used for the integration design: [Google server-side OAuth](https://deve
 `/api/mcp` expõe ferramentas públicas de leitura com schemas estritos; `/api/mcp/status` e `get_capabilities` permitem descobrir disponibilidade e proveniência. As ferramentas operacionais adicionais exigem autenticação e papéis autorizados no servidor.
 
 Em navegadores que oferecem WebMCP, o Atlas registra apenas ferramentas públicas, disponíveis e marcadas como somente leitura, usando o catálogo desse mesmo servidor. O registro detecta `document.modelContext` da especificação atual e `navigator.modelContext` de implementações anteriores. Navegadores sem suporte continuam com a UI e o MCP HTTP; nenhum suporte é simulado.
+
+### Dependência do mapa 2D
+
+O loader do Atlas usa G6 5.1.1 com verificação de integridade SHA-384 do bundle oficial do npm. Unpkg e jsDelivr servem a mesma versão; não há uma tentativa de vendor local sem arquivo. Tags que falham são removidas para que uma nova tentativa carregue a dependência novamente.

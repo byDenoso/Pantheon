@@ -188,13 +188,13 @@ export default async function handler(req,res) {
     if(route==='personal'){
       if(req.method!=='GET')return send({error:'METHOD_NOT_ALLOWED'},405);
       if(!privateAccess)return send({error:'AUTH_REQUIRED'},401);
-      return send(await buildPersonalSnapshot({env,now,reader:readProvider}));
+      return send(await buildPersonalSnapshot({env:providerEnv,now,reader:readProvider}));
     }
     if(route==='personal-action'){
       if(req.method!=='POST')return send({error:'METHOD_NOT_ALLOWED'},405);
       if(!privateAccess)return send({error:'AUTH_REQUIRED'},401);
       if(!sameOrigin(req))return send({error:'ORIGIN_NOT_ALLOWED'},403);
-      try{const body=await requestBody(req);return send(await executePersonalAction({env,now:new Date(now).toISOString(),signal:req.signal,proposal:body.proposal,approval:body.approval}));}
+      try{const body=await requestBody(req);return send(await executePersonalAction({env:providerEnv,now:new Date(now).toISOString(),signal:req.signal,proposal:body.proposal,approval:body.approval}));}
       catch(error){const [code,status]=personalError(error);return send({error:code},status);}
     }
     if(req.method!=='GET')return send({error:'WRITES_DISABLED'},405);

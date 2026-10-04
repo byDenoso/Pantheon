@@ -1,9 +1,9 @@
 import {atlasRouteParam} from './route-params.ts';
-const LOCAL_G6_SOURCE = new URL(`${import.meta.env.BASE_URL}vendor/g6.min.js`, window.location.origin).href;
+export const G6_VERSION = '5.1.1';
+const G6_SCRIPT_INTEGRITY = 'sha384-UD8c5szelcdeclSWhUiFuz1tiZeIweaJygrWmWcSllSAfocHUyRyQZ5iiQ0J1MGm';
 export const G6_SOURCES = [
-  LOCAL_G6_SOURCE,
-  'https://unpkg.com/@antv/g6@5/dist/g6.min.js',
-  'https://cdn.jsdelivr.net/npm/@antv/g6@5/dist/g6.min.js',
+  `https://unpkg.com/@antv/g6@${G6_VERSION}/dist/g6.min.js`,
+  `https://cdn.jsdelivr.net/npm/@antv/g6@${G6_VERSION}/dist/g6.min.js`,
 ] as const;
 
 let loading:Promise<void>|null=null;
@@ -20,14 +20,18 @@ function loadScript(src:string,timeoutMs=4500):Promise<void>{
       clearTimeout(timer);
       script.removeEventListener('load',onLoad);
       script.removeEventListener('error',onError);
-      if(error)reject(error);else resolve();
+      if(error){
+        // A retry must create a new request, rather than reuse a failed tag.
+        if(script.dataset.atlasDependency==='g6')script.remove();
+        reject(error);
+      }else resolve();
     };
     const onLoad=()=>((window as any).G6?.Graph?finish():finish(new Error('G6 global ausente após o carregamento')));
     const onError=()=>finish(new Error(`Falha ao carregar ${src}`));
     const timer=window.setTimeout(()=>finish(new Error(`Timeout ao carregar ${src}`)),timeoutMs);
     script.addEventListener('load',onLoad,{once:true});
     script.addEventListener('error',onError,{once:true});
-    if(!existing){script.src=src;script.async=true;script.crossOrigin='anonymous';script.referrerPolicy='no-referrer';script.dataset.atlasDependency='g6';document.head.appendChild(script);}
+    if(!existing){script.src=src;script.async=true;script.crossOrigin='anonymous';script.integrity=G6_SCRIPT_INTEGRITY;script.referrerPolicy='no-referrer';script.dataset.atlasDependency='g6';document.head.appendChild(script);}
   });
 }
 
@@ -42,7 +46,8 @@ export function ensureAtlasG6():Promise<void>{
       try{
         await loadScript(source);
         if((window as any).G6?.Graph){
-          document.documentElement.dataset.atlasG6Source=source===LOCAL_G6_SOURCE?'local':source.includes('jsdelivr')?'jsdelivr':'unpkg';
+          document.documentElement.dataset.atlasG6Source=source.includes('jsdelivr')?'jsdelivr':'unpkg';
+          document.documentElement.dataset.atlasG6Version=G6_VERSION;
           return;
         }
       }catch(error){lastError=error;}

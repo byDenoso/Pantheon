@@ -49,12 +49,22 @@ try {
   }
   // Exercise rapid G6 teardown/recreation while render and fit transitions may
   // still be active; this surfaced late getData errors in CI.
+  const minimap = page.locator('.g6-minimap');
+  const minimapCanvas = minimap.locator('canvas').first();
+  if (width >= 600) {
+   await minimap.waitFor({ state: 'visible' });
+   await minimapCanvas.waitFor({ state: 'attached' });
+  }
   for (let cycle = 0; cycle < 2; cycle += 1) {
    await page.getByRole('button',{name:'Ver como tabela'}).click();
    await page.getByRole('button',{name:'Ver grafo'}).click();
   }
   // G6 owns several layered canvases inside this renderer.
   await page.locator('#atlas-metro-g6 canvas').first().waitFor();
+  if (width >= 600) {
+   await minimap.waitFor({ state: 'visible' });
+   await minimapCanvas.waitFor({ state: 'attached' });
+  }
   await page.getByRole('button',{name:'Ver como tabela'}).click();
   const table=page.locator('.nexo-graph-table');
   const station=table.locator('tbody tr:not(.selected) .nexo-graph-table-select').first();
@@ -62,6 +72,14 @@ try {
   await station.focus();await page.keyboard.press('Enter');
   assert.equal((await table.locator('tbody tr.selected .nexo-graph-table-select').innerText()).trim(),stationName);
   await page.getByRole('button',{name:'Ver grafo'}).click();
+  await page.locator('#atlas-metro-g6 canvas').first().waitFor();
+  if (width >= 600) {
+   await minimap.waitFor({ state: 'visible' });
+   await minimapCanvas.waitFor({ state: 'attached' });
+  }
+  // The upstream minimap debounces redraw by 128 ms; let a full trailing
+  // window pass so late callbacks surface as pageerrors before this test ends.
+  await page.waitForTimeout(250);
   assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
   assert.deepEqual(errors, []); await page.close();
  }
