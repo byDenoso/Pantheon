@@ -21,3 +21,17 @@ test('operational diagnostics retain a safe cause without logging provider bodie
     assert.equal(await operationalSource('READ_CANONICAL_CONTEXT',async()=>42),42);
   }finally{console.warn=original;}
 });
+
+test('Google operational diagnostics are allowlisted and not returned to clients',async()=>{
+  const original=console.warn,logs=[];
+  console.warn=value=>logs.push(JSON.parse(value));
+  try{
+    for(const diagnostic of ['OIDC_MISSING','CONNECT_USER_AUTHORIZATION_REQUIRED','private-token:user@example.test']){
+      const error=Object.assign(new Error('private-provider-body'),{code:'AUTH_REQUIRED',googleDiagnostic:diagnostic});
+      await assert.rejects(()=>operationalSource('READ_CANONICAL_CONTEXT',()=>{throw error;}),out=>
+        out.code==='AUTH_REQUIRED'&&out.message==='AUTH_REQUIRED'&&out.googleDiagnostic===undefined);
+    }
+    assert.deepEqual(logs.map(x=>x.diagnostic),['OIDC_MISSING','CONNECT_USER_AUTHORIZATION_REQUIRED',undefined]);
+    assert.equal(JSON.stringify(logs).includes('private-'),false);
+  }finally{console.warn=original;}
+});
