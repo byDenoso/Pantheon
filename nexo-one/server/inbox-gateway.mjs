@@ -11,7 +11,7 @@
 // Gate actions (APPROVE_CHARTER, CANONIZE, ...) are refused: they are born only in a conversation with Dener.
 import { createHash, createPublicKey, createVerify } from 'node:crypto';
 import { googleToken } from './adapters/google.mjs';
-import { GOOGLE_WRITE_SCOPES } from './adapters/connect.mjs';
+import { GOOGLE_SHEETS_SPOOL_SCOPES,googleRuntimeEnvironment } from './adapters/connect.mjs';
 import { isOperationalEnvelope } from './mcp/operational-queue.mjs';
 
 const REPO = 'byDenoso/TCC', BRANCH = 'nexo-inbox', API = 'https://api.github.com';
@@ -43,9 +43,8 @@ async function sheetJson(token,url,options={}) {
 }
 
 export async function readSpool(env,req) {
-  const requestOidc=req?.headers?.['x-vercel-oidc-token'];
-  const scopedEnv=requestOidc&&!env.VERCEL_OIDC_TOKEN?{...env,VERCEL_OIDC_TOKEN:requestOidc}:env;
-  const token=await googleToken(scopedEnv,undefined,{scopes:GOOGLE_WRITE_SCOPES.sheets});
+  const scopedEnv=googleRuntimeEnvironment(env,req?.headers);
+  const token=await googleToken(scopedEnv,undefined,{scopes:GOOGLE_SHEETS_SPOOL_SCOPES});
   const spreadsheetId=String(env.NEXO_SPOOL_ID||SPOOL_ID_DEFAULT).trim();
   const meta=await sheetJson(token,`${SHEETS_API}/${encodeURIComponent(spreadsheetId)}?fields=sheets.properties(title,index)`);
   const first=[...(meta.sheets||[])].sort((a,b)=>(a.properties?.index||0)-(b.properties?.index||0))[0];
