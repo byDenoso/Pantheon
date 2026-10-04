@@ -1,6 +1,6 @@
 {
   "acked": {},
-  "base_commit": "2bbe7af6cdc9d906a5bbc853a2046e47b7f667ed",
+  "base_commit": "46554bf38ecd174bcc4457c188b5c48287d1d45d",
   "battery_runs": {
     "acknowledged": {
       "37232450153:1": {
@@ -22,7 +22,7 @@
     },
     "contract": "BATTERY_RUN_CURSOR_V1",
     "last_acknowledged_count": 0,
-    "last_canonical_check": "2026-10-04T21:34:25Z",
+    "last_canonical_check": "2026-10-04T21:36:05Z",
     "pending": {
       "36149285633:1": {
         "battery_id": "bat-runner-canary-1",
@@ -284,9 +284,9 @@
         "battery_id": "bat-fam-w0wa-bao-sn-multi-0929t0604",
         "input_sha256": "sha256:ddd49e4b2a3c9df273e2bf987c9c0d48dec6c08357981b4adcde8fbc213251e8",
         "invocation_sha256": "legacy",
-        "last_attempted_at": "2026-10-04T21:34:25Z",
+        "last_attempted_at": "2026-10-04T21:36:05Z",
         "reason": "DEFERRED_DEPENDENCY",
-        "retry_count": 10,
+        "retry_count": 11,
         "run_attempt": 1,
         "run_id": 36581570124,
         "run_ref": "actions/runs/36581570124"
@@ -299,9 +299,9 @@
         "battery_id": "bat-fam-w0wa-bao-sn-multi-0929t2312",
         "input_sha256": "sha256:cc0b291b47f8ed9e6bfe293be2654e570fd0805aaa5d825cbcf1fccf01bab80a",
         "invocation_sha256": "legacy",
-        "last_attempted_at": "2026-10-04T21:34:25Z",
+        "last_attempted_at": "2026-10-04T21:36:05Z",
         "reason": "DEFERRED_DEPENDENCY",
-        "retry_count": 10,
+        "retry_count": 11,
         "run_attempt": 1,
         "run_id": 36643989160,
         "run_ref": "actions/runs/36643989160"
@@ -314,9 +314,9 @@
         "battery_id": "bat-fam-w0wa-bao-sn-multi-0929t2316",
         "input_sha256": "sha256:f704e2e9d668d126fa8da44004261e3ab3e3aa8ffe3d579997d482139e2229cc",
         "invocation_sha256": "legacy",
-        "last_attempted_at": "2026-10-04T21:34:25Z",
+        "last_attempted_at": "2026-10-04T21:36:05Z",
         "reason": "DEFERRED_DEPENDENCY",
-        "retry_count": 10,
+        "retry_count": 11,
         "run_attempt": 1,
         "run_id": 36644374490,
         "run_ref": "actions/runs/36644374490"
@@ -329,9 +329,9 @@
         "battery_id": "bat-fam-desi-dr1-fullshape-0929t2322",
         "input_sha256": "sha256:a61910a1a3e128f4860a4fcbcca205998d5a843f7552590c85112e660b56c46c",
         "invocation_sha256": "legacy",
-        "last_attempted_at": "2026-10-04T21:34:25Z",
+        "last_attempted_at": "2026-10-04T21:36:05Z",
         "reason": "DEFERRED_DEPENDENCY",
-        "retry_count": 10,
+        "retry_count": 11,
         "run_attempt": 1,
         "run_id": 36644877751,
         "run_ref": "actions/runs/36644877751"
@@ -344,9 +344,9 @@
         "battery_id": "bat-fam-w0wa-bao-sn-multi-0929t2322",
         "input_sha256": "sha256:2e6c070dfec152a4f16e50711532e289fccfe7d593153d4422c6764f0d6d05c5",
         "invocation_sha256": "legacy",
-        "last_attempted_at": "2026-10-04T21:34:25Z",
+        "last_attempted_at": "2026-10-04T21:36:05Z",
         "reason": "DEFERRED_DEPENDENCY",
-        "retry_count": 10,
+        "retry_count": 11,
         "run_attempt": 1,
         "run_id": 36644879989,
         "run_ref": "actions/runs/36644879989"
@@ -359,9 +359,9 @@
         "battery_id": "bat-fam-desi-dr1-fullshape-0929t2323",
         "input_sha256": "sha256:d9aa8dea0d5c7c47d5a4c5e538cc55233236f0b8e4ea2fbef77cf6fe6f753a79",
         "invocation_sha256": "legacy",
-        "last_attempted_at": "2026-10-04T21:34:25Z",
+        "last_attempted_at": "2026-10-04T21:36:05Z",
         "reason": "DEFERRED_DEPENDENCY",
-        "retry_count": 10,
+        "retry_count": 11,
         "run_attempt": 1,
         "run_id": 36645015139,
         "run_ref": "actions/runs/36645015139"
@@ -524,9 +524,9 @@
         "battery_id": "bat-dr1-roadmap-20260930-01",
         "input_sha256": "sha256:dcdf63f498f38e44d72eb914fc2f5fcc34b0fcbfb55463e0abe81e2e295cf613",
         "invocation_sha256": "legacy",
-        "last_attempted_at": "2026-10-04T21:34:25Z",
+        "last_attempted_at": "2026-10-04T21:36:05Z",
         "reason": "DEFERRED_DEPENDENCY",
-        "retry_count": 41,
+        "retry_count": 42,
         "run_attempt": 1,
         "run_id": 36772641788,
         "run_ref": "actions/runs/36772641788"
@@ -539,9 +539,9 @@
         "battery_id": "bat-fam-a5ad217c776268e2f5a65a7d5c2baf84",
         "input_sha256": "sha256:91dc0b478e17dda2b1286a5974dc2bb1835b29ffecefa9e738157df6d74092af",
         "invocation_sha256": "legacy",
-        "last_attempted_at": "2026-10-04T21:34:25Z",
+        "last_attempted_at": "2026-10-04T21:36:05Z",
         "reason": "DEFERRED_DEPENDENCY",
-        "retry_count": 41,
+        "retry_count": 42,
         "run_attempt": 1,
         "run_id": 36777174466,
         "run_ref": "actions/runs/36777174466"
@@ -554,9 +554,9 @@
         "battery_id": "bat-fam-w0wa-bao-sn-multi-0930t2117",
         "input_sha256": "sha256:26da45370b1fcfc96f26f364b4b4d714d52f328cf9ad6639d35c1ec4fbcc7211",
         "invocation_sha256": "legacy",
-        "last_attempted_at": "2026-10-04T21:34:25Z",
+        "last_attempted_at": "2026-10-04T21:36:05Z",
         "reason": "DEFERRED_DEPENDENCY",
-        "retry_count": 41,
+        "retry_count": 42,
         "run_attempt": 1,
         "run_id": 36778520788,
         "run_ref": "actions/runs/36778520788"
@@ -569,9 +569,9 @@
         "battery_id": "bat-fam-59785abd29506a0db4f415e26c420ccb",
         "input_sha256": "sha256:4856efce37adbfe2015dcdbd10bda0e37ed0adc9e7d23efde6ee9c2ed2fc12b5",
         "invocation_sha256": "legacy",
-        "last_attempted_at": "2026-10-04T21:34:25Z",
+        "last_attempted_at": "2026-10-04T21:36:05Z",
         "reason": "DEFERRED_DEPENDENCY",
-        "retry_count": 41,
+        "retry_count": 42,
         "run_attempt": 1,
         "run_id": 36779436467,
         "run_ref": "actions/runs/36779436467"
@@ -584,9 +584,9 @@
         "battery_id": "bat-fam-32bcf249e0172cddcad890c8624678e0",
         "input_sha256": "sha256:783322c9e76cb1e25ad00a46cbd6a5950686cd4314f13f1ebb4a59bdd4543bfe",
         "invocation_sha256": "legacy",
-        "last_attempted_at": "2026-10-04T21:34:25Z",
+        "last_attempted_at": "2026-10-04T21:36:05Z",
         "reason": "DEFERRED_DEPENDENCY",
-        "retry_count": 41,
+        "retry_count": 42,
         "run_attempt": 1,
         "run_id": 36779615398,
         "run_ref": "actions/runs/36779615398"
@@ -599,9 +599,9 @@
         "battery_id": "bat-fam-a16e9bbd0fe4582fb77160a5dbe33a04",
         "input_sha256": "sha256:8ebfa64562bbe14912cb03c03d0c6544caf8e0caefc3bc05bce1a58d3d6bf256",
         "invocation_sha256": "legacy",
-        "last_attempted_at": "2026-10-04T21:34:25Z",
+        "last_attempted_at": "2026-10-04T21:36:05Z",
         "reason": "DEFERRED_DEPENDENCY",
-        "retry_count": 41,
+        "retry_count": 42,
         "run_attempt": 1,
         "run_id": 36785185446,
         "run_ref": "actions/runs/36785185446"
@@ -614,9 +614,9 @@
         "battery_id": "bat-fam-faed792cc185e52cf88b3f6e5cc8b83a",
         "input_sha256": "sha256:cd0958bd27a301d4ff7bd0df2665da84e94505d8b20fe4f1207ec076ba25f8c0",
         "invocation_sha256": "legacy",
-        "last_attempted_at": "2026-10-04T21:34:25Z",
+        "last_attempted_at": "2026-10-04T21:36:05Z",
         "reason": "DEFERRED_DEPENDENCY",
-        "retry_count": 41,
+        "retry_count": 42,
         "run_attempt": 1,
         "run_id": 36786481107,
         "run_ref": "actions/runs/36786481107"
@@ -629,9 +629,9 @@
         "battery_id": "bat-fam-da6b8bc63cedc9fc6e300a0b32b7bff4",
         "input_sha256": "sha256:93b925c265647d641fa3344d7de5e1e1cdd776765b2dcf7b2c61c1d8d8cd68e6",
         "invocation_sha256": "legacy",
-        "last_attempted_at": "2026-10-04T21:34:25Z",
+        "last_attempted_at": "2026-10-04T21:36:05Z",
         "reason": "DEFERRED_DEPENDENCY",
-        "retry_count": 41,
+        "retry_count": 42,
         "run_attempt": 1,
         "run_id": 36790361198,
         "run_ref": "actions/runs/36790361198"
@@ -644,9 +644,9 @@
         "battery_id": "bat-fam-03d6dd7367790e47dd689623394493cb",
         "input_sha256": "sha256:f046ab99bc91011956247d4b12c3684e132f1fb0def49ff30a455395787bec16",
         "invocation_sha256": "legacy",
-        "last_attempted_at": "2026-10-04T21:34:25Z",
+        "last_attempted_at": "2026-10-04T21:36:05Z",
         "reason": "DEFERRED_DEPENDENCY",
-        "retry_count": 41,
+        "retry_count": 42,
         "run_attempt": 1,
         "run_id": 36790488605,
         "run_ref": "actions/runs/36790488605"
@@ -659,9 +659,9 @@
         "battery_id": "bat-fam-2e4d9fb3e0827bda3f48b2abddbce35a",
         "input_sha256": "sha256:1d054bfd59e653d44982e171bc82918c3917e8ae6d25e19d36b70d74341c7940",
         "invocation_sha256": "legacy",
-        "last_attempted_at": "2026-10-04T21:34:25Z",
+        "last_attempted_at": "2026-10-04T21:36:05Z",
         "reason": "DEFERRED_DEPENDENCY",
-        "retry_count": 15,
+        "retry_count": 16,
         "run_attempt": 1,
         "run_id": 36791250338,
         "run_ref": "actions/runs/36791250338"
@@ -734,9 +734,9 @@
         "battery_id": "bat-fam-ef703bc5afc01a199a77d042313c0909",
         "input_sha256": "sha256:36de090e30f9978b74addc28dacc26e01b5585f6efa9ba844bd699e856606f7b",
         "invocation_sha256": "legacy",
-        "last_attempted_at": "2026-10-04T21:34:25Z",
+        "last_attempted_at": "2026-10-04T21:36:05Z",
         "reason": "DEFERRED_DEPENDENCY",
-        "retry_count": 9,
+        "retry_count": 10,
         "run_attempt": 1,
         "run_id": 36808948476,
         "run_ref": "actions/runs/36808948476"
@@ -914,9 +914,9 @@
         "battery_id": "bat-fam-e2e2f781de61a5f261e731b79703a13c",
         "input_sha256": "sha256:4dbe9bbdbd2dca1526cab38672c6c46ea4e19f07f0ab47ee5748f7646b9e6007",
         "invocation_sha256": "legacy",
-        "last_attempted_at": "2026-10-04T21:34:25Z",
+        "last_attempted_at": "2026-10-04T21:36:05Z",
         "reason": "DEFERRED_DEPENDENCY",
-        "retry_count": 8,
+        "retry_count": 9,
         "run_attempt": 1,
         "run_id": 36925390159,
         "run_ref": "actions/runs/36925390159"
@@ -929,9 +929,9 @@
         "battery_id": "bat-fam-251c8339d38b705e812c05765cabe696",
         "input_sha256": "sha256:e869605b0cdf9c8ddd20769f2a74781d2cfc1a3a6173745fbc5230aff5ebcb55",
         "invocation_sha256": "legacy",
-        "last_attempted_at": "2026-10-04T21:34:25Z",
+        "last_attempted_at": "2026-10-04T21:36:05Z",
         "reason": "DEFERRED_DEPENDENCY",
-        "retry_count": 8,
+        "retry_count": 9,
         "run_attempt": 1,
         "run_id": 36934671739,
         "run_ref": "actions/runs/36934671739"
@@ -944,9 +944,9 @@
         "battery_id": "bat-fam-2575d2681b654237dbc1c2b1ce596ea0",
         "input_sha256": "sha256:b8b747447b476f5082c587298b065996d86b9015d19836b9bbeecea0136fbf04",
         "invocation_sha256": "legacy",
-        "last_attempted_at": "2026-10-04T21:34:25Z",
+        "last_attempted_at": "2026-10-04T21:36:05Z",
         "reason": "DEFERRED_DEPENDENCY",
-        "retry_count": 8,
+        "retry_count": 9,
         "run_attempt": 1,
         "run_id": 36955581497,
         "run_ref": "actions/runs/36955581497"
@@ -968,14 +968,14 @@
       }
     },
     "scan": {
-      "last_advanced_at": "2026-10-04T21:34:25Z",
-      "last_complete_at": "2026-10-04T21:34:25Z",
+      "last_advanced_at": "2026-10-04T21:36:05Z",
+      "last_complete_at": "2026-10-04T21:36:05Z",
       "last_full_sweep_at": "2026-10-04T20:40:16Z",
       "next_page": 1,
       "window": {
-        "end": "2021-12-31",
-        "start": "2021-01-01",
-        "through": "2021-12-31T23:59:59Z"
+        "end": "2020-12-31",
+        "start": "2020-01-01",
+        "through": "2020-12-31T23:59:59Z"
       },
       "window_queue": []
     }
@@ -1459,6 +1459,8 @@
     "inbox/scheduled-operator-c-ready-lifecycle-change-20260930t1213z.json": "881ed2d541c35d9ecacae9e85a7ab7a73ab1f425",
     "inbox/scheduled-operator-c-tower-native-merged-20261002.json": "b16a292676fbf6bf138256cd3d6f4e0d8de617ed",
     "inbox/scheduled-operator-closed-roadmap-ack-regression-20261004.json": "0fcc9b41cdcc9c30b42be86603f0cf8ce59f28a8",
+    "inbox/scheduled-operator-ddemega016-artifact-critical-20261004.json": "7cee1617a12edbf0eed59c7dec2110dcca30c6d2",
+    "inbox/scheduled-operator-ddemega016-result-critical-20261004.json": "c14d1b5d6bcf7a01fc2fc999d5dd28ba0f80fcdd",
     "inbox/scheduled-operator-desi-t02-product-gap-20261004t1834z.json": "3dc870de5cb49dd24e4ffa44382f702eece3cd70",
     "inbox/scheduled-operator-drive-control-403-20261004t1328z.json": "556d8b96fc621e108074c45b75e8ac82c33b447b",
     "inbox/scheduled-operator-h0lcdm005-shoes-matrix-freeze-20261004.json": "49717282789ebd54912129b4d560bcfbc2b0e787",
@@ -1637,13 +1639,13 @@
     "inbox/scheduled-executor-batch-646a1ab8f0f2860e.json": {
       "blob_sha": "4ec491f1dbaccce3b010351e7d1ec07910cfdfdd",
       "fingerprint": "6a3fb67521690ac71e34dabaa416d3d166c7fa794ea9a13428d66d8c3ad6f347",
-      "observed_at": "2026-10-04T21:34:23Z",
+      "observed_at": "2026-10-04T21:36:04Z",
       "reason": "NOT_REPORTED"
     },
     "inbox/scheduled-refutador-batch-71ed43b5cf944d50.json": {
       "blob_sha": "a31b0df1cd4b35dad88f8a4bcdf660b535ffe89f",
       "fingerprint": "16245cde098d804253493aae8090e9e53d5677d3fd1a01d5a9b0be1a631c7d04",
-      "observed_at": "2026-10-04T21:34:23Z",
+      "observed_at": "2026-10-04T21:36:04Z",
       "reason": "NOT_REPORTED"
     }
   },
@@ -5893,6 +5895,62 @@
         }
       ],
       "tower_revision": "sha256:1ecde7c2a8a3b3aca78a3d20d53c15af1865a39259c2f703506a6845906e1a8e"
+    },
+    "inbox/scheduled-operator-ddemega016-artifact-critical-20261004.json": {
+      "fingerprint": "e780b3b86f57b113a4d888d35016fc5f36a682ef1acaa040d19c85cdb698308f",
+      "observed_at": "2026-10-04T21:36:04Z",
+      "outcome": "APPLIED",
+      "receipt_ids": [
+        "OR-1478c84b9c0a9657f451b50748ab4188"
+      ],
+      "receipts": [
+        {
+          "contract": "OPERATION_RECEIPT_V1",
+          "effect_id": "envelope-21c6abad9311903d848e4ea2a7628299",
+          "intent_id": "gateway:tcc-323d3233b6540a5f70c70025991f8975",
+          "observed_at": "2026-10-04T21:35:32.210446Z",
+          "occurred_at": "2026-10-04T21:35:32.210431Z",
+          "outcome": "APPLIED",
+          "payload_sha256": "sha256:024eab2fc726a780cb86865689fbb235aa1d6450ee8d1c0883cd61cd7166c103",
+          "reason_code": null,
+          "receipt_id": "OR-1478c84b9c0a9657f451b50748ab4188",
+          "result_revision": "sha256:703dc338913598d6956474702da3bbb29a7ed36986bc0f0a67aeadad523ae058",
+          "retry_condition": null,
+          "source_revision": "sha256:047749f8066138500457090d8103f4b255d2690ea8f4b5a20f9d5e4fa5b31edb",
+          "stage": "APPLIED",
+          "supersedes": null,
+          "visibility": "PUBLIC"
+        }
+      ],
+      "tower_revision": "sha256:0813aa85e6d7fbc8391b9bce36df4e03875c5cf75291bbfc57876f6bb6658a17"
+    },
+    "inbox/scheduled-operator-ddemega016-result-critical-20261004.json": {
+      "fingerprint": "6120671084f0ee67357c3463c62e3334c3da6643bb3e78977d781776e09a963e",
+      "observed_at": "2026-10-04T21:36:04Z",
+      "outcome": "APPLIED",
+      "receipt_ids": [
+        "OR-416849e086108044984a491785b439bd"
+      ],
+      "receipts": [
+        {
+          "contract": "OPERATION_RECEIPT_V1",
+          "effect_id": "envelope-7d820b502b422419af17b0656e59c241",
+          "intent_id": "gateway:tcc-2295bcaa0026fde2917fe304c513a673",
+          "observed_at": "2026-10-04T21:35:36.295439Z",
+          "occurred_at": "2026-10-04T21:35:36.295425Z",
+          "outcome": "APPLIED",
+          "payload_sha256": "sha256:6c375c569d7a3ae2c2228a9cbde755f1426b395f0722b982af823ac68d93283c",
+          "reason_code": null,
+          "receipt_id": "OR-416849e086108044984a491785b439bd",
+          "result_revision": "sha256:ec63b8bccc2a4a3b68e9eb4ff5b22437ff24c43e056c9b3378ecb13b65b35062",
+          "retry_condition": null,
+          "source_revision": "sha256:047749f8066138500457090d8103f4b255d2690ea8f4b5a20f9d5e4fa5b31edb",
+          "stage": "APPLIED",
+          "supersedes": null,
+          "visibility": "PUBLIC"
+        }
+      ],
+      "tower_revision": "sha256:0813aa85e6d7fbc8391b9bce36df4e03875c5cf75291bbfc57876f6bb6658a17"
     },
     "inbox/scheduled-operator-desi-t02-product-gap-20261004t1834z.json": {
       "fingerprint": "88727cdcfdb1bbaa9e2afbf1a2c1f4a38b50c969ca947bdaf415b709d3a3e026",
