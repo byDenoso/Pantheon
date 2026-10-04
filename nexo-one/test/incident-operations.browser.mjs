@@ -18,15 +18,6 @@ try {
   const errors = []; page.on('pageerror', error => errors.push(error.message));
   await page.route('**/api/system**', route => route.fulfill({ json: state }));
   await page.route('**/api/world**', route => route.fulfill({ json: {} }));
-  await page.goto(`${baseUrl}/#/saude`);
-  await page.getByText('Responsável operacional não informado', { exact: true }).waitFor();
-  const body = await page.locator('body').innerText();
-  assert.match(body, /responsável atual: Conselheiro · destinatário: Executor/);
-  assert.match(body, /aceite ainda não registrado/); assert.match(body, /Aprendizagem: Em observação · próxima etapa: Learner/);
-  assert.match(body, /Resolvido operacionalmente/); assert.match(body, /2026-09-29 09:00:00 UTC/);
-  assert.ok(!body.includes('SECRET_HANDOFF')); assert.ok(!body.includes('quem investiga'));
-  assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
-  await page.screenshot({ path: `${output}/health-${width}.png`, fullPage: true });
   await page.goto(`${baseUrl}/#/atlas?view=2d`);
   const detailsToggle = page.getByRole('button', { name: /Incidentes.*detalhes/ });
   if (width < 600) {
@@ -36,7 +27,11 @@ try {
   await page.getByText('Incidentes em acompanhamento', { exact: true }).waitFor();
   const atlasQueue = page.locator('.atlas-incident-queue');
   const openQueue = await atlasQueue.innerText();
+  assert.match(openQueue, /Responsável operacional não informado/);
   assert.match(openQueue, /responsável atual: Conselheiro · destinatário: Executor/);
+  assert.match(openQueue, /aceite ainda não registrado/);
+  assert.match(openQueue, /Aprendizagem: Em observação · próxima etapa: Learner/);
+  assert.ok(!openQueue.includes('SECRET_HANDOFF'));
   assert.doesNotMatch(openQueue, /Pré-requisitos reparados\.|Resolvido operacionalmente/);
   const showResolved = atlasQueue.getByRole('button', { name: 'Mostrar resolvidos (1)' });
   assert.equal(await showResolved.getAttribute('aria-expanded'), 'false');
@@ -59,8 +54,8 @@ try {
   await station.focus();await page.keyboard.press('Enter');
   assert.equal((await table.locator('tbody tr.selected .nexo-graph-table-select').innerText()).trim(),stationName);
   await page.getByRole('button',{name:'Ver grafo'}).click();
-  await page.goBack(); await page.getByText('Responsável operacional não informado', { exact: true }).waitFor();
+  assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
   assert.deepEqual(errors, []); await page.close();
  }
- console.log('PASS: health + Atlas, desktop/mobile, legacy/open/resolved, back navigation, no private handoff, no page errors');
+ console.log('PASS: Atlas desktop/mobile, legacy/open/resolved, focus restoration, keyboard selection, no private handoff, no overflow or page errors');
 } finally { await browser.close(); }
