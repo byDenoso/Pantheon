@@ -27,12 +27,17 @@ import { Modal } from '../shell/Modal.tsx';
 import { InstrumentHeader } from '../shell/InstrumentHeader.tsx';
 import { StarfieldCanvas } from '../components/StarfieldCanvas.tsx';
 import { useCinematics } from './useCinematics.ts';
-import { Overview } from '../features/system/Overview.tsx';
-import { ActionsView, ExecutionView, InboxView } from '../features/system/Operations.tsx';
-import { CapabilitiesView, IntegrityView, SourcesView, TruthGraphView } from '../features/system/Integrity.tsx';
-import { PersonalCockpit } from '../features/PersonalCockpit.tsx';
 import { parseLabRoute, type LabRoute } from '../features/lab/routes.ts';
 const LabApp = lazy(() => import('../features/lab/LabApp.tsx'));
+const Overview = lazy(() => import('../features/system/Overview.tsx').then(module => ({ default: module.Overview })));
+const InboxView = lazy(() => import('../features/system/Operations.tsx').then(module => ({ default: module.InboxView })));
+const ActionsView = lazy(() => import('../features/system/Operations.tsx').then(module => ({ default: module.ActionsView })));
+const ExecutionView = lazy(() => import('../features/system/Operations.tsx').then(module => ({ default: module.ExecutionView })));
+const TruthGraphView = lazy(() => import('../features/system/Integrity.tsx').then(module => ({ default: module.TruthGraphView })));
+const CapabilitiesView = lazy(() => import('../features/system/Integrity.tsx').then(module => ({ default: module.CapabilitiesView })));
+const SourcesView = lazy(() => import('../features/system/Integrity.tsx').then(module => ({ default: module.SourcesView })));
+const IntegrityView = lazy(() => import('../features/system/Integrity.tsx').then(module => ({ default: module.IntegrityView })));
+const PersonalCockpit = lazy(() => import('../features/PersonalCockpit.tsx').then(module => ({ default: module.PersonalCockpit })));
 
 const stored = (key: string, fallback: string): string => {
   try { return localStorage.getItem(key) || fallback; } catch { return fallback; }
@@ -328,10 +333,10 @@ export default function App() {
               ? <Surface load={system.load} error={system.error} onRetry={system.reload}>
                   <Suspense fallback={<LoadingState label="Carregando módulo…" />}>{systemContent()}</Suspense>
                 </Surface>
-              : <PersonalCockpit view={view} world={world.world} loading={world.loading} error={world.error}
+              : <Suspense fallback={<LoadingState label="Carregando plano pessoal…" />}><PersonalCockpit view={view} world={world.world} loading={world.loading} error={world.error}
                   refresh={() => { void world.refresh(false); system.sync(); }} authenticated={session.session.authenticated}
                   query={personalQuery} setQuery={setPersonalQuery}
-                  context={personalContext} setContext={setPersonalContext} />}
+                  context={personalContext} setContext={setPersonalContext} /></Suspense>}
           </main>
         </div>
 
