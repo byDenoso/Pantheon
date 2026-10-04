@@ -114,9 +114,10 @@ const COSMIC_MOTE_FRAGMENT = `
 varying vec3 vTint; varying float vOpacity; varying float vDepth;
 void main(){
   vec2 p = gl_PointCoord - 0.5; float d = length(p);
-  float cloud = exp(-d * d * 13.0) * (1.0 - smoothstep(0.34, 0.5, d));
-  float filamentCore = exp(-d * d * 62.0);
-  float alpha = (cloud * 0.7 + filamentCore * 0.62) * vOpacity * vDepth;
+  float veil = exp(-d * d * 4.0) * (1.0 - smoothstep(0.35, 0.5, d));
+  float cloud = exp(-d * d * 12.0) * (1.0 - smoothstep(0.34, 0.5, d));
+  float filamentCore = exp(-d * d * 54.0);
+  float alpha = (veil * 0.24 + cloud * 0.62 + filamentCore * 0.48) * vOpacity * vDepth;
   if (alpha < 0.003) discard;
   gl_FragColor = vec4(vTint * (0.78 + filamentCore * 0.55), alpha);
   #include <colorspace_fragment>
@@ -592,7 +593,7 @@ export function ObservatoryScene({
       }
       if (runtime.cosmicLines) {
         const lineMaterial = runtime.cosmicLines.material as LineBasicMaterial;
-        lineMaterial.opacity = nextTheme === 'dark' ? 0.68 : 0.48;
+        lineMaterial.opacity = nextTheme === 'dark' ? 0.26 : 0.18;
         const lineBlending = nextTheme === 'dark' ? AdditiveBlending : NormalBlending;
         if (lineMaterial.blending !== lineBlending) {
           lineMaterial.blending = lineBlending;
@@ -618,7 +619,7 @@ export function ObservatoryScene({
         const web = buildCosmicWebGeometry(nextLayout, quality);
         const lineCount = web.filaments.getAttribute('position')?.count || 0;
         if (lineCount > 0) {
-          const cosmicLineMaterial = new LineBasicMaterial({ vertexColors: true, transparent: true, opacity: nextTheme === 'dark' ? 0.68 : 0.48, depthWrite: false, blending: nextTheme === 'dark' ? AdditiveBlending : NormalBlending });
+          const cosmicLineMaterial = new LineBasicMaterial({ vertexColors: true, transparent: true, opacity: nextTheme === 'dark' ? 0.26 : 0.18, depthWrite: false, blending: nextTheme === 'dark' ? AdditiveBlending : NormalBlending });
           runtime.cosmicLines = new LineSegments(web.filaments, cosmicLineMaterial);
           runtime.cosmicLines.name = 'static-cosmic-density';
           runtime.cosmicLines.renderOrder = -2;
@@ -667,7 +668,7 @@ export function ObservatoryScene({
       }
       const membershipLineGeometry = membershipGeometry(nextLayout, nextScale);
       if ((membershipLineGeometry.getAttribute('position')?.count || 0) > 0) {
-        const membershipLineMaterial = new LineBasicMaterial({ vertexColors: true, transparent: true, opacity: nextTheme === 'dark' ? 0.52 : 0.43, depthWrite: false, blending: nextTheme === 'dark' ? AdditiveBlending : NormalBlending });
+        const membershipLineMaterial = new LineBasicMaterial({ vertexColors: true, transparent: true, opacity: nextTheme === 'dark' ? 0.18 : 0.12, depthWrite: false, blending: nextTheme === 'dark' ? AdditiveBlending : NormalBlending });
         runtime.membershipLines = new LineSegments(membershipLineGeometry, membershipLineMaterial);
         runtime.membershipLines.name = 'published-membership';
         scene.add(runtime.membershipLines);

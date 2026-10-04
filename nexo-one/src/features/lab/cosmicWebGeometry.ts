@@ -19,18 +19,18 @@ export interface CosmicWebGeometry {
 }
 
 const QUALITY: Record<CosmicQuality, { samples: number; strands: number; lineSteps: number; haloScale: number }> = {
-  high: { samples: 48, strands: 4, lineSteps: 34, haloScale: 1 },
-  medium: { samples: 32, strands: 3, lineSteps: 25, haloScale: 0.72 },
-  low: { samples: 18, strands: 2, lineSteps: 16, haloScale: 0.42 },
+  high: { samples: 224, strands: 4, lineSteps: 34, haloScale: 1 },
+  medium: { samples: 176, strands: 3, lineSteps: 25, haloScale: 0.72 },
+  low: { samples: 88, strands: 2, lineSteps: 16, haloScale: 0.42 },
 };
 const CONNECTION_LIMIT = 2_048;
 const KNOT_LIMIT = 512;
 const DOMAIN_CANDIDATE_LIMIT = 256;
 const PARTICLE_BUDGET: Record<CosmicQuality, number> = { high: 60_000, medium: 42_000, low: 20_000 };
 
-const MEMBERSHIP_COLORS = ['#326dbe', '#548bd0', '#6576c2', '#8a73c7'].map(hex => new Color(hex));
-const DOMAIN_COLORS = ['#2d60a5', '#3f63ba', '#4a8ec0', '#7258aa'].map(hex => new Color(hex));
-const HAZE_COLORS = ['#263d88', '#344a9b', '#274e71', '#5e468d'].map(hex => new Color(hex));
+const MEMBERSHIP_COLORS = ['#3979cc', '#578fd9', '#7186d7', '#937cce'].map(hex => new Color(hex));
+const DOMAIN_COLORS = ['#356fba', '#4c78ca', '#529bc9', '#7a69bb'].map(hex => new Color(hex));
+const HAZE_COLORS = ['#344d9c', '#435daf', '#315a7e', '#7357a3'].map(hex => new Color(hex));
 
 function hash(value: string): number {
   let result = 2166136261;
@@ -141,6 +141,8 @@ export function buildCosmicWebGeometry(layout: ObservatoryLayout, quality: Cosmi
   const entityDegree = new Map<string, number>();
   const entityByKey = layout.entityByKey;
   let particleBudget = PARTICLE_BUDGET[quality];
+  const connectionSampleBudget = Math.floor(PARTICLE_BUDGET[quality] * 0.7);
+  const samplesPerConnection = Math.max(4, Math.min(config.samples, Math.floor(connectionSampleBudget / Math.max(1, connections.length))));
 
   const pushParticle = (point: Vector3, color: Color, size: number, opacity: number) => {
     pointPositions.push(point.x, point.y, point.z);
@@ -164,7 +166,8 @@ export function buildCosmicWebGeometry(layout: ObservatoryLayout, quality: Cosmi
     const colorSet = connection.relation === 'membership' ? MEMBERSHIP_COLORS : DOMAIN_COLORS;
     const strandCount = config.strands;
     const bendSign = unit(connection.id + ':bend') > 0.5 ? 1 : -1;
-    const bend = Math.min(1.8, span * 0.14) * bendSign;
+    const phase = unit(connection.id + ':phase') * Math.PI * 2;
+    const bend = Math.min(2.1, Math.max(0.22, span * 0.34)) * bendSign;
 
     const centerAt = (t: number, lane: number) => {
       const u = 1 - t;
@@ -175,42 +178,51 @@ export function buildCosmicWebGeometry(layout: ObservatoryLayout, quality: Cosmi
         .addScaledVector(c1, 3 * u * u * t)
         .addScaledVector(c2, 3 * u * t * t)
         .addScaledVector(b, t * t * t);
-      if (lane !== 0) curve.addScaledVector(sideB, Math.sin(Math.PI * t) * laneOffset * 0.62);
+      const envelope = Math.sin(Math.PI * t);
+      const weave = envelope * (Math.sin(t * Math.PI * 2.2 + phase) * 0.22 + Math.sin(t * Math.PI * 5.1 - phase * 0.7) * 0.11) * Math.min(1.25, span * 0.2);
+      curve.addScaledVector(sideA, weave);
+      curve.addScaledVector(sideB, Math.sin(t * Math.PI * 3.3 + phase * 1.4) * weave * 0.58);
+      if (lane !== 0) curve.addScaledVector(sideB, envelope * laneOffset * 0.62);
       return curve;
     };
 
-    const connectionSamples = Math.max(4, Math.min(config.samples, Math.floor(particleBudget * 0.7 / Math.max(1, connections.length))));
-    for (let strand = 0; strand < strandCount; strand += 1) {
-      const lane = strand - (strandCount - 1) / 2;
-      for (let step = 0; step < config.lineSteps; step += 1) {
-        const t0 = step / config.lineSteps;
-        const t1 = (step + 1) / config.lineSteps;
-        const start = centerAt(t0, lane);
-        const end = centerAt(t1, lane);
-        linePositions.push(start.x, start.y, start.z, end.x, end.y, end.z);
-        const colorIndex = connection.relation === 'domain-density'
-          ? Math.min(colorSet.length - 1, Math.floor(unit(connection.id + ':hue') * colorSet.length))
-          : Math.floor(unit(connection.id + ':hue') * colorSet.length);
-        const color = colorSet[colorIndex]!.clone().multiplyScalar(lane === 0 ? 1.2 : 0.72);
-        lineColors.push(color.r, color.g, color.b, color.r, color.g, color.b);
+    const connectionSamples = samplesPerConnection;
+    if (connection.relation === 'domain-density') {
+      for (let strand = 0; strand < strandCount; strand += 1) {
+        const lane = strand - (strandCount - 1) / 2;
+        for (let step = 0; step < config.lineSteps; step += 1) {
+          const t0 = step / config.lineSteps;
+          const t1 = (step + 1) / config.lineSteps;
+          const start = centerAt(t0, lane);
+          const end = centerAt(t1, lane);
+          linePositions.push(start.x, start.y, start.z, end.x, end.y, end.z);
+          const colorIndex = Math.floor(unit(connection.id + ':hue') * colorSet.length);
+          const color = colorSet[colorIndex]!.clone().multiplyScalar(lane === 0 ? 0.74 : 0.42);
+          lineColors.push(color.r, color.g, color.b, color.r, color.g, color.b);
+        }
       }
+    }
 
-      const particleCount = Math.max(2, Math.round(connectionSamples / strandCount));
-      for (let sample = 0; sample < particleCount; sample += 1) {
+    const particleStrands = connection.relation === 'membership' ? 1 : strandCount;
+    const particlesPerStrand = Math.max(2, Math.round(connectionSamples / particleStrands));
+    for (let strand = 0; strand < particleStrands; strand += 1) {
+      const lane = strand - (particleStrands - 1) / 2;
+      for (let sample = 0; sample < particlesPerStrand; sample += 1) {
         if (particleBudget <= 0) break;
         const seed = `${connection.id}:${strand}:${sample}`;
-        const t = (sample + 0.25 + unit(seed + ':t') * 0.5) / particleCount;
+        const t = (sample + 0.25 + unit(seed + ':t') * 0.5) / particlesPerStrand;
         const point = centerAt(t, lane);
         const phi = unit(seed + ':phi') * Math.PI * 2;
-        const radius = (0.035 + 0.19 * Math.sin(Math.PI * t)) * Math.sqrt(unit(seed + ':radius'));
+        const filamentWidth = connection.relation === 'membership' ? 0.46 : 0.72;
+        const radius = (0.11 + filamentWidth * Math.sin(Math.PI * t)) * Math.sqrt(unit(seed + ':radius'));
         point.addScaledVector(sideA, Math.cos(phi) * radius);
         point.addScaledVector(sideB, Math.sin(phi) * radius);
         const colorIndex = Math.floor(unit(seed + ':color') * colorSet.length);
         const color = colorSet[colorIndex]!.clone();
         const opacity = connection.relation === 'membership'
-          ? 0.15 + unit(seed + ':alpha') * 0.27
-          : 0.12 + unit(seed + ':alpha') * 0.21;
-        pushParticle(point, color, 1.25 + unit(seed + ':size') * 2.3, opacity);
+          ? 0.12 + unit(seed + ':alpha') * 0.23
+          : 0.09 + unit(seed + ':alpha') * 0.17;
+        pushParticle(point, color, 3.2 + unit(seed + ':size') * 4.8, opacity);
         particleBudget -= 1;
       }
     }
@@ -229,7 +241,7 @@ export function buildCosmicWebGeometry(layout: ObservatoryLayout, quality: Cosmi
     const countPerKnot = Math.max(0, Math.floor(particleBudget / Math.max(1, sampledKnots.length - knotIndex)));
     const count = Math.min(countPerKnot, Math.round((baseCount + Math.min(110, degree * 9)) * config.haloScale));
     const center = vector(entity.position);
-    const radius = entity.kind === 'project' ? 1.35 : entity.kind === 'region' ? 1.65 : 0.66;
+    const radius = entity.kind === 'project' ? 2.15 : entity.kind === 'region' ? 2.55 : 0.95;
     for (let sample = 0; sample < count; sample += 1) {
       const seed = `knot:${entity.key}:${sample}`;
       const z = unit(seed + ':z') * 2 - 1;
@@ -242,7 +254,7 @@ export function buildCosmicWebGeometry(layout: ObservatoryLayout, quality: Cosmi
         Math.sin(angle) * planar * shell * radius,
       ));
       const color = HAZE_COLORS[Math.floor(unit(seed + ':color') * HAZE_COLORS.length)]!;
-      const opacity = 0.018 + unit(seed + ':alpha') * (entity.kind === 'project' ? 0.075 : 0.05);
+      const opacity = 0.026 + unit(seed + ':alpha') * (entity.kind === 'project' ? 0.12 : 0.075);
       pushParticle(point, color, 16 + unit(seed + ':size') * 44, opacity);
       particleBudget -= 1;
     }

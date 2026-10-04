@@ -46,6 +46,29 @@ const noOverflow = async (page, route) => {
   assert.ok(size.scroll <= size.width + 1, route + ': horizontal overflow ' + JSON.stringify(size));
 };
 try {
+  // Replay an actual public read model through this candidate build. The fixed
+  // fixture below tests behavior; this capture reviews the real graph's shape.
+  const publishedResponse = await fetch('https://nexo-one-two.vercel.app/api/system', { signal: AbortSignal.timeout(30_000) });
+  assert.ok(publishedResponse.ok, 'published public system is readable for visual evidence');
+  const publishedSystem = await publishedResponse.json();
+  assert.ok(Object.keys(publishedSystem.read_model?.tests || {}).length > 0, 'published capture contains real tests');
+  const publishedContext = await browser.newContext({ viewport: { width: 1600, height: 1000 }, locale: 'pt-BR', timezoneId: 'America/Sao_Paulo' });
+  const publishedPage = await publishedContext.newPage();
+  const publishedErrors = [];
+  publishedPage.on('pageerror', error => publishedErrors.push(error.message));
+  publishedPage.on('console', message => { if (message.type() === 'error' && /THREE.WebGLProgram|VALIDATE_STATUS|shader error|Error compiling/i.test(message.text())) publishedErrors.push(message.text()); });
+  await publishedPage.addInitScript(() => { localStorage.setItem('nexo-theme','dark'); localStorage.setItem('nexo.quality','medium'); localStorage.setItem('nexo.intro.seen','1'); });
+  await publishedPage.route('**/api/session', route => route.fulfill({ json: { configured: false, authenticated: false } }));
+  await publishedPage.route('**/api/system*', route => route.fulfill({ json: publishedSystem }));
+  await publishedPage.goto(base + '/#/agora');
+  await publishedPage.getByRole('navigation', { name: 'Escala do ATLAS' }).waitFor();
+  await publishedPage.evaluate(() => document.fonts.ready);
+  await publishedPage.waitForFunction(() => document.querySelector('.obs-scene')?.getAttribute('data-cosmic-rendered') === 'true');
+  await publishedPage.screenshot({ path: output + '/published-atlas-webgl.png' });
+  const publishedDiagnostics = await publishedPage.locator('.obs-scene').evaluate(el => ({ particles: Number(el.dataset.cosmicParticles), filaments: Number(el.dataset.cosmicFilaments), rendered: el.dataset.cosmicRendered }));
+  await writeFile(output + '/published-atlas-webgl.json', JSON.stringify({ ...publishedDiagnostics, source: 'PUBLIC_API_SYSTEM_REPLAY', generated_at: publishedSystem.generated_at, errors: publishedErrors }, null, 2));
+  assert.deepEqual(publishedErrors, [], 'published graph shader and page errors');
+  await publishedContext.close();
   for (const [name, viewport, theme, reduced, fallback] of [
     ['desktop', { width: 1440, height: 1000 }, 'dark', false, false],
     ['mobile', { width: 390, height: 844 }, 'dark', false, false],
@@ -84,6 +107,7 @@ try {
       const geometry = await page.locator('.obs-scene').evaluate(el => ({ particles: Number(el.dataset.cosmicParticles), filaments: Number(el.dataset.cosmicFilaments) }));
       assert.ok(geometry.particles <= (viewport.width >= 1280 ? 42_000 : 20_000) && geometry.filaments > 0 && geometry.filaments <= 2_048, 'cosmic substrate has bounded render buffers');
       await page.clock.runFor(500);
+      await page.clock.resume();
       await page.waitForFunction(() => document.querySelector('.obs-scene')?.getAttribute('data-cosmic-rendered') === 'true');
     }
     if (!input) await page.addStyleTag({ content: 'body::after{content:"FIXTURE VISUAL · DADOS SINTÉTICOS · SOMENTE TESTE";position:fixed;left:12px;bottom:6px;z-index:9999;padding:4px 8px;background:#15120c;color:#f4e4bd;font:11px system-ui;pointer-events:none}' });
