@@ -2,6 +2,7 @@ import {createOperationalService} from './operational-tools.mjs';
 import {readOperationalTower} from './operational-state.mjs';
 import {submitOperationalIntent} from './operational-queue.mjs';
 import {operationalPrincipal} from './operational-auth.mjs';
+import {googleRuntimeEnvironment,GOOGLE_AUTH_DIAGNOSTICS} from '../adapters/connect.mjs';
 
 export const OPERATIONAL_READ_SCOPES=Object.freeze(['https://www.googleapis.com/auth/drive.readonly']);
 const SAFE_ERRORS=new Set(['AUTH_REQUIRED','RATE_LIMITED','UNAVAILABLE','EXISTING_GOOGLE_AUTH_REQUIRED',
@@ -13,7 +14,8 @@ export async function operationalSource(stage,read){
   catch(error){
     const candidate=error?.code||error?.message;
     const code=SAFE_ERRORS.has(candidate)?candidate:'OPERATIONAL_SOURCE_UNAVAILABLE';
-    console.warn(JSON.stringify({component:'NEXO_OPERATIONAL_RUNTIME',stage,code}));
+    const diagnostic=GOOGLE_AUTH_DIAGNOSTICS.includes(error?.googleDiagnostic)?error.googleDiagnostic:null;
+    console.warn(JSON.stringify({component:'NEXO_OPERATIONAL_RUNTIME',stage,code,...(diagnostic?{diagnostic}:{})}));
     throw Object.assign(new Error(code),{code});
   }
 }
@@ -24,7 +26,7 @@ export async function operationalForRequest(request,env=process.env){
   const principal=await operationalPrincipal(request,env);
   if(!principal)return {principal:null,service:null};
   const {googleToken}=await import('../adapters/google.mjs');
-  const scopedEnv=headers['x-vercel-oidc-token']&&!env.VERCEL_OIDC_TOKEN?{...env,VERCEL_OIDC_TOKEN:headers['x-vercel-oidc-token']}:env;
+  const scopedEnv=googleRuntimeEnvironment(env,headers);
   const service=createOperationalService({
     // Role context needs Drive only, never Gmail, Calendar or Sheets read scopes.
     readState:()=>operationalSource('READ_CANONICAL_CONTEXT',async()=>readOperationalTower({
