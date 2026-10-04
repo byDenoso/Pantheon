@@ -8,7 +8,7 @@ import {
   scaleForDistance,
   stableSceneOffset,
 } from '../src/features/lab/sceneModel.ts';
-import { buildCosmicWebGeometry } from '../src/features/lab/cosmicWebGeometry.ts';
+import { allocateConnectionSamples, buildCosmicWebGeometry } from '../src/features/lab/cosmicWebGeometry.ts';
 
 const sampleTest = (id, overrides = {}) => ({
   id,
@@ -174,6 +174,26 @@ test('cinematic web geometry is deterministic, budgeted, and separates density f
     const target = layout.entityByKey.get(connection.targetKey);
     return source && target && source.domain === target.domain;
   }));
+});
+
+test('cosmic filament samples follow 3D path length while retaining a floor for short relations', () => {
+  const origin = { key: 'project:origin', position: { x: 0, y: 0, z: 0 } };
+  const near = { key: 'hypothesis:near', position: { x: 0.5, y: 0, z: 0 } };
+  const far = { key: 'project:far', position: { x: 100, y: 0, z: 0 } };
+  const entityByKey = new Map([[origin.key, origin], [near.key, near], [far.key, far]]);
+  const connections = Array.from({ length: 500 }, (_, index) => ({
+    id: `short-${String(index).padStart(3, '0')}`,
+    sourceKey: origin.key,
+    targetKey: near.key,
+    relation: 'membership',
+  }));
+  connections.push({ id: 'long-domain-fiber', sourceKey: origin.key, targetKey: far.key, relation: 'domain-density' });
+  const allocation = allocateConnectionSamples({ entityByKey }, connections, 'medium');
+
+  assert.equal(allocation.length, connections.length);
+  assert.ok(allocation[500] >= allocation[0] * 2, 'long inter-region paths receive denser samples');
+  assert.ok(allocation.every(samples => samples >= 10), 'short published relations retain a visible density floor');
+  assert.ok(allocation.every(samples => samples <= 176 * 2), 'per-path detail stays bounded');
 });
 
 test('large cosmic layouts honor per-quality particle and connection budgets', () => {

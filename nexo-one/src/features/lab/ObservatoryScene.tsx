@@ -98,28 +98,35 @@ const POINT_FRAGMENT = `
  }`;
 
 const COSMIC_MOTE_VERTEX = `
-attribute float size; attribute vec3 tint; attribute float opacity;
+attribute float size; attribute vec3 tint; attribute float opacity; attribute vec3 axis; attribute float aspect;
 uniform float pixelRatio;
-varying vec3 vTint; varying float vOpacity; varying float vDepth;
+varying vec3 vTint; varying float vOpacity; varying float vDepth; varying vec2 vAxis; varying float vAspect;
 void main(){
   vec4 mv = modelViewMatrix * vec4(position, 1.0);
   float depth = max(0.0, -mv.z);
-  gl_PointSize = clamp(size * pixelRatio * (13.0 / max(1.0, depth)), 1.0 * pixelRatio, 44.0 * pixelRatio);
+  vec3 viewAxis = (modelViewMatrix * vec4(axis, 0.0)).xyz;
+  vec2 screenAxis = viewAxis.xy;
+  vAxis = length(screenAxis) > 0.0001 ? normalize(screenAxis) : vec2(1.0, 0.0);
+  vAspect = max(1.0, aspect);
+  gl_PointSize = clamp(size * vAspect * pixelRatio * (13.0 / max(1.0, depth)), 1.0 * pixelRatio, 44.0 * pixelRatio);
   vTint = tint;
   vOpacity = opacity;
   vDepth = 1.0 - smoothstep(30.0, 105.0, depth) * 0.52;
   gl_Position = projectionMatrix * mv;
 }`;
 const COSMIC_MOTE_FRAGMENT = `
-varying vec3 vTint; varying float vOpacity; varying float vDepth;
+varying vec3 vTint; varying float vOpacity; varying float vDepth; varying vec2 vAxis; varying float vAspect;
 void main(){
-  vec2 p = gl_PointCoord - 0.5; float d = length(p);
-  float veil = exp(-d * d * 4.0) * (1.0 - smoothstep(0.35, 0.5, d));
-  float cloud = exp(-d * d * 12.0) * (1.0 - smoothstep(0.34, 0.5, d));
-  float filamentCore = exp(-d * d * 54.0);
-  float alpha = (veil * 0.24 + cloud * 0.62 + filamentCore * 0.48) * vOpacity * vDepth;
+  vec2 p = gl_PointCoord - 0.5;
+  vec2 acrossAxis = vec2(-vAxis.y, vAxis.x);
+  float along = dot(p, vAxis) * 2.0;
+  float across = dot(p, acrossAxis) * 2.0 * vAspect;
+  float veil = exp(-along * along * 1.7 - across * across * 10.0);
+  float fiber = exp(-along * along * 5.5 - across * across * 40.0);
+  float filamentCore = exp(-along * along * 18.0 - across * across * 110.0);
+  float alpha = (veil * 0.12 + fiber * 0.58 + filamentCore * 0.52) * vOpacity * vDepth;
   if (alpha < 0.003) discard;
-  gl_FragColor = vec4(vTint * (0.78 + filamentCore * 0.55), alpha);
+  gl_FragColor = vec4(vTint * (0.82 + filamentCore * 0.78), alpha);
   #include <colorspace_fragment>
 }`;
 
@@ -619,7 +626,7 @@ export function ObservatoryScene({
         const web = buildCosmicWebGeometry(nextLayout, quality);
         const lineCount = web.filaments.getAttribute('position')?.count || 0;
         if (lineCount > 0) {
-          const cosmicLineMaterial = new LineBasicMaterial({ vertexColors: true, transparent: true, opacity: nextTheme === 'dark' ? 0.26 : 0.18, depthWrite: false, blending: nextTheme === 'dark' ? AdditiveBlending : NormalBlending });
+          const cosmicLineMaterial = new LineBasicMaterial({ vertexColors: true, transparent: true, opacity: nextTheme === 'dark' ? 0.18 : 0.12, depthWrite: false, blending: nextTheme === 'dark' ? AdditiveBlending : NormalBlending });
           runtime.cosmicLines = new LineSegments(web.filaments, cosmicLineMaterial);
           runtime.cosmicLines.name = 'static-cosmic-density';
           runtime.cosmicLines.renderOrder = -2;

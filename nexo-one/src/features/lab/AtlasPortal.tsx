@@ -49,7 +49,8 @@ export function AtlasPortal({ lab, fallback, sourceCurrent, scale, onScale, onFo
     for (const test of lab.tests.values()) {
       if (test.contestOf) continue;
       const key = test.roadmapId || test.campaignId || test.domain;
-      groups.set(key, [...(groups.get(key) || []), test]);
+      const members = groups.get(key);
+      if (members) members.push(test); else groups.set(key, [test]);
     }
     const regions = [...groups].sort(([a], [b]) => a.localeCompare(b)).map(([id, tests]) => {
       const angle = seed(id) * Math.PI * 2;

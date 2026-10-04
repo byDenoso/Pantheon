@@ -19,8 +19,8 @@ export interface CosmicWebGeometry {
 }
 
 const QUALITY: Record<CosmicQuality, { samples: number; strands: number; lineSteps: number; haloScale: number }> = {
-  high: { samples: 224, strands: 4, lineSteps: 34, haloScale: 1 },
-  medium: { samples: 176, strands: 3, lineSteps: 25, haloScale: 0.72 },
+  high: { samples: 224, strands: 3, lineSteps: 34, haloScale: 1 },
+  medium: { samples: 176, strands: 2, lineSteps: 25, haloScale: 0.72 },
   low: { samples: 88, strands: 2, lineSteps: 16, haloScale: 0.42 },
 };
 const CONNECTION_LIMIT = 2_048;
@@ -31,6 +31,7 @@ const PARTICLE_BUDGET: Record<CosmicQuality, number> = { high: 60_000, medium: 4
 const MEMBERSHIP_COLORS = ['#3979cc', '#578fd9', '#7186d7', '#937cce'].map(hex => new Color(hex));
 const DOMAIN_COLORS = ['#356fba', '#4c78ca', '#529bc9', '#7a69bb'].map(hex => new Color(hex));
 const HAZE_COLORS = ['#344d9c', '#435daf', '#315a7e', '#7357a3'].map(hex => new Color(hex));
+const HUB_COLORS = ['#b9cce0', '#d2c29d'].map(hex => new Color(hex));
 
 function hash(value: string): number {
   let result = 2166136261;
@@ -119,6 +120,60 @@ export function cosmicWebSignature(layout: ObservatoryLayout): string {
 }
 
 /**
+ * Allocate a fixed particle budget by path length, with a minimum density for
+ * every published relation. Longer inter-region filaments therefore receive
+ * more samples per path, instead of looking like sparse bridges between knots.
+ */
+export function allocateConnectionSamples(
+  layout: ObservatoryLayout,
+  connections: CosmicConnection[],
+  quality: CosmicQuality,
+): number[] {
+  if (!connections.length) return [];
+  const budget = Math.floor(PARTICLE_BUDGET[quality] * 0.84);
+  const maxPerConnection = QUALITY[quality].samples * QUALITY[quality].strands;
+  const minimum = Math.min(10, Math.max(2, Math.floor(budget / connections.length)));
+  const allocation = connections.map(() => minimum);
+  let remaining = Math.max(0, budget - minimum * connections.length);
+  const weights = connections.map(connection => {
+    const source = layout.entityByKey.get(connection.sourceKey);
+    const target = layout.entityByKey.get(connection.targetKey);
+    const span = source && target ? vector(source.position).distanceTo(vector(target.position)) : 0;
+    return Math.max(0.25, span) * (connection.relation === 'domain-density' ? 1.35 : 1);
+  });
+  const active = new Set(connections.map((_, index) => index).filter(index => allocation[index]! < maxPerConnection));
+  while (remaining > 0 && active.size > 0) {
+    const activeIndices = [...active];
+    const totalWeight = activeIndices.reduce((sum, index) => sum + weights[index]!, 0);
+    if (totalWeight <= 0) break;
+    const roundBudget = remaining;
+    const fractions: { index: number; fraction: number; id: string }[] = [];
+    let assigned = 0;
+    for (const index of activeIndices) {
+      const share = roundBudget * weights[index]! / totalWeight;
+      const room = maxPerConnection - allocation[index]!;
+      const whole = Math.min(room, Math.floor(share));
+      allocation[index] = allocation[index]! + whole;
+      remaining -= whole;
+      assigned += whole;
+      fractions.push({ index, fraction: share - Math.floor(share), id: connections[index]!.id });
+      if (allocation[index]! >= maxPerConnection) active.delete(index);
+    }
+    fractions.sort((a, b) => b.fraction - a.fraction || a.id.localeCompare(b.id));
+    for (const { index } of fractions) {
+      if (remaining <= 0) break;
+      if (!active.has(index)) continue;
+      allocation[index] = allocation[index]! + 1;
+      remaining -= 1;
+      assigned += 1;
+      if (allocation[index]! >= maxPerConnection) active.delete(index);
+    }
+    if (assigned === 0) break;
+  }
+  return allocation;
+}
+
+/**
  * Build the static cosmic substrate from published membership and same-domain
  * clustering. These lines are deliberately undirected; dependency arrows are
  * rendered separately from the explicit parent/child records.
@@ -136,22 +191,27 @@ export function buildCosmicWebGeometry(layout: ObservatoryLayout, quality: Cosmi
   const lineColors: number[] = [];
   const pointPositions: number[] = [];
   const pointColors: number[] = [];
+  const pointAxes: number[] = [];
   const pointSizes: number[] = [];
+  const pointAspects: number[] = [];
   const pointOpacities: number[] = [];
   const entityDegree = new Map<string, number>();
+  const entityNeighbors = new Map<string, { position: Vector3; distance: number; tie: string }[]>();
   const entityByKey = layout.entityByKey;
   let particleBudget = PARTICLE_BUDGET[quality];
-  const connectionSampleBudget = Math.floor(PARTICLE_BUDGET[quality] * 0.7);
-  const samplesPerConnection = Math.max(4, Math.min(config.samples, Math.floor(connectionSampleBudget / Math.max(1, connections.length))));
+  const sampleAllocation = allocateConnectionSamples(layout, connections, quality);
 
-  const pushParticle = (point: Vector3, color: Color, size: number, opacity: number) => {
+  const pushParticle = (point: Vector3, color: Color, size: number, opacity: number, axis = new Vector3(0, 1, 0), aspect = 1) => {
     pointPositions.push(point.x, point.y, point.z);
     pointColors.push(color.r, color.g, color.b);
+    pointAxes.push(axis.x, axis.y, axis.z);
     pointSizes.push(size);
+    pointAspects.push(aspect);
     pointOpacities.push(opacity);
   };
 
-  for (const connection of connections) {
+  for (let connectionIndex = 0; connectionIndex < connections.length; connectionIndex += 1) {
+    const connection = connections[connectionIndex]!;
     const source = entityByKey.get(connection.sourceKey);
     const target = entityByKey.get(connection.targetKey);
     if (!source || !target) continue;
@@ -162,6 +222,12 @@ export function buildCosmicWebGeometry(layout: ObservatoryLayout, quality: Cosmi
     const b = vector(target.position);
     const span = a.distanceTo(b);
     if (span < 0.03) continue;
+    const sourceNeighbors = entityNeighbors.get(source.key) || [];
+    sourceNeighbors.push({ position: b, distance: span, tie: connection.id });
+    entityNeighbors.set(source.key, sourceNeighbors);
+    const targetNeighbors = entityNeighbors.get(target.key) || [];
+    targetNeighbors.push({ position: a, distance: span, tie: connection.id });
+    entityNeighbors.set(target.key, targetNeighbors);
     const [sideA, sideB] = stableBasis(a, b);
     const colorSet = connection.relation === 'membership' ? MEMBERSHIP_COLORS : DOMAIN_COLORS;
     const strandCount = config.strands;
@@ -179,14 +245,14 @@ export function buildCosmicWebGeometry(layout: ObservatoryLayout, quality: Cosmi
         .addScaledVector(c2, 3 * u * t * t)
         .addScaledVector(b, t * t * t);
       const envelope = Math.sin(Math.PI * t);
-      const weave = envelope * (Math.sin(t * Math.PI * 2.2 + phase) * 0.22 + Math.sin(t * Math.PI * 5.1 - phase * 0.7) * 0.11) * Math.min(1.25, span * 0.2);
+      const weave = envelope * (Math.sin(t * Math.PI * 2.2 + phase) * 0.3 + Math.sin(t * Math.PI * 5.1 - phase * 0.7) * 0.14) * Math.min(1.55, span * 0.22);
       curve.addScaledVector(sideA, weave);
-      curve.addScaledVector(sideB, Math.sin(t * Math.PI * 3.3 + phase * 1.4) * weave * 0.58);
+      curve.addScaledVector(sideB, Math.sin(t * Math.PI * 3.3 + phase * 1.4) * weave * 0.72);
       if (lane !== 0) curve.addScaledVector(sideB, envelope * laneOffset * 0.62);
       return curve;
     };
 
-    const connectionSamples = samplesPerConnection;
+    const connectionSamples = Math.min(config.samples * config.strands, sampleAllocation[connectionIndex] || 0);
     if (connection.relation === 'domain-density') {
       for (let strand = 0; strand < strandCount; strand += 1) {
         const lane = strand - (strandCount - 1) / 2;
@@ -203,26 +269,31 @@ export function buildCosmicWebGeometry(layout: ObservatoryLayout, quality: Cosmi
       }
     }
 
-    const particleStrands = connection.relation === 'membership' ? 1 : strandCount;
-    const particlesPerStrand = Math.max(2, Math.round(connectionSamples / particleStrands));
+    const particleStrands = connection.relation === 'membership' ? (quality === 'low' ? 1 : 2) : strandCount;
+    const particlesPerStrand = Math.floor(connectionSamples / particleStrands);
+    const extraParticles = connectionSamples % particleStrands;
     for (let strand = 0; strand < particleStrands; strand += 1) {
+      const strandSamples = particlesPerStrand + (strand < extraParticles ? 1 : 0);
       const lane = strand - (particleStrands - 1) / 2;
-      for (let sample = 0; sample < particlesPerStrand; sample += 1) {
+      for (let sample = 0; sample < strandSamples; sample += 1) {
         if (particleBudget <= 0) break;
         const seed = `${connection.id}:${strand}:${sample}`;
-        const t = (sample + 0.25 + unit(seed + ':t') * 0.5) / particlesPerStrand;
+        const t = (sample + 0.18 + unit(seed + ':t') * 0.64) / Math.max(1, strandSamples);
         const point = centerAt(t, lane);
         const phi = unit(seed + ':phi') * Math.PI * 2;
-        const filamentWidth = connection.relation === 'membership' ? 0.46 : 0.72;
+        const filamentWidth = connection.relation === 'membership' ? 0.2 : 0.32;
         const radius = (0.11 + filamentWidth * Math.sin(Math.PI * t)) * Math.sqrt(unit(seed + ':radius'));
         point.addScaledVector(sideA, Math.cos(phi) * radius);
         point.addScaledVector(sideB, Math.sin(phi) * radius);
+        const t0 = Math.max(0, t - 0.012);
+        const t1 = Math.min(1, t + 0.012);
+        const tangent = centerAt(t1, lane).sub(centerAt(t0, lane)).normalize();
         const colorIndex = Math.floor(unit(seed + ':color') * colorSet.length);
         const color = colorSet[colorIndex]!.clone();
         const opacity = connection.relation === 'membership'
-          ? 0.12 + unit(seed + ':alpha') * 0.23
-          : 0.09 + unit(seed + ':alpha') * 0.17;
-        pushParticle(point, color, 3.2 + unit(seed + ':size') * 4.8, opacity);
+          ? 0.2 + unit(seed + ':alpha') * 0.24
+          : 0.15 + unit(seed + ':alpha') * 0.2;
+        pushParticle(point, color, 2.1 + unit(seed + ':size') * 2.8, opacity, tangent, 2.1 + unit(seed + ':aspect') * 2.1);
         particleBudget -= 1;
       }
     }
@@ -237,25 +308,38 @@ export function buildCosmicWebGeometry(layout: ObservatoryLayout, quality: Cosmi
   for (let knotIndex = 0; knotIndex < sampledKnots.length && particleBudget > 0; knotIndex += 1) {
     const entity = sampledKnots[knotIndex]!;
     const degree = entityDegree.get(entity.key) || 0;
-    const baseCount = entity.kind === 'region' ? 62 : entity.kind === 'project' ? 92 : 54;
+    const baseCount = entity.kind === 'region' ? 32 : entity.kind === 'project' ? 42 : 28;
     const countPerKnot = Math.max(0, Math.floor(particleBudget / Math.max(1, sampledKnots.length - knotIndex)));
     const count = Math.min(countPerKnot, Math.round((baseCount + Math.min(110, degree * 9)) * config.haloScale));
     const center = vector(entity.position);
-    const radius = entity.kind === 'project' ? 2.15 : entity.kind === 'region' ? 2.55 : 0.95;
+    const radius = entity.kind === 'project' ? 1.75 : entity.kind === 'region' ? 2.05 : 0.72;
+    const mainNeighbor = (entityNeighbors.get(entity.key) || []).slice().sort((a, b) => b.distance - a.distance || a.tie.localeCompare(b.tie))[0];
+    const axis = mainNeighbor
+      ? mainNeighbor.position.clone().sub(center).normalize()
+      : new Vector3(0.6, 0.35, 0.72).normalize();
+    const [axisA, axisB] = stableBasis(center, center.clone().add(axis));
     for (let sample = 0; sample < count; sample += 1) {
       const seed = `knot:${entity.key}:${sample}`;
-      const z = unit(seed + ':z') * 2 - 1;
       const angle = unit(seed + ':angle') * Math.PI * 2;
-      const shell = Math.pow(unit(seed + ':shell'), entity.kind === 'region' ? 0.68 : 1.15);
-      const planar = Math.sqrt(Math.max(0, 1 - z * z));
-      const point = center.clone().add(new Vector3(
-        Math.cos(angle) * planar * shell * radius,
-        z * shell * radius * (entity.kind === 'region' ? 0.55 : 0.78),
-        Math.sin(angle) * planar * shell * radius,
-      ));
+      const shell = Math.sqrt(unit(seed + ':shell'));
+      const along = (unit(seed + ':along') - 0.5) * radius * 2.4;
+      const crossRadius = shell * radius * 0.34;
+      const point = center.clone().addScaledVector(axis, along)
+        .addScaledVector(axisA, Math.cos(angle) * crossRadius)
+        .addScaledVector(axisB, Math.sin(angle) * crossRadius);
       const color = HAZE_COLORS[Math.floor(unit(seed + ':color') * HAZE_COLORS.length)]!;
-      const opacity = 0.026 + unit(seed + ':alpha') * (entity.kind === 'project' ? 0.12 : 0.075);
-      pushParticle(point, color, 16 + unit(seed + ':size') * 44, opacity);
+      const opacity = 0.022 + unit(seed + ':alpha') * (entity.kind === 'project' ? 0.045 : 0.035);
+      pushParticle(point, color, 3.6 + unit(seed + ':size') * 7.2, opacity, axis, 1.8 + unit(seed + ':aspect') * 1.2);
+      particleBudget -= 1;
+    }
+    const hubLightCount = degree >= 5 ? Math.min(12, 3 + degree) : degree >= 3 ? 2 : 0;
+    for (let sample = 0; sample < hubLightCount && particleBudget > 0; sample += 1) {
+      const seed = `hub:${entity.key}:${sample}`;
+      const angle = unit(seed + ':angle') * Math.PI * 2;
+      const radiusOffset = Math.sqrt(unit(seed + ':radius')) * 0.22;
+      const point = center.clone().addScaledVector(axisA, Math.cos(angle) * radiusOffset).addScaledVector(axisB, Math.sin(angle) * radiusOffset);
+      const color = HUB_COLORS[Math.floor(unit(seed + ':color') * HUB_COLORS.length)]!;
+      pushParticle(point, color, 1.8 + unit(seed + ':size') * 1.8, 0.22 + unit(seed + ':alpha') * 0.2, axis, 2.2);
       particleBudget -= 1;
     }
   }
@@ -268,7 +352,9 @@ export function buildCosmicWebGeometry(layout: ObservatoryLayout, quality: Cosmi
   const particles = new BufferGeometry();
   particles.setAttribute('position', new BufferAttribute(new Float32Array(pointPositions), 3));
   particles.setAttribute('tint', new BufferAttribute(new Float32Array(pointColors), 3));
+  particles.setAttribute('axis', new BufferAttribute(new Float32Array(pointAxes), 3));
   particles.setAttribute('size', new BufferAttribute(new Float32Array(pointSizes), 1));
+  particles.setAttribute('aspect', new BufferAttribute(new Float32Array(pointAspects), 1));
   particles.setAttribute('opacity', new BufferAttribute(new Float32Array(pointOpacities), 1));
   if (pointPositions.length) particles.computeBoundingSphere();
 
