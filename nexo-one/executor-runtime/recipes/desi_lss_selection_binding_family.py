@@ -16,6 +16,7 @@ import os
 from pathlib import Path
 import re
 import sys
+import time
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -50,6 +51,9 @@ INDEX_SHA256 = "8957d496d448a3fa585aa43399ffeace6b9f90ba7624514fe37c917d1fce406b
 CHECKSUM_SHA256 = "7ca54da2370849ee92f20a8b7eb993b8d612f9d51658832e3f5d718735e01539"
 SMOKE_NZ_NAME = "BGS_ANY_NGC_nz.txt"
 SMOKE_NZ_SHA256 = "1654453f2b481a979095e2c952272ecce3861042f895416781d4504511df0141"
+NETWORK_ATTEMPTS = 3
+NETWORK_RETRY_SECONDS = (1, 2)
+RETRYABLE_HTTP_CODES = {408, 429, 500, 502, 503, 504}
 
 
 class InputUnavailable(Exception):
@@ -117,11 +121,26 @@ def verified_bytes(binding: dict) -> bytes:
     validate_binding(binding)
     opener = urllib.request.build_opener(NoRedirect())
     request = urllib.request.Request(binding["url"], headers={"User-Agent": "NEXO-DESI-T03/1"})
-    try:
-        with opener.open(request, timeout=180) as response:
-            raw = response.read()
-    except (OSError, urllib.error.URLError) as error:
-        raise InputUnavailable(f"cannot retrieve frozen input {binding['name']}: {error}") from error
+    raw = None
+    last_error = None
+    for attempt in range(NETWORK_ATTEMPTS):
+        try:
+            with opener.open(request, timeout=180) as response:
+                raw = response.read()
+            break
+        except urllib.error.HTTPError as error:
+            last_error = error
+            if error.code not in RETRYABLE_HTTP_CODES:
+                break
+        except (OSError, urllib.error.URLError) as error:
+            last_error = error
+        if attempt < NETWORK_ATTEMPTS - 1:
+            time.sleep(NETWORK_RETRY_SECONDS[attempt])
+    if raw is None:
+        raise InputUnavailable(
+            f"cannot retrieve frozen input {binding['name']} after "
+            f"{attempt + 1} attempt(s): {last_error}"
+        ) from last_error
     actual = hashlib.sha256(raw).hexdigest()
     if actual != binding["sha256"]:
         raise InputUnavailable(f"SHA256 mismatch for frozen input {binding['name']}: {actual}")
