@@ -60,6 +60,7 @@ jobs:
           done
           NEXO_BASE_URL=http://127.0.0.1:4178 node test/lab-cinematic-integrity.browser.mjs
           NEXO_BASE_URL=http://127.0.0.1:4178 node test/board-message.browser.mjs
+          NEXO_BASE_URL=http://127.0.0.1:4178 node test/incident-operations.browser.mjs
           baseline_dir="$RUNNER_TEMP/atlas-crew-baseline"
           git fetch --no-tags --depth=1 origin 052fd7e3c1051b3542fd0dcf1be6fc54619e6f67
           git worktree add --detach "$baseline_dir" FETCH_HEAD
@@ -85,6 +86,7 @@ jobs:
             nexo-one/test-output/board-message/
             nexo-one/test-output/crew-layout/
             nexo-one/test-output/crew-layout-baseline/
+            nexo-one/test-output/incident-operations/
           if-no-files-found: warn
           retention-days: 7
 

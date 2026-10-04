@@ -2059,8 +2059,11 @@ function MetroThreeView({
     let lastFrameAt = 0;
     const minimumFrameMs = compact ? 1000 / 36 : 0;
     const animate = (now: number) => {
+      if (document.hidden) {
+        runtime.frame = 0;
+        return;
+      }
       runtime.frame = requestAnimationFrame(animate);
-      if (document.hidden) return;
       if (minimumFrameMs && now - lastFrameAt < minimumFrameMs) return;
       lastFrameAt = now;
       updateSynapsePulses(runtime, now);
@@ -2072,12 +2075,25 @@ function MetroThreeView({
       }
       renderer.render(scene, camera);
     };
-    runtime.frame = requestAnimationFrame(animate);
+    const onVisibilityChange = () => {
+      if (document.hidden) {
+        if (runtime.frame) cancelAnimationFrame(runtime.frame);
+        runtime.frame = 0;
+        return;
+      }
+      if (!runtime.frame) {
+        lastFrameAt = 0;
+        runtime.frame = requestAnimationFrame(animate);
+      }
+    };
+    document.addEventListener('visibilitychange', onVisibilityChange);
+    if (!document.hidden) runtime.frame = requestAnimationFrame(animate);
 
     return () => {
       observer.disconnect();
       cancelAnimationFrame(resizeFrame);
       cancelAnimationFrame(runtime.frame);
+      document.removeEventListener('visibilitychange', onVisibilityChange);
       renderer.domElement.removeEventListener('webglcontextlost', onContextLost);
       renderer.domElement.removeEventListener('webglcontextrestored', onContextRestored);
       renderer.domElement.removeEventListener('pointerdown', onPointerDown);

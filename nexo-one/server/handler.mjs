@@ -10,6 +10,7 @@ import {buildPublicAtlasSsot} from './compiler/atlas-public-ssot.mjs';
 import {buildAtlasResearchView,RESEARCH_ROUTES} from './compiler/atlas-research-api.mjs';
 import {verifyProjectionService} from './auth/vercel-oidc.mjs';
 import {sameOrigin} from './auth/session.mjs';
+import {googleRuntimeEnvironment} from './adapters/connect.mjs';
 import {sessionAccess,sessionRoute} from './auth/session-route.mjs';
 import {buildPersonalSnapshot,executePersonalAction} from './personal/service.mjs';
 import {createNexoMcpWebHandler,readNexoMcpStatus} from './mcp/server.mjs';
@@ -132,6 +133,7 @@ export default async function handler(req,res) {
   const send=(value,status=200)=>{res.statusCode=status;res.end(JSON.stringify(value));};
   const url=new URL(req.url,'http://local'),path=url.pathname.replace(/\/+$/,''),route=url.searchParams.get('route')||(path.endsWith('/mcp/status')?'mcp/status':path.endsWith('/personal/action')?'personal-action':path.split('/').pop());
   const privateAccess=sessionAccess(req,env,now),access=privateAccess?'PRIVATE':'PUBLIC';
+  const providerEnv=privateAccess?googleRuntimeEnvironment(env,req.headers):env;
   const origin=String(req.headers.origin||'');
   const mcpOriginAllowed=!origin||ATLAS_ORIGINS.has(origin)||sameOrigin(req);
   if((ATLAS_ORIGINS.has(origin)||sameOrigin(req))&&isCorsRoute(route)){
@@ -223,7 +225,7 @@ export default async function handler(req,res) {
     }
     const q=(url.searchParams.get('q')||'').trim().slice(0,200);
     if(route==='recall'&&!q)return send({error:'QUERY_REQUIRED'},400);
-    const options={now,access,env,force};
+    const options={now,access,env:providerEnv,force};
     const selected=route==='recall'?['drive','gmail','github','nexo','atlas']:PROVIDERS;
     if(route==='world'&&url.searchParams.get('stream')==='1'){
       res.setHeader('Content-Type','application/x-ndjson; charset=utf-8');
@@ -235,7 +237,7 @@ export default async function handler(req,res) {
     const world=compile(results,{now,access});
     const requiredProviders=world.providers.filter(p=>p.id!=='vercel');
     if(route==='health'){
-      const connectionHealth=summarizeConnectionHealth({env,providers:world.providers,access});
+      const connectionHealth=summarizeConnectionHealth({env:providerEnv,providers:world.providers,access});
       return send({status:requiredProviders.every(p=>p.status==='AVAILABLE'&&!p.partial)?'HEALTHY':'DEGRADED',version:'0.1.0',contractVersion:'1',access,privateConfigured:connectionHealth.session.configured,sessionConfigured:connectionHealth.session.configured,connections:connectionHealth.connections,providers:world.providers,generatedAt:world.generatedAt});
     }
     if(route==='now')return send({...world,items:world.items.filter(x=>['ACT','ESCALATE'].includes(x.attention)).slice(0,3)});
