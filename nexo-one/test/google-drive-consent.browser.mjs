@@ -17,7 +17,7 @@ const server=createServer(async(req,res)=>{
   res.setHeader('Content-Security-Policy',"default-src 'self'; script-src 'self'; style-src 'self'; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'");
   const path=new URL(req.url,'http://local').pathname;
   if(path==='/__synthetic_return'&&process.env.NEXO_CONSENT_FIXTURE_SERVER==='1'){
-    res.statusCode=303;res.setHeader('Location','/api/google-drive-return?state='+new URL(callbackUrl).searchParams.get('state'));res.end();return;
+    res.statusCode=303;res.setHeader('Location','/api/google-drive-return'+new URL(callbackUrl).search);res.end();return;
   }
   if(path.startsWith('/api/')){
     let raw='';for await(const chunk of req)raw+=chunk;const body=raw?JSON.parse(raw):{};
@@ -58,15 +58,16 @@ if(process.env.NEXO_CONSENT_FIXTURE_SERVER==='1'){
 }else{
 const browser=await chromium.launch({headless:true,...(process.env.NEXO_CHROMIUM_PATH?{executablePath:process.env.NEXO_CHROMIUM_PATH}:{})});
 await mkdir('test-output/google-drive-consent',{recursive:true});
+const syntheticConsentReturn=route=>{
+  assert.equal(route.request().url(),'https://connect.vercel.com/authorize/sca_synthetic');
+  const callback=new URL(callbackUrl);
+  return route.fulfill({status:302,headers:{Location:baseUrl+'/api/google-drive-return'+callback.search},body:''});
+};
 try{
   for(const [label,width,height] of [['desktop',1280,900],['mobile',390,844]]){
     const context=await browser.newContext({viewport:{width,height}}),page=await context.newPage(),errors=[];
     page.on('pageerror',e=>errors.push(e.message));
-    await page.route('https://connect.vercel.com/**',route=>{
-      assert.equal(route.request().url(),'https://connect.vercel.com/authorize/sca_synthetic');
-      const callback=new URL(callbackUrl);
-      return route.fulfill({status:302,headers:{Location:baseUrl+'/api/google-drive-return?state='+callback.searchParams.get('state')+'&profile='+callback.searchParams.get('profile')},body:''});
-    });
+    await page.route('https://connect.vercel.com/**',syntheticConsentReturn);
     await page.goto(baseUrl+'/google-drive-connect.html');
     await page.getByRole('button',{name:'Entrar na sessão privada'}).waitFor();
     const initialStarts=starts;
@@ -99,6 +100,7 @@ try{
   }
   {
     const context=await browser.newContext(),page=await context.newPage();
+    await page.route('https://connect.vercel.com/**',syntheticConsentReturn);
     await page.goto(baseUrl+'/google-drive-connect.html');await page.getByLabel('Senha do NEXO').fill(password);
     await page.getByRole('button',{name:'Entrar na sessão privada'}).click();
     await page.getByText(/não fica limitado a uma planilha específica/).waitFor();
@@ -116,6 +118,7 @@ try{
   }
   startMode='uncertain';
   const context=await browser.newContext(),page=await context.newPage();
+  await page.route('https://connect.vercel.com/**',syntheticConsentReturn);
   await page.goto(baseUrl+'/google-drive-connect.html');await page.getByLabel('Senha do NEXO').fill(password);
   await page.getByRole('button',{name:'Entrar na sessão privada'}).click();
   await page.getByLabel('Autorizo esta conexão persistente somente de leitura do Google Drive').check();
