@@ -8,6 +8,7 @@ import {
   scaleForDistance,
   stableSceneOffset,
 } from '../src/features/lab/sceneModel.ts';
+import { buildCosmicWebGeometry } from '../src/features/lab/cosmicWebGeometry.ts';
 
 const sampleTest = (id, overrides = {}) => ({
   id,
@@ -153,6 +154,54 @@ test('stale execution state cannot pulse dependencies and blocked targets are at
   assert.equal(isRecentSceneResult(blockedTests[1], new Set(['B']), true), false);
 });
 
+test('cinematic web geometry is deterministic, budgeted, and separates density from dependency arrows', () => {
+  const layout = buildObservatoryLayout(baseTests, projects, hypotheses);
+  const low = buildCosmicWebGeometry(layout, 'low');
+  const lowAgain = buildCosmicWebGeometry(layout, 'low');
+  const medium = buildCosmicWebGeometry(layout, 'medium');
+  const positions = low.particles.getAttribute('position').array;
+  const repeated = lowAgain.particles.getAttribute('position').array;
+  assert.ok(low.particleCount > 0);
+  assert.ok(low.particleCount <= 20_000);
+  assert.deepEqual(Array.from(positions), Array.from(repeated), 'static dust must not change on re-render');
+  assert.ok(medium.particleCount > low.particleCount, 'quality tier increases structural detail');
+  assert.ok(low.filaments.getAttribute('position').count > 0);
+  assert.ok(low.connections.some(connection => connection.relation === 'membership'));
+  assert.ok(low.connections.some(connection => connection.relation === 'domain-density'));
+  assert.equal(low.connections.some(connection => connection.id.includes('A->B')), false, 'dependency direction is rendered in its separate arrow layer');
+  assert.ok(low.connections.filter(connection => connection.relation === 'domain-density').every(connection => {
+    const source = layout.entityByKey.get(connection.sourceKey);
+    const target = layout.entityByKey.get(connection.targetKey);
+    return source && target && source.domain === target.domain;
+  }));
+});
+
+test('large cosmic layouts honor per-quality particle and connection budgets', () => {
+  const entities = [];
+  const entityByKey = new Map();
+  const memberships = [];
+  const count = 2_200;
+  for (let index = 0; index < count; index += 1) {
+    const id = String(index).padStart(4, '0');
+    const angle = index / count * Math.PI * 2;
+    const projectKey = `project:P-${id}`;
+    const testKey = `test:T-${id}`;
+    const project = { key: projectKey, id: `P-${id}`, kind: 'project', label: `Projeto ${id}`, domain: 'SCIENCE', position: { x: Math.cos(angle) * 12, y: Math.sin(angle) * 4, z: Math.sin(angle) * 9 } };
+    const test = { key: testKey, id: `T-${id}`, kind: 'test', label: `Teste ${id}`, domain: 'SCIENCE', position: { x: project.position.x + 0.4, y: project.position.y, z: project.position.z } };
+    entities.push(project, test);
+    entityByKey.set(projectKey, project);
+    entityByKey.set(testKey, test);
+    memberships.push({ id: `${projectKey}->${testKey}`, sourceKey: projectKey, targetKey: testKey });
+  }
+  const largeLayout = { entities, entityByKey, memberships, dependencies: [], keyByTestId: new Map(), projectForTest: new Map(), hypothesisForTest: new Map(), projectCount: count, hypothesisCount: 0, testCount: count };
+  const low = buildCosmicWebGeometry(largeLayout, 'low');
+  const high = buildCosmicWebGeometry(largeLayout, 'high');
+  assert.ok(low.connections.length <= 2_048);
+  assert.ok(high.connections.length <= 2_048);
+  assert.ok(low.particleCount <= 20_000);
+  assert.ok(high.particleCount <= 60_000);
+});
+
 test('scale thresholds and recent-result brightness reflect explicit state only', () => {
   assert.equal(scaleForDistance(30), 'overview');
   assert.equal(scaleForDistance(18), 'research');
@@ -174,5 +223,9 @@ test('primary scene has no synthetic formation, decorative orbit or temporal aft
   assert.match(scene, /element\.tabIndex = -1/);
   assert.match(scene, /setAttribute\('aria-hidden', 'true'\)/);
   assert.match(scene, /published-membership/);
+  assert.match(scene, /#include <colorspace_fragment>/);
+  assert.match(scene, /dataset\.cosmicParticles/);
+  assert.match(scene, /dataset\.cosmicFilaments/);
+  assert.match(scene, /buildCosmicWebGeometry/);
   assert.doesNotMatch(scene, /nexo:replay-formation|AfterimagePass|scene\.scale\.setScalar|target\.az \+= dt/);
 });

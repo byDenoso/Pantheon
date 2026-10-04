@@ -58,21 +58,36 @@ try {
     const page = await context.newPage();
     const errors = [];
     page.on('pageerror', error => errors.push(error.message));
+    page.on('console', message => {
+      if (message.type() === 'error' && /THREE.WebGLProgram|VALIDATE_STATUS|shader error|Error compiling/i.test(message.text())) errors.push(message.text());
+    });
     await page.clock.install({ time: Date.parse(projection.manifest.generated_at) + 60_000 });
-    await page.addInitScript(({ theme, fallback }) => {
+    await page.addInitScript(({ theme, fallback, quality }) => {
       localStorage.setItem('nexo-theme', theme);
       localStorage.setItem('nexo.intro.seen', '1');
       localStorage.setItem('nexo.legend.seen', '1');
-      localStorage.setItem('nexo.quality', 'low');
+      localStorage.setItem('nexo.quality', quality);
       if (fallback) {
         const getContext = HTMLCanvasElement.prototype.getContext;
         HTMLCanvasElement.prototype.getContext = function (kind, ...args) { return /^webgl/.test(kind) ? null : getContext.call(this, kind, ...args); };
       }
-    }, { theme, fallback });
+    }, { theme, fallback, quality: viewport.width >= 1280 ? 'medium' : 'low' });
     await page.route('**/api/session', route => route.fulfill({ json: { configured: false, authenticated: false } }));
     await page.route('**/api/system*', route => route.fulfill({ json: system }));
     await page.route('**/build-meta.json*', route => route.fulfill({ json: { projection_fingerprint: projection.manifest.projection_fingerprint } }));
     await page.goto(base + '/#/agora');
+    await page.getByRole('navigation', { name: 'Escala do ATLAS' }).waitFor();
+    await page.evaluate(() => document.fonts.ready);
+    if (!fallback) {
+      await page.locator('.obs-scene canvas').waitFor();
+      await page.waitForFunction(() => Number(document.querySelector('.obs-scene')?.getAttribute('data-cosmic-particles')) > 0);
+      const geometry = await page.locator('.obs-scene').evaluate(el => ({ particles: Number(el.dataset.cosmicParticles), filaments: Number(el.dataset.cosmicFilaments) }));
+      assert.ok(geometry.particles <= (viewport.width >= 1280 ? 42_000 : 20_000) && geometry.filaments > 0 && geometry.filaments <= 2_048, 'cosmic substrate has bounded render buffers');
+      await page.clock.runFor(500);
+      await page.waitForFunction(() => document.querySelector('.obs-scene')?.getAttribute('data-cosmic-rendered') === 'true');
+    }
+    if (!input) await page.addStyleTag({ content: 'body::after{content:"FIXTURE VISUAL · DADOS SINTÉTICOS · SOMENTE TESTE";position:fixed;left:12px;bottom:6px;z-index:9999;padding:4px 8px;background:#15120c;color:#f4e4bd;font:11px system-ui;pointer-events:none}' });
+    await page.screenshot({ path: output + '/' + name + '-atlas-entry.png' });
     await page.getByRole('button', { name: 'Abrir observatório' }).click();
     await page.locator('#now-problem').waitFor();
     await visualReady(page, name + ':home');

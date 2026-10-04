@@ -40,6 +40,12 @@ Pesquisa anterior à implementação, em fontes primárias:
 
 Direção: vazios e concentrações, filamentos orgânicos, hierarquia de escala, contraste contido e instrumentos legíveis. Sem formação cosmológica fictícia, respiração ornamental ou giro automático que se passe por atividade do sistema.
 
+### Refinamento cinematográfico autorizado
+
+Após a primeira publicação, o usuário enviou uma referência de teia cósmica e pediu explicitamente Three.js + WebGL. A cena passa a representar densidade com feixes de partículas, núcleos luminosos e profundidade. Essas amostras visuais não são entidades adicionais nem execuções; a atividade continua restrita ao estado publicado. O tecido entre regiões do mesmo domínio representa afinidade de área, enquanto dependências operacionais usam relações publicadas e setas próprias. A alternativa sem WebGL preserva a mesma distinção.
+
+Os shaders personalizados fazem a conversão de saída para o espaço de cor do renderer; omiti-la escurecia os nós. Referência técnica: https://threejs.org/manual/pages/color-management.html. O CI registra a entrada do ATLAS em desktop e celular e trata erros de compilação de shader como falhas.
+
 ## Restrições verificadas
 
 - A API de automações exposta nesta sessão não contém campos de modelo ou esforço. A preferência solicitada é GPT 6 Luna / Medium, mas texto de prompt não configura o executor. A aplicação da preferência precisa de verificação no produto.
