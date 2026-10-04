@@ -25,6 +25,13 @@ function boundedScopes(scopes){
   return [...new Set(scopes)];
 }
 
+function googleSubject(env){
+  // This is the existing single-user binding, never a request-controlled identity.
+  const id=env.GOOGLE_CONNECT_SUBJECT_ID===undefined?'owner':env.GOOGLE_CONNECT_SUBJECT_ID;
+  if(typeof id!=='string'||!id||id.length>256||/[\s\u0000-\u001f\u007f]/u.test(id))throw new ProviderError('AUTH_REQUIRED');
+  return {type:'user',id};
+}
+
 export async function googleConnectToken(env,signal,{scopes=GOOGLE_READ_SCOPES}={}){
   requireEnv(env,'GOOGLE_CONNECTOR','VERCEL_OIDC_TOKEN');
   const data=await json(connectorUrl(env.GOOGLE_CONNECTOR),{
@@ -32,7 +39,7 @@ export async function googleConnectToken(env,signal,{scopes=GOOGLE_READ_SCOPES}=
     signal,
     method:'POST',
     headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({subject:{type:'app'},scopes:boundedScopes(scopes)})
+    body:JSON.stringify({subject:googleSubject(env),scopes:boundedScopes(scopes)})
   });
   if(typeof data.token!=='string'||!data.token)throw new ProviderError('AUTH_REQUIRED');
   return data.token;
