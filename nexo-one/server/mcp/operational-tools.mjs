@@ -232,6 +232,9 @@ export function createOperationalService({readState,submitIntent,submitScientifi
         return {role:args.role,prompt:ROLE_PROMPTS[args.role],authority:state.authority,revision:state.revision,
           available:available.map(item=>({...safeWork(item),role_session:sessionFor(item)})),
           blocked:work.filter(item=>item.state==='BLOCKED').map(safeWork),
+          // Bootstrap real scientific work from the same verified snapshot; do not
+          // make every role rediscover it through a second full Tower download.
+          scientific_queue:{...scientificQueue(state,args.role,principal.id,{}),next_tool:'get_scientific_queue'},
           instructions:{recover_technical_failures:true,block_only_affected_item:true,criterion_changes:'EXPLICIT_SCIENTIFIC_DECISION',
             recipe:'REUSE_DEFINED_METHOD; INDEPENDENT_REVIEW_FOR_SCIENTIFIC_CODE_CHANGE',record_via:'WRITER_ONLY',
             routine_approval_required:false,formal_gates:['DESTRUCTIVE_OR_IRREVERSIBLE_ACTION','CRITICAL_CREDENTIAL_OR_ACCESS_CHANGE'],
