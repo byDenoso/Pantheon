@@ -9,6 +9,7 @@ import type { PlacedNode3D } from '../viewmodels/graph3d.ts';
 import { useNexoStore } from '../data/NexoStore.tsx';
 import { domainLabel } from '../viewmodels/tokens.ts';
 
+const EMPTY_EDGES: [] = [];
 const SCALE = 0.36; // matches G_SCALE in GalaxyThree3D (half size)
 const ENDPOINT = import.meta.env?.VITE_GALAXY_ENDPOINT?.trim() || './galaxy/latest.json';
 const TYPE: Record<string, GraphNodeType> = {
@@ -214,7 +215,7 @@ export function GalaxyView({ selectedId }: { selectedId: string | null; onSelect
     <div className="atlas3d-shell atlas-three-field-shell atlas-galaxy-view" data-renderer="galaxy-spiral">
       <GalaxyThree3D
         nodes={nodes}
-        edges={[]}
+        edges={EMPTY_EDGES}
         selectedId={selectedId}
         onSelect={handleSelect}
         onFailure={handleFailure}

@@ -312,6 +312,15 @@ export function Atlas3DContent({system,themeOverride}:{system:SystemStore;themeO
     if(query==='2d'||query==='3d'||query==='galaxy')return query;
     return '2d';
   });
+  useEffect(() => {
+    const restoreMode = () => {
+      const mode = atlasRouteParams().get('view') || atlasRouteParams().get('mode');
+      if (mode === '2d' || mode === '3d' || mode === 'galaxy') setViewMode(mode);
+    };
+    window.addEventListener('hashchange', restoreMode);
+    window.addEventListener('popstate', restoreMode);
+    return () => { window.removeEventListener('hashchange', restoreMode); window.removeEventListener('popstate', restoreMode); };
+  }, []);
   const [showBeams, setShowBeams] = useState(true);
   const [show3dHint, setShow3dHint] = useState(false);
   const [mobileDetailsOpen, setMobileDetailsOpen] = useState(false);

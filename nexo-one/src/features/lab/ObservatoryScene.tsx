@@ -1,20 +1,13 @@
-// Observatório: teia cósmica WebGL contínua atrás de todas as páginas.
+// Observatório: teia cósmica 3D vetorial projetada pela câmera.
 // Leitura: cada domínio é uma região (halo grande) da teia; cada hipótese é um nó;
 // cada teste é uma estrela no filamento que liga sua hipótese ao domínio.
 // Cor/pulso = veredito (confirmado queima estável, em revisão pulsa, bloqueado apaga, refutado vermelho).
 // A câmera muda de enquadramento por página; clicar numa estrela abre o teste.
 import { useEffect, useMemo, useRef, useState } from 'react';
-import {
-  AdditiveBlending, NormalBlending, HalfFloatType, WebGLRenderTarget, BufferAttribute, BufferGeometry, Color, LineBasicMaterial, LineSegments,
-  PerspectiveCamera, Points, Raycaster, Scene, ShaderMaterial, Vector2, Vector3, WebGLRenderer,
-} from 'three';
-import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
-import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
-import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
-import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
-import { AfterimagePass } from 'three/examples/jsm/postprocessing/AfterimagePass.js';
+import { BufferAttribute, BufferGeometry, Color, Matrix4, PerspectiveCamera, Scene, Vector3 } from 'three';
 import type { TestEntity, Verdict } from './model.ts';
 import { normDomain } from './domains.ts';
+import { createCosmicDynamics } from './cosmicDynamics.ts';
 
 /** Fenômenos da teia: o que o NEXO faz agora, na escala certa (galáxias ativas, não estrelas).
  *  Quasar = decisão sua · AGN com jatos = testes rodando/na fila · GRB = pensamento novo. */
@@ -161,14 +154,8 @@ export function detectQuality(): Quality {
     if (forced === 'high' || forced === 'medium' || forced === 'low') return forced;
   } catch { /* sem armazenamento */ }
   if (window.matchMedia('(max-width: 760px)').matches || (navigator.hardwareConcurrency || 8) < 4) return 'low';
-  let gpu = '';
-  try {
-    const gl = document.createElement('canvas').getContext('webgl');
-    const ext = gl?.getExtension('WEBGL_debug_renderer_info');
-    gpu = String((ext && gl?.getParameter(ext.UNMASKED_RENDERER_WEBGL)) || '');
-  } catch { /* sem WebGL de diagnóstico */ }
-  if (/RTX|GTX|Radeon RX|Radeon Pro|Apple M\d|Arc A|Quadro/i.test(gpu)) return 'high';
-  if (/SwiftShader|llvmpipe|Software/i.test(gpu)) return 'low';
+  if ((navigator.hardwareConcurrency || 8) >= 12) return 'high';
+  if ((navigator.hardwareConcurrency || 8) <= 4) return 'low';
   return 'medium';
 }
 const DENSITY: Record<Quality, number> = { high: 1.7, medium: 1.05, low: 0.55 };
@@ -229,25 +216,34 @@ export function ObservatoryScene({ tests, page, focusIds, onPick, onAvailability
   useEffect(() => {
     const el = host.current;
     if (!el) return;
-    let renderer: WebGLRenderer;
-    try { renderer = new WebGLRenderer({ antialias: true, alpha: true, powerPreference: 'high-performance' }); }
-    catch { el.dataset.fallback = 'true'; onAvailability?.(false); return; }
-    delete el.dataset.fallback; onAvailability?.(true);
-    const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    delete el.dataset.fallback;
+    onAvailability?.(true);
+    const motionPreference = window.matchMedia('(prefers-reduced-motion: reduce)');
+    let reduced = motionPreference.matches;
+    const updateMotionPreference = (event: MediaQueryListEvent) => { reduced = event.matches; };
+    motionPreference.addEventListener('change', updateMotionPreference);
     const mobile = window.matchMedia('(max-width: 760px)').matches;
     let quality: Quality = detectQuality();
     const dens = DENSITY[quality];
-    const dprFor = (q: Quality) => Math.min(window.devicePixelRatio || 1, q === 'high' ? 2 : q === 'medium' ? 1.5 : 1.25);
-    let dpr = dprFor(quality);
-    renderer.setPixelRatio(dpr);
     el.dataset.quality = quality;
-    renderer.domElement.setAttribute('aria-hidden', 'true');
-    el.appendChild(renderer.domElement);
+    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    svg.classList.add('obs-vector-canvas');
+    svg.dataset.towerSvgNative = 'observatory';
+    svg.setAttribute('role', 'img');
+    svg.setAttribute('aria-label', 'Modelo visual ilustrativo flat-ΛCDM: expansão acelerada e atração suavizada para âncoras de domínio, sem massas inferidas dos registros.');
+    svg.setAttribute('preserveAspectRatio', 'none');
+    svg.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;touch-action:none;cursor:grab';
+    svg.style.background = theme === 'dark' && quality !== 'low' ? '#000' : 'transparent';
+    el.dataset.physicsModel = 'illustrative-flat-lcdm-toy';
+    el.dataset.physicsModelStatus = 'TOY_MODEL';
+    const svgTitle = document.createElementNS('http://www.w3.org/2000/svg', 'title');
+    svgTitle.textContent = 'Modelo visual ilustrativo flat-ΛCDM. As âncoras de domínio têm peso visual igual; massas não são inferidas dos registros.';
+    svg.appendChild(svgTitle);
+    el.prepend(svg);
     const scene = new Scene();
     const camera = new PerspectiveCamera(48, 1, 0.1, 300);
-    const uniforms = { time: { value: 0 }, pixelRatio: { value: dpr }, evo: { value: 0 } };
+    const uniforms = { time: { value: 0 }, pixelRatio: { value: 1 }, evo: { value: 0 } };
     const light = theme === 'light';
-    const mat = new ShaderMaterial({ uniforms: { ...uniforms, ink: { value: light ? 1 : 0 } }, vertexShader: VERT, fragmentShader: FRAG, transparent: true, depthWrite: false, blending: light ? NormalBlending : AdditiveBlending });
 
     // --- Estrutura: domínios, hipóteses, filamentos ---
     const web = buf();
@@ -319,9 +315,7 @@ export function ObservatoryScene({ tests, page, focusIds, onPick, onAvailability
     }
     if (reduced) web.pulse.fill(0);
     const webGeo = geom(web), starGeo = geom(stars);
-    scene.add(new Points(webGeo, mat));
-    const starPoints = new Points(starGeo, mat);
-    scene.add(starPoints);
+    const starPositions = starGeo.getAttribute('position').array as Float32Array;
     const baseSize = Float32Array.from(stars.size);
 
     // Cubo de simulação: linhas finas que dão escala e a sensação de "caixa observada".
@@ -329,8 +323,6 @@ export function ObservatoryScene({ tests, page, focusIds, onPick, onAvailability
     const corners = [-B, B];
     for (const x of corners) for (const y of corners) { e.push(x, y, -B, x, y, B); e.push(x, -B, y, x, B, y); e.push(-B, x, y, B, x, y); }
     const boxGeo = new BufferGeometry(); boxGeo.setAttribute('position', new BufferAttribute(new Float32Array(e), 3));
-    const boxMat = new LineBasicMaterial({ color: theme === 'dark' ? 0x3a3d4c : 0x55586a, transparent: true, opacity: 0.22 });
-    scene.add(new LineSegments(boxGeo, boxMat));
 
     // --- Fenômenos ---
     const ev = events ?? { quasars: [], agn: [], grbs: [] };
@@ -346,9 +338,7 @@ export function ObservatoryScene({ tests, page, focusIds, onPick, onAvailability
       push(qso, [at.x, at.y, at.z], [0.98, 0.92, 0.8], 70, reduced ? 0 : 1, rnd(`g${k}`));
       anchors.push(at);
     });
-    const qsoMat = new ShaderMaterial({ uniforms, vertexShader: VERT, fragmentShader: QSO_FRAG, transparent: true, depthWrite: false, blending: AdditiveBlending });
     const qsoGeo = geom(qso);
-    scene.add(new Points(qsoGeo, qsoMat));
     const jp: number[] = [], jd: number[] = [], jph: number[] = [], jsp: number[] = [];
     ev.agn.forEach((e, k) => {
       // Perto do domínio, não no núcleo: uma galáxia ativa vizinha.
@@ -368,8 +358,17 @@ export function ObservatoryScene({ tests, page, focusIds, onPick, onAvailability
     jetGeo.setAttribute('dir', new BufferAttribute(new Float32Array(jd), 3));
     jetGeo.setAttribute('phase', new BufferAttribute(new Float32Array(jph), 1));
     jetGeo.setAttribute('speed', new BufferAttribute(new Float32Array(jsp), 1));
-    const jetMat = new ShaderMaterial({ uniforms, vertexShader: JET_VERT, fragmentShader: JET_FRAG, transparent: true, depthWrite: false, blending: AdditiveBlending });
-    scene.add(new Points(jetGeo, jetMat));
+
+    const domainAnchors = Float32Array.from(domainPos.flatMap(d => [d.x, d.y, d.z]));
+    const dynamics = createCosmicDynamics({
+      particleBuffers: [
+        webGeo.getAttribute('position').array as Float32Array,
+        starPositions,
+        qsoGeo.getAttribute('position').array as Float32Array,
+        jetGeo.getAttribute('position').array as Float32Array,
+      ],
+      anchors: domainAnchors,
+    });
 
     // --- Câmera ---
     const cam = { dist: 40, elev: 0.5, az: 0.3 };
@@ -390,7 +389,7 @@ export function ObservatoryScene({ tests, page, focusIds, onPick, onAvailability
       sizes.needsUpdate = true;
       if (set.size === 1) {
         const i = ids.indexOf(list[0]!);
-        if (i >= 0) target.look.set(stars.pos[i * 3]!, stars.pos[i * 3 + 1]!, stars.pos[i * 3 + 2]!).multiplyScalar(scene.scale.x);
+        if (i >= 0) target.look.set(starPositions[i * 3]!, starPositions[i * 3 + 1]!, starPositions[i * 3 + 2]!).multiplyScalar(scene.scale.x);
       }
     };
     const basePulse = Float32Array.from(stars.pulse);
@@ -411,7 +410,7 @@ export function ObservatoryScene({ tests, page, focusIds, onPick, onAvailability
 
     const resize = () => {
       const w = el.clientWidth || window.innerWidth, h = el.clientHeight || window.innerHeight;
-      renderer.setSize(w, h, false); camera.aspect = w / h;
+      svg.setAttribute('viewBox', `0 0 ${w} ${h}`); camera.aspect = w / h;
       // Desktop: a teia vive à direita, a coluna de leitura à esquerda.
       // Desktop: a coluna de leitura ocupa ~600px à esquerda; a teia se desloca para a área livre.
       // ≥1280: leitura (~600px) à esquerda e telemetria (340px) à direita; a teia centra no espaço entre as duas.
@@ -419,49 +418,13 @@ export function ObservatoryScene({ tests, page, focusIds, onPick, onAvailability
       else if (w > 900) camera.setViewOffset(w, h, -Math.min(w * 0.3, 300), 0, w, h); else camera.clearViewOffset();
       camera.updateProjectionMatrix();
     };
-    // Bloom: brilho físico dos aglomerados e filamentos (alta = resolução cheia, média = meia, baixa = sem).
-    let composer: EffectComposer | null = null;
-    let bloom: UnrealBloomPass | null = null;
-    const buildComposer = () => {
-      composer?.dispose(); composer = null; bloom = null;
-      if (quality === 'low' || theme === 'light') { renderer.setClearColor(0x000000, 0); return; }
-      renderer.setClearColor(0x000000, 1); // o bloom precisa de fundo opaco
-      composer = new EffectComposer(renderer, new WebGLRenderTarget(1, 1, { samples: quality === 'high' ? 4 : 2, type: HalfFloatType }));
-      composer.setPixelRatio(dpr);
-      composer.addPass(new RenderPass(scene, camera));
-      // Bloom contido: só os núcleos mais brilhantes vazam luz; o preto do fundo continua preto.
-      bloom = new UnrealBloomPass(new Vector2(1, 1), quality === 'high' ? 0.4 : 0.34, 0.32, 0.82);
-      composer.addPass(bloom);
-      // Suavização temporal leve: mistura 45% do quadro anterior e mata o 'sparkle' sem rastro visível na rotação lenta.
-      composer.addPass(new AfterimagePass(0.45));
-      composer.addPass(new OutputPass());
-    };
-    buildComposer();
-    const resizeComposer = () => {
-      if (!composer || !bloom) return;
-      const w = el.clientWidth || window.innerWidth, h = el.clientHeight || window.innerHeight;
-      composer.setSize(w, h);
-      const f = quality === 'high' ? 1 : 0.5; // média: bloom em meia resolução
-      bloom.setSize(Math.max(1, Math.round(w * dpr * f)), Math.max(1, Math.round(h * dpr * f)));
-    };
-    const resizeAll = () => { resize(); resizeComposer(); };
+    const resizeAll = () => resize();
     resizeAll();
     const ro = new ResizeObserver(resizeAll); ro.observe(el);
-    // Guarda de fluidez: média de quadros ruim por ~3 s desce um nível (resolução e bloom), nunca sobe sozinho.
-    let slowAcc = 0, slowN = 0;
-    const degrade = () => {
-      if (quality === 'low') return;
-      quality = quality === 'high' ? 'medium' : 'low';
-      dpr = dprFor(quality); renderer.setPixelRatio(dpr); uniforms.pixelRatio.value = dpr;
-      el.dataset.quality = quality;
-      buildComposer(); resizeAll();
-    };
 
     // Controles (como nos grafos): arrastar gira · roda/pinça dá zoom · botão direito, Shift ou 2 dedos movem · duplo clique recentra.
     // Fora do modo Explorar, a roda e o toque vertical continuam rolando a página.
-    const ray = new Raycaster(); ray.params.Points = { threshold: 0.35 };
-    const ndc = new Vector2();
-    const canvas = renderer.domElement;
+    const canvas = svg;
     const pointers = new Map<number, { x: number; y: number }>();
     let drag: { x: number; y: number; moved: boolean; pan: boolean } | null = null;
     let pinch: { d: number; cx: number; cy: number } | null = null;
@@ -502,12 +465,10 @@ export function ObservatoryScene({ tests, page, focusIds, onPick, onAvailability
       pointers.delete(ev.pointerId);
       if (pointers.size < 2) pinch = null;
       const was = drag; drag = null;
-      if (!was || was.moved || ev.target !== canvas) return;
+      if (!was || was.moved || !(ev.target instanceof Node) || !canvas.contains(ev.target)) return;
       const rect = canvas.getBoundingClientRect();
-      ndc.set(((ev.clientX - rect.left) / rect.width) * 2 - 1, -((ev.clientY - rect.top) / rect.height) * 2 + 1);
-      ray.setFromCamera(ndc, camera);
-      const hit = ray.intersectObject(starPoints)[0];
-      if (hit?.index !== undefined && ids[hit.index]) pickRef.current(ids[hit.index]!);
+      const i = nearestStar(ev.clientX - rect.left, ev.clientY - rect.top, rect.width, rect.height);
+      if (i !== null && ids[i]) pickRef.current(ids[i]!);
     };
     const byId = new Map(tests.map(t => [t.id, t]));
     let hoverAt = 0;
@@ -516,10 +477,8 @@ export function ObservatoryScene({ tests, page, focusIds, onPick, onAvailability
       if (!tipEl || drag || pinch || ev.pointerType === 'touch') { if (tipEl) tipEl.style.opacity = '0'; return; }
       const now = performance.now(); if (now - hoverAt < 50) return; hoverAt = now;
       const rect = canvas.getBoundingClientRect();
-      ndc.set(((ev.clientX - rect.left) / rect.width) * 2 - 1, -((ev.clientY - rect.top) / rect.height) * 2 + 1);
-      ray.setFromCamera(ndc, camera);
-      const hit = ray.intersectObject(starPoints)[0];
-      const t = hit?.index !== undefined ? byId.get(ids[hit.index] ?? '') : undefined;
+      const index = nearestStar(ev.clientX - rect.left, ev.clientY - rect.top, rect.width, rect.height);
+      const t = index !== null ? byId.get(ids[index] ?? '') : undefined;
       if (!t) {
         // Perto de uma nuvem de formação? explica o que é.
         const mx = ev.clientX - rect.left, my = ev.clientY - rect.top;
@@ -567,32 +526,114 @@ export function ObservatoryScene({ tests, page, focusIds, onPick, onAvailability
     const labelEls = [...(labels.current?.querySelectorAll('[data-domain]') ?? [])] as HTMLElement[];
     const eventEls = [...(labels.current?.querySelectorAll('[data-event]') ?? [])] as HTMLElement[];
     const proj = new Vector3();
+    const clipMatrix = new Matrix4();
+    const updateProjectionMatrix = () => {
+      camera.updateMatrixWorld();
+      clipMatrix.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse);
+    };
 
-    let raf = 0, last = performance.now(), visible = true, expansion = 1, lodTick = 0;
-    let contextLost = false;
-    const lost = (event: Event) => { event.preventDefault(); contextLost = true; onAvailability?.(false); };
-    const restored = () => { contextLost = false; last = performance.now(); onAvailability?.(true); };
-    canvas.addEventListener('webglcontextlost', lost); canvas.addEventListener('webglcontextrestored', restored);
+    const vectorLayers = ['environment', 'tests', 'events', 'jets', 'bounds'].map(name => {
+      const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+      g.setAttribute('class', `obs-vector-${name}`); g.setAttribute('pointer-events', 'none'); svg.appendChild(g); return g;
+    });
+    const pathCaches = vectorLayers.map(() => new Map<string, SVGPathElement>());
+    // Lookup de alta resolução mantém a quantização visual original sem pow() por vértice.
+    const srgb = new Uint8Array(65_536);
+    for (let i = 0; i < srgb.length; i += 1) srgb[i] = Math.round(Math.pow(i / 65_535, 1 / 2.2) * 255);
+    const colorCache = new Map<number, string>();
+    const rgb = (r: number, g: number, b: number) => {
+      const ri = Math.max(0, Math.min(65_535, Math.round(r * 65_535)));
+      const gi = Math.max(0, Math.min(65_535, Math.round(g * 65_535)));
+      const bi = Math.max(0, Math.min(65_535, Math.round(b * 65_535)));
+      const red = srgb[ri]!, green = srgb[gi]!, blue = srgb[bi]!;
+      const key = (red << 16) | (green << 8) | blue;
+      let color = colorCache.get(key);
+      if (!color) {
+        color = `rgb(${red},${green},${blue})`;
+        colorCache.set(key, color);
+      }
+      return color;
+    };
+    const updateLayer = (index: number, data: Map<string, string[]>) => {
+      const layer = vectorLayers[index]!, cache = pathCaches[index]!, live = new Set<string>();
+      for (const [key, parts] of data) {
+        live.add(key); let path = cache.get(key);
+        if (!path) { path = document.createElementNS('http://www.w3.org/2000/svg', 'path'); path.setAttribute('fill', 'none'); path.setAttribute('pointer-events', 'none'); path.setAttribute('stroke', key.split('|')[0]!); path.setAttribute('stroke-opacity', key.split('|')[1]!); path.setAttribute('stroke-width', key.split('|')[2]!); path.setAttribute('stroke-linecap', 'round'); path.setAttribute('vector-effect', 'non-scaling-stroke'); cache.set(key, path); layer.appendChild(path); }
+        const d = parts.join('');
+        if (path.getAttribute('d') !== d) path.setAttribute('d', d);
+      }
+      for (const [key, path] of cache) if (!live.has(key)) { path.remove(); cache.delete(key); }
+    };
+    const projectPaths = (geo: BufferGeometry, index: number, deform: boolean, time: number, omit = 1) => {
+      const positions = geo.getAttribute('position'), tints = geo.getAttribute('tint'), sizes = geo.getAttribute('size'), pulses = geo.getAttribute('pulse'), seeds = geo.getAttribute('seed'), nodesAttr = geo.getAttribute('node');
+      const groups = new Map<string, string[]>();
+      for (let i = 0; i < positions.count; i += omit) {
+        let x=positions.getX(i), y=positions.getY(i), z=positions.getZ(i), pulse=pulses.getX(i), seed=seeds.getX(i);
+        if (deform) { const nx=nodesAttr.getX(i), ny=nodesAttr.getY(i), nz=nodesAttr.getZ(i), dx=nx-x, dy=ny-y, dz=nz-z, distance=Math.hypot(dx,dy,dz), evo=uniforms.evo.value, outward=Math.min(1,Math.max(0,(distance-.6)/2.6))*.75*evo, norm=Math.hypot(x,y,z)||1, breath=Math.sin(time*.07+seed*6.28)*.015; x+=(dx*.3*evo)+x/norm*outward+dx*breath; y+=(dy*.3*evo)+y/norm*outward+dy*breath; z+=(dz*.3*evo)+z/norm*outward+dz*breath; }
+        const m = clipMatrix.elements, px = x * expansion, py = y * expansion, pz = z * expansion;
+        const cx=m[0]!*px+m[4]!*py+m[8]!*pz+m[12]!, cy=m[1]!*px+m[5]!*py+m[9]!*pz+m[13]!, cz=m[2]!*px+m[6]!*py+m[10]!*pz+m[14]!, cw=m[3]!*px+m[7]!*py+m[11]!*pz+m[15]!;
+        if (cw <= 0) continue;
+        const ndcX=cx/cw, ndcY=cy/cw, ndcZ=cz/cw;
+        if(ndcZ < -1 || ndcZ > 1 || Math.abs(ndcX)>1.05 || Math.abs(ndcY)>1.05) continue;
+        const sx=(ndcX*.5+.5)*(el.clientWidth||window.innerWidth), sy=(-ndcY*.5+.5)*(el.clientHeight||window.innerHeight), depth=Math.max(8,cam.dist), pulseFactor=1+pulse*.32*Math.sin(time*2.4+seed*6.28), radius=Math.max(.45,Math.min(6,sizes.getX(i)*18/Math.max(8,cw)*pulseFactor*.14)), alpha=Math.round(Math.max(.16,Math.min(.95,(.45+.45*pulseFactor)*(light?.62:1)))*4)/4;
+        const color=rgb(tints.getX(i),tints.getY(i),tints.getZ(i)), width=Math.max(1,Math.round(radius*2*2)/2), key=`${color}|${alpha}|${width}`, d=`M${sx.toFixed(1)},${sy.toFixed(1)}h.01`, list=groups.get(key); if(list) list.push(d); else groups.set(key,[d]);
+      }
+      updateLayer(index, groups);
+    };
+    const nearestStar = (x: number, y: number, w: number, h: number): number | null => {
+      updateProjectionMatrix();
+      const m = clipMatrix.elements;
+      let best: number|null=null, distance=18;
+      for(let i=0;i<ids.length;i++){
+        const px=starPositions[i*3]!*expansion,py=starPositions[i*3+1]!*expansion,pz=starPositions[i*3+2]!*expansion;
+        const cx=m[0]!*px+m[4]!*py+m[8]!*pz+m[12]!,cy=m[1]!*px+m[5]!*py+m[9]!*pz+m[13]!,cz=m[2]!*px+m[6]!*py+m[10]!*pz+m[14]!,cw=m[3]!*px+m[7]!*py+m[11]!*pz+m[15]!;
+        if(cw<=0)continue;const nz=cz/cw;if(nz < -1||nz>1)continue;
+        const sx=(cx/cw*.5+.5)*w,sy=(-cy/cw*.5+.5)*h,d=Math.hypot(x-sx,y-sy);if(d<distance){best=i;distance=d;}
+      }
+      return best;
+    };
+    const renderJets = (time: number) => {
+      const pos=jetGeo.getAttribute('position'),dir=jetGeo.getAttribute('dir'),phase=jetGeo.getAttribute('phase'),speed=jetGeo.getAttribute('speed'),parts:string[]=[];
+      const m=clipMatrix.elements,w=el.clientWidth||window.innerWidth,h=el.clientHeight||window.innerHeight;
+      for(let i=0;i<pos.count;i++){const f=((time*speed.getX(i)+phase.getX(i))%1+1)%1,px=(pos.getX(i)+dir.getX(i)*f)*expansion,py=(pos.getY(i)+dir.getY(i)*f)*expansion,pz=(pos.getZ(i)+dir.getZ(i)*f)*expansion,cx=m[0]!*px+m[4]!*py+m[8]!*pz+m[12]!,cy=m[1]!*px+m[5]!*py+m[9]!*pz+m[13]!,cz=m[2]!*px+m[6]!*py+m[10]!*pz+m[14]!,cw=m[3]!*px+m[7]!*py+m[11]!*pz+m[15]!;if(cw<=0)continue;const nz=cz/cw;if(nz < -1||nz>1)continue;parts.push(`M${((cx/cw*.5+.5)*w).toFixed(1)},${((-.5*cy/cw+.5)*h).toFixed(1)}h.01`);}
+      updateLayer(3,new Map([[`${light?'#69471f':'#f2e6d1'}|0.65|1.5`,parts]]));
+    };
+    const renderVectors = (time: number) => {
+      updateProjectionMatrix();
+      const qualityStep = quality === 'low' ? 3 : quality === 'medium' ? 2 : 1;
+      projectPaths(webGeo,0,true,time,qualityStep); projectPaths(starGeo,1,false,time,1); projectPaths(qsoGeo,2,false,time,1);
+      renderJets(time);
+      const bounds=boxGeo.getAttribute('position'), lines:string[]=[],m=clipMatrix.elements,bw=el.clientWidth||window.innerWidth,bh=el.clientHeight||window.innerHeight;
+      for(let i=0;i+1<bounds.count;i+=2){const ax=bounds.getX(i)*expansion,ay=bounds.getY(i)*expansion,az=bounds.getZ(i)*expansion,bx=bounds.getX(i+1)*expansion,by=bounds.getY(i+1)*expansion,bz=bounds.getZ(i+1)*expansion,acx=m[0]!*ax+m[4]!*ay+m[8]!*az+m[12]!,acy=m[1]!*ax+m[5]!*ay+m[9]!*az+m[13]!,acz=m[2]!*ax+m[6]!*ay+m[10]!*az+m[14]!,acw=m[3]!*ax+m[7]!*ay+m[11]!*az+m[15]!,bcx=m[0]!*bx+m[4]!*by+m[8]!*bz+m[12]!,bcy=m[1]!*bx+m[5]!*by+m[9]!*bz+m[13]!,bcz=m[2]!*bx+m[6]!*by+m[10]!*bz+m[14]!,bcw=m[3]!*bx+m[7]!*by+m[11]!*bz+m[15]!;if(acw<=0||bcw<=0)continue;const azN=acz/acw,bzN=bcz/bcw;if(azN>1&&bzN>1)continue;lines.push(`M${((acx/acw*.5+.5)*bw).toFixed(1)},${(-acy/acw*.5+.5)*bh}L${((bcx/bcw*.5+.5)*bw).toFixed(1)},${(-bcy/bcw*.5+.5)*bh}`);}
+      updateLayer(4,new Map([['#9a8d75|0.20|0.6',lines]])); el.dataset.renderCount=String(Number(el.dataset.renderCount||0)+1); svg.dataset.ready='true'; svg.dataset.renderCount=el.dataset.renderCount;
+    };
+
+    let raf = 0, last = performance.now(), lastVector = 0, visible = true, expansion = 1, lodTick = 0;
     const FORM_S = 180; let cosmic = 0;
-    const replay = () => { cosmic = 0; };
+    const replay = () => { cosmic = 0; dynamics.reset(); expansion = dynamics.state.expansion; };
     window.addEventListener('nexo:replay-formation', replay);
-    const vis = () => { visible = document.visibilityState === 'visible'; };
+    const vis = () => { visible = document.visibilityState === 'visible'; if (visible && !raf) raf = requestAnimationFrame(frame); else if (!visible) { cancelAnimationFrame(raf); raf = 0; } };
     document.addEventListener('visibilitychange', vis);
     const frame = (now: number) => {
-      raf = requestAnimationFrame(frame);
-      if (!visible || contextLost) { last = now; return; }
+      raf = 0;
+      if (!visible) { last = now; return; }
       // A reading surface does not need 60 WebGL frames per second.
       const frameBudget = 1000 / (reduced ? 15 : mobile || !exploreRef.current ? 30 : 60);
-      if (now - last < frameBudget) return;
+      if (now - last < frameBudget) { raf = requestAnimationFrame(frame); return; }
       const dt = Math.min(0.05, (now - last) / 1000); last = now;
       if (!reduced) uniforms.time.value += dt;
+      const physics = dynamics.step(dt, {
+        paused: !visible,
+        hidden: document.visibilityState !== 'visible',
+        reducedMotion: reduced,
+      });
+      expansion = physics.expansion;
       // Relógio cósmico: a formação é visível — ~3 min do quase-uniforme até a teia madura
       // (aglomeração nos nós, vazios crescendo), depois segue bem devagar. "Rever formação" zera o relógio.
       cosmic += dt;
       { const u = Math.min(1, cosmic / FORM_S); const e = u * u * (3 - 2 * u); const tail = cosmic > FORM_S ? (cosmic - FORM_S) / (cosmic - FORM_S + 600) : 0;
         uniforms.evo.value = reduced ? 0.6 : 0.08 + 0.8 * e + 0.12 * tail; }
-      // Expansão do universo: acompanha a formação, desacelerando (a(t) monotônico).
-      expansion = reduced ? 1 : 1 + 0.14 * (cosmic / (cosmic + 90));
+      // O fator de escala flat-ΛCDM é comprimido para caber no volume visual.
       scene.scale.setScalar(expansion);
       if (!reduced && !drag && !exploreRef.current) target.az += dt * 0.025;
       const k = reduced ? 1 : 1 - Math.pow(0.03, dt);
@@ -603,11 +644,8 @@ export function ObservatoryScene({ tests, page, focusIds, onPick, onAvailability
         look.x + Math.cos(cam.az) * Math.cos(cam.elev) * cam.dist, look.y + Math.sin(cam.elev) * cam.dist,
         look.z + Math.sin(cam.az) * Math.cos(cam.elev) * cam.dist);
       camera.lookAt(look);
-      if (composer) composer.render(dt); else renderer.render(scene, camera);
-      if (!reduced) {
-        slowAcc += dt; slowN += 1;
-        if (slowAcc > 3) { if (slowAcc / slowN > Math.max(1 / 42, frameBudget / 1000 * 1.35)) degrade(); slowAcc = 0; slowN = 0; }
-      }
+      camera.updateMatrixWorld();
+      if (now - lastVector >= (exploreRef.current ? 1000 / 30 : 250)) { lastVector = now; renderVectors(uniforms.time.value); }
       const w = canvas.clientWidth, h = canvas.clientHeight;
       const placed: Array<[number, number, number]> = [];
       const place = (node: HTMLElement, x: number, y: number) => {
@@ -629,7 +667,7 @@ export function ObservatoryScene({ tests, page, focusIds, onPick, onAvailability
         const close = cam.dist < 17;
         const cand: Array<[number, number, number, string]> = [];
         if (close) for (let i = 0; i < ids.length; i += 1) {
-          proj.set(stars.pos[i * 3]!, stars.pos[i * 3 + 1]!, stars.pos[i * 3 + 2]!).multiplyScalar(expansion).project(camera);
+          proj.set(starPositions[i * 3]!, starPositions[i * 3 + 1]!, starPositions[i * 3 + 2]!).multiplyScalar(expansion).project(camera);
           if (proj.z > 1 || Math.abs(proj.x) > 0.9 || Math.abs(proj.y) > 0.9) continue;
           const sx = (proj.x * 0.5 + 0.5) * w, sy = (-proj.y * 0.5 + 0.5) * h;
           if (w > 900 && window.innerWidth < 1280 && !exploreRef.current && sx < Math.min(640, w * 0.45)) continue;
@@ -651,11 +689,13 @@ export function ObservatoryScene({ tests, page, focusIds, onPick, onAvailability
         node.style.opacity = off ? '0' : '1';
         if (!off) place(node, (proj.x * 0.5 + 0.5) * w, (-proj.y * 0.5 + 0.5) * h);
       });
+      if (visible) raf = requestAnimationFrame(frame);
     };
     raf = requestAnimationFrame(frame);
 
     return () => {
       cancelAnimationFrame(raf); ro.disconnect();
+      motionPreference.removeEventListener('change', updateMotionPreference);
       window.removeEventListener('nexo:replay-formation', replay); document.removeEventListener('visibilitychange', vis);
       canvas.removeEventListener('pointerdown', down);
       window.removeEventListener('pointermove', move);
@@ -666,8 +706,9 @@ export function ObservatoryScene({ tests, page, focusIds, onPick, onAvailability
       canvas.removeEventListener('pointerleave', leave);
       canvas.removeEventListener('dblclick', dbl);
       canvas.removeEventListener('contextmenu', noMenu);
-      canvas.removeEventListener('webglcontextlost', lost); canvas.removeEventListener('webglcontextrestored', restored);
-      composer?.dispose(); webGeo.dispose(); starGeo.dispose(); qsoGeo.dispose(); qsoMat.dispose(); jetGeo.dispose(); jetMat.dispose(); boxGeo.dispose(); boxMat.dispose(); mat.dispose(); renderer.dispose();
+      webGeo.dispose(); starGeo.dispose(); qsoGeo.dispose(); jetGeo.dispose(); boxGeo.dispose();
+      delete el.dataset.physicsModel;
+      delete el.dataset.physicsModelStatus;
       canvas.remove(); api.current = null;
     };
   }, [tests, theme, events, domains, sourceCurrent]);

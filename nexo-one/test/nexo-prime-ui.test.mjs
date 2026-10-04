@@ -46,18 +46,18 @@ test('mobile Atlas keeps readable type and gesture-first camera controls',async(
   assert.doesNotMatch(css,/font-size:(?:6(?:\.\d+)?|7(?:\.\d+)?|8(?:\.\d+)?)px/);
 });
 
-test('galaxy keeps macro framing, theme-aware rendering and bounded adjustable bloom',async()=>{
+test('galaxy keeps historical framing, theme-aware vector rendering and adjustable glow',async()=>{
   const galaxy=await text('src/components/GalaxyThree3D.tsx');
   const view=await text('src/atlas3d/GalaxyView.tsx');
   const compiler=await text('src/viewmodels/galaxyCompiler.ts');
   assert.match(galaxy,/DEFAULT_CAMERA = new Vector3\(0, 16, 286\)/);
   assert.match(galaxy,/MACRO_CAMERA = new Vector3\(0, 12, 360\)/);
-  assert.match(galaxy,/toneMappingExposure = themeName === 'light' \? 0\.92/);
-  assert.match(galaxy,/bloom\.threshold = 0\.2/);
-  assert.match(galaxy,/bloom\.strength = 0\.55 \* glow/);
-  assert.match(galaxy,/bloom\.radius = 0\.5/);
+  assert.match(galaxy,/svgNode\('svg'\)/);
+  assert.match(galaxy,/PerspectiveCamera/);
+  assert.match(galaxy,/glowRef\.current/);
+  assert.match(galaxy,/visibilitychange/);
   assert.match(view,/value: 0\.66/);
-  assert.match(galaxy,/NormalBlending/);
+  assert.doesNotMatch(galaxy,/new WebGLRenderer|new EffectComposer|foreignObject/);
   assert.match(compiler,/node\.domain === 'NEXO' \? 'CORE'/);
 });
 

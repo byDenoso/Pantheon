@@ -2,8 +2,8 @@ import {atlasRouteParam} from './route-params.ts';
 const LOCAL_G6_SOURCE = new URL(`${import.meta.env.BASE_URL}vendor/g6.min.js`, window.location.origin).href;
 export const G6_SOURCES = [
   LOCAL_G6_SOURCE,
-  'https://unpkg.com/@antv/g6@5/dist/g6.min.js',
-  'https://cdn.jsdelivr.net/npm/@antv/g6@5/dist/g6.min.js',
+  'https://unpkg.com/@antv/g6@5.1.1/dist/g6.min.js',
+  'https://cdn.jsdelivr.net/npm/@antv/g6@5.1.1/dist/g6.min.js',
 ] as const;
 
 let loading:Promise<void>|null=null;
@@ -32,11 +32,25 @@ function loadScript(src:string,timeoutMs=4500):Promise<void>{
 }
 
 export function ensureAtlasG6():Promise<void>{
-  if((window as any).G6?.Graph){document.documentElement.dataset.atlasG6Source='preloaded';return Promise.resolve();}
+  const forceFallback=atlasRouteParam('g6Fallback')==='1';
+  if(!forceFallback&&document.documentElement.dataset.atlasG6Source==='module'&&(window as any).G6?.Graph)return Promise.resolve();
   if(loading)return loading;
   loading=(async()=>{
-    const forceFallback=atlasRouteParam('g6Fallback')==='1';
     let lastError:unknown=null;
+    if(!forceFallback){
+      try{
+        // Share the same @antv/g-lite module instance with @antv/g-svg. A
+        // standalone G6 UMD script bundles a separate renderer runtime.
+        const module=await import('@antv/g6');
+        if(module.Graph){
+          (window as any).G6=module;
+          document.documentElement.dataset.atlasG6Source='module';
+          return;
+        }
+        lastError=new Error('G6 module import did not expose Graph');
+      }catch(error){lastError=error;}
+    }
+    if((window as any).G6?.Graph){document.documentElement.dataset.atlasG6Source='preloaded';return;}
     for(const source of G6_SOURCES){
       if(forceFallback&&!source.includes('jsdelivr.net'))continue;
       try{

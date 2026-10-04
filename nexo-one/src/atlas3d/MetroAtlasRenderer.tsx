@@ -9,6 +9,8 @@ import {
 } from 'react';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
+import { SVGObject, SVGRenderer } from 'three/addons/renderers/SVGRenderer.js';
+import { Renderer as G6SvgRenderer } from '@antv/g-svg';
 import type { AtlasGraphLayer, AtlasMetroModel, AtlasMetroNode } from './atlasAdapter.ts';
 import { atlasHopDistances, visibleAtlasIds } from './atlasAdapter.ts';
 import { nearestVisibleAtlasAncestor, projectVisualCrossLinks } from './learningVisuals.ts';
@@ -48,6 +50,12 @@ type G6Graph = {
   getZoom: () => number;
   getViewportByCanvas: (point: [number, number]) => [number, number];
   resize?: () => void;
+  getPluginInstance?: (key: string) => {
+    onRender?: { cancel?: () => void };
+    onTransform?: { cancel?: () => void };
+    renderMinimap?: () => void;
+    renderMask?: () => void;
+  } | undefined;
   destroy?: () => void;
 };
 
@@ -156,6 +164,11 @@ function setRendererError(container: HTMLElement, code: string, message: string)
 function clearRendererError(container: HTMLElement): void {
   delete container.dataset.rendererError;
   container.querySelector('.atlas-render-error')?.remove();
+}
+
+function getG6SvgOutput(container: HTMLElement): SVGSVGElement | null {
+  return [...container.querySelectorAll<SVGSVGElement>('svg')]
+    .find(svg => svg.querySelector('path') !== null) || null;
 }
 
 function createG6Graph(
@@ -552,6 +565,8 @@ function Metro2DView({
     const container = containerRef.current;
     const labelLayer = labelLayerRef.current;
     const leaderLayer = leaderLayerRef.current;
+    // ensureAtlasG6 publishes the npm-module namespace here before the Metro
+    // mounts, so G6 and @antv/g-svg share their @antv/g-lite runtime.
     const Graph = window.G6?.Graph;
     if (!surface || !container || !labelLayer || !leaderLayer || !Graph) {
       if (container) {
@@ -573,8 +588,10 @@ function Metro2DView({
     const compact = isCompactRenderer(container);
     container.dataset.g6Profile = compact ? 'compact-touch' : 'desktop';
     container.dataset.g6Theme = theme;
+    container.dataset.g6Renderer = 'svg';
     const graph = createG6Graph(Graph, {
       container,
+      renderer: () => new G6SvgRenderer(),
       theme,
       data: { nodes: [], edges: [] },
       padding: compact ? [142, 22, 50, 22] : [86, 76, 76, 76],
@@ -694,6 +711,9 @@ function Metro2DView({
           key: 'minimap',
           type: 'minimap',
           size: [176, 108],
+          // The G6 minimap creates a second canvas renderer by default. Give it
+          // the same SVG backend so the complete 2D surface stays vector-native.
+          renderer: new G6SvgRenderer(),
         },
       ],
     });
@@ -749,14 +769,18 @@ function Metro2DView({
     graph.on('aftertransform', scheduleLabels);
     graph.on('afterrender', () => {
       scheduleLabels();
-      // G6 can complete a real canvas render in headless Chromium while the
+      // G6 can complete a real SVG render in headless Chromium while the
       // render() promise remains unsettled. Readiness belongs to the renderer
-      // event + materialized canvas, not to that promise implementation detail.
+      // event + materialized vector paths, not to that promise implementation detail.
       requestAnimationFrame(() => {
         if (graphRef.current !== graph) return;
-        const ready = Boolean(container.querySelector('canvas'));
+        const svg = getG6SvgOutput(container);
+        const ready = Boolean(svg);
         container.dataset.g6Ready = ready ? 'true' : 'false';
         if (!ready) return;
+        svg!.dataset.towerSvgNative = 'metro2d';
+        svg!.dataset.ready = 'true';
+        container.dataset.g6SvgPathCount = String(svg!.querySelectorAll('path').length);
         clearRendererError(container);
         onReadyRef.current?.();
       });
@@ -790,22 +814,30 @@ function Metro2DView({
           new Promise<'timeout'>(resolve => window.setTimeout(() => resolve('timeout'), renderTimeoutMs)),
         ]);
         if (sequence !== refreshSequence) return;
-        const canvasReady = Boolean(container.querySelector('canvas'));
-        if (renderOutcome === 'timeout' && !canvasReady) {
-          throw new Error('G6 render timeout sem canvas materializado');
+        const svg = getG6SvgOutput(container);
+        const svgReady = Boolean(svg);
+        if (renderOutcome === 'timeout' && !svgReady) {
+          throw new Error('G6 render timeout sem SVG vetorial materializado');
         }
-        if (!canvasReady) {
-          throw new Error('G6 render sem canvas materializado');
+        if (!svgReady) {
+          throw new Error('G6 render sem SVG vetorial materializado');
         }
+        svg!.dataset.towerSvgNative = 'metro2d';
+        svg!.dataset.ready = 'true';
+        container.dataset.g6SvgPathCount = String(svg!.querySelectorAll('path').length);
         container.dataset.g6Ready = 'true';
 
         applyG6Selection(graph, modelRef.current, expandedRef.current, selectedRef.current, hoveredRef.current, showBeamsRef.current, visibleLayersRef.current, illuminatedRef.current);
 
-        // Renderer readiness is a canvas concern, not an animation concern. A
+        // Renderer readiness is a vector-output concern, not an animation concern. A
         // stalled fit transition on touch/Safari must never keep the whole Atlas
         // in a perpetual loading state after G6 has already drawn successfully.
-        container.dataset.g6Ready = container.querySelector('canvas') ? 'true' : 'false';
+        const currentSvg = getG6SvgOutput(container);
+        container.dataset.g6Ready = currentSvg ? 'true' : 'false';
         if (container.dataset.g6Ready === 'true') {
+          currentSvg!.dataset.towerSvgNative = 'metro2d';
+          currentSvg!.dataset.ready = 'true';
+          container.dataset.g6SvgPathCount = String(currentSvg!.querySelectorAll('path').length);
           clearRendererError(container);
           onReadyRef.current?.();
         }
@@ -868,6 +900,17 @@ function Metro2DView({
       cancelAnimationFrame((scheduleLabels as any).frame || 0);
       resizeObserver.disconnect();
       refreshRef.current = async () => {};
+      // G6 5.1.1 unbinds the minimap but leaves its delayed callbacks queued.
+      // Cancel them before its context is destroyed during rapid mode changes.
+      const minimap = graph.getPluginInstance?.('minimap');
+      minimap?.onRender?.cancel?.();
+      minimap?.onTransform?.cancel?.();
+      // AntV's debounce has no cancel method; the queued callback dispatches
+      // these methods at execution time, so detach their work on this instance.
+      if (minimap) {
+        minimap.renderMinimap = () => {};
+        minimap.renderMask = () => {};
+      }
       graph.destroy?.();
       graphRef.current = null;
       renderLabelsRef.current = () => {};
@@ -928,7 +971,7 @@ type SynapsePulse = {
 type ThreeRuntime = {
   scene: THREE.Scene;
   camera: THREE.PerspectiveCamera;
-  renderer: THREE.WebGLRenderer;
+  renderer: SVGRenderer;
   controls: OrbitControls;
   content: THREE.Group | null;
   raycaster: THREE.Raycaster;
@@ -941,10 +984,17 @@ type ThreeRuntime = {
   frame: number;
   hasFit: boolean;
   pulses: SynapsePulse[];
+  billboards: SvgBillboard[];
   focusModel: AtlasMetroModel | null;
   visibleIds: string[];
   zoomedLabels: boolean;
   illuminated: boolean;
+};
+
+type SvgBillboard = SVGObject & {
+  inner: SVGGElement;
+  material: { opacity: number; depthTest: boolean };
+  userData: Record<string, unknown>;
 };
 
 function disposeThreeObject(root: THREE.Object3D) {
@@ -992,27 +1042,22 @@ function createOrganicGeometry(radius: number, seedKey: string, detail = 3): THR
   return geometry;
 }
 
-let sharedGlowTexture: THREE.CanvasTexture | null = null;
+let vectorBillboardSequence = 0;
+const SVG_NS = 'http://www.w3.org/2000/svg';
 
-function getSharedGlowTexture(): THREE.CanvasTexture {
-  if (sharedGlowTexture) return sharedGlowTexture;
-  const canvas = document.createElement('canvas');
-  canvas.width = 128;
-  canvas.height = 128;
-  const context = canvas.getContext('2d')!;
-  const gradient = context.createRadialGradient(64, 64, 0, 64, 64, 62);
-  gradient.addColorStop(0, 'rgba(255,255,255,.88)');
-  gradient.addColorStop(.20, 'rgba(255,255,255,.54)');
-  gradient.addColorStop(.48, 'rgba(255,255,255,.18)');
-  gradient.addColorStop(1, 'rgba(255,255,255,0)');
-  context.fillStyle = gradient;
-  context.fillRect(0, 0, 128, 128);
+function svgElement<T extends SVGElement>(name: string): T {
+  return document.createElementNS(SVG_NS, name) as T;
+}
 
-  sharedGlowTexture = new THREE.CanvasTexture(canvas);
-  sharedGlowTexture.colorSpace = THREE.SRGBColorSpace;
-  sharedGlowTexture.minFilter = THREE.LinearFilter;
-  sharedGlowTexture.userData.atlasSharedTexture = true;
-  return sharedGlowTexture;
+function makeBillboard(): SvgBillboard {
+  const root = svgElement<SVGGElement>('g');
+  const inner = svgElement<SVGGElement>('g');
+  root.appendChild(inner);
+  const object = new SVGObject(root) as SvgBillboard;
+  object.inner = inner;
+  object.material = { opacity: 1, depthTest: true };
+  object.userData = {};
+  return object;
 }
 
 function createGlowSprite(
@@ -1020,19 +1065,32 @@ function createGlowSprite(
   diameter: number,
   opacity: number,
   theme: AtlasTheme = 'dark',
-): THREE.Sprite {
-  const material = new THREE.SpriteMaterial({
-    map: getSharedGlowTexture(),
-    color: new THREE.Color(colorValue),
-    transparent: true,
-    opacity,
-    depthWrite: false,
-    depthTest: true,
-    blending: theme === 'light' ? THREE.NormalBlending : THREE.AdditiveBlending,
-  });
-  const sprite = new THREE.Sprite(material);
-  sprite.scale.set(diameter, diameter, 1);
-  return sprite;
+): SvgBillboard {
+  const billboard = makeBillboard();
+  const defs = svgElement<SVGDefsElement>('defs');
+  const gradient = svgElement<SVGRadialGradientElement>('radialGradient');
+  const id = `atlas-glow-${vectorBillboardSequence++}`;
+  gradient.id = id;
+  gradient.setAttribute('gradientUnits', 'userSpaceOnUse');
+  gradient.setAttribute('cx', '0'); gradient.setAttribute('cy', '0'); gradient.setAttribute('r', '.5');
+  const color = new THREE.Color(colorValue).getStyle();
+  const stops = theme === 'light'
+    ? [[0, 'rgba(255,255,255,.78)', opacity], [.22, color, opacity * .8], [.62, color, opacity * .2], [1, color, 0]] as const
+    : [[0, 'rgba(255,255,255,.88)', opacity], [.2, color, opacity * .62], [.48, color, opacity * .21], [1, color, 0]] as const;
+  for (const [offset, stopColor, stopOpacity] of stops) {
+    const stop = svgElement<SVGStopElement>('stop');
+    stop.setAttribute('offset', String(offset));stop.setAttribute('stop-color', stopColor);stop.setAttribute('stop-opacity', String(stopOpacity));
+    gradient.appendChild(stop);
+  }
+  defs.appendChild(gradient);billboard.inner.appendChild(defs);
+  const circle = svgElement<SVGCircleElement>('circle');
+  circle.setAttribute('cx', '0');circle.setAttribute('cy', '0');circle.setAttribute('r', '.5');circle.setAttribute('fill', `url(#${id})`);
+  billboard.inner.appendChild(circle);
+  billboard.scale.set(diameter, diameter, 1);
+  billboard.material.opacity = opacity;
+  billboard.userData.baseOpacity = opacity;
+  billboard.userData.baseScale = diameter;
+  return billboard;
 }
 
 function synapseCurve(
@@ -1181,38 +1239,28 @@ function createLabelSprite(
   isHub: boolean,
   compact = false,
   theme: AtlasTheme = 'dark',
-): THREE.Sprite {
-  const canvas = document.createElement('canvas');
-  canvas.width = compact ? 256 : 512;
-  canvas.height = compact ? 64 : 128;
-  const context = canvas.getContext('2d')!;
-  context.fillStyle = theme === 'light' ? 'rgba(255,255,255,.95)' : 'rgba(7,11,20,.90)';
-  context.strokeStyle = domainColor;
-  context.lineWidth = (isHub ? 5 : 3) * (compact ? .5 : 1);
-  const unit = compact ? .5 : 1;
-  context.beginPath();
-  context.roundRect(8 * unit, 18 * unit, 496 * unit, 92 * unit, 22 * unit);
-  context.fill();
-  context.stroke();
-  context.fillStyle = theme === 'light' ? '#0f172a' : '#e5edf8';
-  context.font = `${isHub ? 800 : 650} ${(isHub ? 34 : 29) * unit}px Inter, Arial, sans-serif`;
-  context.textAlign = 'center';
-  context.textBaseline = 'middle';
-  const label = text.length > 28 ? `${text.slice(0, 27)}…` : text;
-  context.fillText(label, 256 * unit, 64 * unit);
-
-  const texture = new THREE.CanvasTexture(canvas);
-  texture.colorSpace = THREE.SRGBColorSpace;
-  texture.minFilter = THREE.LinearFilter;
-  const material = new THREE.SpriteMaterial({ map: texture, transparent: true, depthTest: false });
-  const sprite = new THREE.Sprite(material);
+): SvgBillboard {
+  const sprite = makeBillboard();
   sprite.renderOrder = 20;
   const compactScale = compact ? 1.18 : 1;
-  sprite.scale.set(
-    (isHub ? 118 : 90) * compactScale,
-    (isHub ? 30 : 23) * compactScale,
-    1,
-  );
+  const width = (isHub ? 118 : 90) * compactScale;
+  const height = (isHub ? 30 : 23) * compactScale;
+  const background = svgElement<SVGRectElement>('rect');
+  background.setAttribute('x', String(-width / 2));background.setAttribute('y', String(-height / 2));
+  background.setAttribute('width', String(width));background.setAttribute('height', String(height));
+  background.setAttribute('rx', String(height * .3));
+  background.setAttribute('fill', theme === 'light' ? 'rgba(255,255,255,.95)' : 'rgba(7,11,20,.90)');
+  background.setAttribute('stroke', domainColor);background.setAttribute('stroke-width', String(isHub ? 1.25 : .75));
+  sprite.inner.appendChild(background);
+  const label = svgElement<SVGTextElement>('text');
+  label.textContent = text.length > 28 ? `${text.slice(0, 27)}…` : text;
+  label.setAttribute('x', '0');label.setAttribute('y', '0');label.setAttribute('text-anchor', 'middle');
+  label.setAttribute('dominant-baseline', 'middle');label.setAttribute('fill', theme === 'light' ? '#0f172a' : '#e5edf8');
+  label.setAttribute('font-family', 'Inter, Arial, sans-serif');label.setAttribute('font-size', String(isHub ? 8 : 6.5));
+  label.setAttribute('font-weight', String(isHub ? 800 : 650));
+  sprite.inner.appendChild(label);
+  sprite.scale.set(1, 1, 1);
+  sprite.userData.baseScale = compactScale;
   return sprite;
 }
 
@@ -1328,16 +1376,16 @@ function applyThreeSelection(runtime: ThreeRuntime, selectedId: string | null) {
     const level = levels.get(id) ?? 0;
     const faded = Boolean(focusId) && level > 2;
     const related = Boolean(focusId) && level === 2;
-    const selectionGlow = group.userData.selectionGlow as THREE.Sprite | undefined;
-    const neuronGlow = group.userData.neuronGlow as THREE.Sprite | undefined;
-    const core = group.userData.core as THREE.Mesh<THREE.BufferGeometry, THREE.MeshStandardMaterial> | undefined;
+    const selectionGlow = group.userData.selectionGlow as SvgBillboard | undefined;
+    const neuronGlow = group.userData.neuronGlow as SvgBillboard | undefined;
+    const core = group.userData.core as THREE.Mesh<THREE.BufferGeometry, THREE.MeshPhongMaterial> | undefined;
 
     if (selectionGlow) {
       selectionGlow.visible = selected;
-      (selectionGlow.material as THREE.SpriteMaterial).opacity = selected ? .52 : 0;
+      selectionGlow.material.opacity = selected ? .52 : 0;
     }
     if (neuronGlow) {
-      const material = neuronGlow.material as THREE.SpriteMaterial;
+      const material = neuronGlow.material;
       const baseOpacity = Number(neuronGlow.userData.baseOpacity || .10);
       const litOpacity = Math.max(.32, baseOpacity * 2.8);
       material.opacity = hovered || selected ? Math.max(.52, litOpacity) : faded
@@ -1512,36 +1560,32 @@ function fitThree(
 
 function renderAndMeasureThree(runtime: ThreeRuntime, container: HTMLElement): number {
   runtime.controls.update();
+  updateSvgBillboards(runtime);
   runtime.renderer.render(runtime.scene, runtime.camera);
-
-  if (!isAtlasReadback()) {
-    container.dataset.threePaintSamples = 'runtime-skip';
-    container.dataset.threeReady = 'true';
-    return 1;
-  }
-
-  const gl = runtime.renderer.getContext();
-  const width = runtime.renderer.domElement.width;
-  const height = runtime.renderer.domElement.height;
-  if (!width || !height) {
-    container.dataset.threePaintSamples = '0';
-    container.dataset.threeReady = 'false';
-    return 0;
-  }
-
-  // Clear alpha is zero; opaque geometry writes alpha. Sampling the rendered
-  // framebuffer makes the production gate prove that 3D content was actually
-  // painted, not merely that a WebGL canvas exists.
-  const pixels = new Uint8Array(width * height * 4);
-  gl.finish();
-  gl.readPixels(0, 0, width, height, gl.RGBA, gl.UNSIGNED_BYTE, pixels);
-  let painted = 0;
-  for (let offset = 3; offset < pixels.length; offset += 64) {
-    if (pixels[offset] > 8) painted += 1;
-  }
+  const painted = runtime.renderer.domElement.querySelectorAll('path').length;
   container.dataset.threePaintSamples = String(painted);
-  container.dataset.threeReady = painted > 20 ? 'true' : 'false';
+  container.dataset.threeRenderer = 'svg';
+  container.dataset.threeReady = painted > 0 ? 'true' : 'false';
+  runtime.renderer.domElement.dataset.ready = container.dataset.threeReady;
+  runtime.renderer.domElement.dataset.renderCount = String(Number(runtime.renderer.domElement.dataset.renderCount || 0) + 1);
   return painted;
+}
+
+function updateSvgBillboards(runtime: ThreeRuntime) {
+  const height = Math.max(1, runtime.renderer.domElement.clientHeight);
+  const focal = height / (2 * Math.tan(THREE.MathUtils.degToRad(runtime.camera.fov / 2)));
+  const worldPosition = new THREE.Vector3();
+  const worldScale = new THREE.Vector3();
+  runtime.scene.updateMatrixWorld(true);
+  for (const billboard of runtime.billboards) {
+    if (!billboard.visible) continue;
+    billboard.getWorldPosition(worldPosition);
+    billboard.getWorldScale(worldScale);
+    const distance = Math.max(.01, runtime.camera.position.distanceTo(worldPosition));
+    const factor = focal / distance;
+    billboard.inner.setAttribute('transform', `scale(${factor * worldScale.x} ${factor * worldScale.y})`);
+    billboard.inner.setAttribute('opacity', String(billboard.material.opacity));
+  }
 }
 
 function rebuildThree(
@@ -1721,12 +1765,12 @@ function rebuildThree(
       + (compact ? .02 : 0);
     const baseEmissive = theme === 'light' ? baseEmissiveDark * .42 : baseEmissiveDark;
 
-    const coreMaterial = new THREE.MeshStandardMaterial({
+    const coreMaterial = new THREE.MeshPhongMaterial({
       color: new THREE.Color(nodeDomainColor).lerp(new THREE.Color(typeColor), .20),
       emissive: new THREE.Color(nodeDomainColor),
       emissiveIntensity: baseEmissive,
-      roughness: .64,
-      metalness: .03,
+      shininess: 22,
+      specular: 0x18202a,
     });
     const core = new THREE.Mesh(createOrganicGeometry(radius, id, compact ? 2 : 3), coreMaterial);
     core.userData = { nodeId: id, baseEmissive };
@@ -1815,6 +1859,10 @@ function rebuildThree(
   }
 
   applyThreeSelection(runtime, selectedId);
+  runtime.billboards = [];
+  runtime.scene.traverse(object => {
+    if (object instanceof SVGObject) runtime.billboards.push(object as SvgBillboard);
+  });
 }
 
 function hitThreeNode(runtime: ThreeRuntime, event: PointerEvent): string | null {
@@ -1881,26 +1929,27 @@ function MetroThreeView({
     const camera = new THREE.PerspectiveCamera(compact ? 50 : 46, 1, 1, 6000);
     camera.position.set(520, 360, 780);
 
-    let renderer: THREE.WebGLRenderer;
+    let renderer: SVGRenderer;
     try {
-      renderer = new THREE.WebGLRenderer({
-        antialias: !compact,
-        alpha: true,
-        powerPreference: compact ? 'default' : 'high-performance',
-        preserveDrawingBuffer: isAtlasReadback(),
-      });
+      renderer = new SVGRenderer();
     } catch (error) {
       setRendererError(
         container,
-        'WEBGL_INIT_FAILED',
-        `O modo 3D não conseguiu criar um contexto WebGL neste dispositivo. Use 2D Metro. ${error instanceof Error ? error.message : String(error)}`,
+        'SVG_INIT_FAILED',
+        `O renderer SVG 3D não conseguiu iniciar neste dispositivo. ${error instanceof Error ? error.message : String(error)}`,
       );
       return;
     }
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, compact ? 1.35 : 2));
-    renderer.setClearColor(theme === 'light' ? 0xf8fafc : 0x070b14, 0);
-    renderer.outputColorSpace = THREE.SRGBColorSpace;
+    renderer.setClearColor(new THREE.Color(theme === 'light' ? 0xf8fafc : 0x070b14), 0);
     renderer.domElement.tabIndex = 0;
+    renderer.domElement.classList.add('atlas-three-svg');
+    renderer.domElement.dataset.renderer = 'three-svg';
+    renderer.domElement.dataset.towerSvgNative = 'metro3d';
+    renderer.domElement.style.display = 'block';
+    renderer.domElement.style.width = '100%';
+    renderer.domElement.style.height = '100%';
+    renderer.domElement.style.outline = 'none';
+    renderer.domElement.style.touchAction = 'none';
     container.appendChild(renderer.domElement);
 
     const controls = new OrbitControls(camera, renderer.domElement);
@@ -1945,6 +1994,7 @@ function MetroThreeView({
       frame: 0,
       hasFit: false,
       pulses: [],
+      billboards: [],
       focusModel: null,
       visibleIds: [],
       zoomedLabels: false,
@@ -1959,7 +2009,7 @@ function MetroThreeView({
       container.dataset.threeViewportHeight = Math.round(height).toString();
       camera.aspect = width / height;
       camera.updateProjectionMatrix();
-      renderer.setSize(width, height, false);
+      renderer.setSize(width, height);
     };
     resize();
     clearRendererError(container);
@@ -2000,22 +2050,6 @@ function MetroThreeView({
 
     const tooltip = tooltipRef.current;
     renderer.domElement.addEventListener('contextmenu', event => event.preventDefault());
-    const onContextLost = (event: Event) => {
-      event.preventDefault();
-      container.dataset.threeContext = 'lost';
-      container.dataset.threeReady = 'false';
-      setRendererError(container, 'WEBGL_CONTEXT_LOST', 'O contexto WebGL foi perdido. Volte para 2D Metro ou recarregue a página.');
-    };
-    const onContextRestored = () => {
-      container.dataset.threeContext = 'restored';
-      clearRendererError(container);
-      resize();
-      rebuildThree(runtime, container, modelRef.current, expandedRef.current, visibleLayersRef.current, selectedRef.current, showBeamsRef.current, theme);
-      fitThree(runtime, false, null, 'all');
-      renderAndMeasureThree(runtime, container);
-    };
-    renderer.domElement.addEventListener('webglcontextlost', onContextLost);
-    renderer.domElement.addEventListener('webglcontextrestored', onContextRestored);
 
     const onPointerDown = (event: PointerEvent) => {
       runtime.pointerDown = { x: event.clientX, y: event.clientY, button: event.button };
@@ -2057,7 +2091,7 @@ function MetroThreeView({
     renderer.domElement.addEventListener('pointerup', onPointerUp);
 
     let lastFrameAt = 0;
-    const minimumFrameMs = compact ? 1000 / 36 : 0;
+    const minimumFrameMs = 1000 / 24;
     const animate = (now: number) => {
       runtime.frame = requestAnimationFrame(animate);
       if (document.hidden) return;
@@ -2070,6 +2104,7 @@ function MetroThreeView({
         runtime.zoomedLabels = zoomedLabels;
         applyThreeSelection(runtime, selectedRef.current);
       }
+      updateSvgBillboards(runtime);
       renderer.render(scene, camera);
     };
     runtime.frame = requestAnimationFrame(animate);
@@ -2078,15 +2113,12 @@ function MetroThreeView({
       observer.disconnect();
       cancelAnimationFrame(resizeFrame);
       cancelAnimationFrame(runtime.frame);
-      renderer.domElement.removeEventListener('webglcontextlost', onContextLost);
-      renderer.domElement.removeEventListener('webglcontextrestored', onContextRestored);
       renderer.domElement.removeEventListener('pointerdown', onPointerDown);
       renderer.domElement.removeEventListener('pointermove', onPointerMove);
       renderer.domElement.removeEventListener('pointerleave', onPointerLeave);
       renderer.domElement.removeEventListener('pointerup', onPointerUp);
       controls.dispose();
       if (runtime.content) disposeThreeObject(runtime.content);
-      renderer.dispose();
       renderer.domElement.remove();
       runtimeRef.current = null;
     };

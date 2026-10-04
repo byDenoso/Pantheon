@@ -7,31 +7,7 @@ import {
   useState,
   type CSSProperties,
 } from 'react';
-import {
-  Group,
-  ACESFilmicToneMapping,
-  AdditiveBlending,
-  NormalBlending,
-  BufferGeometry,
-  Color,
-  Float32BufferAttribute,
-  GridHelper,
-  LineBasicMaterial,
-  LineDashedMaterial,
-  LineSegments,
-  PerspectiveCamera,
-  Points,
-  QuadraticBezierCurve3,
-  Scene,
-  ShaderMaterial,
-  SRGBColorSpace,
-  Vector2,
-  Vector3,
-  WebGLRenderer,
-} from 'three';
-import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
-import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
-import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
+import { BufferGeometry, Color, Float32BufferAttribute, Matrix4, PerspectiveCamera, QuadraticBezierCurve3, Vector3 } from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import type { GraphEdge } from '../contracts/system.ts';
 import type { PlacedNode3D } from '../viewmodels/graph3d.ts';
@@ -736,6 +712,17 @@ function compatibleView(camera: PerspectiveCamera, target: Vector3): Canvas25DVi
   };
 }
 
+function svgNode<K extends keyof SVGElementTagNameMap>(tag: K): SVGElementTagNameMap[K] {
+  return document.createElementNS('http://www.w3.org/2000/svg', tag);
+}
+function vectorColor(r: number, g: number, b: number): string {
+  const channel = (v: number) => Math.round(255 * (v <= 0.0031308 ? 12.92 * v : 1.055 * Math.pow(Math.max(0, v), 1 / 2.4) - 0.055));
+  return `rgb(${channel(r)},${channel(g)},${channel(b)})`;
+}
+function starSubpath(x: number, y: number): string {
+  return `M${x.toFixed(1)},${y.toFixed(1)}h.01`;
+}
+
 export const GalaxyThree3D = forwardRef<CanvasGraph25DHandle, Props>(function GalaxyThree3D({
   nodes,
   edges,
@@ -753,11 +740,15 @@ export const GalaxyThree3D = forwardRef<CanvasGraph25DHandle, Props>(function Ga
 }, ref) {
   const hostRef = useRef<HTMLDivElement | null>(null);
   const mountRef = useRef<HTMLDivElement | null>(null);
-  const rendererRef = useRef<WebGLRenderer | null>(null);
   const cameraRef = useRef<PerspectiveCamera | null>(null);
   const controlsRef = useRef<OrbitControls | null>(null);
-  const sceneRef = useRef<Scene | null>(null);
-  const nodePointsRef = useRef<Points | null>(null);
+  const selectedRef = useRef(selectedId);
+  selectedRef.current = selectedId;
+  const glowRef = useRef(glow);
+  glowRef.current = glow;
+  const onSelectRef = useRef(onSelect);
+  onSelectRef.current = onSelect;
+  const selectionDrawRef = useRef<() => void>(() => {});
   const labelsRef = useRef(new Map<string, HTMLSpanElement>());
   const eventsRef = useRef(new Map<string, HTMLSpanElement>());
   // Events are read per frame from a ref: toggling a kind must not rebuild the WebGL scene.
@@ -804,6 +795,8 @@ export const GalaxyThree3D = forwardRef<CanvasGraph25DHandle, Props>(function Ga
       .filter(node => isMajor(node, selectedId) || local.has(node.id))
       .slice(0, isMobile ? 8 : morphology ? 14 : 42);
   }, [edges, isMobile, nodes, selectedId]);
+  const labelsForDrawRef = useRef(visibleLabels);
+  labelsForDrawRef.current = visibleLabels;
 
   const visibleEventTagIds = useMemo(() => {
     const keep = new Set<string>();
@@ -842,6 +835,7 @@ export const GalaxyThree3D = forwardRef<CanvasGraph25DHandle, Props>(function Ga
       fromTarget,
       toTarget: target,
     };
+    selectionDrawRef.current();
   };
 
   const focusNode = (id: string, distance = 34): boolean => {
@@ -863,6 +857,7 @@ export const GalaxyThree3D = forwardRef<CanvasGraph25DHandle, Props>(function Ga
       fromTarget: controls.target.clone(),
       toTarget: DEFAULT_TARGET.clone(),
     };
+    selectionDrawRef.current();
   };
 
   useImperativeHandle(ref, () => ({
@@ -896,344 +891,40 @@ export const GalaxyThree3D = forwardRef<CanvasGraph25DHandle, Props>(function Ga
   }, []);
 
   useEffect(() => {
-    const mount = mountRef.current;
-    if (!mount || failed) return;
+    const mount=mountRef.current;if(!mount||failed)return;
+    let disposed=false,raf=0,visible=!document.hidden,lastDraw=0,interactionUntil=0;
+    let width=Math.max(1,mount.clientWidth),height=Math.max(1,mount.clientHeight);
+    const spiral=themeName==='dark',camera=new PerspectiveCamera(isMobile?35:40,width/height,.1,1200);camera.position.copy(homeCamera);cameraRef.current=camera;
+    const svg=svgNode('svg');svg.classList.add('galaxy-three-canvas');svg.dataset.towerSvgNative='galaxy';svg.setAttribute('role','img');svg.setAttribute('aria-label',ariaLabel);svg.setAttribute('tabindex','0');svg.setAttribute('preserveAspectRatio','none');svg.style.touchAction='none';svg.style.cursor='grab';svg.setAttribute('viewBox',`0 0 ${width} ${height}`);mount.replaceChildren(svg);
+    const layers=['deep','field','relations','entities'].map(n=>{const g=svgNode('g');g.setAttribute('class',`galaxy-svg-${n}`);g.setAttribute('pointer-events','none');svg.appendChild(g);return g;});
+    const [deepLayer,fieldLayer,relationLayer,entityLayer]=layers as [SVGGElement,SVGGElement,SVGGElement,SVGGElement];
+    const controls=new OrbitControls(camera,svg);controls.target.copy(DEFAULT_TARGET);controls.enableDamping=true;controls.dampingFactor=.065;controls.enablePan=true;controls.enableRotate=true;controls.screenSpacePanning=true;controls.rotateSpeed=.52;controls.zoomSpeed=.82;controls.panSpeed=.58;controls.minDistance=12;controls.maxDistance=360;controls.minPolarAngle=.18;controls.maxPolarAngle=Math.PI-.18;controlsRef.current=controls;
+    const count=spiral?(isMobile?7000:26000):isMacro?(isMobile?90:320):(isMobile?240:900);
+    const galaxy=spiral?buildSpiralGalaxy(count,morphology??DEFAULT_MORPHOLOGY):buildFieldGeometry(nodes,count,isMacro,themeName),deep=spiral?buildDeepField(isMobile?220:560):null;
+    const nodeGeo=buildNodeGeometry(nodes,null,themeName,spiral?(morphology??DEFAULT_MORPHOLOGY):null),relations=buildRelationSegments(nodes,edges,null),rings=buildFieldRingSegments(nodes,isMacro);
+    const selectionRing=svgNode('circle');selectionRing.setAttribute('fill','none');selectionRing.setAttribute('stroke',themeName==='light'?'#a94808':'#eefcf7');selectionRing.setAttribute('stroke-width','1.5');selectionRing.setAttribute('pointer-events','none');entityLayer.appendChild(selectionRing);
+    const angle={value:diskAngleRef.current},cache=[new Map<string,SVGPathElement>(),new Map<string,SVGPathElement>(),new Map<string,SVGPathElement>()];
+    const cameraSpace=new Vector3(),projected=new Vector3(),axis=new Vector3(0,0,1);
+    const setGrouped=(layer:SVGGElement,stash:Map<string,SVGPathElement>,data:Map<string,string>)=>{const keep=new Set<string>();for(const [key,d] of data){keep.add(key);let el=stash.get(key);if(!el){el=svgNode('path');el.setAttribute('pointer-events','none');el.setAttribute('fill','none');el.setAttribute('stroke',key.split('|')[0]!);el.setAttribute('stroke-opacity',key.split('|')[1]!);el.setAttribute('stroke-width',key.split('|')[2]!);el.setAttribute('stroke-linecap','round');el.setAttribute('vector-effect','non-scaling-stroke');stash.set(key,el);layer.appendChild(el);}el.setAttribute('d',d);}for(const [key,el] of stash)if(!keep.has(key)){el.remove();stash.delete(key);}};
+    const colorCache=new Map<number,string>();
+    const colorKey=(r:number,g:number,b:number,a:number,w:number)=>{const qr=Math.min(6,Math.max(0,Math.round(r*6))),qg=Math.min(6,Math.max(0,Math.round(g*6))),qb=Math.min(6,Math.max(0,Math.round(b*6))),qa=Math.min(3,Math.max(0,Math.round(a*3))),qw=Math.min(12,Math.max(1,Math.round(w*2))),index=((((qr*7+qg)*7+qb)*4+qa)*13+qw);let color=colorCache.get(index);if(!color){color=`${vectorColor(qr/6,qg/6,qb/6)}|${(qa/3).toFixed(2)}|${(qw/2).toFixed(1)}`;colorCache.set(index,color);}return color;};
+    const transform=new Matrix4(),rotation=new Matrix4();
+    const drawPoints=(geo:BufferGeometry,layer:SVGGElement,stash:Map<string,SVGPathElement>,rotate:boolean,opacity:number)=>{const p=geo.getAttribute('position'),c=geo.getAttribute('aColor'),sz=geo.getAttribute('aSize'),br=geo.getAttribute('aBrightness'),buckets=new Map<string,string[]>();camera.updateMatrixWorld(true);rotation.makeRotationZ(rotate?angle.value:0);transform.multiplyMatrices(camera.projectionMatrix,camera.matrixWorldInverse).multiply(rotation);const m=transform.elements,zoom=720/Math.max(20,camera.position.distanceTo(controls.target));for(let i=0;i<p.count;i++){const x0=p.getX(i),y0=p.getY(i),z0=p.getZ(i),cx=m[0]*x0+m[4]*y0+m[8]*z0+m[12],cy=m[1]*x0+m[5]*y0+m[9]*z0+m[13],cz=m[2]*x0+m[6]*y0+m[10]*z0+m[14],cw=m[3]*x0+m[7]*y0+m[11]*z0+m[15];if(cw<=0)continue;const nx=cx/cw,ny=cy/cw,nz=cz/cw;if(nz< -1||nz>1||Math.abs(nx)>1.08||Math.abs(ny)>1.08)continue;const px=(nx*.5+.5)*width,py=(-ny*.5+.5)*height,light=br?.getX(i)??.6,r=Math.min(3,Math.max(.35,(sz?.getX(i)??1)*zoom*.28)),alpha=Math.max(.12,Math.min(1,(.22+light*.72)*opacity*1.65)),key=c?colorKey(c.getX(i),c.getY(i),c.getZ(i),alpha,r):`#fff|${alpha.toFixed(2)}|${Math.max(.5,Math.round(r*4)/4)}`,bucket=buckets.get(key);if(bucket)bucket.push(starSubpath(px,py));else buckets.set(key,[starSubpath(px,py)]);}const data=new Map<string,string>();for(const [key,parts] of buckets)data.set(key,parts.join(''));setGrouped(layer,stash,data);};
+    const drawLines=(geo:BufferGeometry,color:string,opacity:number,dash='')=>{const a=geo.getAttribute('position'),parts:string[]=[];const p0=new Vector3(),p1=new Vector3();for(let i=0;i+1<a.count;i+=2){p0.fromBufferAttribute(a,i).applyAxisAngle(axis,angle.value).project(camera);p1.fromBufferAttribute(a,i+1).applyAxisAngle(axis,angle.value).project(camera);if(p0.z>1||p1.z>1)continue;parts.push(`M${((p0.x*.5+.5)*width).toFixed(1)},${((-.5*p0.y+.5)*height).toFixed(1)}L${((p1.x*.5+.5)*width).toFixed(1)},${((-.5*p1.y+.5)*height).toFixed(1)}`);}let path=relationLayer.querySelector<SVGPathElement>(`path[data-ink="${color}"]`);if(!path){path=svgNode('path');path.dataset.ink=color;path.setAttribute('pointer-events','none');path.setAttribute('fill','none');path.setAttribute('vector-effect','non-scaling-stroke');relationLayer.appendChild(path);}path.setAttribute('d',parts.join(''));path.setAttribute('stroke',color);path.setAttribute('stroke-width','.7');path.setAttribute('stroke-opacity',String(opacity));if(dash)path.setAttribute('stroke-dasharray',dash);else path.removeAttribute('stroke-dasharray');};
+    const updateOverlays=()=>{for(const n of labelsForDrawRef.current){const el=labelsRef.current.get(n.id);if(!el)continue;projected.set(n.x,n.y,n.z).applyAxisAngle(axis,angle.value).project(camera);const ok=projected.z>-1&&projected.z<1,x=(projected.x*.5+.5)*width,y=(-projected.y*.5+.5)*height;el.style.opacity=ok?'1':'0';el.style.transform=`translate(-50%,-50%) translate(${x}px,${y+(n.type==='DOMAIN'?22:15)}px)`;}for(const e of events){const el=eventsRef.current.get(e.id);if(!el)continue;projected.set(e.x,e.y,e.z).applyAxisAngle(axis,angle.value).project(camera);const x=(projected.x*.5+.5)*width,y=(-projected.y*.5+.5)*height;el.style.opacity=projected.z>-1&&projected.z<1?'1':'0';el.style.transform=`translate(-50%,-50%) translate(${x}px,${y}px)`;}};
+    const drawVectors=()=>{camera.aspect=width/height;camera.updateProjectionMatrix();controls.update();camera.updateMatrixWorld();drawPoints(galaxy,fieldLayer,cache[1]!,true,spiral?(isMobile?1.02:.9)*glowRef.current:isMacro?.24:.48);if(deep)drawPoints(deep,deepLayer,cache[0]!,false,.32);drawLines(relations.structural,themeName==='light'?'#847c70':'#65727d',.2);drawLines(relations.dependency,themeName==='light'?'#8a7f6e':'#8ca3b5',.35,'2 2');drawLines(relations.learning,themeName==='light'?'#9368a5':'#c889ff',.55,'3 1');drawLines(relations.blocked,'#df747d',.5);drawPoints(nodeGeo,entityLayer,cache[2]!,true,1);const selected=selectedRef.current?nodes.find(n=>n.id===selectedRef.current):undefined;if(selected){projected.set(selected.x,selected.y,selected.z).applyAxisAngle(axis,angle.value).project(camera);selectionRing.setAttribute('cx',String((projected.x*.5+.5)*width));selectionRing.setAttribute('cy',String((-.5*projected.y+.5)*height));selectionRing.setAttribute('r',selected.type==='DOMAIN'?'11':'6');selectionRing.style.display=projected.z>-1&&projected.z<1?'':'none';}else selectionRing.style.display='none';svg.dataset.ready='true';svg.dataset.renderCount=String(Number(svg.dataset.renderCount||0)+1);};
+    const draw=()=>{drawVectors();updateOverlays();};
+    const pick=(cx:number,cy:number)=>{const rect=svg.getBoundingClientRect();let best:number|null=null,score=Infinity;for(let i=0;i<nodes.length;i++){const n=nodes[i]!;projected.set(n.x,n.y,n.z).applyAxisAngle(axis,angle.value).project(camera);if(projected.z<=-1||projected.z>=1)continue;const x=rect.left+(projected.x*.5+.5)*rect.width,y=rect.top+(-projected.y*.5+.5)*rect.height,d=Math.hypot(cx-x,cy-y);if(d<(isMobile?28:16)&&d+Math.max(0,projected.z+1)*2.5<score){score=d+Math.max(0,projected.z+1)*2.5;best=i;}}return best;};
+    let down:{x:number;y:number}|null=null,hoverAt=0;const downFn=(e:PointerEvent)=>{down={x:e.clientX,y:e.clientY};interactionUntil=performance.now()+900;};const upFn=(e:PointerEvent)=>{if(!down)return;const moved=Math.hypot(e.clientX-down.x,e.clientY-down.y);down=null;if(moved>(isMobile?16:7))return;const hit=pick(e.clientX,e.clientY);onSelectRef.current(hit===null?null:nodes[hit]!.id);};const hoverFn=(e:PointerEvent)=>{if(down)request(true);if(performance.now()-hoverAt<50)return;hoverAt=performance.now();const hit=pick(e.clientX,e.clientY),tip=hostRef.current?.querySelector<HTMLElement>('.galaxy-tip');if(tip){tip.style.opacity=hit===null?'0':'1';if(hit!==null)tip.textContent=nodes[hit]!.label;}};svg.addEventListener('pointerdown',downFn);svg.addEventListener('pointerup',upFn);svg.addEventListener('pointermove',hoverFn);
+    let lastFrame=0,lastOverlay=0;const animate=(now:number)=>{raf=0;if(disposed||!visible)return;const dt=lastFrame?Math.min(.1,(now-lastFrame)/1000):0;lastFrame=now;const tween=tweenRef.current;if(tween){const raw=tween.duration<=0?1:Math.min(1,(now-tween.startAt)/tween.duration),t=easeOutCubic(raw);camera.position.lerpVectors(tween.fromPosition,tween.toPosition,t);controls.target.lerpVectors(tween.fromTarget,tween.toTarget,t);if(raw>=1)tweenRef.current=null;}if(spiral&&!reducedMotion)angle.value+=dt*.0116;controls.update();const active=now<interactionUntil||Boolean(tweenRef.current),vectorBudget=active?1000/18:250;if(now-lastDraw>=vectorBudget){lastDraw=now;drawVectors();}if(now-lastOverlay>=vectorBudget){lastOverlay=now;updateOverlays();}if(((spiral&&!reducedMotion)||tweenRef.current||active)&&!raf)raf=requestAnimationFrame(animate);};
+    const request=(active=false)=>{if(active)interactionUntil=Math.max(interactionUntil,performance.now()+650);if(!raf)raf=requestAnimationFrame(animate);};const changed=()=>request();const started=()=>request(true);controls.addEventListener('change',changed);controls.addEventListener('start',started);
+    const ro=new ResizeObserver(()=>{const r=mount.getBoundingClientRect();width=Math.max(1,r.width);height=Math.max(1,r.height);svg.setAttribute('viewBox',`0 0 ${width} ${height}`);camera.aspect=width/height;camera.updateProjectionMatrix();request();});ro.observe(mount);
+    const vis=()=>{visible=!document.hidden;if(visible)request();else{cancelAnimationFrame(raf);raf=0;}};document.addEventListener('visibilitychange',vis);
+    draw();if(spiral&&!reducedMotion)request();selectionDrawRef.current=()=>request();
+    return()=>{disposed=true;cancelAnimationFrame(raf);ro.disconnect();document.removeEventListener('visibilitychange',vis);controls.removeEventListener('change',changed);controls.removeEventListener('start',started);svg.removeEventListener('pointerdown',downFn);svg.removeEventListener('pointerup',upFn);svg.removeEventListener('pointermove',hoverFn);controls.dispose();galaxy.dispose();deep?.dispose();nodeGeo.dispose();rings.dispose();Object.values(relations).forEach(g=>g.dispose());cameraRef.current=null;controlsRef.current=null;mount.replaceChildren();};
+  }, [ariaLabel, edges, failed, homeCamera, isMacro, isMobile, morphology, nodes, onFailure, reducedMotion, themeName]);
 
-    let renderer: WebGLRenderer | null = null;
-    let composer: EffectComposer | null = null;
-    let frame = 0;
-    let disposed = false;
-
-    try {
-      renderer = new WebGLRenderer({
-        antialias: true,
-        alpha: true,
-        powerPreference: 'high-performance',
-      });
-      renderer.outputColorSpace = SRGBColorSpace;
-      renderer.toneMapping = ACESFilmicToneMapping;
-      renderer.toneMappingExposure = themeName === 'light' ? 0.92 : (isMobile ? 0.96 : 1.0);
-      // Phones are 3x screens: a 1.45 cap rendered the galaxy at half resolution (blurry, dull points).
-      renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, isMobile ? 2.5 : 2));
-      renderer.setSize(size.width, size.height, false);
-      renderer.domElement.className = 'galaxy-three-canvas';
-      renderer.domElement.setAttribute('aria-label', ariaLabel);
-      renderer.domElement.tabIndex = 0;
-      mount.replaceChildren(renderer.domElement);
-      rendererRef.current = renderer;
-
-      const scene = new Scene();
-      sceneRef.current = scene;
-
-      const camera = new PerspectiveCamera(isMobile ? 35 : 40, size.width / size.height, 0.1, 1200);
-      camera.position.copy(homeCamera);
-      cameraRef.current = camera;
-
-      const controls = new OrbitControls(camera, renderer.domElement);
-      controls.target.copy(DEFAULT_TARGET);
-      controls.enableDamping = true;
-      controls.dampingFactor = 0.065;
-      controls.enablePan = true;
-      controls.enableRotate = true;
-      controls.screenSpacePanning = true;
-      controls.rotateSpeed = 0.52;
-      controls.zoomSpeed = 0.82;
-      controls.panSpeed = 0.58;
-      controls.minDistance = 12;
-      controls.maxDistance = 360;
-      controls.minPolarAngle = 0.18;
-      controls.maxPolarAngle = Math.PI - 0.18;
-      controlsRef.current = controls;
-
-      const palette = paletteForTheme(themeName);
-      const spiral = themeName === 'dark';
-      const particleCount = spiral
-        ? (isMobile ? 7000 : 26000)
-        : isMacro ? (isMobile ? 90 : 320) : (isMobile ? 240 : 900);
-      const galaxyGeometry = spiral ? buildSpiralGalaxy(particleCount, morphology ?? DEFAULT_MORPHOLOGY) : buildFieldGeometry(nodes, particleCount, isMacro, themeName);
-      const galaxyMaterial = new ShaderMaterial({
-        uniforms: {
-          uTime: { value: 0 },
-          uPixelRatio: { value: renderer.getPixelRatio() },
-          uColorA: { value: palette.accent },
-          uColorB: { value: palette.strong },
-          uOpacity: { value: spiral ? (isMobile ? 1.18 : 0.95) * glow : isMacro ? (themeName === 'light' ? 0.20 : 0.24) : (themeName === 'light' ? 0.38 : 0.52) },
-          uNucleusRadius: { value: (morphology?.bulge.radius ?? DEFAULT_MORPHOLOGY.bulge.radius) * G_SCALE * 1.6 * 2.7 },
-        },
-        vertexShader: spiral ? spiralVertexShader : galaxyVertexShader,
-        fragmentShader: spiral ? spiralFragmentShader : galaxyFragmentShader,
-        transparent: true,
-        depthWrite: false,
-        blending: themeName === 'light' ? NormalBlending : AdditiveBlending,
-      });
-      const galaxy = new Points(galaxyGeometry, galaxyMaterial);
-      // Everything that belongs to the disk turns together (stars, data points, relations).
-      const disk = new Group();
-      disk.rotation.z = diskAngleRef.current;
-      scene.add(disk);
-      const deepFieldGeometry = spiral ? buildDeepField(isMobile ? 220 : 560) : null;
-      const deepFieldMaterial = spiral ? new ShaderMaterial({
-        uniforms: { uPixelRatio: { value: renderer.getPixelRatio() }, uOpacity: { value: isMobile ? 0.52 : 0.75 } },
-        vertexShader: deepFieldVertexShader,
-        fragmentShader: deepFieldFragmentShader,
-        transparent: true,
-        depthWrite: false,
-        blending: AdditiveBlending,
-      }) : null;
-      if (deepFieldGeometry && deepFieldMaterial) scene.add(new Points(deepFieldGeometry, deepFieldMaterial));
-      disk.add(galaxy);
-
-      const ringGeometry = buildFieldRingSegments(nodes, isMacro);
-      const ringMaterial = new LineBasicMaterial({ color: palette.accent, transparent: true, opacity: themeName === 'light' ? 0.05 : (isMacro ? 0.06 : 0.04), blending: NormalBlending, depthWrite: false });
-      const ringLines = new LineSegments(ringGeometry, ringMaterial);
-      ringLines.visible = !spiral;
-      scene.add(ringLines);
-
-      const grid = new GridHelper(isMacro ? 430 : 300, isMacro ? 30 : 22, palette.accent, palette.accent);
-      grid.position.set(0, isMacro ? -94 : -74, -24);
-      const gridMaterial = grid.material as LineBasicMaterial;
-      gridMaterial.transparent = true; gridMaterial.opacity = themeName === 'light' ? 0.055 : 0.075; gridMaterial.depthWrite = false;
-      grid.visible = !isMobile && !spiral;
-      scene.add(grid);
-
-      const nodeGeometry = buildNodeGeometry(nodes, selectedId, themeName, spiral ? (morphology ?? DEFAULT_MORPHOLOGY) : null);
-      const nodeMaterial = new ShaderMaterial({
-        uniforms: {
-          uTime: { value: 0 },
-          uPixelRatio: { value: renderer.getPixelRatio() },
-          uColorA: { value: palette.accent },
-          uColorB: { value: palette.strong },
-          uOpacity: { value: 1.0 },
-        },
-        vertexShader: galaxyVertexShader,
-        fragmentShader: galaxyFragmentShader,
-        transparent: true,
-        depthWrite: false,
-        blending: themeName === 'light' ? NormalBlending : AdditiveBlending,
-      });
-      const nodePoints = new Points(nodeGeometry, nodeMaterial);
-      nodePointsRef.current = nodePoints;
-      disk.add(nodePoints);
-
-      const relationSegments = buildRelationSegments(nodes, edges, selectedId);
-      const relationMaterial = new LineBasicMaterial({
-        color: themeName === 'light' ? '#7d858d' : '#65727d',
-        transparent: true,
-        opacity: selectedId ? 0.16 : (isMacro ? 0.48 : 0.30),
-        blending: NormalBlending,
-        depthWrite: false,
-      });
-      const dependencyMaterial = new LineDashedMaterial({
-        color: themeName === 'light' ? '#5d7488' : '#8ca3b5',
-        transparent: true,
-        opacity: selectedId ? 0.22 : 0.46,
-        dashSize: 2.1,
-        gapSize: 1.5,
-        depthWrite: false,
-      });
-      const learningRelationMaterial = new LineDashedMaterial({
-        color: themeName === 'light' ? '#8b4fb8' : '#c889ff',
-        transparent: true,
-        opacity: selectedId ? 0.42 : 0.72,
-        dashSize: 3.2,
-        gapSize: 1.1,
-        blending: themeName === 'light' ? NormalBlending : AdditiveBlending,
-        depthWrite: false,
-      });
-      const blockedRelationMaterial = new LineBasicMaterial({
-        color: '#df747d',
-        transparent: true,
-        opacity: selectedId ? 0.34 : 0.62,
-        depthWrite: false,
-      });
-      const selectedRelationMaterial = new LineBasicMaterial({
-        color: palette.strong,
-        transparent: true,
-        opacity: 0.98,
-        blending: themeName === 'light' ? NormalBlending : AdditiveBlending,
-        depthWrite: false,
-      });
-      const relationLines = new LineSegments(relationSegments.structural, relationMaterial);
-      const dependencyLines = new LineSegments(relationSegments.dependency, dependencyMaterial);
-      dependencyLines.computeLineDistances();
-      const learningRelationLines = new LineSegments(relationSegments.learning, learningRelationMaterial);
-      learningRelationLines.computeLineDistances();
-      const blockedRelationLines = new LineSegments(relationSegments.blocked, blockedRelationMaterial);
-      const selectedRelationLines = new LineSegments(relationSegments.selected, selectedRelationMaterial);
-      disk.add(relationLines, dependencyLines, learningRelationLines, blockedRelationLines, selectedRelationLines);
-
-      if (!isMobile && themeName === 'dark') {
-        composer = new EffectComposer(renderer);
-        composer.addPass(new RenderPass(scene, camera));
-        const bloom = new UnrealBloomPass(new Vector2(size.width, size.height), 0.55 * glow, 0.5, 0.2);
-        bloom.threshold = 0.2;
-        bloom.strength = 0.55 * glow;
-        bloom.radius = 0.5;
-        composer.addPass(bloom);
-      }
-
-      const projected = new Vector3();
-      const pickIndex = (clientX: number, clientY: number): number | null => {
-        const rect = renderer!.domElement.getBoundingClientRect();
-        const hitRadius = isMobile ? 28 : 16;
-        let bestIndex: number | null = null;
-        let bestScore = Number.POSITIVE_INFINITY;
-        for (let index = 0; index < nodes.length; index += 1) {
-          const node = nodes[index]!;
-          projected.set(node.x, node.y, node.z).applyAxisAngle(Z_AXIS, disk.rotation.z).project(camera);
-          if (projected.z <= -1 || projected.z >= 1) continue;
-          const x = rect.left + (projected.x * 0.5 + 0.5) * rect.width;
-          const y = rect.top + (-projected.y * 0.5 + 0.5) * rect.height;
-          const distance = Math.hypot(clientX - x, clientY - y);
-          if (distance > hitRadius) continue;
-          // Favor the visually closest node when several points overlap.
-          const score = distance + Math.max(0, projected.z + 1) * 2.5;
-          if (score < bestScore) {
-            bestScore = score;
-            bestIndex = index;
-          }
-        }
-        return bestIndex;
-      };
-
-      const pick = (clientX: number, clientY: number, focus = false) => {
-        const index = pickIndex(clientX, clientY);
-        if (index == null || !nodes[index]) {
-          onSelect(null);
-          return;
-        }
-        const id = nodes[index]!.id;
-        onSelect(id);
-        if (focus) focusNode(id, isMobile ? 28 : 34);
-      };
-
-      const onPointerDown = (event: PointerEvent) => {
-        pointerDownRef.current = { x: event.clientX, y: event.clientY };
-      };
-      const onPointerUp = (event: PointerEvent) => {
-        const start = pointerDownRef.current;
-        pointerDownRef.current = null;
-        if (!start) return;
-        const travel = Math.hypot(event.clientX - start.x, event.clientY - start.y);
-        const tapTolerance = isMobile ? 16 : 7;
-        if (travel <= tapTolerance) pick(event.clientX, event.clientY);
-      };
-      const onPointerCancel = () => {
-        pointerDownRef.current = null;
-      };
-      const onDoubleClick = (event: MouseEvent) => {
-        pick(event.clientX, event.clientY, true);
-      };
-      renderer.domElement.addEventListener('pointerdown', onPointerDown);
-      renderer.domElement.addEventListener('pointerup', onPointerUp);
-      renderer.domElement.addEventListener('pointercancel', onPointerCancel);
-      renderer.domElement.addEventListener('dblclick', onDoubleClick);
-
-      const scratch = new Vector3();
-      const updateLabels = () => {
-        const width = size.width;
-        const height = size.height;
-        for (const node of visibleLabels) {
-          const label = labelsRef.current.get(node.id);
-          if (!label) continue;
-          const projected = scratch.set(node.x, node.y, node.z).applyAxisAngle(Z_AXIS, disk.rotation.z).project(camera);
-          const visible = projected.z > -1 && projected.z < 1;
-          const x = (projected.x * 0.5 + 0.5) * width;
-          const y = (-projected.y * 0.5 + 0.5) * height;
-          label.style.opacity = visible ? '1' : '0';
-          label.style.transform = `translate(-50%, -50%) translate(${x}px, ${y + (node.type === 'DOMAIN' ? 22 : 15)}px)`;
-        }
-        // Tags that would collide stack downwards instead of overlapping.
-        const placed: Array<{ x: number; y: number }> = [];
-        for (const event of eventListRef.current) {
-          const marker = eventsRef.current.get(event.id);
-          if (!marker) continue;
-          const projected = scratch.set(event.x, event.y, event.z).applyAxisAngle(Z_AXIS, disk.rotation.z).project(camera);
-          const visible = projected.z > -1 && projected.z < 1;
-          const x = (projected.x * 0.5 + 0.5) * width;
-          const y = (-projected.y * 0.5 + 0.5) * height;
-          let shift = 0;
-          while (placed.some(p => Math.abs(p.x - x) < 70 && Math.abs(p.y - (y + shift)) < 17)) shift += 17;
-          placed.push({ x, y: y + shift });
-          marker.style.opacity = visible ? '1' : '0';
-          marker.style.setProperty('--tag-shift', `${shift}px`);
-          marker.style.transform = `translate(-50%, -50%) translate(${x}px, ${y}px)`;
-        }
-      };
-
-      // Slow, continuous rotation of the disk (≈ one turn every 9 minutes); frame-rate independent.
-      let lastFrame = 0;
-      const animate = (now: number) => {
-        if (disposed) return;
-        if (spiral && !reducedMotion) {
-          const dt = lastFrame ? Math.min(0.1, (now - lastFrame) / 1000) : 0;
-          disk.rotation.z += dt * 0.0116;
-        }
-        diskAngleRef.current = disk.rotation.z;
-        lastFrame = now;
-        const tween = tweenRef.current;
-        if (tween) {
-          const raw = tween.duration <= 0 ? 1 : Math.min(1, (now - tween.startAt) / tween.duration);
-          const t = easeOutCubic(raw);
-          camera.position.lerpVectors(tween.fromPosition, tween.toPosition, t);
-          controls.target.lerpVectors(tween.fromTarget, tween.toTarget, t);
-          if (raw >= 1) tweenRef.current = null;
-        }
-        controls.update();
-        galaxyMaterial.uniforms.uTime!.value = now * 0.001;
-        nodeMaterial.uniforms.uTime!.value = now * 0.001;
-        updateLabels();
-        if (composer) composer.render();
-        else renderer!.render(scene, camera);
-        frame = requestAnimationFrame(animate);
-      };
-      frame = requestAnimationFrame(animate);
-
-      return () => {
-        disposed = true;
-        cancelAnimationFrame(frame);
-        renderer?.domElement.removeEventListener('pointerdown', onPointerDown);
-        renderer?.domElement.removeEventListener('pointerup', onPointerUp);
-        renderer?.domElement.removeEventListener('pointercancel', onPointerCancel);
-        renderer?.domElement.removeEventListener('dblclick', onDoubleClick);
-        controls.dispose();
-        galaxyGeometry.dispose();
-        galaxyMaterial.dispose();
-        deepFieldGeometry?.dispose();
-        deepFieldMaterial?.dispose();
-        ringGeometry.dispose();
-        ringMaterial.dispose();
-        grid.geometry.dispose();
-        gridMaterial.dispose();
-        nodeGeometry.dispose();
-        nodeMaterial.dispose();
-        relationSegments.structural.dispose();
-        relationSegments.dependency.dispose();
-        relationSegments.blocked.dispose();
-        relationSegments.learning.dispose();
-        relationSegments.selected.dispose();
-        relationMaterial.dispose();
-        dependencyMaterial.dispose();
-        blockedRelationMaterial.dispose();
-        learningRelationMaterial.dispose();
-        selectedRelationMaterial.dispose();
-        composer?.dispose();
-        renderer?.dispose();
-        rendererRef.current = null;
-        cameraRef.current = null;
-        controlsRef.current = null;
-        sceneRef.current = null;
-        nodePointsRef.current = null;
-        mount.replaceChildren();
-      };
-    } catch {
-      renderer?.dispose();
-      rendererRef.current = null;
-      setFailed(true);
-      onFailure?.();
-      return;
-    }
-  }, [ariaLabel, edges, failed, glow, isMacro, isMobile, morphology, nodes, onFailure, onSelect, reducedMotion, selectedId, size.height, size.width, themeName, visibleLabels]);
+  useEffect(() => { selectionDrawRef.current(); }, [selectedId, glow, visibleLabels, focusEvent]);
 
   // Phones: the event sheet covers the lower half, so lift the framing while it is open.
   useEffect(() => {
@@ -1256,7 +947,7 @@ export const GalaxyThree3D = forwardRef<CanvasGraph25DHandle, Props>(function Ga
     <div
       ref={hostRef}
       className={`galaxy-three-root ${className}`}
-      data-renderer="three-nexo-field"
+      data-renderer="svg-three-vector-field"
       data-particle-profile={isMobile ? 'mobile' : 'desktop'}
       data-view-mode={viewMode}
       data-theme={themeName}

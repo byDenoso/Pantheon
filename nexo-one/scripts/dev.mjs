@@ -3,7 +3,11 @@ import {readFile} from 'node:fs/promises';
 import path from 'node:path';
 import handler from '../server/handler.mjs';
 const built=process.argv.includes('--built');
-const vite=built?null:await(await import('vite')).createServer({server:{middlewareMode:true},appType:'spa'});
+const vite=built?null:await(await import('vite')).createServer({
+  server:{middlewareMode:true,hmr:{port:24678+Number(process.env.PORT||4173)-4173},watch:{ignored:['**/output/**']}},
+  optimizeDeps:{entries:['index.html','atlas3d/index.html','mcp/index.html']},
+  appType:'spa',
+});
 const root=path.resolve('dist');
 const mime={'.html':'text/html','.js':'text/javascript','.css':'text/css','.svg':'image/svg+xml'};
 const host=process.env.HOST||'127.0.0.1';

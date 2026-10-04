@@ -697,15 +697,15 @@ test('dedicated Atlas production page uses Metro renderer, G6 and deterministic 
   assert.match(renderer, /refreshSequence/);
   assert.match(renderer, /graph\.on\('afterrender'/);
   assert.match(renderer, /renderOutcome/);
-  assert.match(renderer, /G6 render timeout sem canvas materializado/);
-  assert.match(renderer, /container\.querySelector\('canvas'\)/);
+  assert.match(renderer, /G6 render timeout sem SVG vetorial materializado/);
+  assert.match(renderer, /getG6SvgOutput/);
   assert.match(renderer, /initializedRef/);
   assert.match(renderer, /refreshRef/);
   assert.match(renderer, /fitDuration = isAtlasReadback\(\) \? 0/);
   assert.match(renderer, /Promise\.race\(\[fitTask, fitTimeout\]\)/);
   assert.doesNotMatch(renderer, /G6_UPDATE_FAILED/);
-  assert.match(renderer, /WEBGL_INIT_FAILED/);
-  assert.match(renderer, /WEBGL_CONTEXT_LOST/);
+  assert.match(renderer, /SVG_INIT_FAILED/);
+  assert.match(renderer, /SVGRenderer/);
   assert.match(renderer, /compact-touch/);
   assert.match(renderer, /reduced-gpu/);
   assert.match(renderer, /compact \? 2 : 3/);
@@ -715,24 +715,24 @@ test('dedicated Atlas production page uses Metro renderer, G6 and deterministic 
   assert.match(renderer, /onReadyRef\.current\?\.\(\)/);
   assert.match(renderer, /runtime-skip/);
   assert.match(renderer, /isAtlasReadback/);
-  assert.match(renderer, /sharedGlowTexture/);
+  assert.match(renderer, /radialGradient/);
   assert.match(renderer, /atlasSharedTexture/);
   assert.match(renderer, /minimumFrameMs/);
   assert.match(renderer, /showLeafLabels/);
   assert.match(renderer, /threeFocusIds/);
-  assert.match(renderer, /preserveDrawingBuffer: isAtlasReadback\(\)/);
+  assert.match(renderer, /G6SvgRenderer/);
   assert.match(renderer, /learningColor/);
   assert.match(renderer, /SCIENTIFIC_LEARNING_PIPELINE/);
   assert.match(renderer, /bundleIndex/);
   assert.match(renderer, /bundleCount/);
   assert.match(renderer, /curveOffset/);
   assert.match(renderer, /g6NodeCount/);
-  assert.match(renderer, /querySelector\('canvas'\)/);
+  assert.match(renderer, /querySelectorAll.*svg/);
   assert.match(renderer, /OrbitControls/);
   assert.match(renderer, /threeNodeCount/);
   assert.match(renderer, /threeReady/);
   assert.match(renderer, /threePaintSamples/);
-  assert.match(renderer, /preserveDrawingBuffer/);
+  assert.doesNotMatch(renderer, /new THREE\.WebGLRenderer|readPixels/);
   assert.match(renderer, /renderAndMeasureThree/);
   assert.match(renderer, /data-three-visual="neural-synapse"/);
   assert.match(renderer, /IcosahedronGeometry/);
@@ -802,13 +802,13 @@ test('dedicated Atlas production page uses Metro renderer, G6 and deterministic 
 });
 
 
-test('G6 selection changes wait for the current canvas render', async () => {
+test('G6 selection changes wait for the current SVG render', async () => {
   const renderer = await text('src/atlas3d/MetroAtlasRenderer.tsx');
   const refreshStart = renderer.indexOf('const refresh = async');
   const refreshEnd = renderer.indexOf('const expansionKey = useMemo', refreshStart);
   const refresh = renderer.slice(refreshStart, refreshEnd);
   assert.match(refresh, /container\.dataset\.g6Ready = 'false';\s*const data = buildG6Data/);
-  assert.match(refresh, /if \(!canvasReady\)[\s\S]*?container\.dataset\.g6Ready = 'true';\s*applyG6Selection/);
+  assert.match(refresh, /if \(!svgReady\)[\s\S]*?container\.dataset\.g6Ready = 'true';\s*applyG6Selection/);
   assert.match(renderer, /if \(container\?\.dataset\.g6Ready !== 'true'\) return;/);
 });
 

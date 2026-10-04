@@ -1,4 +1,40 @@
-import {useEffect,useRef} from 'react';
+import {useEffect,useId,useRef} from 'react';
+
+type SvgPaint={kind:'radial'|'linear';stops:Array<{offset:number;color:string}>;coords:number[];addColorStop:(offset:number,color:string)=>void};
+type Paint=string|SvgPaint;
+type SvgState={alpha:number;fill:Paint;stroke:Paint;lineWidth:number;lineCap:string;lineJoin:string;dash:number[];font:string;textAlign:string;textBaseline:string;transform:[number,number,number,number,number,number]};
+const SVG_NS='http://www.w3.org/2000/svg';
+
+/** Canvas-subset adapter: records vector paths and batches primitives by paint/style. */
+class SvgCanvasContext {
+  globalAlpha=1;fillStyle:Paint='#000';strokeStyle:Paint='#000';lineWidth=1;lineCap='butt';lineJoin='miter';font='10px sans-serif';textAlign='start';textBaseline='alphabetic';
+  private transform:[number,number,number,number,number,number]=[1,0,0,1,0,0];
+  private stack:SvgState[]=[];private defs:SVGDefsElement;private groups=new Map<string,{d:string;attrs:Record<string,string>}>();private ordered:SVGElement[]=[];
+  private current:string[]=[];private paints=new Map<string,string>();private nextPaint=0;private svg:SVGSVGElement;private prefix:string;
+  constructor(svg:SVGSVGElement,prefix:string){this.svg=svg;this.prefix=prefix.replace(/[^a-zA-Z0-9_-]/g,'');this.defs=document.createElementNS(SVG_NS,'defs');}
+  beginFrame(width:number,height:number){this.defs=document.createElementNS(SVG_NS,'defs');this.groups.clear();this.ordered=[];this.paints.clear();this.nextPaint=0;this.stack=[];this.transform=[1,0,0,1,0,0];this.globalAlpha=1;this.fillStyle='#000';this.strokeStyle='#000';this.lineWidth=1;this.lineCap='butt';this.lineJoin='miter';this._dash=[];this.font='10px sans-serif';this.textAlign='start';this.textBaseline='alphabetic';this.svg.setAttribute('viewBox',`0 0 ${Math.max(1,width)} ${Math.max(1,height)}`);}
+  present(){this.flushGroup();this.svg.replaceChildren(this.defs,...this.ordered);}
+  private flushGroup(){for(const group of this.groups.values()){const path=document.createElementNS(SVG_NS,'path');path.setAttribute('d',group.d);for(const [name,value] of Object.entries(group.attrs))path.setAttribute(name,value);this.ordered.push(path);}this.groups.clear();}
+  private point(x:number,y:number){const [a,b,c,d,e,f]=this.transform;return{x:a*x+c*y+e,y:b*x+d*y+f};}
+  private matrix(){return this.transform.map(v=>Number(v.toFixed(3))).join(',');}
+  setTransform(a:number,b:number,c:number,d:number,e:number,f:number){this.transform=[a,b,c,d,e,f];}
+  save(){this.stack.push({alpha:this.globalAlpha,fill:this.fillStyle,stroke:this.strokeStyle,lineWidth:this.lineWidth,lineCap:this.lineCap,lineJoin:this.lineJoin,dash:this._dash.slice(),font:this.font,textAlign:this.textAlign,textBaseline:this.textBaseline,transform:[...this.transform] as SvgState['transform']});}
+  restore(){const s=this.stack.pop();if(!s)return;this.globalAlpha=s.alpha;this.fillStyle=s.fill;this.strokeStyle=s.stroke;this.lineWidth=s.lineWidth;this.lineCap=s.lineCap;this.lineJoin=s.lineJoin;this._dash=s.dash;this.font=s.font;this.textAlign=s.textAlign;this.textBaseline=s.textBaseline;this.transform=s.transform;}
+  private _dash:number[]=[];setLineDash(dash:number[]){this._dash=[...dash];}
+  beginPath(){this.current=[];}moveTo(x:number,y:number){const p=this.point(x,y);this.current.push(`M${p.x.toFixed(2)},${p.y.toFixed(2)}`);}lineTo(x:number,y:number){const p=this.point(x,y);this.current.push(`L${p.x.toFixed(2)},${p.y.toFixed(2)}`);}quadraticCurveTo(cx:number,cy:number,x:number,y:number){const c=this.point(cx,cy),p=this.point(x,y);this.current.push(`Q${c.x.toFixed(2)},${c.y.toFixed(2)} ${p.x.toFixed(2)},${p.y.toFixed(2)}`);}closePath(){this.current.push('Z');}
+  ellipse(x:number,y:number,rx:number,ry:number,rotation:number,start:number,end:number){const segments=Math.max(12,Math.ceil(Math.abs(end-start)*12)),cos=Math.cos(rotation),sin=Math.sin(rotation);for(let i=0;i<=segments;i++){const t=start+(end-start)*i/segments,px=x+rx*Math.cos(t)*cos-ry*Math.sin(t)*sin,py=y+rx*Math.cos(t)*sin+ry*Math.sin(t)*cos,p=this.point(px,py);this.current.push(`${i?'L':'M'}${p.x.toFixed(2)},${p.y.toFixed(2)}`);}if(Math.abs(end-start)>=Math.PI*2-.01)this.closePath();}
+  arc(x:number,y:number,r:number,start:number,end:number){this.ellipse(x,y,r,r,0,start,end);}
+  translate(x:number,y:number){this.transform=this.mul(this.transform,[1,0,0,1,x,y]);}rotate(angle:number){this.transform=this.mul(this.transform,[Math.cos(angle),Math.sin(angle),-Math.sin(angle),Math.cos(angle),0,0]);}
+  private mul(a:number[],b:number[]):[number,number,number,number,number,number]{return[a[0]*b[0]+a[2]*b[1],a[1]*b[0]+a[3]*b[1],a[0]*b[2]+a[2]*b[3],a[1]*b[2]+a[3]*b[3],a[0]*b[4]+a[2]*b[5]+a[4],a[1]*b[4]+a[3]*b[5]+a[5]];}
+  fillRect(x:number,y:number,w:number,h:number){const a=this.point(x,y),b=this.point(x+w,y),c=this.point(x+w,y+h),d=this.point(x,y+h);this.emit(`M${a.x.toFixed(2)},${a.y.toFixed(2)}L${b.x.toFixed(2)},${b.y.toFixed(2)}L${c.x.toFixed(2)},${c.y.toFixed(2)}L${d.x.toFixed(2)},${d.y.toFixed(2)}Z`,'fill');}
+  stroke(){this.emit(this.current.join(''),'stroke');}fill(){this.emit(this.current.join(''),'fill');}
+  private paint(paint:Paint):string{if(typeof paint==='string')return paint;const signature=paint.kind+':'+(paint.kind==='linear'?paint.coords.join(','):'')+':'+paint.stops.map(s=>`${s.offset}:${s.color}`).join('|');let id=this.paints.get(signature);if(id)return`url(#${id})`;id=`${this.prefix}-paint-${this.nextPaint++}`;this.paints.set(signature,id);const g=document.createElementNS(SVG_NS,paint.kind==='radial'?'radialGradient':'linearGradient');g.id=id;g.setAttribute('gradientUnits',paint.kind==='radial'?'objectBoundingBox':'userSpaceOnUse');if(paint.kind==='radial'){g.setAttribute('cx','.5');g.setAttribute('cy','.5');g.setAttribute('r','.5');g.setAttribute('fx','.5');g.setAttribute('fy','.5');}else{const [x1,y1,x2,y2]=paint.coords;g.setAttribute('x1',String(x1));g.setAttribute('y1',String(y1));g.setAttribute('x2',String(x2));g.setAttribute('y2',String(y2));}for(const stop of paint.stops){const node=document.createElementNS(SVG_NS,'stop');node.setAttribute('offset',String(stop.offset));node.setAttribute('stop-color',stop.color);g.appendChild(node);}this.defs.appendChild(g);return`url(#${id})`;}
+  private emit(d:string,mode:'fill'|'stroke'){if(!d)return;const paint=this.paint(mode==='fill'?this.fillStyle:this.strokeStyle),alpha=Math.max(0,Math.min(1,this.globalAlpha)),opacity=String(Math.round(alpha*100)/100),attrs:Record<string,string>=mode==='fill'?{fill:paint,'fill-opacity':opacity}:{fill:'none',stroke:paint,'stroke-opacity':opacity,'stroke-width':String(this.lineWidth),'stroke-linecap':this.lineCap,'stroke-linejoin':this.lineJoin};if(mode==='stroke'&&this._dash.length)attrs['stroke-dasharray']=this._dash.join(' ');const key=JSON.stringify([attrs,this.matrix()]);const old=this.groups.get(key);if(old)old.d+=d;else this.groups.set(key,{d,attrs});}
+  createRadialGradient(_x0:number,_y0:number,_r0:number,_x1:number,_y1:number,r1:number):SvgPaint{const gradient:SvgPaint={kind:'radial',stops:[],coords:[r1],addColorStop:(offset,color)=>{gradient.stops.push({offset,color});gradient.stops.sort((a,b)=>a.offset-b.offset);}};return gradient;}
+  createLinearGradient(x1:number,y1:number,x2:number,y2:number):SvgPaint{const a=this.point(x1,y1),b=this.point(x2,y2),gradient:SvgPaint={kind:'linear',stops:[],coords:[a.x,a.y,b.x,b.y],addColorStop:(offset,color)=>{gradient.stops.push({offset,color});gradient.stops.sort((m,n)=>m.offset-n.offset);}};return gradient;}
+  measureText(text:string){const px=Number(/([\d.]+)px/.exec(this.font)?.[1]||10);return{width:text.length*px*.6} as TextMetrics;}
+  fillText(text:string,x:number,y:number){this.flushGroup();const p=this.point(x,y),node=document.createElementNS(SVG_NS,'text');node.textContent=text;node.setAttribute('x',String(p.x));node.setAttribute('y',String(p.y));node.setAttribute('fill',this.paint(this.fillStyle));node.setAttribute('fill-opacity',String(Math.round(Math.max(0,Math.min(1,this.globalAlpha))*100)/100));node.setAttribute('font',this.font);node.setAttribute('text-anchor',this.textAlign==='center'?'middle':this.textAlign==='right'?'end':'start');node.setAttribute('dominant-baseline',this.textBaseline==='middle'?'middle':'alphabetic');this.ordered.push(node);}
+}
 
 export type StarCluster={id:string;label:string;color:string;weight:number;detail?:string};
 /** Cross-domain relations: each becomes a filament of the cosmic web, denser with more relations. */
@@ -13,7 +49,8 @@ export type StarLink={a:string;b:string;count:number};
 // galáxias (densidade e brilho pela contagem). Pares sem relação ganham só um fio
 // tênue, para a teia ler como estrutura contínua sem inventar vínculo.
 export function StarfieldCanvas({className='starfield-canvas',clusters=[],links=[]}:{className?:string;clusters?:StarCluster[];links?:StarLink[]}){
-  const ref=useRef<HTMLCanvasElement>(null);
+  const ref=useRef<SVGSVGElement>(null);
+  const id=useId();
   const clustersRef=useRef(clusters);
   clustersRef.current=clusters;
   const linksRef=useRef(links);
@@ -21,8 +58,8 @@ export function StarfieldCanvas({className='starfield-canvas',clusters=[],links=
   const clusterKey=clusters.map(c=>`${c.id}:${c.weight}:${c.color}`).join('|')+'#'+links.map(l=>`${l.a}-${l.b}:${l.count}`).join('|');
 
   useEffect(()=>{
-    const canvas=ref.current;const context=canvas?.getContext('2d');
-    if(!canvas||!context)return;
+    const canvas=ref.current;if(!canvas)return;
+    const context=new SvgCanvasContext(canvas,id);
     const still=typeof matchMedia==='function'&&matchMedia('(prefers-reduced-motion: reduce)').matches;
     let width=0,height=0,frame=0,time=0,visible=true,focus:string|null=null;
     let stars:Array<{angle:number;radius:number;size:number;seed:number;speed:number}>=[];
@@ -110,10 +147,9 @@ export function StarfieldCanvas({className='starfield-canvas',clusters=[],links=
     };
 
     const resize=()=>{
-      const ratio=Math.min(window.devicePixelRatio||1,2);ratioNow=ratio;
+      ratioNow=1;
       width=canvas.clientWidth;height=canvas.clientHeight;
-      canvas.width=width*ratio;canvas.height=height*ratio;
-      context.setTransform(ratio,0,0,ratio,0,0);
+      canvas.setAttribute('viewBox',`0 0 ${Math.max(1,width)} ${Math.max(1,height)}`);
       stars=Array.from({length:Math.min(1200,Math.round(width*height/800))},()=>({
         angle:Math.random()*Math.PI*2,radius:Math.pow(Math.random(),.6)*Math.max(width,height)*.7,
         size:Math.random()*1.3+.2,seed:Math.random(),speed:.00004+Math.random()*.0001,
@@ -122,6 +158,7 @@ export function StarfieldCanvas({className='starfield-canvas',clusters=[],links=
     };
 
     const draw=()=>{
+      context.beginFrame(width,height);
       const cx=width*.72,cy=height*.4;
       const intro=still?1:ease(time/INTRO);
       if(!still){
@@ -249,6 +286,7 @@ export function StarfieldCanvas({className='starfield-canvas',clusters=[],links=
       });
       layer(0);
       context.globalAlpha=1;time+=16;
+      context.present();
       if(!still&&visible)frame=requestAnimationFrame(draw);
     };
 
@@ -290,9 +328,9 @@ export function StarfieldCanvas({className='starfield-canvas',clusters=[],links=
       canvas.removeEventListener('pointermove',onPointer);canvas.removeEventListener('pointerleave',onLeave);
       delete document.documentElement.dataset.domainFocus;
     };
-  },[clusterKey]);
+  },[clusterKey,id]);
 
-  return <canvas ref={ref} className={className} aria-hidden="true"/>;
+  return <svg data-tower-svg-native="starfield" ref={ref} className={className} aria-hidden="true" focusable="false"/>;
 }
 
 function hexAlpha(hex:string,alpha:number){

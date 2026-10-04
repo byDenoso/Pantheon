@@ -6,3 +6,10 @@ dist/
 test-output/
 release/
 .nexo-spool/
+output/
+# Public readback assets for the local historical preview, not source authority.
+public/system.json
+public/galaxy/
+public/mcp/topology.json
+public/tower-projection/publication.json
+public/vendor/g6.min.js
