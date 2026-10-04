@@ -20,30 +20,35 @@ try {
   const matrix = baseline ? [['desktop', 1440, 1100, 'dark', false, false]] : [
     ['desktop', 1440, 1100, 'dark', false, false], ['screenshot-646', 646, 1100, 'dark', false, false],
     ['mobile-390', 390, 1000, 'dark', false, false], ['mobile-320', 320, 1000, 'dark', false, false],
-    ['mobile-reduced', 390, 1000, 'dark', true, false], ['mobile-light-fallback', 390, 1000, 'light', true, true],
+    ['mobile-reduced', 390, 1000, 'dark', true, false], ['mobile-light-no-webgl', 390, 1000, 'light', true, true],
   ];
-  for (const [name, width, height, theme, reduced, fallback] of matrix) {
+  for (const [name, width, height, theme, reduced, webglDisabled] of matrix) {
     const context = await browser.newContext({ viewport: { width, height }, locale: 'pt-BR', reducedMotion: reduced ? 'reduce' : 'no-preference', isMobile: width < 760, hasTouch: width < 760 });
     const page = await context.newPage();
     const errors = []; page.on('pageerror', error => errors.push(error.message));
     await page.clock.install({ time: now });
-    await page.addInitScript(({ theme, fallback }) => {
+    await page.addInitScript(({ theme, webglDisabled }) => {
       localStorage.setItem('nexo-theme', theme); localStorage.setItem('nexo.intro.seen', '1'); localStorage.setItem('nexo.legend.seen', '1'); localStorage.setItem('nexo.quality', 'low');
-      if (fallback) {
+      if (webglDisabled) {
         const get = HTMLCanvasElement.prototype.getContext;
         HTMLCanvasElement.prototype.getContext = function(kind, ...args) { return /^webgl/.test(kind) ? null : get.call(this, kind, ...args); };
       }
-    }, { theme, fallback });
+    }, { theme, webglDisabled });
     await page.route('**/api/session', route => route.fulfill({ json: { configured: false, authenticated: false } }));
     await page.route('**/api/system*', route => route.fulfill({ json: system }));
     await page.route('**/build-meta.json*', route => route.fulfill({ json: { projection_fingerprint: projection.manifest.projection_fingerprint } }));
     await page.goto(base + '/#/ciclo');
     await page.locator('.crew').waitFor(); await page.evaluate(() => document.fonts.ready);
-    await page.waitForFunction(() => {
+    await page.waitForFunction(isBaseline => {
       const hud = document.querySelector('.hud'), obs = document.querySelector('.observatory');
-      return hud && Number(getComputedStyle(hud).opacity) === 1 && !hud.querySelector('[data-counting="true"],[data-writing="true"]')
-        && (obs.classList.contains('scene-unavailable') || !!obs.querySelector('.obs-scene canvas'));
-    });
+      const surface = isBaseline ? '.obs-scene canvas' : '.obs-scene svg[data-tower-svg-native="observatory"][data-ready="true"]';
+      return hud && obs && Number(getComputedStyle(hud).opacity) === 1 && !hud.querySelector('[data-counting="true"],[data-writing="true"]')
+        && !!obs.querySelector(surface);
+    }, baseline);
+    if (!baseline) {
+      assert.equal(await page.locator('.obs-scene canvas').count(), 0);
+      assert.equal(await page.locator('.observatory.scene-unavailable').count(), 0, 'SVG remains available without WebGL');
+    }
     await page.addStyleTag({ content: 'body::after{content:"' + (baseline ? 'BASELINE · DEFEITO ESPERADO' : 'QA LAYOUT') + ' · FIXTURE SINTÉTICA";position:fixed;left:8px;bottom:3px;z-index:9999;padding:3px 6px;background:#15120c;color:#f4e4bd;font:10px system-ui;pointer-events:none}' });
     await page.locator('.crew').scrollIntoViewIfNeeded();
     const metrics = await page.locator('.crew').evaluate(crew => [...crew.querySelectorAll('.crew-card')].map(card => {
@@ -80,7 +85,7 @@ try {
       }
       assert.ok(pulses.some(text => text.includes('compartilhado entre operadores')), name + ': shared operator role is not presented as an individual event count');
       assert.deepEqual(errors, [], name + ': page errors');
-      reports.push({ name, width, cards: metrics.length, fullWidth: true, noOverflow: true, reducedMotion: reduced, webglFallback: fallback, maxHeight: Math.max(...metrics.map(m => m.card.height)), errors });
+      reports.push({ name, width, cards: metrics.length, fullWidth: true, noOverflow: true, reducedMotion: reduced, webglDisabled, renderer: 'svg', maxHeight: Math.max(...metrics.map(m => m.card.height)), errors });
     }
     await context.close();
   }

@@ -47,24 +47,27 @@ try {
    assert.equal(await detailsToggle.evaluate(toggle => document.activeElement === toggle), true,
     'fechar detalhes no iPhone deve devolver o foco ao botão de abertura');
   }
-  // Exercise rapid G6 teardown/recreation while render and fit transitions may
+  // Both the primary G6 renderer and its minimap use the SVG backend.
+  // Require materialized output, not merely an attached empty container.
+  const waitForGraph = async () => {
+   await page.locator('#atlas-metro-g6 svg[data-tower-svg-native="metro2d"][data-ready="true"]').waitFor();
+   await page.waitForFunction(() => !!document.querySelector('#atlas-metro-g6 svg[data-tower-svg-native="metro2d"] path[d]'));
+   assert.equal(await page.locator('#atlas-metro-g6 canvas').count(), 0);
+   if (width >= 600) {
+    await page.locator('.g6-minimap').waitFor({ state: 'visible' });
+    await page.locator('.g6-minimap svg').first().waitFor();
+    await page.waitForFunction(() => !!document.querySelector('.g6-minimap svg path[d]'));
+    assert.equal(await page.locator('.g6-minimap canvas').count(), 0);
+   }
+  };
+  await waitForGraph();
+  // Exercise rapid teardown/recreation while render and fit transitions may
   // still be active; this surfaced late getData errors in CI.
-  const minimap = page.locator('.g6-minimap');
-  const minimapCanvas = minimap.locator('canvas').first();
-  if (width >= 600) {
-   await minimap.waitFor({ state: 'visible' });
-   await minimapCanvas.waitFor({ state: 'attached' });
-  }
   for (let cycle = 0; cycle < 2; cycle += 1) {
    await page.getByRole('button',{name:'Ver como tabela'}).click();
    await page.getByRole('button',{name:'Ver grafo'}).click();
   }
-  // G6 owns several layered canvases inside this renderer.
-  await page.locator('#atlas-metro-g6 canvas').first().waitFor();
-  if (width >= 600) {
-   await minimap.waitFor({ state: 'visible' });
-   await minimapCanvas.waitFor({ state: 'attached' });
-  }
+  await waitForGraph();
   await page.getByRole('button',{name:'Ver como tabela'}).click();
   const table=page.locator('.nexo-graph-table');
   const station=table.locator('tbody tr:not(.selected) .nexo-graph-table-select').first();
@@ -72,16 +75,12 @@ try {
   await station.focus();await page.keyboard.press('Enter');
   assert.equal((await table.locator('tbody tr.selected .nexo-graph-table-select').innerText()).trim(),stationName);
   await page.getByRole('button',{name:'Ver grafo'}).click();
-  await page.locator('#atlas-metro-g6 canvas').first().waitFor();
-  if (width >= 600) {
-   await minimap.waitFor({ state: 'visible' });
-   await minimapCanvas.waitFor({ state: 'attached' });
-  }
+  await waitForGraph();
   // The upstream minimap debounces redraw by 128 ms; let a full trailing
   // window pass so late callbacks surface as pageerrors before this test ends.
   await page.waitForTimeout(250);
   assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
   assert.deepEqual(errors, []); await page.close();
  }
- console.log('PASS: Atlas desktop/mobile, legacy/open/resolved, focus restoration, keyboard selection, no private handoff, no overflow or page errors');
+ console.log('PASS: Atlas desktop/mobile, legacy/open/resolved, focus restoration, keyboard selection, native SVG graph/minimap, no private handoff, no overflow or page errors');
 } finally { await browser.close(); }
