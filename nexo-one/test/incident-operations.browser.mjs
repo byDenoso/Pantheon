@@ -53,7 +53,8 @@ try {
    await page.getByRole('button',{name:'Ver como tabela'}).click();
    await page.getByRole('button',{name:'Ver grafo'}).click();
   }
-  await page.locator('#atlas-metro-g6 canvas').waitFor();
+  // G6 owns several layered canvases inside this renderer.
+  await page.locator('#atlas-metro-g6 canvas').first().waitFor();
   await page.getByRole('button',{name:'Ver como tabela'}).click();
   const table=page.locator('.nexo-graph-table');
   const station=table.locator('tbody tr:not(.selected) .nexo-graph-table-select').first();
