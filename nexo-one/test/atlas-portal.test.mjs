@@ -16,6 +16,7 @@ test('Atlas fallback keeps real evidence links and reserves pulses for fresh RUN
     const current = render(true), stale = render(false);
     assert.equal((current.match(/class="atlas-node-running"/g) || []).length, 1);
     assert.doesNotMatch(stale, /class="atlas-node-running"/);
+    assert.doesNotMatch(stale, /#8adbd7|r="2.5"/);
     assert.match(stale, /LEITURA DESATUALIZADA/);
     assert.match(stale, /execução não verificada/);
     for (const id of ['A','B','C']) assert.match(current, new RegExp(`href="#/e/${id}"`));

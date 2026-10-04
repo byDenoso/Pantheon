@@ -6,7 +6,7 @@ import './atlas-portal.css';
 
 export type AtlasScale = 'overview' | 'research' | 'operational';
 const seed = (id: string) => { let h = 2166136261; for (const c of id) h = Math.imul(h ^ c.charCodeAt(0), 16777619); return (h >>> 0) / 4294967296; };
-const color = (test: TestEntity) => test.verdict === 'BLOCKED' ? '#a68d74' : test.status === 'RUNNING' ? '#8adbd7' : test.verdict === 'REFUTED' ? '#cb8c90' : '#afc3e7';
+const color = (test: TestEntity, sourceCurrent: boolean) => test.verdict === 'BLOCKED' ? '#a68d74' : sourceCurrent && test.status === 'RUNNING' ? '#8adbd7' : test.verdict === 'REFUTED' ? '#cb8c90' : '#afc3e7';
 
 /** Coordinates encode membership, never measured cosmological positions. */
 export function AtlasPortal({ lab, fallback, sourceCurrent, scale, onScale, onFocus, onPanel, onSearch, selectedRegion, onRegionChange }: {
@@ -51,12 +51,12 @@ export function AtlasPortal({ lab, fallback, sourceCurrent, scale, onScale, onFo
       <defs><radialGradient id="atlas-halo"><stop stopColor="#829dcc" stopOpacity=".22"/><stop offset="1" stopColor="#829dcc" stopOpacity="0"/></radialGradient><filter id="atlas-glow"><feGaussianBlur stdDeviation="1.8"/></filter></defs>
       {model.regions.map(r => <g key={r.id} opacity={region && region !== r.id ? .16 : 1}>
         <ellipse cx={r.x} cy={r.y} rx={75 + Math.sqrt(r.tests.length) * 3} ry={50 + Math.sqrt(r.tests.length) * 2} fill="url(#atlas-halo)"/>
-        {model.nodes.filter(n => n.region === r.id).map(n => <path key={n.test.id} d={`M${r.x},${r.y} Q${r.x + (n.x - r.x) * .25},${n.y} ${n.x},${n.y}`} fill="none" stroke={color(n.test)} strokeWidth=".7" opacity={n.test.verdict === 'BLOCKED' ? '.12' : '.3'}/>) }
+        {model.nodes.filter(n => n.region === r.id).map(n => <path key={n.test.id} d={`M${r.x},${r.y} Q${r.x + (n.x - r.x) * .25},${n.y} ${n.x},${n.y}`} fill="none" stroke={color(n.test, sourceCurrent)} strokeWidth=".7" opacity={n.test.verdict === 'BLOCKED' ? '.12' : '.3'}/>) }
         <circle cx={r.x} cy={r.y} r="3" fill="#e2d7bf"/>
       </g>)}
       {model.nodes.flatMap(n => n.test.parents.map(id => { const p = model.byId.get(id); return p ? <path key={`${id}:${n.test.id}`} d={`M${p.x},${p.y} Q${(p.x + n.x) / 2},${Math.min(p.y,n.y)-35} ${n.x},${n.y}`} fill="none" stroke="#a8cdd8" strokeWidth="1" strokeDasharray={n.test.verdict === 'BLOCKED' ? '3 5' : undefined} opacity=".4"/> : null; }))}
       {model.nodes.map(n => <a key={n.test.id} href={labHref('entidade',n.test.id)} aria-label={`${n.test.name} · ${VERDICT_PT[n.test.verdict]}`} className={sourceCurrent && n.test.status === 'RUNNING' ? 'atlas-node-running' : undefined} style={{opacity: region && region !== n.region ? .16 : 1}}>
-        <title>{`${n.test.name} · ${VERDICT_PT[n.test.verdict]}`}</title><circle cx={n.x} cy={n.y} r="7" fill="transparent"/><circle cx={n.x} cy={n.y} r="4" fill={color(n.test)} opacity=".6" filter="url(#atlas-glow)"/><circle cx={n.x} cy={n.y} r={n.test.status === 'RUNNING' ? 2.5 : 1.4} fill={color(n.test)}/>
+        <title>{`${n.test.name} · ${VERDICT_PT[n.test.verdict]}`}</title><circle cx={n.x} cy={n.y} r="7" fill="transparent"/><circle cx={n.x} cy={n.y} r="4" fill={color(n.test, sourceCurrent)} opacity=".6" filter="url(#atlas-glow)"/><circle cx={n.x} cy={n.y} r={sourceCurrent && n.test.status === 'RUNNING' ? 2.5 : 1.4} fill={color(n.test, sourceCurrent)}/>
       </a>)}
     </svg></div>}
     <header className="atlas-title"><p>NEXO / OBSERVATÓRIO</p><h1>ATLAS<span>.</span></h1><p className="atlas-statement">A pesquisa tem uma forma.<br/>Explore suas conexões.</p></header>
