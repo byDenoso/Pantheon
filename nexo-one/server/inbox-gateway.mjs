@@ -12,7 +12,7 @@
 import { createHash, createPublicKey, createVerify } from 'node:crypto';
 import { googleToken } from './adapters/google.mjs';
 import { GOOGLE_SHEETS_SPOOL_SCOPES,googleRuntimeEnvironment } from './adapters/connect.mjs';
-import { isOperationalEnvelope } from './mcp/operational-queue.mjs';
+import { isOperationalEnvelope,SPOOL_ID as WRITER_SPOOL_ID } from './mcp/operational-queue.mjs';
 
 const REPO = 'byDenoso/TCC', BRANCH = 'nexo-inbox', API = 'https://api.github.com';
 const GATE = new Set(['APPROVE_CHARTER', 'REJECT_CHARTER', 'CANONIZE', 'REJECT_CANARY']);
@@ -28,6 +28,10 @@ const googleConfigured=env=>Boolean(env.GOOGLE_CONNECTOR||(env.GOOGLE_CLIENT_ID&
 const quoteSheet=title=>`'${String(title).replaceAll("'","''")}'`;
 const encodeSheetRange=range=>encodeURIComponent(range).replaceAll("'",'%27');
 const ackStable=id=>`gwack-${createHash('sha256').update(String(id)).digest('hex').slice(0,32)}`;
+const canonical=value=>value===null||typeof value!=='object'?JSON.stringify(value):Array.isArray(value)
+  ?'['+value.map(canonical).join(',')+']'
+  :'{'+Object.keys(value).sort().map(key=>JSON.stringify(key)+':'+canonical(value[key])).join(',')+'}';
+const digest=value=>createHash('sha256').update(value).digest('hex');
 
 async function sheetJson(token,url,options={}) {
   const response=await fetch(url,{
@@ -278,6 +282,55 @@ export async function inboxDrop(url,env,req) {
     return [{ok:false,error:'SHEET_SPOOL_WRITE_FAILED',primary:'SHEET_SPOOL',detail,github_token_role:'READ_ONLY_COMPATIBILITY'},502];
   }
   return [{ok:false,error:'GATEWAY_NOT_CONFIGURED',hint:'Configure the ATLAS Google connector for Sheets write.'},503];
+}
+
+/**
+ * Submit one scientific battery request through the same Sheet spool consumed by
+ * the canonical NEXO Writer. This is queue ingress only: the Writer revalidates
+ * readiness, reserves the attempt and owns any later dispatch.
+ */
+export async function submitScientificGatewayEnvelope(stableId,envelope,env,req) {
+  const fail=code=>{throw Object.assign(new Error(code),{code});};
+  if(!/^[a-z0-9-]{4,60}$/.test(String(stableId||'')))fail('SCIENTIFIC_QUEUE_STABLE_ID_INVALID');
+  const payload=envelope?.payload;
+  if(envelope?.kind!=='TEST_BATTERY'||envelope?.source!=='MCP_EXECUTOR'||
+      Object.keys(envelope||{}).some(key=>!['kind','source','payload'].includes(key))||
+      !payload||Object.keys(payload).some(key=>!['battery_id','tests'].includes(key))||
+      !/^[a-z0-9-]{3,48}$/.test(String(payload.battery_id||''))||!Array.isArray(payload.tests)||payload.tests.length!==1)
+    fail('SCIENTIFIC_QUEUE_ENVELOPE_INVALID');
+  const [spec]=payload.tests;
+  if(!spec||Object.keys(spec).some(key=>!['test_id','recipe','params'].includes(key))||
+      !/^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$/.test(String(spec.test_id||''))||
+      !/^[a-z0-9_]{2,40}$/.test(String(spec.recipe||''))||!spec.params||typeof spec.params!=='object'||Array.isArray(spec.params))
+    fail('SCIENTIFIC_QUEUE_ENVELOPE_INVALID');
+  if(isOperationalEnvelope(envelope)||refusesGate(envelope))fail('SCIENTIFIC_QUEUE_ENVELOPE_INVALID');
+  const identity=canonical(envelope);
+  if(stableId!==`science-${digest(identity).slice(0,48)}`)fail('SCIENTIFIC_QUEUE_STABLE_ID_INVALID');
+  const stored={...envelope,_via:'INBOX_GATEWAY_SHEET'};
+  const bytes=canonical(stored);
+  const readback=spool=>{
+    const rows=spool.rows.filter(row=>String(row?.[spool.columns.stable]||'').trim()===stableId);
+    for(const row of rows){
+      let actual;
+      try{actual=JSON.parse(Buffer.from(String(row?.[spool.columns.envelope]||''),'base64url').toString('utf8'));}
+      catch{fail('SPOOL_IDENTITY_CONFLICT');}
+      if(canonical(actual)!==bytes)fail('SPOOL_IDENTITY_CONFLICT');
+    }
+    return rows.length;
+  };
+  let spool=await readSpool(env,req);
+  if(spool.spreadsheetId!==WRITER_SPOOL_ID)fail('SPOOL_DESTINATION_MISMATCH');
+  let count=readback(spool);
+  const reused=count>0;
+  if(!count){
+    await appendSpoolRow(spool,fullSpoolRow(spool,{stableId,envelope:stored,role:'MCP_EXECUTOR'}));
+    spool=await readSpool(env,req);
+    if(spool.spreadsheetId!==WRITER_SPOOL_ID)fail('SPOOL_DESTINATION_MISMATCH');
+    count=readback(spool);
+    if(!count)fail('SPOOL_BODY_READBACK_FAILED');
+  }
+  return {readback:'PASS',reused,
+    stable_id:stableId,body_sha256:digest(bytes),destination:`sheet:${spool.spreadsheetId}/${spool.title}`};
 }
 
 // ── GitHub Actions OIDC (robot identity, no shared secret) ──────────────────

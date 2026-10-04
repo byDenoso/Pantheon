@@ -346,12 +346,22 @@ jobs:
       - name: Aggregate receipts
         run: |
           python3 - <<'PY'
-          import glob, json
+          import glob, hashlib, json, os
           paths = sorted(glob.glob("parts/*/out.json"))
           if not paths:
               raise SystemExit("no shard receipts")
           results = [json.load(open(path, encoding="utf-8")) for path in paths]
-          json.dump({"results": results}, open("battery-results.json", "w", encoding="utf-8"), ensure_ascii=False)
+          manifest = {
+              "run_id": int(os.environ["GITHUB_RUN_ID"]),
+              "run_attempt": int(os.environ["GITHUB_RUN_ATTEMPT"]),
+              "battery_id": os.environ["NEXO_BATTERY_ID"],
+          }
+          committed = {"contract": "NEXO_BATTERY_RESULTS_V1", "manifest": manifest, "results": results}
+          invocation = hashlib.sha256(json.dumps(
+              committed, ensure_ascii=False, sort_keys=True, separators=(",", ":"), allow_nan=False
+          ).encode("utf-8")).hexdigest()
+          document = {**committed, "invocation_sha256": invocation}
+          json.dump(document, open("battery-results.json", "w", encoding="utf-8"), ensure_ascii=False)
           print("collected", len(results), "ok", sum(1 for item in results if item.get("ok")), "failed", sum(1 for item in results if not item.get("ok")))
           PY
       - uses: actions/upload-artifact@v4

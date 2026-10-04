@@ -40,6 +40,12 @@ Pesquisa anterior à implementação, em fontes primárias:
 
 Direção: vazios e concentrações, filamentos orgânicos, hierarquia de escala, contraste contido e instrumentos legíveis. Sem formação cosmológica fictícia, respiração ornamental ou giro automático que se passe por atividade do sistema.
 
+### Refinamento cinematográfico autorizado
+
+Após a primeira publicação, o usuário enviou uma referência de teia cósmica e pediu explicitamente Three.js + WebGL. A cena passa a representar densidade com feixes de partículas, núcleos luminosos e profundidade. Essas amostras visuais não são entidades adicionais nem execuções; a atividade continua restrita ao estado publicado. O tecido entre regiões do mesmo domínio representa afinidade de área, enquanto dependências operacionais usam relações publicadas e setas próprias. A alternativa sem WebGL preserva a mesma distinção.
+
+Os shaders personalizados fazem a conversão de saída para o espaço de cor do renderer; omiti-la escurecia os nós. Referência técnica: https://threejs.org/manual/pages/color-management.html. O CI registra a entrada do ATLAS em desktop e celular e trata erros de compilação de shader como falhas.
+
 ## Restrições verificadas
 
 - A API de automações exposta nesta sessão não contém campos de modelo ou esforço. A preferência solicitada é GPT 6 Luna / Medium, mas texto de prompt não configura o executor. A aplicação da preferência precisa de verificação no produto.
@@ -53,7 +59,7 @@ Direção: vazios e concentrações, filamentos orgânicos, hierarquia de escala
 2. Verificar o principal de leitura do arquivo de controle e resolver a causa real do 403 dentro da autorização existente.
 3. Recriar intenção vinculada ao recibo e à versão atual; exigir registro terminal e leitura de retorno pelo Writer.
 4. Configurar e verificar GPT 6 Luna / Medium no executor de cada automação.
-5. Substituir o coletor de baterias limitado às últimas 20 execuções por paginação e recibos duráveis por run, avançando o cursor somente após confirmação canônica. Esta migração não está incluída nesta entrega.
+5. Observar em operação a coleta paginada e a interface científica implementadas na segunda etapa. O avanço da descoberta preserva pendências; o ACK de conclusão exige recibo exato e bateria canônica. Contrato, prompt complementar e limites estão em [nexo-scientific-queue-battery-collector-2026-10.md](nexo-scientific-queue-battery-collector-2026-10.md).
 6. Acompanhar entregas científicas verificadas, tempo bloqueado, intenções duplicadas, idade das filas e custo por entrega. Aumentar cadência apenas se a fila elegível e a capacidade justificarem.
 
 Reversão: reverter os commits de implementação e restaurar os prompts anteriores versionados; nunca apagar recibos ou reescrever o histórico para aparentar progresso.

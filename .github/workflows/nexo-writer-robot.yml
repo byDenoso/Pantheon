@@ -212,60 +212,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           mkdir -p /tmp/bat /tmp/dispatch
-          gh run list --repo "$GITHUB_REPOSITORY" --workflow nexo-test-battery.yml --status completed --limit 20 --json databaseId,displayTitle,event,conclusion,startedAt,updatedAt > /tmp/bat/runs.json || echo '[]' > /tmp/bat/runs.json
-          python3 - <<'PY'
-          import json, subprocess, os, pathlib
-          from datetime import datetime, timezone
-
-          def parsed(value):
-              if not value:
-                  return None
-              try:
-                  return datetime.fromisoformat(str(value).replace("Z", "+00:00")).astimezone(timezone.utc)
-              except ValueError:
-                  return None
-
-          runs = json.load(open("/tmp/bat/runs.json"))
-          updates = []
-          for run in runs:
-              if str(run.get("event") or "") != "workflow_dispatch":
-                  continue  # PR canaries prove the runner but never enter canonical state
-              bid = str(run.get("displayTitle", "")).replace("battery ", "").strip()
-              if not bid:
-                  continue
-              run_ref = f"actions/runs/{run['databaseId']}"
-              d = pathlib.Path(f"/tmp/bat/{run['databaseId']}")
-              dl = subprocess.run(["gh", "run", "download", str(run["databaseId"]), "--repo",
-                                   os.environ["GITHUB_REPOSITORY"], "-n", "battery-results", "-D", str(d)],
-                                  capture_output=True)
-              result_file = d / "battery-results.json"
-              if dl.returncode != 0 or not result_file.is_file():
-                  conclusion = str(run.get("conclusion") or "startup_failure")
-                  if conclusion not in {"failure", "cancelled", "timed_out", "startup_failure"}:
-                      conclusion = "startup_failure"
-                  updates.append({"kind": "BATTERY_STATUS", "source": "WRITER_ROBOT",
-                                  "payload": {"battery_id": bid, "status": "DONE", "run_ref": run_ref,
-                                              "completed_at": run.get("updatedAt"), "conclusion": conclusion,
-                                              "results_missing": True, "results": []}})
-                  continue
-
-              results = json.load(open(result_file, encoding="utf-8")).get("results", [])
-              started = {str(row.get("test_id")): row.get("started_at") for row in results
-                         if isinstance(row, dict) and row.get("test_id") and parsed(row.get("started_at"))}
-              if started:
-                  updates.append({"kind": "BATTERY_STATUS", "source": "WRITER_ROBOT",
-                                  "payload": {"battery_id": bid, "status": "RUNNING", "run_ref": run_ref,
-                                              "started_tests": started}})
-              completion_times = [parsed(row.get("executed_at")) for row in results if isinstance(row, dict)]
-              completion_times = [stamp for stamp in completion_times if stamp is not None]
-              completed = max(completion_times).isoformat().replace("+00:00", "Z") if completion_times else run.get("updatedAt")
-              updates.append({"kind": "BATTERY_STATUS", "source": "WRITER_ROBOT",
-                              "payload": {"battery_id": bid, "status": "DONE", "run_ref": run_ref,
-                                          "completed_at": completed, "conclusion": run.get("conclusion"),
-                                          "results": results}})
-          json.dump(updates, open("/tmp/bat/updates.json", "w", encoding="utf-8"), ensure_ascii=False)
-          print("battery runs seen", len(runs), "observations", len(updates))
-          PY
+          python scripts/collect_battery_runs.py --repo "$GITHUB_REPOSITORY"
           python scripts/collect_execution_assessments.py --approvals nexo-control/execution-assessment-approvals.json --updates /tmp/bat/updates.json
 
       - name: Apply inbox to the Tower
@@ -309,28 +256,29 @@ jobs:
           for f in "${specs[@]}"; do id=$(basename "$f" .json); gh workflow run nexo-test-battery.yml --repo "$GITHUB_REPOSITORY" --ref main -f battery_id="$id"; echo "dispatched $id"; done
 
       - name: Record public TCC operation receipts
-        if: steps.cred.outputs.ok == 'true'
+        if: steps.cred.outputs.ok == 'true' && steps.robot.outcome == 'success'
         env:
           GH_TOKEN: ${{ github.token }}
+          GOOGLE_SERVICE_ACCOUNT_JSON: ${{ secrets.NEXO_DRIVE_WRITER_JSON }}
           REPORTED: ${{ steps.robot.outputs.gateway_reported }}
           RESOLVED: ${{ steps.robot.outputs.gateway_resolved }}
           REV: ${{ steps.robot.outputs.tower_revision }}
         run: |
           python - <<'PY'
           import base64, datetime, json, os, subprocess, time
+          from google.auth.transport.requests import AuthorizedSession
+          from google.oauth2 import service_account
+          from scripts.collect_battery_runs import record_cursor_outcomes as record_battery_cursor_outcomes
           from scripts.collect_tcc_inbox import record_cursor_outcomes
 
           map_path="/tmp/tcc-public-map.json"
-          if not os.path.exists(map_path):
-              raise SystemExit(0)
-
           reported={value for value in os.environ.get("REPORTED","").split(",") if value}
           resolved={value for value in os.environ.get("RESOLVED","").split(",") if value}
           try:
               receipt_items={item.get("id"):item for item in json.load(open("/tmp/operation-public-receipts.json",encoding="utf-8")).get("items",[])}
           except Exception:
               receipt_items={}
-          mapping=json.load(open(map_path,encoding="utf-8"))
+          mapping=json.load(open(map_path,encoding="utf-8")) if os.path.exists(map_path) else []
           path="nexo-one/tcc-public-inbox-ack.json"
           repo=os.environ["GITHUB_REPOSITORY"]
           now=datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
@@ -342,7 +290,23 @@ jobs:
                   print("public inbox cursor read retry",attempt); time.sleep(2); continue
               meta=json.loads(get.stdout)
               cursor=json.loads(base64.b64decode(meta["content"]).decode())
-              record_cursor_outcomes(cursor,mapping,reported,resolved,receipt_items,now,rev)
+              if mapping:
+                  record_cursor_outcomes(cursor,mapping,reported,resolved,receipt_items,now,rev)
+
+              try:
+                  collection=json.load(open("/tmp/bat/collection.json",encoding="utf-8"))
+              except (OSError,ValueError):
+                  collection={}
+              if collection:
+                  info=json.loads(os.environ["GOOGLE_SERVICE_ACCOUNT_JSON"])
+                  credentials=service_account.Credentials.from_service_account_info(
+                      info,scopes=["https://www.googleapis.com/auth/drive.readonly"])
+                  session=AuthorizedSession(credentials)
+                  tower_response=session.get(
+                      "https://www.googleapis.com/drive/v3/files/1m97cFmEkw19yiqD_6FWPG4j1lDCAYM4z",
+                      params={"alt":"media","supportsAllDrives":"true"},timeout=120)
+                  tower_response.raise_for_status()
+                  record_battery_cursor_outcomes(cursor,collection,tower_response.content)
               pending=cursor.get("pending") or {}
 
               body=json.dumps(cursor,indent=2,sort_keys=True)+"\n"
@@ -361,7 +325,8 @@ jobs:
                   input=payload,text=True,capture_output=True
               )
               if put.returncode==0:
-                  print("public TCC inbox cursor PASS pending",len(pending))
+                  print("public TCC/battery cursors PASS pending",len(pending),
+                        "battery pending",len((cursor.get("battery_runs") or {}).get("pending") or {}))
                   raise SystemExit(0)
               print("public inbox cursor CAS retry",attempt); time.sleep(2)
 

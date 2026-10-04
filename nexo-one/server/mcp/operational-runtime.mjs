@@ -2,6 +2,7 @@ import {createOperationalService} from './operational-tools.mjs';
 import {readOperationalTower} from './operational-state.mjs';
 import {submitOperationalIntent} from './operational-queue.mjs';
 import {operationalPrincipal} from './operational-auth.mjs';
+import {submitScientificGatewayEnvelope} from '../inbox-gateway.mjs';
 import {googleRuntimeEnvironment,GOOGLE_AUTH_DIAGNOSTICS} from '../adapters/connect.mjs';
 
 export const OPERATIONAL_READ_SCOPES=Object.freeze(['https://www.googleapis.com/auth/drive.readonly']);
@@ -32,7 +33,9 @@ export async function operationalForRequest(request,env=process.env){
     readState:()=>operationalSource('READ_CANONICAL_CONTEXT',async()=>readOperationalTower({
       token:await googleToken(scopedEnv,undefined,{scopes:OPERATIONAL_READ_SCOPES})})),
     submitIntent:(intent,identity)=>operationalSource('WRITE_PRIVATE_INTENT',()=>
-      submitOperationalIntent(intent,identity,scopedEnv,nodeRequest))
+      submitOperationalIntent(intent,identity,scopedEnv,nodeRequest)),
+    submitScientificRequest:(stableId,envelope)=>operationalSource('WRITE_SCIENTIFIC_QUEUE',()=>
+      submitScientificGatewayEnvelope(stableId,envelope,scopedEnv,nodeRequest))
   });
   return {principal,service};
 }
