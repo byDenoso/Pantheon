@@ -26,10 +26,6 @@ test('installed MCP SDK exposes role tools only to the existing authenticated pr
     authorized=await connect(true);
     const list=await authorized.listTools();
     assert.deepEqual(list.tools.map(x=>x.name),[...NEXO_MCP_TOOL_NAMES,...OPERATIONAL_TOOL_NAMES]);
-    const result=await authorized.callTool({name:'get_role_capabilities',arguments:{role:'EXECUTOR'}});
-    assert.ok(!result.isError);const body=JSON.parse(result.content[0].text);
-    assert.equal(body.routine_approval_required,false);
-    assert.deepEqual(body.request_execution_includes,['claim','prepare','validate','dispatch','collect','register']);
     anonymous=await connect(false);
     assert.deepEqual((await anonymous.listTools()).tools.map(x=>x.name),NEXO_MCP_TOOL_NAMES);
     assert.deepEqual((await authorized.listTools()).tools.map(x=>x.name),[...NEXO_MCP_TOOL_NAMES,...OPERATIONAL_TOOL_NAMES]);
@@ -39,12 +35,18 @@ test('installed MCP SDK exposes role tools only to the existing authenticated pr
   }
 });
 
-test('capability discovery requires neither a Tower read nor a durable record',async()=>{
-  const forbidden=()=>{throw Error('unnecessary I/O');};
-  const service=createOperationalService({readState:forbidden,submitIntent:forbidden});
+test('capability discovery carries a fresh canonical revision without advertising dispatch',async()=>{
+  const state={authority:'TOWER_V06@GOOGLE_DRIVE_PRIVATE',readback:'PASS',revision:'sha256:'+'a'.repeat(64),
+    observed_at:'2026-10-04T00:00:00Z',work:[],science:{tests:[],recovery:[],batteries:[]}};
+  const service=createOperationalService({readState:async()=>state,submitIntent:()=>{throw Error('not used');},
+    submitScientificRequest:()=>{throw Error('not used');}});
   const result=await service.call('get_role_capabilities',{role:'ENGENHEIRO'},{authenticated:true,id:'a'.repeat(64),roles:['ENGENHEIRO']});
   assert.equal(result.antigravity_required,false);
   assert.equal(result.routine_approval_required,false);
+  assert.equal(result.scientific_queue.revision,state.revision);
+  assert.equal(result.scientific_queue.evidence.readback,'PASS');
+  assert.equal(result.scientific_queue.dispatch,false);
+  assert.equal(result.scientific_queue.exercised,false);
 });
 
 test('fresh blocked retry links the latest matching terminal intent before hashing',async()=>{
@@ -58,7 +60,8 @@ test('fresh blocked retry links the latest matching terminal intent before hashi
     }};
   let submitted;
   const service=createOperationalService({readState:async()=>({authority:'TOWER_V06@GOOGLE_DRIVE_PRIVATE',readback:'PASS',revision:'sha256:'+ 'a'.repeat(64),work:[work]}),
-    submitIntent:async(intent)=>{submitted=intent;return {readback:'PASS',body_sha256:sha256(intent)};}});
+    submitIntent:async(intent)=>{submitted=intent;return {readback:'PASS',body_sha256:sha256(intent)};},
+    submitScientificRequest:()=>{throw Error('not used');}});
   const result=await service.call('request_execution',{work_id:work.id},principal);
   assert.equal(submitted.supersedes,latest);
   const {id,...identity}=submitted;
@@ -74,7 +77,8 @@ test('only legacy blocked work without a terminal intent receipt uses the explic
     error:{code:'LEGACY_BLOCKED',retryable:false},outbox:null,processed:{}};
   let submitted;
   const service=createOperationalService({readState:async()=>({authority:'TOWER_V06@GOOGLE_DRIVE_PRIVATE',readback:'PASS',revision:'sha256:'+ 'a'.repeat(64),work:[work]}),
-    submitIntent:async(intent)=>{submitted=intent;return {readback:'PASS',body_sha256:sha256(intent)};}});
+    submitIntent:async(intent)=>{submitted=intent;return {readback:'PASS',body_sha256:sha256(intent)};},
+    submitScientificRequest:()=>{throw Error('not used');}});
   const result=await service.call('request_execution',{work_id:work.id},principal);
   assert.equal(Object.hasOwn(submitted,'supersedes'),false);
   assert.equal(result.recovery_mode,'LEGACY_BLOCKED_WITHOUT_TERMINAL_INTENT_RECEIPT');
