@@ -3907,8 +3907,8 @@
     },
     "inbox/scheduled-nexo-google-subject-repair-932a5ba6.json": {
       "fingerprint": "56b53303ad68304e22157198ef9eff7f18a67e5f61dcf71e716d2e698fffc139",
-      "observed_at": "2026-10-04T01:58:29Z",
-      "outcome": "APPLIED",
+      "observed_at": "2026-10-04T02:11:38Z",
+      "outcome": "ALREADY_APPLIED",
       "receipt_ids": [
         "OR-2e034341e33860239a74832ab4dd92a9"
       ],
@@ -3917,9 +3917,9 @@
           "contract": "OPERATION_RECEIPT_V1",
           "effect_id": "envelope-6ea20131bbfa9474432f3ec895d9e100",
           "intent_id": "gateway:tcc-de5734467afc13f67a28154b886c7eb1",
-          "observed_at": "2026-10-04T01:58:05.556779Z",
+          "observed_at": "2026-10-04T02:11:20.830511Z",
           "occurred_at": "2026-10-04T01:58:05.556763Z",
-          "outcome": "APPLIED",
+          "outcome": "ALREADY_APPLIED",
           "payload_sha256": "sha256:cc2fc276c29f0e3eb37153090df56c34713207bc94bef9ac8392e3825e529b9f",
           "reason_code": null,
           "receipt_id": "OR-2e034341e33860239a74832ab4dd92a9",
@@ -3931,7 +3931,7 @@
           "visibility": "PUBLIC"
         }
       ],
-      "tower_revision": "sha256:851d38d3ee6753293538745e30959e1a510540f128505e332a2aa31d0ffa2295"
+      "tower_revision": null
     },
     "inbox/scheduled-nexo-persist-canary-20260929t1419z.json": {
       "fingerprint": "fd347aa101efdc1ea2876b30bcb2346588fc49aaeba5367ec5fb4da46381b6a9",
