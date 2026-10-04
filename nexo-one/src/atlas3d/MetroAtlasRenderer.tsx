@@ -2104,7 +2104,9 @@ function MetroThreeView({
       updateSvgBillboards(runtime);
       renderer.render(scene, camera);
     };
-    runtime.frame = requestAnimationFrame(animate);
+    // Production readback verifies the materialized SVG, not decorative
+    // animation. Avoid hundreds of synthetic virtual-time rerenders in CI.
+    if (!isAtlasReadback()) runtime.frame = requestAnimationFrame(animate);
 
     return () => {
       observer.disconnect();
