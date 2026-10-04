@@ -7,6 +7,8 @@ export const ROLE_PROMPTS=Object.freeze(Object.fromEntries(Object.entries(ROLE_N
 export const MUTATIONS=Object.freeze(['claim_work','prepare_package','validate_package','request_execution','register_delivery']);
 export const OPERATIONAL_TOOL_NAMES=Object.freeze(['get_role_session','get_role_capabilities','get_work',...MUTATIONS,'get_result']);
 const ID=/^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$/;
+const INTENT_ID=/^op-[a-f0-9]{48}$/;
+const TERMINAL_INTENT_DISPOSITIONS=new Set(['BLOCKED','STALE_VERSION']);
 export function canonical(value){
   if(value===null||typeof value!=='object')return JSON.stringify(value);
   if(Array.isArray(value))return '['+value.map(canonical).join(',')+']';
@@ -32,6 +34,24 @@ function safeWork(work){
       destinations_managed_by:'WRITER',independent_review:definition.review?.status||'NOT_REQUIRED_FOR_OPERATIONAL_CONTROL'},
     id:work.id,role:work.role,state:work.state,scope:work.scope,error:work.error||null,version:work.version,
     package_sha256:work.package?.sha256||null,run_id:work.outbox?.run_id||null,result:work.result?.body?.result||null,receipt:work.receipt||null};
+}
+function terminalIntents(work){
+  if(!work.processed||typeof work.processed!=='object'||Array.isArray(work.processed))return [];
+  return Object.entries(work.processed).filter(([id,receipt])=>INTENT_ID.test(id)&&receipt&&typeof receipt==='object'&&
+    receipt.intent_id===id&&TERMINAL_INTENT_DISPOSITIONS.has(receipt.disposition)&&
+    Number.isInteger(receipt.expected_version)&&Number.isInteger(work.version)&&receipt.expected_version<work.version);
+}
+function supersessionFor(work,action,principalId){
+  const terminal=terminalIntents(work);
+  const sameAction=terminal.filter(([,receipt])=>receipt.action===action&&receipt.principal===principalId);
+  let candidates=sameAction;
+  if(work.state==='BLOCKED'&&!sameAction.length)
+    candidates=terminal.filter(([,receipt])=>receipt.disposition==='BLOCKED'&&receipt.principal===principalId);
+  candidates.sort((a,b)=>a[1].expected_version-b[1].expected_version||(a[0]<b[0]?-1:a[0]>b[0]?1:0));
+  const target=candidates.at(-1)?.[0]||null;
+  if(work.state==='BLOCKED'&&terminal.length&&!target)fail('SUPERSESSION_UNAVAILABLE');
+  if(work.state!=='BLOCKED'&&sameAction.length&&!target)fail('SUPERSESSION_UNAVAILABLE');
+  return {intentId:target,legacyBlocked:work.state==='BLOCKED'&&terminal.length===0};
 }
 export function createOperationalService({readState,submitIntent}){
   requireValue(typeof readState==='function'&&typeof submitIntent==='function','OPERATIONAL_ADAPTERS_REQUIRED');
@@ -72,16 +92,19 @@ export function createOperationalService({readState,submitIntent}){
       if((name==='claim_work'&&work.owner===principal.id&&work.state!=='READY')||
         (name==='prepare_package'&&work.package&&work.state!=='BLOCKED')||
         (name==='validate_package'&&['VALIDATED','DISPATCH_PENDING','DISPATCH_UNKNOWN','RUNNING','RESULT_AVAILABLE','DELIVERY_PENDING','REGISTERED'].includes(work.state))||
-        (name==='request_execution'&&work.outbox)||
+        (name==='request_execution'&&work.outbox&&work.state!=='BLOCKED')||
         (name==='register_delivery'&&['DELIVERY_PENDING','REGISTERED'].includes(work.state)))
         return {...safeWork(work),idempotent:true};
+      const supersession=supersessionFor(work,name,principal.id);
       const value={contract:'NEXO_OPERATIONAL_INTENT_V1',action:name,work_id:work.id,principal:principal.id,
-        role_session:sessionFor(work),expected_version:work.version};
+        role_session:sessionFor(work),expected_version:work.version,
+        ...(supersession.intentId?{supersedes:supersession.intentId}:{})};
       const intent={...value,id:'op-'+sha256(value).slice(0,48)};
       const receipt=await submitIntent(intent,principal);
       requireValue(receipt?.readback==='PASS'&&receipt?.body_sha256===sha256(intent),'INTENT_READBACK_FAILED');
       return {work_id:work.id,state:'PENDING_WRITER',intent_id:intent.id,action:name,
-        queue_readback:'PASS',canonical_state:work.state,poll:'get_work',idempotent:Boolean(receipt.reused)};
+        queue_readback:'PASS',canonical_state:work.state,poll:'get_work',idempotent:Boolean(receipt.reused),
+        ...(supersession.legacyBlocked?{recovery_mode:'LEGACY_BLOCKED_WITHOUT_TERMINAL_INTENT_RECEIPT'}:{})};
     }
   };
 }

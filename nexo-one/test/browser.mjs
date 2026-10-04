@@ -284,7 +284,7 @@ try {
       assert.equal(await commandInput.isVisible(), false, 'the mobile design hides the command input');
       const productNavigation = page.getByRole('navigation', { name: 'Modo do produto' });
       assert.equal(await productNavigation.isVisible(), true, 'a navegação responsiva deve continuar visível no mobile');
-      const nowMode = productNavigation.getByRole('button', { name: 'Agora', exact: true });
+      const nowMode = productNavigation.getByRole('button', { name: 'ATLAS', exact: true });
       assert.equal(await nowMode.count(), 1, 'o modo Agora deve estar disponível na navegação mobile');
       await nowMode.click();
       await page.waitForFunction(() => location.hash === '#/agora');

@@ -47,15 +47,53 @@ test('capability discovery requires neither a Tower read nor a durable record',a
   assert.equal(result.routine_approval_required,false);
 });
 
+test('fresh blocked retry links the latest matching terminal intent before hashing',async()=>{
+  const principal={authenticated:true,id:'a'.repeat(64),roles:['EXECUTOR']};
+  const first='op-'+'1'.repeat(48),latest='op-'+'2'.repeat(48);
+  const work={id:'OPERATIONAL-CONTROL-DRIVE-SUM-V1',role:'EXECUTOR',scope:'ENGINEERING_OPERATIONAL_ONLY',
+    definition_sha256:'f'.repeat(64),version:8,owner:principal.id,state:'BLOCKED',resume_state:'CLAIMED',
+    error:{code:'DRIVE_HTTP_403',retryable:false,stage:'DRIVE_METADATA_READ'},outbox:null,processed:{
+      [first]:{intent_id:first,disposition:'BLOCKED',action:'request_execution',principal:principal.id,expected_version:2},
+      [latest]:{intent_id:latest,disposition:'STALE_VERSION',action:'request_execution',principal:principal.id,expected_version:5}
+    }};
+  let submitted;
+  const service=createOperationalService({readState:async()=>({authority:'TOWER_V06@GOOGLE_DRIVE_PRIVATE',readback:'PASS',revision:'sha256:'+ 'a'.repeat(64),work:[work]}),
+    submitIntent:async(intent)=>{submitted=intent;return {readback:'PASS',body_sha256:sha256(intent)};}});
+  const result=await service.call('request_execution',{work_id:work.id},principal);
+  assert.equal(submitted.supersedes,latest);
+  const {id,...identity}=submitted;
+  assert.equal(id,'op-'+sha256(identity).slice(0,48));
+  assert.equal(result.intent_id,id);
+  assert.equal(result.canonical_state,'BLOCKED');
+});
+
+test('only legacy blocked work without a terminal intent receipt uses the explicit migration path',async()=>{
+  const principal={authenticated:true,id:'a'.repeat(64),roles:['EXECUTOR']};
+  const work={id:'OPERATIONAL-CONTROL-DRIVE-SUM-V1',role:'EXECUTOR',scope:'ENGINEERING_OPERATIONAL_ONLY',
+    definition_sha256:'f'.repeat(64),version:3,owner:principal.id,state:'BLOCKED',resume_state:'CLAIMED',
+    error:{code:'LEGACY_BLOCKED',retryable:false},outbox:null,processed:{}};
+  let submitted;
+  const service=createOperationalService({readState:async()=>({authority:'TOWER_V06@GOOGLE_DRIVE_PRIVATE',readback:'PASS',revision:'sha256:'+ 'a'.repeat(64),work:[work]}),
+    submitIntent:async(intent)=>{submitted=intent;return {readback:'PASS',body_sha256:sha256(intent)};}});
+  const result=await service.call('request_execution',{work_id:work.id},principal);
+  assert.equal(Object.hasOwn(submitted,'supersedes'),false);
+  assert.equal(result.recovery_mode,'LEGACY_BLOCKED_WITHOUT_TERMINAL_INTENT_RECEIPT');
+});
+
 test('existing spool verifies exact body, destination, and idempotent repeat',async()=>{
   const principal={authenticated:true,id:'a'.repeat(64)};
-  const identity={contract:'NEXO_OPERATIONAL_INTENT_V1',action:'request_execution',work_id:'OPERATIONAL-CONTROL-DRIVE-SUM-V1',principal:principal.id,expected_version:1,role_session:{}};
+  const identity={contract:'NEXO_OPERATIONAL_INTENT_V1',action:'request_execution',work_id:'OPERATIONAL-CONTROL-DRIVE-SUM-V1',principal:principal.id,expected_version:1,role_session:{},supersedes:'op-'+'1'.repeat(48)};
   const intent={...identity,id:'op-'+sha256(identity).slice(0,48)};
   const spool={spreadsheetId:SPOOL_ID,title:'Sheet1',columns:{stable:0,envelope:1},rows:[]};
   let writes=0;
   const submit=createOperationalQueue({read:async()=>spool,append:async(_,{stableId,envelope})=>{writes++;spool.rows.push([stableId,Buffer.from(JSON.stringify(envelope)).toString('base64url')]);}});
   assert.equal((await submit(intent,principal)).readback,'PASS');
   assert.equal((await submit(intent,principal)).reused,true);assert.equal(writes,1);
+  const changedLink={...intent,supersedes:'op-'+'2'.repeat(48)};
+  await assert.rejects(()=>submit(changedLink,principal),/INTENT_HASH_MISMATCH/);
+  const malformed={...intent,supersedes:'not-an-intent'};
+  malformed.id='op-'+sha256(Object.fromEntries(Object.entries(malformed).filter(([key])=>key!=='id'))).slice(0,48);
+  await assert.rejects(()=>submit(malformed,principal),/SUPERSESSION_ID_INVALID/);
   spool.rows[0][1]=Buffer.from(JSON.stringify({...intent,work_id:'changed'})).toString('base64url');
   await assert.rejects(()=>submit(intent,principal),/SPOOL_IDENTITY_CONFLICT/);
   spool.spreadsheetId='wrong';await assert.rejects(()=>submit(intent,principal),/SPOOL_DESTINATION_MISMATCH/);

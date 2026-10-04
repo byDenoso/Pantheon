@@ -1,5 +1,8 @@
 import {canonical,sha256,MUTATIONS} from './operational-tools.mjs';
 export const SPOOL_ID='1M2maKkuEjxumZRa145dzei7dEPFi2yKsKlUf7_scC-E';
+const INTENT_ID=/^op-[a-f0-9]{48}$/;
+const PRINCIPAL_ID=/^[0-9a-f]{64}$/;
+const WORK_ID=/^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$/;
 export function isOperationalEnvelope(value){
   if(!value||typeof value!=='object')return false;
   if(value.contract==='NEXO_OPERATIONAL_INTENT_V1'||value.kind==='OPERATIONAL_INTENT')return true;
@@ -11,8 +14,17 @@ export function createOperationalQueue({read,append}){
   return async function submit(intent,principal){
     if(!principal?.authenticated||intent.principal!==principal.id||intent.contract!=='NEXO_OPERATIONAL_INTENT_V1'||
        !MUTATIONS.includes(intent.action))fail('AUTHENTICATED_INTENT_REQUIRED');
+    const required=['contract','id','action','work_id','principal','role_session','expected_version'];
+    const keys=Object.keys(intent);
+    if(required.some(key=>!Object.hasOwn(intent,key))||keys.some(key=>!required.includes(key)&&key!=='supersedes'))
+      fail('INTENT_FIELDS_INVALID');
+    if(!PRINCIPAL_ID.test(String(intent.principal))||!WORK_ID.test(String(intent.work_id))||
+       !intent.role_session||typeof intent.role_session!=='object'||Array.isArray(intent.role_session)||
+       !Number.isInteger(intent.expected_version)||intent.expected_version<0)fail('INTENT_FIELDS_INVALID');
+    if(Object.hasOwn(intent,'supersedes')&&(!INTENT_ID.test(String(intent.supersedes))||intent.supersedes===intent.id))
+      fail('SUPERSESSION_ID_INVALID');
     const {id,...identity}=intent;
-    if(id!=='op-'+sha256(identity).slice(0,48))fail('INTENT_HASH_MISMATCH');
+    if(!INTENT_ID.test(String(id))||id!=='op-'+sha256(identity).slice(0,48))fail('INTENT_HASH_MISMATCH');
     const bytes=canonical(intent);
     if(Buffer.byteLength(bytes)>32768)fail('INTENT_TOO_LARGE');
     function check(spool){

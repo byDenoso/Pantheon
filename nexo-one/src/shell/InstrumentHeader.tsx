@@ -25,7 +25,7 @@ export function InstrumentHeader({
   onThemeToggle:()=>void;onSync:()=>void;onNavigate:(mode:ProductMode)=>void;onAccountClick?:()=>void;privateSession?:boolean;syncMessage?:string;watching?:boolean;onForceSync?:()=>void;
 }){
   const freshness=readAt?formatAge(readAt):'sem leitura';
-  const modes:Array<[ProductMode,string]>=[['agora','Agora'],['universo','Universo'],['ciclo','Ciclo'],['roadmaps','Roadmaps'],['evidencia','Evidência'],['saude','Saúde'],...(privateSession?[['pessoal','Pessoal'],['sistema','Sistema']] as Array<[ProductMode,string]>:[])];
+  const modes:Array<[ProductMode,string]>=[['agora','ATLAS'],['universo','Universo'],['ciclo','Ciclo'],['roadmaps','Roadmaps'],['evidencia','Evidência'],['saude','Saúde'],...(privateSession?[['pessoal','Pessoal'],['sistema','Sistema']] as Array<[ProductMode,string]>:[])];
   const busy=syncStatus==='SYNCING';
   // Feedback visível em qualquer viewport: o botão sozinho não diz o que aconteceu.
   const [toast,setToast]=useState('');
@@ -39,7 +39,7 @@ export function InstrumentHeader({
   const canForce=Boolean(onForceSync&&FORCE_SYNC_URL)&&!busy&&!watching&&(syncStatus==='UNCHANGED'||syncStatus==='FAILED');
   const publishedNow = usePublishedClock();
   return <header className="instrument-header">
-    <a href="#/agora" className="instrument-brand" onClick={e=>{e.preventDefault();onNavigate('agora')}} aria-label="NEXO ONE — Início">
+    <a href="#/agora" className="instrument-brand" onClick={e=>{e.preventDefault();onNavigate('agora')}} aria-label="NEXO — ATLAS">
       <span className="instrument-mark" aria-hidden="true">Λ<i className="sig-cursor" /></span><strong>NEXO</strong>
     </a>
     <nav className="instrument-modes" aria-label="Modo do produto">

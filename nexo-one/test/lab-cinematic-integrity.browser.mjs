@@ -73,6 +73,7 @@ try {
     await page.route('**/api/system*', route => route.fulfill({ json: system }));
     await page.route('**/build-meta.json*', route => route.fulfill({ json: { projection_fingerprint: projection.manifest.projection_fingerprint } }));
     await page.goto(base + '/#/agora');
+    await page.getByRole('button', { name: 'Abrir observatório' }).click();
     await page.locator('#now-problem').waitFor();
     await visualReady(page, name + ':home');
     assert.match(await page.locator('.now-priorities').innerText(), new RegExp(`${blocked} testes parados`));
@@ -123,6 +124,7 @@ try {
     await visualReady(page, name + ':cycle');
     await page.screenshot({ path: output + '/' + name + '-cycle.png' });
     await page.evaluate(() => { location.hash = '#/agora'; });
+    await page.getByRole('button', { name: 'Abrir observatório' }).click();
     await page.locator('#now-problem').waitFor();
     await page.getByRole('button', { name: 'Procurar', exact: true }).click();
     await page.getByRole('dialog').waitFor();
@@ -152,26 +154,10 @@ try {
       await page.keyboard.press('ArrowRight');
       await page.keyboard.press('+');
       await page.getByRole('button', { name: 'Recentrar câmera' }).click();
-      const crumb = page.getByRole('navigation', { name: 'Onde você está na teia' });
-      if (viewport.width < 760) {
-        const bounds = await crumb.boundingBox();
-        const header = await page.locator('.instrument-header').boundingBox();
-        assert.ok(bounds && header && bounds.y >= header.y + header.height, 'scene breadcrumb below mobile header');
-      } else if (viewport.width >= 1280) {
-        const bounds = await crumb.boundingBox();
-        const sidebar = await page.locator('.telemetry').boundingBox();
-        assert.ok(bounds && sidebar && bounds.x + bounds.width < sidebar.x, 'scene breadcrumb left of desktop telemetry');
-      }
-      await crumb.getByRole('button', { name: 'NEXO', exact: true }).click();
-      await visualReady(page, name + ':explore', true);
-      await tools.locator('summary').click();
-      assert.notEqual(await tools.getAttribute('open'), null, 'visual controls open for the exploration guide');
-      const hint = await page.locator('.obs-tools-guide').boundingBox();
-      assert.ok(hint && hint.x >= 0 && hint.x + hint.width <= viewport.width, 'explore hint within viewport');
-      if (viewport.width >= 1280) {
-        const sidebar = await page.locator('.telemetry').boundingBox();
-        assert.ok(hint.x + hint.width < sidebar.x, 'explore hint must not be clipped by telemetry');
-      }
+      await page.getByRole('navigation', { name: 'Escala do ATLAS' }).waitFor();
+      await page.getByRole('button', { name: /02.*Pesquisa/ }).click();
+      assert.equal(await page.locator('.atlas-portal').getAttribute('data-scale'), 'research');
+      await noOverflow(page, name + ':atlas');
       await page.screenshot({ path: output + '/' + name + '-explore.png' });
       await page.keyboard.press('Escape');
       assert.equal(await page.locator('.observatory.exploring').count(), 0);
@@ -197,6 +183,7 @@ try {
       await page.unroute('**/api/system*');
       await page.route('**/api/system*', route => route.fulfill({ json: audit }));
       await page.reload();
+      await page.getByRole('button', { name: 'Abrir observatório' }).click();
       await page.locator('#now-problem').waitFor();
       await visualReady(page, name + ':blocker-semantics');
       await page.addStyleTag({ content: 'body::after{content:"FIXTURE VISUAL · DADOS SINTÉTICOS · SOMENTE TESTE";position:fixed;left:12px;bottom:6px;z-index:9999;padding:4px 8px;background:#15120c;color:#f4e4bd;font:11px system-ui;pointer-events:none}' });

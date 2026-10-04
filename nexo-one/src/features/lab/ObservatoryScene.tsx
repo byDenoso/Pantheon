@@ -1,710 +1,839 @@
-// Observatório: teia cósmica WebGL contínua atrás de todas as páginas.
-// Leitura: cada domínio é uma região (halo grande) da teia; cada hipótese é um nó;
-// cada teste é uma estrela no filamento que liga sua hipótese ao domínio.
-// Cor/pulso = veredito (confirmado queima estável, em revisão pulsa, bloqueado apaga, refutado vermelho).
-// A câmera muda de enquadramento por página; clicar numa estrela abre o teste.
+// A semantic cosmic-web view of published projects, hypotheses, tests and dependencies.
+// The scene is a read-only projection: it does not infer missing graph edges or animate
+// records that are not explicitly marked as running.
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
-  AdditiveBlending, NormalBlending, HalfFloatType, WebGLRenderTarget, BufferAttribute, BufferGeometry, Color, LineBasicMaterial, LineSegments,
+  AdditiveBlending, BufferAttribute, BufferGeometry, Color, LineBasicMaterial, LineSegments, NormalBlending,
   PerspectiveCamera, Points, Raycaster, Scene, ShaderMaterial, Vector2, Vector3, WebGLRenderer,
 } from 'three';
-import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
-import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
-import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
-import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
-import { AfterimagePass } from 'three/examples/jsm/postprocessing/AfterimagePass.js';
-import type { TestEntity, Verdict } from './model.ts';
+import type { TestEntity } from './model.ts';
 import { normDomain } from './domains.ts';
+import {
+  buildObservatoryLayout, dependenciesAtScale, SCALE_DISTANCE, scaleForDistance,
+  isRecentSceneResult, stableSceneOffset, type ObservatoryLayout, type ObservatoryScale, type SceneEntity,
+  type SceneHypothesis, type SceneProject, type ScenePosition,
+} from './sceneModel.ts';
 
-/** Fenômenos da teia: o que o NEXO faz agora, na escala certa (galáxias ativas, não estrelas).
- *  Quasar = decisão sua · AGN com jatos = testes rodando/na fila · GRB = pensamento novo. */
+export type { ObservatoryScale, SceneHypothesis, SceneProject } from './sceneModel.ts';
+
 export interface SceneEvents {
   quasars: Array<{ domain: string; label: string; href: string }>;
   agn: Array<{ domain: string; count: number; label: string; href: string }>;
   grbs: Array<{ domain: string; label: string; href: string }>;
 }
-
 export type ScenePage = 'agora' | 'universo' | 'ciclo' | 'roadmaps' | 'roadmap' | 'evidencia' | 'entidade' | 'saude';
-
-// Domínios vêm dos dados: um domínio novo (ex.: PHILOSOPHY) ganha sua região da teia sozinho.
-// Os três fundadores têm posição fixa; os novos são postos numa esfera, em posição estável pelo nome.
 export interface DomainSpot { id: string; label: string; at: [number, number, number] }
-const BASE: DomainSpot[] = [
-  { id: 'SCIENCE', label: 'Ciência', at: [-6.5, 1.5, -2] },
-  { id: 'ENGINEERING', label: 'Engenharia', at: [6, -1, 3] },
-  { id: 'OLYMPUS', label: 'Olympus', at: [1.5, 5, 7] },
-];
-const LABEL_PT: Record<string, string> = {
-  PHILOSOPHY: 'Filosofia', FILOSOFIA: 'Filosofia', MATHEMATICS: 'Matemática', BIOLOGY: 'Biologia', PHYSICS: 'Física',
-  ECONOMICS: 'Economia', HISTORY: 'História', PSYCHOLOGY: 'Psicologia', LINGUISTICS: 'Linguística', MEDICINE: 'Medicina',
+
+const FIXED_DOMAIN_SPOTS: Record<string, [number, number, number]> = {
+  SCIENCE: [-6.5, 1.5, -2], ENGINEERING: [6, -1, 3], OLYMPUS: [1.5, 5, 7],
 };
+const DOMAIN_LABELS: Record<string, string> = {
+  NEXO: 'NEXO', SCIENCE: 'Ciência', ENGINEERING: 'Engenharia', OLYMPUS: 'Olympus',
+  PHILOSOPHY: 'Filosofia', FILOSOFIA: 'Filosofia', MATHEMATICS: 'Matemática', BIOLOGY: 'Biologia',
+  PHYSICS: 'Física', ECONOMICS: 'Economia', HISTORY: 'História', PSYCHOLOGY: 'Psicologia',
+  LINGUISTICS: 'Linguística', MEDICINE: 'Medicina',
+};
+
+/** Stable domain reference points; never creates regions without a published entity. */
 export function layoutDomains(ids: string[]): DomainSpot[] {
-  const extra = [...new Set(ids.map(normDomain))].filter(id => !BASE.some(b => b.id === id)).sort();
-  return [...BASE, ...extra.map(id => {
-    const h = rnd(id), g = rnd(id + '#');
-    const th = h * Math.PI * 2, ph = Math.acos(0.6 * (2 * g - 1));
-    const r = 9.5;
-    const label = LABEL_PT[id] ?? id.charAt(0) + id.slice(1).toLowerCase().replace(/_/g, ' ');
-    return { id, label, at: [r * Math.sin(ph) * Math.cos(th), r * Math.cos(ph), r * Math.sin(ph) * Math.sin(th)] as [number, number, number] };
-  })];
+  return [...new Set(ids.map(normDomain))].sort().map(id => {
+    const at = FIXED_DOMAIN_SPOTS[id] || (() => {
+      const offset = stableSceneOffset('domain:' + id, 9.5);
+      return [offset.x, offset.y, offset.z] as [number, number, number];
+    })();
+    return { id, label: DOMAIN_LABELS[id] || id.charAt(0) + id.slice(1).toLowerCase().replace(/_/g, ' '), at };
+  });
 }
 
-const VERDICT_RGB: Record<Verdict, [number, number, number]> = {
-  CONFIRMED: [0.62, 0.86, 0.7], REFUTED: [0.9, 0.46, 0.4], REVIEW: [0.92, 0.76, 0.48], PROVISIONAL: [0.7, 0.75, 0.86],
-  READY: [0.74, 0.71, 0.8], RUNNING: [0.68, 0.76, 0.88], CHECKPOINTED: [0.52, 0.57, 0.68],
-  BLOCKED: [0.36, 0.35, 0.4], REJECTED: [0.82, 0.64, 0.47], DISCARDED: [0.25, 0.24, 0.28],
-};
-const VERDICT_TXT: Record<Verdict, string> = {
-  CONFIRMED: 'confirmado', REFUTED: 'refutado', REVIEW: 'em revisão', PROVISIONAL: 'resultado provisório',
-  READY: 'na fila', RUNNING: 'em processamento', CHECKPOINTED: 'execução salva', BLOCKED: 'bloqueado', REJECTED: 'rejeitado pelo critério', DISCARDED: 'descartado',
-};
-const VERDICT_SIZE: Record<Verdict, number> = {
-  CONFIRMED: 34, REFUTED: 24, REVIEW: 26, PROVISIONAL: 17, READY: 12, RUNNING: 15, CHECKPOINTED: 12, BLOCKED: 11, REJECTED: 17, DISCARDED: 7,
-};
-const VERDICT_PULSE: Record<Verdict, number> = {
-  CONFIRMED: 0.12, REFUTED: 0, REVIEW: 1, PROVISIONAL: 0.25, READY: 0.45, RUNNING: 0.8, CHECKPOINTED: 0.12, BLOCKED: 0, REJECTED: 0, DISCARDED: 0,
-};
-
-// [distância, elevação, azimute, alvo(domínio índice ou -1 = centro)]
-const SHOTS: Record<ScenePage, [number, number, number, number]> = {
-  universo: [32, 0.6, 1.2, -1], agora: [30, 0.42, 0.7, -1], ciclo: [21, 0.2, 1.8, -1], roadmaps: [17, 0.55, 2.6, 0], roadmap: [12, 0.4, 3.1, 0],
-  evidencia: [24, 0.9, 3.9, -1], entidade: [10, 0.3, 4.4, 0], saude: [38, 0.12, 5.3, -1],
-};
-
-// Física de brinquedo (fiel à ideia): aglomeração da matéria escura puxa o gás dos filamentos para o nó
-// mais próximo; nos vazios a expansão é mais rápida que nas paredes (backreaction). 'evo' satura:
-// visível em segundos, quase parado em horas.
-const VERT = `
-attribute float size; attribute vec3 tint; attribute float pulse; attribute float seed; attribute vec3 node;
-uniform float time; uniform float pixelRatio; uniform float evo; varying vec3 vTint; varying float vAlpha; varying float vSize;
-void main(){
-  vec3 toNode = node - position; float dn = length(toNode);
-  vec3 q = position + toNode * (0.30 * evo);                                   // clustering
-  q += normalize(position + vec3(1e-4)) * (0.75 * evo) * smoothstep(0.6, 3.2, dn); // vazios crescem mais
-  q += toNode * 0.015 * sin(time * 0.07 + seed * 6.28);                      // respiração lenta
-  vec4 mv = modelViewMatrix * vec4(q,1.0);
-  float p = 1.0 + pulse * 0.4 * sin(time*2.4 + seed*6.28);
-  float px = size * p * pixelRatio * (18.0 / -mv.z);
-  gl_PointSize = max(px, 2.0 * pixelRatio);                                   // nada menor que 2px: sem cintilar
-  vSize = gl_PointSize / pixelRatio;
-  vTint = tint; vAlpha = clamp(0.5 + 0.5*p, 0.0, 1.0) * clamp(px / (2.6 * pixelRatio), 0.18, 1.0);
-  gl_Position = projectionMatrix * mv;
-}`;
-const FRAG = `
-uniform float ink;
-varying vec3 vTint; varying float vAlpha; varying float vSize;
-void main(){
-  vec2 c = gl_PointCoord - 0.5; float d = length(c);
-  float glow = exp(-d*d*42.0);
-  // Núcleo nítido só em pontos grandes: em pontos de poucos pixels ele vira sub-pixel e cintila.
-  float core = (1.0 - smoothstep(0.035, 0.09, d)) * smoothstep(7.0, 16.0, vSize);
-  float a = (glow*0.85 + core) * vAlpha * (1.0 - smoothstep(0.42, 0.5, d)); if (a < 0.004) discard;
-  vec3 lit = vTint * (0.55 + glow*0.8) + core*0.6;
-  // Tema claro: tinta ciano-escura sobre papel (mesma matiz, sem brilho aditivo).
-  vec3 inked = mix(vec3(0.092607,0.254668,0.347275), vTint*0.42, 0.3);
-  gl_FragColor = vec4(mix(lit, inked, ink), ink > 0.5 ? a*0.55 : a);
-}`;
-
-// Quasar: núcleo branco-quente + raios de difração, pulso lento.
-const QSO_FRAG = `
-varying vec3 vTint; varying float vAlpha;
-void main(){
-  vec2 c = gl_PointCoord - 0.5; float d = length(c);
-  float glow = exp(-d*d*14.0); float core = smoothstep(0.08, 0.0, d);
-  float spikes = exp(-abs(c.x)*90.0)*exp(-abs(c.y)*5.0) + exp(-abs(c.y)*90.0)*exp(-abs(c.x)*5.0);
-  float a = (glow*0.9 + core + spikes*0.9) * vAlpha; if (a < 0.01) discard;
-  gl_FragColor = vec4(vTint*(0.7+glow) + core, a);
-}`;
-// Jatos do AGN: partículas que correm ao longo do eixo e somem na ponta.
-const JET_VERT = `
-attribute vec3 dir; attribute float phase; attribute float speed;
-uniform float time; uniform float pixelRatio; varying float vFade;
-void main(){
-  float f = fract(time*speed + phase);
-  vec3 p = position + dir * f;
-  vec4 mv = modelViewMatrix * vec4(p,1.0);
-  gl_PointSize = (4.0 - 2.5*f) * pixelRatio * (18.0 / -mv.z);
-  vFade = 1.0 - f;
-  gl_Position = projectionMatrix * mv;
-}`;
-const JET_FRAG = `
-varying float vFade;
-void main(){
-  vec2 c = gl_PointCoord - 0.5; float d = length(c);
-  float a = exp(-d*d*20.0) * vFade; if (a < 0.01) discard;
-  gl_FragColor = vec4(vec3(0.836881,0.918528,0.969557)*(0.6+vFade*0.6), a);
-}`;
-
-const rnd = (text: string): number => {
-  let h = 2166136261;
-  for (let i = 0; i < text.length; i += 1) { h ^= text.charCodeAt(i); h = Math.imul(h, 16777619); }
-  // Finalizador murmur3: sem ele, ids curtos parecidos caem alinhados.
-  h ^= h >>> 16; h = Math.imul(h, 0x85ebca6b); h ^= h >>> 13; h = Math.imul(h, 0xc2b2ae35); h ^= h >>> 16;
-  return (h >>> 0) / 4294967295;
-};
-const jitter = (seed: string, s: number): [number, number, number] =>
-  [(rnd(seed + 'x') - 0.5) * s, (rnd(seed + 'y') - 0.5) * s, (rnd(seed + 'z') - 0.5) * s];
-
-// Paleta da teia (azul sobre preto): gás escuro -> filamento azul -> nó branco frio.
-const INFERNO = ['#020305', '#09101a', '#1a2d3c', '#3b688a', '#9ac6ec', '#edf9ff'].map(c => new Color(c));
-const inferno = (t: number) => {
-  const x = Math.max(0, Math.min(0.999, t)) * (INFERNO.length - 1), i = Math.floor(x), f = x - i;
-  return INFERNO[i]!.clone().lerp(INFERNO[i + 1]!, f);
-};
-
-/** Qualidade gráfica: alta (GPU dedicada / Apple M), média (Intel Iris / UHD / integradas), baixa (celular ou fraca).
- *  Pode ser forçada com localStorage 'nexo.quality' = high | medium | low. */
 export type Quality = 'high' | 'medium' | 'low';
 export function detectQuality(): Quality {
   try {
     const forced = localStorage.getItem('nexo.quality');
     if (forced === 'high' || forced === 'medium' || forced === 'low') return forced;
-  } catch { /* sem armazenamento */ }
+  } catch { /* storage may be unavailable */ }
   if (window.matchMedia('(max-width: 760px)').matches || (navigator.hardwareConcurrency || 8) < 4) return 'low';
-  let gpu = '';
-  try {
-    const gl = document.createElement('canvas').getContext('webgl');
-    const ext = gl?.getExtension('WEBGL_debug_renderer_info');
-    gpu = String((ext && gl?.getParameter(ext.UNMASKED_RENDERER_WEBGL)) || '');
-  } catch { /* sem WebGL de diagnóstico */ }
-  if (/RTX|GTX|Radeon RX|Radeon Pro|Apple M\d|Arc A|Quadro/i.test(gpu)) return 'high';
-  if (/SwiftShader|llvmpipe|Software/i.test(gpu)) return 'low';
   return 'medium';
 }
-const DENSITY: Record<Quality, number> = { high: 1.7, medium: 1.05, low: 0.55 };
-const gauss = () => { let u = 0, v = 0; while (!u) u = Math.random(); while (!v) v = Math.random(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(6.2832 * v); };
 
-interface Buf { pos: number[]; tint: number[]; size: number[]; pulse: number[]; seed: number[]; node: number[] }
-const buf = (): Buf => ({ pos: [], tint: [], size: [], pulse: [], seed: [], node: [] });
-const push = (b: Buf, p: number[], c: Color | number[], s: number, pu = 0, sd = Math.random(), node?: number[]) => {
-  b.pos.push(...p); b.tint.push(...(c instanceof Color ? [c.r, c.g, c.b] : c)); b.size.push(s); b.pulse.push(pu); b.seed.push(sd);
-  b.node.push(...(node ?? p));
+const DENSITY: Record<Quality, number> = { high: 1.7, medium: 1.1, low: 0.66 };
+const MARKER_TINT: Record<SceneEntity['kind'], string> = {
+  region: '#19485a', project: '#28738d', hypothesis: '#51a8c1', test: '#8ed8e8',
 };
-const geom = (b: Buf) => {
-  const g = new BufferGeometry();
-  g.setAttribute('position', new BufferAttribute(new Float32Array(b.pos), 3));
-  g.setAttribute('tint', new BufferAttribute(new Float32Array(b.tint), 3));
-  g.setAttribute('size', new BufferAttribute(new Float32Array(b.size), 1));
-  g.setAttribute('pulse', new BufferAttribute(new Float32Array(b.pulse), 1));
-  g.setAttribute('seed', new BufferAttribute(new Float32Array(b.seed), 1));
-  g.setAttribute('node', new BufferAttribute(new Float32Array(b.node), 3));
-  return g;
+const STATUS_LABEL: Record<TestEntity['verdict'], string> = {
+  CONFIRMED: 'Confirmado', REFUTED: 'Refutado', REVIEW: 'Em revisão', PROVISIONAL: 'Resultado provisório',
+  READY: 'Na fila', RUNNING: 'Em processamento', CHECKPOINTED: 'Execução salva', BLOCKED: 'Bloqueado',
+  REJECTED: 'Rejeitado pelo critério', DISCARDED: 'Descartado',
 };
 
-/** Filamento: partículas ao longo de uma curva levemente arqueada entre dois nós. */
-function filament(b: Buf, a: Vector3, c: Vector3, density: number, heat: number, seed: string) {
-  const mid = a.clone().add(c).multiplyScalar(0.5).add(new Vector3(...jitter(seed, a.distanceTo(c) * 0.35)));
-  const n = Math.max(6, Math.round(a.distanceTo(c) * density * 1.35));
-  const p = new Vector3();
-  for (let i = 0; i < n; i += 1) {
-    const t = Math.random(), u = 1 - t;
-    p.set(u * u * a.x + 2 * u * t * mid.x + t * t * c.x, u * u * a.y + 2 * u * t * mid.y + t * t * c.y, u * u * a.z + 2 * u * t * mid.z + t * t * c.z);
-    const edge = Math.min(t, u);
-    const spread = 0.022 + 0.05 * (1 - 2 * edge); // fino no meio, mais grosso perto dos nós
-    const end = t < 0.5 ? a : c;
-    push(b, [p.x + gauss() * spread, p.y + gauss() * spread, p.z + gauss() * spread],
-      inferno(heat * (0.62 + 0.38 * (1 - edge * 2)) * (0.72 + Math.random() * 0.28)).multiplyScalar(1.05), 1.4 + Math.random() * 2, 0, Math.random(), [end.x, end.y, end.z]);
-  }
-  return mid;
+const POINT_VERTEX = `
+attribute float size; attribute vec3 tint; attribute float heat; attribute float execution;
+uniform float time; uniform float pixelRatio;
+varying vec3 vTint; varying float vAlpha; varying float vCore;
+void main(){
+  vec4 mv = modelViewMatrix * vec4(position,1.0);
+  float running = execution > 0.5 ? 1.0 + 0.22 * sin(time * 3.1) : 1.0;
+  float px = size * (1.0 + heat * 0.52) * running * pixelRatio * (20.0 / max(0.4, -mv.z));
+  gl_PointSize = clamp(px, 2.0 * pixelRatio, 46.0 * pixelRatio);
+  vTint = tint * (0.72 + heat * 0.62 + execution * 0.12);
+  vAlpha = clamp(0.56 + heat * 0.36 + execution * 0.08, 0.38, 1.0);
+  vCore = execution;
+  gl_Position = projectionMatrix * mv;
+}`;
+const POINT_FRAGMENT = `
+ varying vec3 vTint; varying float vAlpha; varying float vCore;
+ void main(){
+   vec2 c = gl_PointCoord - 0.5; float d = length(c);
+   float body = 1.0 - smoothstep(0.16, 0.5, d);
+   float center = 1.0 - smoothstep(0.02, 0.16, d);
+   float a = (body * 0.72 + center * (0.30 + vCore * 0.22)) * vAlpha;
+   if (a < 0.018) discard;
+   gl_FragColor = vec4(vTint * (0.72 + center * 0.42), a);
+ }`;
+
+interface PointLayer { kind: SceneEntity['kind']; points: Points; entities: SceneEntity[]; geometry: BufferGeometry }
+interface SceneRuntime {
+  renderer: WebGLRenderer;
+  scene: Scene;
+  camera: PerspectiveCamera;
+  material: ShaderMaterial;
+  layers: PointLayer[];
+  dependencyLines: LineSegments | null;
+  membershipLines: LineSegments | null;
+  reducedMotion: boolean;
+  frame: number;
+  visible: boolean;
+  contextLost: boolean;
+  layout: ObservatoryLayout;
+  tests: TestEntity[];
+  scale: ObservatoryScale;
+  render: () => void;
+  schedule: () => void;
+  setScale: (scale: ObservatoryScale, focusKey?: string | null) => void;
+  focus: (ids: string[]) => void;
+  orbit: (azimuth: number, elevation: number) => void;
+  reset: () => void;
+  update: (layout: ObservatoryLayout, tests: TestEntity[], scale: ObservatoryScale, focused: string[], hot: string[], sourceCurrent: boolean, theme: 'dark' | 'light') => void;
+  onHit: (entity: SceneEntity | null) => void;
 }
 
-export function ObservatoryScene({ tests, page, focusIds, onPick, onAvailability, theme, events, explore = false, hot, sourceCurrent = false }: {
-  sourceCurrent?: boolean; hot?: string[]; explore?: boolean; events?: SceneEvents; tests: TestEntity[]; page: ScenePage; focusIds?: string[]; onPick: (id: string) => void; onAvailability?: (available: boolean) => void; theme: 'dark' | 'light';
+function geometryForEntities(entities: SceneEntity[], quality: Quality, focused: Set<string>, hot: Set<string>, sourceCurrent: boolean): BufferGeometry {
+  const positions: number[] = [];
+  const colors: number[] = [];
+  const sizes: number[] = [];
+  const heats: number[] = [];
+  const executions: number[] = [];
+  const dense = DENSITY[quality];
+  const focusIsActive = focused.size > 0;
+  for (const entity of entities) {
+    const p = entity.position;
+    positions.push(p.x, p.y, p.z);
+    const running = entity.kind === 'test' && entity.test?.status === 'RUNNING' && sourceCurrent ? 1 : 0;
+    const isHot = entity.kind === 'test' && entity.test !== undefined && isRecentSceneResult(entity.test, hot, sourceCurrent);
+    const isFocused = focused.has(entity.id) || focused.has(entity.key);
+    const base = new Color(MARKER_TINT[entity.kind]);
+    if (focusIsActive && !isFocused) base.multiplyScalar(0.28);
+    if (isHot) base.lerp(new Color('#d8fbff'), 0.66);
+    if (isFocused) base.lerp(new Color('#e7fcff'), 0.70);
+    colors.push(base.r, base.g, base.b);
+    const baseSize = entity.kind === 'region' ? 24 : entity.kind === 'project' ? 19 : entity.kind === 'hypothesis' ? 13 : 8;
+    sizes.push(baseSize * dense * (isHot || isFocused ? 1.28 : 1));
+    heats.push(isHot || isFocused ? 1 : 0);
+    executions.push(running);
+  }
+  const geometry = new BufferGeometry();
+  geometry.setAttribute('position', new BufferAttribute(new Float32Array(positions), 3));
+  geometry.setAttribute('tint', new BufferAttribute(new Float32Array(colors), 3));
+  geometry.setAttribute('size', new BufferAttribute(new Float32Array(sizes), 1));
+  geometry.setAttribute('heat', new BufferAttribute(new Float32Array(heats), 1));
+  geometry.setAttribute('execution', new BufferAttribute(new Float32Array(executions), 1));
+  return geometry;
+}
+
+function positionVector(position: ScenePosition): Vector3 {
+  return new Vector3(position.x, position.y, position.z);
+}
+
+function dependencyGeometry(layout: ObservatoryLayout, tests: TestEntity[], scale: ObservatoryScale, sourceCurrent: boolean): BufferGeometry {
+  const positions: number[] = [];
+  const colors: number[] = [];
+  const links = dependenciesAtScale(layout, tests, scale, sourceCurrent);
+  const colorStart = new Color('#14546b');
+  const colorEnd = new Color('#53c5dd');
+  for (const link of links) {
+    const source = layout.entityByKey.get(link.sourceKey);
+    const target = layout.entityByKey.get(link.targetKey);
+    if (!source || !target) continue;
+    const a = positionVector(source.position);
+    const b = positionVector(target.position);
+    const direction = b.clone().sub(a);
+    const span = direction.length();
+    if (span < 0.08) continue;
+    direction.normalize();
+    const reference = Math.abs(direction.y) < 0.86 ? new Vector3(0, 1, 0) : new Vector3(1, 0, 0);
+    const perpendicular = direction.clone().cross(reference).normalize();
+    const bend = Math.min(0.9, span * 0.08) * ((hashAngle(link.id) % 2) ? 1 : -1);
+    const control = a.clone().add(b).multiplyScalar(0.5).addScaledVector(perpendicular, bend);
+    const pointAt = (t: number) => {
+      const u = 1 - t;
+      return a.clone().multiplyScalar(u * u).addScaledVector(control, 2 * u * t).addScaledVector(b, t * t);
+    };
+    const segments = 20;
+    for (let segment = 0; segment < segments; segment += 1) {
+      const start = pointAt(segment / segments);
+      const end = pointAt((segment + 1) / segments);
+      positions.push(start.x, start.y, start.z, end.x, end.y, end.z);
+      const brightness = link.attenuated ? 0.20 : link.activeExecution ? 1 : 0.68;
+      const c1 = colorStart.clone().lerp(colorEnd, (segment / segments) * brightness);
+      const c2 = colorStart.clone().lerp(colorEnd, ((segment + 1) / segments) * brightness);
+      colors.push(c1.r, c1.g, c1.b, c2.r, c2.g, c2.b);
+    }
+    // Direction is explicit: a small arrowhead points to the dependent record.
+    const tip = pointAt(0.82);
+    const tangent = pointAt(0.88).sub(pointAt(0.76)).normalize();
+    const side = new Vector3(-tangent.y, tangent.x, tangent.z * 0.25).normalize();
+    const back = tip.clone().addScaledVector(tangent, -Math.min(0.42, span * 0.12));
+    const wing = Math.min(0.22, span * 0.065);
+    for (const wingSign of [-1, 1]) {
+      const base = back.clone().addScaledVector(side, wing * wingSign);
+      positions.push(base.x, base.y, base.z, tip.x, tip.y, tip.z);
+      const arrowEnd = link.attenuated ? colorStart.clone().lerp(colorEnd, 0.22) : colorEnd;
+      colors.push(colorStart.r, colorStart.g, colorStart.b, arrowEnd.r, arrowEnd.g, arrowEnd.b);
+    }
+  }
+  const geometry = new BufferGeometry();
+  geometry.setAttribute('position', new BufferAttribute(new Float32Array(positions), 3));
+  geometry.setAttribute('color', new BufferAttribute(new Float32Array(colors), 3));
+  return geometry;
+}
+
+function membershipGeometry(layout: ObservatoryLayout, scale: ObservatoryScale): BufferGeometry {
+  const positions: number[] = [];
+  const colors: number[] = [];
+  if (scale !== 'overview') for (const link of layout.memberships) {
+    const source = layout.entityByKey.get(link.sourceKey);
+    const target = layout.entityByKey.get(link.targetKey);
+    if (!source || !target) continue;
+    const expected = scale === 'research'
+      ? ['project', 'region'].includes(source.kind) && target.kind === 'hypothesis'
+      : source.kind === 'hypothesis' && target.kind === 'test'
+        || ['project', 'region'].includes(source.kind) && target.kind === 'test';
+    if (!expected) continue;
+    const a = positionVector(source.position), b = positionVector(target.position);
+    const distance = a.distanceTo(b);
+    const steps = 16;
+    const dark = new Color('#124252'), light = new Color('#286c7d');
+    for (let step = 0; step < steps; step += 1) {
+      if (step % 2 === 1) continue;
+      const start = a.clone().lerp(b, step / steps);
+      const end = a.clone().lerp(b, (step + 1) / steps);
+      positions.push(start.x, start.y, start.z, end.x, end.y, end.z);
+      colors.push(dark.r, dark.g, dark.b, light.r, light.g, light.b);
+    }
+    if (distance < 0.01) continue;
+  }
+  const geometry = new BufferGeometry();
+  geometry.setAttribute('position', new BufferAttribute(new Float32Array(positions), 3));
+  geometry.setAttribute('color', new BufferAttribute(new Float32Array(colors), 3));
+  return geometry;
+}
+
+function hashAngle(value: string): number {
+  let hash = 2166136261;
+  for (let index = 0; index < value.length; index += 1) { hash ^= value.charCodeAt(index); hash = Math.imul(hash, 16777619); }
+  return hash >>> 0;
+}
+
+function focusCenter(layout: ObservatoryLayout, ids: string[], scale: ObservatoryScale): Vector3 | null {
+  const positions: Vector3[] = [];
+  const keys = new Set<string>();
+  for (const id of ids) {
+    const key = layout.keyByTestId.get(id.replace(/^(?:test:)/i, ''));
+    const test = key ? layout.entityByKey.get(key) : null;
+    if (!test) continue;
+    const aggregateKey = scale === 'operational' ? test.key
+      : scale === 'research' ? layout.hypothesisForTest.get(test.id) || layout.projectForTest.get(test.id)
+        : layout.projectForTest.get(test.id);
+    if (!aggregateKey || keys.has(aggregateKey)) continue;
+    keys.add(aggregateKey);
+    const entity = layout.entityByKey.get(aggregateKey);
+    if (entity) positions.push(positionVector(entity.position));
+  }
+  if (!positions.length) return null;
+  return positions.reduce((sum, point) => sum.add(point), new Vector3()).multiplyScalar(1 / positions.length);
+}
+
+function defaultScaleForPage(page: ScenePage): ObservatoryScale {
+  if (page === 'entidade') return 'operational';
+  if (page === 'roadmap' || page === 'roadmaps' || page === 'ciclo' || page === 'evidencia') return 'research';
+  return 'overview';
+}
+
+function fitFactor(camera: PerspectiveCamera): number {
+  return camera.aspect < 1 ? 1 / Math.max(0.55, camera.aspect) : 1;
+}
+
+function scaleLabels(layout: ObservatoryLayout, scale: ObservatoryScale, focusIds: string[], hotIds: string[]): SceneEntity[] {
+  const projects = layout.entities.filter(entity => entity.kind === 'project');
+  const regions = layout.entities.filter(entity => entity.kind === 'region');
+  if (scale === 'overview') return [...regions, ...projects];
+  const hypotheses = layout.entities.filter(entity => entity.kind === 'hypothesis');
+  if (scale === 'research') {
+    const important = new Set([...focusIds, ...hotIds].map(id => layout.hypothesisForTest.get(id.replace(/^(?:test:)/i, ''))).filter(Boolean));
+    const chosen = hypotheses.length <= 48 ? hypotheses : hypotheses.filter(entity => important.has(entity.key)).slice(0, 48);
+    return [...regions, ...projects, ...chosen];
+  }
+  const focusedTests = new Set(focusIds.map(id => id.replace(/^(?:test:)/i, '')));
+  const hotTests = new Set(hotIds);
+  const testLabels = layout.entities.filter(entity => entity.kind === 'test' && (focusedTests.has(entity.id) || hotTests.has(entity.id))).slice(0, 16);
+  return [...regions, ...projects, ...hypotheses.filter(entity => importantHypothesis(layout, entity, focusIds, hotIds)).slice(0, 32), ...testLabels];
+}
+
+function importantHypothesis(layout: ObservatoryLayout, entity: SceneEntity, focusIds: string[], hotIds: string[]): boolean {
+  const ids = [...focusIds, ...hotIds].map(id => id.replace(/^(?:test:)/i, ''));
+  return ids.some(id => layout.hypothesisForTest.get(id) === entity.key);
+}
+
+export function ObservatoryScene({
+  tests, page, focusIds = [], onPick, onAvailability, theme, events, explore = false, hot = [], sourceCurrent = false,
+  projects = [], hypotheses = [], scale, onScaleChange, onProjectSelect,
+}: {
+  sourceCurrent?: boolean;
+  hot?: string[];
+  explore?: boolean;
+  events?: SceneEvents;
+  tests: TestEntity[];
+  projects?: SceneProject[];
+  hypotheses?: SceneHypothesis[];
+  page: ScenePage;
+  focusIds?: string[];
+  scale?: ObservatoryScale;
+  onScaleChange?: (scale: ObservatoryScale) => void;
+  onProjectSelect?: (id: string | null) => void;
+  onPick: (id: string) => void;
+  onAvailability?: (available: boolean) => void;
+  theme: 'dark' | 'light';
 }) {
   const host = useRef<HTMLDivElement>(null);
   const labels = useRef<HTMLDivElement>(null);
-  const api = useRef<{ shot: (p: ScenePage) => void; focus: (ids: string[]) => void; heat: (ids: string[]) => void; goDomain: (i: number | null) => void; zoom: (factor: number) => void; orbit: (az: number, elev: number) => void } | null>(null);
-  const [sel, setSel] = useState<number | null>(null);
   const tip = useRef<HTMLDivElement>(null);
-  const near = useRef<HTMLDivElement>(null);
-  const pageRef = useRef(page);
-  pageRef.current = page;
-  const pickRef = useRef(onPick);
-  pickRef.current = onPick;
-  const exploreRef = useRef(explore);
-  exploreRef.current = explore;
-  const resetView = useRef<() => void>(() => {});
-  const domains = useMemo(() => layoutDomains([...tests.map(t => t.domain), ...(events?.quasars ?? []).map(e => e.domain), ...(events?.agn ?? []).map(e => e.domain)]), [tests, events]);
+  const runtimeRef = useRef<SceneRuntime | null>(null);
+  const api = useRef<SceneApi | null>(null);
+  const [sceneScale, setSceneScale] = useState<ObservatoryScale>(scale || defaultScaleForPage(page));
+  const [selectedProject, setSelectedProject] = useState<string | null>(null);
+  const dataRef = useRef({ tests, projects, hypotheses, focusIds, hot, sourceCurrent, theme, page, explore, events, scale, onPick, onAvailability, onScaleChange, onProjectSelect });
+  dataRef.current = { tests, projects, hypotheses, focusIds, hot, sourceCurrent, theme, page, explore, events, scale, onPick, onAvailability, onScaleChange, onProjectSelect };
+  const layout = useMemo(() => buildObservatoryLayout(tests, projects, hypotheses), [tests, projects, hypotheses]);
+  const focusKey = useMemo(() => [...focusIds].sort().join('|'), [focusIds]);
+  const hotKey = useMemo(() => [...hot].sort().join('|'), [hot]);
+  const labelEntities = useMemo(() => scaleLabels(layout, sceneScale, focusIds, hot), [layout, sceneScale, focusKey, hotKey]);
 
   useEffect(() => {
-    const el = host.current;
-    if (!el) return;
+    const hostElement = host.current;
+    if (!hostElement) return;
     let renderer: WebGLRenderer;
-    try { renderer = new WebGLRenderer({ antialias: true, alpha: true, powerPreference: 'high-performance' }); }
-    catch { el.dataset.fallback = 'true'; onAvailability?.(false); return; }
-    delete el.dataset.fallback; onAvailability?.(true);
-    const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    const mobile = window.matchMedia('(max-width: 760px)').matches;
-    let quality: Quality = detectQuality();
-    const dens = DENSITY[quality];
-    const dprFor = (q: Quality) => Math.min(window.devicePixelRatio || 1, q === 'high' ? 2 : q === 'medium' ? 1.5 : 1.25);
-    let dpr = dprFor(quality);
+    try {
+      renderer = new WebGLRenderer({ antialias: true, alpha: true, powerPreference: 'default' });
+    } catch {
+      hostElement.dataset.fallback = 'true';
+      dataRef.current.onAvailability?.(false);
+      return;
+    }
+    delete hostElement.dataset.fallback;
+    const quality = detectQuality();
+    hostElement.dataset.quality = quality;
+    const dpr = Math.min(window.devicePixelRatio || 1, quality === 'high' ? 1.65 : quality === 'medium' ? 1.25 : 1);
     renderer.setPixelRatio(dpr);
-    el.dataset.quality = quality;
+    renderer.setClearColor(dataRef.current.theme === 'dark' ? 0x03080d : 0xf7fbfc, 0);
     renderer.domElement.setAttribute('aria-hidden', 'true');
-    el.appendChild(renderer.domElement);
+    hostElement.appendChild(renderer.domElement);
+
     const scene = new Scene();
-    const camera = new PerspectiveCamera(48, 1, 0.1, 300);
-    const uniforms = { time: { value: 0 }, pixelRatio: { value: dpr }, evo: { value: 0 } };
-    const light = theme === 'light';
-    const mat = new ShaderMaterial({ uniforms: { ...uniforms, ink: { value: light ? 1 : 0 } }, vertexShader: VERT, fragmentShader: FRAG, transparent: true, depthWrite: false, blending: light ? NormalBlending : AdditiveBlending });
-
-    // --- Estrutura: domínios, hipóteses, filamentos ---
-    const web = buf();
-    const domainPos = domains.map(d => new Vector3(...d.at));
-    const indexOf = new Map(domains.map((d, i) => [d.id, i]));
-    const domainIndex = (d: string) => indexOf.get(normDomain(d)) ?? 0;
-    // Filamentos entre domínios (a teia maior) + ramos cegos para dar textura de rede.
-    for (let i = 0; i < domainPos.length; i += 1) for (let j = i + 1; j < domainPos.length; j += 1) filament(web, domainPos[i]!, domainPos[j]!, 120 * dens, 0.85, `d${i}${j}`);
-    const scale = 13;
-    const voids: Vector3[] = [];
-    for (let k = 0; k < Math.round(70 * Math.min(1.25, dens)); k += 1) voids.push(new Vector3(...jitter(`v${k}`, scale * 2)));
-    voids.forEach((v, k) => {
-      const nearest = [...voids].sort((a, b) => a.distanceTo(v) - b.distanceTo(v)).slice(1, 4);
-      nearest.forEach((w, m) => filament(web, v, w, 50 * dens, 0.78, `w${k}${m}`));
-      push(web, [v.x, v.y, v.z], inferno(0.88), 12 + rnd(`vn${k}`) * 18, 0.1);
-      for (let q = 0; q < Math.round(40 * dens); q += 1) { const r = Math.pow(Math.random(), 2.4) * 0.8; push(web, [v.x + (Math.random() - 0.5) * r * 2, v.y + (Math.random() - 0.5) * r * 2, v.z + (Math.random() - 0.5) * r * 2], inferno(0.75 + Math.random() * 0.2), 2 + Math.random() * 3); }
+    const camera = new PerspectiveCamera(48, 1, 0.1, 360);
+    const material = new ShaderMaterial({
+      uniforms: { time: { value: 0 }, pixelRatio: { value: dpr } },
+      vertexShader: POINT_VERTEX,
+      fragmentShader: POINT_FRAGMENT,
+      transparent: true,
+      depthWrite: false,
+      blending: AdditiveBlending,
     });
-    domainPos.forEach((d, i) => {
-      const nearest = [...voids].sort((a, b) => a.distanceTo(d) - b.distanceTo(d)).slice(0, 3);
-      nearest.forEach((w, m) => filament(web, d, w, 46 * dens, 0.85, `dv${i}${m}`));
-      // Halo do domínio: aglomerado quente.
-      for (let k = 0; k < Math.round(480 * dens); k += 1) {
-        const r = Math.pow(Math.random(), 2.2) * 2.4, th = Math.random() * Math.PI * 2, ph = Math.acos(2 * Math.random() - 1);
-        push(web, [d.x + r * Math.sin(ph) * Math.cos(th), d.y + r * Math.cos(ph), d.z + r * Math.sin(ph) * Math.sin(th)], inferno(0.95 - r * 0.2), 3 + Math.random() * 4);
-      }
-      push(web, [d.x, d.y, d.z], new Color('#eef6ff'), 95, 0.08);
-    });
+    const runtime: SceneRuntime = {
+      renderer, scene, camera, material, layers: [], dependencyLines: null, membershipLines: null, reducedMotion: window.matchMedia('(prefers-reduced-motion: reduce)').matches,
+      frame: 0, visible: document.visibilityState === 'visible', contextLost: false,
+      layout, tests: [...tests], scale: scale || defaultScaleForPage(page),
+      render: () => {}, schedule: () => {}, setScale: () => {}, focus: () => {}, orbit: () => {}, reset: () => {}, update: () => {}, onHit: () => {},
+    };
 
-    // Hipóteses: nós ao redor do seu domínio; testes ao longo do filamento hipótese->domínio.
-    const byHyp = new Map<string, TestEntity[]>();
-    for (const t of tests) {
-      const key = `${domainIndex(t.domain)}|${t.hypothesisId ?? t.campaignId ?? t.id}`;
-      (byHyp.get(key) ?? byHyp.set(key, []).get(key)!).push(t);
-    }
-    const stars = buf();
-    const ids: string[] = [];
-    const clouds: Array<{ at: Vector3; ready: number; label: string }> = [];
-    for (const [key, list] of byHyp) {
-      const [di] = key.split('|');
-      const d = domainPos[Number(di)]!;
-      const node = d.clone().add(new Vector3(...jitter(key, 9)));
-      filament(web, d, node, 30 * dens, 0.7, key);
-      push(web, [node.x, node.y, node.z], inferno(0.8), 22 + Math.min(40, list.length * 4), 0.05);
-      // Nuvem de formação (nuvem molecular): hipótese com testes prontos esperando. Poeira quente difusa,
-      // quase sem pontos nítidos; encolhe sozinha quando os testes rodam (o tamanho vem da fila).
-      const ready = list.filter(t => t.verdict === 'READY').length;
-      if (ready >= 3) {
-        const R = 0.9 + ready * 0.07;
-        for (let q = 0; q < 26 + ready * 7; q += 1) {           // véu de poeira: pontos grandes e muito tênues
-          const r = Math.pow(Math.random(), 0.6) * R;
-          const th = Math.random() * Math.PI * 2, ph = Math.acos(2 * Math.random() - 1);
-          push(web, [node.x + r * Math.sin(ph) * Math.cos(th), node.y + r * Math.cos(ph) * 0.55, node.z + r * Math.sin(ph) * Math.sin(th)],
-            [0.05, 0.139446, 0.2 + Math.random() * 0.176676], 38 + Math.random() * 46, 0.05);
-        }
-        for (let q = 0; q < ready * 2; q += 1) {                // proto-estrelas: poucas, pequenas, quentes
-          const r = Math.pow(Math.random(), 1.4) * R * 0.7;
-          const th = Math.random() * Math.PI * 2, ph = Math.acos(2 * Math.random() - 1);
-          push(web, [node.x + r * Math.sin(ph) * Math.cos(th), node.y + r * Math.cos(ph) * 0.55, node.z + r * Math.sin(ph) * Math.sin(th)],
-            [0.462681, 0.683005, 0.936378], 5 + Math.random() * 4, 0.35);
-        }
-        clouds.push({ at: node.clone(), ready, label: list[0]?.name ?? '' });
-      }
-      list.forEach(t => {
-        const s = 0.15 + rnd(t.id) * 0.85;
-        const p = node.clone().lerp(d, s * 0.8).add(new Vector3(...jitter(t.id, 0.9)));
-        push(stars, [p.x, p.y, p.z], VERDICT_RGB[t.verdict], VERDICT_SIZE[t.verdict], reduced || !sourceCurrent ? 0 : VERDICT_PULSE[t.verdict], rnd(t.id));
-        ids.push(t.id);
-      });
-    }
-    if (reduced) web.pulse.fill(0);
-    const webGeo = geom(web), starGeo = geom(stars);
-    scene.add(new Points(webGeo, mat));
-    const starPoints = new Points(starGeo, mat);
-    scene.add(starPoints);
-    const baseSize = Float32Array.from(stars.size);
-
-    // Cubo de simulação: linhas finas que dão escala e a sensação de "caixa observada".
-    const B = scale + 2, e: number[] = [];
-    const corners = [-B, B];
-    for (const x of corners) for (const y of corners) { e.push(x, y, -B, x, y, B); e.push(x, -B, y, x, B, y); e.push(-B, x, y, B, x, y); }
-    const boxGeo = new BufferGeometry(); boxGeo.setAttribute('position', new BufferAttribute(new Float32Array(e), 3));
-    const boxMat = new LineBasicMaterial({ color: theme === 'dark' ? 0x3a3d4c : 0x55586a, transparent: true, opacity: 0.22 });
-    scene.add(new LineSegments(boxGeo, boxMat));
-
-    // --- Fenômenos ---
-    const ev = events ?? { quasars: [], agn: [], grbs: [] };
-    const anchors: Vector3[] = [];
-    const qso = buf();
-    ev.quasars.forEach((e, k) => {
-      const at = domainPos[domainIndex(e.domain)]!.clone().add(new Vector3(...jitter(`q${k}${e.label}`, 5)));
-      push(qso, [at.x, at.y, at.z], [0.844686, 0.957997, 1], 150, reduced ? 0 : 0.35, rnd(e.label));
-      anchors.push(at);
-    });
-    ev.grbs.forEach((e, k) => {
-      const at = domainPos[domainIndex(e.domain)]!.clone().add(new Vector3(...jitter(`g${k}`, 2.5)));
-      push(qso, [at.x, at.y, at.z], [0.823020, 0.946474, 1], 70, reduced ? 0 : 1, rnd(`g${k}`));
-      anchors.push(at);
-    });
-    const qsoMat = new ShaderMaterial({ uniforms, vertexShader: VERT, fragmentShader: QSO_FRAG, transparent: true, depthWrite: false, blending: AdditiveBlending });
-    const qsoGeo = geom(qso);
-    scene.add(new Points(qsoGeo, qsoMat));
-    const jp: number[] = [], jd: number[] = [], jph: number[] = [], jsp: number[] = [];
-    ev.agn.forEach((e, k) => {
-      // Perto do domínio, não no núcleo: uma galáxia ativa vizinha.
-      const d = domainPos[domainIndex(e.domain)]!.clone().add(new Vector3(...jitter(`agnpos${e.domain}`, 7)));
-      const axis = new Vector3(...jitter(`agn${k}`, 1)).add(new Vector3(0, 1.4, 0)).normalize();
-      const len = 2 + Math.min(3.5, e.count * 0.15);
-      const n = 60 + Math.min(120, e.count * 5);
-      for (let i = 0; i < n; i += 1) for (const sgn of [1, -1]) {
-        jp.push(d.x + (Math.random() - 0.5) * 0.12, d.y + (Math.random() - 0.5) * 0.12, d.z + (Math.random() - 0.5) * 0.12);
-        jd.push(axis.x * len * sgn, axis.y * len * sgn, axis.z * len * sgn);
-        jph.push(Math.random()); jsp.push(reduced ? 0 : 0.18 + Math.random() * 0.12);
-      }
-      anchors.push(d.clone().add(axis.clone().multiplyScalar(len * 0.6)));
-    });
-    const jetGeo = new BufferGeometry();
-    jetGeo.setAttribute('position', new BufferAttribute(new Float32Array(jp), 3));
-    jetGeo.setAttribute('dir', new BufferAttribute(new Float32Array(jd), 3));
-    jetGeo.setAttribute('phase', new BufferAttribute(new Float32Array(jph), 1));
-    jetGeo.setAttribute('speed', new BufferAttribute(new Float32Array(jsp), 1));
-    const jetMat = new ShaderMaterial({ uniforms, vertexShader: JET_VERT, fragmentShader: JET_FRAG, transparent: true, depthWrite: false, blending: AdditiveBlending });
-    scene.add(new Points(jetGeo, jetMat));
-
-    // --- Câmera ---
-    const cam = { dist: 40, elev: 0.5, az: 0.3 };
+    let cam = { dist: SCALE_DISTANCE[runtime.scale], elev: 0.48, az: 0.72 };
+    let target = { dist: SCALE_DISTANCE[runtime.scale], elev: 0.48, az: 0.72, look: new Vector3() };
     let zoom = 1;
+    let commandedScale: ObservatoryScale | null = null;
     const pan = new Vector3();
-    const target = { dist: 30, elev: 0.42, az: 0.7, look: new Vector3() };
     const look = new Vector3();
-    const lookGoal = new Vector3();
-    const shot = (p: ScenePage) => {
-      const [dist, elev, az, t] = SHOTS[p];
-      Object.assign(target, { dist, elev, az: az + Math.round((cam.az - az) / (Math.PI * 2)) * Math.PI * 2 });
-      target.look.copy(t >= 0 ? domainPos[t]!.clone().multiplyScalar(0.6) : new Vector3());
-    };
-    const focus = (list: string[]) => {
-      const set = new Set(list);
-      const sizes = starGeo.getAttribute('size') as BufferAttribute;
-      ids.forEach((id, i) => sizes.setX(i, set.size ? (set.has(id) ? baseSize[i]! * 2.6 : baseSize[i]! * 0.5) : baseSize[i]!));
-      sizes.needsUpdate = true;
-      if (set.size === 1) {
-        const i = ids.indexOf(list[0]!);
-        if (i >= 0) target.look.set(stars.pos[i * 3]!, stars.pos[i * 3 + 1]!, stars.pos[i * 3 + 2]!).multiplyScalar(scene.scale.x);
-      }
-    };
-    const basePulse = Float32Array.from(stars.pulse);
-    const heat = (list: string[]) => {
-      const set = new Set(list);
-      const pulses = starGeo.getAttribute('pulse') as BufferAttribute;
-      ids.forEach((id, i) => pulses.setX(i, set.has(id) && !reduced ? 1.8 : basePulse[i]!));
-      pulses.needsUpdate = true;
-    };
-    // Navegação: NEXO (visão geral) -> domínio (câmera vai até ele e aproxima).
-    const goDomain = (i: number | null) => {
-      zoom = 1; pan.set(0, 0, 0);
-      if (i === null || !domainPos[i]) { shot(pageRef.current); return; }
-      target.look.copy(domainPos[i]!).multiplyScalar(scene.scale.x);
-      target.dist = 13; target.elev = 0.32;
-    };
-    api.current = { shot, focus, heat, goDomain, zoom: factor => { zoom = Math.max(0.12, Math.min(2.6, zoom * factor)); }, orbit: (az, elev) => { target.az += az; target.elev = Math.max(-1.35, Math.min(1.4, target.elev + elev)); } };
-
-    const resize = () => {
-      const w = el.clientWidth || window.innerWidth, h = el.clientHeight || window.innerHeight;
-      renderer.setSize(w, h, false); camera.aspect = w / h;
-      // Desktop: a teia vive à direita, a coluna de leitura à esquerda.
-      // Desktop: a coluna de leitura ocupa ~600px à esquerda; a teia se desloca para a área livre.
-      // ≥1280: leitura (~600px) à esquerda e telemetria (340px) à direita; a teia centra no espaço entre as duas.
-      if (window.innerWidth >= 1280) camera.clearViewOffset(); // a teia tem a própria janela no meio: centralizada
-      else if (w > 900) camera.setViewOffset(w, h, -Math.min(w * 0.3, 300), 0, w, h); else camera.clearViewOffset();
-      camera.updateProjectionMatrix();
-    };
-    // Bloom: brilho físico dos aglomerados e filamentos (alta = resolução cheia, média = meia, baixa = sem).
-    let composer: EffectComposer | null = null;
-    let bloom: UnrealBloomPass | null = null;
-    const buildComposer = () => {
-      composer?.dispose(); composer = null; bloom = null;
-      if (quality === 'low' || theme === 'light') { renderer.setClearColor(0x000000, 0); return; }
-      renderer.setClearColor(0x000000, 1); // o bloom precisa de fundo opaco
-      composer = new EffectComposer(renderer, new WebGLRenderTarget(1, 1, { samples: quality === 'high' ? 4 : 2, type: HalfFloatType }));
-      composer.setPixelRatio(dpr);
-      composer.addPass(new RenderPass(scene, camera));
-      // Bloom contido: só os núcleos mais brilhantes vazam luz; o preto do fundo continua preto.
-      bloom = new UnrealBloomPass(new Vector2(1, 1), quality === 'high' ? 0.4 : 0.34, 0.32, 0.82);
-      composer.addPass(bloom);
-      // Suavização temporal leve: mistura 45% do quadro anterior e mata o 'sparkle' sem rastro visível na rotação lenta.
-      composer.addPass(new AfterimagePass(0.45));
-      composer.addPass(new OutputPass());
-    };
-    buildComposer();
-    const resizeComposer = () => {
-      if (!composer || !bloom) return;
-      const w = el.clientWidth || window.innerWidth, h = el.clientHeight || window.innerHeight;
-      composer.setSize(w, h);
-      const f = quality === 'high' ? 1 : 0.5; // média: bloom em meia resolução
-      bloom.setSize(Math.max(1, Math.round(w * dpr * f)), Math.max(1, Math.round(h * dpr * f)));
-    };
-    const resizeAll = () => { resize(); resizeComposer(); };
-    resizeAll();
-    const ro = new ResizeObserver(resizeAll); ro.observe(el);
-    // Guarda de fluidez: média de quadros ruim por ~3 s desce um nível (resolução e bloom), nunca sobe sozinho.
-    let slowAcc = 0, slowN = 0;
-    const degrade = () => {
-      if (quality === 'low') return;
-      quality = quality === 'high' ? 'medium' : 'low';
-      dpr = dprFor(quality); renderer.setPixelRatio(dpr); uniforms.pixelRatio.value = dpr;
-      el.dataset.quality = quality;
-      buildComposer(); resizeAll();
-    };
-
-    // Controles (como nos grafos): arrastar gira · roda/pinça dá zoom · botão direito, Shift ou 2 dedos movem · duplo clique recentra.
-    // Fora do modo Explorar, a roda e o toque vertical continuam rolando a página.
-    const ray = new Raycaster(); ray.params.Points = { threshold: 0.35 };
+    const pointerRay = new Raycaster();
+    pointerRay.params.Points = { threshold: 0.46 };
     const ndc = new Vector2();
     const canvas = renderer.domElement;
     const pointers = new Map<number, { x: number; y: number }>();
     let drag: { x: number; y: number; moved: boolean; pan: boolean } | null = null;
-    let pinch: { d: number; cx: number; cy: number } | null = null;
-    const right = new Vector3(), upv = new Vector3();
-    const panBy = (dx: number, dy: number) => {
-      camera.matrixWorld.extractBasis(right, upv, new Vector3());
-      const scale = cam.dist * 0.0016;
-      pan.addScaledVector(right, -dx * scale).addScaledVector(upv, dy * scale);
+    let pinch: { distance: number; x: number; y: number } | null = null;
+    let lastFrame = performance.now();
+    let resizeObserver: ResizeObserver;
+
+    const activeExecution = () => !runtime.reducedMotion && runtime.tests.some(test => test.status === 'RUNNING') && dataRef.current.sourceCurrent;
+    const projectCamera = () => {
+      const viewportFit = fitFactor(camera);
+      const distance = cam.dist * viewportFit * zoom;
+      const elevation = cam.elev;
+      camera.position.set(
+        look.x + Math.cos(cam.az) * Math.cos(elevation) * distance,
+        look.y + Math.sin(elevation) * distance,
+        look.z + Math.sin(cam.az) * Math.cos(elevation) * distance,
+      );
+      camera.lookAt(look);
     };
-    const zoomBy = (factor: number) => { zoom = Math.max(0.12, Math.min(2.6, zoom * factor)); };
-    const down = (ev: PointerEvent) => {
-      pointers.set(ev.pointerId, { x: ev.clientX, y: ev.clientY });
+    const render = () => {
+      projectCamera();
+      if (!runtime.contextLost) renderer.render(scene, camera);
+    };
+    const positionLabels = () => {
+      const labelRoot = labels.current;
+      if (!labelRoot) return;
+      const rect = canvas.getBoundingClientRect();
+      labelRoot.querySelectorAll<HTMLElement>('[data-scene-node]').forEach(element => {
+        const entity = runtime.layout.entityByKey.get(element.dataset.sceneNode || '');
+        if (!entity) {
+          element.style.opacity = '0';
+          element.style.pointerEvents = 'none';
+          element.tabIndex = -1;
+          element.setAttribute('aria-hidden', 'true');
+          return;
+        }
+        const projected = positionVector(entity.position).project(camera);
+        const x = (projected.x * 0.5 + 0.5) * rect.width;
+        const y = (-projected.y * 0.5 + 0.5) * rect.height;
+        const offscreen = projected.z > 1 || Math.abs(projected.x) > 1.08 || Math.abs(projected.y) > 1.08;
+        element.style.opacity = offscreen ? '0' : '1';
+        element.style.pointerEvents = offscreen ? 'none' : 'auto';
+        if (offscreen) {
+          element.tabIndex = -1;
+          element.setAttribute('aria-hidden', 'true');
+        } else {
+          element.removeAttribute('aria-hidden');
+          if (element instanceof HTMLButtonElement) element.tabIndex = 0;
+        }
+        if (!offscreen) element.style.transform = 'translate(' + Math.round(x + 9) + 'px,' + Math.round(y - 10) + 'px)';
+      });
+    };
+    const updateScale = (notify: boolean) => {
+      if (commandedScale) {
+        if (Math.abs(cam.dist - target.dist) > 0.02) return;
+        commandedScale = null;
+      }
+      const next = scaleForDistance(cam.dist * zoom);
+      if (next === runtime.scale) return;
+      if (next === 'overview') {
+        target.look.set(0, 0, 0);
+        pan.set(0, 0, 0);
+        setSelectedProject(null);
+        dataRef.current.onProjectSelect?.(null);
+      }
+      runtime.scale = next;
+      hostElement.dataset.scale = next;
+      setSceneScale(next);
+      if (notify) dataRef.current.onScaleChange?.(next);
+      runtime.update(runtime.layout, runtime.tests, next, dataRef.current.focusIds, dataRef.current.hot, dataRef.current.sourceCurrent, dataRef.current.theme);
+    };
+    const schedule = () => {
+      if (runtime.frame || !runtime.visible || runtime.contextLost) return;
+      runtime.frame = requestAnimationFrame(frame);
+    };
+    const frame = (now: number) => {
+      runtime.frame = 0;
+      if (!runtime.visible || runtime.contextLost) return;
+      const dt = Math.min(0.06, Math.max(0.001, (now - lastFrame) / 1000));
+      lastFrame = now;
+      const k = runtime.reducedMotion ? 1 : 1 - Math.exp(-dt / 0.16);
+      const targetLook = target.look.clone().add(pan);
+      cam.dist += (target.dist - cam.dist) * k;
+      cam.elev += (target.elev - cam.elev) * k;
+      cam.az += (target.az - cam.az) * k;
+      look.lerp(targetLook, k);
+      const moving = Math.abs(cam.dist - target.dist) > 0.012
+        || Math.abs(cam.elev - target.elev) > 0.0008
+        || Math.abs(cam.az - target.az) > 0.0008
+        || look.distanceTo(targetLook) > 0.001;
+      if (!runtime.reducedMotion) material.uniforms.time.value += dt;
+      render();
+      positionLabels();
+      updateScale(true);
+      if (moving || activeExecution()) schedule();
+    };
+    runtime.render = () => { render(); positionLabels(); };
+    runtime.schedule = schedule;
+    runtime.setScale = (nextScale, focusKey = null) => {
+      const currentData = dataRef.current;
+      target.dist = SCALE_DISTANCE[nextScale];
+      commandedScale = nextScale;
+      zoom = 1;
+      if (nextScale === 'overview') {
+        target.look.set(0, 0, 0);
+        pan.set(0, 0, 0);
+        setSelectedProject(null);
+        currentData.onProjectSelect?.(null);
+      }
+      if (focusKey) {
+        const entity = runtime.layout.entityByKey.get(focusKey);
+        if (entity) target.look.copy(positionVector(entity.position));
+      }
+      if (runtime.reducedMotion) {
+        cam.dist = target.dist;
+        look.copy(target.look).add(pan);
+      }
+      runtime.scale = nextScale;
+      hostElement.dataset.scale = nextScale;
+      setSceneScale(nextScale);
+      if (currentData.scale !== nextScale) currentData.onScaleChange?.(nextScale);
+      runtime.update(runtime.layout, runtime.tests, nextScale, currentData.focusIds, currentData.hot, currentData.sourceCurrent, currentData.theme);
+      schedule();
+    };
+    runtime.focus = ids => {
+      const center = focusCenter(runtime.layout, ids.map(id => id.replace(/^(?:test:)/i, '')), runtime.scale);
+      if (!center) return;
+      target.look.copy(center);
+      if (runtime.reducedMotion) look.copy(center).add(pan);
+      schedule();
+    };
+    runtime.update = (nextLayout, nextTests, nextScale, focusedIds, hotIds, sourceIsCurrent, nextTheme) => {
+      const focused = new Set(focusedIds.map(id => id.replace(/^(?:test:)/i, '')));
+      const hot = new Set(hotIds.map(id => id.replace(/^(?:test:)/i, '')));
+      const initial = nextLayout.entities;
+      const entitiesByKind: SceneEntity[][] = [
+        initial.filter(entity => entity.kind === 'region'),
+        initial.filter(entity => entity.kind === 'project'),
+        initial.filter(entity => entity.kind === 'hypothesis'),
+        initial.filter(entity => entity.kind === 'test'),
+      ];
+      for (const layer of runtime.layers) {
+        scene.remove(layer.points);
+        layer.geometry.dispose();
+      }
+      runtime.layers = entitiesByKind.map((entities, index) => {
+        const kind = (['region', 'project', 'hypothesis', 'test'] as const)[index]!;
+        const geometry = geometryForEntities(entities, quality, focused, hot, sourceIsCurrent);
+        const points = new Points(geometry, material);
+        points.name = kind;
+        points.visible = kind === 'region' || kind === 'project' || (kind === 'hypothesis' && nextScale !== 'overview') || kind === 'test' && nextScale === 'operational';
+        scene.add(points);
+        return { kind, points, entities, geometry };
+      });
+      if (runtime.dependencyLines) {
+        scene.remove(runtime.dependencyLines);
+        runtime.dependencyLines.geometry.dispose();
+        (runtime.dependencyLines.material as LineBasicMaterial).dispose();
+        runtime.dependencyLines = null;
+      }
+      if (runtime.membershipLines) {
+        scene.remove(runtime.membershipLines);
+        runtime.membershipLines.geometry.dispose();
+        (runtime.membershipLines.material as LineBasicMaterial).dispose();
+        runtime.membershipLines = null;
+      }
+      const membershipLineGeometry = membershipGeometry(nextLayout, nextScale);
+      if ((membershipLineGeometry.getAttribute('position')?.count || 0) > 0) {
+        const membershipLineMaterial = new LineBasicMaterial({ vertexColors: true, transparent: true, opacity: nextTheme === 'dark' ? 0.52 : 0.43, depthWrite: false, blending: nextTheme === 'dark' ? AdditiveBlending : NormalBlending });
+        runtime.membershipLines = new LineSegments(membershipLineGeometry, membershipLineMaterial);
+        runtime.membershipLines.name = 'published-membership';
+        scene.add(runtime.membershipLines);
+      } else membershipLineGeometry.dispose();
+      const lineGeometry = dependencyGeometry(nextLayout, nextTests, nextScale, sourceIsCurrent);
+      if ((lineGeometry.getAttribute('position')?.count || 0) > 0) {
+        const lineMaterial = new LineBasicMaterial({ vertexColors: true, transparent: true, opacity: nextTheme === 'dark' ? 0.66 : 0.58, depthWrite: false, blending: nextTheme === 'dark' ? AdditiveBlending : NormalBlending });
+        runtime.dependencyLines = new LineSegments(lineGeometry, lineMaterial);
+        runtime.dependencyLines.name = 'published-dependencies';
+        scene.add(runtime.dependencyLines);
+      } else lineGeometry.dispose();
+      runtime.layout = nextLayout;
+      runtime.tests = [...nextTests];
+      runtime.scale = nextScale;
+      hostElement.dataset.projectCount = String(nextLayout.projectCount);
+      hostElement.dataset.hypothesisCount = String(nextLayout.hypothesisCount);
+      hostElement.dataset.testCount = String(nextLayout.testCount);
+      hostElement.dataset.dependencyCount = String(nextLayout.dependencies.length);
+      hostElement.dataset.activeExecutions = String(sourceIsCurrent ? nextTests.filter(test => test.status === 'RUNNING').length : 0);
+      hostElement.dataset.recentResults = String(sourceIsCurrent ? hot.size : 0);
+      for (const layer of runtime.layers) {
+        const active = layer.kind === 'region' || layer.kind === 'project' || (layer.kind === 'hypothesis' && nextScale !== 'overview') || layer.kind === 'test' && nextScale === 'operational';
+        layer.points.visible = active;
+      }
+      hostElement.dataset.scale = nextScale;
+      runtime.render();
+      runtime.schedule();
+    };
+    runtime.onHit = entity => {
+      const tooltip = tip.current;
+      if (!tooltip) return;
+      tooltip.replaceChildren();
+      if (!entity) { tooltip.style.opacity = '0'; return; }
+      const title = document.createElement('b'); title.textContent = entity.label;
+      const detail = document.createElement('i');
+      detail.textContent = entity.kind === 'test' && entity.test ? STATUS_LABEL[entity.test.verdict]
+        : entity.kind === 'hypothesis' ? 'Hipótese publicada'
+          : entity.kind === 'region' ? 'Região sem projeto atribuído' : 'Projeto publicado';
+      tooltip.append(title, detail);
+      tooltip.style.opacity = '1';
+    };
+    runtime.orbit = (azimuth, elevation) => {
+      target.az += azimuth;
+      target.elev = Math.max(-1.28, Math.min(1.28, target.elev + elevation));
+      schedule();
+    };
+    runtime.reset = () => {
+      pan.set(0, 0, 0);
+      zoom = 1;
+      target.look.set(0, 0, 0);
+      target.az = 0.72;
+      target.elev = 0.48;
+      runtime.setScale('overview');
+    };
+    const setScale = (nextScale: ObservatoryScale, focusKey: string | null = null) => runtime.setScale(nextScale, focusKey);
+    const currentInitialScale = dataRef.current.scale || defaultScaleForPage(dataRef.current.page);
+    runtime.scale = currentInitialScale;
+    cam.dist = target.dist = SCALE_DISTANCE[currentInitialScale];
+    hostElement.dataset.scale = currentInitialScale;
+    runtime.update(layout, tests, currentInitialScale, focusIds, hot, sourceCurrent, theme);
+    dataRef.current.onAvailability?.(true);
+
+    const resize = () => {
+      const width = Math.max(1, hostElement.clientWidth || window.innerWidth);
+      const height = Math.max(1, hostElement.clientHeight || window.innerHeight);
+      renderer.setSize(width, height, false);
+      camera.aspect = width / height;
+      camera.updateProjectionMatrix();
+      schedule();
+    };
+    resizeObserver = new ResizeObserver(resize);
+    resizeObserver.observe(hostElement);
+    resize();
+
+    const hitAt = (event: PointerEvent): SceneEntity | null => {
+      const rect = canvas.getBoundingClientRect();
+      if (!rect.width || !rect.height) return null;
+      ndc.set(((event.clientX - rect.left) / rect.width) * 2 - 1, -((event.clientY - rect.top) / rect.height) * 2 + 1);
+      pointerRay.setFromCamera(ndc, camera);
+      const visibleLayers = runtime.layers.filter(layer => layer.points.visible).map(layer => layer.points);
+      const hit = pointerRay.intersectObjects(visibleLayers, false)[0];
+      if (hit?.index === undefined) return null;
+      const layer = runtime.layers.find(item => item.points === hit.object);
+      return layer?.entities[hit.index] || null;
+    };
+    const down = (event: PointerEvent) => {
+      pointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
       if (pointers.size === 2) {
-        const [p1, p2] = [...pointers.values()];
-        pinch = { d: Math.hypot(p1!.x - p2!.x, p1!.y - p2!.y), cx: (p1!.x + p2!.x) / 2, cy: (p1!.y + p2!.y) / 2 };
-        drag = null; return;
-      }
-      drag = { x: ev.clientX, y: ev.clientY, moved: false, pan: ev.button === 2 || ev.shiftKey };
-      if (exploreRef.current) canvas.setPointerCapture?.(ev.pointerId);
-    };
-    const move = (ev: PointerEvent) => {
-      if (pointers.has(ev.pointerId)) pointers.set(ev.pointerId, { x: ev.clientX, y: ev.clientY });
-      if (pinch && pointers.size === 2) {
-        const [p1, p2] = [...pointers.values()];
-        const d = Math.hypot(p1!.x - p2!.x, p1!.y - p2!.y), cx = (p1!.x + p2!.x) / 2, cy = (p1!.y + p2!.y) / 2;
-        if (pinch.d > 0) zoomBy(pinch.d / d);
-        panBy(cx - pinch.cx, cy - pinch.cy);
-        pinch = { d, cx, cy }; return;
-      }
-      if (!drag) return;
-      const dx = ev.clientX - drag.x, dy = ev.clientY - drag.y;
-      if (Math.abs(dx) + Math.abs(dy) > 4) drag.moved = true;
-      if (drag.pan) panBy(dx, dy);
-      else { target.az += dx * 0.005; target.elev = Math.max(-1.35, Math.min(1.4, target.elev + dy * 0.004)); }
-      drag.x = ev.clientX; drag.y = ev.clientY;
-    };
-    const up = (ev: PointerEvent) => {
-      pointers.delete(ev.pointerId);
-      if (pointers.size < 2) pinch = null;
-      const was = drag; drag = null;
-      if (!was || was.moved || ev.target !== canvas) return;
-      const rect = canvas.getBoundingClientRect();
-      ndc.set(((ev.clientX - rect.left) / rect.width) * 2 - 1, -((ev.clientY - rect.top) / rect.height) * 2 + 1);
-      ray.setFromCamera(ndc, camera);
-      const hit = ray.intersectObject(starPoints)[0];
-      if (hit?.index !== undefined && ids[hit.index]) pickRef.current(ids[hit.index]!);
-    };
-    const byId = new Map(tests.map(t => [t.id, t]));
-    let hoverAt = 0;
-    const hover = (ev: PointerEvent) => {
-      const tipEl = tip.current;
-      if (!tipEl || drag || pinch || ev.pointerType === 'touch') { if (tipEl) tipEl.style.opacity = '0'; return; }
-      const now = performance.now(); if (now - hoverAt < 50) return; hoverAt = now;
-      const rect = canvas.getBoundingClientRect();
-      ndc.set(((ev.clientX - rect.left) / rect.width) * 2 - 1, -((ev.clientY - rect.top) / rect.height) * 2 + 1);
-      ray.setFromCamera(ndc, camera);
-      const hit = ray.intersectObject(starPoints)[0];
-      const t = hit?.index !== undefined ? byId.get(ids[hit.index] ?? '') : undefined;
-      if (!t) {
-        // Perto de uma nuvem de formação? explica o que é.
-        const mx = ev.clientX - rect.left, my = ev.clientY - rect.top;
-        const hitCloud = clouds.find(c => {
-          proj.copy(c.at).multiplyScalar(scene.scale.x).project(camera);
-          const sx = (proj.x * 0.5 + 0.5) * rect.width, sy = (-proj.y * 0.5 + 0.5) * rect.height;
-          return proj.z < 1 && Math.hypot(sx - mx, sy - my) < 46;
-        });
-        if (!hitCloud) { tipEl.style.opacity = '0'; canvas.style.cursor = ''; return; }
-        tipEl.innerHTML = '';
-        const b = document.createElement('b'); b.textContent = `Nuvem de formação: ${hitCloud.ready} candidatos marcados READY na leitura`;
-        const i = document.createElement('i'); i.textContent = 'A elegibilidade e o despacho dependem da verificação publicada; consulte a fila.';
-        tipEl.append(b, i);
-        tipEl.style.transform = `translate(${mx + 14}px, ${my + 12}px)`;
-        tipEl.style.opacity = '1'; canvas.style.cursor = 'pointer';
+        const pair = [...pointers.values()];
+        pinch = { distance: Math.hypot(pair[0]!.x - pair[1]!.x, pair[0]!.y - pair[1]!.y), x: (pair[0]!.x + pair[1]!.x) / 2, y: (pair[0]!.y + pair[1]!.y) / 2 };
+        drag = null;
         return;
       }
-      tipEl.innerHTML = '';
-      const b = document.createElement('b'); b.textContent = t.name;
-      const i = document.createElement('i'); i.textContent = VERDICT_TXT[t.verdict]; i.dataset.v = t.verdict.toLowerCase();
-      tipEl.append(b, i);
-      tipEl.style.transform = `translate(${ev.clientX - rect.left + 14}px, ${ev.clientY - rect.top + 12}px)`;
-      tipEl.style.opacity = '1'; canvas.style.cursor = 'pointer';
+      drag = { x: event.clientX, y: event.clientY, moved: false, pan: event.button === 2 || event.shiftKey };
+      if (dataRef.current.explore) canvas.setPointerCapture?.(event.pointerId);
     };
-    canvas.addEventListener('pointermove', hover);
-    const leave = () => { if (tip.current) tip.current.style.opacity = '0'; };
-    canvas.addEventListener('pointerleave', leave);
-    const wheel = (ev: WheelEvent) => {
-      if (!exploreRef.current && !ev.ctrlKey) return; // rolando a página
-      ev.preventDefault();
-      zoomBy(Math.exp(ev.deltaY * 0.0012));
+    const panBy = (dx: number, dy: number) => {
+      const basisRight = new Vector3(), basisUp = new Vector3(), basisForward = new Vector3();
+      camera.matrixWorld.extractBasis(basisRight, basisUp, basisForward);
+      const amount = cam.dist * fitFactor(camera) * 0.0018;
+      pan.addScaledVector(basisRight, -dx * amount).addScaledVector(basisUp, dy * amount);
     };
-    const dbl = () => { zoom = 1; pan.set(0, 0, 0); };
-    const noMenu = (ev: Event) => { if (exploreRef.current) ev.preventDefault(); };
+    const move = (event: PointerEvent) => {
+      if (pointers.has(event.pointerId)) pointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
+      if (pinch && pointers.size === 2) {
+        const pair = [...pointers.values()];
+        const distance = Math.hypot(pair[0]!.x - pair[1]!.x, pair[0]!.y - pair[1]!.y);
+        const x = (pair[0]!.x + pair[1]!.x) / 2, y = (pair[0]!.y + pair[1]!.y) / 2;
+        if (pinch.distance > 0 && distance > 0) zoom = Math.max(0.3, Math.min(2.6, zoom * pinch.distance / distance));
+        panBy(x - pinch.x, y - pinch.y);
+        pinch = { distance, x, y };
+        schedule();
+        return;
+      }
+      if (!drag) return;
+      const dx = event.clientX - drag.x, dy = event.clientY - drag.y;
+      if (Math.abs(dx) + Math.abs(dy) > 3) drag.moved = true;
+      if (drag.pan) panBy(dx, dy);
+      else { target.az += dx * 0.005; target.elev = Math.max(-1.28, Math.min(1.28, target.elev + dy * 0.004)); }
+      drag.x = event.clientX; drag.y = event.clientY;
+      schedule();
+    };
+    const up = (event: PointerEvent) => {
+      pointers.delete(event.pointerId);
+      if (pointers.size < 2) pinch = null;
+      const was = drag; drag = null;
+      if (!was || was.moved || event.button !== 0) return;
+      const entity = hitAt(event);
+      if (!entity) return;
+      runtime.onHit(entity);
+      if (entity.kind === 'test') dataRef.current.onPick(entity.id);
+      else if (entity.kind === 'hypothesis') dataRef.current.onPick(entity.id);
+      else if (entity.kind === 'project') {
+        setSelectedProject(entity.id);
+        dataRef.current.onProjectSelect?.(entity.id);
+        setScale('research', entity.key);
+      } else if (entity.kind === 'region') {
+        setSelectedProject(entity.id);
+        dataRef.current.onProjectSelect?.(entity.id);
+        setScale('research', entity.key);
+      }
+    };
+    let lastHover = 0;
+    const hover = (event: PointerEvent) => {
+      if (event.pointerType === 'touch' || drag || pinch) return;
+      const now = performance.now();
+      if (now - lastHover < 45) return;
+      lastHover = now;
+      const entity = hitAt(event);
+      runtime.onHit(entity);
+      canvas.style.cursor = entity ? 'pointer' : '';
+      const tooltip = tip.current;
+      if (tooltip && entity) {
+        const rect = hostElement.getBoundingClientRect();
+        tooltip.style.transform = 'translate(' + Math.round(event.clientX - rect.left + 12) + 'px,' + Math.round(event.clientY - rect.top + 12) + 'px)';
+      }
+    };
+    const leave = () => { runtime.onHit(null); canvas.style.cursor = ''; };
+    const wheel = (event: WheelEvent) => {
+      if (!dataRef.current.explore && !event.ctrlKey) return;
+      event.preventDefault();
+      zoom = Math.max(0.3, Math.min(2.6, zoom * Math.exp(event.deltaY * 0.0011)));
+      schedule();
+    };
+    const setScaleFromKey = (next: ObservatoryScale) => setScale(next);
+    const doubleClick = () => { pan.set(0, 0, 0); zoom = 1; setScaleFromKey('overview'); target.look.set(0, 0, 0); schedule(); };
+    const noMenu = (event: Event) => { if (dataRef.current.explore) event.preventDefault(); };
+    const contextLost = (event: Event) => { event.preventDefault(); runtime.contextLost = true; hostElement.dataset.fallback = 'context-lost'; dataRef.current.onAvailability?.(false); if (runtime.frame) cancelAnimationFrame(runtime.frame); runtime.frame = 0; };
+    const contextRestored = () => { runtime.contextLost = false; delete hostElement.dataset.fallback; dataRef.current.onAvailability?.(true); schedule(); };
+    const visibility = () => { runtime.visible = document.visibilityState === 'visible'; if (!runtime.visible && runtime.frame) { cancelAnimationFrame(runtime.frame); runtime.frame = 0; } else schedule(); };
+    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const motionChanged = (event: MediaQueryListEvent) => { runtime.reducedMotion = event.matches; if (event.matches) material.uniforms.time.value = 0; schedule(); };
+    reducedMotion.addEventListener?.('change', motionChanged);
+    const apiSetScale = setScale;
+    const apiFocus = (ids: string[]) => runtime.focus(ids);
+    const reset = () => runtime.reset();
+    api.current = { setScale: apiSetScale, focus: apiFocus, reset };
+
     canvas.addEventListener('pointerdown', down);
     window.addEventListener('pointermove', move);
     window.addEventListener('pointerup', up);
     window.addEventListener('pointercancel', up);
+    canvas.addEventListener('pointermove', hover);
+    canvas.addEventListener('pointerleave', leave);
     canvas.addEventListener('wheel', wheel, { passive: false });
-    canvas.addEventListener('dblclick', dbl);
+    canvas.addEventListener('dblclick', doubleClick);
     canvas.addEventListener('contextmenu', noMenu);
-    resetView.current = dbl;
+    canvas.addEventListener('webglcontextlost', contextLost);
+    canvas.addEventListener('webglcontextrestored', contextRestored);
+    document.addEventListener('visibilitychange', visibility);
 
-    // Rótulos dos domínios projetados em HTML (nítidos, legíveis, sem textura).
-    const labelEls = [...(labels.current?.querySelectorAll('[data-domain]') ?? [])] as HTMLElement[];
-    const eventEls = [...(labels.current?.querySelectorAll('[data-event]') ?? [])] as HTMLElement[];
-    const proj = new Vector3();
-
-    let raf = 0, last = performance.now(), pacedAt = last, previousBudget = 0, visible = true, expansion = 1, lodTick = 0;
-    let contextLost = false;
-    const lost = (event: Event) => { event.preventDefault(); contextLost = true; onAvailability?.(false); };
-    const restored = () => { contextLost = false; pacedAt = last = performance.now(); slowAcc = 0; slowN = 0; onAvailability?.(true); };
-    canvas.addEventListener('webglcontextlost', lost); canvas.addEventListener('webglcontextrestored', restored);
-    const FORM_S = 180; let cosmic = 0;
-    const replay = () => { cosmic = 0; };
-    window.addEventListener('nexo:replay-formation', replay);
-    const vis = () => { visible = document.visibilityState === 'visible'; };
-    document.addEventListener('visibilitychange', vis);
-    const frame = (now: number) => {
-      raf = requestAnimationFrame(frame);
-      if (!visible || contextLost) { pacedAt = last = now; slowAcc = 0; slowN = 0; return; }
-      // A reading surface does not need 60 WebGL frames per second.
-      const frameBudget = 1000 / (reduced ? 15 : mobile || !exploreRef.current ? 30 : 60);
-      // Reading and orbiting have different targets; their quality samples cannot mix.
-      if (frameBudget !== previousBudget) { previousBudget = frameBudget; pacedAt = last = now; slowAcc = 0; slowN = 0; }
-      const elapsed = now - pacedAt;
-      if (elapsed < frameBudget - 0.1) return;
-      // Keep the fractional interval so refresh rates above the target do not lose frames.
-      pacedAt += Math.max(1, Math.floor((elapsed + 0.1) / frameBudget)) * frameBudget;
-      const dt = Math.min(0.05, (now - last) / 1000); last = now;
-      if (!reduced) uniforms.time.value += dt;
-      // Relógio cósmico: a formação é visível — ~3 min do quase-uniforme até a teia madura
-      // (aglomeração nos nós, vazios crescendo), depois segue bem devagar. "Rever formação" zera o relógio.
-      cosmic += dt;
-      { const u = Math.min(1, cosmic / FORM_S); const e = u * u * (3 - 2 * u); const tail = cosmic > FORM_S ? (cosmic - FORM_S) / (cosmic - FORM_S + 600) : 0;
-        uniforms.evo.value = reduced ? 0.6 : 0.08 + 0.8 * e + 0.12 * tail; }
-      // Expansão do universo: acompanha a formação, desacelerando (a(t) monotônico).
-      expansion = reduced ? 1 : 1 + 0.14 * (cosmic / (cosmic + 90));
-      scene.scale.setScalar(expansion);
-      if (!reduced && !drag && !exploreRef.current) target.az += dt * 0.025;
-      const k = reduced ? 1 : 1 - Math.pow(0.03, dt);
-      const fit = camera.aspect < 1 ? 1 / Math.max(0.55, camera.aspect) : 1;
-      cam.dist += (target.dist * fit * zoom - cam.dist) * k; cam.elev += (target.elev - cam.elev) * k; cam.az += (target.az - cam.az) * k;
-      look.lerp(lookGoal.copy(target.look).add(pan), k);
-      camera.position.set(
-        look.x + Math.cos(cam.az) * Math.cos(cam.elev) * cam.dist, look.y + Math.sin(cam.elev) * cam.dist,
-        look.z + Math.sin(cam.az) * Math.cos(cam.elev) * cam.dist);
-      camera.lookAt(look);
-      if (composer) composer.render(dt); else renderer.render(scene, camera);
-      if (!reduced) {
-        slowAcc += dt; slowN += 1;
-        if (slowAcc > 3) { if (slowAcc / slowN > Math.max(1 / 42, frameBudget / 1000 * 1.35)) degrade(); slowAcc = 0; slowN = 0; }
-      }
-      const w = canvas.clientWidth, h = canvas.clientHeight;
-      const placed: Array<[number, number, number]> = [];
-      const place = (node: HTMLElement, x: number, y: number) => {
-        const wd = node.offsetWidth || 120;
-        for (let tries = 0; tries < 6 && placed.some(([px, py, pw]) => Math.abs(py - y) < 22 && x < px + pw + 8 && px < x + wd + 8); tries += 1) y += 22;
-        placed.push([x, y, wd]);
-        node.style.transform = `translate(${x}px, ${y}px)`;
-      };
-      labelEls.forEach((node, i) => {
-        proj.copy(domainPos[i]!).multiplyScalar(expansion).project(camera);
-        const off = proj.z > 1 || Math.abs(proj.x) > 1.1 || Math.abs(proj.y) > 1.1 || (!exploreRef.current && w > 900 && window.innerWidth < 1280 && (proj.x * 0.5 + 0.5) * w < Math.min(820, w * 0.6));
-        node.style.opacity = off ? '0' : '1';
-        node.style.pointerEvents = off ? 'none' : 'auto';
-        if (!off) place(node, (proj.x * 0.5 + 0.5) * w, (-proj.y * 0.5 + 0.5) * h);
-      });
-      // Detalhe por distância: perto de um domínio, os testes mais próximos mostram o nome.
-      const nearEls = near.current ? [...near.current.children] as HTMLElement[] : [];
-      if (nearEls.length && ++lodTick % 8 === 0) {
-        const close = cam.dist < 17;
-        const cand: Array<[number, number, number, string]> = [];
-        if (close) for (let i = 0; i < ids.length; i += 1) {
-          proj.set(stars.pos[i * 3]!, stars.pos[i * 3 + 1]!, stars.pos[i * 3 + 2]!).multiplyScalar(expansion).project(camera);
-          if (proj.z > 1 || Math.abs(proj.x) > 0.9 || Math.abs(proj.y) > 0.9) continue;
-          const sx = (proj.x * 0.5 + 0.5) * w, sy = (-proj.y * 0.5 + 0.5) * h;
-          if (w > 900 && window.innerWidth < 1280 && !exploreRef.current && sx < Math.min(640, w * 0.45)) continue;
-          cand.push([Math.hypot(proj.x, proj.y), sx, sy, byId.get(ids[i]!)?.name ?? '']);
-        }
-        cand.sort((a, b) => a[0] - b[0]);
-        nearEls.forEach((node, k) => {
-          const c = cand[k];
-          if (!c || !c[3]) { node.style.opacity = '0'; return; }
-          node.textContent = c[3].length > 42 ? c[3].slice(0, 40) + '…' : c[3];
-          node.style.opacity = '1';
-          node.style.transform = `translate(${c[1] + 10}px, ${c[2] - 8}px)`;
-        });
-      }
-      eventEls.forEach((node, i) => {
-        const a = anchors[i]; if (!a) return;
-        proj.copy(a).multiplyScalar(expansion).project(camera);
-        const off = proj.z > 1 || Math.abs(proj.x) > 1.05 || Math.abs(proj.y) > 1.05 || (!exploreRef.current && w > 900 && window.innerWidth < 1280 && (proj.x * 0.5 + 0.5) * w < Math.min(820, w * 0.6));
-        node.style.opacity = off ? '0' : '1';
-        if (!off) place(node, (proj.x * 0.5 + 0.5) * w, (-proj.y * 0.5 + 0.5) * h);
-      });
-    };
-    raf = requestAnimationFrame(frame);
-
+    runtimeRef.current = runtime;
+    runtime.schedule();
     return () => {
-      cancelAnimationFrame(raf); ro.disconnect();
-      window.removeEventListener('nexo:replay-formation', replay); document.removeEventListener('visibilitychange', vis);
+      if (runtime.frame) cancelAnimationFrame(runtime.frame);
+      resizeObserver.disconnect();
+      reducedMotion.removeEventListener?.('change', motionChanged);
       canvas.removeEventListener('pointerdown', down);
       window.removeEventListener('pointermove', move);
       window.removeEventListener('pointerup', up);
       window.removeEventListener('pointercancel', up);
-      canvas.removeEventListener('wheel', wheel);
       canvas.removeEventListener('pointermove', hover);
       canvas.removeEventListener('pointerleave', leave);
-      canvas.removeEventListener('dblclick', dbl);
+      canvas.removeEventListener('wheel', wheel);
+      canvas.removeEventListener('dblclick', doubleClick);
       canvas.removeEventListener('contextmenu', noMenu);
-      canvas.removeEventListener('webglcontextlost', lost); canvas.removeEventListener('webglcontextrestored', restored);
-      composer?.dispose(); webGeo.dispose(); starGeo.dispose(); qsoGeo.dispose(); qsoMat.dispose(); jetGeo.dispose(); jetMat.dispose(); boxGeo.dispose(); boxMat.dispose(); mat.dispose(); renderer.dispose();
-      canvas.remove(); api.current = null;
+      canvas.removeEventListener('webglcontextlost', contextLost);
+      canvas.removeEventListener('webglcontextrestored', contextRestored);
+      document.removeEventListener('visibilitychange', visibility);
+      for (const layer of runtime.layers) layer.geometry.dispose();
+      runtime.dependencyLines?.geometry.dispose();
+      (runtime.dependencyLines?.material as LineBasicMaterial | undefined)?.dispose();
+      runtime.membershipLines?.geometry.dispose();
+      (runtime.membershipLines?.material as LineBasicMaterial | undefined)?.dispose();
+      material.dispose();
+      renderer.dispose();
+      canvas.remove();
+      runtimeRef.current = null;
+      api.current = null;
     };
-  }, [tests, theme, events, domains, sourceCurrent]);
+    // The runtime is mounted once. Data updates are applied by the separate update effect.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
-  useEffect(() => { api.current?.shot(page); }, [page, tests, theme]);
-  useEffect(() => { api.current?.focus(focusIds ?? []); }, [focusIds, tests, theme]);
-  useEffect(() => { api.current?.heat(hot ?? []); }, [hot, tests, theme, events]);
+  useEffect(() => {
+    const runtime = runtimeRef.current;
+    const initialScale = scale || defaultScaleForPage(page);
+    if (!runtime) { setSceneScale(initialScale); return; }
+    runtime.update(layout, tests, runtime.scale, focusIds, hot, sourceCurrent, theme);
+    runtime.focus(focusIds);
+  }, [layout, tests, focusKey, hotKey, sourceCurrent, theme]);
 
-  const go = (i: number | null) => { setSel(i); api.current?.goDomain(i); };
-  useEffect(() => { setSel(null); }, [page]);
-  return <div ref={host} className={`obs-scene obs-scene--${theme}`}>
-    <nav className="obs-crumb" aria-label="Onde você está na teia">
-      <button type="button" onClick={() => go(null)} aria-current={sel === null ? 'location' : undefined}>NEXO</button>
-      {sel !== null && domains[sel] && <><i aria-hidden="true">›</i><span aria-current="location">{domains[sel]!.label}</span>
-        <em>{tests.filter(t => normDomain(t.domain) === domains[sel]!.id).length} testes</em></>}
+  useEffect(() => {
+    const runtime = runtimeRef.current;
+    if (!runtime) { if (scale) setSceneScale(scale); return; }
+    if (scale && runtime.scale !== scale) runtime.setScale(scale);
+  }, [scale]);
+
+  useEffect(() => {
+    const runtime = runtimeRef.current;
+    if (!runtime || scale) return;
+    const next = defaultScaleForPage(page);
+    if (runtime.scale !== next) runtime.setScale(next);
+  }, [page, scale]);
+
+  const sceneLabels = labelEntities;
+  const projectMap = new Map(layout.entities.filter(entity => entity.kind === 'project' || entity.kind === 'region').map(entity => [entity.id, entity]));
+  const selectProject = (entity: SceneEntity) => {
+    setSelectedProject(entity.id);
+    dataRef.current.onProjectSelect?.(entity.id);
+    runtimeRef.current?.setScale('research', entity.key);
+  };
+  const setScale = (next: ObservatoryScale) => runtimeRef.current?.setScale(next);
+  const resetView = () => api.current?.reset();
+
+  return <div ref={host} className={'obs-scene obs-scene--' + theme} data-scene-model="cosmic-web" data-scale={sceneScale}
+    data-project-count={layout.projectCount} data-hypothesis-count={layout.hypothesisCount} data-test-count={layout.testCount} data-dependency-count={layout.dependencies.length}>
+    <nav className="obs-crumb" aria-label="Escala da teia">
+      <button type="button" onClick={resetView} aria-current={sceneScale === 'overview' ? 'location' : undefined}>Visão geral</button>
+      {selectedProject && projectMap.has(selectedProject) && <><i aria-hidden="true">›</i><span aria-current="location">{projectMap.get(selectedProject)!.label}</span>
+        <em>{projectMap.get(selectedProject)!.kind === 'region'
+          ? tests.filter(test => !test.roadmapId && !test.campaignId && normDomain(test.domain) === selectedProject).length
+          : tests.filter(test => test.roadmapId === selectedProject || test.campaignId === selectedProject).length} testes</em></>}
+      <small aria-live="polite">{sceneScale === 'overview' ? 'sistema' : sceneScale === 'research' ? 'projetos e hipóteses' : 'evidências e execuções'}</small>
     </nav>
-    <div className="obs-camera-controls" role="group" aria-label="Câmera da teia; setas giram, mais e menos aproximam" tabIndex={0}
+    <div className="obs-camera-controls" role="group" aria-label="Câmera da teia; arraste para orbitar e mais ou menos para mudar escala" tabIndex={0}
       onKeyDown={event => {
-        const commands: Record<string, () => void> = { ArrowLeft: () => api.current?.orbit(-0.12, 0), ArrowRight: () => api.current?.orbit(0.12, 0), ArrowUp: () => api.current?.orbit(0, -0.1), ArrowDown: () => api.current?.orbit(0, 0.1), '+': () => api.current?.zoom(0.8), '=': () => api.current?.zoom(0.8), '-': () => api.current?.zoom(1.25), Home: () => resetView.current() };
-        if (commands[event.key]) { event.preventDefault(); commands[event.key]!(); }
+        const commands: Record<string, () => void> = {
+          ArrowLeft: () => runtimeRef.current?.orbit(-0.12, 0), ArrowRight: () => runtimeRef.current?.orbit(0.12, 0),
+          ArrowUp: () => runtimeRef.current?.orbit(0, -0.1), ArrowDown: () => runtimeRef.current?.orbit(0, 0.1),
+          '+': () => setScale(sceneScale === 'overview' ? 'research' : 'operational'), '=': () => setScale(sceneScale === 'overview' ? 'research' : 'operational'),
+          '-': () => setScale(sceneScale === 'operational' ? 'research' : 'overview'), Home: resetView,
+        };
+        const command = commands[event.key];
+        if (command) { event.preventDefault(); command(); }
       }}>
-      <button type="button" aria-label="Aproximar câmera" onClick={() => api.current?.zoom(0.8)}>+</button>
-      <button type="button" aria-label="Afastar câmera" onClick={() => api.current?.zoom(1.25)}>−</button>
-      <button type="button" aria-label="Recentrar câmera" onClick={() => resetView.current()}>Centro</button>
+      <button type="button" aria-label="Aproximar uma escala" onClick={() => setScale(sceneScale === 'overview' ? 'research' : 'operational')}>+</button>
+      <button type="button" aria-label="Afastar uma escala" onClick={() => setScale(sceneScale === 'operational' ? 'research' : 'overview')}>−</button>
+      <button type="button" aria-label="Recentrar câmera" onClick={resetView}>Centro</button>
     </div>
     <div ref={tip} className="obs-tip" role="tooltip" />
-    <div ref={near} className="obs-near" aria-hidden="true">{Array.from({ length: 7 }, (_, k) => <span key={k} />)}</div>
     <div ref={labels} className="obs-scene-labels">
-      {domains.map((d, i) => <button type="button" key={d.id} data-domain={d.id} className={sel === i ? 'on' : undefined}
-        onClick={() => go(sel === i ? null : i)} title={`Ir até ${d.label}`}>{d.label}</button>)}
-      {[...(events?.quasars ?? []).map(e => ['qso', e] as const), ...(events?.grbs ?? []).map(e => ['grb', e] as const), ...(events?.agn ?? []).map(e => ['agn', e] as const)]
-        .map(([kind, e], i) => <a key={i} data-event={kind} href={e.href} className={`obs-ev obs-ev--${kind}`}>{e.label}</a>)}
+      {sceneLabels.map(entity => entity.kind === 'project' || entity.kind === 'region'
+        ? <button type="button" key={entity.key} data-scene-node={entity.key} data-project={entity.id} data-region={entity.kind === 'region' ? entity.id : undefined}
+          className={selectedProject === entity.id ? 'on' : undefined} onClick={() => selectProject(entity)} title={'Abrir projeto ' + entity.label}>{entity.label}</button>
+        : entity.kind === 'test'
+          ? <button type="button" key={entity.key} data-scene-node={entity.key} data-testid={entity.id}
+            onClick={() => onPick(entity.id)} title={'Abrir evidência ' + entity.label}>{entity.label}</button>
+          : <span key={entity.key} data-scene-node={entity.key} data-hypothesis={entity.id} title={entity.label}>{entity.label}</span>)}
     </div>
   </div>;
 }
+
+// Camera controls are held in the renderer; these commands stay stable across scene updates.
+type SceneApi = { setScale: (scale: ObservatoryScale, focusKey?: string | null) => void; focus: (ids: string[]) => void; reset: () => void };
