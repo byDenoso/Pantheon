@@ -709,8 +709,13 @@ test('dedicated Atlas production page uses Metro renderer, G6 and deterministic 
   assert.match(renderer, /SVGRenderer/);
   assert.match(renderer, /compact-touch/);
   assert.match(renderer, /reduced-gpu/);
-  assert.match(renderer, /compact \? 2 : 3/);
-  assert.match(renderer, /compact \? 4 : 5/);
+  assert.doesNotMatch(renderer, /compact \? 2 : 3/);
+  assert.match(renderer, /const organicDetail = node\.entityType === 'hub' \|\| node\.entityType === 'subdomain' \? 1 : 0/);
+  assert.match(renderer, /const radialSegments = 3/);
+  assert.match(renderer, /Math\.max\(10, Math\.min\(24, Math\.round\(span \/ 14\)\)\)/);
+  assert.match(renderer, /SphereGeometry\(Math\.max\(1\.4, radius \* \.18\), compact \? 5 : 7, 4\)/);
+  assert.match(renderer, /minimumFrameMs = 1000 \/ \(compact \? 8 : 12\)/);
+  assert.match(renderer, /threeGeometryBudget = 'svg-low-poly-v1'/);
   assert.match(renderer, /node\.entityType === 'hub'.*node\.entityType === 'subdomain'.*id === selectedId/s);
   assert.match(renderer, /props\.viewMode === '2d' \?/);
   assert.match(renderer, /onReadyRef\.current\?\.\(\)/);
