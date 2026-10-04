@@ -884,7 +884,7 @@ test('G6 selection changes wait for the current canvas render', async () => {
   const refreshEnd = renderer.indexOf('const expansionKey = useMemo', refreshStart);
   const refresh = renderer.slice(refreshStart, refreshEnd);
   assert.match(refresh, /container\.dataset\.g6Ready = 'false';\s*const data = buildG6Data/);
-  assert.match(refresh, /if \(!canvasReady\)[\s\S]*?container\.dataset\.g6Ready = 'true';\s*applyG6Selection/);
+  assert.match(refresh, /if \(!canvasReady\)[\s\S]*?container\.dataset\.g6Ready = 'true';\s*await runGraphOperation\(\(\) => applyG6Selection/);
   assert.match(renderer, /if \(container\?\.dataset\.g6Ready !== 'true'\) return;/);
 });
 
