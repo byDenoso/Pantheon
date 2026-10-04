@@ -1,6 +1,6 @@
 {
   "acked": {},
-  "base_commit": "9621490be5675b7f3372b20fb0b4b3d00a391413",
+  "base_commit": "8005fc27d3f614a087493bc63dfe2087e1677a6e",
   "blob_index_complete": true,
   "blobs": {
     "inbox/20260925T101213Z-BATCH-referee2.json": "bba0461f9a58d6ee6781d525ef62d3bfa5481908",
@@ -268,6 +268,7 @@
     "inbox/scheduled-guardiao-integrity-20261003t0242z.json": "9c635359a1c74bf589e01e56ab951d1db67a191f",
     "inbox/scheduled-guardiao-integrity-20261004t0038z.json": "572e6905a8ae117e22b943c62cced43ed5a1d6a0",
     "inbox/scheduled-guardiao-integrity-20261004t0710z.json": "2d2f3b18d23223632ee906fbc12e3ae52e63bd67",
+    "inbox/scheduled-guardiao-integrity-20261004t1315z.json": "760a27f6c158d992e306a50a3cdacb53b7e9a9af",
     "inbox/scheduled-guardiao-integrity-256956b433317ea8.json": "faff038a4ee2ead846f70443237abdf66c8285ae",
     "inbox/scheduled-guardiao-integrity-4eca6a809262f332.json": "761917601628b4834d6e900b33c59c13e21e4926",
     "inbox/scheduled-guardiao-integrity-843309583b848e26.json": "d330e80f724abd22c987cf7359dd5dba62677a84",
@@ -290,6 +291,7 @@
     "inbox/scheduled-guardiao-recipe-review-pr406-d145ab19.json": "74da6d506eec494c61ed14188e3b70524e118fdf",
     "inbox/scheduled-guardiao-recipe-review-pr410-28e364d3.json": "d035f8dde80fe13ab264dfc27a268ad30ea249e9",
     "inbox/scheduled-guardiao-recipe-review-pr410-d75d7132.json": "a204daaaa3f6154568d1e9f6155260e2f6055aea",
+    "inbox/scheduled-guardiao-resumo-diario-20261004.json": "3a8c490daa6d54d37447334f45fc7b2e0496b465",
     "inbox/scheduled-guardiao-write-block-20261002t2015z.json": "e660546409d68ed4b86376a87a4a843c36f2899d",
     "inbox/scheduled-guardiao-write-failure-20261002t0611z.json": "59f4254867234bda32c12781b90aee551356c6e0",
     "inbox/scheduled-interactive-20260929-router040-ready-binds-v1.json": "2307012b548e39895ed2d1dad0fb1115377ce7fd",
@@ -631,13 +633,13 @@
     "inbox/scheduled-executor-batch-646a1ab8f0f2860e.json": {
       "blob_sha": "4ec491f1dbaccce3b010351e7d1ec07910cfdfdd",
       "fingerprint": "6a3fb67521690ac71e34dabaa416d3d166c7fa794ea9a13428d66d8c3ad6f347",
-      "observed_at": "2026-10-04T13:13:29Z",
+      "observed_at": "2026-10-04T13:18:30Z",
       "reason": "NOT_REPORTED"
     },
     "inbox/scheduled-refutador-batch-71ed43b5cf944d50.json": {
       "blob_sha": "a31b0df1cd4b35dad88f8a4bcdf660b535ffe89f",
       "fingerprint": "16245cde098d804253493aae8090e9e53d5677d3fd1a01d5a9b0be1a631c7d04",
-      "observed_at": "2026-10-04T13:13:29Z",
+      "observed_at": "2026-10-04T13:18:30Z",
       "reason": "NOT_REPORTED"
     }
   },
@@ -2923,6 +2925,34 @@
       ],
       "tower_revision": "sha256:2f1c5949146717e917d2dae85a673dee9b081ba48f99b4ce9a8035fdadc60a55"
     },
+    "inbox/scheduled-guardiao-integrity-20261004t1315z.json": {
+      "fingerprint": "874d1f09efbe61db8a99d9fdcdc713bd77d237647e3dc118cdc225b860a07197",
+      "observed_at": "2026-10-04T13:18:30Z",
+      "outcome": "APPLIED",
+      "receipt_ids": [
+        "OR-365d8db8c338e092862df443049d9a5f"
+      ],
+      "receipts": [
+        {
+          "contract": "OPERATION_RECEIPT_V1",
+          "effect_id": "envelope-2ac54dfc872e874cc6a34d9d6c94dd79",
+          "intent_id": "gateway:tcc-2f0145f79e5a07269ad7a82f18296367",
+          "observed_at": "2026-10-04T13:18:03.660847Z",
+          "occurred_at": "2026-10-04T13:18:03.660833Z",
+          "outcome": "APPLIED",
+          "payload_sha256": "sha256:f01176d2923bf56ebd55fcbddd769ed8ecefcdb8284a3708f5c528b481b33481",
+          "reason_code": null,
+          "receipt_id": "OR-365d8db8c338e092862df443049d9a5f",
+          "result_revision": "sha256:6d1f5fec9b8610f8464ca9dd790ce4631adf6ec72f8c49eed920a255de41b30d",
+          "retry_condition": null,
+          "source_revision": "sha256:047749f8066138500457090d8103f4b255d2690ea8f4b5a20f9d5e4fa5b31edb",
+          "stage": "APPLIED",
+          "supersedes": null,
+          "visibility": "PUBLIC"
+        }
+      ],
+      "tower_revision": "sha256:37eb33cd4b65e9329fb183dfc890753333de614596f82df6247ec998f32a862c"
+    },
     "inbox/scheduled-guardiao-integrity-256956b433317ea8.json": {
       "applied_at": "2026-09-30T23:44:02Z",
       "fingerprint": "da73edbdb43a397cac4244eac89204363b8db3724890b273f95e0d7948273fed",
@@ -3261,6 +3291,34 @@
         }
       ],
       "tower_revision": "sha256:70175e94f224a72e14ccc98d8a7f920dfcbea7c9fcdf03c55a371eb2157653f2"
+    },
+    "inbox/scheduled-guardiao-resumo-diario-20261004.json": {
+      "fingerprint": "e748938b65a3dd4413ef16ae83a2ba8a2948afbf825346864d9845551595df2e",
+      "observed_at": "2026-10-04T13:18:30Z",
+      "outcome": "APPLIED",
+      "receipt_ids": [
+        "OR-82d6eb763145a557f65ade418014f428"
+      ],
+      "receipts": [
+        {
+          "contract": "OPERATION_RECEIPT_V1",
+          "effect_id": "envelope-c769626a4cdc79e5a8adcbd4474b5143",
+          "intent_id": "gateway:tcc-532ba76e1d59def5d72374b50678d475",
+          "observed_at": "2026-10-04T13:18:06.984268Z",
+          "occurred_at": "2026-10-04T13:18:06.984251Z",
+          "outcome": "APPLIED",
+          "payload_sha256": "sha256:643aaba753136938f99d792a8246227700235a64c777d14c7e111933c2f0c42b",
+          "reason_code": null,
+          "receipt_id": "OR-82d6eb763145a557f65ade418014f428",
+          "result_revision": "sha256:72db78076b73181c9f2f16f1d79384ba8f0b7f8097f559bddc65185602158ac5",
+          "retry_condition": null,
+          "source_revision": "sha256:047749f8066138500457090d8103f4b255d2690ea8f4b5a20f9d5e4fa5b31edb",
+          "stage": "APPLIED",
+          "supersedes": null,
+          "visibility": "PUBLIC"
+        }
+      ],
+      "tower_revision": "sha256:37eb33cd4b65e9329fb183dfc890753333de614596f82df6247ec998f32a862c"
     },
     "inbox/scheduled-guardiao-write-block-20261002t2015z.json": {
       "fingerprint": "25ccb4c190fd34e293c201a7f4f645ecb361fbdcd9a30bc6b24ad6aa6a8c7db1",
