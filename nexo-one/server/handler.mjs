@@ -11,6 +11,7 @@ import {buildAtlasResearchView,RESEARCH_ROUTES} from './compiler/atlas-research-
 import {verifyProjectionService} from './auth/vercel-oidc.mjs';
 import {sameOrigin} from './auth/session.mjs';
 import {sessionAccess,sessionRoute} from './auth/session-route.mjs';
+import {googleDriveConsentRoute,googleDriveConsentReturn} from './auth/google-drive-consent.mjs';
 import {buildPersonalSnapshot,executePersonalAction} from './personal/service.mjs';
 import {createNexoMcpWebHandler,readNexoMcpStatus} from './mcp/server.mjs';
 import {summarizeConnectionHealth} from './health/connection-state.mjs';
@@ -157,6 +158,14 @@ export default async function handler(req,res) {
     if(route==='session'){
       const decision=sessionRoute(req,env,now,await requestBody(req));
       if(decision.setCookie)res.setHeader('Set-Cookie',decision.setCookie);
+      return send(decision.body,decision.status);
+    }
+    if(route==='google-drive-consent'||route==='google-drive-return'){
+      const decision=route==='google-drive-return'?googleDriveConsentReturn(req,env,now):
+        await googleDriveConsentRoute(req,env,now,{body:await requestBody(req)});
+      if(decision.setCookie)res.setHeader('Set-Cookie',decision.setCookie);
+      if(decision.location)res.setHeader('Location',decision.location);
+      res.setHeader('Referrer-Policy','no-referrer');
       return send(decision.body,decision.status);
     }
     if(route==='projection-sync'){

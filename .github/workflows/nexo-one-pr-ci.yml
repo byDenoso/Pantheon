@@ -44,6 +44,7 @@ jobs:
           npm run build
           npx playwright install --with-deps chromium
           npm run test:mcp-browser
+          node test/google-drive-consent.browser.mjs
 
       - name: Verify Atlas visual regression matrix
         working-directory: nexo-one
