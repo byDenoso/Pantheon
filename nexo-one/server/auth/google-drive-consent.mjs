@@ -1,7 +1,7 @@
 import {createHash,createHmac,randomBytes,timingSafeEqual} from 'node:crypto';
 import {startAuthorization} from '@vercel/connect';
 import {authenticated,sameOrigin} from './session.mjs';
-import {googleConnectToken,googleRuntimeEnvironment,GOOGLE_WRITE_SCOPES} from '../adapters/connect.mjs';
+import {googleConnectToken,googleRuntimeEnvironment,GOOGLE_SHEETS_SPOOL_SCOPES} from '../adapters/connect.mjs';
 import {readOperationalTower} from '../mcp/operational-state.mjs';
 import {SPOOL_ID} from '../mcp/operational-queue.mjs';
 
@@ -14,7 +14,7 @@ export const GOOGLE_DRIVE_CONSENT=Object.freeze({
 export const GOOGLE_SHEETS_SPOOL_CONSENT=Object.freeze({
   connector:GOOGLE_DRIVE_CONSENT.connector,
   subject:GOOGLE_DRIVE_CONSENT.subject,
-  scopes:Object.freeze([...GOOGLE_DRIVE_CONSENT.scopes,...GOOGLE_WRITE_SCOPES.sheets]),
+  scopes:GOOGLE_SHEETS_SPOOL_SCOPES,
   origin:GOOGLE_DRIVE_CONSENT.origin
 });
 export const GOOGLE_CONSENT_PROFILES=Object.freeze({

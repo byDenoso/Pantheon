@@ -13,6 +13,11 @@ export const GOOGLE_WRITE_SCOPES=Object.freeze({
   calendarEvent:Object.freeze(['https://www.googleapis.com/auth/calendar.events'])
 });
 
+// The operational spool uses the exact profile approved by the owner.
+export const GOOGLE_SHEETS_SPOOL_SCOPES=Object.freeze([
+  'https://www.googleapis.com/auth/drive.readonly',...GOOGLE_WRITE_SCOPES.sheets
+]);
+
 function connectorUrl(value){
   if(typeof value!=='string'||!value.trim())throw new ProviderError('AUTH_REQUIRED');
   const parts=value.trim().split('/');

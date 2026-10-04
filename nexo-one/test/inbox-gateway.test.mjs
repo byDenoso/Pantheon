@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {inboxDrop} from '../server/inbox-gateway.mjs';
+import {inboxDrop,readSpool} from '../server/inbox-gateway.mjs';
+import {GOOGLE_SHEETS_SPOOL_CONSENT} from '../server/auth/google-drive-consent.mjs';
 import {submit} from '../scripts/nexo-submit.mjs';
 
 const env={GOOGLE_CONNECTOR:'google/nexo-google',VERCEL_OIDC_TOKEN:'oidc-fixture',NEXO_SPOOL_ID:'spool-fixture'};
@@ -126,4 +127,38 @@ test('read-only GitHub token is not used as a write fallback when the Sheet spoo
     assert.equal(value.github_token_role,'READ_ONLY_COMPATIBILITY');
   });
   assert.equal(seen.some(entry=>entry.u.includes('api.github.com')),false);
+});
+
+test('spool requests the same granted profile as owner consent using the current request identity',async()=>{
+  const fx=sheetFixture(),requests=[];
+  const fetch=async(url,options={})=>{
+    if(String(url).includes('/v1/connect/token/')){
+      const body=JSON.parse(options.body);requests.push({body,authorization:options.headers.Authorization});
+      if(JSON.stringify(body.scopes)!==JSON.stringify(GOOGLE_SHEETS_SPOOL_CONSENT.scopes))
+        return Response.json({error:{code:'user_authorization_required'}},{status:403});
+    }
+    return fx.fetch(url,options);
+  };
+  await withFetch(fetch,async()=>{
+    const result=await readSpool({...env,VERCEL_OIDC_TOKEN:'stale-build-identity'},
+      {headers:{'x-vercel-oidc-token':'current-request-identity'}});
+    assert.equal(result.title,'Spool');
+  });
+  assert.equal(requests.length,1);
+  assert.deepEqual(requests[0].body,{subject:GOOGLE_SHEETS_SPOOL_CONSENT.subject,scopes:GOOGLE_SHEETS_SPOOL_CONSENT.scopes});
+  assert.equal(requests[0].authorization,'Bearer current-request-identity');
+  assert.equal(fx.seen.some(item=>item.method!=='GET'&&!item.u.includes('/connect/token/')),false);
+});
+
+test('a denied granted-profile request stops without another scope, identity or transport attempt',async()=>{
+  const calls=[];
+  await withFetch(async(url,options={})=>{
+    calls.push({url:String(url),body:JSON.parse(options.body)});
+    return Response.json({error:{code:'user_authorization_required'}},{status:403});
+  },async()=>{
+    await assert.rejects(readSpool({...env,GOOGLE_REFRESH_TOKEN:'unused',NEXO_INBOX_TOKEN:'unused'},{}),
+      error=>error.code==='AUTH_REQUIRED'&&error.googleDiagnostic==='CONNECT_USER_AUTHORIZATION_REQUIRED');
+  });
+  assert.equal(calls.length,1);
+  assert.deepEqual(calls[0].body,{subject:GOOGLE_SHEETS_SPOOL_CONSENT.subject,scopes:GOOGLE_SHEETS_SPOOL_CONSENT.scopes});
 });
