@@ -1,6 +1,6 @@
 {
   "acked": {},
-  "base_commit": "42a3d15463441d7958fed10fd7a8a19236ffd581",
+  "base_commit": "82c9bdd72ce0ae19f1dbe0794515d7fa217819eb",
   "blob_index_complete": true,
   "blobs": {
     "inbox/20260925T101213Z-BATCH-referee2.json": "bba0461f9a58d6ee6781d525ef62d3bfa5481908",
@@ -275,6 +275,7 @@
     "inbox/scheduled-guardiao-integrity-843309583b848e26.json": "d330e80f724abd22c987cf7359dd5dba62677a84",
     "inbox/scheduled-guardiao-integrity-88536298f7a69178.json": "644405b6559d7d52c30a0c58869c5a89c34f7099",
     "inbox/scheduled-guardiao-pr419-self-review-b798abfd.json": "25d94b336d043d298bd6e0b63dd474fedddd0670",
+    "inbox/scheduled-guardiao-pr420-self-review-51837430.json": "2299daeaa9943fc9e06fc27c0db42c0c77bb73d7",
     "inbox/scheduled-guardiao-recipe-review-pr395-1cd39cd5.json": "1013a96b3e8f94c69f514dff1e043611565ef93a",
     "inbox/scheduled-guardiao-recipe-review-pr395-4271a90a.json": "cf38a67cb25c710522b162069084622ce47ee9d0",
     "inbox/scheduled-guardiao-recipe-review-pr395-c90f8752.json": "69397065d84175d60247a0ffa7d72309687166c5",
@@ -634,13 +635,13 @@
     "inbox/scheduled-executor-batch-646a1ab8f0f2860e.json": {
       "blob_sha": "4ec491f1dbaccce3b010351e7d1ec07910cfdfdd",
       "fingerprint": "6a3fb67521690ac71e34dabaa416d3d166c7fa794ea9a13428d66d8c3ad6f347",
-      "observed_at": "2026-10-04T13:19:35Z",
+      "observed_at": "2026-10-04T13:24:28Z",
       "reason": "NOT_REPORTED"
     },
     "inbox/scheduled-refutador-batch-71ed43b5cf944d50.json": {
       "blob_sha": "a31b0df1cd4b35dad88f8a4bcdf660b535ffe89f",
       "fingerprint": "16245cde098d804253493aae8090e9e53d5677d3fd1a01d5a9b0be1a631c7d04",
-      "observed_at": "2026-10-04T13:19:35Z",
+      "observed_at": "2026-10-04T13:24:28Z",
       "reason": "NOT_REPORTED"
     }
   },
@@ -3028,6 +3029,34 @@
         }
       ],
       "tower_revision": null
+    },
+    "inbox/scheduled-guardiao-pr420-self-review-51837430.json": {
+      "fingerprint": "6854a16db3752a0164dcd66af6a442ca036b178664d8c9a8b38bbbcace6c01fa",
+      "observed_at": "2026-10-04T13:24:28Z",
+      "outcome": "APPLIED",
+      "receipt_ids": [
+        "OR-0365e1949945f511797c30ea2bbf724d"
+      ],
+      "receipts": [
+        {
+          "contract": "OPERATION_RECEIPT_V1",
+          "effect_id": "envelope-3767303b4550ddfd7d73ec55626953c3",
+          "intent_id": "gateway:tcc-354a09167a00dcb35c7b6cbcd29c9192",
+          "observed_at": "2026-10-04T13:24:04.683608Z",
+          "occurred_at": "2026-10-04T13:24:04.683589Z",
+          "outcome": "APPLIED",
+          "payload_sha256": "sha256:a3a05404de2a179db61df97d63fb038f26fe6f466df8f90e69a0943780172b20",
+          "reason_code": null,
+          "receipt_id": "OR-0365e1949945f511797c30ea2bbf724d",
+          "result_revision": "sha256:6be1cabeb8592260b7fc05acffe46c18614b45ed17945fdd1f0499119afa545b",
+          "retry_condition": null,
+          "source_revision": "sha256:047749f8066138500457090d8103f4b255d2690ea8f4b5a20f9d5e4fa5b31edb",
+          "stage": "APPLIED",
+          "supersedes": null,
+          "visibility": "PUBLIC"
+        }
+      ],
+      "tower_revision": "sha256:680f9652bbd652e2a76457a3f01f8a18079d03f1399de2c4f782e4e336b92b15"
     },
     "inbox/scheduled-guardiao-recipe-review-pr395-1cd39cd5.json": {
       "applied_at": "2026-10-01T19:17:07Z",
