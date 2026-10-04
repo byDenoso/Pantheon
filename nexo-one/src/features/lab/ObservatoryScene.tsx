@@ -8,6 +8,7 @@ import { BufferAttribute, BufferGeometry, Color, Matrix4, PerspectiveCamera, Sce
 import type { TestEntity, Verdict } from './model.ts';
 import { normDomain } from './domains.ts';
 import { createCosmicDynamics } from './cosmicDynamics.ts';
+import { environmentStride } from './vector-budget.ts';
 
 /** Fenômenos da teia: o que o NEXO faz agora, na escala certa (galáxias ativas, não estrelas).
  *  Quasar = decisão sua · AGN com jatos = testes rodando/na fila · GRB = pensamento novo. */
@@ -567,15 +568,17 @@ export function ObservatoryScene({ tests, page, focusIds, onPick, onAvailability
     const projectPaths = (geo: BufferGeometry, index: number, deform: boolean, time: number, omit = 1) => {
       const positions = geo.getAttribute('position'), tints = geo.getAttribute('tint'), sizes = geo.getAttribute('size'), pulses = geo.getAttribute('pulse'), seeds = geo.getAttribute('seed'), nodesAttr = geo.getAttribute('node');
       const groups = new Map<string, string[]>();
+      // Layout dimensions are constant during this projection, not per vertex.
+      const m = clipMatrix.elements, viewportWidth = el.clientWidth || window.innerWidth, viewportHeight = el.clientHeight || window.innerHeight;
       for (let i = 0; i < positions.count; i += omit) {
         let x=positions.getX(i), y=positions.getY(i), z=positions.getZ(i), pulse=pulses.getX(i), seed=seeds.getX(i);
         if (deform) { const nx=nodesAttr.getX(i), ny=nodesAttr.getY(i), nz=nodesAttr.getZ(i), dx=nx-x, dy=ny-y, dz=nz-z, distance=Math.hypot(dx,dy,dz), evo=uniforms.evo.value, outward=Math.min(1,Math.max(0,(distance-.6)/2.6))*.75*evo, norm=Math.hypot(x,y,z)||1, breath=Math.sin(time*.07+seed*6.28)*.015; x+=(dx*.3*evo)+x/norm*outward+dx*breath; y+=(dy*.3*evo)+y/norm*outward+dy*breath; z+=(dz*.3*evo)+z/norm*outward+dz*breath; }
-        const m = clipMatrix.elements, px = x * expansion, py = y * expansion, pz = z * expansion;
+        const px = x * expansion, py = y * expansion, pz = z * expansion;
         const cx=m[0]!*px+m[4]!*py+m[8]!*pz+m[12]!, cy=m[1]!*px+m[5]!*py+m[9]!*pz+m[13]!, cz=m[2]!*px+m[6]!*py+m[10]!*pz+m[14]!, cw=m[3]!*px+m[7]!*py+m[11]!*pz+m[15]!;
         if (cw <= 0) continue;
         const ndcX=cx/cw, ndcY=cy/cw, ndcZ=cz/cw;
         if(ndcZ < -1 || ndcZ > 1 || Math.abs(ndcX)>1.05 || Math.abs(ndcY)>1.05) continue;
-        const sx=(ndcX*.5+.5)*(el.clientWidth||window.innerWidth), sy=(-ndcY*.5+.5)*(el.clientHeight||window.innerHeight), depth=Math.max(8,cam.dist), pulseFactor=1+pulse*.32*Math.sin(time*2.4+seed*6.28), radius=Math.max(.45,Math.min(6,sizes.getX(i)*18/Math.max(8,cw)*pulseFactor*.14)), alpha=Math.round(Math.max(.16,Math.min(.95,(.45+.45*pulseFactor)*(light?.62:1)))*4)/4;
+        const sx=(ndcX*.5+.5)*viewportWidth, sy=(-ndcY*.5+.5)*viewportHeight, pulseFactor=1+pulse*.32*Math.sin(time*2.4+seed*6.28), radius=Math.max(.45,Math.min(6,sizes.getX(i)*18/Math.max(8,cw)*pulseFactor*.14)), alpha=Math.round(Math.max(.16,Math.min(.95,(.45+.45*pulseFactor)*(light?.62:1)))*4)/4;
         const color=rgb(tints.getX(i),tints.getY(i),tints.getZ(i)), width=Math.max(1,Math.round(radius*2*2)/2), key=`${color}|${alpha}|${width}`, d=`M${sx.toFixed(1)},${sy.toFixed(1)}h.01`, list=groups.get(key); if(list) list.push(d); else groups.set(key,[d]);
       }
       updateLayer(index, groups);
@@ -600,7 +603,9 @@ export function ObservatoryScene({ tests, page, focusIds, onPick, onAvailability
     };
     const renderVectors = (time: number) => {
       updateProjectionMatrix();
-      const qualityStep = quality === 'low' ? 3 : quality === 'medium' ? 2 : 1;
+      // Bound decorative projection even as the publication gains hypotheses.
+      // Every published test and event retains stride 1 and remains selectable.
+      const qualityStep = environmentStride(webGeo.getAttribute('position').count, quality);
       projectPaths(webGeo,0,true,time,qualityStep); projectPaths(starGeo,1,false,time,1); projectPaths(qsoGeo,2,false,time,1);
       renderJets(time);
       const bounds=boxGeo.getAttribute('position'), lines:string[]=[],m=clipMatrix.elements,bw=el.clientWidth||window.innerWidth,bh=el.clientHeight||window.innerHeight;
@@ -744,4 +749,3 @@ export function ObservatoryScene({ tests, page, focusIds, onPick, onAvailability
     </div>
   </div>;
 }
-

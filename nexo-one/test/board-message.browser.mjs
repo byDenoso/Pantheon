@@ -34,36 +34,39 @@ assert.ok(latest, 'published board input required for this focused QA');
 const base = process.env.NEXO_BASE_URL || 'http://127.0.0.1:4187';
 const output = process.env.NEXO_QA_OUTPUT || 'test-output/board-message';
 await mkdir(output, { recursive: true });
-const browser = await chromium.launch({ headless: true, ...(process.env.CHROMIUM_EXECUTABLE ? { executablePath: process.env.CHROMIUM_EXECUTABLE } : {}), args: ['--no-sandbox', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'] });
+const browser = await chromium.launch({ headless: true, ...(process.env.CHROMIUM_EXECUTABLE ? { executablePath: process.env.CHROMIUM_EXECUTABLE } : {}), args: ['--no-sandbox'] });
 const reports = [];
 const noOverflow = async page => assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), 'horizontal overflow');
 const ready = async page => {
   await page.evaluate(() => document.fonts.ready);
   await page.waitForFunction(() => Number(getComputedStyle(document.querySelector('.hud')).opacity) === 1 && !document.querySelector('[data-writing="true"],[data-counting="true"]'));
+  await page.locator('.obs-scene svg[data-tower-svg-native="observatory"][data-ready="true"]').waitFor();
+  assert.equal(await page.locator('.observatory.scene-unavailable').count(), 0, 'SVG does not require WebGL');
+  assert.equal(await page.locator('[data-tower-svg-host]').count(), 0, 'no duplicate page surface');
 };
 try {
-  for (const [name, width, height, theme, reduced, fallback] of [
+  for (const [name, width, height, theme, reduced, webglDisabled] of [
     ['desktop', 1440, 1000, 'dark', false, false], ['iphone', 390, 844, 'dark', false, false],
     ['narrow-mobile', 320, 700, 'dark', false, false], ['iphone-reduced', 390, 844, 'dark', true, false],
-    ['iphone-light-fallback', 390, 844, 'light', true, true],
+    ['iphone-light-no-webgl', 390, 844, 'light', true, true],
   ]) {
     const context = await browser.newContext({ viewport: { width, height }, locale: 'pt-BR', reducedMotion: reduced ? 'reduce' : 'no-preference', isMobile: width < 760, hasTouch: width < 760 });
     const page = await context.newPage();
     const errors = [];
     page.on('pageerror', error => errors.push(error.message));
     await page.clock.install({ time: now });
-    await page.addInitScript(({ theme, fallback }) => {
+    await page.addInitScript(({ theme, webglDisabled }) => {
       localStorage.setItem('nexo-theme', theme); localStorage.setItem('nexo.intro.seen', '1'); localStorage.setItem('nexo.legend.seen', '1'); localStorage.setItem('nexo.quality', 'low');
-      if (fallback) {
+      if (webglDisabled) {
         const get = HTMLCanvasElement.prototype.getContext;
         HTMLCanvasElement.prototype.getContext = function(kind, ...args) { return /^webgl/.test(kind) ? null : get.call(this, kind, ...args); };
       }
-    }, { theme, fallback });
+    }, { theme, webglDisabled });
     await page.route('**/api/session', route => route.fulfill({ json: { configured: false, authenticated: false } }));
     await page.route('**/api/system*', route => route.fulfill({ json: system }));
     await page.route('**/build-meta.json*', route => route.fulfill({ json: { projection_fingerprint: projection.manifest.projection_fingerprint } }));
+    // The legacy cockpit URL now routes directly to the same observatory page.
     await page.goto(base + '/#/cockpit/comando');
-    await page.getByRole('button', { name: 'Abrir observatório' }).click();
     const focus = page.locator('.board-focus');
     await focus.waitFor(); await ready(page); await noOverflow(page);
     assert.equal(await focus.locator('.board-text').textContent(), latest.text, 'literal original preserved');
@@ -76,7 +79,7 @@ try {
     if (!input) await page.addStyleTag({ content: 'body::after{content:"FIXTURE · DADOS SINTÉTICOS · SOMENTE TESTE";position:fixed;left:8px;bottom:3px;z-index:9999;background:#15120c;color:#f4e4bd;padding:3px 6px;font:10px system-ui;pointer-events:none}' });
     await page.screenshot({ path: output + '/' + name + '-opening.png' });
     assert.ok(originalBounds.y < Math.min(height - 60, hudBounds.y + hudBounds.height) - 20, name + ': original message starts in the opening viewport; ' + JSON.stringify({ originalY: originalBounds.y, hud: hudBounds }));
-    if (width < 760 && !fallback) {
+    if (width < 760) {
       await page.getByRole('button', { name: 'Explorar a teia' }).waitFor();
       const diagnostics = await page.evaluate(() => {
         const bounds = selector => {
@@ -92,9 +95,7 @@ try {
       assert.ok(diagnostics.toggle.bottom <= diagnostics.hero.y, 'exploration control stays outside the hero');
       assert.ok(diagnostics.scene.bottom <= diagnostics.hud.y + 1, 'reading panel starts below the sky');
     }
-    if (!input) {
-      assert.equal(await focus.locator('.board-state').innerText(), 'Aguardando resposta');
-    }
+    if (!input) assert.equal(await focus.locator('.board-state').innerText(), 'Aguardando resposta');
     const more = focus.getByRole('button', { name: 'Ler recado inteiro' });
     if (await more.count()) {
       await more.click();
@@ -113,7 +114,7 @@ try {
     const firstLink = focus.locator('.board-evidence a[href^="#/e/"]').first();
     if (await firstLink.count()) {
       await firstLink.click(); await page.locator('.h1-entity').waitFor();
-      await page.goBack(); await page.getByRole('button', { name: 'Abrir observatório' }).click(); await focus.waitFor(); await ready(page);
+      await page.goBack(); await focus.waitFor(); await ready(page);
     }
     await focus.getByRole('button', { name: 'Ver todos os recados' }).click();
     const waitForOpenBoard = () => page.waitForFunction(total => {
@@ -160,7 +161,7 @@ try {
     const motions = await focus.evaluate(el => el.getAnimations({ subtree: true }).filter(animation => animation.playState === 'running').length);
     assert.equal(motions, 0, 'no message activity animation');
     assert.deepEqual(errors, [], name + ': page errors');
-    reports.push({ name, input: input ? 'public-projection' : 'synthetic-test-only', focusY: bounds.y, originalY: originalBounds.y, literal: true, keyboardFocus: true, repeatedOpen: true, filters: true, mobileControlBounds: width < 760 && !fallback, reducedMotion: reduced, webglFallback: fallback, errors });
+    reports.push({ name, input: input ? 'public-projection' : 'synthetic-test-only', focusY: bounds.y, originalY: originalBounds.y, literal: true, keyboardFocus: true, repeatedOpen: true, filters: true, mobileControlBounds: width < 760, reducedMotion: reduced, webglDisabled, renderer: 'svg', errors });
     await context.close();
   }
 } finally { await browser.close(); }
