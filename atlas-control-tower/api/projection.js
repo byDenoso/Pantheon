@@ -1,13 +1,5 @@
-import {driveGraph,DRIVE_SSOT_META} from '../lib/drive-ssot.mjs';
-
-const queryOf=req=>{const u=new URL(req.url||'/','https://atlas.local');const q=Object.fromEntries(u.searchParams);delete q.route;return q};
-const send=(res,status,payload)=>{res.statusCode=status;res.setHeader('Content-Type','application/json; charset=utf-8');res.setHeader('Cache-Control','public, max-age=60, stale-while-revalidate=300');res.setHeader('X-Atlas-Authority','GOOGLE_DRIVE');return res.end(JSON.stringify(payload))};
-const failureState=error=>/permission|forbidden|unauthor/i.test(String(error?.message||error))?'PERMISSION_ERROR':'SOURCE_UNAVAILABLE';
-
-export default async function handler(req,res){
- if(req.method!=='GET')return send(res,405,{ok:false,error:'READ_ONLY_DRIVE_SSOT'});
- const q=queryOf(req);
- if(q.describe==='1')return send(res,200,{contract:'drive-ssot-v1',authority:'GOOGLE_DRIVE',projectionOnly:true,sourceFileId:DRIVE_SSOT_META.sourceFileId,levels:['atlas','domain','detail']});
- try{return send(res,200,driveGraph(q))}
- catch(error){return send(res,503,{ok:false,state:failureState(error),error:String(error?.message||error),authority:'GOOGLE_DRIVE',projectionOnly:true})}
-}
+const SOURCE='https://nexo-one-two.vercel.app/api/system';
+async function tower(){const r=await fetch(SOURCE,{headers:{Accept:'application/json'},signal:AbortSignal.timeout(10000)});if(!r.ok)throw new Error('TOWER_PUBLIC_'+r.status);const s=await r.json();if(s?.science_projection_v1?.source?.authority!=='TOWER_V06')throw new Error('NON_TOWER_AUTHORITY');return s}
+const q=req=>Object.fromEntries(new URL(req.url||'/','https://atlas.local').searchParams);
+const send=(res,status,payload)=>{res.statusCode=status;res.setHeader('Content-Type','application/json; charset=utf-8');res.setHeader('Cache-Control','public, max-age=60, stale-while-revalidate=120');res.setHeader('X-Atlas-Authority','TOWER_V06');return res.end(JSON.stringify(payload))};
+export default async function handler(req,res){if(req.method!=='GET')return send(res,405,{ok:false,error:'READ_ONLY_TOWER_V06'});try{const s=await tower(),query=q(req),focus=query.focus||'system:NEXO',nodes=s.graph?.nodes||[],edges=s.graph?.edges||[];return send(res,200,{source:'tower_v06',freshness:'LIVE',sourceVersion:s.generated_at,fingerprint:s.bus?.fingerprint||s.science_projection_v1?.source?.projection_fingerprint||null,authority:'TOWER_V06',projectionOnly:true,sourceRef:s.bus?.source_ref||s.science_projection_v1?.source?.projection_ref||null,focus,nodes,edges,total:nodes.length,hasMore:false,truncated:false,depth:query.depth?Number(query.depth):null})}catch(e){return send(res,503,{ok:false,error:'TOWER_V06_UNAVAILABLE',detail:String(e?.message||e)})}}
