@@ -38,14 +38,14 @@
     },
     "contract": "BATTERY_RUN_CURSOR_V1",
     "last_acknowledged_count": 0,
-    "last_canonical_check": "2026-10-05T21:36:30Z",
+    "last_canonical_check": "2026-10-05T21:52:03Z",
     "pending": {
       "36149285633:1": {
         "battery_id": "bat-runner-canary-1",
         "created_at": "2026-09-25T14:42:31Z",
-        "last_attempted_at": "2026-10-05T21:36:30Z",
+        "last_attempted_at": "2026-10-05T21:52:03Z",
         "reason": "ARTIFACT_NOT_AVAILABLE",
-        "retry_count": 41,
+        "retry_count": 42,
         "run_attempt": 1,
         "run_id": 36149285633,
         "run_key": "36149285633:1",
@@ -61,9 +61,9 @@
         "created_at": "2026-09-28T02:27:21Z",
         "input_sha256": "sha256:b329852f192f99fa6c0601b51ffb0082f9673f2c2ae7cef0c4ae610df0b43ae2",
         "invocation_sha256": "legacy",
-        "last_attempted_at": "2026-10-05T21:36:30Z",
+        "last_attempted_at": "2026-10-05T21:52:03Z",
         "reason": "ARTIFACT_NOT_AVAILABLE",
-        "retry_count": 41,
+        "retry_count": 42,
         "run_attempt": 1,
         "run_id": 36369882601,
         "run_key": "36369882601:1",
@@ -78,9 +78,9 @@
         "battery_id": "bat-executor-20260928-w0wa-ready-01",
         "input_sha256": "sha256:10651a092b17ce05f58c9682176cb5e877f9467c7b4022349ee5b3a87172722c",
         "invocation_sha256": null,
-        "last_attempted_at": "2026-10-05T21:36:30Z",
+        "last_attempted_at": "2026-10-05T21:52:03Z",
         "reason": "REJECTED_TERMINAL",
-        "retry_count": 41,
+        "retry_count": 42,
         "run_attempt": 1,
         "run_id": 36464310475,
         "run_ref": "actions/runs/36464310475"
@@ -94,9 +94,9 @@
         "created_at": "2026-09-28T20:07:39Z",
         "input_sha256": "sha256:f6dfa8aead6f83ca58fd56e4d5b40a89566eba16b768e63304ebc87566549779",
         "invocation_sha256": "legacy",
-        "last_attempted_at": "2026-10-05T21:36:30Z",
+        "last_attempted_at": "2026-10-05T21:52:03Z",
         "reason": "ARTIFACT_NOT_AVAILABLE",
-        "retry_count": 41,
+        "retry_count": 42,
         "run_attempt": 1,
         "run_id": 36476984753,
         "run_key": "36476984753:1",
@@ -111,9 +111,9 @@
         "battery_id": "bat-fam-w0wa-bao-sn-multi-0929t0257",
         "input_sha256": "sha256:3b3a66483b427ec109ced3593303d756432b311c129edd144eb3e248acd4e1c4",
         "invocation_sha256": "legacy",
-        "last_attempted_at": "2026-10-05T21:36:30Z",
+        "last_attempted_at": "2026-10-05T21:52:03Z",
         "reason": "DEFERRED_DEPENDENCY",
-        "retry_count": 41,
+        "retry_count": 42,
         "run_attempt": 1,
         "run_id": 36514999485,
         "run_ref": "actions/runs/36514999485"
@@ -126,9 +126,9 @@
         "battery_id": "bat-fam-w0wa-bao-sn-multi-0929t0351",
         "input_sha256": "sha256:f84504e520e1b0ba5daff34ec612ec658ba5e7bc98bf722edf22f8a6094cf7a4",
         "invocation_sha256": "legacy",
-        "last_attempted_at": "2026-10-05T21:36:30Z",
+        "last_attempted_at": "2026-10-05T21:52:03Z",
         "reason": "DEFERRED_DEPENDENCY",
-        "retry_count": 41,
+        "retry_count": 42,
         "run_attempt": 1,
         "run_id": 36519006280,
         "run_ref": "actions/runs/36519006280"
@@ -141,9 +141,9 @@
         "battery_id": "bat-fam-w0wa-bao-sn-multi-0929t0352",
         "input_sha256": "sha256:ea59c349152d7319132aa9daff25ab8ba2f7fabcd7ab519be937c2c6d04b6b63",
         "invocation_sha256": "legacy",
-        "last_attempted_at": "2026-10-05T21:36:30Z",
+        "last_attempted_at": "2026-10-05T21:52:03Z",
         "reason": "DEFERRED_DEPENDENCY",
-        "retry_count": 40,
+        "retry_count": 41,
         "run_attempt": 1,
         "run_id": 36519092316,
         "run_ref": "actions/runs/36519092316"
@@ -156,9 +156,9 @@
         "battery_id": "bat-fam-tower-native-0929t0434",
         "input_sha256": "sha256:b6c582a59d6fafc65cd5f843d7050017d4573f7bc3f5b68f85fa14e55a253751",
         "invocation_sha256": "legacy",
-        "last_attempted_at": "2026-10-05T20:47:20Z",
+        "last_attempted_at": "2026-10-05T21:52:03Z",
         "reason": "DEFERRED_DEPENDENCY",
-        "retry_count": 34,
+        "retry_count": 35,
         "run_attempt": 1,
         "run_id": 36522286020,
         "run_ref": "actions/runs/36522286020"
@@ -171,9 +171,9 @@
         "battery_id": "bat-fam-w0wa-bao-sn-multi-0929t0541",
         "input_sha256": "sha256:fff959f73149f6f5d7f98eae4811c2c7e1a6415e75ee5ce9ca7578236e6deac3",
         "invocation_sha256": "legacy",
-        "last_attempted_at": "2026-10-05T20:47:20Z",
+        "last_attempted_at": "2026-10-05T21:52:03Z",
         "reason": "DEFERRED_DEPENDENCY",
-        "retry_count": 34,
+        "retry_count": 35,
         "run_attempt": 1,
         "run_id": 36527341457,
         "run_ref": "actions/runs/36527341457"
@@ -186,9 +186,9 @@
         "battery_id": "bat-fam-w0wa-bao-sn-multi-0929t0542",
         "input_sha256": "sha256:a8820ba4e8e0c99e112ea95faec36e9d18b9213e303b1fbd3c8b18c3d02d01f3",
         "invocation_sha256": "legacy",
-        "last_attempted_at": "2026-10-05T20:47:20Z",
+        "last_attempted_at": "2026-10-05T21:52:03Z",
         "reason": "DEFERRED_DEPENDENCY",
-        "retry_count": 34,
+        "retry_count": 35,
         "run_attempt": 1,
         "run_id": 36527451683,
         "run_ref": "actions/runs/36527451683"
@@ -201,9 +201,9 @@
         "battery_id": "bat-fam-w0wa-bao-sn-multi-0929t0543",
         "input_sha256": "sha256:c12ab92efa904d655f76fdae13a49e12b9c75cc18ed695a4f9443eea1bef7b97",
         "invocation_sha256": "legacy",
-        "last_attempted_at": "2026-10-05T21:16:43Z",
+        "last_attempted_at": "2026-10-05T21:52:03Z",
         "reason": "DEFERRED_DEPENDENCY",
-        "retry_count": 33,
+        "retry_count": 34,
         "run_attempt": 1,
         "run_id": 36527569285,
         "run_ref": "actions/runs/36527569285"
@@ -216,9 +216,9 @@
         "battery_id": "bat-w0wa-robustness-20260928-01",
         "input_sha256": "sha256:7277444cd20733ca78cea7229cdb0fc7e6c7ee4f132bd81e8daa6ec1a88378fe",
         "invocation_sha256": "legacy",
-        "last_attempted_at": "2026-10-05T21:16:43Z",
+        "last_attempted_at": "2026-10-05T21:52:03Z",
         "reason": "DEFERRED_DEPENDENCY",
-        "retry_count": 33,
+        "retry_count": 34,
         "run_attempt": 1,
         "run_id": 36527694292,
         "run_ref": "actions/runs/36527694292"
@@ -231,9 +231,9 @@
         "battery_id": "bat-fam-w0wa-bao-sn-multi-0929t0558",
         "input_sha256": "sha256:af19f1eea1a17a43041a8f56207d5bf21fc4d682f4bded10ba1e4a9055b08879",
         "invocation_sha256": "legacy",
-        "last_attempted_at": "2026-10-05T21:16:43Z",
+        "last_attempted_at": "2026-10-05T21:52:03Z",
         "reason": "DEFERRED_DEPENDENCY",
-        "retry_count": 33,
+        "retry_count": 34,
         "run_attempt": 1,
         "run_id": 36528713850,
         "run_ref": "actions/runs/36528713850"
@@ -366,9 +366,9 @@
         "battery_id": "bat-fam-w0wa-bao-sn-multi-0929t2322",
         "input_sha256": "sha256:2e6c070dfec152a4f16e50711532e289fccfe7d593153d4422c6764f0d6d05c5",
         "invocation_sha256": "legacy",
-        "last_attempted_at": "2026-10-05T20:47:20Z",
+        "last_attempted_at": "2026-10-05T21:52:03Z",
         "reason": "DEFERRED_DEPENDENCY",
-        "retry_count": 31,
+        "retry_count": 32,
         "run_attempt": 1,
         "run_id": 36644879989,
         "run_ref": "actions/runs/36644879989"
@@ -381,9 +381,9 @@
         "battery_id": "bat-fam-desi-dr1-fullshape-0929t2323",
         "input_sha256": "sha256:d9aa8dea0d5c7c47d5a4c5e538cc55233236f0b8e4ea2fbef77cf6fe6f753a79",
         "invocation_sha256": "legacy",
-        "last_attempted_at": "2026-10-05T20:47:20Z",
+        "last_attempted_at": "2026-10-05T21:52:03Z",
         "reason": "DEFERRED_DEPENDENCY",
-        "retry_count": 31,
+        "retry_count": 32,
         "run_attempt": 1,
         "run_id": 36645015139,
         "run_ref": "actions/runs/36645015139"
@@ -396,9 +396,9 @@
         "battery_id": "bat-fam-w0wa-bao-sn-multi-0929t2327",
         "input_sha256": "sha256:4caf49045fc2b5294bd8b669a56558d06a998527127f97fd44a74658fdf59f08",
         "invocation_sha256": "legacy",
-        "last_attempted_at": "2026-10-05T20:47:20Z",
+        "last_attempted_at": "2026-10-05T21:52:03Z",
         "reason": "DEFERRED_DEPENDENCY",
-        "retry_count": 30,
+        "retry_count": 31,
         "run_attempt": 1,
         "run_id": 36645283227,
         "run_ref": "actions/runs/36645283227"
@@ -411,9 +411,9 @@
         "battery_id": "bat-fam-tower-native-0930t0013",
         "input_sha256": "sha256:ac0694b9dce06a9110475e0acbe3e3bfaf44f115d767f448e526da5827bdb2e9",
         "invocation_sha256": "legacy",
-        "last_attempted_at": "2026-10-05T20:47:20Z",
+        "last_attempted_at": "2026-10-05T21:52:03Z",
         "reason": "DEFERRED_DEPENDENCY",
-        "retry_count": 33,
+        "retry_count": 34,
         "run_attempt": 1,
         "run_id": 36649308907,
         "run_ref": "actions/runs/36649308907"
@@ -891,9 +891,9 @@
         "battery_id": "bat-fam-82c3c847076778cc8ec62e09008c0aa7",
         "input_sha256": "sha256:eccc3d23ce24aa46ab5f663608dcae93b77cd595b2e65ff15c1a8c2bc66cec7a",
         "invocation_sha256": "legacy",
-        "last_attempted_at": "2026-10-05T19:31:31Z",
+        "last_attempted_at": "2026-10-05T21:52:03Z",
         "reason": "REJECTED_TERMINAL",
-        "retry_count": 27,
+        "retry_count": 28,
         "run_attempt": 1,
         "run_id": 36922968065,
         "run_ref": "actions/runs/36922968065"
@@ -906,9 +906,9 @@
         "battery_id": "bat-fam-f13c5074e987a1c19da7fbd3c58ec8fa",
         "input_sha256": "sha256:a44844555e35d29a1dca1c9431d15681e02146ef15591b61786e2663e41a877a",
         "invocation_sha256": "legacy",
-        "last_attempted_at": "2026-10-05T19:31:31Z",
+        "last_attempted_at": "2026-10-05T21:52:03Z",
         "reason": "REJECTED_TERMINAL",
-        "retry_count": 27,
+        "retry_count": 28,
         "run_attempt": 1,
         "run_id": 36924123835,
         "run_ref": "actions/runs/36924123835"
@@ -921,9 +921,9 @@
         "battery_id": "bat-fam-22552c95141cb1fd63468a7163335b4f",
         "input_sha256": "sha256:0e78e0321bfd1cad644ed56653b27a67fe24d1f03e9deb570d59a9cfbded1a6f",
         "invocation_sha256": "legacy",
-        "last_attempted_at": "2026-10-05T19:31:31Z",
+        "last_attempted_at": "2026-10-05T21:52:03Z",
         "reason": "REJECTED_TERMINAL",
-        "retry_count": 27,
+        "retry_count": 28,
         "run_attempt": 1,
         "run_id": 36924935590,
         "run_ref": "actions/runs/36924935590"
@@ -990,14 +990,14 @@
       }
     },
     "scan": {
-      "last_advanced_at": "2026-10-05T21:36:30Z",
-      "last_complete_at": "2026-10-05T21:28:51Z",
+      "last_advanced_at": "2026-10-05T21:52:03Z",
+      "last_complete_at": "2026-10-05T21:52:03Z",
       "last_full_sweep_at": "2026-10-05T21:28:51Z",
-      "next_page": 2,
+      "next_page": 1,
       "window": {
-        "end": "2026-10-05",
-        "start": "2026-01-01",
-        "through": "2026-10-05T21:28:51Z"
+        "end": "2025-12-31",
+        "start": "2025-01-01",
+        "through": "2025-12-31T23:59:59Z"
       },
       "window_queue": []
     }
@@ -1683,19 +1683,19 @@
     "inbox/scheduled-executor-batch-646a1ab8f0f2860e.json": {
       "blob_sha": "4ec491f1dbaccce3b010351e7d1ec07910cfdfdd",
       "fingerprint": "6a3fb67521690ac71e34dabaa416d3d166c7fa794ea9a13428d66d8c3ad6f347",
-      "observed_at": "2026-10-05T21:36:27Z",
+      "observed_at": "2026-10-05T21:52:01Z",
       "reason": "NOT_REPORTED"
     },
     "inbox/scheduled-learner-h0lcdm006-decision-contract-20261005.json": {
       "blob_sha": "af5082dffcf945b55bb9a5e00d42324e7f41943a",
       "fingerprint": "188de2073f1c3ff2529ca91069f02b6b796d6e01ab570fd70e6ecdc829f6a0fe",
-      "observed_at": "2026-10-05T21:36:27Z",
+      "observed_at": "2026-10-05T21:52:01Z",
       "reason": "DEFERRED_DEPENDENCY"
     },
     "inbox/scheduled-refutador-batch-71ed43b5cf944d50.json": {
       "blob_sha": "a31b0df1cd4b35dad88f8a4bcdf660b535ffe89f",
       "fingerprint": "16245cde098d804253493aae8090e9e53d5677d3fd1a01d5a9b0be1a631c7d04",
-      "observed_at": "2026-10-05T21:36:27Z",
+      "observed_at": "2026-10-05T21:52:01Z",
       "reason": "NOT_REPORTED"
     }
   },
@@ -5532,7 +5532,7 @@
     },
     "inbox/scheduled-learner-h0lcdm006-decision-contract-20261005.json": {
       "fingerprint": "188de2073f1c3ff2529ca91069f02b6b796d6e01ab570fd70e6ecdc829f6a0fe",
-      "observed_at": "2026-10-05T21:36:27Z",
+      "observed_at": "2026-10-05T21:52:01Z",
       "outcome": "DEFERRED_DEPENDENCY",
       "receipt_ids": [
         "OR-e3fb041607626a88b63d7495d1720197"
@@ -5542,7 +5542,7 @@
           "contract": "OPERATION_RECEIPT_V1",
           "effect_id": "envelope-6e41f4f148a3973c07eee52336177cd6",
           "intent_id": "gateway:tcc-680c3dba7d83c1adf55c0171e313a1de",
-          "observed_at": "2026-10-05T21:36:05.873746Z",
+          "observed_at": "2026-10-05T21:51:26.475331Z",
           "occurred_at": "2026-10-05T10:22:11.591758Z",
           "outcome": "DEFERRED_DEPENDENCY",
           "payload_sha256": "sha256:4400ed31ea9b0686426ad48c58d61c394ec9877366d9542ade1b60fa9212f032",
@@ -5558,7 +5558,7 @@
           "visibility": "PUBLIC"
         }
       ],
-      "tower_revision": "sha256:3dd59ff8391717e19635de35bc0ecee2f07227b3891a4fada5b41b8def4539de"
+      "tower_revision": "sha256:92428534a2f61ba25272049df8a1f99f55b397903b1c27a1c836db78b07c0e93"
     },
     "inbox/scheduled-learner-h0lcdm006-recipe-request-20261005.json": {
       "fingerprint": "edd50be7e5c626f108945c5c0f633a7fb74d956f108189289b01dd6b99285a31",
