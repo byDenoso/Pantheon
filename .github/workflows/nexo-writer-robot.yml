@@ -63,6 +63,7 @@ jobs:
           EOF
 
       - name: Reconcile Writer bundle with tested TCC main
+        continue-on-error: true
         id: bundle
         if: steps.cred.outputs.ok == 'true'
         env:
@@ -145,6 +146,7 @@ jobs:
           fi
 
       - name: Collect proposals from public TCC inbox
+        continue-on-error: true
         if: steps.cred.outputs.ok == 'true'
         env:
           TCC_REPO: byDenoso/TCC
@@ -155,6 +157,7 @@ jobs:
           python scripts/collect_tcc_inbox.py
 
       - name: Collect proposals from scheduled Sheet spool
+        continue-on-error: true
         if: steps.cred.outputs.ok == 'true'
         env:
           GOOGLE_SERVICE_ACCOUNT_JSON: ${{ secrets.NEXO_DRIVE_WRITER_JSON }}
@@ -207,6 +210,7 @@ jobs:
           PY
 
       - name: Collect finished test batteries
+        continue-on-error: true
         if: steps.cred.outputs.ok == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
@@ -240,6 +244,7 @@ jobs:
           python /tmp/nexo_gpt_writer.py robot
 
       - name: Dispatch queued test batteries
+        continue-on-error: true
         if: steps.robot.outputs.tower_revision != ''
         env:
           GH_TOKEN: ${{ github.token }}
@@ -256,6 +261,7 @@ jobs:
           for f in "${specs[@]}"; do id=$(basename "$f" .json); gh workflow run nexo-test-battery.yml --repo "$GITHUB_REPOSITORY" --ref main -f battery_id="$id"; echo "dispatched $id"; done
 
       - name: Record public TCC operation receipts
+        continue-on-error: true
         if: steps.cred.outputs.ok == 'true' && steps.robot.outcome == 'success'
         env:
           GH_TOKEN: ${{ github.token }}
@@ -334,6 +340,7 @@ jobs:
           PY
 
       - name: Acknowledge applied scheduled Sheet spool proposals
+        continue-on-error: true
         if: steps.robot.outputs.gateway_resolved != ''
         env:
           GH_TOKEN: ${{ github.token }}
@@ -392,6 +399,7 @@ jobs:
           PY
 
       - name: Signal the ATLAS (tower-head)
+        continue-on-error: true
         if: steps.robot.outputs.tower_revision != ''
         env:
           GH_TOKEN: ${{ github.token }}
@@ -442,12 +450,14 @@ jobs:
           PY
 
       - name: Rebuild the ATLAS now
+        continue-on-error: true
         if: steps.robot.outputs.tower_revision != ''
         env:
           GH_TOKEN: ${{ github.token }}
         run: gh workflow run nexo-one-pages.yml --ref main
 
       - name: Run the health alarm (hourly; GitHub drops the alarm's own schedule)
+        continue-on-error: true
         if: always()
         env:
           GH_TOKEN: ${{ github.token }}
@@ -456,6 +466,7 @@ jobs:
           if [ $(( $(date -u +%s) - $(date -u -d "$last" +%s) )) -ge 3000 ]; then gh workflow run nexo-alert.yml --ref main && echo "alarm dispatched"; else echo "alarm ran recently"; fi
 
       - name: Report writer bundle drift (one issue, closes itself)
+        continue-on-error: true
         if: always() && steps.bundle.outputs.drift != ''
         env:
           GH_TOKEN: ${{ github.token }}
