@@ -154,8 +154,9 @@ try {
     await page.screenshot({ path: output + '/' + name + '-home.png' });
     await page.evaluate(() => { location.hash = '#/e/FAM-DE-FS-GEOGROWTH-ELG-DESI-PP'; });
     await page.locator('.h1-entity').locator('..').waitFor();
-    assert.match(await page.locator('.h1-entity').locator('..').innerText(), /Rejeitado pelo critério/);
-    assert.doesNotMatch(await page.locator('.story').innerText().catch(() => ''), /Travei aqui/);
+    assert.match(await page.locator('.h1-entity').locator('..').innerText(), /Não atendeu ao critério do teste/);
+    await page.locator('.story').waitFor();
+    assert.equal(await page.locator('.story .beat-block').count(), 0, 'a rejected result is not an operational blocker');
     await noOverflow(page, name + ':rejected');
     await visualReady(page, name + ':rejected');
     await page.screenshot({ path: output + '/' + name + '-rejected.png' });
