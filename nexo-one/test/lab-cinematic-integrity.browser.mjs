@@ -1,7 +1,9 @@
-// Run against the local forced-remote dev server. Public input stays outside the deployed source.
+// Component visual QA on a loopback fixture entry. Explicit supplied public
+// projection input stays outside deployed source; default input is synthetic.
 import assert from 'node:assert/strict';
 import { readFile, mkdir, writeFile } from 'node:fs/promises';
 import { chromium } from 'playwright';
+import { legacyVisualUrl } from './helpers/legacy-visual-url.mjs';
 import { labVisualFixture } from './lab-visual-fixture.mjs';
 import { buildLab } from '../src/features/lab/model.ts';
 import { buildPagesProjection } from '../scripts/build-pages-system.mjs';
@@ -17,7 +19,7 @@ await mkdir(output, { recursive: true });
 const browser = await chromium.launch({ headless: true, ...(process.env.CHROMIUM_EXECUTABLE ? { executablePath: process.env.CHROMIUM_EXECUTABLE } : {}), args: ['--no-sandbox'] });
 const reports = [];
 const readiness = [];
-let activePage, activeName = 'published';
+let activePage, activeName = 'component-replay';
 // The current renderer groups projected samples into SVG paths. Measure that
 // real output, not retired WebGL buffer attributes or the unmounted AtlasPortal.
 const vectorReady = async (page, sampleBudget) => {
@@ -71,10 +73,11 @@ const noOverflow = async (page, route) => {
   assert.ok(size.scroll <= size.width + 1, route + ': horizontal overflow ' + JSON.stringify(size));
 };
 try {
-  const publishedResponse = await fetch('https://nexo-one-two.vercel.app/api/system', { signal: AbortSignal.timeout(30_000) });
-  assert.ok(publishedResponse.ok, 'published public system is readable for visual evidence');
-  const publishedSystem = await publishedResponse.json();
-  assert.ok(Object.keys(publishedSystem.read_model?.tests || {}).length > 0, 'published capture contains real tests');
+  // /api/system is private after migration. Anonymous denial is checked against
+  // the real handler in mcp-browser; rendering replays this test's explicit input.
+  const publishedSystem = system;
+  const replaySource = input ? 'SUPPLIED_PROJECTION_REPLAY' : 'SYNTHETIC_COMPONENT_REPLAY';
+  assert.ok(Object.keys(publishedSystem.read_model?.tests || {}).length > 0, 'visual replay contains source records');
   const publishedContext = await browser.newContext({ viewport: { width: 1600, height: 1000 }, locale: 'pt-BR', timezoneId: 'America/Sao_Paulo' });
   const publishedPage = activePage = await publishedContext.newPage();
   const publishedErrors = [];
@@ -82,12 +85,13 @@ try {
   await publishedPage.addInitScript(() => { localStorage.setItem('nexo-theme','dark'); localStorage.setItem('nexo.quality','medium'); localStorage.setItem('nexo.intro.seen','1'); localStorage.setItem('nexo.legend.seen','1'); });
   await publishedPage.route('**/api/session', route => route.fulfill({ json: { configured: false, authenticated: false } }));
   await publishedPage.route('**/api/system*', route => route.fulfill({ json: publishedSystem }));
-  await publishedPage.goto(base + '/#/agora');
+  await publishedPage.goto(legacyVisualUrl(base, '#/agora'));
   await publishedPage.locator('#now-problem').waitFor();
   await publishedPage.evaluate(() => document.fonts.ready);
   const publishedDiagnostics = await vectorReady(publishedPage, 42_000);
-  await publishedPage.screenshot({ path: output + '/published-atlas-svg.png' });
-  await writeFile(output + '/published-atlas-svg.json', JSON.stringify({ ...publishedDiagnostics, source: 'PUBLIC_API_SYSTEM_REPLAY', generated_at: publishedSystem.generated_at, errors: publishedErrors }, null, 2));
+  await publishedPage.addStyleTag({ content: 'body::after{content:"' + replaySource + ' · SOMENTE TESTE";position:fixed;left:12px;bottom:6px;z-index:9999;padding:4px 8px;background:#15120c;color:#f4e4bd;font:11px system-ui;pointer-events:none}' });
+  await publishedPage.screenshot({ path: output + '/component-replay-atlas-svg.png' });
+  await writeFile(output + '/component-replay-atlas-svg.json', JSON.stringify({ ...publishedDiagnostics, source: replaySource, live_endpoint_checked: false, generated_at: publishedSystem.generated_at, errors: publishedErrors }, null, 2));
   assert.deepEqual(publishedErrors, [], 'published graph rendering and page errors');
   await publishedContext.close();
   for (const [name, viewport, theme, reduced, webglDisabled] of [
@@ -117,7 +121,7 @@ try {
     await page.route('**/api/session', route => route.fulfill({ json: { configured: false, authenticated: false } }));
     await page.route('**/api/system*', route => route.fulfill({ json: system }));
     await page.route('**/build-meta.json*', route => route.fulfill({ json: { projection_fingerprint: projection.manifest.projection_fingerprint } }));
-    await page.goto(base + '/#/agora');
+    await page.goto(legacyVisualUrl(base, '#/agora'));
     await page.locator('#now-problem').waitFor();
     await page.evaluate(() => document.fonts.ready);
     const geometry = await vectorReady(page, 6_000);
@@ -150,8 +154,9 @@ try {
     await page.screenshot({ path: output + '/' + name + '-home.png' });
     await page.evaluate(() => { location.hash = '#/e/FAM-DE-FS-GEOGROWTH-ELG-DESI-PP'; });
     await page.locator('.h1-entity').locator('..').waitFor();
-    assert.match(await page.locator('.h1-entity').locator('..').innerText(), /Rejeitado pelo critério/);
-    assert.doesNotMatch(await page.locator('.story').innerText().catch(() => ''), /Travei aqui/);
+    assert.match(await page.locator('.h1-entity').locator('..').innerText(), /Não atendeu ao critério do teste/);
+    await page.locator('.story').waitFor();
+    assert.equal(await page.locator('.story .beat-block').count(), 0, 'a rejected result is not an operational blocker');
     await noOverflow(page, name + ':rejected');
     await visualReady(page, name + ':rejected');
     await page.screenshot({ path: output + '/' + name + '-rejected.png' });

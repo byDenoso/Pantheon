@@ -64,9 +64,10 @@
   "routes": [
     {
       "src": "/",
-      "status": 307,
+      "status": 303,
       "headers": {
-        "Location": "https://nexo-one-two.vercel.app/"
+        "Location": "https://nexoresearch.org/#",
+        "Referrer-Policy": "no-referrer"
       }
     },
     {
@@ -188,9 +189,10 @@
     },
     {
       "src": "/(.*)",
-      "status": 307,
+      "status": 303,
       "headers": {
-        "Location": "https://nexo-one-two.vercel.app/$1"
+        "Location": "https://nexoresearch.org/#",
+        "Referrer-Policy": "no-referrer"
       }
     }
   ]
