@@ -441,8 +441,25 @@ jobs:
           raise SystemExit("tower-head CAS failed after 5 retries")
           PY
 
+      - name: Publish NEXO state projection (agents and alarm read it from Pages)
+        id: projection
+        if: steps.cred.outputs.ok == 'true'
+        env:
+          GOOGLE_SERVICE_ACCOUNT_JSON: ${{ secrets.NEXO_DRIVE_READER_JSON }}
+        run: |
+          set -euo pipefail
+          git clone -q --depth 1 https://github.com/byDenoso/TCC.git /tmp/tcc_proj
+          (cd /tmp/tcc_proj && python scripts/nexo_tower.py project --out /tmp/proj >/dev/null)
+          git clone -q --depth 1 --branch nexo-projection "https://x-access-token:${{ github.token }}@github.com/${GITHUB_REPOSITORY}.git" /tmp/pb
+          cp /tmp/proj/projection.json /tmp/proj/manifest.json /tmp/pb/
+          cd /tmp/pb
+          if git diff --quiet; then echo "changed=false" >> "$GITHUB_OUTPUT"; exit 0; fi
+          git -c user.name=nexo-writer-robot -c user.email=nexo-writer-robot@users.noreply.github.com commit -qam "projection $(jq -r .tower_revision manifest.json)"
+          git push -q origin nexo-projection
+          echo "changed=true" >> "$GITHUB_OUTPUT"
+
       - name: Rebuild the ATLAS now
-        if: steps.robot.outputs.tower_revision != ''
+        if: steps.projection.outputs.changed == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
         run: gh workflow run nexo-one-pages.yml --ref main

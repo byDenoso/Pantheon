@@ -52,6 +52,13 @@ jobs:
           node scripts/build-pages-system.mjs
           touch dist/.nojekyll
           node scripts/static-publication.mjs --check
+      - name: Add NEXO state projection (read by the agents and the alarm)
+        run: |
+          set -euo pipefail
+          mkdir -p nexo-one/dist/tower-projection
+          for f in projection.json manifest.json; do
+            curl -fsSL "https://raw.githubusercontent.com/${{ github.repository }}/nexo-projection/$f" -o "nexo-one/dist/tower-projection/$f"
+          done
       - name: Upload shell-only Pages artifact
         uses: actions/upload-pages-artifact@v4
         with:
@@ -74,7 +81,6 @@ jobs:
           set -euo pipefail
           base="${PAGES_URL%/}"
           for route in system.json science-projection-v1.json world-public.ndjson \
-            tower-projection/projection.json tower-projection/manifest.json \
             tower-projection/publication.json mcp/topology.json galaxy/latest.json \
             galaxy/index.json build-meta.json; do
             status="$(curl --silent --show-error --location --output /dev/null \
@@ -84,3 +90,4 @@ jobs:
               *) echo "::error::Former public data path is still reachable: ${route} (${status})"; exit 1 ;;
             esac
           done
+          curl -fsSL "${base}/tower-projection/projection.json" | jq -e '.manifest' >/dev/null
