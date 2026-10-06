@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {Client,StreamableHTTPClientTransport} from '@modelcontextprotocol/client';
 import {createNexoMcpWebHandler,NEXO_MCP_TOOL_NAMES} from '../server/mcp/server.mjs';
 import {sha256,OPERATIONAL_TOOL_NAMES,createOperationalService} from '../server/mcp/operational-tools.mjs';
+import {RETRIEVAL_TOOL_NAMES} from '../server/mcp/retrieval-tools.mjs';
 import {createOperationalQueue,isOperationalEnvelope,SPOOL_ID} from '../server/mcp/operational-queue.mjs';
 
 test('installed MCP SDK exposes role tools only to the existing authenticated principal',async()=>{
@@ -25,10 +26,10 @@ test('installed MCP SDK exposes role tools only to the existing authenticated pr
   try{
     authorized=await connect(true);
     const list=await authorized.listTools();
-    assert.deepEqual(list.tools.map(x=>x.name),[...NEXO_MCP_TOOL_NAMES,...OPERATIONAL_TOOL_NAMES]);
+    assert.deepEqual(list.tools.map(x=>x.name),[...NEXO_MCP_TOOL_NAMES,...OPERATIONAL_TOOL_NAMES,...RETRIEVAL_TOOL_NAMES]);
     anonymous=await connect(false);
     assert.deepEqual((await anonymous.listTools()).tools.map(x=>x.name),NEXO_MCP_TOOL_NAMES);
-    assert.deepEqual((await authorized.listTools()).tools.map(x=>x.name),[...NEXO_MCP_TOOL_NAMES,...OPERATIONAL_TOOL_NAMES]);
+    assert.deepEqual((await authorized.listTools()).tools.map(x=>x.name),[...NEXO_MCP_TOOL_NAMES,...OPERATIONAL_TOOL_NAMES,...RETRIEVAL_TOOL_NAMES]);
   }finally{
     await authorized?.close().catch(()=>{});await anonymous?.close().catch(()=>{});await handler.close();
     if(previous===undefined)delete process.env.NEXO_MCP_ACCESS_KEY_SHA256;else process.env.NEXO_MCP_ACCESS_KEY_SHA256=previous;
