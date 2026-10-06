@@ -20,6 +20,7 @@ import {googleDriveConsentRoute,googleDriveConsentReturn} from './auth/google-dr
 import {buildPersonalSnapshot,executePersonalAction} from './personal/service.mjs';
 import {createNexoMcpWebHandler,readNexoMcpStatus} from './mcp/server.mjs';
 import {summarizeConnectionHealth} from './health/connection-state.mjs';
+import {executeRetrieval, RETRIEVAL_TOOL_NAMES} from './mcp/retrieval-tools.mjs';
 const ATLAS_ORIGINS=new Set(['https://bydenoso.github.io','https://nexo-one-two.vercel.app','https://nexo-atlas-control-tower.vercel.app','https://nexo-atlas-cockpit.vercel.app']);
 const isCorsRoute=route=>(route==='mcp'||route==='mcp/status')||route==='projection-sync'||route==='atlas-public-ssot'||route==='world'||RESEARCH_ROUTES.has(route);
 const mcpWebHandler=createNexoMcpWebHandler({readSnapshot:()=>readResearchSnapshot({env:process.env,now:Date.now()})});
@@ -171,6 +172,26 @@ export default async function handler(req,res) {
         res.setHeader('Content-Security-Policy',"default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self'; frame-ancestors 'self'; base-uri 'self'; form-action 'self'");
         res.statusCode=200;return res.end(result.bytes);
       }catch(error){return send({error:error?.message==='PRIVATE_ASSET_NOT_FOUND'?'NOT_FOUND':'PRIVATE_UI_UNAVAILABLE'},error?.message==='PRIVATE_ASSET_NOT_FOUND'?404:503);}
+    }
+    if(route==='atlas-retrieval'){
+      if(req.method!=='POST')return send({error:'METHOD_NOT_ALLOWED'},405);
+      if(!privateAccess)return send({error:'AUTH_REQUIRED'},401);
+      if(!sameOrigin(req))return send({error:'ORIGIN_NOT_ALLOWED'},403);
+      if(Number(req.headers['content-length']||0)>65536)return send({error:'REQUEST_BODY_TOO_LARGE'},413);
+      try{
+        const body=await requestBody(req);
+        const name=String(body?.name||'');
+        const args=body?.args&&typeof body.args==='object'&&!Array.isArray(body.args)?body.args:{};
+        if(!RETRIEVAL_TOOL_NAMES.includes(name))return send({error:'UNKNOWN_RETRIEVAL_TOOL'},400);
+        const id=String(env.NEXO_RETRIEVAL_ATLAS_PRINCIPAL_ID||'atlas-private-owner').trim();
+        const roles=String(env.NEXO_RETRIEVAL_ATLAS_ROLES||'LEARNER').split(',').map(v=>v.trim()).filter(Boolean);
+        const principal={authenticated:true,id,roles};
+        return send(await executeRetrieval({principal,env,fetchImpl:fetch},name,args));
+      }catch(error){
+        const code=/^[A-Z_]{3,80}$/.test(String(error?.code||error?.message||''))?String(error.code||error.message):'RETRIEVAL_UNAVAILABLE';
+        const status=code==='ROLE_FORBIDDEN'||code==='UPSTREAM_SCOPE_TOO_BROAD'?403:code==='CONNECTOR_NOT_CONFIGURED'?503:502;
+        return send({error:code},status);
+      }
     }
     if(route==='atlas-private'){
       if(req.method!=='GET')return send({error:'METHOD_NOT_ALLOWED'},405);

@@ -113,3 +113,18 @@ test('locale: the frame-side parser accepts only the two supported locales and n
   for (const bad of ['fr', 'EN', 7, null, undefined, {}, ['en'], 'en-US']) assert.equal(parseToFrame({channel: HOST, type: 'LOCALE', locale: bad}), null);
   assert.equal(parseToFrame({channel: FRAME, type: 'LOCALE', locale: 'en'}), null, 'wrong channel'); assert.equal(parseFromFrame({channel: FRAME, type: 'LOCALE', locale: 'en'}), null, 'the frame cannot send it');
 });
+
+test('retrieval bridge accepts only trusted allowlisted requests and returns structured result',async()=>{
+  const calls=[];const t=setup({onRetrieval:async(name,args)=>{calls.push([name,args]);return {hits:[{id:'TEST::X'}]};}});
+  t.emit({origin:O,source:t.frameWin,data:msg('RETRIEVAL',{id:'r1',name:'nexo_search',args:{query:'X'}})});
+  await new Promise(r=>setTimeout(r,0));
+  assert.deepEqual(calls,[['nexo_search',{query:'X'}]]);
+  assert.deepEqual(t.posted.at(-1),[{channel:HOST,type:'RETRIEVAL_RESULT',id:'r1',ok:true,data:{hits:[{id:'TEST::X'}]}},O]);
+  t.emit({origin:O,source:t.frameWin,data:msg('RETRIEVAL',{id:'bad',name:'delete_everything',args:{}})});
+  await new Promise(r=>setTimeout(r,0));assert.equal(calls.length,1);
+});
+test('retrieval parser rejects malformed args and accepts only the documented result envelope',()=>{
+  assert.equal(parseFromFrame({channel:FRAME,type:'RETRIEVAL',id:'r1',name:'nexo_search',args:[]}),null);
+  assert.equal(parseFromFrame({channel:FRAME,type:'RETRIEVAL',id:'r1',name:'evil',args:{}}),null);
+  assert.deepEqual(parseToFrame({channel:HOST,type:'RETRIEVAL_RESULT',id:'r1',ok:false,code:'ROLE_FORBIDDEN'}),{channel:HOST,type:'RETRIEVAL_RESULT',id:'r1',ok:false,code:'ROLE_FORBIDDEN'});
+});
