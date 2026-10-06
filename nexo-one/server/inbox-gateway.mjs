@@ -199,9 +199,19 @@ async function githubInboxRecord(token,id) {
 
 function refusesGate(envelope) {
   if(isOperationalEnvelope(envelope))return true;
-  const items = envelope?.kind === 'BATCH' ? envelope?.payload?.items || [] : [envelope];
-  return items.some(item => String(item?.kind || '').toUpperCase() === 'OPERATOR_INTENT'
-    && GATE.has(String(item?.payload?.action || '').toUpperCase()));
+  // Match the Writer's recursive BATCH, kind aliases and bare-payload forms.
+  // A transport-authenticated caller still cannot assert Dener's gate authority.
+  const items=[envelope];
+  while(items.length){
+    const item=items.pop();
+    if(!item||typeof item!=='object'||Array.isArray(item))continue;
+    const body=item.payload&&typeof item.payload==='object'&&!Array.isArray(item.payload)?item.payload:item;
+    const kind=String(item.kind||body.kind||'').toUpperCase().replaceAll('-','_').replaceAll(' ','_');
+    if(kind==='BATCH'){
+      if(Array.isArray(body.items))for(const child of body.items)items.push(child);
+    }else if((kind==='OPERATOR_INTENT'||kind==='INTENT')&&GATE.has(String(body.action||'').toUpperCase()))return true;
+  }
+  return false;
 }
 
 const notConfigured = [{ ok: false, error: 'GATEWAY_NOT_CONFIGURED', hint: 'NEXO_INBOX_TOKEN ausente na Vercel.' }, 503];
