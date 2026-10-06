@@ -2,6 +2,7 @@
 import assert from 'node:assert/strict';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { chromium } from 'playwright';
+import { legacyVisualUrl } from './helpers/legacy-visual-url.mjs';
 import { labVisualFixture } from './lab-visual-fixture.mjs';
 import { buildPagesProjection } from '../scripts/build-pages-system.mjs';
 import { latestBoardRecord, boardConversation, boardThreads } from '../src/features/lab/presentation.ts';
@@ -66,7 +67,7 @@ try {
     await page.route('**/api/system*', route => route.fulfill({ json: system }));
     await page.route('**/build-meta.json*', route => route.fulfill({ json: { projection_fingerprint: projection.manifest.projection_fingerprint } }));
     // The legacy cockpit URL now routes directly to the same observatory page.
-    await page.goto(base + '/#/cockpit/comando');
+    await page.goto(legacyVisualUrl(base, '#/cockpit/comando'));
     const focus = page.locator('.board-focus');
     await focus.waitFor(); await ready(page); await noOverflow(page);
     assert.equal(await focus.locator('.board-text').textContent(), latest.text, 'literal original preserved');

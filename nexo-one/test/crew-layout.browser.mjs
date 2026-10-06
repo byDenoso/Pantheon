@@ -2,6 +2,7 @@
 import assert from 'node:assert/strict';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { chromium } from 'playwright';
+import { legacyVisualUrl } from './helpers/legacy-visual-url.mjs';
 import { labVisualFixture } from './lab-visual-fixture.mjs';
 import { buildPagesProjection } from '../scripts/build-pages-system.mjs';
 
@@ -37,7 +38,7 @@ try {
     await page.route('**/api/session', route => route.fulfill({ json: { configured: false, authenticated: false } }));
     await page.route('**/api/system*', route => route.fulfill({ json: system }));
     await page.route('**/build-meta.json*', route => route.fulfill({ json: { projection_fingerprint: projection.manifest.projection_fingerprint } }));
-    await page.goto(base + '/#/ciclo');
+    await page.goto(legacyVisualUrl(base, '#/ciclo', baseline));
     await page.locator('.crew').waitFor(); await page.evaluate(() => document.fonts.ready);
     await page.waitForFunction(isBaseline => {
       const hud = document.querySelector('.hud'), obs = document.querySelector('.observatory');

@@ -2,6 +2,7 @@
 import assert from 'node:assert/strict';
 import { mkdir } from 'node:fs/promises';
 import { chromium } from 'playwright';
+import { legacyVisualUrl } from './helpers/legacy-visual-url.mjs';
 import { scenarioById, DEFAULT_SCENARIO_ID } from '../src/data/fixtures/scenarios.ts';
 const state = scenarioById(DEFAULT_SCENARIO_ID).build();
 const legacy = { incident_id: 'INC-LEGACY', summary_pt: 'Incidente sem contrato operacional.', state: 'OBSERVED', next_owner: 'LEARNER', evidence_count: 3, public_ids: { tests: [], hypotheses: [], lessons: [] } };
@@ -18,7 +19,7 @@ try {
   const errors = []; page.on('pageerror', error => errors.push(error.stack || error.message));
   await page.route('**/api/system**', route => route.fulfill({ json: state }));
   await page.route('**/api/world**', route => route.fulfill({ json: {} }));
-  await page.goto(`${baseUrl}/#/atlas?view=2d`);
+  await page.goto(legacyVisualUrl(baseUrl, '#/atlas?view=2d'));
   const detailsToggle = page.getByRole('button', { name: /Incidentes.*detalhes/ });
   if (width < 600) {
    await detailsToggle.click();

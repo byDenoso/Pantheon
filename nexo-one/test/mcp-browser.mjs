@@ -22,7 +22,7 @@ try{
   // Exercise the real HTTP handler from an anonymous browser, with no fixture auth.
   const anonymous=await browser.newContext();const probe=await anonymous.newPage();
   try{
-    for(const route of ['/api/mcp/status','/api/atlas-private','/api/atlas-private-ui']){
+    for(const route of ['/api/system','/api/mcp/status','/api/atlas-private','/api/atlas-private-ui']){
       const response=await probe.goto(denialBase+route);
       assert.equal(response.status(),401);assert.deepEqual(await response.json(),{error:'AUTH_REQUIRED'});
     }
