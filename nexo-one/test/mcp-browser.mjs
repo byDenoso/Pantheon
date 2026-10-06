@@ -53,14 +53,16 @@ try{
       assert.equal(await page.locator('[data-mcp-control-ready],iframe.atlas-private-frame').count(),0,'the public entry exposes no private query panel');
       await page.goto(`${backend.base}/#/privado`);
       await page.locator('#atlas-pin').fill('synthetic-code-1');
+      await page.getByRole('group',{name:'Tema',exact:true}).getByRole('button',{name:theme==='dark'?'Escuro':'Claro',exact:true}).click();
+      await page.waitForFunction(expected=>document.documentElement.dataset.theme===expected,theme);
       await page.getByRole('button',{name:'Entrar',exact:true}).click();
       await page.locator('iframe.atlas-private-frame').waitFor();
       const frame=await page.locator('iframe.atlas-private-frame').elementHandle().then(element=>element.contentFrame());
       assert.ok(frame);await frame.locator('.pw').waitFor();
-      if(await frame.evaluate(()=>document.documentElement.dataset.theme)!==theme)await frame.locator('.instrument-theme').click();
-      assert.equal(await frame.evaluate(()=>document.documentElement.dataset.theme),theme);
-      await frame.evaluate(()=>{location.hash='#/sistema?tab=mcp';});
+      await frame.waitForFunction(expected=>document.documentElement.dataset.theme===expected,theme);
+      await frame.evaluate(expected=>{location.hash=`#/sistema?tab=mcp&theme=${expected}`;},theme);
       await frame.locator('[data-mcp-control-ready="true"]').waitFor();
+      await frame.waitForFunction(expected=>document.documentElement.dataset.theme===expected,theme);
       const registered=await frame.locator('.mcp-tool-grid article button strong').allTextContents();
       assert.deepEqual(registered,expectedTools.map(tool=>tool.name),'the real panel registers the private runtime query catalog');
       const panel=await frame.locator('.mcp-control').innerText();
@@ -99,7 +101,9 @@ try{
       console.log(`MCP_BROWSER_${width}_${theme.toUpperCase()}_OK`);
     }catch(error){
       await page.screenshot({path:`test-output/mcp-failed-${width}-${theme}.png`,fullPage:true}).catch(()=>{});
-      await writeFile(`test-output/mcp-failed-${width}-${theme}.json`,JSON.stringify({url:page.url(),frames:page.frames().map(frame=>frame.url()),errors,requests,foreign,body:(await page.locator('body').innerText().catch(()=>'' )).slice(0,3000)},null,2));
+      const diagnostic={url:page.url(),frames:await Promise.all(page.frames().map(async frame=>({url:frame.url(),body:(await frame.locator('body').innerText().catch(()=>'' )).slice(0,6000)}))),errors,requests,foreign};
+      await writeFile(`test-output/mcp-failed-${width}-${theme}.json`,JSON.stringify(diagnostic,null,2));
+      console.error('MCP_BROWSER_FAILURE',JSON.stringify(diagnostic));
       throw error;
     }finally{await context.close();await backend.close();}
   }
