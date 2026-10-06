@@ -1,8 +1,10 @@
+import { assertPrivateProjectionOutput } from '../lib/publication-policy.mjs';
 import { mkdir, rename, rm, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { validateAtlasV3Snapshot } from './sdk.mjs';
 
 export async function publishAtlasV3Snapshot(snapshot, outDir) {
+  assertPrivateProjectionOutput(outDir);
   const valid = validateAtlasV3Snapshot(snapshot);
   const fingerprint = valid.manifest.fingerprint;
   if (!fingerprint?.startsWith('sha256:')) throw new Error('ATLAS_V3_FINGERPRINT_REQUIRED');

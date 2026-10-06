@@ -4,9 +4,10 @@
 // lesson/strategy/policy content -- not scheduler/handoff operational state). Returns
 // DATA_UNAVAILABLE honestly rather than inventing a filament with no backing evidence,
 // consistent with getLearnerLayer() in src/core/PublicSnapshotSource.ts.
-import { withGoogleAuth, send } from './_middleware.mjs';
+import { send } from './_middleware.mjs';
+import { withPrivateApiBoundary } from '../../lib/private-api-boundary.mjs';
 
-export default withGoogleAuth((req, res) => {
+export default withPrivateApiBoundary((req, res) => {
   send(res, {
     session: req.session,
     data: [],

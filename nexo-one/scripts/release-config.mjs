@@ -6,11 +6,12 @@ export function buildReleaseVercelConfig(sourceConfig,staticFiles=[]){
   return {
     version:2,
     builds:[
-      {src:'api/index.js',use:'@vercel/node'},
+      {src:'api/index.js',use:'@vercel/node',config:{includeFiles:['server/private-ui/**']}},
       ...explicitStatic.map(src=>({src,use:'@vercel/static'}))
     ],
     routes:[
       {src:'/(.*)',headers:securityHeaders,continue:true},
+      {src:'/api/atlas-private-assets/(.*)',dest:'/api/index.js?route=atlas-private-asset&asset=$1'},
       {src:'/api/(.*)',dest:'/api/index.js?route=$1'},
       {handle:'filesystem'},
       {src:'/(.*)',dest:'/index.html'}

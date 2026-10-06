@@ -3,9 +3,10 @@
 // api/atlas.js, api/runtime*.js: they expose graph/state/entity/audit/learning/ops,
 // none of which is an intent->execution->receipt->mutation->readback->handoff log).
 // Returns an honest DATA_UNAVAILABLE rather than fabricating an activity feed.
-import { withGoogleAuth, send } from './_middleware.mjs';
+import { send } from './_middleware.mjs';
+import { withPrivateApiBoundary } from '../../lib/private-api-boundary.mjs';
 
-export default withGoogleAuth((req, res) => {
+export default withPrivateApiBoundary((req, res) => {
   send(res, {
     session: req.session,
     data: null,

@@ -1,4 +1,5 @@
-import {withGoogleAuth,send} from './_middleware.mjs';
+import { send } from './_middleware.mjs';
+import { withPrivateApiBoundary } from '../../lib/private-api-boundary.mjs';
 import {createTowerGateway} from '../../lib/tower-gateway.mjs';
 import {createNexoSemanticGateway} from '../../lib/nexo-semantic-gateway.mjs';
 
@@ -21,7 +22,7 @@ function parseBody(body){
   return {};
 }
 
-export default withGoogleAuth(async(req,res)=>{
+export default withPrivateApiBoundary(async(req,res)=>{
   if(String(req.method||'GET').toUpperCase()!=='POST') return send(res,{error:'METHOD_NOT_ALLOWED'},405);
   let body;
   try{body=parseBody(req.body);}catch{return send(res,{error:'INVALID_JSON'},400);}

@@ -1,3 +1,4 @@
+import { withPrivateApiBoundary } from '../lib/private-api-boundary.mjs';
 import {createScientificMcpService} from '../lib/scientific-mcp.mjs';
 import {createScientificMcpHttpHandler} from '../lib/scientific-mcp-http.mjs';
 import {createTowerGateway,towerStorageMode} from '../lib/tower-gateway.mjs';
@@ -69,4 +70,4 @@ const storageMode=towerStorageMode();
 const ACTIVE_DRIVE_MCP=storageMode==='DRIVE_PRIMARY';
 const handler=ACTIVE_DRIVE_MCP?createActiveHandler():retiredHandler;
 
-export default handler;
+export default withPrivateApiBoundary(handler, { machine: 'mcp' });

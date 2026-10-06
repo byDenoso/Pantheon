@@ -1,3 +1,4 @@
+const meanKnownWeights = (links: {weight: number | null}[]) => { const values=links.map(link=>link.weight).filter((value): value is number=>value!==null && Number.isFinite(value)); return values.length ? values.reduce((sum,value)=>sum+value,0)/values.length : null; };
 import type { AtlasCrossLink, AtlasMetroModel } from './atlasAdapter.ts';
 
 export type VisualCrossLink = AtlasCrossLink & {
@@ -97,7 +98,7 @@ export function projectVisualCrossLinks(
     recordVisuals.push({
       ...base,
       id: `visual-record:${key}`,
-      weight: bucket.reduce((sum, link) => sum + Number(link.weight || 0), 0) / bucket.length,
+      weight: meanKnownWeights(bucket),
       visualCount: bucket.length,
       visualRefs: refs,
       sourceCollapsed: bucket.some(link => link.sourceCollapsed),
@@ -123,7 +124,7 @@ export function projectVisualCrossLinks(
       ...base,
       id: `visual-learning:${key}`,
       label: refs.length > 1 ? `${base.label} · ${refs.length} registros` : base.label,
-      weight: bucket.reduce((sum, link) => sum + Number(link.weight || 0), 0) / bucket.length,
+      weight: meanKnownWeights(bucket),
       visualCount: relationCount,
       visualRefs: refs,
       sourceCollapsed: bucket.some(link => link.sourceCollapsed),

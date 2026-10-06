@@ -17,6 +17,7 @@ import type { ScenePage, SceneEvents } from './ObservatoryScene.tsx';
 import { normDomain } from './domains.ts';
 import './lab.css';
 import '../../styles/atlas-cinematic.css';
+import { stateLabel } from '../../i18n/state-language.ts';
 import { currentVerdictText, matchesSearch, boardMeta, boardConversation, boardThreads, readinessLabel, hasPublishedValue, roadmapTrail, latestBoardRecord } from './presentation.ts';
 import { BoardMessage } from './BoardMessage.tsx';
 import { selectScienceFocus, scientificStatRows } from './science-presentation.ts';
@@ -287,7 +288,7 @@ function Now({ lab, state, onReplay, replayCount }: { lab: Lab; state: SystemSta
         <Stat n={S.confirmed} label="confirmados" tone="ok" />
         <Stat n={S.refuted} label="refutados" tone="crit" />
         <Stat n={S.review} label="em revisão" tone="warn" />
-        <Stat n={S.ready} label="na fila" tone="mute" />
+        <Stat n={S.ready} label="prontos para executar" tone="mute" />
       </div>
       <p className="hud-note self-line">Autoengenharia (o NEXO estudando a si mesmo): <b>{E2.confirmed}</b> confirmados · <b>{E2.refuted}</b> refutados · <b>{E2.review}</b> em revisão.</p>
     </Section>
@@ -431,7 +432,7 @@ function useAmbience(on: boolean, pulse: string | null) {
 const STAGES: Array<{ key: string; label: string; who: string; get: (lab: Lab, s: SystemState) => number }> = [
   { key: 'thought', label: 'Pensamento', who: 'Cientista · Pítia', get: (_l, s) => s.evolution?.thoughts?.length ?? 0 },
   { key: 'hyp', label: 'Hipóteses', who: 'Cientista · Learner', get: l => l.hypotheses.size },
-  { key: 'ready', label: 'Na fila', who: 'Operador', get: l => l.counts.READY },
+  { key: 'ready', label: 'Prontos para executar', who: 'Operador', get: l => l.counts.READY },
   { key: 'result', label: 'Resultado', who: 'Runner público', get: l => l.counts.PROVISIONAL },
   { key: 'review', label: 'Contestação', who: 'Crítico · Refutador', get: l => (l.reviews.PENDING_REVIEW ?? 0) + (l.reviews.CONTESTED ?? 0) },
   { key: 'ref1', label: 'Referee 1', who: 'Crítico · Refutador', get: l => l.reviews.REFEREE1_PASSED ?? 0 },
@@ -513,7 +514,7 @@ function Roadmaps({ lab }: { lab: Lab }) {
       <span className="rm-title">{r.title}{r.renewable && <em> · permanente</em>}</span>
       <span className="rm-q">{r.question}</span>
       <Bar parts={roadmapParts(lab, r.tests)} total={r.tests.length} />
-      <span className="rm-meta"><b>{r.confirmed}</b>/{r.target ?? '?'} confirmados · {r.tests.length} vinculados · orçamento {r.used ?? '—'}/{r.maxTests ?? '?'}{r.stop ? ` · parado: ${r.stop}` : ''}</span>
+      <span className="rm-meta"><b>{r.confirmed ?? '—'}</b>/{r.target ?? '?'} confirmados · {r.tests.length} vinculados · orçamento {r.used ?? '—'}/{r.maxTests ?? '?'}{r.stop ? ` · parado: ${r.stop}` : ''}</span>
     </a></li>)}</ul>
   </>;
 }
@@ -524,7 +525,7 @@ function RoadmapPage({ lab, id }: { lab: Lab; id: string }) {
   const tests = r.tests.map(t => lab.tests.get(t)!).filter(t => !t.contestOf);
   const hyps = new Map<string, TestEntity[]>();
   tests.forEach(t => { const k = t.hypothesisId ?? '—'; (hyps.get(k) ?? hyps.set(k, []).get(k)!).push(t); });
-  const pct = (n: number, d: number | null) => (d ? Math.min(100, Math.round(100 * n / d)) : 0);
+  const pct = (n: number | null, d: number | null) => (n !== null && d ? Math.min(100, Math.round(100 * n / d)) : 0);
   const confirmed = tests.filter(t => t.verdict === 'CONFIRMED');
   const frontierDeclared = r.frontierIdsPublished ?? Boolean(r.frontierIds?.length);
   const frontierTests = frontierDeclared ? (r.frontierIds ?? []).map(id => lab.tests.get(id)!).filter(Boolean) : tests.filter(isReady);
@@ -540,8 +541,8 @@ function RoadmapPage({ lab, id }: { lab: Lab; id: string }) {
     </header>
     <Trail tests={tests} frontier={frontierDeclared ? r.frontierIds ?? [] : null} target={r.target} />
     <div className="stop-rules">
-      <div><span>Meta</span><strong>{r.confirmed}/{r.target ?? '?'}</strong><i style={{ width: `${pct(r.confirmed, r.target)}%` }} className="ok" /><em>confirmações para encerrar com sucesso</em></div>
-      <div><span>Refutações seguidas</span><strong>{r.refutedStreak}/{r.killStreak ?? '?'}</strong><i style={{ width: `${pct(r.refutedStreak, r.killStreak)}%` }} className="crit" /><em>encerra por refutação</em></div>
+      <div><span>Meta</span><strong>{r.confirmed ?? '—'}/{r.target ?? '?'}</strong><i style={{ width: `${pct(r.confirmed, r.target)}%` }} className="ok" /><em>confirmações para encerrar com sucesso</em></div>
+      <div><span>Refutações seguidas</span><strong>{r.refutedStreak ?? '—'}/{r.killStreak ?? '?'}</strong><i style={{ width: `${pct(r.refutedStreak, r.killStreak)}%` }} className="crit" /><em>encerra por refutação</em></div>
       <div><span>Orçamento</span><strong>{r.used ?? '—'}/{r.maxTests ?? '?'}</strong><i style={{ width: `${pct(r.used ?? 0, r.maxTests)}%` }} className="warn" /><em>uso declarado pela Tower{r.maxDays ? ` · ${r.maxDays} dias` : ''}</em></div>
     </div>
     <p className="hud-note count-source">Contagem desta página: {tests.length} testes principais + {r.tests.length - tests.length} contestações vinculadas. Orçamento: evolution.roadmaps.tests_used; vínculos: {r.testsSource}. São medidas distintas.{r.used === null && ' Uso do orçamento não publicado.'}</p>
@@ -889,10 +890,8 @@ const roleLabel = (role: string) => { const t = taskOf(role); const r = ROLE_PT[
 // A escolha de palavras descreve um evento recebido; ela nunca cria uma ação nova.
 const narrationDeck = browserNarrationDeck();
 const say = (key: string, seed: string, vars: Record<string, string | number> = {}) => narrationDeck.say(key, seed, vars);
-const NARRATION_TERMS: Record<string, string> = {
-  PROMOTED: 'positivo na execução', REJECTED: 'rejeitado pelo critério', INCONCLUSIVE: 'inconclusivo', CONTESTED: 'contestado',
-  PENDING_REVIEW: 'aguardando revisão', REFEREE1_PASSED: 'primeira revisão aprovada', CONFIRMED: 'confirmado na revisão', REFUTED: 'refutado na revisão',
-};
+// termos vindos do formatador único de linguagem; as chaves são os valores publicados, intactos
+const NARRATION_TERMS: Record<string, string> = Object.fromEntries(['PROMOTED', 'REJECTED', 'INCONCLUSIVE', 'CONTESTED', 'PENDING_REVIEW', 'REFEREE1_PASSED', 'CONFIRMED', 'REFUTED'].map(k => [k, stateLabel(k, 'pt-BR', true)]));
 /** Estrela que representa a entidade na teia (contestações apontam para o resultado atacado). */
 function starOf(lab: Lab, id: string): string | null {
   let t = lab.tests.get(id);
@@ -1186,7 +1185,7 @@ const ACOUSTIC = (() => {
 function Acoustic() {
   return <p className="sig-acoustic" aria-hidden="true">
     <svg viewBox="0 0 180 40"><defs><linearGradient id="sig-spec" x1="0" x2="1">
-      <stop offset="0" stopColor="#8a7a5c" /><stop offset=".45" stopColor="#d4bf95" /><stop offset=".75" stopColor="#f0dfbd" /><stop offset="1" stopColor="#fff6e4" />
+      <stop offset="0" stopColor="#12348f" /><stop offset=".45" stopColor="#1e5bff" /><stop offset=".75" stopColor="#6890ff" /><stop offset="1" stopColor="#dbeaff" />
     </linearGradient></defs><path d={ACOUSTIC} /></svg>
     <span><em>Λ</em>_ observatório NEXO · ℓ(ℓ+1)C<sub>ℓ</sub></span>
   </p>;
@@ -1194,7 +1193,7 @@ function Acoustic() {
 
 // ---------- Trilha do roadmap: o caminho andado (cor = veredito), a fronteira acesa e a meta ----------
 const TRAIL_COLOR: Record<Verdict, string> = {
-  CONFIRMED: '#5fd0a0', REFUTED: '#e0664f', REVIEW: '#e0b24f', PROVISIONAL: '#9fb4d8', READY: '#d4bf95',
+  CONFIRMED: '#5fd0a0', REFUTED: '#e0664f', REVIEW: '#e0b24f', PROVISIONAL: '#9fb4d8', READY: '#6890ff',
   RUNNING: '#9fb4d8', CHECKPOINTED: '#7f8ca3', BLOCKED: '#6b6f7a', REJECTED: '#cca47d', DISCARDED: '#3d414a',
 };
 function Trail({ tests, frontier, target }: { tests: TestEntity[]; frontier: string[] | null; target: number | null }) {
@@ -1209,7 +1208,7 @@ function Trail({ tests, frontier, target }: { tests: TestEntity[]; frontier: str
   const confirmed = tests.filter(t => t.verdict === 'CONFIRMED').length;
   return <figure className="trail" aria-label={`Trilha: ${walked.length} resultados fora da fronteira, ${ahead.length} ${frontierLabel}, ${other.length} outros registros`}>
     <svg viewBox={`0 0 ${W} 92`} style={{ maxHeight: 140 }}>
-      <defs><linearGradient id="trail-walk" x1="0" x2="1"><stop offset="0" stopColor="#8a7a5c" stopOpacity=".2" /><stop offset="1" stopColor="#d4bf95" /></linearGradient></defs>
+      <defs><linearGradient id="trail-walk" x1="0" x2="1"><stop offset="0" stopColor="#12348f" stopOpacity=".2" /><stop offset="1" stopColor="#6890ff" /></linearGradient></defs>
       <path d={pathD} className="trail-ahead" />
       <path d={pathD} className="trail-walk" style={{ clipPath: `inset(0 ${W - walkedEnd}px 0 0)` }} />
       {walked.map((t, i) => <a key={t.id} href={labHref('entidade', t.id)}><circle cx={x(i)} cy={y(i)} r={t.verdict === 'CONFIRMED' ? 6 : 4} fill={TRAIL_COLOR[t.verdict]}><title>{t.name}</title></circle></a>)}

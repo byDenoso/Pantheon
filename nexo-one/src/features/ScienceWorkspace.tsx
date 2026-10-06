@@ -45,7 +45,7 @@ function envelope(record:ScienceProjectionRecord,key:string):ScienceEvidenceFiel
 }
 function nested(record:ScienceProjectionRecord,parent:string,key:string):ScienceEvidenceField|undefined{
   const value=record[parent];
-  if(!value||typeof value!=='object'||Array.isArray(value)||Object.hasOwn(value,'value'))return undefined;
+  if(!value||typeof value!=='object'||Array.isArray(value)||(Object.hasOwn(value,'value')&&Object.hasOwn(value,'unavailable_reason')))return undefined;
   const item=(value as Record<string,ScienceEvidenceField>)[key];
   return item&&typeof item==='object'&&Object.hasOwn(item,'value')?item:undefined;
 }
@@ -234,7 +234,7 @@ export function DenseTable({heads,rows,empty}:{heads:string[];rows:ReactNode[];e
 }
 
 function learningRows(filaments:Filament[],query:string){
-  return filaments.filter(item=>!query||JSON.stringify(item).toLowerCase().includes(query)).sort((a,b)=>b.weight-a.weight);
+  return filaments.filter(item=>!query||JSON.stringify(item).toLowerCase().includes(query)).sort((a,b)=>a.weight==null?(b.weight==null?0:1):b.weight==null?-1:b.weight-a.weight);
 }
 
 export default function ScienceWorkspace({state}:{state:SystemState}){
@@ -331,7 +331,7 @@ export default function ScienceWorkspace({state}:{state:SystemState}){
 
     {tab==='aprendizado'&&<DenseTable heads={['Filamento','Relação','Tipo','Estado','Suporte','Contradição','Peso','Limite']} empty="Nenhum filamento corresponde ao filtro." rows={filaments.map(item=><tr key={item.id}>
       <td><strong>{item.label}</strong><small>{item.id}</small></td><td>{item.from_label} → {item.to_label}</td><td>{item.kind}</td><td>{item.status}</td>
-      <td className="science-num">{item.support}</td><td className="science-num">{item.contradiction}</td><td className="science-num">{item.weight.toFixed(2)}</td><td>{item.boundary||'—'}</td>
+      <td className="science-num">{item.support ?? '—'}</td><td className="science-num">{item.contradiction ?? '—'}</td><td className="science-num">{item.weight == null ? '—' : item.weight.toFixed(2)}</td><td>{item.boundary||'—'}</td>
     </tr>)}/>}
 
     {projection&&tab==='graficos'&&<div className="science-graphics">

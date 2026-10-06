@@ -268,3 +268,25 @@
  .lab-route .instrument-sync>span:last-child{display:none}
  .observatory[data-page="universo"] .hud{padding-top:80px}
 }
+
+/* ===== Azul do Atlas (Dener): os destaques do site inteiro na mesma família de azul da teia. Só cor: estrutura, fundos e texto ficam como estão. ===== */
+:root[data-theme="dark"] .observatory,:root[data-theme="dark"] .lab-route{
+  --o-accent:#6890ff;--o-accent-2:#b9dbff;--o-on-accent:#060b14;--o-accent-rgb:104,144,255;--accent:#6890ff;
+  --sig-gold:#6890ff;--sig-oiii:#6890ff;--obs-sodium:#6890ff;--obs-sodium-ink:#6890ff;--v-ready:#6890ff;
+  --sig-spectrum:linear-gradient(90deg,transparent,#12348f 18%,#1e5bff 55%,#b9dbff 84%,transparent);
+  --o-line:rgba(104,144,255,.22);--o-glass-line:rgba(104,144,255,.22)}
+:root[data-theme="light"] .observatory,:root[data-theme="light"] .lab-route{
+  --o-accent:#1e5bff;--o-accent-rgb:30,91,255;--o-on-accent:#ffffff;--accent:#1e5bff;
+  --sig-gold:#1e5bff;--sig-oiii:#1e5bff;--obs-sodium:#1e5bff;--obs-sodium-ink:#1e5bff;--v-ready:#1e5bff;
+  --sig-spectrum:linear-gradient(90deg,transparent,#b9dbff 18%,#1e5bff 55%,#12348f 84%,transparent);
+  --o-glass-line:rgba(30,91,255,.24)}
+
+/* Fundos: branco no tema claro e preto no escuro (antes bege / azul-noite). Só cor; estrutura e componentes intactos. */
+:root[data-theme="light"]{--obs-void:#ffffff;--obs-deep:#f4f7fe;--obs-raise:#ffffff;--obs-line:#c9d6ee}
+:root[data-theme="light"] body,:root[data-theme="light"] .unified-shell{background:#ffffff}
+:root[data-theme="light"] .observatory{--o-void:#ffffff;--o-panel:rgba(244,247,254,.96);--o-raise:rgba(255,255,255,.98);--o-glass:rgba(244,247,254,.92)!important;--o-line:rgba(30,91,255,.2)}
+:root[data-theme="light"] .lab-route{--obs-void:#ffffff}
+:root[data-theme="light"] .telemetry,:root[data-theme="light"] .observatory .telemetry{background:color-mix(in srgb,#ffffff 72%,transparent)!important}
+:root[data-theme="light"] .observatory:not(.exploring):not(.flat):not(.scene-unavailable) .hud{background:rgba(255,255,255,.95)!important}
+:root[data-theme="dark"]{--obs-void:#000000}
+:root[data-theme="dark"] .observatory,:root[data-theme="dark"] .lab-route{--o-void:#000000;--obs-void:#000000}

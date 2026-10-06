@@ -1,32 +1,18 @@
-import {Component,lazy,Suspense,type ReactNode} from 'react';
+// Public Atlas entry. It imports nothing from the legacy app, store, adapters,
+// fixtures or the SVG mirror (see src/legacy/main.tsx for the previous entry).
+import {Component, type ReactNode} from 'react';
 import {createRoot} from 'react-dom/client';
-import App from './app/App';
-import {NexoStoreProvider} from './data/NexoStore.tsx';
-import {startWebMcp} from './mcp/webmcp.ts';
-import './styles/product-foundation.css';
-import './styles/tokens.css';
-import './styles/layout.css';
-import './styles/components.css';
-import './styles/system.css';
-import './styles/command-os.css';
-import './styles/nexo-prime.css';
-import './styles/product-shell.css';
-import '@fontsource/big-shoulders-display/600';
-import '@fontsource/big-shoulders-display/900';
-import '@fontsource/ibm-plex-sans/300';
-import '@fontsource/ibm-plex-sans/400';
-import '@fontsource/ibm-plex-sans/500';
-import '@fontsource/ibm-plex-mono/400';
-import '@fontsource/ibm-plex-mono/500';
-import './styles/observatory.css';
-import './styles/signature.css';
-import './styles/mission-control.css';
-import './styles/editorial.css';
-import './styles/deco.css';
-// Keep the whole visible Tower vector surface; HTML supplies input and accessibility.
-// A native-only diagnostic remains available without loading the mirror.
-const TowerSVGSurface = lazy(() => import('./components/TowerSVGSurface.tsx'));
-const svgMirrorEnabled = new URLSearchParams(window.location.search).get('svgMirror') !== '0';
-class Boundary extends Component<{children:ReactNode},{failed:boolean}>{state={failed:false};static getDerivedStateFromError(){return {failed:true};}render(){return this.state.failed?<main className="fatal-state"><h1>Não foi possível abrir esta visão.</h1><p>Recarregue para consultar novamente suas fontes.</p><button onClick={()=>location.reload()}>Recarregar</button></main>:this.props.children;}}
-createRoot(document.getElementById('root')!).render(<Boundary><NexoStoreProvider><><App/>{svgMirrorEnabled && <Suspense fallback={null}><TowerSVGSurface/></Suspense>}</></NexoStoreProvider></Boundary>);
-startWebMcp();
+import AppRouter from './atlas/ui/AppRouter.tsx';
+import {LocaleProvider} from './atlas/ui/LocaleProvider.tsx';
+import './atlas/atlas-theme.css';
+
+class Boundary extends Component<{children: ReactNode}, {failed: boolean}> {
+  state = {failed: false};
+  static getDerivedStateFromError() { return {failed: true}; }
+  render() {
+    return this.state.failed
+      ? <main className="atlas-main"><h1>Atlas</h1><p>Reload / Recarregue.</p><button className="atlas-btn" onClick={() => location.reload()}>OK</button></main>
+      : this.props.children;
+  }
+}
+createRoot(document.getElementById('root')!).render(<Boundary><LocaleProvider><AppRouter/></LocaleProvider></Boundary>);

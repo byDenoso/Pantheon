@@ -1,3 +1,4 @@
+import { withPrivateApiBoundary } from '../lib/private-api-boundary.mjs';
 import atlasHandler from './atlas.js';
 import { observatoryQuestionsPayload } from '../lib/observatory-contract.mjs';
 
@@ -21,7 +22,7 @@ function graphRequest(req, focus) {
  * silently become a second database reader. Tests stay in campaign metadata;
  * only DOMAIN and CAMPAIGN nodes are returned to the graph UI.
  */
-export default async function handler(req, res) {
+async function handler(req, res) {
   res.setHeader('Content-Type', 'application/json; charset=utf-8');
   res.setHeader('Cache-Control', 'private, no-store');
   res.setHeader('X-Content-Type-Options', 'nosniff');
@@ -58,3 +59,5 @@ export default async function handler(req, res) {
     res.end(JSON.stringify({ contract: 'NEXO_ATLAS_OBSERVATORY_QUESTIONS_V1', status: 'DATA_UNAVAILABLE', error: 'OBSERVATORY_GRAPH_READ_FAILED', detail: String(error?.message || error).slice(0, 180) }));
   }
 }
+
+export default withPrivateApiBoundary(handler);

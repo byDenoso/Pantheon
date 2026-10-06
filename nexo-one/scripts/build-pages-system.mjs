@@ -1,6 +1,6 @@
 import { publicIncidentSummaries } from '../server/compiler/incident-operations.mjs';
 import { createHash } from 'node:crypto';
-import { copyFile, mkdir, readFile, writeFile } from 'node:fs/promises';
+import { sealStaticPublication } from './static-publication.mjs';
 import { resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { buildScienceProjectionV1, validateScienceProjectionV1 } from './science-projection-v1.mjs';
@@ -1411,64 +1411,10 @@ export async function buildPagesSystemState(options = {}) {
   return (await buildPagesProjection(options)).system;
 }
 
-async function readJson(path) {
-  return JSON.parse(await readFile(path, 'utf8'));
-}
-
-async function readJsonIfPresent(path) {
-  try {
-    return await readJson(path);
-  } catch (error) {
-    if (error?.code === 'ENOENT') return [];
-    throw error;
-  }
-}
-
+// Compilers above remain available to authenticated backend readers. Static
+// publication is a separate authorization boundary and is empty by default.
 const invokedPath = process.argv[1] ? pathToFileURL(resolve(process.argv[1])).href : '';
 if (import.meta.url === invokedPath) {
-  const projectionPath = resolve(process.env.NEXO_PUBLIC_PROJECTION || 'data/tower-public/projection.json');
-  const manifestPath = resolve(process.env.NEXO_PUBLIC_PROJECTION_MANIFEST || 'data/tower-public/manifest.json');
-  const interdomainPath = resolve(process.env.NEXO_PUBLIC_INTERDOMAIN || 'data/tower-public/interdomain.json');
-  const learningPath = resolve(process.env.NEXO_PUBLIC_LEARNING || 'data/tower-public/learning.json');
-  const peerDetectionBatteryPath = resolve(
-    process.env.NEXO_PEER_DETECTION_BATTERY || 'data/tower-public/peer-detection-battery.json',
-  );
-  const humanGateDetailsPath = resolve(
-    process.env.NEXO_PUBLIC_HUMAN_GATE_DETAILS || 'data/tower-public/human-gates-details.json',
-  );
-  const generalPath = resolve(
-    process.env.NEXO_PUBLIC_GENERAL || 'data/general-public-projection.json',
-  );
-  const projection = await readJson(projectionPath);
-  const manifestFile = await readJson(manifestPath);
-  const interdomain = await readJsonIfPresent(interdomainPath);
-  const learning = await readJsonIfPresent(learningPath);
-  const peerDetectionBattery = await readJsonIfPresent(peerDetectionBatteryPath);
-  const humanGateDetails = await readJsonIfPresent(humanGateDetailsPath);
-  const general = await readJsonIfPresent(generalPath);
-  const { system, world, scienceProjection } = buildPagesProjection({
-    projection,
-    manifestFile,
-    interdomain,
-    learning,
-    peerDetectionBattery,
-    humanGateDetails,
-    general,
-  });
-
-  const dist = resolve('dist');
-  const evidenceDir = resolve(dist, 'tower-projection');
-  const contractsDir = resolve(dist, 'contracts');
-  await Promise.all([mkdir(evidenceDir, { recursive: true }), mkdir(contractsDir, { recursive: true })]);
-  await Promise.all([
-    writeFile(resolve(dist, 'system.json'), JSON.stringify(system, null, 2) + '\n', 'utf8'),
-    writeFile(resolve(dist, 'science-projection-v1.json'), JSON.stringify(scienceProjection, null, 2) + '\n', 'utf8'),
-    writeFile(resolve(dist, 'world-public.ndjson'), JSON.stringify(world) + '\n', 'utf8'),
-    copyFile(projectionPath, resolve(evidenceDir, 'projection.json')),
-    copyFile(manifestPath, resolve(evidenceDir, 'manifest.json')),
-    copyFile(resolve('contracts/science-projection-v1.schema.json'), resolve(contractsDir, 'science-projection-v1.schema.json')),
-  ]);
-  const scienceReadback = await readJson(resolve(dist, 'science-projection-v1.json'));
-  validateScienceProjectionV1(scienceReadback);
+  const result = await sealStaticPublication(resolve('dist'));
+  console.log(JSON.stringify({ status: 'PUBLIC_SHELL_ONLY', ...result }));
 }
-

@@ -46,7 +46,7 @@ export interface AtlasCrossLink {
   target: string;
   label: string;
   kind: string;
-  weight: number;
+  weight: number | null;
   aggregated: boolean;
   isLearning: boolean;
   learningScope: 'INTRA_DOMAIN' | 'INTER_DOMAIN' | null;

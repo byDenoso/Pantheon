@@ -18,13 +18,13 @@ export function currentVerdictText(test: Pick<TestEntity, 'verdict' | 'verdictRa
     case 'REFUTED': return 'A revisão atual refutou este resultado. O registro da execução abaixo permanece disponível para auditoria e não representa uma conclusão vigente.';
     case 'CONFIRMED': return 'O resultado está confirmado na revisão publicada, dentro dos limites deste teste.';
     case 'REVIEW': return 'O resultado segue em revisão. A interpretação da execução ainda não é uma conclusão confirmada.';
-    case 'READY': return test.readiness?.eligible === true ? 'O teste está READY e elegível segundo a verificação publicada. O despacho continua dependente da bateria.' : test.readiness?.eligible === false ? 'O teste está marcado READY, mas a verificação publicada o considera inelegível para execução.' : 'O teste está marcado READY na fila. Esse estado, sozinho, não comprova elegibilidade para a próxima execução.';
-    case 'BLOCKED': return 'O teste está bloqueado. A ausência de execução não é uma refutação científica.';
-    case 'RUNNING': return 'O teste está em processamento; ainda não há conclusão publicada desta execução.';
+    case 'READY': return test.readiness?.eligible === true ? 'O teste está pronto para executar e é elegível segundo a verificação publicada. O envio para execução continua dependendo da bateria.' : test.readiness?.eligible === false ? 'O teste está marcado como pronto para executar, mas a verificação publicada o considera inelegível: ele ainda não pode rodar.' : 'O teste está marcado como pronto para executar. Esse estado, sozinho, não comprova que ele pode rodar na próxima execução.';
+    case 'BLOCKED': return 'O teste está parado, aguardando desbloqueio. Não ter rodado não é uma refutação científica.';
+    case 'RUNNING': return 'O teste está em andamento; ainda não há conclusão publicada desta execução.';
     case 'CHECKPOINTED': return 'A execução foi salva em um checkpoint; isso não equivale a um resultado concluído.';
     case 'REJECTED': return 'A execução terminou com rejeição pelo critério registrado. Esse desfecho negativo é distinto da refutação por revisão independente.';
     case 'DISCARDED': return 'O teste foi descartado no registro atual. Consulte os detalhes do contrato e da execução.';
-    default: return test.verdictRaw?.toUpperCase() === 'INCONCLUSIVE' ? 'A execução registrou um resultado inconclusivo. Ainda não há confirmação pela revisão publicada.' : test.verdictRaw || test.meaning || hasPublishedValue(test.result) ? 'O resultado é provisório; ainda não está confirmado pela revisão publicada.' : 'O teste está registrado, mas o resultado científico ainda não foi publicado nesta leitura.';
+    default: return test.verdictRaw?.toUpperCase() === 'INCONCLUSIVE' ? 'Os dados ainda não permitem concluir. A execução terminou sem um resultado conclusivo: não é refutação nem confirmação.' : test.verdictRaw || test.meaning || hasPublishedValue(test.result) ? 'O resultado é provisório; ainda não está confirmado pela revisão publicada.' : 'O teste está registrado, mas o resultado científico ainda não foi publicado nesta leitura.';
   }
 }
 

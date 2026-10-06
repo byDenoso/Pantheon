@@ -1,3 +1,4 @@
+import { withPrivateApiBoundary } from '../../lib/private-api-boundary.mjs';
 import cockpit from './cockpit.mjs';
 import activity from './activity.mjs';
 import research from './research.mjs';
@@ -21,7 +22,7 @@ const handlers = Object.freeze({
   'drive-bootstrap': driveBootstrap,
 });
 
-export default async function privateDispatcher(req, res) {
+async function privateDispatcher(req, res) {
   const rawRoute = req.query?.route;
   const route = Array.isArray(rawRoute) ? rawRoute[0] : rawRoute;
   const handler = typeof route === 'string' ? handlers[route] : undefined;
@@ -32,3 +33,5 @@ export default async function privateDispatcher(req, res) {
 
   return handler(req, res);
 }
+
+export default withPrivateApiBoundary(privateDispatcher);

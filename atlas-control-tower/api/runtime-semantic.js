@@ -1,3 +1,4 @@
+import { withPrivateApiBoundary } from '../lib/private-api-boundary.mjs';
 import baseHandler from './runtime-v2.js';
 import {isFastRootQuery,systemRootGraph,semanticIndexMode,contentRangeTotal} from '../lib/system-overview.mjs';
 
@@ -193,7 +194,7 @@ async function probeSemanticHealth(req){
   return{available:true,count:contentRangeTotal(response.headers?.get?.('content-range')),indexVersion:rows[0]?.index_version||''};
 }
 
-export default async function handler(req,res){
+async function handler(req,res){
   const route=routeOf(req),query=queryOf(req),indexMode=semanticIndexMode(route,query);
 
   // The top-level graph is declared structure. Rendering it must not hydrate the
@@ -261,3 +262,5 @@ export default async function handler(req,res){
   };
   return baseHandler(req,res);
 }
+
+export default withPrivateApiBoundary(handler, { machine: 'projection-oidc' });

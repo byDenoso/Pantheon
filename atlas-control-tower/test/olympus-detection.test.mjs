@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import handler from '../api/runtime-semantic.js';
+import { productionAtlasOidcFixture } from './helpers/production-atlas-oidc.mjs';
 
 const ok = (data,{contentRange=''}={}) => ({
  ok:true,status:200,json:async()=>data,text:async()=>JSON.stringify(data),
@@ -21,9 +22,11 @@ function responseSink(){
 }
 
 test('system:OLYMPUS detects people and their current state from the olympus schema', async t => {
+ const { token, jwk } = productionAtlasOidcFixture();
  const originalFetch=global.fetch;
  t.after(()=>{global.fetch=originalFetch});
  global.fetch=async (url,options={}) => {
+  if(String(url).endsWith('/.well-known/jwks'))return ok({keys:[jwk]});
   const profile=options.headers?.['Accept-Profile'];
   const table=decodeURIComponent(new URL(url).pathname.split('/').pop());
   if(profile==='flight_api') return ok([],{contentRange:'0-0/0'});
@@ -38,7 +41,7 @@ test('system:OLYMPUS detects people and their current state from the olympus sch
   return ok([]);
  };
  const sink=responseSink();
- await handler({method:'GET',url:'/api/graph?focus=system%3AOLYMPUS&depth=2',headers:{'x-vercel-oidc-token':'test-token'}},sink.res);
+ await handler({method:'GET',url:'/api/graph?focus=system%3AOLYMPUS&depth=2',headers:{'x-vercel-oidc-token':token}},sink.res);
  const data=JSON.parse(sink.body());
  assert.equal(sink.res.statusCode,200);
  assert.ok(data.nodes.some(n=>n.id==='olympus:person:OLY-CL-0001'&&n.label==='Dener'));
@@ -47,7 +50,7 @@ test('system:OLYMPUS detects people and their current state from the olympus sch
  assert.ok(data.edges.some(e=>e.source==='olympus:person:OLY-CL-0001'&&e.target==='olympus:state:OLY-CL-0001'));
 
  const entitySink=responseSink();
- await handler({method:'GET',url:'/api/entity?id=olympus%3Aperson%3AOLY-CL-0001',headers:{'x-vercel-oidc-token':'test-token'}},entitySink.res);
+ await handler({method:'GET',url:'/api/entity?id=olympus%3Aperson%3AOLY-CL-0001',headers:{'x-vercel-oidc-token':token}},entitySink.res);
  const entity=JSON.parse(entitySink.body());
  assert.equal(entity.entity.label,'Dener');
  assert.equal(entity.entity.metadata.decision,'REQUEST_DATA');

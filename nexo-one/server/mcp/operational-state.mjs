@@ -68,21 +68,24 @@ function scientificQueueFromTower(tower){
   return {tests:tests.sort((a,b)=>a.id.localeCompare(b.id)),recovery:recovery.sort((a,b)=>a.id.localeCompare(b.id)),batteries};
 }
 
-export function operationalStateFromTower(tower,proof){
+export function validateCanonicalTowerIdentity(tower,proof){
   if(!proof?.body_verified||proof.file_id!==TOWER_ID||tower?.contract!=='NEXO_TOWER_LIVE_V1'||
      tower.stable_file_id!==TOWER_ID||tower.storage!=='GOOGLE_DRIVE_PRIVATE'||
      tower.revision!==tower.state_fingerprint||!/^sha256:[a-f0-9]{64}$/.test(tower.state_fingerprint))
     throw new Error('CANONICAL_TOWER_INVALID');
+}
+export function operationalStateFromTower(tower,proof){
+  validateCanonicalTowerIdentity(tower,proof);
   const work=Object.entries(tower.files).filter(([key,entry])=>key.startsWith('entities/artifact/')&&entry.value?.kind==='NEXO_OPERATIONAL_WORK_V1')
     .map(([,entry])=>({...entry.value.payload,version:entry.value.entity_version}));
   return {authority:'TOWER_V06@GOOGLE_DRIVE_PRIVATE',revision:tower.revision,readback:'PASS',observed_at:new Date().toISOString(),work,
     science:scientificQueueFromTower(tower),
     integrity:'DRIVE_MD5_AND_REVISION_READBACK',availability:work.length?'CONFIGURED_IN_TOWER':'NO_OPERATIONAL_WORK_REGISTERED'};
 }
-export async function readOperationalTower({token,fetchImpl=fetch}){
+export async function readVerifiedCanonicalTower({token,fetchImpl=fetch,signal}){
   if(!token)throw new Error('EXISTING_GOOGLE_AUTH_REQUIRED');
   const url=`https://www.googleapis.com/drive/v3/files/${TOWER_ID}`;
-  const init=()=>({headers:{Authorization:`Bearer ${token}`},signal:AbortSignal.timeout(45000)});
+  const init=()=>({headers:{Authorization:`Bearer ${token}`},redirect:'error',cache:'no-store',signal:signal||AbortSignal.timeout(45000)});
   const query='?fields=id,headRevisionId,size,md5Checksum&supportsAllDrives=true';
   const meta=await fetchImpl(url+query,init());if(!meta.ok)throw new Error('TOWER_METADATA_UNAVAILABLE');
   const before=await meta.json();
@@ -97,5 +100,13 @@ export async function readOperationalTower({token,fetchImpl=fetch}){
   const after=await check.json();
   if(after.id!==TOWER_ID||after.headRevisionId!==before.headRevisionId||after.md5Checksum!==md5)throw new Error('TOWER_READ_RACE');
   // Preserve the Writer fingerprint: Python/JS float encodings can differ.
-  return operationalStateFromTower(JSON.parse(raw),{file_id:TOWER_ID,body_verified:true});
+  const tower=JSON.parse(raw),proof={file_id:TOWER_ID,body_verified:true};
+  // Preserve the existing validation and its Writer-facing semantics.
+  validateCanonicalTowerIdentity(tower,proof);
+  return {tower,proof};
+}
+
+export async function readOperationalTower(options){
+  const {tower,proof}=await readVerifiedCanonicalTower(options);
+  return operationalStateFromTower(tower,proof);
 }

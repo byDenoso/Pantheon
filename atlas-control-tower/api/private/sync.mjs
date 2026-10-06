@@ -4,7 +4,8 @@
 // separate request, not the same object reused) to compute readbackVerified via the
 // shared resolveSyncReceipt rule. Never reports success without that independent
 // after-read confirming it.
-import { withGoogleAuth, send } from './_middleware.mjs';
+import { send } from './_middleware.mjs';
+import { withPrivateApiBoundary } from '../../lib/private-api-boundary.mjs';
 import { proxyInternal } from './_proxy.mjs';
 import { resolveSyncReceipt } from '../../lib/sync-receipt.mjs';
 
@@ -43,7 +44,7 @@ export async function performSync(req) {
   });
 }
 
-export default withGoogleAuth(async (req, res) => {
+export default withPrivateApiBoundary(async (req, res) => {
   if (req.method !== 'POST') return send(res, { error: 'METHOD_NOT_ALLOWED' }, 405);
   const receipt = await performSync(req);
   send(res, { session: req.session, ...receipt });

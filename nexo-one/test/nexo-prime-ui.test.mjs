@@ -7,7 +7,7 @@ const text=path=>readFile(new URL(path,root),'utf8');
 
 test('NEXO Prime is loaded last and owns the final design tokens',async()=>{
   const [main,css]=await Promise.all([
-    text('src/main.tsx'),
+    text('src/legacy/main.tsx'),
     text('src/styles/nexo-prime.css'),
   ]);
   const command=main.indexOf("./styles/command-os.css");

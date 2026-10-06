@@ -1,3 +1,4 @@
+import {atlasTestSession} from './helpers/atlas-session.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
@@ -27,14 +28,15 @@ test('personal mutation is handled before the global GET-only guard and remains 
   assert.match(actionBlock,/approval/);
 });
 
-test('private personal reads use the request OIDC and reject anonymous access before provider calls',async()=>{
+test('private personal reads use the request OIDC and reject anonymous access before provider calls',async t=>{
+  const atlasSession=atlasTestSession(t);
   const fixture={NEXO_SESSION_SECRET:'test-only-personal-session-secret-32-characters',NEXO_PASSWORD_HASH:'configured',
     GOOGLE_CONNECTOR:'google/test-personal',VERCEL_OIDC_TOKEN:'stale-build-identity',
     NEXO_SOURCE_URL:'https://nexo.test/private-snapshot'};
   const previous=Object.fromEntries(Object.keys(fixture).map(key=>[key,process.env[key]]));
   const originalFetch=globalThis.fetch;const authorizations=[];
   Object.assign(process.env,fixture);clearProviderCache();
-  globalThis.fetch=async(url,options={})=>{
+  globalThis.fetch=atlasSession.wrap(async(url,options={})=>{
     const target=String(url);
     if(target.startsWith('https://api.vercel.com/v1/connect/token/')){
       authorizations.push(options.headers.Authorization);
@@ -42,7 +44,7 @@ test('private personal reads use the request OIDC and reject anonymous access be
     }
     if(target.startsWith('https://nexo.test/'))return Response.json({version:'1',revision:'fixture',items:[]});
     return Response.json({files:[],items:[],messages:[]});
-  };
+  });
   const invoke=async(cookie)=>{
     let output;const response={setHeader(){},end(body){output=JSON.parse(body);}};
     await handler({method:'GET',url:'/api/personal',headers:{host:'nexo-one-two.vercel.app',cookie,
@@ -51,7 +53,7 @@ test('private personal reads use the request OIDC and reject anonymous access be
   };
   try{
     assert.equal((await invoke('')).status,401);assert.equal(authorizations.length,0);
-    const result=await invoke('nexo_session='+makeSession(process.env));
+    const result=await invoke(atlasSession.cookie+'; nexo_session='+makeSession(process.env));
     assert.equal(result.status,200);assert.equal(authorizations.length,3);
     assert.ok(authorizations.every(value=>value==='Bearer request-personal-identity'));
     assert.ok(result.output.providers.filter(p=>['gmail','calendar','drive'].includes(p.id)).every(p=>p.status==='AVAILABLE'));

@@ -1,3 +1,4 @@
+import { withPrivateApiBoundary } from '../lib/private-api-boundary.mjs';
 import {loadGithubCanonical,syncGithubCanonical} from '../lib/github-canonical-runtime.mjs';
 import {projectGithubCanonical} from '../lib/github-canonical-projection.mjs';
 import liveActivity from './live/activity.mjs';
@@ -20,7 +21,7 @@ function towerize(value){
  return out;
 }
 function sendJson(res,value,status=200,{noStore=false}={}){res.statusCode=status;res.setHeader('Content-Type','application/json; charset=utf-8');res.setHeader('Cache-Control',noStore?'private, no-store':'public, max-age=30, stale-while-revalidate=120');res.setHeader('X-Content-Type-Options','nosniff');res.setHeader('X-Atlas-Authority','TOWER_V06');res.setHeader('X-Atlas-Truth-Owner',TRUTH_OWNER);return res.end(JSON.stringify(towerize(value)))}
-export default async function handler(req,res){
+async function handler(req,res){
  const route=routeOf(req),query=queryOf(req),method=String(req.method||'GET').toUpperCase();
  if(route==='live-activity')return liveActivity(req,res);
  if(method==='POST'&&route==='sync'){
@@ -32,3 +33,5 @@ export default async function handler(req,res){
  try{const state=await loadGithubCanonical({force:query.refresh==='1',signal:req.signal});return sendJson(res,projectGithubCanonical(state,route,query))}
  catch(error){console.warn('[atlas:tower-projection]',route,String(error?.message||error));return sendJson(res,{ok:false,error:'TOWER_PROJECTION_UNAVAILABLE',detail:String(error?.message||error).slice(0,180),authority:'TOWER_V06',truthOwner:TRUTH_OWNER,projectionOnly:true,lastValidPreserved:true},503,{noStore:true})}
 }
+
+export default withPrivateApiBoundary(handler);

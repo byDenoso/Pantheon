@@ -1,3 +1,4 @@
+import { withPrivateApiBoundary } from '../lib/private-api-boundary.mjs';
 import {readGithubAuthority} from '../lib/github-authority.mjs';
 import {loadGithubCanonical} from '../lib/github-canonical-runtime.mjs';
 import {loadDriveGithubScience,projectDriveGithubScience} from '../lib/drive-github-science.mjs';
@@ -13,7 +14,7 @@ export function assertScienceProjectionAuthorized(authority){
  return projection;
 }
 
-export default async function handler(req,res){
+async function handler(req,res){
  const method=String(req.method||'GET').toUpperCase(),route=routeOf(req),query=queryOf(req);
  if(method==='OPTIONS'){res.statusCode=204;return res.end()}
  if(method!=='GET'||!['graph','state','entity'].includes(route))return sendJson(res,{ok:false,error:'METHOD_OR_ROUTE_NOT_ALLOWED',authority:'GITHUB'},405);
@@ -28,3 +29,5 @@ export default async function handler(req,res){
   return sendJson(res,{ok:false,error:'DRIVE_GITHUB_SCIENCE_UNAVAILABLE',detail:String(error?.message||error).slice(0,180),authority:'GITHUB',projectionAuthority:'GOOGLE_DRIVE',lastValidPreserved:true},500);
  }
 }
+
+export default withPrivateApiBoundary(handler);

@@ -9,7 +9,7 @@ const text = async path => {
 };
 
 test('Command OS visual layer is loaded last so it can safely refine the existing system', async () => {
-  const main = await text('src/main.tsx');
+  const main = await text('src/legacy/main.tsx');
   const importIndex = main.indexOf("./styles/command-os.css");
   const systemIndex = main.indexOf("./styles/system.css");
 

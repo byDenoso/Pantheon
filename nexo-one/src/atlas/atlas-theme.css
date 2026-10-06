@@ -1,0 +1,103 @@
+/* Atlas public/private theme. One blue family on white (light) and on black (dark). The token names --cyan / --orange are historical:
+   --cyan is the interface blue, --orange its deep (light) or lit (dark) companion for emphasis and focus.
+   System font stack only (no external fonts). Contrast ratios are asserted in test/atlas-theme.test.mjs. */
+:root{
+  color-scheme:light;
+  --bg:#ffffff; --bg-2:#f4f7fe; --fg:#0a1220; --fg-2:#48566c; --line:#c9d6ee;
+  --cyan:#1e5bff; --on-cyan:#ffffff; --orange:#12348f; --focus:#12348f;
+  --font:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+}
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  --bg:#000000; --bg-2:#060b14; --fg:#f2f6fd; --fg-2:#98a6bc; --line:#17243c;
+  --cyan:#6890ff; --on-cyan:#000b1f; --orange:#b9dbff; --focus:#b9dbff;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme]){
+    color-scheme:dark;
+    --bg:#000000; --bg-2:#060b14; --fg:#f2f6fd; --fg-2:#98a6bc; --line:#17243c;
+    --cyan:#6890ff; --on-cyan:#000b1f; --orange:#b9dbff; --focus:#b9dbff;
+  }
+}
+*{box-sizing:border-box}
+html,body,#root{margin:0;min-height:100%}
+body{background:var(--bg);color:var(--fg);font:16px/1.55 var(--font);-webkit-text-size-adjust:100%}
+a{color:var(--cyan)}
+:focus-visible{outline:3px solid var(--focus);outline-offset:2px}
+.atlas-app{min-height:100vh;display:flex;flex-direction:column}
+.atlas-header{display:flex;flex-wrap:wrap;gap:12px 20px;align-items:center;justify-content:space-between;padding:12px 20px;border-bottom:1px solid var(--line)}
+.atlas-brand{display:flex;align-items:baseline;gap:10px;color:var(--fg);text-decoration:none;font-weight:700;font-size:1.25rem}
+.atlas-brand small{font-weight:400;font-size:.8rem;color:var(--fg-2)}
+.atlas-mark{width:12px;height:12px;border-radius:50%;background:var(--cyan);box-shadow:0 0 0 3px color-mix(in srgb,var(--cyan) 35%,transparent);align-self:center}
+.atlas-nav a{color:var(--cyan);font-weight:600}
+.atlas-controls{display:flex;flex-wrap:wrap;gap:10px}
+.atlas-seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.atlas-seg button{background:transparent;color:var(--fg);border:0;padding:8px 12px;font:inherit;font-size:.85rem;cursor:pointer;min-height:36px}
+.atlas-seg button+button{border-left:1px solid var(--line)}
+.atlas-seg button[aria-pressed="true"]{background:var(--cyan);color:var(--on-cyan);font-weight:700}
+.atlas-main{flex:1;width:100%;max-width:1100px;margin:0 auto;padding:20px}
+.atlas-hero{position:relative;min-height:420px;border:1px solid var(--line);border-radius:14px;overflow:hidden;background:var(--bg-2)}
+.atlas-web{position:absolute;inset:0;width:100%;height:100%;display:block}
+.atlas-web[data-fallback="static"]{background:radial-gradient(circle at 30% 40%,color-mix(in srgb,var(--cyan) 30%,transparent),transparent 55%),radial-gradient(circle at 72% 62%,color-mix(in srgb,var(--orange) 26%,transparent),transparent 50%)}
+.atlas-hero-copy{position:relative;max-width:560px;padding:28px;background:color-mix(in srgb,var(--bg) 82%,transparent);margin:28px;border-radius:12px}
+.atlas-hero-copy h1{margin:0 0 10px;font-size:clamp(1.6rem,4vw,2.4rem);line-height:1.15}
+.atlas-note{font-size:.8rem;color:var(--fg-2)}
+.atlas-btn{background:var(--cyan);color:var(--on-cyan);border:0;border-radius:8px;padding:10px 16px;font:inherit;font-weight:700;cursor:pointer;min-height:44px}
+.atlas-btn:disabled{opacity:.55;cursor:not-allowed}
+.atlas-tech{margin-top:14px;padding:12px 14px;border-left:4px solid var(--orange)}
+.atlas-tech[hidden]{display:none}
+.atlas-items{margin-top:24px;display:grid;gap:16px}
+.atlas-empty{border:1px dashed var(--line);border-radius:12px;padding:20px}
+.atlas-item{border:1px solid var(--line);border-radius:12px;padding:16px}
+.atlas-kind{display:inline-block;font-size:.75rem;font-weight:700;color:var(--orange);text-transform:uppercase;letter-spacing:.06em}
+.atlas-form{display:grid;gap:10px;max-width:420px}
+.atlas-form input{padding:10px 12px;font:inherit;border:1px solid var(--fg-2);border-radius:8px;background:var(--bg);color:var(--fg);min-height:44px}
+.atlas-warn{color:var(--orange);font-weight:600}
+.atlas-row{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+.atlas-data{display:grid;gap:6px;margin:0}
+.atlas-data div{display:grid;grid-template-columns:minmax(120px,1fr) 3fr;gap:12px;border-bottom:1px solid var(--line);padding:6px 0}
+.atlas-data dt{color:var(--fg-2);overflow-wrap:anywhere}
+.atlas-data dd{margin:0;overflow-wrap:anywhere}
+/* bfcache: hide private content synchronously on pagehide */
+html[data-atlas-private="hidden"] .private-root{visibility:hidden}
+@media (max-width:560px){.atlas-hero-copy{margin:12px;padding:16px}.atlas-data div{grid-template-columns:1fr}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
+.private-root.has-frame{max-width:none;padding:12px 16px}
+.atlas-private-frame{display:block;width:100%;height:100vh;height:100dvh;min-height:760px; /* legacy screens are laid out for a full viewport */border:1px solid var(--line);border-radius:10px;background:var(--bg)}
+
+/* ---- public presentation: sections under the hero. Same tokens, same max width; one column on phones. ---- */
+.atlas-toc{display:flex;flex-wrap:wrap;gap:8px;margin:20px 0 0;padding:0;list-style:none}
+.atlas-toc button{background:transparent;color:var(--cyan);border:1px solid var(--line);border-radius:999px;padding:8px 14px;font:inherit;font-size:.9rem;font-weight:600;cursor:pointer;min-height:44px}
+.atlas-toc button:hover{border-color:var(--cyan)}
+.atlas-section{margin-top:56px;scroll-margin-top:16px}
+.atlas-section>h2{margin:0 0 8px;font-size:clamp(1.35rem,3vw,1.75rem);line-height:1.2}
+.atlas-section>h2::before{content:"";display:block;width:36px;height:3px;border-radius:2px;background:var(--cyan);margin-bottom:14px}
+.atlas-section h3{margin:0 0 6px;font-size:1.05rem;line-height:1.3}
+.atlas-section p{margin:0 0 12px;max-width:68ch}
+.atlas-lead{color:var(--fg-2);font-size:1.05rem}
+.atlas-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:16px;margin:20px 0 12px;padding:0;list-style:none}
+.atlas-card{border:1px solid var(--line);border-radius:12px;padding:18px;background:var(--bg-2)}
+.atlas-card p{margin:0}
+.atlas-card .atlas-q{color:var(--cyan);font-weight:600;margin-bottom:8px}
+.atlas-list{margin:8px 0 12px;padding-left:20px;max-width:68ch}
+.atlas-list li{margin-bottom:6px}
+.atlas-steps{counter-reset:step;display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:16px;margin:20px 0 16px;padding:0;list-style:none}
+.atlas-steps li{counter-increment:step;border-top:2px solid var(--cyan);padding-top:12px}
+.atlas-steps li::before{content:counter(step,decimal-leading-zero);display:block;font-size:.8rem;font-weight:700;color:var(--fg-2);letter-spacing:.06em;margin-bottom:4px}
+.atlas-steps p{margin:0}
+.atlas-callout{border-left:4px solid var(--cyan);background:var(--bg-2);border-radius:0 10px 10px 0;padding:14px 16px;max-width:72ch}
+.atlas-callout p{margin:0}
+.atlas-terms{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px 24px;margin:16px 0}
+.atlas-terms dt{font-weight:700}
+.atlas-terms dd{margin:2px 0 0;color:var(--fg-2)}
+.atlas-items{margin-top:16px}
+.atlas-empty h3{margin:0 0 6px}
+.atlas-empty p{margin:0}
+.atlas-mail{display:inline-flex;align-items:center;min-height:44px;font-weight:700;font-size:1.05rem;overflow-wrap:anywhere}
+.atlas-footer{margin-top:64px;border-top:1px solid var(--line);background:var(--bg-2)}
+.atlas-footer-in{max-width:1100px;margin:0 auto;padding:24px 20px;display:grid;grid-template-columns:minmax(0,2fr) minmax(0,1fr) minmax(0,1fr);gap:20px 32px;font-size:.9rem;color:var(--fg-2)}
+.atlas-footer strong{display:block;color:var(--fg);margin-bottom:6px}
+.atlas-footer ul{margin:0;padding:0;list-style:none;display:grid;gap:2px}
+.atlas-footer button{background:none;border:0;padding:6px 0;font:inherit;color:var(--cyan);cursor:pointer;text-align:left;min-height:32px}
+.atlas-footer p{margin:0}
+@media (max-width:720px){.atlas-footer-in{grid-template-columns:1fr}.atlas-section{margin-top:40px}.atlas-footer button{min-height:44px}}

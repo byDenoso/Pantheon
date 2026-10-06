@@ -5,7 +5,7 @@ import {readFile} from 'node:fs/promises';
 const root=new URL('../',import.meta.url);
 const text=path=>readFile(new URL(path,root),'utf8');
 
-test('MCP Atlas is a routed surface in the unified SPA with canonical Tower sources',async()=>{
+test('MCP Atlas retains its routed shell while unauthenticated topology publication is disabled',async()=>{
   const [vite,workflow,site,builder]=await Promise.all([
     text('vite.config.ts'),
     text('../.github/workflows/nexo-one-pages.yml'),
@@ -13,9 +13,13 @@ test('MCP Atlas is a routed surface in the unified SPA with canonical Tower sour
     text('scripts/build-mcp-topology.mjs'),
   ]);
   assert.match(vite,/mcp\/index\.html/);
-  assert.match(workflow,/manifests\/capabilities\.json/);
-  assert.match(workflow,/mcp_server\.py/);
-  assert.match(workflow,/build-mcp-topology\.mjs/);
+  assert.doesNotMatch(workflow,/manifests\/capabilities\.json|mcp_server\.py|build-mcp-topology\.mjs|projection-manifest\.json/);
+  assert.match(workflow,/mcp\/topology\.json/);
+  assert.match(workflow,/Verify former data URLs are unavailable/);
+  assert.match(workflow,/403\|404\|410\)/);
+  assert.match(builder,/assertPublicDataPublicationAllowed\(\)/);
+  assert.ok(builder.indexOf('assertPublicDataPublicationAllowed();')<builder.indexOf('const sourceRoot='));
+  assert.match(vite,/sealStaticPublication/);
   assert.match(site,/NexoGraph/);
   assert.doesNotMatch(site,/mcp-neural-2d/);
   assert.match(site,/type GraphView=NexoGraphView/);
@@ -25,25 +29,14 @@ test('MCP Atlas is a routed surface in the unified SPA with canonical Tower sour
   assert.match(site,/data-mcp-theme/);
   assert.match(site,/data-mcp-graph-view/);
   assert.match(site,/loadPublishedContext<Topology>/);
-  assert.match(workflow,/VITE_PUBLIC_NEXO_BASE:\s*https:\/\/bydenoso\.github\.io\/Pantheon\//);
   assert.doesNotMatch(workflow,/VITE_PRIVATE_COCKPIT_URL:\s*https:\/\/nexo-one-two\.vercel\.app/);
-  assert.match(workflow,/PAGES_MCP_NEURAL_DARK_2D_OK/);
-  assert.match(workflow,/PAGES_MCP_NEURAL_LIGHT_2D_OK/);
-  assert.match(workflow,/PAGES_MCP_NEURAL_DARK_3D_OK/);
-  assert.match(workflow,/PAGES_MCP_NEURAL_LIGHT_3D_OK/);
-  assert.match(workflow,/PAGES_MCP_NEURAL_MOBILE_LIGHT_2D_OK/);
-  assert.match(workflow,/PAGES_MCP_NEURAL_MOBILE_DARK_3D_OK/);
   assert.doesNotMatch(site,/react-force-graph-3d|ForceGraph3D/);
   assert.match(site,/routeParams\(\)/);
   const bridge=await text('mcp/index.html');
-  assert.match(bridge,/destination\.hash\s*=\s*'\/sistema'/);
+  assert.match(bridge,/destination\.hash\s*=\s*'\/privado'/);
   assert.match(builder,/NEXO_MCP_TOPOLOGY_V1/);
   assert.match(builder,/TOWER_V06/);
 
-  assert.match(workflow,/projection-manifest\.json/);
-  assert.match(workflow,/WORK_COUNT_DRIFT/);
-  assert.match(workflow,/WORK_STATUS_DRIFT/);
-  assert.match(workflow,/MCP_TOPOLOGY_FRESHNESS_FINGERPRINT_MISMATCH/);
   assert.match(site,/systemGraphModel/);
   assert.doesNotMatch(site,/system-graph-views/);
   assert.match(site,/\['roles','Equipes de automação'\]/);

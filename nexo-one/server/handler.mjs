@@ -1,3 +1,7 @@
+import {encodePrivateResponse} from './atlas/private-response.mjs';
+import {readPrivateUiAsset} from './atlas/private-assets.mjs';
+import {readAtlasPrivatePublication} from './atlas/private-source.mjs';
+import {atlasBoundary} from './atlas/boundary.mjs';
 import {inboxDrop,inboxRobot} from './inbox-gateway.mjs';
 import {toNodeHandler} from '@modelcontextprotocol/node';
 import {PROVIDERS} from '../src/contracts/validate.mjs';
@@ -131,8 +135,19 @@ function personalError(error){
 export default async function handler(req,res) {
   const env=process.env,now=Date.now();
   res.setHeader('Content-Type','application/json; charset=utf-8');res.setHeader('Cache-Control','private, no-store');res.setHeader('X-Content-Type-Options','nosniff');res.setHeader('Vary','Authorization, Origin, Cookie');
+  res.setHeader('CDN-Cache-Control','no-store');res.setHeader('Vercel-CDN-Cache-Control','no-store');
   const send=(value,status=200)=>{res.statusCode=status;res.end(JSON.stringify(value));};
-  const url=new URL(req.url,'http://local'),path=url.pathname.replace(/\/+$/,''),route=url.searchParams.get('route')||(path.endsWith('/mcp/status')?'mcp/status':path.endsWith('/personal/action')?'personal-action':path.split('/').pop());
+  const url=new URL(req.url,'http://local'),path=url.pathname.replace(/\/+$/,''),route=path.startsWith('/api/atlas-private-assets/')?'atlas-private-asset':url.searchParams.get('route')||(path.endsWith('/mcp/status')?'mcp/status':path.endsWith('/personal/action')?'personal-action':path.split('/').pop());
+  if(route==='atlas-locale')res.setHeader('Vary','Authorization, Origin, Cookie, Accept-Language, X-Vercel-IP-Country');
+  // Evaluate the privacy boundary before any adapter, cache or streaming read.
+  try{
+    const boundary=await atlasBoundary(req,env,{route,now,body:route==='atlas-session'?await requestBody(req):{}});
+    if(boundary){
+      if(boundary.setCookie)res.setHeader('Set-Cookie',boundary.setCookie);
+      if(boundary.status===429)res.setHeader('Retry-After','900');
+      return send(boundary.body,boundary.status);
+    }
+  }catch{return send({error:'AUTH_UNAVAILABLE'},503);}
   const privateAccess=sessionAccess(req,env,now),access=privateAccess?'PRIVATE':'PUBLIC';
   const providerEnv=privateAccess?googleRuntimeEnvironment(env,req.headers):env;
   const origin=String(req.headers.origin||'');
@@ -145,6 +160,29 @@ export default async function handler(req,res) {
   }
   if(req.method==='OPTIONS'&&(ATLAS_ORIGINS.has(origin)||sameOrigin(req))&&isCorsRoute(route)){res.statusCode=204;return res.end();}
   try{
+    if(route==='atlas-private-ui'||route==='atlas-private-asset'){
+      if(req.method!=='GET')return send({error:'METHOD_NOT_ALLOWED'},405);
+      const asset=route==='atlas-private-ui'?'index.html':path.startsWith('/api/atlas-private-assets/')?path.slice('/api/atlas-private-assets/'.length):url.searchParams.get('asset');
+      try{
+        const result=await readPrivateUiAsset(asset);
+        res.setHeader('Content-Type',result.contentType);
+        res.setHeader('Referrer-Policy','no-referrer');
+        res.setHeader('X-Frame-Options','SAMEORIGIN');
+        res.setHeader('Content-Security-Policy',"default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self'; frame-ancestors 'self'; base-uri 'self'; form-action 'self'");
+        res.statusCode=200;return res.end(result.bytes);
+      }catch(error){return send({error:error?.message==='PRIVATE_ASSET_NOT_FOUND'?'NOT_FOUND':'PRIVATE_UI_UNAVAILABLE'},error?.message==='PRIVATE_ASSET_NOT_FOUND'?404:503);}
+    }
+    if(route==='atlas-private'){
+      if(req.method!=='GET')return send({error:'METHOD_NOT_ALLOWED'},405);
+      try{
+        const value=await readAtlasPrivatePublication(googleRuntimeEnvironment(env,req.headers));
+        const encoded=encodePrivateResponse(value,req.headers['accept-encoding']);
+        res.setHeader('Vary','Authorization, Origin, Cookie, Accept-Encoding');
+        if(encoded.encoding)res.setHeader('Content-Encoding',encoded.encoding);
+        res.statusCode=200;return res.end(encoded.bytes);
+      }
+      catch{return send({error:'PRIVATE_SOURCE_UNAVAILABLE'},503);}
+    }
     if(route==='inbox-drop'){try{const [value,status]=await inboxDrop(url,env,req);return send(value,status);}catch(error){return send({ok:false,error:String(error?.message||error).slice(0,120)},502);}}
     if(route==='inbox-list'||route==='inbox-ack'){const [value,status]=await inboxRobot(route,url,req,env);return send(value,status);}
     if(route==='mcp/status'){
@@ -217,7 +255,8 @@ export default async function handler(req,res) {
     if(!['world','health','now','loops','day','context','recall','projections','system'].includes(route))return send({error:'NOT_FOUND'},404);
     if(route==='projections'){
       const serviceAccess=await verifyProjectionService(req,{now});
-      const projectionAccess=serviceAccess?'PRIVATE':'PUBLIC';
+      if(!serviceAccess)return send({error:'ATLAS_SERVICE_REQUIRED'},403);
+      const projectionAccess='PRIVATE';
       return send(await buildProjectionBus({env,now,access:projectionAccess,force}));
     }
     if(route==='system'){

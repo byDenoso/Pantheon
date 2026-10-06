@@ -1,0 +1,180 @@
+/*!
+Copyright 2014 The Nunito Project Authors (https://github.com/googlefonts/nunito)
+Copyright 2017 The Barlow Project Authors (https://github.com/jpt/barlow)
+
+Nunito and Barlow are distributed under the following license.
+
+SIL OPEN FONT LICENSE Version 1.1 - 26 February 2007
+-----------------------------------------------------------
+
+PREAMBLE
+The goals of the Open Font License (OFL) are to stimulate worldwide
+development of collaborative font projects, to support the font creation
+efforts of academic and linguistic communities, and to provide a free and
+open framework in which fonts may be shared and improved in partnership
+with others.
+
+The OFL allows the licensed fonts to be used, studied, modified and
+redistributed freely as long as they are not sold by themselves. The
+fonts, including any derivative works, can be bundled, embedded,
+redistributed and/or sold with any software provided that any reserved
+names are not used by derivative works. The fonts and derivatives,
+however, cannot be released under any other type of license. The
+requirement for fonts to remain under this license does not apply
+to any document created using the fonts or their derivatives.
+
+DEFINITIONS
+"Font Software" refers to the set of files released by the Copyright
+Holder(s) under this license and clearly marked as such. This may
+include source files, build scripts and documentation.
+
+"Reserved Font Name" refers to any names specified as such after the
+copyright statement(s).
+
+"Original Version" refers to the collection of Font Software components as
+distributed by the Copyright Holder(s).
+
+"Modified Version" refers to any derivative made by adding to, deleting,
+or substituting -- in part or in whole -- any of the components of the
+Original Version, by changing formats or by porting the Font Software to a
+new environment.
+
+"Author" refers to any designer, engineer, programmer, technical
+writer or other person who contributed to the Font Software.
+
+PERMISSION & CONDITIONS
+Permission is hereby granted, free of charge, to any person obtaining
+a copy of the Font Software, to use, study, copy, merge, embed, modify,
+redistribute, and sell modified and unmodified copies of the Font
+Software, subject to the following conditions:
+
+1) Neither the Font Software nor any of its individual components,
+in Original or Modified Versions, may be sold by itself.
+
+2) Original or Modified Versions of the Font Software may be bundled,
+redistributed and/or sold with any software, provided that each copy
+contains the above copyright notice and this license. These can be
+included either as stand-alone text files, human-readable headers or
+in the appropriate machine-readable metadata fields within text or
+binary files as long as those fields can be easily viewed by the user.
+
+3) No Modified Version of the Font Software may use the Reserved Font
+Name(s) unless explicit written permission is granted by the corresponding
+Copyright Holder. This restriction only applies to the primary font name as
+presented to the users.
+
+4) The name(s) of the Copyright Holder(s) or the Author(s) of the Font
+Software shall not be used to promote, endorse or advertise any
+Modified Version, except to acknowledge the contribution(s) of the
+Copyright Holder(s) and the Author(s) or with their explicit written
+permission.
+
+5) The Font Software, modified or unmodified, in part or in whole,
+must be distributed entirely under this license, and must not be
+distributed under any other license. The requirement for fonts to
+remain under this license does not apply to any document created
+using the Font Software.
+
+TERMINATION
+This license becomes null and void if any of the above conditions are
+not met.
+
+DISCLAIMER
+THE FONT SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO ANY WARRANTIES OF
+MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT
+OF COPYRIGHT, PATENT, TRADEMARK, OR OTHER RIGHT. IN NO EVENT SHALL THE
+COPYRIGHT HOLDER BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+INCLUDING ANY GENERAL, SPECIAL, INDIRECT, INCIDENTAL, OR CONSEQUENTIAL
+DAMAGES, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+FROM, OUT OF THE USE OR INABILITY TO USE THE FONT SOFTWARE OR FROM
+OTHER DEALINGS IN THE FONT SOFTWARE.
+
+*/
+/* Self-hosted, swappable presentation fonts. See assets/FONT-LICENSES.txt. */
+@font-face{font-family:Atlas Rounded;src:url('./assets/NunitoBlack.ttf') format('truetype');font-style:normal;font-weight:900;font-display:swap}
+@font-face{font-family:Atlas Barlow;src:url('./assets/Barlow-Regular.ttf') format('truetype');font-style:normal;font-weight:400;font-display:swap}
+@font-face{font-family:Atlas Barlow;src:url('./assets/Barlow-Medium.ttf') format('truetype');font-style:normal;font-weight:500 700;font-display:swap}
+.atlas-header-menu{display:flex;flex-wrap:wrap;align-items:center;gap:14px 24px}
+.atlas-menu-toggle{display:none}
+.atlas-app[data-area="public"]{--font-body:"Atlas Barlow",var(--font);--font-heading:"Atlas Rounded",ui-rounded,var(--font);--action:#1e5bff;font-family:var(--font-body);overflow-x:clip}
+.atlas-app[data-area="public"] .atlas-header{max-width:1440px;width:100%;margin:0 auto;padding:22px clamp(24px,5.3vw,76px);gap:8px 28px;align-items:flex-start}
+.atlas-app[data-area="public"] .atlas-brand{gap:24px;font:900 32px/1.4 var(--font-heading);min-height:44px;white-space:nowrap}
+.atlas-app[data-area="public"] .atlas-brand small{max-width:190px;white-space:normal;font:400 14px/1.3 var(--font-body)}
+.atlas-app[data-area="public"] .atlas-mark{display:none}
+.atlas-app[data-area="public"] .atlas-header-menu{margin-left:auto;display:grid;justify-items:end;gap:6px}
+.atlas-app[data-area="public"] .atlas-nav{display:flex;align-items:center;gap:24px;font-size:17px}
+.atlas-app[data-area="public"] .atlas-nav>a{font-size:14px;color:var(--fg-2);font-weight:400;text-decoration:none;min-height:44px;display:flex;align-items:center}
+.atlas-app[data-area="public"] .atlas-toc{margin:0;gap:24px}
+.atlas-app[data-area="public"] .atlas-toc button{padding:0;background:none;border:0;border-radius:0;color:var(--fg);font-size:17px;font-weight:400;min-height:44px}
+.atlas-app[data-area="public"] .atlas-toc button:hover,.atlas-app[data-area="public"] .atlas-nav>a:hover{text-decoration:underline;text-underline-offset:6px}
+.atlas-app[data-area="public"] .atlas-controls{gap:22px}
+.atlas-app[data-area="public"] .atlas-seg{border:0;border-radius:0;gap:4px;overflow:visible}
+.atlas-app[data-area="public"] .atlas-seg button{font:400 13px/1.3 var(--font-body);padding:5px 8px;min-height:36px;color:var(--fg-2)}
+.atlas-app[data-area="public"] .atlas-seg button+button{border:0}
+.atlas-app[data-area="public"] .atlas-seg button[aria-pressed="true"]{color:var(--cyan);background:none;box-shadow:inset 0 -1px var(--cyan);font-weight:500}
+.atlas-public-main{max-width:1440px;padding:0 clamp(24px,5.3vw,76px);font-size:20px;line-height:1.45}
+.atlas-public-main h1,.atlas-public-main h2,.atlas-public-main h3{font-family:var(--font-heading);font-weight:900;letter-spacing:-.025em}
+.atlas-public-main .atlas-hero{min-height:710px;display:grid;grid-template-columns:1fr 1fr;align-items:center;border:0;border-radius:0;background:none;overflow:visible;padding:72px 0 70px}
+.atlas-public-main .atlas-hero-copy{z-index:2;width:620px;max-width:100%;padding:0;margin:0;background:none;border-radius:0;align-self:start}
+.atlas-public-main .atlas-eyebrow{font-family:var(--font-body);font-size:12px;line-height:1.4;letter-spacing:.06em;text-transform:uppercase;color:var(--cyan);margin:0 0 34px;font-weight:500}
+.atlas-public-main .atlas-hero-copy h1{margin:0 0 32px;font-size:clamp(46px,5.45vw,80px);line-height:1.1;letter-spacing:-.035em}
+.atlas-hero-copy h1 span{display:block}
+.atlas-public-main .atlas-hero-lead{font-size:24px;line-height:1.4;color:var(--fg-2);max-width:430px;margin:0 0 38px}
+.atlas-hero-actions{display:flex;align-items:center;gap:26px;flex-wrap:wrap}
+.atlas-public-main .atlas-btn{display:flex;align-items:center;justify-content:space-between;gap:28px;min-height:56px;min-width:226px;padding:14px 20px;background:var(--action);color:#ffffff;font:500 20px/1.3 var(--font-body);border-radius:8px}
+.atlas-public-main .atlas-btn:hover{filter:brightness(1.12)}
+.atlas-text-action{display:flex;justify-content:space-between;align-items:center;gap:26px;min-height:56px;background:none;color:var(--fg);border:0;padding:12px 0;font:500 20px/1.3 var(--font-body);cursor:pointer}
+.atlas-text-action:hover{text-decoration:underline;text-underline-offset:5px}
+.atlas-hero-actions span{font-size:24px;font-family:var(--font)}
+.atlas-hero-art{position:absolute;right:-76px;top:92px;width:82%;height:520px;margin:0;pointer-events:none}
+.atlas-hero-picture{position:absolute;inset:0;mask-image:linear-gradient(to right,transparent 0%,#000 22%,#000 100%)}
+.atlas-web-art{display:block;width:100%;height:100%;object-fit:cover;object-position:60% 50%;filter:invert(1) hue-rotate(180deg);mix-blend-mode:multiply}
+.atlas-web-motion{position:absolute;inset:0;opacity:.13;mix-blend-mode:multiply}
+.atlas-web-motion .atlas-web{inset:0}
+.atlas-hero-art .atlas-note{position:absolute;right:76px;bottom:-24px;margin:0;font-size:14px;line-height:1.4;color:var(--fg-2);text-align:right}
+:root[data-theme="dark"] .atlas-web-art{filter:none;mix-blend-mode:screen}
+:root[data-theme="dark"] .atlas-web-motion{mix-blend-mode:screen}
+@media (prefers-color-scheme:dark){:root:not([data-theme]) .atlas-web-art{filter:none;mix-blend-mode:screen}:root:not([data-theme]) .atlas-web-motion{mix-blend-mode:screen}}
+.atlas-public-main .atlas-section{margin:0;padding:64px 0 72px;border-top:1px solid var(--line);scroll-margin-top:24px}
+.atlas-public-main .atlas-section h2{font-size:clamp(32px,3.25vw,48px);line-height:1.15;max-width:480px;margin:0 0 40px}
+.atlas-public-main .atlas-section h2::before{display:none}
+.atlas-public-main .atlas-section h3{font-size:clamp(22px,2.15vw,30px);line-height:1.2;margin:0}
+.atlas-public-main .atlas-section p{color:var(--fg-2);margin:0;max-width:68ch}
+.atlas-public-main .atlas-section .atlas-eyebrow{color:var(--cyan);margin:0 0 32px}
+.atlas-research-lines{list-style:none;margin:52px 0 0;padding:0}
+.atlas-research-lines li{display:grid;grid-template-columns:42px minmax(0,1fr) minmax(240px,.9fr);gap:24px;padding:32px 0;border-top:1px solid var(--line);align-items:start}
+.atlas-research-lines li:last-child{border-bottom:1px solid var(--line)}
+.atlas-line-number{font:500 13px/1.5 var(--font-body);letter-spacing:.04em;color:var(--cyan);padding-top:5px}
+.atlas-public-main .atlas-research-lines p{font-size:21px;max-width:390px}
+.atlas-public-main .atlas-method-section{display:grid;grid-template-columns:1fr 1fr;gap:80px;padding-top:74px;padding-bottom:84px}
+.atlas-public-main .atlas-method-intro h2{max-width:370px;margin-bottom:38px}
+.atlas-public-main .atlas-method-intro .atlas-lead{max-width:340px;font-size:24px}
+.atlas-public-main .atlas-steps{display:block;counter-reset:none;margin:0;padding:0;list-style:none}
+.atlas-public-main .atlas-steps li{display:grid;grid-template-columns:30px minmax(0,1fr);gap:22px;border-top:1px solid var(--line);padding:24px 0 28px;counter-increment:none}
+.atlas-public-main .atlas-steps li::before{display:none}
+.atlas-public-main .atlas-steps h3{font-size:26px;margin-bottom:12px}
+.atlas-public-main .atlas-steps p{font-size:21px;max-width:380px}
+.atlas-public-main .atlas-items{gap:36px;margin-top:0}
+.atlas-public-main .atlas-empty{padding:0;border:0;border-radius:0;color:var(--fg-2)}
+.atlas-public-main .atlas-item{border:0;border-top:1px solid var(--line);border-radius:0;padding:28px 0}
+.atlas-public-main .atlas-item h3{margin:12px 0}
+.atlas-public-main .atlas-item details{margin-top:14px}
+.atlas-public-test{padding:32px 0;border-top:1px solid var(--line)}
+.atlas-public-test dl{margin:0;display:grid;gap:28px}
+.atlas-public-test dl>div{display:grid;grid-template-columns:minmax(160px,.6fr) minmax(0,1.8fr);gap:36px}
+.atlas-public-test dt{font-weight:500;font-size:18px;color:var(--fg-2)}
+.atlas-public-test dd{margin:0;white-space:pre-wrap;overflow-wrap:anywhere;max-width:66ch}
+.atlas-public-main .atlas-contact-section{padding-bottom:52px}
+.atlas-public-main .atlas-contact-section h2{margin-bottom:24px}
+.atlas-public-main .atlas-mail{display:inline-flex;gap:32px;margin-top:24px;padding:10px 0 18px;border-bottom:1px solid var(--action);color:var(--fg);font-size:clamp(22px,2.1vw,30px);font-weight:500;text-decoration:none;min-height:56px}
+.atlas-public-main .atlas-mail:hover{color:var(--cyan)}
+.atlas-public-main .atlas-mail span{color:var(--cyan)}
+.atlas-app[data-area="public"] .atlas-footer{background:none;margin:0;border:0}
+.atlas-app[data-area="public"] .atlas-footer-in{max-width:1288px;margin:0 auto;padding:22px 0 28px;border-top:1px solid var(--line);display:flex;align-items:center;gap:24px;font-size:14px}
+.atlas-app[data-area="public"] .atlas-footer strong{font:900 20px/1.4 var(--font-heading);margin:0}
+.atlas-app[data-area="public"] .atlas-footer a{margin-left:auto;min-height:44px;display:flex;align-items:center;color:var(--fg-2)}
+@media(min-width:1441px){.atlas-hero-art{right:-76px}}
+@media(max-width:1200px){.atlas-app[data-area="public"] .atlas-brand small{display:none}.atlas-hero-art{right:-6vw;width:78%;top:150px;height:450px}.atlas-public-main .atlas-hero-copy{width:600px}.atlas-hero-art .atlas-note{right:6vw}.atlas-app[data-area="public"] .atlas-footer-in{margin:0 5.3vw}.atlas-public-main .atlas-hero-lead{max-width:390px}}
+@media(max-width:900px){.atlas-app[data-area="public"] .atlas-header{align-items:center;padding:14px 24px}.atlas-app[data-area="public"] .atlas-header-menu{display:none;width:100%;justify-items:stretch;margin-left:0;padding:16px 0 6px}.atlas-app[data-area="public"] .atlas-header-menu.is-open{display:grid}.atlas-app[data-area="public"] .atlas-menu-toggle{display:block;border:0;background:none;color:var(--fg);font:500 18px/1.3 var(--font-body);min-height:44px;padding:10px 0;cursor:pointer}.atlas-app[data-area="public"] .atlas-nav{flex-wrap:wrap;gap:12px 24px}.atlas-app[data-area="public"] .atlas-toc{gap:16px 24px}.atlas-app[data-area="public"] .atlas-controls{margin-top:16px}.atlas-app[data-area="public"] .atlas-seg button{min-height:44px;font-size:15px}.atlas-public-main{padding:0 24px}.atlas-public-main .atlas-hero{display:flex;flex-direction:column;align-items:stretch;padding:42px 0 36px;min-height:0}.atlas-public-main .atlas-hero-copy{width:100%;max-width:660px;align-self:auto}.atlas-public-main .atlas-hero-copy h1{font-size:clamp(44px,8vw,70px);margin-bottom:24px}.atlas-public-main .atlas-hero-lead{max-width:540px;font-size:22px}.atlas-hero-art{position:relative;top:auto;right:auto;width:calc(100% + 48px);height:420px;margin:32px -24px 0}.atlas-hero-picture{mask-image:none}.atlas-web-art{object-position:65% 50%}.atlas-hero-art .atlas-note{right:24px;left:24px;bottom:0;text-align:left;max-width:100%}.atlas-public-main .atlas-method-section{gap:40px}.atlas-research-lines li{grid-template-columns:28px minmax(0,1fr) minmax(220px,1fr);gap:16px}.atlas-app[data-area="public"] .atlas-footer-in{margin:0 24px}}
+@media(max-width:600px){.atlas-app[data-area="public"] .atlas-brand{font-size:30px}.atlas-public-main .atlas-eyebrow{font-size:11px;margin-bottom:28px}.atlas-public-main .atlas-hero-copy h1{font-size:clamp(38px,10.5vw,54px);line-height:1.13;letter-spacing:-.04em}.atlas-public-main .atlas-hero-lead{font-size:20px;line-height:1.4;margin-bottom:26px}.atlas-hero-actions{display:grid;gap:12px}.atlas-public-main .atlas-btn,.atlas-text-action{width:100%;font-size:20px;min-height:54px;padding:14px 20px}.atlas-text-action{border-bottom:1px solid var(--line);border-radius:0;padding-bottom:20px}.atlas-hero-art{height:360px;margin-top:24px}.atlas-hero-picture{bottom:42px}.atlas-web-art{object-fit:cover;object-position:65% 50%}.atlas-hero-art .atlas-note{font-size:13px;max-width:300px}.atlas-public-main .atlas-section{padding:44px 0 52px}.atlas-public-main .atlas-section h2{font-size:32px;margin-bottom:30px}.atlas-research-lines{margin-top:36px}.atlas-research-lines li{grid-template-columns:20px minmax(0,1fr);gap:12px 14px;padding:24px 0}.atlas-research-lines h3{font-size:22px}.atlas-research-lines p{grid-column:2}.atlas-public-main .atlas-research-lines p{font-size:18px}.atlas-public-main .atlas-method-section{display:block}.atlas-public-main .atlas-method-intro .atlas-lead{font-size:20px;max-width:100%;margin-bottom:32px}.atlas-public-main .atlas-method-intro h2{margin-bottom:26px}.atlas-public-main .atlas-steps li{padding:22px 0;gap:12px}.atlas-public-main .atlas-steps h3{font-size:24px}.atlas-public-main .atlas-steps p{font-size:18px}.atlas-public-main .atlas-empty,.atlas-contact-section>p{font-size:18px}.atlas-public-test dl>div{grid-template-columns:1fr;gap:8px}.atlas-public-test dt{font-size:16px}.atlas-public-test dd{font-size:19px}.atlas-app[data-area="public"] .atlas-footer-in{gap:14px;flex-wrap:wrap;font-size:12px}.atlas-app[data-area="public"] .atlas-footer a{font-size:14px}.atlas-public-main .atlas-mail{font-size:21px;gap:16px}}

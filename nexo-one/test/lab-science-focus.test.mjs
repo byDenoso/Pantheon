@@ -29,7 +29,7 @@ test('DDELEARN inconclusive result remains inconclusive despite delta chi square
   const focus = selectScienceFocus([dde]);
   assert.equal(focus.test, dde);
   assert.match(focus.reason, /Sem resultado confirmado/);
-  assert.match(currentVerdictText(dde), /resultado inconclusivo/);
+  assert.match(currentVerdictText(dde), /Os dados ainda não permitem concluir/); assert.match(currentVerdictText(dde), /não é refutação nem confirmação/);
   assert.equal(dde.verdictRaw, 'INCONCLUSIVE');
   const [[label, explanation]] = scientificStatRows(dde);
   assert.equal(label, 'Δχ² = -17.1');

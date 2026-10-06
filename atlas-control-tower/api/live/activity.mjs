@@ -1,3 +1,4 @@
+import { withPrivateApiBoundary } from '../../lib/private-api-boundary.mjs';
 import {createTowerGithubGateway} from '../../lib/tower-github-gateway.mjs';
 
 function send(res,body,status=200){
@@ -22,7 +23,7 @@ function timestamp(item){
   return 0;
 }
 
-export default async function liveActivity(req,res){
+async function liveActivity(req,res){
   if(String(req?.method||'GET').toUpperCase()!=='GET') return send(res,{error:'METHOD_NOT_ALLOWED'},405);
   const gateway=createTowerGithubGateway();
   try{
@@ -60,3 +61,5 @@ export default async function liveActivity(req,res){
     return send(res,{ok:false,state:'ERROR',truth_owner:'TOWER_V06',error:String(error?.message||error)},502);
   }
 }
+
+export default withPrivateApiBoundary(liveActivity);

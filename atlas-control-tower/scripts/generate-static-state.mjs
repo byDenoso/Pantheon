@@ -1,3 +1,4 @@
+import { assertPrivateProjectionOutput } from '../lib/publication-policy.mjs';
 import fs from 'node:fs';
 import path from 'node:path';
 import {createHash} from 'node:crypto';
@@ -13,6 +14,7 @@ import {buildScienceReadModelV2} from '../lib/science-read-model-v2.mjs';
 
 const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
 const outDir=path.resolve(root,process.argv[2]||'public/data');
+assertPrivateProjectionOutput(outDir);
 const dataDir=path.join(root,'data');
 const read=file=>JSON.parse(fs.readFileSync(file,'utf8'));
 const write=(file,value)=>{fs.mkdirSync(path.dirname(file),{recursive:true});fs.writeFileSync(file,JSON.stringify(value,null,2)+'\n')};

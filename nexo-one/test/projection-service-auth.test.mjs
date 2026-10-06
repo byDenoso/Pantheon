@@ -54,7 +54,8 @@ test('service identity remains projection-scoped while human private sessions ca
   assert.match(handler,/if\(route==='session'\)/);
   const projectionBlock=handler.split("if(route==='projections')")[1].split("if(route==='system')")[0];
   assert.match(projectionBlock,/verifyProjectionService\(req,\{now\}\)/);
-  assert.match(projectionBlock,/projectionAccess=serviceAccess\?'PRIVATE':'PUBLIC'/);
+  assert.match(projectionBlock,/if\(!serviceAccess\)return send\(\{error:'ATLAS_SERVICE_REQUIRED'\},403\)/);
+  assert.match(projectionBlock,/projectionAccess='PRIVATE'/);
   const systemRoute=handler.split("if(route==='system')")[1].split('const q=')[0];
   assert.match(systemRoute,/readPublishedTowerSystem\(\{env,signal:req\.signal,now,force\}\)/);
   assert.match(systemRoute,/SANCTIONED_PUBLIC_PROJECTION_UNAVAILABLE/);

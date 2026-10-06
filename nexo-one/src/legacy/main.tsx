@@ -1,0 +1,32 @@
+import {Component,lazy,Suspense,type ReactNode} from 'react';
+import {createRoot} from 'react-dom/client';
+import App from '../app/App';
+import {NexoStoreProvider} from '../data/NexoStore.tsx';
+import {startWebMcp} from '../mcp/webmcp.ts';
+import '../styles/product-foundation.css';
+import '../styles/tokens.css';
+import '../styles/layout.css';
+import '../styles/components.css';
+import '../styles/system.css';
+import '../styles/command-os.css';
+import '../styles/nexo-prime.css';
+import '../styles/product-shell.css';
+import '@fontsource/big-shoulders-display/600';
+import '@fontsource/big-shoulders-display/900';
+import '@fontsource/ibm-plex-sans/300';
+import '@fontsource/ibm-plex-sans/400';
+import '@fontsource/ibm-plex-sans/500';
+import '@fontsource/ibm-plex-mono/400';
+import '@fontsource/ibm-plex-mono/500';
+import '../styles/observatory.css';
+import '../styles/signature.css';
+import '../styles/mission-control.css';
+import '../styles/editorial.css';
+import '../styles/deco.css';
+// Keep the whole visible Tower vector surface; HTML supplies input and accessibility.
+// A native-only diagnostic remains available without loading the mirror.
+const TowerSVGSurface = lazy(() => import('../components/TowerSVGSurface.tsx'));
+const svgMirrorEnabled = new URLSearchParams(window.location.search).get('svgMirror') !== '0';
+class Boundary extends Component<{children:ReactNode},{failed:boolean}>{state={failed:false};static getDerivedStateFromError(){return {failed:true};}render(){return this.state.failed?<main className="fatal-state"><h1>Não foi possível abrir esta visão.</h1><p>Recarregue para consultar novamente suas fontes.</p><button onClick={()=>location.reload()}>Recarregar</button></main>:this.props.children;}}
+createRoot(document.getElementById('root')!).render(<Boundary><NexoStoreProvider><><App/>{svgMirrorEnabled && <Suspense fallback={null}><TowerSVGSurface/></Suspense>}</></NexoStoreProvider></Boundary>);
+startWebMcp();

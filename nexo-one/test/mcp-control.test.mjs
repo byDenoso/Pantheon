@@ -79,13 +79,13 @@ test('new publications invalidate semantic cache, concurrent aborts stay isolate
     const invalid=publication();invalid.build_meta.projection_fingerprint='sha256:'+'f'.repeat(64);assert.throws(()=>researchSnapshotFromPublication(invalid),/MISMATCH/);
   }finally{globalThis.fetch=original;}
 });
-test('HTTP metadata and MCP reject arbitrary origins and have explicit CORS and size limits',async()=>{
+test('HTTP metadata and MCP reject every anonymous origin before transport or source reads',async()=>{
   const server=http.createServer(handler);await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
   const base=`http://127.0.0.1:${server.address().port}`;
   try{
-    for(const path of ['/api/mcp','/api/mcp/status']){const res=await fetch(base+path,{headers:{Origin:'https://attacker.test'}});assert.equal(res.status,403);assert.equal(res.headers.get('access-control-allow-origin'),null);}
-    const allowed=await fetch(base+'/api/mcp/status',{method:'OPTIONS',headers:{Origin:'https://bydenoso.github.io'}});assert.equal(allowed.status,204);assert.equal(allowed.headers.get('access-control-allow-origin'),'https://bydenoso.github.io');
-    const hello=await fetch(base+'/api/mcp',{method:'POST',headers:{'Content-Type':'application/json',Accept:'application/json, text/event-stream',Origin:base},body:JSON.stringify({jsonrpc:'2.0',id:1,method:'initialize',params:{protocolVersion:'2025-11-25',capabilities:{},clientInfo:{name:'browser',version:'1'}}})});assert.equal(hello.status,200);assert((await hello.text()).includes('nexo-science'));
-    const big=await fetch(base+'/api/mcp',{method:'POST',headers:{'Content-Type':'application/json'},body:'x'.repeat(262145)});assert.equal(big.status,413);
+    for(const path of ['/api/mcp','/api/mcp/status']){const res=await fetch(base+path,{headers:{Origin:'https://attacker.test'}});assert.equal(res.status,401);assert.equal(res.headers.get('access-control-allow-origin'),null);}
+    const allowed=await fetch(base+'/api/mcp/status',{method:'OPTIONS',headers:{Origin:'https://bydenoso.github.io'}});assert.equal(allowed.status,401);assert.equal(allowed.headers.get('access-control-allow-origin'),null);
+    const hello=await fetch(base+'/api/mcp',{method:'POST',headers:{'Content-Type':'application/json',Accept:'application/json, text/event-stream',Origin:base},body:JSON.stringify({jsonrpc:'2.0',id:1,method:'initialize',params:{protocolVersion:'2025-11-25',capabilities:{},clientInfo:{name:'browser',version:'1'}}})});assert.equal(hello.status,401);assert.deepEqual(await hello.json(),{error:'AUTH_REQUIRED'});
+    const big=await fetch(base+'/api/mcp',{method:'POST',headers:{'Content-Type':'application/json'},body:'x'.repeat(262145)});assert.equal(big.status,401);
   }finally{await new Promise(resolve=>server.close(resolve));}
 });

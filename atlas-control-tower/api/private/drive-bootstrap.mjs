@@ -1,4 +1,4 @@
-import {withGoogleAuth} from './_middleware.mjs';
+import { withPrivateApiBoundary } from '../../lib/private-api-boundary.mjs';
 import {bootstrapDriveFromGithub} from '../../lib/drive-bootstrap.mjs';
 
 async function driveBootstrap(req,res,{send}){
@@ -6,4 +6,4 @@ async function driveBootstrap(req,res,{send}){
   try{return send(res,{ok:true,...await bootstrapDriveFromGithub()},200);}
   catch(error){return send(res,{ok:false,error:'DRIVE_BOOTSTRAP_FAILED',detail:String(error?.message||error).slice(0,240)},503);}
 }
-export default withGoogleAuth(driveBootstrap);
+export default withPrivateApiBoundary(driveBootstrap);

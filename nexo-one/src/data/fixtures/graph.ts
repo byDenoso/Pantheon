@@ -197,15 +197,15 @@ export function buildGraph(seed: Seed): { nodes: GraphNode[]; edges: GraphEdge[]
         : filament.status === 'PROVISIONAL' ? 'SNAPSHOT' : 'LIVE',
       authority_class: 'DERIVED', source_ref: filament.source_ref, fingerprint: fingerprint(`fil:${filament.id}`),
       freshness: freshness(filament.status === 'RETIRED' ? 'STALE' : 'RECENT', 25), checked_at: ago(25),
-      summary: `${filament.from_label} → ${filament.to_label} · peso ${filament.weight.toFixed(2)}`,
+      summary: `${filament.from_label} → ${filament.to_label} · peso ${filament.weight == null ? 'não informado' : filament.weight.toFixed(2)}`,
       evidence: filament.evidence,
     }));
     const target = filament.domain === 'SCIENCE' ? 'claim.h0-calibrator'
       : filament.domain === 'ENGINEERING' ? 'claim.deploy-incident' : 'claim.readback-authority';
     edges.push(edge(`filament.${filament.id}`, target,
-      filament.contradiction > filament.support ? 'CONTRADICTS' : 'SUPPORTS',
+      (filament.contradiction ?? 0) > (filament.support ?? 0) ? 'CONTRADICTS' : 'SUPPORTS',
       `${filament.support} evidências a favor, ${filament.contradiction} contra. Limite: ${filament.boundary}`,
-      filament.weight));
+      filament.weight ?? undefined));
   }
 
   const conflict = seed.findings.find(f => f.status === 'CONFLICT');

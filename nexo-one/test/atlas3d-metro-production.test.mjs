@@ -780,7 +780,7 @@ test('dedicated Atlas production page uses Metro renderer, G6 and deterministic 
   assert.doesNotMatch(css, /pointer-events:none;opacity:\.18/);
 
   assert.doesNotMatch(index, /@antv\/g6@5\/dist\/g6\.min\.js/);
-  assert.match(index, /destination\.hash\s*=\s*`\/atlas\?/);
+  assert.match(index, /destination\.hash\s*=\s*'\/privado'/);
   assert.match(main, /G6_SOURCES/);
   assert.match(main, /product-foundation\.css/);
   assert.match(main, /ensureAtlasG6/);

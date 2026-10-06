@@ -1,3 +1,4 @@
+import { withPrivateApiBoundary } from '../lib/private-api-boundary.mjs';
 import {createHash} from 'node:crypto';
 
 const CONTRACT='ProjectionEnvelope/v1';
@@ -32,7 +33,7 @@ export async function fetchProjection({url=process.env.NEXO_ONE_PROJECTION_URL||
   }
 }
 
-export default async function handler(req,res){
+async function handler(req,res){
   res.setHeader('Content-Type','application/json; charset=utf-8');
   res.setHeader('Cache-Control','private, max-age=30, stale-while-revalidate=60');
   res.setHeader('X-Content-Type-Options','nosniff');
@@ -42,3 +43,5 @@ export default async function handler(req,res){
   res.statusCode=200;
   return res.end(JSON.stringify(result));
 }
+
+export default withPrivateApiBoundary(handler, { machine: 'projection-oidc' });

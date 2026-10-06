@@ -1,3 +1,4 @@
+import { withPrivateApiBoundary } from '../lib/private-api-boundary.mjs';
 import baseHandler from './runtime.js';
 
 const BASE='https://ep-cool-lab-aw72uid0.apirest.c-12.us-east-1.aws.neon.tech/neondb/rest/v1';
@@ -79,7 +80,7 @@ function callBase(req,res){
  return baseHandler(req,res);
 }
 
-export default async function handler(req,res){
+async function handler(req,res){
  res.setHeader('Content-Type','application/json; charset=utf-8');res.setHeader('Cache-Control',req.method==='GET'?READ_CACHE:'private, no-store');res.setHeader('X-Content-Type-Options','nosniff');
  const u=new URL(req.url||'/','https://atlas.local'),q=Object.fromEntries(u.searchParams),route=q.route||u.pathname.split('/').pop(),send=(x,s=200)=>{res.statusCode=s;res.end(JSON.stringify(x))};
  try{
@@ -97,3 +98,5 @@ export default async function handler(req,res){
   return callBase(req,res);
  }catch(e){console.error('[atlas:runtime-v2]',route,e?.message||e);return callBase(req,res)}
 }
+
+export default withPrivateApiBoundary(handler, { machine: 'projection-oidc' });

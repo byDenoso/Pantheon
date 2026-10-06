@@ -5,10 +5,15 @@
   "framework": "vite",
   "functions": {
     "api/index.js": {
-      "maxDuration": 30
+      "maxDuration": 30,
+      "includeFiles": "server/private-ui/**"
     }
   },
   "rewrites": [
+    {
+      "source": "/api/atlas-private-assets/:asset*",
+      "destination": "/api/index?route=atlas-private-asset&asset=:asset*"
+    },
     {
       "source": "/api/mcp/status",
       "destination": "/api/index?route=mcp/status"

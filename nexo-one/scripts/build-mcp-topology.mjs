@@ -1,3 +1,8 @@
+import { assertPublicDataPublicationAllowed } from './static-publication.mjs';
+
+// No historical payload or source provenance grants publication permission.
+assertPublicDataPublicationAllowed();
+
 import {mkdir, readFile, writeFile} from 'node:fs/promises';
 import {resolve} from 'node:path';
 

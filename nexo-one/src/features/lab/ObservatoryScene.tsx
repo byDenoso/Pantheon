@@ -5,6 +5,7 @@
 // A câmera muda de enquadramento por página; clicar numa estrela abre o teste.
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { BufferAttribute, BufferGeometry, Color, Matrix4, PerspectiveCamera, Scene, Vector3 } from 'three';
+import { VERDICT_PT } from './model.ts';
 import type { TestEntity, Verdict } from './model.ts';
 import { normDomain } from './domains.ts';
 import { createCosmicDynamics } from './cosmicDynamics.ts';
@@ -48,10 +49,7 @@ const VERDICT_RGB: Record<Verdict, [number, number, number]> = {
   READY: [0.74, 0.71, 0.8], RUNNING: [0.68, 0.76, 0.88], CHECKPOINTED: [0.52, 0.57, 0.68],
   BLOCKED: [0.36, 0.35, 0.4], REJECTED: [0.82, 0.64, 0.47], DISCARDED: [0.25, 0.24, 0.28],
 };
-const VERDICT_TXT: Record<Verdict, string> = {
-  CONFIRMED: 'confirmado', REFUTED: 'refutado', REVIEW: 'em revisão', PROVISIONAL: 'resultado provisório',
-  READY: 'na fila', RUNNING: 'em processamento', CHECKPOINTED: 'execução salva', BLOCKED: 'bloqueado', REJECTED: 'rejeitado pelo critério', DISCARDED: 'descartado',
-};
+const VERDICT_TXT: Record<Verdict, string> = Object.fromEntries(Object.entries(VERDICT_PT).map(([v, label]) => [v, label.charAt(0).toLowerCase() + label.slice(1)])) as Record<Verdict, string>;
 const VERDICT_SIZE: Record<Verdict, number> = {
   CONFIRMED: 34, REFUTED: 24, REVIEW: 26, PROVISIONAL: 17, READY: 12, RUNNING: 15, CHECKPOINTED: 12, BLOCKED: 11, REJECTED: 17, DISCARDED: 7,
 };
@@ -140,7 +138,8 @@ const jitter = (seed: string, s: number): [number, number, number] =>
   [(rnd(seed + 'x') - 0.5) * s, (rnd(seed + 'y') - 0.5) * s, (rnd(seed + 'z') - 0.5) * s];
 
 // Paleta da teia (dourado sobre preto): gás escuro -> filamento dourado-queimado -> nó branco quente.
-const INFERNO = ['#030302', '#130f08', '#35291a', '#7a5f35', '#d4bf95', '#fff6e4'].map(c => new Color(c));
+// rampa de densidade na família azul do Atlas (antes dourada): preto -> azul profundo -> azul -> azul claro
+const INFERNO = ['#000000', '#03102e', '#0a2a78', '#1e5bff', '#6890ff', '#dbeaff'].map(c => new Color(c));
 const inferno = (t: number) => {
   const x = Math.max(0, Math.min(0.999, t)) * (INFERNO.length - 1), i = Math.floor(x), f = x - i;
   return INFERNO[i]!.clone().lerp(INFERNO[i + 1]!, f);
@@ -270,7 +269,7 @@ export function ObservatoryScene({ tests, page, focusIds, onPick, onAvailability
         const r = Math.pow(Math.random(), 2.2) * 2.4, th = Math.random() * Math.PI * 2, ph = Math.acos(2 * Math.random() - 1);
         push(web, [d.x + r * Math.sin(ph) * Math.cos(th), d.y + r * Math.cos(ph), d.z + r * Math.sin(ph) * Math.sin(th)], inferno(0.95 - r * 0.2), 3 + Math.random() * 4);
       }
-      push(web, [d.x, d.y, d.z], new Color('#fff4df'), 95, 0.08);
+      push(web, [d.x, d.y, d.z], new Color('#e6f0ff'), 95, 0.08);
     });
 
     // Hipóteses: nós ao redor do seu domínio; testes ao longo do filamento hipótese->domínio.
@@ -602,7 +601,7 @@ export function ObservatoryScene({ tests, page, focusIds, onPick, onAvailability
       const pos=jetGeo.getAttribute('position'),dir=jetGeo.getAttribute('dir'),phase=jetGeo.getAttribute('phase'),speed=jetGeo.getAttribute('speed'),parts:string[]=[];
       const m=clipMatrix.elements,w=viewportWidth,h=viewportHeight;
       for(let i=0;i<pos.count;i++){const f=((time*speed.getX(i)+phase.getX(i))%1+1)%1,px=(pos.getX(i)+dir.getX(i)*f)*expansion,py=(pos.getY(i)+dir.getY(i)*f)*expansion,pz=(pos.getZ(i)+dir.getZ(i)*f)*expansion,cx=m[0]!*px+m[4]!*py+m[8]!*pz+m[12]!,cy=m[1]!*px+m[5]!*py+m[9]!*pz+m[13]!,cz=m[2]!*px+m[6]!*py+m[10]!*pz+m[14]!,cw=m[3]!*px+m[7]!*py+m[11]!*pz+m[15]!;if(cw<=0)continue;const nz=cz/cw;if(nz < -1||nz>1)continue;parts.push(`M${((cx/cw*.5+.5)*w).toFixed(1)},${((-.5*cy/cw+.5)*h).toFixed(1)}h.01`);}
-      updateLayer(3,new Map([[`${light?'#69471f':'#f2e6d1'}|0.65|1.5`,parts]]));
+      updateLayer(3,new Map([[`${light?'#12348f':'#dbeaff'}|0.65|1.5`,parts]]));
     };
     const baseEnvironmentStride = environmentStride(webGeo.getAttribute('position').count, quality);
     const renderVectors = (time: number, interactionStride = 1) => {
@@ -614,7 +613,7 @@ export function ObservatoryScene({ tests, page, focusIds, onPick, onAvailability
       renderJets(time);
       const bounds=boxGeo.getAttribute('position'), lines:string[]=[],m=clipMatrix.elements,bw=viewportWidth,bh=viewportHeight;
       for(let i=0;i+1<bounds.count;i+=2){const ax=bounds.getX(i)*expansion,ay=bounds.getY(i)*expansion,az=bounds.getZ(i)*expansion,bx=bounds.getX(i+1)*expansion,by=bounds.getY(i+1)*expansion,bz=bounds.getZ(i+1)*expansion,acx=m[0]!*ax+m[4]!*ay+m[8]!*az+m[12]!,acy=m[1]!*ax+m[5]!*ay+m[9]!*az+m[13]!,acz=m[2]!*ax+m[6]!*ay+m[10]!*az+m[14]!,acw=m[3]!*ax+m[7]!*ay+m[11]!*az+m[15]!,bcx=m[0]!*bx+m[4]!*by+m[8]!*bz+m[12]!,bcy=m[1]!*bx+m[5]!*by+m[9]!*bz+m[13]!,bcz=m[2]!*bx+m[6]!*by+m[10]!*bz+m[14]!,bcw=m[3]!*bx+m[7]!*by+m[11]!*bz+m[15]!;if(acw<=0||bcw<=0)continue;const azN=acz/acw,bzN=bcz/bcw;if(azN>1&&bzN>1)continue;lines.push(`M${((acx/acw*.5+.5)*bw).toFixed(1)},${(-acy/acw*.5+.5)*bh}L${((bcx/bcw*.5+.5)*bw).toFixed(1)},${(-bcy/bcw*.5+.5)*bh}`);}
-      updateLayer(4,new Map([['#9a8d75|0.20|0.6',lines]])); el.dataset.renderCount=String(Number(el.dataset.renderCount||0)+1); svg.dataset.ready='true'; svg.dataset.renderCount=el.dataset.renderCount;
+      updateLayer(4,new Map([['#7f93b8|0.20|0.6',lines]])); el.dataset.renderCount=String(Number(el.dataset.renderCount||0)+1); svg.dataset.ready='true'; svg.dataset.renderCount=el.dataset.renderCount;
       const renderedStride = baseEnvironmentStride * interactionStride;
       el.dataset.environmentStride = String(renderedStride);
       svg.dataset.environmentStride = String(renderedStride);

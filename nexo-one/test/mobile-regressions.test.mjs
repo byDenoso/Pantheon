@@ -6,7 +6,7 @@ const root = new URL('../', import.meta.url);
 const text = path => readFile(new URL(path, root), 'utf8');
 
 test('published shell does not mount the legacy projection overlay that probes /api/projections', async () => {
-  const main = await text('src/main.tsx');
+  const main = await text('src/legacy/main.tsx');
   assert.doesNotMatch(main, /ProjectionBusStatus/);
   assert.doesNotMatch(main, /<ProjectionBusStatus\s*\/>/);
 });

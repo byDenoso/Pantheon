@@ -1,8 +1,13 @@
 import { defineConfig } from 'vite';
+import { fileURLToPath } from 'node:url';
+import { resolve } from 'node:path';
+import { sealStaticPublication } from './scripts/static-publication.mjs';
 
 const pagesBase = process.env.GITHUB_PAGES ? '/Pantheon/' : '/';
 
-export default defineConfig({
+export default defineConfig(({command}) => ({
+  resolve: command === 'build' ? {alias: [{find: /(?:\.\.\/|\.\/)+(?:data\/)?fixtures\/scenarios\.ts$/, replacement: fileURLToPath(new URL('./src/data/fixtures/production-empty.ts', import.meta.url))}]} : undefined,
+  plugins: [(() => { let output = ''; return {name: 'atlas-public-shell-only', apply: 'build' as const, configResolved(config: {root: string; build: {outDir: string}}) {output = resolve(config.root, config.build.outDir);}, async closeBundle() {await sealStaticPublication(output);}}; })()],
   base: pagesBase,
   build: {
     target: 'es2022',
@@ -18,4 +23,4 @@ export default defineConfig({
     },
   },
   server: { host: '127.0.0.1' },
-});
+}));

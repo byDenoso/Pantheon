@@ -1,3 +1,4 @@
+import { withPrivateApiBoundary } from '../lib/private-api-boundary.mjs';
 import {createHash} from 'node:crypto';
 import {createTowerDriveGateway} from '../lib/tower-drive-gateway.mjs';
 import {buildAtlasProjectionV3} from '../v3/project.mjs';
@@ -64,7 +65,7 @@ function send(res,body,status=200,{noStore=true}={}){
   res.setHeader('X-Atlas-Truth-Owner','TOWER_V06@GOOGLE_DRIVE_PRIVATE');
   res.end(JSON.stringify(body));
 }
-export default async function handler(req,res){
+async function handler(req,res){
   const gateway=createTowerDriveGateway();
   const route=routeOf(req),query=queryOf(req),method=String(req.method||'GET').toUpperCase();
   if(method==='GET'&&route==='health'){
@@ -127,3 +128,5 @@ export default async function handler(req,res){
 }
 
 export const __runtimeDriveInternal={loadSource,project};
+
+export default withPrivateApiBoundary(handler);

@@ -1,3 +1,4 @@
+import { assertPrivateProjectionOutput } from './publication-policy.mjs';
 import {createHash} from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -221,6 +222,7 @@ function semanticFingerprint(sourceVersion,artifacts){
 }
 
 export async function generateStaticState({outDir,dataDir=DEFAULT_DATA_DIR,generatedAt=new Date().toISOString()}={}){
+  assertPrivateProjectionOutput(outDir);
   if(!outDir)throw new Error('STATIC_STATE_OUT_DIR_REQUIRED');
   const {science,shards,drive}=loadSources(dataDir);
   ensure(outDir);

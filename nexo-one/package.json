@@ -12,13 +12,18 @@
     "typecheck": "tsc --noEmit",
     "test": "node --test test/*.test.mjs",
     "style:lint": "node scripts/style-lint.mjs",
-    "build": "vite build",
+    "build": "vite build && node scripts/build-private-ui.mjs",
     "preview": "node scripts/dev.mjs --built",
     "check": "npm run typecheck && npm test && npm run style:lint && npm run build",
     "test:browser": "node test/browser.mjs",
     "prepare": "git config core.hooksPath nexo-one/.githooks 2>/dev/null || true",
     "test:mcp-browser": "node test/mcp-browser.mjs",
-    "preview:atlas-0110": "node scripts/preview-atlas-0110.mjs"
+    "preview:atlas-0110": "node scripts/preview-atlas-0110.mjs",
+    "build:private": "node scripts/build-private-ui.mjs",
+    "test:private-browser": "node test/atlas-private-frame.browser.mjs",
+    "test:tower-browser": "node test/tower-web.browser.mjs",
+    "test:cosmos-browser": "node test/tower-cosmos.browser.mjs",
+    "test:presentation-browser": "node test/atlas-presentation.browser.mjs"
   },
   "dependencies": {
     "@antv/g-svg": "2.1.1",

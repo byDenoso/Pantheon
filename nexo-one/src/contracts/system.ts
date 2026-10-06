@@ -8,7 +8,7 @@ export const DOMAINS: Domain[] = ['NEXO', 'SCIENCE', 'ENGINEERING', 'OLYMPUS'];
 
 export type AuthorityClass = 'TRUTH_OWNER' | 'DELEGATED' | 'DERIVED' | 'NON_AUTHORITATIVE';
 export type Severity = 'P0' | 'P1' | 'P2' | 'INFO';
-export type Risk = 'LOW' | 'MEDIUM' | 'HIGH';
+export type Risk = 'LOW' | 'MEDIUM' | 'HIGH' | 'UNKNOWN';
 
 /** Estado de uma projeção. Uma projeção nunca é prova de verdade. */
 export type ProjectionState =
@@ -70,8 +70,8 @@ export interface TruthFinding {
   source_observed_at?: string | null;
 }
 
-export type RequiredOperation = 'READ' | 'WRITE' | 'SCHEDULE' | 'DEPLOY' | 'NOTIFY';
-export type Runtime = 'LOCAL' | 'GITHUB_ACTIONS' | 'VERCEL' | 'NEXO_KERNEL' | 'HUMAN';
+export type RequiredOperation = 'READ' | 'WRITE' | 'SCHEDULE' | 'DEPLOY' | 'NOTIFY' | 'UNKNOWN';
+export type Runtime = 'LOCAL' | 'GITHUB_ACTIONS' | 'VERCEL' | 'NEXO_KERNEL' | 'HUMAN' | 'UNKNOWN';
 
 export type ReadbackStatus = 'CONFIRMED' | 'PENDING' | 'FAILED' | 'UNVERIFIED' | 'NOT_APPLICABLE';
 export interface Readback {
@@ -84,7 +84,7 @@ export interface Readback {
 
 export type ActionStatus =
   | 'PROPOSED' | 'ELIGIBLE' | 'AWAITING_HUMAN' | 'RUNNING' | 'APPLIED'
-  | 'NO_OP_ALREADY_APPLIED' | 'WAITING_SIDE_QUEST' | 'BLOCKED' | 'FAILED';
+  | 'NO_OP_ALREADY_APPLIED' | 'WAITING_SIDE_QUEST' | 'BLOCKED' | 'FAILED' | 'UNKNOWN';
 
 export type InboxKind = 'DECIDIR' | 'APROVAR' | 'RESPONDER' | 'ESCOLHER' | 'FORNECER_DADO' | 'CONFIGURAR_ACESSO';
 export const INBOX_KINDS: InboxKind[] = ['DECIDIR', 'APROVAR', 'RESPONDER', 'ESCOLHER', 'FORNECER_DADO', 'CONFIGURAR_ACESSO'];
@@ -111,7 +111,7 @@ export interface ActionRecord {
   blocker: string | null;
   next_action: string;
   risk: Risk;
-  reversible: boolean;
+  reversible: boolean | null;
   /** Por que o NEXO pode (ou não pode) resolver isto sozinho. */
   eligibility: string;
   human_gate: HumanGate | null;
@@ -182,20 +182,20 @@ export interface ExecutionStep {
   detail: string;
 }
 
-export type RunStatus = 'SUCCEEDED' | 'FAILED' | 'NO_OP' | 'RUNNING' | 'BLOCKED';
+export type RunStatus = 'SUCCEEDED' | 'FAILED' | 'NO_OP' | 'RUNNING' | 'BLOCKED' | 'UNKNOWN';
 
 export interface ExecutionRun {
   run_id: string;
   action_id: string;
   lane: Domain;
   title: string;
-  started_at: string;
+  started_at: string | null;
   ended_at: string | null;
   status: RunStatus;
   effect_key: string | null;
   capability_id: string | null;
   runtime: Runtime;
-  retries: number;
+  retries: number | null;
   receipt_ref: string | null;
   steps: ExecutionStep[];
   readback: Readback;
@@ -333,16 +333,16 @@ export interface GraphEdge {
   blocked?: boolean;
 }
 
-export type FilamentStatus = 'ESTABLISHED' | 'PROVISIONAL' | 'TESTING' | 'CONTESTED' | 'RETIRED';
+export type FilamentStatus = 'ESTABLISHED' | 'PROVISIONAL' | 'TESTING' | 'CONTESTED' | 'RETIRED' | 'UNKNOWN';
 
 export interface Filament {
   id: string;
   label: string;
   domain: Domain;
   kind: 'SEMANTIC' | 'PROCEDURAL' | 'SCIENTIFIC_LEARNING_PIPELINE';
-  weight: number;
-  support: number;
-  contradiction: number;
+  weight: number | null;
+  support: number | null;
+  contradiction: number | null;
   status: FilamentStatus;
   evidence: string[];
   source_ref: string;
@@ -405,6 +405,7 @@ export interface ScienceProjectionV1 {
   campaigns: ScienceProjectionRecord[];
   hypotheses: ScienceProjectionRecord[];
   tests: ScienceProjectionRecord[];
+  historical_tests?: ScienceProjectionRecord[];
   fingerprint: string;
 }
 

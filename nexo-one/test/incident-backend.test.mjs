@@ -1,3 +1,4 @@
+import {atlasTestSession} from './helpers/atlas-session.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {researchSnapshotFromPublication} from '../server/adapters/research-snapshot.mjs';
@@ -63,10 +64,10 @@ test('HTTP research handler and official MCP transport carry the same incident p
  const {default:handler}=await import('../server/handler.mjs');
  const {createNexoMcpWebHandler}=await import('../server/mcp/server.mjs');
  const {Client,StreamableHTTPClientTransport}=await import('@modelcontextprotocol/client');
- const source=publication();
- t.mock.method(globalThis,'fetch',async()=>new Response(JSON.stringify(source),{status:200,headers:{'Content-Type':'application/json'}}));
+ const source=publication(),session=atlasTestSession(t);
+ t.mock.method(globalThis,'fetch',session.wrap(async()=>new Response(JSON.stringify(source),{status:200,headers:{'Content-Type':'application/json'}})));
  let api;const res={setHeader(){},end(body){api=JSON.parse(body);}};
- await handler({url:'/api/index?route=science-read-model',method:'GET',headers:{}},res);
+ await handler({url:'/api/index?route=science-read-model',method:'GET',headers:{cookie:session.cookie}},res);
  assert.equal(res.statusCode,200);assert.equal(api.data.evolution.incidents.length,1);
  const web=createNexoMcpWebHandler({readSnapshot:async()=>researchSnapshotFromPublication(source)});
  const client=new Client({name:'incident-contract-test',version:'1.0.0'},{versionNegotiation:{mode:'auto'}});

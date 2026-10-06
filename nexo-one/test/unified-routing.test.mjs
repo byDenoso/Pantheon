@@ -35,12 +35,12 @@ test('legacy MCP and Atlas pages are minimal bridges and retain the SPA entries 
   const [mcp, atlas, vite] = await Promise.all([
     read('../mcp/index.html'), read('../atlas3d/index.html'), read('../vite.config.ts'),
   ]);
-  assert.match(mcp, /destination\.hash\s*=\s*'\/sistema'/);
+  assert.match(mcp, /destination\.hash\s*=\s*'\/privado'/);
   assert.match(mcp, /location\.replace/);
-  assert.match(mcp, /location\.search/);
-  assert.match(mcp, /content="[01];url=\.\.\/#\/sistema/);
-  assert.match(atlas, /params\.set\('view',\s*params\.get\('view'\) \|\| '3d'\)/);
-  assert.match(atlas, /content="[01];url=\.\.\/#\/atlas/);
+  assert.doesNotMatch(mcp, /location\.search/);
+  assert.match(mcp, /content="[01];url=\.\.\/#\/privado/);
+  assert.doesNotMatch(atlas, /location\.search|params\.set/);
+  assert.match(atlas, /content="[01];url=\.\.\/#\/privado/);
   assert.match(atlas, /location\.replace/);
   assert.match(vite, /main:\s*'index\.html'/);
   assert.match(vite, /atlas3d:\s*'atlas3d\/index\.html'/);

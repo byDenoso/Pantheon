@@ -4,6 +4,8 @@ export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, '.', '');
   const apiBase = env.NEXO_API_BASE_URL || env.VITE_NEXO_API_BASE_URL || '';
   return {
+    // Historical public/data snapshots are private inputs, never build assets.
+    publicDir:false,
     define: { __NEXO_API_BASE_URL__: JSON.stringify(apiBase) },
     build:{
       outDir:'dist',

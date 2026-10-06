@@ -280,7 +280,7 @@ export function ExecutionView(
   { state, selectedRunId, onSelectRun }:
   { state: SystemState; selectedRunId: string | null; onSelectRun: (runId: string | null) => void },
 ) {
-  const runs = [...state.runs].sort((a, b) => b.started_at.localeCompare(a.started_at));
+  const runs = [...state.runs].sort((a, b) => (b.started_at ?? '').localeCompare(a.started_at ?? ''));
   const selected: ExecutionRun | null = runs.find(r => r.run_id === selectedRunId) ?? runs[0] ?? null;
   if (!selected) {
     return <>
@@ -305,7 +305,8 @@ export function ExecutionView(
             <strong>{humanizeText(run.title)}</strong>
             <span className="run-meta">
               <time>{dateTime(run.started_at)}</time>
-              {run.retries > 0 && <em>{run.retries} novas tentativas</em>}
+              {run.retries === null && <em>Novas tentativas não informadas</em>}
+              {run.retries !== null && run.retries > 0 && <em>{run.retries} novas tentativas</em>}
             </span>
           </button>
         ))}

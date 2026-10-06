@@ -2,14 +2,13 @@
 // montado a partir do system.json. O front não inventa estado: tudo vem da projeção;
 // quando falta dado, o campo fica null e a página diz o que falta.
 import { formatPublishedAge } from '../../viewmodels/published-time.ts';
+import { stateLabel } from '../../i18n/state-language.ts';
 import type { GraphNode, ScienceProjectionRecord, SystemState } from '../../contracts/system.ts';
 
 export type Verdict = 'CONFIRMED' | 'REFUTED' | 'REVIEW' | 'PROVISIONAL' | 'READY' | 'RUNNING' | 'CHECKPOINTED' | 'BLOCKED' | 'REJECTED' | 'DISCARDED';
 
-export const VERDICT_PT: Record<Verdict, string> = {
-  CONFIRMED: 'Confirmado', REFUTED: 'Refutado', REVIEW: 'Em revisão', PROVISIONAL: 'Resultado provisório',
-  READY: 'Na fila', RUNNING: 'Em processamento', CHECKPOINTED: 'Execução salva', BLOCKED: 'Bloqueado', REJECTED: 'Rejeitado pelo critério', DISCARDED: 'Descartado',
-};
+/** Rótulos humanos vindos do formatador único de linguagem (src/i18n/state-language.ts); os valores do enum não mudam. */
+export const VERDICT_PT: Record<Verdict, string> = Object.fromEntries((['CONFIRMED', 'REFUTED', 'REVIEW', 'PROVISIONAL', 'READY', 'RUNNING', 'CHECKPOINTED', 'BLOCKED', 'REJECTED', 'DISCARDED'] as const).map(v => [v, stateLabel(v, 'pt-BR')])) as Record<Verdict, string>;
 /** Forma além da cor: o estado nunca depende só do matiz. */
 export const VERDICT_GLYPH: Record<Verdict, string> = {
   CONFIRMED: '✓', REFUTED: '✕', REVIEW: '◐', PROVISIONAL: '●', READY: '○', RUNNING: '▶', CHECKPOINTED: '◫', BLOCKED: '▨', REJECTED: '⊘', DISCARDED: '–',
@@ -78,8 +77,8 @@ export interface HypothesisEntity {
 export interface CampaignEntity { id: string; title: string | null; question: string | null; questionPlain?: string | null; why: string | null; hypothesisIds: string[]; tests: string[] }
 export interface RoadmapEntity {
   id: string; title: string; question: string | null; campaignId: string | null; state: string;
-  confirmed: number; target: number | null; used: number | null; maxTests: number | null; maxDays: number | null;
-  refutedStreak: number; killStreak: number | null; stop: string | null; renewable: boolean; charteredAt: string | null;
+  confirmed: number | null; target: number | null; used: number | null; maxTests: number | null; maxDays: number | null;
+  refutedStreak: number | null; killStreak: number | null; stop: string | null; renewable: boolean; charteredAt: string | null;
   tests: string[]; hypotheses: string[]; frontier: number | null;
   testsSource?: string; frontierSource?: string;
   frontierIds?: string[]; frontierIdsPublished?: boolean; objectives?: string[]; progress?: Record<string, number>;
@@ -100,7 +99,13 @@ export interface Lab {
 }
 
 const val = (field: unknown): unknown => {
-  if (field && typeof field === 'object' && 'value' in (field as Record<string, unknown>)) return (field as { value: unknown }).value;
+  if (field && typeof field === 'object' && 'value' in (field as Record<string, unknown>)) {
+    const record=field as Record<string,unknown>;
+    const inner=record.value;
+    const ownEvidence=Object.hasOwn(record,'unavailable_reason')||Object.hasOwn(record,'source_ref')||Object.hasOwn(record,'fingerprint');
+    const nestedEvidenceMap=!ownEvidence&&inner!==null&&typeof inner==='object'&&!Array.isArray(inner)&&Object.hasOwn(inner,'value');
+    if(!nestedEvidenceMap)return inner;
+  }
   return field ?? null;
 };
 const str = (field: unknown): string | null => {
@@ -140,7 +145,7 @@ export function buildLab(state: SystemState): Lab {
   const nodes = new Map<string, GraphNode>();
   for (const node of state.graph.nodes) if (node.type === 'TEST') nodes.set(bare(node.id), node);
   const records = new Map<string, ScienceProjectionRecord>();
-  for (const rec of sp?.tests ?? []) records.set(bare(String(rec.id)), rec);
+  for (const rec of [...(sp?.historical_tests ?? []), ...(sp?.tests ?? [])]) records.set(bare(String(rec.id)), rec);
 
   const rmodel = ((state as unknown as { read_model?: ReadModel }).read_model) ?? null;
   const rmTests = { ...(rmodel?.historical_tests ?? {}), ...(rmodel?.tests ?? {}) };
@@ -286,11 +291,11 @@ export function buildLab(state: SystemState): Lab {
       question: str(full?.question_plain) ?? str((full?.semantic as Record<string, unknown> | undefined)?.question_plain) ?? camp?.questionPlain
         ?? str(full?.question) ?? (charter.question as string) ?? camp?.question ?? null, campaignId,
       state: String(full?.state ?? rm.state ?? charter.status ?? 'UNPUBLISHED'),
-      confirmed: Number(prog.confirmed ?? rm.confirmed ?? 0),
+      confirmed: prog.confirmed == null && rm.confirmed == null ? null : Number(prog.confirmed ?? rm.confirmed),
       target: (stop.success_confirmed ?? rm.success_target ?? null) as number | null,
       used: typeof rm.tests_used === 'number' ? rm.tests_used : null, maxTests: (budget.max_tests ?? rm.max_tests ?? null) as number | null,
       maxDays: (budget.max_days ?? rm.max_days ?? null) as number | null,
-      refutedStreak: Number(rm.refuted_streak ?? 0),
+      refutedStreak: rm.refuted_streak == null ? null : Number(rm.refuted_streak),
       killStreak: (stop.kill_consecutive_refuted ?? rm.kill_streak ?? null) as number | null,
       stop: (rm.stop_reached as string) ?? null, renewable: Boolean(ch.renewable ?? rm.renewable),
       charteredAt: (charter.chartered_at as string) ?? null, tests: rmTestIds,

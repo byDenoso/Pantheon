@@ -1,11 +1,13 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {execFile} from 'node:child_process';
-import {mkdtemp,mkdir,readFile,rm,writeFile,copyFile} from 'node:fs/promises';
+import {mkdtemp,mkdir,readFile,rm,writeFile,access} from 'node:fs/promises';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {promisify} from 'node:util';
+import {compileGalaxySnapshot} from '../server/compiler/galaxy-v1.mjs';
+import {sealStaticPublication} from '../scripts/static-publication.mjs';
 
 const run=promisify(execFile);
 const repoRoot=fileURLToPath(new URL('../',import.meta.url));
@@ -32,7 +34,27 @@ function projection({tower='a'.repeat(40),fingerprint='sha256:'+'1'.repeat(64),s
   };
 }
 
-test('main production builder keeps the Tower-native compiler and creates bounded versioned history',async()=>{
+
+test('Tower-native compiler preserves authority and revision changes without publishing data',()=>{
+  const first=projection();
+  const firstSnapshot=compileGalaxySnapshot({projection:first,manifestFile:first.manifest});
+  assert.equal(firstSnapshot.provenance.authority,'TOWER_V06');
+  assert.equal(firstSnapshot.provenance.source_fingerprint,first.manifest.projection_fingerprint);
+  assert.equal(firstSnapshot.tower_revision,first.manifest.tower_commit);
+  assert.deepEqual(firstSnapshot.changes,[]);
+  const second=projection({tower:'b'.repeat(40),fingerprint:'sha256:'+'2'.repeat(64),status:'RUNNING'});
+  second.manifest.event_cursor='20260919T200000000000Z-test';
+  second.manifest.generated_at='2026-09-19T20:00:00.000Z';
+  second.event_cursor=second.manifest.event_cursor;
+  const current=compileGalaxySnapshot({projection:second,manifestFile:second.manifest,previousSnapshot:firstSnapshot});
+  assert.equal(current.provenance.source_fingerprint,second.manifest.projection_fingerprint);
+  assert.equal(current.tower_revision,second.manifest.tower_commit);
+  assert.notEqual(current.snapshot_id,firstSnapshot.snapshot_id);
+  assert.ok(current.changes.length>=1);
+  assert.notDeepEqual(current.changes,firstSnapshot.changes);
+});
+
+test('public galaxy builder rejects source and history flags; sealing removes stale output without altering private inputs',async()=>{
   const temp=await mkdtemp(join(tmpdir(),'nexo-main-galaxy-'));
   try{
     const data=join(temp,'data');
@@ -45,74 +67,44 @@ test('main production builder keeps the Tower-native compiler and creates bounde
     await writeFile(projectionPath,JSON.stringify(first),'utf8');
     await writeFile(manifestPath,JSON.stringify(first.manifest),'utf8');
     await writeFile(interdomainPath,'[]','utf8');
-
     const script=join(repoRoot,'scripts','build-galaxy-snapshot.mjs');
-    const env={
-      ...process.env,
-      NEXO_PUBLIC_PROJECTION:projectionPath,
-      NEXO_PUBLIC_PROJECTION_MANIFEST:manifestPath,
-      NEXO_PUBLIC_INTERDOMAIN:interdomainPath,
-      NEXO_GALAXY_OUT:out,
-      NEXO_GALAXY_RETENTION:'4',
-    };
-    await run(process.execPath,[script],{cwd:temp,env});
-    const firstLatest=JSON.parse(await readFile(join(out,'latest.json'),'utf8'));
-    assert.equal(firstLatest.provenance.authority,'TOWER_V06');
-    assert.equal(firstLatest.provenance.source_fingerprint,first.manifest.projection_fingerprint);
-    assert.deepEqual(firstLatest.changes,[]);
-    await copyFile(join(out,'latest.json'),join(temp,'previous.json'));
+    await assert.rejects(run(process.execPath,[script],{cwd:temp,env:{...process.env,
+      NEXO_PUBLIC_PROJECTION:projectionPath,NEXO_PUBLIC_PROJECTION_MANIFEST:manifestPath,
+      NEXO_PUBLIC_INTERDOMAIN:interdomainPath,NEXO_GALAXY_OUT:out,
+      NEXO_GALAXY_RETENTION:'4',NEXO_GALAXY_PREVIOUS:join(data,'old.json'),
+    }}),error=>error.code===1&&/PUBLIC_DATA_PUBLICATION_DISABLED/.test(error.stderr));
+    await assert.rejects(access(join(out,'latest.json')),{code:'ENOENT'});
+    await assert.rejects(access(join(out,'index.json')),{code:'ENOENT'});
 
-    const second=projection({
-      tower:'b'.repeat(40),
-      fingerprint:'sha256:'+'2'.repeat(64),
-      status:'RUNNING',
-    });
-    second.manifest.event_cursor='20260919T200000000000Z-test';
-    second.manifest.generated_at='2026-09-19T20:00:00.000Z';
-    second.event_cursor=second.manifest.event_cursor;
-    await writeFile(projectionPath,JSON.stringify(second),'utf8');
-    await writeFile(manifestPath,JSON.stringify(second.manifest),'utf8');
-
-    const {stdout}=await run(process.execPath,[script],{
-      cwd:temp,
-      env:{...env,NEXO_GALAXY_PREVIOUS:join(temp,'previous.json')},
-    });
-    const summary=JSON.parse(stdout.trim());
-    const latest=JSON.parse(await readFile(join(out,'latest.json'),'utf8'));
-    const index=JSON.parse(await readFile(join(out,'index.json'),'utf8'));
-    assert.equal(summary.previous_snapshot_id,firstLatest.snapshot_id);
-    assert.ok(latest.changes.length>=1);
-    assert.equal(index.contract,'NEXO_ONE_GALAXY_INDEX_V1');
-    assert.equal(index.latest_snapshot_id,latest.snapshot_id);
-    assert.equal(index.snapshots.length,2);
-    assert.ok(index.snapshots.some(item=>item.snapshot_id===firstLatest.snapshot_id));
-    assert.ok(index.snapshots.some(item=>item.snapshot_id===latest.snapshot_id));
-    assert.deepEqual(
-      JSON.parse(await readFile(join(out,'snapshots',latest.snapshot_id+'.json'),'utf8')),
-      latest,
-    );
-  }finally{
-    await rm(temp,{recursive:true,force:true});
-  }
+    // Even already-hydrated history must not survive a later shell publication.
+    await mkdir(join(out,'snapshots'),{recursive:true});
+    for(const name of ['latest.json','index.json','snapshots/galaxy-old.json']){
+      await writeFile(join(out,name),'PRIVATE_HISTORICAL_CONTENT');
+    }
+    await writeFile(join(temp,'dist','index.html'),'<html>shell</html>');
+    await sealStaticPublication(join(temp,'dist'));
+    for(const name of ['latest.json','index.json','snapshots/galaxy-old.json']){
+      await assert.rejects(access(join(out,name)),{code:'ENOENT'});
+    }
+    assert.deepEqual(JSON.parse(await readFile(projectionPath,'utf8')),first);
+    assert.deepEqual(JSON.parse(await readFile(manifestPath,'utf8')),first.manifest);
+  }finally{await rm(temp,{recursive:true,force:true});}
 });
 
-test('Pages pipeline uses Tower projection authority, hourly recovery cadence, history hydration and production readback',async()=>{
+test('Pages never hydrates or republishes galaxy history and still verifies its absence after deployment',async()=>{
   const [workflow,builder]=await Promise.all([
     read('../../.github/workflows/nexo-one-pages.yml'),
     read('../scripts/build-galaxy-snapshot.mjs'),
   ]);
-  assert.match(workflow,/cron: '0 \* \* \* \*'/);
-  assert.match(workflow,/VITE_GALAXY_ENDPOINT: \.\/galaxy\/latest\.json/);
-  assert.match(workflow,/Hydrate previous valid galaxy history/);
-  assert.match(workflow,/NEXO_GALAXY_RETENTION: '168'/);
-  assert.match(workflow,/GALAXY_VERSIONED_READBACK_MISMATCH/);
-  assert.match(workflow,/GALAXY_NOT_BOUND_TO_TOWER_PROJECTION/);
-  const readback=workflow.slice(workflow.indexOf('      - name: Read back sanctioned projection'));
-  const versionedCurl=readback.indexOf('galaxy/snapshots/${galaxy_id}.json');
-  const versionedRead=readback.indexOf("const galaxyVersioned=JSON.parse");
-  assert.ok(versionedCurl>=0&&versionedRead>versionedCurl,'versioned snapshot must be fetched before Node readback');
-  assert.ok(readback.includes("grep -Eq '^galaxy-[0-9a-z-]+"),'snapshot id readback validation must be present');
+  assert.doesNotMatch(workflow,/cron:|VITE_GALAXY_ENDPOINT:|NEXO_GALAXY_RETENTION:|NEXO_GALAXY_PREVIOUS/);
+  assert.doesNotMatch(workflow,/Hydrate previous valid galaxy history|build-galaxy-snapshot\.mjs/);
+  assert.match(workflow,/Verify former data URLs are unavailable/);
+  assert.match(workflow,/galaxy\/latest\.json/);
+  assert.match(workflow,/galaxy\/index\.json/);
+  assert.match(workflow,/403\|404\|410\)/);
+  assert.match(workflow,/scripts\/static-publication\.mjs --check/);
+  assert.match(builder,/assertPublicDataPublicationAllowed\(\)/);
+  assert.ok(builder.indexOf('assertPublicDataPublicationAllowed();')<builder.indexOf('const projection=await readJson'));
   assert.match(builder,/server\/compiler\/galaxy-v1\.mjs/);
   assert.doesNotMatch(builder,/viewmodels\/galaxyCompiler/);
 });
-

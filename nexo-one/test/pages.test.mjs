@@ -82,44 +82,29 @@ test('manual sync is a server-side GitHub dispatch bridge with exact readback id
   assert.match(sync, /meta\.sync_request_id===requestId/);
 });
 
-test('GitHub Pages consumes only the sanctioned TOWER_V06 public projection', async () => {
+test('GitHub Pages publishes no Tower data while private compiler validation is preserved', async () => {
   const workflow = await text('../.github/workflows/nexo-one-pages.yml');
   const builder = await text('scripts/build-pages-system.mjs');
+  const boundary = await text('scripts/static-publication.mjs');
 
-  assert.match(workflow, /NEXO_VAULT_READ_TOKEN/);
-  assert.match(workflow, /byDenoso\/NEXO-Obsidian-Vault/);
-  assert.match(workflow, /TOWER_V06\/projections\/public\/projection\.json/);
-  assert.match(workflow, /TOWER_V06\/projections\/public\/manifest\.json/);
-  assert.match(workflow, /METALEARNING_CURRENT\.json/);
-  assert.match(workflow, /PEER_DETECTION_BATTERY_V1\.json/);
-  assert.match(workflow, /human-gates-details\.json/);
-  assert.match(workflow, /NEXO_PUBLIC_HUMAN_GATE_DETAILS/);
-  assert.match(workflow, /verify_projection/);
-  assert.match(workflow, /authority.*TOWER_V06/);
-  assert.match(workflow, /projection_only/);
-  assert.match(workflow, /writeback/);
-  assert.match(workflow, /tower_commit/);
-  assert.match(workflow, /event_cursor/);
-  assert.match(workflow, /projection_fingerprint/);
-  assert.match(workflow, /presentation_input_fingerprint/);
-  assert.match(workflow, /METALEARNING_CURRENT\.json/);
-  assert.match(workflow, /PRESENTATION_INPUT_FINGERPRINT/);
-  assert.match(workflow, /BUILD_META_PRESENTATION_INPUT_FINGERPRINT_MISMATCH/);
-  assert.doesNotMatch(workflow, /cp atlas-control-tower\/data\/nexo-drive-projection\.json/);
-  assert.doesNotMatch(workflow, /truthgraph\.snapshot\.json/);
+  assert.doesNotMatch(workflow, /NEXO_VAULT_READ_TOKEN|NEXO_DRIVE_READER_JSON|NEXO_PUBLIC_PROJECTION/);
+  assert.doesNotMatch(workflow, /byDenoso\/NEXO-Obsidian-Vault|_vault|_tcc/);
+  assert.doesNotMatch(workflow, /METALEARNING_CURRENT\.json|PEER_DETECTION_BATTERY_V1\.json|human-gates-details\.json/);
+  assert.doesNotMatch(workflow, /cp .*projection\.json|truthgraph\.snapshot\.json/);
+  assert.match(workflow, /node scripts\/build-pages-system\.mjs/);
+  assert.match(workflow, /node scripts\/static-publication\.mjs --check/);
+  assert.ok(workflow.indexOf('scripts/static-publication.mjs --check') < workflow.indexOf('actions/upload-pages-artifact@v4'));
+  assert.match(boundary, /APPROVED_PUBLIC_DATA = Object\.freeze\(\[\]\)/);
 
+  // Source integrity still matters for protected server-side compilation. It
+  // does not itself grant permission to publish that content to a static host.
   assert.match(builder, /NEXO_PUBLIC_PROJECTION_V1/);
   assert.match(builder, /validateSanctionedProjection/);
   assert.match(builder, /buildScienceProjectionV1/);
-  assert.match(builder, /science-projection-v1\.json/);
-  assert.match(builder, /validateScienceProjectionV1\(scienceReadback\)/);
   assert.match(builder, /Pantheon performs presentation shaping only/);
-  assert.doesNotMatch(builder, /readProvider/);
-  assert.doesNotMatch(builder, /public-system-input/);
-  assert.doesNotMatch(builder, /nexo-drive-projection/);
-  assert.doesNotMatch(builder, /truthgraph\.snapshot/);
-  assert.match(workflow, /SCIENCE_PROJECTION_SOURCE_MISMATCH/);
-  assert.match(workflow, /PAGES_SCIENCE_PROJECTION_READBACK_OK/);
+  assert.match(builder, /sealStaticPublication\(resolve\('dist'\)\)/);
+  assert.doesNotMatch(builder, /writeFile|copyFile|NEXO_PUBLIC_PROJECTION \|\|/);
+  assert.doesNotMatch(builder, /readProvider|public-system-input|nexo-drive-projection|truthgraph\.snapshot/);
 });
 
 test('Pages capability projection cannot silently collapse a non-empty Tower registry to zero', async () => {
@@ -360,32 +345,27 @@ test('Peer Detection battery is projected by canonical semantic groups, not raw 
   assert.ok(system.graph.edges.filter(edge => edge.is_learning).length >= 2);
 });
 
-test('published Pages auto-syncs Tower snapshots without a new infrastructure service', async () => {
+test('Pages no longer republishes private Tower updates on writer events or an hourly schedule', async () => {
   const workflow = await text('../.github/workflows/nexo-one-pages.yml');
   const writer = await text('../.github/workflows/nexo-writer-robot.yml');
-  const guide = await text('docs/ATLAS_GUIDE_FOR_GPT.md');
   const hook = await text('src/data/useSystem.ts');
   const remote = await text('src/data/adapters/remote.ts');
 
-  assert.match(workflow, /repository_dispatch:/);
-  assert.match(workflow, /nexo-public-projection-updated/);
-  assert.match(workflow, /cron:\s*'0 \* \* \* \*'/);
+  assert.doesNotMatch(workflow, /repository_dispatch:|nexo-public-projection-updated|schedule:|cron:/);
+  assert.match(workflow, /workflow_dispatch:/);
+  assert.doesNotMatch(workflow, /METALEARNING_CURRENT\.json|PEER_DETECTION_BATTERY_V1\.json/);
+  // Writer execution remains independent of the public site's permission.
   assert.match(writer, /cron:\s*'7,22,37,52 \* \* \* \*'/);
   assert.match(writer, /nexo-wake\/\*\.json/);
-  assert.match(guide, /agendamento horário é apenas recuperação/);
-  assert.match(guide, /Writer robô .*a cada 30 min/);
-  assert.match(guide, /nexo\.ingest_request.*REQUEST_INGRESS_V1/);
-  assert.match(workflow, /METALEARNING_CURRENT\.json/);
-  assert.match(workflow, /PEER_DETECTION_BATTERY_V1\.json/);
+  // Existing client cache/freshness behavior is retained; its presence cannot
+  // authorize static data exports and will not override an unavailable source.
   assert.match(hook, /setInterval/);
   assert.match(hook, /HEARTBEAT_MS = 20_000/);
-  assert.match(hook, /build-meta\.json/);
-  assert.match(hook, /projection_fingerprint/);
   assert.match(hook, /visibilitychange/);
+  assert.match(hook, /syncController\.current/);
   assert.match(remote, /VITE_SYSTEM_ENDPOINT/);
   assert.match(remote, /staticProjection/);
   assert.match(remote, /'no-cache'/);
-  assert.match(hook, /syncController\.current/);
 });
 
 test('explicit Tower human gates become Needs Dener inbox items', async () => {
@@ -502,27 +482,26 @@ test('new projected domains expand without compiler switch edits', async () => {
   assert.match(primitives, /DOMAIN_GLYPH\[domain\] \?\? '◇'/);
 });
 
-test('GitHub Pages deploys the unified SPA and reads back routes, parity and projections', async () => {
+test('GitHub Pages deploys only a verified shell and negatively reads back former data URLs', async () => {
   const workflow = await text('../.github/workflows/nexo-one-pages.yml');
+  const vite = await text('vite.config.ts');
 
   assert.match(workflow, /actions\/configure-pages@v5/);
   assert.match(workflow, /actions\/upload-pages-artifact@v4/);
   assert.match(workflow, /actions\/deploy-pages@v4/);
-  assert.match(workflow, /id:\s*pages/);
-  assert.match(workflow, /test -s dist\/atlas3d\/index\.html/);
-  assert.match(workflow, /PAGES_ATLAS_ROUTE_READBACK_OK/);
-  assert.match(workflow, /ready_marker='data-atlas-ready/);
-  assert.match(workflow, /data-three-ready=\"true\"/);
-  assert.match(workflow, /data-three-paint-samples/);
-  assert.match(workflow, /PAGES_MCP_NEURAL_DARK_2D_OK/);
-  assert.match(workflow, /CAPABILITY_SEMANTICS_PARITY/);
-  assert.match(workflow, /PAGES_TOWER_PROJECTION_READBACK_OK/);
-  assert.match(workflow, /PAGES_SCIENCE_PROJECTION_READBACK_OK/);
-  assert.match(workflow, /PAGES_BUILD_META_READBACK_OK/);
-  assert.match(workflow, /viewport=\$\{width\}x\$\{height\}/);
-  assert.match(workflow, /desktop-1440-dark/);
-  assert.match(workflow, /desktop-1024-light/);
-  assert.match(workflow, /mobile-390-light/);
+  assert.match(workflow, /deploy:\n    needs: build/);
+  assert.match(workflow, /path: nexo-one\/dist/);
+  assert.match(workflow, /npm run typecheck/);
+  assert.match(workflow, /node --test test\/static-publication-boundary\.test\.mjs/);
+  assert.match(vite, /main: 'index\.html'/);
+  assert.match(vite, /mcp: 'mcp\/index\.html'/);
+  assert.match(vite, /atlas3d: 'atlas3d\/index\.html'/);
+  for (const path of ['system.json', 'science-projection-v1.json', 'world-public.ndjson',
+    'tower-projection/projection.json', 'tower-projection/publication.json', 'mcp/topology.json',
+    'galaxy/latest.json', 'galaxy/index.json', 'build-meta.json']) assert.ok(workflow.includes(path), path);
+  assert.match(workflow, /403\|404\|410\)/);
+  assert.match(workflow, /Former public data path is still reachable/);
+  assert.doesNotMatch(workflow, /PAGES_TOWER_PROJECTION_READBACK_OK|CAPABILITY_SEMANTICS_PARITY|atlas3d-production-readback/);
   assert.match(workflow, /pages:\s*write/);
   assert.match(workflow, /id-token:\s*write/);
 });
@@ -538,7 +517,7 @@ test('NEXO ONE is the only workflow allowed to publish the Pages root', async ()
   assert.deepEqual(publishers, ['nexo-one-pages.yml']);
 });
 
-test('GitHub Pages personal plane reads the locally compiled public WorldState', async () => {
+test('GitHub Pages never injects or emits a public personal WorldState', async () => {
   const hook = await text('src/app/useWorld.ts');
   const workflow = await text('../.github/workflows/nexo-one-pages.yml');
   const builder = await text('scripts/build-pages-system.mjs');
@@ -547,26 +526,24 @@ test('GitHub Pages personal plane reads the locally compiled public WorldState',
   assert.match(hook, /staticProjection\?\(reset\?'reload':'no-cache'\):'no-store'/);
   assert.match(hook, /endsWith\('\.ndjson'\)/);
   assert.doesNotMatch(hook, /fetch\('\/api\/world\?stream=1&refresh=1'/);
-  assert.match(workflow, /VITE_WORLD_ENDPOINT:\s*\.\/world-public\.ndjson/);
-  assert.match(workflow, /test -s dist\/world-public\.ndjson/);
-  assert.match(builder, /world-public\.ndjson/);
+  assert.doesNotMatch(workflow, /VITE_WORLD_ENDPOINT:|test -s dist\/world-public\.ndjson/);
+  assert.match(workflow, /Verify former data URLs are unavailable/);
+  assert.match(workflow, /world-public\.ndjson/);
   assert.match(builder, /buildPagesProjection/);
-  assert.doesNotMatch(workflow, /VITE_WORLD_ENDPOINT:\s*https:\/\/nexo-one-two\.vercel\.app\/api\/world/);
+  assert.doesNotMatch(builder, /writeFile|world-public\.ndjson/);
 });
 
-
-test('Pages runtime avoids redundant scheduled deploys and hydrates history concurrently', async () => {
+test('Pages preserves publication ordering without hydrating any historical data', async () => {
   const workflow = await text('../.github/workflows/nexo-one-pages.yml');
   assert.match(workflow, /cancel-in-progress:\s*false/);
-  assert.match(workflow, /id:\s*deploy_needed/);
-  assert.match(workflow, /PAGES_NO_OP projection, live semantic inputs and Pantheon commit already published/);
-  assert.match(workflow, /build-meta\.json/);
-  assert.match(workflow, /NEXO_ONE_BUILD_META_V1/);
-  assert.match(workflow, /xargs -r -P 8/);
-  assert.match(workflow, /if: needs\.build\.outputs\.deploy_needed == 'true'/);
-  assert.match(workflow, /PAGES_BUILD_META_READBACK_OK/);
+  assert.match(workflow, /deploy:\n    needs: build/);
+  assert.doesNotMatch(workflow, /schedule:|deploy_needed|PAGES_NO_OP|NEXO_GALAXY_PREVIOUS|xargs -r -P 8/);
+  assert.doesNotMatch(workflow, /Hydrate previous valid galaxy history|galaxy\/snapshots\/\$\{?id/);
+  assert.ok(workflow.indexOf('scripts/static-publication.mjs --check') < workflow.indexOf('actions/upload-pages-artifact@v4'));
+  assert.match(workflow, /galaxy\/latest\.json/);
+  assert.match(workflow, /galaxy\/index\.json/);
+  assert.match(workflow, /403\|404\|410\)/);
 });
-
 
 test('General durable Drive state projects into Atlas as aggregates and Learning filaments', async () => {
   const { buildPagesProjection } = await import('../scripts/build-pages-system.mjs');
@@ -637,16 +614,16 @@ test('General durable Drive state projects into Atlas as aggregates and Learning
 });
 
 
-test('Pages fingerprints and compiles the derived General projection', async () => {
+test('General projection compilation stays available privately but is absent from Pages publication', async () => {
   const workflow = await text('../.github/workflows/nexo-one-pages.yml');
   const builder = await text('scripts/build-pages-system.mjs');
-  assert.match(workflow, /general-public-projection\.json/);
-  assert.match(workflow, /NEXO_PUBLIC_GENERAL/);
-  assert.match(builder, /NEXO_PUBLIC_GENERAL/);
+  assert.doesNotMatch(workflow, /general-public-projection\.json|NEXO_PUBLIC_GENERAL/);
+  assert.doesNotMatch(builder, /NEXO_PUBLIC_GENERAL/);
   assert.match(builder, /generalLearningFilaments/);
   assert.match(builder, /applyGeneralExecutionToGraph/);
+  assert.match(builder, /export function buildPagesProjection/);
+  assert.match(builder, /sealStaticPublication/);
 });
-
 
 test('public system state projects capability registry with conservative evidence semantics', async () => {
   const { buildPagesProjection } = await import('../scripts/build-pages-system.mjs');

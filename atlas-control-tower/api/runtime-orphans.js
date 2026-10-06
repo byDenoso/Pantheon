@@ -1,3 +1,4 @@
+import { withPrivateApiBoundary } from '../lib/private-api-boundary.mjs';
 import driveHandler from './runtime-drive.js';
 import liveActivity from './live/activity.mjs';
 
@@ -10,4 +11,4 @@ export function createRuntimeOrphansHandler({drive=driveHandler,activity=liveAct
 }
 
 const handler=createRuntimeOrphansHandler();
-export default handler;
+export default withPrivateApiBoundary(handler);

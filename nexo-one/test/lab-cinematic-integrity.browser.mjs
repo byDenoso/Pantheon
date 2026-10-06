@@ -146,7 +146,7 @@ try {
     assert.equal(await tools.getByRole('button', { name: 'Mostrar só a página', exact: true }).getAttribute('aria-pressed'), 'false');
     assert.equal(await page.locator('.observatory.scene-unavailable').count(), 0, 'native SVG remains functional without WebGL');
     assert.equal(await page.locator(nativeScene).count(), 1);
-    if (theme === 'dark') assert.equal(await page.locator('.observatory').evaluate(el => getComputedStyle(el).getPropertyValue('--o-accent').trim()), '#9fc9ff');
+    if (theme === 'dark') assert.equal(await page.locator('.observatory').evaluate(el => getComputedStyle(el).getPropertyValue('--o-accent').trim()), '#6890ff');
     await page.screenshot({ path: output + '/' + name + '-home.png' });
     await page.evaluate(() => { location.hash = '#/e/FAM-DE-FS-GEOGROWTH-ELG-DESI-PP'; });
     await page.locator('.h1-entity').locator('..').waitFor();

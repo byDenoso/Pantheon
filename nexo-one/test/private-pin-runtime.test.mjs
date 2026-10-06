@@ -11,7 +11,7 @@ test('legacy monorepo Vercel runtime remains structurally valid during migration
   assert.match(config.installCommand,/cd nexo-one/);
   assert.match(config.buildCommand,/cd nexo-one/);
   assert.equal(config.outputDirectory,'nexo-one/dist');
-  assert.equal(config.functions,undefined);
+  assert.deepEqual(config.functions,{'api/index.js':{includeFiles:'nexo-one/server/private-ui/**'}});
   assert.ok(config.rewrites.some(entry=>entry.source==='/api/:route'&&entry.destination.includes('/api/index')));
   assert.match(api,/module\.exports\s*=\s*async function/);
   assert.match(api,/await import\('\.\.\/nexo-one\/server\/handler\.mjs'\)/);
@@ -56,9 +56,10 @@ test('numeric PIN mode is protected by Apps Script server-side rate limiting',as
   assert.match(code,/RATE_LIMITED/);
 });
 
-test('GitHub Pages injects only the non-secret Apps Script bridge URL',async()=>{
+test('GitHub Pages includes only a private-cockpit link and no legacy auth bridge or credentials',async()=>{
   const workflow=await text('../.github/workflows/nexo-one-pages.yml');
-  assert.match(workflow,/VITE_NEXO_AUTH_BRIDGE_URL:\s*\$\{\{ vars\.VITE_NEXO_AUTH_BRIDGE_URL \}\}/);
+  assert.match(workflow,/VITE_PRIVATE_COCKPIT_URL:\s*\$\{\{ vars\.VITE_PRIVATE_COCKPIT_URL \}\}/);
+  assert.doesNotMatch(workflow,/VITE_NEXO_AUTH_BRIDGE_URL:/);
   assert.doesNotMatch(workflow,/NEXO_PIN_HASH:/);
   assert.doesNotMatch(workflow,/NEXO_SESSION_SECRET:/);
   assert.doesNotMatch(workflow,/NEXO_PIN:/);
