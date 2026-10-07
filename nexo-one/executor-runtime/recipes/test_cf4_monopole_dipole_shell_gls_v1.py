@@ -104,7 +104,7 @@ class CF4ShellRecipeTests(unittest.TestCase):
         self.assertEqual(caught.exception.decision, "FROZEN_PARAMS_MISMATCH")
 
     def test_strict_runner_input_binding_requires_all_three_exact_sources(self):
-        rows = [{"url": item["url"], "sha256": item["sha256"]} for item in recipe.SOURCES.values()]
+        rows = [{"name": name, "url": item["url"], "sha256": item["sha256"], "version": recipe.CF4_VERSION}\n                for name, item in recipe.SOURCES.items()]
         with tempfile.TemporaryDirectory() as tmp:
             path = Path(tmp) / "inputs.json"
             path.write_text(json.dumps(rows), encoding="utf-8")
