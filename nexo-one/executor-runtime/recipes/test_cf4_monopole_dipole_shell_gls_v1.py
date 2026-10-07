@@ -143,5 +143,32 @@ class CF4ShellRecipeTests(unittest.TestCase):
                     os.environ["INPUTS_PATH"] = old_path
 
 
+    def test_missing_runner_binding_is_operational_failure_not_verdict(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            params_path = root / "params.json"
+            result_path = root / "result.json"
+            params_path.write_text(json.dumps(PARAMS), encoding="utf-8")
+            previous = dict(os.environ)
+            os.environ.clear()
+            os.environ.update({
+                "PARAMS_PATH": str(params_path),
+                "RESULT_PATH": str(result_path),
+                "NEXO_REQUIRE_FROZEN_INPUTS": "1",
+            })
+            try:
+                with self.assertRaises(SystemExit) as stopped:
+                    recipe.main()
+                self.assertEqual(stopped.exception.code, 1)
+                payload = json.loads(result_path.read_text(encoding="utf-8"))
+                self.assertEqual(payload["execution_status"], "INPUT_OR_FIT_UNAVAILABLE")
+                self.assertNotIn("verdict", payload)
+                self.assertEqual(payload["statistics"]["test_id"], recipe.TEST_ID)
+                self.assertEqual(payload["statistics"]["prereg_hash"], recipe.PREREG_HASH)
+            finally:
+                os.environ.clear()
+                os.environ.update(previous)
+
+
 if __name__ == "__main__":
     unittest.main()
