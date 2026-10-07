@@ -7,7 +7,7 @@ O Executor não manda código na proposta (o filtro do ChatGPT bloqueia). Em `TE
 
 | Receita | Para quê | Parâmetros |
 |---|---|---|
-| `seed_bounds` | replicação por sementes de amostra normal; limites de média e desvio | `seeds[]`, `n` (int ou lista), `max_abs_mean`, `max_abs_sd_minus_1` |
+| `seed_bounds` | replicação por sementes de amostra normal; limites de média e desvio | `seeds[]`, `n` (int ou lista), `max_abs_mean`, `max_abs_sd_minus_1` |\n| `cf4_monopole_dipole_shell_gls_v1` | CF4: monopolo de H_i condicionado ao dipolo em shells 20–160 Mpc, referência 120–160, 12 HEALPix Nside=1 e LOO FP/TF | parâmetros congelados no smoke: shells, referência, thresholds de promoção/H2/rejeição |
 | `runner_readback_canary` | replica o canário numérico e registra identidade pública/read-back do runner | `seed`, `n`, `max_abs_mean`, `max_abs_sd_minus_1` |
 | `tree_matching_symbolic_r1` | ataque simbólico R=1: refaz a eliminação radial com escalas independentes e infere o matching termo a termo | `angular_scale`, `radial_mu2` |
 | `w0wa_bao_sn` | ajuste w0-wa (CPL plano) com DESI DR2 BAO + Pantheon+, retirando traçadores ou faixas de redshift; compara com o conjunto completo | `drop_bao_z[]` (0.295 BGS, 0.51/0.706 LRG, 0.934 LRG+ELG, 1.321 ELG, 1.484 QSO, 2.33 Ly-α), `drop_sn_zbands[[zmin,zmax]]`, `use_sn`, `priors{omega_m,w0,wa:[média,σ]}`, `criterion` (`delta_chi2_ge` ou `shift_lt`), `threshold` |
