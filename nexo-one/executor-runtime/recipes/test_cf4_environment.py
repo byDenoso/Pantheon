@@ -98,11 +98,31 @@ class CF4Integration(unittest.TestCase):
                 (p/'params.json').write_text(json.dumps(params))
                 run=subprocess.run([sys.executable,str(p/'test.py')],cwd=p,env=env,capture_output=True,timeout=20)
                 out=json.loads((p/'result.json').read_text());self.assertEqual(run.returncode,exitcode)
-                self.assertIsNone(out['result']);self.assertFalse(out['scientific_result_eligible'])
+                self.assertIsNone(out.get('result'));self.assertFalse(out['scientific_result_eligible'])
                 if exitcode:self.assertNotIn('verdict',out)
                 else:
                     self.assertTrue({'verdict','decision','summary','statistics','semantic'}.issubset(out))
                     self.assertIsNone(out['verdict']);self.assertEqual(out['statistics']['dataset_kind'],'synthetic')
+
+    def test_operational_failures_retain_reason_in_shared_receipt_classifier(self):
+        spec=importlib.util.spec_from_file_location('shared_receipt_validation',ROOT.parent/'receipt_validation.py')
+        receipt=importlib.util.module_from_spec(spec);spec.loader.exec_module(receipt)
+        errors=(cf4.OperationalBlock('missing definition'),OSError('download unavailable'),
+                cf4.ContractInputError('input hash or schema mismatch'),np.linalg.LinAlgError('GLS unavailable'))
+        with tempfile.TemporaryDirectory() as d:
+            p=Path(d);(p/'params.json').write_text(json.dumps(self.params('vector_quadratic')))
+            env={'PARAMS_PATH':str(p/'params.json'),'RESULT_PATH':str(p/'result.json')}
+            for error in errors:
+                with self.subTest(error=type(error).__name__),mock.patch.dict(os.environ,env),mock.patch.object(cf4,'run',side_effect=error):
+                    with self.assertRaises(SystemExit) as stopped:cf4.main()
+                    self.assertEqual(stopped.exception.code,1)
+                    out=json.loads((p/'result.json').read_text())
+                    self.assertNotIn('result',out);self.assertNotIn('verdict',out)
+                    self.assertFalse(out['scientific_result_eligible'])
+                    ok,stage,reason=receipt.classify_payload(1,out)
+                    self.assertFalse(ok);self.assertEqual(stage,'INPUT_OR_FIT_UNAVAILABLE')
+                    self.assertEqual(reason['code'],'INPUT_OR_FIT_UNAVAILABLE')
+                    self.assertEqual(reason['detail'],str(error))
 
     def test_catalog_rejects_embedded_source_drift_without_raising(self):
         m=cf4._manifest()

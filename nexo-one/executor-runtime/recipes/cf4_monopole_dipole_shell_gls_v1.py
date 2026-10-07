@@ -456,7 +456,7 @@ def main():
         result=run(params)
     except (ContractInputError,ValueError,KeyError,OSError,np.linalg.LinAlgError) as error:
         code=1
-        result={'ok':False,'execution_status':'INPUT_OR_DECISION_UNAVAILABLE','error':str(error),'result':None,'scientific_result_eligible':False}
+        result={'ok':False,'execution_status':'INPUT_OR_FIT_UNAVAILABLE','error':str(error),'scientific_result_eligible':False}
     Path(os.environ['RESULT_PATH']).write_text(json.dumps(result,ensure_ascii=False,allow_nan=False)+'\n')
     print(result.get('summary') or result.get('error'))
     raise SystemExit(code)
