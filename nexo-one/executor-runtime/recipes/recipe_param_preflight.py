@@ -41,6 +41,16 @@ def validate_params(recipe, params, inputs, recipe_root):
         manifest = json.loads(raw)
         if manifest['contract'] != CONTRACT or manifest['recipe'] != recipe:
             raise ValueError('unsupported manifest contract or validator')
+        if recipe == 'cf4_monopole_dipole_shell_gls_v1':
+            if manifest.get('validator') != 'cf4_environment_v1':
+                raise ValueError('unsupported CF4 parameter validator')
+            if not _cf4_embedded_sources_match(root/(recipe+'.py'), raw, Path(__file__)):
+                reject('CF4_RUNTIME_PREFLIGHT_DRIFT','standalone runtime must match trusted manifest and validator bytes')
+            for code, detail in _validate_cf4_environment(params, inputs, manifest):
+                reject(code, detail)
+            result['reasons'] = sorted(set(result['reasons']))
+            result['eligible'] = not result['reasons']
+            return result
         if recipe == 'rank_score_leave_one_out':
             if manifest.get('validator') != 'rank_score_leave_one_out_v1':
                 raise ValueError('unsupported manifest contract or validator')
@@ -154,3 +164,66 @@ def validate_params(recipe, params, inputs, recipe_root):
     result['reasons'] = sorted(set(result['reasons']))
     result['eligible'] = not result['reasons']
     return result
+
+
+
+def _validate_cf4_environment(params, inputs, manifest):
+    """Pure technical admission for the single fixed catalog implementation.
+
+    Identity and source commitments are supplied by the canonical TEST binding.
+    They are provenance, not a caller-created scientific approval.
+    """
+    reasons=[]
+    def no(code,detail): reasons.append((code,detail))
+    if not isinstance(params,dict):
+        return [('RECIPE_PARAMS_INVALID','params must be an object')]
+    required={'mode','test_id','prereg_hash','dipole_score','fit_scope','decision_ref','decision_sha256'}
+    if set(params)!=required: no('CF4_PARAMS_NOT_EXPLICIT','all seven identity/source fields are required; no extras')
+    if params.get('mode')!='cf4_environment': no('UNSUPPORTED_RECIPE_MODE','smoke is never scientific admission')
+    if (not isinstance(params.get('test_id'),str) or not params['test_id'].strip()
+        or not isinstance(params.get('prereg_hash'),str)
+        or not re.fullmatch(r'sha256:[0-9a-f]{64}',params['prereg_hash'])):
+        no('FROZEN_TEST_IDENTITY_MISMATCH','canonical TEST identity and preregistration commitment are required')
+    if manifest.get('dipole_score')!='vector_quadratic' or params.get('dipole_score')!='vector_quadratic':
+        no('DIPOLE_SCORE_UNRESOLVED','this recipe implements the fixed vector_quadratic definition')
+    if manifest.get('fit_scope')!='joint_gls_marginal' or params.get('fit_scope')!='joint_gls_marginal':
+        no('DIPOLE_FIT_SCOPE_UNRESOLVED','the joint fit uses marginal dipole covariance; shell fits are diagnostics')
+    ref=params.get('decision_ref'); sha=params.get('decision_sha256')
+    if not isinstance(ref,str) or not ref.strip() or not isinstance(sha,str) or not re.fullmatch(r'[0-9a-f]{64}',sha):
+        no('PROSPECTIVE_DECISION_REFERENCE_MISSING','explicit source reference and exact source SHA256 required')
+    expected=manifest.get('inputs')
+    if not isinstance(expected,list) or len(expected)!=3:
+        no('PREFLIGHT_CONTRACT_INVALID','three fixed public inputs are required')
+    else:
+        required_inputs={(i['name'],i['url'],i['version'],i['sha256']) for i in expected}
+        actual=set()
+        if isinstance(inputs,list):
+            for i in inputs:
+                if not isinstance(i,dict): break
+                actual.add((i.get('name'),i.get('url'),i.get('version'),str(i.get('sha256') or '').removeprefix('sha256:')))
+        if not isinstance(inputs,list) or len(inputs)!=3 or actual!=required_inputs:
+            no('INPUT_RECIPE_MANIFEST_MISMATCH','CF4 binding must match all three fixed input identities')
+    return reasons
+
+def _cf4_embedded_sources_match(recipe_path, manifest_raw, validator_path):
+    """Verify the standalone runtime is generated from this exact admission source."""
+    try:
+        import ast
+        runtime_source=Path(recipe_path).read_text()
+        validator_source=Path(validator_path).read_text()
+        runtime_tree=ast.parse(runtime_source)
+        validator_tree=ast.parse(validator_source)
+        constants={}
+        for node in runtime_tree.body:
+            if isinstance(node,ast.Assign) and len(node.targets)==1 and isinstance(node.targets[0],ast.Name):
+                if node.targets[0].id in ('_CATALOG_MANIFEST_SHA256','_CATALOG_VALIDATOR_SHA256','_FROZEN_MANIFEST_JSON'):
+                    constants[node.targets[0].id]=ast.literal_eval(node.value)
+        def helper(source,tree):
+            return next(ast.get_source_segment(source,n) for n in tree.body if isinstance(n,ast.FunctionDef) and n.name=='_validate_cf4_environment')
+        return (constants.get('_CATALOG_MANIFEST_SHA256')==hashlib.sha256(manifest_raw).hexdigest()
+                and constants.get('_CATALOG_VALIDATOR_SHA256')==hashlib.sha256(Path(validator_path).read_bytes()).hexdigest()
+                and isinstance(constants.get('_FROZEN_MANIFEST_JSON'),str)
+                and constants['_FROZEN_MANIFEST_JSON'].encode()==manifest_raw
+                and helper(runtime_source,runtime_tree)==helper(validator_source,validator_tree))
+    except (OSError, SyntaxError, StopIteration, ValueError, TypeError):
+        return False

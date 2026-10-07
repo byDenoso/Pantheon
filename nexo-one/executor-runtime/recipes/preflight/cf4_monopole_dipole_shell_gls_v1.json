@@ -1,0 +1,28 @@
+{
+  "contract": "RECIPE_PARAM_PREFLIGHT_V1",
+  "recipe": "cf4_monopole_dipole_shell_gls_v1",
+  "validator": "cf4_environment_v1",
+  "inputs": [
+    {
+      "name": "CF4 ReadMe",
+      "url": "https://cdsarc.cds.unistra.fr/ftp/J/ApJ/944/94/ReadMe",
+      "version": "CDS archive 28-Jan-2025 / J/ApJ/944/94",
+      "sha256": "2cfed1418147d5a626dee1fa37c47252124477c9828490508d9bbe511d34edb4"
+    },
+    {
+      "name": "CF4 table3.dat.gz",
+      "url": "https://cdsarc.cds.unistra.fr/ftp/J/ApJ/944/94/table3.dat.gz",
+      "version": "CDS archive 28-Jan-2025 / J/ApJ/944/94",
+      "sha256": "1c02e2b3829b0b323524a5f3671a5f530cbdccae3c10b432db0c2e2fe09672fe"
+    },
+    {
+      "name": "CF4 table4.dat.gz",
+      "url": "https://cdsarc.cds.unistra.fr/ftp/J/ApJ/944/94/table4.dat.gz",
+      "version": "CDS archive 28-Jan-2025 / J/ApJ/944/94",
+      "sha256": "be91d4fae6fa01552ab3bc85db695411fca3249eeae08b566a712e6ea790bd99"
+    }
+  ],
+  "dipole_score": "vector_quadratic",
+  "fit_scope": "joint_gls_marginal",
+  "definition": "Q=A^T Sigma_A^-1 A; sqrt(Q)>=3; report chi-square(3) diagnostic p. Sigma_A is the marginal covariance of each dipole in the joint GLS. Identity and source commitments belong to the individual canonical TEST binding, not to the generic public catalog."
+}
