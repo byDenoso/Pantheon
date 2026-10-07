@@ -2,15 +2,43 @@
  *  There is no second data path. Reads are broad; writes are limited to moving
  *  this browser view. No tool mutates scientific state. */
 
-const SCHEMA = {type:'object', properties:{
- id:{type:'string'}, query:{type:'string'}, domain:{type:'string'},
- status:{type:'string'}, depth:{type:'number'}
-}};
+const schema=(properties={},required=[])=>({type:'object',properties,required,additionalProperties:false});
+const text={type:'string'},id={type:'string',minLength:1};
+const empty=schema(),optionalId=schema({id}),requiredId=schema({id},['id']);
+export const TOOL_SCHEMAS=Object.freeze({
+ atlas_search:schema({query:text}),atlas_get_entity:requiredId,atlas_get_test:requiredId,
+ atlas_get_claim:requiredId,atlas_get_hypothesis:requiredId,
+ atlas_graph_neighborhood:schema({id,depth:{type:'integer',minimum:1}},['id']),
+ atlas_get_health:empty,atlas_get_automation_runs:empty,atlas_get_learning:optionalId,
+ atlas_explain_learning_origin:requiredId,atlas_get_learning_relations:empty,
+ atlas_get_migration_issues:empty,atlas_get_blockers:optionalId,atlas_show_lineage:requiredId,
+ atlas_get_learning_lineage:requiredId,atlas_get_provenance:empty,atlas_focus_entity:requiredId,
+ atlas_filter_graph:schema({query:text,domain:text,status:text}),atlas_compare:requiredId,atlas_sync:empty
+});
+function validateInput(name,value={}) {
+ const spec=TOOL_SCHEMAS[name];
+ const invalid=()=>{throw new TypeError('ATLAS_TOOL_INPUT_INVALID')};
+ if(!value||typeof value!=='object'||Array.isArray(value))invalid();
+ if(spec.required.some(key=>!Object.hasOwn(value,key)))invalid();
+ for(const [key,item] of Object.entries(value)) {
+  const property=spec.properties[key];
+  if(!property)invalid();
+  if(property.type==='string'&&(typeof item!=='string'||(property.minLength&&!item.trim())))invalid();
+  if(property.type==='integer'&&(!Number.isInteger(item)||item<property.minimum))invalid();
+ }
+ return value;
+}
+export function browserModelContext(documentLike=globalThis.document,navigatorLike=globalThis.navigator) {
+ // Current WebMCP lives on document; retain the historical navigator fallback.
+ for(const context of [documentLike?.modelContext,navigatorLike?.modelContext])
+  if(typeof context?.registerTool==='function')return context;
+ return undefined;
+}
 
 const prefixed = (id, prefix) => String(id || '').startsWith(prefix) ? String(id) : prefix + String(id || '');
 
 /** View-moving tools are the only non-read ones; they change nothing on the server. */
-export const VIEW_TOOLS = ['atlas_focus_entity', 'atlas_show_lineage', 'atlas_filter_graph', 'atlas_compare', 'atlas_sync'];
+export const VIEW_TOOLS = ['atlas_focus_entity', 'atlas_filter_graph', 'atlas_compare', 'atlas_sync'];
 
 export function buildTools({api, session, actions}) {
  return {
@@ -44,23 +72,32 @@ export function buildTools({api, session, actions}) {
  };
 }
 
-export async function registerWebMcp({api, session, actions, onStatus}) {
- const context = navigator.modelContext || document.modelContext;
- if (!context?.registerTool) {onStatus('WebMCP não disponível neste navegador'); return 0}
- const tools = buildTools({api, session, actions});
- let count = 0;
- for (const [name, execute] of Object.entries(tools)) {
+export async function registerWebMcp({api,session,actions,onStatus=()=>{},signal,
+ documentLike=globalThis.document,navigatorLike=globalThis.navigator}) {
+ const context=browserModelContext(documentLike,navigatorLike);
+ if(!context){onStatus('WebMCP n\u00e3o dispon\u00edvel neste navegador');return 0}
+ const tools=buildTools({api,session,actions});
+ let count=0,failed=0;
+ for(const [name,execute] of Object.entries(tools)) {
+  if(signal?.aborted)break;
   try {
    await context.registerTool({
-    name,
-    description: name.replaceAll('_', ' '),
-    inputSchema: SCHEMA,
-    annotations: {readOnlyHint: !VIEW_TOOLS.includes(name)},
-    execute: async p => ({content:[{type:'text', text:JSON.stringify(await execute(p || {}))}]})
-   });
+    name,description:name.replaceAll('_',' '),inputSchema:TOOL_SCHEMAS[name],
+    annotations:{readOnlyHint:!VIEW_TOOLS.includes(name),consequentialHint:false,untrustedContentHint:true},
+    execute:async(p,execution={})=>{
+     signal?.throwIfAborted();execution.signal?.throwIfAborted();
+     const result=await execute(validateInput(name,p));
+     signal?.throwIfAborted();execution.signal?.throwIfAborted();
+     return {content:[{type:'text',text:JSON.stringify(result)}]};
+    }
+   },signal?{signal}:undefined);
    count++;
-  } catch {/* one unsupported tool must not drop the rest */}
+  } catch {
+   if(signal?.aborted)break;
+   failed++;
+  }
  }
- onStatus(`WebMCP · ${count} ferramentas`);
+ if(signal?.aborted){onStatus('WebMCP encerrado');return 0}
+ onStatus(`WebMCP \u00b7 ${count} ferramentas${failed?` \u00b7 ${failed} indispon\u00edveis`:''}`);
  return count;
 }

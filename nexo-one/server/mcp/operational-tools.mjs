@@ -10,13 +10,15 @@ export const OPERATIONAL_TOOL_NAMES=Object.freeze(['get_role_session','get_role_
 const TOOL_MUTATIONS=new Set([...MUTATIONS,SCIENTIFIC_MUTATION]);
 const SCIENCE_OWNER_ROLES=Object.freeze({
   EXECUTOR:Object.freeze(['EXECUTOR']),
-  ENGENHEIRO:Object.freeze(['ENGINEER','ENGENHEER','ENGENHEIRO']),
-  CIENTISTA:Object.freeze(['ADVISOR']),
+  ENGENHEIRO:Object.freeze(['ADVISOR','ENGINEER','ENGENHEER','ENGENHEIRO']),
+  CIENTISTA:Object.freeze(['LEARNER']),
   CRITICO:Object.freeze(['REFEREE1','REFEREE2','REFEREE_1','REFEREE_2'])
 });
 const ID=/^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$/;
 const INTENT_ID=/^op-[a-f0-9]{48}$/;
 const TERMINAL_INTENT_DISPOSITIONS=new Set(['BLOCKED','STALE_VERSION']);
+// Closed work remains addressable by test ID, but must not consume active queue pages.
+const TERMINAL_SCIENTIFIC_WORK_STATUSES=new Set(['DONE','REJECTED','ARCHIVED','CANCELLED','CANCELED','RESOLVED']);
 const ACTIVE_SCIENTIFIC_ATTEMPT_STATUSES=new Set(['PENDING','RESERVED','QUEUED','DISPATCH_PENDING','DISPATCHED','RUNNING','CHECKPOINTED']);
 const compareIds=(left,right)=>left<right?-1:left>right?1:0;
 export function canonical(value){
@@ -49,8 +51,11 @@ const safeReasons=value=>Array.isArray(value)?value.filter(item=>typeof item==='
 function scientificQueue(state,role,principalId,args){
   const owners=SCIENCE_OWNER_ROLES[role]||[];
   const source=state.science&&typeof state.science==='object'?state.science:{};
+  // Visibility allows preparation by the recipient; it never transfers ownership.
   const recoveries=(Array.isArray(source.recovery)?source.recovery:[]).filter(item=>
-    owners.includes(String(item.owner_role||item.target_role||'').toUpperCase()));
+    (owners.includes(String(item.owner_role||'').toUpperCase())||
+      owners.includes(String(item.target_role||'').toUpperCase()))&&
+    (args.test_id||!TERMINAL_SCIENTIFIC_WORK_STATUSES.has(String(item.status||'').toUpperCase())));
   const recoveryTests=new Set(recoveries.map(item=>item.test_id).filter(Boolean));
   const batteries=Array.isArray(source.batteries)?source.batteries:[];
   const attemptFor=item=>{
@@ -227,6 +232,9 @@ export function createOperationalService({readState,submitIntent,submitScientifi
         return {role:args.role,prompt:ROLE_PROMPTS[args.role],authority:state.authority,revision:state.revision,
           available:available.map(item=>({...safeWork(item),role_session:sessionFor(item)})),
           blocked:work.filter(item=>item.state==='BLOCKED').map(safeWork),
+          // Bootstrap real scientific work from the same verified snapshot; do not
+          // make every role rediscover it through a second full Tower download.
+          scientific_queue:{...scientificQueue(state,args.role,principal.id,{}),next_tool:'get_scientific_queue'},
           instructions:{recover_technical_failures:true,block_only_affected_item:true,criterion_changes:'EXPLICIT_SCIENTIFIC_DECISION',
             recipe:'REUSE_DEFINED_METHOD; INDEPENDENT_REVIEW_FOR_SCIENTIFIC_CODE_CHANGE',record_via:'WRITER_ONLY',
             routine_approval_required:false,formal_gates:['DESTRUCTIVE_OR_IRREVERSIBLE_ACTION','CRITICAL_CREDENTIAL_OR_ACCESS_CHANGE'],
