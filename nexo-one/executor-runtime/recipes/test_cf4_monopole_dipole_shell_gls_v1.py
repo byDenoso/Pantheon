@@ -96,6 +96,18 @@ class CF4ShellRecipeTests(unittest.TestCase):
         self.assertEqual(out["decision"], "REJECTED_LOCAL_ENVIRONMENT_H0_SHIFT")
         self.assertEqual(out["verdict"], "REJECTED")
 
+    def test_reference_shell_self_contrast_is_exact_zero(self):
+        groups = self.synthetic(per_shell=400)
+        out = recipe.analyze(groups, PARAMS)
+        reference = next(row for row in out["statistics"]["shells"] if row["shell_mpc"] == [120.0, 160.0])
+        self.assertEqual(reference["vs_reference"], {
+            "delta_h_km_s_mpc": 0.0,
+            "se_km_s_mpc": 0.0,
+            "lower95_km_s_mpc": 0.0,
+            "upper95_km_s_mpc": 0.0,
+            "self_reference": True,
+        })
+
     def test_param_drift_fails_closed(self):
         groups = self.synthetic(per_shell=200)
         changed = {**PARAMS, "promotion_delta_min": 1.4}
