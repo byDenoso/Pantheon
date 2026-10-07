@@ -104,6 +104,61 @@ class CF4Integration(unittest.TestCase):
                     self.assertTrue({'verdict','decision','summary','statistics','semantic'}.issubset(out))
                     self.assertIsNone(out['verdict']);self.assertEqual(out['statistics']['dataset_kind'],'synthetic')
 
+    def test_production_prepare_rejects_parser_fit_and_classifier_drift(self):
+        import hashlib
+        import textwrap
+        workflow=(ROOT.parents[2]/'.github/workflows/nexo-test-battery.yml').read_text()
+        blocks=workflow.split("python3 - <<'PY'\n")
+        block=next(x.split('\n          PY',1)[0] for x in blocks
+                   if 'recipe_sha256 mismatch between frozen battery and checked-out runtime' in x)
+        prepare=textwrap.dedent(block)
+        source=(ROOT/(NAME+'.py')).read_text()
+        frozen_sha=hashlib.sha256(source.encode()).hexdigest()
+        params=self.params('vector_quadratic');manifest=cf4._manifest()
+        preflight=validator.validate_params(NAME,params,manifest['inputs'],ROOT)
+        self.assertTrue(preflight['eligible'])
+        mutations=(('unchanged',None,None),
+                   ('classifier','if d>=1.5 and lo>0.5 and positive>=10:','if True:'),
+                   ('fit','normal = Xw.T @ Xw','normal = 2 * (Xw.T @ Xw)'),
+                   ('parser','out["sigma_Hi"]=(math.log(10.0)/5.0)*out["e_DMzp"]*out["Hi"]','out["sigma_Hi"]=1.0'))
+        for label,before,after in mutations:
+            with self.subTest(component=label),tempfile.TemporaryDirectory() as d:
+                root=Path(d);job=root/'job';job.mkdir()
+                catalog=root/'runtime-base/nexo-one/executor-runtime/recipes'
+                (catalog/'preflight').mkdir(parents=True)
+                modified=source if before is None else source.replace(before,after,1)
+                if before is not None:self.assertNotEqual(source,modified)
+                (catalog/(NAME+'.py')).write_text(modified)
+                for relative in ('recipe_param_preflight.py','preflight/'+NAME+'.json'):
+                    (catalog/relative).write_bytes((ROOT/relative).read_bytes())
+                bid='bat-synthetic-hash-proof';spec=root/'battery-specs/batteries';spec.mkdir(parents=True)
+                (spec/(bid+'.json')).write_text(json.dumps({'tests':[{
+                    'test_id':params['test_id'],'recipe':NAME,'recipe_sha256':frozen_sha,
+                    'attempt_id':'attempt-'+'a'*32,'params':params,'inputs':manifest['inputs'],
+                    'param_preflight':preflight}]}))
+                env={'BID':bid,'IDX':'0','MATRIX_TEST_ID':params['test_id'],
+                     'NEXO_CI_FIXTURE':'false','GITHUB_OUTPUT':str(root/'output')}
+                previous=Path.cwd();previous_path=list(sys.path)
+                previous_validator=sys.modules.pop('recipe_param_preflight',None)
+                try:
+                    os.chdir(root)
+                    with mock.patch.dict(os.environ,env):
+                        # Only redirect staging to this temporary directory. Execute
+                        # the actual production preparation block and its hash check.
+                        script=prepare.replace('/tmp/job',str(job))
+                        if before is None:
+                            exec(compile(script,'production_prepare','exec'),{})
+                            self.assertEqual((job/'test.py').read_text(),source)
+                        else:
+                            with self.assertRaisesRegex(SystemExit,'recipe_sha256 mismatch'):
+                                exec(compile(script,'production_prepare','exec'),{})
+                            self.assertFalse((job/'test.py').exists())
+                finally:
+                    os.chdir(previous);sys.path[:]=previous_path
+                    sys.modules.pop('recipe_param_preflight',None)
+                    if previous_validator is not None:sys.modules['recipe_param_preflight']=previous_validator
+                # The staged script is never executed by this regression.
+
     def test_operational_failures_retain_reason_in_shared_receipt_classifier(self):
         spec=importlib.util.spec_from_file_location('shared_receipt_validation',ROOT.parent/'receipt_validation.py')
         receipt=importlib.util.module_from_spec(spec);spec.loader.exec_module(receipt)
