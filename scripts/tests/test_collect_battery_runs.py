@@ -1,4 +1,5 @@
 import hashlib
+import copy
 import io
 import json
 import re
@@ -56,6 +57,7 @@ class FakeGitHub:
     def __init__(self, runs):
         self.runs = {int(run["id"]): run for run in runs}
         self.list_queries = []
+        self.detail_queries = []
 
     def __call__(self, url):
         parsed = urllib.parse.urlparse(url)
@@ -78,6 +80,7 @@ class FakeGitHub:
             return {"total_count": len(rows), "workflow_runs": rows[start:start + per_page]}
         match = re.search(r"/actions/runs/(\d+)$", parsed.path)
         if match:
+            self.detail_queries.append(int(match.group(1)))
             return self.runs[int(match.group(1))]
         raise AssertionError(f"unexpected API URL {url}")
 
@@ -91,6 +94,113 @@ class FakeGitHub:
 
 
 class BatteryRunCollectorTests(unittest.TestCase):
+    def test_terminal_rejection_does_not_consume_pending_retry_budget(self):
+        run = make_run(301, created="2026-09-20T10:00:00Z")
+        saved = {**collector._run_metadata(run), "reason": "REJECTED_TERMINAL",
+                 "input_sha256": "sha256:" + "a" * 64, "retry_count": 254}
+        cursor = initial_cursor(pending={"301:1": saved})
+        # No recent/backfill observations: any detail call is a hot retry.
+        def api(url):
+            self.assertIn("/actions/workflows/", url, "terminal attempt must not be polled by ID")
+            return {"total_count": 0, "workflow_runs": []}
+        selected, _ = collector.collect_run_pages(REPO, cursor, api)
+        self.assertEqual(selected, [])
+        self.assertEqual(cursor["battery_runs"]["pending"]["301:1"], saved)
+
+    def test_terminal_rejection_is_not_rediscovered_from_recent_or_backfill(self):
+        run = make_run(302)
+        for source in ("recent", "backfill"):
+            with self.subTest(source=source):
+                saved = {**collector._run_metadata(run), "reason": "REJECTED_TERMINAL"}
+                cursor = initial_cursor(pending={"302:1": saved})
+                def api(url):
+                    if "/actions/workflows/" not in url:
+                        return run
+                    is_backfill = "created=" in url
+                    rows = [run] if is_backfill == (source == "backfill") else []
+                    return {"total_count": len(rows), "workflow_runs": rows}
+                selected, _ = collector.collect_run_pages(REPO, cursor, api)
+                self.assertEqual(selected, [])
+
+    def test_transient_pending_attempts_remain_retryable(self):
+        for reason in ("ARTIFACT_NOT_AVAILABLE", "DEFERRED_DEPENDENCY",
+                       "RETRYABLE_TRANSPORT", "CANONICAL_CONFIRMATION_MISSING"):
+            with self.subTest(reason=reason):
+                run = make_run(303)
+                cursor = initial_cursor(pending={"303:1": {
+                    **collector._run_metadata(run), "reason": reason}})
+                api = FakeGitHub([run])
+                selected, _ = collector.collect_run_pages(REPO, cursor, api)
+                self.assertEqual([meta["run_key"] for meta, _ in selected], ["303:1"])
+                self.assertEqual(api.detail_queries, [303])
+
+    def test_new_attempt_after_terminal_rejection_is_discovered_and_history_survives(self):
+        old = {**collector._run_metadata(make_run(304)), "reason": "REJECTED_TERMINAL",
+               "input_sha256": "sha256:" + "a" * 64, "retry_count": 77}
+        for source in ("recent", "backfill"):
+            with self.subTest(source=source):
+                run = make_run(304, attempt=2)
+                cursor = initial_cursor(pending={"304:1": copy.deepcopy(old)})
+                def api(url):
+                    self.assertIn("/actions/workflows/", url)
+                    is_backfill = "created=" in url
+                    rows = [run] if is_backfill == (source == "backfill") else []
+                    return {"total_count": len(rows), "workflow_runs": rows}
+                _, collection = collector.collect(
+                    REPO, cursor, api, download=lambda *_: {"pending_reason": "ARTIFACT_NOT_AVAILABLE"})
+                self.assertEqual(set(collection["pending"]), {"304:2"})
+                collector.record_cursor_outcomes(cursor, collection, canonical_tower({}))
+                self.assertEqual(cursor["battery_runs"]["pending"]["304:1"], old)
+                self.assertIn("304:2", cursor["battery_runs"]["pending"])
+                self.assertEqual(cursor["battery_runs"]["acknowledged"], {})
+
+    def test_new_running_attempt_remains_durable_after_terminal_predecessor(self):
+        run = make_run(305, attempt=2, status="in_progress")
+        cursor = initial_cursor(pending={"305:1": {"reason": "REJECTED_TERMINAL"}})
+        api = FakeGitHub([run])
+        _, collection = collector.collect(REPO, cursor, api)
+        collector.record_cursor_outcomes(cursor, collection, canonical_tower({}))
+        self.assertIn("305:2", cursor["battery_runs"]["pending"])
+        api.runs[305] = make_run(305, attempt=2)
+        selected, _ = collector.collect_run_pages(REPO, cursor, api)
+        self.assertEqual([meta["run_key"] for meta, _ in selected], ["305:2"])
+
+    def test_superseded_transient_cannot_requeue_a_terminal_replacement(self):
+        run = make_run(306, attempt=2)
+        cursor = initial_cursor(pending={
+            "306:1": {"reason": "ARTIFACT_NOT_AVAILABLE"},
+            "306:2": {"reason": "REJECTED_TERMINAL"},
+        })
+        selected, _ = collector.collect_run_pages(REPO, cursor, FakeGitHub([run]))
+        self.assertEqual(selected, [])
+
+    def test_exact_terminal_receipt_parks_attempt_without_ack_or_history_loss(self):
+        run = make_run(307)
+        cursor = initial_cursor()
+        download_calls = []
+        def download(*args):
+            download_calls.append(args)
+            return {"results": [], "artifact_id": 999, "artifact_sha256": "sha256:" + "a" * 64}
+        api = FakeGitHub([run])
+        _, collection = collector.collect(REPO, cursor, api, download=download)
+        observation = collection["observations"][0]
+        receipt = {"contract": collector.RECEIPT_CONTRACT, "effect_id": "envelope-rejected",
+                   "payload_sha256": observation["input_sha256"], "outcome": "REJECTED_TERMINAL",
+                   "receipt_id": "receipt-rejected", "occurred_at": "2026-10-04T12:01:00Z"}
+        tower = canonical_tower({"operations/receipts/rejected.json": {"encoding": "json", "value": receipt}})
+        collector.record_cursor_outcomes(cursor, collection, tower)
+        saved = copy.deepcopy(cursor["battery_runs"]["pending"]["307:1"])
+        self.assertEqual(saved["reason"], "REJECTED_TERMINAL")
+        self.assertEqual(saved["input_sha256"], observation["input_sha256"])
+        # A changed global Tower revision or missing old receipt is not a source change.
+        for _ in range(3):
+            _, replay = collector.collect(REPO, cursor, api, download=download)
+            self.assertEqual(replay["observations"], [])
+            collector.record_cursor_outcomes(cursor, replay, canonical_tower({}))
+            self.assertEqual(cursor["battery_runs"]["pending"]["307:1"], saved)
+            self.assertEqual(cursor["battery_runs"]["acknowledged"], {})
+        self.assertEqual(len(download_calls), 1)
+
     def test_download_pending_reason_is_durable_not_a_keyerror(self):
         run = make_run(3)
         metadata = collector._run_metadata(run)
