@@ -261,7 +261,17 @@ def analyze(groups: dict[str, np.ndarray], params: dict) -> dict:
     reference_fit = fit_monopole_dipole(groups, base & _shell_mask(distances, REFERENCE, include_high=True))
     for bounds in SHELLS:
         fitted = fit_monopole_dipole(groups, base & _shell_mask(distances, bounds, include_high=(bounds == REFERENCE)))
-        shell_results.append({"shell_mpc": list(bounds), "fit": fitted, "vs_reference": contrast(fitted, reference_fit)})
+        if bounds == REFERENCE:
+            vs_reference = {
+                "delta_h_km_s_mpc": 0.0,
+                "se_km_s_mpc": 0.0,
+                "lower95_km_s_mpc": 0.0,
+                "upper95_km_s_mpc": 0.0,
+                "self_reference": True,
+            }
+        else:
+            vs_reference = {**contrast(fitted, reference_fit), "self_reference": False}
+        shell_results.append({"shell_mpc": list(bounds), "fit": fitted, "vs_reference": vs_reference})
 
     joint_fit, _, joint_contrast = _fit_pair(groups, base)
 
