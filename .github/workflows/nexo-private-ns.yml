@@ -1,0 +1,87 @@
+name: NEXO private campaign
+
+# Generic segmented runner for a private campaign. Code, configuration, checkpoints and
+# results live only in a private Drive folder and are fetched/updated at runtime; nothing
+# private is stored in this repository, printed to the log or uploaded as an artifact.
+on:
+  workflow_dispatch:
+    inputs:
+      run_id:
+        required: true
+        type: choice
+        options: [pilot, m1r1, m1r2, m2r1, m2r2, m3r1, m3r2]
+
+permissions:
+  contents: read
+  actions: write
+
+concurrency:
+  group: nexo-private-${{ inputs.run_id }}
+  cancel-in-progress: false
+
+jobs:
+  segment:
+    runs-on: ubuntu-latest
+    timeout-minutes: 340
+    env:
+      CODE_FILE_ID: 1rMP44h37yhDAxS8Tq-WqXnwzuwooYfgg
+      CODE_SHA256: 7bda5c7d8268511443f3923f58073ff3d5ad2cd12faa25491db7a467ec4cc47f
+      COBAYA_PACKAGES_PATH: /home/runner/cobaya_packages
+    steps:
+      - name: Deadline
+        run: echo "DEADLINE=$(( $(date +%s) + 335*60 ))" >> "$GITHUB_ENV"
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install pinned stack
+        run: pip install -q "cobaya==3.6.2" "camb==1.6.6" "dynesty==2.1.5" numpy scipy pyyaml google-auth requests >/dev/null
+
+      - name: Restore public likelihood data cache
+        uses: actions/cache@v4
+        with:
+          path: /home/runner/cobaya_packages
+          key: cobaya-planck2018-desi2024-v1
+
+      - name: Fetch private code
+        env:
+          GOOGLE_SERVICE_ACCOUNT_JSON: ${{ secrets.NEXO_DRIVE_WRITER_JSON }}
+        run: |
+          python - <<'PY'
+          import hashlib, io, json, os, tarfile
+          from google.oauth2 import service_account
+          from google.auth.transport.requests import AuthorizedSession
+          creds = service_account.Credentials.from_service_account_info(json.loads(os.environ["GOOGLE_SERVICE_ACCOUNT_JSON"]), scopes=["https://www.googleapis.com/auth/drive"])
+          r = AuthorizedSession(creds).get(f"https://www.googleapis.com/drive/v3/files/{os.environ['CODE_FILE_ID']}", params={"alt": "media"}, timeout=120)
+          r.raise_for_status()
+          if hashlib.sha256(r.content).hexdigest() != os.environ["CODE_SHA256"]:
+              raise SystemExit("code hash mismatch")
+          tarfile.open(fileobj=io.BytesIO(r.content), mode="r:gz").extractall(os.environ["RUNNER_TEMP"] + "/c", filter="data")
+          print("code ok")
+          PY
+
+      - name: Install likelihood data (public, official sources)
+        working-directory: ${{ runner.temp }}/c
+        run: |
+          python -c "import yaml,run_campaign as R; yaml.safe_dump(R.frozen_info('M3','$COBAYA_PACKAGES_PATH'),open('install.yaml','w'))"
+          cobaya-install install.yaml -p "$COBAYA_PACKAGES_PATH" --skip-global >/dev/null 2>&1 || cobaya-install install.yaml -p "$COBAYA_PACKAGES_PATH" --skip-global 2>&1 | tail -3
+          rm -f install.yaml
+
+      - name: Segment
+        id: seg
+        working-directory: ${{ runner.temp }}/c
+        env:
+          GOOGLE_SERVICE_ACCOUNT_JSON: ${{ secrets.NEXO_DRIVE_WRITER_JSON }}
+          OMP_NUM_THREADS: '1'
+        run: |
+          set +e
+          python run_campaign.py "${{ inputs.run_id }}" "$DEADLINE" 2>/dev/null | grep '^STATUS' ; rc=${PIPESTATUS[0]}
+          echo "rc=$rc" >> "$GITHUB_OUTPUT"
+          [ "$rc" = "0" ] || [ "$rc" = "75" ]
+
+      - name: Continue in a new job
+        if: steps.seg.outputs.rc == '75'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run nexo-private-ns.yml --repo "$GITHUB_REPOSITORY" --ref main -f run_id="${{ inputs.run_id }}"
