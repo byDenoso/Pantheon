@@ -348,18 +348,28 @@ def run(params: dict) -> dict:
 
 
 def main() -> None:
+    exit_code = 0
     try:
         params = json.loads(Path(os.environ["PARAMS_PATH"]).read_text(encoding="utf-8"))
         result = run(params)
-    except InputUnavailable as exc:
+    except (InputUnavailable, OSError, ValueError, KeyError, json.JSONDecodeError, np.linalg.LinAlgError) as exc:
+        exit_code = 1
+        decision = exc.decision if isinstance(exc, InputUnavailable) else "INPUT_OR_FIT_UNAVAILABLE"
         result = {
-            "verdict": "INCONCLUSIVE",
-            "decision": exc.decision,
-            "summary": exc.reason,
-            "statistics": {},
-            "semantic": {"result_meaning": exc.reason},
+            "execution_status": "INPUT_OR_FIT_UNAVAILABLE",
+            "error": str(exc),
+            "decision": decision,
+            "statistics": {
+                "test_id": TEST_ID,
+                "prereg_hash": PREREG_HASH,
+                "recovery_work_id": RECOVERY_WORK_ID,
+                "recipe_family": RECIPE_FAMILY,
+            },
         }
-    Path(os.environ["RESULT_PATH"]).write_text(json.dumps(result, ensure_ascii=False, indent=2), encoding="utf-8")
+    Path(os.environ["RESULT_PATH"]).write_text(
+        json.dumps(result, ensure_ascii=False, allow_nan=False, indent=2), encoding="utf-8")
+    print(result.get("summary") or result.get("error"))
+    raise SystemExit(exit_code)
 
 
 if __name__ == "__main__":
