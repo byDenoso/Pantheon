@@ -38,6 +38,10 @@ SHELLS = ((20.0, 40.0), (40.0, 60.0), (60.0, 80.0), (80.0, 120.0), (120.0, 160.0
 REFERENCE = (120.0, 160.0)
 JOINT = (40.0, 120.0)
 CONFIDENCE_Z = 1.959963984540054
+TEST_ID = "T-H0LCDM26-002-R2-CF4-ENV-MONOPOLE"
+PREREG_HASH = "sha256:66baf59fd5e008193dd3eaf2bdaedf50c7f5101bebbd622355eb7b0185384f8c"
+RECOVERY_WORK_ID = "WORK::RECOVERY-cb2fc9077d5e0eca0c68f6adcefc09f6"
+RECIPE_FAMILY = "cf4_monopole_dipole_shell_gls_v1"
 
 
 class InputUnavailable(RuntimeError):
@@ -328,6 +332,10 @@ def analyze(groups: dict[str, np.ndarray], params: dict) -> dict:
                     f"95%=[{lower95:.3f},{upper95:.3f}], LOO positivo={positive_loo}/12, "
                     f"shells com dipolo S/N>=3={dipole_shells_ge3}/3."),
         "statistics": {
+            "test_id": TEST_ID,
+            "prereg_hash": PREREG_HASH,
+            "recovery_work_id": RECOVERY_WORK_ID,
+            "recipe_family": RECIPE_FAMILY,
             "groups_20_160": int(np.sum(base)),
             "shells": shell_results,
             "joint_40_120": {"fit": joint_fit, "vs_reference": joint_contrast},
