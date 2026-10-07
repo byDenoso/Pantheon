@@ -1,0 +1,14 @@
+{
+  "shells_mpc": [[20, 40], [40, 60], [60, 80], [80, 120], [120, 160]],
+  "reference_shell_mpc": [120, 160],
+  "joint_shell_mpc": [40, 120],
+  "healpix_nside": 1,
+  "promotion_delta_min": 1.5,
+  "promotion_lower95_min": 0.5,
+  "promotion_positive_loo_min": 10,
+  "h2_monopole_max": 0.5,
+  "h2_dipole_sn_min": 3.0,
+  "h2_shells_min": 2,
+  "kill_abs_delta_max": 0.5,
+  "kill_upper95_max": 1.0
+}
