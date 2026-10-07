@@ -24,8 +24,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 340
     env:
-      CODE_FILE_ID: 1rMP44h37yhDAxS8Tq-WqXnwzuwooYfgg
-      CODE_SHA256: 7bda5c7d8268511443f3923f58073ff3d5ad2cd12faa25491db7a467ec4cc47f
+      CODE_FILE_ID: 1zTmiuRaSPcNjDqZKVFPIcAD0E1cdJx-V
+      CODE_SHA256: 96186d8a295c9ca865462b0097c1f50325e684dc43c5d8623b7d6ce930fd5288
       COBAYA_PACKAGES_PATH: /home/runner/cobaya_packages
     steps:
       - name: Deadline
