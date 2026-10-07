@@ -184,6 +184,13 @@ def collect_run_pages(repo: str, cursor: dict, api=read_api_json, *, per_page: i
             metadata = _run_metadata(run)
             by_key.setdefault(metadata["run_key"], (metadata, run))
     acknowledged = state["acknowledged"]
+    # Keep rejected attempts in the durable ledger, but never spend retry or
+    # discovery capacity on the same terminally rejected identity. A new
+    # run_attempt has its own key and remains discoverable. A global Tower
+    # revision or a GitHub timestamp change is not proof that rejection of
+    # this payload has been resolved.
+    rejected_keys = {key for key, saved in state["pending"].items()
+                     if isinstance(saved, dict) and saved.get("reason") == "REJECTED_TERMINAL"}
     ordered = sorted((pair for pair in by_key.values() if eligible_run(pair[1])),
                      key=lambda pair: (pair[0]["created_at"], pair[0]["run_id"], pair[0]["run_attempt"]))
     pending_candidates = []
@@ -191,7 +198,8 @@ def collect_run_pages(repo: str, cursor: dict, api=read_api_json, *, per_page: i
     pending_deferred = {}
     retryable_pending = []
     for key, saved in state["pending"].items():
-        if key in acknowledged or not isinstance(saved, dict) or saved.get("superseded_by_attempt"):
+        if (key in acknowledged or key in rejected_keys or not isinstance(saved, dict)
+                or saved.get("superseded_by_attempt")):
             continue
         try:
             run_id, attempt = (int(part) for part in key.split(":"))
@@ -216,7 +224,7 @@ def collect_run_pages(repo: str, cursor: dict, api=read_api_json, *, per_page: i
                     and str(run.get("id") or "").isdigit()
                     and str(run.get("run_attempt") or "").isdigit()):
                 replacement = _run_metadata(run)
-                if eligible_run(run):
+                if eligible_run(run) and replacement["run_key"] not in rejected_keys:
                     pending_candidates.append((replacement, run))
             superseded[key] = {**saved, "superseded_by_attempt": current_attempt,
                                "replacement": replacement,
@@ -228,7 +236,8 @@ def collect_run_pages(repo: str, cursor: dict, api=read_api_json, *, per_page: i
 
     pending_keys = {metadata["run_key"] for metadata, _ in pending_candidates}
     fresh = [(metadata, run) for metadata, run in ordered
-             if metadata["run_key"] not in acknowledged and metadata["run_key"] not in pending_keys]
+             if metadata["run_key"] not in acknowledged and metadata["run_key"] not in pending_keys
+             and metadata["run_key"] not in rejected_keys]
     selected = pending_candidates[:MAX_RUNS_PER_CYCLE // 2]
     selected.extend(fresh[:MAX_RUNS_PER_CYCLE - len(selected)])
     backfill_keys = [_run_metadata(run)["run_key"] for run in backfill if valid_battery_run(run)] if not overflow else []
@@ -569,6 +578,15 @@ def record_cursor_outcomes(cursor: dict, collection: dict, raw_tower: bytes) -> 
                             "last_attempted_at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
                             "retry_count": int(pending.get(key, {}).get("retry_count") or 0) + 1,
                             "reason": (receipt or {}).get("outcome") or "CANONICAL_CONFIRMATION_MISSING"}
+            if receipt and receipt.get("outcome") == "REJECTED_TERMINAL":
+                # Retain the exact decision/source for later explicit recovery;
+                # parking is neither successful acknowledgement nor deletion.
+                pending[key].update(
+                    rejection_receipt_id=receipt.get("receipt_id"),
+                    rejected_payload_sha256=observation["input_sha256"],
+                    rejection_tower_revision=bundle.get("state_fingerprint"),
+                    rejected_at=receipt.get("occurred_at"),
+                )
 
     for key, value in (collection.get("pending") or {}).items():
         if key not in acked:
