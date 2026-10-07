@@ -131,6 +131,25 @@ jobs:
         working-directory: nexo-one/executor-runtime/recipes
         run: OPENBLAS_NUM_THREADS=1 python -m unittest test_w0wa_bao_sn_multi -v
 
+      - name: Verify CF4 shell monopole recipe on frozen real data
+        working-directory: nexo-one/executor-runtime/recipes
+        run: |
+          set -euo pipefail
+          OPENBLAS_NUM_THREADS=1 python -m unittest test_cf4_monopole_dipole_shell_gls_v1 -v
+          OPENBLAS_NUM_THREADS=1 PARAMS_PATH=smoke/cf4_monopole_dipole_shell_gls_v1.json \
+            RESULT_PATH=/tmp/cf4-shell.json python cf4_monopole_dipole_shell_gls_v1.py
+          python - <<'PY'
+          import json
+          value=json.load(open('/tmp/cf4-shell.json',encoding='utf-8'))
+          assert {'verdict','decision','summary','statistics','semantic'} <= set(value), value
+          stats=value['statistics']
+          assert stats.get('groups_20_160',0) > 1000, stats
+          assert len(stats.get('healpix',{}).get('leave_one_region_out',[])) == 12, stats
+          assert {row['excluded_method_family'] for row in stats.get('leave_one_method_family_out',[])} == {'FP','TF'}, stats
+          assert stats.get('no_correlated_shell_significance_sum') is True, stats
+          print(value['summary'])
+          PY
+
       - name: Verify frozen rank-score leave-one-out regression tests
         working-directory: nexo-one/executor-runtime/recipes
         run: python -m unittest test_rank_score_leave_one_out -v
