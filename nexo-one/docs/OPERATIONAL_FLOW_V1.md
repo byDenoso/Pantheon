@@ -6,7 +6,7 @@ This change hardens an existing ingress and adds read-only private operations vi
 
 The existing authenticated `/api/inbox-drop` uses its existing configured Sheet spool. Scientific ingress independently retains its stricter canonical destination. Retrying the same stable ID and same payload reconciles the persisted body. A different body or conflicting multipart slot returns 409. Successful transport reports `DELIVERED`, `BODY_HASH` and `application_verification: NOT_CHECKED`; it does not report applied science. An ambiguous append failure instructs retry with the same identity and payload. A check-only request without the expected `body_sha256` is explicitly existence-only, not a verified body readback.
 
-This deliberately tightens the old check-only response: consumers must distinguish `found` from verified identity. The current submit client falls through to an exact-body retry when its old preflight cannot verify a payload; gateway tests cover retry and changed-body rejection. Legacy CLI existence-only checks that infer ABSENT from non-PASS must migrate before operational rollout. Legacy GitHub-only ingress is not a fallback write path.
+This deliberately tightens the old check-only response: consumers must distinguish `found` from verified identity. The submit client falls through to an exact-body retry when preflight cannot verify a payload; gateway tests cover retry and changed-body rejection. The CLI now returns CHECK_UNAVAILABLE rather than ABSENT for an existing unverified body. Tests exercise both UNVERIFIED and legacy PASS combined with EXISTENCE_ONLY. Other legacy consumers must honor the same distinction. Legacy GitHub-only ingress is not a fallback write path.
 
 This is at-least-once delivery. Concurrent identical appends may leave duplicate rows; effect deduplication remains the canonical Writer's responsibility. No cross-process lock or exactly-once transport is claimed. Multipart rows are not deleted by mutable row numbers. Compaction is outside delivery and must preserve unresolved deliveries and receipts.
 
@@ -24,10 +24,10 @@ The private page offers work/campaign/receipt tabs, pagination, source identity,
 
 ## Verification and release
 
-Focused regression command (Node built-ins only):
+Focused regression command:
 
 ```sh
-node --test test/inbox-reliable-drop.test.mjs test/operational-frontier.test.mjs test/operations-route.test.mjs
+node --test test/inbox-reliable-drop.test.mjs test/operational-frontier.test.mjs test/operations-route.test.mjs test/nexo-submit-identity.test.mjs test/inbox-gateway.test.mjs
 ```
 
 Run the full existing `npm run check` and private browser checks on the complete repository before release. A synthetic component render is not a live authentication, Drive, Writer or deployment test. Preserve the existing release/privacy prerequisites. After rollout verify anonymous denial before reads, authenticated reads, source revision, exact retry payload, Writer receipt plus entity readback, and unchanged public output. Do not use the rollout to restart active scientific jobs.
