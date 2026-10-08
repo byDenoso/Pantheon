@@ -88,6 +88,8 @@ test('machine-route exceptions reject absent and malformed machine credentials i
 
 test('public output stays empty for route aliases, untrusted query URLs, and every non-GET method',async t=>{
   useEnvironment(t);
+  // Anonymous public fallback must still work before a versioned store is provisioned.
+  delete process.env.NEXO_ATLAS_REDIS_URL; delete process.env.NEXO_ATLAS_REDIS_TOKEN;
   let reads=0;
   t.mock.method(globalThis,'fetch',async()=>{reads++;throw Error('unexpected upstream read');});
   for(const url of [
