@@ -66,6 +66,7 @@ test('scientific MCP ingress writes only the existing Writer spool and replays e
 
 test('inbox-drop persists chunked envelopes through the Sheet spool without GitHub write access',async()=>{
   const fx=sheetFixture();
+  let expectedHash;
   await withFetch(fx.fetch,async()=>{
     const first=new URL('https://atlas.example/api/inbox-drop?id=run-1234&i=1&n=2&d='+encoded.slice(0,Math.ceil(encoded.length/2)));
     const second=new URL('https://atlas.example/api/inbox-drop?id=run-1234&i=2&n=2&d='+encoded.slice(Math.ceil(encoded.length/2)));
@@ -73,6 +74,8 @@ test('inbox-drop persists chunked envelopes through the Sheet spool without GitH
     assert.equal(pendingStatus,202);assert.equal(pending.complete,false);assert.equal(pending.transport,'SHEET_SPOOL');
     const [saved,savedStatus]=await inboxDrop(second,env);
     assert.equal(savedStatus,201);assert.equal(saved.complete,true);assert.equal(saved.saved,'sheet:run-1234');assert.equal(saved.readback,'PASS');
+    expectedHash=saved.body_sha256;
+    assert.equal(saved.verification,'BODY_HASH');assert.equal(saved.application_verification,'NOT_CHECKED');
   });
   const header=fx.rows[0],stable=header.indexOf('stable_id'),raw=header.indexOf('envelope_b64url');
   const savedRow=fx.rows.find(row=>row?.[stable]==='run-1234');
@@ -80,7 +83,10 @@ test('inbox-drop persists chunked envelopes through the Sheet spool without GitH
   assert.equal(fx.seen.some(entry=>entry.u.includes('api.github.com')),false);
   await withFetch(fx.fetch,async()=>{
     const [found,foundStatus]=await inboxDrop(new URL('https://atlas.example/api/inbox-drop?id=run-1234&check=1'),env);
-    assert.equal(foundStatus,200);assert.equal(found.complete,true);assert.equal(found.readback,'PASS');assert.equal(found.saved,'sheet:run-1234');
+    assert.equal(foundStatus,200);assert.equal(found.complete,true);assert.equal(found.readback,'UNVERIFIED');assert.equal(found.saved,'sheet:run-1234');
+    assert.equal(found.verification,'EXISTENCE_ONLY');assert.equal(found.application_verification,'NOT_CHECKED');
+    const [verified,verifiedStatus]=await inboxDrop(new URL('https://atlas.example/api/inbox-drop?id=run-1234&check=1&body_sha256='+expectedHash),env);
+    assert.equal(verifiedStatus,200);assert.equal(verified.readback,'PASS');assert.equal(verified.verification,'BODY_HASH');
     const [absent,absentStatus]=await inboxDrop(new URL('https://atlas.example/api/inbox-drop?id=run-5678&check=1'),env);
     assert.equal(absentStatus,200);assert.equal(absent.complete,false);assert.equal(absent.found,false);
   });
@@ -99,14 +105,19 @@ test('Executor client durably submits through inbox-drop and receives readback i
     };
     const result=await submit(payload.stable_id,JSON.stringify(payload),{base:'https://atlas.example',fetchImpl});
     assert.equal(result.ok,true);assert.equal(result.gateway.readback,'PASS');assert.equal(result.gateway.saved,`sheet:${payload.stable_id}`);
+    const replay=await submit(payload.stable_id,JSON.stringify(payload),{base:'https://atlas.example',fetchImpl});
+    assert.equal(replay.ok,true);assert.equal(replay.gateway.reused,true);
+    const changed=await submit(payload.stable_id,JSON.stringify({...payload,payload:{entries:[]}}),{base:'https://atlas.example',fetchImpl});
+    assert.equal(changed.ok,false);assert.equal(changed.httpStatus,409);
   });
   const stable=fx.rows[0].indexOf('stable_id'),raw=fx.rows[0].indexOf('envelope_b64url');
   const row=fx.rows.find(candidate=>candidate?.[stable]===payload.stable_id);
   assert.ok(row);assert.deepEqual(JSON.parse(Buffer.from(row[raw],'base64url').toString('utf8')),{...payload,_via:'INBOX_GATEWAY_SHEET'});
+  assert.equal(fx.rows.filter(candidate=>candidate?.[stable]===payload.stable_id).length,1);
   assert.equal(fx.seen.some(entry=>entry.u.includes('api.github.com')),false);
 });
 
-test('gateway check recognises a processed GitHub id without resubmitting it',async()=>{
+test('gateway check recognises a processed GitHub id without inventing body verification',async()=>{
   const id='batch-processed',file=`20260927-NEXO_THOUGHT-gw-${id}.json`,path=`processed/${file}`;
   const fetch=async url=>{
     const value=String(url);
@@ -117,7 +128,8 @@ test('gateway check recognises a processed GitHub id without resubmitting it',as
   };
   await withFetch(fetch,async()=>{
     const [value,status]=await inboxDrop(new URL(`https://atlas.example/api/inbox-drop?id=${id}&check=1`),{NEXO_INBOX_TOKEN:'fixture-read-token'});
-    assert.equal(status,200);assert.equal(value.complete,true);assert.equal(value.readback,'PASS');assert.equal(value.saved,path);
+    assert.equal(status,200);assert.equal(value.complete,true);assert.equal(value.readback,'UNVERIFIED');assert.equal(value.saved,path);
+    assert.equal(value.verification,'EXISTENCE_ONLY');assert.equal(value.application_verification,'NOT_CHECKED');
   });
 });
 

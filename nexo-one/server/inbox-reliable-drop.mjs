@@ -75,7 +75,8 @@ export function createReliableInboxDrop({readSpool, appendSpoolRow, fullSpoolRow
     try {
       const read = async () => {
         const spool = await readSpool(env, req);
-        if (spool.spreadsheetId !== spoolId) throw new Error('SPOOL_DESTINATION_MISMATCH');
+        const expectedSpoolId = typeof spoolId === 'function' ? spoolId(env) : spoolId;
+        if (spool.spreadsheetId !== expectedSpoolId) throw new Error('SPOOL_DESTINATION_MISMATCH');
         return spool;
       };
       let spool = await read();
@@ -85,6 +86,7 @@ export function createReliableInboxDrop({readSpool, appendSpoolRow, fullSpoolRow
         if (expected && !/^[a-f0-9]{64}$/.test(expected)) return failure('BAD_REQUEST', 400);
         if (expected && saved.count && saved.fingerprint !== expected) return failure('SPOOL_IDENTITY_CONFLICT', 409);
         return [{ok: true, id, found: saved.count > 0, complete: saved.count > 0,
+          saved: saved.count ? `sheet:${id}` : null,
           stage: saved.count ? 'DELIVERED' : 'NOT_FOUND', transport: 'SHEET_SPOOL',
           readback: expected && saved.count ? 'PASS' : 'UNVERIFIED',
           verification: expected && saved.count ? 'BODY_HASH' : 'EXISTENCE_ONLY',
