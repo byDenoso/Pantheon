@@ -8,7 +8,7 @@ export type Presentation = {
   lines: {label: string; title: string; items: ResearchLine[]};
   works: {label: string; title: string};
   methods: {label: string; title: string; lead: string; steps: {title: string; body: string}[]};
-  test: {question: string; answers: string; method: string; result: string};
+  test: {question: string; answers: string; method: string; result: string; limits: string};
   contact: {label: string; title: string; body: string; action: string};
   footer: {note: string; sections: string};
   nav: {lines: string; works: string; methods: string; contact: string; menu: string; close: string};
@@ -36,7 +36,7 @@ export const PRESENTATION: Record<Locale, Presentation> = {
       ],
     },
     works: {label: 'Trabalhos', title: 'Trabalhos'},
-    test: {question: 'Pergunta', answers: 'O que o teste responde', method: 'Método', result: 'Resultado'},
+    test: {question: 'Pergunta', answers: 'O que o teste responde', method: 'Método', result: 'Resultado', limits: 'Limites'},
     contact: {label: 'Contato', title: 'Contato', body: 'Para perguntas sobre a pesquisa ou propostas de colaboração.', action: 'Escrever para'},
     footer: {note: 'Cosmologia computacional', sections: 'Seções'},
     nav: {lines: 'Pesquisa', works: 'Trabalhos', methods: 'Métodos', contact: 'Contato', menu: 'Menu', close: 'Fechar menu'},
@@ -62,7 +62,7 @@ export const PRESENTATION: Record<Locale, Presentation> = {
       ],
     },
     works: {label: 'Work', title: 'Work'},
-    test: {question: 'Question', answers: 'What the test answers', method: 'Method', result: 'Result'},
+    test: {question: 'Question', answers: 'What the test answers', method: 'Method', result: 'Result', limits: 'Limitations'},
     contact: {label: 'Contact', title: 'Contact', body: 'For questions about the research or proposals for collaboration.', action: 'Write to'},
     footer: {note: 'Computational cosmology', sections: 'Sections'},
     nav: {lines: 'Research', works: 'Work', methods: 'Methods', contact: 'Contact', menu: 'Menu', close: 'Close menu'},

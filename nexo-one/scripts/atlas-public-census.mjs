@@ -1,0 +1,17 @@
+import {readFileSync,writeFileSync} from 'node:fs';
+import {createHash} from 'node:crypto';
+const input=process.argv[2],output=process.argv[3];
+if(!input||!output)throw Error('usage: node atlas-public-census.mjs TOWER_JSON OUTPUT_JSON');
+const tower=JSON.parse(readFileSync(input,'utf8'));
+if(tower.contract!=='NEXO_TOWER_LIVE_V1'||tower.authority!=='TOWER_V06'||tower.storage!=='GOOGLE_DRIVE_PRIVATE'||tower.state_fingerprint!==tower.revision)throw Error('TOWER_IDENTITY_INVALID');
+const files=tower.files;const tests=Object.entries(files).filter(([p,e])=>p.startsWith('entities/test/')&&e?.value?.kind==='TEST').map(([p,e])=>({path:p,...e.value}));
+const science=tests.filter(t=>t.domain==='SCIENCE');
+const eligible=science.filter(t=>t.review_state==='CONFIRMED'&&t.result_summary&&!/PEER/i.test(t.id||'')&&t.artifact_ref&&t.result_ref&&t.review_ref);
+const projection=files['projections/public/projection.json']?.value||{};
+const manifest=files['projections/public/manifest.json']?.value||{};
+const publicTests=(Array.isArray(projection.tests)?projection.tests:[]);
+const unresolved=()=>({reason:'BASELINE_215_SOURCE_NOT_LOCATED',expected:215,identities_verified:0});
+const statuses={};for(const t of tests)statuses[String(t.status||'UNSET')]=(statuses[String(t.status||'UNSET')]||0)+1;
+const report={contract:'NEXO_PUBLIC_FIRST_PULSE_PRIVATE_V1',source:{file_id:tower.stable_file_id,revision:tower.revision,updated_at:tower.updated_at,source_file_count:tower.file_count},tower_census:{tests:tests.length,science:science.length,other:tests.length-science.length,confirmed_science:science.filter(t=>t.review_state==='CONFIRMED').length,peer_science:science.filter(t=>/PEER/i.test(t.id||'')).length,tests_with_explicit_three_links:eligible.length,statuses},legacy_projection:{contract:projection.contract||null,tests:publicTests.length,stored_tower_revision:manifest.tower_revision||null,matches_current_tower:manifest.tower_revision===tower.revision,manifest_generated_at:manifest.generated_at||null},claimed_215_baseline:unresolved(),publications:{published:0,updated:0,withdrawn:0,actual_site_checked:false},notes:['This is a read-only census, not proof of publication or scientific approval.','A monolithic Drive blob was read as a whole; future logical deltas require a persistent verified cursor.','Missing explicit TEST refs does not prove related RUN/EVENT/ARTIFACT records are absent.','No USER-facing scientific records are promoted from review state alone.']};
+writeFileSync(output,JSON.stringify(report,null,2)+'\n');
+console.log(JSON.stringify({revision:tower.revision,tests:tests.length,science:science.length,confirmed:report.tower_census.confirmed_science,legacy_public_tests:publicTests.length,legacy_stale:!report.legacy_projection.matches_current_tower,baseline_215_resolved:false}));

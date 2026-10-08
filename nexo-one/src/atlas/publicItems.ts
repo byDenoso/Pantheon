@@ -9,9 +9,9 @@ export type Bilingual = {'pt-BR': string; en: string};
 export type PublicItem = {id: string; kind: ItemKind; title: Bilingual; plain: Bilingual; technical: Bilingual; credit: string | null};
 
 // Optional presentation projection. The five canonical item kinds are unchanged.
-export type PublicTest = {id: string; question: Bilingual; answers: Bilingual; method: Bilingual; result: Bilingual};
+export type PublicTest = {id: string; question: Bilingual; answers: Bilingual; method: Bilingual; result: Bilingual; limits?: Bilingual; campaign?: string; finding?: string};
 
-export const MAX_ITEMS = 60;
+export const MAX_ITEMS = 300;
 const MAX_TEXT = 4000;
 
 const text = (v: unknown, max = MAX_TEXT): string | null =>
@@ -56,8 +56,11 @@ export function guardTest(raw: unknown): PublicTest | null {
   const answers = bilingual(raw.answers);
   const method = bilingual(raw.method);
   const result = bilingual(raw.result);
-  if (!id || !question || !answers || !method || !result) return null;
-  return {id, question, answers, method, result};
+  const limits = raw.limits === undefined ? undefined : bilingual(raw.limits);
+  if (!id || !question || !answers || !method || !result || (raw.limits !== undefined && !limits)) return null;
+  const campaign = typeof raw.campaign === 'string' && /^[a-z][a-z0-9-]{2,79}$/.test(raw.campaign) ? raw.campaign : undefined;
+  const finding = typeof raw.finding === 'string' && /^[a-z][a-z0-9-]{2,79}$/.test(raw.finding) ? raw.finding : undefined;
+  return {id, question, answers, method, result, ...(limits ? {limits} : {}), ...(campaign ? {campaign} : {}), ...(finding ? {finding} : {})};
 }
 
 export function guardTests(raw: unknown[]): PublicTest[] {

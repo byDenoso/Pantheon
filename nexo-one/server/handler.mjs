@@ -2,6 +2,10 @@ import {encodePrivateResponse} from './atlas/private-response.mjs';
 import {readPrivateUiAsset} from './atlas/private-assets.mjs';
 import {readAtlasPrivatePublication} from './atlas/private-source.mjs';
 import {atlasBoundary} from './atlas/boundary.mjs';
+import {publishPublicCatalog} from './atlas/public-catalog.mjs';
+import {atlasStore} from './auth/atlas-session.mjs';
+import {googleToken} from './adapters/google.mjs';
+import {readVerifiedCanonicalTower} from './mcp/operational-state.mjs';
 import {inboxDrop,inboxRobot} from './inbox-gateway.mjs';
 import {toNodeHandler} from '@modelcontextprotocol/node';
 import {PROVIDERS} from '../src/contracts/validate.mjs';
@@ -182,6 +186,22 @@ export default async function handler(req,res) {
         res.statusCode=200;return res.end(encoded.bytes);
       }
       catch{return send({error:'PRIVATE_SOURCE_UNAVAILABLE'},503);}
+    }
+    if(route==='atlas-publish'){
+      if(req.method!=='POST')return send({error:'METHOD_NOT_ALLOWED'},405);
+      if(!env.NEXO_ATLAS_REDIS_URL||!env.NEXO_ATLAS_REDIS_TOKEN)return send({error:'PUBLIC_CATALOG_STORAGE_UNCONFIGURED'},503);
+      try{
+        const packet=await requestBody(req);
+        const token=await googleToken(env,AbortSignal.timeout(8000),{scopes:['https://www.googleapis.com/auth/drive.readonly']});
+        const {tower}=await readVerifiedCanonicalTower({token,signal:AbortSignal.timeout(23000)});
+        const receipt=await publishPublicCatalog(atlasStore(env),tower,packet);
+        return send(receipt,200);
+      }catch(error){
+        const code=String(error?.code||error?.message||'');
+        const conflict=['PUBLIC_CATALOG_STALE_HEAD','SOURCE_DIGEST_STALE','SOURCE_RUN_CHANGED','PUBLIC_FINDING_ID_CHANGED'].includes(code);
+        const invalid=/^(PUBLIC_|SOURCE_|CLAIM_|TOWER_IDENTITY_INVALID)/.test(code);
+        return send({error:invalid?code:'PUBLICATION_UNAVAILABLE'},conflict?409:invalid?422:503);
+      }
     }
     if(route==='inbox-drop'){try{const [value,status]=await inboxDrop(url,env,req);return send(value,status);}catch(error){return send({ok:false,error:String(error?.message||error).slice(0,120)},502);}}
     if(route==='inbox-list'||route==='inbox-ack'){const [value,status]=await inboxRobot(route,url,req,env);return send(value,status);}

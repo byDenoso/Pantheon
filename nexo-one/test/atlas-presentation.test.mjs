@@ -19,14 +19,14 @@ test('approved direct opening and PT-BR metadata; document title retains the NEX
   assert.match(rd('src/atlas/ui/PublicApp.tsx'), /document\.title = m\.heroTitle/);
 });
 
-test('both languages preserve structure, three research lines, four method steps and the exact four test labels', () => {
+test('both languages preserve structure, three research lines, four method steps and five public-card labels', () => {
   const pt = PRESENTATION['pt-BR'], en = PRESENTATION.en;
   assert.deepEqual(shape(pt), shape(en));
   for (const text of strings(PRESENTATION)) assert.ok(text.trim());
   assert.deepEqual(pt.lines.items.map(row => row.id), ['expansion', 'structure', 'components']);
   assert.equal(pt.methods.steps.length, 4); assert.equal(en.methods.steps.length, 4);
-  assert.deepEqual(Object.values(pt.test), ['Pergunta', 'O que o teste responde', 'Método', 'Resultado']);
-  assert.deepEqual(Object.values(en.test), ['Question', 'What the test answers', 'Method', 'Result']);
+  assert.deepEqual(Object.values(pt.test), ['Pergunta', 'O que o teste responde', 'Método', 'Resultado', 'Limites']);
+  assert.deepEqual(Object.values(en.test), ['Question', 'What the test answers', 'Method', 'Result', 'Limitations']);
   assert.match(rd('src/atlas/ui/PublicApp.tsx'), /const t = PRESENTATION\[locale\]/);
 });
 
