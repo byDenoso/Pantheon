@@ -12,7 +12,7 @@ export default function PublicTestView({test, locale}: {test: PublicTest; locale
         <div><dt>{labels.answers}</dt><dd>{pick(test.answers, locale)}</dd></div>
         <div><dt>{labels.method}</dt><dd>{pick(test.method, locale)}</dd></div>
         <div><dt>{labels.result}</dt><dd>{pick(test.result, locale)}</dd></div>
-        {test.limits && <div><dt>{labels.limits}</dt><dd>{pick(test.limits, locale)}</dd></div>
+        {test.limits && <div><dt>{labels.limits}</dt><dd>{pick(test.limits, locale)}</dd></div>}
       </dl>
     </article>
   );
