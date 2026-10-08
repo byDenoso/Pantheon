@@ -20,6 +20,13 @@ class LinearCVSoftwareTests(unittest.TestCase):
         self.assertGreater(f, 0.48)
         self.assertLess(f, 0.6)
 
+    def test_linear_growth_evolves_with_redshift_and_matches_z0_limit(self):
+        rates = cv.linear_velocity_growth_response(0.315,np.array([0.,.03,.10,.15]))
+        self.assertAlmostEqual(rates[0],cv.flat_lcdm_growth(0.315),places=12)
+        self.assertTrue(np.all(np.isfinite(rates)))
+        self.assertTrue(np.all(rates>0))
+        self.assertGreater(rates[-1],rates[0])
+
     def test_covariance_diagonal_matches_isotropic_velocity_integral(self):
         k = np.geomspace(1e-4, 1, 128)
         power = 1000 * np.exp(-k)
@@ -31,6 +38,18 @@ class LinearCVSoftwareTests(unittest.TestCase):
         np.testing.assert_allclose(np.diag(sigma), expected, rtol=5e-12)
         np.testing.assert_allclose(sigma, sigma.T, atol=1e-8)
         self.assertGreater(np.linalg.eigvalsh(sigma)[0], 0)
+
+    def test_velocity_covariance_scales_with_each_redshift_growth_factor(self):
+        k = np.geomspace(1e-4, 1, 64)
+        power = 2000*np.exp(-k)
+        u = cv.sky_vectors(np.array([0.,60.,220.]),np.array([5.,-15.,30.]))
+        r = u*np.array([80.,130.,260.])[:,None]
+        scalar=cv.velocity_covariance(r,u,k,power,.5,block=2)
+        growth=np.array([.5,.7,.9])
+        evolved=cv.velocity_covariance(r,u,k,power,growth,block=2)
+        ratio=growth/.5
+        np.testing.assert_allclose(evolved,scalar*ratio[:,None]*ratio[None,:],rtol=1e-12,atol=1e-10)
+        self.assertGreater(np.linalg.eigvalsh(evolved)[0],0.)
 
     def test_full_covariance_weighted_CID_collapse_preserves_cross_terms(self):
         records = np.array([
