@@ -135,6 +135,10 @@ jobs:
         working-directory: nexo-one/executor-runtime/recipes
         run: python -m unittest test_rank_score_leave_one_out -v
 
+      - name: Verify H0 linear cosmic-variance evaluator on synthetic fixtures
+        working-directory: nexo-one/executor-runtime/recipes
+        run: OPENBLAS_NUM_THREADS=1 python -m unittest test_h0lcdm26_linear_cv_r2 -v
+
       - name: Verify parameter preflight and operational failure receipts
         run: python -m unittest discover -s nexo-one/executor-runtime/tests -p test_recipe_param_preflight.py -v
 
