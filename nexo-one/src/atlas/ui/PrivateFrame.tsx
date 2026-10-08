@@ -46,9 +46,14 @@ export default function PrivateFrame({data, title, locale, onLogout, onError, on
     return () => { window.clearTimeout(timer); bridge.dispose(); if (bridgeRef.current === bridge) bridgeRef.current = null; };
   }, [data]);
   return (
-    <iframe
-      ref={ref} className="atlas-private-frame" title={title} src={PRIVATE_UI_URL}
-      sandbox={PRIVATE_FRAME_SANDBOX} referrerPolicy="no-referrer"
-    />
+    <>
+      <a href="/api/atlas-operations-ui" target="_blank" rel="noopener noreferrer">
+        {locale.startsWith('en') ? 'Operations: work, campaigns and receipts' : 'Opera\u00e7\u00e3o: trabalho, campanhas e recibos'}
+      </a>
+      <iframe
+        ref={ref} className="atlas-private-frame" title={title} src={PRIVATE_UI_URL}
+        sandbox={PRIVATE_FRAME_SANDBOX} referrerPolicy="no-referrer"
+      />
+    </>
   );
 }
