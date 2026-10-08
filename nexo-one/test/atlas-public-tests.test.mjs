@@ -29,7 +29,7 @@ test('public test guard keeps exactly four bilingual fields and the opaque UI ke
   }
   assert.equal(guardTest({...summary(), id: ''}), null);
   assert.equal(guardTests([summary(), summary()]).length, 1);
-  assert.equal(guardTests(Array.from({length: 100}, (_, i) => summary(`s${i}`))).length, MAX_ITEMS);
+  assert.equal(guardTests(Array.from({length: 500}, (_, i) => summary(`s${i}`))).length, MAX_ITEMS);
 });
 
 test('no approval, source flags or private source input can publish a test', () => {
