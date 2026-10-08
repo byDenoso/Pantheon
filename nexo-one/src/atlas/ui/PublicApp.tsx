@@ -1,4 +1,4 @@
-import {lazy, Suspense, useEffect, useState} from 'react';
+import {Fragment, lazy, Suspense, useEffect, useState} from 'react';
 import {loadPublic, pick, type PublicState} from '../publicItems.ts';
 import {ApiError} from '../api.ts';
 import {CONTACT_EMAIL, PRESENTATION} from '../../i18n/presentation.ts';
@@ -71,7 +71,7 @@ export default function PublicApp() {
             {pub.status === 'loading' && <p>{m.loading}</p>}
             {pub.status === 'unavailable' && <p className="atlas-empty">{m.unavailable}</p>}
             {pub.status === 'empty' && <p className="atlas-empty">{m.emptyTitle}</p>}
-            {pub.status === 'ready' && pub.tests.map(test => <PublicTestView key={test.id} test={test} locale={locale}/>)}
+            {pub.status === 'ready' && pub.tests.map((test, i) => <Fragment key={test.id}>{test.campaign && (i === 0 || pub.tests[i - 1]?.campaign !== test.campaign) && <h3 className="atlas-campaign-title">{test.campaign.replaceAll('-', ' ')}</h3>}<PublicTestView test={test} locale={locale}/></Fragment>)}
             {pub.status === 'ready' && pub.items.map(it => (
               <article key={it.id} className="atlas-item">
                 <span className="atlas-kind">{m.kinds[it.kind]}</span>
