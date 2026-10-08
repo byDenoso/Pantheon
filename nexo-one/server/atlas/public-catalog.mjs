@@ -2,7 +2,7 @@ import {createHash} from 'node:crypto';
 
 // Public storage is a replaceable projection. Only the Drive Tower is scientific authority.
 export const PUBLIC_CATALOG_CONTRACT='NEXO_APPROVED_PUBLIC_CATALOG_V1';
-export const EMPTY_PUBLIC_CATALOG=Object.freeze({contract:'ATLAS_PUBLIC_V1',items:[],links:[],tests:[]});
+export const EMPTY_PUBLIC_CATALOG=Object.freeze({contract:'ATLAS_PUBLIC_V1',items:[],links:[]});
 const HEAD='nexo:atlas:approved-public:v1:head';
 const VERSION='nexo:atlas:approved-public:v1:version:';
 const FIELDS=['question','answers','method','result','limits'];
