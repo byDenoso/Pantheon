@@ -18,7 +18,7 @@ function bilingual(value){if(!isObject(value)||Object.keys(value).sort().join(',
 function sourceRecord(tower,testId){
   if(typeof testId!=='string'||!/^[A-Za-z0-9_.-]{3,190}$/.test(testId)||PRIVATE.test(testId))fail('SOURCE_PRIVATE_OR_INVALID');
   const path=`entities/test/${testId}.json`,record=tower.files?.[path]?.value;
-  if(!isObject(record)||record.kind!=='TEST'||record.id!==testId||record.domain!=='SCIENCE'||record.private===true||record.visibility==='PRIVATE')fail('SOURCE_NOT_ELIGIBLE');
+  if(!isObject(record)||record.kind!=='TEST'||record.id!==testId||record.domain!=='SCIENCE'||record.private===true||record.visibility==='PRIVATE'||PRIVATE.test(String(record.roadmap_id||''))||PRIVATE.test(String(record.campaign_id||''))||PRIVATE.test(String(record.semantic?.domain_id||''))||PRIVATE.test(String(record.semantic?.model_id||'')))fail('SOURCE_NOT_ELIGIBLE');
   if(!['DONE','VERIFIED','RESULT'].includes(record.status)||record.review_state!=='CONFIRMED'||record.archive_reason||record.contests?.some?.(c=>!['REVIEWED','CLOSED','RESOLVED'].includes(String(c?.status||'').toUpperCase())))fail('SOURCE_REVIEW_INCOMPLETE');
   if(typeof record.result_summary!=='string'||!record.result_summary.trim()||/n[aã]o executad[oa]|not executed/i.test(record.result_summary))fail('SOURCE_RESULT_MISSING');
   return {path,record};
@@ -77,7 +77,10 @@ export function preparePublicCatalog(tower,packet){
 function publicPart(document){
   if(document?.contract!==PUBLIC_CATALOG_CONTRACT||!SHA.test(String(document?.revision||''))||!Array.isArray(document.tests)||catalogDigest({contract:document.contract,approvalId:document.approvalId,tests:document.tests,provenance:document.provenance})!==document.revision)fail('PUBLIC_CATALOG_CORRUPT');
   // Reproject known keys only, even if the stored snapshot has unknown fields.
-  const tests=document.tests.map(x=>({id:x.id,campaign:x.campaign,finding:x.finding,...Object.fromEntries(FIELDS.map(f=>[f,x[f]]))}));
+  const tests=document.tests.map(x=>{
+    if(!ID.test(x.id)||!ID.test(x.campaign)||!ID.test(x.finding)||PRIVATE.test(x.id)||PRIVATE.test(x.campaign)||PRIVATE.test(x.finding))fail('PUBLIC_CATALOG_CORRUPT');
+    return {id:x.id,campaign:x.campaign,finding:x.finding,...Object.fromEntries(FIELDS.map(f=>[f,bilingual(x[f])]))};
+  });
   return {...EMPTY_PUBLIC_CATALOG,tests};
 }
 export async function readPublicCatalog(store){
