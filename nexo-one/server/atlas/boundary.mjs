@@ -1,4 +1,6 @@
 import {atlasLocale} from './locale.mjs';
+import {readPublicCatalog} from './public-catalog.mjs';
+import {atlasStore} from '../auth/atlas-session.mjs';
 import {operationalPrincipal} from '../mcp/operational-auth.mjs';
 import {atlasAuthenticated,atlasSameOrigin,atlasSessionRoute} from '../auth/atlas-session.mjs';
 // Approval is explicit and code-reviewed. No Tower/source fields are approved.
@@ -8,7 +10,13 @@ export const MACHINE_ROUTES=new Set(['inbox-list','inbox-ack','atlas-ssot','proj
 export const AUTH_ROUTES=new Set(['session','google-drive-return']);
 export async function atlasBoundary(req,env,{route,body={},now=Date.now(),store}={}){
   if(route==='atlas-locale')return {status:req.method==='GET'?200:405,body:req.method==='GET'?atlasLocale(req,env):{error:'METHOD_NOT_ALLOWED'}};
-  if(route==='atlas-public')return {status:req.method==='GET'?200:405,body:req.method==='GET'?publicAtlas():{error:'METHOD_NOT_ALLOWED'}};
+  if(route==='atlas-public'){
+    if(req.method!=='GET')return {status:405,body:{error:'METHOD_NOT_ALLOWED'}};
+    // An unconfigured deployment has no approved public catalog.
+    if(!env.NEXO_ATLAS_REDIS_URL||!env.NEXO_ATLAS_REDIS_TOKEN)return {status:200,body:publicAtlas()};
+    try{return {status:200,body:await readPublicCatalog(store||atlasStore(env))};}
+    catch{return {status:503,body:{error:'PUBLIC_CATALOG_UNAVAILABLE'}};}
+  }
   if(route==='atlas-session')return atlasSessionRoute(req,env,now,body,store);
   // These existing machine handlers must still apply their own independent OIDC
   // verification. This exception never grants browser/session access to them.
