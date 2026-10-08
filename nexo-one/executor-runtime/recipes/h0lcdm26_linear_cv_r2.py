@@ -152,27 +152,51 @@ def flat_lcdm_background(omega_m: float, z: np.ndarray) -> tuple[np.ndarray, np.
 
 
 def flat_lcdm_growth(omega_m: float) -> float:
-    """Exact smooth-matter+Lambda growth-rate at a=1 from integral solution."""
-    def E(a: float) -> float:
+    """Exact z=0 smooth-matter+Lambda growth rate."""
+    return float(linear_velocity_growth_response(omega_m, np.array([0.0]))[0])
+
+
+def linear_velocity_growth_response(omega_m: float, z: np.ndarray) -> np.ndarray:
+    """a E(a) D(a) f(a), with D(1)=1, for a single z=0 linear P(k).
+
+    Keeping the z-dependent growth in the covariance avoids treating 0<z<.15
+    velocities as though every host lived at the observer's cosmic time.
+    """
+    require(0 < omega_m < 1, 'Omega_m out of flat-LambdaCDM domain')
+    z = np.asarray(z, float)
+    require(np.isfinite(z).all() and np.all(z >= 0), 'growth redshifts invalid')
+
+    def E_of_a(a: float) -> float:
         return math.sqrt(omega_m / a**3 + 1 - omega_m)
+
     def integral(a: float) -> float:
-        return quad(lambda aa: 1 / (aa**3 * E(aa)**3), 1e-9, a, epsabs=1e-10)[0]
-    a = 1.0
-    I = integral(a)
-    require(I > 0, 'growth integral invalid')
-    # d ln[H(a)*I(a)] / d ln a at a=1
-    growth = -1.5 * omega_m + 1 / I
-    require(0 < growth < 1.5, 'growth factor outside physical range')
-    return float(growth)
+        return quad(lambda aa: 1 / (aa**3 * E_of_a(aa)**3),
+                    1e-9, a, epsabs=1e-10)[0]
+
+    norm = integral(1.0)
+    require(norm > 0, 'growth normalization missing')
+    response = np.empty(z.size, dtype=float)
+    for i, zz in enumerate(z.flat):
+        a = 1.0 / (1.0 + float(zz))
+        E = E_of_a(a)
+        I = integral(a)
+        growth_D = E * I / norm
+        fraction_m = (omega_m / a**3) / E**2
+        growth_f = -1.5 * fraction_m + 1 / (a**2 * E**3 * I)
+        response[i] = a * E * growth_D * growth_f
+    require((response > 0).all() and np.isfinite(response).all(),
+            'growth response invalid')
+    return response.reshape(z.shape)
 
 
 def velocity_covariance(positions_hmpc: np.ndarray, unit_vectors: np.ndarray,
-                        k_hmpc: np.ndarray, power_hmpc3: np.ndarray, growth_rate: float,
+                        k_hmpc: np.ndarray, power_hmpc3: np.ndarray, growth_rate: float | np.ndarray,
                         block: int = 24) -> np.ndarray:
     """<v_ri v_rj> from isotropic linear P(k) with j0/j2 tensor kernel.
 
-    k in h/Mpc, P in (Mpc/h)^3, positions in Mpc/h. Factor (100 f)^2
-    converts the gradient of the linear potential to (km/s)^2 at z=0.
+    k in h/Mpc, P in (Mpc/h)^3, positions in Mpc/h. Per-object
+    q(z)=a E(z) D(z) f(z) multiplies each velocity; factor 100^2 q_i q_j
+    converts z=0 linear matter P(k) to correlated (km/s)^2 velocities.
     """
     pos = np.asarray(positions_hmpc, float)
     unit = np.asarray(unit_vectors, float)
@@ -182,10 +206,12 @@ def velocity_covariance(positions_hmpc: np.ndarray, unit_vectors: np.ndarray,
             'velocity covariance position shape invalid')
     require(k.ndim == 1 and len(k) >= 10 and np.all(np.diff(k) > 0)
             and np.all(power >= 0) and np.isfinite(power).all(), 'P(k) grid invalid')
-    require(growth_rate > 0, 'growth rate invalid')
     n = len(unit)
+    growth = np.broadcast_to(np.asarray(growth_rate, float), (n,))
+    require(np.isfinite(growth).all() and (growth > 0).all(),
+            'linear growth response invalid')
     covariance = np.empty((n, n), float)
-    coefficient = (100.0 * growth_rate)**2 / (2 * math.pi**2)
+    coefficient = 100.0**2 / (2 * math.pi**2)
     for start in range(0, n, block):
         end = min(start + block, n)
         dr = pos[start:end, None, :] - pos[None, :, :]
@@ -198,8 +224,10 @@ def velocity_covariance(positions_hmpc: np.ndarray, unit_vectors: np.ndarray,
         j0 = spherical_jn(0, jarg)
         j2 = spherical_jn(2, jarg)
         kernel = (j0 + j2) * (dotnn[:, :, None] / 3) - j2 * (a * b)[:, :, None]
-        covariance[start:end] = coefficient * simpson(power[None, None, :] * kernel,
-                                                       x=k, axis=2)
+        covariance[start:end] = (coefficient * growth[start:end, None]
+                                 * growth[None, :]
+                                 * simpson(power[None, None, :] * kernel,
+                                           x=k, axis=2))
     covariance = (covariance + covariance.T) / 2
     require(np.isfinite(covariance).all(), 'velocity covariance non-finite')
     eig = np.linalg.eigvalsh(covariance)
@@ -257,7 +285,9 @@ def analyze(paths: dict[str, str]) -> dict[str, Any]:
         z = selection['z']
         E, chi = flat_lcdm_background(omega_m, z)
         position = selection['n'] * (H * chi[:, None])
-        cov_vel = velocity_covariance(position, selection['n'], k, power, growth)
+        per_object_growth = linear_velocity_growth_response(omega_m, z)
+        cov_vel = velocity_covariance(position, selection['n'], k, power,
+                                      per_object_growth)
         result = infer_sigma_and_tail(selection['measurement_cov'], cov_vel, z, omega_m)
         result.update(n_selected_rows=selection['selected_rows'], n_unique_cid=len(selection['cids']),
                       min_zHD=float(z.min()), max_zHD=float(z.max()))
@@ -287,7 +317,8 @@ def analyze(paths: dict[str, str]) -> dict[str, Any]:
             'statistics': {'primary': primary, 'secondary': secondary,
                            'secondary_cut_adds_rows': not indistinguishable,
                            'H2_identifiability':'UNIDENTIFIABLE_ON_FROZEN_SELECTION' if indistinguishable else 'DISTINCT_CUTS',
-                           'omega_m': omega_m,'growth_rate_z0':growth},
+                           'omega_m': omega_m,'growth_rate_z0':growth,
+                           'growth_evolution':'EXACT_FLAT_LCDM_aE_D_f_PER_SN'},
             'inputs_sha256':{key:sha256(path) for key,path in source.items()},
             'cid_reduction':'WITHIN_CID_FULL_COV_BLUE_NO_BETWEEN_CID_COV_DISCARD',
             'velocity_model':'LINEAR_LCDM_ISOTROPIC_Pk_J0_J2_TENSOR',
