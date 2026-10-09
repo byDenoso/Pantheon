@@ -39,6 +39,34 @@ class LinearCVSoftwareTests(unittest.TestCase):
         np.testing.assert_allclose(sigma, sigma.T, atol=1e-8)
         self.assertGreater(np.linalg.eigvalsh(sigma)[0], 0)
 
+    def test_off_diagonal_tensor_matches_direct_fourier_angular_quadrature(self):
+        """Independent direction integral checks j0/j2 off-diagonal geometry."""
+        from scipy.integrate import simpson
+        ra = np.array([85., 31., 18.])
+        rb = np.array([-36., 47., 91.])
+        na, nb = ra / np.linalg.norm(ra), rb / np.linalg.norm(rb)
+        k = np.geomspace(1e-4, .12, 64)
+        power = 2500 * (k / .02)**.7 * np.exp(-k / .07)
+        computed = cv.velocity_covariance(np.array([ra, rb]), np.array([na, nb]),
+                                          k, power, np.array([.51, .56]), block=1)[0, 1]
+
+        # Independent Fourier-space sphere integral: no Bessel kernel here.
+        mu, weights = np.polynomial.legendre.leggauss(48)
+        azimuth = np.arange(96) * 2 * np.pi / 96
+        sin_theta = np.sqrt(1 - mu[:, None]**2)
+        directions = np.stack((
+            np.broadcast_to(sin_theta * np.cos(azimuth), (48, 96)),
+            np.broadcast_to(sin_theta * np.sin(azimuth), (48, 96)),
+            np.broadcast_to(mu[:, None], (48, 96)),
+        ), axis=-1).reshape(-1, 3)
+        weight = np.repeat(weights / (2 * 96), 96)
+        directional = (directions @ na) * (directions @ nb)
+        phase = directions @ (ra - rb)
+        angular_kernel = np.cos(np.outer(k, phase)) @ (weight * directional)
+        expected = (100**2 * .51 * .56 / (2 * np.pi**2)
+                    * simpson(power * angular_kernel, x=k))
+        np.testing.assert_allclose(computed, expected, rtol=1e-8, atol=1e-7)
+
     def test_velocity_covariance_scales_with_each_redshift_growth_factor(self):
         k = np.geomspace(1e-4, 1, 64)
         power = 2000*np.exp(-k)
