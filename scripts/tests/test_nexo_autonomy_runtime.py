@@ -4,7 +4,7 @@ import tempfile
 import unittest
 from pathlib import Path
 from types import SimpleNamespace
-from scripts.nexo_autonomy_runtime import verified_context, reconcile, scientific_step_starts, validate_package, dispatch_once, fresh_writer_job, implementation_matches, MODE
+from scripts.nexo_autonomy_runtime import verified_context, reconcile, scientific_step_starts, validate_package, dispatch_once, fresh_writer_job, implementation_matches, capacity_candidate, MODE
 
 
 class TransportTests(unittest.TestCase):
@@ -49,6 +49,22 @@ class TransportTests(unittest.TestCase):
             changed = dict(comparison, files=[{"filename": filename, "status": "modified"}])
             self.assertFalse(implementation_matches(lambda _: changed, "a" * 40, "b" * 40))
         self.assertFalse(implementation_matches(lambda _: dict(comparison, status="diverged"), "a" * 40, "b" * 40))
+
+    def test_capacity_growth_uses_existing_reviewed_completed_stage_only(self):
+        report = {"schema": "NEXO_CAPACITY_REVIEW_V1", "decision": "PASS", "reviewer_role": "GUARDIAO",
+                  "stage": 1, "battery_refs": ["bat-one"]}
+        tower = {"files": {"CONTROL.json": {"value": {"autonomy_mandate": {"status": "ACTIVE", "id": "m-one"}}},
+                           "evolution/autonomy_capacity.json": {"value": {"mandate_id": "m-one", "parallelism": 1}},
+                           "evolution/batteries.json": {"value": {"batteries": [{"id": "bat-one", "status": "DONE",
+                               "conclusion": "success", "mandate_id": "m-one", "parallelism": 1}]}},
+                           "entities/evidence/cap-one.json": {"value": report}}}
+        self.assertEqual(capacity_candidate(tower), {"parallelism": 2, "review_ref": "entities/evidence/cap-one.json", "battery_refs": ["bat-one"]})
+        for field, value in (("decision", "PENDING"), ("reviewer_role", "EXECUTOR"), ("stage", 2), ("battery_refs", ["missing"])):
+            old = report[field]; report[field] = value
+            self.assertEqual(capacity_candidate(tower), {})
+            report[field] = old
+        tower["files"]["entities/evidence/cap-two.json"] = {"value": dict(report)}
+        self.assertEqual(capacity_candidate(tower), {})
 
     def test_uncertain_dispatch_binds_only_unique_matching_first_run(self):
         tower = {"files": {"evolution/batteries.json": {"value": {"batteries": [

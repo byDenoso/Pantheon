@@ -161,6 +161,40 @@ def verified_context(gateway, *, verify, api, timestamp, implementation_revision
     return {"proposal_sha256": sorted(hashes), "capacity_observation": {"quota": quota}}
 
 
+def capacity_candidate(tower):
+    """Propose a measured stage from existing evidence; the Writer revalidates it."""
+    files = tower.get("files") or {}
+    def value(path):
+        return files.get(path, {}).get("value", {})
+    mandate = value("CONTROL.json").get("autonomy_mandate") or {}
+    capacity = value("evolution/autonomy_capacity.json")
+    if mandate.get("status") != "ACTIVE" or capacity.get("mandate_id") != mandate.get("id"):
+        return {}
+    stage = capacity.get("parallelism")
+    if type(stage) is not int or stage not in {1, 2}:
+        return {}
+    batteries = {row.get("id"): row for row in value("evolution/batteries.json").get("batteries") or [] if isinstance(row, dict)}
+    candidates = []
+    for path, record in files.items():
+        if not re.fullmatch(r"entities/evidence/[A-Za-z0-9_-]+\.json", path):
+            continue
+        report = record.get("value") if isinstance(record, dict) else None
+        if not isinstance(report, dict):
+            continue
+        refs = report.get("battery_refs")
+        if (report.get("schema") != "NEXO_CAPACITY_REVIEW_V1" or report.get("decision") != "PASS"
+                or report.get("reviewer_role") != "GUARDIAO" or type(report.get("stage")) is not int or report["stage"] != stage
+                or not isinstance(refs, list) or not refs or any(not isinstance(ref, str) for ref in refs)
+                or len(refs) != len(set(refs))):
+            continue
+        if all(batteries.get(ref, {}).get("status") == "DONE"
+               and batteries[ref].get("conclusion") == "success"
+               and batteries[ref].get("mandate_id") == mandate["id"]
+               and batteries[ref].get("parallelism") == stage for ref in refs):
+            candidates.append({"parallelism": {1: 2, 2: 4}[stage], "review_ref": path, "battery_refs": refs})
+    return candidates[0] if len(candidates) == 1 else {}
+
+
 def read_tower():
     from google.oauth2 import service_account
     from google.auth.transport.requests import AuthorizedSession
@@ -325,6 +359,7 @@ def main():
         def verify(envelope, proof):
             return request_json(ORIGIN + "/api/autonomy-verify-human", token=oidc("nexo-autonomy-writer"),
                                 body={"envelope": envelope, "authorization": proof})
+        tower = None
         try:
             tower = read_tower()
             receipt = tower["files"].get("CONTROL.json", {}).get("value", {}).get("autonomy_mandate", {}).get("activation_receipt", {})
@@ -333,6 +368,8 @@ def main():
             revision = None
         context = verified_context(gateway, verify=verify, api=read_api_json, timestamp=now(), implementation_revision=revision,
                                    current_run_id=os.environ.get("GITHUB_RUN_ID"), current_revision=os.environ.get("GITHUB_SHA"))
+        if tower and context["capacity_observation"]["quota"]["status"] == "AVAILABLE_FREE":
+            context["capacity_observation"].update(capacity_candidate(tower))
         Path(args.output or "/tmp/nexo-autonomy-context.json").write_text(json.dumps(context), encoding="utf-8")
         print("verified human intents", len(context["proposal_sha256"]), "free capacity", context["capacity_observation"]["quota"]["status"])
     elif args.command == "reconcile":
