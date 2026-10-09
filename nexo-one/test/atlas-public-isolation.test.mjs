@@ -28,7 +28,7 @@ function closure(entry) {
       if (r) stack.push(r); else if (!s.startsWith('.')) bare.add(s);
     }
   }
-  return {files: [...seen].map(f => f.slice(root.length + 1)), bare: [...bare]};
+  return {files: [...seen].map(f => f.slice(root.length + 1).replaceAll('\\', '/')), bare: [...bare]};
 }
 
 const {files, bare} = closure(join(src, 'main.tsx'));

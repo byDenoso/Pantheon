@@ -74,7 +74,7 @@ function failure(status: number, body: Record<string, unknown> | null): ApiError
 }
 
 // ---- public -------------------------------------------------------------------
-export type PublicPayload = {contract: 'ATLAS_PUBLIC_V1'; items: unknown[]; links: unknown[]; tests?: unknown[]};
+export type PublicPayload = {contract: 'ATLAS_PUBLIC_V1'; items: unknown[]; links: unknown[]; tests?: unknown[]; campaigns?: unknown[]; coverage?: 'COMPLETE' | 'PARTIAL' | 'UNAVAILABLE'; generatedAt?: string; sourceRevision?: string};
 
 export async function fetchPublic(fetchImpl: Fetch, signal?: AbortSignal): Promise<PublicPayload> {
   const res = await send(fetchImpl, PUBLIC_PATH, {}, signal);
@@ -82,7 +82,15 @@ export async function fetchPublic(fetchImpl: Fetch, signal?: AbortSignal): Promi
   if (status !== 200) throw failure(status, body);
   if (!body || body.contract !== 'ATLAS_PUBLIC_V1' || !Array.isArray(body.items) || !Array.isArray(body.links)) throw new ApiError('CONTRACT', status);
   if (body.tests !== undefined && !Array.isArray(body.tests)) throw new ApiError('CONTRACT', status);
-  return {contract: 'ATLAS_PUBLIC_V1', items: body.items, links: body.links, ...(body.tests === undefined ? {} : {tests: body.tests as unknown[]})};
+  if (body.campaigns !== undefined && (body.campaignsContract !== 'ATLAS_PUBLIC_CAMPAIGNS_V1' || !Array.isArray(body.campaigns) || !['COMPLETE', 'PARTIAL', 'UNAVAILABLE'].includes(String(body.coverage)) || !isIsoTime(body.generatedAt) || typeof body.sourceRevision !== 'string' || !/^sha256:[a-f0-9]{64}$/.test(body.sourceRevision))) throw new ApiError('CONTRACT', status);
+  return {contract: 'ATLAS_PUBLIC_V1', items: body.items, links: body.links, ...(body.tests === undefined ? {} : {tests: body.tests as unknown[]}), ...(body.campaigns === undefined ? {} : {campaigns: body.campaigns as unknown[], coverage: body.coverage as PublicPayload['coverage'], generatedAt: body.generatedAt as string, sourceRevision: body.sourceRevision as string})};
+}
+
+export async function fetchPublicCampaignSnapshot(fetchImpl: Fetch, path: string, signal?: AbortSignal): Promise<PublicPayload> {
+  const res = await send(fetchImpl, path, {}, signal);
+  const {status, body} = await readJson(res);
+  if (status !== 200 || !body || body.contract !== 'ATLAS_PUBLIC_CAMPAIGNS_V1' || !Array.isArray(body.campaigns) || !['COMPLETE', 'PARTIAL', 'UNAVAILABLE'].includes(String(body.coverage)) || !isIsoTime(body.generatedAt) || typeof body.sourceRevision !== 'string' || !/^sha256:[a-f0-9]{64}$/.test(body.sourceRevision) || typeof body.snapshotDigest !== 'string' || !/^sha256:[a-f0-9]{64}$/.test(body.snapshotDigest)) throw new ApiError('CONTRACT', status);
+  return {contract: 'ATLAS_PUBLIC_V1', items: [], links: [], campaigns: body.campaigns, coverage: body.coverage as PublicPayload['coverage'], generatedAt: body.generatedAt, sourceRevision: body.sourceRevision};
 }
 
 // ---- session ------------------------------------------------------------------

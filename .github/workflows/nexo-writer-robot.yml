@@ -215,6 +215,21 @@ jobs:
           python scripts/collect_battery_runs.py --repo "$GITHUB_REPOSITORY"
           python scripts/collect_execution_assessments.py --approvals nexo-control/execution-assessment-approvals.json --updates /tmp/bat/updates.json
 
+      - name: Verify human autonomy intents and current free capacity
+        if: steps.cred.outputs.ok == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GOOGLE_SERVICE_ACCOUNT_JSON: ${{ secrets.NEXO_DRIVE_WRITER_JSON }}
+        run: python scripts/nexo_autonomy_runtime.py context
+
+      - name: Reconcile reserved autonomy runs before any retry
+        continue-on-error: true
+        if: steps.cred.outputs.ok == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GOOGLE_SERVICE_ACCOUNT_JSON: ${{ secrets.NEXO_DRIVE_WRITER_JSON }}
+        run: python scripts/nexo_autonomy_runtime.py reconcile
+
       - name: Apply inbox to the Tower
         id: robot
         if: steps.cred.outputs.ok == 'true'
@@ -223,6 +238,7 @@ jobs:
           NEXO_OPERATIONAL_READER_JSON: ${{ secrets.NEXO_DRIVE_READER_JSON }}
           GOOGLE_SERVICE_ACCOUNT_JSON: ${{ secrets.NEXO_DRIVE_WRITER_JSON }}
           NEXO_GATEWAY_ITEMS: /tmp/gateway.json
+          NEXO_VERIFIED_HUMAN_INTENTS: /tmp/nexo-autonomy-context.json
           NEXO_OPERATION_RECEIPTS_OUT: /tmp/operation-public-receipts.json
           NEXO_BATTERY_UPDATES: /tmp/bat/updates.json
           NEXO_BATTERY_DIR: /tmp/dispatch
@@ -244,6 +260,9 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
+          # Newly persisted mandate reservations carry no Git operational state.
+          # An uncertain dispatch is reconciled from GitHub, never retried here.
+          python scripts/nexo_autonomy_runtime.py dispatch
           shopt -s nullglob
           specs=(/tmp/dispatch/*.json)
           [ ${#specs[@]} -eq 0 ] && { echo "no batteries"; exit 0; }
@@ -254,6 +273,48 @@ jobs:
           for f in "${specs[@]}"; do cp "$f" /tmp/bb/batteries/; done
           cd /tmp/bb && git -c user.name=nexo-writer-robot -c user.email=nexo-writer-robot@users.noreply.github.com add batteries && git -c user.name=nexo-writer-robot -c user.email=nexo-writer-robot@users.noreply.github.com commit -qm "batteries: dispatch $(ls batteries | wc -l)" && git push -q origin nexo-batteries
           for f in "${specs[@]}"; do id=$(basename "$f" .json); gh workflow run nexo-test-battery.yml --repo "$GITHUB_REPOSITORY" --ref main -f battery_id="$id"; echo "dispatched $id"; done
+
+      - name: Prepare approved public campaigns after canonical readback
+        continue-on-error: true
+        if: steps.robot.outputs.tower_revision != ''
+        env:
+          GOOGLE_SERVICE_ACCOUNT_JSON: ${{ secrets.NEXO_DRIVE_WRITER_JSON }}
+          # This gate stays off until the current domain's publication source is reconciled.
+          NEXO_PUBLIC_CAMPAIGNS_PUBLISH_ENABLED: ${{ vars.NEXO_PUBLIC_CAMPAIGNS_PUBLISH_ENABLED }}
+        run: |
+          python - <<'PY'
+          import json, os, subprocess
+          from pathlib import Path
+          from scripts.nexo_autonomy_runtime import read_tower
+          source = Path('/tmp/tcc-tested/runtime/nexo_agent_api/public_campaigns.py')
+          if not source.is_file():
+              print('PUBLICATION_PENDING: no verified public campaign runtime; previous version retained')
+              raise SystemExit(0)
+          private = Path('/tmp/nexo-public-readback.private.json')
+          try:
+              private.write_text(json.dumps(read_tower(), ensure_ascii=False), encoding='utf-8')
+              result = subprocess.run(['python', 'nexo-one/scripts/prepare_public_campaigns.py',
+                  '--tower', str(private), '--tcc-root', '/tmp/tcc-tested',
+                  '--output', '/tmp/nexo-public-campaigns.json'], capture_output=True, text=True)
+              if result.returncode:
+                  print('PUBLICATION_PENDING: projection validation failed; previous version retained')
+              else:
+                  receipt = json.loads(result.stdout)
+                  print(json.dumps(receipt))
+                  if receipt.get('status') == 'PUBLIC_CAMPAIGNS_PREPARED':
+                      check = subprocess.run(['node', 'nexo-one/scripts/publish-public-campaigns.mjs',
+                          '--input', '/tmp/nexo-public-campaigns.json', '--output-dir', '/tmp/public-check/dist'],
+                          capture_output=True, text=True)
+                      if check.returncode:
+                          print('PUBLICATION_PENDING: artifact readback failed; previous version retained')
+                      elif os.environ.get('NEXO_PUBLIC_CAMPAIGNS_PUBLISH_ENABLED') != 'true':
+                          print('PUBLICATION_PENDING: domain source reconciliation required; verified derivative prepared')
+                      else:
+                          # No inferred provider/alias may overwrite the existing site.
+                          print('PUBLICATION_PENDING: verified host publisher must be connected before enabling this gate')
+          finally:
+              private.unlink(missing_ok=True)
+          PY
 
       - name: Record public TCC operation receipts
         if: steps.cred.outputs.ok == 'true' && steps.robot.outcome == 'success'

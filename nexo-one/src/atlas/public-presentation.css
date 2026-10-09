@@ -164,6 +164,35 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
 .atlas-public-test dl{margin:0;display:grid;gap:28px}
 .atlas-public-test dl>div{display:grid;grid-template-columns:minmax(160px,.6fr) minmax(0,1.8fr);gap:36px}
 .atlas-public-test dt{font-weight:500;font-size:18px;color:var(--fg-2)}
+.atlas-campaigns{width:100%;min-width:0}
+.atlas-public-campaign{padding:32px 0;border-top:1px solid var(--line)}
+.atlas-campaign-heading,.atlas-campaign-tabs,.atlas-campaign-pagination{display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+.atlas-campaign-heading{justify-content:space-between}
+.atlas-campaign-heading a{min-width:44px;min-height:44px;display:grid;place-items:center}
+.atlas-public-main .atlas-public-campaign h3{margin:12px 0 28px;max-width:40ch}
+.atlas-public-campaign h3 a{color:var(--fg);text-decoration:none}
+.atlas-public-campaign h3 a:hover{text-decoration:underline;text-underline-offset:6px}
+.atlas-public-campaign dl{margin:0;display:grid;gap:20px}
+.atlas-public-campaign dl>div{display:grid;grid-template-columns:minmax(160px,.6fr) minmax(0,1.8fr);gap:36px}
+.atlas-public-campaign dt{font-size:18px;color:var(--fg-2)}
+.atlas-public-campaign dd{margin:0;overflow-wrap:anywhere}
+.atlas-public-campaign h4{font:500 18px/1.4 var(--font-body);margin:0 0 10px}
+.atlas-campaign-controls{margin:28px 0;display:grid;gap:24px}
+.atlas-campaign-controls label{display:grid;gap:8px;max-width:580px;font-size:18px}
+.atlas-campaign-controls input{font:inherit;min-height:48px;padding:10px 14px;background:var(--bg);color:var(--fg);border:1px solid var(--line);border-radius:8px;width:100%}
+.atlas-campaign-tabs button,.atlas-campaign-pagination button{font:500 18px/1.3 var(--font-body);min-height:44px;padding:10px 16px;border:1px solid var(--line);border-radius:8px;color:var(--fg);background:transparent;cursor:pointer}
+.atlas-campaign-tabs button[aria-pressed="true"]{background:var(--action);border-color:var(--action);color:#fff}
+.atlas-campaign-pagination button:disabled{opacity:.5;cursor:default}
+.atlas-campaign-pagination{margin-top:28px;font-size:16px;justify-content:space-between}
+.atlas-campaign-limits,.atlas-campaign-result,.atlas-campaign-sources,.atlas-campaign-tests{margin:24px 0}
+.atlas-campaign-tests summary,.atlas-public-campaign>details summary{font-size:17px;min-height:44px;cursor:pointer;padding:10px 0}
+.atlas-campaign-tests ol{padding-left:24px;list-style:decimal}
+.atlas-campaign-test{padding:18px 0;border-top:1px solid var(--line)}
+.atlas-public-main .atlas-campaign-test p{margin:8px 0}
+.atlas-public-campaign small,.atlas-campaign-result time,.atlas-public-main .atlas-campaign-publication{color:var(--fg-2);font-size:14px}
+.atlas-campaign-sources a,.atlas-campaign-back{color:var(--cyan);overflow-wrap:anywhere}
+.atlas-campaign-back{display:inline-flex;align-items:center;min-height:44px;margin-top:16px}
+@media(max-width:600px){.atlas-public-campaign dl>div{grid-template-columns:1fr;gap:8px}.atlas-public-campaign dt{font-size:16px}.atlas-public-campaign dd{font-size:19px}.atlas-campaign-tabs{gap:8px}.atlas-campaign-tabs button{font-size:16px}.atlas-public-campaign{padding:24px 0}.atlas-campaign-pagination{gap:10px}}
 .atlas-public-test dd{margin:0;white-space:pre-wrap;overflow-wrap:anywhere;max-width:66ch}
 .atlas-public-main .atlas-contact-section{padding-bottom:52px}
 .atlas-public-main .atlas-contact-section h2{margin-bottom:24px}

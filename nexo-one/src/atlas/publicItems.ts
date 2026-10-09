@@ -1,7 +1,8 @@
 // Public items: PROPOSED shape, not approved content. The public area is a positive
 // allowlist: whatever the API returns is shown only if it passes this guard, and an
 // empty list renders the "not approved yet" state. Nothing is bundled.
-import {fetchPublic, ApiError, isObj, type Fetch, type Locale} from './api.ts';
+import {fetchPublic, fetchPublicCampaignSnapshot, ApiError, isObj, type Fetch, type Locale} from './api.ts';
+import {guardPublicCampaigns, type PublicCampaign} from './publicCampaigns.ts';
 
 export const ITEM_KINDS = ['method', 'hypothesis', 'limit', 'robustness', 'note'] as const;
 export type ItemKind = typeof ITEM_KINDS[number];
@@ -73,14 +74,20 @@ export function guardTests(raw: unknown[]): PublicTest[] {
   return out;
 }
 
-export type PublicState = {status: 'loading' | 'empty' | 'ready' | 'unavailable'; items: PublicItem[]; tests: PublicTest[]};
+export type PublicState = {status: 'loading' | 'empty' | 'ready' | 'unavailable'; items: PublicItem[]; tests: PublicTest[]; campaigns?: PublicCampaign[]; coverage?: 'COMPLETE' | 'PARTIAL' | 'UNAVAILABLE'; generatedAt?: string; sourceRevision?: string};
 
-export async function loadPublic(fetchImpl: Fetch, signal?: AbortSignal): Promise<PublicState> {
+export async function loadPublic(fetchImpl: Fetch, signal?: AbortSignal, staticPath?: string): Promise<PublicState> {
   try {
-    const payload = await fetchPublic(fetchImpl, signal);
+    let payload;
+    try { payload = await fetchPublic(fetchImpl, signal); } catch (e) {
+      if (!staticPath || !(e instanceof ApiError) || e.code !== 'NOT_DEPLOYED') throw e;
+      payload = await fetchPublicCampaignSnapshot(fetchImpl, staticPath, signal);
+    }
     const items = guardItems(payload.items);
     const tests = guardTests(payload.tests ?? []);
-    return items.length || tests.length ? {status: 'ready', items, tests} : {status: 'empty', items: [], tests: []};
+    const extra = payload.campaigns === undefined ? {} : {campaigns: guardPublicCampaigns(payload.campaigns), coverage: payload.coverage, generatedAt: payload.generatedAt, sourceRevision: payload.sourceRevision};
+    if (payload.campaigns?.length && !extra.campaigns?.length) throw new ApiError('CONTRACT', 200);
+    return items.length || tests.length || extra.campaigns?.length || (extra.campaigns && extra.coverage !== 'COMPLETE') ? {status: 'ready', items, tests, ...extra} : {status: 'empty', items: [], tests: [], ...extra};
   } catch (e) {
     if (e instanceof ApiError && e.code === 'ABORTED') throw e;
     // No bundled example, private record or inferred result is used as a fallback.

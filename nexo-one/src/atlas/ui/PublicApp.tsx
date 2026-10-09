@@ -4,6 +4,7 @@ import {ApiError} from '../api.ts';
 import {CONTACT_EMAIL, PRESENTATION} from '../../i18n/presentation.ts';
 import {useLocale, useMessages} from './LocaleProvider.tsx';
 import PublicTestView from './PublicTestView.tsx';
+import PublicCampaignsView from './PublicCampaignsView.tsx';
 import Shell from './Shell.tsx';
 import {goToPublicSection} from '../publicNavigation.ts';
 import '../public-presentation.css';
@@ -20,7 +21,7 @@ export default function PublicApp() {
   useEffect(() => { document.title = m.heroTitle; }, [m.heroTitle]);
   useEffect(() => {
     const ac = new AbortController();
-    loadPublic((u, i) => fetch(u, i), ac.signal).then(s => { if (!ac.signal.aborted) setPub(s); })
+    loadPublic((u, i) => fetch(u, i), ac.signal, `${import.meta.env.BASE_URL}public-campaigns.json`).then(s => { if (!ac.signal.aborted) setPub(s); })
       .catch(e => { if (!ac.signal.aborted && !(e instanceof ApiError && e.code === 'ABORTED')) setPub({status: 'unavailable', items: [], tests: []}); });
     return () => ac.abort();
   }, []);
@@ -71,6 +72,7 @@ export default function PublicApp() {
             {pub.status === 'loading' && <p>{m.loading}</p>}
             {pub.status === 'unavailable' && <p className="atlas-empty">{m.unavailable}</p>}
             {pub.status === 'empty' && <p className="atlas-empty">{m.emptyTitle}</p>}
+            {pub.campaigns !== undefined && <PublicCampaignsView campaigns={pub.campaigns} locale={locale} generatedAt={pub.generatedAt} coverage={pub.coverage}/>}
             {pub.status === 'ready' && pub.tests.map(test => <PublicTestView key={test.id} test={test} locale={locale}/>)}
             {pub.status === 'ready' && pub.items.map(it => (
               <article key={it.id} className="atlas-item">

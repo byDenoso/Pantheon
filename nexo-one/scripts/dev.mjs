@@ -2,7 +2,7 @@ import http from 'node:http';
 import {readFile} from 'node:fs/promises';
 import {realpathSync} from 'node:fs';
 import path from 'node:path';
-import handler from '../server/handler.mjs';
+import handler from '../api/index.js';
 const built=process.argv.includes('--built');
 const vite=built?null:await(await import('vite')).createServer({
   // Worktrees and fixture servers may share dependencies, but not optimized module identities.

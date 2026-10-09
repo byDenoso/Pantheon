@@ -4,15 +4,16 @@ import {mkdtempSync, rmSync, readdirSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {spawnSync} from 'node:child_process';
+import {fileURLToPath} from 'node:url';
 import {FORBIDDEN, scanDist} from '../scripts/scan-public-bundle.mjs';
 
-const root = new URL('../', import.meta.url).pathname;
+const root = fileURLToPath(new URL('../', import.meta.url));
 
 test('local production build: no source maps, no static data, no legacy/private markers in any emitted chunk', () => {
   const temp = mkdtempSync(join(tmpdir(), 'atlas-build-'));
   const out = join(temp, 'dist');
   try {
-    const r = spawnSync('npx', ['vite', 'build', '--outDir', out, '--emptyOutDir'], {cwd: root, encoding: 'utf8', env: {...process.env, GITHUB_PAGES: ''}});
+    const r = spawnSync(process.execPath, [join(root, 'node_modules/vite/bin/vite.js'), 'build', '--outDir', out, '--emptyOutDir'], {cwd: root, encoding: 'utf8', env: {...process.env, GITHUB_PAGES: ''}});
     assert.equal(r.status, 0, r.stdout + r.stderr);
     const {files, findings} = scanDist(out);
     assert.deepEqual(findings, []);
