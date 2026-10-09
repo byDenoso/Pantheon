@@ -8,6 +8,9 @@ on:
       - '.github/workflows/nexo-one-pages.yml'
       - '.github/workflows/nexo-one-pr-ci.yml'
       - '.github/workflows/nexo-test-battery.yml'
+      - '.github/workflows/nexo-writer-robot.yml'
+      - 'scripts/nexo_autonomy_runtime.py'
+      - 'scripts/tests/**'
 
 permissions:
   contents: read
@@ -46,6 +49,8 @@ jobs:
           node test/atlas-performance.browser.mjs
           npm run test:mcp-browser
           node test/google-drive-consent.browser.mjs
+          node test/autonomy-control.browser.mjs
+          node test/public-campaigns.browser.mjs
 
       - name: Verify Atlas visual regression matrix
         working-directory: nexo-one
@@ -126,6 +131,9 @@ jobs:
 
       - name: Verify frozen-input and prospective-selection regression tests
         run: python -m unittest discover -s nexo-one/executor-runtime/tests -p test_tower_native_frozen_inputs.py -v
+
+      - name: Verify Writer transport, authority and recovery collectors
+        run: python -m unittest discover -s scripts/tests -v
 
       - name: Verify BAO release and frozen decision regression tests
         working-directory: nexo-one/executor-runtime/recipes

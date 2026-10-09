@@ -8,6 +8,7 @@ import type { ActionRecord, InboxItem } from '../contracts/system.ts';
 import { useWorld } from './useWorld.ts';
 import { useNexoStore } from '../data/NexoStore.tsx';
 import { useSession } from './useSession.ts';
+import AutonomyControlPanel from '../atlas/ui/AutonomyControlPanel.tsx';
 import { useIsMobile } from './useMediaQuery.ts';
 import { SCENARIOS } from '../data/fixtures/scenarios.ts';
 import {
@@ -394,6 +395,7 @@ export default function App() {
               {session.session.authenticated
                 ? <div className="login-form">
                     <p>Você está autenticado neste runtime. Fechar este painel não altera a sessão.</p>
+                    {session.runtime === 'VERCEL_NATIVE' && <AutonomyControlPanel legacy/>}
                     <button className="primary-button" type="button" disabled={session.pending}
                       onClick={async () => { await session.logout(); setLoginOpen(false); }}>
                       {session.pending ? 'Saindo…' : 'Sair da sessão'}

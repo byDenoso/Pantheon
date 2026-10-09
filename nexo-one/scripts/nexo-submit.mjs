@@ -20,8 +20,9 @@
 // dispatch-runtime staging ref is never resubmitted; everything else goes through the gateway.
 //
 // Idempotency: the canonical inbox is keyed by stable_id. --check (and the default
-// preflight) asks the connector-free gateway whether the id already landed, so a retry
-// after an ambiguous failure cannot duplicate a result in the Sheet spool or legacy inbox.
+// preflight) asks the connector-free gateway whether the id already landed. When existence
+// is known but body identity is not verified, --check reports unavailable; submission
+// reconciles the same ID and exact payload at the gateway instead of trusting existence.
 
 export const GATEWAY_BASE = 'https://nexo-one-two.vercel.app';
 export const MAX_PARTS = 40;
@@ -60,11 +61,14 @@ export function planSubmission(id, json, { maxChunk = MAX_CHUNK, maxParts = MAX_
 export const dropUrl = (base, part) =>
   `${String(base).replace(/\/+$/, '')}/api/inbox-drop?id=${part.id}&i=${part.i}&n=${part.n}&d=${encodeURIComponent(part.d)}`;
 
-/** Already-landed ids are a success, not a retry: the inbox is keyed by stable_id. */
+/** An unverified existing body is not absence and must not silently finalize a pending delivery. */
 export async function alreadyLanded(stableId, fetchImpl = fetch, base = GATEWAY_BASE) {
   const response = await fetchImpl(`${String(base).replace(/\/+$/, '')}/api/inbox-drop?id=${encodeURIComponent(stableId)}&check=1`);
   if (!response.ok) throw new Error(`INBOX_CHECK_FAILED_HTTP_${response.status}`);
   const body = await response.json().catch(() => ({}));
+  if (body.complete === true && (body.readback !== 'PASS' || body.verification === 'EXISTENCE_ONLY')) {
+    throw new Error('INBOX_BODY_UNVERIFIED');
+  }
   return body.complete === true && body.readback === 'PASS' ? String(body.saved || stableId) : null;
 }
 

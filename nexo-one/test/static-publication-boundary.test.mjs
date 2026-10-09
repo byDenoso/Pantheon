@@ -38,7 +38,12 @@ test('public content allowlist is empty and flags cannot authorize publication',
 test('static sealing removes every data/history artifact and preserves private inputs', async t => {
   const root = await fixture(t);
   await assert.rejects(assertStaticPublication(join(root, 'dist')), /UNAPPROVED_STATIC_PUBLICATION/);
-  await symlink(join(root, 'data', 'private.json'), join(root, 'dist', 'assets', 'private.js'));
+  try { await symlink(join(root, 'data', 'private.json'), join(root, 'dist', 'assets', 'private.js')); }
+  catch (error) {
+    if (process.platform !== 'win32' || error.code !== 'EPERM') throw error;
+    // A Windows junction exercises the same no-follow publication boundary without elevation.
+    await symlink(join(root, 'data'), join(root, 'dist', 'assets', 'private.js'), 'junction');
+  }
   const result = await sealStaticPublication(join(root, 'dist'));
   assert.equal(result.publicDataCount, 0);
   for (const relative of [...historicalPaths, 'assets/private.js']) {

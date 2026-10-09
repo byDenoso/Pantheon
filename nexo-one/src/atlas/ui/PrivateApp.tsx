@@ -2,6 +2,7 @@ import {lazy, Suspense, useState, type FormEvent} from 'react';
 import {useLocale, useMessages} from './LocaleProvider.tsx';
 import {usePrivateSession} from './usePrivateSession.ts';
 import Shell from './Shell.tsx';
+import AutonomyControlPanel from './AutonomyControlPanel.tsx';
 
 // The existing Atlas screens run inside a guarded same-origin frame (see PrivateFrame).
 const PrivateFrame = lazy(() => import('./PrivateFrame.tsx'));
@@ -27,6 +28,7 @@ function PrivateArea({onFrameError, onFrameReady}: {onFrameError: (code: string)
     <main className={`atlas-main private-root${live ? ' has-frame' : ''}`}>
       <div className="atlas-row">
         <h1>{m.privateTitle}</h1>
+        <a href="/autonomy">{locale === 'en' ? 'Review research autonomy' : 'Revisar autonomia da pesquisa'}</a>
         {live && <button type="button" className="atlas-btn" onClick={() => void logout()}>{m.signOut}</button>}
       </div>
       {state.phase === 'checking' && <p role="status">{m.checking}</p>}
@@ -45,6 +47,7 @@ function PrivateArea({onFrameError, onFrameReady}: {onFrameError: (code: string)
       {live && state.data && (
         <>
           {state.expiresAt && <p><small>{m.expires} {new Date(state.expiresAt).toLocaleString()}</small></p>}
+          <AutonomyControlPanel locale={locale}/>
           <Suspense fallback={<p role="status">{m.checking}</p>}>
             <PrivateFrame data={state.data} title={m.frameTitle} locale={locale} onLogout={() => void logout()} onError={onFrameError} onReady={onFrameReady}/>
           </Suspense>

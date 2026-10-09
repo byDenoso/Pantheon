@@ -10,6 +10,12 @@ on:
       battery_id:
         description: battery id (file batteries/<id>.json on branch nexo-batteries)
         required: true
+      transport:
+        description: Frozen package transport (existing batteries retain their transport)
+        required: false
+        default: LEGACY_GIT_SPEC
+        type: choice
+        options: [LEGACY_GIT_SPEC, CANONICAL_DRIVE_PACKAGE]
   pull_request:
     paths:
       - '.github/workflows/nexo-test-battery.yml'
@@ -24,6 +30,7 @@ concurrency:
 
 env:
   NEXO_BATTERY_ID: ${{ inputs.battery_id || 'bat-runner-canary-1' }}
+  NEXO_CANONICAL_PACKAGE: ${{ github.event_name == 'workflow_dispatch' && inputs.transport == 'CANONICAL_DRIVE_PACKAGE' }}
 
 jobs:
   preflight:
@@ -52,22 +59,30 @@ jobs:
 
   plan:
     runs-on: ubuntu-latest
+    timeout-minutes: 45
+    permissions:
+      contents: read
+      id-token: write
     outputs:
       matrix: ${{ steps.m.outputs.matrix }}
+      parallelism: ${{ steps.m.outputs.parallelism }}
     steps:
       - name: Checkout versioned CI fixture
-        if: github.event_name == 'pull_request'
         uses: actions/checkout@v4
         with:
           path: runtime-base
           persist-credentials: false
       - name: Checkout frozen battery specs
+        if: env.NEXO_CANONICAL_PACKAGE != 'true' && github.event_name != 'pull_request'
         uses: actions/checkout@v4
         with:
           ref: nexo-batteries
           path: battery-specs
           sparse-checkout: batteries
           persist-credentials: false
+      - name: Wait for canonical run binding and read sanitized package
+        if: env.NEXO_CANONICAL_PACKAGE == 'true'
+        run: python runtime-base/scripts/nexo_autonomy_runtime.py package --battery-id "$NEXO_BATTERY_ID" --output "battery-specs/batteries/$NEXO_BATTERY_ID.json" --wait-seconds 2400
       - id: m
         env:
           BID: ${{ env.NEXO_BATTERY_ID }}
@@ -83,6 +98,10 @@ jobs:
           tests = list(spec.get("tests") or [])
           assert tests, "battery has no tests"
           assert len(tests) <= 20, "battery exceeds 20-test limit"
+          parallelism = spec.get("parallelism", 20)
+          assert type(parallelism) is int and 1 <= parallelism <= 20, "invalid parallelism"
+          if os.environ.get("NEXO_CANONICAL_PACKAGE") == "true":
+              assert parallelism in (1, 2, 4), "unmeasured capacity"
           include, seen = [], set()
           for i, test in enumerate(tests):
               test_id = str(test.get("test_id") or "")
@@ -91,15 +110,19 @@ jobs:
               include.append({"test_id": test_id, "index": i})
           with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as out:
               out.write("matrix=" + json.dumps({"include": include}, separators=(",", ":")) + "\n")
+              out.write("parallelism=" + str(parallelism) + "\n")
           PY
 
   run:
     needs: [preflight, plan]
     runs-on: ubuntu-latest
     timeout-minutes: 350
+    permissions:
+      contents: read
+      id-token: write
     strategy:
       fail-fast: false
-      max-parallel: 20
+      max-parallel: ${{ fromJson(needs.plan.outputs.parallelism) }}
       matrix: ${{ fromJson(needs.plan.outputs.matrix) }}
     steps:
       - name: Checkout runtime definition
@@ -108,11 +131,36 @@ jobs:
           path: runtime-base
           persist-credentials: false
       - name: Checkout frozen battery specs
+        if: env.NEXO_CANONICAL_PACKAGE != 'true' && github.event_name != 'pull_request'
         uses: actions/checkout@v4
         with:
           ref: nexo-batteries
           path: battery-specs
           sparse-checkout: batteries
+          persist-credentials: false
+      - name: Recheck mandate and canonical reservation before execution
+        if: env.NEXO_CANONICAL_PACKAGE == 'true'
+        run: python runtime-base/scripts/nexo_autonomy_runtime.py package --battery-id "$NEXO_BATTERY_ID" --output "battery-specs/batteries/$NEXO_BATTERY_ID.json"
+      - name: Read frozen recipe revision
+        id: frozen
+        if: env.NEXO_CANONICAL_PACKAGE == 'true'
+        env:
+          IDX: ${{ matrix.index }}
+        run: |
+          python - <<'PY'
+          import json, os, re
+          test = json.load(open(f"battery-specs/batteries/{os.environ['NEXO_BATTERY_ID']}.json"))["tests"][int(os.environ["IDX"])]
+          revision = test.get("recipe_revision", "")
+          assert re.fullmatch(r"[0-9a-f]{40}", revision), "frozen recipe revision missing"
+          with open(os.environ["GITHUB_OUTPUT"], "a") as out:
+              out.write("revision=" + revision + "\n")
+          PY
+      - name: Checkout immutable recipe implementation
+        if: env.NEXO_CANONICAL_PACKAGE == 'true'
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.frozen.outputs.revision }}
+          path: frozen-recipe
           persist-credentials: false
       - name: Setup Python
         uses: actions/setup-python@v5
@@ -149,7 +197,8 @@ jobs:
           recipe = str(test.get("recipe") or "")
           if not re.fullmatch(r"[a-z0-9_]{2,40}", recipe):
               raise SystemExit(f"invalid or missing recipe name {recipe!r}")
-          script_path = f"runtime-base/nexo-one/executor-runtime/recipes/{recipe}.py"
+          recipe_checkout = "frozen-recipe" if os.environ.get("NEXO_CANONICAL_PACKAGE") == "true" else "runtime-base"
+          script_path = f"{recipe_checkout}/nexo-one/executor-runtime/recipes/{recipe}.py"
           raw_script = open(script_path, "rb").read()
           actual_recipe_sha = hashlib.sha256(raw_script).hexdigest()
           expected_recipe_sha = str(test.get("recipe_sha256") or "")
@@ -171,7 +220,7 @@ jobs:
           # used by Writer admission. No data download or scientific fit occurs here.
           from pathlib import Path
           import sys
-          recipe_root = Path("runtime-base/nexo-one/executor-runtime/recipes").resolve()
+          recipe_root = Path(f"{recipe_checkout}/nexo-one/executor-runtime/recipes").resolve()
           frozen_preflight = test.get("param_preflight")
           if recipe == "w0wa_bao_sn_multi" or frozen_preflight is not None:
               sys.path.insert(0, str(recipe_root))

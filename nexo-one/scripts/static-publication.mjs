@@ -1,6 +1,7 @@
 import { lstat, readdir, readFile, rm } from 'node:fs/promises';
 import { basename, join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
+import {validatePublicCampaignSnapshot} from '../server/atlas/public-campaign-projection.mjs';
 
 // There is currently no approved public research or operational content. A
 // projection's provenance, old `public` name, or environment flag is not consent.
@@ -15,7 +16,7 @@ export function assertPublicDataPublicationAllowed() {
 }
 
 export function isPublicShellFile(file) {
-  return ['index.html', 'atlas3d/index.html', 'mcp/index.html', '.nojekyll',
+  return ['index.html', 'atlas3d/index.html', 'mcp/index.html', '.nojekyll', 'public-campaigns.json',
     'google-drive-connect.html', 'google-drive-connect.js', 'google-drive-connect.css'].includes(file)
     || /^assets\/[A-Za-z0-9_.-]+\.(?:js|css|woff2?|ttf|svg|png|jpe?g|webp|gif|ico)$/.test(file)
     || file === 'vendor/g6.min.js';
@@ -43,7 +44,9 @@ export async function assertStaticPublication(outDir) {
   const forbidden = [];
   await walk(root, async (file, allowed) => {
     if (!allowed) forbidden.push(file);
-    else if (/\.(?:js|html)$/i.test(file) && PRIVATE_BUNDLE_MARKERS.test(await readFile(join(root, file), 'utf8'))) {
+    else if (file === 'public-campaigns.json') {
+      try { validatePublicCampaignSnapshot(JSON.parse(await readFile(join(root, file), 'utf8'))); } catch { forbidden.push(`${file} (INVALID_PUBLIC_CAMPAIGN_SNAPSHOT)`); }
+    } else if (/\.(?:js|html)$/i.test(file) && PRIVATE_BUNDLE_MARKERS.test(await readFile(join(root, file), 'utf8'))) {
       forbidden.push(`${file} (PRIVATE_RESEARCH_MARKER)`);
     }
   });
