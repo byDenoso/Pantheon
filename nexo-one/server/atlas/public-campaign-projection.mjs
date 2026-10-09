@@ -91,7 +91,8 @@ export function projectApprovedPublicCampaigns(records, approvals = [], meta = {
       if (!row || !publicSource(row) || publicTestSourceDigest(row) !== t.sourceDigest || !publication(t) || !object(q) || !safeId(t.publicId) || seenTests.has(t.publicId) || !bi(q.question) || !iso(q.updatedAt)) continue;
       if (row.campaign_id !== source.id && row.roadmap_id !== source.id) continue;
       const reviewed = independentlyReviewed(row, tests, t);
-      const result = reviewed && object(q.result) && verdicts.has(q.result.verdict) && !(row.review_state === 'REFUTED' && q.result.verdict === 'SUPPORTS') && bi(q.result.summary) ? {verdict: q.result.verdict, summary: bi(q.result.summary), limitations: limitList(q.result.limitations)} : null;
+      const unsupportedPositive = q.result?.verdict === 'SUPPORTS' && (row.review_state === 'REFUTED' || ['INCONCLUSIVE', 'INCONCLUSIVO'].includes(String(row.verdict ?? '').toUpperCase()));
+      const result = reviewed && object(q.result) && verdicts.has(q.result.verdict) && !unsupportedPositive && bi(q.result.summary) ? {verdict: q.result.verdict, summary: bi(q.result.summary), limitations: limitList(q.result.limitations)} : null;
       campaign.tests.push({id: t.publicId, question: bi(q.question), method: bi(q.method), stage: canonicalStage(row, reviewed), updatedAt: q.updatedAt, result, references: references(q.references)});
       seenTests.add(t.publicId);
     }

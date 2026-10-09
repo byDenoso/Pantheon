@@ -49,6 +49,32 @@ export function createAutonomyRoutes({humanAuthenticated=existingHumanSession, o
   return async (route, req, env=process.env) => {
     const reply=(status,body)=>({status,body});
     try {
+      if (route === 'autonomy-status') {
+        if (req.method !== 'GET') return reply(405,{error:'METHOD_NOT_ALLOWED'});
+        if (!await humanAuthenticated(req,env)) return reply(401,{error:'HUMAN_SESSION_REQUIRED'});
+        const {tower}=await readTower(env,req);
+        const raw=tower?.files?.['CONTROL.json']?.value?.autonomy_mandate;
+        const valid=raw?.schema==='NEXO_AUTONOMY_MANDATE_V1'
+          && /^[A-Za-z0-9_-]{3,80}$/.test(raw.id || '') && Number.isSafeInteger(raw.revision)
+          && raw.revision>=1 && ['ACTIVE','REVOKED'].includes(raw.status);
+        const mandate=valid?{id:raw.id,revision:raw.revision,status:raw.status}:null;
+        const observed_at=new Date().toISOString();
+        const canRevoke=mandate?.status==='ACTIVE' && (env.NEXO_SESSION_SECRET?.length || 0)>=32;
+        const revokeEnvelope=canRevoke?humanProposal({kind:'OPERATOR_INTENT',source:'DENER',created_at:observed_at,
+          payload:{action:'REVOKE_AUTONOMY_MANDATE',mandate_id:mandate.id,expected_revision:mandate.revision,
+            approval_ref:'NEXO_PRIVATE_HUMAN_CONTROL:'+tower.state_fingerprint}}):null;
+        // Preparation does not assert readiness of the five external tasks or
+        // a public host. The activation prompt must obtain those readbacks.
+        // This view never invents checks=true, nor exposes private CONTROL data.
+        return reply(200,{contract:'NEXO_AUTONOMY_CONTROL_VIEW_V1',observed_at,
+          tower_fingerprint:tower.state_fingerprint,mandate,receipt:null,
+          actions:{approve:{available:false,envelope:null,proposal_sha256:null,
+            blockers:mandate?.status==='ACTIVE'?['ACTIVE_MANDATE_REQUIRES_REVOCATION']:
+              ['VERIFIED_ACTIVATION_RECEIPT_REQUIRED','FIVE_TASK_PROMPTS_READBACK_REQUIRED','VERIFIED_PUBLIC_HOST_REQUIRED']},
+            revoke:{available:canRevoke,envelope:revokeEnvelope,
+              proposal_sha256:revokeEnvelope?sha256(revokeEnvelope):null,
+              blockers:canRevoke?[]:[mandate?.status==='ACTIVE'?'HUMAN_ATTESTATION_NOT_CONFIGURED':'NO_ACTIVE_MANDATE']}}});
+      }
       if (route === 'autonomy-control') {
         if (req.method !== 'POST') return reply(405,{error:'METHOD_NOT_ALLOWED'});
         if (!await humanAuthenticated(req,env)) return reply(401,{error:'HUMAN_SESSION_REQUIRED'});

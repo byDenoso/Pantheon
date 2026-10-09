@@ -29,6 +29,31 @@ test('human control refuses machine session, CSRF and an unconfirmed proposal',a
   assert.equal((await handler('autonomy-control',req,env)).status,202);
   assert.equal(submits,1);
 });
+test('private control view is read-only, sanitized and never fabricates activation proofs',async()=>{
+  let reads=0,submits=0;
+  const tower=towerFixture();tower.state_fingerprint='sha256:'+'a'.repeat(64);
+  tower.files['CONTROL.json'].value.private_secret='never-expose';
+  tower.files['CONTROL.json'].value.autonomy_mandate.activation_receipt={private_path:'never-expose'};
+  const make=allowed=>createAutonomyRoutes({humanAuthenticated:async()=>allowed,
+    readTower:async()=>{reads++;return{tower};},submit:async()=>{submits++;}});
+  const req={method:'GET',headers:{}};
+  assert.equal((await make(false)('autonomy-status',req,env)).status,401);
+  assert.equal(reads,0);
+  const handler=make(true), view=(await handler('autonomy-status',req,env)).body;
+  assert.equal(view.contract,'NEXO_AUTONOMY_CONTROL_VIEW_V1');
+  assert.deepEqual(view.mandate,{id:'m-one',revision:1,status:'ACTIVE'});
+  assert.equal(view.actions.approve.available,false);
+  assert.equal(view.actions.approve.envelope,null);
+  assert.equal(view.actions.revoke.available,true);
+  assert.equal(view.actions.revoke.proposal_sha256,sha256(view.actions.revoke.envelope));
+  assert.equal(view.actions.revoke.envelope.payload.expected_revision,1);
+  assert.equal(JSON.stringify(view).includes('never-expose'),false);
+  assert.equal(submits,0);
+  delete tower.files['CONTROL.json'].value.autonomy_mandate;
+  const inactive=(await handler('autonomy-status',req,env)).body;
+  assert.equal(inactive.mandate,null);assert.equal(inactive.actions.revoke.available,false);
+  assert.ok(inactive.actions.approve.blockers.includes('VERIFIED_ACTIVATION_RECEIPT_REQUIRED'));
+});
 test('runner identity is signature verified and bound to exact public main workflow',async()=>{
   const {privateKey,publicKey}=generateKeyPairSync('rsa',{modulusLength:2048});
   const key={...publicKey.export({format:'jwk'}),kid:'test-key'};

@@ -175,23 +175,31 @@ def capacity_candidate(tower):
         return {}
     batteries = {row.get("id"): row for row in value("evolution/batteries.json").get("batteries") or [] if isinstance(row, dict)}
     candidates = []
-    for path, record in files.items():
-        if not re.fullmatch(r"entities/evidence/[A-Za-z0-9_-]+\.json", path):
-            continue
-        report = record.get("value") if isinstance(record, dict) else None
+    registry_path = "evolution/autonomy_capacity_reviews.json"
+    registry = value(registry_path)
+    if registry.get("schema") != "NEXO_CAPACITY_REVIEW_REGISTRY_V1":
+        return {}
+    for report in registry.get("reviews") or []:
         if not isinstance(report, dict):
             continue
         refs = report.get("battery_refs")
+        rid = report.get("id")
         if (report.get("schema") != "NEXO_CAPACITY_REVIEW_V1" or report.get("decision") != "PASS"
-                or report.get("reviewer_role") != "GUARDIAO" or type(report.get("stage")) is not int or report["stage"] != stage
+                or report.get("policy") != "NEXO_CAPACITY_STABILITY_V1" or report.get("approved_by") != "WRITER_GUARDIAN_POLICY"
+                or report.get("mandate_id") != mandate["id"] or report.get("next_parallelism") != {1: 2, 2: 4}[stage]
+                or not isinstance(rid, str) or not re.fullmatch(r"[A-Za-z0-9_-]+", rid)
+                or type(report.get("stage")) is not int or report["stage"] != stage
                 or not isinstance(refs, list) or not refs or any(not isinstance(ref, str) for ref in refs)
                 or len(refs) != len(set(refs))):
             continue
         if all(batteries.get(ref, {}).get("status") == "DONE"
                and batteries[ref].get("conclusion") == "success"
                and batteries[ref].get("mandate_id") == mandate["id"]
-               and batteries[ref].get("parallelism") == stage for ref in refs):
-            candidates.append({"parallelism": {1: 2, 2: 4}[stage], "review_ref": path, "battery_refs": refs})
+               and batteries[ref].get("parallelism") == stage
+               and (report.get("battery_sha256") or {}).get(ref) == hashlib.sha256(json.dumps(
+                   batteries[ref], ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
+               for ref in refs):
+            candidates.append({"parallelism": {1: 2, 2: 4}[stage], "review_ref": registry_path + "#" + rid, "battery_refs": refs})
     return candidates[0] if len(candidates) == 1 else {}
 
 

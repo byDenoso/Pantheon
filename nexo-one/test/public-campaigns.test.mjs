@@ -50,6 +50,22 @@ test('different questions remain separate even when their public question text i
   assert.equal(snapshot.campaigns[0].question.en, snapshot.campaigns[1].question.en);
 });
 
+test('independent confirmation cannot turn an inconclusive canonical result into positive evidence', () => {
+  const c = campaign(), attack = {id: 'attack', contests_test_id: 'canonical-test'};
+  for (const verdict of ['INCONCLUSIVE', 'INCONCLUSIVO']) {
+    const row = {...sourceTest(), verdict, review_state: 'CONFIRMED', contests: [{contest_test_id: 'attack'}],
+      reviews: [{referee: 'critic', outcome: 'INCONCLUSIVE', contest_test_id: 'attack', at}]};
+    const approval = approve(row, 'TEST');
+    approval.independence = {policy: 'NEXO_SCIENTIFIC_INDEPENDENCE_V1', eligible: true,
+      parentDigest: publicTestSourceDigest(row), attackId: 'attack', attackDigest: publicTestSourceDigest(attack), reviewedAt: at};
+    const render = () => projectApprovedPublicCampaigns({campaigns: [c], tests: [row, attack]}, [approve(c), approval], meta).campaigns[0].tests[0];
+    approval.presentation.result.verdict = 'SUPPORTS';
+    assert.equal(render().stage, 'REVIEWED'); assert.equal(render().result, null);
+    approval.presentation.result.verdict = 'INCONCLUSIVE';
+    assert.equal(render().result.verdict, 'INCONCLUSIVE');
+  }
+});
+
 test('explicit closure retains inconclusive and negative studies; independent review is required', () => {
   const c = {...campaign(), closure: {status: 'CLOSED', receipt_id: 'closure-1', closed_at: at, outcome: 'INCONCLUSIVE'}};
   const attack = {id: 'attack', contests_test_id: 'canonical-test'};

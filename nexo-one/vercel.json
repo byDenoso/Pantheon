@@ -37,6 +37,14 @@
     {
       "source": "/api/:route",
       "destination": "/api/index?route=:route"
+    },
+    {
+      "source": "/autonomy",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/autonomy/",
+      "destination": "/index.html"
     }
   ],
   "headers": [

@@ -24,7 +24,12 @@ export function scanDist(dist) {
     }
     if (!/\.(js|css|html|mjs)$/.test(f) || rel.startsWith('google-drive-connect')) continue; // pre-existing standalone page, outside the Atlas entry
     const text = readFileSync(f, 'utf8');
-    for (const m of FORBIDDEN) if (text.includes(m)) findings.push(`${rel}: contains "${m}"`);
+    for (const m of FORBIDDEN) {
+      // The reviewed human entry uses the existing native cookie session.
+      // Every data/legacy marker stays forbidden, including in that chunk.
+      if (m === '/api/session' && /^assets\/HumanAutonomyApp-[A-Za-z0-9_-]+\.js$/.test(rel)) continue;
+      if (text.includes(m)) findings.push(`${rel}: contains "${m}"`);
+    }
   }
   return {files: files.map(f => f.slice(dist.length + 1).replaceAll('\\', '/')), findings};
 }

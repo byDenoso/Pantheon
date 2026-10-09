@@ -51,19 +51,29 @@ class TransportTests(unittest.TestCase):
         self.assertFalse(implementation_matches(lambda _: dict(comparison, status="diverged"), "a" * 40, "b" * 40))
 
     def test_capacity_growth_uses_existing_reviewed_completed_stage_only(self):
-        report = {"schema": "NEXO_CAPACITY_REVIEW_V1", "decision": "PASS", "reviewer_role": "GUARDIAO",
-                  "stage": 1, "battery_refs": ["bat-one"]}
+        report = {"id": "cap-one", "schema": "NEXO_CAPACITY_REVIEW_V1", "decision": "PASS",
+                  "policy": "NEXO_CAPACITY_STABILITY_V1", "approved_by": "WRITER_GUARDIAN_POLICY",
+                  "mandate_id": "m-one", "next_parallelism": 2, "stage": 1, "battery_refs": ["bat-one"]}
         tower = {"files": {"CONTROL.json": {"value": {"autonomy_mandate": {"status": "ACTIVE", "id": "m-one"}}},
                            "evolution/autonomy_capacity.json": {"value": {"mandate_id": "m-one", "parallelism": 1}},
                            "evolution/batteries.json": {"value": {"batteries": [{"id": "bat-one", "status": "DONE",
                                "conclusion": "success", "mandate_id": "m-one", "parallelism": 1}]}},
-                           "entities/evidence/cap-one.json": {"value": report}}}
-        self.assertEqual(capacity_candidate(tower), {"parallelism": 2, "review_ref": "entities/evidence/cap-one.json", "battery_refs": ["bat-one"]})
-        for field, value in (("decision", "PENDING"), ("reviewer_role", "EXECUTOR"), ("stage", 2), ("battery_refs", ["missing"])):
+                           "evolution/autonomy_capacity_reviews.json": {"value": {"schema": "NEXO_CAPACITY_REVIEW_REGISTRY_V1", "reviews": [report]}}}}
+        battery=tower["files"]["evolution/batteries.json"]["value"]["batteries"][0]
+        report["battery_sha256"]={"bat-one":hashlib.sha256(json.dumps(battery, ensure_ascii=False,
+            sort_keys=True, separators=(",", ":")).encode()).hexdigest()}
+        self.assertEqual(capacity_candidate(tower), {"parallelism": 2, "review_ref": "evolution/autonomy_capacity_reviews.json#cap-one", "battery_refs": ["bat-one"]})
+        for field, value in (("decision", "PENDING"), ("approved_by", "EXECUTOR"), ("stage", 2), ("battery_refs", ["missing"])):
             old = report[field]; report[field] = value
             self.assertEqual(capacity_candidate(tower), {})
             report[field] = old
-        tower["files"]["entities/evidence/cap-two.json"] = {"value": dict(report)}
+        battery["unreviewed_change"]=True
+        self.assertEqual(capacity_candidate(tower), {})
+        del battery["unreviewed_change"]
+        tower["files"]["evolution/autonomy_capacity_reviews.json"]["value"]["reviews"].append(dict(report, id="cap-two"))
+        self.assertEqual(capacity_candidate(tower), {})
+        tower["files"].pop("evolution/autonomy_capacity_reviews.json")
+        tower["files"]["entities/evidence/cap-forged.json"] = {"value": dict(report, reviewer_role="GUARDIAO")}
         self.assertEqual(capacity_candidate(tower), {})
 
     def test_uncertain_dispatch_binds_only_unique_matching_first_run(self):

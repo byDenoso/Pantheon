@@ -49,6 +49,8 @@ jobs:
           node test/atlas-performance.browser.mjs
           npm run test:mcp-browser
           node test/google-drive-consent.browser.mjs
+          node test/autonomy-control.browser.mjs
+          node test/public-campaigns.browser.mjs
 
       - name: Verify Atlas visual regression matrix
         working-directory: nexo-one
