@@ -154,7 +154,23 @@ def cosine(p,q):
     a=np.array([p["w0"]+1,p["wa"]]); b=np.array([q["w0"]+1,q["wa"]]); den=np.linalg.norm(a)*np.linalg.norm(b)
     return None if den==0 else float(a@b/den)
 
-def decision_from_holds(mode, comps, out):
+def individual_dr2_two_compilation_profile(params):
+    """Exact prospective profile whose frozen kill includes same-bin cosine."""
+    if not isinstance(params, dict):
+        return False
+    if (params.get("mode") != "bao_tracer_jackknife"
+            or params.get("bao_release", "dr2") != "dr2"
+            or params.get("compilations") != ["pantheon_plus", "union3"]):
+        return False
+    groups = params.get("tracer_groups")
+    expected = {0.295, 0.51, 0.706, 0.934, 1.321, 1.484, 2.33}
+    return (isinstance(groups, list) and len(groups) == len(expected)
+            and all(isinstance(group, dict) and isinstance(group.get("z"), list)
+                    and len(group["z"]) == 1 and isinstance(group["z"][0], (int, float))
+                    and not isinstance(group["z"][0], bool) for group in groups)
+            and {group["z"][0] for group in groups} == expected)
+
+def decision_from_holds(mode, comps, out, params=None):
     labels=[h["label"] for h in out[0]["holds"]] if out else []
     if len(out)<2 and not (mode=="bao_tracer_jackknife" and comps==["union3"]):
         verdict,decision="INCONCLUSIVE","INSUFFICIENT_COMPILATIONS"
@@ -180,6 +196,12 @@ def decision_from_holds(mode, comps, out):
                                          and h["cosine"] is not None and h["cosine"]>=0.8
                                          for h in r["holds"]) for r in out)
         if any(v>=2 for v in over70.values()): verdict,decision="REJECTED","SAME_TRACER_DOMINATES"
+        elif (individual_dr2_two_compilation_profile(params)
+              and comps == ["pantheon_plus", "union3"] and len(out) == 2
+              and any(all(any(h["label"] == lab and h.get("cosine") is not None
+                              and math.isfinite(h["cosine"]) and h["cosine"] < 0.5
+                              for h in row["holds"]) for row in out) for lab in labels)):
+            verdict,decision="REJECTED","SAME_BIN_DIRECTION_UNSTABLE"
         elif successful_compilations>=2: verdict,decision="PROMOTED","TRACER_ROBUST"
         else: verdict,decision="INCONCLUSIVE","MIXED_TRACER_ROBUSTNESS"
 
@@ -210,7 +232,7 @@ def run(params):
 
     if any(r["full"]["delta_chi2"]<=1e-6 for r in out):
         raise RuntimeError("Ganho CPL nulo: fração removida não é identificável.")
-    verdict,decision = decision_from_holds(mode, comps, out)
+    verdict,decision = decision_from_holds(mode, comps, out, params)
 
     # Leitura em português simples, escrita a partir da decisão (o critério congelado não muda).
     def worst(key):
@@ -221,6 +243,7 @@ def run(params):
      "DISTRIBUTED_REDSHIFT_LEVERAGE":"A preferência por energia escura variável não depende de uma faixa só: continua de pé quando se tira qualquer faixa de distância, nas duas coleções de supernovas.",
      "MIXED_REDSHIFT_LEVERAGE":"Resultado misto: uma faixa de distância pesa bastante, mas não o suficiente para dizer que a preferência por energia escura variável depende só dela.",
      "SAME_TRACER_DOMINATES":"A preferência por energia escura variável vem quase toda de um único tipo de galáxia no mapa do DESI.",
+     "SAME_BIN_DIRECTION_UNSTABLE":"O mesmo bin altera fortemente a direção w0-wa nas duas coleções de supernovas, conforme o critério congelado.",
      "TRACER_ROBUST":"A preferência por energia escura variável aparece com todos os tipos de galáxia do DESI; nenhum sozinho a sustenta.",
      "MIXED_TRACER_ROBUSTNESS":"Resultado misto: um tipo de galáxia do DESI pesa bastante, mas não o suficiente para concluir que a preferência depende só dele.",
     }
