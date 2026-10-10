@@ -2,6 +2,24 @@ import {useEffect, useRef} from 'react';
 import {createFrameBridge} from '../privateFrameBridge.ts';
 import {refreshPrivateRuntime} from '../privateRefresh.ts';
 
+async function runPrivateRetrieval(name: string, args: Record<string, unknown>, signal: AbortSignal) {
+  const response = await fetch('/api/atlas-retrieval', {
+    method: 'POST',
+    credentials: 'same-origin',
+    cache: 'no-store',
+    signal,
+    headers: {'Content-Type': 'application/json', 'Accept': 'application/json'},
+    body: JSON.stringify({name, args}),
+  });
+  let body: Record<string, unknown> = {};
+  try { body = await response.json() as Record<string, unknown>; } catch { /* fail below */ }
+  if (!response.ok) {
+    const code = typeof body.error === 'string' ? body.error : 'RETRIEVAL_UNAVAILABLE';
+    const error = new Error(code) as Error & {code?: string}; error.code = code; throw error;
+  }
+  return body;
+}
+
 export const PRIVATE_UI_URL = '/api/atlas-private-ui';
 /**
  * No top-navigation, modals or downloads. Popups are allowed ONLY so an explicit user click on a validated HTTPS source link
@@ -32,6 +50,7 @@ export default function PrivateFrame({data, title, locale, onLogout, onError, on
       getData: () => latest.current,
       getLocale: () => localeRef.current,
       onRefresh: signal => refreshPrivateRuntime(undefined, latest.current, Date.now, signal),
+      onRetrieval: (name, args, signal) => runPrivateRetrieval(name, args, signal),
       onRefreshed: fresh => { latest.current = fresh as Record<string, unknown>; },
       onReady: () => {
         window.clearTimeout(timer);

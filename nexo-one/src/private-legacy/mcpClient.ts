@@ -5,6 +5,8 @@
 import type {McpTool, McpStatus} from '../mcp/client.ts';
 import type {PrivateRuntime} from './runtime.ts';
 import {runtimeHolder} from './state.ts';
+import {FRAME, parseToFrame, trusted} from './protocol.ts';
+import {postToParent} from './state.ts';
 
 export type {ToolSchema, McpTool, McpCall, McpStatus} from '../mcp/client.ts';
 export const MCP_ENDPOINT = 'local://snapshot-privado';
@@ -296,13 +298,48 @@ export const DEFS: Def[] = [
     }},
 ];
 
+
+const REMOTE_TOOLS: McpTool[] = [
+  {name:'nexo_search',description:'Busca híbrida autorizada na Tower canônica verificada.',category:'Retrieval remoto',access:'PRIVATE',availability:'DISCOVERED',inputSchema:{type:'object',properties:{query:{type:'string',maxLength:4000},role:{type:'string',maxLength:64},mode:{type:'string',maxLength:64},k:{type:'integer',minimum:1,maximum:50},as_of:{type:'string',maxLength:128},expected_revision:{type:'string',maxLength:256},include_inactive:{type:'boolean'},filters:{type:'object'}},required:['query']},annotations:{readOnlyHint:true,destructiveHint:false,idempotentHint:true,openWorldHint:false}},
+  {name:'nexo_get',description:'Leitura exata de entidade na Tower verificada.',category:'Retrieval remoto',access:'PRIVATE',availability:'DISCOVERED',inputSchema:{type:'object',properties:{entity:{type:'string',maxLength:512},role:{type:'string',maxLength:64},as_of:{type:'string',maxLength:128},expected_revision:{type:'string',maxLength:256},include_inactive:{type:'boolean'}},required:['entity']},annotations:{readOnlyHint:true,destructiveHint:false,idempotentHint:true,openWorldHint:false}},
+  {name:'nexo_neighbors',description:'Um salto no grafo explícito autorizado.',category:'Retrieval remoto',access:'PRIVATE',availability:'DISCOVERED',inputSchema:{type:'object',properties:{entity:{type:'string',maxLength:512},role:{type:'string',maxLength:64},direction:{type:'string',enum:['in','out','both']},relation:{type:'string',maxLength:128},limit:{type:'integer',minimum:1,maximum:200}},required:['entity']},annotations:{readOnlyHint:true,destructiveHint:false,idempotentHint:true,openWorldHint:false}},
+  {name:'nexo_trace',description:'Traçado limitado de relações explícitas com proveniência.',category:'Retrieval remoto',access:'PRIVATE',availability:'DISCOVERED',inputSchema:{type:'object',properties:{entity:{type:'string',maxLength:512},role:{type:'string',maxLength:64},direction:{type:'string',enum:['in','out','both']},relation:{type:'string',maxLength:128},limit:{type:'integer',minimum:1,maximum:200},depth:{type:'integer',minimum:0,maximum:6}},required:['entity']},annotations:{readOnlyHint:true,destructiveHint:false,idempotentHint:true,openWorldHint:false}},
+  {name:'nexo_diff',description:'Comparação entre revisões observadas da entidade.',category:'Retrieval remoto',access:'PRIVATE',availability:'DISCOVERED',inputSchema:{type:'object',properties:{entity:{type:'string',maxLength:512},role:{type:'string',maxLength:64},revision_a:{type:'string',maxLength:256},revision_b:{type:'string',maxLength:256},observed_a:{type:'string',maxLength:128},observed_b:{type:'string',maxLength:128}},required:['entity','revision_a','revision_b']},annotations:{readOnlyHint:true,destructiveHint:false,idempotentHint:true,openWorldHint:false}},
+  {name:'nexo_evidence',description:'Pacote de evidência limitado para agentes; texto continua sendo dado não confiável.',category:'Retrieval remoto',access:'PRIVATE',availability:'DISCOVERED',inputSchema:{type:'object',properties:{query:{type:'string',maxLength:4000},role:{type:'string',maxLength:64},budget_chars:{type:'integer',minimum:400,maximum:50000},expected_revision:{type:'string',maxLength:256},as_of:{type:'string',maxLength:128},mode:{type:'string',maxLength:64},filters:{type:'object'}},required:['query']},annotations:{readOnlyHint:true,destructiveHint:false,idempotentHint:true,openWorldHint:false}},
+  {name:'nexo_groups',description:'Grupos canônicos visíveis sem fundir alegações.',category:'Retrieval remoto',access:'PRIVATE',availability:'DISCOVERED',inputSchema:{type:'object',properties:{role:{type:'string',maxLength:64},mode:{type:'string',enum:['topic','semantic','community']},limit:{type:'integer',minimum:1,maximum:100}},required:[]},annotations:{readOnlyHint:true,destructiveHint:false,idempotentHint:true,openWorldHint:false}},
+  {name:'nexo_history',description:'Revisões observadas e eventos canônicos registrados.',category:'Retrieval remoto',access:'PRIVATE',availability:'DISCOVERED',inputSchema:{type:'object',properties:{entity:{type:'string',maxLength:512},role:{type:'string',maxLength:64},as_of:{type:'string',maxLength:128},changed_only:{type:'boolean'},limit:{type:'integer',minimum:1,maximum:200}},required:['entity']},annotations:{readOnlyHint:true,destructiveHint:false,idempotentHint:true,openWorldHint:false}},
+  {name:'nexo_retrieval_capabilities',description:'Estado da conexão autenticada e modo da fonte; não autoriza outro chat ou automação.',category:'Retrieval remoto',access:'PRIVATE',availability:'DISCOVERED',inputSchema:{type:'object',properties:{},required:[]},annotations:{readOnlyHint:true,destructiveHint:false,idempotentHint:true,openWorldHint:false}},
+];
+const REMOTE_NAMES = new Set(REMOTE_TOOLS.map(tool=>tool.name));
+let remoteSeq = 0;
+async function remoteCall(name:string,args:Record<string,unknown>,signal?:AbortSignal):Promise<Record<string,unknown>>{
+  abortIf(signal);
+  const id='ret_'+Date.now().toString(36)+'_'+(++remoteSeq).toString(36);
+  return new Promise((resolve,reject)=>{
+    let done=false;
+    const cleanup=()=>{if(done)return;done=true;window.removeEventListener('message',onMessage);signal?.removeEventListener('abort',onAbort);};
+    const onAbort=()=>{cleanup();reject(signal?.reason??new DOMException('Aborted','AbortError'));};
+    const onMessage=(ev:MessageEvent)=>{
+      if(!trusted(ev,window.location.origin,window.parent))return;
+      const msg=parseToFrame(ev.data);if(!msg||msg.type!=='RETRIEVAL_RESULT'||msg.id!==id)return;
+      cleanup();
+      if(msg.ok)resolve((msg.data&&typeof msg.data==='object'&&!Array.isArray(msg.data)?msg.data:{result:msg.data}) as Record<string,unknown>);
+      else reject(new Error(msg.code));
+    };
+    window.addEventListener('message',onMessage);
+    signal?.addEventListener('abort',onAbort,{once:true});
+    if(!postToParent({channel:FRAME,type:'RETRIEVAL',id,name,args})){cleanup();reject(new Error('RETRIEVAL_BRIDGE_UNAVAILABLE'));}
+  });
+}
+
 export function describeTools(rt: PrivateRuntime): McpTool[] {
-  return DEFS.map(d => {
+  const local = DEFS.map(d => {
     const why = d.unavailable(rt);
     return {name: d.name, description: why ? `${d.description} Indisponível: ${why}` : d.description, category: 'Runtime privado', access: 'PRIVATE',
       availability: why ? 'UNAVAILABLE' : 'AVAILABLE', inputSchema: d.inputSchema,
       annotations: {readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false}};
   });
+  return [...local,...REMOTE_TOOLS];
 }
 
 export function statusFor(rt: PrivateRuntime): McpStatus {
@@ -338,6 +375,7 @@ export async function callReadOnlyTool(tool: McpTool, args: Record<string, unkno
   if (tool.annotations?.readOnlyHint !== true || tool.access !== 'PRIVATE') throw new Error('Esta ferramenta exige outro nível de acesso.');
   const rt = runtimeHolder.get();
   if (!rt) throw new Error('Runtime privado não carregado.');
+  if (REMOTE_NAMES.has(tool.name)) return remoteCall(tool.name, args, signal);
   const def = DEFS.find(d => d.name === tool.name);
   if (!def) throw new Error('Ferramenta desconhecida.');
   const why = def.unavailable(rt); // evaluated against the CURRENT generation, not the descriptor the panel holds
