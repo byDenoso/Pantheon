@@ -48,6 +48,15 @@ jobs:
         with:
           python-version: '3.12'
 
+      - name: Check Atlas OIDC transport without consuming decisions
+        if: >-
+          steps.cred.outputs.ok == 'true' &&
+          github.repository == 'byDenoso/Pantheon' &&
+          github.ref == 'refs/heads/main' &&
+          github.workflow_ref == 'byDenoso/Pantheon/.github/workflows/nexo-writer-robot.yml@refs/heads/main'
+        continue-on-error: true
+        run: python -m scripts.atlas_oidc_canary
+
       - name: Fetch canonical writer bundle from Drive
         if: steps.cred.outputs.ok == 'true'
         env:
