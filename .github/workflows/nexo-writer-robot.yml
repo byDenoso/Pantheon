@@ -287,7 +287,10 @@ jobs:
 
       - name: Prepare approved public campaigns after canonical readback
         continue-on-error: true
-        if: steps.robot.outputs.tower_revision != ''
+        # Reconcile pending publication on every successful Writer pulse, even
+        # when this pulse made no new canonical mutation. The existing host
+        # authorization gate remains unchanged.
+        if: steps.robot.outcome == 'success'
         env:
           GOOGLE_SERVICE_ACCOUNT_JSON: ${{ secrets.NEXO_DRIVE_WRITER_JSON }}
           # This gate stays off until the current domain's publication source is reconciled.
