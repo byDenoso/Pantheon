@@ -101,6 +101,18 @@ class LinearCVSoftwareTests(unittest.TestCase):
         b = cv.collapse_cids(records,np.eye(2),.01)['selected_source_indices']
         np.testing.assert_array_equal(a,b)
 
+    def test_frozen_fixed_zhel_jacobian_matches_central_difference(self):
+        # mu_th(zHD, fixed zHEL) = 5 log10[(1+zHEL) chi(zHD)] + 25.
+        omega_m = .315
+        for z in (.023, .05, .1):
+            dz = (1 + z) / cv.C
+            _, chi_plus = cv.flat_lcdm_background(omega_m, np.array([z + dz]))
+            _, chi_minus = cv.flat_lcdm_background(omega_m, np.array([z - dz]))
+            numeric = (5 / np.log(10)) * (np.log(chi_plus[0]) - np.log(chi_minus[0])) / 2
+            analytic = cv.fixed_zhel_doppler_mu_jacobian(np.array([z]), omega_m)[0]
+            self.assertGreater(analytic, 0.)
+            self.assertAlmostEqual(analytic, numeric, delta=abs(analytic) * 1e-7)
+
     def test_tail_propagation_agrees_with_20000_draw_sanity(self):
         z = np.array([.03,.055,.08])
         u = cv.sky_vectors(np.array([0.,90.,160.]),np.array([0.,0.,30.]))

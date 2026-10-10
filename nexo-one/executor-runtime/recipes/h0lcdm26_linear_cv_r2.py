@@ -236,14 +236,24 @@ def velocity_covariance(positions_hmpc: np.ndarray, unit_vectors: np.ndarray,
     return covariance
 
 
+
+def fixed_zhel_doppler_mu_jacobian(z: np.ndarray, omega_m: float) -> np.ndarray:
+    """d(mu_th)/dv at fixed zHEL for the frozen Pantheon+ distance model.
+
+    mu_th = 5 log10[(1+zHD)(1+zHEL) D_A(zHD)] + 25,
+    dzHD/dv = (1+zHD)/c, and D_A(zHD) = chi(zHD)/(1+zHD).
+    """
+    E, chi = flat_lcdm_background(omega_m, z)
+    return (5 / math.log(10)) * (1 + z) / (H0 * E * chi)
+
+
 def infer_sigma_and_tail(cov_meas: np.ndarray, cov_vel: np.ndarray, z: np.ndarray,
                          omega_m: float, *, seed: int = SEED, n_mock: int = N_MOCKS) -> dict[str, Any]:
     require(n_mock == N_MOCKS and seed == SEED, 'Monte Carlo seed/count frozen')
     n = len(z)
     require(cov_meas.shape == cov_vel.shape == (n, n), 'covariance dimensions mismatch')
-    E, chi = flat_lcdm_background(omega_m, z)
-    # Standard first-order Doppler impact on d_L(z) at fixed observed z.
-    jacobian_mu = (5 / math.log(10)) / C * (1 - (1 + z) * C / (H0 * E * chi))
+    # Consistent with frozen fixed-zHEL Pantheon+ distance-modulus operator.
+    jacobian_mu = fixed_zhel_doppler_mu_jacobian(z, omega_m)
     one = np.ones(n)
     w = np.linalg.solve(cov_meas, one)
     require(float(w.sum()) > 0, 'invalid intercept GLS denominator')
