@@ -81,8 +81,15 @@ def validate_params(recipe, params, inputs, recipe_root):
             result['reasons'] = sorted(set(result['reasons']))
             result['eligible'] = not result['reasons']
             return result
-        if manifest.get('validator') != 'w0wa_bao_sn_multi_v1' or recipe != 'w0wa_bao_sn_multi':
+        registered_validators = {
+            'w0wa_bao_sn_multi': 'w0wa_bao_sn_multi_v1',
+            'w0wa_bao_sn_multi_hold_v2': 'w0wa_bao_sn_multi_hold_v2',
+        }
+        if recipe not in registered_validators or manifest.get('validator') != registered_validators[recipe]:
             raise ValueError('unsupported manifest contract or validator')
+        if recipe == 'w0wa_bao_sn_multi_hold_v2':
+            for code, detail in _validate_hold_v2_profile(params, manifest):
+                reject(code, detail)
         releases = manifest['releases']
         compilations = manifest['compilations']
         if not isinstance(releases, dict) or not isinstance(compilations, dict):
@@ -227,3 +234,22 @@ def _cf4_embedded_sources_match(recipe_path, manifest_raw, validator_path):
                 and helper(runtime_source,runtime_tree)==helper(validator_source,validator_tree))
     except (OSError, SyntaxError, StopIteration, ValueError, TypeError):
         return False
+
+
+def _validate_hold_v2_profile(params, manifest):
+    """Narrow admission for the versioned two-compilation individual-bin variant."""
+    if not isinstance(params, dict):
+        return [('RECIPE_PARAMS_INVALID', 'params must be an object')]
+    reasons = []
+    if (params.get('mode') != 'bao_tracer_jackknife'
+            or params.get('bao_release', 'dr2') != 'dr2'
+            or params.get('compilations') != ['pantheon_plus', 'union3']):
+        reasons.append(('UNSUPPORTED_CONTEST_PROFILE', 'requires DR2, Pantheon+, Union3 and BAO individual-bin jackknife'))
+    groups = params.get('tracer_groups')
+    expected_z = set(manifest['releases']['dr2']['redshift_rows'])
+    if (not isinstance(groups, list) or len(groups) != len(expected_z)
+            or any(not isinstance(g, dict) or not isinstance(g.get('z'), list)
+                   or len(g['z']) != 1 or not finite(g['z'][0]) for g in groups)
+            or {g['z'][0] for g in groups} != expected_z):
+        reasons.append(('RECIPE_HOLDOUTS_INVALID', 'requires exactly one holdout for each frozen DR2 redshift bin'))
+    return reasons

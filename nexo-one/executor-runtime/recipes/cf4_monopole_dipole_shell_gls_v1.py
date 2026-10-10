@@ -318,7 +318,7 @@ def _validate_cf4_environment(params, inputs, manifest):
     return reasons
 
 _CATALOG_MANIFEST_SHA256='c801613bd7e57e5e65e81d3e6b6168dfa3b574d687018e0e895eabdd1fc5c84e'
-_CATALOG_VALIDATOR_SHA256='696775df30930ffca993d1487396dab8727de7097dc4352dc3d85f1dfc9b812a'
+_CATALOG_VALIDATOR_SHA256='702506daa31d581e646b7baf4558d6b46221d4f1cb2836dd6906aa5aa5fe6b5a'
 _FROZEN_MANIFEST_JSON='{\n  "contract": "RECIPE_PARAM_PREFLIGHT_V1",\n  "recipe": "cf4_monopole_dipole_shell_gls_v1",\n  "validator": "cf4_environment_v1",\n  "inputs": [\n    {\n      "name": "CF4 ReadMe",\n      "url": "https://cdsarc.cds.unistra.fr/ftp/J/ApJ/944/94/ReadMe",\n      "version": "CDS archive 28-Jan-2025 / J/ApJ/944/94",\n      "sha256": "2cfed1418147d5a626dee1fa37c47252124477c9828490508d9bbe511d34edb4"\n    },\n    {\n      "name": "CF4 table3.dat.gz",\n      "url": "https://cdsarc.cds.unistra.fr/ftp/J/ApJ/944/94/table3.dat.gz",\n      "version": "CDS archive 28-Jan-2025 / J/ApJ/944/94",\n      "sha256": "1c02e2b3829b0b323524a5f3671a5f530cbdccae3c10b432db0c2e2fe09672fe"\n    },\n    {\n      "name": "CF4 table4.dat.gz",\n      "url": "https://cdsarc.cds.unistra.fr/ftp/J/ApJ/944/94/table4.dat.gz",\n      "version": "CDS archive 28-Jan-2025 / J/ApJ/944/94",\n      "sha256": "be91d4fae6fa01552ab3bc85db695411fca3249eeae08b566a712e6ea790bd99"\n    }\n  ],\n  "dipole_score": "vector_quadratic",\n  "fit_scope": "joint_gls_marginal",\n  "definition": "Q=A^T Sigma_A^-1 A; sqrt(Q)>=3; report chi-square(3) diagnostic p. Sigma_A is the marginal covariance of each dipole in the joint GLS. Identity and source commitments belong to the individual canonical TEST binding, not to the generic public catalog."\n}\n'
 
 # Runner integration uses the existing PARAMS_PATH / RESULT_PATH protocol.
