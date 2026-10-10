@@ -29,6 +29,41 @@ TOWER_ID = "1m97cFmEkw19yiqD_6FWPG4j1lDCAYM4z"
 OPENER = urllib.request.build_opener(NoApiRedirect())
 
 
+IMPLEMENTATION_REVISION_RE = re.compile(r"^[0-9a-f]{40}$")
+
+
+def select_context_revision(tower, proposed_revision=None):
+    """Select a candidate after read_tower validation, never establish quota/authority.
+
+    Existing mandates retain their canonical receipt revision. An explicit SHA
+    can bootstrap observation only when a successful canonical read has no
+    mandate. verified_context still proves exact CI, equivalence and fresh runner.
+    Failed reads and malformed CONTROL never permit a proposal fallback.
+    """
+    invalid = {"revision": None, "preparation_only": False}
+    if not isinstance(tower, dict) or not isinstance(tower.get("files"), dict):
+        return invalid
+    entry = tower["files"].get("CONTROL.json")
+    control = entry.get("value") if isinstance(entry, dict) and entry.get("encoding") == "json" else None
+    if not isinstance(control, dict):
+        return invalid
+    valid_sha = lambda value: isinstance(value, str) and IMPLEMENTATION_REVISION_RE.fullmatch(value) is not None
+    mandate = control.get("autonomy_mandate")
+    if mandate is not None:
+        if not isinstance(mandate, dict):
+            raise ValueError("MANDATE_INVALID")
+        receipt = mandate.get("activation_receipt")
+        canonical = receipt.get("source_revision") if isinstance(receipt, dict) else None
+        if not valid_sha(canonical):
+            raise ValueError("CANONICAL_IMPLEMENTATION_REVISION_MISSING")
+        if proposed_revision is not None and proposed_revision != canonical:
+            raise ValueError("IMPLEMENTATION_REVISION_CONFLICT")
+        return {"revision": canonical, "preparation_only": False}
+    if proposed_revision is not None and not valid_sha(proposed_revision):
+        raise ValueError("PROPOSED_IMPLEMENTATION_REVISION_INVALID")
+    return {"revision": proposed_revision, "preparation_only": True}
+
+
 def request_json(url, *, token=None, body=None):
     headers = {"Accept": "application/json", "User-Agent": "nexo-autonomy-runtime"}
     if token:
@@ -358,10 +393,13 @@ def dispatch_once(specs, *, invoke, main_revision):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("command", choices=["context", "reconcile", "package", "dispatch"])
+    parser.add_argument("--implementation-revision")
     parser.add_argument("--battery-id")
     parser.add_argument("--output")
     parser.add_argument("--wait-seconds", type=int, default=0)
     args = parser.parse_args()
+    if args.implementation_revision is not None and args.command != "context":
+        parser.error("--implementation-revision is only allowed for context")
     if args.command == "context":
         gateway = json.loads(Path("/tmp/gateway.json").read_text(encoding="utf-8"))
         def verify(envelope, proof):
@@ -370,13 +408,12 @@ def main():
         tower = None
         try:
             tower = read_tower()
-            receipt = tower["files"].get("CONTROL.json", {}).get("value", {}).get("autonomy_mandate", {}).get("activation_receipt", {})
-            revision = receipt.get("source_revision")
         except (OSError, ValueError, RuntimeError):
-            revision = None
-        context = verified_context(gateway, verify=verify, api=read_api_json, timestamp=now(), implementation_revision=revision,
+            tower = None
+        selected = select_context_revision(tower, args.implementation_revision)
+        context = verified_context(gateway, verify=verify, api=read_api_json, timestamp=now(), implementation_revision=selected["revision"],
                                    current_run_id=os.environ.get("GITHUB_RUN_ID"), current_revision=os.environ.get("GITHUB_SHA"))
-        if tower and context["capacity_observation"]["quota"]["status"] == "AVAILABLE_FREE":
+        if tower and not selected["preparation_only"] and context["capacity_observation"]["quota"]["status"] == "AVAILABLE_FREE":
             context["capacity_observation"].update(capacity_candidate(tower))
         Path(args.output or "/tmp/nexo-autonomy-context.json").write_text(json.dumps(context), encoding="utf-8")
         print("verified human intents", len(context["proposal_sha256"]), "free capacity", context["capacity_observation"]["quota"]["status"])
@@ -426,3 +463,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+

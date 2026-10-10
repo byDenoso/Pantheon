@@ -6,6 +6,11 @@ on:
   schedule:
     - cron: '7,22,37,52 * * * *'   # off-peak minutes every 15 min: GitHub drops some scheduled runs under load (21:07-22:07 UTC were all lost), so a miss costs 15 min, not 1 h; proposals still wake it instantly
   workflow_dispatch:
+    inputs:
+      autonomy_preparation_revision:
+        description: "Optional SHA40 candidate for read-only autonomy context preparation"
+        required: false
+        type: string
   push:
     branches: [main]
     paths:
@@ -220,7 +225,13 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           GOOGLE_SERVICE_ACCOUNT_JSON: ${{ secrets.NEXO_DRIVE_WRITER_JSON }}
-        run: python scripts/nexo_autonomy_runtime.py context
+          AUTONOMY_PREPARATION_REVISION: ${{ inputs.autonomy_preparation_revision || '' }}
+        run: |
+          if [ -n "$AUTONOMY_PREPARATION_REVISION" ]; then
+            python scripts/nexo_autonomy_runtime.py context --implementation-revision "$AUTONOMY_PREPARATION_REVISION"
+          else
+            python scripts/nexo_autonomy_runtime.py context
+          fi
 
       - name: Reconcile reserved autonomy runs before any retry
         continue-on-error: true
@@ -550,3 +561,4 @@ jobs:
           elif [ "$DRIFT" = "false" ] && [ -n "$n" ]; then
             gh issue close "$n" --comment "Bundle do Drive alinhado ao último Writer testado no TCC (${MAIN:0:12})."
           fi
+

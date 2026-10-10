@@ -1,10 +1,12 @@
+import copy
+from unittest.mock import patch
 import hashlib
 import json
 import tempfile
 import unittest
 from pathlib import Path
 from types import SimpleNamespace
-from scripts.nexo_autonomy_runtime import verified_context, reconcile, scientific_step_starts, validate_package, dispatch_once, fresh_writer_job, implementation_matches, capacity_candidate, MODE
+from scripts.nexo_autonomy_runtime import select_context_revision, verified_context, reconcile, scientific_step_starts, validate_package, dispatch_once, fresh_writer_job, implementation_matches, capacity_candidate, MODE
 
 
 class TransportTests(unittest.TestCase):
@@ -180,5 +182,126 @@ class TransportTests(unittest.TestCase):
             self.assertFalse(path.exists())
 
 
+
+class PreparationTests(unittest.TestCase):
+    """Synthetic contract tests, never operational readiness evidence."""
+    SHA = "a" * 40
+    NOW = "2026-10-08T23:00:00Z"
+
+    def tower(self, mandate=None):
+        return {"files": {"CONTROL.json": {"encoding": "json", "value": {"autonomy_mandate": mandate}}}}
+
+    def api(self, current=None):
+        current = current or self.SHA
+        base = "https://api.github.com/repos/byDenoso/Pantheon"
+        return {
+            base: {"private": False, "visibility": "public"},
+            base + "/actions/workflows/nexo-test-battery.yml": {"state": "active"},
+            base + "/actions/workflows/nexo-one-pr-ci.yml/runs?head_sha=" + self.SHA + "&status=success&per_page=5": {
+                "workflow_runs": [{"id": 10, "head_sha": self.SHA, "status": "completed", "conclusion": "success", "run_attempt": 1,
+                                   "head_repository": {"full_name": "byDenoso/Pantheon"}}]},
+            base + "/actions/runs/10/jobs": {"jobs": [{"name": "executor-runtime-smoke", "status": "completed", "conclusion": "success",
+                                                      "labels": ["ubuntu-latest"], "runner_name": "GitHub Actions 1"}]},
+            base + "/actions/runs/11": {"id": 11, "head_sha": current, "head_branch": "main", "run_attempt": 1, "status": "in_progress",
+                                       "path": ".github/workflows/nexo-writer-robot.yml", "head_repository": {"full_name": "byDenoso/Pantheon"}},
+            base + "/actions/runs/11/jobs": {"jobs": [{"id": 12, "name": "write", "status": "in_progress", "started_at": "2026-10-08T22:59:00Z",
+                                                      "labels": ["ubuntu-latest"], "runner_name": "GitHub Actions 1"}]},
+            base + "/compare/" + self.SHA + "..." + current: {"status": "ahead", "merge_base_commit": {"sha": self.SHA},
+                "files": [{"filename": "nexo-one/tower-head.json", "status": "modified"}]},
+        }
+
+    def observe(self, tower, proposed=None, responses=None, current=None):
+        selected = select_context_revision(tower, proposed)
+        values = responses if responses is not None else self.api(current)
+        return verified_context({"items": []}, verify=lambda *_: self.fail("No human authorization may be fabricated"),
+            api=lambda url: copy.deepcopy(values[url]), timestamp=self.NOW, implementation_revision=selected["revision"],
+            current_run_id="11", current_revision=current or self.SHA)
+
+    def test_initial_candidate_collects_real_verifier_observation_without_mutation(self):
+        tower = self.tower()
+        before = copy.deepcopy(tower)
+        result = self.observe(tower, self.SHA)
+        self.assertEqual(result["capacity_observation"]["quota"]["status"], "AVAILABLE_FREE")
+        self.assertEqual(result["proposal_sha256"], [])
+        self.assertEqual(tower, before)
+        self.assertTrue(select_context_revision(tower, self.SHA)["preparation_only"])
+
+    def test_absent_invalid_proposal_and_missing_source_fail_closed(self):
+        self.assertEqual(self.observe(self.tower())["capacity_observation"]["quota"]["status"], "UNVERIFIED")
+        for proposed in ("", "bad", "A" * 40, "a" * 39, 1, [], {}):
+            with self.subTest(proposed=proposed), self.assertRaises(ValueError):
+                select_context_revision(self.tower(), proposed)
+        for tower in (None, {}, {"files": {}}, {"files": {"CONTROL.json": []}},
+                      {"files": {"CONTROL.json": {"encoding": "text", "value": {}}}},
+                      {"files": {"CONTROL.json": {"encoding": "json", "value": []}}}):
+            with self.subTest(tower=tower):
+                self.assertEqual(self.observe(tower, self.SHA)["capacity_observation"]["quota"]["status"], "UNVERIFIED")
+
+    def test_existing_mandate_keeps_canonical_revision_and_rejects_override(self):
+        for status in ("ACTIVE", "REVOKED"):
+            tower = self.tower({"status": status, "activation_receipt": {"source_revision": self.SHA}})
+            before = copy.deepcopy(tower)
+            self.assertEqual(select_context_revision(tower), {"revision": self.SHA, "preparation_only": False})
+            self.assertEqual(select_context_revision(tower, self.SHA)["revision"], self.SHA)
+            with self.assertRaises(ValueError): select_context_revision(tower, "b" * 40)
+            self.assertEqual(tower, before)
+        for mandate in ({}, {"activation_receipt": {}}, {"activation_receipt": {"source_revision": "bad"}}, [], False):
+            with self.subTest(mandate=mandate), self.assertRaises(ValueError):
+                select_context_revision(self.tower(mandate), self.SHA)
+
+    def test_all_existing_proof_gates_remain_required(self):
+        base = "https://api.github.com/repos/byDenoso/Pantheon"
+        ci = base + "/actions/workflows/nexo-one-pr-ci.yml/runs?head_sha=" + self.SHA + "&status=success&per_page=5"
+        cases = [
+            (base, None, {"private": True, "visibility": "private"}),
+            (ci, "workflow_runs", {"head_sha": "b" * 40}),
+            (ci, "workflow_runs", {"conclusion": "failure"}),
+            (base + "/actions/runs/10/jobs", "jobs", {"name": "not-the-smoke-test"}),
+            (base + "/actions/runs/11", None, {"status": "completed"}),
+            (base + "/actions/runs/11", None, {"path": "different.yml"}),
+            (base + "/actions/runs/11/jobs", "jobs", {"started_at": "2026-10-08T20:00:00Z"}),
+            (base + "/actions/runs/11/jobs", "jobs", {"labels": ["ubuntu-latest", "self-hosted"]}),
+            (base + "/actions/runs/11/jobs", "jobs", {"labels": ["ubuntu-16-cores"]}),
+            (base + "/actions/runs/11/jobs", "jobs", {"runner_name": "custom paid runner"}),
+        ]
+        for url, rows, change in cases:
+            with self.subTest(change=change):
+                api = self.api()
+                target = api[url][rows][0] if rows else api[url]
+                target.update(change)
+                self.assertEqual(self.observe(self.tower(), self.SHA, api)["capacity_observation"]["quota"]["status"], "UNVERIFIED")
+        current = "b" * 40
+        api = self.api(current)
+        comparison = base + "/compare/" + self.SHA + "..." + current
+        self.assertEqual(self.observe(self.tower(), self.SHA, api, current)["capacity_observation"]["quota"]["status"], "AVAILABLE_FREE")
+        api[comparison]["files"] = [{"filename": "scripts/nexo_autonomy_runtime.py", "status": "modified"}]
+        self.assertEqual(self.observe(self.tower(), self.SHA, api, current)["capacity_observation"]["quota"]["status"], "UNVERIFIED")
+
+    def test_cli_wires_preparation_without_capacity_growth_or_human_intents(self):
+        import scripts.nexo_autonomy_runtime as runtime
+        tower = self.tower()
+        before = copy.deepcopy(tower)
+        with patch("sys.argv", ["runtime", "context", "--implementation-revision", self.SHA]), \
+             patch.dict("os.environ", {"GITHUB_RUN_ID": "11", "GITHUB_SHA": self.SHA}), \
+             patch.object(runtime, "read_tower", return_value=tower), \
+             patch.object(runtime, "read_api_json", side_effect=lambda url: self.api()[url]), \
+             patch.object(runtime, "now", return_value=self.NOW), \
+             patch.object(runtime, "capacity_candidate") as growth, \
+             patch.object(runtime.Path, "read_text", return_value='{"items":[]}'), \
+             patch.object(runtime.Path, "write_text") as output:
+            runtime.main()
+            value = json.loads(output.call_args.args[0])
+            self.assertEqual(value["capacity_observation"]["quota"]["status"], "AVAILABLE_FREE")
+            self.assertEqual(value["proposal_sha256"], [])
+            growth.assert_not_called()
+        self.assertEqual(tower, before)
+        for command in ("dispatch", "package", "reconcile"):
+            with patch("sys.argv", ["runtime", command, "--implementation-revision", self.SHA]), \
+                 patch.object(runtime, "read_tower") as read, self.assertRaises(SystemExit):
+                runtime.main()
+            read.assert_not_called()
+
+
 if __name__ == "__main__":
     unittest.main()
+
