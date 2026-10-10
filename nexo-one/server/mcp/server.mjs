@@ -2,6 +2,7 @@ import {createMcpHandler,McpServer} from '@modelcontextprotocol/server';
 import * as z from 'zod/v4';
 import {executeMcpTool} from './tools.mjs';
 import {registerOperationalTools} from './operational-tools.mjs';
+import {registerRetrievalTools} from './retrieval-tools.mjs';
 import {operationalForRequest} from './operational-runtime.mjs';
 import {STYLE_POLICY,buildStyleInstruction,validateStyleText} from '../policy/style-policy.mjs';
 import {getPdfPolicy} from '../policy/pdf-reporting-policy.mjs';
@@ -78,7 +79,7 @@ const TOOL_DEFINITIONS=Object.freeze({
 });
 
 export const NEXO_MCP_TOOL_NAMES=Object.freeze(Object.keys(TOOL_DEFINITIONS));
-export const MCP_SERVER_INFO=Object.freeze({name:'nexo-science',version:'1.4.0',transport:'streamable-http',endpoint:'/api/mcp',mode:'read-only',access:'PUBLIC'});
+export const MCP_SERVER_INFO=Object.freeze({name:'nexo-science',version:'1.5.0',transport:'streamable-http',endpoint:'/api/mcp',mode:'read-only',access:'PUBLIC'});
 const category=name=>name==='get_capabilities'?'capabilities':name.includes('policy')||name==='validate_style_text'?'policy':name==='get_operations'?'operations':name==='get_provenance'?'provenance':'science';
 export const MCP_TOOL_REGISTRY=Object.freeze(Object.fromEntries(NEXO_MCP_TOOL_NAMES.map(name=>[name,Object.freeze({
   name,...TOOL_DEFINITIONS[name],inputSchema:TOOL_DEFINITIONS[name].inputSchema.strict(),
@@ -119,7 +120,7 @@ function publicCapabilities(status){
       source_version:status.sourceVersion,fingerprint:status.fingerprint,
       projection_fingerprint:status.projectionFingerprint},
     tools,tool_count:tools.length,
-    authenticated_surface:{operational_tools_access:'AUTHENTICATED',operational_tools_discoverable:'AUTHENTICATED_ONLY',mutations:'WRITER_MEDIATED'}
+    authenticated_surface:{operational_tools_access:'AUTHENTICATED',operational_tools_discoverable:'AUTHENTICATED_ONLY',retrieval_tools_access:'AUTHENTICATED_ROLE_BOUND',retrieval_source:'CANONICAL_DRIVE_IN_PROCESS',mutations:'WRITER_MEDIATED'}
   };
 }
 function toolResult(payload){
@@ -163,7 +164,10 @@ export function createNexoMcpServer({readSnapshot,operational=null}){
       catch(error){return {...toolResult({error:errorCode(error)}),isError:true};}
     });
   }
-  if(operational)registerOperationalTools(server,{...operational,z});
+  if(operational){
+    registerOperationalTools(server,{service:operational.service,principal:operational.principal,z});
+    if(operational.retrieval)registerRetrievalTools(server,{service:operational.retrieval,principal:operational.principal,z});
+  }
   return server;
 }
 

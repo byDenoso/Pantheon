@@ -1,7 +1,8 @@
 import {createOperationalService} from './operational-tools.mjs';
-import {readOperationalTower} from './operational-state.mjs';
+import {readOperationalTower,readVerifiedCanonicalTower} from './operational-state.mjs';
 import {submitOperationalIntent} from './operational-queue.mjs';
 import {operationalPrincipal} from './operational-auth.mjs';
+import {createRetrievalService} from './retrieval-tools.mjs';
 import {submitScientificGatewayEnvelope} from '../inbox-gateway.mjs';
 import {googleRuntimeEnvironment,GOOGLE_AUTH_DIAGNOSTICS} from '../adapters/connect.mjs';
 
@@ -25,17 +26,24 @@ export async function operationalForRequest(request,env=process.env){
   if(!headers.host)headers.host=new URL(request.url).host;
   const nodeRequest={headers,method:request.method};
   const principal=await operationalPrincipal(request,env);
-  if(!principal)return {principal:null,service:null};
+  if(!principal)return {principal:null,service:null,retrieval:null};
   const {googleToken}=await import('../adapters/google.mjs');
   const scopedEnv=googleRuntimeEnvironment(env,headers);
+  const driveToken=()=>googleToken(scopedEnv,undefined,{scopes:OPERATIONAL_READ_SCOPES});
   const service=createOperationalService({
     // Role context needs Drive only, never Gmail, Calendar or Sheets read scopes.
     readState:()=>operationalSource('READ_CANONICAL_CONTEXT',async()=>readOperationalTower({
-      token:await googleToken(scopedEnv,undefined,{scopes:OPERATIONAL_READ_SCOPES})})),
+      token:await driveToken()})),
     submitIntent:(intent,identity)=>operationalSource('WRITE_PRIVATE_INTENT',()=>
       submitOperationalIntent(intent,identity,scopedEnv,nodeRequest)),
     submitScientificRequest:(stableId,envelope)=>operationalSource('WRITE_SCIENTIFIC_QUEUE',()=>
       submitScientificGatewayEnvelope(stableId,envelope,scopedEnv,nodeRequest))
   });
-  return {principal,service};
+  const retrieval=createRetrievalService({
+    readTower:()=>operationalSource('READ_CANONICAL_RETRIEVAL',async()=>{
+      const {tower}=await readVerifiedCanonicalTower({token:await driveToken()});
+      return {tower,observedAt:new Date().toISOString()};
+    })
+  });
+  return {principal,service,retrieval};
 }
