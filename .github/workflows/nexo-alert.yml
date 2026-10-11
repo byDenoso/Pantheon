@@ -60,8 +60,19 @@ jobs:
         run: |
           n=$(gh issue list --state open --search "$TITLE in:title" --json number --jq '.[0].number // empty')
           if [ -s /tmp/problems ]; then
-            body="$(printf 'Problemas detectados (%s UTC):\n\n%s\n\nO que fazer: abra o chat do ChatGPT das tarefas NEXO em Agendado e retome a tarefa pausada; para o robô, veja a aba Actions.' "$(date -u +%H:%M)" "$(cat /tmp/problems)")"
-            if [ -n "$n" ]; then gh issue comment "$n" --body "$body"; else gh issue create --title "$TITLE" --body "$body"; fi
+            # The same problems with new hours or counts only refresh the issue body. A comment (and the e-mail it
+            # sends) goes out only when the set of problems changes, so a new failure is not buried in hourly repeats.
+            sig=$(sed -E 's/\([^)]*\)//g; s/[0-9]+/N/g' /tmp/problems | sort | sha256sum | cut -c1-16)
+            body="$(printf 'Problemas abertos (atualizado %s UTC):\n\n%s\n\nO que fazer: abra o chat do ChatGPT das tarefas NEXO em Agendado e retome a tarefa pausada; para o robô, veja a aba Actions.\n\n<!-- nexo-alert-sig:%s -->' "$(date -u '+%d/%m %H:%M')" "$(cat /tmp/problems)" "$sig")"
+            if [ -z "$n" ]; then
+              gh issue create --title "$TITLE" --body "$body"
+            else
+              old=$(gh issue view "$n" --json body --jq '.body' | grep -oE 'nexo-alert-sig:[0-9a-f]+' | cut -d: -f2 || true)
+              gh issue edit "$n" --body "$body"
+              if [ "$old" != "$sig" ]; then
+                gh issue comment "$n" --body "$(printf 'Mudou o conjunto de problemas (%s UTC):\n\n%s' "$(date -u +%H:%M)" "$(cat /tmp/problems)")"
+              fi
+            fi
           elif [ -n "$n" ]; then
             gh issue close "$n" --comment "Tudo voltou ao normal ($(date -u +%H:%M) UTC)."
           fi
