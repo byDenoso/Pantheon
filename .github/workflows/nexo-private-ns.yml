@@ -61,6 +61,27 @@ jobs:
           print("code ok")
           PY
 
+      - name: Apply reviewed runner fixes
+        working-directory: ${{ runner.temp }}/c
+        run: |
+          python - <<'PY'
+          import pathlib
+          p = pathlib.Path("run_campaign.py")
+          s = p.read_text()
+          subs = [
+              ('chunk=600 if run_id == "pilot" else 1500,', 'chunk=600 if run_id == "pilot" else 300,'),
+              ('    return {"RUNNING": EXIT_SEGMENT_DONE, "RETRY": EXIT_SEGMENT_DONE}.get(state["status"], 0)',
+               '    if state["status"] in ("RUNNING", "RETRY"):\n'
+               '        return EXIT_SEGMENT_DONE\n'
+               '    return 0 if state["status"] in ("CONVERGED", "BUDGET_EXHAUSTED", "PILOT_DONE") else 1'),
+          ]
+          for old, new in subs:
+              assert s.count(old) == 1, old
+              s = s.replace(old, new)
+          p.write_text(s)
+          print("runner patched")
+          PY
+
       - name: Install likelihood data (public, official sources)
         working-directory: ${{ runner.temp }}/c
         run: |
