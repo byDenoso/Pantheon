@@ -1,6 +1,6 @@
 import type {Lang} from '../i18n/state-language.ts';
 const pt = {
-  decisionFlow: 'Abrir fluxo de decisões', returnWeb: 'Voltar à teia', private: 'Área privada', web: 'Teia', domains: 'Domínios', tests: 'Testes', operations: 'Operação', legacy: 'Outras visões',
+  decisionFlow: 'Abrir fluxo de decisões', returnWeb: 'Voltar à teia', private: 'Área privada', web: 'Teia', domains: 'Domínios', tests: 'Testes', operations: 'Operação', mural: 'Mural', legacy: 'Outras visões',
   partial: 'Esta leitura está incompleta. As listas mostram apenas os registros disponíveis.', collectionUnavailable: 'Esta coleção não está disponível na leitura atual.',
   loading: 'Carregando a visão…', sourceAt: 'Leitura de', unknown: 'Não registrado nesta leitura.',
   domainsLead: 'Escolha um domínio para acompanhar seus testes, resultados e pendências.',
@@ -27,7 +27,7 @@ const pt = {
 };
 export type WorkspaceCopy = typeof pt;
 export const WORKSPACE_COPY: Record<Lang, WorkspaceCopy> = {'pt-BR': pt, en: {
-  decisionFlow: 'Open decision workflow', returnWeb: 'Back to the web', private: 'Private area', web: 'Web', domains: 'Domains', tests: 'Tests', operations: 'Operations', legacy: 'Other views',
+  decisionFlow: 'Open decision workflow', returnWeb: 'Back to the web', private: 'Private area', web: 'Web', domains: 'Domains', tests: 'Tests', operations: 'Operations', mural: 'Board', legacy: 'Other views',
   partial: 'This snapshot is incomplete. Lists show only the available records.', collectionUnavailable: 'This collection is unavailable in the current snapshot.',
   loading: 'Loading the view…', sourceAt: 'Snapshot from', unknown: 'Not recorded in this snapshot.',
   domainsLead: 'Choose a domain to follow its tests, results and pending work.', domainsEmpty: 'No domain was recorded in this snapshot.', allDomains: 'All domains',
