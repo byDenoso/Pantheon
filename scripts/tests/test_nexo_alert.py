@@ -151,6 +151,28 @@ class NexoAlertIdentityTests(unittest.TestCase):
         self.assertEqual(found[0]["identity"]["code"], "projection_read_degraded")
         self.assertEqual(found[0]["identity"]["reason"], "manifest_authority_invalid")
 
+    def test_delivery_scope_is_unknown_when_snapshot_age_is_not_observable(self):
+        missing_generated_at = valid_projection(NOW.isoformat())
+        missing_generated_at["manifest"].pop("generated_at")
+        invalid_generated_at = valid_projection(NOW.isoformat())
+        invalid_generated_at["manifest"]["generated_at"] = "not-a-timestamp"
+        cases = (
+            ("projection unavailable", None),
+            ("generated_at missing", missing_generated_at),
+            ("generated_at invalid", invalid_generated_at),
+        )
+        expected = ("Entrega da proje\u00e7\u00e3o p\u00fablica: "
+                    "n\u00e3o verificada; idade desconhecida")
+        for label, projection in cases:
+            with self.subTest(label=label):
+                problems = alert.collect_problems(projection, [], NOW)
+                self.assertIn(expected, alert._scope_text(problems))
+
+        fresh = alert.collect_problems(valid_projection(NOW.isoformat()), [], NOW)
+        self.assertIn("Entrega da proje\u00e7\u00e3o p\u00fablica: "
+                      "sem atraso observado segundo generated_at",
+                      alert._scope_text(fresh))
+
     def test_invalid_optional_cosmology_state_is_read_degraded(self):
         projection = valid_projection(NOW.isoformat())
         projection["cosmology_state"] = {

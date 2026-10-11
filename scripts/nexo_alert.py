@@ -296,15 +296,27 @@ def pending_notification(body: str) -> dict[str, Any] | None:
 
 def _scope_text(problems: Sequence[Mapping[str, Any]]) -> str:
     categories = {problem["identity"].get("category") for problem in problems}
+    codes = {problem["identity"].get("code") for problem in problems}
     projection = "problema observado" if "observability" in categories else "sem falha observada"
     execution = "falha observada" if "execution" in categories else "sem falha observada"
-    delivery = "atraso observado" if "delivery" in categories else "sem atraso observado"
+    unverified_age_codes = {
+        "projection_json_invalid",
+        "projection_unavailable",
+        "projection_read_degraded",
+        "manifest_generation_time_unavailable",
+    }
+    if "delivery" in categories:
+        delivery = "atraso observado segundo generated_at"
+    elif codes & unverified_age_codes:
+        delivery = "n\u00e3o verificada; idade desconhecida"
+    else:
+        delivery = "sem atraso observado segundo generated_at"
     return (
         "Escopo observado:\n"
         f"- Projeção/observabilidade pública: {projection}.\n"
         f"- Execução observada em GitHub Actions: {execution}; execuções ChatGPT e estado do "
         "scheduler são desconhecidos.\n"
-        f"- Entrega da projeção pública: {delivery} segundo generated_at; isso não diagnostica "
+        f"- Entrega da projeção pública: {delivery}; isso não diagnostica "
         "a causa nem confirma autorização/rede.\n"
         "- Entrega privada, email ou notificação: não verificada por este alarme.\n"
         "- Aplicação canônica no Drive/Tower (APPLIED): não verificada; a projeção pública "
