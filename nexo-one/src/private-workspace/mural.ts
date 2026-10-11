@@ -26,16 +26,17 @@ export function privateMuralData(state:unknown){
       updatedAt:at||prior?.updatedAt||'',refs:refs(row.evidence_refs).length?refs(row.evidence_refs):prior?.refs||[]};
     seen.set(id,next);
   }
-  const requests=[...seen.values()].filter(row=>!hidePeer(row)).sort(byRecent);
+  const excludedHandoffs=new Set(events.filter(row=>hidePeer(row)).map(row=>str(row.handoff_id)));
+  const requests=[...seen.values()].filter(row=>!excludedHandoffs.has(row.id)&&!hidePeer(row)).sort(byRecent);
   const evolution=obj(root.evolution),board=arr(evolution.board).length?evolution.board:obj(obj(model.evolution).board).posts;
-  const posts=items(board).map(row=>({id:str(row.id),from:str(row.from),to:str(row.to),text:str(row.text),
+  const posts=items(board).filter(row=>row.private!==true&&!hidePeer(row)).map(row=>({id:str(row.id),from:str(row.from),to:str(row.to),text:str(row.text),
     at:str(row.at),replyTo:str(row.reply_to),resolved:Boolean(row.resolved_at),refs:refs(row.refs),replies:[]} as MuralPost))
     .filter(row=>row.id&&!hidePeer(row));
   const responses=new Map<string,MuralPost[]>();
   for(const row of posts)if(row.replyTo)responses.set(row.replyTo,[...(responses.get(row.replyTo)||[]),row]);
   const messages=posts.filter(row=>!row.replyTo).map(row=>({...row,replies:(responses.get(row.id)||[]).sort((a,b)=>a.at.localeCompare(b.at))}))
     .sort((a,b)=>b.at.localeCompare(a.at));
-  const campaigns=items(model.roadmaps).filter(row=>str(obj(row.charter).status).toUpperCase()==='PROPOSED')
+  const campaigns=items(model.roadmaps).filter(row=>str(obj(row.charter).status).toUpperCase()==='PROPOSED'&&!hidePeer(row))
     .map(row=>{const charter=obj(row.charter),semantic=obj(row.semantic);return {
       id:str(row.roadmap_id||row.id),title:str(row.title||row.id),question:str(charter.question||semantic.question_plain||row.question),
       proposedBy:str(charter.proposed_by),proposedAt:str(charter.proposed_at),refs:refs(charter.refs)
