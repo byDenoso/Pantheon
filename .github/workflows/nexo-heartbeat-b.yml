@@ -1,18 +1,10 @@
 name: NEXO heartbeat B
 
-# Keeps the Writer robot on a 15-minute cadence without trusting GitHub's cron.
-# 2026-09-29: of the last 40 robot runs only 1 came from its own schedule; the rest were
-# manual or chained dispatches, with gaps of ~2 h. This job stays alive for ~5h30m, checks
-# every 5 minutes and dispatches the robot when it has not started in 15 minutes, then hands
-# over to its own successor. The cron below only re-seeds the chain if it ever breaks.
-# Redundant twin of nexo-heartbeat.yml: own chain, own concurrency group, cron offset by 1h30
-# and checks offset by 150 s, so either chain alone keeps the robot on cadence. The robot's
-# own concurrency group queues any overlapping dispatch instead of running it in parallel.
-# Public repository: Actions minutes are free.
+# Manual-only legacy diagnostic: a deliberate dispatch temporarily monitors the Writer.
+# The bounded run neither re-seeds itself nor schedules a successor.
+# Recurrence remains with the Writer's own cron and event triggers.
 on:
   workflow_dispatch:
-  schedule:
-    - cron: '41 1-23/2 * * *'
 
 permissions:
   actions: write
@@ -54,7 +46,3 @@ jobs:
             sleep "$CHECK_EVERY_S"
           done
 
-      - name: Hand over to the next heartbeat
-        # Not on cancellation: cancelling (or disabling) this workflow is how a person stops the chain.
-        if: success() || failure()
-        run: gh workflow run nexo-heartbeat-b.yml --ref main && echo "successor dispatched"
