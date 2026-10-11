@@ -54,3 +54,16 @@ test('PEER is excluded from both operational and campaign cards',()=>{
  assert.deepEqual(data.messages.map(row=>row.id),['BP-SYNTH-VISIBLE']);
  assert.deepEqual(data.campaigns.map(row=>row.id),['RM-SYNTH-VISIBLE']);
 });
+
+
+test('private source posts and hidden domain metadata never reach the mural',()=>{
+ const sensitive={...handoff('HANDOFF_CREATED','PENDING','2026-10-10T08:00:00Z','HO-SYNTH-HIDDEN'),objective_ref:'PEER-HIDDEN'};
+ const safe=handoff('HANDOFF_CREATED','PENDING','2026-10-10T08:01:00Z','HO-SYNTH-OK');
+ const data=privateMuralData({...base,read_model:{activity:[sensitive,safe],roadmaps:[]},
+  evolution:{board:[
+    {id:'BP-SYNTH-PRIVATE',from:'LEARNER',to:'EXECUTOR',private:true,text:'Sensitive private text',at:'2026-10-10T08:00:00Z'},
+    {id:'BP-SYNTH-OK',from:'LEARNER',to:'EXECUTOR',text:'Allowed context',at:'2026-10-10T09:00:00Z'}
+  ]}});
+ assert.deepEqual(data.requests.map(row=>row.id),['HO-SYNTH-OK']);
+ assert.deepEqual(data.messages.map(row=>row.id),['BP-SYNTH-OK']);
+});
