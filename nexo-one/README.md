@@ -1,6 +1,10 @@
 # NEXO ONE
 
-Frontend e backend atuais do NEXO Atlas em `Pantheon/nexo-one`, publicados em https://nexo-one-two.vercel.app/. React 19, TypeScript, Vite e Node 24. A Tower/Writer permanece a autoridade operacional; a migração SQLite está em ensaio. `atlas-control-tower/` preserva adapters de compatibilidade, sem um segundo frontend ativo.
+O Atlas em produção está em https://nexo.denerpereira.com.br/, no projeto Sites existente `appgprj_6ac45767d678819182c86c56d11e0d37`. Seu Worker e sua interface têm repositório de fonte próprio no Sites. A identidade ChatGPT, a sessão PIN e a conexão Drive desse produto não são as credenciais do runtime Vercel descrito abaixo.
+
+Este diretório preserva o runtime NEXO ONE e suas integrações de compatibilidade em React 19, TypeScript, Vite e Node 24. `atlas-control-tower/` também preserva adapters de compatibilidade. A Tower/Writer no Drive permanece a autoridade operacional; GitHub contém código e derivados. Alterar este checkout não publica o Site atual.
+
+As seções abaixo documentam o runtime deste diretório. Para a revisão entre os componentes e seus limites, veja `docs/SYSTEM_REVIEW_2026-10-11.md`.
 
 ## Current scope
 

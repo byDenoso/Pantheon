@@ -1,13 +1,17 @@
 import {createHash} from 'node:crypto';
 import {json,requireEnv,item,inferContext,ProviderError} from './http.mjs';
 import {googleConnectToken,GOOGLE_READ_SCOPES,GOOGLE_WRITE_SCOPES} from './connect.mjs';
-let legacyTokenCache=null;
+const legacyTokenCache=new Map();
 async function legacyGoogleToken(env,signal) {
   requireEnv(env,'GOOGLE_CLIENT_ID','GOOGLE_CLIENT_SECRET','GOOGLE_REFRESH_TOKEN');
-  if(legacyTokenCache && legacyTokenCache.until>Date.now()) return legacyTokenCache.value;
+  const key=createHash('sha256').update(JSON.stringify([env.GOOGLE_CLIENT_ID,env.GOOGLE_CLIENT_SECRET,env.GOOGLE_REFRESH_TOKEN])).digest('hex');
+  const cached=legacyTokenCache.get(key);
+  if(cached&&cached.until>Date.now())return cached.value;
   const result=await json('https://oauth2.googleapis.com/token',{signal,method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:new URLSearchParams({client_id:env.GOOGLE_CLIENT_ID,client_secret:env.GOOGLE_CLIENT_SECRET,refresh_token:env.GOOGLE_REFRESH_TOKEN,grant_type:'refresh_token'}).toString()});
   if(!result.access_token)throw new Error('AUTH_REQUIRED');
-  legacyTokenCache={value:result.access_token,until:Date.now()+Math.max(0,(result.expires_in||3600)-120)*1000};return result.access_token;
+  legacyTokenCache.set(key,{value:result.access_token,until:Date.now()+Math.max(0,(result.expires_in||3600)-120)*1000});
+  while(legacyTokenCache.size>16)legacyTokenCache.delete(legacyTokenCache.keys().next().value);
+  return result.access_token;
 }
 export async function googleToken(env,signal,{scopes=GOOGLE_READ_SCOPES}={}) {
   if(env.GOOGLE_CONNECTOR)return googleConnectToken(env,signal,{scopes});

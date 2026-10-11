@@ -77,9 +77,27 @@ test('standalone galaxy and topology public builders stop before reading private
 
 test('Pages workflow never retrieves private Tower inputs or old public history', async () => {
   const workflow = await readFile(join(project, '..', '.github/workflows/nexo-one-pages.yml'), 'utf8');
-  assert.doesNotMatch(workflow, /NEXO_(?:VAULT_READ_TOKEN|DRIVE_READER_JSON)|_vault|build_public_projection|build-galaxy-snapshot|build-mcp-topology|Hydrate previous/);
+  assert.doesNotMatch(workflow, /NEXO_(?:VAULT_READ_TOKEN|DRIVE_READER_JSON)|_vault|build_public_projection|build-galaxy-snapshot|build-mcp-topology|Hydrate previous|nexo-projection/);
   assert.match(workflow, /scripts\/static-publication\.mjs --check/);
   assert.match(workflow, /path: nexo-one\/dist/);
+  const upload = workflow.indexOf('uses: actions/upload-pages-artifact@');
+  const finalStep = workflow.slice(0, upload).split('      - name: ').at(-2);
+  assert.match(finalStep, /scripts\/static-publication\.mjs --check/,
+    'the last build step before upload must validate the exact artifact');
+  assert.match(finalStep, /scripts\/scan-public-bundle\.mjs/);
+  const readback = workflow.split('- name: Verify former data URLs are unavailable')[1];
+  assert.match(readback, /for route in[^;]*tower-projection\/projection\.json[^;]*tower-projection\/manifest\.json/);
+  assert.doesNotMatch(readback, /curl -fsSL[^\n]*tower-projection/);
+});
+
+test('a Tower projection reintroduced after sealing fails the final publication check', async t => {
+  const root = await fixture(t);
+  await sealStaticPublication(join(root, 'dist'));
+  await assertStaticPublication(join(root, 'dist'));
+  await writeFile(join(root, 'dist', 'tower-projection', 'projection.json'), '{"manifest":{}}');
+  await writeFile(join(root, 'dist', 'tower-projection', 'manifest.json'), '{}');
+  await assert.rejects(assertStaticPublication(join(root, 'dist')),
+    /UNAPPROVED_STATIC_PUBLICATION: tower-projection\/manifest\.json, tower-projection\/projection\.json/);
 });
 
 

@@ -118,17 +118,33 @@ async function readPublishedTowerSystem({env=process.env,signal,now=Date.now(),f
   return inflight;
 }
 async function requestBody(req){
-  if(req.body&&typeof req.body==='object'&&!Buffer.isBuffer(req.body))return req.body;
-  if(typeof req.body==='string'){try{return JSON.parse(req.body);}catch{return {};}}
-  if(!req||typeof req[Symbol.asyncIterator]!=='function')return {};
-  let raw='';for await(const chunk of req){raw+=Buffer.from(chunk).toString('utf8');if(raw.length>65536)throw new Error('REQUEST_BODY_TOO_LARGE');}
+  const maxBytes=65536;
+  const bounded=bytes=>{if(bytes>maxBytes)throw new Error('REQUEST_BODY_TOO_LARGE');};
+  if(req.body&&typeof req.body==='object'&&!(req.body instanceof Uint8Array)){
+    let serialized;try{serialized=JSON.stringify(req.body);}catch{throw new Error('INVALID_JSON');}
+    bounded(Buffer.byteLength(serialized));return req.body;
+  }
+  let bytes;
+  if(typeof req.body==='string'||req.body instanceof Uint8Array){
+    bounded(typeof req.body==='string'?Buffer.byteLength(req.body):req.body.byteLength);
+    bytes=Buffer.from(req.body);
+  }else{
+    if(!req||typeof req[Symbol.asyncIterator]!=='function')return {};
+    const chunks=[];let size=0;
+    for await(const chunk of req){const part=Buffer.from(chunk);size+=part.byteLength;bounded(size);chunks.push(part);}
+    bytes=Buffer.concat(chunks,size);
+  }
+  // Decode once: a multibyte passphrase may span arbitrary stream chunks.
+  let raw;try{raw=new TextDecoder('utf-8',{fatal:true}).decode(bytes);}catch{throw new Error('INVALID_JSON');}
   if(!raw.trim())return {};try{return JSON.parse(raw);}catch{throw new Error('INVALID_JSON');}
 }
+const bodyError=error=>error?.message==='REQUEST_BODY_TOO_LARGE'?['REQUEST_BODY_TOO_LARGE',413]:error?.message==='INVALID_JSON'?['INVALID_JSON',400]:null;
 function personalError(error){
   const code=String(error?.message||error||'REQUEST_FAILED');
+  const inputError=bodyError(error);if(inputError)return inputError;
   if(code==='PERSONAL_ACTION_DENIED')return [code,403];
   if(['APPROVAL_MISMATCH','STALE_PROPOSAL','EFFECT_RESERVATION_CONFLICT','CAPABILITY_PASS_ROUTE_NOT_FOUND'].some(value=>code.includes(value)))return [code,409];
-  if(['PERSONAL_ACTION_INPUT_REQUIRED','PERSONAL_ACTION_NOT_EXECUTABLE','INVALID_JSON','REQUEST_BODY_TOO_LARGE'].includes(code))return [code,400];
+  if(['PERSONAL_ACTION_INPUT_REQUIRED','PERSONAL_ACTION_NOT_EXECUTABLE'].includes(code))return [code,400];
   if(code.includes('AUTH_REQUIRED'))return ['AUTH_REQUIRED',401];
   return ['REQUEST_FAILED',500];
 }
@@ -141,13 +157,13 @@ export default async function handler(req,res) {
   if(route==='atlas-locale')res.setHeader('Vary','Authorization, Origin, Cookie, Accept-Language, X-Vercel-IP-Country');
   // Evaluate the privacy boundary before any adapter, cache or streaming read.
   try{
-    const boundary=await atlasBoundary(req,env,{route,now,body:route==='atlas-session'?await requestBody(req):{}});
+    const boundary=await atlasBoundary(req,env,{route,now,body:route==='atlas-session'&&req.method==='POST'?await requestBody(req):{}});
     if(boundary){
       if(boundary.setCookie)res.setHeader('Set-Cookie',boundary.setCookie);
       if(boundary.status===429)res.setHeader('Retry-After','900');
       return send(boundary.body,boundary.status);
     }
-  }catch{return send({error:'AUTH_UNAVAILABLE'},503);}
+  }catch(error){const inputError=bodyError(error);return inputError?send({error:inputError[0]},inputError[1]):send({error:'AUTH_UNAVAILABLE'},503);}
   const privateAccess=sessionAccess(req,env,now),access=privateAccess?'PRIVATE':'PUBLIC';
   const providerEnv=privateAccess?googleRuntimeEnvironment(env,req.headers):env;
   const origin=String(req.headers.origin||'');
@@ -176,7 +192,7 @@ export default async function handler(req,res) {
       if(req.method!=='GET')return send({error:'METHOD_NOT_ALLOWED'},405);
       try{
         const value=await readAtlasPrivatePublication(googleRuntimeEnvironment(env,req.headers));
-        const encoded=encodePrivateResponse(value,req.headers['accept-encoding']);
+        const encoded=await encodePrivateResponse(value,req.headers['accept-encoding']);
         res.setHeader('Vary','Authorization, Origin, Cookie, Accept-Encoding');
         if(encoded.encoding)res.setHeader('Content-Encoding',encoded.encoding);
         res.statusCode=200;return res.end(encoded.bytes);
@@ -294,5 +310,5 @@ export default async function handler(req,res) {
     if(route==='context')return send({...world,items:world.items.filter(x=>x.contextId===url.searchParams.get('id'))});
     if(route==='recall')return send({...world,query:q,items:world.items.filter(x=>`${x.title} ${x.summary||''} ${x.contextId||''}`.toLocaleLowerCase().includes(q.toLocaleLowerCase())||['drive','gmail','github'].includes(x.source))});
     return send(world);
-  }catch(error){console.error('[nexo-one]',route,String(error?.message||error));return send({error:'REQUEST_FAILED'},500);}
+  }catch(error){const inputError=bodyError(error);if(inputError)return send({error:inputError[0]},inputError[1]);console.error('[nexo-one]',route,String(error?.message||error));return send({error:'REQUEST_FAILED'},500);}
 }

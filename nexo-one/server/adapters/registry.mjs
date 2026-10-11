@@ -7,12 +7,16 @@ import {hash,semantic} from '../compiler/world-state.mjs';
 export const readers={drive,gmail,calendar,github,vercel,nexo,atlas};
 export const labels={drive:'Google Drive',gmail:'Gmail',calendar:'Calendar',github:'GitHub',vercel:'Vercel',nexo:'NEXO SSoT',atlas:'Atlas'};
 const cache=new Map(), inflight=new Map();
+let cacheGeneration=0;
+// Identity and source configuration are part of the scope. Hash the effective
+// environment so credentials never appear in keys or returned diagnostics.
+const scopeKey=(access,id,env)=>`${access}:${id}:${hash(Object.entries(env).filter(([,value])=>value!==undefined).sort(([a],[b])=>a.localeCompare(b)))}`;
 const publicTruthGraphProjection=env=>`https://raw.githubusercontent.com/${env.GITHUB_REPOSITORY||'byDenoso/Pantheon'}/main/nexo-one/data/truthgraph.snapshot.json`;
 export function pending(id,now,message='Aguardando leitura.') {return {provider:{id,label:labels[id],status:'UNAVAILABLE',lastSuccessAt:null,checkedAt:new Date(now).toISOString(),revision:null,message,partial:false,count:null},items:[]};}
 export async function readProvider(id,{env=process.env,now=Date.now(),access='PUBLIC',query='',reader=readers[id],timeout=8000,force=false}={}) {
-  const key=`${access}:${id}`;
   if(access==='PUBLIC'&&!['github','nexo'].includes(id))return {...pending(id,now,'Conecte sua conta para consultar esta fonte.'),provider:{...pending(id,now).provider,status:'AUTH_REQUIRED',message:'Acesso privado ainda não configurado.'}};
   const effectiveEnv=access==='PUBLIC'?(id==='nexo'?{NEXO_SOURCE_URL:publicTruthGraphProjection(env)}:{GITHUB_REPOSITORY:env.GITHUB_REPOSITORY}):env;
+  const key=scopeKey(access,id,effectiveEnv),generation=cacheGeneration;
   const old=cache.get(key);
   if(!query&&!force&&old&&now-Date.parse(old.provider.lastSuccessAt)<60000)return old;
   if(!query&&inflight.has(key))return inflight.get(key);
@@ -24,16 +28,20 @@ export async function readProvider(id,{env=process.env,now=Date.now(),access='PU
       const revision=result.revision||hash(result.items.map(semantic).sort((a,b)=>a.id.localeCompare(b.id)));
       const projected=access==='PUBLIC'&&id==='nexo';
       const out={items:result.items,...(result.truthGraphInput?{truthGraphInput:result.truthGraphInput}:{}),provider:{id,label:labels[id],status:'AVAILABLE',lastSuccessAt:new Date(now).toISOString(),checkedAt:new Date(now).toISOString(),revision,message:projected?'Projection-only do TruthGraph; autoridade permanece nas fontes canônicas.':result.partial?'Leitura parcial; há mais registros na fonte.':'Leitura concluída.',partial:projected||!!result.partial,count:result.items.length}};
-      if(!query)cache.set(key,out);return out;
+      if(!query&&generation===cacheGeneration){
+        cache.set(key,out);
+        while(cache.size>64)cache.delete(cache.keys().next().value);
+      }
+      return out;
     }catch(error){
       const code=['AUTH_REQUIRED','RATE_LIMITED'].includes(error.code||error.message)?error.code||error.message:'UNAVAILABLE';
-      if(code==='AUTH_REQUIRED'&&!query)cache.delete(key);
+      if(code==='AUTH_REQUIRED'&&!query&&generation===cacheGeneration)cache.delete(key);
       const fallback=!query&&code!=='AUTH_REQUIRED'?old:null;
       return {items:fallback?fallback.items.map(x=>({...x,freshness:{...x.freshness,state:'STALE'}})):[],...(fallback?.truthGraphInput?{truthGraphInput:fallback.truthGraphInput}:{}),provider:{...pending(id,now).provider,status:code,lastSuccessAt:fallback?.provider.lastSuccessAt||null,revision:fallback?.provider.revision||null,count:fallback?.items.length??null,partial:!!fallback,message:code==='AUTH_REQUIRED'?'Credencial ou permissão de leitura necessária.':code==='RATE_LIMITED'?'Limite de consultas atingido.':fallback?'Fonte indisponível; exibindo a última leitura válida.':'Não foi possível consultar esta fonte.'}};
     }finally{clearTimeout(timer);}
   })();
   if(!query)inflight.set(key,work);
-  try{return await work;}finally{if(!query)inflight.delete(key);}
+  try{return await work;}finally{if(!query&&inflight.get(key)===work)inflight.delete(key);}
 }
-export function clearProviderCache(){cache.clear();inflight.clear();}
+export function clearProviderCache(){cacheGeneration++;cache.clear();inflight.clear();}
 export function adapter(id,options={}) {return {snapshot:()=>readProvider(id,options),health:async()=>(await readProvider(id,options)).provider,search:query=>readProvider(id,{...options,query})};}
