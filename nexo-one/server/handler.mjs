@@ -143,6 +143,7 @@ export default async function handler(req,res) {
   try{
     const boundary=await atlasBoundary(req,env,{route,now,body:route==='atlas-session'?await requestBody(req):{}});
     if(boundary){
+      if(route==='mcp'&&boundary.status===405)res.setHeader('Allow','POST, OPTIONS');
       if(boundary.setCookie)res.setHeader('Set-Cookie',boundary.setCookie);
       if(boundary.status===429)res.setHeader('Retry-After','900');
       return send(boundary.body,boundary.status);

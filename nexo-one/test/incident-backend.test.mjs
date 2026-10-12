@@ -1,6 +1,7 @@
 import {atlasTestSession} from './helpers/atlas-session.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import {createHash} from 'node:crypto';
 import {researchSnapshotFromPublication} from '../server/adapters/research-snapshot.mjs';
 import {buildPagesProjection} from '../scripts/build-pages-system.mjs';
 import {buildAtlasResearchView} from '../server/compiler/atlas-research-api.mjs';
@@ -71,8 +72,11 @@ test('HTTP research handler and official MCP transport carry the same incident p
  assert.equal(res.statusCode,200);assert.equal(api.data.evolution.incidents.length,1);
  const web=createNexoMcpWebHandler({readSnapshot:async()=>researchSnapshotFromPublication(source)});
  const client=new Client({name:'incident-contract-test',version:'1.0.0'},{versionNegotiation:{mode:'auto'}});
+ const key='SYNTHETIC_INCIDENT_MCP_TEST_KEY',old=process.env.NEXO_MCP_ACCESS_KEY_SHA256;
+ process.env.NEXO_MCP_ACCESS_KEY_SHA256=createHash('sha256').update(key).digest('hex');
+ t.after(()=>{if(old===undefined)delete process.env.NEXO_MCP_ACCESS_KEY_SHA256;else process.env.NEXO_MCP_ACCESS_KEY_SHA256=old;});
  try{
-  await client.connect(new StreamableHTTPClientTransport(new URL('http://test.local/mcp'),{fetch:(url,init)=>web.fetch(new Request(url,init))}));
+  await client.connect(new StreamableHTTPClientTransport(new URL('http://test.local/mcp'),{fetch:(url,init)=>{const request=new Request(url,init);request.headers.set('Authorization',`Bearer ${key}`);return web.fetch(request);}}));
   const reply=await client.callTool({name:'get_operations',arguments:{}});
   assert.equal(reply.isError,undefined);const payload=JSON.parse(reply.content[0].text);
   assert.deepEqual(payload.incidents,api.data.evolution.incidents);assert.ok(!JSON.stringify(payload).includes(secret));
