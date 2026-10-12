@@ -25,6 +25,27 @@ test('one raw canonical Tower compiles every private view with one revision and 
  assert.ok(buildAtlasMetroModel(data.system,Date.parse(data.generated_at)).nodes.some(row=>row.domain==='OLYMPUS'));
  assert.ok(data.system.inbox.length>0);assert.ok(data.system.filaments.length>0);
 });
+test('PEER records and references are excluded from every private Atlas view without editing Tower',()=>{
+ const tower=makePrivateTowerFixture();
+ const insert=(path,value)=>{tower.files[path]={encoding:'json',value};tower.file_count++;};
+ insert('entities/test/TEST-PEER-D10.json',{id:'TEST-PEER-D10',domain:'SCIENCE',title:'Restricted research',status:'READY',question:'Model comparison',result:{chi2:123}});
+ insert('entities/work/WORK-PEER-D10.json',{id:'WORK-PEER-D10',domain:'SCIENCE',title:'Restricted work',status:'READY'});
+ insert('entities/artifact/ARTIFACT-PEER-01.json',{id:'ARTIFACT-PEER-01',type:'RESULT',numbers:[1,2,3]});
+ insert('events/EV-PEER-D10.json',{id:'EV-PEER-D10',entity_id:'TEST-PEER-D10',event_type:'TEST_CHECKPOINT'});
+ tower.files['CONTROL.json'].value.peer_detection_note='PEER research must not enter the Atlas';
+ tower.files['manifests/capabilities.json'].value.capabilities['peer.camb.exact_v2']={status:'ACTIVE'};
+ tower.files['evolution/gates.json'].value.gates.push({id:'GATE-PEER-01',title:'Private PEER gate'});
+ const sourceBefore=JSON.stringify(tower);
+ const normalized=normalizePrivateTower(tower);
+ assert.equal(JSON.stringify(tower),sourceBefore,'canonical source must remain unchanged');
+ assert.ok(normalized.records.tests.some(row=>row.id==='TEST-01'));
+ assert.ok(!normalized.records.tests.some(row=>row.id==='TEST-PEER-D10'));
+ assert.equal(normalized.records.coverage.tests.count,1);
+ assert.doesNotMatch(JSON.stringify(normalized.records),/(^|[^a-z0-9])peer(?=$|[^a-z0-9])/i);
+ const data=compilePrivateTowerRuntime(tower).data;
+ assert.ok(data.system.read_model.tests['TEST-01']);
+ assert.doesNotMatch(JSON.stringify(data),/(^|[^a-z0-9])peer(?=$|[^a-z0-9])/i);
+});
 test('malformed canonical identity/count/control reject instead of compiling a mirror',()=>{
  for(const mutate of [t=>{t.storage='PUBLIC';},t=>{t.stable_file_id='other';},t=>{t.file_count++;},t=>{t.revision='sha256:'+'b'.repeat(64);},t=>{t.files['CONTROL.json'].value.truth_owner='OTHER';}]){const tower=makePrivateTowerFixture();mutate(tower);assert.throws(()=>normalizePrivateTower(tower),/PRIVATE_TOWER_INVALID/);}
 });
