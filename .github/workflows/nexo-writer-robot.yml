@@ -166,7 +166,8 @@ jobs:
           SPOOL_ID: 1M2maKkuEjxumZRa145dzei7dEPFi2yKsKlUf7_scC-E
         run: |
           python - <<'PY'
-          import base64, csv, io, json, os
+          import base64, csv, io, json, os, re
+          from datetime import datetime, timezone
           from google.oauth2 import service_account
           from google.auth.transport.requests import AuthorizedSession
 
@@ -198,10 +199,38 @@ jobs:
               raw=(row.get("envelope_b64url") or "").strip()
               if not stable or not raw or stable in ack:
                   continue
+              # New scheduled tasks use a deliberately restricted, private,
+              # fileless bridge. Legacy spool entries keep their historical path.
+              # This is never a bypass for a Drive ACL/policy/auth 403.
+              if stable.startswith("sched-v1-"):
+                  if (not re.fullmatch(r"sched-v1-[a-z0-9-]{1,51}",stable)
+                          or len(raw)>32768
+                          or not re.fullmatch(r"[A-Za-z0-9_-]+",raw)):
+                      print("scheduled spool restricted item rejected (id/size/encoding)")
+                      continue
               try:
                   padded=raw+"="*((4-len(raw)%4)%4)
-                  envelope=json.loads(base64.urlsafe_b64decode(padded.encode()).decode("utf-8"))
-              except Exception:
+                  data=base64.b64decode(padded.encode("ascii"),altchars=b"-_",validate=True)
+                  if len(data)>24576:
+                      continue
+                  envelope=json.loads(data.decode("utf-8"),parse_constant=lambda _: (_ for _ in ()).throw(ValueError("non-finite JSON")))
+                  if stable.startswith("sched-v1-"):
+                      # Sheets write provenance is GATEWAY, not DRIVE. Handoff
+                      # admission must remain impossible through this path.
+                      if (type(envelope) is not dict
+                              or set(envelope)!={"kind","source","created_at","intent_id","payload"}
+                              or envelope["kind"] not in {"BOARD_POST","INTEGRITY_REPORT","LEARNING_SIGNAL"}
+                              or type(envelope["payload"]) is not dict
+                              or not isinstance(envelope["intent_id"],str)
+                              or not 1<=len(envelope["intent_id"])<=160
+                              or not isinstance(envelope["source"],str)
+                              or envelope["source"] != str(row.get("role") or "")
+                              or not isinstance(envelope["created_at"],str)):
+                          continue
+                      at=datetime.fromisoformat(envelope["created_at"].replace("Z","+00:00"))
+                      if at.tzinfo is None or at.utcoffset()!=timezone.utc.utcoffset(at):
+                          continue
+              except (ValueError,TypeError,KeyError,UnicodeDecodeError):
                   continue
               item_id=f"sheet-{stable}"
               gateway["items"].append({"id":item_id,"envelope":envelope})
