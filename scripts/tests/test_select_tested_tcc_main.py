@@ -1,5 +1,11 @@
 import importlib.util
+import json
+import os
 from pathlib import Path
+import subprocess
+import sys
+import tempfile
+import textwrap
 import unittest
 
 spec = importlib.util.spec_from_file_location('selector', Path(__file__).parents[1]/'select_tested_tcc_main.py')
@@ -57,6 +63,55 @@ class Selection(unittest.TestCase):
         self.assertLess(selection,recheck);self.assertLess(recheck,upload)
         self.assertIn('if [ "$verified_sha" != "$tested_sha" ]; then', text)
         self.assertIn('retaining the Drive bundle',text)
+
+    def test_projection_publisher_retains_derivative_if_tested_revision_moves(self):
+        workflow=(Path(__file__).parents[2]/'.github/workflows/nexo-writer-robot.yml').read_text()
+        section=workflow.split('- name: Publish derived NEXO state projection from tested code',1)[1].split('      - name: ',1)[0]
+        self.assertIn("steps.bundle.outputs.tested_sha != ''",section)
+        self.assertIn("steps.robot.outcome == 'success'",section)
+        self.assertIn('echo "tested_sha=$tested_sha" >> "$GITHUB_OUTPUT"',workflow)
+        script=textwrap.dedent(section.split('        run: |\n',1)[1])
+        self.assertNotIn('/tmp/tcc_proj',script)
+        self.assertNotIn('gh workflow run nexo-one-pages.yml',workflow)
+        for selected, checkout, projects in (([OLD],CURRENT,0),([CURRENT],OLD,0),([CURRENT,OLD],CURRENT,1)):
+            with self.subTest(selected=selected,checkout=checkout), tempfile.TemporaryDirectory() as work:
+                root=Path(work)
+                tools=root/'bin';tools.mkdir()
+                source=root/'checkout';source.mkdir()
+                selector=root/'selected.json';selector.write_text(json.dumps(selected))
+                calls=root/'calls'
+                python_mock=tools/'python'
+                python_mock.write_text(f'#!{sys.executable}\n'+textwrap.dedent('''
+                    import json, os, sys
+                    from pathlib import Path
+                    if sys.argv[1] == 'scripts/select_tested_tcc_main.py':
+                        path=Path(os.environ['SELECTOR_VALUES'])
+                        values=json.loads(path.read_text())
+                        print(values.pop(0))
+                        path.write_text(json.dumps(values))
+                    else:
+                        with open(os.environ['CALLS'],'a') as log: log.write('project\\n')
+                    '''))
+                git_mock=tools/'git'
+                git_mock.write_text(f'#!{sys.executable}\n'+textwrap.dedent('''
+                    import os, sys
+                    if sys.argv[1:2] == ['-C'] and sys.argv[-2:] == ['rev-parse','HEAD']:
+                        print(os.environ['CHECKOUT_SHA'])
+                    else:
+                        with open(os.environ['CALLS'],'a') as log: log.write('publish\\n')
+                    '''))
+                python_mock.chmod(0o755);git_mock.chmod(0o755)
+                result=subprocess.run(['bash','-c',script.replace('/tmp/tcc-tested',str(source))],
+                    text=True,capture_output=True,env={**os.environ,'PATH':str(tools)+os.pathsep+os.environ['PATH'],
+                    'TESTED_SHA':CURRENT,'CHECKOUT_SHA':checkout,'SELECTOR_VALUES':str(selector),'CALLS':str(calls)})
+                self.assertEqual(result.returncode,0,result.stderr)
+                self.assertIn('retaining the previous derivative',result.stdout)
+                self.assertEqual(calls.read_text() if calls.exists() else '', 'project\n'*projects)
+
+    def test_alarm_reads_existing_derivative_without_requiring_pages_data(self):
+        text=(Path(__file__).parents[2]/'.github/workflows/nexo-alert.yml').read_text()
+        self.assertNotIn('github.io/Pantheon/tower-projection',text)
+        self.assertIn('raw.githubusercontent.com/${GITHUB_REPOSITORY}/nexo-projection/projection.json',text)
 
     def test_public_inbox_reads_are_pinned_to_captured_ref_sha(self):
         root=Path(__file__).parents[2]

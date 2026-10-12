@@ -89,13 +89,23 @@ const publicTools=()=>Object.values(MCP_TOOL_REGISTRY).filter(isPublicReadOnlyMc
 const calls=[];
 let total=0,errors=0;
 export function mcpTelemetry(){return {scope:'process-local',total,errors,calls:calls.map(call=>({...call}))};}
-const errorCode=error=>error?.code==='MCP_INVALID_INPUT'?'MCP_INVALID_INPUT':error?.code==='UNKNOWN_MCP_TOOL'?'UNKNOWN_MCP_TOOL':'MCP_SOURCE_UNAVAILABLE';
+const MCP_ERROR_CODES=new Set(['MCP_INVALID_INPUT','UNKNOWN_MCP_TOOL','MCP_AUTH_REQUIRED','MCP_RATE_LIMITED','MCP_TIMEOUT','MCP_CANCELLED','MCP_SOURCE_UNAVAILABLE']);
+const errorCode=error=>{
+  const candidate=error?.code||error?.message;
+  if(MCP_ERROR_CODES.has(candidate))return candidate;
+  if(['AUTH_REQUIRED','AUTHENTICATION_REQUIRED','EXISTING_GOOGLE_AUTH_REQUIRED'].includes(candidate))return 'MCP_AUTH_REQUIRED';
+  if(candidate==='RATE_LIMITED')return 'MCP_RATE_LIMITED';
+  if(error?.name==='TimeoutError'||['TIMEOUT','ETIMEDOUT'].includes(candidate))return 'MCP_TIMEOUT';
+  if(error?.name==='AbortError'||candidate==='ABORT_ERR')return 'MCP_CANCELLED';
+  return 'MCP_SOURCE_UNAVAILABLE';
+};
 
 export async function readNexoMcpStatus({readSnapshot}){
-  let model=null,snapshot=null;
-  try{snapshot=await readSnapshot();model=await executeMcpTool(snapshot,'get_science_state',{});}catch{}
+  let model=null,snapshot=null,sourceErrorCode=null;
+  try{snapshot=await readSnapshot();model=await executeMcpTool(snapshot,'get_science_state',{});}catch(error){sourceErrorCode=errorCode(error);}
   return {
     contract:'NEXO_MCP_STATUS_V1',server:MCP_SERVER_INFO,status:model?.state==='READY'?'READY':'DEGRADED',
+    source_error_code:model?.state==='READY'?null:sourceErrorCode||'MCP_SOURCE_UNAVAILABLE',
     generated_at:model?.generatedAt||null,last_read_at:snapshot?.lastReadAt||null,
     fingerprint:model?.fingerprint||null,projectionFingerprint:model?.projectionFingerprint||null,
     sourceVersion:model?.sourceVersion||null,authority:model?.authority||null,freshness:model?.freshness||'UNAVAILABLE',
@@ -115,7 +125,7 @@ function publicCapabilities(status){
     contract:'NEXO_MCP_CAPABILITIES_V1',status:status.status,
     public_surface:{access:'PUBLIC',mode:'READ_ONLY',authority:status.authority,
       projection_only:status.projectionOnly,writeback:status.writeback,
-      freshness:status.freshness,generated_at:status.generated_at,last_read_at:status.last_read_at,
+      freshness:status.freshness,source_error_code:status.source_error_code,generated_at:status.generated_at,last_read_at:status.last_read_at,
       source_version:status.sourceVersion,fingerprint:status.fingerprint,
       projection_fingerprint:status.projectionFingerprint},
     tools,tool_count:tools.length,

@@ -25,13 +25,15 @@ jobs:
         run: |
           set -u
           : > /tmp/problems
-          proj=$(curl -fsS "https://bydenoso.github.io/Pantheon/tower-projection/projection.json" || true)
-          if [ -z "$proj" ]; then echo "- O site público não respondeu." >> /tmp/problems; fi
+          # The alarm consumes the existing derived branch; Pages publishes only
+          # the application shell and must never become a Tower data dependency.
+          proj=$(curl --connect-timeout 10 --max-time 30 -fsS "https://raw.githubusercontent.com/${GITHUB_REPOSITORY}/nexo-projection/projection.json" || true)
+          if [ -z "$proj" ]; then echo "- A projeção derivada não respondeu." >> /tmp/problems; fi
           if [ -n "$proj" ]; then
             gen=$(echo "$proj" | jq -r '.manifest.generated_at // empty')
             if [ -n "$gen" ]; then
               age=$(( ( $(date -u +%s) - $(date -u -d "$gen" +%s) ) / 3600 ))
-              [ "$age" -ge 3 ] && echo "- O site está sem atualização há ${age}h (última: $gen)." >> /tmp/problems
+              [ "$age" -ge 3 ] && echo "- A projeção derivada está sem atualização há ${age}h (última: $gen)." >> /tmp/problems
             fi
             for role in EXECUTOR LEARNER REFUTADOR GUARDIAO; do
               last=$(echo "$proj" | jq -r --arg r "$role" '[.activity[] | select(.role==$r) | .at] | max // empty')

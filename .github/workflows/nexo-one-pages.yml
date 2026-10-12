@@ -10,8 +10,6 @@ on:
 
 permissions:
   contents: read
-  pages: write
-  id-token: write
 
 concurrency:
   group: nexo-one-github-pages-v2
@@ -23,6 +21,10 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      pages: read
     steps:
       - name: Checkout application
         uses: actions/checkout@v4
@@ -51,14 +53,12 @@ jobs:
           npm run build
           node scripts/build-pages-system.mjs
           touch dist/.nojekyll
-          node scripts/static-publication.mjs --check
-      - name: Add NEXO state projection (read by the agents and the alarm)
+      - name: Assert final public artifact
+        working-directory: nexo-one
         run: |
           set -euo pipefail
-          mkdir -p nexo-one/dist/tower-projection
-          for f in projection.json manifest.json; do
-            curl -fsSL "https://raw.githubusercontent.com/${{ github.repository }}/nexo-projection/$f" -o "nexo-one/dist/tower-projection/$f"
-          done
+          node scripts/static-publication.mjs --check
+          node scripts/scan-public-bundle.mjs dist
       - name: Upload shell-only Pages artifact
         uses: actions/upload-pages-artifact@v4
         with:
@@ -67,6 +67,10 @@ jobs:
   deploy:
     needs: build
     runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      pages: write
+      id-token: write
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
@@ -81,6 +85,7 @@ jobs:
           set -euo pipefail
           base="${PAGES_URL%/}"
           for route in system.json science-projection-v1.json world-public.ndjson \
+            tower-projection/projection.json tower-projection/manifest.json \
             tower-projection/publication.json mcp/topology.json galaxy/latest.json \
             galaxy/index.json build-meta.json; do
             status="$(curl --silent --show-error --location --output /dev/null \
@@ -90,4 +95,3 @@ jobs:
               *) echo "::error::Former public data path is still reachable: ${route} (${status})"; exit 1 ;;
             esac
           done
-          curl -fsSL "${base}/tower-projection/projection.json" | jq -e '.manifest' >/dev/null

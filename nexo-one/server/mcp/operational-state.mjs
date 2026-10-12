@@ -82,21 +82,30 @@ export function operationalStateFromTower(tower,proof){
     science:scientificQueueFromTower(tower),
     integrity:'DRIVE_MD5_AND_REVISION_READBACK',availability:work.length?'CONFIGURED_IN_TOWER':'NO_OPERATIONAL_WORK_REGISTERED'};
 }
+async function requireTowerResponse(response,fallback){
+  if(response.ok)return;
+  const limited=response.status===429||(response.status===403&&response.headers.get('x-ratelimit-remaining')==='0');
+  const code=limited?'RATE_LIMITED':[401,403].includes(response.status)?'AUTH_REQUIRED':fallback;
+  await response.body?.cancel().catch(()=>{});
+  throw new Error(code);
+}
 export async function readVerifiedCanonicalTower({token,fetchImpl=fetch,signal}){
   if(!token)throw new Error('EXISTING_GOOGLE_AUTH_REQUIRED');
+  const deadline=AbortSignal.timeout(45000),readSignal=signal?AbortSignal.any([signal,deadline]):deadline;
+  readSignal.throwIfAborted();
   const url=`https://www.googleapis.com/drive/v3/files/${TOWER_ID}`;
-  const init=()=>({headers:{Authorization:`Bearer ${token}`},redirect:'error',cache:'no-store',signal:signal||AbortSignal.timeout(45000)});
+  const init=()=>({headers:{Authorization:`Bearer ${token}`},redirect:'error',cache:'no-store',signal:readSignal});
   const query='?fields=id,headRevisionId,size,md5Checksum&supportsAllDrives=true';
-  const meta=await fetchImpl(url+query,init());if(!meta.ok)throw new Error('TOWER_METADATA_UNAVAILABLE');
+  const meta=await fetchImpl(url+query,init());await requireTowerResponse(meta,'TOWER_METADATA_UNAVAILABLE');
   const before=await meta.json();
   if(before.id!==TOWER_ID||!before.headRevisionId||!/^[a-f0-9]{32}$/.test(before.md5Checksum))throw new Error('TOWER_METADATA_INVALID');
   if(Number(before.size)>32*1024*1024)throw new Error('TOWER_TOO_LARGE');
-  const response=await fetchImpl(url+'?alt=media&supportsAllDrives=true',init());if(!response.ok)throw new Error('TOWER_UNAVAILABLE');
+  const response=await fetchImpl(url+'?alt=media&supportsAllDrives=true',init());await requireTowerResponse(response,'TOWER_UNAVAILABLE');
   const chunks=[];let size=0;
   for await(const chunk of response.body){size+=chunk.byteLength;if(size>32*1024*1024)throw new Error('TOWER_TOO_LARGE');chunks.push(chunk);}
   const raw=Buffer.concat(chunks),md5=createHash('md5').update(raw).digest('hex');
   if(md5!==before.md5Checksum||raw.length!==Number(before.size))throw new Error('TOWER_BODY_HASH_MISMATCH');
-  const check=await fetchImpl(url+query,init());if(!check.ok)throw new Error('TOWER_READ_RACE');
+  const check=await fetchImpl(url+query,init());await requireTowerResponse(check,'TOWER_READ_RACE');
   const after=await check.json();
   if(after.id!==TOWER_ID||after.headRevisionId!==before.headRevisionId||after.md5Checksum!==md5)throw new Error('TOWER_READ_RACE');
   // Preserve the Writer fingerprint: Python/JS float encodings can differ.

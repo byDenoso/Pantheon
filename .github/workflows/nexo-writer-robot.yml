@@ -148,6 +148,7 @@ jobs:
             echo "reconciled=false" >> "$GITHUB_OUTPUT"
             echo "bundle aligned drive=${drive:0:12} tested_tcc=${main:0:12} @ ${tested_sha:0:12}"
           fi
+          echo "tested_sha=$tested_sha" >> "$GITHUB_OUTPUT"
 
       - name: Collect proposals from public TCC inbox
         if: steps.cred.outputs.ok == 'true'
@@ -513,15 +514,29 @@ jobs:
           raise SystemExit("tower-head CAS failed after 5 retries")
           PY
 
-      - name: Publish NEXO state projection (agents and alarm read it from Pages)
+      - name: Publish derived NEXO state projection from tested code
         id: projection
-        if: steps.cred.outputs.ok == 'true'
+        if: steps.cred.outputs.ok == 'true' && steps.bundle.outputs.tested_sha != '' && steps.robot.outcome == 'success'
         env:
           GOOGLE_SERVICE_ACCOUNT_JSON: ${{ secrets.NEXO_DRIVE_READER_JSON }}
+          GH_TOKEN: ${{ github.token }}
+          TESTED_SHA: ${{ steps.bundle.outputs.tested_sha }}
         run: |
           set -euo pipefail
-          git clone -q --depth 1 https://github.com/byDenoso/TCC.git /tmp/tcc_proj
-          (cd /tmp/tcc_proj && python scripts/nexo_tower.py project --out /tmp/proj >/dev/null)
+          # Retain the previous derivative if the tested main moved while the
+          # Writer ran. Do not bypass the bundle's tested-code selection gate.
+          verified_sha=$(python scripts/select_tested_tcc_main.py)
+          checkout_sha=$(git -C /tmp/tcc-tested rev-parse HEAD)
+          if [ "$verified_sha" != "$TESTED_SHA" ] || [ "$checkout_sha" != "$TESTED_SHA" ]; then
+            echo "::warning::No matching tested projection runtime; retaining the previous derivative."
+            exit 0
+          fi
+          (cd /tmp/tcc-tested && python scripts/nexo_tower.py project --out /tmp/proj >/dev/null)
+          verified_sha=$(python scripts/select_tested_tcc_main.py)
+          if [ "$verified_sha" != "$TESTED_SHA" ]; then
+            echo "::warning::TCC main changed during projection build; retaining the previous derivative."
+            exit 0
+          fi
           git clone -q --depth 1 --branch nexo-projection "https://x-access-token:${{ github.token }}@github.com/${GITHUB_REPOSITORY}.git" /tmp/pb
           cp /tmp/proj/projection.json /tmp/proj/manifest.json /tmp/pb/
           cd /tmp/pb
@@ -529,12 +544,6 @@ jobs:
           git -c user.name=nexo-writer-robot -c user.email=nexo-writer-robot@users.noreply.github.com commit -qam "projection $(jq -r .tower_revision manifest.json)"
           git push -q origin nexo-projection
           echo "changed=true" >> "$GITHUB_OUTPUT"
-
-      - name: Rebuild the ATLAS now
-        if: steps.projection.outputs.changed == 'true'
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: gh workflow run nexo-one-pages.yml --ref main
 
       - name: Run the health alarm (hourly; GitHub drops the alarm's own schedule)
         if: always()
