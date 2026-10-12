@@ -2,6 +2,7 @@ import {timingSafeEqual} from 'node:crypto';
 import {authenticated,sameOrigin} from '../auth/session.mjs';
 import {isRobot} from '../inbox-gateway.mjs';
 import {sha256,ROLE_PROMPTS} from './operational-tools.mjs';
+import {runtimePrincipal} from './runtime-principals.mjs';
 
 const equal=(a,b)=>a.length===b.length&&timingSafeEqual(Buffer.from(a),Buffer.from(b));
 const WRITER_REF='byDenoso/Pantheon/.github/workflows/nexo-writer-robot.yml@refs/heads/main';
@@ -10,6 +11,12 @@ export async function operationalPrincipal(request,env){
   if(!headers.host)headers.host=new URL(request.url).host;
   const req={headers};
   const bearer=/^Bearer ([^\s]+)$/.exec(headers.authorization||'')?.[1];
+  // Opt-in migration: once configured, bearer callers cannot fall back to a
+  // shared all-role key or another identity after revocation/config failure.
+  if(bearer&&Object.hasOwn(env,'NEXO_MCP_PRINCIPALS_JSON')){
+    try{return runtimePrincipal(env.NEXO_MCP_PRINCIPALS_JSON,bearer);}
+    catch{return null;}
+  }
   const expected=env.NEXO_MCP_ACCESS_KEY_SHA256||env.NEXO_RUNNER_KEY_SHA256;
   if(bearer&&/^[0-9a-f]{64}$/.test(expected||'')&&equal(sha256(bearer),expected))
     return {authenticated:true,id:sha256('existing-mcp-key:'+bearer),roles:Object.keys(ROLE_PROMPTS)};

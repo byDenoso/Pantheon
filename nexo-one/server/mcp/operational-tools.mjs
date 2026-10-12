@@ -8,10 +8,12 @@ export const MUTATIONS=Object.freeze(['claim_work','prepare_package','validate_p
 export const SCIENTIFIC_MUTATION='request_scientific_execution';
 export const OPERATIONAL_TOOL_NAMES=Object.freeze(['get_role_session','get_role_capabilities','get_work','get_scientific_queue',SCIENTIFIC_MUTATION,...MUTATIONS,'get_result']);
 const TOOL_MUTATIONS=new Set([...MUTATIONS,SCIENTIFIC_MUTATION]);
+export const principalAllowsTool=(principal,name)=>principal?.allowed_tools===undefined||
+  (Array.isArray(principal.allowed_tools)&&principal.allowed_tools.includes(name));
 const SCIENCE_OWNER_ROLES=Object.freeze({
   EXECUTOR:Object.freeze(['EXECUTOR']),
-  ENGENHEIRO:Object.freeze(['ENGINEER','ENGENHEER','ENGENHEIRO']),
-  CIENTISTA:Object.freeze(['ADVISOR']),
+  ENGENHEIRO:Object.freeze(['ADVISOR','ENGINEER','ENGENHEER','ENGENHEIRO']),
+  CIENTISTA:Object.freeze(['LEARNER','CIENTISTA']),
   CRITICO:Object.freeze(['REFEREE1','REFEREE2','REFEREE_1','REFEREE_2'])
 });
 const ID=/^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$/;
@@ -137,7 +139,7 @@ function toolsForRole(role,principal,state){
   if(role==='EXECUTOR'&&principal.roles.includes('EXECUTOR'))tools.push(SCIENTIFIC_MUTATION);
   const assignedWork=(state.work||[]).some(work=>work.role===role&&principal.roles.includes(work.role)&&(!work.owner||work.owner===principal.id));
   if(assignedWork)tools.push('get_result',...MUTATIONS);
-  return tools;
+  return tools.filter(name=>principalAllowsTool(principal,name));
 }
 function terminalIntents(work){
   if(!work.processed||typeof work.processed!=='object'||Array.isArray(work.processed))return [];
@@ -163,6 +165,7 @@ export function createOperationalService({readState,submitIntent,submitScientifi
     async call(name,args,principal){
       requireValue(principal?.authenticated===true&&Array.isArray(principal.roles)&&/^[0-9a-f]{64}$/.test(principal.id),'AUTHENTICATION_REQUIRED');
       requireValue(OPERATIONAL_TOOL_NAMES.includes(name),'UNKNOWN_OPERATIONAL_TOOL');
+      requireValue(principalAllowsTool(principal,name),'TOOL_FORBIDDEN');
       requireValue(args&&typeof args==='object'&&!Array.isArray(args),'INPUT_INVALID');
       const expected=name==='get_scientific_queue'?['role','test_id','limit','cursor']:
         name===SCIENTIFIC_MUTATION?['test_id']:
@@ -179,11 +182,13 @@ export function createOperationalService({readState,submitIntent,submitScientifi
       const state=await readState();
       requireValue(state.authority==='TOWER_V06@GOOGLE_DRIVE_PRIVATE'&&state.readback==='PASS','CANONICAL_STATE_UNAVAILABLE');
       if(name==='get_role_capabilities')return {role:args.role,principal_id:principal.id,tools:toolsForRole(args.role,principal,state),
-        writer:'NEXO Writer robot',execution:'GITHUB_ACTIONS',antigravity_required:false,
+        writer:'NEXO Writer',execution:state.control?.execution_primary||'UNVERIFIED',antigravity_required:false,
+        runtime:principal.runtime||'LEGACY_UNSCOPED',
+        control:state.control||null,
         mutation_model:'IMMUTABLE_INTENT_THEN_WRITER_ACK',availability:'CHECK_ON_USE',
         routine_approval_required:false,request_execution_includes:['claim','prepare','validate','dispatch','collect','register'],
-        scientific_result_eligible:false,scientific_queue:{tools:['get_scientific_queue',...(args.role==='EXECUTOR'&&principal.roles.includes('EXECUTOR')?[SCIENTIFIC_MUTATION]:[])],
-          mode:args.role==='EXECUTOR'&&principal.roles.includes('EXECUTOR')?'READ_AND_QUEUE_REQUEST':'READ_ONLY',
+        scientific_result_eligible:false,scientific_queue:{tools:['get_scientific_queue',...(args.role==='EXECUTOR'&&principal.roles.includes('EXECUTOR')&&principalAllowsTool(principal,SCIENTIFIC_MUTATION)?[SCIENTIFIC_MUTATION]:[])],
+          mode:args.role==='EXECUTOR'&&principal.roles.includes('EXECUTOR')&&principalAllowsTool(principal,SCIENTIFIC_MUTATION)?'READ_AND_QUEUE_REQUEST':'READ_ONLY',
           authority:state.authority,availability:'LIVE_READBACK',revision:state.revision,
           evidence:{kind:'TOWER_LIVE_READBACK',observed_at:state.observed_at||null,readback:state.readback},
           principal_id:principal.id,scope:'ROLE_BOUND_SCIENCE_QUEUE',authorized:true,exercised:false,
@@ -259,7 +264,7 @@ export function createOperationalService({readState,submitIntent,submitScientifi
 }
 export function registerOperationalTools(server,{service,principal,z}){
   if(!service||!principal?.authenticated)return;
-  const exposed=OPERATIONAL_TOOL_NAMES.filter(name=>name!==SCIENTIFIC_MUTATION||principal.roles.includes('EXECUTOR'));
+  const exposed=OPERATIONAL_TOOL_NAMES.filter(name=>principalAllowsTool(principal,name)&&(name!==SCIENTIFIC_MUTATION||principal.roles.includes('EXECUTOR')));
   for(const name of exposed){
     const byRole=['get_role_session','get_role_capabilities','get_work'].includes(name);
     const inputSchema=name==='get_scientific_queue'
