@@ -80,7 +80,7 @@ test('Pages workflow never retrieves private Tower inputs or old public history'
   assert.doesNotMatch(workflow, /NEXO_(?:VAULT_READ_TOKEN|DRIVE_READER_JSON)|_vault|build_public_projection|build-galaxy-snapshot|build-mcp-topology|Hydrate previous/);
   assert.match(workflow, /scripts\/static-publication\.mjs --check/);
   assert.match(workflow, /path: nexo-one\/dist/);
-  assert.doesNotMatch(workflow, /nexo-projection|raw\\.githubusercontent\\.com/);
+  assert.doesNotMatch(workflow, /nexo-projection|raw\.githubusercontent\.com/);
   const lastGate = workflow.lastIndexOf('node scripts/static-publication.mjs --check');
   const upload = workflow.indexOf('uses: actions/upload-pages-artifact@v4');
   assert.ok(lastGate > 0 && lastGate < upload, 'final publication gate must precede artifact upload');
