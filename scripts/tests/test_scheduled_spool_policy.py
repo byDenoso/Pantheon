@@ -56,6 +56,9 @@ class ScheduledSpoolPolicyTests(unittest.TestCase):
             ("OPERATIONAL_RECEIPT", "EXECUTOR"),
             ("ENXAME_EVENT", "LEARNER"),
             ("BATCH", "PITIA"),
+            ("TEST_BATTERY", "EXECUTOR"),
+            ("FAMILY_CHARTER", "PITIA"),
+            ("FITNESS_REPORT", "GUARDIAO"),
         ]:
             with self.subTest(kind=kind):
                 with self.assertRaises(ScheduledSpoolError):
