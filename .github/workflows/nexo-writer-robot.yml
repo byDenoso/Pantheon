@@ -513,9 +513,12 @@ jobs:
           raise SystemExit("tower-head CAS failed after 5 retries")
           PY
 
-      - name: Publish NEXO state projection (agents and alarm read it from Pages)
+      # SECURITY QUARANTINE: a public branch is not an approved disclosure channel.
+      # Keep Writer/Tower writes operational; resume projection only after independently
+      # reviewed allowlist, PEER exclusion and a verified end-to-end publication gate.
+      - name: Publish NEXO state projection (DISABLED pending privacy approval)
         id: projection
-        if: steps.cred.outputs.ok == 'true'
+        if: ${{ false }}
         env:
           GOOGLE_SERVICE_ACCOUNT_JSON: ${{ secrets.NEXO_DRIVE_READER_JSON }}
         run: |
