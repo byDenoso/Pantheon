@@ -2,7 +2,7 @@
 import http from 'node:http';
 import {createHash} from 'node:crypto';
 import {existsSync, readFileSync, statSync} from 'node:fs';
-import {extname, join, normalize} from 'node:path';
+import {extname, join, normalize, sep} from 'node:path';
 
 const TYPES = {'.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.css': 'text/css', '.woff2': 'font/woff2', '.woff': 'font/woff', '.svg': 'image/svg+xml', '.json': 'application/json'};
 
@@ -30,7 +30,7 @@ export function startBackend({privateDir, publicDir, runtime, sessionMs = 3_600_
     if (p.startsWith('/api/atlas-private-assets/')) {
       if (!live()) return send(res, 401, {error: 'AUTH_REQUIRED'});
       const rel = normalize(decodeURIComponent(p.slice('/api/atlas-private-assets/'.length))).replace(/^(\.\.[/\\])+/, '');
-      const want = manifest.files[rel]; const f = join(privateDir, rel);
+      const want = manifest.files[rel.split(sep).join('/')]; const f = join(privateDir, rel);
       if (!want || !existsSync(f)) return send(res, 404, {error: 'NOT_FOUND'});
       const buf = readFileSync(f); if (createHash('sha256').update(buf).digest('hex') !== want) return send(res, 503, {error: 'PRIVATE_UI_UNAVAILABLE'});
       return send(res, 200, buf, TYPES[extname(f)] ?? 'application/octet-stream');
