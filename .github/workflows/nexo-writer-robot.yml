@@ -271,7 +271,6 @@ jobs:
           # Bounded read-only GC in this existing singleton Writer; no collection.
           NEXO_TOWER_GC_DRY_RUN: "1"
           NEXO_TOWER_GC_MAX_BYTES: "16777216"
-          NEXO_TOWER_GC_REPORT_PATH: /tmp/nexo-tower-gc-dry-run.json
           NEXO_BATTERY_UPDATES: /tmp/bat/updates.json
           NEXO_BATTERY_DIR: /tmp/dispatch
           NEXO_RECIPE_REVISION: ${{ github.sha }}
