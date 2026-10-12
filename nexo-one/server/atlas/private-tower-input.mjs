@@ -1,6 +1,47 @@
 import {TOWER_ID} from '../mcp/operational-state.mjs';
 const object=value=>value!==null&&typeof value==='object'&&!Array.isArray(value);
 const fail=()=>{throw new Error('PRIVATE_TOWER_INVALID');};
+// PEER is a separate, explicitly excluded research family even in the private
+// Atlas. It remains untouched in the canonical Tower and in private science.
+// Do not infer that a private authenticated dashboard is an authorized PEER sink.
+const PEER_FAMILY=/(^|[^a-z0-9])peer(?=$|[^a-z0-9])/i;
+const peerIn=value=>PEER_FAMILY.test(JSON.stringify(value));
+const identityKeys=new Set(['id','entity_id','test_id','hypothesis_id','roadmap_id','campaign_id','artifact_id','event_id','source_ref','_source_path','name','title','model','family']);
+function peerIdentity(value){
+  return object(value)&&Object.entries(value).some(([key,v])=>identityKeys.has(key)&&typeof v==='string'&&PEER_FAMILY.test(v));
+}
+function stripPeerFromPrivateAtlas(value){
+  if(typeof value==='string')return PEER_FAMILY.test(value)?undefined:value;
+  if(Array.isArray(value))return value.flatMap(item=>{
+    // Entity/relation/event rows carry PEER-only numerical data that must not
+    // survive merely because their identifying PEER string was stripped.
+    if(object(item)&&peerIn(item))return [];
+    const clean=stripPeerFromPrivateAtlas(item);
+    return clean===undefined?[]:[clean];
+  });
+  if(!object(value))return value;
+  if(peerIdentity(value))return undefined;
+  const clean={};
+  for(const [key,item] of Object.entries(value)){
+    if(PEER_FAMILY.test(key))continue;
+    const sanitized=stripPeerFromPrivateAtlas(item);
+    if(sanitized!==undefined)clean[key]=sanitized;
+  }
+  return clean;
+}
+export function excludePeerFromPrivateAtlas(records){
+  // The source Tower is never edited. Filtering precedes every private view.
+  const out=stripPeerFromPrivateAtlas(records);
+  for(const name of ['work','tests','hypotheses','campaigns','roadmaps','lessons','artifacts','events','interdomain']){
+    if(!Array.isArray(out[name]))continue;
+    out.coverage[name]={...out.coverage[name],count:out[name].length,
+      paths:out[name].map(row=>row._source_path).filter(Boolean)};
+  }
+  out.coverage.capabilities={...out.coverage.capabilities,count:Object.keys(out.capabilities||{}).length};
+  if(peerIn(out))throw new Error('PRIVATE_ATLAS_PEER_BOUNDARY_FAILED');
+  return out;
+}
+
 // Normalize only canonical entity/manifest/snapshot surfaces. Runtime text is
 // retained server-side for bounded tool-declaration extraction, never serialized.
 export function normalizePrivateTower(tower){
@@ -37,5 +78,5 @@ export function normalizePrivateTower(tower){
   }
   records.sourceUpdatedAt=tower.updated_at;
   records.writeModel=tower.write_model;
-  return {records,revision:tower.revision,generatedAt:tower.updated_at,sourceRef:`https://drive.google.com/file/d/${TOWER_ID}/view`};
+  return {records:excludePeerFromPrivateAtlas(records),revision:tower.revision,generatedAt:tower.updated_at,sourceRef:`https://drive.google.com/file/d/${TOWER_ID}/view`};
 }
