@@ -241,7 +241,7 @@ jobs:
           mkdir -p /tmp/bb/batteries
           for f in "${specs[@]}"; do cp "$f" /tmp/bb/batteries/; done
           cd /tmp/bb && git -c user.name=nexo-writer-robot -c user.email=nexo-writer-robot@users.noreply.github.com add batteries && git -c user.name=nexo-writer-robot -c user.email=nexo-writer-robot@users.noreply.github.com commit -qm "batteries: dispatch $(ls batteries | wc -l)" && git push -q origin nexo-batteries
-          for f in "${specs[@]}"; do id=$(basename "$f" .json); gh workflow run nexo-test-battery.yml --repo "$GITHUB_REPOSITORY" --ref main -f battery_id="$id"; echo "dispatched $id"; done
+          for f in "${specs[@]}"; do id=$(basename "$f" .json); gh workflow run nexo-test-battery.yml --repo "$GITHUB_REPOSITORY" --ref main -f battery_id="$id" -f transport=LEGACY_GIT_SPEC; echo "dispatched $id"; done
 
       - name: Prepare approved public campaigns after canonical readback
         continue-on-error: true

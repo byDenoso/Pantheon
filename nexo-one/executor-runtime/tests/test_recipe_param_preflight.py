@@ -167,6 +167,7 @@ class WorkflowIntegration(unittest.TestCase):
         for invalid in (False, True, 'missing', 'manifest', 'validator'):
             with self.subTest(invalid=invalid), tempfile.TemporaryDirectory() as temp:
                 base=Path(temp);(base/'runtime-base').symlink_to(RUNTIME.parents[1],target_is_directory=True)
+                (base/'frozen-recipe').symlink_to(RUNTIME.parents[1],target_is_directory=True)
                 fixtures=base/'battery-specs/batteries';fixtures.mkdir(parents=True)
                 job=base/'job';job.mkdir();params=copy.deepcopy(PARAMS)
                 if invalid is True:params['tracer_groups'][0]['z'][-1]=.934

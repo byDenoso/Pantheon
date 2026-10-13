@@ -1,8 +1,8 @@
-"""Receita congelada: testes META sobre o histórico do NEXO, lidos da projeção pública (só agregados, sem acesso à Tower).
+"""Receita congelada: testes META sobre snapshots públicos congelados e verificados.
 
 Parâmetros (params.json):
   mode: prediction_calibration | readiness_yield | event_clock
-  projection_url: padrão https://bydenoso.github.io/Pantheon/tower-projection/projection.json
+  INPUTS_PATH: binding HTTPS commit-pinned + versão + SHA256; fonte live retirada.
   min_per_stratum: mínimo de casos por grupo (padrão 10)
   min_cases: mínimo de casos (readiness_yield; padrão 20)
   min_hypotheses: mínimo de hipóteses (event_clock; padrão 10)
@@ -20,12 +20,10 @@ import urllib.request
 with open(os.environ["PARAMS_PATH"], encoding="utf-8") as handle:
     params = json.load(handle)
 mode = params["mode"]
-OFFICIAL_LIVE_URL = "https://bydenoso.github.io/Pantheon/tower-projection/projection.json"
 OFFICIAL_SNAPSHOT = re.compile(
     r"https://raw[.]githubusercontent[.]com/byDenoso/Pantheon/[0-9a-f]{40}/"
     r"nexo-one/executor-runtime/snapshots/public-projection-[0-9]{8}-[0-9]{6}[.]json(?:[.]gz)?"
 )
-url = params.get("projection_url", OFFICIAL_LIVE_URL)
 
 
 class NoProjectionRedirect(urllib.request.HTTPRedirectHandler):
@@ -70,14 +68,9 @@ def load_projection():
     elif required:
         raise ValueError("production tower_native requires INPUTS_PATH; live fallback forbidden")
     else:
-        # The existing daily recipe smoke probes the live public endpoint. Its
-        # result is operational only and is never a production battery result.
-        if url != OFFICIAL_LIVE_URL:
-            raise ValueError("live smoke must use the official public projection")
-        raw = projection_bytes(url)
-        projection = json.loads(raw)
-        provenance = {"url": url, "sha256": hashlib.sha256(raw).hexdigest(),
-                      "scope": "LIVE_SMOKE_ONLY"}
+        # Public projection was withdrawn for privacy; never request it or
+        # reconstruct its bytes as an operational fallback.
+        raise ValueError("PUBLIC_PROJECTION_RETIRED: tower_native requires INPUTS_PATH; live fallback forbidden")
     if not isinstance(projection, dict) or not isinstance(projection.get("tests"), list):
         raise ValueError("invalid public projection structure")
     return projection, provenance

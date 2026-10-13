@@ -74,6 +74,15 @@ class FrozenInputsTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'live fallback forbidden'):
             self.run_recipe(missing=True)
 
+    def test_retired_live_smoke_never_fetches(self):
+        with tempfile.TemporaryDirectory() as scratch:
+            params=Path(scratch) / 'params.json'
+            params.write_text(json.dumps({'mode':'readiness_yield'}))
+            with patch.dict(os.environ, {'PARAMS_PATH':str(params), 'RESULT_PATH':str(Path(scratch) / 'result.json')}, clear=True), patch('urllib.request.OpenerDirector.open') as fetch:
+                with self.assertRaisesRegex(ValueError, 'PUBLIC_PROJECTION_RETIRED'):
+                    runpy.run_path(str(RECIPE), run_name='__main__')
+                fetch.assert_not_called()
+
     def test_design_time_does_not_attest_prediction_time(self):
         body = projection()
         for t in body['tests']:

@@ -42,7 +42,8 @@ class C01WriterPinBindingTests(unittest.TestCase):
         selection_ci = SELECTION_CI.read_text(encoding="utf-8")
         registry_path = '"nexo-control/execution-assessment-approvals.json"'
         self.assertIn(registry_path, writer)
-        self.assertIn("scripts/tests/test_c01_writer_pin_binding.py", selection_ci)
+        self.assertTrue("'scripts/**'" in selection_ci or "scripts/tests/test_c01_writer_pin_binding.py" in selection_ci)
+        self.assertIn("python -m unittest discover -s scripts/tests", selection_ci)
 
 
 if __name__ == "__main__":
