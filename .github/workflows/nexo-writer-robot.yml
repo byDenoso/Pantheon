@@ -164,69 +164,7 @@ jobs:
         env:
           GOOGLE_SERVICE_ACCOUNT_JSON: ${{ secrets.NEXO_DRIVE_WRITER_JSON }}
           SPOOL_ID: 1M2maKkuEjxumZRa145dzei7dEPFi2yKsKlUf7_scC-E
-        run: |
-          python - <<'PY'
-          import base64, csv, io, json, os, re
-          from datetime import datetime, timezone
-          from google.oauth2 import service_account
-          from google.auth.transport.requests import AuthorizedSession
-
-          path="/tmp/gateway.json"
-          try:
-              gateway=json.load(open(path,encoding="utf-8"))
-          except Exception:
-              gateway={"items":[]}
-          gateway.setdefault("items",[])
-
-          ack_path="nexo-one/scheduled-spool-ack.json"
-          try:
-              ack=json.load(open(ack_path,encoding="utf-8")).get("acked",{})
-          except Exception:
-              ack={}
-
-          info=json.loads(os.environ["GOOGLE_SERVICE_ACCOUNT_JSON"])
-          creds=service_account.Credentials.from_service_account_info(
-              info, scopes=["https://www.googleapis.com/auth/drive.readonly"])
-          s=AuthorizedSession(creds)
-          url=f"https://www.googleapis.com/drive/v3/files/{os.environ['SPOOL_ID']}/export"
-          r=s.get(url,params={"mimeType":"text/csv"},timeout=60)
-          r.raise_for_status()
-
-          from scripts.scheduled_spool_policy import validate_scheduled_envelope, ScheduledSpoolError
-
-          reader=csv.DictReader(io.StringIO(r.text))
-          mapping=[]
-          restricted_rejected=0
-          for row in reader:
-              stable=(row.get("stable_id") or "").strip().lower()
-              raw=(row.get("envelope_b64url") or "").strip()
-              if not stable or not raw or stable in ack:
-                  continue
-              if stable.startswith("sched-v1-"):
-                  # Explicitly governed scientific proposals use this private,
-                  # non-Drive source. Handoffs and privileged intents do not.
-                  try:
-                      envelope=validate_scheduled_envelope(row)
-                  except ScheduledSpoolError:
-                      restricted_rejected+=1
-                      continue
-              else:
-                  # Historical spool rows preserve their original admission
-                  # semantics, including earlier canaries.
-                  try:
-                      padded=raw+"="*((4-len(raw)%4)%4)
-                      envelope=json.loads(base64.urlsafe_b64decode(padded.encode()).decode("utf-8"))
-                  except Exception:
-                      continue
-              item_id=f"sheet-{stable}"
-              gateway["items"].append({"id":item_id,"envelope":envelope})
-              mapping.append({"id":item_id,"stable_id":stable})
-          if restricted_rejected:
-              print("restricted scheduled spool rows rejected",restricted_rejected)
-          json.dump(gateway,open(path,"w",encoding="utf-8"),ensure_ascii=False)
-          json.dump(mapping,open("/tmp/sheet-spool-map.json","w",encoding="utf-8"),ensure_ascii=False)
-          print("sheet spool items",len(mapping))
-          PY
+        run: python -m scripts.collect_scheduled_spool
 
       - name: Collect finished test batteries
         if: steps.cred.outputs.ok == 'true'
@@ -426,62 +364,11 @@ jobs:
           PY
 
       - name: Acknowledge applied scheduled Sheet spool proposals
-        if: steps.robot.outputs.gateway_resolved != ''
-        env:
-          GH_TOKEN: ${{ github.token }}
-          RESOLVED: ${{ steps.robot.outputs.gateway_resolved }}
+        if: steps.cred.outputs.ok == 'true'
         run: |
-          python - <<'PY'
-          import base64, datetime, json, os, subprocess, time
-
-          map_path="/tmp/sheet-spool-map.json"
-          if not os.path.exists(map_path):
-              raise SystemExit(0)
-
-          resolved=set(x for x in os.environ.get("RESOLVED","").split(",") if x)
-          mapping=json.load(open(map_path,encoding="utf-8"))
-          stable=[x["stable_id"] for x in mapping if x.get("id") in resolved]
-          if not stable:
-              print("sheet spool ack 0")
-              raise SystemExit(0)
-
-          repo=os.environ["GITHUB_REPOSITORY"]
-          path="nexo-one/scheduled-spool-ack.json"
-          now=datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
-
-          for attempt in range(1,6):
-              get=subprocess.run(
-                  ["gh","api",f"repos/{repo}/contents/{path}?ref=main"],
-                  text=True,capture_output=True
-              )
-              if get.returncode!=0:
-                  print("sheet ack ledger read retry",attempt)
-                  time.sleep(2); continue
-              meta=json.loads(get.stdout)
-              current=json.loads(base64.b64decode(meta["content"]).decode())
-              current.setdefault("version",1)
-              acked=current.setdefault("acked",{})
-              for sid in stable:
-                  acked[sid]=now
-              body=json.dumps(current,indent=2,sort_keys=True)+"\n"
-              payload=json.dumps({
-                  "message":f"NEXO writer robot: ack {len(stable)} scheduled spool item(s)",
-                  "content":base64.b64encode(body.encode()).decode(),
-                  "sha":meta["sha"],
-                  "branch":"main",
-              })
-              put=subprocess.run(
-                  ["gh","api","--method","PUT",f"repos/{repo}/contents/{path}","--input","-"],
-                  input=payload,text=True,capture_output=True
-              )
-              if put.returncode==0:
-                  print("sheet spool ack",len(stable))
-                  raise SystemExit(0)
-              print("sheet ack ledger CAS retry",attempt)
-              time.sleep(2)
-
-          raise SystemExit("sheet spool ack failed after retries")
-          PY
+          # The next collector reconciles private receipts by exact identity.
+          # Do not publish private spool IDs or depend on gateway_resolved.
+          echo "Sheet spool acknowledgements remain in the canonical private Tower."
 
       - name: Signal the ATLAS (tower-head)
         if: steps.robot.outputs.tower_revision != ''
