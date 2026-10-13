@@ -112,8 +112,10 @@ function actionOf(row,ctx) {
     effect_key:first(row.effect_key),input_fingerprint:first(row.input_fingerprint,ctx.revision),readback,receipt_ref:first(row.receipt_ref),
     blocker:first(row.blocker),next_action:text(row.next_action) || 'Próxima ação não informada pela fonte.',
     eligibility:text(first(row.eligibility,row.automation_reason,row.automation?.reason)) || 'Projeção privada somente de leitura; autorização de execução não é inferida.',
-    human_gate:gate,updated_at:text(first(row.updated_at,row.last_checked,ctx.generatedAt)),
-    unavailable_fields:[...(runtime === 'UNKNOWN' ? ['runtime'] : []),...(operation === 'UNKNOWN' ? ['required_operation'] : []),...(risk === 'UNKNOWN' ? ['risk'] : []),...(reversible === null ? ['reversible'] : []),...(status === 'UNKNOWN' ? ['status'] : [])]};
+    // A source check or Tower generation does not date the action's last change.
+    // Keep the string contract's unknown value; original invalid data remains in read_model.
+    human_gate:gate,updated_at:validDate(row.updated_at) ? row.updated_at : '',
+    unavailable_fields:[...(validDate(row.updated_at) ? [] : ['updated_at']),...(runtime === 'UNKNOWN' ? ['runtime'] : []),...(operation === 'UNKNOWN' ? ['required_operation'] : []),...(risk === 'UNKNOWN' ? ['risk'] : []),...(reversible === null ? ['reversible'] : []),...(status === 'UNKNOWN' ? ['status'] : [])]};
 }
 
 function inboxOf(action,row,ctx) {

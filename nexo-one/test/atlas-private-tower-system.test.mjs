@@ -10,6 +10,26 @@ import {globalSummary,humanActions,resolvableActions} from '../src/viewmodels/sy
 
 const compile = () => compilePrivateTowerSystem(privateTowerSystemFixture());
 
+test('private action timestamps never inherit a source check or Tower generation',()=>{
+  const input=privateTowerSystemFixture(),work=input.records.work.find(row=>row.action_id==='ACTION-EXEC');
+  const updated='2026-09-28T08:00:00.000Z';
+  work.last_checked=input.generatedAt;
+  for(const value of [undefined,null,'not a timestamp']){
+    work.updated_at=value;
+    const state=compilePrivateTowerSystem(input),action=state.actions.find(row=>row.action_id==='ACTION-EXEC');
+    assert.equal(action.updated_at,'');
+    assert.ok(action.unavailable_fields.includes('updated_at'));
+    assert.equal(action.checked_at,input.generatedAt);
+    assert.equal(state.read_model.work['WORK-EXEC'].updated_at,value);
+  }
+  work.updated_at=updated;
+  const action=compilePrivateTowerSystem(input).actions.find(row=>row.action_id==='ACTION-EXEC');
+  assert.equal(action.updated_at,updated);
+  assert.ok(!action.unavailable_fields.includes('updated_at'));
+  input.generatedAt='2026-10-02T10:00:00.000Z';
+  assert.equal(compilePrivateTowerSystem(input).actions.find(row=>row.action_id==='ACTION-EXEC').updated_at,updated);
+});
+
 test('pure private compiler preserves canonical generation, original details and all private entity kinds',()=>{
   const input = privateTowerSystemFixture(),before = structuredClone(input);
   const state = compilePrivateTowerSystem(input);
