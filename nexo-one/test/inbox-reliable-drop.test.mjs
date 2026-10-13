@@ -85,6 +85,8 @@ test('nested gates, operational envelopes and malformed payloads retain boundari
   const {state,drop}=harness();
   for (const value of [
     {kind:'BATCH',payload:{items:[{kind:'operator-intent',payload:{action:'CANONIZE'}}]}},
+    {kind:'OPERATOR_INTENT',source:'DENER',payload:{action:'SET_MCP_ROUTE'}},
+    {kind:'BATCH',payload:{items:[{kind:'INTENT',source:'EXECUTOR',payload:{action:'SET_MCP_ROUTE'}}]}},
     {contract:'NEXO_OPERATIONAL_INTENT_V1'},
   ]) assert.equal((await drop(request(encoded(value)),env,{}))[1],403);
   for (const value of [null,[],42]) assert.equal((await drop(request(encoded(value)),env,{}))[1],422);

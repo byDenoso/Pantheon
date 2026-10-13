@@ -46,7 +46,7 @@ test('existing trusted machine key remains authorized at the gateway boundary',a
   });
 });
 
-for(const action of ['APPROVE_CHARTER','REJECT_CHARTER','CANONIZE','REJECT_CANARY']){
+for(const action of ['APPROVE_CHARTER','REJECT_CHARTER','CANONIZE','REJECT_CANARY','APPROVE_AUTONOMY_MANDATE','REVOKE_AUTONOMY_MANDATE','SET_MCP_ROUTE']){
   for(const [shape,wrap] of [
     ['direct',value=>value],
     ['batch',value=>batch([safe,value])],

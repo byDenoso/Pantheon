@@ -5,7 +5,7 @@ const canonical = value => value === null || typeof value !== 'object' ? JSON.st
     : '{' + Object.keys(value).sort().map(key => JSON.stringify(key) + ':' + canonical(value[key])).join(',') + '}';
 const digest = value => createHash('sha256').update(canonical(value)).digest('hex');
 const object = value => value !== null && typeof value === 'object' && !Array.isArray(value);
-const GATES = new Set(['APPROVE_CHARTER', 'REJECT_CHARTER', 'CANONIZE', 'REJECT_CANARY', 'APPROVE_AUTONOMY_MANDATE', 'REVOKE_AUTONOMY_MANDATE']);
+const GATES = new Set(['APPROVE_CHARTER', 'REJECT_CHARTER', 'CANONIZE', 'REJECT_CANARY', 'APPROVE_AUTONOMY_MANDATE', 'REVOKE_AUTONOMY_MANDATE', 'SET_MCP_ROUTE']);
 const decode = value => JSON.parse(Buffer.from(value, 'base64url').toString('utf8'));
 const configured = env => Boolean(env.GOOGLE_CONNECTOR || (env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET && env.GOOGLE_REFRESH_TOKEN));
 
