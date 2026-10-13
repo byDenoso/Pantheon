@@ -1,5 +1,5 @@
 name: NEXO test battery
-run-name: battery ${{ (github.event_name != 'workflow_dispatch' || inputs.transport == 'CI_CANARY') && 'bat-runner-canary-1' || inputs.battery_id }}
+run-name: ${{ (github.event_name != 'workflow_dispatch' || inputs.transport == 'CI_CANARY') && 'canary bat-runner-canary-1' || format('battery {0}', inputs.battery_id) }}
 
 # Public scientific compute only. The Writer robot dispatches production batteries.
 # Pull requests/main changes run a fixed canary; manual CI_CANARY never reads Tower.

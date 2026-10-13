@@ -128,6 +128,18 @@ class FrozenPackage(unittest.TestCase):
                 with self.assertRaises(ValueError):
                     read_package(altered, CANARY_ID, fixture=True)
 
+    def test_manual_ci_canary_is_not_a_production_battery_for_writer_collection(self):
+        from scripts.collect_battery_runs import battery_id_from_run, valid_battery_run
+        workflow = (REPO / ".github/workflows/nexo-test-battery.yml").read_text()
+        title = workflow.splitlines()[1]
+        self.assertIn("'canary bat-runner-canary-1'", title)
+        self.assertIn("format('battery {0}', inputs.battery_id)", title)
+        canary = {"event": "workflow_dispatch", "display_title": "canary " + CANARY_ID,
+                  "id": 123, "run_attempt": 1}
+        self.assertFalse(valid_battery_run(canary))
+        self.assertEqual(battery_id_from_run(canary), "")
+        self.assertTrue(valid_battery_run({**canary, "display_title": "battery bat-synthetic"}))
+
     def test_workflow_plan_prepare_execute_receipt_numeric_canary_offline(self):
         workflow = (REPO / ".github/workflows/nexo-test-battery.yml").read_text()
         def code_at(step):
