@@ -3,7 +3,7 @@ import {createHash, createHmac, createPublicKey, createVerify, randomBytes, timi
 export const REPOSITORY = 'byDenoso/Pantheon';
 export const WRITER_WORKFLOW = `${REPOSITORY}/.github/workflows/nexo-writer-robot.yml@refs/heads/main`;
 export const RUNNER_WORKFLOW = `${REPOSITORY}/.github/workflows/nexo-test-battery.yml@refs/heads/main`;
-export const HUMAN_ACTIONS = new Set(['APPROVE_AUTONOMY_MANDATE', 'REVOKE_AUTONOMY_MANDATE']);
+export const HUMAN_ACTIONS = new Set(['APPROVE_AUTONOMY_MANDATE', 'REVOKE_AUTONOMY_MANDATE', 'SET_MCP_ROUTE']);
 export const canonical = value => value === null || typeof value !== 'object' ? JSON.stringify(value)
   : Array.isArray(value) ? '[' + value.map(canonical).join(',') + ']'
     : '{' + Object.keys(value).sort().map(key => JSON.stringify(key) + ':' + canonical(value[key])).join(',') + '}';

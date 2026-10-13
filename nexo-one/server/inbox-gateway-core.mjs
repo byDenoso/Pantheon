@@ -15,7 +15,7 @@ import { GOOGLE_SHEETS_SPOOL_SCOPES,googleRuntimeEnvironment } from './adapters/
 import { isOperationalEnvelope,SPOOL_ID as WRITER_SPOOL_ID } from './mcp/operational-queue.mjs';
 
 const REPO = 'byDenoso/TCC', BRANCH = 'nexo-inbox', API = 'https://api.github.com';
-const GATE = new Set(['APPROVE_CHARTER', 'REJECT_CHARTER', 'CANONIZE', 'REJECT_CANARY', 'APPROVE_AUTONOMY_MANDATE', 'REVOKE_AUTONOMY_MANDATE']);
+const GATE = new Set(['APPROVE_CHARTER', 'REJECT_CHARTER', 'CANONIZE', 'REJECT_CANARY', 'APPROVE_AUTONOMY_MANDATE', 'REVOKE_AUTONOMY_MANDATE', 'SET_MCP_ROUTE']);
 const MAX_PARTS = 40, MAX_CHUNK = 6000;
 const ROBOT_REPO = 'byDenoso/Pantheon', ROBOT_WORKFLOW = '.github/workflows/nexo-writer-robot.yml', AUDIENCE = 'nexo-inbox';
 

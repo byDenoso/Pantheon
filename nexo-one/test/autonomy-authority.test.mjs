@@ -7,6 +7,24 @@ import {createAutonomyRoutes} from '../server/autonomy/routes.mjs';
 
 const env={NEXO_SESSION_SECRET:'synthetic-test-secret-'.repeat(3)};
 const envelope={kind:'OPERATOR_INTENT',source:'DENER',payload:{action:'APPROVE_AUTONOMY_MANDATE',mandate_id:'m-one',public_data_only:true}};
+test('MCP route authority signs exact human proposals without manufacturing canary evidence',async()=>{
+  const proposal={kind:'OPERATOR_INTENT',source:'DENER',created_at:'2026-10-13T00:00:00Z',
+    payload:{action:'SET_MCP_ROUTE',endpoint:'https://synthetic.invalid/api/mcp',canary:{state:'PENDING'},expected_revision:1}};
+  const proof=attestHuman(proposal,env);
+  assert.equal(verifyHuman(proposal,proof,env),true);
+  assert.equal(verifyHuman({...proposal,payload:{...proposal.payload,endpoint:'https://changed.invalid/api/mcp'}},proof,env),false);
+  assert.equal(verifyHuman({...proposal,payload:{...proposal.payload,canary:{state:'PASS'}}},proof,env),false);
+  assert.equal(verifyHuman({...proposal,source:'EXECUTOR'},proof,env),false);
+  assert.throws(()=>attestHuman({...proposal,source:'EXECUTOR'},env),/HUMAN_INTENT_INVALID/);
+  let delivered;
+  const handler=createAutonomyRoutes({humanAuthenticated:()=>true,originAllowed:()=>true,
+    submit:async(body,authorization)=>{delivered=body;assert.equal(verifyHuman(body,authorization,env),true);return{stage:'DELIVERED',readback:'PASS'};}});
+  const req={method:'POST',headers:{},body:{envelope:proposal,confirmation_sha256:sha256(proposal)}};
+  assert.equal((await handler('autonomy-control',req,env)).status,202);
+  assert.deepEqual(delivered,proposal);
+  assert.equal(delivered.payload.canary.state,'PENDING');
+  assert.equal(delivered.payload.action,'SET_MCP_ROUTE');
+});
 test('human authority requires server attestation bound to the exact intent',()=>{
   const proof=attestHuman(envelope,env);
   assert.equal(verifyHuman(envelope,proof,env),true);
