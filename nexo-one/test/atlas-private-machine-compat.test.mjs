@@ -17,6 +17,8 @@ test('existing machine key passes MCP and spool ingress only, without browser or
   for(const route of ['mcp','mcp/status','inbox-drop'])assert.equal(await atlasBoundary(nodeReq('Bearer '+machineKey),machineEnv,{route}),null);
   for(const route of ['atlas-private','world','system','google-drive-consent'])assert.equal((await atlasBoundary(nodeReq('Bearer '+machineKey),machineEnv,{route})).status,401);
   assert.equal((await atlasBoundary(nodeReq('Bearer incorrect'),machineEnv,{route:'mcp'})).status,401);
+  assert.equal(await atlasBoundary(nodeReq('', 'POST'),{}, {route:'mcp'}),null);
+  assert.deepEqual(await atlasBoundary(nodeReq('', 'GET'),{}, {route:'mcp'}),{status:405,body:{error:'METHOD_NOT_ALLOWED'}});
 });
 test('actual HTTP MCP keeps existing authenticated operational tool discovery',async t=>{
   install(t,machineEnv);

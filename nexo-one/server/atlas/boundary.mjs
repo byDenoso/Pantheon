@@ -14,6 +14,7 @@ export async function atlasBoundary(req,env,{route,body={},now=Date.now(),store}
   // These existing machine handlers must still apply their own independent OIDC
   // verification. This exception never grants browser/session access to them.
   if(MACHINE_ROUTES.has(route)||AUTH_ROUTES.has(route))return null;
+  if(route==='mcp'&&req.method==='OPTIONS')return null;
   if(route==='mcp'||route==='mcp/status'||route==='inbox-drop'){
     // Preserve existing machine grants for MCP and its equivalent spool ingress. Strip
     // cookies so the old owner-session branch cannot bypass Atlas revocation.
@@ -22,6 +23,19 @@ export async function atlasBoundary(req,env,{route,body={},now=Date.now(),store}
       const machineRequest=new Request('https://machine.invalid/api/mcp',{
         method:req.method,headers:{authorization}});
       if(await operationalPrincipal(machineRequest,env))return null;
+    }
+    // The unauthenticated MCP subset is enforced by the SDK wrapper before any
+    // snapshot, Tower, resource, prompt, cache, or operational adapter is read.
+    // Only POST can carry that explicit JSON-RPC allowlist; status and inbox
+    // ingress remain authenticated.
+    if(route==='mcp'&&req.method==='POST'&&!authorization){
+      if(await atlasAuthenticated(req,env,now,store)&&!atlasSameOrigin(req,env))
+        return {status:403,body:{error:'ORIGIN_NOT_ALLOWED'}};
+      return null;
+    }
+    if(route==='mcp'&&req.method!=='POST'){
+      if(await atlasAuthenticated(req,env,now,store))return null;
+      return {status:405,body:{error:'METHOD_NOT_ALLOWED'}};
     }
   }
   if(!await atlasAuthenticated(req,env,now,store))return {status:401,body:{error:'AUTH_REQUIRED'}};

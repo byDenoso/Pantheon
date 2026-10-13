@@ -1,7 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import {createHash} from 'node:crypto';
 import {Client,StreamableHTTPClientTransport} from '@modelcontextprotocol/client';
 import {createNexoMcpWebHandler,NEXO_MCP_TOOL_NAMES} from '../server/mcp/server.mjs';
+import {OPERATIONAL_TOOL_NAMES} from '../server/mcp/operational-tools.mjs';
 
 const snapshot={
   sourceModifiedAt:'2026-09-12T12:00:00Z',generatedAt:'2026-09-12T12:01:00Z',
@@ -13,18 +15,24 @@ const snapshot={
   ],Engineering:[],Olympus:[]}
 };
 
-test('official MCP client negotiates 2026-07-28 and sees only read-only NEXO tools',async()=>{
+test('authenticated MCP client negotiates 2026-07-28 and preserves the existing scientific tools',async t=>{
+  const key='SYNTHETIC_MCP_HTTP_TEST_KEY';
+  const old=process.env.NEXO_MCP_ACCESS_KEY_SHA256;
+  process.env.NEXO_MCP_ACCESS_KEY_SHA256=createHash('sha256').update(key).digest('hex');
+  t.after(()=>{if(old===undefined)delete process.env.NEXO_MCP_ACCESS_KEY_SHA256;else process.env.NEXO_MCP_ACCESS_KEY_SHA256=old;});
   const handler=createNexoMcpWebHandler({readSnapshot:async()=>snapshot});
   const transport=new StreamableHTTPClientTransport(new URL('http://test.local/mcp'),{
-    fetch:(url,init)=>handler.fetch(new Request(url,init))
+    fetch:(url,init)=>{const request=new Request(url,init);request.headers.set('Authorization',`Bearer ${key}`);return handler.fetch(request);}
   });
   const client=new Client({name:'nexo-mcp-test',version:'1.0.0'},{versionNegotiation:{mode:'auto'}});
   try{
     await client.connect(transport);
     assert.equal(client.getNegotiatedProtocolVersion(),'2026-07-28');
     const list=await client.listTools();
-    assert.deepEqual(list.tools.map(tool=>tool.name),NEXO_MCP_TOOL_NAMES);
-    for(const tool of list.tools){
+    const scienceTools=list.tools.filter(tool=>NEXO_MCP_TOOL_NAMES.includes(tool.name));
+    assert.deepEqual(scienceTools.map(tool=>tool.name),NEXO_MCP_TOOL_NAMES);
+    assert.deepEqual(list.tools.map(tool=>tool.name),[...NEXO_MCP_TOOL_NAMES,...OPERATIONAL_TOOL_NAMES]);
+    for(const tool of scienceTools){
       assert.equal(tool.annotations?.readOnlyHint,true,tool.name);
       assert.equal(tool.annotations?.destructiveHint,false,tool.name);
       assert.equal(tool.annotations?.idempotentHint,true,tool.name);

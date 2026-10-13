@@ -18,6 +18,30 @@ Closure requires canonical `closure: {status: CLOSED, receipt_id, closed_at, rea
 
 References require explicit `public: true`, bilingual `label`, and an HTTPS `url`. Private families, credentials, local paths, raw records, Drive document URLs, and internal source references are excluded. The output allowlist contains only presentation fields and the source revision, generation time, and snapshot digest. Source IDs, receipts, source digests, and raw review objects remain server-side.
 
+## Scope-v4 boundary
+
+The v1 snapshot digest and its v1 Writer approval receipts prove consistency
+within this publication format; they do not by themselves establish the
+`NEXO_ATLAS_SCOPE_V4` source admission required for current anonymous science
+reads. Until a reader verifies that current admission, anonymous MCP exposes
+only a generic degraded catalog status and returns no campaign records. It
+does not fall back to the historical science snapshot, Tower, source paths, or
+approval metadata.
+
+## Legacy HTTP route is outside the MCP change
+
+`GET /api/atlas-public` remains the existing HTTP v1 route and is not changed or
+readmitted by the anonymous MCP boundary. Its optional `public-campaigns.json`
+artifact may continue to be served by the existing route when configured and
+valid. This patch does not exercise that response or readmit it under v4. The
+artifact and v1 approval/digest evidence do not prove a current
+`NEXO_ATLAS_SCOPE_V4` source admission. This change neither suspends nor
+authorizes this route or any other public endpoint. Before a separate change
+serves current science from `/api/atlas-public`, its reader must
+verify the canonical v4 admission and associated review chain; with no valid
+binding it must return the existing empty/degraded public state. Do not infer or
+manufacture a binding from the v1 artifact.
+
 ## Publication and reads
 
 The private cross-runtime bridge is `python nexo-one/scripts/prepare_public_campaigns.py --tower <verified-private-Writer-readback> --tcc-root <TCC-checkout> --output <sanitized-snapshot>`. It verifies canonical registry byte commitments, adapts Python/JavaScript JSON number spelling without renewing stale approvals, and deletes private intermediates. PUBLIC_CAMPAIGNS_PENDING preserves the last verified snapshot when canonical bindings or approvals are unavailable. Only the sanitized output may enter the public derivative branch.

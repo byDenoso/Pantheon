@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {Client,StreamableHTTPClientTransport} from '@modelcontextprotocol/client';
-import {createNexoMcpWebHandler,NEXO_MCP_TOOL_NAMES} from '../server/mcp/server.mjs';
+import {createNexoMcpWebHandler,NEXO_MCP_TOOL_NAMES,ANONYMOUS_PUBLIC_CATALOG_TOOL} from '../server/mcp/server.mjs';
 import {sha256,OPERATIONAL_TOOL_NAMES,createOperationalService} from '../server/mcp/operational-tools.mjs';
 import {createOperationalQueue,isOperationalEnvelope,SPOOL_ID} from '../server/mcp/operational-queue.mjs';
 
@@ -27,7 +27,7 @@ test('installed MCP SDK exposes role tools only to the existing authenticated pr
     const list=await authorized.listTools();
     assert.deepEqual(list.tools.map(x=>x.name),[...NEXO_MCP_TOOL_NAMES,...OPERATIONAL_TOOL_NAMES]);
     anonymous=await connect(false);
-    assert.deepEqual((await anonymous.listTools()).tools.map(x=>x.name),NEXO_MCP_TOOL_NAMES);
+    assert.deepEqual((await anonymous.listTools()).tools.map(x=>x.name),[ANONYMOUS_PUBLIC_CATALOG_TOOL]);
     assert.deepEqual((await authorized.listTools()).tools.map(x=>x.name),[...NEXO_MCP_TOOL_NAMES,...OPERATIONAL_TOOL_NAMES]);
   }finally{
     await authorized?.close().catch(()=>{});await anonymous?.close().catch(()=>{});await handler.close();

@@ -4,7 +4,8 @@ import http from 'node:http';
 import {Client,StreamableHTTPClientTransport} from '@modelcontextprotocol/client';
 import {publication} from './fixtures/mcp-publication.mjs';
 import {readResearchSnapshot,researchSnapshotFromPublication} from '../server/adapters/research-snapshot.mjs';
-import {MCP_TOOL_REGISTRY,isPublicReadOnlyMcpTool,createNexoMcpWebHandler,executeNexoMcpTool,readNexoMcpStatus} from '../server/mcp/server.mjs';
+import {MCP_TOOL_REGISTRY,NEXO_MCP_TOOL_NAMES,isPublicReadOnlyMcpTool,createNexoMcpWebHandler,executeNexoMcpTool,readNexoMcpStatus} from '../server/mcp/server.mjs';
+import {sha256,OPERATIONAL_TOOL_NAMES} from '../server/mcp/operational-tools.mjs';
 import {buildAtlasResearchView} from '../server/compiler/atlas-research-api.mjs';
 import handler from '../server/handler.mjs';
 
@@ -52,13 +53,16 @@ test('schemas fail closed and public execution cannot accept an operational acti
   assert.equal(capabilities.tools.find(t=>t.name==='get_capabilities').availability,'AVAILABLE');
   assert(!JSON.stringify(capabilities).includes('secret-canary'));
 });
-test('MCP initialize/discovery/call shares schemas and sanitizes source errors',async()=>{
+test('authenticated MCP initialize/discovery/call shares schemas and sanitizes source errors',async t=>{
   let unavailable=false;
+  const key='SYNTHETIC_MCP_CONTROL_TEST_KEY',old=process.env.NEXO_MCP_ACCESS_KEY_SHA256;
+  process.env.NEXO_MCP_ACCESS_KEY_SHA256=sha256(key);
+  t.after(()=>{if(old===undefined)delete process.env.NEXO_MCP_ACCESS_KEY_SHA256;else process.env.NEXO_MCP_ACCESS_KEY_SHA256=old;});
   const web=createNexoMcpWebHandler({readSnapshot:async()=>{if(unavailable)throw Error('secret-canary');return snapshot();}});
   const client=new Client({name:'atlas-test',version:'1'});
   try{
-    await client.connect(new StreamableHTTPClientTransport(new URL('http://local/mcp'),{fetch:(url,init)=>web.fetch(new Request(url,init))}));
-    const tools=await client.listTools();assert.equal(tools.tools.length,Object.keys(MCP_TOOL_REGISTRY).length);
+    await client.connect(new StreamableHTTPClientTransport(new URL('http://local/mcp'),{fetch:(url,init)=>{const request=new Request(url,init);request.headers.set('Authorization',`Bearer ${key}`);return web.fetch(request);}}));
+    const tools=await client.listTools();assert.equal(tools.tools.length,NEXO_MCP_TOOL_NAMES.length+OPERATIONAL_TOOL_NAMES.length);
     assert((await client.callTool({name:'get_campaign',arguments:{id:'C1'}})).structuredContent.result.campaign);
     const capabilities=await client.callTool({name:'get_capabilities',arguments:{}});
     assert.equal(capabilities.structuredContent.result.contract,'NEXO_MCP_CAPABILITIES_V1');
@@ -79,13 +83,15 @@ test('new publications invalidate semantic cache, concurrent aborts stay isolate
     const invalid=publication();invalid.build_meta.projection_fingerprint='sha256:'+'f'.repeat(64);assert.throws(()=>researchSnapshotFromPublication(invalid),/MISMATCH/);
   }finally{globalThis.fetch=original;}
 });
-test('HTTP metadata and MCP reject every anonymous origin before transport or source reads',async()=>{
+test('anonymous MCP validates origin, exposes only its public handshake, and keeps private status protected',async()=>{
   const server=http.createServer(handler);await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
   const base=`http://127.0.0.1:${server.address().port}`;
   try{
-    for(const path of ['/api/mcp','/api/mcp/status']){const res=await fetch(base+path,{headers:{Origin:'https://attacker.test'}});assert.equal(res.status,401);assert.equal(res.headers.get('access-control-allow-origin'),null);}
+    const mcpGet=await fetch(base+'/api/mcp',{headers:{Origin:'https://attacker.test'}});assert.equal(mcpGet.status,405);assert.equal(mcpGet.headers.get('access-control-allow-origin'),null);
+    const status=await fetch(base+'/api/mcp/status',{headers:{Origin:'https://attacker.test'}});assert.equal(status.status,401);assert.equal(status.headers.get('access-control-allow-origin'),null);
     const allowed=await fetch(base+'/api/mcp/status',{method:'OPTIONS',headers:{Origin:'https://bydenoso.github.io'}});assert.equal(allowed.status,401);assert.equal(allowed.headers.get('access-control-allow-origin'),null);
-    const hello=await fetch(base+'/api/mcp',{method:'POST',headers:{'Content-Type':'application/json',Accept:'application/json, text/event-stream',Origin:base},body:JSON.stringify({jsonrpc:'2.0',id:1,method:'initialize',params:{protocolVersion:'2025-11-25',capabilities:{},clientInfo:{name:'browser',version:'1'}}})});assert.equal(hello.status,401);assert.deepEqual(await hello.json(),{error:'AUTH_REQUIRED'});
-    const big=await fetch(base+'/api/mcp',{method:'POST',headers:{'Content-Type':'application/json'},body:'x'.repeat(262145)});assert.equal(big.status,401);
+    const rejectedOrigin=await fetch(base+'/api/mcp',{method:'POST',headers:{'Content-Type':'application/json',Accept:'application/json, text/event-stream',Origin:'https://attacker.test'},body:JSON.stringify({jsonrpc:'2.0',id:1,method:'initialize',params:{protocolVersion:'2025-11-25',capabilities:{},clientInfo:{name:'browser',version:'1'}}})});assert.equal(rejectedOrigin.status,403);assert.equal(rejectedOrigin.headers.get('access-control-allow-origin'),null);
+    const hello=await fetch(base+'/api/mcp',{method:'POST',headers:{'Content-Type':'application/json',Accept:'application/json, text/event-stream',Origin:base},body:JSON.stringify({jsonrpc:'2.0',id:1,method:'initialize',params:{protocolVersion:'2025-11-25',capabilities:{},clientInfo:{name:'browser',version:'1'}}})});assert.equal(hello.status,200);assert.equal((await hello.text()).includes('PRIVATE_CANARY'),false);
+    const big=await fetch(base+'/api/mcp',{method:'POST',headers:{'Content-Type':'application/json'},body:'x'.repeat(262145)});assert.equal(big.status,413);
   }finally{await new Promise(resolve=>server.close(resolve));}
 });

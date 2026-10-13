@@ -1,5 +1,6 @@
 import {createMcpHandler,McpServer} from '@modelcontextprotocol/server';
 import * as z from 'zod/v4';
+import {atlasAuthenticated,atlasSameOrigin} from '../auth/atlas-session.mjs';
 import {executeMcpTool} from './tools.mjs';
 import {registerOperationalTools} from './operational-tools.mjs';
 import {operationalForRequest} from './operational-runtime.mjs';
@@ -86,6 +87,10 @@ export const MCP_TOOL_REGISTRY=Object.freeze(Object.fromEntries(NEXO_MCP_TOOL_NA
 })])));
 export const isPublicReadOnlyMcpTool=definition=>definition?.access==='PUBLIC'&&definition?.annotations?.readOnlyHint===true;
 const publicTools=()=>Object.values(MCP_TOOL_REGISTRY).filter(isPublicReadOnlyMcpTool);
+export const ANONYMOUS_PUBLIC_CATALOG_TOOL='get_public_catalog_status';
+const PUBLIC_CATALOG_STATUS=Object.freeze({
+  contract:'NEXO_PUBLIC_CATALOG_STATUS_V1',status:'DEGRADED',availability:'UNAVAILABLE',items:[],reason:'CATALOG_UNAVAILABLE'
+});
 const calls=[];
 let total=0,errors=0;
 export function mcpTelemetry(){return {scope:'process-local',total,errors,calls:calls.map(call=>({...call}))};}
@@ -167,18 +172,92 @@ export function createNexoMcpServer({readSnapshot,operational=null}){
   return server;
 }
 
+function createAnonymousPublicCatalogServer(){
+  const server=new McpServer({name:MCP_SERVER_INFO.name,version:MCP_SERVER_INFO.version});
+  server.registerTool(ANONYMOUS_PUBLIC_CATALOG_TOOL,{
+    description:'Read only the availability of the approved public catalog. No records are returned while the catalog is unavailable.',
+    inputSchema:z.object({}).strict(),
+    annotations:READ_ONLY_ANNOTATIONS
+  },async()=>toolResult(PUBLIC_CATALOG_STATUS));
+  return server;
+}
+
+function anonymousPublicMcpRequest(body){
+  if(!body||typeof body!=='object'||Array.isArray(body)||body.jsonrpc!=='2.0'||typeof body.method!=='string')return false;
+  if(['initialize','notifications/initialized','ping','server/discover','tools/list','resources/list','prompts/list'].includes(body.method))return true;
+  if(body.method!=='tools/call'||!body.params||typeof body.params!=='object'||Array.isArray(body.params))return false;
+  if(Object.keys(body.params).some(key=>!['name','arguments','_meta'].includes(key)))return false;
+  if(body.params.name!==ANONYMOUS_PUBLIC_CATALOG_TOOL)return false;
+  const args=body.params.arguments;
+  return args===undefined||Boolean(args&&typeof args==='object'&&!Array.isArray(args)&&Object.keys(args).length===0);
+}
+
+function anonymousRequest(request,body){
+  const headers=new Headers();
+  for(const name of ['accept','content-type','mcp-protocol-version','mcp-method','mcp-name','origin']){
+    const value=request.headers.get(name);
+    if(value)headers.set(name,value);
+  }
+  const safeBody={jsonrpc:'2.0',method:body.method};
+  if(Object.hasOwn(body,'id'))safeBody.id=body.id;
+  if(body.method==='initialize'){
+    safeBody.params={
+      protocolVersion:body.params?.protocolVersion,
+      capabilities:{},
+      clientInfo:{name:'anonymous-client',version:'1.0.0'}
+    };
+  }else if(body.method==='tools/call'){
+    safeBody.params={name:ANONYMOUS_PUBLIC_CATALOG_TOOL,arguments:{}};
+  }
+  return new Request(request.url,{method:'POST',headers,body:Buffer.from(JSON.stringify(safeBody)),signal:request.signal});
+}
+
+function noStore(response){
+  const headers=new Headers(response.headers);
+  headers.set('Cache-Control','private, no-store');
+  headers.set('Vary','Authorization, Origin, Cookie');
+  return new Response(response.body,{status:response.status,statusText:response.statusText,headers});
+}
+
+function anonymousDenied(){
+  return Response.json({error:'AUTH_REQUIRED'},{status:401,headers:{
+    'Cache-Control':'private, no-store','Vary':'Authorization, Origin, Cookie','X-Content-Type-Options':'nosniff'
+  }});
+}
+
+async function atlasSessionAccess(request){
+  const cookie=String(request.headers.get('cookie')||'');
+  if(!cookie.split(';').some(value=>value.trim().startsWith('__Host-atlas_session=')))return 'anonymous';
+  const req={method:request.method,headers:Object.fromEntries(request.headers.entries())};
+  try{
+    if(!await atlasAuthenticated(req,process.env,Date.now()))return 'anonymous';
+    if(request.method==='POST'&&!atlasSameOrigin(req,process.env))return 'origin-denied';
+    return 'authenticated';
+  }catch{return 'anonymous';}
+}
+
+function originDenied(){
+  return Response.json({error:'ORIGIN_NOT_ALLOWED'},{status:403,headers:{
+    'Cache-Control':'private, no-store','Vary':'Authorization, Origin, Cookie','X-Content-Type-Options':'nosniff'
+  }});
+}
+
 export function createNexoMcpWebHandler({readSnapshot}){
-  const handler=createMcpHandler(()=>createNexoMcpServer({readSnapshot}),{responseMode:'json'});
+  const publicHandler=createMcpHandler(()=>createAnonymousPublicCatalogServer(),{responseMode:'json'});
+  const atlasSessionHandler=createMcpHandler(()=>createNexoMcpServer({readSnapshot}),{responseMode:'json'});
   return {
-    close:()=>handler.close(),
+    close:async()=>{await Promise.all([publicHandler.close(),atlasSessionHandler.close()]);},
     async fetch(request,options){
+      let parsedBody=null;
       if(request.method==='POST'&&request.body){
         const reader=request.body.getReader(),chunks=[];let size=0;
         while(true){const {done,value}=await reader.read();if(done)break;size+=value.byteLength;
-          if(size>262144){await reader.cancel();return Response.json({error:'REQUEST_BODY_TOO_LARGE'},{status:413});}
+          if(size>262144){await reader.cancel();return noStore(Response.json({error:'REQUEST_BODY_TOO_LARGE'},{status:413}));}
           chunks.push(value);
         }
-        request=new Request(request,{body:Buffer.concat(chunks)});
+        const bytes=Buffer.concat(chunks);
+        try{parsedBody=JSON.parse(bytes.toString('utf8'));}catch{}
+        request=new Request(request,{body:bytes});
       }
       const operational=await operationalForRequest(request);
       if(operational.principal){
@@ -186,7 +265,11 @@ export function createNexoMcpWebHandler({readSnapshot}){
         try{return await privateHandler.fetch(request,options);}
         finally{await privateHandler.close();}
       }
-      return handler.fetch(request,options);
+      const atlasAccess=await atlasSessionAccess(request);
+      if(atlasAccess==='origin-denied')return originDenied();
+      if(atlasAccess==='authenticated')return noStore(await atlasSessionHandler.fetch(request,options));
+      if(request.method!=='POST'||!anonymousPublicMcpRequest(parsedBody))return anonymousDenied();
+      return noStore(await publicHandler.fetch(anonymousRequest(request,parsedBody),options));
     }
   };
 }

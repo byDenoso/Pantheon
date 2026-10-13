@@ -1,7 +1,7 @@
 // Private legacy Atlas shell build. Output goes ONLY to server/private-ui (served after auth by
 // /api/atlas-private-ui and /api/atlas-private-assets/*). Never the public dist.
 import {defineConfig, type Plugin} from 'vite';
-import {resolve} from 'node:path';
+import {resolve, sep} from 'node:path';
 
 const root = resolve(import.meta.dirname);
 export const PRIVATE_BASE = '/api/atlas-private-assets/';
@@ -15,7 +15,8 @@ const swaps: Record<string, string> = {
   'src/atlas3d/g6-loader.ts': 'src/private-legacy/g6-loader.ts',
   'src/mcp/client.ts': 'src/private-legacy/mcpClient.ts',
 };
-const abs = new Map(Object.entries(swaps).map(([a, b]) => [resolve(root, a), resolve(root, b)]));
+const slash = (path: string) => path.split(sep).join('/');
+const abs = new Map(Object.entries(swaps).map(([a, b]) => [slash(resolve(root, a)), slash(resolve(root, b))]));
 
 type Pair = [from: string, to: string];
 /** Literal replacements; the build fails loudly when a legacy text changed and an adaptation no longer applies. */
@@ -87,7 +88,8 @@ export const privateSwap = (): Plugin => ({
   async resolveId(source, importer, options) {
     if (source.startsWith('\0')) return null;
     const r = await this.resolve(source, importer, {...options, skipSelf: true});
-    return r && abs.has(r.id) ? abs.get(r.id)! : null;
+    const id = r ? slash(r.id) : null;
+    return id && abs.has(id) ? abs.get(id)! : null;
   },
   transform(code, id) {
     const file = id.split('?')[0]!;

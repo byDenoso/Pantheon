@@ -55,7 +55,21 @@ without needing a browser cookie. The inbox-drop gateway still applies its
 existing envelope restrictions. Legacy tasks that only open anonymous inbox-drop
 URLs must migrate to authenticated MCP or send their already-authorized machine
 credential; they cannot use the browser PIN or an anonymous URL as a substitute. A legacy owner cookie alone is not a machine
-identity. Anonymous MCP discovery and all anonymous data reads stay denied.
+identity. Anonymous `POST /api/mcp` is limited to initialize, tool discovery,
+empty resource/prompt listings, and the generic `get_public_catalog_status`
+tool. That tool currently returns `DEGRADED` with no records because the
+existing campaign artifact does not prove current v4 scope readmission. Every
+other anonymous JSON-RPC method, tool call, resource read, and prompt read
+returns the same generic 401 before a research snapshot or operational source is read;
+anonymous non-POST HTTP methods return 405 (except a valid CORS preflight).
+`/api/mcp/status` remains authenticated. Existing machine and legacy owner
+identities keep their established authenticated MCP handler, including its
+existing session transport methods; no new grant or
+anonymous writer is introduced.
+An Atlas-session MCP `POST` continues to require the exact configured
+`NEXO_ATLAS_ORIGIN`; an absent or different Origin returns 403, even if that
+origin is separately allowlisted for CORS. Requests without a valid Atlas
+session remain limited to the anonymous catalog subset above.
 
 ## Authenticated legacy UI assets (mount still outstanding)
 

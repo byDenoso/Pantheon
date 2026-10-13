@@ -19,7 +19,24 @@ test('rotation and changing PIN hash invalidate previous sessions',async()=>{con
 test('incorrect PIN and short PIN fail; global atomic attempts resist spoofed IPs',async()=>{const store=memory();for(let n=0;n<5;n++)assert.equal((await atlasSessionRoute(request('POST','',{'x-forwarded-for':`synthetic-${n}`}),env,now,{pin:n?'1234':'incorrect-value'},store)).status,401);assert.equal((await login(store)).status,429);});
 test('mutations require exact configured origin and JSON login',async()=>{for(const origin of ['', 'http://atlas.example','https://evil.example']){assert.equal((await atlasSessionRoute(request('POST','',{origin}),env,now,{pin},memory())).status,403);assert.equal((await atlasSessionRoute(request('DELETE','',{origin}),env,now,{},memory())).status,403);}assert.equal((await atlasSessionRoute(request('POST','',{'content-type':'text/plain'}),env,now,{pin},memory())).status,415);});
 test('forged or duplicate cookies fail and old legacy cookie is not authority',async()=>{for(const cookie of ['nexo_session=legacy','__Host-atlas_session=forged','__Host-atlas_session='+ 'a'.repeat(64)+'; __Host-atlas_session='+ 'b'.repeat(64)])assert.equal(await atlasAuthenticated(request('GET',cookie),env,now,memory()),false);});
-test('anonymous paths deny before any upstream data read, including route aliases',async()=>{for(const route of ['world','system','atlas-private','atlas-public-ssot','mcp','mcp/status','projection-sync','observatory-tests','lab-evidence','unknown','inbox-drop'])assert.deepEqual(await atlasBoundary(request(),env,{route,now,store:memory()}),{status:401,body:{error:'AUTH_REQUIRED'}});assert.equal((await atlasBoundary(request(),env,{route:'atlas-public',now,store:memory()})).status,200);});
+test('anonymous MCP is limited to the SDK POST gate; private/status and legacy paths still deny before source reads',async()=>{
+  assert.equal(await atlasBoundary(request('POST'),env,{route:'mcp',now,store:memory()}),null);
+  assert.equal(await atlasBoundary(request('OPTIONS'),env,{route:'mcp',now,store:memory()}),null);
+  assert.deepEqual(await atlasBoundary(request('GET'),env,{route:'mcp',now,store:memory()}),{status:405,body:{error:'METHOD_NOT_ALLOWED'}});
+  const store=memory(),cookie=extract(await login(store));
+  assert.equal(await atlasBoundary(request('GET',cookie),env,{route:'mcp',now,store}),null);
+  for(const route of ['world','system','atlas-private','atlas-public-ssot','mcp/status','projection-sync','observatory-tests','lab-evidence','unknown','inbox-drop'])assert.deepEqual(await atlasBoundary(request(),env,{route,now,store:memory()}),{status:401,body:{error:'AUTH_REQUIRED'}});
+  assert.equal((await atlasBoundary(request(),env,{route:'atlas-public',now,store:memory()})).status,200);
+});
+test('authenticated MCP POST requires exact same origin including a present Origin header',async()=>{
+  const store=memory(),session=extract(await login(store));
+  const absent=request('POST',session);delete absent.headers.origin;
+  const foreignOrigins=['https://attacker.example','https://nexo-one-two.vercel.app'];
+  const actual=[await atlasBoundary(absent,env,{route:'mcp',now,store})];
+  for(const origin of foreignOrigins)actual.push(await atlasBoundary(request('POST',session,{origin}),env,{route:'mcp',now,store}));
+  assert.deepEqual(actual,[{status:403,body:{error:'ORIGIN_NOT_ALLOWED'}},...foreignOrigins.map(()=>({status:403,body:{error:'ORIGIN_NOT_ALLOWED'}}))]);
+  assert.equal(await atlasBoundary(request('POST',session),env,{route:'mcp',now,store}),null);
+});
 test('store failure never falls back to memory or authenticated success',async()=>{const store=async()=>{throw Error('offline');};await assert.rejects(login(store));const req=request('GET','__Host-atlas_session='+'a'.repeat(64));await assert.rejects(atlasAuthenticated(req,env,now,store));});
 test('private source is absent by default and never falls back to public URLs',async()=>{let calls=0;await assert.rejects(readAtlasPrivatePublication({},()=>{calls++;}));assert.equal(calls,0);});
 test('private source is bounded, authenticated, no-store, and validates envelope',async()=>{const {data}=makePrivateRuntimeFixture();const result=await readAtlasPrivatePublication({NEXO_ATLAS_PRIVATE_SOURCE_URL:'https://private.example/snapshot',NEXO_ATLAS_PRIVATE_SOURCE_TOKEN:'test'},async(url,options)=>{assert.equal(options.cache,'no-store');assert.equal(options.redirect,'error');assert.equal(options.headers.Authorization,'Bearer test');return new Response(JSON.stringify({contract:'ATLAS_PRIVATE_V1',data,extra:'discard'}));});assert.deepEqual(result,{contract:'ATLAS_PRIVATE_V1',data});});

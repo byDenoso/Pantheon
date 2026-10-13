@@ -47,7 +47,7 @@ test('actual handler denies the full anonymous route/method/alias matrix before 
   t.mock.method(globalThis,'fetch',async()=>{reads++;throw Error('unexpected upstream read');});
   const routes=new Set([
     'world','system','health','now','loops','day','context','recall','atlas-private',
-    'atlas-public-ssot','mcp','mcp/status','projection-sync','personal','personal-action',
+    'atlas-public-ssot','mcp/status','projection-sync','personal','personal-action',
     'inbox-drop','google-drive-consent',...RESEARCH_ROUTES
   ]);
   let checked=0;
@@ -66,7 +66,7 @@ test('actual handler denies the full anonymous route/method/alias matrix before 
       checked++;
     }
   }
-  assert.ok(checked>=306);
+  assert.ok(checked>=297);
   assert.equal(reads,0);
 });
 
