@@ -146,6 +146,9 @@ jobs:
       - name: Verify parameter preflight and operational failure receipts
         run: python -m unittest discover -s nexo-one/executor-runtime/tests -p test_recipe_param_preflight.py -v
 
+      - name: Verify frozen Actions package and local numeric canary
+        run: python -m unittest discover -s nexo-one/executor-runtime/tests -p test_package_validation.py -v
+
       - name: Verify runner, scientific stack and network
         env:
           GH_TOKEN: ${{ github.token }}

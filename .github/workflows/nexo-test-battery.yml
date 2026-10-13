@@ -1,21 +1,26 @@
 name: NEXO test battery
-run-name: battery ${{ inputs.battery_id || 'bat-runner-canary-1' }}
+run-name: battery ${{ (github.event_name != 'workflow_dispatch' || inputs.transport == 'CI_CANARY') && 'bat-runner-canary-1' || inputs.battery_id }}
 
 # Public scientific compute only. The Writer robot dispatches production batteries.
-# Pull requests run the fixed canary so this exact runner is proven before changes merge.
+# Pull requests/main changes run a fixed canary; manual CI_CANARY never reads Tower.
 # No secrets, no Tower/Drive access, read-only repository token, checkout credentials removed.
 on:
   workflow_dispatch:
     inputs:
       battery_id:
-        description: battery id (file batteries/<id>.json on branch nexo-batteries)
+        description: Canonical Writer reservation ID (CI_CANARY always uses its fixed fixture)
         required: true
       transport:
         description: Frozen package transport (existing batteries retain their transport)
         required: false
-        default: LEGACY_GIT_SPEC
+        default: CANONICAL_DRIVE_PACKAGE
         type: choice
-        options: [LEGACY_GIT_SPEC, CANONICAL_DRIVE_PACKAGE]
+        options: [CANONICAL_DRIVE_PACKAGE, CI_CANARY, LEGACY_GIT_SPEC]
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/nexo-test-battery.yml'
+      - 'nexo-one/executor-runtime/**'
   pull_request:
     paths:
       - '.github/workflows/nexo-test-battery.yml'
@@ -25,11 +30,12 @@ permissions:
   contents: read
 
 concurrency:
-  group: nexo-battery-${{ inputs.battery_id || format('pr-{0}', github.event.pull_request.number) }}
+  group: nexo-battery-${{ (github.event_name == 'workflow_dispatch' && inputs.transport != 'CI_CANARY' && inputs.battery_id) || format('canary-{0}', github.sha) }}
   cancel-in-progress: false
 
 env:
-  NEXO_BATTERY_ID: ${{ inputs.battery_id || 'bat-runner-canary-1' }}
+  NEXO_BATTERY_ID: ${{ (github.event_name != 'workflow_dispatch' || inputs.transport == 'CI_CANARY') && 'bat-runner-canary-1' || inputs.battery_id }}
+  NEXO_CI_FIXTURE: ${{ github.event_name != 'workflow_dispatch' || inputs.transport == 'CI_CANARY' }}
   NEXO_CANONICAL_PACKAGE: ${{ github.event_name == 'workflow_dispatch' && inputs.transport == 'CANONICAL_DRIVE_PACKAGE' }}
 
 jobs:
@@ -66,6 +72,8 @@ jobs:
     outputs:
       matrix: ${{ steps.m.outputs.matrix }}
       parallelism: ${{ steps.m.outputs.parallelism }}
+      package_sha256: ${{ steps.m.outputs.package_sha256 }}
+      spec_revision: ${{ steps.m.outputs.spec_revision }}
     steps:
       - name: Checkout versioned CI fixture
         uses: actions/checkout@v4
@@ -73,7 +81,7 @@ jobs:
           path: runtime-base
           persist-credentials: false
       - name: Checkout frozen battery specs
-        if: env.NEXO_CANONICAL_PACKAGE != 'true' && github.event_name != 'pull_request'
+        if: env.NEXO_CI_FIXTURE != 'true' && env.NEXO_CANONICAL_PACKAGE != 'true'
         uses: actions/checkout@v4
         with:
           ref: nexo-batteries
@@ -86,22 +94,24 @@ jobs:
       - id: m
         env:
           BID: ${{ env.NEXO_BATTERY_ID }}
-          NEXO_CI_FIXTURE: ${{ github.event_name == 'pull_request' }}
+          NEXO_CI_FIXTURE: ${{ env.NEXO_CI_FIXTURE }}
         run: |
           python3 - <<'PY'
-          import json, os, re
+          import json, os, re, subprocess, sys
           bid = os.environ["BID"]
           assert re.fullmatch(r"[a-z0-9-]{3,48}", bid), "bad battery id"
           spec_path = (f"runtime-base/nexo-one/executor-runtime/fixtures/{bid}.json"
                        if os.environ["NEXO_CI_FIXTURE"] == "true" else f"battery-specs/batteries/{bid}.json")
-          spec = json.load(open(spec_path, encoding="utf-8"))
-          tests = list(spec.get("tests") or [])
-          assert tests, "battery has no tests"
-          assert len(tests) <= 20, "battery exceeds 20-test limit"
-          parallelism = spec.get("parallelism", 20)
-          assert type(parallelism) is int and 1 <= parallelism <= 20, "invalid parallelism"
-          if os.environ.get("NEXO_CANONICAL_PACKAGE") == "true":
-              assert parallelism in (1, 2, 4), "unmeasured capacity"
+          sys.path.insert(0, "runtime-base/nexo-one/executor-runtime")
+          from package_validation import read_package, recipe_revision
+          spec, package_hash = read_package(spec_path, bid,
+              fixture=os.environ["NEXO_CI_FIXTURE"] == "true",
+              transport="CANONICAL_DRIVE_PACKAGE" if os.environ.get("NEXO_CANONICAL_PACKAGE") == "true" else "LEGACY_GIT_SPEC",
+              workflow_revision=os.environ.get("GITHUB_SHA"))
+          tests, parallelism = spec["tests"], spec.get("parallelism", 20)
+          spec_revision = ""
+          if os.environ["NEXO_CI_FIXTURE"] != "true" and os.environ.get("NEXO_CANONICAL_PACKAGE") != "true":
+              spec_revision = subprocess.check_output(["git", "-C", "battery-specs", "rev-parse", "HEAD"], text=True).strip()
           include, seen = [], set()
           for i, test in enumerate(tests):
               test_id = str(test.get("test_id") or "")
@@ -111,6 +121,8 @@ jobs:
           with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as out:
               out.write("matrix=" + json.dumps({"include": include}, separators=(",", ":")) + "\n")
               out.write("parallelism=" + str(parallelism) + "\n")
+              out.write("package_sha256=" + package_hash + "\n")
+              out.write("spec_revision=" + spec_revision + "\n")
           PY
 
   run:
@@ -131,10 +143,10 @@ jobs:
           path: runtime-base
           persist-credentials: false
       - name: Checkout frozen battery specs
-        if: env.NEXO_CANONICAL_PACKAGE != 'true' && github.event_name != 'pull_request'
+        if: env.NEXO_CI_FIXTURE != 'true' && env.NEXO_CANONICAL_PACKAGE != 'true'
         uses: actions/checkout@v4
         with:
-          ref: nexo-batteries
+          ref: ${{ needs.plan.outputs.spec_revision }}
           path: battery-specs
           sparse-checkout: batteries
           persist-credentials: false
@@ -143,20 +155,28 @@ jobs:
         run: python runtime-base/scripts/nexo_autonomy_runtime.py package --battery-id "$NEXO_BATTERY_ID" --output "battery-specs/batteries/$NEXO_BATTERY_ID.json"
       - name: Read frozen recipe revision
         id: frozen
-        if: env.NEXO_CANONICAL_PACKAGE == 'true'
+        if: env.NEXO_CI_FIXTURE != 'true'
         env:
           IDX: ${{ matrix.index }}
+          NEXO_PACKAGE_SHA256: ${{ needs.plan.outputs.package_sha256 }}
         run: |
           python - <<'PY'
-          import json, os, re
-          test = json.load(open(f"battery-specs/batteries/{os.environ['NEXO_BATTERY_ID']}.json"))["tests"][int(os.environ["IDX"])]
-          revision = test.get("recipe_revision", "")
+          import os, re, sys
+          sys.path.insert(0, "runtime-base/nexo-one/executor-runtime")
+          from package_validation import read_package, recipe_revision
+          spec, _ = read_package(f"battery-specs/batteries/{os.environ['NEXO_BATTERY_ID']}.json", os.environ["NEXO_BATTERY_ID"],
+              transport="CANONICAL_DRIVE_PACKAGE" if os.environ.get("NEXO_CANONICAL_PACKAGE") == "true" else "LEGACY_GIT_SPEC",
+              workflow_revision=os.environ.get("GITHUB_SHA"), expected_sha256=os.environ["NEXO_PACKAGE_SHA256"])
+          test = spec["tests"][int(os.environ["IDX"])]
+          revision = recipe_revision(test,
+              transport="CANONICAL_DRIVE_PACKAGE" if os.environ.get("NEXO_CANONICAL_PACKAGE") == "true" else "LEGACY_GIT_SPEC",
+              workflow_revision=os.environ["GITHUB_SHA"])
           assert re.fullmatch(r"[0-9a-f]{40}", revision), "frozen recipe revision missing"
           with open(os.environ["GITHUB_OUTPUT"], "a") as out:
               out.write("revision=" + revision + "\n")
           PY
       - name: Checkout immutable recipe implementation
-        if: env.NEXO_CANONICAL_PACKAGE == 'true'
+        if: env.NEXO_CI_FIXTURE != 'true'
         uses: actions/checkout@v4
         with:
           ref: ${{ steps.frozen.outputs.revision }}
@@ -175,7 +195,8 @@ jobs:
           BID: ${{ env.NEXO_BATTERY_ID }}
           IDX: ${{ matrix.index }}
           MATRIX_TEST_ID: ${{ matrix.test_id }}
-          NEXO_CI_FIXTURE: ${{ github.event_name == 'pull_request' }}
+          NEXO_PACKAGE_SHA256: ${{ needs.plan.outputs.package_sha256 }}
+          NEXO_CI_FIXTURE: ${{ env.NEXO_CI_FIXTURE }}
         run: |
           mkdir -p /tmp/job
           python3 - <<'PY'
@@ -183,7 +204,11 @@ jobs:
           bid, idx, expected_id = os.environ["BID"], int(os.environ["IDX"]), os.environ["MATRIX_TEST_ID"]
           spec_path = (f"runtime-base/nexo-one/executor-runtime/fixtures/{bid}.json"
                        if os.environ["NEXO_CI_FIXTURE"] == "true" else f"battery-specs/batteries/{bid}.json")
-          spec = json.load(open(spec_path, encoding="utf-8"))
+          spec_raw = open(spec_path, "rb").read()
+          expected_package_hash = os.environ.get("NEXO_PACKAGE_SHA256")
+          if expected_package_hash and hashlib.sha256(spec_raw).hexdigest() != expected_package_hash:
+              raise SystemExit("PACKAGE_CHANGED_AFTER_PLAN")
+          spec = json.loads(spec_raw)
           test = spec["tests"][idx]
           test_id = str(test.get("test_id") or "")
           meta = {"battery_id": bid, "test_id": test_id or expected_id,
@@ -197,7 +222,7 @@ jobs:
           recipe = str(test.get("recipe") or "")
           if not re.fullmatch(r"[a-z0-9_]{2,40}", recipe):
               raise SystemExit(f"invalid or missing recipe name {recipe!r}")
-          recipe_checkout = "frozen-recipe" if os.environ.get("NEXO_CANONICAL_PACKAGE") == "true" else "runtime-base"
+          recipe_checkout = "runtime-base" if os.environ["NEXO_CI_FIXTURE"] == "true" else "frozen-recipe"
           script_path = f"{recipe_checkout}/nexo-one/executor-runtime/recipes/{recipe}.py"
           raw_script = open(script_path, "rb").read()
           actual_recipe_sha = hashlib.sha256(raw_script).hexdigest()
@@ -421,7 +446,7 @@ jobs:
 
       - name: Wake the Writer robot to record the results now
         # Otherwise results wait for GitHub's throttled */5 schedule (hours) before reaching the Tower.
-        if: github.event_name == 'workflow_dispatch'
+        if: github.event_name == 'workflow_dispatch' && env.NEXO_CI_FIXTURE != 'true'
         env:
           GH_TOKEN: ${{ github.token }}
         run: gh workflow run nexo-writer-robot.yml --repo "$GITHUB_REPOSITORY" --ref main && echo "writer robot dispatched"
