@@ -69,5 +69,12 @@
         }
       ]
     }
-  ]
+  ],
+  "git": {
+    "deploymentEnabled": {
+      "nexo-state": false,
+      "nexo-batteries": false,
+      "nexo-projection": false
+    }
+  }
 }
