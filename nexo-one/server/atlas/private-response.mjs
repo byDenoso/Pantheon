@@ -1,6 +1,6 @@
 import {gzipSync} from 'node:zlib';
 const MAX_WIRE_BYTES=4*1024*1024;
-const MAX_JSON_BYTES=32*1024*1024;
+const MAX_JSON_BYTES=64*1024*1024; // o gzip (teto de 4 MiB) é o limite real
 function acceptsGzip(value){return String(value||'').split(',').some(part=>{const [name,...parameters]=part.trim().toLowerCase().split(';');if(name!=='gzip')return false;const q=parameters.find(value=>value.trim().startsWith('q='));return q===undefined||Number(q.trim().slice(2))>0;});}
 // Send one complete canonical generation; never truncate private collections to
 // fit a hosting limit. Content-Encoding is transparent to browser fetch().json().

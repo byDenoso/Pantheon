@@ -46,6 +46,7 @@ export function createOperationsHandler({boundary,tokenProvider,runtimeEnvironme
     } catch (error) {
       if (error?.code === 'OPERATIONAL_CURSOR_STALE') return send({error:error.code,restart_from_first_page:true},409);
       if (['OPERATIONAL_QUERY_INVALID','OPERATIONAL_CURSOR_INVALID'].includes(error?.code)) return send({error:error.code},400);
+      console.error('atlas-operations',error?.message);
       return send({error:'PRIVATE_SOURCE_UNAVAILABLE'},503);
     }
   };

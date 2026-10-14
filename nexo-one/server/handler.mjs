@@ -181,7 +181,7 @@ export default async function handler(req,res) {
         if(encoded.encoding)res.setHeader('Content-Encoding',encoded.encoding);
         res.statusCode=200;return res.end(encoded.bytes);
       }
-      catch{return send({error:'PRIVATE_SOURCE_UNAVAILABLE'},503);}
+      catch(error){console.error('atlas-private',error?.message);return send({error:'PRIVATE_SOURCE_UNAVAILABLE'},503);}
     }
     if(route==='inbox-drop'){try{const [value,status]=await inboxDrop(url,env,req);return send(value,status);}catch(error){return send({ok:false,error:String(error?.message||error).slice(0,120)},502);}}
     if(route==='inbox-list'||route==='inbox-ack'){const [value,status]=await inboxRobot(route,url,req,env);return send(value,status);}

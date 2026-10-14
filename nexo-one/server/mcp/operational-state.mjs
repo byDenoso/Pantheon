@@ -1,5 +1,7 @@
 import {createHash} from 'node:crypto';
 export const TOWER_ID='1m97cFmEkw19yiqD_6FWPG4j1lDCAYM4z';
+// Última Tower verificada nesta instância: mesma revisão e md5 dispensam baixar 14 MB de novo.
+let verifiedCache=null;
 
 const SCIENTIFIC_TEST_PREFIX='entities/test/';
 const SCIENTIFIC_WORK_PREFIX='entities/work/';
@@ -82,7 +84,7 @@ export function operationalStateFromTower(tower,proof){
     science:scientificQueueFromTower(tower),
     integrity:'DRIVE_MD5_AND_REVISION_READBACK',availability:work.length?'CONFIGURED_IN_TOWER':'NO_OPERATIONAL_WORK_REGISTERED'};
 }
-export async function readVerifiedCanonicalTower({token,fetchImpl=fetch,signal}){
+export async function readVerifiedCanonicalTower({token,fetchImpl=fetch,signal,useCache=false}){
   if(!token)throw new Error('EXISTING_GOOGLE_AUTH_REQUIRED');
   const url=`https://www.googleapis.com/drive/v3/files/${TOWER_ID}`;
   const init=()=>({headers:{Authorization:`Bearer ${token}`},redirect:'error',cache:'no-store',signal:signal||AbortSignal.timeout(45000)});
@@ -91,6 +93,8 @@ export async function readVerifiedCanonicalTower({token,fetchImpl=fetch,signal})
   const before=await meta.json();
   if(before.id!==TOWER_ID||!before.headRevisionId||!/^[a-f0-9]{32}$/.test(before.md5Checksum))throw new Error('TOWER_METADATA_INVALID');
   if(Number(before.size)>32*1024*1024)throw new Error('TOWER_TOO_LARGE');
+  if(useCache&&verifiedCache?.head===before.headRevisionId&&verifiedCache.md5===before.md5Checksum)
+    return {tower:verifiedCache.tower,proof:{file_id:TOWER_ID,body_verified:true}};
   const response=await fetchImpl(url+'?alt=media&supportsAllDrives=true',init());if(!response.ok)throw new Error('TOWER_UNAVAILABLE');
   const chunks=[];let size=0;
   for await(const chunk of response.body){size+=chunk.byteLength;if(size>32*1024*1024)throw new Error('TOWER_TOO_LARGE');chunks.push(chunk);}
@@ -103,10 +107,11 @@ export async function readVerifiedCanonicalTower({token,fetchImpl=fetch,signal})
   const tower=JSON.parse(raw),proof={file_id:TOWER_ID,body_verified:true};
   // Preserve the existing validation and its Writer-facing semantics.
   validateCanonicalTowerIdentity(tower,proof);
+  verifiedCache={head:before.headRevisionId,md5,tower};
   return {tower,proof};
 }
 
 export async function readOperationalTower(options){
-  const {tower,proof}=await readVerifiedCanonicalTower(options);
+  const {tower,proof}=await readVerifiedCanonicalTower({useCache:true,...options});
   return operationalStateFromTower(tower,proof);
 }
