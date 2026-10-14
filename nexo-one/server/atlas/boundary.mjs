@@ -18,9 +18,11 @@ export async function atlasBoundary(req,env,{route,body={},now=Date.now(),store}
     // Preserve existing machine grants for MCP and its equivalent spool ingress. Strip
     // cookies so the old owner-session branch cannot bypass Atlas revocation.
     const authorization=String(req.headers?.authorization||'');
-    if(authorization&&authorization.length<=16391){
-      const machineRequest=new Request('https://machine.invalid/api/mcp',{
-        method:req.method,headers:{authorization}});
+    // Chave no link (conectores sem OAuth): /api/mcp?key=... e /api/inbox-drop?...&key=...
+    const key=new URL(req.url||'/','http://local').searchParams.get('key')||'';
+    if((authorization&&authorization.length<=16391)||(key&&key.length<=128)){
+      const machineRequest=new Request('https://machine.invalid/api/mcp'+(key?'?key='+encodeURIComponent(key):''),{
+        method:req.method,headers:authorization?{authorization}:{}});
       if(await operationalPrincipal(machineRequest,env))return null;
     }
   }
