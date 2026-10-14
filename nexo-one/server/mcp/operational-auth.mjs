@@ -13,6 +13,12 @@ export async function operationalPrincipal(request,env){
   const expected=env.NEXO_MCP_ACCESS_KEY_SHA256||env.NEXO_RUNNER_KEY_SHA256;
   if(bearer&&/^[0-9a-f]{64}$/.test(expected||'')&&equal(sha256(bearer),expected))
     return {authenticated:true,id:sha256('existing-mcp-key:'+bearer),roles:Object.keys(ROLE_PROMPTS)};
+  // Conectores sem OAuth (tarefas agendadas do ChatGPT) mandam a chave no link: /api/mcp?key=...
+  // Só o hash fica no código; trocar a chave = gerar outra e trocar o hash (ou NEXO_MCP_URL_KEY_SHA256).
+  const urlKey=new URL(request.url,'http://local').searchParams.get('key');
+  const urlKeyHash=env.NEXO_MCP_URL_KEY_SHA256||'5c33b5bed4466e8e43fc84fa392c0bebc6bfe0a2152370d1f71aed6fd72b2927';
+  if(urlKey&&urlKey.length<=128&&equal(sha256(urlKey),urlKeyHash))
+    return {authenticated:true,id:sha256('mcp-url-key:'+urlKeyHash),roles:Object.keys(ROLE_PROMPTS)};
   if(authenticated(req,env)&&(request.method!=='POST'||sameOrigin(req)))
     return {authenticated:true,id:sha256('existing-owner-session:'+env.NEXO_SESSION_SECRET),roles:Object.keys(ROLE_PROMPTS)};
   // Reuse the already authorized Writer OIDC verifier. Claims are inspected only
