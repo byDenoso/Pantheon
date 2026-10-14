@@ -4,6 +4,7 @@ import {createHash,scryptSync} from 'node:crypto';
 import handler from '../server/handler.mjs';
 import {RESEARCH_ROUTES} from '../server/compiler/atlas-research-api.mjs';
 import {readAtlasPrivatePublication} from '../server/atlas/private-source.mjs';
+import {makePrivateTowerFixture} from './helpers/private-tower.fixture.mjs';
 
 const salt='c'.repeat(32);
 const env={
@@ -211,5 +212,43 @@ test('private source rejects redirects and upstream failures without following a
     }),/PRIVATE_SOURCE_UNAVAILABLE/);
     assert.equal(reads,1);
   }
-  await assert.rejects(readAtlasPrivatePublication(env,async()=>{throw Error('synthetic offline');}),/synthetic offline/);
+  await assert.rejects(readAtlasPrivatePublication(env,async()=>{throw Error('synthetic offline');}),/PRIVATE_SOURCE_UNAVAILABLE/);
+});
+
+test('explicit private proxy 401/403 never retries via another identity',async()=>{
+  for(const status of [401,403]){
+    let driveTokens=0,driveReads=0;
+    await assert.rejects(readAtlasPrivatePublication(env,async()=>new Response('denied',{status}),{
+      tokenProvider:async()=>{driveTokens++;return 'synthetic';},
+      reader:async()=>{driveReads++;throw Error('must not read Drive');},
+    }),error=>error?.code==='PRIVATE_SOURCE_ACCESS_DENIED'&&error?.message==='PRIVATE_SOURCE_UNAVAILABLE');
+    assert.equal(driveTokens,0);assert.equal(driveReads,0);
+  }
+});
+
+test('proxy server error uses already-authorized canonical Drive and reads one revision',async()=>{
+  const tower=makePrivateTowerFixture();let reads=0;
+  const data=await readAtlasPrivatePublication(env,async()=>new Response('down',{status:503}),{
+    tokenProvider:async()=> 'synthetic',
+    reader:async()=>{reads++;return {tower};},
+  });
+  assert.equal(reads,1);
+  assert.equal(data.data.source_revision,tower.revision);
+});
+
+test('failed proxy and Drive are separately diagnosed without secret-bearing errors',async t=>{
+  const entries=[];
+  t.mock.method(console,'error',(...args)=>entries.push(args.join(' ')));
+  await assert.rejects(readAtlasPrivatePublication(env,async()=>new Response('down',{status:503}),{
+    tokenProvider:async()=>{throw Error('AUTH_REQUIRED');},
+  }),/PRIVATE_SOURCE_UNAVAILABLE/);
+  await assert.rejects(readAtlasPrivatePublication(env,async()=>{throw Error('SECRET_IN_UPSTREAM_MESSAGE');},{
+    tokenProvider:async()=>{throw Error('AUTH_REQUIRED');},
+  }),/PRIVATE_SOURCE_UNAVAILABLE/);
+  const log=entries.join('\n');
+  assert.match(log,/PRIVATE_SOURCE_UNAVAILABLE/);
+  assert.match(log,/AUTH_REQUIRED/);
+  assert.match(log,/UNCLASSIFIED_ERROR/);
+  assert.doesNotMatch(log,/SECRET_IN_UPSTREAM_MESSAGE/);
+  assert.doesNotMatch(log,/synthetic-source-token/);
 });
