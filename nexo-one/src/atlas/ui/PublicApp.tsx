@@ -4,12 +4,12 @@ import {ApiError} from '../api.ts';
 import {CONTACT_EMAIL, PRESENTATION} from '../../i18n/presentation.ts';
 import {useLocale, useMessages} from './LocaleProvider.tsx';
 import PublicTestView from './PublicTestView.tsx';
-import PublicCampaignsView from './PublicCampaignsView.tsx';
 import Shell from './Shell.tsx';
 import {goToPublicSection} from '../publicNavigation.ts';
 import '../public-presentation.css';
 
 const CosmicWebCanvas = lazy(() => import('./CosmicWebCanvas.tsx'));
+const PublicCampaignsView = lazy(() => import('./PublicCampaignsView.tsx'));
 const art = new URL('../assets/cosmic-web.png', import.meta.url).href;
 
 export default function PublicApp() {
@@ -17,6 +17,18 @@ export default function PublicApp() {
   const locale = useLocale();
   const t = PRESENTATION[locale];
   const [pub, setPub] = useState<PublicState>({status: 'loading', items: [], tests: []});
+  const [motionReady, setMotionReady] = useState(false);
+
+  // The static hero image paints first; the decorative animation starts at idle.
+  useEffect(() => {
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    if ('requestIdleCallback' in window) {
+      const idle = window.requestIdleCallback(() => setMotionReady(true), {timeout: 1500});
+      return () => window.cancelIdleCallback(idle);
+    }
+    const timeout = window.setTimeout(() => setMotionReady(true), 400);
+    return () => window.clearTimeout(timeout);
+  }, []);
 
   useEffect(() => { document.title = m.heroTitle; }, [m.heroTitle]);
   useEffect(() => {
@@ -41,8 +53,8 @@ export default function PublicApp() {
           </div>
           <figure className="atlas-hero-art">
             <div className="atlas-hero-picture">
-              <img className="atlas-web-art" src={art} width="1672" height="941" alt="" fetchPriority="high"/>
-              <div className="atlas-web-motion" aria-hidden="true"><Suspense fallback={null}><CosmicWebCanvas label={m.vizLabel}/></Suspense></div>
+              <img className="atlas-web-art" src={art} width="1672" height="941" alt="" decoding="async" fetchPriority="high"/>
+              {motionReady && <div className="atlas-web-motion" aria-hidden="true"><Suspense fallback={null}><CosmicWebCanvas label={m.vizLabel}/></Suspense></div>}
             </div>
             <figcaption className="atlas-note">{m.vizNote}</figcaption>
           </figure>
@@ -72,7 +84,7 @@ export default function PublicApp() {
             {pub.status === 'loading' && <p>{m.loading}</p>}
             {pub.status === 'unavailable' && <p className="atlas-empty">{m.unavailable}</p>}
             {pub.status === 'empty' && <p className="atlas-empty">{m.emptyTitle}</p>}
-            {pub.campaigns !== undefined && <PublicCampaignsView campaigns={pub.campaigns} locale={locale} generatedAt={pub.generatedAt} coverage={pub.coverage}/>}
+            {pub.campaigns !== undefined && <Suspense fallback={null}><PublicCampaignsView campaigns={pub.campaigns} locale={locale} generatedAt={pub.generatedAt} coverage={pub.coverage}/></Suspense>}
             {pub.status === 'ready' && pub.tests.map(test => <PublicTestView key={test.id} test={test} locale={locale}/>)}
             {pub.status === 'ready' && pub.items.map(it => (
               <article key={it.id} className="atlas-item">
