@@ -1,6 +1,8 @@
-import {googleToken} from '../adapters/google.mjs';
-import {readVerifiedCanonicalTower} from '../mcp/operational-state.mjs';
-import {compilePrivateTowerRuntime} from './private-tower.mjs';
+import {campaignScope,readCampaignObservation} from './campaign-drive.mjs';
+import {compilePrivateCampaignRuntime} from './private-campaign.mjs';
+// Campaign mode avoids importing or reading the legacy Tower modules.
+const defaultTokenProvider=async (...args)=>(await import('../adapters/google.mjs')).googleToken(...args);
+const defaultTowerReader=async (...args)=>(await import('../mcp/operational-state.mjs')).readVerifiedCanonicalTower(...args);
 import {validatePrivateRuntime} from './private-runtime.mjs';
 // Only a server-configured, access-controlled source may supply private Atlas
 // data. No public Pages/Raw GitHub fallback and no caller-provided upstream URL.
@@ -8,7 +10,7 @@ async function readFromDrive(env,fetcher,tokenProvider,reader){
   const token=await tokenProvider(env,AbortSignal.timeout(8000),{scopes:['https://www.googleapis.com/auth/drive.readonly']});
   const signal=AbortSignal.timeout(20000);
   for(let attempt=0;attempt<2;attempt++){
-    try{const {tower}=await reader({token,fetchImpl:fetcher,signal});return compilePrivateTowerRuntime(tower);}
+    try{const {tower}=await reader({token,fetchImpl:fetcher,signal});const {compilePrivateTowerRuntime}=await import('./private-tower.mjs');return compilePrivateTowerRuntime(tower);}
     catch(error){if(attempt||signal.aborted||error?.message!=='TOWER_READ_RACE')throw error;}
   }
 }
@@ -49,7 +51,15 @@ function safeProxyError(error){
   if(['PRIVATE_SOURCE_UNAVAILABLE','PRIVATE_SOURCE_TOO_LARGE','PRIVATE_SOURCE_INVALID'].includes(code))return error;
   return new Error('PRIVATE_SOURCE_UNAVAILABLE');
 }
-export async function readAtlasPrivatePublication(env=process.env,fetcher=fetch,{tokenProvider=googleToken,reader=readVerifiedCanonicalTower}={}){
+export async function readAtlasPrivatePublication(env=process.env,fetcher=fetch,{tokenProvider=defaultTokenProvider,reader=defaultTowerReader,campaignId,now}={}){
+  const mode=env.NEXO_ATLAS_DATA_SOURCE||'tower';
+  if(!['tower','campaigns'].includes(mode))throw new Error('PRIVATE_SOURCE_MODE_INVALID');
+  if(mode==='campaigns'){
+    // Explicit opt-in, private allowlist, no proxy or Tower fallback on failure.
+    const scope=campaignScope(env,campaignId);
+    const token=await tokenProvider(env,AbortSignal.timeout(8000),{scopes:['https://www.googleapis.com/auth/drive.readonly']});
+    return compilePrivateCampaignRuntime(await readCampaignObservation({...scope,token,fetchImpl:fetcher,...(now?{now}:{})}));
+  }
   if(!env.NEXO_ATLAS_PRIVATE_SOURCE_URL&&env.NEXO_ATLAS_PRIVATE_SOURCE_TOKEN)throw new Error('PRIVATE_SOURCE_NOT_CONFIGURED');
   if(!env.NEXO_ATLAS_PRIVATE_SOURCE_URL)return readFromDrive(env,fetcher,tokenProvider,reader);
   // Legacy proxy first when configured; if it is down, the canonical Drive read
