@@ -60,7 +60,7 @@ export function normalizePrivateTower(tower){
     && object(compactPolicy.fields);
   if(oldControl&&(compactPolicy||protectedAuthority))fail();
   const control=oldControl || (migrated?{...compactPolicy.fields,truth_owner:tower.truth_owner,write_model:tower.write_model}:null);
-  if(!object(control)||control.truth_owner!==tower.truth_owner||control.write_model!==tower.write_model)fail();
+  if(!object(control)||control.truth_owner!==tower.truth_owner||(migrated&&control.write_model!==tower.write_model))fail();
   const coverage={};
   const idFields={work:'work_id',tests:'test_id',hypotheses:'hypothesis_id',campaigns:'campaign_id',roadmaps:'roadmap_id',lessons:'lesson_id',artifacts:'artifact_id',events:'event_id'};
   const collect=(name,prefix)=>{
