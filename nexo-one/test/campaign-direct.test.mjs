@@ -124,7 +124,7 @@ test('campaign failure cannot fall back to a Tower, proxy or stale snapshot',asy
 });
 for(const status of [401,403])test('legacy proxy auth '+status+' cannot fall back to Drive',async()=>{
  let token=0,reader=0;
- await assert.rejects(readAtlasPrivatePublication({NEXO_ATLAS_PRIVATE_SOURCE_URL:'https://proxy.invalid',NEXO_ATLAS_PRIVATE_SOURCE_TOKEN:'synthetic'},async()=>new Response('{}',{status}),{tokenProvider:()=>{token++;},reader:()=>{reader++;}}),/AUTH_DENIED/);
+ await assert.rejects(readAtlasPrivatePublication({NEXO_ATLAS_PRIVATE_SOURCE_URL:'https://proxy.invalid',NEXO_ATLAS_PRIVATE_SOURCE_TOKEN:'synthetic'},async()=>new Response('{}',{status}),{tokenProvider:()=>{token++;},reader:()=>{reader++;}}),error=>error?.code==='PRIVATE_SOURCE_ACCESS_DENIED'&&error?.message==='PRIVATE_SOURCE_UNAVAILABLE');
  assert.equal(token,0);assert.equal(reader,0);
 });
 test('unknown mode rejected before source access',async()=>{await assert.rejects(readAtlasPrivatePublication({NEXO_ATLAS_DATA_SOURCE:'other'},()=>{throw Error('unexpected');}),/MODE_INVALID/);});
@@ -158,7 +158,7 @@ test('explicit historical no-Atlas restriction cannot be overridden by event vis
 test('cleanup failure cannot turn a proxy denial into fallback authorization',async()=>{
  let reads=0;
  const fetcher=async()=>({ok:false,status:403,body:{cancel:async()=>{throw Error('cleanup failed');}}});
- await assert.rejects(readAtlasPrivatePublication({NEXO_ATLAS_PRIVATE_SOURCE_URL:'https://proxy.invalid',NEXO_ATLAS_PRIVATE_SOURCE_TOKEN:'synthetic'},fetcher,{tokenProvider:()=>{reads++;}}),/AUTH_DENIED/);
+ await assert.rejects(readAtlasPrivatePublication({NEXO_ATLAS_PRIVATE_SOURCE_URL:'https://proxy.invalid',NEXO_ATLAS_PRIVATE_SOURCE_TOKEN:'synthetic'},fetcher,{tokenProvider:()=>{reads++;}}),error=>error?.code==='PRIVATE_SOURCE_ACCESS_DENIED'&&error?.message==='PRIVATE_SOURCE_UNAVAILABLE');
  assert.equal(reads,0);
 });
 
