@@ -22,7 +22,7 @@ export default function PublicApp() {
   // The static hero image paints first; the decorative animation starts at idle.
   useEffect(() => {
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-    if ('requestIdleCallback' in window) {
+    if (typeof window.requestIdleCallback === 'function') {
       const idle = window.requestIdleCallback(() => setMotionReady(true), {timeout: 1500});
       return () => window.cancelIdleCallback(idle);
     }
