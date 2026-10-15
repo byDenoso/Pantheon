@@ -48,7 +48,19 @@ export function normalizePrivateTower(tower){
   if(!object(tower)||tower.contract!=='NEXO_TOWER_LIVE_V1'||tower.authority!=='TOWER_V06'||tower.storage!=='GOOGLE_DRIVE_PRIVATE'||tower.truth_owner!=='TOWER_V06@GOOGLE_DRIVE_PRIVATE'||tower.write_model!=='IN_PLACE_FILE_REVISION_CAS_READBACK'||tower.stable_file_id!==TOWER_ID||tower.revision!==tower.state_fingerprint||!/^sha256:[a-f0-9]{64}$/.test(tower.revision)||!object(tower.files)||tower.file_count!==Object.keys(tower.files).length||!Number.isFinite(Date.parse(tower.updated_at)))fail();
   const files=tower.files;
   const value=key=>files[key]?.encoding==='json'?structuredClone(files[key].value):undefined;
-  const control=value('CONTROL.json');if(!object(control)||control.truth_owner!==tower.truth_owner)fail();
+  const oldControl=value('CONTROL.json');
+  const compactPolicy=value('runtime/executor_policy.json');
+  const protectedAuthority=value('evolution/autonomy_authority.json');
+  const digest=compactPolicy?.legacy_sha256;
+  const migrated=!oldControl && compactPolicy?.schema==='NEXO_EXECUTOR_POLICY_V1'
+    && protectedAuthority?.schema==='NEXO_AUTONOMY_AUTHORITY_V1'
+    && /^[0-9a-f]{64}$/.test(String(digest||''))
+    && protectedAuthority.legacy_sha256===digest
+    && files['events/migrations/control-'+digest+'.json']?.encoding==='json'
+    && object(compactPolicy.fields);
+  if(oldControl&&(compactPolicy||protectedAuthority))fail();
+  const control=oldControl || (migrated?{...compactPolicy.fields,truth_owner:tower.truth_owner,write_model:tower.write_model}:null);
+  if(!object(control)||control.truth_owner!==tower.truth_owner||(migrated&&control.write_model!==tower.write_model))fail();
   const coverage={};
   const idFields={work:'work_id',tests:'test_id',hypotheses:'hypothesis_id',campaigns:'campaign_id',roadmaps:'roadmap_id',lessons:'lesson_id',artifacts:'artifact_id',events:'event_id'};
   const collect=(name,prefix)=>{

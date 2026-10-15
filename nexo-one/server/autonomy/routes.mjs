@@ -53,7 +53,16 @@ export function createAutonomyRoutes({humanAuthenticated=existingHumanSession, o
         if (req.method !== 'GET') return reply(405,{error:'METHOD_NOT_ALLOWED'});
         if (!await humanAuthenticated(req,env)) return reply(401,{error:'HUMAN_SESSION_REQUIRED'});
         const {tower}=await readTower(env,req);
-        const raw=tower?.files?.['CONTROL.json']?.value?.autonomy_mandate;
+        const legacy=tower?.files?.['CONTROL.json']?.value;
+        const compact=tower?.files?.['runtime/executor_policy.json']?.value;
+        const protectedAuthority=tower?.files?.['evolution/autonomy_authority.json']?.value;
+        const digest=compact?.legacy_sha256;
+        const migrated=!legacy && compact?.schema==='NEXO_EXECUTOR_POLICY_V1'
+          && protectedAuthority?.schema==='NEXO_AUTONOMY_AUTHORITY_V1'
+          && /^[0-9a-f]{64}$/.test(String(digest||''))
+          && protectedAuthority.legacy_sha256===digest
+          && tower?.files?.['events/migrations/control-'+digest+'.json']?.encoding==='json';
+        const raw=legacy?(compact?null:legacy.autonomy_mandate):(migrated?protectedAuthority.autonomy_mandate:null);
         const valid=raw?.schema==='NEXO_AUTONOMY_MANDATE_V1'
           && /^[A-Za-z0-9_-]{3,80}$/.test(raw.id || '') && Number.isSafeInteger(raw.revision)
           && raw.revision>=1 && ['ACTIVE','REVOKED'].includes(raw.status);

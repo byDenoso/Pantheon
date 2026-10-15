@@ -72,8 +72,17 @@ export async function verifyActionsIdentity(req, {workflow, audience, fetcher = 
 }
 
 export function scientificPackage(tower, batteryId, identity) {
-  const control = tower?.files?.['CONTROL.json']?.value;
-  const mandate = control?.autonomy_mandate;
+  const legacy = tower?.files?.['CONTROL.json']?.value;
+  const compact = tower?.files?.['runtime/executor_policy.json']?.value;
+  const protectedAuthority = tower?.files?.['evolution/autonomy_authority.json']?.value;
+  const digest = compact?.legacy_sha256;
+  const migrated = !legacy && compact?.schema === 'NEXO_EXECUTOR_POLICY_V1'
+    && protectedAuthority?.schema === 'NEXO_AUTONOMY_AUTHORITY_V1'
+    && /^[0-9a-f]{64}$/.test(String(digest||''))
+    && protectedAuthority.legacy_sha256 === digest
+    && tower?.files?.['events/migrations/control-'+digest+'.json']?.encoding === 'json';
+  const mandate = legacy ? (compact ? null : legacy.autonomy_mandate)
+    : (migrated ? protectedAuthority.autonomy_mandate : null);
   const ledger = tower?.files?.['evolution/batteries.json']?.value;
   const battery = ledger?.batteries?.find(row => row.id === batteryId);
   if (!mandate || mandate.schema !== 'NEXO_AUTONOMY_MANDATE_V1' || mandate.status !== 'ACTIVE'

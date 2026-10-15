@@ -9,13 +9,19 @@
     "writeModel": "IN_PLACE_FILE_REVISION_CAS_READBACK",
     "gitOperationalState": "FROZEN_CODE_AND_PROVENANCE_ONLY",
     "codeContracts": "GITHUB_MAIN",
-    "projection": "ATLAS_PROJECTION_V3"
+    "projection": "ATLAS_PROJECTION_V3",
+    "policyDocumentFileId": "1XO_V7Cmb75l8zSWCIsaoQGFRssLwLqMB",
+    "policySource": "PRIVATE_DRIVE_PSEUDO_MCP",
+    "legacyControl": "RETAINED_FOR_CODE_COMPATIBILITY_UNTIL_VERIFIED_CUTOVER"
   },
   "runtime": {
     "frontend": "GITHUB_PAGES",
     "readModel": "ATLAS_DATA_SDK_V3",
     "compute": "CHATGPT_RUNTIME_OR_AUTHORIZED_RUNNER",
-    "canonicalStorage": "GOOGLE_DRIVE_PRIVATE"
+    "canonicalStorage": "GOOGLE_DRIVE_PRIVATE",
+    "scientificArtifacts": "CREATE_ONLY_PRIVATE_DRIVE_CAMP_ID",
+    "scheduledTaskCount": 7,
+    "scheduledTaskAuthorization": "LIVE_CHATGPT_SCHEDULER_NOT_CODE"
   },
   "projection": {
     "freshnessModel": "LIVE_TOWER_REVISION",
