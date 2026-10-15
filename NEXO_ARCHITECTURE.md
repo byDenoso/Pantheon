@@ -1,8 +1,10 @@
 # NEXO Canonical Architecture
 
-The sole operational truth owner is:
+The sole scientific and operational state owner is:
 
 `TOWER_V06@GOOGLE_DRIVE_PRIVATE`
+
+The sole current operating policy reference for the seven NEXO ChatGPT Tasks is the private Google Drive pseudo-MCP document `MCP_RUNTIME_CONTRACT_V1.json` (stable file ID `1XO_V7Cmb75l8zSWCIsaoQGFRssLwLqMB`), especially `control_retirement_transition.current_verified_rules`. The legacy `CONTROL.json` remains in the live Tower only for compatibility with readers and Writer until full code/Task acceptance gates pass; it is not a requirement for independent scientific execution. Existing security mandates stay enforced.
 
 The canonical live object is the stable Google Drive file `NEXO_TOWER_LIVE.json` (stable file id `1m97cFmEkw19yiqD_6FWPG4j1lDCAYM4z`). Its live contract is `NEXO_TOWER_LIVE_V1` and the operational write model is `IN_PLACE_FILE_REVISION_CAS_READBACK`.
 
@@ -28,15 +30,15 @@ No dual-write to Git is permitted.
 
 - **Single unattended writer:** `.github/workflows/nexo-writer-robot.yml` uses the canonical Drive bundle reconciled against tested TCC main. Its existing concurrency group serializes that job. Schedule remains `7,22,37,52 * * * *`; the existing dispatch path can wake it.
 - **Public proposals:** `TCC@nexo/dispatch-runtime:nexo_persist/requests/<stable_id>.json` -> pinned relay -> `TCC@nexo-inbox` -> Writer. Staging, delivery and application are different stages confirmed by compatible receipts and exact hashes.
-- **Write concurrency:** the same stable Drive file is read, compared, PATCHed and read back. `IN_PLACE_FILE_REVISION_CAS_READBACK` is the legacy contract label; the HTTP transport has no demonstrated atomic conditional write. A local lock does not serialize independent machines. Do not start another canonical writer.
-- **ChatGPT** reads the Tower through its Drive connector and never writes it. Proposals, hypotheses and learning signals go to the create-only Drive folder `NEXO_INBOX`; the writer applies them.
+- **Write concurrency:** the same stable Drive file is read, compared, PATCHed and read back. `IN_PLACE_FILE_REVISION_CAS_READBACK` is the legacy contract label; the HTTP transport has no demonstrated atomic conditional write. A local lock does not serialize independent machines. Do not start another canonical writer. Source-compatible policy consumers must be migrated and verified before physically retiring `CONTROL`.
+- **ChatGPT scientific Tasks:** seven enabled roles (Maestro, Cientista, Engenheiro, Executor, Crítico, Sintetizador, Editor), operating from live schedule and private pseudo-MCP policies. They create non-empty, immutable scientific artifacts directly under authorized private Drive CAMP_ID folders and verify content, MIME, parent and hashes. They do not overwrite the canonical Tower. Writer remains the only serialized Tower consolidator; pending application is distinct from persisted campaign evidence.
 - **ATLAS (Pages)** reads the Tower from Drive with a Reader-only secret (`NEXO_DRIVE_READER_JSON`) and builds the public projection inside the job. The vault export mirror is a fallback only while that secret is absent. The scheduled cron is a slow reconciler (GitHub runs it every few hours); the writer's dispatch is the sync path.
 - **Drift check:** `nexo_tower.py status` compares the Tower `state_fingerprint` with the published `tower-projection/manifest.json` and reports `CURRENT` or `OUTDATED`.
 - **Meaning:** `TCC/runtime/nexo_agent_api/contracts/SEMANTIC_TAXONOMY_V1.json` (Git contract). Every projected test/campaign carries a resolved `semantic` block; the ATLAS renders domains/stations from it.
 - **MCP:** hosted read-only scientific views. No mutation capability is implied; a read does not stage, deliver or apply a proposal. Pages remains the presentation pipeline and existing Vercel endpoints provide compatibility routes.
 - **Projection:** producer allowlist; preserve the last valid observation after failure or an incompatible read. Scientific state, attempt, review, decision, revision and freshness remain separate. Polling never refreshes the time of a historical result.
 - **C01:** only the explicitly approved readiness-cache adapter on the corrected baseline, with immutable context and verified mandate. Deterministic 10% assignment, maximum 100 candidate evaluations/day for 7–28 days (maximum 2800). Quality counts at least 600 unique units actually evaluated by the candidate with justified independence/strata; controls are excluded. Insufficient sample, monitor loss or failed readback never promotes. Global scientific gates and CAMB/MCMC remain unchanged.
-- **Automations:** ChatGPT task configuration is external to this Work. Versioned instructions do not prove changes to prompts, models, schedules or states.
+- **Automations:** live scheduler readback on 2026-10-15 confirmed that all seven prompts reference the Drive pseudo-MCP and that other listed tasks are disabled/completed. Their next scheduled-runtime Drive write permission is not yet verified. This repository does not control those Task schedules or credentials.
 
 Current Atlas V3 design: `docs/superpowers/specs/2026-09-14-atlas-neural-v3.md`.
 
