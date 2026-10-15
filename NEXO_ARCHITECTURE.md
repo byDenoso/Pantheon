@@ -44,6 +44,31 @@ Current Atlas V3 design: `docs/superpowers/specs/2026-09-14-atlas-neural-v3.md`.
 
 Historical sovereign architecture: `docs/superpowers/specs/2026-09-13-nexo-sovereign-architecture.md`.
 
+## Native Docs evidence packages (rollout gated)
+
+TCC implements `NEXO_ARTIFACT_PACKAGE_V1` in its existing Writer bundle. Small evidence
+packages (up to 128 KiB of original bytes) remain in immutable private campaign Docs,
+with Base64 content, original-byte hashes and provenance. Files can be restored by any
+executor implementing the contract; no separate raw-file creation, database or service
+account storage quota is required.
+
+Producers create and fill Docs outside consumed folders, verify them, then move the
+completed evidence to its campaign and the individual proposal to `NEXO_INBOX`.
+The proposal's optional `artifact_packages` references are accepted only on the private
+Drive ingress. The same singleton Writer reads the evidence, verifies the pinned private
+campaign hierarchy and hashes, and catalogs metadata alongside the requested effects.
+Unreachable evidence remains pending; a receipt cannot substitute for effect readback.
+The existing Writer summary exposes aggregate `evidence_health` age/counts without private
+identities. The technical Actions alert still observes workflow outcomes only.
+
+Source availability is not deployment or Task readiness. Before enabling these references,
+verify that the existing Writer is running the compatible tested TCC bundle and can read
+the campaign Docs. An owner-only campaign requires explicit operator-managed access before
+the Writer can consolidate it; code does not change sharing. Scheduled Task capabilities
+must be checked in their own runtime, including after a ChatGPT plan migration.
+The old spool and raw JSON paths remain compatible within their existing authorization.
+No Task, schedule, permission or live Tower mutation is performed by this source change.
+
 ## Expansion (adding a domain, subdomain or automation)
 
 Nothing in the UI or compilers lists domains by hand.
