@@ -1,5 +1,5 @@
 {
   "active": "GPT",
   "shadow": "CLAUDE",
-  "note": "Quem roda os 5 papéis agendados. Para trocar, mude 'active' para CLAUDE e ative as tarefas do Claude (ver nexo-control/README.md). Propostas do produtor em shadow são registradas e nunca aplicadas na Tower."
+  "note": "Seleciona somente o produtor do Writer tecnico legado. Nao administra o calendario nem o elenco das Tasks cientificas: use o inventario vivo do agendador e o Pseudo-MCP privado. Propostas do produtor em shadow nao sao aplicadas na Tower."
 }
