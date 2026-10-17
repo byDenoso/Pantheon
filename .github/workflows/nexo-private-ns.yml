@@ -9,7 +9,7 @@ on:
       run_id:
         required: true
         type: choice
-        options: [pilot, m1r1, m1r2, m2r1, m2r2, m3r1, m3r2]
+        options: [pilot, m1r1, m1r2, m2r1, m2r2, m3r1, m3r2, validation-a]
 
 permissions:
   contents: read
@@ -21,6 +21,7 @@ concurrency:
 
 jobs:
   segment:
+    if: inputs.run_id != 'validation-a'
     runs-on: ubuntu-latest
     timeout-minutes: 340
     env:
@@ -106,3 +107,48 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: gh workflow run nexo-private-ns.yml --repo "$GITHUB_REPOSITORY" --ref main -f run_id="${{ inputs.run_id }}"
+
+  private-validation:
+    if: inputs.run_id == 'validation-a'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 330
+    permissions:
+      contents: read
+    env:
+      CODE_FILE_ID: 17WTz82won53xBEKGRrxhnZqznaYVOjcA
+      CODE_SHA256: bee27d3235fc47efb7b1632b984ed74b5fac8dd7cd81ffa4149d5c49c692edfc
+      INPUT_FILE_ID: 1RUH9uzEwNkJwqcPYiKkaKtmUM1hf9jBe
+      INPUT_SHA256: 68487970d1719490618688de8e147dcf919ef3c35eacb5c36c69280134f7d8e8
+      OUTPUT_FILE_ID: 1iUk5SO1Ju0KGeWoBgxLVWvA3MtIkl6Ye
+      STATE_FILE_ID: 1yulWKsC67kYrz-ydwBX44ti0Ebl1yoUs
+    steps:
+      - name: Set single-segment deadline
+        run: echo "DEADLINE=$(( $(date +%s) + 300*60 ))" >> "$GITHUB_ENV"
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12.14'
+      - name: Install frozen validation stack
+        run: python -m pip install --disable-pip-version-check "cobaya==3.6.2" "camb==1.6.6" "dynesty==2.1.5" "numpy==2.5.3" "scipy==1.18.1" "astropy==8.0.1" "clipy-like==0.15" "PyYAML==6.0.3" google-auth requests >/dev/null 2>&1
+      - name: Fetch immutable private runner
+        env:
+          GOOGLE_SERVICE_ACCOUNT_JSON: ${{ secrets.NEXO_DRIVE_WRITER_JSON }}
+        run: |
+          python - <<'PYCODE' > "$RUNNER_TEMP/private-fetch.log" 2>&1
+          import hashlib, io, json, os, tarfile
+          from google.oauth2 import service_account
+          from google.auth.transport.requests import AuthorizedSession
+          creds = service_account.Credentials.from_service_account_info(json.loads(os.environ["GOOGLE_SERVICE_ACCOUNT_JSON"]), scopes=["https://www.googleapis.com/auth/drive"])
+          r = AuthorizedSession(creds).get(f"https://www.googleapis.com/drive/v3/files/{os.environ['CODE_FILE_ID']}", params={"alt": "media"}, timeout=120)
+          r.raise_for_status()
+          assert hashlib.sha256(r.content).hexdigest() == os.environ["CODE_SHA256"]
+          tarfile.open(fileobj=io.BytesIO(r.content), mode="r:gz").extractall(os.environ["RUNNER_TEMP"] + "/validation", filter="data")
+          PYCODE
+      - name: Run one bounded private validation segment
+        env:
+          GOOGLE_SERVICE_ACCOUNT_JSON: ${{ secrets.NEXO_DRIVE_WRITER_JSON }}
+        run: |
+          set +e
+          python "$RUNNER_TEMP/validation/run_private_segment.py" > "$RUNNER_TEMP/private-segment.log" 2>&1
+          rc=$?
+          grep '^STATUS [A-Z_]*$' "$RUNNER_TEMP/private-segment.log" || true
+          exit "$rc"
