@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {Client,StreamableHTTPClientTransport} from '@modelcontextprotocol/client';
 import {createNexoMcpWebHandler,NEXO_MCP_TOOL_NAMES} from '../server/mcp/server.mjs';
+import {privateRetrievalAllowed} from '../server/mcp/operational-runtime.mjs';
 import {sha256,OPERATIONAL_TOOL_NAMES,createOperationalService} from '../server/mcp/operational-tools.mjs';
 import {createOperationalQueue,isOperationalEnvelope,SPOOL_ID} from '../server/mcp/operational-queue.mjs';
 
@@ -102,4 +103,16 @@ test('existing spool verifies exact body, destination, and idempotent repeat',as
   await assert.rejects(()=>submit(intent,principal),/SPOOL_IDENTITY_CONFLICT/);
   spool.spreadsheetId='wrong';await assert.rejects(()=>submit(intent,principal),/SPOOL_DESTINATION_MISMATCH/);
   assert.equal(isOperationalEnvelope({kind:'BATCH',payload:{items:[intent]}}),true);
+});
+
+// Synthetic identity tests: private evidence must not become readable through
+// the URL key, the operational bearer, or an arbitrary principal object.
+test('private retrieval is owner-session-only',()=>{
+  const env={NEXO_SESSION_SECRET:'synthetic-fixture-not-a-real-secret'};
+  const owner={authenticated:true,roles:['CIENTISTA'],id:sha256('existing-owner-session:'+env.NEXO_SESSION_SECRET)};
+  assert.equal(privateRetrievalAllowed(owner,env),true);
+  assert.equal(privateRetrievalAllowed({...owner,id:sha256('mcp-url-key:synthetic')},env),false);
+  assert.equal(privateRetrievalAllowed({...owner,id:sha256('existing-mcp-key:synthetic')},env),false);
+  assert.equal(privateRetrievalAllowed({...owner,authenticated:false},env),false);
+  assert.equal(privateRetrievalAllowed(owner,{}),false);
 });
