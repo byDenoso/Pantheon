@@ -1,0 +1,9 @@
+{
+  "mode": "synthetic_software_smoke_only",
+  "test_id": "T-H0LCDM26-001-R2-LINEAR-CV",
+  "inputs_required": ["pantheon_table", "pantheon_cov", "plin", "manifest"],
+  "allow_scientific_result_from_smoke": false,
+  "requires_exact_sha256": true,
+  "seed": 2601001,
+  "realisations": 20000
+}
