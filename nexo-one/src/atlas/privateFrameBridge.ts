@@ -26,6 +26,9 @@ export type BridgeDeps = {
   refreshTimeoutMs?: number;
   /** called with the fresh data only after it was handed to the frame */
   onRefreshed?: (data: unknown) => void;
+  /** Execute one allowlisted read-only retrieval call outside the network-closed frame. */
+  onRetrieval?: (name: string, args: Record<string, unknown>, signal: AbortSignal) => Promise<unknown>;
+  retrievalTimeoutMs?: number;
 };
 export class RefreshError extends Error {
   fatal: boolean; code: string;
@@ -57,6 +60,7 @@ export function createFrameBridge(d: BridgeDeps) {
     } else if (msg.type === 'ACCEPTED') d.onAccepted?.();
     else if (msg.type === 'SESSION_ACTION') d.onLogout();
     else if (msg.type === 'REFRESH') refresh(msg.id);
+    else if (msg.type === 'RETRIEVAL') retrieval(msg.id, msg.name, msg.args);
     else d.onError(msg.code);
   };
   // single-flight: concurrent REFRESH requests share one revalidation; each caller still gets its own reply id
@@ -90,6 +94,22 @@ export function createFrameBridge(d: BridgeDeps) {
       if (fatal) d.onError(code); else send({channel: HOST, type: 'REFRESH_FAILED', id, code});
     });
   };
+  const retrievals = new Map<string, AbortController>();
+  const retrieval = (id: string, name: string, args: Record<string, unknown>) => {
+    if (!d.onRetrieval) { send({channel: HOST, type: 'RETRIEVAL_RESULT', id, ok: false, code: 'RETRIEVAL_UNAVAILABLE'}); return; }
+    if (retrievals.has(id)) return;
+    const controller = new AbortController(); retrievals.set(id, controller);
+    const timer = setTimeout(() => controller.abort(), d.retrievalTimeoutMs ?? 30_000);
+    Promise.resolve().then(() => d.onRetrieval!(name, args, controller.signal)).then(
+      data => { if (!disposed) send({channel: HOST, type: 'RETRIEVAL_RESULT', id, ok: true, data}); },
+      error => {
+        if (disposed) return;
+        const raw = String((error as {code?: unknown})?.code ?? (error as Error)?.message ?? 'RETRIEVAL_UNAVAILABLE');
+        const code = /^[A-Z_]{3,80}$/.test(raw) ? raw : controller.signal.aborted ? 'RETRIEVAL_TIMEOUT' : 'RETRIEVAL_UNAVAILABLE';
+        send({channel: HOST, type: 'RETRIEVAL_RESULT', id, ok: false, code});
+      },
+    ).finally(() => { clearTimeout(timer); retrievals.delete(id); });
+  };
   d.win.addEventListener('message', onMessage);
   return {
     /** Tells the frame the shell's language changed. Nothing is sent before the frame said READY or after dispose. */
@@ -99,6 +119,7 @@ export function createFrameBridge(d: BridgeDeps) {
       send({channel: HOST, type: 'TEARDOWN'}); // best effort: the frame is usually removed right after
       disposed = true;
       refreshAbort?.abort();
+      for (const controller of retrievals.values()) controller.abort(); retrievals.clear();
       d.win.removeEventListener('message', onMessage);
     },
   };

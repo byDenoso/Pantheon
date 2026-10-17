@@ -2,6 +2,7 @@ import {createMcpHandler,McpServer} from '@modelcontextprotocol/server';
 import * as z from 'zod/v4';
 import {executeMcpTool} from './tools.mjs';
 import {registerOperationalTools} from './operational-tools.mjs';
+import {registerRetrievalTools} from './retrieval-tools.mjs';
 import {operationalForRequest} from './operational-runtime.mjs';
 import {STYLE_POLICY,buildStyleInstruction,validateStyleText} from '../policy/style-policy.mjs';
 import {getPdfPolicy} from '../policy/pdf-reporting-policy.mjs';
@@ -163,7 +164,10 @@ export function createNexoMcpServer({readSnapshot,operational=null}){
       catch(error){return {...toolResult({error:errorCode(error)}),isError:true};}
     });
   }
-  if(operational)registerOperationalTools(server,{...operational,z});
+  if(operational){
+    registerOperationalTools(server,{...operational,z});
+    registerRetrievalTools(server,{principal:operational.principal,z});
+  }
   return server;
 }
 
@@ -183,7 +187,12 @@ export function createNexoMcpWebHandler({readSnapshot}){
       const operational=await operationalForRequest(request);
       if(operational.principal){
         const privateHandler=createMcpHandler(()=>createNexoMcpServer({readSnapshot,operational}),{responseMode:'json'});
-        try{return await privateHandler.fetch(request,options);}
+        try{
+          const response=await privateHandler.fetch(request,options);
+          const headers=new Headers(response.headers);
+          headers.set('Cache-Control','private, no-store');
+          return new Response(response.body,{status:response.status,statusText:response.statusText,headers});
+        }
         finally{await privateHandler.close();}
       }
       return handler.fetch(request,options);

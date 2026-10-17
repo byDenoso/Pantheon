@@ -60,12 +60,12 @@ export const adaptations: Record<string, (code: string) => string> = {
   ], 'Workspace.tsx'),
   '/src/mcp/McpControlPanel.tsx': code => replaceLiterals(code, [
     ['Interface programática do NEXO. O console consulta as ferramentas públicas do servidor.',
-      'PRIVATE · consultas somente leitura sobre o snapshot local da geração autenticada. Não é um servidor MCP ao vivo.'],
+      'PRIVATE · consultas locais da geração autenticada + retrieval remoto read-only pela ponte protegida do parent. O iframe continua sem acesso direto à rede.'],
     ['<h3>Servidor <StatusBadge', '<h3>Consultas locais <StatusBadge'],
     ['status.status!==\'READY\'&&<p role="status">Fonte científica indisponível. As políticas continuam disponíveis.</p>',
-      '<p role="status">PRIVATE · snapshot local da geração autenticada: sem saúde ao vivo de servidor, sem telemetria e sem acesso de máquina.</p>'],
+      '<p role="status">PRIVATE · snapshot local + retrieval remoto read-only quando configurado; tokens e credenciais ficam somente no servidor.</p>'],
     ['Telemetria indisponível nesta versão do servidor. O tempo de execução de cada consulta é medido pelo console.',
-      'Sem servidor MCP: telemetria não se aplica a consultas locais. O tempo de execução de cada consulta é medido pelo console.'],
+      'Telemetria do snapshot local não se aplica; chamadas de retrieval remoto preservam o resultado estruturado e o tempo é medido pelo console.'],
   ], 'McpControlPanel.tsx'),
   '/src/data/useSystem.ts': code => replaceLiterals(code, [
     ["'Disparando sincronização real…'", "'Revalidando a sessão e buscando nova geração privada…'"],
