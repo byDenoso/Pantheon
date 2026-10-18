@@ -10,6 +10,7 @@ import {DomainView, OperationView, ResearchView, TestDetail} from './Views.tsx';
 import './workspace.css';
 const TowerCosmos = lazy(() => import('../tower-web/TowerCosmos.tsx'));
 const TowerWeb = lazy(() => import('../tower-web/TowerWeb.tsx'));
+const KnowledgeGraph = lazy(() => import('../knowledge/KnowledgeGraph.tsx'));
 const nodeHref = (node: TowerNode) => node.kind === 'test' ? testHref(node.id.replace(/^test:/, '')) : node.domain ? researchHref(node.domain) : '#/teia/dominios';
 
 /** Presentation only, behind the existing authenticated Host. No fetch, credentials or persistence of source data. */
@@ -34,18 +35,18 @@ export default function PrivateWorkspace({state, generatedAt, route, refresh}: {
     return () => { window.removeEventListener('storage', changed); mq.removeEventListener('change', apply); };
   }, []);
   const pageKey = JSON.stringify(route);
-  useEffect(() => { if (route.page !== 'web' && route.page !== 'organogram') document.querySelector<HTMLElement>('[data-private-heading]')?.focus({preventScroll: true}); }, [pageKey]);
+  useEffect(() => { if (route.page !== 'organogram' && route.page !== 'cosmos') document.querySelector<HTMLElement>('[data-private-heading]')?.focus({preventScroll: true}); }, [pageKey]);
   const requestRefresh = async () => {
     if (!refresh || flight.current) return;
     flight.current = true; setRefreshing(true); setNotice('');
     try { await refresh(); if (mounted.current) setNotice(m.refreshed); } catch { if (mounted.current) setNotice(m.refreshError); }
     finally { flight.current = false; if (mounted.current) setRefreshing(false); }
   };
-  const active = route.page === 'organogram' ? 'web' : route.page === 'test' ? 'research' : route.page;
+  const active = route.page === 'organogram' || route.page === 'cosmos' ? 'web' : route.page === 'test' ? 'research' : route.page;
   const availability = (state as unknown as {availability?: Record<string, {state?: string}>}).availability;
   const coverage = availability?.[route.page === 'operations' ? 'work' : 'tests']?.state;
   const coverageNote = coverage === 'UNAVAILABLE' ? m.collectionUnavailable : coverage === 'PARTIAL' ? m.partial : null;
-  const isWeb = route.page === 'web' || route.page === 'organogram';
+  const isWeb = route.page === 'web' || route.page === 'organogram' || route.page === 'cosmos';
   return <div className="pw" data-theme={theme} data-view={route.page}>
     <header className="pw-header"><a className="pw-brand" href="#/teia">NEXO<small>{m.private}</small></a>
       <nav aria-label={m.private}>{([['web','#/teia',m.web],['domains','#/teia/dominios',m.domains],['research','#/teia/testes',m.tests],['operations','#/teia/operacao',m.operations]] as const).map(([key, href, label]) => <a key={key} href={href} aria-current={active === key ? 'page' : undefined}>{label}</a>)}</nav>
@@ -55,7 +56,8 @@ export default function PrivateWorkspace({state, generatedAt, route, refresh}: {
     <div className={isWeb ? 'pw-content pw-web-content' : 'pw-content'}>
       {!isWeb && coverageNote && <p className="pw-coverage" role="status">{coverageNote}</p>}
       <Suspense fallback={<main className="pw-page" role="status">{m.loading}</main>}>
-        {route.page === 'web' && <TowerCosmos tests={tests} campaignLabel={campaignLabel} normDomain={normDomain} theme={theme} generatedAt={generatedAt} refresh={refresh} backHref="#/teia/dominios" nodeHref={nodeHref} emptyMessage={coverageNote ?? undefined}/>}
+        {route.page === 'web' && <KnowledgeGraph state={state} lang={lang}/>}
+        {route.page === 'cosmos' && <TowerCosmos tests={tests} campaignLabel={campaignLabel} normDomain={normDomain} theme={theme} generatedAt={generatedAt} refresh={refresh} backHref="#/teia/dominios" nodeHref={nodeHref} emptyMessage={coverageNote ?? undefined}/>}
         {route.page === 'organogram' && <TowerWeb tests={tests} campaignLabel={campaignLabel} normDomain={normDomain} theme={theme} backHref="#/teia"/>}
         {route.page === 'domains' && <DomainView tests={tests} state={state} lang={lang}/>}
         {route.page === 'research' && <ResearchView key={`${route.domain}:${route.filter}`} tests={tests} state={state} domain={route.domain} filter={route.filter} lang={lang}/>}

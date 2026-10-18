@@ -4,10 +4,12 @@ import {writeFileSync,readFileSync,rmSync,mkdirSync} from 'node:fs';
 import {resolve,dirname} from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {privateWorkspaceState} from '../test/helpers/private-workspace.fixture.mjs';
+import {knowledgeReadModel} from '../test/helpers/knowledge.fixture.mjs';
 const root=fileURLToPath(new URL('../',import.meta.url));
 const destination=resolve(process.argv[2]??'../private-workspace-preview.html');
 const entry=resolve(root,`test/.private-workspace-preview-${process.pid}.tsx`);
 const state=privateWorkspaceState();
+Object.assign(state.read_model,knowledgeReadModel());
 const code=`import {useEffect,useState} from 'react';
 import {createRoot} from 'react-dom/client';
 import PrivateWorkspace from '../src/private-workspace/PrivateWorkspace.tsx';
@@ -21,7 +23,7 @@ function Preview(){const [route,setRoute]=useState(()=>workspaceRoute(location.h
 createRoot(document.getElementById('root')!).render(<Preview/>);`;
 writeFileSync(entry,code);
 try{
- const built=await build({configFile:false,root,base:'./',build:{write:false,sourcemap:false,minify:true,lib:{entry,name:'NexoPrivatePreview',formats:['iife']}}});
+ const built=await build({configFile:false,root,base:'./',define:{'process.env.NODE_ENV':'"production"'},build:{write:false,sourcemap:false,minify:true,lib:{entry,name:'NexoPrivatePreview',formats:['iife']}}});
  const output=(Array.isArray(built)?built:[built]).flatMap(result=>result.output);
  const js=output.filter(item=>item.type==='chunk').map(item=>item.code).join('\n');
  const css=output.filter(item=>item.type==='asset'&&item.fileName.endsWith('.css')).map(item=>String(item.source)).join('\n');

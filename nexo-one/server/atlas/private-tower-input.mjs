@@ -32,7 +32,7 @@ function stripPeerFromPrivateAtlas(value){
 export function excludePeerFromPrivateAtlas(records){
   // The source Tower is never edited. Filtering precedes every private view.
   const out=stripPeerFromPrivateAtlas(records);
-  for(const name of ['work','tests','hypotheses','campaigns','roadmaps','lessons','artifacts','events','interdomain']){
+  for(const name of ['work','tests','hypotheses','claims','campaigns','roadmaps','lessons','artifacts','events','interdomain']){
     if(!Array.isArray(out[name]))continue;
     out.coverage[name]={...out.coverage[name],count:out[name].length,
       paths:out[name].map(row=>row._source_path).filter(Boolean)};
@@ -62,13 +62,13 @@ export function normalizePrivateTower(tower){
   const control=oldControl || (migrated?{...compactPolicy.fields,truth_owner:tower.truth_owner,write_model:tower.write_model}:null);
   if(!object(control)||control.truth_owner!==tower.truth_owner||(migrated&&control.write_model!==tower.write_model))fail();
   const coverage={};
-  const idFields={work:'work_id',tests:'test_id',hypotheses:'hypothesis_id',campaigns:'campaign_id',roadmaps:'roadmap_id',lessons:'lesson_id',artifacts:'artifact_id',events:'event_id'};
+  const idFields={work:'work_id',tests:'test_id',hypotheses:'hypothesis_id',claims:'claim_id',campaigns:'campaign_id',roadmaps:'roadmap_id',lessons:'lesson_id',artifacts:'artifact_id',events:'event_id'};
   const collect=(name,prefix)=>{
     const paths=Object.keys(files).filter(key=>key.startsWith(prefix)&&key.endsWith('.json')).sort();
     coverage[name]={status:paths.length?'PRESENT':'NOT_PRESENT',count:paths.length,paths};
     return paths.map(key=>{const v=value(key);if(!object(v))fail();const id=typeof v.id==='string'&&v.id?v.id:typeof v[idFields[name]]==='string'?v[idFields[name]]:key.slice(key.lastIndexOf('/')+1,-5);return {...v,id,_source_path:key};});
   };
-  const records={work:collect('work','entities/work/'),tests:collect('tests','entities/test/'),hypotheses:collect('hypotheses','entities/hypothesis/'),campaigns:collect('campaigns','entities/campaign/'),roadmaps:collect('roadmaps','roadmaps/'),lessons:collect('lessons','entities/lesson/'),interdomain:collect('interdomain','entities/interdomain/'),artifacts:collect('artifacts','entities/artifact/'),events:collect('events','events/'),control,snapshot:value('snapshot/latest.json')||null,activeIndex:value('indexes/active-work.json')||null,coverage,texts:{},evolution:{}};
+  const records={work:collect('work','entities/work/'),tests:collect('tests','entities/test/'),hypotheses:collect('hypotheses','entities/hypothesis/'),claims:collect('claims','entities/claim/'),campaigns:collect('campaigns','entities/campaign/'),roadmaps:collect('roadmaps','roadmaps/'),lessons:collect('lessons','entities/lesson/'),interdomain:collect('interdomain','entities/interdomain/'),artifacts:collect('artifacts','entities/artifact/'),events:collect('events','events/'),control,snapshot:value('snapshot/latest.json')||null,activeIndex:value('indexes/active-work.json')||null,coverage,texts:{},evolution:{}};
   const capabilityManifest=value('manifests/capabilities.json');
   records.capabilities=object(capabilityManifest?.capabilities)?capabilityManifest.capabilities:{};
   coverage.capabilities={status:object(capabilityManifest?.capabilities)?'PRESENT':'NOT_PRESENT',count:Object.keys(records.capabilities).length,paths:object(capabilityManifest?.capabilities)?['manifests/capabilities.json']:[]};

@@ -5,7 +5,7 @@ import {hasPublishedValue, matchesSearch} from '../features/lab/presentation.ts'
 import {normDomain} from '../features/lab/domains.ts';
 
 export type ResearchFilter = 'all' | 'results' | 'pending';
-export type WorkspaceRoute = {page: 'web' | 'organogram'} | {page: 'domains'} | {page: 'research'; domain: string | null; filter: ResearchFilter} | {page: 'test'; id: string} | {page: 'operations'} | {page: 'missing'};
+export type WorkspaceRoute = {page: 'web' | 'organogram' | 'cosmos'} | {page: 'domains'} | {page: 'research'; domain: string | null; filter: ResearchFilter} | {page: 'test'; id: string} | {page: 'operations'} | {page: 'missing'};
 export function workspaceRoute(hash: string): WorkspaceRoute | null {
   if (!hash || hash === '#' || hash === '#/' || hash === '#/teia' || hash === '#/teia/') return {page: 'web'};
   if (!/^#\/teia(?:\/|\?|$)/.test(hash)) return null;
@@ -16,6 +16,7 @@ export function workspaceRoute(hash: string): WorkspaceRoute | null {
   try {
     if (parts.length === 1) return {page: 'web'};
     if (parts[1] === 'organograma' && parts.length === 2) return {page: 'organogram'};
+    if (parts[1] === 'cosmos' && parts.length === 2) return {page: 'cosmos'};
     if (parts[1] === 'dominios' && parts.length === 2) return {page: 'domains'};
     if (parts[1] === 'testes' && parts.length === 2) return {page: 'research', domain: null, filter};
     if (parts[1] === 'dominio' && parts.length === 3 && parts[2]) return {page: 'research', domain: decodeURIComponent(parts[2]), filter};
