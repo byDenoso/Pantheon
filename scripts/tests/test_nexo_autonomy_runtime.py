@@ -65,6 +65,16 @@ class TransportTests(unittest.TestCase):
         report["battery_sha256"]={"bat-one":hashlib.sha256(json.dumps(battery, ensure_ascii=False,
             sort_keys=True, separators=(",", ":")).encode()).hexdigest()}
         self.assertEqual(capacity_candidate(tower), {"parallelism": 2, "review_ref": "evolution/autonomy_capacity_reviews.json#cap-one", "battery_refs": ["bat-one"]})
+        migrated = copy.deepcopy(tower)
+        mandate = migrated["files"].pop("CONTROL.json")["value"]["autonomy_mandate"]
+        digest = "d" * 64
+        migrated["files"].update({
+            "runtime/executor_policy.json": {"encoding": "json", "value": {"schema": "NEXO_EXECUTOR_POLICY_V1", "legacy_sha256": digest}},
+            "evolution/autonomy_authority.json": {"encoding": "json", "value": {"schema": "NEXO_AUTONOMY_AUTHORITY_V1", "legacy_sha256": digest, "autonomy_mandate": mandate}},
+            f"events/migrations/control-{digest}.json": {"encoding": "json", "value": {}}})
+        self.assertEqual(capacity_candidate(migrated), capacity_candidate(tower))
+        migrated["files"].pop(f"events/migrations/control-{digest}.json")
+        self.assertEqual(capacity_candidate(migrated), {})
         for field, value in (("decision", "PENDING"), ("approved_by", "EXECUTOR"), ("stage", 2), ("battery_refs", ["missing"])):
             old = report[field]; report[field] = value
             self.assertEqual(capacity_candidate(tower), {})
@@ -236,6 +246,44 @@ class PreparationTests(unittest.TestCase):
                       {"files": {"CONTROL.json": {"encoding": "json", "value": []}}}):
             with self.subTest(tower=tower):
                 self.assertEqual(self.observe(tower, self.SHA)["capacity_observation"]["quota"]["status"], "UNVERIFIED")
+
+    def migrated(self, mandate, digest="d" * 64, **override):
+        files = {
+            "runtime/executor_policy.json": {"encoding": "json", "value": {"schema": "NEXO_EXECUTOR_POLICY_V1", "legacy_sha256": digest, "fields": {}}},
+            "evolution/autonomy_authority.json": {"encoding": "json", "value": {"schema": "NEXO_AUTONOMY_AUTHORITY_V1", "legacy_sha256": digest, "autonomy_mandate": mandate}},
+            f"events/migrations/control-{digest}.json": {"encoding": "json", "value": {}},
+        }
+        files.update(override)
+        return {"files": {key: value for key, value in files.items() if value is not None}}
+
+    def test_migrated_layout_supplies_the_mandate_like_legacy(self):
+        mandate = {"status": "ACTIVE", "id": "m-one", "activation_receipt": {"source_revision": self.SHA}}
+        for tower in (self.tower(mandate), self.migrated(mandate)):
+            with self.subTest(tower=list(tower["files"])):
+                self.assertEqual(select_context_revision(tower), {"revision": self.SHA, "preparation_only": False})
+        capacity = {"evolution/autonomy_capacity.json": {"encoding": "json", "value": {"mandate_id": "m-one", "parallelism": 3}}}
+        legacy = self.tower(mandate); legacy["files"].update(capacity)
+        migrated = self.migrated(mandate); migrated["files"].update(capacity)
+        self.assertEqual(capacity_candidate(legacy), capacity_candidate(migrated))
+
+    def test_invalid_migrated_layouts_fail_closed(self):
+        mandate = {"status": "ACTIVE", "id": "m-one", "activation_receipt": {"source_revision": self.SHA}}
+        both = self.migrated(mandate); both["files"].update(self.tower(mandate)["files"])
+        digest_mismatch = self.migrated(mandate)
+        digest_mismatch["files"]["evolution/autonomy_authority.json"]["value"]["legacy_sha256"] = "e" * 64
+        cases = {
+            "legacy_and_compact": both,
+            "missing_event": self.migrated(mandate, **{"events/migrations/control-" + "d" * 64 + ".json": None}),
+            "missing_authority": self.migrated(mandate, **{"evolution/autonomy_authority.json": None}),
+            "missing_policy": self.migrated(mandate, **{"runtime/executor_policy.json": None}),
+            "digest_mismatch": digest_mismatch,
+            "bad_digest": self.migrated(mandate, digest="xyz"),
+            "wrong_schema": self.migrated(mandate, **{"runtime/executor_policy.json": {"encoding": "json", "value": {"schema": "OTHER", "legacy_sha256": "d" * 64}}}),
+        }
+        for name, tower in cases.items():
+            with self.subTest(name=name):
+                self.assertEqual(select_context_revision(tower, self.SHA), {"revision": None, "preparation_only": False})
+                self.assertEqual(capacity_candidate(tower), {})
 
     def test_existing_mandate_keeps_canonical_revision_and_rejects_override(self):
         for status in ("ACTIVE", "REVOKED"):

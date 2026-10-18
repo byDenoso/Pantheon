@@ -30,6 +30,39 @@ OPENER = urllib.request.build_opener(NoApiRedirect())
 
 
 IMPLEMENTATION_REVISION_RE = re.compile(r"^[0-9a-f]{40}$")
+LEGACY_DIGEST_RE = re.compile(r"^[0-9a-f]{64}$")
+
+
+def control_layout(files):
+    """Mirror nexo-one/server/autonomy/authority.mjs scientificPackage.
+
+    Returns (valid, mandate). CONTROL.json present: legacy layout, invalid if
+    the compact policy coexists. Absent: the migrated layout counts only when
+    executor policy, protected authority and the migration event all exist and
+    the legacy digests match. Anything else is invalid.
+    """
+    if not isinstance(files, dict):
+        return False, None
+    def value(path):
+        entry = files.get(path)
+        return entry.get("value") if isinstance(entry, dict) else None
+    legacy = value("CONTROL.json")
+    compact = value("runtime/executor_policy.json")
+    authority = value("evolution/autonomy_authority.json")
+    if legacy is not None:
+        if compact is not None or not isinstance(legacy, dict):
+            return False, None
+        return True, legacy.get("autonomy_mandate")
+    digest = compact.get("legacy_sha256") if isinstance(compact, dict) else None
+    migration = files.get(f"events/migrations/control-{digest}.json")
+    migrated = (isinstance(compact, dict) and compact.get("schema") == "NEXO_EXECUTOR_POLICY_V1"
+                and isinstance(authority, dict) and authority.get("schema") == "NEXO_AUTONOMY_AUTHORITY_V1"
+                and isinstance(digest, str) and LEGACY_DIGEST_RE.fullmatch(digest) is not None
+                and authority.get("legacy_sha256") == digest
+                and isinstance(migration, dict) and migration.get("encoding") == "json")
+    if not migrated:
+        return False, None
+    return True, authority.get("autonomy_mandate")
 
 
 def select_context_revision(tower, proposed_revision=None):
@@ -43,12 +76,15 @@ def select_context_revision(tower, proposed_revision=None):
     invalid = {"revision": None, "preparation_only": False}
     if not isinstance(tower, dict) or not isinstance(tower.get("files"), dict):
         return invalid
-    entry = tower["files"].get("CONTROL.json")
-    control = entry.get("value") if isinstance(entry, dict) and entry.get("encoding") == "json" else None
-    if not isinstance(control, dict):
+    files = tower["files"]
+    entry = files.get("CONTROL.json")
+    if entry is not None and not (isinstance(entry, dict) and entry.get("encoding") == "json"
+                                  and isinstance(entry.get("value"), dict)):
+        return invalid
+    valid, mandate = control_layout(files)
+    if not valid:
         return invalid
     valid_sha = lambda value: isinstance(value, str) and IMPLEMENTATION_REVISION_RE.fullmatch(value) is not None
-    mandate = control.get("autonomy_mandate")
     if mandate is not None:
         if not isinstance(mandate, dict):
             raise ValueError("MANDATE_INVALID")
@@ -201,7 +237,8 @@ def capacity_candidate(tower):
     files = tower.get("files") or {}
     def value(path):
         return files.get(path, {}).get("value", {})
-    mandate = value("CONTROL.json").get("autonomy_mandate") or {}
+    mandate = control_layout(files)[1]
+    mandate = mandate if isinstance(mandate, dict) else {}
     capacity = value("evolution/autonomy_capacity.json")
     if mandate.get("status") != "ACTIVE" or capacity.get("mandate_id") != mandate.get("id"):
         return {}
