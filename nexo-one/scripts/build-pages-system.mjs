@@ -4,6 +4,7 @@ import { sealStaticPublication } from './static-publication.mjs';
 import { resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { buildScienceProjectionV1, validateScienceProjectionV1 } from './science-projection-v1.mjs';
+import { PEER_FAMILY, peerIdentity } from '../server/atlas/private-tower-input.mjs';
 
 const CONTRACT = 'NEXO_PUBLIC_PROJECTION_V1';
 const SYSTEM_CONTRACT = '1';
@@ -100,6 +101,75 @@ export function validateSanctionedProjection(projection, manifestFile = null) {
   }
   if (manifestFile && stable(manifestFile) !== stable(manifest)) fail('manifest file differs from projection.manifest');
   return manifest;
+}
+
+// Public gate. Applied after validation and before any shaping, so every
+// public surface (graph, read model, science projection, world) sees the same
+// filtered input. PEER is excluded entirely; bait/blind rows never leave; a
+// test keeps result values only after an independent review it SURVIVED.
+const BAIT_KEYS = ['bait', 'is_bait', 'blind', 'blinded', 'is_blind'];
+const RESULT_KEYS = ['result', 'scientific_result', 'statistics', 'verdict', 'scientific_verdict', 'result_meaning', 'outcome', 'scientific_outcome'];
+function isBaitRecord(record) {
+  return BAIT_KEYS.some(key => {
+    const value = record?.[key];
+    return value === true || (typeof value === 'string' && value.trim() !== '' && !/^(false|no|none|0)$/i.test(value.trim()));
+  });
+}
+function isPeerRecord(record) {
+  return peerIdentity(record) || PEER_FAMILY.test(String(record?.id ?? record?.campaign_id ?? ''));
+}
+export function survivedIndependentReview(test) {
+  const survived = value => String(value ?? '').toUpperCase() === 'SURVIVED';
+  return survived(test?.review_state) || survived(test?.review?.verdict) || survived(test?.review?.outcome)
+    || (Array.isArray(test?.reviews) && test.reviews.some(review => survived(review?.outcome) || survived(review?.verdict)));
+}
+function withoutUnreviewedResult(test) {
+  if (survivedIndependentReview(test)) return test;
+  const out = { ...test };
+  for (const key of RESULT_KEYS) delete out[key];
+  if (out.semantic && typeof out.semantic === 'object') {
+    out.semantic = { ...out.semantic };
+    delete out.semantic.result_meaning;
+  }
+  return out;
+}
+export function publicGateProjection(projection) {
+  const keep = record => record && typeof record === 'object' && !isPeerRecord(record) && !isBaitRecord(record);
+  const out = { ...projection };
+  out.work = projection.work.filter(keep);
+  out.tests = projection.tests.filter(keep).map(withoutUnreviewedResult);
+  if (Array.isArray(projection.campaigns)) out.campaigns = projection.campaigns.filter(keep);
+  if (Array.isArray(projection.hypotheses)) out.hypotheses = projection.hypotheses.filter(keep);
+  if (Array.isArray(projection.roadmaps)) out.roadmaps = projection.roadmaps.filter(keep);
+  const capabilities = Object.entries(projection.capabilities)
+    .filter(([key, value]) => !PEER_FAMILY.test(key) && !(value && (isPeerRecord(value) || PEER_FAMILY.test(String(value.battery_id || ''))) ) && !isBaitRecord(value));
+  out.capabilities = Object.fromEntries(capabilities);
+  const removedCapabilities = Object.keys(projection.capabilities).length - capabilities.length;
+  if (projection.human_gates) {
+    const workIds = projection.human_gates.work_ids.filter(id => !PEER_FAMILY.test(String(id)));
+    out.human_gates = { ...projection.human_gates, work_ids: workIds, count: projection.human_gates.count - (projection.human_gates.work_ids.length - workIds.length) };
+  }
+  if (projection.cosmology_state) {
+    const historical = projection.cosmology_state.historical_tests.filter(keep).map(withoutUnreviewedResult);
+    const ids = new Set([...out.tests, ...historical].map(test => String(test.id)));
+    out.cosmology_state = {
+      ...projection.cosmology_state,
+      historical_tests: historical,
+      frontiers: projection.cosmology_state.frontiers.filter(keep).map(frontier => ({
+        ...frontier,
+        key_evidence: (frontier.key_evidence || []).filter(evidence => ids.has(String(evidence.id))),
+      })),
+    };
+  }
+  if (projection.counts && removedCapabilities) {
+    out.counts = { ...projection.counts, capabilities: Number(projection.counts.capabilities) - removedCapabilities };
+  }
+  return out;
+}
+const PEER_ID = /(^|[^a-z0-9])peer(?=[-_.])/i;
+function assertNoPeerIdentity(label, ids) {
+  const leak = ids.find(id => PEER_ID.test(String(id)));
+  if (leak) throw new Error('PUBLIC_PEER_BOUNDARY_FAILED:' + label + ':' + leak);
 }
 
 function cursorTime(cursor) {
@@ -677,7 +747,7 @@ function graphFromProjection(projection, observedAt, filaments = [], peerDetecti
         : campaign.subdomain
           ? String(campaign.subdomain).split('/').filter(Boolean).at(-1)
           : undefined,
-      atlas_visible: atlas.visible !== false,
+      atlas_visible: atlas.visible === true,
       ...semanticFields(campaign, labels),
       source_links: Array.isArray(campaign.source_links)
         ? campaign.source_links
@@ -728,7 +798,7 @@ function graphFromProjection(projection, observedAt, filaments = [], peerDetecti
       test_group_id: item.test_group_id ? String(item.test_group_id) : undefined,
       atlas_visible: item.campaign_id
         ? (campaignById.get(String(item.campaign_id))?.atlas_projection?.show_tests === true)
-        : true,
+        : item.atlas_visible === true,
       ...semanticFields(item, labels),
     });
     const owners = ownershipCampaignIds(item);
@@ -1107,8 +1177,8 @@ function generalLearningFilaments(general, observedAt) {
   return records.flatMap(item => {
     const id = String(item?.id || '').trim();
     const status = String(item?.status || '').toUpperCase();
-    if (!id || status === 'REJECTED' || status === 'RETIRED') return [];
-    if (status !== 'PROMOTED' && item?.atlas_visible !== true) return [];
+    if (!id || status === 'REJECTED' || status === 'RETIRED' || isPeerRecord(item) || isBaitRecord(item)) return [];
+    if (item?.atlas_visible !== true) return [];
 
     const fromDomain = domainOf(item.from_domain || item.domain || 'NEXO');
     const toDomain = domainOf(item.to_domain || item.domain || fromDomain);
@@ -1193,21 +1263,23 @@ function applyGeneralExecutionToGraph(graph, general, manifest, observedAt) {
 }
 
 export function buildPagesProjection({
-  projection,
+  projection: rawProjection,
   manifestFile = null,
   interdomain = [],
   learning = {},
-  peerDetectionBattery = null,
   humanGateDetails = [],
   general = {},
 } = {}) {
-  const manifest = validateSanctionedProjection(projection, manifestFile);
+  const manifest = validateSanctionedProjection(rawProjection, manifestFile);
+  const projection = publicGateProjection(rawProjection);
+  // PEER never reaches a public surface, whatever the caller passes.
+  const peerDetectionBattery = null;
   const scienceProjection = buildScienceProjectionV1({ projection, manifest });
   const generatedAt = Date.parse(String(manifest.generated_at || ''));
   const observedAt = Number.isFinite(generatedAt) ? new Date(generatedAt).toISOString() : cursorTime(manifest.event_cursor);
   const source = sourceRef(manifest);
   const filaments = [
-    ...learningFilamentsFromTower(interdomain, manifest, observedAt),
+    ...learningFilamentsFromTower((Array.isArray(interdomain) ? interdomain : []).filter(item => !isPeerRecord(item) && !isBaitRecord(item)), manifest, observedAt),
     ...proceduralLearningFilaments(learning, projection, manifest, observedAt),
     ...peerDetectionLearningFilaments(peerDetectionBattery, projection, manifest, observedAt),
     ...generalLearningFilaments(general, observedAt),
@@ -1404,6 +1476,12 @@ export function buildPagesProjection({
     access: 'PUBLIC',
   };
 
+  assertNoPeerIdentity('graph', system.graph.nodes.map(node => node.id));
+  assertNoPeerIdentity('filaments', system.filaments.map(item => item.id));
+  assertNoPeerIdentity('projected_work', system.projected_work.map(item => item.id));
+  assertNoPeerIdentity('world', world.items.map(item => item.id));
+  assertNoPeerIdentity('read_model', Object.keys(system.read_model.tests));
+  assertNoPeerIdentity('science', ['campaigns', 'hypotheses', 'tests'].flatMap(name => scienceProjection[name].map(item => item.id)));
   return { system, world, scienceProjection };
 }
 

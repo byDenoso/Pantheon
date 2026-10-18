@@ -292,7 +292,7 @@ test('sanctioned TOWER interdomain entities become visible learning filaments', 
   assert.ok(system.graph.edges.some(edge => edge.from === 'domain:SCIENCE' && edge.to === 'domain:OLYMPUS'));
 });
 
-test('Peer Detection battery is projected by canonical semantic groups, not raw runtime stations', async () => {
+test('PEER never reaches the public projection, even when the caller passes the battery', async () => {
   const { buildPagesProjection } = await import('../scripts/build-pages-system.mjs');
   const manifest = {
     authority: 'TOWER_V06',
@@ -307,42 +307,81 @@ test('Peer Detection battery is projected by canonical semantic groups, not raw 
     contract: 'NEXO_PUBLIC_PROJECTION_V1',
     manifest,
     event_cursor: manifest.event_cursor,
+    campaigns: [{ campaign_id: 'CAMP-PEER-DETECTION-V1', title: 'peer', atlas_projection: { visible: true } }],
     work: [
       { id: 'PEER-DETECTION-D00', title: 'freeze', domain: 'COSMOLOGY', status: 'READY' },
-      { id: 'PEER-DETECTION-D01', title: 'baseline', domain: 'COSMOLOGY', status: 'READY' },
+      { id: 'WORK-KEEP', title: 'keep', domain: 'NEXO', status: 'READY' },
     ],
     tests: [
-      { id: 'PEER-DETECTION-D00-V1', title: 'freeze test', domain: 'COSMOLOGY', status: 'VERIFIED' },
+      { id: 'PEER-DETECTION-D00-V1', title: 'freeze test', domain: 'COSMOLOGY', status: 'VERIFIED', campaign_id: 'CAMP-PEER-DETECTION-V1' },
     ],
     capabilities: {
       'peer.detection.d00_v1': { battery_id: 'PEER_DETECTION_BATTERY_V1', gate_id: 'D00', status: 'ACTIVE' },
-      'peer.detection.d01_v1': { battery_id: 'PEER_DETECTION_BATTERY_V1', gate_id: 'D01', status: 'ACTIVE' },
+      'cap.keep': { status: 'PROVEN' },
     },
     counts: { active_work: 2, tests: 1, capabilities: 2 },
   };
   const peerDetectionBattery = {
     id: 'PEER_DETECTION_BATTERY_V1',
-    execution_order: ['D00', 'D01'],
-    gates: {
-      D00: { group: 'GOVERNANCE', purpose: 'freeze', capability_id: 'peer.detection.d00_v1' },
-      D01: { group: 'BASELINE_PROFILE', purpose: 'baseline', capability_id: 'peer.detection.d01_v1' },
-    },
+    execution_order: ['D00'],
+    gates: { D00: { group: 'GOVERNANCE', purpose: 'freeze', capability_id: 'peer.detection.d00_v1' } },
   };
+  const out = buildPagesProjection({ projection, manifestFile: manifest, peerDetectionBattery });
+  const serialized = JSON.stringify(out);
+  assert.doesNotMatch(serialized, /PEER_DETECTION_BATTERY_V1|CAMP-PEER-DETECTION-V1|PEER-DETECTION-|peer\.detection|peer_detection_group/i);
+  assert.deepEqual(out.system.projected_work.map(node => node.id), ['work:WORK-KEEP']);
+  assert.deepEqual(out.system.capabilities.map(item => item.capability_id), ['cap.keep']);
+});
 
-  const { system } = buildPagesProjection({ projection, manifestFile: manifest, peerDetectionBattery });
-  const rawPeer = system.graph.nodes.filter(node =>
-    /^work:PEER-DETECTION-|^test:PEER-DETECTION-|^capability:peer\.detection\./i.test(node.id)
-  );
-  assert.equal(rawPeer.length, 0);
-  assert.equal(system.projected_work.length, 2, 'operational queue must preserve peer WORK hidden from Atlas');
-  assert.deepEqual(system.projected_work.map(node => node.id).sort(), [
-    'work:PEER-DETECTION-D00',
-    'work:PEER-DETECTION-D01',
-  ]);
-  const semantic = system.filaments.filter(item => item.kind === 'SCIENTIFIC_LEARNING_PIPELINE');
-  assert.equal(semantic.length, 2);
-  assert.deepEqual(new Set(semantic.map(item => item.peer_detection_group)), new Set(['GOVERNANCE', 'BASELINE_PROFILE']));
-  assert.ok(system.graph.edges.filter(edge => edge.is_learning).length >= 2);
+test('public gate: Atlas is closed by default, results need a SURVIVED review, bait never leaves', async () => {
+  const { buildPagesProjection } = await import('../scripts/build-pages-system.mjs');
+  const manifest = {
+    authority: 'TOWER_V06',
+    projection_only: true,
+    writeback: 'FORBIDDEN',
+    tower_commit: '3'.repeat(40),
+    event_cursor: '20260923T000000000000Z-gate',
+    projection_fingerprint: 'sha256:' + '4'.repeat(64),
+    generated_at: '2026-09-23T00:00:00Z',
+  };
+  const result = { parameter: 'w0', value: -0.91, err_lo: 0.05, err_hi: 0.05, unit: '' };
+  const projection = {
+    contract: 'NEXO_PUBLIC_PROJECTION_V1',
+    manifest,
+    event_cursor: manifest.event_cursor,
+    campaigns: [
+      { campaign_id: 'CAMP-DEFAULT', title: 'default', atlas_projection: {} },
+      { campaign_id: 'CAMP-OPEN', title: 'open', atlas_projection: { visible: true, show_tests: true } },
+    ],
+    work: [],
+    tests: [
+      { id: 'T-LOOSE', title: 'loose', status: 'READY' },
+      { id: 'T-QUESTION', title: 'question', status: 'READY', atlas_visible: true, semantic: { question_plain: 'Is w0 = -1?' } },
+      { id: 'T-UNREVIEWED', title: 'unreviewed', status: 'DONE', campaign_id: 'CAMP-OPEN', verdict: 'SUPPORTS', result, semantic: { result_meaning: 'secret-unreviewed-meaning' } },
+      { id: 'T-SURVIVED', title: 'survived', status: 'DONE', campaign_id: 'CAMP-OPEN', verdict: 'SUPPORTS', result, reviews: [{ outcome: 'SURVIVED', referee: 'R1' }], semantic: { result_meaning: 'reviewed-meaning' } },
+      { id: 'T-BAIT', title: 'bait', status: 'DONE', atlas_visible: true, is_bait: true, result },
+      { id: 'T-BLIND', title: 'blind', status: 'DONE', atlas_visible: true, blinded: 'yes' },
+    ],
+    capabilities: {},
+    counts: { active_work: 0, tests: 6, capabilities: 0 },
+  };
+  const { system, scienceProjection } = buildPagesProjection({ projection, manifestFile: manifest });
+  const node = id => system.graph.nodes.find(item => item.id === id);
+  assert.equal(node('campaign:CAMP-DEFAULT').atlas_visible, false);
+  assert.equal(node('campaign:CAMP-OPEN').atlas_visible, true);
+  assert.equal(node('test:T-LOOSE').atlas_visible, false);
+  assert.equal(node('test:T-QUESTION').atlas_visible, true);
+  assert.equal(node('test:T-BAIT'), undefined);
+  assert.equal(node('test:T-BLIND'), undefined);
+  const serialized = JSON.stringify({ system, scienceProjection });
+  assert.doesNotMatch(serialized, /secret-unreviewed-meaning|T-BAIT|T-BLIND/);
+  assert.match(serialized, /reviewed-meaning/);
+  const science = id => scienceProjection.tests.find(item => item.id === id);
+  assert.equal(science('T-UNREVIEWED').result.value.value, null);
+  assert.equal(science('T-UNREVIEWED').verdict.value, null);
+  assert.equal(science('T-SURVIVED').result.value.value, -0.91);
+  assert.equal(system.read_model.tests['T-UNREVIEWED'].verdict, undefined);
+  assert.equal(system.read_model.tests['T-SURVIVED'].verdict, 'SUPPORTS');
 });
 
 test('Pages no longer republishes private Tower updates on writer events or an hourly schedule', async () => {
@@ -583,6 +622,7 @@ test('General durable Drive state projects into Atlas as aggregates and Learning
       title: 'Projection provenance integrity',
       rule: 'Validate payload plus source identity plus source revision.',
       status: 'PROMOTED',
+      atlas_visible: true,
       from_domain: 'NEXO',
       to_domain: 'ENGINEERING',
       from_label: 'NEXO execution',

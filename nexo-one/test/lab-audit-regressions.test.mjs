@@ -22,7 +22,9 @@ test('scientific rejection is completed negative evidence, distinct from blockin
     { id: 'F', status: 'ARCHIVED' },
     { id: 'G', status: 'DONE', verdict: 'REJECTED' },
   ];
-  const { system } = buildPagesProjection({ projection: projection(tests), manifestFile: manifest });
+  // Lab semantics need published verdicts; the public gate only keeps them after a SURVIVED review.
+  const reviewed = tests.map(t => ({ ...t, reviews: [{ outcome: 'SURVIVED' }] }));
+  const { system } = buildPagesProjection({ projection: projection(reviewed), manifestFile: manifest });
   assert.equal(system.graph.nodes.find(n => n.id === 'test:' + tests[0].id).state, 'SNAPSHOT');
   assert.equal(system.graph.nodes.find(n => n.id === 'test:C').state, 'BLOCKED');
   const lab = buildLab(system);

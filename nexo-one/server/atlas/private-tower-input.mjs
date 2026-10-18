@@ -4,10 +4,10 @@ const fail=()=>{throw new Error('PRIVATE_TOWER_INVALID');};
 // PEER is a separate, explicitly excluded research family even in the private
 // Atlas. It remains untouched in the canonical Tower and in private science.
 // Do not infer that a private authenticated dashboard is an authorized PEER sink.
-const PEER_FAMILY=/(^|[^a-z0-9])peer(?=$|[^a-z0-9])/i;
+export const PEER_FAMILY=/(^|[^a-z0-9])peer(?=$|[^a-z0-9])/i;
 const peerIn=value=>PEER_FAMILY.test(JSON.stringify(value));
 const identityKeys=new Set(['id','entity_id','test_id','hypothesis_id','roadmap_id','campaign_id','artifact_id','event_id','source_ref','_source_path','name','title','model','family']);
-function peerIdentity(value){
+export function peerIdentity(value){
   return object(value)&&Object.entries(value).some(([key,v])=>identityKeys.has(key)&&typeof v==='string'&&PEER_FAMILY.test(v));
 }
 function stripPeerFromPrivateAtlas(value){

@@ -9,7 +9,7 @@ function projection(cosmology) {
   return { contract:'NEXO_PUBLIC_PROJECTION_V1', manifest, event_cursor:manifest.event_cursor, counts:{active_work:0,tests:1,capabilities:0}, work:[], tests:[{id:'CURRENT',status:'READY'}], campaigns:[], capabilities:{}, cosmology_state:cosmology };
 }
 function cosmology() {
-  return { model:'COSMOLOGY_STATE_V1', authority:'TOWER', projection_only:true, frontiers:[{id:'frontier',title:'Frontier from Tower',state:'TENSION',summary:'Published synthesis',key_evidence:[{id:'HISTORY'}]}], historical_tests:[{id:'HISTORY',display_name:'Historical null',question:'Frozen question',result_meaning:'Published null result',status:'DONE',review_state:'REFUTED'}] };
+  return { model:'COSMOLOGY_STATE_V1', authority:'TOWER', projection_only:true, frontiers:[{id:'frontier',title:'Frontier from Tower',state:'TENSION',summary:'Published synthesis',key_evidence:[{id:'HISTORY'}]}], historical_tests:[{id:'HISTORY',display_name:'Historical null',question:'Frozen question',result_meaning:'Published null result',status:'DONE',review_state:'REFUTED',reviews:[{outcome:'SURVIVED'}]}] };
 }
 test('Universo navigation and encoded detail routes preserve first-level order', () => {
   assert.deepEqual(LAB_PAGES.map(([, title]) => title), ['Agora','Universo','Ciclo','Roadmaps','Evidência','Saúde']);
