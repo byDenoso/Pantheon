@@ -97,29 +97,35 @@ export function buildKnowledge(state: SystemState): Knowledge {
   return {questions: [...questions.values()], hypotheses, claims, scores};
 }
 
-/** Deterministic layout: questions in columns, hypotheses beneath, claims on a ring around their first hypothesis. */
+/** Deterministic orbital layout: each question is a hub, its hypotheses sit on an orbit, claims fan outward as satellites.
+ *  Groups run left to right, or stack vertically when `compact` (narrow screens). */
 export type Placed = {id: string; kind: 'question' | 'hypothesis' | 'claim'; x: number; y: number; r: number};
-export function layoutKnowledge(k: Knowledge): Map<string, Placed> {
+export function layoutKnowledge(k: Knowledge, {compact = false}: {compact?: boolean} = {}): Map<string, Placed> {
   const out = new Map<string, Placed>();
   const byQuestion = new Map<string, KHypothesis[]>();
   for (const h of k.hypotheses) { const q = h.question ?? '∅'; byQuestion.set(q, [...(byQuestion.get(q) ?? []), h]); }
   const claimsOf = new Map<string, KClaim[]>();
   for (const c of k.claims) { const h = c.links[0]?.hypothesis; if (h) claimsOf.set(h, [...(claimsOf.get(h) ?? []), c]); }
-  let x = 0;
+  const orbit = compact ? 150 : 200, ring0 = compact ? 92 : 112, band = 30, perBand = 9;
+  let cursor = 0;
   for (const [q, hs] of byQuestion) {
-    const width = Math.max(1, hs.length) * 300;
-    out.set(`q:${q}`, {id: q, kind: 'question', x: x + width / 2, y: 0, r: 34});
+    const group: Placed[] = [{id: q, kind: 'question', x: 0, y: 0, r: 16}];
     hs.forEach((h, i) => {
-      const hx = x + 150 + i * 300, hy = 230;
-      out.set(`h:${h.id}`, {id: h.id, kind: 'hypothesis', x: hx, y: hy, r: 22});
+      // Up to three hypotheses hang below the hub like a fan (the label sits above); more close the full orbit.
+      const t = hs.length <= 3 ? Math.PI / 2 + (i - (hs.length - 1) / 2) * 0.98 : Math.PI * 2 * (i + 0.5) / hs.length - Math.PI / 2;
+      const hx = Math.cos(t) * orbit, hy = Math.sin(t) * orbit;
+      group.push({id: h.id, kind: 'hypothesis', x: hx, y: hy, r: 20});
       const cs = claimsOf.get(h.id) ?? [];
       cs.forEach((c, j) => {
-        const band = Math.floor(j / 10), n = Math.min(10, cs.length - band * 10), ring = 100 + band * 40;
-        const a = Math.PI * (0.08 + 0.84 * ((j % 10) + 0.5) / n);
-        out.set(`c:${c.id}`, {id: c.id, kind: 'claim', x: hx + Math.cos(a) * ring, y: hy + Math.sin(a) * ring, r: 6 + c.weight * 6});
+        const b = Math.floor(j / perBand), n = Math.min(perBand, cs.length - b * perBand), ring = ring0 + b * band;
+        const spread = Math.min(Math.PI * 0.85, n * 0.26), a = t + (n > 1 ? -spread / 2 + spread * (j % perBand) / (n - 1) : 0) + (b % 2) * 0.12;
+        group.push({id: c.id, kind: 'claim', x: hx + Math.cos(a) * ring, y: hy + Math.sin(a) * ring, r: 4 + c.weight * 5});
       });
     });
-    x += width + 80;
+    const x0 = Math.min(...group.map(p => p.x)) - 110, x1 = Math.max(...group.map(p => p.x)) + 110, y0 = -80, y1 = Math.max(...group.map(p => p.y)) + 40;
+    const dx = compact ? 0 : cursor - x0, dy = compact ? cursor - y0 : 0;
+    for (const p of group) out.set(`${p.kind[0]}:${p.id}`, {...p, x: p.x + dx, y: p.y + dy});
+    cursor += compact ? y1 - y0 + 60 : x1 - x0 + 20;
   }
   return out;
 }
