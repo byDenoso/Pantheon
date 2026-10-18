@@ -35,8 +35,9 @@ try{
  await frame.getByRole('button',{name:/^Em execução/}).click();assert.equal(await frame.locator('.pw-operation').count(),1);
  await frame.getByRole('button',{name:/^Bloqueados/}).click();assert.equal(await frame.locator('.pw-operation').count(),1);
  await frame.getByRole('button',{name:/^Aguardando/}).click();assert.ok(await frame.locator('.pw-operation').count()>=1);
- // Returning to the web restores the existing renderer, not an image.
- await frame.getByRole('link',{name:'Teia',exact:true}).click();await frame.locator('.tc-stage canvas.tc-2d').waitFor();
+ // The private entry is the knowledge graph; the cosmic web stays one link away.
+ await frame.getByRole('link',{name:'Conhecimento',exact:true}).click();await frame.locator('.kg').waitFor();
+ await frame.getByRole('link',{name:'Teia cósmica',exact:true}).click();await frame.locator('.tc-stage canvas.tc-2d').waitFor();
  await frame.getByRole('combobox',{name:'Procurar por rótulo ou ID'}).fill('SYNTHETIC-OLYMPUS-3');await frame.getByRole('combobox',{name:'Procurar por rótulo ou ID'}).press('Enter');
  await frame.locator('[data-testid=tower-open-detail]').click();await frame.locator('.pw-test-detail').waitFor();
  if(process.env.WORKSPACE_SHOTS){mkdirSync(process.env.WORKSPACE_SHOTS,{recursive:true});await page.screenshot({path:join(process.env.WORKSPACE_SHOTS,'private-detail-desktop.png'),fullPage:true});}
