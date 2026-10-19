@@ -99,7 +99,7 @@ export function ShadowBoard({state, lang}: {state: SystemState; lang: Lang}) {
   const c = SHADOW_COPY[lang === 'en' ? 'en' : 'pt'];
   const [tab, setTab] = useState<'resumo' | 'roadmap' | 'mural'>('roadmap'), [status, setStatus] = useState('ALL'), [limit, setLimit] = useState(20);
   const roadmap = board?.roadmap ?? [], mural = board?.mural ?? [], resumo = board?.resumo ?? [];
-  const levelRank = (level: string) => { const i = ['N1', 'N4', 'N2', 'N3'].indexOf(level); return i < 0 ? 4 : i; };
+  const levelRank = (level: string) => { const i = ['N1', 'N4', 'EMG', 'N2', 'N3', 'CUSTO'].indexOf(level); return i < 0 ? 6 : i; };
   const resumoRows = useMemo(() => [...resumo].sort((a, b) => levelRank(a.nivel) - levelRank(b.nivel) || b.data_hora.localeCompare(a.data_hora)), [resumo]);
   const statuses = useMemo(() => Array.from(new Set(roadmap.map(row => row.status).filter(Boolean))).sort((a, b) => statusRank(a) - statusRank(b)), [roadmap]);
   const rows = useMemo(() => roadmap.filter(row => status === 'ALL' || row.status === status).sort((a, b) => statusRank(a.status) - statusRank(b.status) || Number(b.prio) - Number(a.prio) || a.item.localeCompare(b.item)), [roadmap, status]);
