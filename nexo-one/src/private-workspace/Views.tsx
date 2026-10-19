@@ -97,8 +97,10 @@ export function OperationView({state, lang}: {state: SystemState; lang: Lang}) {
 export function ShadowBoard({state, lang}: {state: SystemState; lang: Lang}) {
   const board = useMemo(() => shadowBoardOf(state), [state]);
   const c = SHADOW_COPY[lang === 'en' ? 'en' : 'pt'];
-  const [tab, setTab] = useState<'roadmap' | 'mural'>('roadmap'), [status, setStatus] = useState('ALL'), [limit, setLimit] = useState(20);
-  const roadmap = board?.roadmap ?? [], mural = board?.mural ?? [];
+  const [tab, setTab] = useState<'resumo' | 'roadmap' | 'mural'>('roadmap'), [status, setStatus] = useState('ALL'), [limit, setLimit] = useState(20);
+  const roadmap = board?.roadmap ?? [], mural = board?.mural ?? [], resumo = board?.resumo ?? [];
+  const levelRank = (level: string) => { const i = ['N1', 'N4', 'N2', 'N3'].indexOf(level); return i < 0 ? 4 : i; };
+  const resumoRows = useMemo(() => [...resumo].sort((a, b) => levelRank(a.nivel) - levelRank(b.nivel) || b.data_hora.localeCompare(a.data_hora)), [resumo]);
   const statuses = useMemo(() => Array.from(new Set(roadmap.map(row => row.status).filter(Boolean))).sort((a, b) => statusRank(a) - statusRank(b)), [roadmap]);
   const rows = useMemo(() => roadmap.filter(row => status === 'ALL' || row.status === status).sort((a, b) => statusRank(a.status) - statusRank(b.status) || Number(b.prio) - Number(a.prio) || a.item.localeCompare(b.item)), [roadmap, status]);
   const recent = useMemo(() => [...mural].reverse(), [mural]);
@@ -107,6 +109,7 @@ export function ShadowBoard({state, lang}: {state: SystemState; lang: Lang}) {
     <header><h2>{c.title}</h2><p>{c.source}{board.modified_at ? ` · ${board.modified_at.slice(0, 16).replace('T', ' ')}Z` : ''}{board.source_ref && <> · <a href={board.source_ref} target="_blank" rel="noreferrer noopener">{c.open}</a></>}</p></header>
     {board.unavailable && <p className="pw-empty" role="status">{c.unavailable} ({board.unavailable})</p>}
     <div className="pw-tabs" role="group" aria-label={c.title}>
+      {resumo.length > 0 && <button type="button" aria-pressed={tab === 'resumo'} onClick={() => { setTab('resumo'); setLimit(20); }}>{c.resumo}<span>{resumo.length}</span></button>}
       <button type="button" aria-pressed={tab === 'roadmap'} onClick={() => { setTab('roadmap'); setLimit(20); }}>{c.roadmap}<span>{roadmap.length}</span></button>
       <button type="button" aria-pressed={tab === 'mural'} onClick={() => { setTab('mural'); setLimit(20); }}>{c.mural}<span>{mural.length}</span></button>
     </div>
@@ -122,6 +125,13 @@ export function ShadowBoard({state, lang}: {state: SystemState; lang: Lang}) {
       </article>)}</div>
       {!rows.length && <p className="pw-empty" role="status">{c.empty}</p>}
       {rows.length > limit && <button type="button" className="pw-button" onClick={() => setLimit(value => value + 20)}>{c.more}</button>}
+    </>}
+    {tab === 'resumo' && <>
+      <div className="pw-operations">{resumoRows.slice(0, limit).map((row, index) => <article key={`${row.data_hora}:${row.item}:${index}`} className="pw-operation" data-level={row.nivel}>
+        <p className="pw-eyebrow">{row.nivel} · {row.item || '—'} · {row.data_hora}</p><h3>{row.o_que_mudou}</h3><p>{row.impacto}</p>
+        {row.link && <p><small>{/^https:\/\//.test(row.link) ? <a href={row.link} target="_blank" rel="noreferrer noopener">{row.link}</a> : row.link}</small></p>}
+      </article>)}</div>
+      {resumoRows.length > limit && <button type="button" className="pw-button" onClick={() => setLimit(value => value + 20)}>{c.more}</button>}
     </>}
     {tab === 'mural' && <>
       <div className="pw-operations">{recent.slice(0, limit).map((row, index) => <article key={`${row.data}:${index}`} className="pw-operation">

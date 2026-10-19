@@ -31,7 +31,7 @@ test('readShadowBoard devolve roadmap, mural e contagens',async()=>{
   const board=await readShadowBoard({token:'t',fetchImpl:transport()});
   assert.equal(board.contract,'NEXO_SHADOW_BOARD_V1');
   assert.equal(board.access,'PRIVATE');
-  assert.deepEqual(board.counts,{roadmap:2,mural:1});
+  assert.deepEqual(board.counts,{roadmap:2,mural:1,resumo:0});
   assert.equal(board.modified_at,'2026-10-19T12:50:29.635Z');
   assert.equal(board.mural[0].de,'I');
 });
@@ -56,6 +56,15 @@ test('se o gviz falhar, a API Sheets (drive.readonly) leva o quadro',async()=>{
     return {ok:false};
   };
   const board=await readShadowBoard({token:'t',fetchImpl});
-  assert.deepEqual(board.counts,{roadmap:1,mural:1});
+  assert.deepEqual(board.counts,{roadmap:1,mural:1,resumo:0});
   assert.equal(board.roadmap[0].item,'R1-1.1');
+});
+
+test('RESUMO aparece quando a aba existe e não derruba o quadro quando falta',async()=>{
+  const resumoCsv=['data_hora,nivel,item,o_que_mudou,impacto,link','2026-10-19 14:40,N1,R1-1.8,"sobreviveu","muda R1",https://x',''].join(String.fromCharCode(10));
+  const base=transport();
+  const withResumo=async url=>String(url).includes('sheet=RESUMO')?{ok:true,text:async()=>resumoCsv}:base(url);
+  const board=await readShadowBoard({token:'t',fetchImpl:withResumo});
+  assert.equal(board.counts.resumo,1);
+  assert.equal(board.resumo[0].nivel,'N1');
 });

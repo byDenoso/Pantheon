@@ -4,6 +4,7 @@
 export const SHADOW_ID='1wizywUGEMd_8KrNqMcz5PQig3KgOTbZd8ENkTW8nRKw';
 export const ROADMAP_COLUMNS=Object.freeze(['item','titulo','status','dono','prio','proximo_teste','depende_de','atualizado','nota']);
 export const MURAL_COLUMNS=Object.freeze(['data','de','para','texto','link']);
+export const RESUMO_COLUMNS=Object.freeze(['data_hora','nivel','item','o_que_mudou','impacto','link']);
 const MAX_ROWS=300,MAX_CELL=2000;
 const clean=value=>String(value??'').replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f]/g,'').trim().slice(0,MAX_CELL);
 
@@ -61,14 +62,15 @@ export async function readShadowBoard({token,fetchImpl=fetch,signal=AbortSignal.
   const info=await meta.json();
   if(info.id!==SHADOW_ID)throw new Error('SHADOW_METADATA_INVALID');
   const options={token,fetchImpl,signal};
-  const [roadmap,mural]=await Promise.all([readTabRows('ROADMAP','A1:I400',ROADMAP_COLUMNS,options),readTabRows('MURAL','A1:E400',MURAL_COLUMNS,options)]);
+  // RESUMO é opcional: a aba pode não existir ainda ou estar vazia.
+  const [roadmap,mural,resumo]=await Promise.all([readTabRows('ROADMAP','A1:I400',ROADMAP_COLUMNS,options),readTabRows('MURAL','A1:E400',MURAL_COLUMNS,options),readTabRows('RESUMO','A1:F400',RESUMO_COLUMNS,options).catch(()=>[])]);
   return {contract:'NEXO_SHADOW_BOARD_V1',access:'PRIVATE',source_id:SHADOW_ID,source_ref:`https://docs.google.com/spreadsheets/d/${SHADOW_ID}/edit`,
-    modified_at:typeof info.modifiedTime==='string'?info.modifiedTime:null,roadmap,mural,
-    counts:{roadmap:roadmap.length,mural:mural.length}};
+    modified_at:typeof info.modifiedTime==='string'?info.modifiedTime:null,roadmap,mural,resumo,
+    counts:{roadmap:roadmap.length,mural:mural.length,resumo:resumo.length}};
 }
 
 // Nunca derruba o Atlas: falha vira ausência de quadro com motivo curto.
 export async function readShadowBoardSafe(options){
   try{return await readShadowBoard(options);}
-  catch(error){return {contract:'NEXO_SHADOW_BOARD_V1',access:'PRIVATE',unavailable:String(error?.message||'SHADOW_UNAVAILABLE').slice(0,64),roadmap:[],mural:[],counts:{roadmap:0,mural:0}};}
+  catch(error){return {contract:'NEXO_SHADOW_BOARD_V1',access:'PRIVATE',unavailable:String(error?.message||'SHADOW_UNAVAILABLE').slice(0,64),roadmap:[],mural:[],resumo:[],counts:{roadmap:0,mural:0,resumo:0}};}
 }
