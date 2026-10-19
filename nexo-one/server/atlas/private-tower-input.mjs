@@ -69,6 +69,10 @@ export function normalizePrivateTower(tower){
     return paths.map(key=>{const v=value(key);if(!object(v))fail();const id=typeof v.id==='string'&&v.id?v.id:typeof v[idFields[name]]==='string'?v[idFields[name]]:key.slice(key.lastIndexOf('/')+1,-5);return {...v,id,_source_path:key};});
   };
   const records={work:collect('work','entities/work/'),tests:collect('tests','entities/test/'),hypotheses:collect('hypotheses','entities/hypothesis/'),claims:collect('claims','entities/claim/'),campaigns:collect('campaigns','entities/campaign/'),roadmaps:collect('roadmaps','roadmaps/'),lessons:collect('lessons','entities/lesson/'),interdomain:collect('interdomain','entities/interdomain/'),artifacts:collect('artifacts','entities/artifact/'),events:collect('events','events/'),control,snapshot:value('snapshot/latest.json')||null,activeIndex:value('indexes/active-work.json')||null,coverage,texts:{},evolution:{}};
+  // The Writer cannot create entities/claim/, so claims also arrive inside this Tower document.
+  // The publication status PEER_REVIEWED is a journal term, not the PEER research family: rename it before the PEER filter.
+  const kf=value('indexes/knowledge-framework.json');
+  records.knowledgeFramework=object(kf)?JSON.parse(JSON.stringify(kf).replace(/"PEER_REVIEWED"/g,'"REFEREED"')):null;
   const capabilityManifest=value('manifests/capabilities.json');
   records.capabilities=object(capabilityManifest?.capabilities)?capabilityManifest.capabilities:{};
   coverage.capabilities={status:object(capabilityManifest?.capabilities)?'PRESENT':'NOT_PRESENT',count:Object.keys(records.capabilities).length,paths:object(capabilityManifest?.capabilities)?['manifests/capabilities.json']:[]};

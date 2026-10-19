@@ -19,7 +19,7 @@ const list = (v: unknown): string[] => Array.isArray(v) ? v.map(str).filter((x):
 const rows = (v: unknown): Row[] => v && typeof v === 'object' ? Object.values(v as Record<string, unknown>).filter((r): r is Row => !!r && typeof r === 'object') : [];
 
 const EVIDENCE: Record<string, number> = {COLLABORATION: 1, INDEPENDENT: 0.8, REANALYSIS: 0.7, THEORY: 0.4, NEXO_SURVIVED: 0.8, NEXO_UNREVIEWED: 0.3};
-const PUBLICATION: Record<string, number> = {PEER_REVIEWED: 1, PREPRINT: 0.7, PROCEEDINGS: 0.5, ERRATUM: 0.5, RETRACTED: 0};
+const PUBLICATION: Record<string, number> = {PEER_REVIEWED: 1, REFEREED: 1, PREPRINT: 0.7, PROCEEDINGS: 0.5, ERRATUM: 0.5, RETRACTED: 0};
 const TIER: Record<string, number> = {A: 1, B: 0.85, C: 0.6, X: 0};
 const REPLICATION: Record<string, number> = {INDEPENDENT_DATA: 1.3, SAME_DATA: 1, CONTESTED: 0.6};
 
@@ -47,20 +47,28 @@ export function scoreHypothesis(claims: readonly KClaim[], hypothesis: string, a
   return {pro: Math.round(pro * 1000) / 1000, con: Math.round(con * 1000) / 1000, lineages: best.size};
 }
 
+const normReplication = (v: string | null) => v === null ? null : ({independent: 'INDEPENDENT_DATA', same: 'SAME_DATA', contested: 'CONTESTED'} as Record<string, string>)[v.toLowerCase()] ?? v;
 const SURVIVED = /^(SURVIVED|SUPPORTED|CONFIRMED|PROMOTED)$/i;
 const AGAINST = /^(REFUTED|FALSIFIED|FALSIFIES|REJECTED|NULL)$/i;
 
 export function buildKnowledge(state: SystemState): Knowledge {
-  const rm = (state as unknown as {read_model?: Record<string, unknown>}).read_model ?? {};
+  const base = (state as unknown as {read_model?: Record<string, unknown>}).read_model ?? {};
+  // The Tower knowledge-framework document arrives as read_model.knowledge (questions, aliases, scores).
+  const rm: Record<string, unknown> = {...base, ...(base.knowledge && typeof base.knowledge === 'object' ? base.knowledge as Record<string, unknown> : {})};
   const hypotheses: KHypothesis[] = rows(rm.hypotheses).map(h => ({
     id: str(h.hypothesis_id) ?? str(h.id) ?? '', label: str(h.proposition) ?? str(h.title) ?? str(h.question) ?? str(h.id) ?? '',
     status: (str(h.status) ?? 'CANDIDATE').toUpperCase(), question: str(h.question_id) ?? str(h.campaign_id) ?? null, roadmap: str(h.roadmap_id),
   })).filter(h => h.id);
   const known = new Set(hypotheses.map(h => h.id));
   const questions = new Map<string, KQuestion>();
+  const declaredQ = Array.isArray(rm.questions) ? rm.questions.filter((q): q is Row => !!q && typeof q === 'object') : rows(rm.questions);
+  for (const q of declaredQ) {
+    const id = str(q.question_id) ?? str(q.id);
+    if (id) questions.set(id, {id, label: str(q.label) ?? str(q.central_question) ?? str(q.question) ?? str(q.title) ?? id, roadmap: str(q.roadmap_id)});
+  }
   for (const c of rows(rm.campaigns)) {
     const id = str(c.campaign_id) ?? str(c.id);
-    if (id) questions.set(id, {id, label: str(c.central_question) ?? str(c.title) ?? id, roadmap: str(c.roadmap_id)});
+    if (id && !questions.has(id)) questions.set(id, {id, label: str(c.central_question) ?? str(c.title) ?? id, roadmap: str(c.roadmap_id)});
   }
   for (const h of hypotheses) if (h.question && !questions.has(h.question)) questions.set(h.question, {id: h.question, label: h.question, roadmap: h.roadmap});
 
@@ -77,10 +85,11 @@ export function buildKnowledge(state: SystemState): Knowledge {
     claims.push({id, label: str(c.label) ?? str(c.title) ?? id, source, ref: str(c.ref) ?? str(c.arxiv) ?? str(c.doi), journal: str(c.journal),
       tier: str(c.journal_tier), value: str(c.value), date: str(c.date), lineage: list(c.data_lineage), survived, links,
       weight: claimWeight({source, evidence: str(c.evidence_type), publication: str(c.publication_status), tier: str(c.journal_tier),
-        replication: str(c.replication), superseded: c.superseded === true, survived})});
+        replication: normReplication(str(c.replication)), superseded: c.superseded === true, survived})});
   }
   // Executed tests linked to a hypothesis are NEXO claims even before a claim record exists.
-  const declared = new Set(claims.map(c => c.id));
+  // Tests already carried by a document claim (ref = test id) are not derived again: the document links are the corrected ones.
+  const declared = new Set([...claims.map(c => c.id), ...claims.map(c => `test:${c.ref}`)]);
   for (const t of rows(rm.tests)) {
     const id = str(t.id), hyp = str(t.hypothesis_id), verdict = str(t.verdict) ?? '';
     if (!id || !hyp || !known.has(hyp) || declared.has(`test:${id}`) || !verdict) continue;

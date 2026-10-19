@@ -156,3 +156,13 @@ test('the small fixture keeps every question visible without a tray, and legacy 
   const legacy = layoutKnowledge(stress);
   assert.ok(stress.hypotheses.every(h => legacy.has(`h:${h.id}`)));
 });
+
+test('the knowledge-framework document supplies questions and journal status survives the PEER filter', async () => {
+  const {excludePeerFromPrivateAtlas} = await import('../server/atlas/private-tower-input.mjs');
+  const kf = {questions: [{id: 'Q-X', label: 'Pergunta do documento', roadmap_id: 'R1'}], claims: [{claim_id: 'C1', source: 'LITERATURE', label: 'a', publication_status: 'REFEREED', journal_tier: 'A', evidence_type: 'COLLABORATION', supports: ['H1']}]};
+  const records = excludePeerFromPrivateAtlas({work: [], tests: [], hypotheses: [], claims: [], campaigns: [], roadmaps: [], lessons: [], artifacts: [], events: [], interdomain: [], coverage: {capabilities: {}}, capabilities: {}, knowledgeFramework: kf});
+  assert.equal(records.knowledgeFramework.claims[0].publication_status, 'REFEREED');
+  const k = buildKnowledge({read_model: {knowledge: {questions: kf.questions}, hypotheses: {H1: {hypothesis_id: 'H1', question_id: 'Q-X', proposition: 'h'}}, claims: {C1: kf.claims[0]}}});
+  assert.equal(k.questions.find(q => q.id === 'Q-X').label, 'Pergunta do documento');
+  assert.equal(k.claims[0].weight, 1);
+});

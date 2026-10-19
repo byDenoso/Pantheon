@@ -410,6 +410,20 @@ function graphAndFilaments(rows,capabilities,ctx) {
   return {graph:{nodes,edges},filaments,unresolved_relations:unresolved};
 }
 
+// Claims from entities/claim/ and from the knowledge-framework document; the document wins on id conflict.
+function mergeClaims(entities,framework) {
+  const out = {};
+  for (const row of Array.isArray(entities) ? entities : []) if (object(row)) out[row.id] = row;
+  const doc = framework?.claims;
+  for (const [key,row] of Array.isArray(doc) ? doc.map(row => [null,row]) : object(doc) ? Object.entries(doc) : []) {
+    const id = object(row) ? text(first(row.claim_id,row.id,key)) : '';
+    if (id) out[id] = {...row,id,claim_id:id};
+  }
+  return out;
+}
+function knowledgeOf(framework) {
+  return object(framework) ? {questions:framework.questions ?? null,aliases:framework.aliases ?? null,hypothesis_scores:framework.hypothesis_scores ?? null} : null;
+}
 /** Compile only already-normalized records from an authenticated, verified read. */
 export function compilePrivateTowerSystem({records,revision,generatedAt,sourceRef} = {}) {
   if (!object(records) || !/^sha256:[a-f0-9]{64}$/.test(text(revision)) || !validDate(generatedAt) || !text(sourceRef)) reject('GENERATION_INVALID');
@@ -472,7 +486,7 @@ export function compilePrivateTowerSystem({records,revision,generatedAt,sourceRe
       projection_fingerprint:revision,projection_ref:sourceRef,writeback:'FORBIDDEN'},fingerprint:revision,
       campaigns:rows.campaigns.map(row => scienceRecord(row,'campaign',ctx)),hypotheses:rows.hypotheses.map(row => scienceRecord(row,'hypothesis',ctx)),tests:rows.tests.map(row => scienceRecord(row,'test',ctx)),historical_tests:historical.map(row => scienceRecord(row,'test',ctx))},
     read_model:{version:1,access:'PRIVATE',source_ref:sourceRef,source_revision:revision,tests:Object.fromEntries(rows.tests.filter(row => !row.historical).map(row => [row.id,{...row,...(row.hypothesis_id == null && row.hypothesis_ref != null ? {hypothesis_id:row.hypothesis_ref} : {})}])),
-      historical_tests:Object.fromEntries([...historical,...rows.tests.filter(row => row.historical)].map(row => [row.id,row])),hypotheses:modelRecords('hypotheses'),claims:Object.fromEntries((Array.isArray(records?.claims)?records.claims:[]).map(row => [row.id,row])),roadmaps:rows.roadmaps.map(row => ({...row,roadmap_id:text(first(row.roadmap_id,row.id))})),
+      historical_tests:Object.fromEntries([...historical,...rows.tests.filter(row => row.historical)].map(row => [row.id,row])),hypotheses:modelRecords('hypotheses'),claims:mergeClaims(records?.claims,records?.knowledgeFramework),knowledge:knowledgeOf(records?.knowledgeFramework),roadmaps:rows.roadmaps.map(row => ({...row,roadmap_id:text(first(row.roadmap_id,row.id))})),
       work:modelRecords('work'),campaigns:modelRecords('campaigns'),lessons:modelRecords('lessons'),interdomain:modelRecords('interdomain'),artifacts:modelRecords('artifacts'),activity,
       evolution:input.evolution ?? null,integrity:input.integrity ?? null,cosmology_baseline:input.cosmologyBaseline ?? null,cosmology_source:input.cosmologyState ?? null,coverage:input.coverage ?? null},
     evolution:evolution.value,evolution_partial:evolution.value ? null : evolution.partial,guardian:guardian.value,cosmology_state:cosmology.value,availability,unresolved_relations};
