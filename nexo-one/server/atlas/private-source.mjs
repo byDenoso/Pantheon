@@ -2,13 +2,21 @@ import {googleToken} from '../adapters/google.mjs';
 import {readVerifiedCanonicalTower} from '../mcp/operational-state.mjs';
 import {compilePrivateTowerRuntime} from './private-tower.mjs';
 import {validatePrivateRuntime} from './private-runtime.mjs';
+import {readShadowBoardSafe} from './shadow-board.mjs';
 // Only a server-configured, access-controlled source may supply private Atlas
 // data. No public Pages/Raw GitHub fallback and no caller-provided upstream URL.
 async function readFromDrive(env,fetcher,tokenProvider,reader){
   const token=await tokenProvider(env,AbortSignal.timeout(8000),{scopes:['https://www.googleapis.com/auth/drive.readonly']});
   const signal=AbortSignal.timeout(20000);
   for(let attempt=0;attempt<2;attempt++){
-    try{const {tower}=await reader({token,fetchImpl:fetcher,signal});return compilePrivateTowerRuntime(tower);}
+    try{
+      const {tower}=await reader({token,fetchImpl:fetcher,signal});
+      const runtime=compilePrivateTowerRuntime(tower);
+      // Quadro Roadmap/Mural da SHADOW: melhor esforço, fora do fingerprint da Tower.
+      const readModel=runtime.data.system.read_model;
+      if(readModel&&typeof readModel==='object')readModel.shadow=await readShadowBoardSafe({token,fetchImpl:fetcher});
+      return runtime;
+    }
     catch(error){if(attempt||signal.aborted||error?.message!=='TOWER_READ_RACE')throw error;}
   }
 }

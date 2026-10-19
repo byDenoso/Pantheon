@@ -6,6 +6,7 @@ import {labHref} from '../features/lab/routes.ts';
 import {normDomain} from '../features/lab/domains.ts';
 import {describeState, type Lang} from '../i18n/state-language.ts';
 import {WORKSPACE_COPY, domainName} from './copy.ts';
+import {SHADOW_COPY, shadowBoardOf, statusRank} from './shadow.ts';
 import {canonicalTestRecord, displayValue, domainSummary, filterTests, operationRows, researchHref, testHref, type OperationGroup, type ResearchFilter} from './model.ts';
 
 const PAGE_SIZE = 40;
@@ -87,7 +88,48 @@ export function OperationView({state, lang}: {state: SystemState; lang: Lang}) {
       <details><summary>{m.technical}</summary><dl><dt>{m.id}</dt><dd>{row.id}</dd><dt>{m.status}</dt><dd>{row.status}</dd><dt>{m.source}</dt><dd>{row.sourceRef ?? m.unknown}</dd></dl></details>
     </article>)}</div>
     {!current.length && <p className="pw-empty" role="status">{rows.length ? m.emptyOperation : m.operationEmpty}</p>}
+    <ShadowBoard state={state} lang={lang}/>
     <p className="pw-workflow-link"><a href={hashForView('INBOX')}>{m.decisionFlow} →</a></p>
     {current.length > limit && <button type="button" className="pw-button" onClick={() => setLimit(value => value + PAGE_SIZE)}>{m.more}</button>}
   </main>;
+}
+
+export function ShadowBoard({state, lang}: {state: SystemState; lang: Lang}) {
+  const board = useMemo(() => shadowBoardOf(state), [state]);
+  const c = SHADOW_COPY[lang === 'en' ? 'en' : 'pt'];
+  const [tab, setTab] = useState<'roadmap' | 'mural'>('roadmap'), [status, setStatus] = useState('ALL'), [limit, setLimit] = useState(20);
+  const roadmap = board?.roadmap ?? [], mural = board?.mural ?? [];
+  const statuses = useMemo(() => Array.from(new Set(roadmap.map(row => row.status).filter(Boolean))).sort((a, b) => statusRank(a) - statusRank(b)), [roadmap]);
+  const rows = useMemo(() => roadmap.filter(row => status === 'ALL' || row.status === status).sort((a, b) => statusRank(a.status) - statusRank(b.status) || Number(b.prio) - Number(a.prio) || a.item.localeCompare(b.item)), [roadmap, status]);
+  const recent = useMemo(() => [...mural].reverse(), [mural]);
+  if (!board) return null;
+  return <section className="pw-shadow" aria-label={c.title}>
+    <header><h2>{c.title}</h2><p>{c.source}{board.modified_at ? ` · ${board.modified_at.slice(0, 16).replace('T', ' ')}Z` : ''}{board.source_ref && <> · <a href={board.source_ref} target="_blank" rel="noreferrer noopener">{c.open}</a></>}</p></header>
+    {board.unavailable && <p className="pw-empty" role="status">{c.unavailable} ({board.unavailable})</p>}
+    <div className="pw-tabs" role="group" aria-label={c.title}>
+      <button type="button" aria-pressed={tab === 'roadmap'} onClick={() => { setTab('roadmap'); setLimit(20); }}>{c.roadmap}<span>{roadmap.length}</span></button>
+      <button type="button" aria-pressed={tab === 'mural'} onClick={() => { setTab('mural'); setLimit(20); }}>{c.mural}<span>{mural.length}</span></button>
+    </div>
+    {tab === 'roadmap' && <>
+      <div className="pw-tabs" role="group" aria-label="status">
+        <button type="button" aria-pressed={status === 'ALL'} onClick={() => setStatus('ALL')}>{c.all}</button>
+        {statuses.map(key => <button type="button" key={key} aria-pressed={status === key} onClick={() => { setStatus(key); setLimit(20); }}>{key}<span>{roadmap.filter(row => row.status === key).length}</span></button>)}
+      </div>
+      <div className="pw-operations">{rows.slice(0, limit).map(row => <article key={row.item} className="pw-operation">
+        <p className="pw-eyebrow">{row.item} · {row.status} · P{row.prio || '?'}</p><h3>{row.titulo}</h3>
+        <dl><dt>{c.owner}</dt><dd>{row.dono || '—'}</dd><dt>{c.next}</dt><dd>{row.proximo_teste || '—'}</dd>{row.depende_de && <><dt>{c.depends}</dt><dd>{row.depende_de}</dd></>}<dt>{c.updated}</dt><dd>{row.atualizado || '—'}</dd></dl>
+        {row.nota && <p>{row.nota}</p>}
+      </article>)}</div>
+      {!rows.length && <p className="pw-empty" role="status">{c.empty}</p>}
+      {rows.length > limit && <button type="button" className="pw-button" onClick={() => setLimit(value => value + 20)}>{c.more}</button>}
+    </>}
+    {tab === 'mural' && <>
+      <div className="pw-operations">{recent.slice(0, limit).map((row, index) => <article key={`${row.data}:${index}`} className="pw-operation">
+        <p className="pw-eyebrow">{row.data} · {row.de || '—'} → {row.para || '—'}</p><p>{row.texto}</p>
+        {row.link && <p><small>{/^https:\/\//.test(row.link) ? <a href={row.link} target="_blank" rel="noreferrer noopener">{row.link}</a> : row.link}</small></p>}
+      </article>)}</div>
+      {!recent.length && <p className="pw-empty" role="status">{c.empty}</p>}
+      {recent.length > limit && <button type="button" className="pw-button" onClick={() => setLimit(value => value + 20)}>{c.more}</button>}
+    </>}
+  </section>;
 }

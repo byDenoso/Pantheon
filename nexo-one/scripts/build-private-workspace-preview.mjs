@@ -5,11 +5,22 @@ import {resolve,dirname} from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {privateWorkspaceState} from '../test/helpers/private-workspace.fixture.mjs';
 import {knowledgeReadModel,knowledgeStressReadModel} from '../test/helpers/knowledge.fixture.mjs';
+import {parseCsv} from '../server/atlas/shadow-board.mjs';
 const root=fileURLToPath(new URL('../',import.meta.url));
 const destination=resolve(process.argv[2]??'../private-workspace-preview.html');
 const entry=resolve(root,`test/.private-workspace-preview-${process.pid}.tsx`);
 const state=privateWorkspaceState();
 Object.assign(state.read_model,process.argv.includes('--stress')?knowledgeStressReadModel():knowledgeReadModel());
+const shadowArg=process.argv.find(arg=>arg.startsWith('--shadow='));
+if(shadowArg){
+ // Quadro Roadmap/Mural a partir de um CSV local (colunas: item,titulo,status,dono,prio,proximo_teste,depende_de).
+ const [head,...rows]=parseCsv(readFileSync(shadowArg.slice(9),'utf8')).filter(row=>row.some(Boolean));
+ const col=name=>head.indexOf(name);
+ state.read_model.shadow={contract:'NEXO_SHADOW_BOARD_V1',access:'PRIVATE',modified_at:'2026-10-19T12:50:00Z',source_ref:'https://docs.google.com/spreadsheets/d/synthetic/edit',
+  roadmap:rows.map(row=>({item:row[col('item')],titulo:row[col('titulo')],status:row[col('status')],dono:row[col('dono')],prio:row[col('prio')],proximo_teste:row[col('proximo_teste')],depende_de:row[col('depende_de')]||'',atualizado:'2026-10-19',nota:''})),
+  mural:[{data:'2026-10-19',de:'I',para:'S1',texto:'ACHADO: a busca do Drive omite arquivos que existem.',link:'PseudoMCP v3.0'},{data:'2026-10-19',de:'P',para:'S1',texto:'RESULTADO: dependências de R1-1.10 auditadas.',link:'https://drive.google.com/'}],
+  counts:{roadmap:rows.length,mural:2}};
+}
 const code=`import {useEffect,useState} from 'react';
 import {createRoot} from 'react-dom/client';
 import PrivateWorkspace from '../src/private-workspace/PrivateWorkspace.tsx';
