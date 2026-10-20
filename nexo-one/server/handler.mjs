@@ -177,6 +177,9 @@ export default async function handler(req,res) {
     // The existing atlasBoundary protects this route with Atlas authentication.
     if(route==='atlas-shadow'){
       if(req.method!=='GET')return send({error:'METHOD_NOT_ALLOWED'},405);
+      // Fail closed: the lexical filter is not proof that PEER is excluded.
+      // Enable only after positive authorization/sanitization review.
+      if(env.NEXO_ATLAS_SHADOW_SOURCE_ENABLED!=='true')return send({error:'NOT_FOUND'},404);
       try{return send(await readAtlasPrivateShadow(googleRuntimeEnvironment(env,req.headers)));}
       catch{return send({error:'SHADOW_SOURCE_UNAVAILABLE'},503);}
     }
