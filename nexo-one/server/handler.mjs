@@ -1,6 +1,7 @@
 import {encodePrivateResponse} from './atlas/private-response.mjs';
 import {readPrivateUiAsset} from './atlas/private-assets.mjs';
 import {readAtlasPrivatePublication} from './atlas/private-source.mjs';
+import {readAtlasPrivateShadow} from './atlas/private-shadow-source.mjs';
 import {atlasBoundary} from './atlas/boundary.mjs';
 import {inboxDrop,inboxRobot} from './inbox-gateway.mjs';
 import {toNodeHandler} from '@modelcontextprotocol/node';
@@ -171,6 +172,13 @@ export default async function handler(req,res) {
         res.setHeader('Content-Security-Policy',"default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self'; frame-ancestors 'self'; base-uri 'self'; form-action 'self'");
         res.statusCode=200;return res.end(result.bytes);
       }catch(error){return send({error:error?.message==='PRIVATE_ASSET_NOT_FOUND'?'NOT_FOUND':'PRIVATE_UI_UNAVAILABLE'},error?.message==='PRIVATE_ASSET_NOT_FOUND'?404:503);}
+    }
+    // SHADOW canonical board is independent of the retired JSON LIVE tower.
+    // The existing atlasBoundary protects this route with Atlas authentication.
+    if(route==='atlas-shadow'){
+      if(req.method!=='GET')return send({error:'METHOD_NOT_ALLOWED'},405);
+      try{return send(await readAtlasPrivateShadow(googleRuntimeEnvironment(env,req.headers)));}
+      catch{return send({error:'SHADOW_SOURCE_UNAVAILABLE'},503);}
     }
     if(route==='atlas-private'){
       if(req.method!=='GET')return send({error:'METHOD_NOT_ALLOWED'},405);
