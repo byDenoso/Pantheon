@@ -64,7 +64,10 @@ def assess(rows):
 
 def main():
     import os
-    from scripts.nexo_shadow_writer import SHADOW, page_rows
+    if __package__:
+        from .nexo_shadow_writer import SHADOW, page_rows
+    else:
+        from nexo_shadow_writer import SHADOW, page_rows
     from google.oauth2 import service_account
     from google.auth.transport.requests import AuthorizedSession
     raw = os.environ.get("GOOGLE_SERVICE_ACCOUNT_JSON")
