@@ -1,0 +1,7 @@
+{
+  "contract": "NEXO_WRITER_WAKE_V1",
+  "purpose": "Verify RESULTADOS transport and readback in existing SHADOW Writer",
+  "source": "OPERATOR_AUTHORIZED_CHATGPT",
+  "requested_at": "2026-10-20T16:01:24-03:00",
+  "contains_private_data": false
+}
