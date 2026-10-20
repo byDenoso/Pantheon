@@ -5,7 +5,7 @@ import {buildPrivateUi} from '../scripts/build-private-ui.mjs';
 import {validateRuntime} from '../src/private-legacy/runtime.ts';
 import {compilePrivateTowerRuntime} from '../server/atlas/private-tower.mjs';
 import {makePrivateTowerFixture} from './helpers/private-tower.fixture.mjs';
-import {scryptSync} from 'node:crypto';
+import {createHash,scryptSync} from 'node:crypto';
 import handler from '../server/handler.mjs';
 import {fetchSession,fetchPublic,fetchPrivate,login,logoutStrict,fetchLocale} from '../src/atlas/api.ts';
 
@@ -13,12 +13,21 @@ test('real HTTP handler and frontend client agree on session/data/locale/logout 
   await buildPrivateUi();
   const compiled = compilePrivateTowerRuntime(makePrivateTowerFixture());
   const pin='synthetic-http-integration',salt='d'.repeat(32),values=new Map();
-  const env={NEXO_ATLAS_ORIGIN:'https://atlas.example',NEXO_ATLAS_PIN_HASH:`scrypt$${salt}$${scryptSync(pin,salt,64).toString('hex')}`,NEXO_ATLAS_REDIS_URL:'https://fixture-store.example',NEXO_ATLAS_REDIS_TOKEN:'synthetic',NEXO_ATLAS_PRIVATE_SOURCE_URL:'https://fixture-source.example',NEXO_ATLAS_PRIVATE_SOURCE_TOKEN:'synthetic'};
+  const retrievalToken='retrieval-secret'; const expectedSubject=createHash('sha256').update('nexo-remote-mcp:'+retrievalToken).digest('hex');
+  const env={NEXO_ATLAS_ORIGIN:'https://atlas.example',NEXO_ATLAS_PIN_HASH:`scrypt${salt}${scryptSync(pin,salt,64).toString('hex')}`,NEXO_ATLAS_REDIS_URL:'https://fixture-store.example',NEXO_ATLAS_REDIS_TOKEN:'synthetic',NEXO_ATLAS_PRIVATE_SOURCE_URL:'https://fixture-source.example',NEXO_ATLAS_PRIVATE_SOURCE_TOKEN:'synthetic',NEXO_RETRIEVAL_ENDPOINT:'https://retrieval.example/mcp',NEXO_RETRIEVAL_ATLAS_PRINCIPAL_ID:'atlas-private-owner',NEXO_RETRIEVAL_ATLAS_ROLES:'LEARNER',NEXO_RETRIEVAL_TOKEN_BINDINGS_JSON:JSON.stringify({'atlas-private-owner':{token:retrievalToken}})};
   const previous=Object.fromEntries(Object.keys(env).map(k=>[k,process.env[k]]));Object.assign(process.env,env);
   t.after(()=>{for(const [k,v] of Object.entries(previous))if(v===undefined)delete process.env[k];else process.env[k]=v;});
   const nativeFetch=globalThis.fetch;let failDelete=false,privateReads=0;
   t.mock.method(globalThis,'fetch',async(url,options={})=>{
     if(String(url)==='https://fixture-source.example/'){privateReads++;return Response.json(compiled);}
+    if(String(url)===env.NEXO_RETRIEVAL_ENDPOINT){
+      const msg=JSON.parse(options.body||'{}');
+      if(msg.method==='initialize')return Response.json({jsonrpc:'2.0',id:msg.id,result:{protocolVersion:'2025-11-25',capabilities:{},serverInfo:{name:'nexo',version:'1.3.0'}}});
+      if(msg.method==='notifications/initialized')return new Response('',{status:202});
+      if(msg.method==='tools/call'&&msg.params?.name==='nexo_retrieval_capabilities')return Response.json({jsonrpc:'2.0',id:msg.id,result:{structuredContent:{authenticated_subject:expectedSubject,roles:['LEARNER'],source_mode:'DRIVE_LIVE_VERIFIED'}}});
+      if(msg.method==='tools/call'&&msg.params?.name==='nexo_search')return Response.json({jsonrpc:'2.0',id:msg.id,result:{structuredContent:{answer_status:'EVIDENCE_FOUND',hits:[{id:'TEST::PRIVATE'}]}}});
+      throw Error('unexpected retrieval rpc');
+    }
     assert.equal(String(url),env.NEXO_ATLAS_REDIS_URL);
     const [command,key,...args]=JSON.parse(options.body);let result;
     if(command==='GET')result=values.get(key)||null;
@@ -40,8 +49,11 @@ test('real HTTP handler and frontend client agree on session/data/locale/logout 
   assert.equal((await fetchLocale(client,'pt-BR')).locale,'pt-BR');
   assert.equal((await fetchSession(client)).authenticated,false);
   await assert.rejects(fetchPrivate(client),e=>e.code==='AUTH_REQUIRED');assert.equal(privateReads,0);
+  const anonymousRetrieval=await nativeFetch(base+'/api/atlas-retrieval',{method:'POST',headers:{Origin:env.NEXO_ATLAS_ORIGIN,'Content-Type':'application/json'},body:JSON.stringify({name:'nexo_search',args:{query:'TEST'}})});assert.equal(anonymousRetrieval.status,401);
   const signedIn=await login(client,pin),copiedCookie=cookie;
   const session=await fetchSession(client);assert.equal(session.authenticated,true);assert.equal(session.expiresAt,signedIn.expiresAt);
+  const retrieval=await client('/api/atlas-retrieval',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:'nexo_search',args:{query:'TEST',role:'LEARNER'}})});assert.equal(retrieval.status,200);assert.equal((await retrieval.json()).hits[0].id,'TEST::PRIVATE');
+  const escalation=await client('/api/atlas-retrieval',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:'nexo_search',args:{query:'TEST',role:'GUARDIAO'}})});assert.equal(escalation.status,403);assert.equal((await escalation.json()).error,'ROLE_FORBIDDEN');
   const privateData = (await fetchPrivate(client)).data;
   assert.deepEqual(privateData,JSON.parse(JSON.stringify(compiled.data)));
   assert.equal(validateRuntime(privateData).ok,true);

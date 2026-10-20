@@ -49,5 +49,7 @@ test('locale bridge: the frame applies LOCALE only after the origin+source check
   assert.doesNotMatch(host.slice(iLoc, iLoc + 120), /setPhase|runtimeHolder|towerMemory|storage/, 'a language change touches no state, data, memory or storage: nothing remounts');
   assert.match(frame, /getLocale: \(\) => localeRef\.current/); assert.match(frame, /useEffect\(\(\) => \{ bridgeRef\.current\?\.setLocale\(locale\); \}, \[locale\]\)/);
   assert.match(app, /const locale = useLocale\(\)/, 'the real preference of the shell'); assert.match(app, /<PrivateFrame data=\{state\.data\} title=\{m\.frameTitle\} locale=\{locale\}/);
-  for (const src of [host, frame, app]) assert.doesNotMatch(src, /atlas-locale|localStorage|fetch\(/, 'no endpoint, no storage, no fetch for the bridge');
+  for (const src of [host, app]) assert.doesNotMatch(src, /atlas-locale|localStorage|fetch\(/, 'frame document and app shell do not fetch for locale');
+  assert.match(frame, /fetch\('\/api\/atlas-retrieval'/, 'only the parent frame controller may call the guarded retrieval endpoint');
+  assert.match(frame, /credentials: 'same-origin'/); assert.match(frame, /cache: 'no-store'/);
 });

@@ -9,6 +9,8 @@ export type ToFrame =
   | {channel: typeof HOST; type: 'REFRESH_FAILED'; id: string; code: string}
   /** the shell's current language preference; presentation only, carries no data */
   | {channel: typeof HOST; type: 'LOCALE'; locale: FrameLocale}
+  | {channel: typeof HOST; type: 'RETRIEVAL_RESULT'; id: string; ok: true; data: unknown}
+  | {channel: typeof HOST; type: 'RETRIEVAL_RESULT'; id: string; ok: false; code: string}
   | {channel: typeof HOST; type: 'TEARDOWN'};
 export const FRAME_LOCALES = ['pt-BR', 'en'] as const;
 export type FrameLocale = typeof FRAME_LOCALES[number];
@@ -20,10 +22,12 @@ export type FromFrame =
   | {channel: typeof FRAME; type: 'ACCEPTED'}
   | {channel: typeof FRAME; type: 'SESSION_ACTION'; action: 'logout'}
   | {channel: typeof FRAME; type: 'REFRESH'; id: string}
+  | {channel: typeof FRAME; type: 'RETRIEVAL'; id: string; name: string; args: Record<string, unknown>}
   | {channel: typeof FRAME; type: 'ERROR'; code: string};
 
 type Ev = {origin: string; source: unknown; data: unknown};
 const rec = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null && !Array.isArray(v);
+const TOOL = /^(?:nexo_search|nexo_get|nexo_neighbors|nexo_trace|nexo_diff|nexo_evidence|nexo_groups|nexo_history|nexo_retrieval_capabilities)$/;
 
 export function trusted(ev: Ev, expectedOrigin: string, expectedSource: unknown): boolean {
   return expectedOrigin !== 'null' && expectedOrigin !== '' && ev.origin === expectedOrigin && expectedSource != null && ev.source === expectedSource;
@@ -34,6 +38,7 @@ export function parseFromFrame(data: unknown): FromFrame | null {
   if (data.type === 'ACCEPTED') return {channel: FRAME, type: 'ACCEPTED'};
   if (data.type === 'SESSION_ACTION' && data.action === 'logout') return {channel: FRAME, type: 'SESSION_ACTION', action: 'logout'};
   if (data.type === 'REFRESH' && typeof data.id === 'string' && ID.test(data.id)) return {channel: FRAME, type: 'REFRESH', id: data.id};
+  if (data.type === 'RETRIEVAL' && typeof data.id === 'string' && ID.test(data.id) && typeof data.name === 'string' && TOOL.test(data.name) && rec(data.args)) return {channel: FRAME, type: 'RETRIEVAL', id: data.id, name: data.name, args: data.args};
   if (data.type === 'ERROR' && typeof data.code === 'string') return {channel: FRAME, type: 'ERROR', code: data.code.slice(0, 64)};
   return null;
 }
@@ -43,6 +48,8 @@ export function parseToFrame(data: unknown): ToFrame | null {
   if (data.type === 'RUNTIME_REFRESH' && typeof data.id === 'string' && ID.test(data.id)) return {channel: HOST, type: 'RUNTIME_REFRESH', id: data.id, data: data.data};
   if (data.type === 'REFRESH_FAILED' && typeof data.id === 'string' && ID.test(data.id) && typeof data.code === 'string') return {channel: HOST, type: 'REFRESH_FAILED', id: data.id, code: data.code.slice(0, 64)};
   if (data.type === 'LOCALE' && isFrameLocale(data.locale)) return {channel: HOST, type: 'LOCALE', locale: data.locale};
+  if (data.type === 'RETRIEVAL_RESULT' && typeof data.id === 'string' && ID.test(data.id) && data.ok === true) return {channel: HOST, type: 'RETRIEVAL_RESULT', id: data.id, ok: true, data: data.data};
+  if (data.type === 'RETRIEVAL_RESULT' && typeof data.id === 'string' && ID.test(data.id) && data.ok === false && typeof data.code === 'string') return {channel: HOST, type: 'RETRIEVAL_RESULT', id: data.id, ok: false, code: data.code.slice(0, 64)};
   if (data.type === 'TEARDOWN') return {channel: HOST, type: 'TEARDOWN'};
   return null;
 }
