@@ -29,7 +29,27 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  shadow:
+    # Same existing Writer workflow and credential, isolated from legacy JSON LIVE.
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Write authorized SHADOW rows from private spool
+        env:
+          GOOGLE_SERVICE_ACCOUNT_JSON: ${{ secrets.NEXO_DRIVE_WRITER_JSON }}
+        run: |
+          test -n "$GOOGLE_SERVICE_ACCOUNT_JSON" || { echo "::error::Existing Writer credential absent"; exit 1; }
+          pip install --quiet google-auth requests
+          python scripts/nexo_shadow_writer.py --apply
+
   write:
+    # Historical JSON LIVE writer is retained for rollback but disabled:
+    # current operator mandate makes LIVE read-only.
+    if: ${{ false }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
