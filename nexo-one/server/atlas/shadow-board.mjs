@@ -5,6 +5,10 @@ export const SHADOW_ID='1wizywUGEMd_8KrNqMcz5PQig3KgOTbZd8ENkTW8nRKw';
 export const ROADMAP_COLUMNS=Object.freeze(['item','titulo','status','dono','prio','proximo_teste','depende_de','atualizado','nota']);
 export const MURAL_COLUMNS=Object.freeze(['data','de','para','texto','link']);
 export const RESUMO_COLUMNS=Object.freeze(['data_hora','nivel','item','o_que_mudou','impacto','link']);
+export const RESULTADOS_COLUMNS=Object.freeze(['data','task','item','titulo','resultado','numeros','limites','link_dados']);
+export const EQUIPE_COLUMNS=Object.freeze(['papel','task_id','cadencia','frentes','estado']);
+// Colunas opcionais: entram quando existem no cabeçalho, sem exigir migração.
+const OPTIONAL={MURAL:['tipo','item','id']};
 const MAX_ROWS=300,MAX_CELL=2000;
 const clean=value=>String(value??'').replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f]/g,'').trim().slice(0,MAX_CELL);
 
@@ -24,26 +28,28 @@ export function parseCsv(text){
   return rows;
 }
 
-export function tableFromCsv(text,columns){return tableFromRows(parseCsv(text),columns);}
-export function tableFromRows(rows,columns){
+export function tableFromCsv(text,columns,optional){return tableFromRows(parseCsv(text),columns,optional);}
+export function tableFromRows(rows,columns,optional=[]){
   if(!rows.length)throw new Error('SHADOW_TAB_EMPTY');
   const header=rows[0].map(cell=>clean(cell).toLowerCase());
   const index=columns.map(name=>header.indexOf(name));
   if(index.includes(-1))throw new Error('SHADOW_HEADER_INVALID');
-  return rows.slice(1).filter(row=>row.some(cell=>clean(cell)!=='')).slice(0,MAX_ROWS)
-    .map(row=>Object.fromEntries(columns.map((name,k)=>[name,clean(row[index[k]])])));
+  const extra=optional.map(name=>[name,header.indexOf(name)]).filter(([,i])=>i>=0);
+  return rows.slice(1).filter(row=>row.some(cell=>clean(cell)!=='')).slice(-MAX_ROWS)
+    .map(row=>Object.fromEntries([...columns.map((name,k)=>[name,clean(row[index[k]])]),...extra.map(([name,i])=>[name,clean(row[i])])]));
 }
 
 // Duas rotas só-leitura com o mesmo token drive.readonly: gviz (CSV) e, se falhar,
 // a API Sheets values.get (aceita drive.readonly). A primeira que responder vale.
 async function readTabRows(sheet,range,columns,options){
-  try{return tableFromCsv(await readTab(sheet,options),columns);}
+  const optional=OPTIONAL[sheet]||[];
+  try{return tableFromCsv(await readTab(sheet,options),columns,optional);}
   catch(first){
     const {token,fetchImpl,signal}=options;
     const response=await fetchImpl(`https://sheets.googleapis.com/v4/spreadsheets/${SHADOW_ID}/values/${encodeURIComponent(`${sheet}!${range}`)}?majorDimension=ROWS`,{headers:{Authorization:`Bearer ${token}`},redirect:'error',cache:'no-store',signal});
     if(!response.ok)throw first;
     const data=await response.json();
-    return tableFromRows(Array.isArray(data?.values)?data.values:[],columns);
+    return tableFromRows(Array.isArray(data?.values)?data.values:[],columns,optional);
   }
 }
 async function readTab(sheet,{token,fetchImpl,signal}){
@@ -63,14 +69,18 @@ export async function readShadowBoard({token,fetchImpl=fetch,signal=AbortSignal.
   if(info.id!==SHADOW_ID)throw new Error('SHADOW_METADATA_INVALID');
   const options={token,fetchImpl,signal};
   // RESUMO é opcional: a aba pode não existir ainda ou estar vazia.
-  const [roadmap,mural,resumo]=await Promise.all([readTabRows('ROADMAP','A1:I400',ROADMAP_COLUMNS,options),readTabRows('MURAL','A1:E400',MURAL_COLUMNS,options),readTabRows('RESUMO','A1:F400',RESUMO_COLUMNS,options).catch(()=>[])]);
+  const [roadmap,mural,resumo]=await Promise.all([readTabRows('ROADMAP','A1:I400',ROADMAP_COLUMNS,options),readTabRows('MURAL','A1:H2000',MURAL_COLUMNS,options),readTabRows('RESUMO','A1:F2000',RESUMO_COLUMNS,options).catch(()=>[])]);
+  // RESULTADOS e EQUIPE também são opcionais.
+  const [resultadosAll,equipe]=await Promise.all([readTabRows('RESULTADOS','A1:J2000',RESULTADOS_COLUMNS,options).catch(()=>[]),readTabRows('EQUIPE','A1:F50',EQUIPE_COLUMNS,options).catch(()=>[])]);
+  // Resultados podem ser longos: últimos 100, campos de detalhe encurtados para o painel.
+  const resultados=resultadosAll.slice(-100).map(row=>({...row,numeros:row.numeros.slice(0,600),limites:row.limites.slice(0,600)}));
   return {contract:'NEXO_SHADOW_BOARD_V1',access:'PRIVATE',source_id:SHADOW_ID,source_ref:`https://docs.google.com/spreadsheets/d/${SHADOW_ID}/edit`,
-    modified_at:typeof info.modifiedTime==='string'?info.modifiedTime:null,roadmap,mural,resumo,
-    counts:{roadmap:roadmap.length,mural:mural.length,resumo:resumo.length}};
+    modified_at:typeof info.modifiedTime==='string'?info.modifiedTime:null,roadmap,mural,resumo,resultados,equipe,
+    counts:{roadmap:roadmap.length,mural:mural.length,resumo:resumo.length,resultados:resultados.length,equipe:equipe.length}};
 }
 
 // Nunca derruba o Atlas: falha vira ausência de quadro com motivo curto.
 export async function readShadowBoardSafe(options){
   try{return await readShadowBoard(options);}
-  catch(error){return {contract:'NEXO_SHADOW_BOARD_V1',access:'PRIVATE',unavailable:String(error?.message||'SHADOW_UNAVAILABLE').slice(0,64),roadmap:[],mural:[],resumo:[],counts:{roadmap:0,mural:0,resumo:0}};}
+  catch(error){return {contract:'NEXO_SHADOW_BOARD_V1',access:'PRIVATE',unavailable:String(error?.message||'SHADOW_UNAVAILABLE').slice(0,64),roadmap:[],mural:[],resumo:[],resultados:[],equipe:[],counts:{roadmap:0,mural:0,resumo:0,resultados:0,equipe:0}};}
 }

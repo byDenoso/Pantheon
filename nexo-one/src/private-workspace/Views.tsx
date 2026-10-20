@@ -97,8 +97,8 @@ export function OperationView({state, lang}: {state: SystemState; lang: Lang}) {
 export function ShadowBoard({state, lang}: {state: SystemState; lang: Lang}) {
   const board = useMemo(() => shadowBoardOf(state), [state]);
   const c = SHADOW_COPY[lang === 'en' ? 'en' : 'pt'];
-  const [tab, setTab] = useState<'resumo' | 'roadmap' | 'mural'>('roadmap'), [status, setStatus] = useState('ALL'), [limit, setLimit] = useState(20);
-  const roadmap = board?.roadmap ?? [], mural = board?.mural ?? [], resumo = board?.resumo ?? [];
+  const [tab, setTab] = useState<'resumo' | 'roadmap' | 'mural' | 'resultados' | 'equipe'>('roadmap'), [status, setStatus] = useState('ALL'), [limit, setLimit] = useState(20);
+  const roadmap = board?.roadmap ?? [], mural = board?.mural ?? [], resumo = board?.resumo ?? [], resultados = board?.resultados ?? [], equipe = board?.equipe ?? [];
   const levelRank = (level: string) => { const i = ['N1', 'N4', 'EMG', 'N2', 'N3', 'CUSTO'].indexOf(level); return i < 0 ? 6 : i; };
   const resumoRows = useMemo(() => [...resumo].sort((a, b) => levelRank(a.nivel) - levelRank(b.nivel) || b.data_hora.localeCompare(a.data_hora)), [resumo]);
   const statuses = useMemo(() => Array.from(new Set(roadmap.map(row => row.status).filter(Boolean))).sort((a, b) => statusRank(a) - statusRank(b)), [roadmap]);
@@ -112,6 +112,8 @@ export function ShadowBoard({state, lang}: {state: SystemState; lang: Lang}) {
       {resumo.length > 0 && <button type="button" aria-pressed={tab === 'resumo'} onClick={() => { setTab('resumo'); setLimit(20); }}>{c.resumo}<span>{resumo.length}</span></button>}
       <button type="button" aria-pressed={tab === 'roadmap'} onClick={() => { setTab('roadmap'); setLimit(20); }}>{c.roadmap}<span>{roadmap.length}</span></button>
       <button type="button" aria-pressed={tab === 'mural'} onClick={() => { setTab('mural'); setLimit(20); }}>{c.mural}<span>{mural.length}</span></button>
+      {resultados.length > 0 && <button type="button" aria-pressed={tab === 'resultados'} onClick={() => { setTab('resultados'); setLimit(20); }}>{c.resultados}<span>{resultados.length}</span></button>}
+      {equipe.length > 0 && <button type="button" aria-pressed={tab === 'equipe'} onClick={() => { setTab('equipe'); setLimit(20); }}>{c.equipe}<span>{equipe.length}</span></button>}
     </div>
     {tab === 'roadmap' && <>
       <div className="pw-tabs" role="group" aria-label="status">
@@ -133,9 +135,20 @@ export function ShadowBoard({state, lang}: {state: SystemState; lang: Lang}) {
       </article>)}</div>
       {resumoRows.length > limit && <button type="button" className="pw-button" onClick={() => setLimit(value => value + 20)}>{c.more}</button>}
     </>}
+    {tab === 'resultados' && <>
+      <div className="pw-operations">{[...resultados].reverse().slice(0, limit).map((row, index) => <article key={`${row.data}:${row.item}:${index}`} className="pw-operation">
+        <p className="pw-eyebrow">{row.task || '—'} · {row.item || '—'} · {row.data}</p><h3>{row.titulo}</h3><p>{row.resultado}</p>
+        {row.numeros && <p><small>{row.numeros}</small></p>}
+        {row.limites && <p><small>{row.limites}</small></p>}
+      </article>)}</div>
+      {resultados.length > limit && <button type="button" className="pw-button" onClick={() => setLimit(value => value + 20)}>{c.more}</button>}
+    </>}
+    {tab === 'equipe' && <div className="pw-operations">{equipe.map(row => <article key={row.papel} className="pw-operation">
+      <p className="pw-eyebrow">{row.papel} · {row.estado} · {row.cadencia}</p><h3>{row.frentes}</h3><p><small>{row.task_id}</small></p>
+    </article>)}</div>}
     {tab === 'mural' && <>
       <div className="pw-operations">{recent.slice(0, limit).map((row, index) => <article key={`${row.data}:${index}`} className="pw-operation">
-        <p className="pw-eyebrow">{row.data} · {row.de || '—'} → {row.para || '—'}</p><p>{row.texto}</p>
+        <p className="pw-eyebrow">{row.data} · {row.de || '—'} → {row.para || '—'}{row.tipo ? ` · ${row.tipo}` : ''}{row.item ? ` · ${row.item}` : ''}</p><p>{row.texto}</p>
         {row.link && <p><small>{/^https:\/\//.test(row.link) ? <a href={row.link} target="_blank" rel="noreferrer noopener">{row.link}</a> : row.link}</small></p>}
       </article>)}</div>
       {!recent.length && <p className="pw-empty" role="status">{c.empty}</p>}

@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {parseCsv,tableFromCsv,readShadowBoard,readShadowBoardSafe,ROADMAP_COLUMNS,MURAL_COLUMNS,SHADOW_ID} from '../server/atlas/shadow-board.mjs';
+import {parseCsv,tableFromCsv,tableFromRows,readShadowBoard,readShadowBoardSafe,ROADMAP_COLUMNS,MURAL_COLUMNS,SHADOW_ID} from '../server/atlas/shadow-board.mjs';
 
 const roadmapCsv='item,titulo,status,dono,prio,proximo_teste,depende_de,atualizado,nota\nR1-1.1,"w0wa, offsets ""SN""",PARTIAL,S1,5,"Ajuste, sem CMB",,2026-10-19,\nR1-1.2,Varredura,OPEN,S1,4,Varrer,R1-1.1,2026-10-19,nota\n';
 const muralCsv='data,de,para,texto,link\n2026-10-19,I,S1,"ACHADO: busca omite",PseudoMCP v3.0\n';
@@ -31,7 +31,7 @@ test('readShadowBoard devolve roadmap, mural e contagens',async()=>{
   const board=await readShadowBoard({token:'t',fetchImpl:transport()});
   assert.equal(board.contract,'NEXO_SHADOW_BOARD_V1');
   assert.equal(board.access,'PRIVATE');
-  assert.deepEqual(board.counts,{roadmap:2,mural:1,resumo:0});
+  assert.deepEqual(board.counts,{roadmap:2,mural:1,resumo:0,resultados:0,equipe:0});
   assert.equal(board.modified_at,'2026-10-19T12:50:29.635Z');
   assert.equal(board.mural[0].de,'I');
 });
@@ -56,7 +56,7 @@ test('se o gviz falhar, a API Sheets (drive.readonly) leva o quadro',async()=>{
     return {ok:false};
   };
   const board=await readShadowBoard({token:'t',fetchImpl});
-  assert.deepEqual(board.counts,{roadmap:1,mural:1,resumo:0});
+  assert.deepEqual(board.counts,{roadmap:1,mural:1,resumo:0,resultados:0,equipe:0});
   assert.equal(board.roadmap[0].item,'R1-1.1');
 });
 
@@ -67,4 +67,15 @@ test('RESUMO aparece quando a aba existe e não derruba o quadro quando falta',a
   const board=await readShadowBoard({token:'t',fetchImpl:withResumo});
   assert.equal(board.counts.resumo,1);
   assert.equal(board.resumo[0].nivel,'N1');
+});
+
+test('MURAL aceita colunas opcionais e mantém as linhas mais recentes',async()=>{
+  const rows=[['data','de','para','texto','link','tipo','item','id'],['2026-10-20T09:06-03:00','S1','TODOS','x','RESULTADOS!5','RESULTADO','R1-1.1','S1-202610200906-1']];
+  const table=tableFromRows(rows,MURAL_COLUMNS,['tipo','item','id']);
+  assert.equal(table[0].tipo,'RESULTADO');
+  assert.equal(table[0].id,'S1-202610200906-1');
+  const many=[['data','de','para','texto','link'],...Array.from({length:350},(_,i)=>[String(i),'a','b','c','d'])];
+  const kept=tableFromRows(many,MURAL_COLUMNS);
+  assert.equal(kept.length,300);
+  assert.equal(kept.at(-1).data,'349');
 });
