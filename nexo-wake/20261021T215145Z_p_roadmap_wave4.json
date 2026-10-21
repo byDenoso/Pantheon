@@ -1,0 +1,14 @@
+{
+  "contract": "NEXO_WRITER_WAKE_V1",
+  "purpose": "process P ROADMAP/EDITORIAL WAVE_4 curation events already enqueued in SHADOW_V2",
+  "requested_at": "2026-10-21T21:51:45Z",
+  "category": "WRITER_TRANSPORT",
+  "source": "OPERATOR_AUTHORIZED_CHATGPT",
+  "task_id": "6ad6d608291c8191a518e9667b72bcab",
+  "stable_ids": [
+    "6ad6d608291c8191a518e9667b72bcab-20261021T1851-0300-001",
+    "6ad6d608291c8191a518e9667b72bcab-20261021T1851-0300-002"
+  ],
+  "contains_private_data": false,
+  "scientific_dispatch_enabled": false
+}
