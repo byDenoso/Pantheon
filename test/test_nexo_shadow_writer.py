@@ -239,6 +239,54 @@ class Recovery(unittest.TestCase):
         self.assertEqual(w.safe_error_code(RuntimeError('token=private-secret')),'UNCLASSIFIED')
         self.assertEqual(w.safe_error_code(RuntimeError('SPOOL_HEADER_MISSING')),'SPOOL_HEADER_MISSING')
 
+    def test_1000_row_page_needs_only_one_values_read(self):
+        calls=[]
+        with patch.object(w,'grid_row_count',return_value=1000), \
+             patch.object(w,'values',side_effect=lambda session,sheet,rng: calls.append(rng) or []):
+            self.assertEqual(list(w.page_rows(None,w.SHADOW,'MURAL','H')),[])
+        self.assertEqual(calls,["'MURAL'!A1:H1000"])
+
+    def test_429_retry_is_only_for_safe_get(self):
+        class ReadResponse:
+            def __init__(self,status):
+                self.status_code=status
+            def raise_for_status(self):
+                if self.status_code!=200:
+                    raise RuntimeError('unexpected read failure')
+        class FakeSession:
+            def __init__(self):
+                self.calls=0
+            def get(self,url,**kwargs):
+                self.calls+=1
+                return ReadResponse(429 if self.calls < 3 else 200)
+        session=FakeSession()
+        with patch.object(w.time,'sleep') as sleep:
+            response=w.safe_get(session,'https://sheets.googleapis.com/test',timeout=60)
+        self.assertEqual(response.status_code,200)
+        self.assertEqual(session.calls,3)
+        self.assertEqual(sleep.call_count,2)
+
+    def test_http_status_without_private_exception_details(self):
+        class HTTPError(Exception):
+            pass
+        error=HTTPError('sensitive_request_url token=secret')
+        error.response=type('Resp',(),{'status_code':429})()
+        self.assertEqual(w.safe_error_code(error),'HTTP_429')
+        self.assertNotIn('secret',w.safe_error_code(error))
+
+    def test_applied_curation_skips_redundant_resumo_scan(self):
+        from scripts import nexo_shadow_curation as c
+        request={'op':'resumo.append','row':['2026-10-21 16:57','E1','CORE4_TEST_WAVE_3','sum','impact','link']}
+        event_id=c.ROLE_ID+'-20261021T1657-0300-test'
+        row=['2026-10-21 16:57','P','WRITER',c.PREFIX+json.dumps(request),
+             '','PEDIDO_CURADORIA','CORE4_TEST_WAVE_3',event_id]
+        receipt_id=c.audit(row,'applied','')['stable_id']
+        saved=(row[0],'WRITER','P',json.dumps({'r':event_id,'h':c.sha(request)}),
+               '','APPLIED',row[6],receipt_id)
+        with patch.object(c.w,'target_index',return_value={receipt_id:saved}), \
+             patch.object(c,'read_rows',side_effect=AssertionError('redundant read')):
+            self.assertEqual(c.process_one(None,row,request,apply=True),'already_applied')
+
 
 if __name__ == "__main__":
     unittest.main()
