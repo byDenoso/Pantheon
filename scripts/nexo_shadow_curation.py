@@ -26,7 +26,7 @@ FIELDS = {name:i for i,name in enumerate(ROADMAP_HEADER) if i >= 2}
 # READY/RUNNING and scientific promotions belong to execution/review receipts,
 # not to an unsupported assertion in a curation request.
 OPERATIONAL_STATES = {'OPEN','PARTIAL','BLOCKED_INPUT','HOLD','PARKED','SUPERSEDED','RETIRED'}
-MAX_BATCH_UTF16 = 2000
+MAX_BATCH_UTF16 = 32000
 MAX_PER_RUN = 5
 DIGEST = re.compile(r'^[a-f0-9]{64}$')
 
@@ -138,75 +138,98 @@ def receipt(session, data):
     return w.match_target(w.target_index(session,'MURAL'),data)
 
 
-def process_one(session, row, request, *, apply):
-    claim=audit(row,'claimed',compact({'r':row[7],'h':sha(request)}))
-    done_id=audit(row,'applied','')['stable_id']
-    idx=w.target_index(session,'MURAL')
-    if done_id in getattr(idx,'conflicts',()):
+def process_one(session, row, request, *, apply, index=None):
+    claim = audit(row, 'claimed', compact({'r':row[7], 'h':sha(request)}))
+    done_id = audit(row, 'applied', '')['stable_id']
+    idx = index if index is not None else w.target_index(session, 'MURAL')
+    if done_id in getattr(idx, 'conflicts', ()):
         raise CurationError('CURATION_RECEIPT_CONFLICT')
-    # An applied receipt is immutable evidence of that request, even if a later
-    # authorized curation has changed the target. Verify its binding, not replay.
+
+    # A verified applied receipt is final even when later curation has changed
+    # the target. Avoid repeated full ROADMAP/RESUMO reads for old receipts.
     if done_id in idx:
         try:
-            saved=json.loads(idx[done_id][3])
-        except (ValueError,TypeError) as exc:
+            saved = json.loads(idx[done_id][3])
+        except (ValueError, TypeError) as exc:
             raise CurationError('CURATION_RECEIPT_INVALID') from exc
-        if saved.get('r') != row[7] or saved.get('h') != sha(request) or idx[done_id][5] != 'APPLIED':
+        if (saved.get('r') != row[7] or saved.get('h') != sha(request)
+                or idx[done_id][5] != 'APPLIED'):
             raise CurationError('CURATION_RECEIPT_INVALID')
         return 'already_applied'
-    if request['op']=='roadmap.set':
-        n,before=locate(session,request['item'])
-        after=before.copy(); col=FIELDS[request['field']]; after[col]=request['value']
-        if row[7]==CANARY and before[col] != 'P5':
-            raise CurationError('CURATION_CANARY_WOULD_CHANGE_VALUE')
-        message=compact({'r':row[7],'h':sha(request),'op':'set','f':request['field'],
-                         'b':before[col],'a':after[col], 'h0':sha(before),'h1':sha(after)})
-        update={'updateCells':{'range':{'sheetId':ROADMAP_ID,'startRowIndex':n-1,'endRowIndex':n,
-                    'startColumnIndex':col,'endColumnIndex':col+1},
-                    'rows':[{'values':cells([after[col]])}],'fields':'userEnteredValue'}}
-    else:
-        read_rows(session,'RESUMO',RESUMO_HEADER)
-        message=compact({'r':row[7],'h':sha(request),'op':'append','h1':sha(request['row'])})
-        update={'appendCells':{'sheetId':RESUMO_ID,'rows':[{'values':cells(request['row'])}],
-                              'fields':'userEnteredValue'}}
-    if claim['stable_id'] in getattr(idx,'conflicts',()):
+
+    if claim['stable_id'] in getattr(idx, 'conflicts', ()):
         raise CurationError('CURATION_RECEIPT_CONFLICT')
-    if claim['stable_id'] in idx:
-        if not w.match_target(idx,claim):
-            raise CurationError('CURATION_RECEIPT_CONFLICT')
-        return 'unresolved'
-    if request['op']=='roadmap.set' and sha(before) != request['before']:
-        return 'conflict'
-    done=audit(row,'applied',message)
-    requests=[update,append_request(done)['requests'][0]]
-    count=len(compact({'spreadsheet_id':w.SHADOW,'requests':requests}).encode('utf-16-le'))//2
+    reserved = claim['stable_id'] in idx
+    if reserved and not w.match_target(idx, claim):
+        raise CurationError('CURATION_RECEIPT_CONFLICT')
+
+    if request['op'] == 'roadmap.set':
+        n, before = locate(session, request['item'])
+        after = before.copy()
+        col = FIELDS[request['field']]
+        after[col] = request['value']
+        if row[7] == CANARY and before[col] != 'P5':
+            raise CurationError('CURATION_CANARY_WOULD_CHANGE_VALUE')
+        if sha(before) != request['before']:
+            return 'conflict'
+        message = compact({'r':row[7], 'h':sha(request), 'op':'set',
+                           'f':request['field'], 'b':before[col], 'a':after[col],
+                           'h0':sha(before), 'h1':sha(after)})
+        update = {'updateCells': {'range': {
+            'sheetId':ROADMAP_ID, 'startRowIndex':n-1, 'endRowIndex':n,
+            'startColumnIndex':col, 'endColumnIndex':col+1},
+            'rows':[{'values':cells([after[col]])}], 'fields':'userEnteredValue'}}
+    else:
+        # Never add an identical summary twice, including legacy CLAIMED cases.
+        existing = read_rows(session, 'RESUMO', RESUMO_HEADER)
+        if any(saved_row == request['row'] for _, saved_row in existing):
+            return 'unresolved' if reserved else 'conflict'
+        message = compact({'r':row[7], 'h':sha(request), 'op':'append',
+                           'h1':sha(request['row'])})
+        update = {'appendCells': {'sheetId':RESUMO_ID,
+                                  'rows':[{'values':cells(request['row'])}],
+                                  'fields':'userEnteredValue'}}
+
+    done = audit(row, 'applied', message)
+    # Sheets applies every request in a batch atomically. In new requests
+    # CLAIMED, mutation and APPLIED therefore commit together or not at all.
+    # Existing legacy CLAIMED requests are reconciled only after exact checks.
+    requests = ([] if reserved else append_request(claim)['requests']) + [
+        update, append_request(done)['requests'][0]]
+    count = len(compact({'spreadsheet_id':w.SHADOW,
+                         'requests':requests}).encode('utf-16-le')) // 2
     if count > MAX_BATCH_UTF16:
         raise CurationError('CURATION_TRANSACTION_TOO_LARGE')
     if not apply:
         return 'eligible'
-    # Persist reservation first. A lost receipt is never silently resubmitted.
-    post(session,append_request(claim)['requests'])
-    if not receipt(session,claim):
-        raise RuntimeError('CURATION_CLAIM_READBACK_UNKNOWN')
-    # Fresh precondition immediately before mutation. This detects intervening
-    # edits but does not pretend to be server-side CAS against other clients.
-    if request['op']=='roadmap.set':
-        new_n,current=locate(session,request['item'])
-        if n != new_n or current != before:
+
+    # Recheck the precondition just before a ROADMAP mutation. This is not CAS
+    # against unrelated external writers; the existing single Writer serializes.
+    if request['op'] == 'roadmap.set':
+        current_n, current = locate(session, request['item'])
+        if n != current_n or before != current:
             return 'conflict'
-    post(session,requests)
-    if not receipt(session,done):
+    post(session, requests)  # one atomic write; never retry the POST blindly
+    refreshed = w.target_index(session, 'MURAL')
+    if not (w.match_target(refreshed, claim) and
+            w.match_target(refreshed, done)):
         raise RuntimeError('CURATION_APPLY_READBACK_UNKNOWN')
-    if request['op']=='roadmap.set':
-        _,current=locate(session,request['item'])
+    if index is not None:
+        index.clear()
+        index.update(refreshed)
+        if hasattr(index, 'conflicts'):
+            index.conflicts = set(getattr(refreshed, 'conflicts', ()))
+
+    if request['op'] == 'roadmap.set':
+        _, current = locate(session, request['item'])
         if current != after:
             raise RuntimeError('CURATION_TARGET_READBACK_UNKNOWN')
-    elif sum(r==request['row'] for _,r in read_rows(session,'RESUMO',RESUMO_HEADER)) != 1:
+    elif sum(saved_row == request['row'] for _, saved_row in
+             read_rows(session, 'RESUMO', RESUMO_HEADER)) != 1:
         raise RuntimeError('CURATION_TARGET_READBACK_UNKNOWN')
     return 'applied'
 
-
-def run(session, mural_rows, *, apply=False):
+def run(session, mural_rows, *, apply=False, index=None):
     counts={key:0 for key in ('eligible','applied','already_applied','unresolved','conflict','invalid','deferred')}
     used=0
     for row in mural_rows:
@@ -217,7 +240,7 @@ def run(session, mural_rows, *, apply=False):
             if used >= MAX_PER_RUN:
                 counts['deferred']+=1
                 continue
-            state=process_one(session,list(row),request,apply=apply)
+            state=process_one(session,list(row),request,apply=apply,index=index)
             counts[state]+=1
             if state in ('eligible','applied'):
                 used+=1
