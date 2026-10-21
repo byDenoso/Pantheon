@@ -11,5 +11,6 @@
   "nlive": null,
   "seed": null,
   "dlogz": null,
-  "max_segments": null
+  "max_segments": null,
+  "public_input_files": null
 }
