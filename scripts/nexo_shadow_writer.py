@@ -15,6 +15,7 @@ import json
 import os
 import re
 import sys
+import time
 from urllib.parse import quote
 
 SHADOW = "1wizywUGEMd_8KrNqMcz5PQig3KgOTbZd8ENkTW8nRKw"
@@ -24,7 +25,7 @@ PLAIN_TAB = "SHADOW_V2"
 API = "https://sheets.googleapis.com/v4/spreadsheets"
 TABS = {"MURAL": (1148777660, 8, "H"), "RESULTADOS": (247327396, 10, "D")}
 KEY = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.:\-]{5,127}$")
-PAGE_SIZE = 250
+PAGE_SIZE = 1000
 MAX_GRID_ROWS = 200000
 PLAIN_HEADER = ["stable_id","created_at","role","tab",
                 "v1","v2","v3","v4","v5","v6","v7","v8","v9","v10","state"]
@@ -102,17 +103,27 @@ def append_request(data):
         "fields": "userEnteredValue"}}]}
     return args
 
+def safe_get(session, url, **kwargs):
+    """Retry only idempotent Sheets reads on quota 429; never replay writes."""
+    for delay in (1, 2, 4, 8, 16, 32, None):
+        response = session.get(url, **kwargs)
+        if getattr(response, "status_code", None) != 429:
+            response.raise_for_status()
+            return response
+        if delay is None:
+            response.raise_for_status()
+        time.sleep(delay)
+
+
 def values(session, sheet, range_):
     path = quote(range_, safe="!:$'")
-    response = session.get(f"{API}/{sheet}/values/{path}", timeout=60)
-    response.raise_for_status()
+    response = safe_get(session, f"{API}/{sheet}/values/{path}", timeout=60)
     return response.json().get("values", [])
 
 def grid_row_count(session, sheet, tab):
-    response = session.get(f"{API}/{sheet}", params={
+    response = safe_get(session, f"{API}/{sheet}", params={
         "fields": "sheets(properties(title,gridProperties(rowCount)))"
     }, timeout=60)
-    response.raise_for_status()
     sheets = response.json().get("sheets", [])
     matching = [s["properties"]["gridProperties"]["rowCount"] for s in sheets
                 if s.get("properties", {}).get("title") == tab]
@@ -331,6 +342,11 @@ _SAFE_ERRORS = frozenset({
 })
 
 def safe_error_code(exc):
+    # Never log the exception body, request URL, credentials or row content.
+    if type(exc).__name__ == "HTTPError":
+        status = getattr(getattr(exc, "response", None), "status_code", None)
+        if type(status) is int and 400 <= status <= 599:
+            return f"HTTP_{status}"
     value = str(exc)
     return value if value in _SAFE_ERRORS else "UNCLASSIFIED"
 
