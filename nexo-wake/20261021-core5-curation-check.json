@@ -1,0 +1,9 @@
+{
+  "contract": "NEXO_WRITER_WAKE_V1",
+  "purpose": "validate the typed curation extension in the existing Writer",
+  "category": "WRITER_CURATION_VALIDATION",
+  "source": "OPERATOR_AUTHORIZED_CHATGPT",
+  "contains_private_data": false,
+  "scientific_dispatch_enabled": false,
+  "core5_cutover": false
+}
