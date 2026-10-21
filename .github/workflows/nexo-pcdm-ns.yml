@@ -1,0 +1,129 @@
+name: NEXO PCDM nested sampling
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/nexo-pcdm-ns.yml'
+      - 'lab/pcdm/**'
+  workflow_dispatch:
+    inputs:
+      previous_run_id:
+        description: 'Prior run containing the verified checkpoint; blank starts fresh'
+        required: false
+        type: string
+      segment:
+        description: '0-based segment index'
+        required: true
+        default: '0'
+        type: string
+
+concurrency:
+  group: nexo-pcdm-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install pinned sampler for mock-only integration test
+        run: pip install -r lab/pcdm/requirements.txt
+      - name: Verify checkpoint, resume and missing-input gates
+        run: python -m unittest discover -s lab/pcdm/tests -v
+
+  sample:
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 340
+    permissions:
+      contents: read
+      actions: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Verify public scientific contract before compute
+        run: python -m lab.pcdm.runner validate
+      - name: Enforce segment bound
+        id: bounds
+        env:
+          SEGMENT: ${{ inputs.segment }}
+        run: |
+          python - <<'PY'
+          import json, os, re
+          s = os.environ['SEGMENT']
+          assert re.fullmatch('[0-9]{1,3}', s), 'invalid segment index'
+          limit = json.load(open('lab/pcdm/frozen.json'))['max_segments']
+          assert int(s) < limit, 'max_segments reached; stop, do not silently restart'
+          PY
+      - name: Restore exact previous run (if any)
+        if: inputs.previous_run_id != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PREVIOUS_RUN: ${{ inputs.previous_run_id }}
+          SEGMENT: ${{ inputs.segment }}
+        run: |
+          set -euo pipefail
+          [[ "$PREVIOUS_RUN" =~ ^[0-9]+$ ]] || exit 78
+          [[ "$SEGMENT" =~ ^[0-9]+$ ]] || exit 78
+          [ "$SEGMENT" -gt 0 ] || exit 78
+          prev_sha="$(gh run view "$PREVIOUS_RUN" --repo "$GITHUB_REPOSITORY" --json headSha --jq .headSha)"
+          [ "$prev_sha" = "$GITHUB_SHA" ] || { echo 'Source commit changed: fail closed'; exit 78; }
+          mkdir -p .pcdm-state
+          gh run download "$PREVIOUS_RUN" --repo "$GITHUB_REPOSITORY" --name "pcdm-state-$PREVIOUS_RUN" --dir .pcdm-state
+          test -s .pcdm-state/checkpoint.dynesty
+          test -s .pcdm-state/status.json
+      - name: Reject missing continuation checkpoint
+        if: inputs.previous_run_id == ''
+        env:
+          SEGMENT: ${{ inputs.segment }}
+        run: test "$SEGMENT" = '0'
+      - name: Install scientific sampler
+        run: python -m pip install -r lab/pcdm/requirements.txt
+      - name: Run one 4h40m window with frequent crash checkpoints
+        id: segment
+        env:
+          OMP_NUM_THREADS: '1'
+          OPENBLAS_NUM_THREADS: '1'
+          MKL_NUM_THREADS: '1'
+        run: |
+          set -euo pipefail
+          python -m lab.pcdm.runner segment --wall-seconds 16800 --state-dir .pcdm-state
+          state="$(python -c 'import json; print(json.load(open(".pcdm-state/status.json"))["status"])')"
+          echo "state=$state" >> "$GITHUB_OUTPUT"
+      - name: Persist immutable checkpoint as Actions artifact
+        if: steps.segment.outcome == 'success'
+        uses: actions/upload-artifact@v4
+        with:
+          name: pcdm-state-${{ github.run_id }}
+          path: .pcdm-state/
+          include-hidden-files: true
+          retention-days: 30
+          if-no-files-found: error
+      - name: Continue automatically on same source revision
+        if: steps.segment.outputs.state == 'RUNNING'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SEGMENT: ${{ inputs.segment }}
+        run: |
+          next="$((SEGMENT + 1))"
+          limit="$(python -c 'import json; print(json.load(open("lab/pcdm/frozen.json"))["max_segments"])')"
+          if [ "$next" -ge "$limit" ]; then
+            echo 'Segment cap reached; checkpoint preserved; no infinite loop'
+            exit 0
+          fi
+          gh workflow run nexo-pcdm-ns.yml --repo "$GITHUB_REPOSITORY" --ref "$GITHUB_REF_NAME" \
+            -f previous_run_id="$GITHUB_RUN_ID" -f segment="$next"
