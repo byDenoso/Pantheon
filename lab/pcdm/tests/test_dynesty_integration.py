@@ -8,17 +8,19 @@ import unittest
 from lab.pcdm.runner import run_segment
 
 
+def ptform(u):
+    return 4 * u - 2
+
+
+def logl(x):
+    return -0.5 * (x[0] / 0.4) ** 2
+
+
 @unittest.skipUnless(importlib.util.find_spec('dynesty'), 'dynesty unavailable offline')
 class DynestyResumeSmoke(unittest.TestCase):
     def test_real_dynesty_checkpoint_restore(self):
         import dynesty
         import numpy as np
-
-        def ptform(u):
-            return 4 * u - 2
-
-        def logl(x):
-            return -0.5 * (x[0] / 0.4) ** 2
 
         with tempfile.TemporaryDirectory() as d:
             path = Path(d)
