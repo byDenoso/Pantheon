@@ -24,7 +24,6 @@ PLAIN_TAB = "SHADOW_V2"
 API = "https://sheets.googleapis.com/v4/spreadsheets"
 TABS = {"MURAL": (1148777660, 8, "H"), "RESULTADOS": (247327396, 10, "D")}
 KEY = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.:\-]{5,127}$")
-LIMIT = 1200
 PAGE_SIZE = 250
 MAX_GRID_ROWS = 200000
 PLAIN_HEADER = ["stable_id","created_at","role","tab",
@@ -101,9 +100,6 @@ def append_request(data):
     args = {"spreadsheet_id": SHADOW, "requests": [{"appendCells": {
         "sheetId": TABS[data["tab"]][0], "rows": [{"values": cells}],
         "fields": "userEnteredValue"}}]}
-    count = len(json.dumps(args, ensure_ascii=False, separators=(",", ":")).encode("utf-16-le")) // 2
-    if count > LIMIT:
-        raise ValueError("FULL_ARGUMENTS_ABOVE_LIMIT")
     return args
 
 def values(session, sheet, range_):
