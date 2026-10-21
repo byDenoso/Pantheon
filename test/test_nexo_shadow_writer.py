@@ -49,9 +49,12 @@ class TestWriter(unittest.TestCase):
         with self.assertRaises(ValueError):
             w.decode_plain(row)
 
-    def test_oversize_target_append(self):
-        with self.assertRaises(ValueError):
-            w.append_request(w.decode(ID,encode(text="x"*2000)))
+    def test_large_target_append_is_allowed(self):
+        for size in (2500, 5000, 10000):
+            with self.subTest(size=size):
+                request = w.append_request(w.decode(ID, encode(text="x" * size)))
+                row = request["requests"][0]["appendCells"]["rows"][0]["values"]
+                self.assertIn("x" * size, [cell["userEnteredValue"]["stringValue"] for cell in row])
 
     def test_legacy_non_shadow_skipped(self):
         b=base64.urlsafe_b64encode(b'{"contract":"NEXO_TOWER_LIVE_V1"}').decode()
