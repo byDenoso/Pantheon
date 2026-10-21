@@ -288,5 +288,68 @@ class Recovery(unittest.TestCase):
             self.assertEqual(c.process_one(None,row,request,apply=True),'already_applied')
 
 
+    def _curation_summary_fixture(self, reserved=False, existing=False):
+        from scripts import nexo_shadow_curation as c
+        request={'op':'resumo.append','row':[
+            '2026-10-21 16:57','E1','CORE4_TEST_WAVE_3',
+            'Verified scientific summary','No promotion','RESULTADOS!307:342']}
+        event_id=c.ROLE_ID+'-20261021T1657-0300-recovery-test'
+        row=['2026-10-21 16:57','P','WRITER',
+             c.PREFIX+json.dumps(request,ensure_ascii=False),
+             '','PEDIDO_CURADORIA','CORE4_TEST_WAVE_3',event_id]
+        claim=c.audit(row,'claimed',c.compact({'r':event_id,'h':c.sha(request)}))
+        mural={claim['stable_id']:tuple(claim['values'])} if reserved else {}
+        summaries=[request['row']] if existing else []
+        written=[]
+        def fake_post(session, batch):
+            written.append(batch)
+            for command in batch:
+                if 'appendCells' not in command:
+                    continue
+                append=command['appendCells']
+                value=[v['userEnteredValue']['stringValue']
+                       for v in append['rows'][0]['values']]
+                if append['sheetId']==c.RESUMO_ID:
+                    summaries.append(value)
+                elif append['sheetId']==c.w.TABS['MURAL'][0]:
+                    mural[value[7]]=tuple(value)
+        def fake_read_rows(session, tab, header):
+            if tab!='RESUMO':
+                raise AssertionError('Unexpected table read')
+            return [(i+2,v) for i,v in enumerate(summaries)]
+        with patch.object(c,'post',side_effect=fake_post), \
+             patch.object(c,'read_rows',side_effect=fake_read_rows), \
+             patch.object(c.w,'target_index',side_effect=lambda s,t:dict(mural)):
+            first=c.process_one(None,row,request,apply=True,index=mural)
+            second=c.process_one(None,row,request,apply=True,index=mural)
+        return c,first,second,written,summaries,mural
+
+    def test_curation_new_summary_is_single_atomic_batch(self):
+        c,first,second,batches,summaries,mural=self._curation_summary_fixture()
+        self.assertEqual((first,second),('applied','already_applied'))
+        self.assertEqual(len(batches),1)
+        self.assertEqual(len(batches[0]),3)
+        self.assertEqual(
+            [x['appendCells']['sheetId'] if 'appendCells' in x else None
+             for x in batches[0]],
+            [c.w.TABS['MURAL'][0],c.RESUMO_ID,c.w.TABS['MURAL'][0]])
+        self.assertEqual(len(summaries),1)
+
+    def test_curation_legacy_claim_recovers_once(self):
+        c,first,second,batches,summaries,mural=self._curation_summary_fixture(reserved=True)
+        self.assertEqual((first,second),('applied','already_applied'))
+        self.assertEqual(len(batches),1)
+        self.assertEqual(len(batches[0]),2)
+        self.assertEqual(len(summaries),1)
+        self.assertIn('APPLIED',[v[5] for v in mural.values()])
+
+    def test_curation_claim_with_existing_summary_does_not_replay(self):
+        _,first,second,batches,summaries,_=self._curation_summary_fixture(
+            reserved=True, existing=True)
+        self.assertEqual((first,second),('unresolved','unresolved'))
+        self.assertEqual(batches,[])
+        self.assertEqual(len(summaries),1)
+
+
 if __name__ == "__main__":
     unittest.main()
