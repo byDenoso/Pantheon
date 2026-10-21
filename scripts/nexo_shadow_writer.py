@@ -323,7 +323,7 @@ def run(session, *, apply=False):
             from .nexo_shadow_curation import run as curate
         else:
             from nexo_shadow_curation import run as curate
-        for key, value in curate(session, mural_rows, apply=apply).items():
+        for key, value in curate(session, mural_rows, apply=apply, index=stored['MURAL']).items():
             counts['curation_' + key] = value
     return counts
 
