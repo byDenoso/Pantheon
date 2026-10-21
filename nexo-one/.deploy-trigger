@@ -1,4 +1,4 @@
 production deploy trigger
-requested: 2026-09-30T14:18:00-03:00
-reason: publish ATLAS 90x90 narration matrix for mural and test lifecycle
+requested: 2026-10-20T23:18:00-03:00
+reason: enable authenticated read-only ATLAS SHADOW backend after privacy review
 scope: nexo-one
