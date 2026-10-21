@@ -18,7 +18,12 @@ class BlockedInput(Exception):
 
 
 def sha256(path):
-    return hashlib.sha256(Path(path).read_bytes()).hexdigest()
+    """Streaming SHA-256, including multi-GB public cosmological data and checkpoints."""
+    h = hashlib.sha256()
+    with Path(path).open('rb') as src:
+        while chunk := src.read(1024 * 1024):
+            h.update(chunk)
+    return h.hexdigest()
 
 
 def atomic_json(path, obj):
