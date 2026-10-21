@@ -308,11 +308,22 @@ def run(session, *, apply=False):
                 counts["invalid"] += 1
             # Authentication, transport and unknown failures still stop this run.
             # No retry, alternative route or lost-receipt replay is introduced.
+    mural_rows = list(stored['MURAL'].values())
+    if any(len(row) == 8 and isinstance(row[3], str) and
+           row[3].startswith('NEXO_CURATION_V1 ') and row[5] == 'PEDIDO_CURADORIA'
+           for row in mural_rows):
+        if __package__:
+            from .nexo_shadow_curation import run as curate
+        else:
+            from nexo_shadow_curation import run as curate
+        for key, value in curate(session, mural_rows, apply=apply).items():
+            counts['curation_' + key] = value
     return counts
 
 def result_status(counts, apply):
     if any(counts.get(key, 0) for key in
-           ("invalid", "unresolved", "quarantined", "conflict", "target_conflicts")):
+           ("invalid", "unresolved", "quarantined", "conflict", "target_conflicts",
+            "curation_invalid", "curation_unresolved", "curation_conflict")):
         return "PARTIAL_RECONCILIATION"
     return "READBACK_VERIFIED" if apply else "PREFLIGHT"
 
