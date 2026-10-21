@@ -335,13 +335,13 @@ class Recovery(unittest.TestCase):
             [c.w.TABS['MURAL'][0],c.RESUMO_ID,c.w.TABS['MURAL'][0]])
         self.assertEqual(len(summaries),1)
 
-    def test_curation_legacy_claim_recovers_once(self):
+    def test_curation_legacy_claim_without_applied_is_never_replayed(self):
         c,first,second,batches,summaries,mural=self._curation_summary_fixture(reserved=True)
-        self.assertEqual((first,second),('applied','already_applied'))
-        self.assertEqual(len(batches),1)
-        self.assertEqual(len(batches[0]),2)
-        self.assertEqual(len(summaries),1)
-        self.assertIn('APPLIED',[v[5] for v in mural.values()])
+        self.assertEqual((first,second),('unresolved','unresolved'))
+        self.assertEqual(batches,[])
+        self.assertEqual(summaries,[])
+        self.assertEqual(len(mural),1)
+        self.assertEqual([v[5] for v in mural.values()],['CLAIMED'])
 
     def test_curation_claim_with_existing_summary_does_not_replay(self):
         _,first,second,batches,summaries,_=self._curation_summary_fixture(
