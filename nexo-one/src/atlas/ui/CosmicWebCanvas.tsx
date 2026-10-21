@@ -1,5 +1,5 @@
 import {useEffect, useRef, useState} from 'react';
-import {QUALITY, buildWeb, initialQuality, nextQuality, project, type Web} from '../web/webModel.ts';
+import {QUALITY, buildWeb, initialQuality, nextQuality, type Web} from '../web/webModel.ts';
 
 const SEED = 20251;
 const PALETTE = {
@@ -45,6 +45,14 @@ export default function CosmicWebCanvas({label}: {label: string}) {
     let reduced = rm.matches;
     let palette = document.documentElement.dataset.theme === 'light' ? PALETTE.light : PALETTE.dark;
     let sprites = {hub: sprite(palette.hub), node: sprite(palette.node)};
+    let sx = new Array<number>(web.nodes.length);
+    let sy = new Array<number>(web.nodes.length);
+    let depth = new Array<number>(web.nodes.length);
+    const resetProjectionBuffers = () => {
+      sx = new Array<number>(web.nodes.length);
+      sy = new Array<number>(web.nodes.length);
+      depth = new Array<number>(web.nodes.length);
+    };
 
     const resize = () => {
       const r = canvas.getBoundingClientRect();
@@ -57,27 +65,38 @@ export default function CosmicWebCanvas({label}: {label: string}) {
     const draw = () => {
       c2d.clearRect(0, 0, w, h);
       const q = QUALITY[qKey];
-      const pts = web.nodes.map(n => project(n, angle, w, h, w > 760 ? w * 0.64 : w / 2));
+      const cos = Math.cos(angle), sin = Math.sin(angle);
+      const scale = Math.min(w, h) * 0.55;
+      const cx = w > 760 ? w * 0.64 : w / 2;
+      const cy = h / 2;
+      for (let i = 0; i < web.nodes.length; i++) {
+        const n = web.nodes[i]!;
+        const x = n.x * cos - n.z * sin;
+        const z = n.x * sin + n.z * cos;
+        const p = 1 / (1 + (z + 1.6) * 0.32);
+        sx[i] = cx + x * scale * p;
+        sy[i] = cy + n.y * scale * p;
+        depth[i] = p;
+      }
       // arcs: three depth bins, one stroke per bin
       for (let bin = 0; bin < 3; bin++) {
         c2d.beginPath();
         for (const [a, b] of web.arcs) {
-          const pa = pts[a]!, pb = pts[b]!;
-          const d = (pa.depth + pb.depth) / 2;
+          const d = (depth[a]! + depth[b]!) / 2;
           const k = d < 0.62 ? 0 : d < 0.8 ? 1 : 2;
           if (k !== bin) continue;
-          c2d.moveTo(pa.sx, pa.sy); c2d.lineTo(pb.sx, pb.sy);
+          c2d.moveTo(sx[a]!, sy[a]!); c2d.lineTo(sx[b]!, sy[b]!);
         }
         c2d.strokeStyle = `rgba(${palette.line},${0.1 + bin * 0.12})`;
         c2d.lineWidth = 0.6 + bin * 0.35;
         c2d.stroke();
       }
       for (let i = 0; i < web.nodes.length; i++) {
-        const n = web.nodes[i]!, p = pts[i]!;
-        const r = n.r * (0.7 + p.depth * 0.9) * (n.r > 2 ? 4 : 1.2);
-        const s = n.r > 2 ? sprites.hub : sprites.node;
-        if (q.glow && s) { c2d.drawImage(s, p.sx - r * 2, p.sy - r * 2, r * 4, r * 4); }
-        else { c2d.fillStyle = `rgba(${n.r > 2 ? palette.hub : palette.node},0.85)`; c2d.beginPath(); c2d.arc(p.sx, p.sy, Math.max(0.8, r / 2), 0, 6.2832); c2d.fill(); }
+        const n = web.nodes[i]!, p = depth[i]!;
+        const r = n.r * (0.7 + p * 0.9) * (n.r > 2 ? 4 : 1.2);
+        const nodeSprite = n.r > 2 ? sprites.hub : sprites.node;
+        if (q.glow && nodeSprite) { c2d.drawImage(nodeSprite, sx[i]! - r * 2, sy[i]! - r * 2, r * 4, r * 4); }
+        else { c2d.fillStyle = `rgba(${n.r > 2 ? palette.hub : palette.node},0.85)`; c2d.beginPath(); c2d.arc(sx[i]!, sy[i]!, Math.max(0.8, r / 2), 0, 6.2832); c2d.fill(); }
       }
     };
 
@@ -93,7 +112,7 @@ export default function CosmicWebCanvas({label}: {label: string}) {
       draw();
       ema = ema ? ema * 0.9 + (performance.now() - t0) * 0.1 : performance.now() - t0;
       const nq = nextQuality(qKey, ema);
-      if (nq !== qKey) { qKey = nq; web = buildWeb(SEED, QUALITY[qKey]); ema = 0; resize(); }
+      if (nq !== qKey) { qKey = nq; web = buildWeb(SEED, QUALITY[qKey]); resetProjectionBuffers(); ema = 0; resize(); }
       raf = requestAnimationFrame(tick);
     };
     const sync = () => {
