@@ -27,7 +27,7 @@ class Session:
                 a=r['appendCells'];values=[v['userEnteredValue']['stringValue'] for v in a['rows'][0]['values']]
                 if a['sheetId']==c.RESUMO_ID:self.summary.append(values)
                 else:self.mural[values[7]]=tuple(values)
-        if self.fail_after_apply and len(self.calls)==2:raise TimeoutError('ambiguous')
+        if self.fail_after_apply and len(self.calls)==1:raise TimeoutError('ambiguous')
         return Response()
 
 class CurationTests(unittest.TestCase):
@@ -42,8 +42,12 @@ class CurationTests(unittest.TestCase):
     def test_valid_patch_and_preserved_history(self):
         s=Session();row=event();r=self.run_request(s,row)
         self.assertEqual(r['applied'],1);self.assertEqual(s.roadmap[4],'P4')
-        self.assertEqual(len(s.calls),2)
-        change=s.calls[1]['requests'];self.assertEqual(len(change),2)
+        self.assertEqual(len(s.calls),1)
+        change=s.calls[0]['requests']
+        self.assertEqual(len(change),3)
+        self.assertEqual(change[0]['appendCells']['sheetId'],w.TABS['MURAL'][0])
+        self.assertEqual(change[1]['updateCells']['range']['sheetId'],c.ROADMAP_ID)
+        self.assertEqual(change[2]['appendCells']['sheetId'],w.TABS['MURAL'][0])
         saved=json.loads(list(s.mural.values())[-1][3])
         self.assertEqual((saved['b'],saved['a']),('P5','P4'))
         self.assertEqual(saved['h0'],c.sha(BASE));self.assertEqual(saved['h1'],c.sha(s.roadmap))
@@ -51,7 +55,7 @@ class CurationTests(unittest.TestCase):
     def test_replay_after_later_edit_does_not_restore_old_target(self):
         s=Session();row=event();self.run_request(s,row);s.roadmap[4]='P2'
         r=self.run_request(s,row)
-        self.assertEqual(r['already_applied'],1);self.assertEqual(s.roadmap[4],'P2');self.assertEqual(len(s.calls),2)
+        self.assertEqual(r['already_applied'],1);self.assertEqual(s.roadmap[4],'P2');self.assertEqual(len(s.calls),1)
 
     def test_stale_precondition_has_no_side_effects(self):
         s=Session();s.roadmap[5]='Concurrent edit';r=self.run_request(s,event())
@@ -68,7 +72,7 @@ class CurationTests(unittest.TestCase):
         s=Session();s.fail_after_apply=True;row=event()
         with self.assertRaises(TimeoutError):self.run_request(s,row)
         s.fail_after_apply=False;r=self.run_request(s,row)
-        self.assertEqual(r['already_applied'],1);self.assertEqual(len(s.calls),2)
+        self.assertEqual(r['already_applied'],1);self.assertEqual(len(s.calls),1)
 
     def test_preflight_is_read_only(self):
         s=Session();r=self.run_request(s,event(),False)
@@ -93,18 +97,41 @@ class CurationTests(unittest.TestCase):
     def test_no_formula_execution(self):
         s=Session();r=self.run_request(s,event(field='proximo_teste',value='=IMPORTDATA("example")'))
         self.assertEqual(r['applied'],1)
-        self.assertEqual(s.calls[1]['requests'][0]['updateCells']['rows'][0]['values'][0],{'userEnteredValue':{'stringValue':'=IMPORTDATA("example")'}})
+        self.assertEqual(s.calls[0]['requests'][1]['updateCells']['rows'][0]['values'][0],{'userEnteredValue':{'stringValue':'=IMPORTDATA("example")'}})
 
     def test_manual_canary_cannot_change_science_or_priority(self):
         s=Session();row=event(value='P5',eid=c.CANARY,role='INTERATIVO')
         self.assertEqual(self.run_request(s,row)['applied'],1);self.assertEqual(s.roadmap,BASE)
         with self.assertRaises(c.CurationError):c.parse(event(value='P4',eid=c.CANARY,role='INTERATIVO'))
 
-    def test_oversized_history_is_not_discarded(self):
+    def test_existing_history_is_retained_in_atomic_receipt(self):
         s=Session();s.roadmap[8]='Old scientific context. '*90
-        row=event(field='nota',value='new',before=c.sha(s.roadmap))
-        # The legacy append limit rejects the audit before any mutation.
+        before=s.roadmap.copy()
+        row=event(field='nota',value='new',before=c.sha(before))
+        self.assertEqual(self.run_request(s,row)['applied'],1)
+        self.assertEqual(s.roadmap[8],'new')
+        self.assertEqual(len(s.calls),1)
+        saved=json.loads(list(s.mural.values())[-1][3])
+        self.assertEqual(saved['b'],before[8])
+        self.assertEqual(saved['h0'],c.sha(before))
+        self.assertEqual(saved['h1'],c.sha(s.roadmap))
+
+    def test_genuinely_oversized_audit_fails_without_data_loss(self):
+        s=Session();s.roadmap[8]='Old context. '*3500
+        before=s.roadmap.copy()
+        row=event(field='nota',value='new',before=c.sha(before))
         self.assertEqual(self.run_request(s,row)['invalid'],1)
+        self.assertEqual(s.calls,[])
+        self.assertEqual(s.roadmap,before)
+
+    def test_legacy_claim_with_target_changed_is_not_replayed(self):
+        s=Session();row=event();request=c.parse(row)
+        claim=c.audit(row,'claimed',c.compact({'r':row[7],'h':c.sha(request)}))
+        s.mural[claim['stable_id']]=tuple(claim['values'])
+        s.roadmap[4]='P4'
+        r=self.run_request(s,row)
+        self.assertEqual(r['unresolved'],1)
+        self.assertEqual(s.roadmap[4],'P4')
         self.assertEqual(s.calls,[])
 
     def test_summary_append_and_idempotence(self):
