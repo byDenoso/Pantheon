@@ -1,0 +1,16 @@
+{
+  "schema": 1,
+  "status": "BLOCKED_INPUT",
+  "reason": "Native PCDM public model, normalized log-likelihood, signed data/prior contracts and executable inputs have not been verified.",
+  "adapter": null,
+  "adapter_sha256": null,
+  "data_sha256": null,
+  "likelihood_sha256": null,
+  "priors_sha256": null,
+  "ndim": null,
+  "nlive": null,
+  "seed": null,
+  "dlogz": null,
+  "max_segments": null,
+  "public_input_files": null
+}
