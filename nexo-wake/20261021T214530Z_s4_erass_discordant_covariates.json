@@ -1,0 +1,19 @@
+{
+  "contract": "NEXO_WRITER_WAKE_V1",
+  "purpose": "process S4 E1 eRASS1 discordant-tail covariate events already enqueued in SHADOW_V2",
+  "requested_at": "2026-10-21T21:45:30Z",
+  "category": "WRITER_TRANSPORT",
+  "source": "OPERATOR_AUTHORIZED_CHATGPT",
+  "task_id": "6ad6d60458508191a0a7ea80a5391368",
+  "stable_ids": [
+    "6ad6d60458508191a0a7ea80a5391368-20261021T1838-001",
+    "6ad6d60458508191a0a7ea80a5391368-20261021T1838-002",
+    "6ad6d60458508191a0a7ea80a5391368-20261021T1838-003",
+    "6ad6d60458508191a0a7ea80a5391368-20261021T1838-004",
+    "6ad6d60458508191a0a7ea80a5391368-20261021T1838-005",
+    "6ad6d60458508191a0a7ea80a5391368-20261021T1838-006",
+    "6ad6d60458508191a0a7ea80a5391368-20261021T1838-007"
+  ],
+  "contains_private_data": false,
+  "scientific_dispatch_enabled": false
+}
