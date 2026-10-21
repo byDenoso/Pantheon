@@ -162,6 +162,12 @@ def process_one(session, row, request, *, apply, index=None):
     reserved = claim['stable_id'] in idx
     if reserved and not w.match_target(idx, claim):
         raise CurationError('CURATION_RECEIPT_CONFLICT')
+    if reserved:
+        # Legacy CLAIMED proves that a write was attempted, not that it failed.
+        # Only an exact APPLIED receipt authorizes idempotent completion. Never
+        # replay a potentially ambiguous legacy mutation or append automatically.
+        # Leave this identity unresolved for evidence-based reconciliation.
+        return 'unresolved'
 
     if request['op'] == 'roadmap.set':
         n, before = locate(session, request['item'])
@@ -183,7 +189,7 @@ def process_one(session, row, request, *, apply, index=None):
         # Never add an identical summary twice, including legacy CLAIMED cases.
         existing = read_rows(session, 'RESUMO', RESUMO_HEADER)
         if any(saved_row == request['row'] for _, saved_row in existing):
-            return 'unresolved' if reserved else 'conflict'
+            return 'conflict'
         message = compact({'r':row[7], 'h':sha(request), 'op':'append',
                            'h1':sha(request['row'])})
         update = {'appendCells': {'sheetId':RESUMO_ID,
@@ -191,10 +197,9 @@ def process_one(session, row, request, *, apply, index=None):
                                   'fields':'userEnteredValue'}}
 
     done = audit(row, 'applied', message)
-    # Sheets applies every request in a batch atomically. In new requests
-    # CLAIMED, mutation and APPLIED therefore commit together or not at all.
-    # Existing legacy CLAIMED requests are reconciled only after exact checks.
-    requests = ([] if reserved else append_request(claim)['requests']) + [
+    # Sheets applies the CLAIMED marker, mutation, and APPLIED receipt
+    # atomically. Legacy CLAIMED without APPLIED is never replayed.
+    requests = append_request(claim)['requests'] + [
         update, append_request(done)['requests'][0]]
     count = len(compact({'spreadsheet_id':w.SHADOW,
                          'requests':requests}).encode('utf-16-le')) // 2
