@@ -1,0 +1,5 @@
+NEXO writer wake
+role=P
+task_id=6ad6d608291c8191a518e9667b72bcab
+stable_ids=6ad6d608291c8191a518e9667b72bcab-20261021T1454-0300-001,6ad6d608291c8191a518e9667b72bcab-20261021T1454-0300-002
+purpose=curation relay only; no scientific payload
