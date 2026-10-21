@@ -29,6 +29,39 @@ def atomic_json(path, obj):
     os.replace(tmp, path)
 
 
+def _attest_public_inputs(config, base):
+    """Bind displayed provenance hashes to the bytes read by this run."""
+    groups = config.get('public_input_files')
+    if not isinstance(groups, dict) or set(groups) != {'data', 'likelihood', 'priors'}:
+        raise BlockedInput('PUBLIC_INPUT_FILE_GROUPS_MISSING')
+    for role in ('data', 'likelihood', 'priors'):
+        entries = groups.get(role)
+        if not isinstance(entries, list) or not entries:
+            raise BlockedInput('PUBLIC_INPUT_FILES_MISSING_' + role.upper())
+        canonical = []
+        seen = set()
+        for entry in entries:
+            if not isinstance(entry, dict) or set(entry) != {'path', 'sha256'}:
+                raise BlockedInput('PUBLIC_INPUT_ENTRY_INVALID_' + role.upper())
+            rel, expected = entry['path'], entry['sha256']
+            if (not isinstance(rel, str) or not rel or
+                not re.fullmatch(r'[A-Za-z0-9_./-]+', rel) or
+                '..' in Path(rel).parts or Path(rel).is_absolute() or rel in seen or
+                not re.fullmatch(r'[0-9a-f]{64}', str(expected))):
+                raise BlockedInput('PUBLIC_INPUT_ENTRY_UNSAFE_' + role.upper())
+            seen.add(rel)
+            target = (base / rel).resolve()
+            if not target.is_relative_to(base) or not target.is_file():
+                raise BlockedInput('PUBLIC_INPUT_FILE_MISSING_' + role.upper())
+            if sha256(target) != expected:
+                raise BlockedInput('PUBLIC_INPUT_SHA256_MISMATCH_' + role.upper())
+            canonical.append({'path': rel, 'sha256': expected})
+        digest = hashlib.sha256(json.dumps(sorted(canonical, key=lambda o: o['path']),
+                                           sort_keys=True, separators=(',', ':')).encode()).hexdigest()
+        if digest != config[role + '_sha256']:
+            raise BlockedInput('PUBLIC_INPUT_GROUP_SHA256_MISMATCH_' + role.upper())
+
+
 def freeze(config_path):
     path = Path(config_path).resolve()
     c = json.loads(path.read_text(encoding='utf-8'))
@@ -47,6 +80,7 @@ def freeze(config_path):
         raise BlockedInput('ADAPTER_PUBLIC_FILE_MISSING')
     if sha256(adapter_path) != c.get('adapter_sha256'):
         raise BlockedInput('ADAPTER_SHA256_MISMATCH')
+    _attest_public_inputs(c, path.parent)
     if not isinstance(c.get('ndim'), int) or not 1 <= c['ndim'] <= 40:
         raise BlockedInput('NDIM_INVALID')
     if not isinstance(c.get('nlive'), int) or c['nlive'] < 2 * c['ndim']:
