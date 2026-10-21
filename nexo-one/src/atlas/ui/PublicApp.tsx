@@ -41,7 +41,7 @@ export default function PublicApp() {
           </div>
           <figure className="atlas-hero-art">
             <div className="atlas-hero-picture">
-              <img className="atlas-web-art" src={art} width="1672" height="941" alt="" fetchPriority="high"/>
+              <img className="atlas-web-art" src={art} width="1672" height="941" alt="" fetchPriority="high" decoding="async"/>
               <div className="atlas-web-motion" aria-hidden="true"><Suspense fallback={null}><CosmicWebCanvas label={m.vizLabel}/></Suspense></div>
             </div>
             <figcaption className="atlas-note">{m.vizNote}</figcaption>
