@@ -74,6 +74,20 @@ test('open layout, self-hosted replaceable fonts and retained decorative animati
   assert.match(css, /SIL OPEN FONT LICENSE Version 1\.1/);
 });
 
+test('public rendering keeps the same presentation while avoiding offscreen and per-frame waste', () => {
+  const app = rd('src/atlas/ui/PublicApp.tsx');
+  const campaigns = rd('src/atlas/ui/PublicCampaignsView.tsx');
+  const canvas = rd('src/atlas/ui/CosmicWebCanvas.tsx');
+  const css = rd('src/atlas/public-presentation.css');
+  assert.match(app, /fetchPriority="high" decoding="async"/);
+  assert.match(css, /content-visibility:auto/);
+  assert.match(css, /contain-intrinsic-block-size:auto 720px/);
+  assert.match(campaigns, /useDeferredValue\(search\)/);
+  assert.match(campaigns, /mounted && <ol>/);
+  assert.match(canvas, /const cos = Math\.cos\(angle\), sin = Math\.sin\(angle\)/);
+  assert.doesNotMatch(canvas, /web\.nodes\.map\(/);
+});
+
 test('contact, accessible mobile navigation and no new network or public-private import', () => {
   assert.equal(CONTACT_EMAIL, 'phys@denerpereira.com.br');
   const app = rd('src/atlas/ui/PublicApp.tsx'), shell = rd('src/atlas/ui/Shell.tsx');

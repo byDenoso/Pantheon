@@ -28,6 +28,7 @@ try {
   await context.route('**/api/atlas-public', route => route.fulfill({contentType: 'application/json', body: JSON.stringify(payload)}));
   await page.goto(backend.base); await page.locator('.atlas-public-campaign').first().waitFor();
   assert.equal(await page.locator('.atlas-public-campaign').count(), 6);
+  assert.equal(await page.locator('.atlas-campaign-test').count(), 0, 'closed campaign details must not mount hidden test DOM');
   await page.getByRole('button', {name: 'Próxima', exact: true}).click(); assert.equal(await page.locator('.atlas-public-campaign').count(), 6);
   await page.getByRole('button', {name: 'Próxima', exact: true}).click(); assert.equal(await page.locator('.atlas-public-campaign').count(), 1);
   await page.getByLabel('Buscar pergunta').fill('expansão'); assert.equal(await page.locator('.atlas-public-campaign').count(), 1);
