@@ -1,0 +1,17 @@
+{
+  "contract": "NEXO_WRITER_WAKE_V1",
+  "purpose": "process seven S3 covariance-block-ablation events already enqueued in SHADOW_V2",
+  "requested_at": "2026-10-21T21:18:45Z",
+  "category": "WRITER_TRANSPORT",
+  "source": "OPERATOR_AUTHORIZED_CHATGPT",
+  "stable_ids": [
+    "6ad6d5f981388191a6fc7facb9191198-20261021T1814-0300-001",
+    "6ad6d5f981388191a6fc7facb9191198-20261021T1814-0300-002",
+    "6ad6d5f981388191a6fc7facb9191198-20261021T1814-0300-003",
+    "6ad6d5f981388191a6fc7facb9191198-20261021T1814-0300-004",
+    "6ad6d5f981388191a6fc7facb9191198-20261021T1814-0300-005",
+    "6ad6d5f981388191a6fc7facb9191198-20261021T1814-0300-006",
+    "6ad6d5f981388191a6fc7facb9191198-20261021T1814-0300-007"
+  ],
+  "contains_private_data": false
+}
