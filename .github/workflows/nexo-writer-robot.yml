@@ -15,6 +15,9 @@ on:
     branches: [main]
     paths:
       - ".github/workflows/nexo-writer-robot.yml"
+      - "scripts/nexo_shadow_writer.py"
+      - "scripts/nexo_shadow_curation.py"
+      - "test/test_nexo_shadow_writer.py"
       - "nexo-wake/*.json"
       - "nexo-control/execution-assessment-approvals.json"
 
@@ -46,10 +49,9 @@ jobs:
           pip install --quiet google-auth requests
           python -m unittest discover -s test -p 'test_nexo_shadow_writer.py' -v
           python scripts/nexo_shadow_writer.py --apply
-      - name: Inspect public-battery requests (read-only, no dispatch)
-        env:
-          GOOGLE_SERVICE_ACCOUNT_JSON: ${{ secrets.NEXO_DRIVE_WRITER_JSON }}
-        run: python scripts/nexo_shadow_intake.py
+      # Read-only public-battery inspection is intentionally not run here:
+      # it never dispatched jobs and caused extra Sheets quota reads/false failures.
+      # scripts/nexo_shadow_intake.py remains available for explicit diagnostics.
 
   write:
     # Historical JSON LIVE writer is retained for rollback but disabled:
