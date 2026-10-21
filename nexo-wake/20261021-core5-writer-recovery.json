@@ -1,0 +1,9 @@
+{
+  "contract": "NEXO_WRITER_WAKE_V1",
+  "purpose": "verify fail-closed identity reconciliation after the tested Writer update",
+  "category": "WRITER_RECONCILIATION_VALIDATION",
+  "source": "OPERATOR_AUTHORIZED_CHATGPT",
+  "contains_private_data": false,
+  "scientific_dispatch_enabled": false,
+  "core5_cutover": false
+}
