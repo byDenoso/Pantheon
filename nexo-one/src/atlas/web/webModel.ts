@@ -58,10 +58,9 @@ export function buildWeb(seed: number, q: WebQuality): Web {
   return {nodes, arcs};
 }
 
-export function project(n: Node3, angle: number, w: number, h: number, cx = w / 2) {
-  const c = Math.cos(angle), s = Math.sin(angle);
-  const x = n.x * c - n.z * s;
-  const z = n.x * s + n.z * c;
+export function project(n: Node3, angle: number, w: number, h: number, cx = w / 2, cos = Math.cos(angle), sin = Math.sin(angle)) {
+  const x = n.x * cos - n.z * sin;
+  const z = n.x * sin + n.z * cos;
   const persp = 1 / (1 + (z + 1.6) * 0.32);
   const scale = Math.min(w, h) * 0.55;
   return {sx: cx + x * scale * persp, sy: h / 2 + n.y * scale * persp, depth: persp};
@@ -77,3 +76,7 @@ export function initialQuality(width: number, cores: number | undefined, mem: nu
   if (width < 900 || (cores !== undefined && cores <= 4)) return 'medium';
   return 'high';
 }
+
+/** Animation should not consume the display's full refresh rate. */
+export const frameIntervalMs = (quality: keyof typeof QUALITY): number =>
+  quality === 'low' ? 50 : quality === 'medium' ? 1000 / 24 : 1000 / 30;

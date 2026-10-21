@@ -1,5 +1,5 @@
 import {useEffect, useRef, useState} from 'react';
-import {QUALITY, buildWeb, initialQuality, nextQuality, project, type Web} from '../web/webModel.ts';
+import {QUALITY, buildWeb, frameIntervalMs, initialQuality, nextQuality, project, type Web} from '../web/webModel.ts';
 
 const SEED = 20251;
 const PALETTE = {
@@ -38,6 +38,7 @@ export default function CosmicWebCanvas({label}: {label: string}) {
     let angle = 0.6;
     let raf = 0;
     let last = 0;
+    let nextFrameAt = 0;
     let ema = 0;
     let visible = true;
     let tabVisible = !document.hidden;
@@ -48,16 +49,21 @@ export default function CosmicWebCanvas({label}: {label: string}) {
 
     const resize = () => {
       const r = canvas.getBoundingClientRect();
-      dpr = Math.min(window.devicePixelRatio || 1, QUALITY[qKey].dprCap);
-      w = Math.max(1, Math.round(r.width)); h = Math.max(1, Math.round(r.height));
+      const nextDpr = Math.min(window.devicePixelRatio || 1, QUALITY[qKey].dprCap);
+      const nextW = Math.max(1, Math.round(r.width)), nextH = Math.max(1, Math.round(r.height));
+      if (nextDpr === dpr && nextW === w && nextH === h) return false;
+      dpr = nextDpr; w = nextW; h = nextH;
       canvas.width = Math.round(w * dpr); canvas.height = Math.round(h * dpr);
       c2d.setTransform(dpr, 0, 0, dpr, 0, 0);
+      return true;
     };
 
     const draw = () => {
       c2d.clearRect(0, 0, w, h);
       const q = QUALITY[qKey];
-      const pts = web.nodes.map(n => project(n, angle, w, h, w > 760 ? w * 0.64 : w / 2));
+      const cx = w > 760 ? w * 0.64 : w / 2;
+      const cosine = Math.cos(angle), sine = Math.sin(angle);
+      const pts = web.nodes.map(n => project(n, angle, w, h, cx, cosine, sine));
       // arcs: three depth bins, one stroke per bin
       for (let bin = 0; bin < 3; bin++) {
         c2d.beginPath();
@@ -86,23 +92,29 @@ export default function CosmicWebCanvas({label}: {label: string}) {
     const tick = (t: number) => {
       raf = 0;
       if (!canRun()) return;
+      if (nextFrameAt && t + 1 < nextFrameAt) {
+        raf = requestAnimationFrame(tick);
+        return;
+      }
+      nextFrameAt = nextFrameAt ? Math.max(nextFrameAt + frameIntervalMs(qKey), t + 1) : t + frameIntervalMs(qKey);
       const dt = last ? Math.min(t - last, 64) : 16;
       last = t;
       angle += dt * 0.00004;
       const t0 = performance.now();
       draw();
-      ema = ema ? ema * 0.9 + (performance.now() - t0) * 0.1 : performance.now() - t0;
+      const drawMs = performance.now() - t0;
+      ema = ema ? ema * 0.9 + drawMs * 0.1 : drawMs;
       const nq = nextQuality(qKey, ema);
       if (nq !== qKey) { qKey = nq; web = buildWeb(SEED, QUALITY[qKey]); ema = 0; resize(); }
       raf = requestAnimationFrame(tick);
     };
     const sync = () => {
-      stop(); last = 0;
+      stop(); last = 0; nextFrameAt = 0;
       if (canRun()) raf = requestAnimationFrame(tick);
-      else draw(); // paused or reduced motion: a single static frame
+      else if (visible && tabVisible) draw(); // static frame only when on-screen
     };
 
-    const ro = new ResizeObserver(() => { resize(); sync(); });
+    const ro = new ResizeObserver(() => { if (resize()) sync(); });
     ro.observe(canvas);
     const io = new IntersectionObserver(es => { visible = es[es.length - 1]?.isIntersecting ?? true; sync(); });
     io.observe(canvas);
