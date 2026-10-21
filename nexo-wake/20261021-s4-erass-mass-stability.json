@@ -1,0 +1,12 @@
+{
+  "contract": "NEXO_WRITER_WAKE_V1",
+  "purpose": "process two existing SHADOW_V2 S4 event rows after private artifact readback",
+  "requested_at": "2026-10-21T17:46:00Z",
+  "category": "WRITER_TRANSPORT",
+  "source": "OPERATOR_AUTHORIZED_CHATGPT",
+  "stable_ids": [
+    "6ad6d60458508191a0a7ea80a5391368-20261021T1438-0300-001",
+    "6ad6d60458508191a0a7ea80a5391368-20261021T1438-0300-002"
+  ],
+  "contains_private_data": false
+}
