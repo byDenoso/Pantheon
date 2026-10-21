@@ -1,0 +1,8 @@
+{
+  "contract": "NEXO_WRITER_WAKE_V1",
+  "purpose": "process plain-text SHADOW_V2 RESULTADOS canary",
+  "requested_at": "2026-10-21T00:34:00Z",
+  "category": "WRITER_TRANSPORT_MIGRATION",
+  "source": "OPERATOR_AUTHORIZED_CHATGPT",
+  "contains_private_data": false
+}
