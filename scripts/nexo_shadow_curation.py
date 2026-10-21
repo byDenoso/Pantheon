@@ -144,6 +144,16 @@ def process_one(session, row, request, *, apply):
     idx=w.target_index(session,'MURAL')
     if done_id in getattr(idx,'conflicts',()):
         raise CurationError('CURATION_RECEIPT_CONFLICT')
+    # An applied receipt is immutable evidence of that request, even if a later
+    # authorized curation has changed the target. Verify its binding, not replay.
+    if done_id in idx:
+        try:
+            saved=json.loads(idx[done_id][3])
+        except (ValueError,TypeError) as exc:
+            raise CurationError('CURATION_RECEIPT_INVALID') from exc
+        if saved.get('r') != row[7] or saved.get('h') != sha(request) or idx[done_id][5] != 'APPLIED':
+            raise CurationError('CURATION_RECEIPT_INVALID')
+        return 'already_applied'
     if request['op']=='roadmap.set':
         n,before=locate(session,request['item'])
         after=before.copy(); col=FIELDS[request['field']]; after[col]=request['value']
@@ -159,16 +169,6 @@ def process_one(session, row, request, *, apply):
         message=compact({'r':row[7],'h':sha(request),'op':'append','h1':sha(request['row'])})
         update={'appendCells':{'sheetId':RESUMO_ID,'rows':[{'values':cells(request['row'])}],
                               'fields':'userEnteredValue'}}
-    # An applied receipt is immutable evidence of that request, even if a later
-    # authorized curation has changed the target. Verify its binding, not replay.
-    if done_id in idx:
-        try:
-            saved=json.loads(idx[done_id][3])
-        except (ValueError,TypeError) as exc:
-            raise CurationError('CURATION_RECEIPT_INVALID') from exc
-        if saved.get('r') != row[7] or saved.get('h') != sha(request) or idx[done_id][5] != 'APPLIED':
-            raise CurationError('CURATION_RECEIPT_INVALID')
-        return 'already_applied'
     if claim['stable_id'] in getattr(idx,'conflicts',()):
         raise CurationError('CURATION_RECEIPT_CONFLICT')
     if claim['stable_id'] in idx:
