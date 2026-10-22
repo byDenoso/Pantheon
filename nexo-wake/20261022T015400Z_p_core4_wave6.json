@@ -1,0 +1,14 @@
+{
+  "contract": "NEXO_WRITER_WAKE_V1",
+  "task_id": "6ad6d608291c8191a518e9667b72bcab",
+  "stable_ids": [
+    "6ad6d608291c8191a518e9667b72bcab-20261021T2254-0300-001",
+    "6ad6d608291c8191a518e9667b72bcab-20261021T2254-0300-002",
+    "6ad6d608291c8191a518e9667b72bcab-20261021T2254-0300-003",
+    "6ad6d608291c8191a518e9667b72bcab-20261021T2254-0300-004",
+    "6ad6d608291c8191a518e9667b72bcab-20261021T2254-0300-005"
+  ],
+  "science_count": "30/6",
+  "review_count": "12/6",
+  "public": false
+}
