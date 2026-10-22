@@ -1,0 +1,14 @@
+{
+  "schema": "NEXO_WRITER_WAKE_V1",
+  "task_id": "6ad6d5f6485c8191a263a890f1721eef",
+  "stable_id_prefix": "6ad6d5f6485c8191a263a890f1721eef-20261022T0206-0300",
+  "spool_id": "1M2maKkuEjxumZRa145dzei7dEPFi2yKsKlUf7_scC-E",
+  "spool_tab": "SHADOW_V2",
+  "range": "SHADOW_V2!A420:O426",
+  "first_stable_id": "6ad6d5f6485c8191a263a890f1721eef-20261022T0206-0300-001",
+  "last_stable_id": "6ad6d5f6485c8191a263a890f1721eef-20261022T0206-0300-007",
+  "target_tabs": ["RESULTADOS", "MURAL"],
+  "artifact_id": "1odMmczUz3PtvrNNOv9HojNM1_nsFJTxV",
+  "artifact_sha256": "7dac69481e04a428a82175fbe00824569f6f56f619afbfd1a022c9818c78bedc",
+  "purpose": "process_canonical_writer_spool"
+}
