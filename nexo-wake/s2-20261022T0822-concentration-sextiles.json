@@ -1,0 +1,36 @@
+{
+  "schema": "NEXO_GITHUB_RELAY_V1",
+  "task_id": "6ad6d5fd907881918a9112f8fc806118",
+  "run_id": "S2-E1-ERASS1-DET-CONCENTRATION-SEXTILES-20261022T0822-0300",
+  "role": "S2",
+  "created_at": "2026-10-22T08:24:00-03:00",
+  "scientific_state": "LOCALIZED_REVIEW_PENDING_S3",
+  "test_count": 6,
+  "summary": {
+    "survived": 2,
+    "weakened": 2,
+    "refuted": 2,
+    "family_pattern": "LOCALIZED",
+    "interpretation": "predictive gain varies across radial-concentration strata; no cosmological inference"
+  },
+  "hashes": {
+    "artifact_sha256": "a64b48789b68b7d84148e2bd7e13b6397dce1dd398b19b670396830bc72a0c56",
+    "drive_readback_sha256": "a64b48789b68b7d84148e2bd7e13b6397dce1dd398b19b670396830bc72a0c56",
+    "result_sha256": "22364a69586784fce7cbae3299c992326c6b643af942fdae76d02f4fba24e1b0",
+    "prereg_sha256": "f5c6b5c903177e226be113601d63c45e3c2e0d5ab8a8bb402d143900e26be26a",
+    "code_sha256": "e45ed526ed4197dfe9c2c15f69fc0cb8c2a2a980f7ca1cc8ba745dbaa53f963f"
+  },
+  "stable_ids": [
+    "6ad6d5fd907881918a9112f8fc806118-20261022T0822-0300-001",
+    "6ad6d5fd907881918a9112f8fc806118-20261022T0822-0300-002",
+    "6ad6d5fd907881918a9112f8fc806118-20261022T0822-0300-003",
+    "6ad6d5fd907881918a9112f8fc806118-20261022T0822-0300-004",
+    "6ad6d5fd907881918a9112f8fc806118-20261022T0822-0300-005",
+    "6ad6d5fd907881918a9112f8fc806118-20261022T0822-0300-006",
+    "6ad6d5fd907881918a9112f8fc806118-20261022T0822-0300-007"
+  ],
+  "writer_state": "ENQUEUED",
+  "spool_range": "SHADOW_V2!605:611",
+  "index_state": "PENDING_INDEX",
+  "privacy": "SANITIZED_RELAY_NO_PRIVATE_PAYLOAD"
+}
