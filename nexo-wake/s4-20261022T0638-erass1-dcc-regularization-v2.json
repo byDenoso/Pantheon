@@ -1,0 +1,36 @@
+{
+  "schema": "nexo.writer.relay.v1",
+  "task_id": "6ad6d60458508191a0a7ea80a5391368",
+  "run_id": "S4-ERASS1-DCC-REGULARIZATION-E1-20261022T0638-0300-V2",
+  "created_at": "2026-10-22T06:45:00-03:00",
+  "correction": "SOURCE_BOOTSTRAP_SEED_PRESERVED",
+  "supersedes": {
+    "spool_rows": "558:564",
+    "tower_resultados": "625:630",
+    "tower_mural": "441",
+    "artifact_drive_id": "1HAgKAYN8Rmkhl8BjbLFZHIXq_gxmsHGe",
+    "artifact_sha256": "b730bb2275a28aff5c028b0c536ace7abda7d566ade824e7f05c98c60d8b4e59",
+    "result_sha256": "0a699dbe75c07eb27bdd2405009c918b193d03ed6cc86df7d7637db563038854",
+    "relay_commit": "706395558cf36089986a1340e14f3c61b97e98c7"
+  },
+  "spool": {
+    "spreadsheet_id": "1M2maKkuEjxumZRa145dzei7dEPFi2yKsKlUf7_scC-E",
+    "tab": "SHADOW_V2",
+    "rows": "565:571",
+    "state": "ENQUEUED"
+  },
+  "stable_ids": [
+    "6ad6d60458508191a0a7ea80a5391368-20261022T0638-0300-v2-001",
+    "6ad6d60458508191a0a7ea80a5391368-20261022T0638-0300-v2-002",
+    "6ad6d60458508191a0a7ea80a5391368-20261022T0638-0300-v2-003",
+    "6ad6d60458508191a0a7ea80a5391368-20261022T0638-0300-v2-004",
+    "6ad6d60458508191a0a7ea80a5391368-20261022T0638-0300-v2-005",
+    "6ad6d60458508191a0a7ea80a5391368-20261022T0638-0300-v2-006",
+    "6ad6d60458508191a0a7ea80a5391368-20261022T0638-0300-v2-007"
+  ],
+  "artifact": {
+    "drive_id": "179KIITRHjdXPYSdJhmA4pDSbhJzwCeJa",
+    "sha256": "090d5dd40c66bb5b4a8b5f30f60d36efed197c7f316ec5071775acd2a9ad1517"
+  },
+  "result_sha256": "8b85f99eeafcb3f5a834703583e1cfe65e9ca7a8c7bdabb815e6291ae66ca7a1"
+}
