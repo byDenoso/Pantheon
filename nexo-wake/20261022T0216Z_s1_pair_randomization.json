@@ -1,0 +1,19 @@
+{
+  "schema": "NEXO_WRITER_WAKE_V1",
+  "requested_at": "2026-10-22T02:16:00Z",
+  "task_id": "6ad6d5f6485c8191a263a890f1721eef",
+  "spool_id": "1M2maKkuEjxumZRa145dzei7dEPFi2yKsKlUf7_scC-E",
+  "spool_tab": "SHADOW_V2",
+  "range": "A346:O352",
+  "stable_ids": [
+    "6ad6d5f6485c8191a263a890f1721eef-20261021T2307-0300-001",
+    "6ad6d5f6485c8191a263a890f1721eef-20261021T2307-0300-002",
+    "6ad6d5f6485c8191a263a890f1721eef-20261021T2307-0300-003",
+    "6ad6d5f6485c8191a263a890f1721eef-20261021T2307-0300-004",
+    "6ad6d5f6485c8191a263a890f1721eef-20261021T2307-0300-005",
+    "6ad6d5f6485c8191a263a890f1721eef-20261021T2307-0300-006",
+    "6ad6d5f6485c8191a263a890f1721eef-20261021T2307-0300-007"
+  ],
+  "artifact_id": "1YgmsrdwelhT6u5uZsS760pNnerBSLjzR",
+  "artifact_sha256": "5939831c27793a539524ce5dd4fd4e65462df9fb2b2bbe371d2e967ab055db02"
+}
