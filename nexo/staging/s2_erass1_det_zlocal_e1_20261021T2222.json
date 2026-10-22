@@ -18,9 +18,11 @@
   },
   "result_sha256": "39a92ec6ac34fe26f42cce6c9fd087b476191ad9f7c47428ff1f74a71d7f4875",
   "persistence": {
-    "state": "SPOOL_ENQUEUED",
+    "state": "PERSISTED",
     "spool_rows": "SHADOW_V2!327:333",
-    "spool_receipts": "PENDING",
+    "spool_receipts": "APPLIED",
+    "target_rows": "RESULTADOS!445:450;MURAL!391",
+    "target_readback_exact_ids": 7,
     "index_delta_drive_file_id": "1bUBy2KQxTmuHir76qIeM9pPOXvCy46ao"
   }
 }
