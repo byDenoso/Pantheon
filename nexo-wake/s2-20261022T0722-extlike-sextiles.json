@@ -4,6 +4,7 @@
   "run_id": "S2-E1-ERASS1-DET-EXTLIKE-SEXTILES-20261022T0722-0300",
   "role": "S2",
   "created_at": "2026-10-22T07:28:00-03:00",
+  "persisted_at": "2026-10-22T07:31:00-03:00",
   "scientific_state": "LOCALIZED_REVIEW_PENDING_S3",
   "test_count": 6,
   "summary": {
@@ -15,6 +16,7 @@
   },
   "hashes": {
     "artifact_sha256": "88e5010988af4b595c7fadf6fe465995eb30e0f070919db95d5d6bbcc8e0dec1",
+    "drive_readback_sha256": "88e5010988af4b595c7fadf6fe465995eb30e0f070919db95d5d6bbcc8e0dec1",
     "result_sha256": "ee2204d85dacd955d41833500f5bacee3d5cbe892eaa9a33c0bfe441f923fc28",
     "prereg_sha256": "c8f90949024439593278b01bc5f0dea08be083c5a8145a50b54480adf2bf3439",
     "code_sha256": "d06e15164d440f50970ec2ffd62506af9ede199f290aaa9d9e4df49f4d75701e"
@@ -28,8 +30,19 @@
     "6ad6d5fd907881918a9112f8fc806118-20261022T0722-0300-006",
     "6ad6d5fd907881918a9112f8fc806118-20261022T0722-0300-007"
   ],
-  "writer_state": "ENQUEUED",
+  "writer_state": "PERSISTED",
   "spool_range": "SHADOW_V2!584:590",
+  "target_results_range": "RESULTADOS!643:648",
+  "target_mural_range": "MURAL!451",
+  "receipts": [
+    "APPLIED:600550b684545f9b",
+    "APPLIED:97efb0f790a56279",
+    "APPLIED:5b168f1b8fbc90f1",
+    "APPLIED:85c0a250cc3ba3be",
+    "APPLIED:44cd1e04dd6475a8",
+    "APPLIED:54149cc5e3e673bf",
+    "APPLIED:13c8e6683acd3353"
+  ],
   "index_state": "PENDING_INDEX",
   "privacy": "SANITIZED_RELAY_NO_PRIVATE_PAYLOAD"
 }
