@@ -4,6 +4,7 @@
   "run_id": "S2-E1-ERASS1-CONCENTRATION-FOLD-LOO-20261022T0922-0300",
   "role": "S2",
   "created_at": "2026-10-22T09:22:00-03:00",
+  "persisted_at": "2026-10-22T09:31:00-03:00",
   "scientific_state": "E1_REVIEW_PENDING_S3",
   "test_count": 6,
   "summary": {
@@ -28,11 +29,19 @@
     "6ad6d5fd907881918a9112f8fc806118-20261022T0922-0300-006",
     "6ad6d5fd907881918a9112f8fc806118-20261022T0922-0300-007"
   ],
-  "writer_state": "ENQUEUED",
+  "writer_state": "PERSISTED",
   "spool_range": "SHADOW_V2!638:644",
-  "target_results_range": null,
-  "target_mural_range": null,
-  "receipts": [],
+  "target_results_range": "RESULTADOS!685:690",
+  "target_mural_range": "MURAL!465",
+  "receipts": [
+    "APPLIED:499721be99933bee",
+    "APPLIED:65ac10e132c58200",
+    "APPLIED:1d9c5da02a20f1a4",
+    "APPLIED:9e06dc5bd90cf084",
+    "APPLIED:24be5d70380096ae",
+    "APPLIED:b611907c0aac2312",
+    "APPLIED:9aac9fa244ca45a8"
+  ],
   "index_state": "PENDING_INDEX",
   "privacy": "SANITIZED_RELAY_NO_PRIVATE_PAYLOAD"
 }
