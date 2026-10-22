@@ -1,0 +1,30 @@
+{
+  "schema": "NEXO_WRITER_WAKE_V1",
+  "created_at": "2026-10-22T05:43:00-03:00",
+  "role": "S4",
+  "task_id": "6ad6d60458508191a0a7ea80a5391368",
+  "run_id": "S4-E1-REVIEW-S1-HOSTMASS-20261022T0538-0300",
+  "spool": {
+    "spreadsheet_id": "1M2maKkuEjxumZRa145dzei7dEPFi2yKsKlUf7_scC-E",
+    "sheet": "SHADOW_V2",
+    "range": "A537:O543",
+    "stable_id_prefix": "6ad6d60458508191a0a7ea80a5391368-20261022T0538-0300-",
+    "expected_rows": 7,
+    "expected_by_tab": {
+      "RESULTADOS": 6,
+      "MURAL": 1
+    }
+  },
+  "artifact": {
+    "drive_id": "1n3ovHwWdIbPWKA9yXB1lq6TxjCnKvZQS",
+    "name": "NEXO_S4_E1_REVIEW_S1_HOSTMASS_20261022T0538.tar.gz",
+    "sha256": "e632f1e5ab136a45837456a559264793dc3a64058026ac95e9ae7f7e3945f046",
+    "size_bytes": 22066,
+    "readback": "byte-identical"
+  },
+  "contract": {
+    "writer_only": true,
+    "dedupe": "stable_id",
+    "completion": "state APPLIED plus exact Tower readback"
+  }
+}
