@@ -17,6 +17,14 @@
     "readback_byte_identical": true
   },
   "result_sha256": "b5bbcf3a4b464bff4794d64d7bfea57161001660d9c104864f0268e8a0607493",
+  "persistence": {
+    "state": "PERSISTED",
+    "spool_rows": "SHADOW_V2!320:325",
+    "spool_receipts": "APPLIED",
+    "target_rows": "RESULTADOS!439:444",
+    "target_readback_exact_ids": 6,
+    "index_delta_drive_file_id": "1zHclas1L9kS9rb7-JMtBb-_5s0oPR4vT"
+  },
   "tests": [
     {"stable_id":"nexo.s4.erass1.dcc.t1.best_z.v1","axis":"BEST_Z","relative_improvement_pct":6.0085750357,"ci95":[0.0048404028,0.0449411030],"folds_better":5,"decision":"CONDITIONALLY_INFORMATIVE"},
     {"stable_id":"nexo.s4.erass1.dcc.t2.best_zerr.v1","axis":"BEST_ZERR","relative_improvement_pct":-1.8664954949,"ci95":[-0.0353890941,0.0142239258],"folds_better":3,"decision":"NOT_MATERIALLY_INFORMATIVE"},
