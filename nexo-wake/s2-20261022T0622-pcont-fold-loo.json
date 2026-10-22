@@ -1,0 +1,26 @@
+{
+  "schema": "nexo.writer.relay.v1",
+  "task_id": "6ad6d5fd907881918a9112f8fc806118",
+  "run_id": "S2-E1-ERASS1-PCONT-FOLD-LOO-20261022T0622-0300",
+  "created_at": "2026-10-22T06:32:00-03:00",
+  "spool": {
+    "spreadsheet_id": "1M2maKkuEjxumZRa145dzei7dEPFi2yKsKlUf7_scC-E",
+    "tab": "SHADOW_V2",
+    "rows": "551:557",
+    "state": "ENQUEUED"
+  },
+  "stable_ids": [
+    "6ad6d5fd907881918a9112f8fc806118-20261022T0622-0300-001",
+    "6ad6d5fd907881918a9112f8fc806118-20261022T0622-0300-002",
+    "6ad6d5fd907881918a9112f8fc806118-20261022T0622-0300-003",
+    "6ad6d5fd907881918a9112f8fc806118-20261022T0622-0300-004",
+    "6ad6d5fd907881918a9112f8fc806118-20261022T0622-0300-005",
+    "6ad6d5fd907881918a9112f8fc806118-20261022T0622-0300-006",
+    "6ad6d5fd907881918a9112f8fc806118-20261022T0622-0300-007"
+  ],
+  "artifact": {
+    "drive_id": "1dKTwnkBFq-kty-WX2ktoz-E3MkF42CzL",
+    "sha256": "88af7a9d3ffb781c8ac31108654a9126f39d204b78a4be92254e1f93716de606"
+  },
+  "result_sha256": "50a961718299f1e04480c65d99d938bf3f8f06e9cabf40e76d11c19e9e7c2f20"
+}
