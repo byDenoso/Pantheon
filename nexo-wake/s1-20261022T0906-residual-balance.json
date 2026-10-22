@@ -13,7 +13,7 @@
     "prereg_sha256": "6c2c8770ca442ef17520d55905c3accf9a3a79b2143c418e91e4bca53812a3b9",
     "code_sha256": "e9ba5d431df5d000064014c8def0c1151e67384f250dc0ab31c28ae86791f6e4"
   },
-  "writer_state": "PARTIAL_APPLIED_WAKE_PENDING",
+  "writer_state": "PERSISTED",
   "spool_range": "SHADOW_V2!624:630",
   "index_state": "PENDING_INDEX",
   "privacy": "SANITIZED_RELAY_NO_PRIVATE_PAYLOAD",
@@ -24,12 +24,13 @@
     "6ad6d5f6485c8191a263a890f1721eef-20261022T0906-0300-002",
     "6ad6d5f6485c8191a263a890f1721eef-20261022T0906-0300-003",
     "6ad6d5f6485c8191a263a890f1721eef-20261022T0906-0300-004",
-    "6ad6d5f6485c8191a263a890f1721eef-20261022T0906-0300-005"
-  ],
-  "claimed_stable_ids": [
-    "6ad6d5f6485c8191a263a890f1721eef-20261022T0906-0300-006"
-  ],
-  "pending_stable_ids": [
+    "6ad6d5f6485c8191a263a890f1721eef-20261022T0906-0300-005",
+    "6ad6d5f6485c8191a263a890f1721eef-20261022T0906-0300-006",
     "6ad6d5f6485c8191a263a890f1721eef-20261022T0906-0300-007"
-  ]
+  ],
+  "target_readback": {
+    "resultados": "RESULTADOS!673:678",
+    "mural": "MURAL!461"
+  },
+  "persisted_at": "2026-10-22T09:14:00-03:00"
 }
