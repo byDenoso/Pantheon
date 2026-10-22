@@ -31,6 +31,7 @@
     "6ad6d5f981388191a6fc7facb9191198-20261022T0714-0300-006",
     "6ad6d5f981388191a6fc7facb9191198-20261022T0714-0300-007"
   ],
-  "writer_state": "PENDING_ENQUEUE",
+  "writer_state": "ENQUEUED",
+  "spool_range": "SHADOW_V2!577:583",
   "privacy": "SANITIZED_RELAY_NO_PRIVATE_PAYLOAD"
 }
