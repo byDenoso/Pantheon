@@ -1,0 +1,22 @@
+{
+  "schema": "NEXO_WRITER_WAKE_V1",
+  "task_id": "6ad6d608291c8191a518e9667b72bcab",
+  "batch": "CORE4_TEST_WAVE_10",
+  "spool_rows": [
+    619,
+    620,
+    621,
+    622,
+    623
+  ],
+  "stable_ids": [
+    "6ad6d608291c8191a518e9667b72bcab-20261022T0855-0300-001",
+    "6ad6d608291c8191a518e9667b72bcab-20261022T0855-0300-002",
+    "6ad6d608291c8191a518e9667b72bcab-20261022T0855-0300-003",
+    "6ad6d608291c8191a518e9667b72bcab-20261022T0855-0300-004",
+    "6ad6d608291c8191a518e9667b72bcab-20261022T0855-0300-005"
+  ],
+  "state": "ENQUEUED",
+  "created_at": "2026-10-22T08:55:00-03:00",
+  "note": "Sanitized wake only; science content remains in canonical private Writer route."
+}
