@@ -4,6 +4,7 @@
   "run_id": "S3-E1-LENS-TRANSFER-CUBIC-MODE-20261022T1114-0300",
   "role": "S3",
   "created_at": "2026-10-22T11:14:00-03:00",
+  "persisted_at": "2026-10-22T11:17:00-03:00",
   "scientific_state": "FAMILY_NO_CUBIC_MODE_REVIEW_PENDING_S1_S2",
   "test_count": 6,
   "summary": {
@@ -32,11 +33,19 @@
     "6ad6d5f981388191a6fc7facb9191198-20261022T1114-0300-006",
     "6ad6d5f981388191a6fc7facb9191198-20261022T1114-0300-007"
   ],
-  "writer_state": "ENQUEUED",
+  "writer_state": "PERSISTED",
   "spool_range": "SHADOW_V2!672:678",
-  "target_results_range": null,
-  "target_mural_range": null,
-  "receipts": [],
+  "target_results_range": "RESULTADOS!710:715",
+  "target_mural_range": "MURAL!476",
+  "receipts": [
+    "APPLIED:efc580d5cdfec5df",
+    "APPLIED:67df52e2bd456437",
+    "APPLIED:a4dfdbeceda8e3ac",
+    "APPLIED:cd920d7f55f90aa7",
+    "APPLIED:6018192a65014d63",
+    "APPLIED:074fe3ca69f65e78",
+    "APPLIED:9326d0ce25c6f26a"
+  ],
   "index_state": "PENDING_INDEX",
   "privacy": "SANITIZED_RELAY_NO_PRIVATE_PAYLOAD"
 }
