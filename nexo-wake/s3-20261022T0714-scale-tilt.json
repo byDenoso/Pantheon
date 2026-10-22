@@ -1,0 +1,36 @@
+{
+  "schema": "NEXO_GITHUB_RELAY_V1",
+  "task_id": "6ad6d5f981388191a6fc7facb9191198",
+  "run_id": "S3-E1-LENS-TRANSFER-SCALE-TILT-20261022T0714-0300",
+  "role": "S3",
+  "created_at": "2026-10-22T07:16:00-03:00",
+  "scientific_state": "FAMILY_NO_SCALE_TILT_REVIEW_PENDING_S1_S2",
+  "test_count": 6,
+  "summary": {
+    "scale_tilt": 0,
+    "no_scale_tilt": 2,
+    "weakened": 4,
+    "p_global_max_abs_z": 0.35524322378388107,
+    "max_abs_z": 1.7753645220336909,
+    "max_abs_z_block": "SPT3G_HIGH",
+    "family_falsifier_triggered": false
+  },
+  "hashes": {
+    "artifact_sha256": "61a8131524d5b2a2123daa418e41c4d2a0089467f49bc71cf74c000572b4e992",
+    "result_sha256": "14b2043230cbc132cfb60a50daa3eb93239c91673449967e37eed84232c9e8ed",
+    "prereg_sha256": "bb55953f1d79c7b2dfeadb8de45b646ed2f4d53a3fd0ebb94a490492d188387e",
+    "code_sha256": "81c59384f504db15715020e79eb5bac3cba7379325489858b7ff276205af239a",
+    "core_sha256": "6e512693f6b3415187e97adb9373774e4c628b2259e2c2709064ed2e693db929"
+  },
+  "stable_ids": [
+    "6ad6d5f981388191a6fc7facb9191198-20261022T0714-0300-001",
+    "6ad6d5f981388191a6fc7facb9191198-20261022T0714-0300-002",
+    "6ad6d5f981388191a6fc7facb9191198-20261022T0714-0300-003",
+    "6ad6d5f981388191a6fc7facb9191198-20261022T0714-0300-004",
+    "6ad6d5f981388191a6fc7facb9191198-20261022T0714-0300-005",
+    "6ad6d5f981388191a6fc7facb9191198-20261022T0714-0300-006",
+    "6ad6d5f981388191a6fc7facb9191198-20261022T0714-0300-007"
+  ],
+  "writer_state": "PENDING_ENQUEUE",
+  "privacy": "SANITIZED_RELAY_NO_PRIVATE_PAYLOAD"
+}
