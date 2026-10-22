@@ -1,0 +1,17 @@
+{
+  "schema": "NEXO_WRITER_WAKE_V1",
+  "task_id": "6ad6d5f6485c8191a263a890f1721eef",
+  "role": "S1",
+  "event_prefix": "6ad6d5f6485c8191a263a890f1721eef-20261022T0806-0300",
+  "spool": {
+    "spreadsheet_id": "1M2maKkuEjxumZRa145dzei7dEPFi2yKsKlUf7_scC-E",
+    "sheet": "SHADOW_V2",
+    "rows": "598:604"
+  },
+  "artifact": {
+    "drive_id": "15ZveTP1vUCrXkejUKkyV8r8UpUP8-TWU",
+    "sha256": "519988e65a51eb284d4fb23f97fe78e5e8aacb11c1e913a8e400ae8ba07d231b"
+  },
+  "result_sha256": "3e29f8cc906c8328c5bccfeaf4b603726b1bd67070de7e563bb5cec4b61bffd7",
+  "contains_private_data": false
+}
