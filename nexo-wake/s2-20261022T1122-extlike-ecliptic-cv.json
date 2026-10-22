@@ -1,0 +1,23 @@
+{
+  "schema": "nexo.writer.relay.v1",
+  "task_id": "6ad6d5fd907881918a9112f8fc806118",
+  "role": "S2",
+  "run_id": "S2-E1-ERASS1-EXTLIKE-ECLIPTIC-CV-20261022T1122-0300",
+  "state": "ENQUEUED",
+  "spool_spreadsheet_id": "1M2maKkuEjxumZRa145dzei7dEPFi2yKsKlUf7_scC-E",
+  "spool_sheet": "SHADOW_V2",
+  "spool_rows": "679:685",
+  "stable_ids": [
+    "6ad6d5fd907881918a9112f8fc806118-20261022T1122-0300-001",
+    "6ad6d5fd907881918a9112f8fc806118-20261022T1122-0300-002",
+    "6ad6d5fd907881918a9112f8fc806118-20261022T1122-0300-003",
+    "6ad6d5fd907881918a9112f8fc806118-20261022T1122-0300-004",
+    "6ad6d5fd907881918a9112f8fc806118-20261022T1122-0300-005",
+    "6ad6d5fd907881918a9112f8fc806118-20261022T1122-0300-006",
+    "6ad6d5fd907881918a9112f8fc806118-20261022T1122-0300-007"
+  ],
+  "artifact_drive_id": "1OvapshuINqM0WPTLDFAss_y8lYJ24lE2",
+  "artifact_sha256": "87fd3a34fbb696c80fb20c2786956241a276e4d86549380eb1379ee277ffc3bb",
+  "result_sha256": "3a55c50ef5d385009812eb8cc9e927d9c38fb5986aa744656e5b937bbe1deb43",
+  "note": "Writer wake-up relay; scientific payload remains in canonical spool and private artifact."
+}
