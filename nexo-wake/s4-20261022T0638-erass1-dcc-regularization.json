@@ -1,0 +1,26 @@
+{
+  "schema": "nexo.writer.relay.v1",
+  "task_id": "6ad6d60458508191a0a7ea80a5391368",
+  "run_id": "S4-ERASS1-DCC-REGULARIZATION-E1-20261022T0638-0300",
+  "created_at": "2026-10-22T06:42:00-03:00",
+  "spool": {
+    "spreadsheet_id": "1M2maKkuEjxumZRa145dzei7dEPFi2yKsKlUf7_scC-E",
+    "tab": "SHADOW_V2",
+    "rows": "558:564",
+    "state": "ENQUEUED"
+  },
+  "stable_ids": [
+    "6ad6d60458508191a0a7ea80a5391368-20261022T0638-0300-001",
+    "6ad6d60458508191a0a7ea80a5391368-20261022T0638-0300-002",
+    "6ad6d60458508191a0a7ea80a5391368-20261022T0638-0300-003",
+    "6ad6d60458508191a0a7ea80a5391368-20261022T0638-0300-004",
+    "6ad6d60458508191a0a7ea80a5391368-20261022T0638-0300-005",
+    "6ad6d60458508191a0a7ea80a5391368-20261022T0638-0300-006",
+    "6ad6d60458508191a0a7ea80a5391368-20261022T0638-0300-007"
+  ],
+  "artifact": {
+    "drive_id": "1HAgKAYN8Rmkhl8BjbLFZHIXq_gxmsHGe",
+    "sha256": "b730bb2275a28aff5c028b0c536ace7abda7d566ade824e7f05c98c60d8b4e59"
+  },
+  "result_sha256": "0a699dbe75c07eb27bdd2405009c918b193d03ed6cc86df7d7637db563038854"
+}
