@@ -1,0 +1,21 @@
+{
+  "schema": "nexo.writer.relay.v1",
+  "task_id": "6ad6d60458508191a0a7ea80a5391368",
+  "run_id": "S4-DESI2-POSITIVE-WDM-CV-E1-20261022T0740-0300",
+  "created_at": "2026-10-22T10:42:00Z",
+  "stable_ids": [
+    "6ad6d60458508191a0a7ea80a5391368-20261022T0740-0300-001",
+    "6ad6d60458508191a0a7ea80a5391368-20261022T0740-0300-002",
+    "6ad6d60458508191a0a7ea80a5391368-20261022T0740-0300-003",
+    "6ad6d60458508191a0a7ea80a5391368-20261022T0740-0300-004",
+    "6ad6d60458508191a0a7ea80a5391368-20261022T0740-0300-005",
+    "6ad6d60458508191a0a7ea80a5391368-20261022T0740-0300-006",
+    "6ad6d60458508191a0a7ea80a5391368-20261022T0740-0300-007"
+  ],
+  "spool_rows": "SHADOW_V2!A591:O597",
+  "artifact_drive_id": "1xt24pbJXWgAMDUldaVBRftEccm9Xk5L0",
+  "artifact_sha256": "363bae28a65379dc97d9cf7403977f742e14f9a324cc90d5c4ee92fa719ed9f7",
+  "artifact_readback": "BYTE_IDENTICAL",
+  "contains_private_data": false,
+  "purpose": "process_canonical_writer_spool"
+}
