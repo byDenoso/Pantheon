@@ -1,0 +1,29 @@
+{
+  "schema": "NEXO_WRITER_WAKE_V1",
+  "task_id": "6ad6d5f6485c8191a263a890f1721eef",
+  "created_at": "2026-10-21T23:07:00-03:00",
+  "spool": {
+    "spreadsheet_id": "1M2maKkuEjxumZRa145dzei7dEPFi2yKsKlUf7_scC-E",
+    "tab": "SHADOW_V2",
+    "range": "A346:O352"
+  },
+  "stable_ids": [
+    "6ad6d5f6485c8191a263a890f1721eef-20261021T2307-0300-001",
+    "6ad6d5f6485c8191a263a890f1721eef-20261021T2307-0300-002",
+    "6ad6d5f6485c8191a263a890f1721eef-20261021T2307-0300-003",
+    "6ad6d5f6485c8191a263a890f1721eef-20261021T2307-0300-004",
+    "6ad6d5f6485c8191a263a890f1721eef-20261021T2307-0300-005",
+    "6ad6d5f6485c8191a263a890f1721eef-20261021T2307-0300-006",
+    "6ad6d5f6485c8191a263a890f1721eef-20261021T2307-0300-007"
+  ],
+  "artifact": {
+    "id": "1YgmsrdwelhT6u5uZsS760pNnerBSLjzR",
+    "sha256": "5939831c27793a539524ce5dd4fd4e65462df9fb2b2bbe371d2e967ab055db02",
+    "size": 29550
+  },
+  "expected": {
+    "resultados": 6,
+    "mural": 1
+  },
+  "index_state": "PENDING_INDEX"
+}
