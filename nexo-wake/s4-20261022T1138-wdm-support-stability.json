@@ -3,7 +3,8 @@
   "task_id": "6ad6d60458508191a0a7ea80a5391368",
   "run_id": "S4-E1-DESI2-WDM-SUPPORT-STABILITY-20261022T1138-0300",
   "created_at": "2026-10-22T14:38:00Z",
-  "state": "ENQUEUED",
+  "persisted_at": "2026-10-22T14:41:00Z",
+  "state": "PERSISTED",
   "stable_ids": [
     "6ad6d60458508191a0a7ea80a5391368-20261022T1138-0300-001",
     "6ad6d60458508191a0a7ea80a5391368-20261022T1138-0300-002",
@@ -17,15 +18,28 @@
     "spreadsheet_id": "1M2maKkuEjxumZRa145dzei7dEPFi2yKsKlUf7_scC-E",
     "tab": "SHADOW_V2",
     "range": "A689:O695",
-    "readback": "VERIFIED"
+    "readback": "VERIFIED",
+    "states": [
+      "APPLIED:37759b7b7a2204f7",
+      "APPLIED:93f8d20383a81508",
+      "APPLIED:a9edb4a45aadeee6",
+      "APPLIED:74afc34643af8a79",
+      "APPLIED:838b127ff044066b",
+      "APPLIED:d1a0cf795788d693",
+      "APPLIED:dc39e6703888e5a9"
+    ]
   },
   "target": {
     "spreadsheet_id": "1wizywUGEMd_8KrNqMcz5PQig3KgOTbZd8ENkTW8nRKw",
-    "tabs": [
-      "RESULTADOS",
-      "MURAL"
-    ],
-    "status": "PENDING"
+    "status": "READBACK_VERIFIED",
+    "ranges": {
+      "RESULTADOS": "725:730",
+      "MURAL": "478"
+    },
+    "matched_rows": {
+      "RESULTADOS": 6,
+      "MURAL": 1
+    }
   },
   "artifact": {
     "drive_file_id": "1KWWNYip35ZJf_S-8lMBgqZzq6y5UhjjI",
