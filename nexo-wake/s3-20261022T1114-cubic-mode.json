@@ -1,0 +1,42 @@
+{
+  "schema": "NEXO_GITHUB_RELAY_V1",
+  "task_id": "6ad6d5f981388191a6fc7facb9191198",
+  "run_id": "S3-E1-LENS-TRANSFER-CUBIC-MODE-20261022T1114-0300",
+  "role": "S3",
+  "created_at": "2026-10-22T11:14:00-03:00",
+  "scientific_state": "FAMILY_NO_CUBIC_MODE_REVIEW_PENDING_S1_S2",
+  "test_count": 6,
+  "summary": {
+    "cubic_mode": 0,
+    "no_cubic_mode": 2,
+    "weakened": 4,
+    "p_global_max_abs_z": 0.6355268223658882,
+    "max_abs_z": 1.4172103944253402,
+    "max_abs_z_block": "ACT_HIGH",
+    "family_falsifier_triggered": false
+  },
+  "hashes": {
+    "artifact_sha256": "442dc5dc50c731048f8a3f31f2d4bf83845a01ce05d99e3a446467e23f929083",
+    "result_sha256": "b4fe9b97342ead7f3433b826c48d2bec3b998bd9e504d2b4220bc0ae1b7de711",
+    "prereg_sha256": "cbd1cbeff3163276e089b62c87a9feecc8d1833c83287a82b3f2e4e5f774784a",
+    "code_sha256": "63bdb67443e471721e4b0337c2780942ccbe0f399bcee44bd4b060b52f71b9bb",
+    "core_sha256": "420a6f4981e25ad27760fa4f5fd7028da1e9d7b84941891eee399d158fe2ee06",
+    "drive_readback_sha256": "442dc5dc50c731048f8a3f31f2d4bf83845a01ce05d99e3a446467e23f929083"
+  },
+  "stable_ids": [
+    "6ad6d5f981388191a6fc7facb9191198-20261022T1114-0300-001",
+    "6ad6d5f981388191a6fc7facb9191198-20261022T1114-0300-002",
+    "6ad6d5f981388191a6fc7facb9191198-20261022T1114-0300-003",
+    "6ad6d5f981388191a6fc7facb9191198-20261022T1114-0300-004",
+    "6ad6d5f981388191a6fc7facb9191198-20261022T1114-0300-005",
+    "6ad6d5f981388191a6fc7facb9191198-20261022T1114-0300-006",
+    "6ad6d5f981388191a6fc7facb9191198-20261022T1114-0300-007"
+  ],
+  "writer_state": "ENQUEUED",
+  "spool_range": "SHADOW_V2!672:678",
+  "target_results_range": null,
+  "target_mural_range": null,
+  "receipts": [],
+  "index_state": "PENDING_INDEX",
+  "privacy": "SANITIZED_RELAY_NO_PRIVATE_PAYLOAD"
+}
