@@ -1,0 +1,85 @@
+{
+  "schema": "nexo.github_relay.v1",
+  "task_id": "6ad6d5fd907881918a9112f8fc806118",
+  "run_id": "S2-E1-ERASS1-CONCENTRATION-ECLIPTIC-CV-20261022T1022-0300",
+  "scientific_class": "E1_ROBUSTNESS_SCAN_GEOMETRY",
+  "question": "Preservação das classes dos seis sextis de concentração quando a validação espacial usa longitude eclíptica.",
+  "source": {
+    "release": "eRASS1 primary v3.2",
+    "drive_id": "13AfV1X8YGGY-JmceFbAvZWrjGggOsiur",
+    "sha256": "f9e9e8f750a2831ac68dad1fb24a028b024c00d3b5879f7a5760af81fc9a40ca"
+  },
+  "artifact": {
+    "drive_id": "1CpWEG_Zjh-OMCyEeTTCEevfGMeZO_8H7",
+    "sha256": "3a3a23374354094b0ef8ce03006dd9c0cb1d3885c73d09e2c291ba2a59a4812a",
+    "readback": "VERIFIED"
+  },
+  "summary": {
+    "tests": "6/6",
+    "survived": 2,
+    "weakened": 2,
+    "refuted": 2,
+    "class_preserved": 4,
+    "class_changed": 2,
+    "family_falsifier_triggered": false
+  },
+  "results": [
+    {
+      "sextile": 1,
+      "n": 934,
+      "source": "REFUTED",
+      "verdict": "REFUTED",
+      "gain_percent": -0.274376,
+      "positive_folds": "2/10"
+    },
+    {
+      "sextile": 2,
+      "n": 934,
+      "source": "REFUTED",
+      "verdict": "REFUTED",
+      "gain_percent": -1.183057,
+      "positive_folds": "5/10"
+    },
+    {
+      "sextile": 3,
+      "n": 934,
+      "source": "SURVIVED",
+      "verdict": "WEAKENED",
+      "gain_percent": 1.955583,
+      "positive_folds": "6/10"
+    },
+    {
+      "sextile": 4,
+      "n": 933,
+      "source": "WEAKENED",
+      "verdict": "SURVIVED",
+      "gain_percent": 4.375064,
+      "positive_folds": "9/10"
+    },
+    {
+      "sextile": 5,
+      "n": 933,
+      "source": "SURVIVED",
+      "verdict": "SURVIVED",
+      "gain_percent": 9.927291,
+      "positive_folds": "9/10"
+    },
+    {
+      "sextile": 6,
+      "n": 933,
+      "source": "WEAKENED",
+      "verdict": "WEAKENED",
+      "gain_percent": -0.30529,
+      "positive_folds": "8/10"
+    }
+  ],
+  "limits": "Mesma sonda e mesmo catálogo; robustez de geometria, não independência observacional; sem inferência de S8, massa ou abundância.",
+  "review": "REVIEW_PENDING_S3",
+  "persistence": "PENDING_WRITE",
+  "hashes": {
+    "prereg": "92fbca6b85db93d7d7bf557ee8135a576c164193332b127d28eda2cc6711b771",
+    "code": "13ed5011c271cb614cfc60ccf0a694f105e58af9d01ac3aa31696626f2d12c9b",
+    "result": "65cc0114a0104ae69520be5f318c2ef9dabdd96082c3815ed158189bbf2a708a"
+  },
+  "index_state": "PENDING_INDEX"
+}
