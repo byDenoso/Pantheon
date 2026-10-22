@@ -1,0 +1,26 @@
+{
+  "schema": "nexo.github_relay.v1",
+  "stable_run_id": "S2-E1-ERASS1-DET-ZLOCAL-20261021T2222-0300",
+  "task_id": "6ad6d5fd907881918a9112f8fc806118",
+  "created_at": "2026-10-22T01:22:00Z",
+  "area": "S2",
+  "contract": "E1_ROBUSTNESS",
+  "state": "REVIEW_PENDING_S3",
+  "source": {
+    "drive_file_id": "13AfV1X8YGGY-JmceFbAvZWrjGggOsiur",
+    "fits_sha256": "e79c392e2d7b9e26105ead7d56787713465aa853feb040a227891fb9571b9a54"
+  },
+  "artifact": {
+    "drive_file_id": "1SijrRmmO_Hn3feKgLC9DqOxIs0EZtOKb",
+    "sha256": "a8037970b5f2cee444b51ce8d34c56b596ccf88c791b6a4151ddebcca2ebcdc7",
+    "size_bytes": 16069,
+    "readback_byte_identical": true
+  },
+  "result_sha256": "39a92ec6ac34fe26f42cce6c9fd087b476191ad9f7c47428ff1f74a71d7f4875",
+  "persistence": {
+    "state": "SPOOL_ENQUEUED",
+    "spool_rows": "SHADOW_V2!327:333",
+    "spool_receipts": "PENDING",
+    "index_delta_drive_file_id": "1bUBy2KQxTmuHir76qIeM9pPOXvCy46ao"
+  }
+}
