@@ -1,0 +1,26 @@
+{
+  "schema": "NEXO_WRITER_WAKE_V1",
+  "task_id": "6ad6d5f6485c8191a263a890f1721eef",
+  "batch": "S1-E1-LRG2-PAIR-RESIDUAL-BALANCE",
+  "spool_rows": [
+    624,
+    625,
+    626,
+    627,
+    628,
+    629,
+    630
+  ],
+  "stable_ids": [
+    "6ad6d5f6485c8191a263a890f1721eef-20261022T0906-0300-001",
+    "6ad6d5f6485c8191a263a890f1721eef-20261022T0906-0300-002",
+    "6ad6d5f6485c8191a263a890f1721eef-20261022T0906-0300-003",
+    "6ad6d5f6485c8191a263a890f1721eef-20261022T0906-0300-004",
+    "6ad6d5f6485c8191a263a890f1721eef-20261022T0906-0300-005",
+    "6ad6d5f6485c8191a263a890f1721eef-20261022T0906-0300-006",
+    "6ad6d5f6485c8191a263a890f1721eef-20261022T0906-0300-007"
+  ],
+  "state": "ENQUEUED",
+  "created_at": "2026-10-22T09:06:00-03:00",
+  "note": "Sanitized wake only; science content remains in canonical private Writer route."
+}
