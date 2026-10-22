@@ -25,5 +25,7 @@
   "writer_state": "ENQUEUED",
   "spool_range": "SHADOW_V2!624:630",
   "index_state": "PENDING_INDEX",
-  "privacy": "SANITIZED_RELAY_NO_PRIVATE_PAYLOAD"
+  "privacy": "SANITIZED_RELAY_NO_PRIVATE_PAYLOAD",
+  "spool_state": "READY_EMPTY",
+  "reconciled_at": "2026-10-22T09:12:00-03:00"
 }
