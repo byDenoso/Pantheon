@@ -1145,10 +1145,13 @@ function addSynapse(
 ) {
   const curve = synapseCurve(source, target, key, bridge, learning, bundleIndex, bundleCount);
   const span = source.distanceTo(target);
+  // SVGRenderer materializes every triangle as DOM. Keep curves visually
+  // smooth while bounding path count; detail belongs in the topology, not
+  // thousands of near-identical SVG faces.
   const segments = compact
-    ? Math.max(12, Math.min(30, Math.round(span / 11)))
-    : Math.max(18, Math.min(52, Math.round(span / 7)));
-  const radialSegments = compact ? 4 : 5;
+    ? Math.max(8, Math.min(18, Math.round(span / 18)))
+    : Math.max(10, Math.min(24, Math.round(span / 14)));
+  const radialSegments = 3;
   const color = new THREE.Color(colorValue);
   const edgeStrength = .72 + Math.min(.28, Math.log2(1 + Math.max(0, strength)) * .12);
   const coreRadius = (learning ? .46 : bridge ? .34 : .48) * Math.max(.72, Math.min(1.45, strength));
@@ -1182,7 +1185,7 @@ function addSynapse(
 
   const particle = new THREE.Group();
   const pulseCore = new THREE.Mesh(
-    new THREE.SphereGeometry(learning ? 1.8 : bridge ? 1.15 : 1.45, compact ? 8 : 10, compact ? 6 : 8),
+    new THREE.SphereGeometry(learning ? 1.8 : bridge ? 1.15 : 1.45, compact ? 5 : 6, 4),
     new THREE.MeshBasicMaterial({
       color,
       transparent: true,
@@ -1763,7 +1766,8 @@ function rebuildThree(
       shininess: 22,
       specular: 0x18202a,
     });
-    const core = new THREE.Mesh(createOrganicGeometry(radius, id, compact ? 2 : 3), coreMaterial);
+    const organicDetail = node.entityType === 'hub' || node.entityType === 'subdomain' ? 1 : 0;
+    const core = new THREE.Mesh(createOrganicGeometry(radius, id, organicDetail), coreMaterial);
     core.userData = { nodeId: id, baseEmissive };
     const organicSeed = hashNumber(id);
     core.rotation.set(
@@ -1775,7 +1779,7 @@ function rebuildThree(
     runtime.interactive.push(core);
 
     const membrane = new THREE.Mesh(
-      createOrganicGeometry(radius * 1.13, `${id}:membrane`, compact ? 2 : 3),
+      createOrganicGeometry(radius * 1.13, `${id}:membrane`, organicDetail),
       new THREE.MeshBasicMaterial({
         color: new THREE.Color(nodeDomainColor),
         transparent: true,
@@ -1800,7 +1804,7 @@ function rebuildThree(
     group.add(neuronGlow);
 
     const statusNucleus = new THREE.Mesh(
-      new THREE.SphereGeometry(Math.max(1.4, radius * .18), compact ? 8 : 14, compact ? 6 : 10),
+      new THREE.SphereGeometry(Math.max(1.4, radius * .18), compact ? 5 : 7, 4),
       new THREE.MeshBasicMaterial({
         color: new THREE.Color(statusColor(node.status)),
         transparent: true,
@@ -2082,7 +2086,9 @@ function MetroThreeView({
     renderer.domElement.addEventListener('pointerup', onPointerUp);
 
     let lastFrameAt = 0;
-    const minimumFrameMs = 1000 / 24;
+    // Continuous SVG scene regeneration is CPU/DOM bound. Twelve frames per
+    // second is sufficient for synapse motion; compact/touch runs at eight.
+    const minimumFrameMs = 1000 / (compact ? 8 : 12);
     const animate = (now: number) => {
       runtime.frame = requestAnimationFrame(animate);
       if (document.hidden) return;
@@ -2098,7 +2104,9 @@ function MetroThreeView({
       updateSvgBillboards(runtime);
       renderer.render(scene, camera);
     };
-    runtime.frame = requestAnimationFrame(animate);
+    // Production readback verifies the materialized SVG, not decorative
+    // animation. Avoid hundreds of synthetic virtual-time rerenders in CI.
+    if (!isAtlasReadback()) runtime.frame = requestAnimationFrame(animate);
 
     return () => {
       observer.disconnect();
@@ -2124,6 +2132,7 @@ function MetroThreeView({
     rebuildThree(runtime, container, model, expanded, visibleLayers, selectedId, showBeams, theme);
     container.dataset.threeNodeCount = String(visibleAtlasIds(model, expanded, visibleLayers).length);
     container.dataset.threeSynapseCount = String(runtime.pulses.length);
+    container.dataset.threeGeometryBudget = 'svg-low-poly-v1';
 
     const layerKey = [...visibleLayers].sort().join('|');
     const structureKey = `${model.revision}|${expansionKey}|${layerKey}`;
