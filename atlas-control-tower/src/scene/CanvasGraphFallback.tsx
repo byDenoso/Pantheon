@@ -24,9 +24,13 @@ const ROOT_SCALE=0.68;
 const MIN_SCALE=0.34;
 const MAX_SCALE=2.5;
 const DOMAIN_POSITIONS:Record<string,WorldPoint>={
-  SCIENCE:{x:-5.6,y:1.1,z:0},
-  ENGINEERING:{x:0,y:-1.8,z:0},
-  OLYMPUS:{x:5.6,y:1.1,z:0}
+  SCIENCE:{x:-6,y:1.2,z:0},
+  ENGINEERING:{x:-3.2,y:-2.6,z:0},
+  INTERDOMAIN:{x:0,y:-4,z:0},
+  OLYMPUS:{x:3.2,y:-2.6,z:0},
+  OPERATIONS:{x:6,y:1.2,z:0},
+  REFERENCES:{x:3.4,y:4.2,z:0},
+  OTHER:{x:-3.4,y:4.2,z:0}
 };
 
 function nodeWorld(node:PositionedNode,focusId:string):WorldPoint{
@@ -49,7 +53,11 @@ function colorFor(node:PositionedNode,theme:'dark'|'light'){
   const id=String(node.id);
   if(id.endsWith(':SCIENCE'))return theme==='light'?'#2679b8':'#56bfff';
   if(id.endsWith(':ENGINEERING'))return theme==='light'?'#258b73':'#63dbbd';
+  if(id.endsWith(':INTERDOMAIN'))return theme==='light'?'#7352b8':'#a98cff';
   if(id.endsWith(':OLYMPUS'))return theme==='light'?'#8059bd':'#b891ff';
+  if(id.endsWith(':OPERATIONS'))return theme==='light'?'#9b5b22':'#ffc06c';
+  if(id.endsWith(':REFERENCES'))return theme==='light'?'#087f68':'#69deb0';
+  if(id.endsWith(':OTHER'))return theme==='light'?'#627083':'#91a8bc';
   const role=nodeVisualRole(node);
   if(role==='attention')return theme==='light'?'#a23b55':'#ff7188';
   if(role==='automation')return theme==='light'?'#a26700':'#ffc86d';
@@ -59,6 +67,7 @@ function colorFor(node:PositionedNode,theme:'dark'|'light'){
 }
 function distance(a:Point,b:Point){return Math.hypot(a.x-b.x,a.y-b.y)}
 function copyCamera(camera:Camera):Camera{return{scale:camera.scale,panX:camera.panX,panY:camera.panY}}
+function truncateLabel(value:string,max:number){return value.length>max?`${value.slice(0,Math.max(1,max-1))}…`:value}
 
 export function CanvasGraphFallback({nodes,edges,labelIds,focusId,selectedId,onNodeClick,reducedMotion,compact,theme='dark'}:Props){
   const canvasRef=useRef<HTMLCanvasElement>(null);
@@ -70,24 +79,31 @@ export function CanvasGraphFallback({nodes,edges,labelIds,focusId,selectedId,onN
   useEffect(()=>{
     const canvas=canvasRef.current;const host=hostRef.current;if(!canvas||!host)return;
     const ctx=canvas.getContext('2d');if(!ctx)return;
-    const runtime=runtimeRef.current;let width=0;let height=0;let raf=0;let disposed=false;
-    const resize=()=>{const dpr=Math.min(window.devicePixelRatio||1,2);const rect=host.getBoundingClientRect();width=Math.max(320,rect.width);height=Math.max(420,rect.height);canvas.width=Math.round(width*dpr);canvas.height=Math.round(height*dpr);canvas.style.width=`${width}px`;canvas.style.height=`${height}px`;ctx.setTransform(dpr,0,0,dpr,0,0)};
+    const runtime=runtimeRef.current;let width=0;let height=0;let mobile=false;let raf=0;let disposed=false;
+    const resize=()=>{const dpr=Math.min(window.devicePixelRatio||1,2);const rect=host.getBoundingClientRect();width=Math.max(1,rect.width);height=Math.max(1,rect.height);mobile=width<=520;canvas.width=Math.round(width*dpr);canvas.height=Math.round(height*dpr);canvas.style.width=`${width}px`;canvas.style.height=`${height}px`;ctx.setTransform(dpr,0,0,dpr,0,0)};
     const unit=()=>Math.min(width,height)/(compact?17.5:16.5)*runtime.camera.scale;
-    const project=(node:PositionedNode)=>{const p=nodeWorld(node,focusRef.current);const depth=Math.max(.72,1+p.z*.035);return{x:width/2+runtime.camera.panX+p.x*unit()*depth,y:height/2+runtime.camera.panY+p.y*unit()*.76*depth,radius:radiusFor(node,node.id===selectedRef.current||node.id===focusRef.current,focusRef.current)*Math.max(.8,depth)}};
     const isDomain=(node:PositionedNode)=>String(node.id).startsWith(DOMAIN_PREFIX)&&focusRef.current===ROOT;
+    const domainScreenPoint=(node:PositionedNode)=>{
+      const domains=nodesRef.current.filter(candidate=>String(candidate.id).startsWith(DOMAIN_PREFIX)).sort((a,b)=>String(a.id).localeCompare(String(b.id)));
+      const index=Math.max(0,domains.findIndex(candidate=>candidate.id===node.id));const total=Math.max(1,domains.length);const angle=-Math.PI/2+(index*Math.PI*2)/total;
+      const rx=Math.min(width*.32,145);const ry=Math.min(height*.25,130);const zoom=Math.max(.72,runtime.camera.scale/ROOT_SCALE);
+      return{x:width/2+runtime.camera.panX+Math.cos(angle)*rx*zoom,y:height*.54+runtime.camera.panY+Math.sin(angle)*ry*zoom,radius:(node.id===selectedRef.current?27:24)*Math.min(1.2,zoom)};
+    };
+    const project=(node:PositionedNode)=>{if(mobile&&focusRef.current===ROOT&&isDomain(node))return domainScreenPoint(node);if(mobile&&focusRef.current===ROOT&&node.id===ROOT)return{x:width/2+runtime.camera.panX,y:height*.54+runtime.camera.panY,radius:node.id===selectedRef.current?15:12};const p=nodeWorld(node,focusRef.current);const depth=Math.max(.72,1+p.z*.035);return{x:width/2+runtime.camera.panX+p.x*unit()*depth,y:height/2+runtime.camera.panY+p.y*unit()*.76*depth,radius:radiusFor(node,node.id===selectedRef.current||node.id===focusRef.current,focusRef.current)*Math.max(.8,depth)}};
     const draw=()=>{
       ctx.clearRect(0,0,width,height);
-      const visible=nodesRef.current;const ids=new Set(visible.map(n=>n.id));const points=new Map(visible.map(n=>[n.id,project(n)]));
+      const visible=nodesRef.current;const ids=new Set(visible.map(n=>n.id));const points=new Map(visible.map(n=>[n.id,project(n)]));const rootMobile=mobile&&focusRef.current===ROOT;
       for(const edge of edgesRef.current){if(!ids.has(edge.source)||!ids.has(edge.target))continue;const a=points.get(edge.source),b=points.get(edge.target);if(!a||!b)continue;const role=edgeVisualRole(edge);ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.setLineDash(role==='learning'?[4,6]:role==='evidence'?[2,5]:[]);ctx.strokeStyle=theme==='light'?'rgba(28,72,104,.22)':'rgba(92,174,220,.24)';ctx.lineWidth=role==='hierarchy'?1.4:1;ctx.stroke();ctx.setLineDash([])}
       for(const node of visible){const p=points.get(node.id);if(!p)continue;const active=node.id===selectedRef.current||node.id===focusRef.current;const domain=isDomain(node);const color=colorFor(node,theme);const root=node.id===ROOT&&focusRef.current===ROOT;
-        if(!root){ctx.beginPath();ctx.arc(p.x,p.y,p.radius+(domain?13:5),0,Math.PI*2);ctx.strokeStyle=domain?(theme==='light'?'rgba(30,73,105,.20)':'rgba(151,220,255,.20)'):(theme==='light'?'rgba(30,73,105,.12)':'rgba(151,220,255,.10)');ctx.lineWidth=domain?1.5:1;ctx.stroke()}
+        if(!root){ctx.beginPath();ctx.arc(p.x,p.y,p.radius+(domain?(rootMobile?7:13):5),0,Math.PI*2);ctx.strokeStyle=domain?(theme==='light'?'rgba(30,73,105,.20)':'rgba(151,220,255,.20)'):(theme==='light'?'rgba(30,73,105,.12)':'rgba(151,220,255,.10)');ctx.lineWidth=domain?1.5:1;ctx.stroke()}
         ctx.beginPath();ctx.arc(p.x,p.y,p.radius,0,Math.PI*2);ctx.fillStyle=root?(theme==='light'?'rgba(45,81,108,.36)':'rgba(135,193,219,.34)'):color;ctx.globalAlpha=root?.55:(active?1:.9);ctx.fill();ctx.globalAlpha=1;ctx.strokeStyle=active?(theme==='light'?'#123e63':'#effcff'):(theme==='light'?'rgba(38,82,114,.65)':'rgba(216,247,255,.72)');ctx.lineWidth=active?2.4:1.25;ctx.stroke();
-        const showLabel=domain||labelsRef.current.has(node.id)||active;if(!showLabel)continue;
+        const showLabel=rootMobile?(domain||active):(domain||labelsRef.current.has(node.id)||active);if(!showLabel)continue;
+        if(rootMobile){const rawLabel=String(node.label||node.id);const label=truncateLabel(rawLabel,domain?18:14);const x=p.x;const y=p.y+p.radius+13;ctx.textBaseline='top';ctx.textAlign='center';ctx.font=`${domain?700:650} ${domain?11:9}px system-ui,sans-serif`;ctx.fillStyle=theme==='light'?'#102d45':'#edfaff';ctx.fillText(label,x,y,Math.min(width*.28,108));ctx.textAlign='start';continue}
         const label=String(node.label||node.id);const x=p.x+p.radius+12;const y=p.y-(domain?12:4);ctx.textBaseline='middle';ctx.font=`${domain?700:active?650:500} ${domain?17:active?14:11}px system-ui,sans-serif`;ctx.fillStyle=theme==='light'?'#102d45':'#edfaff';ctx.fillText(label,x,y);
         if(domain){const summary=String(node.summary||'');if(summary){ctx.font='500 11px system-ui,sans-serif';ctx.fillStyle=theme==='light'?'rgba(45,75,98,.82)':'rgba(184,218,233,.80)';const max=compact?190:270;const words=summary.split(/\s+/);let line='';let yy=y+21;for(const word of words){const test=line?`${line} ${word}`:word;if(ctx.measureText(test).width>max&&line){ctx.fillText(line,x,yy);line=word;yy+=15}else line=test}if(line)ctx.fillText(line,x,yy)}}
         else{ctx.font='700 8px ui-monospace,SFMono-Regular,Menlo,monospace';ctx.fillStyle=theme==='light'?'rgba(67,104,133,.88)':'rgba(151,208,232,.72)';ctx.fillText(`${String(node.type||'ENTITY')} · ${String(node.status||'UNKNOWN')}`,x,y+14)}
       }
-      raf=requestAnimationFrame(draw);
+      if(!disposed)raf=requestAnimationFrame(draw);
     };
     const point=(event:PointerEvent):Point=>{const rect=canvas.getBoundingClientRect();return{x:event.clientX-rect.left,y:event.clientY-rect.top}};
     const hit=(x:number,y:number)=>{let best:PositionedNode|undefined;let bestD=Infinity;for(const node of nodesRef.current){const p=project(node);const d=Math.hypot(x-p.x,y-p.y);if(d<=p.radius+16&&d<bestD){best=node;bestD=d}}return best};
@@ -107,5 +123,5 @@ export function CanvasGraphFallback({nodes,edges,labelIds,focusId,selectedId,onN
 
   useEffect(()=>{if(focusId===ROOT)runtimeRef.current.camera={scale:ROOT_SCALE,panX:0,panY:0};else runtimeRef.current.camera={scale:.82,panX:0,panY:0}},[focusId]);
 
-  return <div ref={hostRef} className="canvas-graph-fallback" data-testid="atlas-canvas-2d" style={{position:'absolute',inset:0,minHeight:compact?420:620,touchAction:'none'}}><canvas ref={canvasRef} aria-label="Grafo interativo 2D" style={{display:'block',width:'100%',height:'100%',touchAction:'none'}}/></div>;
+  return <div ref={hostRef} className="canvas-graph-fallback" data-testid="atlas-canvas-2d" style={{position:'absolute',inset:0,minHeight:compact?420:620,touchAction:'none',overflow:'hidden'}}><canvas ref={canvasRef} aria-label="Grafo interativo 2D" style={{display:'block',width:'100%',height:'100%',touchAction:'none'}}/></div>;
 }
