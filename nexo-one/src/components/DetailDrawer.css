@@ -6,8 +6,9 @@
 .detail-drawer-code{margin-top:6px;color:var(--quiet,#6b7a8c);font-size:10px}
 .detail-drawer-code summary{cursor:pointer}
 .detail-drawer-code code{display:block;margin-top:6px;color:var(--quiet,#6b7a8c);font-size:10.5px;word-break:break-all}
-.detail-drawer header button{flex:none;width:30px;height:30px;border:1px solid var(--line,#26313d);border-radius:8px;background:transparent;color:var(--muted,#8b98a5);font-size:18px;line-height:1;cursor:pointer}
+.detail-drawer header button{flex:none;width:44px;height:44px;border:1px solid var(--line,#26313d);border-radius:10px;background:transparent;color:var(--muted,#8b98a5);font-size:20px;line-height:1;cursor:pointer}
 .detail-drawer header button:hover{color:var(--ink,#fff)}
+.detail-drawer header button:focus-visible{outline:2px solid var(--accent,#3fd0e0);outline-offset:2px;color:var(--ink,#fff)}
 .detail-drawer dl{display:grid;gap:0;margin:8px 0 0}
 .detail-drawer dl>div{display:grid;grid-template-columns:120px 1fr;gap:12px;padding:9px 0;border-bottom:1px solid color-mix(in srgb,var(--line,#26313d) 60%,transparent)}
 .detail-drawer dt{color:var(--quiet,#6b7a8c);font-size:11px}
