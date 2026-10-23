@@ -135,7 +135,7 @@ def sub_sn(sn,band):
         cov=np.linalg.inv(sn["prec"])[np.ix_(k,k)]
     else:
         cov=sn["cov"][np.ix_(k,k)]
-    if len(k)<10: raise ValueError("Holdout deixou menos de dez pontos de supernovas.")
+    if len(k)<2: raise ValueError("Holdout deixou menos de dois pontos de supernovas.")
     return {**sn,"z":sn["z"][k],"zhel":sn["zhel"][k],"mu":sn["mu"][k],"cov":cov,"prec":np.linalg.inv(cov)}
 
 def sub_bao(bao,drop):
