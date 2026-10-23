@@ -29,5 +29,10 @@
   },
   "result_sha256": "08d210df08a3ca0f321b67fccd5521b444818c4b6bc4f0400f7248ef4ae2e39d",
   "canonical_result_sha256": "7930efc6005825fa530fef1bccef30cc5ed3f3d7430c17be1341b567a29c0e78",
-  "source_package_sha256": "3ef8b2f3be5cc5ac9971d00427fc7e2d89be1df8f83ce0d44d222cf07d6160fc"
+  "source_package_sha256": "3ef8b2f3be5cc5ac9971d00427fc7e2d89be1df8f83ce0d44d222cf07d6160fc",
+  "spool_rows": [
+    "SHADOW_V2!733",
+    "SHADOW_V2!734"
+  ],
+  "writer_wake_sequence": 2
 }
