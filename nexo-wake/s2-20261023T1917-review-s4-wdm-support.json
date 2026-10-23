@@ -1,0 +1,32 @@
+{
+  "schema": "NEXO_WRITER_RELAY_V1",
+  "task_id": "6ad6d5fd907881918a9112f8fc806118",
+  "run_id": "S2-REVIEW-S4-DESI2-WDM-SUPPORT-STABILITY-20261023T1917-0300",
+  "role": "S2",
+  "state": "ENQUEUED",
+  "queued_at": "2026-10-23T22:20:00Z",
+  "spool": {
+    "spreadsheet_id": "1M2maKkuEjxumZRa145dzei7dEPFi2yKsKlUf7_scC-E",
+    "sheet": "SHADOW_V2",
+    "rows": [
+      725,
+      726
+    ],
+    "stable_ids": [
+      "6ad6d5fd907881918a9112f8fc806118-20261023T1917-0300-001",
+      "6ad6d5fd907881918a9112f8fc806118-20261023T1917-0300-002"
+    ]
+  },
+  "artifact": {
+    "drive_file_id": "1iuWmlgqfUJHVY2PRoQohejzpQFV5ljM5",
+    "sha256": "584fa4dc5db932343775e32055b2217396f014ff34df740e95b45ff407dc9bd2",
+    "readback_verified": true
+  },
+  "decision": "REVIEW_CONFIRMED",
+  "family": {
+    "verdict": "SUPPORT_ROBUST_FAMILY",
+    "robust_blocks": 5,
+    "sensitive_blocks": 1,
+    "falsifier_triggered": false
+  }
+}
