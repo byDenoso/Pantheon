@@ -1,0 +1,29 @@
+{
+  "schema": "NEXO_S3_RESULT_RELAY_V1",
+  "task_id": "6ad6d5f981388191a6fc7facb9191198",
+  "run_id": "S3-F6A-NS-RECOMB-IDENTIFIABILITY-20261023T2010-0300",
+  "family": "F6A-NS-RECOMB-IDENTIFIABILITY",
+  "evidence_level": "E1",
+  "decision": "ENFRAQUECE",
+  "stopping_decision": "STOP_BRANCH",
+  "claim": "Planck PR4 CamSpec high-l TE+EE alone does not locally discriminate plateau-reheating endpoints through ns; freeing Neff and YHe doubles the local ns curvature scale.",
+  "numbers": {
+    "delta_ns_50_60": 0.00666666666666671,
+    "sigma_ns_fixed_Neff_YHe": 0.09892477797950412,
+    "sigma_ns_free_Neff_YHe": 0.19856904543202106,
+    "degradation": 2.007273096667064,
+    "endpoint_separation_free": 0.03357354441706778,
+    "numerical_relative_spread": 0.007480549929400784
+  },
+  "interpretation_limit": "Expected local Fisher only; no observed central spectrum, global posterior, model preference, or cosmological exclusion.",
+  "next_decisive_test": "Broader primary-CMB likelihood with explicit recombination freedom and BK18 where pertinent.",
+  "stable_ids": [
+    "6ad6d5f981388191a6fc7facb9191198-20261023T2010-0300-001",
+    "6ad6d5f981388191a6fc7facb9191198-20261023T2010-0300-002"
+  ],
+  "hashes": {
+    "result_sha256": "8914ff70232d14c27c1f3b4e533ba701c6ee7c79a177441244d064d5d26e12cb",
+    "artifact_sha256": "c9d949b1b6085c936c5ea568c4059f44c74b808cc7ab23c120c5f5bf1511b0fe",
+    "source_package_sha256": "3ef8b2f3be5cc5ac9971d00427fc7e2d89be1df8f83ce0d44d222cf07d6160fc"
+  }
+}
