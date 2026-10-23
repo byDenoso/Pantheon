@@ -1,0 +1,12 @@
+{
+  "schema": "NEXO_WRITER_RELAY_V1",
+  "task_id": "6ad6d60458508191a0a7ea80a5391368",
+  "role": "S4",
+  "run_id": "S4-F4A-BIND-P1D-ADMISSIBILITY-20261023T2045-0300",
+  "stable_ids": [
+    "6ad6d60458508191a0a7ea80a5391368-20261023T2045-0300-001"
+  ],
+  "correction": "spool state must be blank before claim",
+  "prior_relay_commit": "7f917bb5e3b2de044c8f2d5231ca05990628774b",
+  "state": "READY"
+}
