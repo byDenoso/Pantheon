@@ -1,0 +1,33 @@
+{
+  "schema": "NEXO_GITHUB_RELAY_V1",
+  "task_id": "6ad6d5fd907881918a9112f8fc806118",
+  "role": "S2",
+  "family_key": "F6A-NS-RECOMB-IDENTIFIABILITY",
+  "parent_run_id": "S3-F6A-NS-RECOMB-IDENTIFIABILITY-20261023T2010-0300",
+  "review_run_id": "S2-REVIEW-S3-F6A-NS-RECOMB-IDENTIFIABILITY-20261023T2024-0300",
+  "review_status": "REVIEW_CONFIRMED",
+  "scientific_decision": "ENFRAQUECE",
+  "branch_decision": "STOP_HIGH_L_STANDALONE",
+  "implementation_independence": true,
+  "observational_independence": false,
+  "metrics": {
+    "sigma_ns_fixed": 0.09892477797950422,
+    "sigma_ns_free": 0.19856904543201928,
+    "degradation": 2.0072730966670442,
+    "endpoint_separation_free_sigma": 0.033573544417068085,
+    "max_parent_relative_difference": 1.7786565408043349e-13,
+    "max_svd_schur_relative_error": 1.057257249525898e-10
+  },
+  "boundaries": [
+    "no observed central spectrum",
+    "no new solver evaluation",
+    "no model preference or exclusion"
+  ],
+  "artifact": {
+    "drive_id": "1pvEbTWfIFaqobpolBG76mrKIi-cg-YQZ",
+    "sha256": "0543c67b3bd86a56eae26728476f3148ca3a6846f2c9c3e34f78ca41dd87c1a0"
+  },
+  "result_sha256": "08d210df08a3ca0f321b67fccd5521b444818c4b6bc4f0400f7248ef4ae2e39d",
+  "canonical_result_sha256": "7930efc6005825fa530fef1bccef30cc5ed3f3d7430c17be1341b567a29c0e78",
+  "source_package_sha256": "3ef8b2f3be5cc5ac9971d00427fc7e2d89be1df8f83ce0d44d222cf07d6160fc"
+}
