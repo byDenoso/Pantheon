@@ -76,12 +76,20 @@ export function validateCanonicalTowerIdentity(tower,proof){
      tower.revision!==tower.state_fingerprint||!/^sha256:[a-f0-9]{64}$/.test(tower.state_fingerprint))
     throw new Error('CANONICAL_TOWER_INVALID');
 }
+// Expose only execution facts, never credentials, grants or the full CONTROL.
+function projectOperationalControl(tower){
+  const control=tower.files?.['CONTROL.json']?.value;
+  if(!control||typeof control!=='object'||Array.isArray(control))return null;
+  const safe=value=>typeof value==='string'&&/^[A-Z][A-Z0-9_]{0,119}$/.test(value)?value:null;
+  return Object.fromEntries(['execution_primary','github_actions_science_role','mutation_inbox',
+    'write_model','write_guard'].map(key=>[key,safe(control[key])]));
+}
 export function operationalStateFromTower(tower,proof){
   validateCanonicalTowerIdentity(tower,proof);
   const work=Object.entries(tower.files).filter(([key,entry])=>key.startsWith('entities/artifact/')&&entry.value?.kind==='NEXO_OPERATIONAL_WORK_V1')
     .map(([,entry])=>({...entry.value.payload,version:entry.value.entity_version}));
   return {authority:'TOWER_V06@GOOGLE_DRIVE_PRIVATE',revision:tower.revision,readback:'PASS',observed_at:new Date().toISOString(),work,
-    science:scientificQueueFromTower(tower),
+    science:scientificQueueFromTower(tower),control:projectOperationalControl(tower),
     integrity:'DRIVE_MD5_AND_REVISION_READBACK',availability:work.length?'CONFIGURED_IN_TOWER':'NO_OPERATIONAL_WORK_REGISTERED'};
 }
 export async function readVerifiedCanonicalTower({token,fetchImpl=fetch,signal,useCache=false}){
