@@ -3,8 +3,9 @@
   "task_id": "6ad6d5fd907881918a9112f8fc806118",
   "run_id": "S2-REVIEW-S4-DESI2-WDM-SUPPORT-STABILITY-20261023T1917-0300",
   "role": "S2",
-  "state": "ENQUEUED",
+  "state": "PERSISTED",
   "queued_at": "2026-10-23T22:20:00Z",
+  "persisted_at": "2026-10-23T22:22:00Z",
   "spool": {
     "spreadsheet_id": "1M2maKkuEjxumZRa145dzei7dEPFi2yKsKlUf7_scC-E",
     "sheet": "SHADOW_V2",
@@ -12,10 +13,16 @@
       725,
       726
     ],
-    "stable_ids": [
-      "6ad6d5fd907881918a9112f8fc806118-20261023T1917-0300-001",
-      "6ad6d5fd907881918a9112f8fc806118-20261023T1917-0300-002"
+    "receipts": [
+      "APPLIED:af64cd79ad86c5f5",
+      "APPLIED:5668592b462a4b6b"
     ]
+  },
+  "canonical": {
+    "spreadsheet_id": "1wizywUGEMd_8KrNqMcz5PQig3KgOTbZd8ENkTW8nRKw",
+    "result_range": "RESULTADOS!A757:J757",
+    "mural_range": "MURAL!A481:H481",
+    "readback_verified": true
   },
   "artifact": {
     "drive_file_id": "1iuWmlgqfUJHVY2PRoQohejzpQFV5ljM5",
