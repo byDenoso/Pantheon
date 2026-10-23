@@ -28,6 +28,14 @@ export async function publishPublicCampaigns(input, outDir, {io = fs} = {}) {
   let previous, previousSnapshot, retainBackup = false;
   try {previous = await io.readFile(file);} catch (error) {if (error.code !== 'ENOENT') throw error;}
   if (previous) previousSnapshot = validatePublicCampaignSnapshot(JSON.parse(previous.toString('utf8')));
+  // Tower receipts and the export clock can move while public science stays
+  // identical. Retain the last verified publication and its actual timestamp.
+  if (previousSnapshot && previousSnapshot.coverage === snapshot.coverage &&
+      JSON.stringify(previousSnapshot.campaigns) === JSON.stringify(snapshot.campaigns)) {
+    return {status: 'PUBLIC_CAMPAIGNS_VERIFIED', changed: false,
+      sourceRevision: previousSnapshot.sourceRevision, snapshotDigest: previousSnapshot.snapshotDigest,
+      count: previousSnapshot.campaigns.length};
+  }
   try {
     await io.writeFile(temporary, `${JSON.stringify(snapshot)}\n`, {flag: 'wx'});
     await verify(temporary, snapshot);
@@ -51,7 +59,7 @@ export async function publishPublicCampaigns(input, outDir, {io = fs} = {}) {
       }
       throw error;
     }
-    return {status: 'PUBLIC_CAMPAIGNS_VERIFIED', sourceRevision: snapshot.sourceRevision, snapshotDigest: snapshot.snapshotDigest, count: snapshot.campaigns.length};
+    return {status: 'PUBLIC_CAMPAIGNS_VERIFIED', changed: true, sourceRevision: snapshot.sourceRevision, snapshotDigest: snapshot.snapshotDigest, count: snapshot.campaigns.length};
   } finally {
     await io.rm(temporary, {force: true});
     await io.rm(restore, {force: true});
