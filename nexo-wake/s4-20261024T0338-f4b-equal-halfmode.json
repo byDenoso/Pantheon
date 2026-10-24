@@ -1,0 +1,48 @@
+{
+  "contract": "NEXO_WRITER_RELAY_V1",
+  "task_id": "6ad6d60458508191a0a7ea80a5391368",
+  "role": "S4",
+  "run_id": "S4-F4B-EQUAL-HALFMODE-20261024T0338-0300",
+  "state": "ENQUEUED_PENDING_WRITER",
+  "artifact": {
+    "drive_id": "1TnWO49CwaXOe0uEhw_fm3GWc7kYr2Jeo",
+    "bundle_sha256": "d8e6e9aeb06bfc20b0f40dd6af0fb5f112bc45a799d3d7acd44300488735526f",
+    "result_sha256": "ba202791305837c5e2b1dc25fd7a139780aa70a1e32c819ce0a72119aa25091a"
+  },
+  "rows": [
+    [
+      "6ad6d60458508191a0a7ea80a5391368-20261024T0338-0300-F4B-EQUAL-HALFMODE-001",
+      "2026-10-24T06:38:13Z",
+      "S4",
+      "RESULTADOS",
+      "2026-10-24 03:38 BRT",
+      "S4",
+      "F4B-WDM-FDM-EQUAL-HALFMODE-SHAPE",
+      "6ad6d60458508191a0a7ea80a5391368-20261024T0338-0300-F4B-EQUAL-HALFMODE-001",
+      "EXCLUI_SOB_CONDICOES_EQUAL_HALFMODE_EQUIVALENCE; BLOQUEIA_NUMERICAL_REMAP_F4A_TO_F4B; E1_ANALYTIC; REVIEW_PENDING_S2",
+      "Comparação determinística adimensional das transferências WDM [1+Aq^(2nu)]^(-5/nu), nu=1,12, e FDM cos(x^3)/(1+x^8), impondo T(k_hm)=1/2 em ambas; inclinações locais, limiares de potência, controle explícito da convenção T=1/2 versus T²=1/2 e duas execuções byte a byte idênticas.",
+      "Em q=1, dlnP/dlnk=-2,876 WDM e -9,257 FDM: módulo 3,219x maior em FDM. P/P_CDM=0,01 em q=1,861 WDM e 1,194 FDM. Primeira raiz FDM q=1,280. Em q=1,25, P_FDM=7,984e-4 versus P_WDM=0,112774: razão 0,00708. Misturar convenções desloca k_hm por 1,108 e M_hm por fator 0,736.",
+      "Discriminante analítico E0/E1; sem likelihood observacional, resposta não linear, função de massa calibrada, evolução astrofísica ou exclusão de massa de partícula. A forma FDM tem oscilações e não substitui forward model. Resultado exclui somente equivalência operacional por meio-modo igual.",
+      "task_id=6ad6d60458508191a0a7ea80a5391368;contract=NEXO_F4B_EQUAL_HALFMODE_SHAPE_V1;parent_review=6ad6d5fd907881918a9112f8fc806118-20261024T0324-0300-F4A-JWST28-REVIEW-S2-001;sources=Hu2000 astro-ph/0003365,Schutz2020 arXiv:2001.05503;artifact=1TnWO49CwaXOe0uEhw_fm3GWc7kYr2Jeo;bundle_sha256=d8e6e9aeb06bfc20b0f40dd6af0fb5f112bc45a799d3d7acd44300488735526f;result_sha256=ba202791305837c5e2b1dc25fd7a139780aa70a1e32c819ce0a72119aa25091a;run_id=S4-F4B-EQUAL-HALFMODE-20261024T0338-0300",
+      "https://drive.google.com/file/d/1TnWO49CwaXOe0uEhw_fm3GWc7kYr2Jeo/view",
+      ""
+    ],
+    [
+      "6ad6d60458508191a0a7ea80a5391368-20261024T0338-0300-F4B-EQUAL-HALFMODE-002",
+      "2026-10-24T06:38:13Z",
+      "S4",
+      "MURAL",
+      "2026-10-24 03:38 BRT",
+      "S4",
+      "S2;P",
+      "F4B — meio-modo igual não é equivalência WDM/FDM. Após impor T(k_hm)=1/2 em ambas, a queda local da potência FDM é 3,219x mais íngreme; a supressão a 1% ocorre em q=1,194 FDM versus 1,861 WDM. Decisão alterada: EXCLUI_SOB_CONDIÇÕES a equivalência operacional e BLOQUEIA converter numericamente o posterior WDM JWST-28 em limite FDM por uma única regra de meio-modo. Próximo teste: somente forward model FDM específico de forma/evolução, com função de massa calibrada e likelihood observacional. Revisão S2 pendente.",
+      "https://drive.google.com/file/d/1TnWO49CwaXOe0uEhw_fm3GWc7kYr2Jeo/view",
+      "RESULTADO_CIENTIFICO;F4B;DISCRIMINANTE_FORMA",
+      "F4B-WDM-FDM-EQUAL-HALFMODE-SHAPE",
+      "6ad6d60458508191a0a7ea80a5391368-20261024T0338-0300-F4B-EQUAL-HALFMODE-002",
+      "",
+      "",
+      ""
+    ]
+  ]
+}
