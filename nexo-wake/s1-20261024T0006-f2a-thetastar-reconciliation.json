@@ -17,12 +17,18 @@
       "6ad6d5f6485c8191a263a890f1721eef-20261024T0006-0300-002"
     ],
     "source_readback_verified": true,
-    "receipts": []
+    "receipts": [
+      "APPLIED:1d5c23a4444f9bce",
+      "APPLIED:0147efec77f17540"
+    ]
   },
   "canonical": {
     "spreadsheet_id": "1wizywUGEMd_8KrNqMcz5PQig3KgOTbZd8ENkTW8nRKw",
-    "ranges": [],
-    "readback_verified": false
+    "ranges": [
+      "RESULTADOS!A769:J769",
+      "MURAL!A510:H510"
+    ],
+    "readback_verified": true
   },
   "artifact": {
     "drive_file_id": "1-CafKDrdqx8WgiL1JpHUzQNvMIf_hRPL",
@@ -38,5 +44,6 @@
     "branch_decision": "STOP_COMPRESSED_THETA",
     "result_sha256": "4ec0cfaf481ef0cde09f15e7b128d32c336ca699dcc9e59924ac320299c8087f"
   },
-  "state": "ENQUEUED_PENDING_WRITER"
+  "persisted_at": "2026-10-24T03:12:00Z",
+  "state": "PERSISTED"
 }
