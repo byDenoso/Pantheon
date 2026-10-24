@@ -34,5 +34,19 @@
     "sha256": "0e5dd17dd4e3df44d20ac9859d389aef13f61ed07e74bdae2b4892f00f9f3d80",
     "size": 12112722
   },
+  "writer": {
+    "spool_sheet": "SHADOW_V2",
+    "spool_rows": [
+      833,
+      834
+    ],
+    "states": [
+      "APPLIED:d73cece1b6aa65b1",
+      "APPLIED:3f02673e48ad2004"
+    ],
+    "target_result": "RESULTADOS!799",
+    "target_mural": "MURAL!563",
+    "readback": "VERIFIED"
+  },
   "next_step": "Reparar ativação/integração da quadratura das filhas; repetir 6400→12800; só então reparar/validar FINUFFT e liberar espectros ativos."
 }
