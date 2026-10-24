@@ -7,47 +7,24 @@
     "6ad6d60458508191a0a7ea80a5391368-20261024T0237-0300-F4A-PRIOR-SENS-001",
     "6ad6d60458508191a0a7ea80a5391368-20261024T0237-0300-F4A-PRIOR-SENS-002"
   ],
+  "spool_rows": [774, 775],
+  "enqueued_before_wake": true,
   "decision": "ENFRAQUECE_UNCONDITIONAL; FAVORECE_CONDICIONALMENTE_INFORMED_PRIORS",
   "evidence": {
     "source": "arXiv:2606.05277v1 equations 3-4",
     "source_commit": "9f0f949f4be40234d48bf3848259fc829c900469",
     "parent_result": "6ad6d60458508191a0a7ea80a5391368-20261024T0137-0300-F4A-JWST28-REPRO-001",
     "bf10": {
-      "uninformative": {
-        "log10_mhm_upper": 8.6,
-        "lambda_fs_upper_kpc": 17.7557,
-        "mtherm_spin_half_lower_kev": 3.004
-      },
-      "galacticus": {
-        "log10_mhm_upper": 7.4,
-        "lambda_fs_upper_kpc": 7.0687,
-        "mtherm_spin_half_lower_kev": 6.5223
-      },
-      "nbody": {
-        "log10_mhm_upper": 7.2,
-        "lambda_fs_upper_kpc": 6.0628,
-        "mtherm_spin_half_lower_kev": 7.4219
-      }
+      "uninformative": {"log10_mhm_upper": 8.6, "lambda_fs_upper_kpc": 17.7557, "mtherm_spin_half_lower_kev": 3.0040},
+      "galacticus": {"log10_mhm_upper": 7.4, "lambda_fs_upper_kpc": 7.0687, "mtherm_spin_half_lower_kev": 6.5223},
+      "nbody": {"log10_mhm_upper": 7.2, "lambda_fs_upper_kpc": 6.0628, "mtherm_spin_half_lower_kev": 7.4219}
     },
-    "prior_sensitivity": {
-      "mhm_ratio": 25.1189,
-      "lambda_ratio": 2.9286,
-      "mtherm_ratio": 2.4707
-    }
+    "prior_sensitivity": {"mhm_ratio": 25.1189, "lambda_ratio": 2.9286, "mtherm_ratio": 2.4707}
   },
   "artifacts": {
-    "report": {
-      "id": "1hBwyVEM00EO7drCIHUTjOJN1_2bA_v1g",
-      "sha256": "ef243767aab3bf3d73d41b313bf56abe1e07778e7c117d54a4522d275f5e4f92"
-    },
-    "result": {
-      "id": "1YV7tLJ47JiZQOaJMLVhfInKqv2bEw1jB",
-      "sha256": "399b3343679cf9fe97941a9f7e855ff6269fc3e416ede6526da896d4462a0cb1"
-    },
-    "script": {
-      "id": "1kA6nTOanallbXwT6Odsx74PRrrNbUTzL",
-      "sha256": "9046b13764a9d25fc098d51a0a85675eac20ed6ec655fadfa2fc269e5dbae280"
-    }
+    "report": {"id": "1hBwyVEM00EO7drCIHUTjOJN1_2bA_v1g", "sha256": "ef243767aab3bf3d73d41b313bf56abe1e07778e7c117d54a4522d275f5e4f92"},
+    "result": {"id": "1YV7tLJ47JiZQOaJMLVhfInKqv2bEw1jB", "sha256": "399b3343679cf9fe97941a9f7e855ff6269fc3e416ede6526da896d4462a0cb1"},
+    "script": {"id": "1kA6nTOanallbXwT6Odsx74PRrrNbUTzL", "sha256": "9046b13764a9d25fc098d51a0a85675eac20ed6ec655fadfa2fc269e5dbae280"}
   },
   "limits": "Same source posterior; no per-lens 4D likelihoods or observational independence.",
   "stop_rule": "STOP_AGGREGATE_POSTERIOR; REQUIRE_PER_LENS_4D_OR_LOO_FOR_NEXT_PROMOTION",
