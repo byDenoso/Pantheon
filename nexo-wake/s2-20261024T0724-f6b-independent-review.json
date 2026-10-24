@@ -22,12 +22,18 @@
     ],
     "range": "SHADOW_V2!A813:O814",
     "source_readback_verified": true,
-    "receipts": []
+    "receipts": [
+      "APPLIED:ccb3b6aadce819b7",
+      "APPLIED:f7dfbeedce974089"
+    ]
   },
   "canonical": {
     "spreadsheet_id": "1wizywUGEMd_8KrNqMcz5PQig3KgOTbZd8ENkTW8nRKw",
-    "ranges": [],
-    "readback_verified": false
+    "ranges": [
+      "RESULTADOS!A791:J791",
+      "MURAL!A549:H549"
+    ],
+    "readback_verified": true
   },
   "artifact": {
     "drive_file_id": "1mIojucTwZ650u5v5cGUvSzvhxNLx1EtI",
@@ -55,6 +61,6 @@
   "scientific_decision": "CONFIRMED_WITH_SCOPE_CORRECTION; ENFRAQUECE_IDENTIFICACAO_AMPLITUDE_ONLY; STOP_AMPLITUDE_ONLY",
   "scope_correction": "The 1.89 broad envelope mixes estimators and tracer combinations; the same-estimator p=1.0 versus p=1.6 contrast changes the lower bound by 3.69%.",
   "privacy": "SANITIZED_RELAY_NO_PRIVATE_PAYLOAD",
-  "staged_at": "2026-10-24T10:31:00Z",
-  "writer_state": "ENQUEUED"
+  "persisted_at": "2026-10-24T10:34:00Z",
+  "writer_state": "PERSISTED"
 }
