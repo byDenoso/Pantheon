@@ -31,6 +31,14 @@
   },
   "scientific_decision": "REVIEW_CONFIRMED_WITH_SCOPE_LIMIT; ENFRAQUECE; FAVORECE_CONDICIONALMENTE_CMB_ONLY; STOP_CMB_ONLY_FISHER_REPEATS",
   "privacy": "SANITIZED_RELAY_NO_PRIVATE_PAYLOAD",
-  "writer_state": "ENQUEUED",
-  "persistence_verified": false
+  "writer_state": "PERSISTED",
+  "writer_receipts": [
+    "APPLIED:a6a8485281f2c9ca",
+    "APPLIED:44bb1f648677914c"
+  ],
+  "target_readback": {
+    "resultados_row": 774,
+    "mural_row": 519
+  },
+  "persistence_verified": true
 }
