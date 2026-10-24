@@ -1,0 +1,33 @@
+{
+  "schema_version": "NEXO_WRITER_RELAY_V1",
+  "task_id": "6ad6d5f981388191a6fc7facb9191198",
+  "role": "S3",
+  "run_id": "S3-F5B-ME-DESI-20261024T0212-0300",
+  "stable_ids": [
+    "6ad6d5f981388191a6fc7facb9191198-20261024T0212-01",
+    "6ad6d5f981388191a6fc7facb9191198-20261024T0212-02"
+  ],
+  "source_spreadsheet_id": "1M2maKkuEjxumZRa145dzei7dEPFi2yKsKlUf7_scC-E",
+  "source_sheet": "SHADOW_V2",
+  "expected_source_rows": [
+    770,
+    771
+  ],
+  "artifact": {
+    "drive_file_id": "1s4_ZS2oELqGt6ZwhSqR15uz4XaUt1QTF",
+    "sha256": "8e4ec0a9569758da9ce8c92b31434baa2b1433ac9c3e7b7122423c5a6bde79ab",
+    "size_bytes": 3728,
+    "metadata_readback_verified": true
+  },
+  "evidence": {
+    "source": "arXiv:2606.06495v1",
+    "stage": "E0_PUBLISHED_DATA_AUDIT",
+    "cmb_only_H0_me_z": "73.00±0.44",
+    "cmb_plus_desi_H0_max_perturbative_approx": 69.5,
+    "H0_target": 73.04
+  },
+  "scientific_decision": "ENFRAQUECE; FAVORECE_CONDICIONALMENTE_CMB_ONLY; STOP_CMB_ONLY_FISHER_REPEATS",
+  "privacy": "SANITIZED_RELAY_NO_PRIVATE_PAYLOAD",
+  "writer_state": "ENQUEUED",
+  "persistence_verified": false
+}
