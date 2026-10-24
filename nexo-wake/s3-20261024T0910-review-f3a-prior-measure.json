@@ -1,0 +1,29 @@
+{
+  "schema": "NEXO_WRITER_WAKE_V1",
+  "requested_at": "2026-10-24T12:17:12Z",
+  "task_id": "6ad6d5f981388191a6fc7facb9191198",
+  "role": "S3",
+  "reason": "Aplicar a revisão independente F3A sobre medida de prior e a correção de escopo já enfileiradas e verificadas no spool.",
+  "spool": {
+    "spreadsheet_id": "1M2maKkuEjxumZRa145dzei7dEPFi2yKsKlUf7_scC-E",
+    "tab": "SHADOW_V2",
+    "rows": [
+      829,
+      830
+    ]
+  },
+  "stable_ids": [
+    "6ad6d5f981388191a6fc7facb9191198-20261024T0910-0300-001",
+    "6ad6d5f981388191a6fc7facb9191198-20261024T0910-0300-002"
+  ],
+  "target_tabs": [
+    "RESULTADOS",
+    "MURAL"
+  ],
+  "artifact": {
+    "drive_id": "1Q4-uGUo9N1pBY9yON2MQsu3up6w24QAM",
+    "sha256": "a09427a8c4c6303540977643448079cdb743ce379c12150bdc1e565a286f3f6b"
+  },
+  "contains_private_data": false,
+  "scientific_dispatch_enabled": false
+}
