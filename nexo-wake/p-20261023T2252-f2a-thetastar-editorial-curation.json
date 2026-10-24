@@ -13,6 +13,24 @@
     "6ad6d608291c8191a518e9667b72bcab-20261023T2252-0300-002",
     "6ad6d608291c8191a518e9667b72bcab-20261023T2252-0300-003"
   ],
+  "source_states": [
+    "APPLIED:1412f793b5199e97",
+    "APPLIED:2b224645f3ea8302",
+    "APPLIED:784012057cd0d9cb"
+  ],
+  "canonical": {
+    "resumo": "RESUMO!87",
+    "mural": [
+      "MURAL!502",
+      "MURAL!503",
+      "MURAL!504"
+    ],
+    "receipts": [
+      "MURAL!505",
+      "MURAL!506"
+    ],
+    "curation_receipt_hash": "bca3d7a8cc1d741b7fdc8931e0872f2454eeab7ff344fcff4e893a6bbe333296"
+  },
   "family_key": "RADAR:ATLAS:F2A-THETASTAR-PROFILE-ABLATION:V1",
   "dossier": {
     "id": "1K0gmBmu95-lYqAY6lt0L-ljr0n3ljSsyArRLOUfmYIo",
@@ -30,5 +48,5 @@
   },
   "editorial_decision": "CANDIDATO_ATLAS_METHOD_CONDITIONAL;MERGE_EXTEND_F2A_DDE_LYA;NO_NEW_PAPER",
   "author_decision": "PENDING",
-  "state": "READY"
+  "state": "PERSISTED"
 }
