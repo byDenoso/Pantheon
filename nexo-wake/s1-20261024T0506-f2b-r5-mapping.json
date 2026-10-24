@@ -1,0 +1,19 @@
+{
+  "schema": "NEXO_WRITER_WAKE_V1",
+  "requested_at": "2026-10-24T08:16:00Z",
+  "task_id": "6ad6d5f6485c8191a263a890f1721eef",
+  "reason": "Apply two S1 F2B R5-versus-Qrho_v mapping events already read back in SHADOW_V2 rows 792:793",
+  "stable_ids": [
+    "6ad6d5f6485c8191a263a890f1721eef-20261024T0506-001",
+    "6ad6d5f6485c8191a263a890f1721eef-20261024T0506-002"
+  ],
+  "spool": "SHADOW_V2",
+  "spool_rows": [
+    792,
+    793
+  ],
+  "targets": [
+    "RESULTADOS",
+    "MURAL"
+  ]
+}
