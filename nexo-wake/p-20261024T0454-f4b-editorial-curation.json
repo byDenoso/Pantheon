@@ -1,0 +1,16 @@
+{
+  "contract": "NEXO_WRITER_WAKE_V1",
+  "task_id": "6ad6d608291c8191a518e9667b72bcab",
+  "role": "P",
+  "created_at": "2026-10-24T07:56:17Z",
+  "spool_id": "1M2maKkuEjxumZRa145dzei7dEPFi2yKsKlUf7_scC-E",
+  "sheet": "SHADOW_V2",
+  "stable_ids": [
+    "6ad6d608291c8191a518e9667b72bcab-20261024T0454-0300-001",
+    "6ad6d608291c8191a518e9667b72bcab-20261024T0454-0300-002",
+    "6ad6d608291c8191a518e9667b72bcab-20261024T0454-0300-003"
+  ],
+  "purpose": "curadoria editorial F4B equal-halfmode WDM-FDM",
+  "dossier_id": "18wSkVAPo5yc463kjVs2B2uhAvAJdiFUGTIHQmHN7SX8",
+  "editorial_object_sha256": "3f9020f624f0098586ba5d004492efc7c48c1de15457523d88efdc677620b93e"
+}
