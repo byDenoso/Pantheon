@@ -22,6 +22,7 @@
     "source": "arXiv:2609.35974v2"
   },
   "privacy": "SANITIZED_RELAY_NO_PRIVATE_PAYLOAD",
-  "writer_state": "ENQUEUED_PENDING",
+  "writer_state": "ENQUEUED",
+  "source_state_verified_empty": true,
   "persistence_verified": false
 }
