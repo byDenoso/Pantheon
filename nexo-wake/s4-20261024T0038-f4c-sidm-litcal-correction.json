@@ -29,5 +29,14 @@
   },
   "scientific_decision": "ENFRAQUECE; CORRECTION_ACCEPTED; E0_CORRECTED; DO_NOT_PROMOTE_TO_E1; STOP_UNTIL_PER_LENS_INPUTS",
   "privacy": "SANITIZED_RELAY_NO_PRIVATE_PAYLOAD",
-  "writer_state": "ENQUEUED_PENDING"
+  "writer_state": "PERSISTED",
+  "writer_receipts": [
+    "APPLIED:66598da51b27d4d9",
+    "APPLIED:f40e2c14da104212"
+  ],
+  "target_readback": {
+    "resultados_row": 771,
+    "mural_row": 512
+  },
+  "persistence_verified": true
 }
