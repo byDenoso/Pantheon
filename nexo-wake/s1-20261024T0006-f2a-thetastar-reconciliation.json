@@ -1,0 +1,42 @@
+{
+  "schema_version": "NEXO_WRITER_RELAY_V1",
+  "task_id": "6ad6d5f6485c8191a263a890f1721eef",
+  "role": "S1",
+  "run_id": "S1-F2A-THETASTAR-RECONCILIATION-20261024T0006-0300",
+  "created_at": "2026-10-24T03:06:09Z",
+  "source": {
+    "spreadsheet_id": "1M2maKkuEjxumZRa145dzei7dEPFi2yKsKlUf7_scC-E",
+    "sheet": "SHADOW_V2",
+    "rows": [
+      760,
+      761
+    ],
+    "range": "SHADOW_V2!A760:O761",
+    "stable_ids": [
+      "6ad6d5f6485c8191a263a890f1721eef-20261024T0006-0300-001",
+      "6ad6d5f6485c8191a263a890f1721eef-20261024T0006-0300-002"
+    ],
+    "source_readback_verified": true,
+    "receipts": []
+  },
+  "canonical": {
+    "spreadsheet_id": "1wizywUGEMd_8KrNqMcz5PQig3KgOTbZd8ENkTW8nRKw",
+    "ranges": [],
+    "readback_verified": false
+  },
+  "artifact": {
+    "drive_file_id": "1-CafKDrdqx8WgiL1JpHUzQNvMIf_hRPL",
+    "url": "https://drive.google.com/file/d/1-CafKDrdqx8WgiL1JpHUzQNvMIf_hRPL/view",
+    "sha256": "103e38a0a9454c240e3609065b042131406c89c35ad94f5bf422f0b0789ce227",
+    "upload_readback_verified": true
+  },
+  "reconciliation": {
+    "parent_stable_id": "S1-F2A-CMB-THETASTAR-HOLDOUT-20261023-V1",
+    "review_stable_id": "6ad6d60458508191a0a7ea80a5391368-20261023T2238-F2A-THETASTAR-REVIEW-S4-001",
+    "scientific_decision": "FAVORECE_CONDICIONALMENTE",
+    "holdout_decision": "INCONCLUSIVO_AS_CMB_SCALAR_HOLDOUT",
+    "branch_decision": "STOP_COMPRESSED_THETA",
+    "result_sha256": "4ec0cfaf481ef0cde09f15e7b128d32c336ca699dcc9e59924ac320299c8087f"
+  },
+  "state": "ENQUEUED_PENDING_WRITER"
+}
