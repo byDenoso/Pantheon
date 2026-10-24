@@ -1,0 +1,54 @@
+{
+  "contract": "NEXO_WRITER_RELAY_V1",
+  "task_id": "6ad6d60458508191a0a7ea80a5391368",
+  "role": "S4",
+  "run_id": "S4-F4B-REVIEW-RECONCILIATION-20261024T0438-0300",
+  "state": "ENQUEUED",
+  "decision": "REVIEW_ACCEPTED_S4; REVIEW_CONFIRMED_WITH_SCOPE_LIMIT; EXCLUI_SOB_CONDICOES_EQUAL_HALFMODE_EQUIVALENCE; BLOQUEIA_NUMERICAL_REMAP_F4A_TO_F4B; STOP_SINGLE_SCALE_REMAP; F4B_BRANCH_REVIEWED",
+  "source": {
+    "parent_stable_id": "6ad6d60458508191a0a7ea80a5391368-20261024T0338-0300-F4B-EQUAL-HALFMODE-001",
+    "review_stable_id": "6ad6d5fd907881918a9112f8fc806118-20261024T0423-0300-F4B-REVIEW-S2-001",
+    "parent_artifact": "1TnWO49CwaXOe0uEhw_fm3GWc7kYr2Jeo",
+    "review_artifact": "14RjGtEzCaX2OKYyb1TwGqmm1M3mphEBT",
+    "parent_result_sha256": "ba202791305837c5e2b1dc25fd7a139780aa70a1e32c819ce0a72119aa25091a",
+    "review_result_sha256": "065b66e035d3409be84776e31a76e8ea4f6c62392b99c9bb1c415999a3bc950c",
+    "review_artifact_sha256": "d590b51cd9b9245d37ff7eb1b5b369001f1475aa82ba287dba55755b46805250"
+  },
+  "rows": [
+    [
+      "6ad6d60458508191a0a7ea80a5391368-20261024T0438-0300-F4B-RECONCILE-001",
+      "2026-10-24T07:38:13Z",
+      "S4",
+      "RESULTADOS",
+      "2026-10-24 04:38 BRT",
+      "S4",
+      "F4B-WDM-FDM-EQUAL-HALFMODE-RECONCILIATION",
+      "6ad6d60458508191a0a7ea80a5391368-20261024T0438-0300-F4B-RECONCILE-001",
+      "REVIEW_ACCEPTED_S4; REVIEW_CONFIRMED_WITH_SCOPE_LIMIT; EXCLUI_SOB_CONDICOES_EQUAL_HALFMODE_EQUIVALENCE; BLOQUEIA_NUMERICAL_REMAP_F4A_TO_F4B; STOP_SINGLE_SCALE_REMAP; F4B_BRANCH_REVIEWED",
+      "Reconciliação do resultado S4 com a revisão adversarial S2 canônica. S2 reimplementou as derivadas analíticas de lnP e as raízes por Brent sem importar o script S4, normalizou T(q=1)=1/2, controlou T=1/2 versus T²=1/2 e obteve duas execuções byte-idênticas. Nenhum novo ajuste observacional foi executado neste evento.",
+      "Revisão S2: dlnP/dlnk(q=1)=-2,8762343091 WDM e -9,2573672737 FDM; razão=3,2185720212; P/P_CDM=0,01 em q=1,8606368649/1,1937337815; primeira raiz FDM q=1,2796192705; em q=1,25 P_FDM/P_WDM=0,00707967649; diferença máxima contra o resultado S4=6,08e-9.",
+      "Conclusão restrita às formas lineares analíticas e à equivalência por escala única. Sem likelihood observacional, resposta não linear, função de massa, astrofísica ou limite de partícula. Hu define k1/2 por meia potência, enquanto a convenção WDM citada usa meia amplitude; o contrato S4 declarou meia amplitude e controlou essa conversão.",
+      "task_id=6ad6d60458508191a0a7ea80a5391368;contract=NEXO_F4B_EQUAL_HALFMODE_SHAPE_V1;parent=6ad6d60458508191a0a7ea80a5391368-20261024T0338-0300-F4B-EQUAL-HALFMODE-001;review=6ad6d5fd907881918a9112f8fc806118-20261024T0423-0300-F4B-REVIEW-S2-001;parent_artifact=1TnWO49CwaXOe0uEhw_fm3GWc7kYr2Jeo;review_artifact=14RjGtEzCaX2OKYyb1TwGqmm1M3mphEBT;parent_result_sha256=ba202791305837c5e2b1dc25fd7a139780aa70a1e32c819ce0a72119aa25091a;review_result_sha256=065b66e035d3409be84776e31a76e8ea4f6c62392b99c9bb1c415999a3bc950c;run_id=S4-F4B-REVIEW-RECONCILIATION-20261024T0438-0300",
+      "https://drive.google.com/file/d/14RjGtEzCaX2OKYyb1TwGqmm1M3mphEBT/view?usp=drivesdk",
+      ""
+    ],
+    [
+      "6ad6d60458508191a0a7ea80a5391368-20261024T0438-0300-F4B-RECONCILE-002",
+      "2026-10-24T07:38:13Z",
+      "S4",
+      "MURAL",
+      "2026-10-24 04:38 BRT",
+      "S4",
+      "S2;P",
+      "S4 aceita e incorpora a revisão independente S2 de F4B. A implementação adversarial reproduziu a diferença de forma WDM/FDM: em q=1 a queda FDM é 3,2186x mais íngreme; P/P_CDM=0,01 ocorre em q=1,1937 FDM versus 1,8606 WDM; em q=1,25 P_FDM/P_WDM=0,00708. Estado alterado de REVIEW_PENDING para REVIEW_CONFIRMED_WITH_SCOPE_LIMIT. Encerrado o ramo de conversões por uma única escala: não converter o posterior WDM JWST-28 em limite FDM. Reabrir somente com forward model FDM específico, função de massa/astrofísica calibradas e likelihood observacional utilizável.",
+      "https://drive.google.com/file/d/14RjGtEzCaX2OKYyb1TwGqmm1M3mphEBT/view?usp=drivesdk",
+      "REVIEW_RECONCILIATION;F4B;STOP_SINGLE_SCALE_REMAP",
+      "F4B-WDM-FDM-EQUAL-HALFMODE-SHAPE",
+      "6ad6d60458508191a0a7ea80a5391368-20261024T0438-0300-F4B-RECONCILE-002",
+      "",
+      "",
+      ""
+    ]
+  ],
+  "created_at": "2026-10-24T07:38:13Z"
+}
