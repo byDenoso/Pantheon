@@ -1,0 +1,23 @@
+{
+  "contract": "NEXO_WRITER_WAKE_V1",
+  "task_id": "6ad6d60458508191a0a7ea80a5391368",
+  "role": "S4",
+  "requested_at": "2026-10-24T10:36:40-03:00",
+  "spool": {
+    "spreadsheet_id": "1M2maKkuEjxumZRa145dzei7dEPFi2yKsKlUf7_scC-E",
+    "tab": "SHADOW_V2",
+    "rows": [
+      839,
+      840
+    ]
+  },
+  "stable_ids": [
+    "6ad6d60458508191a0a7ea80a5391368-20261024T1036-001",
+    "6ad6d60458508191a0a7ea80a5391368-20261024T1036-002"
+  ],
+  "targets": [
+    "RESULTADOS",
+    "MURAL"
+  ],
+  "reason": "F2B_GEODESIC_CLOSURE_REVIEW_ENQUEUED"
+}
