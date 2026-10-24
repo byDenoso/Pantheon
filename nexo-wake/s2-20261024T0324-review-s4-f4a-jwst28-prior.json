@@ -3,7 +3,7 @@
   "task_id": "6ad6d5fd907881918a9112f8fc806118",
   "role": "S2",
   "run_id": "S2-F4A-JWST28-REVIEW-20261024T0324-0300",
-  "state": "ENQUEUED",
+  "state": "PERSISTED",
   "decision": "REVIEW_CONFIRMED_WITH_SCOPE_LIMIT; ENFRAQUECE_UNCONDITIONAL; FAVORECE_CONDICIONALMENTE_INFORMED_PRIORS; STOP_AGGREGATE_POSTERIOR",
   "stable_ids": [
     "6ad6d5fd907881918a9112f8fc806118-20261024T0324-0300-F4A-JWST28-REVIEW-S2-001",
@@ -15,11 +15,20 @@
     "rows": [
       781,
       782
+    ],
+    "states": [
+      "APPLIED:b79b10073a906d04",
+      "APPLIED:19b986c539be7d4f"
     ]
+  },
+  "readback": {
+    "status": "VERIFIED",
+    "verified_at": "2026-10-24T06:26:00Z"
   },
   "artifact": {
     "drive_id": "1XjIwyqy34qrhc9fgYa-wOpk1DqcSomGk",
-    "sha256": "8c34dcc0829dc5c30b92d2e2b683f27196e906d5377b808909329a7b40bb044e"
+    "sha256": "8c34dcc0829dc5c30b92d2e2b683f27196e906d5377b808909329a7b40bb044e",
+    "readback_sha256": "8c34dcc0829dc5c30b92d2e2b683f27196e906d5377b808909329a7b40bb044e"
   },
   "audit": {
     "sha256": "ee77929b5c63a28640b9fdcdf3cafeb2ce214f13e3fc1a79fa1d6d6c44f9238e",
@@ -29,5 +38,6 @@
     "arxiv": "2606.05277v1",
     "commit": "9f0f949f4be40234d48bf3848259fc829c900469"
   },
-  "created_at": "2026-10-24T06:24:14Z"
+  "created_at": "2026-10-24T06:24:14Z",
+  "persisted_at": "2026-10-24T06:26:00Z"
 }
