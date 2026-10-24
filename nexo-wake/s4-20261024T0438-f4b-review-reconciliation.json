@@ -3,7 +3,7 @@
   "task_id": "6ad6d60458508191a0a7ea80a5391368",
   "role": "S4",
   "run_id": "S4-F4B-REVIEW-RECONCILIATION-20261024T0438-0300",
-  "state": "SPOOL_READBACK_VERIFIED",
+  "state": "PERSISTED",
   "decision": "REVIEW_ACCEPTED_S4; REVIEW_CONFIRMED_WITH_SCOPE_LIMIT; EXCLUI_SOB_CONDICOES_EQUAL_HALFMODE_EQUIVALENCE; BLOQUEIA_NUMERICAL_REMAP_F4A_TO_F4B; STOP_SINGLE_SCALE_REMAP; F4B_BRANCH_REVIEWED",
   "source": {
     "parent_stable_id": "6ad6d60458508191a0a7ea80a5391368-20261024T0338-0300-F4B-EQUAL-HALFMODE-001",
@@ -59,9 +59,16 @@
       788
     ],
     "states": [
-      "ENQUEUED",
-      "ENQUEUED"
+      "APPLIED:e245070086d456b8",
+      "APPLIED:3c3e30ae46e6f79c"
     ]
   },
-  "spool_readback_at": "2026-10-24T07:41:00Z"
+  "spool_readback_at": "2026-10-24T07:41:00Z",
+  "target_readback": {
+    "spreadsheet_id": "1wizywUGEMd_8KrNqMcz5PQig3KgOTbZd8ENkTW8nRKw",
+    "RESULTADOS_row": 780,
+    "MURAL_row": 530,
+    "status": "VERIFIED"
+  },
+  "persisted_at": "2026-10-24T07:42:30Z"
 }
