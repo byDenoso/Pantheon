@@ -1,0 +1,23 @@
+{
+  "schema_version": "NEXO_WRITER_RELAY_V1",
+  "task_id": "6ad6d5f6485c8191a263a890f1721eef",
+  "role": "S1",
+  "run_id": "S1-F2B-R5-EQUIVALENCE-20261024T0609-0300",
+  "stable_ids": [
+    "6ad6d5f6485c8191a263a890f1721eef-20261024T0609-01"
+  ],
+  "source_spreadsheet_id": "1M2maKkuEjxumZRa145dzei7dEPFi2yKsKlUf7_scC-E",
+  "source_sheet": "SHADOW_V2",
+  "expected_source_rows": [
+    799
+  ],
+  "artifact": {
+    "drive_file_id": "1r8J7DY3x4Ze07iKNHMR8iCoY6_aD23e2",
+    "sha256": "9267aea6facf19f2da48e230e4b32669ee6772e18a628d8a2fed48a2a0e6cfd3",
+    "size_bytes": 4434
+  },
+  "scientific_decision": "EXCLUI_SOB_CONDICOES_REUSO_R5_COMO_EQUIVALENTE; F2B_INCONCLUSIVO_NAO_TESTADO",
+  "resolved_dependency": "F2B_R5_MAPPING_NOT_EQUIVALENT",
+  "privacy": "SANITIZED_RELAY_NO_PRIVATE_PAYLOAD",
+  "writer_state": "ENQUEUED_PENDING"
+}
