@@ -1,0 +1,35 @@
+{
+  "contract": "NEXO_WRITER_RELAY_V1",
+  "task_id": "6ad6d5f981388191a6fc7facb9191198",
+  "role": "S3",
+  "run_id": "S3-F3B-REVIEW-20261024T0314-0300",
+  "created_at": "2026-10-24T06:14:00Z",
+  "writer_state": "ENQUEUED",
+  "spool": {
+    "spreadsheet_id": "1M2maKkuEjxumZRa145dzei7dEPFi2yKsKlUf7_scC-E",
+    "sheet": "SHADOW_V2",
+    "result_row": 779,
+    "mural_row": 780,
+    "stable_ids": [
+      "6ad6d5f981388191a6fc7facb9191198-20261024T0314-0300-F3B-REVIEW-S3-001",
+      "6ad6d5f981388191a6fc7facb9191198-20261024T0314-0300-F3B-REVIEW-S3-002"
+    ]
+  },
+  "parent": {
+    "stable_id": "S2-F3B-DESI-DR1-TEMPORAL-PROXY-20261023-V1",
+    "artifact_id": "1f0mssMIwsYbEXqye_2QtMq_kcorGuIih",
+    "artifact_sha256": "603470e96772158d3c5669bf28aeb0451b755c87f5cc0833bf4f6cb7d1d7a8c1",
+    "recipe_commit": "51329d11ddcfe82eec0c88653ad7ed1aebd661d0",
+    "recipe_blob_sha": "befd3068448bbd17f53d11d76ba8f7a5772f2a5a"
+  },
+  "review": {
+    "decision": "REVIEW_CONFIRMED_WITH_SCOPE_LIMIT; ENFRAQUECE; STOP_PROXY_BRANCH",
+    "joint_delta_chi2": -1.300826558577569,
+    "favorable_blocks": "1/5",
+    "artifact_id": "1EXVwYvj0bYH2SZ_ZCaUWx7FJ9PGMCqA3",
+    "artifact_sha256": "83e10e64f67134335c4bc7ad90aa7b2aeb82c67232cc75f97dcb00d3bd20d4e4",
+    "result_sha256": "6f60a8d06107d16ef7e4b0046d1feba668af7bccee10025a9312615e50a18017",
+    "scope_limit": "Independent arithmetic, aggregation, decision-rule and deletion-sensitivity audit; not an independent likelihood rerun."
+  },
+  "privacy": "sanitized; no private framework payloads"
+}
