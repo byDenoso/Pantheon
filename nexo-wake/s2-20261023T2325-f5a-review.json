@@ -1,0 +1,30 @@
+{
+  "schema_version": "NEXO_WRITER_RELAY_V1",
+  "task_id": "6ad6d5fd907881918a9112f8fc806118",
+  "role": "S2",
+  "run_id": "S2-REVIEW-S3-F5A-MNU-TAU-IDENTIFIABILITY-20261023T2325-0300",
+  "stable_ids": [
+    "6ad6d5fd907881918a9112f8fc806118-20261023T2325-F5A-REVIEW-S2-001",
+    "6ad6d5fd907881918a9112f8fc806118-20261023T2325-F5A-REVIEW-S2-002"
+  ],
+  "source_spreadsheet_id": "1M2maKkuEjxumZRa145dzei7dEPFi2yKsKlUf7_scC-E",
+  "source_sheet": "SHADOW_V2",
+  "expected_source_rows": [
+    756,
+    757
+  ],
+  "artifact": {
+    "drive_file_id": "1GHCL7E_F3j6r-iRgv5ZeqJWZjWV7oYGn",
+    "sha256": "7d47abf81a6f74438e1e5c70c6f84c9d1b57e85d19427dacbd437b574932c574",
+    "size_bytes": 12848
+  },
+  "evidence": {
+    "parent_task_id": "6ad6d5f981388191a6fc7facb9191198",
+    "parent_result_sha256": "e15f40de4430a6c7d78de236074853035f67fd62f6687ceb137b2da7a4f1df5a",
+    "review_result_sha256": "958916f34a714165b988c9e058d083a44ee9afc47bd59d70b5a843a6a5f02519",
+    "script_sha256": "e05219bb7d91cee2e558a8d36e227e4af3655663bb574f463710c741253b3b6c"
+  },
+  "scientific_decision": "REVIEW_CONFIRMED; INCONCLUSIVO; NUMERICAL_CONTROL_FAILED; HIGH_L_STANDALONE_NONIDENTIFIABLE; STOP_BRANCH",
+  "privacy": "SANITIZED_RELAY_NO_PRIVATE_PAYLOAD",
+  "writer_state": "ENQUEUED_PENDING"
+}
