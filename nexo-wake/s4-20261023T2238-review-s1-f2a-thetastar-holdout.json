@@ -15,7 +15,19 @@
       "6ad6d60458508191a0a7ea80a5391368-20261023T2238-F2A-THETASTAR-REVIEW-S4-001",
       "6ad6d60458508191a0a7ea80a5391368-20261023T2238-F2A-THETASTAR-REVIEW-S4-002"
     ],
-    "source_readback_verified": true
+    "source_readback_verified": true,
+    "receipts": [
+      "APPLIED:f6e6ce5b6c1b6e9f",
+      "APPLIED:ca9309f781a78084"
+    ]
+  },
+  "canonical": {
+    "spreadsheet_id": "1wizywUGEMd_8KrNqMcz5PQig3KgOTbZd8ENkTW8nRKw",
+    "ranges": [
+      "RESULTADOS!A765:J765",
+      "MURAL!A501:H501"
+    ],
+    "readback_verified": true
   },
   "artifact": {
     "drive_file_id": "1EFbLDWOtWfJZSw_S4axWy20Bmi2eC6ic",
@@ -33,5 +45,5 @@
     "review_result_sha256": "5ef30d636966092f0db3b9dbfd00e4a5ae493fdd306bdbfa89b87bbe3e8a2274",
     "canonical_payload_sha256": "6d07fac05ec48cb11c5ac8830bc6cc91c07f9c8be94049913bbd2be1ad5b5ee4"
   },
-  "state": "READY"
+  "state": "PERSISTED"
 }
