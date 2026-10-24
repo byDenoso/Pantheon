@@ -6,18 +6,35 @@
   "stable_ids": [
     "6ad6d5f6485c8191a263a890f1721eef-20261024T0609-01"
   ],
-  "source_spreadsheet_id": "1M2maKkuEjxumZRa145dzei7dEPFi2yKsKlUf7_scC-E",
-  "source_sheet": "SHADOW_V2",
-  "expected_source_rows": [
-    799
-  ],
+  "source": {
+    "spreadsheet_id": "1M2maKkuEjxumZRa145dzei7dEPFi2yKsKlUf7_scC-E",
+    "sheet": "SHADOW_V2",
+    "rows": [
+      799
+    ],
+    "range": "SHADOW_V2!A799:O799",
+    "source_readback_verified": true,
+    "receipts": [
+      "APPLIED:0949080d36ed85ea"
+    ]
+  },
+  "canonical": {
+    "spreadsheet_id": "1wizywUGEMd_8KrNqMcz5PQig3KgOTbZd8ENkTW8nRKw",
+    "ranges": [
+      "RESULTADOS!A785:J785"
+    ],
+    "readback_verified": true
+  },
   "artifact": {
     "drive_file_id": "1r8J7DY3x4Ze07iKNHMR8iCoY6_aD23e2",
+    "url": "https://drive.google.com/file/d/1r8J7DY3x4Ze07iKNHMR8iCoY6_aD23e2/view",
     "sha256": "9267aea6facf19f2da48e230e4b32669ee6772e18a628d8a2fed48a2a0e6cfd3",
-    "size_bytes": 4434
+    "size_bytes": 4434,
+    "upload_readback_verified": true
   },
   "scientific_decision": "EXCLUI_SOB_CONDICOES_REUSO_R5_COMO_EQUIVALENTE; F2B_INCONCLUSIVO_NAO_TESTADO",
   "resolved_dependency": "F2B_R5_MAPPING_NOT_EQUIVALENT",
   "privacy": "SANITIZED_RELAY_NO_PRIVATE_PAYLOAD",
-  "writer_state": "ENQUEUED_PENDING"
+  "persisted_at": "2026-10-24T09:17:00Z",
+  "writer_state": "PERSISTED"
 }
