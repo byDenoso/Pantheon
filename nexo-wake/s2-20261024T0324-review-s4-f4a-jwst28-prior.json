@@ -21,9 +21,11 @@
       "APPLIED:19b986c539be7d4f"
     ]
   },
-  "readback": {
-    "status": "VERIFIED",
-    "verified_at": "2026-10-24T06:26:00Z"
+  "target_readback": {
+    "spreadsheet_id": "1wizywUGEMd_8KrNqMcz5PQig3KgOTbZd8ENkTW8nRKw",
+    "RESULTADOS_row": 777,
+    "MURAL_row": 527,
+    "status": "VERIFIED"
   },
   "artifact": {
     "drive_id": "1XjIwyqy34qrhc9fgYa-wOpk1DqcSomGk",
