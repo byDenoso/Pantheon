@@ -9,9 +9,25 @@
   ],
   "source_spreadsheet_id": "1M2maKkuEjxumZRa145dzei7dEPFi2yKsKlUf7_scC-E",
   "source_sheet": "SHADOW_V2",
-  "expected_source_rows": [
+  "source_rows": [
     756,
     757
+  ],
+  "writer_receipts": [
+    "APPLIED:1160dbdabb7e77a5",
+    "APPLIED:c00e73941e7a4f56"
+  ],
+  "target_readback": [
+    {
+      "tab": "RESULTADOS",
+      "row": 767,
+      "stable_id": "6ad6d5fd907881918a9112f8fc806118-20261023T2325-F5A-REVIEW-S2-001"
+    },
+    {
+      "tab": "MURAL",
+      "row": 508,
+      "stable_id": "6ad6d5fd907881918a9112f8fc806118-20261023T2325-F5A-REVIEW-S2-002"
+    }
   ],
   "artifact": {
     "drive_file_id": "1GHCL7E_F3j6r-iRgv5ZeqJWZjWV7oYGn",
@@ -26,5 +42,5 @@
   },
   "scientific_decision": "REVIEW_CONFIRMED; INCONCLUSIVO; NUMERICAL_CONTROL_FAILED; HIGH_L_STANDALONE_NONIDENTIFIABLE; STOP_BRANCH",
   "privacy": "SANITIZED_RELAY_NO_PRIVATE_PAYLOAD",
-  "writer_state": "ENQUEUED_PENDING"
+  "writer_state": "PERSISTED"
 }
