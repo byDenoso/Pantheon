@@ -28,6 +28,18 @@
   },
   "scientific_decision": "ENFRAQUECE; FAVORECE_CONDICIONALMENTE_CMB_ONLY; STOP_CMB_ONLY_FISHER_REPEATS",
   "privacy": "SANITIZED_RELAY_NO_PRIVATE_PAYLOAD",
-  "writer_state": "ENQUEUED",
-  "persistence_verified": false
+  "writer_state": "PERSISTED",
+  "writer_receipts": [
+    "APPLIED:7e00e5a6d086b5c5",
+    "APPLIED:6ba4c4fb075a6e67"
+  ],
+  "target_readback": {
+    "resultados_row": 773,
+    "mural_row": 518
+  },
+  "writer_workflow": {
+    "run_id": 40065706138,
+    "conclusion": "success"
+  },
+  "persistence_verified": true
 }
