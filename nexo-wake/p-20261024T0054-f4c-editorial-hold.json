@@ -22,7 +22,21 @@
     "source": "arXiv:2609.35974v2"
   },
   "privacy": "SANITIZED_RELAY_NO_PRIVATE_PAYLOAD",
-  "writer_state": "ENQUEUED",
-  "source_state_verified_empty": true,
-  "persistence_verified": false
+  "writer_state": "PERSISTED",
+  "writer_receipts": [
+    "APPLIED:62bbc2c06a8b6102",
+    "APPLIED:f1ba2b1d2c91c7bb"
+  ],
+  "target_readback": {
+    "mural_rows": [
+      513,
+      514
+    ],
+    "curation_receipt_rows": [
+      515,
+      516
+    ],
+    "resumo_row": 88
+  },
+  "persistence_verified": true
 }
