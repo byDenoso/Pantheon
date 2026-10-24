@@ -29,6 +29,23 @@
     "f5b_review_sha256": "61a895117c8d45b7b6372d03e47fcd0233f3b8dc59aac137c96764a7b0c1ffc0"
   },
   "privacy": "SANITIZED_RELAY_NO_PRIVATE_PAYLOAD",
-  "writer_state": "ENQUEUED",
-  "persistence_verified": false
+  "writer_state": "PERSISTED",
+  "writer_receipts": [
+    "APPLIED:206bc960ae5aae7c",
+    "APPLIED:cd9d4365a7d05623",
+    "APPLIED:61fca7e1f2a726a8"
+  ],
+  "target_readback": {
+    "mural_rows": [
+      521,
+      522,
+      523
+    ],
+    "curation_receipt_rows": [
+      524,
+      525
+    ],
+    "resumo_row": 89
+  },
+  "persistence_verified": true
 }
