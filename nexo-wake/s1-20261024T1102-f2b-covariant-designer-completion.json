@@ -1,0 +1,23 @@
+{
+  "contract": "NEXO_WRITER_WAKE_V1",
+  "task_id": "6ad6d5f6485c8191a263a890f1721eef",
+  "role": "S1",
+  "requested_at": "2026-10-24T11:07:00-03:00",
+  "spool": {
+    "spreadsheet_id": "1M2maKkuEjxumZRa145dzei7dEPFi2yKsKlUf7_scC-E",
+    "tab": "SHADOW_V2",
+    "rows": [
+      844,
+      845
+    ]
+  },
+  "stable_ids": [
+    "6ad6d5f6485c8191a263a890f1721eef-20261024T1102-0300-001",
+    "6ad6d5f6485c8191a263a890f1721eef-20261024T1102-0300-002"
+  ],
+  "targets": [
+    "RESULTADOS",
+    "MURAL"
+  ],
+  "reason": "F2B_COVARIANT_DESIGNER_COMPLETION_ENQUEUED"
+}
