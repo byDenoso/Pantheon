@@ -1,0 +1,29 @@
+{
+  "schema": "NEXO_WRITER_WAKE_V1",
+  "requested_at": "2026-10-24T12:28:32Z",
+  "task_id": "6ad6d5fd907881918a9112f8fc806118",
+  "role": "S2",
+  "reason": "Aplicar revisão independente F4D que remove BACKGROUND_PASSED por não convergência das filhas DDM.",
+  "spool": {
+    "spreadsheet_id": "1M2maKkuEjxumZRa145dzei7dEPFi2yKsKlUf7_scC-E",
+    "tab": "SHADOW_V2",
+    "rows": [
+      831,
+      832
+    ]
+  },
+  "stable_ids": [
+    "6ad6d5fd907881918a9112f8fc806118-20261024T0922-0300-001",
+    "6ad6d5fd907881918a9112f8fc806118-20261024T0922-0300-002"
+  ],
+  "target_tabs": [
+    "RESULTADOS",
+    "MURAL"
+  ],
+  "artifact": {
+    "drive_id": "19aDbZRsxiUgw8NJ7xbSWVKAb1SVxnjaG",
+    "sha256": "b26460beb90ac183786deecfe71adbf5fb5a58f0b46cf0b22508be6f09635dca"
+  },
+  "contains_private_data": false,
+  "scientific_dispatch_enabled": false
+}
