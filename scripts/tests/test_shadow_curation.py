@@ -57,9 +57,23 @@ class CurationTests(unittest.TestCase):
         r=self.run_request(s,row)
         self.assertEqual(r['already_applied'],1);self.assertEqual(s.roadmap[4],'P2');self.assertEqual(len(s.calls),1)
 
-    def test_stale_precondition_has_no_side_effects(self):
-        s=Session();s.roadmap[5]='Concurrent edit';r=self.run_request(s,event())
-        self.assertEqual(r['conflict'],1);self.assertEqual(s.calls,[])
+    def test_stale_precondition_writes_audit_only_never_overwrites_roadmap(self):
+        s=Session();s.roadmap[5]='Concurrent edit';row=event()
+        r=self.run_request(s,row)
+        self.assertEqual(r['superseded'],1)
+        self.assertEqual(s.roadmap[5],'Concurrent edit')
+        self.assertEqual(len(s.calls),1)
+        self.assertEqual(len(s.calls[0]['requests']),1)
+        self.assertEqual(list(s.mural.values())[-1][5],'SUPERSEDED')
+        again=self.run_request(s,row)
+        self.assertEqual(again['already_superseded'],1)
+        self.assertEqual(len(s.calls),1)
+
+    def test_stale_preflight_does_not_write_audit(self):
+        s=Session();s.roadmap[5]='Concurrent edit'
+        r=self.run_request(s,event(),apply=False)
+        self.assertEqual(r['superseded_candidate'],1)
+        self.assertEqual(s.calls,[])
 
     def test_reservation_without_apply_never_replays(self):
         s=Session();row=event();request=c.parse(row)
