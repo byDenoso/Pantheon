@@ -15,9 +15,10 @@ except ImportError:
     import nexo_shadow_writer as w
 
 PREFIX = 'NEXO_CURATION_V1 '
+OLDER_ROLE_ID = '6ad6d608291c8191a518e9667b72bcab'  # verified P Task identity on 21-24 Oct; historical receipts only
 ROLE_ID = '6adcbfe8693881919c4f756adafd1ab1'  # historical pending P curation receipts
 CURRENT_ROLE_ID = '6ade1cf703648191a46f59f0475894fe'  # live P task in AGENTS 2026-10-25
-P_CURATOR_IDS = frozenset((ROLE_ID, CURRENT_ROLE_ID))
+P_CURATOR_IDS = frozenset((OLDER_ROLE_ID, ROLE_ID, CURRENT_ROLE_ID))
 CANARY = 'CORE5-CURATION-473-CANARY'
 CANARY_ITEM = 'OPS-I-DATASETS-INDEX-20261019'
 ROADMAP_ID = 1202623426
@@ -33,7 +34,7 @@ OPERATIONAL_STATES = {'OPEN','PARTIAL','BLOCKED_INPUT','HOLD','PARKED','SUPERSED
 # Count UTF-16 conservatively for the Sheets 50,000-character cell boundary.
 MAX_CELL_UTF16 = 50000
 MAX_BATCH_BYTES = 2_000_000
-MAX_PER_RUN = 5
+MAX_PER_RUN = 24  # bounded throughput; excess curation stays queued for next cycle
 DIGEST = re.compile(r'^[a-f0-9]{64}$')
 
 class CurationError(ValueError):
