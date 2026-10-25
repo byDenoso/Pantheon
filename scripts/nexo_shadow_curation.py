@@ -15,9 +15,10 @@ except ImportError:
     import nexo_shadow_writer as w
 
 PREFIX = 'NEXO_CURATION_V1 '
+OLDER_ROLE_ID = '6ad6d608291c8191a518e9667b72bcab'  # verified prior P actor, 21 historical receipts
 ROLE_ID = '6adcbfe8693881919c4f756adafd1ab1'  # historical pending P curation receipts
 CURRENT_ROLE_ID = '6ade1cf703648191a46f59f0475894fe'  # live P task in AGENTS 2026-10-25
-P_CURATOR_IDS = frozenset((ROLE_ID, CURRENT_ROLE_ID))
+P_CURATOR_IDS = frozenset((OLDER_ROLE_ID, ROLE_ID, CURRENT_ROLE_ID))
 CANARY = 'CORE5-CURATION-473-CANARY'
 CANARY_ITEM = 'OPS-I-DATASETS-INDEX-20261019'
 ROADMAP_ID = 1202623426
@@ -28,8 +29,9 @@ FIELDS = {name:i for i,name in enumerate(ROADMAP_HEADER) if i >= 2}
 # READY/RUNNING and scientific promotions belong to execution/review receipts,
 # not to an unsupported assertion in a curation request.
 OPERATIONAL_STATES = {'OPEN','PARTIAL','BLOCKED_INPUT','HOLD','PARKED','SUPERSEDED','RETIRED'}
-MAX_BATCH_UTF16 = 32000
-MAX_PER_RUN = 5
+MAX_BATCH_BYTES = 1500000  # conservative transport bound, not an editorial text cap
+MAX_CELL_UTF16 = 50000  # actual Google Sheets per-cell content limit
+MAX_PER_RUN = 24  # bounded progress with room for historical backlog
 DIGEST = re.compile(r'^[a-f0-9]{64}$')
 
 class CurationError(ValueError):
@@ -44,7 +46,14 @@ def sha(obj):
     return hashlib.sha256(compact(obj).encode('utf-8')).hexdigest()
 
 
+def utf16_len(value):
+    return len(value.encode('utf-16-le')) // 2
+
+
 def cells(values):
+    # Reject only a real Sheets cell overflow, not ordinary scientific prose.
+    if any(not isinstance(v,str) or utf16_len(v) > MAX_CELL_UTF16 for v in values):
+        raise CurationError('CURATION_CELL_LIMIT')
     return [{'userEnteredValue':{'stringValue':v}} for v in values]
 
 
@@ -77,7 +86,7 @@ def parse(row):
         if request['item'] != row[6] or request['field'] not in FIELDS or not DIGEST.fullmatch(request['before']):
             raise CurationError('CURATION_TARGET_INVALID')
         value = request['value']; field = request['field']
-        if len(value) > 350 or any(ord(c) < 32 and c not in '\n\t' for c in value):
+        if utf16_len(value) > MAX_CELL_UTF16 or any(ord(c) < 32 and c not in '\n\t' for c in value):
             raise CurationError('CURATION_VALUE_INVALID')
         if field == 'prio' and value not in {'P1','P2','P3','P4','P5'}:
             raise CurationError('CURATION_PRIORITY_INVALID')
@@ -92,7 +101,7 @@ def parse(row):
             raise CurationError('CURATION_SCHEMA_INVALID')
         values = request['row']
         if (not isinstance(values,list) or len(values) != 6 or
-            not all(isinstance(v,str) and len(v) <= 350 for v in values) or
+            not all(isinstance(v,str) and utf16_len(v) <= MAX_CELL_UTF16 for v in values) or
             values[2] != row[6] or not values[0] or not values[1]):
             raise CurationError('CURATION_SUMMARY_INVALID')
     else:
@@ -121,6 +130,7 @@ def audit(row, suffix, message):
 
 
 def append_request(data):
+    cells(data['values'])  # fail on a genuine cell limit even for audit receipts
     try:
         return w.append_request(data)
     except ValueError as exc:
@@ -129,8 +139,8 @@ def append_request(data):
 
 def post(session, requests):
     payload={'requests':requests}
-    n=len(compact({'spreadsheet_id':w.SHADOW,**payload}).encode('utf-16-le'))//2
-    if n > MAX_BATCH_UTF16:
+    n=len(compact({'spreadsheet_id':w.SHADOW,**payload}).encode('utf-8'))
+    if n > MAX_BATCH_BYTES:
         raise CurationError('CURATION_TRANSACTION_TOO_LARGE')
     response=session.post(f'{w.API}/{w.SHADOW}:batchUpdate',json=payload,timeout=60)
     response.raise_for_status()
@@ -204,8 +214,8 @@ def process_one(session, row, request, *, apply, index=None):
     requests = append_request(claim)['requests'] + [
         update, append_request(done)['requests'][0]]
     count = len(compact({'spreadsheet_id':w.SHADOW,
-                         'requests':requests}).encode('utf-16-le')) // 2
-    if count > MAX_BATCH_UTF16:
+                         'requests':requests}).encode('utf-8'))
+    if count > MAX_BATCH_BYTES:
         raise CurationError('CURATION_TRANSACTION_TOO_LARGE')
     if not apply:
         return 'eligible'
