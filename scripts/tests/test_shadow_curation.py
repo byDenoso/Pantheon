@@ -84,6 +84,11 @@ class CurationTests(unittest.TestCase):
         self.assertEqual(s.roadmap[4],'P4')
         self.assertEqual(c.parse(event(eid=c.ROLE_ID+'-20261024-001'))['op'],'roadmap.set')
 
+    def test_verified_original_p_identity_preserved(self):
+        s=Session();row=event(eid=c.OLDER_ROLE_ID+'-20261024T1055-0300-001')
+        self.assertEqual(self.run_request(s,row)['applied'],1)
+        self.assertEqual(s.roadmap[4],'P4')
+
     def test_unlisted_p_identity_is_rejected(self):
         s=Session();row=event(eid='6ade0000000000000000000000000000-20261025-002')
         self.assertEqual(self.run_request(s,row)['invalid'],1)
@@ -128,12 +133,38 @@ class CurationTests(unittest.TestCase):
         self.assertEqual(saved['h1'],c.sha(s.roadmap))
 
     def test_genuinely_oversized_audit_fails_without_data_loss(self):
-        s=Session();s.roadmap[8]='Old context. '*3500
+        s=Session();s.roadmap[8]='Old context. '*5000
         before=s.roadmap.copy()
         row=event(field='nota',value='new',before=c.sha(before))
         self.assertEqual(self.run_request(s,row)['invalid'],1)
         self.assertEqual(s.calls,[])
         self.assertEqual(s.roadmap,before)
+
+    def test_scientific_roadmap_text_longer_than_350(self):
+        s=Session();value='Comparar likelihoods nativos, priors e covariancias: '*14
+        self.assertGreater(len(value),350)
+        row=event(field='proximo_teste',value=value)
+        self.assertEqual(self.run_request(s,row)['applied'],1)
+        self.assertEqual(s.roadmap[5],value)
+
+    def test_long_resumo_fields_preserved_exactly(self):
+        s=Session();row=event()
+        values=[row[0],'E1',BASE[0],'Descricao '+('diagnostico detalhado '*50),
+                'Impacto '+('ainda sem revisao independente '*40),'source']
+        row[3]=c.PREFIX+c.compact({'op':'resumo.append','row':values})
+        self.assertGreater(max(map(len,values)),350)
+        self.assertEqual(self.run_request(s,row)['applied'],1)
+        self.assertEqual(s.summary,[values])
+
+    def test_atomic_history_receipt_larger_than_old_limit(self):
+        s=Session();s.roadmap[8]='Historico validado. '*2300
+        before=s.roadmap.copy()
+        self.assertGreater(len(before[8]),32000)
+        self.assertLess(c.utf16_len(before[8]),c.MAX_CELL_UTF16)
+        row=event(field='nota',value='Updated context',before=c.sha(before))
+        self.assertEqual(self.run_request(s,row)['applied'],1)
+        saved=json.loads(list(s.mural.values())[-1][3])
+        self.assertEqual(saved['b'],before[8])
 
     def test_legacy_claim_with_target_changed_is_not_replayed(self):
         s=Session();row=event();request=c.parse(row)
@@ -157,6 +188,14 @@ class CurationTests(unittest.TestCase):
         with patch.object(c,'process_one',side_effect=lambda *a,**k:next(states)):
             r=c.run(None,rows,apply=True)
         self.assertEqual(r['applied'],1);self.assertEqual(r['unresolved'],7)
+
+    def test_24_independent_curation_events_per_cycle(self):
+        rows=[event(eid=c.ROLE_ID+'-bulk-'+str(i)) for i in range(25)]
+        states=iter(['applied']*25)
+        with patch.object(c,'process_one',side_effect=lambda *a,**k:next(states)):
+            r=c.run(None,rows,apply=True)
+        self.assertEqual(r['applied'],c.MAX_PER_RUN)
+        self.assertEqual(r['deferred'],1)
 
     def test_curation_errors_are_reported_as_partial(self):
         for key in ('curation_invalid','curation_unresolved','curation_conflict'):
