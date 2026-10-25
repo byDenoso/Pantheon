@@ -15,7 +15,9 @@ except ImportError:
     import nexo_shadow_writer as w
 
 PREFIX = 'NEXO_CURATION_V1 '
-ROLE_ID = '6adcbfe8693881919c4f756adafd1ab1'
+ROLE_ID = '6adcbfe8693881919c4f756adafd1ab1'  # historical pending P curation receipts
+CURRENT_ROLE_ID = '6ade1cf703648191a46f59f0475894fe'  # live P task in AGENTS 2026-10-25
+P_CURATOR_IDS = frozenset((ROLE_ID, CURRENT_ROLE_ID))
 CANARY = 'CORE5-CURATION-473-CANARY'
 CANARY_ITEM = 'OPS-I-DATASETS-INDEX-20261019'
 ROADMAP_ID = 1202623426
@@ -58,7 +60,7 @@ def parse(row):
     if row[2] != 'WRITER':
         raise CurationError('CURATION_RECIPIENT_INVALID')
     manual_canary = row[1] == 'INTERATIVO' and row[7] == CANARY
-    if not manual_canary and (row[1] != 'P' or not row[7].startswith(ROLE_ID+'-')):
+    if not manual_canary and (row[1] != 'P' or not any(row[7].startswith(task_id+'-') for task_id in P_CURATOR_IDS)):
         raise CurationError('CURATION_ROLE_NOT_ALLOWED')
     try:
         request = json.loads(row[3][len(PREFIX):],object_pairs_hook=w.strict_obj,
