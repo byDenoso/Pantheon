@@ -206,6 +206,23 @@ class Recovery(unittest.TestCase):
         counts,s=self.invoke([_recovery_plain(_recovery_data())],apply=False)
         self.assertEqual(counts['eligible'],1); self.assertEqual(s.posts,[]); self.assertEqual(s.marks,[])
 
+    def test_preexisting_invalid_spool_marker_is_not_a_new_incident(self):
+        d=_recovery_data('legacy-invalid-marker')
+        bad=_recovery_plain(d,state='INVALID:PLAIN_TRAILING_VALUES');bad[12]='unexpected'
+        counts,s=self.invoke([bad,_recovery_plain(_recovery_data('good-event'))])
+        self.assertEqual(counts['invalid'],1)
+        self.assertEqual(counts['preexisting_invalid'],1)
+        self.assertEqual(counts['new_failures'],0)
+        self.assertEqual(counts['written'],1)
+
+    def test_preexisting_pending_sync_is_visible_not_new(self):
+        d=_recovery_data('old-pending-sync')
+        counts,s=self.invoke([_recovery_plain(d,state='PENDING_SYNC')])
+        self.assertEqual(counts['quarantined'],1)
+        self.assertEqual(counts['preexisting_quarantined'],1)
+        self.assertEqual(counts['new_failures'],0)
+        self.assertEqual(s.posts,[])
+
     def test_invalid_row_keeps_other_work_running(self):
         invalid=_recovery_plain(_recovery_data()); invalid[12]='stray'
         counts,s=self.invoke([invalid,_recovery_plain(_recovery_data('event-good'))])
@@ -290,6 +307,34 @@ class Recovery(unittest.TestCase):
         self.assertEqual(response.status_code,200)
         self.assertEqual(session.calls,3)
         self.assertEqual(sleep.call_count,2)
+
+    def test_read_only_retry_after_transient_503(self):
+        class R:
+            def __init__(self,status):self.status_code=status
+            def raise_for_status(self):
+                if self.status_code != 200:raise RuntimeError('HTTP temporary')
+        class S:
+            def __init__(self):self.calls=0
+            def get(self,url,**kwargs):
+                self.calls+=1
+                return R(503 if self.calls<3 else 200)
+        s=S()
+        with patch.object(w.time,'sleep') as delay:
+            r=w.safe_get(s,'https://sheets.googleapis.com/test')
+        self.assertEqual(r.status_code,200)
+        self.assertEqual(s.calls,3)
+        self.assertEqual(delay.call_count,2)
+
+    def test_nontransient_400_fails_without_retry(self):
+        class R:
+            status_code=400
+            def raise_for_status(self):raise ValueError('bad request')
+        class S:
+            def __init__(self):self.calls=0
+            def get(self,url,**kwargs):self.calls+=1;return R()
+        s=S()
+        with self.assertRaises(ValueError):w.safe_get(s,'https://sheets.googleapis.com/test')
+        self.assertEqual(s.calls,1)
 
     def test_http_status_without_private_exception_details(self):
         class HTTPError(Exception):
