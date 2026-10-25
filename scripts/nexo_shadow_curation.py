@@ -28,7 +28,11 @@ FIELDS = {name:i for i,name in enumerate(ROADMAP_HEADER) if i >= 2}
 # READY/RUNNING and scientific promotions belong to execution/review receipts,
 # not to an unsupported assertion in a curation request.
 OPERATIONAL_STATES = {'OPEN','PARTIAL','BLOCKED_INPUT','HOLD','PARKED','SUPERSEDED','RETIRED'}
-MAX_BATCH_UTF16 = 32000
+# Transport bounds, not editorial limits. Google recommends payloads <= 2 MB:
+# https://developers.google.com/workspace/sheets/api/limits
+# Count UTF-16 conservatively for the Sheets 50,000-character cell boundary.
+MAX_CELL_UTF16 = 50000
+MAX_BATCH_BYTES = 2_000_000
 MAX_PER_RUN = 5
 DIGEST = re.compile(r'^[a-f0-9]{64}$')
 
@@ -44,8 +48,34 @@ def sha(obj):
     return hashlib.sha256(compact(obj).encode('utf-8')).hexdigest()
 
 
+def validate_cell(value):
+    if not isinstance(value, str) or any(ord(ch) < 32 and ch not in '\n\t' for ch in value):
+        raise CurationError('CURATION_VALUE_INVALID')
+    try:
+        units = len(value.encode('utf-16-le')) // 2
+    except UnicodeEncodeError as exc:
+        raise CurationError('CURATION_VALUE_INVALID') from exc
+    if units > MAX_CELL_UTF16:
+        raise CurationError('CURATION_CELL_TOO_LARGE')
+
+
 def cells(values):
+    for value in values:
+        validate_cell(value)
     return [{'userEnteredValue':{'stringValue':v}} for v in values]
+
+
+def validate_batch(requests):
+    for request in requests:
+        for operation in request.values():
+            for row in operation.get('rows', []):
+                for cell in row.get('values', []):
+                    entered = cell.get('userEnteredValue', {})
+                    if 'stringValue' in entered:
+                        validate_cell(entered['stringValue'])
+    # Match requests' default JSON encoding, including escaping and whitespace.
+    if len(json.dumps({'requests': requests}, allow_nan=False).encode('utf-8')) > MAX_BATCH_BYTES:
+        raise CurationError('CURATION_TRANSACTION_TOO_LARGE')
 
 
 def parse(row):
@@ -77,8 +107,7 @@ def parse(row):
         if request['item'] != row[6] or request['field'] not in FIELDS or not DIGEST.fullmatch(request['before']):
             raise CurationError('CURATION_TARGET_INVALID')
         value = request['value']; field = request['field']
-        if len(value) > 350 or any(ord(c) < 32 and c not in '\n\t' for c in value):
-            raise CurationError('CURATION_VALUE_INVALID')
+        validate_cell(value)
         if field == 'prio' and value not in {'P1','P2','P3','P4','P5'}:
             raise CurationError('CURATION_PRIORITY_INVALID')
         if field == 'status' and value not in OPERATIONAL_STATES:
@@ -92,9 +121,11 @@ def parse(row):
             raise CurationError('CURATION_SCHEMA_INVALID')
         values = request['row']
         if (not isinstance(values,list) or len(values) != 6 or
-            not all(isinstance(v,str) and len(v) <= 350 for v in values) or
+            not all(isinstance(v,str) for v in values) or
             values[2] != row[6] or not values[0] or not values[1]):
             raise CurationError('CURATION_SUMMARY_INVALID')
+        for value in values:
+            validate_cell(value)
     else:
         raise CurationError('CURATION_OPERATION_NOT_ALLOWED')
     return request
@@ -129,9 +160,7 @@ def append_request(data):
 
 def post(session, requests):
     payload={'requests':requests}
-    n=len(compact({'spreadsheet_id':w.SHADOW,**payload}).encode('utf-16-le'))//2
-    if n > MAX_BATCH_UTF16:
-        raise CurationError('CURATION_TRANSACTION_TOO_LARGE')
+    validate_batch(requests)
     response=session.post(f'{w.API}/{w.SHADOW}:batchUpdate',json=payload,timeout=60)
     response.raise_for_status()
 
@@ -203,10 +232,7 @@ def process_one(session, row, request, *, apply, index=None):
     # atomically. Legacy CLAIMED without APPLIED is never replayed.
     requests = append_request(claim)['requests'] + [
         update, append_request(done)['requests'][0]]
-    count = len(compact({'spreadsheet_id':w.SHADOW,
-                         'requests':requests}).encode('utf-16-le')) // 2
-    if count > MAX_BATCH_UTF16:
-        raise CurationError('CURATION_TRANSACTION_TOO_LARGE')
+    validate_batch(requests)
     if not apply:
         return 'eligible'
 
