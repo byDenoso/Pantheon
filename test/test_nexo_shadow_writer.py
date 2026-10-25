@@ -130,6 +130,31 @@ class Recovery(unittest.TestCase):
         self.assertEqual(counts['written'],1); self.assertEqual(len(s.posts),1)
         self.assertEqual(s.marks,[(2,'CLAIMED:'+w.digest_for(d)),(2,'APPLIED:'+w.digest_for(d))])
 
+    def test_separate_appends_share_one_verified_target_read(self):
+        docs=[_recovery_data('batch-verify-'+str(i)) for i in range(6)]
+        rows=[_recovery_plain(x) for x in docs]
+        s=Session()
+        sources={w.PLAIN_TAB:[(1,w.PLAIN_HEADER),*[(i+2,r) for i,r in enumerate(rows)]],
+                 w.LEGACY_TAB:[(1,['stable_id','created_at','role','envelope_b64url'])]}
+        with patch.object(w,'page_rows',side_effect=lambda ss,sh,tab,col,first=1:iter(sources[tab])), \
+             patch.object(w,'target_index',side_effect=lambda ss,tab:dict(s.records[tab])) as idx, \
+             patch.object(w,'mark',side_effect=lambda ss,tab,col,n,value:s.marks.append((n,value))):
+            counts=w.run(s,apply=True)
+        self.assertEqual(counts['written'],6)
+        self.assertEqual(counts['readback_batches'],1)
+        self.assertEqual(len(s.posts),6)
+        self.assertEqual(idx.call_count,3)
+        self.assertEqual([x[1][:7] for x in s.marks[:6]],['CLAIMED']*6)
+        self.assertEqual([x[1][:7] for x in s.marks[6:]],['APPLIED']*6)
+
+    def test_eight_plus_one_events_use_two_readback_batches(self):
+        docs=[_recovery_data('batch-9-'+str(i)) for i in range(9)]
+        counts,s=self.invoke([_recovery_plain(d) for d in docs])
+        self.assertEqual(counts['written'],9)
+        self.assertEqual(counts['readback_batches'],2)
+        self.assertEqual(len(s.posts),9)
+        self.assertEqual(len(s.marks),18)
+
     def test_existing_event_reconciles_without_append(self):
         d=_recovery_data(); counts,s=self.invoke([_recovery_plain(d)],records={'MURAL':{d['stable_id']:tuple(d['values'])},'RESULTADOS':{}})
         self.assertEqual(counts['reconciled'],1); self.assertEqual(s.posts,[])
