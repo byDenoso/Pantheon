@@ -27,6 +27,7 @@ TABS = {"MURAL": (1148777660, 8, "H"), "RESULTADOS": (247327396, 10, "D")}
 KEY = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.:\-]{5,127}$")
 PAGE_SIZE = 1000
 MAX_GRID_ROWS = 200000
+READBACK_BATCH_SIZE = 8  # batch safe verification reads; independent appends
 PLAIN_HEADER = ["stable_id","created_at","role","tab",
                 "v1","v2","v3","v4","v5","v6","v7","v8","v9","v10","state"]
 
@@ -185,7 +186,7 @@ def digest_for(data):
                      ensure_ascii=False, separators=(",", ":"), sort_keys=True).encode("utf-8")
     return hashlib.sha256(raw).hexdigest()[:16]
 
-def _process(session, stored, seen, counts, *, number, data, state, digest, mark_tab, mark_column, apply):
+def _process(session, stored, seen, counts, *, number, data, state, digest, mark_tab, mark_column, apply, queued=None):
     key = (data["tab"], data["stable_id"])
     fingerprint = tuple(data["values"])
     if key in seen:
@@ -223,12 +224,38 @@ def _process(session, stored, seen, counts, *, number, data, state, digest, mark
     response = session.post(f"{API}/{SHADOW}:batchUpdate",
                             json={"requests": append_request(data)["requests"]}, timeout=60)
     response.raise_for_status()
+    if queued is not None:
+        # Batch ONLY safe readbacks. Writes stay individually reserved and
+        # individually posted; a failed event cannot poison unrelated appends.
+        queued.append((data, digest, mark_tab, mark_column, number))
+        return
     refreshed = target_index(session, data["tab"])
     if not match_target(refreshed, data):
         raise RuntimeError("WRITE_READBACK_UNKNOWN")
     stored[data["tab"]] = refreshed
     mark(session, mark_tab, mark_column, number, applied)
     counts["written"] += 1
+
+def flush_verified_appends(session, stored, counts, queued):
+    """Coalesce readback of independently posted appends; never replay on error.
+
+    Each POST has returned success. If subsequent readback fails, the spool
+    remains CLAIMED; next cycle reconciles against the exact target ID/content.
+    """
+    if not queued:
+        return
+    touched = {item[0]['tab'] for item in queued}
+    refreshed = {tab: target_index(session, tab) for tab in touched}
+    for data, _, _, _, _ in queued:
+        if not match_target(refreshed[data['tab']], data):
+            raise RuntimeError('WRITE_READBACK_UNKNOWN')
+    for data, digest, mark_tab, mark_column, number in queued:
+        mark(session, mark_tab, mark_column, number, 'APPLIED:' + digest)
+        counts['written'] += 1
+    stored.update(refreshed)
+    counts['readback_batches'] += 1
+    queued.clear()
+
 
 def run(session, *, apply=False):
     stored = {tab: target_index(session, tab) for tab in TABS}
@@ -238,6 +265,7 @@ def run(session, *, apply=False):
     counts = {"eligible": 0, "written": 0, "invalid": 0, "legacy": 0,
               "plain": 0, "duplicate": 0, "attempted_before": 0, "reconciled": 0,
               "unresolved": 0, "conflict": 0, "quarantined": 0,
+              "readback_batches": 0,
               "target_conflicts": sum(len(getattr(index, "conflicts", ())) for index in stored.values())}
 
     legacy_rows = page_rows(session, SPOOL, LEGACY_TAB, "E")
@@ -291,6 +319,7 @@ def run(session, *, apply=False):
     for item in pending:
         data = item["data"]
         groups.setdefault((data["tab"], data["stable_id"]), []).append(item)
+    readback_queue = []
     for key, items in groups.items():
         fingerprints = {tuple(item["data"]["values"]) for item in items}
         if len(fingerprints) != 1 or key[1] in invalid_ids:
@@ -306,7 +335,10 @@ def run(session, *, apply=False):
                    1 if item["state"].startswith("CLAIMED:") else 2)
         for item in items:
             try:
-                _process(session, stored, seen, counts, **item, apply=apply)
+                _process(session, stored, seen, counts, **item, apply=apply,
+                         queued=readback_queue)
+                if len(readback_queue) >= READBACK_BATCH_SIZE:
+                    flush_verified_appends(session, stored, counts, readback_queue)
             except IdentityConflict:
                 counts["conflict"] += 1
             except AppliedReadbackMissing:
@@ -315,6 +347,7 @@ def run(session, *, apply=False):
                 counts["invalid"] += 1
             # Authentication, transport and unknown failures still stop this run.
             # No retry, alternative route or lost-receipt replay is introduced.
+    flush_verified_appends(session, stored, counts, readback_queue)
     mural_rows = list(stored['MURAL'].values())
     if any(len(row) == 8 and isinstance(row[3], str) and
            row[3].startswith('NEXO_CURATION_V1 ') and row[5] == 'PEDIDO_CURADORIA'
