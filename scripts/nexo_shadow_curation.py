@@ -173,6 +173,10 @@ def receipt(session, data):
 def process_one(session, row, request, *, apply, index=None):
     claim = audit(row, 'claimed', compact({'r':row[7], 'h':sha(request)}))
     done_id = audit(row, 'applied', '')['stable_id']
+    # A stale CAS proposal is never applied, but it can receive a terminal,
+    # immutable audit receipt so it does not reappear as a fresh conflict.
+    stale = audit(row, 'superseded', compact({'r':row[7], 'h':sha(request),
+                                            'reason':'STALE_ROADMAP_VERSION'}))
     idx = index if index is not None else w.target_index(session, 'MURAL')
     if done_id in getattr(idx, 'conflicts', ()):
         raise CurationError('CURATION_RECEIPT_CONFLICT')
@@ -188,6 +192,13 @@ def process_one(session, row, request, *, apply, index=None):
                 or idx[done_id][5] != 'APPLIED'):
             raise CurationError('CURATION_RECEIPT_INVALID')
         return 'already_applied'
+
+    if stale['stable_id'] in getattr(idx, 'conflicts', ()):
+        raise CurationError('CURATION_RECEIPT_CONFLICT')
+    if stale['stable_id'] in idx:
+        if not w.match_target(idx, stale):
+            raise CurationError('CURATION_RECEIPT_INVALID')
+        return 'already_superseded'
 
     if claim['stable_id'] in getattr(idx, 'conflicts', ()):
         raise CurationError('CURATION_RECEIPT_CONFLICT')
@@ -209,7 +220,20 @@ def process_one(session, row, request, *, apply, index=None):
         if row[7] == CANARY and before[col] != 'P5':
             raise CurationError('CURATION_CANARY_WOULD_CHANGE_VALUE')
         if sha(before) != request['before']:
-            return 'conflict'
+            if not apply:
+                return 'superseded_candidate'
+            # Only an audit record is appended. NEVER overwrite the current
+            # ROADMAP cell when the original precondition has become stale.
+            post(session, append_request(stale)['requests'])
+            refreshed = w.target_index(session, 'MURAL')
+            if not w.match_target(refreshed, stale):
+                raise RuntimeError('CURATION_SUPERSEDED_READBACK_UNKNOWN')
+            if index is not None:
+                index.clear()
+                index.update(refreshed)
+                if hasattr(index, 'conflicts'):
+                    index.conflicts = set(getattr(refreshed, 'conflicts', ()))
+            return 'superseded'
         message = compact({'r':row[7], 'h':sha(request), 'op':'set',
                            'f':request['field'], 'b':before[col], 'a':after[col],
                            'h0':sha(before), 'h1':sha(after)})
@@ -264,7 +288,9 @@ def process_one(session, row, request, *, apply, index=None):
     return 'applied'
 
 def run(session, mural_rows, *, apply=False, index=None):
-    counts={key:0 for key in ('eligible','applied','already_applied','unresolved','conflict','invalid','deferred')}
+    counts={key:0 for key in ('eligible','applied','already_applied',
+        'superseded','already_superseded','superseded_candidate',
+        'unresolved','conflict','invalid','deferred')}
     used=0
     for row in mural_rows:
         try:
