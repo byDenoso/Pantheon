@@ -1,0 +1,148 @@
+diff --git a/source/background.c b/source/background.c
+--- a/source/background.c
++++ b/source/background.c
+@@ -2595,6 +2595,7 @@
+              pba->error_message,
+              pba->error_message);
+-  pba->h_ddm = pvecback[pba->index_bg_H]*_c_/1e5;
+-  pba->H0_ddm = pvecback[pba->index_bg_H];
++  /* Read the final stored background, not a mutable evolver workspace. */
++  pba->H0_ddm = pba->background_table[(pba->bt_size-1)*pba->bg_size+pba->index_bg_H];
++  pba->h_ddm = pba->H0_ddm*_c_/1e5;
+ 
+   pba->Omega0_b = pba->Omega0_b * pba->h*pba->h / (pba->h_ddm*pba->h_ddm);
+diff --git a/include/perturbations.h b/include/perturbations.h
+--- a/include/perturbations.h
++++ b/include/perturbations.h
+@@ -378,5 +378,6 @@
+   int N_G1_freq_max;       /**< the maximum # of frequencies for NUFFT with G1 **/
+   int N_G2_freq_max;       /**< the maximum # of frequencies for NUFFT with G2 **/
+-  int ntrans;              /**< dimension for vectorization of NUFFT **/
++  int ntrans;              /**< dimension for vectorization of NUFFT **/
++  int n_finufft_plan_threads; /**< number of canonical owner slots for FINUFFT plans */
+ 
+   finufft_plan * list_r2c_plans_finufft_short;  // real to complex plan (short)
+diff --git a/source/perturbations.c b/source/perturbations.c
+--- a/source/perturbations.c
++++ b/source/perturbations.c
+@@ -1242,5 +1242,16 @@
+ 	free(ppt->j_array);
+ 	free(ppt->dj_array);
+-	free(ppt->d2j_array);
++	free(ppt->d2j_array);
++    /* FINUFFT plans are owned by ppt, shared with one workspace per thread. */
++    for (int t=0; t<ppt->n_finufft_plan_threads; ++t) {
++      finufft_destroy(ppt->list_r2c_plans_finufft_short[t]);
++      finufft_destroy(ppt->list_c2r_plans_finufft_short[t]);
++      finufft_destroy(ppt->list_r2c_plans_finufft_long[t]);
++      finufft_destroy(ppt->list_c2r_plans_finufft_long[t]);
++    }
++    free(ppt->list_r2c_plans_finufft_short);
++    free(ppt->list_c2r_plans_finufft_short);
++    free(ppt->list_r2c_plans_finufft_long);
++    free(ppt->list_c2r_plans_finufft_long);
+   }
+    
+@@ -2196,5 +2207,6 @@
+ 	
+     int dim = 1, ier;
+-	ppt->ntrans = ppr->N_ell*ppr->N_type;
++	ppt->ntrans = ppr->N_ell*ppr->N_type;
++    ppt->n_finufft_plan_threads = number_of_threads;
+     int64_t Ns1[] = {ppr->N_G1}, Ns2[] = {ppr->N_G2},Ns2_freq[] = {ppt->N_G2_freq_max}, Ns3[] = {ppt->N_G1_freq_max};
+ 	class_alloc(ppt->list_r2c_plans_finufft_short, number_of_threads * sizeof(finufft_plan), ppt->error_message);
+@@ -2211,17 +2223,17 @@
+ 	  opts.nthreads = 1;
+ 
+-      finufft_plan r2c_plan_G1;
+-      finufft_plan c2r_plan_G1_tau;
+-      ppt->list_r2c_plans_finufft_short[index_thread] = r2c_plan_G1;
+-      ppt->list_c2r_plans_finufft_short[index_thread] = c2r_plan_G1_tau;
+-	  ier = finufft_makeplan(3, dim, Ns1, 1, ppr->N_type, 1e-6, &ppt->list_r2c_plans_finufft_short[index_thread], &opts);
+-      ier = finufft_makeplan(3, dim, Ns3, -1, ppr->N_ell, 1e-6, &ppt->list_c2r_plans_finufft_short[index_thread], &opts);
+-
+-      finufft_plan r2c_plan_G2;
+-      finufft_plan c2r_plan_G2_tau;
+-      ppt->list_r2c_plans_finufft_long[index_thread] = r2c_plan_G2;
+-      ppt->list_c2r_plans_finufft_long[index_thread] = c2r_plan_G2_tau;
+-      ier = finufft_makeplan(3, dim, Ns2, 1, ppr->N_type, 1e-6, &ppt->list_r2c_plans_finufft_long[index_thread], &opts);
+-      ier = finufft_makeplan(3, dim, Ns2_freq, -1, ppr->N_ell, 1e-6, &ppt->list_c2r_plans_finufft_long[index_thread], &opts);
++      ppt->list_r2c_plans_finufft_short[index_thread] = NULL;
++      ppt->list_c2r_plans_finufft_short[index_thread] = NULL;
++	  ier = finufft_makeplan(3, dim, Ns1, 1, ppr->N_type, 1e-6, &ppt->list_r2c_plans_finufft_short[index_thread], &opts);
++      class_test(ier > 1 || ppt->list_r2c_plans_finufft_short[index_thread] == NULL, ppt->error_message, "FINUFFT plan creation failed: code %d", ier);
++      ier = finufft_makeplan(3, dim, Ns3, -1, ppr->N_ell, 1e-6, &ppt->list_c2r_plans_finufft_short[index_thread], &opts);
++      class_test(ier > 1 || ppt->list_c2r_plans_finufft_short[index_thread] == NULL, ppt->error_message, "FINUFFT plan creation failed: code %d", ier);
++
++      ppt->list_r2c_plans_finufft_long[index_thread] = NULL;
++      ppt->list_c2r_plans_finufft_long[index_thread] = NULL;
++      ier = finufft_makeplan(3, dim, Ns2, 1, ppr->N_type, 1e-6, &ppt->list_r2c_plans_finufft_long[index_thread], &opts);
++      class_test(ier > 1 || ppt->list_r2c_plans_finufft_long[index_thread] == NULL, ppt->error_message, "FINUFFT plan creation failed: code %d", ier);
++      ier = finufft_makeplan(3, dim, Ns2_freq, -1, ppr->N_ell, 1e-6, &ppt->list_c2r_plans_finufft_long[index_thread], &opts);
++      class_test(ier > 1 || ppt->list_c2r_plans_finufft_long[index_thread] == NULL, ppt->error_message, "FINUFFT plan creation failed: code %d", ier);
+ 
+     }
+@@ -3345,8 +3357,5 @@
+     free(ppw->fft_kernels_ncdmfft_G2);
+ 
+-	finufft_destroy(ppw->r2c_plan_finufft_short); 
+-	finufft_destroy(ppw->c2r_plan_finufft_short); 
+-	finufft_destroy(ppw->r2c_plan_finufft_long); 
+-	finufft_destroy(ppw->c2r_plan_finufft_long); 
++    /* Shared FINUFFT plans must NOT be destroyed by a per-thread workspace. */
+ 	free(ppw->xi_max_qbin);
+ 	free(ppw->xi_star_qbin);
+@@ -3782,5 +3791,7 @@
+ 
+       // determine whether ncdm moments evolution is to be skipped. This is the case if we use ncdmfft and are NOT in fluid approximation or the first loop
+-      if ((index_loop_ncdmfft==0) || ppw->approx[ppw->index_ap_ncdmfa] == (int)ncdmfa_on ) {
++      if ((pba->has_ncdm == _TRUE_) &&
++          ((index_loop_ncdmfft==0) ||
++           (ppw->approx[ppw->index_ap_ncdmfa] == (int)ncdmfa_on))) {
+         /* turn on ncdm_psi_evolution in first (or only) loop */
+         ppw->has_ncdm_psi_evolution = _TRUE_; // we have psi_l evolution if we are in the first round or if we are in fluid approximation
+@@ -13840,6 +13851,9 @@
+                                    double * accumulator_2
+                                    ) {
+-  if (pba->has_ddm == _FALSE_)
+-    return _SUCCESS_;
++  if (pba->has_ddm == _FALSE_)
++    return _SUCCESS_;
++  /* DDM spectra require real initialized FFT plans. Fail cleanly otherwise. */
++  class_test(ppt->has_ncdmfft != _TRUE_, ppt->error_message,
++             "DDM active perturbations unavailable: ncdmfft plans were not initialized; no P(k) claim");
+   /* Select grid-dependent quantities */
+   double *q_arr, *f0_arr, *df0_arr, *aq_arr;
+@@ -14255,9 +14269,18 @@
+ }
+ }
+-    for (int i=0;i<N_out;i++) xi_G_out[i] = ppw->xi_G_ddm[i];
+-
+-    finufft_setpts(ppw->r2c_plan_finufft_long, N_G, ppw->xi_G_ddm, NULL, NULL, N_G_freq, freq_G, NULL, NULL);
+-    finufft_execute(ppw->r2c_plan_finufft_long, G, finufft_G);
+-    finufft_setpts(ppw->c2r_plan_finufft_long, N_G_freq, freq_G, NULL, NULL, N_out, xi_G_out, NULL, NULL);
++    for (int i=0;i<N_out;i++) xi_G_out[i] = ppw->xi_G_ddm[i];
++    /* FINUFFT 2.4 retains pointers supplied to setpts until execute.
++       The physical xi_G_out array is rescaled below; use an immutable copy. */
++    double *finufft_target_coords = (double *) malloc(sizeof(double)*N_out);
++    class_test(finufft_target_coords == NULL, ppt->error_message, "DDM FINUFFT target allocation failed");
++    for (int i=0;i<N_out;i++) finufft_target_coords[i] = xi_G_out[i];
++    class_test(ppw->r2c_plan_finufft_long == NULL || ppw->c2r_plan_finufft_long == NULL,
++               ppt->error_message, "DDM FINUFFT plan missing or invalid");
++    class_test(finufft_setpts(ppw->r2c_plan_finufft_long, N_G, ppw->xi_G_ddm, NULL, NULL, N_G_freq, freq_G, NULL, NULL) > 1,
++               ppt->error_message, "DDM FINUFFT forward setpts failed");
++    class_test(finufft_execute(ppw->r2c_plan_finufft_long, G, finufft_G) > 1,
++               ppt->error_message, "DDM FINUFFT forward execute failed");
++    class_test(finufft_setpts(ppw->c2r_plan_finufft_long, N_G_freq, freq_G, NULL, NULL, N_out, finufft_target_coords, NULL, NULL) > 1,
++               ppt->error_message, "DDM FINUFFT inverse setpts failed");
+ 
+     for (int i=0; i<N_out; i++) xi_G_out[i] = xi_G_out[i]*xi_f/_PI_;
+@@ -14285,5 +14308,7 @@
+     compute_I0_vectorized_sum(xi_G_out, N_out, xi_f, xi_f, Acoeff, Bcoeff, KG0);
+ 
+-    finufft_execute(ppw->c2r_plan_finufft_long, integrand_G, KG);
++    class_test(finufft_execute(ppw->c2r_plan_finufft_long, integrand_G, KG) > 1,
++               ppt->error_message, "DDM FINUFFT inverse execute failed");
++    free(finufft_target_coords);
+ 
+     for (int i=0;i<N_out*ppr->N_ell;i++) KG[i] += (complex double) KG0[i];
