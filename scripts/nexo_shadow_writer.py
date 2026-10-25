@@ -105,15 +105,22 @@ def append_request(data):
     return args
 
 def safe_get(session, url, **kwargs):
-    """Retry only idempotent Sheets reads on quota 429; never replay writes."""
-    for delay in (1, 2, 4, 8, 16, 32, None):
+    """Retry only idempotent Sheets GETs on quota or transient server errors.
+
+    Never retry POST append or ambiguous marker writes through this routine.
+    Quota 429 retains the existing bounded exponential retry sequence.
+    Other transient HTTP statuses use at most four GET attempts.
+    """
+    for attempt in range(7):
         response = session.get(url, **kwargs)
-        if getattr(response, "status_code", None) != 429:
+        status = getattr(response, 'status_code', None)
+        if status not in (408, 429, 500, 502, 503, 504):
             response.raise_for_status()
             return response
-        if delay is None:
+        if attempt >= 6 or (status != 429 and attempt >= 3):
             response.raise_for_status()
-        time.sleep(delay)
+            return response
+        time.sleep(2 ** min(attempt, 5))
 
 
 def values(session, sheet, range_):
@@ -266,6 +273,8 @@ def run(session, *, apply=False):
               "plain": 0, "duplicate": 0, "attempted_before": 0, "reconciled": 0,
               "unresolved": 0, "conflict": 0, "quarantined": 0,
               "readback_batches": 0,
+              "preexisting_invalid": 0, "preexisting_quarantined": 0,
+              "new_failures": 0,
               "target_conflicts": sum(len(getattr(index, "conflicts", ())) for index in stored.values())}
 
     legacy_rows = page_rows(session, SPOOL, LEGACY_TAB, "E")
@@ -289,6 +298,8 @@ def run(session, *, apply=False):
                                 digest=digest, mark_tab=LEGACY_TAB, mark_column="E"))
         except (ValueError, KeyError, TypeError, UnicodeError):
             counts["invalid"] += 1
+            if len(row) > 4 and isinstance(row[4], str) and row[4].startswith('INVALID:'):
+                counts['preexisting_invalid'] += 1
             if isinstance(row[0], str) and KEY.fullmatch(row[0]):
                 invalid_ids.add(row[0])
 
@@ -310,6 +321,8 @@ def run(session, *, apply=False):
                                 digest=digest_for(data), mark_tab=PLAIN_TAB, mark_column="O"))
         except (ValueError, KeyError, TypeError, UnicodeError):
             counts["invalid"] += 1
+            if len(row) > 14 and isinstance(row[14], str) and row[14].startswith('INVALID:'):
+                counts['preexisting_invalid'] += 1
             if row and isinstance(row[0], str) and KEY.fullmatch(row[0]):
                 invalid_ids.add(row[0])
 
@@ -328,6 +341,9 @@ def run(session, *, apply=False):
         if any(item["state"] not in ("", "CLAIMED:"+item["digest"],
                                       "APPLIED:"+item["digest"]) for item in items):
             counts["quarantined"] += len(items)
+            counts['preexisting_quarantined'] += sum(
+                isinstance(item['state'], str) and
+                item['state'].startswith(('INVALID:', 'PENDING_SYNC')) for item in items)
             continue
         # Resolve the strongest existing receipt first within this identity.
         # This never reorders distinct identities for scientific bookkeeping.
@@ -358,6 +374,13 @@ def run(session, *, apply=False):
             from nexo_shadow_curation import run as curate
         for key, value in curate(session, mural_rows, apply=apply, index=stored['MURAL']).items():
             counts['curation_' + key] = value
+    # Separate genuinely new problems from pre-existing, explicitly marked
+    # historical debt. Both remain visible; neither is silently discarded.
+    counts['new_failures'] = (
+        counts['invalid'] - counts['preexisting_invalid'] +
+        counts['quarantined'] - counts['preexisting_quarantined'] +
+        counts['unresolved'] + counts['conflict'] + counts['target_conflicts'] +
+        sum(counts.get('curation_' + key, 0) for key in ('invalid', 'unresolved', 'conflict')))
     return counts
 
 def result_status(counts, apply):
