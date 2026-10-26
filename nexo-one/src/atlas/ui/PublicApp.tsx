@@ -1,6 +1,6 @@
 import {lazy, Suspense, useEffect, useState} from 'react';
 import {loadPublic, pick, type PublicState} from '../publicItems.ts';
-import {ApiError} from '../api.ts';
+import {startPublicRefresh} from '../publicRefresh.ts';
 import {CONTACT_EMAIL, PRESENTATION} from '../../i18n/presentation.ts';
 import {useLocale, useMessages} from './LocaleProvider.tsx';
 import PublicTestView from './PublicTestView.tsx';
@@ -17,14 +17,13 @@ export default function PublicApp() {
   const locale = useLocale();
   const t = PRESENTATION[locale];
   const [pub, setPub] = useState<PublicState>({status: 'loading', items: [], tests: []});
+  const [publicDelayed, setPublicDelayed] = useState(false);
 
   useEffect(() => { document.title = m.heroTitle; }, [m.heroTitle]);
-  useEffect(() => {
-    const ac = new AbortController();
-    loadPublic((u, i) => fetch(u, i), ac.signal, `${import.meta.env.BASE_URL}public-campaigns.json`).then(s => { if (!ac.signal.aborted) setPub(s); })
-      .catch(e => { if (!ac.signal.aborted && !(e instanceof ApiError && e.code === 'ABORTED')) setPub({status: 'unavailable', items: [], tests: []}); });
-    return () => ac.abort();
-  }, []);
+  useEffect(() => startPublicRefresh(
+    signal => loadPublic((u, i) => fetch(u, i), signal, `${import.meta.env.BASE_URL}public-campaigns.json`),
+    (state, delayed) => {setPub(state); setPublicDelayed(delayed);},
+  ), []);
 
   return (
     <Shell area="public">
@@ -69,6 +68,9 @@ export default function PublicApp() {
           <p className="atlas-eyebrow"><span aria-hidden="true">03 / </span>{t.works.label}</p>
           <h2 id="h-works">{t.works.title}</h2>
           <div className="atlas-items" aria-live="polite" data-status={pub.status}>
+            {publicDelayed && pub.status !== 'unavailable' && <p role="status">{locale === 'pt-BR'
+              ? 'Atualização atrasada. A última publicação confirmada continua exibida.'
+              : 'Update delayed. The last confirmed publication remains displayed.'}</p>}
             {pub.status === 'loading' && <p>{m.loading}</p>}
             {pub.status === 'unavailable' && <p className="atlas-empty">{m.unavailable}</p>}
             {pub.status === 'empty' && <p className="atlas-empty">{m.emptyTitle}</p>}
@@ -97,3 +99,4 @@ export default function PublicApp() {
     </Shell>
   );
 }
+
