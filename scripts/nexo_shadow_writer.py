@@ -412,9 +412,25 @@ def run(session, *, apply=False):
     return counts
 
 def result_status(counts, apply):
-    if any(counts.get(key, 0) for key in
-           ("invalid", "unresolved", "quarantined", "conflict", "target_conflicts",
-            "curation_invalid", "curation_unresolved", "curation_conflict")):
+    """Report active reconciliation failures, retaining historic quarantine counts.
+
+    An explicitly marked prior rejection remains INVALID/PENDING_SYNC in the
+    spool and in the counters, but it does not make a successfully verified
+    independent batch permanently PARTIAL. Unmarked errors, inconsistent
+    counters, missing receipts and scientific curation conflicts remain partial.
+    No rejected event is replayed or upgraded to APPLIED by this classification.
+    """
+    old_invalid = counts.get("preexisting_invalid", 0)
+    old_quarantined = counts.get("preexisting_quarantined", 0)
+    invalid = counts.get("invalid", 0)
+    quarantined = counts.get("quarantined", 0)
+    if old_invalid > invalid or old_quarantined > quarantined:
+        return "PARTIAL_RECONCILIATION"
+    active = (invalid - old_invalid + quarantined - old_quarantined +
+              sum(counts.get(key, 0) for key in (
+                  "unresolved", "conflict", "target_conflicts",
+                  "curation_invalid", "curation_unresolved", "curation_conflict")))
+    if active > 0 or counts.get("new_failures", 0) > 0:
         return "PARTIAL_RECONCILIATION"
     return "READBACK_VERIFIED" if apply else "PREFLIGHT"
 
