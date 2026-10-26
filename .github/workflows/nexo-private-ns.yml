@@ -40,30 +40,42 @@ jobs:
         env:
           GOOGLE_SERVICE_ACCOUNT_JSON: ${{ secrets.NEXO_DRIVE_WRITER_JSON }}
         run: |
-          python - >/dev/null 2>&1 <<'PY' && echo "inspect ok" || { echo "inspect failed"; exit 1; }
+          python - 2>/dev/null <<'PY' || exit 1
           import hashlib, io, json, os, tarfile
-          from google.oauth2 import service_account
-          from google.auth.transport.requests import AuthorizedSession
-          creds = service_account.Credentials.from_service_account_info(json.loads(os.environ["GOOGLE_SERVICE_ACCOUNT_JSON"]), scopes=["https://www.googleapis.com/auth/drive"])
-          s = AuthorizedSession(creds)
-          r = s.get(f"https://www.googleapis.com/drive/v3/files/{os.environ['CODE_FILE_ID']}", params={"alt": "media"}, timeout=120)
-          r.raise_for_status()
-          if hashlib.sha256(r.content).hexdigest() != os.environ["CODE_SHA256"]:
-              raise SystemExit("code hash mismatch")
-          tf = tarfile.open(fileobj=io.BytesIO(r.content), mode="r:gz")
-          files = [m for m in tf.getmembers() if m.isfile()]
-          rc = [m for m in files if os.path.basename(m.name) == "run_campaign.py"]
-          assert len(rc) == 1
-          parts = ["# archive members (name, bytes)\n"]
-          parts += [f"{m.name}\t{m.size}\n" for m in files]
-          parts += ["\n=====FILE run_campaign.py=====\n", tf.extractfile(rc[0]).read().decode("utf-8"),
-                    "\n=====PAD=====\n", "x" * (300 * 1024)]
-          body = "".join(parts).encode("utf-8")
-          meta = {"name": "INSPECT_run_campaign_py_96186d8a.txt", "parents": [os.environ["OUT_PARENT"]], "mimeType": "text/plain"}
-          b = "nexoinspect"
-          payload = (f"--{b}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n{json.dumps(meta)}\r\n--{b}\r\nContent-Type: text/plain\r\n\r\n").encode() + body + f"\r\n--{b}--".encode()
-          u = s.post("https://www.googleapis.com/upload/drive/v3/files", params={"uploadType": "multipart", "supportsAllDrives": "true", "fields": "id"}, data=payload, headers={"Content-Type": f"multipart/related; boundary={b}"}, timeout=120)
-          u.raise_for_status()
+          stage = "start"
+          try:
+              from google.oauth2 import service_account
+              from google.auth.transport.requests import AuthorizedSession
+              stage = "auth"
+              creds = service_account.Credentials.from_service_account_info(json.loads(os.environ["GOOGLE_SERVICE_ACCOUNT_JSON"]), scopes=["https://www.googleapis.com/auth/drive"])
+              s = AuthorizedSession(creds)
+              stage = "download"
+              r = s.get(f"https://www.googleapis.com/drive/v3/files/{os.environ['CODE_FILE_ID']}", params={"alt": "media"}, timeout=120)
+              r.raise_for_status()
+              stage = "hash"
+              assert hashlib.sha256(r.content).hexdigest() == os.environ["CODE_SHA256"]
+              stage = "untar"
+              tf = tarfile.open(fileobj=io.BytesIO(r.content), mode="r:gz")
+              files = [m for m in tf.getmembers() if m.isfile()]
+              rc = [m for m in files if os.path.basename(m.name) == "run_campaign.py"]
+              assert len(rc) == 1
+              stage = "build"
+              parts = ["# archive members (name, bytes)\n"]
+              parts += [f"{m.name}\t{m.size}\n" for m in files]
+              parts += ["\n=====FILE run_campaign.py=====\n", tf.extractfile(rc[0]).read().decode("utf-8"),
+                        "\n=====PAD=====\n", "x" * (300 * 1024)]
+              body = "".join(parts).encode("utf-8")
+              meta = {"name": "INSPECT_run_campaign_py_96186d8a.txt", "parents": [os.environ["OUT_PARENT"]], "mimeType": "text/plain"}
+              b = "nexoinspect"
+              payload = (f"--{b}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n{json.dumps(meta)}\r\n--{b}\r\nContent-Type: text/plain\r\n\r\n").encode() + body + f"\r\n--{b}--".encode()
+              stage = "upload"
+              u = s.post("https://www.googleapis.com/upload/drive/v3/files", params={"uploadType": "multipart", "supportsAllDrives": "true", "fields": "id"}, data=payload, headers={"Content-Type": f"multipart/related; boundary={b}"}, timeout=120)
+              u.raise_for_status()
+              print("inspect ok")
+          except BaseException as e:
+              resp = getattr(e, "response", None)
+              print("inspect failed stage=%s exc=%s http=%s" % (stage, type(e).__name__, getattr(resp, "status_code", None)))
+              raise SystemExit(1)
           PY
 
   segment:
