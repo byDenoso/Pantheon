@@ -139,11 +139,12 @@ function toolsForRole(role,principal,state){
   if(assignedWork)tools.push('get_result',...MUTATIONS);
   return tools;
 }
+const receiptVersion=receipt=>receipt.observed_version??receipt.expected_version;
 function terminalIntents(work){
   if(!work.processed||typeof work.processed!=='object'||Array.isArray(work.processed))return [];
   return Object.entries(work.processed).filter(([id,receipt])=>INTENT_ID.test(id)&&receipt&&typeof receipt==='object'&&
     receipt.intent_id===id&&TERMINAL_INTENT_DISPOSITIONS.has(receipt.disposition)&&
-    Number.isInteger(receipt.expected_version)&&Number.isInteger(work.version)&&receipt.expected_version<work.version);
+    Number.isInteger(receiptVersion(receipt))&&Number.isInteger(work.version)&&receiptVersion(receipt)<work.version);
 }
 function supersessionFor(work,action,principalId){
   const terminal=terminalIntents(work);
@@ -151,7 +152,7 @@ function supersessionFor(work,action,principalId){
   let candidates=sameAction;
   if(work.state==='BLOCKED'&&!sameAction.length)
     candidates=terminal.filter(([,receipt])=>receipt.disposition==='BLOCKED'&&receipt.principal===principalId);
-  candidates.sort((a,b)=>a[1].expected_version-b[1].expected_version||(a[0]<b[0]?-1:a[0]>b[0]?1:0));
+  candidates.sort((a,b)=>receiptVersion(a[1])-receiptVersion(b[1])||(a[0]<b[0]?-1:a[0]>b[0]?1:0));
   const target=candidates.at(-1)?.[0]||null;
   if(work.state==='BLOCKED'&&terminal.length&&!target)fail('SUPERSESSION_UNAVAILABLE');
   if(work.state!=='BLOCKED'&&sameAction.length&&!target)fail('SUPERSESSION_UNAVAILABLE');
@@ -245,6 +246,8 @@ export function createOperationalService({readState,submitIntent,submitScientifi
         (name==='register_delivery'&&['DELIVERY_PENDING','REGISTERED'].includes(work.state)))
         return {...safeWork(work),idempotent:true};
       const supersession=supersessionFor(work,name,principal.id);
+      // Advisory snapshot distinguishes a fresh retry after progress blocks.
+      // The Writer revalidates current state; it does not require version equality.
       const value={contract:'NEXO_OPERATIONAL_INTENT_V1',action:name,work_id:work.id,principal:principal.id,
         role_session:sessionFor(work),expected_version:work.version,
         ...(supersession.intentId?{supersedes:supersession.intentId}:{})};

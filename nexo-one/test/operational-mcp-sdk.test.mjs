@@ -64,6 +64,7 @@ test('fresh blocked retry links the latest matching terminal intent before hashi
     submitScientificRequest:()=>{throw Error('not used');}});
   const result=await service.call('request_execution',{work_id:work.id},principal);
   assert.equal(submitted.supersedes,latest);
+  assert.equal(submitted.expected_version,work.version);
   const {id,...identity}=submitted;
   assert.equal(id,'op-'+sha256(identity).slice(0,48));
   assert.equal(result.intent_id,id);
@@ -102,4 +103,53 @@ test('existing spool verifies exact body, destination, and idempotent repeat',as
   await assert.rejects(()=>submit(intent,principal),/SPOOL_IDENTITY_CONFLICT/);
   spool.spreadsheetId='wrong';await assert.rejects(()=>submit(intent,principal),/SPOOL_DESTINATION_MISMATCH/);
   assert.equal(isOperationalEnvelope({kind:'BATCH',payload:{items:[intent]}}),true);
+});
+
+
+test('advisory versions and observed-version retry lineage preserve exact identity',async()=>{
+  const principal={authenticated:true,id:'a'.repeat(64),roles:['EXECUTOR']};
+  const first='op-'+'1'.repeat(48),latest='op-'+'2'.repeat(48);
+  const work={id:'OPERATIONAL-CONTROL-DRIVE-SUM-V1',role:'EXECUTOR',scope:'ENGINEERING_OPERATIONAL_ONLY',
+    definition_sha256:'f'.repeat(64),version:8,owner:principal.id,state:'BLOCKED',resume_state:'CLAIMED',outbox:null,
+    processed:{[first]:{intent_id:first,disposition:'BLOCKED',action:'request_execution',principal:principal.id,expected_version:6},
+      [latest]:{intent_id:latest,disposition:'BLOCKED',action:'request_execution',principal:principal.id,expected_version:null,observed_version:7}}};
+  const spool={spreadsheetId:SPOOL_ID,title:'Sheet1',columns:{stable:0,envelope:1},rows:[]};
+  let writes=0,submitted;
+  const queue=createOperationalQueue({read:async()=>spool,append:async(_,{stableId,envelope})=>{
+    writes++;spool.rows.push([stableId,Buffer.from(JSON.stringify(envelope)).toString('base64url')]);}});
+  const service=createOperationalService({readState:async()=>({authority:'TOWER_V06@GOOGLE_DRIVE_PRIVATE',readback:'PASS',revision:'sha256:'+'a'.repeat(64),work:[work]}),
+    submitIntent:async(intent,p)=>{submitted=intent;return queue(intent,p);},submitScientificRequest:()=>{throw Error('not used');}});
+  await service.call('request_execution',{work_id:work.id},principal);
+  assert.equal(submitted.supersedes,latest);
+  assert.equal(submitted.expected_version,work.version);
+  assert.equal((await queue(submitted,principal)).reused,true);
+  assert.equal(writes,1);
+  const {id:oldId,expected_version:oldVersion,...versionless}=submitted;
+  versionless.id='op-'+sha256(versionless).slice(0,48);
+  await assert.rejects(()=>queue(versionless,principal),/INTENT_FIELDS_INVALID/);
+  for(const expected_version of [null,true,-1,'1']){
+    const {id,...body}=submitted;body.expected_version=expected_version;
+    await assert.rejects(()=>queue({...body,id:'op-'+sha256(body).slice(0,48)},principal),/INTENT_FIELDS_INVALID/);
+  }
+});
+
+
+test('a reconciled progress block gets a fresh intent identity without a version gate',async()=>{
+  const principal={authenticated:true,id:'a'.repeat(64),roles:['EXECUTOR']};
+  const work={id:'OPERATIONAL-CONTROL-DRIVE-SUM-V1',role:'EXECUTOR',scope:'ENGINEERING_OPERATIONAL_ONLY',
+    definition_sha256:'f'.repeat(64),version:1,owner:null,state:'READY',outbox:null,processed:{}};
+  const sent=[];
+  const service=createOperationalService({readState:async()=>({authority:'TOWER_V06@GOOGLE_DRIVE_PRIVATE',readback:'PASS',revision:'sha256:'+'a'.repeat(64),work:[work]}),
+    submitIntent:async(intent)=>{sent.push(intent);return {readback:'PASS',body_sha256:sha256(intent)};},
+    submitScientificRequest:()=>{throw Error('not used');}});
+  await service.call('request_execution',{work_id:work.id},principal);
+  const original=sent[0];
+  work.processed[original.id]={intent_id:original.id,disposition:'APPLIED',action:original.action,
+    principal:principal.id,expected_version:1,observed_version:1};
+  Object.assign(work,{state:'BLOCKED',resume_state:'RUNNING',owner:principal.id,version:5,
+    outbox:{attempted:true,run_id:123},error:{code:'RESULT_HASH_MISMATCH'}});
+  await service.call('request_execution',{work_id:work.id},principal);
+  assert.notEqual(sent[1].id,original.id);
+  assert.equal(sent[1].expected_version,5);
+  assert.equal(Object.hasOwn(sent[1],'supersedes'),false);
 });
