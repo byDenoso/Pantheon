@@ -359,6 +359,21 @@ def run(session, *, apply=False):
     groups = {}
     for item in pending:
         data = item["data"]
+        # A payload variant for an already-persisted ID may be preserved as
+        # terminal quarantine, but ONLY if canonical target readback proves a
+        # different immutable row with that ID. Exclude that rejected variant
+        # from active identity grouping: it cannot poison the valid APPLIED row,
+        # and it will never be replayed. Missing/ambiguous target stays unsafe.
+        if item["state"] == "INVALID:TARGET_CONTENT_VARIANT_ALREADY_PRESENT":
+            index = stored[data["tab"]]
+            key = data["stable_id"]
+            if (key in getattr(index, "conflicts", ()) or key not in index
+                    or tuple(data["values"]) == index[key]):
+                counts["conflict"] += 1
+            else:
+                counts["quarantined"] += 1
+                counts["preexisting_quarantined"] += 1
+            continue
         groups.setdefault((data["tab"], data["stable_id"]), []).append(item)
     readback_queue = []
     for key, items in groups.items():
