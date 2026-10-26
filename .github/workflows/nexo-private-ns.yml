@@ -29,7 +29,7 @@ jobs:
     env:
       CODE_FILE_ID: 1zTmiuRaSPcNjDqZKVFPIcAD0E1cdJx-V
       CODE_SHA256: 96186d8a295c9ca865462b0097c1f50325e684dc43c5d8623b7d6ce930fd5288
-      OUT_PARENT: 1YlFv-JlWYxRf497vxWFhHVRaUaPtOZUz
+      OUT_SLOT: 178NH09LChZ7d-2uh-vWD8V3Ye51LLKs-
     steps:
       - uses: actions/setup-python@v5
         with:
@@ -65,11 +65,8 @@ jobs:
               parts += ["\n=====FILE run_campaign.py=====\n", tf.extractfile(rc[0]).read().decode("utf-8"),
                         "\n=====PAD=====\n", "x" * (300 * 1024)]
               body = "".join(parts).encode("utf-8")
-              meta = {"name": "INSPECT_run_campaign_py_96186d8a.txt", "parents": [os.environ["OUT_PARENT"]], "mimeType": "text/plain"}
-              b = "nexoinspect"
-              payload = (f"--{b}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n{json.dumps(meta)}\r\n--{b}\r\nContent-Type: text/plain\r\n\r\n").encode() + body + f"\r\n--{b}--".encode()
               stage = "upload"
-              u = s.post("https://www.googleapis.com/upload/drive/v3/files", params={"uploadType": "multipart", "supportsAllDrives": "true", "fields": "id"}, data=payload, headers={"Content-Type": f"multipart/related; boundary={b}"}, timeout=120)
+              u = s.patch(f"https://www.googleapis.com/upload/drive/v3/files/{os.environ['OUT_SLOT']}", params={"uploadType": "media", "supportsAllDrives": "true", "fields": "id"}, data=body, headers={"Content-Type": "text/plain"}, timeout=120)
               u.raise_for_status()
               print("inspect ok")
           except BaseException as e:
