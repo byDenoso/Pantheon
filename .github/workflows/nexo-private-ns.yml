@@ -9,7 +9,7 @@ on:
       run_id:
         required: true
         type: choice
-        options: [pilot, m1r1, m1r2, m2r1, m2r2, m3r1, m3r2, validation-a, inspect-src]
+        options: [pilot, m1r1, m1r2, m2r1, m2r2, m3r1, m3r2, validation-a, inspect-src, contract-check, c0m1r1, c0m1r2, c0m2r1, c0m2r2, c0m3r1, c0m3r2]
 
 permissions:
   contents: read
@@ -83,6 +83,8 @@ jobs:
       CODE_FILE_ID: 1zTmiuRaSPcNjDqZKVFPIcAD0E1cdJx-V
       CODE_SHA256: 96186d8a295c9ca865462b0097c1f50325e684dc43c5d8623b7d6ce930fd5288
       COBAYA_PACKAGES_PATH: /home/runner/cobaya_packages
+      PATCH_FILE_ID: 1rVG_mF5kf41ZQkqzI0AQGFwOtN4V0CJk
+      PATCH_SHA256: 2783b3c7e5591e002a259034b5d5c0dc44db349a090b64d2aba8a43958f0ac60
     steps:
       - name: Deadline
         run: echo "DEADLINE=$(( $(date +%s) + 335*60 ))" >> "$GITHUB_ENV"
@@ -138,6 +140,24 @@ jobs:
           print("runner patched")
           PY
 
+      - name: Apply private patch
+        working-directory: ${{ runner.temp }}/c
+        env:
+          GOOGLE_SERVICE_ACCOUNT_JSON: ${{ secrets.NEXO_DRIVE_WRITER_JSON }}
+        run: |
+          python - 2>/dev/null <<'PY' || { echo "patch failed"; exit 1; }
+          import hashlib, json, os
+          from google.oauth2 import service_account
+          from google.auth.transport.requests import AuthorizedSession
+          creds = service_account.Credentials.from_service_account_info(json.loads(os.environ["GOOGLE_SERVICE_ACCOUNT_JSON"]), scopes=["https://www.googleapis.com/auth/drive"])
+          r = AuthorizedSession(creds).get(f"https://www.googleapis.com/drive/v3/files/{os.environ['PATCH_FILE_ID']}", params={"alt": "media", "supportsAllDrives": "true"}, timeout=120)
+          r.raise_for_status()
+          got = hashlib.sha256(r.content).hexdigest()
+          if got != os.environ["PATCH_SHA256"]:
+              print("patch hash mismatch got=" + got); raise SystemExit(1)
+          exec(compile(r.content.decode("utf-8"), "private_patch", "exec"), {"__name__": "__patch__"})
+          PY
+
       - name: Install likelihood data (public, official sources)
         working-directory: ${{ runner.temp }}/c
         run: |
@@ -161,7 +181,7 @@ jobs:
         if: steps.seg.outputs.rc == '75'
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh workflow run nexo-private-ns.yml --repo "$GITHUB_REPOSITORY" --ref main -f run_id="${{ inputs.run_id }}"
+        run: gh workflow run nexo-private-ns.yml --repo "$GITHUB_REPOSITORY" --ref "${{ github.ref_name }}" -f run_id="${{ inputs.run_id }}"
 
   private-validation:
     if: inputs.run_id == 'validation-a'
