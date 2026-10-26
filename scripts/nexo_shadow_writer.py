@@ -41,6 +41,7 @@ class TargetIndex(dict):
     def __init__(self):
         super().__init__()
         self.conflicts = set()
+        self.last_row = 1  # Last observed occupied row; header is row 1.
 
 def strict_obj(pairs):
     output = {}
@@ -154,7 +155,9 @@ def target_index(session, tab):
     width = TABS[tab][1]
     key_column = 7 if tab == "MURAL" else 3
     result = TargetIndex()
-    for _, row in page_rows(session, SHADOW, tab, "H" if tab == "MURAL" else "J", first=2):
+    for number, row in page_rows(session, SHADOW, tab, "H" if tab == "MURAL" else "J", first=2):
+        if row:
+            result.last_row = max(result.last_row, number)
         if len(row) <= key_column or not row[key_column]:
             continue
         unique_id = row[key_column]
@@ -244,25 +247,49 @@ def _process(session, stored, seen, counts, *, number, data, state, digest, mark
     counts["written"] += 1
 
 def flush_verified_appends(session, stored, counts, queued):
-    """Coalesce readback of independently posted appends; never replay on error.
+    """Verify acknowledged, individually reserved appends without repeated full scans.
 
-    Each POST has returned success. If subsequent readback fails, the spool
-    remains CLAIMED; next cycle reconciles against the exact target ID/content.
+    Only use a narrow tail range when it contains exactly the rows we appended,
+    in order. Missing/reordered/unexpected rows trigger the prior full-index
+    reconciliation. An ambiguous POST still stays CLAIMED, never replayed.
     """
     if not queued:
         return
-    touched = {item[0]['tab'] for item in queued}
-    refreshed = {tab: target_index(session, tab) for tab in touched}
+    touched = {item[0]["tab"] for item in queued}
+    refreshed = {}
+    for tab in touched:
+        prior = stored[tab]
+        events = [item[0] for item in queued if item[0]["tab"] == tab]
+        if isinstance(prior, TargetIndex):
+            first = prior.last_row + 1
+            last = first + len(events) - 1
+            col = "H" if tab == "MURAL" else "J"
+            window = values(session, SHADOW, f"'{tab}'!A{first}:{col}{last}")
+            width = TABS[tab][1]
+            exact = len(window) == len(events) and all(
+                tuple((row + [""] * width)[:width]) == tuple(data["values"])
+                for row, data in zip(window, events))
+            if exact and not any(data["stable_id"] in prior for data in events):
+                candidate = TargetIndex()
+                candidate.update(prior)
+                candidate.conflicts.update(prior.conflicts)
+                candidate.last_row = last
+                for data in events:
+                    candidate[data["stable_id"]] = tuple(data["values"])
+                refreshed[tab] = candidate
+                counts["tail_readback_tabs"] += 1
+                continue
+            counts["tail_readback_fallbacks"] += 1
+        refreshed[tab] = target_index(session, tab)
     for data, _, _, _, _ in queued:
-        if not match_target(refreshed[data['tab']], data):
-            raise RuntimeError('WRITE_READBACK_UNKNOWN')
+        if not match_target(refreshed[data["tab"]], data):
+            raise RuntimeError("WRITE_READBACK_UNKNOWN")
     for data, digest, mark_tab, mark_column, number in queued:
-        mark(session, mark_tab, mark_column, number, 'APPLIED:' + digest)
-        counts['written'] += 1
+        mark(session, mark_tab, mark_column, number, "APPLIED:" + digest)
+        counts["written"] += 1
     stored.update(refreshed)
-    counts['readback_batches'] += 1
+    counts["readback_batches"] += 1
     queued.clear()
-
 
 def run(session, *, apply=False):
     stored = {tab: target_index(session, tab) for tab in TABS}
@@ -272,7 +299,8 @@ def run(session, *, apply=False):
     counts = {"eligible": 0, "written": 0, "invalid": 0, "legacy": 0,
               "plain": 0, "duplicate": 0, "attempted_before": 0, "reconciled": 0,
               "unresolved": 0, "conflict": 0, "quarantined": 0,
-              "readback_batches": 0,
+              "readback_batches": 0, "tail_readback_tabs": 0,
+              "tail_readback_fallbacks": 0,
               "preexisting_invalid": 0, "preexisting_quarantined": 0,
               "new_failures": 0,
               "target_conflicts": sum(len(getattr(index, "conflicts", ())) for index in stored.values())}
