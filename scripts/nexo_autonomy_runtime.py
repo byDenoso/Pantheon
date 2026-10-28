@@ -151,7 +151,8 @@ def fresh_writer_job(run, jobs, *, run_id, revision, checked_at):
         started = timestamp(job.get("started_at"))
         labels = job.get("labels") or []
         if (checked and started and -60 <= (checked - started).total_seconds() <= 3600
-                and job.get("name") == "write" and job.get("status") == "in_progress"
+                # Capacity only: the SHADOW Writer does not authorize LIVE writes.
+                and job.get("name") in {"write", "shadow"} and job.get("status") == "in_progress"
                 and "ubuntu-latest" in labels and "self-hosted" not in labels
                 and str(job.get("runner_name") or "").startswith("GitHub Actions")):
             return job
