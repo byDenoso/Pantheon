@@ -1,6 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {readFileSync} from 'node:fs';
+import {readFileSync,mkdtempSync,mkdirSync,writeFileSync,rmSync} from 'node:fs';
+import {tmpdir} from 'node:os';
+import {execFileSync,spawnSync} from 'node:child_process';
 import {fileURLToPath} from 'node:url';
 import {dirname,resolve} from 'node:path';
 
@@ -17,11 +19,45 @@ test('Atlas runtime fails closed instead of serving or relabeling Drive fallback
   assert.match(authority,/ATLAS_LEGACY_DRIVE_PROJECTION_RETIRED/);
 });
 
-test('Vercel projects skip builds when their project directory is unchanged',()=>{
-  const atlas=JSON.parse(read('../vercel.json'));
-  const nexo=JSON.parse(read('../../nexo-one/vercel.json'));
-  const root=JSON.parse(read('../../vercel.json'));
-  assert.equal(atlas.ignoreCommand,'git diff --quiet "${VERCEL_GIT_PREVIOUS_SHA:-HEAD^}" HEAD -- .');
-  assert.equal(nexo.ignoreCommand,'git diff --quiet "${VERCEL_GIT_PREVIOUS_SHA:-HEAD^}" HEAD -- .');
-  assert.equal(root.ignoreCommand,'git diff --quiet "${VERCEL_GIT_PREVIOUS_SHA:-HEAD^}" HEAD -- nexo-one vercel.json');
+// Root/nexo-one publication-marker behavior is covered by
+// nexo-one/test/vercel-publication-markers.test.mjs. Test Atlas behavior here,
+// rather than freezing the obsolete spelling of all three shell commands.
+test('Atlas build scope and missing-history behavior',async t=>{
+  const command=JSON.parse(read('../vercel.json')).ignoreCommand;
+  const root=mkdtempSync(resolve(tmpdir(),'atlas-build-scope-'));
+  const cwd=resolve(root,'atlas-control-tower');
+  const git=(...args)=>execFileSync('git',args,{cwd:root,encoding:'utf8'}).trim();
+  const put=(path,value)=>{
+    const file=resolve(root,path);
+    mkdirSync(dirname(file),{recursive:true});writeFileSync(file,value);
+  };
+  const check=(previous,expected)=>{
+    const result=spawnSync('bash',['-c',command],{
+      cwd,env:{...process.env,VERCEL_GIT_PREVIOUS_SHA:previous},encoding:'utf8',
+    });
+    assert.ifError(result.error);
+    assert.equal(result.status,expected,result.stderr);
+  };
+  try{
+    git('init','-q');git('config','user.name','Test');git('config','user.email','test@example.test');
+    put('atlas-control-tower/src/app.js','original');git('add','.');git('commit','-qm','base');
+    let previous=git('rev-parse','HEAD');
+    await t.test('unchanged project skips build',()=>check(previous,0));
+    await t.test('operational files outside Atlas skip build',()=>{
+      put('scripts/maintenance.py','changed');git('add','.');git('commit','-qm','operations');
+      check(previous,0);
+    });
+    await t.test('Atlas source changes require build',()=>{
+      previous=git('rev-parse','HEAD');
+      put('atlas-control-tower/src/app.js','changed');git('add','.');git('commit','-qm','source');
+      check(previous,1);
+    });
+    await t.test('Atlas configuration changes require build',()=>{
+      previous=git('rev-parse','HEAD');
+      put('atlas-control-tower/vercel.json','{}');git('add','.');git('commit','-qm','config');
+      check(previous,1);
+    });
+    await t.test('missing previous SHA does not skip build',()=>check('',1));
+    await t.test('unavailable previous commit does not skip build',()=>check('f'.repeat(40),1));
+  }finally{rmSync(root,{recursive:true,force:true});}
 });
