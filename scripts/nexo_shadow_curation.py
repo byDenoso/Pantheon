@@ -290,7 +290,7 @@ def process_one(session, row, request, *, apply, index=None):
 def run(session, mural_rows, *, apply=False, index=None):
     counts={key:0 for key in ('eligible','applied','already_applied',
         'superseded','already_superseded','superseded_candidate',
-        'unresolved','conflict','invalid','deferred')}
+        'unresolved','conflict','invalid','deferred','rejected','already_rejected')}
     used=0
     for row in mural_rows:
         try:
@@ -304,6 +304,42 @@ def run(session, mural_rows, *, apply=False, index=None):
             counts[state]+=1
             if state in ('eligible','applied'):
                 used+=1
-        except (CurationError,w.IdentityConflict):
+        except CurationError as exc:
+            # Only deterministic parse failures can be terminally rejected.
+            # Runtime/receipt/identity failures remain unresolved, never hidden.
+            try:
+                parse(list(row))
+            except CurationError as parse_error:
+                code = str(parse_error)
+                recognized_sender = len(row) == 8 and row[1] in (
+                    'P', CURRENT_ROLE_ID, 'P | NEXO Writer', f'P | task_id={CURRENT_ROLE_ID}')
+                if (code.startswith('CURATION_') and recognized_sender
+                        and row[7].startswith(CURRENT_ROLE_ID+'-') and w.KEY.fullmatch(row[7])):
+                    rejected = audit(row, 'rejected', compact({'r':row[7],
+                        'payload_sha256':sha(list(row)), 'reason':code}))
+                    idx = index if index is not None else w.target_index(session,'MURAL')
+                    if rejected['stable_id'] in getattr(idx,'conflicts',()):
+                        counts['conflict'] += 1
+                        continue
+                    if rejected['stable_id'] in idx:
+                        if w.match_target(idx,rejected):
+                            counts['already_rejected'] += 1
+                        else:
+                            counts['conflict'] += 1
+                        continue
+                    if apply:
+                        post(session,append_request(rejected)['requests'])
+                        refreshed=w.target_index(session,'MURAL')
+                        if not w.match_target(refreshed,rejected):
+                            raise RuntimeError('CURATION_REJECTION_READBACK_UNKNOWN')
+                        if index is not None:
+                            index.update(refreshed)
+                            if hasattr(index,'last_row'):
+                                index.last_row = getattr(refreshed,'last_row',index.last_row)
+                        counts['rejected'] += 1
+                        continue
+            counts['invalid']+=1
+        except w.IdentityConflict:
             counts['invalid']+=1
     return counts
+

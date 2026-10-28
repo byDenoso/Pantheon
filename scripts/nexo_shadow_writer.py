@@ -26,7 +26,7 @@ API = "https://sheets.googleapis.com/v4/spreadsheets"
 TABS = {"MURAL": (1148777660, 8, "H"), "RESULTADOS": (247327396, 10, "D")}
 KEY = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.:\-]{5,127}$")
 PAGE_SIZE = 1000
-MAX_GRID_ROWS = 200000
+MAX_GRID_ROWS = 1000000  # metadata safety bound; capacity review starts well before this
 READBACK_BATCH_SIZE = 8  # batch safe verification reads; independent appends
 PLAIN_HEADER = ["stable_id","created_at","role","tab",
                 "v1","v2","v3","v4","v5","v6","v7","v8","v9","v10","state"]
@@ -196,6 +196,18 @@ def digest_for(data):
                      ensure_ascii=False, separators=(",", ":"), sort_keys=True).encode("utf-8")
     return hashlib.sha256(raw).hexdigest()[:16]
 
+def validate_new_event(data):
+    """Admission checks for a new event, never retroactive rewriting."""
+    row = data['values']
+    required = (0, 1, 2, 3, 5, 7) if data['tab'] == 'MURAL' else (0, 1, 2, 3, 4, 5, 6, 7)
+    if any(not row[i].strip() for i in required):
+        raise ValueError('MISSING_EVENT_METADATA')
+    for cell in row:
+        if len(cell.encode('utf-16-le')) // 2 > 50000:
+            raise ValueError('CELL_PLATFORM_LIMIT')
+    if len(json.dumps({'requests':append_request(data)['requests']}).encode()) > 2_000_000:
+        raise ValueError('BATCH_PLATFORM_LIMIT')
+
 def _process(session, stored, seen, counts, *, number, data, state, digest, mark_tab, mark_column, apply, queued=None):
     key = (data["tab"], data["stable_id"])
     fingerprint = tuple(data["values"])
@@ -227,6 +239,7 @@ def _process(session, stored, seen, counts, *, number, data, state, digest, mark
         counts["attempted_before"] += 1
         counts["unresolved"] += 1
         return
+    validate_new_event(data)
     counts["eligible"] += 1
     if not apply:
         return
@@ -291,7 +304,7 @@ def flush_verified_appends(session, stored, counts, queued):
     counts["readback_batches"] += 1
     queued.clear()
 
-def run(session, *, apply=False):
+def run(session, *, apply=False, snapshot=None):
     stored = {tab: target_index(session, tab) for tab in TABS}
     seen = {}
     pending = []
@@ -424,6 +437,8 @@ def run(session, *, apply=False):
         counts['quarantined'] - counts['preexisting_quarantined'] +
         counts['unresolved'] + counts['conflict'] + counts['target_conflicts'] +
         sum(counts.get('curation_' + key, 0) for key in ('invalid', 'unresolved', 'conflict')))
+    if snapshot is not None:
+        snapshot.update(stored=stored, pending=pending)
     return counts
 
 def result_status(counts, apply):
@@ -454,6 +469,9 @@ _SAFE_ERRORS = frozenset({
     "STATE_READBACK_FAILED", "IDENTITY_CONTENT_CONFLICT", "SPOOL_ID_CONTENT_CONFLICT",
     "APPLIED_READBACK_MISSING", "WRITE_READBACK_UNKNOWN", "SPOOL_HEADER_MISSING",
     "SPOOL_HEADER_MISMATCH", "PLAIN_SPOOL_HEADER_MISSING", "PLAIN_SPOOL_HEADER_MISMATCH",
+    "OPERATIONS_VIEW_MISSING", "OPERATIONS_SCHEMA_INVALID", "OPERATIONS_VIEW_CAPACITY",
+    "OPERATIONS_PAYLOAD_TOO_LARGE", "OPERATIONS_READBACK_FAILED",
+    "CURATION_REJECTION_READBACK_UNKNOWN",
 })
 
 def safe_error_code(exc):
@@ -468,7 +486,9 @@ def safe_error_code(exc):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--apply", action="store_true")
-    flag = parser.parse_args().apply
+    parser.add_argument("--operations", action="store_true")
+    args = parser.parse_args()
+    flag = args.apply
     from google.oauth2 import service_account
     from google.auth.transport.requests import AuthorizedSession
     raw = os.getenv("GOOGLE_SERVICE_ACCOUNT_JSON")
@@ -476,16 +496,35 @@ def main():
         raise SystemExit("WRITER_CREDENTIAL_MISSING")
     creds = service_account.Credentials.from_service_account_info(
         json.loads(raw), scopes=["https://www.googleapis.com/auth/spreadsheets"])
+    started = time.monotonic()
+    snapshot = {}
+    operations = 'NOT_REQUESTED'
     try:
         with AuthorizedSession(creds) as session:
-            result = run(session, apply=flag)
+            result = run(session, apply=flag, snapshot=snapshot)
+            if args.operations and flag:
+                try:
+                    if __package__:
+                        from .nexo_tower_operations import build_views, publish_views
+                    else:
+                        from nexo_tower_operations import build_views, publish_views
+                    team = values(session, SHADOW, "'EQUIPE'!A1:F100")
+                    roster = {r[1]:r[0] for r in team[1:] if len(r)>1 and r[0] in ('S1','S2','S3','S4','P')}
+                    views = build_views(**snapshot, counts=result, roster=roster,
+                        revision=os.getenv('GITHUB_SHA','unknown'), duration=time.monotonic()-started)
+                    operations = publish_views(session, views, sys.modules[__name__])
+                except Exception as exc:
+                    # Evidence already written stays verified. An operational
+                    # projection failure never causes replay of scientific rows.
+                    operations = 'FAILED_'+safe_error_code(exc)
     except Exception as exc:
         print(json.dumps({"status": "STOP_NO_RETRY", "error_class": type(exc).__name__,
                           "error_code": safe_error_code(exc)}), file=sys.stderr)
         return 1
     status = result_status(result, flag)
-    print(json.dumps({"status": status, **result}))
-    return 0
+    print(json.dumps({"status": status, "operations":operations, **result}))
+    return 1 if operations.startswith('FAILED_') else 0
 
 if __name__ == "__main__":
     raise SystemExit(main())
+
