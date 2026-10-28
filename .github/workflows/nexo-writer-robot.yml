@@ -17,6 +17,7 @@ on:
       - ".github/workflows/nexo-writer-robot.yml"
       - "scripts/nexo_shadow_writer.py"
       - "scripts/nexo_shadow_curation.py"
+      - "scripts/nexo_tower_operations.py"
       - "test/test_nexo_shadow_writer.py"
       - "nexo-wake/*.json"
       - "nexo-control/execution-assessment-approvals.json"
@@ -48,7 +49,7 @@ jobs:
           test -n "$GOOGLE_SERVICE_ACCOUNT_JSON" || { echo "::error::Existing Writer credential absent"; exit 1; }
           pip install --quiet google-auth requests
           python -m unittest discover -s test -p 'test_nexo_shadow_writer.py' -v
-          python scripts/nexo_shadow_writer.py --apply
+          python scripts/nexo_shadow_writer.py --apply --operations
       # Read-only public-battery inspection is intentionally not run here:
       # it never dispatched jobs and caused extra Sheets quota reads/false failures.
       # scripts/nexo_shadow_intake.py remains available for explicit diagnostics.
@@ -518,4 +519,5 @@ jobs:
           elif [ "$DRIFT" = "false" ] && [ -n "$n" ]; then
             gh issue close "$n" --comment "Bundle do Drive alinhado ao último Writer testado no TCC (${MAIN:0:12})."
           fi
+
 
