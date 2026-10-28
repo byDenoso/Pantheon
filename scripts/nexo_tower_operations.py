@@ -57,6 +57,27 @@ def maintenance_rows(mural, now):
                     owner, action, found[7] if found else '', found[4] if found else ''])
     return out
 
+def executor_receipt(row):
+    """Validate receipt shape only; hashes are declarations, not independent replay."""
+    try:
+        method = json.loads(row[5])
+        receipt = method.get('EXECUTOR_RECEIPT_V1', method)
+        if not isinstance(receipt, dict):
+            return False
+        if not all(isinstance(receipt.get(k), str) and receipt[k] for k in ('run_id', 'runtime', 'class')):
+            return False
+        if receipt['runtime'] not in ('local_sandbox', 'github_actions') or receipt['class'] not in ('E0', 'E1', 'E2'):
+            return False
+        if not all(isinstance(receipt.get(k), str) and re.fullmatch(r'[a-f0-9]{64}', receipt[k]) for k in ('script_sha256', 'output_sha256')):
+            return False
+        hashes = receipt.get('input_hashes')
+        return isinstance(hashes, dict) and bool(hashes) and all(
+            isinstance(k, str) and k and isinstance(v, str) and re.fullmatch(r'[a-f0-9]{64}', v)
+            for k, v in hashes.items())
+    except (ValueError, TypeError, AttributeError, IndexError):
+        return False
+
+
 def build_views(stored, pending, counts, *, now=None, roster=None, revision='unknown', duration=0):
     from zoneinfo import ZoneInfo
     now = now or dt.datetime.now(ZoneInfo('America/Sao_Paulo'))
@@ -81,7 +102,7 @@ def build_views(stored, pending, counts, *, now=None, roster=None, revision='unk
                     f"{item['mark_tab']}!A{item['number']}", 'P', 'CLAIMED_WITHOUT_EXACT_TARGET',
                     'Reconciliar recibo e destino; nunca despachar de novo por timeout.', stamp, 'TRANSPORT'])
     executions = [['id', 'data', 'produtor_declarado', 'item', 'classe_declarada', 'proveniencia', 'artefato_declarado', 'fonte']]
-    missing_artifacts = identity_conflicts = 0
+    missing_artifacts = identity_conflicts = receipt_complete = 0
     for row in results:
         padded = list(row) + [''] * (10-len(row))
         source_role = padded[1]
@@ -95,10 +116,12 @@ def build_views(stored, pending, counts, *, now=None, roster=None, revision='unk
         artifact = padded[9]
         missing = not artifact or 'LOCAL_ONLY' in artifact
         missing_artifacts += int(missing)
+        valid_receipt = executor_receipt(padded)
+        receipt_complete += int(valid_receipt)
         classification = re.search(r'(?<![A-Za-z0-9])(E[012]|QA|TECH_CHECK|REVIEW)(?![A-Za-z0-9])', ' '.join(padded[2:6]))
         executions.append([padded[3], padded[0], source_role, padded[2],
             classification[1] if classification else 'UNCLASSIFIED',
-            'CONFLICT' if conflict else 'DECLARED_NOT_INDEPENDENTLY_VERIFIED',
+            'CONFLICT' if conflict else ('EXECUTOR_RECEIPT_SHAPE_VALID_NOT_REPLAYED' if valid_receipt else 'DECLARED_NOT_INDEPENDENTLY_VERIFIED'),
             'LOCAL_OR_MISSING' if missing else 'POINTER_PRESENT_NOT_REVALIDATED',
             f'RESULTADOS · id={padded[3]}'])
     # A bounded navigation view; full evidence remains in RESULTADOS.
@@ -112,6 +135,7 @@ def build_views(stored, pending, counts, *, now=None, roster=None, revision='unk
     metric('duration_seconds', 'CAPACITY_REVIEW' if duration >= 300 else 'OBSERVED', round(duration, 3), 'Relógio monotônico', '>=300 s: investigar custo de leitura antes do timeout de 600 s.')
     metric('results_records', 'RECORDS_NOT_TEST_COUNT', len(results), 'RESULTADOS', 'Linhas incluem QA, revisão e ciência; não somar como testes independentes.', scope='EVIDENCE')
     metric('mural_records', 'OBSERVED', len(mural), 'MURAL')
+    metric('verified_quantitative_runs', 'RECEIPT_SHAPE_ONLY_NOT_REPLAYED', receipt_complete, 'RESULTADOS.metodo', 'Não equiparar recibo declarado a execução reproduzida.', scope='EVIDENCE')
     metric('written_this_cycle', 'READBACK_VERIFIED', counts.get('written', 0), 'Writer counters')
     metric('active_failures', 'ATTENTION' if active else 'CLEAR', active, 'Writer counters')
     metric('historical_quarantine', 'PRESERVED', counts.get('preexisting_invalid',0)+counts.get('preexisting_quarantined',0), 'Spool', 'Não liberar recusas; causa e escopo continuam visíveis.')
