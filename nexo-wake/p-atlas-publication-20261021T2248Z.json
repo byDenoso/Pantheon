@@ -1,9 +1,0 @@
-{
-  "schema": "NEXO_WRITER_WAKE_V1",
-  "requested_at": "2026-10-21T22:48:00Z",
-  "task_id": "6ad6d608291c8191a518e9667b72bcab",
-  "reason": "Apply the author-approved Atlas publication decision already enqueued in SHADOW_V2; canonical Writer readback only",
-  "stable_ids": [
-    "NEXO-P-ATLAS-APPROVAL-DE-BAO-PPLUS-20261021"
-  ]
-}

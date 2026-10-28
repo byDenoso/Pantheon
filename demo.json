@@ -1,0 +1,50 @@
+{
+  "nodes": [
+    {
+      "deviceId": "1",
+      "id": "n1"
+    },
+    {
+      "deviceId": "2",
+      "id": "n2"
+    }
+  ],
+  "pollIntervalSeconds": 60,
+  "devices": [
+    {
+      "latencyMs": 2,
+      "ip": "192.0.2.1",
+      "name": "Switch central (exemplo)",
+      "id": "1",
+      "status": "Up",
+      "lastCheckedUtc": null,
+      "sector": "Data Center"
+    },
+    {
+      "latencyMs": null,
+      "ip": "192.0.2.2",
+      "name": "Servidor (exemplo)",
+      "id": "2",
+      "status": "Down",
+      "lastCheckedUtc": null,
+      "sector": "Data Center"
+    }
+  ],
+  "generatedUtc": "2026-10-28T18:00:00Z",
+  "edges": [
+    {
+      "from": "n1",
+      "id": "e1",
+      "to": "n2"
+    }
+  ],
+  "incidents": [
+    {
+      "startedUtc": "2026-10-28T18:00:00Z",
+      "deviceName": "Servidor (exemplo)",
+      "deviceId": "2"
+    }
+  ],
+  "receivedUtc": "2026-10-28T18:00:00Z",
+  "lastCollectionUtc": null
+}

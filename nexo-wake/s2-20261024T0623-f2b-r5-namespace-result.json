@@ -1,9 +1,0 @@
-{
-  "contract": "NEXO_WRITER_WAKE_V1",
-  "stable_id": "6ad6d5fd907881918a9112f8fc806118-20261024T0623-001",
-  "spool": "SHADOW_V2",
-  "spool_row": 800,
-  "target": "RESULTADOS",
-  "task_id": "6ad6d5fd907881918a9112f8fc806118",
-  "reason": "S2_F2B_R5_NAMESPACE_REVIEW_ENQUEUED"
-}

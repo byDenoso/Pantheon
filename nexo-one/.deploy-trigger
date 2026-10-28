@@ -1,4 +1,0 @@
-production deploy trigger
-requested: 2026-10-20T23:18:00-03:00
-reason: enable authenticated read-only ATLAS SHADOW backend after privacy review
-scope: nexo-one

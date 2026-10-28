@@ -1,9 +1,0 @@
-{
-  "contract": "NEXO_WRITER_WAKE_V1",
-  "stable_id": "6ad6d60458508191a0a7ea80a5391368-20261024T0938-0300-F4D-DDM-QUAD-002",
-  "spool": "SHADOW_V2",
-  "spool_row": 834,
-  "target": "MURAL",
-  "task_id": "6ad6d60458508191a0a7ea80a5391368",
-  "reason": "S4_F4D_DDM_QUADRATURE_RECONCILIATION_ENQUEUED"
-}

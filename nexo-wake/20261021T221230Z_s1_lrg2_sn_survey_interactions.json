@@ -1,9 +1,0 @@
-{
-  "contract": "NEXO_WRITER_WAKE_V1",
-  "purpose": "process S1 E1 LRG2 x SN-survey interaction events already enqueued in SHADOW_V2",
-  "requested_at": "2026-10-21T22:12:30Z",
-  "category": "WRITER_TRANSPORT",
-  "source": "OPERATOR_AUTHORIZED_CHATGPT",
-  "task_id": "6ad6d5f6485c8191a263a890f1721eef",
-  "contains_private_data": false
-}

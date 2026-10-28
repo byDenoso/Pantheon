@@ -1,7 +1,0 @@
-{
-  "schema": "NEXO_WRITER_WAKE_V1",
-  "task_id": "6ad6d5f981388191a6fc7facb9191198",
-  "reason": "seven S3 edge2-trim events present in private spool",
-  "first_stable_id": "6ad6d5f981388191a6fc7facb9191198-20261021T1614-0300-001",
-  "last_stable_id": "6ad6d5f981388191a6fc7facb9191198-20261021T1614-0300-007"
-}

@@ -1,7 +1,0 @@
-{
-  "contract": "NEXO_WRITER_WAKE_V1",
-  "purpose": "Run existing SHADOW writer and verify transport canary, with no private data",
-  "source": "OPERATOR_AUTHORIZED_CHATGPT",
-  "requested_at": "2026-10-20T16:00:00-03:00",
-  "contains_private_data": false
-}

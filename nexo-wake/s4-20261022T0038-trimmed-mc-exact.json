@@ -1,9 +1,0 @@
-{
-  "event": "NEXO_WRITER_WAKE",
-  "task_id": "6ad6d60458508191a0a7ea80a5391368",
-  "stable_id_prefix": "6ad6d60458508191a0a7ea80a5391368-20261022T0038-0300",
-  "spool_rows": "SHADOW_V2!388:394",
-  "artifact_drive_id": "1YWKvxZOuh8jfHI9ELXHfLGCycd6AMXxI",
-  "artifact_sha256": "26897c17f8cf98aee5e2a28f2de0ce2fe9b547e2a9606fc17f92220d6aab1a7e",
-  "requested_at": "2026-10-22T00:38:00-03:00"
-}

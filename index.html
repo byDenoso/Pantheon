@@ -1,0 +1,12 @@
+<!doctype html><html lang="pt-br"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow"><title>Watcher · Rede</title><link rel="stylesheet" href="./style.css"></head><body>
+<header><div class="brand"><img src="./arcelormittal-color.png" alt="ArcelorMittal"><span class="brand-divider" aria-hidden="true"></span><div class="brand-product"><strong>Watcher</strong><span>Monitoramento de rede</span></div></div><span id="freshness" role="status">Conectando…</span></header>
+<main><div class="title"><div><small>DEMONSTRAÇÃO · DADOS FICTÍCIOS</small><h1>Rede da usina</h1><p id="updated">Aguardando coleta</p></div><button id="refresh">Atualizar</button></div>
+<div id="summary" class="summary"></div><p class="notice">A verificação usa ping. Uma resposta não garante que as aplicações do servidor estejam funcionando.</p>
+<section><div class="sectionhead"><div><small>TOPOLOGIA</small><h2>Mapa da rede</h2></div><div class="controls"><button id="zoomout" aria-label="Diminuir zoom">−</button><button id="zoomin" aria-label="Aumentar zoom">+</button><button id="reset">Enquadrar</button></div></div>
+<div class="filters"><input id="search" placeholder="Buscar equipamento, IP ou setor" aria-label="Buscar equipamento"><select id="sector" aria-label="Filtrar setor"><option value="">Todos os setores</option></select></div>
+<div class="mapwrap" id="mapwrap"><svg id="map" role="img" aria-label="Topologia de equipamentos e conexões documentadas"></svg></div><p class="hint">Toque em um equipamento para ver detalhes. Arraste o mapa para navegar.</p><div id="detail" aria-live="polite"></div></section>
+<section><div class="sectionhead"><div><small>MONITORAMENTO</small><h2>Incidentes ativos</h2></div></div><div id="incidents"></div></section></main>
+<script type="module" src="./app.js"></script></body></html>
+
+
+

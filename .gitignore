@@ -1,6 +1,0 @@
-__pycache__/
-*.py[cod]
-nexo-one/.tmp/
-
-# Authenticated UI build artifacts belong only in the server function package.
-nexo-one/server/private-ui/

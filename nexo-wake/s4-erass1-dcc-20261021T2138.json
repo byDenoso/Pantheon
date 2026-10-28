@@ -1,7 +1,0 @@
-{
-  "schema": "nexo.writer_wake.v1",
-  "run_id": "S4-ERASS1-DISCORDANT-CONDITIONAL-E1-20261021T2138-0300",
-  "spool": "SHADOW_V2",
-  "rows": 6,
-  "relay_commit": "31a2dc61b304166884ec6fa75991ffe11af3c1e2"
-}

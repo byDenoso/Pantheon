@@ -1,5 +1,0 @@
-{
-  "active": "GPT",
-  "shadow": "CLAUDE",
-  "note": "Seleciona somente o produtor do Writer tecnico legado. Nao administra o calendario nem o elenco das Tasks cientificas: use o inventario vivo do agendador e o Pseudo-MCP privado. Propostas do produtor em shadow nao sao aplicadas na Tower."
-}
