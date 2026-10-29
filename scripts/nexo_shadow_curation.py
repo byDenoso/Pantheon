@@ -17,8 +17,9 @@ except ImportError:
 PREFIX = 'NEXO_CURATION_V1 '
 OLDER_ROLE_ID = '6ad6d608291c8191a518e9667b72bcab'  # verified P Task identity on 21-24 Oct; historical receipts only
 ROLE_ID = '6adcbfe8693881919c4f756adafd1ab1'  # historical pending P curation receipts
-CURRENT_ROLE_ID = '6ade1cf703648191a46f59f0475894fe'  # live P task in AGENTS 2026-10-25
-P_CURATOR_IDS = frozenset((OLDER_ROLE_ID, ROLE_ID, CURRENT_ROLE_ID))
+PREVIOUS_ROLE_ID = '6ade1cf703648191a46f59f0475894fe'  # previous P identity; reconcile history only
+CURRENT_ROLE_ID = '6ae3979ea2ec81919653df61a92d9cc7'  # live P task in AGENTS 2026-10-29 / current Pro scheduler
+P_CURATOR_IDS = frozenset((OLDER_ROLE_ID, ROLE_ID, PREVIOUS_ROLE_ID, CURRENT_ROLE_ID))
 CANARY = 'CORE5-CURATION-473-CANARY'
 CANARY_ITEM = 'OPS-I-DATASETS-INDEX-20261019'
 ROADMAP_ID = 1202623426
