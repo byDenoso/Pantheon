@@ -5,6 +5,7 @@ import {createRoot} from 'react-dom/client';
 import AppRouter from './atlas/ui/AppRouter.tsx';
 import {LocaleProvider} from './atlas/ui/LocaleProvider.tsx';
 import './atlas/atlas-theme.css';
+import './atlas/cosmic-theme.css';
 
 class Boundary extends Component<{children: ReactNode}, {failed: boolean}> {
   state = {failed: false};
