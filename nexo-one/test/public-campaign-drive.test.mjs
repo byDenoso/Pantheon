@@ -17,6 +17,19 @@ const snapshot = () => createPublicCampaignSnapshot([{
   tests:[{id:'test-1',question:bi('PRIVATE_TEST_DETAIL'),method:bi('Internal method'),stage:'PLANNED',updatedAt:at,result:null,references:[]}],
 }], {sourceRevision:'sha256:'+'a'.repeat(64),generatedAt:at,coverage:'PARTIAL'});
 
+test('server diagnostics allow only fixed codes and never log provider secrets', async t => {
+  const messages=[];
+  t.mock.method(console,'warn',value=>messages.push(value));
+  for(const googleDiagnostic of ['CONNECT_NO_TOKEN','Bearer synthetic-secret']) {
+    const result=await publicCampaignAtlas({NEXO_PUBLIC_CAMPAIGNS_DRIVE_FILE_ID:'approved-snapshot'}, {
+      tokenProvider:async()=>{throw Object.assign(new Error('private provider body'),{googleDiagnostic});},
+    });
+    assert.equal(result.status,503);
+  }
+  assert.deepEqual(messages.map(value=>JSON.parse(value).diagnostic),['CONNECT_NO_TOKEN','PUBLIC_CAMPAIGN_SNAPSHOT_UNAVAILABLE']);
+  assert.doesNotMatch(messages.join(' '),/synthetic-secret|private provider body|approved-snapshot/);
+});
+
 test('public campaign response contains summaries without individual tests', async t => {
   const dir=await mkdtemp(join(tmpdir(),'campaign-summary-')); t.after(()=>rm(dir,{recursive:true,force:true}));
   const file=join(dir,'snapshot.json'); await writeFile(file,JSON.stringify(snapshot()));
