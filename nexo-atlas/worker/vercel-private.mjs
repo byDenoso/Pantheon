@@ -73,6 +73,6 @@ export function createVercelPrivate({store,fetcher=fetch,readBytes=readCanonical
         return new Response(request.method==='HEAD'?null:file.bytes,{headers:{...headers,'Content-Type':file.type,'X-Frame-Options':'SAMEORIGIN','Content-Security-Policy':"default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self'; frame-ancestors 'self'; base-uri 'self'; form-action 'self'"}});
       }
       return json({error:'NOT_FOUND'},404);
-    } catch {return json({error:'PRIVATE_UNAVAILABLE'},503);}
+    } catch {return json({error:path.startsWith('/api/atlas-private')?'PRIVATE_SOURCE_UNAVAILABLE':'AUTH_UNAVAILABLE'},503);}
   };
 }
