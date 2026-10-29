@@ -215,6 +215,14 @@ def _process(session, stored, seen, counts, *, number, data, state, digest, mark
         if seen[key] != fingerprint:
             raise IdentityConflict("SPOOL_ID_CONTENT_CONFLICT")
         counts["duplicate"] += 1
+        # Deduplicate target appends, not source acknowledgements. Each exact
+        # copy needs its own receipt after the target is independently read back.
+        # A newly queued append may only become visible on the next run; never
+        # acknowledge it from the in-memory payload or replay an uncertain write.
+        if (apply and state in ("", "CLAIMED:" + digest)
+                and match_target(stored[data["tab"]], data)):
+            mark(session, mark_tab, mark_column, number, "APPLIED:" + digest)
+            counts["reconciled"] += 1
         return
     seen[key] = fingerprint
     append_request(data)
@@ -523,7 +531,7 @@ def main():
         return 1
     status = result_status(result, flag)
     print(json.dumps({"status": status, "operations":operations, **result}))
-    return 1 if operations.startswith('FAILED_') else 0
+    return 1 if status == 'PARTIAL_RECONCILIATION' or operations.startswith('FAILED_') else 0
 
 if __name__ == "__main__":
     raise SystemExit(main())

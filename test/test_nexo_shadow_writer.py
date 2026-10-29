@@ -190,6 +190,42 @@ class Recovery(unittest.TestCase):
         self.assertEqual(counts['written'],1); self.assertEqual(counts['duplicate'],1)
         self.assertEqual(len(s.posts),1)
 
+    def test_applied_sibling_reconciles_empty_duplicate_marker(self):
+        d=_recovery_data(); applied='APPLIED:'+w.digest_for(d)
+        counts,s=self.invoke([_recovery_plain(d,applied),_recovery_plain(d)],
+            records={'MURAL':{d['stable_id']:tuple(d['values'])},'RESULTADOS':{}})
+        self.assertEqual(s.posts,[])
+        self.assertEqual(s.marks,[(3,applied)])
+        self.assertEqual(counts['reconciled'],1)
+
+    def test_verified_claimed_siblings_each_receive_applied_marker(self):
+        d=_recovery_data(); digest=w.digest_for(d)
+        counts,s=self.invoke([_recovery_plain(d,'CLAIMED:'+digest),_recovery_plain(d)],
+            records={'MURAL':{d['stable_id']:tuple(d['values'])},'RESULTADOS':{}})
+        self.assertEqual(s.posts,[])
+        self.assertEqual(s.marks,[(2,'APPLIED:'+digest),(3,'APPLIED:'+digest)])
+        self.assertEqual(counts['reconciled'],2)
+
+    def test_fresh_duplicate_converges_on_next_readback_without_replay(self):
+        d=_recovery_data(); rows=[_recovery_plain(d),_recovery_plain(d)]
+        first,s=self.invoke(rows)
+        self.assertEqual(first['written'],1)
+        self.assertEqual(len(s.posts),1)
+        for number,marker in s.marks:
+            rows[number-2][14]=marker
+        second,t=self.invoke(rows,records=s.records)
+        self.assertEqual(t.posts,[])
+        self.assertEqual(t.marks,[(3,'APPLIED:'+w.digest_for(d))])
+        self.assertEqual(second['reconciled'],1)
+
+    def test_duplicate_preflight_never_reconciles_marker(self):
+        d=_recovery_data()
+        counts,s=self.invoke([_recovery_plain(d),_recovery_plain(d)],apply=False,
+            records={'MURAL':{d['stable_id']:tuple(d['values'])},'RESULTADOS':{}})
+        self.assertEqual(s.posts,[])
+        self.assertEqual(s.marks,[])
+        self.assertEqual(counts['reconciled'],0)
+
     def test_invalid_marker_does_not_get_erased(self):
         d=_recovery_data(); counts,s=self.invoke([_recovery_plain(d,'APPLIED:wrong')])
         self.assertEqual(counts['quarantined'],1); self.assertEqual(s.marks,[])
@@ -419,6 +455,50 @@ class Recovery(unittest.TestCase):
         self.assertEqual((first,second),('unresolved','unresolved'))
         self.assertEqual(batches,[])
         self.assertEqual(len(summaries),1)
+
+
+class MainStatusTests(unittest.TestCase):
+    def invoke_main(self, counts):
+        import io
+        import types
+        from unittest.mock import MagicMock
+        names=('google','google.oauth2','google.oauth2.service_account',
+               'google.auth','google.auth.transport','google.auth.transport.requests')
+        modules={name:types.ModuleType(name) for name in names}
+        modules['google.oauth2.service_account'].Credentials=MagicMock()
+        modules['google.auth.transport.requests'].AuthorizedSession=MagicMock()
+        output=io.StringIO()
+        with patch.dict(w.sys.modules,modules), \
+             patch.dict(w.os.environ,{'GOOGLE_SERVICE_ACCOUNT_JSON':'{}'}), \
+             patch.object(w.sys,'argv',['nexo_shadow_writer.py','--apply']), \
+             patch.object(w.sys,'stdout',output), \
+             patch.object(w,'run',return_value=counts):
+            code=w.main()
+        return code,json.loads(output.getvalue())
+
+    def test_active_reconciliation_failures_return_nonzero(self):
+        for field in ('unresolved','conflict','target_conflicts','invalid','quarantined',
+                      'curation_invalid','curation_unresolved','curation_conflict'):
+            with self.subTest(field=field):
+                code,result=self.invoke_main({field:1})
+                self.assertEqual(result['status'],'PARTIAL_RECONCILIATION')
+                self.assertEqual(code,1)
+
+    def test_new_failure_counter_returns_nonzero(self):
+        code,result=self.invoke_main({'new_failures':1})
+        self.assertEqual(result['status'],'PARTIAL_RECONCILIATION')
+        self.assertEqual(code,1)
+
+    def test_historical_quarantine_keeps_success_exit(self):
+        code,result=self.invoke_main({'invalid':7,'preexisting_invalid':7,
+            'quarantined':13,'preexisting_quarantined':13,'new_failures':0})
+        self.assertEqual(result['status'],'READBACK_VERIFIED')
+        self.assertEqual(code,0)
+
+    def test_clean_reconciliation_keeps_success_exit(self):
+        code,result=self.invoke_main({'written':1,'new_failures':0})
+        self.assertEqual(result['status'],'READBACK_VERIFIED')
+        self.assertEqual(code,0)
 
 
 if __name__ == "__main__":
