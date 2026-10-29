@@ -24,6 +24,22 @@ test('store failure never falls back to memory or authenticated success',async()
 test('private source is absent by default and never falls back to public URLs',async()=>{let calls=0;await assert.rejects(readAtlasPrivatePublication({},()=>{calls++;}));assert.equal(calls,0);});
 test('private source is bounded, authenticated, no-store, and validates envelope',async()=>{const {data}=makePrivateRuntimeFixture();const result=await readAtlasPrivatePublication({NEXO_ATLAS_PRIVATE_SOURCE_URL:'https://private.example/snapshot',NEXO_ATLAS_PRIVATE_SOURCE_TOKEN:'test'},async(url,options)=>{assert.equal(options.cache,'no-store');assert.equal(options.redirect,'error');assert.equal(options.headers.Authorization,'Bearer test');return new Response(JSON.stringify({contract:'ATLAS_PRIVATE_V1',data,extra:'discard'}));});assert.deepEqual(result,{contract:'ATLAS_PRIVATE_V1',data});});
 test('Redis store sends atomic command and propagates errors',async()=>{const store=atlasStore(env,async(url,options)=>{assert.equal(options.redirect,'error');assert.deepEqual(JSON.parse(options.body),['GET','synthetic']);return new Response(JSON.stringify({result:null}));});assert.equal(await store('GET','synthetic'),null);await assert.rejects(atlasStore(env,async()=>new Response('{"error":"denied"}'))('GET','x'));});
+test('Vercel Marketplace Redis variables support the same private session boundary',async()=>{
+  const marketplace={...env,KV_REST_API_URL:env.NEXO_ATLAS_REDIS_URL,KV_REST_API_TOKEN:env.NEXO_ATLAS_REDIS_TOKEN};
+  delete marketplace.NEXO_ATLAS_REDIS_URL;delete marketplace.NEXO_ATLAS_REDIS_TOKEN;
+  const commands=memory();let calls=0;
+  const store=atlasStore(marketplace,async(url,options)=>{
+    assert.equal(url,marketplace.KV_REST_API_URL);
+    assert.equal(options.headers.Authorization,`Bearer ${marketplace.KV_REST_API_TOKEN}`);
+    calls++;
+    return new Response(JSON.stringify({result:await commands(...JSON.parse(options.body))}));
+  });
+  const out=await atlasSessionRoute(request('POST'),marketplace,now,{pin},store);
+  assert.equal(out.status,200);
+  assert.equal(await atlasAuthenticated(request('GET',extract(out)),marketplace,now,store),true);
+  assert.equal(calls,3);
+  assert.equal((await atlasSessionRoute(request('POST','',{origin:'https://evil.example'}),marketplace,now,{pin},store)).status,403);
+});
 test('malformed limiter reservations fail closed before PIN derivation',async()=>{for(const value of [undefined,null,false,0,-1,{},'1','not-a-number'])await assert.rejects(login(async()=>value),/AUTH_STORE_UNAVAILABLE/);});
 
 test('session read returns original expiry instead of extending near-expired display',async()=>{
