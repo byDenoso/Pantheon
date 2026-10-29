@@ -1,0 +1,37 @@
+@import './cosmic-palette.css';
+/* Match existing root specificity; retain the original public/private boundary. */
+:root, :root[data-theme="light"], :root[data-theme="dark"] {
+  --bg: var(--nexo-bg); --bg-2: var(--nexo-surface);
+  --fg: var(--nexo-text); --fg-2: var(--nexo-muted); --line: var(--nexo-line);
+  --cyan: var(--nexo-accent); --on-cyan: var(--nexo-on-accent);
+  --orange: var(--nexo-highlight); --focus: var(--nexo-accent);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) {
+    --bg: var(--nexo-bg); --bg-2: var(--nexo-surface);
+    --fg: var(--nexo-text); --fg-2: var(--nexo-muted); --line: var(--nexo-line);
+    --cyan: var(--nexo-accent); --on-cyan: var(--nexo-on-accent);
+    --orange: var(--nexo-highlight); --focus: var(--nexo-accent);
+  }
+}
+.atlas-header { background: var(--bg); }
+.atlas-header-menu, .atlas-controls { min-width: 0; }
+.atlas-brand { letter-spacing: .035em; }
+.atlas-mark { box-shadow: none; border: 1px solid var(--cyan); }
+.atlas-hero { border-radius: 4px; }
+.atlas-hero-copy { border-radius: 0; border-left: 2px solid var(--cyan); }
+.atlas-hero-copy h1 { font-family: Georgia, 'Times New Roman', serif; font-weight: 400; font-size: clamp(2.5rem, 5vw, 4.25rem); letter-spacing: -.035em; text-wrap: balance; }
+.atlas-section > h2 { font-family: Georgia, 'Times New Roman', serif; font-size: clamp(1.8rem, 3vw, 2.6rem); font-weight: 400; }
+.atlas-item, .atlas-card { border-radius: 6px; }
+.atlas-kind { font-family: ui-monospace, SFMono-Regular, Consolas, monospace; }
+.atlas-form input, .atlas-seg { border-color: var(--nexo-control); }
+.atlas-btn, .atlas-seg button { min-height: 44px; }
+.atlas-btn { border-radius: 6px; }
+.atlas-data dd { font-variant-numeric: tabular-nums; }
+.atlas-warn { color: var(--nexo-amber); }
+@media (max-width: 560px) {
+  .atlas-brand { flex-wrap: wrap; }
+  .atlas-brand small { flex-basis: 100%; }
+  .atlas-hero-copy h1 { overflow-wrap: anywhere; }
+}
+@media (forced-colors: active) { .atlas-btn { border: 1px solid ButtonText; } }
